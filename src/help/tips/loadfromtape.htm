@@ -1,0 +1,142 @@
+<html>
+<body>
+  <h1>Tipps &amp; Tricks</h1>
+
+  <h2>Auf Magnettonband gespeicherte Dateien laden</h2>
+
+  <h3>Vorbemerkungen</h3>
+    Um auf Magnettonband gespeicherte Dateien laden zu k&ouml;nnen,
+    m&uuml;ssen diese in einer entsprechend guten Qualit&auml;t
+    vom Band wiedergegeben werden k&ouml;nnen.
+    Das ist nat&uuml;rlich um so schwieriger,
+    je &auml;lter die Aufnahmen sind,
+    denn die Qualit&auml;t l&auml;sst im Laufe der Zeit nach.
+    Das wiederum kann zu Fehlern beim Wiedereinlesen f&uuml;hren.
+    Sie sollten deshalb Geduld mitbringen
+    und nicht gleich beim ersten Fehlversuch aufgeben.
+  <br><br>
+
+  <h3>Voraussetzungen</h3>
+    <ol>
+      <li>Sie m&uuml;ssen das Magnettonbandger&auml;t (z.B. Kassettenrecorder)
+          an die Line-In- oder Mikrofonbuchse 
+          des Emulator-Rechners anschlie&szlig;en.
+      <li>Sie ben&ouml;tigen im Emulator eine Software,
+	  die das Format lesen kann,
+          mit dem die Dateien auf dem Magnettonband gespeichert wurden.
+	  <br>
+	  Die in JKCEMU vorhandenen Betriebssysteme bzw. Monitorprogramme
+	  bieten mindestens die M&ouml;glichkeit,
+	  im jeweiligen Standardformat gespeicherte Maschinencodeprogramme
+	  zu laden.
+    </ol>
+  <br><br>
+
+  <h3>Vorgehensweise</h3>
+    <ol>
+      <li>Schlie&szlig;en Sie das Magnettonbandger&auml;t an die Line-In- oder
+          falls diese nicht vorhanden oder der Signalpegel zu gering ist
+          an die Mikrofonbuchse des Emulator-Computers an.
+          Entsprechende Kabel und Adapter finden Sie im Fachhandel.
+      <li>Stellen Sie mit der Lautst&auml;rkeregelung oder einem Mixer sicher,
+          dass die Wiedergabe des Magnettonbandger&auml;tes im Emulator-Rechner
+          leicht &uuml;bersteuert zu h&ouml;ren ist.
+      <li>Geben Sie im Emulator den Befehl zum Laden der Datei ein,
+          dr&uuml;cken aber noch nicht auf <em>ENTER</em>.
+      <li>Aktivieren Sie die Audio-Funktion
+          <a href="../audio.htm#data_in">Daten vom Audio-Eingang lesen</a>.
+      <li>Starten Sie am Magnettonbandger&auml;t die Wiedergabe.
+      <li>Sobald Sie den Synchronisationston am Anfang der zu ladenden Datei
+          h&ouml;ren, bet&auml;tigen Sie die <em>ENTER</em>-Taste.
+          Damit beginnt das eigentliche Laden.
+      <li>Nachdem die Datei geladen wurde,
+          deaktivieren Sie die Audio-Funktion und speichern am besten gleich
+          den gerade geladenen Adressbereich.
+    </ol>
+  <br><br>
+
+  <h3>Hinweise bei Lesefehlern</h3>
+    Sollte das Laden Probleme bereiten, probieren Sie die folgenden Tipps aus:
+    <ul>
+      <li>&Uuml;berpr&uuml;fen Sie, ob die Audio-Daten auch wirklich
+          am Emulator ankommen.
+          Erh&ouml;hen Sie dazu mit der Lautst&auml;rkeregelung oder
+          einem Mixer den Eingangspegel des Line-In- beziehungsweise
+          des Mikrofoneingangs.
+          Das Eingangssignal sollte leicht bis deutlich &uuml;bersteuert sein.
+      <li>&Uuml;berpr&uuml;fen Sie, ob die in den
+          <a href="../settings.htm">Einstellungen</a>
+          angegebene Emulationsgeschwindigkeit gleich der ist,
+          mit der die Datei auf dem Band gespeichert wurde.
+      <li>Schalten Sie zwischen dem linken und dem rechten Kanal um,
+          insbesondere dann, wenn das Band in einem Stereo-Kassettenrecorder
+          wiedergegeben wird.
+      <li>Schlie&szlig;en Sie das Magnettonbandger&auml;t an einen anderen
+          Audio-Eingang an (z.B. zwischen Line-In- und Mikrofonbuchse
+          wechseln).
+      <li>&Auml;ndern Sie die Geschwindigkeit des Emulators auf einen
+          etwa 10 bis 20 Prozent niedrigeren oder h&ouml;heren Wert.
+          Das ist vorallem dann sinnvoll, wenn das Ladeprogramm
+          den Synchronisationston und damit schon den ersten Block
+          nicht erkennt.
+          M&ouml;glicherweise unterscheidet sich die Wiedergabegeschwindigkeit
+          zu sehr von der Geschwindigkeit, mit der das Band bespielt wurde.
+      <li>Probieren Sie verschiedene Ladeprogramme aus.
+	  M&ouml;chten Sie z.B. Dateien im KC-Format einlesen,
+	  kann es sinnvoll sein,
+	  in die Z1013-Emulation zu wechseln und dort ein Z1013-Programm
+	  zum Laden von KC-Dateien zu verwenden
+	  (z.B. KC-Interface, KC-BASIC-Interpreter).
+      <li>Probieren Sie verschiedene Abtastraten aus.
+    </ul>
+  <br><br>
+    Sollten diese Hinweise zu keinem Erfolg f&uuml;hren,
+    kann ein echter Computer gute Dienste leisten:
+    <ol>
+      <li>Laden Sie die Datei zuerst in den echten Computer.
+          Aufgrund der anderen Hardware sind die Erfolgsaussichten besser.
+      <li>Schlie&szlig;en Sie diesen Computer an den Audio-Eingang
+          des Emulator-Rechners an.
+      <li>Starten Sie im Emulator das Laden, so wie oben beschrieben.
+      <li>Speichern Sie auf dem angeschlossenen Computer die Datei,
+	  sodass die Daten direkt an den Emulator-Rechner &uuml;bertragen
+	  werden.
+    </ol>
+  <br><br>
+    Eine andere M&ouml;glichkeit besteht darin,
+    die Datei auf dem Magnettonbandger&auml;t abzuspielen
+    und mit Hilfe der Betriebssystemmittel als Sound-Datei aufzunehmen.
+    Anschlie&szlig;end lesen Sie diese Sound-Datei in JKCEMU ein
+    (siehe auch <a href="readsoundfile.htm">In einer Sound-Datei
+    enthaltenes Programm laden</a>
+    Diese Vorgehensweise ist vorallem dann sinnvoll,
+    wenn die Rechenleitung nicht ausreicht,
+    um beim Einlesen die Emulationsgeschwindigkeit aufrecht zu erhalten.
+    Das ist dann der Fall, wenn die in der Statuszeile angezeigte
+    emulierte Taktfrequenz wesentlich unter der in den Einstellungen
+    angegebenen liegt.
+  <br><br>
+
+  <h3>Hinweise f&uuml;r KC-BASIC-Programme auf dem Z1013</h3>
+    Das Laden von BASIC-Programmen mit Hilfe eines KC-Basic-Interpreters
+    auf dem Z1013 bereitet m&ouml;glicherweise mehr Probleme als das Laden
+    von Dateien, die im Z1013-Format auf Band gespeichert sind.
+    Auf jeden Fall sollten Sie verschiedene BASIC-Interpreter ausprobieren,
+    denn die Implementierungen der Ladefunktion unterscheiden sich.
+    Empfehlenswert ist der Interpreter &quot;KC-Basic m++&quot;.
+    Sollten Sie trotzdem keinen Erfolg haben,
+    ist der Umweg &uuml;ber einen echten Z1013 die wohl letzte Chance:
+    <ol>
+      <li>Laden Sie das KC-BASIC-Programm in den Z1013.
+      <li>Laden Sie anschlie&szlig;end das Programm in den Emulator,
+          indem Sie es im Z1013-Format an den Emulator-Rechner
+          &uuml;bertragen.
+          Dazu ist die Verwendung eines BASIC-Interpreters sinnvoll,
+          der das HSAVE-Kommando in Verbindung mit dem Sprungverteiler
+          und Headersave unterst&uuml;tzt.
+	  Der Sprungverteiler muss nat&uuml;rlich vorhanden sein,
+	  z.B. durch Verwendung des Brosig- oder M&uuml;ller-Monitors.
+    </ol>
+</body>
+</html>
+

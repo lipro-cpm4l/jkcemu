@@ -1,0 +1,48 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des Z9001, KC85/1 und KC87</h1>
+
+  <h2>Emulierte Hardware</h2>
+    <ul>
+      <li>4 kByte ROM f&uuml;r Betriebssystem
+      <li>bei KC87 zus&auml;tzlich 10 kByte ROM f&uuml;r BASIC-Interpreter
+      <li>16 kByte RAM
+      <li>optional ein oder zwei 16 kByte RAM-Module;<br>
+	  Damit ist der RAM auf 32 bzw. 48 kByte vergr&ouml;&szlig;erbar.
+      <li>1 kByte Bildwiederholspeicher
+      <li>optional Farbmodul inkl. 1 kByte Farbattributspeicher
+      <li>Kassettenrecorderanschluss
+    </ul>
+  <br><br>
+
+  <h2>Im ROM enthaltene Software</h2>
+    <ul>
+      <li>Z9001, KC85/1:
+	<ul>
+	  <li>Betriebssystemversion 1.2
+	</ul>
+      <li>KC87
+	<ul>
+	  <li>Betriebssystemversion 1.3
+	  <li>KC-BASIC 86
+	</ul>
+    </ul>
+  <br><br>
+
+  <h2>Tastatur</h2>
+    F&uuml;r einige Tasten auf der Z9001-Tastatur gibt es &uuml;blicherweise
+    keine direkten gleichnamigen Tasten auf der Tastatur des Emulator-Rechners.
+    Diese Tasten werden aber trotzdem emuliert, und zwar:
+    <table border="1">
+      <tr><th>Z9001-Taste</th><th>Emuliert mittels</th></tr>
+      <tr><td>Zeilenanfang</td><td>Shift-Links</td></tr>
+      <tr><td>Zeilenende</td><td>Shift-Rechts</td></tr>
+      <tr><td>GRAPHIC</td><td>F1</td></tr>
+      <tr><td>COLOR</td><td>F2</td></tr>
+      <tr><td>LIST</td><td>F3</td></tr>
+      <tr><td>RUN</td><td>F4</td></tr>
+      <tr><td>STOP</td><td>F5</td></tr>
+    </table>
+</body>
+</html>
+

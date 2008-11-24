@@ -1,0 +1,537 @@
+<html>
+<body>
+  <h1>Dateiformate</h1>
+    JKCEMU unterst&uuml;tzt verschiedene Dateiformate,
+    sowohl f&uuml;r das Laden als auch f&uuml;r das Speichern.
+    Einige Dateiformate eignen sich nur f&uuml;r bestimmte Arten von Daten,
+    z.B. f&uuml;r KC-BASIC-Programme.
+    Die meisten Dateiformate aber eignen sich zum Speichern beliebiger
+    bin&auml;rer Daten.
+    Prinzipiell k&ouml;nnen Sie in jedem dieser Dateiformate
+    die Programme und Daten eines jeden emulierten Systems speichern.
+    Es empfiehlt sich aber,
+    Programme immer in einem der Formate zu speichern,
+    die f&uuml;r das emulierte System &uuml;blich sind.
+  <br><br>
+    Folgende Formate werden unterst&uuml;tzt:
+  <br>
+    <ul>
+      <li><a href="fileformats.htm#headersave">Headersave-Format</a>
+      <li><a href="fileformats.htm#kcb">KCB-Format</a>
+      <li><a href="fileformats.htm#kcc">KCC-Format</a>
+      <li><a href="fileformats.htm#kcbasic">KC-BASIC-Programmdatei</a>
+      <li><a href="fileformats.htm#tap">KC-TAP-Format</a>
+      <li><a href="fileformats.htm#hex">Intel-HEX-Format</a>
+      <li><a href="fileformats.htm#bin">Speicherabbilddatei</a>
+    </ul>
+  <br><br>
+
+
+  <h2><a name="headersave">Headersave-Format</a></h2>
+    Das Headersave-Format ist quasi das Standardformat beim Z1013.
+    Es bietet sich, dieses Format im Emulatorumfeld auch als Standardformat
+    f&uuml;r AC1-Daten zu verwenden.
+  <br><br>
+    Das Headersave-Dateiformat entspricht inhaltlich dem
+    Headersave-Kassettenaufzeichnungsformat des Z1013.
+    Es enth&auml;lt einen 32 Byte gro&szlig;en Kopfblock,
+    an den sich der Datenbereich anschlie&szlig;t,
+    der wiederum ein 1:1-Abbild eines Teils des Arbeitsspeichers darstellt.
+    Die &uuml;bliche Dateiendung ist <em>*.z80</em>.
+  <br><br>
+    Der Kopfblock hat folgenden Aufbau:
+  <br>
+    <table border="1">
+      <tr>
+	<th>Offset</th>
+	<th>L&auml;nge</th>
+	<th>Feld</th>
+	<th>Bedeutung</th>
+      </tr>
+      <tr>
+        <td nowrap valign="top">0</td>
+        <td nowrap valign="top">2 Bytes</td>
+        <td nowrap valign="top">Anfangsadresse</td>
+        <td>
+	  Anfangsadresse im Arbeitsspeicher,<br>
+          In den Speicherbereich ab dieser Adresse wird der hinter
+          dem Kopfblock folgende Datenbereich der Datei geladen.
+          Es ist i.d.R. auch m&ouml;glich, beim Laden eine andere
+          Adresse anzugeben.
+          In diesem Fall wird die im Kopfblock stehende Anfangsadresse
+          ignoriert.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">2</td>
+        <td nowrap valign="top">2 Bytes</td>
+        <td nowrap valign="top">Endadresse</td>
+        <td>
+	  Endadresse im Arbeitsspeicher,<br>
+          Es werden <em>(Endadresse - Anfangsadresse + 1)</em>
+          Bytes geladen.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">4</td>
+        <td nowrap valign="top">2 Bytes</td>
+        <td nowrap valign="top">Startadresse</td>
+        <td>
+	  Die Startadresse ist nur relevant, wenn die Datei
+          ein ausf&uuml;hrbares Maschinencodeprogramm
+          (Dateityp &quot;C&quot;) enth&auml;lt.
+          Das Programm wird mit einem Sprungbefehl auf diese Adresse
+          gestartet.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">12</td>
+        <td nowrap valign="top">1 Byte</td>
+        <td nowrap valign="top">Dateityp</td>
+        <td>
+	  Der Dateityp wird mit einem Buchstaben angegeben.
+          Die wichtigsten Typen sind:
+          <table border=0>
+              <tr>
+                <td valign="top">A:</td>
+                <td>Assemblerquelltext</td>
+              </tr>
+              <tr>
+                <td valign="top">B:</td>
+                <td>BASIC-Programm (KC-BASIC)</td>
+              </tr>
+              <tr>
+                <td valign="top">b:</td>
+                <td>BASIC-Programm (Mini-/Tiny-BASIC)</td>
+              </tr>
+              <tr>
+                <td valign="top">C:</td>
+                <td>Ausf&uuml;hrbares Maschinencodeprogramm</td>
+              </tr>
+          </table>
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">13</td>
+        <td nowrap valign="top">3 Bytes</td>
+        <td nowrap valign="top">Headersave-Kennung</td>
+        <td>Hier stehen drei Bytes mit dem hexadezimalen Wert Wert D3.
+      </tr>
+      <tr>
+        <td nowrap valign="top">16</td>
+        <td nowrap valign="top">16 Bytes</td>
+        <td nowrap valign="top">Dateiname</td>
+        <td>
+	  Das ist eine 16 Zeichen lange Bezeichnung,
+          die bei Speicherung auf Magnettonband als Dateiname
+          dient.
+	  Ist die Bezeichnung k&uuml;rzer als 16 Zeichen,
+	  wird mit Leerzeichen aufgef&uuml;llt.
+	  <br>
+          Da beim Emulator die Datei im Dateisystem des Computers liegt
+          und somit bereits einen Namen hat,
+          hat dieses Feld nur die Bedeutung
+          einer zus&auml;tzlichen Bezeichnung.
+          Diese Bezeichnung muss nicht mit dem Namen im Dateisystem
+          &uuml;bereinstimmen.
+	</td>
+      </tr>
+    </table>
+  <br>
+    Headersave-Dateien sind Little-Endian kodiert, d.h.,
+    das niederwertige Byte steht vor dem h&ouml;herwertigen.
+    Das gilt auch f&uuml;r die Adressangaben im Kopfblock.
+  <br><br>
+
+  <h3>Headersave-Kassettenaufzeichnungsformat</h3>
+    Die beiden originalen Z1013-Monitorprogramme (2.02 und A.2)
+    speichern Programmme und Daten, indem ein Bereich des Arbeitsspeichers
+    auf den Massenspeicher (Magnettonband) geschrieben wird.
+    Dabei werden keine Verwaltungsinformationen mit abgespeichert,
+    d.h., der Anwender muss sich die Anfangs- und Endadresse
+    des Speicherbereichs und bei einem Maschinencodeprogramm
+    auch die Startadresse separat merken.
+  <br><br>
+    Dieses einfache Prinzip ist nicht sehr komfortabel und wurde deshalb
+    bereits beim Tiny-BASIC-Interpreter,
+    der als Hex-Listing im Z1013-Handbuch abgedruckt ist,
+    um einen 32-Byte gro&szlig;en Kopfblock mit Verwaltungsinformationen
+    erweitert.
+    Dieses Verfahren haben sp&auml;ter engagierte Z1013-Anwender
+    zum sogenannten Headersave-Format weiterentwickelt,
+    welches sich als Quasi-Standard durchsetzte.
+    Werkseitig wurde jedoch das Headersave-Format bei keinem einzigen
+    Z1013 implementiert.
+    Man kann aber trotzdem mit den originalen Monitorprogrammen
+    eine Headersave-Datei von Kassette laden,
+    indem man das Laden erst nach dem akustisch deutlich unterscheidbaren
+    Kopfblock startet.
+  <br><br>
+    Der Kopfblock beim Aufzeichnungsformat des Tiny-BASIC-Interpreters
+    ist kompatibel zum Headersave-Format.
+    Es fehlen nur die Startadresse und die Headersave-Kennung.
+  <br><br>
+
+
+  <h2><a name=kcb">KCB-Format</a></h2>
+    Das KCB-Format ist identisch zum KCC-Format (siehe weiter unten).
+    Die unterschiedliche Dateiendung besagt nur,
+    dass die Datei ein KC-BASIC-Programm enth&auml;lt,
+    obwohl das Dateiformat f&uuml;r eine KC-Systemdatei und eben nicht
+    f&uuml;r eine KC-BASIC-Datei steht.
+    Dieses Packen eines BASIC-Programms in eine Systemdatei wird
+    &uuml;blicherweise deshalb getan, um das BASIC-Programm selbststartend
+    zu machen.
+    Dazu enth&auml;lt die Datei zus&auml;tzlich eine kleine
+    Maschinencode-Routine, auf die die Startadresse in den Kopfdaten zeigt.
+  <br><br>
+    JKCEMU unterst&uuml;tzt das KCB-Format dahingehend,
+    dass es das BASIC-Programm l&auml;d und f&uuml;r das RAM
+    beziehungsweise ROM-BASIC reloziert.
+    Der in der Datei enthaltene Maschinencode und ggf. sonstige Daten
+    werden ignoriert.
+    M&ouml;chten Sie dagegen die Datei komplett laden,
+    also nicht nur das BASIC-Programm,
+    m&uuml;ssen Sie die Datei als KCC-Datei anfassen,
+    d.h. in dem Dialog mit den <a href="loadsave.htm#options">Ladeoptionen</a>
+    einfach das Format umstellen.
+    Allerdings wird dann das BASIC-Programm nicht mehr reloziert.
+  <br><br>
+
+  <h2><a name=kcc">KCC-Format</a></h2>
+    Das KCC-Format wird von mehreren KC-Emulatoren verwendet
+    und hat seinen Ursprung im Kassettenaufzeichnungsformat
+    der KC-Computer (KC85/1-4, KC87, Z9001).
+    Das Dateiformat enth&auml;lt einen Kopfblock,
+    an den sich der Datenbereich anschlie&szlig;t,
+    der wiederum ein 1:1-Abbild eines Teils des Arbeitsspeichers darstellt.
+    Die &uuml;bliche Dateiendung ist <em>*.kcc</em>.
+  <br><br>
+    Der Kopfblock hat folgenden Aufbau:
+  <br>
+    <table border="1">
+      <tr>
+	<th>Offset</th>
+	<th>L&auml;nge</th>
+	<th>Feld</th>
+	<th>Bedeutung</th>
+      </tr>
+      <tr>
+        <td nowrap valign="top">0</td>
+        <td nowrap valign="top">8 Bytes</td>
+        <td nowrap valign="top">Dateiname</td>
+        <td>
+	  Das ist eine maximal 8 Zeichen lange Bezeichnung,
+          die bei Speicherung auf Magnettonband als Dateiname
+          dient.
+	  <br>
+          Da beim Emulator die Datei im Dateisystem des Computers liegt
+          und somit bereits einen Namen hat,
+          hat dieses Feld nur die Bedeutung
+          einer zus&auml;tzlichen Beschreibung.
+          Diese Beschreibung muss nicht mit dem Namen im Dateisystem
+          &uuml;bereinstimmen.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">8</td>
+        <td nowrap valign="top">3 Bytes</td>
+        <td nowrap valign="top">Dateityp</td>
+        <td>
+	  Das ist eine maximal 3 Zeichen lange Dateinamenerweiterung.
+	  Da die Dateinamenerweiterung, die als Dateityp fungiert,
+	  sich direkt an den Dateinamen anschlie&szlig;t,
+	  werden h&auml;ufig beide Felder zu einer 11-Zeichen langen
+	  Dateibezeichnung zusammengefasst.
+	  Auch JKCEMU bietet hierf&uuml;r nur ein Feld an
+	  und f&uuml;llt ggf. mit Leerzeichen auf.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">16</td>
+        <td nowrap valign="top">1 Byte</td>
+        <td nowrap valign="top">Anzahl nachfolgender Adressen</td>
+        <td>
+	  Dieses Feld gibt die Anzahl der nachfolgenden Adressen an
+	  (Anfangs-, End-, Start-/Kaltstart- und Warmstartadresse).
+	  Hier steht meistens eine zwei oder drei und selten eine vier.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">17</td>
+        <td nowrap valign="top">2 Bytes</td>
+        <td nowrap valign="top">Anfangsadresse</td>
+        <td>
+	  Anfangsadresse im emulierten Arbeitsspeicher
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">19</td>
+        <td nowrap valign="top">2 Bytes</td>
+        <td nowrap valign="top">Endadresse + 1</td>
+        <td>
+	  Endadresse + 1 im emulierten Arbeitsspeicher
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">21</td>
+        <td nowrap valign="top">2 Bytes</td>
+        <td nowrap valign="top">Startadresse</td>
+        <td>
+	  Mit dieser Adresse wird das in der Datei enthaltene
+	  Maschinencodeprogramm gestartet.
+	  <br>
+	  Die Startadresse ist nur g&uuml;ltig,
+	  wenn das Feld <em>Anzahl nachfolgender Adressen</em>
+	  den Wert drei oder vier hat.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">23</td>
+        <td nowrap valign="top">2 Bytes</td>
+        <td nowrap valign="top">Warmstartadresse</td>
+        <td>
+	  Wenn ein Programm zwei Startadressen hat (Kalt- und Warmstart),
+	  ist hier die Warmstartadresse zu finden.
+	  <br>
+	  Die Warmstartadresse ist nur g&uuml;ltig,
+	  wenn das Feld <em>Anzahl nachfolgender Adressen</em>
+	  den Wert vier hat.
+	  <br>
+	  JKCEMU wertet die Warmstartadresse nicht aus.
+	</td>
+      </tr>
+    </table>
+  <br>
+    KCC-Dateien sind Little-Endian kodiert, d.h.,
+    das niederwertige Byte steht vor dem h&ouml;herwertigen.
+    Das gilt auch f&uuml;r die Adressangaben im Kopfblock.
+  <br><br>
+    <a name="kcc_endaddr"><b>Achtung!</b></a> Die im Dateikopf
+    eingetragene zweite Adresse ist die Endadresse + 1
+    (siehe KC85/3 Systemhandbuch, Seite 88).
+    Allerdings scheint das nicht &uuml;berall so implementiert zu sein.
+    Um sicherzustellen, dass das letzte Byte nicht verloren geht,
+    behandelt JKCEMU das KCC-Format folgenderma&szlig;en:
+    <ol>
+      <li>Beim Speichern wird die Endadresse + 1 in den Dateikopf eingetragen.
+	  Der KC-Header entspricht somit der offiziellen Dokumentation.
+      <li>Beim Laden wird bis einschlie&szlig;lich der in den Kopfdaten
+	  eingetragenen Adresse geladen, u.U. also ein Byte zuviel.
+    </ol>
+    Damit ist sichergestellt, dass niemals ein Byte zu wenig geladen wird,
+    egal, ob nun ein Fremdprogramm eine von JKCEMU erzeugte KCC-Datei
+    laden will oder umgekehrt.
+  <br><br>
+
+  <h3><a name="jtc">JTC-Format</a></h3>
+    Der Jugend+Technik-Computer verwendet in der Ausbaustufe mit dem
+    erweiterten Betriebssystem <em>EMR-ES 1988</em>
+    das Kassettenaufzeichnungsformat der KC-Computer.
+    Aus diesem Grund wird beim <em>JTCEMU</em>, dem Ju+Te-Computer-Emulator,
+    das KCC-Dateiformat verwendet.
+    Um jedoch deutlich zu machen,
+    dass eine solche Datei kein KC-Programm sondern ein
+    Ju+Te-Computer-Programm enth&auml;lt,
+    wird das Format bei JTCEMU <em>JTC-</em>Format genannt
+    und die Dateiendung ist <em>*.jtc</em>.
+  <br><br>
+    <b>Achtung!</b> Entgegen der KC85/3-Dokumentation tr&auml;gt
+    der Ju+Te-Computer die tats&auml;chliche Endadresse in den Dateikopf
+    ein und nicht die Endadresse + 1.
+    Aus diesem Grund tut es auch der Emulator JTCEMU so.
+    Insofern ist das von JTCEMU erzeugte JTC-Format nicht ganz identisch
+    zum vom JKCEMU erzeugten KCC-Format.
+    Allerdings geht beim Einlesen von JTC-Dateien in JKCEMU trotzdem
+    kein Byte verloren, da ja bis einschlie&szlig;lich zu der
+    im Dateikopf eingetragenen Endadresse gelesen.
+  <br><br>
+
+
+  <h2><a name="kcbasic">KC-BASIC-Programmdatei</a></h2>
+    Eine KC-BASIC-Programmdatei hat &uuml;blicherweise die Dateiendung
+    <em>*.sss</em> und enth&auml;lt am Anfang zwei Bytes
+    die die L&auml;ge des BASIC-Programms angeben.
+    Ab dem dritten Byte folgt das eigentliche Programm.
+    Abgeschlossen wird die Datei mit einem Byte mit dem Wert 3.
+    Die Programmdatei ist somit drei Bytes l&auml;nger
+    als die L&auml;ngenangabe in den ersten beiden Bytes.
+  <br><br>
+    Manche KC-BASIC-Programmdateien haben einen 11-Byte gro&szlig;en
+    Dateikopf, der mit einer BASIC-Programmdateikennung beginnt
+    (drei mal D3 oder drei mal D6) und dahinter einen 8 Zeichen langen Namen
+    enth&auml;lt.
+  <br><br>
+    JKCEMU kann beide Arten von KC-BASIC-Programmdateien laden.
+    Beim Speichern wird jedoch nur die Form ohne Kopfdaten unterst&uuml;tzt.
+  <br><br>
+    KC-BASIC-Progammdateien sind Little-Endian kodiert, d.h.,
+    das niederwertige Byte steht vor dem h&ouml;herwertigen.
+    Das gilt auch f&uuml;r die L&auml;ngenangabe am Dateianfang.
+  <br><br>
+
+
+  <h2><a name="tap">KC-TAP-Format</a></h2>
+    Das KC-TAP-Format wurde von Arne Fitzenreiter definiert
+    und wird von vielen KC-Emulatoren verwendet.
+    Es ist nicht nur inhaltlich, sondern auch verwaltungstechnisch
+    vom Kassettenaufzeichnungsformat der KC-Computer abgeleitet,
+    denn es enth&auml;lt neben den Nutzbytes auch Blocknummern.
+  <br><br>
+    Das KC-TAP-Format beginnt mit einer 16 Byte gro&szlig;en Kennung,
+    an den sich 129 Byte gro&szlig;e Bl&ouml;cke anschlie&szlig;en.
+    Jeder Block beginnt mit einer Blocknummer gefolgt von 128 Nutzbytes.
+    Der erste Block ist gew&ouml;hlich der Kopfblock und gibt Auskunft
+    &uuml;ber die Art und die L&auml;nge der Datei.
+  <br><br>
+    Die Datei hat folgenden Aufbau:
+  <br>
+    <table border="1">
+      <tr>
+	<th>Offset</th>
+	<th>L&auml;nge</th>
+	<th>Bedeutung</th>
+      </tr>
+      <tr>
+        <td nowrap valign="top">0</td>
+        <td nowrap valign="top">16 Bytes</td>
+        <td nowrap valign="top">
+	  KC-TAP-Kennung mit der hexadezimalen Bytefolge:
+	  <br>
+	  C3 4B 43 2D 54 41 50 45 20 62 79 20 41 46 2E 20
+	  <br><br>
+	  Als C-String geschrieben:<br>
+	  "\xC3KC-TAPE by AF. "
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">16</td>
+        <td nowrap valign="top">129 Bytes</td>
+        <td nowrap valign="top">Kopfblock</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">145</td>
+        <td nowrap valign="top">129 Bytes</td>
+        <td nowrap valign="top">2. Block</td>
+      </tr>
+      <tr>
+        <td>...</td>
+        <td>...</td>
+        <td>...</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">16 + ((<em>n</em> - 1) * 129)</td>
+        <td nowrap valign="top">129 Bytes</td>
+        <td nowrap valign="top">
+	  <em>n</em>. Block
+	  <br>
+	  Der letzte Block hat h&auml;ufig die Blocknummer 255
+	  (hexadezimal: FF).
+	</td>
+      </tr>
+    </table>
+  <br>
+    L&auml;sst man die KC-TAP-Kennung und die Blocknummern weg
+    und kettet nur die Nutzdaten der einzelnen Bl&ouml;cke zusammen,
+    erh&auml;lt man entweder das KCC- oder das KC-BASIC-Programmdateiformat,
+    je nachdem, was die KC-TAP-Datei enth&auml;lt.
+  <br><br>
+    Eine KC-TAP-Datei kann aber auch ein KC-BASIC-Programm im ASCII-Format
+    oder ein KC-BASIC-Datenfeld enthalten.
+    Diese Formate werden von JKCEMU nicht unterst&uuml;tzt.
+  <br><br>
+    Mehrere KC-TAP-Dateien k&ouml;nnen zu einer Datei zusammengekettet werden,
+    was sinngem&auml;&szlig; mehrere hintereinander liegende
+    Kassettenaufzeichnungen bedeutet.
+    JKCEMU unterst&uuml;tzt zusammengekettete KC-TAP-Dateien nicht,
+    d.h., bei einer solchen Datei liest der Emulator nur die erste
+    Teildatei.
+  <br><br>
+    <b>Achtung!</b> Bez&uuml;glich der beim KC-TAP-Format im Kopfblock
+    eingetragenen Endadresse gilt das gleiche wie beim KCC-Format
+    (siehe <a href="fileformats.htm#kcc_endaddr">hier</a>).
+  <br><br>
+
+
+  <h2><a name="hex">Intel-HEX-Format</a></h2>
+    In einer Intel-HEX-Datei werden die bin&auml;ren Daten als hexadezimale
+    Zahlen in textueller Form gespeichert,
+    d.h., die Intel-HEX-Datei ist eine reine ASCII-Datei.
+    Die Daten sind in Segmente, sogenannte Records, gruppiert,
+    wobei &uuml;blicherweise jedes Segment eine eigene Textzeile bildet.
+    Der Aufbau eines Records ist:
+  <br>
+    <table border="1">
+      <tr>
+	<th>Offset</th>
+	<th>L&auml;nge</th>
+	<th>Feld</th>
+	<th>Bedeutung</th>
+      </tr>
+      <tr>
+        <td nowrap valign="top">0</td>
+        <td nowrap valign="top">1 Zeichen</td>
+        <td nowrap valign="top">Startmarkierung</td>
+        <td>
+	  Hier steht ein Doppelpunkt.
+	  Alle Zeichen zwischen dem letzten Record und der Startmarkierung
+	  werden ignoriert.
+	  &Uuml;blicherweise betrifft das einen Zeilenumbruch.
+      </tr>
+      <tr>
+        <td nowrap valign="top">1</td>
+        <td nowrap valign="top">2 Zeichen</td>
+        <td nowrap valign="top">Anzahl der Datenbytes</td>
+        <td>Die Anzahl der Datenbytes wird hexadezimal angegeben.</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">3</td>
+        <td nowrap valign="top">4 Zeichen</td>
+        <td nowrap valign="top">Startadresse des Records</td>
+        <td>Die Adresse wird hexadezimal angegeben.</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">7</td>
+        <td nowrap valign="top">2 Zeichen</td>
+        <td nowrap valign="top">Record-Typ</td>
+        <td>
+	  00: Daten-Record<br>
+	  01: Dateiende-Record<br>
+	  Andere Record-Typen werden von JKCEMU nicht unterst&uuml;tzt.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">9</td>
+        <td nowrap valign="top"><em>n</em> Zeichen</td>
+        <td nowrap valign="top">Daten des Records</td>
+        <td>
+	  Jeweils zwei Zeichen kodieren hexadezimal ein Datenbyte,
+	  d.h., der Record enth&auml;lt <em>n / 2</em> Datenbytes.
+	</td>
+      </tr>
+      <tr>
+        <td nowrap valign="top">9 + <em>n</em></td>
+        <td nowrap valign="top">2 Zeichen</td>
+        <td nowrap valign="top">Pr&uuml;fsumme</td>
+        <td>
+	  Die Pr&uuml;fsumme sind die unteren 8 Bits des Ergebnisses
+	  aus Null minus der Summe der einzelnen Bytes,
+	  wobei jeweils hexadezimale Zeichen ein Byte ergeben.
+	</td>
+      </tr>
+    </table>
+  <br>
+    Der Dateiende-Record sieht &uuml;blicherweise so aus:
+    <tt>:00000001FF</tt>
+  <br><br>
+
+
+  <h2><a name="bin">Speicherabbilddatei (Image-Datei)</a></h2>
+    Eine Speicherabbilddatei enth&auml;lt ein reines Abbild
+    eines Teils des Arbeitsspeichers des Emulators.
+    Es sind keine Kopfdaten enthalten, d.h.,
+    Anfangs- und ggf. Startadresse muss man sich separat merken.
+    Die &uuml;bliche Dateiendung ist <em>*.bin</em>.
+</body>
+</html>
+

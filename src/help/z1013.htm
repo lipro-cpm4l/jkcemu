@@ -1,0 +1,69 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des Z1013</h1>
+
+  <h2>Emulierte Hardware</h2>
+    Da der Z1013 als Bausatz ausgeliefert wurde,
+    sind f&uuml;r diesen besonders h&auml;ufig Modifizierungen
+    und Erweiterungen entwickelt wurden.
+    Das trifft insbesondere auf Tastatur, Monitorprogramm
+    und RAM-Gr&ouml;&szlig;e zu.
+    JKCEMU emuliert die g&auml;ngigen Tastaturansteuerungen
+    mit jeweils einem oder mehreren dazu passenden Monitorprogrammen.
+    In den <a href="settings.htm">Einstellungen</a> w&auml;hlen Sie
+    die gew&uuml;nschte Kombination aus Monitorprogramm und Tastatur aus.
+  <br><br>
+    Konkret werden emuliert:
+    <ul>
+      <li>Je nach Monitorprogramm 2 oder 4 kByte ROM
+      <li>16 oder 64 kByte RAM,<br>
+	  Der tats&auml;chlich verf&uuml;gbare RAM betr&auml;gt
+	  je nach emulierter ROM-Gr&ouml;&szlig;e max. 62 kByte.
+      <li>Tastaturen:
+	  <ul>
+	    <li>Folienflachtastatur (8x4-Matrix)
+	    <li>Alpha-Tastatur (8x8-Matrix)
+	    <li>K7659 (12x8-Matrix)
+	    <li>S6009 (12x8-Matrix)
+	  </ul>
+      <li>Kassettenrecorderanschluss
+    </ul>
+  <br><br>
+
+  <h2>Im ROM enthaltene Software</h2>
+    Je nach Einstellung:
+    <ul>
+      <li>Originales Monitorprogramm Version 2.02
+      <li>Originales Monitorprogramm Version A.2
+      <li>Monitorprogramm von Rainer Brosig Version 2.028
+	  f&uuml;r Tastatur K7659
+      <li>Monitorprogramm von Rainer Brosig Version 2.028
+	  f&uuml;r Tastatur S6009
+      <li>Monitorprogramm von Jens M&uuml;ller Version 1992
+	  (siehe <a href="z1013/mon_jm_1992.htm">Beschreibung</a>)
+    </ul>
+  <br><br>
+
+  <h2>Einbindung eines externen Monitorprogramms</h2>
+    JKCEMU bietet in den <a href="settings.htm">Einstellungen</a>
+    die M&ouml;glichkeit, beliebige ROM-Images einzubinden.
+    Mit dieser Funktion k&ouml;nnen Sie auch ein anderes,
+    extern als Bin&auml;rdatei vorliegendes Monitorprogramm einbinden,
+    welches dann das intern vorhandene &uuml;berdeckt.
+    Wichtig ist aber, dass sie in den <a href="settings.htm">Einstellungen</a>
+    eine Kombination aus Monitorprogramm und Tastatur ausw&auml;hlen,
+    die genau die Tastatur enth&auml;lt,
+    die das extern eingebundene Monitorprogramm voraussetzt.
+  <br><br>
+
+  <h2>Folienflachtastatur</h2>
+    Die Folienflachtastatur enth&auml;lt vier Shift-Tasten,
+    die von einigen Spielprogrammen direkt abgefragt
+    und zur Steuerung der Spielfigur verwendet werden.
+    Damit Sie solche Programme auch im Emulator ohne Einschr&auml;nkungen
+    bedienen k&ouml;nnen,
+    werden diese vier Shift-Tasten auch als Einzeltasten emuliert,
+    und zwar durch mit Hilfe der Funktionstasten <em>F1</em> bis <em>F4</em>.
+</body>
+</html>
+

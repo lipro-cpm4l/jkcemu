@@ -1,0 +1,87 @@
+<html>
+<body>
+  <h1>Einschr&auml;nkungen des Compilers gegen&uuml;ber
+      dem AC1-Mini- und dem Z1013-Tiny-BASIC</h1>
+
+    Das Ziel des BASIC-Compilers ist es,
+    schnelle und m&ouml;glichst kleine Maschinencodeprogramme zu erzeugen,
+    die keine unn&ouml;tigen Funktionen enthalten.
+    Der BASIC-Quelltext und nicht ben&ouml;tigte BASIC-Funktionalit&auml;ten
+    sind im Maschinencodeprogramm nicht vorhanden.
+    Daraus resultieren einige Einschr&auml;nkungen gegen&uuml;ber
+    der Ausf&uuml;hrung eines BASIC-Programms im Interpreter:
+  <br><br>
+
+  <h2>CALL</h2>
+    Grunds&auml;tzlich besteht bei der CALL-Anweisung keine Einschr&auml;nkung
+    gegen&uuml;ber dem Interpreter.
+    Jedoch rufen manche BASIC-Programme mit CALL Maschinenunterprogramme
+    des BASIC-Interpreters auf.
+    Andere Programme dagegen enthalten in REM-Zeilen Maschinencode,
+    der mit CALL aufgerufen wird.
+    Untergrogramme des BASIC-Interpreters beziehungsweise in REM-Zeilen
+    versteckter Maschinencode sind im erzeugten Maschinencodeprogramm
+    nicht (mehr) vorhanden und k&ouml;nnen somit auch nicht aufgerufen werden.
+    Wird dennoch so ein CALL-Befehl ausgef&uuml;hrt,
+    f&uuml;hrt das wahrscheinlich zum Absturz des Programms.
+  <br><br>
+    Eine L&ouml;sung des Problems besteht darin,
+    die ben&ouml;tigten Maschinencoderoutinen vor ihrem Aufruf
+    mit POKE-Befehlen zu erzeugen.
+    Gegebenfalls k&ouml;nnen hierf&uuml;r auch die Anweisungen
+    DATA, READ und DOKE verwendet werden,
+    die jedoch die beiden originalen BASIC-Interpreter nicht kennen.
+  <br><br>
+
+  <h2>GOTO und GOSUB</h2>
+    Die hinter GOTO und GOSUB angegebene Zeilennummer muss eine Zahl sein.
+    Ein variabler Ausdruck,
+    wie im Interpreter m&ouml;glich, ist nicht erlaubt.
+    Da im erzeugten Maschinencodeprogramm kein BASIC-Quelltext und somit
+    auch keine Zeilennummern mehr vorhanden sind,
+    muss bereits der Compiler die Sprungziele aufl&ouml;sen.
+    Das kann er jedoch nur tun, wenn die Ziele eindeutig feststehen,
+    d.h., wenn sie nicht variabel sind.
+  <br><br>
+    Der Compiler k&ouml;nnte zwar in das erzeugte Maschinencodeprogramm
+    auch eine Zuordnung von Zeilennummern zu Maschinencodeadressen einbauen
+    und so auch variable Sprungziele erm&ouml;glichen,
+    jedoch w&uuml;rde dadurch das Programm ziemlich aufgebl&auml;ht werden.
+    Da das aber nicht das Ziel des BASIC-Compilers ist,
+    werden variable Sprungziele eben nicht unterst&uuml;tzt.
+  <br><br>
+    Die hinter GOTO und GOSUB stehende Zeilennummer muss auch existieren.
+    Der BASIC-Interpreter springt bei einer nicht existierenden Zeilennummer
+    zu der Zeile, die anstelle der nicht existierenden steht.
+    Das ist logischerweise die Zeile mit der n&auml;chst h&ouml;heren Nummer.
+    Da aber der BASIC-Compiler auch Zeilen ohne eine Zeilennummer gestattet,
+    ist das nicht mehr so eindeutig:
+  <br><br>
+    <tt>
+      100 GOTO 220<br>
+      200 PRINT &quot;Das&quot;<br>
+      PRINT &quot;ist&quot;<br>
+      PRINT &quot;ein&quot;<br>
+      PRINT &quot;Beispiel.&quot;<br>
+      240 PRINT &quot;Alles klar?&quot;
+    </tt>
+  <br><br>
+    Zu welcher Zeile soll nun in Zeile 100 gesprungen werden?
+    Zur ersten Zeile ohne Zeilennummer oder zur Zeile 240?
+    Damit solche Ungereimtheiten nicht auftreten k&ouml;nnen,
+    gilt die Festlegung:
+    Als Sprungziele angegebene Zeilennummern m&uuml;ssen existieren.
+  <br><br>
+
+  <h2>INPUT</h2>
+    Bei der Eingabe von numerischen Werten bieten die beiden originalen
+    BASIC-Interpreter die M&ouml;glichkeit,
+    komplexe numerische Ausdr&uuml;cke einschlie&szlig;lich
+    Funktionsaufrufen anzugeben,
+    so wie sie auch im BASIC-Quelltext erlaubt sind.
+    Das erzeugte Maschinencodeprogramm enth&auml;lt jedoch diese
+    typische Interpreter-Funktionalit&auml;t nicht.
+    Aus diesem Grund k&ouml;nnen nur ganze Dezimalzahlen eingegeben werden.
+</body>
+</html>
+
