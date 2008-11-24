@@ -1,0 +1,187 @@
+<html>
+<body>
+  <h1>Optimieren des erzeugten Programmcodes</h1>
+    Wenn Sie ein BASIC-Programm entwickelt haben und es endg&uuml;ltig
+    compilieren m&ouml;chten,
+    um es als fertiges Maschinencodeprogramm verwenden zu k&ouml;nnen,
+    sollte der erzeugte Maschinencode optimiert sein.
+    Unter einem optimalen Maschinenode versteht man,
+    dass der Code so kurz bzw. so schnell,
+    d.h. eine so hohe Ausf&uuml;hrungsgeschwindigkeit besitzt,
+    wie nur m&ouml;glich ist.
+    Aufgrund der internen Arbeitsweise des Compilers,
+    der ja den Quelltext nach vorgegebenen Regeln &uuml;bersetzt,
+    und aufgrund der Tatsache,
+    dass der Compiler die Semantik des Programms nicht kennt,
+    kann ein Compiler nie so optimalen Maschinencode erzeugen
+    wie ein Mensch, der das Programm gleich in Maschinencode
+    bzw. Assembler entwickelt.
+    Trotzdem ist es der Anspruch eines Compilers,
+    optimierten, d.h. dem Optimum m&ouml;glichst nahe kommenden
+    Programmcode zu erzeugen.
+  <br><br>
+    Der JKCEMU-BASIC-Compiler erzeugt lokal optimierten Programmcode,
+    d.h., innerhalb einer Anweisung wird der Programmcode optimiert.
+    Eine globale Optimierung, d.h. &uuml;ber Anweisungsgrenzen hinweg,
+    erfolgt nicht.
+    Dennoch weist der erzeugte Programmcode einen hohen Optimierungsgrad auf.
+    Mit Hilfe der <a href="options.htm">Compiler-Optionen</a>
+    k&ouml;nnen Sie Einfluss auf die Optimierung nehmen
+    und so f&uuml;r noch besseren Programmcode sorgen.
+    Die Wirkung der Optionen auf den erzeugten Programmcode
+    k&ouml;nnen Sie selbst sehen,
+    indem Sie die Option <em>Erzeugten Assembler-Quelltext anzeigen</em>
+    einschalten.
+  <br><br>
+    Den schnellsten und meistens auch k&uuml;rzesten Programmcode erhalten Sie,
+    wenn in der Gruppe <em>Laufzeiteigenschaften</em> die Optionen
+    <ul>
+      <li><em>CTRL-C bricht Programm ab<em>,
+      <li><em>Grenzen des @-Variablen-Arrays pr&uuml;fen</em> und
+      <li><em>Stack bez&uuml;glich GOSUB/RETURN und FOR/NEXT pr&uuml;fen</em>
+    </ul>
+    ausgeschaltet und in der Gruppe <em>Sonstiges</em> die Optionen
+    <ul>
+      <li><em>FOR/NEXT als strukturierte Schleifen &uuml;bersetzen</em> und
+      <li><em>Relative Spr&uuml;nge bevorzugen</em>
+    </ul>
+    eingeschaltet werden.
+  <br><br>
+    Die letzten beiden genannten Optionen in der Gruppe <em>Sonstiges</em>
+    k&ouml;nnen aber in bestimmten Situationen zu fehlerhaftem Programmcode
+    f&uuml;hren.
+    Aus diesem Grund werden sie nachfolgend ausf&uuml;hrlich behandelt,
+    damit Sie wissen, in welchen Situationen die Optionen ausgeschaltet
+    werden m&uuml;ssen.
+  <br><br>
+
+  <h2>
+    <a name="structured_for_next">
+      FOR/NEXT als strukturierte Schleife &uuml;bersetzen
+    </a>
+  </h2>
+    BASIC ist keine strukturierte Programmiersprache.
+    Mit der GOTO-Anweisung kann man zu jeder beliebigen Stelle springen.
+    Auch die FOR/NEXT-Schleife ist nicht strukturiert.
+    Auf eine FOR-Anweisung wird immer das im Programmablauf und nicht das
+    im Quelltext folgende NEXT als Ende der Schleife angesehen.
+    Folgendes Beispiel demonstriert diesen Fall:
+  <br><br>
+    <tt>
+      100 E=0<br>
+      110 PRINT "1. SCHLEIFE"<br>
+      120 FOR I=1 TO 5<br>
+      130 PRINT I<br>
+      140 NEXT I<br>
+      150 IF E=1 GOTO 200<br>
+      160 E=1<br>
+      170 PRINT "2. SCHLEIFE"<br>
+      180 FOR I=5 TO 1 STEP -1<br>
+      190 GOTO 130<br>
+      200 PRINT "FERTIG"<br>
+    </tt>
+  <br>
+    Das kurze BASIC-Programm ist zwar unstrukturiert
+    und damit auch un&uuml;bersichtlich,
+    aber inhaltlich v&ouml;llig korrekt.
+    Die zweite FOR-Schleife in Zeile 180 benutzt einfach
+    Teile der ersten Schleife mit,
+    und zwar den Schleifeninhalt (PRINT-Anweisung in Zeile 130)
+    und das Schleifenende (NEXT-Anweisung in Zeile 140).
+    Die eine NEXT-Anweisung schlie&szlig;t somit zwei Schleifen ab.
+    Ja, das ist in BASIC erlaubt!
+    Folglich muss der Compiler die FOR-Schleife so &uuml;bersetzen,
+    dass alle relevanten Schleifeninformationen auf den Stack gelegt werden,
+    damit sie bei der NEXT-Anweisung zur Verf&uuml;gung stehen.
+    Konkret betrifft das vier Werte:
+  <br>
+    <ol>
+      <li>Adresse der Schleifenvariable<br>
+          Nun gut, man kann einwenden,
+          dass die Schleifenvariable bei der NEXT-Anweisung mit angegeben ist,
+          aber NEXT ist auch ohne Angabe einer Variable erlaubt.
+          Und schon ist nicht mehr sicher,
+          ob bei der im Programmablauf n&auml;chst folgenden NEXT-Anweisung,
+          die ja die FOR-Schleife abschlie&szlig;t,
+          eine Variable angegeben ist.
+          Und wenn ja, ist es auch die gleiche?<br>
+      <li>Schrittweite<br>
+      <li>Endwert<br>
+      <li>Adresse des Schleifeninhalts, damit die NEXT-Anweisung
+          an die richtige Stelle zur&uuml;ckspringen kann.<br>
+    </ol>
+  <br>
+    Mit vier Werten auf dem Stack wird ein relativ hoher Aufwand
+    f&uuml;r die Schleife selbst betrieben.
+    Insbesondere bei sehr kleinen Schleifen, wie z.B.
+  <br><br>
+    <tt>
+      100 REM Z1013-BILDSCHIRM MIT BASIC-MITTELN LOESCHEN<br>
+      110 FOR A=HEX(EC00) TO HEX(EFFF)<br>
+      120 POKE A,32<br>
+      130 NEXT A<br>
+    </tt>
+  <br>
+    ist die Ausf&uuml;hrungszeit,
+    die die Schleife f&uuml;r sich selbst ben&ouml;tigt,
+    unverh&auml;ltnism&auml;&szlig;ig gro&szlig; zu der Zeit,
+    die der Schleifeninhalt ben&ouml;tigt.
+    Eine Schleife l&auml;sst sich wesentlich effizienter &uuml;bersetzen,
+    wenn klar w&auml;re,
+    dass eine NEXT-Anweisung zu genau einer FOR-Anweisung geh&ouml;rt.
+    In dem Fall w&auml;ren die meisten, wenn nicht sogar alle notwendigen
+    Schleifeninformationen beim Compilieren bereits bekannt
+    und m&uuml;ssten nicht erst vom Stack gelesen werden.
+    Jeder strukturiert programmierende Softwareentwickler wird die
+    FOR/NEXT-Schleife auch so anwenden,
+    dass im Quelltext auf eine FOR-Anweisung auch eine NEXT-Anweisung folgt,
+    die zu genau dieser einen FOR-Anweisung geh&ouml;rt.
+    Und genau f&uuml;r diesen Fall gibt es die Option
+    <em>FOR/NEXT als strukturierte Schleifen &uuml;bersetzen</em>.
+    Ist diese Option eingeschaltet, werden nur noch die variablen Werte
+    (z.B. Schrittweite oder Endwert, falls diese in einer Variablen stehen)
+    auf den Stack gelegt.
+    Die konstanten Werte werden bei der NEXT-Anweisung fest kodiert
+    und beziehen sich auf die zugeh&ouml;rige und im Quelltext
+    <u>vorher</u> stehende FOR-Anweisung.
+  <br><br>
+    Zusammenfassung: Die Option erzeugt effizienteren Programmcode,
+    darf aber nur eingeschaltet werden,
+    wenn niemals mit GOTO aus einer FOR/NEXT-Schleife heraus
+    oder in so eine Schleife hinein gesprungen wird
+    und somit sichergestellt ist,
+    dass jede NEXT-Anweisung zu genau einer FOR-Anweisung geh&ouml;rt.
+    Erf&uuml;llt das BASIC-Programm diese Bedingungen nicht,
+    muss die Option ausgeschaltet werden,
+    da sonst ein sematisch anderer und somit inhaltlich falscher
+    Programmcode erzeugt wird!
+  <br><br>
+
+  <h2><a name="prefer_rel_jumps">Relative Spr&uuml;nge bevorzugen</a></h2>
+    Spr&uuml;nge zu bestimmten Anweisungen werden als absolute Spr&uuml;nge
+    mit drei Bytes &uuml;bersetzt,
+    da beim Compilieren die Sprungdistanz nicht bekannt ist.
+    Wird die Option <em>Relative Spr&uuml;nge bevorzugen</em> eingeschaltet,
+    &uuml;bersetzt der Compiler die Spr&uuml;nge,
+    die wahrscheinlich nur eine kurze Sprungweite haben,
+    mit relativen Sprungbefehlen, die nur zwei Bytes lang sind
+    und auch schneller ausgef&uuml;hrt werden als absolute Spr&uuml;ge.
+  <br><br>
+    Spr&uuml;nge mit einer wahrscheinlich kurzen Sprungweite
+    sind z.B. Spr&uuml;nge von einer IF-Anweisung zum ELSE-Zweig
+    bzw. zur n&auml;chsten Programmzeile,
+    falls die IF-Bedingung nicht erf&uuml;llt ist.
+  <br><br>
+    In seltenen F&auml;llen kann es vorkommen,
+    dass die Sprungdistanz f&uuml;r einen relativen Sprung zu gro&szlig; ist,
+    z.B. wenn sehr viele Anweisungen in einer Programmzeile
+    mit einer IF-Anweisung stehen.
+    In dem Fall meldet dann der Assembler,
+    der automatisch nach dem eigentlichen Compiler gestartet wird,
+    &quot;Relative Sprungdistanz zu gro&szlig;&quot;.
+    F&uuml;r Sie bedeutet das nur,
+    dass Sie die Option ausschalten m&uuml;ssen,
+    wenn die besagte Fehlermeldung erscheint.
+</body>
+</html>
+

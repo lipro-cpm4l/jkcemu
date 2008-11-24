@@ -1,0 +1,118 @@
+<html>
+<body>
+  <h1>Rechner</h1>
+    In JKCEMU ist ein Rechner integriert, der neben den &uuml;blichen
+    Taschenrechnerfunktionen auch das Rechnen mit Bin&auml;r-, Oktal-
+    und Hexadezimalzahlen sowie die Umrechnung zwischen
+    Unicode-Zeichen und seinem numerischen Wert unterst&uuml;tzt.
+    Neben den vier Grundrechenarten
+    (Operatoren <em>+</em>, <em>-</em>, <em>*</em>, <em>/</em>)
+    beherrscht der Rechner auch die Modulorechnung (Operator <em>%</em>),
+    bin&auml;res Inklusiv-ODER (Operator <em>|</em>),
+    bin&auml;res Exklusiv-ODER (Operator <em>^</em>)
+    und bin&auml;res UND (Operator <em>&</em>).
+    Des weiteren sind eine Vielzahl von Funktionen m&ouml;glich.
+  <br><br>
+    Geben Sie bitte in dem Feld <em>Formel/Ausdruck</em> ein Zeichen
+    oder einen numerischen Ausdruck ein
+    und dr&uuml;cken Sie die <em>Enter</em>-Taste.
+    Der Rechner berechnet den Ausdruck
+    und zeigt das Ergebnis im unteren Teil des Fensters an.
+    Die Gro&szlig;-/Kleinschreibung spielt dabei keine Rolle.
+  <br><br>
+
+  <h2>Basis der Zahlen</h2>
+    Hexadezimalzahlen k&ouml;nnen durch ein vorangestelltes <em>0x</em>
+    oder durch ein angeh&auml;ngtes <em>h</em> markiert werden.
+    Zahlen mit einem angeh&auml;ngten <em>o</em> oder
+    einem angeh&auml;ngten <em>q</em> werden als Oktalzahlen interpretiert.
+    Ein Dezimalpunkt markiert eine Zahl als dezimale Flie&szlig;kommazahl.
+    Ein Komma ist als Dezimalpunkt nicht zugelassen!
+    F&uuml;r alle anderen Zahlen gilt die Basis,
+    die unterhalb des Eingabefeldes ausgew&auml;hlt ist.
+  <br><br>
+
+  <h2>Optionen</h2>
+    In den Optionen k&ouml;nnen Sie angeben,
+    ob die Berechnung nach jedem Tastendruck oder erst nach der
+    <em>Enter</em>-Taste erfolgen soll.
+    Die zweite Variante ist vorallem auf langsameren Computern empfehlenswert.
+    Wenn Sie Ihre <a href="settings.htm">Einstellungen</a> als Profil speichern,
+    werden auch die Optionen des Rechners in dem Profil festgehalten.
+  <br><br>
+
+  <h2>Konstanten</h2>
+    In einem numerischen Ausdruck sind folgende Konstanten erlaubt:
+    <table border="1">
+      <tr><th>Konstante</th><th>Bedeutung</th></tr>
+      <tr><td>E</td><td nowrap>Eulersche Zahl 2.71828...</td></tr>
+      <tr><td>PI</td><td nowrap>Kreiszahl 3.1415926...</td></tr>
+    </table>
+  <br><br>
+
+  <h2>Funktionen</h2>
+    In einem numerischen Ausdruck k&ouml;nnen auch Funktionen vorkommen,
+    deren Argumente durch Komma getrennt in runden Klammern eingeschlossen
+    hinter den Fuktionsnamen geschrieben werden.
+    <table border="1">
+      <tr><th>Funktion</th><th>Bedeutung</th></tr>
+      <tr><td>ABS( <em>x</em> )</td><td>Absolute Zahl</td></tr>
+      <tr>
+	<td>ACOS( <em>x</em> )<br>ARCCOS( <em>x</em> )</td>
+	<td>Arkuskosinus</td>
+      </tr>
+      <tr>
+	<td>ASIN( <em>x</em> )<br>ASIN( <em>x</em> )</td>
+	<td>Arkussinus</td>
+      </tr>
+      <tr>
+	<td>ATAN( <em>x</em> )<br>ARCTAN( <em>x</em> )</td>
+	<td>Arkustangens</td></tr>
+      <tr><td>COS( <em>x</em> )</td><td>Kosinus</td></tr>
+      <tr><td>COSH( <em>x</em> )</td><td>Kosinus Hyperbolicus</td></tr>
+      <tr>
+	<td>EXP( <em>x</em> )</td>
+	<td>Exponentialfunktion <em>e</em> hoch <em>x</em></td></tr>
+      <tr>
+	<td>LOG( <em>x</em> )</td>
+	<td>Logarithmus zur Basis <em>e</em></td>
+      </tr>
+      <tr><td>LOG10( <em>x</em> )</td><td>Logarithmus zur Basis 10</td></tr>
+      <tr>
+	<td>MAX( <em>x1</em>, <em>x2</em> [, ...] )</td>
+	<td>
+	  Liefert das Argument mit dem gr&ouml;&szlig;ten Wert zur&uuml;ck
+	</td>
+      </tr>
+      <tr>
+	<td>MIN( <em>x1</em>, <em>x2</em> [, ...] )</td>
+	<td>Liefert das Argument mit dem kleinsten Wert zur&uuml;ck</td>
+      </tr>
+      <tr>
+	<td>POW( <em>x</em>, <em>y</em> )</td>
+	<td>Exponentialfunktion <em>x</em> hoch <em>y</em></td>
+      </tr>
+      <tr>
+	<td>RND( <em>x</em> )<br>RANDOM( <em>x</em> )</td>
+	<td>Zufallszahl im Bereich 0 bis x</td>
+      </tr>
+      <tr><td>SIN( <em>x</em> )</td><td>Sinus</td></tr>
+      <tr><td>SINH( <em>x</em> )</td><td>Sinus Hyperbolicus</td></tr>
+      <tr>
+	<td>SQR( <em>x</em> )<br>SQRT( <em>x</em> )</td>
+	<td>Quadratwurzel</td>
+      </tr>
+      <tr><td>TAN( <em>x</em> )</td><td>Tangens</td></tr>
+      <tr><td>TANH( <em>x</em> )</td><td>Tangens Hyperbolicus</td></tr>
+      <tr>
+	<td>TO_DEGREES( <em>x</em> )<br>TODEGREES( <em>x</em> )</td>
+	<td>Umrechnung eines Winkels vom Bogenma&szlig; in Grad</td>
+      </tr>
+      <tr>
+	<td>TO_RADIANS( <em>x</em> )<br>TORADIANS( <em>x</em> )</td>
+	<td>Umrechnung eines Winkels von Grad in das Bogenma&szlig;</td>
+      </tr>
+    </table>
+</body>
+</html>
+

@@ -1,0 +1,197 @@
+<html>
+<body>
+  <h1>Audio/Kassette</h1>
+
+  <h2>Vorbemerkungen</h2>
+    Die von JKCEMU emulierten Systeme verwenden im Original einen
+    Kassettenrecorder als Massenspeicher, d.h. die Daten werden in T&ouml;ne
+    umgewandelt und auf Band gespeichert.
+    Heute werden Dateien nicht mehr sequentiell auf einem Audio-Band,
+    sondern in einem Dateisystem gespeichert.
+    Deshalb geschieht das
+    <a href="loadsave.htm">Laden und Speichern von Programmen und Dateien</a>
+    im Emulator auf eine ganz andere Art und Weise.
+    Trotzdem ist JKCEMU in der Lage, den Anschluss f&uuml;r
+    den Kassettenrecorder zu emulieren.
+    Daf&uuml;r werden wahlweise das Audio-System oder Sound-Dateien verwendet.
+  <br><br>
+    Damit dieser Anschluss emuliert wird,
+    m&uuml;ssen Sie das Fenster &quot;JKCEMU Audio/Kassette&quot; &ouml;ffnen
+    und eine entsprechende Audio-Funktion aktivieren.
+    Klicken Sie dazu im Hauptfenster im Men&uuml; <em>Extra</em>,
+    auf den Eintrag <em>Audio/Kassette...</em>.
+    Die nachfolgende Beschreibung bezieht sich auf dieses Fenster.
+  <br><br>
+    Einige Programme, insbesondere Spielprogramme, geben auch T&ouml;ne
+    zur akustischen Untermalung aus.
+    Da die emulierten Computer daf&uuml;r keine separate Sound-Ausgabe
+    besitzen, werden diese T&ouml;ne auch &uuml;ber den
+    Kassettenrecorderanschluss ausgegeben.
+    Aus diesem Grund f&uuml;hrt JKCEMU die Funktionen zur Emulation des
+    Kassettenrecorderanschlusses unter dem Titel <em>Audio/Kassette</em>.
+  <br><br>
+
+
+  <h2>Audio-Funktionen</h2>
+
+  <h3><a name="sound_out">T&ouml;ne ausgeben</a></h3>
+    W&auml;hlen Sie diese Funktion, wenn Sie die T&ouml;ne h&ouml;ren
+    m&ouml;chten, die ein Programm zum Zwecke der Unterhaltung ausgibt
+    (z.B. akustische Untermalung bei Spielprogrammen).
+  <br><br>
+    Bei dieser Funktion wird die Ausf&uuml;hrungsgeschwindigkeit des Emulators
+    konstant gehalten, um einen gleichm&auml;&szlig;igen Programmablauf
+    zu gew&auml;hrleisten.
+    Eine ununterbrochene Versorgung des Audio-Systems mit Daten wird
+    nicht gew&auml;hrleistet, sodass kurze Unterbrechungen in der
+    Tonausgabe auftreten k&ouml;nnen.
+  <br><br>
+
+  <h3><a name="data_out">Daten am Audio-Ausgang ausgeben</a></h3>
+    W&auml;hlen Sie diese Funktion, wenn Sie Daten oder
+    Programme auf Magnettonband speichern oder an einen anderen Computer
+    mit Kassettenrecorderanschluss &uuml;bertragen m&ouml;chten.
+    Tipps &amp; Tricks dazu finden Sie unter
+    <a href="tips/savetotape.htm">Dateien auf Magnettonband speichern</a>.
+  <br><br>
+    JKCEMU versucht sicherzustellen, dass das Audio-System
+    ununterbrochen mit Daten versorgt wird.
+    Die Ausf&uuml;hrungsgeschwindigkeit des Emulators richtet sich
+    nach den Anforderungen des Audio-Systems und kann somit variieren.
+  <br><br>
+
+  <h3><a name="data_in">Daten vom Audio-Eingang lesen</a></h3>
+    Diese Funktion dient dazu, auf Magnettonband gespeicherte Dateien
+    und Programme oder Daten von einem anderen Computer direkt in den Emulator
+    zu Laden.
+    Tipps und Tricks zu diesem Thema finden Sie unter
+    <a href="tips/loadfromtape.htm">Auf Magnettonband gespeicherte
+    Dateien laden</a>.
+  <br><br>
+    JKCEMU &ouml;ffnet den Audio-Kanal in Stereo.
+    In den Optionen k&ouml;nnen Sie w&auml;hlen,
+    ob die Daten vom linken oder rechten Kanal gelesen werden.
+    Sollte sich der Audio-Kanal nur in Mono &ouml;ffnen lassen,
+    steht diese Umschaltm&ouml;glichkeit nat&uuml;rlich
+    nicht zur Verf&uuml;gung.
+  <br><br>
+
+  <h3><a name="file_out">Sound-Datei speichern</a></h3>
+    Bei dieser Funktion werden die Daten, die am emulierten Anschluss
+    f&uuml;r das Magnettonbandger&auml;t ausgegeben werden,
+    in eine Sound-Datei geschrieben.
+    Die Sound-Datei beginnt mit dem ersten Phasenwechsel
+    nach Aktivierung der Funktion und endet beim letzten Phasenwechsel
+    vor Deaktivierung, d.h,
+    die Datei enth&auml;lt weder an ihrem Anfang noch
+    an ihrem Ende eine Pause.
+  <br><br>
+    Die Funktion deaktiviert sich automatisch,
+    wenn etwa eine Sekunde lang kein Phasenwechsel
+    und damit kein Ton mehr ausgegeben wurde.
+  <br><br>
+    Die eigentliche Sound-Datei wird erst beim Deaktivieren
+    erzeugt, d.h., bis dahin merkt sich JKCEMU die Audio-Daten im Speicher.
+    Aus diesem Grund kann diese Funktion auch nicht &uuml;ber
+    einen l&auml;ngeren Zeitraum aktiviert bleiben.
+  <br><br>
+
+  <h3><a name="file_in">Sound-Datei lesen</a></h3>
+    Diese Funktion emuliert den Anschluss f&uuml;r
+    das Magnettonbandger&auml;t,
+    indem die Audio-Daten von einer Sound-Datei gelesen werden.
+    Ein Fortschrittsbalken visualisiert den Einleseprozess.
+  <br><br>
+    Einige der emulierten Computer fragen den Kassettenrecorderanschluss
+    im Polling-Verfahren ab.
+    Im Emulator wirkt sich das dann so aus,
+    dass die Datei immer nur dann gelesen wird,
+    wenn auch der emulierte Kassettenrecorderanschluss abgefragt wird.
+    Ist das gerade nicht der Fall, bleibt der Fortschrittsbalken stehen.
+  <br><br>
+
+
+  <h2>Optionen</h2>
+    Im Bereich Optionen k&ouml;nnen Sie die Eigenschaften der jeweiligen
+    Audio-Funktion beeinflussen.
+    Je nach ausgew&auml;hlter Funktion stehen nur die relevanten
+    Optionen zur Verf&uuml;gung.
+  <br><br>
+
+  <h3>Abtastrate</h3>
+    Normalerweise sollten Sie das Auswahlfeld auf &quot;Standard&quot;
+    stehen lassen.
+    Sie k&ouml;nnen jedoch die verschiedenen Abtastraten einzeln ausprobieren,
+    wenn Sie mit den Audio-Funktionen Probleme haben sollten.
+  <br><br>
+
+  <h3>Aktiver Kanal</h3>
+    Wenn Sie Daten von einer Stereo-Audio-Quelle einlesen
+    (egal ob vom Audio-System oder von einer Sound-Datei),
+    bestimmen Sie hiermit, ob die Daten vom linken oder vom rechten Kanal
+    gelesen werden.
+  <br><br>
+    Den aktiven Kanal k&ouml;nnen Sie auch dann beliebig umschalten,
+    wenn die entsprechende Audio-Funktion bereits aktiviert wurde.
+  <br><br>
+
+  <h3>Mith&ouml;ren</h3>
+    Wenn Sie diese Option einschalten,
+    h&ouml;ren Sie beim Speichern oder Lesen einer Sound-Datei
+    diese mit.
+  <br><br>
+    Das Speichern oder Lesen einer Sound-Datei kann den Emulator
+    bremsen.
+    Das erkennen Sie daran, dass die emulierte Taktfrequenz unter der
+    eingestellten Geschwindigkeit liegt.
+    In diesem Fall h&ouml;ren Sie kurze Unterbrechungen
+    in der Tonausgabe.
+    Das hat jedoch keinen qualitativen Einfluss auf den Datenfluss zwischen
+    Emulator und Sound-Datei.
+  <br><br>
+
+
+  <h2>Hinweise</h2>
+
+  <h3><a name="volume">Lautst&auml;rke</a></h3>
+    Die Laust&auml;rkeregelung erfolgt &uuml;ber die entsprechende
+    Bedienungssoftware des Betriebssystems.
+    Auf Ihrem Computer sollte ein Programm mit dem Namen
+    &quot;Lautst&auml;rkeregelung&quot; oder ein Mixer installiert sein.
+    Starten Sie dieses Programm und regeln Sie damit die Lautst&auml;rke.
+  <br><br>
+
+  <h3>Sonstiges</h3>
+    <ul>
+      <li>
+        Sie k&ouml;nnen die Audio-Funktionen nur dann aktivieren,
+        wenn im Bereich <a href="settings.htm">Einstellungen</a>
+        die Geschwindigkeit des Emulators auf einen festen Wert gesetzt ist.
+        Dieser Wert dient als Zeitbasis f&uuml;r die Berechnung
+        der Audio-Daten.
+      <li>
+        Wenn bereits eine andere Applikation das Audio-System verwendet,
+        kann mitunter kein weiterer Audio-Kanal ge&ouml;ffnet werden.
+        Schlie&szlig;en Sie in diesem Fall die andere Applikation.
+      <li>
+        Sollte die Rechenleistung nicht ausreichen,
+        um die Audio-Daten in Echtzeit zu erzeugen oder zu verarbeiten,
+        wird eine Daten&uuml;bertragung &uuml;ber das Audio-System
+        fehlschlagen.
+        In diesem Fall sind nur Sound-Dateien Erfolg versprechend.
+        Verwenden Sie bitte f&uuml;r die Aufnahme und Wiedergabe
+        dieser Dateien die entsprechenden Werkzeuge des Betriebssystems.
+        Bei Sound-Dateien ist immer die eingestellte und nicht die gerade
+        tats&auml;chlich emulierte Taktfrequenz von Bedeutung,
+        d.h., JKCEMU garantiert in jedem Fall die vollst&auml;ndige
+        Erzeugung beziehungsweise Verarbeitung der Sound-Dateien.
+      <li>
+        Sie sollten die Audio-Funktionen wieder deaktivieren,
+        wenn Sie diese nicht mehr ben&ouml;tigen oder wenn Sie Probleme
+        mit der Performance haben, denn die Nutzung der Audio-Funktionen
+        erfordert zus&auml;tzliche Rechenleistung,
+        die Sie m&ouml;glicherweise anderweitig gut gebrauchen k&ouml;nnten.
+    </ul>
+</body>
+</html>
+
