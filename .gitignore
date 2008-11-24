@@ -1,0 +1,11 @@
+# Ant build directory #
+build
+
+# Javadoc directory #
+javadoc
+
+# Class Files #
+*.class
+
+# Package Files #
+*.jar
