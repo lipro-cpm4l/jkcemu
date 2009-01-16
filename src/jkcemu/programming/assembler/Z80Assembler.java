@@ -1541,7 +1541,7 @@ public class Z80Assembler extends PrgThread
       else if( a2.isIndirectAddr() ) {
 	putCode( 0xED );
 	putCode( 0x7B );
-	putWord( getWord( a2 ) );
+	putWord( getWord( a2.getIndirectText() ) );
       } else {
 	putCode( 0x31 );
 	putWord( getWord( a2 ) );

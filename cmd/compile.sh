@@ -17,6 +17,8 @@ rm -f $SRC_DIR/jkcemu/tools/calculator/*.class
 rm -f $SRC_DIR/jkcemu/tools/hexdiff/*.class
 rm -f $SRC_DIR/jkcemu/tools/hexeditor/*.class
 rm -f $SRC_DIR/jkcemu/ac1/*.class
+rm -f $SRC_DIR/jkcemu/bcs3/*.class
+rm -f $SRC_DIR/jkcemu/kc85/*.class
 rm -f $SRC_DIR/jkcemu/z1013/*.class
 rm -f $SRC_DIR/jkcemu/z9001/*.class
 rm -f $SRC_DIR/z80emu/*.class
@@ -37,6 +39,8 @@ javac $* -classpath $SRC_DIR \
   $SRC_DIR/jkcemu/tools/hexdiff/*.java \
   $SRC_DIR/jkcemu/tools/hexeditor/*.java \
   $SRC_DIR/jkcemu/ac1/*.java \
+  $SRC_DIR/jkcemu/bcs3/*.java \
+  $SRC_DIR/jkcemu/kc85/*.java \
   $SRC_DIR/jkcemu/z1013/*.java \
   $SRC_DIR/jkcemu/z9001/*.java \
   $SRC_DIR/z80emu/*.java

@@ -26,6 +26,48 @@ public class EmuUtil
 							fmt2FileFilter = null;
 
 
+  public static boolean applyWindowSettings(
+					Properties props,
+					BasicFrm   frm,
+					boolean    resizable )
+  {
+    boolean rv = false;
+    if( (frm != null) && (props != null) ) {
+      String prefix = frm.getSettingsPrefix();
+
+      int x = EmuUtil.parseInt(
+			props.getProperty( prefix + ".window.x" ),
+			-1,
+			-1 );
+      int y = EmuUtil.parseInt(
+			props.getProperty( prefix + ".window.y" ),
+			-1,
+			-1 );
+      if( (x >= 0) && (y >= 0) ) {
+	if( resizable ) {
+	  int w = EmuUtil.parseInt(
+			props.getProperty( prefix + ".window.width" ),
+			-1,
+			-1 );
+	  int h = EmuUtil.parseInt(
+			props.getProperty( prefix + ".window.height" ),
+			-1,
+			-1 );
+
+	  if( (w > 0) && (h > 0) ) {
+	    frm.setBounds( x, y, w, h );
+	    rv = true;
+	  }
+	} else {
+	  frm.setLocation( x, y );
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
+
   public static File createDir( Component owner, File parent )
   {
     File rvFile = null;
@@ -174,6 +216,44 @@ public class EmuUtil
         if( lf != null )
           rv = className.equals( lf.getClass().getName() );
       }
+    }
+    return rv;
+  }
+
+
+  public static String extractText(
+				byte[] data,
+				int    offs,
+				int    nRows,
+				int    nCols,
+				int    colDist )
+  {
+    String rv = null;
+    if( data != null ) {
+      StringBuilder buf = new StringBuilder( nRows + (nCols + 1) );
+      for( int i = 0; i < nRows; i++ ) {
+	int rowIdx = offs + (i * colDist);
+	int nSpaces = 0;
+	for( int k = 0; k < nCols; k++ ) {
+	  int b = 0;
+	  int p = rowIdx + k;
+	  if( (p >= 0) && (p < data.length) ) {
+	    b = (int) (data[ p ] & 0xFF);
+	  }
+	  if( (b == 0) || b == 0x20 ) {
+	    nSpaces++;
+	  }
+	  else if( (b > 0x20) && (b < 0x7F) ) {
+	    while( nSpaces > 0 ) {
+	      buf.append( (char) '\u0020' );
+	      --nSpaces;
+	    }
+	    buf.append( (char) b );
+	  }
+	}
+	buf.append( (char) '\n' );
+      }
+      rv = buf.toString();
     }
     return rv;
   }
@@ -352,6 +432,14 @@ public class EmuUtil
   }
 
 
+  public static boolean isHexChar( int ch )
+  {
+    return ((ch >= '0') && (ch <= '9'))
+		|| ((ch >= 'A') && (ch <= 'F'))
+		|| ((ch >= 'a') && (ch <= 'f'));
+  }
+
+
   public static boolean isNativeFileDialogSelected()
   {
     return isEqualIgnoreCase(
@@ -428,6 +516,31 @@ public class EmuUtil
 	nTotal += nRead;
     }
     return nTotal;
+  }
+
+
+  public static ExtFile readExtFont( Window owner, Properties props )
+  {
+    ExtFile extFont = null;
+    if( props != null ) {
+      String  fileName = props.getProperty( "jkcemu.font.file.name" );
+      if( fileName != null ) {
+	if( fileName.length() > 0 ) {
+	  try {
+	    extFont = new ExtFile( new File( fileName ) );
+	  }
+	  catch( IOException ex ) {
+	    String msg = ex.getMessage();
+	    BasicDlg.showErrorDlg(
+		owner,
+		String.format(
+			"Zeichensatz kann nicht geladen werden\n%s",
+			msg != null ? msg : "" ) );
+	  }
+	}
+      }
+    }
+    return extFont;
   }
 
 
@@ -694,8 +807,8 @@ public class EmuUtil
       errWriter = new PrintWriter( new FileWriter( errFile ) );
 
       errWriter.println( "Bitte senden Sie diese Datei an"
-						+ " jkcemu@jens-mueller.org" );
-      errWriter.println( "Please send this file to jkcemu@jens-mueller.org" );
+						+ " info@jens-mueller.org" );
+      errWriter.println( "Please send this file to info@jens-mueller.org" );
       errWriter.println();
       errWriter.println( "--- Program ---" );
       errWriter.write( Main.getVersion() );
@@ -749,7 +862,10 @@ public class EmuUtil
 	  + errFile.getPath() + "\' geschrieben.\n"
 	  + "Bitte senden Sie diese Textdatei einschlie\u00DFlich einer\n"
 	  + "kurzen Beschreibung Ihrer letzten Aktionen per E-Mail an:\n"
-	  + "jkcemu@jens-mueller.org\n\nVielen Dank!",
+	  + "info@jens-mueller.org\n\n"
+	  + "Schreiben Sie bitte in den Betreff der E-Mail unbedingt\n"
+	  + "das Wort JKCEMU hinein!\n\n"
+	  + "Vielen Dank!",
 	"Applikationsfehler" );
 
     } else {
@@ -759,7 +875,10 @@ public class EmuUtil
 	"Es ist ein interner Applikationsfehler aufgetreten.\n"
 	  + "Bitte melden Sie diesen Fehler einschlie\u00DFlich einer\n"
 	  + "kurzen Beschreibung Ihrer letzten Aktionen per E-Mail an:\n"
-	  + "jkcemu@jens-mueller.org\n\nVielen Dank!",
+	  + "info@jens-mueller.org\n\n"
+	  + "Schreiben Sie bitte in den Betreff der E-Mail unbedingt\n"
+	  + "das Wort JKCEMU hinein!\n\n"
+	  + "Vielen Dank!",
 	"Applikationsfehler" );
     }
   }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -498,6 +498,49 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     updFields();
 
 
+    /*
+     * Bei einer BIN-Datei versuchen,
+     * die Ladeadressen aus dem Dateinamen zu ermitteln
+     */
+    if( (file != null) && (fileFmt != null) ) {
+      if( fileFmt.equals( FileInfo.BIN ) ) {
+	String fileName = file.getName();
+	if( fileName != null ) {
+	  int len = fileName.length();
+	  int pos = fileName.indexOf( '_' );
+	  while( (pos >= 0) && ((pos + 4) < len) ) {
+	    if( EmuUtil.isHexChar( fileName.charAt( pos + 1 ) )
+		&& EmuUtil.isHexChar( fileName.charAt( pos + 2 ) )
+		&& EmuUtil.isHexChar( fileName.charAt( pos + 3 ) )
+		&& EmuUtil.isHexChar( fileName.charAt( pos + 4 ) ) )
+	    {
+	      this.fldLoadBegAddr.setText(
+				fileName.substring( pos + 1, pos + 5 ) );
+	      if( (pos + 9) < len ) {
+		char ch = fileName.charAt( pos + 5 );
+		if( ((ch == '_') || (ch == '-'))
+		    && EmuUtil.isHexChar( fileName.charAt( pos + 6 ) )
+		    && EmuUtil.isHexChar( fileName.charAt( pos + 7 ) )
+		    && EmuUtil.isHexChar( fileName.charAt( pos + 8 ) )
+		    && EmuUtil.isHexChar( fileName.charAt( pos + 9 ) ) )
+		{
+		  this.fldLoadEndAddr.setText(
+				fileName.substring( pos + 6, pos + 10 ) );
+		}
+	      }
+	      break;
+	    }
+	    if( pos + 5 < len ) {
+	      pos = fileName.indexOf( '_', pos + 1 );
+	    } else {
+	      pos = -1;
+	    }
+	  }
+	}
+      }
+    }
+
+
     // Fenstergroesse und -position
     pack();
     setParentCentered();
@@ -617,14 +660,6 @@ public class LoadDlg extends BasicDlg implements DocumentListener
   }
 
 
-  private static boolean isHexChar( int ch )
-  {
-    return ((ch >= '0') && (ch <= '9'))
-	   || ((ch >= 'A') && (ch <= 'Z'))
-	   || ((ch >= 'a') && (ch <= 'z'));
-  }
-
-
   private static int parseHex( InputStream in, int cnt ) throws IOException
   {
     int value = 0;
@@ -651,7 +686,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
    * als byte-Array zurueck.
    * Um bei einer sehr grossen Datei einen Speicherueberlauf zu verhindern,
    * werden nur soviele Bytes gelesen,
-   * dass sich bis zu 64 kByte Nutzbytes extrahieren lassen.
+   * dass sich bis zu 64 KByte Nutzbytes extrahieren lassen.
    */
   private static byte[] readFile( Component owner, File file )
   {

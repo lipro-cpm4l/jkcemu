@@ -78,6 +78,11 @@ public class Main
       if( props != null ) {
 	screenFrm.getEmuThread().applySettings( props );
 	applyProfileToFrames( file, props, true, null );
+	EmuUtil.applyWindowSettings(
+				props,
+				screenFrm,
+				screenFrm.isResizable() );
+	SwingUtilities.updateComponentTreeUI( screenFrm );
 	done = true;
       }
     }
@@ -274,7 +279,7 @@ public class Main
 
   public static String getVersion()
   {
-    return "JKCEMU Version 0.1";
+    return "JKCEMU Version 0.2";
   }
 
 

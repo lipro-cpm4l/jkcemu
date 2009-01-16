@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -41,6 +41,37 @@ public class AudioDataQueue extends InputStream
     this.pos       = 0;
     this.len       = 0;
     this.errorText = null;
+  }
+
+
+  public void addOpposedPhase()
+  {
+    if( (this.phaseData != null) && (this.size > 0) ) {
+      int v = 0;
+      int p = this.size - 1;
+      while( p >= 0 ) {
+	if( v == 0 ) {
+	  v = this.phaseData[ p ];
+	} else {
+	  int m = this.phaseData[ p ];
+	  if( ((v < 0) && (m >= 0))
+	      || ((v > 0) && (m <= 0)) )
+	  {
+	    break;
+	  }
+	}
+	--p;
+      }
+      int e = this.size;
+      while( p < e ) {
+	if( ensureSize() ) {
+	  this.phaseData[ this.size ] = (byte) -this.phaseData[ p++ ];
+	  this.size++;
+	} else {
+	  break;
+	}
+      }
+    }
   }
 
 

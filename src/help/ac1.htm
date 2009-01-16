@@ -4,20 +4,34 @@
 
   <h2>Emulierte Hardware</h2>
     <ul>
-      <li>4 kByte ROM f&uuml;r Monitorprogramm und Mini-BASIC
-      <li>60 kByte RAM inkl. 2 kByte Bildwiederholspeicher
+      <li>4 KByte ROM f&uuml;r Monitorprogramm und Mini-BASIC
+      <li>2 KByte Bildwiederholspeicher
+      <li>2 KByte SRAM
+      <li>64 KByte DRAM
       <li>64x32 Zeichen Bildschirmgr&ouml;&szlig;e
-	  mit erweitertem Zeichengenerator
+      <li>CTC mit ein Verbindung Ausgang Kanal 0 auf Eingang Kanal 1
       <li>Kassettenrecorderanschluss
+      <li>Eine RAM-Floppy nach Zeitschrift <em>Mikroprozessortechnik</em>
+          Heft 3/1988 an der IO-Basis-Adresse E0h (RAM-Floppy A)
     </ul>
   <br><br>
 
   <h2>Im ROM enthaltene Software</h2>
     <ul>
-      <li>Monitorprogramm Version 3.1
+      <li>Je nach Einstellung Monitorprogramm Version 3.1
+	  oder SCCH-Monitor 10/88
       <li>Mini-BASIC Version 2.1
+	  (nur in Verbindung mit Monitorprogramm Version 3.1)
     </ul>
   <br><br>
+
+  <h2>Hinweise zum DRAM</h2>
+    Es werden 64 KByte DRAM emuliert.
+    Diese befinden sich physisch in einem globalen RAM-Bereich,
+    der von allen emulierten Systemen gemeinsam genutzt wird.
+    Die unteren 8 KByte liegen parallel zu ROM, Bildwiederholspeicher
+    und SRAM und k&ouml;nnen &uuml;ber die IO-Ports 1C bis 1F
+    ein- und wieder ausgeblendet werden.
 </body>
 </html>
 

@@ -109,6 +109,26 @@ public class ScreenFld extends JComponent
   }
 
 
+  public void updPreferredSize()
+  {
+    int margin = this.margin;
+    if( margin < 0 ) {
+      margin = 0;
+    }
+    setPreferredSize( new Dimension(
+	(2 * margin) + (this.emuSys.getScreenBaseWidth() * this.screenScale),
+	(2 * margin) + (this.emuSys.getScreenBaseHeight()
+						* this.screenScale) ) );
+
+    Container parent = getParent();
+    if( parent != null ) {
+      parent.invalidate();
+    } else {
+      invalidate();
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   public void paint( Graphics g )
@@ -173,61 +193,41 @@ public class ScreenFld extends JComponent
     }
 
     /*
-     * Aus Greunden der Performance werden nebeneinander liegende
+     * Aus Greunden der Performance werden untereinander liegende
      * Punkte zusammengefasst und als Linie gezeichnet.
      */
-    for( int y = 0; y < hBase; y++ ) {
+    for( int x = 0; x < wBase; x++ ) {
       int lastColorIdx = -1;
-      int xColorBeg    = -1;
-      for( int x = 0; x < wBase; x++ ) {
+      int yColorBeg    = -1;
+      for( int y = 0; y < hBase; y++ ) {
 	int curColorIdx = this.emuSys.getColorIndex( x, y );
 	if( curColorIdx != lastColorIdx ) {
 	  if( (lastColorIdx >= 0)
 	      && (lastColorIdx != bgColorIdx)
-	      && (xColorBeg >= 0) )
+	      && (yColorBeg >= 0) )
 	  {
 	    g.setColor( this.emuSys.getColor( lastColorIdx ) );
 	    g.fillRect(
-                        xColorBeg * this.screenScale,
-                        y * this.screenScale,
-                        (x - xColorBeg) * this.screenScale,
-                        this.screenScale );
+		x * this.screenScale,
+		yColorBeg * this.screenScale,
+		this.screenScale,
+		(y - yColorBeg) * this.screenScale );
 	  }
-	  xColorBeg    = x;
+	  yColorBeg    = y;
 	  lastColorIdx = curColorIdx;
 	}
       }
       if( (lastColorIdx >= 0)
 	  && (lastColorIdx != bgColorIdx)
-	  && (xColorBeg >= 0) )
+	  && (yColorBeg >= 0) )
       {
 	g.setColor( this.emuSys.getColor( lastColorIdx ) );
 	g.fillRect(
-                xColorBeg * this.screenScale,
-                y * this.screenScale,
-                (wBase - xColorBeg) * this.screenScale,
-                this.screenScale );
+		x * this.screenScale,
+		yColorBeg * this.screenScale,
+		this.screenScale,
+		(hBase - yColorBeg) * this.screenScale );
       }
-    }
-  }
-
-
-  private void updPreferredSize()
-  {
-    int margin = this.margin;
-    if( margin < 0 ) {
-      margin = 0;
-    }
-    setPreferredSize( new Dimension(
-	(2 * margin) + (this.emuSys.getScreenBaseWidth() * this.screenScale),
-	(2 * margin) + (this.emuSys.getScreenBaseHeight()
-						* this.screenScale) ) );
-
-    Container parent = getParent();
-    if( parent != null ) {
-      parent.invalidate();
-    } else {
-      invalidate();
     }
   }
 }

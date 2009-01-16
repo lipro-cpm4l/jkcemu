@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.z1013;
 import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.Properties;
+import jkcemu.Main;
 import jkcemu.base.*;
 import z80emu.*;
 
@@ -21,25 +22,33 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   public static final int MEM_SCREEN = 0xEC00;
   public static final int MEM_OS     = 0xF000;
 
-  private static byte[] mon202      = null;
-  private static byte[] monA2       = null;
-  private static byte[] monRB_K7659 = null;
-  private static byte[] monRB_S6009 = null;
-  private static byte[] monJM_1992  = null;
-  private static byte[] fontBytes   = null;
-  private static byte[] ramVideo    = null;
+  private static byte[] mon202         = null;
+  private static byte[] monA2          = null;
+  private static byte[] monRB_K7659    = null;
+  private static byte[] monRB_S6009    = null;
+  private static byte[] monJM_1992     = null;
+  private static byte[] z1013FontBytes = null;
+  private static byte[] altFontBytes   = null;
+  private static byte[] ramVideo       = new byte[ 0x0400 ];
 
   private Z80PIO   pio;
   private Keyboard keyboard;
   private byte[]   romOS;
+  private boolean  romDisabled;
+  private boolean  altFontEnabled;
+  private boolean  mode4MHz;
+  private boolean  mode64x16;
   private boolean  ram16k;
 
 
   public Z1013( EmuThread emuThread, Properties props )
   {
     super( emuThread );
-    if( fontBytes == null ) {
-      fontBytes = readResource( "/rom/z1013/z1013font.bin" );
+    if( z1013FontBytes == null ) {
+      z1013FontBytes = readResource( "/rom/z1013/z1013font.bin" );
+    }
+    if( altFontBytes == null ) {
+      altFontBytes = readResource( "/rom/z1013/altfont.bin" );
     }
     String monText = EmuUtil.getProperty( props, "jkcemu.z1013.monitor" );
     if( monText.equals( "A.2" ) ) {
@@ -68,20 +77,21 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       }
       this.romOS = mon202;
     }
-    this.ram16k = EmuUtil.getProperty(
+    this.romDisabled    = false;
+    this.altFontEnabled = false;
+    this.mode4MHz       = false;
+    this.mode64x16      = false;
+    this.ram16k         = EmuUtil.getProperty(
 				props,
 				"jkcemu.z1013.ram.kbyte" ).equals( "16" );
-
-    if( ramVideo == null ) {
-      ramVideo = new byte[ 0x0400 ];
-      fillRandom( ramVideo );
-    }
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     this.pio   = new Z80PIO( cpu, null );
     this.keyboard = new Keyboard( this.pio );
     this.keyboard.applySettings( props );
     cpu.addAddressListener( this );
+
+    reset( EmuThread.ResetLevel.POWER_ON );
   }
 
 
@@ -110,7 +120,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public String extractScreenText()
   {
-    return extractScreenText( 0xEC00, 32, 32, 32 );
+    return extractMemText( 0xEC00, 32, 32, 32 );
   }
 
 
@@ -122,12 +132,21 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public int getColorIndex( int x, int y )
   {
-    int rv = 0;
+    int    rv        = BLACK;
+    byte[] fontBytes = this.emuThread.getExtFontBytes();
+    if( fontBytes == null ) {
+      if( this.altFontEnabled ) {
+	fontBytes = altFontBytes;
+      } else {
+	fontBytes = z1013FontBytes;
+      }
+    }
     if( fontBytes != null ) {
       int row = y / 8;
       int col = x / 8;
-      int idx = (this.emuThread.getMemByte( 0xEC00 + (row * 32) + col ) * 8)
-			+ (y % 8);
+      int idx = (this.emuThread.getMemByte(
+			0xEC00 + (row * (this.mode64x16 ? 64 : 32)) + col )
+							* 8) + (y % 8);
       if( (idx >= 0) && (idx < fontBytes.length ) ) {
 	int m = 0x80;
 	int n = x % 8;
@@ -135,7 +154,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 	  m >>= n;
 	}
 	if( (fontBytes[ idx ] & m) != 0 ) {
-	  rv = 1;
+	  rv = WHITE;
 	}
       }
     }
@@ -171,7 +190,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
     int     rv   = 0xFF;
     boolean done = false;
-    if( this.romOS != null ) {
+    if( !this.romDisabled && (this.romOS != null) ) {
       if( (addr >= MEM_OS) && (addr < MEM_OS + this.romOS.length) ) {
 	rv   = (int) this.romOS[ addr - MEM_OS ] & 0xFF;
 	done = true;
@@ -188,7 +207,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public int getResetStartAddress()
+  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
     return MEM_OS;
   }
@@ -196,13 +215,13 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public int getScreenBaseHeight()
   {
-    return 256;
+    return this.mode64x16 ? 128 : 256;
   }
 
 
   public int getScreenBaseWidth()
   {
-    return 256;
+    return this.mode64x16 ? 512 : 256;
   }
 
 
@@ -212,27 +231,49 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public boolean keyEvent( KeyEvent e )
+  public static String getTinyBasicProgram( Z80MemView memory )
   {
-    boolean rv = false;
-    switch( e.getID() ) {
-      case KeyEvent.KEY_PRESSED:
-	if( this.keyboard.setKeyCode( e.getKeyCode() ) ) {
-	  rv = true;
-	}
-	break;
+    return SourceUtil.getTinyBasicProgram(
+				memory,
+				0x1152,
+				memory.getMemWord( 0x101F ) + 1 );
+  }
 
-      case KeyEvent.KEY_RELEASED:
-	this.keyboard.setKeyReleased();
-	rv = true;
-	break;
 
-      case KeyEvent.KEY_TYPED:
-	this.keyboard.setKeyChar( e.getKeyChar() );
-	rv = true;
-	break;
+  public boolean keyPressed( KeyEvent e )
+  {
+    return this.keyboard.setKeyCode( e.getKeyCode() );
+  }
+
+
+  public void keyReleased( int keyCode )
+  {
+    this.keyboard.setKeyReleased();
+  }
+
+
+  public void keyTyped( char ch )
+  {
+    this.keyboard.setKeyChar( ch );
+  }
+
+
+  public void openBasicProgram()
+  {
+    int begAddr = askKCBasicBegAddr();
+    if( begAddr >= 0 )
+      SourceUtil.openKCBasicProgram( this.screenFrm, begAddr );
+  }
+
+
+  public void openTinyBasicProgram()
+  {
+    String text = getTinyBasicProgram( this.emuThread );
+    if( text != null ) {
+      this.screenFrm.openText( text );
+    } else {
+      showNoTinyBasic();
     }
-    return rv;
   }
 
 
@@ -240,6 +281,27 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   {
     int value = 0x0F;			// wird von unbelegten Ports gelesen
 
+    if( (port & 0xFF) == 4 ) {
+      value = 0;
+      if( this.romDisabled ) {
+	value |= 0x10;
+      }
+      if( this.altFontEnabled ) {
+	value |= 0x20;
+      }
+      if( this.mode4MHz ) {
+	value |= 0x40;
+      }
+      if( this.mode64x16 ) {
+	value |= 0x80;
+      }
+    }
+    else if( (port & 0xF8) == 0x98 ) {
+      value = this.emuThread.getRAMFloppyA().readByte( port & 0x07 );
+    }
+    else if( (port & 0xF8) == 0x58 ) {
+      value = this.emuThread.getRAMFloppyB().readByte( port & 0x07 );
+    }
     if( (port & 0x1C) == 0 ) {		// IOSEL0 -> PIO, ab A5 ignorieren
       switch( port & 0x03 ) {
 	case 0:
@@ -268,7 +330,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   /*
    * Ein RESET ist erforderlich, wenn sich das emulierte System oder
    * das Monitorprogramm aendert oder wenn der RAM
-   * von 64 auf 16 kByte reduziert wird.
+   * von 64 auf 16 KByte reduziert wird.
    */
   public boolean requiresReset( Properties props )
   {
@@ -299,11 +361,51 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public void reset( boolean powerOn )
+  public void reset( EmuThread.ResetLevel resetLevel )
   {
-    this.pio.reset( powerOn );
-    if( powerOn )
+    this.romDisabled    = false;
+    this.altFontEnabled = false;
+    this.mode64x16      = false;
+    if( this.mode4MHz ) {
+      this.emuThread.updCPUSpeed( Main.getProperties(), getSystemName() );
+      this.mode4MHz = false;
+    }
+    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       fillRandom( ramVideo );
+    }
+    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
+	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
+    {
+      this.pio.reset( true );
+    } else {
+      this.pio.reset( false );
+    }
+    this.keyboard.reset();
+  }
+
+
+  public void saveBasicProgram()
+  {
+    int begAddr = askKCBasicBegAddr();
+    if( begAddr >= 0 )
+      SourceUtil.saveKCBasicProgram( this.screenFrm, begAddr );
+  }
+
+
+  public void saveTinyBasicProgram()
+  {
+    int endAddr = this.emuThread.getMemWord( 0x101F ) + 1;
+    if( endAddr > 0x1152 ) {
+      (new SaveDlg(
+		this.screenFrm,
+		0x1000,
+		endAddr,
+		'b',
+		false,          // kein KC-BASIC
+		"Z1013-TinyBASIC-Programm speichern" )).setVisible( true );
+    } else {
+      showNoTinyBasic();
+    }
   }
 
 
@@ -313,7 +415,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
     boolean rv   = false;
     boolean done = false;
-    if( this.romOS != null ) {
+    if( !this.romDisabled && (this.romOS != null) ) {
       if( (addr >= MEM_OS) && (addr < MEM_OS + this.romOS.length) )
 	done = true;
     }
@@ -332,37 +434,87 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
+  public boolean supportsRAMFloppyA()
+  {
+    return true;
+  }
+
+
+  public boolean supportsRAMFloppyB()
+  {
+    return true;
+  }
+
+
   public void writeIOByte( int port, int value )
   {
-    switch( port & 0x1C ) {		// Adressleitungen ab A5 ignorieren
-      case 0:				// IOSEL0 -> PIO
-	switch( port & 0x03 ) {
-	  case 0:
-	    this.pio.writePortA( value );
-	    break;
+    if( (port & 0xFF) == 4 ) {
+      this.romDisabled    = ((value & 0x10) != 0);
+      this.altFontEnabled = ((value & 0x20) != 0);
+      this.mode64x16      = ((value & 0x80) != 0);
 
-	  case 1:
-	    this.pio.writeControlA( value );
-	    break;
-
-	  case 2:
-	    this.pio.writePortB( value );
-	    this.keyboard.putRowValuesToPIO();
-	    this.emuThread.updAudioOutPhase(
-			(this.pio.fetchOutValuePortB( false ) & 0x80) != 0 );
-	    break;
-
-	  case 3:
-	    this.pio.writeControlB( value );
-	    break;
+      Z80CPU cpu = this.emuThread.getZ80CPU();
+      if( (value & 0x40) != 0 ) {
+	if( !this.mode4MHz && (cpu.getMaxSpeedKHz() == 2000) ) {
+	  cpu.setMaxSpeedKHz( 4000 );
+	  this.mode4MHz = true;
 	}
-	break;
+      } else {
+	if( this.mode4MHz && (cpu.getMaxSpeedKHz() == 4000) ) {
+	  cpu.setMaxSpeedKHz( 2000 );
+	}
+	this.mode4MHz = false;
+      }
+      this.screenFrm.setScreenDirty( true );
+      this.screenFrm.fireScreenSizeChanged();
+    }
+    else if( (port & 0xF8) == 0x98 ) {
+      this.emuThread.getRAMFloppyA().writeByte( port & 0x07, value );
+    }
+    else if( (port & 0xF8) == 0x58 ) {
+      this.emuThread.getRAMFloppyB().writeByte( port & 0x07, value );
+    } else {
+      switch( port & 0x1C ) {		// Adressleitungen ab A5 ignorieren
+	case 0:				// IOSEL0 -> PIO
+	  switch( port & 0x03 ) {
+	    case 0:
+	      this.pio.writePortA( value );
+	      break;
 
-      case 8:				// IOSEL2 -> Tastaturspalten
-	this.keyboard.setSelectedCol( value );
-	break;
+	    case 1:
+	      this.pio.writeControlA( value );
+	      break;
+
+	    case 2:
+	      this.pio.writePortB( value );
+	      this.keyboard.putRowValuesToPIO();
+	      this.emuThread.writeAudioPhase(
+			(this.pio.fetchOutValuePortB( false ) & 0x80) != 0 );
+	      break;
+
+	    case 3:
+	      this.pio.writeControlB( value );
+	      break;
+	  }
+	  break;
+
+	case 8:				// IOSEL2 -> Tastaturspalten
+	  this.keyboard.setSelectedCol( value );
+	  break;
+      }
     }
     z80AddressChanged( port );
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void showNoTinyBasic()
+  {
+    BasicDlg.showErrorDlg(
+	this.screenFrm,
+	"Es ist kein Z1013-TinyBASIC-Programm im entsprechenden\n"
+		+ "Adressbereich des Arbeitsspeichers vorhanden." );
   }
 }
 

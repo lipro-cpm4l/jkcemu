@@ -1,0 +1,59 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des KC85/2...4</h1>
+
+  <h2>Emulierte Hardware</h2>
+    Emuliert werden die Grundger&auml;te inklusive Tongeneratoren
+    und Kassettenrecorderanschluss.
+    Der emulierte Speicher betr&auml;gt bei:
+    <ul>
+      <li>KC85/2:<br>
+	<ul>
+	  <li>4 kyte ROM
+	  <li>32 kyte RAM inklusive Bildwiederholspeicher
+	</ul>
+      <li>KC85/3:<br>
+	<ul>
+	  <li>16 kyte ROM
+	  <li>32 kyte RAM inklusive Bildwiederholspeicher
+	</ul>
+      <li>KC85/4:<br>
+	<ul>
+	  <li>20 kyte ROM
+	  <li>128 kyte RAM inklusive Bildwiederholspeicher
+	</ul>
+    </ul>
+  <br>
+
+  <h3>RAM</h3>
+    RAM 0 (0000-3FFF) und RAM 4 (4000-7FFF, nur KC85/4) liegen in einem
+    globalen RAM-Bereich, der von allen emulierten Systemen gemeinsam
+    genutzt wird.
+  <br><br>
+
+  <h3>Tongeneratoren und Kassettenrecorderanschluss</h3>
+    Welche erzeugten T&ouml;ne vom Emulator ausgegeben werden,
+    legen Sie durch Auswahl einer entsprechenden Funktion
+    in dem Fenster <a href="audio.htm">Audio/Kassette</a> fest.
+    Bei der Funktion <a href="audio.htm#sound_out">T&ouml;ne ausgeben
+    (Emulation des Lautsprechers)</a> h&ouml;ren Sie das Mischsignal
+    aus beiden Tongeneratoren,
+    welches auch der Lautst&auml;rkebeeinflussung unterliegt.
+    Bei allen anderen Audio-Funktionen wird das Signal des Tongenerators 1
+    (linker Kanal) ohne Lautst&auml;rkebeeinflussung ausgegeben,
+    d.h. des Signals, mit dem Dateien auf Kassette gespeichert werden.
+  <br><br>
+
+  <h3>Zusatzmodule</h3>
+    Es werden keine Zusatzmodule emuliert.
+  <br><br>
+
+  <h2>Im ROM enthaltene Software</h2>
+    <ul>
+      <li>bei KC85/2: CAOS 2.2
+      <li>bei KC85/3: CAOS 3.1 und KC-BASIC
+      <li>bei KC85/4: CAOS 4.2 und KC-BASIC
+    </ul>
+</body>
+</html>
+

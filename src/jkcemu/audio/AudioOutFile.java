@@ -81,6 +81,7 @@ public class AudioOutFile extends AudioOut
     this.errorText       = queue.getErrorText();
     if( (this.errorText == null) && (queue.length() > 0) ) {
       try {
+	queue.addOpposedPhase();	// Halbschwingung anhaengen
 	AudioSystem.write(
 		new AudioInputStream(
 			queue,

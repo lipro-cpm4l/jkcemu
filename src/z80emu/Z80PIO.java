@@ -129,6 +129,18 @@ public class Z80PIO implements Z80InterruptSource
   }
 
 
+  public boolean canFireInterruptPortA()
+  {
+    return !z80IsInterruptPending() && this.portA.interruptEnabled;
+  }
+
+
+  public boolean canFireInterruptPortB()
+  {
+    return !z80IsInterruptPending() && this.portB.interruptEnabled;
+  }
+
+
   public boolean isReadyPortA()
   {
     return this.portA.ready;

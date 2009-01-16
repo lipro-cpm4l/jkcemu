@@ -1037,45 +1037,18 @@ public class EditFrm extends BasicFrm implements
 
   public boolean doClose()
   {
+    boolean rv = true;
     if( this.logFrm != null ) {
       this.logFrm.doClose();
     }
-    while( !this.editTexts.isEmpty() ) {
+    while( rv && !this.editTexts.isEmpty() ) {
       EditText editText = this.editTexts.get( 0 );
       setSelectedEditText( editText );
-      if( !doFileClose() ) {
-        return false;
-      }
-      if( (editText.getProjectFile() != null)
-	  && editText.hasProjectChanged() )
-      {
-	setState( Frame.NORMAL );
-	toFront();
-	String[] options = { "Speichern", "Verwerfen", "Abbrechen" };
-	int      selOpt  = JOptionPane.showOptionDialog(
-				this,
-				"Das Projekt wurde ge\u00E4ndert und nicht"
-					+" gespeichert.\n"
-					+ "M\u00F6chten Sie es"
-					+ " jetzt speichern?",
-				"Daten ge\u00E4ndert",
-				JOptionPane.YES_NO_CANCEL_OPTION,
-				JOptionPane.WARNING_MESSAGE,
-				null,
-				options,
-				"Speichern" );
-	if( selOpt == 0 ) {
-	  if( !editText.saveProject( this, false ) ) {
-	    return false;
-	  }
-	} else {
-	  if( selOpt != 1 )
-	    return false;
-	}
-      }
+      rv = doFileClose();
     }
-
-    boolean rv = super.doClose();
+    if( rv ) {
+      rv = super.doClose();
+    }
     if( rv ) {
       this.screenFrm.childFrameClosed( this );
     }
@@ -1222,58 +1195,73 @@ public class EditFrm extends BasicFrm implements
     boolean  rv       = false;
     EditText editText = getSelectedEditText();
     if( editText != null ) {
-      if( editText.hasDataChanged() ) {
+      boolean textChanged = editText.hasDataChanged();
+      boolean prjChanged  = false;
+      if( editText.getProjectFile() != null ) {
+	prjChanged = editText.hasProjectChanged();
+      }
+      if( textChanged || prjChanged ) {
 	setState( Frame.NORMAL );
 	toFront();
-	String[] options = { "Speichern", "Verwerfen", "Abbrechen" };
-	int      selOpt  = JOptionPane.showOptionDialog(
-				this,
-				"Der Text wurde ge\u00E4ndert und nicht"
-					+" gespeichert.\n"
-					+ "M\u00F6chten Sie den Text"
-					+ " jetzt speichern?",
-				"Daten ge\u00E4ndert",
-				JOptionPane.YES_NO_CANCEL_OPTION,
-				JOptionPane.WARNING_MESSAGE,
-				null,
-				options,
-				"Speichern" );
-	if( selOpt == 0 ) {
-	  if( !doFileSave( false ) ) {
-	    return false;
+	String[]    options = { "Speichern", "Verwerfen", "Abbrechen" };
+	JOptionPane pane    = new JOptionPane(
+		String.format(
+			"%s wurde ge\u00E4ndert und nicht gespeichert.\n"
+				+ "M\u00F6chten Sie jetzt speichern?",
+			prjChanged ? "Das Projekt" : "Der Text" ),
+		JOptionPane.WARNING_MESSAGE );
+	pane.setWantsInput( false );
+	pane.setOptions( options );
+	pane.setInitialValue( options[ 0 ] );
+	pane.createDialog( this, "Daten ge\u00E4ndert" ).setVisible( true );
+	Object value = pane.getValue();
+	if( value != null ) {
+	  if( value.equals( options[ 0 ] ) ) {
+	    rv = true;
+	    if( textChanged ) {
+	      if( !doFileSave( false ) )
+		rv = false;
+	    }
+	    if( rv && prjChanged ) {
+	      if( !editText.saveProject( this, false ) )
+		rv = false;
+	    }
 	  }
-	} else {
-	  if( selOpt != 1 )
-	    return false;
+	  else if( value.equals( options[ 1 ] ) ) {
+	    rv = true;
+	  }
 	}
+      } else {
+	rv = true;
       }
-      PrgThread prgThread = this.prgThread;
-      if( prgThread != null ) {
-	if( editText == prgThread.getEditText() )
-	  prgThread.fireStop();
+      if( rv ) {
+	PrgThread prgThread = this.prgThread;
+	if( prgThread != null ) {
+	  if( editText == prgThread.getEditText() )
+	    prgThread.fireStop();
+	}
+	Component tabComponent = editText.getTabComponent();
+	if( tabComponent != null ) {
+	  tabbedPane.remove( tabComponent );
+	}
+	JTextArea textArea = editText.getJTextArea();
+	if( textArea != null ) {
+	  textArea.removeMouseListener( this );
+	}
+	this.editTexts.remove( editText );
+	if( (this.unusedEditText != null)
+	    && (this.unusedEditText == editText) )
+	{
+	  this.unusedEditText = null;
+	}
+	editText.die();
+	updTitle( null );
+	updUndoButtons();
+	updCaretButtons();
+	updPasteButtons();
+	updFileButtons();
+	updStatusBar();
       }
-      Component tabComponent = editText.getTabComponent();
-      if( tabComponent != null ) {
-        tabbedPane.remove( tabComponent );
-      }
-      JTextArea textArea = editText.getJTextArea();
-      if( textArea != null ) {
-        textArea.removeMouseListener( this );
-      }
-      this.editTexts.remove( editText );
-      if( (this.unusedEditText != null)
-	  && (this.unusedEditText == editText) )
-      {
-	this.unusedEditText = null;
-      }
-      editText.die();
-      updTitle( null );
-      updUndoButtons();
-      updCaretButtons();
-      updPasteButtons();
-      updFileButtons();
-      updStatusBar();
-      rv = true;
     } else {
       rv = super.doClose();
       if( rv )

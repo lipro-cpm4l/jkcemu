@@ -41,42 +41,11 @@ public class BasicFrm extends JFrame implements
    *
    * Rueckgabewert: true, wenn Fensterposition bzw. -groesse geaendert wurde
    */
-  public boolean applySettings( Properties props, boolean resizeable )
+  public boolean applySettings( Properties props, boolean resizable )
   {
-    boolean rv = false;
-    if( (props != null) && !isVisible() ) {
-      String prefix = getSettingsPrefix();
-
-      int x = EmuUtil.parseInt(
-			props.getProperty( prefix + ".window.x" ),
-			-1,
-			-1 );
-      int y = EmuUtil.parseInt(
-			props.getProperty( prefix + ".window.y" ),
-			-1,
-			-1 );
-      if( (x >= 0) && (y >= 0) ) {
-	if( resizeable ) {
-	  int w = EmuUtil.parseInt(
-			props.getProperty( prefix + ".window.width" ),
-			-1,
-			-1 );
-	  int h = EmuUtil.parseInt(
-			props.getProperty( prefix + ".window.height" ),
-			-1,
-			-1 );
-
-	  if( (w > 0) && (h > 0) ) {
-	    setBounds( x, y, w, h );
-	    rv = true;
-	  }
-	} else {
-	  setLocation( x, y );
-	  rv = true;
-	}
-      }
-    }
-    return rv;
+    return ((props != null) && !isVisible()) ?
+			EmuUtil.applyWindowSettings( props, this, resizable )
+			: false;
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -52,15 +52,15 @@ public class Z9001 extends EmuSys implements
 		{ 'P', 'Q', 'R',  'S', 'T', 'U', 'V', 'W'  },
 		{ 'X', 'Y', 'Z',  0,   0,   0,   0,   0    } };
 
-  private static byte[] os12      = null;
-  private static byte[] os13      = null;
-  private static byte[] basic86   = null;
-  private static byte[] fontBytes = null;
-  private static byte[] ramColor  = null;
-  private static byte[] ramVideo  = null;
+  private static byte[] os12           = null;
+  private static byte[] os13           = null;
+  private static byte[] basic86        = null;
+  private static byte[] z9001FontBytes = null;
 
   private byte[]            romBASIC;
   private byte[]            romOS;
+  private byte[]            ramColor;
+  private byte[]            ramVideo;
   private int               ramSize;
   private boolean           kc87;
   private boolean           mode20Rows;
@@ -80,8 +80,8 @@ public class Z9001 extends EmuSys implements
   public Z9001( EmuThread emuThread, Properties props )
   {
     super( emuThread );
-    if( fontBytes == null ) {
-      fontBytes = readResource( "/rom/z9001/z9001font.bin" );
+    if( z9001FontBytes == null ) {
+      z9001FontBytes = readResource( "/rom/z9001/z9001font.bin" );
     }
     String sysText = EmuUtil.getProperty( props, "jkcemu.system" );
     if( sysText.equals( "KC87" ) ) {
@@ -102,15 +102,9 @@ public class Z9001 extends EmuSys implements
       this.romOS    = os12;
       this.kc87     = false;
     }
-    this.ramSize = getRAMSize( props );
-    if( ramColor == null ) {
-      ramColor = new byte[ 0x0400 ];
-      fillRandom( ramColor );
-    }
-    if( ramVideo == null ) {
-      ramVideo = new byte[ 0x0400 ];
-      fillRandom( ramVideo );
-    }
+    this.ramVideo       = new byte[ 0x0400 ];
+    this.ramColor       = new byte[ 0x0400 ];
+    this.ramSize        = getRAMSize( props );
     this.audioInTStates = 0;
     this.audioInPhase   = this.emuThread.readAudioPhase();
     this.audioOutPhase  = false;
@@ -135,7 +129,7 @@ public class Z9001 extends EmuSys implements
     } else {
       this.blinkTimer = null;
     }
-    updScreenConfig( 0 );
+    reset( EmuThread.ResetLevel.POWER_ON );
   }
 
 
@@ -160,7 +154,13 @@ public class Z9001 extends EmuSys implements
       switch( timerNum ) {
 	case 0:
 	  this.audioOutPhase = !this.audioOutPhase;
-	  this.emuThread.updAudioOutPhase( this.audioOutPhase );
+	  if( this.emuThread.isLoudspeakerEmulationEnabled() ) {
+	    if( (this.pio88.fetchOutValuePortA( false ) & 0x80) != 0 ) {
+	      this.emuThread.writeAudioPhase( this.audioOutPhase );
+	    }
+	  } else {
+	    this.emuThread.writeAudioPhase( this.audioOutPhase );
+	  }
 	  break;
 
 	case 2:
@@ -184,12 +184,12 @@ public class Z9001 extends EmuSys implements
      * indem zyklisch geschaut wird, ob sich die Eingangsphase geaendert hat.
      * Wenn ja, wird ein Impuls an der Strobe-Leitung der zugehoerigen PIO
      * emuliert.
-     * Auf der einen Seite soll das Audiosystem soll nicht zu oft abgefragt
+     * Auf der einen Seite soll das Audiosystem nicht zu oft abgefragt
      * werden.
      * Auf der anderen Seite sollen aber die Zykluszeit nicht so gross werden,
-     * Dass die Genauigkeit der Zeitmessung kuenstlich verschlechert wird.
+     * dass die Genauigkeit der Zeitmessung kuenstlich verschlechert wird.
      * Aus diesem Grund werden genau soviele Taktzyklen abgezaehlt,
-     * die wir auch der Vorteile der CTC mindestens zaehlen muss.
+     * wie auch der Vorteile der CTC mindestens zaehlen muss.
      */
     if( this.audioInTStates > 15 ) {
       this.audioInTStates = 0;
@@ -230,7 +230,7 @@ public class Z9001 extends EmuSys implements
 
   public String extractScreenText()
   {
-    return extractScreenText( MEM_VIDEO, 24, 40, 40 );
+    return extractMemText( MEM_VIDEO, 24, 40, 40 );
   }
 
 
@@ -264,7 +264,11 @@ public class Z9001 extends EmuSys implements
 
   public int getColorIndex( int x, int y )
   {
-    int rv = 0;
+    int    rv        = 0;
+    byte[] fontBytes = this.emuThread.getExtFontBytes();
+    if( fontBytes == null ) {
+      fontBytes = z9001FontBytes;
+    }
     if( fontBytes != null ) {
       int col  = x / 8;
       int row  = 0;
@@ -352,13 +356,13 @@ public class Z9001 extends EmuSys implements
       }
     }
     if( this.colorMode
-	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + ramColor.length) )
+	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + this.ramColor.length) )
     {
-      rv   = (int) ramColor[ addr - MEM_COLOR ] & 0xFF;
+      rv   = (int) this.ramColor[ addr - MEM_COLOR ] & 0xFF;
       done = true;
     }
-    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + ramVideo.length) ) {
-      rv   = (int) ramVideo[ addr - MEM_VIDEO ] & 0xFF;
+    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + this.ramVideo.length) ) {
+      rv   = (int) this.ramVideo[ addr - MEM_VIDEO ] & 0xFF;
       done = true;
     }
     if( !done && (addr < this.ramSize) ) {
@@ -368,7 +372,7 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public int getResetStartAddress()
+  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
     return MEM_OS;
   }
@@ -398,156 +402,167 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public boolean keyEvent( KeyEvent e )
+  public boolean keyPressed( KeyEvent e )
   {
     boolean rv = false;
-    switch( e.getID() ) {
-      case KeyEvent.KEY_PRESSED:
-	switch( e.getKeyCode() ) {
-	  case KeyEvent.VK_BACK_SPACE:
-	    this.kbMatrix[ 0 ] = 0x40;
-	    rv = true;
-	    break;
+    switch( e.getKeyCode() ) {
+      case KeyEvent.VK_BACK_SPACE:
+	this.kbMatrix[ 0 ] = 0x40;
+	rv = true;
+	break;
 
-	  case KeyEvent.VK_LEFT:
-	    if( e.isShiftDown() ) {
-	      this.kbMatrix[ 3 ] = 0x20;
-	    } else {
-	      this.kbMatrix[ 0 ] = 0x40;
-	    }
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_RIGHT:
-	    if( e.isShiftDown() ) {
-	      this.kbMatrix[ 3 ] = 0x20;
-	    } else {
-	      this.kbMatrix[ 0 ] = 0x80;	// Shift
-	      this.kbMatrix[ 1 ] = 0x40;
-	    }
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_DOWN:
-	    this.kbMatrix[ 2 ] = 0x40;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_UP:
-	    this.kbMatrix[ 3 ] = 0x40;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_ESCAPE:
-	    if( e.isShiftDown() ) {
-	      this.kbMatrix[ 0 ] = 0x80;	// Shift
-	    }
-	    this.kbMatrix[ 4 ] = 0x40;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_ENTER:
-	    this.kbMatrix[ 5 ] = 0x40;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_SPACE:
-	    this.kbMatrix[ 7 ] = 0x40;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_INSERT:
-	    if( e.isShiftDown() ) {
-	      this.kbMatrix[ 0 ] = 0x80;	// Shift
-	    }
-	    this.kbMatrix[ 5 ] = 0x20;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_DELETE:
-	    this.kbMatrix[ 0 ] = 0x80;		// Shift
-	    this.kbMatrix[ 5 ] = 0x20;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_PAUSE:
-	    if( e.isShiftDown() ) {
-	      this.kbMatrix[ 0 ] = 0x80;	// Shift
-	    }
-	    this.kbMatrix[ 4 ] = 0x20;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_F1:			// Z9001-Taste GRAPHIC
-	    this.kbMatrix[ 3 ] = 0x80;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_F2:			// Z9001-Taste COLOR
-	    this.kbMatrix[ 1 ] = 0x80;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_F3:			// Z9001-Taste LIST
-	    this.kbMatrix[ 4 ] = 0x80;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_F4:			// Z9001-Taste RUN
-	    this.kbMatrix[ 5 ] = 0x80;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_F5:			// Z9001-Taste STOP
-	    this.kbMatrix[ 6 ] = 0x40;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_CONTROL:
-	    this.kbMatrix[ 2 ] = 0x80;
-	    rv = true;
-	    break;
-
-	  case KeyEvent.VK_SHIFT:
-	    this.kbMatrix[ 0 ] = 0x80;
-	    rv = true;
-	    break;
+      case KeyEvent.VK_LEFT:
+	if( e.isShiftDown() ) {
+	  this.kbMatrix[ 3 ] = 0x20;
+	} else {
+	  this.kbMatrix[ 0 ] = 0x40;
 	}
-        break;
+	rv = true;
+	break;
 
-      case KeyEvent.KEY_RELEASED:
-	Arrays.fill( this.kbMatrix, 0 );
-	putKeyboardMatrixValuesToPorts();
-        rv = true;
-        break;
-
-      case KeyEvent.KEY_TYPED:
-	char ch = e.getKeyChar();
-	if( ch > 0 ) {
-	  synchronized( this.kbMatrix ) {
-	    if( (ch >= 1) && (ch <='\u0020') ) {
-	      if( setCharInKBMatrix( ch + 0x40, kbMatrixShift ) ) {
-		this.kbMatrix[ 2 ] |= 0x80;	// Control
-		rv = true;
-	      }
-	    } else {
-	      if( setCharInKBMatrix( ch, kbMatrixNormal ) ) {
-		rv = true;
-	      } else {
-		if( setCharInKBMatrix( ch, kbMatrixShift ) ) {
-		  this.kbMatrix[ 0 ] |= 0x80;	// Shift
-		  rv = true;
-		}
-	      }
-	    }
-	  }
+      case KeyEvent.VK_RIGHT:
+	if( e.isShiftDown() ) {
+	  this.kbMatrix[ 3 ] = 0x20;
+	} else {
+	  this.kbMatrix[ 0 ] = 0x80;		// Shift
+	  this.kbMatrix[ 1 ] = 0x40;
 	}
+	rv = true;
+	break;
+
+      case KeyEvent.VK_DOWN:
+	this.kbMatrix[ 2 ] = 0x40;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_UP:
+	this.kbMatrix[ 3 ] = 0x40;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_ESCAPE:
+	if( e.isShiftDown() ) {
+	  this.kbMatrix[ 0 ] = 0x80;		// Shift
+	}
+	this.kbMatrix[ 4 ] = 0x40;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_ENTER:
+	this.kbMatrix[ 5 ] = 0x40;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_SPACE:
+	this.kbMatrix[ 7 ] = 0x40;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_INSERT:
+	if( e.isShiftDown() ) {
+	  this.kbMatrix[ 0 ] = 0x80;		// Shift
+	}
+	this.kbMatrix[ 5 ] = 0x20;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_DELETE:
+	this.kbMatrix[ 0 ] = 0x80;		// Shift
+	this.kbMatrix[ 5 ] = 0x20;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_PAUSE:
+	if( e.isShiftDown() ) {
+	  this.kbMatrix[ 0 ] = 0x80;		// Shift
+	}
+	this.kbMatrix[ 4 ] = 0x20;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_F1:			// Z9001-Taste GRAPHIC
+	this.kbMatrix[ 3 ] = 0x80;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_F2:			// Z9001-Taste COLOR
+	this.kbMatrix[ 1 ] = 0x80;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_F3:			// Z9001-Taste LIST
+	this.kbMatrix[ 4 ] = 0x80;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_F4:			// Z9001-Taste RUN
+	this.kbMatrix[ 5 ] = 0x80;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_F5:			// Z9001-Taste STOP
+	this.kbMatrix[ 6 ] = 0x40;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_CONTROL:
+	this.kbMatrix[ 2 ] = 0x80;
+	rv = true;
+	break;
+
+      case KeyEvent.VK_SHIFT:
+	this.kbMatrix[ 0 ] = 0x80;
+	rv = true;
 	break;
     }
     if( rv ) {
       putKeyboardMatrixValuesToPorts();
     }
     return rv;
+  }
+
+
+  public void keyReleased( int keyCode )
+  {
+    Arrays.fill( this.kbMatrix, 0 );
+    putKeyboardMatrixValuesToPorts();
+  }
+
+
+  public void keyTyped( char ch )
+  {
+    boolean state = false;
+    synchronized( this.kbMatrix ) {
+      if( (ch >= 1) && (ch <='\u0020') ) {
+	if( setCharInKBMatrix( ch + 0x40, kbMatrixShift ) ) {
+	  this.kbMatrix[ 2 ] |= 0x80;	// Control
+	  state = true;
+	}
+      } else {
+	if( setCharInKBMatrix( ch, kbMatrixNormal ) ) {
+	  state = true;
+	} else {
+	  if( setCharInKBMatrix( ch, kbMatrixShift ) ) {
+	    this.kbMatrix[ 0 ] |= 0x80;	// Shift
+	    state = true;
+	  }
+	}
+      }
+    }
+    if( state ) {
+      putKeyboardMatrixValuesToPorts();
+    }
+  }
+
+
+  public void openBasicProgram()
+  {
+    int begAddr = 0x0401;
+    if( !this.kc87 ) {
+      begAddr = askKCBasicBegAddr();
+    }
+    if( begAddr >= 0 )
+      SourceUtil.openKCBasicProgram( this.screenFrm, begAddr );
   }
 
 
@@ -629,16 +644,35 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public void reset( boolean powerOn )
+  public void reset( EmuThread.ResetLevel resetLevel )
   {
-    this.ctc80.reset( powerOn );
-    this.pio88.reset( powerOn );
-    this.pio90.reset( powerOn );
-    updScreenConfig( 0 );
-    if( powerOn ) {
-      fillRandom( ramColor );
-      fillRandom( ramVideo );
+    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+      fillRandom( this.ramColor );
+      fillRandom( this.ramVideo );
     }
+    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
+	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
+    {
+      this.ctc80.reset( true );
+      this.pio88.reset( true );
+      this.pio90.reset( true );
+    } else {
+      this.ctc80.reset( false );
+      this.pio88.reset( false );
+      this.pio90.reset( false );
+    }
+    updScreenConfig( 0 );
+  }
+
+
+  public void saveBasicProgram()
+  {
+    int begAddr = 0x0401;
+    if( !this.kc87 ) {
+      begAddr = askKCBasicBegAddr();
+    }
+    if( begAddr >= 0 )
+      SourceUtil.saveKCBasicProgram( this.screenFrm, begAddr );
   }
 
 
@@ -648,14 +682,14 @@ public class Z9001 extends EmuSys implements
 
     boolean rv = false;
     if( this.colorMode
-	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + ramColor.length) )
+	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + this.ramColor.length) )
     {
-      ramColor[ addr - MEM_COLOR ] = (byte) value;
+      this.ramColor[ addr - MEM_COLOR ] = (byte) value;
       this.screenFrm.setScreenDirty( true );
       rv = true;
     }
-    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + ramVideo.length) ) {
-      ramVideo[ addr - MEM_VIDEO ] = (byte) value;
+    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + this.ramVideo.length) ) {
+      this.ramVideo[ addr - MEM_VIDEO ] = (byte) value;
       this.screenFrm.setScreenDirty( true );
       rv = true;
     }
@@ -672,7 +706,13 @@ public class Z9001 extends EmuSys implements
     switch( port & 0xFB ) {	// Adressleitung A2 nicht benutzt
       case 0x88:
 	this.pio88.writePortA( value );
-	updScreenConfig( this.pio88.fetchOutValuePortA( false ) );
+	int v = this.pio88.fetchOutValuePortA( false );
+	updScreenConfig( v );
+	if( this.emuThread.isLoudspeakerEmulationEnabled()
+	    && ((v & 0x80) != 0) )
+	{
+	  this.emuThread.writeAudioPhase( this.audioOutPhase );
+	}
 	break;
 
       case 0x89:

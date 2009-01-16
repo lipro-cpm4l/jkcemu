@@ -22,19 +22,13 @@
     auf den Eintrag <em>Audio/Kassette...</em>.
     Die nachfolgende Beschreibung bezieht sich auf dieses Fenster.
   <br><br>
-    Einige Programme, insbesondere Spielprogramme, geben auch T&ouml;ne
-    zur akustischen Untermalung aus.
-    Da die emulierten Computer daf&uuml;r keine separate Sound-Ausgabe
-    besitzen, werden diese T&ouml;ne auch &uuml;ber den
-    Kassettenrecorderanschluss ausgegeben.
-    Aus diesem Grund f&uuml;hrt JKCEMU die Funktionen zur Emulation des
-    Kassettenrecorderanschlusses unter dem Titel <em>Audio/Kassette</em>.
-  <br><br>
 
 
   <h2>Audio-Funktionen</h2>
 
-  <h3><a name="sound_out">T&ouml;ne ausgeben</a></h3>
+  <h3>
+   <a name="sound_out">T&ouml;ne ausgeben (Emulation des Lautsprechers)</a>
+  </h3>
     W&auml;hlen Sie diese Funktion, wenn Sie die T&ouml;ne h&ouml;ren
     m&ouml;chten, die ein Programm zum Zwecke der Unterhaltung ausgibt
     (z.B. akustische Untermalung bei Spielprogrammen).
@@ -46,6 +40,12 @@
     nicht gew&auml;hrleistet, sodass kurze Unterbrechungen in der
     Tonausgabe auftreten k&ouml;nnen.
   <br><br>
+    <b>Achtung!</b> Besitzt das emulierte Computer-System einen Lautsprecher
+    zur Tonausgabe, der hardwarem&auml;&szlig;ig anders angesteuert wird
+    als der Kassettenrecorderanschluss,
+    so wird bei diese Funktion der Lautsprecher emuliert.
+  <br><br>
+
 
   <h3><a name="data_out">Daten am Audio-Ausgang ausgeben</a></h3>
     W&auml;hlen Sie diese Funktion, wenn Sie Daten oder
@@ -58,6 +58,11 @@
     ununterbrochen mit Daten versorgt wird.
     Die Ausf&uuml;hrungsgeschwindigkeit des Emulators richtet sich
     nach den Anforderungen des Audio-Systems und kann somit variieren.
+  <br><br>
+    <b>Achtung!</b> Besitzt das emulierte Computer-System einen Lautsprecher
+    zur Tonausgabe, der hardwarem&auml;&szlig;ig anders angesteuert wird
+    als der Kassettenrecorderanschluss,
+    so wird bei diese Funktion der Kassettenrecorderanschluss emuliert.
   <br><br>
 
   <h3><a name="data_in">Daten vom Audio-Eingang lesen</a></h3>

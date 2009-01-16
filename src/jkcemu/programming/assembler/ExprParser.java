@@ -203,8 +203,8 @@ public class ExprParser
     while( this.pos < this.len ) {
       ch = this.text.charAt( this.pos );
       if( ((ch >= '0') && (ch <= '9'))
-	       || ((ch >= 'A') && (ch <= 'F'))
-	       || ((ch >= 'a') && (ch <= 'f')) )
+	  || ((ch >= 'A') && (ch <= 'F'))
+	  || ((ch >= 'a') && (ch <= 'f')) )
       {
 	this.pos++;
 	buf.append( (char) ch );
@@ -216,17 +216,7 @@ public class ExprParser
     if( this.pos < this.len ) {
       ch = this.text.charAt( this.pos );
     }
-    if( (ch == 'B') || (ch == 'b') ) {
-      this.pos++;
-      try {
-	value = Integer.parseInt( buf.toString(), 2 );
-      }
-      catch( NumberFormatException ex ) {
-	throw new PrgException(
-			buf.toString() + ": Ung\u00FCltige Bin\u00E4rzahl" );
-      }
-    }
-    else if( (ch == 'O') || (ch == 'o') || (ch == 'Q') || (ch == 'q') ) {
+    if( (ch == 'O') || (ch == 'o') || (ch == 'Q') || (ch == 'q') ) {
       this.pos++;
       try {
 	value = Integer.parseInt( buf.toString(), 8 );
@@ -246,12 +236,30 @@ public class ExprParser
 			buf.toString() + ": Ung\u00FCltige Hexadezimalzahl" );
       }
     } else {
-      try {
-	value = Integer.parseInt( buf.toString() );
+      boolean done = false;
+      int     len  = buf.length();
+      if( len > 1 ) {
+	ch = buf.charAt( len - 1 );
+	if( (ch == 'B') || (ch == 'b') ) {
+	  done = true;
+	  buf.setLength( len - 1 );
+	  try {
+	    value = Integer.parseInt( buf.toString(), 2 );
+	  }
+	  catch( NumberFormatException ex ) {
+	    throw new PrgException(
+			buf.toString() + ": Ung\u00FCltige Bin\u00E4rzahl" );
+	  }
+	}
       }
-      catch( NumberFormatException ex ) {
-	throw new PrgException(
-			buf.toString() + ": Ung\u00FCltige Dezimalzahl" );
+      if( !done ) {
+	try {
+	  value = Integer.parseInt( buf.toString() );
+	}
+	catch( NumberFormatException ex ) {
+	  throw new PrgException(
+			buf.toString() + ": Ung\u00FCltige Zahl" );
+	}
       }
     }
     return value;
