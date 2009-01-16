@@ -1,0 +1,627 @@
+<html>
+<body>
+  <h1>Assembler</h1>
+    Im Emulator ist ein Assembler integriert,
+    den Sie &uuml;ber den <a href="texteditor.htm">Texteditor</a>
+    aufrufen k&ouml;nnen, d.h., den Assembler-Quelltext
+    &ouml;ffnen, bearbeiten und assemblieren Sie im Texteditor.
+  <br><br>
+    Die Beschreibung des Assemblers unterteilt sich in folgende Rubriken:
+    <ul>
+      <li><a href="assembler.htm#options">Assembler-Optionen</a>
+      <li><a href="assembler.htm#messages">
+				Assembler-Ausgaben und Fehlermeldungen</a>
+      <li><a href="assembler.htm#general_syntax">Allgemeine Syntax</a>
+      <li><a href="assembler.htm#special_syntax">Mnemonik und Syntax:
+						Zilog oder Robotron?</a>
+      <li><a href="assembler.htm#undoc">Undokumentierte Befehle</a>
+    </ul>
+  <br><br>
+
+
+  <h2><a name="options">Assembler-Optionen</a></h2>
+    Mit den Assembler-Optionen beeinflussen Sie die Arbeitsweise
+    des Assemblers, insbesondere hinsichtlich der unterst&uuml;tzten
+    Mnemonik und Syntax sowie was mit dem erzeugten Programmcode
+    geschehen soll.
+    Die Assembler-Optionen stellen Sie in einem Fenster ein,
+    dass beim erstmaligen Starten des Assemblers erscheint.
+    Au&szlig;erdem k&ouml;nnen Sie die Optionen jederzeit
+    mit dem Men&uuml;punkt <em>Assemblieren mit...</em>
+    aufrufen und ver&auml;ndern.
+  <br><br>
+    Wenn Sie mehrere Assembler-Quelltexte im Texteditor ge&ouml;ffnet haben,
+    werden die Assembler-Optionen f&uuml;r jeden Quelltext separat verwaltet.
+  <br><br>
+
+
+  <h2><a name="messages">Assembler-Ausgaben und Fehlermeldungen</a></h2>
+    Alle Assembler-Ausgaben, d.h. Meldungen &uuml;ber den
+    Abarbeitungsfortschritt, Fehlermeldungen, Warnungen
+    und, sofern in den Assembler-Optionen angegeben,
+    die Ausgabe der Markentabelle erscheinen in einem separaten Fenster,
+    dass mit jedem Start des Assembler ge&ouml;ffnet beziehungsweise
+    auf dem Desktop nach vorn geholt wird.
+    Auf Fehlermeldungen und Warnungen k&ouml;nnen sie doppelt klicken,
+    um direkt zu der betreffenden Stelle im Quelltext zu gelangen.
+  <br><br>
+
+
+  <h2><a name="general_syntax">Allgemeine Syntax</a></h2>
+
+  <h3>Gro&szlig;- und Kleinschreibung</h3>
+    Der Assembler unterscheidet au&szlig;er bei Zeichen- und
+    Zeichenkettenliteralen nicht zwischen Gro&szlig;- und Kleinschreibung,
+    d.h., die Mnemonik der Befehle und die Register k&ouml;nnen
+    sowohl gro&szlig; als auch klein geschrieben werden.
+    Bei den Marken gibt man in den Assembler-Optionen an,
+    ob zwischen Gro&szlig;- und Kleinschreibung unterschieden werden soll.
+  <br><br>
+
+  <h3>Aufbau einer Assembler-Quelltextzeile</h3>
+    Die allgemeine Syntax einer Quelltextzeile lautet:
+
+    <p>
+      <tt>
+	[<it>Marke</it>[<it>:</it>]] [<it>Mnemonik</it>
+	  [<it>Argument_1</it>[,<it>Argument_2</it>[,...]]]]
+	  [;<it>Kommentar</it>]
+      </tt>
+    </p>
+    <br>
+
+    In eckigen Klammern stehende Ausdr&uuml;cke sind optional.
+    Eine Marke muss am Anfang einer Zeile beginnen.
+    Ein Assembler-Befehl (angegeben durch eine Mnemonik) darf nicht
+    am Anfang einer Zeile beginnen, d.h.,
+    wenn die Zeile keine Marke enth&auml;lt,
+    muss vor der Mnemonik mindestens ein Leerzeichen oder ein Tabulator
+    stehen.
+  <br><br>
+
+  <h3>Numerische Ausdr&uuml;cke</h3>
+    Bei numerischen Ausdr&uuml;cken unterst&uuml;tzt der Assembler
+    die Vorzeichen <tt>+</tt> und <tt>-</tt> sowie die arithmetischen
+    Operationen Addition und Subtraktion, die ebenfalls durch
+    <tt>+</tt> und <tt>-</tt> angegeben werden.
+    Die einzelnen Elemente eines Ausdrucks sind entweder eine Marke,
+    ein Zahlenliteral, ein Zeichenliteral oder der Zugriff auf das
+    h&ouml;herwerte beziehungsweise niederwertige Byte
+    eines untergeordneten Ausdrucks.
+  <br><br>
+
+  <h3>Zahlenliteral</h3>
+    Zahlenliterale beginnen mit einer Ziffer und
+    k&ouml;nnen mit einem Buchstaben enden,
+    der die Basis der Zahl angibt.
+    Folgende Buchstaben sind dabei m&ouml;glich:
+
+    <table border=3>
+      <tr>
+	<th>Abschlie&szlig;ender Buchstabe</th>
+	<th>Basis der Zahl</th>
+	<th>Bemerkung</th>
+      </tr>
+      <tr><td>nicht vorhanden</td><td>10</td><td>Dezimalzahl</td></tr>
+      <tr><td>B, oder b</td><td>2</td><td>Bin&auml;rzahl</td></tr>
+      <tr><td>O, o, Q oder q</td><td>8</td><td>Oktalzahl</td></tr>
+      <tr><td>H oder h</td><td>16</td><td>Hexadezimalzahl</td></tr>
+    </table>
+  <br>
+    Hexadezimalzahlen m&uuml;ssen auch mit einer Ziffer beginnen!
+  <br><br>
+    Beispiele:
+
+    <table border=3>
+      <tr><th>Beispiel</th><th>Dezimaler Wert</th></tr>
+      <tr><td>123</td><td>123</td></tr>
+      <tr><td>101b</td><td>5</td></tr>
+      <tr><td>123q</td><td>83</td></tr>
+      <tr><td>0AFh</td><td>175</td></tr>
+    </table>
+  <br><br>
+
+  <h3>Zeichenliteral</h3>
+    Ein Zeichenliteral ist ein in einfachen Hochkommas
+    eingeschlossenes Zeichen, z.B. <tt>'A'</tt>.
+    Ein Zeichenliteral kann innerhalb eines numerischen Ausdrucks
+    verwendet werden.
+  <br><br>
+
+  <h3>Zeichenkettenliteral</h3>
+    Ein Zeichenkettenliteral umfasst ein oder mehrere in einfachen
+    oder doppelten Hochkommas eingeschlossene Zeichen.
+    Zeichenkettenliterale k&ouml;nnen nur bei den Pseudobefehlen
+    <tt>DB</tt>, <tt>DEFB</tt> und <tt>DEFM</tt> verwendet werden.
+  <br><br>
+
+  <h3>Zugriff auf h&ouml;her- oder niederwertiges Byte in einem Ausdruck</h3>
+    <table border=3>
+      <tr><th>Zugriff auf</th><th>Syntax</th></tr>
+      <tr><td>h&ouml;herwertiges Byte</td><td><tt>H(...)</tt></td></tr>
+      <tr><td>niederwertiges Byte</td><td><tt>L(...)</tt></td></tr>
+    </table>
+  <br><br>
+
+  <h3>Pseudobefehle</h3>
+    Der Assembler versteht folgende Pseudobefehle:
+    <table border=3>
+      <tr>
+	<th nowrap>Mnemonik</th>
+	<th nowrap>Anzahl der Argumente</th>
+	<th nowrap>Typ der Argumente</th>
+	<th nowrap>Beschreibung</th>
+      </tr>
+      <tr>
+	<td valign=top><tt>CPU</tt></td>
+	<td valign=top>1</td>
+	<td valign=top>Zeichenkette <tt>U880</tt> oder <tt>Z80</tt></td>
+	<td valign=top>
+	  Angabe des Prozessortyps,<br>
+	  Dieser Pseudobefehl ist aus Kompatibilit&auml;tsgr&uuml;nden
+	  vorhanden und hat keine Wirkung,
+	  da der Assembler sowieso nur einen Prozessortyp unterst&uuml;tzt.
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>DEFB</tt><br>
+	  <tt>DEFM</tt><br>
+	  <tt>DB</tt>
+	</td>
+	<td valign=top>mindestens 1</td>
+	<td valign=top>Numerische Ausdr&uuml;cke oder Zeichenketten</td>
+	<td valign=top>Datenbytes erzeugen</td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>DEFH</tt><br>
+	  <tt>HEX</tt>
+	</td>
+	<td valign=top>mindestens 1</td>
+	<td valign=top>
+	  Hexadezimalzahlen,<br>
+	  Es k&ouml;nnen Hexadezimalzahlen
+	  auch ohne f&uuml;hrende Null und ohne abschlie&szlig;endes
+	  <tt>H</tt> angegeben werden.<br>
+	  Beispiel: <tt>DEFH AB</tt>
+	</td>
+	<td valign=top>Datenbytes erzeugen</td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>DEFS</tt><br>
+	  <tt>DS</tt>
+	</td>
+	<td valign=top>mindestens 1</td>
+	<td valign=top>Numerische Ausdr&uuml;cke</td>
+	<td valign=top>
+	  Speicherbereich reservieren,<br>
+	  Steht der Befehl am Anfang oder am Ende des Quelltextes,
+	  wird der Speicherbereich zwar reserviert,
+	  d.h. die Adressen mitgez&auml;hlt,
+	  jedoch wird kein Programmcode erzeugt.
+	  Steht dagegen der Befehl mitten im Quelltext,
+	  wird der Bereich mit Null-Bytes aufgef&uuml;llt.
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>DEFW</tt><br>
+	  <tt>DA</tt><br>
+	  <tt>DW</tt>
+	</td>
+	<td valign=top>mindestens 1</td>
+	<td valign=top>Numerische Ausdr&uuml;cke</td>
+	<td valign=top>Datenw&ouml;rter (jeweils 2 Bytes) erzeugen</td>
+      </tr>
+      <tr>
+	<td valign=top><tt>END</tt></td>
+	<td valign=top>0</td>
+	<td></td>
+	<td valign=top>
+	  Ende des Quelltextes,<br>
+	  Alle weiteren Quelltextzeilen werden ignoriert.
+	</td>
+      </tr>
+      <tr>
+	<td valign=top><tt>ENT</tt></td>
+	<td valign=top>0</td>
+	<td></td>
+	<td valign=top>
+	  Eintrittspunkt in das Programms,<br>
+	  Die aktuelle Adresse wird als Startadresse verwendet.
+	  Fehlt der Befehl im Quelltext,
+	  gilt die Anfangsadresse als Startadresse.
+	</td>
+      </tr>
+      <tr>
+	<td valign=top><tt>EQU</tt></td>
+	<td valign=top>1</td>
+	<td valign=top>Numerischer Ausdruck</td>
+	<td valign=top>
+	  Marke definieren,<br>
+	  Die Quelltextzeile muss eine Marke enthalten,
+	  die mit dem angegebenen Wert definiert wird.
+	</td>
+      </tr>
+      <tr>
+	<td valign=top><tt>ORG</tt></td>
+	<td valign=top>1</td>
+	<td valign=top>Numerischer Ausdruck</td>
+	<td valign=top>
+	  Programmz&auml;hler (Adresse) auf den angegebenen Wert setzen,<br>
+	  Steht der Befehl mitten im Quelltext,
+	  wird der Bereich zwischen der letzten und der neuen Adresse
+	  mit Null-Bytes aufgef&uuml;llt.
+	</td>
+      </tr>
+    </table>
+  <br>
+    Alle Pseudobefehle k&ouml;nnen auch mit einem vorangestellten Punkt
+    geschrieben werden, z.B. <tt>.ORG</tt>, <tt>.DB</tt> und so weiter.
+  <br><br>
+
+
+  <h2>
+    <a name="special_syntax">Mnemonik und Syntax: Zilog oder Robotron?</a>
+  </h2>
+    Robotron hat bei einigen Assembler-Befehlen eine von Zilog
+    abweichende Mnemonik eingef&uuml;hrt,
+    teilweise auch eine abweichende Syntax.
+    Der JKCEMU-Assembler unterst&uuml;tzt beide Varianten.
+    In den <a href="assembler.htm#options">Assembler-Optionen</a>
+    k&ouml;nnen Sie aber auch einstellen, dass entweder nur die Zilog-
+    oder nur die Robotron-Mnemonik/-Syntax zugelassen ist.
+  <br><br>
+    Die Mnemonik unterscheidet sich bei folgenden Befehlen:
+    <table border=1>
+      <tr>
+	<th nowrap>Assembler-Befehl</th>
+	<th nowrap>Zilog-Mnemonik</th>
+	<th nowrap>Robotron-Mnemonik</th>
+      </tr>
+      <tr>
+	<td valign=top>bedingte CALL-Befehle</td>
+	<td valign=top>
+	  <tt>CALL Z</tt><br>
+	  <tt>CALL NZ</tt><br>
+	  <tt>CALL C</tt><br>
+	  <tt>CALL NC</tt><br>
+	  <tt>CALL PE</tt><br>
+	  <tt>CALL PO</tt><br>
+	  <tt>CALL M</tt><br>
+	  <tt>CALL P</tt>
+	</td>
+	<td valign=top>
+	  <tt>CAZ</tt><br>
+	  <tt>CANZ</tt><br>
+	  <tt>CAC</tt><br>
+	  <tt>CANC</tt><br>
+	  <tt>CAPE</tt><br>
+	  <tt>CAPO</tt><br>
+	  <tt>CAM</tt><br>
+	  <tt>CAP</tt>
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>Vergleichsbefehle</td>
+	<td valign=top><tt>CP</tt></td>
+	<td valign=top><tt>CMP</tt></td>
+      </tr>
+      <tr>
+	<td valign=top>Austauschbefehl mit AF</td>
+	<td valign=top><tt>EX AF,AF'</tt></td>
+	<td valign=top><tt>EXAF</tt></td>
+      </tr>
+      <tr>
+	<td valign=top>Eingabebefehl: Nur Flag-Register</td>
+	<td valign=top>von Zilog nicht dokumentiert</td>
+	<td valign=top><tt>INF</tt></td>
+      </tr>
+      <tr>
+	<td valign=top>unbedingter absoluter Sprung</td>
+	<td valign=top><tt>JP</tt></td>
+	<td valign=top><tt>JMP</tt></td>
+      </tr>
+      <tr>
+	<td valign=top>bedingte absolute Spr&uuml;nge</td>
+	<td valign=top>
+	  <tt>JP Z</tt><br>
+	  <tt>JP NZ</tt><br>
+	  <tt>JP C</tt><br>
+	  <tt>JP NC</tt><br>
+	  <tt>JP PE</tt><br>
+	  <tt>JP PO</tt><br>
+	  <tt>JP M</tt><br>
+	  <tt>JP P</tt>
+	</td>
+	<td valign=top>
+	  <tt>JPZ</tt><br>
+	  <tt>JPNZ</tt><br>
+	  <tt>JPC</tt><br>
+	  <tt>JPNC</tt><br>
+	  <tt>JPPE</tt><br>
+	  <tt>JPPO</tt><br>
+	  <tt>JPM</tt><br>
+	  <tt>JPP</tt>
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>bedingte relative Spr&uuml;nge</td>
+	<td valign=top>
+	  <tt>JR Z</tt><br>
+	  <tt>JR NZ</tt><br>
+	  <tt>JR C</tt><br>
+	  <tt>JR NC</tt>
+	</td>
+	<td valign=top>
+	  <tt>JRZ</tt><br>
+	  <tt>JRNZ</tt><br>
+	  <tt>JRC</tt><br>
+	  <tt>JRNC</tt>
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>bedingte R&uuml;ckkehrbefehle</td>
+	<td valign=top>
+	  <tt>RET Z</tt><br>
+	  <tt>RET NZ</tt><br>
+	  <tt>RET C</tt><br>
+	  <tt>RET NC</tt><br>
+	  <tt>RET PE</tt><br>
+	  <tt>RET PO</tt><br>
+	  <tt>RET M</tt><br>
+	  <tt>RET P</tt>
+	</td>
+	<td valign=top>
+	  <tt>RZ</tt><br>
+	  <tt>RNZ</tt><br>
+	  <tt>RC</tt><br>
+	  <tt>RNC</tt><br>
+	  <tt>RPE</tt><br>
+	  <tt>RPO</tt><br>
+	  <tt>RM</tt><br>
+	  <tt>RP</tt>
+	</td>
+      </tr>
+    </table>
+
+  <br><br>
+    Die Syntax unterscheidet sich bei folgenden Befehlen:
+    <table border=1>
+      <tr>
+	<th nowrap>Assembler-Befehl</th>
+	<th nowrap>Zilog-Syntax</th>
+	<th nowrap>Robotron-Syntax</th>
+	<th nowrap>Erl&auml;uterung</th>
+      </tr>
+      <tr>
+	<td valign=top>Eingabebefehle</td>
+	<td valign=top><tt>IN r,(C)</tt></td>
+	<td valign=top><tt>IN r</tt></td>
+	<td valign=top><tt>r</tt>: Register A, B, C, D, E, H oder L</td>
+      </tr>
+      <tr>
+	<td valign=top>Ausgabebefehle</td>
+	<td valign=top>
+	  <tt>OUT (C),r</tt><br>
+	  <tt>OUT (n),A</tt>
+	</td>
+	<td valign=top>
+	  <tt>OUT r</tt><br>
+	  <tt>OUT n</tt>
+	</td>
+	<td valign=top>
+	  <tt>r</tt>: Register A, B, C, D, E, H oder L<br>
+	  <tt>n</tt>: numerischer Ausdruck
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  8-Bit-Befehle:
+	  <ul>
+	    <li>ADD
+	    <li>ADC
+	    <li>SBC
+	  </ul>
+	</td>
+	<td valign=top>
+	  <tt>ADD A,x<br></tt>
+	  <tt>ADC A,x<br></tt>
+	  <tt>SBC A,x</tt>
+	</td>
+	<td valign=top>
+	  <tt>ADD x</tt><br>
+	  <tt>ADC x</tt><br>
+	  <tt>SBC x</tt>
+	</td>
+	<td valign=top>
+	  <tt>x</tt>: entweder:
+	  <ul>
+	    <li>numerischer Ausdruck oder
+	    <li>Register A, B, C, D, E, H, L oder
+	    <li><tt>(HL)</tt> oder
+	    <li><tt>(IX+d)</tt> oder
+	    <li><tt>(IY+d)</tt>
+	  </ul>
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+
+  <h2><a name="undoc">Undokumentierte Befehle</a></h2>
+    Einige Operationscodes f&uuml;hren im Mikroprozessor Befehle aus,
+    die vom Hersteller nicht dokumentiert sind.
+    Dabei verh&auml;lt sich der Prozessor U880 genau so wie die Z80 CPU.
+  <br><br>
+    Der Assembler unterst&uuml;tzt diese undokumentierten Befehle,
+    wenn Sie das in den <href="assembler.htm#options">Assembler-Optionen</a>
+    so festlegen.
+    Da die Befehle weder von Zilog noch von Robotron dokumentiert sind,
+    existiert auch keine offizielle Mnemonik beziehungsweise Syntax.
+    Aus diesem Grund sind Mnemonik und Syntax dieser undokumentierten
+    Prozessorbefehle spezifische Eigenheiten des JKCEMU-Assemblers
+    und werden nachfolgend beschrieben.
+  <br><br>
+
+  <h3>Zugriff auf die einzelnen Bytes der Index-Register</h3>
+    Viele 8-Bit-Register-Befehle k&ouml;nnen auch auf das niederwertige
+    beziehungsweise h&ouml;herwertige Byte der beiden Indexregister
+    angewendet werden.
+    Dabei versteht der Assembler folgende Namen f&uuml;r die
+    Index-Teilregister:
+    <table border=1>
+      <tr><th nowrap>Teilregister</th><th>Name</th></tr>
+      <tr>
+	<td valign=top>Niederwertiges Byte von IX:</td>
+	<td valign=top><tt>IXL</tt> oder <tt>LX</tt></td>
+      </tr>
+      <tr>
+	<td valign=top>H&ouml;herwertiges Byte von IX:</td>
+	<td valign=top><tt>IXH</tt> oder <tt>HX</tt></td>
+      </tr>
+      <tr>
+	<td valign=top>Niederwertiges Byte von IY:</td>
+	<td valign=top><tt>IYL</tt> oder <tt>LY</tt></td>
+      </tr>
+      <tr>
+	<td valign=top>H&ouml;herwertiges Byte von IY:</td>
+	<td valign=top><tt>IYH</tt> oder <tt>HY</tt></td>
+      </tr>
+    </table>
+  <br><br>
+    Folgende Befehle sind m&ouml;glich:
+    <table border=1>
+      <tr>
+	<th nowrap>Mnemonik und Syntax mit IXH</th>
+	<th nowrap>Erl&auml;uterung</th>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>LD IXH,n</tt><br>
+	  <tt>LD IXH,r</tt><br>
+	  <tt>LD IXH,IXH</tt><br>
+	  <tt>LD IXH,IXL</tt>
+	</td>
+	<td valign=top>
+	  <tt>n</tt>: numerischer Ausdruck<br>
+	  <tt>r</tt>: Register A, B, C, D oder E
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>LD r,IXH</tt>
+	</td>
+	<td valign=top>
+	  <tt>r</tt>: Register A, B, C, D oder E
+	</td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>ADD A,IXH</tt><br>
+	  <tt>ADC A,IXH</tt><br>
+	  <tt>SUB IXH</tt><br>
+	  <tt>SBC A,IXH</tt><br>
+	  <tt>AND IXH</tt><br>
+	  <tt>XOR IXH</tt><br>
+	  <tt>OR IXH</tt><br>
+	  <tt>CP IXH</tt>
+	</td>
+	<td valign=top></td>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>INC IXH</tt><br>
+	  <tt>DEC IXH</tt>
+	</td>
+	<td valign=top></td>
+      </tr>
+    </table>
+  <br>
+    Anstelle von <tt>IXH</tt> sind auch <tt>IXL</tt>, <tt>IYH</tt>,
+    <tt>IYL</tt> sowie die alternativen Schreibweisen
+    <tt>HX</tt>, <tt>LX</tt>, <tt>HY</tt> und <tt>LY</tt> m&ouml;glich.
+  <br><br>
+
+  <h3>Eingabebefehl: Nur Flag-Register setzen</h3>
+    Der Befehl liest ein Byte vom Eingabetor, dessen Adresse im Register C
+    steht und setzt das Flag-Register entsprechend.
+    Der eingelesene Wert selbst wird nicht behalten.
+    <table border=1>
+      <tr><th nowrap>Mnemonik und Syntax</th></tr>
+      <tr><td valign=top>IN F,(C)<br> IN (C)</td></tr>
+    </table>
+    <br>
+    <b>Achtung:</b> Robotron hat diesen Befehl mit der Mnemonik <tt>INF</tt>
+    dokumentiert. Diese Mnemonik wird vom Assembler somit auch als ein
+    offizieller Befehl verstanden.
+  <br><br>
+
+  <h3>Logischer Linksschiebebefehl</h3>
+    Der Befehl schiebt das Argument um ein Bit nach links,
+    wobei das Bit 0 danach auf 1 gesetzt ist.
+    <table border=1>
+      <tr>
+	<th nowrap>Mnemonik und Syntax</th>
+	<th nowrap>Erl&auml;uterung</th>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>SLL r</tt><br>
+	  <tt>SLL (HL)</tt><br>
+	  <tt>SLL (IX+d)</tt><br>
+          <tt>SLL (IY+d)</tt>
+	</td>
+	<td valign=top>
+	  <tt>r</tt>: Register A, B, C, D, E, H oder L
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h3>
+    Rotations-, Schiebe- und Einzelbitbefehle mit Indexregistern,
+    die auch auf ein anderes Register wirken
+  </h3>
+    Die offiziell dokumentierten Rotations-, Schiebe- und Einzelbitbefehle,
+    die auf ein Byte im Arbeitsspeicher angewendet werden,
+    welches durch indirekte Adressierung mit einem Indexregister
+    und Distanzangabe bestimmt wird,
+    k&ouml;nnen auch auf ein Register wirken,
+    welches als zus&auml;tzliches Argument anzugegeben ist.
+    Das gilt auch f&uuml;r den undokumentierten SLL-Befehl.
+
+    <table border=1>
+      <tr>
+	<th nowrap>Mnemonik und Syntax</th>
+	<th nowrap>Erl&auml;uterung</th>
+      </tr>
+      <tr>
+	<td valign=top>
+	  <tt>RLC (IX+d),r</tt><br>
+	  <tt>RRC (IX+d),r</tt><br>
+	  <tt>RL (IX+d),r</tt><br>
+	  <tt>RR (IX+d),r</tt><br>
+	  <tt>SLA (IX+d),r</tt><br>
+	  <tt>SRA (IX+d),r</tt><br>
+	  <tt>SLL (IX+d),r</tt><br>
+	  <tt>SRL (IX+d),r</tt><br>
+	  <tt>RES b,(IX+d),r</tt><br>
+	  <tt>SET b,(IX+d),r</tt>
+	</td>
+	<td valign=top>
+	  <tt>r</tt>: Register A, B, C, D, E, H oder L<br>
+	  <tt>b</tt>: 0 bis 7
+	</td>
+      </tr>
+    </table>
+  <br>
+    Anstelle von <tt>IX</tt> kann auch <tt>IY</tt> angegeben werden.
+    Die Befehle haben die gleiche Wirkung wie die offiziell dokumentierten
+    Befehle ohne die zus&auml;tzliche Registerangabe, nur mit dem Unterschied,
+    dass sie auch auf das zus&auml;tzlich angegebene 8-Bit-Register wirken.
+</body>
+</html>
+

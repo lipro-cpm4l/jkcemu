@@ -1,0 +1,178 @@
+<html>
+<body>
+  <h1>BASIC-Programme laden und speichern</h1>
+    Das Laden und Speichern von BASIC-Programmen erfordert
+    eine besondere Vorgehensweise.
+    JKCEMU bietet eine spezielle Unterst&uuml;tztung f&uuml;r
+    KC-BASIC-, AC1-BASIC, AC1-Mini-BASIC- und Z1013-Tiny-BASIC-Programme.
+  <br><br>
+    Der KC-BASIC-Interpreter meldet sich zwar mit &quot;HC-BASIC&quot
+    (Heimcomputer-BASIC), jedoch wird dieses BASIC aufgrund der sp&auml;ter
+    erfolgten Umbenennung der ersten DDR-Heimcomputer in KC85/1 und KC85/2
+    (Kleincomputer) &uuml;blicherweise <em>KC-BASIC</em> genannt.
+  <br><br>
+
+
+  <h2><a name="kcbasic">Laden und Speichern von KC-BASIC-Programmen</a></h2>
+
+  <h3>Laden eines KC-BASIC-Programms</h3>
+    <ol>
+      <li>Laden Sie den KC-BASIC-Interpreter in den Arbeitsspeicher
+          des Emulators (nicht relevant,
+	  wenn sich der BASIC-Interpreter bereits im ROM befindet).
+      <li>F&uuml;hren Sie einen Kaltstart aus.
+      <li>Verlassen Sie den BASIC-Interpreter mit <tt>BYE</tt>.
+      <li>Laden Sie das KC-BASIC-Programm wie eine gew&ouml;hnliche Datei
+          in den Arbeitsspeicher (siehe
+          <a href="loadsave.htm#loadfile">Datei laden</a>).
+	  <br>
+	  Das BASIC-Programm muss dazu in einem Dateiformat gespeichert sein,
+	  welches auch als KC-BASIC erkannt wird.
+	  Das sind:
+	  <ul>
+	    <li>KC-BASIC-Programmdateien
+		(&uuml;blicherweise <em>*.sss</em>-Dateien)
+	    <li>KC-TAP-Dateien, welche KC-BASIC-Programme
+		im KC-BASIC-Format enthalten
+	    <li>KCB-Dateien (Es wird nur das reine BASIC-Programm geladen,
+	        keine weiteren Maschinencodeteile, siehe Hinweise zum
+		<a href="fileformats.htm#kcb">KCB-Format</a>!)
+	    <li>zus&auml;tzlich bei Z1013 mit RAM-BASIC:
+		Headersave-Dateien mit Dateityp &quot;B&quot;
+		und Startadresse 2BC0.
+	  </ul>
+	  Wird das BASIC-Programm aus einer Nicht-BASIC-Datei geladen,
+	  werden die Systemzellen des BASIC-Interpreters nicht angepasst,
+	  was zu unerw&uuml;schten Effekten bis hin zum Absturz
+	  des ganzen BASIC-Interpreters f&uuml;hren kann.
+      <li>F&uuml;hren Sie einen Warmstart des BASIC-Interpreters aus.
+      <li>Jetzt k&ouml;nnen Sie das BASIC-Programm mit <tt>RUN</tt> starten.
+    </ol>
+  <br>
+    <b>Achtung!</b> In der Regel ist es auch m&ouml;glich,
+    ein BASIC-Programm zu laden, w&auml;hrend Sie sich noch
+    im BASIC-Interpreter befinden.
+    Allerdings darf der Interpreter gerade nichts tun,
+    erst recht kein BASIC-Programm ausf&uuml;hren!
+  <br><br>
+    Ist das KC-BASIC-Programm in einer KCC- oder KC-TAP-System-Datei
+    gespeichert, sodass JKCEMU diese Datei nicht als BASIC-Programm erkennt,
+    m&uuml;ssen Sie folgenderma&szlig;en vorgehen:
+    <a href="tips/kcc_tap_basic.htm">KC-BASIC-Programm aus KCC-/KC-TAP-Datei
+    extrahieren</a>.
+  <br><br>
+
+  <h3>Speichern eines KC-BASIC-Programms</h3>
+    Klicken Sie im Men&uuml; <em>Datei</em>, Untermen&uuml;
+    <em>BASIC-Programm</em>, auf den Punkt <em>Speichern...</em>.
+    Je nach dem gerade emulierten System werden Sie nun gefragt,
+    ob das BASIC-Programm im entsprechenden Adressbereich
+    des RAM- oder ROM-BASIC-Interpreters gesucht werden soll.
+    Anschlie&szlig;end erscheint der Dialog f&uuml;r das Speichern einer Datei
+    (siehe <a href="loadsave.htm#savefile">Datei speichern</a>).
+    Die Eingabefelder f&uuml;r den zu speichernden Adressbereich
+    sind bereits ausgef&uuml;llt und k&ouml;nnen nicht ge&auml;ndert werden.
+    Des weiteren ist auch das &uuml;bliche Dateiformat vorausgew&auml;hlt
+    (KC-BASIC-Programmdatei bzw. bei Z1013 Headersave-Datei mit Dateityp
+    &quot;B&quot;).
+  <br><br>
+    <b>Achtung!</b> Sie k&ouml;nnen das BASIC-Programm prinzipiell
+    in jedem angebotenen Dateiformat speichern.
+    Allerdings sollten Sie ein KC-BASIC-Programm nur als
+    <em>KC-BASIC-Programmdatei</em> oder als
+    <em>KC-TAP-Datei mit Blocknummer 1 als ersten Block</em> speichern.
+    Beim Z1013 ist noch das Headersave-Format mit Dateityp &quot;B&quot;
+    m&ouml;glich.
+    Bei allen anderen Formaten wird das BASIC-Programm zwar auch gespeichert,
+    allerdings werden beim sp&auml;teren Laden die Systemzellen
+    des BASIC-Interpreters nicht angepasst,
+    und das BASIC-Programm kann dann nicht richtig genutzt werden.
+  <br><br>
+
+
+  <h2><a name="ac1basic">Laden und Speichern von AC1-BASIC-Programmen</a></h2>
+    Dieser Rubrik bezieht sich auf BASIC-Programme f&uuml;r den 8 KByte
+    gro&szlig;en AC1-BASIC-Interpreter Version 1.1 von 1986.
+  <br><br>
+
+  <h3>Laden eines AC1-BASIC-Programms</h3>
+    <ol>
+      <li>Laden Sie den AC1-BASIC-Interpreter in den Arbeitsspeicher
+          des Emulators.
+      <li>F&uuml;hren Sie einen Kaltstart aus.
+      <li>Verlassen Sie den BASIC-Interpreter mit <tt>BYE</tt>.
+      <li>Laden Sie das AC1-BASIC-Programm wie eine gew&ouml;hnliche Datei
+          in den Arbeitsspeicher (siehe
+          <a href="loadsave.htm#loadfile">Datei laden</a>).
+	  <br>
+	  Das BASIC-Programm muss in einer Headersave-Datei
+	  mit Dateityp &quot;B&quot; und Anfangsadresse 607F gespeichert sein.
+	  Ist das nicht der Fall, wird das BASIC-Programm zwar geladen,
+	  die Systemzellen des BASIC-Interpreters aber nicht angepasst.
+	  Das kann dann zu unerw&uuml;schten Effekten bis hin zum Absturz
+	  des ganzen BASIC-Interpreters f&uuml;hren.
+      <li>F&uuml;hren Sie einen Warmstart des BASIC-Interpreters aus.
+      <li>Jetzt k&ouml;nnen Sie das BASIC-Programm mit <tt>RUN</tt> starten.
+    </ol>
+  <br>
+    <b>Achtung!</b> In der Regel ist es auch m&ouml;glich,
+    ein BASIC-Programm zu laden, w&auml;hrend Sie sich noch
+    im BASIC-Interpreter befinden.
+    Allerdings darf der Interpreter gerade nichts tun,
+    erst recht kein BASIC-Programm ausf&uuml;hren!
+  <br><br>
+
+  <h3>Speichern eines AC1-BASIC-Programms</h3>
+    W&auml;hrend ein AC1 emuliert wird,
+    klicken Sie im Men&uuml; <em>Datei</em>, Untermen&uuml;
+    <em>BASIC-Programm</em>, auf den Punkt <em>Speichern...</em>.
+    Es erscheint der Dialog f&uuml;r das Speichern einer Datei
+    (siehe <a href="loadsave.htm#savefile">Datei speichern</a>).
+    Die Eingabefelder f&uuml;r den zu speichernden Adressbereich
+    sind bereits ausgef&uuml;llt und k&ouml;nnen nicht ge&auml;ndert werden.
+    Des weiteren ist auch das &uuml;bliche Dateiformat vorausgew&auml;hlt
+    (Headersave-Datei mit Dateityp &quot;B&quot;).
+  <br><br>
+    <b>Achtung!</b> Sie k&ouml;nnen das AC1-BASIC-Programm prinzipiell
+    in jedem angebotenen Dateiformat speichern.
+    Allerdings werden beim sp&auml;teren Laden die Systemzellen
+    des BASIC-Interpreters nur dann angepasst,
+    wenn das BASIC-Programm in einer Headersave-Datei mit Dateityp
+    &quot;B&quot; gespeichert wird.
+    Bei allen anderen Formaten werden beim Laden die Systemzellen
+    nicht angepasst,
+    und das BASIC-Programm kann dann nicht richtig genutzt werden.
+  <br><br>
+
+
+  <h2><a name="tinybasic">Laden und Speichern von
+                          AC1-Mini- und Z1013-Tiny-BASIC-Programmen</a></h2>
+
+  <h3>Laden eines Mini-/Tiny-BASIC-Programms</h3>
+    <ol>
+      <li>Laden Sie den Tiny-BASIC-Interpreter in den Arbeitsspeicher
+	  des Emulators (nicht relevant bei AC1,
+	  da dort der Mini-BASIC-Interpreter bereits im ROM enthalten ist).
+      <li>F&uuml;hren Sie einen Kaltstart aus.
+      <li>Verlassen Sie den BASIC-Interpreter mit <tt>BYE</tt>.
+      <li>Laden Sie das Mini-/Tiny-BASIC-Programm wie eine
+	  gew&ouml;hnliche Datei
+          (siehe <a href="loadsave.htm#loadfile">Datei laden</a>).
+      <li>F&uuml;hren Sie einen Warmstart des BASIC-Interpreters aus.
+      <li>Jetzt k&ouml;nnen Sie das BASIC-Programm mit <tt>RUN</tt> starten.
+    </ol>
+  <br><br>
+
+  <h3>Speichern eines Mini-/Tiny-BASIC-Programms</h3>
+    Klicken Sie dazu im Men&uuml; <em>Datei</em>, Untermen&uuml;
+    <em>Mini-/Tiny-BASIC-Programm</em>, auf den Punkt <em>Speichern...</em>.
+    Es erscheint der Dialog f&uuml;r das Speichern einer Datei
+    (siehe <a href="loadsave.htm#savefile">Datei speichern</a>).
+    Die Eingabefelder f&uuml;r den zu speichernden Adressbereich
+    sind bereits ausgef&uuml;llt und k&ouml;nnen nicht ge&auml;ndert werden.
+    Des weiteren ist auch das &uuml;bliche Dateiformat vorausgew&auml;hlt
+    (Headersave-Datei mit Dateityp &quot;b&quot;).
+  <br><br>
+</body>
+</html>
+

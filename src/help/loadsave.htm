@@ -1,0 +1,148 @@
+<html>
+<body>
+  <h1>Programme und Dateien laden, starten und speichern</h1>
+
+  <h2>Vorbemerkungen</h2>
+    Bei den von JKCEMU emulierten Computern werden Daten auf Magnettonband,
+    i.d.R. eine Audio-Kassette, gespeichert.
+    Das ist zwar prinzipiell mit Hilfe der
+    <a href="audio.htm">Audio-Funktionen</a> auch im Emulator m&ouml;glich,
+    jedoch k&ouml;nnen hier Dateien wesentlich komfortabler im Dateisystem
+    des Emulator-Rechners gespeichert werden,
+    weshalb dies &uuml;blicherweise auch so getan wird.
+    JKCEMU unterst&uuml;tzt dabei verschiedene
+    <a href="fileformats.htm">Dateiformate</a>.
+  <br><br>
+    <b>Achtung!</b> Das Speichern und Laden der BASIC-Programme
+    erfolgt bei den emulierten Computern durch den BASIC-Interpreter
+    und nicht durch das Betriebssystem bzw. Monitorprogramm.
+    Auch haben BASIC-Dateien h&auml;ufig ein anderes Format.
+    Aus diesem Grund ist bei BASIC-Programmen eine andere Vorgehensweise
+    notwendig, die sie <a href="loadsavebasic.htm">hier</a> finden.
+  <br><br>
+
+  <h2><a name="loadfile">Datei laden</a></h2>
+    Es gibt drei M&ouml;glichkeiten, eine Datei aus dem Dateisystem
+    in den Emulator zu laden:
+    <ol>
+      <li>&uuml;ber einen Dateiauswahldialog
+      <li>mit Hilfe des <a href="tools/filebrowser.htm">Datei-Browsers</a>
+      <li>per Drag&Drop
+    </ol>
+  <br><br>
+
+  <h3>Datei &uuml;ber Dateiauswahldialog laden</h3>
+    Diese klassische Form des Ladens einer Datei erfolgt &uuml;ber das
+    Men&uuml; <em>Datei</em>, Men&uuml;punkt <em>Laden...</em>.
+    Es erscheint eine Dateiauswahlbox, in der Sie die Datei
+    ausw&auml;hlen k&ouml;nnen.
+  <br><br>
+    JKCEMU bietet Ihnen entsprechend Ihrer Wahl (siehe
+    <a href="settings.htm#filedialog">Einstellungen</a>) einen eigenen
+    Dateiauswahldialog oder die Dateiauswahlbox des Betriebssystems an.
+    Der JKCEMU-Dateiauswahldialog ist auf die Spezifika des Emulators
+    optimiert.
+    Wenn Sie eine Datei ausgew&auml;hlt haben,
+    die Kopfdaten mit einer Ladeadresse enth&auml;lt,
+    k&ouml;nnen Sie diese durch Dr&uuml;cken auf <em>Laden</em>
+    in den Arbeitsspeicher laden.
+    Enth&auml;lt die Datei ein ausf&uuml;hrbares Maschinencodeprogramm
+    und in ihren Kopfdaten ist eine Startadresse hinterlegt,
+    wird durch Dr&uuml;cken auf den Knopf <em>Starten</em>
+    die Datei in den Arbeitsspecher geladen und sofort gestartet.
+    Die dritte Option <em>Laden mit...</em> gestattet die Eingabe
+    von <a href="loadsave.htm#options">Ladeoptionen</a>
+    wie z.B. abweichende Ladeadressen.
+  <br><br>
+    Wenn Sie die Dateiauswahlbox des Betriebssystems verwenden,
+    wird nach Auswahl einer Datei immer in den Modus zur Eingabe
+    der Ladeoptionen &uuml;bergegangen.
+  <br><br>
+
+  <h3><a name="options">Ladeoptionen</a></h3>
+    Zu den Ladeoptionen z&auml;hlen die Auswahl des Dateiformats,
+    die Ladeadressen und im Fall einer
+    <a href="fileformats.htm#headersave">Headersave</a>-Datei
+    bei gleichzeitiger Emulation des Z1013 die Angabe,
+    ob die Headersave-Kopfdaten zus&auml;tzlich in den daf&uuml;r
+    vorgesehenen Adressbereich des Arbeitsspeichers kopiert werden sollen.
+    Die Eingabe der Ladeoptionen erfolgt in einem separaten Fenster.
+  <br><br>
+    Bei einigen <a href="fileformats.htm">Dateiformaten</a>
+    sind die Ladeadressen in der Datei gespeichert (Kopfdaten),
+    sodass Sie keine Anfangs- und Endadresse explizit angeben m&uuml;ssen.
+    M&ouml;chten Sie die Datei jedoch an eine andere Stelle im Arbeitsspeicher
+    laden, m&uuml;ssen Sie die entsprechende Anfangsadresse eingeben.
+    Das Feld f&uuml;r die Endadresse kann leer bleiben.
+  <br><br>
+    Die Ladeoptionen erm&ouml;glichen auch das Laden einer
+    Datei in einem anderen als das automatisch erkannte Format.
+    So gibt es z.B. Z1013-Dateien,
+    die einen zum Headersave kompatiblen Dateikopf haben,
+    der jedoch nicht die Headersave-Kennung enth&auml;lt.
+    Dadurch wird die Datei nicht als Headersave-Datei erkannt.
+    Sie kann aber in dem Fall als solche geladen werden.
+    Jedoch m&uuml;ssen Sie bei solchen Dingen ganz sicher sein,
+    was Sie da tun!
+    Bei falscher Anwendung kann das zum Absturz des im Emulator laufenden
+    Programms und damit zu Datenverlust f&uuml;hren.
+  <br><br>
+    Wird gerade ein Z1013 emuliert und Sie m&ouml;chten beim Laden
+    einer Headersave-Datei die Kopfdaten zus&auml;tzlich in den
+    daf&uuml;r vorgesehenen Adressbereich im Arbeitsspeicher laden,
+    so schalten Sie die entsprechende Option ein.
+  <br><br>
+
+  <h3><a name="dnd">Laden per Drag&Drop</a></h3>
+    Im <a href="tools/filebrowser.htm">Datei-Browser</a>
+    markieren Sie eine Datei,
+    ziehen diese mit gedr&uuml;ckter Maustaste &uuml;ber das
+    Emulator-Fenster und lassen sie dort los.
+    Damit Sie nicht versehentlich eine Datei auf diese Art und Weise laden
+    und so Daten im Arbeitsspeicher des Emulators zerst&ouml;ren,
+    erscheint zur Sicherheit immer das Fenster zur Eingabe der Ladeoptionen.
+  <br><br>
+    <b>Hinweis:</b> Auf einigen Plattformen bzw. Betriebssystemen
+    funktioniert Drag&Drop auch &uuml;ber Programmgrenzen hinweg, d.h.,
+    Sie k&ouml;nnen auch in einem anderen Programm, z.B. einem Dateimanager,
+    eine Datei markieren, in JKCEMU hineinziehen und dort fallen lassen.
+  <br><br>
+
+  <h2>Programm starten</h2>
+    Das Starten eines Programms setzt das Laden der entsprechenden
+    Programmdatei voraus.
+    Wenn die Programmdatei eine Startadresse enth&auml;lt,
+    k&ouml;nnen Sie beim Laden das Programm gleich starten lassen.
+    Anderenfalls m&uuml;ssen Sie &uuml;ber das Betriebssystem bzw.
+    dem Monitorprogramm das Programm manuell starten.
+  <br><br>
+
+  <h2><a name="savefile">Datei speichern</a></h2>
+    Klicken Sie im Men&uuml; <em>Datei</em> auf den Punkt <em>Speichern</em>.
+    Es erscheint ein Fenster, in dem Sie die Adressen des zu speichernden
+    Bereichs eingeben, das Dateiformat ausw&auml;hlen und je nach
+    ausgew&auml;hlten Dateiformat die Kopfdaten angeben.
+  <br><br>
+    Sie m&uuml;ssen die Felder &quot;Anfangsadresse&quot; und
+    &quot;Endadresse&quot; hexadezimal ausf&uuml;llen.
+    Diese Werte werden automatisch als Kopfdaten &uuml;bernommen,
+    sofern das ausgew&auml;hlte Dateiformat Kopfdaten unterst&uuml;tzt.
+    Sie k&ouml;nnen als Kopfdaten aber auch abweichende Adressen angeben,
+    die dann erst beim Laden Verwendung finden.
+  <br><br>
+    Wird gerade ein Z1013 emuliert und Sie m&ouml;chten beim Speichern
+    einer Headersave-Datei die Kopfdaten zus&auml;tzlich in den
+    daf&uuml;r vorgesehenen Adressbereich im Arbeitsspeicher laden,
+    so schalten Sie die entsprechende Option ein.
+  <br><br>
+    Durch Dr&uuml;cken auf den Knopf <em>Speicherm</em> erscheint ein
+    Dateiauswahldialog. Hier legen Sie den Namen der zu speichernden Datei
+    fest und best&auml;tigen Sie.
+  <br><br>
+    <b>Achtung!</b> Beim JKCEMU-Dateiauswahldialog m&uuml;ssen Sie
+    nach dem Eintippen eines Dateinamens die <em>ENTER</em>-Taste
+    dr&uuml;cken, bevor Sie mit der Maus auf den Knopf <em>Speichern</em>
+    klicken.
+</body>
+</html>
+

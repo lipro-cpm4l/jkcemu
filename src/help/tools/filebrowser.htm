@@ -1,0 +1,127 @@
+<html>
+<body>
+  <h1>Datei-Browser</h1>
+    Der Datei-Browser dient dazu,
+    Programme und Dateien besonders bequem zu laden bzw. zu &ouml;ffnen.
+    W&auml;hrend beim gew&ouml;hnlichen Laden mit einem Dateiauswahldialog
+    viele Mausklicks notwendig sind, kann der Datei-Browser offen bleiben,
+    sodass zu jedem Zeitpunkt eine Datei ausgew&auml;hlt und mit nur wenigen
+    Mausklicks geladen bzw. ge&ouml;ffnet werden kann.
+    Au&szlig;erdem sind je nach Einstellung auch versteckte Dateien sichtbar,
+    was beim JKCEMU-Dateiauswahldialog nicht der Fall ist.
+  <br><br>
+
+  <h2>Ansicht</h2>
+    Der Datei-Browser zeigt auf der linken Seite das Dateisystem
+    in einer Baumdarstellung an.
+    Die rechte Seite dient zur Anzeige von Details.
+    Zwischen beiden Seiten befindet sich ein Balken,
+    den Sie nach links und rechts verschieben k&ouml;nnen.
+  <br><br>
+    Wenn Sie eine Datei anklicken,
+    werden Detailinformationen auf der rechten Seite angezeigt.
+    Bei einer Bilddatei sehen Sie das ganze Bild, vorausgesetzt,
+    das Dateiformat wird unterst&uuml;tzt und die eingestellte
+    maximale Dateigr&ouml;&szlig;e f&uuml;r die Vorschau
+    wurde nicht &uuml;berschritten.
+    Bei einer Archivdatei (TAR und ZIP) sowie bei einem Verzeichnis
+    wird der jeweilige Inhalt angezeigt.
+  <br><br>
+
+  <h2>Drag&Drop</h2>
+    Der Datei-Browser kann als Quelle einer Drag&Drop-Operation verwendet
+    werden, d.h., Sie k&ouml;nnen eine Datei markieren,
+    mit gedr&uuml;ckter Maustaste in ein anderes Fenster ziehen
+    und dort loslassen.
+    Dann liegt es an dem anderen Fenster, was mit der Datei passiert.
+    Das JKCEMU-Emulator-Fenster wird in einem solchen Fall die Datei laden.
+  <br><br>
+
+  <h2>Dateien laden und starten</h2>
+    Es ist die Hauptaufgabe des Datei-Browsers,
+    Dateien bequem zu laden und ggf. auch zu starten.
+    Im Men&uuml; <em>Datei</em> gibt es daf&uuml;r verschiedene Funktionen,
+    von denen die wichtigsten auch in der Werkzeugleiste im oberen
+    Bereich des Fensters zu finden sind.
+  <br><br>
+
+  <h3>In Emulator laden mit...</h3>
+    Bei dieser Funktion wird vor dem Laden der selektierten Datei immer
+    der Dialog mit den <a href="../loadsave.htm#options">Ladeoptionen</a>
+    angezeigt.
+    Sie k&ouml;nnen damit z.B. die Datei auf eine andere als in der Datei
+    angegebenen Adresse laden.
+  <br><br>
+
+  <h3>In Emulator laden</h3>
+    Bei dieser Funktion wird die selektierte Datei ohne Nachfrage
+    in den Arbeitsspeicher des Emulators geladen.
+    Voraussetzung ist allerdings,
+    dass das Format der Datei auch Ladeadressen kennt.
+    Ist das nicht der Fall, muss zwangsweise eine Ladeadresse angegeben werden.
+    In dem Fall erscheint dann doch der Dialog mit den
+    <a href="../loadsave.htm#options">Ladeoptionen</a>.
+  <br><br>
+
+  <h3>Im Emulator starten</h3>
+    Enth&auml;lt die selektierte Datei ein ausf&uuml;hrbares
+    Maschinencodeprogramm und eine Startadresse,
+    wird die Datei ohne Nachfrage geladen und das Programm gestartet.
+  <br><br>
+
+  <h3><a name="doubleclick">Doppelklick</a></h3>
+    Ein Doppelklick auf eine Datei f&uuml;hrt eine f&uuml;r die Datei
+    sinnvolle Aktion aus.
+    Eine Textdatei wird im <a href="texteditor.htm">Texteditor</a>
+    ge&ouml;ffnet, eine unterst&uuml;tzte Bilddatei im
+    <a href="imageviewer.htm">Bildbetrachter</a> angezeigt
+    und eine unterst&uuml;tzte Sound-Datei abgespielt.
+    Bei allen anderen Dateien wird davon ausgegangen,
+    dass Sie in den Arbeitsspeicher des Emulator geladen werden sollen.
+    Dazu erscheint der Dialog mit den
+    <a href="../loadsave.htm#options">Ladeoptionen</a>.
+    Da es aber hinderlich sein kann,
+    jedesmal diesen Dialog best&auml;tigen zu m&uuml;ssen,
+    k&ouml;nnen Sie dieses Verhalten im Men&uuml; <em>Einstellungen</em>
+    abschalten. Mit dem Men&uuml;punkt
+    <em>Doppelklick f&uuml;hrt Laden/Starten ohne Nachfrage aus</em>
+    legen Sie fest, dass beim Doppelklick auf eine Datei,
+    deren Format Ladeadressen kennt, keine
+    <a href="../loadsave.htm#options">Ladeoptionen</a> mehr abgefragt werden.
+    Enth&auml;lt die Datei ein ausf&uuml;hrbares Maschinencodeprogramm,
+    d.h. ist eine Startadresse eingetragen,
+    wird das Programm auch sofort gestartet.
+  <br><br>
+
+  <h2>Weitere Funktionen</h2>
+    Der Datei-Browser bietet neben dem Laden bzw. &Ouml;ffnen
+    von Dateien auch weiterer Funktionen,
+    wie z.B. Verzeichnisse anlegen,
+    Verzeichnisse und Dateien umbenennen und l&ouml;schen,
+    Pr&uuml;f- und Hashwerte berechnen,
+    Packen und Entpacken sowie
+    den &Auml;nderungszeitpunkt auf einen beliebigen Wert setzen.
+    Alle diese Funktionen finden Sie im Men&uuml; <em>Datei</em>.
+  <br><br>
+
+  <h2>Tastaturbedienung</h2>
+    Der Datei-Browser l&auml;sst sich auch bequem und schnell
+    mit den vier Cursor-Tasten bedienen.
+    Das Auf- und Zuklappen der Verzeichnisse geschieht mit den Tasten
+    <em>Links</em> und <em>Rechts</em>.
+    Die <em>Enter</em>-Taste hat die gleiche Funktion wir ein
+    <a href="filebrowser.htm#doubleclick">Doppelklick</a>.
+  <br><br>
+
+  <h2>Einstellungen</h2>
+    Im Men&uuml; <em>Einstellungen</em> k&ouml;nnen Sie den Datei-Browser
+    an Ihre Bed&uuml;rfnisse anpassen.
+    Diese Einstellungen,
+    die Position des Schiebers zwischen Baumdarstellung und Vorschau
+    sowie die Fenstergr&ouml;&szlig;e und -position
+    k&ouml;nnen Sie auch dauerhaft in einem Profil speichern.
+    Das tun Sie in dem separaten Fenster f&uuml;r
+    <a href="../settings.htm">Einstellungen</a>.
+</body>
+</html>
+

@@ -1,0 +1,65 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des BCS3</h1>
+
+  <h2>Emulierte Hardware</h2>
+    <ul>
+      <li>Je nach Einstellung 2 oder 4 KByte ROM
+      <li>1 KByte RAM
+      <li>Kassettenrecorderanschluss
+      <li>Optional eine Speichererweiterung mit 16 oder 32 KByte RAM<br>
+	  Die Speichererweiterung liegt in einem globalen RAM-Bereich und
+	  wird f&uuml;r alle emulierten Systeme gemeinsam genutzt.
+    </ul>
+  <br><br>
+
+  <h2>Im ROM enthaltene Software</h2>
+    Je nach Einstellung:<br>
+    <ul>
+       <li>BASIC-SE 2.4 f&uuml;r 27 sichtbare Zeichen pro Zeile
+	   und 2,5 MHz Taktfrequenz
+       <li>BASIC-SE 3.1 f&uuml;r 29 sichtbare Zeichen pro Zeile
+	   und 2,5 MHz Taktfrequenz
+       <li>BASIC-SE 3.1 f&uuml;r 40 sichtbare Zeichen pro Zeile
+	   und 3,5 MHz Taktfrequenz
+    </ul>
+  <br><br>
+
+  <h2>Hinweise zu BASIC-SE 3.1</h2>
+    <ul>
+      <li>Beim Systemstart pr&uuml;ft BASIC-SE 3.1,
+	  ob der Speicher bereits initialisiert ist
+	  und f&uuml;hrt in Abh&auml;ngigkeit davon entweder
+	  einen Kalt- oder Warmstart durch.
+	  Bei einem Warmstart werden die Systemzellen im Arbeitsspeicher
+	  nicht neu initialisiert.
+	  Demzufolge f&uuml;hrt ein RESET gew&ouml;hnlich zu einem Warmstart,
+	  da der Speicher bereits initialisiert ist.
+      <li>Bei einem Kaltstart m&uuml;ssen Sie als erstes
+	  die Anzahl der sichtbaren Zeilen (3 bis 29) eingeben
+	  und <em>ENTER</em> bet&auml;tigen,
+	  bevor Sie in die BASIC-Eingabeaufforderung gelangen.
+      <li>Der Speicherplatz f&uuml;r das BASIC-Programm beginnt hinter
+	  dem Bildspeicher, d.h., je mehr sichtbare Zeilen es gibt,
+	  desto weiter hinten beginnt das BASIC-Programm.
+	  <br>
+	  <b>Achtung!</b> Wenn Sie z.B. bei 8 sichtbaren Zeilen
+	  ein BASIC-Programm speichern und es bei 12 Zeilen
+	  wieder laden, m&uuml;ssen Sie das BASIC-Programm
+	  auf eine andere Adresse laden, sonst &uuml;berschreiben
+	  Sie den Bildspeicher!
+	  Und das d&uuml;rfte den BCS3 zum Absturz bringen!
+	  Der Anfang des Speicherplatzes f&uuml;r das BASIC-Programm
+	  steht in 3C00/3C01.
+	  Lesen Sie die Adresse aus diesen beiden Bytes
+	  (z.B. mit der Speicheransicht im Men&uuml; <em>Extra</em>,
+	  Untermen&uuml; <em>Werkzeuge</em>)
+	  und laden das BASIC-Programm auf diese Adresse.
+      <li>BASIC-SE 3.1 ist nicht abw&auml;rtskompatibel zur Version 2.4,
+	  d.h., BASIC-SE-Programme der Version 2.4 laufen nicht
+	  mit der Version 3.1.
+	  Die Tokens und damit das Bin&auml;rformat hat sich ge&auml;ndert.
+    </ul>
+</body>
+</html>
+

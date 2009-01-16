@@ -1,0 +1,318 @@
+<html>
+<body>
+  <h1>BASIC-Funktionen</h1>
+    Nachfolgend werden die BASIC-Funktionen beschrieben,
+    die der Compiler versteht.
+    Es wird auch auf die Unterschiede zum AC1-Mini-BASIC
+    und Z1013-Tiny-BASIC eingegangen.
+  <br><br>
+    Wenn zu einer Funktion keine Syntax angegeben ist,
+    hat die Funktion keine Argumente,
+    d.h., hinter dem Funktionsnamen d&uuml;rfen keine Klammern stehen.
+  <br><br>
+    <table border="1">
+      <tr>
+	<th nowrap>Funktion</th>
+	<th nowrap>Bedeutung</th>
+	<th nowrap>AC1-Mini-BASIC</th>
+	<th nowrap>Z1013-Tiny-BASIC</th>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#abs"><tt>ABS</tt></a></td>
+	<td>Absoluter Betrag</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#deek"><tt>DEEK</tt></a></td>
+	<td>16-Bit-Wert (2 Bytes) aus dem Arbeitsspeicher lesen</td>
+	<td>nein</td>
+	<td>nein</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#hex"><tt>HEX</tt></a></td>
+	<td>Hexadezimalzahl</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#inchar"><tt>INCHAR</tt></a></td>
+	<td>Ein Zeichen von der Tastatur lesen</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#inkey"><tt>INKEY</tt></a></td>
+	<td>Wert der gerade gedr&uuml;ckten Taste lesen</td>
+	<td>nein</td>
+	<td>nein</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#in"><tt>IN</tt></a></td>
+	<td>Wert von einem Eingabetor lesen</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#in"><tt>INP</tt></a></td>
+	<td>Wert von einem Eingabetor lesen</td>
+	<td>nein</td>
+	<td>nein</td>
+      </tr>
+      <tr valign="top">
+	<td><tt>LEN</tt></td>
+	<td>
+	  L&auml;nge der zuletzt mit
+	  <a href="instructions.htm#in_string">I$</a>
+	  eingegebenen Zeichenkette ermitteln
+	</td>
+	<td>nein</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#peek"><tt>PEEK</tt></a></td>
+	<td>8-Bit-Wert (1 Byte) aus dem Arbeitsspeicher lesen</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#rnd"><tt>RND</tt></a></td>
+	<td>Ermitteln einer Zufallszahl</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#sgn"><tt>SGN</tt></a></td>
+	<td>Ermitteln des Vorzeichens</td>
+	<td>nein</td>
+	<td>nein</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#size"><tt>SIZE</tt></a></td>
+	<td>
+	  Ermitteln der Gr&ouml;&szlig;e des oberhalb von
+	  <a href="functions.htm#top">TOP</a>
+	  zur Verf&uuml;gung stehenden Speicherplatzes
+	</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#sqr"><tt>SQR</tt></a></td>
+	<td>Ermitteln der Quadratwurzel</td>
+	<td>nein</td>
+	<td>nein</td>
+      </tr>
+      <tr valign="top">
+	<td><a href="functions.htm#top"><tt>TOP</tt></a></td>
+	<td>
+	  Ermitteln der Adresse des ersten freien Bytes
+	  hinter dem Programm
+	</td>
+	<td>ja</td>
+	<td>ja</td>
+      </tr>
+
+    </table>
+  <br><br>
+
+  <h2>Erl&auml;uterungen zu den Funktionen</h2>
+    In spitzen Klammern eingeschlossene Elemente dienen als Platzhalter
+    und sind entsprechend zu ersetzten.
+  <br><br>
+
+  <h3><a name="abs">ABS</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>ABS</tt>
+	  <tt>(</tt>
+	  <it>&lt;numerischer Ausdruck&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+    </table>
+  <br>
+    Die Funktion liefert den absoluten Betrag des Wertes
+    des angegebenen Ausdrucks.
+  <br><br>
+
+  <h3><a name="deek">DEEK</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>DEEK</tt>
+	  <tt>(</tt>
+	  <it>&lt;Adresse&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+      <tr valign="top">
+	<td>Adresse:</td><td>numerischer Ausdruck</td></td>
+      </tr>
+    </table>
+  <br>
+    Die Funktion liest zwei aufeinander folgende Bytes vom Arbeitsspeicher
+    ab der angegebenen Adresse und liefert sie als 16-Bit-Wert zur&uuml;ck.
+  <br><br>
+
+  <h3><a name="hex">HEX</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>HEX</tt>
+	  <tt>(</tt>
+	  <it>&lt;Hexadezimalzahl&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+      <tr valign="top">
+	<td>Hexadezimalzahl:</td>
+	<td>Folge von Zeichen aus 0 bis 9, A bis F oder a bis f</td>
+      </tr>
+    </table>
+  <br>
+    Die Funktion liefert den Wert der angegebenen Hexadezimalzahl.
+  <br><br>
+    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC-Interpreter
+    sind Kleinbuchstaben in der Hexadezimalzahl nicht erlaubt.
+    Au&szlig;erdem d&uuml;rfen zwischen den Klammern und der Hexadezimalzahl
+    keine Leerzeichen stehen.
+  <br><br>
+
+  <h3><a name="inchar">INCHAR</a></h3>
+    Die Funktion liest ein Zeichen von der Tastatur und liefert
+    den Wert dieses Zeichens zur&uuml;ck.
+    Wenn keine Taste gedr&uuml;ckt ist, wird bis zum Dr&uuml;cken
+    einer Taste gewartet.
+  <br><br>
+
+  <h3><a name="inkey">INKEY</a></h3>
+    Die Funktion pr&uuml;ft, ob gerade eine Taste gedr&uuml;ckt ist.
+    Wenn ja, wird der Wert des damit eingegebenen Zeichen zur&uuml;ckgeliefert.
+    Anderenfalls liefert die Funktion den Wert Null.
+  <br><br>
+
+  <h3><a name="in">IN, INP</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>IN</tt>
+	  <tt>(</tt>
+	  <it>&lt;Adresse&gt;</it>
+	  <tt>)</tt><br>
+	  <tt>INP</tt>
+	  <tt>(</tt>
+	  <it>&lt;Adresse&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+      <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+    </table>
+  <br>
+    Die Funktionen IN und INP haben die gleiche Wirkung.
+    Sie lesen ein Byte von dem durch die Adresse
+    angegebenen Eingabetor und liefern den Wert des Bytes zur&uuml;ck.
+  <br><br>
+    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC ist nur
+    das Schl&uuml;sselwort IN erlaubt.
+  <br><br>
+
+  <h3><a name="peek">PEEK</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>PEEK</tt>
+	  <tt>(</tt>
+	  <it>&lt;Adresse&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+      <tr valign="top">
+	<td>Adresse:</td><td>numerischer Ausdruck</td></td>
+      </tr>
+    </table>
+  <br>
+    Die Funktion liest das Byte vom Arbeitsspeicher,
+    welches auf der angegebenen Adresse steht,
+    und liefert den Wert des Bytes zur&uuml;ck.
+  <br><br>
+
+  <h3><a name="rnd">RND</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>RND</tt>
+	  <tt>(</tt>
+	  <it>&lt;Maximalwert&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+      <tr valign="top">
+	<td>Maximalwert:</td><td>numerischer Ausdruck</td></td>
+      </tr>
+    </table>
+  <br>
+    Die Funktion liefert einen zuf&auml;lligen Wert zwischen eins
+    und dem angegebenen Maximalwert.
+  <br><br>
+
+  <h3><a name="sgn">SGN</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>SGN</tt>
+	  <tt>(</tt>
+	  <it>&lt;numerischer Ausdruck&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+    </table>
+  <br>
+    Die Funktion liefert -1, wenn der Wert des angegebenen Ausdrucks
+    kleiner Null ist, 1 wenn der Wert gr&ouml;&szlig;er Null ist
+    und Null, wenn der Wert Null ist.
+  <br><br>
+
+  <h3><a name="size">SIZE</a></h3>
+    Die Funktion liefert die Gr&ouml;&szlig;e des Speicherbereichs
+    zur&uuml;ck, der sich unmittelbar an das Programm anschlie&szlig;t
+    und dessen Adresse mit der
+    <a href="functions.htm#top">TOP</a>-Funktion ermittelt werden kann.
+    Die obere Grenze dieses Speicherbereichs wird in den
+    <a href="options.htm">Compiler-Optionen</a> eingestellt.
+    Wenn die Gr&ouml;&szlig;e dieses Bereichs 32767 Bytes &uuml;bersteigt,
+    wird nur 32767 zur&uuml;ckgeliefert,
+    da das der gr&ouml;&szlig;tm&ouml;gliche positive Wert ist.
+  <br><br>
+
+  <h3><a name="sqr">SQR</a></h3>
+    <table border="1">
+      <tr valign="top">
+	<td>Syntax:</td>
+	<td>
+	  <tt>SQR</tt>
+	  <tt>(</tt>
+	  <it>&lt;numerischer Ausdruck&gt;</it>
+	  <tt>)</tt>
+	</td>
+      </tr>
+    </table>
+  <br>
+    Die Funktion liefert den ganzzahligen Anteil der Quadratwurzel
+    aus dem Wert des angegebenen Ausdrucks zur&uuml;ck.
+  <br><br>
+
+  <h3><a name="top">TOP</a></h3>
+    Die Funktion liefert die Adresse des ersten freien Bytes
+    hinter dem Programm zur&uuml;ck.
+</body>
+</html>
+

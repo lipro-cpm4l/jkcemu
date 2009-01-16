@@ -1,0 +1,120 @@
+<html>
+<body>
+  <h1>
+    Beschreibung des Monitorprogramms
+    &quot;Z1013-OS J.Mueller 1990-1992&quot;
+  </h1>
+
+  <h2>1. Allgemeines</h2>
+    Das Monitorprogramm wurde mit dem Ziel entwickelt,
+    den originalen Monitor 2.02 durch eine komfortablere Version
+    zu ersetzen.
+    Die Hardware-Vorausetzungen sollten beibehalten werden
+    (2 KByte ROM, Folienflachtastatur).
+  <br><br>
+
+  <h2>2. Eigenschaften</h2>
+    Das Monitorprogramm wurde mit dem Ziel entwickelt,
+    die M&ouml;glichkeit zum Speichern und Laden von Dateien
+    im neuen Kassettenaufzeichnungsformat <em>Headersave</em> zu bieten.
+    Diese neuen Funktionen k&ouml;nnen &uuml;ber die Kommandos <tt>L</tt>
+    und <tt>S</tt> sowie von Programmen aus &uuml;ber den Sprungverteiler
+    aufgerufen werden.
+    Funktionen f&uuml;r das Laden und Speichern im alten
+    Kassettenaufzeichnungsformat stehen aber weiterhin zur Verf&uuml;gung
+    (Kommandos <tt>G</tt> und <tt>P</tt> sowie Systemfunktionen 8 und 9).
+  <br><br>
+    Als weitere Neuerung wurde die Tastaturabfrage komfortabler gestaltet,
+    indem in der Systemfunktion 4 (INKEY) ein Autorepeat implementiert wurde.
+  <br><br>
+    Aufgrund der neuen Funktionen mussten aber andere
+    Funktionalit&auml;ten, die seltener gebraucht werden
+    (Speicherbereiche vergleichen, Haltepunkt setzen,
+    Schrittbetrieb, Registeranzeige), weichen.
+  <br><br>
+    Ein Nachteil des neuen Monitorprogramms ist,
+    dass sich die Systemfunktionen auf anderen Adressen befinden und
+    somit nur noch &uuml;ber <em>RST 20</em> aufgerufen werden k&ouml;nnen.
+    Dieser Nachteil ist inzwischen jedoch nicht mehr so tragisch,
+    da der A.2-Monitor ebenfalls andere Einsprungadressen hat
+    und deshalb die meisten Z1013-Programme dahingehend angepasst wurden,
+    nur noch RST 20 f&uuml;r Systemaufrufe zu verwenden.
+  <br><br>
+
+  <h2>3. Initialisierung</h2>
+    Zu Beginn werden wie beim Original die Z1013-Systemzellen initialisiert.
+    Au&szlig;erdem werden einige Funktionen des Sprungverteilers
+    initialisiert (Headersave, Tastaturabfrage).
+    Das setzt voraus, dass der Bereich F800h bis FFFFh RAM ist.
+    Danach wird gepr&uuml;ft, ob am Kassetteneingang gerade
+    ein Synchronisationston anliegt.
+    Wenn ja, wird die Laderoutine (Kommando <em>L</em>) aufgerufen.
+    Danach erscheint die Eingabeaufforderung
+    und man befindet sich in der Kommandoschleife.
+  <br><br>
+
+  <h2>4. Kommandos</h2>
+    Gegen&uuml;ber dem Original stehen folgende Kommandos
+    nicht mehr zur Verfuegung: B, C, E, F, N, R
+  <br><br>
+    Folgende Kommandos sind neu oder haben eine ge&auml;nderte
+    oder v&ouml;llig neue Bedeutung: D, G, L, M, P, S
+  <br><br>
+    Nachfolgend werden nur die Kommandos beschrieben,
+    die sich vom Original-Monitor 2.02 unterscheiden:
+  <br><br>
+
+  <h3>D &lt;aadr&gt; [&lt;eadr&gt;]</h3>
+    Werden Anfangs- und Endadresse angegeben,
+    wird der entsprechende Speicherinhalt wie beim Original
+    ausgegeben.
+    L&auml;sst man die Endadresse weg,
+    erfolgt die Speicherausgabe blockweise als HEX-ASCII-Dump.
+    Dr&uuml;ckt man <em>ENTER</em>, wird der n&auml;chste Block ausgegeben.
+    Jede andere Taste beendet das Kommando.
+  <br><br>
+
+  <h3>G &lt;aadr&gt; &lt;eadr&gt;</h3>
+    Diese Kommando entspricht dem alten <tt>L</tt>-Kommando und lie&szlig;t
+    eine Datei im alten Nicht-Headersave-Format von Kassette.
+  <br><br>
+
+  <h3>L [&lt;aadr&gt;]</h3>
+    Dieses Kommando l&auml;dt eine Datei im Headersave-Format
+    von der Kassette.
+    Dabei kann eine Ladeadresse angegeben werden,
+    die dann anstelle der in der Datei befindlichen verwendet wird.
+  <br><br>
+    Das Kommando listet erst einmal nur die Headersave-Dateien,
+    die die Kassette abspielt.
+    Immer nachdem ein Kopfblock gelesen wurde, wird er angezeigt.
+    Um die gerade angezeigt Datei zu laden,
+    m&uuml;ssen Sie <em>ENTER</em> dr&uuml;cken.
+  <br><br>
+    Wenn die gew&uuml;nschte Datei nicht zu finden ist,
+    k&ouml;nnen Sie das Kommando mit <em>S4-K/CTRL-C</em> abbrechen.
+  <br><br>
+
+  <h3>M &lt;aadr&gt;</h3>
+    Das <tt>M</tt>-Kommando dient zum &Auml;ndern von Speicherbereichen
+    und entspricht dem Original.
+    Es wurde jedoch komfortabler gestaltet,
+    indem neben hexadezimalen Zahlen auch ASCII-Zeichen
+    eingegeben werden k&ouml;nnen.
+    Wenn eine Eingabe mit einem Quote-Zeichen beginnt,
+    wird das n&auml;chste Zeichen als ASCII-Zeichen &uuml;bernommen.
+  <br><br>
+
+  <h3>P &lt;aadr&gt; &lt;eadr&gt;</h3>
+    Diese Kommando entspricht dem alten <tt>S</tt>-Kommando und
+    speichert den angegebenen Adressbereich im alten
+    Nicht-Headersave-Format auf Kassette.
+  <br><br>
+
+  <h3>S &lt;aadr&gt; &lt;eadr&gt;</h3>
+    Dieses Kommando speichert den angegebenen Adressbereich
+    im Headersave-Format auf Kassette.
+    Dazu werden Sie nach dem Typ und dem Namen der Datei gefragt.
+</body>
+</html>
+
