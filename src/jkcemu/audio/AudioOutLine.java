@@ -20,7 +20,7 @@ public class AudioOutLine extends AudioOut
   private static int[] sampleRatesSound = { 22050, 16000, 8000 };
   private static int[] sampleRatesData  = { 44100, 32000, 22050 };
 
-  private boolean        forDataTransfer;
+  private boolean        loudspeaker;
   private SourceDataLine dataLine;
   private byte[]         audioDataBuf;
   private int            audioDataPos;
@@ -28,13 +28,19 @@ public class AudioOutLine extends AudioOut
 
   public AudioOutLine(
 		Z80CPU    z80cpu,
-		boolean   forDataTransfer )
+		boolean   loudspeaker )
   {
     super( z80cpu );
-    this.forDataTransfer = forDataTransfer;
-    this.dataLine        = null;
-    this.audioDataBuf    = null;
-    this.audioDataPos    = 0;
+    this.loudspeaker  = loudspeaker;
+    this.dataLine     = null;
+    this.audioDataBuf = null;
+    this.audioDataPos = 0;
+  }
+
+
+  public boolean isLoudspeakerEmulationEnabled()
+  {
+    return this.loudspeaker;
   }
 
 
@@ -51,8 +57,8 @@ public class AudioOutLine extends AudioOut
 	if( sampleRate > 0 ) {
 	  line = openSourceDataLine( sampleRate );
 	} else {
-	  int[] sampleRates = this.forDataTransfer ?
-				this.sampleRatesData : this.sampleRatesSound;
+	  int[] sampleRates = this.loudspeaker ?
+				this.sampleRatesSound : this.sampleRatesData;
 	  for( int i = 0; (line == null) && (i < sampleRates.length); i++ )
 	    line = openSourceDataLine( sampleRates[ i ] );
 	}
@@ -117,7 +123,7 @@ public class AudioOutLine extends AudioOut
        * der CPU-Emulation temporaer, d.h.,
        * bis mindestens zum naechsten Soundsystemaufruf, abgeschaltet.
        */
-      if( this.forDataTransfer )
+      if( !this.loudspeaker )
 	this.z80cpu.setSpeedUnlimitedFor( diffTStates * 8 );
     }
   }
@@ -125,10 +131,15 @@ public class AudioOutLine extends AudioOut
 
   protected void writeSamples( int nSamples, boolean phase )
   {
+    writeSamples( nSamples, (byte) (phase ? 100 : -100) );
+  }
+
+
+  protected void writeSamples( int nSamples, byte value )
+  {
     SourceDataLine line         = this.dataLine;
     byte[]         audioDataBuf = this.audioDataBuf;
     if( (line != null) && (audioDataBuf != null) ) {
-      byte value = (byte) (phase ? 110 : -110);
       for( int i = 0; i < nSamples; i++ ) {
 	if( this.audioDataPos >= audioDataBuf.length ) {
 	  line.write( audioDataBuf, 0, audioDataBuf.length );
@@ -145,8 +156,9 @@ public class AudioOutLine extends AudioOut
   private SourceDataLine openSourceDataLine( int sampleRate )
   {
     SourceDataLine line = openSourceDataLine2( sampleRate, false );
-    if( line == null )
+    if( line == null ) {
       line = openSourceDataLine2( sampleRate, true );
+    }
     return line;
   }
 

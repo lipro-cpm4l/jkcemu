@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -67,6 +67,8 @@ public class Z80CPU
   private volatile Action                  action;
   private volatile int                     interruptMode;
   private int                              interruptReg;
+  private Integer                          haltPC;
+  private int                              instBegPC;
   private int                              regPC;
   private int                              regSP;
   private int                              regA;
@@ -101,7 +103,6 @@ public class Z80CPU
   private boolean                          flagN;
   private boolean                          flagCarry;
   private boolean                          lastInstWasEIorDI;
-  private boolean                          lastInstWasHALT;
   private volatile boolean                 active;
   private volatile boolean                 pause;
   private volatile boolean                 debugEnabled;
@@ -346,10 +347,11 @@ public class Z80CPU
     this.regR_bits0to6     = 0;
     this.regR_bit7         = false;
     this.lastInstWasEIorDI = false;
-    this.lastInstWasHALT   = false;
     this.debugCallLevel    = 0;
     this.pause             = false;
     this.action            = this.debugEnabled ? Action.DEBUG_RUN : Action.RUN;
+    this.haltPC            = null;
+    this.instBegPC         = 0;
     this.regPC             = 0;
     if( powerOn ) {
       setRegF( 0xFF );
@@ -600,6 +602,18 @@ public class Z80CPU
   public boolean getFlagCarry()
   {
     return this.flagCarry;
+  }
+
+
+  public boolean getIFF1()
+  {
+    return this.iff1;
+  }
+
+
+  public boolean getIFF2()
+  {
+    return this.iff2;
   }
 
 
@@ -994,16 +1008,17 @@ public class Z80CPU
 	  this.lastInstWasEIorDI = false;
 	} else {
 	  if( this.interruptAccepted && this.iff1 ) {
-	    this.lastInstWasHALT   = false;
 	    this.interruptAccepted = false;
 	    this.iff1              = false;
 	    this.iff2              = false;
+	    this.haltPC            = null;
 	    incRegR();
 
 	    switch( this.interruptMode ) {
 	      case 0:
+		this.instBegPC = this.regPC;
 		execInst( -1, getInterruptSourceVector() );
-		this.instTStates += 2;	// insgesamt 13 bei RST-Befehl
+		this.instTStates += 2;		// insgesamt 13 bei RST-Befehl
 		break;
 
 	      case 1:
@@ -1023,11 +1038,16 @@ public class Z80CPU
 	  else if( this.nmiAccepted ) {
 	    this.nmiAccepted = false;
 	    this.iff1        = false;
+	    this.haltPC      = null;
 	    incRegR();
 	    doPush( this.regPC );
 	    this.regPC = 0x0066;
 	    this.instTStates += 11;
 	  }
+	}
+	if( this.haltPC != null ) {
+	  this.regPC  = this.haltPC.intValue();
+	  this.haltPC = null;
 	}
 
 
@@ -1104,17 +1124,11 @@ public class Z80CPU
 
 	} else {
 
-	  if( this.lastInstWasHALT ) {
-
-	    // NOP-Befehle emulieren
-	    this.instTStates += 4;
-
-	  } else {
-	    // BefehlsOpCode lesen und PC weitersetzen
-	    opCode     = readMemByte( this.regPC );
-	    this.regPC = (this.regPC + 1) & 0xFFFF;
-	    execInst( -1, opCode );
-	  }
+	  // BefehlsOpCode lesen und PC weitersetzen
+	  this.instBegPC = this.regPC;
+	  opCode         = readMemByte( this.regPC );
+	  this.regPC     = (this.regPC + 1) & 0xFFFF;
+	  execInst( -1, opCode );
 	}
 	this.speedTStates += this.instTStates;
 
@@ -1138,6 +1152,7 @@ public class Z80CPU
    */
   public void execInstruction( int... opCode )
   {
+    this.instBegPC = this.regPC;
     try {
       this.codeBuf    = opCode;
       this.codeBufPos = 0;
@@ -1713,8 +1728,8 @@ public class Z80CPU
   {
     if( opCode == 0x76 ) {			// HALT
 
-      // NOP-Befehle ausfuehren
-      this.lastInstWasHALT = true;
+      // NOP-Befehl mit Ruecksetzen des PCs
+      this.haltPC = new Integer( this.instBegPC );
       this.instTStates += 4;
 
     } else {					// 8-Bit-Ladebefehle
@@ -1728,7 +1743,7 @@ public class Z80CPU
 			preCode == 0xDD ? this.regIX : this.regIY,
 			nextByte() ),
 		getSrcValue( -1, opCode ) );
-	this.instTStates += 15;	// insgesamt 19
+	this.instTStates += 15;			// insgesamt 19
       }
       else if( ((preCode == 0xDD) || (preCode == 0xFD))
 	       && ((opCode & 0x07) == 6) )
@@ -1762,7 +1777,7 @@ public class Z80CPU
 	  default:
 	    throwIllegalState( opCode );
 	}
-	this.instTStates += 15;	// insgesamt 19
+	this.instTStates += 15;			// insgesamt 19
 
       } else {
 
@@ -1849,9 +1864,9 @@ public class Z80CPU
     }
     if( (opCode & 0x07) == 6 ) {
       if( (preCode == 0xDD) || (preCode == 0xFD) ) {
-	this.instTStates += 15;	// insgesamt 19: ....(IXY+d)
+	this.instTStates += 15;			// insgesamt 19: ....(IXY+d)
       } else {
-	this.instTStates += 7;	// (HL)
+	this.instTStates += 7;			// (HL)
       }
     } else {
       this.instTStates += 4;
@@ -2833,7 +2848,7 @@ public class Z80CPU
     int opCode = nextByte();
     if( opCode < 0x80 ) {
       if( opCode < 0x40 ) {
-	this.instTStates += 8;		// *NOP
+	this.instTStates += 8;			// *NOP
       } else {
 	if( opCode < 0x60 ) {
 	  if( opCode < 0x50 ) {

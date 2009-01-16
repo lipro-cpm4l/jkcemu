@@ -47,6 +47,8 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuFilePackTgz;
   private JMenuItem            mnuFilePlay;
   private JMenuItem            mnuFileShowImage;
+  private JMenuItem            mnuFileRAMFloppyALoad;
+  private JMenuItem            mnuFileRAMFloppyBLoad;
   private JMenuItem            mnuFileChecksum;
   private JMenuItem            mnuFileCreateDir;
   private JMenuItem            mnuFileRename;
@@ -79,6 +81,8 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuPopupPackTar;
   private JMenuItem            mnuPopupPackTgz;
   private JMenuItem            mnuPopupShowImage;
+  private JMenuItem            mnuPopupRAMFloppyALoad;
+  private JMenuItem            mnuPopupRAMFloppyBLoad;
   private JMenuItem            mnuPopupChecksum;
   private JMenuItem            mnuPopupCreateDir;
   private JMenuItem            mnuPopupRename;
@@ -170,6 +174,13 @@ public class FileBrowserFrm extends BasicFrm
 
     this.mnuFilePackGZip = createJMenuItem( "GZip-Datei..." );
     mnuFilePack.add( this.mnuFilePackGZip );
+    mnuFile.addSeparator();
+
+    this.mnuFileRAMFloppyALoad = createJMenuItem( "In RAM-Floppy A laden" );
+    mnuFile.add( this.mnuFileRAMFloppyALoad );
+
+    this.mnuFileRAMFloppyBLoad = createJMenuItem( "In RAM-Floppy B laden" );
+    mnuFile.add( this.mnuFileRAMFloppyBLoad );
     mnuFile.addSeparator();
 
     this.mnuFileCreateDir = createJMenuItem( "Verzeichnis erstellen..." );
@@ -325,6 +336,13 @@ public class FileBrowserFrm extends BasicFrm
 
     this.mnuPopupPackGZip = createJMenuItem( "GZip-Datei..." );
     mnuPopupPack.add( this.mnuPopupPackGZip );
+    this.mnuPopup.addSeparator();
+
+    this.mnuPopupRAMFloppyALoad = createJMenuItem( "In RAM-Floppy A laden" );
+    this.mnuPopup.add( this.mnuPopupRAMFloppyALoad );
+
+    this.mnuPopupRAMFloppyBLoad = createJMenuItem( "In RAM-Floppy B laden" );
+    this.mnuPopup.add( this.mnuPopupRAMFloppyBLoad );
     this.mnuPopup.addSeparator();
 
     this.mnuPopupCreateDir = createJMenuItem( "Verszeichnis erstellen..." );
@@ -761,6 +779,18 @@ public class FileBrowserFrm extends BasicFrm
 	  rv = true;
 	  doFilePackZip();
 	}
+	else if( (src == this.mnuFileRAMFloppyALoad)
+		 || (src == this.mnuPopupRAMFloppyALoad) )
+	{
+	  rv = true;
+	  doFileRAMFloppyLoad( this.screenFrm.getEmuThread().getRAMFloppyA() );
+	}
+	else if( (src == this.mnuFileRAMFloppyBLoad)
+		 || (src == this.mnuPopupRAMFloppyBLoad) )
+	{
+	  rv = true;
+	  doFileRAMFloppyLoad( this.screenFrm.getEmuThread().getRAMFloppyB() );
+	}
 	else if( (src == this.mnuFileCreateDir)
 		 || (src == this.mnuPopupCreateDir) )
 	{
@@ -1182,6 +1212,40 @@ public class FileBrowserFrm extends BasicFrm
     if( fileNode != null ) {
       if( fileNode.isImageFile() )
 	this.screenFrm.showImageFile( fileNode.getFile() );
+    }
+  }
+
+
+  private void doFileRAMFloppyLoad( RAMFloppy ramFloppy )
+  {
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      File file = fileNode.getFile();
+      if( file != null ) {
+	boolean state = true;
+	if( ramFloppy.hasDataChanged() ) {
+	  if( BasicDlg.showYesNoDlg(
+		this,
+		"Die Daten in der RAM-Floppy sind nicht gespeichert.\n"
+			+ "M\u00F6chten Sie trotzdem die RAM-Floppy mit der\n"
+			+ "ausgew\u00E5hlten Datei laden?" ) )
+	  {
+	    state = true;
+	  }
+	}
+	if( state ) {
+	  try {
+	    ramFloppy.load( file );
+	    Main.setLastFile( file, "ramfloppy" );
+	  }
+	  catch( IOException ex ) {
+	    BasicDlg.showErrorDlg(
+		this,
+		"Die RAM-Floppy kann nicht geladen werden.\n\n"
+						+ ex.getMessage() );
+	  }
+	}
+      }
     }
   }
 
@@ -1843,6 +1907,12 @@ public class FileBrowserFrm extends BasicFrm
 
     this.mnuFilePackZip.setEnabled( stateEntries );
     this.mnuPopupPackZip.setEnabled( stateEntries );
+
+    this.mnuFileRAMFloppyALoad.setEnabled( stateOneFile );
+    this.mnuPopupRAMFloppyALoad.setEnabled( stateOneFile );
+
+    this.mnuFileRAMFloppyBLoad.setEnabled( stateOneFile );
+    this.mnuPopupRAMFloppyBLoad.setEnabled( stateOneFile );
 
     this.mnuFileLastModified.setEnabled( stateEntries );
     this.mnuPopupLastModified.setEnabled( stateEntries );

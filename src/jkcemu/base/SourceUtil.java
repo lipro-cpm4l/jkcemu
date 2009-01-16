@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,44 +8,13 @@
 
 package jkcemu.base;
 
-import java.io.IOException;
+import java.awt.Component;
 import java.lang.*;
 import z80emu.Z80MemView;
 
 
 public class SourceUtil
 {
-  /*
-   * Diese Tabelle mappt die AC1-BASIC-Tokens in die entsprechenden Texte.
-   * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
-   */
-  private static final String[] ac1Tokens = {
-    "END",      "FOR",    "NEXT",   "DATA",		// 0x80
-    "INPUT",    "DIM",    "READ",   "LET",
-    "GOTO",     "RUN",    "IF",     "RESTORE",
-    "GOSUB",    "RETURN", "REM",    "STOP",
-    "OUT",      "ON",     "NULL",   "WAIT",		// 0x90
-    "DEF",      "POKE",   "DOKE",   "AUTO",
-    "LINES",    "CLS",    "WIDTH",  "BYE",
-    "RENUMBER", "CALL",   "PRINT",  "CONT",
-    "LIST",     "CLEAR",  "CLOAD",  "CSAVE",		// 0xA0
-    "NEW",      "TAB(",   "TO",     "FN",
-    "SPC(",     "THEN",   "NOT",    "STEP",
-    "+",        "-",      "*",      "/",
-    "^",        "AND",    "OR",     ">",		// 0xB0
-    "=",        "<",      "SGN",    "INT",
-    "ABS",      "USR",    "FRE",    "INP",
-    "POS",      "SQR",    "RND",    "LN",
-    "EXP",      "COS",    "SIN",    "TAN",		// 0xC0
-    "ATN",      "PEEK",   "DEEK",   "POINT",
-    "LEN",      "STR$",   "VAL",    "ASC",
-    "CHR$",     "LEFT$",  "RIGHT$", "MID$",
-    "SET",      "RESET",  "WINDOW", "SCREEN",		// 0xD0
-    "EDIT",     "ASAVE",  "ALOAD",  "TRON",
-    "TROFF" };
-
-
-
   /*
    * Diese Tabelle mappt die KC-BASIC-Tokens in die entsprechenden Texte.
    * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
@@ -103,7 +72,7 @@ public class SourceUtil
 
   public static String getAssemblerText(
 				Z80MemView memory,
-				int        addr ) throws IOException
+				int        addr )
   {
     String rv      = null;
     int    endAddr = addr + memory.getMemWord( addr ) - 1;
@@ -129,178 +98,20 @@ public class SourceUtil
 	    buf.append( (char) b );
 	  }
 	}
-	rv = buf.toString();
+	if( buf.length() > 0 ) {
+	  rv = buf.toString();
+	}
       }
     }
     return rv;
   }
 
 
-  public static String getAC1BasicText( Z80MemView memory ) throws IOException
+  public static int getKCStyleBasicEndAddr( Z80MemView memory, int begAddr )
   {
-    String rv = getBasicText( memory, 0x60F7, ac1Tokens );
-    if( rv == null ) {
-      throwNoAC1Basic();
-    }
-    return rv;
-  }
-
-
-  public static String getKCBasicText(
-				Z80MemView memory,
-				int        addr ) throws IOException
-  {
-    String rv = getBasicText( memory, addr, kcTokens );
-    if( rv == null ) {
-      throwNoKCBasic();
-    }
-    return rv;
-  }
-
-
-  public static String getTinyBasicText(
-				String     sysName,
-				Z80MemView memory ) throws IOException
-  {
-    int addr    = -1;
-    int endAddr = -1;
-    if( sysName.startsWith( "AC1" ) ) {
-      addr    = 0x1950;
-      endAddr = memory.getMemWord( 0x18E9 ) + 1;
-    } else if( sysName.startsWith( "Z1013" ) ) {
-      addr    = 0x1152;
-      endAddr = memory.getMemWord( 0x101F ) + 1;
-    }
-    if( addr < 0 ) {
-      throwTinyBasicNotSupported();
-    }
-    if( endAddr <= addr ) {
-      throwNoTinyBasic();
-    }
-    int           len = endAddr - addr;
-    StringBuilder buf = new StringBuilder( len * 3 / 2 );
-
-    // Tiny-BASIC-Programm extrahieren
-    while( addr < endAddr - 1 ) {
-      buf.append( memory.getMemWord( addr ) );
-      addr += 2;
-
-      // Anzahl Leerzeichen vor der Anweisung ermitteln
-      int n = 0;
-      while( addr < endAddr ) {
-	int ch = memory.getMemByte( addr );
-	if( ch == '\u0020' ) {
-	  n++;
-	  addr++;
-	} else {
-	  if( ch != '\r' ) {
-	    for( int i = 0; i <= n; i++ )
-	      buf.append( (char) '\u0020' );
-	  }
-	  break;
-	}
-      }
-
-      // Zeile ausgeben
-      while( addr < endAddr ) {
-	int ch = memory.getMemByte( addr++ );
-	if( ch == '\r' ) {
-	  break;
-	}
-	if( ch != 0 ) {
-	  buf.append( (char) ch );
-	}
-      }
-      buf.append( (char) '\n' );
-    }
-    return buf.toString();
-  }
-
-
-  public static void saveAC1BasicProgram( ScreenFrm screenFrm )
-							throws IOException
-  {
-    int endAddr = getBasicEndAddr( screenFrm, 0x60F7 );
-    if( endAddr >= 0x60F7 ) {
-      SaveDlg dlg = new SaveDlg(
-				screenFrm,
-				0x60F7,
-				endAddr,
-				'B',
-				false,		// KC-BASIC
-				"AC1-BASIC-Programm speichern" );
-      dlg.setVisible( true );
-    } else {
-      throwNoAC1Basic();
-    }
-  }
-
-
-  public static void saveKCBasicProgram(
-				ScreenFrm  screenFrm,
-				int        begAddr ) throws IOException
-  {
-    int endAddr = getBasicEndAddr( screenFrm, begAddr );
-    if( endAddr >= begAddr ) {
-      SaveDlg dlg = new SaveDlg(
-				screenFrm,
-				begAddr - 0x41,
-				endAddr,
-				'B',
-				true,		// KC-BASIC
-				"KC-BASIC-Programm speichern" );
-      dlg.setVisible( true );
-    } else {
-      throwNoKCBasic();
-    }
-  }
-
-
-  public static void saveTinyBasicProgram( ScreenFrm screenFrm )
-							throws IOException
-  {
-    EmuThread emuThread = screenFrm.getEmuThread();
-    String    sysName   = emuThread.getEmuSys().getSystemName();
-    if( sysName.startsWith( "AC1" ) ) {
-      int endAddr = emuThread.getMemWord( 0x18E9 ) + 1;
-      if( endAddr <= 0x1950 ) {
-	throwNoTinyBasic();
-      }
-      new SaveDlg(
-		screenFrm,
-		0x18C0,
-		endAddr,
-		'b',
-		false,		// KC-BASIC
-		"AC1-Mini-BASIC-Programm speichern" ).setVisible( true );
-    } else if( sysName.startsWith( "Z1013" ) ) {
-      int endAddr = emuThread.getMemWord( 0x101F ) + 1;
-      if( endAddr <= 0x1152 ) {
-	throwNoTinyBasic();
-      }
-      new SaveDlg(
-		screenFrm,
-		0x1000,
-		endAddr,
-		'b',
-		false,		// KC-BASIC
-		"Z1013-Tiny-BASIC-Programm speichern" ).setVisible( true );
-    } else {
-      throwTinyBasicNotSupported();
-    }
-  }
-
-
-	/* --- private Methoden --- */
-
-  private static int getBasicEndAddr(
-				ScreenFrm screenFrm,
-				int       begAddr ) throws IOException
-  {
-    Z80MemView memory       = screenFrm.getEmuThread();
-    int        endAddr      = -1;
-    int        curLineAddr  = begAddr;
-    int        nextLineAddr = memory.getMemWord( curLineAddr );
+    int endAddr      = -1;
+    int curLineAddr  = begAddr;
+    int nextLineAddr = memory.getMemWord( curLineAddr );
     while( (nextLineAddr > curLineAddr + 5)
 	   && (memory.getMemByte( nextLineAddr - 1 ) == 0) )
     {
@@ -314,10 +125,16 @@ public class SourceUtil
   }
 
 
-  private static String getBasicText(
+  public static String getKCBasicProgram( Z80MemView memory, int addr )
+  {
+    return getKCStyleBasicProgram( memory, addr, kcTokens );
+  }
+
+
+  public static String getKCStyleBasicProgram(
 				Z80MemView memory,
 				int        addr,
-				String[]   tokenTab ) throws IOException
+				String[]   tokenTab )
   {
     StringBuilder buf = new StringBuilder( 0x4000 );
 
@@ -379,46 +196,102 @@ public class SourceUtil
       addr         = nextLineAddr;
       nextLineAddr = memory.getMemWord( addr );
     }
+    return buf.length() > 0 ? buf.toString() : null;
+  }
 
+
+  public static String getTinyBasicProgram(
+				Z80MemView memory,
+				int        begAddr,
+				int        endAddr )
+  {
     String rv = null;
-    if( buf.length() > 0 ) {
-      rv = buf.toString();
-    } else {
-      throwNoKCBasic();
+    if( endAddr > begAddr ) {
+      int           len = endAddr - begAddr;
+      StringBuilder buf = new StringBuilder( len * 3 / 2 );
+
+      // Tiny-BASIC-Programm extrahieren
+      int addr = begAddr;
+      while( addr < endAddr - 1 ) {
+	buf.append( memory.getMemWord( addr ) );
+	addr += 2;
+
+	// Anzahl Leerzeichen vor der Anweisung ermitteln
+	int n = 0;
+	while( addr < endAddr ) {
+	  int ch = memory.getMemByte( addr );
+	  if( ch == '\u0020' ) {
+	    n++;
+	    addr++;
+	  } else {
+	    if( ch != '\r' ) {
+	      for( int i = 0; i <= n; i++ )
+		buf.append( (char) '\u0020' );
+	    }
+	    break;
+	  }
+	}
+
+	// Zeile ausgeben
+	while( addr < endAddr ) {
+	  int ch = memory.getMemByte( addr++ );
+	  if( ch == '\r' ) {
+	    break;
+	  }
+	  if( ch != 0 ) {
+	    buf.append( (char) ch );
+	  }
+	}
+	buf.append( (char) '\n' );
+      }
+      if( buf.length() > 0 ) {
+	rv = buf.toString();
+      }
     }
     return rv;
   }
 
 
-  private static void throwNoAC1Basic() throws IOException
+  public static void openKCBasicProgram(
+				ScreenFrm screenFrm,
+				int       begAddr )
   {
-    throw new IOException(
-		"Es ist kein AC1-BASIC-Programm im entsprechenden\n"
-			+ "Adressbereich des Arbeitsspeichers vorhanden." );
+    String text = getKCBasicProgram( screenFrm.getEmuThread(), begAddr );
+    if( text != null ) {
+      screenFrm.openText( text );
+    } else {
+      showNoKCBasic( screenFrm );
+    }
   }
 
 
-  private static void throwNoKCBasic() throws IOException
+  public static void saveKCBasicProgram(
+				ScreenFrm  screenFrm,
+				int        begAddr )
   {
-    throw new IOException(
-		"Es ist kein KC-BASIC-Programm im entsprechenden\n"
-			+ "Adressbereich des Arbeitsspeichers vorhanden." );
+    int endAddr = getKCStyleBasicEndAddr( screenFrm.getEmuThread(), begAddr );
+    if( endAddr >= begAddr ) {
+      (new SaveDlg(
+		screenFrm,
+		begAddr - 0x41,
+		endAddr,
+		'B',
+		true,		// KC-BASIC
+		"KC-BASIC-Programm speichern" )).setVisible( true );
+    } else {
+      showNoKCBasic( screenFrm );
+    }
   }
 
 
-  private static void throwNoTinyBasic() throws IOException
-  {
-      throw new IOException(
-		"Es ist kein Mini-/Tiny-BASIC-Programm im entsprechenden\n"
-			+ "Adressbereich des Arbeitsspeichers vorhanden." );
-  }
+	/* --- private Methoden --- */
 
-
-  private static void throwTinyBasicNotSupported() throws IOException
+  private static void showNoKCBasic( Component owner )
   {
-      throw new IOException(
-		"Mini-/Tiny-BASIC wird f\u00FCr das gerade emulierte System"
-			+ " nicht unterst\u00FCtzt." );
+    BasicDlg.showErrorDlg(
+	owner,
+	"Es ist kein KC-BASIC-Programm im entsprechenden\n"
+		+ "Adressbereich des Arbeitsspeichers vorhanden." );
   }
 }
 

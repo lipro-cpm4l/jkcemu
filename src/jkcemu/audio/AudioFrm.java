@@ -104,7 +104,9 @@ public class AudioFrm extends BasicFrm implements Z80MaxSpeedListener
 
     ButtonGroup grpFct = new ButtonGroup();
 
-    this.btnSoundOut = new JRadioButton( "T\u00F6ne ausgeben", true );
+    this.btnSoundOut = new JRadioButton(
+			"T\u00F6ne ausgeben (Emulation des Lautsprechers)",
+			true );
     grpFct.add( this.btnSoundOut );
     this.btnSoundOut.addActionListener( this );
     panelFct.add( this.btnSoundOut, gbcFct );
@@ -544,7 +546,7 @@ public class AudioFrm extends BasicFrm implements Z80MaxSpeedListener
     stopAudio();
     AudioOut audioOut = new AudioOutLine(
 				this.z80cpu,
-				this.btnDataOut.isSelected() );
+				this.btnSoundOut.isSelected() );
     this.audioFmt = audioOut.startAudio( speedKHz, getSampleRate() );
     this.audioIO  = audioOut;
     if( this.audioFmt != null ) {

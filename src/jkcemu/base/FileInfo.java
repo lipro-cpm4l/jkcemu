@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,7 +23,7 @@ public class FileInfo
 				"KC-BASIC-Programmdatei mit Kopfdaten";
   public static final String KCBASIC_PURE = "KC-BASIC-Programmdatei";
   public static final String INTELHEX = "Intel-HEX-Datei";
-  public static final String BIN      = "Speicherabbilddatei ohne Kopfdaten";
+  public static final String BIN = "BIN-Datei (Speicherabbild ohne Kopfdaten)";
 
 
   private byte[] header;
@@ -145,16 +145,16 @@ public class FileInfo
 	char c5 = (char) (header[ 5 ] & 0xFF);
 	char c6 = (char) (header[ 6 ] & 0xFF);
 	if( ((header[ 0 ] & 0xFF)== ':')
-	    && isHexChar( header[ 1 ] & 0xFF )
-	    && isHexChar( header[ 2 ] & 0xFF )
-	    && isHexChar( c3 )
-	    && isHexChar( c4 )
-	    && isHexChar( c5 )
-	    && isHexChar( c6 )
+	    && EmuUtil.isHexChar( header[ 1 ] & 0xFF )
+	    && EmuUtil.isHexChar( header[ 2 ] & 0xFF )
+	    && EmuUtil.isHexChar( c3 )
+	    && EmuUtil.isHexChar( c4 )
+	    && EmuUtil.isHexChar( c5 )
+	    && EmuUtil.isHexChar( c6 )
 	    && ((header[ 7 ] & 0xFF) == '0')
 	    && ((header[ 8 ] & 0xFF) == '0')
-	    && isHexChar( header[ 9 ] & 0xFF )
-	    && isHexChar( header[ 10 ] & 0xFF ) )
+	    && EmuUtil.isHexChar( header[ 9 ] & 0xFF )
+	    && EmuUtil.isHexChar( header[ 10 ] & 0xFF ) )
 	{
 	  fileFmt = INTELHEX;
 	}
@@ -408,10 +408,10 @@ public class FileInfo
 	char c5 = (char) (header[ 5 ] & 0xFF);
 	char c6 = (char) (header[ 6 ] & 0xFF);
 	if( ((header[ 0 ] & 0xFF) == ':')
-	    && isHexChar( c3 )
-	    && isHexChar( c4 )
-	    && isHexChar( c5 )
-	    && isHexChar( c6 ) )
+	    && EmuUtil.isHexChar( c3 )
+	    && EmuUtil.isHexChar( c4 )
+	    && EmuUtil.isHexChar( c5 )
+	    && EmuUtil.isHexChar( c6 ) )
 	{
 	  rv = (getHexValue( c3 ) << 12)
 			| (getHexValue( c4 ) << 8)
@@ -612,7 +612,7 @@ public class FileInfo
    * Diese Methode liest eine Datei und liefert ihren Inhalt als Byte-Array.
    * Um bei einer sehr grossen Datei einen Speicherueberlauf zu verhindern,
    * werden nur soviele Bytes gelesen,
-   * dass sich bis zu 64 kByte Nutzdaten extrahieren lassen.
+   * dass sich bis zu 64 KByte Nutzdaten extrahieren lassen.
    * Im unguenstigsten Fall enthaelt eine Intel-HEX-Datei ein Nutzbyte
    * pro Zeile, sodass fuer ein Nutzbyte theoretisch max. 13 Dateibytes
    * notwendig sein koennen (:01AAAABBCC\r\n).
@@ -842,14 +842,6 @@ public class FileInfo
       rv = (ch - 'a' + 10);
     }
     return rv;
-  }
-
-
-  private static boolean isHexChar( int ch )
-  {
-    return ((ch >= '0') && (ch <= '9'))
-	   || ((ch >= 'A') && (ch <= 'F'))
-	   || ((ch >= 'a') && (ch <= 'f'));
   }
 
 

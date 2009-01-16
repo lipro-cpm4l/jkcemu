@@ -13,12 +13,12 @@
     In den <a href="settings.htm">Einstellungen</a> w&auml;hlen Sie
     die gew&uuml;nschte Kombination aus Monitorprogramm und Tastatur aus.
   <br><br>
-    Konkret werden emuliert:
+    Emuliert werden:
     <ul>
-      <li>Je nach Monitorprogramm 2 oder 4 kByte ROM
-      <li>16 oder 64 kByte RAM,<br>
+      <li>Je nach Monitorprogramm 2 oder 4 KByte ROM
+      <li>16 oder 64 KByte RAM,<br>
 	  Der tats&auml;chlich verf&uuml;gbare RAM betr&auml;gt
-	  je nach emulierter ROM-Gr&ouml;&szlig;e max. 62 kByte.
+	  je nach emulierter ROM-Gr&ouml;&szlig;e max. 62 KByte.
       <li>Tastaturen:
 	  <ul>
 	    <li>Folienflachtastatur (8x4-Matrix)
@@ -27,7 +27,60 @@
 	    <li>S6009 (12x8-Matrix)
 	  </ul>
       <li>Kassettenrecorderanschluss
+      <li>2 RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
+	  Heft 3/1988 an den IO-Basis-Adressen
+	  98h (RAM-Floppy A) und 58h (RAM-Floppy B)
+      <li>Peters-Platine
     </ul>
+  <br><br>
+
+  <h3>Peters-Platine</h3>
+    Die Peters-Platine erm&ouml;glicht &uuml;ber IO-Port 4
+    die Abschaltung des ROMs sowie die Umschaltung des Zeichensatzes,
+    der Taktfrequenz und der Bildschirmorganisation.
+  <br><br>
+    Bedeutung der Bits von IO-Port 4:
+  <br>
+    <table border="1">
+      <tr>
+	<th valign="top">Bit</th>
+	<th valign="top">Bedeutung bei Wert 0 (Standard)</th>
+	<th valign="top">Bedeutung bei Wert 1</th></tr>
+      </tr>
+      <tr>
+	<td valign="top">4</td>
+	<td valign="top">ROM eingeblendet</td>
+	<td valign="top">
+	  ROM aus- und daf&uuml;r RAM eingeblendet,<br>
+	  Im Emulator extern eingebundene ROM-Images
+	  werden nicht ausgeblendet.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">5</td>
+	<td valign="top">Standardzeichensatz</td>
+	<td valign="top">
+	  alternativer Zeichensatz,<br>
+	  Der Emulator schaltet auf einen Zeichensatz mit deutschen Umlauten
+	  nach ISO 646 und inversen Zeichen um.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">6</td>
+	<td valign="top">Taktfrequenz 2 MHz</td>
+	<td valign="top">
+	  Taktfrequenz 4 MHz,<br>
+	  Der Emulator schaltet nur dann auf 4 MHz um,
+	  wenn in den <a href="settings.htm#speed">Einstellungen</a>
+	  der Standardwert von 2 MHz angegeben ist.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">7</td>
+	<td valign="top">Bildschirm 32x32 Zeichen</td>
+	<td valign="top">Bildschirm 64x16 Zeichen</td>
+      </tr>
+    </table>
   <br><br>
 
   <h2>Im ROM enthaltene Software</h2>
@@ -63,7 +116,7 @@
     Damit Sie solche Programme auch im Emulator ohne Einschr&auml;nkungen
     bedienen k&ouml;nnen,
     werden diese vier Shift-Tasten auch als Einzeltasten emuliert,
-    und zwar durch mit Hilfe der Funktionstasten <em>F1</em> bis <em>F4</em>.
+    und zwar mit den Funktionstasten <em>F1</em> bis <em>F4</em>.
 </body>
 </html>
 

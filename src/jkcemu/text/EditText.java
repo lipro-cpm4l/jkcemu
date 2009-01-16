@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,6 +22,8 @@ import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.programming.PrgOptions;
 import jkcemu.print.*;
+import jkcemu.ac1.AC1;
+import jkcemu.z1013.Z1013;
 import z80emu.Z80MemView;
 
 
@@ -330,7 +332,7 @@ public class EditText implements
 			  addr = 0x2C01;
 			  break;
 		      }
-		      text = SourceUtil.getKCBasicText( loadData, addr );
+		      text = SourceUtil.getKCBasicProgram( loadData, addr );
 		    }
 		    break;
 
@@ -339,15 +341,11 @@ public class EditText implements
 		    if( loadData != null ) {
 		      switch( loadData.getBegAddr() ) {
 			case 0x1000:
-			  text = SourceUtil.getTinyBasicText(
-							"Z1013",
-							loadData );
+			  text = Z1013.getTinyBasicProgram( loadData );
 			  break;
 
 			case 0x18C0:
-			  text = SourceUtil.getTinyBasicText(
-							"AC1",
-							loadData );
+			  text = AC1.getTinyBasicProgram( loadData );
 			  break;
 		      }
 		    }
@@ -391,7 +389,7 @@ public class EditText implements
 	      {
 		loadData = FileInfo.createLoadData( fileBytes, fileFmt );
 		if( loadData != null ) {
-		  text = SourceUtil.getKCBasicText(
+		  text = SourceUtil.getKCBasicProgram(
 						loadData,
 						fileInfo.getBegAddr() );
 		}

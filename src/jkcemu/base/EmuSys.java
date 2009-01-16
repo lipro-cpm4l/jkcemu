@@ -13,12 +13,16 @@ import java.awt.event.KeyEvent;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
+import javax.swing.JOptionPane;
 import jkcemu.base.ScreenFrm;
 import z80emu.*;
 
 
 public abstract class EmuSys
 {
+  protected static final int BLACK = 0;
+  protected static final int WHITE = 1;
+
   protected EmuThread emuThread;
   protected ScreenFrm screenFrm;
 
@@ -29,6 +33,33 @@ public abstract class EmuSys
   {
     this.emuThread = emuThread;
     this.screenFrm = emuThread.getScreenFrm();
+  }
+
+
+  protected int askKCBasicBegAddr()
+  {
+    int         addr    = -1;
+    String[]    options = { "RAM-BASIC", "ROM-BASIC", "Abbrechen" };
+    JOptionPane pane    = new JOptionPane(
+	"W\u00E4hlen Sie bitte aus,"
+		+ " ob das KC-BASIC-Programm im Adressbereich f\u00FCr das\n"
+		+ "RAM-BASIC (ab 2C01h) oder f\u00FCr das"
+		+ " ROM-BASIC (ab 0401h) gesucht werden soll.",
+	JOptionPane.QUESTION_MESSAGE );
+    pane.setOptions( options );
+    pane.createDialog(
+		this.screenFrm,
+		"Adresse des KC-BASIC-Programms" ).setVisible( true );
+    Object value = pane.getValue();
+    if( value != null ) {
+      if( value.equals( options[ 0 ] ) ) {
+	addr = 0x2C01;
+      }
+      else if( value.equals( options[ 1 ] ) ) {
+	addr = 0x0401;
+      }
+    }
+    return addr;
   }
 
 
@@ -44,7 +75,7 @@ public abstract class EmuSys
   }
 
 
-  protected String extractScreenText(
+  protected String extractMemText(
 				int addr,
 				int nRows,
 				int nCols,
@@ -56,7 +87,7 @@ public abstract class EmuSys
       int nSpaces = 0;
       for( int k = 0; k < nCols; k++ ) {
 	int b = this.emuThread.getMemByte( rowAddr + k );
-	if( b == 0x20 ) {
+	if( (b == 0) || b == 0x20 ) {
 	  nSpaces++;
 	}
 	else if( (b > 0x20) && (b < 0x7F) ) {
@@ -100,13 +131,13 @@ public abstract class EmuSys
 
   public int getBorderColorIndex()
   {
-    return 0;		// schwarz
+    return BLACK;
   }
 
 
   public Color getColor( int colorIdx )
   {
-    return colorIdx == 1 ? Color.white : Color.black;
+    return colorIdx == WHITE ? Color.white : Color.black;
   }
 
 
@@ -118,7 +149,7 @@ public abstract class EmuSys
 
   public int getColorIndex( int x, int y )
   {
-    return 0;
+    return WHITE;
   }
 
 
@@ -131,11 +162,17 @@ public abstract class EmuSys
   }
 
 
+  public int getMemWord( int addr )
+  {
+    return (getMemByte( addr + 1 ) << 8) | getMemByte( addr );
+  }
+
+
   public abstract int getMinOSAddress();
   public abstract int getMaxOSAddress();
 
 
-  public int getResetStartAddress()
+  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
     return 0;
   }
@@ -146,15 +183,45 @@ public abstract class EmuSys
   public abstract String getSystemName();
 
 
+  public boolean getSwapKeyCharCase()
+  {
+    return false;
+  }
+
+
   public boolean hasKCBasicInROM()
   {
     return false;
   }
 
 
-  public boolean keyEvent( KeyEvent e )
+  public void openBasicProgram()
+  {
+    showFunctionNotSupported();
+  }
+
+
+  public void openTinyBasicProgram()
+  {
+    showFunctionNotSupported();
+  }
+
+
+  public boolean keyPressed( KeyEvent e )
   {
     return false;
+  }
+
+
+  public void keyReleased( int keyCode )
+  {
+    // leer
+  }
+
+
+  public void keyTyped( char keyChar )
+  {
+    // leer
   }
 
 
@@ -203,9 +270,21 @@ public abstract class EmuSys
   }
 
 
-  public void reset( boolean powerOn )
+  public void reset( EmuThread.ResetLevel resetLevel )
   {
     // leer
+  }
+
+
+  public void saveBasicProgram()
+  {
+    showFunctionNotSupported();
+  }
+
+
+  public void saveTinyBasicProgram()
+  {
+    showFunctionNotSupported();
   }
 
 
@@ -215,9 +294,32 @@ public abstract class EmuSys
   }
 
 
+  public boolean supportsRAMFloppyA()
+  {
+    return false;
+  }
+
+
+  public boolean supportsRAMFloppyB()
+  {
+    return false;
+  }
+
+
   public void writeIOByte( int port, int value )
   {
     // leer
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void showFunctionNotSupported()
+  {
+    BasicDlg.showErrorDlg(
+	this.screenFrm,
+	"Diese Funktion steht f\u00Fcr das gerade emulierte System\n"
+		+ "nicht zur Verf\u00FCgung." );
   }
 }
 

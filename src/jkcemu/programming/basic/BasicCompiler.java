@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,7 @@ import jkcemu.programming.assembler.Z80Assembler;
 
 public class BasicCompiler extends PrgThread
 {
-  private enum Platform { AC1, Z1013, Z9001 };
+  private enum Platform { AC1, KC85_2TO4, Z1013, Z9001, UNKNOWN };
 
   private enum LibItem { INLN, R_INT, P_HEXA, P_INT, P_LTXT, P_TEXT, P_TAB,
 			DATA, DREAD,
@@ -46,6 +46,7 @@ public class BasicCompiler extends PrgThread
   private BasicSourceFormatter sourceFormatter;
   private StringBuilder        asmOut;
   private StringBuilder        dataOut;
+  private String               sysName;
   private String               endOfLineLabel;
   private Stack<String>        elseLabels;
   private Platform             platform;
@@ -84,13 +85,26 @@ public class BasicCompiler extends PrgThread
       }
       this.sourceFormatter = new BasicSourceFormatter( capacity );
     }
-    this.platform  = Platform.Z9001;
-    String sysName = emuThread.getEmuSys().getSystemName();
-    if( sysName.startsWith( "AC1" ) ) {
-      this.platform  = Platform.AC1;
+    this.platform = Platform.UNKNOWN;
+    this.sysName  = emuThread.getEmuSys().getSystemName();
+    if( this.sysName.startsWith( "AC1" ) ) {
+      this.platform = Platform.AC1;
     }
-    else if( sysName.startsWith( "Z1013" ) ) {
+    else if( this.sysName.startsWith( "HC900" )
+	     || this.sysName.startsWith( "KC85/2" )
+	     || this.sysName.startsWith( "KC85/3" )
+	     || this.sysName.startsWith( "KC85/4" ) )
+    {
+      this.platform = Platform.KC85_2TO4;
+    }
+    else if( this.sysName.startsWith( "Z1013" ) ) {
       this.platform  = Platform.Z1013;
+    }
+    else if( this.sysName.startsWith( "Z9001" )
+	     || this.sysName.startsWith( "KC85/1" )
+	     || this.sysName.startsWith( "KC87" ) )
+    {
+      this.platform = Platform.Z9001;
     }
     this.libItems                  = new HashSet<LibItem>();
     this.varLabels                 = new HashSet<String>();
@@ -169,23 +183,32 @@ public class BasicCompiler extends PrgThread
       try {
 	clearErrorCount();
 	appendToLog( "Compiliere...\n" );
-	parseSource();
-	closePrintString();
-	if( this.running ) {
-	  putLibrary();
-	  writeInit();
-	  if( (getErrorCount() == 0)
-	      && (this.forceRun
-		  || this.options.getCodeToEmu()
-		  || this.options.getCodeToFile()) )
-	  {
-	    (new Z80Assembler(
+	if( this.platform == Platform.UNKNOWN ) {
+	  appendToLog(
+		String.format(
+			"Fehler: Das gerade emulierte System (%s)"
+				+ " wird nicht unterst\u00FCtzt.\n",
+			this.sysName ) );
+	  incErrorCount();
+	} else {
+	  parseSource();
+	  closePrintString();
+	  if( this.running ) {
+	    putLibrary();
+	    writeInit();
+	    if( (getErrorCount() == 0)
+		&& (this.forceRun
+		    || this.options.getCodeToEmu()
+		    || this.options.getCodeToFile()) )
+	    {
+	      (new Z80Assembler(
 			this.emuThread,
 			this.editText,
 			this.asmOut.toString(),
 			this.logOut,
 			this.options,
 			this.forceRun )).assemble();
+	    }
 	  }
 	}
       }
@@ -472,7 +495,7 @@ public class BasicCompiler extends PrgThread
     }
     String line = readLine();
     while( this.running && (line != null) ) {
-      parseLine( line );
+      parseLine( line.trim() );
       line = readLine();
     }
     if( this.basicOptions.getShowAsm() && !this.suppressExit ) {
@@ -570,7 +593,7 @@ public class BasicCompiler extends PrgThread
     if( this.elseLabels != null ) {
       this.elseLabels.clear();
     }
-    if( this.basicOptions.getShowAsm() ) {
+    if( this.basicOptions.getShowAsm() && (lineText.length() > 0) ) {
       putCode( "\n;" );
       putCode( lineText );
       putCode( '\n' );
@@ -1294,7 +1317,7 @@ public class BasicCompiler extends PrgThread
 	  while( (ch != CharacterIterator.DONE)
 		 && (iter.getIndex() < curPos) )
 	  {
-	    putCharToPrintString( ch );
+	    putCharToPrintString( Character.toUpperCase( ch ) );
 	    ch = iter.next();
 	  }
 	}
@@ -2800,6 +2823,14 @@ public class BasicCompiler extends PrgThread
 		+ "\tJR\tZ,INLN3\n"
 		+ "\tDEC\tHL\n"
 		+ "\tDEC\tD\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tA,B\n"
+		+ "\tCALL\tXOUTCH\n"
+		+ "\tLD\tA,20H\n"
+		+ "\tCALL\tXOUTCH\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
 		+ "\tJR\tINLN2\n"
 		+ "INLN6:\tLD\tA,D\n"
 		+ "\tCP\tE\n"
@@ -3765,6 +3796,7 @@ public class BasicCompiler extends PrgThread
       }
       putCode( '\n' );
     }
+    putCode( "M_STCK:\tDEFS\t2\n" );
     if( stackSize > 0 ) {
       if( this.basicOptions.getShowAsm() ) {
 	putCode( "\n;Stack-Bereich\n" );
@@ -3982,10 +4014,42 @@ public class BasicCompiler extends PrgThread
       }
       buf.append( "\tORG\t" );
       buf.append( getHex4( this.basicOptions.getBegAddr() ) );
-      buf.append( "\n"
-		+ "\tJP\tMSTART\n" );
+      buf.append( (char) '\n' );
+      if( this.platform == Platform.KC85_2TO4 ) {
+	buf.append( "\tDEFB\t7FH,7FH\n" );
+	boolean invalidChars = false;
+	int     nChars       = 0;
+	String  appName      = this.basicOptions.getAppName();
+	if( appName != null ) {
+	  int len = appName.length();
+	  for( int i = 0; i < len; i++ ) {
+	    char ch = appName.charAt( i );
+	    if( (ch >= '\u0020') && (ch < 0x7F) ) {
+	      if( nChars == 0 ) {
+		buf.append( "\tDEFM\t\'" );
+	      }
+	      buf.append( ch );
+	      nChars++;
+	    } else {
+	      invalidChars = true;
+	    }
+	  }
+	}
+	if( invalidChars ) {
+	  putWarning( "Nicht erlaubte Zeichen aus Programmnamen entfernt" );
+	}
+	if( nChars > 0 ) {
+	  buf.append( "\'\n"
+		+ "\tDEFB\t1\n"
+		+ "\tENT\n" );
+	} else {
+	  putWarning( "Programm kann im Betriebssystem nicht aufgerufen"
+				+ " werden, da der Programmnane leer ist." );
+	}
+      }
+      buf.append( "\tJP\tMSTART\n" );
       if( this.platform == Platform.Z9001 ) {
-	buf.append( "\tDB\t\'" );
+	buf.append( "\tDEFM\t\'" );
 	boolean invalidChars = false;
 	int     nChars       = 0;
 	String  appName      = this.basicOptions.getAppName();
@@ -4012,29 +4076,45 @@ public class BasicCompiler extends PrgThread
 	  buf.append( (char) '\u0020');
 	  nChars++;
 	}
-	buf.append( "\',0\n"
-		+ "\tDB\t0\n" );
+	buf.append( "\'\n"
+		+ "\tDEFB\t0\n" );
       }
       if( this.basicOptions.getShowAsm() ) {
 	buf.append( "\n;Aufruf der Systemfunktionen\n" );
       }
+      buf.append( "XEXIT:\tLD\tSP,(M_STCK)\n" );
       switch( this.platform ) {
 	case AC1:
-	  buf.append( "XEXIT:\tJP\t07FDH\n" );
+	  buf.append( "\tJP\t07FDH\n" );
+	  break;
+
+	case KC85_2TO4:
+	  buf.append( "\tRET\n" );
 	  break;
 
 	case Z1013:
-	  buf.append( "XEXIT:\tJP\t0038H\n" );
+	  buf.append( "\tJP\t0038H\n" );
 	  break;
 
 	case Z9001:
-	  buf.append( "XEXIT:\tJP\t0000H\n" );
+	  buf.append( "\tJP\t0000H\n" );
 	  break;
       }
       if( this.libItems.contains( LibItem.XOUTCH ) ) {
 	switch( this.platform ) {
 	  case AC1:
 	    buf.append( "XOUTCH:\tJP\t0010H\n" );
+	    break;
+
+	  case KC85_2TO4:
+	    buf.append( "XOUTCH:\tCP\t0DH\n"
+		+ "\tJR\tNZ,XOUTC1\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tDEFB\t24H\n"
+		+ "\tLD\tA,0AH\n"
+		+ "XOUTC1:\tCALL\t0F003H\n"
+		+ "\tDEFB\t24H\n"
+		+ "\tRET\n" );
 	    break;
 
 	  case Z1013:
@@ -4064,6 +4144,12 @@ public class BasicCompiler extends PrgThread
 	    buf.append( "XINCH:\tJP\t0008H\n" );
 	    break;
 
+	  case KC85_2TO4:
+	    buf.append( "XINCH:\tCALL\t0F003H\n"
+		+ "\tDEFB\t16h\n"
+		+ "\tRET\n" );
+	    break;
+
 	  case Z1013:
 	    buf.append( "XINCH:\tRST\t20H\n"
 		+ "\tDEFB\t1\n"
@@ -4086,6 +4172,17 @@ public class BasicCompiler extends PrgThread
 	    buf.append( "XINKEY:\tCALL\t07FAH\n"
 		+ "\tAND\t7FH\n"
 		+ "\tRET\n" );
+	    break;
+
+	  case KC85_2TO4:
+	    buf.append( "XINKEY:\tCALL\t0F003H\n"
+		+ "\tDB\t0CH\n"
+		+ "\tJR\tC,XINKE1\n"
+		+ "\tXOR\tA\n"
+		+ "\tJR\tXINKE2\n"
+		+ "XINKE1:\tCALL\t0F003H\n"
+		+ "\tDB\t0EH\n"
+		+ "XINKE2:\tRET\n" );
 	    break;
 
 	  case Z1013:
@@ -4125,7 +4222,7 @@ public class BasicCompiler extends PrgThread
       if( this.basicOptions.getShowAsm() ) {
 	buf.append( "\n;Programmstart\n" );
       }
-      buf.append( "MSTART:" );
+      buf.append( "MSTART:\tLD\t(M_STCK),SP\n" );
       if( this.basicOptions.getStackSize() > 0 ) {
 	buf.append( "\tLD\tSP,M_TOP" );
 	this.libItems.add( LibItem.M_TOP );

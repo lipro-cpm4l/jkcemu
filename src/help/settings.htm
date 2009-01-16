@@ -28,7 +28,7 @@
     finden Sie unter <a href="emusys.htm">Emulierte Systeme</a>.
   <br><br>
 
-  <h3>1.2. Geschwindigkeit</h3>
+  <h3><a name="speed">1.2. Geschwindigkeit</a></h3>
     Hier legen Sie fest, welche Taktfrequenz emuliert werden soll.
     Standardm&auml;&szlig;ig wird die Originalgeschwindigkeit
     des emulierten Systems nachgeahmt.
@@ -47,7 +47,22 @@
     wird eine entsprechend geringere Taktfrequenz emuliert.
   <br><br>
 
-  <h3>1.3. ROM</h3>
+  <h3>1.3. Zeichensatz</h3>
+    Hier haben Sie die M&ouml;glichkeit, eine externe Zeichensatzdatei
+    anzugeben, die dann anstelle der im Emulator
+    integrierten Zeichens&auml;tze verwendet wird.
+  <br><br>
+    Die Funktion hat jedoch nur bei den emulierten Systemen eine Wirkung,
+    die einen separaten Zeichengenerator verwenden,
+    d.h. Systeme ohne Vollgrafik.
+    Bei Vollgrafiksystemen (KC85/2...4) ist der Zeichensatz im Betriebssystem
+    enthalten und kann deshalb nur durch Austausch des Betriebssystems
+    ge&auml;ndert werden.
+    Der Austausch des Betriebssystems ist mit JKCEMU m&ouml;glich,
+    indem Sie dieses als externes ROM-Image einbinden.
+  <br><br>
+
+  <h3>1.4. ROM</h3>
     Mit der Auswahl des zu emulierenden Computer-Typs
     sind auch die ROM-Bereiche vorgegeben.
     Zus&auml;tzlich k&ouml;nnen Sie diese ROM-Bereiche
@@ -74,12 +89,22 @@
     was h&ouml;chstwahrscheinlich nicht sinnvoll ist.
   <br><br>
 
-  <h3>1.4. Best&auml;tigungen</h3>
+  <h3>1.5. RAM-Floppies</h3>
+    In dieser Rubrik k&ouml;nnen Sie f&uuml;r jede RAM-Floppy
+    eine Datei angeben, die beim Kaltstart des emulierten Systems
+    automatisch in die RAM-Floppy geladen wird.
+    Ein Kaltstart erfolgt, wenn Sie im Bereich
+    <a href="settings.htm#system">System</a> ein anderes emuliertes System
+    ausw&auml;hlen und &uuml;bernehmen oder im Hauptfenster
+    den Men&uuml;punkt <em>Einschalten (Power On)</em> ausl&ouml;sen.
+  <br><br>
+
+  <h3>1.6. Best&auml;tigungen</h3>
     Hier geben Sie an, welche Aktionen erst nach der Bejahung einer
     Sicherheitsabfrage ausgef&uuml;hrt werden sollen.
   <br><br>
 
-  <h3>1.5. Erscheinungsbild</h3>
+  <h3>1.7. Erscheinungsbild</h3>
     JKCEMU ist mit der Programmiersprache Java entwickelt,
     der ein plattform&uuml;bergreifendes Konzept zu Grunde liegt.
     Manche Leute w&uuml;nschen,
@@ -105,12 +130,12 @@
     erst gar nicht angeboten.
   <br><br>
 
-  <h3>1.6 Sonstiges</h3>
+  <h3>1.8. Sonstiges</h3>
     In dieser Gruppe finden Sie die Einstellungen,
     die sich in keine andere Gruppe sinnvoll einordnen lassen.
   <br><br>
 
-  <h4><a name="filedialog">1.6.1. Dateiauswahldialog</a></h4>
+  <h4><a name="filedialog">1.8.1. Dateiauswahldialog</a></h4>
     JKCEMU kommt mit einem eigenen Dateiauswahldialog daher.
     Dieser hat den Vorteil, dass er auf die Bed&uuml;rfnisse des Emulators
     zugeschnitten ist.
@@ -135,7 +160,7 @@
     nur wenig von dem des Betriebssystems unterscheiden.
   <br><br>
 
-  <h4>1.6.2. Rand um Bildschirmausgabe</h4>
+  <h4>1.8.2. Rand um Bildschirmausgabe</h4>
     Sie k&ouml;nnen einen Rand um die Bildschrirmausgabe erzeugen,
     indem Sie das Hauptfenster gr&ouml;&szlig;er ziehen.
     Wenn Sie nun jedoch eine andere Skalierung der Bildschirmausgabe
@@ -147,7 +172,7 @@
     der in solchen F&auml;llen automatisch erzeugt wird.
   <br><br>
 
-  <h4>1.6.3. Zykluszeit f&uuml;r Bildschirmaktualisierung</h4>
+  <h4>1.8.3. Zykluszeit f&uuml;r Bildschirmaktualisierung</h4>
     Der Emulator aktualisiert zyklisch die Bildschirmausgabe
     entsprechend den &Auml;nderungen im Bildwiederholspeicher
     bzw. im Video-RAM.
@@ -164,7 +189,7 @@
     fl&uuml;ssiger Bedienung.
   <br><br>
 
-  <h4>1.6.4. Profile werden gespeichert im Verzeichnis</h4>
+  <h4>1.8.4. Profile werden gespeichert im Verzeichnis</h4>
     Hier sehen Sie zur Information den vollst&auml;ndigen Pfad,
     in dem die <a href="settings.htm#profiles">Profile</a> gespeichert werden.
     Ist die Umgebungsvariable <em>APPDATA</em> gesetzt,

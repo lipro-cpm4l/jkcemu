@@ -132,9 +132,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.tabbedPane = new JTabbedPane(
-				JTabbedPane.TOP,
-				JTabbedPane.SCROLL_TAB_LAYOUT );
+    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
     add( this.tabbedPane, gbc );
 
 
@@ -153,7 +151,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
     panelGeneral.add(
 	new JLabel(
-		"Programmname (nur relevant bei KC85/1, KC87 und Z9001):" ),
+		"Programmname (nur relevant bei KCs, HC900 und Z9001):" ),
 	gbcGeneral );
 
     this.docAppName = new LimitedDocument( 8 );
@@ -540,7 +538,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       labelText    = textEndOfMem;
       int endOfMem = this.docEndOfMem.intValue();
 
-      labelText     = "Stack-Gr\u00F6\u00DFe";
+      labelText     = "Stack-Gr\u00F6\u00DFe:";
       int stackSize = 0;
       if( this.btnStackSeparate.isSelected() ) {
 	stackSize = this.docStackSize.intValue();

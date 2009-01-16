@@ -35,15 +35,27 @@ public abstract class AudioOut extends AudioIO
   }
 
 
+  public boolean isLoudspeakerEmulationEnabled()
+  {
+    return false;
+  }
+
+
   protected abstract void writeSamples( int nSamples, boolean phase );
+
+
+  protected void writeSamples( int nSamples, byte value )
+  {
+    // standardmaessig nicht unterstuetzt, deshalb leere Methode
+  }
 
 
   /*
    * Die Methode wird im CPU-Emulations-Thread aufgerufen
-   * und besagt, dass in das entsprechende Tor der PIO
+   * und besagt, dass auf die entsprechenden Ausgabeleitung
    * ein Wert geschrieben wurde.
    */
-  public void updPhase( boolean phase )
+  public void writePhase( boolean phase )
   {
     if( this.enabled && (this.tStatesPerFrame > 0) ) {
       if( this.firstCall ) {
@@ -73,6 +85,45 @@ public abstract class AudioOut extends AudioIO
 	       */
 	      this.lastTStates += (nSamples * this.tStatesPerFrame);
 	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  /*
+   * Die Methode wird im CPU-Emulations-Thread aufgerufen
+   * und schreibt synchron zur verstrichenen CPU-Taktzyklenzahl
+   * einen Byte-Wert in den Audiokanal.
+   */
+  public void writeValue( byte value )
+  {
+    if( this.enabled && (this.tStatesPerFrame > 0) ) {
+      if( this.firstCall ) {
+	this.firstCall   = false;
+	this.lastTStates = this.z80cpu.getProcessedTStates();
+	this.lastPhase   = false;
+
+      } else {
+
+	int tStates     = this.z80cpu.getProcessedTStates();
+	int diffTStates = this.z80cpu.calcTStatesDiff(
+					      this.lastTStates,
+					      tStates );
+	if( diffTStates > 0 ) {
+	  currentTStates( tStates, diffTStates );
+	  if( tStates > this.lastTStates ) {
+
+	    // Anzahl der zu erzeugenden Samples
+	    int nSamples  = diffTStates / this.tStatesPerFrame;
+	    writeSamples( nSamples, value );
+
+	    /*
+	     * Anzahl der verstrichenen Taktzyklen auf den Wert
+	     * des letzten ausgegebenen Samples korrigieren
+	     */
+	    this.lastTStates += (nSamples * this.tStatesPerFrame);
 	  }
 	}
       }

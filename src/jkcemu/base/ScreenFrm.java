@@ -80,12 +80,33 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     mnuFile.add( createJMenuItem( "Speichern...", "file.save" ) );
     mnuFile.addSeparator();
 
+    // Untermenu RAM-Floppy A
+    JMenu mnuRAMFloppyA = new JMenu( "RAM-Floppy A" );
+    mnuFile.add( mnuRAMFloppyA );
+    mnuRAMFloppyA.add( createJMenuItem(
+			"Laden...",
+			"file.ramfloppy_a.load" ) );
+    mnuRAMFloppyA.add( createJMenuItem(
+			"Speichern...",
+			"file.ramfloppy_a.save" ) );
+
+    // Untermenu RAM-Floppy B
+    JMenu mnuRAMFloppyB = new JMenu( "RAM-Floppy B" );
+    mnuFile.add( mnuRAMFloppyB );
+    mnuRAMFloppyB.add( createJMenuItem(
+			"Laden...",
+			"file.ramfloppy_b.load" ) );
+    mnuRAMFloppyB.add( createJMenuItem(
+			"Speichern...",
+			"file.ramfloppy_b.save" ) );
+    mnuFile.addSeparator();
+
     // Untermenu BASIC
     JMenu mnuBasic = new JMenu( "BASIC-Programm" );
     mnuFile.add( mnuBasic );
     mnuBasic.add( createJMenuItem(
 			"Im Texteditor \u00F6ffnen...",
-			"file.basic.edit" ) );
+			"file.basic.open" ) );
     mnuBasic.add( createJMenuItem(
 			"Speichern...",
 			"file.basic.save" ) );
@@ -95,7 +116,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     mnuFile.add( mnuTinyBasic );
     mnuTinyBasic.add( createJMenuItem(
 			"Im Texteditor \u00F6ffnen...",
-			"file.tinybasic.edit" ) );
+			"file.tinybasic.open" ) );
     mnuTinyBasic.add( createJMenuItem(
 			"Speichern...",
 			"file.tinybasic.save" ) );
@@ -108,15 +129,18 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 			"file.screen.image.snapshot" ) );
     mnuScreen.addSeparator();
     mnuScreen.add( createJMenuItem(
+			"als Bild kopieren",
+			"file.screen.image.copy" ) );
+    mnuScreen.add( createJMenuItem(
 			"als Bilddatei speichern...",
 			"file.screen.image.save" ) );
+    mnuScreen.addSeparator();
+    mnuScreen.add( createJMenuItem(
+			"als Text kopieren",
+			"file.screen.text.copy" ) );
     mnuScreen.add( createJMenuItem(
 			"als Textdatei speichern...",
 			"file.screen.text.save" ) );
-    mnuScreen.addSeparator();
-    mnuScreen.add( createJMenuItem(
-			"als Bild kopieren",
-			"file.screen.image.copy" ) );
     mnuFile.addSeparator();
 
     mnuFile.add( createJMenuItem( "Datei-Browser...", "file.browser" ) );
@@ -361,6 +385,38 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
+  public void fireScreenSizeChanged()
+  {
+    final Window    window    = this;
+    final ScreenFld screenFld = this.screenFld;
+    SwingUtilities.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    screenFld.updPreferredSize();
+		    window.pack();
+		  }
+		} );
+  }
+
+
+  public void fireShowErrorDlg( final String msg )
+  {
+    final Component owner = this;
+    SwingUtilities.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    BasicDlg.showErrorDlg(
+			owner,
+			msg != null ? msg : "Unbekannter Fehler" );
+		  }
+		} );
+  }
+
+
   public EmuThread getEmuThread()
   {
     return this.emuThread;
@@ -598,6 +654,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     // Bildschirmausgabe aktualisieren
     this.screenFld.setEmuSys( emuSys );
     this.screenFld.setScreenScale( screenScale );
+    setScreenDirty( true );
 
     // Fenstergroesse
     boolean rv     = false;
@@ -624,12 +681,30 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   public void keyPressed( KeyEvent e )
   {
     int keyCode = e.getKeyCode();
-    if( (keyCode != KeyEvent.VK_F7)
-	&& (keyCode != KeyEvent.VK_F8)
-	&& (keyCode != KeyEvent.VK_F9)
-	&& (keyCode != KeyEvent.VK_F10) )
+    if( (keyCode == KeyEvent.VK_BACK_SPACE)
+	|| (keyCode == KeyEvent.VK_CONTROL)
+	|| (keyCode == KeyEvent.VK_DELETE)
+	|| (keyCode == KeyEvent.VK_DOWN)
+	|| (keyCode == KeyEvent.VK_END)
+	|| (keyCode == KeyEvent.VK_ENTER)
+	|| (keyCode == KeyEvent.VK_ESCAPE)
+	|| (keyCode == KeyEvent.VK_F1)
+	|| (keyCode == KeyEvent.VK_F2)
+	|| (keyCode == KeyEvent.VK_F3)
+	|| (keyCode == KeyEvent.VK_F4)
+	|| (keyCode == KeyEvent.VK_F5)
+	|| (keyCode == KeyEvent.VK_F6)
+	|| (keyCode == KeyEvent.VK_HOME)
+	|| (keyCode == KeyEvent.VK_INSERT)
+	|| (keyCode == KeyEvent.VK_LEFT)
+	|| (keyCode == KeyEvent.VK_PAUSE)
+	|| (keyCode == KeyEvent.VK_RIGHT)
+	|| (keyCode == KeyEvent.VK_SHIFT)
+	|| (keyCode == KeyEvent.VK_SPACE)
+	|| (keyCode == KeyEvent.VK_TAB)
+	|| (keyCode == KeyEvent.VK_UP) )
     {
-      if( this.emuThread.getEmuSys().keyEvent( e ) ) {
+      if( this.emuThread.keyPressed( e ) ) {
 	this.ignoreKeyChar = true;
 	e.consume();
       }
@@ -645,9 +720,8 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 	&& (keyCode != KeyEvent.VK_F9)
 	&& (keyCode != KeyEvent.VK_F10) )
     {
-      if( this.emuThread.getEmuSys().keyEvent( e ) ) {
-	e.consume();
-      }
+      this.emuThread.keyReleased( keyCode );
+      e.consume();
     }
     this.ignoreKeyChar = false;
   }
@@ -658,9 +732,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     if( this.ignoreKeyChar ) {
       this.ignoreKeyChar = false;
     } else {
-      if( this.emuThread.getEmuSys().keyEvent( e ) ) {
-	e.consume();
-      }
+      this.emuThread.keyTyped( e.getKeyChar() );
     }
   }
 
@@ -752,146 +824,174 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   {
     boolean rv = false;
     if( e != null ) {
-      try {
-	if( e instanceof ActionEvent ) {
-	  String actionCmd = ((ActionEvent) e).getActionCommand();
-	  if( actionCmd != null ) {
-	    if( actionCmd.equals( "file.quit" ) ) {
-	      rv = true;
-	      doClose();
-	    }
-	    else if( actionCmd.equals( "help.content" ) ) {
-	      rv = true;
-	      showHelp( null );
-	    }
-	    else if( actionCmd.equals( "help.about" ) ) {
-	      rv = true;
-	      doHelpAbout();
-	    } else if( actionCmd.equals( "file.load" ) ) {
-	      rv = true;
-	      doFileLoad( true );
-	    }
-	    else if( actionCmd.equals( "file.save" ) ) {
-	      rv = true;
-	      doFileSave();
-	    }
-	    else if( actionCmd.equals( "file.basic.edit" ) ) {
-	      rv = true;
-	      doFileBasicEdit();
-	    }
-	    else if( actionCmd.equals( "file.basic.save" ) ) {
-	      rv = true;
-	      doFileBasicSave();
-	    }
-	    else if( actionCmd.equals( "file.tinybasic.edit" ) ) {
-	      rv = true;
-	      doFileTinyBasicEdit();
-	    }
-	    else if( actionCmd.equals( "file.tinybasic.save" ) ) {
-	      rv = true;
-	      SourceUtil.saveTinyBasicProgram( this );
-	    }
-	    else if( actionCmd.equals( "file.screen.image.snapshot" ) ) {
-	      rv = true;
-	      doFileScreenImageSnapshot();
-	    }
-	    else if( actionCmd.equals( "file.screen.image.save" ) ) {
-	      rv = true;
-	      doFileScreenImageSave();
-	    }
-	    else if( actionCmd.equals( "file.screen.text.save" ) ) {
-	      rv = true;
-	      doFileScreenTextSave();
-	    }
-	    else if( actionCmd.equals( "file.screen.image.copy" ) ) {
-	      rv = true;
-	      doFileScreenImageCopy();
-	    }
-	    else if( actionCmd.equals( "file.browser" ) ) {
-	      rv = true;
-	      doFileBrowser();
-	    }
-	    else if( actionCmd.equals( "file.editor" ) ) {
-	      rv = true;
-	      doFileEditor();
-	    }
-	    else if( actionCmd.equals( "extra.scale.1" ) ) {
-	      rv = true;
-	      doScreenScale( 1 );
-	    }
-	    else if( actionCmd.equals( "extra.scale.2" ) ) {
-	      rv = true;
-	      doScreenScale( 2 );
-	    }
-	    else if( actionCmd.equals( "extra.scale.3" ) ) {
-	      rv = true;
-	      doScreenScale( 3 );
-	    }
-	    else if( actionCmd.equals( "extra.scale.4" ) ) {
-	      rv = true;
-	      doScreenScale( 4 );
-	    }
-	    else if( actionCmd.equals( "extra.audio" ) ) {
-	      rv = true;
-	      doExtraAudio();
-	    }
-	    else if( actionCmd.equals( "extra.imageviewer" ) ) {
-	      rv = true;
-	      doExtraImageViewer();
-	    }
-	    else if( actionCmd.equals( "extra.debugger" ) ) {
-	      rv = true;
-	      doExtraDebugger();
-	    }
-	    else if( actionCmd.equals( "extra.reassembler" ) ) {
-	      rv = true;
-	      doExtraReassembler();
-	    }
-	    else if( actionCmd.equals( "extra.memviewer" ) ) {
-	      rv = true;
-	      doExtraMemViewer();
-	    }
-	    else if( actionCmd.equals( "extra.calculator" ) ) {
-	      rv = true;
-	      doExtraCalculator();
-	    }
-	    else if( actionCmd.equals( "extra.hex.diff" ) ) {
-	      rv = true;
-	      doExtraHexDiff();
-	    }
-	    else if( actionCmd.equals( "extra.hex.editor" ) ) {
-	      rv = true;
-	      doExtraHexEditor();
-	    }
-	    else if( actionCmd.equals( "extra.settings" ) ) {
-	      rv = true;
-	      doExtraSettings();
-	    }
-	    else if( actionCmd.equals( "extra.profile" ) ) {
-	      rv = true;
-	      doExtraProfile();
-	    }
-	    else if( actionCmd.equals( "extra.pause" ) ) {
-	      rv = true;
-	      doExtraPause();
-	    }
-	    else if( actionCmd.equals( "extra.nmi" ) ) {
-	      rv = true;
-	      doExtraNMI();
-	    }
-	    else if( actionCmd.equals( "extra.reset" ) ) {
-	      rv = true;
-	      doExtraReset();
-	    }
-	    else if( actionCmd.equals( "extra.power_on" ) ) {
-	      rv = true;
-	      doExtraPowerOn();
-	    }
+      if( e instanceof ActionEvent ) {
+	String actionCmd = ((ActionEvent) e).getActionCommand();
+	if( actionCmd != null ) {
+	  if( actionCmd.equals( "file.quit" ) ) {
+	    rv = true;
+	    doClose();
+	  }
+	  else if( actionCmd.equals( "file.load" ) ) {
+	    rv = true;
+	    doFileLoad( true );
+	  }
+	  else if( actionCmd.equals( "file.save" ) ) {
+	    rv = true;
+	    doFileSave();
+	  }
+	  else if( actionCmd.equals( "file.ramfloppy_a.load" ) ) {
+	    rv = true;
+	    doFileRAMFloppyLoad(
+			this.emuThread.getRAMFloppyA(),
+			'A',
+			this.emuThread.getEmuSys().supportsRAMFloppyA() );
+	  }
+	  else if( actionCmd.equals( "file.ramfloppy_a.save" ) ) {
+	    rv = true;
+	    doFileRAMFloppySave(
+			this.emuThread.getRAMFloppyA(),
+			'A',
+			this.emuThread.getEmuSys().supportsRAMFloppyA() );
+	  }
+	  else if( actionCmd.equals( "file.ramfloppy_b.load" ) ) {
+	    rv = true;
+	    doFileRAMFloppyLoad(
+			this.emuThread.getRAMFloppyB(),
+			'B',
+			this.emuThread.getEmuSys().supportsRAMFloppyB() );
+	  }
+	  else if( actionCmd.equals( "file.ramfloppy_b.save" ) ) {
+	    rv = true;
+	    doFileRAMFloppySave(
+			this.emuThread.getRAMFloppyB(),
+			'B',
+			this.emuThread.getEmuSys().supportsRAMFloppyB() );
+	  }
+	  else if( actionCmd.equals( "file.basic.open" ) ) {
+	    rv = true;
+	    this.emuThread.getEmuSys().openBasicProgram();
+	  }
+	  else if( actionCmd.equals( "file.basic.save" ) ) {
+	    rv = true;
+	    this.emuThread.getEmuSys().saveBasicProgram();
+	  }
+	  else if( actionCmd.equals( "file.tinybasic.open" ) ) {
+	    rv = true;
+	    this.emuThread.getEmuSys().openTinyBasicProgram();
+	  }
+	  else if( actionCmd.equals( "file.tinybasic.save" ) ) {
+	    rv = true;
+	    this.emuThread.getEmuSys().saveTinyBasicProgram();
+	  }
+	  else if( actionCmd.equals( "file.screen.image.snapshot" ) ) {
+	    rv = true;
+	    doFileScreenImageSnapshot();
+	  }
+	  else if( actionCmd.equals( "file.screen.image.save" ) ) {
+	    rv = true;
+	    doFileScreenImageSave();
+	  }
+	  else if( actionCmd.equals( "file.screen.text.save" ) ) {
+	    rv = true;
+	    doFileScreenTextSave();
+	  }
+	  else if( actionCmd.equals( "file.screen.image.copy" ) ) {
+	    rv = true;
+	    doFileScreenImageCopy();
+	  }
+	  else if( actionCmd.equals( "file.screen.text.copy" ) ) {
+	    rv = true;
+	    doFileScreenTextCopy();
+	  }
+	  else if( actionCmd.equals( "file.browser" ) ) {
+	    rv = true;
+	    doFileBrowser();
+	  }
+	  else if( actionCmd.equals( "file.editor" ) ) {
+	    rv = true;
+	    doFileEditor();
+	  }
+	  else if( actionCmd.equals( "extra.scale.1" ) ) {
+	    rv = true;
+	    doScreenScale( 1 );
+	  }
+	  else if( actionCmd.equals( "extra.scale.2" ) ) {
+	    rv = true;
+	    doScreenScale( 2 );
+	  }
+	  else if( actionCmd.equals( "extra.scale.3" ) ) {
+	    rv = true;
+	    doScreenScale( 3 );
+	  }
+	  else if( actionCmd.equals( "extra.scale.4" ) ) {
+	    rv = true;
+	    doScreenScale( 4 );
+	  }
+	  else if( actionCmd.equals( "extra.audio" ) ) {
+	    rv = true;
+	    doExtraAudio();
+	  }
+	  else if( actionCmd.equals( "extra.imageviewer" ) ) {
+	    rv = true;
+	    doExtraImageViewer();
+	  }
+	  else if( actionCmd.equals( "extra.debugger" ) ) {
+	    rv = true;
+	    doExtraDebugger();
+	  }
+	  else if( actionCmd.equals( "extra.reassembler" ) ) {
+	    rv = true;
+	    doExtraReassembler();
+	  }
+	  else if( actionCmd.equals( "extra.memviewer" ) ) {
+	    rv = true;
+	    doExtraMemViewer();
+	  }
+	  else if( actionCmd.equals( "extra.calculator" ) ) {
+	    rv = true;
+	    doExtraCalculator();
+	  }
+	  else if( actionCmd.equals( "extra.hex.diff" ) ) {
+	    rv = true;
+	    doExtraHexDiff();
+	  }
+	  else if( actionCmd.equals( "extra.hex.editor" ) ) {
+	    rv = true;
+	    doExtraHexEditor();
+	  }
+	  else if( actionCmd.equals( "extra.settings" ) ) {
+	    rv = true;
+	    doExtraSettings();
+	  }
+	  else if( actionCmd.equals( "extra.profile" ) ) {
+	    rv = true;
+	    doExtraProfile();
+	  }
+	  else if( actionCmd.equals( "extra.pause" ) ) {
+	    rv = true;
+	    doExtraPause();
+	  }
+	  else if( actionCmd.equals( "extra.nmi" ) ) {
+	    rv = true;
+	    doExtraNMI();
+	  }
+	  else if( actionCmd.equals( "extra.reset" ) ) {
+	    rv = true;
+	    doExtraReset();
+	  }
+	  else if( actionCmd.equals( "extra.power_on" ) ) {
+	    rv = true;
+	    doExtraPowerOn();
+	  }
+	  else if( actionCmd.equals( "help.content" ) ) {
+	    rv = true;
+	    showHelp( null );
+	  }
+	  else if( actionCmd.equals( "help.about" ) ) {
+	    rv = true;
+	    doHelpAbout();
 	  }
 	}
-      }
-      catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex.getMessage() );
       }
     }
     return rv;
@@ -908,6 +1008,30 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 		this,
 		"M\u00F6chten Sie den Emulator jetzt beenden?",
 		"Best\u00E4tigung" ) )
+      {
+	return false;
+      }
+    }
+
+    // Pruefen, ob RAM-Floppies gespeichert wurden
+    String msg = null;
+    if( this.emuThread.getRAMFloppyA().hasDataChanged()
+	&& this.emuThread.getRAMFloppyB().hasDataChanged() )
+    {
+      msg = "Daten in beiden RAM-Floppies";
+    } else {
+      if( this.emuThread.getRAMFloppyA().hasDataChanged() ) {
+	msg = "Daten in RAM-Floppy A";
+      }
+      else if( this.emuThread.getRAMFloppyB().hasDataChanged() ) {
+	msg = "Daten in RAM-Floppy B";
+      }
+    }
+    if( msg != null ) {
+      if( !BasicDlg.showYesNoDlg(
+		this,
+		msg + " wurden ge\u00E4ndert und nicht gespeichert.\n"
+			+ "M\u00F6chten Sie trotzdem beenden?" ) )
       {
 	return false;
       }
@@ -1021,42 +1145,59 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
-  private void doFileBasicEdit() throws IOException
+  private void doFileRAMFloppyLoad(
+			RAMFloppy ramFloppy,
+			char      floppyCh,
+			boolean   supported )
   {
-    String prgText = null;
-    if( this.emuThread.getEmuSys().getSystemName().startsWith( "AC1" ) ) {
-      prgText = SourceUtil.getAC1BasicText( this.emuThread );
-    } else {
-      int begAddr = askKCBasicBegAddr();
-      if( begAddr >= 0 ) {
-	prgText = SourceUtil.getKCBasicText( this.emuThread, begAddr );
+    if( confirmRAMFloppyOperation( floppyCh, supported ) ) {
+      File file = EmuUtil.showFileOpenDlg(
+			this,
+			String.format( "RAM-Floppy %c laden", floppyCh ),
+			Main.getLastPathFile( "ramfloppy" ),
+			EmuUtil.getBinaryFileFilter() );
+      if( file != null ) {
+	try {
+	  ramFloppy.load( file );
+	  Main.setLastFile( file, "ramfloppy" );
+	  showStatusText( "RAM-Floppy geladen" );
+	}
+	catch( IOException ex ) {
+	  BasicDlg.showErrorDlg(
+		this,
+		"Die RAM-Floppy kann nicht geladen werden.\n\n"
+						+ ex.getMessage() );
+	}
       }
     }
-    if( prgText != null ) {
-      openText( prgText );
-    }
   }
 
 
-  private void doFileBasicSave() throws IOException
+  private void doFileRAMFloppySave(
+			RAMFloppy ramFloppy,
+			char      floppyCh,
+			boolean   supported )
   {
-    if( this.emuThread.getEmuSys().getSystemName().startsWith( "AC1" ) ) {
-      SourceUtil.saveAC1BasicProgram( this );
-    } else {
-      int begAddr = askKCBasicBegAddr();
-      if( begAddr >= 0 )
-	SourceUtil.saveKCBasicProgram( this, begAddr );
+    if( confirmRAMFloppyOperation( floppyCh, supported ) ) {
+      File file = EmuUtil.showFileSaveDlg(
+			this,
+			String.format( "RAM-Floppy %c speichern", floppyCh ),
+			ramFloppy.getFile() != null ?
+				ramFloppy.getFile()
+				: Main.getLastPathFile( "ramfloppy" ) );
+      if( file != null ) {
+	try {
+	  ramFloppy.save( file );
+	  Main.setLastFile( file, "ramfloppy" );
+	}
+	catch( IOException ex ) {
+	  BasicDlg.showErrorDlg(
+		this,
+		"RAM-Floppy kann nicht gespeichert werden.\n\n"
+						+ ex.getMessage() );
+	}
+      }
     }
-  }
-
-
-  private void doFileTinyBasicEdit() throws IOException
-  {
-    String prgText = SourceUtil.getTinyBasicText(
-			this.emuThread.getEmuSys().getSystemName(),
-			this.emuThread );
-    if( prgText != null )
-      openText( prgText );
   }
 
 
@@ -1090,6 +1231,25 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 			this.screenFld.createBufferedImage() ) != null )
     {
       showStatusText( "Bilddatei gespeichert" );
+    }
+  }
+
+
+  private void doFileScreenTextCopy()
+  {
+    String screenText = this.emuThread.getEmuSys().extractScreenText();
+    if( screenText != null ) {
+      try {
+	Toolkit tk = getToolkit();
+	if( tk != null ) {
+	  Clipboard clp = tk.getSystemClipboard();
+	  if( clp != null ) {
+	    StringSelection ss = new StringSelection( screenText );
+	    clp.setContents( ss, ss );
+	  }
+	}
+      }
+      catch( IllegalStateException ex ) {}
     }
   }
 
@@ -1280,19 +1440,23 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
       Properties props = Main.loadProperties( file );
       if( props != null ) {
 	/*
-         * Die eingebundenen ROM-Images sollen nur einmal geladen werden,
+         * Die eingebundenen Dateien (ROM-Images, Zeichensatzdatei)
+	 * sollen nur einmal geladen werden,
 	 * und nicht doppelt in EmuThread und SettingsFrm.
 	 * Aus diesem Grund werden diese hier gesondert behandelt.
 	 */
+	ExtFile  extFont = EmuUtil.readExtFont( this, props );
 	ExtROM[] extROMs = EmuUtil.readExtROMs( this, props );
-	this.emuThread.applySettings( props, extROMs, false );
+	this.emuThread.applySettings( props, extFont, extROMs, false );
 	Main.applyProfileToFrames( file, props, true, null );
 	Frame frm = this.subFrms.get( SettingsFrm.class );
 	if( frm != null ) {
-	  if( frm instanceof SettingsFrm )
+	  if( frm instanceof SettingsFrm ) {
+	    ((SettingsFrm) frm).setExtFont( extFont );
 	    ((SettingsFrm) frm).setExtROMs( extROMs );
+	  }
 	}
-	fireReset();
+	fireReset( EmuThread.ResetLevel.COLD_RESET );
       }
     }
   }
@@ -1347,10 +1511,10 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 		"M\u00F6chten Sie den Emulator neu starten?",
 		"Best\u00E4tigung" ) )
       {
-	this.emuThread.fireReset( false );
+	this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
       }
     } else {
-      this.emuThread.fireReset( false );
+      this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
     }
   }
 
@@ -1369,10 +1533,10 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 			+ "Programme und Daten verloren.",
 		"Best\u00E4tigung" ) )
       {
-	this.emuThread.fireReset( true );
+	this.emuThread.fireReset( EmuThread.ResetLevel.POWER_ON );
       }
     } else {
-      this.emuThread.fireReset( true );
+      this.emuThread.fireReset( EmuThread.ResetLevel.POWER_ON );
     }
   }
 
@@ -1385,7 +1549,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
       this,
       Main.getVersion()
 	+ "\n...ein in Java geschriebener Kleincomputer-Emulator"
-	+ "\n\n(c) 2008 Jens M\u00FCller"
+	+ "\n\n(c) 2008-2009 Jens M\u00FCller"
 	+ "\n\nLizenz: GNU General Public License Version 3"
 	+ "\n\nJegliche Gew\u00E4hrleistung und Haftung ist ausgeschlossen!"
 	+ "\nDie Anwendung dieser Software erfolgt ausschlie\u00DFlich"
@@ -1394,9 +1558,12 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 	+ "\nund Grafiksymbole der emulierten Computer."
 	+ "\nDie Urheberrechte daran liegen bei:"
 	+ "\n- VEB Me\u00DFelektronik Dresden (Z9001, KC85/1, KC87)"
+	+ "\n- VEB Mikroelektronik M\u00FChlhausen"
+	+ " (HC900, KC85/2, KC85/3, KC85/4)"
 	+ "\n- VEB Robotron-Elektronik Riesa (Z1013)"
 	+ "\n- Rainer Brosig (erweitertes Z1013-Monitorprogramm)"
 	+ "\n- Frank Heyder (AC1)"
+	+ "\n- Eckhard Schiller (BCS3)"
 	+ "\n\nWeitere Informationen finden Sie in der Hilfe sowie"
 	+ "\nim Internet unter http://www.jens-mueller.org/jkcemu"
 	+ "\n",
@@ -1406,38 +1573,37 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 
 	/* --- private Methoden --- */
 
-  private int askKCBasicBegAddr()
+  private boolean confirmRAMFloppyOperation(
+					char    floppyCh,
+					boolean supported )
   {
-    int addr = -1;
-    if( this.emuThread.getEmuSys().hasKCBasicInROM() ) {
-      addr = 0x0401;
-    } else {
-      String[]    options = { "RAM-BASIC", "ROM-BASIC", "Abbrechen" };
+    if( !supported ) {
+      String[]    options = { "Weiter", "Abbrechen" };
       JOptionPane pane    = new JOptionPane(
-	"W\u00E4hlen Sie bitte aus,"
-		+ " ob das KC-BASIC-Programm im Adressbereich f\u00FCr das\n"
-		+ "RAM-BASIC (ab 2C01h) oder f\u00FCr das"
-		+ " ROM-BASIC (ab 0401h) gesucht werden soll.",
-	JOptionPane.QUESTION_MESSAGE );
+		String.format(
+			"Die RAM-Floppy %c wird von dem gerade emulierten"
+				+ " System nicht unterst\u00FCtzt.\n"
+				+ "Sie k\u00F6nnen zwar die RAM-Floppy"
+				+ " laden und speichern,\n"
+				+ "jedoch nicht auf sie zugreifen.",
+			floppyCh ),
+		JOptionPane.WARNING_MESSAGE );
       pane.setOptions( options );
+      pane.setWantsInput( false );
+      pane.setInitialSelectionValue( options[ 0 ] );
       pane.createDialog(
 		this,
-		"Adresse des KC-BASIC-Programms" ).setVisible( true );
+		"RAM-Floppy nicht unterst\u00FCtzt" ).setVisible( true );
       Object value = pane.getValue();
       if( value != null ) {
-	if( value.equals( options[ 0 ] ) ) {
-	  addr = 0x2C01;
-	}
-	else if( value.equals( options[ 1 ] ) ) {
-	  addr = 0x0401;
-	}
+	supported = value.equals( options[ 0 ] );
       }
     }
-    return addr;
+    return supported;
   }
 
 
-  private void fireReset()
+  private void fireReset( final EmuThread.ResetLevel resetLevel )
   {
     final EmuThread emuThread = this.emuThread;
     SwingUtilities.invokeLater(
@@ -1445,7 +1611,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 		{
 		  public void run()
 		  {
-		    emuThread.fireReset( false );
+		    emuThread.fireReset( resetLevel );
 		  }
 		} );
   }

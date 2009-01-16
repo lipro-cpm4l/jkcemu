@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -157,7 +157,7 @@ public class FileInfoFld extends Component
 	    }
 	    else if( fSize >= kb ) {
 	      buf.append( this.decFmt.format( (double) fSize / (double) kb ) );
-	      buf.append( " kByte" );
+	      buf.append( " KByte" );
 	    }
 	    boolean enclose = (buf.length() > 0);
 	    if( enclose ) {

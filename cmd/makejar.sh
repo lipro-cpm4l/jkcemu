@@ -17,13 +17,16 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/tools/hexdiff/*.class \
   jkcemu/tools/hexeditor/*.class \
   jkcemu/ac1/*.class \
+  jkcemu/bcs3/*.class \
+  jkcemu/kc85/*.class \
   jkcemu/z1013/*.class \
   jkcemu/z9001/*.class \
   z80emu/*.class \
   rom/ac1/*.bin \
+  rom/bcs3/*.bin \
+  rom/kc85/*.bin \
   rom/z1013/*.bin \
   rom/z9001/*.bin \
-  images/*.png \
   images/debug/*.png \
   images/edit/*.png \
   images/file/*.png \
