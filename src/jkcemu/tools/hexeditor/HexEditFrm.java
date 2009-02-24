@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -47,6 +47,7 @@ public class HexEditFrm extends BasicFrm implements
   private JMenuItem                 mnuSave;
   private JMenuItem                 mnuSaveAs;
   private JMenuItem                 mnuClose;
+  private JMenuItem                 mnuCopy;
   private JMenuItem                 mnuAppend;
   private JMenuItem                 mnuInsert;
   private JMenuItem                 mnuOverwrite;
@@ -125,6 +126,11 @@ public class HexEditFrm extends BasicFrm implements
     JMenu mnuEdit = new JMenu( "Bearbeiten" );
     mnuEdit.setMnemonic( KeyEvent.VK_B );
     mnuBar.add( mnuEdit );
+
+    this.mnuCopy = createJMenuItem( "Bytes kopieren" );
+    this.mnuCopy.setEnabled( false );
+    mnuEdit.add( this.mnuCopy );
+    mnuEdit.addSeparator();
 
     this.mnuInsert = createJMenuItem(
 		"Bytes einf\u00FCgen...",
@@ -597,6 +603,10 @@ public class HexEditFrm extends BasicFrm implements
 	rv = true;
 	doBytesAppend();
       }
+      else if( src == this.mnuCopy ) {
+	rv = true;
+	doBytesCopy();
+      }
       else if( src == this.mnuInsert ) {
 	rv = true;
 	doBytesInsert();
@@ -770,6 +780,51 @@ public class HexEditFrm extends BasicFrm implements
 	setDataChanged( true );
 	updView();
 	setCaretPosition( this.fileLen - 1, true );
+      }
+    }
+  }
+
+
+  private void doBytesCopy()
+  {
+    int caretPos = this.hexCharFld.getCaretPosition();
+    int markPos  = this.hexCharFld.getMarkPosition();
+    int m1       = -1;
+    int m2       = -1;
+    if( (caretPos >= 0) && (markPos >= 0) ) {
+      m1 = Math.min( caretPos, markPos );
+      m2 = Math.max( caretPos, markPos );
+    } else {
+      m1 = caretPos;
+      m2 = caretPos;
+    }
+    if( m2 >= this.fileLen ) {
+      m2 = this.fileLen - 1;
+    }
+    if( m1 >= 0 ) {
+      StringBuilder buf = new StringBuilder( (m2 - m1 + 1) * 3 );
+      boolean       sp  = false;
+      while( m1 <= m2 ) {
+	if( sp ) {
+	  buf.append( '\u0020' );
+	}
+	byte b = this.fileBytes[ m1++ ];
+	buf.append( EmuUtil.getHexChar( b >> 4 ) );
+	buf.append( EmuUtil.getHexChar( b ) );
+	sp = true;
+      }
+      if( buf.length() > 0 ) {
+	try {
+	  Toolkit tk = getToolkit();
+	  if( tk != null ) {
+	    Clipboard clipboard = tk.getSystemClipboard();
+	    if( clipboard != null ) {
+	      StringSelection ss = new StringSelection( buf.toString() );
+	      clipboard.setContents( ss, ss );
+	    }
+	  }
+	}
+	catch( IllegalStateException ex ) {}
       }
     }
   }
@@ -1377,6 +1432,7 @@ public class HexEditFrm extends BasicFrm implements
     this.labelValue16.setEnabled( text16 != null );
     this.labelValue32.setEnabled( text32 != null );
 
+    this.mnuCopy.setEnabled( state8 );
     this.mnuInsert.setEnabled( state8 );
     this.mnuOverwrite.setEnabled( state8 );
     this.mnuRemove.setEnabled( state8 );

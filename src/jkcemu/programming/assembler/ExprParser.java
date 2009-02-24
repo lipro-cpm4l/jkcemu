@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -103,9 +103,19 @@ public class ExprParser
     if( this.pos >= this.len ) {
       throw new PrgException( "Unerwartetes Ende des Arguments" );
     }
-    if( this.text.regionMatches( true, this.pos, "L(", 0, 2 ) ) {
+    if( this.text.regionMatches( true, this.pos, "LOW(", 0, 4 ) ) {
+      this.pos += 4;
+      value = parseExpr() & 0xFF;
+      parseToken( ')' );
+    }
+    else if( this.text.regionMatches( true, this.pos, "L(", 0, 2 ) ) {
       this.pos += 2;
       value = parseExpr() & 0xFF;
+      parseToken( ')' );
+    }
+    else if( this.text.regionMatches( true, this.pos, "HIGH(", 0, 5 ) ) {
+      this.pos += 5;
+      value = (parseExpr() >> 8) & 0xFF;
       parseToken( ')' );
     }
     else if( this.text.regionMatches( true, this.pos, "H(", 0, 2 ) ) {

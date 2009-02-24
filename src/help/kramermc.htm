@@ -1,0 +1,107 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des Kramer-MC</h1>
+    Unter Kramer-MC versteht man den Selbstbaucomputer,
+    der in dem 1987 erschienenen Buch
+    <em>Praktische Mikrocomputertechnik</em>
+    von Manfred Kramer beschrieben ist.
+  <br><br>
+
+  <h2>1. Emulierte Hardware</h2>
+    <ul>
+      <li>23 KByte ROM
+      <li>41 KByte RAM inklusive 1 KByte Bildwiederholspeicher
+      <li>64x16 Zeichen Bildschirmgr&ouml;&szlig;e
+    </ul>
+  <br><br>
+
+
+  <h2>2. Im ROM enthaltene Software</h2>
+    <ul>
+      <li><a href="kramermc/monitor.htm">Monitorprogramm</a>
+      <li><a href="kramermc/assembler.htm">Assembler</a>
+      <li>Reassembler
+      <li>Debugger
+      <li>BASIC-Interpreter
+      <li><a href="kramermc/editor.htm">Editor</a>
+    </ul>
+  <br><br>
+
+
+  <h2>3. Speicheraufteilung</h2>
+    <table border="1">
+      <tr>
+	<td nowrap>0000-03FF</td>
+	<td><a href="kramermc/monitor.htm">Monitorprogramm</a></td>
+      </tr>
+      <tr><td nowrap>0400-07FF</td><td>Debugger</td></tr>
+      <tr><td nowrap>0800-0BFF</td><td>Reassembler</td></tr>
+      <tr><td nowrap>0C00-0FFF</td><td>System-RAM</td></tr>
+      <tr>
+	<td nowrap>1000-3FFF</td>
+	<td>RAM, Programmspeicher f&uuml;r BASIC</td>
+      </tr>
+      <tr>
+	<td nowrap>4000-7FFF</td>
+	<td>
+	  RAM, Textspeicher f&uuml;r <a href="kramermc/editor.htm">Editor</a>
+	</td>
+      </tr>
+      <tr><td nowrap>8000-AFFF</td><td>BASIC-Interpreter</td></tr>
+      <tr><td nowrap>B000-BFFF</td><td>RAM</td></tr>
+      <tr>
+	<td nowrap>C000-C3FF</td>
+	<td><a href="kramermc/editor.htm">Editor</a></td>
+      </tr>
+      <tr>
+	<td nowrap>C400-DFFF</td>
+	<td><a href="kramermc/assembler.htm">Assembler</a></td>
+      </tr>
+      <tr><td nowrap>E000-FBFF</td><td>RAM</td></tr>
+      <tr><td nowrap>FC00-FFFF</td><td>Bildwiederholspeicher</td></tr>
+    </table>
+  <br><br>
+
+
+  <h2>4. BASIC</h2>
+    JKCEMU bietet eine spezielle Unterst&uuml;tzung
+    f&uuml;r das Speichern und Laden von BASIC-Programmen.
+    Zum Speichern nutzen Sie bitte die entsprechende Funktion im Men&uuml;
+    <em>Datei</em>, Untermen&uuml; <em> BASIC-Programm</em>,
+    und speichern das Programm als
+    <a href="fileformats.htm#headersave">Headersave</a>-Datei
+    mit dem Dateityp <tt>B</tt>.
+  <br><br>
+    Nur wenn Sie das BASIC-Programm so speichern,
+    werden beim Laden des Programms die Systemzellen des
+    BASIC-Interpreters richtig angepasst.
+    In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
+    aber im Interpreter nicht richtig nutzen.
+  <br><br>
+
+
+  <h2>5. Sonstiges</h2>
+
+  <h3>5.1. JKCEMU-BASIC-Compiler</h3>
+    Der JKCEMU-BASIC-Compiler kann Programmcode f&uuml;r den Kramer-MC
+    erzeugen, allerdings mit nachfolgend beschriebenen Einschr&auml;nkungen.
+  <br><br>
+
+  <h4>5.1.1. Stack</h4>
+    Sie d&uuml;rfen die Compiler-Option <em>System-Stack verwenden</em>
+    nicht einschalten, da beim Starten eines Maschinencodeprogramms
+    mit dem Kommando <tt>G&lt;SADR&gt;</tt> der Stack-Pointer den Wert 0000
+    hat und somit in den Bildwiederholspeicher hineinlaufen w&uuml;rde.
+    Compilieren Sie immer mit der Option <em>Eigener Stack-Bereich</em>.
+  <br><br>
+
+  <h4>5.1.2. INKEY</h4>
+    Beim Kramer-MC, zumindest bei dem in JKCEMU integrierten Monitorprogramm,
+    funktioniert die Tastaturstatusabfrage nicht richtig.
+    Mit Ausnahme von Control-C (Abbruch) wird das Dr&uuml;cken
+    einer Taste nicht erkannt.
+    Aus diesem Grund funktioniert auch die INKEY-Funktion nicht
+    bzw. nicht richtig.
+</body>
+</html>
+

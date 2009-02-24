@@ -96,7 +96,7 @@
     der die Basis der Zahl angibt.
     Folgende Buchstaben sind dabei m&ouml;glich:
 
-    <table border=3>
+    <table border="1">
       <tr>
 	<th>Abschlie&szlig;ender Buchstabe</th>
 	<th>Basis der Zahl</th>
@@ -112,7 +112,7 @@
   <br><br>
     Beispiele:
 
-    <table border=3>
+    <table border="1">
       <tr><th>Beispiel</th><th>Dezimaler Wert</th></tr>
       <tr><td>123</td><td>123</td></tr>
       <tr><td>101b</td><td>5</td></tr>
@@ -136,16 +136,28 @@
   <br><br>
 
   <h3>Zugriff auf h&ouml;her- oder niederwertiges Byte in einem Ausdruck</h3>
-    <table border=3>
+    <table border="1">
       <tr><th>Zugriff auf</th><th>Syntax</th></tr>
-      <tr><td>h&ouml;herwertiges Byte</td><td><tt>H(...)</tt></td></tr>
-      <tr><td>niederwertiges Byte</td><td><tt>L(...)</tt></td></tr>
+      <tr>
+	<td valign="top">h&ouml;herwertiges Byte:</td>
+	<td valign="top">
+	  <tt>H(...)</tt><br>
+	  <tt>HIGH(...)
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">niederwertiges Byte:</td>
+	<td valign="top">
+	  <tt>L(...)</tt><br>
+	  <tt>LOW(...)</tt>
+	</td>
+      </tr>
     </table>
   <br><br>
 
   <h3>Pseudobefehle</h3>
     Der Assembler versteht folgende Pseudobefehle:
-    <table border=3>
+    <table border="1">
       <tr>
 	<th nowrap>Mnemonik</th>
 	<th nowrap>Anzahl der Argumente</th>
@@ -275,7 +287,7 @@
     oder nur die Robotron-Mnemonik/-Syntax zugelassen ist.
   <br><br>
     Die Mnemonik unterscheidet sich bei folgenden Befehlen:
-    <table border=1>
+    <table border="1">
       <tr>
 	<th nowrap>Assembler-Befehl</th>
 	<th nowrap>Zilog-Mnemonik</th>
@@ -389,7 +401,7 @@
 
   <br><br>
     Die Syntax unterscheidet sich bei folgenden Befehlen:
-    <table border=1>
+    <table border="1">
       <tr>
 	<th nowrap>Assembler-Befehl</th>
 	<th nowrap>Zilog-Syntax</th>
@@ -472,7 +484,7 @@
     angewendet werden.
     Dabei versteht der Assembler folgende Namen f&uuml;r die
     Index-Teilregister:
-    <table border=1>
+    <table border="1">
       <tr><th nowrap>Teilregister</th><th>Name</th></tr>
       <tr>
 	<td valign=top>Niederwertiges Byte von IX:</td>
@@ -493,7 +505,7 @@
     </table>
   <br><br>
     Folgende Befehle sind m&ouml;glich:
-    <table border=1>
+    <table border="1">
       <tr>
 	<th nowrap>Mnemonik und Syntax mit IXH</th>
 	<th nowrap>Erl&auml;uterung</th>
@@ -549,7 +561,7 @@
     Der Befehl liest ein Byte vom Eingabetor, dessen Adresse im Register C
     steht und setzt das Flag-Register entsprechend.
     Der eingelesene Wert selbst wird nicht behalten.
-    <table border=1>
+    <table border="1">
       <tr><th nowrap>Mnemonik und Syntax</th></tr>
       <tr><td valign=top>IN F,(C)<br> IN (C)</td></tr>
     </table>
@@ -562,7 +574,7 @@
   <h3>Logischer Linksschiebebefehl</h3>
     Der Befehl schiebt das Argument um ein Bit nach links,
     wobei das Bit 0 danach auf 1 gesetzt ist.
-    <table border=1>
+    <table border="1">
       <tr>
 	<th nowrap>Mnemonik und Syntax</th>
 	<th nowrap>Erl&auml;uterung</th>
@@ -593,7 +605,7 @@
     welches als zus&auml;tzliches Argument anzugegeben ist.
     Das gilt auch f&uuml;r den undokumentierten SLL-Befehl.
 
-    <table border=1>
+    <table border="1">
       <tr>
 	<th nowrap>Mnemonik und Syntax</th>
 	<th nowrap>Erl&auml;uterung</th>

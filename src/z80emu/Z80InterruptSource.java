@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -13,8 +13,10 @@ import java.lang.*;
 
 public interface Z80InterruptSource
 {
-  public int     z80GetInterruptVector();
-  public void    z80InterruptFinished();
-  public boolean z80IsInterruptPending();
+  public int     interruptAccepted();		// RET: Interrupt-Vektor
+  public void    interruptFinished();
+  public boolean isInterruptPending();
+  public boolean isInterruptRequested();
+  public void    reset();
 }
 

@@ -16,15 +16,15 @@ import z80emu.Z80MemView;
 
 public class LoadData implements Z80MemView
 {
-  private byte[]  data;
-  private int     offset;
-  private int     len;
-  private int     begAddr;
-  private int     startAddr;
-  private int     fileType;
-  private boolean ac1basic;
-  private boolean kcbasic;
-  private String  infoMsg;
+  private byte[]   data;
+  private int      offset;
+  private int      len;
+  private int      begAddr;
+  private int      startAddr;
+  private int      fileType;
+  private Object   fileFmt;
+  private String   infoMsg;
+  private FileInfo fileInfo;
 
 
   public LoadData(
@@ -32,16 +32,16 @@ public class LoadData implements Z80MemView
 		int    offset,
 		int    len,
 		int    begAddr,
-		int    startAddr )
+		int    startAddr,
+		Object fileFmt )
   {
     this.data      = data;
     this.offset    = offset;
     this.len       = len;
     this.begAddr   = begAddr;
     this.startAddr = startAddr;
+    this.fileFmt   = fileFmt;
     this.fileType  = -1;
-    this.ac1basic  = false;
-    this.kcbasic   = false;
     this.infoMsg   = null;
   }
 
@@ -113,18 +113,11 @@ public class LoadData implements Z80MemView
 	emuThread.setMemByte( dst++, this.data[ src++ ] );
 	--len;
       }
-      if( this.ac1basic ) {
-	int topAddr = this.begAddr + this.len;
-	emuThread.setMemWord( this.begAddr - 37, topAddr );
-	emuThread.setMemWord( this.begAddr - 35, topAddr );
-	emuThread.setMemWord( this.begAddr - 33, topAddr );
-      }
-      if( this.kcbasic ) {
-	int topAddr = this.begAddr + this.len;
-	emuThread.setMemWord( this.begAddr - 42, topAddr );
-	emuThread.setMemWord( this.begAddr - 40, topAddr );
-	emuThread.setMemWord( this.begAddr - 38, topAddr );
-      }
+      emuThread.getEmuSys().updSysCells(
+				this.begAddr,
+				this.len,
+				this.fileFmt,
+				this.fileType );
     }
   }
 
@@ -198,18 +191,6 @@ public class LoadData implements Z80MemView
   public void setStartAddr( int addr )
   {
     this.startAddr = addr;
-  }
-
-
-  public void setUpdAC1BasicSysCells( boolean state )
-  {
-    this.ac1basic = state;
-  }
-
-
-  public void setUpdKCBasicSysCells( boolean state )
-  {
-    this.kcbasic = state;
   }
 
 

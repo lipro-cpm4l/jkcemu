@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,7 @@ import java.io.*;
 import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
-import jkcemu.z1013.Z1013;
+import jkcemu.system.Z1013;
 import z80emu.*;
 
 

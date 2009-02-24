@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -460,6 +460,13 @@ public class HexDiffFrm extends HTMLViewFrm implements
 		buf.append( "Es werden nur die ersten " );
 		buf.append( maxDiffs );
 		buf.append( " Unterschiede angezeigt.\n" );
+	      }
+	    } else {
+	      if( nDiffs == 1 ) {
+		buf.append( "1 unterschiedliches Byte\n" );
+	      } else {
+		buf.append( nDiffs );
+		buf.append( " unterschiedliche Bytes\n" );
 	      }
 	    }
 	    buf.append( "</html>\n" );

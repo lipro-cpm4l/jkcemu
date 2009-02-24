@@ -2,13 +2,13 @@
 <body>
   <h1>Hinweise zur Emulation des Z1013</h1>
 
-  <h2>Emulierte Hardware</h2>
+  <h2>1. Emulierte Hardware</h2>
     Da der Z1013 als Bausatz ausgeliefert wurde,
     sind f&uuml;r diesen besonders h&auml;ufig Modifizierungen
     und Erweiterungen entwickelt wurden.
     Das trifft insbesondere auf Tastatur, Monitorprogramm
     und RAM-Gr&ouml;&szlig;e zu.
-    JKCEMU emuliert die g&auml;ngigen Tastaturansteuerungen
+    JKCEMU emuliert die g&auml;ngigen Tastaturen
     mit jeweils einem oder mehreren dazu passenden Monitorprogrammen.
     In den <a href="settings.htm">Einstellungen</a> w&auml;hlen Sie
     die gew&uuml;nschte Kombination aus Monitorprogramm und Tastatur aus.
@@ -16,9 +16,7 @@
     Emuliert werden:
     <ul>
       <li>Je nach Monitorprogramm 2 oder 4 KByte ROM
-      <li>16 oder 64 KByte RAM,<br>
-	  Der tats&auml;chlich verf&uuml;gbare RAM betr&auml;gt
-	  je nach emulierter ROM-Gr&ouml;&szlig;e max. 62 KByte.
+      <li>16 oder 64 KByte RAM
       <li>Tastaturen:
 	  <ul>
 	    <li>Folienflachtastatur (8x4-Matrix)
@@ -34,7 +32,17 @@
     </ul>
   <br><br>
 
-  <h3>Peters-Platine</h3>
+  <h3>1.1. Folienflachtastatur</h3>
+    Die Folienflachtastatur enth&auml;lt vier Shift-Tasten,
+    die von einigen Spielprogrammen direkt abgefragt
+    und zur Steuerung der Spielfigur verwendet werden.
+    Damit Sie solche Programme auch im Emulator ohne Einschr&auml;nkungen
+    bedienen k&ouml;nnen,
+    werden diese vier Shift-Tasten auch als Einzeltasten emuliert,
+    und zwar mit den Funktionstasten <em>F1</em> bis <em>F4</em>.
+  <br><br>
+
+  <h3>1.2. Peters-Platine</h3>
     Die Peters-Platine erm&ouml;glicht &uuml;ber IO-Port 4
     die Abschaltung des ROMs sowie die Umschaltung des Zeichensatzes,
     der Taktfrequenz und der Bildschirmorganisation.
@@ -83,7 +91,8 @@
     </table>
   <br><br>
 
-  <h2>Im ROM enthaltene Software</h2>
+
+  <h2>2. Im ROM enthaltene Software</h2>
     Je nach Einstellung:
     <ul>
       <li>Originales Monitorprogramm Version 2.02
@@ -97,26 +106,18 @@
     </ul>
   <br><br>
 
-  <h2>Einbindung eines externen Monitorprogramms</h2>
-    JKCEMU bietet in den <a href="settings.htm">Einstellungen</a>
-    die M&ouml;glichkeit, beliebige ROM-Images einzubinden.
+
+  <h2>3. Sonstiges</h2>
+
+  <h3>3.1. Einbindung eines externen Monitorprogramms</h3>
+    JKCEMU bietet die M&ouml;glichkeit, beliebige ROM-Images einzubinden.
     Mit dieser Funktion k&ouml;nnen Sie auch ein anderes,
     extern als Bin&auml;rdatei vorliegendes Monitorprogramm einbinden,
     welches dann das intern vorhandene &uuml;berdeckt.
-    Wichtig ist aber, dass sie in den <a href="settings.htm">Einstellungen</a>
+    Wichtig ist aber, dass Sie in den <a href="settings.htm">Einstellungen</a>
     eine Kombination aus Monitorprogramm und Tastatur ausw&auml;hlen,
-    die genau die Tastatur enth&auml;lt,
+    die genau der Tastatur entspricht,
     die das extern eingebundene Monitorprogramm voraussetzt.
-  <br><br>
-
-  <h2>Folienflachtastatur</h2>
-    Die Folienflachtastatur enth&auml;lt vier Shift-Tasten,
-    die von einigen Spielprogrammen direkt abgefragt
-    und zur Steuerung der Spielfigur verwendet werden.
-    Damit Sie solche Programme auch im Emulator ohne Einschr&auml;nkungen
-    bedienen k&ouml;nnen,
-    werden diese vier Shift-Tasten auch als Einzeltasten emuliert,
-    und zwar mit den Funktionstasten <em>F1</em> bis <em>F4</em>.
 </body>
 </html>
 

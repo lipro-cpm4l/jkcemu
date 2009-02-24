@@ -32,9 +32,11 @@ public class PrintUtil
       PrintRequestAttributeSet attrs = Main.getPrintRequestAttributeSet();
       if( attrs == null ) {
 	attrs = new HashPrintRequestAttributeSet();
+	attrs.add( MediaSizeName.ISO_A4 );
+	attrs.add( OrientationRequested.PORTRAIT );
       }
       if( jobName == null ) {
-	jobName = "JHCEMU";
+	jobName = "JKCEMU";
       }
       attrs.add( new Copies( 1 ) );
       attrs.add( new JobName( jobName, Locale.getDefault() ) );

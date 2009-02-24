@@ -1,0 +1,339 @@
+<html>
+<body>
+  <h1>BASIC-SE 3.1</h1>
+    BASIC-SE 3.1 ist ein BASIC-Dialekt mit einer 16-Bit-Ganzzahl-
+    und einer 32-BIT-Flie&szlig;kommaarithmetik sowie String-Verarbeitung.
+  <br><br>
+
+  <h2>System-Start</h2>
+    Nach einem Kaltstart m&uuml;ssen Sie als erstes die Anzahl
+    der sichtbaren Zeilen eingeben.
+    Erst danach gelangen Sie in den Kommandomodus.
+  <br><br>
+
+  <h2>Kommandos</h2>
+    <table border="1">
+      <tr><td>LIST</td><td>Programm anzeigen</td></tr>
+      <tr><td>LOAD</td><td>Laden von Kassette</td></tr>
+      <tr><td>NEW</td><td>Programm l&ouml;schen</td></tr>
+      <tr><td>RUN</td><td>Programm starten</td></tr>
+      <tr><td>SAVE</td><td>Programm auf Kassette speichern</td></tr>
+      <tr>
+	<td>SAVED</td>
+	<td>Programm und nachfolgenden RAM-Bereich auf Kassette speichern</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Zeilenformat, Eingabe einer Programmzeile</h2>
+    Eine Programmzeile beginnt mit der Zeilennummer (1 bis 9998),
+    gefolgt von einer oder mehreren Anweisungen,
+    die durch Doppelpunkt zu trennen sind.
+    Die Zeile <em>9999 END</em> wird automatisch angeh&auml;ngt.
+  <br><br>
+
+  <h2>Datentypen</h2>
+    Es gibt Integer- (Ganzzahlen mit einem Betrag kleiner 32628)
+    und Flie&szlig;kommazahlen sowie Zeichenketten (Strings).
+  <br><br>
+
+  <h2>Konstanten</h2>
+    <table border="1">
+      <tr><td>Integerzahlen:</td><td>-32627 bis 32627</td></tr>
+      <tr>
+	<td>Flie&szlig;kommazahlen:</td><td>0.0000001 bis 9999999</td>
+      </tr>
+      <tr>
+	<td>Hexadezimale Zahlen:</td>
+	<td>
+	  Beginen mit einer Ziffer und enden mit einem H,<br>
+	  z.B.: 0F000H
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">String-Literal:</td>
+	<td>
+	  In einfachen Quote-Zeichen eingeschlossene Zeichenkette<br>
+	  z.B. 'ABC'
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Variablen</h2>
+    Numerische Variablen k&ouml;nnen mit einem Buchstaben, zwei Buchstaben
+    oder einem Buchstaben und einer Ziffer bezeichnet werden.
+    Au&szlig;dem sind auch ein- und zweidimensionale Felder m&ouml;glich.
+  <br><br>
+    Die Namen der String-Variablen bestehen aus einem Buchstaben
+    und dem W&auml;hrungssymbol.
+  <br><br>
+    Numerische Felder sowie String-Variablen m&uuml;ssen
+    mit der DIM-Anweisung deklariert werden.
+  <br><br>
+
+  <h2>Operationen</h2>
+    <table border="1">
+      <tr><td valign="top"><tt>*</tt></td><td>Multiplikation</td></tr>
+      <tr>
+	<td valign="top"><tt>/</tt></td>
+	<td>Division</td></tr>
+      <tr><td valign="top"><tt>-</tt></td><td>Suktraktion</td></tr>
+      <tr><td valign="top"><tt>+</tt></td><td>Addition</td></tr>
+      <tr>
+	<td valign="top"><tt>OR</tt></td>
+	<td>Bitweises Inklusiv-ODER</td></tr>
+      <tr><td valign="top"><tt>AND</tt></td><td>Bitweises UND</td></tr>
+      <tr>
+	<td valign="top"><tt>&gt;</tt></td>
+	<td>
+	  Gr&ouml;&szlig;er als<br>
+	  Ergebnis ist 0 oder 1.</td>
+      </tr>
+      <tr>
+	<td valign="top"><tt>&lt;</tt></td>
+	<td>
+	  Kleiner als<br>
+	  Ergebnis ist 0 oder 1.</td>
+	</td>
+      </tr>
+      <tr>
+	<td valign="top"><tt>#</tt></td>
+	<td>
+	  Ungleich<br>
+	  Ergebnis ist 0 oder 1.</td>
+	</td>
+      </tr>
+      <tr>
+	<td valign="top"><tt>=</tt></td>
+	<td>
+	  Gleich<br>
+	  Ergebnis ist 0 oder 1.</td>
+	</td>
+      </tr>
+    </table>
+  <br>
+    Weiter oben stehende Operationen haben Vorrang,
+    d.h., wenn in einem numerischen Ausdruck alle 10 Operationen
+    vorkommen, wird die Multiplikation zuerst und der Test auf Gleichheit
+    zuletzt ausgef&uuml;hrt.
+    Diese Vorrangreihenfolge entspricht aber nicht in allen Punkten
+    den mathematischen Regeln!
+    Au&szlig;erdem ist BASIC-SE 3.1 an der Stelle auch nicht ganz fehlerfrei.
+    Aus diesem Grund sollte man die Ausf&uuml;hrungsreihenfolge
+    mit Hilfe runder Klammern selbst festlegen.
+  <br><br>
+
+  <h2>Anweisungen</h2>
+    <table border="1">
+      <tr><th>Anweisung</th><th>Bedeutung</th></tr>
+      <tr><td valign="top">CLS</td></td>Bildschirm l&ouml;schen</td></td></tr>
+      <tr>
+	<td valign="top">DATA &lt;Ausdruck&gt; [ , ... ]</td>
+	</td>Datenbereich (Liste von Zahlen und/oder Zeichenketten)</td>
+      </tr>
+      <tr>
+	<td valign="top">DIM</td>
+	</td>
+	  Deklarieren und Dimensionieren von Feld- und String-Variablen,<br>
+	  Beispiel: <tt>DIM A(5), B2(6,7), C$(10)
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">END</td>
+	</td>
+	  Programm beenden,<br>
+	  Die Zeile <em>9999 END</em> wird automatisch angef&uuml;gt.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  FOR &lt;Startwert&gt; TO &lt;Endwert&gt;
+	  [ STEP &lt;Schritweite&gt; ]
+	</td>
+	<td valign="top">Beginn einer Schleife</td>
+      </tr>
+      <tr>
+	<td valign="top">GOSUB &lt;Zeilennummer&gt;</td>
+	</td>
+	  Aufruf eines Unterprogramms,<br>
+	  Die Zeilennummer kann auch als variabler numerischer Ausdruck
+	  angegeben werden.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">GOTO &lt;Zeilennummer&gt;</td>
+	</td>
+	  Sprung zu einer Programmzeile,<br>
+	  Die Zeilennummer kann auch als variabler numerischer Ausdruck
+	  angegeben werden.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  IF &lt;Numerischer Ausdruck&gt; THEN &lt;Anweisungen&gt;
+	</td>
+	</td>
+	  Bedingte Programmausf&uuml;hrung,<br>
+	  Hat der Ausdruck einen Wert ungleich Null,
+	  werden die hinter THEN stehenden Anweisungen ausgef&uuml;hrt.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  INPUT [ &lt;String-Literal&gt; , ] Variable&gt; [ , ... ] </td>
+	</td>
+	  Eingabe von Zahlen und Schreiben des eingegebenen Wertes
+	  in eine Variable
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  LET &lt;Variable&gt; = &lt;Ausdruck&gt; [ , ... ]
+	</td>
+	<td>Wertzuweisung,<br>
+	  Das Schl&uuml;sselwort <em>LET</em> kann weggelassen werden.	
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">NEXT</td>
+	<td>Ende einer FOR-Schleife</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  OUT &lt;Port-Adresse&gt; , &lt;Wert&gt; [ , &lt;Wert&gt; [ , ... ] ]
+	</td>
+	<td>Ausgabe des Wertes oder der Werte auf dem angegebenen IO-Port</td>
+      </tr>
+      <tr>
+	<td valign="top">PLOT  &lt;x&gt; , &lt;y&gt;</td>
+	<td>
+	  Setzen eines Bildpunktes mit Hilfe der Pseudografik,<br>
+	  Eine Zeichenstelle ist dabei in vier Bildpunkte unterteilt.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  POKE &lt;Adresse&gt; , &lt;Wert&gt; [ , &lt;Wert_2&gt; [ , ... ] ]
+	</td>
+	<td>
+	  Der Wert wird in die angegebene Speicherzelle geschrieben,
+	  Wert 2 in Speicherzelle + 1 usw.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  PRINT [ &lt;Ausdruck&gt; ] [ , ... ] [;]
+	</td>
+	<td>
+	  Ausgabe auf dem Bildschirm,<br>
+	  Ausdruck: Numerischer oder Zeichenkettenausdruck,<br>
+	  Steht vor einem Integer-Ausdruck ein Prozentzeichen,
+	  wird der Wert hexadezimal ausgegeben.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">READ &lt;Variable&gt; [ , &lt;Variable&gt;</td>
+	<td>
+	  Lesen des n&auml;chsten Elements oder der n&auml;chsten Elemente
+	  des mit DATA erzeugten Datenbereichs in die angegebenen
+	  Variablen,<br>
+	  Der Lesezeiger wird entsprechend weitergesetzt.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">REM &lt;Kommentar&gt;</td>
+	<td>
+	  Der hinter REM stehende Text wird als Kommentar gewertet.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">RESTORE</td>
+	<td>Zur&uuml;cksetzen des Lesezeigers f&uuml;r READ</td>
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">RETURN</td>
+	<td>Beenden eines Unterprogramms</td>
+      </tr>
+      <tr>
+	<td valign="top">UNPLOT  &lt;x&gt; , &lt;y&gt;</td>
+	<td>
+	  Zur&uuml;cksetzen eines Bildpunktes mit Hilfe der Pseudografik,<br>
+	  Eine Zeichenstelle ist dabei in vier Bildpunkte unterteilt.
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Funktionen</h2>
+    <table border="1">
+      <tr><th>Funktion</th><th>Bedeutung</th></tr>
+      <tr>
+	<td valign="top">CHR$( &lt;Numerischer Ausdruck&gt; )</td>
+	<td>Ermitteln des ACSII-Zeichens, dessen Wert der Ausdruck hat</td>
+      </tr>
+      <tr>
+	<td valign="top">IN( &lt;Port-Adresse&gt; )</td>
+	<td>Lesen des angegebenen IO-Ports</td>
+      </tr>
+      <tr>
+	<td valign="top">INKEY$</td>
+	<td>
+	  Abfrage der Tastatur,<br>
+	  Ist eine Taste gedr&uuml;ckt, wird das Zeichen zur&uuml;ckgegeben.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">INT( &lt;Numerischer Ausdruck&gt; )</td>
+	<td>
+	  Ermitteln der n&auml;chst kleineren ganzen Zahl,<br>
+	  Ist der Betrag des Wertes kleiner 32628,
+	  wird intern die Flie&szlig;komma- in eine Integer-Zahl gewandelt.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">LEN( &lt;String-Ausdruck&gt; )</td>
+	<td>Ermitteln der L&auml;nge eines Strings</td>
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">PEEK( &lt;Port-Adresse&gt; )</td>
+	<td>Lesen der angegebenen Speicherzelle</td>
+      </tr>
+      <tr>
+	<td valign="top">RND</td>
+	<td>Ermitteln einer Zufallszahl zwischen 0 und 0.9999</td>
+      </tr>
+      <tr>
+	<td valign="top">USR( &lt;Adresse&gt; )</td>
+	<td>
+	  Aufruf eines Maschinencodeunterprogramms<br>
+	  Der R&uuml;ckgabewert ist der Inhalt der Register CBLH.
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Fehlermeldungen</h2>
+    <table border="1">
+      <tr><td>@</td><td>Weder Zahl noch Schl&uuml;sselwort</td></tr>
+      <tr><td>A</td><td>Arithmetikfehler</td></tr>
+      <tr><td>B</td><td>Syntaxfehler</td></tr>
+      <tr><td>D</td><td>DATA fehlt</td></tr>
+      <tr><td>F</td><td>Funktion und Anweisung verwechselt</td></tr>
+      <tr><td>I</td><td>Keine Integer-Zahl</td></tr>
+      <tr><td>M</td><td>Speicher voll</td></tr>
+      <tr><td>U</td><td>&Uuml;berlauf bei PLOT/UNPLOT oder Feldern</td></tr>
+      <tr><td>$ (W&auml;hrungssymbol)</td><td>Keine Zeichenkette</td></tr>
+      <tr><td>= ()</td><td>Dieses Zeichen fehlt</td></tr>
+    </table>
+  <br><br>
+
+  <h2>Literatur</h2>
+    Schiller, Eckhard: Erweiterungen f&uuml;r Basic-Heimcomputer,<br>
+    in radio fernsehen elektronik, Heft 9/1986, S. 559-563,<br>
+    Berlin 1986
+</body>
+</html>
+

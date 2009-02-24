@@ -1,0 +1,90 @@
+<html>
+<body>
+  <h1>S/P-BASIC V3.2</h1>
+    S/P-BASIC V3.2 ist eine von Frank Pr&uuml;fer geschaffene
+    Weiterentwicklung von BASIC-SE 3.1.
+    Nachfolgend wird nur auf die wesentlichen Unterschiede eingegangen.
+  <br><br>
+
+  <h2>Ausf&uuml;hrungsreihenfolge der Operationen</h2>
+    Die Ausf&uuml;hrungsreihenfolge wurde ge&auml;ndert,
+    entspricht aber wie bei BASIC-SE 3.1 auch nicht den mathematischen Regeln.
+    Deshalb ist es ratsam,
+    die Ausf&uuml;hrungsreihenfolge durch runde Klammern selbst festzulegen.
+  <br><br>
+
+  <h2>Neue und ge&auml;nderte Anweisungen</h2>
+    <table border="1">
+      <tr><th>Anweisung</th><th>Bedeutung</th></tr>
+      <tr>
+	<td valign="top" nowrap>CALL &lt;Adresse&gt; [ , ... ]</td>
+	</td>
+	  Aufruf eines Maschinencodeunterprogramms ohne R&uuml;ckgabe
+	  eines Wertes
+	</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>PRINT [... [, ...]] [;]</td>
+	<td>
+	  Bei PRINT ist ein Konstrukt zur Ausgabe von Leerzeichen
+	  hinzugekommen:<br>
+	  &amp; &lt;Ausdruck&gt;<br>
+	  Es werden so viele Leerzeichen ausgegeben,
+	  wie der Wert des Ausdrucks ist.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>RANDOMIZE</td>
+	</td>
+	  Festlegen eines zuf&auml;lligen Startwertes
+	  für den Zufallszahlengenerator (RND-Funktion)
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Neue und ge&auml;nderte Funktionen</h2>
+    <table border="1">
+      <tr><th>Funktion</th><th>Bedeutung</th></tr>
+      <tr>
+	<td valign="top" nowrap>ASC( &lt;String-Ausdruck&gt; )</td>
+	<td>
+	  Ermitteln des ACSII-Codes des ersten Zeichens
+	  der &uuml;bergebenen Zeichenkette</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>
+	  USR( &lt;Adresse&gt; )<br>
+	  USR( &lt;Adresse&gt; , &lt;Wert&gt; )
+	</td>
+	<td>
+	  Aufruf eines Maschinencodeunterprogramms mit R&uuml;ckgabe
+	  eines Wertes in den Registern CBHL,<br>
+	  Au&szlig;erdem ist auch die &Uuml;bergabe eines Wertes
+	  in diesen Registern m&ouml;glich.
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Neue und ge&auml;nderte Fehlermeldungen</h2>
+    <table border="1">
+      <tr>
+	<td>U</td>
+	<td>Undefiniertes Zeichen, weder Zahl noch Schl&uuml;sselwort</td>
+      </tr>
+      <tr><td>S</td><td>Syntaxfehler</td></tr>
+      <tr><td>O</td><td>&Uuml;berlauf bei PLOT/UNPLOT oder Feldern</td></tr>
+      <tr><td>L</td><td>Zeile nicht gefunden</td></tr>
+      <tr>
+	<td>T</td>
+	<td>
+	  Lesen von Magnetband fehlgeschlagen,<br>
+	  Sie sollten mit NEW alles neu initialiseren.
+	</td>
+      </tr>
+    </table>
+  <br><br>
+</body>
+</html>
+

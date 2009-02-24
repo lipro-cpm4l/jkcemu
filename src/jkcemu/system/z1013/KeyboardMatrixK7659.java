@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,7 +7,7 @@
  * die nach Brosig/Eisenkolb angeschlossen ist (12x8-Matrix).
  */
 
-package jkcemu.z1013;
+package jkcemu.system.z1013;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;

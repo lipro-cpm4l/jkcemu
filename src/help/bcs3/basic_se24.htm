@@ -1,0 +1,214 @@
+<html>
+<body>
+  <h1>BASIC-SE 2.4</h1>
+    BASIC-SE 2.4 ist ein einfacher BASIC-Dialekt
+    mit einer 16-Bit-Ganzzahlarithmetik.
+  <br><br>
+
+  <h2>Kommandos</h2>
+    <table border="1">
+      <tr><td>LIST</td><td>Programm anzeigen</td></tr>
+      <tr><td>NEW</td><td>Programm l&ouml;schen</td></tr>
+      <tr><td>RUN</td><td>Programm starten</td></tr>
+    </table>
+  <br><br>
+
+  <h2>Zeilenformat, Eingabe einer Programmzeile</h2>
+    Eine Programmzeile beginnt mit der Zeilennummer (1 bis 9998),
+    gefolgt von einer oder mehreren Anweisungen,
+    die durch Semikolon zu trennen sind.
+    Die Zeile <em>9999 END</em> wird automatisch angeh&auml;ngt.
+  <br><br>
+
+  <h2>Zahlenformat</h2>
+    Die Zahlen (immer Ganzzahlen) werden mit 1 Bit Vorzeichen
+    und 15 Bit Betrag dargestellt, also nicht im Zweierkompliment.
+  <br><br>
+
+  <h2>Konstanten</h2>
+    <table border="1">
+      <tr><td>Dezimalzahlen:</td><td>-32627 bis 32627</td></tr>
+      <tr><td>Hexadezimale Zahlen:</td><td>0 bis 0FFFH</td></tr>
+    </table>
+  <br><br>
+
+  <h2>Variablen</h2>
+    Variablennamen bestehen aus einem oder zwei Buchstaben.
+    Die Namen <em>IF</em>, <em>OR</em> und alle,
+    die mit dem Buchstaben <em>H</em> beginnen, sind verboten.
+  <br><br>
+
+  <h2>Operationen</h2>
+    <table border="1">
+      <tr><td valign="top"><tt>*</tt></td><td>Multiplikation</td></tr>
+      <tr>
+	<td valign="top"><tt>/</tt></td>
+	<td>Division, rundet immer ab</td></tr>
+      <tr><td valign="top"><tt>-</tt></td><td>Suktraktion</td></tr>
+      <tr><td valign="top"><tt>+</tt></td><td>Addition</td></tr>
+      <tr>
+	<td valign="top"><tt>OR</tt></td>
+	<td>Bitweises Inklusiv-ODER</td></tr>
+      <tr><td valign="top"><tt>AND</tt></td><td>Bitweises UND</td></tr>
+      <tr>
+	<td valign="top"><tt>&gt;</tt></td>
+	<td>
+	  Gr&ouml;&szlig;er als,<br>
+	  Ergebnis ist 0 oder 1.</td>
+      </tr>
+      <tr>
+	<td valign="top"><tt>&lt;</tt></td>
+	<td>
+	  Kleiner als,<br>
+	  Ergebnis ist 0 oder 1.</td>
+	</td>
+      </tr>
+    </table>
+  <br>
+    Weiter oben stehende Operationen haben Vorrang,
+    d.h., wenn in einem numerischen Ausdruck alle 8 Operationen
+    vorkommen, wird die Multiplikation zuerst und der Vergleich
+    <em>Gr&ouml;&szlig;er als</em> zuletzt ausgef&uuml;hrt.
+    Durch runde Klammern l&auml;sst sich eine andere
+    Ausf&uuml;hrungsreihenfolge erzwingen.
+  <br><br>
+
+  <h2>Anweisungen</h2>
+    <table border="1">
+      <tr><th>Anweisung</th><th>Bedeutung</th></tr>
+      <tr>
+	<td valign="top">CLEAR</td></td>Bildschirm l&ouml;schen</td></td>
+      </tr>
+      <tr>
+	<td valign="top">END</td>
+	</td>
+	  Programm beenden,<br>
+	  Die Zeile <em>9999 END</em> wird automatisch angef&uuml;gt.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">GOSUB &lt;Zeilennummer&gt;</td>
+	</td>
+	  Aufruf eines Unterprogramms,<br>
+	  Die Zeilennummer kann auch als variabler numerischer Ausdruck
+	  angegeben werden.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">GOTO &lt;Zeilennummer&gt;</td>
+	</td>
+	  Sprung zu einer Programmzeile,<br>
+	  Die Zeilennummer kann auch als variabler numerischer Ausdruck
+	  angegeben werden.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  IF &lt;Numerischer Ausdruck&gt; THEN &lt;Anweisungen&gt;
+	</td>
+	</td>
+	  Bedingte Programmausf&uuml;hrung,<br>
+	  Hat der Ausdruck einen Wert ungleich Null,
+	  werden die hinter THEN stehenden Anweisungen ausgef&uuml;hrt.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  INPUT [ &lt;String-Literal&gt; , ]
+	  [ &lt;Leerzeichenausdruck&gt; , ] Variable&gt; [ , ... ] </td>
+	</td>
+	  Eingabe von Zahlen und Schreiben des eingegebenen Wertes
+	  in eine Variable,<br>
+	  Die Bildschirmausgabe ist bei der PRINT-Anweisung beschrieben.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  LET &lt;Variable&gt; = &lt;Numerischer Ausdruck&gt;
+	</td>
+	<td>Wertzuweisung,<br>
+	  Das Schl&uuml;sselwort <em>LET</em> kann weggelassen werden.	
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  OUT &lt;Port-Adresse&gt; , &lt;Numerischer Ausdruck&gt;
+	</td>
+	<td>
+	  Der Wert des numerischen Ausdrucks wird auf dem angegebenen
+	  IO-Port ausgegeben.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  POKE &lt;Adresse&gt; , &lt;Numerischer Ausdruck&gt;
+	</td>
+	<td>
+	  Der Wert des numerischen Ausdrucks wird in die Speicherzelle
+	  mit der angegebenen Adresse geschrieben.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  PRINT [ &lt;String-Literal&gt; ] [ , ]
+	  [ &lt;Leerzeichenausdruck&gt; ] [ , ]
+	  [ [ BYTE ] &lt;Numerischer Ausdruck&gt; ] [ , ... ]
+	</td>
+	<td>
+	  Ausgabe auf dem Bildschirm:<br>
+	  <ul>
+	    <li>String-Literal:<br>
+		In einfachen Quote-Zeichen eingeschlossene Zeichenkette
+	    <li>Leerzeichenausdruck:<br>
+		Syntax: # &lt;Numerischer Ausdruck&gt<br>
+		Es werden so viele Leerzeichen ausgegeben,
+		wie der Wert des numerischen Ausdrucks ist.
+	    <li>BYTE:<br>
+		Steht vor einem numerischen Ausdruck das Schl&uuml;sselwort
+		BYTE, wird das niederwertige Byte des Wertes hexadezimal
+		ausgegeben.
+	  </ul>
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">REM &lt;Kommentar&gt;</td>
+	<td>
+	  Der hinter REM stehende Text wird bis zum n&auml;chsten Semikolon
+	  bzw. bis zum Zeilenende als Kommentar gewertet.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">RETURN</td>
+	<td>Beenden eines Unterprogramms</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Funktionen</h2>
+    <table border="1">
+      <tr><th>Funktion</th><th>Bedeutung</th></tr>
+      <tr>
+	<td valign="top">IN( &lt;Port-Adresse&gt; )</td>
+	<td>Lesen des angegebenen IO-Ports</td>
+      </tr>
+      <tr>
+	<td valign="top">PEEK( &lt;Port-Adresse&gt; )</td>
+	<td>Lesen der angegebenen Speicherzelle</td>
+      </tr>
+      <tr>
+	<td valign="top">RND( &lt;Numerischer Ausdruck&gt; )</td>
+	<td>
+	  Ermitteln einer Zufallszahl zwischen 1 und dem angegebenen Ausdruck
+	  (max. 255)
+	</td>
+      </tr>
+    </table>
+  <br><br>
+
+  <h2>Literatur</h2>
+    Schiller, Eckhard: Basic-Heimcomputer,<br>
+    in radio fernsehen elektronik, Heft 1/1985, S. 13-18,<br>
+    Berlin 1985
+</body>
+</html>
+

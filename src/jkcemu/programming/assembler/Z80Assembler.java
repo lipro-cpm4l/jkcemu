@@ -2339,7 +2339,8 @@ public class Z80Assembler extends PrgThread
 			0,
 			aCode.length,
 			begAddr,
-			this.forceRun ? startAddr : -1 ) );
+			this.forceRun ? startAddr : -1,
+			null ) );
       }
     } else {
       StringBuilder buf = new StringBuilder( 256 );
@@ -2382,7 +2383,13 @@ public class Z80Assembler extends PrgThread
 	  FileSaver.saveFile(
 		new File( fileName ),
 		fileFmt,
-		new LoadData( aCode, 0, aCode.length, this.begAddr, -1 ),
+		new LoadData(
+			aCode,
+			0,
+			aCode.length,
+			this.begAddr,
+			-1,
+			fileFmt ),
 		this.begAddr,
 		begAddr + aCode.length - 1,
 		false,
