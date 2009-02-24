@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -68,6 +68,8 @@ public class DebugFrm extends BasicFrm implements
   private AbstractButton    btnFlagPV;
   private AbstractButton    btnFlagN;
   private AbstractButton    btnFlagCarry;
+  private AbstractButton    btnIFF1;
+  private AbstractButton    btnIFF2;
   private JTextField        fldRegAF;
   private JTextField        fldRegAsciiA;
   private JTextField        fldRegBC;
@@ -176,11 +178,11 @@ public class DebugFrm extends BasicFrm implements
     mnuDebug.add( this.mnuDebugBreakDisable );
 
     this.mnuDebugBreakEnableAll = createJMenuItem(
-				"Alle Haltepunkt aktivieren" );
+				"Alle Haltepunkte aktivieren" );
     mnuDebug.add( this.mnuDebugBreakEnableAll );
 
     this.mnuDebugBreakDisableAll = createJMenuItem(
-				"Alle Haltepunkt deaktivieren" );
+				"Alle Haltepunkte deaktivieren" );
     mnuDebug.add( this.mnuDebugBreakDisableAll );
     mnuDebug.addSeparator();
 
@@ -226,11 +228,11 @@ public class DebugFrm extends BasicFrm implements
     mnuPopup.add( this.mnuPopupBreakDisable );
 
     this.mnuPopupBreakEnableAll = createJMenuItem(
-				"Alle Haltepunkt aktivieren" );
+				"Alle Haltepunkte aktivieren" );
     mnuPopup.add( this.mnuPopupBreakEnableAll );
 
     this.mnuPopupBreakDisableAll = createJMenuItem(
-				"Alle Haltepunkt deaktivieren" );
+				"Alle Haltepunkte deaktivieren" );
     mnuPopup.add( this.mnuPopupBreakDisableAll );
 
 
@@ -247,37 +249,13 @@ public class DebugFrm extends BasicFrm implements
 						0, 0 );
 
 
-    // Bereich Flags
-    JPanel panelFlag = new JPanel( new FlowLayout() );
-    panelFlag.setBorder( BorderFactory.createTitledBorder( "Flags" ) );
-
-    this.btnFlagSign = createFlagField( "S" );
-    panelFlag.add( this.btnFlagSign );
-
-    this.btnFlagZero = createFlagField( "Z" );
-    panelFlag.add( this.btnFlagZero );
-
-    this.btnFlagHalf = createFlagField( "H" );
-    panelFlag.add( this.btnFlagHalf );
-
-    this.btnFlagPV = createFlagField( "PV" );
-    panelFlag.add( this.btnFlagPV );
-
-    this.btnFlagN = createFlagField( "N" );
-    panelFlag.add( this.btnFlagN );
-
-    this.btnFlagCarry = createFlagField( "C" );
-    panelFlag.add( this.btnFlagCarry );
-
-    add( panelFlag, gbc );
-
-
     // Toolbar
     JToolBar toolBar = new JToolBar();
     toolBar.setFloatable( false );
     toolBar.setBorderPainted( false );
     toolBar.setOrientation( JToolBar.HORIZONTAL );
     toolBar.setRollover( true );
+    add( toolBar, gbc );
 
     this.btnRun = createImageButton(
 			"/images/debug/run.png",
@@ -304,13 +282,45 @@ public class DebugFrm extends BasicFrm implements
 			"Aus Aufruf herausspringen" );
     toolBar.add( this.btnStepUp );
 
+
+    // Bereich Flags
+    JPanel panelFlag = new JPanel( new FlowLayout() );
+    panelFlag.setBorder( BorderFactory.createTitledBorder( "Flags" ) );
     gbc.gridx++;
-    add( toolBar, gbc );
+    add( panelFlag, gbc );
+
+    this.btnFlagSign = createFlagField( "S" );
+    panelFlag.add( this.btnFlagSign );
+
+    this.btnFlagZero = createFlagField( "Z" );
+    panelFlag.add( this.btnFlagZero );
+
+    this.btnFlagHalf = createFlagField( "H" );
+    panelFlag.add( this.btnFlagHalf );
+
+    this.btnFlagPV = createFlagField( "PV" );
+    panelFlag.add( this.btnFlagPV );
+
+    this.btnFlagN = createFlagField( "N" );
+    panelFlag.add( this.btnFlagN );
+
+    this.btnFlagCarry = createFlagField( "C" );
+    panelFlag.add( this.btnFlagCarry );
+
+    this.btnIFF1 = createFlagField( "IFF1" );
+    panelFlag.add( this.btnIFF1 );
+
+    this.btnIFF2 = createFlagField( "IFF2" );
+    panelFlag.add( this.btnIFF2 );
 
 
     // Bereich Register
     JPanel panelReg = new JPanel( new GridBagLayout() );
     panelReg.setBorder( BorderFactory.createTitledBorder( "Register" ) );
+    gbc.gridwidth = 2;
+    gbc.gridx     = 0;
+    gbc.gridy++;
+    add( panelReg, gbc );
 
     GridBagConstraints gbcReg = new GridBagConstraints(
 						1, 0,
@@ -569,11 +579,6 @@ public class DebugFrm extends BasicFrm implements
     gbcReg.gridx++;
     panelReg.add( new JScrollPane( this.fldMemPC ), gbcReg );
 
-    gbc.gridwidth = 2;
-    gbc.gridx     = 0;
-    gbc.gridy++;
-    add( panelReg, gbc );
-
 
     // Haltepunkte
     JPanel panelBreak = new JPanel( new BorderLayout( 5, 5 ) );
@@ -594,8 +599,7 @@ public class DebugFrm extends BasicFrm implements
     gbc.fill      = GridBagConstraints.VERTICAL;
     gbc.anchor    = GridBagConstraints.WEST;
     gbc.gridwidth = 1;
-    gbc.gridx++;
-    gbc.gridx++;
+    gbc.gridx += 3;
     add( panelBreak, gbc );
 
 
@@ -795,34 +799,58 @@ public class DebugFrm extends BasicFrm implements
 	screenFrm.showHelp( "/help/tools/debugger.htm" );
       }
       else if( src == this.btnFlagSign ) {
-	if( this.btnFlagSign.isEnabled() )
+	rv = true;
+	if( this.btnFlagSign.isEnabled() ) {
 	  this.z80cpu.setFlagSign( this.btnFlagSign.isSelected() );
+	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagZero ) {
-	if( this.btnFlagZero.isEnabled() )
+	rv = true;
+	if( this.btnFlagZero.isEnabled() ) {
 	  this.z80cpu.setFlagZero( this.btnFlagZero.isSelected() );
+	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagHalf ) {
-	if( this.btnFlagHalf.isEnabled() )
+	rv = true;
+	if( this.btnFlagHalf.isEnabled() ) {
 	  this.z80cpu.setFlagHalf( this.btnFlagHalf.isSelected() );
+	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagPV ) {
-	if( this.btnFlagPV.isEnabled() )
+	rv = true;
+	if( this.btnFlagPV.isEnabled() ) {
 	  this.z80cpu.setFlagPV( this.btnFlagPV.isSelected() );
+	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagN ) {
-	if( this.btnFlagN.isEnabled() )
+	rv = true;
+	if( this.btnFlagN.isEnabled() ) {
 	  this.z80cpu.setFlagN( this.btnFlagN.isSelected() );
+	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagCarry ) {
-	if( this.btnFlagCarry.isEnabled() )
+	rv = true;
+	if( this.btnFlagCarry.isEnabled() ) {
 	  this.z80cpu.setFlagCarry( this.btnFlagCarry.isSelected() );
+	}
 	updFieldsAF();
+      }
+      else if( src == this.btnIFF1 ) {
+	rv = true;
+	if( this.btnIFF1.isEnabled() ) {
+	  this.z80cpu.setIFF1( this.btnIFF1.isSelected() );
+	}
+      }
+      else if( src == this.btnIFF2 ) {
+	rv = true;
+	if( this.btnIFF2.isEnabled() ) {
+	  this.z80cpu.setIFF2( this.btnIFF2.isSelected() );
+	}
       }
       else if( src == this.timerForClear ) {
 	rv = true;
@@ -841,6 +869,7 @@ public class DebugFrm extends BasicFrm implements
 	       || (src == this.fldRegSP)
 	       || (src == this.fldRegPC) )
       {
+	rv = true;
 	fieldValueChanged( src );
       }
     }
@@ -912,7 +941,7 @@ public class DebugFrm extends BasicFrm implements
 
   private void doDebugBreakAdd()
   {
-    ReplyHexDlg dlg = new ReplyHexDlg( this, "Haltepunktadresse:", 4 );
+    ReplyHexDlg dlg = new ReplyHexDlg( this, "Haltepunktadresse:", 4, null );
     dlg.setVisible( true );
     Integer addr = dlg.getReply();
     if( addr != null ) {
@@ -1095,6 +1124,8 @@ public class DebugFrm extends BasicFrm implements
     this.btnFlagPV.setEnabled( state );
     this.btnFlagN.setEnabled( state );
     this.btnFlagCarry.setEnabled( state );
+    this.btnIFF1.setEnabled( state );
+    this.btnIFF2.setEnabled( state );
     this.fldRegAF.setEditable( state );
     this.fldRegBC.setEditable( state );
     this.fldRegDE.setEditable( state );
@@ -1260,64 +1291,76 @@ public class DebugFrm extends BasicFrm implements
 	}
 
 	if( tf == this.fldRegAF ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegAF( v );
+	  }
 	  updFieldsFlag();
 	  updFieldsAF();
 	}
 	else if( tf == this.fldRegAF2 ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegAF2( v );
+	  }
 	  updFieldsAF2();
 	}
 	else if( tf == this.fldRegBC ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegBC( v );
+	  }
 	  updFieldsBC();
 	}
 	else if( tf == this.fldRegBC2 ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegBC2( v );
+	  }
 	  updFieldsBC2();
 	}
 	else if( tf == this.fldRegDE ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegDE( v );
+	  }
 	  updFieldsDE();
 	}
 	else if( tf == this.fldRegDE2 ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegDE2( v );
+	  }
 	  updFieldsDE2();
 	}
 	else if( tf == this.fldRegHL ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegHL( v );
+	  }
 	  updFieldsHL();
 	}
 	else if( tf == this.fldRegHL2 ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegHL2( v );
+	  }
 	  updFieldsHL2();
 	}
 	else if( tf == this.fldRegIX ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegIX( v );
+	  }
 	  updFieldsIX();
 	}
 	else if( tf == this.fldRegIY ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegIY( v );
+	  }
 	  updFieldsIY();
 	}
 	else if( tf == this.fldRegSP ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegSP( v );
+	  }
 	  updFieldsSP();
 	}
 	else if( tf == this.fldRegPC ) {
-	  if( v != -1 )
+	  if( v != -1 ) {
 	    this.z80cpu.setRegPC( v );
+	  }
 	  updFieldsPC();
 	}
       }
@@ -1350,6 +1393,8 @@ public class DebugFrm extends BasicFrm implements
     this.btnFlagPV.setSelected( this.z80cpu.getFlagPV() );
     this.btnFlagN.setSelected( this.z80cpu.getFlagN() );
     this.btnFlagCarry.setSelected( this.z80cpu.getFlagCarry() );
+    this.btnIFF1.setSelected( this.z80cpu.getIFF1() );
+    this.btnIFF2.setSelected( this.z80cpu.getIFF2() );
   }
 
 
@@ -1570,7 +1615,6 @@ public class DebugFrm extends BasicFrm implements
   private JTextField createHexField()
   {
     JTextField fld = new JTextField( 5 );
-    new HexDocument( fld, 4 );
     fld.addActionListener( this );
     fld.addFocusListener( this );
     fld.setEditable( false );

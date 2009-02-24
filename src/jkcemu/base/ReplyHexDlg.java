@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,13 +19,17 @@ public class ReplyHexDlg extends AbstractReplyDlg
 
 
   public ReplyHexDlg(
-		Frame  owner,
-		String msg,
-		int    numDigits )
+		Frame   owner,
+		String  msg,
+		int     numDigits,
+		Integer value )
   {
     super( owner, msg, "Eingabe Hexadezimalzahl", null );
     this.reply  = null;
     this.docHex = new HexDocument( this.replyTextField, numDigits );
+    if( value != null ) {
+      this.docHex.setValue( value.intValue(), numDigits );
+    }
     this.replyTextField.setColumns( numDigits + 1 );
     fitWindowBounds();
   }

@@ -6,13 +6,13 @@
  * Emulation des Z1013
  */
 
-package jkcemu.z1013;
+package jkcemu.system;
 
-import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.system.z1013.*;
 import z80emu.*;
 
 
@@ -22,6 +22,13 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   public static final int MEM_SCREEN = 0xEC00;
   public static final int MEM_OS     = 0xF000;
 
+  private static final String[] sysCallNames = {
+			"OUTCH", "INCH",  "PRST7", "INHEX",
+			"INKEY", "INLIN", "OUTHX", "OUTHL",
+			"CSAVE", "CLOAD", "MEM",   "WIND",
+			"OTHLS", "OUTDP", "OUTSP", "TRANS",
+			"INSTR", "KILL",  "HEXUM", "ALPHA" };
+
   private static byte[] mon202         = null;
   private static byte[] monA2          = null;
   private static byte[] monRB_K7659    = null;
@@ -29,16 +36,16 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   private static byte[] monJM_1992     = null;
   private static byte[] z1013FontBytes = null;
   private static byte[] altFontBytes   = null;
-  private static byte[] ramVideo       = new byte[ 0x0400 ];
 
   private Z80PIO   pio;
   private Keyboard keyboard;
+  private int      ramEndAddr;
+  private byte[]   ramVideo;
   private byte[]   romOS;
   private boolean  romDisabled;
   private boolean  altFontEnabled;
   private boolean  mode4MHz;
   private boolean  mode64x16;
-  private boolean  ram16k;
 
 
   public Z1013( EmuThread emuThread, Properties props )
@@ -81,23 +88,42 @@ public class Z1013 extends EmuSys implements Z80AddressListener
     this.altFontEnabled = false;
     this.mode4MHz       = false;
     this.mode64x16      = false;
-    this.ram16k         = EmuUtil.getProperty(
-				props,
-				"jkcemu.z1013.ram.kbyte" ).equals( "16" );
+    this.ramEndAddr     = getRAMEndAddr( props );
+    this.ramVideo       = new byte[ 0x0400 ];
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
-    this.pio   = new Z80PIO( cpu, null );
-    this.keyboard = new Keyboard( this.pio );
-    this.keyboard.applySettings( props );
+    this.pio   = new Z80PIO( cpu );
+    cpu.setInterruptSources( this.pio );
     cpu.addAddressListener( this );
 
+    this.keyboard = new Keyboard( this.pio );
+    this.keyboard.applySettings( props );
+
     reset( EmuThread.ResetLevel.POWER_ON );
+  }
+
+
+  public static int getDefaultSpeedKHz( Properties props )
+  {
+    return EmuUtil.getProperty(
+			props,
+			"jkcemu.system" ).startsWith( "Z1013.01" ) ?
+								1000 : 2000;
   }
 
 
   public Keyboard getKeyboard()
   {
     return this.keyboard;
+  }
+
+
+  public static String getTinyBasicProgram( Z80MemView memory )
+  {
+    return SourceUtil.getTinyBasicProgram(
+				memory,
+				0x1152,
+				memory.getMemWord( 0x101F ) + 1 );
   }
 
 
@@ -114,7 +140,9 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public void die()
   {
-    this.emuThread.getZ80CPU().removeAddressListener( this );
+    Z80CPU cpu = this.emuThread.getZ80CPU();
+    cpu.removeAddressListener( this );
+    cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
 
@@ -142,11 +170,20 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       }
     }
     if( fontBytes != null ) {
-      int row = y / 8;
       int col = x / 8;
-      int idx = (this.emuThread.getMemByte(
-			0xEC00 + (row * (this.mode64x16 ? 64 : 32)) + col )
-							* 8) + (y % 8);
+      int idx = -1;
+      if( this.mode64x16 ) {
+	int rPix = y % 16;
+	if( rPix < 8 ) {
+	  int row = y / 16;
+	  idx = (this.emuThread.getMemByte( 0xEC00 + (row * 64) + col ) * 8)
+								+ rPix;
+	}
+      } else {
+	int row = y / 8;
+	idx = (this.emuThread.getMemByte( 0xEC00 + (row * 32) + col ) * 8)
+								+ (y % 8);
+      }
       if( (idx >= 0) && (idx < fontBytes.length ) ) {
 	int m = 0x80;
 	int n = x % 8;
@@ -159,12 +196,6 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       }
     }
     return rv;
-  }
-
-
-  public int getDefaultStartAddress()
-  {
-    return 0x0100;
   }
 
 
@@ -196,11 +227,11 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 	done = true;
       }
     }
-    if( (addr >= MEM_SCREEN) && (addr < MEM_SCREEN + ramVideo.length) ) {
-      rv   = (int) ramVideo[ addr - MEM_SCREEN ] & 0xFF;
+    if( (addr >= MEM_SCREEN) && (addr < MEM_SCREEN + this.ramVideo.length) ) {
+      rv   = (int) this.ramVideo[ addr - MEM_SCREEN ] & 0xFF;
       done = true;
     }
-    if( !done && (!this.ram16k || (addr < 0x4000)) ) {
+    if( !done && (addr <= this.ramEndAddr) ) {
       rv = this.emuThread.getRAMByte( addr );
     }
     return rv;
@@ -215,7 +246,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public int getScreenBaseHeight()
   {
-    return this.mode64x16 ? 128 : 256;
+    return this.mode64x16 ? 248 : 256;
   }
 
 
@@ -231,30 +262,33 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public static String getTinyBasicProgram( Z80MemView memory )
+  public boolean getSwapKeyCharCase()
   {
-    return SourceUtil.getTinyBasicProgram(
-				memory,
-				0x1152,
-				memory.getMemWord( 0x101F ) + 1 );
+    return true;
   }
 
 
-  public boolean keyPressed( KeyEvent e )
+  public boolean isISO646DE()
   {
-    return this.keyboard.setKeyCode( e.getKeyCode() );
+    return this.altFontEnabled;
   }
 
 
-  public void keyReleased( int keyCode )
+  public boolean keyPressed( int keyCode, boolean shiftDown )
+  {
+    return this.keyboard.setKeyCode( keyCode );
+  }
+
+
+  public void keyReleased()
   {
     this.keyboard.setKeyReleased();
   }
 
 
-  public void keyTyped( char ch )
+  public boolean keyTyped( char ch )
   {
-    this.keyboard.setKeyChar( ch );
+    return this.keyboard.setKeyChar( ch );
   }
 
 
@@ -327,6 +361,61 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
+  public int reassembleSysCall(
+			int           addr,
+			StringBuilder buf,
+			int           colMnemonic,
+			int           colArgs,
+			int           colRemark )
+  {
+    int rv  = 0;
+    int bol = buf.length();
+    int b   = getMemByte( addr );
+    if( b == 0xE7 ) {
+      buf.append( String.format( "%04X  E7", addr ) );
+      appendSpacesToCol( buf, bol, colMnemonic );
+      buf.append( "RST" );
+      appendSpacesToCol( buf, bol, colArgs );
+      buf.append( "20H\n" );
+      rv = 1;
+    } else if( b == 0xCD ) {
+      if( getMemWord( addr + 1 ) == 0x0020 ) {
+	buf.append( String.format( "%04X  CD 00 20", addr ) );
+	appendSpacesToCol( buf, bol, colMnemonic );
+	buf.append( "CALL" );
+	appendSpacesToCol( buf, bol, colArgs );
+	buf.append( "0020H\n" );
+	rv = 3;
+      }
+    }
+    if( rv > 0 ) {
+      addr += rv;
+
+      bol = buf.length();
+      b   = getMemByte( addr );
+      buf.append( String.format( "%04X  %02X", addr, b ) );
+      appendSpacesToCol( buf, bol, colMnemonic );
+      buf.append( "DB" );
+      appendSpacesToCol( buf, bol, colArgs );
+      if( b >= 0xA0 ) {
+	buf.append( (char) '0' );
+      }
+      buf.append( String.format( "%02XH", b ) );
+      if( (b >= 0) && (b < sysCallNames.length) ) {
+	appendSpacesToCol( buf, bol, colRemark );
+	buf.append( (char) ';' );
+	buf.append( sysCallNames[ b ] );
+      }
+      buf.append( (char) '\n' );
+      rv++;
+      if( b == 2 ) {
+	rv += reassStringBit7( addr + 1, buf, colMnemonic, colArgs );
+      }
+    }
+    return rv;
+  }
+
+
   /*
    * Ein RESET ist erforderlich, wenn sich das emulierte System oder
    * das Monitorprogramm aendert oder wenn der RAM
@@ -351,11 +440,8 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 	rv = (this.romOS != mon202);
       }
     }
-    if( !rv ) {
-      rv = EmuUtil.getProperty(
-			props,
-			"jkcemu.z1013.ram.kbyte" ).equals( "16" )
-		&& !this.ram16k;
+    if( !rv && (getRAMEndAddr( props ) != this.ramEndAddr) ) {
+      rv = true;
     }
     return rv;
   }
@@ -363,15 +449,17 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public void reset( EmuThread.ResetLevel resetLevel )
   {
+    boolean old64x16 = this.mode64x16;
+
     this.romDisabled    = false;
     this.altFontEnabled = false;
     this.mode64x16      = false;
     if( this.mode4MHz ) {
-      this.emuThread.updCPUSpeed( Main.getProperties(), getSystemName() );
+      this.emuThread.updCPUSpeed( Main.getProperties() );
       this.mode4MHz = false;
     }
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      fillRandom( ramVideo );
+      fillRandom( this.ramVideo );
     }
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
 	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
@@ -381,6 +469,9 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       this.pio.reset( false );
     }
     this.keyboard.reset();
+
+    if( old64x16 )
+      this.screenFrm.fireScreenSizeChanged();
   }
 
 
@@ -420,12 +511,12 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 	done = true;
     }
     if( !done ) {
-      if( (addr >= MEM_SCREEN) && (addr < MEM_SCREEN + ramVideo.length) ) {
-	ramVideo[ addr - MEM_SCREEN ] = (byte) value;
+      if( (addr >= MEM_SCREEN) && (addr < MEM_SCREEN + this.ramVideo.length) ) {
+	this.ramVideo[ addr - MEM_SCREEN ] = (byte) value;
 	this.screenFrm.setScreenDirty( true );
 	rv = true;
       }
-      else if( !this.ram16k || (addr < 0x4000) ) {
+      else if( !done && (addr <= this.ramEndAddr) ) {
 	this.emuThread.setRAMByte( addr, value );
 	rv = true;
       }
@@ -446,9 +537,27 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
+  public void updSysCells(
+			int    begAddr,
+			int    len,
+			Object fileFmt,
+			int    fileType )
+  {
+    SourceUtil.updKCBasicSysCells(
+			this.emuThread,
+			begAddr,
+			len,
+			fileFmt,
+			fileType );
+  }
+
+
   public void writeIOByte( int port, int value )
   {
     if( (port & 0xFF) == 4 ) {
+      boolean oldAltFontEnabled = this.mode64x16;
+      boolean oldMode64x16      = this.mode64x16;
+
       this.romDisabled    = ((value & 0x10) != 0);
       this.altFontEnabled = ((value & 0x20) != 0);
       this.mode64x16      = ((value & 0x80) != 0);
@@ -465,8 +574,15 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 	}
 	this.mode4MHz = false;
       }
-      this.screenFrm.setScreenDirty( true );
-      this.screenFrm.fireScreenSizeChanged();
+
+      if( (this.altFontEnabled != oldAltFontEnabled)
+	  || (this.mode64x16 != oldMode64x16) )
+      {
+	this.screenFrm.setScreenDirty( true );
+      }
+      if( this.mode64x16 != oldMode64x16 ) {
+	this.screenFrm.fireScreenSizeChanged();
+      }
     }
     else if( (port & 0xF8) == 0x98 ) {
       this.emuThread.getRAMFloppyA().writeByte( port & 0x07, value );
@@ -508,6 +624,22 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
 
 	/* --- private Methoden --- */
+
+  private static int getRAMEndAddr( Properties props )
+  {
+    int    rv      = 0xFFFF;
+    String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
+    if( sysName.startsWith( "Z1013.01" )
+	|| sysName.startsWith( "Z1013.16" ) )
+    {
+      rv = 0x3FFF;
+    }
+    else if( sysName.startsWith( "Z1013.12" ) ) {
+      rv = 0x03FF;
+    }
+    return rv;
+  }
+
 
   private void showNoTinyBasic()
   {

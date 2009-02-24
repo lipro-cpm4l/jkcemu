@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,7 +7,7 @@
  * der Tastatur.
  */
 
-package jkcemu.z1013;
+package jkcemu.system.z1013;
 
 import java.lang.*;
 import jkcemu.Main;
@@ -82,18 +82,21 @@ public abstract class KeyboardMatrix
   }
 
 
-  public void setKeyCharCode( int keyCharCode )
+  public boolean setKeyCharCode( int keyCharCode )
   {
+    boolean rv = false;
+
     reset();
     this.keyCharCode = keyCharCode;
 
     // Tastencode in Matrix abbilden
     if( (this.keyCharCode > 0) && (this.keyCharCode <= 0xFF) ) {
-      updRowMasks();
+      rv = updRowMasks();
     } else {
       this.keyCharCode = 0;
       setShiftKeysPressed( false );
     }
+    return rv;
   }
 
 
@@ -106,6 +109,6 @@ public abstract class KeyboardMatrix
   }
 
 
-  protected abstract void updRowMasks();
+  protected abstract boolean updRowMasks();
 }
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,14 +13,10 @@ import java.awt.event.KeyEvent;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.audio.*;
-import jkcemu.ac1.AC1;
-import jkcemu.bcs3.BCS3;
-import jkcemu.kc85.KC85;
-import jkcemu.z1013.Z1013;
-import jkcemu.z9001.Z9001;
+import jkcemu.system.*;
 import z80emu.*;
 
 
@@ -50,6 +46,7 @@ public class EmuThread extends Thread implements
 
   public EmuThread( ScreenFrm screenFrm )
   {
+    super( "Emulation Thread" );
     this.screenFrm   = screenFrm;
     this.z80cpu      = new Z80CPU( this, this );
     this.monitor     = "a monitor object for synchronization";
@@ -102,13 +99,17 @@ public class EmuThread extends Thread implements
 	emuSys = new AC1( this, props );
       } else if( sysName.startsWith( "BCS3" ) ) {
 	emuSys = new BCS3( this, props );
-      } else if( sysName.startsWith( "Z1013" ) ) {
-	emuSys = new Z1013( this, props );
+      } else if( sysName.startsWith( "HueblerEvertMC" ) ) {
+	emuSys = new HueblerEvertMC( this );
       } else if( sysName.startsWith( "KC85/2" )
 		 || sysName.startsWith( "KC85/3" )
 		 || sysName.startsWith( "KC85/4" ) )
       {
 	emuSys = new KC85( this, props );
+      } else if( sysName.startsWith( "KramerMC" ) ) {
+	emuSys = new KramerMC( this );
+      } else if( sysName.startsWith( "Z1013" ) ) {
+	emuSys = new Z1013( this, props );
       } else {
 	emuSys = new Z9001( this, props );
       }
@@ -122,35 +123,54 @@ public class EmuThread extends Thread implements
       this.emuSys  = emuSys;
       this.extROMs = extROMs;
     }
+    emuSys.applySettings( props );
     this.extFont = extFont;
     if( reqReset || (this.emuSys == null) ) {
       fireReset( ResetLevel.COLD_RESET );
     }
 
+    // RAM-Floppies
+    if( props != null ) {
+      checkLoadRF(
+		this.ramFloppyA,
+		'A',
+		props.getProperty( "jkcemu.ramfloppy.a.file.name" ) );
+      checkLoadRF(
+		this.ramFloppyB,
+		'B',
+		props.getProperty( "jkcemu.ramfloppy.b.file.name" ) );
+    }
+
     // CPU-Geschwindigkeit
-    updCPUSpeed( props, emuSys.getSystemName() );
+    updCPUSpeed( props );
   }
 
 
-  public static int getDefaultSpeedKHz(
-				String     sysName,
-				Properties props )
+  public static int getDefaultSpeedKHz( Properties props )
   {
-    int rv = 1750;			// KC85/2..4
+    int    rv      = Z9001.getDefaultSpeedKHz();
+    String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
     if( sysName != null ) {
-      if( sysName.startsWith( "KC85/1" )
-	  || sysName.startsWith( "KC87" )
-	  || sysName.startsWith( "Z9001" ) )
+      if( sysName.startsWith( "KC85/2" )
+	  || sysName.startsWith( "KC85/3" )
+	  || sysName.startsWith( "KC85/4" ) )
       {
-	rv = 2458;			// eigentlich 2,4576 MHz
+	rv = KC85.getDefaultSpeedKHz();
       }
-      else if( sysName.startsWith( "AC1" )
-	       || sysName.startsWith( "Z1013" ) )
-      {
-	rv = 2000;
+      else if( sysName.startsWith( "AC1" ) ) {
+	rv = AC1.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "BCS3" ) ) {
 	rv = BCS3.getDefaultSpeedKHz( props );
+      }
+      else if( sysName.startsWith( "HueblerEvertMC" ) ) {
+	rv = HueblerEvertMC.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "KramerMC" ) ) {
+	rv = KramerMC.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "Z1013" ) ) {
+	rv = Z1013.getDefaultSpeedKHz( props );
       }
     }
     return rv;
@@ -232,13 +252,13 @@ public class EmuThread extends Thread implements
 
   public boolean keyPressed( KeyEvent e )
   {
-    return this.emuSys.keyPressed( e );
+    return this.emuSys.keyPressed( e.getKeyCode(), e.isShiftDown() );
   }
 
 
-  public void keyReleased( int keyCode )
+  public void keyReleased()
   {
-    this.emuSys.keyReleased( keyCode );
+    this.emuSys.keyReleased();
   }
 
 
@@ -251,40 +271,7 @@ public class EmuThread extends Thread implements
         ch = Character.toUpperCase( ch );
       }
     }
-    switch( ch ) {
-      case '\u00A7':  // Paragraf-Zeichen
-	ch = '@';
-	break;
-
-      case '\u00C4':  // Ae
-	ch = '[';
-	break;
-
-      case '\u00D6':  // Oe
-	ch = '\\';
-	break;
-
-      case '\u00DC':  // Ue
-	ch = ']';
-	break;
-
-      case '\u00E4':  // ae
-	ch = '{';
-	break;
-
-      case '\u00F6':  // oe
-	ch = '|';
-	break;
-
-      case '\u00FC':  // ue
-	ch = '}';
-	break;
-
-      case '\u00DF':  // sz
-	ch = '~';
-	break;
-    }
-    this.emuSys.keyTyped( ch );
+    this.emuSys.keyTyped( EmuUtil.toISO646DE( ch ) );
   }
 
 
@@ -318,9 +305,9 @@ public class EmuThread extends Thread implements
   }
 
 
-  public void updCPUSpeed( Properties props, String sysName )
+  public void updCPUSpeed( Properties props )
   {
-    int    maxSpeedKHz  = getDefaultSpeedKHz( sysName, props );
+    int    maxSpeedKHz  = getDefaultSpeedKHz( props );
     String maxSpeedText = EmuUtil.getProperty( props, "jkcemu.maxspeed.khz" );
     if( maxSpeedText.equals( "unlimited" ) ) {
       maxSpeedKHz = 0;
@@ -455,6 +442,29 @@ public class EmuThread extends Thread implements
   }
 
 
+  public int readMemByte( int addr )
+  {
+    addr &= 0xFFFF;
+
+    int      rv      = 0xFF;
+    boolean  done    = false;
+    ExtROM[] extROMs = this.extROMs;
+    if( extROMs != null ) {
+      for( int i = 0; !done && (i < extROMs.length); i++ ) {
+	ExtROM rom = this.extROMs[ i ];
+	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) ) {
+	  rv = rom.getByte( addr );
+	  done = true;
+	}
+      }
+    }
+    if( !done ) {
+      rv = this.emuSys.readMemByte( addr );
+    }
+    return rv;
+  }
+
+
   public void setMemByte( int addr, int value )
   {
     addr &= 0xFFFF;
@@ -477,6 +487,24 @@ public class EmuThread extends Thread implements
   {
     this.emuSys.setMemByte( addr, value & 0xFF );
     this.emuSys.setMemByte( addr + 1, (value >> 8) & 0xFF );
+  }
+
+
+  public void writeMemByte( int addr, int value )
+  {
+    addr &= 0xFFFF;
+
+    boolean  done    = false;
+    ExtROM[] extROMs = this.extROMs;
+    if( extROMs != null ) {
+      for( int i = 0; !done && (i < extROMs.length); i++ ) {
+	ExtROM rom = this.extROMs[ i ];
+	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) )
+	  done = true;
+      }
+    }
+    if( !done )
+      this.emuSys.writeMemByte( addr, value );
   }
 
 
@@ -522,8 +550,6 @@ public class EmuThread extends Thread implements
 	  if( (this.resetLevel == ResetLevel.COLD_RESET)
 	      || (this.resetLevel == ResetLevel.POWER_ON) )
 	  {
-	    checkLoadRF( this.ramFloppyA, 'A', "jkcemu.ramfloppy.a" );
-	    checkLoadRF( this.ramFloppyB, 'B', "jkcemu.ramfloppy.b" );
 	    this.z80cpu.resetCPU( true );
 	  } else {
 	    this.z80cpu.resetCPU( false );
@@ -550,21 +576,51 @@ public class EmuThread extends Thread implements
   private void checkLoadRF(
 			RAMFloppy ramFloppy,
 			char      rfChar,
-			String    propsPrefix )
+			String    fileName )
   {
-    String fileName = Main.getProperty( propsPrefix + ".file.name" );
     if( fileName != null ) {
       if( fileName.length() > 0 ) {
-	try {
-	  ramFloppy.load( new File( fileName ) );
+	File    file    = new File( fileName );
+	boolean changed = ramFloppy.hasDataChanged();
+	boolean load    = true;
+	if( changed ) {
+	  File oldFile = ramFloppy.getFile();
+	  if( oldFile != null ) {
+	    if( file.equals( oldFile ) ) {
+	      changed = false;
+	      load    = false;
+	    }
+	  }
 	}
-	catch( IOException ex ) {
-	  String msg = ex.getMessage();
-	  this.screenFrm.fireShowErrorDlg(
+	if( changed ) {
+	  if( JOptionPane.showConfirmDialog(
+		this.screenFrm,
+		String.format(
+			"Die Daten in der RAM-Floppy %c wurden"
+				+ " ge\u00E4ndert und nicht gespeichert.\n"
+				+ "Soll trotzdem die Datei \'%s\'\n"
+				+ "in die RAM-Floppy geladen werden?",
+			rfChar,
+			fileName ),
+		"Daten ge\u00E4ndert",
+		JOptionPane.YES_NO_OPTION,
+		JOptionPane.WARNING_MESSAGE ) != JOptionPane.YES_OPTION )
+	  {
+	    load = false;
+	  }
+	}
+	if( load ) {
+	  try {
+	    ramFloppy.load( file );
+	  }
+	  catch( IOException ex ) {
+	    String msg = ex.getMessage();
+	    this.screenFrm.fireShowErrorDlg(
 			String.format(
 				"RAM-Floppy %c kann nicht geladen werden\n%s",
 				rfChar,
 				msg != null ? msg : "" ) );
+	  }
 	}
       }
     }

@@ -6,10 +6,11 @@
  * Emulation des KC85/2..4
  */
 
-package jkcemu.kc85;
+package jkcemu.system;
 
-import java.awt.Color;
-import java.awt.event.*;
+import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
@@ -21,37 +22,37 @@ public class KC85 extends EmuSys implements
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
-  private int[][] rgbValues = {
+  private int[] rgbValues = {
 
 			// primaere Vordergrundfarben
-			{ 0,   0,   0 },	// schwarz
-			{ 0,   0,   255 },	// blau
-			{ 255, 0,   0 },	// rot
-			{ 255, 0,   255 },	// purpur
-			{ 0,   255, 0 },	// gruen
-			{ 0,   255, 255 },	// tuerkis
-			{ 255, 255, 0 },	// gelb
-			{ 255, 255, 255 },	// weiss
+			0,              // schwarz
+			0x0000FF,       // blau
+			0xFF0000,       // rot
+			0xFF00FF,       // purpur
+			0x00FF00,       // gruen
+			0x00FFFF,       // tuerkis
+			0xFFFF00,       // gelb
+			0xFFFFFF,       // weiss
 
 			// Vordergrundfarben mit 30 Grad Drehung im Farbkreis
-			{ 0,   0,   0 },	// schwarz
-			{ 75,  0,   180 },	// violett
-			{ 180, 75,  0 },	// orange
-			{ 180, 0,   138 },	// purpurrot
-			{ 0,   180, 75 },	// gruenblau
-			{ 0,   138, 180 },	// blaugruen
-			{ 138, 255, 0 },	// gelbgruen
-			{ 255, 255, 255 },	// weiss
+			0,              // schwarz
+			0x4B00B4,       // violett
+			0xB44B00,       // orange
+			0xB4008A,       // purpurrot
+			0x00B44B,       // gruenblau
+			0x008AB4,       // blaugruen
+			0x8AFF00,       // gelbgruen
+			0xFFFFFF,       // weiss
 
 			// Hintergrundfarben (30% dunkler)
-			{ 0,   0,   0 },	// schwarz
-			{ 0,   0,   180 },	// blau
-			{ 180, 0,   0 },	// rot
-			{ 180, 0,   180 },	// purpur
-			{ 0,   180, 0 },	// gruen
-			{ 0,   180, 180 },	// tuerkis
-			{ 180, 180, 0 },	// gelb
-			{ 180, 180, 180 } };	// weiss
+			0,              // schwarz
+			0x0000B4,       // blau
+			0xB40000,       // rot
+			0xB400B4,       // purpur
+			0x00B400,       // gruen
+			0x00B4B4,       // tuerkis
+			0xB4B400,       // gelb
+			0xB4B4B4 };     // weiss
 
   /*
    * Beim KC85/2..4 weicht der Zeichensatz vom ASCII-Standard etwas ab.
@@ -105,6 +106,26 @@ public class KC85 extends EmuSys implements
 	 -1, 124,  12,  28, 108,  44,  92, 125,		// 0xF0  F0...F7
 	 13,  29, 109,  45,  93,  -1,  -1,  -1 };	// 0xF8  F8...FC
 
+  private static final String[] sysCallNames = {
+			"CRT",   "MBO",   "UOT1",  "UOT2",
+			"KBD",   "MBI",   "USIN1", "USIN2",
+			"ISRO",  "CSRO",  "ISRI",  "CSRI",
+			"KBDS",  "BYE",   "KBDZ",  "COLOR",
+			"LOAD",  "VERIF", "LOOP",  "NORM",
+			"WAIT",  "LARG",  "INTB",  "INLIN",
+			"RHEX",  "ERRM",  "HLHX",  "HLDE",
+			"AHEX",  "ZSUCH", "SOUT",  "SIN",
+			"NOUT",  "NIN",   "GARG",  "OSTR",
+			"OCHR",  "CUCP",  "MODU",  "JUMP",
+			"LDMA",  "LDAM",  "BRKT",  "SPACE",
+			"CRLF",  "HOME",  "MODI",  "PUDE",
+			"PUSE",  "SIXD",  "DABR",  "TCIF",
+			"PADR",  "TON",   "SAVE",  "MBIN",
+			"MBOUT", "KEY",   "KEYLI", "DISP",
+			"WININ", "WINAK", "LINE",  "CIRCLE",
+			"SQR",   "MULT",  "CSTBT", "INIEA",
+			"INIME", "ZKOUT", "MENU",  "V24OUT",
+			"V24DUP" };
 
   private static byte[] basic_c000  = null;
   private static byte[] caos22_e000 = null;
@@ -115,50 +136,55 @@ public class KC85 extends EmuSys implements
   private static byte[] caos42_e000 = null;
   private static byte[] caos42_f000 = null;
 
-  private volatile boolean blinkEnabled;
-  private volatile boolean blinkState;
-  private volatile boolean hiColorRes;
-  private boolean          basicC000Enabled;
-  private boolean          caosC000Enabled;
-  private boolean          caosE000Enabled;
-  private boolean          irmEnabled;
-  private boolean          ram0Enabled;
-  private boolean          ram0Writeable;
-  private boolean          ram4Enabled;
-  private boolean          ram4Writeable;
-  private boolean          ram8Enabled;
-  private boolean          ram81Enabled;
-  private boolean          ram8Writeable;
-  private boolean          ramColorEnabled;
-  private boolean          screen1Enabled;
-  private volatile boolean screen1Visible;
-  private boolean          audioOutPhaseL;
-  private boolean          audioOutPhaseR;
-  private boolean          audioInPhase;
-  private int              audioInTStates;
-  private volatile int     keyNumPressed;
-  private int              keyNumProcessing;
-  private int              keyShiftBitCnt;
-  private int              keyShiftValue;
-  private int              keyTStates;
-  private volatile int     tStatesPerLine;
-  private int              lineTStateCounter;
-  private int              ctcInCounter;
-  private int              kcTypeNum;
-  private byte[]           basicC000;
-  private byte[]           caosC000;
-  private byte[]           caosE000;
-  private byte[]           caosF000;
-  private byte[]           ram80;
-  private byte[]           ram81;
-  private byte[]           ramColor0;
-  private byte[]           ramColor1;
-  private byte[]           ramPixel0;
-  private byte[]           ramPixel1;
-  private Color[]          colors;
-  private String           sysName;
-  private Z80PIO           pio;
-  private Z80CTC           ctc;
+  private volatile boolean       blinkEnabled;
+  private volatile boolean       blinkState;
+  private volatile boolean       hiColorRes;
+  private boolean                basicC000Enabled;
+  private boolean                caosC000Enabled;
+  private boolean                caosE000Enabled;
+  private boolean                irmEnabled;
+  private boolean                ram0Enabled;
+  private boolean                ram0Writeable;
+  private boolean                ram4Enabled;
+  private boolean                ram4Writeable;
+  private boolean                ram8Enabled;
+  private boolean                ram81Enabled;
+  private boolean                ram8Writeable;
+  private boolean                ramColorEnabled;
+  private boolean                screen1Enabled;
+  private volatile boolean       screen1Visible;
+  private boolean                audioOutPhaseL;
+  private boolean                audioOutPhaseR;
+  private boolean                audioInPhase;
+  private int                    audioInTStates;
+  private volatile int           keyNumPressed;
+  private int                    keyNumProcessing;
+  private int                    keyShiftBitCnt;
+  private int                    keyShiftValue;
+  private int                    keyTStates;
+  private volatile int           tStatesLinePos0;
+  private volatile int           tStatesLinePos1;
+  private volatile int           tStatesLinePos2;
+  private volatile int           tStatesPerLine;
+  private int                    lineTStateCounter;
+  private int                    lineCounter;
+  private int                    kcTypeNum;
+  private byte[]                 basicC000;
+  private byte[]                 caosC000;
+  private byte[]                 caosE000;
+  private byte[]                 caosF000;
+  private byte[]                 ram80;
+  private byte[]                 ram81;
+  private byte[]                 ramColor0;
+  private byte[]                 ramColor1;
+  private byte[]                 ramPixel0;
+  private byte[]                 ramPixel1;
+  private Color[]                colors;
+  private volatile BufferedImage screenImage;
+  private volatile BufferedImage screenImage2;
+  private String                 sysName;
+  private Z80PIO                 pio;
+  private Z80CTC                 ctc;
 
 
   public KC85( EmuThread emuThread, Properties props )
@@ -223,23 +249,28 @@ public class KC85 extends EmuSys implements
 
     this.colors = new Color[ rgbValues.length ];
     for( int i = 0; i < rgbValues.length; i++ ) {
-      this.colors[ i ] = new Color(
-				rgbValues[ i ][ 0 ],
-				rgbValues[ i ][ 1 ],
-				rgbValues[ i ][ 2 ] );
+      this.colors[ i ] = new Color( rgbValues[ i ] );
     }
-
-    this.tStatesPerLine = 0;
+    this.screenImage  = null;
+    this.screenImage2 = null;
 
     Z80CPU cpu = emuThread.getZ80CPU();
-    this.ctc = new Z80CTC( cpu, null );
-    this.pio = new Z80PIO( cpu, this.ctc );
+    this.ctc   = new Z80CTC( cpu );
+    this.pio   = new Z80PIO( cpu );
+    cpu.setInterruptSources( this.ctc, this.pio );
+
     this.ctc.addCTCListener( this );
-    cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
+    cpu.addMaxSpeedListener( this );
 
     reset( EmuThread.ResetLevel.POWER_ON );
     z80MaxSpeedChanged();
+  }
+
+
+  public static int getDefaultSpeedKHz()
+  {
+    return 1750;
   }
 
 
@@ -267,7 +298,9 @@ public class KC85 extends EmuSys implements
 
 	case 2:
 	  this.blinkState = !this.blinkState;
-	  this.screenFrm.setScreenDirty( true );
+	  if( this.screenImage == null ) {
+	    this.screenFrm.setScreenDirty( true );
+	  }
 	  break;
       }
     }
@@ -278,8 +311,11 @@ public class KC85 extends EmuSys implements
 
   public void z80MaxSpeedChanged()
   {
-    this.tStatesPerLine = this.emuThread.getZ80CPU().getMaxSpeedKHz()
-					* 1000 / (624 * 50);
+    int t = this.emuThread.getZ80CPU().getMaxSpeedKHz() * 112 / 1750;
+    this.tStatesLinePos0 = (int) Math.round( t * 32.0 / 112.0 );
+    this.tStatesLinePos1 = (int) Math.round( t * 64.0 / 112.0 );
+    this.tStatesLinePos2 = (int) Math.round( t * 96.0 / 112.0 );
+    this.tStatesPerLine  = t;
   }
 
 
@@ -291,29 +327,38 @@ public class KC85 extends EmuSys implements
 
     /*
      * CTC-Eingaenge:
-     *   Kanal 0 und 1: doppelte Zeilensynchronfrequenz
-     *   Kanal 2 und 3: Bildsynchronimpulse
-     *
-     * Der CTC-Kanal mit der hoechsten Prioritaet bekommt zuletzt den Impuls,
-     * damit er bei gleichzeitigem Erfuelltsein der Interruptbedingung
-     * mit einem niedriger priorisierten Kanal bei diesem
-     * die Interruptsausloesung nicht unterdrueckt.
+     *   Kanal 0 und 1: h4-Signal (doppelte Zeilensynchronfrequenz),
+     *                  pro Pixelzeile 32+32+32+16=112 Takte
+     *   Kanal 2 und 3: Bildsynchronimpulse,
+     *                  256*112 Takte Low, 56*112 Takte High
      */
     int tStatesPerLine = this.tStatesPerLine;
     if( tStatesPerLine > 0 ) {
       this.lineTStateCounter += tStates;
-      while( this.lineTStateCounter >= tStatesPerLine ) {
-	this.ctcInCounter++;
-	if( this.ctcInCounter >= 624 ) {
-	  this.ctc.externalUpdate( 3, 1 );
-	  this.ctc.externalUpdate( 2, 1 );
-	  this.ctcInCounter = 0;
+      if( this.lineTStateCounter >= tStatesPerLine ) {
+	this.lineTStateCounter %= tStatesPerLine;
+	if( this.lineCounter < 311 ) {
+	  updScreenLine();
+	  this.lineCounter++;
+	} else {
+	  this.lineCounter = 0;
+	  if( this.screenImage != null ) {
+	    this.screenFrm.setScreenDirty( true );
+	  }
 	}
-	this.ctc.externalUpdate( 1, 1 );
-	this.ctc.externalUpdate( 0, 1 );
-	this.lineTStateCounter -= tStatesPerLine;
-
       }
+      boolean bi = (this.lineCounter < 256);	// "bi" entspricht /BI
+      boolean h4 = false;
+      if( ((this.lineTStateCounter >= this.tStatesLinePos0)
+		&& (this.lineTStateCounter < this.tStatesLinePos1))
+	  || (this.lineTStateCounter >= this.tStatesLinePos2) )
+      {
+	h4 = true;
+      }
+      this.ctc.externalUpdate( 0, h4 );
+      this.ctc.externalUpdate( 1, h4 );
+      this.ctc.externalUpdate( 2, bi );
+      this.ctc.externalUpdate( 3, bi );
     }
 
     /*
@@ -428,7 +473,6 @@ public class KC85 extends EmuSys implements
 	  this.keyShiftBitCnt = 0;
 	} else {
 	  this.keyTStates = 0;
-	  //this.keyTStates += tStates;
 	  --this.keyShiftBitCnt;
 	}
       } else {
@@ -440,18 +484,100 @@ public class KC85 extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  public void applySettings( Properties props )
+  {
+    if( EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.kc85.emulate_video_timing",
+				true ) )
+    {
+      if( this.screenImage2 == null ) {
+	this.screenImage2 = new BufferedImage(
+					getScreenBaseWidth(),
+					getScreenBaseHeight(),
+					BufferedImage.TYPE_INT_RGB );
+      }
+      this.screenImage = this.screenImage2;
+    } else {
+      this.screenImage = null;
+    }
+  }
+
+
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
+    this.ctc.removeCTCListener( this );
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
-    this.ctc.removeCTCListener( this );
+    cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
 
   public String extractScreenText()
   {
-    return extractMemText( 0xB200, 32, 40, 40 );
+    StringBuilder buf = new StringBuilder( 32 * 41 );
+    for( int i = 0; i < 32; i++ ) {
+      int rowAddr = 0xB200 + (i * 40);
+      int nSpaces = 0;
+      for( int k = 0; k < 40; k++ ) {
+	int b = this.emuThread.getMemByte( rowAddr + k );
+	if( (b == 0) || b == 0x20 ) {
+	  nSpaces++;
+	}
+	else if( (b > 0x20) && (b < 0x7F) ) {
+	  while( nSpaces > 0 ) {
+	    buf.append( (char) '\u0020' );
+	    --nSpaces;
+	  }
+	  switch( b ) {
+	    case 0x5B:					// volles Rechteck
+	      break;					// -> herausfiltern
+	    case 0x5C:
+	      buf.append( (char) '|' );
+	      break;
+	    case 0x5D:
+	      buf.append( (char) '\u00AC' );		// Negationszeichen
+	      break;
+	    case 0x60:
+	      if( this.kcTypeNum > 2 ) {
+		buf.append( (char) '\u00A9' );		// Copyright-Symbol
+	      } else {
+		buf.append( (char) '@' );
+	      }
+	      break;
+	    case 0x7B:
+	      if( this.kcTypeNum > 2 ) {
+		buf.append( (char) '\u00E4' );		// ae-Umlaut
+	      } else {
+		buf.append( (char) '|' );
+	      }
+	      break;
+	    case 0x7C:
+	      if( this.kcTypeNum > 2 ) {
+		buf.append( (char) '\u00F6' );		// oe-Umlaut
+	      } else {
+		buf.append( (char) '\u00AC' );		// Negationszeichen
+	      }
+	      break;
+	    case 0x7D:
+	      if( this.kcTypeNum > 2 ) {
+		buf.append( (char) '\u00FC' );		// ue-Umlaut
+	      }
+	      break;
+	    case 0x7E:
+	      if( this.kcTypeNum > 2 ) {
+		buf.append( (char) '\u00DF' );		// sz-Umlaut
+	      }
+	      break;
+	    default:
+	      buf.append( (char) b );
+	  }
+	}
+      }
+      buf.append( (char) '\n' );
+    }
+    return buf.toString();
   }
 
 
@@ -463,7 +589,6 @@ public class KC85 extends EmuSys implements
 
   public Color getColor( int colorIdx )
   {
-
     Color color = null;
     if( this.colors != null ) {
       if( (colorIdx >= 0) && (colorIdx < this.colors.length) )
@@ -550,12 +675,6 @@ public class KC85 extends EmuSys implements
       }
     }
     return rv;
-  }
-
-
-  public int getDefaultStartAddress()
-  {
-    return 0x0300;
   }
 
 
@@ -662,6 +781,12 @@ public class KC85 extends EmuSys implements
   }
 
 
+  public Image getScreenImage()
+  {
+    return this.screenImage;
+  }
+
+
   public boolean getSwapKeyCharCase()
   {
     return true;
@@ -680,105 +805,105 @@ public class KC85 extends EmuSys implements
   }
 
 
-  public boolean keyPressed( KeyEvent e )
+  public boolean keyPressed( int keyCode, boolean shiftDown )
   {
     boolean rv = false;
-    if( this.emuThread.getZ80CPU().getIFF1()
-	&& this.pio.canFireInterruptPortB() )
-    {
-      char ch = 0;
-      switch( e.getKeyCode() ) {
-	case KeyEvent.VK_LEFT:
-	case KeyEvent.VK_BACK_SPACE:
-	  ch = 7;
-	  break;
+    char    ch = 0;
+    switch( keyCode ) {
+      case KeyEvent.VK_LEFT:
+      case KeyEvent.VK_BACK_SPACE:
+	ch = 7;
+	break;
 
-	case KeyEvent.VK_RIGHT:
-	  ch = 9;
-	  break;
+      case KeyEvent.VK_RIGHT:
+	ch = 9;
+	break;
 
-	case KeyEvent.VK_DOWN:
-	  ch = 0x0A;
-	  break;
+      case KeyEvent.VK_DOWN:
+	ch = 0x0A;
+	break;
 
-	case KeyEvent.VK_UP:
-	  ch = 0x0B;
-	  break;
+      case KeyEvent.VK_UP:
+	ch = 0x0B;
+	break;
 
-	case KeyEvent.VK_ENTER:
-	  ch = 0x0D;
-	  break;
+      case KeyEvent.VK_ENTER:
+	ch = 0x0D;
+	break;
 
-	case KeyEvent.VK_HOME:
-	  ch = 0x10;
-	  break;
+      case KeyEvent.VK_HOME:
+	ch = 0x10;
+	break;
 
-	case KeyEvent.VK_END:
-	  ch = 0x18;
-	  break;
+      case KeyEvent.VK_END:
+	ch = 0x18;
+	break;
 
-	case KeyEvent.VK_INSERT:
-	  ch = 0x1A;
-	  break;
+      case KeyEvent.VK_INSERT:
+	ch = 0x1A;
+	break;
 
-	case KeyEvent.VK_ESCAPE:
-	  ch = 0x1B;
-	  break;
+      case KeyEvent.VK_ESCAPE:
+	ch = 0x1B;
+	break;
 
-	case KeyEvent.VK_DELETE:
-	  ch = 0x1F;
-	  break;
+      case KeyEvent.VK_DELETE:
+	ch = 0x1F;
+	break;
 
-	case KeyEvent.VK_SPACE:
-	  ch = 0x20;
-	  break;
+      case KeyEvent.VK_SPACE:
+	ch = 0x20;
+	break;
 
-	case KeyEvent.VK_F1:
-	  ch = (char) (e.isShiftDown() ? 0xF7 : 0xF1);
-	  break;
+      case KeyEvent.VK_F1:
+	ch = (char) (shiftDown ? 0xF7 : 0xF1);
+	break;
 
-	case KeyEvent.VK_F2:
-	  ch = (char) (e.isShiftDown() ? 0xF8 : 0xF2);
-	  break;
+      case KeyEvent.VK_F2:
+	ch = (char) (shiftDown ? 0xF8 : 0xF2);
+	break;
 
-	case KeyEvent.VK_F3:
-	  ch = (char) (e.isShiftDown() ? 0xF9 : 0xF3);
-	  break;
+      case KeyEvent.VK_F3:
+	ch = (char) (shiftDown ? 0xF9 : 0xF3);
+	break;
 
-	case KeyEvent.VK_F4:
-	  ch = (char) (e.isShiftDown() ? 0xFA : 0xF4);
-	  break;
+      case KeyEvent.VK_F4:
+	ch = (char) (shiftDown ? 0xFA : 0xF4);
+	break;
 
-	case KeyEvent.VK_F5:
-	  ch = (char) (e.isShiftDown() ? 0xFB : 0xF5);
-	  break;
+      case KeyEvent.VK_F5:
+	ch = (char) (shiftDown ? 0xFB : 0xF5);
+	break;
 
-	case KeyEvent.VK_F6:
-	  ch = (char) (e.isShiftDown() ? 0xFC : 0xFC);
-	  break;
-      }
-      if( ch > 0 ) {
-	keyTyped( ch );
-	rv = true;
-      }
+      case KeyEvent.VK_F6:
+	ch = (char) (shiftDown ? 0xFC : 0xFC);
+	break;
+    }
+    if( ch > 0 ) {
+      keyTyped( ch );
+      rv = true;
     }
     return rv;
   }
 
 
-  public void keyReleased( int keyCode )
+  public void keyReleased()
   {
     this.keyNumPressed = -1;
   }
 
 
-  public void keyTyped( char ch )
+  public boolean keyTyped( char ch )
   {
+    boolean rv = false;
     if( (ch > 0) && (ch < char2KeyNum.length) ) {
       int keyNum = char2KeyNum[ ch ];
-      if( keyNum >= 0 )
+      if( keyNum >= 0 ) {
 	this.keyNumPressed = (keyNum & 0xFE) | (~keyNum & 0x01);
+	rv                 = true;
+      }
     }
+    return rv;
   }
 
 
@@ -819,6 +944,55 @@ public class KC85 extends EmuSys implements
       case 0x8F:
 	rv = this.ctc.read( port & 0x03 );
 	break;
+    }
+    return rv;
+  }
+
+
+  public int reassembleSysCall(
+			int           addr,
+			StringBuilder buf,
+			int           colMnemonic,
+			int           colArgs,
+			int           colRemark )
+  {
+    int rv = 0;
+    String s = null;
+    int    b = getMemByte( addr );
+    switch( b ) {
+      case 0xC3:
+	s = "JP";
+	break;
+      case 0xCD:
+	s = "CALL";
+	break;
+    }
+    if( s != null ) {
+      if( getMemWord( addr + 1 ) == 0xF003 ) {
+	int idx = getMemByte( addr + 3 );
+	int bol = buf.length();
+	buf.append( String.format( "%04X  %02X 03 F0", addr, b ) );
+	appendSpacesToCol( buf, bol, colMnemonic );
+	buf.append( s );
+	appendSpacesToCol( buf, bol, colArgs );
+	buf.append( "0F003H\n" );
+	bol = buf.length();
+	buf.append( String.format( "%04X  %02X", (addr + 3) & 0xFFFF, idx ) );
+	appendSpacesToCol( buf, bol, colMnemonic );
+	buf.append( "DB" );
+	appendSpacesToCol( buf, bol, colArgs );
+	if( idx >= 0xA0 ) {
+	  buf.append( (char) '0' );
+	}
+	buf.append( String.format( "%02XH", idx ) );
+	if( (idx >= 0) && (idx < sysCallNames.length) ) {
+	  appendSpacesToCol( buf, bol, colRemark );
+	  buf.append( (char) ';' );
+	  buf.append( sysCallNames[ idx ] );
+	}
+	buf.append( (char) '\n' );
+	rv = 4;
+      }
     }
     return rv;
   }
@@ -886,8 +1060,8 @@ public class KC85 extends EmuSys implements
     this.audioOutPhaseL    = false;
     this.audioInPhase      = this.emuThread.readAudioPhase();
     this.audioInTStates    = 0;
-    this.ctcInCounter      = 0;
     this.lineTStateCounter = 0;
+    this.lineCounter       = 0;
     this.keyNumPressed     = -1;
     this.keyNumProcessing  = -1;
     this.keyShiftBitCnt    = 0;
@@ -939,7 +1113,9 @@ public class KC85 extends EmuSys implements
 	if( a != null ) {
 	  if( idx < a.length ) {
 	    a[ idx ] = (byte) value;
-	    this.screenFrm.setScreenDirty( true );
+	    if( this.screenImage == null ) {
+	      this.screenFrm.setScreenDirty( true );
+	    }
 	  }
 	}
       } else if( this.ram8Enabled && this.ram8Writeable ) {
@@ -957,6 +1133,21 @@ public class KC85 extends EmuSys implements
       }
     }
     return rv;
+  }
+
+
+  public void updSysCells(
+			int    begAddr,
+			int    len,
+			Object fileFmt,
+			int    fileType )
+  {
+    SourceUtil.updKCBasicSysCells(
+			this.emuThread,
+                        begAddr,
+                        len,
+                        fileFmt,
+                        fileType );
   }
 
 
@@ -1031,7 +1222,11 @@ public class KC85 extends EmuSys implements
 
   private int getColorIndex( int colorByte, boolean foreground )
   {
-    if( this.blinkEnabled && this.blinkState && ((colorByte & 0x80) != 0) ) {
+    if( !this.hiColorRes
+	&& this.blinkEnabled
+	&& this.blinkState
+	&& ((colorByte & 0x80) != 0) )
+    {
       foreground = false;
     }
     return foreground ? ((colorByte >> 3) & 0x0F) : ((colorByte & 0x07) + 16);
@@ -1064,6 +1259,89 @@ public class KC85 extends EmuSys implements
       this.emuThread.writeAudioValue( (byte) value );
     } else {
       this.emuThread.writeAudioPhase( this.audioOutPhaseL );
+    }
+  }
+
+
+  private void updScreenLine()
+  {
+    BufferedImage img = this.screenImage;
+    int           y   = this.lineCounter;
+    if( (img != null) && (y >= 0) && (y < 256) ) {
+      int x = 0;
+      for( int col = 0; col < 40; col++ ) {
+	if( this.kcTypeNum > 3 ) {
+	  boolean screen1  = this.screen1Visible;
+	  byte[]  ramPixel = screen1 ? this.ramPixel1 : this.ramPixel0;
+	  byte[]  ramColor = screen1 ? this.ramColor1 : this.ramColor0;
+	  int     idx      = (col * 256) + y;
+	  if( (idx >= 0) && (idx < ramPixel.length) ) {
+	    int p = ramPixel[ idx ];
+	    int c = ramColor[ idx ];
+	    int m = 0x80;
+	    for( int i = 0; (i < 8) && (x < 320); i++ ) {
+	      int colorIdx = 0;
+	      if( this.hiColorRes ) {
+		if( (p & m) != 0 ) {
+		  if( (c & m) != 0 ) {
+		    colorIdx = 7;               // weiss
+		  } else {
+		    colorIdx = 2;               // rot
+		  }
+		} else {
+		  if( (c & m) != 0 ) {
+		    colorIdx = 5;               // tuerkis
+		  } else {
+		    colorIdx = 0;               // schwarz
+		  }
+		}
+	      } else {
+		colorIdx = getColorIndex( c, (p & m) != 0 );
+	      }
+	      if( (colorIdx >= 0) && (colorIdx < rgbValues.length) ) {
+		img.setRGB( x++, y, rgbValues[ colorIdx ] );
+	      }
+	      m >>= 1;
+	    }
+	  }
+	} else {
+	  int pIdx = -1;
+	  int cIdx = -1;
+	  if( col < 32 ) {
+	    pIdx = ((y << 5) & 0x1E00)
+			| ((y << 7) & 0x0180)
+			| ((y << 3) & 0x0060)
+			| (col & 0x001F);
+	    cIdx = 0x2800 | ((y << 3) & 0x07E0) | (col & 0x001F);
+	  } else {
+	    pIdx = 0x2000
+			| ((y << 3) & 0x0600)
+			| ((y << 7) & 0x0180)
+			| ((y << 3) & 0x0060)
+			| ((y >> 1) & 0x0018)
+			| (col & 0x0007);
+	    cIdx = 0x3000
+			| ((y << 1) & 0x0180)
+			| ((y << 3) & 0x0060)
+			| ((y >> 1) & 0x0018)
+			| (col & 0x0007);
+	  }
+	  if( (pIdx >= 0) && (pIdx < this.ramPixel0.length)
+	      && (cIdx >= 0) && (cIdx < this.ramPixel0.length) )
+	  {
+	    int p = this.ramPixel0[ pIdx ];
+	    int c = this.ramPixel0[ cIdx ];
+	    int m = 0x80;
+	    for( int i = 0; (i < 8) && (x < 320); i++ ) {
+	      int colorIdx = getColorIndex( c, (p & m) != 0 );
+	      if( (colorIdx >= 0) && (colorIdx < rgbValues.length) ) {
+		img.setRGB( x++, y, rgbValues[ colorIdx ] );
+	      }
+	      m >>= 1;
+	    }
+	  }
+	}
+      }
     }
   }
 }

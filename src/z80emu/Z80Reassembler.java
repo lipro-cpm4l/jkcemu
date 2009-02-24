@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -13,13 +13,6 @@ import java.lang.*;
 
 public class Z80Reassembler
 {
-  public static String getHexString( int value, int numDigits )
-  {
-    String s = "0000" + Integer.toHexString( value );
-    return s.substring( s.length() - numDigits ).toUpperCase();
-  }
-
-
   public static Z80ReassInstr reassInstruction(
 					int addr,
 					int b0,
@@ -285,7 +278,7 @@ public class Z80Reassembler
       case 0xC6:
 	return new Z80ReassInstr( 2, "ADD", "A", getByteText( b1 ) );
       case 0xC7:
-	return new Z80ReassInstr( 1, "RST", "00h" );
+	return new Z80ReassInstr( 1, "RST", "00H" );
       case 0xC8:
 	return new Z80ReassInstr( 1, "RET", "Z" );
       case 0xC9:
@@ -307,7 +300,7 @@ public class Z80Reassembler
       case 0xCE:
 	return new Z80ReassInstr( 2, "ADC", "A", getByteText( b1 ) );
       case 0xCF:
-	return new Z80ReassInstr( 1, "RST", "08h" );
+	return new Z80ReassInstr( 1, "RST", "08H" );
 
       case 0xD0:
 	return new Z80ReassInstr( 1, "RET", "NC" );
@@ -329,7 +322,7 @@ public class Z80Reassembler
       case 0xD6:
 	return new Z80ReassInstr( 2, "SUB", getByteText( b1 ) );
       case 0xD7:
-	return new Z80ReassInstr( 1, "RST", "10h" );
+	return new Z80ReassInstr( 1, "RST", "10H" );
       case 0xD8:
 	return new Z80ReassInstr( 1, "RET", "C" );
       case 0xD9:
@@ -352,7 +345,7 @@ public class Z80Reassembler
       case 0xDE:
 	return new Z80ReassInstr( 2, "SBC", getByteText( b1 ) );
       case 0xDF:
-	return new Z80ReassInstr( 1, "RST", "18h" );
+	return new Z80ReassInstr( 1, "RST", "18H" );
 
       case 0xE0:
 	return new Z80ReassInstr( 1, "RET", "PO" );
@@ -373,7 +366,7 @@ public class Z80Reassembler
       case 0xE6:
 	return new Z80ReassInstr( 2, "AND", getByteText( b1 ) );
       case 0xE7:
-	return new Z80ReassInstr( 1, "RST", "20h" );
+	return new Z80ReassInstr( 1, "RST", "20H" );
       case 0xE8:
 	return new Z80ReassInstr( 1, "RET", "PE" );
       case 0xE9:
@@ -393,7 +386,7 @@ public class Z80Reassembler
       case 0xEE:
 	return new Z80ReassInstr( 2, "XOR", getByteText( b1 ) );
       case 0xEF:
-	return new Z80ReassInstr( 1, "RST", "28h" );
+	return new Z80ReassInstr( 1, "RST", "28H" );
 
       case 0xF0:
 	return new Z80ReassInstr( 1, "RET", "P" );
@@ -414,7 +407,7 @@ public class Z80Reassembler
       case 0xF6:
 	return new Z80ReassInstr( 2, "OR", getByteText( b1 ) );
       case 0xF7:
-	return new Z80ReassInstr( 1, "RST", "30h" );
+	return new Z80ReassInstr( 1, "RST", "30H" );
       case 0xF8:
 	return new Z80ReassInstr( 1, "RET", "M" );
       case 0xF9:
@@ -436,7 +429,7 @@ public class Z80Reassembler
       case 0xFE:
 	return new Z80ReassInstr( 2, "CP", getByteText( b1 ) );
       case 0xFF:
-	return new Z80ReassInstr( 1, "RST", "38h" );
+	return new Z80ReassInstr( 1, "RST", "38H" );
     }
     return null;
   }
@@ -952,7 +945,7 @@ public class Z80Reassembler
       case 0xC6:
 	return new Z80ReassInstr( 3, "*ADD", "A", getByteText( b2 ) );
       case 0xC7:
-	return new Z80ReassInstr( 2, "*RST", "00h" );
+	return new Z80ReassInstr( 2, "*RST", "00H" );
       case 0xC8:
 	return new Z80ReassInstr( 2, "*RET", "Z" );
       case 0xC9:
@@ -974,7 +967,7 @@ public class Z80Reassembler
       case 0xCE:
 	return new Z80ReassInstr( 3, "*ADC", "A", getByteText( b2 ) );
       case 0xCF:
-	return new Z80ReassInstr( 2, "*RST", "08h" );
+	return new Z80ReassInstr( 2, "*RST", "08H" );
 
       case 0xD0:
 	return new Z80ReassInstr( 2, "*RET", "NC" );
@@ -996,7 +989,7 @@ public class Z80Reassembler
       case 0xD6:
 	return new Z80ReassInstr( 3, "*SUB", getByteText( b2 ) );
       case 0xD7:
-	return new Z80ReassInstr( 2, "*RST", "10h" );
+	return new Z80ReassInstr( 2, "*RST", "10H" );
       case 0xD8:
 	return new Z80ReassInstr( 2, "*RET", "C" );
       case 0xD9:
@@ -1017,7 +1010,7 @@ public class Z80Reassembler
       case 0xDE:
 	return new Z80ReassInstr( 3, "*SBC", getByteText( b2 ) );
       case 0xDF:
-	return new Z80ReassInstr( 2, "*RST", "18h" );
+	return new Z80ReassInstr( 2, "*RST", "18H" );
 
       case 0xE0:
 	return new Z80ReassInstr( 2, "*RET", "PO" );
@@ -1038,7 +1031,7 @@ public class Z80Reassembler
       case 0xE6:
 	return new Z80ReassInstr( 3, "*AND", getByteText( b2 ) );
       case 0xE7:
-	return new Z80ReassInstr( 2, "*RST", "20h" );
+	return new Z80ReassInstr( 2, "*RST", "20H" );
       case 0xE8:
 	return new Z80ReassInstr( 2, "*RET", "PE" );
       case 0xE9:
@@ -1058,7 +1051,7 @@ public class Z80Reassembler
       case 0xEE:
 	return new Z80ReassInstr( 3, "*XOR", getByteText( b2 ) );
       case 0xEF:
-	return new Z80ReassInstr( 2, "*RST", "28h" );
+	return new Z80ReassInstr( 2, "*RST", "28H" );
 
       case 0xF0:
 	return new Z80ReassInstr( 2, "*RET", "P" );
@@ -1079,7 +1072,7 @@ public class Z80Reassembler
       case 0xF6:
 	return new Z80ReassInstr( 3, "*OR", getByteText( b2 ) );
       case 0xF7:
-	return new Z80ReassInstr( 2, "*RST", "30h" );
+	return new Z80ReassInstr( 2, "*RST", "30H" );
       case 0xF8:
 	return new Z80ReassInstr( 2, "*RET", "M" );
       case 0xF9:
@@ -1099,7 +1092,7 @@ public class Z80Reassembler
       case 0xFE:
 	return new Z80ReassInstr( 3, "*CP", getByteText( b2 ) );
       case 0xFF:
-	return new Z80ReassInstr( 2, "RST", "38h" );
+	return new Z80ReassInstr( 2, "RST", "38H" );
     }
     return null;
   }
@@ -1236,16 +1229,24 @@ public class Z80Reassembler
   }
 
 
-  private static String getByteText( int n )
+  private static String getByteText( int v )
   {
-    return getHexString( n & 0xFF, 2 ) + "h";
+    v &= 0xFF;
+    return String.format( "%s%02XH", (v >= 0xA0 ? "0" : ""), v );
   }
 
 
 
+  private static String getWordText( int v )
+  {
+    v &= 0xFFFF;
+    return String.format( "%s%04XH", (v >= 0xA000 ? "0" : ""), v );
+  }
+
+
   private static String getWordText( int l, int h )
   {
-    return getHexString( getAddr( l, h ), 4 ) + "h";
+    return getWordText( getAddr( l, h ) );
   }
 
 
@@ -1263,7 +1264,7 @@ public class Z80Reassembler
 
   private static String getRelAddrText( int nextInstAddr, int d )
   {
-    return getHexString( getRelAddr( nextInstAddr, d ), 4 ) + "h";
+    return getWordText( getRelAddr( nextInstAddr, d ) );
   }
 }
 

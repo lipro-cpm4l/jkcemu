@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,25 +12,28 @@ import java.awt.Frame;
 import java.awt.event.*;
 import java.lang.*;
 import javax.swing.*;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.*;
 import z80emu.*;
 
 
 public class ReassFrm extends AbstractMemAreaFrm
 {
-  private static final int COL_NAME = 19;
-  private static final int COL_ARG  = 27;
+  private static final int COL_MNEMONIC = 23;
+  private static final int COL_ARGS     = 31;
+  private static final int COL_REMARK   = 49;
+
+  private EmuThread emuThread;
 
 
-  public ReassFrm( Z80MemView memory )
+  public ReassFrm( EmuThread emuThread )
   {
     super(
-	memory,
+	emuThread,
 	"JKCEMU Reassembler",
 	"Reassemblieren",
 	KeyStroke.getKeyStroke( KeyEvent.VK_R, InputEvent.CTRL_MASK ),
-	40 );
-    
+	58 );
+    this.emuThread = emuThread;
   }
 
 
@@ -48,10 +51,50 @@ public class ReassFrm extends AbstractMemAreaFrm
       }
       StringBuilder buf = new StringBuilder( 0x4000 );
       while( addr <= endAddr ) {
-	int begOfLine = buf.length();
-	buf.append( String.format( "%04X", addr ) );
-	addr = reassInstr( buf, begOfLine, addr );
-	buf.append( (char) '\n' );
+	int len = this.emuThread.getEmuSys().reassembleSysCall(
+					addr,
+					buf,
+					COL_MNEMONIC,
+					COL_ARGS,
+					COL_REMARK );
+	if( len > 0 ) {
+	  addr += len;
+	} else {
+	  int begOfLine = buf.length();
+	  buf.append( String.format( "%04X", addr ) );
+	  Z80ReassInstr instruction = Z80Reassembler.reassInstruction(
+				addr,
+				this.memory.getMemByte( addr ),
+				this.memory.getMemByte( addr + 1 ),
+				this.memory.getMemByte( addr + 2 ),
+				this.memory.getMemByte( addr + 3 ) );
+	  if( instruction != null ) {
+	    appendCode( buf, addr, instruction.getLength() );
+
+	    String s = instruction.getName();
+	    if( s != null ) {
+	      appendSpaces( buf, begOfLine + COL_MNEMONIC );
+	      buf.append( s );
+
+	      s = instruction.getArg1();
+	      if( s != null ) {
+		appendSpaces( buf, begOfLine + COL_ARGS );
+		buf.append( s );
+
+		s = instruction.getArg2();
+		if( s != null ) {
+		  buf.append( (char) ',' );
+		  buf.append( s );
+		}
+	      }
+	    }
+	    addr += instruction.getLength();
+	  } else {
+	    appendCode( buf, addr, 1 );
+	    addr++;
+	  }
+	  buf.append( (char) '\n' );
+	}
       }
       setResult( buf.toString() );
     }
@@ -68,7 +111,9 @@ public class ReassFrm extends AbstractMemAreaFrm
     buf.append( (char) '\u0020' );
     for( int i = 0; i < len; i++ ) {
       buf.append( (char) '\u0020' );
-      buf.append( String.format( "%02X", this.memory.getMemByte( addr++ ) ) );
+      buf.append( String.format(
+			"%02X",
+			this.emuThread.getMemByte( addr++ ) ) );
     }
   }
 
@@ -77,44 +122,6 @@ public class ReassFrm extends AbstractMemAreaFrm
   {
     for( int i = buf.length(); i < endPos; i++ )
       buf.append( (char) '\u0020' );
-  }
-
-
-  private int reassInstr( StringBuilder buf, int begOfLine, int addr )
-  {
-    Z80ReassInstr instr = Z80Reassembler.reassInstruction(
-				addr,
-				this.memory.getMemByte( addr ),
-				this.memory.getMemByte( addr + 1 ),
-				this.memory.getMemByte( addr + 2 ),
-				this.memory.getMemByte( addr + 3 ) );
-    if( instr != null ) {
-      int len = instr.getLength();
-      appendCode( buf, addr, len );
-
-      String s = instr.getName();
-      if( s != null ) {
-	appendSpaces( buf, begOfLine + COL_NAME );
-	buf.append( s );
-
-	s = instr.getArg1();
-	if( s != null ) {
-	  appendSpaces( buf, begOfLine + COL_ARG );
-	  buf.append( s );
-
-	  s = instr.getArg2();
-	  if( s != null ) {
-	    buf.append( (char) ',' );
-	    buf.append( s );
-	  }
-	}
-      }
-      addr += len;
-    } else {
-      appendCode( buf, addr, 1 );
-      addr++;
-    }
-    return addr;
   }
 }
 

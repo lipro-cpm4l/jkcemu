@@ -18,11 +18,12 @@ import jkcemu.base.*;
 import jkcemu.text.*;
 import jkcemu.programming.*;
 import jkcemu.programming.assembler.Z80Assembler;
+import jkcemu.system.*;
 
 
 public class BasicCompiler extends PrgThread
 {
-  private enum Platform { AC1, KC85_2TO4, Z1013, Z9001, UNKNOWN };
+  private enum Platform { AC1, HC900, HEMC, KRAMERMC, Z1013, Z9001, UNKNOWN };
 
   private enum LibItem { INLN, R_INT, P_HEXA, P_INT, P_LTXT, P_TEXT, P_TAB,
 			DATA, DREAD,
@@ -85,25 +86,25 @@ public class BasicCompiler extends PrgThread
       }
       this.sourceFormatter = new BasicSourceFormatter( capacity );
     }
+    EmuSys emuSys = emuThread.getEmuSys();
+    this.sysName  = emuSys.getSystemName();
     this.platform = Platform.UNKNOWN;
-    this.sysName  = emuThread.getEmuSys().getSystemName();
-    if( this.sysName.startsWith( "AC1" ) ) {
+    if( emuSys instanceof AC1 ) {
       this.platform = Platform.AC1;
     }
-    else if( this.sysName.startsWith( "HC900" )
-	     || this.sysName.startsWith( "KC85/2" )
-	     || this.sysName.startsWith( "KC85/3" )
-	     || this.sysName.startsWith( "KC85/4" ) )
-    {
-      this.platform = Platform.KC85_2TO4;
+    else if( emuSys instanceof KC85 ) {
+      this.platform = Platform.HC900;
     }
-    else if( this.sysName.startsWith( "Z1013" ) ) {
+    else if( emuSys instanceof HueblerEvertMC ) {
+      this.platform  = Platform.HEMC;
+    }
+    else if( emuSys instanceof KramerMC ) {
+      this.platform  = Platform.KRAMERMC;
+    }
+    else if( emuSys instanceof Z1013 ) {
       this.platform  = Platform.Z1013;
     }
-    else if( this.sysName.startsWith( "Z9001" )
-	     || this.sysName.startsWith( "KC85/1" )
-	     || this.sysName.startsWith( "KC87" ) )
-    {
+    else if( emuSys instanceof Z9001 ) {
       this.platform = Platform.Z9001;
     }
     this.libItems                  = new HashSet<LibItem>();
@@ -3572,7 +3573,7 @@ public class BasicCompiler extends PrgThread
     if( this.libItems.contains( LibItem.INKEY ) ) {
       /*
        * Tastaturstatus abfragen und Wert des Zeichens zurueckliefern,
-       * welches durch die gerade gedrucke(n) Taste(n) gebildet wird.
+       * welches durch die gerade gedrueckte(n) Taste(n) gebildet wird.
        * Dabei wird auch auf Abbruch geprueft
        *
        * Rueckgabe:
@@ -4015,7 +4016,7 @@ public class BasicCompiler extends PrgThread
       buf.append( "\tORG\t" );
       buf.append( getHex4( this.basicOptions.getBegAddr() ) );
       buf.append( (char) '\n' );
-      if( this.platform == Platform.KC85_2TO4 ) {
+      if( this.platform == Platform.HC900 ) {
 	buf.append( "\tDEFB\t7FH,7FH\n" );
 	boolean invalidChars = false;
 	int     nChars       = 0;
@@ -4088,55 +4089,82 @@ public class BasicCompiler extends PrgThread
 	  buf.append( "\tJP\t07FDH\n" );
 	  break;
 
-	case KC85_2TO4:
+	case HC900:
 	  buf.append( "\tRET\n" );
+	  break;
+
+	case HEMC:
+	  buf.append( "\tJP\t0F01EH\n" );
 	  break;
 
 	case Z1013:
 	  buf.append( "\tJP\t0038H\n" );
 	  break;
 
+	case KRAMERMC:
 	case Z9001:
 	  buf.append( "\tJP\t0000H\n" );
 	  break;
       }
       if( this.libItems.contains( LibItem.XOUTCH ) ) {
+	buf.append( "XOUTCH:\tPUSH\tAF\n"
+		+ "\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n" );
 	switch( this.platform ) {
 	  case AC1:
-	    buf.append( "XOUTCH:\tJP\t0010H\n" );
+	    buf.append( "\tRST\t10H\n" );
 	    break;
 
-	  case KC85_2TO4:
-	    buf.append( "XOUTCH:\tCP\t0DH\n"
+	  case HC900:
+	    buf.append( "\tCP\t0DH\n"
 		+ "\tJR\tNZ,XOUTC1\n"
 		+ "\tCALL\t0F003H\n"
 		+ "\tDEFB\t24H\n"
 		+ "\tLD\tA,0AH\n"
 		+ "XOUTC1:\tCALL\t0F003H\n"
-		+ "\tDEFB\t24H\n"
-		+ "\tRET\n" );
+		+ "\tDEFB\t24H\n" );
+	    break;
+
+	  case HEMC:
+	    buf.append( "\tCP\t0DH\n"
+		+ "\tJR\tNZ,XOUTC1\n"
+		+ "\tLD\tC,A\n"
+		+ "\tCALL\t0F009H\n"
+		+ "\tLD\tA,0AH\n"
+		+ "XOUTC1:\tLD\tC,A\n"
+		+ "\tCALL\t0F009H\n" );
+	    break;
+
+	  case KRAMERMC:
+	    buf.append( "\tCP\t0DH\n"
+		+ "\tJR\tNZ,XOUTC1\n"
+		+ "\tLD\tC,A\n"
+		+ "\tCALL\t00E6H\n"
+		+ "\tLD\tA,0AH\n"
+		+ "XOUTC1:\tLD\tC,A\n"
+		+ "\tCALL\t00E6H\n" );
 	    break;
 
 	  case Z1013:
-	    buf.append( "XOUTCH:\tRST\t20H\n"
-		+ "\tDEFB\t0\n"
-		+ "\tRET\n" );
+	    buf.append( "\tRST\t20H\n"
+		+ "\tDEFB\t0\n" );
 	    break;
 
 	  case Z9001:
-	    buf.append( "XOUTCH:\tPUSH\tBC\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tLD\tC,2\n"
+	    buf.append( "\tLD\tC,2\n"
 		+ "\tLD\tE,A\n"
 		+ "\tCP\t0DH\n"
 		+ "\tJR\tNZ,XOUTC1\n"
 		+ "\tCALL\t0005H\n"
 		+ "\tLD\tE,0AH\n"
-		+ "XOUTC1:\tCALL\t0005H\n"
+		+ "XOUTC1:\tCALL\t0005H\n" );
+	}
+	buf.append( "\tPOP\tHL\n"
 		+ "\tPOP\tDE\n"
 		+ "\tPOP\tBC\n"
+		+ "\tPOP\tAF\n"
 		+ "\tRET\n" );
-	}
       }
       if( this.libItems.contains( LibItem.XINCH ) ) {
 	switch( this.platform ) {
@@ -4144,10 +4172,18 @@ public class BasicCompiler extends PrgThread
 	    buf.append( "XINCH:\tJP\t0008H\n" );
 	    break;
 
-	  case KC85_2TO4:
+	  case HC900:
 	    buf.append( "XINCH:\tCALL\t0F003H\n"
 		+ "\tDEFB\t16h\n"
 		+ "\tRET\n" );
+	    break;
+
+	  case HEMC:
+	    buf.append( "XINCH:\tJP\t0F003H\n" );
+	    break;
+
+	  case KRAMERMC:
+	    buf.append( "XINCH:\tJP\t00E0H\n" );
 	    break;
 
 	  case Z1013:
@@ -4174,7 +4210,7 @@ public class BasicCompiler extends PrgThread
 		+ "\tRET\n" );
 	    break;
 
-	  case KC85_2TO4:
+	  case HC900:
 	    buf.append( "XINKEY:\tCALL\t0F003H\n"
 		+ "\tDB\t0CH\n"
 		+ "\tJR\tC,XINKE1\n"
@@ -4183,6 +4219,20 @@ public class BasicCompiler extends PrgThread
 		+ "XINKE1:\tCALL\t0F003H\n"
 		+ "\tDB\t0EH\n"
 		+ "XINKE2:\tRET\n" );
+	    break;
+
+	  case HEMC:
+	    buf.append( "XINKEY:\tCALL\t0F012H\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tJP\t0F003H\n" );
+	    break;
+
+	  case KRAMERMC:
+	    buf.append( "XINKEY:\tCALL\t00EFH\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tJP\t00E0H\n" );
 	    break;
 
 	  case Z1013:

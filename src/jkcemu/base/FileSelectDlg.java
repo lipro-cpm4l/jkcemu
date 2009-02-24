@@ -576,10 +576,13 @@ public class FileSelectDlg
 	if( fileName != null ) {
 	  fileName = fileName.trim();
 	  if( fileName.length() > 0 ) {
-	    if( this.fsv != null ) {
-	      file = this.fsv.getChild( this.curDir, fileName );
-	    } else {
-	      file = new File( this.curDir, fileName );
+	    file = new File( fileName );
+	    if( !file.isAbsolute() ) {
+	      if( this.fsv != null ) {
+		file = this.fsv.getChild( this.curDir, fileName );
+	      } else {
+		file = new File( this.curDir, fileName );
+	      }
 	    }
 	  }
 	}

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Z1013-Emulator
  *
@@ -7,7 +7,7 @@
  * der Alpha-Tastatur (8x8-Matrix).
  */
 
-package jkcemu.z1013;
+package jkcemu.system.z1013;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
@@ -146,8 +146,9 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
   }
 
 
-  protected void updRowMasks()
+  protected boolean updRowMasks()
   {
+    boolean rv          = false;
     boolean ctrl        = false;
     int     keyCharCode = this.keyCharCode;
     if( (keyCharCode > 0) && (keyCharCode < '\u0020') ) {
@@ -159,18 +160,23 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
     if( pos >= 0 ) {
       int m = (1 << (pos % 6));
       this.rowMasks[ pos / 6 ] |= m;
+      rv = true;
     } else {
       pos = this.matrixShift.indexOf( keyCharCode );
       if( pos >= 0 ) {
 	int m = (1 << (pos % 6));
 	this.rowMasks[ pos / 6 ] |= m;
 	this.rowMasks[ 6 ] |= 0x80;		// Shift-Taste
+	rv = true;
       }
     }
-    if( ctrl ) {
-      this.rowMasks[ 5 ] |= 0x40;		// Control-Taste
+    if( rv ) {
+      if( ctrl ) {
+	this.rowMasks[ 5 ] |= 0x40;		// Control-Taste
+      }
+      updShiftKeysPressed();
     }
-    updShiftKeysPressed();
+    return rv;
   }
 
 

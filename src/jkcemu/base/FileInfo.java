@@ -250,7 +250,7 @@ public class FileInfo
       if( fileFmt.equals( KCTAP_SYS ) || fileFmt.equals( KCTAP_BASIC ) ) {
 	rv = createLoadDataFromKCTAP( fileBuf, fileFmt );
       } else if( fileFmt.equals( INTELHEX ) ) {
-	rv = createLoadDataFromINTELHEX( fileBuf, fileFmt );
+	rv = createLoadDataFromINTELHEX( fileBuf );
       } else {
 	int begAddr = -1;
 	int len     = -1;
@@ -262,15 +262,12 @@ public class FileInfo
 	  if( len <= 0 ) {
 	    new IOException( "Laden als Headersave-Datei nicht m\u00F6glich" );
 	  }
-	  rv = new LoadData( fileBuf, 32, len, begAddr, -1 );
+	  rv = new LoadData( fileBuf, 32, len, begAddr, -1, fileFmt );
 	  int fileType = fileBuf[ 12 ] & 0xFF;
 	  if( fileType == 'C' ) {
 	    rv.setStartAddr( EmuUtil.getWord( fileBuf, 4 ) );
 	  }
 	  rv.setFileType( fileType );
-	  if( (fileType == 'B') && (begAddr == 0x60F7) ) {
-	    rv.setUpdAC1BasicSysCells( true );
-	  }
 	} else if( fileFmt.equals( KCB ) ) {
 	  int fileBegAddr = EmuUtil.getWord( fileBuf, 17 );
 	  int fileEndAddr = EmuUtil.getWord( fileBuf, 19 );
@@ -297,8 +294,8 @@ public class FileInfo
 			128 + begAddr - fileBegAddr,
 			len,
 			begAddr,
-			-1 );
-	  rv.setUpdKCBasicSysCells( true );
+			-1,
+			fileFmt );
 	  rv.setInfoMsg(
 		"Es wird nur das eigentliche KC-BASIC-Programm geladen.\n"
 			+ "Eventuell in der Datei enthaltener Maschinencode"
@@ -315,7 +312,7 @@ public class FileInfo
 	  if( len <= 0 ) {
 	    new IOException( "Laden als KCC/JTC-Datei nicht m\u00F6glich" );
 	  }
-	  rv = new LoadData( fileBuf, 128, len, begAddr, -1 );
+	  rv = new LoadData( fileBuf, 128, len, begAddr, -1, fileFmt );
 	  if( fileBuf[ 16 ] >= 3 ) {
 	    rv.setStartAddr( EmuUtil.getWord( fileBuf, 21 ) );
 	  }
@@ -331,8 +328,8 @@ public class FileInfo
 			14,
 			len,
 			(((int) fileBuf[ 14 ] & 0xFF) << 8) | 0x01,
-			-1 );
-	  rv.setUpdKCBasicSysCells( true );
+			-1,
+			fileFmt );
 	} else if( fileFmt.equals( KCBASIC_PURE ) ) {
 	  if( fileBuf.length > 1) {
 	    len = EmuUtil.getWord( fileBuf, 0 );
@@ -345,13 +342,13 @@ public class FileInfo
 			2,
 			len,
 			(((int) fileBuf[ 3 ] & 0xFF) << 8) | 0x01,
-			-1 );
-	  rv.setUpdKCBasicSysCells( true );
+			-1,
+			fileFmt );
 	}
       }
     }
     if( rv == null ) {
-      rv = new LoadData( fileBuf, 0, fileBuf.length, -1, -1 );
+      rv = new LoadData( fileBuf, 0, fileBuf.length, -1, -1, fileFmt );
     }
     return rv;
   }
@@ -366,10 +363,18 @@ public class FileInfo
       if( fileInfo != null ) {
 	rv = FileInfo.createLoadData( fileBuf, fileInfo.getFileFormat() );
       } else {
-	rv = new LoadData( fileBuf, 0, fileBuf.length, -1, -1 );
+	rv = new LoadData( fileBuf, 0, fileBuf.length, -1, -1, null );
       }
     }
     return rv;
+  }
+
+
+  public boolean equalsFileFormat( String format )
+  {
+    return (this.fileFmt != null) && (format != null) ?
+					this.fileFmt.equals( format )
+					: false;
   }
 
 
@@ -668,8 +673,7 @@ public class FileInfo
 
 
   private static LoadData createLoadDataFromINTELHEX(
-					byte[] fileBuf,
-					Object fileFmt ) throws IOException
+					byte[] fileBuf ) throws IOException
   {
     String infoMsg = null;
 
@@ -742,8 +746,15 @@ public class FileInfo
     if( firstAddr >= 0 ) {
       byte[] dataBytes = out.toByteArray();
       if( dataBytes != null ) {
-	if( dataBytes.length > 0 )
-	  rv = new LoadData( dataBytes, 0, dataBytes.length, firstAddr, -1 );
+	if( dataBytes.length > 0 ) {
+	  rv = new LoadData(
+			dataBytes,
+			0,
+			dataBytes.length,
+			firstAddr,
+			-1,
+			FileInfo.INTELHEX );
+	}
       }
     }
     if( rv == null ) {
@@ -798,8 +809,13 @@ public class FileInfo
       }
       pos++;
     }
-    LoadData rv = new LoadData( dstBuf, 0, len - n, begAddr, startAddr );
-    rv.setUpdKCBasicSysCells( kcbasic );
+    LoadData rv = new LoadData(
+			dstBuf,
+			0,
+			len - n,
+			begAddr,
+			startAddr,
+			fileFmt );
     return rv;
   }
 

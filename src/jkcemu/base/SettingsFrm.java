@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -58,26 +58,33 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnSysKC85_3;
   private JRadioButton                btnSysKC85_4;
   private JRadioButton                btnSysKC87;
+  private JRadioButton                btnSysHEMC;
+  private JRadioButton                btnSysKramerMC;
   private JRadioButton                btnSysZ1013;
-  private JRadioButton                btnAC1mon31;
+  private JRadioButton                btnAC1mon31_64x16;
+  private JRadioButton                btnAC1mon31_64x32;
+  private JRadioButton                btnAC1monSCCH80;
   private JRadioButton                btnAC1monSCCH1088;
   private JRadioButton                btnBCS3se24_27;
   private JRadioButton                btnBCS3se31_29;
   private JRadioButton                btnBCS3se31_40;
+  private JRadioButton                btnBCS3se32_29;
   private JRadioButton                btnBCS3ram1k;
   private JRadioButton                btnBCS3ram17k;
-  private JRadioButton                btnBCS3ram33k;
+  private JCheckBox                   btnKC85VideoTiming;
   private JRadioButton                btnZ9001ram16k;
   private JRadioButton                btnZ9001ram32k;
   private JRadioButton                btnZ9001ram48k;
   private JCheckBox                   btnZ9001color;
+  private JRadioButton                btnZ1013_01;
+  private JRadioButton                btnZ1013_12;
+  private JRadioButton                btnZ1013_16;
+  private JRadioButton                btnZ1013_64;
   private JRadioButton                btnZ1013mon202;
   private JRadioButton                btnZ1013monA2;
   private JRadioButton                btnZ1013monRB_K7659;
   private JRadioButton                btnZ1013monRB_S6009;
   private JRadioButton                btnZ1013monJM_1992;
-  private JRadioButton                btnZ1013ram16k;
-  private JRadioButton                btnZ1013ram64k;
   private JRadioButton                btnSpeedDefault;
   private JRadioButton                btnSpeedValue;
   private JRadioButton                btnSpeedUnlimited;
@@ -204,6 +211,18 @@ public class SettingsFrm extends BasicFrm
     gbcSys.gridy++;
     this.panelSys.add( this.btnSysBCS3, gbcSys );
 
+    this.btnSysHEMC = new JRadioButton( "H\u00FCbler/Evert-MC", false );
+    this.btnSysHEMC.addActionListener( this );
+    grpSys.add( this.btnSysHEMC );
+    gbcSys.gridy++;
+    this.panelSys.add( this.btnSysHEMC, gbcSys );
+
+    this.btnSysKramerMC = new JRadioButton( "Kramer-MC", false );
+    this.btnSysKramerMC.addActionListener( this );
+    grpSys.add( this.btnSysKramerMC );
+    gbcSys.gridy++;
+    this.panelSys.add( this.btnSysKramerMC, gbcSys );
+
     this.btnSysZ1013 = new JRadioButton( "Z1013", false );
     this.btnSysZ1013.addActionListener( this );
     grpSys.add( this.btnSysZ1013 );
@@ -248,19 +267,48 @@ public class SettingsFrm extends BasicFrm
 
     ButtonGroup grpAC1mon = new ButtonGroup();
 
-    this.btnAC1mon31 = new JRadioButton(
-		"Monitorprogramm 3.1 mit erweitertem Zeichensatz",
+    panelAC1.add( new JLabel( "64x16 Zeichen, 1 KByte SRAM:" ), gbcAC1 );
+
+    this.btnAC1mon31_64x16 = new JRadioButton(
+		"Monitorprogramm 3.1 / Zeichensatz U402 BM513 (Ur-AC1)",
+		false );
+    this.btnAC1mon31_64x16.addActionListener( this );
+    grpAC1mon.add( this.btnAC1mon31_64x16 );
+    gbcAC1.insets.top  = 0;
+    gbcAC1.insets.left = 50;
+    gbcAC1.gridy++;
+    panelAC1.add( this.btnAC1mon31_64x16, gbcAC1 );
+
+    gbcAC1.insets.top  = 10;
+    gbcAC1.insets.left = 5;
+    gbcAC1.gridy++;
+    panelAC1.add(
+	new JLabel( "64x32 Zeichen, 2 KByte SRAM, 64 KByte DRAM:" ),
+	gbcAC1 );
+
+    this.btnAC1mon31_64x32 = new JRadioButton(
+		"Monitorprogramm 3.1 / CC-Dessau-Zeichensatz",
 		true );
-    this.btnAC1mon31.addActionListener( this );
-    grpAC1mon.add( this.btnAC1mon31 );
-    panelAC1.add( this.btnAC1mon31, gbcAC1 );
+    this.btnAC1mon31_64x32.addActionListener( this );
+    grpAC1mon.add( this.btnAC1mon31_64x32 );
+    gbcAC1.insets.top  = 0;
+    gbcAC1.insets.left = 50;
+    gbcAC1.gridy++;
+    panelAC1.add( this.btnAC1mon31_64x32, gbcAC1 );
+
+    this.btnAC1monSCCH80 = new JRadioButton(
+		"SCCH-Monitorprogramm 8.0 / SCCH-Zeichensatz",
+		false );
+    this.btnAC1monSCCH80.addActionListener( this );
+    grpAC1mon.add( this.btnAC1monSCCH80 );
+    gbcAC1.gridy++;
+    panelAC1.add( this.btnAC1monSCCH80, gbcAC1 );
 
     this.btnAC1monSCCH1088 = new JRadioButton(
-		"SCCH-Monitorprogramm 10/88 mit SCCH-Zeichensatz",
+		"SCCH-Monitorprogramm 10/88 / SCCH-Zeichensatz",
 		false );
     this.btnAC1monSCCH1088.addActionListener( this );
     grpAC1mon.add( this.btnAC1monSCCH1088 );
-    gbcAC1.insets.top    = 0;
     gbcAC1.insets.bottom = 5;
     gbcAC1.gridy++;
     panelAC1.add( this.btnAC1monSCCH1088, gbcAC1 );
@@ -282,14 +330,14 @@ public class SettingsFrm extends BasicFrm
     ButtonGroup grpBCS3os = new ButtonGroup();
 
     this.btnBCS3se24_27 = new JRadioButton(
-		"2 KByte BASIC-System SE 2.4 / 27 Zeichen pro Zeile",
+		"2 KByte BASIC-SE 2.4 / 2,5 MHz / 27 Zeichen pro Zeile",
 		true );
     this.btnBCS3se24_27.addActionListener( this );
     grpBCS3os.add( this.btnBCS3se24_27 );
     panelBCS3.add( this.btnBCS3se24_27, gbcBCS3 );
 
     this.btnBCS3se31_29 = new JRadioButton(
-		"4 KByte BASIC-System SE 3.1 / 29 Zeichen pro Zeile",
+		"4 KByte BASIC-SE 3.1 / 2,5 MHz / 29 Zeichen pro Zeile",
 		false );
     this.btnBCS3se31_29.addActionListener( this );
     grpBCS3os.add( this.btnBCS3se31_29 );
@@ -298,13 +346,21 @@ public class SettingsFrm extends BasicFrm
     panelBCS3.add( this.btnBCS3se31_29, gbcBCS3 );
 
     this.btnBCS3se31_40 = new JRadioButton(
-		"4 KByte BASIC-System SE 3.1 / 40 Zeichen pro Zeile",
+		"4 KByte BASIC-SE 3.1 / 3,5 MHz / 40 Zeichen pro Zeile",
 		false );
     this.btnBCS3se31_40.addActionListener( this );
     grpBCS3os.add( this.btnBCS3se31_40 );
     gbcBCS3.insets.top = 0;
     gbcBCS3.gridy++;
     panelBCS3.add( this.btnBCS3se31_40, gbcBCS3 );
+
+    this.btnBCS3se32_29 = new JRadioButton(
+		"4 KByte S/P-BASIC V3.2 / 2,5 MHz / 29 Zeichen pro Zeile",
+		false );
+    this.btnBCS3se32_29.addActionListener( this );
+    grpBCS3os.add( this.btnBCS3se32_29 );
+    gbcBCS3.gridy++;
+    panelBCS3.add( this.btnBCS3se32_29, gbcBCS3 );
 
     ButtonGroup grpBCS3ram = new ButtonGroup();
 
@@ -320,18 +376,49 @@ public class SettingsFrm extends BasicFrm
 				false );
     this.btnBCS3ram17k.addActionListener( this );
     grpBCS3ram.add( this.btnBCS3ram17k );
-    gbcBCS3.insets.top = 0;
+    gbcBCS3.insets.top    = 0;
+    gbcBCS3.insets.bottom = 5;
     gbcBCS3.gridy++;
     panelBCS3.add( this.btnBCS3ram17k, gbcBCS3 );
 
-    this.btnBCS3ram33k = new JRadioButton(
-				"33 KByte RAM (32 KByte RAM-Erweiterung)",
-				false );
-    this.btnBCS3ram33k.addActionListener( this );
-    grpBCS3ram.add( this.btnBCS3ram33k );
-    gbcBCS3.insets.bottom = 5;
-    gbcBCS3.gridy++;
-    panelBCS3.add( this.btnBCS3ram33k, gbcBCS3 );
+
+    // Optionen fuer KC85/2..4
+    JPanel panelKC85 = new JPanel( new GridBagLayout() );
+    this.panelSysOpt.add( panelKC85, "KC85" );
+
+    GridBagConstraints gbcKC85 = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 0, 5 ),
+						0, 0 );
+
+    panelKC85.add(
+	new JLabel( "Die folgende Option ben\u00F6tigt relativ viel"
+						+ " Rechenleistung." ),
+	gbcKC85 );
+
+    gbcKC85.insets.top = 0;
+    gbcKC85.gridy++;
+    panelKC85.add(
+	new JLabel( "Sollte diese Leistung zur Verf\u00FCgung stehen," ),
+	gbcKC85 );
+
+    gbcKC85.gridy++;
+    panelKC85.add(
+	new JLabel( "dann schalten Sie die Option bitte aus." ),
+	gbcKC85 );
+
+    this.btnKC85VideoTiming = new JCheckBox(
+			"Zeitverhalten der Bildschirmsteuerung emulieren",
+			true );
+    this.btnKC85VideoTiming.addActionListener( this );
+    gbcKC85.insets.top    = 5;
+    gbcKC85.insets.bottom = 5;
+    gbcKC85.gridy++;
+    panelKC85.add( this.btnKC85VideoTiming, gbcKC85 );
 
 
     // Optionen fuer Z1013
@@ -347,6 +434,40 @@ public class SettingsFrm extends BasicFrm
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
+    ButtonGroup grpZ1013hw = new ButtonGroup();
+
+    this.btnZ1013_01 = new JRadioButton(
+				"Z1013.01 / 1 MHz / 16 KByte RAM",
+				false );
+    this.btnZ1013_01.addActionListener( this );
+    grpZ1013hw.add( this.btnZ1013_01 );
+    panelZ1013.add( this.btnZ1013_01, gbcZ1013 );
+
+    this.btnZ1013_12 = new JRadioButton(
+				"Z1013.12 / 2 MHz / 1 KByte RAM",
+				false );
+    this.btnZ1013_12.addActionListener( this );
+    grpZ1013hw.add( this.btnZ1013_12 );
+    gbcZ1013.insets.top = 0;
+    gbcZ1013.gridy++;
+    panelZ1013.add( this.btnZ1013_12, gbcZ1013 );
+
+    this.btnZ1013_16 = new JRadioButton(
+				"Z1013.16 / 2 MHz / 16 KByte RAM",
+				false );
+    this.btnZ1013_16.addActionListener( this );
+    grpZ1013hw.add( this.btnZ1013_16 );
+    gbcZ1013.gridy++;
+    panelZ1013.add( this.btnZ1013_16, gbcZ1013 );
+
+    this.btnZ1013_64 = new JRadioButton(
+				"Z1013.64 / 2 MHz / 64 KByte RAM",
+				false );
+    this.btnZ1013_64.addActionListener( this );
+    grpZ1013hw.add( this.btnZ1013_64 );
+    gbcZ1013.gridy++;
+    panelZ1013.add( this.btnZ1013_64, gbcZ1013 );
+
     ButtonGroup grpZ1013mon = new ButtonGroup();
 
     this.btnZ1013mon202 = new JRadioButton(
@@ -354,6 +475,8 @@ public class SettingsFrm extends BasicFrm
 		true );
     this.btnZ1013mon202.addActionListener( this );
     grpZ1013mon.add( this.btnZ1013mon202 );
+    gbcZ1013.insets.top = 10;
+    gbcZ1013.gridy++;
     panelZ1013.add( this.btnZ1013mon202, gbcZ1013 );
 
     this.btnZ1013monA2 = new JRadioButton(
@@ -389,24 +512,6 @@ public class SettingsFrm extends BasicFrm
     gbcZ1013.insets.bottom = 5;
     gbcZ1013.gridy++;
     panelZ1013.add( this.btnZ1013monJM_1992, gbcZ1013 );
-
-    ButtonGroup grpZ1013ram = new ButtonGroup();
-
-    this.btnZ1013ram16k = new JRadioButton( "16 KByte RAM", false );
-    this.btnZ1013ram16k.addActionListener( this );
-    grpZ1013ram.add( this.btnZ1013ram16k );
-    gbcZ1013.insets.top    = 5;
-    gbcZ1013.insets.bottom = 0;
-    gbcZ1013.gridy++;
-    panelZ1013.add( this.btnZ1013ram16k, gbcZ1013 );
-
-    this.btnZ1013ram64k = new JRadioButton( "64 KByte RAM", true );
-    this.btnZ1013ram64k.addActionListener( this );
-    grpZ1013ram.add( this.btnZ1013ram64k );
-    gbcZ1013.insets.top    = 0;
-    gbcZ1013.insets.bottom = 5;
-    gbcZ1013.gridy++;
-    panelZ1013.add( this.btnZ1013ram64k, gbcZ1013 );
 
 
     // Optionen fuer Z9001
@@ -520,7 +625,7 @@ public class SettingsFrm extends BasicFrm
 
     GridBagConstraints gbcFont = new GridBagConstraints(
 						0, 0,
-						1, 1,
+						3, 1,
 						0.0, 0.0,
 						GridBagConstraints.WEST,
 						GridBagConstraints.NONE,
@@ -528,8 +633,7 @@ public class SettingsFrm extends BasicFrm
 						0, 0 );
 
     this.panelFont.add(
-	new JLabel( "Sie k\u00F6nnen hier eine externe Zeichensatzdatei"
-			+ " angeben," ),
+	new JLabel( "Sie k\u00F6nnen hier eine Zeichensatzdatei angeben," ),
 	gbcFont );
 
     gbcFont.insets.top = 0;
@@ -563,24 +667,23 @@ public class SettingsFrm extends BasicFrm
     gbcFont.weightx       = 1.0;
     gbcFont.insets.top    = 0;
     gbcFont.insets.bottom = 5;
+    gbcFont.gridwidth     = 1;
     gbcFont.gridy++;
     this.panelFont.add( this.fldExtFontFile, gbcFont );
 
-    JPanel panelExtFontBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
-    gbcFont.anchor  = GridBagConstraints.EAST;
+    this.btnExtFontSelect = createImageButton(
+					"/images/file/open.png",
+					"Ausw\u00E4hlen" );
     gbcFont.fill    = GridBagConstraints.NONE;
     gbcFont.weightx = 0.0;
-    gbcFont.gridy++;
-    this.panelFont.add( panelExtFontBtn, gbcFont );
+    gbcFont.gridx++;
+    this.panelFont.add( this.btnExtFontSelect, gbcFont );
 
-    this.btnExtFontSelect = new JButton( "Ausw\u00E4hlen" );
-    this.btnExtFontSelect.addActionListener( this );
-    panelExtFontBtn.add( this.btnExtFontSelect );
-
-    this.btnExtFontRemove = new JButton( "Entfernen" );
-    this.btnExtFontRemove.setEnabled( false );
-    this.btnExtFontRemove.addActionListener( this );
-    panelExtFontBtn.add( this.btnExtFontRemove );
+    this.btnExtFontRemove = createImageButton(
+					"/images/file/delete.png",
+					"Entfernen" );
+    gbcFont.gridx++;
+    this.panelFont.add( this.btnExtFontRemove, gbcFont );
 
 
     // Bereich ROM
@@ -620,13 +723,15 @@ public class SettingsFrm extends BasicFrm
     gbcROM.gridx++;
     this.panelROM.add( panelROMBtn, gbcROM );
 
-    this.btnROMAdd = new JButton( "Hinzuf\u00FCgen" );
-    this.btnROMAdd.addActionListener( this );
+    this.btnROMAdd = createImageButton(
+				"/images/file/open.png",
+				"Hinzuf\u00FCgen" );
     panelROMBtn.add( this.btnROMAdd );
 
-    this.btnROMRemove = new JButton( "Entfernen" );
+    this.btnROMRemove = createImageButton(
+				"/images/file/delete.png",
+				"Entfernen" );
     this.btnROMRemove.setEnabled( false );
-    this.btnROMRemove.addActionListener( this );
     panelROMBtn.add( this.btnROMRemove );
 
 
@@ -636,7 +741,7 @@ public class SettingsFrm extends BasicFrm
 
     GridBagConstraints gbcRF = new GridBagConstraints(
 						0, 0,
-						1, 1,
+						3, 1,
 						0.0, 0.0,
 						GridBagConstraints.WEST,
 						GridBagConstraints.NONE,
@@ -645,59 +750,52 @@ public class SettingsFrm extends BasicFrm
 
     this.panelRF.add(
 	new JLabel( "Sie k\u00F6nnen hier Dateien angeben,"
-		+ " mit denen die RAM-Floppies initialisiert werden sollen." ),
+		+ " mit denen die RAM-Floppies initialisiert werden." ),
 	gbcRF );
 
     gbcRF.insets.top = 0;
     gbcRF.gridy++;
     this.panelRF.add(
-	new JLabel( "Die jeweilige Datei wird bei einem Kaltstart"
-		+ " (Wechsel des emulierten Systems," ),
+	new JLabel( "Die jeweilige Datei wird automatisch"
+		+ " in die RAM-Floppy geladen." ),
 	gbcRF );
 
+    gbcRF.insets.top = 20;
     gbcRF.gridy++;
     this.panelRF.add(
-	new JLabel( "Emulation des Einschaltens)"
-		+ " automatisch in die RAM-Floppy geladen." ),
-	gbcRF );
-
-    gbcRF.insets.top = 10;
-    gbcRF.gridy++;
-    this.panelRF.add(
-	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy A" ),
+	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy A:" ),
 	gbcRF );
 
     this.fldRFAFile = new JTextField();
     this.fldRFAFile.setEditable( false );
-    gbcRF.fill          = GridBagConstraints.HORIZONTAL;
-    gbcRF.weightx       = 1.0;
-    gbcRF.insets.top    = 0;
-    gbcRF.insets.bottom = 5;
+    gbcRF.fill       = GridBagConstraints.HORIZONTAL;
+    gbcRF.weightx    = 1.0;
+    gbcRF.insets.top = 0;
+    gbcRF.gridwidth  = 1;
     gbcRF.gridy++;
     this.panelRF.add( this.fldRFAFile, gbcRF );
 
-    JPanel panelRFABtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
-    gbcRF.anchor  = GridBagConstraints.EAST;
+    this.btnRFAFileSelect = createImageButton(
+					"/images/file/open.png",
+					"Ausw\u00E4hlen" );
     gbcRF.fill    = GridBagConstraints.NONE;
     gbcRF.weightx = 0.0;
-    gbcRF.gridy++;
-    this.panelRF.add( panelRFABtn, gbcRF );
+    gbcRF.gridx++;
+    this.panelRF.add( this.btnRFAFileSelect, gbcRF );
 
-    this.btnRFAFileSelect = new JButton( "Ausw\u00E4hlen" );
-    this.btnRFAFileSelect.addActionListener( this );
-    panelRFABtn.add( this.btnRFAFileSelect );
-
-    this.btnRFAFileRemove = new JButton( "Entfernen" );
+    this.btnRFAFileRemove = createImageButton(
+					"/images/file/delete.png",
+					"Entfernen" );
     this.btnRFAFileRemove.setEnabled( false );
-    this.btnRFAFileRemove.addActionListener( this );
-    panelRFABtn.add( this.btnRFAFileRemove );
+    gbcRF.gridx++;
+    this.panelRF.add( this.btnRFAFileRemove, gbcRF );
 
-    gbcRF.anchor        = GridBagConstraints.WEST;
-    gbcRF.insets.top    = 10;
-    gbcRF.insets.bottom = 0;
+    gbcRF.insets.top = 20;
+    gbcRF.gridwidth  = 3;
+    gbcRF.gridx      = 0;
     gbcRF.gridy++;
     this.panelRF.add(
-	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy B" ),
+	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy B:" ),
 	gbcRF );
 
     this.fldRFBFile = new JTextField();
@@ -706,24 +804,24 @@ public class SettingsFrm extends BasicFrm
     gbcRF.weightx       = 1.0;
     gbcRF.insets.top    = 0;
     gbcRF.insets.bottom = 5;
+    gbcRF.gridwidth     = 1;
     gbcRF.gridy++;
     this.panelRF.add( this.fldRFBFile, gbcRF );
 
-    JPanel panelRFBBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
-    gbcRF.anchor  = GridBagConstraints.EAST;
+    this.btnRFBFileSelect = createImageButton(
+					"/images/file/open.png",
+					"Ausw\u00E4hlen" );
     gbcRF.fill    = GridBagConstraints.NONE;
     gbcRF.weightx = 0.0;
-    gbcRF.gridy++;
-    this.panelRF.add( panelRFBBtn, gbcRF );
+    gbcRF.gridx++;
+    this.panelRF.add( this.btnRFBFileSelect, gbcRF );
 
-    this.btnRFBFileSelect = new JButton( "Ausw\u00E4hlen" );
-    this.btnRFBFileSelect.addActionListener( this );
-    panelRFBBtn.add( this.btnRFBFileSelect );
-
-    this.btnRFBFileRemove = new JButton( "Entfernen" );
+    this.btnRFBFileRemove = createImageButton(
+					"/images/file/delete.png",
+					"Entfernen" );
     this.btnRFBFileRemove.setEnabled( false );
-    this.btnRFBFileRemove.addActionListener( this );
-    panelRFBBtn.add( this.btnRFBFileRemove );
+    gbcRF.gridx++;
+    this.panelRF.add( this.btnRFBFileRemove, gbcRF );
 
 
     // Bereich Bestaetigungen
@@ -1091,11 +1189,13 @@ public class SettingsFrm extends BasicFrm
 	}
 	else if( (src == this.btnSysAC1)
 		 || (src == this.btnSysBCS3)
+		 || (src == this.btnSysHEMC)
 		 || (src == this.btnSysKC85_1)
 		 || (src == this.btnSysKC85_2)
 		 || (src == this.btnSysKC85_3)
 		 || (src == this.btnSysKC85_4)
 		 || (src == this.btnSysKC87)
+		 || (src == this.btnSysKramerMC)
 		 || (src == this.btnSysZ1013) )
 	{
 	  rv = true;
@@ -1264,10 +1364,7 @@ public class SettingsFrm extends BasicFrm
 	if( emuSys == null ) {
 	  emuSys = this.emuThread.getEmuSys();
 	}
-	String sysName = props.getProperty( "jkcemu.system" );
-	if( sysName != null ) {
-	  setSpeedValueFld( EmuThread.getDefaultSpeedKHz( sysName, props ) );
-	}
+	setSpeedValueFld( EmuThread.getDefaultSpeedKHz( props ) );
       }
 
       this.btnApply.setEnabled( false );
@@ -1449,8 +1546,46 @@ public class SettingsFrm extends BasicFrm
 				Main.getLastPathFile( "rom" ),
 				EmuUtil.getBinaryFileFilter() );
     if( file != null ) {
+      Integer begAddr  = null;
+      String  fileName = file.getName();
+      if( fileName != null ) {
+	int len = fileName.length();
+	int pos = fileName.indexOf( '_' );
+	while( (pos >= 0) && ((pos + 4) < len) ) {
+	  pos++;
+	  int v = 0;
+	  for( int i = 0; i < 4; i++ ) {
+	    char ch = fileName.charAt( pos++ );
+	    if( (ch >= '0') && (ch <= '9') ) {
+	      v = (v << 4) | (ch - '0');
+	    }
+	    else if( (ch >= 'A') && (ch <= 'F') ) {
+	      v = (v << 4) | (ch - 'A') + 10;
+	    }
+	    else if( (ch >= 'a') && (ch <= 'f') ) {
+	      v = (v << 4) | (ch - 'F') + 10;
+	    } else {
+	      v = -1;
+	      break;
+	    }
+	  }
+	  if( v >= 0 ) {
+	    begAddr = new Integer( v );
+	    break;
+	  }
+	  if( pos + 4 < len ) {
+	    pos = fileName.indexOf( '_', pos );
+	  } else {
+	    pos = -1;
+	  }
+	}
+      }
       try {
-	ReplyHexDlg dlg = new ReplyHexDlg( this, "Anfangsadresse:", 4 );
+	ReplyHexDlg dlg = new ReplyHexDlg(
+					this,
+					"Anfangsadresse:",
+					4,
+					begAddr );
 	dlg.setVisible( true );
 	Integer addr = dlg.getReply();
 	if( addr != null ) {
@@ -1663,6 +1798,9 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysBCS3.isSelected() ) {
       valueSys = "BCS3";
     }
+    else if( this.btnSysHEMC.isSelected() ) {
+      valueSys = "HueblerEvertMC";
+    }
     else if( this.btnSysKC85_1.isSelected() ) {
       valueSys = "KC85/1";
     }
@@ -1678,29 +1816,62 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysKC87.isSelected() ) {
       valueSys = "KC87";
     }
+    else if( this.btnSysKramerMC.isSelected() ) {
+      valueSys = "KramerMC";
+    }
     else if( this.btnSysZ1013.isSelected() ) {
-      valueSys = "Z1013";
+      if( this.btnZ1013_01.isSelected() ) {
+	valueSys = "Z1013.01";
+      } else if( this.btnZ1013_12.isSelected() ) {
+	valueSys = "Z1013.12";
+      } else if( this.btnZ1013_16.isSelected() ) {
+	valueSys = "Z1013.16";
+      } else {
+	valueSys = "Z1013.64";
+      }
     }
     props.setProperty( "jkcemu.system", valueSys );
 
 
     // Optionen fuer AC1
-    props.setProperty(
-		"jkcemu.ac1.monitor",
-		this.btnAC1monSCCH1088.isSelected() ? "SCCH10/88" : "3.1" );
+    String ac1mon = "3.1_64x32";
+    if( this.btnAC1mon31_64x16.isSelected() ) {
+      ac1mon = "3.1_64x16";
+    }
+    else if( this.btnAC1monSCCH80.isSelected() ) {
+      ac1mon = "SCCH8.0";
+    }
+    else if( this.btnAC1monSCCH1088.isSelected() ) {
+      ac1mon = "SCCH10/88";
+    }
+    props.setProperty( "jkcemu.ac1.monitor", ac1mon );
 
 
     // Optionen fuer BCS3
     if( this.btnBCS3se31_29.isSelected() ) {
-      props.setProperty( "jkcemu.bcs3.os.version", "SE3.1" );
+      props.setProperty( "jkcemu.bcs3.os.version", "3.1" );
       props.setProperty( "jkcemu.bcs3.chars_per_line", "29" );
     } else if( this.btnBCS3se31_40.isSelected() ) {
-      props.setProperty( "jkcemu.bcs3.os.version", "SE3.1" );
+      props.setProperty( "jkcemu.bcs3.os.version", "3.1" );
       props.setProperty( "jkcemu.bcs3.chars_per_line", "40" );
+    } else if( this.btnBCS3se32_29.isSelected() ) {
+      props.setProperty( "jkcemu.bcs3.os.version", "3.2" );
+      props.setProperty( "jkcemu.bcs3.chars_per_line", "29" );
     } else {
-      props.setProperty( "jkcemu.bcs3.os.version", "SE2.4" );
+      props.setProperty( "jkcemu.bcs3.os.version", "2.4" );
       props.setProperty( "jkcemu.bcs3.chars_per_line", "27" );
     }
+    if( this.btnBCS3ram17k.isSelected() ) {
+      props.setProperty( "jkcemu.bcs3.ram.kbyte", "17" );
+    } else {
+      props.setProperty( "jkcemu.bcs3.ram.kbyte", "1" );
+    }
+
+
+    // Optionen fuer KC85/2..4
+    props.setProperty(
+		"jkcemu.kc85.emulate_video_timing",
+		Boolean.toString( this.btnKC85VideoTiming.isSelected() ) );
 
 
     // Optionen fuer Z1013
@@ -1718,9 +1889,6 @@ public class SettingsFrm extends BasicFrm
       z1013mon = "JM_1992";
     }
     props.setProperty( "jkcemu.z1013.monitor", z1013mon );
-    props.setProperty(
-		"jkcemu.z1013.ram.kbyte",
-		this.btnZ1013ram16k.isSelected() ? "16" : "64" );
 
 
     // Optionen fuer Z9001
@@ -1810,6 +1978,12 @@ public class SettingsFrm extends BasicFrm
     else if( sysName.startsWith( "BCS3" ) ) {
       this.btnSysBCS3.setSelected( true );
     }
+    else if( sysName.startsWith( "HueblerEvertMC" ) ) {
+      this.btnSysHEMC.setSelected( true );
+    }
+    else if( sysName.startsWith( "KramerMC" ) ) {
+      this.btnSysKramerMC.setSelected( true );
+    }
     else if( sysName.startsWith( "Z1013" ) ) {
       this.btnSysZ1013.setSelected( true );
     } else {
@@ -1818,21 +1992,23 @@ public class SettingsFrm extends BasicFrm
 
 
     // Optionen fuer AC1
-    if( EmuUtil.getProperty(
-			props,
-			"jkcemu.ac1.monitor" ).equals( "SCCH10/88" ) )
-    {
+    String ac1mon = EmuUtil.getProperty( props, "jkcemu.ac1.monitor" );
+    if( ac1mon.equals( "3.1_64x16" ) ) {
+      this.btnAC1mon31_64x16.setSelected( true );
+    } else if( ac1mon.equals( "SCCH8.0" ) ) {
+      this.btnAC1monSCCH80.setSelected( true );
+    } else if( ac1mon.equals( "SCCH10/88" ) ) {
       this.btnAC1monSCCH1088.setSelected( true );
     } else {
-      this.btnAC1mon31.setSelected( true );
+      this.btnAC1mon31_64x32.setSelected( true );
     }
 
 
     // Optionen fuer BCS3
-    if( EmuUtil.getProperty(
-			props,
-			"jkcemu.bcs3.os.version" ).equals( "SE3.1" ) )
-    {
+    String bcs3Version = EmuUtil.getProperty(
+				props,
+				"jkcemu.bcs3.os.version" );
+    if( bcs3Version.equals( "3.1" ) ) {
       if( EmuUtil.getProperty(
 			props,
 			"jkcemu.bcs3.chars_per_line" ).equals( "40" ) )
@@ -1841,12 +2017,40 @@ public class SettingsFrm extends BasicFrm
       } else {
 	this.btnBCS3se31_29.setSelected( true );
       }
+    } else if( bcs3Version.equals( "3.2" ) ) {
+      this.btnBCS3se32_29.setSelected( true );
     } else {
       this.btnBCS3se24_27.setSelected( true );
     }
+    if( EmuUtil.getProperty(
+		props,
+		"jkcemu.bcs3.ram.kbyte" ).equals( "17" ) )
+    {
+      this.btnBCS3ram17k.setSelected( true );
+    } else {
+      this.btnBCS3ram1k.setSelected( true );
+    }
+
+
+    // Optionen fuer KC85/2..4
+    this.btnKC85VideoTiming.setSelected(
+			EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.kc85.emulate_video_timing",
+				true ) );
 
 
     // Optionen fuer Z1013
+    if( sysName.startsWith( "Z1013.01" ) ) {
+      this.btnZ1013_01.setSelected( true );
+    } else if( sysName.startsWith( "Z1013.12" ) ) {
+      this.btnZ1013_12.setSelected( true );
+    } else if( sysName.startsWith( "Z1013.16" ) ) {
+      this.btnZ1013_16.setSelected( true );
+    } else {
+      this.btnZ1013_64.setSelected( true );
+    }
+
     String monText = EmuUtil.getProperty( props, "jkcemu.z1013.monitor" );
     if( monText.equals( "A.2" ) ) {
       this.btnZ1013monA2.setSelected( true );
@@ -1859,10 +2063,6 @@ public class SettingsFrm extends BasicFrm
     } else {
       this.btnZ1013mon202.setSelected( true );
     }
-    this.btnZ1013ram16k.setSelected(
-			EmuUtil.getProperty(
-				props,
-				"jkcemu.z1013.ram.kbyte" ).equals( "16" ) );
 
 
     // Optionen fuer Z9001
@@ -1883,7 +2083,7 @@ public class SettingsFrm extends BasicFrm
 
 
     // Geschwindigkeit
-    int    defaultKHz = EmuThread.getDefaultSpeedKHz( sysName, props );
+    int    defaultKHz = EmuThread.getDefaultSpeedKHz( props );
     String speedText  = EmuUtil.getProperty(
 					props,
 					"jkcemu.maxspeed.khz" ).toLowerCase();
@@ -1999,6 +2199,12 @@ public class SettingsFrm extends BasicFrm
     }
     else if( this.btnSysKC85_1.isSelected() || this.btnSysKC87.isSelected() ) {
       cardName = "Z9001";
+    }
+    else if( this.btnSysKC85_2.isSelected()
+	     || this.btnSysKC85_3.isSelected()
+	     || this.btnSysKC85_4.isSelected() )
+    {
+      cardName = "KC85";
     }
     this.cardLayoutSysOpt.show( this.panelSysOpt, cardName );
   }

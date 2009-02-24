@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,8 +32,13 @@ import jkcemu.tools.hexeditor.HexEditFrm;
 import z80emu.*;
 
 
-public class ScreenFrm extends BasicFrm implements DropTargetListener
+public class ScreenFrm extends BasicFrm implements
+						DropTargetListener,
+						FlavorListener
 {
+  private JMenuItem            mnuEditPaste;
+  private JMenuItem            mnuEditPasteStop;
+  private JMenuItem            mnuEditPasteContinue;
   private JMenuItem            mnuExtraPause;
   private JRadioButtonMenuItem btnScreenScale1;
   private JRadioButtonMenuItem btnScreenScale2;
@@ -49,6 +54,9 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   private NumberFormat         speedFmt;
   private Map<Class,BasicFrm>  subFrms;
   private EmuThread            emuThread;
+  private Clipboard            clipboard;
+  private PasteTextMngr        pasteTextMngr;
+  private String               pasteRemainText;
 
 
   public ScreenFrm()
@@ -57,12 +65,23 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 
 
     // Initialisierungen
+    this.pasteTextMngr       = null;
+    this.pasteRemainText     = null;
     this.ignoreKeyChar       = false;
     this.screenDirty         = false;
     this.screenRefreshMillis = 50;
     this.screenRefreshTimer  = new javax.swing.Timer(
 					this.screenRefreshMillis,
 					this );
+
+    this.clipboard = null;
+    Toolkit tk = getToolkit();
+    if( tk != null ) {
+      this.clipboard = tk.getSystemClipboard();
+    }
+    if( this.clipboard != null ) {
+      this.clipboard.addFlavorListener( this );
+    }
 
     this.subFrms   = new Hashtable<Class,BasicFrm>();
     this.emuThread = new EmuThread( this );
@@ -114,6 +133,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     // Untermenu Mini-/Tiny-BASIC
     JMenu mnuTinyBasic = new JMenu( "Mini-/Tiny-BASIC-Programm" );
     mnuFile.add( mnuTinyBasic );
+    mnuFile.addSeparator();
     mnuTinyBasic.add( createJMenuItem(
 			"Im Texteditor \u00F6ffnen...",
 			"file.tinybasic.open" ) );
@@ -121,13 +141,12 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 			"Speichern...",
 			"file.tinybasic.save" ) );
 
-    // Untermenu Bildschirmausgabe
-    JMenu mnuScreen = new JMenu( "Bildschirmausgabe" );
+    // Untermenu Schnappschuss der Bildschirmausgabe
+    JMenu mnuScreen = new JMenu( "Schnappschuss der Bildschirmausgabe" );
     mnuFile.add( mnuScreen );
     mnuScreen.add( createJMenuItem(
-			"Schnappschuss erzeugen...",
-			"file.screen.image.snapshot" ) );
-    mnuScreen.addSeparator();
+			"im Bildbetrachter anzeigen...",
+			"file.screen.image.show" ) );
     mnuScreen.add( createJMenuItem(
 			"als Bild kopieren",
 			"file.screen.image.copy" ) );
@@ -135,6 +154,9 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 			"als Bilddatei speichern...",
 			"file.screen.image.save" ) );
     mnuScreen.addSeparator();
+    mnuScreen.add( createJMenuItem(
+			"im Texteditor anzeigen",
+			"file.screen.text.show" ) );
     mnuScreen.add( createJMenuItem(
 			"als Text kopieren",
 			"file.screen.text.copy" ) );
@@ -149,6 +171,28 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 			"file.editor" ) );
     mnuFile.addSeparator();
     mnuFile.add( createJMenuItem( "Beenden", "file.quit" ) );
+
+
+    // Menu Bearbeiten
+    JMenu mnuEdit = new JMenu( "Bearbeiten" );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
+
+    this.mnuEditPaste = createJMenuItem( "Einf\u00FCgen", "edit.paste" );
+    this.mnuEditPaste.setEnabled( false );
+    mnuEdit.add( this.mnuEditPaste );
+    mnuEdit.addSeparator();
+
+    this.mnuEditPasteStop = createJMenuItem(
+				"Einf\u00FCgen anhalten",
+				"edit.paste.stop" );
+    this.mnuEditPasteStop.setEnabled( false );
+    mnuEdit.add( this.mnuEditPasteStop );
+
+    this.mnuEditPasteContinue = createJMenuItem(
+				"Einf\u00FCgen fortsetzen",
+				"edit.paste.continue" );
+    this.mnuEditPasteContinue.setEnabled( false );
+    mnuEdit.add( this.mnuEditPasteContinue );
 
 
     // Menu Extra
@@ -243,6 +287,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     // Menu zusammenbauen
     JMenuBar mnuBar = new JMenuBar();
     mnuBar.add( mnuFile );
+    mnuBar.add( mnuEdit );
     mnuBar.add( mnuExtra );
     mnuBar.add( mnuHelp );
     setJMenuBar( mnuBar );
@@ -343,6 +388,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 
     // sonstiges
     updActionComponents();
+    updPasteBtnEnabled();
     this.statusRefreshTimer = new javax.swing.Timer( 1000, this );
     this.statusRefreshTimer.start();
 
@@ -382,6 +428,19 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   public BufferedImage createSnapshot()
   {
     return this.screenFld.createBufferedImage();
+  }
+
+
+  public void firePasteFinished( final String remainText )
+  {
+    SwingUtilities.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    pasteFinished( remainText );
+		  }
+		} );
   }
 
 
@@ -595,6 +654,14 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
+	/* --- FlavorListener --- */
+
+  public void flavorsChanged( FlavorEvent e )
+  {
+    updPasteBtnEnabled();
+  }
+
+
 	/* --- ueberschriebene Methoden fuer KeyListener --- */
 
   public boolean applySettings( Properties props, boolean resizable )
@@ -720,7 +787,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 	&& (keyCode != KeyEvent.VK_F9)
 	&& (keyCode != KeyEvent.VK_F10) )
     {
-      this.emuThread.keyReleased( keyCode );
+      this.emuThread.keyReleased();
       e.consume();
     }
     this.ignoreKeyChar = false;
@@ -745,6 +812,13 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     {
       this.screenFld.requestFocus();
     }
+  }
+
+
+  public void windowDeactivated( WindowEvent e )
+  {
+    if( e.getWindow() == this )
+      this.emuThread.keyReleased();
   }
 
 
@@ -883,21 +957,25 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 	    rv = true;
 	    this.emuThread.getEmuSys().saveTinyBasicProgram();
 	  }
-	  else if( actionCmd.equals( "file.screen.image.snapshot" ) ) {
+	  else if( actionCmd.equals( "file.screen.image.show" ) ) {
 	    rv = true;
-	    doFileScreenImageSnapshot();
+	    doFileScreenImageShow();
+	  }
+	  else if( actionCmd.equals( "file.screen.image.copy" ) ) {
+	    rv = true;
+	    doFileScreenImageCopy();
 	  }
 	  else if( actionCmd.equals( "file.screen.image.save" ) ) {
 	    rv = true;
 	    doFileScreenImageSave();
 	  }
+	  else if( actionCmd.equals( "file.screen.text.show" ) ) {
+	    rv = true;
+	    doFileScreenTextShow();
+	  }
 	  else if( actionCmd.equals( "file.screen.text.save" ) ) {
 	    rv = true;
 	    doFileScreenTextSave();
-	  }
-	  else if( actionCmd.equals( "file.screen.image.copy" ) ) {
-	    rv = true;
-	    doFileScreenImageCopy();
 	  }
 	  else if( actionCmd.equals( "file.screen.text.copy" ) ) {
 	    rv = true;
@@ -910,6 +988,18 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 	  else if( actionCmd.equals( "file.editor" ) ) {
 	    rv = true;
 	    doFileEditor();
+	  }
+	  else if( actionCmd.equals( "edit.paste" ) ) {
+	    rv = true;
+	    doEditPaste();
+	  }
+	  else if( actionCmd.equals( "edit.paste.stop" ) ) {
+	    rv = true;
+	    doEditPasteStop();
+	  }
+	  else if( actionCmd.equals( "edit.paste.continue" ) ) {
+	    rv = true;
+	    pasteText( this.pasteRemainText );
 	  }
 	  else if( actionCmd.equals( "extra.scale.1" ) ) {
 	    rv = true;
@@ -1018,20 +1108,23 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
     if( this.emuThread.getRAMFloppyA().hasDataChanged()
 	&& this.emuThread.getRAMFloppyB().hasDataChanged() )
     {
-      msg = "Daten in beiden RAM-Floppies";
+      msg = "Die Daten in beiden RAM-Floppies";
     } else {
       if( this.emuThread.getRAMFloppyA().hasDataChanged() ) {
-	msg = "Daten in RAM-Floppy A";
+	msg = "Die Daten in RAM-Floppy A";
       }
       else if( this.emuThread.getRAMFloppyB().hasDataChanged() ) {
-	msg = "Daten in RAM-Floppy B";
+	msg = "Die Daten in RAM-Floppy B";
       }
     }
     if( msg != null ) {
-      if( !BasicDlg.showYesNoDlg(
+      if( JOptionPane.showConfirmDialog(
 		this,
 		msg + " wurden ge\u00E4ndert und nicht gespeichert.\n"
-			+ "M\u00F6chten Sie trotzdem beenden?" ) )
+			+ "M\u00F6chten Sie trotzdem beenden?",
+		"Daten ge\u00E4ndert",
+		JOptionPane.YES_NO_OPTION,
+		JOptionPane.WARNING_MESSAGE ) != JOptionPane.YES_OPTION )
       {
 	return false;
       }
@@ -1151,22 +1244,38 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 			boolean   supported )
   {
     if( confirmRAMFloppyOperation( floppyCh, supported ) ) {
-      File file = EmuUtil.showFileOpenDlg(
+      boolean status = true;
+      if( ramFloppy.hasDataChanged() ) {
+	if( JOptionPane.showConfirmDialog(
+		this,
+		"Die Daten in der RAM-Floppy wurden ge\u00E4ndert"
+			+ " und nicht gespeichert.\n"
+			+ "M\u00F6chten Sie trotzdem laden?",
+		"Daten ge\u00E4ndert",
+		JOptionPane.YES_NO_OPTION,
+		JOptionPane.WARNING_MESSAGE ) != JOptionPane.YES_OPTION )
+	{
+	  status = false;
+	}
+      }
+      if( status ) {
+	File file = EmuUtil.showFileOpenDlg(
 			this,
 			String.format( "RAM-Floppy %c laden", floppyCh ),
 			Main.getLastPathFile( "ramfloppy" ),
 			EmuUtil.getBinaryFileFilter() );
-      if( file != null ) {
-	try {
-	  ramFloppy.load( file );
-	  Main.setLastFile( file, "ramfloppy" );
-	  showStatusText( "RAM-Floppy geladen" );
-	}
-	catch( IOException ex ) {
-	  BasicDlg.showErrorDlg(
+	if( file != null ) {
+	  try {
+	    ramFloppy.load( file );
+	    Main.setLastFile( file, "ramfloppy" );
+	    showStatusText( "RAM-Floppy geladen" );
+	  }
+	  catch( IOException ex ) {
+	    BasicDlg.showErrorDlg(
 		this,
 		"Die RAM-Floppy kann nicht geladen werden.\n\n"
 						+ ex.getMessage() );
+	  }
 	}
       }
     }
@@ -1201,12 +1310,6 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
-  private void doFileScreenImageSnapshot()
-  {
-    showImage( this.screenFld.createBufferedImage(), "Schnappschuss" );
-  }
-
-
   private void doFileScreenImageCopy()
   {
     try {
@@ -1235,9 +1338,15 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
+  private void doFileScreenImageShow()
+  {
+    showImage( this.screenFld.createBufferedImage(), "Schnappschuss" );
+  }
+
+
   private void doFileScreenTextCopy()
   {
-    String screenText = this.emuThread.getEmuSys().extractScreenText();
+    String screenText = getScreenText();
     if( screenText != null ) {
       try {
 	Toolkit tk = getToolkit();
@@ -1256,7 +1365,7 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 
   private void doFileScreenTextSave()
   {
-    String screenText = this.emuThread.getEmuSys().extractScreenText();
+    String screenText = getScreenText();
     if( screenText != null ) {
       File file = EmuUtil.showFileSaveDlg(
 				this,
@@ -1299,6 +1408,14 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
+  private void doFileScreenTextShow()
+  {
+    String screenText = getScreenText();
+    if( screenText != null )
+      doFileEditor().openText( screenText );
+  }
+
+
   private void doFileBrowser()
   {
     if( reopenSubFrm( FileBrowserFrm.class ) == null ) {
@@ -1318,6 +1435,33 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
       this.subFrms.put( f.getClass(), f );
     }
     return f;
+  }
+
+
+	/* --- Aktionen im Menu Datei --- */
+
+  private void doEditPaste()
+  {
+    if( this.clipboard != null ) {
+      try {
+	if( this.clipboard.isDataFlavorAvailable(
+					DataFlavor.stringFlavor ) )
+	{
+	  Object data = this.clipboard.getData( DataFlavor.stringFlavor );
+	  if( data != null )
+	    pasteText( data.toString() );
+	}
+      }
+      catch( Exception ex ) {}
+    }
+  }
+
+
+  private void doEditPasteStop()
+  {
+    PasteTextMngr pasteTextMngr = this.pasteTextMngr;
+    if( pasteTextMngr != null )
+      pasteTextMngr.fireStop();
   }
 
 
@@ -1554,16 +1698,23 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
 	+ "\n\nJegliche Gew\u00E4hrleistung und Haftung ist ausgeschlossen!"
 	+ "\nDie Anwendung dieser Software erfolgt ausschlie\u00DFlich"
 	+ "\nauf eigenes Risiko."
-	+ "\n\nDer Emulator enth\u00E4lt Systemsoftware, Schriftarten"
-	+ "\nund Grafiksymbole der emulierten Computer."
-	+ "\nDie Urheberrechte daran liegen bei:"
+	+ "\n\nDer Emulator enth\u00E4lt Systemsoftware, Schriftarten,"
+	+ " Grafiksymbole"
+	+ "\nund Beschreibungen der emulierten Computer."
+	+ "\nDie Urheberschaften daran liegen bei:"
 	+ "\n- VEB Me\u00DFelektronik Dresden (Z9001, KC85/1, KC87)"
 	+ "\n- VEB Mikroelektronik M\u00FChlhausen"
 	+ " (HC900, KC85/2, KC85/3, KC85/4)"
 	+ "\n- VEB Robotron-Elektronik Riesa (Z1013)"
-	+ "\n- Rainer Brosig (erweitertes Z1013-Monitorprogramm)"
-	+ "\n- Frank Heyder (AC1)"
+	+ "\n- Dr. Rainer Brosig (erweitertes Z1013-Monitorprogramm)"
+	+ "\n- Frank Heyder (Monitorprogramm 3.1 f\u00FCr AC1)"
+	+ "\n- Eckhard Ludwig (SCCH-Software f\u00FCr AC1)"
 	+ "\n- Eckhard Schiller (BCS3)"
+	+ "\n- Frank Pr\u00FCfer (S/P-BASIC V3.2 f\u00FCr BCS3)"
+	+ "\n- Torsten Musiol (Maschinenkode-Editor f\u00FCr BCS3)"
+	+ "\n- Bernd H\u00FCbler (H\u00FCbler/Evert-MC)"
+	+ "\n- Klaus-Peter Evert (H\u00FCbler/Evert-MC)"
+	+ "\n- Manfred Kramer (Kramer-MC)"
 	+ "\n\nWeitere Informationen finden Sie in der Hilfe sowie"
 	+ "\nim Internet unter http://www.jens-mueller.org/jkcemu"
 	+ "\n",
@@ -1630,6 +1781,119 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
+  private String getScreenText()
+  {
+    String text = this.emuThread.getEmuSys().extractScreenText();
+    if( text != null ) {
+      int len = text.length();
+      if( len > 0 ) {
+
+	// ggf. deutsche Umlaute konvertieren
+	boolean extFont = (this.emuThread.getExtFont() != null);
+	if( extFont || this.emuThread.getEmuSys().isISO646DE() ) {
+	  boolean state = false;
+	  for( int i = 0; i < len; i++ ) {
+	    char ch = text.charAt( i );
+	    if( (ch == 0x5B) || (ch == 0x5C) || (ch == 0x5D)
+		|| (ch == 0x7B) || (ch == 0x7C) || (ch == 0x7D)
+		|| (ch == 0x7E) )
+	    {
+	      state = true;
+	      break;
+	    }
+	  }
+	  if( state ) {
+	    if( extFont ) {
+	      String[]    options = { "ASCII", "Umlaute", "Abbrechen" };
+	      JOptionPane pane    = new JOptionPane(
+		"Der Text enth\u00E4lt Zeichencodes, die nach ASCII"
+			+ " die Zeichen [ \\ ] { | } ~\n"
+			+ "und nach ISO646-DE deutsche Umlaute darstellen.\n"
+			+ "Da sie eine externe Zeichensatzdatei"
+			+ " eingebunden haben,\n"
+			+ "kann JKCEMU nicht wissen, ob ASCII-Zeichen\n"
+			+ "oder deutsche Umlaute angezeigt werden.\n"
+			+ "Wie sind diese Zeichencodes zu interpretieren?",
+		JOptionPane.QUESTION_MESSAGE );
+	      pane.setOptions( options );
+	      pane.setWantsInput( false );
+	      pane.createDialog( this, "Zeichensatz" ).setVisible( true );
+	      Object value = pane.getValue();
+	      if( value != null ) {
+		if( value.equals( options[ 0 ] ) ) {
+		  state = false;
+		} else if( value.equals( options[ 2 ] ) ) {
+		  text = null;
+		}
+	      } else {
+		text = null;
+	      }
+	    }
+	    if( state && (text != null) ) {
+	      StringBuilder buf = new StringBuilder( len );
+	      for( int k = 0; k < len; k++ ) {
+		char ch = text.charAt( k );
+		switch( ch ) {
+		  case '[':
+		    buf.append( (char) '\u00C4' );
+		    break;
+		  case '\\':
+		    buf.append( (char) '\u00D6' );
+		    break;
+		  case ']':
+		    buf.append( (char) '\u00DC' );
+		    break;
+		  case '{':
+		    buf.append( (char) '\u00E4' );
+		    break;
+		  case '|':
+		    buf.append( (char) '\u00F6' );
+		    break;
+		  case '}':
+		    buf.append( (char) '\u00FC' );
+		    break;
+		  case '~':
+		    buf.append( (char) '\u00DF' );
+		    break;
+		  default:
+		    buf.append( (char) ch );
+		}
+	      }
+	      text = buf.toString();
+	    }
+	  }
+	}
+      }
+    }
+    return text;
+  }
+
+
+  private void pasteFinished( String remainText )
+  {
+    this.pasteTextMngr   = null;
+    this.pasteRemainText = remainText;
+    this.mnuEditPasteStop.setEnabled( false );
+    if( remainText != null ) {
+      if( remainText.length() > 0 )
+        this.mnuEditPasteContinue.setEnabled( true );
+    }
+  }
+
+
+  private void pasteText( String text )
+  {
+    if( (this.pasteTextMngr == null) && (text != null) ) {
+      if( text.length() > 0 ) {
+	this.pasteTextMngr = new PasteTextMngr( this, text );
+	this.mnuEditPasteStop.setEnabled( true );
+	this.mnuEditPasteContinue.setEnabled( false );
+	this.pasteTextMngr.start();
+      }
+    }
+  }
+
+
   private void refreshStatus()
   {
     String msg    = "Bereit";
@@ -1652,6 +1916,21 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
       }
     }
     this.labelStatus.setText( msg );
+  }
+
+
+  private Frame reopenSubFrm( Class frmClass )
+  {
+    Frame rv  = null;
+    Frame frm = this.subFrms.get( frmClass );
+    if( frm != null ) {
+      frm.setVisible( true );
+      frm.setState( Frame.NORMAL );
+      frm.toFront();
+      if( frmClass.isInstance( frm ) )
+	rv = frm;
+    }
+    return rv;
   }
 
 
@@ -1687,18 +1966,17 @@ public class ScreenFrm extends BasicFrm implements DropTargetListener
   }
 
 
-  private Frame reopenSubFrm( Class frmClass )
+  private void updPasteBtnEnabled()
   {
-    Frame rv  = null;
-    Frame frm = this.subFrms.get( frmClass );
-    if( frm != null ) {
-      frm.setVisible( true );
-      frm.setState( Frame.NORMAL );
-      frm.toFront();
-      if( frmClass.isInstance( frm ) )
-	rv = frm;
+    boolean state = false;
+    if( this.clipboard != null ) {
+      try {
+	state = this.clipboard.isDataFlavorAvailable(
+					DataFlavor.stringFlavor );
+      }
+      catch( Exception ex ) {}
     }
-    return rv;
+    this.mnuEditPaste.setEnabled( state );
   }
 }
 

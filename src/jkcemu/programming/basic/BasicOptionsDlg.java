@@ -477,8 +477,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     } else {
       this.fldAppName.setText( "MYAPP" );
       this.docBegAddr.setValue(
-		BasicOptions.getDefaultBegAddr(
-			emuThread.getEmuSys().getSystemName() ), 4 );
+		BasicOptions.getDefaultBegAddr( emuThread.getEmuSys() ), 4 );
       this.docArraySize.setValue( BasicOptions.DEFAULT_ARRAY_SIZE );
       this.docEndOfMem.setValue( BasicOptions.DEFAULT_END_OF_MEM, 4 );
       this.btnBreakInput.setSelected( true );

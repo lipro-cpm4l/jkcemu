@@ -6,7 +6,7 @@
  * Emulation des Z9001 und Nachfolger (KC85/1, KC87)
  */
 
-package jkcemu.z9001;
+package jkcemu.system;
 
 import java.awt.Color;
 import java.awt.event.*;
@@ -19,6 +19,7 @@ import z80emu.*;
 public class Z9001 extends EmuSys implements
 					ActionListener,
 					Z80CTCListener,
+					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
   public static final int MEM_BASIC = 0xC000;
@@ -26,7 +27,15 @@ public class Z9001 extends EmuSys implements
   public static final int MEM_VIDEO = 0xEC00;
   public static final int MEM_OS    = 0xF000;
 
-  private static Color[] colors = {
+  private static final String[] biosCallNames = {
+			"INIT",  "WBOOT", "CONST", "CONIN",
+			"COOUT", "LIST",  "PUNCH", "READER",
+			"GSTIK", "BOSER", "STIME", "GTIME",
+			"SDMA",  "READ",  "WRITE", "LLIST",
+			"GCURS", "SCURS", "BOSER", "GIOBY",
+			"SIOBY", "GMEM",  "SMEM" };
+
+  private static final Color[] colors = {
 				Color.black,
 				Color.red,
 				Color.green,
@@ -39,18 +48,18 @@ public class Z9001 extends EmuSys implements
   private static int[][] kbMatrixNormal = {
 		{ '0', '1', '2', '3', '4', '5', '6', '7' },
 		{ '8', '9', ':', ';', ',', '=', '.', '?' },
-		{ '@', 'a', 'b', 'c', 'd', 'e', 'f', 'g' },
-		{ 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o' },
-		{ 'p', 'q', 'r', 's', 't', 'u', 'v', 'w' },
-		{ 'x', 'y', 'z', 0,   0,   0  , '^', 0   } };
+		{ '@', 'A', 'B',  'C', 'D', 'E', 'F', 'G'  },
+		{ 'H', 'I', 'J',  'K', 'L', 'M', 'N', 'O'  },
+		{ 'P', 'Q', 'R',  'S', 'T', 'U', 'V', 'W'  },
+		{ 'X', 'Y', 'Z',  0,   0,   0,   '^', 0    } };
 
   private static int[][] kbMatrixShift = {
 		{ '_', '!', '\"', '#', '$', '%', '&', '\'' },
 		{ '(', ')', '*',  '+', '<', '-', '>', '/'  },
-		{ 0,   'A', 'B',  'C', 'D', 'E', 'F', 'G'  },
-		{ 'H', 'I', 'J',  'K', 'L', 'M', 'N', 'O'  },
-		{ 'P', 'Q', 'R',  'S', 'T', 'U', 'V', 'W'  },
-		{ 'X', 'Y', 'Z',  0,   0,   0,   0,   0    } };
+		{ 0,   'a', 'b', 'c', 'd', 'e', 'f', 'g' },
+		{ 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o' },
+		{ 'p', 'q', 'r', 's', 't', 'u', 'v', 'w' },
+		{ 'x', 'y', 'z', 0,   0,   0  , 0, 0   } };
 
   private static byte[] os12           = null;
   private static byte[] os13           = null;
@@ -69,6 +78,9 @@ public class Z9001 extends EmuSys implements
   private boolean           audioOutPhase;
   private boolean           audioInPhase;
   private int               audioInTStates;
+  private int               frameTStates;
+  private int               tStatesPerFrame;
+  private int               tStatesVisible;
   private int               borderColorIdx;
   private int[]             kbMatrix;
   private Z80PIO            pio90;
@@ -117,10 +129,13 @@ public class Z9001 extends EmuSys implements
     Arrays.fill( this.kbMatrix, 0 );
 
     Z80CPU cpu = emuThread.getZ80CPU();
-    this.pio90 = new Z80PIO( cpu, null );
-    this.pio88 = new Z80PIO( cpu, this.pio90 );
-    this.ctc80 = new Z80CTC( cpu, this.pio88 );
+    this.pio90 = new Z80PIO( cpu );
+    this.pio88 = new Z80PIO( cpu );
+    this.ctc80 = new Z80CTC( cpu );
+    cpu.setInterruptSources( this.pio90, this.pio88, this.ctc80 );
+
     this.ctc80.addCTCListener( this );
+    cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
     if( this.colorMode ) {
@@ -130,6 +145,13 @@ public class Z9001 extends EmuSys implements
       this.blinkTimer = null;
     }
     reset( EmuThread.ResetLevel.POWER_ON );
+    z80MaxSpeedChanged();
+  }
+
+
+  public static int getDefaultSpeedKHz()
+  {
+    return 2458;	// eigentlich 2,4576 MHz
   }
 
 
@@ -143,6 +165,16 @@ public class Z9001 extends EmuSys implements
       this.colorSwap = !this.colorSwap;
       this.screenFrm.setScreenDirty( true );
     }
+  }
+
+
+	/* --- Z80MaxSpeedListener --- */
+
+  public void z80MaxSpeedChanged()
+  {
+    this.tStatesPerFrame = this.emuThread.getZ80CPU().getMaxSpeedKHz() * 200;
+    this.tStatesVisible  = (int) Math.round(
+					this.tStatesPerFrame * 192.0 / 312.0 );
   }
 
 
@@ -213,6 +245,13 @@ public class Z9001 extends EmuSys implements
 	}
       }
     }
+
+    // Zugriffe auf den Bildwiederhol- und Farbspeicher verlangsamen
+    if( (this.tStatesPerFrame > 0) && (this.tStatesVisible > 0) ) {
+      this.frameTStates += tStates;
+      if( this.frameTStates >= this.tStatesPerFrame )
+	this.frameTStates %= this.tStatesPerFrame;
+    }
   }
 
 
@@ -224,7 +263,11 @@ public class Z9001 extends EmuSys implements
       this.blinkTimer.stop();
     }
     this.ctc80.removeCTCListener( this );
-    this.emuThread.getZ80CPU().removeTStatesListener( this );
+
+    Z80CPU cpu = this.emuThread.getZ80CPU();
+    cpu.removeMaxSpeedListener( this );
+    cpu.removeTStatesListener( this );
+    cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
 
@@ -315,12 +358,6 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public int getDefaultStartAddress()
-  {
-    return 0x0300;
-  }
-
-
   public int getMinOSAddress()
   {
     return MEM_OS;
@@ -390,6 +427,12 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  public boolean getSwapKeyCharCase()
+  {
+    return true;
+  }
+
+
   public String getSystemName()
   {
     return this.kc87 ? "KC87" : "KC85/1 (Z9001)";
@@ -402,118 +445,110 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public boolean keyPressed( KeyEvent e )
+  public boolean keyPressed( int keyCode, boolean shiftDown )
   {
     boolean rv = false;
-    switch( e.getKeyCode() ) {
-      case KeyEvent.VK_BACK_SPACE:
-	this.kbMatrix[ 0 ] = 0x40;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_LEFT:
-	if( e.isShiftDown() ) {
-	  this.kbMatrix[ 3 ] = 0x20;
-	} else {
+    synchronized( this.kbMatrix ) {
+      switch( keyCode ) {
+	case KeyEvent.VK_BACK_SPACE:
 	  this.kbMatrix[ 0 ] = 0x40;
-	}
-	rv = true;
-	break;
+	  rv = true;
+	  break;
 
-      case KeyEvent.VK_RIGHT:
-	if( e.isShiftDown() ) {
-	  this.kbMatrix[ 3 ] = 0x20;
-	} else {
+	case KeyEvent.VK_LEFT:
+	  if( shiftDown ) {
+	    this.kbMatrix[ 3 ] = 0x20;
+	  } else {
+	    this.kbMatrix[ 0 ] = 0x40;
+	  }
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_RIGHT:
+	  if( shiftDown ) {
+	    this.kbMatrix[ 3 ] = 0x20;
+	  } else {
+	    this.kbMatrix[ 0 ] = 0x80;		// Shift
+	    this.kbMatrix[ 1 ] = 0x40;
+	  }
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_DOWN:
+	  this.kbMatrix[ 2 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_UP:
+	  this.kbMatrix[ 3 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_ESCAPE:
+	  if( shiftDown ) {
+	    this.kbMatrix[ 0 ] = 0x80;		// Shift
+	  }
+	  this.kbMatrix[ 4 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_ENTER:
+	  this.kbMatrix[ 5 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_SPACE:
+	  this.kbMatrix[ 7 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_INSERT:
+	  if( shiftDown ) {
+	    this.kbMatrix[ 0 ] = 0x80;		// Shift
+	  }
+	  this.kbMatrix[ 5 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_DELETE:
 	  this.kbMatrix[ 0 ] = 0x80;		// Shift
-	  this.kbMatrix[ 1 ] = 0x40;
-	}
-	rv = true;
-	break;
+	  this.kbMatrix[ 5 ] = 0x20;
+	  rv = true;
+	  break;
 
-      case KeyEvent.VK_DOWN:
-	this.kbMatrix[ 2 ] = 0x40;
-	rv = true;
-	break;
+	case KeyEvent.VK_PAUSE:
+	  if( shiftDown ) {
+	    this.kbMatrix[ 0 ] = 0x80;		// Shift
+	  }
+	  this.kbMatrix[ 4 ] = 0x20;
+	  rv = true;
+	  break;
 
-      case KeyEvent.VK_UP:
-	this.kbMatrix[ 3 ] = 0x40;
-	rv = true;
-	break;
+	case KeyEvent.VK_F1:			// Z9001-Taste GRAPHIC
+	  this.kbMatrix[ 3 ] = 0x80;
+	  rv = true;
+	  break;
 
-      case KeyEvent.VK_ESCAPE:
-	if( e.isShiftDown() ) {
-	  this.kbMatrix[ 0 ] = 0x80;		// Shift
-	}
-	this.kbMatrix[ 4 ] = 0x40;
-	rv = true;
-	break;
+	case KeyEvent.VK_F2:			// Z9001-Taste COLOR
+	  this.kbMatrix[ 1 ] = 0x80;
+	  rv = true;
+	  break;
 
-      case KeyEvent.VK_ENTER:
-	this.kbMatrix[ 5 ] = 0x40;
-	rv = true;
-	break;
+	case KeyEvent.VK_F3:			// Z9001-Taste LIST
+	  this.kbMatrix[ 4 ] = 0x80;
+	  rv = true;
+	  break;
 
-      case KeyEvent.VK_SPACE:
-	this.kbMatrix[ 7 ] = 0x40;
-	rv = true;
-	break;
+	case KeyEvent.VK_F4:			// Z9001-Taste RUN
+	  this.kbMatrix[ 5 ] = 0x80;
+	  rv = true;
+	  break;
 
-      case KeyEvent.VK_INSERT:
-	if( e.isShiftDown() ) {
-	  this.kbMatrix[ 0 ] = 0x80;		// Shift
-	}
-	this.kbMatrix[ 5 ] = 0x20;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_DELETE:
-	this.kbMatrix[ 0 ] = 0x80;		// Shift
-	this.kbMatrix[ 5 ] = 0x20;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_PAUSE:
-	if( e.isShiftDown() ) {
-	  this.kbMatrix[ 0 ] = 0x80;		// Shift
-	}
-	this.kbMatrix[ 4 ] = 0x20;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_F1:			// Z9001-Taste GRAPHIC
-	this.kbMatrix[ 3 ] = 0x80;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_F2:			// Z9001-Taste COLOR
-	this.kbMatrix[ 1 ] = 0x80;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_F3:			// Z9001-Taste LIST
-	this.kbMatrix[ 4 ] = 0x80;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_F4:			// Z9001-Taste RUN
-	this.kbMatrix[ 5 ] = 0x80;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_F5:			// Z9001-Taste STOP
-	this.kbMatrix[ 6 ] = 0x40;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_CONTROL:
-	this.kbMatrix[ 2 ] = 0x80;
-	rv = true;
-	break;
-
-      case KeyEvent.VK_SHIFT:
-	this.kbMatrix[ 0 ] = 0x80;
-	rv = true;
-	break;
+	case KeyEvent.VK_F5:			// Z9001-Taste STOP
+	  this.kbMatrix[ 6 ] = 0x40;
+	  rv = true;
+	  break;
+      }
     }
     if( rv ) {
       putKeyboardMatrixValuesToPorts();
@@ -522,36 +557,39 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public void keyReleased( int keyCode )
+  public void keyReleased()
   {
-    Arrays.fill( this.kbMatrix, 0 );
+    synchronized( this.kbMatrix ) {
+      Arrays.fill( this.kbMatrix, 0 );
+    }
     putKeyboardMatrixValuesToPorts();
   }
 
 
-  public void keyTyped( char ch )
+  public boolean keyTyped( char ch )
   {
-    boolean state = false;
+    boolean rv = false;
     synchronized( this.kbMatrix ) {
       if( (ch >= 1) && (ch <='\u0020') ) {
 	if( setCharInKBMatrix( ch + 0x40, kbMatrixShift ) ) {
 	  this.kbMatrix[ 2 ] |= 0x80;	// Control
-	  state = true;
+	  rv = true;
 	}
       } else {
 	if( setCharInKBMatrix( ch, kbMatrixNormal ) ) {
-	  state = true;
+	  rv = true;
 	} else {
 	  if( setCharInKBMatrix( ch, kbMatrixShift ) ) {
 	    this.kbMatrix[ 0 ] |= 0x80;	// Shift
-	    state = true;
+	    rv = true;
 	  }
 	}
       }
     }
-    if( state ) {
+    if( rv ) {
       putKeyboardMatrixValuesToPorts();
     }
+    return rv;
   }
 
 
@@ -610,6 +648,24 @@ public class Z9001 extends EmuSys implements
 	break;
     }
     return rv;
+  }
+
+
+  public int reassembleSysCall(
+			int           addr,
+			StringBuilder buf,
+			int           colMnemonic,
+			int           colArgs,
+			int           colRemark )
+  {
+    return reassSysCallTable(
+			addr,
+			0xF000,
+			biosCallNames,
+			buf,
+			colMnemonic,
+			colArgs,
+			colRemark );
   }
 
 
@@ -701,6 +757,21 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  public void updSysCells(
+			int    begAddr,
+			int    len,
+			Object fileFmt,
+			int    fileType )
+  {
+    SourceUtil.updKCBasicSysCells(
+			this.emuThread,
+			begAddr,
+			len,
+			fileFmt,
+			fileType );
+  }
+
+
   public void writeIOByte( int port, int value )
   {
     switch( port & 0xFB ) {	// Adressleitung A2 nicht benutzt
@@ -757,6 +828,12 @@ public class Z9001 extends EmuSys implements
 
 	/* --- private Methoden --- */
 
+  private boolean getColorMode( Properties props )
+  {
+    return EmuUtil.getBooleanProperty( props, "jkcemu.z9001.color", true );
+  }
+
+
   private int getKeyboardColValue()
   {
     int rv       = 0;
@@ -771,12 +848,6 @@ public class Z9001 extends EmuSys implements
       }
     }
     return ~rv & 0xFF;
-  }
-
-
-  private boolean getColorMode( Properties props )
-  {
-    return EmuUtil.getBooleanProperty( props, "jkcemu.z9001.color", true );
   }
 
 

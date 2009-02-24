@@ -217,8 +217,7 @@ public class ExprParser
     if( ch == '+' ) {
       this.iter.next();
       value = parsePrimExpr();
-    }
-    if( ch == '-' ) {
+    } else if( ch == '-' ) {
       this.iter.next();
       value = parsePrimExpr();
       if( isFloat( value ) ) {
@@ -226,6 +225,11 @@ public class ExprParser
       } else {
 	value = new Long( -value.longValue() );
       }
+    } else if( ch == '~' ) {
+      this.iter.next();
+      value = parsePrimExpr();
+      checkInteger( value );
+      value = new Long( ~value.longValue() );
     } else {
       value = parsePrimExpr();
     }

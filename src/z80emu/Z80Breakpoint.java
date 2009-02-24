@@ -58,10 +58,14 @@ public class Z80Breakpoint implements Comparable<Z80Breakpoint>
   public String toString()
   {
     if( this.text == null ) {
-      if( this.enabled ) {
-	this.text = String.format( "%04X", this.addr );
+      if( this.addr < 0 ) {
+	this.text = this.enabled ? "INT" : "( INT )";
       } else {
-	this.text = String.format( "( %04X )", this.addr );
+	if( this.enabled ) {
+	  this.text = String.format( "%04X", this.addr );
+	} else {
+	  this.text = String.format( "( %04X )", this.addr );
+	}
       }
     }
     return text;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@ package jkcemu.tools.hexeditor;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.ByteArrayOutputStream;
 import java.lang.*;
 import java.text.ParseException;
 import java.util.EventObject;
@@ -312,34 +313,44 @@ public class ReplyBytesDlg extends BasicDlg
 	      bytesPerItem = 4;
 	      radix        = 10;
 	    }
-	    String[] items = text.toUpperCase().split( "[\u0020,:;]" );
+	    String[] items = text.toUpperCase().split( "[\\s,:;]" );
 	    if( items != null ) {
 	      if( items.length > 0 ) {
-		rv = new byte[ items.length * bytesPerItem ];
+		ByteArrayOutputStream buf = new ByteArrayOutputStream(
+						items.length * bytesPerItem );
 		for( int i = 0; i < items.length; i++ ) {
-		  try {
-		    int value = Integer.parseInt( items[ i ], radix );
-		    int pos   = i * bytesPerItem;
-		    if( this.btnBigEndian.isSelected() ) {
-		      for( int k = bytesPerItem - 1; k >= 0; --k ) {
-			rv[ pos + k ] = (byte) (value & 0xFF);
-			value >>= 8;
+		  String itemText = items[ i ];
+		  if( itemText != null ) {
+		    if( itemText.length() > 0 ) {
+		      try {
+			int value = Integer.parseInt( items[ i ], radix );
+			int pos   = i * bytesPerItem;
+			if( this.btnBigEndian.isSelected() ) {
+			  for( int k = bytesPerItem - 1; k >= 0; --k ) {
+			    if( k > 0 ) {
+			      buf.write( (value >> (k * 8)) & 0xFF );
+			    } else {
+			      buf.write( value & 0xFF );
+			    }
+			  }
+			} else {
+			  for( int k = 0; k < bytesPerItem; k++ ) {
+			    buf.write( value & 0xFF );
+			    value >>= 8;
+			  }
+			}
 		      }
-		    } else {
-		      for( int k = 0; k < bytesPerItem; k++ ) {
-			rv[ pos + k ] = (byte) (value & 0xFF);
-			value >>= 8;
-		      }
-		    }
-		  }
-		  catch( NumberFormatException ex ) {
-		    throw new ParseException(
+		      catch( NumberFormatException ex ) {
+			throw new ParseException(
 				String.format(
 					"%s: ung\u00FCltiges Format",
 					items[ i ] ),
 				i );
+		      }
+		    }
 		  }
 		}
+		rv = buf.toByteArray();
 	      }
 	    }
 	  }

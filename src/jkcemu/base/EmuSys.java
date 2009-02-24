@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,7 @@
 
 package jkcemu.base;
 
-import java.awt.Color;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.*;
 import java.lang.*;
@@ -33,6 +33,25 @@ public abstract class EmuSys
   {
     this.emuThread = emuThread;
     this.screenFrm = emuThread.getScreenFrm();
+  }
+
+
+  protected void appendSpacesToCol(
+			StringBuilder buf,
+			int           begOfLine,
+			int           col )
+  {
+    int n = begOfLine + col - buf.length();
+    while( n > 0 ) {
+      buf.append( (char) '\u0020' );
+      --n;
+    }
+  }
+
+
+  public void applySettings( Properties props )
+  {
+    // leer
   }
 
 
@@ -81,7 +100,7 @@ public abstract class EmuSys
 				int nCols,
 				int colDist )
   {
-    StringBuilder buf = new StringBuilder( nRows + (nCols + 1) );
+    StringBuilder buf = new StringBuilder( nRows * (nCols + 1) );
     for( int i = 0; i < nRows; i++ ) {
       int rowAddr = addr + (i * colDist);
       int nSpaces = 0;
@@ -153,13 +172,13 @@ public abstract class EmuSys
   }
 
 
-  public abstract int getDefaultStartAddress();
-
-
-  public int getMemByte( int addr )
+  public Integer getLoadAddr()
   {
-    return 0xFF;
+    return null;
   }
+
+
+  public abstract int getMemByte( int addr );
 
 
   public int getMemWord( int addr )
@@ -183,6 +202,12 @@ public abstract class EmuSys
   public abstract String getSystemName();
 
 
+  public Image getScreenImage()
+  {
+    return null;
+  }
+
+
   public boolean getSwapKeyCharCase()
   {
     return false;
@@ -190,6 +215,16 @@ public abstract class EmuSys
 
 
   public boolean hasKCBasicInROM()
+  {
+    return false;
+  }
+
+
+  /*
+   * Diese Methode besagt, ob der Zeichensatz Zeichen
+   * nach der deutschen Variante von ISO646 enthaelt.
+   */
+  public boolean isISO646DE()
   {
     return false;
   }
@@ -207,27 +242,60 @@ public abstract class EmuSys
   }
 
 
-  public boolean keyPressed( KeyEvent e )
+  public boolean keyPressed( int keyCode, boolean shiftDown )
   {
     return false;
   }
 
 
-  public void keyReleased( int keyCode )
+  public void keyReleased()
   {
     // leer
   }
 
 
-  public void keyTyped( char keyChar )
+  public boolean keyTyped( char keyChar )
   {
-    // leer
+    return false;
+  }
+
+
+  public boolean pasteChar( char ch )
+  {
+    boolean rv = false;
+    switch( ch ) {
+      case '\n':
+      case '\r':
+	rv = keyPressed( KeyEvent.VK_ENTER, false );
+	break;
+
+      case '\u0020':
+	rv = keyPressed( KeyEvent.VK_SPACE, false );
+	break;
+
+      default:
+	rv = keyTyped( ch );
+    }
+    if( rv ) {
+      try {
+	Thread.sleep( 150 );
+      }
+      catch( InterruptedException ex ) {}
+      keyReleased();
+    }
+    return rv;
   }
 
 
   public int readIOByte( int port )
   {
     return 0xFF;
+  }
+
+
+  public int readMemByte( int addr )
+  {
+    return getMemByte( addr );
   }
 
 
@@ -264,6 +332,206 @@ public abstract class EmuSys
   }
 
 
+  /*
+   * Diese Methode reassembliert Bytes als Zeichenkette
+   * bis einschliesslich das Byte, bei dem Bit 7 gesetzt ist.
+   *
+   * Rueckgabewert: Anzahl der reassemlierten Bytes
+   */
+  protected int reassStringBit7(
+			int           addr,
+			StringBuilder buf,
+			int           colMnemonic,
+			int           colArgs )
+  {
+    int     rv   = 0;
+    boolean loop = true;
+    while( loop ) {
+      int     a = addr;
+      int     n = 0;
+      long    r = 0;
+      boolean c = false;
+      while( (n < 5) && (a < 0x10000) ) {
+	int b = getMemByte( a );
+	if( n == 0 ) {
+	  c = ((b >= 0x20) && (b < 0x7F));
+	} else {
+	  if( ((b >= 0x20) && (b < 0x7F)) != c ) {
+	    break;
+	  }
+	}
+	r = (r << 8) | b;
+	n++;
+	a++;
+	if( (b & 0x80) != 0 ) {
+	  loop = false;
+	  break;
+	}
+      }
+      if( n > 0 ) {
+	int begOfLine = buf.length();
+	buf.append( String.format( "%04X ", addr ) );
+	addr = a;
+
+	long m1 = 0;
+	for( int i = 0; i < n; i++ ) {
+	  m1 = (m1 << 8) | (r & 0xFF);
+	  r >>= 8;
+	}
+	long m2 = m1;
+
+	for( int i = 0; i < n; i++ ) {
+	  buf.append( String.format( " %02X", (int) m1 & 0xFF ) );
+	  m1 >>= 8;
+	}
+	appendSpacesToCol( buf, begOfLine, colMnemonic );
+	buf.append( "DB" );
+	appendSpacesToCol( buf, begOfLine, colArgs );
+
+	boolean first = true;
+	boolean quote = false;
+	for( int i = 0; i < n; i++ ) {
+	  int b = (int) m2 & 0xFF;
+	  if( (b & 0x80) != 0 ) {
+	    if( quote ) {
+	      buf.append( (char) '\'' );
+	      quote = false;
+	    }
+	    if( first ) {
+	      first = false;
+	    } else {
+	      buf.append( (char) ',' );
+	    }
+	    if( (b >= 0xA0) && (b < 0xFF) ) {
+	      buf.append( "80H+\'" );
+	      buf.append( (char) (b & 0x7F) );
+	      buf.append( (char) '\'' );
+	    } else {
+	      if( b >= 0xA0 ) {
+		buf.append( (char) '0' );
+	      }
+	      buf.append( String.format( "%02XH", b ) );
+	    }
+	  } else {
+	    if( (b >= 0x20) && (b < 0x7F) ) {
+	      if( !quote ) {
+		if( first ) {
+		  first = false;
+		} else {
+		  buf.append( (char) ',' );
+		}
+		buf.append( (char) '\'' );
+		quote = true;
+	      }
+	      buf.append( (char) b );
+	    } else {
+	      if( quote ) {
+		buf.append( (char) '\'' );
+		quote = false;
+	      }
+	      if( first ) {
+		first = false;
+	      } else {
+		buf.append( (char) ',' );
+	      }
+	      buf.append( String.format( "%02XH", b ) );
+	    }
+	  }
+	  m2 >>= 8;
+	}
+	if( quote ) {
+	  buf.append( (char) '\'' );
+	}
+	buf.append( (char) '\n' );
+	rv += n;
+      }
+    }
+    return rv;
+  }
+
+
+  /*
+   * Diese Methode reassembliert einen Aufruf in einer Sprungtabelle.
+   *
+   * Rueckgabewert: Anzahl der reassemlierten Bytes
+   */
+  protected int reassSysCallTable(
+			int           addr,
+			int           sysCallTableAddr,
+			String[]      sysCallNames,
+			StringBuilder buf,
+			int           colMnemonic,
+			int           colArgs,
+			int           colRemark )
+  {
+    int rv = 0;
+    String s = null;
+    int    b = getMemByte( addr );
+    switch( b ) {
+      case 0xC3:
+	s = "JP";
+	break;
+      case 0xCD:
+	s = "CALL";
+	break;
+    }
+    if( s != null ) {
+      int w = getMemWord( addr + 1 );
+      if( w >= sysCallTableAddr ) {
+	int m = w - sysCallTableAddr;
+	int idx = m / 3;
+	if( ((idx * 3) == m) && (idx < sysCallNames.length) ) {
+	  int bol = buf.length();
+	  buf.append( String.format(
+				"%04X  %02X %02X %02X",
+				addr,
+				b,
+				w & 0xFF,
+				w >> 8 ) );
+	  appendSpacesToCol( buf, bol, colMnemonic );
+	  buf.append( s );
+	  appendSpacesToCol( buf, bol, colArgs );
+	  if( w >= 0xA000 ) {
+	    buf.append( (char) '0' );
+	  }
+	  buf.append( String.format( "%04XH", w ) );
+	  appendSpacesToCol( buf, bol, colRemark );
+	  buf.append( (char) ';' );
+	  buf.append( sysCallNames[ idx ] );
+	  buf.append( (char) '\n' );
+	  rv = 3;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  /*
+   * Diese Methode wird vom Reassembler aufgerufen,
+   * bevor der Befehl an der uebergebenen Adresse reassembliert wird.
+   * Damit kann das emulierte System Einfluss auf die Reassemblierung
+   * nehmen, z.B. bei Systemaufrufen.
+   * Insbesondere wenn hinter Systemaufrufen Datenbytes stehen,
+   * die nicht als Befehle uebersetzt werden sollen,
+   * muss die Methode ueberschrieben werden.
+   *
+   * An an Puffer muessen immer vollstaendige Zeilen angehaengt werden.
+   * Die Formatierung wird durch die restlichen drei Argumente angegeben.
+   *
+   * Rueckgabewert: Anzahl der reassemlierten Bytes
+   */
+  public int reassembleSysCall(
+			int           addr,
+			StringBuilder buf,
+			int           colMnemonic,
+			int           colArgs,
+			int           colRemark )
+  {
+    return 0;		// kein Byte reassembliert
+  }
+
+
   public boolean requiresReset( Properties props )
   {
     return true;
@@ -288,9 +556,15 @@ public abstract class EmuSys
   }
 
 
-  public boolean setMemByte( int addr, int value )
+  public abstract boolean setMemByte( int addr, int value );
+
+
+  protected void showNoBasic()
   {
-    return false;
+    BasicDlg.showErrorDlg(
+	this.screenFrm,
+	"Es ist kein BASIC-Programm im entsprechenden\n"
+		+ "Adressbereich des Arbeitsspeichers vorhanden." );
   }
 
 
@@ -306,9 +580,25 @@ public abstract class EmuSys
   }
 
 
+  public void updSysCells(
+		int    begAddr,
+		int    len,
+		Object fileFmt,
+		int    fileType )
+  {
+    // leer
+  }
+
+
   public void writeIOByte( int port, int value )
   {
     // leer
+  }
+
+
+  public void writeMemByte( int addr, int value )
+  {
+    setMemByte( addr, value );
   }
 
 

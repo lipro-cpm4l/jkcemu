@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,7 +7,7 @@
  * die nach Brosig/Eisenkolb angeschlossen ist (12x8-Matrix).
  */
 
-package jkcemu.z1013;
+package jkcemu.system.z1013;
 
 import java.lang.*;
 
@@ -83,15 +83,21 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
   }
 
 
-  protected void updRowMasks()
+  protected boolean updRowMasks()
   {
-    if( !updRowMasks( this.keyCharCode ) ) {
+    boolean rv = updRowMasks( this.keyCharCode );
+    if( !rv ) {
       if( keyCharCode < '\u0020' ) {
-	if( updRowMasks( this.keyCharCode + 'A' - 1 ) )
+	if( updRowMasks( this.keyCharCode + 'A' - 1 ) ) {
 	  this.ctrlPressed = true;
+	  rv               = true;
+	}
       }
     }
-    updShiftKeysPressed();
+    if( rv ) {
+      updShiftKeysPressed();
+    }
+    return rv;
   }
 
 

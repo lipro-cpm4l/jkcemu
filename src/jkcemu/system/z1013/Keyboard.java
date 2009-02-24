@@ -1,12 +1,12 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Emulation der Z1013-Tastatur
  */
 
-package jkcemu.z1013;
+package jkcemu.system.z1013;
 
 import java.lang.*;
 import java.util.Properties;
@@ -92,26 +92,22 @@ public class Keyboard
   }
 
 
-  public void setKeyChar( char keyChar )
+  public boolean setKeyChar( char keyChar )
   {
-    // ggf. Gross-/Kleinbuchstaben tauschen
-    if( (keyChar >= 'A') && (keyChar <= 'Z') ) {
-      keyChar = (char) (keyChar - 'A' + 'a');
-    } else if( (keyChar >= 'a') && (keyChar <= 'z') ) {
-      keyChar = (char) (keyChar - 'a' + 'A');
-    }
-
-    // Zeichen ggf. umwandeln und anwenden
-    int ch = 0;
+    boolean rv = false;
+    int     ch = 0;
     if( keyChar == '\n' ) {
       ch = '\r';
     } else {
       ch = keyChar;
     }
     if( (ch > 0) && (ch <= 0xFF) ) {
-      this.curKeyboardMatrix.setKeyCharCode( ch );
-      putRowValuesToPIO();
+      if( this.curKeyboardMatrix.setKeyCharCode( ch ) ) {
+	putRowValuesToPIO();
+	rv = true;
+      }
     }
+    return rv;
   }
 
 

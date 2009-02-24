@@ -16,7 +16,7 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
-import jkcemu.z1013.Z1013;
+import jkcemu.system.*;
 
 
 public class LoadDlg extends BasicDlg implements DocumentListener
@@ -62,14 +62,17 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 			ScreenFrm screenFrm,
 			File      file,
 			boolean   interactive,
-			//int       begAddr,
-			//int       endAddr,
-			//int       reqFileType,
 			boolean   startEnabled,
 			boolean   startSelected )
   {
     byte[] fileBuf = readFile( owner, file );
     if( fileBuf != null ) {
+
+      /*
+       * pruefen, ob das gerade emulierte System eine Ladeadresse vorgibt,
+       * Wenn ja, dann Dialog mit der eingetragenen Ladeadresse anzeigen
+       */
+      Integer begAddr = screenFrm.getEmuThread().getEmuSys().getLoadAddr();
 
       // ggf. muss Dialog mit den Ladeoptionen angezeigt muss
       boolean  done     = false;
@@ -77,7 +80,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
       FileInfo fileInfo = FileInfo.analyzeFile( fileBuf, file );
       if( fileInfo != null ) {
 	fileFmt = fileInfo.getFileFormat();
-	if( !interactive && (fileFmt != null) ) {
+	if( (begAddr == null) && !interactive && (fileFmt != null) ) {
 	  LoadData loadData = null;
 	  try {
 	    loadData = fileInfo.createLoadData( fileBuf, fileFmt );
@@ -86,12 +89,13 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	  if( loadData != null ) {
 	    int originBegAddr = loadData.getBegAddr();
 	    if( originBegAddr >= 0 ) {
-	      EmuThread emuThread = screenFrm.getEmuThread();
-	      String    sysName   = emuThread.getEmuSys().getSystemName();
-	      boolean   isAC1     = sysName.startsWith( "AC1" );
-	      boolean   isZ1013   = sysName.startsWith( "Z1013" );
-	      boolean   isKC      = sysName.startsWith( "Z9001" )
-					|| sysName.startsWith( "KC" );
+	      EmuThread emuThread  = screenFrm.getEmuThread();
+	      EmuSys    emuSys     = emuThread.getEmuSys();
+	      boolean   isAC1      = (emuSys instanceof AC1);
+	      boolean   isKramerMC = (emuSys instanceof KramerMC);
+	      boolean   isZ1013    = (emuSys instanceof Z1013);
+	      boolean   isKC       = ((emuSys instanceof KC85)
+					|| (emuSys instanceof Z9001));
 	      if( !startSelected ) {
 		loadData.setStartAddr( -1 );
 	      }
@@ -120,7 +124,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	       * gerade emulierten System ist
 	       */
 	      if( loadData.getStartAddr() >= 0 ) {
-		if( ((isAC1 || isZ1013)
+		if( ((isAC1 || isKramerMC || isZ1013)
 				&& !fileFmt.equals( FileInfo.HEADERSAVE ))
 		    || (isKC && !fileFmt.equals( FileInfo.KCC )
 				&& !fileFmt.equals( FileInfo.KCTAP_SYS )) )
@@ -173,6 +177,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 				file,
 				fileBuf,
 				fileFmt != null ? fileFmt : FileInfo.BIN,
+				begAddr,
 				startEnabled );
 	dlg.setVisible( true );
       }
@@ -246,6 +251,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 		File      file,
 		byte[]    fileBuf,
 		String    fileFmt,
+		Integer   begAddr,
 		boolean   startEnabled )
   {
     super( owner, "Datei laden" );
@@ -391,6 +397,10 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     gbcLoad.gridx++;
     panelLoad.add( this.fldLoadBegAddr, gbcLoad );
 
+    if( begAddr != null ) {
+      this.docLoadBegAddr.setValue( begAddr.intValue(), 4 );
+    }
+
     this.labelLoadEndAddr = new JLabel( "Endadresse:" );
     gbcLoad.anchor        = GridBagConstraints.EAST;
     gbcLoad.fill          = GridBagConstraints.NONE;
@@ -411,7 +421,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     gbcLoad.gridx++;
     panelLoad.add( this.fldLoadEndAddr, gbcLoad );
 
-    this.labelLoadBasicAddr = new JLabel( "BASIC-Programm laden nach:" );
+    this.labelLoadBasicAddr = new JLabel( "KC-BASIC-Programm laden nach:" );
     gbcLoad.fill          = GridBagConstraints.NONE;
     gbcLoad.insets.top    = 5;
     gbcLoad.insets.bottom = 2;
