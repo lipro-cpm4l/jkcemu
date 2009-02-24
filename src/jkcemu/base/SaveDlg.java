@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,6 +17,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
 import jkcemu.Main;
+import jkcemu.system.*;
 import z80emu.Z80Memory;
 
 
@@ -387,28 +388,21 @@ public class SaveDlg extends BasicDlg implements
 
 
     // Vorbelegungen
-    String sysName = this.screenFrm.getEmuThread().getEmuSys().getSystemName();
-    if( sysName.startsWith( "AC1" ) ) {
+    EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
+    if( (emuSys instanceof AC1) || (emuSys instanceof KramerMC) ) {
       this.btnFileFmtHS.setSelected( true );
     }
-    else if( sysName.startsWith( "KC" )
-	     || sysName.startsWith( "HC900" )
-	     || sysName.startsWith( "Z9001" ) )
-    {
+    else if( (emuSys instanceof KC85) || (emuSys instanceof Z9001) ) {
       this.btnFileFmtKC.setSelected( true );
     }
-    else if( sysName.startsWith( "Z1013" ) ) {
+    else if( emuSys instanceof Z1013 ) {
       this.btnFileFmtHS.setSelected( true );
       this.btnKeepHeader.setSelected(
 		EmuUtil.parseBoolean(
 			Main.getProperty( "jkcemu.loadsave.header.keep" ),
 			false ) );
     }
-    if( this.kcBasic
-	|| sysName.startsWith( "KC85/2" )
-	|| sysName.startsWith( "KC85/3" )
-	|| sysName.startsWith( "KC85/4" ) )
-    {
+    if( this.kcBasic || (emuSys instanceof KC85) ) {
       this.btnBegBlkNum1.setSelected( true );
     } else {
       this.btnBegBlkNum0.setSelected( true );

@@ -884,6 +884,45 @@ public class EmuUtil
   }
 
 
+  public static char toISO646DE( char ch )
+  {
+    switch( ch ) {
+      case '\u00A7':  // Paragraf-Zeichen
+	ch = '@';
+	break;
+
+      case '\u00C4':  // Ae
+	ch = '[';
+	break;
+
+      case '\u00D6':  // Oe
+	ch = '\\';
+	break;
+
+      case '\u00DC':  // Ue
+	ch = ']';
+	break;
+
+      case '\u00E4':  // ae
+	ch = '{';
+	break;
+
+      case '\u00F6':  // oe
+	ch = '|';
+	break;
+
+      case '\u00FC':  // ue
+	ch = '}';
+	break;
+
+      case '\u00DF':  // sz
+	ch = '~';
+	break;
+    }
+    return ch;
+  }
+
+
 	/* --- private Methoden --- */
 
   private static boolean deleteFile(

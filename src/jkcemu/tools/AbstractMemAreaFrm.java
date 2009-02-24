@@ -19,6 +19,7 @@ import javax.swing.event.*;
 import javax.swing.text.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.print.*;
 import z80emu.Z80MemView;
 
 
@@ -29,12 +30,17 @@ public abstract class AbstractMemAreaFrm
   protected Z80MemView memory;
 
   private File           lastFile;
+  private String         textFind;
   private JTextArea      textArea;
   private JTextComponent selectionFld;
   private JMenuItem      mnuAction;
+  private JMenuItem      mnuPrintOptions;
+  private JMenuItem      mnuPrint;
   private JMenuItem      mnuSaveAs;
   private JMenuItem      mnuClose;
   private JMenuItem      mnuCopy;
+  private JMenuItem      mnuFind;
+  private JMenuItem      mnuFindNext;
   private JMenuItem      mnuSelectAll;
   private JTextField     fldBegAddr;
   private JTextField     fldEndAddr;
@@ -53,6 +59,7 @@ public abstract class AbstractMemAreaFrm
     Main.updIcon( this );
     this.memory       = memory;
     this.lastFile     = null;
+    this.textFind     = null;
     this.selectionFld = null;
     this.textArea     = new JTextArea();
     this.textArea.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
@@ -68,26 +75,35 @@ public abstract class AbstractMemAreaFrm
     mnuFile.setMnemonic( 'D' );
     mnuBar.add( mnuFile );
 
-    this.mnuAction = new JMenuItem( actionText );
+    this.mnuAction = createJMenuItem( actionText );
     if( actionKeyStroke != null ) {
       this.mnuAction.setAccelerator( actionKeyStroke );
     }
-    this.mnuAction.addActionListener( this );
     mnuFile.add( this.mnuAction );
     mnuFile.addSeparator();
 
-    this.mnuSaveAs = new JMenuItem( "Speichern unter..." );
-    this.mnuSaveAs.setAccelerator(
+    this.mnuPrintOptions = createJMenuItem( "Druckoptionen..." );
+    mnuFile.add( this.mnuPrintOptions );
+
+    this.mnuPrint = createJMenuItem(
+			"Drucken...",
+			KeyStroke.getKeyStroke(
+				KeyEvent.VK_P,
+				InputEvent.CTRL_MASK ) );
+    this.mnuPrint.setEnabled( false );
+    mnuFile.add( this.mnuPrint );
+    mnuFile.addSeparator();
+
+    this.mnuSaveAs = createJMenuItem(
+		"Speichern unter...",
 		KeyStroke.getKeyStroke(
 			KeyEvent.VK_S,
 			InputEvent.CTRL_MASK | InputEvent.SHIFT_MASK ) );
     this.mnuSaveAs.setEnabled( false );
-    this.mnuSaveAs.addActionListener( this );
     mnuFile.add( this.mnuSaveAs );
     mnuFile.addSeparator();
 
-    this.mnuClose = new JMenuItem( "Schlie\u00DFen" );
-    this.mnuClose.addActionListener( this );
+    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
     mnuFile.add( this.mnuClose );
 
 
@@ -96,18 +112,34 @@ public abstract class AbstractMemAreaFrm
     mnuEdit.setMnemonic( 'B' );
     mnuBar.add( mnuEdit );
 
-    this.mnuCopy = new JMenuItem( "Kopieren" );
-    this.mnuCopy.setAccelerator( KeyStroke.getKeyStroke(
-					KeyEvent.VK_C,
-					InputEvent.CTRL_MASK ) );
+    this.mnuCopy = createJMenuItem(
+			"Kopieren",
+			KeyStroke.getKeyStroke(
+				KeyEvent.VK_C,
+				InputEvent.CTRL_MASK ) );
     this.mnuCopy.setEnabled( false );
-    this.mnuCopy.addActionListener( this );
     mnuEdit.add( this.mnuCopy );
     mnuEdit.addSeparator();
 
-    this.mnuSelectAll = new JMenuItem( "Alles ausw\u00E4hlen" );
+    this.mnuFind = createJMenuItem(
+			"Suchen...",
+			KeyStroke.getKeyStroke(
+				KeyEvent.VK_F,
+				InputEvent.CTRL_MASK ) );
+    this.mnuFind.setEnabled( false );
+    mnuEdit.add( this.mnuFind );
+
+    this.mnuFindNext = createJMenuItem(
+		"Weitersuchen",
+		KeyStroke.getKeyStroke(
+			KeyEvent.VK_F,
+			InputEvent.CTRL_MASK | InputEvent.SHIFT_MASK ) );
+    this.mnuFindNext.setEnabled( false );
+    mnuEdit.add( this.mnuFindNext );
+    mnuEdit.addSeparator();
+
+    this.mnuSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
     this.mnuSelectAll.setEnabled( false );
-    this.mnuSelectAll.addActionListener( this );
     mnuEdit.add( this.mnuSelectAll );
 
 
@@ -204,7 +236,9 @@ public abstract class AbstractMemAreaFrm
     this.textArea.requestFocus();
     if( text != null ) {
       if( text.length() > 0 ) {
+	this.mnuPrint.setEnabled( true );
 	this.mnuSaveAs.setEnabled( true );
+	this.mnuFind.setEnabled( true );
 	this.mnuSelectAll.setEnabled( true );
       }
     }
@@ -252,6 +286,14 @@ public abstract class AbstractMemAreaFrm
 	rv = true;
 	doAction();
       }
+      else if( src == this.mnuPrintOptions ) {
+	rv = true;
+	PrintOptionsDlg.showPrintOptionsDlg( this, true, true );
+      }
+      else if( src == this.mnuPrint ) {
+	rv = true;
+	doPrint();
+      }
       else if( src == this.mnuSaveAs ) {
 	rv = true;
 	doSaveAs();
@@ -265,6 +307,14 @@ public abstract class AbstractMemAreaFrm
 	if( this.selectionFld != null ) {
 	  this.selectionFld.copy();
 	}
+      }
+      else if( src == this.mnuFind ) {
+	rv = true;
+	doFind();
+      }
+      else if( src == this.mnuFindNext ) {
+	rv = true;
+	doFindNext();
       }
       else if( src == this.mnuSelectAll ) {
 	rv = true;
@@ -288,7 +338,74 @@ public abstract class AbstractMemAreaFrm
   }
 
 
-	/* --- private Methoden --- */
+	/* --- Aktionen --- */
+
+  private void doFind()
+  {
+    String selectedText = this.textArea.getSelectedText();
+    if( selectedText != null ) {
+      if( selectedText.length() == 0 )
+	selectedText = null;
+    }
+
+    String[]    options = { "Suchen", "Abbrechen" };
+    JOptionPane pane    = new JOptionPane(
+				"Suchen nach:",
+				JOptionPane.PLAIN_MESSAGE );
+    pane.setOptions( options );
+    pane.setWantsInput( true );
+    if( selectedText != null ) {
+      pane.setInitialSelectionValue( selectedText );
+    } else {
+      if( this.textFind != null ) {
+	pane.setInitialSelectionValue( this.textFind );
+      }
+    }
+    pane.setInitialValue( options[ 0 ] );
+    pane.createDialog( this, "Suchen" ).setVisible( true );
+    Object value = pane.getValue();
+    if( value != null ) {
+      if( value.equals( options[ 0 ] ) ) {
+	value = pane.getInputValue();
+	if( value != null ) {
+	  String text = value.toString();
+	  if( text != null ) {
+	    if( text.length() > 0 ) {
+	      this.textFind = text;
+	      findText( Math.max(
+				this.textArea.getCaretPosition(),
+				this.textArea.getSelectionEnd() ) );
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doFindNext()
+  {
+    if( this.textFind == null ) {
+      doFind();
+    } else {
+      findText( Math.max(
+			this.textArea.getCaretPosition(),
+			this.textArea.getSelectionEnd() ) );
+    }
+  }
+
+
+  private void doPrint()
+  {
+    PrintUtil.doPrint(
+	this,
+	new PlainTextPrintable(
+		this.textArea.getText(),
+		this.textArea.getTabSize(),
+		this.lastFile != null ? this.lastFile.getName() : null ),
+	"JKCEMU - Speicheransicht" );
+  }
+
 
   private void doSaveAs()
   {
@@ -323,6 +440,49 @@ public abstract class AbstractMemAreaFrm
 	BasicDlg.showErrorDlg( this, ex );
       }
     }
+  }
+
+
+	/* --- private Methoden --- */
+
+  private boolean findText( int startPos )
+  {
+    boolean rv       = false;
+    String  textFind = this.textFind;
+
+    if( (textFind != null) && (textFind.length() > 0) ) {
+      this.mnuFindNext.setEnabled( true );
+
+      String textBase = this.textArea.getText();
+      if( textBase == null ) {
+	textBase = "";
+      }
+      textFind = textFind.toUpperCase();
+      textBase = textBase.toUpperCase();
+      if( startPos < 0 ) {
+	startPos = 0;
+      }
+      int len     = textBase.length();
+      int posFind = -1;
+      if( startPos < len ) {
+	posFind = textBase.indexOf( textFind, startPos );
+      }
+      if( (posFind >= 0) && (posFind < len) ) {
+	toFront();
+	this.textArea.requestFocus();
+	this.textArea.setCaretPosition( posFind );
+	this.textArea.select( posFind, posFind + textFind.length() );
+	rv = true;
+      }
+    }
+    if( !rv ) {
+      if( startPos > 0 ) {
+	rv = findText( 0 );
+      } else {
+	BasicDlg.showInfoDlg( this, "Text nicht gefunden!", "Text suchen" );
+      }
+    }
+    return rv;
   }
 }
 

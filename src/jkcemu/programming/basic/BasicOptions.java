@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,9 +10,10 @@ package jkcemu.programming.basic;
 
 import java.lang.*;
 import java.util.Properties;
-import jkcemu.base.EmuThread;
+import jkcemu.base.*;
 import jkcemu.programming.PrgOptions;
 import jkcemu.text.EditText;
+import jkcemu.system.*;
 
 
 public class BasicOptions extends PrgOptions
@@ -45,9 +46,8 @@ public class BasicOptions extends PrgOptions
 
   public BasicOptions( EmuThread emuThread )
   {
-    String sysName         = emuThread.getEmuSys().getSystemName();
     this.appName           = "MYAPP";
-    this.begAddr           = getDefaultBegAddr( sysName );
+    this.begAddr           = getDefaultBegAddr( emuThread.getEmuSys() );
     this.arraySize         = DEFAULT_ARRAY_SIZE;
     this.stackSize         = DEFAULT_STACK_SIZE;
     this.endOfMem          = DEFAULT_END_OF_MEM;
@@ -268,14 +268,17 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public static int getDefaultBegAddr( String sysName )
+  public static int getDefaultBegAddr( EmuSys emuSys )
   {
-    int rv = 0x0300;		// Z9001
-    if( sysName != null ) {
-      if( sysName.startsWith( "AC1" ) ) {
+    int rv = 0x0300;		// HC900, Z9001
+    if( emuSys != null ) {
+      if( emuSys instanceof AC1 ) {
 	rv = 0x2000;
       }
-      else if( sysName.startsWith( "Z1013" ) ) {
+      else if( emuSys instanceof KramerMC ) {
+	rv = 0x1000;
+      }
+      else if( emuSys instanceof Z1013 ) {
 	rv = 0x0100;
       }
     }

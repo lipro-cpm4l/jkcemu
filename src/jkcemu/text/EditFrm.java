@@ -1176,8 +1176,17 @@ public class EditFrm extends BasicFrm implements
   {
     EditText editText = getSelectedEditText();
     if( editText != null ) {
-      if( PrintUtil.doPrint( this, editText, editText.getName() ) )
+      File file = editText.getFile();
+      if( PrintUtil.doPrint(
+		this,
+		new PlainTextPrintable(
+			editText.getText(),
+			editText.getTabSize(),
+			file != null ? file.getName() : null ),
+		editText.getName() ) )
+      {
         this.labelStatus.setText( "Datei gedruckt" );
+      }
     }
   }
 

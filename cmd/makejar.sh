@@ -11,20 +11,19 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/programming/*.class \
   jkcemu/programming/assembler/*.class \
   jkcemu/programming/basic/*.class \
+  jkcemu/system/*.class \
+  jkcemu/system/z1013/*.class \
   jkcemu/text/*.class \
   jkcemu/tools/*.class \
   jkcemu/tools/calculator/*.class \
   jkcemu/tools/hexdiff/*.class \
   jkcemu/tools/hexeditor/*.class \
-  jkcemu/ac1/*.class \
-  jkcemu/bcs3/*.class \
-  jkcemu/kc85/*.class \
-  jkcemu/z1013/*.class \
-  jkcemu/z9001/*.class \
   z80emu/*.class \
   rom/ac1/*.bin \
   rom/bcs3/*.bin \
+  rom/huebler/*.bin \
   rom/kc85/*.bin \
+  rom/kramermc/*.bin \
   rom/z1013/*.bin \
   rom/z9001/*.bin \
   images/debug/*.png \
@@ -33,6 +32,8 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   images/icon/*.png \
   images/nav/*.png \
   help/*.htm \
+  help/bcs3/*.htm \
+  help/kramermc/*.htm \
   help/tips/*.htm \
   help/tools/*.htm \
   help/tools/basicc/*.htm \

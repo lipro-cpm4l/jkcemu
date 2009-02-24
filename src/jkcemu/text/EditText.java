@@ -10,7 +10,6 @@ package jkcemu.text;
 
 import java.awt.*;
 import java.awt.dnd.DropTarget;
-import java.awt.print.*;
 import java.io.*;
 import java.lang.*;
 import java.util.Properties;
@@ -22,15 +21,13 @@ import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.programming.PrgOptions;
 import jkcemu.print.*;
-import jkcemu.ac1.AC1;
-import jkcemu.z1013.Z1013;
+import jkcemu.system.*;
 import z80emu.Z80MemView;
 
 
 public class EditText implements
 				CaretListener,
 				DocumentListener,
-				Printable,
 				UndoableEditListener
 {
   private boolean       used;
@@ -305,8 +302,11 @@ public class EditText implements
 	  String fileFmt = fileInfo.getFileFormat();
 	  if( fileFmt != null ) {
 	    try {
-	      LoadData loadData = null;
-	      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+	      if( fileFmt.equals( FileInfo.BIN ) ) {
+		text = BCS3.getBasicProgram( fileBytes );
+	      }
+	      else if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+		LoadData loadData = null;
 		switch( fileInfo.getFileType() ) {
 		  case 'A':
 		    loadData = FileInfo.createLoadData( fileBytes, fileFmt );
@@ -321,18 +321,34 @@ public class EditText implements
 		    loadData = FileInfo.createLoadData( fileBytes, fileFmt );
 		    if( loadData != null ) {
 		      int addr = fileInfo.getBegAddr();
-		      switch( addr >> 8 ) {
-			case 0x03:
-			case 0x04:
-			  addr = 0x0401;
+		      switch( addr ) {
+			case 0x03C0:
+			case 0x0400:
+			case 0x0401:
+			  text = SourceUtil.getKCBasicProgram(
+							loadData,
+							0x0401 );
 			  break;
 
-			case 0x2B:
-			case 0x2C:
-			  addr = 0x2C01;
+			case 0x1001:
+			  text = KramerMC.getBasicProgram( loadData );
 			  break;
+
+			case 0x2BC0:
+			case 0x2C00:
+			case 0x2C01:
+			  text = SourceUtil.getKCBasicProgram(
+							loadData,
+							0x2C01 );
+			  break;
+
+			case 0x60F7:
+			  text = AC1.getBasicProgram( this.editFrm, loadData );
+			  break;
+
+			default:
+			  text = BCS3.getBasicProgram( fileBytes );
 		      }
-		      text = SourceUtil.getKCBasicProgram( loadData, addr );
 		    }
 		    break;
 
@@ -387,7 +403,9 @@ public class EditText implements
 		       || fileFmt.equals( FileInfo.KCBASIC_HEAD )
 		       || fileFmt.equals( FileInfo.KCBASIC_PURE ) )
 	      {
-		loadData = FileInfo.createLoadData( fileBytes, fileFmt );
+		LoadData loadData = FileInfo.createLoadData(
+							fileBytes,
+							fileFmt );
 		if( loadData != null ) {
 		  text = SourceUtil.getKCBasicProgram(
 						loadData,
@@ -987,95 +1005,6 @@ public class EditText implements
   {
     setDataChanged();
     this.used = true;
-  }
-
-
-	/* --- Printable --- */
-
-  public int print(
-		Graphics   g,
-		PageFormat pf,
-		int        pageNum ) throws PrinterException
-  {
-    String text    = getText();
-    int    tabSize = getTabSize();
-
-    // Anzahl Zeilen pro Seite
-    int fontSize     = Main.getPrintFontSize();
-    int linesPerPage = (int) pf.getImageableHeight() / fontSize;
-    if( Main.getPrintFileName() || Main.getPrintPageNum() ) {
-      linesPerPage -= 2;
-    }
-    if( (linesPerPage < 1) || (pf.getImageableWidth() < 1.0) ) {
-      throw new PrinterException(
-		"Die Seite hat keinen bedruckbaren Bereich,\n"
-			+ "da die R\u00E4nder zu gro\u00DF sind." );
-    }
-
-    // vorherige Seiten ueberspringen
-    int linesToSkip = pageNum * linesPerPage;
-    int len         = text.length();
-    int pos         = 0;
-    while( (linesToSkip > 0) && (pos < len) ) {
-      int i = text.indexOf( '\n', pos );
-      if( i < pos )
-	return NO_SUCH_PAGE;
-
-      pos = i + 1;
-      --linesToSkip;
-    }
-    if( (linesToSkip > 0) || (pos >= len) )
-      return NO_SUCH_PAGE;
-
-    // Seite drucken
-    g.setFont( new Font( "Monospaced", Font.PLAIN, fontSize ) );
-    g.setColor( Color.black );
-
-    int x = (int) pf.getImageableX();
-    int y = (int) pf.getImageableY() + fontSize;
-    while( (linesPerPage > 0) && (pos < len) ) {
-      int i = text.indexOf( '\n', pos );
-      if( i >= pos ) {
-	g.drawString(
-		PrintUtil.expandTabs( text.substring( pos, i ), tabSize ),
-		x,
-		y );
-	pos = i + 1;
-      } else {
-	g.drawString(
-		PrintUtil.expandTabs( text.substring( pos ), tabSize ),
-		x,
-		y );
-	pos = len;
-      }
-      y += fontSize;
-      --linesPerPage;
-    }
-
-    // Fusszeile
-    fontSize -= 2;
-    if( fontSize < 6 ) {
-      fontSize = 6;
-    }
-    y = (int) (pf.getImageableY() + pf.getImageableHeight());
-    String fileName = (this.file != null ? this.file.getName() : null);
-    if( Main.getPrintFileName() && (fileName != null) ) {
-      g.setFont( new Font( "Monospaced", Font.PLAIN, fontSize ) );
-      g.drawString( fileName, x, y );
-      if( Main.getPrintPageNum() ) {
-	String s = String.valueOf( pageNum + 1 );
-	g.drawString(
-		s,
-		(int) (pf.getImageableX() + pf.getImageableWidth()
-				- g.getFontMetrics().stringWidth( s )),
-		y );
-      }
-    } else {
-      if( Main.getPrintPageNum() )
-	PrintUtil.printCenteredPageNum( g, pf, fontSize, pageNum + 1 );
-    }
-
-    return PAGE_EXISTS;
   }
 
 

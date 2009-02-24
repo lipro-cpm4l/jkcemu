@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -14,6 +14,13 @@ import java.lang.*;
 public interface Z80Memory extends Z80MemView
 {
   public void setMemByte( int addr, int value );
-  public void setMemWord( int addr, int value );
+
+  /*
+   * Diese beiden Methoden werden von der Emulation aufgerufen,
+   * d.h., wenn ein Speicherzugriff zu WAIT-States fuehrt,
+   * muessen diese mit emuliert werden.
+   */
+  public int  readMemByte( int addr );
+  public void writeMemByte( int addr, int value );
 }
 

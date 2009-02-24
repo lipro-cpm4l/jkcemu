@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,7 +7,7 @@
  * der Folientastatur (8x4-Matrix).
  */
 
-package jkcemu.z1013;
+package jkcemu.system.z1013;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
@@ -194,13 +194,15 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
    * da sie ja auch auf der Emulator-Tastatur mit Control erzeugt wurden.
    * Enter, Leer- und Cursor-Tasten werden separat behandelt.
    */
-  protected synchronized void updRowMasks()
+  protected synchronized boolean updRowMasks()
   {
+    boolean rv = false;
     if( this.keyCharCode > 0 ) {
 
       // einzelne 8er-Gruppen pruefen
       int rowMask = (1 << (this.keyCharCode & 0x07));
 
+      rv = true;
       switch( this.keyCharCode & 0xF8 ) {
 
 	// ohne Shift
@@ -269,9 +271,16 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
 	  this.rowMask2 = rowMask;
 	  this.rowMask3 = 8;
 	  break;
+
+	// Code auf Tastaturmatrix nicht abbildbar
+	default:
+	  rv = false;
       }
+    }
+    if( rv ) {
       updShiftKeysPressed();
     }
+    return rv;
   }
 
 

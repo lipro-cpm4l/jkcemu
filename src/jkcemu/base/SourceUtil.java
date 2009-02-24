@@ -156,8 +156,9 @@ public class SourceUtil
 	  addr++;
 	} else {
 	  if( ch != 0 ) {
-	    for( int i = 0; i <= n; i++ )
+	    for( int i = 0; i <= n; i++ ) {
 	      buf.append( (char) '\u0020' );
+	    }
 	  }
 	  break;
 	}
@@ -166,25 +167,27 @@ public class SourceUtil
       // Programmzeile extrahieren
       while( addr < nextLineAddr ) {
 	int ch = memory.getMemByte( addr++ );
-	if( ch == 0 )
+	if( ch == 0 ) {
 	  break;
-
+	}
 	if( ch == '\"' ) {
 	  buf.append( (char) ch );
 	  while( addr < nextLineAddr ) {
 	    ch = memory.getMemByte( addr++ );
-	    if( ch == 0 )
+	    if( ch == 0 ) {
 	      break;
-
+	    }
 	    buf.append( (char) ch );
-	    if( ch == '\"' )
+	    if( ch == '\"' ) {
 	      break;
+	    }
 	  }
 	} else {
 	  if( ch >= 0x80 ) {
 	    int pos = ch - 0x80;
-	    if( (pos >= 0) && (pos < tokenTab.length) )
+	    if( (pos >= 0) && (pos < tokenTab.length) ) {
 	      buf.append( tokenTab[ pos ] );
+	    }
 	  } else {
 	    buf.append( (char) ch );
 	  }
@@ -280,6 +283,39 @@ public class SourceUtil
 		"KC-BASIC-Programm speichern" )).setVisible( true );
     } else {
       showNoKCBasic( screenFrm );
+    }
+  }
+
+
+  public static void updKCBasicSysCells(
+			EmuThread emuThread,
+			int       begAddr,
+			int       len,
+			Object    fileFmt,
+			int       fileType )
+  {
+    if( fileFmt != null ) {
+      boolean state = false;
+      if( ((begAddr == 0x2BC0) || (begAddr == 0x2C00) || (begAddr == 0x2C01))
+	  && fileFmt.equals( FileInfo.HEADERSAVE )
+	  && (fileType == 'B') )
+      {
+	state = true;
+      }
+      else if( ((begAddr == 0x0401) || (begAddr == 0x2C01))
+	       && (fileFmt.equals( FileInfo.KCB )
+			|| fileFmt.equals( FileInfo.KCBASIC_HEAD )
+			|| fileFmt.equals( FileInfo.KCBASIC_PURE )
+			|| fileFmt.equals( FileInfo.KCTAP_BASIC )) )
+      {
+	state = true;
+      }
+      if( state ) {
+	int topAddr = begAddr + len;
+	emuThread.setMemWord( begAddr - 42, topAddr );
+	emuThread.setMemWord( begAddr - 40, topAddr );
+	emuThread.setMemWord( begAddr - 38, topAddr );
+      }
     }
   }
 

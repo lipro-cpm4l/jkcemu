@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -178,30 +178,66 @@ public class ScreenFld extends JComponent
 
   private void paint( Graphics g, int w, int h )
   {
-    int wBase = this.emuSys.getScreenBaseWidth();
-    int hBase = this.emuSys.getScreenBaseHeight();
+    if( (w > 0) && (h > 0) ) {
 
-    // Hintergrund
-    int bgColorIdx = this.emuSys.getBorderColorIndex();
-    g.setColor( this.emuSys.getColor( bgColorIdx ) );
-    g.fillRect( 0, 0, w, h );
+      // Hintergrund
+      int bgColorIdx = this.emuSys.getBorderColorIndex();
+      g.setColor( this.emuSys.getColor( bgColorIdx ) );
+      g.fillRect( 0, 0, w, h );
 
-    // Vordergrund zentrieren
-    Point offset = getOffset( wBase, hBase );
-    if( (offset.x > 0) && (offset.y > 0) ) {
-      g.translate( offset.x, offset.y );
-    }
+      // Vordergrund zentrieren
+      int wBase = this.emuSys.getScreenBaseWidth();
+      int hBase = this.emuSys.getScreenBaseHeight();
 
-    /*
-     * Aus Greunden der Performance werden untereinander liegende
-     * Punkte zusammengefasst und als Linie gezeichnet.
-     */
-    for( int x = 0; x < wBase; x++ ) {
-      int lastColorIdx = -1;
-      int yColorBeg    = -1;
-      for( int y = 0; y < hBase; y++ ) {
-	int curColorIdx = this.emuSys.getColorIndex( x, y );
-	if( curColorIdx != lastColorIdx ) {
+      int wScaled = wBase * this.screenScale;
+      int hScaled = hBase * this.screenScale;
+
+      int xOffs = (w - wScaled) / 2;
+      if( xOffs < 0) {
+	xOffs = 0;
+      }
+      int yOffs = (h - hScaled) / 2;
+      if( yOffs < 0) {
+	yOffs = 0;
+      }
+
+      Image image = this.emuSys.getScreenImage();
+      if( image != null ) {
+	if( this.screenScale > 1 ) {
+	  g.drawImage( image, xOffs, yOffs, wScaled, hScaled, this );
+	} else {
+	  g.drawImage( image, xOffs, yOffs, this );
+	}
+      } else {
+	if( (xOffs > 0) || (yOffs > 0) ) {
+	  g.translate( xOffs, yOffs );
+	}
+
+	/*
+	 * Aus Gruenden der Performance werden untereinander liegende
+	 * Punkte zusammengefasst und als Linie gezeichnet.
+	 */
+	for( int x = 0; x < wBase; x++ ) {
+	  int lastColorIdx = -1;
+	  int yColorBeg    = -1;
+	  for( int y = 0; y < hBase; y++ ) {
+	    int curColorIdx = this.emuSys.getColorIndex( x, y );
+	    if( curColorIdx != lastColorIdx ) {
+	      if( (lastColorIdx >= 0)
+		  && (lastColorIdx != bgColorIdx)
+		  && (yColorBeg >= 0) )
+	      {
+		g.setColor( this.emuSys.getColor( lastColorIdx ) );
+		g.fillRect(
+			x * this.screenScale,
+			yColorBeg * this.screenScale,
+			this.screenScale,
+			(y - yColorBeg) * this.screenScale );
+	      }
+	      yColorBeg    = y;
+	      lastColorIdx = curColorIdx;
+	    }
+	  }
 	  if( (lastColorIdx >= 0)
 	      && (lastColorIdx != bgColorIdx)
 	      && (yColorBeg >= 0) )
@@ -211,22 +247,9 @@ public class ScreenFld extends JComponent
 		x * this.screenScale,
 		yColorBeg * this.screenScale,
 		this.screenScale,
-		(y - yColorBeg) * this.screenScale );
-	  }
-	  yColorBeg    = y;
-	  lastColorIdx = curColorIdx;
-	}
-      }
-      if( (lastColorIdx >= 0)
-	  && (lastColorIdx != bgColorIdx)
-	  && (yColorBeg >= 0) )
-      {
-	g.setColor( this.emuSys.getColor( lastColorIdx ) );
-	g.fillRect(
-		x * this.screenScale,
-		yColorBeg * this.screenScale,
-		this.screenScale,
 		(hBase - yColorBeg) * this.screenScale );
+	  }
+	}
       }
     }
   }

@@ -15,19 +15,15 @@ import java.util.Collection;
 
 public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 {
-  private Z80CPU                     z80cpu;
-  private Z80InterruptSource         preIntSource;
+  private Z80CPU                     cpu;
   private Collection<Z80CTCListener> listeners;
   private int                        interruptVector;
   private Timer[]                    timer;
 
 
-
-
-  public Z80CTC( Z80CPU z80cpu, Z80InterruptSource preIntSource )
+  public Z80CTC( Z80CPU cpu )
   {
-    this.z80cpu          = z80cpu;
-    this.preIntSource    = preIntSource;
+    this.cpu             = cpu;
     this.listeners       = null;
     this.interruptVector = 0;
     this.timer           = new Timer[ 4 ];
@@ -53,39 +49,44 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-  public int externalUpdate( int timerNum, int pulses )
+  public synchronized int externalUpdate( int timerNum, boolean state )
+  {
+    return (timerNum >= 0) && (timerNum < this.timer.length) ?
+			this.timer[ timerNum ].externalUpdate( state ) : 0;
+  }
+
+
+  public synchronized int externalUpdate( int timerNum, int pulses )
   {
     return (timerNum >= 0) && (timerNum < this.timer.length) ?
 			this.timer[ timerNum ].externalUpdate( pulses ) : 0;
   }
 
 
-  public int read( int timerNum )
+  public synchronized int read( int timerNum )
   {
     return (timerNum >= 0) && (timerNum < this.timer.length) ?
 			this.timer[ timerNum ].read() : 0xFF;
   }
 
 
-  public void reset( boolean powerOn )
+  public synchronized void reset( boolean powerOn )
   {
     if( powerOn ) {
       this.interruptVector = 0;
     }
-    for( int i = 0; i < this.timer.length; i++ ) {
-      this.timer[ i ].reset();
-    }
+    reset();
   }
 
 
-  public void systemUpdate( int pulses )
+  public synchronized void systemUpdate( int pulses )
   {
     for( int i = 0; i < this.timer.length; i++ )
       this.timer[ i ].systemUpdate( pulses );
   }
 
 
-  public void write( int timerNum, int value )
+  public synchronized void write( int timerNum, int value )
   {
     boolean done = false;
     if( (timerNum >= 0) && (timerNum < this.timer.length) ) {
@@ -108,12 +109,14 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
 	/* --- Methoden fuer Z80InterruptSource --- */
 
-  public int z80GetInterruptVector()
+  public synchronized int interruptAccepted()
   {
     int rv = 0;
     for( int i = 0; i < this.timer.length; i++ ) {
-      if( this.timer[ i ].interruptPending ) {
-	rv = this.interruptVector + (2 * i);
+      if( this.timer[ i ].interruptRequested ) {
+	this.timer[ i ].interruptRequested = false;
+	this.timer[ i ].interruptPending   = true;
+	rv = this.interruptVector + (i * 2);
 	break;
       }
     }
@@ -121,22 +124,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-	/* --- Z80TStatesListener --- */
-
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    systemUpdate( tStates );
-  }
-
-
-  /*
-   * Normalerweise erkennt der Interrupt-ausloesende Baustein selbst,
-   * wenn der Befehl RETI abgearbeitet wird und die
-   * Interrupt-Routine beendet ist.
-   * Hier im Emulator wird durch die CPU-Emulation diese Methode
-   * aufgerufen, wenn RETI verarbeitet wird.
-   */
-  public void z80InterruptFinished()
+  public synchronized void interruptFinished()
   {
     for( int i = 0; i < this.timer.length; i++ ) {
       if( this.timer[ i ].interruptPending ) {
@@ -147,15 +135,42 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-  /*
-   * Diese Methode besagt, ob die CTC einen Interrupt ausgeloest hat,
-   * deren Behandlungsroutine noch nicht beendet ist.
-   * Uebertragen bedeutet das, ob die CTC die
-   * Interrupt-Prioritaeten-Kette unterbrochen hat.
-   */
-  public boolean z80IsInterruptPending()
+  public boolean isInterruptPending()
   {
-    return isInterruptPending( this.timer.length - 1 );
+    return this.timer[ 0 ].interruptPending
+		|| this.timer[ 1 ].interruptPending
+		|| this.timer[ 2 ].interruptPending
+		|| this.timer[ 3 ].interruptPending;
+  }
+
+
+  public boolean isInterruptRequested()
+  {
+    boolean rv = false;
+    for( int i = 0; i < this.timer.length; i++ ) {
+      if( this.timer[ i ].interruptEnabled
+		&& this.timer[ i ].interruptRequested )
+      {
+	rv = true;
+	break;
+      }
+    }
+    return rv;
+  }
+
+
+  public void reset()
+  {
+    for( int i = 0; i < this.timer.length; i++ )
+      this.timer[ i ].reset();
+  }
+
+
+	/* --- Z80TStatesListener --- */
+
+  public synchronized void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    systemUpdate( tStates );
   }
 
 
@@ -163,17 +178,20 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
   private class Timer
   {
-    private int              timerNum;
-    private volatile int     counterInit;
-    private volatile int     counter;
-    private volatile int     preCounter;
-    private volatile boolean pre256;
-    private volatile boolean extMode;
-    private volatile boolean waitForTrigger;
-    private volatile boolean interruptEnabled;
-    private volatile boolean interruptPending;
-    private volatile boolean nextIsCounterValue;
-    private volatile boolean running;
+    private int     timerNum;
+    private int     counterInit;
+    private int     counter;
+    private int     preCounter;
+    private boolean pre256;
+    private boolean extMode;
+    private boolean slope;
+    private boolean waitForTrigger;
+    private boolean interruptEnabled;
+    private boolean interruptPending;
+    private boolean interruptRequested;
+    private boolean nextIsCounterValue;
+    private boolean running;
+    private Boolean lastInSlope;
 
 
     public Timer( int timerNum )
@@ -189,22 +207,25 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     }
 
 
-    public int externalUpdate( int pulses )
+    public int externalUpdate( boolean slope )
     {
       int rv = 0;
-      if( pulses > 0 ) {
-	if( this.extMode ) {
-	  rv = updCounter( pulses );
-	} else {
-	  if( this.waitForTrigger && !this.running ) {
-	    this.preCounter     = 0;
-	    this.counter        = this.counterInit;
-	    this.waitForTrigger = false;
-	    this.running        = true;
-	  }
+      if( slope == this.slope ) {
+        Boolean lastInSlope = this.lastInSlope;
+        if( lastInSlope != null ) {
+	  if( slope != lastInSlope.booleanValue() )
+	    rv = externalUpdate2( 1 );
 	}
       }
+      this.lastInSlope = slope ? Boolean.TRUE : Boolean.FALSE;
       return rv;
+    }
+
+
+    public int externalUpdate( int pulses )
+    {
+      this.lastInSlope = null;
+      return externalUpdate2( pulses );
     }
 
 
@@ -221,11 +242,14 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
       this.preCounter         = 0;
       this.pre256             = false;
       this.extMode            = false;
+      this.slope              = false;
       this.waitForTrigger     = false;
       this.interruptEnabled   = false;
       this.interruptPending   = false;
+      this.interruptRequested = false;
       this.nextIsCounterValue = false;
       this.running            = false;
+      this.lastInSlope        = null;
     }
 
 
@@ -251,12 +275,33 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	this.interruptEnabled   = ((value & 0x80) != 0);
 	this.extMode            = ((value & 0x40) != 0);
 	this.pre256             = ((value & 0x20) != 0);
+	this.slope              = ((value & 0x10) != 0);
 	this.waitForTrigger     = ((value & 0x08) != 0);
 	this.nextIsCounterValue = ((value & 0x04) != 0);
 	if( (value & 0x02) != 0 ) {
 	  this.running = false;
 	}
+	this.lastInSlope = null;
       }
+    }
+
+
+    private int externalUpdate2( int pulses )
+    {
+      int rv = 0;
+      if( pulses > 0 ) {
+	if( this.extMode ) {
+	  rv = updCounter( pulses );
+	} else {
+	  if( this.waitForTrigger && !this.running ) {
+	    this.preCounter     = 0;
+	    this.counter        = this.counterInit;
+	    this.waitForTrigger = false;
+	    this.running        = true;
+	  }
+	}
+      }
+      return rv;
     }
 
 
@@ -272,11 +317,8 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	  this.counter = this.counterInit;
 	  rv++;
 	  informListeners( this.timerNum );
-	  if( this.interruptEnabled ) {
-	    if( !isInterruptPending( this.timerNum ) ) {
-	      this.interruptPending = true;
-	      fireInterrupt();
-	    }
+	  if( this.interruptEnabled && !this.interruptPending ) {
+	    this.interruptRequested = true;
 	  }
 	}
       }
@@ -307,39 +349,13 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
 	/* --- private Methoden --- */
 
-  private void fireInterrupt()
-  {
-    this.z80cpu.fireInterrupt( this );
-  }
-
-
   private void informListeners( int timerNum )
   {
     Collection<Z80CTCListener> listeners = this.listeners;
     if( listeners != null ) {
-      synchronized( listeners ) {
-	for( Z80CTCListener listener : listeners )
-	  listener.z80CTCUpdate( this, timerNum );
-      }
+      for( Z80CTCListener listener : listeners )
+	listener.z80CTCUpdate( this, timerNum );
     }
-  }
-
-
-  private boolean isInterruptPending( int timerNum )
-  {
-    boolean rv = false;
-    if( this.preIntSource != null ) {
-      rv = this.preIntSource.z80IsInterruptPending();
-    }
-    if( !rv ) {
-      for( int i = 0; (i < this.timer.length) && (i <= timerNum); i++ ) {
-	if( this.timer[ i ].interruptPending ) {
-	  rv = true;
-	  break;
-	}
-      }
-    }
-    return rv;
   }
 }
 
