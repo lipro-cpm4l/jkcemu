@@ -279,7 +279,7 @@ public class Main
 
   public static String getVersion()
   {
-    return "JKCEMU Version 0.3";
+    return "JKCEMU Version 0.4";
   }
 
 

@@ -16,6 +16,7 @@ import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.programming.PrgOptions;
+import jkcemu.system.*;
 
 
 public abstract class AbstractOptionsDlg extends BasicDlg
@@ -240,8 +241,8 @@ public abstract class AbstractOptionsDlg extends BasicDlg
       this.btnCodeToEmu.setSelected( false );
       this.btnCodeToFile.setSelected( false );
 
-      String sysName = this.emuThread.getEmuSys().getSystemName();
-      if( sysName.startsWith( "AC1" ) || sysName.startsWith( "Z1013" ) ) {
+      EmuSys emuSys = this.emuThread.getEmuSys();
+      if( (emuSys instanceof AC1) || (emuSys instanceof Z1013) ) {
 	this.comboFileFmt.setSelectedItem(
 			FileSaver.getFormatText( FileSaver.HEADERSAVE ) );
       } else {

@@ -74,11 +74,11 @@ public class BCS3 extends EmuSys implements
 	"READ",    null, "DATA",   null };
 
   /*
-   * Diese Tabelle mappt die BCS3-BASIC-SE3.2-Tokens
+   * Diese Tabelle mappt die BCS3-S/P-BASIC-3.3-Tokens
    * in die entsprechenden Texte.
    * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0xB0".
    */
-  private static final String[] se32Tokens = {
+  private static final String[] sp33Tokens = {
 	null,      null,     null,        null,		// 0xB0
 	null,      null,     null,        null,
 	null,      null,     null,        null,
@@ -102,15 +102,15 @@ public class BCS3 extends EmuSys implements
 
   private static int[] endInstBytesSE24 = { 0x0F, 0x27, 0xDE, 0x1E };
   private static int[] endInstBytesSE31 = { 0x0F, 0x27, 0xCE, 0x1E };
-  private static int[] endInstBytesSE32 = { 0x00, 0x27, 0xCA, 0x1E };
+  private static int[] endInstBytesSP33 = { 0x00, 0x27, 0xCA, 0x1E };
 
   private static byte[] fontBytesSE24  = null;
   private static byte[] fontBytesSE31  = null;
-  private static byte[] fontBytesSE32  = null;
+  private static byte[] fontBytesSP33  = null;
   private static byte[] osBytesSE24    = null;
   private static byte[] osBytesSE31_29 = null;
   private static byte[] osBytesSE31_40 = null;
-  private static byte[] osBytesSE32_29 = null;
+  private static byte[] osBytesSP33_29 = null;
   private static byte[] mcEdtitorSE31  = null;
 
   private Z80CTC           ctc;
@@ -132,7 +132,7 @@ public class BCS3 extends EmuSys implements
 
   public BCS3( EmuThread emuThread, Properties props )
   {
-    super( emuThread );
+    super( emuThread, props );
     this.romF000   = null;
     String version = EmuUtil.getProperty( props, "jkcemu.bcs3.os.version" );
     if( version.equals( "3.1" ) ) {
@@ -162,27 +162,27 @@ public class BCS3 extends EmuSys implements
 	}
 	this.romF000 = mcEdtitorSE31;
       }
-    } else if( version.equals( "3.2" ) ) {
-      if( fontBytesSE32 == null ) {
-	fontBytesSE32 = readResource( "/rom/bcs3/se32font.bin" );
+    } else if( version.equals( "3.3" ) ) {
+      if( fontBytesSP33 == null ) {
+	fontBytesSP33 = readResource( "/rom/bcs3/sp33font.bin" );
       }
-      this.fontBytes        = fontBytesSE32;
+      this.fontBytes        = fontBytesSP33;
       this.screenOffset     = 0x00A0;
       this.screenBaseHeight = 232;
       this.screenCharRows   = 4;	// Anfangswert
       this.screenCharCols   = 29;
       this.screenRowOffset  = 30;
-      if( osBytesSE32_29 == null ) {
-	osBytesSE32_29 = readResource( "/rom/bcs3/se32_29.bin" );
+      if( osBytesSP33_29 == null ) {
+	osBytesSP33_29 = readResource( "/rom/bcs3/sp33_29.bin" );
       }
-      this.rom0000 = osBytesSE32_29;
+      this.rom0000 = osBytesSP33_29;
     } else {
       if( fontBytesSE24 == null ) {
 	fontBytesSE24 = readResource( "/rom/bcs3/se24font.bin" );
       }
       this.fontBytes        = fontBytesSE24;
       this.screenOffset     = 0x0050;
-      this.screenBaseHeight = 192;
+      this.screenBaseHeight = 184;
       this.screenCharCols   = 27;
       this.screenCharRows   = 12;
       this.screenRowOffset  = 28;
@@ -205,7 +205,7 @@ public class BCS3 extends EmuSys implements
     this.ctc.addCTCListener( this );
     cpu.addTStatesListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON );
+    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
@@ -228,8 +228,8 @@ public class BCS3 extends EmuSys implements
 	  endLineNum = 9999;
 	  break;
 	}
-	if( equalsRange( data, pos, endInstBytesSE32 ) ) {
-	  tokens     = se32Tokens;
+	if( equalsRange( data, pos, endInstBytesSP33 ) ) {
+	  tokens     = sp33Tokens;
 	  endLineNum = 9984;
 	  break;
 	}
@@ -381,6 +381,12 @@ public class BCS3 extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  public boolean canExtractScreenText()
+  {
+    return true;
+  }
+
+
   public void die()
   {
     this.ctc.removeCTCListener( this );
@@ -388,17 +394,6 @@ public class BCS3 extends EmuSys implements
     Z80CPU cpu = emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
-  }
-
-
-  public String extractScreenText()
-  {
-    return EmuUtil.extractText(
-			this.ram,
-			this.screenOffset,
-			this.screenCharRows,
-			this.screenCharCols,
-			this.screenRowOffset );
   }
 
 
@@ -426,7 +421,7 @@ public class BCS3 extends EmuSys implements
 	int fIdx = -1;
 	if( this.rom0000 == osBytesSE24 ) {
 	  int rPix = y % 16;
-	  if( (rPix >= 2) && (rPix <= 9) ) {
+	  if( rPix < 8 ) {
 	    int row = y / 16;
 	    int col = x / 8;
 	    if( (row < this.screenCharRows) && (col < this.screenCharCols) ) {
@@ -435,10 +430,10 @@ public class BCS3 extends EmuSys implements
 				+ col;
 	      if( (mIdx >= 0) && (mIdx < this.ram.length) ) {
 		int ch = (int) (this.ram[ mIdx ] & 0xFF);
-		if( rPix == 9 ) {
+		if( rPix == 7 ) {
 		  fIdx = (ch * 8);
 		} else {
-		  fIdx = (ch * 8) + rPix - 1;
+		  fIdx = (ch * 8) + rPix + 1;
 		}
 	      }
 	    }
@@ -479,6 +474,36 @@ public class BCS3 extends EmuSys implements
   }
 
 
+  public int getCharColCount()
+  {
+    return this.screenCharCols;
+  }
+
+
+  public int getCharHeight()
+  {
+    return 8;
+  }
+
+
+  public int getCharRowCount()
+  {
+    return this.screenCharRows;
+  }
+
+
+  public int getCharRowHeight()
+  {
+    return this.rom0000 == osBytesSE24 ? 16 : 8;
+  }
+
+
+  public int getCharWidth()
+  {
+    return 8;
+  }
+
+
   public Integer getLoadAddr()
   {
     Integer rv = null;
@@ -487,23 +512,11 @@ public class BCS3 extends EmuSys implements
     }
     else if( (this.rom0000 == osBytesSE31_29)
 	     || (this.rom0000 == osBytesSE31_40)
-	     || (this.rom0000 == osBytesSE32_29) )
+	     || (this.rom0000 == osBytesSP33_29) )
     {
       rv = new Integer( getMemWord( 0x3C00 ) );
     }
     return rv;
-  }
-
-
-  public int getMinOSAddress()
-  {
-    return 0;
-  }
-
-
-  public int getMaxOSAddress()
-  {
-    return this.rom0000 != null ? this.rom0000.length - 1 : 0;
   }
 
 
@@ -571,13 +584,22 @@ public class BCS3 extends EmuSys implements
   }
 
 
-  public int getScreenBaseHeight()
+  protected int getScreenChar( int chX, int chY )
+  {
+    int idx = this.screenOffset + (chY * this.screenRowOffset) + chX;
+    return (idx >= 0) && (idx < this.ram.length) ?
+					((int) this.ram[ idx ] & 0xFF)
+					: -1;
+  }
+
+
+  public int getScreenHeight()
   {
     return this.screenBaseHeight;
   }
 
 
-  public int getScreenBaseWidth()
+  public int getScreenWidth()
   {
     return this.screenCharCols * 8;
   }
@@ -589,7 +611,7 @@ public class BCS3 extends EmuSys implements
   }
 
 
-  public String getSystemName()
+  public String getTitle()
   {
     return "BCS3";
   }
@@ -695,10 +717,10 @@ public class BCS3 extends EmuSys implements
       endLineNum = 9999;
       tokens     = se31Tokens;
     }
-    else if( this.rom0000 == osBytesSE32_29 ) {
+    else if( this.rom0000 == osBytesSP33_29 ) {
       addr       = getMemWord( 0x3C00 );
       endLineNum = 9984;
-      tokens     = se32Tokens;
+      tokens     = sp33Tokens;
     }
     if( (addr >= 0) && (endLineNum >= 0) && (tokens != null) ) {
       int lineNum = getMemWord( addr );
@@ -709,7 +731,7 @@ public class BCS3 extends EmuSys implements
 	  addr += 2;
 	  boolean sep = false;
 	  boolean spc = true;
-	  int     ch  = getMemByte( addr++ );
+	  int     ch  = this.emuThread.getMemByte( addr++ );
 	  while( (ch != 0) && (ch != 0x1E) ) {
 	    if( spc ) {
 	      buf.append( (char) '\u0020' );
@@ -751,7 +773,7 @@ public class BCS3 extends EmuSys implements
 	      buf.append( (char) ch );
 	      sep = false;
 	    }
-	    ch = getMemByte( addr++ );
+	    ch = this.emuThread.getMemByte( addr++ );
 	  }
 	  buf.append( (char) '\n' );
 	  if( ch == 0 ) {
@@ -806,8 +828,8 @@ public class BCS3 extends EmuSys implements
 	    rv = true;
 	  }
 	}
-      } else if( version.equals( "3.2" ) ) {
-	if( this.rom0000 != osBytesSE32_29 ) {
+      } else if( version.equals( "3.3" ) ) {
+	if( this.rom0000 != osBytesSP33_29 ) {
 	  rv = true;
 	}
       } else {
@@ -824,14 +846,14 @@ public class BCS3 extends EmuSys implements
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
 	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
     {
       if( (this.rom0000 == osBytesSE31_29)
 	  || (this.rom0000 == osBytesSE31_40)
-	  || (this.rom0000 == osBytesSE32_29) )
+	  || (this.rom0000 == osBytesSP33_29) )
       {
 	this.screenCharRows = 3;
       }
@@ -858,7 +880,7 @@ public class BCS3 extends EmuSys implements
       begAddr    = getMemWord( 0x3C00 );
       endLineNum = 9999;
     }
-    else if( this.rom0000 == osBytesSE32_29 ) {
+    else if( this.rom0000 == osBytesSP33_29 ) {
       begAddr    = getMemWord( 0x3C00 );
       endLineNum = 9984;
     }
@@ -869,9 +891,9 @@ public class BCS3 extends EmuSys implements
 	int addr = begAddr;
 	while( (lineNum >= 0) && (lineNum <= endLineNum) ) {
 	  addr += 2;
-	  int ch = getMemByte( addr++ );
+	  int ch = this.emuThread.getMemByte( addr++ );
 	  while( (ch != 0) && (ch != 0x1E) ) {
-	    ch = getMemByte( addr++ );
+	    ch = this.emuThread.getMemByte( addr++ );
 	  }
 	  if( ch == 0x1E ) {
 	    endAddr = addr;
@@ -909,7 +931,7 @@ public class BCS3 extends EmuSys implements
 	  this.ram[ idx ] = (byte) value;
 	  if( ((this.rom0000 == osBytesSE31_29)
 	       || (this.rom0000 == osBytesSE31_40)
-	       || (this.rom0000 == osBytesSE32_29))
+	       || (this.rom0000 == osBytesSP33_29))
 	      && (addr == 0x1C06) )
 	  {
 	    int nRows = (int) (this.ram[ 6 ] & 0xFF);
@@ -954,9 +976,9 @@ public class BCS3 extends EmuSys implements
       prgBegAddr   = getMemWord( 0x3C00 );
       endInstBytes = endInstBytesSE31;
     }
-    else if( this.rom0000 == osBytesSE32_29 ) {
+    else if( this.rom0000 == osBytesSP33_29 ) {
       prgBegAddr   = getMemWord( 0x3C00 );
-      endInstBytes = endInstBytesSE32;
+      endInstBytes = endInstBytesSP33;
     }
     if( (prgBegAddr >= 0)
 	&& (begAddr == prgBegAddr)
@@ -981,7 +1003,9 @@ public class BCS3 extends EmuSys implements
 	  int a = addr;
 	  int b = 0;
 	  while( b < endInstBytes.length ) {
-	    if( ((int) endInstBytes[ b ] & 0xFF) != getMemByte( a ) ) {
+	    if( ((int) endInstBytes[ b ] & 0xFF)
+				!= this.emuThread.getMemByte( a ) )
+	    {
 	      b = -1;
 	      break;
 	    }

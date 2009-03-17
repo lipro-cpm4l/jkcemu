@@ -887,6 +887,7 @@ public class FileSelectDlg
 	this.list.setListData( entries.toArray() );
       }
     }
+    this.labelStatus.setText( defaultStatusText );
   }
 
 
@@ -956,6 +957,7 @@ public class FileSelectDlg
     final FileSystemView fsv     = this.fsv;
     final File           dirFile = this.curDir;
     if( curDir != null ) {
+      this.labelStatus.setText( "Lese Verzeichnis..." );
       Thread t = new Thread()
 			{
 			  public void run()

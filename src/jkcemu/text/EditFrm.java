@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,11 +14,12 @@ import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.*;
 import java.lang.*;
+import java.text.CharacterIterator;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.text.BadLocationException;
+import javax.swing.text.*;
 import jkcemu.Main;
 import jkcemu.programming.*;
 import jkcemu.programming.assembler.*;
@@ -2287,9 +2288,28 @@ public class EditFrm extends BasicFrm implements
         try {
           int pos = textArea.getCaretPosition();
           int row = textArea.getLineOfOffset( pos );
-          int col = pos - textArea.getLineStartOffset( row );
-          statusText = "Z:" + String.valueOf( row + 1 )
-                                + " S:" + String.valueOf( col + 1 );
+	  int bol = textArea.getLineStartOffset( row );
+          int col = pos - bol;
+	  if( col > 0 ) {
+	    Document doc     = textArea.getDocument();
+	    int      tabSize = textArea.getTabSize();
+	    if( (doc != null) && (tabSize > 0) ) {
+	      Segment seg = new Segment();
+	      seg.setPartialReturn( false );
+	      doc.getText( bol, col, seg );
+	      col = 0;
+	      int ch = seg.first();
+	      while( ch != CharacterIterator.DONE ) {
+		if( ch == '\t' ) {
+		  col = ((col / tabSize) + 1) * tabSize;
+		} else {
+		  col++;
+		}
+		ch = seg.next();
+	      }
+	    }
+	  }
+          statusText = String.format( "Z:%d S:%d", row + 1, col + 1 );
         }
         catch( BadLocationException ex ) {}
       }

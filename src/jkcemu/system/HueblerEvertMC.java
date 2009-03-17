@@ -15,7 +15,7 @@ import jkcemu.base.*;
 import z80emu.*;
 
 
-public class HueblerEvertMC extends EmuSys
+public class HueblerEvertMC extends AbstractHueblerMC
 {
   private static final String[] sysCallNames = {
 			"BEGIN", "CI",    "RI",   "COE",
@@ -27,24 +27,19 @@ public class HueblerEvertMC extends EmuSys
 
   private byte[] ramVideo;
   private byte[] ramStatic;
-  private int    keyChar;
-  private Z80CTC ctc;
+  private Z80PIO pio2;
 
 
-  public HueblerEvertMC( EmuThread emuThread )
+  public HueblerEvertMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread );
+    super( emuThread, props );
     fontBytes      = readResource( "/rom/huebler/hemcfont.bin" );
     monBytes       = readResource( "/rom/huebler/mon21.bin" );
     this.ramVideo  = new byte[ 0x0800 ];
     this.ramStatic = new byte[ 0x0400 ];
-
-    Z80CPU cpu = emuThread.getZ80CPU();
-    this.ctc   = new Z80CTC( cpu );
-    cpu.setInterruptSources( this.ctc );
-    cpu.addTStatesListener( this.ctc );
-
-    reset( EmuThread.ResetLevel.POWER_ON );
+    this.pio2      = new Z80PIO( emuThread.getZ80CPU() );
+    createIOSystem();
+    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
@@ -56,17 +51,9 @@ public class HueblerEvertMC extends EmuSys
 
 	/* --- ueberschriebene Methoden --- */
 
-  public void die()
+  public boolean canExtractScreenText()
   {
-    Z80CPU cpu = emuThread.getZ80CPU();
-    cpu.removeTStatesListener( this.ctc );
-    cpu.setInterruptSources( (Z80InterruptSource[]) null );
-  }
-
-
-  public String extractScreenText()
-  {
-    return EmuUtil.extractText( this.ramVideo, 0, 24, 64, 24 );
+    return true;
   }
 
 
@@ -115,15 +102,33 @@ public class HueblerEvertMC extends EmuSys
   }
 
 
-  public int getMinOSAddress()
+  public int getCharColCount()
   {
-    return 0xF000;
+    return 64;
   }
 
 
-  public int getMaxOSAddress()
+  public int getCharHeight()
   {
-    return 0xFBFF;
+    return 8;
+  }
+
+
+  public int getCharRowCount()
+  {
+    return 24;
+  }
+
+
+  public int getCharRowHeight()
+  {
+    return 10;
+  }
+
+
+  public int getCharWidth()
+  {
+    return 6;
   }
 
 
@@ -163,25 +168,28 @@ public class HueblerEvertMC extends EmuSys
   }
 
 
-  public int getScreenBaseHeight()
+  protected int getScreenChar( int chX, int chY )
+  {
+    int idx = (chY * 64) + chX;
+    return (idx >= 0) && (idx < this.ramVideo.length) ?
+					((int) this.ramVideo[ idx ] & 0xFF)
+					: -1;
+  }
+
+
+  public int getScreenHeight()
   {
     return 238;
   }
 
 
-  public int getScreenBaseWidth()
+  public int getScreenWidth()
   {
     return 384;
   }
 
 
-  public boolean getSwapKeyCharCase()
-  {
-    return true;
-  }
-
-
-  public String getSystemName()
+  public String getTitle()
   {
     return "H\u00FCbler/Evert-MC";
   }
@@ -229,40 +237,30 @@ public class HueblerEvertMC extends EmuSys
   }
 
 
-  public void keyReleased()
-  {
-    this.keyChar = 0;
-  }
-
-
-  public boolean keyTyped( char ch )
-  {
-    boolean rv = false;
-    if( (ch > 0) && (ch < 0x7F) ) {
-      this.keyChar = ch;
-      rv           = true;
-    }
-    return rv;
-  }
-
-
   public int readIOByte( int port )
   {
-    int rv = 0;
-    switch( port & 0x3C ) {
-      case 0x08:
-	if( this.keyChar != 0 ) {
-	  if( (port & 0x01) != 0 ) {
-	    rv = 0xFF;
-	  } else {
-	    rv = this.keyChar;
-	  }
-	}
-	break;
+    port &= 0x3F;
 
-      case 0x14:
-	rv = this.ctc.read( port & 0x03 );
-	break;
+    int rv = 0;
+    switch( port ) {
+      case 0x10:
+        rv = this.pio2.readPortA();
+        break;
+
+      case 0x11:
+        rv = this.pio2.readControlA();
+        break;
+
+      case 0x12:
+        rv = this.pio2.readPortB();
+        break;
+
+      case 0x13:
+        rv = this.pio2.readControlB();
+        break;
+
+      default:
+	rv = super.readIOByte( port );
     }
     return rv;
   }
@@ -297,7 +295,7 @@ public class HueblerEvertMC extends EmuSys
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       fillRandom( this.ramStatic );
@@ -337,8 +335,27 @@ public class HueblerEvertMC extends EmuSys
 
   public void writeIOByte( int port, int value )
   {
-    if( (port & 0x3C) == 0x14 )
-      this.ctc.write( port & 0x03, value );
+    port &= 0x3F;
+    switch( port ) {
+      case 0x10:
+	this.pio2.writePortA( value );
+	break;
+
+      case 0x11:
+	this.pio2.writeControlA( value );
+	break;
+
+      case 0x12:
+	this.pio2.writePortB( value );
+	break;
+
+      case 0x13:
+	this.pio2.writeControlB( value );
+	break;
+
+      default:
+	super.writeIOByte( port, value );
+    }
   }
 }
 

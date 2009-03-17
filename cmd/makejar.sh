@@ -24,6 +24,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   rom/huebler/*.bin \
   rom/kc85/*.bin \
   rom/kramermc/*.bin \
+  rom/lc80/*.bin \
   rom/z1013/*.bin \
   rom/z9001/*.bin \
   images/debug/*.png \

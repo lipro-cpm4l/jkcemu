@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,12 +26,15 @@ public abstract class AudioOut extends AudioIO
   protected boolean   enabled;
   protected int       maxPauseTStates;
 
+  private boolean firstPhaseChange;
+
 
   protected AudioOut( Z80CPU z80cpu )
   {
     super( z80cpu );
-    this.enabled         = false;
-    this.maxPauseTStates = 0;
+    this.enabled          = false;
+    this.firstPhaseChange = false;
+    this.maxPauseTStates  = 0;
   }
 
 
@@ -59,31 +62,36 @@ public abstract class AudioOut extends AudioIO
   {
     if( this.enabled && (this.tStatesPerFrame > 0) ) {
       if( this.firstCall ) {
-	this.firstCall   = false;
-	this.lastTStates = this.z80cpu.getProcessedTStates();
-	this.lastPhase   = phase;
+	this.firstCall        = false;
+	this.firstPhaseChange = true;
+	this.lastPhase        = phase;
 
       } else {
 
 	if( phase != this.lastPhase ) {
-	  this.lastPhase  = phase;
-	  int tStates     = this.z80cpu.getProcessedTStates();
-	  int diffTStates = this.z80cpu.calcTStatesDiff(
-						this.lastTStates,
-						tStates );
-	  if( diffTStates > 0 ) {
-	    currentTStates( tStates, diffTStates );
-	    if( tStates > this.lastTStates ) {
+	  this.lastPhase = phase;
+	  if( this.firstPhaseChange ) {
+	    this.firstPhaseChange = false;
+	    this.lastTStates      = this.z80cpu.getProcessedTStates();
+	  } else {
+	    int tStates     = this.z80cpu.getProcessedTStates();
+	    int diffTStates = this.z80cpu.calcTStatesDiff(
+						  this.lastTStates,
+						  tStates );
+	    if( diffTStates > 0 ) {
+	      currentTStates( tStates, diffTStates );
+	      if( tStates > this.lastTStates ) {
 
-	      // Anzahl der zu erzeugenden Samples
-	      int nSamples  = diffTStates / this.tStatesPerFrame;
-	      writeSamples( nSamples, phase );
+		// Anzahl der zu erzeugenden Samples
+		int nSamples  = diffTStates / this.tStatesPerFrame;
+		writeSamples( nSamples, phase );
 
-	      /*
-	       * Anzahl der verstrichenen Taktzyklen auf den Wert
-	       * des letzten ausgegebenen Samples korrigieren
-	       */
-	      this.lastTStates += (nSamples * this.tStatesPerFrame);
+		/*
+		 * Anzahl der verstrichenen Taktzyklen auf den Wert
+		 * des letzten ausgegebenen Samples korrigieren
+		 */
+		this.lastTStates += (nSamples * this.tStatesPerFrame);
+	      }
 	    }
 	  }
 	}

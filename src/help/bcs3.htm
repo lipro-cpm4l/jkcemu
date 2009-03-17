@@ -50,7 +50,7 @@
        <li><a href="bcs3/basic_se31.htm">BASIC-SE 3.1</a>
 	   f&uuml;r 40 sichtbare Zeichen pro Zeile
 	   und 3,5 MHz Taktfrequenz
-       <li><a href="bcs3/sp_basic_32.htm">S/P-BASIC V3.2</a>
+       <li><a href="bcs3/sp_basic_33.htm">S/P-BASIC V3.3</a>
 	   f&uuml;r 29 sichtbare Zeichen pro Zeile
 	   und 2,5 MHz Taktfrequenz
        <li><a href="bcs3/mc_editor.htm">Maschinenkode-Editor</a>
@@ -59,7 +59,7 @@
     </ul>
   <br><br>
 
-  <h3>2.1. Hinweise zu BASIC-SE 3.1 und S/P-BASIC V3.2</h3>
+  <h3>2.1. Hinweise zu BASIC-SE 3.1 und S/P-BASIC V3.3</h3>
     <ul>
       <li>Beim Systemstart pr&uuml;ft das BASIC,
 	  ob der Speicher bereits initialisiert ist
@@ -88,7 +88,7 @@
 	  Speichern und Laden Sie deshalb die BASIC-Programme so,
 	  wie es weiter unter beschrieben ist.
 	  <br><br>
-      <li>S/P-BASIC V3.2 ist nicht abw&auml;rtskompatibel zu BASIC-SE 3.1,
+      <li>S/P-BASIC V3.3 ist nicht abw&auml;rtskompatibel zu BASIC-SE 3.1,
 	  und dieses ist auch nicht abw&auml;rtskompatibel zur Version 2.4,
 	  d.h., BASIC-Programme laufen nur mit der Version,
 	  mit der sie auch eingetippt wurden.
@@ -120,7 +120,7 @@
     Bei Speicherabbilddateien ohne Kopfdaten ist das immer der Fall.
   <br><br>
 
-  <h3>3.2. JKCEMU BASIC-Compiler</h3>
+  <h3>3.2. JKCEMU-BASIC-Compiler</h3>
     Der BCS3 ist von seinem Konzept her als reiner BASIC-Rechner ausgelegt.
     Zur Verwaltung und Benutzung von Maschinencodeprogrammen,
     d.h. von solchen Programmen, die auch ein BASIC-Compiler erzeugt,
@@ -128,6 +128,16 @@
     keine Unterst&uuml;tztung.
     Aus diesem Grund kann auch der JKCEMU BASIC-Compiler keinen
     Programmcode f&uuml;r den BCS3 erzeugen.
+  <br><br>
+
+  <h3>3.3. Neue Betriebssystemversion als externes ROM-Image einbinden</h3>
+    Wenn Sie eine andere Betriebssystemversion als externes ROM-Image
+    einbinden m&ouml;chten,
+    m&uuml;ssen Sie bei den in JKCEMU integrierten BCS3-Betriebssystemen
+    das einstellen, dass die gleichen Adressen f&uuml;r die Bildschirmausgabe
+    verwendet wie die Version, die Sie extern einbinden m&ouml;chten.
+    Anderenfalls ist die Bildschirmausgabe fehlerhaft.
+    Im Zweifelsfall probieren Sie einfach alle Varianten durch.
 </body>
 </html>
 

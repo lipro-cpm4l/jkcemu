@@ -51,6 +51,9 @@ Jegliche Gewaehrleistung und Haftung ist ausgeschlossen!
 4. Starten Sie JKCEMU
    - unter Linux/Unix mit: "java -jar /tmp/jkcemu.jar"
    - unter Windows in der DOS-Box mit: "javaw.exe -jar C:\jkcemu.jar"
+5. Legen Sie auf dem Desktop eine "Verknuepfung zu einem Programm" an,
+   und tragen dort die in der Console/DOS-Box erfolgreich verwendete
+   Kommandozeile ein.
 
 
 4. Compilieren

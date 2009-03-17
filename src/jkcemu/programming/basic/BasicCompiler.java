@@ -23,7 +23,9 @@ import jkcemu.system.*;
 
 public class BasicCompiler extends PrgThread
 {
-  private enum Platform { AC1, HC900, HEMC, KRAMERMC, Z1013, Z9001, UNKNOWN };
+  private enum Platform {
+			AC1, HC900, HUEBLERMC, KRAMERMC,
+			Z1013, Z9001, UNKNOWN };
 
   private enum LibItem { INLN, R_INT, P_HEXA, P_INT, P_LTXT, P_TEXT, P_TAB,
 			DATA, DREAD,
@@ -47,7 +49,7 @@ public class BasicCompiler extends PrgThread
   private BasicSourceFormatter sourceFormatter;
   private StringBuilder        asmOut;
   private StringBuilder        dataOut;
-  private String               sysName;
+  private String               sysTitle;
   private String               endOfLineLabel;
   private Stack<String>        elseLabels;
   private Platform             platform;
@@ -87,7 +89,7 @@ public class BasicCompiler extends PrgThread
       this.sourceFormatter = new BasicSourceFormatter( capacity );
     }
     EmuSys emuSys = emuThread.getEmuSys();
-    this.sysName  = emuSys.getSystemName();
+    this.sysTitle = emuSys.getTitle();
     this.platform = Platform.UNKNOWN;
     if( emuSys instanceof AC1 ) {
       this.platform = Platform.AC1;
@@ -95,11 +97,13 @@ public class BasicCompiler extends PrgThread
     else if( emuSys instanceof KC85 ) {
       this.platform = Platform.HC900;
     }
-    else if( emuSys instanceof HueblerEvertMC ) {
-      this.platform  = Platform.HEMC;
+    else if( (emuSys instanceof HueblerEvertMC)
+	     || (emuSys instanceof HueblerGraphicsMC) )
+    {
+      this.platform = Platform.HUEBLERMC;
     }
     else if( emuSys instanceof KramerMC ) {
-      this.platform  = Platform.KRAMERMC;
+      this.platform = Platform.KRAMERMC;
     }
     else if( emuSys instanceof Z1013 ) {
       this.platform  = Platform.Z1013;
@@ -189,7 +193,7 @@ public class BasicCompiler extends PrgThread
 		String.format(
 			"Fehler: Das gerade emulierte System (%s)"
 				+ " wird nicht unterst\u00FCtzt.\n",
-			this.sysName ) );
+			this.sysTitle ) );
 	  incErrorCount();
 	} else {
 	  parseSource();
@@ -4093,7 +4097,7 @@ public class BasicCompiler extends PrgThread
 	  buf.append( "\tRET\n" );
 	  break;
 
-	case HEMC:
+	case HUEBLERMC:
 	  buf.append( "\tJP\t0F01EH\n" );
 	  break;
 
@@ -4126,7 +4130,7 @@ public class BasicCompiler extends PrgThread
 		+ "\tDEFB\t24H\n" );
 	    break;
 
-	  case HEMC:
+	  case HUEBLERMC:
 	    buf.append( "\tCP\t0DH\n"
 		+ "\tJR\tNZ,XOUTC1\n"
 		+ "\tLD\tC,A\n"
@@ -4178,7 +4182,7 @@ public class BasicCompiler extends PrgThread
 		+ "\tRET\n" );
 	    break;
 
-	  case HEMC:
+	  case HUEBLERMC:
 	    buf.append( "XINCH:\tJP\t0F003H\n" );
 	    break;
 
@@ -4221,7 +4225,7 @@ public class BasicCompiler extends PrgThread
 		+ "XINKE2:\tRET\n" );
 	    break;
 
-	  case HEMC:
+	  case HUEBLERMC:
 	    buf.append( "XINKEY:\tCALL\t0F012H\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
