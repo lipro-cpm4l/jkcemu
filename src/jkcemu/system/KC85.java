@@ -22,37 +22,40 @@ public class KC85 extends EmuSys implements
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
-  private int[] rgbValues = {
+  private static final int SCREEN_WIDTH  = 320;
+  private static final int SCREEN_HEIGHT = 256;
 
-			// primaere Vordergrundfarben
-			0,              // schwarz
-			0x0000FF,       // blau
-			0xFF0000,       // rot
-			0xFF00FF,       // purpur
-			0x00FF00,       // gruen
-			0x00FFFF,       // tuerkis
-			0xFFFF00,       // gelb
-			0xFFFFFF,       // weiss
+  private static final int[][] basicRGBValues = {
 
-			// Vordergrundfarben mit 30 Grad Drehung im Farbkreis
-			0,              // schwarz
-			0x4B00B4,       // violett
-			0xB44B00,       // orange
-			0xB4008A,       // purpurrot
-			0x00B44B,       // gruenblau
-			0x008AB4,       // blaugruen
-			0x8AFF00,       // gelbgruen
-			0xFFFFFF,       // weiss
+				// primaere Vordergrundfarben
+				{ 0,   0,   0   },	// schwarz
+				{ 0,   0,   255 },	// blau
+				{ 255, 0,   0   },	// rot
+				{ 255, 0,   255 },	// purpur
+				{ 0,   255, 0   },	// gruen
+				{ 0,   255, 255 },	// tuerkis
+				{ 255, 255, 0   },	// gelb
+				{ 255, 255, 255 },	// weiss
 
-			// Hintergrundfarben (30% dunkler)
-			0,              // schwarz
-			0x0000B4,       // blau
-			0xB40000,       // rot
-			0xB400B4,       // purpur
-			0x00B400,       // gruen
-			0x00B4B4,       // tuerkis
-			0xB4B400,       // gelb
-			0xB4B4B4 };     // weiss
+				// Vordergrundfarben mit 30 Grad Drehung im Farbkreis
+				{ 0,   0,   0   },	// schwarz
+				{ 75,  0,   180 },	// violett
+				{ 180, 75,  0   },	// orange
+				{ 180, 0,   138 },	// purpurrot
+				{ 0,   180, 75  },	// gruenblau
+				{ 0,   138, 180 },	// blaugruen
+				{ 138, 255, 0   },	// gelbgruen
+				{ 255, 255, 255 },	// weiss
+
+				// Hintergrundfarben (30% dunkler)
+				{ 0,   0,   0   },	// schwarz
+				{ 0,   0,   180 },	// blau
+				{ 180, 0,   0   },	// rot
+				{ 180, 0,   180 },	// purpur
+				{ 0,   180, 0   },	// gruen
+				{ 0,   180, 180 },	// tuerkis
+				{ 180, 180, 0   },	// gelb
+				{ 180, 180, 180 } };	// weiss
 
   /*
    * Beim KC85/2..4 weicht der Zeichensatz vom ASCII-Standard etwas ab.
@@ -179,6 +182,7 @@ public class KC85 extends EmuSys implements
   private byte[]                 ramColor1;
   private byte[]                 ramPixel0;
   private byte[]                 ramPixel1;
+  private int[]                  rgbValues;
   private Color[]                colors;
   private volatile BufferedImage screenImage;
   private volatile BufferedImage screenImage2;
@@ -189,7 +193,7 @@ public class KC85 extends EmuSys implements
 
   public KC85( EmuThread emuThread, Properties props )
   {
-    super( emuThread );
+    super( emuThread, props );
     this.sysName = EmuUtil.getProperty( props, "jkcemu.system" );
     if( this.sysName.startsWith( "KC85/2" )
 	|| this.sysName.startsWith( "HC900" ) )
@@ -247,12 +251,11 @@ public class KC85 extends EmuSys implements
     this.ramPixel0 = new byte[ 0x4000 ];
     this.ramPixel1 = new byte[ 0x4000 ];
 
-    this.colors = new Color[ rgbValues.length ];
-    for( int i = 0; i < rgbValues.length; i++ ) {
-      this.colors[ i ] = new Color( rgbValues[ i ] );
-    }
     this.screenImage  = null;
     this.screenImage2 = null;
+    this.rgbValues    = new int[ basicRGBValues.length ];
+    this.colors       = new Color[ basicRGBValues.length ];
+    createColors( props );
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( cpu );
@@ -263,7 +266,7 @@ public class KC85 extends EmuSys implements
     cpu.addTStatesListener( this );
     cpu.addMaxSpeedListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON );
+    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged();
   }
 
@@ -486,6 +489,7 @@ public class KC85 extends EmuSys implements
 
   public void applySettings( Properties props )
   {
+    super.applySettings( props );
     if( EmuUtil.getBooleanProperty(
 				props,
 				"jkcemu.kc85.emulate_video_timing",
@@ -493,14 +497,21 @@ public class KC85 extends EmuSys implements
     {
       if( this.screenImage2 == null ) {
 	this.screenImage2 = new BufferedImage(
-					getScreenBaseWidth(),
-					getScreenBaseHeight(),
+					SCREEN_WIDTH,
+					SCREEN_HEIGHT,
 					BufferedImage.TYPE_INT_RGB );
       }
       this.screenImage = this.screenImage2;
     } else {
       this.screenImage = null;
     }
+    createColors( props );
+  }
+
+
+  public boolean canExtractScreenText()
+  {
+    return true;
   }
 
 
@@ -511,73 +522,6 @@ public class KC85 extends EmuSys implements
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
-  }
-
-
-  public String extractScreenText()
-  {
-    StringBuilder buf = new StringBuilder( 32 * 41 );
-    for( int i = 0; i < 32; i++ ) {
-      int rowAddr = 0xB200 + (i * 40);
-      int nSpaces = 0;
-      for( int k = 0; k < 40; k++ ) {
-	int b = this.emuThread.getMemByte( rowAddr + k );
-	if( (b == 0) || b == 0x20 ) {
-	  nSpaces++;
-	}
-	else if( (b > 0x20) && (b < 0x7F) ) {
-	  while( nSpaces > 0 ) {
-	    buf.append( (char) '\u0020' );
-	    --nSpaces;
-	  }
-	  switch( b ) {
-	    case 0x5B:					// volles Rechteck
-	      break;					// -> herausfiltern
-	    case 0x5C:
-	      buf.append( (char) '|' );
-	      break;
-	    case 0x5D:
-	      buf.append( (char) '\u00AC' );		// Negationszeichen
-	      break;
-	    case 0x60:
-	      if( this.kcTypeNum > 2 ) {
-		buf.append( (char) '\u00A9' );		// Copyright-Symbol
-	      } else {
-		buf.append( (char) '@' );
-	      }
-	      break;
-	    case 0x7B:
-	      if( this.kcTypeNum > 2 ) {
-		buf.append( (char) '\u00E4' );		// ae-Umlaut
-	      } else {
-		buf.append( (char) '|' );
-	      }
-	      break;
-	    case 0x7C:
-	      if( this.kcTypeNum > 2 ) {
-		buf.append( (char) '\u00F6' );		// oe-Umlaut
-	      } else {
-		buf.append( (char) '\u00AC' );		// Negationszeichen
-	      }
-	      break;
-	    case 0x7D:
-	      if( this.kcTypeNum > 2 ) {
-		buf.append( (char) '\u00FC' );		// ue-Umlaut
-	      }
-	      break;
-	    case 0x7E:
-	      if( this.kcTypeNum > 2 ) {
-		buf.append( (char) '\u00DF' );		// sz-Umlaut
-	      }
-	      break;
-	    default:
-	      buf.append( (char) b );
-	  }
-	}
-      }
-      buf.append( (char) '\n' );
-    }
-    return buf.toString();
   }
 
 
@@ -678,15 +622,33 @@ public class KC85 extends EmuSys implements
   }
 
 
-  public int getMinOSAddress()
+  public int getCharColCount()
   {
-    return 0xE000;
+    return 40;
   }
 
 
-  public int getMaxOSAddress()
+  public int getCharHeight()
   {
-    return 0xFFFF;
+    return 8;
+  }
+
+
+  public int getCharRowCount()
+  {
+    return 32;
+  }
+
+
+  public int getCharRowHeight()
+  {
+    return 8;
+  }
+
+
+  public int getCharWidth()
+  {
+    return 8;
   }
 
 
@@ -769,21 +731,83 @@ public class KC85 extends EmuSys implements
   }
 
 
-  public int getScreenBaseHeight()
+  protected int getScreenChar( int chX, int chY )
   {
-    return 256;
+    int ch  = -1;
+    int idx = 0x3200 + (chY * 40) + chX;
+    if( (idx >= 0) && (idx < this.ramPixel0.length) ) {
+      ch = (int) this.ramPixel0[ idx ] & 0xFF;
+      switch( ch ) {
+	case 0:
+	  ch = 0x20;
+	  break;
+
+	case 0x5B:			// volles Rechteck -> herausfiltern
+	  ch = -1;
+	  break;
+
+	case 0x5C:
+	  ch = '|';
+	  break;
+
+	case 0x5D:
+	  ch = '\u00AC';		// Negationszeichen
+	  break;
+
+	case 0x60:
+	  if( this.kcTypeNum > 2 ) {
+	    ch = '\u00A9';		// Copyright-Symbol
+	  } else {
+	    ch = '@';
+	  }
+	  break;
+
+	case 0x7B:
+	  if( this.kcTypeNum > 2 ) {
+	    ch = '\u00E4';		// ae-Umlaut
+	  } else {
+	    ch = '|' ;
+	  }
+	  break;
+
+	case 0x7C:
+	  if( this.kcTypeNum > 2 ) {
+	    ch = '\u00F6';		// oe-Umlaut
+	  } else {
+	    ch = '\u00AC';		// Negationszeichen
+	  }
+	  break;
+
+	case 0x7D:
+	  if( this.kcTypeNum > 2 ) {
+	    ch = '\u00FC';		// ue-Umlaut
+	  } else {
+	    ch = -1;
+	  }
+	  break;
+
+	case 0x7E:
+	  if( this.kcTypeNum > 2 ) {
+	    ch = '\u00DF';		// sz-Umlaut
+	  } else {
+	    ch = -1;
+	  }
+	  break;
+      }
+    }
+    return ch;
   }
 
 
-  public int getScreenBaseWidth()
+  public int getScreenHeight()
   {
-    return 320;
+    return SCREEN_HEIGHT;
   }
 
 
-  public Image getScreenImage()
+  public int getScreenWidth()
   {
-    return this.screenImage;
+    return SCREEN_WIDTH;
   }
 
 
@@ -793,7 +817,7 @@ public class KC85 extends EmuSys implements
   }
 
 
-  public String getSystemName()
+  public String getTitle()
   {
     return this.sysName;
   }
@@ -802,6 +826,23 @@ public class KC85 extends EmuSys implements
   public boolean hasKCBasicInROM()
   {
     return (this.kcTypeNum > 2);
+  }
+
+
+  protected boolean isExtROMSwitchableAt( int addr )
+  {
+    boolean rv = true;
+    if( (addr >= 0x8000) && (addr < 0xC000) ) {
+      if( this.irmEnabled ) {
+	rv = false;
+      }
+    }
+    else if( (addr >= 0xC000) && (addr < 0xE000) ) {
+      if( (this.kcTypeNum > 3) && !this.caosC000Enabled ) {
+	rv = false;
+      }
+    }
+    return rv;
   }
 
 
@@ -918,6 +959,28 @@ public class KC85 extends EmuSys implements
   }
 
 
+  public boolean paintScreen( Graphics g, int xOffs, int yOffs, int screenScale )
+  {
+    boolean rv  = false;
+    Image   img = this.screenImage;
+    if( img != null ) {
+      if( screenScale > 1 ) {
+	g.drawImage(
+		img,
+		xOffs,
+		yOffs,
+		SCREEN_WIDTH * screenScale,
+		SCREEN_HEIGHT * screenScale,
+		this );
+      } else {
+	g.drawImage( img, xOffs, yOffs, this );
+      }
+      rv = true;
+    }
+    return rv;
+  }
+
+
   public int readIOByte( int port )
   {
     int rv = 0xFF;
@@ -958,7 +1021,7 @@ public class KC85 extends EmuSys implements
   {
     int rv = 0;
     String s = null;
-    int    b = getMemByte( addr );
+    int    b = this.emuThread.getMemByte( addr );
     switch( b ) {
       case 0xC3:
 	s = "JP";
@@ -969,7 +1032,7 @@ public class KC85 extends EmuSys implements
     }
     if( s != null ) {
       if( getMemWord( addr + 1 ) == 0xF003 ) {
-	int idx = getMemByte( addr + 3 );
+	int idx = this.emuThread.getMemByte( addr + 3 );
 	int bol = buf.length();
 	buf.append( String.format( "%04X  %02X 03 F0", addr, b ) );
 	appendSpacesToCol( buf, bol, colMnemonic );
@@ -1020,7 +1083,7 @@ public class KC85 extends EmuSys implements
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       Arrays.fill( this.ram80, (byte) 0 );
@@ -1220,6 +1283,22 @@ public class KC85 extends EmuSys implements
 
 	/* --- private Methoden --- */
 
+  private void createColors( Properties props )
+  {
+    double brightness = getBrightness( props );
+    if( (brightness >= 0.0) && (brightness <= 1.0) ) {
+      for( int i = 0; i < basicRGBValues.length; i++ ) {
+	int r = (int) Math.round( basicRGBValues[ i ][ 0 ] * brightness );
+	int g = (int) Math.round( basicRGBValues[ i ][ 1 ] * brightness );
+	int b = (int) Math.round( basicRGBValues[ i ][ 2 ] * brightness );
+
+	this.rgbValues[ i ] = (r << 16) | (g << 8) | b;
+	this.colors[ i ]    = new Color( this.rgbValues[ i ] );
+      }
+    }
+  }
+
+
   private int getColorIndex( int colorByte, boolean foreground )
   {
     if( !this.hiColorRes
@@ -1279,7 +1358,7 @@ public class KC85 extends EmuSys implements
 	    int p = ramPixel[ idx ];
 	    int c = ramColor[ idx ];
 	    int m = 0x80;
-	    for( int i = 0; (i < 8) && (x < 320); i++ ) {
+	    for( int i = 0; (i < 8) && (x < SCREEN_WIDTH); i++ ) {
 	      int colorIdx = 0;
 	      if( this.hiColorRes ) {
 		if( (p & m) != 0 ) {
@@ -1332,7 +1411,7 @@ public class KC85 extends EmuSys implements
 	    int p = this.ramPixel0[ pIdx ];
 	    int c = this.ramPixel0[ cIdx ];
 	    int m = 0x80;
-	    for( int i = 0; (i < 8) && (x < 320); i++ ) {
+	    for( int i = 0; (i < 8) && (x < SCREEN_WIDTH); i++ ) {
 	      int colorIdx = getColorIndex( c, (p & m) != 0 );
 	      if( (colorIdx >= 0) && (colorIdx < rgbValues.length) ) {
 		img.setRGB( x++, y, rgbValues[ colorIdx ] );
@@ -1345,4 +1424,3 @@ public class KC85 extends EmuSys implements
     }
   }
 }
-

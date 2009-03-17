@@ -50,7 +50,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public Z1013( EmuThread emuThread, Properties props )
   {
-    super( emuThread );
+    super( emuThread, props );
     if( z1013FontBytes == null ) {
       z1013FontBytes = readResource( "/rom/z1013/z1013font.bin" );
     }
@@ -99,7 +99,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
     this.keyboard = new Keyboard( this.pio );
     this.keyboard.applySettings( props );
 
-    reset( EmuThread.ResetLevel.POWER_ON );
+    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
@@ -138,17 +138,17 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
 	/* --- ueberschriebene Methoden --- */
 
+  public boolean canExtractScreenText()
+  {
+    return true;
+  }
+
+
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeAddressListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
-  }
-
-
-  public String extractScreenText()
-  {
-    return extractMemText( 0xEC00, 32, 32, 32 );
   }
 
 
@@ -199,19 +199,33 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public int getMinOSAddress()
+  public int getCharColCount()
   {
-    return MEM_OS;
+    return this.mode64x16 ? 64 : 32;
   }
 
 
-  public int getMaxOSAddress()
+  public int getCharHeight()
   {
-    int rv = MEM_OS;
-    if( this.romOS != null ) {
-      rv = MEM_OS + this.romOS.length - 1;
-    }
-    return rv;
+    return 8;
+  }
+
+
+  public int getCharRowCount()
+  {
+    return this.mode64x16 ? 16 : 32;
+  }
+
+
+  public int getCharRowHeight()
+  {
+    return this.mode64x16 ? 16 : 8;
+  }
+
+
+  public int getCharWidth()
+  {
+    return 8;
   }
 
 
@@ -244,19 +258,33 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public int getScreenBaseHeight()
+  protected int getScreenChar( int chX, int chY )
+  {
+    int ch  = -1;
+    int idx = (chY * (this.mode64x16 ? 64 : 32)) + chX;
+    if( (idx >= 0) && (idx < this.ramVideo.length) ) {
+      ch = (int) this.ramVideo[ idx ] & 0xFF;
+      if( this.altFontEnabled && (ch >= 0xA0) && (ch < 0xFF) ) {
+	ch &= 0x7F; 		// 0xA0 bis 0xFE: invertierte Zeichen
+      }
+    }
+    return ch;
+  }
+
+
+  public int getScreenHeight()
   {
     return this.mode64x16 ? 248 : 256;
   }
 
 
-  public int getScreenBaseWidth()
+  public int getScreenWidth()
   {
     return this.mode64x16 ? 512 : 256;
   }
 
 
-  public String getSystemName()
+  public String getTitle()
   {
     return "Z1013";
   }
@@ -265,6 +293,12 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   public boolean getSwapKeyCharCase()
   {
     return true;
+  }
+
+
+  protected boolean isExtROMSwitchableAt( int addr )
+  {
+    return !this.romDisabled || (addr < MEM_OS);
   }
 
 
@@ -347,8 +381,9 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 	  break;
 
 	case 2:
-	  value = (this.emuThread.readAudioPhase() ? 0x40 : 0)
-					| (this.pio.readPortB() & 0xBF);
+	  this.pio.putInValuePortB(
+			this.emuThread.readAudioPhase() ? 0x40 : 0, 0x40 );
+	  value = this.pio.readPortB();
 	  break;
 
 	case 3:
@@ -370,7 +405,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   {
     int rv  = 0;
     int bol = buf.length();
-    int b   = getMemByte( addr );
+    int b   = this.emuThread.getMemByte( addr );
     if( b == 0xE7 ) {
       buf.append( String.format( "%04X  E7", addr ) );
       appendSpacesToCol( buf, bol, colMnemonic );
@@ -392,7 +427,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       addr += rv;
 
       bol = buf.length();
-      b   = getMemByte( addr );
+      b   = this.emuThread.getMemByte( addr );
       buf.append( String.format( "%04X  %02X", addr, b ) );
       appendSpacesToCol( buf, bol, colMnemonic );
       buf.append( "DB" );
@@ -447,7 +482,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     boolean old64x16 = this.mode64x16;
 

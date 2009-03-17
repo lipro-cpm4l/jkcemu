@@ -88,9 +88,9 @@ public class KramerMC extends EmuSys implements
   private Z80PIO       pio;
 
 
-  public KramerMC( EmuThread emuThread )
+  public KramerMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread );
+    super( emuThread, props );
     if( rom0000 == null ) {
       rom0000 = readResource( "/rom/kramermc/rom_0000.bin" );
     }
@@ -115,7 +115,7 @@ public class KramerMC extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON );
+    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged();
   }
 
@@ -170,18 +170,18 @@ public class KramerMC extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  public boolean canExtractScreenText()
+  {
+    return true;
+  }
+
+
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
-  }
-
-
-  public String extractScreenText()
-  {
-    return EmuUtil.extractText( this.ramVideo, 0, 16, 64, 64 );
   }
 
 
@@ -218,15 +218,33 @@ public class KramerMC extends EmuSys implements
   }
 
 
-  public int getMinOSAddress()
+  public int getCharColCount()
   {
-    return 0;
+    return 64;
   }
 
 
-  public int getMaxOSAddress()
+  public int getCharHeight()
   {
-    return rom0000 != null ? (rom0000.length - 1) : 0;
+    return 8;
+  }
+
+
+  public int getCharRowCount()
+  {
+    return 16;
+  }
+
+
+  public int getCharRowHeight()
+  {
+    return 8;
+  }
+
+
+  public int getCharWidth()
+  {
+    return 6;
   }
 
 
@@ -283,19 +301,28 @@ public class KramerMC extends EmuSys implements
   }
 
 
-  public int getScreenBaseHeight()
+  protected int getScreenChar( int chX, int chY )
+  {
+    int idx = (chY * 64) + chX;
+    return (idx >= 0) && (idx < this.ramVideo.length) ?
+					((int) this.ramVideo[ idx ] & 0xFF)
+					: -1;
+  }
+
+
+  public int getScreenHeight()
   {
     return 128;
   }
 
 
-  public int getScreenBaseWidth()
+  public int getScreenWidth()
   {
     return 384;
   }
 
 
-  public String getSystemName()
+  public String getTitle()
   {
     return "Kramer-MC";
   }
@@ -491,7 +518,7 @@ public class KramerMC extends EmuSys implements
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       fillRandom( ramVideo );

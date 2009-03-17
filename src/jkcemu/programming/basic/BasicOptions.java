@@ -275,6 +275,11 @@ public class BasicOptions extends PrgOptions
       if( emuSys instanceof AC1 ) {
 	rv = 0x2000;
       }
+      else if( (emuSys instanceof HueblerEvertMC)
+	       || (emuSys instanceof HueblerGraphicsMC) )
+      {
+	rv = 0x8000;
+      }
       else if( emuSys instanceof KramerMC ) {
 	rv = 0x1000;
       }

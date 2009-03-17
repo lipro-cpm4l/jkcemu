@@ -1,7 +1,7 @@
 <html>
 <body>
-  <h1>S/P-BASIC V3.2</h1>
-    S/P-BASIC V3.2 ist eine von Frank Pr&uuml;fer geschaffene
+  <h1>S/P-BASIC V3.3</h1>
+    S/P-BASIC V3.3 ist eine von Frank Pr&uuml;fer geschaffene
     Weiterentwicklung von BASIC-SE 3.1.
     Nachfolgend wird nur auf die wesentlichen Unterschiede eingegangen.
   <br><br>
@@ -21,6 +21,20 @@
 	</td>
 	  Aufruf eines Maschinencodeunterprogramms ohne R&uuml;ckgabe
 	  eines Wertes
+	</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>IF &lt;Bedingung&gt; THEN ...</td>
+	</td>
+	  Bedingte Programmausf&uuml;hrung,<br>
+	  Die IF-Anweisung hat sich syntaktisch nicht ge&auml;ndert.
+	  Es gibt allerdings Unterschiede in der Logik,
+	  wenn hinter dem Schl&uuml;sselwort THEN mehr als eine Anweisung
+	  folgen:
+	  Ist die Bedingung nicht erf&uuml;llt,
+	  wird mit der n&auml;chsten Programmzeile und nicht
+	  wie bei BASIC-SE 3.1 mit der &uuml;bern&auml;chsten Anweisung
+	  hinter THEN fortgesetzt.
 	</td>
       </tr>
       <tr>

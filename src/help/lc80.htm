@@ -1,0 +1,210 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des LC80</h1>
+
+  <h2>1. Emulierte Hardware</h2>
+    Die emulierte Hardware unterscheidet sich je nach Einstellung:
+    <ul>
+      <li>LC80 mit ROM 2xU505:<br>
+	<ul>
+	  <li>2 KByte ROM im Adressbereich 0000-03FF und 0800-0BFF
+	  <li>1 KByte RAM im Adressbereich 2000-23FF
+	  <li>Kassettenrecorderanschluss
+	</ul>
+	Aufgrund der unvollst&auml;ndigen Adressdekodierung
+	ist der ROM-Bereich 0000-03FF auch im Adressbereich 0400-07FF
+	sowie der ROM-Bereich 0800-0BFF auch im Adressbereich 0C00-0FFF
+	sichtbar.
+	<br><br>
+
+      <li>LC80 mit ROM 2716:<br>
+	<ul>
+	  <li>2 KByte ROM im Adressbereich 0000-07FF
+	  <li>4 KByte RAM im Adressbereich 2000-3FFF
+	  <li>Kassettenrecorderanschluss
+	</ul>
+	Vom Hersteller wurde diese LC80-Version nur mit 1 KByte RAM
+	ausgeliefert.
+	Damit aber JKCEMU auch eine Konfiguration anbietet,
+	die das originale Monitorprogramm mit dem maximalen RAM-Ausbau vereint,
+	werden 4 KByte RAM emuliert.
+	<br><br>
+
+      <li>LC80.2:<br>
+	<ul>
+	  <li>4 KByte ROM im Adressbereich 0000-0FFF
+	  <li>4 KByte RAM im Adressbereich 2000-3FFF
+	  <li>Kassettenrecorderanschluss
+	</ul>
+	<br><br>
+
+      <li>LC80e:<br>
+	<ul>
+	  <li>12 KByte ROM im Adressbereich 0000-1FFF und C000-CFFF
+	  <li>4 KByte RAM im Adressbereich 2000-3FFF
+	  <li>Kassettenrecorderanschluss
+	</ul>
+    </ul>
+  <br>
+    Bei allen LC80-Versionen au&szlig;er dem LC80e
+    ist aufgrund der unvollst&auml;ndigen Adressdekodierung
+    der Adressbereich 0000-3FFF auch unter 4000-7FFF, 8000-BFFF
+    sowie unter C000-FFFF sichtbar.
+  <br><br>
+    <b>Achtung!</b> Beim LC80 mit U505-Best&uuml;ckung befindet sich
+    ein Teil des Monitorprogramms und damit auch der Systemfunktionen
+    auf anderen Adressen.
+    Programme, die diese Systemfunktionen benutzen,
+    laufen deshalb entweder nicht oder nur auf dieser LC80-Version.
+  <br><br>
+
+  <h3>1.1. Tastatur</h3>
+    Die Tabelle zeigt, wie die LC80-Tasten auf die Tastatur
+    des Emulatorrechners abgebildet werden:
+    <br>
+    <table border="1">
+      <tr><th>LC80-Taste</th><th>Taste im Emulator</th><th>Bedeutung</th></tr>
+      <tr><td>ADR</td><td>F1</td><td>Adresseingabe einleiten</td></tr>
+      <tr><td>DAT</td><td>F2</td><td>Dateneingabe einleiten</td></tr>
+      <tr><td>LD</td><td>F3 oder L</td><td>Datei von Kassette laden</td></tr>
+      <tr>
+	<td>ST</td>
+	<td>F4 oder S</td>
+	<td>Datei auf Kassette speichern</td>
+      </tr>
+      <tr>
+	<td>EX</td>
+	<td>F5 oder X</td>
+	<td>Programm/Aktion ausf&uuml;hren</td>
+      </tr>
+      <tr><td>RES</td><td>Escape</td><td>Zur&uuml;cksetzen (RESET)</td></tr>
+      <tr>
+	<td>NMI</td>
+	<td>N</td>
+	<td>Nicht maskierbaren Interrupt ausl&ouml;sen</td>
+      </tr>
+      <tr>
+	<td>+</td>
+	<td>+</td>
+	<td>N&auml;chste Adresse / n&auml;chster Arbeitsschritt</td>
+      </tr>
+      <tr>
+	<td>-</td>
+	<td>-</td>
+	<td>Vorherige Adresse / vorheriger Arbeitsschritt</td>
+      </tr>
+      <tr><td>0...9</td><td>0...9</td><td>Adress-/Dateneingabe</td></tr>
+      <tr><td>A...F</td><td>A...F</td><td>Adress-/Dateneingabe</td></tr>
+    </table>
+  <br>
+    <b>Achtung!</b> Escape und N l&ouml;sen der Einfachheit halber
+    RESET bzw. NMI ohne Sicherheitsabfrage aus,
+    auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
+    aktiviert ist.
+  <br><br>
+
+  <h2>2. Im ROM enthaltene Software</h2>
+    <ul>
+      <li>LC80 mit 1 KByte ROM:<br>
+	<ul>
+	  <li>Originales Monitorprprogramm
+	</ul>
+      <li>LC80.2:<br>
+	<ul>
+	  <li>Monitorprogramm von Eckhard Buschendorf
+	</ul>
+      <li>LC80e:<br>
+	<ul>
+	  <li>Originales Monitorprprogramm
+	  <li>Schachprogramm SC-80
+	</ul>
+    </ul>
+    Die originalen Monitorprogramme der einzelnen LC80-Versionen
+    sind funktional gleich, unterscheiden sich aber in ihrem
+    bin&auml;ren Abbild, vorallem beim LC80e.
+  <br><br>
+
+  <h3>2.1. Bedienungshinweise zum originalen Monitorprogramm</h3>
+    Nach dem Einschalten spielt der LC80 eine Melodie ab.
+    Damit Sie diese auch im Emulator h&ouml;ren k&ouml;nnen,
+    m&uuml;ssen Sie entweder die Audio-Funktion
+    <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> oder
+    <a href="audio.htm#data_out">Daten am Audio-Ausgang ausgeben</a>
+    aktivieren und anschlie&szlig;end den Men&uuml;punkt
+    <em>Einschalten (Power On)</em> im Men&uuml; <em>Extra</em> aufrufen.
+  <br><br>
+
+  <h4>2.1.1. Anzeige</h4>
+    Bei Adressein- und -ausgaben ist die Anzeige &uuml;blicherweise
+    zweigeteilt:
+    Die ersten vier Stellen zeigen die Adresse und
+    die letzten beiden Stellen das Datenbyte an,
+    welches von dieser Adresse gelesen wurde.
+  <br><br>
+    Links von der Anzeige werden die beiden LEDs emuliert:
+    <br>
+    <table border="1">
+      <tr><td>Gr&uuml;ne LED:</td><td>Ausgabe</td></tr>
+      <tr><td>Rote LED:</td><td>HALT-Zustand</td></tr>
+    </table>
+  <br><br>
+
+  <h4>2.1.2. Programm von Kassette laden</h4>
+    <em>RES</em> &rarr; <em>LD</em> &rarr; <em>&lt;Dateiname&gt;</em>
+    &rarr; <em>EX</em> 
+  <br><br>
+    Der Dateiname ist eine vierstellige hexadezimale Zahl.
+  <br><br>
+    Wenn Sie den Dateinamen nicht kennen,
+    dann geben Sie irgendeinen ein.
+    In dem Fall, d.h. wenn der Dateiname falsch ist,
+    wird die Datei zwar nicht geladen,
+    aber der LC80 zeigt den auf Kassette gespeicherten Dateinamen kurz an,
+    sobald die entsprechende Bandstelle gerade gelesen wird.
+  <br><br>
+    Nach dem Einlesen sehen Sie im Display die Endadresse + 1
+    oder im Fehlerfall die Ausschrift <em>Error</em>.
+  <br><br>
+    <b>Achtung!</b> In JKCEMU m&uuml;ssen Sie auch die eingangsseitige
+    Emulation des Kassettenrecorderanschlusses aktivieren,
+    entweder mit der Audio-Funktion
+    <a href="audio.htm#data_in">Daten vom Audio-Eingang lesen</a>
+    oder mit der Funktion <a href="audio.htm#file_in">Sound-Datei lesen</a>.
+  <br><br>
+
+  <h4>2.1.3. Programm auf Kassette speichern</h4>
+    <em>RES</em> &rarr; <em>ST</em> &rarr; <em>&lt;Dateiname&gt;</em>
+    &rarr; <em>+</em> &rarr; <em>&lt;Anfangsadresse&gt;</em>
+    &rarr; <em>+</em> &rarr; <em>&lt;Endadresse + 1&gt;</em>
+    &rarr; <em>EX</em> 
+  <br><br>
+    Dateiname und Adressangaben sind jeweils eine vierstellige
+    hexadezimale Zahl.
+  <br><br>
+    <b>Achtung!</b> In JKCEMU m&uuml;ssen Sie auch die ausgangsseitige
+    Emulation des Kassettenrecorderanschlusses aktivieren,
+    entweder mit der Audio-Funktion
+    <a href="audio.htm#data_out">Daten am Audio-Ausgang ausgeben</a>
+    oder mit der Funktion
+    <a href="audio.htm#file_out">Sound-Datei speichern</a>.
+  <br><br>
+
+  <h4>2.1.4. Programm starten</h4>
+    <em>RES</em> &rarr; <em>&lt;Anfangsadresse&gt;</em> &rarr; <em>EX</em> 
+  <br><br>
+    Die Adresse ist eine vierstellige hexadezimale Zahl.
+  <br><br>
+    Die meisten Spiel- und Anwendungsprogramme werden auf Adresse 2000
+    (RAM-Anfang) gestartet.
+  <br><br>
+
+  <h4>2.1.5. Schachprogramm SC-80</h4>
+    Zum Hineinschnuppern in das Schachprogramm SC-80,
+    welches nur im LC80e enthalten ist,
+    kann man es gegen sich selbst spielen lassen.
+    Geben Sie dazu folgendes ein:
+  <br><br>
+    <em>RES ADR 0800 EX ADR DAT</em>
+</body>
+</html>
+

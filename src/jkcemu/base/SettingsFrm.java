@@ -26,6 +26,7 @@ public class SettingsFrm extends BasicFrm
 				DocumentListener,
 				ListSelectionListener
 {
+  public static final int DEFAULT_BRIGHTNESS        = 80;
   public static final int DEFAULT_SCREEN_REFRESH_MS = 50;
 
   private static final int MAX_MARGIN = 199;
@@ -37,12 +38,11 @@ public class SettingsFrm extends BasicFrm
   private Vector<ExtROM>              extROMs;
   private Map<String,AbstractButton>  lafClass2Button;
   private SpinnerNumberModel          spinnerModelMargin;
-  private JPanel                      panelEtc;
   private JPanel                      panelFont;
   private JPanel                      panelLAF;
   private JPanel                      panelROM;
   private JPanel                      panelRF;
-  private JPanel                      panelSys;
+  private JPanel                      panelScreen;
   private JPanel                      panelSysOpt;
   private JCheckBox                   btnConfirmNMI;
   private JCheckBox                   btnConfirmReset;
@@ -53,13 +53,15 @@ public class SettingsFrm extends BasicFrm
   private CardLayout                  cardLayoutSysOpt;
   private JRadioButton                btnSysAC1;
   private JRadioButton                btnSysBCS3;
+  private JRadioButton                btnSysHEMC;
+  private JRadioButton                btnSysHGMC;
   private JRadioButton                btnSysKC85_1;
   private JRadioButton                btnSysKC85_2;
   private JRadioButton                btnSysKC85_3;
   private JRadioButton                btnSysKC85_4;
   private JRadioButton                btnSysKC87;
-  private JRadioButton                btnSysHEMC;
   private JRadioButton                btnSysKramerMC;
+  private JRadioButton                btnSysLC80;
   private JRadioButton                btnSysZ1013;
   private JRadioButton                btnAC1mon31_64x16;
   private JRadioButton                btnAC1mon31_64x32;
@@ -68,10 +70,15 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnBCS3se24_27;
   private JRadioButton                btnBCS3se31_29;
   private JRadioButton                btnBCS3se31_40;
-  private JRadioButton                btnBCS3se32_29;
+  private JRadioButton                btnBCS3sp33_29;
   private JRadioButton                btnBCS3ram1k;
   private JRadioButton                btnBCS3ram17k;
+  private JCheckBox                   btnHGMCbasic;
   private JCheckBox                   btnKC85VideoTiming;
+  private JRadioButton                btnLC80_U505;
+  private JRadioButton                btnLC80_2716;
+  private JRadioButton                btnLC80_2;
+  private JRadioButton                btnLC80e;
   private JRadioButton                btnZ9001ram16k;
   private JRadioButton                btnZ9001ram32k;
   private JRadioButton                btnZ9001ram48k;
@@ -90,6 +97,7 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnSpeedUnlimited;
   private JRadioButton                btnFileDlgEmu;
   private JRadioButton                btnFileDlgNative;
+  private JCheckBox                   btnDirectCopyPaste;
   private JPanel                      panelSpeed;
   private JLabel                      labelSpeedUnit;
   private JTextField                  fldSpeed;
@@ -105,6 +113,7 @@ public class SettingsFrm extends BasicFrm
   private JButton                     btnRFBFileRemove;
   private JTextField                  fldRFBFile;
   private JTextField                  fldProfileDir;
+  private JSlider                     sliderBrightness;
   private JSpinner                    spinnerMargin;
   private ButtonGroup                 grpLAF;
   private UIManager.LookAndFeelInfo[] lafs;
@@ -151,8 +160,11 @@ public class SettingsFrm extends BasicFrm
 
 
     // Bereich System
-    this.panelSys = new JPanel( new GridBagLayout() );
-    this.tabbedPane.addTab( "System", this.panelSys );
+    JPanel tabSys = new JPanel( new BorderLayout() );
+    this.tabbedPane.addTab( "System", tabSys );
+
+    JPanel panelSys = new JPanel( new GridBagLayout() );
+    tabSys.add( new JScrollPane( panelSys ), BorderLayout.WEST );
 
     GridBagConstraints gbcSys = new GridBagConstraints(
 						0, 0,
@@ -165,70 +177,78 @@ public class SettingsFrm extends BasicFrm
 
     ButtonGroup grpSys = new ButtonGroup();
 
-    this.btnSysKC85_1 = new JRadioButton( "KC85/1 (Z9001)", false );
-    this.btnSysKC85_1.addActionListener( this );
-    grpSys.add( this.btnSysKC85_1 );
-    this.panelSys.add( this.btnSysKC85_1, gbcSys );
-
-    this.btnSysKC85_2 = new JRadioButton( "KC85/2 (HC900)", false );
-    this.btnSysKC85_2.addActionListener( this );
-    grpSys.add( this.btnSysKC85_2 );
-    gbcSys.insets.top = 0;
-    gbcSys.gridy++;
-    this.panelSys.add( this.btnSysKC85_2, gbcSys );
-
-    this.btnSysKC85_3 = new JRadioButton( "KC85/3", false );
-    this.btnSysKC85_3.addActionListener( this );
-    grpSys.add( this.btnSysKC85_3 );
-    gbcSys.gridy++;
-    this.panelSys.add( this.btnSysKC85_3, gbcSys );
-
-    this.btnSysKC85_4 = new JRadioButton( "KC85/4", true );
-    this.btnSysKC85_4.addActionListener( this );
-    grpSys.add( this.btnSysKC85_4 );
-    gbcSys.gridy++;
-    this.panelSys.add( this.btnSysKC85_4, gbcSys );
-
-    this.btnSysKC87 = new JRadioButton( "KC87", false );
-    this.btnSysKC87.addActionListener( this );
-    grpSys.add( this.btnSysKC87 );
-    gbcSys.insets.bottom = 5;
-    gbcSys.gridy++;
-    this.panelSys.add( this.btnSysKC87, gbcSys );
-
-    this.btnSysAC1 = new JRadioButton( "AC1", false );
+    this.btnSysAC1 = new JRadioButton( "AC1", true );
     this.btnSysAC1.addActionListener( this );
     grpSys.add( this.btnSysAC1 );
-    gbcSys.insets.top    = 5;
-    gbcSys.insets.bottom = 0;
-    gbcSys.gridy++;
-    this.panelSys.add( this.btnSysAC1, gbcSys );
+    panelSys.add( this.btnSysAC1, gbcSys );
 
     this.btnSysBCS3 = new JRadioButton( "BCS3", false );
     this.btnSysBCS3.addActionListener( this );
     grpSys.add( this.btnSysBCS3 );
     gbcSys.insets.top = 0;
     gbcSys.gridy++;
-    this.panelSys.add( this.btnSysBCS3, gbcSys );
+    panelSys.add( this.btnSysBCS3, gbcSys );
 
     this.btnSysHEMC = new JRadioButton( "H\u00FCbler/Evert-MC", false );
     this.btnSysHEMC.addActionListener( this );
     grpSys.add( this.btnSysHEMC );
     gbcSys.gridy++;
-    this.panelSys.add( this.btnSysHEMC, gbcSys );
+    panelSys.add( this.btnSysHEMC, gbcSys );
+
+    this.btnSysHGMC = new JRadioButton( "H\u00FCbler-Grafik-MC", false );
+    this.btnSysHGMC.addActionListener( this );
+    grpSys.add( this.btnSysHGMC );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysHGMC, gbcSys );
+
+    this.btnSysKC85_1 = new JRadioButton( "KC85/1 (Z9001)", false );
+    this.btnSysKC85_1.addActionListener( this );
+    grpSys.add( this.btnSysKC85_1 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysKC85_1, gbcSys );
+
+    this.btnSysKC85_2 = new JRadioButton( "KC85/2 (HC900)", false );
+    this.btnSysKC85_2.addActionListener( this );
+    grpSys.add( this.btnSysKC85_2 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysKC85_2, gbcSys );
+
+    this.btnSysKC85_3 = new JRadioButton( "KC85/3", false );
+    this.btnSysKC85_3.addActionListener( this );
+    grpSys.add( this.btnSysKC85_3 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysKC85_3, gbcSys );
+
+    this.btnSysKC85_4 = new JRadioButton( "KC85/4", false );
+    this.btnSysKC85_4.addActionListener( this );
+    grpSys.add( this.btnSysKC85_4 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysKC85_4, gbcSys );
+
+    this.btnSysKC87 = new JRadioButton( "KC87", false );
+    this.btnSysKC87.addActionListener( this );
+    grpSys.add( this.btnSysKC87 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysKC87, gbcSys );
 
     this.btnSysKramerMC = new JRadioButton( "Kramer-MC", false );
     this.btnSysKramerMC.addActionListener( this );
     grpSys.add( this.btnSysKramerMC );
     gbcSys.gridy++;
-    this.panelSys.add( this.btnSysKramerMC, gbcSys );
+    panelSys.add( this.btnSysKramerMC, gbcSys );
+
+    this.btnSysLC80 = new JRadioButton( "LC80", false );
+    this.btnSysLC80.addActionListener( this );
+    grpSys.add( this.btnSysLC80 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysLC80, gbcSys );
 
     this.btnSysZ1013 = new JRadioButton( "Z1013", false );
     this.btnSysZ1013.addActionListener( this );
     grpSys.add( this.btnSysZ1013 );
     gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
-    this.panelSys.add( this.btnSysZ1013, gbcSys );
+    panelSys.add( this.btnSysZ1013, gbcSys );
 
 
     // Optionen
@@ -244,12 +264,24 @@ public class SettingsFrm extends BasicFrm
     gbcSys.gridheight = GridBagConstraints.REMAINDER;
     gbcSys.gridy      = 0;
     gbcSys.gridx++;
-    panelSys.add( this.panelSysOpt, gbcSys );
+    tabSys.add( this.panelSysOpt, BorderLayout.CENTER );
 
 
-    JPanel panelNoOpt = new JPanel( new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
+    JPanel panelNoOpt = new JPanel( new GridBagLayout() );
     this.panelSysOpt.add( panelNoOpt, "noopt" );
-    panelNoOpt.add( new JLabel( "Keine Optionen verf\u00FCgbar" ) );
+
+    GridBagConstraints gbcNoOpt = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.CENTER,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 0, 5 ),
+						0, 0 );
+
+    panelNoOpt.add(
+		new JLabel( "Keine Optionen verf\u00FCgbar" ),
+		gbcNoOpt );
 
 
     // Optionen fuer AC1
@@ -270,7 +302,7 @@ public class SettingsFrm extends BasicFrm
     panelAC1.add( new JLabel( "64x16 Zeichen, 1 KByte SRAM:" ), gbcAC1 );
 
     this.btnAC1mon31_64x16 = new JRadioButton(
-		"Monitorprogramm 3.1 / Zeichensatz U402 BM513 (Ur-AC1)",
+		"Monitorprogramm 3.1, Zeichensatz U402 BM513 (Ur-AC1)",
 		false );
     this.btnAC1mon31_64x16.addActionListener( this );
     grpAC1mon.add( this.btnAC1mon31_64x16 );
@@ -287,7 +319,7 @@ public class SettingsFrm extends BasicFrm
 	gbcAC1 );
 
     this.btnAC1mon31_64x32 = new JRadioButton(
-		"Monitorprogramm 3.1 / CC-Dessau-Zeichensatz",
+		"Monitorprogramm 3.1, CC-Dessau-Zeichensatz",
 		true );
     this.btnAC1mon31_64x32.addActionListener( this );
     grpAC1mon.add( this.btnAC1mon31_64x32 );
@@ -297,7 +329,7 @@ public class SettingsFrm extends BasicFrm
     panelAC1.add( this.btnAC1mon31_64x32, gbcAC1 );
 
     this.btnAC1monSCCH80 = new JRadioButton(
-		"SCCH-Monitorprogramm 8.0 / SCCH-Zeichensatz",
+		"SCCH-Monitorprogramm 8.0, SCCH-Zeichensatz",
 		false );
     this.btnAC1monSCCH80.addActionListener( this );
     grpAC1mon.add( this.btnAC1monSCCH80 );
@@ -305,7 +337,7 @@ public class SettingsFrm extends BasicFrm
     panelAC1.add( this.btnAC1monSCCH80, gbcAC1 );
 
     this.btnAC1monSCCH1088 = new JRadioButton(
-		"SCCH-Monitorprogramm 10/88 / SCCH-Zeichensatz",
+		"SCCH-Monitorprogramm 10/88, SCCH-Zeichensatz",
 		false );
     this.btnAC1monSCCH1088.addActionListener( this );
     grpAC1mon.add( this.btnAC1monSCCH1088 );
@@ -330,14 +362,14 @@ public class SettingsFrm extends BasicFrm
     ButtonGroup grpBCS3os = new ButtonGroup();
 
     this.btnBCS3se24_27 = new JRadioButton(
-		"2 KByte BASIC-SE 2.4 / 2,5 MHz / 27 Zeichen pro Zeile",
+		"2 KByte BASIC-SE 2.4, 2,5 MHz, 27 Zeichen pro Zeile",
 		true );
     this.btnBCS3se24_27.addActionListener( this );
     grpBCS3os.add( this.btnBCS3se24_27 );
     panelBCS3.add( this.btnBCS3se24_27, gbcBCS3 );
 
     this.btnBCS3se31_29 = new JRadioButton(
-		"4 KByte BASIC-SE 3.1 / 2,5 MHz / 29 Zeichen pro Zeile",
+		"4 KByte BASIC-SE 3.1, 2,5 MHz, 29 Zeichen pro Zeile",
 		false );
     this.btnBCS3se31_29.addActionListener( this );
     grpBCS3os.add( this.btnBCS3se31_29 );
@@ -346,7 +378,7 @@ public class SettingsFrm extends BasicFrm
     panelBCS3.add( this.btnBCS3se31_29, gbcBCS3 );
 
     this.btnBCS3se31_40 = new JRadioButton(
-		"4 KByte BASIC-SE 3.1 / 3,5 MHz / 40 Zeichen pro Zeile",
+		"4 KByte BASIC-SE 3.1, 3,5 MHz, 40 Zeichen pro Zeile",
 		false );
     this.btnBCS3se31_40.addActionListener( this );
     grpBCS3os.add( this.btnBCS3se31_40 );
@@ -354,13 +386,13 @@ public class SettingsFrm extends BasicFrm
     gbcBCS3.gridy++;
     panelBCS3.add( this.btnBCS3se31_40, gbcBCS3 );
 
-    this.btnBCS3se32_29 = new JRadioButton(
-		"4 KByte S/P-BASIC V3.2 / 2,5 MHz / 29 Zeichen pro Zeile",
+    this.btnBCS3sp33_29 = new JRadioButton(
+		"4 KByte S/P-BASIC V3.3, 2,5 MHz, 29 Zeichen pro Zeile",
 		false );
-    this.btnBCS3se32_29.addActionListener( this );
-    grpBCS3os.add( this.btnBCS3se32_29 );
+    this.btnBCS3sp33_29.addActionListener( this );
+    grpBCS3os.add( this.btnBCS3sp33_29 );
     gbcBCS3.gridy++;
-    panelBCS3.add( this.btnBCS3se32_29, gbcBCS3 );
+    panelBCS3.add( this.btnBCS3sp33_29, gbcBCS3 );
 
     ButtonGroup grpBCS3ram = new ButtonGroup();
 
@@ -380,6 +412,27 @@ public class SettingsFrm extends BasicFrm
     gbcBCS3.insets.bottom = 5;
     gbcBCS3.gridy++;
     panelBCS3.add( this.btnBCS3ram17k, gbcBCS3 );
+
+
+    // Optionen fuer Huebler-Grafik-MC
+    JPanel panelHGMC = new JPanel( new GridBagLayout() );
+    this.panelSysOpt.add( panelHGMC, "HGMC" );
+
+    GridBagConstraints gbcHGMC = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.CENTER,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 5, 5 ),
+						0, 0 );
+
+    this.btnHGMCbasic = new JCheckBox(
+				"BASIC-Interpreter im ROM enthalten",
+				true );
+    this.btnHGMCbasic.addActionListener( this );
+    gbcHGMC.gridy++;
+    panelHGMC.add( this.btnHGMCbasic, gbcHGMC );
 
 
     // Optionen fuer KC85/2..4
@@ -403,7 +456,7 @@ public class SettingsFrm extends BasicFrm
     gbcKC85.insets.top = 0;
     gbcKC85.gridy++;
     panelKC85.add(
-	new JLabel( "Sollte diese Leistung zur Verf\u00FCgung stehen," ),
+	new JLabel( "Sollte diese Leistung nicht zur Verf\u00FCgung stehen," ),
 	gbcKC85 );
 
     gbcKC85.gridy++;
@@ -419,6 +472,55 @@ public class SettingsFrm extends BasicFrm
     gbcKC85.insets.bottom = 5;
     gbcKC85.gridy++;
     panelKC85.add( this.btnKC85VideoTiming, gbcKC85 );
+
+
+    // Optionen fuer LC80
+    JPanel panelLC80 = new JPanel( new GridBagLayout() );
+    this.panelSysOpt.add( panelLC80, "LC80" );
+
+    GridBagConstraints gbcLC80 = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.NORTHWEST,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 0, 5 ),
+						0, 0 );
+
+    ButtonGroup grpLC80 = new ButtonGroup();
+
+    this.btnLC80_U505 = new JRadioButton(
+		"LC80, 2 KByte ROM (2xU505), 1 KByte RAM",
+		false );
+    this.btnLC80_U505.addActionListener( this );
+    grpLC80.add( this.btnLC80_U505 );
+    panelLC80.add( this.btnLC80_U505, gbcLC80 );
+
+    this.btnLC80_2716 = new JRadioButton(
+		"LC80, 2 KByte ROM (2716), 4 KByte RAM",
+		true );
+    this.btnLC80_2716.addActionListener( this );
+    grpLC80.add( this.btnLC80_2716 );
+    gbcLC80.insets.top = 0;
+    gbcLC80.gridy++;
+    panelLC80.add( this.btnLC80_2716, gbcLC80 );
+
+    this.btnLC80_2 = new JRadioButton(
+		"LC80.2, 4 KByte ROM mit Buschendorf-Monitor, 4 KByte RAM",
+		false );
+    this.btnLC80_2.addActionListener( this );
+    grpLC80.add( this.btnLC80_2 );
+    gbcLC80.gridy++;
+    panelLC80.add( this.btnLC80_2, gbcLC80 );
+
+    this.btnLC80e = new JRadioButton(
+		"LC80e, 12 KByte ROM mit Schachprogramm SC-80, 4 KByte RAM",
+		false );
+    this.btnLC80e.addActionListener( this );
+    grpLC80.add( this.btnLC80e );
+    gbcLC80.insets.bottom = 5;
+    gbcLC80.gridy++;
+    panelLC80.add( this.btnLC80e, gbcLC80 );
 
 
     // Optionen fuer Z1013
@@ -437,14 +539,14 @@ public class SettingsFrm extends BasicFrm
     ButtonGroup grpZ1013hw = new ButtonGroup();
 
     this.btnZ1013_01 = new JRadioButton(
-				"Z1013.01 / 1 MHz / 16 KByte RAM",
+				"Z1013.01, 1 MHz, 16 KByte RAM",
 				false );
     this.btnZ1013_01.addActionListener( this );
     grpZ1013hw.add( this.btnZ1013_01 );
     panelZ1013.add( this.btnZ1013_01, gbcZ1013 );
 
     this.btnZ1013_12 = new JRadioButton(
-				"Z1013.12 / 2 MHz / 1 KByte RAM",
+				"Z1013.12, 2 MHz, 1 KByte RAM",
 				false );
     this.btnZ1013_12.addActionListener( this );
     grpZ1013hw.add( this.btnZ1013_12 );
@@ -453,7 +555,7 @@ public class SettingsFrm extends BasicFrm
     panelZ1013.add( this.btnZ1013_12, gbcZ1013 );
 
     this.btnZ1013_16 = new JRadioButton(
-				"Z1013.16 / 2 MHz / 16 KByte RAM",
+				"Z1013.16, 2 MHz, 16 KByte RAM",
 				false );
     this.btnZ1013_16.addActionListener( this );
     grpZ1013hw.add( this.btnZ1013_16 );
@@ -461,7 +563,7 @@ public class SettingsFrm extends BasicFrm
     panelZ1013.add( this.btnZ1013_16, gbcZ1013 );
 
     this.btnZ1013_64 = new JRadioButton(
-				"Z1013.64 / 2 MHz / 64 KByte RAM",
+				"Z1013.64, 2 MHz, 64 KByte RAM",
 				false );
     this.btnZ1013_64.addActionListener( this );
     grpZ1013hw.add( this.btnZ1013_64 );
@@ -471,7 +573,7 @@ public class SettingsFrm extends BasicFrm
     ButtonGroup grpZ1013mon = new ButtonGroup();
 
     this.btnZ1013mon202 = new JRadioButton(
-		"Monitorprogramm 2.02 / Folienflachtastatur",
+		"Monitorprogramm 2.02, Folienflachtastatur",
 		true );
     this.btnZ1013mon202.addActionListener( this );
     grpZ1013mon.add( this.btnZ1013mon202 );
@@ -480,7 +582,7 @@ public class SettingsFrm extends BasicFrm
     panelZ1013.add( this.btnZ1013mon202, gbcZ1013 );
 
     this.btnZ1013monA2 = new JRadioButton(
-		"Monitorprogramm A.2 / Alpha-Tastatur",
+		"Monitorprogramm A.2, Alpha-Tastatur",
 		false );
     this.btnZ1013monA2.addActionListener( this );
     grpZ1013mon.add( this.btnZ1013monA2 );
@@ -489,7 +591,7 @@ public class SettingsFrm extends BasicFrm
     panelZ1013.add( this.btnZ1013monA2, gbcZ1013 );
 
     this.btnZ1013monRB_K7659 = new JRadioButton(
-		"Brosig-Monitorprogramm 2.028 / Tastatur K7659",
+		"Brosig-Monitorprogramm 2.028, Tastatur K7659",
 		false );
     this.btnZ1013monRB_K7659.addActionListener( this );
     grpZ1013mon.add( this.btnZ1013monRB_K7659 );
@@ -497,7 +599,7 @@ public class SettingsFrm extends BasicFrm
     panelZ1013.add( this.btnZ1013monRB_K7659, gbcZ1013 );
 
     this.btnZ1013monRB_S6009 = new JRadioButton(
-		"Brosig-Monitorprogramm 2.028 / Tastatur S6009",
+		"Brosig-Monitorprogramm 2.028, Tastatur S6009",
 		false );
     this.btnZ1013monRB_S6009.addActionListener( this );
     grpZ1013mon.add( this.btnZ1013monRB_S6009 );
@@ -505,7 +607,7 @@ public class SettingsFrm extends BasicFrm
     panelZ1013.add( this.btnZ1013monRB_S6009, gbcZ1013 );
 
     this.btnZ1013monJM_1992 = new JRadioButton(
-		"M\u00FCller-Monitorprogramm 1992 / Folienflachtastatur",
+		"M\u00FCller-Monitorprogramm 1992, Folienflachtastatur",
 		false );
     this.btnZ1013monJM_1992.addActionListener( this );
     grpZ1013mon.add( this.btnZ1013monJM_1992 );
@@ -647,13 +749,13 @@ public class SettingsFrm extends BasicFrm
     gbcFont.gridy++;
     this.panelFont.add(
 	new JLabel( "Diese Funktion hat jedoch keine Wirkung bei"
-				+ " KC85/2...4," ),
+				+ " H\u00FCbler-Grafik-MC und KC85/2...4," ),
 	gbcFont );
 
     gbcFont.insets.top = 0;
     gbcFont.gridy++;
     this.panelFont.add(
-	new JLabel( "da dort der Zeichensatz im Betriebssystem"
+	new JLabel( "da dort der Zeichensatz im jeweiligen Betriebssystem"
 				+ " enthalten ist." ),
 	gbcFont );
 
@@ -824,6 +926,101 @@ public class SettingsFrm extends BasicFrm
     this.panelRF.add( this.btnRFBFileRemove, gbcRF );
 
 
+    // Bereich Bildschirmausgabe
+    this.panelScreen = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Bildschirmausgabe", this.panelScreen );
+
+    GridBagConstraints gbcScreen = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					0.0, 0.0,
+					GridBagConstraints.EAST,
+					GridBagConstraints.NONE,
+					new Insets( 10, 5, 10, 5 ),
+					0, 0 );
+
+    this.panelScreen.add( new JLabel( "Helligkeit [%]:" ), gbcScreen );
+
+    this.sliderBrightness = new JSlider(
+					SwingConstants.HORIZONTAL,
+					0,
+					100,
+					DEFAULT_BRIGHTNESS );
+    this.sliderBrightness.setMajorTickSpacing( 20 );
+    this.sliderBrightness.setPaintLabels( true );
+    this.sliderBrightness.setPaintTrack( true );
+    this.sliderBrightness.setSnapToTicks( false );
+    this.sliderBrightness.addChangeListener( this );
+    gbcScreen.anchor    = GridBagConstraints.WEST;
+    gbcScreen.fill      = GridBagConstraints.HORIZONTAL;
+    gbcScreen.weightx   = 1.0;
+    gbcScreen.gridwidth = GridBagConstraints.REMAINDER;
+    gbcScreen.gridx++;
+    this.panelScreen.add( this.sliderBrightness, gbcScreen );
+
+    gbcScreen.anchor    = GridBagConstraints.EAST;
+    gbcScreen.fill      = GridBagConstraints.NONE;
+    gbcScreen.weightx   = 0.0;
+    gbcScreen.gridwidth = 1;
+    gbcScreen.gridx     = 0;
+    gbcScreen.gridy++;
+    this.panelScreen.add( new JLabel( "Rand:" ), gbcScreen );
+
+    this.spinnerModelMargin = new SpinnerNumberModel( 20, 0, MAX_MARGIN, 1 );
+    this.spinnerMargin = new JSpinner( this.spinnerModelMargin );
+    this.spinnerMargin.addChangeListener( this );
+
+    gbcScreen.anchor = GridBagConstraints.WEST;
+    gbcScreen.fill   = GridBagConstraints.HORIZONTAL;
+    gbcScreen.gridx++;
+    this.panelScreen.add( this.spinnerMargin, gbcScreen );
+
+    gbcScreen.fill = GridBagConstraints.NONE;
+    gbcScreen.gridx++;
+    this.panelScreen.add( new JLabel( "Pixel" ), gbcScreen );
+
+    gbcScreen.anchor = GridBagConstraints.EAST;
+    gbcScreen.gridx  = 0;
+    gbcScreen.gridy++;
+    this.panelScreen.add( new JLabel( "Aktualisierungszyklus:" ), gbcScreen );
+
+    this.comboScreenRefresh = new JComboBox();
+    this.comboScreenRefresh.setEditable( false );
+    this.comboScreenRefresh.addItem( "10" );
+    this.comboScreenRefresh.addItem( "20" );
+    this.comboScreenRefresh.addItem( "30" );
+    this.comboScreenRefresh.addItem( "50" );
+    this.comboScreenRefresh.addItem( "100" );
+    this.comboScreenRefresh.addItem( "200" );
+    this.comboScreenRefresh.addActionListener( this );
+    gbcScreen.anchor = GridBagConstraints.WEST;
+    gbcScreen.fill   = GridBagConstraints.HORIZONTAL;
+    gbcScreen.gridx++;
+    this.panelScreen.add( this.comboScreenRefresh, gbcScreen );
+
+    gbcScreen.fill = GridBagConstraints.NONE;
+    gbcScreen.gridx++;
+    this.panelScreen.add( new JLabel( "ms" ), gbcScreen );
+
+    this.btnDirectCopyPaste = new JCheckBox(
+		"Direktes \"Kopieren & Einf\u00FCgen\" durch Dr\u00FCcken"
+			+ " der mittleren Maustaste",
+		true );
+    this.btnDirectCopyPaste.addActionListener( this );
+    gbcScreen.anchor     = GridBagConstraints.CENTER;
+    gbcScreen.insets.top = 10;
+    gbcScreen.gridwidth = GridBagConstraints.REMAINDER;
+    gbcScreen.gridx     = 0;
+    gbcScreen.gridy++;
+    this.panelScreen.add( this.btnDirectCopyPaste, gbcScreen );
+
+    // gleicher Font von JSpinner und JComboBox
+    Font font = this.comboScreenRefresh.getFont();
+    if( font != null ) {
+      this.spinnerMargin.setFont( font );
+    }
+
+
     // Bereich Bestaetigungen
     JPanel panelConfirm = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Best\u00E4tigungen", panelConfirm );
@@ -911,8 +1108,8 @@ public class SettingsFrm extends BasicFrm
 
 
     // Bereich Sonstiges
-    this.panelEtc = new JPanel( new GridBagLayout() );
-    this.tabbedPane.addTab( "Sonstiges", this.panelEtc );
+    JPanel tabEtc = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Sonstiges", tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
 					0, 0,
@@ -923,7 +1120,7 @@ public class SettingsFrm extends BasicFrm
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.panelEtc.add( new JLabel( "Dateiauswahldialog:" ), gbcEtc );
+    tabEtc.add( new JLabel( "Dateiauswahldialog:" ), gbcEtc );
 
     ButtonGroup grpFileDlg = new ButtonGroup();
 
@@ -935,7 +1132,7 @@ public class SettingsFrm extends BasicFrm
     gbcEtc.insets.top  = 0;
     gbcEtc.insets.left = 50;
     gbcEtc.gridy++;
-    this.panelEtc.add( this.btnFileDlgEmu, gbcEtc );
+    tabEtc.add( this.btnFileDlgEmu, gbcEtc );
 
     this.btnFileDlgNative = new JRadioButton(
 			"Dateiauswahlbox des Betriebssystems verwenden",
@@ -944,58 +1141,15 @@ public class SettingsFrm extends BasicFrm
     this.btnFileDlgNative.addActionListener( this );
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
-    this.panelEtc.add( this.btnFileDlgNative, gbcEtc );
+    tabEtc.add( this.btnFileDlgNative, gbcEtc );
 
-    gbcEtc.insets.top  = 5;
-    gbcEtc.insets.left = 5;
-    gbcEtc.gridwidth   = 1;
-    gbcEtc.gridy++;
-    this.panelEtc.add( new JLabel( "Rand um Bildschirmausgabe:" ), gbcEtc );
-
-    this.spinnerModelMargin = new SpinnerNumberModel( 20, 0, MAX_MARGIN, 1 );
-    this.spinnerMargin = new JSpinner( this.spinnerModelMargin );
-    this.spinnerMargin.addChangeListener( this );
-
-    gbcEtc.fill = GridBagConstraints.HORIZONTAL;
-    gbcEtc.gridx++;
-    this.panelEtc.add( this.spinnerMargin, gbcEtc );
-
-    gbcEtc.fill = GridBagConstraints.NONE;
-    gbcEtc.gridx++;
-    this.panelEtc.add( new JLabel( "Pixel" ), gbcEtc );
-
-    gbcEtc.gridx = 0;
-    gbcEtc.gridy++;
-    this.panelEtc.add(
-		new JLabel( "Zykluszeit f\u00FCr Bildschirmaktualisierung:" ),
-		gbcEtc );
-
-    this.comboScreenRefresh = new JComboBox();
-    this.comboScreenRefresh.setEditable( false );
-    this.comboScreenRefresh.addItem( "10" );
-    this.comboScreenRefresh.addItem( "20" );
-    this.comboScreenRefresh.addItem( "30" );
-    this.comboScreenRefresh.addItem( "50" );
-    this.comboScreenRefresh.addItem( "100" );
-    this.comboScreenRefresh.addItem( "200" );
-    this.comboScreenRefresh.addActionListener( this );
-    gbcEtc.anchor = GridBagConstraints.WEST;
-    gbcEtc.fill   = GridBagConstraints.HORIZONTAL;
-    gbcEtc.gridx++;
-    this.panelEtc.add( this.comboScreenRefresh, gbcEtc );
-
-    gbcEtc.fill = GridBagConstraints.NONE;
-    gbcEtc.gridx++;
-    this.panelEtc.add( new JLabel( "ms" ), gbcEtc );
-
-    Font font       = null;
     File profileDir = Main.getProfileDir();
     if( profileDir != null ) {
+      gbcEtc.insets.top    = 15;
+      gbcEtc.insets.left   = 5;
       gbcEtc.insets.bottom = 0;
-      gbcEtc.gridwidth     = GridBagConstraints.REMAINDER;
-      gbcEtc.gridx         = 0;
       gbcEtc.gridy++;
-      this.panelEtc.add(
+      tabEtc.add(
 		new JLabel( "Profile werden gespeichert im Verzeichnis:" ),
 		gbcEtc );
 
@@ -1007,19 +1161,7 @@ public class SettingsFrm extends BasicFrm
       gbcEtc.insets.top    = 0;
       gbcEtc.insets.bottom = 5;
       gbcEtc.gridy++;
-      this.panelEtc.add( this.fldProfileDir, gbcEtc );
-
-      font = this.fldProfileDir.getFont();
-    }
-
-    // gleicher Font von JSpinner und JComboBox
-    if( font != null ) {
-      this.spinnerMargin.setFont( font );
-    } else {
-      font = this.spinnerMargin.getFont();
-    }
-    if( font != null ) {
-      this.comboScreenRefresh.setFont( font );
+      tabEtc.add( this.fldProfileDir, gbcEtc );
     }
 
 
@@ -1111,7 +1253,8 @@ public class SettingsFrm extends BasicFrm
 
   public void stateChanged( ChangeEvent e )
   {
-    if( e.getSource() == this.spinnerMargin )
+    Object src = e.getSource();
+    if( (src == this.sliderBrightness) || (src == this.spinnerMargin) )
       setDataChanged();
   }
 
@@ -1190,12 +1333,14 @@ public class SettingsFrm extends BasicFrm
 	else if( (src == this.btnSysAC1)
 		 || (src == this.btnSysBCS3)
 		 || (src == this.btnSysHEMC)
+		 || (src == this.btnSysHGMC)
 		 || (src == this.btnSysKC85_1)
 		 || (src == this.btnSysKC85_2)
 		 || (src == this.btnSysKC85_3)
 		 || (src == this.btnSysKC85_4)
 		 || (src == this.btnSysKC87)
 		 || (src == this.btnSysKramerMC)
+		 || (src == this.btnSysLC80)
 		 || (src == this.btnSysZ1013) )
 	{
 	  rv = true;
@@ -1269,6 +1414,7 @@ public class SettingsFrm extends BasicFrm
       applyEtc( props );
       applyFont( props );
       applyRF( props );
+      applyScreen( props );
       applySys( props );
 
       // Array mit neuen ROMs erzeugen
@@ -1282,48 +1428,26 @@ public class SettingsFrm extends BasicFrm
       }
 
       /*
-       * pruefen, ob ein RESET erforderlich ist,
-       * Dazu die ROMs vergleichen,
-       * falls diese den Betriebssystembereich ueberdecken
+       * Wenn sich die eingebundenen ROM-Images geaendert haben,
+       * ist ein RESET erforderlich.
        */
       boolean forceReset = false;
       if( !forceReset ) {
-	int nNewExtROMs   = 0;
-	int newExtROMAddr = -1;
+	int nNewExtROMs = 0;
 	if( newExtROMs != null ) {
 	  nNewExtROMs = newExtROMs.length;
-	  if( nNewExtROMs > 0 )
-	    newExtROMAddr = newExtROMs[ 0 ].getBegAddress();
 	}
 	ExtROM[] oldExtROMs    = this.emuThread.getExtROMs();
 	int      nOldExtROMs   = 0;
-	int      oldExtROMAddr = -1;
 	if( oldExtROMs != null ) {
 	  nOldExtROMs = oldExtROMs.length;
-	  if( nOldExtROMs > 0 )
-	    oldExtROMAddr = oldExtROMs[ 0 ].getBegAddress();
 	}
-	EmuSys emuSys = this.emuThread.getEmuSys();
-	if( emuSys != null ) {
-	  if( (nNewExtROMs > 0) || (nOldExtROMs > 0) ) {
-	    if( ((newExtROMAddr >= emuSys.getMinOSAddress())
-			&& (newExtROMAddr <= emuSys.getMaxOSAddress()))
-		|| ((oldExtROMAddr >= emuSys.getMinOSAddress())
-			&& (oldExtROMAddr <= emuSys.getMaxOSAddress())) )
-	    {
-	      if( nNewExtROMs == nOldExtROMs ) {
-		if( (newExtROMs != null) && (oldExtROMs != null) ) {
-		  for( int i = 0; i < newExtROMs.length; i++ ) {
-		    if( !newExtROMs[ i ].equals( oldExtROMs[ i ] ) ) {
-		      forceReset = true;
-		      break;
-		    }
-		  }
-		} else {
-		  forceReset = true;
-		}
-	      } else {
+	if( nNewExtROMs == nOldExtROMs ) {
+	  if( (newExtROMs != null) && (oldExtROMs != null) ) {
+	    for( int i = 0; i < newExtROMs.length; i++ ) {
+	      if( !newExtROMs[ i ].equals( oldExtROMs[ i ] ) ) {
 		forceReset = true;
+		break;
 	      }
 	    }
 	  }
@@ -1631,18 +1755,6 @@ public class SettingsFrm extends BasicFrm
     props.setProperty(
 		"jkcemu.filedialog",
 		this.btnFileDlgNative.isSelected() ? "native" : "jkcemu" );
-
-    Object obj = this.spinnerMargin.getValue();
-    props.setProperty(
-		"jkcemu.screen.margin",
-		obj != null ? obj.toString() : "0" );
-
-    obj = this.comboScreenRefresh.getSelectedItem();
-    if( obj != null ) {
-      String text = obj.toString();
-      if( text != null )
-	props.setProperty( "jkcemu.screen.refresh.ms", text );
-    }
   }
 
 
@@ -1748,6 +1860,30 @@ public class SettingsFrm extends BasicFrm
   }
 
 
+  private void applyScreen( Properties props )
+  {
+    props.setProperty(
+		"jkcemu.brightness",
+		String.valueOf( this.sliderBrightness.getValue() ) );
+
+    Object obj = this.spinnerMargin.getValue();
+    props.setProperty(
+		"jkcemu.screen.margin",
+		obj != null ? obj.toString() : "0" );
+
+    obj = this.comboScreenRefresh.getSelectedItem();
+    if( obj != null ) {
+      String text = obj.toString();
+      if( text != null )
+	props.setProperty( "jkcemu.screen.refresh.ms", text );
+    }
+
+    props.setProperty(
+		"jkcemu.copy_and_paste.direct",
+		Boolean.toString( this.btnDirectCopyPaste.isSelected() ) );
+  }
+
+
   private boolean applySpeed( Properties props )
   {
     boolean rv = false;
@@ -1801,6 +1937,9 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysHEMC.isSelected() ) {
       valueSys = "HueblerEvertMC";
     }
+    else if( this.btnSysHGMC.isSelected() ) {
+      valueSys = "HueblerGraphicsMC";
+    }
     else if( this.btnSysKC85_1.isSelected() ) {
       valueSys = "KC85/1";
     }
@@ -1818,6 +1957,17 @@ public class SettingsFrm extends BasicFrm
     }
     else if( this.btnSysKramerMC.isSelected() ) {
       valueSys = "KramerMC";
+    }
+    else if( this.btnSysLC80.isSelected() ) {
+      if( this.btnLC80_U505.isSelected() ) {
+	valueSys = "LC80_U505";
+      } else if( this.btnLC80_2.isSelected() ) {
+	valueSys = "LC80.2";
+      } else if( this.btnLC80e.isSelected() ) {
+	valueSys = "LC80e";
+      } else {
+	valueSys = "LC80_2716";
+      }
     }
     else if( this.btnSysZ1013.isSelected() ) {
       if( this.btnZ1013_01.isSelected() ) {
@@ -1854,8 +2004,8 @@ public class SettingsFrm extends BasicFrm
     } else if( this.btnBCS3se31_40.isSelected() ) {
       props.setProperty( "jkcemu.bcs3.os.version", "3.1" );
       props.setProperty( "jkcemu.bcs3.chars_per_line", "40" );
-    } else if( this.btnBCS3se32_29.isSelected() ) {
-      props.setProperty( "jkcemu.bcs3.os.version", "3.2" );
+    } else if( this.btnBCS3sp33_29.isSelected() ) {
+      props.setProperty( "jkcemu.bcs3.os.version", "3.3" );
       props.setProperty( "jkcemu.bcs3.chars_per_line", "29" );
     } else {
       props.setProperty( "jkcemu.bcs3.os.version", "2.4" );
@@ -1866,6 +2016,12 @@ public class SettingsFrm extends BasicFrm
     } else {
       props.setProperty( "jkcemu.bcs3.ram.kbyte", "1" );
     }
+
+
+    // Optionen fuer Huebler-Grafik-MC
+    props.setProperty(
+		"jkcemu.hgmc.basic",
+		Boolean.toString( this.btnHGMCbasic.isSelected() ) );
 
 
     // Optionen fuer KC85/2..4
@@ -1960,7 +2116,23 @@ public class SettingsFrm extends BasicFrm
   {
     // System
     String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( sysName.startsWith( "KC85/2" ) || sysName.startsWith( "HC900" ) ) {
+    if( sysName.startsWith( "BCS3" ) ) {
+      this.btnSysBCS3.setSelected( true );
+    }
+    else if( sysName.startsWith( "HueblerEvertMC" ) ) {
+      this.btnSysHEMC.setSelected( true );
+    }
+    else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
+      this.btnSysHGMC.setSelected( true );
+    }
+    else if( sysName.startsWith( "KC85/1" )
+	     || sysName.startsWith( "Z9001" ) )
+    {
+      this.btnSysKC85_1.setSelected( true );
+    }
+    else if( sysName.startsWith( "KC85/2" )
+	     || sysName.startsWith( "HC900" ) )
+    {
       this.btnSysKC85_2.setSelected( true );
     }
     else if( sysName.startsWith( "KC85/3" ) ) {
@@ -1972,22 +2144,16 @@ public class SettingsFrm extends BasicFrm
     else if( sysName.startsWith( "KC87" ) ) {
       this.btnSysKC87.setSelected( true );
     }
-    else if( sysName.startsWith( "AC1" ) ) {
-      this.btnSysAC1.setSelected( true );
-    }
-    else if( sysName.startsWith( "BCS3" ) ) {
-      this.btnSysBCS3.setSelected( true );
-    }
-    else if( sysName.startsWith( "HueblerEvertMC" ) ) {
-      this.btnSysHEMC.setSelected( true );
-    }
     else if( sysName.startsWith( "KramerMC" ) ) {
       this.btnSysKramerMC.setSelected( true );
+    }
+    else if( sysName.startsWith( "LC80" ) ) {
+      this.btnSysLC80.setSelected( true );
     }
     else if( sysName.startsWith( "Z1013" ) ) {
       this.btnSysZ1013.setSelected( true );
     } else {
-      this.btnSysKC85_1.setSelected( true );
+      this.btnSysAC1.setSelected( true );
     }
 
 
@@ -2017,8 +2183,8 @@ public class SettingsFrm extends BasicFrm
       } else {
 	this.btnBCS3se31_29.setSelected( true );
       }
-    } else if( bcs3Version.equals( "3.2" ) ) {
-      this.btnBCS3se32_29.setSelected( true );
+    } else if( bcs3Version.equals( "3.3" ) ) {
+      this.btnBCS3sp33_29.setSelected( true );
     } else {
       this.btnBCS3se24_27.setSelected( true );
     }
@@ -2032,12 +2198,32 @@ public class SettingsFrm extends BasicFrm
     }
 
 
+    // Optionen fuer Huebler-Grafik-MC
+    this.btnHGMCbasic.setSelected(
+			EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.hgmc.basic",
+				true ) );
+
+
     // Optionen fuer KC85/2..4
     this.btnKC85VideoTiming.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
 				"jkcemu.kc85.emulate_video_timing",
 				true ) );
+
+
+    // Optionen fuer LC80
+    if( sysName.startsWith( "LC80_U505" ) ) {
+      this.btnLC80_U505.setSelected( true );
+    } else if( sysName.startsWith( "LC80.2" ) ) {
+      this.btnLC80_2.setSelected( true );
+    } else if( sysName.startsWith( "LC80e" ) ) {
+      this.btnLC80e.setSelected( true );
+    } else {
+      this.btnLC80_2716.setSelected( true );
+    }
 
 
     // Optionen fuer Z1013
@@ -2125,6 +2311,35 @@ public class SettingsFrm extends BasicFrm
     this.btnRFBFileRemove.setEnabled( rfBFileName.length() > 0 );
 
 
+    // Bildschirmausgabe
+    int brightness = EmuUtil.getIntProperty(
+					props,
+					"jkcemu.brightness",
+					DEFAULT_BRIGHTNESS );
+    if( (brightness >= 0) && (brightness <= 100) ) {
+      this.sliderBrightness.setValue( brightness );
+    }
+    try {
+      int margin = EmuUtil.getIntProperty( props, "jkcemu.screen.margin", 20 );
+      if( (margin >= 0) && (margin <= MAX_MARGIN) )
+	this.spinnerModelMargin.setValue( new Integer( margin ) );
+    }
+    catch( IllegalArgumentException ex ) {}
+    if( screenRefreshMillis == null ) {
+      screenRefreshMillis = props.getProperty( "jkcemu.screen.refresh.ms" );
+    }
+    if( screenRefreshMillis != null ) {
+      screenRefreshMillis = screenRefreshMillis.trim();
+      if( screenRefreshMillis.length() > 0 )
+	this.comboScreenRefresh.setSelectedItem( screenRefreshMillis );
+    }
+    this.btnDirectCopyPaste.setSelected(
+		EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.copy_and_paste.direct",
+				true ) );
+
+
     // Bestaetigungen
     this.btnConfirmNMI.setSelected(
 	EmuUtil.getBooleanProperty( props, "jkcemu.confirm.nmi", true ) );
@@ -2160,20 +2375,6 @@ public class SettingsFrm extends BasicFrm
     } else {
       this.btnFileDlgEmu.setSelected( true );
     }
-    try {
-      int margin = EmuUtil.getIntProperty( props, "jkcemu.screen.margin", 20 );
-      if( (margin >= 0) && (margin <= MAX_MARGIN) )
-	this.spinnerModelMargin.setValue( new Integer( margin ) );
-    }
-    catch( IllegalArgumentException ex ) {}
-    if( screenRefreshMillis == null ) {
-      screenRefreshMillis = props.getProperty( "jkcemu.screen.refresh.ms" );
-    }
-    if( screenRefreshMillis != null ) {
-      screenRefreshMillis = screenRefreshMillis.trim();
-      if( screenRefreshMillis.length() > 0 )
-	this.comboScreenRefresh.setSelectedItem( screenRefreshMillis );
-    }
   }
 
 
@@ -2194,17 +2395,23 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysBCS3.isSelected() ) {
       cardName = "BCS3";
     }
-    else if( this.btnSysZ1013.isSelected() ) {
-      cardName = "Z1013";
-    }
-    else if( this.btnSysKC85_1.isSelected() || this.btnSysKC87.isSelected() ) {
-      cardName = "Z9001";
+    else if( this.btnSysHGMC.isSelected() ) {
+      cardName = "HGMC";
     }
     else if( this.btnSysKC85_2.isSelected()
 	     || this.btnSysKC85_3.isSelected()
 	     || this.btnSysKC85_4.isSelected() )
     {
       cardName = "KC85";
+    }
+    else if( this.btnSysLC80.isSelected() ) {
+      cardName = "LC80";
+    }
+    else if( this.btnSysZ1013.isSelected() ) {
+      cardName = "Z1013";
+    }
+    else if( this.btnSysKC85_1.isSelected() || this.btnSysKC87.isSelected() ) {
+      cardName = "Z9001";
     }
     this.cardLayoutSysOpt.show( this.panelSysOpt, cardName );
   }

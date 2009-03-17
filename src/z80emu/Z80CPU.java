@@ -14,6 +14,7 @@ package z80emu;
 import java.lang.*;
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class Z80CPU
@@ -43,88 +44,93 @@ public class Z80CPU
 
 
   // private Attribute
-  private volatile Z80AddressListener        addrListener;
-  private volatile Z80AddressRangeListener   addrRangeListener;
-  private volatile Z80AddressRange           addrRangeListenerRange;
-  private volatile Z80TStatesListener        tStatesListener;
-  private Z80Memory                          memory;
-  private Z80IOSystem                        ioSys;
-  private volatile Z80Breakpoint[]           debugBreakpoints;
-  private volatile PrintWriter               debugTracer;
-  private volatile Z80InterruptSource[]      interruptSources;
-  private Collection<Z80MaxSpeedListener>    maxSpeedListeners;
-  private Collection<Z80StatusListener>      statusListeners;
-  private boolean[]                          parity;
-  private volatile int[]                     codeBuf;
-  private volatile int                       codeBufPos;
-  private volatile int                       maxSpeedKHz;
-  private volatile long                      speedUnlimitedTill;
-  private volatile long                      speedMillisBeg;
-  private volatile long                      speedMillisEnd;
-  private volatile int                       speedTStates;
-  private volatile int                       instTStates;
-  private volatile int                       debugCallLevel;
-  private volatile Action                    action;
-  private volatile int                       interruptMode;
-  private int                                interruptReg;
-  private Integer                            haltPC;
-  private int                                instBegPC;
-  private int                                regPC;
-  private int                                regSP;
-  private int                                regA;
-  private int                                regB;
-  private int                                regC;
-  private int                                regD;
-  private int                                regE;
-  private int                                regH;
-  private int                                regL;
-  private int                                regA2;
-  private int                                regF2;
-  private int                                regB2;
-  private int                                regC2;
-  private int                                regD2;
-  private int                                regE2;
-  private int                                regH2;
-  private int                                regL2;
-  private int                                regIX;
-  private int                                regIY;
-  private int                                regR_bits0to6;
-  private boolean                            regR_bit7;
-  private boolean                            iff1;
-  private boolean                            iff2;
-  private volatile boolean                   nmiFired;
-  private boolean                            flagSign;
-  private boolean                            flagZero;
-  private boolean                            flag5;
-  private boolean                            flagHalf;
-  private boolean                            flag3;
-  private boolean                            flagPV;
-  private boolean                            flagN;
-  private boolean                            flagCarry;
-  private boolean                            lastInstWasEIorDI;
-  private volatile boolean                   active;
-  private volatile boolean                   pause;
-  private volatile boolean                   debugEnabled;
-  private String                             waitMonitor;
+  private volatile Z80AddressListener      addrListener;
+  private volatile Z80TStatesListener      tStatesListener;
+  private Z80Memory                        memory;
+  private Z80IOSystem                      ioSys;
+  private Thread                           thread;
+  private volatile Z80Breakpoint[]         debugBreakpoints;
+  private volatile PrintWriter             debugTracer;
+  private volatile Z80InterruptSource[]    interruptSources;
+  private Collection<Z80HaltStateListener> haltStateListeners;
+  private Collection<Z80MaxSpeedListener>  maxSpeedListeners;
+  private Collection<Z80StatusListener>    statusListeners;
+  private boolean[]                        parity;
+  private volatile int[]                   codeBuf;
+  private volatile int                     codeBufPos;
+  private volatile int                     maxSpeedKHz;
+  private volatile long                    speedUnlimitedTill;
+  private volatile long                    speedMillisBeg;
+  private volatile long                    speedMillisEnd;
+  private volatile int                     speedTStates;
+  private volatile int                     instTStates;
+  private volatile int                     debugCallLevel;
+  private volatile Action                  action;
+  private volatile int                     interruptMode;
+  private int                              interruptReg;
+  private boolean                          haltState;
+  private Integer                          haltPC;
+  private int                              instBegPC;
+  private int                              regPC;
+  private int                              regSP;
+  private int                              regA;
+  private int                              regB;
+  private int                              regC;
+  private int                              regD;
+  private int                              regE;
+  private int                              regH;
+  private int                              regL;
+  private int                              regA2;
+  private int                              regF2;
+  private int                              regB2;
+  private int                              regC2;
+  private int                              regD2;
+  private int                              regE2;
+  private int                              regH2;
+  private int                              regL2;
+  private int                              regIX;
+  private int                              regIY;
+  private int                              regR_bits0to6;
+  private boolean                          regR_bit7;
+  private boolean                          iff1;
+  private boolean                          iff2;
+  private volatile boolean                 nmiFired;
+  private boolean                          flagSign;
+  private boolean                          flagZero;
+  private boolean                          flag5;
+  private boolean                          flagHalf;
+  private boolean                          flag3;
+  private boolean                          flagPV;
+  private boolean                          flagN;
+  private boolean                          flagCarry;
+  private boolean                          lastInstWasEIorDI;
+  private volatile boolean                 active;
+  private volatile boolean                 pause;
+  private volatile boolean                 debugEnabled;
+  private AtomicInteger                    waitStates;
+  private String                           waitMonitor;
 
 
   public Z80CPU( Z80Memory memory, Z80IOSystem ioSys )
   {
-    this.memory                 = memory;
-    this.ioSys                  = ioSys;
-    this.addrListener           = null;
-    this.addrRangeListener      = null;
-    this.addrRangeListenerRange = null;
-    this.tStatesListener        = null;
-    this.interruptSources       = null;
-    this.maxSpeedListeners      = new ArrayList<Z80MaxSpeedListener>();
-    this.statusListeners        = new ArrayList<Z80StatusListener>();
-    this.debugBreakpoints       = null;
-    this.debugTracer            = null;
-    this.maxSpeedKHz            = -1;
-    this.active                 = false;
-    this.debugEnabled           = false;
-    this.waitMonitor            = "wait monitor";
+    this.memory             = memory;
+    this.ioSys              = ioSys;
+    this.thread             = null;
+    this.addrListener       = null;
+    this.tStatesListener    = null;
+    this.interruptSources   = null;
+    this.haltStateListeners = new ArrayList<Z80HaltStateListener>();
+    this.maxSpeedListeners  = new ArrayList<Z80MaxSpeedListener>();
+    this.statusListeners    = new ArrayList<Z80StatusListener>();
+    this.debugBreakpoints   = null;
+    this.debugTracer        = null;
+    this.haltPC             = null;
+    this.maxSpeedKHz        = -1;
+    this.active             = false;
+    this.haltState          = false;
+    this.debugEnabled       = false;
+    this.waitStates         = new AtomicInteger( 0 );
+    this.waitMonitor        = "wait monitor";
 
     // Paritaeten fuer den Byte-Bereich berechnen
     this.parity = new boolean[ 0x100 ];
@@ -140,6 +146,12 @@ public class Z80CPU
       this.parity[ i ] = v;
     }
     resetCPU( true );
+  }
+
+
+  public void addWaitStates( int tStates )
+  {
+    this.waitStates.addAndGet( tStates );
   }
 
 
@@ -186,40 +198,44 @@ public class Z80CPU
 
 
   /*
-   * Es kann nur ein AdressRangeListener gesetzt werden.
-   */
-  public synchronized void addAddressRangeListener(
-			Z80AddressRangeListener addrRangeListener,
-			int                     addr,
-			int                     len )
-  {
-    if( this.addrRangeListener != null ) {
-      throw new IllegalStateException( "Zu viele Z80AddressRangeListeners" );
-    }
-    this.addrRangeListener      = addrRangeListener;
-    this.addrRangeListenerRange = new Z80AddressRange( addr, len );
-  }
-
-
-  public synchronized void removeAddressRangeListener(
-			Z80AddressRangeListener addrRangeListener )
-  {
-    if( (this.addrRangeListener != null)
-	&& (this.addrRangeListener == addrRangeListener) )
-    {
-      this.addrRangeListener      = null;
-      this.addrRangeListenerRange = null;
-    }
-  }
-
-
-  /*
    * Der erste Argument bzw. der erste Eintrag in der Argumentliste
    * hat die hochste Interrupt-Prioritaet.
    */
   public void setInterruptSources( Z80InterruptSource... iSources )
   {
     this.interruptSources = iSources;
+  }
+
+
+  public void addHaltStateListener( Z80HaltStateListener listener )
+  {
+    synchronized( this.haltStateListeners ) {
+      this.haltStateListeners.add( listener );
+    }
+  }
+
+
+  public void removeHaltStateListener( Z80HaltStateListener listener )
+  {
+    synchronized( this.haltStateListeners ) {
+      this.maxSpeedListeners.remove( listener );
+    }
+  }
+
+
+  public void addMaxSpeedListener( Z80MaxSpeedListener listener )
+  {
+    synchronized( this.maxSpeedListeners ) {
+      this.maxSpeedListeners.add( listener );
+    }
+  }
+
+
+  public void removeMaxSpeedListener( Z80MaxSpeedListener listener )
+  {
+    synchronized( this.maxSpeedListeners ) {
+      this.maxSpeedListeners.remove( listener );
+    }
   }
 
 
@@ -241,23 +257,6 @@ public class Z80CPU
 	&& (this.tStatesListener == listener) )
     {
       this.tStatesListener = null;
-    }
-  }
-
-
-  public void addMaxSpeedListener( Z80MaxSpeedListener maxSpeedListener )
-  {
-    synchronized( this.maxSpeedListeners ) {
-      if( !this.maxSpeedListeners.contains( maxSpeedListener ) )
-	this.maxSpeedListeners.add( maxSpeedListener );
-    }
-  }
-
-
-  public void removeMaxSpeedListener( Z80MaxSpeedListener maxSpeedListener )
-  {
-    synchronized( this.maxSpeedListeners ) {
-      this.maxSpeedListeners.remove( maxSpeedListener );
     }
   }
 
@@ -363,10 +362,11 @@ public class Z80CPU
     this.lastInstWasEIorDI = false;
     this.debugCallLevel    = 0;
     this.pause             = false;
-    this.haltPC            = null;
     this.action            = this.debugEnabled ? Action.DEBUG_RUN : Action.RUN;
+    this.haltPC            = null;
     this.instBegPC         = 0;
     this.regPC             = 0;
+    setHaltState( false );
     if( powerOn ) {
       setRegF( 0xFF );
       this.regA  = 0xFF;
@@ -971,6 +971,7 @@ public class Z80CPU
     resetSpeed();
 
     this.active = true;
+    this.thread = Thread.currentThread();
     updStatusListeners();
 
     try {
@@ -983,9 +984,9 @@ public class Z80CPU
 
 	  // Zaehler fuer die Taktzyklen darf nicht ueberlaufen
 	  this.speedUnlimitedTill = 0L;
-	  this.speedTStates        -= tStatesWrap;
 	  this.speedMillisBeg     = System.currentTimeMillis();
 	  this.speedMillisEnd     = -1L;
+	  this.speedTStates       -= tStatesWrap;
 
 	} else {
 
@@ -996,7 +997,7 @@ public class Z80CPU
 	   * benoetigt wird.
 	   */
 	  if( this.speedUnlimitedTill < this.speedTStates ) {
-	    if( speedBrakeTStates < 1000 ) {
+	    if( speedBrakeTStates < 500 ) {
 	      speedBrakeTStates++;
 	    } else {
 	      speedBrakeTStates = 0;
@@ -1010,7 +1011,7 @@ public class Z80CPU
 
 		if( timeToUse > usedTime ) {
 		  try {
-		    Thread.sleep( timeToUse - usedTime );
+		    Thread.sleep( Math.min( timeToUse - usedTime, 50 ) );
 		  }
 		  catch( InterruptedException ex ) {}
 		}
@@ -1032,10 +1033,10 @@ public class Z80CPU
 	  this.nmiFired = false;
 	  this.iff2     = this.iff1;
 	  this.iff1     = false;
-	  this.haltPC   = null;
 	  incRegR();
 	  doPush( this.regPC );
-	  this.regPC = 0x0066;
+	  this.haltPC = null;
+	  this.regPC  = 0x0066;
 	  this.instTStates += 11;
 	  iAccepted = true;
 	} else {
@@ -1051,9 +1052,9 @@ public class Z80CPU
 		    break;
 		  }
 		  if( iSource.isInterruptRequested() ) {
+		    this.haltPC = null;
 		    this.iff1   = false;
 		    this.iff2   = false;
-		    this.haltPC = null;
 		    int iVector = iSource.interruptAccepted();
 		    incRegR();
 
@@ -1087,6 +1088,8 @@ public class Z80CPU
 	if( !iAccepted && (this.haltPC != null) ) {
 	  this.regPC  = this.haltPC.intValue();
 	  this.haltPC = null;
+	} else {
+	  setHaltState( false );
 	}
 
 
@@ -1122,60 +1125,24 @@ public class Z80CPU
 	  }
 	}
 
-
-	/*
-	 * in Z80AddressRangeListener springen?
-	 * Wenn ja und die dafuer benoetigte Zeit ist groesser 100 ms,
-	 * dann wird davon ausgegangen, dass auf eine Benutzereingabe
-	 * gewartet wurde.
-	 * In diesem Fall wird die extern benoetigte Zeit von der
-	 * vom Emulator benoetigten Zeit abgezogen.
-	 */
-	boolean                 isInRange = false;
-	Z80AddressRangeListener listener  = null;
-	Z80AddressRange         range     = null;
-	synchronized( this ) {
-	  listener  = this.addrRangeListener;
-	  range     = this.addrRangeListenerRange;
-	}
-	if( range != null ) {
-	  isInRange = range.isInAddressRange( this.regPC );
-	}
-	if( isInRange && (listener != null) ) {
-	  this.speedMillisEnd = System.currentTimeMillis();
-
-	  int oldSP = this.regSP;
-	  listener.z80AddressReached( this.regPC );
-	  this.debugCallLevel += ((oldSP - this.regSP) / 2);
-
-	  /*
-	   * wenn zwischenzeitlich die Geschwindigkeit
-	   * nicht zurueckgesetzt wurde, dann korrigieren
-	   */
-	  if( this.speedMillisEnd > 0L ) {
-	    long extNeededMillis = System.currentTimeMillis()
-					      - this.speedMillisEnd;
-	    if( extNeededMillis > 100L ) {
-	      this.speedMillisBeg += extNeededMillis;
-	    }
-	  }
-	  this.speedMillisEnd = -1L;
-
-	} else {
-
-	  // BefehlsOpCode lesen und PC weitersetzen
-	  this.instBegPC = this.regPC;
-	  opCode         = readMemByte( this.regPC );
-	  this.regPC     = (this.regPC + 1) & 0xFFFF;
-	  execInst( -1, opCode );
-	}
+	// BefehlsOpCode lesen und PC weitersetzen
+	this.instBegPC = this.regPC;
+	opCode         = readMemByte( this.regPC );
+	this.regPC     = (this.regPC + 1) & 0xFFFF;
+	execInst( -1, opCode );
+	this.instTStates  += this.waitStates.getAndSet( 0 );
 	this.speedTStates += this.instTStates;
 
 	// verbrauchte Anzahl Taktzyklen melden
-	if( this.instTStates > 0 ) {
-	  Z80TStatesListener tStatesListener = this.tStatesListener;
-	  if( tStatesListener != null )
+	Z80TStatesListener tStatesListener = this.tStatesListener;
+	if( tStatesListener != null ) {
+	  while( this.instTStates >= 4 ) {
+	    tStatesListener.z80TStatesProcessed( this, 4 );
+	    this.instTStates -= 4;
+	  }
+	  if( this.instTStates > 0 ) {
 	    tStatesListener.z80TStatesProcessed( this, this.instTStates );
+	  }
 	}
       }
     }
@@ -1772,6 +1739,7 @@ public class Z80CPU
       // NOP-Befehl mit Ruecksetzen des PCs
       this.haltPC = new Integer( this.instBegPC );
       this.instTStates += 4;
+      setHaltState( true );
 
     } else {					// 8-Bit-Ladebefehle
 
@@ -3390,9 +3358,6 @@ public class Z80CPU
     int addr   = computeRelAddr( regIXY, nextByte() );
     int value  = readMemByte( addr );
     int opCode = nextByte();
-    if( (opCode & 0x03) != 0x02 ) {
-      throwIllegalState( opCode );
-    }
     if( opCode < 0x80 ) {
       if( opCode < 0x40 ) {
         switch( opCode & 0x38 ) {
@@ -4316,6 +4281,19 @@ public class Z80CPU
     this.memory.writeMemByte( addr, value & 0xFF );
     this.memory.writeMemByte( addr + 1, value >> 8 );
     fireAddressChanged( addr );
+  }
+
+
+  private void setHaltState( boolean state )
+  {
+    if( state != this.haltState ) {
+      this.haltState = state;
+      synchronized( this.haltStateListeners ) {
+	for( Z80HaltStateListener listener : this.haltStateListeners ) {
+	  listener.z80HaltStateChanged( this, state );
+	}
+      }
+    }
   }
 
 
