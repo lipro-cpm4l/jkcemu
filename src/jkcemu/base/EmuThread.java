@@ -82,12 +82,11 @@ public class EmuThread extends Thread implements
 				Properties props,
 				ExtFile    extFont,
 				ExtROM[]   extROMs,
-				boolean    forceReset )
+				boolean    reqReset )
   {
     // zu emulierendes System ermitteln
-    boolean reqReset = false;
-    EmuSys  emuSys   = this.emuSys;
-    if( emuSys != null ) {
+    EmuSys emuSys = this.emuSys;
+    if( !reqReset && (emuSys != null) ) {
       reqReset = emuSys.requiresReset( props );
     }
     if( (emuSys == null) || reqReset ) {
@@ -95,23 +94,30 @@ public class EmuThread extends Thread implements
 	emuSys.die();
       }
       String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-      if( sysName.startsWith( "AC1" ) ) {
-	emuSys = new AC1( this, props );
-      } else if( sysName.startsWith( "BCS3" ) ) {
+      if( sysName.startsWith( "BCS3" ) ) {
 	emuSys = new BCS3( this, props );
       } else if( sysName.startsWith( "HueblerEvertMC" ) ) {
-	emuSys = new HueblerEvertMC( this );
+	emuSys = new HueblerEvertMC( this, props );
+      } else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
+	emuSys = new HueblerGraphicsMC( this, props );
+      } else if( sysName.startsWith( "KC85/1" )
+		 || sysName.startsWith( "KC87" )
+		 || sysName.startsWith( "Z9001" ) )
+      {
+	emuSys = new Z9001( this, props );
       } else if( sysName.startsWith( "KC85/2" )
 		 || sysName.startsWith( "KC85/3" )
 		 || sysName.startsWith( "KC85/4" ) )
       {
 	emuSys = new KC85( this, props );
       } else if( sysName.startsWith( "KramerMC" ) ) {
-	emuSys = new KramerMC( this );
+	emuSys = new KramerMC( this, props );
+      } else if( sysName.startsWith( "LC80" ) ) {
+	emuSys = new LC80( this, props );
       } else if( sysName.startsWith( "Z1013" ) ) {
 	emuSys = new Z1013( this, props );
       } else {
-	emuSys = new Z9001( this, props );
+	emuSys = new AC1( this, props );
       }
     }
     if( reqReset && (this.emuSys != null) ) {
@@ -148,17 +154,20 @@ public class EmuThread extends Thread implements
 
   public static int getDefaultSpeedKHz( Properties props )
   {
-    int    rv      = Z9001.getDefaultSpeedKHz();
+    int    rv      = AC1.getDefaultSpeedKHz();
     String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
     if( sysName != null ) {
-      if( sysName.startsWith( "KC85/2" )
-	  || sysName.startsWith( "KC85/3" )
-	  || sysName.startsWith( "KC85/4" ) )
+      if( sysName.startsWith( "KC85/1" )
+	  || sysName.startsWith( "KC87" )
+	  || sysName.startsWith( "Z9001" ) )
+      {
+	rv = Z9001.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "KC85/2" )
+	       || sysName.startsWith( "KC85/3" )
+	       || sysName.startsWith( "KC85/4" ) )
       {
 	rv = KC85.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "AC1" ) ) {
-	rv = AC1.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "BCS3" ) ) {
 	rv = BCS3.getDefaultSpeedKHz( props );
@@ -166,8 +175,14 @@ public class EmuThread extends Thread implements
       else if( sysName.startsWith( "HueblerEvertMC" ) ) {
 	rv = HueblerEvertMC.getDefaultSpeedKHz();
       }
+      else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
+	rv = HueblerGraphicsMC.getDefaultSpeedKHz();
+      }
       else if( sysName.startsWith( "KramerMC" ) ) {
 	rv = KramerMC.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "LC80" ) ) {
+	rv = LC80.getDefaultSpeedKHz( props );
       }
       else if( sysName.startsWith( "Z1013" ) ) {
 	rv = Z1013.getDefaultSpeedKHz( props );
@@ -355,6 +370,8 @@ public class EmuThread extends Thread implements
    */
   public void fireReset( ResetLevel resetLevel )
   {
+    this.screenFrm.clearScreenSelection();
+    this.screenFrm.stopPastingText();
     synchronized( this.monitor ) {
       this.resetLevel = resetLevel;
       this.loadData   = null;
@@ -416,19 +433,13 @@ public class EmuThread extends Thread implements
   {
     addr &= 0xFFFF;
 
-    int      rv      = 0xFF;
-    boolean  done    = false;
-    ExtROM[] extROMs = this.extROMs;
-    if( extROMs != null ) {
-      for( int i = 0; !done && (i < extROMs.length); i++ ) {
-	ExtROM rom = this.extROMs[ i ];
-	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) ) {
-	  rv = rom.getByte( addr );
-	  done = true;
-	}
+    int rv = 0;
+    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
+      rv = getExtROMByte( addr );
+      if( rv < 0 ) {
+	rv = this.emuSys.getMemByte( addr );
       }
-    }
-    if( !done ) {
+    } else {
       rv = this.emuSys.getMemByte( addr );
     }
     return rv;
@@ -437,8 +448,7 @@ public class EmuThread extends Thread implements
 
   public int getMemWord( int addr )
   {
-    return (this.emuSys.getMemByte( addr + 1 ) << 8)
-				| this.emuSys.getMemByte( addr );
+    return (getMemByte( addr + 1 ) << 8) | getMemByte( addr );
   }
 
 
@@ -446,19 +456,13 @@ public class EmuThread extends Thread implements
   {
     addr &= 0xFFFF;
 
-    int      rv      = 0xFF;
-    boolean  done    = false;
-    ExtROM[] extROMs = this.extROMs;
-    if( extROMs != null ) {
-      for( int i = 0; !done && (i < extROMs.length); i++ ) {
-	ExtROM rom = this.extROMs[ i ];
-	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) ) {
-	  rv = rom.getByte( addr );
-	  done = true;
-	}
+    int rv = 0;
+    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
+      rv = getExtROMByte( addr );
+      if( rv < 0 ) {
+	rv = this.emuSys.getMemByte( addr );
       }
-    }
-    if( !done ) {
+    } else {
       rv = this.emuSys.readMemByte( addr );
     }
     return rv;
@@ -469,13 +473,10 @@ public class EmuThread extends Thread implements
   {
     addr &= 0xFFFF;
 
-    boolean  done    = false;
-    ExtROM[] extROMs = this.extROMs;
-    if( extROMs != null ) {
-      for( int i = 0; !done && (i < extROMs.length); i++ ) {
-	ExtROM rom = this.extROMs[ i ];
-	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) )
-	  done = true;
+    boolean done = false;
+    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
+      if( getExtROMByte( addr ) >= 0 ) {
+	done = true;
       }
     }
     if( !done )
@@ -485,8 +486,8 @@ public class EmuThread extends Thread implements
 
   public void setMemWord( int addr, int value )
   {
-    this.emuSys.setMemByte( addr, value & 0xFF );
-    this.emuSys.setMemByte( addr + 1, (value >> 8) & 0xFF );
+    setMemByte( addr, value & 0xFF );
+    setMemByte( addr + 1, (value >> 8) & 0xFF );
   }
 
 
@@ -494,13 +495,10 @@ public class EmuThread extends Thread implements
   {
     addr &= 0xFFFF;
 
-    boolean  done    = false;
-    ExtROM[] extROMs = this.extROMs;
-    if( extROMs != null ) {
-      for( int i = 0; !done && (i < extROMs.length); i++ ) {
-	ExtROM rom = this.extROMs[ i ];
-	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) )
-	  done = true;
+    boolean done = false;
+    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
+      if( getExtROMByte( addr ) >= 0 ) {
+	done = true;
       }
     }
     if( !done )
@@ -554,7 +552,7 @@ public class EmuThread extends Thread implements
 	  } else {
 	    this.z80cpu.resetCPU( false );
 	  }
-	  this.emuSys.reset( this.resetLevel );
+	  this.emuSys.reset( this.resetLevel, Main.getProperties() );
 	  this.z80cpu.setRegPC(
 			this.emuSys.getResetStartAddress( this.resetLevel ) );
 	}
@@ -624,6 +622,23 @@ public class EmuThread extends Thread implements
 	}
       }
     }
+  }
+
+
+  private int getExtROMByte( int addr )
+  {
+    int      rv      = -1;
+    ExtROM[] extROMs = this.extROMs;
+    if( extROMs != null ) {
+      for( int i = 0; i < extROMs.length; i++ ) {
+	ExtROM rom = this.extROMs[ i ];
+	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) ) {
+	  rv = rom.getByte( addr );
+	  break;
+	}
+      }
+    }
+    return rv;
   }
 }
 

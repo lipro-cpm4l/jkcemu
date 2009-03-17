@@ -221,44 +221,6 @@ public class EmuUtil
   }
 
 
-  public static String extractText(
-				byte[] data,
-				int    offs,
-				int    nRows,
-				int    nCols,
-				int    colDist )
-  {
-    String rv = null;
-    if( data != null ) {
-      StringBuilder buf = new StringBuilder( nRows + (nCols + 1) );
-      for( int i = 0; i < nRows; i++ ) {
-	int rowIdx = offs + (i * colDist);
-	int nSpaces = 0;
-	for( int k = 0; k < nCols; k++ ) {
-	  int b = 0;
-	  int p = rowIdx + k;
-	  if( (p >= 0) && (p < data.length) ) {
-	    b = (int) (data[ p ] & 0xFF);
-	  }
-	  if( (b == 0) || b == 0x20 ) {
-	    nSpaces++;
-	  }
-	  else if( (b > 0x20) && (b < 0x7F) ) {
-	    while( nSpaces > 0 ) {
-	      buf.append( (char) '\u0020' );
-	      --nSpaces;
-	    }
-	    buf.append( (char) b );
-	  }
-	}
-	buf.append( (char) '\n' );
-      }
-      rv = buf.toString();
-    }
-    return rv;
-  }
-
-
   public static boolean getBooleanProperty(
 				Properties props,
 				String     keyword,

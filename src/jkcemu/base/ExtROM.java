@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -87,6 +87,53 @@ public class ExtROM extends ExtFile implements Comparable<ExtROM>
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  public boolean equals( Object o )
+  {
+    boolean rv = false;
+    if( o != null ) {
+      if( o == this ) {
+	rv = true;
+      } else {
+	if( o instanceof ExtROM ) {
+	  rv          = true;
+	  ExtROM data = (ExtROM) o;
+	  if( this.begAddr != data.getBegAddress() ) {
+	    rv = false;
+	  } else {
+	    byte[] bytes1 = getBytes();
+	    byte[] bytes2 = data.getBytes();
+	    if( (bytes1 != null) && (bytes2 != null) ) {
+	      if( bytes1.length == bytes2.length ) {
+		for( int i = 0; i < bytes1.length; i++ ) {
+		  if( bytes1[ i ] != bytes2[ i ] ) {
+		    rv = false;
+		    break;
+		  }
+		}
+	      } else {
+		rv = false;
+	      }
+	    } else {
+	      int n1 = 0;
+	      if( bytes1 != null ) {
+		n1 = bytes1.length;
+	      }
+	      int n2 = 0;
+	      if( bytes2 != null ) {
+		n2 = bytes2.length;
+	      }
+	      if( n1 != n2 ) {
+		rv = false;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
 
   public String toString()
   {

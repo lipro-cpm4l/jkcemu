@@ -389,7 +389,10 @@ public class SaveDlg extends BasicDlg implements
 
     // Vorbelegungen
     EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
-    if( (emuSys instanceof AC1) || (emuSys instanceof KramerMC) ) {
+    if( (emuSys instanceof AC1)
+	|| (emuSys instanceof HueblerGraphicsMC)
+	|| (emuSys instanceof KramerMC) )
+    {
       this.btnFileFmtHS.setSelected( true );
     }
     else if( (emuSys instanceof KC85) || (emuSys instanceof Z9001) ) {
@@ -707,8 +710,7 @@ public class SaveDlg extends BasicDlg implements
 
     this.btnKeepHeader.setEnabled(
 	stateHS
-	&& this.screenFrm.getEmuThread().getEmuSys()
-				.getSystemName().startsWith( "Z1013" ) );
+	&& (this.screenFrm.getEmuThread().getEmuSys() instanceof Z1013) );
   }
 
 

@@ -85,7 +85,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
   private static byte[] scchMon1088   = null;
   private static byte[] minibasic     = null;
   private static byte[] gsbasic       = null;
-  private static byte[] ac1FontBytes  = null;
+  private static byte[] ccdFontBytes  = null;
   private static byte[] scchFontBytes = null;
   private static byte[] u402FontBytes = null;
 
@@ -104,7 +104,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
   public AC1( EmuThread emuThread, Properties props )
   {
-    super( emuThread );
+    super( emuThread, props );
     this.romMon           = null;
     this.romBASIC         = null;
     this.fontBytes        = null;
@@ -145,10 +145,10 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	this.romMon    = mon31_64x16;
 	this.mode64x16 = true;
       } else {
-	if( ac1FontBytes == null ) {
-	  ac1FontBytes = readResource( "/rom/ac1/ac1font.bin" );
+	if( ccdFontBytes == null ) {
+	  ccdFontBytes = readResource( "/rom/ac1/ccdfont.bin" );
 	}
-	this.fontBytes = ac1FontBytes;
+	this.fontBytes = ccdFontBytes;
 	if( mon31_64x32 == null ) {
 	  mon31_64x32 = readResource( "/rom/ac1/mon_31_64x32.bin" );
 	}
@@ -175,7 +175,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
     cpu.addTStatesListener( this.ctc );
 
     this.keyboardUsed = false;
-    reset( EmuThread.ResetLevel.POWER_ON );
+    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
@@ -246,6 +246,12 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
 	/* --- ueberschriebene Methoden --- */
 
+  public boolean canExtractScreenText()
+  {
+    return true;
+  }
+
+
   public void die()
   {
     this.ctc.removeCTCListener( this );
@@ -253,35 +259,6 @@ public class AC1 extends EmuSys implements Z80CTCListener
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeTStatesListener( this.ctc );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
-  }
-
-
-  public String extractScreenText()
-  {
-    StringBuilder buf = new StringBuilder( 65 * (this.mode64x16 ? 16 : 32) );
-    for( int i = 0; i < 32; i++ ) {
-      int rowIdx  = (this.mode64x16 ? 0x03FF : 0x07FF) - (i * 64);
-      int nSpaces = 0;
-      for( int k = 0; k < 64; k++ ) {
-	int a = rowIdx - k;
-	int b = 20;
-	if( (a >= 0) && (a < this.ramVideo.length) ) {
-	  b = (int) this.ramVideo[ a ] & 0xFF;
-	}
-	if( b == 0x20 ) {
-	  nSpaces++;
-	}
-	else if( (b > 0x20) && (b < 0x7F) ) {
-	  while( nSpaces > 0 ) {
-	    buf.append( (char) '\u0020' );
-	    --nSpaces;
-	  }
-	  buf.append( (char) b );
-	}
-      }
-      buf.append( (char) '\n' );
-    }
-    return buf.toString();
   }
 
 
@@ -330,15 +307,33 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
-  public int getMinOSAddress()
+  public int getCharColCount()
   {
-    return 0;
+    return 64;
   }
 
 
-  public int getMaxOSAddress()
+  public int getCharHeight()
   {
-    return this.romMon != null ? (this.romMon.length - 1) : 0;
+    return 8;
+  }
+
+
+  public int getCharRowCount()
+  {
+    return this.mode64x16 ? 16 : 32;
+  }
+
+
+  public int getCharRowHeight()
+  {
+    return this.mode64x16 ? 16 : 8;
+  }
+
+
+  public int getCharWidth()
+  {
+    return 6;
   }
 
 
@@ -396,13 +391,61 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
-  public int getScreenBaseHeight()
+  protected int getScreenChar( int chX, int chY )
+  {
+    int ch  = -1;
+    int idx = (this.mode64x16 ? 0x03FF : 0x07FF) - (chY * 64) - chX;
+    if( (idx >= 0) && (idx < this.ramVideo.length) ) {
+      ch = (int) this.ramVideo[ idx ];
+      if( this.fontBytes == ccdFontBytes ) {
+
+	// Umlaute im Zeichensatz des Computerclubs Dessau
+	switch( ch ) {
+	  case 0x16:		// Paragraf-Zeichen
+	    ch = '\u00A7';
+	    break;
+
+	  case 0x17:		// Ae-Umlaut
+	    ch = '\u00C4';
+	    break;
+
+	  case 0x18:		// Oe-Umlaut
+	    ch = '\u00D6';
+	    break;
+
+	  case 0x19:		// Ue-Umlaut
+	    ch = '\u00DC';
+	    break;
+
+	  case 0x1A:		// ae-Umlaut
+	    ch = '\u00E4';
+	    break;
+
+	  case 0x1B:		// oe-Umlaut
+	    ch = '\u00F6';
+	    break;
+
+	  case 0x1C:		// ue-Umlaut
+	    ch = '\u00FC';
+	    break;
+
+	  case 0x1D:		// sz
+	    ch = '\u00DF';
+	    break;
+	}
+      }
+    }
+    return ch;
+  }
+
+
+  public int getScreenHeight()
   {
     return this.mode64x16 ? 248 : 256;
   }
 
 
-  public int getScreenBaseWidth()
+  public int getScreenWidth()
   {
     return 384;
   }
@@ -414,9 +457,15 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
-  public String getSystemName()
+  public String getTitle()
   {
     return "AC1";
+  }
+
+
+  protected boolean isExtROMSwitchableAt( int addr )
+  {
+    return !this.lowerDRAMEnabled || (addr >= 0x2000);
   }
 
 
@@ -529,7 +578,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
   {
     int rv  = 0;
     int bol = buf.length();
-    int b   = getMemByte( addr );
+    int b   = this.emuThread.getMemByte( addr );
     switch( b ) {
       case 0xCF:
 	buf.append( String.format( "%04X  %02X", addr, b ) );
@@ -650,8 +699,9 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	  break;
 
 	case 5:
-	  rv = (this.emuThread.readAudioPhase() ? 0x80 : 0)
-					| (this.pio.readPortB() & 0x7F);
+	  this.pio.putInValuePortB(
+			this.emuThread.readAudioPhase() ? 0x80 : 0, 0x80 );
+	  rv = this.pio.readPortB();
 	  break;
 
 	case 6:
@@ -702,7 +752,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       fillRandom( this.ramStatic );

@@ -92,6 +92,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	      EmuThread emuThread  = screenFrm.getEmuThread();
 	      EmuSys    emuSys     = emuThread.getEmuSys();
 	      boolean   isAC1      = (emuSys instanceof AC1);
+	      boolean   isHGMC     = (emuSys instanceof HueblerGraphicsMC);
 	      boolean   isKramerMC = (emuSys instanceof KramerMC);
 	      boolean   isZ1013    = (emuSys instanceof Z1013);
 	      boolean   isKC       = ((emuSys instanceof KC85)
@@ -124,7 +125,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	       * gerade emulierten System ist
 	       */
 	      if( loadData.getStartAddr() >= 0 ) {
-		if( ((isAC1 || isKramerMC || isZ1013)
+		if( ((isAC1 || isHGMC || isKramerMC || isZ1013)
 				&& !fileFmt.equals( FileInfo.HEADERSAVE ))
 		    || (isKC && !fileFmt.equals( FileInfo.KCC )
 				&& !fileFmt.equals( FileInfo.KCTAP_SYS )) )
@@ -217,7 +218,9 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	  rv = true;
 	  updFields();
 	}
-	else if( src == this.btnLoad ) {
+	else if( (src == this.btnLoad)
+		 || (src == fldLoadEndAddr) )
+	{
 	  rv = true;
 	  doLoad( false );
 	}
@@ -501,7 +504,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     // Felder aktualisieren
     EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
     this.btnKeepHeader.setSelected(
-		emuSys.getSystemName().startsWith( "Z1013" )
+		(emuSys instanceof Z1013)
 		&& EmuUtil.parseBoolean(
 			Main.getProperty( "jkcemu.loadsave.header.keep" ),
 			false ) );
@@ -638,7 +641,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	  EmuThread emuThread = this.screenFrm.getEmuThread();
 
 	  // ggf. Dateikopf in Arbeitsspeicher kopieren
-	  if( emuThread.getEmuSys().getSystemName().startsWith( "Z1013" )
+	  if( (emuThread.getEmuSys() instanceof Z1013)
 	      && fileFmt.equals( FileInfo.HEADERSAVE )
 	      && this.btnKeepHeader.isSelected()
 	      && (loadData.getOffset() == 32) )
@@ -826,8 +829,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
     EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
     this.btnKeepHeader.setEnabled(
-	emuSys.getSystemName().startsWith( "Z1013" )
-	&& fileFmt.equals( FileInfo.HEADERSAVE ) );
+			(emuSys instanceof Z1013)
+			&& fileFmt.equals( FileInfo.HEADERSAVE ) );
     this.btnLoad.setEnabled( this.fileBuf.length > 0 );
     updStartButton( begAddr, endAddr, startAddr );
   }

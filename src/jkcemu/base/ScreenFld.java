@@ -9,30 +9,64 @@
 package jkcemu.base;
 
 import java.awt.*;
+import java.awt.event.*;
 import java.awt.image.*;
 import java.lang.*;
 import javax.swing.JComponent;
 
 
-public class ScreenFld extends JComponent
+public class ScreenFld extends JComponent implements MouseMotionListener
 {
   public static final int DEFAULT_MARGIN = 20;
 
   private ScreenFrm screenFrm;
   private EmuSys    emuSys;
+  private Color     markXORColor;
+  private Point     dragStart;
+  private Point     dragEnd;
+  private boolean   textSelected;
+  private int       selectionCharX1;
+  private int       selectionCharX2;
+  private int       selectionCharY1;
+  private int       selectionCharY2;
   private int       lastColorIdx;
-  private int       margin;
   private int       screenScale;
+  private int       margin;
+  private int       xOffs;
+  private int       yOffs;
 
 
   public ScreenFld( ScreenFrm screenFrm )
   {
-    this.screenFrm    = screenFrm;
-    this.emuSys       = screenFrm.getEmuThread().getEmuSys();
-    this.lastColorIdx = -1;
-    this.margin       = DEFAULT_MARGIN;
-    this.screenScale  = 1;
+    this.screenFrm       = screenFrm;
+    this.emuSys          = screenFrm.getEmuThread().getEmuSys();
+    this.markXORColor    = new Color( 192, 192, 0 );
+    this.dragStart       = null;
+    this.dragEnd         = null;
+    this.textSelected    = false;
+    this.selectionCharX1 = -1;
+    this.selectionCharY1 = -1;
+    this.selectionCharX2 = -1;
+    this.selectionCharY2 = -1;
+    this.lastColorIdx    = -1;
+    this.screenScale     = 1;
+    this.margin          = DEFAULT_MARGIN;
+    this.xOffs           = 0;
+    this.yOffs           = 0;
+    addMouseMotionListener( this );
     updPreferredSize();
+  }
+
+
+  public void clearSelection()
+  {
+    this.dragStart       = null;
+    this.dragEnd         = null;
+    this.selectionCharX1 = -1;
+    this.selectionCharY1 = -1;
+    this.selectionCharX2 = -1;
+    this.selectionCharY2 = -1;
+    this.screenFrm.setScreenDirty( true );
   }
 
 
@@ -62,7 +96,7 @@ public class ScreenFld extends JComponent
       IndexColorModel cm = new IndexColorModel( nBits, nColors, r, g, b );
       img = new BufferedImage( w, h, BufferedImage.TYPE_BYTE_INDEXED, cm );
       Graphics graphics = img.createGraphics();
-      paint( graphics, w, h );
+      paint( graphics, w, h, false );
       graphics.dispose();
     }
     return img;
@@ -87,8 +121,24 @@ public class ScreenFld extends JComponent
   }
 
 
+  public String getSelectedText()
+  {
+    return (this.selectionCharX1 >= 0)
+		&& (this.selectionCharY1 >= 0)
+		&& (this.selectionCharX2 >= 0)
+		&& (this.selectionCharY2 >= 0) ?
+					this.emuSys.getScreenText(
+							this.selectionCharX1,
+							this.selectionCharY1,
+							this.selectionCharX2,
+							this.selectionCharY2 )
+					: null;
+  }
+
+
   public void setEmuSys( EmuSys emuSys )
   {
+    clearSelection();
     this.emuSys = emuSys;
   }
 
@@ -111,14 +161,14 @@ public class ScreenFld extends JComponent
 
   public void updPreferredSize()
   {
+    clearSelection();
     int margin = this.margin;
     if( margin < 0 ) {
       margin = 0;
     }
     setPreferredSize( new Dimension(
-	(2 * margin) + (this.emuSys.getScreenBaseWidth() * this.screenScale),
-	(2 * margin) + (this.emuSys.getScreenBaseHeight()
-						* this.screenScale) ) );
+	(2 * margin) + (this.emuSys.getScreenWidth() * this.screenScale),
+	(2 * margin) + (this.emuSys.getScreenHeight() * this.screenScale) ) );
 
     Container parent = getParent();
     if( parent != null ) {
@@ -129,12 +179,43 @@ public class ScreenFld extends JComponent
   }
 
 
+	/* --- MouseMotionListener --- */
+
+  public void mouseDragged( MouseEvent e )
+  {
+    if( e.getComponent() == this ) {
+      if( this.emuSys.canExtractScreenText()
+	  && (this.emuSys.getCharColCount() > 0)
+	  && (this.emuSys.getCharRowCount() > 0)
+	  && (this.emuSys.getCharRowHeight() > 0)
+	  && (this.emuSys.getCharHeight() > 0)
+	  && (this.emuSys.getCharWidth() > 0) )
+      {
+	if( this.dragStart == null ) {
+	  this.dragStart = new Point( e.getX(), e.getY() );
+	  this.dragEnd   = null;
+	} else {
+	  this.dragEnd = new Point( e.getX(), e.getY() );
+	}
+	this.screenFrm.setScreenDirty( true );
+      }
+      e.consume();
+    }
+  }
+
+
+  public void mouseMoved( MouseEvent e )
+  {
+    // leer
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   public void paint( Graphics g )
   {
     this.screenFrm.setScreenDirty( false );
-    paint( g, getWidth(), getHeight() );
+    paint( g, getWidth(), getHeight(), true );
   }
 
 
@@ -152,32 +233,9 @@ public class ScreenFld extends JComponent
 
 	/* --- private Methoden --- */
 
-  private Point getOffset( int wBase, int hBase )
+  private void paint( Graphics g, int w, int h, boolean withMarking )
   {
-    int w = getWidth();
-    if( w < 1 ) {
-      w = wBase * this.screenScale;
-    }
-
-    int h = getHeight();
-    if( h < 1 ) {
-      h = hBase * this.screenScale;
-    }
-
-    int xOffset = (w - (wBase * this.screenScale)) / 2;
-    if( xOffset < 0 ) {
-      xOffset = 0;
-    }
-    int yOffset = (h - (hBase * this.screenScale)) / 2;
-    if( yOffset < 0 ) {
-      yOffset = 0;
-    }
-    return new Point( xOffset, yOffset );
-  }
-
-
-  private void paint( Graphics g, int w, int h )
-  {
+    boolean textSelected = false;
     if( (w > 0) && (h > 0) ) {
 
       // Hintergrund
@@ -186,31 +244,21 @@ public class ScreenFld extends JComponent
       g.fillRect( 0, 0, w, h );
 
       // Vordergrund zentrieren
-      int wBase = this.emuSys.getScreenBaseWidth();
-      int hBase = this.emuSys.getScreenBaseHeight();
+      int wBase = this.emuSys.getScreenWidth();
+      int hBase = this.emuSys.getScreenHeight();
 
-      int wScaled = wBase * this.screenScale;
-      int hScaled = hBase * this.screenScale;
-
-      int xOffs = (w - wScaled) / 2;
-      if( xOffs < 0) {
-	xOffs = 0;
+      this.xOffs = (w - (wBase * this.screenScale)) / 2;
+      if( this.xOffs < 0) {
+	this.xOffs = 0;
       }
-      int yOffs = (h - hScaled) / 2;
-      if( yOffs < 0) {
-	yOffs = 0;
+      this.yOffs = (h - (hBase * this.screenScale)) / 2;
+      if( this.yOffs < 0) {
+	this.yOffs = 0;
       }
 
-      Image image = this.emuSys.getScreenImage();
-      if( image != null ) {
-	if( this.screenScale > 1 ) {
-	  g.drawImage( image, xOffs, yOffs, wScaled, hScaled, this );
-	} else {
-	  g.drawImage( image, xOffs, yOffs, this );
-	}
-      } else {
-	if( (xOffs > 0) || (yOffs > 0) ) {
-	  g.translate( xOffs, yOffs );
+      if( !this.emuSys.paintScreen( g, this.xOffs, this.yOffs, this.screenScale ) ) {
+	if( (this.xOffs > 0) || (this.yOffs > 0) ) {
+	  g.translate( this.xOffs, this.yOffs );
 	}
 
 	/*
@@ -250,8 +298,130 @@ public class ScreenFld extends JComponent
 		(hBase - yColorBeg) * this.screenScale );
 	  }
 	}
+	if( (this.xOffs > 0) || (this.yOffs > 0) ) {
+	  g.translate( -this.xOffs, -this.yOffs );
+	}
       }
+
+      // Markierter Text
+      if( withMarking
+	  && (this.screenScale > 0)
+	  && (this.dragStart != null)
+	  && (this.dragEnd != null) )
+      {
+	int nCols = this.emuSys.getCharColCount();
+	int nRows = this.emuSys.getCharRowCount();
+	int hRow  = this.emuSys.getCharRowHeight();
+	int hChar = this.emuSys.getCharHeight();
+	int wChar = this.emuSys.getCharWidth();
+	if( (nCols > 0) && (nRows > 0) && (hRow > 0) && (hChar > 0) && (wChar > 0) ) {
+	  int x1 = this.dragStart.x;
+	  int y1 = this.dragStart.y;
+	  int x2 = this.dragEnd.x;
+	  int y2 = this.dragEnd.y;
+
+	  // Zeichenpositionen berechnen
+	  this.selectionCharX1 = Math.max( (x1 - this.xOffs) / this.screenScale, 0 )
+					/ wChar;
+	  this.selectionCharY1 = Math.max( (y1 - this.yOffs) / this.screenScale, 0 )
+					/ hRow;
+	  this.selectionCharX2 = Math.max( (x2 - this.xOffs) / this.screenScale, 0 )
+					/ wChar;
+	  this.selectionCharY2 = Math.max( (y2 - this.yOffs) / this.screenScale , 0 )
+					/ hRow;
+	  if( this.selectionCharX1 >= nCols ) {
+	    this.selectionCharX1 = nCols - 1;
+	  }
+	  if( this.selectionCharY1 >= nRows ) {
+	    this.selectionCharY1 = nRows - 1;
+	  }
+	  if( this.selectionCharX2 >= nCols ) {
+	    this.selectionCharX2 = nCols - 1;
+	  }
+	  if( this.selectionCharY2 >= nRows ) {
+	    this.selectionCharY2 = nRows - 1;
+	  }
+
+	  // Koordinaten tauschen, wenn Endpunkt vor Startpunkt liegt
+	  if( (this.selectionCharY1 > this.selectionCharY2)
+	      || ((this.selectionCharY1 == this.selectionCharY2)
+		  && (this.selectionCharX1 > this.selectionCharX2)) )
+	  {
+	    int m = this.selectionCharX1;
+	    this.selectionCharX1 = this.selectionCharX2;
+	    this.selectionCharX2 = m;
+
+	    m = this.selectionCharY1;
+	    this.selectionCharY1 = this.selectionCharY2;
+	    this.selectionCharY2 = m;
+
+	    m  = x1;
+	    x1 = x2;
+	    x2 = m;
+
+	    m  = y1;
+	    y1 = y2;
+	    y2 = m;
+	  }
+
+	  // Koordinaten anpassen, wenn Endpunkt ausserhalb der Bildschirmausgabe liegt
+	  if( y1 < this.yOffs ) {
+	    this.selectionCharX1 = 0;
+	    this.selectionCharY1 = 0;
+	  } else {
+	    if( x1 > (this.xOffs + (this.screenScale * nCols * wChar)) ) {
+	      this.selectionCharX1 = 0;
+	      this.selectionCharY1++;
+	    }
+	  }
+	  if( y2 > (this.yOffs + (this.screenScale
+					* (((nRows - 1) * hRow) + hChar))) )
+	  {
+	    this.selectionCharX2 = nCols - 1;
+	    this.selectionCharY2 = nRows - 1;
+	  } else {
+	    if( x2 < this.xOffs ) {
+	      this.selectionCharX2 = nCols - 1;
+	      --this.selectionCharY2;
+	    }
+	  }
+
+	  // Markierter Text visualisieren
+	  g.setColor( Color.white );
+	  g.setXORMode( this.markXORColor );
+	  if( this.selectionCharY1 == this.selectionCharY2 ) {
+	    g.fillRect(
+		this.xOffs + (this.screenScale * this.selectionCharX1 * wChar),
+		this.yOffs + (this.screenScale * this.selectionCharY1 * hRow),
+		this.screenScale * (this.selectionCharX2 - this.selectionCharX1 + 1) * wChar,
+		this.screenScale * hChar );
+	  } else {
+	    g.fillRect(
+		this.xOffs + (this.screenScale * this.selectionCharX1 * wChar),
+		this.yOffs + (this.screenScale * this.selectionCharY1 * hRow),
+		this.screenScale * (nCols - this.selectionCharX1) * wChar,
+		this.screenScale * hRow );
+	    if( this.selectionCharY1 + 1 < this.selectionCharY2 ) {
+	      g.fillRect(
+		this.xOffs,
+		this.yOffs + (this.screenScale * (this.selectionCharY1 + 1) * hRow),
+		this.screenScale * nCols * wChar,
+		this.screenScale * (this.selectionCharY2 - this.selectionCharY1 - 1)
+									* hRow );
+	    }
+	    g.fillRect(
+		this.xOffs,
+		this.yOffs + (this.screenScale * this.selectionCharY2 * hRow),
+		this.screenScale * (this.selectionCharX2 + 1) * wChar,
+		this.screenScale * hChar );
+	  }
+	  textSelected = true;
+	}
+      }
+    }
+    if( withMarking && (textSelected != this.textSelected) ) {
+      this.textSelected = textSelected;
+      this.screenFrm.setScreenTextSelected( textSelected );
     }
   }
 }
-

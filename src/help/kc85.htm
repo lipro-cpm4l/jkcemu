@@ -1,6 +1,10 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des KC85/2...4</h1>
+  <h1>Hinweise zur Emulation des HC900 und KC85/2...4</h1>
+    HC900 ist die urspr&uuml;ngliche Bezeichnung des KC85/2.
+    Da es zwischen beiden keine funktionalen Unterschiede gibt,
+    werden sie auch zusammen als ein Computertyp emuliert.
+  <br><br>
 
   <h2>1. Emulierte Hardware</h2>
     Emuliert werden die Grundger&auml;te inklusive Tongeneratoren
@@ -60,7 +64,40 @@
 
   <h2>3. Sonstiges</h2>
 
-  <h3>3.1. Zeitverhalten der Bildschirmsteuerung</h3>
+  <h3>3.1. Einbindung externer ROM-Images</h3>
+    Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>
+    externe ROM-Images an jeder beliebigen Adresse einbinden.
+    Aufgrund des Bankswitchings sind diese ROM-Images aber
+    nicht immer sichtbar, sondern nur in folgenden F&auml;llen:
+    <ul>
+      <li>Adressbereich 0000-7FFF:<br>
+	  Ein extern eingebundenes ROM-Image ist immer sichtbar
+	  und verdeckt somit den internen RAM.
+	  <br><br>
+
+      <li>Adressbereich 8000-BFFF:<br>
+	  Ein extern eingebundenes ROM-Image ist nur sichtbar,
+	  wenn der Videospeicher (IRM) ausgeblendet ist.
+	  Jeglicher anderer Speicher, z.B. RAM 8, wird verdeckt.
+	  <br><br>
+
+      <li>Adressbereich C000-DFFF:<br>
+	  Beim KC85/2 und KC85/3 ist das extern eingebundene ROM-Image
+	  immer sichtbar.
+	  Beim KC85/4 ist es dagegen mit dem CAOS-C-ROM gekoppelt,
+	  d.h. das eingebundene ROM-Image ist nur sichtbar,
+	  wenn der interne Betriebssystem-ROM ab Adresse C000 aktiv ist.
+	  Damit k&ouml;nnen Sie die in diesem Adressbereich liegenden
+	  Betriebssystemteile &uuml;berladen,
+	  nicht aber den BASIC-Interpreter.
+	  <br><br>
+
+      <li>Adressbereich E000-FFFF:<br>
+	  Ein extern eingebundenes ROM-Image ist immer sichtbar.
+    </ul>
+  <br><br>
+
+  <h3>3.2. Zeitverhalten der Bildschirmsteuerung</h3>
     F&uuml;r den KC85/2...4 gibt es in den
     <a href="settings.htm">Einstellungen</a> die Option
     <em>Zeitverhalten der Bildschirmsteuerung emulieren</em>.

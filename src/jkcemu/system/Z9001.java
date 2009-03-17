@@ -35,15 +35,15 @@ public class Z9001 extends EmuSys implements
 			"GCURS", "SCURS", "BOSER", "GIOBY",
 			"SIOBY", "GMEM",  "SMEM" };
 
-  private static final Color[] colors = {
-				Color.black,
-				Color.red,
-				Color.green,
-				Color.yellow,
-				Color.blue,
-				new Color( 255, 0, 255 ),
-				new Color( 0, 255, 255 ),
-				Color.white };
+  private static final int basicRGBValues[][] = {
+				{ 0,   0,   0 },
+				{ 255, 0,   0 },
+				{ 0,   255, 0 },
+				{ 255, 255, 0 },
+				{ 0,   0,   255 },
+				{ 255, 0,   255 },
+				{ 0,   255, 255 },
+				{ 255, 255, 255 } };
 
   private static int[][] kbMatrixNormal = {
 		{ '0', '1', '2', '3', '4', '5', '6', '7' },
@@ -78,8 +78,9 @@ public class Z9001 extends EmuSys implements
   private boolean           audioOutPhase;
   private boolean           audioInPhase;
   private int               audioInTStates;
-  private int               frameTStates;
-  private int               tStatesPerFrame;
+  private int               lineNum;
+  private int               lineTStates;
+  private int               tStatesPerLine;
   private int               tStatesVisible;
   private int               borderColorIdx;
   private int[]             kbMatrix;
@@ -87,11 +88,12 @@ public class Z9001 extends EmuSys implements
   private Z80PIO            pio88;
   private Z80CTC            ctc80;
   private javax.swing.Timer blinkTimer;
+  private Color[]           colors;
 
 
   public Z9001( EmuThread emuThread, Properties props )
   {
-    super( emuThread );
+    super( emuThread, props );
     if( z9001FontBytes == null ) {
       z9001FontBytes = readResource( "/rom/z9001/z9001font.bin" );
     }
@@ -117,6 +119,8 @@ public class Z9001 extends EmuSys implements
     this.ramVideo       = new byte[ 0x0400 ];
     this.ramColor       = new byte[ 0x0400 ];
     this.ramSize        = getRAMSize( props );
+    this.lineNum        = 0;
+    this.lineTStates    = 0;
     this.audioInTStates = 0;
     this.audioInPhase   = this.emuThread.readAudioPhase();
     this.audioOutPhase  = false;
@@ -124,6 +128,8 @@ public class Z9001 extends EmuSys implements
     this.colorMode      = getColorMode( props );
     this.colorSwap      = false;
     this.borderColorIdx = 0;
+    this.colors         = new Color[ basicRGBValues.length ];
+    createColors( props );
 
     this.kbMatrix = new int[ 8 ];
     Arrays.fill( this.kbMatrix, 0 );
@@ -144,7 +150,7 @@ public class Z9001 extends EmuSys implements
     } else {
       this.blinkTimer = null;
     }
-    reset( EmuThread.ResetLevel.POWER_ON );
+    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged();
   }
 
@@ -172,9 +178,9 @@ public class Z9001 extends EmuSys implements
 
   public void z80MaxSpeedChanged()
   {
-    this.tStatesPerFrame = this.emuThread.getZ80CPU().getMaxSpeedKHz() * 200;
-    this.tStatesVisible  = (int) Math.round(
-					this.tStatesPerFrame * 192.0 / 312.0 );
+    this.tStatesPerLine = this.emuThread.getZ80CPU().getMaxSpeedKHz()
+								* 20 / 312;
+    this.tStatesVisible = (int) Math.round( this.tStatesPerLine / 2 );
   }
 
 
@@ -247,15 +253,34 @@ public class Z9001 extends EmuSys implements
     }
 
     // Zugriffe auf den Bildwiederhol- und Farbspeicher verlangsamen
-    if( (this.tStatesPerFrame > 0) && (this.tStatesVisible > 0) ) {
-      this.frameTStates += tStates;
-      if( this.frameTStates >= this.tStatesPerFrame )
-	this.frameTStates %= this.tStatesPerFrame;
+    if( (this.tStatesPerLine > 0) && (this.tStatesVisible > 0) ) {
+      this.lineTStates += tStates;
+      if( this.lineTStates >= this.tStatesPerLine ) {
+	this.lineTStates %= this.tStatesPerLine;
+	if( this.lineNum < 311 ) {
+	  this.lineNum++;
+	} else {
+	  this.lineNum = 0;
+	}
+      }
     }
   }
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    createColors( props );
+  }
+
+
+  public boolean canExtractScreenText()
+  {
+    return true;
+  }
+
 
   public void die()
   {
@@ -268,12 +293,6 @@ public class Z9001 extends EmuSys implements
     cpu.removeMaxSpeedListener( this );
     cpu.removeTStatesListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
-  }
-
-
-  public String extractScreenText()
-  {
-    return extractMemText( MEM_VIDEO, 24, 40, 40 );
   }
 
 
@@ -358,54 +377,39 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public int getMinOSAddress()
+  public int getCharColCount()
   {
-    return MEM_OS;
+    return 40;
   }
 
 
-  public int getMaxOSAddress()
+  public int getCharHeight()
   {
-    int rv = MEM_OS;
-    if( this.romOS != null ) {
-      rv = MEM_OS + this.romOS.length - 1;
-    }
-    return rv;
+    return 8;
+  }
+
+
+  public int getCharRowCount()
+  {
+    return this.mode20Rows ? 20 : 24;
+  }
+
+
+  public int getCharRowHeight()
+  {
+    return this.mode20Rows ? 9 : 8;
+  }
+
+
+  public int getCharWidth()
+  {
+    return 8;
   }
 
 
   public int getMemByte( int addr )
   {
-    addr &= 0xFFFF;
-
-    int     rv   = 0xFF;
-    boolean done = false;
-    if( this.romBASIC != null ) {
-      if( (addr >= MEM_BASIC) && (addr < MEM_BASIC + this.romBASIC.length) ) {
-	rv   = (int) this.romBASIC[ addr - MEM_BASIC ] & 0xFF;
-	done = true;
-      }
-    }
-    if( !done && (this.romOS != null) ) {
-      if( (addr >= MEM_OS) && (addr < MEM_OS + this.romOS.length) ) {
-	rv   = (int) this.romOS[ addr - MEM_OS ] & 0xFF;
-	done = true;
-      }
-    }
-    if( this.colorMode
-	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + this.ramColor.length) )
-    {
-      rv   = (int) this.ramColor[ addr - MEM_COLOR ] & 0xFF;
-      done = true;
-    }
-    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + this.ramVideo.length) ) {
-      rv   = (int) this.ramVideo[ addr - MEM_VIDEO ] & 0xFF;
-      done = true;
-    }
-    if( !done && (addr < this.ramSize) ) {
-      rv = this.emuThread.getRAMByte( addr );
-    }
-    return rv;
+    return getMemByteInternal( addr, false );
   }
 
 
@@ -415,13 +419,22 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public int getScreenBaseHeight()
+  protected int getScreenChar( int chX, int chY )
+  {
+    int idx = (chY * 40) + chX;
+    return (idx >= 0) && (idx < this.ramVideo.length) ?
+					((int) this.ramVideo[ idx ] & 0xFF)
+					: -1;
+  }
+
+
+  public int getScreenHeight()
   {
     return 192;
   }
 
 
-  public int getScreenBaseWidth()
+  public int getScreenWidth()
   {
     return 320;
   }
@@ -433,7 +446,7 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public String getSystemName()
+  public String getTitle()
   {
     return this.kc87 ? "KC87" : "KC85/1 (Z9001)";
   }
@@ -651,6 +664,12 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  public int readMemByte( int addr )
+  {
+    return getMemByteInternal( addr, true );
+  }
+
+
   public int reassembleSysCall(
 			int           addr,
 			StringBuilder buf,
@@ -700,7 +719,7 @@ public class Z9001 extends EmuSys implements
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel )
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       fillRandom( this.ramColor );
@@ -734,26 +753,7 @@ public class Z9001 extends EmuSys implements
 
   public boolean setMemByte( int addr, int value )
   {
-    addr &= 0xFFFF;
-
-    boolean rv = false;
-    if( this.colorMode
-	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + this.ramColor.length) )
-    {
-      this.ramColor[ addr - MEM_COLOR ] = (byte) value;
-      this.screenFrm.setScreenDirty( true );
-      rv = true;
-    }
-    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + this.ramVideo.length) ) {
-      this.ramVideo[ addr - MEM_VIDEO ] = (byte) value;
-      this.screenFrm.setScreenDirty( true );
-      rv = true;
-    }
-    else if( addr < this.ramSize ) {
-      this.emuThread.setRAMByte( addr, value );
-      rv = true;
-    }
-    return rv;
+    return setMemByteInternal( addr, value, false );
   }
 
 
@@ -826,7 +826,40 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  public void writeMemByte( int addr, int value )
+  {
+    setMemByteInternal( addr, value, true );
+  }
+
+
 	/* --- private Methoden --- */
+
+  private void adjustVideoRAMAccessTStates()
+  {
+    if( (this.lineNum < 192)
+	&& (this.tStatesPerLine > 0)
+	&& (this.tStatesVisible > 0)
+	&& (this.lineTStates < this.tStatesVisible) )
+    {
+      this.emuThread.getZ80CPU().addWaitStates(
+			this.tStatesVisible - this.lineTStates );
+    }
+  }
+
+
+  private void createColors( Properties props )
+  {
+    double brightness = getBrightness( props );
+    if( (brightness >= 0.0) && (brightness <= 1.0) ) {
+      for( int i = 0; i < this.colors.length; i++ ) {
+	this.colors[ i ] = new Color(
+		(int) Math.round( basicRGBValues[ i ][ 0 ] * brightness ),
+		(int) Math.round( basicRGBValues[ i ][ 1 ] * brightness ),
+		(int) Math.round( basicRGBValues[ i ][ 2 ] * brightness ) );
+      }
+    }
+  }
+
 
   private boolean getColorMode( Properties props )
   {
@@ -868,6 +901,47 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  private int getMemByteInternal( int addr, boolean emuWaitStates )
+  {
+    addr &= 0xFFFF;
+
+    int     rv   = 0xFF;
+    boolean done = false;
+    if( this.romBASIC != null ) {
+      if( (addr >= MEM_BASIC) && (addr < MEM_BASIC + this.romBASIC.length) ) {
+	rv   = (int) this.romBASIC[ addr - MEM_BASIC ] & 0xFF;
+	done = true;
+      }
+    }
+    if( !done && (this.romOS != null) ) {
+      if( (addr >= MEM_OS) && (addr < MEM_OS + this.romOS.length) ) {
+	rv   = (int) this.romOS[ addr - MEM_OS ] & 0xFF;
+	done = true;
+      }
+    }
+    if( this.colorMode
+	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + this.ramColor.length) )
+    {
+      rv   = (int) this.ramColor[ addr - MEM_COLOR ] & 0xFF;
+      done = true;
+      if( emuWaitStates ) {
+	adjustVideoRAMAccessTStates();
+      }
+    }
+    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + this.ramVideo.length) ) {
+      rv   = (int) this.ramVideo[ addr - MEM_VIDEO ] & 0xFF;
+      done = true;
+      if( emuWaitStates ) {
+	adjustVideoRAMAccessTStates();
+      }
+    }
+    if( !done && (addr < this.ramSize) ) {
+      rv = this.emuThread.getRAMByte( addr );
+    }
+    return rv;
+  }
+
+
   private static int getRAMSize( Properties props )
   {
     int    ramSize = 0x4000;
@@ -905,6 +979,40 @@ public class Z9001 extends EmuSys implements
 	}
       }
       mask <<= 1;
+    }
+    return rv;
+  }
+
+
+  private boolean setMemByteInternal(
+				int     addr,
+				int     value,
+				boolean emuWaitStates )
+  {
+    addr &= 0xFFFF;
+
+    boolean rv = false;
+    if( this.colorMode
+	&& (addr >= MEM_COLOR) && (addr < MEM_COLOR + this.ramColor.length) )
+    {
+      this.ramColor[ addr - MEM_COLOR ] = (byte) value;
+      this.screenFrm.setScreenDirty( true );
+      rv = true;
+      if( emuWaitStates ) {
+	adjustVideoRAMAccessTStates();
+      }
+    }
+    if( (addr >= MEM_VIDEO) && (addr < MEM_VIDEO + this.ramVideo.length) ) {
+      this.ramVideo[ addr - MEM_VIDEO ] = (byte) value;
+      this.screenFrm.setScreenDirty( true );
+      rv = true;
+      if( emuWaitStates ) {
+	adjustVideoRAMAccessTStates();
+      }
+    }
+    else if( addr < this.ramSize ) {
+      this.emuThread.setRAMByte( addr, value );
+      rv = true;
     }
     return rv;
   }
