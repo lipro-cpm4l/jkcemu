@@ -229,6 +229,12 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
+  public String getHelpPage()
+  {
+    return "/help/z1013.htm";
+  }
+
+
   public int getMemByte( int addr )
   {
     addr &= 0xFFFF;
@@ -263,9 +269,12 @@ public class Z1013 extends EmuSys implements Z80AddressListener
     int ch  = -1;
     int idx = (chY * (this.mode64x16 ? 64 : 32)) + chX;
     if( (idx >= 0) && (idx < this.ramVideo.length) ) {
-      ch = (int) this.ramVideo[ idx ] & 0xFF;
-      if( this.altFontEnabled && (ch >= 0xA0) && (ch < 0xFF) ) {
-	ch &= 0x7F; 		// 0xA0 bis 0xFE: invertierte Zeichen
+      int b = (int) this.ramVideo[ idx ] & 0xFF;
+      if( (b >= 0x20) && (b < 0x7F) ) {
+	ch = b;
+      }
+      else if( (ch >= 0xA0) && (ch < 0xFF) && this.altFontEnabled ) {
+	ch = b & 0x7F; 		// 0xA0 bis 0xFE: invertierte Zeichen
       }
     }
     return ch;
@@ -444,7 +453,12 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       buf.append( (char) '\n' );
       rv++;
       if( b == 2 ) {
-	rv += reassStringBit7( addr + 1, buf, colMnemonic, colArgs );
+	rv += reassStringBit7(
+			this.emuThread,
+			addr + 1,
+			buf,
+			colMnemonic,
+			colArgs );
       }
     }
     return rv;

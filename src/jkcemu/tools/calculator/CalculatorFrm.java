@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -44,10 +44,6 @@ public class CalculatorFrm extends BasicFrm implements
   private JMenuItem      mnuHelpContent;
   private Document       docInput;
   private JTextField     fldInput;
-  private JRadioButton   btnDecimal;
-  private JRadioButton   btnHex;
-  private JRadioButton   btnOctal;
-  private JRadioButton   btnBinary;
   private JRadioButton   btnUpdOnEnter;
   private JRadioButton   btnUpdImmediately;
   private JEditorPane    fldOutput;
@@ -149,54 +145,43 @@ public class CalculatorFrm extends BasicFrm implements
     if( this.docInput != null ) {
       this.docInput.addDocumentListener( this );
     }
-    gbcInput.fill      = GridBagConstraints.HORIZONTAL;
-    gbcInput.weightx   = 1.0;
-    gbcInput.gridwidth = GridBagConstraints.REMAINDER;
+    gbcInput.fill    = GridBagConstraints.HORIZONTAL;
+    gbcInput.weightx = 1.0;
     gbcInput.gridx++;
     panelInput.add( this.fldInput, gbcInput );
 
+    gbcInput.anchor        = GridBagConstraints.EAST;
     gbcInput.fill          = GridBagConstraints.NONE;
     gbcInput.insets.bottom = 0;
     gbcInput.weightx       = 0.0;
-    gbcInput.gridwidth     = GridBagConstraints.REMAINDER;
     gbcInput.gridx         = 0;
     gbcInput.gridy++;
-    panelInput.add(
-	new JLabel("Basis der Zahlen, die nicht als Oktal- (...Q),"
-			+ " Hexadezimal- (0x... oder ...H)" ),
-	gbcInput );
+    panelInput.add( new JLabel( "Bin\u00E4rzahl:" ), gbcInput );
 
+    gbcInput.anchor = GridBagConstraints.WEST;
+    gbcInput.gridx++;
+    panelInput.add( new JLabel( "$..." ), gbcInput );
+
+    gbcInput.anchor     = GridBagConstraints.EAST;
     gbcInput.insets.top = 0;
+    gbcInput.gridx      = 0;
     gbcInput.gridy++;
-    panelInput.add(
-	new JLabel( "oder Flie\u00DFkommazahl (Dezimalpunkt)"
-			+ " gekennzeichnet sind:" ),
-	gbcInput );
+    panelInput.add( new JLabel( "Oktalzahl:" ), gbcInput );
 
-    JPanel panelRadix = new JPanel( new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
+    gbcInput.anchor = GridBagConstraints.WEST;
+    gbcInput.gridx++;
+    panelInput.add( new JLabel( "...Q" ), gbcInput );
+
+    gbcInput.anchor        = GridBagConstraints.EAST;
+    gbcInput.insets.bottom = 5;
+    gbcInput.gridx         = 0;
     gbcInput.gridy++;
-    panelInput.add( panelRadix, gbcInput );
+    panelInput.add( new JLabel( "Hexadezimalzahl:" ), gbcInput );
 
-    ButtonGroup grpRadix   = new ButtonGroup();
-    this.btnDecimal = new JRadioButton( "Dezimal", true );
-    this.btnDecimal.addActionListener( this );
-    grpRadix.add( this.btnDecimal );
-    panelRadix.add( this.btnDecimal );
+    gbcInput.anchor = GridBagConstraints.WEST;
+    gbcInput.gridx++;
+    panelInput.add( new JLabel( "0x... oder ...H" ), gbcInput );
 
-    this.btnHex = new JRadioButton( "Hexadezimal", false );
-    this.btnHex.addActionListener( this );
-    grpRadix.add( this.btnHex );
-    panelRadix.add( this.btnHex );
-
-    this.btnOctal = new JRadioButton( "Oktal", false );
-    this.btnOctal.addActionListener( this );
-    grpRadix.add( this.btnOctal );
-    panelRadix.add( this.btnOctal );
-
-    this.btnBinary = new JRadioButton( "Bin\u00E4r", false );
-    this.btnBinary.addActionListener( this );
-    grpRadix.add( this.btnBinary );
-    panelRadix.add( this.btnBinary );
 
     // Bereich Optionen
     this.btnUpdOnEnter   = null;
@@ -340,20 +325,6 @@ public class CalculatorFrm extends BasicFrm implements
     boolean rv = false;
     if( props != null ) {
       rv = super.applySettings( props, resizable );
-
-      String radixText = props.getProperty( "jkcemu.calculator.radix" );
-      if( radixText != null ) {
-	if( radixText.equals( "2" ) ) {
-	  this.btnBinary.setSelected( true );
-	}
-	else if( radixText.equals( "8" ) ) {
-	  this.btnOctal.setSelected( true );
-	}
-	else if( radixText.equals( "16" ) ) {
-	  this.btnHex.setSelected( true );
-	}
-      }
-
       if( this.docInput != null ) {
 	boolean updImmediately = EmuUtil.parseBooleanProperty(
 				props,
@@ -378,18 +349,6 @@ public class CalculatorFrm extends BasicFrm implements
       if( src == this.fldInput ) {
 	rv = true;
 	updOutput();
-      }
-      if( (src == this.btnDecimal)
-	  || (src == this.btnHex)
-	  || (src == this.btnOctal)
-	  || (src == this.btnBinary) )
-      {
-	rv = true;
-	updOutput();
-      }
-      else if( src == this.mnuFileClose ) {
-	rv = true;
-	doClose();
       }
       else if( src == this.mnuEditCut ) {
 	rv = true;
@@ -420,15 +379,6 @@ public class CalculatorFrm extends BasicFrm implements
   {
     if( props != null ) {
       super.putSettingsTo( props );
-      if( this.btnHex.isSelected() ) {
-	props.setProperty( "jkcemu.calculator.radix", "16" );
-      } else if( this.btnOctal.isSelected() ) {
-	props.setProperty( "jkcemu.calculator.radix", "8" );
-      } else if( this.btnBinary.isSelected() ) {
-	props.setProperty( "jkcemu.calculator.radix", "2" );
-      } else {
-	props.setProperty( "jkcemu.calculator.radix", "10" );
-      }
       props.setProperty(
 		"jkcemu.calculator.computes_immediately",
 		String.valueOf( isUpdImmediately() ) );
@@ -516,20 +466,10 @@ public class CalculatorFrm extends BasicFrm implements
 			new Integer( (int) ch ) );
 	    }
 	  }
-	  ExprParser.Radix radix = ExprParser.Radix.DECIMAL;
-	  if( this.btnHex.isSelected() ) {
-	    radix = ExprParser.Radix.HEXADECIMAL;
-	  }
-	  else if( this.btnOctal.isSelected() ) {
-	    radix = ExprParser.Radix.OCTAL;
-	  }
-	  else if( this.btnBinary.isSelected() ) {
-	    radix = ExprParser.Radix.BINARY;
-	  }
 	  appendResultRow(
 			buf,
 			"Ergebnis des Ausdrucks",
-			parser.parseExpr( text, radix ) );
+			parser.parseExpr( text ) );
 	  appendResultEnd( buf );
 	}
 	catch( ParseException ex ) {

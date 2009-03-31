@@ -202,6 +202,12 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   }
 
 
+  public String getHelpPage()
+  {
+    return "/help/hgmc.htm";
+  }
+
+
   public int getMemByte( int addr )
   {
     addr &= 0xFFFF;

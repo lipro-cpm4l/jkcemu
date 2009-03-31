@@ -21,10 +21,14 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   z80emu/*.class \
   rom/ac1/*.bin \
   rom/bcs3/*.bin \
+  rom/c80/*.bin \
   rom/huebler/*.bin \
   rom/kc85/*.bin \
   rom/kramermc/*.bin \
   rom/lc80/*.bin \
+  rom/llc2/*.bin \
+  rom/poly880/*.bin \
+  rom/vcs80/*.bin \
   rom/z1013/*.bin \
   rom/z9001/*.bin \
   images/debug/*.png \

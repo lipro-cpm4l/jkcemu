@@ -24,7 +24,7 @@ import jkcemu.system.*;
 public class BasicCompiler extends PrgThread
 {
   private enum Platform {
-			AC1, HC900, HUEBLERMC, KRAMERMC,
+			AC1_LLC2, HC900, HUEBLERMC, KRAMERMC,
 			Z1013, Z9001, UNKNOWN };
 
   private enum LibItem { INLN, R_INT, P_HEXA, P_INT, P_LTXT, P_TEXT, P_TAB,
@@ -91,8 +91,10 @@ public class BasicCompiler extends PrgThread
     EmuSys emuSys = emuThread.getEmuSys();
     this.sysTitle = emuSys.getTitle();
     this.platform = Platform.UNKNOWN;
-    if( emuSys instanceof AC1 ) {
-      this.platform = Platform.AC1;
+    if( (emuSys instanceof AC1)
+	|| (emuSys instanceof LLC2) )
+    {
+      this.platform = Platform.AC1_LLC2;
     }
     else if( emuSys instanceof KC85 ) {
       this.platform = Platform.HC900;
@@ -4089,7 +4091,7 @@ public class BasicCompiler extends PrgThread
       }
       buf.append( "XEXIT:\tLD\tSP,(M_STCK)\n" );
       switch( this.platform ) {
-	case AC1:
+	case AC1_LLC2:
 	  buf.append( "\tJP\t07FDH\n" );
 	  break;
 
@@ -4116,7 +4118,7 @@ public class BasicCompiler extends PrgThread
 		+ "\tPUSH\tDE\n"
 		+ "\tPUSH\tHL\n" );
 	switch( this.platform ) {
-	  case AC1:
+	  case AC1_LLC2:
 	    buf.append( "\tRST\t10H\n" );
 	    break;
 
@@ -4172,7 +4174,7 @@ public class BasicCompiler extends PrgThread
       }
       if( this.libItems.contains( LibItem.XINCH ) ) {
 	switch( this.platform ) {
-	  case AC1:
+	  case AC1_LLC2:
 	    buf.append( "XINCH:\tJP\t0008H\n" );
 	    break;
 
@@ -4208,7 +4210,7 @@ public class BasicCompiler extends PrgThread
       }
       if( this.libItems.contains( LibItem.XINKEY ) ) {
 	switch( this.platform ) {
-	  case AC1:
+	  case AC1_LLC2:
 	    buf.append( "XINKEY:\tCALL\t07FAH\n"
 		+ "\tAND\t7FH\n"
 		+ "\tRET\n" );

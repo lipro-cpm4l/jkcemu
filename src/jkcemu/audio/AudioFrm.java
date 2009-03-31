@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -329,11 +329,19 @@ public class AudioFrm extends BasicFrm implements Z80MaxSpeedListener
   /*
    * Wenn sich die Emulationsgeschwindigkeit aendert,
    * stimmt die Synchronisation mit dem Audio-System nicht mehr.
-   * Aus diesem Grund die Audiokanaele schliessen.
+   * Aus diesem Grund die Audiokanaele schliessen und
+   * bei Ein-/Ausgabe ueber das Sound-System wieder oeffnen.
    */
   public void z80MaxSpeedChanged()
   {
-    doDisable();
+    SwingUtilities.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    maxSpeedChanged();
+		  }
+		} );
   }
 
 
@@ -629,6 +637,21 @@ public class AudioFrm extends BasicFrm implements Z80MaxSpeedListener
     int i = this.comboSampleRate.getSelectedIndex() - 1;  // 0: automatisch
     return ((i >= 0) && (i < this.sampleRates.length)) ?
 					this.sampleRates[ i ] : 0;
+  }
+
+
+  private void maxSpeedChanged()
+  {
+    doDisable();
+    int speedKHz = this.z80cpu.getMaxSpeedKHz();
+    if( speedKHz > 0 ) {
+      if( this.btnSoundOut.isSelected() || this.btnDataOut.isSelected() ) {
+	doEnableAudioOutLine( speedKHz, this.btnDataOut.isSelected() );
+      }
+      else if( this.btnDataIn.isSelected() ) {
+	doEnableAudioInLine( speedKHz );
+      }
+    }
   }
 
 

@@ -50,10 +50,10 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  protected void appendSpacesToCol(
-			StringBuilder buf,
-			int           begOfLine,
-			int           col )
+  public static void appendSpacesToCol(
+				StringBuilder buf,
+				int           begOfLine,
+				int           col )
   {
     int n = begOfLine + col - buf.length();
     while( n > 0 ) {
@@ -213,6 +213,12 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
+  public String getHelpPage()
+  {
+    return null;
+  }
+
+
   public Integer getLoadAddr()
   {
     return null;
@@ -288,7 +294,7 @@ public abstract class EmuSys implements ImageObserver
 	      buf.append( (char) '\u0020' );
 	      --nSpaces;
 	    }
-	    buf.append( (char) b );
+	    buf.append( (char) (b > 0 ? b : '_') );
 	  }
 	  chX1++;
 	  if( chX1 >= nCols ) {
@@ -509,7 +515,8 @@ public abstract class EmuSys implements ImageObserver
    *
    * Rueckgabewert: Anzahl der reassemlierten Bytes
    */
-  protected int reassStringBit7(
+  public static int reassStringBit7(
+			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
 			int           colMnemonic,
@@ -523,7 +530,7 @@ public abstract class EmuSys implements ImageObserver
       long    r = 0;
       boolean c = false;
       while( (n < 5) && (a < 0x10000) ) {
-	int b = getMemByte( a );
+	int b = memory.getMemByte( a );
 	if( n == 0 ) {
 	  c = ((b >= 0x20) && (b < 0x7F));
 	} else {

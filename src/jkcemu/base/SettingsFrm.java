@@ -53,6 +53,7 @@ public class SettingsFrm extends BasicFrm
   private CardLayout                  cardLayoutSysOpt;
   private JRadioButton                btnSysAC1;
   private JRadioButton                btnSysBCS3;
+  private JRadioButton                btnSysC80;
   private JRadioButton                btnSysHEMC;
   private JRadioButton                btnSysHGMC;
   private JRadioButton                btnSysKC85_1;
@@ -62,6 +63,10 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnSysKC87;
   private JRadioButton                btnSysKramerMC;
   private JRadioButton                btnSysLC80;
+  private JRadioButton                btnSysLLC2;
+  private JRadioButton                btnSysMKX80032;
+  private JRadioButton                btnSysPoly880;
+  private JRadioButton                btnSysVCS80;
   private JRadioButton                btnSysZ1013;
   private JRadioButton                btnAC1mon31_64x16;
   private JRadioButton                btnAC1mon31_64x32;
@@ -170,7 +175,7 @@ public class SettingsFrm extends BasicFrm
 						0, 0,
 						1, 1,
 						0.0, 0.0,
-						GridBagConstraints.NORTHWEST,
+						GridBagConstraints.WEST,
 						GridBagConstraints.NONE,
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
@@ -188,6 +193,12 @@ public class SettingsFrm extends BasicFrm
     gbcSys.insets.top = 0;
     gbcSys.gridy++;
     panelSys.add( this.btnSysBCS3, gbcSys );
+
+    this.btnSysC80 = new JRadioButton( "C-80", false );
+    this.btnSysC80.addActionListener( this );
+    grpSys.add( this.btnSysC80 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysC80, gbcSys );
 
     this.btnSysHEMC = new JRadioButton( "H\u00FCbler/Evert-MC", false );
     this.btnSysHEMC.addActionListener( this );
@@ -228,25 +239,56 @@ public class SettingsFrm extends BasicFrm
     this.btnSysKC87 = new JRadioButton( "KC87", false );
     this.btnSysKC87.addActionListener( this );
     grpSys.add( this.btnSysKC87 );
+    gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC87, gbcSys );
 
     this.btnSysKramerMC = new JRadioButton( "Kramer-MC", false );
     this.btnSysKramerMC.addActionListener( this );
     grpSys.add( this.btnSysKramerMC );
-    gbcSys.gridy++;
+    gbcSys.insets.top    = 5;
+    gbcSys.insets.bottom = 0;
+    gbcSys.gridy         = 0;
+    gbcSys.gridx++;
     panelSys.add( this.btnSysKramerMC, gbcSys );
 
-    this.btnSysLC80 = new JRadioButton( "LC80", false );
+    this.btnSysLC80 = new JRadioButton( "LC-80", false );
     this.btnSysLC80.addActionListener( this );
     grpSys.add( this.btnSysLC80 );
+    gbcSys.insets.top = 0;
     gbcSys.gridy++;
     panelSys.add( this.btnSysLC80, gbcSys );
+
+    this.btnSysLLC2 = new JRadioButton( "LLC2", false );
+    this.btnSysLLC2.addActionListener( this );
+    grpSys.add( this.btnSysLLC2 );
+    gbcSys.insets.top = 0;
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysLLC2, gbcSys );
+
+    this.btnSysMKX80032 = new JRadioButton( "MKX-80032", false );
+    this.btnSysMKX80032.addActionListener( this );
+    grpSys.add( this.btnSysMKX80032 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysMKX80032, gbcSys );
+
+    this.btnSysPoly880 = new JRadioButton( "Poly880", false );
+    this.btnSysPoly880.addActionListener( this );
+    grpSys.add( this.btnSysPoly880 );
+    gbcSys.insets.top = 0;
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysPoly880, gbcSys );
+
+    this.btnSysVCS80 = new JRadioButton( "VCS-80", false );
+    this.btnSysVCS80.addActionListener( this );
+    grpSys.add( this.btnSysVCS80 );
+    gbcSys.insets.top = 0;
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysVCS80, gbcSys );
 
     this.btnSysZ1013 = new JRadioButton( "Z1013", false );
     this.btnSysZ1013.addActionListener( this );
     grpSys.add( this.btnSysZ1013 );
-    gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysZ1013, gbcSys );
 
@@ -490,14 +532,14 @@ public class SettingsFrm extends BasicFrm
     ButtonGroup grpLC80 = new ButtonGroup();
 
     this.btnLC80_U505 = new JRadioButton(
-		"LC80, 2 KByte ROM (2xU505), 1 KByte RAM",
+		"LC-80, 2 KByte ROM (2xU505), 1 KByte RAM",
 		false );
     this.btnLC80_U505.addActionListener( this );
     grpLC80.add( this.btnLC80_U505 );
     panelLC80.add( this.btnLC80_U505, gbcLC80 );
 
     this.btnLC80_2716 = new JRadioButton(
-		"LC80, 2 KByte ROM (2716), 4 KByte RAM",
+		"LC-80, 2 KByte ROM (2716), 4 KByte RAM",
 		true );
     this.btnLC80_2716.addActionListener( this );
     grpLC80.add( this.btnLC80_2716 );
@@ -506,7 +548,7 @@ public class SettingsFrm extends BasicFrm
     panelLC80.add( this.btnLC80_2716, gbcLC80 );
 
     this.btnLC80_2 = new JRadioButton(
-		"LC80.2, 4 KByte ROM mit Buschendorf-Monitor, 4 KByte RAM",
+		"LC-80.2, 4 KByte ROM mit Buschendorf-Monitor, 4 KByte RAM",
 		false );
     this.btnLC80_2.addActionListener( this );
     grpLC80.add( this.btnLC80_2 );
@@ -514,7 +556,7 @@ public class SettingsFrm extends BasicFrm
     panelLC80.add( this.btnLC80_2, gbcLC80 );
 
     this.btnLC80e = new JRadioButton(
-		"LC80e, 12 KByte ROM mit Schachprogramm SC-80, 4 KByte RAM",
+		"LC-80e, 12 KByte ROM mit Schachprogramm SC-80, 4 KByte RAM",
 		false );
     this.btnLC80e.addActionListener( this );
     grpLC80.add( this.btnLC80e );
@@ -1332,6 +1374,7 @@ public class SettingsFrm extends BasicFrm
 	}
 	else if( (src == this.btnSysAC1)
 		 || (src == this.btnSysBCS3)
+		 || (src == this.btnSysC80)
 		 || (src == this.btnSysHEMC)
 		 || (src == this.btnSysHGMC)
 		 || (src == this.btnSysKC85_1)
@@ -1341,6 +1384,10 @@ public class SettingsFrm extends BasicFrm
 		 || (src == this.btnSysKC87)
 		 || (src == this.btnSysKramerMC)
 		 || (src == this.btnSysLC80)
+		 || (src == this.btnSysLLC2)
+		 || (src == this.btnSysMKX80032)
+		 || (src == this.btnSysPoly880)
+		 || (src == this.btnSysVCS80)
 		 || (src == this.btnSysZ1013) )
 	{
 	  rv = true;
@@ -1437,8 +1484,8 @@ public class SettingsFrm extends BasicFrm
 	if( newExtROMs != null ) {
 	  nNewExtROMs = newExtROMs.length;
 	}
-	ExtROM[] oldExtROMs    = this.emuThread.getExtROMs();
-	int      nOldExtROMs   = 0;
+	ExtROM[] oldExtROMs  = this.emuThread.getExtROMs();
+	int      nOldExtROMs = 0;
 	if( oldExtROMs != null ) {
 	  nOldExtROMs = oldExtROMs.length;
 	}
@@ -1934,6 +1981,9 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysBCS3.isSelected() ) {
       valueSys = "BCS3";
     }
+    else if( this.btnSysC80.isSelected() ) {
+      valueSys = "C80";
+    }
     else if( this.btnSysHEMC.isSelected() ) {
       valueSys = "HueblerEvertMC";
     }
@@ -1968,6 +2018,18 @@ public class SettingsFrm extends BasicFrm
       } else {
 	valueSys = "LC80_2716";
       }
+    }
+    else if( this.btnSysLLC2.isSelected() ) {
+      valueSys = "LLC2";
+    }
+    else if( this.btnSysMKX80032.isSelected() ) {
+      valueSys = "MKX80032";
+    }
+    else if( this.btnSysPoly880.isSelected() ) {
+      valueSys = "Poly880";
+    }
+    else if( this.btnSysVCS80.isSelected() ) {
+      valueSys = "VCS80";
     }
     else if( this.btnSysZ1013.isSelected() ) {
       if( this.btnZ1013_01.isSelected() ) {
@@ -2119,6 +2181,9 @@ public class SettingsFrm extends BasicFrm
     if( sysName.startsWith( "BCS3" ) ) {
       this.btnSysBCS3.setSelected( true );
     }
+    else if( sysName.startsWith( "C80" ) ) {
+      this.btnSysC80.setSelected( true );
+    }
     else if( sysName.startsWith( "HueblerEvertMC" ) ) {
       this.btnSysHEMC.setSelected( true );
     }
@@ -2149,6 +2214,18 @@ public class SettingsFrm extends BasicFrm
     }
     else if( sysName.startsWith( "LC80" ) ) {
       this.btnSysLC80.setSelected( true );
+    }
+    else if( sysName.startsWith( "LLC2" ) ) {
+      this.btnSysLLC2.setSelected( true );
+    }
+    else if( sysName.startsWith( "MKX80032" ) ) {
+      this.btnSysMKX80032.setSelected( true );
+    }
+    else if( sysName.startsWith( "Poly880" ) ) {
+      this.btnSysPoly880.setSelected( true );
+    }
+    else if( sysName.startsWith( "VCS80" ) ) {
+      this.btnSysVCS80.setSelected( true );
     }
     else if( sysName.startsWith( "Z1013" ) ) {
       this.btnSysZ1013.setSelected( true );

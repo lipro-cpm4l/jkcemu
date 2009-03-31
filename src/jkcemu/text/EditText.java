@@ -343,6 +343,14 @@ public class EditText implements
 			  break;
 
 			case 0x60F7:
+			  /*
+			   * Das SCCH-BASIC fuer den LLC2 ist bzgl.
+			   * des BASIC-Dialekts und
+			   * der Adressen des Quelltextes
+			   * identisch zu der Version fuer den AC1.
+			   * Aus diesem Grund gibt es hier keine
+			   * spezielle Behandlung fuer LLC2-BASIC-Programme.
+			   */
 			  text = AC1.getBasicProgram( this.editFrm, loadData );
 			  break;
 

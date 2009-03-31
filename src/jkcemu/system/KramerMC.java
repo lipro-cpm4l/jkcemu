@@ -248,6 +248,12 @@ public class KramerMC extends EmuSys implements
   }
 
 
+  public String getHelpPage()
+  {
+    return "/help/kramermc.htm";
+  }
+
+
   public int getMemByte( int addr )
   {
     addr &= 0xFFFF;
@@ -303,10 +309,15 @@ public class KramerMC extends EmuSys implements
 
   protected int getScreenChar( int chX, int chY )
   {
+    int ch  = -1;
     int idx = (chY * 64) + chX;
-    return (idx >= 0) && (idx < this.ramVideo.length) ?
-					((int) this.ramVideo[ idx ] & 0xFF)
-					: -1;
+    if( (idx >= 0) && (idx < this.ramVideo.length) ) {
+      int b = (int) this.ramVideo[ idx ] & 0xFF;
+      if( (b >= 0x20) && (b < 0x7F) ) {
+	ch = b;
+      }
+    }
+    return ch;
   }
 
 

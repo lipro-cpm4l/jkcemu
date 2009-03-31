@@ -1,0 +1,61 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des Poly-Computers 880</h1>
+
+  <h2>1. Emulierte Hardware</h2>
+    <ul>
+      <li>2 KByte ROM</li>
+      <li>1 KByte RAM</li>
+    </ul>
+    Der ROM liegt in den Bereichen 0000-03FF und 1000-03FF
+    und der RAM in 4000-43FF.
+    Aufgrund der unvollst&auml;ndigen Adressdekodierung
+    sind diese Speicherbereiche jeweils vier mal hintereinander sichtbar,
+    d.h. X000-X3FF sehen Sie auch in X400-X7FF, X800-XBFF und XC00-XFFF,
+    wobei X f&uuml;r 0, 1 oder 4 steht.
+  <br><br>
+
+  <h3>1.1. Tastatur</h3>
+    Die Tabelle zeigt, wie die Tasten des Poly-Computers auf der Tastatur
+    des Emulatorrechners abgebildet werden:
+    <br>
+    <table border="1">
+      <tr>
+	<th>Poly880-Taste</th>
+	<th>Taste im Emulator</th>
+	<th>Bedeutung</th>
+      </tr>
+      <tr><td>BACK</td><td>B oder -</td><td>Vorherige Adresse</td></tr>
+      <tr>
+	<td>EXEC</td>
+	<td>X oder Enter</td>
+	<td>Aktion ausf&uuml;hren</td>
+      </tr>
+      <tr><td>RES</td><td>Escape</td><td>Funktion</td></tr>
+      <tr><td>FCT</td><td>F oder F1</td><td>Funktion</td></tr>
+      <tr><td>GO</td><td>G</td><td>Programm starten</td></tr>
+      <tr><td>REG</td><td>R</td><td>Register</td></tr>
+      <tr><td>STEP</td><td>S</td><td>Schrittbetrieb</td></tr>
+      <tr><td>MEM</td><td>M</td><td>Speicher anzeigen/ver&auml;ndern</td></tr>
+      <tr><td>0...9</td><td>0...9</td><td>Adress-/Dateneingabe</td></tr>
+      <tr><td>A</td><td>a oder A</td><td>Adress-/Dateneingabe</td></tr>
+      <tr><td>B</td><td>b</td><td>Adress-/Dateneingabe</td></tr>
+      <tr><td>C</td><td>c oder C</td><td>Adress-/Dateneingabe</td></tr>
+      <tr><td>D</td><td>d oder D</td><td>Adress-/Dateneingabe</td></tr>
+      <tr><td>E</td><td>e oder E</td><td>Adress-/Dateneingabe</td></tr>
+      <tr><td>F</td><td>f</td><td>Adress-/Dateneingabe</td></tr>
+    </table>
+  <br>
+    <b>Achtung!</b> Escape l&ouml;st der Einfachheit halber
+    RESET ohne Sicherheitsabfrage aus,
+    auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
+    aktiviert ist.
+  <br><br>
+
+  <h2>2. Im ROM enthaltene Software</h2>
+    <ul>
+      <li>Originales Monitorprprogramm
+    </ul>
+</body>
+</html>
+

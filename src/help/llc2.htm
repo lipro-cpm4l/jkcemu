@@ -1,0 +1,85 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des LLC2</h1>
+
+  <h2>1. Emulierte Hardware</h2>
+    <ul>
+      <li>4 KByte ROM f&uuml;r Monitorprogramm
+      <li>8 KByte Hintergrund-ROM f&uuml;r Grafik/Sound-BASIC
+      <li>64 KByte RAM inklusive Bildwiederholspeicher
+      <li>CTC mit Verbindung von Ausgang Kanal 1 auf Eingang Kanal 3
+      <li>Kassettenrecorderanschluss
+    </ul>
+  <br><br>
+
+  <h3>1.1. Hinweise zum Speicher</h3>
+    Der RAM befindet sich physisch in einem globalen RAM-Bereich,
+    der von allen emulierten Systemen gemeinsam genutzt wird.
+    Die unteren 48 KByte sind nach dem Einschalten bzw. nach einem RESET
+    nicht sichtbar.
+    Erst mit einem Ein-/Ausgabebefehl auf der Adresse E0h
+    werden der ROM ein- und der RAM ausgeblendet.
+    Mit diesem Mechanismus l&auml;dt sich das Monitorprogramm
+    vom ROM in den RAM um.
+  <br><br>
+
+
+  <h2>2. Im ROM enthaltene Software</h2>
+    <ul>
+      <li>SCCH-Monitor 9.1
+      <li>Grafik/Sound-BASIC Version 3.2
+    </ul>
+  <br><br>
+
+
+  <h2>3. BASIC</h2>
+
+  <h3>3.1. Grafik/Sound-BASIC</h3>
+    Der Grafik/Sound-BASIC-Interpreter Version 3.2 liegt
+    in einem Hintergrund-ROM im Adressbereich 4000-5FFF.
+    Standardm&auml;&szlig;ig befindet sich in diesem Adressbereich RAM.
+    &Uuml;ber das Bit 1 des IO-Ports ECh kann der ROM in den Vordergrund
+    geholt und somit der BASIC-Interpreter in dem Adressbereich sichtbar
+    gemacht werden.
+  <br><br>
+    Mit den im Emulator integrierten SCCH-Monitorprogrammen k&ouml;nnen
+    Sie das BASIC mit dem Kommando <em>b</em> direkt aufrufen (Kaltstart).
+    Dabei wird auch der BASIC-ROM in den Vordergrund geholt.
+    Einen Warmstart des Interpreters f&uuml;hren Sie mit dem Kommando
+    <em>r</em> aus.
+  <br><br>
+
+  <h3>3.2. Speichern von BASIC-Programmen</h3>
+    JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das Speichern
+    und Laden von BASIC-Programmen.
+    Zum Speichern nutzen Sie bitte die entsprechende Funktion im Men&uuml;
+    <em>Datei</em>, Untermen&uuml; <em> BASIC-Programm</em>,
+    und speichern das Programm als
+    <a href="fileformats.htm#headersave">Headersave</a>-Datei
+    mit dem Dateityp <tt>B</tt>.
+  <br><br>
+    Nur wenn Sie das BASIC-Programm so speichern,
+    werden beim Laden des Programms die Systemzellen des
+    BASIC-Interpreters richtig angepasst.
+    In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
+    aber im Interpreter nicht richtig nutzen.
+  <br><br>
+
+
+  <h2>4. Sonstiges</h2>
+
+  <h3>4.1. Einbindung externer ROM-Images</h3>
+    Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>
+    externe ROM-Images an jeder beliebigen Adresse einbinden.
+    F&uuml;r die unteren 48 KByte des Adressraumes gilt aber,
+    dass das extern eingebundene ROM-Image nur sichtbar ist,
+    wenn der Betriebssystem-ROM aktiv ist.
+    Und das ist &uuml;blicherweise nur unmittelbar nach einem RESET der Fall,
+    denn der LLC2 ist so konzipiert,
+    dass sich das Betriebssystem vom ROM in den RAM kopiert
+    und anschlie&szlig;end den ROM ausblendet.
+    Damit sind dann auch extern eingebundene ROM-Images
+    in den unteren 48 KByte nicht sichtbar.
+</body>
+</html>
+
