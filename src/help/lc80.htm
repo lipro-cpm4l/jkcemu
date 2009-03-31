@@ -1,6 +1,6 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des LC80</h1>
+  <h1>Hinweise zur Emulation des LC-80</h1>
 
   <h2>1. Emulierte Hardware</h2>
     Die emulierte Hardware unterscheidet sich je nach Einstellung:
@@ -59,7 +59,7 @@
   <br><br>
 
   <h3>1.1. Tastatur</h3>
-    Die Tabelle zeigt, wie die LC80-Tasten auf die Tastatur
+    Die Tabelle zeigt, wie die LC80-Tasten auf der Tastatur
     des Emulatorrechners abgebildet werden:
     <br>
     <table border="1">
@@ -74,7 +74,7 @@
       </tr>
       <tr>
 	<td>EX</td>
-	<td>F5 oder X</td>
+	<td>Enter oder X</td>
 	<td>Programm/Aktion ausf&uuml;hren</td>
       </tr>
       <tr><td>RES</td><td>Escape</td><td>Zur&uuml;cksetzen (RESET)</td></tr>
@@ -105,7 +105,7 @@
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li>LC80 mit 1 KByte ROM:<br>
+      <li>LC80 mit 2 KByte ROM:<br>
 	<ul>
 	  <li>Originales Monitorprprogramm
 	</ul>
@@ -199,12 +199,19 @@
   <br><br>
 
   <h4>2.1.5. Schachprogramm SC-80</h4>
-    Zum Hineinschnuppern in das Schachprogramm SC-80,
-    welches nur im LC80e enthalten ist,
-    kann man es gegen sich selbst spielen lassen.
-    Geben Sie dazu folgendes ein:
+    Das Schachprogramm, welches nur im LC80e enthalten ist,
+    wird auf Adresse C800 gestartet.
+    Geben Sie dazu ein:
   <br><br>
-    <em>RES ADR 0800 EX ADR DAT</em>
+    <em>RES &rarr; ADR &rarr; C &rarr; 8 &rarr; 0 &rarr; 0 &rarr; EX</em>
+  <br><br>
+    Wenn die Ausschrift <em>SC-80</em> erscheint,
+    wurde das Schachprogramm gestartet.
+    Nun k&ouml;nnen Sie z.B. LC80e gegen sich selbst spielen lassen.
+    Bet&auml;tigen Sie dazu folgende beiden Tasten nacheinander:
+  <br><br>
+    <em>ADR &rarr; DAT</em>
+  <br><br>
 </body>
 </html>
 

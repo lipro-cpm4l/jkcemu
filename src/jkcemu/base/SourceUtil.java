@@ -134,7 +134,7 @@ public class SourceUtil
   public static String getKCStyleBasicProgram(
 				Z80MemView memory,
 				int        addr,
-				String[]   tokenTab )
+				String[]   tokens )
   {
     StringBuilder buf = new StringBuilder( 0x4000 );
 
@@ -148,17 +148,19 @@ public class SourceUtil
       addr += 2;
 
       // Anzahl Leerzeichen vor der Anweisung ermitteln
-      int n = 0;
+      boolean sep = true;
+      int     n   = 0;
       while( addr < nextLineAddr ) {
 	int ch = memory.getMemByte( addr );
 	if( ch == '\u0020' ) {
 	  n++;
 	  addr++;
 	} else {
-	  if( ch != 0 ) {
+	  if( (ch != 0) && (n > 0) ) {
 	    for( int i = 0; i <= n; i++ ) {
 	      buf.append( (char) '\u0020' );
 	    }
+	    sep = false;
 	  }
 	  break;
 	}
@@ -171,6 +173,9 @@ public class SourceUtil
 	  break;
 	}
 	if( ch == '\"' ) {
+	  if( sep ) {
+	    buf.append( (char) '\u0020' );
+	  }
 	  buf.append( (char) ch );
 	  while( addr < nextLineAddr ) {
 	    ch = memory.getMemByte( addr++ );
@@ -185,11 +190,37 @@ public class SourceUtil
 	} else {
 	  if( ch >= 0x80 ) {
 	    int pos = ch - 0x80;
-	    if( (pos >= 0) && (pos < tokenTab.length) ) {
-	      buf.append( tokenTab[ pos ] );
+	    if( (pos >= 0) && (pos < tokens.length) ) {
+	      String s = tokens[ pos ];
+	      if( s != null ) {
+		int len = s.length();
+		if( len > 0 ) {
+		  if( isIdentifierChar( buf.charAt( buf.length() - 1 ) )
+		      && isIdentifierChar( s.charAt( 0 ) ) )
+		  {
+		    buf.append( (char) '\u0020' );
+		  }
+		  buf.append( s );
+		  if( isIdentifierChar( s.charAt( len - 1 ) ) ) {
+		    sep = true;
+		  } else {
+		    sep = false;
+		  }
+		}
+		ch = 0;
+	      }
 	    }
-	  } else {
+	  }
+	  if( ch > 0 ) {
+	    if( sep
+		&& (isIdentifierChar( ch )
+			|| (ch == '\'')
+			|| (ch == '\"')) )
+	    {
+	      buf.append( (char) '\u0020' );
+	    }
 	    buf.append( (char) ch );
+	    sep = false;
 	  }
 	}
       }
@@ -321,6 +352,14 @@ public class SourceUtil
 
 
 	/* --- private Methoden --- */
+
+  private static boolean isIdentifierChar( int ch )
+  {
+    return ((ch >= 'A') && (ch <= 'Z'))
+		|| ((ch >= 'a') && (ch <= 'z'))
+		|| ((ch >= '0') && (ch <= '9'));
+  }
+
 
   private static void showNoKCBasic( Component owner )
   {

@@ -37,9 +37,9 @@ public class LC80 extends EmuSys implements
   private byte[]           romC000;
   private byte[]           ram;
   private int[]            kbMatrixValues;
-  private int[]            segStatus;
-  private int[]            segValues;
-  private volatile int     curSegValue;
+  private int[]            digitStatus;
+  private int[]            digitValues;
+  private int              curDigitValue;
   private volatile int     pio1BValue;
   private long             curDisplayTStates;
   private long             displayCheckTStates;
@@ -102,9 +102,9 @@ public class LC80 extends EmuSys implements
     this.curDisplayTStates   = 0;
     this.displayCheckTStates = 0;
     this.pio1BValue          = 0xFF;
-    this.curSegValue         = 0xFF;
-    this.segValues           = new int[ 6 ];
-    this.segStatus           = new int[ 6 ];
+    this.curDigitValue       = 0xFF;
+    this.digitValues         = new int[ 6 ];
+    this.digitStatus         = new int[ 6 ];
     this.kbMatrixValues      = new int[ 6 ];
 
     Z80CPU cpu = emuThread.getZ80CPU();
@@ -158,13 +158,15 @@ public class LC80 extends EmuSys implements
       this.curDisplayTStates += tStates;
       if( this.curDisplayTStates > this.displayCheckTStates ) {
 	boolean dirty = false;
-	for( int i = 0; i < this.segValues.length; i++ ) {
-	  if( this.segStatus[ i ] > 0 ) {
-	    --this.segStatus[ i ];
-	  } else {
-	    if( this.segValues[ i ] != 0 ) {
-	      this.segValues[ i ] = 0;
-	      dirty = true;
+	synchronized( this.digitValues ) {
+	  for( int i = 0; i < this.digitValues.length; i++ ) {
+	    if( this.digitStatus[ i ] > 0 ) {
+	      --this.digitStatus[ i ];
+	    } else {
+	      if( this.digitValues[ i ] != 0 ) {
+		this.digitValues[ i ] = 0;
+		dirty = true;
+	      }
 	    }
 	  }
 	}
@@ -201,6 +203,7 @@ public class LC80 extends EmuSys implements
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
     cpu.removeHaltStateListener( this );
+    cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
@@ -238,6 +241,12 @@ public class LC80 extends EmuSys implements
   public int getColorCount()
   {
     return 5;
+  }
+
+
+  public String getHelpPage()
+  {
+    return "/help/lc80.htm";
   }
 
 
@@ -283,18 +292,18 @@ public class LC80 extends EmuSys implements
 
   public int getScreenWidth()
   {
-    return 429;
+    return 39 + (65 * this.digitValues.length);
   }
 
 
   public String getTitle()
   {
-    String rv = "LC80";
+    String rv = "LC-80";
     if( this.rom0000 == lc80_2 ) {
-      rv = "LC80.2";
+      rv = "LC-80.2";
     }
     else if( this.rom0000 == lc80e_0000 ) {
-      rv = "LC80e";
+      rv = "LC-80e";
     }
     return rv;
   }
@@ -325,7 +334,7 @@ public class LC80 extends EmuSys implements
 	  rv = true;
 	  break;
 
-	case KeyEvent.VK_F5:
+	case KeyEvent.VK_ENTER:
 	  this.kbMatrixValues[ 0 ] = 0x80;		// EX
 	  rv = true;
 	  break;
@@ -355,27 +364,29 @@ public class LC80 extends EmuSys implements
   public boolean keyTyped( char keyChar )
   {
     boolean rv = false;
-    int     ch = Character.toUpperCase( keyChar );
-    if( ch == 'N' ) {
-      this.emuThread.getZ80CPU().fireNMI();
-      rv = true;
-    } else {
-      synchronized( this.kbMatrixValues ) {
-	int m  = 0x10;
-	for( int i = 0; i < kbMatrix.length; i++ ) {
-	  int[] rowKeys = kbMatrix[ i ];
-	  for( int k = 0; k < rowKeys.length; k++ ) {
-	    if( rowKeys[ k ] == ch ) {
-	      this.kbMatrixValues[ k ] |= m;
-	      rv = true;
-	      break;
+    if( keyChar > 0 ) {
+      int ch = Character.toUpperCase( keyChar );
+      if( ch == 'N' ) {
+	this.emuThread.getZ80CPU().fireNMI();
+	rv = true;
+      } else {
+	synchronized( this.kbMatrixValues ) {
+	  int m  = 0x10;
+	  for( int i = 0; i < kbMatrix.length; i++ ) {
+	    int[] rowKeys = kbMatrix[ i ];
+	    for( int k = 0; k < rowKeys.length; k++ ) {
+	      if( rowKeys[ k ] == ch ) {
+		this.kbMatrixValues[ k ] |= m;
+		rv = true;
+		break;
+	      }
 	    }
+	    m <<= 1;
 	  }
-	  m <<= 1;
 	}
-      }
-      if( rv ) {
-	putKBMatrixRowValueToPort();
+	if( rv ) {
+	  putKBMatrixRowValueToPort();
+	}
       }
     }
     return rv;
@@ -412,16 +423,18 @@ public class LC80 extends EmuSys implements
 
     // 7-Segment-Anzeige
     x += (50 * screenScale);
-    for( int i = 0; i < this.segValues.length; i++ ) {
-      paint7SegDigit(
+    synchronized( this.digitValues ) {
+      for( int i = 0; i < this.digitValues.length; i++ ) {
+	paint7SegDigit(
 		g,
 		x,
 		y,
-		this.segValues[ i ],
+		this.digitValues[ i ],
 		this.greenDark,
 		this.greenLight,
 		screenScale );
-      x += (65 * screenScale);
+	x += (65 * screenScale);
+      }
     }
     return true;
   }
@@ -429,8 +442,6 @@ public class LC80 extends EmuSys implements
 
   public int readIOByte( int port )
   {
-    port &= 0x1F;	// unvollstaendige Adressdekodierung
-
     int rv = 0xFF;
     if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
@@ -496,8 +507,13 @@ public class LC80 extends EmuSys implements
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       fillRandom( this.ram );
     }
-    Arrays.fill( this.kbMatrixValues, 0 );
-    Arrays.fill( this.segValues, 0 );
+    synchronized( this.kbMatrixValues ) {
+      Arrays.fill( this.kbMatrixValues, 0 );
+    }
+    synchronized( this.digitValues ) {
+      Arrays.fill( this.digitStatus, 0 );
+      Arrays.fill( this.digitValues, 0 );
+    }
   }
 
 
@@ -523,13 +539,11 @@ public class LC80 extends EmuSys implements
 
   public void writeIOByte( int port, int value )
   {
-    port &= 0x1F;	// unvollstaendige Adressdekodierung
-
     if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
 	  this.pio1.writePortA( value );
-	  this.curSegValue = toDigitValue(
+	  this.curDigitValue = toDigitValue(
 				this.pio1.fetchOutValuePortA( false ) );
 	  putKBMatrixRowValueToPort();
 	  updDisplay();
@@ -598,12 +612,14 @@ public class LC80 extends EmuSys implements
   private void putKBMatrixRowValueToPort()
   {
     int v = 0;
-    int m = 0x04;
-    for( int i = 0; i < this.kbMatrixValues.length; i++ ) {
-      if( (this.pio1BValue & m) == 0 ) {
-	v |= this.kbMatrixValues[ i ];
+    synchronized( this.kbMatrixValues ) {
+      int m = 0x04;
+      for( int i = 0; i < this.kbMatrixValues.length; i++ ) {
+	if( (this.pio1BValue & m) == 0 ) {
+	  v |= this.kbMatrixValues[ i ];
+	}
+	m <<= 1;
       }
-      m <<= 1;
     }
     this.pio2.putInValuePortB( ~v, 0xF0 );
   }
@@ -663,19 +679,21 @@ public class LC80 extends EmuSys implements
 
   private void updDisplay()
   {
-    boolean b = false;
-    int     m = 0x80;
-    for( int i = 0; i < this.segValues.length; i++ ) {
-      if( (this.pio1BValue & m) == 0 ) {
-	this.segStatus[ i ] = 2;
-	if( this.segValues[ i ] != this.curSegValue ) {
-	  this.segValues[ i ] = this.curSegValue;
-	  b = true;
+    boolean dirty = false;
+    synchronized( this.digitValues ) {
+      int m = 0x80;
+      for( int i = 0; i < this.digitValues.length; i++ ) {
+	if( (this.pio1BValue & m) == 0 ) {
+	  this.digitStatus[ i ] = 2;
+	  if( this.digitValues[ i ] != this.curDigitValue ) {
+	    this.digitValues[ i ] = this.curDigitValue;
+	    dirty = true;
+	  }
 	}
+	m >>= 1;
       }
-      m >>= 1;
     }
-    if( b )
+    if( dirty )
       this.screenFrm.setScreenDirty( true );
   }
 }

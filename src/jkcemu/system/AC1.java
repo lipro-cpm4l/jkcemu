@@ -49,36 +49,6 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	"EDIT",     "ASAVE",  "ALOAD",  "TRON",
 	"TROFF" };
 
-  /*
-   * Diese Tabelle mappt die Tokens des SCCH-BASIC-Interpreters
-   * in ihre entsprechenden Texte.
-   * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
-   */
-  private static final String[] scchTokens = {
-	"END",      "FOR",    "NEXT",     "DATA",	// 0x80
-	"INPUT",    "DIM",    "READ",     "LET",
-	"GOTO",     "RUN",    "IF",       "RESTORE",
-	"GOSUB",    "RETURN", "REM",      "STOP",
-	"OUT",      "ON",     "NULL",     "WAIT",	// 0x90
-	"DEF",      "POKE",   "DOKE",     "AUTO",
-	"LINES",    "CLS",    "WIDTH",    "BYE",
-	"KEY",      "CALL",   "PRINT",    "CONT",
-	"LIST",     "CLEAR",  "CLOAD",    "CSAVE",	// 0xA0
-	"NEW",      "TAB(",   "TO",       "FN",
-	"SPC(",     "THEN",   "NOT",      "STEP",
-	"+",        "-",      "*",        "/",
-	"^",        "AND",    "OR",       ">",		// 0xB0
-	"=",        "<",      "SGN",      "INT",
-	"ABS",      "USR",    "FRE",      "INP",
-	"POS",      "SQR",    "RND",      "LN",
-	"EXP",      "COS",    "SIN",      "TAN",	// 0xC0
-	"ATN",      "PEEK",   "DEEK",     "POINT",
-	"LEN",      "STR$",   "VAL",      "ASC",
-	"CHR$",     "LEFT$",  "RIGHT$",   "MID$",
-	"SET",      "RESET",  "RENUMBER", "LOCATE",	// 0xD0
-	"SOUND",    "INKEY",  "MODE",     "TRON",
-	"TROFF" };
-
   private static byte[] mon31_64x16   = null;
   private static byte[] mon31_64x32   = null;
   private static byte[] scchMon80     = null;
@@ -161,7 +131,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
     } else {
       this.ramStatic = new byte[ 0x0800 ];
       this.ramVideo  = new byte[ 0x0800 ];
-      if( this.gsbasic == null ) {
+      if( gsbasic == null ) {
 	gsbasic = readResource( "/rom/ac1/gsbasic.bin" );
       }
     }
@@ -174,7 +144,6 @@ public class AC1 extends EmuSys implements Z80CTCListener
     this.ctc.addCTCListener( this );
     cpu.addTStatesListener( this.ctc );
 
-    this.keyboardUsed = false;
     reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
@@ -183,7 +152,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
   {
     String rv = null;
     String s1 = getBasicProgram( memory, 0x60F7, ac1Tokens );
-    String s2 = getBasicProgram( memory, 0x60F7, scchTokens );
+    String s2 = AC1LLC2Util.getSCCHBasicProgram( memory );
     if( (s1 != null) && (s2 != null) ) {
       if( s1.equals( s2 ) ) {
 	rv = s1;
@@ -337,6 +306,12 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
+  public String getHelpPage()
+  {
+    return "/help/ac1.htm";
+  }
+
+
   public int getMemByte( int addr )
   {
     addr &= 0xFFFF;
@@ -396,42 +371,45 @@ public class AC1 extends EmuSys implements Z80CTCListener
     int ch  = -1;
     int idx = (this.mode64x16 ? 0x03FF : 0x07FF) - (chY * 64) - chX;
     if( (idx >= 0) && (idx < this.ramVideo.length) ) {
-      ch = (int) this.ramVideo[ idx ];
-      if( this.fontBytes == ccdFontBytes ) {
+      int b = (int) this.ramVideo[ idx ];
+      if( (b >= 0x20) && (b < 0x7F) ) {
+	ch = b;
+	if( this.fontBytes == ccdFontBytes ) {
 
-	// Umlaute im Zeichensatz des Computerclubs Dessau
-	switch( ch ) {
-	  case 0x16:		// Paragraf-Zeichen
-	    ch = '\u00A7';
-	    break;
+	  // Umlaute im Zeichensatz des Computerclubs Dessau
+	  switch( b ) {
+	    case 0x16:		// Paragraf-Zeichen
+	      ch = '\u00A7';
+	      break;
 
-	  case 0x17:		// Ae-Umlaut
-	    ch = '\u00C4';
-	    break;
+	    case 0x17:		// Ae-Umlaut
+	      ch = '\u00C4';
+	      break;
 
-	  case 0x18:		// Oe-Umlaut
-	    ch = '\u00D6';
-	    break;
+	    case 0x18:		// Oe-Umlaut
+	      ch = '\u00D6';
+	      break;
 
-	  case 0x19:		// Ue-Umlaut
-	    ch = '\u00DC';
-	    break;
+	    case 0x19:		// Ue-Umlaut
+	      ch = '\u00DC';
+	      break;
 
-	  case 0x1A:		// ae-Umlaut
-	    ch = '\u00E4';
-	    break;
+	    case 0x1A:		// ae-Umlaut
+	      ch = '\u00E4';
+	      break;
 
-	  case 0x1B:		// oe-Umlaut
-	    ch = '\u00F6';
-	    break;
+	    case 0x1B:		// oe-Umlaut
+	      ch = '\u00F6';
+	      break;
 
-	  case 0x1C:		// ue-Umlaut
-	    ch = '\u00FC';
-	    break;
+	    case 0x1C:		// ue-Umlaut
+	      ch = '\u00FC';
+	      break;
 
-	  case 0x1D:		// sz
-	    ch = '\u00DF';
-	    break;
+	    case 0x1D:		// sz
+	      ch = '\u00DF';
+	      break;
+	  }
 	}
       }
     }
@@ -536,16 +514,14 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
   public void openBasicProgram()
   {
-    String[] tokens = scchTokens;
+    String text = null;
     if( (this.romMon == this.mon31_64x16)
 	|| (this.romMon == this.mon31_64x32) )
     {
-      tokens = ac1Tokens;
+      text = getBasicProgram( this.emuThread, 0x60F7, ac1Tokens );
+    } else {
+      text = AC1LLC2Util.getSCCHBasicProgram( this.emuThread );
     }
-    String text = getBasicProgram(
-				this.emuThread,
-				0x60F7,
-				ac1Tokens );
     if( text != null ) {
       this.screenFrm.openText( text );
     } else {
@@ -576,101 +552,13 @@ public class AC1 extends EmuSys implements Z80CTCListener
 			int           colArgs,
 			int           colRemark )
   {
-    int rv  = 0;
-    int bol = buf.length();
-    int b   = this.emuThread.getMemByte( addr );
-    switch( b ) {
-      case 0xCF:
-	buf.append( String.format( "%04X  %02X", addr, b ) );
-	appendSpacesToCol( buf, bol, colMnemonic );
-	buf.append( "RST" );
-	appendSpacesToCol( buf, bol, colArgs );
-	buf.append( "08H" );
-	appendSpacesToCol( buf, bol, colRemark );
-	buf.append( ";INCH\n" );
-	rv = 1;
-	break;
-
-      case 0xD7:
-	buf.append( String.format( "%04X  %02X", addr, b ) );
-	appendSpacesToCol( buf, bol, colMnemonic );
-	buf.append( "RST" );
-	appendSpacesToCol( buf, bol, colArgs );
-	buf.append( "10H" );
-	appendSpacesToCol( buf, bol, colRemark );
-	buf.append( ";OUTCH\n" );
-	rv = 1;
-	break;
-
-      case 0xDF:
-	buf.append( String.format( "%04X  %02X", addr, b ) );
-	appendSpacesToCol( buf, bol, colMnemonic );
-	buf.append( "RST" );
-	appendSpacesToCol( buf, bol, colArgs );
-	buf.append( "18H" );
-	appendSpacesToCol( buf, bol, colRemark );
-	buf.append( ";OUTS\n" );
-	rv = 1 + reassStringBit7( addr + 1, buf, colMnemonic, colArgs );
-	break;
-
-      case 0xC3:
-      case 0xCD:
-	int w = getMemWord( addr + 1 );
-	switch( w ) {
-	  case 0x0008:
-	  case 0x1802:
-	    buf.append( String.format(
-				"%04X  %02X %02X %02X",
+    return AC1LLC2Util.reassembleSysCall(
+				this.emuThread,
 				addr,
-				b,
-				w >> 8,
-				w & 0xFF ) );
-	    appendSpacesToCol( buf, bol, colMnemonic );
-	    buf.append( "CALL" );
-	    appendSpacesToCol( buf, bol, colArgs );
-	    buf.append( String.format( "%04XH", w ) );
-	    appendSpacesToCol( buf, bol, colRemark );
-	    buf.append( ";INCH\n" );
-	    rv = 3;
-	    break;
-
-	  case 0x0010:
-	  case 0x1805:
-	    buf.append( String.format(
-				"%04X  %02X %02X %02X",
-				addr,
-				b,
-				w >> 8,
-				w & 0xFF ) );
-	    appendSpacesToCol( buf, bol, colMnemonic );
-	    buf.append( "CALL" );
-	    appendSpacesToCol( buf, bol, colArgs );
-	    buf.append( String.format( "%04XH", w ) );
-	    appendSpacesToCol( buf, bol, colRemark );
-	    buf.append( ";OUTCH\n" );
-	    rv = 3;
-	    break;
-
-	  case 0x0018:
-	  case 0x1808:
-	    buf.append( String.format(
-				"%04X  %02X %02X %02X",
-				addr,
-				b,
-				w >> 8,
-				w & 0xFF ) );
-	    appendSpacesToCol( buf, bol, colMnemonic );
-	    buf.append( "CALL" );
-	    appendSpacesToCol( buf, bol, colArgs );
-	    buf.append( String.format( "%04XH", w ) );
-	    appendSpacesToCol( buf, bol, colRemark );
-	    buf.append( ";OUTS\n" );
-	    rv = 3 + reassStringBit7( addr + 3, buf, colMnemonic, colArgs );
-	    break;
-	}
-	break;
-    }
-    return rv;
+				buf,
+				colMnemonic,
+				colArgs,
+				colRemark );
   }
 
 

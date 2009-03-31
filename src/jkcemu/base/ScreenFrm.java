@@ -44,6 +44,7 @@ public class ScreenFrm extends BasicFrm implements
   private JMenuItem            mnuEditPasteStop;
   private JMenuItem            mnuEditPasteContinue;
   private JMenuItem            mnuExtraPause;
+  private JMenuItem            mnuHelpSys;
   private JRadioButtonMenuItem btnScreenScale1;
   private JRadioButtonMenuItem btnScreenScale2;
   private JRadioButtonMenuItem btnScreenScale3;
@@ -299,6 +300,12 @@ public class ScreenFrm extends BasicFrm implements
     // Menu Hilfe
     JMenu mnuHelp = new JMenu( "?" );
     mnuHelp.add( createJMenuItem( "Hilfe...", "help.content" ) );
+
+    this.mnuHelpSys = createJMenuItem(
+				"Hilfe zum emulierten System...",
+				"help.system" );
+    this.mnuHelpSys.setEnabled( false );
+    mnuHelp.add( this.mnuHelpSys );
     mnuHelp.addSeparator();
     mnuHelp.add( createJMenuItem( "\u00DCber JKCEMU...", "help.about" ) );
 
@@ -748,6 +755,7 @@ public class ScreenFrm extends BasicFrm implements
       emuSys = emuThread.getEmuSys();
     }
     setTitle( "JKCEMU: " + emuSys.getTitle() );
+    this.mnuHelpSys.setEnabled( emuSys.getHelpPage() != null );
 
     // Bildschirmaktualisierung
     this.screenRefreshTimer.stop();
@@ -1181,6 +1189,10 @@ public class ScreenFrm extends BasicFrm implements
 	  else if( actionCmd.equals( "help.content" ) ) {
 	    rv = true;
 	    showHelp( null );
+	  }
+	  else if( actionCmd.equals( "help.system" ) ) {
+	    rv = true;
+	    doHelpSystem();
 	  }
 	  else if( actionCmd.equals( "help.about" ) ) {
 	    rv = true;
@@ -1843,14 +1855,16 @@ public class ScreenFrm extends BasicFrm implements
 	+ "\n- VEB Mikroelektronik Erfurt (LC80)"
 	+ "\n- VEB Mikroelektronik M\u00FChlhausen"
 	+ " (HC900, KC85/2, KC85/3, KC85/4)"
+	+ "\n- VEB Polytechnik Karl-Marx-Stadt (Poly-Computer 880)"
 	+ "\n- VEB Robotron-Elektronik Riesa (Z1013)"
 	+ "\n- Bernd H\u00FCbler (H\u00FCbler/Evert-MC, H\u00FCbler-Grafik-MC)"
 	+ "\n- Dr. Rainer Brosig (erweitertes Z1013-Monitorprogramm)"
-	+ "\n- Eckart Buschendorf (LC80.2-Monitorprogramm)"
-	+ "\n- Eckhard Ludwig (SCCH-Software f\u00FCr AC1)"
-	+ "\n- Eckhard Schiller (BCS3)"
+	+ "\n- Eckart Buschendorf (LC-80.2-Monitorprogramm)"
+	+ "\n- Eckhard Ludwig (SCCH-Software f\u00FCr AC1 und LLC2)"
+	+ "\n- Eckhard Schiller (BCS3 und VCS-80)"
 	+ "\n- Frank Heyder (Monitorprogramm 3.1 f\u00FCr AC1)"
 	+ "\n- Frank Pr\u00FCfer (S/P-BASIC V3.3 f\u00FCr BCS3)"
+	+ "\n- Joachim Czepa (C-80)"
 	+ "\n- Klaus-Peter Evert (H\u00FCbler/Evert-MC)"
 	+ "\n- Manfred Kramer (Kramer-MC)"
 	+ "\n- Torsten Musiol (Maschinenkode-Editor f\u00FCr BCS3)"
@@ -1858,6 +1872,14 @@ public class ScreenFrm extends BasicFrm implements
 	+ "\nim Internet unter http://www.jens-mueller.org/jkcemu"
 	+ "\n",
       "\u00DCber JKCEMU..." );
+  }
+
+
+  private void doHelpSystem()
+  {
+    String page = this.screenFld.getEmuSys().getHelpPage();
+    if( page != null )
+      showHelp( page );
   }
 
 
