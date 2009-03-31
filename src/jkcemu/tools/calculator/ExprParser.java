@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,8 +15,6 @@ import java.text.*;
 
 public class ExprParser
 {
-  public static enum Radix { BINARY, OCTAL, DECIMAL, HEXADECIMAL };
-
   private final static int MAX_BINARY_DIGITS        = 64;
   private final static int MAX_OCTAL_DIGITS         = 21;
   private final static int MAX_DECIMAL_DIGITS       = 18;
@@ -27,22 +25,19 @@ public class ExprParser
 
   private String            text;
   private CharacterIterator iter;
-  private Radix             radix;
 
 
   public ExprParser()
   {
-    this.text  = null;
-    this.iter  = null;
-    this.radix = Radix.DECIMAL;
+    this.text = null;
+    this.iter = null;
   }
 
 
-  public Number parseExpr( String text, Radix radix ) throws ParseException
+  public Number parseExpr( String text ) throws ParseException
   {
     this.text    = (text != null ? text : "");
     this.iter    = new StringCharacterIterator( this.text );
-    this.radix   = radix;
     Number value = parseInclusiveORExpr();
     char   ch    = skipSpaces();
     if( ch != CharacterIterator.DONE ) {
@@ -245,7 +240,7 @@ public class ExprParser
       this.iter.next();
       value = parseInclusiveORExpr();
       checkToken( ')' );
-    } else if( ((ch >= '0') && (ch <= '9')) ) {
+    } else if( (ch == '$') || ((ch >= '0') && (ch <= '9')) ) {
       value = parseNumber();
     } else if( ((ch >= 'A') && (ch <= 'Z'))
 	       || ((ch >= 'a') && (ch <= 'z')) )
@@ -266,13 +261,33 @@ public class ExprParser
   private Number parseNumber() throws ParseException
   {
     char ch = skipSpaces();
+
+    // auf Binaerzahl pruefen
+    if( ch == '$' ) {
+      ch = this.iter.next();
+      if( (ch == '0') || (ch == '1') ) {
+	long binValue = 0L;
+	do {
+	  binValue <<= 1;
+	  if( ch == '1' ) {
+	    binValue |= 1;
+	  }
+	  ch = this.iter.next();
+	} while( (ch == '0') || (ch == '1') );
+	return new Long( binValue );
+      } else {
+	fireError( "Bin\u00E4rzahl hinter \'$\' erwartet" );
+      }
+    }
+
+    // auf Hexadezimalzahl mit vorangestelltem '0x' pruefen
     if( ch == '0' ) {
       ch = this.iter.next();
       if( (ch == 'x') || (ch == 'X') ) {
 	ch = this.iter.next();
 	if( isHexDigit( ch ) ) {
 	  long hexValue = 0L;
-	  while( isHexDigit( ch ) ) {
+	  do {
 	    hexValue <<= 4;
 	    if( (ch >= '0') && (ch <= '9') ) {
 	      hexValue |= (ch - '0');
@@ -282,13 +297,15 @@ public class ExprParser
 	      hexValue |= (ch - 'a' + 10);
 	    }
 	    ch = this.iter.next();
-	  }
+	  } while( isHexDigit( ch ) );
 	  return new Long( hexValue );
 	} else {
 	  fireError( "Hexadezimalziffern hinter \'0x\' erwartet" );
 	}
       }
     }
+
+    // Zahl parsen mit evtl. nachgestellter Basis
     boolean isBinary  = true;
     boolean isOctal   = true;
     boolean isDecimal = true;
@@ -331,6 +348,7 @@ public class ExprParser
       ch = this.iter.next();
     }
 
+    // auf Fliesskommazahl pruefen
     if( ch == '.' ) {
       if( isDecimal ) {
 	if( nPre > MAX_DECIMAL_DIGITS ) {
@@ -388,6 +406,7 @@ public class ExprParser
       fireError( "Ung\u00FCltige Flie\u00DFkommazahl" );
     }
 
+    // auf Oktalzahl und Hexadezimalzahl mit nachgestelltem 'H' pruefen
     if( (ch == 'O') || (ch == 'o') || (ch == 'Q') || (ch == 'q') ) {
       this.iter.next();
       if( isOctal ) {
@@ -406,43 +425,14 @@ public class ExprParser
       return new Long( hexValue );
     }
 
-    if( isBinary && (this.radix == Radix.BINARY) ) {
-      if( nPre > MAX_BINARY_DIGITS ) {
-	fireNumberOverflow();
-      }
-      return new Long( binaryValue );
-    } else if( isOctal && (this.radix == Radix.OCTAL) ) {
-      if( nPre > MAX_OCTAL_DIGITS ) {
-	fireNumberOverflow();
-      }
-      return new Long( octalValue );
-    } else if( isDecimal && (this.radix == Radix.DECIMAL) ) {
-      if( nPre > MAX_DECIMAL_DIGITS ) {
-	fireNumberOverflow();
-      }
-      return new Long( decimalValue );
-    } else if( isHex && (this.radix == Radix.HEXADECIMAL) ) {
-      if( nPre > MAX_HEX_DIGITS ) {
-	fireNumberOverflow();
-      }
-      return new Long( hexValue );
+    // kann nur noch ganze Dezimalzahl sein
+    if( !isDecimal ) {
+      fireError( "Ziffer 0 bis 9 erwartet" );
     }
-
-    switch( this.radix ) {
-      case DECIMAL:
-	fireError( "Ziffer 0 bis 9 erwartet" );
-
-      case HEXADECIMAL:
-	fireError( "Ziffer 0 bis 9 oder Zeichen A bis F erwartet" );
-
-      case OCTAL:
-	fireError( "Ziffer 0 bis 7 erwartet" );
-
-      case BINARY:
-	fireError( "Ziffer 0 oder 1 erwartet" );
+    if( nPre > MAX_DECIMAL_DIGITS ) {
+      fireNumberOverflow();
     }
-    fireError( "Syntax fehlerhaft" );		// darf nie erreicht werden
-    return null;				// erfordert der Compiler
+    return new Long( decimalValue );
   }
 
 

@@ -167,7 +167,7 @@ public class BCS3 extends EmuSys implements
 	fontBytesSP33 = readResource( "/rom/bcs3/sp33font.bin" );
       }
       this.fontBytes        = fontBytesSP33;
-      this.screenOffset     = 0x00A0;
+      this.screenOffset     = 0x00B4;
       this.screenBaseHeight = 232;
       this.screenCharRows   = 4;	// Anfangswert
       this.screenCharCols   = 29;
@@ -504,6 +504,12 @@ public class BCS3 extends EmuSys implements
   }
 
 
+  public String getHelpPage()
+  {
+    return "/help/bcs3.htm";
+  }
+
+
   public Integer getLoadAddr()
   {
     Integer rv = null;
@@ -586,10 +592,15 @@ public class BCS3 extends EmuSys implements
 
   protected int getScreenChar( int chX, int chY )
   {
+    int ch  = -1;
     int idx = this.screenOffset + (chY * this.screenRowOffset) + chX;
-    return (idx >= 0) && (idx < this.ram.length) ?
-					((int) this.ram[ idx ] & 0xFF)
-					: -1;
+    if( (idx >= 0) && (idx < this.ram.length) ) {
+      int b = (int) this.ram[ idx ] & 0xFF;
+      if( (b >= 0x20) && (b < 0x7F) ) {
+        ch = b;
+      }
+    }
+    return ch;
   }
 
 

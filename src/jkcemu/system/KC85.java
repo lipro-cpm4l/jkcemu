@@ -652,6 +652,12 @@ public class KC85 extends EmuSys implements
   }
 
 
+  public String getHelpPage()
+  {
+    return "/help/kc85.htm";
+  }
+
+
   public int getMemByte( int addr )
   {
     addr &= 0xFFFF;
@@ -736,8 +742,8 @@ public class KC85 extends EmuSys implements
     int ch  = -1;
     int idx = 0x3200 + (chY * 40) + chX;
     if( (idx >= 0) && (idx < this.ramPixel0.length) ) {
-      ch = (int) this.ramPixel0[ idx ] & 0xFF;
-      switch( ch ) {
+      int b = (int) this.ramPixel0[ idx ] & 0xFF;
+      switch( b ) {
 	case 0:
 	  ch = 0x20;
 	  break;
@@ -793,6 +799,11 @@ public class KC85 extends EmuSys implements
 	    ch = -1;
 	  }
 	  break;
+
+	default:
+	  if( (b >= 0x20) && (b < 0x7F) ) {
+	    ch = b;
+	  }
       }
     }
     return ch;

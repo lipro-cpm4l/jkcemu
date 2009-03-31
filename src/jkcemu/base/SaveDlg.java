@@ -391,7 +391,8 @@ public class SaveDlg extends BasicDlg implements
     EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
     if( (emuSys instanceof AC1)
 	|| (emuSys instanceof HueblerGraphicsMC)
-	|| (emuSys instanceof KramerMC) )
+	|| (emuSys instanceof KramerMC)
+	|| (emuSys instanceof LLC2) )
     {
       this.btnFileFmtHS.setSelected( true );
     }

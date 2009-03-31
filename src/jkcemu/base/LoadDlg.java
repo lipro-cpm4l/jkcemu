@@ -92,6 +92,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	      EmuThread emuThread  = screenFrm.getEmuThread();
 	      EmuSys    emuSys     = emuThread.getEmuSys();
 	      boolean   isAC1      = (emuSys instanceof AC1);
+	      boolean   isLLC2     = (emuSys instanceof LLC2);
 	      boolean   isHGMC     = (emuSys instanceof HueblerGraphicsMC);
 	      boolean   isKramerMC = (emuSys instanceof KramerMC);
 	      boolean   isZ1013    = (emuSys instanceof Z1013);
@@ -125,7 +126,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	       * gerade emulierten System ist
 	       */
 	      if( loadData.getStartAddr() >= 0 ) {
-		if( ((isAC1 || isHGMC || isKramerMC || isZ1013)
+		if( ((isAC1 || isHGMC || isKramerMC || isLLC2 || isZ1013)
 				&& !fileFmt.equals( FileInfo.HEADERSAVE ))
 		    || (isKC && !fileFmt.equals( FileInfo.KCC )
 				&& !fileFmt.equals( FileInfo.KCTAP_SYS )) )

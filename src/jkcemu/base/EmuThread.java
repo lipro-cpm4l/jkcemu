@@ -96,6 +96,8 @@ public class EmuThread extends Thread implements
       String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
       if( sysName.startsWith( "BCS3" ) ) {
 	emuSys = new BCS3( this, props );
+      } else if( sysName.startsWith( "C80" ) ) {
+	emuSys = new C80( this, props );
       } else if( sysName.startsWith( "HueblerEvertMC" ) ) {
 	emuSys = new HueblerEvertMC( this, props );
       } else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
@@ -114,6 +116,14 @@ public class EmuThread extends Thread implements
 	emuSys = new KramerMC( this, props );
       } else if( sysName.startsWith( "LC80" ) ) {
 	emuSys = new LC80( this, props );
+      } else if( sysName.startsWith( "LLC2" ) ) {
+	emuSys = new LLC2( this, props );
+      } else if( sysName.startsWith( "MKX80032" ) ) {
+	emuSys = new MKX80032( this, props );
+      } else if( sysName.startsWith( "Poly880" ) ) {
+	emuSys = new Poly880( this, props );
+      } else if( sysName.startsWith( "VCS80" ) ) {
+	emuSys = new VCS80( this, props );
       } else if( sysName.startsWith( "Z1013" ) ) {
 	emuSys = new Z1013( this, props );
       } else {
@@ -172,6 +182,9 @@ public class EmuThread extends Thread implements
       else if( sysName.startsWith( "BCS3" ) ) {
 	rv = BCS3.getDefaultSpeedKHz( props );
       }
+      else if( sysName.startsWith( "C80" ) ) {
+	rv = C80.getDefaultSpeedKHz();
+      }
       else if( sysName.startsWith( "HueblerEvertMC" ) ) {
 	rv = HueblerEvertMC.getDefaultSpeedKHz();
       }
@@ -183,6 +196,18 @@ public class EmuThread extends Thread implements
       }
       else if( sysName.startsWith( "LC80" ) ) {
 	rv = LC80.getDefaultSpeedKHz( props );
+      }
+      else if( sysName.startsWith( "LLC2" ) ) {
+	rv = LLC2.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "MKX80032" ) ) {
+	rv = MKX80032.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "Poly880" ) ) {
+	rv = Poly880.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "VCS80" ) ) {
+	rv = VCS80.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "Z1013" ) ) {
 	rv = Z1013.getDefaultSpeedKHz( props );

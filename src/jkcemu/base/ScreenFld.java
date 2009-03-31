@@ -256,7 +256,12 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	this.yOffs = 0;
       }
 
-      if( !this.emuSys.paintScreen( g, this.xOffs, this.yOffs, this.screenScale ) ) {
+      if( !this.emuSys.paintScreen(
+				g,
+				this.xOffs,
+				this.yOffs,
+				this.screenScale ) )
+      {
 	if( (this.xOffs > 0) || (this.yOffs > 0) ) {
 	  g.translate( this.xOffs, this.yOffs );
 	}

@@ -1,0 +1,145 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des C-80</h1>
+    Der C-80 ist ein von Joachim Czepa 1986 vorgestellter
+    Einplatinenrechner f&uuml;r den Eigenbau.
+  <br><br>
+
+  <h2>1. Emulierte Hardware</h2>
+    <ul>
+      <li>1 KByte ROM
+      <li>1 KByte RAM
+      <li>8-stellige 7-Segment-Anzeige
+    </ul>
+    Der RAM liegt im Bereichen 0C00-0FFF.
+    Aufgrund der unvollst&auml;ndigen Adressdekodierung
+    ist er auch im Bereich 0800-0BFF sichtbar.
+  <br><br>
+
+  <h3>1.1. Tastatur</h3>
+    Die Tabelle zeigt, wie die Tasten des C-80 auf der Tastatur
+    des Emulatorrechners abgebildet werden:
+    <br>
+    <table border="1">
+      <tr>
+	<th valign="top">C-80-Taste</th>
+	<th valign="top">Taste im Emulator</th>
+	<th valign="top">Bedeutung</th>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>RES</td>
+	<td valign="top" nowrap>Escape</td>
+	<td valign="top">Zur&uuml;cksetzen</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>BRK</td>
+	<td valign="top" nowrap>N</td>
+	<td valign="top">Abbrechen (NMI)</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>FCT</td>
+	<td valign="top" nowrap>F1</td>
+	<td valign="top">
+	  Funktionstaste,<br>
+	  Durch Dr&uuml;cken, wieder Loslassen und anschlie&szlig;endes
+	  Dr&uuml;cken einer der Tasten <em>1</em> bis <em>6</em>
+	  wird eine Funktion aufgerufen,
+	  f&uuml;r die keine separate Taste vorhanden ist.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>MEM</td>
+	<td valign="top" nowrap>M</td>
+	<td valign="top">Speicheranzeige</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>GO</td>
+	<td valign="top" nowrap>G</td>
+	<td valign="top">Programm starten</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>REG</td>
+	<td valign="top" nowrap>R</td>
+	<td valign="top">Register anzeigen</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>-</td>
+	<td valign="top" nowrap>-</td>
+	<td valign="top">Wert/Adresse dekrementieren</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>+</td>
+	<td valign="top" nowrap>+ oder Enter</td>
+	<td valign="top">Wert/Adresse inkrementieren oder &uuml;bernehmen</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>0...9</td>
+	<td valign="top" nowrap>0...9</td>
+	<td valign="top">Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top" nowrap>A...F</td>
+	<td valign="top" nowrap>A...F oder a...f</td>
+	<td valign="top">Adress-/Dateneingabe</td>
+      </tr>
+    </table>
+  <br>
+    <b>Achtung!</b> Escape und N l&ouml;sen der Einfachheit halber
+    RESET bzw. NMI ohne Sicherheitsabfrage aus,
+    auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
+    aktiviert ist.
+  <br><br>
+
+
+  <h2>2. Im ROM enthaltene Software</h2>
+    <ul>
+      <li>Originales Monitorprprogramm
+    </ul>
+  <br>
+
+  <h3>2.1. Beschreibung des Monitorprogramms</h3>
+    Nach einem RESET ist nur ein Dezimalpunkt zu sehen.
+  <br><br>
+
+  <h4>2.1.1. Speicherzellen anzeigen und beschreiben</h4>
+    <ol>
+      <li>Zur&uuml;cksetzen (Taste <em>RESET</em>)
+      <li>Speicheranzeige aufrufen (Taste <em>MEM</em>>)
+      <li>Adresse eingeben (Tasten <em>0</em>...<em>9</em>
+	  und <em>A</em>...<em>F</em>)
+      <li>Adresse &uuml;bernehmen (Taste <em>+</em>)
+      <li>Gegebenfalls Adresse &auml;ndern (Tasten <em>+</em> und <em>-</em>)
+      <li>Gegebenfalls Wert eingeben und mit Taste <em>+</em> &uuml;bernehmen
+      <li>Weiter mit Punkt 5
+    </ol>
+  <br><br>
+
+  <h4>2.1.2. Programmstart</h4>
+    <em>RESET</em> &rarr; <em>GO</em> &rarr; Startadresse eingeben
+    [ &rarr; <em>-</em> &rarr; Haltepunktadresse eingeben ]
+    &rarr; <em>+</em>
+  <br><br>
+    Das Dr&uuml;cken des Minuszeichens mit Eingabe der Haltepunktadresse
+    kann auch weggelassen werden.
+  <br><br>
+    <b>Achtung! </b> Ein Haltepunkt kann nur im RAM und nur
+    auf das erste Byte eines Befehls gesetzt werden.
+  <br><br>
+    Die <em>BRK</em>-Taste (NMI) hat die gleiche Bedeutung
+    wie das Erreichen des Haltepunktes.
+  <br><br>
+
+  <h4>2.1.3. Register anzeigen</h4>
+    <em>RESET</em> &rarr; <em>REG</em>
+  <br><br>
+    Es wird ein Doppelregister angezeigt.
+    Mit den Tasten <em>+</em> und <em>-</em> wechseln Sie
+    zum n&auml;chsten bzw. vorherigen Doppelregister.
+  <br><br>
+    Die Register werden ge&auml;ndert,
+    indem Sie ein Byte eingeben und dieses dann mit <em>+</em>
+    dem h&ouml;herwertigen oder mit <em>-</em> dem niederwertigen
+    Register des angezeigten Doppelregisters zuweisen.
+</body>
+</html>
+

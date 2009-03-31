@@ -132,6 +132,12 @@ public class HueblerEvertMC extends AbstractHueblerMC
   }
 
 
+  public String getHelpPage()
+  {
+    return "/help/hemc.htm";
+  }
+
+
   public int getMemByte( int addr )
   {
     addr &= 0xFFFF;
@@ -170,10 +176,15 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
   protected int getScreenChar( int chX, int chY )
   {
+    int ch  = -1;
     int idx = (chY * 64) + chX;
-    return (idx >= 0) && (idx < this.ramVideo.length) ?
-					((int) this.ramVideo[ idx ] & 0xFF)
-					: -1;
+    if( (idx >= 0) && (idx < this.ramVideo.length) ) {
+      int b = (int) this.ramVideo[ idx ] & 0xFF;
+      if( (b >= 0x20) && (b < 0x7F) ) {
+	ch = b;
+      }
+    }
+    return ch;
   }
 
 
