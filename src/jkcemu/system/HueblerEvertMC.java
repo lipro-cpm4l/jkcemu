@@ -138,7 +138,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 
@@ -309,7 +309,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      fillRandom( this.ramStatic );
+      initSRAM( this.ramStatic, props );
       fillRandom( this.ramVideo );
     }
     this.keyChar = 0;

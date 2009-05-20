@@ -1,33 +1,32 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des VCS-80</h1>
-    Der VCS-80 ist ein Eigenbau-Lerncomputer,
+  <h1>Hinweise zur Emulation des VCS80</h1>
+    Der VCS80 ist ein Eigenbau-Lerncomputer,
     dessen Bauanleitung Eckhard Schiller 1983 in der Zeitschrift
     <em>radio fernsehen elektronik</em> ver&ouml;ffentlicht hat.
-  <br<<br>
+  <br/><br/>
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>0,5 KByte ROM
-      <li>1 KByte RAM
-      <li>8-stellige 7-Segment-Anzeige
+      <li>0,5 KByte ROM im Adressbereich 0000-01FF</li>
+      <li>1 KByte RAM im Adressbereich 0400-07FF</li>
+      <li>8-stellige 7-Segment-Anzeige</li>
     </ul>
-    Der ROM liegt im Bereichen 0000-01FF.
-    Aufgrund der unvollst&auml;ndigen Adressdekodierung
-    ist er auch im Bereich 0200-03FF sichtbar.
-  <br><br>
-    Die 7-Segment-Anzeige hat eigentlich 9 Stelen.
-    Allerdings wird mit mittlere Stelle nicht verwendet.
+    Der ROM ist aufgrund der unvollst&auml;ndigen Adressdekodierung
+    auch im Bereich 0200-03FF sichtbar.
+  <br/><br/>
+    Die 7-Segment-Anzeige hat eigentlich 9 Stellen.
+    Allerdings wird die mittlere Stelle nicht verwendet.
     Somit gibt es vier Stellen links und vier Stellen rechts.
-  <br><br>
+  <br/><br/>
 
   <h3>1.1. Tastatur</h3>
-    Die Tabelle zeigt, wie die Tasten des VCS-80 auf der Tastatur
+    Die Tabelle zeigt, wie die Tasten des VCS80 auf der Tastatur
     des Emulatorrechners abgebildet werden:
-    <br>
+    <br/>
     <table border="1">
       <tr>
-	<th valign="top">VCS-80-Taste</th>
+	<th valign="top">VCS80-Taste</th>
 	<th valign="top">Taste im Emulator</th>
 	<th valign="top">Bedeutung</th>
       </tr>
@@ -40,7 +39,7 @@
 	<td valign="top" nowrap>PE</td>
 	<td valign="top" nowrap>P</td>
 	<td valign="top">
-	  Periphere Eingabe,<br>
+	  Periphere Eingabe,<br/>
 	  Vom Monitorprogramm mit keiner eigenst&auml;ndigen Funktion belegt
 	</td>
       </tr>
@@ -90,89 +89,99 @@
 	<td valign="top">Adress-/Dateneingabe</td>
       </tr>
     </table>
-  <br>
+  <br/>
     <b>Achtung!</b> Escape l&ouml;st der Einfachheit halber
     RESET ohne Sicherheitsabfrage aus,
     auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
     aktiviert ist.
-  <br><br>
+  <br/><br/>
 
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li>Originales Monitorprprogramm
+      <li>Originales Monitorprprogramm</li>
     </ul>
-  <br>
+  <br/>
 
-  <h3>2.1. Beschreibung des Monitorprogramms</h3>
+  <h3>2.1. Hinweise zur Bedienung des Monitorprogramms</h3>
     Nach einem RESET steht links <em>Mo</em> und rechts eine beliebige Adresse.
-  <br><br>
+  <br/><br/>
 
-  <h4>2.1.1. Speicherzellen anzeigen und beschreiben</h4>
+  <h4>2.1.1. Speicherzellen anzeigen/&auml;ndern</h4>
     <ol>
-      <li>Zur&uuml;cksetzen (Taste <em>RESET</em>)
-      <li>Adresse eingeben (Tasten <em>0</em>...<em>9</em>,
-	  <em>A</em>...<em>F</em>, <em>A+</em> und <em>A-</em>)
-      <li>Adresse &uuml;bernehmen (Taste <em>MA</em>),<br>
-	  Sie befinden sich jetzt im Hauptzyklus, d.h. die Stellen
-	  7 und 8 zeigen das Byte auf der &uuml;bernommenen Adresse an
-	  und die beiden Stellen davor das Byte der vorherigen Adresse.
-      <li>Gegebenfalls Wert eingeben
-	  (Tasten <em>0</em>...<em>9</em> und <em>A</em>...<em>F</em>)
-      <li>Wert &uuml;bernehmen und n&auml;chste Adresse angezeigen
-	  (Taste <em>A+</em>),<br>
-      <li>Weiter mit Punkt 4
+      <li>Zur&uuml;cksetzen (Taste <em>RESET&nbsp;(Escape)</em>)</li>
+      <li>
+	Adresse eingeben (Tasten <em>0</em>...<em>9</em>,
+	<em>A</em>...<em>F</em>, <em>A+&nbsp;(+)</em> und <em>A-&nbsp;(-)</em>)
+      </li>
+      <li>
+	Adresse &uuml;bernehmen (Taste <em>MA&nbsp;(M)</em>),<br/>
+	Sie befinden sich jetzt im Hauptzyklus, d.h. die Stellen
+	7 und 8 zeigen das Byte auf der &uuml;bernommenen Adresse an
+	und die beiden Stellen davor das Byte der vorherigen Adresse.
+      </li>
+      <li>
+	Gegebenfalls Wert eingeben
+	(Tasten <em>0</em>...<em>9</em> und <em>A</em>...<em>F</em>)
+      </li>
+      <li>
+	Wert &uuml;bernehmen und n&auml;chste Adresse angezeigen
+	(Taste <em>A+&nbsp;(+)</em>),
+      </li>
+      <li>Weiter mit Punkt 4</li>
     </ol>
-  <br><br>
+  <br/><br/>
 
-  <h4>2.1.2. Register anzeigen</h4>
-    <em>RESET</em> &rarr; <em>RE</em>
-  <br><br>
+  <h4>2.1.2. Register anzeigen/&auml;ndern</h4>
+    <em>RESET&nbsp;(Escape)</em> &rarr; <em>RE&nbsp;(R)</em>
+  <br/><br/>
     Es wird das AF-Register angezeigt.
-    Mit den Tasten <em>A+</em>, <em>A-</em>, <em>MA</em>
-    <em>RE</em> und <em>GO</em> wechseln Sie zu den Registern
+    Mit den Tasten <em>A+&nbsp;(+)</em>, <em>A-&nbsp;(-)</em>, <em>MA&nbsp;(M)</em>
+    <em>RE&nbsp;(R)</em> und <em>GO&nbsp;(G)</em> wechseln Sie zu den Registern
     BC, DE, HL, IX bzw. IY.
-    Jede andere Funktionstaste f&uml;hrt zum Hauptzyklus.
-  <br><br>
+    Jede andere Funktionstaste f&uuml;hrt zum Hauptzyklus.
+  <br/><br/>
 
   <h4>2.1.3. Programmstart</h4>
-    <em>RESET</em> &rarr; <em>GO</em> &rarr; Adresse eingeben
-    &rarr; beliebige Funktionstaste
-  <br><br>
+    <em>RESET&nbsp;(Escape)</em> &rarr; <em>GO&nbsp;(G)</em>
+    &rarr; &lt;Adresse&gt; &rarr; &lt;beliebige&nbsp;Funktionstaste&gt;
+  <br/><br/>
 
   <h4>2.1.4. Einzelschrittbetrieb</h4>
-    <em>RESET</em> &rarr; Adresse eingeben &rarr; <em>MA</em>
-    &rarr; <em>ST</em>
-  <br><br>
-    Mit jedem Bet&auml;tigen der Taste <em>ST</em> wird nun
+    <em>RESET&nbsp;(Escape)</em> &rarr; &lt;Adresse&gt;
+    &rarr; <em>MA&nbsp;(M)</em> &rarr; <em>ST&nbsp;(S)</em>
+  <br/><br/>
+    Mit jedem Bet&auml;tigen der Taste <em>ST&nbsp;(S)</em> wird nun
     ein Befehl abgearbeitet.
-  <br><br>
-    Technisch wird der Schrittbetrieb mit Hilfe eines Interrupts realisiert.
-    Vor dem auszuf&uuml;hrenden Befehl wird ein Interruptfreigabebefehl
+    Dabei wird vor dem auszuf&uuml;hrenden Befehl ein Interruptfreigabebefehl
     geschrieben und dieser auch angesprungen.
     W&auml;hrend der Befehlsausf&uuml;hrung l&ouml;st dann
     die Adressleitung A0 &uuml;ber PIO-Bit B7 einen Interrupt aus.
     Die Interrupt-Service-Routine korrigiert die Speicherzelle,
     in die der Interruptfreigabebefehl geschrieben wurde
-    und kehrt in die Eingabeschelife zur&uuml;ck.
-  <br><br>
+    und kehrt in die Eingabeschleife zur&uuml;ck.
+  <br/><br/>
     F&uuml;r den Schrittbetrieb gelten folgende Einschr&auml;nkungen:
     <ul>
-      <li>Die Speicherzelle vor dem auszuf&uuml;hrenden Befehl muss RAM sein.
-      <li>Es k&ouml;nnen keine Befehle im Schrittbetrieb ausgef&uuml;hrt
-	  werden, die das Interrupt-System beeinflussen.
+      <li>
+	Die Speicherzelle vor dem auszuf&uuml;hrenden Befehl muss RAM sein.
+      </li>
+      <li>
+	Es k&ouml;nnen keine Befehle im Schrittbetrieb ausgef&uuml;hrt
+	werden, die das Interrupt-System beeinflussen.
+      </li>
     </ul>
-  <br>
+  <br/>
 
   <h4>2.1.5. Unterbrechungspunkt</h4>
-    <em>RESET</em> &rarr; <em>TR</em> &rarr; Adresse eingeben
-    &rarr; beliebige Funktionstaste
-  <br><br>
+    <em>RESET&nbsp;(Escape)</em> &rarr; <em>TR&nbsp;(T)</em>
+    &rarr; &lt;Adresse&gt; &rarr; &lt;beliebige&nbsp;Funktionstaste&gt;
+  <br/><br/>
     Auf die angegebene Adresse wird ein Restart-Befehl geschrieben.
     Wenn die Programmausf&uuml;hrung diesen Befehl erreicht,
     wird die Speicherzelle wieder mit dem urspr&uuml;glichen Wert beschrieben
     und in die Eingabeschleife zur&uuml;ckgekehrt.
-  <br><br>
+  <br/><br/>
     Ein Unterbrechungspunkt kann nur auf einer RAM-Adresse gesetzt werden.
 </body>
 </html>

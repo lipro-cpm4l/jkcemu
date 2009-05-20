@@ -368,6 +368,10 @@ public class EditText implements
 			  text = Z1013.getTinyBasicProgram( loadData );
 			  break;
 
+			case 0x1400:
+			  text = LLC1.getTinyBasicProgram( loadData );
+			  break;
+
 			case 0x18C0:
 			  text = AC1.getTinyBasicProgram( loadData );
 			  break;

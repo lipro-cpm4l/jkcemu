@@ -5,34 +5,36 @@
     den Bernd H&uuml;bler in dem 1988 erschienenen Buch
     <em>Mikroelektronik in der Amateurpraxis 3</em>
     als <em>BASIC-Kleincomputer mit Grafik</em> vorgestellt hat.
-  <br><br>
+  <br/><br/>
 
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>Je nach Einstellung 4 oder 18 KByte ROM
-      <li>64 KByte RAM inklusive Bildwiederholspeicher
-      <li>CTC
-      <li>PIO
+      <li>Je nach Einstellung 4 oder 18 KByte ROM</li>
+      <li>64 KByte RAM inklusive Bildwiederholspeicher</li>
+      <li>CTC</li>
+      <li>PIO</li>
     </ul>
     Von dem IO-System werden nur die CTC und die PIO emuliert.
     Die SIO und das Kassettenrecorderinterface sowie ggf.
     an der PIO angeschlossene Hardware werden nicht emuliert.
-  <br><br>
+  <br/><br/>
 
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-       <li>Monitorprogramm Version 3.0
-       <li>Geringf&uuml;gig modifiziertes HBASIC 3.3
-	   (optional, siehe Abschnitt 3.1.)
+      <li>Monitorprogramm Version 3.0</li>
+      <li>
+	Geringf&uuml;gig modifiziertes HBASIC 3.3
+	(optional, siehe Abschnitt 3.1.)
+      </li>
     </ul>
     Im Monitorprogramm kann man sich mit <em>HELP</em>
     eine Liste aller Kommandos anzeigen lassen.
     Die Liste enth&auml;lt sowohl die Kommandos des Monitorprogramm selbst
     als auch solche,
     die eventuell an anderen Stellen im Arbeitsspeicher zu finden sind.
-  <br><br>
+  <br/><br/>
 
 
   <h2>3. BASIC</h2>
@@ -42,7 +44,7 @@
     Der dazugeh&ouml;rige BASIC-Interpreter ist im Original allerdings
     nicht im ROM enthalten.
     Er muss von Kassette geladen werden.
-  <br><br>
+  <br/><br/>
     Damit man im Emulator diesen Interpreter nicht immer erst laden muss,
     bietet JKCEMU in den <a href="settings.htm">Einstellungen</a>
     die Option <em>BASIC-Interpreter im ROM enthalten</em> an.
@@ -52,7 +54,7 @@
     zu startende Laderoutine,
     die den Interpreter vom ROM in den RAM kopiert und dort startet
     (Kaltstart).
-  <br><br>
+  <br/><br/>
     Der originale BASIC-Interpreter stellt aber auch ein Kommando
     mit dem Namen <em>BASIC</em> zur Verf&uuml;gung.
     Damit es nun zu keinen Verwechslungen kommt,
@@ -60,10 +62,10 @@
     in <em>WBASIC</em> umbenannt.
     Damit ist mit <em>BASIC</em> ein Kaltstart und mit <em>WBASIC</em>
     ein Warmstart des Interpreters m&ouml;glich.
-  <br><br>
+  <br/><br/>
     Der R&uuml;cksprung vom BASIC-Interpreter zum Monitorprogramm
     erfolgt mittels RESET.
-  <br><br>
+  <br/><br/>
 
   <h3>3.2. BASIC-Programme speichern und laden</h3>
     JKCEMU bietet eine spezielle Unterst&uuml;tzung
@@ -73,13 +75,13 @@
     und speichern das Programm als
     <a href="fileformats.htm#headersave">Headersave</a>-Datei
     mit dem Dateityp <tt>B</tt>.
-  <br><br>
+  <br/><br/>
     Nur wenn Sie das BASIC-Programm so speichern,
     werden beim Laden des Programms die Systemzellen des
     BASIC-Interpreters richtig angepasst.
     In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
     aber im Interpreter nicht richtig nutzen.
-  <br><br>
+  <br/><br/>
 
 
   <h2>4. Sonstiges</h2>
@@ -101,7 +103,7 @@
     werden.
     Au&szlig;erdem kann auch ein Schnappschuss der Bildschirmausgabe
     nicht als Text kopiert, gespeichert oder im Texteditor angezeigt werden.
-  <br><br>
+  <br/><br/>
 
   <h3>4.2. Einbindung externer ROM-Images</h3>
     Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>

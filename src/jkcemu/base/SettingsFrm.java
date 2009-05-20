@@ -63,9 +63,11 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnSysKC87;
   private JRadioButton                btnSysKramerMC;
   private JRadioButton                btnSysLC80;
+  private JRadioButton                btnSysLLC1;
   private JRadioButton                btnSysLLC2;
-  private JRadioButton                btnSysMKX80032;
+  private JRadioButton                btnSysPCM;
   private JRadioButton                btnSysPoly880;
+  private JRadioButton                btnSysSC2;
   private JRadioButton                btnSysVCS80;
   private JRadioButton                btnSysZ1013;
   private JRadioButton                btnAC1mon31_64x16;
@@ -78,15 +80,18 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnBCS3sp33_29;
   private JRadioButton                btnBCS3ram1k;
   private JRadioButton                btnBCS3ram17k;
+  private JCheckBox                   btnBCS3SoftVideo;
   private JCheckBox                   btnHGMCbasic;
   private JCheckBox                   btnKC85VideoTiming;
   private JRadioButton                btnLC80_U505;
   private JRadioButton                btnLC80_2716;
   private JRadioButton                btnLC80_2;
   private JRadioButton                btnLC80e;
+  private JCheckBox                   btnPCMAutoLoadBDOS;
   private JRadioButton                btnZ9001ram16k;
   private JRadioButton                btnZ9001ram32k;
   private JRadioButton                btnZ9001ram48k;
+  private JRadioButton                btnZ9001ram74k;
   private JCheckBox                   btnZ9001color;
   private JRadioButton                btnZ1013_01;
   private JRadioButton                btnZ1013_12;
@@ -100,6 +105,8 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnSpeedDefault;
   private JRadioButton                btnSpeedValue;
   private JRadioButton                btnSpeedUnlimited;
+  private JRadioButton                btnSRAMInit00;
+  private JRadioButton                btnSRAMInitRandom;
   private JRadioButton                btnFileDlgEmu;
   private JRadioButton                btnFileDlgNative;
   private JCheckBox                   btnDirectCopyPaste;
@@ -111,12 +118,12 @@ public class SettingsFrm extends BasicFrm
   private JButton                     btnExtFontSelect;
   private JButton                     btnExtFontRemove;
   private JTextField                  fldExtFontFile;
-  private JButton                     btnRFAFileSelect;
-  private JButton                     btnRFAFileRemove;
-  private JTextField                  fldRFAFile;
-  private JButton                     btnRFBFileSelect;
-  private JButton                     btnRFBFileRemove;
-  private JTextField                  fldRFBFile;
+  private JButton                     btnRF1Select;
+  private JButton                     btnRF1Remove;
+  private JTextField                  fldRF1File;
+  private JButton                     btnRF2Select;
+  private JButton                     btnRF2Remove;
+  private JTextField                  fldRF2File;
   private JTextField                  fldProfileDir;
   private JSlider                     sliderBrightness;
   private JSpinner                    spinnerMargin;
@@ -129,6 +136,12 @@ public class SettingsFrm extends BasicFrm
   private JButton                     btnClose;
   private JButton                     btnROMAdd;
   private JButton                     btnROMRemove;
+  private JTextField                  fldROMPrgXFile;
+  private JButton                     btnROMPrgXSelect;
+  private JButton                     btnROMPrgXRemove;
+  private JTextField                  fldROMDiskFile;
+  private JButton                     btnROMDiskSelect;
+  private JButton                     btnROMDiskRemove;
   private JTabbedPane                 tabbedPane;
 
 
@@ -259,27 +272,37 @@ public class SettingsFrm extends BasicFrm
     gbcSys.gridy++;
     panelSys.add( this.btnSysLC80, gbcSys );
 
+    this.btnSysLLC1 = new JRadioButton( "LLC1", false );
+    this.btnSysLLC1.addActionListener( this );
+    grpSys.add( this.btnSysLLC1 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysLLC1, gbcSys );
+
     this.btnSysLLC2 = new JRadioButton( "LLC2", false );
     this.btnSysLLC2.addActionListener( this );
     grpSys.add( this.btnSysLLC2 );
-    gbcSys.insets.top = 0;
     gbcSys.gridy++;
     panelSys.add( this.btnSysLLC2, gbcSys );
 
-    this.btnSysMKX80032 = new JRadioButton( "MKX-80032", false );
-    this.btnSysMKX80032.addActionListener( this );
-    grpSys.add( this.btnSysMKX80032 );
+    this.btnSysPCM = new JRadioButton( "PC/M", false );
+    this.btnSysPCM.addActionListener( this );
+    grpSys.add( this.btnSysPCM );
     gbcSys.gridy++;
-    panelSys.add( this.btnSysMKX80032, gbcSys );
+    panelSys.add( this.btnSysPCM, gbcSys );
 
     this.btnSysPoly880 = new JRadioButton( "Poly880", false );
     this.btnSysPoly880.addActionListener( this );
     grpSys.add( this.btnSysPoly880 );
-    gbcSys.insets.top = 0;
     gbcSys.gridy++;
     panelSys.add( this.btnSysPoly880, gbcSys );
 
-    this.btnSysVCS80 = new JRadioButton( "VCS-80", false );
+    this.btnSysSC2 = new JRadioButton( "SC2", false );
+    this.btnSysSC2.addActionListener( this );
+    grpSys.add( this.btnSysSC2 );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysSC2, gbcSys );
+
+    this.btnSysVCS80 = new JRadioButton( "VCS80", false );
     this.btnSysVCS80.addActionListener( this );
     grpSys.add( this.btnSysVCS80 );
     gbcSys.insets.top = 0;
@@ -331,20 +354,22 @@ public class SettingsFrm extends BasicFrm
     this.panelSysOpt.add( panelAC1, "AC1" );
 
     GridBagConstraints gbcAC1 = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.NORTHWEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
 
     ButtonGroup grpAC1mon = new ButtonGroup();
 
-    panelAC1.add( new JLabel( "64x16 Zeichen, 1 KByte SRAM:" ), gbcAC1 );
+    panelAC1.add(
+	new JLabel( "Ur-AC1 (64x16 Zeichen, 1 KByte SRAM):" ),
+	gbcAC1 );
 
     this.btnAC1mon31_64x16 = new JRadioButton(
-		"Monitorprogramm 3.1, Zeichensatz U402 BM513 (Ur-AC1)",
+		"Monitorprogramm 3.1, Zeichensatz U402 BM513",
 		false );
     this.btnAC1mon31_64x16.addActionListener( this );
     grpAC1mon.add( this.btnAC1mon31_64x16 );
@@ -357,11 +382,12 @@ public class SettingsFrm extends BasicFrm
     gbcAC1.insets.left = 5;
     gbcAC1.gridy++;
     panelAC1.add(
-	new JLabel( "64x32 Zeichen, 2 KByte SRAM, 64 KByte DRAM:" ),
+	new JLabel( "Standard-AC1 (64x32 Zeichen, 2 KByte SRAM, 64 KByte DRAM,"
+			+ " RAM-Floppy nach MP 3/88):" ),
 	gbcAC1 );
 
     this.btnAC1mon31_64x32 = new JRadioButton(
-		"Monitorprogramm 3.1, CC-Dessau-Zeichensatz",
+		"Monitorprogramm 3.1, Zeichensatz CC-Dessau",
 		true );
     this.btnAC1mon31_64x32.addActionListener( this );
     grpAC1mon.add( this.btnAC1mon31_64x32 );
@@ -370,11 +396,21 @@ public class SettingsFrm extends BasicFrm
     gbcAC1.gridy++;
     panelAC1.add( this.btnAC1mon31_64x32, gbcAC1 );
 
+    gbcAC1.insets.top  = 10;
+    gbcAC1.insets.left = 5;
+    gbcAC1.gridy++;
+    panelAC1.add(
+	new JLabel( "SCCH-AC1 (zus\u00E4tzlich SCCH-Module 1 (ROM-Disk)"
+			+ " und 3 (RAM-Disk)):" ),
+	gbcAC1 );
+
     this.btnAC1monSCCH80 = new JRadioButton(
 		"SCCH-Monitorprogramm 8.0, SCCH-Zeichensatz",
 		false );
     this.btnAC1monSCCH80.addActionListener( this );
     grpAC1mon.add( this.btnAC1monSCCH80 );
+    gbcAC1.insets.top  = 0;
+    gbcAC1.insets.left = 50;
     gbcAC1.gridy++;
     panelAC1.add( this.btnAC1monSCCH80, gbcAC1 );
 
@@ -450,10 +486,18 @@ public class SettingsFrm extends BasicFrm
 				false );
     this.btnBCS3ram17k.addActionListener( this );
     grpBCS3ram.add( this.btnBCS3ram17k );
-    gbcBCS3.insets.top    = 0;
-    gbcBCS3.insets.bottom = 5;
+    gbcBCS3.insets.top = 0;
     gbcBCS3.gridy++;
     panelBCS3.add( this.btnBCS3ram17k, gbcBCS3 );
+
+    this.btnBCS3SoftVideo = new JCheckBox(
+		"Softwarem\u00E4\u00DFig erzeugtes Bildsignal anzeigen",
+		false );
+    this.btnBCS3SoftVideo.addActionListener( this );
+    gbcBCS3.insets.top    = 10;
+    gbcBCS3.insets.bottom = 5;
+    gbcBCS3.gridy++;
+    panelBCS3.add( this.btnBCS3SoftVideo, gbcBCS3 );
 
 
     // Optionen fuer Huebler-Grafik-MC
@@ -565,6 +609,26 @@ public class SettingsFrm extends BasicFrm
     panelLC80.add( this.btnLC80e, gbcLC80 );
 
 
+    // Optionen fuer PC/M
+    JPanel panelPCM = new JPanel( new GridBagLayout() );
+    this.panelSysOpt.add( panelPCM, "PCM" );
+
+    GridBagConstraints gbcPCM = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.CENTER,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 5, 5 ),
+						0, 0 );
+
+    this.btnPCMAutoLoadBDOS = new JCheckBox(
+					"Bei RESET automatisch BDOS laden",
+					true );
+    this.btnPCMAutoLoadBDOS.addActionListener( this );
+    panelPCM.add( this.btnPCMAutoLoadBDOS, gbcPCM );
+
+
     // Optionen fuer Z1013
     JPanel panelZ1013 = new JPanel( new GridBagLayout() );
     this.panelSysOpt.add( panelZ1013, "Z1013" );
@@ -667,7 +731,7 @@ public class SettingsFrm extends BasicFrm
 						1, 1,
 						0.0, 0.0,
 						GridBagConstraints.NORTHWEST,
-						GridBagConstraints.NONE,
+						GridBagConstraints.HORIZONTAL,
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
@@ -679,7 +743,7 @@ public class SettingsFrm extends BasicFrm
     panelZ9001.add( this.btnZ9001ram16k, gbcZ9001 );
 
     this.btnZ9001ram32k = new JRadioButton(
-			"32 KByte RAM (1 RAM-Modul gesteckt)", false );
+			"32 KByte RAM (ein 16K-RAM-Modul gesteckt)", false );
     this.btnZ9001ram32k.addActionListener( this );
     grpZ9001ram.add( this.btnZ9001ram32k );
     gbcZ9001.insets.top = 0;
@@ -687,14 +751,24 @@ public class SettingsFrm extends BasicFrm
     panelZ9001.add( this.btnZ9001ram32k, gbcZ9001 );
 
     this.btnZ9001ram48k = new JRadioButton(
-			"48 KByte RAM (2 RAM-Module gesteckt)", false );
+			"48 KByte RAM (zwei 16K-RAM-Module gesteckt)", false );
     this.btnZ9001ram48k.addActionListener( this );
     grpZ9001ram.add( this.btnZ9001ram48k );
-    gbcZ9001.insets.bottom = 5;
     gbcZ9001.gridy++;
     panelZ9001.add( this.btnZ9001ram48k, gbcZ9001 );
 
-    this.btnZ9001color = new JCheckBox( "Farbmodul", true );
+    this.btnZ9001ram74k = new JRadioButton(
+			"74 KByte RAM (ein 64K-RAM-Modul gesteckt)",
+			false );
+    this.btnZ9001ram74k.addActionListener( this );
+    grpZ9001ram.add( this.btnZ9001ram74k );
+    gbcZ9001.insets.bottom = 5;
+    gbcZ9001.gridy++;
+    panelZ9001.add( this.btnZ9001ram74k, gbcZ9001 );
+
+    this.btnZ9001color = new JCheckBox(
+				"Farbmodul und Vollgrafikmodul",
+				true );
     this.btnZ9001color.addActionListener( this );
     gbcZ9001.insets.top = 5;
     gbcZ9001.gridy++;
@@ -835,13 +909,13 @@ public class SettingsFrm extends BasicFrm
     this.tabbedPane.addTab( "ROM", this.panelROM );
 
     GridBagConstraints gbcROM = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
 
     this.panelROM.add( new JLabel( "Eingebundene ROM-Images:" ), gbcROM );
 
@@ -855,6 +929,7 @@ public class SettingsFrm extends BasicFrm
     gbcROM.insets.top    = 0;
     gbcROM.insets.right  = 0;
     gbcROM.insets.bottom = 5;
+    gbcROM.gridwidth     = 2;
     gbcROM.gridy++;
     this.panelROM.add( new JScrollPane( this.listROM ), gbcROM );
 
@@ -864,7 +939,7 @@ public class SettingsFrm extends BasicFrm
     gbcROM.weighty      = 0.0;
     gbcROM.insets.right = 5;
     gbcROM.gridheight   = 1;
-    gbcROM.gridx++;
+    gbcROM.gridx += 2;
     this.panelROM.add( panelROMBtn, gbcROM );
 
     this.btnROMAdd = createImageButton(
@@ -877,6 +952,68 @@ public class SettingsFrm extends BasicFrm
 				"Entfernen" );
     this.btnROMRemove.setEnabled( false );
     panelROMBtn.add( this.btnROMRemove );
+
+    gbcROM.insets.top = 10;
+    gbcROM.gridx      = 0;
+    gbcROM.gridy++;
+    this.panelROM.add(
+	new JLabel( "ROM-Image f\u00FCr Programmpaket X"
+					+ " (nur SCCH-AC1 und LLC2):" ),
+	gbcROM );
+
+    this.fldROMPrgXFile = new JTextField();
+    this.fldROMPrgXFile.setEditable( false );
+    gbcROM.fill       = GridBagConstraints.HORIZONTAL;
+    gbcROM.weightx    = 1.0;
+    gbcROM.insets.top = 0;
+    gbcROM.gridwidth  = 1;
+    gbcROM.gridy++;
+    this.panelROM.add( this.fldROMPrgXFile, gbcROM );
+
+    this.btnROMPrgXSelect = createImageButton(
+					"/images/file/open.png",
+					"Ausw\u00E4hlen" );
+    gbcROM.fill    = GridBagConstraints.NONE;
+    gbcROM.weightx = 0.0;
+    gbcROM.gridx++;
+    this.panelROM.add( this.btnROMPrgXSelect, gbcROM );
+
+    this.btnROMPrgXRemove = createImageButton(
+					"/images/file/delete.png",
+					"Entfernen" );
+    gbcROM.gridx++;
+    this.panelROM.add( this.btnROMPrgXRemove, gbcROM );
+
+    gbcROM.insets.top = 10;
+    gbcROM.gridx      = 0;
+    gbcROM.gridy++;
+    panelROM.add(
+	new JLabel( "ROM-Image f\u00FCr ROM-Disk (nur SCCH-AC1 und LLC2):" ),
+	gbcROM );
+
+    this.fldROMDiskFile = new JTextField();
+    this.fldROMDiskFile.setEditable( false );
+    gbcROM.fill          = GridBagConstraints.HORIZONTAL;
+    gbcROM.weightx       = 1.0;
+    gbcROM.insets.top    = 0;
+    gbcROM.insets.bottom = 5;
+    gbcROM.gridwidth     = 1;
+    gbcROM.gridy++;
+    panelROM.add( this.fldROMDiskFile, gbcROM );
+
+    this.btnROMDiskSelect = createImageButton(
+					"/images/file/open.png",
+					"Ausw\u00E4hlen" );
+    gbcROM.fill    = GridBagConstraints.NONE;
+    gbcROM.weightx = 0.0;
+    gbcROM.gridx++;
+    panelROM.add( this.btnROMDiskSelect, gbcROM );
+
+    this.btnROMDiskRemove = createImageButton(
+					"/images/file/delete.png",
+					"Entfernen" );
+    gbcROM.gridx++;
+    panelROM.add( this.btnROMDiskRemove, gbcROM );
 
 
     // Bereich RAM-Floppy
@@ -907,65 +1044,65 @@ public class SettingsFrm extends BasicFrm
     gbcRF.insets.top = 20;
     gbcRF.gridy++;
     this.panelRF.add(
-	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy A:" ),
+	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy 1:" ),
 	gbcRF );
 
-    this.fldRFAFile = new JTextField();
-    this.fldRFAFile.setEditable( false );
+    this.fldRF1File = new JTextField();
+    this.fldRF1File.setEditable( false );
     gbcRF.fill       = GridBagConstraints.HORIZONTAL;
     gbcRF.weightx    = 1.0;
     gbcRF.insets.top = 0;
     gbcRF.gridwidth  = 1;
     gbcRF.gridy++;
-    this.panelRF.add( this.fldRFAFile, gbcRF );
+    this.panelRF.add( this.fldRF1File, gbcRF );
 
-    this.btnRFAFileSelect = createImageButton(
+    this.btnRF1Select = createImageButton(
 					"/images/file/open.png",
 					"Ausw\u00E4hlen" );
     gbcRF.fill    = GridBagConstraints.NONE;
     gbcRF.weightx = 0.0;
     gbcRF.gridx++;
-    this.panelRF.add( this.btnRFAFileSelect, gbcRF );
+    this.panelRF.add( this.btnRF1Select, gbcRF );
 
-    this.btnRFAFileRemove = createImageButton(
+    this.btnRF1Remove = createImageButton(
 					"/images/file/delete.png",
 					"Entfernen" );
-    this.btnRFAFileRemove.setEnabled( false );
+    this.btnRF1Remove.setEnabled( false );
     gbcRF.gridx++;
-    this.panelRF.add( this.btnRFAFileRemove, gbcRF );
+    this.panelRF.add( this.btnRF1Remove, gbcRF );
 
     gbcRF.insets.top = 20;
     gbcRF.gridwidth  = 3;
     gbcRF.gridx      = 0;
     gbcRF.gridy++;
     this.panelRF.add(
-	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy B:" ),
+	new JLabel( "Name der Initialisierungsdatei f\u00FCr RAM-Floppy 2:" ),
 	gbcRF );
 
-    this.fldRFBFile = new JTextField();
-    this.fldRFBFile.setEditable( false );
+    this.fldRF2File = new JTextField();
+    this.fldRF2File.setEditable( false );
     gbcRF.fill          = GridBagConstraints.HORIZONTAL;
     gbcRF.weightx       = 1.0;
     gbcRF.insets.top    = 0;
     gbcRF.insets.bottom = 5;
     gbcRF.gridwidth     = 1;
     gbcRF.gridy++;
-    this.panelRF.add( this.fldRFBFile, gbcRF );
+    this.panelRF.add( this.fldRF2File, gbcRF );
 
-    this.btnRFBFileSelect = createImageButton(
+    this.btnRF2Select = createImageButton(
 					"/images/file/open.png",
 					"Ausw\u00E4hlen" );
     gbcRF.fill    = GridBagConstraints.NONE;
     gbcRF.weightx = 0.0;
     gbcRF.gridx++;
-    this.panelRF.add( this.btnRFBFileSelect, gbcRF );
+    this.panelRF.add( this.btnRF2Select, gbcRF );
 
-    this.btnRFBFileRemove = createImageButton(
+    this.btnRF2Remove = createImageButton(
 					"/images/file/delete.png",
 					"Entfernen" );
-    this.btnRFBFileRemove.setEnabled( false );
+    this.btnRF2Remove.setEnabled( false );
     gbcRF.gridx++;
-    this.panelRF.add( this.btnRFBFileRemove, gbcRF );
+    this.panelRF.add( this.btnRF2Remove, gbcRF );
 
 
     // Bereich Bildschirmausgabe
@@ -1181,9 +1318,35 @@ public class SettingsFrm extends BasicFrm
 			false );
     grpFileDlg.add( this.btnFileDlgNative );
     this.btnFileDlgNative.addActionListener( this );
-    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     tabEtc.add( this.btnFileDlgNative, gbcEtc );
+
+    gbcEtc.insets.top    = 20;
+    gbcEtc.insets.left   = 5;
+    gbcEtc.insets.bottom = 0;
+    gbcEtc.gridy++;
+    tabEtc.add(
+	new JLabel( "Statische RAM-Bereiche (SRAM) initialisieren mit:" ),
+	gbcEtc );
+
+    ButtonGroup grpSRAMInit = new ButtonGroup();
+
+    this.btnSRAMInit00 = new JRadioButton( "Null-Bytes", true );
+    grpSRAMInit.add( this.btnSRAMInit00 );
+    this.btnSRAMInit00.addActionListener( this );
+    gbcEtc.insets.top  = 0;
+    gbcEtc.insets.left = 50;
+    gbcEtc.gridy++;
+    tabEtc.add( this.btnSRAMInit00, gbcEtc );
+
+    this.btnSRAMInitRandom = new JRadioButton(
+			"Zufallsmuster (entspricht Originalverhalten)",
+			false );
+    grpSRAMInit.add( this.btnSRAMInitRandom );
+    this.btnSRAMInitRandom.addActionListener( this );
+    gbcEtc.insets.bottom = 5;
+    gbcEtc.gridy++;
+    tabEtc.add( this.btnSRAMInitRandom, gbcEtc );
 
     File profileDir = Main.getProfileDir();
     if( profileDir != null ) {
@@ -1352,6 +1515,30 @@ public class SettingsFrm extends BasicFrm
 	  rv = true;
 	  doROMRemove();
 	}
+	else if( src == this.btnROMPrgXSelect ) {
+	  rv = true;
+	  doFileSelect(
+		this.fldROMPrgXFile,
+		this.btnROMPrgXRemove,
+		"Programmpaket X",
+		"rom" );
+	}
+	else if( src == this.btnROMPrgXRemove ) {
+	  rv = true;
+	  doFileRemove( this.fldROMPrgXFile, this.btnROMPrgXRemove );
+	}
+	else if( src == this.btnROMDiskSelect ) {
+	  rv = true;
+	  doFileSelect(
+		this.fldROMDiskFile,
+		this.btnROMDiskRemove,
+		"ROM-Disk",
+		"rom" );
+	}
+	else if( src == this.btnROMDiskRemove ) {
+	  rv = true;
+	  doFileRemove( this.fldROMDiskFile, this.btnROMDiskRemove );
+	}
 	else if( src == this.btnApply ) {
 	  rv = true;
 	  doApply();
@@ -1384,9 +1571,11 @@ public class SettingsFrm extends BasicFrm
 		 || (src == this.btnSysKC87)
 		 || (src == this.btnSysKramerMC)
 		 || (src == this.btnSysLC80)
+		 || (src == this.btnSysLLC1)
 		 || (src == this.btnSysLLC2)
-		 || (src == this.btnSysMKX80032)
+		 || (src == this.btnSysPCM)
 		 || (src == this.btnSysPoly880)
+		 || (src == this.btnSysSC2)
 		 || (src == this.btnSysVCS80)
 		 || (src == this.btnSysZ1013) )
 	{
@@ -1410,21 +1599,29 @@ public class SettingsFrm extends BasicFrm
 	  rv = true;
 	  doExtFontRemove();
 	}
-	else if( src == this.btnRFAFileSelect ) {
+	else if( src == this.btnRF1Select ) {
 	  rv = true;
-	  doRAMFloppyFileSelect( this.fldRFAFile, this.btnRFAFileRemove );
+	  doFileSelect(
+		this.fldRF1File,
+		this.btnRF1Remove,
+		"RAM-Floppy 1",
+		"ramfloppy" );
 	}
-	else if( src == this.btnRFAFileRemove ) {
+	else if( src == this.btnRF1Remove ) {
 	  rv = true;
-	  doRAMFloppyFileRemove( this.fldRFAFile, this.btnRFAFileRemove );
+	  doFileRemove( this.fldRF1File, this.btnRF1Remove );
 	}
-	else if( src == this.btnRFBFileSelect ) {
+	else if( src == this.btnRF2Select ) {
 	  rv = true;
-	  doRAMFloppyFileSelect( this.fldRFBFile, this.btnRFBFileRemove );
+	  doFileSelect(
+		this.fldRF2File,
+		this.btnRF2Remove,
+		"RAM-Floppy 2",
+		"ramfloppy" );
 	}
-	else if( src == this.btnRFBFileRemove ) {
+	else if( src == this.btnRF2Remove ) {
 	  rv = true;
-	  doRAMFloppyFileRemove( this.fldRFBFile, this.btnRFBFileRemove );
+	  doFileRemove( this.fldRF2File, this.btnRF2Remove );
 	}
 	else if( (src instanceof JCheckBox)
 		 || (src instanceof JComboBox)
@@ -1666,7 +1863,11 @@ public class SettingsFrm extends BasicFrm
   }
 
 
-  private void doRAMFloppyFileSelect( JTextField fldFile, JButton btnRemove )
+  private void doFileSelect(
+			JTextField fldFile,
+			JButton    btnRemove,
+			String     title,
+			String     category )
   {
     String oldFileName = fldFile.getText();
     if( oldFileName != null ) {
@@ -1675,10 +1876,10 @@ public class SettingsFrm extends BasicFrm
     }
     File file = EmuUtil.showFileOpenDlg(
 				this,
-				"RAM-Floppy laden",
+				title + " laden",
 				oldFileName != null ?
 					new File( oldFileName )
-					: Main.getLastPathFile( "ramfloppy" ),
+					: Main.getLastPathFile( category ),
 				EmuUtil.getBinaryFileFilter() );
     if( file != null ) {
       if( file.exists() ) {
@@ -1686,7 +1887,7 @@ public class SettingsFrm extends BasicFrm
 	  fldFile.setText( file.getPath() );
 	  btnRemove.setEnabled( true );
 	  setDataChanged();
-	  Main.setLastFile( file, "ramfloppy" );
+	  Main.setLastFile( file, category );
 	} else {
 	  BasicDlg.showErrorDlg(
 			this,
@@ -1701,7 +1902,7 @@ public class SettingsFrm extends BasicFrm
   }
 
 
-  private void doRAMFloppyFileRemove( JTextField fldFile, JButton btnRemove )
+  private void doFileRemove( JTextField fldFile, JButton btnRemove )
   {
     fldFile.setText( "" );
     btnRemove.setEnabled( false );
@@ -1795,6 +1996,22 @@ public class SettingsFrm extends BasicFrm
   }
 
 
+  private void doROMPrgXRemove()
+  {
+    this.fldROMPrgXFile.setText( "" );
+    this.btnROMPrgXRemove.setEnabled( false );
+    setDataChanged();
+  }
+
+
+  private void doROMDiskRemove()
+  {
+    this.fldROMDiskFile.setText( "" );
+    this.btnROMDiskRemove.setEnabled( false );
+    setDataChanged();
+  }
+
+
 	/* --- private Methoden --- */
 
   private void applyEtc( Properties props )
@@ -1802,6 +2019,9 @@ public class SettingsFrm extends BasicFrm
     props.setProperty(
 		"jkcemu.filedialog",
 		this.btnFileDlgNative.isSelected() ? "native" : "jkcemu" );
+    props.setProperty(
+		"jkcemu.sram.init",
+		this.btnSRAMInit00.isSelected() ? "00" : "random" );
   }
 
 
@@ -1863,14 +2083,14 @@ public class SettingsFrm extends BasicFrm
 
   private void applyRF( Properties props )
   {
-    String fileName = this.fldRFAFile.getText();
+    String fileName = this.fldRF1File.getText();
     props.setProperty(
-		"jkcemu.ramfloppy.a.file.name",
+		"jkcemu.ramfloppy.1.file.name",
 		fileName != null ? fileName : "" );
 
-    fileName = this.fldRFBFile.getText();
+    fileName = this.fldRF2File.getText();
     props.setProperty(
-		"jkcemu.ramfloppy.b.file.name",
+		"jkcemu.ramfloppy.2.file.name",
 		fileName != null ? fileName : "" );
   }
 
@@ -1903,6 +2123,14 @@ public class SettingsFrm extends BasicFrm
       a = rom.getEndAddress();
     }
     props.setProperty( "jkcemu.rom.count", Integer.toString( n ) );
+    String fileName = this.fldROMPrgXFile.getText();
+    props.setProperty(
+		"jkcemu.program_x.file.name",
+		fileName != null ? fileName : "" );
+    fileName = this.fldROMDiskFile.getText();
+    props.setProperty(
+		"jkcemu.romdisk.file.name",
+		fileName != null ? fileName : "" );
     return rv;
   }
 
@@ -2019,14 +2247,20 @@ public class SettingsFrm extends BasicFrm
 	valueSys = "LC80_2716";
       }
     }
+    else if( this.btnSysLLC1.isSelected() ) {
+      valueSys = "LLC1";
+    }
     else if( this.btnSysLLC2.isSelected() ) {
       valueSys = "LLC2";
     }
-    else if( this.btnSysMKX80032.isSelected() ) {
-      valueSys = "MKX80032";
+    else if( this.btnSysPCM.isSelected() ) {
+      valueSys = "PCM";
     }
     else if( this.btnSysPoly880.isSelected() ) {
       valueSys = "Poly880";
+    }
+    else if( this.btnSysSC2.isSelected() ) {
+      valueSys = "SC2";
     }
     else if( this.btnSysVCS80.isSelected() ) {
       valueSys = "VCS80";
@@ -2078,6 +2312,9 @@ public class SettingsFrm extends BasicFrm
     } else {
       props.setProperty( "jkcemu.bcs3.ram.kbyte", "1" );
     }
+    props.setProperty(
+		"jkcemu.bcs3.emulate_software_video",
+		Boolean.toString( this.btnBCS3SoftVideo.isSelected() ) );
 
 
     // Optionen fuer Huebler-Grafik-MC
@@ -2090,6 +2327,12 @@ public class SettingsFrm extends BasicFrm
     props.setProperty(
 		"jkcemu.kc85.emulate_video_timing",
 		Boolean.toString( this.btnKC85VideoTiming.isSelected() ) );
+
+
+    // Optionen fuer PC/M
+    props.setProperty(
+		"jkcemu.pcm.auto_load_bdos",
+		Boolean.toString( this.btnPCMAutoLoadBDOS.isSelected() ) );
 
 
     // Optionen fuer Z1013
@@ -2116,6 +2359,9 @@ public class SettingsFrm extends BasicFrm
     }
     else if( this.btnZ9001ram48k.isSelected() ) {
       z9001ram = "48";
+    }
+    else if( this.btnZ9001ram74k.isSelected() ) {
+      z9001ram = "74";
     }
     props.setProperty( "jkcemu.z9001.ram.kbyte", z9001ram );
     props.setProperty(
@@ -2215,14 +2461,20 @@ public class SettingsFrm extends BasicFrm
     else if( sysName.startsWith( "LC80" ) ) {
       this.btnSysLC80.setSelected( true );
     }
+    else if( sysName.startsWith( "LLC1" ) ) {
+      this.btnSysLLC1.setSelected( true );
+    }
     else if( sysName.startsWith( "LLC2" ) ) {
       this.btnSysLLC2.setSelected( true );
     }
-    else if( sysName.startsWith( "MKX80032" ) ) {
-      this.btnSysMKX80032.setSelected( true );
+    else if( sysName.startsWith( "PCM" ) ) {
+      this.btnSysPCM.setSelected( true );
     }
     else if( sysName.startsWith( "Poly880" ) ) {
       this.btnSysPoly880.setSelected( true );
+    }
+    else if( sysName.startsWith( "SC2" ) ) {
+      this.btnSysSC2.setSelected( true );
     }
     else if( sysName.startsWith( "VCS80" ) ) {
       this.btnSysVCS80.setSelected( true );
@@ -2273,6 +2525,11 @@ public class SettingsFrm extends BasicFrm
     } else {
       this.btnBCS3ram1k.setSelected( true );
     }
+    this.btnBCS3SoftVideo.setSelected(
+			EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.bcs3.emulate_software_video",
+				false ) );
 
 
     // Optionen fuer Huebler-Grafik-MC
@@ -2288,6 +2545,14 @@ public class SettingsFrm extends BasicFrm
 			EmuUtil.getBooleanProperty(
 				props,
 				"jkcemu.kc85.emulate_video_timing",
+				true ) );
+
+
+    // Optionen fuer PC/M
+    this.btnPCMAutoLoadBDOS.setSelected(
+			EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.pcm.auto_load_bdos",
 				true ) );
 
 
@@ -2334,6 +2599,8 @@ public class SettingsFrm extends BasicFrm
       this.btnZ9001ram32k.setSelected( true );
     } else if( ramText.equals( "48" ) ) {
       this.btnZ9001ram48k.setSelected( true );
+    } else if( ramText.equals( "74" ) ) {
+      this.btnZ9001ram74k.setSelected( true );
     } else {
       this.btnZ9001ram16k.setSelected( true );
     }
@@ -2374,18 +2641,26 @@ public class SettingsFrm extends BasicFrm
     updSpeedFieldsEnabled();
 
 
-    // RAM-Floppies
-    String rfAFileName = EmuUtil.getProperty(
-					props,
-					"jkcemu.ramfloppy.a.file.name" );
-    this.fldRFAFile.setText( rfAFileName );
-    this.btnRFAFileRemove.setEnabled( rfAFileName.length() > 0 );
+    // ROM
+    String fileName = EmuUtil.getProperty(
+				props,
+				"jkcemu.program_x.file.name" );
+    this.fldROMPrgXFile.setText( fileName );
+    this.btnROMPrgXRemove.setEnabled( fileName.length() > 0 );
 
-    String rfBFileName = EmuUtil.getProperty(
-					props,
-					"jkcemu.ramfloppy.b.file.name" );
-    this.fldRFBFile.setText( rfBFileName );
-    this.btnRFBFileRemove.setEnabled( rfBFileName.length() > 0 );
+    fileName = EmuUtil.getProperty( props, "jkcemu.romdisk.file.name" );
+    this.fldROMDiskFile.setText( fileName );
+    this.btnROMDiskRemove.setEnabled( fileName.length() > 0 );
+
+
+    // RAM-Floppies
+    fileName = EmuUtil.getProperty( props, "jkcemu.ramfloppy.1.file.name" );
+    this.fldRF1File.setText( fileName );
+    this.btnRF1Remove.setEnabled( fileName.length() > 0 );
+
+    fileName = EmuUtil.getProperty( props, "jkcemu.ramfloppy.2.file.name" );
+    this.fldRF2File.setText( fileName );
+    this.btnRF2Remove.setEnabled( fileName.length() > 0 );
 
 
     // Bildschirmausgabe
@@ -2452,6 +2727,14 @@ public class SettingsFrm extends BasicFrm
     } else {
       this.btnFileDlgEmu.setSelected( true );
     }
+    if( EmuUtil.getProperty(
+		props,
+		"jkcemu.sram.init" ).toLowerCase().startsWith( "r" ) )
+    {
+      this.btnSRAMInitRandom.setSelected( true );
+    } else {
+      this.btnSRAMInit00.setSelected( true );
+    }
   }
 
 
@@ -2483,6 +2766,9 @@ public class SettingsFrm extends BasicFrm
     }
     else if( this.btnSysLC80.isSelected() ) {
       cardName = "LC80";
+    }
+    else if( this.btnSysPCM.isSelected() ) {
+      cardName = "PCM";
     }
     else if( this.btnSysZ1013.isSelected() ) {
       cardName = "Z1013";

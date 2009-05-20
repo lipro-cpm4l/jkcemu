@@ -40,14 +40,11 @@ public class C80 extends EmuSys implements
   private boolean audioOutPhase;
   private Z80PIO  pio1;
   private Z80PIO  pio2;
-  private Color   redLight;
-  private Color   redDark;
 
 
   public C80( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    createColors( props );
     if( mon == null ) {
       mon = readResource( "/rom/c80/c80mon.bin" );
     }
@@ -76,7 +73,7 @@ public class C80 extends EmuSys implements
 
   public static int getDefaultSpeedKHz()
   {
-    return 2500;
+    return 455;
   }
 
 
@@ -126,13 +123,6 @@ public class C80 extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
-  public void applySettings( Properties props )
-  {
-    super.applySettings( props );
-    createColors( props );
-  }
-
-
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
@@ -153,11 +143,11 @@ public class C80 extends EmuSys implements
     Color color = Color.black;
     switch( colorIdx ) {
       case 1:
-	color = this.redDark;
+	color = this.colorRedDark;
 	break;
 
       case 2:
-	color = this.redLight;
+	color = this.colorRedLight;
 	break;
     }
     return color;
@@ -176,7 +166,7 @@ public class C80 extends EmuSys implements
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     int rv = 0xFF;
 
@@ -231,6 +221,11 @@ public class C80 extends EmuSys implements
 	  rv = true;
 	  break;
 
+	case KeyEvent.VK_N:
+	  this.emuThread.getZ80CPU().fireNMI();
+	  rv = true;
+	  break;
+
 	case KeyEvent.VK_F1:
 	  this.keyMatrixValues[ 7 ] |= 0x01;	// FCT
 	  rv = true;
@@ -253,22 +248,17 @@ public class C80 extends EmuSys implements
   {
     boolean rv = false;
     if( keyChar > 0 ) {
-      int ch = Character.toUpperCase( keyChar );
-      if( ch == 'N' ) {
-	this.emuThread.getZ80CPU().fireNMI();
-	rv = true;
-      } else {
-	synchronized( this.keyMatrixValues ) {
-	  int m  = 0x01;
-	  for( int i = 0; !rv && (i < keyMatrix.length); i++ ) {
-	    for( int k = 0; !rv && (k < keyMatrix[ i ].length); k++ ) {
-	      if( ch == keyMatrix[ i ][ k ] ) {
-		this.keyMatrixValues[ k ] |= m;
-		rv = true;
-	      }
+      synchronized( this.keyMatrixValues ) {
+	int ch = Character.toUpperCase( keyChar );
+	int m  = 0x01;
+	for( int i = 0; !rv && (i < keyMatrix.length); i++ ) {
+	  for( int k = 0; !rv && (k < keyMatrix[ i ].length); k++ ) {
+	    if( ch == keyMatrix[ i ][ k ] ) {
+	      this.keyMatrixValues[ k ] |= m;
+	      rv = true;
 	    }
-	    m <<= 1;
 	  }
+	  m <<= 1;
 	}
       }
     }
@@ -285,8 +275,8 @@ public class C80 extends EmuSys implements
 		x,
 		y,
 		this.digitValues[ i ],
-		this.redDark,
-		this.redLight,
+		this.colorRedDark,
+		this.colorRedLight,
 		screenScale );
 	x += (65 * screenScale);
       }
@@ -354,7 +344,7 @@ public class C80 extends EmuSys implements
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      fillRandom( this.ram );
+      initSRAM( this.ram, props );
     }
     synchronized( this.digitValues ) {
       Arrays.fill( this.digitStatus, 0 );
@@ -481,16 +471,6 @@ public class C80 extends EmuSys implements
     if( dirty ) {
       this.screenFrm.setScreenDirty( true );
     }
-  }
-
-
-	/* --- private Methoden --- */
-
-  private void createColors( Properties props )
-  {
-    int value       = getMaxRGBValue( props );
-    this.redLight = new Color( value, 0, 0 );
-    this.redDark  = new Color( value / 5, 0, 0 );
   }
 }
 

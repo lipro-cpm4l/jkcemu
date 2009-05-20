@@ -95,6 +95,7 @@ public class Z80CPU
   private boolean                          iff1;
   private boolean                          iff2;
   private volatile boolean                 nmiFired;
+  private volatile boolean                 waitMode;
   private boolean                          flagSign;
   private boolean                          flagZero;
   private boolean                          flag5;
@@ -129,6 +130,7 @@ public class Z80CPU
     this.active             = false;
     this.haltState          = false;
     this.debugEnabled       = false;
+    this.waitMode           = false;
     this.waitStates         = new AtomicInteger( 0 );
     this.waitMonitor        = "wait monitor";
 
@@ -362,6 +364,7 @@ public class Z80CPU
     this.lastInstWasEIorDI = false;
     this.debugCallLevel    = 0;
     this.pause             = false;
+    this.waitMode          = false;
     this.action            = this.debugEnabled ? Action.DEBUG_RUN : Action.RUN;
     this.haltPC            = null;
     this.instBegPC         = 0;
@@ -458,6 +461,12 @@ public class Z80CPU
   public void setSpeedUnlimitedFor( int unlimitedSpeedTStates )
   {
     this.speedUnlimitedTill = this.speedTStates + (long) unlimitedSpeedTStates;
+  }
+
+
+  public void setWaitMode( boolean state )
+  {
+    this.waitMode = state;
   }
 
 
@@ -558,18 +567,6 @@ public class Z80CPU
     this.regSP = (this.regSP - 1) & 0xFFFF;
     writeMemByte( this.regSP, value );
     this.debugCallLevel++;
-  }
-
-
-  public String getMemString( int addr, int len )
-  {
-    StringBuilder buf = new StringBuilder( len );
-    for( int i = 1; i < len; i++ ) {
-      int b = this.memory.getMemByte( i ) & 0xFF;
-      if( b > 0 )
-	buf.append( (char) b );
-    }
-    return buf.toString();
   }
 
 
@@ -977,6 +974,17 @@ public class Z80CPU
     try {
       while( this.active ) {
 
+	// WAIT-Mode
+	if( this.waitMode ) {
+	  Z80TStatesListener tStatesListener = this.tStatesListener;
+	  if( tStatesListener != null ) {
+	    while( this.active && this.waitMode ) {
+	      this.speedTStates++;
+	      tStatesListener.z80TStatesProcessed( this, 1 );
+	    }
+	  }
+	}
+
 	/*
 	 * Geschwindigkeitsverwaltung
 	 */
@@ -1127,7 +1135,7 @@ public class Z80CPU
 
 	// BefehlsOpCode lesen und PC weitersetzen
 	this.instBegPC = this.regPC;
-	opCode         = readMemByte( this.regPC );
+	opCode         = readMemByteM1( this.regPC );
 	this.regPC     = (this.regPC + 1) & 0xFFFF;
 	execInst( -1, opCode );
 	this.instTStates  += this.waitStates.getAndSet( 0 );
@@ -2133,7 +2141,7 @@ public class Z80CPU
 	break;
       case 0xDD:				// IX-Befehle
 	this.instTStates += 4;
-	execInst( opCode, nextByte() );
+	execInst( opCode, nextByteM1() );
 	break;
       case 0xDE:				// SBC n
 	doInstSUB8( nextByte(), this.flagCarry ? 1 : 0 );
@@ -2402,7 +2410,7 @@ public class Z80CPU
 	break;
       case 0xFD:				// IY-Befehle
 	this.instTStates += 4;
-	execInst( opCode, nextByte() );
+	execInst( opCode, nextByteM1() );
 	break;
       case 0xFE:				// CP n
 	doInstCP( nextByte() );
@@ -2852,7 +2860,7 @@ public class Z80CPU
 
   private void execED()
   {
-    int opCode = nextByte();
+    int opCode = nextByteM1();
     if( opCode < 0x80 ) {
       if( opCode < 0x40 ) {
 	this.instTStates += 8;			// *NOP
@@ -4074,6 +4082,17 @@ public class Z80CPU
   }
 
 
+  private int nextByteM1()
+  {
+    if( this.codeBuf != null ) {
+      return this.codeBuf[ this.codeBufPos++ ];
+    }
+    int rv     = readMemByteM1( this.regPC );
+    this.regPC = (this.regPC + 1) & 0xFFFF;
+    return rv;
+  }
+
+
   private int nextWord()
   {
     int lowByte  = nextByte();
@@ -4109,7 +4128,7 @@ public class Z80CPU
 
   private boolean debugHasInstRETXReached()
   {
-    int opCode = this.memory.getMemByte( this.regPC );
+    int opCode = this.memory.getMemByte( this.regPC, true );
     if( this.codeBuf != null ) {
       if( (this.codeBufPos >= 0) && (this.codeBufPos < this.codeBuf.length) )
 	opCode = this.codeBuf[ this.codeBufPos ];
@@ -4128,7 +4147,7 @@ public class Z80CPU
     }
 
     if( opCode == 0xED ) {
-      opCode = this.memory.getMemByte( this.regPC + 1 );
+      opCode = this.memory.getMemByte( this.regPC + 1, true );
       if( this.codeBuf != null ) {
 	if( (this.codeBufPos >= 0)
 	    && (this.codeBufPos < this.codeBuf.length - 1) )
@@ -4189,18 +4208,24 @@ public class Z80CPU
       debugTracer.print( "  " );
 
       // Befehl reassemblieren
+      int           b0    = this.memory.getMemByte( addr, true );
+      boolean       b1_m1 = ((b0 == 0xED) || (b0 == 0xDD) || (b0 == 0xFD));
       Z80ReassInstr instr = Z80Reassembler.reassInstruction(
-					addr,
-					this.memory.getMemByte( addr ),
-					this.memory.getMemByte( addr + 1 ),
-					this.memory.getMemByte( addr + 2 ),
-					this.memory.getMemByte( addr + 3 ) );
+				addr,
+				b0,
+				this.memory.getMemByte( addr + 1, b1_m1 ),
+				this.memory.getMemByte( addr + 2, false ),
+				this.memory.getMemByte( addr + 3, false ) );
       if( instr != null ) {
 	// Befehlscode ausgeben
 	int w = 12;
 	int n = instr.getLength();
 	for( int i = 0; i < n; i++ ) {
-	  debugTracer.printf( "%02X", this.memory.getMemByte( addr ) );
+	  debugTracer.printf(
+			"%02X",
+			this.memory.getMemByte(
+					addr,
+					(i == 0) || ((i == 1) && b1_m1) ) );
 
 	  debugTracer.print( (char) '\u0020' );
 	  addr++;
@@ -4236,7 +4261,7 @@ public class Z80CPU
 
       } else {
 
-	debugTracer.printf( "%02X", this.memory.getMemByte( addr ) );
+	debugTracer.printf( "%02X", this.memory.getMemByte( addr, true ) );
       }
       debugTracer.println();
     }
@@ -4254,7 +4279,15 @@ public class Z80CPU
 
   private int readMemByte( int addr )
   {
-    int value = this.memory.readMemByte( addr );
+    int value = this.memory.readMemByte( addr, false );
+    fireAddressChanged( addr );
+    return value;
+  }
+
+
+  private int readMemByteM1( int addr )
+  {
+    int value = this.memory.readMemByte( addr, true );
     fireAddressChanged( addr );
     return value;
   }
@@ -4262,8 +4295,8 @@ public class Z80CPU
 
   private int readMemWord( int addr )
   {
-    int value = (this.memory.readMemByte( addr + 1 ) << 8)
-					| this.memory.readMemByte( addr );
+    int value = (this.memory.readMemByte( addr + 1, false ) << 8)
+				| this.memory.readMemByte( addr, false );
     fireAddressChanged( addr );
     return value;
   }

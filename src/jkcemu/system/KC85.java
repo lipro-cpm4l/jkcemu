@@ -27,41 +27,41 @@ public class KC85 extends EmuSys implements
 
   private static final int[][] basicRGBValues = {
 
-				// primaere Vordergrundfarben
-				{ 0,   0,   0   },	// schwarz
-				{ 0,   0,   255 },	// blau
-				{ 255, 0,   0   },	// rot
-				{ 255, 0,   255 },	// purpur
-				{ 0,   255, 0   },	// gruen
-				{ 0,   255, 255 },	// tuerkis
-				{ 255, 255, 0   },	// gelb
-				{ 255, 255, 255 },	// weiss
+			// primaere Vordergrundfarben
+			{ 0,   0,   0   },	// schwarz
+			{ 0,   0,   255 },	// blau
+			{ 255, 0,   0   },	// rot
+			{ 255, 0,   255 },	// purpur
+			{ 0,   255, 0   },	// gruen
+			{ 0,   255, 255 },	// tuerkis
+			{ 255, 255, 0   },	// gelb
+			{ 255, 255, 255 },	// weiss
 
-				// Vordergrundfarben mit 30 Grad Drehung im Farbkreis
-				{ 0,   0,   0   },	// schwarz
-				{ 75,  0,   180 },	// violett
-				{ 180, 75,  0   },	// orange
-				{ 180, 0,   138 },	// purpurrot
-				{ 0,   180, 75  },	// gruenblau
-				{ 0,   138, 180 },	// blaugruen
-				{ 138, 255, 0   },	// gelbgruen
-				{ 255, 255, 255 },	// weiss
+			// Vordergrundfarben mit 30 Grad Drehung im Farbkreis
+			{ 0,   0,   0   },	// schwarz
+			{ 75,  0,   180 },	// violett
+			{ 180, 75,  0   },	// orange
+			{ 180, 0,   138 },	// purpurrot
+			{ 0,   180, 75  },	// gruenblau
+			{ 0,   138, 180 },	// blaugruen
+			{ 138, 255, 0   },	// gelbgruen
+			{ 255, 255, 255 },	// weiss
 
-				// Hintergrundfarben (30% dunkler)
-				{ 0,   0,   0   },	// schwarz
-				{ 0,   0,   180 },	// blau
-				{ 180, 0,   0   },	// rot
-				{ 180, 0,   180 },	// purpur
-				{ 0,   180, 0   },	// gruen
-				{ 0,   180, 180 },	// tuerkis
-				{ 180, 180, 0   },	// gelb
-				{ 180, 180, 180 } };	// weiss
+			// Hintergrundfarben (30% dunkler)
+			{ 0,   0,   0   },	// schwarz
+			{ 0,   0,   180 },	// blau
+			{ 180, 0,   0   },	// rot
+			{ 180, 0,   180 },	// purpur
+			{ 0,   180, 0   },	// gruen
+			{ 0,   180, 180 },	// tuerkis
+			{ 180, 180, 0   },	// gelb
+			{ 180, 180, 180 } };	// weiss
 
   /*
    * Beim KC85/2..4 weicht der Zeichensatz vom ASCII-Standard etwas ab.
    * Deshalb werden hier nur die Tastencodes gemappt,
    * die auf dem emulierten Rechner zur Anzeige des inhaltlich
-   * gleichen Zeichens fuehrt.
+   * gleichen Zeichens fuehren.
    *
    * Konkret bestehen folgende Unterschiede:
    *
@@ -371,7 +371,7 @@ public class KC85 extends EmuSys implements
      * emuliert.
      * Auf der einen Seite soll das Audiosystem nicht zu oft abgefragt
      * werden.
-     * Auf der anderen Seite sollen aber die Zykluszeit nicht so gross werden,
+     * Auf der anderen Seite soll aber die Zykluszeit nicht so gross sein,
      * dass die Genauigkeit der Zeitmessung kuenstlich verschlechert wird.
      * Aus diesem Grund werden genau soviele Taktzyklen abgezaehlt,
      * wie auch der Vorteile der CTC mindestens zaehlen muss.
@@ -408,7 +408,7 @@ public class KC85 extends EmuSys implements
      * Die angegebenen Takte beziehen sich auf die Standardtaktfrequenz.
      * Wird eine andere Taktfrequenz eingestellt,
      * laeuft alles mit der anderen Taktfrequenz,
-     * die Zeitverhaeltnisse zueinander bleiben immer gleich.
+     * die Zeitverhaeltnisse untereineinander bleiben damit immer gleich.
      */
     if( this.keyShiftBitCnt <= 0 ) {
       if( this.keyTStates > 0 ) {
@@ -658,7 +658,7 @@ public class KC85 extends EmuSys implements
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 
@@ -970,7 +970,11 @@ public class KC85 extends EmuSys implements
   }
 
 
-  public boolean paintScreen( Graphics g, int xOffs, int yOffs, int screenScale )
+  public boolean paintScreen(
+			Graphics g,
+			int      xOffs,
+			int      yOffs,
+			int      screenScale )
   {
     boolean rv  = false;
     Image   img = this.screenImage;
@@ -1032,7 +1036,7 @@ public class KC85 extends EmuSys implements
   {
     int rv = 0;
     String s = null;
-    int    b = this.emuThread.getMemByte( addr );
+    int    b = this.emuThread.getMemByte( addr, true );
     switch( b ) {
       case 0xC3:
 	s = "JP";
@@ -1043,7 +1047,7 @@ public class KC85 extends EmuSys implements
     }
     if( s != null ) {
       if( getMemWord( addr + 1 ) == 0xF003 ) {
-	int idx = this.emuThread.getMemByte( addr + 3 );
+	int idx = this.emuThread.getMemByte( addr + 3, false );
 	int bol = buf.length();
 	buf.append( String.format( "%04X  %02X 03 F0", addr, b ) );
 	appendSpacesToCol( buf, bol, colMnemonic );

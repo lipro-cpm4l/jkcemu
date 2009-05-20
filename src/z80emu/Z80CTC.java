@@ -179,6 +179,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   private class Timer
   {
     private int     timerNum;
+    private int     ignoreInternalPulses;
     private int     counterInit;
     private int     counter;
     private int     preCounter;
@@ -237,26 +238,36 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
     public void reset()
     {
-      this.counterInit        = 0x100;
-      this.counter            = this.counterInit;
-      this.preCounter         = 0;
-      this.pre256             = false;
-      this.extMode            = false;
-      this.slope              = false;
-      this.waitForTrigger     = false;
-      this.interruptEnabled   = false;
-      this.interruptPending   = false;
-      this.interruptRequested = false;
-      this.nextIsCounterValue = false;
-      this.running            = false;
-      this.lastInSlope        = null;
+      this.ignoreInternalPulses = 0;
+      this.counterInit          = 0x100;
+      this.counter              = this.counterInit;
+      this.preCounter           = 0;
+      this.pre256               = false;
+      this.extMode              = false;
+      this.slope                = false;
+      this.waitForTrigger       = false;
+      this.interruptEnabled     = false;
+      this.interruptPending     = false;
+      this.interruptRequested   = false;
+      this.nextIsCounterValue   = false;
+      this.running              = false;
+      this.lastInSlope          = null;
     }
 
 
     public void systemUpdate( int pulses )
     {
-      if( (pulses > 0) && !this.extMode )
-	updCounter( updPreCounter( pulses ) );
+      if( pulses > 0 ) {
+	if( pulses < this.ignoreInternalPulses ) {
+	  this.ignoreInternalPulses -= pulses;
+	} else {
+	  pulses -= this.ignoreInternalPulses;
+	  this.ignoreInternalPulses = 0;
+	  if( (pulses > 0) && !this.extMode ) {
+	    updCounter( updPreCounter( pulses ) );
+	  }
+	}
+      }
     }
 
 
@@ -267,9 +278,18 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	this.counterInit        = (value > 0 ? value : 0x100);
 	this.nextIsCounterValue = false;
 	if( !this.running && (this.extMode || !this.waitForTrigger) ) {
-	  this.preCounter = 0;
-	  this.counter    = this.counterInit;
-	  this.running    = true;
+	  /*
+	   * Die Taktzyklen des Ausgabebefehls,
+	   * mit dem der CTC-Kanal programmiert wird,
+	   * duerfen nicht alle zum Herunterzaehlen des Kanals
+	   * verwendet werden.
+	   * Aus diesem Grund werden einige der naechsten
+	   * internen Taktzyklen ignoriert.
+	   */
+	  this.ignoreInternalPulses = 8;
+	  this.preCounter           = 0;
+	  this.counter              = this.counterInit;
+	  this.running              = true;
 	}
       } else {
 	this.interruptEnabled   = ((value & 0x80) != 0);

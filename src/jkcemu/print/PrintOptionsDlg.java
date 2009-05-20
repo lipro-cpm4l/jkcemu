@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -65,7 +65,7 @@ public class PrintOptionsDlg extends BasicDlg
       }
     }
     catch( Exception ex ) {
-      EmuUtil.showSysError( this, null, ex );
+      EmuUtil.exitSysError( this, null, ex );
     }
     return rv;
   }

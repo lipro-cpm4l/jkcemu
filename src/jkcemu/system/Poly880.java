@@ -39,14 +39,11 @@ public class Poly880 extends EmuSys implements
   private Z80CTC  ctc;
   private Z80PIO  pio1;
   private Z80PIO  pio2;
-  private Color   greenLight;
-  private Color   greenDark;
 
 
   public Poly880( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    createColors( props );
     if( mon0000 == null ) {
       mon0000 = readResource( "/rom/poly880/poly880_0000.bin" );
     }
@@ -146,13 +143,6 @@ public class Poly880 extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
-  public void applySettings( Properties props )
-  {
-    super.applySettings( props );
-    createColors( props );
-  }
-
-
   public void die()
   {
     this.ctc.removeCTCListener( this );
@@ -175,11 +165,11 @@ public class Poly880 extends EmuSys implements
     Color color = Color.black;
     switch( colorIdx ) {
       case 1:
-	color = this.greenDark;
+	color = this.colorGreenDark;
 	break;
 
       case 2:
-	color = this.greenLight;
+	color = this.colorGreenLight;
 	break;
     }
     return color;
@@ -198,7 +188,7 @@ public class Poly880 extends EmuSys implements
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     int rv = 0xFF;
 
@@ -314,8 +304,8 @@ public class Poly880 extends EmuSys implements
 		x,
 		y,
 		this.digitValues[ i ],
-		this.greenDark,
-		this.greenLight,
+		this.colorGreenDark,
+		this.colorGreenLight,
 		screenScale );
 	x += (65 * screenScale);
       }
@@ -400,7 +390,7 @@ public class Poly880 extends EmuSys implements
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      fillRandom( this.ram );
+      initSRAM( this.ram, props );
     }
     synchronized( this.digitValues ) {
       Arrays.fill( this.digitStatus, 0 );
@@ -502,14 +492,6 @@ public class Poly880 extends EmuSys implements
 
 
 	/* --- private Methoden --- */
-
-  private void createColors( Properties props )
-  {
-    int value       = getMaxRGBValue( props );
-    this.greenLight = new Color( 0, value, 0 );
-    this.greenDark  = new Color( 0, value / 5, 0 );
-  }
-
 
   public void putKeyMatrixValueToPort()
   {

@@ -93,7 +93,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     int addr         = 0x3770;
     int nextLineAddr = memory.getMemWord( addr );
     while( (nextLineAddr > addr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1 ) == 0) )
+	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
     {
       // Zeilennummer
       addr += 2;
@@ -103,7 +103,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
       // Anzahl Leerzeichen vor der Anweisung ermitteln
       int n = 0;
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr );
+	int ch = memory.getMemByte( addr, false );
 	if( ch == '\u0020' ) {
 	  n++;
 	  addr++;
@@ -121,14 +121,14 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
       String[] tokens = basicTokens;
       boolean  colon  = false;
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr++ );
+	int ch = memory.getMemByte( addr++, false );
 	if( ch == 0 ) {
 	  break;
 	}
 	if( ch == '\"' ) {
 	  buf.append( (char) ch );
 	  while( addr < nextLineAddr ) {
-	    ch = memory.getMemByte( addr++ );
+	    ch = memory.getMemByte( addr++, false );
 	    if( ch == 0 ) {
 	      break;
 	    }
@@ -208,7 +208,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 

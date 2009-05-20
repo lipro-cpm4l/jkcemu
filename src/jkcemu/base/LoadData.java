@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -210,7 +210,7 @@ public class LoadData implements Z80MemView
 
 	/* --- Z80MemView --- */
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     return getAbsoluteByte( this.offset + addr - this.begAddr );
   }
@@ -218,7 +218,7 @@ public class LoadData implements Z80MemView
 
   public int getMemWord( int addr )
   {
-    return (getMemByte( addr + 1 ) << 8) | getMemByte( addr );
+    return (getMemByte( addr + 1, false ) << 8) | getMemByte( addr, false );
   }
 }
 

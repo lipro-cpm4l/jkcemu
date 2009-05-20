@@ -1,0 +1,429 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des Schachcomputers SC2</h1>
+    Der Schachcomputer SC2 wurde im VEB Mikroelektronik Erfurt hergestellt.
+    Die Kommunikation zwischen Spieler und Computer erfolgt
+    ausschlie&szlig;lich &uuml;ber eine Tastatur und eine 7-Segment-Anzeige
+    sowie zwei LEDs f&uuml;r &quot;Schach&quot; und &quot;Matt&quot;.
+    Des weiteren gibt es noch eine akustische Signalisierung.
+    Diese ist recht praktisch, da n&auml;mlich die Denkzeiten des Computers
+    je nach Programmstufe recht lang sein k&ouml;nnen.
+    In JKCEMU ist der Signalton jedoch nur zu h&ouml;ren,
+    wenn Sie eine entsprechende
+    <a href="audio.htm">Audio-Funktion</a> aktivieren.
+  <br/><br/>
+    Den SC2 gibt es in zwei Varianten,
+    eine f&uuml;r das Inland bestimmte Version mit 2,4576 MHz Taktfrequenz
+    und eine nur f&uuml;r den Export vorgesehene Version mit 4MHz.
+    JKCEMU emuliert die Inlandsversion mit der niedrigeren Taktfrequenz.
+    Zum Verk&uuml;rzen der mitunter recht langen Denkzeiten des Computers
+    k&ouml;nnen Sie in den <a href="settings.htm">Einstellungen</a>,
+    Bereich <em>Geschwindigkeit</em>,
+    die emulierte Taktfrequenz entsprechend hoch setzen.
+  <br/><br/>
+
+
+  <h2>1. Tastatur</h2>
+    <table border="1">
+      <tr><th>SC2-Taste</th><th>Taste in JKCEMU</th><th>Bedeutung</th></tr>
+      <tr>
+	<td valign="top">R</td>
+	<td valign="top">Escape</td>
+	<td>
+	  R&uuml;ckstellen (RESET),<br/>
+	  Alle Figuren sind in der Ausgangsstellung,<br/>
+	  Computer spielt mit schwarz.
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">K</td>
+	<td valign="top">K oder +</td>
+	<td>Programmstufe einstellen</td>
+      </tr>
+      <tr>
+	<td valign="top">L</td>
+	<td valign="top">L oder Backspace</td>
+	<td>
+	  L&ouml;schen der Anzeige,<br/>
+	  L&ouml;schen von nichtquittierten Zugeingaben
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">P</td>
+	<td valign="top">P</td>
+	<td>Problemeingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">Q</td>
+	<td valign="top">Q oder Enter</td>
+	<td>
+	  Quittieren von Zugeingaben,<br/>
+	  Anzeige der n&auml;chsten Figur und ihrer Stellung
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">T</td>
+	<td valign="top">T</td>
+	<td>Signalton abschalten</td>
+      </tr>
+      <tr>
+	<td valign="top">W</td>
+	<td valign="top">W</td>
+	<td>Figurenwahl: Computer spielt mit wei&szlig;.</td>
+      </tr>
+      <tr>
+	<td valign="top">A&nbsp;1</td>
+	<td valign="top">A oder 1</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">B&nbsp;2</td>
+	<td valign="top">B oder 2</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">C&nbsp;3</td>
+	<td valign="top">C oder 3</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">D&nbsp;4</td>
+	<td valign="top">D oder 4</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">E&nbsp;5</td>
+	<td valign="top">E oder 5</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">F&nbsp;6</td>
+	<td valign="top">F oder 6</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">G&nbsp;7</td>
+	<td valign="top">G oder 7</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">H&nbsp;8</td>
+	<td valign="top">H oder 8</td>
+	<td>Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+    </table>
+  <br/><br/>
+
+
+  <h2>2. Anzeige</h2>
+
+  <h3>2.1. 7-Segment-Anzeige</h3>
+    <table border="1">
+      <tr><th>Anzeige</th><th>Bedeutung</th></tr>
+      <tr><td nowrap><em>E2 E4</em></td><td>Zug E2 nach E4</td></tr>
+      <tr>
+	<td nowrap><em>-- --</em></td>
+	<td>Fehlerhafte Eingabe oder Regelversto&szlig;</td>
+      </tr>
+      <tr>
+	<td nowrap><em>EE EE</em></td>
+	<td>Computer spielt mit Wei&szlig;</td>
+      </tr>
+      <tr>
+	<td nowrap><em>oo oo</em></td>
+	<td>Computer &uuml;berlegt gerade</td>
+      </tr>
+      <tr>
+	<td nowrap><em>d3 E1</em></td>
+	<td>
+	  <em>d3</em>: Koordinaten der eingegebenen Dame<br/>
+	  <em>E1</em>: Code f&uuml;r wei&szlig;e Dame bei Eingabe<br/>
+	</td>
+      </tr>
+      <tr>
+	<td nowrap><em>Pr ob</em></td>
+	<td>Problemeingabemodus</td>
+      </tr>
+    </table>
+  <br/>
+    Die Spaltenangaben im Schachbrett werden mit <em>A</em>, <em>b</em>,
+    <em>C</em>, <em>d</em>, <em>E</em>, <em>F</em>, <em>g</em>
+    und <em>H</em> angezeigt.
+    Das kleine <em>g</em> sieht dabei genauso aus wie die Ziffer <em>9</em>.
+  <br/><br/>
+
+  <h3>2.2. Signalisierung bestimmter Spielsituationen</h3>
+    <table border="1">
+      <tr>
+	<th>Spielsituation</th>
+	<th>7-Segment-Anzeige</th>
+	<th>Anzeige &quot;Matt&quot;</th>
+	<th>Anzeige &quot;Schach&quot;</th>
+	<th>Bemerkung</th>
+      </tr>
+      <tr>
+	<td valign="top">Patt des Computers</td>
+	<td valign="top">blinkt</td>
+	<td></td>
+	<td></td>
+	<td valign="top">Ende des Spiels</td>
+      </tr>
+      <tr>
+	<td valign="top">Voraus-Matt des Spielers</td>
+	<td valign="top">blinkt</td>
+	<td></td>
+	<td></td>
+	<td valign="top">Spiel kann fortgesetzt werden.</td>
+      </tr>
+      <tr>
+	<td valign="top">Matt des Computers</td>
+	<td valign="top">blinkt</td>
+	<td valign="top">blinkt</td>
+	<td></td>
+	<td valign="top">Ende des Spiels</td>
+      </tr>
+      <tr>
+	<td valign="top">Voraus-Matt des Computers</td>
+	<td valign="top">blinkt</td>
+	<td valign="top">blinkt</td>
+	<td></td>
+	<td valign="top">Spiel kann fortgesetzt werden.</td>
+      </tr>
+      <tr>
+	<td valign="top">Schach durch den Computer</td>
+	<td></td>
+	<td></td>
+	<td valign="top">leuchtet</td>
+	<td valign="top">Spiel kann fortgesetzt werden.</td>
+      </tr>
+      <tr>
+	<td valign="top">Matt des Spielers</td>
+	<td valign="top">blinkt</td>
+	<td></td>
+	<td valign="top">blinkt</td>
+	<td valign="top">Ende des Spiels</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  Voraus-Matt des Spielers und<br/>
+	  Schach durch den Computer</td>
+	<td valign="top">blinkt</td>
+	<td></td>
+	<td valign="top">blinkt</td>
+	<td valign="top">Spiel kann fortgesetzt werden.</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  Voraus-Matt des Computers und<br/>
+	  Schach durch den Computer</td>
+	<td valign="top">blinkt</td>
+	<td valign="top">blinkt</td>
+	<td valign="top">blinkt</td>
+	<td valign="top">Spiel kann fortgesetzt werden.</td>
+      </tr>
+    </table>
+  <br/><br/>
+
+
+  <h2>3. Hinweise zur Bedienung</h2>
+    Nach dem R&uuml;ckstellen (RESET oder Escape) w&auml;hlen
+    Sie die Programmstufe (1 bis 10) mit der Taste <em>K</em>.
+    Je h&ouml;her die Programmstufe, desto st&auml;rker ist der Computer.
+    Allerdings denkt er dann auch l&auml;nger nach.
+  <br/><br/>
+    Standardm&auml;&szlig;ig spielen Sie mit Wei&szlig; und der Computer
+    mit Schwarz, d.h., Sie sind als Erster am Zug.
+    Geben Sie nun Ihren ersten Zug ein (z.B. <em>E2E4</em>
+    und quittieren mit <em>Q (Enter)</em>.
+    Der Computer denkt nach und zeigt seinen ersten Zug an.
+    Nun sind Sie wieder an der Reihe und so weiter.
+  <br/><br/>
+    M&ouml;chten Sie mit Schwarz spielen,
+    dann dr&uuml;cken Sie nach der Wahl der Programmstufe
+    die Taste <em>W</em> (Anzeige <em>EE EE</em>) und quittieren mit
+    <em>Q (Enter)</em>.
+    Der Computer zeigt nun seinen ersten Zug an.
+    Jetzt sind Sie an der Reihe, geben Ihren ersten Zug ein und quittieren,
+    und so weiter.
+  <br/><br/>
+
+  <h3>3.1. Programmstufen</h3>
+    <table border="1">
+      <tr>
+	<th>Programmstufe</th>
+	<th>Geeignet f&uuml;r</th>
+	<th>Durchschnittliche Zugzeit</th>
+      </tr>
+      <tr><td>10</td><td>Endspielanalyse</td><td>12:30 Minuten</td></tr>
+      <tr><td>9</td><td>Totalanalyse</td><td>1 Stunde</td></tr>
+      <tr><td>8</td><td>Spezialanalyse</td><td>16 Minuten</td></tr>
+      <tr><td>7</td><td>Turnieranalyse</td><td>10 Minuten</td></tr>
+      <tr><td>6</td><td>Trainingsanalyse</td><td>4:50 Minuten</td></tr>
+      <tr><td>5</td><td>Turnier</td><td>2:30 Minuten</td></tr>
+      <tr><td>4</td><td>Training</td><td>1 Minute</td></tr>
+      <tr><td>3</td><td>Praxis</td><td>40 Sekunden</td></tr>
+      <tr><td>2</td><td>Schnellschach</td><td>8 Sekunden</td></tr>
+      <tr><td>1</td><td>Blitzschach</td><td>3 Sekunden</td></tr>
+    </table>
+  <br/>
+    Die Programmstufe kann w&auml;hrend des Spiels beliebig
+    durch Dr&uuml;cken der Taste <em>K</em> ge&auml;ndert werden.
+  <br/><br/>
+
+  <h3>3.2. Spezialz&uuml;ge</h3>
+
+  <h4>3.2.1. Rochade</h4>
+    F&uuml;r die Rochade wird der Zug des K&ouml;nigs eingegeben
+    bzw. angezeigt, d.h., m&ouml;gliche Z&uuml;ge sind:
+    <table border="1">
+      <tr>
+	<td><em>E1 G1</em></td>
+	<td>Als Wei&szlig; auf der K&ouml;nigsseite rochieren</td>
+      </tr>
+      <tr>
+	<td><em>E1 C1</em></td>
+	<td>Als Wei&szlig; auf der Damenseite rochieren</td>
+      </tr>
+      <tr>
+	<td><em>E8 g8</em></td>
+	<td>Als Schwarz auf der K&ouml;nigsseite rochieren</td>
+      </tr>
+      <tr>
+	<td><em>E8 C8</em></td>
+	<td>Als Schwarz auf der Damenseite rochieren</td>
+      </tr>
+    </table>
+  <br/><br/>
+
+  <h4>3.2.2. En passant</h4>
+    Das Schlagen <em>En passant</em> (im Vor&uuml;bergehen)
+    ist nur zwischen  Bauern und auch dann nur m&ouml;glich,
+    wenn ein Bauer zwei Felder nach vorn geht und dabei das Feld
+    &uuml;berspringt,
+    auf dem er von einem anderen Bauern geschlagen werden kann.
+    In dem Fall kann der gegnerische Bauer durch ziehen auf das
+    &uuml;bersprungene Feld schlagen.
+  <br/><br/>
+
+  <h4>3.2.3. Bauernumwandlung</h4>
+    Erreicht ein Bauer die gegenerische Grundlinie,
+    kann er in eine beliebige andere Figur umgewandelt werden.
+    Standardm&auml;&szlig;ig wird immer in eine Dame umgewandelt.
+    M&ouml;chten Sie jedoch Ihren Bauern in eine andere Figur umwandeln,
+    so m&uuml;ssen Sie das &uuml;ber die Problemeingabe tun.
+  <br/><br/>
+
+  <h3>3.3. Korrekturen</h3>
+    Haben Sie sich beim Eingeben eines Zuges vertippt und den Zug
+    noch nicht mit <em>Q (Enter)</em> quittiert,
+    so dr&uuml;cken Sie <em>L</em> und geben den Zug noch einmal ein.
+  <br/><br/>
+    Sollte der Computer den von Ihnen eingegebenen Zug nicht aktzeptieren
+    (Anzeige <em>-- --</em>), so geben Sie einfach einen g&uuml;ltigen Zug ein.
+  <br/><br/>
+
+  <h3>3.4. Spielstandskontrolle</h3>
+    Immer wenn Sie an Zug sind, k&ouml;nnen Sie die Spielstandskontrolle
+    aufrufen,
+    um sich den im Computer gespeicherten Spielstand anzeigen zu lassen.
+    Dr&uuml;cken Sie einfach ohne einen Zug einzugeben
+    die Taste <em>Q (Enter)</em>.
+    Mit jedem Tastendruck wird ein belegtes Feld und die darauf stehende
+    Figur angezeigt.
+    Die linken beiden Stellen in der Anzeige geben das Feld an
+    und die rechten beiden Stellen stehen f&uuml;r die Figur.
+    Die Figuren sind folgenderma&szlig;en kodiert:
+  <br/>
+    <table border="1">
+      <tr><th>Figur</th><th>Wei&szlig;</th><th>Schwarz</th></tr>
+      <tr><td>Bauer</td><td>E2</td><td>2</td></tr>
+      <tr><td>Springer</td><td>E4</td><td>4</td></tr>
+      <tr><td>L&auml;ufer</td><td>E6</td><td>6</td></tr>
+      <tr><td>Turm</td><td>E8</td><td>8</td></tr>
+      <tr><td>Dame</td><td>EA</td><td>A</td></tr>
+      <tr><td>K&ouml;nig</td><td>EC</td><td>C</td></tr>
+    </table>
+  <br/><br/>
+    Die Spielstandskontrolle ist au&szlig;er nach einer Problemeingabe
+    erst nach dem ersten Zug m&ouml;glich.
+    Zum Weiterspielen nach der Spielstandskontrolle m&uuml;ssen Sie
+    die Taste <em>L</em> dr&uuml;cken.
+    In der Anzeige steht nun <em>00 00</em>,
+    und Sie k&ouml;nnen nun Ihren Zug eingeben.
+  <br/><br/>
+
+  <h3>3.5. Problemeingabe (Spielstandsver&auml;nderung)</h3>
+    Mit der Taste <em>P</em> gelangen Sie in den Problemeingabemodus.
+    Mit der gleichen Taste verlassen Sie diesen Modus wieder.
+    In der Anzeige sehen Sie dann vier Nullen,
+    und Sie k&ouml;nnen weiter spielen.
+  <br/><br/>
+    M&ouml;chten Sie eine Figur entfernen,
+    dann geben Sie die Position des Feldes ein und dr&uuml;cken
+    <em>Q (Enter)</em>.
+    Das Feld wird damit auf leer gesetzt.
+  <br/><br/>
+    M&ouml;chten Sie dagegen eine Figur hinzuf&uuml;gen oder &auml;ndern,
+    dann geben Sie die Position des Feldes und
+    dahinter den Code f&uuml;r die Figur ein und dr&uuml;cken
+    <em>Q (Enter)</em>.
+  <br/><br/>
+    Die Codes f&uuml;r die Figuren unterscheiden sich bei K&ouml;nig
+    und Dame gegen&uuml;ber denen bei der Spielstandskontrolle
+    (Dame: <em>1</em> statt <em>A</em>,
+    K&ouml;nig: <em>3</em> statt <em>C</em>).
+    Sie k&ouml;nnen aber trotzdem die Codes <em>A</em> und <em>C</em> eingeben,
+    angezeigt werden dann aber <em>1</em> bzw. <em>3</em>.
+  <br/><br/>
+    F&uuml;r die Problemeingabe gelten somit folgende Codes:
+  <br/>
+    <table border="1">
+      <tr><th>Figur</th><th>Wei&szlig;</th><th>Schwarz</th></tr>
+      <tr><td>Bauer</td><td>E2</td><td>2</td></tr>
+      <tr><td>Springer</td><td>E4</td><td>4</td></tr>
+      <tr><td>L&auml;ufer</td><td>E6</td><td>6</td></tr>
+      <tr><td>Turm</td><td>E8</td><td>8</td></tr>
+      <tr><td>Dame</td><td>E1</td><td>1</td></tr>
+      <tr><td>K&ouml;nig</td><td>E3</td><td>3</td></tr>
+    </table>
+  <br/><br/>
+
+
+  <h2>4. Sonstiges</h2>
+    Die Software des Schachcomputers SC2 ist nicht ganz fehlerfrei.
+    In einigen wenigen F&auml;llen ist die Anzeige &quot;Schach&quot;
+    falsch.
+    Dabei kann sie sowohl unberechtigt aufleuchten als auch dunkel bleiben,
+    obwohl der Computer Schach bietet.
+  <br/><br/>
+    Beispiel f&uuml;r ein unberechtigtes Aufleuchten der Schach-Anzeige:
+  <br/>
+    <table border="0">
+      <tr><td>1.</td><td nowrap>E2 - E4</td><td nowrap>E7 - E5</td></tr>
+      <tr><td>2.</td><td nowrap>G1 - F3</td><td nowrap>B8 - C6</td></tr>
+      <tr><td>3.</td><td nowrap>F1 - B5</td><td nowrap>A7 - A6</td></tr>
+      <tr><td>4.</td><td nowrap>B5 - A4</td><td nowrap>G8 - F6</td></tr>
+      <tr><td>5.</td><td nowrap>B1 - C3</td><td nowrap>B7 - B5</td></tr>
+      <tr><td>6.</td><td nowrap>A4 - B3</td><td nowrap>F8 - E7</td></tr>
+    </table>
+  <br/><br/>
+    Beispiel f&uuml;r eine fehlende Schach-Signalisierung:
+  <br/>
+    <table border="0">
+      <tr><td>1.</td><td nowrap>E2 - E4<td></td><td nowrap>E7 - E6</td></tr>
+      <tr><td>2.</td><td nowrap>D2 - D4<td></td><td nowrap>D7 - D5</td></tr>
+      <tr><td>3.</td><td nowrap>B1 - C3<td></td><td nowrap>F8 - B4</td></tr>
+      <tr><td>4.</td><td nowrap>E4 - E5<td></td><td nowrap>C7 - C5</td></tr>
+      <tr><td>5.</td><td nowrap>A1 - A3<td></td><td nowrap>B4 - C3</td></tr>
+    </table>
+  <br/><br/>
+    In beiden F&auml;llen kann das Spiel einfach fortgesetzt werden.
+  <br/><br/>
+
+
+  <h2>5. Quellennachweise</h2>
+    Die Tabellen und Informationan ab Punkt 2.2 wurden weitestgehend
+    aus der originalen Bedienungsanleitung &uuml;bernommen.
+</body>
+</html>
+

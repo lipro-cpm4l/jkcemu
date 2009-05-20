@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,12 +14,14 @@ import javax.swing.text.*;
 
 public class LimitedDocument extends PlainDocument
 {
-  private int maxLen;
+  private int     maxLen;
+  private boolean swapCase;
 
 
   public LimitedDocument( int maxLen )
   {
-    this.maxLen = maxLen;
+    this.maxLen   = maxLen;
+    this.swapCase = false;
   }
 
 
@@ -29,11 +31,32 @@ public class LimitedDocument extends PlainDocument
   }
 
 
+  public void setSwapCase( boolean state )
+  {
+    this.swapCase = state;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   public void insertString( int offs, String str, AttributeSet a )
 						throws BadLocationException
   {
+    if( (str != null) && this.swapCase ) {
+      char[] ary = str.toCharArray();
+      if( ary != null ) {
+	for( int i = 0; i < ary.length; i++ ) {
+	  char ch = ary[ i ];
+	  if( Character.isUpperCase( ch ) ) {
+	    ary[ i ] = Character.toLowerCase( ch );
+	  }
+	  else if( Character.isLowerCase( ch ) ) {
+	    ary[ i ] = Character.toUpperCase( ch );
+	  }
+	}
+	str = new String( ary );
+      }
+    }
     if( str != null ) {
       int len = str.length();
       if( len > 0 ) {

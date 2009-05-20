@@ -23,13 +23,28 @@ public class LLC2 extends EmuSys implements Z80CTCListener
 
   private Z80CTC  ctc;
   private Z80PIO  pio;
+  private byte[]  ramExtended;
+  private byte[]  prgX;
+  private byte[]  romdisk;
   private boolean romEnabled;
+  private boolean romdiskEnabled;
+  private boolean romdiskA15;
+  private boolean prgXEnabled;
   private boolean gsbasicEnabled;
+  private boolean inverseMode;
   private boolean loudspeakerEnabled;
   private boolean loudspeakerPhase;
   private boolean audioOutPhase;
   private boolean keyboardUsed;
-  private boolean breakPressed;
+  private boolean hiRes;
+  private boolean rf32KActive;
+  private boolean rf32NegA15;
+  private boolean rfReadEnabled;
+  private boolean rfWriteEnabled;
+  private int     rfAddr16to19;
+  private int     fontOffset;
+  private int     videoPixelAddr;
+  private int     videoTextAddr;
 
 
   public LLC2( EmuThread emuThread, Properties props )
@@ -44,6 +59,9 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     if( gsbasic == null ) {
       gsbasic = readResource( "/rom/llc2/gsbasic.bin" );
     }
+    this.ramExtended = this.emuThread.getExtendedRAM( 0x100000 );
+    this.prgX        = readProgramX( props );
+    this.romdisk     = readROMDisk( props );
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( cpu );
@@ -70,6 +88,7 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     if( ctc == this.ctc ) {
       switch( timerNum ) {
 	case 0:
+
 	  // Lautsprecher
 	  if( this.loudspeakerEnabled ) {
 	    this.loudspeakerPhase = !this.loudspeakerPhase;
@@ -114,24 +133,45 @@ public class LLC2 extends EmuSys implements Z80CTCListener
 
   public int getColorIndex( int x, int y )
   {
-    int    rv     = BLACK;
-    byte[] fBytes = this.emuThread.getExtFontBytes();
-    if( fBytes == null ) {
-      fBytes = fontBytes;
-    }
-    if( fBytes != null ) {
-      int row = y / 8;
-      int col = x / 8;
-      int idx = (this.emuThread.getRAMByte( 0xC000 + (row * 64) + col )
-							* 8) + (y % 8);
-      if( (idx >= 0) && (idx < fBytes.length ) ) {
-	int m = 0x80;
-	int n = x % 8;
-	if( n > 0 ) {
-	  m >>= n;
+    int rv = BLACK;
+    if( this.hiRes ) {
+      int g = y / 8;
+      int p = y % 8;
+      int b = this.emuThread.getRAMByte(
+		this.videoPixelAddr + (p * 0x0800) + (g * 64) + (x / 8) );
+      int m = 0x80;
+      int n = x % 8;
+      if( n > 0 ) {
+	m >>= n;
+      }
+      if( (b & m) != 0 ) {
+	rv = WHITE;
+      }
+    } else {
+      byte[] fBytes = this.emuThread.getExtFontBytes();
+      if( fBytes == null ) {
+	fBytes = fontBytes;
+      }
+      if( fBytes != null ) {
+	int row = y / 8;
+	int col = x / 8;
+	int ch  = this.emuThread.getRAMByte(
+				this.videoTextAddr + (row * 64) + col );
+	int idx = this.fontOffset
+			+ ((ch & (this.inverseMode ? 0x7F : 0xFF)) * 8)
+			+ (y % 8);
+	if( (idx >= 0) && (idx < fBytes.length) ) {
+	  int m = 0x80;
+	  int n = x % 8;
+	  if( n > 0 ) {
+	    m >>= n;
+	  }
+	  if( (fBytes[ idx ] & m) != 0 ) {
+	    rv = WHITE;
+	  }
 	}
-	if( (fBytes[ idx ] & m) != 0 ) {
-	  rv = WHITE;
+	if( this.inverseMode && ((ch & 0x80) != 0) ) {
+	  rv = (rv == WHITE ? BLACK : WHITE);
 	}
       }
     }
@@ -175,31 +215,82 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 
-    int rv = 0xFF;
-    if( this.romEnabled && (addr < 0xC000) ) {
+    int     rv   = 0xFF;
+    boolean done = false;
+    if( !m1 && this.rfReadEnabled ) {
+      if( this.ramExtended != null ) {
+	int idx = this.rfAddr16to19 | addr;
+	if( idx < this.ramExtended.length ) {
+	  rv = (int) this.ramExtended[ idx ] & 0xFF;
+	}
+      }
+      done = true;
+    }
+    if( !done && this.rf32KActive && (addr >= 0x4000) && (addr < 0xC000) ) {
+      if( this.ramExtended != null ) {
+	int idx = this.rfAddr16to19 | addr;
+	if( this.rf32NegA15 ) {
+	  if( (idx & 0x8000) != 0 ) {
+	    idx &= 0xF7FFF;
+	  } else {
+	    idx |= 0x8000;
+	  }
+	}
+	if( idx < this.ramExtended.length ) {
+	  rv = (byte) this.ramExtended[ idx ] & 0xFF;
+	}
+      }
+      done = true;
+    }
+    if( !done && this.gsbasicEnabled
+	&& (addr >= 0x4000) && (addr < 0x6000) )
+    {
+      if( gsbasic != null ) {
+	int idx = addr - 0x4000;
+	if( idx < gsbasic.length ) {
+	  rv = (int) gsbasic[ idx ] & 0xFF;
+	}
+      }
+      done = true;
+    }
+    if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
+      if( this.romdisk != null ) {
+	int idx = addr - 0xC000;
+	if( this.prgXEnabled ) {
+	  idx |= 0x4000;
+	}
+	if( this.romdiskA15 ) {
+	  idx |= 0x8000;
+	}
+	if( idx < this.romdisk.length ) {
+	  rv = (int) this.romdisk[ idx ] & 0xFF;
+	}
+      }
+      done = true;
+    }
+    if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
+      if( this.prgX != null ) {
+	int idx = addr - 0xE000;
+	if( idx < this.prgX.length ) {
+	  rv = (int) this.prgX[ idx ] & 0xFF;
+	}
+      }
+      done = true;
+    }
+    if( !done && this.romEnabled && (addr < 0xC000) ) {
       if( scchMon91 != null ) {
 	if( addr < scchMon91.length ) {
 	  rv = (int) this.scchMon91[ addr ] & 0xFF;
 	}
       }
-    } else {
-      boolean done = false;
-      if( (addr >= 0x4000) && (addr < 0x6000)
-	  && this.gsbasicEnabled && (gsbasic != null) )
-      {
-	int idx = addr - 0x4000;
-	if( idx < gsbasic.length ) {
-	  rv = (int) gsbasic[ idx ] & 0xFF;
-	  done = true;
-	}
-      }
-      if( !done ) {
-	rv = this.emuThread.getRAMByte( addr );
-      }
+      done = true;
+    }
+    if( !done ) {
+      rv = this.emuThread.getRAMByte( addr );
     }
     return rv;
   }
@@ -208,8 +299,10 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   protected int getScreenChar( int chX, int chY )
   {
     int ch  = -1;
-    int addr = 0xC000 + (chY * 64) + chX;
-    if( (addr >= 0xC000) && (addr < 0xC800) ) {
+    int addr = this.videoTextAddr + (chY * 64) + chX;
+    if( (addr >= this.videoTextAddr)
+	&& (addr < (this.videoTextAddr + 0x0800)) )
+    {
       int b = this.emuThread.getRAMByte( addr );
       if( (b >= 0x20) && (b < 0x7F) ) {
 	ch = b;
@@ -245,7 +338,21 @@ public class LLC2 extends EmuSys implements Z80CTCListener
 
   protected boolean isExtROMSwitchableAt( int addr )
   {
-    return this.romEnabled || (addr >= 0xC000);
+    boolean rv = false;
+    if( !this.rfReadEnabled ) {
+      if( addr < 0xC000 ) {
+	rv = this.romEnabled;
+      } else if( (addr >= 0xC000) && (addr < 0xE000) ) {
+	if( !this.romdiskEnabled ) {
+	  rv = true;
+	}
+      } else {
+	if( !this.romdiskEnabled && !this.prgXEnabled ) {
+	  rv = true;
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -258,62 +365,42 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   public boolean keyPressed( int keyCode, boolean shiftDown )
   {
     boolean rv = false;
-    if( keyCode == KeyEvent.VK_F1 ) {
-      this.breakPressed = true;
-      this.pio.putInValuePortB( 0xDF, 0x20 );
+    int     ch = 0;
+    switch( keyCode ) {
+      case KeyEvent.VK_LEFT:
+      case KeyEvent.VK_BACK_SPACE:
+	ch = 8;
+	break;
+
+      case KeyEvent.VK_RIGHT:
+	ch = 9;
+	break;
+
+      case KeyEvent.VK_DOWN:
+	ch = 0x0A;
+	break;
+
+      case KeyEvent.VK_UP:
+	ch = 0x0B;
+	break;
+
+      case KeyEvent.VK_ENTER:
+	ch = 0x0D;
+	break;
+
+      case KeyEvent.VK_SPACE:
+	ch = 0x20;
+	break;
+
+      case KeyEvent.VK_DELETE:
+	ch = 0x7F;
+	break;
+    }
+    if( ch > 0 ) {
+      this.pio.putInValuePortA( ch | 0x80, 0xFF );
       rv = true;
-    } else {
-      int ch = 0;
-      switch( keyCode ) {
-	case KeyEvent.VK_LEFT:
-	case KeyEvent.VK_BACK_SPACE:
-	  ch = 8;
-	  break;
-
-	case KeyEvent.VK_RIGHT:
-	  ch = 9;
-	  break;
-
-	case KeyEvent.VK_DOWN:
-	  ch = 0x0A;
-	  break;
-
-	case KeyEvent.VK_UP:
-	  ch = 0x0B;
-	  break;
-
-	case KeyEvent.VK_ENTER:
-	  ch = 0x0D;
-	  break;
-
-	case KeyEvent.VK_SPACE:
-	  ch = 0x20;
-	  break;
-
-	case KeyEvent.VK_DELETE:
-	  ch = 0x7F;
-	  break;
-      }
-      if( ch > 0 ) {
-	this.pio.putInValuePortA( ch | 0x80, 0xFF );
-	rv = true;
-      }
-      if( this.breakPressed ) {
-	this.breakPressed = false;
-	this.pio.putInValuePortB( 0xFF, 0x20 );
-      }
     }
     return rv;
-  }
-
-
-  public void keyReleased()
-  {
-    this.pio.putInValuePortA( 0, 0xFF );
-    if( this.breakPressed ) {
-      this.breakPressed = false;
-      this.pio.putInValuePortB( 0xFF, 0x20 );
-    }
   }
 
 
@@ -321,10 +408,16 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   {
     boolean rv = false;
     if( (ch > 0) && (ch < 0x7F) ) {
-      this.pio.putInValuePortA( ch | 0x80, 0xFF );
+      this.pio.putInValuePortA( ch | 0x80, false );
       rv = true;
     }
     return rv;
+  }
+
+
+  public void keyReleased()
+  {
+    this.pio.putInValuePortA( 0, false );
   }
 
 
@@ -359,48 +452,50 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   public int readIOByte( int port )
   {
     int rv = 0xFF;
-    switch( port & 0xFF ) {
-      case 0xE0:
-      case 0xE1:
-      case 0xE2:
-      case 0xE3:
-	this.romEnabled = false;
-	break;
+    if( (port & 0xF8) == 0xD0 ) {
+      rv = this.emuThread.getRAMFloppy1().readByte( port & 0x07 );
+    }
+    else if( (port & 0xF8) == 0xB0 ) {
+      rv = this.emuThread.getRAMFloppy2().readByte( port & 0x07 );
+    } else {
+      switch( port & 0xFF ) {
+	case 0xE0:
+	case 0xE1:
+	case 0xE2:
+	case 0xE3:
+	  this.romEnabled = false;
+	  break;
 
-      case 0xE8:
-	if( !this.keyboardUsed ) {
-	  this.pio.putInValuePortA( 0, 0xFF );
-	  this.keyboardUsed = true;
-	}
-	rv = this.pio.readPortA();
-	break;
+	case 0xE8:
+	  if( !this.keyboardUsed ) {
+	    this.pio.putInValuePortA( 0, 0xFF );
+	    this.keyboardUsed = true;
+	  }
+	  rv = this.pio.readPortA();
+	  break;
 
-      case 0xE9:
-	int v = 0xFC;
-	if( this.emuThread.readAudioPhase() ) {
-	  v |= 0x02;
-	}
-	if( this.breakPressed ) {
-	  v &= 0xDF;
-	}
-	this.pio.putInValuePortB( v, 0x22 );
-	rv = this.pio.readPortB();
-	break;
+	case 0xE9:
+	  this.pio.putInValuePortB(
+			  this.emuThread.readAudioPhase() ? 0xFE : 0xFC,
+			  0x22 );
+	  rv = this.pio.readPortB();
+	  break;
 
-      case 0xEA:
-	rv = this.pio.readControlA();
-	break;
+	case 0xEA:
+	  rv = this.pio.readControlA();
+	  break;
 
-      case 0xEB:
-	rv = this.pio.readControlB();
-	break;
+	case 0xEB:
+	  rv = this.pio.readControlB();
+	  break;
 
-      case 0xF8:
-      case 0xF9:
-      case 0xFA:
-      case 0xFB:
-	rv = this.ctc.read( port & 0x03 );
-	break;
+	case 0xF8:
+	case 0xF9:
+	case 0xFA:
+	case 0xFB:
+	  rv = this.ctc.read( port & 0x03 );
+	  break;
+      }
     }
     return rv;
   }
@@ -429,11 +524,24 @@ public class LLC2 extends EmuSys implements Z80CTCListener
       this.pio.reset( false );
     }
     this.romEnabled         = true;
+    this.romdiskEnabled     = false;
+    this.romdiskA15         = false;
+    this.prgXEnabled        = false;
+    this.gsbasicEnabled     = false;
+    this.inverseMode        = false;
     this.loudspeakerEnabled = false;
     this.loudspeakerPhase   = false;
     this.audioOutPhase      = false;
     this.keyboardUsed       = false;
-    this.breakPressed       = false;
+    this.hiRes              = false;
+    this.rf32KActive        = false;
+    this.rf32NegA15         = false;
+    this.rfReadEnabled      = false;
+    this.rfWriteEnabled     = false;
+    this.rfAddr16to19       = 0;
+    this.fontOffset         = 0;
+    this.videoPixelAddr     = 0xC000;
+    this.videoTextAddr      = 0xC000;
   }
 
 
@@ -458,25 +566,76 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   {
     addr &= 0xFFFF;
 
-    boolean rv = false;
-    if( !this.romEnabled || (addr >= 0xC000) ) {
-      boolean done = false;
-      if( (addr >= 0x4000) && (addr < 0x6000)
-	  && this.gsbasicEnabled && (gsbasic != null) )
-      {
-	if( (addr - 0x4000) < gsbasic.length ) {
-	  done = true;
+    boolean rv   = false;
+    boolean done = false;
+    if( this.rfWriteEnabled ) {
+      if( this.ramExtended != null ) {
+	int idx = this.rfAddr16to19 | addr;
+	if( idx < this.ramExtended.length ) {
+	  this.ramExtended[ idx ] = (byte) value;
+	  rv = true;
 	}
       }
-      if( !done ) {
-	this.emuThread.setRAMByte( addr, value );
-	if( (addr >= 0xC000) || (addr < 0xC800) ) {
+      done = true;
+    }
+    if( !done && this.rf32KActive && (addr >= 0x4000) && (addr < 0xC000) ) {
+      if( this.ramExtended != null ) {
+	int idx = this.rfAddr16to19 | addr;
+	if( this.rf32NegA15 ) {
+	  if( (idx & 0x8000) != 0 ) {
+	    idx &= 0xF7FFF;
+	  } else {
+	    idx |= 0x8000;
+	  }
+	}
+	if( idx < this.ramExtended.length ) {
+	  this.ramExtended[ idx ] = (byte) value;
+	  rv = true;
+	}
+      }
+      done = true;
+    }
+    if( !done && this.gsbasicEnabled
+          && (addr >= 0x4000) && (addr < 0x6000) )
+    {
+      done = true;
+    }
+    if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
+      done = true;
+    }
+    if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
+      done = true;
+    }
+    if( !done && (!this.romEnabled || (addr >= 0xC000)) ) {
+      this.emuThread.setRAMByte( addr, value );
+      if( this.hiRes ) {
+	if( (addr >= this.videoPixelAddr)
+	    && (addr < (this.videoPixelAddr + 0x4000)) )
+	{
 	  this.screenFrm.setScreenDirty( true );
 	}
-	rv = true;
+      } else {
+	if( (addr >= this.videoTextAddr)
+	    && (addr < (this.videoTextAddr + 0x0800)) )
+	{
+	  this.screenFrm.setScreenDirty( true );
+	}
       }
+      rv = true;
     }
     return rv;
+  }
+
+
+  public boolean supportsRAMFloppy1()
+  {
+    return true;
+  }
+
+
+  public boolean supportsRAMFloppy2()
+  {
+    return true;
   }
 
 
@@ -501,51 +660,120 @@ public class LLC2 extends EmuSys implements Z80CTCListener
 
   public void writeIOByte( int port, int value )
   {
-    switch( port & 0xFF ) {
-      case 0xE0:
-      case 0xE1:
-      case 0xE2:
-      case 0xE3:
-	this.romEnabled = false;
-	break;
+    if( (port & 0xF8) == 0xD0 ) {
+      this.emuThread.getRAMFloppy1().writeByte( port & 0x07, value );
+    } else if( (port & 0xF8) == 0xB0 ) {
+      this.emuThread.getRAMFloppy2().writeByte( port & 0x07, value );
+    } else {
+      boolean dirty = false;
+      switch( port & 0xFF ) {
+	case 0xE0:
+	case 0xE1:
+	case 0xE2:
+	case 0xE3:
+	  this.romEnabled = false;
+	  break;
 
-      case 0xE8:
-	this.pio.writePortA( value );
-	break;
+	case 0xE8:
+	  this.pio.writePortA( value );
+	  break;
 
-      case 0xE9:
-	this.pio.writePortB( value );
-	{
-	  int     v = this.pio.fetchOutValuePortB( false );
-	  boolean b = ((v & 0x01) != 0);
-	  if( b != this.audioOutPhase ) {
-	    this.audioOutPhase = b;
-	    if( !this.emuThread.isLoudspeakerEmulationEnabled() ) {
-	      this.emuThread.writeAudioPhase( b );
+	case 0xE9:
+	  this.pio.writePortB( value );
+	  {
+	    int     v = this.pio.fetchOutValuePortB( false );
+	    boolean b = ((v & 0x01) != 0);
+	    if( b != this.audioOutPhase ) {
+	      this.audioOutPhase = b;
+	      if( !this.emuThread.isLoudspeakerEmulationEnabled() ) {
+		this.emuThread.writeAudioPhase( b );
+	      }
+	    }
+	    b = ((v & 0x20) != 0);
+	    if( b != this.inverseMode ) {
+	      this.inverseMode = b;
+	      dirty            = true;
+	    }
+	    b = ((v & 0x40) != 0);
+	    if( b != this.inverseMode ) {
+	      this.loudspeakerEnabled = b;
+	      if( this.emuThread.isLoudspeakerEmulationEnabled() ) {
+		this.loudspeakerPhase = !this.loudspeakerPhase;
+		this.emuThread.writeAudioPhase( this.loudspeakerPhase );
+	      }
 	    }
 	  }
-	  this.loudspeakerEnabled = ((v & 0x40) != 0);
-	}
-	break;
+	  break;
 
-      case 0xEA:
-	this.pio.writeControlA( value );
-	break;
+	case 0xEA:
+	  this.pio.writeControlA( value );
+	  break;
 
-      case 0xEB:
-	this.pio.writeControlB( value );
-	break;
+	case 0xEB:
+	  this.pio.writeControlB( value );
+	  break;
 
-      case 0xEC:
-	this.gsbasicEnabled = ((value & 0x02) != 0);
-	break;
+	case 0xEC:
+	  this.prgXEnabled    = ((value & 0x01) != 0);
+	  this.gsbasicEnabled = ((value & 0x02) != 0);
+	  this.romdiskEnabled = ((value & 0x08) != 0);
+	  this.romdiskA15     = ((value & 0x20) != 0);
+	  if( (value & 0x04) != 0 ) {
+	    this.romEnabled = false;
+	  }
+	  break;
 
-      case 0xF8:
-      case 0xF9:
-      case 0xFA:
-      case 0xFB:
-	this.ctc.write( port & 0x03, value );
-	break;
+	case 0xED:
+	  this.rfAddr16to19   = (value << 16) & 0xF0000;
+	  this.rf32NegA15     = ((value & 0x10) != 0);
+	  this.rf32KActive    = ((value & 0x20) != 0);
+	  this.rfReadEnabled  = ((value & 0x40) != 0);
+	  this.rfWriteEnabled = ((value & 0x80) != 0);
+	  break;
+
+	case 0xEE:
+	  {
+	    int vAddr = ((value & 0x44) == 0x04 ? 0xF800 : 0xC000);
+	    if( vAddr != this.videoTextAddr ) {
+	      this.videoTextAddr = vAddr;
+	      dirty              = true;
+	    }
+	    switch( value & 0x30 ) {
+	      case 0:
+		vAddr = 0xC000;
+		break;
+	      case 0x10:
+		vAddr = 0x8000;
+		break;
+	      case 0x20:
+		vAddr = 0x4000;
+		break;
+	      case 030:
+		vAddr = 0x0000;
+		break;
+	    }
+	    if( vAddr != videoPixelAddr ) {
+	      this.videoPixelAddr = vAddr;
+	      dirty               = true;
+	    }
+	    boolean hiRes = ((value & 0x40) != 0);
+	    if( hiRes != this.hiRes ) {
+	      this.hiRes = hiRes;
+	      dirty      = true;
+	    }
+	  }
+	  break;
+
+	case 0xF8:
+	case 0xF9:
+	case 0xFA:
+	case 0xFB:
+	  this.ctc.write( port & 0x03, value );
+	  break;
+      }
+      if( dirty ) {
+	this.screenFrm.setScreenDirty( true );
+      }
     }
   }
 }

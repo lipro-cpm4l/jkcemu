@@ -77,13 +77,13 @@ public class SourceUtil
     String rv      = null;
     int    endAddr = addr + memory.getMemWord( addr ) - 1;
     if( endAddr >= 6 ) {
-      if( (memory.getMemByte( endAddr  ) == 0xFF)
-	  && (memory.getMemByte( endAddr - 1 ) == 0) )
+      if( (memory.getMemByte( endAddr, false  ) == 0xFF)
+	  && (memory.getMemByte( endAddr - 1, false ) == 0) )
       {
 	StringBuilder buf = new StringBuilder( 0x4000 );
 	addr += 7;
 	while( addr < endAddr ) {
-	  int b = memory.getMemByte( addr++ );
+	  int b = memory.getMemByte( addr++, false );
 	  if( b == 0xFF ) {
 	    break;
 	  }
@@ -113,7 +113,7 @@ public class SourceUtil
     int curLineAddr  = begAddr;
     int nextLineAddr = memory.getMemWord( curLineAddr );
     while( (nextLineAddr > curLineAddr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1 ) == 0) )
+	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
     {
       curLineAddr  = nextLineAddr;
       nextLineAddr = memory.getMemWord( curLineAddr );
@@ -140,7 +140,7 @@ public class SourceUtil
 
     int nextLineAddr = memory.getMemWord( addr );
     while( (nextLineAddr > addr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1 ) == 0) )
+	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
     {
       // Zeilennummer
       addr += 2;
@@ -151,7 +151,7 @@ public class SourceUtil
       boolean sep = true;
       int     n   = 0;
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr );
+	int ch = memory.getMemByte( addr, false );
 	if( ch == '\u0020' ) {
 	  n++;
 	  addr++;
@@ -168,7 +168,7 @@ public class SourceUtil
 
       // Programmzeile extrahieren
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr++ );
+	int ch = memory.getMemByte( addr++, false );
 	if( ch == 0 ) {
 	  break;
 	}
@@ -178,7 +178,7 @@ public class SourceUtil
 	  }
 	  buf.append( (char) ch );
 	  while( addr < nextLineAddr ) {
-	    ch = memory.getMemByte( addr++ );
+	    ch = memory.getMemByte( addr++, false );
 	    if( ch == 0 ) {
 	      break;
 	    }
@@ -253,7 +253,7 @@ public class SourceUtil
 	// Anzahl Leerzeichen vor der Anweisung ermitteln
 	int n = 0;
 	while( addr < endAddr ) {
-	  int ch = memory.getMemByte( addr );
+	  int ch = memory.getMemByte( addr, false );
 	  if( ch == '\u0020' ) {
 	    n++;
 	    addr++;
@@ -268,7 +268,7 @@ public class SourceUtil
 
 	// Zeile ausgeben
 	while( addr < endAddr ) {
-	  int ch = memory.getMemByte( addr++ );
+	  int ch = memory.getMemByte( addr++, false );
 	  if( ch == '\r' ) {
 	    break;
 	  }
