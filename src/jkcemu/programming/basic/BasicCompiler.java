@@ -23,8 +23,8 @@ import jkcemu.system.*;
 
 public class BasicCompiler extends PrgThread
 {
-  private enum Platform {
-			AC1_LLC2, HC900, HUEBLERMC, KRAMERMC,
+  public enum Platform {
+			AC1_LLC2, CPM, HUEBLERMC, KC85, KRAMERMC,
 			Z1013, Z9001, UNKNOWN };
 
   private enum LibItem { INLN, R_INT, P_HEXA, P_INT, P_LTXT, P_TEXT, P_TAB,
@@ -37,8 +37,8 @@ public class BasicCompiler extends PrgThread
 			H_CP, H_DIV, H_NEXT, CKSTCK, JP_HL,
 			INCHR, INKEY, CKBRK, ARYADR,
 			E_ARG, E_ARIT, E_BRK, E_NXWF, E_REWG,
-			OUTNL, M_RND, M_LEN, M_WINT, M_ARY, M_TOP,
-			XOUTCH, XINCH, XINKEY, XCKBRK };
+			OUTNL, M_RND, M_KBCH, M_LEN, M_WINT, M_ARY, M_TOP,
+			XOUTCH, XINCH, XINKEY, XINSTS };
 
   private static final int MAX_VALUE   = 32767;
   private static final int MIN_VALUE   = -32768;
@@ -90,29 +90,7 @@ public class BasicCompiler extends PrgThread
     }
     EmuSys emuSys = emuThread.getEmuSys();
     this.sysTitle = emuSys.getTitle();
-    this.platform = Platform.UNKNOWN;
-    if( (emuSys instanceof AC1)
-	|| (emuSys instanceof LLC2) )
-    {
-      this.platform = Platform.AC1_LLC2;
-    }
-    else if( emuSys instanceof KC85 ) {
-      this.platform = Platform.HC900;
-    }
-    else if( (emuSys instanceof HueblerEvertMC)
-	     || (emuSys instanceof HueblerGraphicsMC) )
-    {
-      this.platform = Platform.HUEBLERMC;
-    }
-    else if( emuSys instanceof KramerMC ) {
-      this.platform = Platform.KRAMERMC;
-    }
-    else if( emuSys instanceof Z1013 ) {
-      this.platform  = Platform.Z1013;
-    }
-    else if( emuSys instanceof Z9001 ) {
-      this.platform = Platform.Z9001;
-    }
+    this.platform = getPlatform( emuSys );
     this.libItems                  = new HashSet<LibItem>();
     this.varLabels                 = new HashSet<String>();
     this.basicLineNums             = new HashSet<Long>();
@@ -180,6 +158,40 @@ public class BasicCompiler extends PrgThread
   }
 
 
+  public static Platform getPlatform( EmuSys emuSys )
+  {
+    Platform platform = Platform.UNKNOWN;
+    if( emuSys != null ) {
+      if( (emuSys instanceof AC1)
+	  || (emuSys instanceof LLC2) )
+      {
+	platform = Platform.AC1_LLC2;
+      }
+      else if( (emuSys instanceof HueblerEvertMC)
+	       || (emuSys instanceof HueblerGraphicsMC) )
+      {
+	platform = Platform.HUEBLERMC;
+      }
+      else if( emuSys instanceof KC85 ) {
+	platform = Platform.KC85;
+      }
+      else if( emuSys instanceof KramerMC ) {
+	platform = Platform.KRAMERMC;
+      }
+      else if( emuSys instanceof PCM ) {
+	platform  = Platform.CPM;
+      }
+      else if( emuSys instanceof Z1013 ) {
+	platform  = Platform.Z1013;
+      }
+      else if( emuSys instanceof Z9001 ) {
+	platform = Platform.Z9001;
+      }
+    }
+    return platform;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   public void run()
@@ -193,16 +205,51 @@ public class BasicCompiler extends PrgThread
 	if( this.platform == Platform.UNKNOWN ) {
 	  appendToLog(
 		String.format(
-			"Fehler: Das gerade emulierte System (%s)"
-				+ " wird nicht unterst\u00FCtzt.\n",
+			"Fehler: %s wird als Zielsystem"
+					+ " nicht unterst\u00FCtzt.\n",
 			this.sysTitle ) );
 	  incErrorCount();
 	} else {
+	  String text = null;
+	  switch( this.platform ) {
+	    case AC1_LLC2:
+	      text = "AC1, LLC2";
+	      break;
+
+	    case CPM:
+	      text = "CP/M";
+	      break;
+
+	    case HUEBLERMC:
+	      text = "H\u00FCbler-MC";
+	      break;
+
+	    case KC85:
+	      text = "HC900, KC85/2..5";
+	      break;
+
+	    case KRAMERMC:
+	      text = "Kramer-MC";
+	      break;
+
+	    case Z1013:
+	      text = "Z1013";
+	      break;
+
+	    case Z9001:
+	      text = "Z9001, KC85/1, KC87";
+	      break;
+	  }
+	  if( text != null ) {
+	    appendToLog( String.format( "Zielsystem: %s\n", text ) );
+	  }
 	  parseSource();
 	  closePrintString();
 	  if( this.running ) {
-	    putLibrary();
+	    int stackSize = this.basicOptions.getStackSize();
+	    putLibrary( stackSize );
 	    writeInit();
+	    putDefMem( stackSize );
 	    if( (getErrorCount() == 0)
 		&& (this.forceRun
 		    || this.options.getCodeToEmu()
@@ -266,6 +313,55 @@ public class BasicCompiler extends PrgThread
 
 
 	/* --- private Methoden --- */
+
+  private int appendAppName( StringBuilder buf, String preText, int nameLen )
+  {
+    boolean invalidChars = false;
+    int     nChars       = 0;
+    String  appName      = this.basicOptions.getAppName();
+    if( appName != null ) {
+      int len = appName.length();
+      for( int i = 0;
+	   (i < len) && ((nameLen < 0) || (nChars < nameLen));
+	   i++ )
+      {
+	char ch = appName.charAt( i );
+	if( (ch >= '\u0020') && (ch < 0x7F) ) {
+	  if( nChars == 0 ) {
+	    if( preText != null ) {
+	      buf.append( preText );
+	    }
+	    buf.append( "\tDEFM\t\'" );
+	  }
+	  buf.append( ch );
+	  nChars++;
+	} else {
+	  invalidChars = true;
+	}
+      }
+    }
+    int rv = nChars;
+    if( nameLen > 0 ) {
+      if( (nChars == 0) && (nameLen > 0) ) {
+	if( preText != null ) {
+	  buf.append( preText );
+	}
+	buf.append( "\tDEFM\t\'" );
+      }
+      while( nChars < nameLen ) {
+	buf.append( (char) '\u0020');
+	nChars++;
+      }
+    }
+    if( nChars > 0 ) {
+      buf.append( "\'\n" );
+    }
+    if( invalidChars ) {
+      putWarning( "Nicht erlaubte Zeichen aus Programmnamen entfernt" );
+    }
+    return rv;
+  }
+
 
   private void appendToLogLineNotFound( LineInfo lineInfo )
 						throws TooManyErrorsException
@@ -2770,9 +2866,8 @@ public class BasicCompiler extends PrgThread
 
 	/* --- Bibliothek mit den benoetigten Funktionalitaeten --- */
 
-  private void putLibrary()
+  private void putLibrary( int stackSize )
   {
-    int stackSize = this.basicOptions.getStackSize();
     if( this.basicOptions.getShowAsm() ) {
       putCode( "\n;Bibliotheksfunktionen\n" );
     }
@@ -3585,7 +3680,12 @@ public class BasicCompiler extends PrgThread
        * Rueckgabe:
        *   A: Wert des Zeichens oder 0
        */
-      if( this.platform == Platform.Z9001 ) {
+      if( (this.platform == Platform.CPM)
+	  || (this.platform == Platform.HUEBLERMC)
+	  || (this.platform == Platform.KC85)
+	  || (this.platform == Platform.KRAMERMC)
+	  || (this.platform == Platform.Z9001) )
+      {
 	putCode( "INKEY:\tCALL\tXINKEY\n"
 		+ "\tCP\t3\n"
 		+ "\tJR\tZ,E_BRK\n"
@@ -3602,9 +3702,14 @@ public class BasicCompiler extends PrgThread
        * Pruefen auf Abbruch
        * Diese Funktion muss unmittelbar hinter LibItem.INKEY folgen!
        */
-      if( this.platform == Platform.Z9001 ) {
-	putCode( "CKBRK:\tCALL\tXCKBRK\n" );
-	this.libItems.add( LibItem.XCKBRK );
+      if( (this.platform == Platform.CPM)
+	  || (this.platform == Platform.HUEBLERMC)
+	  || (this.platform == Platform.KC85)
+	  || (this.platform == Platform.KRAMERMC)
+	  || (this.platform == Platform.Z9001) )
+      {
+	putCode( "CKBRK:\tCALL\tXINSTS\n" );
+	this.libItems.add( LibItem.XINSTS );
       } else {
 	putCode( "CKBRK:\tCALL\tXINKEY\n" );
 	this.libItems.add( LibItem.XINKEY );
@@ -3749,17 +3854,33 @@ public class BasicCompiler extends PrgThread
     if( this.libItems.contains( LibItem.DATA ) ) {
       /*
        * Leseposition fuer Daten auf den Anfang des Datenbereichs setzen,
-       * Speicherzelle fuer Leseposition anlegen
        */
       putCode( "DINIT:\tLD\tHL,DBEG\n"
 		+ "\tLD\t(M_READ),HL\n"
-		+ "\tRET\n"
-		+ "DBEG:\n" );
+		+ "\tRET\n" );
+    }
+  }
+
+
+  private void putDefMem( int stackSize )
+  {
+    if( this.libItems.contains( LibItem.DATA ) ) {
+      /*
+       * Speicherzelle fuer Leseposition anlegen
+       */
+      putCode( "DBEG:\n" );
       if( this.dataOut != null ) {
 	putCode( this.dataOut );
       }
       putCode( "DEND:\n"
 		+ "M_READ:\tDEFS\t2\n" );
+    }
+    if( this.libItems.contains( LibItem.M_KBCH ) ) {
+      /*
+       * Speicherzelle fuer das Zeichen, welches beim Pruefen
+       * auf Programmabbruch von der Tastatur gelesen wurde
+       */
+      this.asmOut.append( "M_KBCH:\tDEFS\t1\n" );
     }
     if( this.libItems.contains( LibItem.M_LEN ) ) {
       /*
@@ -3774,7 +3895,9 @@ public class BasicCompiler extends PrgThread
       putCode( "M_WINT:\tDEFS\t1\n" );
     }
     if( this.libItems.contains( LibItem.M_RND ) ) {
-      // Speicherzelle fuer den Zufallsgenerator
+      /*
+       * Speicherzelle fuer den Zufallsgenerator
+       */
       putCode( "M_RND:\tDEFS\t2\n" );
     }
     if( this.libItems.contains( LibItem.R_INT ) ) {
@@ -4010,7 +4133,7 @@ public class BasicCompiler extends PrgThread
   private void writeInit()
   {
     if( this.asmOut != null ) {
-      StringBuilder buf = new StringBuilder( 0x400 );
+      StringBuilder buf = new StringBuilder( 0x4000 );
       if( this.basicOptions.getShowAsm() ) {
 	buf.append( ";\n"
 		+ ";Dieser Quelltext wurde vom JKCEMU-BASIC-Compiler"
@@ -4022,69 +4145,28 @@ public class BasicCompiler extends PrgThread
       buf.append( "\tORG\t" );
       buf.append( getHex4( this.basicOptions.getBegAddr() ) );
       buf.append( (char) '\n' );
-      if( this.platform == Platform.HC900 ) {
+      if( this.platform == Platform.KC85 ) {
 	buf.append( "\tDEFB\t7FH,7FH\n" );
-	boolean invalidChars = false;
-	int     nChars       = 0;
-	String  appName      = this.basicOptions.getAppName();
-	if( appName != null ) {
-	  int len = appName.length();
-	  for( int i = 0; i < len; i++ ) {
-	    char ch = appName.charAt( i );
-	    if( (ch >= '\u0020') && (ch < 0x7F) ) {
-	      if( nChars == 0 ) {
-		buf.append( "\tDEFM\t\'" );
-	      }
-	      buf.append( ch );
-	      nChars++;
-	    } else {
-	      invalidChars = true;
-	    }
-	  }
-	}
-	if( invalidChars ) {
-	  putWarning( "Nicht erlaubte Zeichen aus Programmnamen entfernt" );
-	}
-	if( nChars > 0 ) {
-	  buf.append( "\'\n"
-		+ "\tDEFB\t1\n"
-		+ "\tENT\n" );
-	} else {
+	if( appendAppName( buf, null, -1 ) == 0 ) {
 	  putWarning( "Programm kann im Betriebssystem nicht aufgerufen"
-				+ " werden, da der Programmnane leer ist." );
+				+ " werden, da der Programmname leer ist." );
 	}
+	buf.append( "\tDEFB\t1\n"
+		+ "\tENT\n" );
       }
       buf.append( "\tJP\tMSTART\n" );
-      if( this.platform == Platform.Z9001 ) {
-	buf.append( "\tDEFM\t\'" );
-	boolean invalidChars = false;
-	int     nChars       = 0;
-	String  appName      = this.basicOptions.getAppName();
-	if( appName != null ) {
-	  int len = appName.length();
-	  for( int i = 0; (i < len) && (nChars < 8); i++ ) {
-	    char ch = appName.charAt( i );
-	    if( (ch >= '\u0020') && (ch < 0x7F) ) {
-	      buf.append( ch );
-	      nChars++;
-	    } else {
-	      invalidChars = true;
-	    }
-	  }
+      if( this.platform == Platform.HUEBLERMC ) {
+	if( appendAppName( buf, "\tDEFB\t0EDH,0FFH\n", -1 ) > 0 ) {
+	  buf.append( "\tDEFB\t0\n"
+		+ "\tJP\tMSTART\n" );
 	}
-	if( invalidChars ) {
-	  putWarning( "Nicht erlaubte Zeichen aus Programmnamen entfernt" );
-	}
-	if( nChars == 0 ) {
+      }
+      else if( this.platform == Platform.Z9001 ) {
+	if( appendAppName( buf, null, 8 ) == 0 ) {
 	  putWarning( "Programm kann im Betriebssystem nicht aufgerufen"
-				+ " werden, da der Programmnane leer ist." );
+				+ " werden, da der Programmname leer ist." );
 	}
-	while( nChars < 8 ) {
-	  buf.append( (char) '\u0020');
-	  nChars++;
-	}
-	buf.append( "\'\n"
-		+ "\tDEFB\t0\n" );
+	buf.append( "\tDEFB\t0\n" );
       }
       if( this.basicOptions.getShowAsm() ) {
 	buf.append( "\n;Aufruf der Systemfunktionen\n" );
@@ -4095,18 +4177,19 @@ public class BasicCompiler extends PrgThread
 	  buf.append( "\tJP\t07FDH\n" );
 	  break;
 
-	case HC900:
-	  buf.append( "\tRET\n" );
-	  break;
-
 	case HUEBLERMC:
 	  buf.append( "\tJP\t0F01EH\n" );
+	  break;
+
+	case KC85:
+	  buf.append( "\tRET\n" );
 	  break;
 
 	case Z1013:
 	  buf.append( "\tJP\t0038H\n" );
 	  break;
 
+	case CPM:
 	case KRAMERMC:
 	case Z9001:
 	  buf.append( "\tJP\t0000H\n" );
@@ -4122,16 +4205,6 @@ public class BasicCompiler extends PrgThread
 	    buf.append( "\tRST\t10H\n" );
 	    break;
 
-	  case HC900:
-	    buf.append( "\tCP\t0DH\n"
-		+ "\tJR\tNZ,XOUTC1\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDEFB\t24H\n"
-		+ "\tLD\tA,0AH\n"
-		+ "XOUTC1:\tCALL\t0F003H\n"
-		+ "\tDEFB\t24H\n" );
-	    break;
-
 	  case HUEBLERMC:
 	    buf.append( "\tCP\t0DH\n"
 		+ "\tJR\tNZ,XOUTC1\n"
@@ -4140,6 +4213,16 @@ public class BasicCompiler extends PrgThread
 		+ "\tLD\tA,0AH\n"
 		+ "XOUTC1:\tLD\tC,A\n"
 		+ "\tCALL\t0F009H\n" );
+	    break;
+
+	  case KC85:
+	    buf.append( "\tCP\t0DH\n"
+		+ "\tJR\tNZ,XOUTC1\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tDEFB\t24H\n"
+		+ "\tLD\tA,0AH\n"
+		+ "XOUTC1:\tCALL\t0F003H\n"
+		+ "\tDEFB\t24H\n" );
 	    break;
 
 	  case KRAMERMC:
@@ -4157,14 +4240,17 @@ public class BasicCompiler extends PrgThread
 		+ "\tDEFB\t0\n" );
 	    break;
 
+	  case CPM:
 	  case Z9001:
 	    buf.append( "\tLD\tC,2\n"
 		+ "\tLD\tE,A\n"
 		+ "\tCP\t0DH\n"
 		+ "\tJR\tNZ,XOUTC1\n"
 		+ "\tCALL\t0005H\n"
+		+ "\tLD\tC,2\n"
 		+ "\tLD\tE,0AH\n"
 		+ "XOUTC1:\tCALL\t0005H\n" );
+	    break;
 	}
 	buf.append( "\tPOP\tHL\n"
 		+ "\tPOP\tDE\n"
@@ -4178,14 +4264,22 @@ public class BasicCompiler extends PrgThread
 	    buf.append( "XINCH:\tJP\t0008H\n" );
 	    break;
 
-	  case HC900:
-	    buf.append( "XINCH:\tCALL\t0F003H\n"
-		+ "\tDEFB\t16h\n"
+	  case CPM:
+	    buf.append( "XINCH:\tCALL\tXINKEY\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,XINCH\n"
 		+ "\tRET\n" );
+	    this.libItems.add( LibItem.XINKEY );
 	    break;
 
 	  case HUEBLERMC:
 	    buf.append( "XINCH:\tJP\t0F003H\n" );
+	    break;
+
+	  case KC85:
+	    buf.append( "XINCH:\tCALL\t0F003H\n"
+		+ "\tDEFB\t16h\n"
+		+ "\tRET\n" );
 	    break;
 
 	  case KRAMERMC:
@@ -4199,13 +4293,65 @@ public class BasicCompiler extends PrgThread
 	    break;
 
 	  case Z9001:
-	    buf.append( "XINCH:\tPUSH\tBC\n"
-		+ "\tLD\tC,1\n"
+	    buf.append( "XINCH:\tLD\tC,1\n"
 		+ "\tCALL\t0005H\n"
-		+ "\tJR\tNC,XINCH1\n"
-		+ "\tXOR\tA\n"
-		+ "XINCH1:\tPOP\tBC\n"
+		+ "\tJR\tC,XINCH\n"
 		+ "\tRET\n" );
+	    break;
+	}
+      }
+      if( this.libItems.contains( LibItem.XINSTS ) ) {
+	switch( this.platform ) {
+	  case CPM:
+	    buf.append( "XINSTS:\tLD\tC,6\n"
+		+ "\tLD\tE,0FFH\n"
+		+ "\tCALL\t0005H\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tLD\t(M_KBCH),A\n"
+		+ "\tRET\n" );
+	    this.libItems.add( LibItem.M_KBCH );
+	    break;
+
+	  case HUEBLERMC:
+	    buf.append( "XINSTS:\tCALL\t0F012H\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tLD\t(M_KBCH),A\n"
+		+ "\tRET\n" );
+	    this.libItems.add( LibItem.M_KBCH );
+	    break;
+
+	  case KRAMERMC:
+	    buf.append( "XINSTS:\tCALL\t00EFH\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tCALL\t00E0H\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tLD\t(M_KBCH),A\n"
+		+ "\tRET\n" );
+	    this.libItems.add( LibItem.M_KBCH );
+	    break;
+
+	  case KC85:
+	    buf.append( "XINSTS:\tCALL\t0F003H\n"
+		+ "\tDB\t0CH\n"
+		+ "\tRET\tC\n"
+		+ "\tXOR\tA\n"
+		+ "\tRET\n" );
+	    break;
+
+	  case Z9001:
+	    buf.append( "XINSTS:\tLD\tC,11\n"
+		+ "\tCALL\t0005H\n"
+		+ "\tRET\tC\n"
+		+ "\tXOR\tA\n"
+		+ "\tRET\n" );
+	    break;
 	}
       }
       if( this.libItems.contains( LibItem.XINKEY ) ) {
@@ -4216,27 +4362,69 @@ public class BasicCompiler extends PrgThread
 		+ "\tRET\n" );
 	    break;
 
-	  case HC900:
-	    buf.append( "XINKEY:\tCALL\t0F003H\n"
-		+ "\tDB\t0CH\n"
-		+ "\tJR\tC,XINKE1\n"
+	  case CPM:
+	    if( this.libItems.contains( LibItem.M_KBCH ) ) {
+	      buf.append( "XINKEY:\tLD\tA,(M_KBCH)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,XINKE1\n"
+		+ "\tPUSH\tAF\n"
 		+ "\tXOR\tA\n"
-		+ "\tJR\tXINKE2\n"
-		+ "XINKE1:\tCALL\t0F003H\n"
-		+ "\tDB\t0EH\n"
-		+ "XINKE2:\tRET\n" );
+		+ "\tLD\t(M_KBCH),A\n"
+		+ "\tPOP\tAF\n"
+		+ "\tRET\n"
+		+ "XINKE1:\tLD\tC,6\n" );
+	    } else {
+	      buf.append( "XINKEY:\tLD\tC,6\n" );
+	    }
+	    buf.append( "\tLD\tE,0FFH\n"
+		+ "\tJP\t0005H\n" );
 	    break;
 
 	  case HUEBLERMC:
-	    buf.append( "XINKEY:\tCALL\t0F012H\n"
+	    if( this.libItems.contains( LibItem.M_KBCH ) ) {
+	      buf.append( "XINKEY:\tLD\tA,(M_KBCH)\n"
 		+ "\tOR\tA\n"
+		+ "\tJR\tZ,XINKE1\n"
+		+ "\tPUSH\tAF\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\t(M_KBCH),A\n"
+		+ "\tPOP\tAF\n"
+		+ "\tRET\n"
+		+ "XINKE1:\tCALL\t0F012H\n" );
+	    } else {
+	      buf.append( "XINKEY:\tCALL\t0F012H\n" );
+	    }
+	    buf.append( "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tJP\t0F003H\n" );
 	    break;
 
+	  case KC85:
+	    buf.append( "XINKEY:\tCALL\t0F003H\n"
+		+ "\tDB\t0CH\n"
+		+ "\tJR\tC,XINKE1\n"
+		+ "\tXOR\tA\n"
+		+ "\tRET\n"
+		+ "XINKE1:\tCALL\t0F003H\n"
+		+ "\tDB\t0EH\n"
+		+ "\tRET\n" );
+	    break;
+
 	  case KRAMERMC:
-	    buf.append( "XINKEY:\tCALL\t00EFH\n"
+	    if( this.libItems.contains( LibItem.M_KBCH ) ) {
+	      buf.append( "XINKEY:\tLD\tA,(M_KBCH)\n"
 		+ "\tOR\tA\n"
+		+ "\tJR\tZ,XINKE1\n"
+		+ "\tPUSH\tAF\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\t(M_KBCH),A\n"
+		+ "\tPOP\tAF\n"
+		+ "\tRET\n"
+		+ "XINKE1:\tCALL\t00EFH\n" );
+	    } else {
+	      buf.append( "XINKEY:\tCALL\t00EFH\n" );
+	    }
+	    buf.append( "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tJP\t00E0H\n" );
 	    break;
@@ -4250,29 +4438,17 @@ public class BasicCompiler extends PrgThread
 	    break;
 
 	  case Z9001:
-	    buf.append( "XINKEY:\tPUSH\tBC\n"
-		+ "\tLD\tC,11\n"
+	    buf.append( "XINKEY:\tLD\tC,11\n"
 		+ "\tCALL\t0005H\n"
 		+ "\tJR\tC,XINKE1\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINKE2\n"
+		+ "\tRET\tZ\n"
 		+ "\tLD\tC,1\n"
 		+ "\tCALL\t0005H\n"
-		+ "\tJR\tNC,XINKE2\n"
+		+ "\tRET\tNC\n"
 		+ "XINKE1:\tXOR\tA\n"
-		+ "XINKE2:\tPOP\tBC\n"
 		+ "\tRET\n" );
-	}
-      }
-      if( this.libItems.contains( LibItem.XCKBRK ) ) {
-	if( this.platform == Platform.Z9001 ) {
-	  buf.append( "XCKBRK:\tPUSH\tBC\n"
-		+ "\tLD\tC,11\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tJR\tNC,XBRK1\n"
-		+ "\tXOR\tA\n"
-		+ "XBRK1:\tPOP\tBC\n"
-		+ "\tRET\n" );
+	    break;
 	}
       }
       if( this.basicOptions.getShowAsm() ) {
@@ -4284,6 +4460,10 @@ public class BasicCompiler extends PrgThread
 	this.libItems.add( LibItem.M_TOP );
       }
       buf.append( '\n' );
+      if( this.libItems.contains( LibItem.M_KBCH ) ) {
+	buf.append( "\tXOR\tA\n"
+		+ "\tLD\t(M_KBCH),A\n" );
+      }
       if( this.libItems.contains( LibItem.DATA ) ) {
 	buf.append( "\tCALL\tDINIT\n" );
       }

@@ -26,8 +26,11 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   rom/kc85/*.bin \
   rom/kramermc/*.bin \
   rom/lc80/*.bin \
+  rom/llc1/*.bin \
   rom/llc2/*.bin \
+  rom/pcm/*.bin \
   rom/poly880/*.bin \
+  rom/sc2/*.bin \
   rom/vcs80/*.bin \
   rom/z1013/*.bin \
   rom/z9001/*.bin \

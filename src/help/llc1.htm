@@ -1,0 +1,211 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des LLC1</h1>
+    Der LLC1 ist ein von Dr. Gerd Maudrich 1985 vorgestellter
+    Selbstbau-Lerncomputer, dessen Bauanleitung auch vertrieben wurde.
+  <br/><br/>
+    Etwas eigenwillig ist das Konzept dieses Computers.
+    Auf der einen Seite besitzt er eine 7-Segment-Anzeige
+    und eine Hexadezimaltastatur.
+    Auf der anderen Seite aber enth&auml;lt schon die Originalbauanleitung
+    ein Modul f&uuml;r die Bildschirmausgabe auf einem Monitor bzw. Fernseher.
+    Die dazugeh&ouml;rige Alpha-Tastatur konnte als Bauanleitung
+    ebenfalls erworben werden.
+    Das Monitorprogramm bedient man mit der Hexadezimaltastatur,
+    den ebenfalls im ROM enthaltenen Tiny-BASIC-Interpreter
+    aber mit der Alpha-Tastatur.
+  <br/><br/>
+    JKCEMU emuliert beide Tastaturen und schaltet dabei auch automatisch
+    zwischen beiden um,
+    d.h. Sie als Anwender bedienen beide LLC1-Tastaturen &uuml;ber
+    die eine Tastatur des Emulatorrechners.
+  <br/><br/>
+
+  <h2>1. Emulierte Hardware</h2>
+    <ul>
+      <li>5 KByte ROM im Adressbereich 0000-13FF</li>
+      <li>2 KByte RAM im Adressbereich 1400-1BFF</li>
+      <li>1 KByte Bildwiederholspeicher im Adressbereich 1C00-1FFF</li>
+      <li>8-stellige 7-Segment-Anzeige</li>
+      <li>Hexadezimaltastatur</li>
+      <li>Alpha-Tastatur</li>
+    </ul>
+  <br/>
+    Die Hexadezimaltastatur l&ouml;st beim Bet&auml;tigen einer Taste
+    einen Interrupt aus.
+    Wenn nun aber nur mit der Alpha-Tastatur gearbeitet wird,
+    soll die Hexadezimaltastatur nat&uuml;rlich keine Interrupts
+    ausl&ouml;sen.
+    Dies wird durch eine automatische Umschaltung zwischen den beiden
+    Tastaturen erreicht, die nach folgendem Prinzip arbeitet:
+    Ab dem Zeitpunkt, wenn das Anwendungsprogramm
+    das Eingabetor f&uuml;r die Alpha-Tastatur liest,
+    ist die Hexadezimaltastatur f&uuml;r eine Sekunde lang gesperrt.
+    Die Hexadezimaltastatur ist somit nur aktiv,
+    wenn die im Emulator laufende Software die Alpha-Tastatur
+    gerade nicht verwendet.
+  <br/><br/>
+
+  <h3>1.1. Hexadezimaltastatur</h3>
+    Die Tabelle zeigt, wie die Tasten der LLC1-Hexadezimaltastatur
+    auf der Tastatur des Emulatorrechners abgebildet werden:
+    <br/>
+    <table border="1">
+      <tr>
+	<th>LLC1-Taste</th>
+	<th>Taste im Emulator</th>
+	<th>Bedeutung</th>
+      </tr>
+      <tr>
+	<td valign="top">EIN</td>
+	<td valign="top">M</td>
+	<td>
+	  &quot;Eingabe&quot;: Speicherzellen anzeigen/&auml;ndern
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">REG</td>
+	<td valign="top">R</td>
+	<td>&quot;Register&quot; anzeigen/&auml;ndern</td>
+      </tr>
+      <tr>
+	<td>ES</td>
+	<td>S</td>
+	<td>&quot;Einzelschrittbetrieb&quot;</td>
+      </tr>
+      <tr>
+	<td valign="top">DL</td>
+	<td valign="top">G oder J</td>
+	<td>
+	  &quot;Durchlauf&quot;: Programm starten
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">HP</td>
+	<td valign="top">H</td>
+	<td>&quot;Haltepunkt&quot; eingeben</td>
+      </tr>
+      <tr>
+	<td valign="top">ST</td>
+	<td valign="top">X oder Enter</td>
+	<td>&quot;Start&quot;: Eingabe abschlie&szlig;en</td>
+      </tr>
+      <tr><td>0...9</td><td>0...9</td><td>Adress-/Dateneingabe</td></tr>
+      <tr>
+	<td valign="top">A...F</td>
+	<td valign="top">A...F oder a...f</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+    </table>
+  <br/>
+
+
+  <h2>2. Im ROM enthaltene Software</h2>
+    <ul>
+      <li>Originales Monitorprprogramm</li>
+      <li>LLC1-BASIC V1.2</li>
+    </ul>
+  <br/><br/>
+
+  <h3>2.1. Hinweise zur Bedienung des Monitorprogramms</h3>
+    Durch Dr&uuml;cken einer der Tasten <em>EIN&nbsp;(M)</em>,
+    <em>REG&nbsp;(R)</em>, <em>ES&nbsp;(S)</em>, <em>HP&nbsp;(H)</em>
+    und <em>DL&nbsp;(G)</em> gelangen Sie in eine der f&uuml;nf Betriebsarten.
+    Das gilt auch, wenn Sie sich bereits in einer anderen Betriebsart befinden.
+    Sie k&ouml;nnen somit zwischen den Betriebsarten
+    jederzeit beliebig wechseln.
+  <br/><br/>
+
+  <h3>2.1.1. EIN: Eingabe (Speicherzellen anzeigen/&auml;ndern)</h3>
+    <em>EIN&nbsp;(M)</em> &rarr; &lt;Adresse&gt; [ &rarr; &lt;Wert&gt; ]
+    &rarr; <em>ST&nbsp;(Enter)</em>
+  <br/><br/>
+    <b>Achtung!</b> Mit jedem Dr&uuml;cken der <em>ST</em>-Taste&nbsp;(Enter)
+    wird die Adresse um eins erh&ouml;ht.
+    Zum Ver&auml;ndern des Wertes auf der ersten Adresse
+    m&uuml;ssen Sie den zweistelligen Wert direkt nach
+    der vierstelligen Adresse eintippen und erst dann <em>ST</em>&nbsp;(Enter)
+    dr&uuml;cken.
+  <br/><br/>
+
+  <h3>2.1.2. REG: Register anzeigen/&auml;ndern</h3>
+    <em>REG&nbsp;(R)</em> &rarr; <em>ST&nbsp;(Enter)</em>
+    &rarr; <em>ST&nbsp;(Enter)</em> &rarr; ...
+  <br/><br/>
+    Mit jedem Dr&uuml;cken auf <em>ST&nbsp;(Enter)</em> wird das n&auml;chste
+    Doppelregister angezeigt,
+    und zwar in der Reihenfolge:
+    <em>SP</em>, <em>PC</em>, <em>IY</em>, <em>IX</em>, <em>HL</em>,
+    <em>DE</em>, <em>BC</em>, <em>AF</em>, <em>HL'</em>, <em>DE'</em>,
+    <em>BC'</em> und <em>AF'</em>.
+  <br/><br/>
+    Zum Ver&auml;ndern des Registerinhalts geben Sie den neuen Wert ein
+    und Dr&uuml;cken dann <em>ST&nbsp;(Enter)</em>.
+  <br/><br/>
+
+  <h3>2.1.3. ES: Einzelschritt</h3>
+    <em>ES&nbsp;(S)</em> &rarr; &lt;Adresse&gt;
+    &rarr; <em>ST&nbsp;(Enter)</em> &rarr; ...
+  <br/><br/>
+    Das Monitorprogramm l&auml;dt die Register und f&uuml;hrt
+    anschlie&szlig;end den Befehl an der angegebenen Adresse aus.
+    Danach wird wieder angehalten, und die Registerinhalte werden gerettet.
+  <br/><br/>
+
+  <h3>2.1.4. HP: Haltepunkt setzen</h3>
+    <em>HP&nbsp;(H)</em> &rarr; &lt;Adresse&gt;
+    &rarr; <em>ST&nbsp;(Enter)</em> &rarr; ...
+  <br/><br/>
+    Auf die angegebene Adresse wird eine Haltepunkt gesetzt,
+    sodass ein mit der Betriebsart <em>DL</em> gestartetes Programm
+    dort anh&auml;lt.
+    Die Registerinhalte werden gerettet und k&ouml;nnen mit der
+    Betriebsart <em>REG</em> angesehen und ver&auml;ndert werden.
+  <br/><br/>
+    Der Haltepunkt wird mit Hilfe eines Restart-Befehls realisiert,
+    der auf die angegebene Adresse geschrieben wird.
+    Aus diesem Grund kann der Haltepunkt nur im RAM
+    und nur auf das erste Byte eines CPU-Befehls gesetzt werden.
+  <br/><br/>
+
+  <h3>2.1.5. DL: Durchlauf (Programm starten)</h3>
+    <em>DL&nbsp;(G)</em> &rarr; &lt;Adresse&gt;
+    &rarr; <em>ST&nbsp;(Enter)</em> &rarr; ...
+  <br/><br/>
+    Die Betriebsart <em>Durchlauf</em> startet ein Programm.
+    Vom Namen her ist gemeint, ein Programm <em>durchlaufen</em> zu lassen.
+  <br/><br/>
+
+
+  <h2>3. BASIC</h2>
+    Im ROM ist ein Tiny-BASIC-Interpreter enthalten,
+    den Sie auf den Adressen 0800 (Kaltstart) und 0803 (Warmstart)
+    starten k&ouml;nnen.
+    Geben Sie f&uuml;r das erstmalige Starten somit ein:
+  <br/>
+    <em>G&nbsp;0&nbsp;8&nbsp;0&nbsp;0&nbsp;Enter</em>
+  <br/><br/>
+
+  <h3>3.1. Speichern von BASIC-Programmen</h3>
+    JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das Speichern
+    und Laden von LLC1-Tiny-BASIC-Programmen.
+    Zum Speichern nutzen Sie bitte die Funktion im Men&uuml;
+    <em>Datei</em> &rarr; <em>Mini-/Tiny-BASIC-Programm</em> &rarr;
+    <em>Speichern...</em>
+    und speichern das Programm als
+    <a href="fileformats.htm#headersave">Headersave</a>-Datei
+    mit dem Dateityp <tt>b</tt>.
+  <br/><br/>
+
+  <h3>3.2. Laden von BASIC-Programmen</h3>
+    Laden Sie zuerst das Tiny-BASIC-Programm und
+    starten Sie danach den BASIC-Interpreter mit einem Warmstart.
+  <br/><br/>
+
+  <h3>3.3. Anzeige eines im Arbeitsspeichers befindlichen BASIC-Programms</h3>
+    Verwenden Sie daf&uuml;r bitte den Men&uuml;punkt
+    <em>Datei</em> &rarr; <em>Mini-/Tiny-BASIC-Programm</em> &rarr;
+    <em>Im&nbsp;Texteditor&nbsp;&ouml;ffnen...</em>.
+</body>
+</html>
+

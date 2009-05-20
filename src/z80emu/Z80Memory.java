@@ -20,7 +20,7 @@ public interface Z80Memory extends Z80MemView
    * d.h., wenn ein Speicherzugriff zu WAIT-States fuehrt,
    * muessen diese mit emuliert werden.
    */
-  public int  readMemByte( int addr );
+  public int  readMemByte( int addr, boolean m1 );
   public void writeMemByte( int addr, int value );
 }
 

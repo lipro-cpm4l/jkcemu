@@ -62,7 +62,7 @@ public class AC1LLC2Util
   {
     int    rv  = 0;
     int    bol = buf.length();
-    int    b   = memory.getMemByte( addr );
+    int    b   = memory.getMemByte( addr, true );
     int    w   = 0;
     String s   = null;
     switch( b ) {

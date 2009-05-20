@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -277,9 +277,15 @@ public class Main
   }
 
 
+  public static ScreenFrm getScreenFrm()
+  {
+    return screenFrm;
+  }
+
+
   public static String getVersion()
   {
-    return "JKCEMU Version 0.5";
+    return "JKCEMU Version 0.6";
   }
 
 

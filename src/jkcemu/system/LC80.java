@@ -21,12 +21,6 @@ public class LC80 extends EmuSys implements
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
-  private static final int[][] kbMatrix = {
-				{ 0,   '3', '7', 'B', 'F', '-' },
-				{ 'L', '2', '+', 'E', 'A', '6' },
-				{ 'S', '1', '5', '9', 'D', 0   },
-				{ 'X', '0', '4', '8', 'C', 0   } };
-
   private static byte[] lc80_u505  = null;
   private static byte[] lc80_2716  = null;
   private static byte[] lc80_2     = null;
@@ -51,16 +45,11 @@ public class LC80 extends EmuSys implements
   private Z80PIO           pio1;
   private Z80PIO           pio2;
   private String           sysName;
-  private Color            redLight;
-  private Color            redDark;
-  private Color            greenLight;
-  private Color            greenDark;
 
 
   public LC80( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    createColors( props );
     this.sysName = EmuUtil.getProperty( props, "jkcemu.system" );
     if( this.sysName.equals( "LC80_U505" ) ) {
       if( lc80_u505 == null ) {
@@ -191,13 +180,6 @@ public class LC80 extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
-  public void applySettings( Properties props )
-  {
-    super.applySettings( props );
-    createColors( props );
-  }
-
-
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
@@ -219,19 +201,19 @@ public class LC80 extends EmuSys implements
     Color color = Color.black;
     switch( colorIdx ) {
       case 1:
-	color = this.greenDark;
+	color = this.colorGreenDark;
 	break;
 
       case 2:
-	color = this.greenLight;
+	color = this.colorGreenLight;
 	break;
 
       case 3:
-	color = this.redDark;
+	color = this.colorRedDark;
 	break;
 
       case 4:
-	color = this.redLight;
+	color = this.colorRedLight;
 	break;
     }
     return color;
@@ -250,7 +232,7 @@ public class LC80 extends EmuSys implements
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     if( this.romC000 != null ) {
       addr &= 0xFFFF;
@@ -309,6 +291,11 @@ public class LC80 extends EmuSys implements
   }
 
 
+  /*
+   * Neben den Funktionstasten werden hier auch die Zifferntasten
+   * sowie die Tasten "+" und "-" getestet, damit diese auch
+   * bei gedrueckter Feststelltaste (Caps Lock) funktionieren.
+   */
   public boolean keyPressed( int keyCode, boolean shiftDown )
   {
     boolean rv = false;
@@ -338,6 +325,66 @@ public class LC80 extends EmuSys implements
 	  this.kbMatrixValues[ 0 ] = 0x80;		// EX
 	  rv = true;
 	  break;
+
+	case KeyEvent.VK_0:
+	  this.kbMatrixValues[ 1 ] = 0x80;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_1:
+	  this.kbMatrixValues[ 1 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_2:
+	  this.kbMatrixValues[ 1 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_3:
+	  this.kbMatrixValues[ 1 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_4:
+	  this.kbMatrixValues[ 2 ] = 0x80;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_5:
+	  this.kbMatrixValues[ 2 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_6:
+	  this.kbMatrixValues[ 5 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_7:
+	  this.kbMatrixValues[ 2 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_8:
+	  this.kbMatrixValues[ 3 ] = 0x80;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_9:
+	  this.kbMatrixValues[ 3 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_PLUS:
+	  this.kbMatrixValues[ 2 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_MINUS:
+	  this.kbMatrixValues[ 5 ] = 0x10;
+	  rv = true;
+	  break;
       }
     }
     if( rv ) {
@@ -345,6 +392,10 @@ public class LC80 extends EmuSys implements
     } else {
       if( keyCode == KeyEvent.VK_ESCAPE ) {
 	this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
+	rv = true;
+      }
+      else if( keyCode == KeyEvent.VK_N ) {
+	this.emuThread.getZ80CPU().fireNMI();
 	rv = true;
       }
     }
@@ -364,30 +415,134 @@ public class LC80 extends EmuSys implements
   public boolean keyTyped( char keyChar )
   {
     boolean rv = false;
-    if( keyChar > 0 ) {
-      int ch = Character.toUpperCase( keyChar );
-      if( ch == 'N' ) {
-	this.emuThread.getZ80CPU().fireNMI();
-	rv = true;
-      } else {
-	synchronized( this.kbMatrixValues ) {
-	  int m  = 0x10;
-	  for( int i = 0; i < kbMatrix.length; i++ ) {
-	    int[] rowKeys = kbMatrix[ i ];
-	    for( int k = 0; k < rowKeys.length; k++ ) {
-	      if( rowKeys[ k ] == ch ) {
-		this.kbMatrixValues[ k ] |= m;
-		rv = true;
-		break;
-	      }
-	    }
-	    m <<= 1;
-	  }
-	}
-	if( rv ) {
-	  putKBMatrixRowValueToPort();
-	}
+    synchronized( this.kbMatrixValues ) {
+      switch( keyChar ) {
+	case '3':			// LC80: 3
+	case 'C':			// SC80: C und 3
+	  this.kbMatrixValues[ 1 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case '7':			// LC80: 7
+	case 'G':			// SC80: G und 7
+	  this.kbMatrixValues[ 2 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case 'b':			// LC80: B
+	case 'S':			// SC80: Springer
+	  this.kbMatrixValues[ 3 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case 'f':			// LC80: F
+	case 'K':			// SC80: Koenig
+	  this.kbMatrixValues[ 4 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case '-':			// LC80: -
+	case 'W':			// SC80: COLOR
+	  this.kbMatrixValues[ 5 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case 'l':			// LC80: LD
+	case 'R':			// SC80: Random
+	  this.kbMatrixValues[ 0 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case '2':			// LC80: 2
+	case 'B':			// SC80: B und 2
+	  this.kbMatrixValues[ 1 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case '+':			// LC80: +
+	case 'O':			// SC80: BOARD
+	  this.kbMatrixValues[ 2 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case 'e':			// LC80: E
+	case 'M':			// SC80: Dame
+	  this.kbMatrixValues[ 3 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case 'a':			// LC80: A
+	case 'U':			// SC80: Bauer
+	  this.kbMatrixValues[ 4 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case '6':			// LC80: 6
+	case 'F':			// SC80: F und 6
+	  this.kbMatrixValues[ 5 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case 's':			// LC80: ST, SC80: Control
+	  this.kbMatrixValues[ 0 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case '1':			// LC80: 1
+	case 'A':			// SC80: A und 1
+	  this.kbMatrixValues[ 1 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case '5':			// LC80: 5
+	case 'E':			// SC80: E und 5
+	  this.kbMatrixValues[ 2 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case '9':			// LC80: 9
+	  this.kbMatrixValues[ 3 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case 'd':			// LC80: D
+	case 'T':			// SC80: Turm
+	  this.kbMatrixValues[ 4 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case 'x':			// LC80: EX, SC80: EX
+	case 'X':
+	  this.kbMatrixValues[ 0 ] = 0x80;
+	  rv = true;
+	  break;
+
+	case '0':			// LC80: 0
+	  this.kbMatrixValues[ 1 ] = 0x80;
+	  rv = true;
+	  break;
+
+	case '4':			// LC80: 4
+	case 'D':			// SC80: D und 4
+	  this.kbMatrixValues[ 2 ] = 0x80;
+	  rv = true;
+	  break;
+
+	case '8':			// LC80: 8
+	case 'H':			// SC80: H und 8
+	  this.kbMatrixValues[ 3 ] = 0x80;
+	  rv = true;
+	  break;
+
+	case 'c':			// LC80: C
+	case 'L':			// SC80: Laeufer
+	  this.kbMatrixValues[ 4 ] = 0x80;
+	  rv = true;
+	  break;
       }
+    }
+    if( rv ) {
+      putKBMatrixRowValueToPort();
     }
     return rv;
   }
@@ -399,9 +554,9 @@ public class LC80 extends EmuSys implements
     if( this.audioOutLED
 	|| (!this.audioOutPhase && !this.audioOutState) )
     {
-      g.setColor( this.greenLight );
+      g.setColor( this.colorGreenLight );
     } else {
-      g.setColor( this.greenDark );
+      g.setColor( this.colorGreenDark );
     }
     g.fillArc(
 	x,
@@ -412,7 +567,7 @@ public class LC80 extends EmuSys implements
 	360 );
 
     // LED fuer HALT-Zustand
-    g.setColor( this.haltState ? this.redLight : this.redDark );
+    g.setColor( this.haltState ? this.colorRedLight : this.colorRedDark );
     g.fillArc(
 	x,
 	y + (30 * screenScale),
@@ -430,8 +585,8 @@ public class LC80 extends EmuSys implements
 		x,
 		y,
 		this.digitValues[ i ],
-		this.greenDark,
-		this.greenLight,
+		this.colorGreenDark,
+		this.colorGreenLight,
 		screenScale );
 	x += (65 * screenScale);
       }
@@ -505,7 +660,7 @@ public class LC80 extends EmuSys implements
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      fillRandom( this.ram );
+      initSRAM( this.ram, props );
     }
     synchronized( this.kbMatrixValues ) {
       Arrays.fill( this.kbMatrixValues, 0 );
@@ -599,16 +754,6 @@ public class LC80 extends EmuSys implements
 
 	/* --- private Methoden --- */
 
-  private void createColors( Properties props )
-  {
-    int value       = getMaxRGBValue( props );
-    this.redLight   = new Color( value, 0, 0 );
-    this.redDark    = new Color( value / 5, 0, 0 );
-    this.greenLight = new Color( 0, value, 0 );
-    this.greenDark  = new Color( 0, value / 8, 0 );
-  }
-
-
   private void putKBMatrixRowValueToPort()
   {
     int v = 0;
@@ -622,6 +767,25 @@ public class LC80 extends EmuSys implements
       }
     }
     this.pio2.putInValuePortB( ~v, 0xF0 );
+  }
+
+
+  private boolean putKeyToMatrix( int[][] kbMatrix, char ch )
+  {
+    boolean rv = false;
+    int     m  = 0x10;
+    for( int i = 0; i < kbMatrix.length; i++ ) {
+      int[] rowKeys = kbMatrix[ i ];
+      for( int k = 0; k < rowKeys.length; k++ ) {
+	if( rowKeys[ k ] == ch ) {
+	  this.kbMatrixValues[ k ] |= m;
+	  rv = true;
+	  break;
+	}
+      }
+      m <<= 1;
+    }
+    return rv;
   }
 
 

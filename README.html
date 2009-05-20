@@ -15,7 +15,7 @@
 
   <h2>1. Allgemeines</h2>
    JKCEMU ist ein in Java entwickelter Software-Emulator,
-   der einige in der DDR hergestellten bzw. entwickelten
+   der einige in der DDR hergestellte bzw. entwickelte
    Klein- und Selbstbaucomputer nachbildet.
   <br/><br/>
 
@@ -32,8 +32,13 @@
    auch den urspr&uuml;nglichen, Rechteinhabern enthalten.
    Den originalen Wortlaut der GNU-GPL finden Sie in der Datei
    <a href="LICENSE.txt">LICENSE.txt</a>.
+   Zum besseren Verst&auml;ndnis gibt es auch eine
+   <a href="gpl3_de.htm">deutsche &Uuml;bersetzung</a>,
+   Diese ist jedoch kein offizieller bzw. rechtskr&auml;ftiger Ersatz
+   f&uuml;r den originalen englischsprachigen Wortlaut!
    Sollten Sie Verst&auml;ndnisprobleme mit dem englischsprachigen Wortlaut
-   haben, m&uuml;ssen Sie sich selbst um eine juristisch abgesicherte
+   haben und Ihnen die inoffizielle &Uuml;bersetzung nicht gen&uuml;gen,
+   m&uuml;ssen Sie sich selbst um eine juristisch abgesicherte
    &Uuml;bersetzung bem&uuml;hen,
    bevor Sie JKCEMU anwenden, weitergeben oder modifizieren.
    Der Autor stellt die Software entsprechend den Bedingungen der GNU-GPL
@@ -44,7 +49,47 @@
    <b>Jegliche Gew&auml;hrleistung und Haftung ist ausgeschlossen!</b>
   <br/><br/>
 
-  <h2>3. Installation</h2>
+  <h2>3. Von der GNU-GPL ausgenommene Programmteile</h2>
+    F&uuml;r den Betrieb von JKCEMU sind ROM-Images der jeweils emulierten
+    Computer notwendig.
+    Diese finden Sie im Verzeichnis <em>src/rom</em>.
+    Die ROM-Images unterliegen nicht der GNU-GPL,
+    d.h., die Rechte, die Ihnen von der GNU-GPL bzgl. der Benutzung,
+    Modifizierung und Weitergabe von JKCEMU einger&auml;umt werden,
+    gelten nicht f&uuml;r die ROM-Inhalte!
+    Jegliche Benutzung dieser ROM-Images au&szlig;erhalb von JKCEMU
+    oder au&szlig;erhalb eines rein privaten, nicht kommerziellen Umfeldes
+    m&uuml;ssen Sie im Zweifelsfall mit den Urhebern bzw.
+    deren Rechtsnachfolgern kl&auml;ren.
+  <br/><br/>
+    Die Urheberschaften der ROM-Inhalte liegen bei:
+    <ul>
+      <li>VEB Me&szlig;elektronik Dresden (Z9001, KC85/1, KC87)</li>
+      <li>VEB Mikroelektronik Erfurt (LC80, SC2)</li>
+      <li>
+	VEB Mikroelektronik M&uuml;hlhausen
+	(HC900, KC85/2, KC85/3, KC85/4)
+      </li>
+      <li>VEB Polytechnik Karl-Marx-Stadt (Poly-Computer 880)</li>
+      <li>VEB Robotron-Elektronik Riesa (Z1013)</li>
+      <li>Prof. Dr. Albrecht Mugler (PC/M)</li>
+      <li>Dr. Gerd Maudrich (LLC1)</li>
+      <li>Dr. Rainer Brosig (erweitertes Z1013-Monitorprogramm)</li>
+      <li>Bernd H&uuml;bler (H&uuml;bler/Evert-MC, H&uuml;bler-Grafik-MC)</li>
+      <li>Eckart Buschendorf (LC-80.2-Monitorprogramm)</li>
+      <li>Eckhard Ludwig (SCCH-Software f&uuml;r AC1 und LLC2)</li>
+      <li>Eckhard Schiller (BCS3 und VCS80)</li>
+      <li>Frank Heyder (Monitorprogramm 3.1 und MiniBASIC f&uuml;r AC1)</li>
+      <li>Frank Pr&uuml;fer (S/P-BASIC V3.3 f&uuml;r BCS3)</li>
+      <li>H. Mathes (PC/M)</li>
+      <li>Joachim Czepa (C-80)</li>
+      <li>Klaus-Peter Evert (H&uuml;bler/Evert-MC)</li>
+      <li>Manfred Kramer (Kramer-MC)</li>
+      <li>Torsten Musiol (Maschinenkode-Editor f&uuml;r BCS3)</li>
+    </ul>
+  <br/><br/>
+
+  <h2>4. Installation</h2>
    <ol>
     <li>
      Installieren Sie die Java Runtime Environment (JRE)
@@ -55,8 +100,8 @@
     </li>
     <li>
      Laden Sie die Datei <em>jkcemu.jar</em> von
-     <a href="http://www.jens-mueller.org/jkcemu">http://www.jens-mueller.org/jkcemu</a>
-     herunter.
+     <a href="http://www.jens-mueller.org/jkcemu">
+     www.jens-mueller.org/jkcemu</a> herunter.
      Die Datei darf dabei nicht als ZIP-Datei entpackt werden!
     </li>
     <li>
@@ -82,7 +127,7 @@
    </ol>
   <br/><br/>
 
-  <h2>4. Compilieren</h2>
+  <h2>5. Compilieren</h2>
    M&ouml;chten Sie den Quelltext compilieren,
    sind folgende Schritte notwendig:
    <ol>
@@ -106,7 +151,101 @@
    im Wurzelverzeichnis des Quelltextes.
   <br/><br/>
 
-  <h2>5. Kontakt</h2>
+  <h2>6. Dank</h2>
+    Die Entwicklung des Emulators war nur m&ouml;glich durch
+    die Zuarbeit anderer, vorallem durch Bereitstellung
+    von Dokumenten und Software.
+    Dabei hat so mancher ganz unbewusst seinen Anteil an JKCEMU beigetragen,
+    indem er auf seiner Homepage wichtige Informationen bereith&auml;lt.
+    Besonders bedanken m&ouml;chte ich mich bei:
+  <br/>
+    <ul>
+      <li>
+	Prof. Dr. Albrecht Mugler f&uuml;r die freundliche Genehmigung
+	zur Integration der PC/M-Systemsoftware
+	(BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
+      </li>
+      <li>
+	Dr. Gerd Maudrich fuer die freundliche Genehmigung zur Integration
+	des LLC1-ROM-Images (Monitorprogramm und Tiny-BASIC-Interpreter)
+	in JKCEMU
+      </li>
+      <li>Andr&eacute; Schenk f&uuml;r das ANT-Skript</li>
+      <li>Andreas Suske f&uuml;r Informationen und Software zum AC1</li>
+      <li>
+	Claus-Peter Fischer f&uuml;r die Bereitstellung eines ROM-Images
+	zum PC/M
+      </li>
+      <li>
+	Frank Pr&uuml;fer f&uuml;r die freundliche Genehmigung
+	zur Integration von S/P-BASIC&nbsp;3.3 in JKCEMU
+	sowie f&uuml;r das Testen der BCS3-Emulation
+      </li>
+      <li>
+	H. Mathes f&uuml;r die freundliche Genehmigung
+	zur Integration der PC/M-Systemsoftware
+	(BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
+      </li>
+      <li>
+	Johann Spannenkrebs f&uuml;r seine Homepage
+	<a href="http://www.ac1-info.de">www.ac1-info.de</a>,
+	der Bereitstellung von Informationen und Software f&uuml;r den AC1
+	und den Poly-Computer&nbsp;880
+	sowie das Testen der AC1- und Poly880-Emulation
+      </li>
+      <li>
+	Manfred Kramer f&uuml;r die freundliche Genehmigung zur Integration
+	der Systemsoftware des Kramer-MC in JKCEMU
+      </li>
+      <li>
+	Peter Salomon f&uuml;r seine Homepage
+	<a href="http://www.robotron-net.de">www.robotron-net.de</a>
+      </li>
+      <li>
+	Ralf K&auml;stner f&uuml;r seine Homepage
+	<a href="http://www.kc85.susowa.homeftp.net">
+	www.kc85.susowa.homeftp.net</a>
+	und die Bereitstellung von Informationen und Software zum KC85/4
+      </li>
+      <li>
+	Rolf Weidlich f&uuml;r die Bereitstellung von Informationen
+	und Software zum AC1 und LLC1
+      </li>
+      <li>
+	Siegfried Schenk f&uuml;r die Bereitstellung von Informationen
+	und Software zum LLC2 und zu den SCCH-Modulen
+      </li>
+      <li>
+	Stephan Linz f&uuml;r seine Homepage zum PC/M
+	<a href="http://www.li-pro.net">www.li-pro.net</a>
+      </li>
+      <li>
+	Thomas Scherrer f&uuml;r seine Z80-Seite
+	<a href="http://www.z80.info">www.z80.info</a>
+      </li>
+      <li>
+	Torsten Paul f&uuml;r seinen Emulator
+	<a href="http://kcemu.sourceforge.net">KCemu</a>
+	und der Bereitstellung von Informationen und ROM-Images
+	diverser Computer
+      </li>
+      <li>
+	Ulrich Zander f&uuml;r seine Homepage
+	<a href="http://www.sax.de/~zander">www.sax.de/~zander</a>
+	und der Beantwortung technischer Fragen zum Z9001
+      </li>
+      <li>
+	Volker Pohlers f&uuml;r seine Homepage
+	<a href="http://www.homecomputer-ddr.de.vu">
+	www.homecomputer-ddr.de.vu</a>
+	sowie seiner aktiven Unterst&uuml;tzung durch Bereitstellung von
+	Dokumenten und Software sowie durch Testen des Emulators
+      </li>
+      <li>den aktiven Mitgliedern im Robotrontechnikforum</li>
+    </ul>
+  <br/><br/>
+
+  <h2>7. Kontakt</h2>
    <table border="0">
     <tr><td>Autor:</td><td>Jens M&uuml;ller</td></tr>
     <tr>

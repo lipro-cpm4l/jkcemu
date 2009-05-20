@@ -35,42 +35,11 @@ public class RAMFloppy
   }
 
 
-  public void writeByte( int offset, int value )
+  public int getByte( int idx )
   {
-    value &= 0xFF;
-    if( (offset >= 0) && (offset <= 3) ) {
-      int addr = computeAddr( offset );
-      if( (addr >= 0) && (addr < this.data.length) ) {
-	this.data[ addr ] = (byte) value;
-	this.dataChanged  = true;
-	if( addr >= this.endOfData )
-	  this.endOfData = addr + 1;
-      }
-    }
-    else if( offset == 6 ) {
-      this.addr8to15 = value;
-    }
-    else if( offset == 7 ) {
-      this.addr0to7 = value;
-    }
-  }
-
-
-  public int readByte( int offset )
-  {
-    int value = 0xFF;
-    if( (offset >= 0) && (offset <= 3) ) {
-      int addr = computeAddr( offset );
-      if( (addr >= 0) && (addr < this.data.length) )
-	value = this.data[ addr ];
-    }
-    else if( offset == 6 ) {
-      value = this.addr8to15;
-    }
-    else if( offset == 7 ) {
-      value = this.addr0to7;
-    }
-    return value & 0xFF;
+    return (idx >= 0) && (idx < this.data.length) ?
+				(int) this.data[ idx ] & 0xFF
+				: 0xFF;
   }
 
 
@@ -96,8 +65,9 @@ public class RAMFloppy
       this.file        = file;
       this.dataChanged = false;
 
-      for( int i = this.endOfData; i < this.data.length; i++ )
+      for( int i = this.endOfData; i < this.data.length; i++ ) {
 	this.data[ i ] = (byte) 0;
+      }
     }
     finally {
       if( in != null ) {
@@ -107,6 +77,32 @@ public class RAMFloppy
 	catch( IOException ex ) {}
       }
     }
+  }
+
+
+  public int readByte( int offset )
+  {
+    int value = 0xFF;
+    if( (offset >= 0) && (offset <= 3) ) {
+      int addr = computeAddr( offset );
+      if( (addr >= 0) && (addr < this.data.length) ) {
+	value = this.data[ addr ];
+      }
+    }
+    else if( offset == 6 ) {
+      value = this.addr8to15;
+    }
+    else if( offset == 7 ) {
+      value = this.addr0to7;
+    }
+    return value & 0xFF;
+  }
+
+
+  public void reset()
+  {
+    this.addr0to7  = 0;
+    this.addr8to15 = 0;
   }
 
 
@@ -129,6 +125,39 @@ public class RAMFloppy
 	}
 	catch( IOException ex ) {}
       }
+    }
+  }
+
+
+  public void setByte( int idx, int value )
+  {
+    if( (idx >= 0) && (idx < this.data.length) ) {
+      this.data[ idx ] = (byte) value;
+      if( idx >= this.endOfData ) {
+	this.endOfData = idx + 1;
+      }
+    }
+  }
+
+
+  public void writeByte( int offset, int value )
+  {
+    value &= 0xFF;
+    if( (offset >= 0) && (offset <= 3) ) {
+      int addr = computeAddr( offset );
+      if( (addr >= 0) && (addr < this.data.length) ) {
+	this.data[ addr ] = (byte) value;
+	this.dataChanged  = true;
+	if( addr >= this.endOfData ) {
+	  this.endOfData = addr + 1;
+	}
+      }
+    }
+    else if( offset == 6 ) {
+      this.addr8to15 = value;
+    }
+    else if( offset == 7 ) {
+      this.addr0to7 = value;
     }
   }
 

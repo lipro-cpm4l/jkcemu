@@ -27,21 +27,22 @@ public class BasicOptions extends PrgOptions
   public static final int DEFAULT_STACK_SIZE     = 128;
   public static final int DEFAULT_END_OF_MEM     = 0x3FFF;
 
-  private String           appName;
-  private int              begAddr;
-  private int              arraySize;
-  private int              stackSize;
-  private int              endOfMem;
-  private boolean          allowLongVarNames;
-  private boolean          checkStack;
-  private boolean          checkArray;
-  private boolean          showAsm;
-  private boolean          strictAC1Basic;
-  private boolean          strictZ1013Basic;
-  private boolean          structuredForNext;
-  private boolean          preferRelJumps;
-  private boolean          printCalls;
-  private BreakPossibility breakPossibility;
+  private String                 appName;
+  private int                    begAddr;
+  private int                    arraySize;
+  private int                    stackSize;
+  private int                    endOfMem;
+  private boolean                allowLongVarNames;
+  private boolean                checkStack;
+  private boolean                checkArray;
+  private boolean                showAsm;
+  private boolean                strictAC1Basic;
+  private boolean                strictZ1013Basic;
+  private boolean                structuredForNext;
+  private boolean                preferRelJumps;
+  private boolean                printCalls;
+  private BreakPossibility       breakPossibility;
+  private BasicCompiler.Platform platform;
 
 
   public BasicOptions( EmuThread emuThread )
@@ -61,6 +62,7 @@ public class BasicOptions extends PrgOptions
     this.preferRelJumps    = true;
     this.printCalls        = true;
     this.breakPossibility  = BreakPossibility.BREAK_INPUT;
+    this.platform          = null;
     setSyntax( Syntax.ZILOG_ONLY );
     setAllowUndocInst( false );
     setLabelsCaseSensitive( false );
@@ -86,6 +88,7 @@ public class BasicOptions extends PrgOptions
     this.preferRelJumps    = src.preferRelJumps;
     this.printCalls        = src.printCalls;
     this.breakPossibility  = src.breakPossibility;
+    this.platform          = src.platform;
   }
 
 
@@ -270,10 +273,17 @@ public class BasicOptions extends PrgOptions
 
   public static int getDefaultBegAddr( EmuSys emuSys )
   {
-    int rv = 0x0300;		// HC900, Z9001
+    int rv = 0x0300;		// KCs
     if( emuSys != null ) {
-      if( emuSys instanceof AC1 ) {
+      if( (emuSys instanceof AC1)
+	  || (emuSys instanceof LLC2) )
+      {
 	rv = 0x2000;
+      }
+      else if( (emuSys instanceof PCM)
+	       || (emuSys instanceof Z1013) )
+      {
+	rv = 0x0100;
       }
       else if( (emuSys instanceof HueblerEvertMC)
 	       || (emuSys instanceof HueblerGraphicsMC) )
@@ -283,9 +293,6 @@ public class BasicOptions extends PrgOptions
       else if( emuSys instanceof KramerMC ) {
 	rv = 0x1000;
       }
-      else if( emuSys instanceof Z1013 ) {
-	rv = 0x0100;
-      }
     }
     return rv;
   }
@@ -294,6 +301,12 @@ public class BasicOptions extends PrgOptions
   public int getEndOfMemory()
   {
     return this.endOfMem;
+  }
+
+
+  public BasicCompiler.Platform getPlatform()
+  {
+    return this.platform;
   }
 
 
@@ -477,6 +490,12 @@ public class BasicOptions extends PrgOptions
   public void setEndOfMemory( int value )
   {
     this.endOfMem = value;
+  }
+
+
+  public void setPlatform( BasicCompiler.Platform platform )
+  {
+    this.platform = platform;
   }
 
 

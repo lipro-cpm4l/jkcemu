@@ -40,6 +40,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   private Z80PIO   pio;
   private Keyboard keyboard;
   private int      ramEndAddr;
+  private byte[]   ramStatic;
   private byte[]   ramVideo;
   private byte[]   romOS;
   private boolean  romDisabled;
@@ -90,6 +91,10 @@ public class Z1013 extends EmuSys implements Z80AddressListener
     this.mode64x16      = false;
     this.ramEndAddr     = getRAMEndAddr( props );
     this.ramVideo       = new byte[ 0x0400 ];
+    this.ramStatic      = null;
+    if( this.ramEndAddr == 0x03FF ) {
+      this.ramStatic = new byte[ 0x0400 ];
+    }
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     this.pio   = new Z80PIO( cpu );
@@ -123,7 +128,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
     return SourceUtil.getTinyBasicProgram(
 				memory,
 				0x1152,
-				memory.getMemWord( 0x101F ) + 1 );
+				memory.getMemWord( 0x101F ) );
   }
 
 
@@ -176,13 +181,13 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 	int rPix = y % 16;
 	if( rPix < 8 ) {
 	  int row = y / 16;
-	  idx = (this.emuThread.getMemByte( 0xEC00 + (row * 64) + col ) * 8)
-								+ rPix;
+	  idx = (this.emuThread.getMemByte( 0xEC00 + (row * 64) + col, false )
+								* 8) + rPix;
 	}
       } else {
 	int row = y / 8;
-	idx = (this.emuThread.getMemByte( 0xEC00 + (row * 32) + col ) * 8)
-								+ (y % 8);
+	idx = (this.emuThread.getMemByte( 0xEC00 + (row * 32) + col, false )
+								* 8) + (y % 8);
       }
       if( (idx >= 0) && (idx < fontBytes.length ) ) {
 	int m = 0x80;
@@ -235,7 +240,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 
@@ -250,6 +255,12 @@ public class Z1013 extends EmuSys implements Z80AddressListener
     if( (addr >= MEM_SCREEN) && (addr < MEM_SCREEN + this.ramVideo.length) ) {
       rv   = (int) this.ramVideo[ addr - MEM_SCREEN ] & 0xFF;
       done = true;
+    }
+    if( !done && (this.ramStatic != null) ) {
+      if( addr < this.ramStatic.length ) {
+	rv   = (int) this.ramStatic[ addr ] & 0xFF;
+	done = true;
+      }
     }
     if( !done && (addr <= this.ramEndAddr) ) {
       rv = this.emuThread.getRAMByte( addr );
@@ -374,10 +385,10 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       }
     }
     else if( (port & 0xF8) == 0x98 ) {
-      value = this.emuThread.getRAMFloppyA().readByte( port & 0x07 );
+      value = this.emuThread.getRAMFloppy1().readByte( port & 0x07 );
     }
     else if( (port & 0xF8) == 0x58 ) {
-      value = this.emuThread.getRAMFloppyB().readByte( port & 0x07 );
+      value = this.emuThread.getRAMFloppy2().readByte( port & 0x07 );
     }
     if( (port & 0x1C) == 0 ) {		// IOSEL0 -> PIO, ab A5 ignorieren
       switch( port & 0x03 ) {
@@ -414,7 +425,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
   {
     int rv  = 0;
     int bol = buf.length();
-    int b   = this.emuThread.getMemByte( addr );
+    int b   = this.emuThread.getMemByte( addr, true );
     if( b == 0xE7 ) {
       buf.append( String.format( "%04X  E7", addr ) );
       appendSpacesToCol( buf, bol, colMnemonic );
@@ -436,7 +447,7 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       addr += rv;
 
       bol = buf.length();
-      b   = this.emuThread.getMemByte( addr );
+      b   = this.emuThread.getMemByte( addr, false );
       buf.append( String.format( "%04X  %02X", addr, b ) );
       appendSpacesToCol( buf, bol, colMnemonic );
       buf.append( "DB" );
@@ -508,6 +519,9 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       this.mode4MHz = false;
     }
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+      if( this.ramStatic != null ) {
+	initSRAM( this.ramStatic, props );
+      }
       fillRandom( this.ramVideo );
     }
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
@@ -534,8 +548,10 @@ public class Z1013 extends EmuSys implements Z80AddressListener
 
   public void saveTinyBasicProgram()
   {
-    int endAddr = this.emuThread.getMemWord( 0x101F ) + 1;
-    if( endAddr > 0x1152 ) {
+    int endAddr = this.emuThread.getMemWord( 0x101F );
+    if( (endAddr > 0x1152)
+	&& (this.emuThread.getMemByte( endAddr - 1, false ) == 0x0D) )
+    {
       (new SaveDlg(
 		this.screenFrm,
 		0x1000,
@@ -563,24 +579,31 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       if( (addr >= MEM_SCREEN) && (addr < MEM_SCREEN + this.ramVideo.length) ) {
 	this.ramVideo[ addr - MEM_SCREEN ] = (byte) value;
 	this.screenFrm.setScreenDirty( true );
-	rv = true;
+	done = true;
+	rv   = true;
       }
-      else if( !done && (addr <= this.ramEndAddr) ) {
-	this.emuThread.setRAMByte( addr, value );
-	rv = true;
+    }
+    if( !done && (this.ramStatic != null) ) {
+      if( addr < this.ramStatic.length ) {
+	this.ramStatic[ addr ] = (byte) value;
+	done = true;
       }
+    }
+    if( !done && (addr <= this.ramEndAddr) ) {
+      this.emuThread.setRAMByte( addr, value );
+      rv = true;
     }
     return rv;
   }
 
 
-  public boolean supportsRAMFloppyA()
+  public boolean supportsRAMFloppy1()
   {
     return true;
   }
 
 
-  public boolean supportsRAMFloppyB()
+  public boolean supportsRAMFloppy2()
   {
     return true;
   }
@@ -634,10 +657,10 @@ public class Z1013 extends EmuSys implements Z80AddressListener
       }
     }
     else if( (port & 0xF8) == 0x98 ) {
-      this.emuThread.getRAMFloppyA().writeByte( port & 0x07, value );
+      this.emuThread.getRAMFloppy1().writeByte( port & 0x07, value );
     }
     else if( (port & 0xF8) == 0x58 ) {
-      this.emuThread.getRAMFloppyB().writeByte( port & 0x07, value );
+      this.emuThread.getRAMFloppy2().writeByte( port & 0x07, value );
     } else {
       switch( port & 0x1C ) {		// Adressleitungen ab A5 ignorieren
 	case 0:				// IOSEL0 -> PIO

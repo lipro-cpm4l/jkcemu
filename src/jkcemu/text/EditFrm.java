@@ -1791,11 +1791,22 @@ public class EditFrm extends BasicFrm implements
     if( this.prgThread == null ) {
       EditText editText = getSelectedEditText();
       if( editText != null ) {
+	BasicCompiler.Platform platform
+		= BasicCompiler.getPlatform( this.emuThread.getEmuSys() );
+
 	BasicOptions basicOptions = null;
 	PrgOptions   options      = editText.getPrgOptions();
 	if( options != null ) {
 	  if( options instanceof BasicOptions )
 	    basicOptions = (BasicOptions) options;
+	}
+	if( basicOptions != null ) {
+	  BasicCompiler.Platform lastPlatform = basicOptions.getPlatform();
+	  if( lastPlatform != null ) {
+	    if( !lastPlatform.equals( platform ) ) {
+	      forceOptionsDlg = true;
+	    }
+	  }
 	}
 	if( forceOptionsDlg || (basicOptions == null) ) {
 	  basicOptions = null;
@@ -1809,6 +1820,7 @@ public class EditFrm extends BasicFrm implements
 	  }
 	}
 	if( basicOptions != null ) {
+	  basicOptions.setPlatform( platform );
 	  editText.setPrgOptions( basicOptions );
 	  if( forceRunProgram && !basicOptions.getCodeToEmu() ) {
 	    basicOptions = new BasicOptions( basicOptions );

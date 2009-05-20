@@ -201,8 +201,8 @@ public class KramerMC extends EmuSys implements
     if( fBytes != null ) {
       int row = y / 8;
       int col = x / 6;
-      int idx = (this.emuThread.getMemByte( 0xFC00 + (row * 64) + col )
-							* 8) + (y % 8);
+      int idx = (this.emuThread.getMemByte( 0xFC00 + (row * 64) + col, false )
+								* 8) + (y % 8);
       if( (idx >= 0) && (idx < fBytes.length ) ) {
 	int m = 0x80;
 	int n = x % 6;
@@ -254,7 +254,7 @@ public class KramerMC extends EmuSys implements
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 

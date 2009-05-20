@@ -4,13 +4,20 @@
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>4 KByte ROM f&uuml;r Monitorprogramm
-      <li>8 KByte Hintergrund-ROM f&uuml;r Grafik/Sound-BASIC
-      <li>64 KByte RAM inklusive Bildwiederholspeicher
-      <li>CTC mit Verbindung von Ausgang Kanal 1 auf Eingang Kanal 3
-      <li>Kassettenrecorderanschluss
+      <li>4 KByte ROM f&uuml;r Monitorprogramm</li>
+      <li>64 KByte RAM inklusive Bildwiederholspeicher</li>
+      <li>CTC mit Verbindung von Ausgang Kanal 1 auf Eingang Kanal 3</li>
+      <li>Kassettenrecorderanschluss</li>
+      <li>
+	Zwei RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
+	Heft 3/1988 an den IO-Basisadressen D0h (RAM-Floppy 1)
+	und B0h (RAM-Floppy 2)
+      </li>
+      <li>SCCH-Modul 1 (zus&auml;tzlicher ROM)</li>
+      <li>SCCH-Modul 3 (zus&auml;tzlicher RAM)</li>
+      <li>Vollgrafikerweiterung HIRES</li>
     </ul>
-  <br><br>
+  <br/><br/>
 
   <h3>1.1. Hinweise zum Speicher</h3>
     Der RAM befindet sich physisch in einem globalen RAM-Bereich,
@@ -21,15 +28,53 @@
     werden der ROM ein- und der RAM ausgeblendet.
     Mit diesem Mechanismus l&auml;dt sich das Monitorprogramm
     vom ROM in den RAM um.
-  <br><br>
+  <br/><br/>
+
+  <h3>1.2. Hinweise zum SCCH-Modul 1</h3>
+    Das SCCH-Modul 1 stellt zus&auml;tzlichen ROM zur Verf&uuml;gung,
+    und zwar:
+    <ul>
+      <li>8 KByte f&uuml;r Grafik/Sound-BASIC-Interpreter</li>
+      <li>8 KByte f&uuml;r Programmpaket X</li>
+      <li>64 KByte f&uuml;r ROM-Disk</li>
+    </ul>
+  <br/>
+    Aktiviert werden die einzelnen ROM-Bereiche &uuml;ber das Ausgabetor ECh.
+  <br/><br/>
+    JKCEMU liefert keinen Inhalt f&uuml;r das Programmpaket X
+    und die ROM-Disk mit.
+    Diesen m&uuml;ssen Sie in den <a href="settings.htm">Einstellungen</a>,
+    Rubrik ROM, durch Einbinden von ROM-Image-Dateien festlegen.
+  <br/><br/>
+
+  <h3>1.3. Hinweise zum SCCH-Modul 3</h3>
+    Das SCCH-Modul 3 stellt je nach Best&uuml;ckung
+    64, 128, 256, 320 oder 512 KByte zus&auml;tzlichen RAM zur Verf&uuml;gung,
+    der &uuml;ber IO-Befehle in den Arbeitsspeicher eingeblendet werden kann.
+    Konkret wird &uuml;ber die Bits 0 bis 3 des IO-Ports EDh
+    einer von 16 m&ouml;glichen 64 KByte gr&ouml;&szlig;en Bl&ouml;cken
+    ausgew&auml;hlt, der dann entsprehend der Bits 4 bis 7 des gleichen
+    IO-Ports nur lesend, nur schreibend oder lesend und schreibend
+    (dann aber nur 32 KByte) eingeblendet wird.
+  <br/><br/>
+    Der Adressraum f&uuml;r den zus&auml;tzlichen RAM betr&auml;gt
+    1 MByte (16 x 64 KByte).
+    Obwohl das Originalmodul nur mit max. 512 KByte best&uuml;ckt werden kann,
+    emuliert JKCEMU die max. m&ouml;glichen 1 MByte.
+    Das hat den Vorteil, dass Software,
+    die diesen zus&auml;tzlichen RAM verwendet,
+    nicht speziell f&uuml;r den Einsatz in JKCEMU konfiguriert werden muss,
+    denn auf jeder Adresse, wo die jeweilige Software RAM voraussetzt,
+    wird sie in JKCEMU auch RAM vorfinden.
+  <br/><br/>
 
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li>SCCH-Monitor 9.1
-      <li>Grafik/Sound-BASIC Version 3.2
+      <li>SCCH-Monitor Version 9.1</li>
+      <li>Grafik/Sound-BASIC Version 3.2</li>
     </ul>
-  <br><br>
+  <br/><br/>
 
 
   <h2>3. BASIC</h2>
@@ -41,29 +86,29 @@
     &Uuml;ber das Bit 1 des IO-Ports ECh kann der ROM in den Vordergrund
     geholt und somit der BASIC-Interpreter in dem Adressbereich sichtbar
     gemacht werden.
-  <br><br>
+  <br/><br/>
     Mit den im Emulator integrierten SCCH-Monitorprogrammen k&ouml;nnen
     Sie das BASIC mit dem Kommando <em>b</em> direkt aufrufen (Kaltstart).
     Dabei wird auch der BASIC-ROM in den Vordergrund geholt.
     Einen Warmstart des Interpreters f&uuml;hren Sie mit dem Kommando
     <em>r</em> aus.
-  <br><br>
+  <br/><br/>
 
   <h3>3.2. Speichern von BASIC-Programmen</h3>
-    JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das Speichern
+    JKCEMU bietet spezielle Unterst&uuml;tzung f&uuml;r das Speichern
     und Laden von BASIC-Programmen.
     Zum Speichern nutzen Sie bitte die entsprechende Funktion im Men&uuml;
     <em>Datei</em>, Untermen&uuml; <em> BASIC-Programm</em>,
     und speichern das Programm als
     <a href="fileformats.htm#headersave">Headersave</a>-Datei
     mit dem Dateityp <tt>B</tt>.
-  <br><br>
+  <br/><br/>
     Nur wenn Sie das BASIC-Programm so speichern,
     werden beim Laden des Programms die Systemzellen des
     BASIC-Interpreters richtig angepasst.
     In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
     aber im Interpreter nicht richtig nutzen.
-  <br><br>
+  <br/><br/>
 
 
   <h2>4. Sonstiges</h2>
@@ -72,14 +117,22 @@
     Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>
     externe ROM-Images an jeder beliebigen Adresse einbinden.
     F&uuml;r die unteren 48 KByte des Adressraumes gilt aber,
-    dass das extern eingebundene ROM-Image nur sichtbar ist,
-    wenn der Betriebssystem-ROM aktiv ist.
-    Und das ist &uuml;blicherweise nur unmittelbar nach einem RESET der Fall,
+    dass das extern eingebundene ROM-Image nur sichtbar ist
+    und auch sonst kein anderer Speicher (z.B. SCCH-Modul 1 oder 3)
+    in dem jeweiligen Adressbereich eingeblendet ist.
+    Dies ist &uuml;blicherweise nur unmittelbar nach einem RESET der Fall,
     denn der LLC2 ist so konzipiert,
     dass sich das Betriebssystem vom ROM in den RAM kopiert
     und anschlie&szlig;end den ROM ausblendet.
     Damit sind dann auch extern eingebundene ROM-Images
     in den unteren 48 KByte nicht sichtbar.
+  <br/><br/>
+
+  <h3>4.2. Inversemodus</h3>
+    JKCEMU emuliert auch den Inversmodus,
+    der mit Bit 5 am Tor B der System-PIO (IO-Adresse E9h) aktiviert wird.
+    Im Inversmodus werden alle Zeichen, bei denen Bit 7 gesetzt ist,
+    als invertierte ASCII-Zeichen auf dem Bildschirm ausgegeben.
 </body>
 </html>
 

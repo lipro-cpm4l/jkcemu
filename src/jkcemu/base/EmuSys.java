@@ -27,6 +27,10 @@ public abstract class EmuSys implements ImageObserver
   protected EmuThread emuThread;
   protected ScreenFrm screenFrm;
   protected Color     colorWhite;
+  protected Color     colorRedLight;
+  protected Color     colorRedDark;
+  protected Color     colorGreenLight;
+  protected Color     colorGreenDark;
 
   // Basiskoordinaten eines horizontalen Segments einer 7-Segment-Anzeige
   private static final int[] base7SegHXPoints = { 0, 3, 31, 34, 31, 3, 0 };
@@ -240,12 +244,12 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public abstract int getMemByte( int addr );
+  public abstract int getMemByte( int addr, boolean m1 );
 
 
   public int getMemWord( int addr )
   {
-    return (getMemByte( addr + 1 ) << 8) | getMemByte( addr );
+    return (getMemByte( addr + 1, false ) << 8) | getMemByte( addr, false );
   }
 
 
@@ -327,6 +331,21 @@ public abstract class EmuSys implements ImageObserver
   public boolean hasKCBasicInROM()
   {
     return false;
+  }
+
+
+  protected void initSRAM( byte[] a, Properties props )
+  {
+    if( a != null ) {
+      if( EmuUtil.getProperty(
+		props,
+		"jkcemu.sram.init" ).toLowerCase().startsWith( "r" ) )
+      {
+	fillRandom( a );
+      } else {
+	Arrays.fill( a, (byte) 0 );
+      }
+    }
   }
 
 
@@ -470,9 +489,19 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public int readMemByte( int addr )
+  public int readMemByte( int addr, boolean m1 )
   {
-    return getMemByte( addr );
+    return getMemByte( addr, m1 );
+  }
+
+
+  protected byte[] readProgramX( Properties props )
+  {
+    return readFileByProperty(
+			props,
+			"jkcemu.program_x.file.name",
+			0x2000,
+			"Programmpaket X" );
   }
 
 
@@ -500,12 +529,22 @@ public abstract class EmuSys implements ImageObserver
       EmuUtil.doClose( in );
     }
     if( !done ) {
-      EmuUtil.showSysError(
+      EmuUtil.exitSysError(
 		this.emuThread.getScreenFrm(),
 		"Resource " + resource + " kann nicht geladen werden",
 		ex );
     }
     return buf.toByteArray();
+  }
+
+
+  protected byte[] readROMDisk( Properties props )
+  {
+    return readFileByProperty(
+			props,
+			"jkcemu.romdisk.file.name",
+			0x10000,
+			"ROM-Disk" );
   }
 
 
@@ -530,7 +569,7 @@ public abstract class EmuSys implements ImageObserver
       long    r = 0;
       boolean c = false;
       while( (n < 5) && (a < 0x10000) ) {
-	int b = memory.getMemByte( a );
+	int b = memory.getMemByte( a, false );
 	if( n == 0 ) {
 	  c = ((b >= 0x20) && (b < 0x7F));
 	} else {
@@ -644,7 +683,7 @@ public abstract class EmuSys implements ImageObserver
   {
     int rv = 0;
     String s = null;
-    int    b = getMemByte( addr );
+    int    b = getMemByte( addr, true );
     switch( b ) {
       case 0xC3:
 	s = "JP";
@@ -746,13 +785,13 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public boolean supportsRAMFloppyA()
+  public boolean supportsRAMFloppy1()
   {
     return false;
   }
 
 
-  public boolean supportsRAMFloppyB()
+  public boolean supportsRAMFloppy2()
   {
     return false;
   }
@@ -792,8 +831,12 @@ public abstract class EmuSys implements ImageObserver
 
   private void createColors( Properties props )
   {
-    int value       = getMaxRGBValue( props );
-    this.colorWhite = new Color( value, value, value );
+    int value            = getMaxRGBValue( props );
+    this.colorWhite      = new Color( value, value, value );
+    this.colorRedLight   = new Color( value, 0, 0 );
+    this.colorRedDark    = new Color( value / 5, 0, 0 );
+    this.colorGreenLight = new Color( 0, value, 0 );
+    this.colorGreenDark  = new Color( 0, value / 8, 0 );
   }
 
 
@@ -850,6 +893,38 @@ public abstract class EmuSys implements ImageObserver
       g.setColor( color );
       g.fillPolygon( tmp7SegXPoints, tmp7SegYPoints, tmp7SegXPoints.length );
     }
+  }
+
+
+  private byte[] readFileByProperty(
+				Properties props,
+				String     propName,
+				int        maxLen,
+				String     text )
+  {
+    byte[] rv = null;
+    if( props != null ) {
+      String fileName = props.getProperty( propName );
+      if( fileName != null ) {
+	if( fileName.length() > 0 ) {
+	  try {
+	    rv = EmuUtil.readFile( new File( fileName ), maxLen );
+	  }
+	  catch( IOException ex ) {
+	    String msg = ex.getMessage();
+	    BasicDlg.showErrorDlg(
+			this.emuThread.getScreenFrm(),
+			String.format(
+				"%s kann nicht geladen werden%s%s",
+				text,
+				msg != null ? ":\n" : ".",
+				msg != null ? msg : "" ) );
+	    rv = null;
+	  }
+	}
+      }
+    }
+    return rv;
   }
 
 

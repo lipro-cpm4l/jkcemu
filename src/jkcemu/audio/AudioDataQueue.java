@@ -161,6 +161,7 @@ public class AudioDataQueue extends InputStream
 	this.phaseData = null;
 	this.errorText = "Kein Speicher mehr f\u00FCr die Aufzeichnung\n"
 				+ "der Audio-Daten verf\u00FCgbar.";
+	System.gc();
       }
     }
     return status;

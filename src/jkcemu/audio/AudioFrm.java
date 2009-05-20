@@ -642,14 +642,17 @@ public class AudioFrm extends BasicFrm implements Z80MaxSpeedListener
 
   private void maxSpeedChanged()
   {
+    boolean state = (this.audioFmt != null);
     doDisable();
-    int speedKHz = this.z80cpu.getMaxSpeedKHz();
-    if( speedKHz > 0 ) {
-      if( this.btnSoundOut.isSelected() || this.btnDataOut.isSelected() ) {
-	doEnableAudioOutLine( speedKHz, this.btnDataOut.isSelected() );
-      }
-      else if( this.btnDataIn.isSelected() ) {
-	doEnableAudioInLine( speedKHz );
+    if( state ) {
+      int speedKHz = this.z80cpu.getMaxSpeedKHz();
+      if( speedKHz > 0 ) {
+	if( this.btnSoundOut.isSelected() || this.btnDataOut.isSelected() ) {
+	  doEnableAudioOutLine( speedKHz, this.btnDataOut.isSelected() );
+	}
+	else if( this.btnDataIn.isSelected() ) {
+	  doEnableAudioInLine( speedKHz );
+	}
       }
     }
   }

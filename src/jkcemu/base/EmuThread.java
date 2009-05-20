@@ -30,8 +30,9 @@ public class EmuThread extends Thread implements
   private Z80CPU              z80cpu;
   private Object              monitor;
   private byte[]              ram;
-  private RAMFloppy           ramFloppyA;
-  private RAMFloppy           ramFloppyB;
+  private byte[]              ramExtended;
+  private RAMFloppy           ramFloppy1;
+  private RAMFloppy           ramFloppy2;
   private volatile ExtFile    extFont;
   private volatile ExtROM[]   extROMs;
   private volatile AudioIn    audioIn;
@@ -51,8 +52,9 @@ public class EmuThread extends Thread implements
     this.z80cpu      = new Z80CPU( this, this );
     this.monitor     = "a monitor object for synchronization";
     this.ram         = new byte[ 0x10000 ];
-    this.ramFloppyA  = new RAMFloppy();
-    this.ramFloppyB  = new RAMFloppy();
+    this.ramExtended = null;
+    this.ramFloppy1  = new RAMFloppy();
+    this.ramFloppy2  = new RAMFloppy();
     this.extFont     = null;
     this.extROMs     = null;
     this.audioIn     = null;
@@ -116,12 +118,16 @@ public class EmuThread extends Thread implements
 	emuSys = new KramerMC( this, props );
       } else if( sysName.startsWith( "LC80" ) ) {
 	emuSys = new LC80( this, props );
+      } else if( sysName.startsWith( "LLC1" ) ) {
+	emuSys = new LLC1( this, props );
       } else if( sysName.startsWith( "LLC2" ) ) {
 	emuSys = new LLC2( this, props );
-      } else if( sysName.startsWith( "MKX80032" ) ) {
-	emuSys = new MKX80032( this, props );
+      } else if( sysName.startsWith( "PCM" ) ) {
+	emuSys = new PCM( this, props );
       } else if( sysName.startsWith( "Poly880" ) ) {
 	emuSys = new Poly880( this, props );
+      } else if( sysName.startsWith( "SC2" ) ) {
+	emuSys = new SC2( this, props );
       } else if( sysName.startsWith( "VCS80" ) ) {
 	emuSys = new VCS80( this, props );
       } else if( sysName.startsWith( "Z1013" ) ) {
@@ -148,13 +154,13 @@ public class EmuThread extends Thread implements
     // RAM-Floppies
     if( props != null ) {
       checkLoadRF(
-		this.ramFloppyA,
-		'A',
-		props.getProperty( "jkcemu.ramfloppy.a.file.name" ) );
+		this.ramFloppy1,
+		'1',
+		props.getProperty( "jkcemu.ramfloppy.1.file.name" ) );
       checkLoadRF(
-		this.ramFloppyB,
-		'B',
-		props.getProperty( "jkcemu.ramfloppy.b.file.name" ) );
+		this.ramFloppy2,
+		'2',
+		props.getProperty( "jkcemu.ramfloppy.2.file.name" ) );
     }
 
     // CPU-Geschwindigkeit
@@ -197,14 +203,20 @@ public class EmuThread extends Thread implements
       else if( sysName.startsWith( "LC80" ) ) {
 	rv = LC80.getDefaultSpeedKHz( props );
       }
+      else if( sysName.startsWith( "LLC1" ) ) {
+	rv = LLC1.getDefaultSpeedKHz();
+      }
       else if( sysName.startsWith( "LLC2" ) ) {
 	rv = LLC2.getDefaultSpeedKHz();
       }
-      else if( sysName.startsWith( "MKX80032" ) ) {
-	rv = MKX80032.getDefaultSpeedKHz();
+      else if( sysName.startsWith( "PCM" ) ) {
+	rv = PCM.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "Poly880" ) ) {
 	rv = Poly880.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "SC2" ) ) {
+	rv = SC2.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "VCS80" ) ) {
 	rv = VCS80.getDefaultSpeedKHz();
@@ -226,6 +238,32 @@ public class EmuThread extends Thread implements
   public EmuSys getNextEmuSys()
   {
     return this.nextEmuSys;
+  }
+
+
+  public synchronized byte[] getExtendedRAM( int size )
+  {
+    byte[] rv = null;
+    if( size > 0 ) {
+      if( this.ramExtended != null ) {
+	if( size > this.ramExtended.length ) {
+	  rv = new byte[ size ];
+	  Arrays.fill( rv, (byte) 0 );
+	  System.arraycopy(
+			this.ramExtended,
+			0,
+			rv,
+			0,
+			this.ramExtended.length );
+	  this.ramExtended = rv;
+	}
+      } else {
+	rv = new byte[ size ];
+	Arrays.fill( rv, (byte) 0 );
+	this.ramExtended = rv;
+      }
+    }
+    return rv;
   }
 
 
@@ -254,15 +292,15 @@ public class EmuThread extends Thread implements
   }
 
 
-  public RAMFloppy getRAMFloppyA()
+  public RAMFloppy getRAMFloppy1()
   {
-    return this.ramFloppyA;
+    return this.ramFloppy1;
   }
 
 
-  public RAMFloppy getRAMFloppyB()
+  public RAMFloppy getRAMFloppy2()
   {
-    return this.ramFloppyB;
+    return this.ramFloppy2;
   }
 
 
@@ -454,7 +492,7 @@ public class EmuThread extends Thread implements
 
 	/* --- Z80Memory --- */
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 
@@ -462,10 +500,10 @@ public class EmuThread extends Thread implements
     if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
       rv = getExtROMByte( addr );
       if( rv < 0 ) {
-	rv = this.emuSys.getMemByte( addr );
+	rv = this.emuSys.getMemByte( addr, m1 );
       }
     } else {
-      rv = this.emuSys.getMemByte( addr );
+      rv = this.emuSys.getMemByte( addr, m1 );
     }
     return rv;
   }
@@ -473,24 +511,13 @@ public class EmuThread extends Thread implements
 
   public int getMemWord( int addr )
   {
-    return (getMemByte( addr + 1 ) << 8) | getMemByte( addr );
+    return (getMemByte( addr + 1, false ) << 8) | getMemByte( addr, false );
   }
 
 
-  public int readMemByte( int addr )
+  public int readMemByte( int addr, boolean m1 )
   {
-    addr &= 0xFFFF;
-
-    int rv = 0;
-    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
-      rv = getExtROMByte( addr );
-      if( rv < 0 ) {
-	rv = this.emuSys.getMemByte( addr );
-      }
-    } else {
-      rv = this.emuSys.readMemByte( addr );
-    }
-    return rv;
+    return getMemByte( addr, m1 );
   }
 
 
@@ -582,6 +609,10 @@ public class EmuThread extends Thread implements
 			this.emuSys.getResetStartAddress( this.resetLevel ) );
 	}
 	this.resetLevel = ResetLevel.NO_RESET;
+
+	// RAM-Floppies zuruecksetzen
+	this.ramFloppy1.reset();
+	this.ramFloppy2.reset();
 
 	// in die Z80-Emulation verzweigen
 	this.z80cpu.run();

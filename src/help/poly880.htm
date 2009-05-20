@@ -1,61 +1,297 @@
 <html>
 <body>
   <h1>Hinweise zur Emulation des Poly-Computers 880</h1>
+    Der Poly-Computer 880, manchmal auch Polycomputer geschrieben,
+    ist ein vom VEB Polytechnik Karl-Marx-Stadt (heute Chemnitz)
+    hergestellter Lerncomputer mit einer 7-Segemt-Anzeige
+    und Hexadezimaltastatur.
+    Als Besonderheit bietet der Poly-Computer einen hardwarem&auml;&szlig;igen
+    Schrittbetrieb, bei dem sogar die einzelnen Taktzyklen des Mikroprozessors
+    verfolgt werden k&ouml;nnen.
+    LEDs zeigen dabei die Signale das Adress-, Daten- und Steuerbusses an.
+    Dieser hardwarem&auml;&szlig;ige Schrittbetrieb und damit die Anzeige
+    der Bussignale wird von JKCEMU allerdings nicht emuliert.
+  <br/><br/>
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>2 KByte ROM</li>
-      <li>1 KByte RAM</li>
+      <li>2 KByte ROM im Adressbereich 0000-03FF und 1000-03FF</li>
+      <li>1 KByte RAM im Adressbereich 4000-43FF</li>
+      <li>8-stellige 7-Segment-Anzeige</li>
+      <li>Kassettenrecorderanschluss</li>
     </ul>
-    Der ROM liegt in den Bereichen 0000-03FF und 1000-03FF
-    und der RAM in 4000-43FF.
     Aufgrund der unvollst&auml;ndigen Adressdekodierung
-    sind diese Speicherbereiche jeweils vier mal hintereinander sichtbar,
-    d.h. X000-X3FF sehen Sie auch in X400-X7FF, X800-XBFF und XC00-XFFF,
+    sind die einzelnen ROM- und RAM-Speicherbereiche jeweils
+    vier mal hintereinander sichtbar,
+    d.h. X000-X3FF sehen Sie auch in X400-X7FF, in X800-XBFF und in XC00-XFFF,
     wobei X f&uuml;r 0, 1 oder 4 steht.
-  <br><br>
+  <br/><br/>
 
-  <h3>1.1. Tastatur</h3>
+  <h3>1.1. Hardware-Schrittbetrieb</h3>
+    Wie bereits oben erw&auml;hnt wird der Hardware-Schrittbetrieb
+    nicht emuliert.
+    Es gibt jedoch noch einen Software-Schrittbetrieb (Taste <em>STEP</em>),
+    der den NMI verwendet und der in JKCEMU auch funktioniert.
+  <br/><br/>
+
+  <h3>1.2. Tastatur</h3>
     Die Tabelle zeigt, wie die Tasten des Poly-Computers auf der Tastatur
     des Emulatorrechners abgebildet werden:
-    <br>
+    <br/>
     <table border="1">
       <tr>
 	<th>Poly880-Taste</th>
-	<th>Taste im Emulator</th>
+	<th>Taste in JKCEMU</th>
 	<th>Bedeutung</th>
       </tr>
-      <tr><td>BACK</td><td>B oder -</td><td>Vorherige Adresse</td></tr>
       <tr>
-	<td>EXEC</td>
-	<td>X oder Enter</td>
+	<td valign="top">BACK</td>
+	<td valign="top">B oder -</td>
+	<td>Vorherige Adresse</td>
+      </tr>
+      <tr>
+	<td valign="top">EXEC</td>
+	<td valign="top">X oder Enter</td>
 	<td>Aktion ausf&uuml;hren</td>
       </tr>
-      <tr><td>RES</td><td>Escape</td><td>Funktion</td></tr>
-      <tr><td>FCT</td><td>F oder F1</td><td>Funktion</td></tr>
-      <tr><td>GO</td><td>G</td><td>Programm starten</td></tr>
-      <tr><td>REG</td><td>R</td><td>Register</td></tr>
-      <tr><td>STEP</td><td>S</td><td>Schrittbetrieb</td></tr>
-      <tr><td>MEM</td><td>M</td><td>Speicher anzeigen/ver&auml;ndern</td></tr>
-      <tr><td>0...9</td><td>0...9</td><td>Adress-/Dateneingabe</td></tr>
-      <tr><td>A</td><td>a oder A</td><td>Adress-/Dateneingabe</td></tr>
-      <tr><td>B</td><td>b</td><td>Adress-/Dateneingabe</td></tr>
-      <tr><td>C</td><td>c oder C</td><td>Adress-/Dateneingabe</td></tr>
-      <tr><td>D</td><td>d oder D</td><td>Adress-/Dateneingabe</td></tr>
-      <tr><td>E</td><td>e oder E</td><td>Adress-/Dateneingabe</td></tr>
-      <tr><td>F</td><td>f</td><td>Adress-/Dateneingabe</td></tr>
+      <tr>
+	<td valign="top">RES</td>
+	<td valign="top">Escape</td>
+	<td>Funktion</td>
+      </tr>
+      <tr>
+	<td valign="top">FCT</td>
+	<td valign="top">F oder F1</td>
+	<td>Funktion</td>
+      </tr>
+      <tr>
+	<td valign="top">GO</td>
+	<td valign="top">G</td>
+	<td>Programm starten</td>
+      </tr>
+      <tr>
+	<td valign="top">REG</td>
+	<td valign="top">R</td>
+	<td>Register</td>
+      </tr>
+      <tr>
+	<td valign="top">STEP</td>
+	<td valign="top">S</td>
+	<td>Schrittbetrieb</td>
+      </tr>
+      <tr>
+	<td valign="top">MEM</td>
+	<td valign="top">M</td>
+	<td>Speicher anzeigen/ver&auml;ndern</td>
+      </tr>
+      <tr>
+	<td valign="top">0...9</td>
+	<td valign="top">0...9</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">A</td>
+	<td valign="top">a oder A</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">B</td>
+	<td valign="top">b</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">C</td>
+	<td valign="top">c oder C</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">D</td>
+	<td valign="top">d oder D</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">E</td>
+	<td valign="top">e oder E</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">F</td>
+	<td valign="top">f</td>
+	<td>Adress-/Dateneingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">CYCL</td>
+	<td></td>
+	<td>
+	  Einzelschritt (einzelner Taktzyklus) im Hardware-Schrittbetrieb,<br/>
+	  von JKCEMU nicht emuliert
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">MCYCL</td>
+	<td></td>
+	<td>
+	  Hardware-Schrittbetrieb einschalten,<br/>
+	  von JKCEMU nicht emuliert
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">MON</td>
+	<td></td>
+	<td>
+	  Hardware-Schrittbetrieb ausschalten,<br/>
+	  von JKCEMU nicht emuliert
+	</td>
+      </tr>
     </table>
-  <br>
+  <br/>
     <b>Achtung!</b> Escape l&ouml;st der Einfachheit halber
     RESET ohne Sicherheitsabfrage aus,
     auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
     aktiviert ist.
-  <br><br>
+  <br/><br/>
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li>Originales Monitorprprogramm
+      <li>Originales Monitorprogramm</li>
     </ul>
+  <br/><br/>
+
+  <h3>2.1. Hinweise zur Bedienung des Monitorprogramms</h3>
+
+  <h4>2.1.1. Speicherzellen anzeigen/&auml;ndern</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>MEM&nbsp;(M)</em>
+    &rarr; &lt;Adresse&gt; &rarr; <em>EXEC&nbsp;(Enter)</em>
+    [ &rarr; &lt;Wert&gt; &rarr; <em>EXEC&nbsp;(Enter)</em> ]
+  <br/><br/>
+    Mit jedem Bet&auml;tigen der Taste <em>EXEC&nbsp;(Enter)</em>
+    wird die n&auml;chste Speicherzelle angezeigt.
+  <br/><br/>
+
+  <h4>2.1.2. Register anzeigen/&auml;ndern</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>REG&nbsp;(R)</em>
+    &rarr; &lt;Registerauswahl&gt;
+    [ &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; &lt;H-Wert&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; &lt;L-Wert&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> ]
+  <br/><br/>
+    Nach Dr&uuml;cken von <em>REG&nbsp;(R)</em> w&auml;hlen Sie
+    durch Bet&auml;tigen einer bestimmten Taste
+    das gew&uuml;nschte Doppelregister aus.
+    Dabei gilt folgende Zuordnung:
+    <table border="1">
+      <tr><th>Taste</th><th>Doppelregister</th></tr>
+      <tr><td>0</td><td>AF</td></tr>
+      <tr><td>1</td><td>BC</td></tr>
+      <tr><td>2</td><td>DE</td></tr>
+      <tr><td>3</td><td>HL</td></tr>
+      <tr><td>4</td><td>AF'</td></tr>
+      <tr><td>5</td><td>BC'</td></tr>
+      <tr><td>6</td><td>DE'</td></tr>
+      <tr><td>7</td><td>HL'</td></tr>
+      <tr><td>8</td><td>I und Status des EI-Flip-Flops</td></tr>
+      <tr><td>9</td><td>IX</td></tr>
+      <tr><td>A</td><td>IY</td></tr>
+      <tr><td>B</td><td>SP</td></tr>
+      <tr><td>C</td><td>PC</td></tr>
+    </table>
+  <br/>
+    M&ouml;chten Sie nun den Registerinhalt &auml;ndern,
+    so bet&auml;tigen Sie <em>EXEC&nbsp;(Enter)</em>,
+    geben den Wert des h&ouml;herwertigen Einzelregisters ein,
+    bet&auml;tigen wieder <em>EXEC&nbsp;(Enter)</em>,
+    geben nun den Wert des niederwertigen Einzelregisters ein
+    und bet&auml;tigen noch einmal <em>EXEC&nbsp;(Enter)</em>.
+  <br/><br/>
+
+  <h4>2.1.3. Programm starten</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>GO&nbsp;(G)</em>
+    [ &rarr; &lt;Startadresse&gt; ] &rarr; <em>EXEC&nbsp;(Enter)</em>
+    [ &rarr; &lt;Haltepunkt&gt; ] &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+    Startadresse und Haltepunkt k&ouml;nnen weggelassen werden.
+    Fehlt die Startadresse, wird der im Registerrettebereich stehende Wert
+    f&uuml;r <em>PC</em> genommen.
+  <br/><br/>
+
+  <h4>2.1.4. Schrittbetrieb</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>STEP&nbsp;(S)</em>
+    [ &rarr; &lt;Adresse&gt; ] &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+    Dieses Kommando f&uuml;hrt den Befehl auf der angegebenen Adresse aus
+    und h&auml;lt dann wieder an.
+    Die Adresse kann weggelassen werden.
+    In dem Fall wird dann der im Registerrettebereich stehende Wert
+    f&uuml;r <em>PC</em> genommen.
+  <br/><br/>
+
+  <h4>2.1.5. Port-Eingabe</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+    &rarr; <em>0</em> &rarr; &lt;Port-Adresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+    Mit jedem Dr&uuml;cken der Taste <em>EXEC&nbsp;(Enter)</em>
+    wird das angegebene Eingabetor gelesen und der Wert angezeigt.
+  <br/><br/>
+
+  <h4>2.1.6. Port-Ausgabe</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+    &rarr; <em>1</em> &rarr; &lt;Port-Adresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em>
+    &rarr; &lt;Wert&gt; &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+    Nach dem ersten Dr&uuml;cken der Taste <em>EXEC&nbsp;(Enter)</em>
+    geben Sie den auszugebenden Wert ein,
+    der dann beim zweiten Bet&auml;tigen von <em>EXEC&nbsp;(Enter)</em>
+    in das Ausgabetor geschrieben wird.
+    Nun k&ouml;nnen Sie beliebig oft weitere Werte eingeben,
+    die dann jeweils mit <em>EXEC&nbsp;(Enter)</em>
+    ebenfalls auf dem Port ausgegeben werden.
+  <br/><br/>
+
+  <h4>2.1.7. Datenbereich verschieben</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+    &rarr; <em>2</em> &rarr; &lt;Zieladresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; &lt;Quelladresse&gt;
+    &rarr; &lt;L&auml;nge&gt; &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+    Mit diesem Kommando verschieben Sie einen Datenbereich auf eine andere
+    Adresse. Genau genommen werden die Daten nicht verschoben,
+    sondern kopiert.
+    Quell- und Zielbereich k&ouml;nnen sich &uuml;berlappen.
+    Nach dem Verschieben erscheint in der Anzeige ein <em>F</em> wie fertig.
+  <br/><br/>
+
+  <h4>2.1.8. Datenbereich f&uuml;llen</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+    &rarr; <em>3</em> &rarr; &lt;Anfangsadresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; &lt;L&auml;nge&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; &lt;Wert&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+
+  <h4>2.1.9. Datenbereich von Kassette laden</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+    &rarr; <em>4</em> &rarr; &lt;Anfangsadresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; &lt;Endadresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+    Nach Eingabe der Endadresse m&uuml;ssen Sie zweimal
+    <em>EXEC&nbsp;(Enter)</em> dr&uuml;cken,
+    bevor das Laden beginnt.
+    Nach Abschluss des Ladens erscheint in der Anzeige ein <em>F</em>.
+  <br/><br/>
+
+  <h4>2.1.10. Datenbereich auf Kassette speichern</h4>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+    &rarr; <em>5</em> &rarr; &lt;Anfangsadresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; &lt;Endadresse&gt;
+    &rarr; <em>EXEC&nbsp;(Enter)</em> &rarr; <em>EXEC&nbsp;(Enter)</em>
+  <br/><br/>
+    Nach Eingabe der Endadresse m&uuml;ssen Sie zweimal
+    <em>EXEC&nbsp;(Enter)</em> dr&uuml;cken,
+    bevor das Speichern beginnt.
+    Nach Abschluss des Speicherns erscheint in der Anzeige ein <em>F</em>.
 </body>
 </html>
 
