@@ -14,8 +14,9 @@ specific network and USB adapters.
 **Emulated computers**:
 
 AC1, BCS3, C-80, HC900, Huebler/Evert-MC, Huebler-Grafik-MC,
-KC85/1, KC85/2, KC85/3, KC85/4, KC87, Kramer-MC, LC-80, LLC2,
-Poly-Computer 880, VCS-80, Z1013, Z9001
+KC85/1, KC85/2, KC85/3, KC85/4, KC87, Kramer-MC, LC-80, LLC1,
+LLC2, PC/M (Mugler/Mathes-PC), Poly-Computer 880, Schachcomputer
+SC2, VCS80, Z1013, Z9001
 
 **Integrated Tools**:
 
