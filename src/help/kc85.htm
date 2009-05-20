@@ -4,36 +4,42 @@
     HC900 ist die urspr&uuml;ngliche Bezeichnung des KC85/2.
     Da es zwischen beiden keine funktionalen Unterschiede gibt,
     werden sie auch zusammen als ein Computertyp emuliert.
-  <br><br>
+  <br/><br/>
 
   <h2>1. Emulierte Hardware</h2>
     Emuliert werden die Grundger&auml;te inklusive Tongeneratoren
     und Kassettenrecorderanschluss.
     Der emulierte Speicher betr&auml;gt bei:
     <ul>
-      <li>KC85/2 (HC900):<br>
+      <li>
+	KC85/2 (HC900):<br/>
 	<ul>
-	  <li>4 kyte ROM
-	  <li>32 kyte RAM inklusive Bildwiederholspeicher
+	  <li>4 kyte ROM</li>
+	  <li>32 kyte RAM inklusive Bildwiederholspeicher</li>
 	</ul>
-      <li>KC85/3:<br>
+      </li>
+      <li>
+	KC85/3:<br/>
 	<ul>
-	  <li>16 kyte ROM
-	  <li>32 kyte RAM inklusive Bildwiederholspeicher
+	  <li>16 kyte ROM</li>
+	  <li>32 kyte RAM inklusive Bildwiederholspeicher</li>
 	</ul>
-      <li>KC85/4:<br>
+      </li>
+      <li>
+	KC85/4:<br/>
 	<ul>
-	  <li>20 kyte ROM
-	  <li>128 kyte RAM inklusive Bildwiederholspeicher
+	  <li>20 kyte ROM</li>
+	  <li>128 kyte RAM inklusive Bildwiederholspeicher</li>
 	</ul>
+      </li>
     </ul>
-  <br>
+  <br/>
 
   <h3>1.1 RAM</h3>
     RAM 0 (0000-3FFF) und RAM 4 (4000-7FFF, nur KC85/4) liegen in einem
     globalen RAM-Bereich, der von allen emulierten Systemen gemeinsam
     genutzt wird.
-  <br><br>
+  <br/><br/>
 
   <h3>1.2. Tongeneratoren und Kassettenrecorderanschluss</h3>
     Welche erzeugten T&ouml;ne vom Emulator ausgegeben werden,
@@ -46,20 +52,20 @@
     Bei allen anderen Audio-Funktionen wird das Signal des Tongenerators 1
     (linker Kanal) ohne Lautst&auml;rkebeeinflussung ausgegeben,
     d.h. des Signals, mit dem Dateien auf Kassette gespeichert werden.
-  <br><br>
+  <br/><br/>
 
   <h3>1.3. Zusatzmodule</h3>
     Es werden keine Zusatzmodule emuliert.
-  <br><br>
+  <br/><br/>
 
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li>bei KC85/2: CAOS 2.2
-      <li>bei KC85/3: CAOS 3.1 und KC-BASIC
-      <li>bei KC85/4: CAOS 4.2 und KC-BASIC
+      <li>bei KC85/2: CAOS 2.2</li>
+      <li>bei KC85/3: CAOS 3.1 und KC-BASIC</li>
+      <li>bei KC85/4: CAOS 4.2 und KC-BASIC</li>
     </ul>
-  <br><br>
+  <br/><br/>
 
 
   <h2>3. Sonstiges</h2>
@@ -70,32 +76,37 @@
     Aufgrund des Bankswitchings sind diese ROM-Images aber
     nicht immer sichtbar, sondern nur in folgenden F&auml;llen:
     <ul>
-      <li>Adressbereich 0000-7FFF:<br>
-	  Ein extern eingebundenes ROM-Image ist immer sichtbar
-	  und verdeckt somit den internen RAM.
-	  <br><br>
-
-      <li>Adressbereich 8000-BFFF:<br>
-	  Ein extern eingebundenes ROM-Image ist nur sichtbar,
-	  wenn der Videospeicher (IRM) ausgeblendet ist.
-	  Jeglicher anderer Speicher, z.B. RAM 8, wird verdeckt.
-	  <br><br>
-
-      <li>Adressbereich C000-DFFF:<br>
-	  Beim KC85/2 und KC85/3 ist das extern eingebundene ROM-Image
-	  immer sichtbar.
-	  Beim KC85/4 ist es dagegen mit dem CAOS-C-ROM gekoppelt,
-	  d.h. das eingebundene ROM-Image ist nur sichtbar,
-	  wenn der interne Betriebssystem-ROM ab Adresse C000 aktiv ist.
-	  Damit k&ouml;nnen Sie die in diesem Adressbereich liegenden
-	  Betriebssystemteile &uuml;berladen,
-	  nicht aber den BASIC-Interpreter.
-	  <br><br>
-
-      <li>Adressbereich E000-FFFF:<br>
-	  Ein extern eingebundenes ROM-Image ist immer sichtbar.
+      <li>
+	Adressbereich 0000-7FFF:<br/>
+	Ein extern eingebundenes ROM-Image ist immer sichtbar
+	und verdeckt somit den internen RAM.
+	<br/><br/>
+      </li>
+      <li>
+	Adressbereich 8000-BFFF:<br/>
+	Ein extern eingebundenes ROM-Image ist nur sichtbar,
+	wenn der Videospeicher (IRM) ausgeblendet ist.
+	Jeglicher anderer Speicher, z.B. RAM 8, wird verdeckt.
+	<br/><br/>
+      </li>
+      <li>
+	Adressbereich C000-DFFF:<br/>
+	Beim KC85/2 und KC85/3 ist das extern eingebundene ROM-Image
+	immer sichtbar.
+	Beim KC85/4 ist es dagegen mit dem CAOS-C-ROM gekoppelt,
+	d.h. das eingebundene ROM-Image ist nur sichtbar,
+	wenn der interne Betriebssystem-ROM ab Adresse C000 aktiv ist.
+	Damit k&ouml;nnen Sie die in diesem Adressbereich liegenden
+	Betriebssystemteile &uuml;berladen,
+	nicht aber den BASIC-Interpreter.
+	<br/><br/>
+      </li>
+      <li>
+	Adressbereich E000-FFFF:<br/>
+	Ein extern eingebundenes ROM-Image ist immer sichtbar.
+      </li>
     </ul>
-  <br><br>
+  <br/><br/>
 
   <h3>3.2. Zeitverhalten der Bildschirmsteuerung</h3>
     F&uuml;r den KC85/2...4 gibt es in den
@@ -103,7 +114,7 @@
     <em>Zeitverhalten der Bildschirmsteuerung emulieren</em>.
     Diese Option sollten Sie ggf. auf leistungsschw&auml;cheren Rechnern
     ausschalten, da sie relativ viel Rechenleistung ben&ouml;tigt,
-  <br><br>
+  <br/><br/>
     An den Eing&auml;ngen des Z&auml;hler-/Zeitgeberbausteins (CTC)
     liegen der Bildsynchronimpuls und der doppelte Zeilensynchronimpuls an.
     Dadurch ist es m&ouml;glich, Software zu schreiben,
@@ -116,7 +127,7 @@
     synchron emuliert werden.
     Und genau das macht die Option
     <em>Zeitverhalten der Bildschirmsteuerung emulieren</em>.
-  <br><br>
+  <br/><br/>
     Es gibt allerdings nur sehr wenige Programme,
     die solche Effekte erzeugen,
     und bei denen somit diese Option eine Wirkung zeigt.

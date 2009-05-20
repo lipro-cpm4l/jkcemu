@@ -70,7 +70,7 @@ public class SaveDlg extends BasicDlg implements
 		ScreenFrm screenFrm,
 		int       begAddr,
 		int       endAddr,
-		int       fileType,
+		int       hsFileType,
 		boolean   kcBasic,
 		String    title )
   {
@@ -314,11 +314,12 @@ public class SaveDlg extends BasicDlg implements
       this.comboHeadFileType.setFont( font );
     }
 
-    if( (fileType > '\u0020') && (fileType <= '\u007E') ) {
+    if( (hsFileType > '\u0020') && (hsFileType <= '\u007E') ) {
+      this.btnFileFmtHS.setSelected( true );
       for( int k = 0; k < hsFileTypes.length; k++ ) {
 	String item = hsFileTypes[ k ];
 	if( item.length() > 0 ) {
-	  if( item.charAt( 0 ) == fileType ) {
+	  if( item.charAt( 0 ) == hsFileType ) {
 	    this.comboHeadFileType.setSelectedItem( item );
 	    this.comboHeadFileType.setEditable( false );
 	    break;
@@ -389,14 +390,7 @@ public class SaveDlg extends BasicDlg implements
 
     // Vorbelegungen
     EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
-    if( (emuSys instanceof AC1)
-	|| (emuSys instanceof HueblerGraphicsMC)
-	|| (emuSys instanceof KramerMC)
-	|| (emuSys instanceof LLC2) )
-    {
-      this.btnFileFmtHS.setSelected( true );
-    }
-    else if( (emuSys instanceof KC85) || (emuSys instanceof Z9001) ) {
+    if( (emuSys instanceof KC85) || (emuSys instanceof Z9001) ) {
       this.btnFileFmtKC.setSelected( true );
     }
     else if( emuSys instanceof Z1013 ) {

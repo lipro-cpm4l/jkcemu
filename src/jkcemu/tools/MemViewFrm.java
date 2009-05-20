@@ -48,7 +48,7 @@ public class MemViewFrm extends AbstractMemAreaFrm
 	  if( addr <= endAddr ) {
 	    buf.append( String.format(
 				" %02X",
-				this.memory.getMemByte( addr++ ) ) );
+				this.memory.getMemByte( addr++, false ) ) );
 	  } else {
 	    buf.append( "   " );
 	  }
@@ -57,7 +57,7 @@ public class MemViewFrm extends AbstractMemAreaFrm
 	addr = rowAddr;
 	for( int i = 0; i < 16; i++ ) {
 	  if( addr <= endAddr ) {
-	    int ch = this.memory.getMemByte( addr++ );
+	    int ch = this.memory.getMemByte( addr++, false );
 	    if( (ch >= '\u0020') && (ch < 0x7F) ) {
 	      buf.append( (char) ch );
 	    } else {

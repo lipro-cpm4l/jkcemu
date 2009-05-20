@@ -4,29 +4,47 @@
     Z9001 ist die urspr&uuml;ngliche Bezeichnung des KC85/1.
     Da es zwischen beiden keine funktionalen Unterschiede gibt,
     werden sie auch zusammen als ein Computertyp emuliert.
-  <br><br>
+  <br/><br/>
     Das Z9001-Betriebssystem ist auch im KC87 enthalten.
     Deshalb meldet sich der KC87 auch als Z9001.
-  <br><br>
+  <br/><br/>
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>4 KByte ROM f&uuml;r Betriebssystem
-      <li>bei KC87 zus&auml;tzlich 10 KByte ROM f&uuml;r BASIC-Interpreter
-      <li>16 KByte RAM
-      <li>optional ein oder zwei 16 KByte RAM-Module;<br>
-	  Damit ist der RAM auf 32 bzw. 48 KByte vergr&ouml;&szlig;erbar.
-      <li>1 KByte Bildwiederholspeicher
-      <li>optional Farbmodul inkl. 1 KByte Farbattributspeicher
-      <li>Kassettenrecorderanschluss
+      <li>4 KByte ROM f&uuml;r Betriebssystem</li>
+      <li>bei KC87 zus&auml;tzlich 10 KByte ROM f&uuml;r BASIC-Interpreter</li>
+      <li>16 KByte RAM</li>
+      <li>
+	Optional ein oder zwei 16 KByte RAM-Module
+	oder ein 64 KByte RAM-Modul;<br/>
+	Damit ist der RAM auf 32, 48 oder 74 KByte vergr&ouml;&szlig;erbar
+	(siehe auch die Bemerkungen zum 64 KByte RAM-Modul weiter unten).
+      </li>
+      <li>1 KByte Bildwiederholspeicher</li>
+      <li>Kassettenrecorderanschluss</li>
+      <li>
+	optional:
+	<ul>
+	  <li>
+	    RAM-Erweiterung:
+	    <ul>
+	      <li>ein 16 KByte RAM-Modul oder</li>
+	      <li>zwei 16 KByte RAM-Module oder</li>
+	      <li>ein 64 KByte RAM-Modul (davon nur 58 KByte nutzbar)</li>
+	    </ul>
+	  </li>
+	  <li>Farbmodul inkl. 1 KByte Farbattributspeicher</li>
+	  <li>Vollgrafikmodul (nur in Verbindung mit Farbmodul)</li>
+	</ul>
+      </li>
     </ul>
-  <br><br>
+  <br/><br/>
 
   <h3>1.1. Tastatur</h3>
     F&uuml;r einige Tasten auf der Z9001-Tastatur gibt es &uuml;blicherweise
     keine direkten gleichnamigen Tasten auf der Tastatur des Emulator-Rechners.
     Diese Tasten werden aber trotzdem emuliert, und zwar:
-  <br>
+  <br/>
     <table border="1">
       <tr><th>Z9001-Taste</th><th>Emuliert mittels</th></tr>
       <tr><td>Zeilenanfang</td><td>Shift-Links</td></tr>
@@ -35,16 +53,47 @@
       <tr><td>COLOR</td><td>F2</td></tr>
       <tr><td>LIST</td><td>F3</td></tr>
       <tr><td>RUN</td><td>F4</td></tr>
-      <tr><td>STOP</td><td>F5</td></tr>
+      <tr><td>STOP</td><td>F5 oder CTRL-C</td></tr>
     </table>
-  <br><br>
+  <br/><br/>
+
+  <h3>1.2. 64 KByte RAM-Modul</h3>
+    Dieses Modul stellt zus&auml;tzlichen RAM im Bereich
+    von 4000 bis E7FF sowie einen Hintergrund-RAM im Bereich 4000-7FFF
+    zur Verf&uuml;gung.
+    Da der Bereich ab E800 dem Farbattribut- und Bildwiederholspeicher
+    sowie dem Betriebssystem-ROM vorbehalten ist und somit nicht
+    durch das RAM-Modul belegt werden kann,
+    sind nur 58 KByte des Moduls nutzbar.
+    Insgesamt stehen somit 74 KByte RAM zur Verf&uuml;gung.
+  <br/><br/>
+    Ein IO-Befehl auf Port 5 schaltet den Hintergrund-RAM ab 4000 ein.
+    Ein IO-Befehl auf Port 4 deaktiviert diesen wieder.
+    Port 7 dient zum Einblenden des RAMs im Bereich ab C000.
+    Beim KC87 wird damit auch der BASIC-ROM ausgeblendet.
+    Ein IO-Befehl auf Port 6 macht das wieder r&uuml;ckg&auml;ngig.
+  <br/><br/>
 
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li>Z9001, KC85/1: Betriebssystemversion 1.2
-      <li>KC87: Betriebssystemversion 1.3, KC-BASIC 86
+      <li>Z9001, KC85/1: Betriebssystemversion 1.2</li>
+      <li>KC87: Betriebssystemversion 1.3, KC-BASIC 86 (Plotter-BASIC)</li>
     </ul>
+  <br/><br/>
+
+
+  <h2>3. Sonstiges</h2>
+
+  <h3>2.1. Einbindung externer ROM-Images</h3>
+    Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>
+    externe ROM-Images an jeder beliebigen Adresse einbinden.
+    Bei der Emulation des 64K-RAM-Moduls gilt allerdings zu beachten,
+    dass ein im Adressbereich 4000 bis 7FFF eingebundenes ROM-Image
+    immer nur dann sichtbar ist, wenn der Hintergrund-RAM ausgeblendet ist.
+    Des weiteren ist ein im Adressbereich C000 bis E7FF
+    eingebundenes ROM-Image nur dann sichtbar,
+    wenn in diesem Bereich das 64K-RAM-Modul nicht eingeblendet ist.
 </body>
 </html>
 

@@ -325,7 +325,7 @@ public class FileInfo
 	  }
 	  rv = new LoadData(
 			fileBuf,
-			14,
+			13,
 			len,
 			(((int) fileBuf[ 14 ] & 0xFF) << 8) | 0x01,
 			-1,

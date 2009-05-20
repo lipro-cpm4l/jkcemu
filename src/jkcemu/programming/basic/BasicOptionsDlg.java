@@ -149,93 +149,81 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    panelGeneral.add(
-	new JLabel(
-		"Programmname (nur relevant bei KCs, HC900 und Z9001):" ),
-	gbcGeneral );
+    panelGeneral.add( new JLabel( "Name des Programms:" ), gbcGeneral );
 
     this.docAppName = new LimitedDocument( 8 );
     this.fldAppName = new JTextField( this.docAppName, "", 8 );
+    gbcGeneral.gridwidth = 2;
     gbcGeneral.gridx++;
     panelGeneral.add( this.fldAppName, gbcGeneral );
 
-
-    // Bereich Speicherbereiche
-    JPanel panelMem = new JPanel( new GridBagLayout() );
-    this.tabbedPane.addTab( "Speicherbereich", panelMem );
-
-    GridBagConstraints gbcMem = new GridBagConstraints(
-					0, 0,
-					1, 1,
-					0.0, 0.0,
-					GridBagConstraints.WEST,
-					GridBagConstraints.NONE,
-					new Insets( 5, 5, 2, 5 ),
-					0, 0 );
-
-    panelMem.add( new JLabel( textBegAddr ), gbcMem );
+    gbcGeneral.insets.top = 20;
+    gbcGeneral.gridwidth  = 1;
+    gbcGeneral.gridx      = 0;
+    gbcGeneral.gridy++;
+    panelGeneral.add( new JLabel( textBegAddr ), gbcGeneral );
 
     JTextField fld = new JTextField( 5 );
     fld.addActionListener( this );
     this.docBegAddr = new HexDocument( fld, 4, textBegAddr );
-    gbcMem.gridx++;
-    panelMem.add( fld, gbcMem );
-    gbcMem.gridx++;
-    panelMem.add( new JLabel( "hex" ), gbcMem );
+    gbcGeneral.gridx++;
+    panelGeneral.add( fld, gbcGeneral );
+    gbcGeneral.gridx++;
+    panelGeneral.add( new JLabel( "hex" ), gbcGeneral );
 
-    gbcMem.insets.top = 2;
-    gbcMem.gridx      = 0;
-    gbcMem.gridy++;
-    panelMem.add( new JLabel( textEndOfMem), gbcMem );
+    gbcGeneral.insets.top = 2;
+    gbcGeneral.gridx      = 0;
+    gbcGeneral.gridy++;
+    panelGeneral.add( new JLabel( textEndOfMem), gbcGeneral );
 
     fld = new JTextField( 5 );
     fld.addActionListener( this );
     this.docEndOfMem = new HexDocument( fld, 4, textEndOfMem );
-    gbcMem.gridx++;
-    panelMem.add( fld, gbcMem );
-    gbcMem.gridx++;
-    panelMem.add( new JLabel( "hex" ), gbcMem );
+    gbcGeneral.gridx++;
+    panelGeneral.add( fld, gbcGeneral );
+    gbcGeneral.gridx++;
+    panelGeneral.add( new JLabel( "hex" ), gbcGeneral );
 
-    gbcMem.gridx = 0;
-    gbcMem.gridy++;
-    panelMem.add( new JLabel( textArraySize ), gbcMem );
+    gbcGeneral.gridx = 0;
+    gbcGeneral.gridy++;
+    panelGeneral.add( new JLabel( textArraySize ), gbcGeneral );
 
     fld = new JTextField( 5 );
     fld.addActionListener( this );
     this.docArraySize    = new IntegerDocument( fld, new Integer( 0 ), null );
-    gbcMem.insets.bottom = 5;
-    gbcMem.gridx++;
-    panelMem.add( fld, gbcMem );
-    gbcMem.gridx++;
-    panelMem.add( new JLabel( "Variablen" ), gbcMem );
+    gbcGeneral.insets.bottom = 5;
+    gbcGeneral.gridx++;
+    panelGeneral.add( fld, gbcGeneral );
+    gbcGeneral.gridx++;
+    panelGeneral.add( new JLabel( "Variablen" ), gbcGeneral );
 
     ButtonGroup grpStack = new ButtonGroup();
 
     this.btnStackSystem = new JRadioButton( "System-Stack verwenden", true );
     this.btnStackSystem.addActionListener( this );
     grpStack.add( this.btnStackSystem );
-    gbcMem.gridwidth     = GridBagConstraints.REMAINDER;
-    gbcMem.insets.top    = 5;
-    gbcMem.insets.bottom = 0;
-    gbcMem.insets.left   = 20;
-    gbcMem.gridy         = 0;
-    gbcMem.gridx += 2;
-    panelMem.add( this.btnStackSystem, gbcMem );
+    gbcGeneral.gridwidth     = GridBagConstraints.REMAINDER;
+    gbcGeneral.insets.top    = 5;
+    gbcGeneral.insets.bottom = 0;
+    gbcGeneral.insets.left   = 20;
+    gbcGeneral.gridy         = 1;
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.btnStackSystem, gbcGeneral );
 
     this.btnStackSeparate = new JRadioButton(
 					"Eigener Stack-Bereich:",
 					false );
     this.btnStackSeparate.addActionListener( this );
     grpStack.add( this.btnStackSeparate );
-    gbcMem.insets.top = 0;
-    gbcMem.gridy++;
-    panelMem.add( this.btnStackSeparate, gbcMem );
+    gbcGeneral.insets.top = 0;
+    gbcGeneral.gridy++;
+    panelGeneral.add( this.btnStackSeparate, gbcGeneral );
 
     this.labelStackSize = new JLabel( "Gr\u00F6\u00DFe:" );
-    gbcMem.gridwidth   = 1;
-    gbcMem.insets.left = 50;
-    gbcMem.gridy++;
-    panelMem.add( this.labelStackSize, gbcMem );
+    gbcGeneral.gridwidth   = 1;
+    gbcGeneral.insets.left = 50;
+    gbcGeneral.gridy++;
+    panelGeneral.add( this.labelStackSize, gbcGeneral );
     
     this.fldStackSize = new JTextField( 5 );
     this.fldStackSize.addActionListener( this );
@@ -243,12 +231,12 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 					this.fldStackSize,
 					new Integer( MIN_STACK_SIZE ),
 					null );
-    gbcMem.insets.left = 5;
-    gbcMem.gridx++;
-    panelMem.add( this.fldStackSize, gbcMem );
+    gbcGeneral.insets.left = 5;
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.fldStackSize, gbcGeneral );
     this.labelStackUnit = new JLabel( "Bytes" );
-    gbcMem.gridx++;
-    panelMem.add( this.labelStackUnit, gbcMem );
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.labelStackUnit, gbcGeneral );
 
 
     // Bereich Laufzeiteigenschaften
@@ -436,6 +424,15 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
 
     // Vorbelegungen
+    EmuSys                 emuSys   = emuThread.getEmuSys();
+    BasicCompiler.Platform platform = BasicCompiler.getPlatform( emuSys );
+    if( (platform != BasicCompiler.Platform.HUEBLERMC)
+	&& (platform != BasicCompiler.Platform.KC85)
+	&& (platform != BasicCompiler.Platform.Z9001) )
+    {
+      this.fldAppName.setEditable( false );
+      this.fldAppName.setEnabled( false );
+    }
     BasicOptions basicOptions = null;
     if( options != null ) {
       if( options instanceof BasicOptions )
@@ -474,6 +471,15 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 				basicOptions.getStructuredForNext() );
       this.btnPreferRelJumps.setSelected(
 				basicOptions.getPreferRelativeJumps() );
+
+      // Bei Aenderung der Plattform die Anfangsadresse neu setzen
+      BasicCompiler.Platform lastPlatform = basicOptions.getPlatform();
+      if( lastPlatform != null ) {
+	if( !lastPlatform.equals( platform ) ) {
+	  this.docBegAddr.setValue(
+			BasicOptions.getDefaultBegAddr( emuSys ), 4 );
+	}
+      }
     } else {
       this.fldAppName.setText( "MYAPP" );
       this.docBegAddr.setValue(
@@ -512,6 +518,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     } else {
       this.btnStackSystem.setSelected( true );
     }
+    this.docAppName.setSwapCase( true );
     updCodeDestFields( options );
     updCheckFieldsEnabled();
     updStackFieldsEnabled();

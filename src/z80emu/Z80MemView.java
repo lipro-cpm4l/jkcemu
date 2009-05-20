@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -13,7 +13,7 @@ import java.lang.*;
 
 public interface Z80MemView
 {
-  public int getMemByte( int addr );
+  public int getMemByte( int addr, boolean m1 );
   public int getMemWord( int addr );
 }
 

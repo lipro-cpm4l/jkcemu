@@ -62,14 +62,27 @@ public class ReassFrm extends AbstractMemAreaFrm
 	} else {
 	  int begOfLine = buf.length();
 	  buf.append( String.format( "%04X", addr ) );
+
+	  int b0        = this.memory.getMemByte( addr, true );
+	  boolean b1_m1 = ((b0 == 0xED) || (b0 == 0xDD) || (b0 == 0xFD));
+
 	  Z80ReassInstr instruction = Z80Reassembler.reassInstruction(
 				addr,
-				this.memory.getMemByte( addr ),
-				this.memory.getMemByte( addr + 1 ),
-				this.memory.getMemByte( addr + 2 ),
-				this.memory.getMemByte( addr + 3 ) );
+				b0,
+				this.memory.getMemByte( addr + 1, b1_m1 ),
+				this.memory.getMemByte( addr + 2, false ),
+				this.memory.getMemByte( addr + 3, false ) );
 	  if( instruction != null ) {
-	    appendCode( buf, addr, instruction.getLength() );
+	    buf.append( (char) '\u0020' );
+	    len = instruction.getLength();
+	    for( int i = 0; i < len; i++ ) {
+	      buf.append( (char) '\u0020' );
+	      buf.append( String.format(
+				"%02X",
+				this.emuThread.getMemByte(
+					addr++,
+					(i == 0) || ((i == 1) && b1_m1) ) ) );
+	    }
 
 	    String s = instruction.getName();
 	    if( s != null ) {
@@ -88,10 +101,10 @@ public class ReassFrm extends AbstractMemAreaFrm
 		}
 	      }
 	    }
-	    addr += instruction.getLength();
 	  } else {
-	    appendCode( buf, addr, 1 );
-	    addr++;
+	    buf.append( String.format(
+				"  %02X",
+				this.emuThread.getMemByte( addr++, true ) ) );
 	  }
 	  buf.append( (char) '\n' );
 	}
@@ -105,18 +118,6 @@ public class ReassFrm extends AbstractMemAreaFrm
 
 
 	/* --- private Methoden --- */
-
-  private void appendCode( StringBuilder buf, int addr, int len )
-  {
-    buf.append( (char) '\u0020' );
-    for( int i = 0; i < len; i++ ) {
-      buf.append( (char) '\u0020' );
-      buf.append( String.format(
-			"%02X",
-			this.emuThread.getMemByte( addr++ ) ) );
-    }
-  }
-
 
   private static void appendSpaces( StringBuilder buf, int endPos )
   {

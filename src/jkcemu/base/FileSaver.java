@@ -230,7 +230,7 @@ public class FileSaver
 	    }
 	  }
 	  while( addr <= endAddr ) {
-	    out.write( memory.getMemByte( addr ) );
+	    out.write( memory.getMemByte( addr, false ) );
 	    addr++;
 	  }
 	  if( isHS && (memForHeader != null) ) {
@@ -255,7 +255,7 @@ public class FileSaver
 			headFileDesc );
 	    int addr = begAddr;
 	    while( addr <= endAddr ) {
-	      out.write( memory.getMemByte( addr ) );
+	      out.write( memory.getMemByte( addr, false ) );
 	      addr++;
 	    }
 	  }
@@ -319,7 +319,7 @@ public class FileSaver
 		out.write( (addr + 128) > endAddr ? 0xFF : blkNum++ );
 		n = 128;
 	      }
-	      out.write( memory.getMemByte( addr++ ) );
+	      out.write( memory.getMemByte( addr++, false ) );
 	      --n;
 	    }
 	    while( n > 0 ) {
@@ -351,7 +351,7 @@ public class FileSaver
 	} else {
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
-	    out.write( memory.getMemByte( addr ) );
+	    out.write( memory.getMemByte( addr, false ) );
 	    addr++;
 	  }
 	}
@@ -398,7 +398,7 @@ public class FileSaver
     int curLineAddr  = begAddr;
     int nextLineAddr = memory.getMemWord( curLineAddr );
     while( (nextLineAddr > curLineAddr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1 ) == 0) )
+	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
     {
       int a = nextLineAddr - begAddr + 0x0401;
       buf.write( a & 0xFF );
@@ -406,7 +406,7 @@ public class FileSaver
 
       int pos = curLineAddr + 2;
       while( pos < nextLineAddr ) {
-	buf.write( memory.getMemByte( pos++ ) );
+	buf.write( memory.getMemByte( pos++, false ) );
       }
 
       curLineAddr  = nextLineAddr;
@@ -465,7 +465,7 @@ public class FileSaver
 
       int cks = (cnt & 0xFF) + (hHeadBegAddr & 0xFF) + (headBegAddr & 0xFF);
       for( int i = 0; i < cnt; i++ ) {
-	int b = memory.getMemByte( addr++ );
+	int b = memory.getMemByte( addr++, false );
 	writeHexByte( out, b );
 	cks += b;
       }

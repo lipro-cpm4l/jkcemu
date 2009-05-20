@@ -36,14 +36,11 @@ public class VCS80 extends EmuSys implements
   private long    curDispTStates;
   private long    dispHCycleTStates;
   private Z80PIO  pio;
-  private Color   redLight;
-  private Color   redDark;
 
 
   public VCS80( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    createColors( props );
     if( mon == null ) {
       mon = readResource( "/rom/vcs80/vcs80mon.bin" );
     }
@@ -153,13 +150,6 @@ public class VCS80 extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
-  public void applySettings( Properties props )
-  {
-    super.applySettings( props );
-    createColors( props );
-  }
-
-
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
@@ -181,11 +171,11 @@ public class VCS80 extends EmuSys implements
     Color color = Color.black;
     switch( colorIdx ) {
       case 1:
-	color = this.redDark;
+	color = this.colorRedDark;
 	break;
 
       case 2:
-	color = this.redLight;
+	color = this.colorRedLight;
 	break;
     }
     return color;
@@ -204,7 +194,7 @@ public class VCS80 extends EmuSys implements
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     int rv = 0xFF;
 
@@ -238,7 +228,7 @@ public class VCS80 extends EmuSys implements
 
   public String getTitle()
   {
-    return "VCS-80";
+    return "VCS80";
   }
 
 
@@ -292,8 +282,8 @@ public class VCS80 extends EmuSys implements
 		x,
 		y,
 		this.digitValues[ i ],
-		this.redDark,
-		this.redLight,
+		this.colorRedDark,
+		this.colorRedLight,
 		screenScale );
 	x += (65 * screenScale);
       }
@@ -339,7 +329,7 @@ public class VCS80 extends EmuSys implements
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      fillRandom( this.ram );
+      initSRAM( this.ram, props );
     }
     synchronized( this.digitValues ) {
       Arrays.fill( this.digitValues, 0 );
@@ -389,14 +379,6 @@ public class VCS80 extends EmuSys implements
 
 
 	/* --- private Methoden --- */
-
-  private void createColors( Properties props )
-  {
-    int value     = getMaxRGBValue( props );
-    this.redLight = new Color( value, 0, 0 );
-    this.redDark  = new Color( value / 5, 0, 0 );
-  }
-
 
   /*
    * Eingang: H-Aktiv

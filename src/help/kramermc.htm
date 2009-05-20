@@ -5,27 +5,27 @@
     der in dem 1987 erschienenen Buch
     <em>Praktische Mikrocomputertechnik</em>
     von Manfred Kramer beschrieben ist.
-  <br><br>
+  <br/><br/>
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>23 KByte ROM
-      <li>41 KByte RAM inklusive 1 KByte Bildwiederholspeicher
-      <li>64x16 Zeichen Bildschirmgr&ouml;&szlig;e
+      <li>23 KByte ROM</li>
+      <li>41 KByte RAM inklusive 1 KByte Bildwiederholspeicher</li>
+      <li>64x16 Zeichen Bildschirmgr&ouml;&szlig;e</li>
     </ul>
-  <br><br>
+  <br/><br/>
 
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li><a href="kramermc/monitor.htm">Monitorprogramm</a>
-      <li><a href="kramermc/assembler.htm">Assembler</a>
-      <li>Reassembler
-      <li>Debugger
-      <li>BASIC-Interpreter
-      <li><a href="kramermc/editor.htm">Editor</a>
+      <li><a href="kramermc/monitor.htm">Monitorprogramm</a></li>
+      <li><a href="kramermc/assembler.htm">Assembler</a></li>
+      <li>Reassembler</li>
+      <li>Debugger</li>
+      <li>BASIC-Interpreter</li>
+      <li><a href="kramermc/editor.htm">Editor</a></li>
     </ul>
-  <br><br>
+  <br/><br/>
 
 
   <h2>3. Speicheraufteilung</h2>
@@ -60,7 +60,7 @@
       <tr><td nowrap>E000-FBFF</td><td>RAM</td></tr>
       <tr><td nowrap>FC00-FFFF</td><td>Bildwiederholspeicher</td></tr>
     </table>
-  <br><br>
+  <br/><br/>
 
 
   <h2>4. BASIC</h2>
@@ -71,13 +71,13 @@
     und speichern das Programm als
     <a href="fileformats.htm#headersave">Headersave</a>-Datei
     mit dem Dateityp <tt>B</tt>.
-  <br><br>
+  <br/><br/>
     Nur wenn Sie das BASIC-Programm so speichern,
     werden beim Laden des Programms die Systemzellen des
     BASIC-Interpreters richtig angepasst.
     In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
     aber im Interpreter nicht richtig nutzen.
-  <br><br>
+  <br/><br/>
 
 
   <h2>5. Sonstiges</h2>
@@ -85,7 +85,7 @@
   <h3>5.1. JKCEMU-BASIC-Compiler</h3>
     Der JKCEMU-BASIC-Compiler kann Programmcode f&uuml;r den Kramer-MC
     erzeugen, allerdings mit nachfolgend beschriebenen Einschr&auml;nkungen.
-  <br><br>
+  <br/><br/>
 
   <h4>5.1.1. Stack</h4>
     Sie d&uuml;rfen die Compiler-Option <em>System-Stack verwenden</em>
@@ -93,7 +93,7 @@
     mit dem Kommando <tt>G&lt;SADR&gt;</tt> der Stack-Pointer den Wert 0000
     hat und somit in den Bildwiederholspeicher hineinlaufen w&uuml;rde.
     Compilieren Sie immer mit der Option <em>Eigener Stack-Bereich</em>.
-  <br><br>
+  <br/><br/>
 
   <h4>5.1.2. INKEY</h4>
     Beim Kramer-MC, zumindest bei dem in JKCEMU integrierten Monitorprogramm,

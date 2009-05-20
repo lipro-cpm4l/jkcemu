@@ -10,6 +10,7 @@ package jkcemu.system;
 
 import java.awt.Component;
 import java.awt.event.KeyEvent;
+import java.io.File;
 import java.lang.*;
 import java.util.Properties;
 import javax.swing.JOptionPane;
@@ -61,26 +62,38 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
   private byte[]  ramStatic;
   private byte[]  ramVideo;
+  private byte[]  ramExtended;
   private byte[]  romMon;
   private byte[]  romBASIC;
+  private byte[]  romdisk;
+  private byte[]  prgX;
   private byte[]  fontBytes;
   private Z80CTC  ctc;
   private Z80PIO  pio;
   private boolean mode64x16;
-  private boolean lowerDRAMEnabled;
-  private boolean gsbasicEnabled;
+  private boolean scchMode;
   private boolean keyboardUsed;
+  private boolean lowerDRAMEnabled;
+  private boolean romdiskEnabled;
+  private boolean romdiskA15;
+  private boolean prgXEnabled;
+  private boolean gsbasicEnabled;
+  private boolean rf32KActive;
+  private boolean rf32NegA15;
+  private boolean rfReadEnabled;
+  private boolean rfWriteEnabled;
+  private int     rfAddr16to19;
 
 
   public AC1( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    this.romMon           = null;
-    this.romBASIC         = null;
-    this.fontBytes        = null;
-    this.mode64x16        = false;
-    this.lowerDRAMEnabled = false;
-    this.gsbasicEnabled   = false;
+    this.ramExtended = null;
+    this.romMon      = null;
+    this.romBASIC    = null;
+    this.fontBytes   = null;
+    this.mode64x16   = false;
+    this.scchMode    = false;
 
     String mon = EmuUtil.getProperty( props, "jkcemu.ac1.monitor" );
     if( mon.startsWith( "SCCH" ) ) {
@@ -99,6 +112,10 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	}
 	this.romMon = scchMon1088;
       }
+      this.scchMode    = true;
+      this.ramExtended = this.emuThread.getExtendedRAM( 0x100000 );
+      this.prgX        = readProgramX( props );
+      this.romdisk     = readROMDisk( props );
     } else {
       if( minibasic == null ) {
 	minibasic = readResource( "/rom/ac1/minibasic.bin" );
@@ -199,7 +216,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
     return SourceUtil.getTinyBasicProgram(
 				memory,
 				0x1950,
-				memory.getMemWord( 0x18E9 ) + 1 );
+				memory.getMemWord( 0x18E9 ) );
   }
 
 
@@ -312,13 +329,75 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
-  public int getMemByte( int addr )
+  public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
 
     int     rv   = 0xFF;
     boolean done = false;
-    if( !this.lowerDRAMEnabled ) {
+    if( this.scchMode ) {
+      if( !m1 && this.rfReadEnabled ) {
+	if( this.ramExtended != null ) {
+	  int idx = this.rfAddr16to19 | addr;
+	  if( idx < this.ramExtended.length ) {
+	    rv = (int) this.ramExtended[ idx ] & 0xFF;
+	  }
+	}
+	done = true;
+      }
+      if( !done && this.rf32KActive && (addr >= 0x4000) && (addr < 0xC000) ) {
+	if( this.ramExtended != null ) {
+	  int idx = this.rfAddr16to19 | addr;
+	  if( this.rf32NegA15 ) {
+	    if( (idx & 0x8000) != 0 ) {
+	      idx &= 0xF7FFF;
+	    } else {
+	      idx |= 0x8000;
+	    }
+	  }
+	  if( idx < this.ramExtended.length ) {
+	    rv = (byte) this.ramExtended[ idx ] & 0xFF;
+	  }
+	}
+	done = true;
+      }
+      if( !done && this.gsbasicEnabled
+	  && (addr >= 0x4000) && (addr < 0x6000) )
+      {
+	if( gsbasic != null ) {
+	  int idx = addr - 0x4000;
+	  if( idx < gsbasic.length ) {
+	    rv = (int) gsbasic[ idx ] & 0xFF;
+	  }
+	}
+	done = true;
+      }
+      if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
+	if( this.romdisk != null ) {
+	  int idx = addr - 0xC000;
+	  if( this.prgXEnabled ) {
+	    idx |= 0x4000;
+	  }
+	  if( this.romdiskA15 ) {
+	    idx |= 0x8000;
+	  }
+	  if( idx < this.romdisk.length ) {
+	    rv = (int) this.romdisk[ idx ] & 0xFF;
+	  }
+	}
+	done = true;
+      }
+      if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
+	if( this.prgX != null ) {
+	  int idx = addr - 0xE000;
+	  if( idx < this.prgX.length ) {
+	    rv = (int) this.prgX[ idx ] & 0xFF;
+	  }
+	}
+	done = true;
+      }
+    }
+    if( !done && !this.lowerDRAMEnabled && (addr < 0x2000) ) {
       if( this.romMon != null ) {
 	if( addr < this.romMon.length ) {
 	  rv   = (int) this.romMon[ addr ] & 0xFF;
@@ -336,28 +415,17 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	if( (addr >= 0x1000) && (addr < 0x1800) ) {
 	  int idx = addr - 0x1000;
 	  if( idx < this.ramVideo.length ) {
-	    rv   = (int) this.ramVideo[ idx ] & 0xFF;
-	    done = true;
+	    rv = (int) this.ramVideo[ idx ] & 0xFF;
 	  }
 	}
 	else if( (addr >= 0x1800) && (addr < 0x2000) ) {
 	  int idx = addr - 0x1800;
 	  if( idx < this.ramStatic.length ) {
-	    rv   = (int) this.ramStatic[ idx ] & 0xFF;
-	    done = true;
+	    rv = (int) this.ramStatic[ idx ] & 0xFF;
 	  }
 	}
       }
-    }
-    if( !done && this.gsbasicEnabled
-	&& (addr >= 0x4000) && (addr < 0x6000)
-	&& (gsbasic != null) )
-    {
-      int idx = addr - 0x4000;
-      if( idx < gsbasic.length ) {
-	rv   = (int) gsbasic[ idx ] & 0xFF;
-	done = true;
-      }
+      done = true;
     }
     if( !done && !this.mode64x16 ) {
       rv = this.emuThread.getRAMByte( addr );
@@ -443,7 +511,21 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
   protected boolean isExtROMSwitchableAt( int addr )
   {
-    return !this.lowerDRAMEnabled || (addr >= 0x2000);
+    boolean rv = false;
+    if( !this.rfReadEnabled ) {
+      if( addr < 0x2000 ) {
+	rv = !this.lowerDRAMEnabled;
+      } else if( (addr >= 0x2000) && (addr < 0xE000) ) {
+	if( !this.romdiskEnabled ) {
+	  rv = true;
+	}
+      } else {
+	if( !this.romdiskEnabled && !this.prgXEnabled ) {
+	  rv = true;
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -567,7 +649,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
     int rv = 0xFF;
     if( (port & 0xF8) == 0xE0 ) {
       if( !this.mode64x16 ) {
-	rv = this.emuThread.getRAMFloppyA().readByte( port & 0x07 );
+	rv = this.emuThread.getRAMFloppy1().readByte( port & 0x07 );
       }
     } else {
       switch( port & 0xFF ) {
@@ -643,7 +725,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      fillRandom( this.ramStatic );
+      initSRAM( this.ramStatic, props );
       fillRandom( this.ramVideo );
     }
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
@@ -655,7 +737,17 @@ public class AC1 extends EmuSys implements Z80CTCListener
       this.ctc.reset( false );
       this.pio.reset( false );
     }
-    this.keyboardUsed = false;
+    this.keyboardUsed     = false;
+    this.lowerDRAMEnabled = false;
+    this.romdiskEnabled   = false;
+    this.romdiskA15       = false;
+    this.prgXEnabled      = false;
+    this.gsbasicEnabled   = false;
+    this.rf32KActive      = false;
+    this.rf32NegA15       = false;
+    this.rfReadEnabled    = false;
+    this.rfWriteEnabled   = false;
+    this.rfAddr16to19     = 0;
   }
 
 
@@ -679,8 +771,10 @@ public class AC1 extends EmuSys implements Z80CTCListener
   public void saveTinyBasicProgram()
   {
     if( this.romBASIC != null ) {
-      int endAddr = this.emuThread.getMemWord( 0x18E9 ) + 1;
-      if( endAddr > 0x1950 ) {
+      int endAddr = this.emuThread.getMemWord( 0x18E9 );
+      if( (endAddr > 0x1950)
+	  && (this.emuThread.getMemByte( endAddr - 1, false ) == 0x0D) )
+      {
 	(new SaveDlg(
 		this.screenFrm,
 		0x18C0,
@@ -703,39 +797,65 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
     boolean rv   = false;
     boolean done = false;
-    if( !this.lowerDRAMEnabled ) {
-      if( this.romMon != null ) {
-	if( addr < this.romMon.length ) {
-	  done = true;
-	}
-      }
-      if( !done && (addr >= 0x0800) && (this.romBASIC != null) ) {
-	if( addr - 0x800 < this.romBASIC.length ) {
-	  done = true;
-	}
-      }
-      if( !done ) {
-	if( (addr >= 0x1000) && (addr < 0x1800) ) {
-	  int idx = addr - 0x1000;
-	  if( idx < this.ramVideo.length ) {
-	    this.ramVideo[ idx ] = (byte) value;
-	    this.screenFrm.setScreenDirty( true );
+    if( this.scchMode ) {
+      if( this.rfWriteEnabled ) {
+	if( this.ramExtended != null ) {
+	  int idx = this.rfAddr16to19 | addr;
+	  if( idx < this.ramExtended.length ) {
+	    this.ramExtended[ idx ] = (byte) value;
 	    rv = true;
 	  }
 	}
-	else if( (addr >= 0x1800) && (addr < 0x2000) ) {
-	  int idx = addr - 0x1800;
-	  if( idx < this.ramStatic.length ) {
-	    this.ramStatic[ idx ] = (byte) value;
+	done = true;
+      }
+      if( !done && this.rf32KActive && (addr >= 0x4000) && (addr < 0xC000) ) {
+	if( this.ramExtended != null ) {
+	  int idx = this.rfAddr16to19 | addr;
+	  if( this.rf32NegA15 ) {
+	    if( (idx & 0x8000) != 0 ) {
+	      idx &= 0xF7FFF;
+	    } else {
+	      idx |= 0x8000;
+	    }
+	  }
+	  if( idx < this.ramExtended.length ) {
+	    this.ramExtended[ idx ] = (byte) value;
 	    rv = true;
 	  }
 	}
+	done = true;
+      }
+      if( !done && this.gsbasicEnabled
+	  && (addr >= 0x4000) && (addr < 0x6000) )
+      {
+	done = true;
+      }
+      if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
+	done = true;
+      }
+      if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
+	done = true;
       }
     }
-    if( !done && this.gsbasicEnabled && (addr >= 0x4000) && (addr < 0x6000) ) {
+    if( !done && !this.lowerDRAMEnabled && (addr < 0x2000) ) {
+      if( (addr >= 0x1000) && (addr < 0x1800) ) {
+	int idx = addr - 0x1000;
+	if( idx < this.ramVideo.length ) {
+	  this.ramVideo[ idx ] = (byte) value;
+	  this.screenFrm.setScreenDirty( true );
+	  rv = true;
+	}
+      }
+      else if( (addr >= 0x1800) && (addr < 0x2000) ) {
+	int idx = addr - 0x1800;
+	if( idx < this.ramStatic.length ) {
+	  this.ramStatic[ idx ] = (byte) value;
+	  rv = true;
+	}
+      }
       done = true;
     }
-    if( !this.mode64x16 && !done ) {
+    if( !done && !this.mode64x16 ) {
       this.emuThread.setRAMByte( addr, value );
       rv = true;
     }
@@ -743,9 +863,9 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
-  public boolean supportsRAMFloppyA()
+  public boolean supportsRAMFloppy1()
   {
-    return true;
+    return !this.mode64x16;
   }
 
 
@@ -772,7 +892,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
   {
     if( (port & 0xF8) == 0xE0 ) {
       if( !this.mode64x16 ) {
-	this.emuThread.getRAMFloppyA().writeByte( port & 0x07, value );
+	this.emuThread.getRAMFloppy1().writeByte( port & 0x07, value );
       }
     } else {
       switch( port & 0xFF ) {
@@ -804,9 +924,24 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	  break;
 
 	case 0x14:
-	  if( !this.mode64x16 ) {
-	    this.gsbasicEnabled   = ((value & 0x02) != 0);
-	    this.lowerDRAMEnabled = ((value & 0x04) != 0);
+	  if( this.scchMode ) {
+	    this.prgXEnabled    = ((value & 0x01) != 0);
+	    this.gsbasicEnabled = ((value & 0x02) != 0);
+	    this.romdiskEnabled = ((value & 0x08) != 0);
+	    this.romdiskA15     = ((value & 0x20) != 0);
+	    if( (value & 0x04) != 0 ) {
+	      this.lowerDRAMEnabled = true;
+	    }
+	  }
+	  break;
+
+	case 0x15:
+	  if( this.scchMode ) {
+	    this.rfAddr16to19   = (value << 16) & 0xF0000;
+	    this.rf32NegA15     = ((value & 0x10) != 0);
+	    this.rf32KActive    = ((value & 0x20) != 0);
+	    this.rfReadEnabled  = ((value & 0x40) != 0);
+	    this.rfWriteEnabled = ((value & 0x80) != 0);
 	  }
 	  break;
 
@@ -834,7 +969,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
     int nextLineAddr = memory.getMemWord( addr );
     while( (nextLineAddr > addr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1 ) == 0) )
+	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
     {
       // Zeilennummer
       addr += 2;
@@ -845,7 +980,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
       boolean sep = true;
       int     n   = 0;
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr );
+	int ch = memory.getMemByte( addr, false );
 	if( ch == '\u0020' ) {
 	  n++;
 	  addr++;
@@ -862,7 +997,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
       // Programmzeile extrahieren
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr++ );
+	int ch = memory.getMemByte( addr++, false );
 	if( ch == 0 ) {
 	  break;
 	}
@@ -872,7 +1007,7 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	  }
 	  buf.append( (char) ch );
 	  while( addr < nextLineAddr ) {
-	    ch = memory.getMemByte( addr++ );
+	    ch = memory.getMemByte( addr++, false );
 	    if( ch == 0 ) {
 	      break;
 	    }

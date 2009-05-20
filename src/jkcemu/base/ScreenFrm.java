@@ -109,25 +109,25 @@ public class ScreenFrm extends BasicFrm implements
     mnuFile.add( createJMenuItem( "Speichern...", "file.save" ) );
     mnuFile.addSeparator();
 
-    // Untermenu RAM-Floppy A
-    JMenu mnuRAMFloppyA = new JMenu( "RAM-Floppy A" );
-    mnuFile.add( mnuRAMFloppyA );
-    mnuRAMFloppyA.add( createJMenuItem(
+    // Untermenu RAM-Floppy 1
+    JMenu mnuRAMFloppy1 = new JMenu( "RAM-Floppy 1" );
+    mnuFile.add( mnuRAMFloppy1 );
+    mnuRAMFloppy1.add( createJMenuItem(
 			"Laden...",
-			"file.ramfloppy_a.load" ) );
-    mnuRAMFloppyA.add( createJMenuItem(
+			"file.ramfloppy_1.load" ) );
+    mnuRAMFloppy1.add( createJMenuItem(
 			"Speichern...",
-			"file.ramfloppy_a.save" ) );
+			"file.ramfloppy_1.save" ) );
 
-    // Untermenu RAM-Floppy B
-    JMenu mnuRAMFloppyB = new JMenu( "RAM-Floppy B" );
-    mnuFile.add( mnuRAMFloppyB );
-    mnuRAMFloppyB.add( createJMenuItem(
+    // Untermenu RAM-Floppy 2
+    JMenu mnuRAMFloppy2 = new JMenu( "RAM-Floppy 2" );
+    mnuFile.add( mnuRAMFloppy2 );
+    mnuRAMFloppy2.add( createJMenuItem(
 			"Laden...",
-			"file.ramfloppy_b.load" ) );
-    mnuRAMFloppyB.add( createJMenuItem(
+			"file.ramfloppy_2.load" ) );
+    mnuRAMFloppy2.add( createJMenuItem(
 			"Speichern...",
-			"file.ramfloppy_b.save" ) );
+			"file.ramfloppy_2.save" ) );
     mnuFile.addSeparator();
 
     // Untermenu BASIC
@@ -308,6 +308,8 @@ public class ScreenFrm extends BasicFrm implements
     mnuHelp.add( this.mnuHelpSys );
     mnuHelp.addSeparator();
     mnuHelp.add( createJMenuItem( "\u00DCber JKCEMU...", "help.about" ) );
+    mnuHelp.add( createJMenuItem( "Lizenzbestimmungen...", "help.license" ) );
+    mnuHelp.add( createJMenuItem( "Danksagung...", "help.thanks" ) );
 
 
     // Menu zusammenbauen
@@ -836,31 +838,17 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
+  /*
+   * Die Tasten F7 bis F10 dienen der Menuesteuerung des Emulators
+   * und werden deshalb nicht an das emulierte System weitergegeben.
+   */
   public void keyPressed( KeyEvent e )
   {
     int keyCode = e.getKeyCode();
-    if( (keyCode == KeyEvent.VK_BACK_SPACE)
-	|| (keyCode == KeyEvent.VK_CONTROL)
-	|| (keyCode == KeyEvent.VK_DELETE)
-	|| (keyCode == KeyEvent.VK_DOWN)
-	|| (keyCode == KeyEvent.VK_END)
-	|| (keyCode == KeyEvent.VK_ENTER)
-	|| (keyCode == KeyEvent.VK_ESCAPE)
-	|| (keyCode == KeyEvent.VK_F1)
-	|| (keyCode == KeyEvent.VK_F2)
-	|| (keyCode == KeyEvent.VK_F3)
-	|| (keyCode == KeyEvent.VK_F4)
-	|| (keyCode == KeyEvent.VK_F5)
-	|| (keyCode == KeyEvent.VK_F6)
-	|| (keyCode == KeyEvent.VK_HOME)
-	|| (keyCode == KeyEvent.VK_INSERT)
-	|| (keyCode == KeyEvent.VK_LEFT)
-	|| (keyCode == KeyEvent.VK_PAUSE)
-	|| (keyCode == KeyEvent.VK_RIGHT)
-	|| (keyCode == KeyEvent.VK_SHIFT)
-	|| (keyCode == KeyEvent.VK_SPACE)
-	|| (keyCode == KeyEvent.VK_TAB)
-	|| (keyCode == KeyEvent.VK_UP) )
+    if( (keyCode != KeyEvent.VK_F7)
+	&& (keyCode != KeyEvent.VK_F8)
+	&& (keyCode != KeyEvent.VK_F9)
+	&& (keyCode != KeyEvent.VK_F10) )
     {
       if( this.emuThread.keyPressed( e ) ) {
 	this.ignoreKeyChar = true;
@@ -1022,33 +1010,33 @@ public class ScreenFrm extends BasicFrm implements
 	    rv = true;
 	    doFileSave();
 	  }
-	  else if( actionCmd.equals( "file.ramfloppy_a.load" ) ) {
+	  else if( actionCmd.equals( "file.ramfloppy_1.load" ) ) {
 	    rv = true;
 	    doFileRAMFloppyLoad(
-			this.emuThread.getRAMFloppyA(),
-			'A',
-			this.emuThread.getEmuSys().supportsRAMFloppyA() );
+			this.emuThread.getRAMFloppy1(),
+			'1',
+			this.emuThread.getEmuSys().supportsRAMFloppy1() );
 	  }
-	  else if( actionCmd.equals( "file.ramfloppy_a.save" ) ) {
+	  else if( actionCmd.equals( "file.ramfloppy_1.save" ) ) {
 	    rv = true;
 	    doFileRAMFloppySave(
-			this.emuThread.getRAMFloppyA(),
-			'A',
-			this.emuThread.getEmuSys().supportsRAMFloppyA() );
+			this.emuThread.getRAMFloppy1(),
+			'1',
+			this.emuThread.getEmuSys().supportsRAMFloppy1() );
 	  }
-	  else if( actionCmd.equals( "file.ramfloppy_b.load" ) ) {
+	  else if( actionCmd.equals( "file.ramfloppy_2.load" ) ) {
 	    rv = true;
 	    doFileRAMFloppyLoad(
-			this.emuThread.getRAMFloppyB(),
-			'B',
-			this.emuThread.getEmuSys().supportsRAMFloppyB() );
+			this.emuThread.getRAMFloppy2(),
+			'2',
+			this.emuThread.getEmuSys().supportsRAMFloppy2() );
 	  }
-	  else if( actionCmd.equals( "file.ramfloppy_b.save" ) ) {
+	  else if( actionCmd.equals( "file.ramfloppy_2.save" ) ) {
 	    rv = true;
 	    doFileRAMFloppySave(
-			this.emuThread.getRAMFloppyB(),
-			'B',
-			this.emuThread.getEmuSys().supportsRAMFloppyB() );
+			this.emuThread.getRAMFloppy2(),
+			'2',
+			this.emuThread.getEmuSys().supportsRAMFloppy2() );
 	  }
 	  else if( actionCmd.equals( "file.basic.open" ) ) {
 	    rv = true;
@@ -1188,7 +1176,7 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "help.content" ) ) {
 	    rv = true;
-	    showHelp( null );
+	    showHelp( "/help/home.htm" );
 	  }
 	  else if( actionCmd.equals( "help.system" ) ) {
 	    rv = true;
@@ -1197,6 +1185,14 @@ public class ScreenFrm extends BasicFrm implements
 	  else if( actionCmd.equals( "help.about" ) ) {
 	    rv = true;
 	    doHelpAbout();
+	  }
+	  else if( actionCmd.equals( "help.license" ) ) {
+	    rv = true;
+	    showHelp( "/help/license.htm" );
+	  }
+	  else if( actionCmd.equals( "help.thanks" ) ) {
+	    rv = true;
+	    showHelp( "/help/thanks.htm" );
 	  }
 	}
       }
@@ -1222,16 +1218,16 @@ public class ScreenFrm extends BasicFrm implements
 
     // Pruefen, ob RAM-Floppies gespeichert wurden
     String msg = null;
-    if( this.emuThread.getRAMFloppyA().hasDataChanged()
-	&& this.emuThread.getRAMFloppyB().hasDataChanged() )
+    if( this.emuThread.getRAMFloppy1().hasDataChanged()
+	&& this.emuThread.getRAMFloppy2().hasDataChanged() )
     {
       msg = "Die Daten in beiden RAM-Floppies";
     } else {
-      if( this.emuThread.getRAMFloppyA().hasDataChanged() ) {
-	msg = "Die Daten in RAM-Floppy A";
+      if( this.emuThread.getRAMFloppy1().hasDataChanged() ) {
+	msg = "Die Daten in RAM-Floppy 1";
       }
-      else if( this.emuThread.getRAMFloppyB().hasDataChanged() ) {
-	msg = "Die Daten in RAM-Floppy B";
+      else if( this.emuThread.getRAMFloppy2().hasDataChanged() ) {
+	msg = "Die Daten in RAM-Floppy 2";
       }
     }
     if( msg != null ) {
@@ -1843,27 +1839,30 @@ public class ScreenFrm extends BasicFrm implements
       Main.getVersion()
 	+ "\n...ein in Java geschriebener Kleincomputer-Emulator"
 	+ "\n\n(c) 2008-2009 Jens M\u00FCller"
-	+ "\n\nLizenz: GNU General Public License Version 3"
+	+ "\n\nLizenz: GNU General Public License Version 3 (GPLv3)"
 	+ "\n\nJegliche Gew\u00E4hrleistung und Haftung ist ausgeschlossen!"
 	+ "\nDie Anwendung dieser Software erfolgt ausschlie\u00DFlich"
 	+ "\nauf eigenes Risiko."
-	+ "\n\nDer Emulator enth\u00E4lt Systemsoftware, Schriftarten,"
-	+ " Grafiksymbole"
-	+ "\nund Beschreibungen der emulierten Computer."
+	+ "\n\nDer Emulator enth\u00E4lt auch Systemsoftware, Schriftarten"
+	+ "\nund Grafiksymbole der emulierten Computer,"
+	+ "\ndie nicht unter der GPLv3 freigegeben sind."
 	+ "\nDie Urheberschaften daran liegen bei:"
 	+ "\n- VEB Me\u00DFelektronik Dresden (Z9001, KC85/1, KC87)"
-	+ "\n- VEB Mikroelektronik Erfurt (LC80)"
+	+ "\n- VEB Mikroelektronik Erfurt (LC80, SC2)"
 	+ "\n- VEB Mikroelektronik M\u00FChlhausen"
 	+ " (HC900, KC85/2, KC85/3, KC85/4)"
 	+ "\n- VEB Polytechnik Karl-Marx-Stadt (Poly-Computer 880)"
 	+ "\n- VEB Robotron-Elektronik Riesa (Z1013)"
-	+ "\n- Bernd H\u00FCbler (H\u00FCbler/Evert-MC, H\u00FCbler-Grafik-MC)"
+	+ "\n- Prof. Dr. Albrecht Mugler (PC/M)"
+	+ "\n- Dr. Gerd Maudrich (LLC1)"
 	+ "\n- Dr. Rainer Brosig (erweitertes Z1013-Monitorprogramm)"
+	+ "\n- Bernd H\u00FCbler (H\u00FCbler/Evert-MC, H\u00FCbler-Grafik-MC)"
 	+ "\n- Eckart Buschendorf (LC-80.2-Monitorprogramm)"
 	+ "\n- Eckhard Ludwig (SCCH-Software f\u00FCr AC1 und LLC2)"
-	+ "\n- Eckhard Schiller (BCS3 und VCS-80)"
-	+ "\n- Frank Heyder (Monitorprogramm 3.1 f\u00FCr AC1)"
+	+ "\n- Eckhard Schiller (BCS3 und VCS80)"
+	+ "\n- Frank Heyder (Monitorprogramm 3.1 und MiniBASIC f\u00FCr AC1)"
 	+ "\n- Frank Pr\u00FCfer (S/P-BASIC V3.3 f\u00FCr BCS3)"
+	+ "\n- H. Mathes (PC/M)"
 	+ "\n- Joachim Czepa (C-80)"
 	+ "\n- Klaus-Peter Evert (H\u00FCbler/Evert-MC)"
 	+ "\n- Manfred Kramer (Kramer-MC)"

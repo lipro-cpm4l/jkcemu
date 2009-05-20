@@ -12,25 +12,29 @@
     mit jeweils einem oder mehreren dazu passenden Monitorprogrammen.
     In den <a href="settings.htm">Einstellungen</a> w&auml;hlen Sie
     die gew&uuml;nschte Kombination aus Monitorprogramm und Tastatur aus.
-  <br><br>
+  <br/><br/>
     Emuliert werden:
     <ul>
-      <li>Je nach Monitorprogramm 2 oder 4 KByte ROM
-      <li>16 oder 64 KByte RAM
-      <li>Tastaturen:
-	  <ul>
-	    <li>Folienflachtastatur (8x4-Matrix)
-	    <li>Alpha-Tastatur (8x8-Matrix)
-	    <li>K7659 (12x8-Matrix)
-	    <li>S6009 (12x8-Matrix)
-	  </ul>
-      <li>Kassettenrecorderanschluss
-      <li>2 RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
-	  Heft 3/1988 an den IO-Basis-Adressen
-	  98h (RAM-Floppy A) und 58h (RAM-Floppy B)
-      <li>Peters-Platine
+      <li>Je nach Monitorprogramm 2 oder 4 KByte ROM</li>
+      <li>16 oder 64 KByte RAM</li>
+      <li>
+	Tastaturen:
+	<ul>
+	  <li>Folienflachtastatur (8x4-Matrix)</li>
+	  <li>Alpha-Tastatur (8x8-Matrix)</li>
+	  <li>K7659 (12x8-Matrix)</li>
+	  <li>S6009 (12x8-Matrix)</li>
+	</ul>
+      </li>
+      <li>Kassettenrecorderanschluss</li>
+      <li>
+	2 RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
+	Heft 3/1988 an den IO-Basis-Adressen
+	98h (RAM-Floppy 1) und 58h (RAM-Floppy 2)
+      </li>
+      <li>Peters-Platine</li>
     </ul>
-  <br><br>
+  <br/><br/>
 
   <h3>1.1. Folienflachtastatur</h3>
     Die Folienflachtastatur enth&auml;lt vier Shift-Tasten,
@@ -40,15 +44,15 @@
     bedienen k&ouml;nnen,
     werden diese vier Shift-Tasten auch als Einzeltasten emuliert,
     und zwar mit den Funktionstasten <em>F1</em> bis <em>F4</em>.
-  <br><br>
+  <br/><br/>
 
   <h3>1.2. Peters-Platine</h3>
     Die Peters-Platine erm&ouml;glicht &uuml;ber IO-Port 4
     die Abschaltung des ROMs sowie die Umschaltung des Zeichensatzes,
     der Taktfrequenz und der Bildschirmorganisation.
-  <br><br>
+  <br/><br/>
     Bedeutung der Bits von IO-Port 4:
-  <br>
+  <br/>
     <table border="1">
       <tr>
 	<th valign="top">Bit</th>
@@ -59,7 +63,7 @@
 	<td valign="top">4</td>
 	<td valign="top">ROM eingeblendet</td>
 	<td valign="top">
-	  ROM aus- und daf&uuml;r RAM eingeblendet,<br>
+	  ROM aus- und daf&uuml;r RAM eingeblendet,<br/>
 	  Im Emulator extern eingebundene ROM-Images
 	  werden nicht ausgeblendet.
 	</td>
@@ -68,7 +72,7 @@
 	<td valign="top">5</td>
 	<td valign="top">Standardzeichensatz</td>
 	<td valign="top">
-	  alternativer Zeichensatz,<br>
+	  alternativer Zeichensatz,<br/>
 	  Der Emulator schaltet auf einen Zeichensatz mit deutschen Umlauten
 	  nach ISO 646 und inversen Zeichen um.
 	</td>
@@ -77,7 +81,7 @@
 	<td valign="top">6</td>
 	<td valign="top">Taktfrequenz 2 MHz</td>
 	<td valign="top">
-	  Taktfrequenz 4 MHz,<br>
+	  Taktfrequenz 4 MHz,<br/>
 	  Der Emulator schaltet nur dann auf 4 MHz um,
 	  wenn in den <a href="settings.htm#speed">Einstellungen</a>
 	  der Standardwert von 2 MHz angegeben ist.
@@ -89,22 +93,28 @@
 	<td valign="top">Bildschirm 64x16 Zeichen</td>
       </tr>
     </table>
-  <br><br>
+  <br/><br/>
 
 
   <h2>2. Im ROM enthaltene Software</h2>
     Je nach Einstellung:
     <ul>
-      <li>Originales Monitorprogramm Version 2.02
-      <li>Originales Monitorprogramm Version A.2
-      <li>Monitorprogramm von Rainer Brosig Version 2.028
-	  f&uuml;r Tastatur K7659
-      <li>Monitorprogramm von Rainer Brosig Version 2.028
-	  f&uuml;r Tastatur S6009
-      <li>Monitorprogramm von Jens M&uuml;ller Version 1992
-	  (siehe <a href="z1013/mon_jm_1992.htm">Beschreibung</a>)
+      <li>Originales Monitorprogramm Version 2.02</li>
+      <li>Originales Monitorprogramm Version A.2</li>
+      <li>
+	Monitorprogramm von Rainer Brosig Version 2.028
+	f&uuml;r Tastatur K7659
+      </li>
+      <li>
+	Monitorprogramm von Rainer Brosig Version 2.028
+	f&uuml;r Tastatur S6009
+      </li>
+      <li>
+	Monitorprogramm von Jens M&uuml;ller Version 1992
+	(siehe <a href="z1013/mon_jm_1992.htm">Beschreibung</a>)
+      </li>
     </ul>
-  <br><br>
+  <br/><br/>
 
 
   <h2>3. Sonstiges</h2>
@@ -118,7 +128,7 @@
     eine Kombination aus Monitorprogramm und Tastatur ausw&auml;hlen,
     die genau der Tastatur entspricht,
     die das extern eingebundene Monitorprogramm voraussetzt.
-  <br><br>
+  <br/><br/>
     Des weiteren ist das extern eingebundene Monitorprogramm
     auch &uuml;ber den IO-Port 4 abschaltbar,
     wenn es im Adressbereich F000-FFFF liegt.

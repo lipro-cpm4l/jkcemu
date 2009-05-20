@@ -221,6 +221,98 @@ public class EmuUtil
   }
 
 
+  public static void exitSysError(
+				Component parent,
+				String    msg,
+				Exception ex )
+  {
+    Main.getScreenFrm().getEmuThread().stopEmulator();
+
+    File          errFile = null;
+    StringBuilder errBuf  = new StringBuilder( 512 );
+    errBuf.append( "Es ist ein interner Applikationsfehler aufgetreten." );
+
+    // Fehlerprotokoll in Datei schreiben
+    PrintWriter errWriter = null;
+    try {
+      String fName = "jkcemu_err.log";
+      String fDir  = System.getProperty( "user.home" );
+      if( fDir == null ) {
+	fDir = "";
+      }
+      errFile = (fDir.length() > 0 ?
+				new File( fDir, fName )
+				: new File( fName ) );
+      errWriter = new PrintWriter( new FileWriter( errFile ) );
+
+      errWriter.println( "Bitte senden Sie diese Datei an"
+						+ " info@jens-mueller.org" );
+      errWriter.println( "Please send this file to info@jens-mueller.org" );
+      errWriter.println();
+      errWriter.println( "--- Program ---" );
+      errWriter.write( Main.getVersion() );
+      errWriter.println();
+
+      if( msg != null ) {
+	errWriter.println();
+	errWriter.println( "--- Fehlermeldung ---" );
+	errWriter.println( msg );
+	errWriter.println();
+      }
+
+      if( ex != null ) {
+	errWriter.println();
+	errWriter.println( "--- Stack Trace ---" );
+	ex.printStackTrace( errWriter );
+	errWriter.println();
+      }
+
+      Properties props = System.getProperties();
+      if( props != null ) {
+	errWriter.println();
+	errWriter.println( "--- Properties ---" );
+	props.list( errWriter );
+	errWriter.println();
+      }
+
+      if( errWriter.checkError() )
+	errFile = null;
+
+      errWriter.close();
+      errWriter = null;
+    }
+    catch( Exception ex2 ) {
+      errFile = null;
+    }
+    finally {
+      if( errWriter != null )
+	errWriter.close();
+    }
+
+    // Fehlerausschrift
+    if( parent == null ) {
+      parent = new Frame();
+    }
+    if( errFile != null ) {
+      errBuf.append( "\nEin Protokoll des Fehlers wurde"
+				+ " in die Textdatei\n\'" );
+      errBuf.append( errFile.getPath() );
+      errBuf.append( "\' geschrieben.\n"
+		+ "Bitte senden Sie diese Textdatei" );
+    } else {
+      errBuf.append( "\nBitte melden Sie diesen Fehler" );
+    }
+    errBuf.append( " einschlie\u00DFlich einer\n"
+		+ "kurzen Beschreibung Ihrer letzten Aktionen per E-Mail an:\n"
+		+ "info@jens-mueller.org\n\n"
+		+ "Schreiben Sie bitte in den Betreff der E-Mail unbedingt\n"
+		+ "das Wort JKCEMU hinein!\n\n"
+		+ "Vielen Dank!" );
+    BasicDlg.showErrorDlg( parent, errBuf.toString(), "Applikationsfehler" );
+    System.exit( 1 );
+  }
+
+
   public static boolean getBooleanProperty(
 				Properties props,
 				String     keyword,
@@ -746,103 +838,6 @@ public class EmuUtil
 				fileFilters );
     dlg.setVisible( true );
     return dlg.getSelectedFile();
-  }
-
-
-  public static void showSysError(
-				Component parent,
-				String    msg,
-				Exception ex )
-  {
-    File errFile = null;
-
-    // Fehlerprotokoll in Datei schreiben
-    PrintWriter errWriter = null;
-    try {
-      String fName = "jkcemu_err.log";
-      String fDir  = System.getProperty( "user.home" );
-      if( fDir == null ) {
-	fDir = "";
-      }
-      errFile = (fDir.length() > 0 ?  new File( fDir, fName )
-					      : new File( fName ) );
-      errWriter = new PrintWriter( new FileWriter( errFile ) );
-
-      errWriter.println( "Bitte senden Sie diese Datei an"
-						+ " info@jens-mueller.org" );
-      errWriter.println( "Please send this file to info@jens-mueller.org" );
-      errWriter.println();
-      errWriter.println( "--- Program ---" );
-      errWriter.write( Main.getVersion() );
-      errWriter.println();
-
-      if( msg != null ) {
-	errWriter.println();
-	errWriter.println( "--- Fehlermeldung ---" );
-	errWriter.println( msg );
-	errWriter.println();
-      }
-
-      if( ex != null ) {
-	errWriter.println();
-	errWriter.println( "--- Stack Trace ---" );
-	ex.printStackTrace( errWriter );
-	errWriter.println();
-      }
-
-      Properties props = System.getProperties();
-      if( props != null ) {
-	errWriter.println();
-	errWriter.println( "--- Properties ---" );
-	props.list( errWriter );
-	errWriter.println();
-      }
-
-      if( errWriter.checkError() )
-	errFile = null;
-
-      errWriter.close();
-      errWriter = null;
-    }
-    catch( Exception ex2 ) {
-      errFile = null;
-    }
-    finally {
-      if( errWriter != null )
-	errWriter.close();
-    }
-
-    // Fehlerausschrift
-    if( parent == null ) {
-      parent = new Frame();
-    }
-    if( errFile != null ) {
-      BasicDlg.showErrorDlg(
-	parent,
-	"Es ist ein interner Applikationsfehler aufgetreten.\n"
-	  + "Ein Protokoll des Fehlers wurde in die Textdatei\n\'"
-	  + errFile.getPath() + "\' geschrieben.\n"
-	  + "Bitte senden Sie diese Textdatei einschlie\u00DFlich einer\n"
-	  + "kurzen Beschreibung Ihrer letzten Aktionen per E-Mail an:\n"
-	  + "info@jens-mueller.org\n\n"
-	  + "Schreiben Sie bitte in den Betreff der E-Mail unbedingt\n"
-	  + "das Wort JKCEMU hinein!\n\n"
-	  + "Vielen Dank!",
-	"Applikationsfehler" );
-
-    } else {
-
-      BasicDlg.showErrorDlg(
-	parent,
-	"Es ist ein interner Applikationsfehler aufgetreten.\n"
-	  + "Bitte melden Sie diesen Fehler einschlie\u00DFlich einer\n"
-	  + "kurzen Beschreibung Ihrer letzten Aktionen per E-Mail an:\n"
-	  + "info@jens-mueller.org\n\n"
-	  + "Schreiben Sie bitte in den Betreff der E-Mail unbedingt\n"
-	  + "das Wort JKCEMU hinein!\n\n"
-	  + "Vielen Dank!",
-	"Applikationsfehler" );
-    }
   }
 
 

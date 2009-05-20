@@ -1508,23 +1508,30 @@ public class DebugFrm extends BasicFrm implements
     StringBuilder buf = new StringBuilder();
 
     for( int row = 0; row < this.fldMemPC.getRows(); row++ ) {
-      if( row > 0 )
+      if( row > 0 ) {
 	buf.append( (char) '\n' );
+      }
+
+      int     b0    = this.emuThread.getMemByte( addr, true );
+      boolean b1_m1 = ((b0 == 0xED) || (b0 == 0xDD) || (b0 == 0xFD));
 
       Z80ReassInstr instr = Z80Reassembler.reassInstruction(
 				addr,
-				this.emuThread.getMemByte( addr ),
-				this.emuThread.getMemByte( addr + 1 ),
-				this.emuThread.getMemByte( addr + 2 ),
-				this.emuThread.getMemByte( addr + 3 ) );
+				b0,
+				this.emuThread.getMemByte( addr + 1, b1_m1 ),
+				this.emuThread.getMemByte( addr + 2, false ),
+				this.emuThread.getMemByte( addr + 3, false ) );
       if( instr != null ) {
 
 	// Befehlscode ausgeben
 	int w = 12;
 	int n = instr.getLength();
 	for( int i = 0; i < n; i++ ) {
-	  buf.append(
-		String.format( "%02X ", this.emuThread.getMemByte( addr ) ) );
+	  buf.append( String.format(
+			"%02X ",
+			this.emuThread.getMemByte(
+					addr,
+					(i == 0) || ((i == 1) && b1_m1) ) ) );
 	  addr++;
 	  w -= 3;
 	}
@@ -1560,7 +1567,7 @@ public class DebugFrm extends BasicFrm implements
 
 	buf.append( String.format(
 			"%02X",
-			this.emuThread.getMemByte( addr ) ) );
+			this.emuThread.getMemByte( addr, true ) ) );
 	addr++;
       }
     }
@@ -1583,16 +1590,17 @@ public class DebugFrm extends BasicFrm implements
 
     // Hex-Darstellung
     for( int i = 0; i < numBytes; i++ ) {
-      buf.append(
-	String.format( "%02X ", this.emuThread.getMemByte( addr + i ) ) );
+      buf.append( String.format(
+			"%02X ",
+			this.emuThread.getMemByte( addr + i, false ) ) );
     }
 
     // ggf. ASCII-Darstellung ausgeben
-    int ch = this.emuThread.getMemByte( addr );
+    int ch = this.emuThread.getMemByte( addr, false );
     if( (ch >= '\u0020') && (ch <= '\u007E') ) {
       buf.append( " \"" );
       for( int k = 0; k < numBytes; k++ ) {
-	ch = this.emuThread.getMemByte( addr + k );
+	ch = this.emuThread.getMemByte( addr + k, false );
 	if( (ch < '\u0020') || (ch > '\u007E') )
 	  break;
 	buf.append( (char) ch );

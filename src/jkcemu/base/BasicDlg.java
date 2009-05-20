@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -381,7 +381,7 @@ public class BasicDlg extends JDialog implements
       rv = doAction( e );
     }
     catch( Exception ex ) {
-      EmuUtil.showSysError( this, null, ex );
+      EmuUtil.exitSysError( this, null, ex );
     }
     setWaitCursor( false );
     return rv;
