@@ -75,7 +75,7 @@ public class LLC1 extends EmuSys implements
     cpu.addTStatesListener( this );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
-    z80MaxSpeedChanged();
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -87,9 +87,9 @@ public class LLC1 extends EmuSys implements
 
 	/* --- Z80MaxSpeedListener --- */
 
-  public void z80MaxSpeedChanged()
+  public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    int maxSpeedKHz          = this.emuThread.getZ80CPU().getMaxSpeedKHz();
+    int maxSpeedKHz          = cpu.getMaxSpeedKHz();
     this.displayCheckTStates = maxSpeedKHz * 50;
     synchronized( this.keyMatrixValues ) {
       this.keyAlphaTStates = maxSpeedKHz;		// 1 Sekunde
@@ -218,6 +218,24 @@ public class LLC1 extends EmuSys implements
   }
 
 
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 50;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 150;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 50;
+  }
+
+
   public String getHelpPage()
   {
     return "/help/llc1.htm";
@@ -318,7 +336,7 @@ public class LLC1 extends EmuSys implements
 	case 0x19:
 	  /*
 	   * Dieser Code stellt beim LLC1 optische das Paragraph-Zeichen dar.
-	   * Er wird aber im Tiny-BASIC fuer das Variablen-Array verwendet,
+	   * Er wird aber im BASIC fuer das Variablen-Array verwendet,
 	   * was normalerweise durch den Klammeraffen dargestellt wird.
 	   * Aus diesem Grund wird es hier auch auf den Klammeraffen gemappt.
 	   */
@@ -407,7 +425,7 @@ public class LLC1 extends EmuSys implements
   }
 
 
-  public static String getTinyBasicProgram( Z80MemView memory )
+  public static String getBasicProgram( Z80MemView memory )
   {
     return SourceUtil.getTinyBasicProgram(
 				memory,
@@ -726,9 +744,9 @@ public class LLC1 extends EmuSys implements
   }
 
 
-  public void openTinyBasicProgram()
+  public void openBasicProgram()
   {
-    String text = getTinyBasicProgram( this.emuThread );
+    String text = getBasicProgram( this.emuThread );
     if( text != null ) {
       this.screenFrm.openText( text );
     } else {
@@ -922,7 +940,7 @@ public class LLC1 extends EmuSys implements
   }
 
 
-  public void saveTinyBasicProgram()
+  public void saveBasicProgram()
   {
     int endAddr = this.emuThread.getMemWord( 0x141B );
     if( (endAddr > 0x154E)
@@ -934,7 +952,7 @@ public class LLC1 extends EmuSys implements
 		endAddr,
 		'b',
 		false,          // kein KC-BASIC
-		"LLC1-TinyBASIC-Programm speichern" )).setVisible( true );
+		"LLC1-BASIC-Programm speichern" )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -973,6 +991,18 @@ public class LLC1 extends EmuSys implements
       }
     }
     return rv;
+  }
+
+
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
   }
 
 

@@ -1,0 +1,36 @@
+<html>
+<body>
+  <h1>40/80-Spuren-Problematik</h1>
+    JKCEMU muss wissen, ob ein Diskettenlaufwerk mit 40&nbsp;Spuren
+    (Single Density, SD) oder mit 80&nbsp;Spuren (Double Density, DD)
+    emuliert werden soll.
+    Hat die in dem Laufwerk eingelegte Diskette 50 oder mehr Spuren,
+    geht JKCEMU von einer Double-Density-Diskette aus.
+    In dem Fall wird auch ein Double-Density-Laufwerk emuliert.
+  <br/><br/>
+    Eine Single-Density-Diskette kann dagegen sowohl in einem
+    Single-Density- als auch in einem Double-Density-Laufwerk
+    betrieben werden.
+    Es h&auml;ngt von der im Emulator laufenden Software ab,
+    welcher Laufwerkstyp emuliert werden muss.
+    Wenn die Software von einem Double-Density-Laufwerk ausgeht,
+    wird sie zwei Positionierungsschritte an das Laufwerk senden,
+    um einen Spurwechsel auf der Diskette zu bewerkstelligen.
+    JKCEMU muss in dem Fall diese zwei Schritte
+    wieder zu einem zusammenfassen (Spurnummernumrechnung).
+    Aus diesem Grund werden Sie beim Einlegen einer Single-Density-Diskette
+    gefragt, ob ein 40- oder 80-Spuren-Laufwerk emuliert werden soll.
+    Bei 40&nbsp;Spuren wird die Spurnummernumrechnung aus-
+    und bei 80&nbsp;Spuren eingeschaltet.
+  <br/><br/>
+    Beim <a href="formatdisk.htm">Formatieren</a> erkennt
+    der Emulator dagegen selbst,
+    ob die Spurnummern umgerechnet werden m&uuml;ssen.
+    Werden nach dem Formatieren der Spur&nbsp;0 zwei Positionierungsschritte
+    an das Laufwerk gesendet,
+    geht JKCEMU von einer 40-Spuren-Diskette in einem 80-Spuren-Laufwerk aus
+    und schaltet die Spurnummernumrechnung ein.
+  <br/><br/>
+</body>
+</html>
+

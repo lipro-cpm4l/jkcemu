@@ -61,7 +61,7 @@ public class RAMFloppy
     try {
       in = new FileInputStream( file );
 
-      this.endOfData   = EmuUtil.read( in, this.data, 0 );
+      this.endOfData   = EmuUtil.read( in, this.data );
       this.file        = file;
       this.dataChanged = false;
 

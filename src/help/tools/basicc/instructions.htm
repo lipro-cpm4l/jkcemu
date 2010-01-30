@@ -5,10 +5,10 @@
     die der Compiler versteht.
     Es wird auch auf die Unterschiede zum AC1-Mini-BASIC
     und Z1013-Tiny-BASIC eingegangen.
-  <br><br>
+  <br/><br/>
     Wenn zu einer Anweisung keine Syntax angegeben ist,
     hat die Anweisung keine Argumente.
-  <br><br>
+  <br/><br/>
     <table border="1">
       <tr>
 	<th nowrap>Anweisung</th>
@@ -176,14 +176,14 @@
 	<td>ja</td>
       </tr>
     </table>
-  <br><br>
+  <br/><br/>
 
   <h2>Erl&auml;uterungen zu den Anweisungen</h2>
     In spitzen Klammern eingeschlossene Elemente dienen als Platzhalter
     und sind entsprechend zu ersetzten.
     In eckigen Klammern eingeschlossene Elemente sind optional
     und k&ouml;nnen weggelassen werden.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="byte">BYTE</a></h3>
     <table border="1">
@@ -192,27 +192,31 @@
 	<td>BYTE &nbsp; <it>&lt;numerischer Ausdruck&gt;</it></td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die unteren 8 Bits des Wertes des angegebenen Ausdrucks werden hexadezimal,
     d.h. in Form von zwei Zeichen, auf dem Bildschirm ausgegeben.
-  <br><br>
+  <br/><br/>
     Beim originalen AC1-Mini- und Z1013-Tiny-BASIC muss der
     numersiche Ausdruck in Klammern eingeschlossen sein.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="call">CALL</a></h3>
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td>CALL &nbsp; <it>&lt;Adresse&gt;</it></td>
+	<td>
+	  <tt>CALL</tt>&nbsp;<it>&lt;Adresse&gt;</it><br/>
+	  <tt>CALL</tt>&nbsp;<tt>*</tt>&nbsp;<it>&lt;Hex-Adresse&gt;</it>
+	</td>
       </tr>
       <tr><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+      <tr><td>Hex-Adresse:</td><td>Adresse als Hexadezimalzahl</td></tr>
     </table>
-  <br>
+  <br/>
     Die CALL-Anweisung ruft ein Maschinencodeunterprogramm auf,
-    welches mit einem Return-Befehl abgeschlossen sein muss.
-    Der Wert des angegebenen Ausdrucks gibt die Adresse des Unterprogramms an.
-  <br><br>
+    welches auf der angegebenen Adresse beginnt und
+    mit einem Return-Befehl abgeschlossen sein muss.
+  <br/><br/>
 
   <h3><a name="cls">CLS</a></h3>
     Die CLS-Anweisung l&ouml;scht den Bildschirm und setzt den Cursor
@@ -220,7 +224,7 @@
     Wurde im Monitorprogramm oder &uuml;ber die entsprechende Systemfunktion
     ein Fenster eingestellt,
     gilt die CLS-Anweisung nur f&uuml;r den Fensterbereich.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="data">DATA</a></h3>
     <table border="1">
@@ -234,15 +238,15 @@
 	  </td>
       </tr>
     </table>
-  <br>
+  <br/>
     Mit DATA werden Daten (numerische 16-Bit-Werte) einem applikationsweiten
     Datenbereich hinzugef&uuml;gt.
     Die Daten sind durch Komma zu trennen und m&uuml;ssen
     konstante numerische Ausdr&uuml;cke sein.
-  <br><br>
+  <br/><br/>
     Das Lesen und damit die Nutzbarmachung dieser Daten im Programm
     erfolgt mit der Anweisung <a href="instructions.htm#read">READ</a>.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="doke">DOKE</a></h3>
     <table border="1">
@@ -265,11 +269,11 @@
 	<td>numerischer Ausdruck</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Der 16-Bit-Wert des zweiten numerischen Ausdrucks
     wird in Form von zwei Bytes in den Arbeitsspeicher
     ab der angegebenen Adresse geschrieben.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="end">END</a></h3>
     Die END-Anweisung dient bei den meisten BASIC-Dialekten
@@ -280,7 +284,7 @@
     und kann im BASIC-Programm nicht verwendet werden.
     Zum Beenden gibt es dort die
     <a href="instructions.htm#stop">STOP</a>-Anweisung.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="for">FOR</a></h3>
     <table border="1">
@@ -302,7 +306,7 @@
       <tr valign="top"><td>Endwert:</td><td>numerischer Ausdruck</td></tr>
       <tr valign="top"><td>Schrittweite:</td><td>numerischer Ausdruck</td></tr>
     </table>
-  <br>
+  <br/>
     Zuerst wird der Variablen der Startwert zugewiesen.
     Anschlie&szlig;end setzt die Programmabarbeitung mit dem ersten Befehl
     hinter der FOR-Anweisung fort.
@@ -313,18 +317,18 @@
     Anderenfalls wird die FOR-Schleife verlassen, d.h.,
     die Programmabarbeitung setzt mit dem ersten Befehl hinter der
     NEXT-Anweisung fort.
-  <br><br>
+  <br/><br/>
     Ist die Schrittweite gr&ouml;&szlig;er Null,
     gilt der Endwert als erreicht, wenn der Wert der Variablen
     gleich oder gr&ouml;&szlig;er dem Endwert ist.
     Ist dagegen die Schrittweite kleiner Null,
     gilt der Endwert als erreicht, wenn der Wert der Variablen
     gleich oder kleiner dem Endwert ist.
-  <br><br>
+  <br/><br/>
     Das Schl&uuml;sselwort STEP und die nachfolgende Schrittweite
     k&ouml;nnen weggelassen werden.
     In dem Fall ist die Schrittweite eins.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="gosub">GOSUB</a></h3>
     <table border="1">
@@ -333,10 +337,10 @@
 	<td><tt>GOSUB</tt> &nbsp; <it>&lt;Zeilennummer&gt;</it></td>
       </tr>
     </table>
-  <br>
+  <br/>
     Das Unterprogramm muss mit <a href="instructions.htm#return">RETURN</a>
     abgeschlossen sein.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="goto">GOTO</a></h3>
     <table border="1">
@@ -345,7 +349,7 @@
 	<td><tt>GOTO</tt> &nbsp; <it>&lt;Zeilennummer&gt;</it></td>
       </tr>
     </table>
-  <br><br>
+  <br/><br/>
 
   <h3><a name="in_string">I$</a></h3>
     <table border="1">
@@ -355,14 +359,14 @@
       </tr>
       <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
     </table>
-  <br>
+  <br/>
     Die I$-Anweisung wartet auf die Eingabe einer Zeichenkette
     die max. 63 Zeichen lang sein kann und
     nach Dr&uuml;cken der ENTER-Taste im Arbeitsspeicher
     ab der durch den numerischen Ausdruck angegebenen Adresse zu finden ist.
     Die Zeichenkette wird mit einem Null-Byte abgeschlossen,
     d.h., max. 64 Bytes werden im Arbeitsspeicher mit der Eingabe belegt.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="if">IF</a></h3>
     <table border="1">
@@ -377,7 +381,7 @@
 	  &nbsp;
 	  <it>&lt;Anweisungen&gt;</it>
 	  &nbsp;
-	  [ <tt>ELSE</tt> &nbsp; <it>&lt;Anweisungen&gt;</it> ]<br>
+	  [ <tt>ELSE</tt> &nbsp; <it>&lt;Anweisungen&gt;</it> ]<br/>
 	  <tt>IF</tt>
 	  &nbsp;
 	  <it>&lt;Bedingung&gt;</it>
@@ -386,22 +390,22 @@
 	  &nbsp;
 	  <it>&lt;Zeilennummer&gt;</it>
 	  &nbsp;
-	  [ <tt>ELSE</tt> &nbsp; <it>&lt;Anweisungen&gt;</it> ]<br>
+	  [ <tt>ELSE</tt> &nbsp; <it>&lt;Anweisungen&gt;</it> ]<br/>
 	</td>
       </tr>
       <tr valign="top"><td>Bedingung:</td><td>numerischer Ausdruck</td></tr>
     </table>
-  <br>
+  <br/>
     Nur wenn die Bedingung erf&uuml;llt ist, d.h.,
     wenn der Wert des Ausdrucks ungleich Null ist,
     werden die nachfolgenden Anweisungen ausgef&uuml;hrt
     beziehungsweise zu der hinten THEN angegeben Zeilennummer gesprungen.
     Existiert ein ELSE-Zweig, werden die Anweisungen hinter ELSE
     ausgef&uuml;hrt, wenn die Bedingung nicht erf&uuml;llt ist.
-  <br><br>
+  <br/><br/>
     Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC sind
     das Schl&uuml;sselwort THEN und der ELSE-Zweig nicht m&ouml;glich.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="input">INPUT</a></h3>
     <table border="1">
@@ -418,7 +422,7 @@
 	</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die INPUT-Anweisung kann mehrere Abschnitte enthalten,
     die durch Komma getrennt sind.
     Jeder Abschnitt steht f&uuml;r eine eigenst&auml;ndige Eingabe.
@@ -431,7 +435,7 @@
     der zur Eingabe einer Zahl auffordert.
     Mit Dr&uuml;cken der ENTER-Taste wird die eingegebene Zahl
     der Variablen zugewiesen.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="let">LET</a></h3>
     <table border="1">
@@ -446,9 +450,9 @@
 	</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Das Schl&uuml;sselwort LET kann entfallen.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="next">NEXT</a></h3>
     <table border="1">
@@ -457,23 +461,23 @@
 	<td><tt>NEXT</tt> &nbsp; [ <it>&lt;Variable&gt;</it> ]</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Schleifenvariable wird mit dem Wert der Schrittweite
     (siehe <a href="instructions.htm#for">FOR</a>-Anweisung)
     addiert.
     Ist der Endwert noch nicht erreicht, wird an den Anfang der FOR-Schleife
     gesprungen.
     Anderenfalls wird die FOR-Schleife verlassen.
-  <br><br>
+  <br/><br/>
     Die NEXT-Anweisung darf nicht ohne ein vorheriges FOR aufgerufen werden!
-  <br><br>
+  <br/><br/>
     Die Angabe einer Variable ist optional.
     Wird jedoch eine Variable angegeben,
     so muss es die gleiche sein wie bei der zugeh&ouml;rigen FOR-Anweisung.
-  <br><br>
+  <br/><br/>
     Beim Z1013-Tiny-BASIC-Interpreter muss die Variable immer
     angegeben werden.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="out_string">O$</a></h3>
     <table border="1">
@@ -483,11 +487,11 @@
       </tr>
       <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
     </table>
-  <br>
+  <br/>
     Die O$-Anweisung gibt eine Zeichenkette auf dem Bildschirm aus,
     die im Arbeitsspeicher liegt und mit einem Null-Byte abgeschlossen ist.
     Die Adresse der Zeichenkette wird durch den numerischen Ausdruck angegeben.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="out">OUT</a></h3>
     <table border="1">
@@ -498,24 +502,24 @@
 	  &nbsp;
 	  <tt>(</tt><it>&lt;Port&gt;</it><tt>)</tt>
 	  <tt>=</tt>
-	  <it>&lt;Wert&gt;</it><br>
+	  <it>&lt;Wert&gt;</it><br/>
 	  <tt>OUT</tt>
 	  &nbsp;
-	  <it>&lt;Port&gt;</it><tt>,</tt><it>&lt;Wert&gt;</it><br>
+	  <it>&lt;Port&gt;</it><tt>,</tt><it>&lt;Wert&gt;</it><br/>
 	</td>
       </tr>
       <tr valign="top"><td>Port:</td><td>numerischer Ausdruck</td></tr>
       <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
     </table>
-  <br>
+  <br/>
     Die OUT-Anweisung gibt einen Wert an einem Ausgabetor (Port) aus.
     Der erste Ausdruck legt die Ausgabeadresse fest,
     der zweite Ausdruck bestimmt den auszugebenden Wert,
     wobei nur die unteren 8 Bits relevant sind.
-  <br><br>
+  <br/><br/>
     Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC ist nur die erste
     Syntax mit den Klammern und dem Gleichheitszeichen erlaubt.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="outchar">OUTCHAR</a></h3>
     <table border="1">
@@ -524,12 +528,12 @@
 	<td><tt>OUTCHAR</tt> &nbsp; <it>&lt;numerischer Ausdruck&gt;</it></td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die OUTCHAR-Anweisung gibt das Zeichen auf dem Bildschirm aus,
     dass durch den Wert des Ausdrucks angegeben wird.
     Handelt es sich dabei um ein Steuerzeichen,
     so ist dieses auch aktiv.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="poke">POKE</a></h3>
     <table border="1">
@@ -552,32 +556,32 @@
 	<td>numerischer Ausdruck</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die durch die Adresse angegebene Speicherzelle wird
     mit den unteren 8 Bits des Wertes des zweiten numerischen Ausdrucks
     beschrieben.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="print">PRINT</a></h3>
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
 	<td>
-	  <tt>PRINT</tt><br>
+	  <tt>PRINT</tt><br/>
 	  <tt>PRINT</tt>
 	  &nbsp;
 	  <it>&lt;String-Literal&gt;</it>
 	  &nbsp;
 	  [ <tt>,</tt> ... ]
 	  &nbsp;
-	  [ <tt>,</tt> ]<br>
+	  [ <tt>,</tt> ]<br/>
 	  <tt>PRINT</tt>
 	  &nbsp;
 	  <it>&lt;numerischer Ausdruck&gt;</it>
 	  &nbsp;
 	  [ <tt>,</tt> ... ]
 	  &nbsp;
-	  [ <tt>,</tt> ]<br>
+	  [ <tt>,</tt> ]<br/>
 	  <tt>PRINT</tt>
 	  &nbsp;
 	  <tt>#</tt> <it>&lt;numerischer Ausdruck&gt;</it>
@@ -588,7 +592,7 @@
 	</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die PRINT-Anweisung kann mehrere Abschnitte enthalten,
     die durch Kommas getrennt werden.
     Ein Abschnitt dient entweder zur Ausgabe einer Zeichenkette
@@ -596,21 +600,21 @@
     einer Dezimalzahl (Angabe eines numerischen Ausdrucks) oder
     zum Festlegen der Feldbreite nachfolgender Ausgaben von Dezimalzahlen
     (Doppelkreuz gefolgt von einem numerischen Ausdruck).
-  <br><br>
+  <br/><br/>
     Dezimalzahlen werden rechtsb&uuml;ndig ausgegeben,
     wof&uuml;r eine Feldbreite notwendig ist.
     Wurde vorher keine Feldbreite explizit angegeben,
     wird die Dezimalzahl auf sechs Zeichen Breite formatiert.
     Die Feldbreite gilt immer nur f&uuml;r die PRINT-Anweisung,
     in der sie angegeben wurde.
-  <br><br>
+  <br/><br/>
     Wird die PRINT-Anweisung mit einem Komma abgeschlossen,
     bleibt der Cursor hinter der Ausgabe stehen,
     d.h., nachfolgende Ausgaben schlie&szlig;en unmittelbar
     an die mit der PRINT-Anweisung gemachten Ausgaben an.
     Wird dagegen die PRINT-Anweisung ohne Komma abgeschlossen,
     geht der Cursor an den Anfang der n&auml;chsten Zeile.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="read">READ</a></h3>
     <table border="1">
@@ -619,21 +623,21 @@
 	<td><tt>READ</tt> &nbsp; &lt;Variable&gt; [ <tt>,</tt> ... ]</td>
       </tr>
     </table>
-  <br>
+  <br/>
     READ liest den n&auml;chsten Wert aus dem Datenbereich,
     der mit den <a href="instructions.htm#data">DATA</a>-Anweisungen
     erzeugt wurde und schreibt ihn in die angegebene Variable.
     Durch Komma getrennt k&ouml;nnen mehrere Variablen angegeben werden.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="rem">REM</a></h3>
     Der Rest der Programmzeile wird als Kommentar gewertet und somit ignoriert.
     Anstelle des Schl&uuml;sselwortes REM kann auch ein Ausrufezeichen
     verwendet werden.
-  <br><br>
+  <br/><br/>
     Der AC1-Mini-BASIC- und der Z1013-Tiny-BASIC-Interpreter gestatten
     die Verwendung eines Ausrufezeichens anstelle von REM nicht.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="restore">RESTORE</a></h3>
     <table border="1">
@@ -642,7 +646,7 @@
 	<td><tt>RESTORE</tt> &nbsp; [ &lt;Zeilennummer&gt; ]</td>
       </tr>
     </table>
-  <br>
+  <br/>
     RESTORE setzt die Leseposition der
     <a href="instructions.htm#read">READ</a>-Anweisung
     auf das erste Datenfeld der ersten
@@ -653,14 +657,14 @@
     der ersten DATA-Anweisung im BASIC-Programm,
     d.h., die Leseposition wird auf den Wert zum Zeitpunkt
     des Programmstarts zur&uuml;ck gesetzt.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="return">RETURN</a></h3>
     Die Programmabarbeitung setzt hinter der zugeh&ouml;rigen
     <a href="instructions.htm#gosub">GOSUB</a>-Anweisung fort.
     Die RETURN-Anweisung darf nicht ohne ein vorheriges GOSUB
     aufgerufen werden!
-  <br><br>
+  <br/><br/>
 
   <h3><a name="stop">STOP</a></h3>
     Die STOP-Anweisung beendet ein Programm.
@@ -672,7 +676,7 @@
     Und dort dient eben STOP zum Beenden eines Programms.
     Alternativ kann aber auch die sonst &uuml;blichere
     <a href="instructions.htm#end">END</a>-Anweisung verwendet werden.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="tab">TAB</a></h3>
     <table border="1">
@@ -682,13 +686,13 @@
       </tr>
       <tr><td>Anzahl:</td><td>numerischer Ausdruck</td></tr>
     </table>
-  <br>
+  <br/>
     Es werden so viele Leerzeichen auf dem Bildschirm ausgegeben,
     wie durch das Argument angegeben ist.
-  <br><br>
+  <br/><br/>
     Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC muss
     der numersiche Ausdruck in Klammern eingeschlossen sein.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="word">WORD</a></h3>
     <table border="1">
@@ -697,13 +701,13 @@
 	<td>WORD &nbsp; <it>&lt;numerischer Ausdruck&gt;</it></td>
       </tr>
     </table>
-  <br>
+  <br/>
     Der Wert des angegebenen Ausdrucks wird hexadezimal,
     d.h. in Form von vier Zeichen, auf dem Bildschirm ausgegeben.
-  <br><br>
+  <br/><br/>
     Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC muss
     der numersiche Ausdruck in Klammern eingeschlossen sein.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="string_literal">String-Literal</a></h3>
     Bei INPUT- und PRINT-Anweisungen k&ouml;nnen String-Literale

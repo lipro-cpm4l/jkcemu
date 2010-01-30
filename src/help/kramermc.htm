@@ -9,10 +9,29 @@
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>23 KByte ROM</li>
-      <li>41 KByte RAM inklusive 1 KByte Bildwiederholspeicher</li>
-      <li>64x16 Zeichen Bildschirmgr&ouml;&szlig;e</li>
+      <li>23&nbsp;KByte ROM</li>
+      <li>41&nbsp;KByte RAM inklusive 1 KByte Bildwiederholspeicher</li>
+      <li>64x16&nbsp;Zeichen Bildschirmgr&ouml;&szlig;e</li>
     </ul>
+  <br/><br/>
+
+  <h3>1.1. Drucker</h3>
+    Es wird ein Drucker emuliert,
+    indem JKCEMU die Betriebssystemaufrufe f&uuml;r Druckausgaben
+    abf&auml;ngt und die Daten an den aktuellen Druckauftrag anh&auml;ngt.
+    Diese Funktion ist jedoch standardm&auml;&szlig;ig deaktiviert
+    und muss bei Bedarf in den <a href="settings.htm">Einstellungen</a>
+    eingeschaltet werden.
+  <br/><br/>
+    Der Hintergrund dieser Ma&szlig;nahme ist,
+    dass der logische Druckerkanal nach einem RESET auf den Bildschirm
+    zeigt und das Monitorprogramm dar&uuml;ber auch noch die Startmeldung
+    ausgibt.
+    Ist das Abfangen der Druckausgaben aktiviert,
+    wird somit mit jedem RESET ein Druckauftrag angelegt,
+    der die kurze Startmeldung enth&auml;lt.
+    Um diese Unsch&ouml;nheit zu vermeiden,
+    ist die Emulation des Druckers standardm&auml;&szlig;ig deaktiviert
   <br/><br/>
 
 
@@ -66,8 +85,8 @@
   <h2>4. BASIC</h2>
     JKCEMU bietet eine spezielle Unterst&uuml;tzung
     f&uuml;r das Speichern und Laden von BASIC-Programmen.
-    Zum Speichern nutzen Sie bitte die entsprechende Funktion im Men&uuml;
-    <em>Datei</em>, Untermen&uuml; <em> BASIC-Programm</em>,
+    Zum Speichern nutzen Sie bitte die Funktion
+    <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
     und speichern das Programm als
     <a href="fileformats.htm#headersave">Headersave</a>-Datei
     mit dem Dateityp <tt>B</tt>.

@@ -83,31 +83,30 @@ public class PrintOptionsDlg extends BasicDlg
 
 
     // Fensterinhalt
-    Container contentPane = getContentPane();
-    contentPane.setLayout( new GridBagLayout() );
+    setLayout( new GridBagLayout() );
 
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.anchor     = GridBagConstraints.NORTHWEST;
-    gbc.fill       = GridBagConstraints.NONE;
-    gbc.insets     = new Insets( 5, 5, 5, 5 );
-    gbc.gridwidth  = 1;
-    gbc.gridheight = 1;
-    gbc.gridx      = 0;
-    gbc.gridy      = 0;
+    GridBagConstraints gbc = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					0.0, 0.0,
+					GridBagConstraints.NORTHWEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
 
 
     // Bereich Optionen
     JPanel panelOpt = new JPanel( new GridBagLayout() );
     panelOpt.setBorder( BorderFactory.createEmptyBorder() );
 
-    GridBagConstraints gbcOpt = new GridBagConstraints();
-    gbcOpt.anchor     = GridBagConstraints.WEST;
-    gbcOpt.fill       = GridBagConstraints.NONE;
-    gbcOpt.insets     = new Insets( 5, 5, 0, 5 );
-    gbcOpt.gridwidth  = 1;
-    gbcOpt.gridheight = 1;
-    gbcOpt.gridx      = 0;
-    gbcOpt.gridy      = 0;
+    GridBagConstraints gbcOpt = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
 
     // Schriftgroesse
     this.comboFontSize = null;
@@ -158,7 +157,7 @@ public class PrintOptionsDlg extends BasicDlg
     panelOpt.add( this.btnPageNum, gbcOpt );
 
     gbc.gridy++;
-    contentPane.add( panelOpt, gbc );
+    add( panelOpt, gbc );
 
 
     // Knoepfe
@@ -176,7 +175,7 @@ public class PrintOptionsDlg extends BasicDlg
     gbc.fill   = GridBagConstraints.NONE;
     gbc.gridx  = 0;
     gbc.gridy++;
-    contentPane.add( panelBtn, gbc );
+    add( panelBtn, gbc );
 
 
     // Fenstergroesse und -position

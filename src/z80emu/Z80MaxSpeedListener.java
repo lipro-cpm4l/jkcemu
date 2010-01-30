@@ -14,5 +14,5 @@ import java.lang.*;
 
 public interface Z80MaxSpeedListener
 {
-  public void z80MaxSpeedChanged();
+  public void z80MaxSpeedChanged( Z80CPU cpu );
 }

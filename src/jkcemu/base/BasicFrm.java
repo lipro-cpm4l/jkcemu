@@ -117,13 +117,15 @@ public class BasicFrm extends JFrame implements
 					ButtonGroup grp,
 					String      text,
 					String      actionCmd,
-					boolean     selected )
+					boolean     selected,
+					KeyStroke   keyStroke )
   {
-    JRadioButtonMenuItem btn = new JRadioButtonMenuItem( text, selected );
-    grp.add( btn );
-    btn.setActionCommand( actionCmd );
-    btn.addActionListener( this );
-    return btn;
+    JRadioButtonMenuItem item = new JRadioButtonMenuItem( text, selected );
+    grp.add( item );
+    item.setActionCommand( actionCmd );
+    item.addActionListener( this );
+    item.setAccelerator( keyStroke );
+    return item;
   }
 
 

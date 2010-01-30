@@ -3,47 +3,52 @@
   <h1>Hinweise zur Emulation des LC-80</h1>
 
   <h2>1. Emulierte Hardware</h2>
-    Die emulierte Hardware unterscheidet sich je nach Einstellung:
+    <ul>
+      <li>6-stellige 7-Segment-Anzeige</li>
+      <li>HALT-LED</li>
+      <li>OUT-LED (Tonausgabe)</li>
+      <li>Tastatur mit Hexadezimal- und Funktionstasten</li>
+      <li>Kassettenrecorderanschluss</li>
+    </ul>
+  <br/>
+    Der emulierte Speicher unterscheidet sich je nach Einstellung:
     <ul>
       <li>LC-80 mit ROM 2xU505:<br/>
 	<ul>
-	  <li>2 KByte ROM im Adressbereich 0000-03FF und 0800-0BFF</li>
-	  <li>1 KByte RAM im Adressbereich 2000-23FF</li>
-	  <li>Kassettenrecorderanschluss</li>
+	  <li>2&nbsp;KByte ROM im Adressbereich 0000-03FF und 0800-0BFF</li>
+	  <li>1&nbsp;KByte RAM im Adressbereich 2000-23FF</li>
 	</ul>
 	Aufgrund der unvollst&auml;ndigen Adressdekodierung
 	ist der ROM-Bereich 0000-03FF auch im Adressbereich 0400-07FF
 	sowie der ROM-Bereich 0800-0BFF auch im Adressbereich 0C00-0FFF
 	sichtbar.
 	<br/><br/>
-
+      </li>
       <li>LC-80 mit ROM 2716:<br/>
 	<ul>
-	  <li>2 KByte ROM im Adressbereich 0000-07FF</li>
-	  <li>4 KByte RAM im Adressbereich 2000-3FFF</li>
-	  <li>Kassettenrecorderanschluss</li>
+	  <li>2&nbsp;KByte ROM im Adressbereich 0000-07FF</li>
+	  <li>4&nbsp;KByte RAM im Adressbereich 2000-3FFF</li>
 	</ul>
-	Vom Hersteller wurde diese LC-80-Version nur mit 1 KByte RAM
+	Vom Hersteller wurde diese LC-80-Version nur mit 1&nbsp;KByte RAM
 	ausgeliefert.
 	Damit aber JKCEMU auch eine Konfiguration anbietet,
 	die das originale Monitorprogramm mit dem maximalen RAM-Ausbau vereint,
-	werden 4 KByte RAM emuliert.
+	werden 4&nbsp;KByte RAM emuliert.
 	<br/><br/>
-
+      </li>
       <li>LC-80.2:<br/>
 	<ul>
-	  <li>4 KByte ROM im Adressbereich 0000-0FFF</li>
-	  <li>4 KByte RAM im Adressbereich 2000-3FFF</li>
-	  <li>Kassettenrecorderanschluss</li>
+	  <li>4&nbsp;KByte ROM im Adressbereich 0000-0FFF</li>
+	  <li>4&nbsp;KByte RAM im Adressbereich 2000-3FFF</li>
 	</ul>
-	<br/><br/>
-
-      <li>LC-80e:<br/>
+	<br/>
+      </li>
+      <li>LC-80e (Export-Variante):<br/>
 	<ul>
-	  <li>12 KByte ROM im Adressbereich 0000-1FFF und C000-CFFF</li>
-	  <li>4 KByte RAM im Adressbereich 2000-3FFF</li>
-	  <li>Kassettenrecorderanschluss</li>
+	  <li>12&nbsp;KByte ROM im Adressbereich 0000-1FFF und C000-CFFF</li>
+	  <li>4&nbsp;KByte RAM im Adressbereich 2000-3FFF</li>
 	</ul>
+      </li>
     </ul>
   <br/>
     Bei allen LC-80-Versionen au&szlig;er dem LC-80e
@@ -79,24 +84,24 @@
 	<td valign="top">F2</td>
 	<td valign="top">Dateneingabe einleiten</td>
       </tr>
-      <tr>	
+      <tr>
 	<td valign="top">LD</td>
-	<td valign="top">F3 oder l</td>
+	<td valign="top">F3 oder L</td>
 	<td valign="top">Datei von Kassette laden</td>
       </tr>
       <tr>
 	<td valign="top">ST</td>
-	<td valign="top">F4 oder s</td>
+	<td valign="top">F4 oder S</td>
 	<td valign="top">Datei auf Kassette speichern</td>
       </tr>
       <tr>
 	<td valign="top">EX</td>
-	<td valign="top">Enter, X oder x</td>
+	<td valign="top">Enter oder X</td>
 	<td valign="top">Programm/Aktion ausf&uuml;hren</td>
       </tr>
       <tr>
 	<td valign="top">NMI</td>
-	<td valign="top">N oder n</td>
+	<td valign="top">N</td>
 	<td valign="top">Nicht maskierbaren Interrupt ausl&ouml;sen</td>
       </tr>
       <tr>
@@ -118,29 +123,22 @@
       </tr>
       <tr>
 	<td valign="top">A...F</td>
-	<td valign="top">a...f</td>
+	<td valign="top">A...F</td>
 	<td valign="top">Adress-/Dateneingabe</td>
       </tr>
     </table>
   <br/>
-    Bei den Buchstaben m&uuml;ssen die Tasten so gedr&uuml;ckt lassen,
-    dass Kleinbuchstaben erzeugt werden,
-    d.h., die Tasten m&uuml;ssen ohne Shift bzw. Feststelltaste
-    gedr&uuml;ckt werden.
-    Die Gro&szlig;buchstaben sind n&auml;mlich f&uuml;r die Bedienung
-    des im LC-80e enthaltenen Schachprogramms SC-80 vorgesehen
-    und werden anders gemappt (siehe weiter unten).
-  <br/><br/>
     <b>Achtung!</b> Die Tasten Escape und N l&ouml;sen der Einfachheit halber
     RESET bzw. NMI ohne Sicherheitsabfrage aus,
     auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
     aktiviert ist.
   <br/><br/>
 
+
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
       <li>
-	LC-80 mit 2 KByte ROM:<br/>
+	LC-80 mit 2&nbsp;KByte ROM:<br/>
 	<ul>
 	  <li>Originales Monitorprprogramm</li>
 	</ul>
@@ -174,7 +172,7 @@
     <em>Einschalten (Power On)</em> im Men&uuml; <em>Extra</em> aufrufen.
   <br/><br/>
 
-  <h4>2.1.1. Anzeige</h4>
+  <h3>2.1.1. Anzeige</h3>
     Bei Adressein- und -ausgaben ist die Anzeige &uuml;blicherweise
     zweigeteilt:
     Die ersten vier Stellen zeigen die Adresse und
@@ -189,9 +187,9 @@
     </table>
   <br/><br/>
 
-  <h4>2.1.2. Programm von Kassette laden</h4>
-    <em>RES&nbsp;(Escape)</em> &rarr; <em>LD&nbsp;(l)</em>
-    &rarr; <em>&lt;Dateiname&gt;</em> &rarr; <em>EX&nbsp;(Enter)</em> 
+  <h3>2.1.2. Programm von Kassette laden</h3>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>LD&nbsp;(L)</em>
+    &rarr; <em>&lt;Dateiname&gt;</em> &rarr; <em>EX&nbsp;(Enter)</em>
   <br/><br/>
     Der Dateiname ist eine vierstellige hexadezimale Zahl.
   <br/><br/>
@@ -212,12 +210,12 @@
     oder mit der Funktion <a href="audio.htm#file_in">Sound-Datei lesen</a>.
   <br/><br/>
 
-  <h4>2.1.3. Programm auf Kassette speichern</h4>
-    <em>RES&nbsp;(Escape)</em> &rarr; <em>ST&nbsp;(s)</em>
+  <h3>2.1.3. Programm auf Kassette speichern</h3>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>ST&nbsp;(S)</em>
     &rarr; <em>&lt;Dateiname&gt;</em>
     &rarr; <em>+</em> &rarr; <em>&lt;Anfangsadresse&gt;</em>
     &rarr; <em>+</em> &rarr; <em>&lt;Endadresse&nbsp;+&nbsp;1&gt;</em>
-    &rarr; <em>EX&nbsp;(Enter)</em> 
+    &rarr; <em>EX&nbsp;(Enter)</em>
   <br/><br/>
     Dateiname und Adressangaben sind jeweils eine vierstellige
     hexadezimale Zahl.
@@ -230,9 +228,9 @@
     <a href="audio.htm#file_out">Sound-Datei speichern</a>.
   <br/><br/>
 
-  <h4>2.1.4. Programm starten</h4>
-    <em>RES&nbsp;(Escape)</em> &rarr; <em>&lt;Anfangsadresse&gt;</em>
-    &rarr; <em>EX&nbsp;(Enter)</em> 
+  <h3>2.1.4. Programm starten</h3>
+    <em>RES&nbsp;(Escape)</em> &rarr; <em>ADR (F1)</em>
+    &rarr; <em>&lt;Anfangsadresse&gt;</em> &rarr; <em>EX&nbsp;(Enter)</em>
   <br/><br/>
     Die Adresse ist eine vierstellige hexadezimale Zahl.
   <br/><br/>
@@ -253,10 +251,11 @@
   <br/><br/>
     Das Schachprogramm verwendet den nichtmaskierbaren Interrupt
     zum Neustart, d.h., durch Dr&uuml;cken der Taste <em>N</em>
-    wird das Schachprogramm neu gestartet.
+    wird das Schachprogramm neu gestartet, aber erst,
+    nachdem das Schachprogramm erstmalig auf dem o.a. Weg gestartet wurde.
   <br/><br/>
 
-  <h4>2.2.1. Tastatur</h4>
+  <h3>2.2.1. Tastatur</h3>
     Die Tasten haben im Schachprogramm eine andere Bedeutung
     bzw. Belegung als im normalen LC-80-Modus.
     Beim Original gab es eine Schablone,
@@ -266,17 +265,22 @@
     Die Zifferntasten sind im LC-80- und im SC-80-Modus gleich.
     Die Buchstaben- und Sondertasten unterscheiden sich jedoch.
     Damit man im Emulator beide Modi bequem bedienen kann,
-    werden Kleinbuchstaben auf die LC-80- und
-    Gro&szlig;buchstaben auf die SC-80-Tasten gemappt.
-    Au&szlig;erdem k&ouml;nnen auch bei gedr&uuml;ckter Feststelltaste
-    (Caps Lock) die Ziffern eingegeben werden.
-    Der Hintergrund dieses Mappings ist,
-    dass Sie im Schachprogramm einfach die Feststelltaste dr&uuml;cken,
-    und schon werden alle Tasten entsprechend des SC-80-Modes gemappt.
-    Verlassen Sie das Schachprogramm, dann l&ouml;sen Sie die Feststelltaste,
-    und alle Tasten werden wieder entsprechend dem LC-80 gemappt.
+    erkennt JKCEMU selbstst&auml;ndig,
+    ob man sich im Schachprogramm befindet und schaltet
+    das Tasten-Mapping entsprechend automatisch zwischen
+    LC-80- und SC-80-Mode um.
   <br/><br/>
-    Die Tabelle zeigt das Tastenmapping im SC-80-Mode im Detail:
+    Die automatische Schachmodeerkennung funktioniert nach folgendem
+    Prinzip:
+    Wenn die Programmausf&uuml;hrung an die Adresse C800 gelangt
+    (Startadresse des Schachprogramms),
+    wird das Tasten-Mapping auf den SC-80-Mode umgestellt.
+    Nun geht JKCEMU davon aus, dass ein R&uuml;cksprung
+    in das Monitorprogramm nur &uuml;ber RESET m&ouml;glich ist,
+    d.h., bei Erreichen der Adresse 0000 wird wieder in den LC-80-Mode
+    zur&uuml;ckgeschaltet.
+  <br/><br/>
+    Die Tabelle zeigt das Tastenmapping im SC-80-Mode:
   <br/>
     <table border="1">
       <tr><th>SC-80-Taste</th><th>Taste in JKCEMU</th><th>Bedeutung</th></tr>
@@ -327,7 +331,7 @@
       </tr>
       <tr>
 	<td valign="top">NMI</td>
-	<td valign="top">N oder n</td>
+	<td valign="top">N</td>
 	<td valign="top">
 	  Schachprogramm neu starten,<br/>
 	  Diese Taste ist auf der originalen SC-80-Schablone nicht beschriftet.
@@ -428,13 +432,13 @@
       </tr>
       <tr>
 	<td valign="top">EX</td>
-	<td valign="top">Enter, X oder x</td>
+	<td valign="top">Enter oder X</td>
 	<td valign="top">Aktion ausf&uuml;hren</td>
       </tr>
     </table>
   <br/><br/>
 
-  <h4>2.2.2. Gegen den Computer spielen</h4>
+  <h3>2.2.2. Gegen den Computer spielen</h3>
     Dr&uuml;cken Sie nach dem Start des Schachprogramms
     <em>NEW&nbsp;GAME&nbsp;/&nbsp;LEV&nbsp;(F1)</em>,
     um in den Spielmodus zu gelangen.
@@ -454,6 +458,8 @@
     <b>Achtung!</b> Wenn der Computer seinen Zug anzeigt,
     m&uuml;ssen Sie etwa 15 Sekunden warten,
     bis Sie selbst wieder einen Zug eingeben k&ouml;nnen.
+    Im <a href="chessboard.htm">Schachbrettfenster</a> wird der Zug
+    auch erst nach dieser Wartezeit angezeigt.
   <br/><br/>
     Soll der Computer mit Wei&szlig; spielen,
     dann dr&uuml;cken Sie nach der Taste
@@ -461,12 +467,13 @@
     oder nach der Wahl der Spielst&auml;rke die Taste
     <em>COLOR&nbsp;(W)</em>.
     In der Anzeige erscheint <em>WHITE</em>.
-    Dr&uuml;cken Sie nun die Taste <em>SELF&nbsp;PLAY&nbsp;/&nbsp;SW</em>.
-    Der Computer zeigt nun seinen ersten Zug an.
+    Dr&uuml;cken Sie nun die Taste
+    <em>SELF&nbsp;PLAY&nbsp;/&nbsp;SW&nbsp;(F2)</em>.
+    Der Computer zeigt daraufhin seinen ersten Zug an.
     Jetzt sind Sie an der Reihe.
   <br/><br/>
 
-  <h4>2.2.3. Korrekturen</h4>
+  <h3>2.2.3. Korrekturen</h3>
     Haben Sie sich bei der Eingabe eines Zuges vertippt
     und noch nicht mit <em>EX&nbsp;(Enter)</em> quittiert,
     dann tippen Sie einfach weitere Zeichen ein,
@@ -482,7 +489,7 @@
     aber Ihr K&ouml;nig damit im Schach stehen w&uuml;rde.
   <br/><br/>
 
-  <h4>2.2.4. Zufallsgenerator</h4>
+  <h3>2.2.4. Zufallsgenerator</h3>
     Das Schachprogramm enth&auml;lt auch einen Zufallsgenerator,
     um nicht immer die gleichen Z&uuml;ge zu spielen.
     Diesen Zufallsgenerator k&ouml;nnen Sie durch Dr&uuml;cken der Taste
@@ -490,13 +497,13 @@
     einer Ziffer von 0 bis 9 beeinflussen.
   <br/><br/>
 
-  <h4>2.2.5. Signalisierung von Spielsituationen</h4>
+  <h3>2.2.5. Signalisierung von Spielsituationen</h3>
     Bietet Ihnen der Computer Schach,
     dann steht in der ersten Stelle der Anzeige ein <em>S</em>.
     Bei Matt sehen Sie ein <em>M</em>.
   <br/><br/>
 
-  <h4>2.2.6. Computer gegen sich selbst spielen lassen</h4>
+  <h3>2.2.6. Computer gegen sich selbst spielen lassen</h3>
     Sie k&ouml;nnen den Computer auch gegen sich selbst spielen lassen,
     indem Sie nach dem Start des Schachprogramms folgendes eingeben:
   <br/><br/>

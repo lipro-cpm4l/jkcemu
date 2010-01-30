@@ -16,6 +16,8 @@ import java.util.*;
 import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.audio.*;
+import jkcemu.disk.*;
+import jkcemu.print.PrintMngr;
 import jkcemu.system.*;
 import z80emu.*;
 
@@ -33,6 +35,7 @@ public class EmuThread extends Thread implements
   private byte[]              ramExtended;
   private RAMFloppy           ramFloppy1;
   private RAMFloppy           ramFloppy2;
+  private PrintMngr           printMngr;
   private volatile ExtFile    extFont;
   private volatile ExtROM[]   extROMs;
   private volatile AudioIn    audioIn;
@@ -45,7 +48,7 @@ public class EmuThread extends Thread implements
   private volatile ExtROM[]   nextExtROMs;
 
 
-  public EmuThread( ScreenFrm screenFrm )
+  public EmuThread( ScreenFrm screenFrm, Properties props )
   {
     super( "Emulation Thread" );
     this.screenFrm   = screenFrm;
@@ -55,6 +58,7 @@ public class EmuThread extends Thread implements
     this.ramExtended = null;
     this.ramFloppy1  = new RAMFloppy();
     this.ramFloppy2  = new RAMFloppy();
+    this.printMngr   = new PrintMngr();
     this.extFont     = null;
     this.extROMs     = null;
     this.audioIn     = null;
@@ -65,7 +69,7 @@ public class EmuThread extends Thread implements
     this.emuSys      = null;
     this.nextEmuSys  = null;
     this.nextExtROMs = null;
-    applySettings( Main.getProperties() );
+    applySettings( props );
     fireReset( ResetLevel.POWER_ON );
   }
 
@@ -109,9 +113,11 @@ public class EmuThread extends Thread implements
 		 || sysName.startsWith( "Z9001" ) )
       {
 	emuSys = new Z9001( this, props );
-      } else if( sysName.startsWith( "KC85/2" )
+      } else if( sysName.startsWith( "HC900" )
+		 || sysName.startsWith( "KC85/2" )
 		 || sysName.startsWith( "KC85/3" )
-		 || sysName.startsWith( "KC85/4" ) )
+		 || sysName.startsWith( "KC85/4" )
+		 || sysName.startsWith( "KC85/5" ) )
       {
 	emuSys = new KC85( this, props );
       } else if( sysName.startsWith( "KramerMC" ) ) {
@@ -128,6 +134,8 @@ public class EmuThread extends Thread implements
 	emuSys = new Poly880( this, props );
       } else if( sysName.startsWith( "SC2" ) ) {
 	emuSys = new SC2( this, props );
+      } else if( sysName.startsWith( "SLC1" ) ) {
+	emuSys = new SLC1( this, props );
       } else if( sysName.startsWith( "VCS80" ) ) {
 	emuSys = new VCS80( this, props );
       } else if( sysName.startsWith( "Z1013" ) ) {
@@ -163,6 +171,17 @@ public class EmuThread extends Thread implements
 		props.getProperty( "jkcemu.ramfloppy.2.file.name" ) );
     }
 
+    // Floppy Disks
+    FloppyDiskStationFrm frm = this.screenFrm.getFloppyDiskStationFrm();
+    if( frm != null ) {
+      int n = emuSys.getSupportedFloppyDiskDriveCount();
+      frm.setDriveCount( n );
+      for( int i = 0; i < n; i++ ) {
+	emuSys.setFloppyDiskDrive( i, frm.getDrive( i ) );
+      }
+    }
+
+
     // CPU-Geschwindigkeit
     updCPUSpeed( props );
   }
@@ -179,9 +198,11 @@ public class EmuThread extends Thread implements
       {
 	rv = Z9001.getDefaultSpeedKHz();
       }
-      else if( sysName.startsWith( "KC85/2" )
+      else if( sysName.startsWith( "HC900" )
+	       || sysName.startsWith( "KC85/2" )
 	       || sysName.startsWith( "KC85/3" )
-	       || sysName.startsWith( "KC85/4" ) )
+	       || sysName.startsWith( "KC85/4" )
+	       || sysName.startsWith( "KC85/5" ) )
       {
 	rv = KC85.getDefaultSpeedKHz();
       }
@@ -217,6 +238,9 @@ public class EmuThread extends Thread implements
       }
       else if( sysName.startsWith( "SC2" ) ) {
 	rv = SC2.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "SLC1" ) ) {
+	rv = SLC1.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "VCS80" ) ) {
 	rv = VCS80.getDefaultSpeedKHz();
@@ -256,6 +280,8 @@ public class EmuThread extends Thread implements
 			0,
 			this.ramExtended.length );
 	  this.ramExtended = rv;
+	} else {
+	  rv = this.ramExtended;
 	}
       } else {
 	rv = new byte[ size ];
@@ -283,6 +309,12 @@ public class EmuThread extends Thread implements
   public ExtROM[] getExtROMs()
   {
     return this.extROMs;
+  }
+
+
+  public PrintMngr getPrintMngr()
+  {
+    return this.printMngr;
   }
 
 
@@ -521,18 +553,21 @@ public class EmuThread extends Thread implements
   }
 
 
-  public void setMemByte( int addr, int value )
+  public boolean setMemByte( int addr, int value )
   {
     addr &= 0xFFFF;
 
+    boolean rv   = false;
     boolean done = false;
     if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
       if( getExtROMByte( addr ) >= 0 ) {
 	done = true;
       }
     }
-    if( !done )
-      this.emuSys.setMemByte( addr, value );
+    if( !done ) {
+      rv = this.emuSys.setMemByte( addr, value );
+    }
+    return rv;
   }
 
 
@@ -610,9 +645,10 @@ public class EmuThread extends Thread implements
 	}
 	this.resetLevel = ResetLevel.NO_RESET;
 
-	// RAM-Floppies zuruecksetzen
+	// RAM-Floppies und Druckmanager zuruecksetzen
 	this.ramFloppy1.reset();
 	this.ramFloppy2.reset();
+	this.printMngr.reset();
 
 	// in die Z80-Emulation verzweigen
 	this.z80cpu.run();

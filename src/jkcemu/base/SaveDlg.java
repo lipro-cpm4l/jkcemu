@@ -307,6 +307,7 @@ public class SaveDlg extends BasicDlg implements
     for( int i = 0; i < hsFileTypes.length; i++ ) {
       this.comboHeadFileType.addItem( hsFileTypes[ i ] );
     }
+    this.comboHeadFileType.setEnabled( true );
     this.comboHeadFileType.setEditable( true );
 
     Font font = this.fldHeadBegAddr.getFont();
@@ -322,6 +323,7 @@ public class SaveDlg extends BasicDlg implements
 	  if( item.charAt( 0 ) == hsFileType ) {
 	    this.comboHeadFileType.setSelectedItem( item );
 	    this.comboHeadFileType.setEditable( false );
+	    this.comboHeadFileType.setEnabled( false );
 	    break;
 	  }
 	}
@@ -390,7 +392,10 @@ public class SaveDlg extends BasicDlg implements
 
     // Vorbelegungen
     EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
-    if( (emuSys instanceof KC85) || (emuSys instanceof Z9001) ) {
+    if( this.kcBasic
+	|| (emuSys instanceof KC85)
+	|| (emuSys instanceof Z9001) )
+    {
       this.btnFileFmtKC.setSelected( true );
     }
     else if( emuSys instanceof Z1013 ) {

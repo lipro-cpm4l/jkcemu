@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,13 +26,11 @@ public class Main
   private static File                     profileDir        = null;
   private static File                     profileFile       = null;
   private static Properties               properties        = null;
-  private static Image                    iconImage         = null;
   private static boolean                  printPageNum      = true;
   private static boolean                  printFileName     = true;
   private static int                      printFontSize     = 12;
   private static PrintRequestAttributeSet printRequestAttrs = null;
   private static ScreenFrm                screenFrm         = null;
-  private static Image                    defaultIconImage  = null;
   private static java.util.List<Image>    iconImages        = null;
 
 
@@ -71,25 +69,19 @@ public class Main
       if( args[ 0 ].length() > 0 )
 	prfName = args[ 0 ];
     }
-    boolean done = false;
-    File    file = new File( profileDir, prfName + ".prf" );
+    Properties props = null;
+    File       file  = new File( profileDir, prfName + ".prf" );
     if( file.exists() ) {
-      Properties props = loadProperties( file );
-      if( props != null ) {
-	screenFrm.getEmuThread().applySettings( props );
-	applyProfileToFrames( file, props, true, null );
-	EmuUtil.applyWindowSettings(
-				props,
-				screenFrm,
-				screenFrm.isResizable() );
-	SwingUtilities.updateComponentTreeUI( screenFrm );
-	done = true;
-      }
+      props = loadProperties( file );
     }
-    if( !done ) {
+    screenFrm.setEmuThread( new EmuThread( screenFrm, props ) );
+    if( props != null ) {
+      applyProfileToFrames( file, props, true, null );
+      screenFrm.getFloppyDiskStationFrm().openDisks( props );
+    } else {
+      screenFrm.applySettings( null, screenFrm.isResizable() );
       screenFrm.pack();
       screenFrm.setScreenCentered();
-      screenFrm.applySettings( null, screenFrm.isResizable() );
     }
 
     // Emulations-Thread starten
@@ -285,7 +277,7 @@ public class Main
 
   public static String getVersion()
   {
-    return "JKCEMU Version 0.6";
+    return "JKCEMU Version 0.7";
   }
 
 

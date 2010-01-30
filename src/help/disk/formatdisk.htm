@@ -1,0 +1,38 @@
+<html>
+<body>
+  <h1>Formatieren emulierter Disketten</h1>
+    JKCEMU ist in der Lage, emulierte Disketten zu formatieren.
+    Allerdings gibt es da einige Dinge zu beachten:
+    <ol>
+      <li>Die emulierte Diskette muss beschreibbar sein.</li>
+      <li>
+	Wenn die emulierte Diskette bereits ein Format besitzt
+	(das ist z.B. bei der Benutzung von realen Disketten immer der Fall),
+	kann das vorhandene Format nicht ge&auml;ndert werden.
+	In dem Fall ist das Formatieren m&ouml;glich,
+	solange nur Sektoren geschrieben werden,
+	die auf der emulierten Diskette bereits vorhanden sind.
+      </li>
+      <li>
+	Zum Beschreiben einer Abbilddatei mit einem beliebigen Format
+	m&uuml;ssen Sie eine neue, d.h. leere,
+	Diskettenabbilddatei anlegen.
+	Die entsprechenden Men&uuml;punkte dazu finden Sie
+	im Men&uuml; des <em>Laden/&Ouml;ffnen</em>-Knopfs
+	im Fenster <em>JKCEMU Diskettenstation</em>.
+	Anschlie&szlig;end starten Sie im Emulator das entsprechende
+	Formatierprogramm.
+      </li>
+      <li>
+	Wird nach der Spur 0 die Spur 2 formatiert, geht JKCEMU davon aus,
+	dass eine 40-Spuren-Diskette in einem 80-Spuren-Laufwerk
+	formatiert wird.
+	JKCEMU rechnet dann die Spur entsprechend um,
+	d.h. die im Laufwerk eingestellte Spur 2
+	ergibt Spur 1 auf der Diskette
+	(siehe <a href="cyls_40_80.htm">40-/80-Spuren-Problematik</a>).
+      </li>
+    </ol>
+</body>
+</html>
+

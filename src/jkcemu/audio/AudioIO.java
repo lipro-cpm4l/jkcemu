@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,13 +16,14 @@ import z80emu.*;
 
 public abstract class AudioIO
 {
-  protected Z80CPU  z80cpu;
-  protected boolean firstCall;
-  protected boolean progressEnabled;
-  protected boolean lastPhase;
-  protected int     lastTStates;
-  protected int     tStatesPerFrame;
-  protected String  errorText;
+  protected Z80CPU      z80cpu;
+  protected AudioFormat audioFmt;
+  protected boolean     firstCall;
+  protected boolean     progressEnabled;
+  protected boolean     lastPhase;
+  protected int         lastTStates;
+  protected int         tStatesPerFrame;
+  protected String      errorText;
 
   private volatile SourceDataLine monitorLine;
   private volatile byte[]         monitorBuf;
@@ -57,13 +58,26 @@ public abstract class AudioIO
   }
 
 
+  public Control[] getDataControls()
+  {
+    return null;
+  }
+
+
   public String getErrorText()
   {
     return this.errorText;
   }
 
 
-  public boolean isMonitorPlayActive()
+  public Control[] getMonitorControls()
+  {
+    Line line = this.monitorLine;
+    return line != null ? line.getControls() : null;
+  }
+
+
+  public boolean isMonitorActive()
   {
     return this.monitorLine != null;
   }
@@ -75,12 +89,13 @@ public abstract class AudioIO
   }
 
 
-  /*
-   * Der Mithoerkanal wird immer mit 8 Bit Mono geoeffnet.
-   */
-  protected void openMonitorLine( AudioFormat fmt )
+  protected void openMonitorLine()
   {
-    if( this.monitorLine == null ) {
+    AudioFormat fmt = this.audioFmt;
+    if( supportsMonitor()
+	&& (this.monitorLine == null)
+	&& (fmt != null) )
+    {
       DataLine.Info  info = new DataLine.Info( SourceDataLine.class, fmt );
       SourceDataLine line = null;
       try {
@@ -124,6 +139,12 @@ public abstract class AudioIO
   }
 
 
+  protected boolean supportsMonitor()
+  {
+    return false;
+  }
+
+
   protected void writeMonitorLine( byte[] buf )
   {
     SourceDataLine line = this.monitorLine;
@@ -147,7 +168,11 @@ public abstract class AudioIO
   }
 
 
-  public abstract AudioFormat startAudio( int speedKHz, int sampleRate );
-  public abstract void        stopAudio();
+  public abstract AudioFormat startAudio(
+					Mixer mixer,
+					int   speedKHz,
+					int   sampleRate );
+
+  public abstract void stopAudio();
 }
 

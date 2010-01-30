@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,15 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.Dialog;
+import java.awt.*;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
+import jkcemu.base.*;
 
 
-public class TarPacker extends AbstractPackDlg
+public class TarPacker extends AbstractThreadDlg
 {
   private Collection<File> srcFiles;
   private File             outFile;
@@ -23,16 +24,12 @@ public class TarPacker extends AbstractPackDlg
 
 
   public static void packFiles(
-		FileBrowserFrm   fileBrowserFrm,
+		Window           owner,
 		Collection<File> srcFiles,
 		File             outFile,
 		boolean          compression )
   {
-    Dialog dlg = new TarPacker(
-			fileBrowserFrm,
-			srcFiles,
-			outFile,
-			compression );
+    Dialog dlg = new TarPacker( owner, srcFiles, outFile, compression );
     if( compression ) {
       dlg.setTitle( "TGZ-Datei packen" );
     } else {
@@ -56,9 +53,9 @@ public class TarPacker extends AbstractPackDlg
 	gzipOut = new GZIPOutputStream( out );
 	out     = gzipOut;
       }
-      this.fileBrowserFrm.fireRefreshNodeFor( outFile.getParentFile() );
+      fireDirectoryChanged( this.outFile.getParentFile() );
       for( File file : this.srcFiles ) {
-	packFile( outFile, out, file, "" );
+	packFile( this.outFile, out, file, "" );
       }
       for( int i = 0; i < 1024; i++ ) {
 	out.write( 0 );
@@ -88,24 +85,24 @@ public class TarPacker extends AbstractPackDlg
       incErrorCount();
     }
     finally {
-      close( out );
+      EmuUtil.doClose( out );
     }
     if( this.canceled || failed ) {
-      outFile.delete();
+      this.outFile.delete();
     }
-    this.fileBrowserFrm.fireRefreshNodeFor( outFile.getParentFile() );
+    fireDirectoryChanged( this.outFile.getParentFile() );
   }
 
 
 	/* --- private Konstruktoren und Methoden --- */
 
   private TarPacker(
-		FileBrowserFrm   fileBrowserFrm,
+		Window           owner,
 		Collection<File> srcFiles,
 		File             outFile,
 		boolean          compression )
   {
-    super( fileBrowserFrm );
+    super( owner, true );
     this.srcFiles    = srcFiles;
     this.outFile     = outFile;
     this.compression = compression;
@@ -125,7 +122,7 @@ public class TarPacker extends AbstractPackDlg
       appendToLog( file.getPath() + "\n" );
       String entryName = file.getName();
       if( !file.equals( outFile) && (entryName != null) ) {
-	if( entryName.length() > 0 ) {
+	if( !entryName.isEmpty() ) {
 	  long millis = file.lastModified();
 	  if( file.isDirectory() ) {
 	    String subPath = path + entryName + "/";
@@ -136,7 +133,7 @@ public class TarPacker extends AbstractPackDlg
 		packFile( outFile, out, subFiles[ i ], subPath );
 	      }
 	    } else {
-	      appendToLog(
+	      appendErrorToLog(
 			"Fehler: Verzeichnis kann nicht gelesen werden.\n" );
 	    }
 	  }
@@ -173,16 +170,11 @@ public class TarPacker extends AbstractPackDlg
 	      }
 	    }
 	    catch( IOException ex ) {
-	      String errMsg = ex.getMessage();
-	      if( errMsg != null ) {
-		appendToLog( "  Fehler:\n" + errMsg + "\n" );
-	      } else {
-		appendToLog( "  Fehler\n" );
-	      }
+	      appendErrorToLog( ex );
 	      incErrorCount();
 	    }
 	    finally {
-	      close( in );
+	      EmuUtil.doClose( in );
 	    }
 	  } else {
 	    appendToLog( "  Ignoriert\n" );

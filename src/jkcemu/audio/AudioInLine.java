@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,12 +18,12 @@ public class AudioInLine extends AudioIn
 {
   private static int[] sampleRates = { 44100, 32000, 22050 };
 
-  private TargetDataLine dataLine;
-  private byte[]         frameBuf;
-  private byte[]         audioDataBuf;
-  private int            audioDataLen;
-  private int            audioDataPos;
-  private int            maxPauseTStates;
+  private volatile TargetDataLine dataLine;
+  private byte[]                  frameBuf;
+  private byte[]                  audioDataBuf;
+  private int                     audioDataLen;
+  private int                     audioDataPos;
+  private int                     maxPauseTStates;
 
 
   public AudioInLine( Z80CPU z80cpu )
@@ -38,54 +38,56 @@ public class AudioInLine extends AudioIn
   }
 
 
-  public AudioFormat startAudio( int speedKHz, int sampleRate )
+  public Control[] getDataControls()
   {
-    AudioFormat fmt = null;
-    if( this.dataLine != null ) {
-      fmt = this.dataLine.getFormat();
-    } else {
-      if( speedKHz > 0 ) {
+    Line line = this.dataLine;
+    return line != null ? line.getControls() : null;
+  }
 
-	// Audio-Eingabekanal oeffnen
-	TargetDataLine line = null;
-	if( sampleRate > 0 ) {
-	  line = openTargetDataLine( sampleRate );
-	} else {
-	  for( int i = 0;
-	       (line == null) && (i < this.sampleRates.length);
-	       i++ )
-	  {
-	    line = openTargetDataLine( this.sampleRates[ i ] );
-	  }
+
+  public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
+  {
+    if( (this.dataLine == null) && (speedKHz > 0) ) {
+
+      // Audio-Eingabekanal oeffnen
+      TargetDataLine line = null;
+      if( sampleRate > 0 ) {
+	line = openTargetDataLine( mixer, sampleRate );
+      } else {
+	for( int i = 0;
+	     (line == null) && (i < this.sampleRates.length);
+	     i++ )
+	{
+	  line = openTargetDataLine( mixer, this.sampleRates[ i ] );
 	}
+      }
 
-        if( line != null ) {
-	  fmt                  = line.getFormat();
-	  this.dataLine        = line;
-	  this.maxPauseTStates = speedKHz * 1000;	// 1 Sekunde
-          this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
+      if( line != null ) {
+	AudioFormat fmt      = line.getFormat();
+	this.dataLine        = line;
+	this.maxPauseTStates = speedKHz * 1000;	// 1 Sekunde
+	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
 						/ fmt.getFrameRate());
 
-	  // Buffer fuer ein Frame anlegen
-	  this.frameBuf = new byte[ fmt.getFrameSize() ];
+	// Buffer fuer ein Frame anlegen
+	this.frameBuf = new byte[ fmt.getFrameSize() ];
 
-	  // Buffer fuer Leseoperationen anlegen
-	  int r = Math.round( fmt.getFrameRate() );
-	  int n = this.dataLine.getBufferSize() / 32;
-	  if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
-	    n = r / 2;
-	  }
-	  if( n < 1 ) {
-	    n = 1;
-	  }
-	  this.audioDataBuf = new byte[ n * this.frameBuf.length ];
-	  this.audioDataLen = 0;
-	  this.audioDataPos = this.audioDataLen;
-	  setAudioFormat( fmt );
-        }
+	// Buffer fuer Leseoperationen anlegen
+	int r = Math.round( fmt.getFrameRate() );
+	int n = this.dataLine.getBufferSize() / 32;
+	if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
+	  n = r / 2;
+	}
+	if( n < 1 ) {
+	  n = 1;
+	}
+	this.audioDataBuf = new byte[ n * this.frameBuf.length ];
+	this.audioDataLen = 0;
+	this.audioDataPos = this.audioDataLen;
+	setAudioFormat( fmt );
       }
     }
-    return fmt;
+    return this.audioFmt;
   }
 
 
@@ -164,30 +166,38 @@ public class AudioInLine extends AudioIn
 
 	/* --- private Methoden --- */
 
-  private TargetDataLine openTargetDataLine( int sampleRate )
+  private TargetDataLine openTargetDataLine( Mixer mixer, int sampleRate )
   {
-    TargetDataLine line = openTargetDataLine( sampleRate, 2 );
+    TargetDataLine line = openTargetDataLine( mixer, sampleRate, 2 );
     if( line == null ) {
-      line = openTargetDataLine( sampleRate, 1 );
-    }
-    return line;
-  }
-
-
-  private TargetDataLine openTargetDataLine( int sampleRate, int channels )
-  {
-    TargetDataLine line = openTargetDataLine( sampleRate, channels, false );
-    if( line == null ) {
-      line = openTargetDataLine( sampleRate, channels, true );
+      line = openTargetDataLine( mixer, sampleRate, 1 );
     }
     return line;
   }
 
 
   private TargetDataLine openTargetDataLine(
-				int     sampleRate,
-				int     channels,
-				boolean bigEndian )
+					Mixer mixer,
+					int   sampleRate,
+					int   channels )
+  {
+    TargetDataLine line = openTargetDataLine(
+					mixer,
+					sampleRate,
+					channels,
+					false );
+    if( line == null ) {
+      line = openTargetDataLine( mixer, sampleRate, channels, true );
+    }
+    return line;
+  }
+
+
+  private TargetDataLine openTargetDataLine(
+					Mixer   mixer,
+					int     sampleRate,
+					int     channels,
+					boolean bigEndian )
   {
     AudioFormat fmt = new AudioFormat(
 				sampleRate,
@@ -199,12 +209,18 @@ public class AudioInLine extends AudioIn
     DataLine.Info  info = new DataLine.Info( TargetDataLine.class, fmt );
     TargetDataLine line = null;
     try {
-      if( AudioSystem.isLineSupported( info ) ) {
-	line = (TargetDataLine) AudioSystem.getLine( info );
-	if( line != null ) {
-	  line.open( fmt );
-	  line.start();
+      if( mixer != null ) {
+	if( mixer.isLineSupported( info ) ) {
+	  line = (TargetDataLine) mixer.getLine( info );
 	}
+      } else {
+	if( AudioSystem.isLineSupported( info ) ) {
+	  line = (TargetDataLine) AudioSystem.getLine( info );
+	}
+      }
+      if( line != null ) {
+	line.open( fmt );
+	line.start();
       }
     }
     catch( Exception ex ) {

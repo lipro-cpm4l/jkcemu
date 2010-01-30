@@ -19,12 +19,14 @@ public class FileInfo
   public static final String KCC          = "KCC/JTC-Datei";
   public static final String KCTAP_SYS    = "KC-TAP-Datei";
   public static final String KCTAP_BASIC  = "KC-TAP-BASIC-Programmdatei";
+  public static final String KCTAP_HEADER = "\u00C3KC-TAPE by AF.\u0020";
   public static final String KCBASIC_HEAD =
 				"KC-BASIC-Programmdatei mit Kopfdaten";
   public static final String KCBASIC_PURE = "KC-BASIC-Programmdatei";
   public static final String INTELHEX = "Intel-HEX-Datei";
   public static final String BIN = "BIN-Datei (Speicherabbild ohne Kopfdaten)";
 
+  public static final int KCTAP_HLEN = KCTAP_HEADER.length();
 
   private byte[] header;
   private long   fileLen;
@@ -34,6 +36,7 @@ public class FileInfo
   private String fileDesc;
   private String addrText;
   private String infoText;
+  private int    nextTAPOffs;
 
 
   public static FileInfo analyzeFile( File file )
@@ -48,7 +51,7 @@ public class FileInfo
 	    in = new FileInputStream( file );
 
 	    byte[] header = new byte[ 40 ];
-	    rv = analyzeFile( header, EmuUtil.read( in, header, 0 ), file );
+	    rv = analyzeFile( header, EmuUtil.read( in, header ), file );
 	  }
 	  finally {
 	    if( in != null ) {
@@ -82,11 +85,16 @@ public class FileInfo
       if( headerLen > header.length ) {
 	headerLen = header.length;
       }
-      String fileFmt  = null;
-      String fileText = null;
-      int    fileType = -1;
-      long   fileLen  = file.length();
-
+      String fileFmt     = null;
+      String fileText    = null;
+      int    fileType    = -1;
+      int    begAddr     = -1;
+      int    endAddr     = -1;
+      int    nextTAPOffs = -1;
+      long   fileLen     = headerLen;
+      if( file != null ) {
+	fileLen = file.length();
+      }
       if( (fileLen > 32) && (headerLen > 15) ) {
 	int b12 = (int) header[ 12 ] & 0xFF;
 	int b13 = (int) header[ 13 ] & 0xFF;
@@ -100,31 +108,40 @@ public class FileInfo
 	}
       }
       if( (fileFmt == null) && (fileLen > 144) && (headerLen > 33) ) {
-	boolean kctap = true;
-	String  text  = "\u00C3KC-TAPE by AF.\u0020";
-	int     n     = text.length();
-	for( int i = 0; i < n; i++ ) {
-	  if( ((int) header[ i ] & 0xFF) != (int) text.charAt( i ) ) {
-	    kctap = false;
-	    break;
-	  }
-	}
-	if( kctap ) {
-	  int b17 = header[ 17 ] & 0xFF;
-	  int b18 = header[ 18 ] & 0xFF;
-	  int b19 = header[ 19 ] & 0xFF;
-	  int b33 = header[ 33 ] & 0xFF;
+	if( isTAPHeaderAt( header, headerLen, 0 ) ) {
+	  int nextOffs = -1;
+	  int b17      = header[ 17 ] & 0xFF;
+	  int b18      = header[ 18 ] & 0xFF;
+	  int b19      = header[ 19 ] & 0xFF;
+	  int b33      = header[ 33 ] & 0xFF;
 	  if( ((b17 < 0xD3) || (b17 > 0xD8))
 	      && ((b18 < 0xD3) || (b18 > 0xD8))
 	      && ((b19 < 0xD3) || (b19 > 0xD8))
 	      && ((b33 >= 2) && (b33 <= 4)) )
 	  {
 	    fileFmt = KCTAP_SYS;
+	    begAddr = getBegAddr( header, fileFmt );
+	    endAddr = getEndAddr( header, fileFmt );
+	    if( (begAddr >= 0) && (begAddr <= endAddr) ) {
+	      int nBlks = (endAddr - begAddr + 127) / 128;
+	      nextOffs  = 16 + (129 * (nBlks + 1));
+	    }
 	  } else {
 	    if( ((b17 == 0xD3) && (b18 == 0xD3) && (b19 == 0xD3))
 		|| ((b17 == 0xD6) && (b18 == 0xD6) && (b19 == 0xD6)) )
 	    {
 	      fileFmt = KCTAP_BASIC;
+	      begAddr = getBegAddr( header, fileFmt );
+	      endAddr = getEndAddr( header, fileFmt );
+	      if( (begAddr >= 0) && (begAddr <= endAddr) ) {
+		int nBlks = (endAddr - begAddr + 13 + 127) / 128;
+		nextOffs  = 16 + (129 * nBlks);
+	      }
+	    }
+	  }
+	  if( nextOffs > 0 ) {
+	    if( isTAPHeaderAt( header, headerLen, nextOffs ) ) {
+	      nextTAPOffs = nextOffs;
 	    }
 	  }
 	}
@@ -206,12 +223,15 @@ public class FileInfo
       if( fileFmt == null ) {
 	fileFmt = BIN;
       }
-      StringBuilder buf     = new StringBuilder( 26 );
-      int           begAddr = getBegAddr( header, fileFmt );
+      StringBuilder buf = new StringBuilder( 26 );
+      if( begAddr < 0 ) {
+	begAddr = getBegAddr( header, fileFmt );
+      }
       if( begAddr >= 0 ) {
 	buf.append( String.format( "%04X", begAddr ) );
-
-	int endAddr = getEndAddr( header, fileFmt );
+	if( endAddr < 0 ) {
+	  endAddr = getEndAddr( header, fileFmt );
+	}
 	if( endAddr >= begAddr ) {
 	  buf.append( String.format( "-%04X", endAddr ) );
 
@@ -235,7 +255,8 @@ public class FileInfo
 			fileFmt,
 			fileText,
 			getFileDesc( header, fileFmt ),
-			buf.length() > 0 ? buf.toString() : null );
+			buf.length() > 0 ? buf.toString() : null,
+			nextTAPOffs );
     }
     return rv;
   }
@@ -257,10 +278,7 @@ public class FileInfo
 	if( fileFmt.equals( HEADERSAVE ) ) {
 	  if( fileBuf.length >= 32 ) {
 	    begAddr = EmuUtil.getWord( fileBuf, 0 );
-	    len     = EmuUtil.getWord( fileBuf, 2 ) - begAddr + 1;
-	  }
-	  if( len <= 0 ) {
-	    new IOException( "Laden als Headersave-Datei nicht m\u00F6glich" );
+	    len     = ((EmuUtil.getWord( fileBuf, 2 ) - begAddr) & 0xFFFF) + 1;
 	  }
 	  rv = new LoadData( fileBuf, 32, len, begAddr, -1, fileFmt );
 	  int fileType = fileBuf[ 12 ] & 0xFF;
@@ -307,10 +325,8 @@ public class FileInfo
 	} else if( fileFmt.equals( KCC ) ) {
 	  if( fileBuf.length >= 128 ) {
 	    begAddr = EmuUtil.getWord( fileBuf, 17 );
-	    len     = EmuUtil.getWord( fileBuf, 19 ) - begAddr + 1;
-	  }
-	  if( len <= 0 ) {
-	    new IOException( "Laden als KCC/JTC-Datei nicht m\u00F6glich" );
+	    len     = ((EmuUtil.getWord( fileBuf, 19 ) - begAddr) & 0xFFFF)
+									+ 1;
 	  }
 	  rv = new LoadData( fileBuf, 128, len, begAddr, -1, fileFmt );
 	  if( fileBuf[ 16 ] >= 3 ) {
@@ -375,6 +391,12 @@ public class FileInfo
     return (this.fileFmt != null) && (format != null) ?
 					this.fileFmt.equals( format )
 					: false;
+  }
+
+
+  public String getAddrText()
+  {
+    return this.addrText;
   }
 
 
@@ -476,12 +498,6 @@ public class FileInfo
   }
 
 
-  public String getAddrText()
-  {
-    return this.addrText;
-  }
-
-
   public static String getFileDesc( byte[] header, Object fileFmt )
   {
     String rv = null;
@@ -564,6 +580,12 @@ public class FileInfo
   }
 
 
+  public int getNextTAPOffset()
+  {
+    return this.nextTAPOffs;
+  }
+
+
   public static int getStartAddr( byte[] header, Object fileFmt )
   {
     int rv = -1;
@@ -638,15 +660,17 @@ public class FileInfo
 		String fileFmt,
 		String fileText,
 		String fileDesc,
-		String addrText )
+		String addrText,
+		int    nextTAPOffs )
   {
-    this.header   = header;
-    this.fileLen  = fileLen;
-    this.fileType = fileType;
-    this.fileFmt  = fileFmt;
-    this.fileText = (fileText != null ? fileText : fileFmt);
-    this.fileDesc = fileDesc;
-    this.addrText = addrText;
+    this.header      = header;
+    this.fileLen     = fileLen;
+    this.fileType    = fileType;
+    this.fileFmt     = fileFmt;
+    this.fileText    = (fileText != null ? fileText : fileFmt);
+    this.fileDesc    = fileDesc;
+    this.addrText    = addrText;
+    this.nextTAPOffs = nextTAPOffs;
 
     boolean       colon = true;
     StringBuilder buf   = new StringBuilder( 64 );
@@ -777,10 +801,7 @@ public class FileInfo
     boolean kcbasic   = false;
     if( fileFmt.equals( KCTAP_SYS ) && (fileBuf.length > 39) ) {
       begAddr = EmuUtil.getWord( fileBuf, 34 );
-      len     = EmuUtil.getWord( fileBuf, 36 ) - begAddr + 1;
-      if( len < 1 ) {
-	len = 0x1000 - begAddr;
-      }
+      len     = ((EmuUtil.getWord( fileBuf, 36 ) - begAddr) & 0xFFFF) + 1;
       if( fileBuf[ 33 ] >= 3 ) {
 	startAddr = EmuUtil.getWord( fileBuf, 38 );
       }
@@ -794,7 +815,7 @@ public class FileInfo
       kcbasic   = true;
     }
     if( (begAddr < 0) || (len <= 0) ) {
-      new IOException( "Laden als KC-TAP-Datei nicht m\u00F6glich" );
+      throw new IOException( "Laden als KC-TAP-Datei nicht m\u00F6glich" );
     }
     byte[] dstBuf = new byte[ len ];
     int    dstPos = 0;
@@ -856,6 +877,27 @@ public class FileInfo
     }
     else if( (ch >= 'a') && (ch <= 'z') ) {
       rv = (ch - 'a' + 10);
+    }
+    return rv;
+  }
+
+
+  private static boolean isTAPHeaderAt(
+				byte[] fileBytes,
+				int    fileLen,
+				int    offs )
+  {
+    boolean rv = false;
+    if( (offs + KCTAP_HLEN) < Math.min( fileBytes.length, fileLen ) ) {
+      rv = true;
+      for( int i = 0; i < KCTAP_HLEN; i++ ) {
+	if( ((int) fileBytes[ offs + i ] & 0xFF)
+				!= (int) KCTAP_HEADER.charAt( i ) )
+	{
+	  rv = false;
+	  break;
+	}
+      }
     }
     return rv;
   }

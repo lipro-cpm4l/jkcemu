@@ -7,29 +7,32 @@
     und so das Geschehen im Emulator zu &uuml;berwachen.
     Dabei ist es auch m&ouml;glich,
     die Speicher- und Registerinhalte anzusehen.
-  <br><br>
+  <br/><br/>
 
 
-  <h2>Debugger starten</h2>
+  <h2>1. Debugger starten</h2>
     Sie befinden sich im Hauptfenster und klicken im Men&uuml;
     <em>Extra</em>, Untermen&uuml; <em>Werkzeuge</em>, den Punkt
     <em>Debugger...</em> an.
-  <br><br>
     Die weitere Beschreibung bezieht sich auf das Debugger-Fenster.
-  <br><br>
+  <br/><br/>
 
 
-  <h2>Programmausf&uuml;hrung anhalten</h2>
+  <h2>2. Programmausf&uuml;hrung anhalten</h2>
     Damit Sie die Speicher- und Registerinhalte ansehen k&ouml;nnen,
     muss die Programmausf&uuml;hrung angehalten werden.
     Daf&uuml;r gibt es zwei M&ouml;glichkeiten:
     <ol>
-      <li>Sie legen einen oder mehrere Haltepunkte an.
-          Wenn die Befehlsabarbeitung auf einen solchen Haltepunkt
-          st&ouml;&szlig;t, der zudem auch aktiviert sein muss,
-	  wird angehalten.
-      <li>Sie klicken im Men&uuml; <em>Debuggen</em> auf den Punkt
-          <em>Programmausf&uuml;hrung anhalten</em>.
+      <li>
+	Sie legen einen oder mehrere Haltepunkte an.
+        Wenn die Befehlsabarbeitung auf einen solchen Haltepunkt
+        st&ouml;&szlig;t, der zudem auch aktiviert sein muss,
+	wird angehalten.
+      </li>
+      <li>
+	Sie klicken im Men&uuml; <em>Debuggen</em> auf den Punkt
+        <em>Programmausf&uuml;hrung anhalten</em>.
+      </li>
     </ol>
     Jedesmal wenn die Programmausf&uuml;hrung anh&auml;lt,
     wird der Inhalt des Debugger-Fensters aktualisiert, d.h.,
@@ -37,84 +40,82 @@
     in der Mitte die ersten Bytes der Speicherbereiche,
     auf denen die Doppelregister zeigen und
     unten die n&auml;chsten auszuf&uuml;hrenden Befehle.
-  <br><br>
+  <br/><br/>
 
 
-  <h2><a name="breakpoint">Haltepunkte</a></h2>
+  <h2><a name="breakpoint">3. Haltepunkte</a></h2>
     &Uuml;ber das Men&uuml; <em>Debuggen</em>,
     Eintrag <em>Haltepunkt hinzuf&uuml;gen...</em>,
     k&ouml;nnen Sie beliebig viele Haltepunkte anlegen.
     Dazu m&uuml;ssen Sie die Haltepunktadressen hexadezimal angeben.
-  <br><br>
+  <br/><br/>
     Der Debugger ist nur solange aktiv, wie das Debugger-Fenster
     sichtbar ist.
     Wenn Sie Haltepunkte angelegt haben und Sie schlie&szlig;en
     das Fenster, werden die Haltepunkte zwar nicht gel&ouml;scht,
     jedoch wird dann dort auch nicht mehr angehalten.
-  <br><br>
+  <br/><br/>
     Um einen Haltepunkt wieder zu entfernen,
     m&uuml;ssen Sie diesen im rechten Bereich des Debugger-Fensters
     durch Anklicken markieren.
     Anschlie&szlig;end klicken Sie im Men&uuml; <em>Debuggen</em>
     auf den Eintrag <em>Haltepunkt entfernen</em>.
-  <br><br>
+  <br/><br/>
     Optional k&ouml;nnen Sie auch alle Haltepunkte auf einmal entfernen
     (Men&uuml;eintrag <em>Alle Haltepunkte entfernen</em>).
-  <br><br>
+  <br/><br/>
     Haltepunkte, die Sie tempor&auml;r nicht ben&ouml;tigen,
     m&uuml;ssen Sie nicht unbedingt entfernen.
     Sie k&ouml;nnen diese Haltepunkte auch einfach deaktivieren
     und sp&auml;ter bei Bedarf wieder aktivieren.
-  <br><br>
+  <br/><br/>
 
 
-  <h2>Schrittbetrieb</h2>
+  <h2>4. Schrittbetrieb</h2>
     Mit Schrittbetrieb ist gemeint, dass nach dem Anhalten der
     Programmausf&uuml;hrung einzelne Befehle oder Befehlsgruppen
     abgearbeitet werden und danach automatisch wieder
     die Programmausf&uuml;hrung angehalten wird.
-  <br><br>
+  <br/><br/>
     Die Funktionalit&auml;ten des Schrittbetriebs finden Sie im Men&uuml;
     <em>Debuggen</em> unter den Punkten <em>&Uuml;ber Aufruf springen</em>,
     <em>In Aufruf springen</em> und <em>Aus Aufruf herausspringen</em>.
-  <br><br>
+  <br/><br/>
     Den Schrittbetrieb beenden Sie ganz einfach durch Fortsetzung
     der Programmausf&uuml;hrung.
     Klicken Sie dazu im Men&uuml; <em>Debuggen</em> den Punkt
     <em>Bis Haltepunkt ausf&uuml;hren</em> an.
-  <br><br>
+  <br/><br/>
     Wenn Sie sich im Schrittbetrieb befinden und Sie schlie&szlig;en
     des Debugger-Fenster, geht der Emulator in den
     <a href="../otherfunc.htm#pause">Pause-Zustand</a> &uuml;ber.
     Sie k&ouml;nnen dann im Hauptfenster im Men&uuml;
     <em>Extra</em> auf <em>Fortsetzen</em> klicken,
     oder Sie &ouml;ffnen wieder den Debugger.
-  <br><br>
+  <br/><br/>
 
-
-  <h3>&Uuml;ber Aufruf springen</h3>
+  <h3>4.1. &Uuml;ber Aufruf springen</h3>
     Es wird ein einzelner Maschinenbefehl abgearbeitet.
     Handelt es sich dabei um den Aufruf eines Unterprogramms,
     so wird das ganze Unterprogramm ausgef&uuml;hrt und
     erst danach wieder angehalten.
-  <br><br>
+  <br/><br/>
 
-  <h3>In Aufruf springen</h3>
+  <h3>4.2. In Aufruf springen</h3>
     Es wird immer nur ein einzelner Maschinenbefehl abgearbeitet.
     Handelt es sich um den Aufruf eines Unterprogramms,
     so wird vor dem ersten Maschinenbefehl des Unterprogramms
     wieder angehalten.
-  <br><br>
+  <br/><br/>
 
-  <h3>Aus Aufruf herausspringen</h3>
+  <h3>4.3. Aus Aufruf herausspringen</h3>
     Es werden die Maschinenbefehle bis zum n&auml;chsten Return-Befehl
     ausgef&uuml;hrt.
     Werden dabei Unterprogramme aufgerufen,
     so werden diese vollst&auml;ndig ausgef&uuml;hrt.
-  <br><br>
+  <br/><br/>
 
-
-  <h3>Registerinhalte und Flags &auml;ndern</h3>
+  <h3>4.4. Registerinhalte und Flags &auml;ndern</h3>
     Im Schrittbetrieb, d.h. wenn die Programmausf&uuml;hrung angehalten
     wurde, k&ouml;nnen die Inhalte der Register ge&auml;ndert werden.
     Geben Sie dazu den gew&uuml;nschten neuen Wert in das jeweilige Feld
@@ -122,10 +123,10 @@
     Die Werte der einzelnen Flags k&ouml;nnen Sie festlegen,
     indem Sie auf die entsprechenden Boxen im oberen Bereich des Fensters
     klicken und so ein H&auml;kchen setzen oder entfernen.
-  <br><br>
+  <br/><br/>
 
 
-  <h2>Befehle aufzeichnen</h2>
+  <h2>5. Befehle aufzeichnen</h2>
     Eine weitere M&ouml;glichkeit der Verfolgung des Geschehens
     im Emulator ist die Befehlsaufzeichnung.
     Dabei werden vor der Abarbeitung eines jeden Maschinenbefehls
@@ -135,14 +136,14 @@
     Diese k&ouml;nnen Sie sich dann mit einem Editor ansehen,
     z.B. mit dem in JKCEMU eingebauten
     <a href="texteditor.htm">Texteditor</a>.
-  <br><br>
+  <br/><br/>
     Die Befehlsaufzeichnung schalten Sie &uuml;ber den Schalter
     <em>Befehle aufzeichnen</em> im Men&uuml; <em>Debuggen</em>
     ein und wieder aus.
     Immer wenn Sie die Befehlsaufzeichnung einschalten,
     werden Sie nach dem Namen der Datei gefragt,
     in der die Befehle aufgezeichnet werden sollen.
-  <br><br>
+  <br/><br/>
     <b>Achtung!</b> Die Befehlsaufzeichnung schreibt pro Maschinenbefehl
     eine ganze Zeile in eine Textdatei.
     Diese Textdatei w&auml;chst deshalb sehr schnell und sehr stark an.
@@ -153,4 +154,3 @@
     von der Schreibgeschwindigkeit des Speichermediums deutlich gebremst.
 </body>
 </html>
-

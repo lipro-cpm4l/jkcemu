@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -929,7 +929,7 @@ public class BasicCompiler extends PrgThread
       else if( checkInstruction( iter, "RETURN" ) ) {
 	parseRETURN();
       }
-      else if( checkInstruction( iter, "REM" ) ) {
+      else if( checkKeyword( iter, "REM" ) ) {
 	parseREM( iter );
       }
       else if( checkInstruction( iter, "FOR" ) ) {
@@ -1053,7 +1053,18 @@ public class BasicCompiler extends PrgThread
 
   private void parseCALL( CharacterIterator iter ) throws PrgException
   {
-    parseExpr( iter );
+    if( skipSpaces( iter ) == '*' ) {
+      iter.next();
+      Integer value = readHex( iter );
+      if( value == null ) {
+	throw new PrgException( "Hexadezimalziffer erwartet" );
+      }
+      ac1BasicMismatch();
+      z1013BasicMismatch();
+      putCode_LD_HL_nn( value.intValue() );
+    } else {
+      parseExpr( iter );
+    }
     putCode( "\tCALL\tJP_HL\n" );
     this.libItems.add( LibItem.JP_HL );
     if( this.basicOptions.getPrintCalls() ) {
@@ -1346,8 +1357,9 @@ public class BasicCompiler extends PrgThread
 	gotoLineNum = readNumber( iter );
       }
       if( gotoLineNum != null ) {
-	if( skipSpaces( iter ) != CharacterIterator.DONE )
+	if( skipSpaces( iter ) != CharacterIterator.DONE ) {
 	  gotoLineNum = null;
+	}
       }
     }
     if( gotoLineNum != null ) {
@@ -1795,6 +1807,9 @@ public class BasicCompiler extends PrgThread
   private void parseREM( CharacterIterator iter )
   {
     iter.setIndex( iter.getEndIndex() );
+    if( this.sourceFormatter != null ) {
+      this.sourceFormatter.copyLast();
+    }
   }
 
 

@@ -1,0 +1,76 @@
+<html>
+<body>
+  <h1>Diskettenabbilddatei erstellen</h1>
+
+  <h2>1. Abbilddatei von Diskette erstellen</h2>
+    Diese Funktion liest eine reale Diskette ein
+    und speichert ihren Inhalt in eine
+    <a href="diskimgformats.htm#plain">einfache Abbilddatei</a>.
+    Rufen Sie dazu im Hauptfenster den Men&uuml;punkt
+    <em>Extra</em> &rarr; <em>Werkzeuge</em> &rarr;
+    <em>Abbilddatei von Diskette erstellen...</em> auf.
+  <br/><br/>
+    <b>Achtung!</b> Beim Zugriff auf Disketten gelten einige
+    Einschr&auml;nkungen (siehe <a href="floppydiskintro.htm#disk">hier</a>).
+    Es kann deshalb nicht garantiert werden,
+    dass das Erstellen von Abbilddateien von Disketten in jedem Fall
+    m&ouml;glich ist.
+  <br/><br/>
+
+
+  <h1>2. Abbilddatei manuell erstellen</h1>
+    JKCEMU bietet die M&ouml;glichkeit,
+    Diskettenabbilddateien manuell zu erstellen,
+    die dem Diskettenformat von CP/M&nbsp;2.2 entsprechen.
+    Das Werkzeug dazu finden Sie im Hauptfenster im Men&uuml;
+    <em>Extra</em> &rarr; <em>Werkzeuge</em> &rarr;
+    <em>CP/M-Diskettenabbilddatei manuell erstellen</em>.
+  <br/><br/>
+    Das Fenster des Werkzeugs enth&auml;lt zwei Unterfenster,
+    zwischen denen Sie &uuml;ber die beiden Reiter umschalten k&ouml;nnen.
+    Im ersten Reiter f&uuml;gen Sie die Dateien hinzu,
+    die die Abbilddatei enthalten soll.
+    Das erledigen Sie mit Hilfe des Men&uuml;punkts
+    <em>Hinzuf&uuml;gen...</em> oder mittels <em>Drag&amp;Drop</em>.
+  <br/><br/>
+    Da der Dateiname in der Abbilddatei dem 8.3-Format entsprechen muss,
+    werden Sie bei Dateien, die dieser Konvention nicht entsprechen,
+    nach einem passenden Namen gefragt.
+    Sollte die Reihenfolge der Dateien in der Abbilddatei eine Rolle spielen,
+    so k&ouml;nnen Sie diese mit den Pfeiltasten in der Werkzeugleiste
+    ver&auml;ndern.
+  <br/><br/>
+    Im zweiten Unterfenster legen Sie das Format fest.
+    Dabei muss sowohl das physische Format (Anzahl Seiten, Anzahl Spuren,
+    Sektoren pro Spur und Sektorgr&ouml;&szlig;e) als auch
+    das logisch Format (Blockgr&ouml;&szlig;e, Blocknummernformat
+    und Directory-Gr&ouml;&szlig;e) angegeben werden.
+    F&uuml;r die gebr&auml;uchstlichen CP/M-Varianten einiger emulierter
+    Computer-Typen gibt es jeweils einen eigenen Auswahlknopf,
+    sodass Sie daf&uuml;r das Format im Detail nicht angeben m&uuml;ssen.
+  <br/><br/>
+    Enth&auml;lt das ausgew&auml;hlte Format eine oder mehrere Systemspuren,
+    so k&ouml;nnen Sie im unteren Bereich eine Datei angeben,
+    die dann in die Systemspuren kopiert wird.
+  <br/><br/>
+    Nachdem Sie alle gew&uuml;nschten Dateien hinzugef&uuml;gt
+    und das Format ausgew&auml;hlt haben,
+    m&uuml;ssen Sie noch die eigentliche Abbilddatei erzeugen.
+    Das erledigen Sie mit dem Men&uuml;punkt
+    <em>Abbilddatei speichern...</em>.
+    Dabei werden Sie nach dem Dateinamen gefragt.
+    Aus der Endung des Dateinamens ermittelt JKCEMU das Dateiformat,
+    entweder <a href="diskimgformats.htm#plain">einfache Abbilddatei</a>
+    oder <a href="diskimgformats.htm#anadisk">Anadisk-Datei</a>.
+  <br/><br/>
+
+
+  <h1>3. Abbilddatei vom emulierten System aus erstellen</h1>
+    Bei dieser Variante legen Sie im Fenster
+    <em>JKCEMU Diskettenstation</em> eine neue, d.h. leere,
+    Diskettenabbilddatei an und <a href="formatdisk.htm">formatieren</a>
+    diese vom emulierten System aus mit einem geeigneten Programm.
+    Beim Formatieren erh&auml;lt die Abbilddatei ihren Inhalt.
+</body>
+</html>
+

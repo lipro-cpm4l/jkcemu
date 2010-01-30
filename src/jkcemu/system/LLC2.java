@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,43 +8,56 @@
 
 package jkcemu.system;
 
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.Properties;
+import java.util.*;
 import jkcemu.base.*;
+import jkcemu.disk.*;
 import z80emu.*;
 
 
-public class LLC2 extends EmuSys implements Z80CTCListener
+public class LLC2
+		extends EmuSys
+		implements
+			FDC8272.DriveSelector,
+			Z80CTCListener,
+			Z80TStatesListener
 {
   private static byte[] fontBytes = null;
   private static byte[] scchMon91 = null;
   private static byte[] gsbasic   = null;
 
-  private Z80CTC  ctc;
-  private Z80PIO  pio;
-  private byte[]  ramExtended;
-  private byte[]  prgX;
-  private byte[]  romdisk;
-  private boolean romEnabled;
-  private boolean romdiskEnabled;
-  private boolean romdiskA15;
-  private boolean prgXEnabled;
-  private boolean gsbasicEnabled;
-  private boolean inverseMode;
-  private boolean loudspeakerEnabled;
-  private boolean loudspeakerPhase;
-  private boolean audioOutPhase;
-  private boolean keyboardUsed;
-  private boolean hiRes;
-  private boolean rf32KActive;
-  private boolean rf32NegA15;
-  private boolean rfReadEnabled;
-  private boolean rfWriteEnabled;
-  private int     rfAddr16to19;
-  private int     fontOffset;
-  private int     videoPixelAddr;
-  private int     videoTextAddr;
+  private Z80CTC            ctc;
+  private Z80PIO            pio;
+  private FDC8272           fdc;
+  private byte[]            ramExtended;
+  private byte[]            prgXBytes;
+  private byte[]            romdiskBytes;
+  private String            prgXFileName;
+  private String            romdiskFileName;
+  private boolean           romEnabled;
+  private boolean           romdiskEnabled;
+  private boolean           romdiskA15;
+  private boolean           prgXEnabled;
+  private boolean           gsbasicEnabled;
+  private boolean           inverseMode;
+  private boolean           loudspeakerEnabled;
+  private boolean           loudspeakerPhase;
+  private boolean           audioOutPhase;
+  private boolean           keyboardUsed;
+  private boolean           hiRes;
+  private boolean           rf32KActive;
+  private boolean           rf32NegA15;
+  private boolean           rfReadEnabled;
+  private boolean           rfWriteEnabled;
+  private int               rfAddr16to19;
+  private int               fontOffset;
+  private int               videoPixelAddr;
+  private int               videoTextAddr;
+  private int               romdiskBankAddr;
+  private FloppyDiskDrive   curFDDrive;
+  private FloppyDiskDrive[] fdDrives;
 
 
   public LLC2( EmuThread emuThread, Properties props )
@@ -59,9 +72,19 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     if( gsbasic == null ) {
       gsbasic = readResource( "/rom/llc2/gsbasic.bin" );
     }
-    this.ramExtended = this.emuThread.getExtendedRAM( 0x100000 );
-    this.prgX        = readProgramX( props );
-    this.romdisk     = readROMDisk( props );
+    this.curFDDrive = null;
+    this.fdDrives   = new FloppyDiskDrive[ 4 ];
+    Arrays.fill( this.fdDrives, null );
+
+    this.fdc             = new FDC8272( this, 4 );
+    this.ramExtended     = this.emuThread.getExtendedRAM( 0x100000 );
+    this.prgXBytes       = null;
+    this.prgXFileName    = null;
+    this.romdiskBytes    = null;
+    this.romdiskFileName = null;
+    this.romdiskBankAddr = 0;
+    lazyReadPrgX( props );
+    lazyReadRomdisk( props );
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( cpu );
@@ -69,7 +92,8 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     cpu.setInterruptSources( this.ctc, this.pio );
 
     this.ctc.addCTCListener( this );
-    cpu.addTStatesListener( this.ctc );
+    cpu.addTStatesListener( this );
+    cpu.addMaxSpeedListener( this.fdc );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
   }
@@ -78,6 +102,14 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   public static int getDefaultSpeedKHz()
   {
     return 3000;
+  }
+
+
+	/* --- FDC8272.DriveSelector --- */
+
+  public FloppyDiskDrive getFloppyDiskDrive( int driveNum )
+  {
+    return this.curFDDrive;
   }
 
 
@@ -107,7 +139,25 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   }
 
 
+	/* --- Z80TStatesListener --- */
+
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+    this.fdc.z80TStatesProcessed( cpu, tStates );
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
+
+
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    lazyReadPrgX( props );
+    lazyReadRomdisk( props );
+  }
+
 
   public boolean canExtractScreenText()
   {
@@ -120,7 +170,8 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
-    cpu.removeTStatesListener( this.ctc );
+    cpu.removeMaxSpeedListener( this.fdc );
+    cpu.removeTStatesListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
@@ -128,54 +179,6 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   public int getAppStartStackInitValue()
   {
     return 0x1856;
-  }
-
-
-  public int getColorIndex( int x, int y )
-  {
-    int rv = BLACK;
-    if( this.hiRes ) {
-      int g = y / 8;
-      int p = y % 8;
-      int b = this.emuThread.getRAMByte(
-		this.videoPixelAddr + (p * 0x0800) + (g * 64) + (x / 8) );
-      int m = 0x80;
-      int n = x % 8;
-      if( n > 0 ) {
-	m >>= n;
-      }
-      if( (b & m) != 0 ) {
-	rv = WHITE;
-      }
-    } else {
-      byte[] fBytes = this.emuThread.getExtFontBytes();
-      if( fBytes == null ) {
-	fBytes = fontBytes;
-      }
-      if( fBytes != null ) {
-	int row = y / 8;
-	int col = x / 8;
-	int ch  = this.emuThread.getRAMByte(
-				this.videoTextAddr + (row * 64) + col );
-	int idx = this.fontOffset
-			+ ((ch & (this.inverseMode ? 0x7F : 0xFF)) * 8)
-			+ (y % 8);
-	if( (idx >= 0) && (idx < fBytes.length) ) {
-	  int m = 0x80;
-	  int n = x % 8;
-	  if( n > 0 ) {
-	    m >>= n;
-	  }
-	  if( (fBytes[ idx ] & m) != 0 ) {
-	    rv = WHITE;
-	  }
-	}
-	if( this.inverseMode && ((ch & 0x80) != 0) ) {
-	  rv = (rv == WHITE ? BLACK : WHITE);
-	}
-      }
-    }
-    return rv;
   }
 
 
@@ -206,6 +209,54 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   public int getCharWidth()
   {
     return 8;
+  }
+
+
+  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  {
+    return false;
+  }
+
+
+  public int getDefaultFloppyDiskBlockSize()
+  {
+    return 2048;
+  }
+
+
+  public int getDefaultFloppyDiskDirBlocks()
+  {
+    return 1;
+  }
+
+
+  public FloppyDiskFormat getDefaultFloppyDiskFormat()
+  {
+    return FloppyDiskFormat.getFormat( 1, 80, 5, 1024 );
+  }
+
+
+  public int getDefaultFloppyDiskSystemTracks()
+  {
+    return 0;
+  }
+
+
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 50;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 150;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 50;
   }
 
 
@@ -258,25 +309,19 @@ public class LLC2 extends EmuSys implements Z80CTCListener
       done = true;
     }
     if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
-      if( this.romdisk != null ) {
-	int idx = addr - 0xC000;
-	if( this.prgXEnabled ) {
-	  idx |= 0x4000;
-	}
-	if( this.romdiskA15 ) {
-	  idx |= 0x8000;
-	}
-	if( idx < this.romdisk.length ) {
-	  rv = (int) this.romdisk[ idx ] & 0xFF;
+      if( this.romdiskBytes != null ) {
+	int idx = this.romdiskBankAddr | (addr - 0xC000);
+	if( idx < this.romdiskBytes.length ) {
+	  rv = (int) this.romdiskBytes[ idx ] & 0xFF;
 	}
       }
       done = true;
     }
     if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
-      if( this.prgX != null ) {
+      if( this.prgXBytes != null ) {
 	int idx = addr - 0xE000;
-	if( idx < this.prgX.length ) {
-	  rv = (int) this.prgX[ idx ] & 0xFF;
+	if( idx < this.prgXBytes.length ) {
+	  rv = (int) this.prgXBytes[ idx ] & 0xFF;
 	}
       }
       done = true;
@@ -321,6 +366,18 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   public int getScreenWidth()
   {
     return 512;
+  }
+
+
+  public int getSupportedFloppyDiskDriveCount()
+  {
+    return this.fdDrives.length;
+  }
+
+
+  public int getSupportedRAMFloppyCount()
+  {
+    return 2;
   }
 
 
@@ -432,6 +489,111 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   }
 
 
+  public boolean paintScreen(
+			Graphics g,
+			int      xOffs,
+			int      yOffs,
+			int      screenScale )
+  {
+    byte[] fontBytes = null;
+    if( !this.hiRes ) {
+      fontBytes = this.emuThread.getExtFontBytes();
+      if( fontBytes == null ) {
+	fontBytes = this.fontBytes;
+      }
+    }
+    if( this.hiRes || (fontBytes != null) ) {
+      int bgColorIdx = getBorderColorIndex();
+      int wBase      = getScreenWidth();
+      int hBase      = getScreenHeight();
+
+      if( (xOffs > 0) || (yOffs > 0) ) {
+	g.translate( xOffs, yOffs );
+      }
+
+      /*
+       * Aus Gruenden der Performance werden nebeneinander liegende
+       * weisse Punkte zusammengefasst und als Linie gezeichnet.
+       */
+      for( int y = 0; y < hBase; y++ ) {
+	int     lastColorIdx = -1;
+	int     xColorBeg    = -1;
+	boolean inverse      = false;
+	for( int x = 0; x < wBase; x++ ) {
+	  int     col   = x / 8;
+	  int     row   = y / 8;
+	  int     rPix  = y % 8;
+	  boolean pixel = false;
+	  if( this.hiRes ) {
+	    int b = this.emuThread.getRAMByte(
+				this.videoPixelAddr + (rPix * 0x0800)
+						+ (row * 64) + (x / 8) );
+	    int m = 0x80;
+	    int n = x % 8;
+	    if( n > 0 ) {
+	      m >>= n;
+	    }
+	    pixel = ((b & m) != 0);
+	  } else {
+	    int ch = this.emuThread.getRAMByte(
+				this.videoTextAddr + (row * 64) + col );
+	    if( ch == 0x10 ) {
+	      inverse = false;
+	    } else if( ch == 0x11 ) {
+	      inverse = true;
+	    }
+	    int idx = this.fontOffset
+			+ ((ch & (this.inverseMode ? 0x7F : 0xFF)) * 8)
+			+ (y % 8);
+	    if( (idx >= 0) && (idx < fontBytes.length) ) {
+	      int m = 0x80;
+	      int n = x % 8;
+	      if( n > 0 ) {
+		m >>= n;
+	      }
+	      pixel = ((fontBytes[ idx ] & m) != 0);
+	      if( inverse || this.inverseMode ) {
+		pixel = !pixel;
+	      }
+	    }
+	  }
+	  int curColorIdx = (pixel ? 1 : 0);
+	  if( curColorIdx != lastColorIdx ) {
+	    if( (lastColorIdx >= 0)
+		&& (lastColorIdx != bgColorIdx)
+		&& (xColorBeg >= 0) )
+	    {
+	      g.setColor( getColor( lastColorIdx ) );
+	      g.fillRect(
+			xColorBeg * screenScale,
+			y * screenScale,
+			(x - xColorBeg) * screenScale,
+			screenScale );
+	    }
+	    xColorBeg    = x;
+	    lastColorIdx = curColorIdx;
+	  }
+	}
+	if( (lastColorIdx >= 0)
+	    && (lastColorIdx != bgColorIdx)
+	    && (xColorBeg >= 0) )
+	{
+	  g.setColor( getColor( lastColorIdx ) );
+	  g.fillRect(
+		xColorBeg * screenScale,
+		y * screenScale,
+		(wBase - xColorBeg) * screenScale,
+		screenScale );
+	}
+      }
+      if( (xOffs > 0) || (yOffs > 0) ) {
+	g.translate( -xOffs, -yOffs );
+      }
+    }
+    return true;
+  }
+
+
   public int reassembleSysCall(
 			int           addr,
 			StringBuilder buf,
@@ -459,6 +621,46 @@ public class LLC2 extends EmuSys implements Z80CTCListener
       rv = this.emuThread.getRAMFloppy2().readByte( port & 0x07 );
     } else {
       switch( port & 0xFF ) {
+	case 0xA0:
+	  rv = this.fdc.readMainStatusReg();
+	  break;
+
+	case 0xA1:
+	  rv = this.fdc.readData();
+	  break;
+
+	case 0xA2:
+	case 0xA3:
+	  rv = this.fdc.readDMA();
+	  break;
+
+	case 0xA4:
+	case 0xA5:
+	  {
+	    rv = 0xDF;		// Bit 0..3 nicht benutzt, 4..7 invertiert
+	    if( this.fdc.getIndexHoleState() ) {
+	      rv &= ~0x10;
+	    }
+	    FloppyDiskDrive fdd = this.curFDDrive;
+	    if( fdd != null ) {
+	      if( fdd.isReady() ) {
+		rv |= 0x20;
+	      }
+	    }
+	    if( this.fdc.isInterruptRequest() ) {
+	      rv &= ~0x40;
+	    }
+	    if( this.fdc.isDMARequest() ) {
+	      rv &= ~0x80;
+	    }
+	  }
+	  break;
+
+	case 0xA8:
+	case 0xA9:
+	  this.fdc.fireTC();
+	  break;
+
 	case 0xE0:
 	case 0xE1:
 	case 0xE2:
@@ -519,9 +721,17 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     {
       this.ctc.reset( true );
       this.pio.reset( true );
+      this.fdc.reset( true );
     } else {
       this.ctc.reset( false );
       this.pio.reset( false );
+      this.fdc.reset( false );
+    }
+    for( int i = 0; i < this.fdDrives.length; i++ ) {
+      FloppyDiskDrive drive = this.fdDrives[ i ];
+      if( drive != null ) {
+	drive.reset();
+      }
     }
     this.romEnabled         = true;
     this.romdiskEnabled     = false;
@@ -542,12 +752,13 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     this.fontOffset         = 0;
     this.videoPixelAddr     = 0xC000;
     this.videoTextAddr      = 0xC000;
+    this.curFDDrive         = null;
   }
 
 
   public void saveBasicProgram()
   {
-    int endAddr = SourceUtil.getKCStyleBasicEndAddr( this.emuThread, 0x60F7 );
+    int endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x60F7 );
     if( endAddr >= 0x60F7 ) {
       (new SaveDlg(
 		this.screenFrm,
@@ -558,6 +769,14 @@ public class LLC2 extends EmuSys implements Z80CTCListener
 		"LLC2-BASIC-Programm speichern" )).setVisible( true );
     } else {
       showNoBasic();
+    }
+  }
+
+
+  public void setFloppyDiskDrive( int idx, FloppyDiskDrive drive )
+  {
+    if( (idx >= 0) && (idx < this.fdDrives.length) ) {
+      this.fdDrives[ idx ] = drive;
     }
   }
 
@@ -595,17 +814,6 @@ public class LLC2 extends EmuSys implements Z80CTCListener
       }
       done = true;
     }
-    if( !done && this.gsbasicEnabled
-          && (addr >= 0x4000) && (addr < 0x6000) )
-    {
-      done = true;
-    }
-    if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
-      done = true;
-    }
-    if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
-      done = true;
-    }
     if( !done && (!this.romEnabled || (addr >= 0xC000)) ) {
       this.emuThread.setRAMByte( addr, value );
       if( this.hiRes ) {
@@ -627,13 +835,19 @@ public class LLC2 extends EmuSys implements Z80CTCListener
   }
 
 
-  public boolean supportsRAMFloppy1()
+  public boolean supportsAudio()
   {
     return true;
   }
 
 
-  public boolean supportsRAMFloppy2()
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
   {
     return true;
   }
@@ -667,6 +881,36 @@ public class LLC2 extends EmuSys implements Z80CTCListener
     } else {
       boolean dirty = false;
       switch( port & 0xFF ) {
+	case 0xA1:
+	  this.fdc.write( value );
+	  break;
+
+	case 0xA2:
+	case 0xA3:
+	  this.fdc.writeDMA( value );
+	  break;
+
+	case 0xA6:
+	case 0xA7:
+	  {
+	    FloppyDiskDrive fdd  = null;
+	    int             mask = 0x01;
+	    for( int i = 0; i < this.fdDrives.length; i++ ) {
+	      if( (value & mask) != 0 ) {
+		fdd = this.fdDrives[ i ];
+		break;
+	      }
+	      mask <<= 1;
+	    }
+	    this.curFDDrive = fdd;
+	  }
+	  break;
+
+	case 0xA8:
+	case 0xA9:
+	  this.fdc.fireTC();
+	  break;
+
 	case 0xE0:
 	case 0xE1:
 	case 0xE2:
@@ -695,7 +939,7 @@ public class LLC2 extends EmuSys implements Z80CTCListener
 	      dirty            = true;
 	    }
 	    b = ((v & 0x40) != 0);
-	    if( b != this.inverseMode ) {
+	    if( b != this.loudspeakerEnabled ) {
 	      this.loudspeakerEnabled = b;
 	      if( this.emuThread.isLoudspeakerEmulationEnabled() ) {
 		this.loudspeakerPhase = !this.loudspeakerPhase;
@@ -717,9 +961,13 @@ public class LLC2 extends EmuSys implements Z80CTCListener
 	  this.prgXEnabled    = ((value & 0x01) != 0);
 	  this.gsbasicEnabled = ((value & 0x02) != 0);
 	  this.romdiskEnabled = ((value & 0x08) != 0);
-	  this.romdiskA15     = ((value & 0x20) != 0);
-	  if( (value & 0x04) != 0 ) {
-	    this.romEnabled = false;
+	  if( this.romdiskEnabled ) {
+	    int bank = (value & 0x01) | ((value >> 3) & 0x0E);
+	    this.romdiskBankAddr = (((value & 0x01) | ((value >> 3) & 0x0E))
+								 << 14);
+	    this.prgXEnabled = false;
+	  } else {
+	    this.prgXEnabled = ((value & 0x01) != 0);
 	  }
 	  break;
 
@@ -774,6 +1022,28 @@ public class LLC2 extends EmuSys implements Z80CTCListener
       if( dirty ) {
 	this.screenFrm.setScreenDirty( true );
       }
+    }
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void lazyReadPrgX( Properties props )
+  {
+    String fName = EmuUtil.getProperty( props, "jkcemu.program_x.file.name" );
+    if( EmuUtil.differs( fName, this.prgXFileName ) ) {
+      this.prgXFileName = fName;
+      this.prgXBytes    = readFile( fName, 0x2000, "Programmpaket X" );
+    }
+  }
+
+
+  private void lazyReadRomdisk( Properties props )
+  {
+    String fName = EmuUtil.getProperty( props, "jkcemu.romdisk.file.name" );
+    if( EmuUtil.differs( fName, this.romdiskFileName ) ) {
+      this.romdiskFileName = fName;
+      this.romdiskBytes    = readFile( fName, 0x40000, "ROM-Disk" );
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,44 +10,67 @@ package jkcemu.system;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.Properties;
+import java.util.*;
 import javax.swing.JOptionPane;
 import jkcemu.base.*;
+import jkcemu.disk.*;
 import z80emu.*;
 
 
-public class PCM extends EmuSys implements Z80CTCListener
+public class PCM extends EmuSys implements
+					FDC8272.DriveSelector,
+					Z80CTCListener,
+					Z80SIOChannelListener
 {
   private static byte[] bdos         = null;
-  private static byte[] rom_1rf      = null;
+  private static byte[] rom1RF       = null;
   private static byte[] pcmFontBytes = null;
 
-  private byte[]  ramVideo;
-  private Z80CTC  ctc;
-  private Z80PIO  pio;
-  private boolean audioOutPhase;
-  private boolean keyboardUsed;
-  private boolean romEnabled;
-  private boolean upperBank0Enabled;
-  private int     ramBank;
-  private int     nmiCounter;
+  private byte[]            ramVideo;
+  private Z80CTC            ctc;
+  private Z80PIO            pio;
+  private Z80SIO            sio;
+  private FDC8272           fdc;
+  private FloppyDiskDrive   curFDDrive;
+  private FloppyDiskDrive[] fdDrives;
+  private boolean           fdcTC;
+  private boolean           audioOutPhase;
+  private boolean           keyboardUsed;
+  private boolean           romEnabled;
+  private boolean           upperBank0Enabled;
+  private int               ramBank;
+  private int               nmiCounter;
 
 
   public PCM( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
 
-    rom_1rf            = readResource( "/rom/pcm/pcm_1rf.bin" );
-    pcmFontBytes       = readResource( "/rom/pcm/pcmfont.bin" );
+    if( rom1RF == null ) {
+      rom1RF = readResource( "/rom/pcm/pcm_1rf.bin" );
+    }
+    if( pcmFontBytes == null ) {
+      pcmFontBytes = readResource( "/rom/pcm/pcmfont.bin" );
+    }
     this.ramVideo      = new byte[ 0x0800 ];
     this.audioOutPhase = false;
+    this.fdcTC         = false;
+    this.curFDDrive    = null;
+    this.fdc           = new FDC8272( this, 4 );
+    this.fdDrives      = new FloppyDiskDrive[ 4 ];
+    Arrays.fill( this.fdDrives, null );
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( cpu );
     this.pio   = new Z80PIO( cpu );
-    cpu.setInterruptSources( this.ctc, this.pio );
-
+    this.sio   = new Z80SIO();
+    cpu.setInterruptSources( this.ctc, this.pio, this.sio );
+    if( this.fdc != null ) {
+      cpu.addMaxSpeedListener( this.fdc );
+      cpu.addTStatesListener( this.fdc );
+    }
     this.ctc.addCTCListener( this );
+    this.sio.addChannelListener( this, 0 );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
   }
@@ -56,6 +79,14 @@ public class PCM extends EmuSys implements Z80CTCListener
   public static int getDefaultSpeedKHz()
   {
     return 2500;
+  }
+
+
+	/* --- FDC8272.DriveSelector --- */
+
+  public FloppyDiskDrive getFloppyDiskDrive( int driveNum )
+  {
+    return this.curFDDrive;
   }
 
 
@@ -72,6 +103,15 @@ public class PCM extends EmuSys implements Z80CTCListener
   }
 
 
+	/* --- Z80SIOChannelListener --- */
+
+  public void z80SIOChannelByteAvailable( Z80SIO sio, int channel, int value )
+  {
+    if( (sio == this.sio) && (channel == 0) )
+      this.emuThread.getPrintMngr().putByte( value );
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   public boolean canExtractScreenText()
@@ -82,10 +122,15 @@ public class PCM extends EmuSys implements Z80CTCListener
 
   public void die()
   {
+    this.sio.removeChannelListener( this, 0 );
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    if( this.fdc != null ) {
+      cpu.removeTStatesListener( this.fdc );
+      cpu.removeMaxSpeedListener( this.fdc );
+    }
   }
 
 
@@ -160,6 +205,24 @@ public class PCM extends EmuSys implements Z80CTCListener
   }
 
 
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 50;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 150;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 50;
+  }
+
+
   public String getHelpPage()
   {
     return "/help/pcm.htm";
@@ -172,9 +235,9 @@ public class PCM extends EmuSys implements Z80CTCListener
 
     int rv = 0xFF;
     if( (addr < 0x2000) && this.romEnabled ) {
-      if( rom_1rf != null ) {
-	if( addr < rom_1rf.length ) {
-	  rv = (int) rom_1rf[ addr ] & 0xFF;
+      if( rom1RF != null ) {
+	if( addr < rom1RF.length ) {
+	  rv = (int) rom1RF[ addr ] & 0xFF;
 	}
       }
     } else if( addr >= 0xF800 ) {
@@ -229,6 +292,18 @@ public class PCM extends EmuSys implements Z80CTCListener
   public int getScreenWidth()
   {
     return 512;
+  }
+
+
+  public int getSupportedFloppyDiskDriveCount()
+  {
+    return this.fdDrives != null ? this.fdDrives.length : 0;
+  }
+
+
+  public int getSupportedRAMFloppyCount()
+  {
+    return 1;
   }
 
 
@@ -375,6 +450,34 @@ public class PCM extends EmuSys implements Z80CTCListener
       case 0x87:
 	rv = this.pio.readControlB();
 	break;
+
+      case 0x88:
+	rv = this.sio.readDataA();
+	break;
+
+      case 0x89:
+	rv = this.sio.readDataB();
+	break;
+
+      case 0x8A:
+	rv = this.sio.readControlA();
+	break;
+
+      case 0x8B:
+	rv = this.sio.readControlB();
+	break;
+
+      case 0xC0:
+	if( this.fdc != null ) {
+	  rv = this.fdc.readMainStatusReg();
+	}
+	break;
+
+      case 0xC1:
+	if( this.fdc != null ) {
+	  rv = this.fdc.readData();
+	}
+	break;
     }
     return rv;
   }
@@ -394,7 +497,7 @@ public class PCM extends EmuSys implements Z80CTCListener
 
   /*
    * Ein RESET ist erforderlich, wenn sich das emulierte System
-   * oder das Monitorprogramm aendert
+   * oder der ROM-Inhalt aendert
    */
   public boolean requiresReset( Properties props )
   {
@@ -416,13 +519,16 @@ public class PCM extends EmuSys implements Z80CTCListener
     {
       if( bdos == null ) {
 	bdos = readResource( "/rom/pcm/bdos.bin" );
-      }
-      if( bdos != null ) {
+    }
+    if( bdos != null ) {
 	int addr = 0xD000;
 	for( int i = 0; (addr < 0x10000) && (i < bdos.length); i++ ) {
 	  this.emuThread.setRAMByte( addr++, bdos[ i ] );
 	}
       }
+    }
+    if( this.fdc != null ) {
+      this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
     }
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
 	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
@@ -433,11 +539,30 @@ public class PCM extends EmuSys implements Z80CTCListener
       this.ctc.reset( false );
       this.pio.reset( false );
     }
+    if( this.fdDrives != null ) {
+      for( int i = 0; i < this.fdDrives.length; i++ ) {
+	FloppyDiskDrive drive = this.fdDrives[ i ];
+	if( drive != null ) {
+	  drive.reset();
+	}
+      }
+    }
+    this.fdcTC             = false;
     this.keyboardUsed      = false;
     this.romEnabled        = true;
     this.upperBank0Enabled = true;
     this.ramBank           = 0;
     this.nmiCounter        = 0;
+  }
+
+
+  public void setFloppyDiskDrive( int idx, FloppyDiskDrive drive )
+  {
+    if( this.fdDrives != null ) {
+      if( (idx >= 0) && (idx < this.fdDrives.length) ) {
+	this.fdDrives[ idx ] = drive;
+      }
+    }
   }
 
 
@@ -475,7 +600,19 @@ public class PCM extends EmuSys implements Z80CTCListener
   }
 
 
-  public boolean supportsRAMFloppy1()
+  public boolean supportsAudio()
+  {
+    return true;
+  }
+
+
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
   {
     return true;
   }
@@ -512,6 +649,22 @@ public class PCM extends EmuSys implements Z80CTCListener
 	this.pio.writeControlB( value );
 	break;
 
+      case 0x88:
+	this.sio.writeDataA( value );
+	break;
+
+      case 0x89:
+	this.sio.writeDataB( value );
+	break;
+
+      case 0x8A:
+	this.sio.writeControlA( value );
+	break;
+
+      case 0x8B:
+	this.sio.writeControlB( value );
+	break;
+
       case 0x94:
       case 0x95:
       case 0x96:
@@ -526,6 +679,33 @@ public class PCM extends EmuSys implements Z80CTCListener
       case 0x9A:
       case 0x9B:
 	this.nmiCounter = 3;
+	break;
+
+      case 0xC1:
+	if( this.fdc != null ) {
+	  this.fdc.write( value );
+	}
+	break;
+
+      case 0xC2:
+      case 0xC3:
+	if( this.fdc != null ) {
+	  boolean         tc   = ((value & 0x80) != 0);
+	  FloppyDiskDrive fdd  = null;
+	  int             mask = 0x01;
+	  for( int i = 0; i < this.fdDrives.length; i++ ) {
+	    if( (value & mask) != 0 ) {
+	      fdd = this.fdDrives[ i ];
+	      break;
+	    }
+	    mask <<= 1;
+	  }
+	  this.curFDDrive = fdd;
+	  if( tc && (tc != this.fdcTC) ) {
+	    this.fdc.fireTC();
+	  }
+	  this.fdcTC    = tc;
+	}
 	break;
     }
   }

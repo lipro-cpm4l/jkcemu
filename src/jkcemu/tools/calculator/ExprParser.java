@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -193,7 +193,12 @@ public class ExprParser
 	if( isFloat( value, v2 ) ) {
 	  value = new Double( value.doubleValue() / v2.doubleValue() );
 	} else {
-	  value = new Long( value.longValue() / v2.longValue() );
+	  long lVal = value.longValue() / v2.longValue();
+	  if( (lVal * v2.longValue()) == value.longValue() ) {
+	    value = new Long( lVal );
+	  } else {
+	    value = new Double( value.doubleValue() / v2.doubleValue() );
+	  }
 	}
       } else if( ch == '%' ) {
 	checkInteger( v2 );

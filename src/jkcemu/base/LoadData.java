@@ -109,7 +109,7 @@ public class LoadData implements Z80MemView
       int src = this.offset;
       int dst = this.begAddr;
       int len = this.len;
-      while( (src < this.data.length) && (len > 0) ) {
+      while( (src < this.data.length) && (dst < 0x10000) && (len > 0) ) {
 	emuThread.setMemByte( dst++, this.data[ src++ ] );
 	--len;
       }

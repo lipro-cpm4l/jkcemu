@@ -63,7 +63,7 @@ public class SC2 extends EmuSys implements
     cpu.addTStatesListener( this );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
-    z80MaxSpeedChanged();
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -75,9 +75,9 @@ public class SC2 extends EmuSys implements
 
 	/* --- Z80MaxSpeedListener --- */
 
-  public void z80MaxSpeedChanged()
+  public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    int maxSpeedKHz          = this.emuThread.getZ80CPU().getMaxSpeedKHz();
+    int maxSpeedKHz          = cpu.getMaxSpeedKHz();
     this.beepCheckTStates    = maxSpeedKHz * 20;
     this.beepFreqTStates     = maxSpeedKHz / 3;		// Tonhoehe des Beeps
     this.displayCheckTStates = maxSpeedKHz * 50;
@@ -162,6 +162,64 @@ public class SC2 extends EmuSys implements
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+  }
+
+
+  public Chessman getChessman( int row, int col )
+  {
+    Chessman rv = null;
+    if( (row >= 0) && (row < 8) && (col >= 0) && (col < 8) ) {
+      switch( getMemByte( 0x1000 + (row * 16) + col, false ) ) {
+	case 1:
+	  rv = Chessman.WHITE_PAWN;
+	  break;
+
+	case 2:
+	  rv = Chessman.WHITE_KNIGHT;
+	  break;
+
+	case 3:
+	  rv = Chessman.WHITE_BISHOP;
+	  break;
+
+	case 4:
+	  rv = Chessman.WHITE_ROOK;
+	  break;
+
+	case 5:
+	  rv = Chessman.WHITE_QUEEN;
+	  break;
+
+	case 6:
+	  rv = Chessman.WHITE_KING;
+	  break;
+
+	case 0xFF:
+	  rv = Chessman.BLACK_PAWN;
+	  break;
+
+	case 0xFE:
+	  rv = Chessman.BLACK_KNIGHT;
+	  break;
+
+	case 0xFD:
+	  rv = Chessman.BLACK_BISHOP;
+	  break;
+
+	case 0xFC:
+	  rv = Chessman.BLACK_ROOK;
+	  break;
+
+	case 0xFB:
+	  rv = Chessman.BLACK_QUEEN;
+	  break;
+
+	case 0xFA:
+	  rv = Chessman.BLACK_KING;
+	  break;
+      }
+    }
+    return rv;
   }
 
 
@@ -481,6 +539,9 @@ public class SC2 extends EmuSys implements
       int idx = addr - 0x1000;
       if( idx < this.ram.length ) {
 	this.ram[ idx ] = (byte) value;
+	if( (idx < 0x78) && ((idx % 16) < 8) ) {
+	  this.screenFrm.setChessboardDirty( true );
+	}
 	rv = true;
       }
     }
@@ -488,6 +549,18 @@ public class SC2 extends EmuSys implements
       this.beepStatus = 3;
     }
     return rv;
+  }
+
+
+  public boolean supportsAudio()
+  {
+    return true;
+  }
+
+
+  public boolean supportsChessboard()
+  {
+    return true;
   }
 
 

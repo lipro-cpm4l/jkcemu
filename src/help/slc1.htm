@@ -1,0 +1,356 @@
+<html>
+<body>
+  <h1>Hinweise zur Emulation des SLC1</h1>
+    Der und Schach- und Lerncomputer SLC1 wurde von Dr. Dieter Scheuschner
+    in der Schaltungssammlung f&nbsp;r den Amateur, 5.&nbsp;Lieferung 1989,
+    vorgestellt.
+    Es handelt sich somit um einen Eigenbau-Computer.
+  <br/><br/>
+    Der SLC1 ist in erster Linie als Schachcomputer konzipiert.
+    Er besitzt aber auch ein kleines Monitorprogramm
+    f&uuml;r Lern- und Demonstrationszwecke.
+  <br/><br/>
+
+
+  <h2>1. Emulierte Hardware</h2>
+    <ul>
+      <li>1&nbsp;KByte ROM im Adressbereich 0000-0FFF</li>
+      <li>1&nbsp;KByte RAM im Adressbereich 5000-53FF</li>
+      <li>6-stellige 7-Segment-Anzeige</li>
+      <li>Busy-LED</li>
+      <li>Tastatur mit 12&nbsp;Tasten</li>
+    </ul>
+    Die Auswahl zwischen ROM und RAM erfolgt anhand der Adressleitung A14.
+    Aufgrund dieser unvollst&auml;ndigen Adressdekodierung
+    ist der Speicher im gesamten Adressraum sichtbar.
+  <br/><br/>
+
+  <h3>1.1. Tastatur</h3>
+    Der SLC1 besitzt ein Schach- und ein Monitorprogramm.
+    Die Tastenbelegung ist bei beiden Programmen v&ouml;llig unterschiedlich.
+    Selbst die Zifferntasten sind nicht gleich.
+    Aus diesem Grund erkennt der Emulator,
+    wann das Schach- bzw. das Monitorprogramm gestartet wird,
+    und schaltet das Tastenmapping entsprechend um.
+  <br/><br/>
+
+  <h3>1.1.1. Tastenmapping im Schachprogramm</h3>
+    <br/>
+    <table border="1">
+      <tr>
+	<th valign="top">SLC1-Taste</th>
+	<th valign="top">Taste im Emulator</th>
+	<th valign="top">Bedeutung</th>
+      </tr>
+      <tr>
+	<td valign="top">C</td>
+	<td valign="top">Escape</td>
+	<td valign="top">Zur&uuml;cksetzen</td>
+      </tr>
+      <tr>
+	<td valign="top">A</td>
+	<td valign="top">F2</td>
+	<td valign="top">
+	  Spielst&auml;rke eingeben,<br/>
+	  Ton ein-/ausschalten,<br/>
+	  Schachbrettbelegung anzeigen
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">St</td>
+	<td valign="top">F1</td>
+	<td valign="top">
+	  In Spielmodus wechseln,<br/>
+	  Eingabe l&ouml;schen
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">Z</td>
+	<td valign="top">Z oder Enter</td>
+	<td valign="top">Zugeingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">A 1</td>
+	<td valign="top">A oder 1</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">B 2</td>
+	<td valign="top">B oder 2</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">C 3</td>
+	<td valign="top">C oder 3</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">D 4</td>
+	<td valign="top">D oder 4</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">E 5</td>
+	<td valign="top">E oder 5</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">F 6</td>
+	<td valign="top">F oder 6</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">G 7</td>
+	<td valign="top">G oder 7</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+      <tr>
+	<td valign="top">H 8</td>
+	<td valign="top">H oder 8</td>
+	<td valign="top">Eingabe der Zeile bzw. Spalte</td>
+      </tr>
+    </table>
+  <br/><br/>
+
+
+  <h3>1.1.2. Tastenmapping im Monitorprogramm</h3>
+    <br/>
+    <table border="1">
+      <tr>
+	<th valign="top">SLC1-Taste</th>
+	<th valign="top">Taste im Emulator</th>
+	<th valign="top">Bedeutung</th>
+      </tr>
+      <tr>
+	<td valign="top">ADR</td>
+	<td valign="top">F1</td>
+	<td valign="top">Adresseingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">Fu</td>
+	<td valign="top">F2</td>
+	<td valign="top">Funktion ausw&auml;hlen</td>
+      </tr>
+      <tr>
+	<td valign="top">Seq</td>
+	<td valign="top">S</td>
+	<td valign="top">Shift (Eingabe vom 8 bis F)</td>
+      </tr>
+      <tr>
+	<td valign="top">+/- 1</td>
+	<td valign="top">+ oder -</td>
+	<td valign="top">Wert um eins erh&ouml;hen oder verringern</td>
+      </tr>
+      <tr>
+	<td valign="top">0 8</td>
+	<td valign="top">0 oder 8</td>
+	<td valign="top">Daten-/Adresseingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">1 9</td>
+	<td valign="top">1 oder 9</td>
+	<td valign="top">Daten-/Adresseingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">2 A</td>
+	<td valign="top">2 oder A</td>
+	<td valign="top">Daten-/Adresseingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">
+	  3 B<br/>
+	  GO
+	</td>
+	<td valign="top">3 oder B</td>
+	<td valign="top">
+	  Daten-/Adresseingabe<br/>
+	  Funktion GO (Programmstart ohne Haltepunkt)
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">4 C</td>
+	<td valign="top">4 oder C</td>
+	<td valign="top">Daten-/Adresseingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">5 D</td>
+	<td valign="top">5 oder D</td>
+	<td valign="top">Daten-/Adresseingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">6 E</td>
+	<td valign="top">6 oder E</td>
+	<td valign="top">Daten-/Adresseingabe</td>
+      </tr>
+      <tr>
+	<td valign="top">7 F</td>
+	<td valign="top">7 oder F</td>
+	<td valign="top">Daten-/Adresseingabe</td>
+      </tr>
+    </table>
+  <br/><br/>
+
+
+  <h2>2. Im ROM enthaltene Software</h2>
+    <ul>
+      <li>Schachprogramm</li>
+      <li>Monitorprogramm</li>
+    </ul>
+  <br/>
+    Nach dem Start bzw. nach einem RESET befindet man sich im Schachprogramm.
+  <br/><br/>
+
+  <h3>2.1. Hinweise zur Bedienung des Schachprogramms</h3>
+    Beim Start des Schachprogramms nimmt der Computer die Grundstellung ein,
+    d.h. Sie spielen Sie mit den wei&szlig;en Figuren.
+    M&ouml;chten Sie mit schwarz spielen,
+    so dr&uuml;cken Sie als erstes die Taste <em>Z (Enter)</em>.
+  <br/><br/>
+    Nun k&ouml;nnen Sie die Spielst&auml;rke (1&nbsp;bis&nbsp;8) einstellen:
+  <br/><br/>
+    <em>A (F2)</em> &rarr; <em>&lt;Spielst&auml;rke&gt;</em> &rarr;
+    <em>St (F1)</em>
+  <br/><br/>
+    In die Grundstellung k&ouml;nnen Sie jederzeit mit der Taste
+    <em>C (Escape)</em> zur&uuml;ckkehren.
+  <br/><br/>
+
+  <h3>2.1.1. Ton ein- und ausschalten</h3>
+    <em>A (F2)</em> &rarr; <em>Z (Enter)</em> &rarr; <em>St (F1)</em>
+  <br/><br/>
+
+  <h3>2.1.2. Zugeingabe und Korrektur</h3>
+    Bei der Zugeingabe tippen Sie einfach Start- und Zielfeld
+    direkt hintereinander ein und schlie&szlig;en mit <em>Z (Enter)</em> ab.
+    Solange Sie die Eingabe noch nicht abgeschlossen haben,
+    k&ouml;nnen Sie mit <em>St (F1)</em> die falsche Eingabe l&ouml;schen
+    und erneut Ihren Zug eingeben.
+  <br/><br/>
+    Ist der eingebene Zug ung&uuml;ltig, werden Sie durch Blinken der Anzeige
+    zur Eingabe eines neuen Zugs aufgefordert.
+  <br/><br/>
+
+  <h3>2.1.3. Rochade</h3>
+    Bei der Rochade ist der entsprechende K&ouml;nigszug einzugeben.
+  <br/><br/>
+
+  <h3>2.1.4. Schachbrettbelegung anzeigen</h3>
+    JKCEMU zeigt Ihnen die Schachbrettbelegung zwar in einem separaten
+    <a href="chessboard.htm">Fenster</a> an,
+    doch der Vollst&auml;ndigkeit halber soll hier auch die entsprechende
+    Funktion des Schachprogramms erl&auml;utert werden.
+    Au&szlig;erdem wird diese Funktion bei der Eingabe eines
+    Schachproblems ben&ouml;tigt.
+  <br/><br/>
+    In die Schachbrettanzeige gelangen Sie durch dreimaliges Dr&uuml;cken
+    der Taste <em>A (F2)</em>.
+    In der Anzeige erscheint <em>A1</em> und dahinter ein Code.
+    Der Code gibt die Belegung des Feldes <em>A1</em> an
+    und hat folgende Bedeutung:
+    <table border="1">
+      <tr><th>Code</th><th>Bedeutung</th></tr>
+      <tr><td>01</td><td>wei&szlig;er Bauer</td></tr>
+      <tr><td>02</td><td>wei&szlig;er Springer</td></tr>
+      <tr><td>03</td><td>wei&szlig;er L&auml;ufer</td></tr>
+      <tr><td>04</td><td>wei&szlig;er Turm</td></tr>
+      <tr><td>05</td><td>wei&szlig;e Dame</td></tr>
+      <tr><td>06</td><td>wei&szlig;er K&ouml;nig</td></tr>
+      <tr><td>FA</td><td>schwarzer K&ouml;nig</td></tr>
+      <tr><td>FB</td><td>schwarze Dame</td></tr>
+      <tr><td>FC</td><td>schwarzer Turm</td></tr>
+      <tr><td>FD</td><td>schwarzer L&auml;ufer</td></tr>
+      <tr><td>FE</td><td>schwarzer Springer</td></tr>
+      <tr><td>FF</td><td>schwarzer Bauer</td></tr>
+      <tr><td>--</td><td>Feld nicht belegt</td></tr>
+    </table>
+  <br/>
+    Mit jeder weiteren Bet&auml;tigung der Taste <em>A (F2)</em>
+    wird das n&auml;chste Feld angezeigt.
+    In den Spielmodus wechseln Sie dann mit <em>St (F1)</em> wieder hinein.
+  <br/><br/>
+
+  <h3>2.1.5. Schachproblem eingeben</h3>
+    Zur Eingabe eines Schachproblems m&uuml;ssen Sie die
+    Spielbrettbelegung entsprechend &auml;ndern.
+    Dr&uuml;cken Sie mehrmals auf <em>A (F2)</em>,
+    sodass Sie in die Schachbrettanzeige gelangen.
+    Bet&auml;tigen Sie <em>A (F2)</em> weiter,
+    bis ein zu &auml;nderndes Feld angezeigt wird.
+    Geben Sie nun den Code (1 bis 6) f&uuml;r die gew&uuml;nschte
+    Spielfigur ein.
+    F&uuml;r eine schwarze Spielfigur m&uuml;ssen Sie den Code
+    der entsprechenden wei&szlig;en Figur zweimal eingeben.
+    M&ouml;chten Sie die Spielfigur vom angezeigten Feld entfernen,
+    geben Sie als Code <em>7</em> oder <em>8</em> ein.
+  <br/><br/>
+
+  <h3>2.1.6. Signalisierung von Schach und matt</h3>
+    <table border="1">
+      <tr><th>Spielsituation</th><th>Anzeige</th></tr>
+      <tr><td>Schach</td><td>Blinken des angezeigten Zugs</td></tr>
+      <tr>
+	<td>Schach und matt</td>
+	<td>Blinken von zwei waagerechten Linien</td>
+      </tr>
+    </table>
+  <br/><br/>
+
+  <h3>2.2. Hinweise zur Bedienung des Monitorprogramms</h3>
+    Das Monitorprogramm starten Sie aus dem Schachprogramm heraus
+    durch f&uuml;nfmaliges Dr&uuml;cken auf <em>A1 (A oder 1)</em>.
+  <br/><br/>
+
+  <h3>2.2.1. Adress- und Dateneingabe</h3>
+    Eine Adresseingabe leiten Sie mit der Taste <em>ADR (F1)</em> ein.
+    Anschlie&szlig;end geben Sie die vierstellige Adresse ein.
+    F&uuml;r die hexadezimalen Ziffern 8 bis F m&uuml;ssen Sie
+    zuerst die Taste <em>Seq (S)</em> dr&uuml;cken,
+    um in den Shift-Modus zu gelangen.
+  <br/><br/>
+    Nachdem Sie vier hexadezimale Ziffern eingegeben haben,
+    sehen Sie in den linken beiden Stellen das Datenbyte an dieser Adresse.
+    Wenn Sie nun weitere hexadezimale Ziffern eingeben,
+    gelangen Sie zur Dateneingabe, d.h. Sie &auml;nderen
+    das ganz links angezeigte Datenbyte.
+    In den Speicher wird es aber erst geschrieben,
+    wenn Sie auf <em>+/- (+)</em> dr&uuml;cken.
+    Gleichzeitig wird dir n&auml;chste Adresse angezeigt.
+    M&ouml;chten Sie zur vorherigen statt zur n&auml;chsten Adresse wechseln,
+    dann bet&auml;tigen Sie vor der Taste <em>+ / -</em>
+    die Taste <em>Seq (A)</em>.
+  <br/><br/>
+
+  <h3>2.2.2. Anwendungsprogramm starten</h3>
+    Geben Sie zuerst die Startadresse ein und rufen Sie dann
+    die Funktion <em>GO</em> auf, d.h. die gesamte Eingabe sieht so aus:
+  <br/><br/>
+    <em>ADR (F1)</em> &rarr; <em>&lt;Adresse&gt;</em>
+    &rarr; <em>Fu (F2)</em> &rarr; <em>GO (B)</em>
+  <br/><br/>
+    Das Anwendungsprogramm kann mit einem Sprung zur Adresse
+    05F4 in das Monitorprogramm zur&uuml;ckspringen.
+    Die Speicherzelle, deren Adresse im Register DE steht,
+    wird dann angezeigt.
+  <br/><br/>
+
+  <h3>2.2.3. Weitere Funktionen</h3>
+    Das Monitorprogramm bietet noch weitere Funktionen,
+    die jedoch in einer komfortableren Form auch in JKCEMU
+    enthalten sind (siehe <a href="tools/debugger.htm">Debugger</a>
+    und <a href="tools/memeditor.htm">Speichereditor</a>).
+    M&ouml;chten Sie trotzdem diese weiteren Funktionen
+    des Monitorprogramms erkunden,
+    so sei auf die entsprechende Literatur verwiesen.
+  <br/><br/>
+
+
+  <h1>3. Quellennachweis / Literatur</h1>
+    Die Informationen in dieser Hilfe wurden weitestgehend
+    aus folgender Ver&ouml;ffentlichung entnommen:
+  <br/><br/>
+    Scheuschner, Dieter: Schach- und Lerncomputer SLC 1,<br/>
+    Schaltungssammlung f&uuml;r den Amateur, 5.&nbsp;Lieferung,<br/>
+    Milit&auml;rverlag der DDR, Berlin 1989
+</body>
+</html>
+

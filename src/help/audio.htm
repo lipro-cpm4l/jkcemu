@@ -2,7 +2,7 @@
 <body>
   <h1>Audio/Kassette</h1>
 
-  <h2>Vorbemerkungen</h2>
+  <h2>1. Vorbemerkungen</h2>
     Die von JKCEMU emulierten Systeme verwenden im Original einen
     Kassettenrecorder als Massenspeicher, d.h. die Daten werden in T&ouml;ne
     umgewandelt und auf Band gespeichert.
@@ -24,10 +24,11 @@
   <br/><br/>
 
 
-  <h2>Audio-Funktionen</h2>
+  <h2>2. Audio-Funktionen</h2>
 
   <h3>
-   <a name="sound_out">T&ouml;ne ausgeben (Emulation des Lautsprechers)</a>
+   <a name="sound_out">2.1. T&ouml;ne ausgeben
+			(Emulation des Lautsprechers)</a>
   </h3>
     W&auml;hlen Sie diese Funktion, wenn Sie die T&ouml;ne h&ouml;ren
     m&ouml;chten, die ein Programm zum Zwecke der Unterhaltung ausgibt
@@ -47,7 +48,7 @@
   <br/><br/>
 
 
-  <h3><a name="data_out">Daten am Audio-Ausgang ausgeben</a></h3>
+  <h3><a name="data_out">2.2. Daten am Audio-Ausgang ausgeben</a></h3>
     W&auml;hlen Sie diese Funktion, wenn Sie Daten oder
     Programme auf Magnettonband speichern oder an einen anderen Computer
     mit Kassettenrecorderanschluss &uuml;bertragen m&ouml;chten.
@@ -65,7 +66,7 @@
     so wird bei diese Funktion der Kassettenrecorderanschluss emuliert.
   <br/><br/>
 
-  <h3><a name="data_in">Daten vom Audio-Eingang lesen</a></h3>
+  <h3><a name="data_in">2.3. Daten vom Audio-Eingang lesen</a></h3>
     Diese Funktion dient dazu, auf Magnettonband gespeicherte Dateien
     und Programme oder Daten von einem anderen Computer direkt in den Emulator
     zu Laden.
@@ -81,7 +82,7 @@
     nicht zur Verf&uuml;gung.
   <br/><br/>
 
-  <h3><a name="file_out">Sound-Datei speichern</a></h3>
+  <h3><a name="file_out">2.4. Sound-Datei speichern</a></h3>
     Bei dieser Funktion werden die Daten, die am emulierten Anschluss
     f&uuml;r das Magnettonbandger&auml;t ausgegeben werden,
     in eine Sound-Datei geschrieben.
@@ -101,7 +102,7 @@
     einen l&auml;ngeren Zeitraum aktiviert bleiben.
   <br/><br/>
 
-  <h3><a name="file_in">Sound-Datei lesen</a></h3>
+  <h3><a name="file_in">2.5. Sound-Datei lesen</a></h3>
     Diese Funktion emuliert den Anschluss f&uuml;r
     das Magnettonbandger&auml;t,
     indem die Audio-Daten von einer Sound-Datei gelesen werden.
@@ -114,23 +115,50 @@
     wenn auch der emulierte Kassettenrecorderanschluss abgefragt wird.
     Ist das gerade nicht der Fall, bleibt der Fortschrittsbalken stehen.
   <br/><br/>
+    <b>Achtung!</b> Nach dem Aktivieren dieser Audio-Funktion
+    und dem Ausw&auml;hlen der Sound-Datei m&uuml;ssen Sie noch
+    auf <em>Abspielen</em> dr&uuml;cken,
+    um das eigentliche Einlesen zu starten.
+    Sie k&ouml;nnen das Einlesen auch jederzeit mit <em>Pause</em>
+    anhalten und mit erneutem Dr&uuml;cken auf <em>Abspielen</em>
+    wieder fortsetzen.
+  <br/><br/>
+
+  <h3><a name="file_in">2.6. KC-TAP-Datei lesen</a></h3>
+    Diese Funktion ist &auml;hnlich wie <em>Sound-Datei lesen</em>,
+    nur mit dem Unterschied, dass die Eingangsdatei keine Sound-
+    sondern eine <a href="fileformats.htm#tap">KC-TAP-Datei</a> ist.
+  <br/><br/>
+    W&auml;hrend des Einlesens werden die Audio-Daten erzeugt
+    und dem emulierten Kassettenrecorderanschluss zugef&uuml;hrt.
+  <br/><br/>
 
 
-  <h2>Optionen</h2>
+  <h2>3. Optionen</h2>
     Im Bereich Optionen k&ouml;nnen Sie die Eigenschaften der jeweiligen
     Audio-Funktion beeinflussen.
     Je nach ausgew&auml;hlter Funktion stehen nur die relevanten
     Optionen zur Verf&uuml;gung.
   <br/><br/>
 
-  <h3>Abtastrate</h3>
+  <h3>3.1. Ger&auml;t</h3>
+    Normalerweise sollten Sie das Auswahlfeld auf &quot;Standard&quot;
+    stehen lassen.
+    Sind jedoch mehrere Sound-Karten vorhanden
+    oder es sind mehrere Sound-Engines (z.B. Mixer) installiert
+    oder der Sound-Treiber bietet mehrere Zugangspunkte,
+    dann k&ouml;nnen Sie hier das logische Ger&auml;t ausw&auml;hlen,
+    mit dem Sie Arbeiten m&ouml;chten.
+  <br/><br/>
+
+  <h3>3.2. Abtastrate</h3>
     Normalerweise sollten Sie das Auswahlfeld auf &quot;Standard&quot;
     stehen lassen.
     Sie k&ouml;nnen jedoch die verschiedenen Abtastraten einzeln ausprobieren,
     wenn Sie mit den Audio-Funktionen Probleme haben sollten.
   <br/><br/>
 
-  <h3>Aktiver Kanal</h3>
+  <h3>3.3. Aktiver Kanal</h3>
     Wenn Sie Daten von einer Stereo-Audio-Quelle einlesen
     (egal ob vom Audio-System oder von einer Sound-Datei),
     bestimmen Sie hiermit, ob die Daten vom linken oder vom rechten Kanal
@@ -140,7 +168,7 @@
     wenn die entsprechende Audio-Funktion bereits aktiviert wurde.
   <br/><br/>
 
-  <h3>Mith&ouml;ren</h3>
+  <h3>3.4. Mith&ouml;ren</h3>
     Wenn Sie diese Option einschalten,
     h&ouml;ren Sie beim Speichern oder Lesen einer Sound-Datei
     diese mit.
@@ -156,17 +184,20 @@
   <br/><br/>
 
 
-  <h2>Hinweise</h2>
+  <h2>4. Hinweise</h2>
 
-  <h3><a name="volume">Lautst&auml;rke</a></h3>
-    Die Laust&auml;rkeregelung erfolgt &uuml;ber die entsprechende
-    Bedienungssoftware des Betriebssystems.
-    Auf Ihrem Computer sollte ein Programm mit dem Namen
-    &quot;Lautst&auml;rkeregelung&quot; oder ein Mixer installiert sein.
-    Starten Sie dieses Programm und regeln Sie damit die Lautst&auml;rke.
+  <h3><a name="volume">4.1. Lautst&auml;rke</a></h3>
+    Das JKCEMU-Audio-Fenster enth&auml;lt einen Schieberegler
+    f&uuml;r die Lautst&auml;rke.
+    Dieser ist jedoch nur aktiv,
+    wenn das Audio-System und die installierten Java-Version
+    die Regelung der Lautst&auml;rke f&uuml;r den ge&ouml;ffneten
+    Audio-Kanal auch unterst&uuml;tzten.
+    Ist das nicht der Fall, m&uuml;ssen Sie auf die entsprechende
+    Bedienungssoftware des Betriebssystems zur&uuml;ckgreifen.
   <br/><br/>
 
-  <h3>Sonstiges</h3>
+  <h3>4.2. Sonstiges</h3>
     <ul>
       <li>
         Sie k&ouml;nnen die Audio-Funktionen nur dann aktivieren,

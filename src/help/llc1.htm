@@ -9,11 +9,11 @@
     und eine Hexadezimaltastatur.
     Auf der anderen Seite aber enth&auml;lt schon die Originalbauanleitung
     ein Modul f&uuml;r die Bildschirmausgabe auf einem Monitor bzw. Fernseher.
-    Die dazugeh&ouml;rige Alpha-Tastatur konnte als Bauanleitung
+    Die dazugeh&ouml;rige alphanumerische Tastatur konnte als Bauanleitung
     ebenfalls erworben werden.
     Das Monitorprogramm bedient man mit der Hexadezimaltastatur,
-    den ebenfalls im ROM enthaltenen Tiny-BASIC-Interpreter
-    aber mit der Alpha-Tastatur.
+    den ebenfalls im ROM enthaltenen BASIC-Interpreter
+    aber mit der alphanumerischen Tastatur.
   <br/><br/>
     JKCEMU emuliert beide Tastaturen und schaltet dabei auch automatisch
     zwischen beiden um,
@@ -27,19 +27,19 @@
       <li>2 KByte RAM im Adressbereich 1400-1BFF</li>
       <li>1 KByte Bildwiederholspeicher im Adressbereich 1C00-1FFF</li>
       <li>8-stellige 7-Segment-Anzeige</li>
-      <li>Hexadezimaltastatur</li>
-      <li>Alpha-Tastatur</li>
+      <li>Hexadezimaltastatur mit zus&auml;tzlichen Funktionstasten</li>
+      <li>Alphanumerische Tastatur</li>
     </ul>
   <br/>
     Die Hexadezimaltastatur l&ouml;st beim Bet&auml;tigen einer Taste
     einen Interrupt aus.
-    Wenn nun aber nur mit der Alpha-Tastatur gearbeitet wird,
+    Wenn nun aber nur mit der alphanumerischen Tastatur gearbeitet wird,
     soll die Hexadezimaltastatur nat&uuml;rlich keine Interrupts
     ausl&ouml;sen.
     Dies wird durch eine automatische Umschaltung zwischen den beiden
     Tastaturen erreicht, die nach folgendem Prinzip arbeitet:
     Ab dem Zeitpunkt, wenn das Anwendungsprogramm
-    das Eingabetor f&uuml;r die Alpha-Tastatur liest,
+    das Eingabetor f&uuml;r die alphanumerische Tastatur liest,
     ist die Hexadezimaltastatur f&uuml;r eine Sekunde lang gesperrt.
     Die Hexadezimaltastatur ist somit nur aktiv,
     wenn die im Emulator laufende Software die Alpha-Tastatur
@@ -178,7 +178,7 @@
 
 
   <h2>3. BASIC</h2>
-    Im ROM ist ein Tiny-BASIC-Interpreter enthalten,
+    Im ROM ist ein einfacher BASIC-Interpreter enthalten,
     den Sie auf den Adressen 0800 (Kaltstart) und 0803 (Warmstart)
     starten k&ouml;nnen.
     Geben Sie f&uuml;r das erstmalige Starten somit ein:
@@ -188,24 +188,23 @@
 
   <h3>3.1. Speichern von BASIC-Programmen</h3>
     JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das Speichern
-    und Laden von LLC1-Tiny-BASIC-Programmen.
-    Zum Speichern nutzen Sie bitte die Funktion im Men&uuml;
-    <em>Datei</em> &rarr; <em>Mini-/Tiny-BASIC-Programm</em> &rarr;
-    <em>Speichern...</em>
+    und Laden von LLC1-BASIC-Programmen.
+    Zum Speichern nutzen Sie bitte die Funktion
+    <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
     und speichern das Programm als
     <a href="fileformats.htm#headersave">Headersave</a>-Datei
     mit dem Dateityp <tt>b</tt>.
   <br/><br/>
 
   <h3>3.2. Laden von BASIC-Programmen</h3>
-    Laden Sie zuerst das Tiny-BASIC-Programm und
+    Laden Sie zuerst das BASIC-Programm und
     starten Sie danach den BASIC-Interpreter mit einem Warmstart.
   <br/><br/>
 
   <h3>3.3. Anzeige eines im Arbeitsspeichers befindlichen BASIC-Programms</h3>
-    Verwenden Sie daf&uuml;r bitte den Men&uuml;punkt
-    <em>Datei</em> &rarr; <em>Mini-/Tiny-BASIC-Programm</em> &rarr;
-    <em>Im&nbsp;Texteditor&nbsp;&ouml;ffnen...</em>.
+    Verwenden Sie hierf&uuml;r bitte den Men&uuml;punkt
+    <em>BASIC-Programm&nbsp;im&nbsp;Texteditor&nbsp;&ouml;ffnen...</em>
+    im Men&uuml; <em>Datei</em>.
 </body>
 </html>
 

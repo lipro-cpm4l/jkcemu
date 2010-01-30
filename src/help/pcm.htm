@@ -1,25 +1,28 @@
 <html>
 <body>
   <h1>Hinweise zur Emulation des PC/M</h1>
-    Der PC/M, auch Mugler/Mathes-PC genannt,
+    Der PC/M, auch Mugler/Mathes-PC oder nur Mugler-PC genannt,
     ist ein Selbstbaucomputer mit CP/M-Kompatibilit&auml;t.
     Das Grundkonzept sieht als Laufwerke RAM-Floppies vor,
     deren Inhalte auf Kassette gespeichert werden.
   <br/><br/>
 
+
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>8 KByte ROM</li>
-      <li>3 RAM-B&auml;nke mit je 62 KByte</li>
-      <li>2 KByte Bildwiederholspeicher</li>
+      <li>8&nbsp;KByte ROM</li>
+      <li>3&nbsp;RAM-B&auml;nke mit je 62 KByte</li>
+      <li>2&nbsp;KByte Bildwiederholspeicher</li>
       <li>Kassettenrecorderanschluss</li>
+      <li>Druckeranschluss an der System-SIO Port A</li>
     </ul>
   <br/>
 
   <h3>1.1. RAM-B&auml;nke</h3>
-    Die RAM-Bank 0 liegt in einem globalen RAM-Bereich,
+    Die RAM-Bank&nbsp;0 liegt in einem globalen RAM-Bereich,
     der von allen emulierten Systemen benutzt wird.
-    Die RAM-B&auml;nke 1 und 2 liegen hintereinander in der RAM-Floppy 1.
+    Die RAM-B&auml;nke&nbsp;1 und 2 liegen hintereinander
+    in der RAM-Floppy&nbsp;1.
     Das ist deshalb sinnvoll, da das RAM-Floppy-System
     diese beiden B&auml;nke auch als RAM-Floppy verwendet.
     Somit kann die RAM-Floppy mit den Emulatorfunktionen
@@ -30,7 +33,7 @@
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
       <li>
-	PC/M Systemsoftware Version 2.02, bestehend aus:<br/>
+	PC/M Systemsoftware Version&nbsp;2.02, bestehend aus:<br/>
 	<ul>
 	  <li>BIOS</li>
 	  <li>Kommandoprozessor CCP</li>
@@ -42,9 +45,9 @@
   <br/>
     Das enthaltene BIOS stellt ein Laufwerk in Form einer
     124&nbsp;KByte gro&szlig;en RAM-Floppy zur Verf&uuml;gung,
-    die in den RAM-B&auml;nken 1 und 2 liegt.
+    die in den RAM-B&auml;nken&nbsp;1 und 2 liegt.
     Aus diesem Grund emuliert JKCEMU diese beiden RAM-B&auml;nke
-    auch physisch in der RAM-Floppy 1,
+    auch physisch in der RAM-Floppy&nbsp;1,
     sodass Sie mit JKCEMU-Mitteln, d.h. von &quot;au&szlig;en&quot;,
     diese Floppy speichern und wieder laden k&ouml;nnen.
   <br/><br/>
@@ -93,19 +96,20 @@
       <tr>
 	<td valign="top"><tt>0</tt></td>
 	<td valign="top">
-	  Speicherbank 0 als aktuellen Arbeitsspeicher einstellen (Standard)
+	  Speicherbank&nbsp;0 als aktuellen Arbeitsspeicher einstellen
+	  (Standard)
 	</td>
       </tr>
       <tr>
 	<td valign="top"><tt>1</tt></td>
 	<td valign="top">
-	  Speicherbank 1 als aktuellen Arbeitsspeicher einstellen
+	  Speicherbank&nbsp;1 als aktuellen Arbeitsspeicher einstellen
 	</td>
       </tr>
       <tr>
 	<td valign="top"><tt>2</tt></td>
 	<td valign="top">
-	  Speicherbank 2 als aktuellen Arbeitsspeicher einstellen
+	  Speicherbank&nbsp;2 als aktuellen Arbeitsspeicher einstellen
 	</td>
       </tr>
       <tr>
@@ -281,10 +285,10 @@
       <tr>
 	<td valign="top"><tt>SAVE n Dateiname.Typ</tt></td>
 	<td valign="top">
-	  Es werden ab Adresse 0100 <em>n</em> Bl&ouml;cke des Arbeitsspeichers
-	  auf das aktuelle Laufwerk in die Datei <em>Dateiname.Typ</em>
-	  gespeichert.
-	  Ein Block ist 256 Byte gro&szlig;.<br/>
+	  Es werden ab Adresse&nbsp;0100 <em>n</em>&nbsp;Bl&ouml;cke
+	  des Arbeitsspeichers auf das aktuelle Laufwerk in die Datei
+	  <em>Dateiname.Typ</em> gespeichert.
+	  Ein Block ist 256&nbsp;Byte gro&szlig;.<br/>
 	  Haben Sie CP/M-Programme als einzelne Dateien vorliegen
 	  und m&ouml;chten diese im Emulator starten,
 	  dann laden Sie so ein Programm zuerst in den Arbeitsspeicher
@@ -303,7 +307,8 @@
     </table>
   <br/><br/>
 
-  <h2>4. JKCEMU-BASIC-Compiler</h2>
+
+  <h2>3. JKCEMU-BASIC-Compiler</h2>
     Der PC/M ist als ein CP/M-kompatibles System konzipiert.
     Aus diesem Grund erzeugt der JKCEMU-BASIC-Compiler
     auch CP/M-kompatiblen Programmcode.
