@@ -1,9 +1,9 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Emulation des KC85/2..4
+ * Emulation der Computer HC900 und KC85/2..5
  */
 
 package jkcemu.system;
@@ -11,9 +11,12 @@ package jkcemu.system;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.*;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
+import jkcemu.disk.*;
+import jkcemu.system.kc85.*;
 import z80emu.*;
 
 
@@ -22,8 +25,49 @@ public class KC85 extends EmuSys implements
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
+  public static final String[] basicTokens = {
+    "END",       "FOR",      "NEXT",    "DATA",		// 0x80
+    "INPUT",     "DIM",      "READ",    "LET",
+    "GOTO",      "RUN",      "IF",      "RESTORE",
+    "GOSUB",     "RETURN",   "REM",     "STOP",
+    "OUT",       "ON",       "NULL",    "WAIT",		// 0x90
+    "DEF",       "POKE",     "DOKE",    "AUTO",
+    "LINES",     "CLS",      "WIDTH",   "BYE",
+    "!",         "CALL",     "PRINT",   "CONT",
+    "LIST",      "CLEAR",    "CLOAD",   "CSAVE",	// 0xA0
+    "NEW",       "TAB(",     "TO",      "FN",
+    "SPC(",      "THEN",     "NOT",     "STEP",
+    "+",         "-",        "*",       "/",
+    "^",         "AND",      "OR",      ">",		// 0xB0
+    "=",         "<",        "SGN",     "INT",
+    "ABS",       "USR",      "FRE",     "INP",
+    "POS",       "SQR",      "RND",     "LN",
+    "EXP",       "COS",      "SIN",     "TAN",		// 0xC0
+    "ATN",       "PEEK",     "DEEK",    "PI",
+    "LEN",       "STR$",     "VAL",     "ASC",
+    "CHR$",      "LEFT$",    "RIGHT$",  "MID$",
+    "LOAD",      "TRON",     "TROFF",   "EDIT",		// 0xD0
+    "ELSE",      "INKEY$",   "JOYST",   "STRING$",
+    "INSTR",     "RENUMBER", "DELETE",  "PAUSE",
+    "BEEP",      "WINDOW",   "BORDER",  "INK",
+    "PAPER",     "AT",       "COLOR",   "SOUND",	// 0xE0
+    "PSET",      "PRESET",   "BLOAD",   "VPEEK",
+    "VPOKE",     "LOCATE",   "KEYLIST", "KEY",
+    "SWITCH",    "PTEST",    "CLOSE",   "OPEN",
+    "RANDOMIZE", "VGET$",    "LINE",    "CIRCLE",	// 0xF0
+    "CSRLIN" };
+
+  private static final int MEM_ARGC      = 0xB780;
   private static final int SCREEN_WIDTH  = 320;
   private static final int SCREEN_HEIGHT = 256;
+
+  private static final FloppyDiskInfo[] availableFloppyDisks = {
+		new FloppyDiskInfo(
+			"/disks/kc85/kc85caos.dump.gz",
+			"KC85 CAOS Systemdiskette" ),
+		new FloppyDiskInfo(
+			"/disks/kc85/kc85microdos.dump.gz",
+			"KC85 MicroDOS Systemdiskette" ) };
 
   private static final int[][] basicRGBValues = {
 
@@ -131,6 +175,8 @@ public class KC85 extends EmuSys implements
 			"V24DUP" };
 
   private static byte[] basic_c000  = null;
+  private static byte[] hc900_e000  = null;
+  private static byte[] hc900_f000  = null;
   private static byte[] caos22_e000 = null;
   private static byte[] caos22_f000 = null;
   private static byte[] caos31_e000 = null;
@@ -138,10 +184,14 @@ public class KC85 extends EmuSys implements
   private static byte[] caos42_c000 = null;
   private static byte[] caos42_e000 = null;
   private static byte[] caos42_f000 = null;
+  private static byte[] caos44_c000 = null;
+  private static byte[] caos44_e000 = null;
+  private static byte[] caos44_f000 = null;
 
   private volatile boolean       blinkEnabled;
   private volatile boolean       blinkState;
   private volatile boolean       hiColorRes;
+  private boolean                pasteFast;
   private boolean                basicC000Enabled;
   private boolean                caosC000Enabled;
   private boolean                caosE000Enabled;
@@ -151,7 +201,6 @@ public class KC85 extends EmuSys implements
   private boolean                ram4Enabled;
   private boolean                ram4Writeable;
   private boolean                ram8Enabled;
-  private boolean                ram81Enabled;
   private boolean                ram8Writeable;
   private boolean                ramColorEnabled;
   private boolean                screen1Enabled;
@@ -160,6 +209,7 @@ public class KC85 extends EmuSys implements
   private boolean                audioOutPhaseR;
   private boolean                audioInPhase;
   private int                    audioInTStates;
+  private int                    ram8SegNum;
   private volatile int           keyNumPressed;
   private int                    keyNumProcessing;
   private int                    keyShiftBitCnt;
@@ -176,28 +226,41 @@ public class KC85 extends EmuSys implements
   private byte[]                 caosC000;
   private byte[]                 caosE000;
   private byte[]                 caosF000;
-  private byte[]                 ram80;
-  private byte[]                 ram81;
+  private byte[]                 ram8;
   private byte[]                 ramColor0;
   private byte[]                 ramColor1;
   private byte[]                 ramPixel0;
   private byte[]                 ramPixel1;
   private int[]                  rgbValues;
   private Color[]                colors;
+  private AbstractKC85Module[]   modules;
   private volatile BufferedImage screenImage;
   private volatile BufferedImage screenImage2;
   private String                 sysName;
   private Z80PIO                 pio;
   private Z80CTC                 ctc;
+  private D004                   d004;
+  private String                 d004RomProp;
 
 
   public KC85( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
     this.sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( this.sysName.startsWith( "KC85/2" )
-	|| this.sysName.startsWith( "HC900" ) )
-    {
+    if( this.sysName.startsWith( "HC900" ) ) {
+      if( hc900_e000 == null ) {
+	hc900_e000 = readResource( "/rom/kc85/hc900_e000.bin" );
+      }
+      if( hc900_f000 == null ) {
+	hc900_f000 = readResource( "/rom/kc85/hc900_f000.bin" );
+      }
+      this.kcTypeNum = 2;
+      this.basicC000 = null;
+      this.caosC000  = null;
+      this.caosE000  = hc900_e000;
+      this.caosF000  = hc900_f000;
+      this.sysName   = "HC900";
+    } else if( this.sysName.startsWith( "KC85/2" ) ) {
       if( caos22_e000 == null ) {
 	caos22_e000 = readResource( "/rom/kc85/caos22_e000.bin" );
       }
@@ -209,7 +272,7 @@ public class KC85 extends EmuSys implements
       this.caosC000  = null;
       this.caosE000  = caos22_e000;
       this.caosF000  = caos22_f000;
-      this.sysName   = "KC85/2 (HC900)";
+      this.sysName   = "KC85/2";
     } else {
       if( basic_c000 == null ) {
 	basic_c000 = readResource( "/rom/kc85/basic_c000.bin" );
@@ -227,6 +290,21 @@ public class KC85 extends EmuSys implements
 	this.caosE000  = caos31_e000;
 	this.caosF000  = caos31_f000;
 	this.sysName   = "KC85/3";
+      } else if( this.sysName.startsWith( "KC85/5" ) ) {
+	if( caos44_c000 == null ) {
+	  caos44_c000 = readResource( "/rom/kc85/caos44_c000.bin" );
+	}
+	if( caos44_e000 == null ) {
+	  caos44_e000 = readResource( "/rom/kc85/caos44_e000.bin" );
+	}
+	if( caos44_f000 == null ) {
+	  caos44_f000 = readResource( "/rom/kc85/caos44_f000.bin" );
+	}
+	this.kcTypeNum = 5;
+	this.caosC000  = caos44_c000;
+	this.caosE000  = caos44_e000;
+	this.caosF000  = caos44_f000;
+	this.sysName   = "KC85/5";
       } else {
 	if( caos42_c000 == null ) {
 	  caos42_c000 = readResource( "/rom/kc85/caos42_c000.bin" );
@@ -244,8 +322,12 @@ public class KC85 extends EmuSys implements
 	this.sysName   = "KC85/4";
       }
     }
-    this.ram80     = new byte[ 0x4000 ];
-    this.ram81     = new byte[ 0x4000 ];
+    this.ram8 = null;
+    if( this.kcTypeNum == 4 ) {
+      this.ram8 = this.emuThread.getExtendedRAM( 0x8000 );	// 32K
+    } else if( this.kcTypeNum > 4 ) {
+      this.ram8 = this.emuThread.getExtendedRAM( 0x38000 );	// 224K
+    }
     this.ramColor0 = new byte[ 0x4000 ];
     this.ramColor1 = new byte[ 0x4000 ];
     this.ramPixel0 = new byte[ 0x4000 ];
@@ -256,18 +338,78 @@ public class KC85 extends EmuSys implements
     this.rgbValues    = new int[ basicRGBValues.length ];
     this.colors       = new Color[ basicRGBValues.length ];
     createColors( props );
+    applyPasteFast( props );
 
-    Z80CPU cpu = emuThread.getZ80CPU();
-    this.ctc   = new Z80CTC( cpu );
-    this.pio   = new Z80PIO( cpu );
-    cpu.setInterruptSources( this.ctc, this.pio );
-
+    Z80CPU cpu       = emuThread.getZ80CPU();
+    this.ctc         = new Z80CTC( cpu );
+    this.pio         = new Z80PIO( cpu );
+    this.d004        = null;
+    this.d004RomProp = "";
+    if( emulatesD004( props ) ) {
+      byte[] romBytes  = null;
+      this.d004RomProp = getD004RomProp( props );
+      if( (this.d004RomProp.length() > 5)
+	  && this.d004RomProp.startsWith( "file:" ) )
+      {
+	try {
+	  romBytes = EmuUtil.readFile(
+			new File( this.d004RomProp.substring( 5 ) ),
+			16 * 1024 );
+	}
+	catch( IOException ex ) {
+	    BasicDlg.showErrorDlg(
+		this.emuThread.getScreenFrm(),
+		"D004-ROM-Datei kann nicht geladen werden.\n"
+			+ "Es wird der Standard-ROM verwendet.",
+		ex );
+	}
+      }
+      if( romBytes == null ) {
+	String resource = null;
+	if( this.d004RomProp.equals( "2.0" ) ) {
+	  resource = "/rom/kc85/d004_20.bin";
+	} else if( this.d004RomProp.equals( "3.2" ) ) {
+	  resource = "/rom/kc85/d004_32.bin";
+	}
+	if( resource == null ) {
+	  if( this.kcTypeNum > 4 ) {
+	    resource = "/rom/kc85/d004_32.bin";
+	  } else {
+	    resource = "/rom/kc85/d004_20.bin";
+	  }
+	}
+	romBytes = EmuUtil.readResource(
+				this.emuThread.getScreenFrm(),
+				resource );
+      }
+      this.d004 = new D004( this.emuThread.getScreenFrm(), romBytes );
+    }
+    this.modules = createModules( props );
+    if( this.modules != null ) {
+      try {
+	java.util.List<Z80InterruptSource> iSources
+				= new ArrayList<Z80InterruptSource>();
+	iSources.add( this.ctc );
+	iSources.add( this.pio );
+	for( int i = 0; i < this.modules.length; i++ ) {
+	  if( this.modules[ i ] instanceof Z80InterruptSource ) {
+	    iSources.add( (Z80InterruptSource) this.modules[ i ] );
+	  }
+	}
+	cpu.setInterruptSources(
+		iSources.toArray(
+			new Z80InterruptSource[ iSources.size() ] ) );
+      }
+      catch( ArrayStoreException ex ) {}
+    } else {
+      cpu.setInterruptSources( this.ctc, this.pio );
+    }
     this.ctc.addCTCListener( this );
     cpu.addTStatesListener( this );
     cpu.addMaxSpeedListener( this );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
-    z80MaxSpeedChanged();
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -312,9 +454,9 @@ public class KC85 extends EmuSys implements
 
 	/* --- Z80MaxSpeedListener --- */
 
-  public void z80MaxSpeedChanged()
+  public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    int t = this.emuThread.getZ80CPU().getMaxSpeedKHz() * 112 / 1750;
+    int t = cpu.getMaxSpeedKHz() * 112 / 1750;
     this.tStatesLinePos0 = (int) Math.round( t * 32.0 / 112.0 );
     this.tStatesLinePos1 = (int) Math.round( t * 64.0 / 112.0 );
     this.tStatesLinePos2 = (int) Math.round( t * 96.0 / 112.0 );
@@ -506,6 +648,10 @@ public class KC85 extends EmuSys implements
       this.screenImage = null;
     }
     createColors( props );
+    applyPasteFast( props );
+    if( this.d004 != null ) {
+      this.d004.applySettings( props );
+    }
   }
 
 
@@ -522,6 +668,21 @@ public class KC85 extends EmuSys implements
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    if( this.d004 != null ) {
+      this.d004.fireStop( false );
+      this.d004.die();
+    }
+    if( this.modules != null ) {
+      for( int i = 0; i < this.modules.length; i++ ) {
+	this.modules[ i ].die();
+      }
+    }
+  }
+
+
+  public static FloppyDiskInfo[] getAvailableFloppyDisks()
+  {
+    return availableFloppyDisks;
   }
 
 
@@ -652,6 +813,56 @@ public class KC85 extends EmuSys implements
   }
 
 
+  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  {
+    return true;
+  }
+
+
+  public int getDefaultFloppyDiskBlockSize()
+  {
+    return this.d004 != null ? 2048 : -1;
+  }
+
+
+  public int getDefaultFloppyDiskDirBlocks()
+  {
+    return this.d004 != null ? 2 : -1;
+  }
+
+
+  public FloppyDiskFormat getDefaultFloppyDiskFormat()
+  {
+    return this.d004 != null ?
+		FloppyDiskFormat.getFormat( 2, 80, 5, 1024 )
+		: null;
+  }
+
+
+  public int getDefaultFloppyDiskSystemTracks()
+  {
+    return this.d004 != null ? 2 : -1;
+  }
+
+
+  public long getDelayMillisAfterPasteChar()
+  {
+    return this.pasteFast ? 0 : super.getDelayMillisAfterPasteChar();
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return this.pasteFast ? 0 : super.getDelayMillisAfterPasteEnter();
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return this.pasteFast ? 0 : super.getHoldMillisPasteChar();
+  }
+
+
   public String getHelpPage()
   {
     return "/help/kc85.htm";
@@ -662,7 +873,7 @@ public class KC85 extends EmuSys implements
   {
     addr &= 0xFFFF;
 
-    int rv = 0xFF;
+    int rv = -1;
     if( (addr >= 0) && (addr < 0x4000) ) {
       if( this.ram0Enabled ) {
 	rv = this.emuThread.getRAMByte( addr );
@@ -689,14 +900,24 @@ public class KC85 extends EmuSys implements
 	    rv = (int) a[ idx ] & 0xFF;
 	  }
 	}
-      } else if( this.ram8Enabled ) {
-	if( this.ram81Enabled ) {
-	  if( idx < this.ram81.length ) {
-	    rv = (int) this.ram81[ idx ] & 0xFF;
+      } else if( this.ram8Enabled && (this.ram8 != null) ) {
+	if( this.kcTypeNum == 4 ) {
+	  if( (this.ram8SegNum & 0x01) != 0 ) {
+	    idx += 0x4000;
 	  }
-	} else {
-	  if( idx < this.ram80.length ) {
-	    rv = (int) this.ram80[ idx ] & 0xFF;
+	  if( idx < this.ram8.length ) {
+	    rv = (int) this.ram8[ idx ] & 0xFF;
+	  }
+	} else if( this.kcTypeNum > 4 ) {
+	  if( this.ram8SegNum == 0 ) {
+	    rv = this.emuThread.getRAMByte( addr - 0x8000 );
+	  } else if( this.ram8SegNum == 1 ) {
+	    rv = this.emuThread.getRAMByte( addr - 0x4000 );
+	  } else {
+	    idx = ((this.ram8SegNum - 2) * 0x4000) + addr - 0x8000;
+	    if( (idx >= 0) && (idx < this.ram8.length) ) {
+	      rv = (int) this.ram8[ idx ] & 0xFF;
+	    }
 	  }
 	}
       }
@@ -727,7 +948,16 @@ public class KC85 extends EmuSys implements
 	}
       }
     }
-    return rv;
+    if( (rv < 0) && (this.modules != null) ) {
+      for( int i = 0; i < this.modules.length; i++ ) {
+	int v = this.modules[ i ].readMemByte( addr );
+	if( v >= 0 ) {
+	  rv = v;
+	  break;
+	}
+      }
+    }
+    return rv >= 0 ? rv : 0xFF;
   }
 
 
@@ -822,6 +1052,38 @@ public class KC85 extends EmuSys implements
   }
 
 
+  public String getSecondarySystemName()
+  {
+    return this.d004 != null ? "D004" : null;
+  }
+
+
+  public Z80CPU getSecondaryZ80CPU()
+  {
+    return this.d004 != null ? this.d004.getZ80CPU() : null;
+  }
+
+
+  public Z80Memory getSecondaryZ80Memory()
+  {
+    return this.d004 != null ? this.d004.getZ80Memory() : null;
+  }
+
+
+  public FloppyDiskInfo[] getSuitableFloppyDisks()
+  {
+    return this.d004 != null ? availableFloppyDisks : null;
+  }
+
+
+  public int getSupportedFloppyDiskDriveCount()
+  {
+    return this.d004 != null ?
+		this.d004.getSupportedFloppyDiskDriveCount()
+		: 0;
+  }
+
+
   public boolean getSwapKeyCharCase()
   {
     return true;
@@ -857,11 +1119,25 @@ public class KC85 extends EmuSys implements
   }
 
 
+  public boolean isSecondarySystemRunning()
+  {
+    return this.d004 != null ? this.d004.isRunning() : false;
+  }
+
+
   public boolean keyPressed( int keyCode, boolean shiftDown )
   {
     boolean rv = false;
     char    ch = 0;
     switch( keyCode ) {
+      case KeyEvent.VK_F9:		// CLR
+	ch = 1;
+	break;
+
+      case KeyEvent.VK_F7:		// BRK
+	ch = 3;
+	break;
+
       case KeyEvent.VK_LEFT:
       case KeyEvent.VK_BACK_SPACE:
 	ch = 7;
@@ -885,6 +1161,10 @@ public class KC85 extends EmuSys implements
 
       case KeyEvent.VK_HOME:
 	ch = 0x10;
+	break;
+
+      case KeyEvent.VK_F8:		// STOP
+	ch = 0x13;
 	break;
 
       case KeyEvent.VK_END:
@@ -928,7 +1208,7 @@ public class KC85 extends EmuSys implements
 	break;
 
       case KeyEvent.VK_F6:
-	ch = (char) (shiftDown ? 0xFC : 0xFC);
+	ch = (char) (shiftDown ? 0xFC : 0xF6);
 	break;
     }
     if( ch > 0 ) {
@@ -961,12 +1241,10 @@ public class KC85 extends EmuSys implements
 
   public void openBasicProgram()
   {
-    int begAddr = 0x0401;
-    if( this.kcTypeNum == 2 ) {
-      begAddr = askKCBasicBegAddr();
-    }
-    if( begAddr >= 0 )
-      SourceUtil.openKCBasicProgram( this.screenFrm, begAddr );
+    SourceUtil.openKCBasicStyleProgram(
+				this.screenFrm,
+				getKCBasicBegAddr(),
+				basicTokens );
   }
 
 
@@ -996,10 +1274,49 @@ public class KC85 extends EmuSys implements
   }
 
 
+  public boolean pasteChar( char ch )
+  {
+    boolean rv = false;
+    if( this.pasteFast ) {
+      if( (ch > 0) && (ch <= 0xFF) ) {
+	if( ch == '\n' ) {
+	  ch = '\r';
+	}
+	try {
+	  Z80CPU cpu = emuThread.getZ80CPU();
+	  int    ix  = cpu.getRegIX();
+	  while( (getMemByte( ix + 8, false ) & 0x01) != 0 ) {
+	    Thread.sleep( 10 );
+	  }
+	  setMemByte( ix + 13, ch );
+	  setMemByte( ix + 8, getMemByte( ix + 8, false ) | 0x01 );
+	  rv = true;
+	}
+	catch( InterruptedException ex ) {}
+      }
+    } else {
+      rv = super.pasteChar( ch );
+    }
+    return rv;
+  }
+
+
   public int readIOByte( int port )
   {
     int rv = 0xFF;
     switch( port & 0xFF ) {
+      case 0x80:
+	if( this.modules != null ) {
+	  int slot = (port >> 8) & 0xFF;
+	  for( int i = 0; i < this.modules.length; i++ ) {
+	    if( this.modules[ i ].getSlot() == slot ) {
+	      rv = this.modules[ i ].getTypeByte();
+	      break;
+	    }
+	  }
+	}
+	break;
+
       case 0x88:
 	rv = this.pio.readPortA();
 	break;
@@ -1022,6 +1339,17 @@ public class KC85 extends EmuSys implements
       case 0x8F:
 	rv = this.ctc.read( port & 0x03 );
 	break;
+
+      default:
+	if( this.modules != null ) {
+	  for( int i = 0; i < this.modules.length; i++ ) {
+	    int v = this.modules[ i ].readIOByte( port );
+	    if( v >= 0 ) {
+	      rv = v;
+	      break;
+	    }
+	  }
+	}
     }
     return rv;
   }
@@ -1077,22 +1405,70 @@ public class KC85 extends EmuSys implements
 
 
   /*
-   * Ein RESET ist erforderlich, wenn sich das emulierte System aendert
+   * Ein RESET ist erforderlich,
+   * wenn sich das emulierte System oder die Modulliste aendert
    */
   public boolean requiresReset( Properties props )
   {
-    boolean rv      = true;
-    String  sysText = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( (sysText.startsWith( "KC85/2" ) || sysText.startsWith( "HC900" ))
-	&& (this.kcTypeNum == 2) )
+    boolean rv = true;
+    if( this.sysName.equals(
+		EmuUtil.getProperty( props, "jkcemu.system" ) ) )
     {
-      rv = false;
-    }
-    else if( sysText.startsWith( "KC85/3" ) && (this.kcTypeNum == 3) ) {
-      rv = false;
-    }
-    else if( sysText.startsWith( "KC85/4" ) && (this.kcTypeNum == 4) ) {
-      rv = false;
+      boolean d004 = emulatesD004( props );
+      if( d004 ) {
+	if( this.d004RomProp.equals( getD004RomProp( props ) ) ) {
+	  rv = false;
+	}
+      } else {
+	rv = false;
+      }
+      if( !rv ) {
+	java.util.List<String> modNames = new ArrayList<String>();
+	if( props != null ) {
+	  boolean loop    = true;
+	  int     slot    = 8;
+	  int     nRemain = EmuUtil.getIntProperty(
+				props,
+				"jkcemu.kc85.module.count",
+				0 );
+	  while( loop && (slot < 0x100) && (nRemain > 0) ) {
+	    loop        = false;
+	    String text = props.getProperty(
+			  String.format( "jkcemu.kc85.module.%02X", slot ) );
+	    if( text != null ) {
+	      if( text.length() > 0 ) {
+		modNames.add( text );
+		loop = true;
+	      }
+	    }
+	    if( loop ) {
+	      slot += 4;
+	      --nRemain;
+	    }
+	  }
+	  if( d004 ) {
+	    modNames.add( "D004" );
+	  }
+	}
+	int n = modNames.size();
+	AbstractKC85Module[] modules = this.modules;
+	if( modules != null ) {
+	  if( modules.length == n ) {
+	    for( int i = 0; i < n; i++ ) {
+	      if( !modules[ i ].getModuleName().equals( modNames.get( i ) ) ) {
+		rv = true;
+		break;
+	      }
+	    }
+	  } else {
+	    rv = true;
+	  }
+	} else {
+	  if( n != 0 ) {
+	    rv = true;
+	  }
+	}
+      }
     }
     return rv;
   }
@@ -1101,8 +1477,9 @@ public class KC85 extends EmuSys implements
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      Arrays.fill( this.ram80, (byte) 0 );
-      Arrays.fill( this.ram81, (byte) 0 );
+      if( this.ram8 != null ) {
+	Arrays.fill( this.ram8, (byte) 0 );
+      }
       Arrays.fill( this.ramColor0, (byte) 0 );
       Arrays.fill( this.ramColor1, (byte) 0 );
       Arrays.fill( this.ramPixel0, (byte) 0 );
@@ -1121,7 +1498,7 @@ public class KC85 extends EmuSys implements
       this.ram4Enabled      = (this.kcTypeNum > 3);
       this.ram4Writeable    = this.ram4Enabled;
       this.ram8Enabled      = false;
-      this.ram81Enabled     = false;
+      this.ram8SegNum       = 2;
       this.ram8Writeable    = false;
       this.ramColorEnabled  = false;
       this.screen1Enabled   = false;
@@ -1131,6 +1508,11 @@ public class KC85 extends EmuSys implements
     } else {
       this.ctc.reset( false );
       this.pio.reset( false );
+    }
+    if( this.modules != null ) {
+      for( int i = 0; i < this.modules.length; i++ ) {
+	this.modules[ i ].reset( resetLevel );
+      }
     }
     blinkEnabled           = false;
     blinkState             = false;
@@ -1151,12 +1533,16 @@ public class KC85 extends EmuSys implements
 
   public void saveBasicProgram()
   {
-    int begAddr = 0x0401;
-    if( this.kcTypeNum == 2 ) {
-      begAddr = askKCBasicBegAddr();
-    }
-    if( begAddr >= 0 )
-      SourceUtil.saveKCBasicProgram( this.screenFrm, begAddr );
+    SourceUtil.saveKCBasicStyleProgram(
+				this.screenFrm,
+				getKCBasicBegAddr() );
+  }
+
+
+  public void setFloppyDiskDrive( int idx, FloppyDiskDrive drive )
+  {
+    if( this.d004 != null )
+      this.d004.setDrive( idx, drive );
   }
 
 
@@ -1164,16 +1550,23 @@ public class KC85 extends EmuSys implements
   {
     addr &= 0xFFFF;
 
-    boolean rv = false;
+    boolean rv   = false;
+    boolean done = false;
     if( (addr >= 0) && (addr < 0x4000) ) {
-      if( this.ram0Enabled && this.ram0Writeable ) {
-	this.emuThread.setRAMByte( addr, value );
-	rv = true;
+      if( this.ram0Enabled ) {
+	if( this.ram0Writeable ) {
+	  this.emuThread.setRAMByte( addr, value );
+	  rv = true;
+	}
+	done = true;
       }
     } else if( (addr >= 0x4000) && (addr < 0x8000) ) {
-      if( this.ram4Enabled && this.ram4Writeable ) {
-	this.emuThread.setRAMByte( addr, value );
-	rv = true;
+      if( this.ram4Enabled ) {
+	if( this.ram4Writeable ) {
+	  this.emuThread.setRAMByte( addr, value );
+	  rv = true;
+	}
+	done = true;
       }
     } else if( (addr >= 0x8000) && (addr < 0xC000) ) {
       int idx = addr - 0x8000;
@@ -1194,23 +1587,93 @@ public class KC85 extends EmuSys implements
 	    if( this.screenImage == null ) {
 	      this.screenFrm.setScreenDirty( true );
 	    }
+	    rv = true;
 	  }
 	}
-      } else if( this.ram8Enabled && this.ram8Writeable ) {
-	if( this.ram81Enabled ) {
-	  if( idx < this.ram81.length ) {
-	    this.ram81[ idx ] = (byte) value;
-	    rv = true;
+	done = true;
+      } else if( this.ram8Enabled && (this.ram8 != null) ) {
+	if( this.ram8Writeable ) {
+	  if( this.kcTypeNum == 4 ) {
+	    if( (this.ram8SegNum & 0x01) != 0 ) {
+	      idx += 0x4000;
+	    }
+	    if( idx < this.ram8.length ) {
+	      this.ram8[ idx ] = (byte) value;
+	      rv = true;
+	    }
+	  } else if( this.kcTypeNum > 4 ) {
+	    if( this.ram8SegNum == 0 ) {
+	      this.emuThread.setRAMByte( addr - 0x8000, value );
+	    } else if( this.ram8SegNum == 1 ) {
+	      this.emuThread.setRAMByte( addr - 0x4000, value );
+	    } else {
+	      idx = ((this.ram8SegNum - 2) * 0x4000) + addr - 0x8000;
+	      if( (idx >= 0) && (idx < this.ram8.length) ) {
+		this.ram8[ idx ] = (byte) value;
+	      }
+	    }
 	  }
-	} else {
-	  if( idx < this.ram80.length ) {
-	    this.ram80[ idx ] = (byte) value;
-	    rv = true;
+	}
+	done = true;
+      }
+    } else if( (addr >= 0xC000) && (addr < 0xE000) ) {
+      int idx = addr - 0xC000;
+      if( this.caosC000Enabled && (this.caosC000 != null) ) {
+	if( idx < this.caosC000.length ) {
+	  done = true;
+	}
+      } else if( this.basicC000Enabled && (this.basicC000 != null) ) {
+	if( idx < this.basicC000.length ) {
+	  done = true;
+	}
+      }
+    } else if( addr >= 0xE000 ) {
+      if( this.caosE000Enabled ) {
+	if( (addr < 0xF000) && (this.caosE000 != null) ) {
+	  int idx = addr - 0xE000;
+	  if( idx < caosE000.length ) {
+	    done = true;
+	  }
+	}
+	else if( this.caosF000 != null ) {
+	  int idx = addr - 0xF000;
+	  if( idx < caosF000.length ) {
+	    done = true;
 	  }
 	}
       }
     }
+    if( !done && (this.modules != null) ) {
+      for( int i = 0; i < this.modules.length; i++ ) {
+	int v = this.modules[ i ].writeMemByte( addr, value );
+	if( v == 1 ) {
+	  break;
+	}
+	else if( v > 1 ) {
+	  rv = true;
+	  break;
+	}
+      }
+    }
     return rv;
+  }
+
+
+  public boolean supportsAudio()
+  {
+    return true;
+  }
+
+
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
   }
 
 
@@ -1233,6 +1696,18 @@ public class KC85 extends EmuSys implements
   {
     int m = 0;
     switch( port & 0xFF ) {
+      case 0x80:
+	if( this.modules != null ) {
+	  int slot = (port >> 8) & 0xFF;
+	  for( int i = 0; i < this.modules.length; i++ ) {
+	    if( this.modules[ i ].getSlot() == slot ) {
+	      this.modules[ i ].setStatus( value );
+	      break;
+	    }
+	  }
+	}
+	break;
+
       case 0x84:
       case 0x85:
 	if( this.kcTypeNum > 3 ) {
@@ -1240,7 +1715,7 @@ public class KC85 extends EmuSys implements
 	  this.ramColorEnabled = ((value & 0x02) != 0);
 	  this.screen1Enabled  = ((value & 0x04) == 0);
 	  this.hiColorRes      = ((value & 0x08) == 0);
-	  this.ram81Enabled    = ((value & 0x10) != 0);
+	  this.ram8SegNum      = (value >> 4) & 0x0F;
 	}
 	break;
 
@@ -1292,11 +1767,29 @@ public class KC85 extends EmuSys implements
       case 0x8F:
 	this.ctc.write( port & 0x03, value );
 	break;
+
+      default:
+	if( this.modules != null ) {
+	  for( int i = 0; i < this.modules.length; i++ ) {
+	    if( this.modules[ i ].writeIOByte( port, value ) ) {
+	      break;
+	    }
+	  }
+	}
     }
   }
 
 
 	/* --- private Methoden --- */
+
+  private void applyPasteFast( Properties props )
+  {
+    this.pasteFast = EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.kc85.paste.fast",
+				true );
+  }
+
 
   private void createColors( Properties props )
   {
@@ -1314,6 +1807,101 @@ public class KC85 extends EmuSys implements
   }
 
 
+  private AbstractKC85Module[] createModules( Properties props )
+  {
+    AbstractKC85Module[]               rv      = null;
+    java.util.List<AbstractKC85Module> modules = null;
+    if( props != null ) {
+      int nRemain = EmuUtil.getIntProperty(
+				props,
+				"jkcemu.kc85.module.count",
+				0 );
+      if( nRemain > 0 ) {
+	modules = new ArrayList<AbstractKC85Module>();
+	int     slot = 8;
+	boolean loop = true;
+	while( loop && (slot < 0x100) && (nRemain > 0) ) {
+	  loop        = false;
+	  String text = props.getProperty(
+			  String.format( "jkcemu.kc85.module.%02X", slot ) );
+	  if( text != null ) {
+	    if( text.equals( "M003" ) ) {
+	      modules.add( new M003( slot, this.emuThread ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M006" ) ) {
+	      modules.add( new M006( slot, this.emuThread ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M011" ) ) {
+	      modules.add( new M011( slot ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M022" ) ) {
+	      modules.add( new M022( slot ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M032" ) ) {
+	      modules.add( new M032( slot ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M034" ) ) {
+	      modules.add( new M034( slot ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M035" ) ) {
+	      modules.add( new M035( slot ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M035x4" ) ) {
+	      modules.add( new M035( slot ) );
+	      modules.add( new M035( slot + 1 ) );
+	      modules.add( new M035( slot + 2 ) );
+	      modules.add( new M035( slot + 3 ) );
+	      loop = true;
+	    }
+	    else if( text.equals( "M036" ) ) {
+	      modules.add( new M036( slot ) );
+	      loop = true;
+	    }
+	  }
+	  if( loop ) {
+	    slot += 4;
+	    --nRemain;
+	  }
+	}
+      }
+    }
+    if( this.d004 != null ) {
+      if( modules != null ) {
+	modules.add( this.d004 );
+      } else {
+	rv      = new AbstractKC85Module[ 1 ];
+	rv[ 0 ] = this.d004;
+      }
+    }
+    if( modules != null ) {
+      int n = modules.size();
+      if( n > 0 ) {
+	try {
+	  rv = modules.toArray( new AbstractKC85Module[ n ] );
+	}
+	catch( ArrayStoreException ex ) {}
+      }
+    }
+    return rv;
+  }
+
+
+  private static boolean emulatesD004( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.kc85.d004.enabled",
+				false );
+  }
+
+
   private int getColorIndex( int colorByte, boolean foreground )
   {
     if( !this.hiColorRes
@@ -1324,6 +1912,33 @@ public class KC85 extends EmuSys implements
       foreground = false;
     }
     return foreground ? ((colorByte >> 3) & 0x0F) : ((colorByte & 0x07) + 16);
+  }
+
+
+  private static String getD004RomProp( Properties props )
+  {
+    String s = EmuUtil.getProperty( props, "jkcemu.kc85.d004.rom" );
+    return s.equals( "2.0" ) || s.equals( "3.2" ) || s.startsWith( "file:" ) ?
+		s : "standard";
+  }
+
+
+  private int getKCBasicBegAddr()
+  {
+    int rv = 0x2C01;			// RAM-BASIC
+    if( this.kcTypeNum > 2 ) {
+      rv = 0x0401;			// ROM-BASIC
+    } else {
+      if( this.modules != null ) {
+	for( int i = 0; i < this.modules.length; i++ ) {
+	  AbstractKC85Module m = this.modules[ i ];
+	  if( (m instanceof M006) && m.isEnabled() ) {
+	    rv = 0x0401;		// ROM-BASIC
+	  }
+	}
+      }
+    }
+    return rv;
   }
 
 

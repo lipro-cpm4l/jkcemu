@@ -15,8 +15,8 @@
   <br/><br/>
     Emuliert werden:
     <ul>
-      <li>Je nach Monitorprogramm 2 oder 4 KByte ROM</li>
-      <li>16 oder 64 KByte RAM</li>
+      <li>Je nach Monitorprogramm 2 oder 4&nbsp;KByte ROM</li>
+      <li>16 oder 64&nbsp;KByte RAM</li>
       <li>
 	Tastaturen:
 	<ul>
@@ -28,13 +28,17 @@
       </li>
       <li>Kassettenrecorderanschluss</li>
       <li>
-	2 RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
-	Heft 3/1988 an den IO-Basis-Adressen
-	98h (RAM-Floppy 1) und 58h (RAM-Floppy 2)
+	2&nbsp;RAM-Floppies nach <em>Mikroprozessortechnik</em>
+	Heft&nbsp;3/1988 an den IO-Basis-Adressen&nbsp;98h
+	(RAM-Floppy&nbsp;1) und 58h (RAM-Floppy&nbsp;2)
       </li>
       <li>Peters-Platine</li>
+      <li>
+	Optional Vollgrafikerweiterung nach <em>Kleinstrechnertips</em>
+	Heft&nbsp;11 und <em>Funkamateur</em> Heft&nbsp;7/91
+      </li>
     </ul>
-  <br/><br/>
+  <br/>
 
   <h3>1.1. Folienflachtastatur</h3>
     Die Folienflachtastatur enth&auml;lt vier Shift-Tasten,
@@ -47,17 +51,17 @@
   <br/><br/>
 
   <h3>1.2. Peters-Platine</h3>
-    Die Peters-Platine erm&ouml;glicht &uuml;ber IO-Port 4
+    Die Peters-Platine erm&ouml;glicht &uuml;ber IO-Port&nbsp;4
     die Abschaltung des ROMs sowie die Umschaltung des Zeichensatzes,
     der Taktfrequenz und der Bildschirmorganisation.
   <br/><br/>
-    Bedeutung der Bits von IO-Port 4:
+    Bedeutung der Bits von IO-Port&nbsp;4:
   <br/>
     <table border="1">
       <tr>
 	<th valign="top">Bit</th>
-	<th valign="top">Bedeutung bei Wert 0 (Standard)</th>
-	<th valign="top">Bedeutung bei Wert 1</th></tr>
+	<th valign="top">Bedeutung bei Wert&nbsp;0 (Standard)</th>
+	<th valign="top">Bedeutung bei Wert&nbsp;1</th>
       </tr>
       <tr>
 	<td valign="top">4</td>
@@ -74,43 +78,50 @@
 	<td valign="top">
 	  alternativer Zeichensatz,<br/>
 	  Der Emulator schaltet auf einen Zeichensatz mit deutschen Umlauten
-	  nach ISO 646 und inversen Zeichen um.
+	  nach ISO&nbsp;646 und inversen Zeichen um.
 	</td>
       </tr>
       <tr>
 	<td valign="top">6</td>
-	<td valign="top">Taktfrequenz 2 MHz</td>
+	<td valign="top">Taktfrequenz 2&nbsp;MHz</td>
 	<td valign="top">
-	  Taktfrequenz 4 MHz,<br/>
-	  Der Emulator schaltet nur dann auf 4 MHz um,
+	  Taktfrequenz 4&nbsp;MHz,<br/>
+	  Der Emulator schaltet nur dann auf 4&nbsp;MHz um,
 	  wenn in den <a href="settings.htm#speed">Einstellungen</a>
-	  der Standardwert von 2 MHz angegeben ist.
+	  der Standardwert von 2&nbsp;MHz angegeben ist.
 	</td>
       </tr>
       <tr>
 	<td valign="top">7</td>
-	<td valign="top">Bildschirm 32x32 Zeichen</td>
-	<td valign="top">Bildschirm 64x16 Zeichen</td>
+	<td valign="top">Bildschirm 32x32&nbsp;Zeichen</td>
+	<td valign="top">Bildschirm 64x16&nbsp;Zeichen</td>
       </tr>
     </table>
   <br/><br/>
 
+  <h3>1.3. Drucker</h3>
+    Es wird ein Drucker emuliert,
+    indem JKCEMU die Aufrufe f&uuml;r Druckausgaben am Sprungverteiler
+    abf&auml;ngt und die Daten an den aktuellen Druckauftrag anh&auml;ngt.
+    Diese Funktion ist in den <a href="settings.htm">Einstellungen</a>
+    abschaltbar.
+  <br/><br/>
 
   <h2>2. Im ROM enthaltene Software</h2>
     Je nach Einstellung:
     <ul>
-      <li>Originales Monitorprogramm Version 2.02</li>
-      <li>Originales Monitorprogramm Version A.2</li>
+      <li>Originales Monitorprogramm Version&nbsp;2.02</li>
+      <li>Originales Monitorprogramm Version&nbsp;A.2</li>
       <li>
-	Monitorprogramm von Rainer Brosig Version 2.028
+	Monitorprogramm von Rainer Brosig Version&nbsp;2.028
 	f&uuml;r Tastatur K7659
       </li>
       <li>
-	Monitorprogramm von Rainer Brosig Version 2.028
+	Monitorprogramm von Rainer Brosig Version&nbsp;2.028
 	f&uuml;r Tastatur S6009
       </li>
       <li>
-	Monitorprogramm von Jens M&uuml;ller Version 1992
+	Monitorprogramm von Jens M&uuml;ller Version&nbsp;1992
 	(siehe <a href="z1013/mon_jm_1992.htm">Beschreibung</a>)
       </li>
     </ul>
@@ -130,8 +141,35 @@
     die das extern eingebundene Monitorprogramm voraussetzt.
   <br/><br/>
     Des weiteren ist das extern eingebundene Monitorprogramm
-    auch &uuml;ber den IO-Port 4 abschaltbar,
+    auch &uuml;ber den IO-Port&nbsp;4 abschaltbar,
     wenn es im Adressbereich F000-FFFF liegt.
+  <br/><br/>
+
+  <h3>3.2 Einf&uuml;gen von Text</h3>
+    Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt normalerweise
+    in der Art und Weise, indem f&uuml;r jedes einzuf&uuml;gende Zeichen
+    das Dr&uuml;cken der entsprechenden Taste simuliert wird.
+    Dieses Prinzip ist recht langsam.
+    F&uuml;r den Z1013 gibt es in den
+    <a href="settings.htm">Einstellungen</a> die Option
+    <em>Einf&uuml;gen von Text durch Abfangen des Systemaufrufs</em>.
+    Bei dieser Option, die standardm&auml;&szlig;ig aktiv ist,
+    wird die INKEY-Funktion des Monitorprogramms abgefangen
+    und jedes einzuf&uuml;gende Zeichen dar&uuml;ber &uuml;bergeben.
+    Das ist wesentlich schneller, da dadurch das Dr&uuml;cken der
+    entsprechenden Tasten nicht simuliert werden muss.
+  <br/><br/>
+    JKCEMU lauscht auf die Startadresse der INKEY-Funktion,
+    d.h., sobald die Programmausf&uuml;hrung auf diese Adresse l&auml;uft,
+    schaut der Emulator nach, ob ein Zeichen eingef&uuml;gt werden soll,
+    Wenn ja, wird dieses Zeichen in das A-Register geladen
+    und ein RETURN-Befehl simuliert.
+    JKCEMU muss somit die Startadresse der INKEY-Funktion kennen.
+    Das ist f&uuml;r die im Emulator integrierten Monnitorprogramme der Fall.
+    Sollten Sie jedoch durch Einbinden eines externen ROM-Images
+    ein anderes Monitorprogramm verwenden,
+    bei dem die INKEY-Funktion auf einer anderen Adresse beginnt,
+    m&uuml;ssen Sie die Option ausschalten.
 </body>
 </html>
 

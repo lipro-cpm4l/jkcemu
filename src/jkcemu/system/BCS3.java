@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,9 +15,7 @@ import jkcemu.base.*;
 import z80emu.*;
 
 
-public class BCS3 extends EmuSys implements
-					Z80CTCListener,
-					Z80TStatesListener
+public class BCS3 extends EmuSys implements Z80CTCListener
 {
   /*
    * Die beiden Tabellen mappen die BASIC-SE2.4- und BASIC-SE3.1-Tokens
@@ -104,10 +102,6 @@ public class BCS3 extends EmuSys implements
   private static int[] endInstBytesSE31 = { 0x0F, 0x27, 0xCE, 0x1E };
   private static int[] endInstBytesSP33 = { 0x00, 0x27, 0xCA, 0x1E };
 
-  private static int SCREEN_CHARS_PER_ROW = 42;
-  private static int SCREEN_HIDDEN_ROWS   = 80;
-  private static int SCREEN_HEIGHT        = 320;
-
   private static byte[] fontBytesSE24  = null;
   private static byte[] fontBytesSE31  = null;
   private static byte[] fontBytesSP33  = null;
@@ -117,39 +111,25 @@ public class BCS3 extends EmuSys implements
   private static byte[] osBytesSP33_29 = null;
   private static byte[] mcEdtitorSE31  = null;
 
-  private Z80CTC           ctc;
-  private byte[]           fontBytes;
-  private byte[]           screenPixels;
-  private byte[]           rom0000;
-  private byte[]           romF000;
-  private byte[]           ram;
-  private int              ramEndAddr;
-  private int              screenOffset;
-  private int              screenBaseHeight;
-  private int              screenCharCols;
-  private int              screenCharRows;
-  private int              screenRowOffset;
-  private int              screenActiveTStates;
-  private int              screenColNum;
-  private int              screenRowNum;
-  private int              screenLineInChar;
-  private int[]            kbMatrix;
-  private volatile boolean frameEmpty;
-  private volatile boolean screenEnabled;
-  private volatile boolean screenMode;
-  private boolean          audioOutPhase;
+  private Z80CTC  ctc;
+  private byte[]  fontBytes;
+  private byte[]  rom0000;
+  private byte[]  romF000;
+  private byte[]  ram;
+  private int     ramEndAddr;
+  private int     screenOffset;
+  private int     screenBaseHeight;
+  private int     screenCharCols;
+  private int     screenCharRows;
+  private int     screenRowOffset;
+  private int[]   kbMatrix;
+  private boolean audioOutPhase;
 
 
   public BCS3( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    this.romF000          = null;
-    this.screenPixels     = null;
-    this.screenMode       = false;
-    this.frameEmpty       = false;
-    this.screenColNum     = 0;
-    this.screenRowNum     = 0;
-    this.screenLineInChar = 0;
+    this.romF000 = null;
 
     String version = EmuUtil.getProperty( props, "jkcemu.bcs3.os.version" );
     if( version.equals( "3.1" ) ) {
@@ -208,19 +188,17 @@ public class BCS3 extends EmuSys implements
       }
       this.rom0000 = osBytesSE24;
     }
-    this.screenActiveTStates = 0;
-    this.screenEnabled       = false;
-    this.ram                 = new byte[ 0x0400 ];
-    this.ramEndAddr          = getRAMEndAddr( props );
-    this.kbMatrix            = new int[ 10 ];
-    this.audioOutPhase       = false;
+    this.ram           = new byte[ 0x0400 ];
+    this.ramEndAddr    = getRAMEndAddr( props );
+    this.kbMatrix      = new int[ 10 ];
+    this.audioOutPhase = false;
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( cpu );
     cpu.setInterruptSources( this.ctc );
 
     this.ctc.addCTCListener( this );
-    cpu.addTStatesListener( this );
+    cpu.addTStatesListener( this.ctc );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
   }
@@ -353,29 +331,6 @@ public class BCS3 extends EmuSys implements
     if( ctc == this.ctc ) {
       switch( timerNum ) {
 	case 0:
-	  if( this.screenMode && (this.screenPixels != null) ) {
-	    if( this.screenRowNum >= 0 ) {
-	      int pos = ((this.screenRowNum - SCREEN_HIDDEN_ROWS)
-				* SCREEN_CHARS_PER_ROW) + this.screenColNum;
-	      if( pos >= 0 ) {
-		while( this.screenColNum < SCREEN_CHARS_PER_ROW ) {
-		  if( pos < this.screenPixels.length ) {
-		    this.screenPixels[ pos++ ] = (byte) 0;
-		  }
-		  this.screenColNum++;
-		}
-	      }
-	    }
-	    this.screenColNum = 0;
-	    if( this.screenRowNum < SCREEN_HEIGHT ) {
-	      this.screenRowNum++;
-	    }
-	    if( this.screenLineInChar < 7 ) {
-	      this.screenLineInChar++;
-	    } else {
-	      this.screenLineInChar = 0;
-	    }
-	  }
 	  this.audioOutPhase = !this.audioOutPhase;
 	  this.emuThread.writeAudioPhase( this.audioOutPhase );
 	  ctc.externalUpdate( 1, 1 );
@@ -387,50 +342,6 @@ public class BCS3 extends EmuSys implements
 	  this.emuThread.getZ80CPU().setWaitMode( false );
 	  ctc.externalUpdate( 2, 1 );
 	  break;
-
-	case 2:
-	  if( this.screenMode && (this.screenPixels != null) ) {
-	    int pos = ((this.screenRowNum - SCREEN_HIDDEN_ROWS)
-				* SCREEN_CHARS_PER_ROW) + this.screenColNum;
-	    if( pos < this.screenPixels.length ) {
-	      Arrays.fill(
-			this.screenPixels,
-			pos >= 0 ? pos : 0,
-			this.screenPixels.length,
-			(byte) 0 );
-	    }
-	    this.frameEmpty   = true;
-	    this.screenColNum = 0;
-	    this.screenRowNum = 0;
-	    this.screenFrm.setScreenDirty( true );
-	  }
-
-	  // Bildschirmausgabe einschalten, wenn Bildsynchronimpulse kommen
-	  this.screenActiveTStates = 100000;
-	  if( !this.screenEnabled ) {
-	    this.screenEnabled = true;
-	    this.screenFrm.setScreenDirty( true );
-	  }
-	  break;
-      }
-    }
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    this.ctc.systemUpdate( tStates );
-
-    // Bildschirmausgabe ausschalten, wenn keine Bildsynchronimpulse kommen
-    if( this.screenActiveTStates > 0 ) {
-      this.screenActiveTStates -= tStates;
-      if( this.screenActiveTStates <= 0 ) {
-	if( this.screenEnabled ) {
-	  this.screenEnabled = false;
-	  this.screenFrm.setScreenDirty( true );
-	}
       }
     }
   }
@@ -438,27 +349,9 @@ public class BCS3 extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
-  public void applySettings( Properties props )
-  {
-    super.applySettings( props );
-    boolean screenMode = EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.bcs3.emulate_software_video",
-				false );
-    if( screenMode && (this.screenPixels == null) ) {
-      this.screenPixels = new byte[ SCREEN_HEIGHT * SCREEN_CHARS_PER_ROW ];
-      Arrays.fill( this.screenPixels, (byte) 0 );
-    }
-    if( screenMode != this.screenMode ) {
-      this.screenMode = screenMode;
-      this.emuThread.getScreenFrm().fireScreenSizeChanged();
-    }
-  }
-
-
   public boolean canExtractScreenText()
   {
-    return !this.screenMode;
+    return true;
   }
 
 
@@ -467,7 +360,7 @@ public class BCS3 extends EmuSys implements
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = emuThread.getZ80CPU();
-    cpu.removeTStatesListener( this );
+    cpu.removeTStatesListener( this.ctc );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
@@ -480,87 +373,66 @@ public class BCS3 extends EmuSys implements
 
   public int getBorderColorIndex()
   {
-    return this.screenEnabled ? WHITE : BLACK;
+    return WHITE;
   }
 
 
   public int getColorIndex( int x, int y )
   {
-    int rv = WHITE;
-    if( this.screenEnabled ) {
-      if( this.screenMode && (this.screenPixels != null) ) {
-	int col = x / 8;
-	int idx = y * (SCREEN_CHARS_PER_ROW) + col;
-	if( (idx >= 0) && (idx < this.screenPixels.length) ) {
-	  int m = 0x80;
-	  int n = x % 8;
-	  if( n > 0 ) {
-	    m >>= n;
-	  }
-	  if( (this.screenPixels[ idx ] & m) != 0 ) {
-	    rv = BLACK;
+    int    rv        = WHITE;
+    byte[] fontBytes = this.emuThread.getExtFontBytes();
+    if( fontBytes == null ) {
+      fontBytes = this.fontBytes;
+    }
+    if( fontBytes != null ) {
+      int fIdx = -1;
+      if( this.rom0000 == osBytesSE24 ) {
+	int rPix = y % 16;
+	if( rPix < 8 ) {
+	  int row = y / 16;
+	  int col = x / 8;
+	  if( (row < this.screenCharRows) && (col < this.screenCharCols) ) {
+	    int mIdx = this.screenOffset
+				+ (row * this.screenRowOffset)
+				+ col;
+	    if( (mIdx >= 0) && (mIdx < this.ram.length) ) {
+	      int ch = (int) (this.ram[ mIdx ] & 0xFF);
+	      if( rPix == 7 ) {
+		fIdx = (ch * 8);
+	      } else {
+		fIdx = (ch * 8) + rPix + 1;
+	      }
+	    }
 	  }
 	}
       } else {
-	byte[] fontBytes = this.emuThread.getExtFontBytes();
-	if( fontBytes == null ) {
-	  fontBytes = this.fontBytes;
-	}
-	if( fontBytes != null ) {
-	  int fIdx = -1;
-	  if( this.rom0000 == osBytesSE24 ) {
-	    int rPix = y % 16;
-	    if( rPix < 8 ) {
-	      int row = y / 16;
-	      int col = x / 8;
-	      if( (row < this.screenCharRows) && (col < this.screenCharCols) ) {
-		int mIdx = this.screenOffset
+	int row = y / 8;
+	int col = x / 8;
+	if( (row < this.screenCharRows) && (col < this.screenCharCols) ) {
+	  int mIdx = this.screenOffset
 				+ (row * this.screenRowOffset)
 				+ col;
-		if( (mIdx >= 0) && (mIdx < this.ram.length) ) {
-		  int ch = (int) (this.ram[ mIdx ] & 0xFF);
-		  if( rPix == 7 ) {
-		    fIdx = (ch * 8);
-		  } else {
-		    fIdx = (ch * 8) + rPix + 1;
-		  }
-		}
-	      }
-	    }
-	  } else {
-	    int row = y / 8;
-	    int col = x / 8;
-	    if( (row < this.screenCharRows)
-		&& (col < this.screenCharCols) )
-	    {
-	      int mIdx = this.screenOffset
-				+ (row * this.screenRowOffset)
-				+ col;
-	      if( (mIdx >= 0) && (mIdx < this.ram.length) ) {
-		int rPix = y % 8;
-		int ch   = (int) (this.ram[ mIdx ] & 0xFF);
-		if( rPix == 7 ) {
-		  fIdx = (ch * 8);
-		} else {
-		  fIdx = (ch * 8) + rPix + 1;
-		}
-	      }
-	    }
-	  }
-	  if( (fIdx >= 0) && (fIdx < fontBytes.length) ) {
-	    int m = 0x80;
-	    int n = x % 8;
-	    if( n > 0 ) {
-	      m >>= n;
-	    }
-	    if( (fontBytes[ fIdx ] & m) != 0 ) {
-	      rv = BLACK;
+	  if( (mIdx >= 0) && (mIdx < this.ram.length) ) {
+	    int rPix = y % 8;
+	    int ch   = (int) (this.ram[ mIdx ] & 0xFF);
+	    if( rPix == 7 ) {
+	      fIdx = (ch * 8);
+	    } else {
+	      fIdx = (ch * 8) + rPix + 1;
 	    }
 	  }
 	}
       }
-    } else {
-      rv = BLACK;
+      if( (fIdx >= 0) && (fIdx < fontBytes.length) ) {
+	int m = 0x80;
+	int n = x % 8;
+	if( n > 0 ) {
+	  m >>= n;
+	}
+	if( (fontBytes[ fIdx ] & m) != 0 ) {
+	  rv = BLACK;
+	}
+      }
     }
     return rv;
   }
@@ -568,31 +440,49 @@ public class BCS3 extends EmuSys implements
 
   public int getCharColCount()
   {
-    return this.screenMode ? -1 : this.screenCharCols;
+    return this.screenCharCols;
   }
 
 
   public int getCharHeight()
   {
-    return this.screenMode ? -1 : 8;
+    return 8;
   }
 
 
   public int getCharRowCount()
   {
-    return this.screenMode ? -1 : this.screenCharRows;
+    return this.screenCharRows;
   }
 
 
   public int getCharRowHeight()
   {
-    return this.screenMode ? -1 : (this.rom0000 == osBytesSE24 ? 16 : 8);
+    return this.rom0000 == osBytesSE24 ? 16 : 8;
   }
 
 
   public int getCharWidth()
   {
-    return this.screenMode ? -1 : 8;
+    return 8;
+  }
+
+
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 80;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 200;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 60;
   }
 
 
@@ -652,33 +542,6 @@ public class BCS3 extends EmuSys implements
 	int idx = addr - 0x1800;
 	if( (idx >= 0) && (idx < this.ram.length) ) {
 	  int ch = (int) (this.ram[ idx ] & 0xFF);
-	  if( this.screenMode
-	      && (this.screenRowNum >= SCREEN_HIDDEN_ROWS)
-	      && ((ch & 0x80) == 0) )
-	  {
-	    byte[] fontBytes = this.emuThread.getExtFontBytes();
-	    if( fontBytes == null ) {
-	      fontBytes = this.fontBytes;
-	    }
-	    if( fontBytes != null ) {
-	      if( this.frameEmpty ) {
-		this.screenLineInChar = 1;
-		this.frameEmpty       = false;
-	      }
-
-	      int dstPos = ((this.screenRowNum - SCREEN_HIDDEN_ROWS)
-				* SCREEN_CHARS_PER_ROW) + this.screenColNum;
-	      if( dstPos < this.screenPixels.length ) {
-		int srcPos = ((ch & 0x7F) * 8) + this.screenLineInChar;
-		if( (srcPos >= 0) && (srcPos < fontBytes.length) ) {
-		  this.screenPixels[ dstPos ] = fontBytes[ srcPos ];
-		}
-	      }
-	    }
-	    if( this.screenColNum < SCREEN_CHARS_PER_ROW ) {
-	      this.screenColNum++;
-	    }
-	  }
 	  if( (ch & 0x80) != 0 ) {
 	    rv = ch;
 	  }
@@ -712,13 +575,11 @@ public class BCS3 extends EmuSys implements
   protected int getScreenChar( int chX, int chY )
   {
     int ch  = -1;
-    if( !this.screenMode ) {
-      int idx = this.screenOffset + (chY * this.screenRowOffset) + chX;
-      if( (idx >= 0) && (idx < this.ram.length) ) {
-	int b = (int) this.ram[ idx ] & 0xFF;
-	if( (b >= 0x20) && (b < 0x7F) ) {
-	  ch = b;
-	}
+    int idx = this.screenOffset + (chY * this.screenRowOffset) + chX;
+    if( (idx >= 0) && (idx < this.ram.length) ) {
+      int b = (int) this.ram[ idx ] & 0xFF;
+      if( (b >= 0x20) && (b < 0x7F) ) {
+	ch = b;
       }
     }
     return ch;
@@ -727,15 +588,13 @@ public class BCS3 extends EmuSys implements
 
   public int getScreenHeight()
   {
-    return this.screenMode ?
-		(SCREEN_HEIGHT - SCREEN_HIDDEN_ROWS)
-		: this.screenBaseHeight;
+    return this.screenBaseHeight;
   }
 
 
   public int getScreenWidth()
   {
-    return (this.screenMode ? SCREEN_CHARS_PER_ROW : this.screenCharCols) * 8;
+    return this.screenCharCols * 8;
   }
 
 
@@ -1074,13 +933,10 @@ public class BCS3 extends EmuSys implements
 	    int nRows = (int) (this.ram[ 6 ] & 0xFF);
 	    if( nRows != this.screenCharRows ) {
 	      this.screenCharRows = nRows;
-	      if( !this.screenMode ) {
-		this.screenFrm.setScreenDirty( true );
-	      }
+	      this.screenFrm.setScreenDirty( true );
 	    }
 	  }
-	  if( !this.screenMode
-	      && (idx >= this.screenOffset)
+	  if( (idx >= this.screenOffset)
 	      && (idx < this.screenOffset
 			+ (this.screenRowOffset * this.screenCharCols)) )
 	  {
@@ -1095,6 +951,24 @@ public class BCS3 extends EmuSys implements
       rv = true;
     }
     return rv;
+  }
+
+
+  public boolean supportsAudio()
+  {
+    return true;
+  }
+
+
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
   }
 
 

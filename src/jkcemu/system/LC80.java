@@ -19,6 +19,7 @@ import z80emu.*;
 public class LC80 extends EmuSys implements
 					Z80HaltStateListener,
 					Z80MaxSpeedListener,
+					Z80PCListener,
 					Z80TStatesListener
 {
   private static byte[] lc80_u505  = null;
@@ -40,6 +41,8 @@ public class LC80 extends EmuSys implements
   private boolean          audioOutLED;
   private volatile boolean audioOutPhase;
   private volatile boolean audioOutState;
+  private boolean          chessComputer;
+  private boolean          chessMode;
   private boolean          haltState;
   private Z80CTC           ctc;
   private Z80PIO           pio1;
@@ -50,7 +53,8 @@ public class LC80 extends EmuSys implements
   public LC80( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    this.sysName = EmuUtil.getProperty( props, "jkcemu.system" );
+    this.chessComputer = false;
+    this.sysName       = EmuUtil.getProperty( props, "jkcemu.system" );
     if( this.sysName.equals( "LC80_U505" ) ) {
       if( lc80_u505 == null ) {
 	lc80_u505 = readResource( "/rom/lc80/lc80_u505.bin" );
@@ -72,9 +76,10 @@ public class LC80 extends EmuSys implements
       if( lc80e_c000 == null ) {
 	lc80e_c000 = readResource( "/rom/lc80/lc80e_c000.bin" );
       }
-      this.rom0000 = lc80e_0000;
-      this.romC000 = lc80e_c000;
-      this.ram     = new byte[ 0x1000 ];
+      this.rom0000       = lc80e_0000;
+      this.romC000       = lc80e_c000;
+      this.ram           = new byte[ 0x1000 ];
+      this.chessComputer = true;
     } else {
       if( lc80_2716 == null ) {
 	lc80_2716 = readResource( "/rom/lc80/lc80_2716.bin" );
@@ -104,9 +109,12 @@ public class LC80 extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addHaltStateListener( this );
     cpu.addTStatesListener( this );
+    if( this.chessComputer ) {
+      cpu.addPCListener( this, 0x0000, 0xC800 );
+    }
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
-    z80MaxSpeedChanged();
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -129,12 +137,27 @@ public class LC80 extends EmuSys implements
   }
 
 
+	/* --- Z80PCListener --- */
+
+  public void z80PCChanged( Z80CPU cpu, int pc )
+  {
+    switch( pc ) {
+      case 0x0000:
+	this.chessMode = false;
+	break;
+
+      case 0xC800:
+	this.chessMode = true;
+	break;
+    }
+  }
+
+
 	/* --- Z80MaxSpeedListener --- */
 
-  public void z80MaxSpeedChanged()
+  public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    this.displayCheckTStates = this.emuThread.getZ80CPU().getMaxSpeedKHz()
-								* 50;
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
   }
 
 
@@ -187,12 +210,75 @@ public class LC80 extends EmuSys implements
     cpu.removeHaltStateListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    if( this.chessComputer ) {
+      cpu.removePCListener( this );
+    }
   }
 
 
   public int getAppStartStackInitValue()
   {
     return 0x23EA;
+  }
+
+
+  public Chessman getChessman( int row, int col )
+  {
+    Chessman rv = null;
+    if( this.chessMode
+	&& (row >= 0) && (row < 8) && (col >= 0) && (col < 8) )
+    {
+      switch( getMemByte( 0x2715 + (row * 10) + col, false ) & 0x8F ) {
+	case 1:
+	  rv = Chessman.WHITE_PAWN;
+	  break;
+
+	case 2:
+	  rv = Chessman.WHITE_KNIGHT;
+	  break;
+
+	case 3:
+	  rv = Chessman.WHITE_BISHOP;
+	  break;
+
+	case 4:
+	  rv = Chessman.WHITE_ROOK;
+	  break;
+
+	case 5:
+	  rv = Chessman.WHITE_QUEEN;
+	  break;
+
+	case 6:
+	  rv = Chessman.WHITE_KING;
+	  break;
+
+	case 0x81:
+	  rv = Chessman.BLACK_PAWN;
+	  break;
+
+	case 0x82:
+	  rv = Chessman.BLACK_KNIGHT;
+	  break;
+
+	case 0x83:
+	  rv = Chessman.BLACK_BISHOP;
+	  break;
+
+	case 0x84:
+	  rv = Chessman.BLACK_ROOK;
+	  break;
+
+	case 0x85:
+	  rv = Chessman.BLACK_QUEEN;
+	  break;
+
+	case 0x86:
+	  rv = Chessman.BLACK_KING;
+	  break;
+      }
+    }
+    return rv;
   }
 
 
@@ -291,98 +377,33 @@ public class LC80 extends EmuSys implements
   }
 
 
-  /*
-   * Neben den Funktionstasten werden hier auch die Zifferntasten
-   * sowie die Tasten "+" und "-" getestet, damit diese auch
-   * bei gedrueckter Feststelltaste (Caps Lock) funktionieren.
-   */
   public boolean keyPressed( int keyCode, boolean shiftDown )
   {
     boolean rv = false;
     synchronized( this.kbMatrixValues ) {
       switch( keyCode ) {
 	case KeyEvent.VK_F1:
-	  this.kbMatrixValues[ 5 ] = 0x80;		// ADR
+	  this.kbMatrixValues[ 5 ] = 0x80;	// ADR / NEW GAME
 	  rv = true;
 	  break;
 
 	case KeyEvent.VK_F2:
-	  this.kbMatrixValues[ 5 ] = 0x40;		// DAT
+	  this.kbMatrixValues[ 5 ] = 0x40;	// DAT / SW / SELF PLAY
 	  rv = true;
 	  break;
 
 	case KeyEvent.VK_F3:
-	  this.kbMatrixValues[ 0 ] = 0x20;		// LD
+	  this.kbMatrixValues[ 0 ] = 0x20;	// LD / RAN
 	  rv = true;
 	  break;
 
 	case KeyEvent.VK_F4:
-	  this.kbMatrixValues[ 0 ] = 0x40;		// ST
+	  this.kbMatrixValues[ 0 ] = 0x40;	// ST / Contr.
 	  rv = true;
 	  break;
 
 	case KeyEvent.VK_ENTER:
-	  this.kbMatrixValues[ 0 ] = 0x80;		// EX
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_0:
-	  this.kbMatrixValues[ 1 ] = 0x80;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_1:
-	  this.kbMatrixValues[ 1 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_2:
-	  this.kbMatrixValues[ 1 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_3:
-	  this.kbMatrixValues[ 1 ] = 0x10;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_4:
-	  this.kbMatrixValues[ 2 ] = 0x80;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_5:
-	  this.kbMatrixValues[ 2 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_6:
-	  this.kbMatrixValues[ 5 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_7:
-	  this.kbMatrixValues[ 2 ] = 0x10;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_8:
-	  this.kbMatrixValues[ 3 ] = 0x80;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_9:
-	  this.kbMatrixValues[ 3 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_PLUS:
-	  this.kbMatrixValues[ 2 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case KeyEvent.VK_MINUS:
-	  this.kbMatrixValues[ 5 ] = 0x10;
+	  this.kbMatrixValues[ 0 ] = 0x80;	// EX
 	  rv = true;
 	  break;
       }
@@ -392,10 +413,6 @@ public class LC80 extends EmuSys implements
     } else {
       if( keyCode == KeyEvent.VK_ESCAPE ) {
 	this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
-	rv = true;
-      }
-      else if( keyCode == KeyEvent.VK_N ) {
-	this.emuThread.getZ80CPU().fireNMI();
 	rv = true;
       }
     }
@@ -416,127 +433,209 @@ public class LC80 extends EmuSys implements
   {
     boolean rv = false;
     synchronized( this.kbMatrixValues ) {
-      switch( keyChar ) {
-	case '3':			// LC80: 3
-	case 'C':			// SC80: C und 3
-	  this.kbMatrixValues[ 1 ] = 0x10;
-	  rv = true;
-	  break;
-
-	case '7':			// LC80: 7
-	case 'G':			// SC80: G und 7
-	  this.kbMatrixValues[ 2 ] = 0x10;
-	  rv = true;
-	  break;
-
-	case 'b':			// LC80: B
-	case 'S':			// SC80: Springer
-	  this.kbMatrixValues[ 3 ] = 0x10;
-	  rv = true;
-	  break;
-
-	case 'f':			// LC80: F
-	case 'K':			// SC80: Koenig
-	  this.kbMatrixValues[ 4 ] = 0x10;
-	  rv = true;
-	  break;
-
-	case '-':			// LC80: -
-	case 'W':			// SC80: COLOR
-	  this.kbMatrixValues[ 5 ] = 0x10;
-	  rv = true;
-	  break;
-
-	case 'l':			// LC80: LD
-	case 'R':			// SC80: Random
-	  this.kbMatrixValues[ 0 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case '2':			// LC80: 2
-	case 'B':			// SC80: B und 2
-	  this.kbMatrixValues[ 1 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case '+':			// LC80: +
-	case 'O':			// SC80: BOARD
-	  this.kbMatrixValues[ 2 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case 'e':			// LC80: E
-	case 'M':			// SC80: Dame
-	  this.kbMatrixValues[ 3 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case 'a':			// LC80: A
-	case 'U':			// SC80: Bauer
-	  this.kbMatrixValues[ 4 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case '6':			// LC80: 6
-	case 'F':			// SC80: F und 6
-	  this.kbMatrixValues[ 5 ] = 0x20;
-	  rv = true;
-	  break;
-
-	case 's':			// LC80: ST, SC80: Control
-	  this.kbMatrixValues[ 0 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case '1':			// LC80: 1
-	case 'A':			// SC80: A und 1
-	  this.kbMatrixValues[ 1 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case '5':			// LC80: 5
-	case 'E':			// SC80: E und 5
-	  this.kbMatrixValues[ 2 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case '9':			// LC80: 9
-	  this.kbMatrixValues[ 3 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case 'd':			// LC80: D
-	case 'T':			// SC80: Turm
-	  this.kbMatrixValues[ 4 ] = 0x40;
-	  rv = true;
-	  break;
-
-	case 'x':			// LC80: EX, SC80: EX
-	case 'X':
-	  this.kbMatrixValues[ 0 ] = 0x80;
-	  rv = true;
-	  break;
-
-	case '0':			// LC80: 0
+      switch( Character.toUpperCase( keyChar ) ) {
+	case '0':
 	  this.kbMatrixValues[ 1 ] = 0x80;
 	  rv = true;
 	  break;
 
-	case '4':			// LC80: 4
-	case 'D':			// SC80: D und 4
+	case '1':
+	  this.kbMatrixValues[ 1 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case '2':
+	  this.kbMatrixValues[ 1 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case '3':
+	  this.kbMatrixValues[ 1 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case '4':
 	  this.kbMatrixValues[ 2 ] = 0x80;
 	  rv = true;
 	  break;
 
-	case '8':			// LC80: 8
-	case 'H':			// SC80: H und 8
+	case '5':
+	  this.kbMatrixValues[ 2 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case '6':
+	  this.kbMatrixValues[ 5 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case '7':
+	  this.kbMatrixValues[ 2 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case '8':
 	  this.kbMatrixValues[ 3 ] = 0x80;
 	  rv = true;
 	  break;
 
-	case 'c':			// LC80: C
-	case 'L':			// SC80: Laeufer
-	  this.kbMatrixValues[ 4 ] = 0x80;
+	case '9':
+	  this.kbMatrixValues[ 3 ] = 0x40;
+	  rv = true;
+	  break;
+
+	case '-':
+	  this.kbMatrixValues[ 5 ] = 0x10;
+	  rv = true;
+	  break;
+
+	case '+':
+	  this.kbMatrixValues[ 2 ] = 0x20;
+	  rv = true;
+	  break;
+
+	case 'A':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 1 ] = 0x40;		// auch 1
+	  } else {
+	    this.kbMatrixValues[ 4 ] = 0x20;
+	  }
+	  rv = true;
+	  break;
+
+	case 'B':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 1 ] = 0x20;		// auch 2
+	  } else {
+	    this.kbMatrixValues[ 3 ] = 0x10;
+	  }
+	  rv = true;
+	  break;
+
+	case 'C':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 1 ] = 0x10;		// auch 3
+	  } else {
+	    this.kbMatrixValues[ 4 ] = 0x80;
+	  }
+	  rv = true;
+	  break;
+
+	case 'D':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 2 ] = 0x80;		// auch 4
+	  } else {
+	    this.kbMatrixValues[ 4 ] = 0x40;
+	  }
+	  rv = true;
+	  break;
+
+	case 'E':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 2 ] = 0x40;		// auch 5
+	  } else {
+	    this.kbMatrixValues[ 3 ] = 0x20;
+	  }
+	  rv = true;
+	  break;
+
+	case 'F':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 5 ] = 0x20;		// auch 6
+	  } else {
+	    this.kbMatrixValues[ 4 ] = 0x10;
+	  }
+	  rv = true;
+	  break;
+
+	case 'G':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 2 ] = 0x10;		// auch 7
+	    rv = true;
+	  }
+	  break;
+
+	case 'H':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 3 ] = 0x80;		// auch 8
+	    rv = true;
+	  }
+	  break;
+
+	case 'K':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 4 ] = 0x10;		// Koenig
+	    rv = true;
+	  }
+	  break;
+
+	case 'L':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 4 ] = 0x80;		// Laeufer
+	  } else {
+	    this.kbMatrixValues[ 0 ] = 0x20;		// LD
+	  }
+	  rv = true;
+	  break;
+
+	case 'M':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 3 ] = 0x20;		// Dame
+	    rv = true;
+	  }
+	  break;
+
+	case 'N':
+	  this.emuThread.getZ80CPU().fireNMI();	// NMI
+	  rv = true;
+	  break;
+
+	case 'O':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 2 ] = 0x20;		// BOARD
+	    rv = true;
+	  }
+	  break;
+
+	case 'R':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 0 ] = 0x20;		// RAN
+	    rv = true;
+	  }
+	  break;
+
+	case 'S':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 3 ] = 0x10;		// Springer
+	  } else {
+	    this.kbMatrixValues[ 0 ] = 0x40;		// ST
+	  }
+	  rv = true;
+	  break;
+
+	case 'T':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 4 ] = 0x40;		// Turm
+	    rv = true;
+	  }
+	  break;
+
+	case 'U':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 4 ] = 0x20;		// Bauer
+	    rv = true;
+	  }
+	  break;
+
+	case 'W':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrixValues[ 5 ] = 0x10;		// COLOR (WHITE)
+	    rv = true;
+	  }
+	  break;
+
+	case 'X':
+	  this.kbMatrixValues[ 0 ] = 0x80;		// EX
 	  rv = true;
 	  break;
       }
@@ -669,6 +768,7 @@ public class LC80 extends EmuSys implements
       Arrays.fill( this.digitStatus, 0 );
       Arrays.fill( this.digitValues, 0 );
     }
+    this.chessMode = false;
   }
 
 
@@ -685,10 +785,25 @@ public class LC80 extends EmuSys implements
       int idx = addr - 0x2000;
       if( idx < this.ram.length ) {
 	this.ram[ idx ] = (byte) value;
+	if( this.chessComputer && (addr >= 0x2715) && (addr < 0x2763) ) {
+          this.screenFrm.setChessboardDirty( true );
+        }
 	rv = true;
       }
     }
     return rv;
+  }
+
+
+  public boolean supportsAudio()
+  {
+    return true;
+  }
+
+
+  public boolean supportsChessboard()
+  {
+    return this.chessComputer;
   }
 
 

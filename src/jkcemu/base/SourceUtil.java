@@ -15,61 +15,6 @@ import z80emu.Z80MemView;
 
 public class SourceUtil
 {
-  /*
-   * Diese Tabelle mappt die KC-BASIC-Tokens in die entsprechenden Texte.
-   * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
-   * Die Tokens ab Code 226 (0xE2) gibt es im KC-BASIC-Interpreter
-   * des Z1013 nicht, jedoch z.B. im KC85/4.
-   * Da aber trotzdem ein BASIC-Programm, welches diese Anweisungen enthaelt,
-   * in einen Z1013 geladen werden kann und dann dort auch richtig angezeigt
-   * werden sollte, werden diese Tokens mit gemappt.
-   *
-   * Ab dem "KC-BASIC-Interpreter Plus" fuer den Z1013 sind folgende vier
-   * Tokens hinzugekommen, von denen drei nicht mit den Tokens der
-   * anderen KCs uebereinstimmen:
-   *	226     HSAVE
-   *	227     HLOAD
-   *	228     PSET
-   *	229     PRES
-   *
-   * Da jedoch die Befehle HSAVE und HLOAD in einem BASIC-Programm wenig
-   * Sinn machen und die Anweisungen PSET und PRES trotzt Vorhandensein
-   * einen Syntax-Fehler hervorrufen, werden diese Tokens entsprechend
-   * der KCs gemappt, auf denen diese Anweisungen auch funktionieren.
-   */
-  private static final String[] kcTokens = {
-    "END",       "FOR",      "NEXT",    "DATA",		// 0x80
-    "INPUT",     "DIM",      "READ",    "LET",
-    "GOTO",      "RUN",      "IF",      "RESTORE",
-    "GOSUB",     "RETURN",   "REM",     "STOP",
-    "OUT",       "ON",       "NULL",    "WAIT",		// 0x90
-    "DEF",       "POKE",     "DOKE",    "AUTO",
-    "LINES",     "CLS",      "WIDTH",   "BYE",
-    "!",         "CALL",     "PRINT",   "CONT",
-    "LIST",      "CLEAR",    "CLOAD",   "CSAVE",	// 0xA0
-    "NEW",       "TAB(",     "TO",      "FN",
-    "SPC(",      "THEN",     "NOT",     "STEP",
-    "+",         "-",        "*",       "/",
-    "^",         "AND",      "OR",      ">",		// 0xB0
-    "=",         "<",        "SGN",     "INT",
-    "ABS",       "USR",      "FRE",     "INP",
-    "POS",       "SQR",      "RND",     "LN",
-    "EXP",       "COS",      "SIN",     "TAN",		// 0xC0
-    "ATN",       "PEEK",     "DEEK",    "PI",
-    "LEN",       "STR$",     "VAL",     "ASC",
-    "CHR$",      "LEFT$",    "RIGHT$",  "MID$",
-    "LOAD",      "TRON",     "TROFF",   "EDIT",		// 0xD0
-    "ELSE",      "INKEY$",   "JOYST",   "STRING$",
-    "INSTR",     "RENUMBER", "DELETE",  "PAUSE",
-    "BEEP",      "WINDOW",   "BORDER",  "INK",
-    "PAPER",     "AT",       "COLOR",   "SOUND",	// 0xE0
-    "PSET",      "PRESET",   "BLOAD",   "VPEEK",
-    "VPOKE",     "LOCATE",   "KEYLIST", "KEY",
-    "SWITCH",    "PTEST",    "CLOSE",   "OPEN",
-    "RANDOMIZE", "VGET$",    "LINE",    "CIRCLE",	// 0xF0
-    "CSRLIN" };
-
-
   public static String getAssemblerText(
 				Z80MemView memory,
 				int        addr )
@@ -107,7 +52,7 @@ public class SourceUtil
   }
 
 
-  public static int getKCStyleBasicEndAddr( Z80MemView memory, int begAddr )
+  public static int getKCBasicStyleEndAddr( Z80MemView memory, int begAddr )
   {
     int endAddr      = -1;
     int curLineAddr  = begAddr;
@@ -125,13 +70,7 @@ public class SourceUtil
   }
 
 
-  public static String getKCBasicProgram( Z80MemView memory, int addr )
-  {
-    return getKCStyleBasicProgram( memory, addr, kcTokens );
-  }
-
-
-  public static String getKCStyleBasicProgram(
+  public static String getKCBasicStyleProgram(
 				Z80MemView memory,
 				int        addr,
 				String[]   tokens )
@@ -213,9 +152,7 @@ public class SourceUtil
 	  }
 	  if( ch > 0 ) {
 	    if( sep
-		&& (isIdentifierChar( ch )
-			|| (ch == '\'')
-			|| (ch == '\"')) )
+		&& (isIdentifierChar( ch ) || (ch == '\'') || (ch == '\"')) )
 	    {
 	      buf.append( (char) '\u0020' );
 	    }
@@ -286,11 +223,15 @@ public class SourceUtil
   }
 
 
-  public static void openKCBasicProgram(
+  public static void openKCBasicStyleProgram(
 				ScreenFrm screenFrm,
-				int       begAddr )
+				int       begAddr,
+				String[]  tokens )
   {
-    String text = getKCBasicProgram( screenFrm.getEmuThread(), begAddr );
+    String text = getKCBasicStyleProgram(
+				screenFrm.getEmuThread(),
+				begAddr,
+				tokens );
     if( text != null ) {
       screenFrm.openText( text );
     } else {
@@ -299,11 +240,11 @@ public class SourceUtil
   }
 
 
-  public static void saveKCBasicProgram(
-				ScreenFrm  screenFrm,
-				int        begAddr )
+  public static void saveKCBasicStyleProgram(
+				ScreenFrm screenFrm,
+				int       begAddr )
   {
-    int endAddr = getKCStyleBasicEndAddr( screenFrm.getEmuThread(), begAddr );
+    int endAddr = getKCBasicStyleEndAddr( screenFrm.getEmuThread(), begAddr );
     if( endAddr >= begAddr ) {
       (new SaveDlg(
 		screenFrm,

@@ -105,20 +105,6 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 		if( fileInfo.getFileType() != 'C' ) {
 		  loadData.setStartAddr( -1 );
 		}
-
-		// ggf. Dateikopf in Arbeitsspeicher kopieren
-		if( isZ1013
-		    && EmuUtil.parseBoolean(
-			Main.getProperty( "jkcemu.loadsave.header.keep" ),
-			false )
-		    && (loadData.getOffset() == 32) )
-		{
-		  for( int i = 0; i < 32; i++ ) {
-		    emuThread.setMemByte(
-				Z1013.MEM_HEAD + i,
-				loadData.getAbsoluteByte( i ) );
-		  }
-		}
 	      }
 
 	      /*
@@ -158,13 +144,38 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 		  }
 		}
 	      }
-
-	      // Datei in Arbeitsspeicher laden und ggf. starten
 	      if( !done ) {
+
+
+		// Datei in Arbeitsspeicher laden und ggf. starten
 		if( confirmLoadDataInfo( owner, loadData ) ) {
 		  emuThread.loadIntoMemory( loadData );
-		  showLoadMsg( screenFrm, loadData );
 		  Main.setLastFile( file, "software" );
+
+		  // ggf. Dateikopf in Arbeitsspeicher kopieren
+		  if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+		    if( isZ1013
+			&& EmuUtil.parseBoolean(
+			    Main.getProperty( "jkcemu.loadsave.header.keep" ),
+			    false )
+			&& (loadData.getOffset() == 32) )
+		    {
+		      for( int i = 0; i < 32; i++ ) {
+			emuThread.setMemByte(
+					Z1013.MEM_HEAD + i,
+					loadData.getAbsoluteByte( i ) );
+		      }
+		    }
+		  }
+
+		  // ggf. Meldung anzeigen und Multi-TAP-Handling
+		  showLoadMsg( screenFrm, loadData );
+		  checkMultiTAPHandling(
+				owner,
+				screenFrm,
+				file,
+				fileBuf,
+				fileInfo.getNextTAPOffset() );
 		  done = true;
 		}
 	      }
@@ -562,6 +573,40 @@ public class LoadDlg extends BasicDlg implements DocumentListener
   }
 
 
+  private static void checkMultiTAPHandling(
+				Window    owner,
+				ScreenFrm screenFrm,
+				File      file,
+				byte[]    fileBytes,
+				int       nextTAPOffs )
+  {
+    if( (file != null) && (fileBytes != null) && (nextTAPOffs > 0) ) {
+      if( JOptionPane.showConfirmDialog(
+		owner,
+		"Die Datei ist eine Multi-TAP-Datei,"
+			+ " d.h., sie enth\u00E4lt mehrere Teildateien.\n"
+			+ "Es wurde aber nur die erste Teildatei in den"
+			+ " Arbeitsspeicher geladen.\n\n"
+			+ "H\u00E4ufig versucht das in der ersten Teildatei"
+			+ " enthaltene Programm,\n"
+			+ "die restlichen Teildateien von Kassette"
+			+ " nachzuladen.\n"
+			+ "Sie k\u00F6nnen jetzt die Emulation"
+			+ " des Kassettenrecorderanschlusses\n"
+			+ "mit den restlichen Teildateien aktivieren,\n"
+			+ "sodass das Nachladen auch im Emulator"
+			+ " funktioniert.\n\n"
+			+ "M\u00F6chten Sie das jetzt tun?",
+		"Multi-TAP-Datei",
+		JOptionPane.YES_NO_OPTION,
+		JOptionPane.WARNING_MESSAGE ) == JOptionPane.YES_OPTION )
+      {
+	screenFrm.openTAPViaAudio( file, fileBytes, nextTAPOffs );
+      }
+    }
+  }
+
+
   private static boolean confirmLoadDataInfo(
 				Component owner,
 				LoadData  loadData )
@@ -641,6 +686,13 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	if( confirmLoadDataInfo( this, loadData ) ) {
 	  EmuThread emuThread = this.screenFrm.getEmuThread();
 
+	  // Datei in Arbeitsspeicher laden und ggf. starten
+	  if( !startEnabled || !startSelected ) {
+	    loadData.setStartAddr( -1 );
+	  }
+	  emuThread.loadIntoMemory( loadData );
+	  Main.setLastFile( this.file, "software" );
+
 	  // ggf. Dateikopf in Arbeitsspeicher kopieren
 	  if( (emuThread.getEmuSys() instanceof Z1013)
 	      && fileFmt.equals( FileInfo.HEADERSAVE )
@@ -654,13 +706,28 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	    }
 	  }
 
-	  // Datei in Arbeitsspeicher laden und ggf. starten
-	  if( !startEnabled || !startSelected ) {
-	    loadData.setStartAddr( -1 );
-	  }
-	  emuThread.loadIntoMemory( loadData );
+	  // ggf. Meldung anzeigen
 	  showLoadMsg( this.screenFrm, loadData );
-	  Main.setLastFile( this.file, "software" );
+
+	  // Multi-TAP-Handling
+	  if( fileFmt.equals( FileInfo.KCTAP_SYS )
+	      || fileFmt.equals( FileInfo.KCTAP_BASIC ) )
+	  {
+	    FileInfo fileInfo = FileInfo.analyzeFile(
+						this.fileBuf,
+						this.fileBuf.length,
+						this.file );
+	    if( fileInfo != null ) {
+	      if( fileFmt.equals( fileInfo.getFileFormat() ) ) {
+		checkMultiTAPHandling(
+				this,
+				this.screenFrm,
+				this.file,
+				this.fileBuf,
+				fileInfo.getNextTAPOffset() );
+	      }
+	    }
+	  }
 	  doClose();
 	}
       }
@@ -720,12 +787,16 @@ public class LoadDlg extends BasicDlg implements DocumentListener
   private static void showLoadMsg( ScreenFrm screenFrm, LoadData loadData )
   {
     if( loadData != null ) {
+      int endAddr = loadData.getEndAddr();
+      if( endAddr > 0xFFFF ) {
+	endAddr = 0xFFFF;
+      }
       screenFrm.toFront();
       screenFrm.showStatusText(
 		String.format(
 			"Datei nach %04X-%04X geladen",
 			loadData.getBegAddr(),
-			loadData.getEndAddr() ) );
+			endAddr ) );
     }
   }
 

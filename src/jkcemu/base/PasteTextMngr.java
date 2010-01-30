@@ -42,6 +42,12 @@ public class PasteTextMngr extends Thread
   public void fireStop()
   {
     this.stopFired = true;
+    if( Thread.currentThread() != this ) {
+      try {
+	interrupt();
+      }
+      catch( SecurityException ex ) {}
+    }
   }
 
 
@@ -83,12 +89,17 @@ public class PasteTextMngr extends Thread
       // Zeichen uebergeben
       if( this.emuSys.pasteChar( ch ) ) {
 	if( (ch == '\n') || (ch == '\r') ) {
-	  delay = 300;
+	  delay = this.emuSys.getDelayMillisAfterPasteEnter();
 	} else {
-	  delay = 150;
+	  delay = this.emuSys.getDelayMillisAfterPasteChar();
 	}
       } else {
-	if( JOptionPane.showConfirmDialog(
+	if( this.stopFired ) {
+	  if( this.curPos > 0 ) {
+	    --this.curPos;
+	  }
+	} else {
+	  if( JOptionPane.showConfirmDialog(
 		this.screenFrm,
 		String.format(
 			"Das Zeichen mit dem hexadezimalen Code %02X\n"
@@ -97,8 +108,9 @@ public class PasteTextMngr extends Thread
 		"Text einf\u00FCgen",
 		JOptionPane.OK_CANCEL_OPTION,
 		JOptionPane.WARNING_MESSAGE ) != JOptionPane.OK_OPTION )
-	{
-	  this.stopFired = true;
+	  {
+	    this.stopFired = true;
+	  }
 	}
       }
     }

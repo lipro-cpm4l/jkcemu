@@ -12,7 +12,7 @@ import java.awt.*;
 import java.awt.dnd.DropTarget;
 import java.io.*;
 import java.lang.*;
-import java.util.Properties;
+import java.util.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
@@ -79,7 +79,8 @@ public class EditText implements
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
-		String        encodingDisplayText ) throws IOException
+		String        encodingDisplayText )
+				throws IOException, UserCancelException
   {
     init( editFrm, emuThread );
     loadFile( file, charConverter, encodingName, encodingDisplayText );
@@ -282,7 +283,8 @@ public class EditText implements
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
-		String        encodingDisplayText ) throws IOException
+		String        encodingDisplayText )
+			throws IOException, UserCancelException
   {
     PushbackInputStream inStream  = null;
     PushbackReader      reader    = null;
@@ -325,9 +327,7 @@ public class EditText implements
 			case 0x03C0:
 			case 0x0400:
 			case 0x0401:
-			  text = SourceUtil.getKCBasicProgram(
-							loadData,
-							0x0401 );
+			  text = getKCBasicProgram( loadData, 0x0401 );
 			  break;
 
 			case 0x1001:
@@ -337,12 +337,11 @@ public class EditText implements
 			case 0x2BC0:
 			case 0x2C00:
 			case 0x2C01:
-			  text = SourceUtil.getKCBasicProgram(
-							loadData,
-							0x2C01 );
+			  text = getKCBasicProgram( loadData, 0x2C01 );
 			  break;
 
 			case 0x60F7:
+			case 0x6FB7:
 			  /*
 			   * Das SCCH-BASIC fuer den LLC2 ist bzgl.
 			   * des BASIC-Dialekts und
@@ -369,7 +368,7 @@ public class EditText implements
 			  break;
 
 			case 0x1400:
-			  text = LLC1.getTinyBasicProgram( loadData );
+			  text = LLC1.getBasicProgram( loadData );
 			  break;
 
 			case 0x18C0:
@@ -419,9 +418,7 @@ public class EditText implements
 							fileBytes,
 							fileFmt );
 		if( loadData != null ) {
-		  text = SourceUtil.getKCBasicProgram(
-						loadData,
-						fileInfo.getBegAddr() );
+		  text = getKCBasicProgram( loadData, fileInfo.getBegAddr() );
 		}
 	      }
 	    }
@@ -1054,6 +1051,102 @@ public class EditText implements
     this.prjChanged          = false;
     this.saved               = true;
     this.trimLines           = false;
+  }
+
+
+  private String getKCBasicProgram(
+			LoadData loadData,
+			int      begAddr ) throws UserCancelException
+  {
+    String rv = null;
+
+    String kc85Basic =  SourceUtil.getKCBasicStyleProgram(
+						loadData,
+						begAddr,
+						KC85.basicTokens );
+
+    String z9001Basic =  SourceUtil.getKCBasicStyleProgram(
+						loadData,
+						begAddr,
+						Z9001.basicTokens );
+
+    String z1013Basic =  SourceUtil.getKCBasicStyleProgram(
+						loadData,
+						begAddr,
+						Z1013.basicTokens );
+
+    if( (kc85Basic != null)
+	&& (z1013Basic != null)
+	&& (z9001Basic != null) )
+    {
+      if( kc85Basic.equals( z1013Basic ) && kc85Basic.equals( z9001Basic ) ) {
+	rv         = kc85Basic;
+	kc85Basic  = null;
+	z1013Basic = null;
+	z9001Basic = null;
+      }
+    }
+    if( rv == null ) {
+      if( (kc85Basic != null)
+	  || (z1013Basic != null)
+	  || (z9001Basic != null) )
+      {
+	java.util.List<String> optionTexts = new ArrayList<String>( 3 );
+	Map<String,String>     basicTexts  = new HashMap<String,String>();
+	if( kc85Basic != null ) {
+	  String optionText = "KC85/2...5";
+	  optionTexts.add( optionText );
+	  basicTexts.put( optionText, kc85Basic );
+	}
+	if( z9001Basic != null ) {
+	  String optionText = "KC87, Z9001";
+	  optionTexts.add( optionText );
+	  basicTexts.put( optionText, z9001Basic );
+	}
+	if( z1013Basic != null ) {
+	  String optionText = "Z1013";
+	  optionTexts.add( optionText );
+	  basicTexts.put( optionText, z1013Basic );
+	}
+	int n = optionTexts.size();
+	if( n == 1 ) {
+	  String optionText = optionTexts.get( 0 );
+	  if( optionText != null ) {
+	    rv = basicTexts.get( optionText );
+	  }
+	}
+	else if( n > 1 ) {
+	  try {
+	    optionTexts.add( "Abbrechen" );
+	    String[] options = optionTexts.toArray( new String[ n + 1 ] );
+	    if( options != null ) {
+	      JOptionPane pane = new JOptionPane(
+		"Das KC-BASIC-Programm enth\u00E4lt Tokens,"
+			+ " die auf den einzelnen\n"
+			+ "Systemen unterschiedliche Anweisungen"
+			+ " repr\u00E4sentieren.\n"
+			+ "Auf welchem System wurde das BASIC-Programm"
+			+ " erstellt?",
+		JOptionPane.QUESTION_MESSAGE );
+	      pane.setOptions( options );
+	      pane.setWantsInput( false );
+	      pane.createDialog(
+			this.editFrm,
+			"BASIC-Version" ).setVisible( true );
+	      Object value = pane.getValue();
+	      if( value != null ) {
+		rv = basicTexts.get( value );
+	      }
+	      if( rv == null ) {
+		throw new UserCancelException();
+	      }
+	    }
+	  }
+	  catch( ArrayStoreException ex ) {}
+	}
+      }
+    }
+    return rv;
   }
 
 

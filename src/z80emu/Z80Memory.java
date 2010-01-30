@@ -13,7 +13,7 @@ import java.lang.*;
 
 public interface Z80Memory extends Z80MemView
 {
-  public void setMemByte( int addr, int value );
+  public boolean setMemByte( int addr, int value );
 
   /*
    * Diese beiden Methoden werden von der Emulation aufgerufen,

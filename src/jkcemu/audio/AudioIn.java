@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -44,11 +44,18 @@ public abstract class AudioIn extends AudioIO
   }
 
 
+  public boolean isPause()
+  {
+    return false;
+  }
+
+
   protected abstract byte[] readFrame();
 
 
   protected void setAudioFormat( AudioFormat fmt )
   {
+    this.audioFmt = fmt;
     if( fmt != null ) {
       int sampleSizeInBits = fmt.getSampleSizeInBits();
 
@@ -65,8 +72,9 @@ public abstract class AudioIn extends AudioIO
       this.sampleSignMask = 0;
       if( this.dataSigned ) {
 	this.sampleSignMask = 1;
-	for( int i = 1; i < sampleSizeInBits; i++ )
+	for( int i = 1; i < sampleSizeInBits; i++ ) {
 	  this.sampleSignMask <<= 1;
+	}
       }
 
       /*
@@ -151,11 +159,13 @@ public abstract class AudioIn extends AudioIO
 	      if( v != -1 ) {
 		int d = this.maxValue - this.minValue;
 		if( this.lastPhase ) {
-		  if( v < this.minValue + (d / 2) )
+		  if( v < this.minValue + (d / 3) ) {
 		    this.lastPhase = false;
+		  }
 		} else {
-		  if( v > this.maxValue - (d / 2) )
+		  if( v > this.maxValue - (d / 3) ) {
 		    this.lastPhase = true;
+		  }
 		}
 	      }
 
@@ -177,20 +187,24 @@ public abstract class AudioIn extends AudioIO
 
   private int readSample()
   {
-    int    value     = -1;
-    byte[] frameData = readFrame();
-    if( frameData != null ) {
-      int offset = this.selectedChannel * this.sampleSizeInBytes;
-      if( offset + this.sampleSizeInBytes <= frameData.length ) {
-	value = 0;
-	if( this.bigEndian ) {
-	  for( int i = 0; i < this.sampleSizeInBytes; i++ )
-	    value = (value << 8) | ((int) frameData[ offset + i ] & 0xFF);
-	} else {
-	  for( int i = this.sampleSizeInBytes - 1; i >= 0; --i )
-	    value = (value << 8) | ((int) frameData[ offset + i ] & 0xFF);
+    int value = -1;
+    if( !isPause() ) {
+      byte[] frameData = readFrame();
+      if( frameData != null ) {
+	int offset = this.selectedChannel * this.sampleSizeInBytes;
+	if( offset + this.sampleSizeInBytes <= frameData.length ) {
+	  value = 0;
+	  if( this.bigEndian ) {
+	    for( int i = 0; i < this.sampleSizeInBytes; i++ ) {
+	      value = (value << 8) | ((int) frameData[ offset + i ] & 0xFF);
+	    }
+	  } else {
+	    for( int i = this.sampleSizeInBytes - 1; i >= 0; --i ) {
+	      value = (value << 8) | ((int) frameData[ offset + i ] & 0xFF);
+	    }
+	  }
+	  value &= this.sampleBitMask;
 	}
-	value &= this.sampleBitMask;
       }
     }
     return value;

@@ -1,21 +1,23 @@
 <html>
 <body>
   <h1>Hinweise zur Emulation des VCS80</h1>
-    Der VCS80 ist ein Eigenbau-Lerncomputer,
+    Der VCS80, auch VCS 80 oder VCS-80 geschrieben,
+    ist ein Eigenbau-Lerncomputer,
     dessen Bauanleitung Eckhard Schiller 1983 in der Zeitschrift
     <em>radio fernsehen elektronik</em> ver&ouml;ffentlicht hat.
   <br/><br/>
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>0,5 KByte ROM im Adressbereich 0000-01FF</li>
-      <li>1 KByte RAM im Adressbereich 0400-07FF</li>
+      <li>0,5&nbsp;KByte ROM im Adressbereich 0000-01FF</li>
+      <li>1&nbsp;KByte RAM im Adressbereich 0400-07FF</li>
       <li>8-stellige 7-Segment-Anzeige</li>
+      <li>Hexadezimaltastatur mit zus&auml;tzlichen Funktionstasten</li>
     </ul>
     Der ROM ist aufgrund der unvollst&auml;ndigen Adressdekodierung
     auch im Bereich 0200-03FF sichtbar.
   <br/><br/>
-    Die 7-Segment-Anzeige hat eigentlich 9 Stellen.
+    Die 7-Segment-Anzeige hat eigentlich 9&nbsp;Stellen.
     Allerdings wird die mittlere Stelle nicht verwendet.
     Somit gibt es vier Stellen links und vier Stellen rechts.
   <br/><br/>
@@ -31,61 +33,61 @@
 	<th valign="top">Bedeutung</th>
       </tr>
       <tr>
-	<td valign="top" nowrap>RESET</td>
-	<td valign="top" nowrap>Escape</td>
+	<td valign="top">RESET</td>
+	<td valign="top">Escape</td>
 	<td valign="top">Zur&uuml;cksetzen</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>PE</td>
-	<td valign="top" nowrap>P</td>
+	<td valign="top">PE</td>
+	<td valign="top">P</td>
 	<td valign="top">
 	  Periphere Eingabe,<br/>
 	  Vom Monitorprogramm mit keiner eigenst&auml;ndigen Funktion belegt
 	</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>ST</td>
-	<td valign="top" nowrap>S</td>
+	<td valign="top">ST</td>
+	<td valign="top">S</td>
 	<td valign="top">Schrittbetrieb</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>TR</td>
-	<td valign="top" nowrap>T</td>
+	<td valign="top">TR</td>
+	<td valign="top">T</td>
 	<td valign="top">Unterbrechnungspunkt eingeben</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>GO</td>
-	<td valign="top" nowrap>G</td>
+	<td valign="top">GO</td>
+	<td valign="top">G</td>
 	<td valign="top">Programm starten</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>RE</td>
-	<td valign="top" nowrap>R</td>
+	<td valign="top">RE</td>
+	<td valign="top">R</td>
 	<td valign="top">Register anzeigen</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>MA</td>
-	<td valign="top" nowrap>M</td>
+	<td valign="top">MA</td>
+	<td valign="top">M</td>
 	<td valign="top">Eingegebene Adresse &uuml;bernehmen</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>A-</td>
-	<td valign="top" nowrap>-</td>
+	<td valign="top">A-</td>
+	<td valign="top">-</td>
 	<td valign="top">Vorherige Adresse</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>A+</td>
-	<td valign="top" nowrap>+</td>
+	<td valign="top">A+</td>
+	<td valign="top">+</td>
 	<td valign="top">N&auml;chste Adresse</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>0...9</td>
-	<td valign="top" nowrap>0...9</td>
+	<td valign="top">0...9</td>
+	<td valign="top">0...9</td>
 	<td valign="top">Adress-/Dateneingabe</td>
       </tr>
       <tr>
-	<td valign="top" nowrap>A...F</td>
-	<td valign="top" nowrap>A...F oder a...f</td>
+	<td valign="top">A...F</td>
+	<td valign="top">A...F oder a...f</td>
 	<td valign="top">Adress-/Dateneingabe</td>
       </tr>
     </table>
@@ -107,7 +109,7 @@
     Nach einem RESET steht links <em>Mo</em> und rechts eine beliebige Adresse.
   <br/><br/>
 
-  <h4>2.1.1. Speicherzellen anzeigen/&auml;ndern</h4>
+  <h3>2.1.1. Speicherzellen anzeigen/&auml;ndern</h3>
     <ol>
       <li>Zur&uuml;cksetzen (Taste <em>RESET&nbsp;(Escape)</em>)</li>
       <li>
@@ -132,22 +134,22 @@
     </ol>
   <br/><br/>
 
-  <h4>2.1.2. Register anzeigen/&auml;ndern</h4>
+  <h3>2.1.2. Register anzeigen/&auml;ndern</h3>
     <em>RESET&nbsp;(Escape)</em> &rarr; <em>RE&nbsp;(R)</em>
   <br/><br/>
     Es wird das AF-Register angezeigt.
-    Mit den Tasten <em>A+&nbsp;(+)</em>, <em>A-&nbsp;(-)</em>, <em>MA&nbsp;(M)</em>
-    <em>RE&nbsp;(R)</em> und <em>GO&nbsp;(G)</em> wechseln Sie zu den Registern
-    BC, DE, HL, IX bzw. IY.
+    Mit den Tasten <em>A+&nbsp;(+)</em>, <em>A-&nbsp;(-)</em>,
+    <em>MA&nbsp;(M)</em> <em>RE&nbsp;(R)</em> und <em>GO&nbsp;(G)</em>
+    wechseln Sie zu den Registern BC, DE, HL, IX bzw. IY.
     Jede andere Funktionstaste f&uuml;hrt zum Hauptzyklus.
   <br/><br/>
 
-  <h4>2.1.3. Programmstart</h4>
+  <h3>2.1.3. Programmstart</h3>
     <em>RESET&nbsp;(Escape)</em> &rarr; <em>GO&nbsp;(G)</em>
     &rarr; &lt;Adresse&gt; &rarr; &lt;beliebige&nbsp;Funktionstaste&gt;
   <br/><br/>
 
-  <h4>2.1.4. Einzelschrittbetrieb</h4>
+  <h3>2.1.4. Einzelschrittbetrieb</h3>
     <em>RESET&nbsp;(Escape)</em> &rarr; &lt;Adresse&gt;
     &rarr; <em>MA&nbsp;(M)</em> &rarr; <em>ST&nbsp;(S)</em>
   <br/><br/>
@@ -173,7 +175,7 @@
     </ul>
   <br/>
 
-  <h4>2.1.5. Unterbrechungspunkt</h4>
+  <h3>2.1.5. Unterbrechungspunkt</h3>
     <em>RESET&nbsp;(Escape)</em> &rarr; <em>TR&nbsp;(T)</em>
     &rarr; &lt;Adresse&gt; &rarr; &lt;beliebige&nbsp;Funktionstaste&gt;
   <br/><br/>

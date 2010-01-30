@@ -20,8 +20,8 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   public static final int DEFAULT_MARGIN = 20;
 
   private ScreenFrm screenFrm;
-  private EmuSys    emuSys;
   private Color     markXORColor;
+  private EmuSys    emuSys;
   private Point     dragStart;
   private Point     dragEnd;
   private boolean   textSelected;
@@ -39,8 +39,8 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   public ScreenFld( ScreenFrm screenFrm )
   {
     this.screenFrm       = screenFrm;
-    this.emuSys          = screenFrm.getEmuThread().getEmuSys();
     this.markXORColor    = new Color( 192, 192, 0 );
+    this.emuSys          = null;
     this.dragStart       = null;
     this.dragEnd         = null;
     this.textSelected    = false;
@@ -76,7 +76,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 
     int w = getWidth();
     int h = getHeight();
-    if( (w > 0) && (h > 0) ) {
+    if( (w > 0) && (h > 0) && (this.emuSys != null) ) {
       int nColors = this.emuSys.getColorCount();
       int value   = nColors - 1;
       int nBits   = 0;
@@ -123,23 +123,26 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 
   public String getSelectedText()
   {
+    String screenText = null;
+    if( this.emuSys != null ) {
+      screenText = this.emuSys.getScreenText(
+					this.selectionCharX1,
+					this.selectionCharY1,
+					this.selectionCharX2,
+					this.selectionCharY2 );
+    }
     return (this.selectionCharX1 >= 0)
 		&& (this.selectionCharY1 >= 0)
 		&& (this.selectionCharX2 >= 0)
-		&& (this.selectionCharY2 >= 0) ?
-					this.emuSys.getScreenText(
-							this.selectionCharX1,
-							this.selectionCharY1,
-							this.selectionCharX2,
-							this.selectionCharY2 )
-					: null;
+		&& (this.selectionCharY2 >= 0) ?  screenText : null;
   }
 
 
   public void setEmuSys( EmuSys emuSys )
   {
-    clearSelection();
     this.emuSys = emuSys;
+    clearSelection();
+    updPreferredSize();
   }
 
 
@@ -162,14 +165,15 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   public void updPreferredSize()
   {
     clearSelection();
-    int margin = this.margin;
-    if( margin < 0 ) {
-      margin = 0;
-    }
-    setPreferredSize( new Dimension(
+    if( this.emuSys != null ) {
+      int margin = this.margin;
+      if( margin < 0 ) {
+	margin = 0;
+      }
+      setPreferredSize( new Dimension(
 	(2 * margin) + (this.emuSys.getScreenWidth() * this.screenScale),
 	(2 * margin) + (this.emuSys.getScreenHeight() * this.screenScale) ) );
-
+    }
     Container parent = getParent();
     if( parent != null ) {
       parent.invalidate();
@@ -183,7 +187,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 
   public void mouseDragged( MouseEvent e )
   {
-    if( e.getComponent() == this ) {
+    if( (e.getComponent() == this) && (this.emuSys != null) ) {
       if( this.emuSys.canExtractScreenText()
 	  && (this.emuSys.getCharColCount() > 0)
 	  && (this.emuSys.getCharRowCount() > 0)
@@ -236,7 +240,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   private void paint( Graphics g, int w, int h, boolean withMarking )
   {
     boolean textSelected = false;
-    if( (w > 0) && (h > 0) ) {
+    if( (w > 0) && (h > 0) && (this.emuSys != null) ) {
 
       // Hintergrund
       int bgColorIdx = this.emuSys.getBorderColorIndex();
@@ -319,21 +323,23 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	int hRow  = this.emuSys.getCharRowHeight();
 	int hChar = this.emuSys.getCharHeight();
 	int wChar = this.emuSys.getCharWidth();
-	if( (nCols > 0) && (nRows > 0) && (hRow > 0) && (hChar > 0) && (wChar > 0) ) {
+	if( (nCols > 0) && (nRows > 0)
+	    && (hRow > 0) && (hChar > 0) && (wChar > 0) )
+	{
 	  int x1 = this.dragStart.x;
 	  int y1 = this.dragStart.y;
 	  int x2 = this.dragEnd.x;
 	  int y2 = this.dragEnd.y;
 
 	  // Zeichenpositionen berechnen
-	  this.selectionCharX1 = Math.max( (x1 - this.xOffs) / this.screenScale, 0 )
-					/ wChar;
-	  this.selectionCharY1 = Math.max( (y1 - this.yOffs) / this.screenScale, 0 )
-					/ hRow;
-	  this.selectionCharX2 = Math.max( (x2 - this.xOffs) / this.screenScale, 0 )
-					/ wChar;
-	  this.selectionCharY2 = Math.max( (y2 - this.yOffs) / this.screenScale , 0 )
-					/ hRow;
+	  this.selectionCharX1 = Math.max(
+			(x1 - this.xOffs) / this.screenScale, 0 ) / wChar;
+	  this.selectionCharY1 = Math.max(
+			(y1 - this.yOffs) / this.screenScale, 0 ) / hRow;
+	  this.selectionCharX2 = Math.max(
+			(x2 - this.xOffs) / this.screenScale, 0 ) / wChar;
+	  this.selectionCharY2 = Math.max(
+			(y2 - this.yOffs) / this.screenScale , 0 ) / hRow;
 	  if( this.selectionCharX1 >= nCols ) {
 	    this.selectionCharX1 = nCols - 1;
 	  }
@@ -369,7 +375,10 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	    y2 = m;
 	  }
 
-	  // Koordinaten anpassen, wenn Endpunkt ausserhalb der Bildschirmausgabe liegt
+	  /*
+	   * Koordinaten anpassen,
+	   * wenn Endpunkt ausserhalb der Bildschirmausgabe liegt
+	   */
 	  if( y1 < this.yOffs ) {
 	    this.selectionCharX1 = 0;
 	    this.selectionCharY1 = 0;
@@ -398,7 +407,8 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	    g.fillRect(
 		this.xOffs + (this.screenScale * this.selectionCharX1 * wChar),
 		this.yOffs + (this.screenScale * this.selectionCharY1 * hRow),
-		this.screenScale * (this.selectionCharX2 - this.selectionCharX1 + 1) * wChar,
+		this.screenScale * (this.selectionCharX2
+					- this.selectionCharX1 + 1) * wChar,
 		this.screenScale * hChar );
 	  } else {
 	    g.fillRect(
@@ -409,10 +419,11 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	    if( this.selectionCharY1 + 1 < this.selectionCharY2 ) {
 	      g.fillRect(
 		this.xOffs,
-		this.yOffs + (this.screenScale * (this.selectionCharY1 + 1) * hRow),
+		this.yOffs + (this.screenScale * (this.selectionCharY1 + 1)
+								* hRow),
 		this.screenScale * nCols * wChar,
-		this.screenScale * (this.selectionCharY2 - this.selectionCharY1 - 1)
-									* hRow );
+		this.screenScale * (this.selectionCharY2
+					- this.selectionCharY1 - 1) * hRow );
 	    }
 	    g.fillRect(
 		this.xOffs,

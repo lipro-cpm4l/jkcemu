@@ -82,6 +82,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     }
     this.videoBaseAddr = 0;
     createIOSystem();
+    checkAddPCListener( props );
     reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
@@ -182,6 +183,13 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    checkAddPCListener( props );
+  }
+
 
   public int getAppStartStackInitValue()
   {
@@ -372,7 +380,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 
   public void saveBasicProgram()
   {
-    int endAddr = SourceUtil.getKCStyleBasicEndAddr( this.emuThread, 0x3770 );
+    int endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x3770 );
     if( endAddr >= 0x3770 ) {
       (new SaveDlg(
 		this.screenFrm,
@@ -402,6 +410,12 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
       rv = true;
     }
     return rv;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
   }
 
 
@@ -447,6 +461,12 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 
 
 	/* --- private Methoden --- */
+
+  private void checkAddPCListener( Properties props )
+  {
+    checkAddPCListener( props, "jkcemu.hgmc.catch_print_calls" );
+  }
+
 
   private static boolean hasBasic( Properties props )
   {

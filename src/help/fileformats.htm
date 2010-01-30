@@ -1,6 +1,15 @@
 <html>
 <body>
   <h1>Dateiformate</h1>
+    <b>Achtung!</b> Diese Seite beschreibt die Dateiformate,
+    die zum Laden von Daten und Programmen in den Arbeitsspeicher
+    des Emulators benutzt werden.
+    Eine Beschreibung der Formate f&uuml;r Diskettenabbilddateien
+    finden Sie unter:
+    <ul>
+      <a href="disk/diskimgformats.htm">Dateiformate f&uuml;r Abbilddateien</a>
+    </ul>
+  <br/>
     JKCEMU unterst&uuml;tzt verschiedene Dateiformate,
     sowohl f&uuml;r das Laden als auch f&uuml;r das Speichern.
     Einige Dateiformate eignen sich nur f&uuml;r bestimmte Arten von Daten,
@@ -10,12 +19,12 @@
     Prinzipiell k&ouml;nnen Sie in jedem dieser Dateiformate
     die Programme und Daten eines jeden emulierten Systems speichern.
     Es empfiehlt sich aber,
-    Programme immer in einem der Formate zu speichern,
+    Programme immer nur in einem der Formate zu speichern,
     die f&uuml;r das emulierte System &uuml;blich sind.
   <br/><br/>
     Folgende Formate werden unterst&uuml;tzt:
   <br/>
-    <ul>
+    <ol>
       <li><a href="fileformats.htm#headersave">Headersave-Format</a></li>
       <li><a href="fileformats.htm#kcb">KCB-Format</a></li>
       <li><a href="fileformats.htm#kcc">KCC-Format</a></li>
@@ -23,11 +32,11 @@
       <li><a href="fileformats.htm#tap">KC-TAP-Format</a></li>
       <li><a href="fileformats.htm#hex">Intel-HEX-Format</a></li>
       <li><a href="fileformats.htm#bin">Speicherabbilddatei</a></li>
-    </ul>
+    </ol>
   <br/><br/>
 
 
-  <h2><a name="headersave">Headersave-Format</a></h2>
+  <h2><a name="headersave">1. Headersave-Format</a></h2>
     Das Headersave-Format ist quasi das Standardformat beim Z1013.
     Es bietet sich, dieses Format im Emulatorumfeld auch als Standardformat
     f&uuml;r AC1-Daten zu verwenden.
@@ -143,7 +152,7 @@
     Das gilt auch f&uuml;r die Adressangaben im Kopfblock.
   <br/><br/>
 
-  <h3>Headersave-Kassettenaufzeichnungsformat</h3>
+  <h3>1.1. Headersave-Kassettenaufzeichnungsformat</h3>
     Die beiden originalen Z1013-Monitorprogramme (2.02 und A.2)
     speichern Programmme und Daten, indem ein Bereich des Arbeitsspeichers
     auf den Massenspeicher (Magnettonband) geschrieben wird.
@@ -173,7 +182,7 @@
   <br/><br/>
 
 
-  <h2><a name=kcb">KCB-Format</a></h2>
+  <h2><a name=kcb">2. KCB-Format</a></h2>
     Das KCB-Format ist identisch zum KCC-Format (siehe weiter unten).
     Die unterschiedliche Dateiendung besagt nur,
     dass die Datei ein KC-BASIC-Programm enth&auml;lt,
@@ -198,7 +207,7 @@
     Allerdings wird dann das BASIC-Programm nicht mehr reloziert.
   <br/><br/>
 
-  <h2><a name=kcc">KCC-Format</a></h2>
+  <h2><a name=kcc">3. KCC-Format</a></h2>
     Das KCC-Format wird von mehreren KC-Emulatoren verwendet
     und hat seinen Ursprung im Kassettenaufzeichnungsformat
     der KC-Computer (KC85/1-4, KC87, Z9001).
@@ -328,7 +337,7 @@
     laden will oder umgekehrt.
   <br/><br/>
 
-  <h3><a name="jtc">JTC-Format</a></h3>
+  <h3><a name="jtc">3.1. JTC-Format</a></h3>
     Der Jugend+Technik-Computer verwendet in der Ausbaustufe mit dem
     erweiterten Betriebssystem <em>EMR-ES 1988</em>
     das Kassettenaufzeichnungsformat der KC-Computer.
@@ -337,7 +346,7 @@
     Um jedoch deutlich zu machen,
     dass eine solche Datei kein KC-Programm sondern ein
     Ju+Te-Computer-Programm enth&auml;lt,
-    wird das Format bei JTCEMU <em>JTC-</em>Format genannt
+    wird das Format bei JTCEMU <em>JTC-</em>Format genannt,
     und die Dateiendung ist <em>*.jtc</em>.
   <br/><br/>
     <b>Achtung!</b> Entgegen der KC85/3-Dokumentation tr&auml;gt
@@ -352,7 +361,7 @@
   <br/><br/>
 
 
-  <h2><a name="kcbasic">KC-BASIC-Programmdatei</a></h2>
+  <h2><a name="kcbasic">4. KC-BASIC-Programmdatei</a></h2>
     Eine KC-BASIC-Programmdatei hat &uuml;blicherweise die Dateiendung
     <em>*.sss</em> und enth&auml;lt am Anfang zwei Bytes
     die die L&auml;ge des BASIC-Programms angeben.
@@ -375,7 +384,7 @@
   <br/><br/>
 
 
-  <h2><a name="tap">KC-TAP-Format</a></h2>
+  <h2><a name="tap">5. KC-TAP-Format</a></h2>
     Das KC-TAP-Format wurde von Arne Fitzenreiter definiert
     und wird von vielen KC-Emulatoren verwendet.
     Es ist nicht nur inhaltlich, sondern auch verwaltungstechnisch
@@ -440,24 +449,52 @@
     erh&auml;lt man entweder das KCC- oder das KC-BASIC-Programmdateiformat,
     je nachdem, was die KC-TAP-Datei enth&auml;lt.
   <br/><br/>
-    Eine KC-TAP-Datei kann aber auch ein KC-BASIC-Programm im ASCII-Format
-    oder ein KC-BASIC-Datenfeld enthalten.
-    Diese Formate werden von JKCEMU nicht unterst&uuml;tzt.
-  <br/><br/>
-    Mehrere KC-TAP-Dateien k&ouml;nnen zu einer Datei zusammengekettet werden,
-    was sinngem&auml;&szlig; mehrere hintereinander liegende
-    Kassettenaufzeichnungen bedeutet.
-    JKCEMU unterst&uuml;tzt zusammengekettete KC-TAP-Dateien nicht,
-    d.h., bei einer solchen Datei liest der Emulator nur die erste
-    Teildatei.
-  <br/><br/>
     <b>Achtung!</b> Bez&uuml;glich der beim KC-TAP-Format im Kopfblock
     eingetragenen Endadresse gilt das gleiche wie beim KCC-Format
     (siehe <a href="fileformats.htm#kcc_endaddr">hier</a>).
   <br/><br/>
+    <b>Hinweis:</b> KC-TAP-Dateien k&ouml;nnen auch mit den
+    <a href="audio.htm">Audio-Funktionen</a> wie Sound-Dateien eingelesen werden.
+    Das ist &uuml;brigens der einzige Weg, KC-TAP-Dateien in JKCEMU zu laden,
+    die ein KC-BASIC-Programm im ASCII-Format oder ein KC-BASIC-Datenfeld enthalten.
+  <br/><br/>
+    <b>Hinweis:</b> Im <a href="tools/filebrowser.htm">Datei-Browser</a>
+    k&ouml;nnen KC-TAP-Dateien in Sound-Dateien exportiert werden.
+  <br/><br/>
+
+  <h3><a name="multi_tap">5.1. Multi-TAP-Dateien</a></h3>
+    Mehrere KC-TAP-Dateien k&ouml;nnen zu einer Datei zusammengekettet werden,
+    was sinngem&auml;&szlig; mehrere, hintereinander liegende
+    Kassettenaufzeichnungen bedeutet.
+    Solche Dateien hei&szlig;en <em>Multi-TAP-Dateien</em>.
+  <br/><br/>
+    Multi-TAP-Dateien eignen sich f&uuml;r Programme,
+    die aus mehreren Dateien bestehen.
+    Meistens handelt es sich dabei um Spielprogramme.
+    Die ersten Datei, d.h. die erste Kassettenaufnahme,
+    enth&auml;lt h&auml;ufig nur ein kleines Programm,
+    welches ein Startbild anzeigt und anschlie&szlig;end die restlichen Dateien,
+    d.h., die nachfolgenden Kassettenaufnahmen, einliest
+    und anschlie&szlig;end das eigentliche Programm startet.
+  <br/><br/>
+    JKCEMU unterst&uuml;tzt Multi-TAP-Dateien folgenderma&szlig;en:
+    <ol>
+      <li>
+	Beim Laden in den Arbeitsspeicher wird nur die erste Teildatei geladen
+	und ggf. gestartet.
+      </li>
+      <li>
+	JKCEMU erkennt das Vorhandensein weiterer Teildateien und fragt den Benutzer,
+	ob diese dem Audio-System vorgelegt werden sollen,
+	damit sie dar&uuml;ber eingelesen werden k&ouml;nnen.
+      </li>
+    </ol>
+    Unabh&auml;gig davon k&ouml;nnen Multi-TAP-Dateien auch vollst&auml;ndig
+    &uuml;ber die Audio-Funktionen eingelesen werden.
+  <br/><br/>
 
 
-  <h2><a name="hex">Intel-HEX-Format</a></h2>
+  <h2><a name="hex">6. Intel-HEX-Format</a></h2>
     In einer Intel-HEX-Datei werden die bin&auml;ren Daten als hexadezimale
     Zahlen in textueller Form gespeichert,
     d.h., die Intel-HEX-Datei ist eine reine ASCII-Datei.
@@ -530,7 +567,7 @@
   <br/><br/>
 
 
-  <h2><a name="bin">Speicherabbilddatei (Image-Datei)</a></h2>
+  <h2><a name="bin">7. Speicherabbilddatei</a></h2>
     Eine Speicherabbilddatei enth&auml;lt ein reines Abbild
     eines Teils des Arbeitsspeichers des Emulators.
     Es sind keine Kopfdaten enthalten, d.h.,

@@ -223,13 +223,28 @@ public class BasicDlg extends JDialog implements
   /*
    * Diese Methoden zeigen eine Fehlermeldung an.
    */
-  public static void showErrorDlg( Component owner, Exception ex )
+  public static void showErrorDlg( Component owner, String msg, Exception ex )
   {
-    String msg = ex.getMessage();
+    String exMsg = null;
+    if( ex != null ) {
+      exMsg = ex.getMessage();
+      if( exMsg == null ) {
+	exMsg = ex.getClass().getName();
+      }
+    }
+    if( (msg != null) && (exMsg != null) ) {
+      msg = msg + "\n\n" + exMsg;
+    }
     if( msg == null ) {
-      msg = ex.getClass().getName();
+      msg = exMsg;
     }
     showErrorDlg( owner, msg );
+  }
+
+
+  public static void showErrorDlg( Component owner, Exception ex )
+  {
+    showErrorDlg( owner, null, ex );
   }
 
 
@@ -239,14 +254,11 @@ public class BasicDlg extends JDialog implements
   }
 
 
-  public static void showErrorDlg(
-				Component owner,
-				String    msg,
-				String    title )
+  public static void showErrorDlg( Component owner, String msg, String title )
   {
     JOptionPane.showMessageDialog(
 		owner,
-		msg,
+		msg != null ? msg : "Unbekannter Fehler",
 		title,
 		JOptionPane.ERROR_MESSAGE );
   }
@@ -262,6 +274,38 @@ public class BasicDlg extends JDialog implements
 	"Die Datei \'" + file.getPath()
 		+ "\'\nkann nicht ge\u00F6ffnet werden.\n\n"
 		+ ex.getMessage() );
+  }
+
+
+  /*
+   * Diese Methode zeigt einen Dialog mit waehlbaren Optionen an.
+   *
+   * Rueckgabewert:
+   *	Index der Option oder -1, wenn Dialog
+   *	ueber Fenstermanager geschlossen wurde.
+   */
+  public static int showOptionDlg(
+				Component owner,
+				String    msg,
+				String    title,
+				String[]  options )
+  {
+    int         rv   = -1;
+    JOptionPane pane = new JOptionPane( msg, JOptionPane.QUESTION_MESSAGE );
+    pane.setOptions( options );
+    pane.createDialog( owner, title ).setVisible( true );
+
+    // ausgewaehlter Knopf ermitteln
+    Object selOption = pane.getValue();
+    if( selOption != null ) {
+      for( int i = 0; i < options.length; i++ ) {
+	if( selOption == options[ i ] ) {
+	  rv = i;
+	  break;
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -301,35 +345,6 @@ public class BasicDlg extends JDialog implements
 
 
   /*
-   * Diese Methode zeigt einen Dialog mit waehlbaren Optionen an.
-   *
-   * Rueckgabewert:
-   *	Index der Option oder -1, wenn Dialog
-   *	ueber Fenstermanager geschlossen wurde.
-   */
-  public static int showOptionDlg(
-				Component owner,
-				String    msg,
-				String    title,
-				String[]  options )
-  {
-    JOptionPane pane = new JOptionPane( msg, JOptionPane.QUESTION_MESSAGE );
-    pane.setOptions( options );
-    pane.createDialog( owner, title ).setVisible( true );
-
-    // ausgewaehlter Knopf ermitteln
-    Object selOption = pane.getValue();
-    if( selOption != null ) {
-      for( int i = 0; i < options.length; i++ ) {
-	if( selOption == options[ i ] )
-	  return i;
-      }
-    }
-    return -1;
-  }
-
-
-  /*
    * Diese Methoden zeigen einen Ja-Nein-Dialog an.
    *
    * Rueckgabewert:
@@ -347,20 +362,16 @@ public class BasicDlg extends JDialog implements
 				String    msg,
 				String    title )
   {
-    String optionYes = "Ja";
-    String optionNo  = "Nein";
+    return showYesNoDlg( owner, msg, title, JOptionPane.QUESTION_MESSAGE );
+  }
 
-    String[] options = new String[ 2 ];
-    options[ 0 ] = optionYes;
-    options[ 1 ] = optionNo;
 
-    JOptionPane pane = new JOptionPane( msg, JOptionPane.QUESTION_MESSAGE );
-    pane.setOptions( options );
-    pane.createDialog( owner, title ).setVisible( true );
-
-    // ausgewaehlter Knopf ermitteln
-    Object selOption = pane.getValue();
-    return ((selOption != null) && (selOption == optionYes)) ? true : false;
+  public static boolean showYesNoWarningDlg(
+				Component owner,
+				String    msg,
+				String    title )
+  {
+    return showYesNoDlg( owner, msg, title, JOptionPane.WARNING_MESSAGE );
   }
 
 
@@ -396,5 +407,26 @@ public class BasicDlg extends JDialog implements
     }
     return false;
   }
-}
 
+
+  private static boolean showYesNoDlg(
+				Component owner,
+				String    msg,
+				String    title,
+				int       msgType )
+  {
+    String optionYes = "Ja";
+    String optionNo  = "Nein";
+
+    String[] options = new String[ 2 ];
+    options[ 0 ] = optionYes;
+    options[ 1 ] = optionNo;
+
+    JOptionPane pane = new JOptionPane( msg, msgType );
+    pane.setOptions( options );
+    pane.createDialog( owner, title ).setVisible( true );
+
+    Object selOption = pane.getValue();
+    return ((selOption != null) && (selOption == optionYes)) ? true : false;
+  }
+}

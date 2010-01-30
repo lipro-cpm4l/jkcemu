@@ -1,9 +1,9 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Knoten im Baum des Datei-Browsers
+ * Erweiterter Knoten im Baum des Datei-Browsers
  */
 
 package jkcemu.filebrowser;
@@ -15,95 +15,70 @@ import javax.imageio.ImageIO;
 import javax.sound.sampled.*;
 import javax.swing.tree.*;
 import jkcemu.base.*;
+import jkcemu.disk.DiskUtil;
 
 
-public class FileNode implements TreeNode
+public class FileNode extends FileTreeNode
 {
   private static final String[] archiveFileExtensions  = {
-					".JAR", ".TAR.GZ", ".TAR", ".TGZ",
-					".ZIP" };
+					".jar", ".tar.gz", ".tar", ".tgz",
+					".zip" };
 
   private static final String[] textFileExtensions  = {
-					".ASC", ".ASM", ".BAS", ".BAT",
-					".C", ".CC", ".CMD", ".CPP", ".CSH",
-					".H", ".JAVA", ".LOG", ".SH", ".TXT" };
+					".asc", ".asm", ".bas", ".bat",
+					".c", ".cc", ".cmd", ".cpp", ".csh",
+					".h", ".java", ".log", ".sh", ".txt" };
 
   private static String[] imageFileExtensions = null;
 
-  private TreeNode           parent;
-  private File               file;
   private int                hsFileType;
-  private boolean            fileSystemRoot;
   private boolean            fileChecked;
   private boolean            audioFile;
   private boolean            archiveFile;
   private boolean            compressedFile;
   private boolean            headersaveFile;
   private boolean            imageFile;
+  private boolean            plainDiskFile;
+  private boolean            anadiskFile;
+  private boolean            telediskFile;
   private boolean            textFile;
+  private boolean            tapFile;
   private boolean            startableFile;
-  private boolean            childrenLoaded;
-  private boolean            leaf;
   private FileInfo           fileInfo;
-  private Vector<FileNode>   vChildren;
   private Map<File,FileNode> fileToChild;
-  private String             nodeName;
 
 
   public FileNode( TreeNode parent, File file, boolean fileSystemRoot )
   {
-    this.parent         = parent;
-    this.file           = file;
+    super( parent, file, fileSystemRoot );
     this.hsFileType     = -1;
-    this.fileSystemRoot = fileSystemRoot;
     this.fileChecked    = false;
     this.audioFile      = false;
     this.archiveFile    = false;
     this.compressedFile = false;
     this.headersaveFile = false;
     this.imageFile      = false;
+    this.plainDiskFile  = false;
+    this.anadiskFile    = false;
+    this.telediskFile   = false;
     this.textFile       = false;
+    this.tapFile        = false;
     this.startableFile  = false;
-    this.childrenLoaded = false;
-    this.leaf           = !fileSystemRoot;
     this.fileInfo       = null;
-    this.vChildren      = null;
     this.fileToChild    = null;
-    if( this.leaf && (this.file != null) ) {
-      if( this.file.isDirectory() )
-	this.leaf = false;
-    }
-    updNodeText();
   }
 
 
-  public void add( FileNode fileNode )
-  {
-    if( this.vChildren == null ) {
-      this.vChildren = new Vector<FileNode>();
-    }
-    this.vChildren.add( fileNode );
-    this.leaf = false;
-  }
-
-
-  public boolean fileNameEndsWith( String suffix )
+  protected boolean fileNameEndsWith( String suffix )
   {
     boolean rv = false;
     if( (this.file != null) && (suffix != null) ) {
       String fName = this.file.getName();
       if( fName != null ) {
-	rv = fName.toUpperCase( Locale.ENGLISH ).endsWith(
-			suffix.toUpperCase( Locale.ENGLISH ) );
+	rv = fName.toLowerCase().endsWith( suffix );
       }
     }
     return rv;
-  }
-
-
-  public File getFile()
-  {
-    return this.file;
   }
 
 
@@ -118,6 +93,13 @@ public class FileNode implements TreeNode
   {
     ensureFileChecked();
     return this.hsFileType;
+  }
+
+
+  public boolean isAnadiskFile()
+  {
+    ensureFileChecked();
+    return this.anadiskFile;
   }
 
 
@@ -142,12 +124,6 @@ public class FileNode implements TreeNode
   }
 
 
-  public boolean isFileSystemRoot()
-  {
-    return this.fileSystemRoot;
-  }
-
-
   public boolean isHeadersaveFile()
   {
     ensureFileChecked();
@@ -162,10 +138,31 @@ public class FileNode implements TreeNode
   }
 
 
+  public boolean isPlainDiskFile()
+  {
+    ensureFileChecked();
+    return this.plainDiskFile;
+  }
+
+
   public boolean isStartableFile()
   {
     ensureFileChecked();
     return this.startableFile;
+  }
+
+
+  public boolean isTAPFile()
+  {
+    ensureFileChecked();
+    return this.tapFile;
+  }
+
+
+  public boolean isTelediskFile()
+  {
+    ensureFileChecked();
+    return this.telediskFile;
   }
 
 
@@ -178,9 +175,8 @@ public class FileNode implements TreeNode
 
   public void setFile( File file )
   {
-    this.file        = file;
+    super.setFile( file );
     this.fileChecked = false;
-    updNodeText();
   }
 
 
@@ -191,14 +187,15 @@ public class FileNode implements TreeNode
 		FileComparator   fileComparator )
   {
     if( forceLoadChildren || this.childrenLoaded ) {
-      java.util.List<FileNode> oldChildren = this.vChildren;
-      this.vChildren                       = null;
+      java.util.List<FileTreeNode> oldChildren = this.vChildren;
+      this.vChildren                           = null;
 
       boolean fileSystemRoots = false;
       File[]  entries         = null;
       if( this.file != null ) {
-	if( this.file.isDirectory() )
+	if( this.file.isDirectory() ) {
 	  entries = this.file.listFiles();
+	}
       } else {
 	fileSystemRoots = true;
 	entries         = File.listRoots();
@@ -213,7 +210,7 @@ public class FileNode implements TreeNode
 
 	  // Eintraege lesen und mit alten Eintraegen vergleichen
 	  Map<File,FileNode> fileToChild = new HashMap<File,FileNode>();
-	  this.vChildren = new Vector<FileNode>( entries.length );
+	  this.vChildren = new Vector<FileTreeNode>( entries.length );
 
 	  boolean changed      = false;
 	  int     nChildren    = 0;
@@ -269,8 +266,14 @@ public class FileNode implements TreeNode
 	    if( !changed ) {
 	      tmpModel = model;
 	    }
-	    for( FileNode child : this.vChildren ) {
-	      child.refresh( tmpModel, false, hiddenFiles, fileComparator );
+	    for( FileTreeNode child : this.vChildren ) {
+	      if( child instanceof FileNode ) {
+		((FileNode) child).refresh(
+					tmpModel,
+					false,
+					hiddenFiles,
+					fileComparator );
+	      }
 	    }
 	  }
 
@@ -315,90 +318,20 @@ public class FileNode implements TreeNode
 	  isParent = true;
 	}
 	if( isParent ) {
-	  for( FileNode child : this.vChildren ) {
-	    child.refreshNodeFor(
-			file,
-			model,
-			forceLoadChildren,
-			hiddenFiles,
-			fileComparator );
+	  for( FileTreeNode child : this.vChildren ) {
+	    if( child instanceof FileNode ) {
+	      ((FileNode) child).refreshNodeFor(
+					file,
+					model,
+					forceLoadChildren,
+					hiddenFiles,
+					fileComparator );
+	    }
 	  }
 	}
       }
       catch( IOException ex ) {}
     }
-  }
-
-
-  public void removeAllChildren()
-  {
-    this.vChildren.clear();
-  }
-
-
-  public void removeFromParent()
-  {
-    if( this.parent != null ) {
-      if( this.parent instanceof FileNode )
-	((FileNode) this.parent).vChildren.remove( this );
-    }
-  }
-
-
-  public String toString()
-  {
-    return this.nodeName;
-  }
-
-
-	/* --- TreeNode --- */
-
-  public Enumeration children()
-  {
-    if( this.vChildren == null ) {
-      this.vChildren = new Vector<FileNode>();
-    }
-    return this.vChildren.elements();
-  }
-
-
-  public boolean getAllowsChildren()
-  {
-    return !this.leaf;
-  }
-
-
-  public TreeNode getChildAt( int pos )
-  {
-    if( this.vChildren != null ) {
-      if( (pos >= 0) && (pos < this.vChildren.size()) )
-	return this.vChildren.get( pos );
-    }
-    return null;
-  }
-
-
-  public int getChildCount()
-  {
-    return this.vChildren != null ? this.vChildren.size() : 0;
-  }
-
-
-  public int getIndex( TreeNode item )
-  {
-    return this.vChildren != null ? this.vChildren.indexOf( item ) : -1;
-  }
-
-
-  public TreeNode getParent()
-  {
-    return this.parent;
-  }
-
-
-  public boolean isLeaf()
-  {
-    return this.leaf;
   }
 
 
@@ -437,20 +370,41 @@ public class FileNode implements TreeNode
 	  if( !this.audioFile ) {
 	    String fName = this.file.getName();
 	    if( fName != null ) {
-	      fName = fName.toUpperCase();
-	      if( fName.endsWith( ".GZ" ) ) {
-		this.compressedFile = true;
-		done                = true;
-	      }
+	      fName = fName.toLowerCase();
 	      if( endsWith( fName, archiveFileExtensions ) ) {
 		this.archiveFile = true;
 		done             = true;
+	      } else if( endsWith( fName, DiskUtil.anadiskFileExt ) ) {
+		this.anadiskFile = true;
+		done             = true;
+	      } else if( endsWith( fName, DiskUtil.telediskFileExt ) ) {
+		this.telediskFile = true;
+		done              = true;
+	      } else if( endsWith( fName, DiskUtil.plainDiskFileExt ) ) {
+		this.plainDiskFile = true;
+		done               = true;
+	      } else if( endsWith( fName, DiskUtil.gzAnadiskFileExt ) ) {
+		this.anadiskFile    = true;
+		this.compressedFile = true;
+		done                = true;
+	      } else if( endsWith( fName, DiskUtil.gzTelediskFileExt ) ) {
+		this.telediskFile   = true;
+		this.compressedFile = true;
+		done                = true;
+	      } else if( endsWith( fName, DiskUtil.gzPlainDiskFileExt ) ) {
+		this.plainDiskFile  = true;
+		this.compressedFile = true;
+		done                = true;
 	      } else if( endsWith( fName, textFileExtensions ) ) {
 		this.textFile = true;
 		done          = true;
 	      } else if( endsWith( fName, getImageFileExtensions() ) ) {
 		this.imageFile = true;
 		done           = true;
+	      }
+	      else if( fName.endsWith( ".gz" ) ) {
+		this.compressedFile = true;
+		done                = true;
 	      }
 	    }
 	  }
@@ -459,6 +413,11 @@ public class FileNode implements TreeNode
 	  if( !done ) {
 	    this.fileInfo = FileInfo.analyzeFile( this.file );
 	    if( this.fileInfo != null ) {
+	      if( this.fileInfo.equalsFileFormat( FileInfo.KCTAP_SYS )
+		  || this.fileInfo.equalsFileFormat( FileInfo.KCTAP_BASIC ) )
+	      {
+		this.tapFile = true;
+	      }
 	      int    begAddr   = this.fileInfo.getBegAddr();
 	      int    endAddr   = this.fileInfo.getEndAddr();
 	      int    startAddr = this.fileInfo.getStartAddr();
@@ -489,28 +448,14 @@ public class FileNode implements TreeNode
 	for( int i = 0; i < imageFileExtensions.length; i++ ) {
 	  String ext = imageFileExtensions[ i ];
 	  if( ext.startsWith( "." ) ) {
-	    imageFileExtensions[ i ] = ext.toUpperCase();
+	    imageFileExtensions[ i ] = ext.toLowerCase();
 	  } else {
-	    imageFileExtensions[ i ] = "." + ext.toUpperCase();
+	    imageFileExtensions[ i ] = "." + ext.toLowerCase();
 	  }
 	}
       }
     }
     return imageFileExtensions;
-  }
-
-
-  private void updNodeText()
-  {
-    this.nodeName = null;
-    if( this.file != null ) {
-      this.nodeName = (isFileSystemRoot() ?
-				this.file.getPath()
-				: this.file.getName());
-    }
-    if( this.nodeName == null ) {
-      this.nodeName = "?";
-    }
   }
 }
 

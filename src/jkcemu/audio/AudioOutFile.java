@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,8 +22,6 @@ public class AudioOutFile extends AudioOut
   private AudioFrm             audioFrm;
   private File                 file;
   private AudioFileFormat.Type fileType;
-  private boolean              monitorPlay;
-  private AudioFormat          audioFmt;
   private AudioDataQueue       queue;
 
 
@@ -31,27 +29,38 @@ public class AudioOutFile extends AudioOut
 		Z80CPU               z80cpu,
 		AudioFrm             audioFrm,
 		File                 file,
-		AudioFileFormat.Type fileType,
-		boolean              monitorPlay )
+		AudioFileFormat.Type fileType )
   {
     super( z80cpu );
-    this.audioFrm    = audioFrm;
-    this.file        = file;
-    this.fileType    = fileType;
-    this.monitorPlay = monitorPlay;
-    this.audioFmt    = null;
-    this.queue       = null;
+    this.audioFrm = audioFrm;
+    this.file     = file;
+    this.fileType = fileType;
+    this.audioFmt = null;
+    this.queue    = null;
   }
 
 
-  public AudioFormat startAudio( int speedKHz, int sampleRate )
+  /*
+   * Wenn die Pause zu groess ist,
+   * wird das Schreiben der Sound-Datei abgebrochen.
+   */
+  protected void currentTStates( int tStates, int diffTStates )
+  {
+    if( diffTStates > this.maxPauseTStates ) {
+      this.lastTStates = tStates;
+      this.enabled     = false;
+      this.audioFrm.fireDisable();
+    }
+  }
+
+
+  public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     if( this.queue == null ) {
       if( speedKHz > 0 ) {
-
-	if( sampleRate <= 0 )
+	if( sampleRate <= 0 ) {
 	  sampleRate = 44100;
-
+	}
 	this.queue           = new AudioDataQueue( sampleRate * 60 );
 	this.maxPauseTStates = speedKHz * 1000;		// 1 Sekunde
 	this.enabled         = true;
@@ -64,8 +73,6 @@ public class AudioOutFile extends AudioOut
 	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
 					/ this.audioFmt.getFrameRate() );
 
-	if( this.monitorPlay )
-	  openMonitorLine( this.audioFmt );
       }
     }
     return this.audioFmt;
@@ -79,7 +86,10 @@ public class AudioOutFile extends AudioOut
     AudioDataQueue queue = this.queue;
     this.enabled         = false;
     this.errorText       = queue.getErrorText();
-    if( (this.errorText == null) && (queue.length() > 0) ) {
+    if( (this.errorText == null)
+	&& (queue.length() > 0)
+	&& (this.audioFmt != null) )
+    {
       try {
 	queue.addOpposedPhase();	// Halbschwingung anhaengen
 	AudioSystem.write(
@@ -98,20 +108,13 @@ public class AudioOutFile extends AudioOut
       this.errorText = "Die Sound-Datei wurde nicht gespeichert,\n"
 			+ "da keine Audio-Daten erzeugt wurden.";
     }
+    this.audioFmt = null;
   }
 
 
-  /*
-   * Wenn die Pause zu groess ist,
-   * wird das Schreiben der Sound-Datei abgebrochen.
-   */
-  protected void currentTStates( int tStates, int diffTStates )
+  protected boolean supportsMonitor()
   {
-    if( diffTStates > this.maxPauseTStates ) {
-      this.lastTStates = tStates;
-      this.enabled     = false;
-      this.audioFrm.fireDisable();
-    }
+    return true;
   }
 
 
@@ -121,7 +124,7 @@ public class AudioOutFile extends AudioOut
       for( int i = 0; i < nSamples; i++ ) {
 	this.queue.putPhase( phase );
       }
-      if( isMonitorPlayActive() ) {
+      if( isMonitorActive() ) {
 	int value = (phase ? PHASE1_VALUE : PHASE0_VALUE);
 	for( int i = 0; i < nSamples; i++ )
 	  writeMonitorLine( value );

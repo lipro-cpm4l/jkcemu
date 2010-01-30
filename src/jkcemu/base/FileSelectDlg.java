@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.lang.*;
 import java.util.*;
+import java.util.regex.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.filechooser.FileSystemView;
@@ -62,6 +63,7 @@ public class FileSelectDlg
   private File                                 selectedFile;
   private FileSystemView                       fsv;
   private JList                                list;
+  private JScrollPane                          scrollPane;
   private JTextField                           fldFileName;
   private JComboBox                            comboFileType;
   private JComboBox                            comboDir;
@@ -75,6 +77,8 @@ public class FileSelectDlg
   private DefaultComboBoxModel                 modelDir;
   private Document                             docFileName;
   private java.util.List<DirItem>              baseDirItems;
+  private Cursor                               defaultCursor;
+  private Cursor                               waitCursor;
   private String                               approveBtnText;
 
 
@@ -151,7 +155,7 @@ public class FileSelectDlg
     if( defaultDir == null ) {
       String homeDirText = System.getProperty( "user.home" );
       if( homeDirText != null ) {
-	if( homeDirText.length() > 0 ) {
+	if( !homeDirText.isEmpty() ) {
 	  defaultDir = new File( homeDirText );
 	  addDirItem( this.baseDirItems, defaultDir );
 	}
@@ -196,7 +200,7 @@ public class FileSelectDlg
     add( toolBar, gbc );
 
     this.btnDirUp = createImageButton(
-			"/images/file/up.png",
+			"/images/file/folder_up.png",
 			"Eine Ebene h\u00F6her" );
     toolBar.add( this.btnDirUp, gbc );
 
@@ -216,6 +220,7 @@ public class FileSelectDlg
     this.list.addKeyListener( this );
     this.list.addMouseListener( this );
     this.list.addListSelectionListener( this );
+    this.scrollPane = new JScrollPane( this.list );
     gbc.fill        = GridBagConstraints.BOTH;
     gbc.weightx     = 1.0;
     gbc.weighty     = 1.0;
@@ -224,7 +229,7 @@ public class FileSelectDlg
     gbc.gridwidth   = 3;
     gbc.gridx       = 0;
     gbc.gridy++;
-    add( new JScrollPane( this.list ), gbc );
+    add( this.scrollPane, gbc );
 
 
     // Dateiname
@@ -259,12 +264,24 @@ public class FileSelectDlg
     this.comboFileType = new JComboBox();
     this.comboFileType.setEditable( false );
     this.comboFileType.addItem( "Alle Dateien" );
+
+    int idx = 0;
     if( fileFilters != null ) {
-      for( int i = 0; i < fileFilters.length; i++ ) {
-	if( fileFilters[ i ] != null )
-	  this.comboFileType.addItem( fileFilters[ i ].getDescription() );
+      if( fileFilters.length == 1 ) {
+	this.comboFileType.addItem( fileFilters[ 0 ].getDescription() );
+	idx = 1;
+      } else {
+	for( int i = 0; i < fileFilters.length; i++ ) {
+	  if( fileFilters[ i ] != null ) {
+	    this.comboFileType.addItem( fileFilters[ i ].getDescription() );
+	  }
+	}
       }
     }
+    try {
+      this.comboFileType.setSelectedIndex( idx );
+    }
+    catch( IllegalArgumentException ex ) {}
     this.comboFileType.addActionListener( this );
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
@@ -345,6 +362,14 @@ public class FileSelectDlg
     this.btnCancel.addActionListener( this );
     this.btnCancel.addKeyListener( this );
     panelBtn.add( this.btnCancel );
+
+
+    // Cursors
+    this.defaultCursor = this.list.getCursor();
+    if( this.defaultCursor == null ) {
+      this.defaultCursor = Cursor.getDefaultCursor();
+    }
+    this.waitCursor = Cursor.getPredefinedCursor( Cursor.WAIT_CURSOR );
 
 
     // Vorbelegung
@@ -467,7 +492,7 @@ public class FileSelectDlg
 	} else {
 	  String fileName = file.getName();
 	  if( fileName != null ) {
-	    if( fileName.length() > 0 ) {
+	    if( !fileName.isEmpty() ) {
 	      if( this.docFileName != null ) {
 		this.docFileName.removeDocumentListener( this );
 		this.fldFileName.setText( fileName );
@@ -499,6 +524,9 @@ public class FileSelectDlg
 	    || (src == this.comboFileType) )
 	{
 	  rv = true;
+	  if( !this.forSave ) {
+	    this.fldFileName.setText( "" );
+	  }
 	  updList();
 	}
 	else if( src == this.list ) {
@@ -521,11 +549,13 @@ public class FileSelectDlg
 	  rv = true;
 	  doApproveFile( true, false );
 	}
-	else if( (src == this.btnLoadWithOptions)
-		 || (src == this.fldFileName) )
-	{
+	else if( src == this.btnLoadWithOptions ) {
 	  rv = true;
 	  doApproveFile( false, true );
+	}
+	else if( src == this.fldFileName ) {
+	  rv = true;
+	  doFileNameAction();
 	}
 	else if( src == this.btnCancel ) {
 	  rv = true;
@@ -546,8 +576,9 @@ public class FileSelectDlg
       Point pt = e.getPoint();
       if( pt != null ) {
 	int idx = this.list.locationToIndex( pt );
-	if( idx >= 0 )
+	if( idx >= 0 ) {
 	  doListAction( idx );
+	}
       }
       e.consume();
     } else {
@@ -575,7 +606,7 @@ public class FileSelectDlg
 	String fileName = this.fldFileName.getText();
 	if( fileName != null ) {
 	  fileName = fileName.trim();
-	  if( fileName.length() > 0 ) {
+	  if( !fileName.isEmpty() ) {
 	    file = new File( fileName );
 	    if( !file.isAbsolute() ) {
 	      if( this.fsv != null ) {
@@ -596,8 +627,9 @@ public class FileSelectDlg
   {
     if( this.curDir != null ) {
       File dirFile = EmuUtil.createDir( this, this.curDir );
-      if( dirFile != null )
+      if( dirFile != null ) {
 	setCurDir( dirFile );
+      }
     }
   }
 
@@ -613,6 +645,36 @@ public class FileSelectDlg
     } else {
       setCurDir( null );
     }
+  }
+
+
+  private void doFileNameAction()
+  {
+    boolean done = false;
+    if( this.curDir != null ) {
+      String text = this.fldFileName.getText();
+      if( text != null ) {
+	text = text.trim();
+	if( !text.isEmpty() ) {
+	  File   file  = new File( text );
+	  String fName = file.getName();
+	  if( fName != null ) {
+	    if( (fName.indexOf( '?' ) < 0) && (fName.indexOf( '*' ) < 0) ) {
+	      if( !file.isAbsolute() ) {
+		if( this.fsv != null ) {
+		  file = this.fsv.getChild( this.curDir, fName );
+		} else {
+		  file = new File( this.curDir, fName );
+		}
+	      }
+	      approveFile( file, false, true );
+	      done = true;
+	    }
+	  }
+	}
+      }
+    }
+    updList();
   }
 
 
@@ -732,6 +794,51 @@ public class FileSelectDlg
   }
 
 
+  public static Pattern compileFileNameMask( String text )
+  {
+    Pattern pattern = null;
+    if( text != null ) {
+      int len = text.length();
+      if( len > 0 ) {
+	final String  specialChars = "\\.[]()^$";
+	boolean       processed    = false;
+	StringBuilder buf = new StringBuilder( len + 10 );
+	for( int i = 0; i < len; i++ ) {
+	  processed = false;
+	  char ch   = text.charAt( i );
+	  if( ch == '*' ) {
+	    buf.append( ".*" );
+	    processed = true;
+	  }
+	  if( !processed && (ch == '?') ) {
+	    buf.append( "." );
+	    processed = true;
+	  }
+	  if( !processed ) {
+	    if( specialChars.indexOf( ch ) >= 0 ) {
+	      buf.append( (char) '\\' );
+	      buf.append( ch );
+	      processed = true;
+	    }
+	  }
+	  if( !processed ) {
+	    buf.append( ch );
+	  }
+	}
+	try {
+	  int flags = Pattern.DOTALL;
+	  if( File.separatorChar != '/' ) {
+	    flags |= Pattern.CASE_INSENSITIVE;
+	  }
+	  pattern = Pattern.compile( buf.toString(), flags );
+	}
+	catch( PatternSyntaxException ex ) {}
+      }
+    }
+    return pattern;
+  }
+
+
   private void docChanged( DocumentEvent e )
   {
     if( e.getDocument() == this.docFileName )
@@ -750,8 +857,9 @@ public class FileSelectDlg
 	      && (fileInfo.getBegAddr() >= 0) )
 	  {
 	    this.loadable = true;
-	    if( fileInfo.getStartAddr() >= 0 )
+	    if( fileInfo.getStartAddr() >= 0 ) {
 	      this.startable = true;
+	    }
 	  }
 	  statusText = fileInfo.getInfoText();
 	}
@@ -768,8 +876,9 @@ public class FileSelectDlg
       this.btnLoadWithOptions.setEnabled( !this.forSave && (file != null) );
     }
     if( statusText != null ) {
-      if( statusText.length() < 1 )
+      if( statusText.isEmpty() ) {
 	statusText = null;
+      }
     }
     return statusText;
   }
@@ -825,6 +934,9 @@ public class FileSelectDlg
 
   private void setCurDir( File dirFile )
   {
+    if( !this.forSave ) {
+      this.fldFileName.setText( "" );
+    }
     this.comboDir.removeActionListener( this );
     DirItem defaultDirItem        = null;
     java.util.List<DirItem> items = new ArrayList<DirItem>();
@@ -859,6 +971,22 @@ public class FileSelectDlg
 	    fileFilter = this.fileFilters[ idx ];
 	  }
 	}
+	Pattern pattern = null;
+	String  mask    = this.fldFileName.getText();
+	if( mask != null ) {
+	  if( (mask.indexOf( '*' ) >= 0) || (mask.indexOf( '?' ) >= 0) ) {
+	    pattern = compileFileNameMask( mask );
+	    if( (pattern != null) && (fileFilter != null) ) {
+	      try {
+		this.comboFileType.removeActionListener( this );
+		this.comboFileType.setSelectedIndex( 0 );
+		this.comboFileType.addActionListener( this );
+		fileFilter = null;
+	      }
+	      catch( IllegalArgumentException ex ) {}
+	    }
+	  }
+	}
 	java.util.List<File> entries = new ArrayList<File>(
 					files.length > 1 ? files.length : 1 );
 	for( int i = 0; i < files.length; i++ ) {
@@ -875,16 +1003,36 @@ public class FileSelectDlg
 	for( int i = 0; i < files.length; i++ ) {
 	  File file = files[ i ];
 	  if( !file.isDirectory() && !file.isHidden() ) {
-	    if( fileFilter != null ) {
-	      if( fileFilter.accept( file ) ) {
-		entries.add( file );
+	    if( pattern != null ) {
+	      String fName = file.getName();
+	      if( fName != null ) {
+		Matcher m = pattern.matcher( fName );
+		if( m != null ) {
+		  if( m.matches() ) {
+		    entries.add( file );
+		  }
+		}
 	      }
 	    } else {
-	      entries.add( file );
+	      if( fileFilter != null ) {
+		if( fileFilter.accept( file ) ) {
+		  entries.add( file );
+		}
+	      } else {
+		entries.add( file );
+	      }
 	    }
 	  }
 	}
 	this.list.setListData( entries.toArray() );
+      }
+    }
+    if( this.defaultCursor != null ) {
+      this.list.setCursor( this.defaultCursor );
+      this.scrollPane.setCursor( this.defaultCursor );
+      JViewport vp = this.scrollPane.getViewport();
+      if( vp != null ) {
+	vp.setCursor( this.defaultCursor );
       }
     }
     this.labelStatus.setText( defaultStatusText );
@@ -907,7 +1055,7 @@ public class FileSelectDlg
 	  String fileName = this.fldFileName.getText();
 	  if( fileName != null ) {
 	    fileName = fileName.trim();
-	    if( fileName.length() > 0 ) {
+	    if( !fileName.isEmpty() ) {
 	      hasFileName = true;
 	    }
 	  }
@@ -938,8 +1086,9 @@ public class FileSelectDlg
     this.curDir    = null;
     Object dirItem = this.comboDir.getSelectedItem();
     if( dirItem != null ) {
-      if( dirItem instanceof DirItem )
+      if( dirItem instanceof DirItem ) {
 	this.curDir = ((DirItem) dirItem).getDirectory();
+      }
     }
     this.list.setListData( new Object[ 0 ] );
     if( this.curDir != null ) {
@@ -957,6 +1106,14 @@ public class FileSelectDlg
     final FileSystemView fsv     = this.fsv;
     final File           dirFile = this.curDir;
     if( curDir != null ) {
+      if( (this.defaultCursor != null) && (this.waitCursor != null) ) {
+	this.list.setCursor( this.waitCursor );
+	this.scrollPane.setCursor( this.waitCursor );
+	JViewport vp = this.scrollPane.getViewport();
+	if( vp != null ) {
+	  vp.setCursor( this.waitCursor );
+	}
+      }
       this.labelStatus.setText( "Lese Verzeichnis..." );
       Thread t = new Thread()
 			{

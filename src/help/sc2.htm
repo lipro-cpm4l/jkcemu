@@ -12,12 +12,8 @@
     wenn Sie eine entsprechende
     <a href="audio.htm">Audio-Funktion</a> aktivieren.
   <br/><br/>
-    Den SC2 gibt es in zwei Varianten,
-    eine f&uuml;r das Inland bestimmte Version mit 2,4576 MHz Taktfrequenz
-    und eine nur f&uuml;r den Export vorgesehene Version mit 4MHz.
-    JKCEMU emuliert die Inlandsversion mit der niedrigeren Taktfrequenz.
-    Zum Verk&uuml;rzen der mitunter recht langen Denkzeiten des Computers
-    k&ouml;nnen Sie in den <a href="settings.htm">Einstellungen</a>,
+    Die Denkzeiten des Computers lassen sich verk&uuml;rzen,
+    indem Sie in den <a href="settings.htm">Einstellungen</a>,
     Bereich <em>Geschwindigkeit</em>,
     die emulierte Taktfrequenz entsprechend hoch setzen.
   <br/><br/>
@@ -120,28 +116,28 @@
   <h3>2.1. 7-Segment-Anzeige</h3>
     <table border="1">
       <tr><th>Anzeige</th><th>Bedeutung</th></tr>
-      <tr><td nowrap><em>E2 E4</em></td><td>Zug E2 nach E4</td></tr>
+      <tr><td><em>E2&nbsp;E4</em></td><td>Zug E2 nach E4</td></tr>
       <tr>
-	<td nowrap><em>-- --</em></td>
+	<td><em>--&nbsp;--</em></td>
 	<td>Fehlerhafte Eingabe oder Regelversto&szlig;</td>
       </tr>
       <tr>
-	<td nowrap><em>EE EE</em></td>
+	<td><em>EE&nbsp;EE</em></td>
 	<td>Computer spielt mit Wei&szlig;</td>
       </tr>
       <tr>
-	<td nowrap><em>oo oo</em></td>
+	<td><em>oo&nbsp;oo</em></td>
 	<td>Computer &uuml;berlegt gerade</td>
       </tr>
       <tr>
-	<td nowrap><em>d3 E1</em></td>
+	<td><em>d3&nbsp;E1</em></td>
 	<td>
 	  <em>d3</em>: Koordinaten der eingegebenen Dame<br/>
 	  <em>E1</em>: Code f&uuml;r wei&szlig;e Dame bei Eingabe<br/>
 	</td>
       </tr>
       <tr>
-	<td nowrap><em>Pr ob</em></td>
+	<td><em>Pr&nbsp;ob</em></td>
 	<td>Problemeingabemodus</td>
       </tr>
     </table>
@@ -272,31 +268,31 @@
 
   <h3>3.2. Spezialz&uuml;ge</h3>
 
-  <h4>3.2.1. Rochade</h4>
+  <h3>3.2.1. Rochade</h3>
     F&uuml;r die Rochade wird der Zug des K&ouml;nigs eingegeben
     bzw. angezeigt, d.h., m&ouml;gliche Z&uuml;ge sind:
     <table border="1">
       <tr>
-	<td><em>E1 G1</em></td>
+	<td><em>E1&nbsp;G1</em></td>
 	<td>Als Wei&szlig; auf der K&ouml;nigsseite rochieren</td>
       </tr>
       <tr>
-	<td><em>E1 C1</em></td>
+	<td><em>E1&nbsp;C1</em></td>
 	<td>Als Wei&szlig; auf der Damenseite rochieren</td>
       </tr>
       <tr>
-	<td><em>E8 g8</em></td>
+	<td><em>E8&nbsp;g8</em></td>
 	<td>Als Schwarz auf der K&ouml;nigsseite rochieren</td>
       </tr>
       <tr>
-	<td><em>E8 C8</em></td>
+	<td><em>E8&nbsp;C8</em></td>
 	<td>Als Schwarz auf der Damenseite rochieren</td>
       </tr>
     </table>
   <br/><br/>
 
-  <h4>3.2.2. En passant</h4>
-    Das Schlagen <em>En passant</em> (im Vor&uuml;bergehen)
+  <h3>3.2.2. En&nbsp;passant</h3>
+    Das Schlagen <em>En&nbsp;passant</em> (im Vor&uuml;bergehen)
     ist nur zwischen  Bauern und auch dann nur m&ouml;glich,
     wenn ein Bauer zwei Felder nach vorn geht und dabei das Feld
     &uuml;berspringt,
@@ -305,7 +301,7 @@
     &uuml;bersprungene Feld schlagen.
   <br/><br/>
 
-  <h4>3.2.3. Bauernumwandlung</h4>
+  <h3>3.2.3. Bauernumwandlung</h3>
     Erreicht ein Bauer die gegenerische Grundlinie,
     kann er in eine beliebige andere Figur umgewandelt werden.
     Standardm&auml;&szlig;ig wird immer in eine Dame umgewandelt.
@@ -323,6 +319,12 @@
   <br/><br/>
 
   <h3>3.4. Spielstandskontrolle</h3>
+    JKCEMU bietet eine eigene <a href="chessboard.htm">Schachbrettanzeige</a>,
+    wodurch die Spielstandskontrolle des Schachprogramms praktisch
+    hinf&auml;llig geworden ist.
+    Der Vollst&auml;ndigkeit halber soll sie aber trotzdem
+    hier erl&auml;utert werden.
+  <br/><br/>
     Immer wenn Sie an Zug sind, k&ouml;nnen Sie die Spielstandskontrolle
     aufrufen,
     um sich den im Computer gespeicherten Spielstand anzeigen zu lassen.
@@ -399,31 +401,31 @@
     Beispiel f&uuml;r ein unberechtigtes Aufleuchten der Schach-Anzeige:
   <br/>
     <table border="0">
-      <tr><td>1.</td><td nowrap>E2 - E4</td><td nowrap>E7 - E5</td></tr>
-      <tr><td>2.</td><td nowrap>G1 - F3</td><td nowrap>B8 - C6</td></tr>
-      <tr><td>3.</td><td nowrap>F1 - B5</td><td nowrap>A7 - A6</td></tr>
-      <tr><td>4.</td><td nowrap>B5 - A4</td><td nowrap>G8 - F6</td></tr>
-      <tr><td>5.</td><td nowrap>B1 - C3</td><td nowrap>B7 - B5</td></tr>
-      <tr><td>6.</td><td nowrap>A4 - B3</td><td nowrap>F8 - E7</td></tr>
+      <tr><td>1.</td><td>E2-E4</td><td>E7-E5</td></tr>
+      <tr><td>2.</td><td>G1-F3</td><td>B8-C6</td></tr>
+      <tr><td>3.</td><td>F1-B5</td><td>A7-A6</td></tr>
+      <tr><td>4.</td><td>B5-A4</td><td>G8-F6</td></tr>
+      <tr><td>5.</td><td>B1-C3</td><td>B7-B5</td></tr>
+      <tr><td>6.</td><td>A4-B3</td><td>F8-E7</td></tr>
     </table>
   <br/><br/>
     Beispiel f&uuml;r eine fehlende Schach-Signalisierung:
   <br/>
     <table border="0">
-      <tr><td>1.</td><td nowrap>E2 - E4<td></td><td nowrap>E7 - E6</td></tr>
-      <tr><td>2.</td><td nowrap>D2 - D4<td></td><td nowrap>D7 - D5</td></tr>
-      <tr><td>3.</td><td nowrap>B1 - C3<td></td><td nowrap>F8 - B4</td></tr>
-      <tr><td>4.</td><td nowrap>E4 - E5<td></td><td nowrap>C7 - C5</td></tr>
-      <tr><td>5.</td><td nowrap>A1 - A3<td></td><td nowrap>B4 - C3</td></tr>
+      <tr><td>1.</td><td>E2-E4</td><td>E7-E6</td></tr>
+      <tr><td>2.</td><td>D2-D4</td><td>D7-D5</td></tr>
+      <tr><td>3.</td><td>B1-C3</td><td>F8-B4</td></tr>
+      <tr><td>4.</td><td>E4-E5</td><td>C7-C5</td></tr>
+      <tr><td>5.</td><td>A1-A3</td><td>B4-C3</td></tr>
     </table>
   <br/><br/>
     In beiden F&auml;llen kann das Spiel einfach fortgesetzt werden.
   <br/><br/>
 
 
-  <h2>5. Quellennachweise</h2>
-    Die Tabellen und Informationan ab Punkt 2.2 wurden weitestgehend
-    aus der originalen Bedienungsanleitung &uuml;bernommen.
+  <h2>5. Quellennachweis</h2>
+    Die Tabellen und Informationan ab Punkt 2 wurden weitestgehend
+    aus der originalen Bedienungsanleitung entnommen.
 </body>
 </html>
 

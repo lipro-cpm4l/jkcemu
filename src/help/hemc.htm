@@ -4,10 +4,10 @@
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>3 KByte ROM</li>
-      <li>61 KByte RAM inklusive Bildwiederholspeicher</li>
+      <li>3&nbsp;KByte ROM</li>
+      <li>61&nbsp;KByte RAM inklusive Bildwiederholspeicher</li>
       <li>CTC</li>
-      <li>2 PIOs</li>
+      <li>2&nbsp;PIOs</li>
     </ul>
     Von der universellen IO-Karte werden nur die CTC und
     die beiden PIOs emuliert.
@@ -15,10 +15,18 @@
     an den PIOs angeschlossene Hardware werden nicht emuliert.
   <br/><br/>
 
+  <h3>1.1. Drucker</h3>
+    Es wird ein Drucker emuliert,
+    indem JKCEMU die Betriebssystemaufrufe f&uuml;r Druckausgaben
+    abf&auml;ngt und die Daten an den aktuellen Druckauftrag anh&auml;ngt.
+    Diese Funktion ist in den <a href="settings.htm">Einstellungen</a>
+    abschaltbar.
+  <br/><br/>
+
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-       <li>Monitorprogramm Version 2.1</li>
+      <li>Monitorprogramm Version&nbsp;2.1</li>
     </ul>
     Im Monitorprogramm kann man sich mit <em>HELP</em>
     eine Liste aller Kommandos anzeigen lassen.

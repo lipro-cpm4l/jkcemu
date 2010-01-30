@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,11 +16,26 @@ import java.lang.*;
 import java.util.*;
 import javax.swing.JOptionPane;
 import jkcemu.base.ScreenFrm;
+import jkcemu.disk.*;
 import z80emu.*;
 
 
 public abstract class EmuSys implements ImageObserver
 {
+  public enum Chessman {
+		WHITE_PAWN,
+		WHITE_KNIGHT,
+		WHITE_BISHOP,
+		WHITE_ROOK,
+		WHITE_QUEEN,
+		WHITE_KING,
+		BLACK_PAWN,
+		BLACK_KNIGHT,
+		BLACK_BISHOP,
+		BLACK_ROOK,
+		BLACK_QUEEN,
+		BLACK_KING };
+
   protected static final int BLACK = 0;
   protected static final int WHITE = 1;
 
@@ -32,18 +47,20 @@ public abstract class EmuSys implements ImageObserver
   protected Color     colorGreenLight;
   protected Color     colorGreenDark;
 
+  private static final int CHESSBOARD_SQUARE_WIDTH = 48;
+
   // Basiskoordinaten eines horizontalen Segments einer 7-Segment-Anzeige
   private static final int[] base7SegHXPoints = { 0, 3, 31, 34, 31, 3, 0 };
   private static final int[] base7SegHYPoints = { 3, 0, 0, 3, 6, 6, 3 };
 
   // Basiskoordinaten eines vertikalen Segments einer 7-Segment-Anzeige
   private static final int[] base7SegVXPoints = { 3, 0, 4, 7, 10, 6, 3 };
+
   //private static final int[] base7SegVYPoints = { 40, 37, 8, 5, 8, 37, 40 };
   private static final int[] base7SegVYPoints = { 5, 2, -27, -30, -27, 2, 5 };
 
-  private static int[]  tmp7SegXPoints = new int[ base7SegHXPoints.length ];
-  private static int[]  tmp7SegYPoints = new int[ base7SegHYPoints.length ];
-  private static Random random         = null;
+  private static int[] tmp7SegXPoints = new int[ base7SegHXPoints.length ];
+  private static int[] tmp7SegYPoints = new int[ base7SegHYPoints.length ];
 
 
   public EmuSys( EmuThread emuThread, Properties props )
@@ -73,33 +90,6 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  protected int askKCBasicBegAddr()
-  {
-    int         addr    = -1;
-    String[]    options = { "RAM-BASIC", "ROM-BASIC", "Abbrechen" };
-    JOptionPane pane    = new JOptionPane(
-	"W\u00E4hlen Sie bitte aus,"
-		+ " ob das KC-BASIC-Programm im Adressbereich f\u00FCr das\n"
-		+ "RAM-BASIC (ab 2C01h) oder f\u00FCr das"
-		+ " ROM-BASIC (ab 0401h) gesucht werden soll.",
-	JOptionPane.QUESTION_MESSAGE );
-    pane.setOptions( options );
-    pane.createDialog(
-		this.screenFrm,
-		"Adresse des KC-BASIC-Programms" ).setVisible( true );
-    Object value = pane.getValue();
-    if( value != null ) {
-      if( value.equals( options[ 0 ] ) ) {
-	addr = 0x2C01;
-      }
-      else if( value.equals( options[ 1 ] ) ) {
-	addr = 0x0401;
-      }
-    }
-    return addr;
-  }
-
-
   public boolean canExtractScreenText()
   {
     return false;
@@ -114,15 +104,7 @@ public abstract class EmuSys implements ImageObserver
 
   protected void fillRandom( byte[] a )
   {
-    if( a != null ) {
-      if( random == null ) {
-	random = new Random();
-	random.setSeed( System.currentTimeMillis() );
-      }
-      for( int i = 0; i < a.length; i++ ) {
-	a[ i ] = (byte) (random.nextInt() & 0xFF);
-      }
-    }
+    EmuUtil.fillRandom( a, 0 );
   }
 
 
@@ -166,6 +148,12 @@ public abstract class EmuSys implements ImageObserver
       rv = 1.0;
     }
     return rv;
+  }
+
+
+  public Chessman getChessman( int row, int col )
+  {
+    return null;
   }
 
 
@@ -214,6 +202,59 @@ public abstract class EmuSys implements ImageObserver
   public int getCharWidth()
   {
     return -1;
+  }
+
+
+  /*
+   * Die Methoden "getDefaultFloppyDisk..." geben das Standardformat
+   * fuer Disketten an,
+   * sofern ueberhaupt ein Format als Standard bezeichnet werden kann.
+   */
+  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  {
+    return false;
+  }
+
+
+  public int getDefaultFloppyDiskBlockSize()
+  {
+    return -1;
+  }
+
+
+  public int getDefaultFloppyDiskDirBlocks()
+  {
+    return -1;
+  }
+
+
+  public FloppyDiskFormat getDefaultFloppyDiskFormat()
+  {
+    return null;
+  }
+
+
+  public int getDefaultFloppyDiskSystemTracks()
+  {
+    return -1;
+  }
+
+
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 150;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 250;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 100;
   }
 
 
@@ -317,6 +358,42 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
+  public String getSecondarySystemName()
+  {
+    return null;
+  }
+
+
+  public Z80CPU getSecondaryZ80CPU()
+  {
+    return null;
+  }
+
+
+  public Z80Memory getSecondaryZ80Memory()
+  {
+    return null;
+  }
+
+
+  public FloppyDiskInfo[] getSuitableFloppyDisks()
+  {
+    return null;
+  }
+
+
+  public int getSupportedFloppyDiskDriveCount()
+  {
+    return 0;
+  }
+
+
+  public int getSupportedRAMFloppyCount()
+  {
+    return 0;
+  }
+
+
   public boolean getSwapKeyCharCase()
   {
     return false;
@@ -372,13 +449,13 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public void openBasicProgram()
+  public boolean isSecondarySystemRunning()
   {
-    showFunctionNotSupported();
+    return false;
   }
 
 
-  public void openTinyBasicProgram()
+  public void openBasicProgram()
   {
     showFunctionNotSupported();
   }
@@ -473,13 +550,56 @@ public abstract class EmuSys implements ImageObserver
 	rv = keyTyped( ch );
     }
     if( rv ) {
-      try {
-	Thread.sleep( 150 );
+      long millis = getHoldMillisPasteChar();
+      if( millis > 0L ) {
+	try {
+	  Thread.sleep( millis );
+	}
+	catch( InterruptedException ex ) {}
       }
-      catch( InterruptedException ex ) {}
       keyReleased();
     }
     return rv;
+  }
+
+
+  protected byte[] readFile( String fileName, int maxLen, String objName )
+  {
+    byte[] rv = null;
+    if( fileName != null ) {
+      if( !fileName.isEmpty() ) {
+	try {
+	  rv = EmuUtil.readFile( new File( fileName ), maxLen );
+	}
+	catch( IOException ex ) {
+	  String msg = ex.getMessage();
+	  BasicDlg.showErrorDlg(
+			this.emuThread.getScreenFrm(),
+			String.format(
+				"%s kann nicht geladen werden%s%s",
+				objName,
+				msg != null ? ":\n" : ".",
+				msg != null ? msg : "" ) );
+	  rv = null;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  protected byte[] readFileByProperty(
+				Properties props,
+				String     propName,
+				int        maxLen,
+				String     objName )
+  {
+    return props != null ?
+		readFile(
+			props.getProperty( propName ),
+			maxLen,
+			objName )
+		: null;
   }
 
 
@@ -495,56 +615,9 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  protected byte[] readProgramX( Properties props )
-  {
-    return readFileByProperty(
-			props,
-			"jkcemu.program_x.file.name",
-			0x2000,
-			"Programmpaket X" );
-  }
-
-
   protected byte[] readResource( String resource )
   {
-    ByteArrayOutputStream buf  = new ByteArrayOutputStream( 0x0800 );
-    boolean               done = false;
-    InputStream           in   = null;
-    Exception             ex   = null;
-    try {
-      in = getClass().getResourceAsStream( resource );
-      if( in != null ) {
-	int b = in.read();
-	while( b != -1 ) {
-	  buf.write( b );
-	  b = in.read();
-	}
-	done = true;
-      }
-    }
-    catch( IOException ioEx ) {
-      ex = ioEx;
-    }
-    finally {
-      EmuUtil.doClose( in );
-    }
-    if( !done ) {
-      EmuUtil.exitSysError(
-		this.emuThread.getScreenFrm(),
-		"Resource " + resource + " kann nicht geladen werden",
-		ex );
-    }
-    return buf.toByteArray();
-  }
-
-
-  protected byte[] readROMDisk( Properties props )
-  {
-    return readFileByProperty(
-			props,
-			"jkcemu.romdisk.file.name",
-			0x10000,
-			"ROM-Disk" );
+    return EmuUtil.readResource( this.emuThread.getScreenFrm(), resource );
   }
 
 
@@ -568,7 +641,7 @@ public abstract class EmuSys implements ImageObserver
       int     n = 0;
       long    r = 0;
       boolean c = false;
-      while( (n < 5) && (a < 0x10000) ) {
+      while( (n < 5) && (a <= 0xFFFF) ) {
 	int b = memory.getMemByte( a, false );
 	if( n == 0 ) {
 	  c = ((b >= 0x20) && (b < 0x7F));
@@ -584,6 +657,9 @@ public abstract class EmuSys implements ImageObserver
 	  loop = false;
 	  break;
 	}
+      }
+      if( a > 0xFFFF ) {
+	loop = false;
       }
       if( n > 0 ) {
 	int begOfLine = buf.length();
@@ -767,9 +843,9 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public void saveTinyBasicProgram()
+  public void setFloppyDiskDrive( int idx, FloppyDiskDrive drive )
   {
-    showFunctionNotSupported();
+    // leer
   }
 
 
@@ -785,13 +861,25 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public boolean supportsRAMFloppy1()
+  public boolean supportsAudio()
   {
     return false;
   }
 
 
-  public boolean supportsRAMFloppy2()
+  public boolean supportsChessboard()
+  {
+    return false;
+  }
+
+
+  public boolean supportsCopyToClipboard()
+  {
+    return false;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
   {
     return false;
   }
@@ -893,38 +981,6 @@ public abstract class EmuSys implements ImageObserver
       g.setColor( color );
       g.fillPolygon( tmp7SegXPoints, tmp7SegYPoints, tmp7SegXPoints.length );
     }
-  }
-
-
-  private byte[] readFileByProperty(
-				Properties props,
-				String     propName,
-				int        maxLen,
-				String     text )
-  {
-    byte[] rv = null;
-    if( props != null ) {
-      String fileName = props.getProperty( propName );
-      if( fileName != null ) {
-	if( fileName.length() > 0 ) {
-	  try {
-	    rv = EmuUtil.readFile( new File( fileName ), maxLen );
-	  }
-	  catch( IOException ex ) {
-	    String msg = ex.getMessage();
-	    BasicDlg.showErrorDlg(
-			this.emuThread.getScreenFrm(),
-			String.format(
-				"%s kann nicht geladen werden%s%s",
-				text,
-				msg != null ? ":\n" : ".",
-				msg != null ? msg : "" ) );
-	    rv = null;
-	  }
-	}
-      }
-    }
-    return rv;
   }
 
 

@@ -429,48 +429,9 @@ public class ImageFrm extends BasicFrm implements
 
   public void drop( DropTargetDropEvent e )
   {
-    if( EmuUtil.isFileDrop( e ) ) {
-      e.acceptDrop( DnDConstants.ACTION_COPY );    // Quelle nicht loeschen
-      Transferable t = e.getTransferable();
-      if( t != null ) {
-	try {
-	  Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
-	  if( o != null ) {
-	    if( o instanceof Collection ) {
-	      Iterator iter = ((Collection) o).iterator();
-	      if( iter != null ) {
-		if( iter.hasNext() ) {
-		  o = iter.next();
-		  if( o != null ) {
-		    File file = null;
-		    if( o instanceof File ) {
-		      file = (File) o;
-		    }
-		    else if( o instanceof String ) {
-		      file = new File( o.toString() );
-		    }
-		    if( file != null ) {
-		      if( iter.hasNext() ) {
-			BasicDlg.showErrorDlg(
-				this,
-				"Sie k\u00F6nnen nur eine Datei"
-					+ " in den Bildbetrachter ziehen." );
-		      } else {
-			showImageFile( file );
-		      }
-		    }
-		  }
-		}
-	      }
-	    }
-	  }
-	}
-	catch( Exception ex ) {}
-      }
-      e.dropComplete( true );
-    } else {
-      e.rejectDrop();
-    }
+    File file = EmuUtil.fileDrop( this, e );
+    if( file != null )
+      showImageFile( file );
   }
 
 

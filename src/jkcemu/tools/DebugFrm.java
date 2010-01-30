@@ -28,8 +28,8 @@ public class DebugFrm extends BasicFrm implements
 						Runnable
 {
   private ScreenFrm         screenFrm;
-  private EmuThread         emuThread;
-  private Z80CPU            z80cpu;
+  private Z80CPU            cpu;
+  private Z80Memory         memory;
   private Z80Breakpoint[]   breakpoints;
   private File              lastTraceFile;
   private PrintWriter       traceWriter;
@@ -105,11 +105,14 @@ public class DebugFrm extends BasicFrm implements
   private javax.swing.Timer timerForClear;
 
 
-  public DebugFrm( ScreenFrm screenFrm )
+  public DebugFrm(
+		ScreenFrm screenFrm,
+		Z80CPU    cpu,
+		Z80Memory memory )
   {
     this.screenFrm     = screenFrm;
-    this.emuThread     = screenFrm.getEmuThread();
-    this.z80cpu        = emuThread.getZ80CPU();
+    this.cpu           = cpu;
+    this.memory        = memory;
     this.breakpoints   = null;
     this.lastTraceFile = null;
     this.traceWriter   = null;
@@ -286,6 +289,7 @@ public class DebugFrm extends BasicFrm implements
     // Bereich Flags
     JPanel panelFlag = new JPanel( new FlowLayout() );
     panelFlag.setBorder( BorderFactory.createTitledBorder( "Flags" ) );
+    gbc.gridwidth = GridBagConstraints.REMAINDER;
     gbc.gridx++;
     add( panelFlag, gbc );
 
@@ -564,7 +568,7 @@ public class DebugFrm extends BasicFrm implements
     gbcReg.gridx++;
     panelReg.add( this.fldRegPC, gbcReg );
 
-    this.fldMemPC = new JTextArea( 5, 32 );
+    this.fldMemPC = new JTextArea( 5, 38 );
     this.fldMemPC.setEditable( false );
     Font font = this.fldMemPC.getFont();
     if( font != null ) {
@@ -576,7 +580,7 @@ public class DebugFrm extends BasicFrm implements
     gbcReg.fill      = GridBagConstraints.HORIZONTAL;
     gbcReg.anchor    = GridBagConstraints.WEST;
     gbcReg.gridwidth = GridBagConstraints.REMAINDER;
-    gbcReg.gridx++;
+    gbcReg.gridy++;
     panelReg.add( new JScrollPane( this.fldMemPC ), gbcReg );
 
 
@@ -620,10 +624,22 @@ public class DebugFrm extends BasicFrm implements
       setScreenCentered();
     }
     setResizable( false );
-    this.z80cpu.addStatusListener( this );
+    this.cpu.addStatusListener( this );
     updDebugger();
     updActionFields();
     updBreakpointList( -1 );
+  }
+
+
+  public Z80CPU getZ80CPU()
+  {
+    return this.cpu;
+  }
+
+
+  public Z80Memory getZ80Memory()
+  {
+    return this.memory;
   }
 
 
@@ -679,7 +695,7 @@ public class DebugFrm extends BasicFrm implements
   {
     if( isShowing() ) {
       updDebugger();
-      if( this.z80cpu.isPause() ) {
+      if( this.cpu.isPause() ) {
 	setState( Frame.NORMAL );
 	toFront();
       }
@@ -692,8 +708,8 @@ public class DebugFrm extends BasicFrm implements
   public void setVisible( boolean state )
   {
     if( state ) {
-      this.z80cpu.setDebugEnabled( state );  // Disable erfolgt ueber doClose()
-      SwingUtilities.invokeLater( this );    // Anzeige aktualisieren
+      this.cpu.setDebugEnabled( state );   // Disable erfolgt ueber doClose()
+      SwingUtilities.invokeLater( this );  // Anzeige aktualisieren
     }
     super.setVisible( state );
   }
@@ -796,60 +812,60 @@ public class DebugFrm extends BasicFrm implements
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	screenFrm.showHelp( "/help/tools/debugger.htm" );
+	this.screenFrm.showHelp( "/help/tools/debugger.htm" );
       }
       else if( src == this.btnFlagSign ) {
 	rv = true;
 	if( this.btnFlagSign.isEnabled() ) {
-	  this.z80cpu.setFlagSign( this.btnFlagSign.isSelected() );
+	  this.cpu.setFlagSign( this.btnFlagSign.isSelected() );
 	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagZero ) {
 	rv = true;
 	if( this.btnFlagZero.isEnabled() ) {
-	  this.z80cpu.setFlagZero( this.btnFlagZero.isSelected() );
+	  this.cpu.setFlagZero( this.btnFlagZero.isSelected() );
 	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagHalf ) {
 	rv = true;
 	if( this.btnFlagHalf.isEnabled() ) {
-	  this.z80cpu.setFlagHalf( this.btnFlagHalf.isSelected() );
+	  this.cpu.setFlagHalf( this.btnFlagHalf.isSelected() );
 	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagPV ) {
 	rv = true;
 	if( this.btnFlagPV.isEnabled() ) {
-	  this.z80cpu.setFlagPV( this.btnFlagPV.isSelected() );
+	  this.cpu.setFlagPV( this.btnFlagPV.isSelected() );
 	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagN ) {
 	rv = true;
 	if( this.btnFlagN.isEnabled() ) {
-	  this.z80cpu.setFlagN( this.btnFlagN.isSelected() );
+	  this.cpu.setFlagN( this.btnFlagN.isSelected() );
 	}
 	updFieldsAF();
       }
       else if( src == this.btnFlagCarry ) {
 	rv = true;
 	if( this.btnFlagCarry.isEnabled() ) {
-	  this.z80cpu.setFlagCarry( this.btnFlagCarry.isSelected() );
+	  this.cpu.setFlagCarry( this.btnFlagCarry.isSelected() );
 	}
 	updFieldsAF();
       }
       else if( src == this.btnIFF1 ) {
 	rv = true;
 	if( this.btnIFF1.isEnabled() ) {
-	  this.z80cpu.setIFF1( this.btnIFF1.isSelected() );
+	  this.cpu.setIFF1( this.btnIFF1.isSelected() );
 	}
       }
       else if( src == this.btnIFF2 ) {
 	rv = true;
 	if( this.btnIFF2.isEnabled() ) {
-	  this.z80cpu.setIFF2( this.btnIFF2.isSelected() );
+	  this.cpu.setIFF2( this.btnIFF2.isSelected() );
 	}
       }
       else if( src == this.timerForClear ) {
@@ -880,7 +896,7 @@ public class DebugFrm extends BasicFrm implements
   public boolean doClose()
   {
     closeTrace();
-    this.z80cpu.setDebugEnabled( false );
+    this.cpu.setDebugEnabled( false );
     return super.doClose();
   }
 
@@ -910,32 +926,32 @@ public class DebugFrm extends BasicFrm implements
 
   private void doDebugRun()
   {
-    this.z80cpu.fireAction( Z80CPU.Action.DEBUG_RUN );
+    this.cpu.fireAction( Z80CPU.Action.DEBUG_RUN );
   }
 
 
   private void doDebugStop()
   {
     this.labelStatus.setText( "Programmausf\u00FChrung wird angehalten..." );
-    this.z80cpu.fireAction( Z80CPU.Action.DEBUG_STOP );
+    this.cpu.fireAction( Z80CPU.Action.DEBUG_STOP );
   }
 
 
   private void doDebugStepOver()
   {
-    this.z80cpu.fireAction( Z80CPU.Action.DEBUG_STEP_OVER );
+    this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_OVER );
   }
 
 
   private void doDebugStepInto()
   {
-    this.z80cpu.fireAction( Z80CPU.Action.DEBUG_STEP_INTO );
+    this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_INTO );
   }
 
 
   private void doDebugStepUp()
   {
-    this.z80cpu.fireAction( Z80CPU.Action.DEBUG_STEP_UP );
+    this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_UP );
   }
 
 
@@ -1094,7 +1110,7 @@ public class DebugFrm extends BasicFrm implements
 			new FileWriter( file.getPath(), append ) ),
 		true );
 
-	  this.z80cpu.setDebugTracer( this.traceWriter );
+	  this.cpu.setDebugTracer( this.traceWriter );
 	  this.mnuDebugTracer.setSelected( true );
 	  this.lastTraceFile = file;
 	  Main.setLastFile( file, "debug" );
@@ -1141,7 +1157,7 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private void setDebuggerDisabled()
+  private void setDebuggerDisabled( String statusText )
   {
     clear();
     setDebuggerEditable( false );
@@ -1155,7 +1171,7 @@ public class DebugFrm extends BasicFrm implements
     this.btnStepOver.setEnabled( false );
     this.btnStepInto.setEnabled( false );
     this.btnStepUp.setEnabled( false );
-    this.labelStatus.setText( "Debugger nicht aktiv" );
+    this.labelStatus.setText( statusText );
   }
 
 
@@ -1257,7 +1273,7 @@ public class DebugFrm extends BasicFrm implements
   private void closeTrace()
   {
     if( this.traceWriter != null ) {
-      this.z80cpu.setDebugTracer( null );
+      this.cpu.setDebugTracer( null );
       this.traceWriter.println( "---" );
       this.traceWriter.flush();
       this.traceWriter.close();
@@ -1292,74 +1308,74 @@ public class DebugFrm extends BasicFrm implements
 
 	if( tf == this.fldRegAF ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegAF( v );
+	    this.cpu.setRegAF( v );
 	  }
 	  updFieldsFlag();
 	  updFieldsAF();
 	}
 	else if( tf == this.fldRegAF2 ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegAF2( v );
+	    this.cpu.setRegAF2( v );
 	  }
 	  updFieldsAF2();
 	}
 	else if( tf == this.fldRegBC ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegBC( v );
+	    this.cpu.setRegBC( v );
 	  }
 	  updFieldsBC();
 	}
 	else if( tf == this.fldRegBC2 ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegBC2( v );
+	    this.cpu.setRegBC2( v );
 	  }
 	  updFieldsBC2();
 	}
 	else if( tf == this.fldRegDE ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegDE( v );
+	    this.cpu.setRegDE( v );
 	  }
 	  updFieldsDE();
 	}
 	else if( tf == this.fldRegDE2 ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegDE2( v );
+	    this.cpu.setRegDE2( v );
 	  }
 	  updFieldsDE2();
 	}
 	else if( tf == this.fldRegHL ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegHL( v );
+	    this.cpu.setRegHL( v );
 	  }
 	  updFieldsHL();
 	}
 	else if( tf == this.fldRegHL2 ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegHL2( v );
+	    this.cpu.setRegHL2( v );
 	  }
 	  updFieldsHL2();
 	}
 	else if( tf == this.fldRegIX ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegIX( v );
+	    this.cpu.setRegIX( v );
 	  }
 	  updFieldsIX();
 	}
 	else if( tf == this.fldRegIY ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegIY( v );
+	    this.cpu.setRegIY( v );
 	  }
 	  updFieldsIY();
 	}
 	else if( tf == this.fldRegSP ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegSP( v );
+	    this.cpu.setRegSP( v );
 	  }
 	  updFieldsSP();
 	}
 	else if( tf == this.fldRegPC ) {
 	  if( v != -1 ) {
-	    this.z80cpu.setRegPC( v );
+	    this.cpu.setRegPC( v );
 	  }
 	  updFieldsPC();
 	}
@@ -1370,118 +1386,122 @@ public class DebugFrm extends BasicFrm implements
 
   private void updDebugger()
   {
-    if( this.timerForClear.isRunning() )
+    if( this.timerForClear.isRunning() ) {
       this.timerForClear.stop();
-
-    if( this.z80cpu.isDebugEnabled() ) {
-      if( this.z80cpu.isPause() ) {
-	setDebugStopped();
+    }
+    if( this.cpu.isActive() ) {
+      if( this.cpu.isDebugEnabled() ) {
+	if( this.cpu.isPause() ) {
+	  setDebugStopped();
+	} else {
+	  setDebugRunning();
+	}
       } else {
-	setDebugRunning();
+	setDebuggerDisabled( "Debugger nicht aktiv" );
       }
     } else {
-      setDebuggerDisabled();
+      setDebuggerDisabled( "Prozessorsystem nicht aktiv" );
     }
   }
 
 
   private void updFieldsFlag()
   {
-    this.btnFlagSign.setSelected( this.z80cpu.getFlagSign() );
-    this.btnFlagZero.setSelected( this.z80cpu.getFlagZero() );
-    this.btnFlagHalf.setSelected( this.z80cpu.getFlagHalf() );
-    this.btnFlagPV.setSelected( this.z80cpu.getFlagPV() );
-    this.btnFlagN.setSelected( this.z80cpu.getFlagN() );
-    this.btnFlagCarry.setSelected( this.z80cpu.getFlagCarry() );
-    this.btnIFF1.setSelected( this.z80cpu.getIFF1() );
-    this.btnIFF2.setSelected( this.z80cpu.getIFF2() );
+    this.btnFlagSign.setSelected( this.cpu.getFlagSign() );
+    this.btnFlagZero.setSelected( this.cpu.getFlagZero() );
+    this.btnFlagHalf.setSelected( this.cpu.getFlagHalf() );
+    this.btnFlagPV.setSelected( this.cpu.getFlagPV() );
+    this.btnFlagN.setSelected( this.cpu.getFlagN() );
+    this.btnFlagCarry.setSelected( this.cpu.getFlagCarry() );
+    this.btnIFF1.setSelected( this.cpu.getIFF1() );
+    this.btnIFF2.setSelected( this.cpu.getIFF2() );
   }
 
 
   private void updFieldsAF()
   {
-    this.fldRegAF.setText( String.format( "%04X", this.z80cpu.getRegAF() ) );
-    this.fldRegAsciiA.setText( getAscii( this.z80cpu.getRegA() ) );
+    this.fldRegAF.setText( String.format( "%04X", this.cpu.getRegAF() ) );
+    this.fldRegAsciiA.setText( getAscii( this.cpu.getRegA() ) );
   }
 
 
   private void updFieldsAF2()
   {
-    this.fldRegAF2.setText( String.format( "%04X", this.z80cpu.getRegAF2() ) );
+    this.fldRegAF2.setText( String.format( "%04X", this.cpu.getRegAF2() ) );
   }
 
 
   private void updFieldsBC()
   {
-    int v =  this.z80cpu.getRegBC();
+    int v =  this.cpu.getRegBC();
     this.fldRegBC.setText( String.format( "%04X", v ) );
-    this.fldRegAsciiB.setText( getAscii( this.z80cpu.getRegB() ) );
-    this.fldRegAsciiC.setText( getAscii( this.z80cpu.getRegC() ) );
+    this.fldRegAsciiB.setText( getAscii( this.cpu.getRegB() ) );
+    this.fldRegAsciiC.setText( getAscii( this.cpu.getRegC() ) );
     this.fldMemBC.setText( getMemInfo( v, 4 ) );
   }
 
 
   private void updFieldsBC2()
   {
-    this.fldRegBC2.setText( String.format( "%04X", this.z80cpu.getRegBC2() ) );
+    this.fldRegBC2.setText( String.format( "%04X", this.cpu.getRegBC2() ) );
   }
 
 
   private void updFieldsDE()
   {
-    int v =  this.z80cpu.getRegDE();
+    int v =  this.cpu.getRegDE();
     this.fldRegDE.setText( String.format( "%04X", v ) );
-    this.fldRegAsciiD.setText( getAscii( this.z80cpu.getRegD() ) );
-    this.fldRegAsciiE.setText( getAscii( this.z80cpu.getRegE() ) );
+    this.fldRegAsciiD.setText( getAscii( this.cpu.getRegD() ) );
+    this.fldRegAsciiE.setText( getAscii( this.cpu.getRegE() ) );
     this.fldMemDE.setText( getMemInfo( v, 4 ) );
   }
 
 
   private void updFieldsDE2()
   {
-    this.fldRegDE2.setText( String.format( "%04X", this.z80cpu.getRegDE2() ) );
+    this.fldRegDE2.setText( String.format( "%04X", this.cpu.getRegDE2() ) );
   }
 
 
   private void updFieldsHL()
   {
-    int v =  this.z80cpu.getRegHL();
+    int v =  this.cpu.getRegHL();
     this.fldRegHL.setText( String.format( "%04X", v ) );
-    this.fldRegAsciiH.setText( getAscii( this.z80cpu.getRegH() ) );
-    this.fldRegAsciiL.setText( getAscii( this.z80cpu.getRegL() ) );
+    this.fldRegAsciiH.setText( getAscii( this.cpu.getRegH() ) );
+    this.fldRegAsciiL.setText( getAscii( this.cpu.getRegL() ) );
     this.fldMemHL.setText( getMemInfo( v, 4 ) );
   }
 
 
   private void updFieldsHL2()
   {
-    this.fldRegHL2.setText( String.format( "%04X", this.z80cpu.getRegHL2() ) );
+    this.fldRegHL2.setText( String.format( "%04X", this.cpu.getRegHL2() ) );
   }
 
 
   private void updFieldsIX()
   {
-    int v =  this.z80cpu.getRegIX();
+    int v =  this.cpu.getRegIX();
     this.fldRegIX.setText( String.format( "%04X", v ) );
-    this.fldRegAsciiIXH.setText( getAscii( this.z80cpu.getRegIXH() ) );
-    this.fldRegAsciiIXL.setText( getAscii( this.z80cpu.getRegIXL() ) );
+    this.fldRegAsciiIXH.setText( getAscii( this.cpu.getRegIXH() ) );
+    this.fldRegAsciiIXL.setText( getAscii( this.cpu.getRegIXL() ) );
     this.fldMemIX.setText( getMemInfo( v, 6 ) );
   }
 
 
   private void updFieldsIY()
   {
-    int v = this.z80cpu.getRegIY();
+    int v = this.cpu.getRegIY();
     this.fldRegIY.setText( String.format( "%04X", v ) );
-    this.fldRegAsciiIYH.setText( getAscii( this.z80cpu.getRegIYH() ) );
-    this.fldRegAsciiIYL.setText( getAscii( this.z80cpu.getRegIYL() ) );
+    this.fldRegAsciiIYH.setText( getAscii( this.cpu.getRegIYH() ) );
+    this.fldRegAsciiIYL.setText( getAscii( this.cpu.getRegIYL() ) );
     this.fldMemIY.setText( getMemInfo( v, 6 ) );
   }
 
 
   private void updFieldsSP()
   {
-    int addr = this.z80cpu.getRegSP();
+    int addr = this.cpu.getRegSP();
     this.fldRegSP.setText( String.format( "%04X", addr ) );
 
     // ersten Eintraege auf dem Stack anzeigen
@@ -1491,7 +1511,7 @@ public class DebugFrm extends BasicFrm implements
     for( int i = 0; i < n; i++ ) {
       buf.append( String.format(
 			"%04X ",
-			this.emuThread.getMemWord( addr ) ) );
+			this.memory.getMemWord( addr ) ) );
       addr++;
       addr++;
     }
@@ -1501,7 +1521,7 @@ public class DebugFrm extends BasicFrm implements
 
   private void updFieldsPC()
   {
-    int addr = this.z80cpu.getRegPC();
+    int addr = this.cpu.getRegPC();
     this.fldRegPC.setText( String.format( "%04X", addr ) );
 
     // naechsten Befehle anzeigen
@@ -1512,16 +1532,19 @@ public class DebugFrm extends BasicFrm implements
 	buf.append( (char) '\n' );
       }
 
-      int     b0    = this.emuThread.getMemByte( addr, true );
+      int     b0    = this.memory.getMemByte( addr, true );
       boolean b1_m1 = ((b0 == 0xED) || (b0 == 0xDD) || (b0 == 0xFD));
 
       Z80ReassInstr instr = Z80Reassembler.reassInstruction(
 				addr,
 				b0,
-				this.emuThread.getMemByte( addr + 1, b1_m1 ),
-				this.emuThread.getMemByte( addr + 2, false ),
-				this.emuThread.getMemByte( addr + 3, false ) );
+				this.memory.getMemByte( addr + 1, b1_m1 ),
+				this.memory.getMemByte( addr + 2, false ),
+				this.memory.getMemByte( addr + 3, false ) );
       if( instr != null ) {
+
+	// Adresse ausgeben
+	buf.append( String.format( "%04X  ", addr ) );
 
 	// Befehlscode ausgeben
 	int w = 12;
@@ -1529,7 +1552,7 @@ public class DebugFrm extends BasicFrm implements
 	for( int i = 0; i < n; i++ ) {
 	  buf.append( String.format(
 			"%02X ",
-			this.emuThread.getMemByte(
+			this.memory.getMemByte(
 					addr,
 					(i == 0) || ((i == 1) && b1_m1) ) ) );
 	  addr++;
@@ -1567,7 +1590,7 @@ public class DebugFrm extends BasicFrm implements
 
 	buf.append( String.format(
 			"%02X",
-			this.emuThread.getMemByte( addr, true ) ) );
+			this.memory.getMemByte( addr, true ) ) );
 	addr++;
       }
     }
@@ -1578,8 +1601,9 @@ public class DebugFrm extends BasicFrm implements
   private String getAscii( int value )
   {
     String rv = "";
-    if( (value > '\u0020') && (value < '\u007F') )
+    if( (value > '\u0020') && (value < '\u007F') ) {
       rv += (char) value;
+    }
     return rv;
   }
 
@@ -1592,15 +1616,15 @@ public class DebugFrm extends BasicFrm implements
     for( int i = 0; i < numBytes; i++ ) {
       buf.append( String.format(
 			"%02X ",
-			this.emuThread.getMemByte( addr + i, false ) ) );
+			this.memory.getMemByte( addr + i, false ) ) );
     }
 
     // ggf. ASCII-Darstellung ausgeben
-    int ch = this.emuThread.getMemByte( addr, false );
+    int ch = this.memory.getMemByte( addr, false );
     if( (ch >= '\u0020') && (ch <= '\u007E') ) {
       buf.append( " \"" );
       for( int k = 0; k < numBytes; k++ ) {
-	ch = this.emuThread.getMemByte( addr + k, false );
+	ch = this.memory.getMemByte( addr + k, false );
 	if( (ch < '\u0020') || (ch > '\u007E') )
 	  break;
 	buf.append( (char) ch );
@@ -1664,7 +1688,7 @@ public class DebugFrm extends BasicFrm implements
     if( (idxToSelect >= 0) && (idxToSelect < n) ) {
       this.listBreakpoint.setSelectedIndex( idxToSelect );
     }
-    this.z80cpu.setBreakpoints( this.breakpoints );
+    this.cpu.setBreakpoints( this.breakpoints );
 
     boolean state = (n > 0);
     this.mnuDebugBreakRemoveAll.setEnabled( state );

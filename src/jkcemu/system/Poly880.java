@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -69,7 +69,7 @@ public class Poly880 extends EmuSys implements
     cpu.addTStatesListener( this );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
-    z80MaxSpeedChanged();
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -104,10 +104,9 @@ public class Poly880 extends EmuSys implements
 
 	/* --- Z80MaxSpeedListener --- */
 
-  public void z80MaxSpeedChanged()
+  public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    this.displayCheckTStates = this.emuThread.getZ80CPU().getMaxSpeedKHz()
-								* 50;
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
   }
 
 
@@ -228,7 +227,7 @@ public class Poly880 extends EmuSys implements
 
   public String getTitle()
   {
-    return "Poly880";
+    return "Poly-880";
   }
 
 
@@ -417,6 +416,12 @@ public class Poly880 extends EmuSys implements
       }
     }
     return rv;
+  }
+
+
+  public boolean supportsAudio()
+  {
+    return true;
   }
 
 

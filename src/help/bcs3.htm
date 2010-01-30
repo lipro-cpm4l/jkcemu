@@ -4,11 +4,11 @@
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>Je nach Einstellung 2 oder 4 KByte ROM</li>
-      <li>1 KByte RAM</li>
+      <li>Je nach Einstellung 2, 4 oder 5&nbsp;KByte ROM</li>
+      <li>1&nbsp;KByte RAM</li>
       <li>Kassettenrecorderanschluss</li>
       <li>
-	Optional eine Speichererweiterung mit 16 KByte RAM<br/>
+	Optional eine Speichererweiterung mit 16o&nbsp;KByte RAM<br/>
 	Die Speichererweiterung liegt in einem globalen RAM-Bereich und
 	wird f&uuml;r alle emulierten Systeme gemeinsam genutzt.
       </li>
@@ -25,21 +25,6 @@
     wo im Speicher die auszugebenden Zeichen stehen.
     Standardm&auml;&szlig;ig liest JKCEMU diese Zeichen selbst aus
     und stellt sie entsprechend dar.
-  <br/><br/>
-    Durch Einbinden eines externen ROM-Images k&ouml;nnen Sie auch
-    eine andere bzw. neue Betriebssystemversion verwenden.
-    Diese benutzt m&ouml;glicherweise einen anderen Adressbereich
-    zum Speichern der Bilddaten.
-    In dem Fall stellt JKCEMU ein falsches Bild dar.
-    Um nun trotzdem eine richtige Bildschirmausgabe zu erreichen,
-    k&ouml;nnen Sie in den <a href="settings.htm">Einstellungen</a>
-    die BCS3-Option
-    <em>Softwarem&auml;&szlig;ig erzeugtes Bildsignal anzeigen</em>
-    einschalten.
-    In dem Fall visualisiert JKCEMU nicht aus dem Arbeitsspeicher heraus,
-    sondern stellt das softwarem&auml;&szlig;ig erzeugtes Bildsignal dar.
-    Nachteilig ist allerdings, dass dann das Markieren und Kopieren
-    von Text in der Bildschirmausgabe nicht mehr m&ouml;glich ist.
   <br/><br/>
 
   <h3>1.2. Kassettenrecorderanschluss</h3>
@@ -72,33 +57,33 @@
     Je nach Einstellung:<br/>
     <ul>
       <li>
-	<a href="bcs3/basic_se24.htm">BASIC-SE 2.4</a>
-	f&uuml;r 27 sichtbare Zeichen pro Zeile und 2,5 MHz Taktfrequenz
+	<a href="bcs3/basic_se24.htm">BASIC-SE&nbsp;2.4</a>
+	f&uuml;r 27 sichtbare Zeichen pro Zeile und 2,5&nbsp;MHz Taktfrequenz
       </li>
       <li>
-	<a href="bcs3/basic_se31.htm">BASIC-SE 3.1</a>
+	<a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
 	f&uuml;r 29 sichtbare Zeichen pro Zeile
-	und 2,5 MHz Taktfrequenz
+	und 2,5&nbsp;MHz Taktfrequenz
       </li>
       <li>
-	<a href="bcs3/basic_se31.htm">BASIC-SE 3.1</a>
+	<a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
 	f&uuml;r 40 sichtbare Zeichen pro Zeile
-	und 3,5 MHz Taktfrequenz
+	und 3,5&nbsp;MHz Taktfrequenz
       </li>
       <li>
-	<a href="bcs3/sp_basic_33.htm">S/P-BASIC V3.3</a>
+	<a href="bcs3/sp_basic_33.htm">S/P-BASIC&nbsp;V3.3</a>
 	f&uuml;r 29 sichtbare Zeichen pro Zeile
-	und 2,5 MHz Taktfrequenz
+	und 2,5&nbsp;MHz Taktfrequenz
       </li>
       <li>
 	<a href="bcs3/mc_editor.htm">Maschinenkode-Editor</a>
-	(nur in Verbindung mit BASIC-SE 3.1
+	(nur in Verbindung mit BASIC-SE&nbsp;3.1
 	f&uuml;r 29 sichtbare Zeichen pro Zeile)
       </li>
     </ul>
   <br/><br/>
 
-  <h3>2.1. Hinweise zu BASIC-SE 3.1 und S/P-BASIC V3.3</h3>
+  <h3>2.1. Hinweise zu BASIC-SE&nbsp;3.1 und S/P-BASIC&nbsp;V3.3</h3>
     <ul>
       <li>
 	Beim Systemstart pr&uuml;ft das BASIC,
@@ -114,7 +99,7 @@
       <li>
 	Bei einem Kaltstart m&uuml;ssen Sie als erstes
 	die Anzahl der sichtbaren Zeilen
-	(BASIC-SE 3.1: 4 bis 29, S/P-BASIC 3.3: 4 bis 28) eingeben
+	(BASIC-SE&nbsp;3.1: 4 bis 29, S/P-BASIC&nbsp;3.3: 4 bis 28) eingeben
 	und <em>ENTER</em> bet&auml;tigen,
 	bevor Sie in die BASIC-Eingabeaufforderung gelangen.
 	<br/><br/>
@@ -135,8 +120,9 @@
 	<br/><br/>
       </li>
       <li>
-	S/P-BASIC V3.3 ist nicht abw&auml;rtskompatibel zu BASIC-SE 3.1,
-	und dieses ist auch nicht abw&auml;rtskompatibel zur Version 2.4,
+	S/P-BASIC&nbsp;V3.3 ist nicht abw&auml;rtskompatibel
+	zu BASIC-SE&nbsp; 3.1,
+	und dieses ist auch nicht abw&auml;rtskompatibel zur Version&nbsp;2.4,
 	d.h., BASIC-Programme laufen nur mit der Version,
 	mit der sie auch eingetippt wurden.
 	Die Token und damit das Bin&auml;rformat ist bei allen drei
@@ -151,7 +137,7 @@
   <h3>3.1. Speichern und Laden von BASIC-Programmen</h3>
     Speichern Sie die BASIC-Programme mit der entsprechenden Funktion
     des Emulator (Men&uuml; <em>Datei</em> &rarr;
-    <em>BASIC-Programm</em> &rarr; <em>Speichern...</em>).
+    <em>BASIC-Programm speichern...</em>).
     Da das BASIC-Programm abh&auml;ngig von der sichtbaren Zeilenzahl
     eventuell auf eine andere Adresse wieder eingeladen werden muss,
     sollte die Ladeadresse nicht in der Datei stehen.

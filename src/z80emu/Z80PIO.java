@@ -40,11 +40,6 @@ public class Z80PIO implements Z80InterruptSource
   private Z80PIO.Port portB;
 
 
-  /*
-   * Der Paramter "preIntSource" verweist auf die hoeher priorisierte
-   * Interrupt-Quelle (Vorgaenger in der Z80-Interrupt-Prioritaeten-Kette)
-   * und kann auch null sein.
-   */
   public Z80PIO( Z80CPU cpu )
   {
     this.cpu    = cpu;
@@ -269,8 +264,12 @@ public class Z80PIO implements Z80InterruptSource
 
   public boolean isInterruptRequested()
   {
-    return (this.portA.interruptEnabled && this.portA.interruptRequested)
-	   || (this.portB.interruptEnabled && this.portB.interruptRequested);
+    boolean rv = (this.portA.interruptEnabled
+				&& this.portA.interruptRequested);
+    if( !rv && !this.portA.interruptPending ) {
+      rv = (this.portB.interruptEnabled && this.portB.interruptRequested);
+    }
+    return rv;
   }
 
 

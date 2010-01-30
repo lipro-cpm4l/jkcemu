@@ -39,6 +39,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
     this.ramStatic = new byte[ 0x0400 ];
     this.pio2      = new Z80PIO( emuThread.getZ80CPU() );
     createIOSystem();
+    checkAddPCListener( props );
     reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
@@ -50,6 +51,13 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    checkAddPCListener( props );
+  }
+
 
   public boolean canExtractScreenText()
   {
@@ -344,6 +352,18 @@ public class HueblerEvertMC extends AbstractHueblerMC
   }
 
 
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
+  }
+
+
   public void writeIOByte( int port, int value )
   {
     port &= 0x3F;
@@ -367,6 +387,14 @@ public class HueblerEvertMC extends AbstractHueblerMC
       default:
 	super.writeIOByte( port, value );
     }
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void checkAddPCListener( Properties props )
+  {
+    checkAddPCListener( props, "jkcemu.hemc.catch_print_calls" );
   }
 }
 

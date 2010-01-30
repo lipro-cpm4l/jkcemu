@@ -48,7 +48,7 @@ public class AC1LLC2Util
 
   public static String getSCCHBasicProgram( Z80MemView memory )
   {
-    return SourceUtil.getKCStyleBasicProgram( memory, 0x60F7, scchTokens );
+    return SourceUtil.getKCBasicStyleProgram( memory, 0x60F7, scchTokens );
   }
 
 
