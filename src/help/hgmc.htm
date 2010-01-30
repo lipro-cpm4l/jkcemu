@@ -10,8 +10,8 @@
 
   <h2>1. Emulierte Hardware</h2>
     <ul>
-      <li>Je nach Einstellung 4 oder 18 KByte ROM</li>
-      <li>64 KByte RAM inklusive Bildwiederholspeicher</li>
+      <li>Je nach Einstellung 4 oder 18&nbsp;KByte ROM</li>
+      <li>64&nbsp;KByte RAM inklusive Bildwiederholspeicher</li>
       <li>CTC</li>
       <li>PIO</li>
     </ul>
@@ -20,13 +20,21 @@
     an der PIO angeschlossene Hardware werden nicht emuliert.
   <br/><br/>
 
+  <h3>1.1. Drucker</h3>
+    Es wird ein Drucker emuliert,
+    indem JKCEMU die Betriebssystemaufrufe f&uuml;r Druckausgaben
+    abf&auml;ngt und die Daten an den aktuellen Druckauftrag anh&auml;ngt.
+    Diese Funktion ist in den <a href="settings.htm">Einstellungen</a>
+    abschaltbar.
+  <br/><br/>
+
 
   <h2>2. Im ROM enthaltene Software</h2>
     <ul>
-      <li>Monitorprogramm Version 3.0</li>
+      <li>Monitorprogramm Version&nbsp;3.0</li>
       <li>
-	Geringf&uuml;gig modifiziertes HBASIC 3.3
-	(optional, siehe Abschnitt 3.1.)
+	Geringf&uuml;gig modifiziertes HBASIC&nbsp;3.3
+	(optional, siehe Abschnitt&nbsp;3.1.)
       </li>
     </ul>
     Im Monitorprogramm kann man sich mit <em>HELP</em>
@@ -70,8 +78,8 @@
   <h3>3.2. BASIC-Programme speichern und laden</h3>
     JKCEMU bietet eine spezielle Unterst&uuml;tzung
     f&uuml;r das Speichern und Laden von BASIC-Programmen.
-    Zum Speichern nutzen Sie bitte die entsprechende Funktion im Men&uuml;
-    <em>Datei</em>, Untermen&uuml; <em> BASIC-Programm</em>,
+    Zum Speichern nutzen Sie bitte die Funktion
+    <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
     und speichern das Programm als
     <a href="fileformats.htm#headersave">Headersave</a>-Datei
     mit dem Dateityp <tt>B</tt>.

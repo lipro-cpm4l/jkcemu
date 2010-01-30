@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,24 +8,36 @@
 
 package jkcemu.system;
 
-import java.awt.Component;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.lang.*;
-import java.util.Properties;
+import java.util.*;
 import javax.swing.JOptionPane;
 import jkcemu.base.*;
+import jkcemu.disk.*;
 import z80emu.*;
 
 
-public class AC1 extends EmuSys implements Z80CTCListener
+public class AC1 extends EmuSys implements
+					FDC8272.DriveSelector,
+					Z80CTCListener,
+					Z80TStatesListener
 {
+  private enum BasicType {
+			AC1_MINI,
+			AC1_8K,
+			AC1_12K,
+			SCCH,
+			BACOBAS,
+			ADDR_60F7 };
+
   /*
-   * Diese Tabelle mappt die Tokens des AC1-BASIC-Interpreters
+   * Diese Tabelle mappt die Tokens des AC1-8K-BASIC-Interpreters
    * in ihre entsprechenden Texte.
    * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
    */
-  private static final String[] ac1Tokens = {
+  private static final String[] ac1_8kTokens = {
 	"END",      "FOR",    "NEXT",   "DATA",		// 0x80
 	"INPUT",    "DIM",    "READ",   "LET",
 	"GOTO",     "RUN",    "IF",     "RESTORE",
@@ -50,6 +62,73 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	"EDIT",     "ASAVE",  "ALOAD",  "TRON",
 	"TROFF" };
 
+  /*
+   * Diese Tabelle mappt die Tokens des AC1-12K-BASIC-Interpreters
+   * in ihre entsprechenden Texte.
+   * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
+   */
+  private static final String[] ac1_12kTokens = {
+	"END",      "FOR",       "NEXT",   "DATA",	// 0x80
+	"INPUT",    "DIM",       "READ",   "LET",
+	"GO TO",    "RUN",       "IF",     "RESTORE",
+	"GO SUB",   "RETURN",    "REM",    "STOP",
+	"OUT",      "ON",        "NULL",   "WAIT",	// 0x90
+	"DEF",      "POKE",      "BEEP",   "AUTO",
+	"?",        "CLS",       "WIDTH",  "FNEND",
+	"RENUMBER", "CALL",      "PRINT",  "CONT",
+	"LIST",     "CLEAR",     "CLOAD",  "CSAVE",	// 0xA0
+	"NEW",      "TAB(",      "TO",     "FN",
+	"SPC(",     "THEN",      "NOT",    "STEP",
+	"+",        "-",         "*",      "/",
+	"^",        "AND",       "OR",     ">",		// 0xB0
+	"=",        "<",         "SGN",    "INT",
+	"ABS",      "USR",       "FRE",    "INP",
+	"POS",      "SQR",       "RND",    "LN",
+	"EXP",      "COS",       "SIN",    "TAN",	// 0xC0
+	"ATN",      "PEEK",      "USING",  "POINT",
+	"LEN",      "STR$",      "VAL",    "ASC",
+	"CHR$",     "LEFT$",     "RIGHT$", "MID$",
+	"SET",      "RESET",     "LPOS",   "INSTR",	// 0xD0
+	"EDIT",     "LVAR",      "LLVAR",  "TRACE",
+	"LTRACE",   "FNRETURN",  "!",      "ELSE",
+	"LPRINT",   "RANDOMIZE", "LWIDTH", "LNULL",
+	"\'",       "PRECISION", "KILL",   "EXCHANGE",	// 0xE0
+	"LINE",     "CLOAD",     "COPY",   "LLIST",
+	"DELETE",   "SWITCH",    "SCREEN" };
+
+  /*
+   * Diese Tabelle mappt die Tokens des BASOBAS-Interpreters
+   * in ihre entsprechenden Texte.
+   * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
+   */
+  private static final String[] bacobasTokens = {
+	"END",      "FOR",    "NEXT",   "DATA",		// 0x80
+	"INPUT",    "DIM",    "READ",   "LET",
+	"GOTO",     "RUN",    "IF",     "RESTORE",
+	"GOSUB",    "RETURN", "REM",    "STOP",
+	"OUT",      "ON",     "NULL",   "WAIT",		// 0x90
+	"DEF",      "POKE",   "DOKE",   "AUTO",
+	"LINES",    "CLS",    "WIDTH",  "BYE",
+	"RENUMBER", "CALL",   "PRINT",  "CONT",
+	"LIST",     "CLEAR",  "CLOAD",  "CSAVE",	// 0xA0
+	"NEW",      "TAB(",   "TO",     "FN",
+	"SPC(",     "THEN",   "NOT",    "STEP",
+	"+",        "-",      "*",      "/",
+	"^",        "AND",    "OR",     ">",		// 0xB0
+	"=",        "<",      "SGN",    "INT",
+	"ABS",      "USR",    "FRE",    "INP",
+	"POS",      "SQR",    "RND",    "LN",
+	"EXP",      "COS",    "SIN",    "TAN",		// 0xC0
+	"ATN",      "PEEK",   "DEEK",   "POINT",
+	"LEN",      "STR$",   "VAL",    "ASC",
+	"CHR$",     "LEFT$",  "RIGHT$", "MID$",
+	"SET",      "RESET",  "WINDOW", "SCREEN",	// 0xD0
+	"EDIT",     "DSAVE",  "DLOAD",  "TRON",
+	"TROFF",    "POS",    "BEEP",   "BRON",
+	"BROFF",    "LPRINT", "LLIST",  "BACO",
+	"CONV",     "TRANS",  "BLIST",  "BEDIT",
+	"BSAVE",    "BLOAD",  "DELETE", "DIR" };
+
   private static byte[] mon31_64x16   = null;
   private static byte[] mon31_64x32   = null;
   private static byte[] scchMon80     = null;
@@ -60,40 +139,54 @@ public class AC1 extends EmuSys implements Z80CTCListener
   private static byte[] scchFontBytes = null;
   private static byte[] u402FontBytes = null;
 
-  private byte[]  ramStatic;
-  private byte[]  ramVideo;
-  private byte[]  ramExtended;
-  private byte[]  romMon;
-  private byte[]  romBASIC;
-  private byte[]  romdisk;
-  private byte[]  prgX;
-  private byte[]  fontBytes;
-  private Z80CTC  ctc;
-  private Z80PIO  pio;
-  private boolean mode64x16;
-  private boolean scchMode;
-  private boolean keyboardUsed;
-  private boolean lowerDRAMEnabled;
-  private boolean romdiskEnabled;
-  private boolean romdiskA15;
-  private boolean prgXEnabled;
-  private boolean gsbasicEnabled;
-  private boolean rf32KActive;
-  private boolean rf32NegA15;
-  private boolean rfReadEnabled;
-  private boolean rfWriteEnabled;
-  private int     rfAddr16to19;
+  private byte[]            ramStatic;
+  private byte[]            ramVideo;
+  private byte[]            ramExtended;
+  private byte[]            romMon;
+  private byte[]            romBASIC;
+  private byte[]            fontBytes;
+  private byte[]            prgXBytes;
+  private byte[]            romdiskBytes;
+  private String            prgXFileName;
+  private String            romdiskFileName;
+  private BasicType         lastBasicType;
+  private Z80CTC            ctc;
+  private Z80PIO            pio;
+  private FDC8272           fdc;
+  private FloppyDiskDrive[] fdDrives;
+  private boolean           fdcWaitEnabled;
+  private boolean           mode64x16;
+  private boolean           scchMode;
+  private boolean           keyboardUsed;
+  private boolean           lowerDRAMEnabled;
+  private boolean           romdiskEnabled;
+  private boolean           prgXEnabled;
+  private boolean           gsbasicEnabled;
+  private boolean           rf32KActive;
+  private boolean           rf32NegA15;
+  private boolean           rfReadEnabled;
+  private boolean           rfWriteEnabled;
+  private int               rfAddr16to19;
+  private int               romdiskBegAddr;
+  private int               romdiskBankAddr;
 
 
   public AC1( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    this.ramExtended = null;
-    this.romMon      = null;
-    this.romBASIC    = null;
-    this.fontBytes   = null;
-    this.mode64x16   = false;
-    this.scchMode    = false;
+    this.ramExtended     = null;
+    this.romMon          = null;
+    this.romBASIC        = null;
+    this.fontBytes       = null;
+    this.prgXBytes       = null;
+    this.romdiskBytes    = null;
+    this.prgXFileName    = null;
+    this.romdiskFileName = null;
+    this.lastBasicType   = null;
+    this.mode64x16       = false;
+    this.scchMode        = false;
+    this.romdiskBegAddr  = getROMDiskBegAddr( props );
+    this.romdiskBankAddr = 0;
 
     String mon = EmuUtil.getProperty( props, "jkcemu.ac1.monitor" );
     if( mon.startsWith( "SCCH" ) ) {
@@ -112,10 +205,10 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	}
 	this.romMon = scchMon1088;
       }
-      this.scchMode    = true;
       this.ramExtended = this.emuThread.getExtendedRAM( 0x100000 );
-      this.prgX        = readProgramX( props );
-      this.romdisk     = readROMDisk( props );
+      this.scchMode    = true;
+      lazyReadPrgX( props );
+      lazyReadRomdisk( props );
     } else {
       if( minibasic == null ) {
 	minibasic = readResource( "/rom/ac1/minibasic.bin" );
@@ -145,12 +238,17 @@ public class AC1 extends EmuSys implements Z80CTCListener
     if( this.mode64x16 ) {
       this.ramStatic = new byte[ 0x0400 ];
       this.ramVideo  = new byte[ 0x0400 ];
+      this.fdDrives  = null;
+      this.fdc       = null;
     } else {
       this.ramStatic = new byte[ 0x0800 ];
       this.ramVideo  = new byte[ 0x0800 ];
       if( gsbasic == null ) {
 	gsbasic = readResource( "/rom/ac1/gsbasic.bin" );
       }
+      this.fdDrives = new FloppyDiskDrive[ 4 ];
+      Arrays.fill( this.fdDrives, null );
+      this.fdc = new FDC8272( this, 4 );
     }
 
     Z80CPU cpu = emuThread.getZ80CPU();
@@ -159,47 +257,85 @@ public class AC1 extends EmuSys implements Z80CTCListener
     cpu.setInterruptSources( this.ctc, this.pio );
 
     this.ctc.addCTCListener( this );
-    cpu.addTStatesListener( this.ctc );
+    cpu.addTStatesListener( this );
+    if( this.fdc != null ) {
+      cpu.addMaxSpeedListener( this.fdc );
+    }
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
-  public static String getBasicProgram( Component owner, Z80MemView memory )
+  public static String getBasicProgram(
+			Window   owner,
+			LoadData loadData ) throws UserCancelException
   {
-    String rv = null;
-    String s1 = getBasicProgram( memory, 0x60F7, ac1Tokens );
-    String s2 = AC1LLC2Util.getSCCHBasicProgram( memory );
-    if( (s1 != null) && (s2 != null) ) {
-      if( s1.equals( s2 ) ) {
-	rv = s1;
-      } else {
-	String[]    options = { "AC1-BASIC", "SCCH-BASIC", "Abbrechen" };
-	JOptionPane pane    = new JOptionPane(
-		"Wurde das BASIC-Programm mit dem originalen"
-			+ " AC1-BASIC-Interpreter\n"
-			+ "oder mit dem Grafik/Sound-BASIC-Interpreter"
-			+ " von SCCH erstellt?",
-		JOptionPane.QUESTION_MESSAGE );
-	pane.setOptions( options );
-	pane.setWantsInput( false );
-	Object value = pane.getValue();
-	if( value != null ) {
-	  if( value.equals( options[ 0 ] ) ) {
-	    rv = s1;
+    String rv   = null;
+    int    addr = loadData.getBegAddr();
+    if( addr == 0x60F7 ) {
+      String ac1_8k = SourceUtil.getKCBasicStyleProgram(
+						loadData,
+						addr,
+						ac1_8kTokens );
+
+      String scch    = AC1LLC2Util.getSCCHBasicProgram( loadData );
+      String bacobas = SourceUtil.getKCBasicStyleProgram(
+						loadData,
+						addr,
+						bacobasTokens );
+
+      if( (ac1_8k != null) && (scch != null) && (bacobas != null) ) {
+	if( ac1_8k.equals( scch ) && scch.equals( bacobas ) ) {
+	  rv = ac1_8k;
+	} else {
+	  java.util.List<String> options = new ArrayList<String>( 4 );
+	  java.util.List<String> texts   = new ArrayList<String>( 3 );
+	  if( ac1_8k != null ) {
+	    options.add( "8K-AC1-BASIC" );
+	    texts.add( ac1_8k );
 	  }
-	  else if( value.equals( options[ 1 ] ) ) {
-	    rv = s2;
+	  if( scch != null ) {
+	    options.add( "SCCH-BASIC" );
+	    texts.add( scch );
+	  }
+	  if( bacobas != null ) {
+	    options.add( "BACOBAS" );
+	    texts.add( bacobas );
+	  }
+	  int n = options.size();
+	  if( n == 1 ) {
+	    rv = texts.get( 0 );
+	  }
+	  else if( n > 1 ) {
+	    try {
+	      int v = OptionDlg.showOptionDlg(
+			owner,
+			"Das BASIC-Programm enth\u00E4lt Tokens,"
+				+ " die von den einzelnen Interpretern\n"
+				+ "als unterschiedliche Anweisungen"
+				+ " verstanden werden.\n"
+				+ "W\u00E4hlen Sie bitte den Interpreter aus,"
+				+ " entsprechend dem die Tokens\n"
+				+ "dekodiert werden sollen.",
+			"BASIC-Interpreter",
+			-1,
+			options.toArray( new String[ n ] ) );
+	      if( (v >= 0) && (v < texts.size()) ) {
+		rv = texts.get( v );
+	      }
+	      if( rv == null ) {
+		throw new UserCancelException();
+	      }
+	    }
+	    catch( ArrayStoreException ex ) {
+	      EmuUtil.exitSysError( owner, null, ex );
+	    }
 	  }
 	}
       }
-    } else {
-      if( s1 != null ) {
-	rv = s1;
-      }
-      else if( s2 != null ) {
-	rv = s2;
-      }
+    }
+    else if( addr == 0x6FB7 ) {
+      rv = SourceUtil.getKCBasicStyleProgram( loadData, addr, ac1_12kTokens );
     }
     return rv;
   }
@@ -220,6 +356,20 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
+		/* --- FDC8272.DriveSelector --- */
+
+  public FloppyDiskDrive getFloppyDiskDrive( int driveNum )
+  {
+    FloppyDiskDrive rv = null;
+    if( this.fdDrives != null ) {
+      if( (driveNum >= 0) && (driveNum < this.fdDrives.length) ) {
+	rv = this.fdDrives[ driveNum ];
+      }
+    }
+    return rv;
+  }
+
+
 	/* --- Z80CTCListener --- */
 
   public void z80CTCUpdate( Z80CTC ctc, int timerNum )
@@ -230,7 +380,26 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
+	/* --- Z80TStatesListener --- */
+
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    this.ctc.systemUpdate( tStates );
+    if( this.fdc != null ) {
+      this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
+
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    lazyReadPrgX( props );
+    lazyReadRomdisk( props );
+  }
+
 
   public boolean canExtractScreenText()
   {
@@ -243,53 +412,17 @@ public class AC1 extends EmuSys implements Z80CTCListener
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
-    cpu.removeTStatesListener( this.ctc );
+    cpu.removeTStatesListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    if( this.fdc != null ) {
+      cpu.removeMaxSpeedListener( this.fdc );
+    }
   }
 
 
   public int getAppStartStackInitValue()
   {
     return 0x2000;
-  }
-
-
-  public int getColorIndex( int x, int y )
-  {
-    int    rv        = BLACK;
-    byte[] fontBytes = this.emuThread.getExtFontBytes();
-    if( fontBytes == null ) {
-      fontBytes = this.fontBytes;
-    }
-    if( fontBytes != null ) {
-      int col  = x / 6;
-      int row  = 0;
-      int rPix = 0;
-      if( this.mode64x16 ) {
-	row  = y / 16;
-	rPix = y % 16;
-      } else {
-	row  = y / 8;
-	rPix = y % 8;
-      }
-      if( (rPix >= 0) && (rPix < 8) ) {
-	int vIdx = this.ramVideo.length - 1 - (row * 64) - col;
-	if( (vIdx >= 0) && (vIdx < this.ramVideo.length) ) {
-	  int fIdx = (((int) this.ramVideo[ vIdx ] & 0xFF) * 8) + rPix;
-	  if( (fIdx >= 0) && (fIdx < fontBytes.length ) ) {
-	    int m = 1;
-	    int n = x % 6;
-	    if( n > 0 ) {
-	      m <<= n;
-	    }
-	    if( (fontBytes[ fIdx ] & m) != 0 ) {
-	      rv = WHITE;
-	    }
-	  }
-	}
-      }
-    }
-    return rv;
   }
 
 
@@ -320,6 +453,24 @@ public class AC1 extends EmuSys implements Z80CTCListener
   public int getCharWidth()
   {
     return 6;
+  }
+
+
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 50;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 150;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 50;
   }
 
 
@@ -372,26 +523,20 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	}
 	done = true;
       }
-      if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
-	if( this.romdisk != null ) {
-	  int idx = addr - 0xC000;
-	  if( this.prgXEnabled ) {
-	    idx |= 0x4000;
-	  }
-	  if( this.romdiskA15 ) {
-	    idx |= 0x8000;
-	  }
-	  if( idx < this.romdisk.length ) {
-	    rv = (int) this.romdisk[ idx ] & 0xFF;
+      if( !done && this.romdiskEnabled && (addr >= this.romdiskBegAddr) ) {
+	if( this.romdiskBytes != null ) {
+	  int idx = this.romdiskBankAddr | (addr - this.romdiskBegAddr);
+	  if( idx < this.romdiskBytes.length ) {
+	    rv = (int) this.romdiskBytes[ idx ] & 0xFF;
 	  }
 	}
 	done = true;
       }
       if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
-	if( this.prgX != null ) {
+	if( this.prgXBytes != null ) {
 	  int idx = addr - 0xE000;
-	  if( idx < this.prgX.length ) {
-	    rv = (int) this.prgX[ idx ] & 0xFF;
+	  if( idx < this.prgXBytes.length ) {
+	    rv = (int) this.prgXBytes[ idx ] & 0xFF;
 	  }
 	}
 	done = true;
@@ -497,6 +642,18 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
+  public int getSupportedFloppyDiskDriveCount()
+  {
+    return this.fdDrives != null ? this.fdDrives.length : 0;
+  }
+
+
+  public int getSupportedRAMFloppyCount()
+  {
+    return this.mode64x16 ? 0 : 1;
+  }
+
+
   public boolean getSwapKeyCharCase()
   {
     return true;
@@ -513,16 +670,15 @@ public class AC1 extends EmuSys implements Z80CTCListener
   {
     boolean rv = false;
     if( !this.rfReadEnabled ) {
-      if( addr < 0x2000 ) {
-	rv = !this.lowerDRAMEnabled;
-      } else if( (addr >= 0x2000) && (addr < 0xE000) ) {
-	if( !this.romdiskEnabled ) {
-	  rv = true;
-	}
-      } else {
-	if( !this.romdiskEnabled && !this.prgXEnabled ) {
-	  rv = true;
-	}
+      rv = true;
+      if( (addr < 0x2000) && this.lowerDRAMEnabled ) {
+	rv = false;
+      }
+      if( rv && (addr >= this.romdiskBegAddr) && this.romdiskEnabled ) {
+	rv = false;
+      }
+      if( rv && (addr >= 0xE000) && this.prgXEnabled ) {
+	rv = false;
       }
     }
     return rv;
@@ -596,34 +752,196 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
   public void openBasicProgram()
   {
-    String text = null;
-    if( (this.romMon == this.mon31_64x16)
-	|| (this.romMon == this.mon31_64x32) )
-    {
-      text = getBasicProgram( this.emuThread, 0x60F7, ac1Tokens );
-    } else {
-      text = AC1LLC2Util.getSCCHBasicProgram( this.emuThread );
+    boolean   cancelled = false;
+    BasicType bType     = null;
+    String    text      = null;
+    int       preIdx    = -1;
+    if( this.lastBasicType != null ) {
+      switch( this.lastBasicType ) {
+	case AC1_MINI:
+	  preIdx = 0;
+	  break;
+
+	case AC1_8K:
+	  preIdx = 1;
+	  break;
+
+	case AC1_12K:
+	  preIdx = 2;
+	  break;
+
+	case SCCH:
+	  preIdx = 3;
+	  break;
+
+	case BACOBAS:
+	  preIdx = 4;
+	  break;
+      }
     }
-    if( text != null ) {
-      this.screenFrm.openText( text );
-    } else {
-      showNoAC1Basic();
+    if( (preIdx < 0) && this.scchMode ) {
+      preIdx = 3;
+    }
+    switch( OptionDlg.showOptionDlg(
+		this.screenFrm,
+		"W\u00E4hlen Sie bitte den BASIC-Interpreter aus,\n"
+			+ "dessen BASIC-Programm ge\u00F6ffnet werden soll.\n"
+			+ "Die Auswahl des Interpreters ist auch deshalb"
+			+ " notwendig,\n"
+			+ "damit die Tokens richtig dekodiert werden.",
+		"BASIC-Interpreter",
+		preIdx,
+		"Mini-BASIC",
+		"8K-AC1-BASIC",
+		"12K-AC1-BASIC",
+		"SCCH-BASIC",
+		"BACOBAS" ) )
+    {
+      case 0:
+	bType = BasicType.AC1_MINI;
+	text  = getTinyBasicProgram( this.emuThread );
+	break;
+
+      case 1:
+	bType = BasicType.AC1_8K;
+	text  = SourceUtil.getKCBasicStyleProgram(
+					this.emuThread,
+					0x60F7,
+					ac1_8kTokens );
+	break;
+
+      case 2:
+	bType = BasicType.AC1_12K;
+	text  = SourceUtil.getKCBasicStyleProgram(
+					this.emuThread,
+					0x6FB7,
+					ac1_12kTokens );
+	break;
+
+      case 3:
+	bType = BasicType.SCCH;
+	text  = AC1LLC2Util.getSCCHBasicProgram( this.emuThread );
+	break;
+
+      case 4:
+	bType = BasicType.BACOBAS;
+	text  = SourceUtil.getKCBasicStyleProgram(
+					this.emuThread,
+					0x60F7,
+					bacobasTokens );
+	break;
+
+      default:
+	cancelled = true;
+    }
+    if( !cancelled ) {
+      if( text != null ) {
+	this.lastBasicType = bType;
+	this.screenFrm.openText( text );
+      } else {
+	showNoBasic();
+      }
     }
   }
 
 
-  public void openTinyBasicProgram()
+  public boolean paintScreen(
+			Graphics g,
+			int      xOffs,
+			int      yOffs,
+			int      screenScale )
   {
-    if( this.romBASIC != null ) {
-      String text = getTinyBasicProgram( this.emuThread );
-      if( text != null ) {
-	this.screenFrm.openText( text );
-      } else {
-	showNoMiniBasic();
-      }
-    } else {
-      super.openTinyBasicProgram();
+    byte[] fontBytes = this.emuThread.getExtFontBytes();
+    if( fontBytes == null ) {
+      fontBytes = this.fontBytes;
     }
+    if( fontBytes != null ) {
+      int bgColorIdx = getBorderColorIndex();
+      int wBase      = getScreenWidth();
+      int hBase      = getScreenHeight();
+
+      if( (xOffs > 0) || (yOffs > 0) ) {
+	g.translate( xOffs, yOffs );
+      }
+
+      /*
+       * Aus Gruenden der Performance werden nebeneinander liegende
+       * weisse Punkte zusammengefasst und als Linie gezeichnet.
+       */
+      for( int y = 0; y < hBase; y++ ) {
+	int     lastColorIdx = -1;
+	int     xColorBeg    = -1;
+	boolean inverse      = false;
+	for( int x = 0; x < wBase; x++ ) {
+	  int col  = x / 6;
+	  int row  = 0;
+	  int rPix = 0;
+	  if( this.mode64x16 ) {
+	    row  = y / 16;
+	    rPix = y % 16;
+	  } else {
+	    row  = y / 8;
+	    rPix = y % 8;
+	  }
+	  if( (rPix >= 0) && (rPix < 8) ) {
+	    int vIdx = this.ramVideo.length - 1 - (row * 64) - col;
+	    if( (vIdx >= 0) && (vIdx < this.ramVideo.length) ) {
+	      int ch = (int) this.ramVideo[ vIdx ] & 0xFF;
+	      if( this.scchMode ) {
+		if( ch == 0x10 ) {
+		  inverse = false;
+		} else if( ch == 0x11 ) {
+		  inverse = true;
+		}
+	      }
+	      int fIdx = (ch * 8) + rPix;
+	      if( (fIdx >= 0) && (fIdx < fontBytes.length ) ) {
+		int m = 0x01;
+		int n = x % 6;
+		if( n > 0 ) {
+		  m <<= n;
+		}
+		boolean pixel = ((fontBytes[ fIdx ] & m) != 0);
+		if( inverse ) {
+		  pixel = !pixel;
+		}
+		int curColorIdx = (pixel ? 1 : 0);
+		if( curColorIdx != lastColorIdx ) {
+		  if( (lastColorIdx >= 0)
+		      && (lastColorIdx != bgColorIdx)
+		      && (xColorBeg >= 0) )
+		  {
+		    g.setColor( getColor( lastColorIdx ) );
+		    g.fillRect(
+			xColorBeg * screenScale,
+			y * screenScale,
+			(x - xColorBeg) * screenScale,
+			screenScale );
+		  }
+		  xColorBeg    = x;
+		  lastColorIdx = curColorIdx;
+		}
+	      }
+	    }
+	  }
+	}
+	if( (lastColorIdx >= 0)
+	    && (lastColorIdx != bgColorIdx)
+	    && (xColorBeg >= 0) )
+	{
+	  g.setColor( getColor( lastColorIdx ) );
+	  g.fillRect(
+		xColorBeg * screenScale,
+		y * screenScale,
+		(wBase - xColorBeg) * screenScale,
+		screenScale );
+	}
+      }
+      if( (xOffs > 0) || (yOffs > 0) ) {
+	g.translate( -xOffs, -yOffs );
+      }
+    }
+    return true;
   }
 
 
@@ -681,6 +999,18 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	case 7:
 	  rv = this.pio.readControlB();
 	  break;
+
+	case 0x40:
+	  if( this.fdc != null ) {
+	    rv = this.fdc.readMainStatusReg();
+	  }
+	  break;
+
+	case 0x41:
+	  if( this.fdc != null ) {
+	    rv = this.fdc.readData();
+	  }
+	  break;
       }
     }
     return rv;
@@ -718,6 +1048,11 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	}
       }
     }
+    if( !rv && this.scchMode ) {
+      if( this.romdiskBegAddr != getROMDiskBegAddr( props ) ) {
+	rv = true;
+      }
+    }
     return rv;
   }
 
@@ -737,10 +1072,21 @@ public class AC1 extends EmuSys implements Z80CTCListener
       this.ctc.reset( false );
       this.pio.reset( false );
     }
+    if( this.fdc != null ) {
+      this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
+    }
+    if( this.fdDrives != null ) {
+      for( int i = 0; i < this.fdDrives.length; i++ ) {
+	FloppyDiskDrive drive = this.fdDrives[ i ];
+	if( drive != null ) {
+	  drive.reset();
+	}
+      }
+    }
+    this.fdcWaitEnabled   = false;
     this.keyboardUsed     = false;
     this.lowerDRAMEnabled = false;
     this.romdiskEnabled   = false;
-    this.romdiskA15       = false;
     this.prgXEnabled      = false;
     this.gsbasicEnabled   = false;
     this.rf32KActive      = false;
@@ -753,40 +1099,96 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
   public void saveBasicProgram()
   {
-    int endAddr = SourceUtil.getKCStyleBasicEndAddr( this.emuThread, 0x60F7 );
-    if( endAddr >= 0x60F7 ) {
-      (new SaveDlg(
+    boolean   cancelled = false;
+    int       begAddr   = -1;
+    int       endAddr   = -1;
+    int       hsType    = -1;
+    BasicType bType     = null;
+    int       preIdx    = -1;
+    if( this.lastBasicType != null ) {
+      switch( this.lastBasicType ) {
+	case AC1_MINI:
+	  preIdx = 0;
+	  break;
+
+	case AC1_8K:
+	case SCCH:
+	case BACOBAS:
+	case ADDR_60F7:
+	  preIdx = 1;
+	  break;
+
+	case AC1_12K:
+	  preIdx = 2;
+	  break;
+      }
+    }
+    if( (preIdx < 0) && this.scchMode ) {
+      preIdx = 1;
+    }
+    switch( OptionDlg.showOptionDlg(
 		this.screenFrm,
-		0x60F7,
+		"W\u00E4hlen Sie bitte den BASIC-Interpreter aus,\n"
+			+ "dessen BASIC-Programm gespeichert werden soll.",
+		"BASIC-Interpreter",
+		preIdx,
+		"Mini-BASIC",
+		"8K-AC1-BASIC, SCCH-BASIC oder BACOBAS",
+		"12K-AC1-BASIC" ) )
+    {
+      case 0:
+	bType   = BasicType.AC1_MINI;
+	begAddr = 0x18C0;
+	endAddr = this.emuThread.getMemWord( 0x18E9 );
+	hsType  = 'b';
+	break;
+
+      case 1:
+	bType = this.lastBasicType;
+	if( (bType != BasicType.AC1_8K)
+	    && (bType != BasicType.SCCH)
+	    && (bType != BasicType.BACOBAS) )
+	{
+	  bType = BasicType.ADDR_60F7;
+	}
+	begAddr = 0x60F7;
+	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, begAddr );
+	hsType  = 'B';
+	break;
+
+      case 2:
+	bType   = BasicType.AC1_12K;
+	begAddr = 0x6FB7;
+	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, begAddr );
+	hsType  = 'B';
+	break;
+
+      default:
+	cancelled = true;
+    }
+    if( !cancelled ) {
+      if( (begAddr > 0) && (endAddr > begAddr) ) {
+	this.lastBasicType = bType;
+	(new SaveDlg(
+		this.screenFrm,
+		begAddr,
 		endAddr,
-		'B',
+		hsType,
 		false,          // kein KC-BASIC
-		"AC1-BASIC-Programm speichern" )).setVisible( true );
-    } else {
-      showNoAC1Basic();
+		"BASIC-Programm speichern" )).setVisible( true );
+      } else {
+	showNoBasic();
+      }
     }
   }
 
 
-  public void saveTinyBasicProgram()
+  public void setFloppyDiskDrive( int idx, FloppyDiskDrive drive )
   {
-    if( this.romBASIC != null ) {
-      int endAddr = this.emuThread.getMemWord( 0x18E9 );
-      if( (endAddr > 0x1950)
-	  && (this.emuThread.getMemByte( endAddr - 1, false ) == 0x0D) )
-      {
-	(new SaveDlg(
-		this.screenFrm,
-		0x18C0,
-		endAddr,
-		'b',
-		false,          // kein KC-BASIC
-                "AC1-MiniBASIC-Programm speichern" )).setVisible( true );
-      } else {
-	showNoMiniBasic();
+    if( this.fdDrives != null ) {
+      if( (idx >= 0) && (idx < this.fdDrives.length) ) {
+	this.fdDrives[ idx ] = drive;
       }
-    } else {
-      super.saveTinyBasicProgram();
     }
   }
 
@@ -825,16 +1227,11 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	}
 	done = true;
       }
-      if( !done && this.gsbasicEnabled
-	  && (addr >= 0x4000) && (addr < 0x6000) )
-      {
+      if( !done && (addr < 0x1000) ) {
+	// Durchschreiben auf den DRAM
+	this.emuThread.setRAMByte( addr, value );
 	done = true;
-      }
-      if( !done && this.romdiskEnabled && (addr >= 0xC000) ) {
-	done = true;
-      }
-      if( !done && this.prgXEnabled && (addr >= 0xE000) ) {
-	done = true;
+	rv   = true;
       }
     }
     if( !done && !this.lowerDRAMEnabled && (addr < 0x2000) ) {
@@ -863,9 +1260,21 @@ public class AC1 extends EmuSys implements Z80CTCListener
   }
 
 
-  public boolean supportsRAMFloppy1()
+  public boolean supportsAudio()
   {
-    return !this.mode64x16;
+    return true;
+  }
+
+
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
   }
 
 
@@ -875,13 +1284,19 @@ public class AC1 extends EmuSys implements Z80CTCListener
 			Object fileFmt,
 			int    fileType )
   {
-    if( (begAddr == 0x60F7) && (fileFmt != null) ) {
-      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-	if( fileType == 'B' ) {
+    if( fileFmt != null ) {
+      if( fileFmt.equals( FileInfo.HEADERSAVE ) && (fileType == 'B') ) {
+	if( begAddr == 0x60F7 ) {
 	  int topAddr = begAddr + len;
 	  this.emuThread.setMemWord( 0x60D2, topAddr );
 	  this.emuThread.setMemWord( 0x60D4, topAddr );
 	  this.emuThread.setMemWord( 0x60D6, topAddr );
+	}
+	else if( begAddr == 0x6FB7 ) {
+	  int topAddr = begAddr + len;
+	  this.emuThread.setMemWord( 0x415E, topAddr );
+	  this.emuThread.setMemWord( 0x4160, topAddr );
+	  this.emuThread.setMemWord( 0x4162, topAddr );
 	}
       }
     }
@@ -925,12 +1340,19 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
 	case 0x14:
 	  if( this.scchMode ) {
-	    this.prgXEnabled    = ((value & 0x01) != 0);
-	    this.gsbasicEnabled = ((value & 0x02) != 0);
-	    this.romdiskEnabled = ((value & 0x08) != 0);
-	    this.romdiskA15     = ((value & 0x20) != 0);
-	    if( (value & 0x04) != 0 ) {
-	      this.lowerDRAMEnabled = true;
+	    this.gsbasicEnabled   = ((value & 0x02) != 0);
+	    this.lowerDRAMEnabled = ((value & 0x04) != 0);
+	    this.romdiskEnabled   = ((value & 0x08) != 0);
+	    if( this.romdiskEnabled ) {
+	      int bank = (value & 0x01) | ((value >> 3) & 0x0E);
+	      if( this.romdiskBegAddr == 0x8000 ) {
+		this.romdiskBankAddr = (bank << 15);
+	      } else {
+		this.romdiskBankAddr = (bank << 14);
+	      }
+	      this.prgXEnabled = false;
+	    } else {
+	      this.prgXEnabled = ((value & 0x01) != 0);
 	    }
 	  }
 	  break;
@@ -953,6 +1375,37 @@ public class AC1 extends EmuSys implements Z80CTCListener
 	    this.lowerDRAMEnabled = ((value & 0x01) != 0);
 	  }
 	  break;
+
+	case 0x41:
+	  if( this.fdc != null ) {
+	    this.fdc.write( value );
+	  }
+	  break;
+
+	case 0x42:
+	case 0x43:
+	  if( this.fdc != null ) {
+	    if( this.fdcWaitEnabled ) {
+	      this.fdc.processTillNextIORequest();
+	    }
+	  }
+	  break;
+
+	case 0x44:
+	case 0x45:
+	  if( this.fdc != null ) {
+	    this.fdcWaitEnabled = ((value & 0x02) != 0);
+	    if( (value & 0x10) != 0 ) {
+	      this.fdc.fireTC();
+	    }
+	  }
+	  break;
+
+	case 0x48:
+	  if( this.fdc != null ) {
+	    this.fdc.fireTC();
+	  }
+	  break;
       }
     }
   }
@@ -960,132 +1413,43 @@ public class AC1 extends EmuSys implements Z80CTCListener
 
 	/* --- private Methoden --- */
 
-  private static String getBasicProgram(
-				Z80MemView memory,
-				int        addr,
-				String[]   tokens )
+  private void lazyReadPrgX( Properties props )
   {
-    StringBuilder buf = new StringBuilder( 0x4000 );
-
-    int nextLineAddr = memory.getMemWord( addr );
-    while( (nextLineAddr > addr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
-    {
-      // Zeilennummer
-      addr += 2;
-      buf.append( memory.getMemWord( addr ) );
-      addr += 2;
-
-      // Anzahl Leerzeichen vor der Anweisung ermitteln
-      boolean sep = true;
-      int     n   = 0;
-      while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr, false );
-	if( ch == '\u0020' ) {
-	  n++;
-	  addr++;
-	} else {
-	  if( (ch != 0) && (n > 0) ) {
-	    for( int i = 0; i <= n; i++ ) {
-	      buf.append( (char) '\u0020' );
-	    }
-	    sep = false;
-	  }
-	  break;
-	}
-      }
-
-      // Programmzeile extrahieren
-      while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr++, false );
-	if( ch == 0 ) {
-	  break;
-	}
-	if( ch == '\"' ) {
-	  if( sep ) {
-	    buf.append( (char) '\u0020' );
-	  }
-	  buf.append( (char) ch );
-	  while( addr < nextLineAddr ) {
-	    ch = memory.getMemByte( addr++, false );
-	    if( ch == 0 ) {
-	      break;
-	    }
-	    buf.append( (char) ch );
-	    if( ch == '\"' ) {
-	      break;
-	    }
-	  }
-	} else {
-	  if( ch >= 0x80 ) {
-	    int pos = ch - 0x80;
-	    if( (pos >= 0) && (pos < tokens.length) ) {
-	      String s = tokens[ pos ];
-	      if( s != null ) {
-		int len = s.length();
-		if( len > 0 ) {
-		  if( isIdentifierChar( buf.charAt( buf.length() - 1 ) )
-		      && isIdentifierChar( s.charAt( 0 ) ) )
-		  {
-		    buf.append( (char) '\u0020' );
-		  }
-		  buf.append( s );
-		  if( isIdentifierChar( s.charAt( len - 1 ) ) ) {
-		    sep = true;
-		  } else {
-		    sep = false;
-		  }
-		}
-		ch = 0;
-	      }
-	    }
-	  }
-	  if( ch > 0 ) {
-	    if( sep
-		&& (isIdentifierChar( ch )
-			|| (ch == '\'')
-			|| (ch == '\"')) )
-	    {
-	      buf.append( (char) '\u0020' );
-	    }
-	    buf.append( (char) ch );
-	    sep = false;
-	  }
-	}
-      }
-      buf.append( (char) '\n' );
-
-      // naechste Zeile
-      addr         = nextLineAddr;
-      nextLineAddr = memory.getMemWord( addr );
+    String fName = EmuUtil.getProperty( props, "jkcemu.program_x.file.name" );
+    if( EmuUtil.differs( fName, this.prgXFileName ) ) {
+      this.prgXFileName = fName;
+      this.prgXBytes    = readFile( fName, 0x2000, "Programmpaket X" );
     }
-    return buf.length() > 0 ? buf.toString() : null;
   }
 
 
-  private static boolean isIdentifierChar( int ch )
+  private void lazyReadRomdisk( Properties props )
   {
-    return ((ch >= 'A') && (ch <= 'Z'))
-		|| ((ch >= 'a') && (ch <= 'z'))
-		|| ((ch >= '0') && (ch <= '9'));
+    String fName = EmuUtil.getProperty( props, "jkcemu.romdisk.file.name" );
+    if( EmuUtil.differs( fName, this.romdiskFileName ) ) {
+      this.romdiskFileName = fName;
+      this.romdiskBytes    = readFile(
+				fName,
+				this.romdiskBegAddr == 0x8000 ?
+							0x80000
+							: 0x40000,
+				"ROM-Disk" );
+    }
   }
 
 
-  private void showNoAC1Basic()
+  private static int getROMDiskBegAddr( Properties props )
   {
-    BasicDlg.showErrorDlg(
-	this.screenFrm,
-	"Es ist kein AC1-BASIC-Programm im entsprechenden\n"
-		+ "Adressbereich des Arbeitsspeichers vorhanden." );
-  }
-
-
-  private void showNoMiniBasic()
-  {
-    BasicDlg.showErrorDlg(
-	this.screenFrm,
-	"Es ist kein AC1-MiniBASIC-Programm im entsprechenden\n"
-		+ "Adressbereich des Arbeitsspeichers vorhanden." );
+    int rv = 0xC000;
+    if( props != null ) {
+      String text = props.getProperty( "jkcemu.ac1.romdisk.address.begin" );
+      if( text != null ) {
+	if( text.trim().equals( "8000" ) ) {
+	  rv = 0x8000;
+	}
+      }
+    }
+    return rv;
   }
 }
 

@@ -13,9 +13,9 @@
       <li>
 	Ur-AC1:
 	<ul>
-	  <li>4 KByte ROM f&uuml;r Monitorprogramm und Mini-BASIC</li>
-	  <li>1 KByte statischer RAM (SRAM)</li>
-	  <li>1 KByte Bildwiederholspeicher f&uuml;r 64x16 Zeichen</li>
+	  <li>4&nbsp;KByte ROM f&uuml;r Monitorprogramm und Mini-BASIC</li>
+	  <li>1&nbsp;KByte statischer RAM (SRAM)</li>
+	  <li>1&nbsp;KByte Bildwiederholspeicher f&uuml;r 64x16 Zeichen</li>
 	  <li>CTC mit Verbindung von Ausgang Kanal 0 auf Eingang Kanal 1</li>
 	  <li>Kassettenrecorderanschluss</li>
 	</ul>
@@ -23,17 +23,25 @@
       <li>
 	Standard-AC1:
 	<ul>
-	  <li>4 KByte ROM f&uuml;r Monitorprogramm und Mini-BASIC</li>
-	  <li>2 KByte statischer RAM (SRAM)</li>
-	  <li>64 KByte dynamischer RAM (DRAM)</li>
-	  <li>2 KByte Bildwiederholspeicher f&uuml;r 64x32 Zeichen</li>
+	  <li>4&nbsp;KByte ROM f&uuml;r Monitorprogramm und Mini-BASIC</li>
+	  <li>2&nbsp;KByte statischer RAM (SRAM)</li>
+	  <li>
+	    <a href="ac1.htm#dram">64&nbsp;KByte dynamischer RAM (DRAM)</a>
+	  </li>
+	  <li>2&nbsp;KByte Bildwiederholspeicher f&uuml;r 64x32 Zeichen</li>
+	  <li>
+	    CTC mit Verbindung von Ausgang Kanal&nbsp;0 auf Eingang Kanal 1
+	  </li>
+	  <li>Kassettenrecorderanschluss</li>
 	  <li>
 	    Eine RAM-Floppy nach Zeitschrift
-	    <em>Mikroprozessortechnik</em> Heft 3/1988
-	    an der IO-Basisadresse E0h (RAM-Floppy 1)
+	    <em>Mikroprozessortechnik</em> Heft&nbsp;3/1988
+	    an der IO-Basisadresse&nbsp;E0h (RAM-Floppy&nbsp;1)
 	  </li>
-	  <li>CTC mit Verbindung von Ausgang Kanal 0 auf Eingang Kanal 1</li>
-	  <li>Kassettenrecorderanschluss</li>
+	  <li>
+	    <a href="ac1.htm#fdc">Floppy-Disk-Controller</a>
+	    mit 4&nbsp;Diskettenlaufwerken
+	  </li>
 	</ul>
       </li>
       <li>
@@ -41,64 +49,154 @@
 	<ul>
 	  <li>
 	    Alles wie beim Standard-AC1,<br/>
-	    Der ROM enth&auml;lt aber ein 4 KByte gro&szlig;es Monitorprogramm,
+	    Der ROM enth&auml;lt aber ein 4&nbsp;KByte gro&szlig;es
+	    Monitorprogramm,
 	    daf&uuml;r entf&auml;llt der Mini-BASIC-Interpreter.
 	  </li>
-	  <li>SCCH-Modul 1 (zus&auml;tzlicher ROM)</li>
 	  <li>
-	    SCCH-Modul 3 (zus&auml;tzlicher RAM)
+	    &quot;Durchschreiben&quot; auf den
+	    <a href="ac1.htm#dram">dynamischen RAM</a>,
+	    wenn in dem betreffenden Adressbereich ROM eingeblendet ist
 	  </li>
+	  <li>
+	    <a href="ac1.htm#scch_mod1">SCCH-Modul&nbsp;1</a>
+	    (zus&auml;tzlicher ROM)
+	  </li>
+	  <li>
+	    <a href="ac1.htm#scch_mod3">SCCH-Modul&nbsp;3</a>
+	    (zus&auml;tzlicher RAM)
+	  </li>
+	  <li><a href="ac1.htm#scch_inverse">SCCH-Inversschaltung</a></li>
 	</ul>
       </li>
     </ul>
   <br/><br/>
 
-  <h3>1.1. Hinweise zum DRAM</h3>
-    Beim Standard- und SCCH-AC1 werden 64 KByte DRAM emuliert.
+  <h3><a name="dram">1.1. 64&nbsp;KByte DRAM</a></h3>
+    Bei Standard- und SCCH-AC1 werden 64&nbsp;KByte DRAM emuliert.
     Diese befinden sich physisch in einem globalen RAM-Bereich,
     der von allen emulierten Systemen gemeinsam genutzt wird.
     Die unteren 8 KByte liegen parallel zum ROM f&uuml;r das Monitorprogramm,
     Bildwiederholspeicher und SRAM und k&ouml;nnen &uuml;ber die IO-Ports
-    1Ch bis 1Fh sowie beim SCCH-AC1 auch &uuml;ber IO-Port 14h
+    1Ch bis 1Fh sowie beim SCCH-AC1 auch &uuml;ber IO-Port&nbsp;14h
     ein- und wieder ausgeblendet werden.
   <br/><br/>
+    <b>Achtung!</b> Beim SCCH-AC1 kann der DRAM auch dann beschrieben werden,
+    wenn in dem betreffenden Adressbereich ROM eingeblendet ist
+    (&quot;Durchschreiben&quot; auf den DRAM).
+  <br/><br/>
 
-  <h3>1.2. Hinweise zum SCCH-Modul 1</h3>
+  <h3><a name="fdc">1.2. Floppy-Disk-Controller</a></h3>
+    Bei Standard- und SCCH-AC1 wird eine Floppy-Disk-Ansteuerung
+    entsprechend der Computerclubs Berlin und Dessau
+    an folgenden IO-Adressen emuliert:
+  <br/>
+    <table border="1">
+      <tr>
+	<th>IO-Adresse (hexadezimal)</th>
+	<th>Zugriff</th><th>Bedeutung</th>
+      </tr>
+      <tr>
+	<td valign="top">40</td>
+	<td valign="top">R</td>
+	<td>FDC-Statusregister</td>
+      </tr>
+      <tr>
+	<td valign="top">41</td>
+	<td valign="top">RW</td>
+	<td>FDC-Datenregister</td>
+      </tr>
+      <tr>
+	<td valign="top">42,&nbsp;43</td>
+	<td valign="top">W</td>
+	<td>
+	  WAIT-Mode (bis zum n&auml;chsten FDC-Interrupt warten)
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">44,&nbsp;45</td>
+	<td valign="top">W</td>
+	<td>
+	  <ul>
+	    <li>Bit&nbsp;1:&nbsp;WAIT-Freigabe (siehe Port 42/43)</li>
+	    <li>Bit&nbsp;4:&nbsp;Terminal&nbsp;Count</li>
+	  </ul>
+	</td>
+      </tr>
+      <tr>
+	<td valign="top">48</td>
+	<td valign="top">W</td>
+	<td>Terminal&nbsp;Count (unabh&auml;ngig vom ausgegebenen Wert)</td>
+      </tr>
+    </table>
+  <br/><br/>
+
+
+  <h3><a name="scch_mod1">1.3. SCCH-Modul&nbsp;1</a></h3>
     Das SCCH-Modul 1 stellt zus&auml;tzlichen ROM zur Verf&uuml;gung,
     und zwar:
     <ul>
-      <li>8 KByte f&uuml;r Grafik/Sound-BASIC-Interpreter</li>
-      <li>8 KByte f&uuml;r Programmpaket X</li>
-      <li>64 KByte f&uuml;r ROM-Disk</li>
+      <li>&nbsp;8KByte f&uuml;r Grafik/Sound-BASIC-Interpreter</li>
+      <li>&nbsp;8KByte f&uuml;r Programmpaket&nbsp;X</li>
+      <li>je nach Einstelllung 256 oder 512&nbsp;KByte f&uuml;r ROM-Disk</li>
     </ul>
   <br/>
-    Aktiviert werden die einzelnen ROM-Bereiche &uuml;ber das Ausgabetor 14h.
-  <br/><br/>
-    JKCEMU liefert keinen Inhalt f&uuml;r das Programmpaket X
+    Gesteuert wird das Modul &uuml;ber das Ausgabetor&nbsp;14h:<br/>
+    <table border="1">
+      <tr>
+	<td valign="top">Bit&nbsp;0:</td>
+	<td>Programmpaket&nbsp;X im Bereich E000-FFFF einblenden</td>
+      </tr>
+      <tr>
+	<td valign="top">Bit&nbsp;1:</td>
+	<td>Grafik/Sound-BASIC im Bereich 4000-5FFF einblenden</td>
+      </tr>
+      <tr>
+	<td valign="top">Bit&nbsp;3:</td>
+	<td>
+	  Ein Segment der ROM-Disk im Bereich C000-FFFF
+	  bzw. 8000-FFFF einblenden,<br/>
+	  Die Bits&nbsp;0, 4, 5 und 6 legen das entsprechende
+	  16K- bzw. 32K-Segment fest.
+	</td>
+      </tr>
+    </table>
+  <br/>
+    JKCEMU liefert keinen Inhalt f&uuml;r das Programmpaket&nbsp;X
     und die ROM-Disk mit.
     Diesen m&uuml;ssen Sie in den <a href="settings.htm">Einstellungen</a>,
     Rubrik ROM, durch Einbinden von ROM-Image-Dateien festlegen.
   <br/><br/>
 
-  <h3>1.3. Hinweise zum SCCH-Modul 3</h3>
+  <h3><a name="scch_mod3">1.4. SCCH-Modul&nbsp;3</a></h3>
     Das SCCH-Modul 3 stellt je nach Best&uuml;ckung
-    64, 128, 256, 320 oder 512 KByte zus&auml;tzlichen RAM zur Verf&uuml;gung,
+    64, 128, 256, 320 oder 512&nbsp;KByte zus&auml;tzlichen RAM
+    zur Verf&uuml;gung,
     der &uuml;ber IO-Befehle in den Arbeitsspeicher eingeblendet werden kann.
     Konkret wird &uuml;ber die Bits 0 bis 3 des IO-Ports 15h
     einer von 16 m&ouml;glichen 64 KByte gr&ouml;&szlig;en Bl&ouml;cken
     ausgew&auml;hlt, der dann entsprehend der Bits 4 bis 7 des gleichen
     IO-Ports nur lesend, nur schreibend oder lesend und schreibend
-    (dann aber nur 32 KByte) eingeblendet wird.
+    (dann aber nur 32&nbsp;KByte) eingeblendet wird.
   <br/><br/>
     Der Adressraum f&uuml;r den zus&auml;tzlichen RAM betr&auml;gt
-    1 MByte (16 x 64 KByte).
-    Obwohl das Originalmodul nur mit max. 512 KByte best&uuml;ckt werden kann,
-    emuliert JKCEMU die max. m&ouml;glichen 1 MByte.
+    1&nbsp;MByte (16 x 64&nbsp;KByte).
+    Obwohl das Originalmodul nur mit max. 512&nbsp;KByte
+    best&uuml;ckt werden kann,
+    emuliert JKCEMU die max. m&ouml;glichen 1&nbsp;MByte.
     Das hat den Vorteil, dass Software,
     die diesen zus&auml;tzlichen RAM verwendet,
     nicht speziell f&uuml;r den Einsatz in JKCEMU konfiguriert werden muss,
     denn auf jeder Adresse, wo die jeweilige Software RAM voraussetzt,
     wird sie in JKCEMU auch RAM vorfinden.
+  <br/><br/>
+
+  <h3><a name="scch_inverse">1.5. SCCH-Inversschaltung</a></h3>
+    Die SCCH-Inversschaltung erkennt die im Bildwiederholspeicher
+    stehenden Bytes mit den Werten 10h und 11h.
+    Bei 11h wird die Inversdarstellung ein- und bei 10h wieder ausgeschaltet.
+    Unabh&auml;ngig davon wird am Zeilenende die Inversdarstellung
+    immer ausgeschaltet.
   <br/><br/>
 
 
@@ -107,18 +205,18 @@
       <li>
 	Bei Ur- und Standard-AC1:
 	<ul>
-	  <li>Monitorprogramm Version 3.1</li>
-	  <li>Mini-BASIC Version 2.1</li>
+	  <li>Monitorprogramm Version&nbsp;3.1</li>
+	  <li>Mini-BASIC Version&nbsp;2.1</li>
 	</ul>
       </li>
       <li>
 	Bei SCCH-AC1:
 	<ul>
 	  <li>
-	    Je nach Einstellung SCCH-Monitor Version 8.0
-	    oder Version 10/88
+	    Je nach Einstellung SCCH-Monitor Version&nbsp;8.0
+	    oder Version&nbsp;10/88
 	  </li>
-	  <li>Grafik/Sound-BASIC Version 3.2</li>
+	  <li>Grafik/Sound-BASIC Version&nbsp;3.2</li>
 	</ul>
       </li>
     </ul>
@@ -127,14 +225,41 @@
 
   <h2>3. BASIC</h2>
 
-  <h3>3.1. Grafik/Sound-BASIC</h3>
-    Der Grafik/Sound-BASIC-Interpreter Version 3.2 ist nur im SCCH-Mode
+  <h3>3.1. Laden, Speichern und &Ouml;ffnen von BASIC-Programmen</h3>
+    JKCEMU bietet spezielle Unterst&uuml;tzung f&uuml;r das Laden
+    und Speichern von BASIC-Programmen sowie f&uuml;r das &Ouml;ffnen
+    von im Arbeitsspeicher befindlichen BASIC-Programmen im Texteditor.
+    Die entsprechenden Funktionen finden Sie im Men&uuml; <em>Datei</em>.
+  <br/><br/>
+    Folgende BASIC-Interpreter werden unterst&uuml;tzt:
+  <br/>
+    <ul>
+      <li>Mini-BASIC Version&nbsp;2.1</li>
+      <li>8K-AC1-BASIC Version&nbsp;1.1</li>
+      <li>12K-AC1-BASIC Version&nbsp;2.1 (High Precision Extended Version)</li>
+      <li>BACOBAS Version&nbsp;2.1</li>
+      <li>SCCH-BASIC Version&nbsp;3.2 (Grafik/Sound-BASIC)</li>
+    </ul>
+  <br/>
+    Beim Speichern von BASIC-Programmen erscheint ein Fenster zur Auswahl
+    des Dateiformats.
+    Speichern Sie bitte im Headersave-Format,
+    welches bereits vorausgew&auml;hlt ist.
+    Nur dann ist sichergestellt, dass Sie das BASIC-Programm
+    sp&auml;ter auch wieder problemlos laden k&ouml;nnen.
+    Bei einem anderen Dateiformat werden n&auml;mlich beim Laden
+    die Systemzellen des BASIC-Interpreters nicht angepasst,
+    und Sie k&ouml;nnen das BASIC-Programm im Interpreter nicht richtig nutzen.
+  <br/><br/>
+
+  <h3>3.2. Grafik/Sound-BASIC</h3>
+    Der Grafik/Sound-BASIC-Interpreter Version&nbsp;3.2 ist im SCCH-Mode
     verf&uuml;gbar und liegt in einem Hintergrund-ROM
     im Adressbereich 4000-5FFF.
     Standardm&auml;&szlig;ig befindet sich in diesem Adressbereich RAM.
-    &Uuml;ber das Bit 1 des IO-Ports 14h kann der ROM in den Vordergrund
-    geholt und somit der BASIC-Interpreter in dem Adressbereich sichtbar
-    gemacht werden.
+    &Uuml;ber das Bit&nbsp;1 des IO-Ports&nbsp;14h kann der ROM
+    in den Vordergrund geholt und somit der BASIC-Interpreter
+    in dem Adressbereich sichtbar gemacht werden.
   <br/><br/>
     Mit den im Emulator integrierten SCCH-Monitorprogrammen k&ouml;nnen
     Sie das BASIC mit dem Kommando <em>b</em> direkt aufrufen (Kaltstart).
@@ -143,62 +268,16 @@
     <em>r</em> aus.
   <br/><br/>
 
-  <h3>3.2. Speichern von BASIC-Programmen</h3>
-    JKCEMU bietet spezielle Unterst&uuml;tzung f&uuml;r das Speichern
-    und Laden von AC1-BASIC- und Mini-BASIC-Programmen.
-    Zum Speichern nutzen Sie bitte die entsprechende Funktion im Men&uuml;
-    <em>Datei</em>, Untermen&uuml; <em>BASIC-Programm</em>
-    bzw. <em>Mini-/Tiny-BASIC-Programm</em>,
-    und speichern das Programm als
-    <a href="fileformats.htm#headersave">Headersave</a>-Datei
-    mit dem Dateityp <tt>B</tt> (AC1- oder Grafik/Sound-BASIC-Programm)
-    bzw.  <tt>b</tt> (Mini-BASIC-Programm).
-  <br/><br/>
-    Nur wenn Sie das BASIC-Programm so speichern,
-    werden beim Laden des Programms die Systemzellen des
-    BASIC-Interpreters richtig angepasst.
-    In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
-    aber im Interpreter nicht richtig nutzen.
-  <br/><br/>
-
-  <h3>3.3. Anzeige eines im Arbeitsspeichers befindlichen BASIC-Programms</h3>
-    Der Emulator bietet im Men&uuml; <em>Datei</em>,
-    Untermen&uuml; <em>BASIC-Programm</em>, eine Funktion zum Anzeigen
-    des im Arbeitsspeichers befindlichen BASIC-Programms im Texteditor.
-    Da die Schl&uuml;sselw&ouml;rter im BASIC-Programm in Form von Tokens
-    gespeichert werden,
-    muss JKCEMU die Tokens in ihre textuelle Form wandeln.
-    Allerdings unterscheiden sich die Tokens bei den verschiedenen
-    BASIC-Interpretern.
-    Aus diesem Grund werden die Tokens entsprechend
-    folgender Regel expandiert:
-    <ul>
-      <li>
-	Ist in den <a href="settings.htm">Einstellungen</a>
-	die AC1-Option <em>Monitorprogramm 3.1</em> aktiviert,
-	werden die Tokens entsprechend dem
-	AC1-BASIC-Interpreter Version 1.1 von Frank Heyder expandiert.
-      </li>
-      <li>
-	Ist in den <a href="settings.htm">Einstellungen</a>
-        eine AC1-Option mit einem SCCH-Monitorprogramm aktiviert,
-	werden die Tokens entsprechend dem
-	Grafik/Sound-BASIC-Interpreter Version 3.2
-	von Eckhard Ludwig expandiert.
-      </li>
-    </ul>
-  <br/><br/>
-
 
   <h2>4. Sonstiges</h2>
 
   <h3>4.1. Einbindung externer ROM-Images</h3>
     Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>
     externe ROM-Images an jeder beliebigen Adresse einbinden.
-    F&uuml;r die unteren 8 KByte des Adressraumes gilt aber,
+    F&uuml;r die unteren 8&nbsp;KByte des Adressraumes gilt aber,
     dass das extern eingebundene ROM-Image nur sichtbar ist,
     wenn der Speicher auf der Grundplatine (Betriebssystem-ROM) aktiv ist
-    und auch sonst kein anderer Speicher (z.B. SCCH-Modul 1 oder 3)
+    und auch sonst kein anderer Speicher (z.B. SCCH-Modul&nbsp;1 oder 3)
     in dem entsprechenden Adressbereich eingeblendet ist.
 </body>
 </html>

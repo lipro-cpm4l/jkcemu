@@ -1,0 +1,136 @@
+<html>
+<body>
+  <h1>Floppy-Disk-Emulation in JKCEMU</h1>
+    JKCEMU emuliert den Floppy Disk Controller U8272,
+    der kompatibel zum Intel&nbsp;8272 und zum NEC&nbsp;765 ist.
+    Dieser kann bis zu vier Diskettenlaufwerke bedienen,
+    die logischerweise auch emuliert werden.
+  <br/><br/>
+    Die emulierten Laufwerke sind f&uuml;r den Anwender im Fenster
+    <em>JKCEMU Diskettenstation</em> sichtbar,
+    dass Sie &uuml;ber das Haupfenster, Men&uuml; <em>Datei</em>
+    &rarr; <em>Diskettenstation</em> aufrufen k&ouml;nnen.
+    Dieses Fenster steht jedoch nur zur Verf&uuml;gung,
+    wenn auch das emulierte System im Original Diskettenlaufwerke
+    bietet bzw. unterst&uuml;tzt.
+    Des weiteren werden auch nicht unbedingt vier,
+    sondern nur so viele Laufwerke emuliert wie auch im Original
+    m&ouml;glich sind.
+  <br/><br/>
+    F&uuml;r jedes Laufwerk gibt es einen eigenen Reiter (Tab).
+    Weiterhin finden Sie unten rechts im Fenster einen Knopf
+    zum &Ouml;ffnen/Laden, womit Sie gedanklich eine Diskette einlegen
+    und wieder entnehmen k&ouml;nnen.
+    Da der Emulator-Rechner m&ouml;glicherweise &uuml;ber gar kein
+    physisches Diskettenlaufwerk verf&uuml;gt,
+    bietet JKCEMU mehrere M&ouml;glichkeiten zur Emulation
+    einer Diskette an.
+    Eine emulierte Diskette kann abgebildet werden durch:
+    <ol>
+      <li>
+	eine reale Diskette,
+	die in einem physischen Diskettenlaufwerk steckt,
+	welches am Arbeitsplatz-Computer angeschlossen ist
+      </li>
+      <li>eine <a href="diskimgformats.htm">Diskettenabbilddatei</a></li>
+      <li>ein Verzeichnis im Dateisystem des Arbeitsplatz-Computers</li>
+    </ol>
+  <br/>
+    Durch Dr&uuml;cken auf den <em>&Ouml;ffnen/Laden</em>-Knopf
+    &ouml;ffnet sich ein Men&uuml;, in dem Sie die verschiedenen
+    M&ouml;glichkeiten ausw&auml;hlen k&ouml;nnen.
+  <br/><br/>
+
+  <h2><a name="disk">1. Emulation mit einer realen Diskette</a></h2>
+    M&ouml;chten Sie vom emulierten System aus auf eine Diskette zugreifen,
+    die in einem am Emulator-Rechner angeschlossenen Diskettenlaufwerk steckt,
+    dann w&auml;hlen Sie im <em>&Ouml;ffnen/Laden</em>-Men&uuml;
+    den Punkt <em>Diskette &ouml;ffnen...</em>.
+    Sie werden nun nach dem Laufwerk gefragt.
+    Auf einem Windows-System w&auml;hlen Sie den Laufwerksbuchstaben aus,
+    mit dem das Diskettenlaufwerk im Windows sichtbar ist.
+    Auf einem Linux/Unix-System geben Sie die entsprechende
+    Ger&auml;tedatei an.
+    Anschlie&szlig;end m&uuml;ssen Sie nur noch das Diskettenformat
+    ausw&auml;hlen.
+  <br/><br/>
+    Bei der Emulation eines Diskettenlaufwerkes mit einer realen Diskette
+    gelten folgende Einschr&auml;nkungen:
+    <ul>
+     <li>
+	Das physische Diskettenformat, d.h. die Anzahl der Spuren,
+	die Anzahl der Sektoren pro Spur und die Sektorgr&ouml;&szlig;e,
+	muss vom Betriebssystem des Emulator-Rechners unterst&uuml;tzt werden.
+	<br/>
+	Dagegen muss das logische Format, d.h. das CP/M-Dateisystem,
+	vom Emulator-Rechner nicht unterst&uuml;tzt werden
+	(und wird i.d.R. auch nicht), d.h., 
+	die Dateien auf der Diskette werden Sie im Dateisystem
+	des Emulator-Rechners nicht sehen k&ouml;nnen.
+      </li>
+      <li>
+	Wenn Sie im emulierten System die Diskette formatieren,
+	wird sie nicht physisch formatiert.
+	Das Formatieren ist m&ouml;glich,
+	solange das neue Format mit dem alten identisch ist.
+	Unterscheiden sich die Formate, wird ein Schreibfehler emuliert,
+	und das Formatierprogramm sollte diesen Fehler auch ausgeben.
+      </li>
+      <li>
+	Die programmiersprache Java, mit der JKCEMU entwickelt wurde,
+	bietet keinen offiziellen Weg f&uuml;r den physischen Zugriff
+	auf eine Diskette.
+	Deshalb kann nicht garantiert werden,
+	dass die Emulation eines Diskettenlaufwerkes mit einer realen Diskette
+	in jedem Fall funktioniert.
+	Der Emulator greift auf die Diskette &uuml;ber die entsprechende
+	Ger&auml;tedatei zu.
+	Diese Ger&auml;tedateien gibt es zwar auf einem Linux/Unix-System
+	und seit Windows&nbsp;NT auch im Windows,
+	jedoch bieten sie nicht die gleichen M&ouml;glichkeiten
+	wie gew&ouml;hnliche Dateien.
+	Der Erfolg h&auml;ngt deshalb davon ab,
+	ob die konkrete Implementierung des Java-Laufzeitsystems
+	mit den Einschr&auml;nkungen der Ger&auml;tedateien harmoniert.
+      </li>
+    </ul>
+  <br/><br/>
+
+  <h2><a name="file">2. Emulation mit einer Diskettenabbilddatei</a></h2>
+    Eine Diskettenabbilddatei (Disk Image File) ist ein 1:1-Abbild
+    einer Diskette und enth&auml;lt somit auch die Spuren und Sektoren,
+    wie sie auf einer realen Diskette zu finden sind.
+    Es gibt verschiedene <a href="diskimgformats.htm">Dateiformate</a>
+    f&uuml;r Abbilddateien, die sich inhaltlich vorallem im Umfang
+    der gespeicherten Geometrie- und Verwaltungsdaten unterscheiden.
+  <br/><br/>
+
+  <h2>3. Abbildung einer emulierten Diskette auf ein Verzeichnis</h2>
+    Bei dieser Form w&auml;hlen Sie ein Verzeichnis im Dateisystem
+    des Emulator-Rechners aus.
+    Die Dateien, die sich in diesem Verzeichnis befinden und
+    die der Dateinamenskonvention von CP/M entsprechen,
+    werden in eine virtuelle Diskette gepackt und k&ouml;nnen
+    vom emulierten System aus gelesen werden.
+    Schreibzugriffe auf diese virtuelle Diskette und damit
+    auf die Dateien im Verzeichnis sind allerdings nicht m&ouml;glich.
+  <br/><br/>
+    Wenn die virtuelle Diskette voll ist,
+    werden die restlichen Dateien in dem Verzeichnis ignoriert.
+    Das gleiche gilt f&uuml;r Dateien, die zu gro&szlig; sind.
+  <br/><br/>
+    Nach der Auswahl des Verzeichnisses werden Sie nach dem
+    Diskettenformat gefragt.
+    In diesem Dialog gibt es auch die Option
+    <em>Automatisch aktualisieren</em>.
+    Haben Sie diese Option eingeschaltet,
+    aktualisiert sich die virtuelle Diskette automatisch,
+    wenn sich die Dateien in dem Verzeichnis &auml;ndern.
+    Die Aktualisierung erfolgt mit einem Zeitverzug von max. 10 Sekunden.
+  <br/><br/>
+    <b>Achtung!</b> Manche Programme oder Betriebssysteme kommen
+    m&ouml;glicherweise mit der automatischen Aktualisierung
+    des Disketteninhalts nicht klar und lesen dadurch falsche Daten ein.
+    In dem Fall m&uuml;ssen Sie die Option ausschalten.
+</body>
+</html>

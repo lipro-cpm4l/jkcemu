@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,6 +12,7 @@ import java.io.*;
 import java.lang.*;
 import java.util.zip.*;
 import javax.swing.*;
+import jkcemu.base.EmuUtil;
 
 
 public class GZipPacker extends Thread
@@ -59,7 +60,7 @@ public class GZipPacker extends Thread
       out = new GZIPOutputStream(
 			new BufferedOutputStream(
 				new FileOutputStream( outFile ) ) );
-      this.fileBrowserFrm.fireRefreshNodeFor( this.outFile.getParentFile() );
+      this.fileBrowserFrm.fireDirectoryChanged( this.outFile.getParentFile() );
 
       int b = in.read();
       while( b != -1 ) {
@@ -81,17 +82,17 @@ public class GZipPacker extends Thread
       msg = ex.getMessage();
     }
     finally {
-      close( in );
-      close( out );
+      EmuUtil.doClose( in );
+      EmuUtil.doClose( out );
     }
-    this.fileBrowserFrm.fireRefreshNodeFor( this.outFile.getParentFile() );
+    this.fileBrowserFrm.fireDirectoryChanged( this.outFile.getParentFile() );
     if( msg != null ) {
       this.fileBrowserFrm.showErrorMsg( msg );
     }
   }
 
 
-	/* --- private Konstruktoren und Methoden --- */
+	/* --- private Konstruktoren --- */
 
   private GZipPacker(
 		FileBrowserFrm fileBrowserFrm,
@@ -101,17 +102,6 @@ public class GZipPacker extends Thread
     this.fileBrowserFrm = fileBrowserFrm;
     this.srcFile        = srcFile;
     this.outFile        = outFile;
-  }
-
-
-  private static void close( Closeable io )
-  {
-    if( io != null ) {
-      try {
-	io.close();
-      }
-      catch( IOException ex ) {}
-    }
   }
 }
 

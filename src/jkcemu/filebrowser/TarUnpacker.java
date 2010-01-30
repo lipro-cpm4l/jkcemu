@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,14 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.Dialog;
+import java.awt.*;
 import java.io.*;
 import java.lang.*;
 import java.util.zip.GZIPInputStream;
+import jkcemu.base.*;
 
 
-public class TarUnpacker extends AbstractPackDlg
+public class TarUnpacker extends AbstractThreadDlg
 {
   private File    srcFile;
   private File    outDir;
@@ -22,16 +23,12 @@ public class TarUnpacker extends AbstractPackDlg
 
 
   public static void unpackFile(
-		FileBrowserFrm fileBrowserFrm,
-		File           srcFile,
-		File           outDir,
-		boolean        compression )
+		Window  owner,
+		File    srcFile,
+		File    outDir,
+		boolean compression )
   {
-    Dialog dlg = new TarUnpacker(
-				fileBrowserFrm,
-				srcFile,
-				outDir,
-				compression );
+    Dialog dlg = new TarUnpacker( owner, srcFile, outDir, compression );
     if( compression ) {
       dlg.setTitle( "TGZ-Datei entpacken" );
     } else {
@@ -75,7 +72,7 @@ public class TarUnpacker extends AbstractPackDlg
 	      pos  = len;
 	    }
 	    if( elem != null ) {
-	      if( elem.length() > 0 ) {
+	      if( !elem.isEmpty() ) {
 		if( outFile != null ) {
 		  outFile = new File( outFile, elem );
 		} else {
@@ -121,22 +118,12 @@ public class TarUnpacker extends AbstractPackDlg
 		out = null;
 	      }
 	      catch( IOException ex ) {
-		StringBuilder buf = new StringBuilder( 128 );
-		buf.append( "  Fehler" );
-		errMsg = ex.getMessage();
-		if( errMsg != null ) {
-		  if( errMsg.length() > 0 ) {
-		    buf.append( ": " );
-		    buf.append( errMsg );
-		  }
-		}
-		buf.append( (char) '\n' );
-		appendToLog( buf.toString() );
+		appendErrorToLog( ex );
 		incErrorCount();
 		failed = true;
 	      }
 	      finally {
-		close( out );
+		EmuUtil.doClose( out );
 	      }
 	      if( failed ) {
 		outFile.delete();
@@ -161,6 +148,7 @@ public class TarUnpacker extends AbstractPackDlg
     catch( IOException ex ) {
       StringBuilder buf = new StringBuilder( 128 );
       buf.append( "\nFehler beim Lesen der Datei " );
+      buf.append( this.srcFile.getPath() );
       String errMsg = ex.getMessage();
       if( errMsg != null ) {
 	if( errMsg.length() > 0 ) {
@@ -173,22 +161,22 @@ public class TarUnpacker extends AbstractPackDlg
       incErrorCount();
     }
     finally {
-      close( in );
+      EmuUtil.doClose( in );
     }
-    this.fileBrowserFrm.fireRefreshNodeFor(
+    fireDirectoryChanged(
 		dirExists ? this.outDir : this.outDir.getParentFile() );
   }
 
 
-	/* --- private Konstruktoren und Methoden --- */
+	/* --- private Konstruktoren --- */
 
   private TarUnpacker(
-		FileBrowserFrm fileBrowserFrm,
-		File           srcFile,
-		File           outDir,
-		boolean        compression )
+		Window  owner,
+		File    srcFile,
+		File    outDir,
+		boolean compression )
   {
-    super( fileBrowserFrm );
+    super( owner, true );
     this.srcFile     = srcFile;
     this.outDir      = outDir;
     this.compression = compression;

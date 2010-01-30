@@ -5,9 +5,9 @@
     Zahlen, Variablen, Funktionsaufrufen und Operatoren,
     die einen numerischen Wert im Bereich von -32768 bis +32767
     als Ergebnis liefern.
-  <br><br>
+  <br/><br/>
 
-  <h2>Variablen</h2>
+  <h2>1. Variablen</h2>
     Es gibt einfache Variablen und genau ein Variablen-Array.
     Einfache Variablen haben als Name einen Buchstaben von A bis Z,
     d.h., es gibt somit 26 einfache Variablen.
@@ -18,21 +18,21 @@
     In dem Fall sind mehr als 26 Variablen m&ouml;glich,
     und der Variablenname kann ab dem zweiten Zeichen
     neben Buchstaben auch Ziffern enthalten.
-  <br><br>
+  <br/><br/>
     Das Variablen-Array hat den Namen @.
     Die Gr&ouml;&szlig;e des Arrays wird in den
     <a href="options.htm">Compiler-Optionen</a> festgelegt.
     Der Zugriff auf ein Element des Variablen-Arrays
     erfolgt mit Hilfe eines Indexes,
     der in runden Klammern unmittelbar hinter dem @ angegeben wird.
-  <br><br>
+  <br/><br/>
 
-  <h2>Funktionen</h2>
+  <h2>2. Funktionen</h2>
     Eine Liste der Funktionen finden Sie
     <a href="functions.htm">hier</a>.
-  <br><br>
+  <br/><br/>
 
-  <h2>Operatoren</h2>
+  <h2>3. Operatoren</h2>
     <table border=1>
       <tr>
 	<th nowrap>Operator</th>
@@ -125,104 +125,104 @@
 	<td>ja</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Logische und Vergleichsoperatoren liefern als Ergebnis immer
     0 oder 1 zur&uuml;ck.
-  <br><br>
+  <br/><br/>
 
-  <h2>Grammatik</h2>
+  <h2>4. Grammatik</h2>
     Folgende Grammatik beschreibt die Syntax der numerischen Ausdr&uuml;cke:
-  <br><br>
-    <i>Ausdruck:</i><br>
-	&nbsp; <i>Logischer UND-Ausdruck</i><br>
+  <br/><br/>
+    <i>Ausdruck:</i><br/>
+	&nbsp; <i>Logischer UND-Ausdruck</i><br/>
 	&nbsp; <i>Ausdruck</i>
 			&nbsp; <tt>OR</tt>
 			&nbsp; <i>Logischer UND-Ausdruck</i>
-  <br><br>
-    <i>Logischer UND-Ausdruck:</i><br>
-	&nbsp; <i>Logischer NICHT-Ausdruck</i><br>
+  <br/><br/>
+    <i>Logischer UND-Ausdruck:</i><br/>
+	&nbsp; <i>Logischer NICHT-Ausdruck</i><br/>
 	&nbsp; <i>Logischer UND-Ausdruck</i>
 			&nbsp; <tt>AND</tt>
 			&nbsp; <i>Logischer NICHT-Ausdruck</i>
-  <br><br>
-    <i>Logischer NICHT-Ausdruck:</i><br>
-	&nbsp; <i>Vergleichsausdruck</i><br>
+  <br/><br/>
+    <i>Logischer NICHT-Ausdruck:</i><br/>
+	&nbsp; <i>Vergleichsausdruck</i><br/>
 	&nbsp; <tt>NOT</tt> &nbsp; <i>Vergleichsausdruck</i>
-  <br><br>
-    <i>Vergleichsausdruck:</i><br>
-	&nbsp; <i>Arithmetischer Ausdruck</i><br>
+  <br/><br/>
+    <i>Vergleichsausdruck:</i><br/>
+	&nbsp; <i>Arithmetischer Ausdruck</i><br/>
 	&nbsp; <i>Arithmetischer Ausdruck</i>
 			&nbsp; <i>Vergleichsoperator</i>
 			&nbsp; <i>Arithmetischer Ausdruck</i>
-  <br><br>
-    <i>Vergleichsoperator:</i><br>
-	&nbsp; <tt>&lt;</tt><br>
-	&nbsp; <tt>&lt;=</tt><br>
-	&nbsp; <tt>=</tt><br>
-	&nbsp; <tt>=&gt;</tt><br>
-	&nbsp; <tt>&gt;</tt><br>
-	&nbsp; <tt>&lt;&gt;</tt><br>
+  <br/><br/>
+    <i>Vergleichsoperator:</i><br/>
+	&nbsp; <tt>&lt;</tt><br/>
+	&nbsp; <tt>&lt;=</tt><br/>
+	&nbsp; <tt>=</tt><br/>
+	&nbsp; <tt>=&gt;</tt><br/>
+	&nbsp; <tt>&gt;</tt><br/>
+	&nbsp; <tt>&lt;&gt;</tt><br/>
 	&nbsp; <tt>#</tt>
-  <br><br>
-    <i>Arithmetischer Ausdruck:</i><br>
-	&nbsp; <i>Additionsausdruck</i><br>
+  <br/><br/>
+    <i>Arithmetischer Ausdruck:</i><br/>
+	&nbsp; <i>Additionsausdruck</i><br/>
 	&nbsp; <i>Vorzeichen</i> &nbsp; <i>Additionsausdruck</i>
-  <br><br>
-    <i>Vorzeichen:</i><br>
-	&nbsp; <tt>+</tt><br>
+  <br/><br/>
+    <i>Vorzeichen:</i><br/>
+	&nbsp; <tt>+</tt><br/>
 	&nbsp; <tt>-</tt>
-  <br><br>
-    <i>Additionsausdruck:</i><br>
-	&nbsp; <i>Multiplikationsausdruck</i><br>
+  <br/><br/>
+    <i>Additionsausdruck:</i><br/>
+	&nbsp; <i>Multiplikationsausdruck</i><br/>
 	&nbsp; <i>Additionsausdruck</i>
 			&nbsp; <i>Additionsoperator</i>
 			&nbsp; <i>Multiplikationsausdruck</i>
-  <br><br>
-    <i>Additionsoperator:</i><br>
-	&nbsp; <tt>+</tt><br>
+  <br/><br/>
+    <i>Additionsoperator:</i><br/>
+	&nbsp; <tt>+</tt><br/>
 	&nbsp; <tt>-</tt>
-  <br><br>
-    <i>Multiplikationsausdruck:</i><br>
-	&nbsp; <i>Prim&auml;rausdruck</i><br>
+  <br/><br/>
+    <i>Multiplikationsausdruck:</i><br/>
+	&nbsp; <i>Prim&auml;rausdruck</i><br/>
 	&nbsp; <i>Multiplikationsausdruck</i>
 			&nbsp; <i>Multiplikationsoperator</i>
 			&nbsp; <i>Prim&auml;rausdruck</i>
-  <br><br>
-    <i>Multiplikationsoperator:</i><br>
-	&nbsp; <tt>*</tt><br>
+  <br/><br/>
+    <i>Multiplikationsoperator:</i><br/>
+	&nbsp; <tt>*</tt><br/>
 	&nbsp; <tt>/</tt>
-  <br><br>
-    <i>Prim&auml;rausdruck:</i><br>
-	&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i> &nbsp; <tt>)</tt><br>
-	&nbsp; <i>Zahlenliteral</i><br>
-	&nbsp; <i>Zeichenliteral</i><br>
-	&nbsp; <i>Einfache Variable</i><br>
-	&nbsp; <i>Array-Variable</i><br>
+  <br/><br/>
+    <i>Prim&auml;rausdruck:</i><br/>
+	&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i> &nbsp; <tt>)</tt><br/>
+	&nbsp; <i>Zahlenliteral</i><br/>
+	&nbsp; <i>Zeichenliteral</i><br/>
+	&nbsp; <i>Einfache Variable</i><br/>
+	&nbsp; <i>Array-Variable</i><br/>
 	&nbsp; <i>Funktionsaufruf</i>
-  <br><br>
-    <i>Zahlenliteral:</i><br>
+  <br/><br/>
+    <i>Zahlenliteral:</i><br/>
 	&nbsp; <i>Folge von Ziffern 0 bis 9</i>
-  <br><br>
-    <i>Zeichenliteral:</i><br>
+  <br/><br/>
+    <i>Zeichenliteral:</i><br/>
 	&nbsp; <tt>'</tt> &nbsp; <i>8-Bit-Zeichen</i> &nbsp; <tt>'</tt>
-  <br><br>
-    <i>Einfache Variable:</i><br>
+  <br/><br/>
+    <i>Einfache Variable:</i><br/>
 	&nbsp; <i>Buchstabe A bis Z</i>
-  <br><br>
-    <i>Array-Variable:</i><br>
+  <br/><br/>
+    <i>Array-Variable:</i><br/>
 	&nbsp; <tt>@</tt> &nbsp; <tt>(</tt>
 			&nbsp; <i>Array-Index</i> &nbsp; <tt>)</tt>
-  <br><br>
-    <i>Array-Index:</i><br>
+  <br/><br/>
+    <i>Array-Index:</i><br/>
 	&nbsp; <i>Ausdruck</i>
-  <br><br>
-    <i>Funktionsaufruf:</i><br>
-	&nbsp; <i>Funktionsname</i><br>
+  <br/><br/>
+    <i>Funktionsaufruf:</i><br/>
+	&nbsp; <i>Funktionsname</i><br/>
 	&nbsp; <i>Funktionsname</i> &nbsp; <tt>(</tt>
 			&nbsp; <i>Argumentliste</i> &nbsp; <tt>)</tt>
-  <br><br>
-    <i>Argumentliste:</i><br>
-	&nbsp; <i>Argument</i><br>
+  <br/><br/>
+    <i>Argumentliste:</i><br/>
+	&nbsp; <i>Argument</i><br/>
 	&nbsp; <i>Argumentliste</i> &nbsp; <tt>,</tt> &nbsp; <i>Argument</i>
 </body>
 </html>

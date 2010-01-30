@@ -1,0 +1,181 @@
+<html>
+<body>
+  <h1>Dateiformate f&uuml;r Abbilddateien</h1>
+    Eine Form der Emulation von Disketten ist die Verwendung
+    von Abbilddateien (Disk Image Files).
+    JKCEMU unterst&uuml;tzt <em>einfache Abbilddateien</em>,
+    <em>Anadisk-</em> und <em>Teledisk-Dateien</em>.
+    Diese Dateien k&ouml;nnen dabei auch
+    <a href="diskimgformats.htm#gzip">GZIP-komprimiert</a> sein.
+  <br/><br/>
+
+  <h2><a name="plain">1. Einfache Abbilddateien</a></h2>
+    Eine einfache Abbilddatei ist eine Aneinanderkettung aller Sektoren
+    einer Diskette, jedoch ohne Verwaltungs- und Geometriedaten,
+    d.h., eine einfache Abbilddatei enth&auml;lt nur Nutzdaten.
+    Die Abbilddatei einer 720K-Diskette ist somit auch 720 KByte gro&szlig;.
+  <br/><br/>
+    Einfache Abbilddateien sind zwar weit verbreitet,
+    jedoch hat das Format keinen einheitlichen Namen.
+    H&auml;ufig wird es einfach nur RAW-Format genannt.
+    Auch ist die Dateiendung nicht festgelegt.
+    Meistens wird <em>*.img</em> verwendet,
+    gelegentlich auch <em>*.image</em> und <em>*.raw</em>.
+  <br/><br/>
+    Erzeugen kann man einfache Abbilddateien unter Linux/Unix
+    mit dem Befehl <em>dd</em>, z.B.:
+  <br/><br/>
+    <tt>&nbsp;dd&nbsp;if=/dev/fd0&nbsp;of=&lt;dateiname&gt;</tt>
+  <br/><br/>
+    Unter DOS sind die Programme <em>rawread.exe</em>
+    und zum Zur&uuml;ckschreiben <em>rawwrite.exe</em> bekannt.
+  <br/><br/>
+    JKCEMU kann ebenfalls einfache Abbilddateien von Disketten erstellen.
+    Die entsprechende Funktion finden Sie im Hauptfenster im Men&uuml;
+    <em>Extra</em>.
+    Des weiteren k&ouml;nnen auch einfache Abbilddateien manuell
+    erstellt werden, siehe <a href="builddiskimg.htm">hier</a>.
+  <br/><br/>
+    Da einfache Abbilddatei keine Verwaltungs- bzw. Geometriedaten enthalten,
+    muss man bei deren Verwendung das Diskettenformat in einem
+    speziellen Dialog ausw&auml;hlen.
+    JKCEMU unterst&uuml;tzt Sie bei der Auswahl,
+    indem anhand der Dateigr&ouml;&szlig;e das wahrscheinlich richtige Format
+    bereits vorausgew&auml;hlt ist.
+  <br/><br/>
+    Im <a href="../tools/filebrowser.htm">Datei-Browser</a> k&ouml;nnen
+    Sie einfache Abbilddateien in Anadisk-Dateien exportieren.
+  <br/><br/>
+
+  <h2><a name="anadisk">2. Anadisk-Dateien</a></h2>
+    Anadisk ist ein Programm zum Erzeugen von speziellen
+    Diskettenabbilddateien (Anadisk-Dateien).
+    In einer Anadisk-Datei sind die Sektoren unkomprimiert aneinandergereiht,
+    wobei vor jedem Sektor ein acht Byte gro&szlig;er Kopf steht.
+    Dieser Kopf hat folgenden Aufbau:
+  <br/>
+    <table border="1">
+      <tr><th>Anzahl Bytes</th><th>Bedeutung</th></tr>
+      <tr>
+	<td valign="top">1 Byte</td>
+	<td>Physische Zylindernummer (beginnt mit 0)</td>
+      </tr>
+      <tr>
+	<td valign="top">1 Byte</td>
+	<td>Physische Kopfnummer (beginnt mit 0)</td>
+      </tr>
+      <tr>
+        <td valign="top">1 Byte</td>
+        <td>Zylindernummer in der Sektor-ID (beginnt mit 0)</td>
+      </tr>
+      <tr>
+        <td valign="top">1 Byte</td>
+        <td>Kopfnummer in der Sektor-ID (beginnt mit 0)</td>
+      </tr>
+      <tr>
+	<td valign="top">1 Byte</td>
+	<td>Sektornummer (beginnt mit 1)</td>
+      </tr>
+      <tr>
+        <td valign="top">1 Byte</td>
+        <td>
+          Sektorgr&ouml;&szlig;e:<br/>
+          &nbsp; 0: 128 Bytes<br/>
+          &nbsp; 1: 256 Bytes<br/>
+          &nbsp; 2: 512 Bytes<br/>
+          &nbsp; 3: 1024 Bytes<br/>
+        </td>
+      </tr>
+      <tr>
+        <td valign="top">2 Bytes</td>
+        <td>
+          Anzahl der nachfolgenden Bytes
+          (tats&auml;chliche Sektorgr&ouml;&szlig;e in der Datei,
+	  Little-Endian-kodiert))
+        </td>
+      </tr>
+    </table>
+  <br/><br/>
+    Aus den Kopfdaten vor jedem Sektor lassen sich die Geometriedaten
+    und damit das Diskettenformat ermitteln.
+    Gel&ouml;schte Sektoren sind in einer Anadisk-Datei
+    allerdings nicht m&ouml;glich bzw. nicht als solche markierbar.
+  <br/><br/>
+    Im <a href="../tools/filebrowser.htm">Datei-Browser</a> k&ouml;nnen
+    Anadisk-Dateien in einfache Abbilddateien exportiert werden,
+    sofern das Diskettenformat dies zul&auml;sst.
+  <br/><br/>
+
+
+  <h2><a name="teledisk">3. Teledisk-Dateien</a></h2>
+    JKCEMU unterst&uuml;tzt Teledisk-Dateien, allerdings nur lesend.
+    Teledisk ist ein Programm zum Erzeugen und Zur&uuml;ckschreiben
+    von speziellen Diskettenabbilddateien (Teledisk-Dateien)
+    und war um 1990 sehr popul&auml;r.
+    Eine Teledisk-Datei enth&auml;lt neben den Nutzdaten
+    auch sehr detailierte Verwaltungs- und Geometriedaten.
+    Dadurch kann Teledisk eine nahezu identische Kopie einer Diskette
+    anfertigen, auch wenn das Diskettenformat vom Standard abweicht
+    oder die Diskette gel&ouml;schte Sektoren enth&auml;lt.
+  <br/><br/>
+    Das Teledisk-Format ist propriet&auml;r und nicht offen gelegt.
+    Die in JKCEMU enthaltene Teledisk-Unterst&uuml;tzung basiert
+    auf den wenigen im Internet frei verf&uuml;gbaren Informationen
+    und ist deshalb auch nicht vollst&auml;ndig.
+    So lassen sich z.B. Teledisk-Dateien mit <em>Advanced Compression</em>
+    nicht verwenden.
+  <br/><br/>
+    Im <a href="../tools/filebrowser.htm">Datei-Browser</a> k&ouml;nnen
+    Teledisk-Dateien in Anadisk- und in einfache Abbilddateien exportiert
+    werden, sofern das Diskettenformat dies zul&auml;sst.
+  <br/><br/>
+
+
+  <h2><a name="gzip">4. Komprimierte Abbilddateien</a></h2>
+    Abbilddateien, d.h. Anadisk-, Teledisk- und einfache Abbilddateien,
+    k&ouml;nnen mit GZIP komprimiert werden, um Speicherplatz zu sparen.
+    Damit JKCEMU solche Dateien auch richtig erkennt,
+    muss am Dateinamen ein <em>.gz</em> angeh&auml;ngt werden
+    (siehe Tabelle).
+    Komprimieren und wieder Entpacken k&ouml;nnen Sie mit Hilfe des
+    <a href="../tools/filebrowser.htm">Datei-Browsers</a>.
+  <br/><br/>
+    <b>Achtung!</b> Die Emulation einer Diskette mit Hilfe
+    einer komprimierten Abbilddatei ist nur lesend m&ouml;glich.
+    Soll eine Diskette auf Basis einer Abbilddatei emuliert werden,
+    auf die auch Schreibzugriffe m&ouml;glich sind,
+    muss die Datei eine unkomprimierte einfache Abbilddatei
+    oder eine unkomprimierte Anadisk-Datei sein.
+  <br/><br/>
+    <table border="1">
+      <tr>
+	<th>Dateityp</th>
+	<th>Dateiendung unkomprimiert</th>
+	<th>Dateiendung komprimiert</th>
+      </tr>
+      <tr>
+	<td valign="top">Einfache Abbilddatei</td>
+	<td valign="top">
+	  .img<br/>
+	  .image<br/>
+	  .raw
+	</td>
+	<td valign="top">
+	  .img.gz<br/>
+	  .image.gz<br/>
+	  .raw.gz
+	</td>
+      <tr>
+	<td valign="top">Anadisk-Datei</td>
+	<td valign="top">.dump</td>
+	<td valign="top">.dump.gz</td>
+      </tr>
+      <tr>
+	<td valign="top">Teledisk-Datei</td>
+	<td valign="top">.td0</td>
+	<td valign="top">.td0.gz</td>
+      </tr>
+      </tr>
+    </table>
+</body>
+</html>

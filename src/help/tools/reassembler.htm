@@ -1,0 +1,36 @@
+<html>
+<body>
+  <h1>Reassembler</h1>
+    Mit dem Reassembler, auch Disassembler genannt,
+    k&ouml;nnen Sie die im Arbeitsspeicher des Emulators
+    liegenden Bytes in die Assemblersyntax &uuml;bersetzen.
+  <br/><br/>
+    Nach dem Starten des Reassemblers ist die Eingabe der Anfangs-
+    und Endadresse des zu reassemblierenden Speicherbereichs erforderlich.
+    Anschlie&szlig;end w&auml;hlen Sie den Men&uuml;punkt
+    <em>Datei</em> &rarr; <em>Reassemblieren</em> an,
+    und das Reassembler-Listing wird in dem Fenster angezeigt.
+    Dieses k&ouml;nnen Sie nun speichern oder drucken.
+  <br/><br/>
+    Es ist auch m&ouml;glich,
+    das eigentliche Reassemblieren durch Dr&uuml;cken
+    der <em>Enter</em>-Taste zu starten,
+    solange der Cursor im Eingabefeld f&uuml;r die Endadresse steht.
+  <br/><br/>
+    <b>Achtung!</b> Es wird der Speicherbereich reassembliert,
+    den auch der Mikroprozessor zu dem Zeitpunkt sieht.
+    Wenn das emulierte System in dem Adressbereich mehrere
+    parallel liegende Speicherb&auml;nke hat,
+    m&uuml;ssen Sie selbst sicherstellen,
+    dass die richtige Bank eingeblendet ist.
+  <br/><br/>
+    <b>Achtung!</b> Der Reassembler ist nicht in der Lage,
+    die Semantik des reassemblierten Programmcodes zu verstehen, d.h.,
+    nicht ausf&uuml;hrbare Datenbereiche werden nicht als solche erkannt
+    Es werden somit alle Bytes in dem zu reassemblierenden
+    Speicherbereich immer als Maschinenbefehle des Mikroprozessors
+    interpretiert, unabh&auml;ngig davon, ob diese auch tats&auml;chlich
+    ausf&uuml;hrbaren Programmcode darstellen.
+</body>
+</html>
+

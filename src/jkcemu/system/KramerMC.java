@@ -18,6 +18,7 @@ import z80emu.*;
 
 public class KramerMC extends EmuSys implements
 					Z80MaxSpeedListener,
+					Z80PCListener,
 					Z80TStatesListener
 {
   private static final int[][] kbMatrixNormal = {
@@ -85,6 +86,7 @@ public class KramerMC extends EmuSys implements
   private volatile int kbStatus;
   private boolean      shiftPressed;
   private boolean      ctrlPressed;
+  private boolean      pcListenerAdded;
   private Z80PIO       pio;
 
 
@@ -115,14 +117,17 @@ public class KramerMC extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
+    this.pcListenerAdded = false;
+    checkAddPCListener( props );
+
     reset( EmuThread.ResetLevel.POWER_ON, props );
-    z80MaxSpeedChanged();
+    z80MaxSpeedChanged( cpu );
   }
 
 
   public static String getBasicProgram( Z80MemView memory )
   {
-    return SourceUtil.getKCStyleBasicProgram( memory, 0x1001, basicTokens );
+    return SourceUtil.getKCBasicStyleProgram( memory, 0x1001, basicTokens );
   }
 
 
@@ -134,14 +139,25 @@ public class KramerMC extends EmuSys implements
 
 	/* --- Z80MaxSpeedListener --- */
 
-  public void z80MaxSpeedChanged()
+  public void z80MaxSpeedChanged( Z80CPU cpu )
   {
     /*
      * Anzahl der Taktzyklen,
      * die eine Taste gedrueckt und danach wieder losgelassen werden soll,
      * bevor das Druecken der eigentlichen Taste emuliert wird.
      */
-    this.kbTStates = this.emuThread.getZ80CPU().getMaxSpeedKHz() * 100;
+    this.kbTStates = cpu.getMaxSpeedKHz() * 100;
+  }
+
+
+	/* --- Z80PCListener --- */
+
+  public void z80PCChanged( Z80CPU cpu, int pc )
+  {
+    if( pc == 0x00EC ) {
+      this.emuThread.getPrintMngr().putByte( cpu.getRegC() );
+      cpu.setRegPC( cpu.doPop() );
+    }
   }
 
 
@@ -170,6 +186,13 @@ public class KramerMC extends EmuSys implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    checkAddPCListener( props );
+  }
+
+
   public boolean canExtractScreenText()
   {
     return true;
@@ -182,6 +205,9 @@ public class KramerMC extends EmuSys implements
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    if( this.pcListenerAdded ) {
+      cpu.removePCListener( this );
+    }
   }
 
 
@@ -245,6 +271,24 @@ public class KramerMC extends EmuSys implements
   public int getCharWidth()
   {
     return 6;
+  }
+
+
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 150;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 250;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 150;
   }
 
 
@@ -435,7 +479,7 @@ public class KramerMC extends EmuSys implements
 
   public void openBasicProgram()
   {
-    String text = SourceUtil.getKCStyleBasicProgram(
+    String text = SourceUtil.getKCBasicStyleProgram(
 					this.emuThread,
 					0x1001,
 					basicTokens );
@@ -554,7 +598,7 @@ public class KramerMC extends EmuSys implements
 
   public void saveBasicProgram()
   {
-    int endAddr = SourceUtil.getKCStyleBasicEndAddr( this.emuThread, 0x1001 );
+    int endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x1001 );
     if( endAddr >= 0x1001 ) {
       (new SaveDlg(
 		this.screenFrm,
@@ -612,6 +656,37 @@ public class KramerMC extends EmuSys implements
   }
 
 
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
+  }
+
+
+  public void updSysCells(
+			int    begAddr,
+			int    len,
+			Object fileFmt,
+			int    fileType )
+  {
+    if( (begAddr == 0x1001) && (fileFmt != null) ) {
+      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+	if( fileType == 'B' ) {
+	  int topAddr = begAddr + len;
+	  this.emuThread.setMemWord( 0x0C5E, topAddr );
+	  this.emuThread.setMemWord( 0x0C60, topAddr );
+	  this.emuThread.setMemWord( 0x0C62, topAddr );
+	}
+      }
+    }
+  }
+
+
   public void writeIOByte( int port, int value )
   {
     switch( port & 0xFF ) {
@@ -636,6 +711,23 @@ public class KramerMC extends EmuSys implements
 
 
 	/* --- private Methoden --- */
+
+  private synchronized void checkAddPCListener( Properties props )
+  {
+    boolean state = EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.kramermc.catch_print_calls", false );
+    if( state != this.pcListenerAdded ) {
+      Z80CPU cpu = this.emuThread.getZ80CPU();
+      if( state ) {
+	cpu.addPCListener( this, 0x00EC );
+      } else {
+	cpu.removePCListener( this );
+      }
+      this.pcListenerAdded = state;
+    }
+  }
+
 
   private boolean setCharInKBMatrix( int ch, int[][] matrixChars )
   {
@@ -685,25 +777,6 @@ public class KramerMC extends EmuSys implements
       }
     }
     this.pio.putInValuePortB( colValue, 0xFF );
-  }
-
-
-  public void updSysCells(
-			int    begAddr,
-			int    len,
-			Object fileFmt,
-			int    fileType )
-  {
-    if( (begAddr == 0x1001) && (fileFmt != null) ) {
-      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-	if( fileType == 'B' ) {
-	  int topAddr = begAddr + len;
-	  this.emuThread.setMemWord( 0x0C5E, topAddr );
-	  this.emuThread.setMemWord( 0x0C60, topAddr );
-	  this.emuThread.setMemWord( 0x0C62, topAddr );
-	}
-      }
-    }
   }
 }
 

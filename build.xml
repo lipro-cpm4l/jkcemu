@@ -4,6 +4,7 @@
   <property name="build"   location="${basedir}/build"/>
   <property name="javadoc" location="${basedir}/javadoc"/>
   <property name="source"  location="${basedir}/src"/>
+  <property name="disks"   location="${source}/disks"/>
   <property name="help"    location="${source}/help"/>
   <property name="images"  location="${source}/images"/>
   <property name="rom"     location="${source}/rom"/>
@@ -16,6 +17,9 @@
 
   <target name="init">
     <mkdir dir="${build}"/>
+    <copy todir="${build}/disks">
+      <fileset dir="${disks}"/>
+    </copy>
     <copy todir="${build}/help">
       <fileset dir="${help}"/>
     </copy>

@@ -107,7 +107,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-	/* --- Methoden fuer Z80InterruptSource --- */
+	/* --- Z80InterruptSource --- */
 
   public synchronized int interruptAccepted()
   {
@@ -148,6 +148,9 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   {
     boolean rv = false;
     for( int i = 0; i < this.timer.length; i++ ) {
+      if( this.timer[ i ].interruptPending ) {
+	break;
+      }
       if( this.timer[ i ].interruptEnabled
 		&& this.timer[ i ].interruptRequested )
       {

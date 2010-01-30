@@ -206,15 +206,16 @@ public class FileChecksumFrm extends BasicFrm
     this.cancelled = true;
     synchronized( this.tableModel ) {
       this.filesChanged = true;
-      this.tableModel.clear();
+      this.tableModel.clear( false );
       if( files != null ) {
 	for( File file : files ) {
-	  if( file.isFile() )
-	    this.tableModel.addRow( new FileEntry( file ) );
+	  if( file.isFile() ) {
+	    this.tableModel.addRow( new ExtendedFileEntry( file ), false );
+	  }
 	}
       }
+      this.tableModel.fireTableDataChanged();
     }
-    this.tableModel.fireTableDataChanged();
     updFields();
   }
 

@@ -5,11 +5,11 @@
     die der Compiler versteht.
     Es wird auch auf die Unterschiede zum AC1-Mini-BASIC
     und Z1013-Tiny-BASIC eingegangen.
-  <br><br>
+  <br/><br/>
     Wenn zu einer Funktion keine Syntax angegeben ist,
     hat die Funktion keine Argumente,
     d.h., hinter dem Funktionsnamen d&uuml;rfen keine Klammern stehen.
-  <br><br>
+  <br/><br/>
     <table border="1">
       <tr>
 	<th nowrap>Funktion</th>
@@ -114,12 +114,12 @@
       </tr>
 
     </table>
-  <br><br>
+  <br/><br/>
 
   <h2>Erl&auml;uterungen zu den Funktionen</h2>
     In spitzen Klammern eingeschlossene Elemente dienen als Platzhalter
     und sind entsprechend zu ersetzten.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="abs">ABS</a></h3>
     <table border="1">
@@ -133,10 +133,10 @@
 	</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Funktion liefert den absoluten Betrag des Wertes
     des angegebenen Ausdrucks.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="deek">DEEK</a></h3>
     <table border="1">
@@ -153,10 +153,10 @@
 	<td>Adresse:</td><td>numerischer Ausdruck</td></td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Funktion liest zwei aufeinander folgende Bytes vom Arbeitsspeicher
     ab der angegebenen Adresse und liefert sie als 16-Bit-Wert zur&uuml;ck.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="hex">HEX</a></h3>
     <table border="1">
@@ -174,27 +174,27 @@
 	<td>Folge von Zeichen aus 0 bis 9, A bis F oder a bis f</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Funktion liefert den Wert der angegebenen Hexadezimalzahl.
-  <br><br>
+  <br/><br/>
     Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC-Interpreter
     sind Kleinbuchstaben in der Hexadezimalzahl nicht erlaubt.
     Au&szlig;erdem d&uuml;rfen zwischen den Klammern und der Hexadezimalzahl
     keine Leerzeichen stehen.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="inchar">INCHAR</a></h3>
     Die Funktion liest ein Zeichen von der Tastatur und liefert
     den Wert dieses Zeichens zur&uuml;ck.
     Wenn keine Taste gedr&uuml;ckt ist, wird bis zum Dr&uuml;cken
     einer Taste gewartet.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="inkey">INKEY</a></h3>
     Die Funktion pr&uuml;ft, ob gerade eine Taste gedr&uuml;ckt ist.
     Wenn ja, wird der Wert des damit eingegebenen Zeichen zur&uuml;ckgeliefert.
     Anderenfalls liefert die Funktion den Wert Null.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="in">IN, INP</a></h3>
     <table border="1">
@@ -204,7 +204,7 @@
 	  <tt>IN</tt>
 	  <tt>(</tt>
 	  <it>&lt;Adresse&gt;</it>
-	  <tt>)</tt><br>
+	  <tt>)</tt><br/>
 	  <tt>INP</tt>
 	  <tt>(</tt>
 	  <it>&lt;Adresse&gt;</it>
@@ -213,14 +213,14 @@
       </tr>
       <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
     </table>
-  <br>
+  <br/>
     Die Funktionen IN und INP haben die gleiche Wirkung.
     Sie lesen ein Byte von dem durch die Adresse
     angegebenen Eingabetor und liefern den Wert des Bytes zur&uuml;ck.
-  <br><br>
+  <br/><br/>
     Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC ist nur
     das Schl&uuml;sselwort IN erlaubt.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="peek">PEEK</a></h3>
     <table border="1">
@@ -237,11 +237,11 @@
 	<td>Adresse:</td><td>numerischer Ausdruck</td></td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Funktion liest das Byte vom Arbeitsspeicher,
     welches auf der angegebenen Adresse steht,
     und liefert den Wert des Bytes zur&uuml;ck.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="rnd">RND</a></h3>
     <table border="1">
@@ -258,10 +258,10 @@
 	<td>Maximalwert:</td><td>numerischer Ausdruck</td></td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Funktion liefert einen zuf&auml;lligen Wert zwischen eins
     und dem angegebenen Maximalwert.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="sgn">SGN</a></h3>
     <table border="1">
@@ -275,11 +275,11 @@
 	</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Funktion liefert -1, wenn der Wert des angegebenen Ausdrucks
     kleiner Null ist, 1 wenn der Wert gr&ouml;&szlig;er Null ist
     und Null, wenn der Wert Null ist.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="size">SIZE</a></h3>
     Die Funktion liefert die Gr&ouml;&szlig;e des Speicherbereichs
@@ -291,7 +291,7 @@
     Wenn die Gr&ouml;&szlig;e dieses Bereichs 32767 Bytes &uuml;bersteigt,
     wird nur 32767 zur&uuml;ckgeliefert,
     da das der gr&ouml;&szlig;tm&ouml;gliche positive Wert ist.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="sqr">SQR</a></h3>
     <table border="1">
@@ -305,10 +305,10 @@
 	</td>
       </tr>
     </table>
-  <br>
+  <br/>
     Die Funktion liefert den ganzzahligen Anteil der Quadratwurzel
     aus dem Wert des angegebenen Ausdrucks zur&uuml;ck.
-  <br><br>
+  <br/><br/>
 
   <h3><a name="top">TOP</a></h3>
     Die Funktion liefert die Adresse des ersten freien Bytes

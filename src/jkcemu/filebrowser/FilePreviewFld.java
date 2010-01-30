@@ -1,9 +1,9 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Komponente fuer die Vorschau einer Datei
+ * Komponente fuer die Detailanzeige bzw. Vorschau einer Datei
  */
 
 package jkcemu.filebrowser;
@@ -24,6 +24,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.*;
 import jkcemu.audio.AudioUtil;
 import jkcemu.base.*;
+import jkcemu.disk.*;
 
 
 public class FilePreviewFld extends JPanel
@@ -32,6 +33,7 @@ public class FilePreviewFld extends JPanel
 					MouseListener,
 					Runnable
 {
+  private Frame          owner;
   private long           maxFileSize;
   private Object         lockMonitor;
   private boolean        fieldsAdded;
@@ -49,8 +51,9 @@ public class FilePreviewFld extends JPanel
   private JTable         fileTable;
 
 
-  public FilePreviewFld()
+  public FilePreviewFld( Frame owner )
   {
+    this.owner             = owner;
     this.maxFileSize       = 0;
     this.lockMonitor       = "lock monitor";
     this.fieldsAdded       = false;
@@ -142,6 +145,7 @@ public class FilePreviewFld extends JPanel
       }
       catch( IllegalMonitorStateException ex ) {}
     }
+    this.fileTableModel.setSortCaseSensitive( sortCaseSensitive );
   }
 
 
@@ -176,7 +180,7 @@ public class FilePreviewFld extends JPanel
 
   public void mouseClicked( MouseEvent e )
   {
-    if( (e.getSource() == this.fileTableHeader) && (e.getClickCount() > 1) ) {
+    if( (e.getSource() == this.fileTableHeader) && (e.getClickCount() > 0) ) {
       int col = this.fileTableHeader.columnAtPoint(
 				new Point( e.getX(), e.getY() ) );
       if( col >= 0 ) {
@@ -292,11 +296,61 @@ public class FilePreviewFld extends JPanel
 		if( fileNode.isAudioFile() ) {
 		  addAudioInfo( infoItems, file );
 		} else if( fileNode.isImageFile() ) {
-		  if( addImageInfo( infoItems, file, maxFileSize ) )
+		  if( addImageInfo( infoItems, file, maxFileSize ) ) {
 		    cardName = "image";
+		  }
+		} else if( fileNode.isPlainDiskFile() ) {
+		  if( addPlainDiskInfo(
+				infoItems,
+				fileNode.isCompressedFile() ?
+					"Komprimierte einfache Abbilddatei"
+					: "Einfache Abbilddatei",
+				file,
+				maxFileSize,
+				sortCaseSensitive ) )
+		  {
+		    cardName = "file.table";
+		  }
+		} else if( fileNode.isAnadiskFile() ) {
+		  if( checkFileSize( file.length(), maxFileSize ) ) {
+		    try {
+		      if( addDiskInfo(
+				infoItems,
+				fileNode.isCompressedFile() ?
+						"Komprimierte Anadisk-Datei"
+						: "Anadisk-Datei",
+				AnadiskFloppyDisk.readFile(
+							this.owner,
+							file ),
+				sortCaseSensitive ) )
+		      {
+			cardName = "file.table";
+		      }
+		    }
+		    catch( IOException ex ) {}
+		  }
+		} else if( fileNode.isTelediskFile() ) {
+		  if( checkFileSize( file.length(), maxFileSize ) ) {
+		    try {
+		      if( addDiskInfo(
+				infoItems,
+				fileNode.isCompressedFile() ?
+						"Komprimierte Teledisk-Datei"
+						: "Teledisk-Datei",
+				TelediskFloppyDisk.readFile(
+							this.owner,
+							file ),
+				sortCaseSensitive ) )
+		      {
+			cardName = "file.table";
+		      }
+		    }
+		    catch( IOException ex ) {}
+		  }
 		} else if( fileNode.isTextFile() ) {
-		  if( addTextInfo( infoItems, file, maxFileSize ) )
+		  if( addTextInfo( infoItems, file, maxFileSize ) ) {
 		    cardName = "text";
+		  }
 		} else if( fileNode.isArchiveFile() ) {
 		  if( addArchiveInfo(
 				infoItems,
@@ -440,7 +494,7 @@ public class FilePreviewFld extends JPanel
     if( (fName != null) && checkFileSize( file.length(), maxFileSize ) ) {
       fName = fName.toLowerCase();
       infoItems.put( FileInfoFld.Item.TYPE, "Archivdatei" );
-      this.fileTableModel.clear();
+      this.fileTableModel.clear( false );
       if( fName.endsWith( ".jar" ) || fName.endsWith( ".zip" ) ) {
 	ZipFile in = null;
 	try {
@@ -449,7 +503,8 @@ public class FilePreviewFld extends JPanel
 	  if( entries != null ) {
 	    while( entries.hasMoreElements() ) {
 	      this.fileTableModel.addRow(
-				new FileEntry( entries.nextElement() ) );
+			new ExtendedFileEntry( entries.nextElement() ),
+			false );
 	    }
 	  }
 	}
@@ -477,7 +532,9 @@ public class FilePreviewFld extends JPanel
 	  }
 	  TarEntry entry = TarEntry.readEntryHeader( in );
 	  while( entry != null ) {
-	    this.fileTableModel.addRow( new FileEntry( entry ) );
+	    this.fileTableModel.addRow(
+			new ExtendedFileEntry( entry ),
+			false );
 	    long size = entry.getSize();
 	    if( size > 0 ) {
 	      if( (size % 512) != 0 ) {
@@ -513,14 +570,16 @@ public class FilePreviewFld extends JPanel
   {
     boolean rv = false;
     infoItems.put( FileInfoFld.Item.TYPE, "Verzeichnis" );
-    this.fileTableModel.clear();
+    this.fileTableModel.clear( false );
     if( children != null ) {
       try {
 	while( children.hasMoreElements() ) {
 	  Object o = children.nextElement();
 	  if( o != null ) {
 	    if( o instanceof FileNode )
-	      this.fileTableModel.addRow( new FileEntry( (FileNode) o ) );
+	      this.fileTableModel.addRow(
+			new ExtendedFileEntry( (FileNode) o ),
+			false );
 	  }
 	}
       }
@@ -528,6 +587,28 @@ public class FilePreviewFld extends JPanel
     }
     this.fileTableModel.setSortCaseSensitive( sortCaseSensitive );
     this.fileTableModel.fireTableDataChanged();
+  }
+
+
+  private boolean addDiskInfo(
+			Map<FileInfoFld.Item,Object> infoItems,
+			String                       typeText,
+			AbstractFloppyDisk           disk,
+			boolean                      sortCaseSensitive )
+  {
+    boolean               rv      = false;
+    Collection<FileEntry> entries = DiskUtil.readDirectory( disk );
+    if( entries != null ) {
+      infoItems.put( FileInfoFld.Item.TYPE, typeText );
+      this.fileTableModel.clear( false );
+      for( FileEntry entry : entries ) {
+	this.fileTableModel.addRow( entry, false );
+      }
+      this.fileTableModel.setSortCaseSensitive( sortCaseSensitive );
+      this.fileTableModel.fireTableDataChanged();
+      rv = true;
+    }
+    return rv;
   }
 
 
@@ -570,6 +651,32 @@ public class FilePreviewFld extends JPanel
       }
       catch( Exception ex ) {}
       catch( OutOfMemoryError ex ) {}
+    }
+    return rv;
+  }
+
+
+  private boolean addPlainDiskInfo(
+			Map<FileInfoFld.Item,Object> infoItems,
+			String                       typeText,
+			File                         file,
+			long                         maxFileSize,
+			boolean                      sortCaseSensitive )
+  {
+    boolean rv    = false;
+    String  fName = file.getName();
+    if( (fName != null) && checkFileSize( file.length(), maxFileSize ) ) {
+      Collection<FileEntry> entries = DiskUtil.readDirFromPlainDisk( file );
+      if( entries != null ) {
+	infoItems.put( FileInfoFld.Item.TYPE, typeText );
+	this.fileTableModel.clear( false );
+	for( FileEntry entry : entries ) {
+	  this.fileTableModel.addRow( entry, false );
+	}
+	this.fileTableModel.setSortCaseSensitive( sortCaseSensitive );
+	this.fileTableModel.fireTableDataChanged();
+	rv = true;
+      }
     }
     return rv;
   }
@@ -639,15 +746,15 @@ public class FilePreviewFld extends JPanel
   private void setContents(
 		Map<FileInfoFld.Item,Object> infoItems,
 		String[]                     addonLines,
-		String                       detailsCardName )
+		String                       cardName )
   {
-    if( detailsCardName != null ) {
+    if( cardName != null ) {
       this.headerFld.setMinRows( 0 );
     }
     this.headerFld.setValues( infoItems, addonLines );
     this.cardLayout.show(
 		this.detailsFld,
-		detailsCardName != null ? detailsCardName : "empty" );
+		cardName != null ? cardName : "empty" );
     invalidate();
   }
 }

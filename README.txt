@@ -44,22 +44,29 @@ Jegliche Gewaehrleistung und Haftung ist ausgeschlossen!
 Fuer den Betrieb von JKCEMU sind ROM-Images der jeweils emulierten
 Computer notwendig.
 Diese finden Sie im Verzeichnis src/rom.
-Die ROM-Images unterliegen nicht der GNU-GPL,
+Des weiteren entaelt JKCEMU im Verzeichnis src/disks
+auch einige Disketteninhalte.
+Die ROM- und Disketten-Images unterliegen nicht der GNU-GPL,
 d.h., die Rechte, die Ihnen von der GNU-GPL bzgl. der Benutzung,
 Modifizierung und Weitergabe von JKCEMU eingeraeumt werden,
-gelten nicht fuer die ROM-Inhalte!
-Jegliche Benutzung dieser ROM-Images ausserhalb von JKCEMU
-oder ausserhalb eines rein privaten, nicht kommerziellen Umfeldes
-muessen Sie im Zweifelsfall mit den Urhebern bzw. deren Rechtsnachfolgern
-klaeren.
+gelten nicht fuer die ROM- und Disketteninhalte!
+Jegliche Benutzung dieser ROM- und Disketten-Images ausserhalb
+von JKCEMU oder ausserhalb eines rein privaten,
+nicht kommerziellen Umfeldes muessen Sie im Zweifelsfall
+mit den Urhebern bzw. deren Rechtsnachfolgern klaeren.
 
 Die Urheberschaften der ROM-Inhalte liegen bei:
+- International Research Institute for Management Sciences (IRIMS), Moskau
+  (MicroDOS)
+- Universitaet Rostock (MicroDOS)
 - VEB Messelektronik Dresden (Z9001, KC85/1, KC87)
 - VEB Mikroelektronik Erfurt (LC80, SC2)
-- VEB Mikroelektronik Muehlhausen (HC900, KC85/2, KC85/3, KC85/4)
+- VEB Mikroelektronik Muehlhausen (HC900, KC85/2...5, MicroDOS)
 - VEB Polytechnik Karl-Marx-Stadt (Poly-Computer 880)
 - VEB Robotron-Elektronik Riesa (Z1013)
 - Prof. Dr. Albrecht Mugler (PC/M)
+- Dr. Dieter Scheuschner (SLC1)
+- Dr. Frank Schwarzenberg (CP/A fuer Z9001)
 - Dr. Gerd Maudrich (LLC1)
 - Dr. Rainer Brosig (erweitertes Z1013-Monitorprogramm)
 - Bernd Huebler (Huebler/Evert-MC, Huebler-Grafik-MC)
@@ -68,10 +75,11 @@ Die Urheberschaften der ROM-Inhalte liegen bei:
 - Eckhard Schiller (BCS3 und VCS80)
 - Frank Heyder (Monitorprogramm 3.1 und MiniBASIC fuer AC1)
 - Frank Pruefer (S/P-BASIC V3.3 fuer BCS3)
-- H. Mathes (PC/M)
+- Herbert Mathes (PC/M)
 - Joachim Czepa (C-80)
 - Klaus-Peter Evert (Huebler/Evert-MC)
 - Manfred Kramer (Kramer-MC)
+- Mario Leubner (CAOS 4.4 und D004-ROM 3.2 fuer KC85/5)
 - Torsten Musiol (Maschinenkode-Editor fuer BCS3)
 
 
@@ -114,6 +122,7 @@ des Quelltextes.
 
 6. Dank
 -------
+
 Die Entwicklung des Emulators war nur moeglich durch die Zuarbeit anderer,
 vorallem durch Bereitstellung von Dokumenten und Software.
 Dabei hat so mancher ganz unbewusst seinen Anteil an JKCEMU beigetragen,
@@ -122,36 +131,49 @@ Besonders bedanken moechte ich mich bei:
 
 - Prof. Dr. Albrecht Mugler fuer die freundliche Genehmigung zur Integration
   der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
+- Dr. Dieter Scheuschner fuer die Bereitstellung des ROM-Inhalts des SLC1
+  und fuer die freundliche Genehmigung, diesen in JKCEMU integrieren zu koennen
 - Dr. Gerd Maudrich fuer die freundliche Genehmigung zur Integration
   des LLC1-ROM-Images (Monitorprogramm und Tiny-BASIC-Interpreter) in JKCEMU
 - Andre Schenk fuer das ANT-Skript
 - Andreas Suske fuer Informationen und Software zum AC1
 - Claus-Peter Fischer fuer die Bereitstellung eines ROM-Images zum PC/M
+- Eckhard Schiller fuer die freundliche Genehmigung zur Integration
+  des VCS80- und der BCS3-ROM-Images in JKCEMU
 - Frank Pruefer fuer die freundliche Genehmigung zur Integration
   von S/P-BASIC 3.3 in JKCEMU sowie fuer das Testen der BCS3-Emulation
-- H. Mathes fuer die freundliche Genehmigung zur Integration
+- Herbert Mathes fuer die freundliche Genehmigung zur Integration
   der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
 - Frank Pruefer fuer die freundliche Genehmigung zur Integration
+  von S/P-BASIC 3.3 in JKCEMU und fuer das Testen der BCS3-Emulation
 - Johann Spannenkrebs fuer seine Homepage http://www.ac1-info.de,
-  der Bereitstellung von Informationen und Software fuer den AC1
-  und den Poly-Computer 880 sowie das Testen der AC1- und Poly880-Emulation
+  fuer die Bereitstellung von Informationen und Software
+  fuer den AC1 und den Poly-Computer 880
+  sowie fuer das Testen der AC1- und Poly880-Emulation
 - Manfred Kramer fuer die freundliche Genehmigung zur Integration
   der Systemsoftware des Kramer-MC in JKCEMU
+- Mario Leubner fuer die freundliche Genehmigung zur Integration
+  von CAOS 4.4 und dem D004-ROM Version 3.2 in JKCEMU
+- Norbert Richter fuer die Bereitstellung von Informationen
+  und Software zum AC1
 - Peter Salomon fuer seine Homepage http://www.robotron-net.de
-- Ralf Kaestner fuer die Bereitstellung von Informationen und Software
-  zum KC85/4
+- Ralf Kaestner fuer seine Homepage http://www.kc85.susowa.homeftp.net
+  und fuer die Bereitstellung von Informationen und Software zum KC85/4
+- Ralph Haensel fuer die Bereitstellung von Informationen und Software
+  zum AC1 sowie fuer das Testen der AC1-Emulation
 - Rolf Weidlich fuer die Bereitstellung von Informationen und Software
   zum AC1 und LLC1
 - Siegfried Schenk fuer die Bereitstellung von Informationen
   und Software zum LLC2 und zu den SCCH-Modulen
 - Stephan Linz fuer seine Homepage zum PC/M http://www.li-pro.net
-- Thomas Scherrer fuer seine Z80-Seite http://www.z80.info"
+- Thomas Scherrer fuer seine Z80-Seite http://www.z80.info
 - Torsten Paul fuer seinen Emulator KCemu (http://kcemu.sourceforge.net)
-  und der Bereitstellung von Informationen und ROM-Images diverser Computer
+  und fuer die Bereitstellung von Informationen und ROM-Images
+  zu diversen Computern
 - Ulrich Zander fuer seine Homepage http://www.sax.de/~zander
-  und der Beantwortung technischer Fragen zum Z9001
-- Volker Pohlers fuer seine Homepage http://www.homecomputer-ddr.de.vu"
-  sowie seiner aktiven Unterstuetzung durch Bereitstellung von
+  und fuer Informationen zum Z9001
+- Volker Pohlers fuer seine Homepage http://www.homecomputer-ddr.de.vu
+  und fuer seine aktive Unterstuetzung durch Bereitstellung von
   Dokumenten und Software sowie durch Testen des Emulators
 - den aktiven Mitgliedern im Robotrontechnikforum
 

@@ -15,16 +15,37 @@ import jkcemu.base.*;
 import z80emu.*;
 
 
-public abstract class AbstractHueblerMC extends EmuSys
+public abstract class AbstractHueblerMC
+				extends EmuSys
+				implements Z80PCListener
 {
-  protected int    keyChar;
-  protected Z80CTC ctc;
-  protected Z80PIO pio;
+  protected boolean pcListenerAdded;
+  protected int     keyChar;
+  protected Z80CTC  ctc;
+  protected Z80PIO  pio;
 
 
   public AbstractHueblerMC( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
+    this.pcListenerAdded = false;
+  }
+
+
+  protected synchronized void checkAddPCListener(
+					Properties props,
+					String     propName )
+  {
+    boolean state = EmuUtil.getBooleanProperty( props, propName, true );
+    if( state != this.pcListenerAdded ) {
+      Z80CPU cpu = this.emuThread.getZ80CPU();
+      if( state ) {
+	cpu.addPCListener( this, 0xF00F );
+      } else {
+	cpu.removePCListener( this );
+      }
+      this.pcListenerAdded = state;
+    }
   }
 
 
@@ -38,6 +59,17 @@ public abstract class AbstractHueblerMC extends EmuSys
   }
 
 
+	/* --- Z80PCListener --- */
+
+  public void z80PCChanged( Z80CPU cpu, int pc )
+  {
+    if( pc == 0xF00F ) {
+      this.emuThread.getPrintMngr().putByte( cpu.getRegC() );
+      cpu.setRegPC( cpu.doPop() );
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   public void die()
@@ -47,6 +79,27 @@ public abstract class AbstractHueblerMC extends EmuSys
       cpu.removeTStatesListener( this.ctc );
     }
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    if( this.pcListenerAdded ) {
+      cpu.removePCListener( this );
+    }
+  }
+
+
+  public long getDelayMillisAfterPasteChar()
+  {
+    return 50;
+  }
+
+
+  public long getDelayMillisAfterPasteEnter()
+  {
+    return 300;
+  }
+
+
+  public long getHoldMillisPasteChar()
+  {
+    return 50;
   }
 
 

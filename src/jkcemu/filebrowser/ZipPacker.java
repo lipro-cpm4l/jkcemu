@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,25 +8,26 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.Dialog;
+import java.awt.*;
 import java.io.*;
 import java.lang.*;
 import java.util.Collection;
 import java.util.zip.*;
+import jkcemu.base.*;
 
 
-public class ZipPacker extends AbstractPackDlg
+public class ZipPacker extends AbstractThreadDlg
 {
   private Collection<File> srcFiles;
   private File             outFile;
 
 
   public static void packFiles(
-		FileBrowserFrm   fileBrowserFrm,
+		Window           owner,
 		Collection<File> srcFiles,
 		File             outFile )
   {
-    Dialog dlg = new ZipPacker( fileBrowserFrm, srcFiles, outFile );
+    Dialog dlg = new ZipPacker( owner, srcFiles, outFile );
     dlg.setTitle( "ZIP-Datei packen" );
     dlg.setVisible( true );
   }
@@ -43,7 +44,7 @@ public class ZipPacker extends AbstractPackDlg
       out = new ZipOutputStream(
 			new BufferedOutputStream(
 				new FileOutputStream( this.outFile ) ) );
-      this.fileBrowserFrm.fireRefreshNodeFor( outFile.getParentFile() );
+      fireDirectoryChanged( outFile.getParentFile() );
       for( File file : this.srcFiles ) {
 	packFile( outFile, out, file, "" );
       }
@@ -59,7 +60,7 @@ public class ZipPacker extends AbstractPackDlg
       buf.append( this.outFile.getPath() );
       String errMsg = ex.getMessage();
       if( errMsg != null ) {
-	if( errMsg.length() > 0 ) {
+	if( !errMsg.isEmpty() ) {
 	  buf.append( ":\n" );
 	  buf.append( errMsg );
 	}
@@ -70,23 +71,23 @@ public class ZipPacker extends AbstractPackDlg
       failed = true;
     }
     finally {
-      close( out );
+      EmuUtil.doClose( out );
     }
     if( this.canceled || failed ) {
       outFile.delete();
     }
-    this.fileBrowserFrm.fireRefreshNodeFor( outFile.getParentFile() );
+    fireDirectoryChanged( outFile.getParentFile() );
   }
 
 
 	/* --- private Konstruktoren und Methoden --- */
 
   private ZipPacker(
-		FileBrowserFrm   fileBrowserFrm,
+		Window           owner,
 		Collection<File> srcFiles,
 		File             outFile )
   {
-    super( fileBrowserFrm );
+    super( owner, true );
     this.srcFiles = srcFiles;
     this.outFile  = outFile;
   }
@@ -164,16 +165,11 @@ public class ZipPacker extends AbstractPackDlg
 	      out.closeEntry();
 	    }
 	    catch( IOException ex ) {
-	      String errMsg = ex.getMessage();
-	      if( errMsg != null ) {
-		appendToLog( "  Fehler:\n" + errMsg + "\n" );
-	      } else {
-		appendToLog( "  Fehler\n" );
-	      }
+	      appendErrorToLog( ex );
 	      incErrorCount();
 	    }
 	    finally {
-	      close( in );
+	      EmuUtil.doClose( in );
 	    }
 	  } else {
 	    appendToLog( "  Ignoriert\n" );

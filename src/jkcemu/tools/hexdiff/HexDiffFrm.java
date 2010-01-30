@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -38,7 +38,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
   public HexDiffFrm( ScreenFrm screenFrm )
   {
     super( screenFrm );
-    setTitle( "JKCEMU Hex-Dateivergleich" );
+    setTitle( "JKCEMU Hex-Dateivergleicher" );
     this.files     = new Vector<FileData>();
     this.lastDiffs = 0;
 
@@ -201,32 +201,9 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
   public void drop( DropTargetDropEvent e )
   {
-    if( EmuUtil.isFileDrop( e ) ) {
-      e.acceptDrop( DnDConstants.ACTION_COPY );    // Quelle nicht loeschen
-      Transferable t = e.getTransferable();
-      if( t != null ) {
-	try {
-	  Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
-	  if( (o != null) && (o instanceof Collection) ) {
-	    Iterator iter = ((Collection) o).iterator();
-	    while( iter.hasNext() ) {
-	      o = iter.next();
-	      if( o instanceof File ) {
-		addFile( (File) o );
-	      } else {
-		String s = o.toString();
-		if( s != null )
-		  addFile( new File( s ) );
-	      }
-	    }
-	  }
-	}
-	catch( Exception ex ) {}
-      }
-      e.dropComplete( true );
-    } else {
-      e.rejectDrop();
-    }
+    File file = EmuUtil.fileDrop( this, e );
+    if( file != null )
+      addFile( file );
   }
 
 

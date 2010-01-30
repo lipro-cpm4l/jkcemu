@@ -5,34 +5,38 @@
     den Sie &uuml;ber den <a href="texteditor.htm">Texteditor</a>
     aufrufen k&ouml;nnen, d.h., den BASIC-Quelltext
     &ouml;ffnen, bearbeiten und compilieren Sie im Texteditor.
-  <br><br>
+  <br/><br/>
     Der BASIC-Compiler erzeugt immer Programmcode f&uuml;r das gerade
     emulierte System.
     Wenn Sie in den <a href="../settings.htm#system">Einstellungen</a>
     ein anderes zu emulierendes System ausw&auml;hlen und
     das BASIC-Programm erneut compilieren,
     wird auch ein anderer Programmcode erzeugt.
-  <br><br>
+  <br/><br/>
     Die Beschreibung des BASIC-Compilers unterteilt sich in folgende Rubriken:
     <ul>
-      <li><a href="basicc.htm#introduction">Allgemeines</a>
-      <li><a href="basicc/instructions.htm">Liste der Anweisungen</a>
-      <li><a href="basicc/functions.htm">Liste der Funktionen</a>
-      <li><a href="basicc/expressions.htm">Numerische Ausdr&uuml;cke</a>
-      <li><a href="basicc/options.htm">Compiler-Optionen</a>
-      <li><a href="basicc/optimize.htm">Optimieren
+      <li><a href="basicc.htm#introduction">Allgemeines</a></li>
+      <li><a href="basicc/instructions.htm">Liste der Anweisungen</a></li>
+      <li><a href="basicc/functions.htm">Liste der Funktionen</a></li>
+      <li><a href="basicc/expressions.htm">Numerische Ausdr&uuml;cke</a></li>
+      <li><a href="basicc/options.htm">Compiler-Optionen</a></li>
+      <li>
+	<a href="basicc/optimize.htm">Optimieren
 		des erzeugten Programmcodes</a>
-      <li><a href="basicc/limitations.htm">Einschr&auml;nkungen
+      </li>
+      <li>
+	<a href="basicc/limitations.htm">Einschr&auml;nkungen
 		gegen&uuml;ber dem AC1-Mini- und dem Z1013-Tiny-BASIC</a>
+      </li>
     </ul>
-  <br><br>
+  <br/><br/>
 
   <h2><a name="introduction">Allgemeines</a></h2>
     Der Compiler dient dazu, BASIC-Programme in Maschinencode
     zu &uuml;bersetzen.
     Die auf diese Weise erzeugten Maschinencodeprogramme k&ouml;nnen direkt
     im Emulator gestartet oder in einer Programmdatei gespeichert werden.
-  <br><br>
+  <br/><br/>
     Der Compiler unterst&uuml;tzt den BASIC-Dialekt des
     AC1-Mini-BASIC-Interpreters und des Z1013-Tiny-BASIC-Interpreters,
     d.h., des Interpreters, der im Z1013-Handbuch
@@ -40,7 +44,7 @@
     Es steht somit eine 16-Bit-Ganzzahlarithmetik mit den
     vier Grundrechenarten zur Verf&uuml;gung.
     Flie&szlig;kommazahlen und String-Funktionen werden nicht unterst&uuml;tzt.
-  <br><br>
+  <br/><br/>
     Der AC1-Mini-BASIC-Interpreter und der Z1013-Tiny-BASIC-Interpreter
     haben gemeinsame Wurzeln.
     Sie verstehen deshalb beide den gleichen BASIC-Dialekt,
@@ -48,7 +52,7 @@
     h&auml;ufig anzutreffenden BASIC-Interpreter unterscheidet.
     Der Z1013-Tiny-BASIC-Interpreter hat dabei einen etwas gr&ouml;&szlig;eren
     Sprachumfang als der AC1-Mini-BASIC-Interpreter.
-  <br><br>
+  <br/><br/>
     Der Compiler versteht neben der etwas speziellen Syntax teilweise
     auch die &uuml;bliche Syntax anderer BASIC-Dialekte.
     Au&szlig;erdem k&ouml;nnen die Schl&uuml;sselw&ouml;rter

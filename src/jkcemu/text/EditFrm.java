@@ -812,35 +812,9 @@ public class EditFrm extends BasicFrm implements
 
   public void drop( DropTargetDropEvent e )
   {
-    if( EmuUtil.isFileDrop( e ) ) {
-      e.acceptDrop( DnDConstants.ACTION_COPY );    // Quelle nicht loeschen
-      Transferable t = e.getTransferable();
-      if( t != null ) {
-	try {
-	  Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
-	  if( (o != null) && (o instanceof Collection) ) {
-	    Iterator iter = ((Collection) o).iterator();
-	    while( iter.hasNext() ) {
-	      o = iter.next();
-	      File file = null;
-	      if( o instanceof File ) {
-		file = (File) o;
-	      } else {
-		String s = o.toString();
-		if( s != null )
-		  file = new File( s );
-	      }
-	      if( file != null )
-		openFile( file );
-	    }
-	  }
-	}
-	catch( Exception ex ) {}
-      }
-      e.dropComplete( true );
-    } else {
-      e.rejectDrop();
-    }
+    File file = EmuUtil.fileDrop( this, e );
+    if( file != null )
+      openFile( file );
   }
 
 
@@ -1223,6 +1197,8 @@ public class EditFrm extends BasicFrm implements
 	pane.setWantsInput( false );
 	pane.setOptions( options );
 	pane.setInitialValue( options[ 0 ] );
+	setState( Frame.NORMAL );
+	toFront();
 	pane.createDialog( this, "Daten ge\u00E4ndert" ).setVisible( true );
 	Object value = pane.getValue();
 	if( value != null ) {
@@ -2076,6 +2052,9 @@ public class EditFrm extends BasicFrm implements
       editText = null;
       BasicDlg.showOpenFileErrorDlg( this, file, ex );
     }
+    catch( UserCancelException ex ) {
+      editText = null;
+    }
     return editText;
   }
 
@@ -2332,7 +2311,7 @@ public class EditFrm extends BasicFrm implements
 
   private void updTitle( EditText editText )
   {
-    String title = "Editor";
+    String title = "JKCEMU Editor";
     if( editText != null ) {
       title += ": ";
       File file = editText.getFile();

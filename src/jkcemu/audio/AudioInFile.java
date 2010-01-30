@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ package jkcemu.audio;
 import java.io.*;
 import java.lang.*;
 import javax.sound.sampled.*;
+import jkcemu.base.EmuUtil;
 import z80emu.Z80CPU;
 
 
@@ -20,68 +21,129 @@ public class AudioInFile extends AudioIn
 {
   private AudioFrm         audioFrm;
   private File             file;
-  private boolean          monitorPlay;
+  private byte[]           fileBytes;
+  private int              offs;
+  private boolean          tapFile;
   private AudioInputStream in;
   private byte[]           frameBuf;
   private long             frameCount;
   private long             framePos;
   private int              progressStepSize;
   private int              progressStepCnt;
+  private volatile boolean pause;
 
 
   public AudioInFile(
 		Z80CPU   z80cpu,
 		AudioFrm audioFrm,
 		File     file,
-		boolean  monitorPlay )
+		byte[]   fileBytes,
+		int      offs,
+		boolean  tapFile )
   {
     super( z80cpu );
     this.audioFrm         = audioFrm;
     this.file             = file;
-    this.monitorPlay      = monitorPlay;
+    this.fileBytes        = fileBytes;
+    this.offs             = offs;
+    this.tapFile          = tapFile;
     this.in               = null;
     this.frameBuf         = null;
     this.frameCount       = 0L;
     this.framePos         = 0L;
     this.progressStepSize = 0;
     this.progressStepCnt  = 0;
+    this.pause            = false;
   }
 
 
-  public AudioFormat startAudio( int speedKHz, int sampleRate )
+  public boolean isPause()
+  {
+    return this.pause;
+  }
+
+
+  public void setPause( boolean state )
+  {
+    this.pause = state;
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     AudioFormat fmt = null;
     if( (this.in == null) && (speedKHz > 0) ) {
+      this.pause = true;
       try {
-	this.in         = AudioSystem.getAudioInputStream( this.file );
-	fmt             = this.in.getFormat();
-	this.frameCount = this.in.getFrameLength();
+	if( this.tapFile ) {
+	  if( this.fileBytes == null ) {
+	    this.fileBytes = EmuUtil.readFile( this.file, 0x100000 );
+	  }
+	  if( this.fileBytes == null ) {
+	    throw new IOException();
+	  }
+	  /*
+	   * Wird in der Mitte einer Multi-TAP-Datei begonnen,
+	   * soll auch die Fortschrittsanzeige in der Mitte beginnen.
+	   * Aus diesem Grund wird in dem Fall sowohl die Gesamtlaenge
+	   * als auch die Restlaenge der Multi-TAP-Datei ermittelt.
+	   */
+	  KCTapAudioInputStream tapIn = new KCTapAudioInputStream(
+						this.fileBytes,
+						0,
+						this.fileBytes.length - offs );
+	  this.frameCount = tapIn.getFrameLength();
+	  if( this.offs > 0 ) {
+	    tapIn = new KCTapAudioInputStream(
+					this.fileBytes,
+					this.offs,
+					this.fileBytes.length - offs );
+	    this.framePos = this.frameCount - tapIn.getFrameLength();
+	    if( this.framePos < 0 ) {
+	      this.framePos = 0;
+	    }
+	  }
+	  this.in = new AudioInputStream(
+				tapIn, 
+				tapIn.getAudioFormat(),
+				tapIn.getFrameLength() );
+	} else {
+	  this.in         = AudioSystem.getAudioInputStream( this.file );
+	  this.frameCount = this.in.getFrameLength();
+	}
+	fmt = this.in.getFormat();
 	if( this.frameCount > 0 ) {
 	  this.progressStepSize = (int) this.frameCount / 100;
 	  this.progressStepCnt  = this.progressStepSize;
 	  this.progressEnabled  = true;
+	  this.audioFrm.fireProgressUpdate(
+			(float) this.framePos / (float) this.frameCount );
 	}
       }
       catch( UnsupportedAudioFileException ex ) {
 	this.errorText = "Das Dateiformat wird nicht unterst\u00FCtzt.";
       }
       catch( Exception ex ) {
-	this.errorText = "Die Datei kann nicht ge\u00F6ffnet werden.\n\n"
-				      + ex.getMessage();
+	this.errorText = "Die Datei kann nicht ge\u00F6ffnet werden.";
+	String msg     = ex.getMessage();
+	if( msg != null ) {
+	  if( !msg.isEmpty() ) {
+	    this.errorText = msg;
+	  }
+	}
       }
       if( (this.in != null) || (fmt != null) ) {
 	this.frameBuf        = new byte[ fmt.getFrameSize() ];
 	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
-					/ fmt.getFrameRate());
+						/ fmt.getFrameRate());
       } else {
 	stopAudio();
       }
     }
     setAudioFormat( fmt );
-    if( this.monitorPlay ) {
-      openMonitorLine( fmt );
-    }
-    return fmt;
+    return this.audioFmt;
   }
 
 
@@ -102,6 +164,12 @@ public class AudioInFile extends AudioIn
   }
 
 
+  protected boolean supportsMonitor()
+  {
+    return true;
+  }
+
+
   protected byte[] readFrame()
   {
     AudioInputStream in  = this.in;
@@ -109,7 +177,7 @@ public class AudioInFile extends AudioIn
     if( (in != null) && (buf != null) ) {
       try {
 	if( in.read( buf ) == buf.length ) {
-	  if( isMonitorPlayActive() ) {
+	  if( isMonitorActive() ) {
             writeMonitorLine( buf );
           }
 	  this.framePos++;
@@ -118,7 +186,7 @@ public class AudioInFile extends AudioIn
 	  } else {
 	    this.progressStepCnt = this.progressStepSize;
 	    this.audioFrm.fireProgressUpdate(
-			(double) this.framePos / (double) this.frameCount );
+			(float) this.framePos / (float) this.frameCount );
 	  }
 	} else {
 	  buf = null;
@@ -132,4 +200,3 @@ public class AudioInFile extends AudioIn
     return buf;
   }
 }
-

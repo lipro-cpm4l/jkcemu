@@ -61,7 +61,7 @@ public class VCS80 extends EmuSys implements
     cpu.addTStatesListener( this );
 
     reset( EmuThread.ResetLevel.POWER_ON, props );
-    z80MaxSpeedChanged();
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -82,7 +82,7 @@ public class VCS80 extends EmuSys implements
 
 	/* --- Z80MaxSpeedListener --- */
 
-  public void z80MaxSpeedChanged()
+  public void z80MaxSpeedChanged( Z80CPU cpu )
   {
     /*
      * Der Takt fuer die Multiplexansteruerung der Anzeige
@@ -91,7 +91,7 @@ public class VCS80 extends EmuSys implements
      * durch 2 geteilt,
      * was einen Takt fuer die Anzeige von 625 KHz ergibt.
      */
-    this.dispHCycleTStates = this.emuThread.getZ80CPU().getMaxSpeedKHz() / 2;
+    this.dispHCycleTStates = cpu.getMaxSpeedKHz() / 2;
   }
 
 

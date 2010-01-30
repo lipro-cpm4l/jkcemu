@@ -6,26 +6,69 @@
   <br/><br/>
 
 
-  <h2>Weitere Funktionen im Men&uuml; Datei</h2>
+  <h2>1. Weitere Funktionen im Men&uuml; Datei</h2>
 
-  <h3>Untermen&uuml; <em>Bildschirmausgabe</em></h3>
+  <h3>1.1. Schnappschuss der Bildschirmausgabe</h3>
     Mit den Funktionen in diesem Untermen&uuml; k&ouml;nnen Sie
-    die gerade angezeigte Bildschirmausgabe als Text oder Bild
-    extrahieren und in einer Datei speichern oder im
-    <a href="tools/imageviewer.htm">Bildbetrachter</a> anzeigen lassen.
+    die gerade angezeigte Bildschirmausgabe als Bild oder Text
+    extrahieren und in eine Datei speichern,
+    in die Zwischenablage kopieren oder im
+    <a href="tools/imageviewer.htm">Bildbetrachter</a>
+    bzw. <a href="tools/texteditor.htm">Texteditor</a> &ouml;ffnen.
   <br/><br/>
 
 
-  <h2>Weitere Funktionen im Men&uuml; Extra</h2>
+  <h2>2. Weitere Funktionen im Men&uuml; Bearbeiten</h2>
 
-  <h3><a name="pause">Pause</a></h3>
+  <h3><a name="copy">2.1. Kopieren</a></h3>
+    Sie k&ouml;nnen in der Bildschirmausgabe Text markieren
+    und diesen in die Zwischenablage kopieren.
+    Bei einigen Systemen, u.a. bei denen mit einer 7-Segment-Anzeige,
+    steht die Funktion allerdings nicht zur Verf&uuml;gung.
+  <br/><br/>
+
+  <h3><a name="paste">2.2. Einf&uuml;gen</a></h3>
+    Mit dieser Funktion f&uuml;gen Sie Text aus der Zwischenablage
+    in die Bildschirmausgabe ein, aber nur scheinbar,
+    denn in Wirklichkeit wird dieser Text an das im Emulator
+    laufende Programm &uuml;bergeben.
+    Dabei wird f&uuml;r jedes einzelne einzuf&uuml;gende Zeichen
+    das Bet&auml;tigen der jeweiligen Taste simuliert.
+    Das dauert prinzpbedingt relative lange.
+    Bei einigen emulierten Systemen gibt es auch die M&ouml;glichkeit,
+    das Einf&uuml;gen durch Einschalten einer speziellen Option
+    zu beschleunigen.
+  <br/><br/>
+    Durch das Prinzip der Simulation von Tastaturbet&auml;tigungen
+    kann es auch vorkommen,
+    dass sich bestimmte Zeichen nicht einf&uuml;gen lassen.
+    Das ist genau dann der Fall,
+    wenn das emulierte System daf&uuml;r keine Taste
+    bzw. Tastenkombination kennt.
+    In dem Fall erscheint ein entsprechender Hinweis,
+    und das Einf&uuml;gen wird angehalten.
+    Sie k&ouml;nnen mit Hilfe des Men&uuml;punktes
+    <em>Einf&uuml;gen fortsetzen</em> sp&auml;ter wieder fortsetzen.
+  <br/><br/>
+
+
+  <h2>3. Weitere Funktionen im Men&uuml; Extra</h2>
+
+  <h3>3.1. Schachbrett</h3>
+    Wird gerade ein Schachcomputer oder Lerncomputer mit integriertem
+    Schachprogramm emuliert,
+    k&ouml;nnen Sie hiermit ein Fenster zur Anzeige der
+    <a href="chessboard.htm">Schachbrettbelegung</a> &ouml;ffnen.
+  <br/><br/>
+
+  <h3><a name="pause">3.2. Pause</a></h3>
     Mit dieser Funktion halten Sie die Programmausf&uuml;hrung
     des Emulators an.
     Mit einem nochmaligen Klick auf den Men&uuml;punkt setzen
     Sie die Programmausf&uuml;hrung wieder fort.
   <br/><br/>
 
-  <h3><a name="nmi">Nicht maskierbarer Interrupt (NMI)</a></h3>
+  <h3><a name="nmi">3.3. Nicht maskierbarer Interrupt (NMI)</a></h3>
     Mit dieser Funktion l&ouml;sen Sie einen nicht
     maskierbaren Interrupt aus.
     Dazu wird eine Interrupt-Routine gestartet,
@@ -37,14 +80,14 @@
     und damit zu Datenverlust f&uuml;hren.
   <br/><br/>
 
-  <h3><a name="reset">Zur&uuml;cksetzen (RESET)</a></h3>
+  <h3><a name="reset">3.4. Zur&uuml;cksetzen (RESET)</a></h3>
     Mit dieser Funktion setzen Sie den Emulator zur&uuml;ck.
     Dabei wird das Ausl&ouml;sen eines RESET-Signals emuliert.
     Das emulierte System startet neu und meldet sich
     mit der Eingabeaufforderung.
   <br/><br/>
 
-  <h3><a name="power_on">Einschalten (Power On)</a></h3>
+  <h3><a name="power_on">3.5. Einschalten (Power On)</a></h3>
     Der Emulator l&ouml;scht den Arbeitsspeicher
     und f&uuml;hrt einen RESET aus.
 </body>

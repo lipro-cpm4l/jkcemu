@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -28,6 +28,19 @@ public class Z80CPU
 			DEBUG_STEP_INTO,
 			DEBUG_STEP_UP };
 
+  private static class PCListenerItem
+  {
+    private Z80PCListener listener;
+    private int[]         pc;
+
+    private PCListenerItem( Z80PCListener listener, int... pc )
+    {
+      this.listener = listener;
+      this.pc       = pc;
+    }
+  };
+
+
   // Nach wieviel Taktzyklen die Zaehlung bei Null beginnen soll
   private static final int tStatesWrap = 1000000000;
 
@@ -44,8 +57,9 @@ public class Z80CPU
 
 
   // private Attribute
+  private volatile PCListenerItem          pcListener;
   private volatile Z80AddressListener      addrListener;
-  private volatile Z80TStatesListener      tStatesListener;
+  private volatile Z80TStatesListener[]    tStatesListeners;
   private Z80Memory                        memory;
   private Z80IOSystem                      ioSys;
   private Thread                           thread;
@@ -117,8 +131,9 @@ public class Z80CPU
     this.memory             = memory;
     this.ioSys              = ioSys;
     this.thread             = null;
+    this.pcListener         = null;
     this.addrListener       = null;
-    this.tStatesListener    = null;
+    this.tStatesListeners   = null;
     this.interruptSources   = null;
     this.haltStateListeners = new ArrayList<Z80HaltStateListener>();
     this.maxSpeedListeners  = new ArrayList<Z80MaxSpeedListener>();
@@ -180,21 +195,44 @@ public class Z80CPU
   /*
    * Es kann nur ein AdressListener gesetzt werden.
    */
-  public void addAddressListener( Z80AddressListener addrListener )
+  public synchronized void addAddressListener( Z80AddressListener listener )
   {
     if( this.addrListener != null ) {
       throw new IllegalStateException( "Zu viele Z80AddressListeners" );
     }
-    this.addrListener = addrListener;
+    this.addrListener = listener;
   }
 
 
-  public void removeAddressListener( Z80AddressListener addrListener )
+  public synchronized void removeAddressListener( Z80AddressListener listener )
   {
     if( (this.addrListener != null)
-	&& (this.addrListener == addrListener) )
+	&& (this.addrListener == listener) )
     {
       this.addrListener = null;
+    }
+  }
+
+
+  /*
+   * Es kann nur ein PCListener gesetzt werden.
+   */
+  public synchronized void addPCListener( Z80PCListener listener, int... pc )
+  {
+    if( this.pcListener != null ) {
+      throw new IllegalStateException( "Zu viele Z80PCListeners" );
+    }
+    this.pcListener = new PCListenerItem( listener, pc );
+  }
+
+
+  public synchronized void removePCListener( Z80PCListener listener )
+  {
+    PCListenerItem item = this.pcListener;
+    if( item != null ) {
+      if( item.listener == listener ) {
+	this.pcListener = null;
+      }
     }
   }
 
@@ -244,21 +282,49 @@ public class Z80CPU
   /*
    * Es kann nur ein TStatesListener gesetzt werden.
    */
-  public void addTStatesListener( Z80TStatesListener listener )
+  public synchronized void addTStatesListener( Z80TStatesListener listener )
   {
-    if( this.tStatesListener != null ) {
-      throw new IllegalStateException( "Zu viele Z80TStatesListeners" );
+    Z80TStatesListener[] listeners = this.tStatesListeners;
+    if( listeners != null ) {
+      Collection<Z80TStatesListener> c
+		= new ArrayList<Z80TStatesListener>( listeners.length + 1 );
+      for( int i = 0; i < listeners.length; i++ ) {
+	c.add( listeners[ i ] );
+      }
+      c.add( listener );
+      try {
+	this.tStatesListeners = c.toArray(
+					new Z80TStatesListener[ c.size() ] );
+      }
+      catch( ArrayStoreException ex ) {}
+    } else {
+      listeners             = new Z80TStatesListener[ 1 ];
+      listeners[ 0 ]        = listener;
+      this.tStatesListeners = listeners;
     }
-    this.tStatesListener = listener;
   }
 
 
-  public void removeTStatesListener( Z80TStatesListener listener )
+  public synchronized void removeTStatesListener( Z80TStatesListener listener )
   {
-    if( (this.tStatesListener != null)
-	&& (this.tStatesListener == listener) )
-    {
-      this.tStatesListener = null;
+    Z80TStatesListener[] listeners = this.tStatesListeners;
+    if( listeners != null ) {
+      Collection<Z80TStatesListener> c
+		= new ArrayList<Z80TStatesListener>( listeners.length );
+      for( int i = 0; i < listeners.length; i++ ) {
+	if( listeners[ i ] != listener ) {
+	  c.add( listeners[ i ] );
+	}
+      }
+      if( c.isEmpty() ) {
+	this.tStatesListeners = null;
+      } else {
+	try {
+	  this.tStatesListeners = c.toArray(
+					new Z80TStatesListener[ c.size() ] );
+	}
+	catch( ArrayStoreException ex ) {}
+      }
     }
   }
 
@@ -371,7 +437,7 @@ public class Z80CPU
     this.regPC             = 0;
     setHaltState( false );
     if( powerOn ) {
-      setRegF( 0xFF );
+      setRegF( 0 );
       this.regA  = 0xFF;
       this.regB  = 0xFF;
       this.regC  = 0xFF;
@@ -448,7 +514,7 @@ public class Z80CPU
     if( this.maxSpeedKHz != oldMaxSpeed ) {
       synchronized( this.maxSpeedListeners ) {
 	for( Z80MaxSpeedListener listener : this.maxSpeedListeners )
-	  listener.z80MaxSpeedChanged();
+	  listener.z80MaxSpeedChanged( this );
       }
     }
   }
@@ -565,7 +631,7 @@ public class Z80CPU
     this.regSP = (this.regSP - 1) & 0xFFFF;
     writeMemByte( this.regSP, value >> 8 );
     this.regSP = (this.regSP - 1) & 0xFFFF;
-    writeMemByte( this.regSP, value );
+    writeMemByte( this.regSP, value & 0xFF );
     this.debugCallLevel++;
   }
 
@@ -976,11 +1042,13 @@ public class Z80CPU
 
 	// WAIT-Mode
 	if( this.waitMode ) {
-	  Z80TStatesListener tStatesListener = this.tStatesListener;
-	  if( tStatesListener != null ) {
+	  Z80TStatesListener[] tStatesListeners = this.tStatesListeners;
+	  if( tStatesListeners != null ) {
 	    while( this.active && this.waitMode ) {
 	      this.speedTStates++;
-	      tStatesListener.z80TStatesProcessed( this, 1 );
+	      for( int i = 0; i < tStatesListeners.length; i++ ) {
+		tStatesListeners[ i ].z80TStatesProcessed( this, 1 );
+	      }
 	    }
 	  }
 	}
@@ -1086,7 +1154,7 @@ public class Z80CPU
 			this.instTStates += 19;
 			break;
 		    }
-		    iAccepted = false;
+		    iAccepted = true;
 		  }
 		}
 	      }
@@ -1133,6 +1201,16 @@ public class Z80CPU
 	  }
 	}
 
+	// ggf. In PCListener springen
+	PCListenerItem pcListener = this.pcListener;
+	if( pcListener != null ) {
+	  for( int i = 0; i < pcListener.pc.length; i++ ) {
+	    if( pcListener.pc[ i ] == this.regPC ) {
+	      pcListener.listener.z80PCChanged( this, this.regPC );
+	    }
+	  }
+	}
+
 	// BefehlsOpCode lesen und PC weitersetzen
 	this.instBegPC = this.regPC;
 	opCode         = readMemByteM1( this.regPC );
@@ -1142,14 +1220,20 @@ public class Z80CPU
 	this.speedTStates += this.instTStates;
 
 	// verbrauchte Anzahl Taktzyklen melden
-	Z80TStatesListener tStatesListener = this.tStatesListener;
-	if( tStatesListener != null ) {
+	Z80TStatesListener[] tStatesListeners = this.tStatesListeners;
+	if( tStatesListeners != null ) {
 	  while( this.instTStates >= 4 ) {
-	    tStatesListener.z80TStatesProcessed( this, 4 );
+	    for( int i = 0; i < tStatesListeners.length; i++ ) {
+	      tStatesListeners[ i ].z80TStatesProcessed( this, 4 );
+	    }
 	    this.instTStates -= 4;
 	  }
 	  if( this.instTStates > 0 ) {
-	    tStatesListener.z80TStatesProcessed( this, this.instTStates );
+	    for( int i = 0; i < tStatesListeners.length; i++ ) {
+	      tStatesListeners[ i ].z80TStatesProcessed(
+						this,
+						this.instTStates );
+	    }
 	  }
 	}
       }
@@ -2431,7 +2515,7 @@ public class Z80CPU
 
   private void execCB()
   {
-    int opCode = nextByte();
+    int opCode = nextByteM1();
     if( opCode < 0x80 ) {
       if( opCode < 0x40 ) {
 	if( opCode < 0x20 ) {
@@ -3365,7 +3449,7 @@ public class Z80CPU
   {
     int addr   = computeRelAddr( regIXY, nextByte() );
     int value  = readMemByte( addr );
-    int opCode = nextByte();
+    int opCode = nextByteM1();
     if( opCode < 0x80 ) {
       if( opCode < 0x40 ) {
         switch( opCode & 0x38 ) {
@@ -3924,6 +4008,9 @@ public class Z80CPU
   /*
    * Diese Methode fuehrt einen Zyklus der Befehle
    * INI, IND, INIR und INDR aus.
+   *
+   * Bei den repetierenden IN-Befehlen wird das B-Register
+   * nach dem IO-Zyklus geaendert, ganz im Gegensatz zu den OUT-Befehlen.
    */
   private void doInstBlockIN( int addValue )
   {
@@ -3933,7 +4020,7 @@ public class Z80CPU
 	this.ioSys != null ?
 		this.ioSys.readIOByte( (this.regB << 8) | this.regC )
 		: 0 );
-    setRegHL( regHL + 1 );
+    setRegHL( regHL + addValue );
     this.regB     = (this.regB - 1) & 0xFF;
     this.flagSign = ((this.regB & BIT7) != 0);
     this.flagZero = (this.regB == 0);
@@ -3946,22 +4033,26 @@ public class Z80CPU
   /*
    * Diese Methode fuehrt einen Zyklus der Befehle
    * OUTI, OUTD, OTIR und OTDR aus.
+   *
+   * Bei den repetierenden OUT-Befehlen wird das B-Register
+   * vor dem IO-Zyklus geaendert, ganz im Gegensatz zu den IN-Befehlen.
    */
   private void doInstBlockOUT( int addValue )
   {
-    int regHL = getRegHL();
-    if( this.ioSys != null ) {
-      this.ioSys.writeIOByte(
-		(this.regB << 8) | this.regC,
-		readMemByte( regHL ) );
-    }
-    setRegHL( regHL + 1 );
     this.regB     = (this.regB - 1) & 0xFF;
     this.flagSign = ((this.regB & BIT7) != 0);
     this.flagZero = (this.regB == 0);
     this.flagN    = true;
     this.flag5    = ((this.regB & BIT5) != 0);
     this.flag3    = ((this.regB & BIT3) != 0);
+
+    int regHL = getRegHL();
+    if( this.ioSys != null ) {
+      this.ioSys.writeIOByte(
+		(this.regB << 8) | this.regC,
+		readMemByte( regHL ) );
+    }
+    setRegHL( regHL + addValue );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2009 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,24 +8,22 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.Dialog;
+import java.awt.*;
 import java.io.*;
 import java.lang.*;
 import java.util.zip.*;
+import jkcemu.base.*;
 
 
-public class ZipUnpacker extends AbstractPackDlg
+public class ZipUnpacker extends AbstractThreadDlg
 {
   private File srcFile;
   private File outDir;
 
 
-  public static void unpackFile(
-		FileBrowserFrm fileBrowserFrm,
-		File           srcFile,
-		File           outDir )
+  public static void unpackFile( Window owner, File srcFile, File outDir )
   {
-    Dialog dlg = new ZipUnpacker( fileBrowserFrm, srcFile, outDir );
+    Dialog dlg = new ZipUnpacker( owner, srcFile, outDir );
     dlg.setTitle( "ZIP-Datei entpacken" );
     dlg.setVisible( true );
   }
@@ -64,7 +62,7 @@ public class ZipUnpacker extends AbstractPackDlg
 	      pos  = len;
 	    }
 	    if( elem != null ) {
-	      if( elem.length() > 0 ) {
+	      if( !elem.isEmpty() ) {
 		if( outFile != null ) {
 		  outFile = new File( outFile, elem );
 		} else {
@@ -114,35 +112,25 @@ public class ZipUnpacker extends AbstractPackDlg
 
 		if( crc32 != null ) {
 		  if( crc32.getValue() != chkSum ) {
-		    appendToLog(
-			"  Fehler: CRC32-Pr\u00FCfsumme differiert\n" );
+		    appendErrorToLog( "CRC32-Pr\u00FCfsumme differiert" );
 		    incErrorCount();
 		  }
 		}
 	      }
 	      catch( IOException ex ) {
-		StringBuilder buf = new StringBuilder( 128 );
-		buf.append( "  Fehler" );
-		String errMsg = ex.getMessage();
-		if( errMsg != null ) {
-		  if( errMsg.length() > 0 ) {
-		    buf.append( ": " );
-		    buf.append( errMsg );
-		  }
-		}
-		buf.append( (char) '\n' );
-		appendToLog( buf.toString() );
+		appendErrorToLog( ex );
 		incErrorCount();
 		failed = true;
 	      }
 	      finally {
-		close( out );
+		EmuUtil.doClose( out );
 	      }
 	      if( failed ) {
 		outFile.delete();
 	      } else {
-		if( millis > 0 )
+		if( millis > 0 ) {
 		  outFile.setLastModified( millis );
+		}
 	      }
 	    }
 	  }
@@ -152,14 +140,15 @@ public class ZipUnpacker extends AbstractPackDlg
       }
     }
     catch( IOException ex ) {
-      StringBuilder buf = new StringBuilder( 128 );
+      StringBuilder buf = new StringBuilder( 256 );
       buf.append( "\nFehler beim Lesen der Datei " );
+      buf.append( this.srcFile.getPath() );
       String errMsg = ex.getMessage();
       if( errMsg != null ) {
-	if( errMsg.length() > 0 ) {
-	  buf.append( ": " );
-	  buf.append( errMsg );
-	}
+        if( !errMsg.isEmpty() ) {
+          buf.append( ":\n" );
+          buf.append( errMsg );
+        }
       }
       buf.append( (char) '\n' );
       appendToLog( buf.toString() );
@@ -167,24 +156,21 @@ public class ZipUnpacker extends AbstractPackDlg
     }
     finally {
       if( inZip != null ) {
-	close( inZip );
+	EmuUtil.doClose( inZip );
       } else {
-	close( in );
+	EmuUtil.doClose( in );
       }
     }
-    this.fileBrowserFrm.fireRefreshNodeFor(
+    fireDirectoryChanged(
 		dirExists ? this.outDir : this.outDir.getParentFile() );
   }
 
 
-	/* --- private Konstruktoren und Methoden --- */
+	/* --- private Konstruktoren --- */
 
-  private ZipUnpacker(
-		FileBrowserFrm fileBrowserFrm,
-		File           srcFile,
-		File           outDir )
+  private ZipUnpacker( Window owner, File srcFile, File outDir )
   {
-    super( fileBrowserFrm );
+    super( owner, true );
     this.srcFile = srcFile;
     this.outDir  = outDir;
   }

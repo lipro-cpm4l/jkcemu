@@ -109,10 +109,6 @@ public class ProfileDlg extends BasicDlg implements
 		JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS ),
 	gbc );
 
-    if( preSelectedIdx >= 0 ) {
-      this.list.setSelectedIndex( preSelectedIdx );
-    }
-
     this.fldProfileName = null;
     this.docProfileName = null;
     if( forSave ) {
@@ -123,8 +119,15 @@ public class ProfileDlg extends BasicDlg implements
       gbc.weighty    = 0.0;
       gbc.gridy++;
       add( this.fldProfileName, gbc );
-      if( preSelectedName != null )
+      if( preSelectedName != null ) {
 	this.fldProfileName.setText( preSelectedName );
+      } else {
+	this.fldProfileName.setText( "standard" );
+      }
+    }
+
+    if( preSelectedIdx >= 0 ) {
+      this.list.setSelectedIndex( preSelectedIdx );
     }
 
 
