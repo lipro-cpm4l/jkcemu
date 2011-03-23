@@ -1,9 +1,9 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Lesen einer KC-TAP-Datei als AudioInputStream
+* Lesen einer KC-TAP-Datei als InputStream von Audio-Daten
  *
  * Laut KC85/3- bzw. KC85/4-Systemhandbuch arbeitet die Kassettenaufzeichnung
  * mit den Frequenzen 600, 1200 und 2400 Hz.
@@ -90,20 +90,6 @@ public class KCTapAudioInputStream extends InputStream
   }
 
 
-	/* --- ueberschriebene Methoden --- */
-
-  public int available()
-  {
-    return 1;		// read-Methode blockt nie
-  }
-
-
-  public void close()
-  {
-    // leer
-  }
-
-
   public AudioFormat getAudioFormat()
   {
     return this.audioFmt;
@@ -116,12 +102,30 @@ public class KCTapAudioInputStream extends InputStream
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public int available()
+  {
+    return 1;		// read-Methode blockt nie
+  }
+
+
+  @Override
+  public void close()
+  {
+    // leer
+  }
+
+
+  @Override
   public boolean markSupported()
   {
     return false;
   }
 
 
+  @Override
   public int read()
   {
     int rv = -1;
@@ -216,12 +220,14 @@ public class KCTapAudioInputStream extends InputStream
   }
 
 
+  @Override
   public int read( byte[] buf )
   {
     return read( buf, 0, buf.length );
   }
 
 
+  @Override
   public int read( byte[] buf, int offs, int len )
   {
     int rv = 0;
@@ -239,6 +245,7 @@ public class KCTapAudioInputStream extends InputStream
   }
 
 
+  @Override
   public void reset() throws IOException
   {
     throw new IOException(
@@ -246,6 +253,7 @@ public class KCTapAudioInputStream extends InputStream
   }
 
 
+  @Override
   public long skip( long n )
   {
     long rv = 0;

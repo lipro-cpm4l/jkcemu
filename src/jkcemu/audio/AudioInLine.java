@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -45,6 +45,72 @@ public class AudioInLine extends AudioIn
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  /*
+   * Mit dieser Methode erfaehrt die Klasse den aktuellen
+   * Taktzyklenzahlerstand und die Anzahl der seit dem letzten
+   * Aufruf vergangenen Taktzyklen.
+   *
+   * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
+   * Audio-Daten ignoriert.
+   */
+  @Override
+  protected void currentTStates( int tStates, int diffTStates )
+  {
+    if( diffTStates > this.maxPauseTStates ) {
+      this.lastTStates = tStates;
+      this.minValue    = 0;
+      this.maxValue    = 0;
+      DataLine line    = this.dataLine;
+      if( line != null ) {
+	line.flush();
+      }
+
+    } else {
+
+      /*
+       * Wenn Daten gelesen werden, darf das Soundsystem
+       * auf keinen Fall auf die CPU-Emulation warten.
+       * In diesem Fall wird die Geschwindigkeitsbremse
+       * der CPU-Emulation temporaer, d.h.,
+       * bis mindestens zum naechsten Soundsystemaufruf, abgeschaltet.
+       */
+      this.z80cpu.setSpeedUnlimitedFor( diffTStates * 8 );
+    }
+  }
+
+
+  @Override
+  protected byte[] readFrame()
+  {
+    int            value        = -1;
+    TargetDataLine line         = this.dataLine;
+    byte[]         audioDataBuf = this.audioDataBuf;
+    byte[]         frameBuf     = this.frameBuf;
+    if( (line != null) && (audioDataBuf != null) && (frameBuf != null) ) {
+      
+      if( this.audioDataPos >= this.audioDataLen ) {
+	this.audioDataLen = line.read(
+				this.audioDataBuf,
+				0,
+				this.audioDataBuf.length );
+	this.audioDataPos = 0;
+      }
+      if( this.audioDataPos + frameBuf.length <= this.audioDataLen ) {
+	System.arraycopy(
+		audioDataBuf,
+		this.audioDataPos,
+		frameBuf, 0,
+		frameBuf.length );
+	this.audioDataPos += frameBuf.length;
+      }
+    }
+    return frameBuf;
+  }
+
+
+  @Override
   public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     if( (this.dataLine == null) && (speedKHz > 0) ) {
@@ -91,6 +157,7 @@ public class AudioInLine extends AudioIn
   }
 
 
+  @Override
   public void stopAudio()
   {
     this.frameBuf     = null;
@@ -100,67 +167,6 @@ public class AudioInLine extends AudioIn
     DataLine line = dataLine;
     this.dataLine = null;
     DataLineCloser.closeDataLine( line );
-  }
-
-
-  /*
-   * Mit dieser Methode erfaehrt die Klasse den aktuellen
-   * Taktzyklenzahlerstand und die Anzahl der seit dem letzten
-   * Aufruf vergangenen Taktzyklen.
-   *
-   * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
-   * Audio-Daten ignoriert.
-   */
-  protected void currentTStates( int tStates, int diffTStates )
-  {
-    if( diffTStates > this.maxPauseTStates ) {
-      this.lastTStates = tStates;
-      this.minValue    = 0;
-      this.maxValue    = 0;
-      DataLine line    = this.dataLine;
-      if( line != null ) {
-	line.flush();
-      }
-
-    } else {
-
-      /*
-       * Wenn Daten gelesen werden, darf das Soundsystem
-       * auf keinen Fall auf die CPU-Emulation warten.
-       * In diesem Fall wird die Geschwindigkeitsbremse
-       * der CPU-Emulation temporaer, d.h.,
-       * bis mindestens zum naechsten Soundsystemaufruf, abgeschaltet.
-       */
-      this.z80cpu.setSpeedUnlimitedFor( diffTStates * 8 );
-    }
-  }
-
-
-  protected byte[] readFrame()
-  {
-    int            value        = -1;
-    TargetDataLine line         = this.dataLine;
-    byte[]         audioDataBuf = this.audioDataBuf;
-    byte[]         frameBuf     = this.frameBuf;
-    if( (line != null) && (audioDataBuf != null) && (frameBuf != null) ) {
-      
-      if( this.audioDataPos >= this.audioDataLen ) {
-	this.audioDataLen = line.read(
-				this.audioDataBuf,
-				0,
-				this.audioDataBuf.length );
-	this.audioDataPos = 0;
-      }
-      if( this.audioDataPos + frameBuf.length <= this.audioDataLen ) {
-	System.arraycopy(
-		audioDataBuf,
-		this.audioDataPos,
-		frameBuf, 0,
-		frameBuf.length );
-	this.audioDataPos += frameBuf.length;
-      }
-    }
-    return frameBuf;
   }
 
 

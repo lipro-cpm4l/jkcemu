@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,8 +31,9 @@ public class GZipPacker extends Thread
   }
 
 
-	/* --- Runnable --- */
+	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void run()
   {
     long             srcLen = this.srcFile.length();
@@ -99,6 +100,7 @@ public class GZipPacker extends Thread
 		File           srcFile,
 		File           outFile )
   {
+    super( "JKCEMU gzip packer" );
     this.fileBrowserFrm = fileBrowserFrm;
     this.srcFile        = srcFile;
     this.outFile        = outFile;

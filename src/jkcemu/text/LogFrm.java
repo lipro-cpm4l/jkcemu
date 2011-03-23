@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -105,6 +105,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
 
 	/* --- Appendable --- */
 
+  @Override
   public Appendable append( char ch )
   {
     appendToText( String.valueOf( ch ) );
@@ -112,6 +113,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
   }
 
 
+  @Override
   public Appendable append( CharSequence csq )
   {
     appendToText( csq != null ? csq.toString() : "null" );
@@ -119,6 +121,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
   }
 
 
+  @Override
   public Appendable append( CharSequence csq, int begPos, int endPos )
   {
     if( csq != null ) {
@@ -138,6 +141,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
 
 	/* --- CaretListener --- */
 
+  @Override
   public void caretUpdate( CaretEvent e )
   {
     int selStart = this.fldText.getSelectionStart();
@@ -148,6 +152,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -167,9 +172,10 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
       }
     }
     return rv;
- }
+  }
 
 
+  @Override
   public void mouseClicked( MouseEvent e )
   {
     if( (e.getComponent() == this.fldText)
@@ -206,6 +212,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this ) {
@@ -224,7 +231,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
   private void appendToText( final String text )
   {
     final JTextArea fldText = this.fldText;
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()

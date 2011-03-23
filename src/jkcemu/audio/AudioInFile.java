@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -71,6 +71,7 @@ public class AudioInFile extends AudioIn
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     AudioFormat fmt = null;
@@ -147,6 +148,7 @@ public class AudioInFile extends AudioIn
   }
 
 
+  @Override
   public void stopAudio()
   {
     closeMonitorLine();
@@ -164,12 +166,14 @@ public class AudioInFile extends AudioIn
   }
 
 
+  @Override
   protected boolean supportsMonitor()
   {
     return true;
   }
 
 
+  @Override
   protected byte[] readFrame()
   {
     AudioInputStream in  = this.in;

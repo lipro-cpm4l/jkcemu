@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,9 @@
 
 package jkcemu.programming;
 
+import java.awt.EventQueue;
 import java.io.*;
 import java.lang.*;
-import javax.swing.SwingUtilities;
 import jkcemu.base.EmuThread;
 import jkcemu.text.EditText;
 
@@ -32,6 +32,7 @@ public class PrgThread extends Thread
 
 
   public PrgThread(
+		String     threadName,
 		EmuThread  emuThread,
 		EditText   editText,
 		String     sourceText,
@@ -39,6 +40,7 @@ public class PrgThread extends Thread
 		PrgOptions options,
 		boolean    forceRun )
   {
+    super( threadName );
     this.emuThread     = emuThread;
     this.editText      = editText;
     this.logOut        = logOut;
@@ -112,7 +114,7 @@ public class PrgThread extends Thread
   protected void fireReplaceSourceText( final String text )
   {
     final EditText editText = this.editText;
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()

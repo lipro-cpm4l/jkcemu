@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,6 +26,7 @@ public class ImgSelection implements ClipboardOwner, Transferable
 
 	/* --- ClipboardOwner --- */
 
+  @Override
   public void lostOwnership( Clipboard clp, Transferable t )
   {
     // leer
@@ -34,6 +35,7 @@ public class ImgSelection implements ClipboardOwner, Transferable
 
 	/* --- Transferable --- */
 
+  @Override
   public Object getTransferData( DataFlavor flavor )
 					throws UnsupportedFlavorException
   {
@@ -44,6 +46,7 @@ public class ImgSelection implements ClipboardOwner, Transferable
   }
 
 
+  @Override
   public DataFlavor[] getTransferDataFlavors()
   {
     DataFlavor[] rv = { DataFlavor.imageFlavor };
@@ -51,6 +54,7 @@ public class ImgSelection implements ClipboardOwner, Transferable
   }
 
 
+  @Override
   public boolean isDataFlavorSupported( DataFlavor flavor )
   {
     return flavor.equals( DataFlavor.imageFlavor );

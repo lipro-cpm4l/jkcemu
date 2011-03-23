@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -107,6 +107,7 @@ public class BasicSourceFormatter
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public String toString()
   {
     return this.buf.toString();

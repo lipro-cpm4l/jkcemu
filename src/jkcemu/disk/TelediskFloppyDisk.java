@@ -155,7 +155,7 @@ public class TelediskFloppyDisk extends AbstractFloppyDisk
 	  } else {
 	    throwUnsupportedTelediskFmt(
 		String.format(
-			"Code=%02X f\u00Fcr Sektorgr\u00F6\u00DF"
+			"Code=%02X f\u00Fcr Sektorgr\u00F6\u00DFe"
 				+ " nicht unterst\u00FCtzt",
 			secSizeCode ) );
 	  }
@@ -298,12 +298,14 @@ public class TelediskFloppyDisk extends AbstractFloppyDisk
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public String getRemark()
   {
     return this.remark;
   }
 
 
+  @Override
   public SectorData getSectorByIndex(
 				int physCyl,
 				int physHead,
@@ -320,6 +322,7 @@ public class TelediskFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public int getSectorsOfCylinder( int physCyl, int physHead )
   {
     java.util.List<SectorData> sectors = getSectorList( physCyl, physHead );
@@ -327,6 +330,7 @@ public class TelediskFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public void putSettingsTo( Properties props, String prefix )
   {
     if( (props != null) && (this.fileName != null) ) {

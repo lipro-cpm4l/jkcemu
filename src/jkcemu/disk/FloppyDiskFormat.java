@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -168,6 +168,7 @@ public class FloppyDiskFormat
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public String toString()
   {
     return this.infoText;

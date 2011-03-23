@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -57,97 +57,96 @@ public class Z80CPU
 
 
   // private Attribute
-  private volatile PCListenerItem          pcListener;
-  private volatile Z80AddressListener      addrListener;
-  private volatile Z80TStatesListener[]    tStatesListeners;
-  private Z80Memory                        memory;
-  private Z80IOSystem                      ioSys;
-  private Thread                           thread;
-  private volatile Z80Breakpoint[]         debugBreakpoints;
-  private volatile PrintWriter             debugTracer;
-  private volatile Z80InterruptSource[]    interruptSources;
-  private Collection<Z80HaltStateListener> haltStateListeners;
-  private Collection<Z80MaxSpeedListener>  maxSpeedListeners;
-  private Collection<Z80StatusListener>    statusListeners;
-  private boolean[]                        parity;
-  private volatile int[]                   codeBuf;
-  private volatile int                     codeBufPos;
-  private volatile int                     maxSpeedKHz;
-  private volatile long                    speedUnlimitedTill;
-  private volatile long                    speedMillisBeg;
-  private volatile long                    speedMillisEnd;
-  private volatile int                     speedTStates;
-  private volatile int                     instTStates;
-  private volatile int                     debugCallLevel;
-  private volatile Action                  action;
-  private volatile int                     interruptMode;
-  private int                              interruptReg;
-  private boolean                          haltState;
-  private Integer                          haltPC;
-  private int                              instBegPC;
-  private int                              regPC;
-  private int                              regSP;
-  private int                              regA;
-  private int                              regB;
-  private int                              regC;
-  private int                              regD;
-  private int                              regE;
-  private int                              regH;
-  private int                              regL;
-  private int                              regA2;
-  private int                              regF2;
-  private int                              regB2;
-  private int                              regC2;
-  private int                              regD2;
-  private int                              regE2;
-  private int                              regH2;
-  private int                              regL2;
-  private int                              regIX;
-  private int                              regIY;
-  private int                              regR_bits0to6;
-  private boolean                          regR_bit7;
-  private boolean                          iff1;
-  private boolean                          iff2;
-  private volatile boolean                 nmiFired;
-  private volatile boolean                 waitMode;
-  private boolean                          flagSign;
-  private boolean                          flagZero;
-  private boolean                          flag5;
-  private boolean                          flagHalf;
-  private boolean                          flag3;
-  private boolean                          flagPV;
-  private boolean                          flagN;
-  private boolean                          flagCarry;
-  private boolean                          lastInstWasEIorDI;
-  private volatile boolean                 active;
-  private volatile boolean                 pause;
-  private volatile boolean                 debugEnabled;
-  private AtomicInteger                    waitStates;
-  private String                           waitMonitor;
+  private volatile PCListenerItem           pcListener;
+  private volatile Z80AddressListener       addrListener;
+  private volatile Z80TStatesListener[]     tStatesListeners;
+  private Z80Memory                         memory;
+  private Z80IOSystem                       ioSys;
+  private Thread                            thread;
+  private volatile PrintWriter              debugTracer;
+  private volatile Z80Breakpoint[]          breakpoints;
+  private volatile Z80InterruptSource[]     interruptSources;
+  private Collection<Z80HaltStateListener>  haltStateListeners;
+  private Collection<Z80MaxSpeedListener>   maxSpeedListeners;
+  private Collection<Z80StatusListener>     statusListeners;
+  private boolean[]                         parity;
+  private volatile int                      maxSpeedKHz;
+  private volatile long                     speedUnlimitedTill;
+  private volatile long                     speedNanosBeg;
+  private volatile long                     speedNanosEnd;
+  private volatile int                      speedTStates;
+  private int                               speedBrakeTStates;
+  private volatile int                      instTStates;
+  private volatile int                      debugCallLevel;
+  private volatile Action                   action;
+  private volatile int                      interruptMode;
+  private int                               interruptReg;
+  private boolean                           haltState;
+  private Integer                           haltPC;
+  private int                               instBegPC;
+  private int                               regPC;
+  private int                               regSP;
+  private int                               regA;
+  private int                               regB;
+  private int                               regC;
+  private int                               regD;
+  private int                               regE;
+  private int                               regH;
+  private int                               regL;
+  private int                               regA2;
+  private int                               regF2;
+  private int                               regB2;
+  private int                               regC2;
+  private int                               regD2;
+  private int                               regE2;
+  private int                               regH2;
+  private int                               regL2;
+  private int                               regIX;
+  private int                               regIY;
+  private int                               regR_bits0to6;
+  private boolean                           regR_bit7;
+  private boolean                           iff1;
+  private boolean                           iff2;
+  private volatile boolean                  nmiFired;
+  private volatile boolean                  waitMode;
+  private boolean                           flagSign;
+  private boolean                           flagZero;
+  private boolean                           flag5;
+  private boolean                           flagHalf;
+  private boolean                           flag3;
+  private boolean                           flagPV;
+  private boolean                           flagN;
+  private boolean                           flagCarry;
+  private boolean                           lastInstWasEIorDI;
+  private volatile boolean                  active;
+  private volatile boolean                  pause;
+  private volatile boolean                  debugEnabled;
+  private AtomicInteger                     waitStates;
+  private Object                            waitMonitor;
 
 
   public Z80CPU( Z80Memory memory, Z80IOSystem ioSys )
   {
-    this.memory             = memory;
-    this.ioSys              = ioSys;
-    this.thread             = null;
-    this.pcListener         = null;
-    this.addrListener       = null;
-    this.tStatesListeners   = null;
-    this.interruptSources   = null;
-    this.haltStateListeners = new ArrayList<Z80HaltStateListener>();
-    this.maxSpeedListeners  = new ArrayList<Z80MaxSpeedListener>();
-    this.statusListeners    = new ArrayList<Z80StatusListener>();
-    this.debugBreakpoints   = null;
-    this.debugTracer        = null;
-    this.haltPC             = null;
-    this.maxSpeedKHz        = -1;
-    this.active             = false;
-    this.haltState          = false;
-    this.debugEnabled       = false;
-    this.waitMode           = false;
-    this.waitStates         = new AtomicInteger( 0 );
-    this.waitMonitor        = "wait monitor";
+    this.memory                = memory;
+    this.ioSys                 = ioSys;
+    this.thread                = null;
+    this.pcListener            = null;
+    this.addrListener          = null;
+    this.tStatesListeners      = null;
+    this.interruptSources      = null;
+    this.haltStateListeners    = new ArrayList<Z80HaltStateListener>();
+    this.maxSpeedListeners     = new ArrayList<Z80MaxSpeedListener>();
+    this.statusListeners       = new ArrayList<Z80StatusListener>();
+    this.breakpoints           = null;
+    this.debugTracer           = null;
+    this.haltPC                = null;
+    this.maxSpeedKHz           = -1;
+    this.active                = false;
+    this.haltState             = false;
+    this.debugEnabled          = false;
+    this.waitMode              = false;
+    this.waitStates            = new AtomicInteger( 0 );
+    this.waitMonitor           = new Object();
 
     // Paritaeten fuer den Byte-Bereich berechnen
     this.parity = new boolean[ 0x100 ];
@@ -244,6 +243,12 @@ public class Z80CPU
   public void setInterruptSources( Z80InterruptSource... iSources )
   {
     this.interruptSources = iSources;
+  }
+
+
+  public Z80InterruptSource[] getInterruptSources()
+  {
+    return this.interruptSources;
   }
 
 
@@ -353,7 +358,7 @@ public class Z80CPU
     this.debugEnabled = state;
     if( this.pause ) {
       fireAction( this.debugEnabled ? Action.DEBUG_STOP : Action.PAUSE );
-      updStatusListeners();
+      updStatusListeners( null, null );
     } else {
       fireAction( this.debugEnabled ? Action.DEBUG_RUN : Action.RUN );
     }
@@ -368,13 +373,12 @@ public class Z80CPU
        * wenn zwischenzeitlich die Geschwindigkeit nicht
        * zurueckgesetzt wurde, dann korrigieren
        */
-      if( this.speedMillisEnd > 0L ) {
-	this.speedMillisBeg += (System.currentTimeMillis()
-						- this.speedMillisEnd);
+      if( this.speedNanosEnd > 0L ) {
+	this.speedNanosBeg += (System.nanoTime() - this.speedNanosEnd);
       }
-      this.speedMillisEnd = -1L;
+      this.speedNanosEnd = -1L;
     } else {
-      this.speedMillisEnd = System.currentTimeMillis();
+      this.speedNanosEnd = System.nanoTime();
     }
   }
 
@@ -417,8 +421,6 @@ public class Z80CPU
       for( int i = 0; i < iSources.length; i++ )
 	iSources[ i ].reset();
     }
-    this.codeBuf           = null;
-    this.codeBufPos        = 0;
     this.nmiFired          = false;
     this.iff1              = false;
     this.iff2              = false;
@@ -464,9 +466,10 @@ public class Z80CPU
   public void resetSpeed()
   {
     this.speedUnlimitedTill = 0L;
+    this.speedBrakeTStates  = 0;
     this.speedTStates       = 0;
-    this.speedMillisBeg     = System.currentTimeMillis();
-    this.speedMillisEnd     = -1L;
+    this.speedNanosBeg      = System.nanoTime();
+    this.speedNanosEnd      = -1L;
   }
 
 
@@ -482,13 +485,13 @@ public class Z80CPU
      * Werte moeglichst schnell auslesen, da die Methode
      * in einem anderen Thread aufgerufen werden kann
      */
-    int  tStates   = this.speedTStates;
-    long millisBeg = this.speedMillisBeg;
-    long millisEnd = this.speedMillisEnd;
-    if( millisEnd <= 0 ) {
-      millisEnd = System.currentTimeMillis();
+    int  tStates  = this.speedTStates;
+    long nanosBeg = this.speedNanosBeg;
+    long nanosEnd = this.speedNanosEnd;
+    if( nanosEnd <= 0 ) {
+      nanosEnd = System.nanoTime();
     }
-    long usedTimeMillis	= millisEnd - millisBeg;
+    long usedTimeMillis	= (nanosEnd - nanosBeg) / 1000000L;
 
     return ((usedTimeMillis > 0L) && (tStates > 0)) ?
 	((double) tStates / (double) usedTimeMillis) : -1.0;
@@ -498,6 +501,18 @@ public class Z80CPU
   public int getMaxSpeedKHz()
   {
     return this.maxSpeedKHz;
+  }
+
+
+  public int getInterruptMode()
+  {
+    return this.interruptMode;
+  }
+
+
+  public void setInterruptMode( int mode )
+  {
+    this.interruptMode = mode;
   }
 
 
@@ -513,8 +528,9 @@ public class Z80CPU
     resetSpeed();
     if( this.maxSpeedKHz != oldMaxSpeed ) {
       synchronized( this.maxSpeedListeners ) {
-	for( Z80MaxSpeedListener listener : this.maxSpeedListeners )
+	for( Z80MaxSpeedListener listener : this.maxSpeedListeners ) {
 	  listener.z80MaxSpeedChanged( this );
+	}
       }
     }
   }
@@ -542,7 +558,7 @@ public class Z80CPU
   {
     this.active = false;
     wakeUp();
-    updStatusListeners();
+    updStatusListeners( null, null );
   }
 
 
@@ -586,7 +602,7 @@ public class Z80CPU
 
     if( (this.action != Action.PAUSE) && (this.action != Action.DEBUG_STOP) ) {
       wakeUp();
-      updStatusListeners();
+      updStatusListeners( null, null );
     }
   }
 
@@ -603,7 +619,7 @@ public class Z80CPU
 
   public void setBreakpoints( Z80Breakpoint[] breakpoints )
   {
-    this.debugBreakpoints = breakpoints;
+    this.breakpoints = breakpoints;
   }
 
 
@@ -633,6 +649,12 @@ public class Z80CPU
     this.regSP = (this.regSP - 1) & 0xFFFF;
     writeMemByte( this.regSP, value & 0xFF );
     this.debugCallLevel++;
+  }
+
+
+  public int getMemByte( int addr, boolean m1 )
+  {
+    return this.memory.getMemByte( addr, m1 );
   }
 
 
@@ -821,6 +843,12 @@ public class Z80CPU
   }
 
 
+  public int getRegR()
+  {
+    return (this.regR_bits0to6 & 0x7F) | (this.regR_bit7 ? BIT7 : 0);
+  }
+
+
   public void setRegA( int value )
   {
     this.regA = value & 0xFF;
@@ -867,6 +895,13 @@ public class Z80CPU
   public void setRegIYL( int value )
   {
     this.regIY = (this.regIY & 0xFF00) | (value & 0xFF);
+  }
+
+
+  public void setRegR( int value )
+  {
+    this.regR_bits0to6 = value & 0x7F;
+    this.regR_bit7     = ((value & 0x80) != 0);
   }
 
 
@@ -1028,14 +1063,12 @@ public class Z80CPU
 
   public void run() throws Z80ExternalException
   {
-    int speedBrakeTStates = 0;
-    int opCode            = 0;
-
+    int opCode = 0;
     resetSpeed();
 
     this.active = true;
     this.thread = Thread.currentThread();
-    updStatusListeners();
+    updStatusListeners( null, null );
 
     try {
       while( this.active ) {
@@ -1060,9 +1093,9 @@ public class Z80CPU
 
 	  // Zaehler fuer die Taktzyklen darf nicht ueberlaufen
 	  this.speedUnlimitedTill = 0L;
-	  this.speedMillisBeg     = System.currentTimeMillis();
-	  this.speedMillisEnd     = -1L;
-	  this.speedTStates       -= tStatesWrap;
+	  this.speedNanosBeg      = System.nanoTime();
+	  this.speedNanosEnd      = -1L;
+	  this.speedTStates -= tStatesWrap;
 
 	} else {
 
@@ -1072,28 +1105,7 @@ public class Z80CPU
 	   * da sonst zuviel Rechenzeit fuer die Bremse selbst
 	   * benoetigt wird.
 	   */
-	  if( this.speedUnlimitedTill < this.speedTStates ) {
-	    if( speedBrakeTStates < 500 ) {
-	      speedBrakeTStates++;
-	    } else {
-	      speedBrakeTStates = 0;
-
-	      if( this.maxSpeedKHz > 0 ) {
-		long timeToUse = (long) ((float) this.speedTStates
-						/ (float) this.maxSpeedKHz );
-		long usedTime  = (this.speedMillisEnd > 0L) ?
-			  (this.speedMillisEnd - this.speedMillisBeg) :
-			  (System.currentTimeMillis() - this.speedMillisBeg);
-
-		if( timeToUse > usedTime ) {
-		  try {
-		    Thread.sleep( Math.min( timeToUse - usedTime, 50 ) );
-		  }
-		  catch( InterruptedException ex ) {}
-		}
-	      }
-	    }
-	  }
+	  checkSpeedBrake();
 	}
 	this.instTStates = 0;
 
@@ -1104,7 +1116,9 @@ public class Z80CPU
 	 * Unmittelbar nach einem EI- und DI-Befehl darf kein
 	 * maskierbarer Interrupt auftreten.
 	 */
-	boolean iAccepted = false;
+	boolean            nmiAccepted     = false;
+	Z80InterruptSource interruptSource = null;
+	Z80Breakpoint      breakpoint      = null;
 	if( this.nmiFired ) {
 	  this.nmiFired = false;
 	  this.iff2     = this.iff1;
@@ -1114,7 +1128,7 @@ public class Z80CPU
 	  this.haltPC = null;
 	  this.regPC  = 0x0066;
 	  this.instTStates += 11;
-	  iAccepted = true;
+	  nmiAccepted = true;
 	} else {
 	  if( this.lastInstWasEIorDI ) {
 	    this.lastInstWasEIorDI = false;
@@ -1124,23 +1138,17 @@ public class Z80CPU
 	      if( iSources != null ) {
 		for( int i = 0; i < iSources.length; i++ ) {
 		  Z80InterruptSource iSource = iSources[ i ];
-		  if( iSource.isInterruptPending() ) {
+		  if( iSource.isInterruptAccepted() ) {
 		    break;
 		  }
 		  if( iSource.isInterruptRequested() ) {
 		    this.haltPC = null;
 		    this.iff1   = false;
 		    this.iff2   = false;
-		    int iVector = iSource.interruptAccepted();
+		    int iVector = iSource.interruptAccept() & 0xFF;
 		    incRegR();
 
 		    switch( this.interruptMode ) {
-		      case 0:
-			this.instBegPC = this.regPC;
-			execInst( -1, iVector );
-			this.instTStates += 2;	// insgesamt 13 bei RST-Befehl
-			break;
-
 		      case 1:
 			doPush( this.regPC );
 			this.regPC = 0x0038;
@@ -1148,20 +1156,30 @@ public class Z80CPU
 			break;
 
 		      case 2:
-			doPush( this.regPC );
-			this.regPC = readMemWord(
-				(this.interruptReg << 8) | iVector );
-			this.instTStates += 19;
+			{
+			  int m = (this.interruptReg << 8) | iVector;
+			  doPush( this.regPC );
+			  this.regPC = readMemWord( m );
+			  this.instTStates += 19;
+			}
 			break;
+
+		      default:			// IM 0
+			this.instBegPC = this.regPC;
+			execInst( -1, iVector );
+			this.instTStates += 2;	// insgesamt 13 bei RST-Befehl
 		    }
-		    iAccepted = true;
+		    interruptSource = iSource;
 		  }
 		}
 	      }
 	    }
 	  }
 	}
-	if( !iAccepted && (this.haltPC != null) ) {
+	if( !nmiAccepted
+	    && (interruptSource == null)
+	    && (this.haltPC != null) )
+	{
 	  this.regPC  = this.haltPC.intValue();
 	  this.haltPC = null;
 	} else {
@@ -1173,35 +1191,62 @@ public class Z80CPU
 	 * Debugger- und Pausesteuerung
 	 */
 	if( (this.action == Action.PAUSE) || this.debugEnabled ) {
-	  if( this.debugEnabled && (this.debugTracer != null) )
-	    doDebugTrace();
+	  if( this.debugEnabled && (this.debugTracer != null) ) {
+	    doDebugTrace( nmiAccepted, interruptSource );
+	  }
 
 	  /*
 	   * Pruefen, ob der Debugger anhalten soll
-	   * Wenn ja, dann die dafuer benoetigte Zeit abziehen
 	   */
-	  if( (this.action == Action.PAUSE)
-	      || (this.action == Action.DEBUG_STOP)
-	      || (this.action == Action.DEBUG_STEP_INTO)
-	      || ((this.action == Action.DEBUG_STEP_OVER)
-				&& (this.debugCallLevel <= 0))
-	      || ((this.action == Action.DEBUG_STEP_UP)
+	  boolean pause = false;
+	  if( (breakpoint == null) && (interruptSource != null) ) {
+	    Z80Breakpoint[] breakpoints = this.breakpoints;
+	    if( breakpoints != null ) {
+	      for( int i = 0; i < breakpoints.length; i++ ) {
+		if( breakpoints[ i ].matches( this, interruptSource ) ) {
+		  breakpoint = breakpoints[ i ];
+		  break;
+		}
+	      }
+	    }
+	  }
+	  if( breakpoint == null ) {
+	    if( (this.action == Action.PAUSE)
+			|| (this.action == Action.DEBUG_STOP)
+			|| (this.action == Action.DEBUG_STEP_INTO)
+			|| ((this.action == Action.DEBUG_STEP_OVER)
 				&& (this.debugCallLevel <= 0)
-				&& debugHasInstRETXReached())
-	      || debugHasBreakpointReached() )
-	  {
+				&& (this.instBegPC != this.regPC))
+			|| ((this.action == Action.DEBUG_STEP_UP)
+				&& (this.debugCallLevel <= 0)
+				&& debugMatchesRETX()) )
+	    {
+	      pause = true;
+	    } else {
+	      Z80Breakpoint[] breakpoints = this.breakpoints;
+	      if( breakpoints != null ) {
+		for( int i = 0; i < breakpoints.length; i++ ) {
+		  if( breakpoints[ i ].matches( this, null ) ) {
+		    breakpoint = breakpoints[ i ];
+		    break;
+		  }
+		}
+	      }
+	    }
+	  }
+	  if( pause || (breakpoint != null) ) {
 	    this.pause = true;
-	    updStatusListeners();
+	    updStatusListeners( breakpoint, interruptSource );
 	    waitFor();
 	    this.pause = false;
-	    updStatusListeners();
+	    updStatusListeners( null, null );
 
 	    if( !this.active )
 	      break;
 	  }
 	}
 
-	// ggf. In PCListener springen
+	// ggf. in PCListener springen
 	PCListenerItem pcListener = this.pcListener;
 	if( pcListener != null ) {
 	  for( int i = 0; i < pcListener.pc.length; i++ ) {
@@ -1240,31 +1285,43 @@ public class Z80CPU
     }
     finally {
       this.active = false;
-      updStatusListeners();
-    }
-  }
-
-
-  /*
-   * Diese Methode fuehrt einen CPU-Befehl aus.
-   */
-  public void execInstruction( int... opCode )
-  {
-    this.instBegPC = this.regPC;
-    try {
-      this.codeBuf    = opCode;
-      this.codeBufPos = 0;
-      while( this.codeBufPos < this.codeBuf.length )
-	execInst( -1, this.codeBuf[ this.codeBufPos++ ] );
-    }
-    finally {
-      this.codeBuf    = null;
-      this.codeBufPos = -1;
+      updStatusListeners( null, null );
     }
   }
 
 
 	/* --- private Methoden --- */
+
+  private void checkSpeedBrake()
+  {
+    if( this.speedUnlimitedTill < this.speedTStates ) {
+      if( this.speedBrakeTStates < 200 ) {
+	this.speedBrakeTStates++;
+      } else {
+	this.speedBrakeTStates = 0;
+
+	if( this.maxSpeedKHz > 0 ) {
+	  long nanosToUse = (long) ((float) this.speedTStates
+						/ (float) this.maxSpeedKHz )
+						* 1000000L;
+	  long usedNanos  = (this.speedNanosEnd > 0L) ?
+			(this.speedNanosEnd - this.speedNanosBeg)
+			: (System.nanoTime() - this.speedNanosBeg);
+
+	  if( nanosToUse > usedNanos ) {
+	    long diffNanos  = nanosToUse - usedNanos;
+	    long millis = diffNanos / 1000000L;
+	    int  nanos  = (int) (diffNanos % 1000000L);
+	    try {
+	      Thread.sleep( millis, nanos );
+	    }
+	    catch( InterruptedException ex ) {}
+	  }
+	}
+      }
+    }
+  }
+
 
   public void execInst( int preCode, int opCode )
   {
@@ -1716,12 +1773,12 @@ public class Z80CPU
 	break;
       case 0x34:
 	if( preCode == 0xDD ) {			// INC (IX+d)
-	  int m = computeRelAddr( this.regIX, nextByte() );
+	  int m = computeRelAddr( this.regIX, nextByteM1() );
 	  writeMemByte( m, doInstINC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
 	}
 	else if( preCode == 0xFD ) {		// INC (IY+d)
-	  int m = computeRelAddr( this.regIY, nextByte() );
+	  int m = computeRelAddr( this.regIY, nextByteM1() );
 	  writeMemByte( m, doInstINC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
 	} else {				// INC (HL)
@@ -1732,12 +1789,12 @@ public class Z80CPU
 	break;
       case 0x35:
 	if( preCode == 0xDD ) {			// DEC (IX+d)
-	  int m = computeRelAddr( this.regIX, nextByte() );
+	  int m = computeRelAddr( this.regIX, nextByteM1() );
 	  writeMemByte( m, doInstDEC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
 	}
 	else if( preCode == 0xFD ) {		// DEC (IY+d)
-	  int m = computeRelAddr( this.regIY, nextByte() );
+	  int m = computeRelAddr( this.regIY, nextByteM1() );
 	  writeMemByte( m, doInstDEC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
 	} else {				// DEC (HL)
@@ -1748,12 +1805,12 @@ public class Z80CPU
 	break;
       case 0x36:
 	if( preCode == 0xDD ) {			// LD (IX+d),n
-	  int m = computeRelAddr( this.regIX, nextByte() );
+	  int m = computeRelAddr( this.regIX, nextByteM1() );
 	  writeMemByte( m, nextByte() );
 	  this.instTStates += 15;
 	}
 	else if( preCode == 0xFD ) {		// LD (IY+d),n
-	  int m = computeRelAddr( this.regIY, nextByte() );
+	  int m = computeRelAddr( this.regIY, nextByteM1() );
 	  writeMemByte( m, nextByte() );
 	  this.instTStates += 15;
 	} else {				// LD (HL),n
@@ -1842,7 +1899,7 @@ public class Z80CPU
 	writeMemByte(
 		computeRelAddr(
 			preCode == 0xDD ? this.regIX : this.regIY,
-			nextByte() ),
+			nextByteM1() ),
 		getSrcValue( -1, opCode ) );
 	this.instTStates += 15;			// insgesamt 19
       }
@@ -1852,7 +1909,7 @@ public class Z80CPU
 	// LD ...,(IXY+d)
 	int value = readMemByte( computeRelAddr(
 			preCode == 0xDD ? this.regIX : this.regIY,
-			nextByte() ) );
+			nextByteM1() ) );
 	switch( opCode & 0x38 ) {		// Bits 3-5: Ziel
 	  case 0x00:
 	    this.regB = value;
@@ -2456,9 +2513,9 @@ public class Z80CPU
 	}
 	break;
       case 0xF9:
-	if( preCode == 0xDD ) {
+	if( preCode == 0xDD ) {			// LD SP,IX
 	  this.regSP = this.regIX;
-	} else if( preCode == 0xFD ) {
+	} else if( preCode == 0xFD ) {		// LD SP,IY
 	  this.regSP = this.regIY;
 	} else {				// LD SP,HL
 	  this.regSP = getRegHL();
@@ -3033,8 +3090,8 @@ public class Z80CPU
 	Z80InterruptSource[] iSources = this.interruptSources;
 	if( iSources != null ) {
 	  for( int i = 0; i < iSources.length; i++ ) {
-	    if( iSources[ i ].isInterruptPending() ) {
-	      iSources[ i ].interruptFinished();
+	    if( iSources[ i ].isInterruptAccepted() ) {
+	      iSources[ i ].interruptFinish();
 	      break;
 	    }
 	  }
@@ -3046,8 +3103,7 @@ public class Z80CPU
 	this.instTStates += 8;
 	break;
       case 0x4F:				// LD R,A
-	this.regR_bits0to6 = this.regA & 0x7F;
-	this.regR_bit7     = ((this.regA & BIT7) != 0);
+	setRegR( this.regA );
 	this.instTStates += 9;
 	break;
       default:
@@ -3131,10 +3187,7 @@ public class Z80CPU
 	this.instTStates += 8;
 	break;
       case 0x5F:				// LD A,R
-	this.regA = this.regR_bits0to6;
-	if( this.regR_bit7 ) {
-	  this.regA |= BIT7;
-	}
+	this.regA     = getRegR();
 	this.flagSign = ((this.regA & BIT7) != 0);
 	this.flagZero = (this.regA == 0);
 	this.flagPV   = this.iff2;
@@ -3447,7 +3500,7 @@ public class Z80CPU
 
   private int execIXY_CB( int regIXY )
   {
-    int addr   = computeRelAddr( regIXY, nextByte() );
+    int addr   = computeRelAddr( regIXY, nextByteM1() );
     int value  = readMemByte( addr );
     int opCode = nextByteM1();
     if( opCode < 0x80 ) {
@@ -4083,15 +4136,11 @@ public class Z80CPU
 
   private void setPCRel( int d )
   {
-    if( this.codeBuf != null ) {
-      this.codeBufPos += d;
-    } else {
-      this.regPC = ((this.regPC + d) & 0xFFFF);
-    }
+    this.regPC = ((this.regPC + d) & 0xFFFF);
   }
 
 
-  private int computeRelAddr( int baseAddr, int d )
+  private static int computeRelAddr( int baseAddr, int d )
   {
     return (baseAddr + (int) ((byte) d)) & 0xFFFF;
   }
@@ -4142,9 +4191,9 @@ public class Z80CPU
 	{
 	  int addr = 0;
 	  if( preCode == 0xDD ) {
-	    addr = computeRelAddr( this.regIX, nextByte() );
+	    addr = computeRelAddr( this.regIX, nextByteM1() );
 	  } else if( preCode == 0xFD ) {
-	    addr = computeRelAddr( this.regIY, nextByte() );
+	    addr = computeRelAddr( this.regIY, nextByteM1() );
 	  } else {
 	    addr = getRegHL();
 	  }
@@ -4164,9 +4213,6 @@ public class Z80CPU
 
   private int nextByte()
   {
-    if( this.codeBuf != null ) {
-      return this.codeBuf[ this.codeBufPos++ ];
-    }
     int rv     = readMemByte( this.regPC );
     this.regPC = (this.regPC + 1) & 0xFFFF;
     return rv;
@@ -4175,9 +4221,6 @@ public class Z80CPU
 
   private int nextByteM1()
   {
-    if( this.codeBuf != null ) {
-      return this.codeBuf[ this.codeBufPos++ ];
-    }
     int rv     = readMemByteM1( this.regPC );
     this.regPC = (this.regPC + 1) & 0xFFFF;
     return rv;
@@ -4198,32 +4241,10 @@ public class Z80CPU
   }
 
 
-  private boolean debugHasBreakpointReached()
+  private boolean debugMatchesRETX()
   {
-    boolean         rv          = false;
-    Z80Breakpoint[] breakpoints = this.debugBreakpoints;
-    if( breakpoints != null ) {
-      for( int i = 0; i < breakpoints.length; i++ ) {
-	Z80Breakpoint bp = breakpoints[ i ];
-	if( bp != null ) {
-	  if( bp.isEnabled() && (bp.getAddress() == this.regPC) ) {
-	    rv = true;
-	    break;
-	  }
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  private boolean debugHasInstRETXReached()
-  {
-    int opCode = this.memory.getMemByte( this.regPC, true );
-    if( this.codeBuf != null ) {
-      if( (this.codeBufPos >= 0) && (this.codeBufPos < this.codeBuf.length) )
-	opCode = this.codeBuf[ this.codeBufPos ];
-    }
+    boolean rv     = false;
+    int     opCode = this.memory.getMemByte( this.regPC, true );
     if( (opCode == 0xC9)				// RET
 	|| ((opCode == 0xC0) && !this.flagZero)		// RET NZ
 	|| ((opCode == 0xC8) && this.flagZero)		// RET Z
@@ -4234,38 +4255,37 @@ public class Z80CPU
 	|| ((opCode == 0xF0) && !this.flagSign)		// RET P
 	|| ((opCode == 0xF8) && this.flagSign) )	// RET M
     {
-      return true;
+      rv = true;
     }
-
-    if( opCode == 0xED ) {
+    else if( opCode == 0xED ) {
       opCode = this.memory.getMemByte( this.regPC + 1, true );
-      if( this.codeBuf != null ) {
-	if( (this.codeBufPos >= 0)
-	    && (this.codeBufPos < this.codeBuf.length - 1) )
-	{
-	  opCode = this.codeBuf[ this.codeBufPos + 1 ];
-	}
-      }
-      if( (opCode == 0x4D)		// RETI
-	  || (opCode == 0x45)		// RETN
-	  || (opCode == 0x55)		// RETN
-	  || (opCode == 0x5D)		// RETN
-	  || (opCode == 0x65)		// RETN
-	  || (opCode == 0x6D)		// RETN
-	  || (opCode == 0x75)		// RETN
-	  || (opCode == 0x7D) )		// RETN
+      if( (opCode == 0x4D)				// RETI
+	  || (opCode == 0x45)				// RETN
+	  || (opCode == 0x55)				// RETN
+	  || (opCode == 0x5D)				// RETN
+	  || (opCode == 0x65)				// RETN
+	  || (opCode == 0x6D)				// RETN
+	  || (opCode == 0x75)				// RETN
+	  || (opCode == 0x7D) )				// RETN
       {
-	return true;
+	rv = true;
       }
     }
-    return false;
+    return rv;
   }
 
 
-  private void doDebugTrace()
+  private void doDebugTrace( boolean nmi, Z80InterruptSource iSource )
   {
     PrintWriter debugTracer = this.debugTracer;
     if( debugTracer != null ) {
+      if( nmi ) {
+	debugTracer.println( "--- NMI ---" );
+      } else if( iSource != null ) {
+	debugTracer.print( "--- Interrupt: " );
+	debugTracer.print( iSource );
+	debugTracer.println( " ---" );
+      }
 
       // Register ausgeben
       debugTracer.print( "AF:" );
@@ -4299,26 +4319,15 @@ public class Z80CPU
       debugTracer.print( "  " );
 
       // Befehl reassemblieren
-      int           b0    = this.memory.getMemByte( addr, true );
-      boolean       b1_m1 = ((b0 == 0xED) || (b0 == 0xDD) || (b0 == 0xFD));
       Z80ReassInstr instr = Z80Reassembler.reassInstruction(
-				addr,
-				b0,
-				this.memory.getMemByte( addr + 1, b1_m1 ),
-				this.memory.getMemByte( addr + 2, false ),
-				this.memory.getMemByte( addr + 3, false ) );
+							this.memory,
+							addr );
       if( instr != null ) {
 	// Befehlscode ausgeben
 	int w = 12;
 	int n = instr.getLength();
 	for( int i = 0; i < n; i++ ) {
-	  debugTracer.printf(
-			"%02X",
-			this.memory.getMemByte(
-					addr,
-					(i == 0) || ((i == 1) && b1_m1) ) );
-
-	  debugTracer.print( (char) '\u0020' );
+	  debugTracer.printf( "%02X ", instr.getByte( i ) );
 	  addr++;
 	  w -= 3;
 	}
@@ -4349,9 +4358,7 @@ public class Z80CPU
 	    }
 	  }
 	}
-
       } else {
-
 	debugTracer.printf( "%02X", this.memory.getMemByte( addr, true ) );
       }
       debugTracer.println();
@@ -4421,6 +4428,10 @@ public class Z80CPU
   }
 
 
+  /*
+   * Diese Methode duerfte nie aufgerufen werden.
+   * Wenn ja, ist die Emulation lueckenhaft.
+   */
   private void throwIllegalState( int opCode )
   {
     throw new IllegalStateException(
@@ -4428,11 +4439,13 @@ public class Z80CPU
   }
 
 
-  private void updStatusListeners()
+  private void updStatusListeners(
+			Z80Breakpoint      breakpoint,
+			Z80InterruptSource iSource )
   {
     synchronized( this.statusListeners ) {
       for( Z80StatusListener listener : this.statusListeners )
-	listener.z80StatusChanged();
+	listener.z80StatusChanged( breakpoint, iSource );
     }
   }
 }

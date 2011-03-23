@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,6 +8,7 @@
 
 package jkcemu.programming;
 
+import java.io.File;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.EmuThread;
@@ -24,11 +25,14 @@ public class PrgOptions
   private boolean labelsCaseSensitive;
   private boolean printLabels;
   private boolean codeToEmu;
+  private boolean codeToSecondSys;
   private boolean codeToFile;
-  private String  codeFileName;
+  private File    codeFile;
   private String  codeFileFmt;
   private char    codeFileType;
   private String  codeFileDesc;
+  private boolean labelsToDebugger;
+  private boolean labelsToReass;
   private boolean formatSource;
 
 
@@ -39,11 +43,14 @@ public class PrgOptions
     this.labelsCaseSensitive = false;
     this.printLabels         = false;
     this.codeToEmu           = false;
+    this.codeToSecondSys     = false;
     this.codeToFile          = false;
-    this.codeFileName        = null;
+    this.codeFile            = null;
     this.codeFileFmt         = null;
     this.codeFileType        = '\u0020';
     this.codeFileDesc        = null;
+    this.labelsToDebugger    = false;
+    this.labelsToReass       = false;
     this.formatSource        = false;
   }
 
@@ -54,6 +61,8 @@ public class PrgOptions
     this.allowUndocInst      = src.allowUndocInst;
     this.labelsCaseSensitive = src.labelsCaseSensitive;
     this.printLabels         = src.printLabels;
+    this.labelsToDebugger    = src.labelsToDebugger;
+    this.labelsToReass       = src.labelsToReass;
     this.formatSource        = src.formatSource;
     copyCodeDestOptionsFrom( src );
   }
@@ -61,12 +70,13 @@ public class PrgOptions
 
   public void copyCodeDestOptionsFrom( PrgOptions src )
   {
-    this.codeToEmu    = src.codeToEmu;
-    this.codeToFile   = src.codeToFile;
-    this.codeFileName = src.codeFileName;
-    this.codeFileFmt  = src.codeFileFmt;
-    this.codeFileType = src.codeFileType;
-    this.codeFileDesc = src.codeFileDesc;
+    this.codeToEmu       = src.codeToEmu;
+    this.codeToSecondSys = src.codeToSecondSys;
+    this.codeToFile      = src.codeToFile;
+    this.codeFile        = src.codeFile;
+    this.codeFileFmt     = src.codeFileFmt;
+    this.codeFileType    = src.codeFileType;
+    this.codeFileDesc    = src.codeFileDesc;
   }
 
 
@@ -76,9 +86,9 @@ public class PrgOptions
   }
 
 
-  public String getCodeFileName()
+  public File getCodeFile()
   {
-    return this.codeFileName;
+    return this.codeFile;
   }
 
 
@@ -109,6 +119,24 @@ public class PrgOptions
   public boolean getCodeToFile()
   {
     return this.codeToFile;
+  }
+
+
+  public boolean getCodeToSecondSystem()
+  {
+    return this.codeToSecondSys;
+  }
+
+
+  public boolean getLabelsToDebugger()
+  {
+    return this.labelsToDebugger;
+  }
+
+
+  public boolean getLabelsToReassembler()
+  {
+    return this.labelsToReass;
   }
 
 
@@ -154,6 +182,10 @@ public class PrgOptions
 		props,
 		"jkcemu.programmimg.code.to_emulator" );
 
+      Boolean codeToSecondSys = getBoolean(
+		props,
+		"jkcemu.programmimg.code.to_second_system" );
+
       Boolean codeToFile = getBoolean(
 		props,
 		"jkcemu.programmimg.code.to_file" );
@@ -170,6 +202,14 @@ public class PrgOptions
       String codeFileDesc = props.getProperty(
 		"jkcemu.programmimg.code.file.description" );
 
+      Boolean labelsToDebugger = getBoolean(
+		props,
+		"jkcemu.programmimg.labels_to_debugger" );
+
+      Boolean labelsToReass = getBoolean(
+		props,
+		"jkcemu.programmimg.labels_to_reassembler" );
+
       Boolean formatSource = getBoolean(
 		props,
 		"jkcemu.programmimg.format.source" );
@@ -179,11 +219,14 @@ public class PrgOptions
 	  || (labelsCaseSensitive != null)
 	  || (printLabels != null)
 	  || (codeToEmu != null)
+	  || (codeToSecondSys != null)
 	  || (codeToFile != null)
 	  || (codeFileName != null)
 	  || (codeFileFmt != null)
 	  || (codeFileType != null)
 	  || (codeFileDesc != null)
+	  || (labelsToDebugger != null)
+	  || (labelsToReass != null)
 	  || (formatSource != null) )
       {
 	if( options == null ) {
@@ -209,16 +252,32 @@ public class PrgOptions
 	  if( codeToEmu != null ) {
 	    options.codeToEmu = codeToEmu.booleanValue();
 	  }
+	  if( codeToSecondSys != null ) {
+	    options.codeToSecondSys = codeToSecondSys.booleanValue();
+	  }
 	  if( codeToFile != null ) {
 	    options.codeToFile = codeToFile.booleanValue();
 	  }
-	  options.codeFileName = codeFileName;
-	  options.codeFileFmt  = codeFileFmt;
+	  File codeFile = null;
+	  if( codeFileName != null ) {
+	    if( !codeFileName.isEmpty() ) {
+	      codeFile = new File( codeFileName );
+	    }
+	  }
+	  options.codeFile    = codeFile;
+	  options.codeFileFmt = codeFileFmt;
 	  if( codeFileType != null ) {
-	    if( codeFileType.length() > 0 )
+	    if( !codeFileType.isEmpty() ) {
 	      options.codeFileType = codeFileType.charAt( 0 );
+	    }
 	  }
 	  options.codeFileDesc = codeFileDesc;
+	  if( labelsToDebugger != null ) {
+	    options.labelsToDebugger = labelsToDebugger.booleanValue();
+	  }
+	  if( labelsToReass != null ) {
+	    options.labelsToReass = labelsToReass.booleanValue();
+	  }
 	  if( formatSource != null ) {
 	    options.formatSource = formatSource.booleanValue();
 	  }
@@ -270,12 +329,20 @@ public class PrgOptions
 		Boolean.toString( this.codeToEmu ) );
 
       props.setProperty(
+		"jkcemu.programmimg.code.to_second_system",
+		Boolean.toString( this.codeToSecondSys ) );
+
+      props.setProperty(
 		"jkcemu.programmimg.code.to_file",
 		Boolean.toString( this.codeToFile ) );
 
+      String codeFileName = null;
+      if( this.codeFile != null ) {
+	codeFileName = this.codeFile.getPath();
+      }
       props.setProperty(
 		"jkcemu.programmimg.code.file.name",
-		this.codeFileName != null ? this.codeFileName : "" );
+		codeFileName != null ? codeFileName : "" );
 
       props.setProperty(
 		"jkcemu.programmimg.code.file.format",
@@ -290,6 +357,14 @@ public class PrgOptions
 		this.codeFileDesc != null ? this.codeFileDesc : "" );
 
       props.setProperty(
+		"jkcemu.programmimg.labels_to_debugger",
+		Boolean.toString( this.labelsToDebugger ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.labels_to_reassembler",
+		Boolean.toString( this.labelsToReass ) );
+
+      props.setProperty(
 		"jkcemu.programmimg.format.source",
 		Boolean.toString( this.formatSource ) );
     }
@@ -302,24 +377,42 @@ public class PrgOptions
   }
 
 
+  public void setCodeToEmu( boolean state )
+  {
+    this.codeToEmu = state;
+  }
+
+
   public void setCodeToFile(
 		boolean state,
-		String  fileName,
+		File    file,
 		String  fileFmt,
 		char    fileType,
 		String  fileDesc )
   {
     this.codeToFile   = state;
-    this.codeFileName = fileName;
+    this.codeFile     = file;
     this.codeFileFmt  = fileFmt;
     this.codeFileType = fileType;
     this.codeFileDesc = fileDesc;
   }
 
 
-  public void setCodeToEmu( boolean state )
+  public void setCodeToSecondSystem( boolean state )
   {
-    this.codeToEmu = state;
+    this.codeToSecondSys = state;
+  }
+
+
+  public void setLabelsToDebugger( boolean state )
+  {
+    this.labelsToDebugger = state;
+  }
+
+
+  public void setLabelsToReassembler( boolean state )
+  {
+    this.labelsToReass = state;
   }
 
 
@@ -355,8 +448,9 @@ public class PrgOptions
     if( props != null ) {
       String value = props.getProperty( keyword );
       if( value != null ) {
-	if( value.length() > 0 )
+	if( !value.isEmpty() ) {
 	  rv = Boolean.valueOf( value );
+	}
       }
     }
     return rv;
@@ -369,7 +463,7 @@ public class PrgOptions
     if( props != null ) {
       String value = props.getProperty( keyword );
       if( value != null ) {
-	if( value.length() > 0 ) {
+	if( !value.isEmpty() ) {
 	  try {
 	    rv = Integer.valueOf( value );
 	  }

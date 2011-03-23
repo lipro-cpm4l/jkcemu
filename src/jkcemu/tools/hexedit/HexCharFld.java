@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.tools.hexedit;
 import java.awt.*;
 import java.lang.*;
 import javax.swing.*;
+import jkcemu.base.EmuUtil;
 
 
 public class HexCharFld extends JComponent
@@ -72,6 +73,70 @@ public class HexCharFld extends JComponent
       maxAddr >>= 4;
     }
     return String.format( "%%0%dX", addrDigits > 4 ? addrDigits : 4 );
+  }
+
+
+  public void copySelectedText()
+  {
+    int dataLen  = this.dataSrc.getDataLength();
+    int caretPos = getCaretPosition();
+    int markPos  = getMarkPosition();
+    int m1       = -1;
+    int m2       = -1;
+    if( (caretPos >= 0) && (markPos >= 0) ) {
+      m1 = Math.min( caretPos, markPos );
+      m2 = Math.max( caretPos, markPos );
+    } else {
+      m1 = caretPos;
+      m2 = caretPos;
+    }
+    if( m2 >= dataLen ) {
+      m2 = dataLen - 1;
+    }
+    if( m1 >= 0 ) {
+      int rows   = m1 / BYTES_PER_ROW;
+      int pos    = rows * BYTES_PER_ROW;  // auf Anfang der Zeile setzen
+      rows       = (m2 + BYTES_PER_ROW - 1) / BYTES_PER_ROW;
+      int endPos = rows * BYTES_PER_ROW;
+
+      StringBuilder buf = new StringBuilder(
+		((m2 - m1) / BYTES_PER_ROW) * ((BYTES_PER_ROW * 4) + 12) );
+
+      int    addrOffs = this.dataSrc.getAddrOffset();
+      String addrFmt  = createAddrFmtString();
+      while( pos < m2 ) {
+	buf.append( String.format( addrFmt, addrOffs + pos ) );
+	buf.append( "\u0020\u0020" );
+	for( int i = 0; i < BYTES_PER_ROW; i++ ) {
+	  int idx = pos + i;
+	  if( idx < dataLen ) {
+	    buf.append(
+		String.format(
+			" %02X",
+			(int) this.dataSrc.getDataByte( idx ) & 0xFF ) );
+	  } else {
+	    buf.append( "\u0020\u0020\u0020" );
+	  }
+	}
+	buf.append( "\u0020\u0020\u0020" );
+	for( int i = 0; i < BYTES_PER_ROW; i++ ) {
+	  int idx = pos + i;
+	  if( idx >= dataLen ) {
+	    break;
+	  }
+	  char ch = (char) this.dataSrc.getDataByte( pos + i );
+	  if( (ch < 0x20) || (ch > 0x7F) ) {
+	    ch = '.';
+	  }
+	  buf.append( (char) ch );
+	}
+	buf.append( (char) '\n' );
+	pos += BYTES_PER_ROW;
+      }
+      if( buf.length() > 0 ) {
+	EmuUtil.copyToClipboard( this, buf.toString() );
+      }
+    }
   }
 
 
@@ -209,6 +274,7 @@ public class HexCharFld extends JComponent
 
 	/* --- ueverschriebene Methoden --- */
 
+  @Override
   public Dimension getPreferredSize()
   {
     return new Dimension(
@@ -217,12 +283,14 @@ public class HexCharFld extends JComponent
   }
 
 
+  @Override
   public boolean isFocusable()
   {
     return true;
   }
 
 
+  @Override
   public void paintComponent( Graphics g )
   {
     int w = getWidth();
@@ -293,23 +361,22 @@ public class HexCharFld extends JComponent
 	x = this.xAscii;
 	for( int i = 0; i < BYTES_PER_ROW; i++ ) {
 	  int idx = pos + i;
-	  if( idx < dataLen ) {
-	    char ch = (char) this.dataSrc.getDataByte( pos + i );
-	    if( (ch < 0x20) || (ch > 0x7F) ) {
-	      ch = '.';
-	    }
-	    if( (idx >= m1) && (idx <= m2) ) {
-	      g.setColor( SystemColor.textHighlight );
-	      g.fillRect( x, y - hFont + 2, this.wChar, this.rowHeight );
-	      g.setColor( SystemColor.textHighlightText );
-	    } else {
-	      g.setColor( SystemColor.textText );
-	    }
-	    g.drawString( Character.toString( ch ), x, y );
-	    x += this.wChar;
-	  } else {
+	  if( idx >= dataLen ) {
 	    break;
 	  }
+	  char ch = (char) this.dataSrc.getDataByte( pos + i );
+	  if( (ch < 0x20) || (ch > 0x7F) ) {
+	    ch = '.';
+	  }
+	  if( (idx >= m1) && (idx <= m2) ) {
+	    g.setColor( SystemColor.textHighlight );
+	    g.fillRect( x, y - hFont + 2, this.wChar, this.rowHeight );
+	    g.setColor( SystemColor.textHighlightText );
+	  } else {
+	    g.setColor( SystemColor.textText );
+	  }
+	  g.drawString( Character.toString( ch ), x, y );
+	  x += this.wChar;
 	}
 	y   += this.rowHeight;
 	pos += BYTES_PER_ROW;
@@ -321,6 +388,7 @@ public class HexCharFld extends JComponent
   }
 
 
+  @Override
   public void setFont( Font font )
   {
     super.setFont( font );

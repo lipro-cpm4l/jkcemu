@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -43,6 +43,7 @@ public class ReplyHexDlg extends AbstractReplyDlg
 
 	/* --- ueberschriebende Methoden --- */
 
+  @Override
   protected boolean approveSelection()
   {
     boolean rv = false;

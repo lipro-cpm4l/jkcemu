@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,9 +19,9 @@ import javax.swing.text.*;
 import javax.swing.undo.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.emusys.*;
 import jkcemu.programming.PrgOptions;
 import jkcemu.print.*;
-import jkcemu.system.*;
 import z80emu.Z80MemView;
 
 
@@ -263,7 +263,8 @@ public class EditText implements
   public boolean isSameFile( File file )
   {
     return ((this.file != null) && (file != null)) ?
-				this.file.equals( file ) : false;
+				EmuUtil.equals( this.file, file )
+				: false;
   }
 
 
@@ -410,9 +411,9 @@ public class EditText implements
 		}
 	      }
 	      else if( fileFmt.equals( FileInfo.KCB )
-		       || fileFmt.equals( FileInfo.KCTAP_BASIC )
-		       || fileFmt.equals( FileInfo.KCBASIC_HEAD )
-		       || fileFmt.equals( FileInfo.KCBASIC_PURE ) )
+		       || fileFmt.equals( FileInfo.KCTAP_BASIC_PRG )
+		       || fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG )
+		       || fileFmt.equals( FileInfo.KCBASIC_PRG ) )
 	      {
 		LoadData loadData = FileInfo.createLoadData(
 							fileBytes,
@@ -987,7 +988,8 @@ public class EditText implements
 
 
 	/* --- CaretListener --- */
- 
+
+  @Override 
   public void caretUpdate( CaretEvent e )
   {
     this.editFrm.caretPositionChanged();
@@ -996,6 +998,7 @@ public class EditText implements
 
 	/* --- DocumentListener --- */
  
+  @Override 
   public void changedUpdate( DocumentEvent e )
   {
     setDataChanged();
@@ -1003,6 +1006,7 @@ public class EditText implements
   }
  
  
+  @Override 
   public void insertUpdate( DocumentEvent e )
   {
     setDataChanged();
@@ -1010,6 +1014,7 @@ public class EditText implements
   }
  
  
+  @Override 
   public void removeUpdate( DocumentEvent e )
   {
     setDataChanged();
@@ -1019,6 +1024,7 @@ public class EditText implements
 
 	/* --- UndoableEditListener --- */
  
+  @Override 
   public void undoableEditHappened( UndoableEditEvent e )
   {
     this.undoMngr.undoableEditHappened( e );
@@ -1187,7 +1193,7 @@ public class EditText implements
     final EditText editText   = this;
     editText.dataChanged      = false;
     editText.saved            = saved;
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 	new Runnable() {
 	  public void run()
 	  {

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
 import jkcemu.Main;
-import jkcemu.system.*;
+import jkcemu.emusys.*;
 import z80emu.Z80Memory;
 
 
@@ -36,7 +36,8 @@ public class SaveDlg extends BasicDlg implements
 
   private ScreenFrm       screenFrm;
   private Z80Memory       memory;
-  private boolean         kcBasic;
+  private boolean         kcbasic;
+  private boolean         rbasic;
   private JTextField      autoFillTarget;
   private JTextField      fldMemBegAddr;
   private JTextField      fldMemEndAddr;
@@ -49,11 +50,13 @@ public class SaveDlg extends BasicDlg implements
   private JLabel          labelHeadFileType;
   private JLabel          labelHeadFileDesc;
   private JCheckBox       btnKeepHeader;
-  private JRadioButton    btnFileFmtKC;
+  private JRadioButton    btnFileFmtBIN;
+  private JRadioButton    btnFileFmtKCC;
   private JRadioButton    btnFileFmtTAP;
+  private JRadioButton    btnFileFmtSSS;
+  private JRadioButton    btnFileFmtRBAS;
   private JRadioButton    btnFileFmtHS;
   private JRadioButton    btnFileFmtHEX;
-  private JRadioButton    btnFileFmtBIN;
   private JRadioButton    btnBegBlkNum0;
   private JRadioButton    btnBegBlkNum1;
   private JButton         btnSave;
@@ -71,16 +74,15 @@ public class SaveDlg extends BasicDlg implements
 		int       begAddr,
 		int       endAddr,
 		int       hsFileType,
-		boolean   kcBasic,
+		boolean   kcbasic,
+		boolean   rbasic,
 		String    title )
   {
-    super(
-	screenFrm,
-	title != null ? title : "Adressbereich/MC-Programm speichern" );
-
+    super( screenFrm, title );
     this.screenFrm      = screenFrm;
     this.memory         = screenFrm.getEmuThread();
-    this.kcBasic        = kcBasic;
+    this.kcbasic        = kcbasic;
+    this.rbasic         = rbasic;
     this.autoFillTarget = null;
 
 
@@ -147,7 +149,6 @@ public class SaveDlg extends BasicDlg implements
     this.docMemEndAddr.addDocumentListener( this );
     if( (begAddr >= 0) && (endAddr >= 0) ) {
       this.fldMemEndAddr.setText( String.format( "%04X", endAddr ) );
-      this.fldMemEndAddr.setEditable( false );
     }
     gbcMem.fill    = GridBagConstraints.HORIZONTAL;
     gbcMem.weightx = 1.0;
@@ -174,22 +175,20 @@ public class SaveDlg extends BasicDlg implements
     ButtonGroup grpFileFmt = new ButtonGroup();
 
     this.btnFileFmtBIN = new JRadioButton(
-			"BIN-Datei (Speicherabbild ohne Kopfdaten)",
-			true );
+			"Speicherabbilddatei ohne Kopfdaten (*.bin)",
+			false );
     this.btnFileFmtBIN.addActionListener( this );
     grpFileFmt.add( this.btnFileFmtBIN );
     panelFileFmt.add( this.btnFileFmtBIN, gbcFileFmt );
 
-    this.btnFileFmtKC = new JRadioButton(
-			kcBasic ? "KC-BASIC-Programmdatei" : "KCC-Datei",
-			false );
-    this.btnFileFmtKC.addActionListener( this );
-    grpFileFmt.add( this.btnFileFmtKC );
+    this.btnFileFmtKCC = new JRadioButton( "KC-Systemdatei (*.kcc)", false );
+    this.btnFileFmtKCC.addActionListener( this );
+    grpFileFmt.add( this.btnFileFmtKCC );
     gbcFileFmt.insets.top = 0;
     gbcFileFmt.gridy++;
-    panelFileFmt.add( this.btnFileFmtKC, gbcFileFmt );
+    panelFileFmt.add( this.btnFileFmtKCC, gbcFileFmt );
 
-    this.btnFileFmtTAP = new JRadioButton( "KC-TAP-Datei", false );
+    this.btnFileFmtTAP = new JRadioButton( "KC-TAP-Datei (*.tap)", false );
     this.btnFileFmtTAP.addActionListener( this );
     grpFileFmt.add( this.btnFileFmtTAP );
     gbcFileFmt.gridy++;
@@ -206,7 +205,7 @@ public class SaveDlg extends BasicDlg implements
     panelFileFmt.add( this.btnBegBlkNum0, gbcFileFmt );
 
     this.btnBegBlkNum1 = new JRadioButton(
-		"Erster Block hat Nr. 1 (KC85/2-4, KC-BASIC)",
+		"Erster Block hat Nr. 1 (HC900, KC85/2-5, KC-BASIC)",
 		true );
     grpBegBlkNum.add( this.btnBegBlkNum1 );
     gbcFileFmt.gridy++;
@@ -214,13 +213,31 @@ public class SaveDlg extends BasicDlg implements
 
     gbcFileFmt.insets.left = 5;
 
-    this.btnFileFmtHS = new JRadioButton( "Headersave-Datei", false );
+    this.btnFileFmtSSS = new JRadioButton(
+			"KC-BASIC-Programmdatei (*.sss)",
+			false );
+    this.btnFileFmtSSS.setEnabled( kcbasic );
+    this.btnFileFmtSSS.addActionListener( this );
+    grpFileFmt.add( this.btnFileFmtSSS );
+    gbcFileFmt.gridy++;
+    panelFileFmt.add( this.btnFileFmtSSS, gbcFileFmt );
+
+    this.btnFileFmtRBAS = new JRadioButton(
+			"RBASIC-Programmdatei (*.bas)",
+			false );
+    this.btnFileFmtRBAS.setEnabled( rbasic );
+    this.btnFileFmtRBAS.addActionListener( this );
+    grpFileFmt.add( this.btnFileFmtRBAS );
+    gbcFileFmt.gridy++;
+    panelFileFmt.add( this.btnFileFmtRBAS, gbcFileFmt );
+
+    this.btnFileFmtHS = new JRadioButton( "Headersave-Datei (*.z80)", false );
     this.btnFileFmtHS.addActionListener( this );
     grpFileFmt.add( this.btnFileFmtHS );
     gbcFileFmt.gridy++;
     panelFileFmt.add( this.btnFileFmtHS, gbcFileFmt );
 
-    this.btnFileFmtHEX = new JRadioButton( "Intel-HEX-Datei", false );
+    this.btnFileFmtHEX = new JRadioButton( "Intel-HEX-Datei (*.hex)", false );
     this.btnFileFmtHEX.addActionListener( this );
     grpFileFmt.add( this.btnFileFmtHEX );
     gbcFileFmt.insets.bottom = 5;
@@ -391,21 +408,35 @@ public class SaveDlg extends BasicDlg implements
 
 
     // Vorbelegungen
-    EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
-    if( this.kcBasic
-	|| (emuSys instanceof KC85)
-	|| (emuSys instanceof Z9001) )
-    {
-      this.btnFileFmtKC.setSelected( true );
+    boolean kc85   = false;
+    boolean z1013  = false;
+    boolean z9001  = false;
+    EmuSys  emuSys = this.screenFrm.getEmuThread().getEmuSys();
+    if( emuSys != null ) {
+      kc85  = (emuSys instanceof KC85);
+      z1013 = (emuSys instanceof Z1013);
+      z9001 = (emuSys instanceof Z9001);
     }
-    else if( emuSys instanceof Z1013 ) {
+    if( z1013 ) {
       this.btnFileFmtHS.setSelected( true );
       this.btnKeepHeader.setSelected(
 		EmuUtil.parseBoolean(
 			Main.getProperty( "jkcemu.loadsave.header.keep" ),
 			false ) );
+    } else {
+      if( kcbasic ) {
+	this.btnFileFmtSSS.setSelected( true );
+      } else if( rbasic ) {
+	this.btnFileFmtRBAS.setSelected( true );
+      } else if( kc85 || z9001 ) {
+	this.btnFileFmtKCC.setSelected( true );
+      } else if( (hsFileType > '\u0020') && (hsFileType <= '\u007E') ) {
+	this.btnFileFmtHS.setSelected( true );
+      } else {
+	this.btnFileFmtBIN.setSelected( true );
+      }
     }
-    if( this.kcBasic || (emuSys instanceof KC85) ) {
+    if( kcbasic || kc85 ) {
       this.btnBegBlkNum1.setSelected( true );
     } else {
       this.btnBegBlkNum0.setSelected( true );
@@ -431,18 +462,21 @@ public class SaveDlg extends BasicDlg implements
 
 	/* --- Methoden fuer DocumentListener --- */
 
+  @Override
   public void changedUpdate( DocumentEvent e )
   {
     docContentChanged( e );
   }
 
 
+  @Override
   public void insertUpdate( DocumentEvent e )
   {
     docContentChanged( e );
   }
 
 
+  @Override
   public void removeUpdate( DocumentEvent e )
   {
     docContentChanged( e );
@@ -456,6 +490,7 @@ public class SaveDlg extends BasicDlg implements
    * wird geprueft, ob das Feld "Anfangsadresse Kopfdaten" leer ist.
    * Wenn ja, wird das automatische Fuellen des zweiten Feldes aktiviert.
    */
+  @Override
   public void focusGained( FocusEvent e )
   {
     if( !e.isTemporary() ) {
@@ -468,6 +503,7 @@ public class SaveDlg extends BasicDlg implements
   }
 
 
+  @Override
   public void focusLost( FocusEvent e )
   {
     if( !e.isTemporary() )
@@ -477,20 +513,24 @@ public class SaveDlg extends BasicDlg implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     this.fldMemBegAddr.requestFocus();
   }
 
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
     if( e != null ) {
       Object src = e.getSource();
       if( (src == this.btnFileFmtBIN)
-	  || (src == this.btnFileFmtKC)
+	  || (src == this.btnFileFmtKCC)
 	  || (src == this.btnFileFmtTAP)
+	  || (src == this.btnFileFmtSSS)
+	  || (src == this.btnFileFmtRBAS)
 	  || (src == this.btnFileFmtHS)
 	  || (src == this.btnFileFmtHEX) )
       {
@@ -529,14 +569,16 @@ public class SaveDlg extends BasicDlg implements
     try {
       FileSaver.checkFileDesc(
 			fileFmt,
-			this.kcBasic,
+			this.kcbasic,
 			this.fldHeadFileDesc.getText() );
 
-      boolean isBIN = this.btnFileFmtBIN.isSelected();
-      boolean isKC  = this.btnFileFmtKC.isSelected();
-      boolean isTAP = this.btnFileFmtTAP.isSelected();
-      boolean isHS  = this.btnFileFmtHS.isSelected();
-      boolean isHEX = this.btnFileFmtHEX.isSelected();
+      boolean isBIN  = this.btnFileFmtBIN.isSelected();
+      boolean isKCC  = this.btnFileFmtKCC.isSelected();
+      boolean isTAP  = this.btnFileFmtTAP.isSelected();
+      boolean isSSS  = this.btnFileFmtTAP.isSelected();
+      boolean isRBAS = this.btnFileFmtRBAS.isSelected();
+      boolean isHS   = this.btnFileFmtHS.isSelected();
+      boolean isHEX  = this.btnFileFmtHEX.isSelected();
 
       String                             title      = "Datei speichern";
       javax.swing.filechooser.FileFilter fileFilter = null;
@@ -544,18 +586,21 @@ public class SaveDlg extends BasicDlg implements
 	title      = "Bin\u00E4rdatei speichern";
 	fileFilter = EmuUtil.getBinaryFileFilter();
       }
-      else if( isKC ) {
-	if( this.kcBasic ) {
-	  title      = "KC-BASIC-Datei speichern";
-	  fileFilter = EmuUtil.getKCBasicFileFilter();
-	} else {
-	  title      = "KC-System-Datei speichern";
-	  fileFilter = EmuUtil.getKCSystemFileFilter();
-	}
+      else if( isKCC ) {
+	title      = "KC-System-Datei speichern";
+	fileFilter = EmuUtil.getKCSystemFileFilter();
       }
       else if( isTAP ) {
 	title      = "KC-TAP-Datei speichern";
 	fileFilter = EmuUtil.getTapFileFilter();
+      }
+      else if( isSSS ) {
+	title      = "KC-BASIC-Programmdatei speichern";
+	fileFilter = EmuUtil.getKCBasicFileFilter();
+      }
+      else if( isRBAS ) {
+	title      = "RBASIC-Programmdatei speichern";
+	fileFilter = EmuUtil.getRBasicFileFilter();
       }
       else if( isHS ) {
 	title      = "Headersave-Datei speichern";
@@ -577,17 +622,18 @@ public class SaveDlg extends BasicDlg implements
 	  int     headBegAddr   = begAddr;
 	  Integer headStartAddr = null;
 	  int     headFileType  = '\u0020';
-	  if( ((isKC || isTAP) && !this.kcBasic) || isHS || isHEX ) {
+	  if( isKCC || (isTAP && !this.kcbasic) || isHS || isHEX ) {
 	    String headBegAddrText = this.fldHeadBegAddr.getText();
 	    if( headBegAddrText != null ) {
-	      if( headBegAddrText.trim().length() > 0 )
+	      if( !headBegAddrText.trim().isEmpty() ) {
 		headBegAddr = this.docHeadBegAddr.intValue() & 0xFFFF;
+	      }
 	    }
 	  }
-	  if( ((isKC || isTAP) && !this.kcBasic) || isHS ) {
+	  if( isKCC || (isTAP && !this.kcbasic) || isHS ) {
 	    String s = this.fldHeadStartAddr.getText();
 	    if( s != null ) {
-	      if( s.trim().length() > 0 ) {
+	      if( !s.trim().isEmpty() ) {
 		headStartAddr = new Integer(
 			this.docHeadStartAddr.intValue() & 0xFFFF );
 	      }
@@ -598,8 +644,9 @@ public class SaveDlg extends BasicDlg implements
 	    if( o != null ) {
 	      String s = o.toString();
 	      if( s != null ) {
-		if( s.length() > 0 )
+		if( s.length() > 0 ) {
 		  headFileType = s.charAt( 0 );
+		}
 	      }
 	    }
 	  }
@@ -609,7 +656,8 @@ public class SaveDlg extends BasicDlg implements
 			this.memory,
 			begAddr,
 			endAddr,
-			this.kcBasic,
+			this.kcbasic,
+			this.rbasic,
 			headBegAddr,
 			headStartAddr,
 			headFileType,
@@ -656,13 +704,7 @@ public class SaveDlg extends BasicDlg implements
   private String getSelectedFileFmt()
   {
     String rv = FileSaver.BIN;
-    if( this.btnFileFmtHEX.isSelected() ) {
-      rv = FileSaver.INTELHEX;
-    }
-    else if( this.btnFileFmtHS.isSelected() ) {
-      rv = FileSaver.HEADERSAVE;
-    }
-    else if( this.btnFileFmtKC.isSelected() ) {
+    if( this.btnFileFmtKCC.isSelected() ) {
       rv = FileSaver.KCC;
     }
     else if( this.btnFileFmtTAP.isSelected() ) {
@@ -670,26 +712,40 @@ public class SaveDlg extends BasicDlg implements
 				FileSaver.KCTAP_0
 				: FileSaver.KCTAP_1;
     }
+    else if( this.btnFileFmtSSS.isSelected() ) {
+      rv = FileSaver.KCBASIC;
+    }
+    else if( this.btnFileFmtRBAS.isSelected() ) {
+      rv = FileSaver.RBASIC;
+    }
+    else if( this.btnFileFmtHS.isSelected() ) {
+      rv = FileSaver.HEADERSAVE;
+    }
+    else if( this.btnFileFmtHEX.isSelected() ) {
+      rv = FileSaver.INTELHEX;
+    }
     return rv;
   }
 
 
   private void updHeadFields()
   {
-    boolean stateKC  = this.btnFileFmtKC.isSelected();
-    boolean stateTAP = this.btnFileFmtTAP.isSelected();
-    boolean stateHS  = this.btnFileFmtHS.isSelected();
-    boolean stateHEX = this.btnFileFmtHEX.isSelected();
+    boolean stateKCC  = this.btnFileFmtKCC.isSelected();
+    boolean stateTAP  = this.btnFileFmtTAP.isSelected();
+    boolean stateSSS  = this.btnFileFmtSSS.isSelected();
+    boolean stateRBAS = this.btnFileFmtRBAS.isSelected();
+    boolean stateHS   = this.btnFileFmtHS.isSelected();
+    boolean stateHEX  = this.btnFileFmtHEX.isSelected();
 
-    this.btnBegBlkNum0.setEnabled( stateTAP );
-    this.btnBegBlkNum1.setEnabled( stateTAP );
+    this.btnBegBlkNum0.setEnabled( stateTAP && !this.kcbasic );
+    this.btnBegBlkNum1.setEnabled( stateTAP && !this.kcbasic );
 
-    boolean stateBegAddr = (((stateKC || stateTAP) && !this.kcBasic)
+    boolean stateBegAddr = (stateKCC || (stateTAP && !this.kcbasic)
 				|| stateHS || stateHEX);
     this.labelHeadBegAddr.setEnabled( stateBegAddr );
     this.fldHeadBegAddr.setEnabled( stateBegAddr );
 
-    boolean stateEndAddr = (((stateKC || stateTAP) && !this.kcBasic)
+    boolean stateEndAddr = (stateKCC || (stateTAP && !this.kcbasic)
 				|| stateHS);
     this.labelHeadStartAddr.setEnabled( stateEndAddr );
     this.fldHeadStartAddr.setEnabled( stateEndAddr );
@@ -697,8 +753,7 @@ public class SaveDlg extends BasicDlg implements
     this.labelHeadFileType.setEnabled( stateHS );
     this.comboHeadFileType.setEnabled( stateHS );
 
-    boolean stateFileDesc = ((stateKC && !this.kcBasic)
-				|| stateTAP || stateHS);
+    boolean stateFileDesc = (stateKCC || stateTAP || stateHS);
     this.labelHeadFileDesc.setEnabled( stateFileDesc );
     this.fldHeadFileDesc.setEnabled( stateFileDesc );
     if( stateFileDesc ) {

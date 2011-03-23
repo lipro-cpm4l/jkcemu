@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -59,21 +59,24 @@ public class IntegerDocument extends PlainDocument
   public int intValue() throws NumberFormatException
   {
     String s = this.textComp.getText();
-    if( s == null )
+    if( s == null ) {
       s = "";
+    }
     return parseInt( s );
   }
 
 
   public Integer getInteger() throws NumberFormatException
   {
-    String s = this.textComp.getText();
+    Integer rv = null;
+    String  s  = this.textComp.getText();
     if( s != null ) {
       s = s.trim();
-      if( s.length() > 0 )
-        return new Integer( parseInt( s ) );
+      if( !s.isEmpty() ) {
+        rv = new Integer( parseInt( s ) );
+      }
     }
-    return null;
+    return rv;
   }
 
 
@@ -106,7 +109,6 @@ public class IntegerDocument extends PlainDocument
       throw new NumberFormatException(
 	"Ung\u00FCltiges Format!\nBitte geben Sie eine ganze Zahl ein." );
     }
-
     if( this.minValue != null ) {
       if( value < this.minValue.intValue() ) {
 	this.textComp.requestFocus();
@@ -114,7 +116,6 @@ public class IntegerDocument extends PlainDocument
 		"Wert zu klein, min. " + this.minValue.toString() + "." );
       }
     }
-
     if( this.maxValue != null ) {
       if( value > this.maxValue.intValue() ) {
 	this.textComp.requestFocus();
@@ -122,8 +123,6 @@ public class IntegerDocument extends PlainDocument
 		"Wert zu gro\u00DF, max. " + this.maxValue.toString() + "." );
       }
     }
-
-    setValue( value );
     return value;
   }
 }

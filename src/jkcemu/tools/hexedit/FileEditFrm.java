@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -41,7 +41,9 @@ public class FileEditFrm
   private JMenuItem mnuPrintOptions;
   private JMenuItem mnuPrint;
   private JMenuItem mnuClose;
+  private JMenuItem mnuTextCopy;
   private JMenuItem mnuBytesCopy;
+  private JMenuItem mnuBytesInvert;
   private JMenuItem mnuBytesSave;
   private JMenuItem mnuBytesAppend;
   private JMenuItem mnuBytesInsert;
@@ -52,6 +54,7 @@ public class FileEditFrm
   private JMenuItem mnuSavePos;
   private JMenuItem mnuGotoSavedPos;
   private JMenuItem mnuSelectToSavedPos;
+  private JMenuItem mnuChecksum;
   private JMenuItem mnuFind;
   private JMenuItem mnuFindNext;
   private JMenuItem mnuHelpContent;
@@ -121,13 +124,13 @@ public class FileEditFrm
     mnuEdit.setMnemonic( KeyEvent.VK_B );
     mnuBar.add( mnuEdit );
 
-    this.mnuBytesCopy = createJMenuItem( "Markierte Bytes kopieren" );
+    this.mnuBytesCopy = createJMenuItem( "Ausgew\u00E4hlte Bytes kopieren" );
     this.mnuBytesCopy.setEnabled( false );
     mnuEdit.add( this.mnuBytesCopy );
 
-    this.mnuBytesSave = createJMenuItem( "Markierte Bytes speichern..." );
-    this.mnuBytesSave.setEnabled( false );
-    mnuEdit.add( this.mnuBytesSave );
+    this.mnuTextCopy = createJMenuItem( "Ausgew\u00E4hlten Text kopieren" );
+    this.mnuTextCopy.setEnabled( false );
+    mnuEdit.add( this.mnuTextCopy );
     mnuEdit.addSeparator();
 
     this.mnuBytesInsert = createJMenuItem(
@@ -148,8 +151,18 @@ public class FileEditFrm
     mnuEdit.add( this.mnuBytesAppend );
     mnuEdit.addSeparator();
 
+    this.mnuBytesSave = createJMenuItem(
+				"Ausgew\u00E4hlte Bytes speichern..." );
+    this.mnuBytesSave.setEnabled( false );
+    mnuEdit.add( this.mnuBytesSave );
+
+    this.mnuBytesInvert = createJMenuItem(
+				"Ausgew\u00E4hlte Bytes invertieren" );
+    this.mnuBytesInvert.setEnabled( false );
+    mnuEdit.add( this.mnuBytesInvert );
+
     this.mnuBytesRemove = createJMenuItem(
-		"Bytes entfernen",
+		"Ausgew\u00E4hlte Bytes entfernen",
 		KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
     this.mnuBytesRemove.setEnabled( false );
     mnuEdit.add( this.mnuBytesRemove );
@@ -173,9 +186,14 @@ public class FileEditFrm
     mnuEdit.add( this.mnuGotoSavedPos );
 
     this.mnuSelectToSavedPos = createJMenuItem(
-				"Bis zur gemerkten Position markieren" );
+			"Bis zur gemerkten Position ausw\u00E4hlen" );
     this.mnuSelectToSavedPos.setEnabled( false );
     mnuEdit.add( this.mnuSelectToSavedPos );
+    mnuEdit.addSeparator();
+
+    this.mnuChecksum = createJMenuItem( "Pr\u00FCfsumme/Hash-Wert..." );
+    this.mnuChecksum.setEnabled( false );
+    mnuEdit.add( this.mnuChecksum );
     mnuEdit.addSeparator();
 
     this.mnuFind = createJMenuItem(
@@ -186,9 +204,7 @@ public class FileEditFrm
 
     this.mnuFindNext = createJMenuItem(
 		"Weitersuchen",
-		KeyStroke.getKeyStroke(
-			KeyEvent.VK_F,
-			Event.CTRL_MASK | Event.SHIFT_MASK ) );
+		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
     this.mnuFindNext.setEnabled( false );
     mnuEdit.add( this.mnuFindNext );
 
@@ -279,14 +295,16 @@ public class FileEditFrm
   public void openFile( File file )
   {
     if( file != null ) {
-      if( confirmDataSaved() )
+      if( confirmDataSaved() ) {
 	openFileInternal( file );
+      }
     }
   }
 
 
 	/* --- DropTargetListener --- */
 
+  @Override
   public void dragEnter( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -294,18 +312,21 @@ public class FileEditFrm
   }
 
 
+  @Override
   public void dragExit( DropTargetEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void dragOver( DropTargetDragEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void drop( DropTargetDropEvent e )
   {
     File file = EmuUtil.fileDrop( this, e );
@@ -314,6 +335,7 @@ public class FileEditFrm
   }
 
 
+  @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -323,6 +345,7 @@ public class FileEditFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
@@ -357,6 +380,9 @@ public class FileEditFrm
       } else if( src == this.mnuBytesCopy ) {
 	rv = true;
 	doBytesCopy();
+      } else if( src == this.mnuBytesInvert ) {
+	rv = true;
+	doBytesInvert();
       } else if( src == this.mnuBytesSave ) {
 	rv = true;
 	doBytesSave();
@@ -378,12 +404,18 @@ public class FileEditFrm
       } else if( src == this.mnuSavePos ) {
 	rv = true;
 	doSavePos();
+      } else if( src == this.mnuTextCopy ) {
+	rv = true;
+	this.hexCharFld.copySelectedText();
       } else if( src == this.mnuGotoSavedPos ) {
 	rv = true;
 	doGotoSavedPos( false );
       } else if( src == this.mnuSelectToSavedPos ) {
 	rv = true;
 	doGotoSavedPos( true );
+      } else if( src == this.mnuChecksum ) {
+	rv = true;
+	doChecksum();
       } else if( (src == this.btnFind) || (src == this.mnuFind) ) {
 	rv = true;
 	doFind();
@@ -401,6 +433,7 @@ public class FileEditFrm
   }
 
 
+  @Override
   public boolean doClose()
   {
     boolean rv = confirmDataSaved();
@@ -415,6 +448,7 @@ public class FileEditFrm
   }
 
 
+  @Override
   public byte getDataByte( int idx )
   {
     byte rv = (byte) 0;
@@ -427,12 +461,14 @@ public class FileEditFrm
   }
 
 
+  @Override
   public int getDataLength()
   {
     return this.fileLen;
   }
 
 
+  @Override
   protected void setContentActionsEnabled( boolean state )
   {
     this.mnuSaveAs.setEnabled( state );
@@ -442,20 +478,25 @@ public class FileEditFrm
   }
 
 
+  @Override
   protected void setFindNextActionsEnabled( boolean state )
   {
     this.mnuFindNext.setEnabled( state );
   }
 
 
+  @Override
   protected void setSelectedByteActionsEnabled( boolean state )
   {
+    this.mnuTextCopy.setEnabled( state );
     this.mnuBytesCopy.setEnabled( state );
+    this.mnuBytesInvert.setEnabled( state );
     this.mnuBytesSave.setEnabled( state );
     this.mnuBytesInsert.setEnabled( state );
     this.mnuBytesOverwrite.setEnabled( state );
     this.mnuBytesRemove.setEnabled( state );
     this.mnuFileInsert.setEnabled( state );
+    this.mnuChecksum.setEnabled( state );
     this.mnuSavePos.setEnabled( state );
     this.mnuSelectToSavedPos.setEnabled( state && (this.savedPos >= 0) );
   }
@@ -523,6 +564,53 @@ public class FileEditFrm
   }
 
 
+  private void doBytesInvert()
+  {
+    int dataLen  = getDataLength();
+    int caretPos = this.hexCharFld.getCaretPosition();
+    int markPos  = this.hexCharFld.getMarkPosition();
+    int m1       = -1;
+    int m2       = -1;
+    if( (caretPos >= 0) && (markPos >= 0) ) {
+      m1 = Math.min( caretPos, markPos );
+      m2 = Math.max( caretPos, markPos );
+    } else {
+      m1 = caretPos;
+      m2 = caretPos;
+    }
+    if( m2 >= dataLen ) {
+      m2 = dataLen - 1;
+    }
+    if( m1 >= 0 ) {
+      String msg = null;
+      if( m2 > m1 ) {
+	msg = String.format(
+		"M\u00F6chten Sie die %d ausgew\u00E4hlten Bytes"
+			+ " invertieren?",
+		m2 - m1 + 1);
+      }
+      else if( m2 == m1 ) {
+	msg = String.format(
+		"M\u00F6chten das ausgew\u00E4hlte Byte mit dem"
+			+ " hexadezimalen Wert %02X invertieren?",
+		this.fileBytes[ m1 ] );
+      }
+      if( msg != null ) {
+	if( BasicDlg.showYesNoDlg( this, msg ) ) {
+	  int p = m1;
+	  while( p <= m2 ) {
+	    this.fileBytes[ p ] = (byte) ~this.fileBytes[ p ];
+	    p++;
+	  }
+	  setDataChanged( true );
+	  updView();
+	  setSelection( m1, m2 );
+	}
+      }
+    }
+  }
+
+
   private void doBytesOverwrite()
   {
     int caretPos = this.hexCharFld.getCaretPosition();
@@ -581,13 +669,13 @@ public class FileEditFrm
       String msg = null;
       if( m2 > m1 ) {
 	msg = String.format(
-		"M\u00F6chten Sie die %d markierten Bytes entfernen?",
+		"M\u00F6chten Sie die %d ausgew\u00E4hlten Bytes entfernen?",
 		m2 - m1 + 1);
       }
       else if( m2 == m1 ) {
 	msg = String.format(
-		"M\u00F6chten das markierte Byte mit dem hexadezimalen"
-			+ " Wert %02X entfernen?",
+		"M\u00F6chten das ausgew\u00E4hlte Byte mit dem"
+			+ " hexadezimalen Wert %02X entfernen?",
 		this.fileBytes[ m1 ] );
       }
       if( msg != null ) {
@@ -899,6 +987,7 @@ public class FileEditFrm
     }
     this.file = null;
     setDataChanged( false );
+    updTitle();
     updView();
     setCaretPosition( -1, false );
     this.hexCharFld.setYOffset( 0 );

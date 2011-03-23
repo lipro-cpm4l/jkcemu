@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -51,6 +51,7 @@ public class FileData implements Closeable
 
 	/* --- Closeable --- */
 
+  @Override
   public void close() throws IOException
   {
     if( this.in != null ) {
@@ -62,6 +63,7 @@ public class FileData implements Closeable
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public String toString()
   {
     return this.file.getPath();

@@ -1,167 +1,167 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des BCS3</h1>
+ <h1>Hinweise zur Emulation des BCS3</h1>
 
-  <h2>1. Emulierte Hardware</h2>
-    <ul>
-      <li>Je nach Einstellung 2, 4 oder 5&nbsp;KByte ROM</li>
-      <li>1&nbsp;KByte RAM</li>
-      <li>Kassettenrecorderanschluss</li>
-      <li>
-	Optional eine Speichererweiterung mit 16o&nbsp;KByte RAM<br/>
-	Die Speichererweiterung liegt in einem globalen RAM-Bereich und
-	wird f&uuml;r alle emulierten Systeme gemeinsam genutzt.
-      </li>
-    </ul>
-  <br/><br/>
+ <h2>1. Emulierte Hardware</h2>
+  <ul>
+   <li>Je nach Einstellung 2, 4 oder 5&nbsp;KByte ROM</li>
+   <li>1&nbsp;KByte RAM</li>
+   <li>Kassettenrecorderanschluss</li>
+   <li>Optional eine Speichererweiterung mit 16&nbsp;KByte RAM</li>
+  </ul>
+ <br/>
 
-  <h3>1.1. Bildschirmausgabe</h3>
-    Beim BCS3 wird das Bildsignal ma&szlig;geblich durch eine
-    zyklich aufgerufene Software-Routine erzeugt.
-    Diese Routine liest die auszugebenden Zeichen aus dem Arbeitsspeicher
-    und steuert die Hardware so an,
-    dass daraus das gew&uuml;nschte Bildsignal entsteht.
-    F&uuml;r die in JKCEMU enthaltenen Betriebssystemversionen ist bekannt,
-    wo im Speicher die auszugebenden Zeichen stehen.
-    Standardm&auml;&szlig;ig liest JKCEMU diese Zeichen selbst aus
-    und stellt sie entsprechend dar.
-  <br/><br/>
+ <h3>1.1. Bildschirmausgabe</h3>
+  Beim BCS3 wird das Bildsignal ma&szlig;geblich durch eine
+  zyklisch aufgerufene Software-Routine erzeugt.
+  Diese Routine liest die auszugebenden Zeichen aus dem Arbeitsspeicher
+  und steuert die Hardware so an,
+  dass daraus das gew&uuml;nschte Bildsignal entsteht.
+  JKCEMU visualisiert jedoch nicht das so entstandene Bildsignal,
+  sondern liest selbst die anzuzeigenden Zeichen aus dem Speicher aus
+  und stellt sie entsprechend dar.
+  F&uuml;r die in JKCEMU enthaltenen Betriebssystemversionen ist bekannt,
+  wo im Speicher die entsprechenden Zeichen stehen.
+  Wenn Sie jedoch durch Einbinden einer externen ROM-Datei
+  im Emulator eine andere Betriebssystemversion benutzen,
+  muss diese den gleichen Adressbereich f&uuml;r den Bildspeicher benutzen.
+  Anderenfalls werden die falschen Zeichen angezeigt.
+ <br/><br/>
 
-  <h3>1.2. Kassettenrecorderanschluss</h3>
-    Der Kassettenrecorderanschluss wird ausgangsseitig vom gleichen
-    CTC-Kanal bedient, der auch die Zeilensynchronimpulse f&uuml;r
-    die Bildschirmausgabe liefert.
-    Aus diesem Grund h&ouml;ren Sie ein Pfeifen, wenn Sie eine
-    <a href="audio.htm">Audio-Funktion</a>
-    zur Ausgabe von T&ouml;nen aktivieren.
-    Das Pfeifen sind die mit halber Frequenz ausgegebenen
-    Zeilensynchronimpulse.
-    Erst beim BASIC-Befehl <em>SAVE</em> werden die f&uuml;r die
-    Datenspeicherung bekannten T&ouml;ne erzeugt.
-    Sobald das BASIC-Programm auf dem Kassettenrecorderanschluss
-    ausgegeben wurde, wird die Bildausgabe wieder aktiv,
-    und Sie h&ouml;ren auch wieder das Pfeifen.
-  <br/><br/>
-    <b>Achtung!</b> BASIC-SE 2.4 enth&auml;lt keine Unterst&uuml;tzung
-    f&uuml;r das Speichern und Laden auf Kassette.
-    Die Befehle <em>LOAD</em> und <em>SAVE</em> springen zur Adresse
-    0800 bzw.0803, d.h., au&szlig;erhalb des ROM-Bereichs.
-    Man kannt dort seine eigenen Routinen zum Laden und Speichern installieren.
-    Da sich dort aber standardm&auml;&szlig;ig kein g&uuml;ltiger Programmcode
-    befindet, f&uuml;hren die Befehle <em>LOAD</em> und <em>SAVE</em>
-    zu einem undefinierten Verhalten.
-  <br/><br/>
-
-
-  <h2>2. Im ROM enthaltene Software</h2>
-    Je nach Einstellung:<br/>
-    <ul>
-      <li>
-	<a href="bcs3/basic_se24.htm">BASIC-SE&nbsp;2.4</a>
-	f&uuml;r 27 sichtbare Zeichen pro Zeile und 2,5&nbsp;MHz Taktfrequenz
-      </li>
-      <li>
-	<a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
-	f&uuml;r 29 sichtbare Zeichen pro Zeile
-	und 2,5&nbsp;MHz Taktfrequenz
-      </li>
-      <li>
-	<a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
-	f&uuml;r 40 sichtbare Zeichen pro Zeile
-	und 3,5&nbsp;MHz Taktfrequenz
-      </li>
-      <li>
-	<a href="bcs3/sp_basic_33.htm">S/P-BASIC&nbsp;V3.3</a>
-	f&uuml;r 29 sichtbare Zeichen pro Zeile
-	und 2,5&nbsp;MHz Taktfrequenz
-      </li>
-      <li>
-	<a href="bcs3/mc_editor.htm">Maschinenkode-Editor</a>
-	(nur in Verbindung mit BASIC-SE&nbsp;3.1
-	f&uuml;r 29 sichtbare Zeichen pro Zeile)
-      </li>
-    </ul>
-  <br/><br/>
-
-  <h3>2.1. Hinweise zu BASIC-SE&nbsp;3.1 und S/P-BASIC&nbsp;V3.3</h3>
-    <ul>
-      <li>
-	Beim Systemstart pr&uuml;ft das BASIC,
-	ob der Speicher bereits initialisiert ist
-	und f&uuml;hrt in Abh&auml;ngigkeit davon entweder
-	einen Kalt- oder Warmstart aus.
-	Bei einem Warmstart werden die Systemzellen im Arbeitsspeicher
-	nicht neu initialisiert.
-	Demzufolge f&uuml;hrt ein RESET gew&ouml;hnlich zu einem Warmstart,
-	da der Speicher bereits initialisiert ist.
-	<br/><br/>
-      </li>
-      <li>
-	Bei einem Kaltstart m&uuml;ssen Sie als erstes
-	die Anzahl der sichtbaren Zeilen
-	(BASIC-SE&nbsp;3.1: 4 bis 29, S/P-BASIC&nbsp;3.3: 4 bis 28) eingeben
-	und <em>ENTER</em> bet&auml;tigen,
-	bevor Sie in die BASIC-Eingabeaufforderung gelangen.
-	<br/><br/>
-      </li>
-      <li>
-	Der Speicherplatz f&uuml;r das BASIC-Programm beginnt hinter
-	dem Bildspeicher, d.h., je mehr sichtbare Zeilen es gibt,
-	desto weiter hinten beginnt das BASIC-Programm.
-	<br/><br/>
-	<b>Achtung!</b> Wenn Sie z.B. bei 8 sichtbaren Zeilen
-	ein BASIC-Programm mit den Emulatorfunktionen speichern
-	und es bei 12 Zeilen wieder laden,
-	m&uuml;ssen Sie das BASIC-Programm auf eine andere Adresse laden,
-	sonst &uuml;berschreiben Sie den Bildspeicher!
-	Und das d&uuml;rfte den BCS3 zum Absturz bringen!
-	Speichern und Laden Sie deshalb die BASIC-Programme so,
-	wie es weiter unter beschrieben ist.
-	<br/><br/>
-      </li>
-      <li>
-	S/P-BASIC&nbsp;V3.3 ist nicht abw&auml;rtskompatibel
-	zu BASIC-SE&nbsp; 3.1,
-	und dieses ist auch nicht abw&auml;rtskompatibel zur Version&nbsp;2.4,
-	d.h., BASIC-Programme laufen nur mit der Version,
-	mit der sie auch eingetippt wurden.
-	Die Token und damit das Bin&auml;rformat ist bei allen drei
-	Versionen unterschiedlich.
-      </li>
-    </ul>
-  <br/><br/>
+ <h3>1.2. Kassettenrecorderanschluss</h3>
+  Der Kassettenrecorderanschluss wird ausgangsseitig vom gleichen
+  CTC-Kanal bedient, der auch die Zeilensynchronimpulse f&uuml;r
+  die Bildschirmausgabe liefert.
+  Aus diesem Grund h&ouml;ren Sie ein Pfeifen, wenn Sie eine
+  <a href="audio.htm">Audio-Funktion</a>
+  zur Ausgabe von T&ouml;nen aktivieren.
+  Das Pfeifen sind die mit halber Frequenz ausgegebenen
+  Zeilensynchronimpulse.
+  Erst beim BASIC-Befehl <em>SAVE</em> werden die f&uuml;r die
+  Datenspeicherung bekannten T&ouml;ne erzeugt.
+  Sobald das BASIC-Programm auf dem Kassettenrecorderanschluss
+  ausgegeben wurde, wird die Bildausgabe wieder aktiv,
+  und Sie h&ouml;ren auch wieder das Pfeifen.
+ <br/><br/>
+  <b>Achtung!</b> BASIC-SE valign="top"2.4 enth&auml;lt keine
+  Unterst&uuml;tzung f&uuml;r das Speichern und Laden auf Kassette.
+  Die Befehle <em>LOAD</em> und <em>SAVE</em> springen zur Adresse
+  0800 bzw.0803, d.h., au&szlig;erhalb des ROM-Bereichs.
+  Man kannt dort seine eigenen Routinen zum Laden und Speichern installieren.
+  Da sich dort aber standardm&auml;&szlig;ig kein g&uuml;ltiger Programmcode
+  befindet, f&uuml;hren die Befehle <em>LOAD</em> und <em>SAVE</em>
+  zu einem undefinierten Verhalten.
+ <br/><br/>
 
 
-  <h2>3. Sonstiges</h2>
+ <h2>2. Im ROM enthaltene Software</h2>
+  Je nach Einstellung:<br/>
+  <ul>
+   <li>
+    <a href="bcs3/basic_se24.htm">BASIC-SE&nbsp;2.4</a>
+    f&uuml;r 27 sichtbare Zeichen pro Zeile und 2,5&nbsp;MHz Taktfrequenz
+   </li>
+   <li>
+    <a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
+    f&uuml;r 29 sichtbare Zeichen pro Zeile
+    und 2,5&nbsp;MHz Taktfrequenz
+   </li>
+   <li>
+    <a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
+    f&uuml;r 40 sichtbare Zeichen pro Zeile
+    und 3,5&nbsp;MHz Taktfrequenz
+   </li>
+   <li>
+    <a href="bcs3/sp_basic_33.htm">S/P-BASIC&nbsp;V3.3</a>
+    f&uuml;r 29 sichtbare Zeichen pro Zeile
+    und 2,5&nbsp;MHz Taktfrequenz
+   </li>
+   <li>
+    <a href="bcs3/mc_editor.htm">Maschinenkode-Editor</a>
+    (nur in Verbindung mit BASIC-SE&nbsp;3.1
+    f&uuml;r 29 sichtbare Zeichen pro Zeile)
+   </li>
+  </ul>
+ <br/>
 
-  <h3>3.1. Speichern und Laden von BASIC-Programmen</h3>
-    Speichern Sie die BASIC-Programme mit der entsprechenden Funktion
-    des Emulator (Men&uuml; <em>Datei</em> &rarr;
-    <em>BASIC-Programm speichern...</em>).
-    Da das BASIC-Programm abh&auml;ngig von der sichtbaren Zeilenzahl
-    eventuell auf eine andere Adresse wieder eingeladen werden muss,
-    sollte die Ladeadresse nicht in der Datei stehen.
-    Verwenden Sie deshalb am besten
-    <a href="fileformats.htm#bin">Speicherabbilddateien ohne Kopfdaten</a>
-    (BIN-Dateien).
-  <br/><br/>
-    Beim Laden eines BASIC-Programms sollten Sie immer so vorgehen,
-    dass der Dialog mit den Ladeoptionen angezeigt wird
-    (siehe <a href="loadsave.htm#options">Ladeoptionen</a>).
-    JKCEMU ermittelt n&auml;mlich die zu verwendende Ladeadresse
-    und schreibt sie in das entsprechende Feld in den Ladeoptionen.
-    Dazu muss aber der Dialog auch angezeigt werden.
-    Bei Speicherabbilddateien ohne Kopfdaten ist das immer der Fall.
-  <br/><br/>
+ <h3>2.1. Hinweise zu BASIC-SE&nbsp;3.1 und S/P-BASIC&nbsp;V3.3</h3>
+  <ul>
+   <li>
+    Beim Systemstart pr&uuml;ft das BASIC,
+    ob der Speicher bereits initialisiert ist
+    und f&uuml;hrt in Abh&auml;ngigkeit davon entweder
+    einen Kalt- oder Warmstart aus.
+    Bei einem Warmstart werden die Systemzellen im Arbeitsspeicher
+    nicht neu initialisiert.
+    Demzufolge f&uuml;hrt ein RESET gew&ouml;hnlich zu einem Warmstart,
+    da der Speicher bereits initialisiert ist.
+    <br/><br/>
+   </li>
+   <li>
+    Bei einem Kaltstart m&uuml;ssen Sie als erstes
+    die Anzahl der sichtbaren Zeilen
+    (BASIC-SE&nbsp;3.1: 4 bis 29, S/P-BASIC&nbsp;3.3: 4 bis 28) eingeben
+    und <em>ENTER</em> bet&auml;tigen,
+    bevor Sie in die BASIC-Eingabeaufforderung gelangen.
+    <br/><br/>
+   </li>
+   <li>
+    Der Speicherplatz f&uuml;r das BASIC-Programm beginnt hinter
+    dem Bildspeicher, d.h., je mehr sichtbare Zeilen es gibt,
+    desto weiter hinten beginnt das BASIC-Programm.
+    <br/><br/>
+    <b>Achtung!</b> Wenn Sie z.B. bei 8 sichtbaren Zeilen
+    ein BASIC-Programm mit den Emulatorfunktionen speichern
+    und es bei 12&nbsp;Zeilen wieder laden,
+    m&uuml;ssen Sie das BASIC-Programm auf eine andere Adresse laden,
+    sonst &uuml;berschreiben Sie den Bildspeicher!
+    Und das d&uuml;rfte den BCS3 zum Absturz bringen!
+    Speichern und Laden Sie deshalb die BASIC-Programme so,
+    wie es weiter unter beschrieben ist.
+    <br/><br/>
+   </li>
+   <li>
+    S/P-BASIC&nbsp;V3.3 ist nicht abw&auml;rtskompatibel
+    zu BASIC-SE&nbsp;3.1,
+    und dieses ist auch nicht abw&auml;rtskompatibel zur Version&nbsp;2.4,
+    d.h., BASIC-Programme laufen nur mit der Version,
+    mit der sie auch eingetippt wurden.
+    Die Token und damit das Bin&auml;rformat ist bei allen drei
+    Versionen unterschiedlich.
+   </li>
+  </ul>
+ <br/>
 
-  <h3>3.2. JKCEMU-BASIC-Compiler</h3>
-    Der BCS3 ist von seinem Konzept her als reiner BASIC-Rechner ausgelegt.
-    Zur Verwaltung und Benutzung von Maschinencodeprogrammen,
-    d.h. von solchen Programmen, die auch ein BASIC-Compiler erzeugt,
-    bieten die verschiedenen Betriebssystemversionen des BCS3
-    keine Unterst&uuml;tztung.
-    Aus diesem Grund kann auch der JKCEMU BASIC-Compiler keinen
-    Programmcode f&uuml;r den BCS3 erzeugen.
+
+ <h2>3. Sonstiges</h2>
+
+ <h3>3.1. Speichern und Laden von BASIC-Programmen</h3>
+  Speichern Sie die BASIC-Programme mit der entsprechenden Funktion
+  des Emulator (Men&uuml; <em>Datei</em> &rarr;
+  <em>BASIC-Programm speichern...</em>).
+  Da das BASIC-Programm abh&auml;ngig von der sichtbaren Zeilenzahl
+  eventuell auf eine andere Adresse wieder eingeladen werden muss,
+  sollte die Ladeadresse nicht in der Datei stehen.
+  Verwenden Sie deshalb am besten
+  <a href="fileformats.htm#bin">Speicherabbilddateien ohne Kopfdaten</a>
+  (BIN-Dateien).
+ <br/><br/>
+  Beim Laden eines BASIC-Programms sollten Sie immer so vorgehen,
+  dass der Dialog mit den Ladeoptionen angezeigt wird
+  (siehe <a href="loadsave.htm#options">Ladeoptionen</a>).
+  JKCEMU ermittelt n&auml;mlich die zu verwendende Ladeadresse
+  und schreibt sie in das entsprechende Feld in den Ladeoptionen.
+  Dazu muss aber der Dialog auch angezeigt werden.
+  Bei Speicherabbilddateien ohne Kopfdaten ist das immer der Fall.
+ <br/><br/>
+
+ <h3>3.2. JKCEMU-BASIC-Compiler</h3>
+  Der BCS3 ist von seinem Konzept her als reiner BASIC-Rechner ausgelegt.
+  Zur Verwaltung und Benutzung von Maschinencodeprogrammen,
+  d.h. von solchen Programmen, die auch ein BASIC-Compiler erzeugt,
+  bieten die verschiedenen Betriebssystemversionen des BCS3
+  keine Unterst&uuml;tztung.
+  Aus diesem Grund kann auch der JKCEMU BASIC-Compiler keinen
+  Programmcode f&uuml;r den BCS3 erzeugen.
 </body>
 </html>
-

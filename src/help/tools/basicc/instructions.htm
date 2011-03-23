@@ -189,7 +189,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td>BYTE &nbsp; <it>&lt;numerischer Ausdruck&gt;</it></td>
+	<td>BYTE &nbsp; &lt;numerischer Ausdruck&gt;</td>
       </tr>
     </table>
   <br/>
@@ -205,8 +205,8 @@
       <tr valign="top">
 	<td>Syntax:</td>
 	<td>
-	  <tt>CALL</tt>&nbsp;<it>&lt;Adresse&gt;</it><br/>
-	  <tt>CALL</tt>&nbsp;<tt>*</tt>&nbsp;<it>&lt;Hex-Adresse&gt;</it>
+	  <tt>CALL</tt>&nbsp;&lt;Adresse&gt;<br/>
+	  <tt>CALL</tt>&nbsp;<tt>*</tt>&nbsp;&lt;Hex-Adresse&gt;
 	</td>
       </tr>
       <tr><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
@@ -216,6 +216,9 @@
     Die CALL-Anweisung ruft ein Maschinencodeunterprogramm auf,
     welches auf der angegebenen Adresse beginnt und
     mit einem Return-Befehl abgeschlossen sein muss.
+  <br/><br/>
+    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC ist nur
+    die erste Syntax erlaubt.
   <br/><br/>
 
   <h3><a name="cls">CLS</a></h3>
@@ -255,9 +258,9 @@
 	<td>
 	  <tt>DOKE</tt>
 	  &nbsp;
-	  <it>&lt;Adresse&gt;</it>
+	  &lt;Adresse&gt;
 	  <tt>,</tt>
-	  <it>&lt;Wert&gt;</it>
+	  &lt;Wert&gt;
 	</td>
       </tr>
       <tr valign="top">
@@ -293,13 +296,13 @@
 	<td>
 	  <tt>FOR</tt>
 	  &nbsp;
-	  <it>&lt;Variable&gt;</it><tt>=</tt><it>&lt;Startwert&gt;</it>
+	  &lt;Variable&gt;<tt>=</tt>&lt;Startwert&gt;
 	  &nbsp;
 	  <tt>TO</tt>
 	  &nbsp;
-	  <it>&lt;Endwert&gt;</it>
+	  &lt;Endwert&gt;
 	  &nbsp;
-	  [ <tt>STEP</tt> &nbsp; <it>&lt;Schrittweite&gt;</it> ]
+	  [ <tt>STEP</tt> &nbsp; &lt;Schrittweite&gt; ]
 	</td>
       </tr>
       <tr valign="top"><td>Startwert:</td><td>numerischer Ausdruck</td></tr>
@@ -334,7 +337,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td><tt>GOSUB</tt> &nbsp; <it>&lt;Zeilennummer&gt;</it></td>
+	<td><tt>GOSUB</tt> &nbsp; &lt;Zeilennummer&gt;</td>
       </tr>
     </table>
   <br/>
@@ -346,7 +349,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td><tt>GOTO</tt> &nbsp; <it>&lt;Zeilennummer&gt;</it></td>
+	<td><tt>GOTO</tt> &nbsp; &lt;Zeilennummer&gt;</td>
       </tr>
     </table>
   <br/><br/>
@@ -355,7 +358,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td><tt>I$</tt> &nbsp; <it>&lt;Adresse&gt;</it></td>
+	<td><tt>I$</tt> &nbsp; &lt;Adresse&gt;</td>
       </tr>
       <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
     </table>
@@ -375,22 +378,22 @@
 	<td>
 	  <tt>IF</tt>
 	  &nbsp;
-	  <it>&lt;Bedingung&gt;</it>
+	  &lt;Bedingung&gt;
 	  &nbsp;
 	  [ <tt>THEN</tt> ]
 	  &nbsp;
-	  <it>&lt;Anweisungen&gt;</it>
+	  &lt;Anweisungen&gt;
 	  &nbsp;
-	  [ <tt>ELSE</tt> &nbsp; <it>&lt;Anweisungen&gt;</it> ]<br/>
+	  [ <tt>ELSE</tt> &nbsp; &lt;Anweisungen&gt; ]<br/>
 	  <tt>IF</tt>
 	  &nbsp;
-	  <it>&lt;Bedingung&gt;</it>
+	  &lt;Bedingung&gt;
 	  &nbsp;
 	  <tt>THEN</tt>
 	  &nbsp;
-	  <it>&lt;Zeilennummer&gt;</it>
+	  &lt;Zeilennummer&gt;
 	  &nbsp;
-	  [ <tt>ELSE</tt> &nbsp; <it>&lt;Anweisungen&gt;</it> ]<br/>
+	  [ <tt>ELSE</tt> &nbsp; &lt;Anweisungen&gt; ]<br/>
 	</td>
       </tr>
       <tr valign="top"><td>Bedingung:</td><td>numerischer Ausdruck</td></tr>
@@ -414,9 +417,9 @@
 	<td>
 	  <tt>INPUT</tt>
 	  &nbsp;
-	  [ <it>&lt;String-Literal&gt;</it> ]
+	  [ &lt;String-Literal&gt; ]
 	  &nbsp;
-	  <it>&lt;Variable&gt;</it>
+	  &lt;Variable&gt;
 	  &nbsp;
 	  [ <tt>,</tt> ... ]
 	</td>
@@ -444,9 +447,9 @@
 	<td>
 	  [ <tt>LET</tt> ]
 	  &nbsp;
-	  <it>&lt;Variable&gt;</it>
+	  &lt;Variable&gt;
 	  <tt>=</tt>
-	  <it>&lt;numerischer Ausdruck&gt;</it>
+	  &lt;numerischer Ausdruck&gt;
 	</td>
       </tr>
     </table>
@@ -458,7 +461,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td><tt>NEXT</tt> &nbsp; [ <it>&lt;Variable&gt;</it> ]</td>
+	<td><tt>NEXT</tt> &nbsp; [ &lt;Variable&gt; ]</td>
       </tr>
     </table>
   <br/>
@@ -483,7 +486,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td><tt>O$</tt> &nbsp; <it>&lt;Adresse&gt;</it></td>
+	<td><tt>O$</tt> &nbsp; &lt;Adresse&gt;</td>
       </tr>
       <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
     </table>
@@ -500,12 +503,12 @@
 	<td>
 	  <tt>OUT</tt>
 	  &nbsp;
-	  <tt>(</tt><it>&lt;Port&gt;</it><tt>)</tt>
+	  <tt>(</tt>&lt;Port&gt;<tt>)</tt>
 	  <tt>=</tt>
-	  <it>&lt;Wert&gt;</it><br/>
+	  &lt;Wert&gt;<br/>
 	  <tt>OUT</tt>
 	  &nbsp;
-	  <it>&lt;Port&gt;</it><tt>,</tt><it>&lt;Wert&gt;</it><br/>
+	  &lt;Port&gt;<tt>,</tt>&lt;Wert&gt;<br/>
 	</td>
       </tr>
       <tr valign="top"><td>Port:</td><td>numerischer Ausdruck</td></tr>
@@ -525,7 +528,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td><tt>OUTCHAR</tt> &nbsp; <it>&lt;numerischer Ausdruck&gt;</it></td>
+	<td><tt>OUTCHAR</tt> &nbsp; &lt;numerischer Ausdruck&gt;</td>
       </tr>
     </table>
   <br/>
@@ -542,9 +545,9 @@
 	<td>
 	  <tt>POKE</tt>
 	  &nbsp;
-	  <it>&lt;Adresse&gt;</it>
+	  &lt;Adresse&gt;
 	  <tt>,</tt>
-	  <it>&lt;Wert&gt;</it>
+	  &lt;Wert&gt;
 	</td>
       </tr>
       <tr valign="top">
@@ -570,21 +573,21 @@
 	  <tt>PRINT</tt><br/>
 	  <tt>PRINT</tt>
 	  &nbsp;
-	  <it>&lt;String-Literal&gt;</it>
+	  &lt;String-Literal&gt;
 	  &nbsp;
 	  [ <tt>,</tt> ... ]
 	  &nbsp;
 	  [ <tt>,</tt> ]<br/>
 	  <tt>PRINT</tt>
 	  &nbsp;
-	  <it>&lt;numerischer Ausdruck&gt;</it>
+	  &lt;numerischer Ausdruck&gt;
 	  &nbsp;
 	  [ <tt>,</tt> ... ]
 	  &nbsp;
 	  [ <tt>,</tt> ]<br/>
 	  <tt>PRINT</tt>
 	  &nbsp;
-	  <tt>#</tt> <it>&lt;numerischer Ausdruck&gt;</it>
+	  <tt>#</tt> &lt;numerischer Ausdruck&gt;
 	  &nbsp;
 	  [ <tt>,</tt> ... ]
 	  &nbsp;
@@ -682,7 +685,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td>TAB &nbsp; <it>&lt;Anzahl&gt;</it></td>
+	<td>TAB &nbsp; &lt;Anzahl&gt;</td>
       </tr>
       <tr><td>Anzahl:</td><td>numerischer Ausdruck</td></tr>
     </table>
@@ -698,7 +701,7 @@
     <table border="1">
       <tr valign="top">
 	<td>Syntax:</td>
-	<td>WORD &nbsp; <it>&lt;numerischer Ausdruck&gt;</it></td>
+	<td>WORD &nbsp; &lt;numerischer Ausdruck&gt;</td>
       </tr>
     </table>
   <br/>

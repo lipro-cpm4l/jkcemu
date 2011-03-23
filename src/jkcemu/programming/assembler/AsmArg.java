@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -33,7 +33,7 @@ public class AsmArg
 	boolean       quoted = false;
 	for( int i = 0; i < len; i++ ) {
 	  char ch = this.argText.charAt( i );
-	  if( ch == '\'' ) {
+	  if( (ch == '\'') || (ch == '\"') ) {
 	    buf.append( ch );
 	    quoted = !quoted;
 	  } else {
@@ -309,15 +309,18 @@ public class AsmArg
   }
 
 
-  public String toString()
-  {
-    return this.argText;
-  }
-
-
   public String toUpperString()
   {
     return this.upperText;
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public String toString()
+  {
+    return this.argText;
   }
 
 

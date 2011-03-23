@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.disk;
 
 import java.awt.*;
+import java.awt.event.*;
 import java.io.*;
 import java.lang.*;
 import java.util.EventObject;
@@ -22,12 +23,16 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 {
   private enum Direction { FILE_TO_DISK, DISK_TO_FILE };
 
-  private Direction       direction;
-  private String          drvFileName;
-  private File            imgFile;
-  private JLabel          labelMsg;
-  private JButton         btnCancel;
-  private volatile Thread thread;
+  private Direction         direction;
+  private String            drvFileName;
+  private File              imgFile;
+  private StringBuilder     statusBuf;
+  private JLabel            labelMsg;
+  private JLabel            labelStatus;
+  private JButton           btnCancel;
+  private javax.swing.Timer timer;
+  private volatile Thread   thread;
+  private volatile long     nBytesProcessed;
 
 
   public static void createDiskImageFromDrive( Frame owner )
@@ -36,7 +41,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     if( drvFileName != null ) {
       File imgFile = EmuUtil.showFileSaveDlg(
 				owner,
-				"Einfach Diskettenabbilddatei speichern",
+				"Einfache Diskettenabbilddatei speichern",
 				Main.getLastPathFile( "disk" ),
 				EmuUtil.getPlainDiskFileFilter() );
       if( imgFile != null ) {
@@ -119,10 +124,10 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 
 	/* --- Runnable --- */
 
+  @Override
   public void run()
   {
     Exception retEx = null;
-    long      len   = 0;
     switch( this.direction ) {
       case DISK_TO_FILE:
 	try {
@@ -134,12 +139,16 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    if( EmuUtil.isGZipFile( this.imgFile ) ) {
 	      out = new GZIPOutputStream( out );
 	    }
+	    Main.setLastDriveFileName( this.drvFileName );
 
 	    byte[] buf = new byte[ 2048 ];	// max. Sektorgroesse
 	    int    n   = in.read( buf );
-	    while( (this.thread != null) && (n > 0) ) {
-	      len += n;
+	    while( n > 0 ) {
 	      out.write( buf, 0, n );
+	      this.nBytesProcessed += n;
+	      if( this.thread == null ) {
+		break;
+	      }
 	      n = in.read( buf );
 	    }
 	    out.close();
@@ -162,11 +171,11 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	   * wird der Fehler ignoriert.
 	   */
 	  if( (File.separatorChar == '/')
-	      || ((len != (720 * 1024))
-		  && (len != (800 * 1024))
-		  && (len != (1200 * 1024))
-		  && (len != (1440 * 1024))
-		  && (len != (2880 * 1024))) )
+	      || ((this.nBytesProcessed != (720 * 1024))
+		  && (this.nBytesProcessed != (800 * 1024))
+		  && (this.nBytesProcessed != (1200 * 1024))
+		  && (this.nBytesProcessed != (1440 * 1024))
+		  && (this.nBytesProcessed != (2880 * 1024))) )
 	  {
 	    retEx = ex;
 	  }
@@ -182,12 +191,17 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    if( EmuUtil.isGZipFile( this.imgFile ) ) {
 	      in = new GZIPInputStream( in );
 	    }
-	    out = new FileOutputStream( this.drvFileName );
+	    out = DeviceIO.openDeviceForSequentialWrite( this.drvFileName );
+	    Main.setLastDriveFileName( this.drvFileName );
 
 	    byte[] buf = new byte[ 2048 ];	// max. Sektorgroesse
 	    int    n   = in.read( buf );
-	    while( (this.thread != null) && (n > 0) ) {
+	    while( n > 0 ) {
 	      out.write( buf, 0, n );
+	      this.nBytesProcessed += n;
+	      if( this.thread == null ) {
+		break;
+	      }
 	      n = in.read( buf );
 	    }
 	    out.close();
@@ -210,6 +224,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -224,6 +239,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
   }
 
 
+  @Override
   public boolean doClose()
   {
     boolean rv = false;
@@ -237,6 +253,9 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     }
     if( this.thread == null ) {
       rv = super.doClose();
+    }
+    if( rv ) {
+      this.timer.stop();
     }
     return rv;
   }
@@ -252,9 +271,11 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 			File      imgFile )
   {
     super( owner, "Abbilddatei" );
-    this.direction   = direction;
-    this.drvFileName = drvFileName;
-    this.imgFile     = imgFile;
+    this.direction       = direction;
+    this.drvFileName     = drvFileName;
+    this.imgFile         = imgFile;
+    this.statusBuf       = new StringBuilder( 80 );
+    this.nBytesProcessed = 0;
 
     setLayout( new GridBagLayout() );
 
@@ -274,17 +295,37 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     gbc.gridy++;
     add( new JLabel( "Bitte warten!" ), gbc );
 
+    this.labelStatus = new JLabel();
+    gbc.insets.top   = 20;
+    gbc.gridy++;
+    add( this.labelStatus, gbc );
+
     this.btnCancel = new JButton( "Abbrechen" );
     this.btnCancel.addActionListener( this );
     this.btnCancel.addKeyListener( this );
-    gbc.insets.top = 10;
     gbc.gridy++;
     add( this.btnCancel, gbc );
 
+    updStatusText();
     pack();
     setParentCentered();
 
-    this.thread = new Thread( this );
+    this.timer = new javax.swing.Timer(
+			500,
+			new ActionListener()
+			{
+			  public void actionPerformed( ActionEvent e )
+			  {
+			    updStatusText();
+			  }
+			} );
+    this.timer.start();
+ 
+    this.thread = new Thread(
+			this,
+			direction == Direction.FILE_TO_DISK ?
+				"JKCEMU disk image writer"
+				: "JKCEMU disk image reader" );
     this.thread.start();
   }
 
@@ -307,7 +348,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 
   private void fireThreadFinished( final Exception ex )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -324,6 +365,27 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
       showErrorDlg( this, ex );
     }
     doClose();
+  }
+
+
+  private void updStatusText()
+  {
+    this.statusBuf.setLength( 0 );
+    EmuUtil.appendSizeText(
+		this.statusBuf,
+		this.nBytesProcessed,
+		true,
+		false );
+    switch( this.direction ) {
+      case DISK_TO_FILE:
+	this.statusBuf.append( " gelesen" );
+	break;
+
+      case FILE_TO_DISK:
+	this.statusBuf.append( " geschrieben" );
+	break;
+    }
+    this.labelStatus.setText( this.statusBuf.toString() );
   }
 }
 

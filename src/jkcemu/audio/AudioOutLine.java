@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.audio;
 
 import java.lang.*;
 import javax.sound.sampled.*;
-import jkcemu.base.EmuThread;
 import z80emu.*;
 
 
@@ -20,7 +19,7 @@ public class AudioOutLine extends AudioOut
   private static int[] sampleRatesSound = { 22050, 16000, 8000 };
   private static int[] sampleRatesData  = { 44100, 32000, 22050 };
 
-  private boolean                 loudspeaker;
+  private boolean                 isSound;
   private volatile SourceDataLine dataLine;
   private byte[]                  audioDataBuf;
   private int                     audioDataPos;
@@ -28,10 +27,10 @@ public class AudioOutLine extends AudioOut
 
   public AudioOutLine(
 		Z80CPU    z80cpu,
-		boolean   loudspeaker )
+		boolean   isSound )
   {
     super( z80cpu );
-    this.loudspeaker  = loudspeaker;
+    this.isSound      = isSound;
     this.dataLine     = null;
     this.audioDataBuf = null;
     this.audioDataPos = 0;
@@ -45,12 +44,51 @@ public class AudioOutLine extends AudioOut
   }
 
 
-  public boolean isLoudspeakerEmulationEnabled()
+	/* --- ueberschriebene Methoden --- */
+
+  /*
+   * Mit dieser Methode erfaehrt die Klasse den aktuellen
+   * Taktzyklenzahlerstand und die Anzahl der seit dem letzten
+   * Aufruf vergangenen Taktzyklen.
+   *
+   * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
+   * Audio-Daten ignoriert.
+   */
+  @Override
+  protected void currentTStates( int tStates, int diffTStates )
   {
-    return this.loudspeaker;
+    if( diffTStates > this.maxPauseTStates ) {
+      this.lastTStates  = tStates;
+      this.audioDataPos = 0;
+      DataLine line = this.dataLine;
+      if( line != null ) {
+        line.flush();
+      }
+
+    } else {
+
+      /*
+       * Wenn Daten geschrieben werden, darf das Soundsystem
+       * auf keinen Fall auf die CPU-Emulation warten.
+       * In diesem Fall wird die Geschwindigkeitsbremse
+       * der CPU-Emulation temporaer, d.h.,
+       * bis mindestens zum naechsten Soundsystemaufruf, abgeschaltet.
+       */
+      if( !this.isSound ) {
+	this.z80cpu.setSpeedUnlimitedFor( diffTStates * 8 );
+      }
+    }
   }
 
 
+  @Override
+  public boolean isSoundOutEnabled()
+  {
+    return this.isSound;
+  }
+
+
+  @Override
   public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     if( (this.dataLine == null) && (speedKHz > 0) ) {
@@ -60,13 +98,14 @@ public class AudioOutLine extends AudioOut
       if( sampleRate > 0 ) {
 	line = openSourceDataLine( mixer, sampleRate );
       } else {
-	int[] sampleRates = this.loudspeaker ?
+	int[] sampleRates = this.isSound ?
 				this.sampleRatesSound : this.sampleRatesData;
-	for( int i = 0; (line == null) && (i < sampleRates.length); i++ )
+	for( int i = 0; (line == null) && (i < sampleRates.length); i++ ) {
 	  line = openSourceDataLine( mixer, sampleRates[ i ] );
+	}
       }
       if( line != null ) {
-	this.maxPauseTStates = speedKHz * 1000;	// 1 Sekunde
+	this.maxPauseTStates = speedKHz * 1000;		// 1 Sekunde
 	this.enabled         = true;
 	this.dataLine        = line;
 	this.audioFmt        = this.dataLine.getFormat();
@@ -90,54 +129,35 @@ public class AudioOutLine extends AudioOut
   }
 
 
+  @Override
   public void stopAudio()
   {
-    DataLine line = this.dataLine;
+    this.enabled        = false;
+    SourceDataLine line = this.dataLine;
+    if( line != null ) {
+
+      // Puffer schreiben
+      byte[] audioDataBuf = this.audioDataBuf;
+      if( audioDataBuf != null ) {
+	if( this.audioDataPos >= audioDataBuf.length ) {
+	  line.write( audioDataBuf, 0, audioDataBuf.length );
+	}
+      }
+    }
     this.dataLine = null;
     this.audioFmt = null;
-    this.enabled  = false;
     DataLineCloser.closeDataLine( line );
   }
 
 
-  /*
-   * Mit dieser Methode erfaehrt die Klasse den aktuellen
-   * Taktzyklenzahlerstand und die Anzahl der seit dem letzten
-   * Aufruf vergangenen Taktzyklen.
-   *
-   * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
-   * Audio-Daten ignoriert.
-   */
-  protected void currentTStates( int tStates, int diffTStates )
-  {
-    if( diffTStates > this.maxPauseTStates ) {
-      this.lastTStates  = tStates;
-      this.audioDataPos = 0;
-      DataLine line = this.dataLine;
-      if( line != null )
-        line.flush();
-
-    } else {
-
-      /*
-       * Wenn Daten geschrieben werden, darf das Soundsystem
-       * auf keinen Fall auf die CPU-Emulation warten.
-       * In diesem Fall wird die Geschwindigkeitsbremse
-       * der CPU-Emulation temporaer, d.h.,
-       * bis mindestens zum naechsten Soundsystemaufruf, abgeschaltet.
-       */
-      if( !this.loudspeaker )
-	this.z80cpu.setSpeedUnlimitedFor( diffTStates * 8 );
-    }
-  }
-
-
+  @Override
   protected void writeSamples( int nSamples, boolean phase )
   {
-    writeSamples( nSamples, (byte) (phase ? 100 : -100) );
+    writeSamples( nSamples, (byte) (phase ? PHASE1_VALUE : PHASE0_VALUE) );
   }
 
 
+  @Override
   protected void writeSamples( int nSamples, byte value )
   {
     SourceDataLine line         = this.dataLine;

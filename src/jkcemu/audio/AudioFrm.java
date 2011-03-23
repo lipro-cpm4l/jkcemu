@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@
 package jkcemu.audio;
 
 import java.awt.*;
+import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.File;
 import java.lang.*;
@@ -25,7 +26,10 @@ import z80emu.*;
 
 public class AudioFrm
 		extends BasicFrm
-		implements ChangeListener, Z80MaxSpeedListener
+		implements
+			ChangeListener,
+			DropTargetListener,
+			Z80MaxSpeedListener
 {
   private static final int[] sampleRates = {
 				96000, 48000, 44100, 32000,
@@ -62,7 +66,7 @@ public class AudioFrm
   private JRadioButton      btnChannel1;
   private JCheckBox         btnMonitor;
   private JLabel            labelFileName;
-  private JTextField        fldFileName;
+  private FileNameFld       fileNameFld;
   private JLabel            labelFormat;
   private JTextField        fldFormat;
   private JLabel            labelProgress;
@@ -279,14 +283,14 @@ public class AudioFrm
     gbcStatus.gridy++;
     panelStatus.add( this.labelProgress, gbcStatus );
 
-    this.fldFileName = new JTextField();
-    this.fldFileName.setEditable( false );
+    this.fileNameFld = new FileNameFld();
+    this.fileNameFld.setEditable( false );
     gbcStatus.anchor  = GridBagConstraints.WEST;
     gbcStatus.fill    = GridBagConstraints.HORIZONTAL;
     gbcStatus.weightx = 1.0;
     gbcStatus.gridy   = 0;
     gbcStatus.gridx++;
-    panelStatus.add( this.fldFileName, gbcStatus );
+    panelStatus.add( this.fileNameFld, gbcStatus );
 
     this.fldFormat = new JTextField();
     this.fldFormat.setEditable( false );
@@ -400,12 +404,13 @@ public class AudioFrm
     }
     setResizable( false );
     this.z80cpu.addMaxSpeedListener( this );
+    (new DropTarget( this.fileNameFld, this )).setActive( true );
   }
 
 
   public void fireDisable()
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -418,7 +423,7 @@ public class AudioFrm
 
   public void fireProgressUpdate( final float value )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -440,13 +445,15 @@ public class AudioFrm
   public void openTAP( File file, byte[] fileBytes, int offs )
   {
     int speedKHz = getSpeedKHz();
-    if( speedKHz > 0 )
+    if( speedKHz > 0 ) {
       enableAudioInFile( speedKHz, file, fileBytes, offs, true );
+    }
   }
 
 
 	/* --- ChangeListener --- */
 
+  @Override
   public void stateChanged( ChangeEvent e )
   {
     Object src = e.getSource();
@@ -478,6 +485,73 @@ public class AudioFrm
   }
 
 
+	/* --- DropTargetListener --- */
+
+  @Override
+  public void dragEnter( DropTargetDragEvent e )
+  {
+    if( (this.audioIO != null) || !EmuUtil.isFileDrop( e ) )
+      e.rejectDrag();
+  }
+
+
+  @Override
+  public void dragExit( DropTargetEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void dragOver( DropTargetDragEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void drop( DropTargetDropEvent e )
+  {
+    boolean done = false;
+    if( (this.audioIO == null) && EmuUtil.isFileDrop( e ) ) {
+      File file = EmuUtil.fileDrop( this, e );
+      if( file != null ) {
+	if( file.isFile() ) {
+	  String fName = file.getName();
+	  if( fName != null ) {
+	    stopAudio();
+	    int speedKHz = getSpeedKHz();
+	    if( speedKHz > 0 ) {
+	      boolean tap = fName.toLowerCase().endsWith( ".tap" );
+	      if( tap ) {
+		this.btnTAPFileIn.setSelected( true );
+	      } else {
+		this.btnSoundFileIn.setSelected( true );
+	      }
+	      updOptFields( tap );
+	      enableAudioInFile( speedKHz, file, null, 0, tap );
+	    }
+	    done = true;
+	  }
+	}
+      }
+    }
+    if( done ) {
+      e.dropComplete( true );
+    } else {
+      e.rejectDrop();
+    }
+  }
+
+
+  @Override
+  public void dropActionChanged( DropTargetDragEvent e )
+  {
+    if( (this.audioIO != null) || !EmuUtil.isFileDrop( e ) )
+      e.rejectDrag();
+  }
+
+
 	/* --- Z80MaxSpeedListener --- */
 
   /*
@@ -486,9 +560,10 @@ public class AudioFrm
    * Aus diesem Grund die Audiokanaele schliessen und
    * bei Ein-/Ausgabe ueber das Sound-System wieder oeffnen.
    */
+  @Override
   public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -501,6 +576,7 @@ public class AudioFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -862,10 +938,10 @@ public class AudioFrm
 
     if( state && (this.curFile != null) ) {
       this.labelFileName.setEnabled( true );
-      this.fldFileName.setText( this.curFile.getPath() );
+      this.fileNameFld.setFile( this.curFile );
     } else {
       this.labelFileName.setEnabled( false );
-      this.fldFileName.setText( "" );
+      this.fileNameFld.setFile( null );
     }
 
     boolean progressState = false;
@@ -938,8 +1014,9 @@ public class AudioFrm
     if( audioIO != null ) {
       audioIO.stopAudio();
       String errorText = audioIO.getErrorText();
-      if( errorText != null )
+      if( errorText != null ) {
 	BasicDlg.showErrorDlg( this, errorText );
+      }
     }
   }
 
@@ -1039,8 +1116,9 @@ public class AudioFrm
     state = false;
     if( (audioIO != null) && (audioFmt != null) ) {
       if( audioIO instanceof AudioIn ) {
-	if( audioFmt.getChannels() > 1 )
+	if( audioFmt.getChannels() > 1 ) {
 	  state = true;
+	}
       }
     } else {
       state = (this.btnDataIn.isSelected()

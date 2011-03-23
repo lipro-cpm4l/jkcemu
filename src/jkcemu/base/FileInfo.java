@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,19 +10,28 @@ package jkcemu.base;
 
 import java.io.*;
 import java.lang.*;
+import jkcemu.Main;
+import jkcemu.emusys.Z9001;
 
 
 public class FileInfo
 {
-  public static final String HEADERSAVE   = "Headersave-Datei";
-  public static final String KCB          = "KCB-Datei (BASIC-Programm)";
-  public static final String KCC          = "KCC/JTC-Datei";
-  public static final String KCTAP_SYS    = "KC-TAP-Datei";
-  public static final String KCTAP_BASIC  = "KC-TAP-BASIC-Programmdatei";
-  public static final String KCTAP_HEADER = "\u00C3KC-TAPE by AF.\u0020";
-  public static final String KCBASIC_HEAD =
+  public static final String HEADERSAVE       = "Headersave-Datei";
+  public static final String KCB              = "KCB-Datei (BASIC-Programm)";
+  public static final String KCC              = "KCC/JTC-Datei";
+  public static final String KCTAP_SYS        = "KC-TAP-Datei";
+  public static final String KCTAP_BASIC_PRG  = "KC-TAP-BASIC-Programmdatei";
+  public static final String KCTAP_BASIC_DATA = "KC-TAP-BASIC-Datenfeld";
+  public static final String KCTAP_BASIC_ASC  = "KC-TAP-BASIC-ASCII-Listing";
+  public static final String KCTAP_HEADER     = "\u00C3KC-TAPE by AF.\u0020";
+  public static final String KCBASIC_HEAD_PRG =
 				"KC-BASIC-Programmdatei mit Kopfdaten";
-  public static final String KCBASIC_PURE = "KC-BASIC-Programmdatei";
+  public static final String KCBASIC_HEAD_DATA =
+				"KC-BASIC-Datenfeld mit Kopfdaten";
+  public static final String KCBASIC_HEAD_ASC =
+				"KC-BASIC-ASCII-Listing mit Kopfdaten";
+  public static final String KCBASIC_PRG = "KC-BASIC-Programmdatei";
+  public static final String RBASIC      = "RBASIC-Programmdatei";
   public static final String INTELHEX = "Intel-HEX-Datei";
   public static final String BIN = "BIN-Datei (Speicherabbild ohne Kopfdaten)";
 
@@ -85,14 +94,19 @@ public class FileInfo
       if( headerLen > header.length ) {
 	headerLen = header.length;
       }
-      String fileFmt     = null;
-      String fileText    = null;
-      int    fileType    = -1;
-      int    begAddr     = -1;
-      int    endAddr     = -1;
-      int    nextTAPOffs = -1;
-      long   fileLen     = headerLen;
+      String upperFileName = null;
+      String fileFmt       = null;
+      String fileText      = null;
+      int    fileType      = -1;
+      int    begAddr       = -1;
+      int    endAddr       = -1;
+      int    nextTAPOffs   = -1;
+      long   fileLen       = headerLen;
       if( file != null ) {
+	String fileName = file.getName();
+	if( fileName != null ) {
+	  upperFileName = fileName.toUpperCase();
+	}
 	fileLen = file.length();
       }
       if( (fileLen > 32) && (headerLen > 15) ) {
@@ -128,15 +142,25 @@ public class FileInfo
 	    }
 	  } else {
 	    if( ((b17 == 0xD3) && (b18 == 0xD3) && (b19 == 0xD3))
-		|| ((b17 == 0xD6) && (b18 == 0xD6) && (b19 == 0xD6)) )
+		|| ((b17 == 0xD7) && (b18 == 0xD7) && (b19 == 0xD7)) )
 	    {
-	      fileFmt = KCTAP_BASIC;
+	      fileFmt = KCTAP_BASIC_PRG;
 	      begAddr = getBegAddr( header, fileFmt );
 	      endAddr = getEndAddr( header, fileFmt );
 	      if( (begAddr >= 0) && (begAddr <= endAddr) ) {
 		int nBlks = (endAddr - begAddr + 13 + 127) / 128;
 		nextOffs  = 16 + (129 * nBlks);
 	      }
+	    }
+	    else if( ((b17 == 0xD4) && (b18 == 0xD4) && (b19 == 0xD4))
+		     || ((b17 == 0xD8) && (b18 == 0xD8) && (b19 == 0xD8)) )
+	    {
+	      fileFmt = KCTAP_BASIC_DATA;
+	    }
+	    else if( ((b17 == 0xD5) && (b18 == 0xD5) && (b19 == 0xD5))
+		     || ((b17 == 0xD9) && (b18 == 0xD9) && (b19 == 0xD9)) )
+	    {
+	      fileFmt = KCTAP_BASIC_ASC;
 	    }
 	  }
 	  if( nextOffs > 0 ) {
@@ -151,9 +175,19 @@ public class FileInfo
 	int b1 = header[ 1 ] & 0xFF;
 	int b2 = header[ 2 ] & 0xFF;
 	if( ((b0 == 0xD3) && (b1 == 0xD3) && (b2 == 0xD3))
-	    || ((b0 == 0xD6) && (b1 == 0xD6) && (b2 == 0xD6)) )
+	    || ((b0 == 0xD7) && (b1 == 0xD7) && (b2 == 0xD7)) )
 	{
-	  fileFmt = KCBASIC_HEAD;
+	  fileFmt = KCBASIC_HEAD_PRG;
+	}
+	else if( ((b0 == 0xD4) && (b1 == 0xD4) && (b2 == 0xD4))
+		 || ((b0 == 0xD8) && (b1 == 0xD8) && (b2 == 0xD8)) )
+	{
+	  fileFmt = KCBASIC_HEAD_DATA;
+	}
+	else if( ((b0 == 0xD5) && (b1 == 0xD5) && (b2 == 0xD5))
+		 || ((b0 == 0xD9) && (b1 == 0xD9) && (b2 == 0xD9)) )
+	{
+	  fileFmt = KCBASIC_HEAD_ASC;
 	}
       }
       if( (fileFmt == null) && (fileLen > 10) && (headerLen > 10) ) {
@@ -168,55 +202,62 @@ public class FileInfo
 	    && EmuUtil.isHexChar( c4 )
 	    && EmuUtil.isHexChar( c5 )
 	    && EmuUtil.isHexChar( c6 )
-	    && ((header[ 7 ] & 0xFF) == '0')
-	    && ((header[ 8 ] & 0xFF) == '0')
+	    && EmuUtil.isHexChar( header[ 7 ] & 0xFF )
+	    && EmuUtil.isHexChar( header[ 8 ] & 0xFF )
 	    && EmuUtil.isHexChar( header[ 9 ] & 0xFF )
 	    && EmuUtil.isHexChar( header[ 10 ] & 0xFF ) )
 	{
 	  fileFmt = INTELHEX;
 	}
       }
-      if( (fileFmt == null) && (file != null) ) {
-	String fName = file.getName();
-	if( fName != null ) {
-	  String upperName = fName.toUpperCase();
-	  if( upperName.endsWith( ".KCB" )
-	      && (fileLen > 127) && (headerLen > 20) )
+      if( (fileFmt == null)
+	  && (file != null)
+	  && (upperFileName != null) )
+      {
+	if( upperFileName.endsWith( ".KCB" )
+	    && (fileLen > 127) && (headerLen > 20) )
+	{
+	  int b16 = header[ 16 ] & 0xFF;
+	  if( (b16 >= 2) && (b16 <= 4)
+	      && (EmuUtil.getWord( header, 17 ) <= 0x0401)
+	      && (EmuUtil.getWord( header, 19 ) >= 0x0409) )
 	  {
-	    int b16 = header[ 16 ] & 0xFF;
-	    if( (b16 >= 2) && (b16 <= 4)
-		&& (EmuUtil.getWord( header, 17 ) <= 0x0401)
-		&& (EmuUtil.getWord( header, 19 ) >= 0x0409) )
-	    {
-	      fileFmt = KCB;
-	    }
+	    fileFmt = KCB;
 	  }
-	  if( (fileFmt == null)
-	      && (upperName.endsWith( ".KCC" ) || upperName.endsWith( ".JTC" ))
-	      && (fileLen > 127) && (headerLen > 16) )
-	  {
-	    int b16 = header[ 16 ] & 0xFF;
-	    if( (b16 >= 2) && (b16 <= 4)
-		&& (EmuUtil.getWord( header, 17 )
+	}
+	if( (fileFmt == null)
+	    && (upperFileName.endsWith( ".KCC" )
+			|| upperFileName.endsWith( ".JTC" ))
+	    && (fileLen > 127) && (headerLen > 16) )
+	{
+	  int b16 = header[ 16 ] & 0xFF;
+	  if( (b16 >= 2) && (b16 <= 4)
+	      && (EmuUtil.getWord( header, 17 )
 				<= EmuUtil.getWord( header, 19 )) )
-	    {
-	      fileFmt = KCC;
-	    }
-	  }
-	  if( (fileFmt == null) && upperName.endsWith( ".SSS" )
-	      && (fileLen >= 9) && (headerLen >= 9) )
 	  {
-	    int h = header[ 3 ] & 0xFF;
-	    if( (h == 0x04) || (h == 0x2C) ) {
-	      fileFmt = KCBASIC_PURE;
-	    }
+	    fileFmt = KCC;
 	  }
-	  if( fileFmt == null ) {
-	    fileFmt = BIN;
-	    int pos = fName.lastIndexOf( '.' );
-	    if( (pos >= 0) && (pos + 1 < fName.length()) ) {
-	      fileText = fName.substring( pos + 1 ).toUpperCase() + "-Datei";
-	    }
+	}
+	if( (fileFmt == null) && upperFileName.endsWith( ".SSS" )
+	    && (fileLen >= 9) && (headerLen >= 9) )
+	{
+	  int h = header[ 3 ] & 0xFF;
+	  if( (h == 0x04) || (h == 0x2C) ) {
+	    fileFmt = KCBASIC_PRG;
+	  }
+	}
+	if( (fileFmt == null) && upperFileName.endsWith( ".BAS" )
+	    && (fileLen >= 9) && (headerLen >= 9) )
+	{
+	  if( (header[ 2 ] & 0xFF) == 0x80 ) {
+	    fileFmt = RBASIC;
+	  }
+	}
+	if( fileFmt == null ) {
+	  fileFmt = BIN;
+	  int pos = upperFileName.lastIndexOf( '.' );
+	  if( (pos >= 0) && (pos + 1 < upperFileName.length()) ) {
+	    fileText = upperFileName.substring( pos + 1 ) + "-Datei";
 	  }
 	}
       }
@@ -268,8 +309,16 @@ public class FileInfo
   {
     LoadData rv = null;
     if( fileFmt != null ) {
-      if( fileFmt.equals( KCTAP_SYS ) || fileFmt.equals( KCTAP_BASIC ) ) {
+      if( fileFmt.equals( KCTAP_SYS ) || fileFmt.equals( KCTAP_BASIC_PRG ) ) {
 	rv = createLoadDataFromKCTAP( fileBuf, fileFmt );
+      } if( fileFmt.equals( KCTAP_BASIC_DATA )
+	    || fileFmt.equals( KCTAP_BASIC_ASC )
+	    || fileFmt.equals( KCBASIC_HEAD_DATA )
+	    || fileFmt.equals( KCBASIC_HEAD_ASC ) )
+      {
+	throw new IOException( "Laden von KC-BASIC-Datenfeldern"
+			+ " und KC-BASIC-ASCII-Listings\n"
+			+ "wird nicht unterst\u00FCtzt" );
       } else if( fileFmt.equals( INTELHEX ) ) {
 	rv = createLoadDataFromINTELHEX( fileBuf );
       } else {
@@ -325,14 +374,13 @@ public class FileInfo
 	} else if( fileFmt.equals( KCC ) ) {
 	  if( fileBuf.length >= 128 ) {
 	    begAddr = EmuUtil.getWord( fileBuf, 17 );
-	    len     = ((EmuUtil.getWord( fileBuf, 19 ) - begAddr) & 0xFFFF)
-									+ 1;
+	    len = ((EmuUtil.getWord( fileBuf, 19 ) - begAddr) & 0xFFFF) + 1;
 	  }
 	  rv = new LoadData( fileBuf, 128, len, begAddr, -1, fileFmt );
 	  if( fileBuf[ 16 ] >= 3 ) {
 	    rv.setStartAddr( EmuUtil.getWord( fileBuf, 21 ) );
 	  }
-	} else if( fileFmt.equals( KCBASIC_HEAD ) ) {
+	} else if( fileFmt.equals( KCBASIC_HEAD_PRG ) ) {
 	  if( fileBuf.length > 12 ) {
 	    len = EmuUtil.getWord( fileBuf, 11 );
 	  }
@@ -346,7 +394,7 @@ public class FileInfo
 			(((int) fileBuf[ 14 ] & 0xFF) << 8) | 0x01,
 			-1,
 			fileFmt );
-	} else if( fileFmt.equals( KCBASIC_PURE ) ) {
+	} else if( fileFmt.equals( KCBASIC_PRG ) ) {
 	  if( fileBuf.length > 1) {
 	    len = EmuUtil.getWord( fileBuf, 0 );
 	  }
@@ -360,6 +408,8 @@ public class FileInfo
 			(((int) fileBuf[ 3 ] & 0xFF) << 8) | 0x01,
 			-1,
 			fileFmt );
+	} else if( fileFmt.equals( RBASIC ) ) {
+	  rv = new LoadData( fileBuf, 1, fileBuf.length, 0x8001, -1, fileFmt );
 	}
       }
     }
@@ -420,14 +470,17 @@ public class FileInfo
       else if( fileFmt.equals( KCTAP_SYS ) && (header.length > 35) ) {
 	rv = EmuUtil.getWord( header, 34 );
       }
-      else if( fileFmt.equals( KCTAP_BASIC ) && (header.length > 31) ) {
+      else if( fileFmt.equals( KCTAP_BASIC_PRG ) && (header.length > 31) ) {
 	rv = ((int) (header[ 31 ] & 0xFF) << 8) | 0x01;
       }
-      else if( fileFmt.equals( KCBASIC_HEAD ) && (header.length > 14) ) {
+      else if( fileFmt.equals( KCBASIC_HEAD_PRG ) && (header.length > 14) ) {
 	rv = ((int) (header[ 14 ] & 0xFF) << 8) | 0x01;
       }
-      else if( fileFmt.equals( KCBASIC_PURE ) && (header.length > 3) ) {
+      else if( fileFmt.equals( KCBASIC_PRG ) && (header.length > 3) ) {
 	rv = ((int) (header[ 3 ] & 0xFF) << 8) | 0x01;
+      }
+      else if( fileFmt.equals( RBASIC ) ) {
+	rv = 0x8001;
       }
       else if( fileFmt.equals( INTELHEX ) && (header.length > 6) ) {
 	char c3 = (char) (header[ 3 ] & 0xFF);
@@ -478,13 +531,13 @@ public class FileInfo
       else if( fileFmt.equals( KCTAP_SYS ) && (header.length > 37) ) {
 	rv = EmuUtil.getWord( header, 36 );
       }
-      else if( fileFmt.equals( KCTAP_BASIC ) && (header.length > 31) ) {
+      else if( fileFmt.equals( KCTAP_BASIC_PRG ) && (header.length > 31) ) {
 	rv = EmuUtil.getWord( header, 28 ) + ((header[ 31 ] & 0xFF) << 8);
       }
-      else if( fileFmt.equals( KCBASIC_HEAD ) && (header.length > 14) ) {
+      else if( fileFmt.equals( KCBASIC_HEAD_PRG ) && (header.length > 14) ) {
 	rv = EmuUtil.getWord( header, 11 ) + ((header[ 14 ] & 0xFF) << 8);
       }
-      else if( fileFmt.equals( KCBASIC_PURE ) && (header.length > 3) ) {
+      else if( fileFmt.equals( KCBASIC_PRG ) && (header.length > 3) ) {
 	rv = EmuUtil.getWord( header, 0 ) + ((header[ 3 ] & 0xFF) << 8);
       }
     }
@@ -495,6 +548,12 @@ public class FileInfo
   public int getEndAddr()
   {
     return getEndAddr( this.header, this.fileFmt );
+  }
+
+
+  public String getFileDesc()
+  {
+    return this.fileDesc;
   }
 
 
@@ -515,7 +574,11 @@ public class FileInfo
 	  }
 	}
       }
-      else if( fileFmt.equals( KCTAP_BASIC ) && (header.length >= 28) ) {
+      else if( (fileFmt.equals( KCTAP_BASIC_PRG )
+			|| fileFmt.equals( KCTAP_BASIC_DATA )
+			|| fileFmt.equals( KCTAP_BASIC_ASC ))
+		&& (header.length >= 28) )
+      {
 	rv = getFileDesc( header, 20, 8 );
       }
       else if( (fileFmt.equals( KCB ) || fileFmt.equals( KCC ))
@@ -525,12 +588,17 @@ public class FileInfo
 	if( rv != null ) {
 	  if( rv.length() < 8 ) {
 	    String ext = getFileDesc( header, 8, 3 );
-	    if( ext != null )
+	    if( ext != null ) {
 	      rv = rv + "." + ext;
+	    }
 	  }
 	}
       }
-      else if( fileFmt.equals( KCBASIC_HEAD ) && (header.length >= 11) ) {
+      else if( (fileFmt.equals( KCBASIC_HEAD_PRG )
+			|| fileFmt.equals( KCBASIC_HEAD_DATA )
+			|| fileFmt.equals( KCBASIC_HEAD_ASC ))
+	       && (header.length >= 11) )
+      {
 	rv = getFileDesc( header, 3, 8 );
       }
     }
@@ -538,9 +606,21 @@ public class FileInfo
   }
 
 
-  public String getFileDesc()
+  public String getFileFormat()
   {
-    return this.fileDesc;
+    return this.fileFmt;
+  }
+
+
+  public String getFileText()
+  {
+    return this.fileText;
+  }
+
+
+  public int getFileType()
+  {
+    return this.fileType;
   }
 
 
@@ -553,24 +633,6 @@ public class FileInfo
       }
     }
     return rv;
-  }
-
-
-  public String getFileText()
-  {
-    return this.fileText;
-  }
-
-
-  public String getFileFormat()
-  {
-    return this.fileFmt;
-  }
-
-
-  public int getFileType()
-  {
-    return this.fileType;
   }
 
 
@@ -596,12 +658,12 @@ public class FileInfo
 	}
       }
       else if( fileFmt.equals( KCC ) && (header.length > 22) ) {
-	if( (header[ 16 ] & 0xFF) >= 3 ) {
+	if( isZ9001() || (header[ 16 ] & 0xFF) >= 3 ) {
 	  rv = EmuUtil.getWord( header, 21 );
 	}
       }
       else if( fileFmt.equals( KCTAP_SYS ) && (header.length > 39) ) {
-	if( (header[ 33 ] & 0xFF) >= 3 ) {
+	if( isZ9001() || (header[ 33 ] & 0xFF) >= 3 ) {
 	  rv = EmuUtil.getWord( header, 38 );
 	}
       }
@@ -621,9 +683,9 @@ public class FileInfo
     boolean rv = false;
     if( fileFmt != null ) {
       rv = fileFmt.equals( KCB )
-		|| fileFmt.equals( KCTAP_BASIC )
-		|| fileFmt.equals( KCBASIC_HEAD )
-		|| fileFmt.equals( KCBASIC_PURE );
+		|| fileFmt.equals( KCTAP_BASIC_PRG )
+		|| fileFmt.equals( KCBASIC_HEAD_PRG )
+		|| fileFmt.equals( KCBASIC_PRG );
     }
     return rv;
   }
@@ -715,46 +777,76 @@ public class FileInfo
 	ch = in.read();
       }
       if( ch != -1 ) {
-
-	/*
-	 * Segment verarbeiten
-	 *
-	 * Satzarten 0 (Daten) und 1 (Endekennung) werden verarbeitet.
-	 * Satzarten 3 und 5 (Startadressen) werden ignoriert.
-	 * Andere Satzarten fuehren zu einer Fehlermeldung.
-	 */
+	// Segment verarbeiten
 	int cnt  = parseHex( in, 2 );
 	int addr = parseHex( in, 4 );
 	int type = parseHex( in, 2 );
-	if( (type == 0) || (type == 1) ) {
-	  if( cnt > 0 ) {
-	    if( firstAddr < 0 ) {
-	      firstAddr = addr;
-	      curAddr   = addr;
-	    }
-	    if( addr == curAddr ) {
-	      while( cnt > 0 ) {
-		out.write( parseHex( in, 2 ) );
-		--cnt;
-		curAddr++;
+	switch( type ) {
+	  case 0:			// Data Record
+	    if( cnt > 0 ) {
+	      if( firstAddr < 0 ) {
+		firstAddr = addr;
+		curAddr   = addr;
 	      }
-	    } else {
-	      infoMsg = "Die Datei enth\u00E4lt mehrere nicht"
+	      if( addr == curAddr ) {
+		while( cnt > 0 ) {
+		  out.write( parseHex( in, 2 ) );
+		  --cnt;
+		  curAddr++;
+		}
+	      } else {
+		infoMsg = "Die Datei enth\u00E4lt mehrere nicht"
 				+ " zusammenh\u00E4ngende Datenbereiche.\n"
 				+ "Es wurde nur der erste Bereich geladen.";
-	      loop = false;
+	      }
 	    }
-	  }
-	  if( type == 1 ) {
+	    break;
+
+	  case 1:			// End of File Record
 	    loop = false;
-	  }
-	} else if( (type != 3) && (type != 5) ) {
-	  infoMsg = "Die Datei enth\u00E4lt nicht unterst\u00FCtzte"
-			+ " Datensatzarten.";
+	    break;
+
+	  case 2:			// Extended Segment Address Record
+	    while( cnt > 0 ) {
+	      if( parseHex( in, 2 ) != 0 ) {
+		infoMsg = "Die Datei enth\u00E4lt einen Datensatz f\u00FCr"
+			+ " eine segmentierte Adresse,\n"
+			+ "der von JKCEMU nicht unterst\u00FCtzt wird.";
+	      }
+	      --cnt;
+	    }
+	    break;
+
+	  case 3:			// Start Segment Address Record
+	  case 5:			// Start Linear Address Record
+	    // Datensatz ignorieren
+	    break;
+
+	  case 4:			// Extended Linear Address Record
+	    while( cnt > 0 ) {
+	      if( parseHex( in, 2 ) != 0 ) {
+		infoMsg = "Die Datei enth\u00E4lt einen Datensatz f\u00FCr"
+			+ " eine lineare 32-Bit-Adresse,\n"
+			+ "die au\u00DFerhalb des von JKCEMU"
+			+ " emulierten Adressraumes liegt.";
+	      }
+	      --cnt;
+	    }
+	    break;
+
+	  default:
+	    infoMsg = String.format(
+			"Die Datei enth\u00E4lt einen Datensatzart"
+				+ " des Typs %d,\n"
+				+ "der von JKCEMU nicht unterst\u00FCtzt"
+				+ " wird.",
+			type );
+	}
+	if( infoMsg != null ) {
 	  if( out.size() > 0 ) {
 	    infoMsg = infoMsg
-			+ "\nEs werden nur die Daten bis zur ersten nicht"
-			+ " unterst\u00FCtzten Satzart geladen.";
+			+ "\nEs werden nur die Daten bis zu diesem Datensatz"
+			+ " geladen.";
 	  } else {
 	    throw new IOException( infoMsg );
 	  }
@@ -802,12 +894,12 @@ public class FileInfo
     if( fileFmt.equals( KCTAP_SYS ) && (fileBuf.length > 39) ) {
       begAddr = EmuUtil.getWord( fileBuf, 34 );
       len     = ((EmuUtil.getWord( fileBuf, 36 ) - begAddr) & 0xFFFF) + 1;
-      if( fileBuf[ 33 ] >= 3 ) {
+      if( isZ9001() || (fileBuf[ 33 ] >= 3) ) {
 	startAddr = EmuUtil.getWord( fileBuf, 38 );
       }
       pos = 145;
     }
-    else if( fileFmt.equals( KCTAP_BASIC ) && (fileBuf.length > 31) ) {
+    else if( fileFmt.equals( KCTAP_BASIC_PRG ) && (fileBuf.length > 31) ) {
       begAddr   = ((fileBuf[ 31 ] & 0xFF) << 8) | 0x01;
       len       = EmuUtil.getWord( fileBuf, 28 );
       pos       = 30;
@@ -900,6 +992,13 @@ public class FileInfo
       }
     }
     return rv;
+  }
+
+
+  private static boolean isZ9001()
+  {
+    EmuSys emuSys = Main.getScreenFrm().getEmuSys();
+    return emuSys != null ? (emuSys instanceof Z9001) : false;
   }
 
 

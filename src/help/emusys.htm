@@ -2,11 +2,12 @@
 <body>
   <h1>Emulierte Systeme</h1>
     <ul>
+      <li><a href="a5105.htm">A5105 (BIC, ALPBA PC 1505)</a></li>
       <li><a href="ac1.htm">AC1</a></li>
       <li><a href="bcs3.htm">BCS3</a></li>
       <li><a href="c80.htm">C-80</a></li>
       <li><a href="hemc.htm">H&uuml;bler/Evert-MC</a></li>
-      <li><a href="hgmc.htm">H&uuml;bler-Grafik-MC</a></li>
+      <li><a href="hgmc.htm">H&uuml;bler-BASIC-Grafik-MC</a></li>
       <li><a href="kc85.htm">HC900</a></li>
       <li><a href="z9001.htm">KC85/1</a></li>
       <li><a href="kc85.htm">KC85/2...5</a></li>
@@ -25,28 +26,15 @@
     </ul>
   <br/><br/>
 
-  <h2>RAM</h2>
-    Der Arbeitsspeicher der emulierten Systeme liegt mit einigen Ausnahmen
-    in einem globalen RAM-Bereich, d.h. es wird f&uuml;r alle Systeme
-    physisch der gleiche Speicher verwendet.
-    Sie k&ouml;nnen so z.B. in der Z1013-Emulation eine Datei in den RAM laden,
-    anschlie&szlig;end in den <a href="settings.htm">Einstellungen</a>
-    auf Z9001 umstellen,
-    und die Datei befindet sich dann im Z9001-Arbeitsspeicher.
-  <br/><br/>
-    Spezielle Speicherbereiche, z.B. Bildwiederholspeicher,
-    werden jedoch nicht gemeinsam genutzt, da das kaum sinvoll ist.
-  <br/><br/>
-
   <h2>Deutsche Umlaute</h2>
     Manche emulierten Systeme kennen deutsche Umlaute, andere wiederum nicht.
     Wenn ein Zeichensatz deutsche Umlaute enth&auml;lt,
-    dann anstelle von einigen ASCII-Zeichen
+    dann h&auml;fig anstelle von einigen ASCII-Zeichen
     (war damals so &uuml;blich, siehe auch deutsche Variante von ISO646).
     Die deutschen Umlaute haben somit die gleichen Codes wie einige
     ASCII-Zeichen.
-    Aus diesem Grund mappt auch JKCEMU die Umlaute auf die Codes
-    der entsprechenden ASCII-Zeichen.
+    Aus diesem Grund mappt auch JKCEMU bei diesen Systemen die Umlaute
+    auf die Codes der entsprechenden ASCII-Zeichen.
     Wenn Sie z.B. ein <em>&auml;</em> eingeben,
     erzeugt der Emulator den Code 5Bh,
     der auch f&uuml;r das ASCII-Zeichen <em>[</em> steht.

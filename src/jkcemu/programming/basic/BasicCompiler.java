@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,17 +8,16 @@
 
 package jkcemu.programming.basic;
 
-import java.awt.Component;
+import java.awt.*;
 import java.io.IOException;
 import java.lang.*;
 import java.text.*;
 import java.util.*;
-import javax.swing.SwingUtilities;
 import jkcemu.base.*;
+import jkcemu.emusys.*;
 import jkcemu.text.*;
 import jkcemu.programming.*;
 import jkcemu.programming.assembler.Z80Assembler;
-import jkcemu.system.*;
 
 
 public class BasicCompiler extends PrgThread
@@ -32,7 +31,7 @@ public class BasicCompiler extends PrgThread
 			F_RND, F_SGN, F_SIZE, F_SQR,
 			O_OR, O_AND, O_NOT,
 			O_LT, O_LE, O_GT, O_GE, O_EQ, O_NE,
-			O_ADD, O_SUB, O_MUL, O_DIV,
+			O_ADD, O_SUB, O_MUL, O_DIV, O_INC, O_DEC,
 			ABS_NEG_HL,
 			H_CP, H_DIV, H_NEXT, CKSTCK, JP_HL,
 			INCHR, INKEY, CKBRK, ARYADR,
@@ -78,7 +77,14 @@ public class BasicCompiler extends PrgThread
 		BasicOptions options,
 		boolean      forceRunProgram )
   {
-    super( emuThread, editText, sourceText, logOut, options, forceRunProgram );
+    super(
+	"JKCEMU basic compiler",
+	emuThread,
+	editText,
+	sourceText,
+	logOut,
+	options,
+	forceRunProgram );
     this.basicOptions    = options;
     this.sourceFormatter = null;
     if( this.basicOptions.getFormatSource() ) {
@@ -91,6 +97,9 @@ public class BasicCompiler extends PrgThread
     EmuSys emuSys = emuThread.getEmuSys();
     this.sysTitle = emuSys.getTitle();
     this.platform = getPlatform( emuSys );
+    if( this.basicOptions.getForceCPM() ) {
+      this.platform = Platform.CPM;
+    }
     this.libItems                  = new HashSet<LibItem>();
     this.varLabels                 = new HashSet<String>();
     this.basicLineNums             = new HashSet<Long>();
@@ -194,6 +203,7 @@ public class BasicCompiler extends PrgThread
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void run()
   {
     EditFrm editFrm = this.editText.getEditFrm();
@@ -279,7 +289,7 @@ public class BasicCompiler extends PrgThread
 	  if( this.basicOptions.getShowAsm() && (this.asmOut != null) ) {
 	    final String       text    = this.asmOut.toString();
 	    final BasicOptions options = new BasicOptions( this.basicOptions );
-	    SwingUtilities.invokeLater(
+	    EventQueue.invokeLater(
 			new Runnable()
 			{
 			  public void run()
@@ -305,7 +315,7 @@ public class BasicCompiler extends PrgThread
       }
     }
     catch( Exception ex ) {
-      SwingUtilities.invokeLater( new ErrorMsg( editFrm, ex ) );
+      EventQueue.invokeLater( new ErrorMsg( editFrm, ex ) );
     }
     if( editFrm != null )
       editFrm.threadTerminated( this );
@@ -1055,6 +1065,7 @@ public class BasicCompiler extends PrgThread
   {
     if( skipSpaces( iter ) == '*' ) {
       iter.next();
+      skipSpaces( iter );
       Integer value = readHex( iter );
       if( value == null ) {
 	throw new PrgException( "Hexadezimalziffer erwartet" );
@@ -1224,8 +1235,11 @@ public class BasicCompiler extends PrgThread
       this.forNextEntries.push( forNextEntry );
       if( !varAddrExpr.equals( "HL" ) && (stepValue != null) ) {
 	forNextEntry.setCounterVariableAddrExpr( varAddrExpr );
+	forNextEntry.setEndValue( endValue );
 	forNextEntry.setStepValue( stepValue.intValue() );
+	forNextEntry.setOptimized( true );
       } else {
+	forNextEntry.setOptimized( false );
 	forNextEntry = null;	// keine Optimierung
       }
     }
@@ -1238,7 +1252,6 @@ public class BasicCompiler extends PrgThread
       if( stepOut != null ) {
 	this.asmOut.append( stepOut );
       }
-      forNextEntry.setEndValue( endValue );
       forNextEntry.setLoopLabel( label );
     } else {
       this.asmOut.append( varAddrOut );
@@ -1330,6 +1343,9 @@ public class BasicCompiler extends PrgThread
     parseExpr( iter );
     putCode( "\tLD\tA,H\n"
 		+ "\tOR\tL\n" );
+    if( this.sourceFormatter != null ) {
+      this.sourceFormatter.append( '\u0020' );
+    }
 
     /*
      * Wenn hinter der Bedingung nur noch ein GOTO folgt
@@ -1520,8 +1536,10 @@ public class BasicCompiler extends PrgThread
      * Je nach Optionen und ob die Adresse der Laufvariablen konstant ist,
      * Stack pruefen und optimierten Programmcode erzeugen
      */
+    int          stepValue      = 0;
+    Integer      endValue       = null;
     String       orgVarAddrExpr = null;
-    ForNextEntry forNextEntry   = null;
+    String       loopLabel      = null;
     if( this.forNextEntries != null ) {
       if( this.forNextEntries.isEmpty() ) {
 	throw new PrgException( "Bei Strukturierter Programmierung"
@@ -1530,10 +1548,15 @@ public class BasicCompiler extends PrgThread
 		+ " \'FOR/NEXT als strukturierte Schleifen \u00FCbersetzen"
 		+ " und optimieren\'" );
       }
-      forNextEntry   = this.forNextEntries.pop();
-      orgVarAddrExpr = forNextEntry.getCounterVariableAddrExpr();
+      ForNextEntry forNextEntry = this.forNextEntries.pop();
+      if( forNextEntry.isOptimized() ) {
+	loopLabel      = forNextEntry.getLoopLabel();
+	orgVarAddrExpr = forNextEntry.getCounterVariableAddrExpr();
+	endValue       = forNextEntry.getEndValue();
+	stepValue      = forNextEntry.getStepValue();
+      }
     }
-    if( orgVarAddrExpr != null ) {
+    if( (loopLabel != null) && (orgVarAddrExpr != null) ) {
       if( varAddrExpr != null ) {
 	if( !varAddrExpr.equals( orgVarAddrExpr ) ) {
 	  throw new PrgException( "Unterschiedliche Laufvariablen"
@@ -1554,7 +1577,6 @@ public class BasicCompiler extends PrgThread
       putCode( "\tLD\tHL,(" );
       putCode( orgVarAddrExpr );
       putCode( ")\n" );
-      int stepValue = forNextEntry.getStepValue();
       if( stepValue == -1 ) {
 	putCode( "\tDEC\tHL\n" );
       } else if( stepValue == 1 ) {
@@ -1569,7 +1591,6 @@ public class BasicCompiler extends PrgThread
       putCode( "\tLD\t(" );
       putCode( orgVarAddrExpr );
       putCode( "),HL\n" );
-      Integer endValue = forNextEntry.getEndValue();
       if( endValue != null ) {
 	putCode_LD_DE_nn( endValue );
       } else {
@@ -1577,57 +1598,50 @@ public class BasicCompiler extends PrgThread
       }
       putCode( "\tCALL\tCPHLDE\n" );
       this.libItems.add( LibItem.H_CP );
-      if( stepValue < 0 ) {
-        if( this.basicOptions.getCheckStack() || (endValue == null) ) {
-	  String label = nextLabel();
-	  putCode( "\tJR\tC," );
-	  putCode( label );
-	  putCode( '\n' );
-	  if( endValue == null ) {
-	    putCode( "\tPUSH\tDE\n" );
-	  }
-	  if( this.basicOptions.getCheckStack() ) {
-	    putCode_LD_A_n( MAGIC_FOR );
-	    putCode( "\tPUSH\tAF\n" );
-	  }
-	  putCode( "\tJP\t" );
-	  putCode( forNextEntry.getLoopLabel() );
-	  putCode( '\n' );
-	  putCode( label );
-	  putCode( ":\n" );
-	} else {
+      if( (endValue != null) && !this.basicOptions.getCheckStack() ) {
+	/*
+	 * Diese FOR-Schleife legt nichts auf den Stack.
+	 * Es kann somit direkt zum Anfang der Schleife gesprungen werden.
+	 */
+	if( stepValue < 0 ) {
 	  putCode( "\tJP\tNC," );
-	  putCode( forNextEntry.getLoopLabel() );
-	  putCode( '\n' );
-	}
-      } else {
-        if( this.basicOptions.getCheckStack() || (endValue == null) ) {
-	  String label = nextLabel();
-	  putCode( "\tJR\tZ," );
-	  putCode( label );
-	  putCode( "\n"
-		+ "\tJR\tC," );
-	  putCode( label );
-	  putCode( '\n' );
-	  if( endValue == null ) {
-	    putCode( "\tPUSH\tDE\n" );
-	  }
-	  if( this.basicOptions.getCheckStack() ) {
-	    putCode( "\tPUSH\tAF\n" );
-	  }
-	  putCode( "\tJP\t" );
-	  putCode( forNextEntry.getLoopLabel() );
-	  putCode( '\n' );
-	  putCode( label );
-	  putCode( ":\n" );
 	} else {
 	  putCode( "\tJP\tZ," );
-	  putCode( forNextEntry.getLoopLabel() );
-	  putCode( "\n"
-		+ "\tJP\tC," );
-	  putCode( forNextEntry.getLoopLabel() );
+	  putCode( loopLabel );
 	  putCode( '\n' );
+	  putCode( "\tJP\tC," );
 	}
+	putCode( loopLabel );
+	putCode( '\n' );
+      } else {
+	String exitLabel = nextLabel();
+	if( stepValue < 0 ) {
+	  putCode( "\tJR\tC," );
+	  putCode( exitLabel );
+	  putCode( '\n' );
+	} else {
+	  String tmpLabel = nextLabel();
+	  putCode( "\tJR\tZ," );
+	  putCode( tmpLabel );
+	  putCode( '\n' );
+	  putCode( "\tJR\tNC," );
+	  putCode( exitLabel );
+	  putCode( '\n' );
+	  putCode( tmpLabel );
+	  putCode( ":\n" );
+	}
+	if( endValue == null ) {
+	  putCode( "\tPUSH\tDE\n" );
+	}
+	if( this.basicOptions.getCheckStack() ) {
+	  putCode_LD_A_n( MAGIC_FOR );
+	  putCode( "\tPUSH\tAF\n" );
+	}
+	putCode( "\tJP\t" );
+	putCode( loopLabel );
+	putCode( '\n' );
+	putCode( exitLabel );
+	putCode( ":\n" );
       }
     } else {
       if( this.basicOptions.getCheckStack() ) {
@@ -1964,6 +1978,7 @@ public class BasicCompiler extends PrgThread
   private void parseHEX( CharacterIterator iter ) throws PrgException
   {
     parseToken( iter, '(' );
+    skipSpaces( iter );
     Integer value = readHex( iter );
     if( value == null ) {
       throw new PrgException( "Hexadezimalziffer erwartet" );
@@ -2365,6 +2380,7 @@ public class BasicCompiler extends PrgThread
       else if( checkKeyword( iter, "HEX" ) ) {
 	if( skipSpaces( iter ) == '(' ) {
 	  iter.next();
+	  skipSpaces( iter );
 	  value = readHex( iter );
 	  if( value != null ) {
 	    if( skipSpaces( iter ) == ')' ) {
@@ -2564,9 +2580,14 @@ public class BasicCompiler extends PrgThread
     char ch = skipSpaces( iter );
     if( ch == '-' ) {
       iter.next();
-      parseAddExpr( iter );
-      putCode( "\tCALL\tNEGHL\n" );
-      this.libItems.add( LibItem.ABS_NEG_HL );
+      Integer value = checkConstExpr( iter );
+      if( value != null ) {
+	putCode_LD_HL_nn( -value.intValue() );
+      } else {
+	parseAddExpr( iter );
+	putCode( "\tCALL\tNEGHL\n" );
+	this.libItems.add( LibItem.ABS_NEG_HL );
+      }
     } else {
       if( ch == '+' ) {
 	ch = iter.next();
@@ -2584,13 +2605,23 @@ public class BasicCompiler extends PrgThread
       iter.next();
       Integer value = checkConstMulExpr( iter );
       if( value != null ) {
-	putCode_LD_DE_nn( value.intValue() );
-	if( ch == '+' ) {
-	  putCode( "\tCALL\tO_ADD\n" );
-	  this.libItems.add( LibItem.O_ADD );
+	if( value.intValue() == 1 ) {
+	  if( ch == '+' ) {
+	    putCode( "\tCALL\tO_INC\n" );
+	    this.libItems.add( LibItem.O_INC );
+	  } else {
+	    putCode( "\tCALL\tO_DEC\n" );
+	    this.libItems.add( LibItem.O_DEC );
+	  }
 	} else {
-	  putCode( "\tCALL\tO_SUB\n" );
-	  this.libItems.add( LibItem.O_SUB );
+	  putCode_LD_DE_nn( value.intValue() );
+	  if( ch == '+' ) {
+	    putCode( "\tCALL\tO_ADD\n" );
+	    this.libItems.add( LibItem.O_ADD );
+	  } else {
+	    putCode( "\tCALL\tO_SUB\n" );
+	    this.libItems.add( LibItem.O_SUB );
+	  }
 	}
       } else {
 	putCode( "\tPUSH\tHL\n" );
@@ -2618,11 +2649,20 @@ public class BasicCompiler extends PrgThread
       iter.next();
       Integer value = checkConstPrimExpr( iter );
       if( value != null ) {
-	putCode_LD_DE_nn( value.intValue() );
 	if( ch == '*' ) {
-	  putCode( "\tCALL\tO_MUL\n" );
-	  this.libItems.add( LibItem.O_MUL );
+	  if( value.intValue() == 2 ) {
+	    putCode( "\tLD\tA,H\n"
+			+ "\tADD\tHL,HL\n"
+			+ "\tXOR\tH\n"
+			+ "\tJP\tM,E_ARIT\n" );
+	    this.libItems.add( LibItem.E_ARIT );
+	  } else {
+	    putCode_LD_DE_nn( value.intValue() );
+	    putCode( "\tCALL\tO_MUL\n" );
+	    this.libItems.add( LibItem.O_MUL );
+	  }
 	} else {
+	  putCode_LD_DE_nn( value.intValue() );
 	  putCode( "\tCALL\tO_DIV\n" );
 	  this.libItems.add( LibItem.O_DIV );
 	}
@@ -2659,6 +2699,38 @@ public class BasicCompiler extends PrgThread
     }
     else if( (ch >= '0') && (ch <= '9') ) {
       putCode_LD_HL_nn( parseNumber( iter ) );
+    }
+    else if( ch == '&' ) {
+      ch = iter.next();
+      if( (ch == 'B') || (ch == 'b') ) {
+	ch = iter.next();
+	if( (ch == '0') || (ch == '1') ) {
+	  int value = 0;
+	  while( (ch == '0') || (ch == '1') ) {
+	    value <<= 1;
+	    if( ch == '1' ) {
+	      value |= 1;
+	    }
+	    ch = iter.next();
+	  }
+	  putCode_LD_HL_nn( value );
+	  ac1BasicMismatch();
+	  z1013BasicMismatch();
+	} else {
+	  throw new PrgException( "0 oder 1 erwartet" );
+	}
+      } else if( (ch == 'H') || (ch == 'h') ) {
+	iter.next();
+	Integer value = readHex( iter );
+	if( value == null ) {
+	  throw new PrgException( "Hexadezimalziffer erwartet" );
+	}
+	putCode_LD_HL_nn( value );
+	ac1BasicMismatch();
+	z1013BasicMismatch();
+      } else {
+	throw new PrgException( "B oder H erwartet" );
+      }
     }
     else if( ch == '\'' ) {
       ch = iter.next();
@@ -2769,7 +2841,7 @@ public class BasicCompiler extends PrgThread
   private Integer readHex( CharacterIterator iter ) throws PrgException
   {
     Integer rv = null;
-    char    ch = skipSpaces( iter );
+    char    ch = iter.current();
     if( ((ch >= '0') && (ch <= '9'))
 	|| ((ch >= 'A') && (ch <= 'F'))
 	|| ((ch >= 'a') && (ch <= 'f')) )
@@ -3231,8 +3303,8 @@ public class BasicCompiler extends PrgThread
        * Ende einer FOR-Schleife
        * Die Funktion liest vom Stack die Werte,
        * die bei der FOR-Anweisung auf den Stack geschrieben wurden,
-       * und prueft, ob zum Schleifenanfang gesprungen wird.
-       * Wenn nein, wir der Stack bereinigt.
+       * und prueft, ob die Schleife nochmal durchlaufen werden muss.
+       * Wenn ja, wird in HL der Wert 1 zurueckgeliefert, anderenfalls 0.
        *
        * Parameter:
        *   Stack:
@@ -3445,7 +3517,7 @@ public class BasicCompiler extends PrgThread
     }
     if( this.libItems.contains( LibItem.H_CP ) ) {
       /*
-       * Vergleich von HL und DE
+       * Vorzeichenbehafteter Vergleich von HL und DE
        * Parameter:
        *   HL, DE: Operanden
        * Rueckgabe:
@@ -3466,12 +3538,39 @@ public class BasicCompiler extends PrgThread
 		+ "\tXOR\tD\n"
 		+ "\tJP\tP,H_CP2\n"
 		+ "\tEX\tDE,HL\n"
+		+ "\tCALL\tH_CP2\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tRET\n"
 		+ "H_CP2:\tLD\tA,H\n"
 		+ "\tCP\tD\n"
 		+ "\tRET\tNZ\n"
 		+ "\tLD\tA,L\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\n" );
+    }
+    if( this.libItems.contains( LibItem.O_INC ) ) {
+      /*
+       * Addition: HL = HL + 1
+       */
+      putCode( "O_INC:\tINC\tHL\n"
+		+ "\tLD\tA,80H\n"
+		+ "\tXOR\tH\n"
+		+ "\tOR\tL\n"
+		+ "\tRET\tNZ\n"
+		+ "\tJP\tE_ARIT\n" );
+      this.libItems.add( LibItem.E_ARIT );
+    }
+    if( this.libItems.contains( LibItem.O_DEC ) ) {
+      /*
+       * Addition: HL = HL - 1
+       */
+      putCode( "O_DEC:\tLD\tA,80H\n"
+		+ "\tXOR\tH\n"
+		+ "\tOR\tL\n"
+		+ "\tJP\tZ,E_ARIT\n"
+		+ "\tDEC\tHL\n"
+		+ "\tRET\n" );
+      this.libItems.add( LibItem.E_ARIT );
     }
     if( this.libItems.contains( LibItem.O_SUB ) ) {
       /*
@@ -3690,7 +3789,7 @@ public class BasicCompiler extends PrgThread
       /*
        * Tastaturstatus abfragen und Wert des Zeichens zurueckliefern,
        * welches durch die gerade gedrueckte(n) Taste(n) gebildet wird.
-       * Dabei wird auch auf Abbruch geprueft
+       * Dabei wird auch auf Abbruch geprueft.
        *
        * Rueckgabe:
        *   A: Wert des Zeichens oder 0
@@ -4158,7 +4257,11 @@ public class BasicCompiler extends PrgThread
 		+ "\n" );
       }
       buf.append( "\tORG\t" );
-      buf.append( getHex4( this.basicOptions.getBegAddr() ) );
+      int begAddr = this.basicOptions.getBegAddr();
+      if( this.basicOptions.getForceCPM() ) {
+	begAddr = 0x0100;
+      }
+      buf.append( getHex4( begAddr ) );
       buf.append( (char) '\n' );
       if( this.platform == Platform.KC85 ) {
 	buf.append( "\tDEFB\t7FH,7FH\n" );

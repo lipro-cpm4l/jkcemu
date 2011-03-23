@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -40,6 +40,7 @@ public class TarUnpacker extends AbstractThreadDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected void doProgress()
   {
     boolean dirExists = this.outDir.exists();
@@ -145,7 +146,7 @@ public class TarUnpacker extends AbstractThreadDlg
 	entry = TarEntry.readEntryHeader( in );
       }
     }
-    catch( IOException ex ) {
+    catch( Exception ex ) {
       StringBuilder buf = new StringBuilder( 128 );
       buf.append( "\nFehler beim Lesen der Datei " );
       buf.append( this.srcFile.getPath() );
@@ -176,7 +177,7 @@ public class TarUnpacker extends AbstractThreadDlg
 		File    outDir,
 		boolean compression )
   {
-    super( owner, true );
+    super( owner, "JKCEMU tar unpacker", true );
     this.srcFile     = srcFile;
     this.outDir      = outDir;
     this.compression = compression;

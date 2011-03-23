@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,6 +18,7 @@ public class FileEntry
   private Long    size;
   private Long    lastModified;
   private File    file;
+  private Integer userNum;
   private Object  value;
   private boolean readOnly;
   private boolean sysFile;
@@ -32,6 +33,7 @@ public class FileEntry
     this.size         = null;
     this.lastModified = null;
     this.file         = null;
+    this.userNum      = null;
     this.value        = null;
     this.readOnly     = false;
     this.sysFile      = false;
@@ -75,6 +77,12 @@ public class FileEntry
   public Long getSize()
   {
     return this.size;
+  }
+
+
+  public Integer getUserNum()
+  {
+    return this.userNum;
   }
 
 
@@ -180,6 +188,12 @@ public class FileEntry
   public void setSystemFile( boolean state )
   {
     this.sysFile = state;
+  }
+
+
+  public void setUserNum( Integer userNum )
+  {
+    this.userNum = userNum;
   }
 
 

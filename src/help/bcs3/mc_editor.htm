@@ -1,83 +1,83 @@
 <html>
 <body>
-  <h1>Maschinenkode-Editor</h1>
-    Torsten Musiol hat f&uuml;r den BCS3 einen Maschinenkode-Editor
-    entwickelt, der auch im Emulator integriert ist.
-    Da dieser Maschinenkode-Editor nur mit BASIC-SE 3.1
-    f&&uuml;r 29 Zeichen pro Zeile korrekt l&auml;uft,
-    ist er auch nur bei dieser BASIC-Version als ROM
-    im Arbeitsspeicher verf&uuml;gbar.
-  <br/><br/>
-    Der Maschinenkode-Editor erfordert mindestens 20 sichtbare Zeilen.
-    Stellen Sie bitte beim Kaltstart von BASIC.SE 3.1
-    eine entsprechende Zeilenzahl ein.
-  <br/><br/>
+ <h1>Maschinenkode-Editor</h1>
+  Torsten Musiol hat f&uuml;r den BCS3 einen Maschinenkode-Editor
+  entwickelt, der auch im Emulator integriert ist.
+  Da dieser Maschinenkode-Editor nur mit BASIC-SE&nbsp;3.1
+  f&uuml;r 29 Zeichen pro Zeile korrekt l&auml;uft,
+  ist er auch nur bei dieser BASIC-Version als ROM
+  im Arbeitsspeicher verf&uuml;gbar.
+ <br/><br/>
+  Der Maschinenkode-Editor erfordert mindestens 20 sichtbare Zeilen.
+  Stellen Sie bitte beim Kaltstart von BASIC-SE&nbsp;3.1
+  eine entsprechende Zeilenzahl ein.
+ <br/><br/>
 
-  <h2>Aufruf</h2>
-    Geben Sie im BASIC-SE 3.1 folgende Zeile ein:<br/><br/>
-    <tt>Y=USR(0F000H)</tt><br/><br/>
-    Der Maschinenkode-Editor meldet sich mit: <tt>EDIT&gt;</tt><br/>
-    Sie befinden sich nun in der Kommandoschleife.
-  <br/><br/>
+ <h2>Aufruf</h2>
+  Geben Sie im BASIC-SE&nbsp;3.1 folgende Zeile ein:<br/><br/>
+  <tt>Y=USR(0F000H)</tt><br/><br/>
+  Der Maschinenkode-Editor meldet sich mit: <tt>EDIT&gt;</tt><br/>
+  Sie befinden sich nun in der Kommandoschleife.
+ <br/><br/>
 
-  <h2>Kommandos</h2>
-    <table border="1">
-      <tr><th>Kommando</th><th>Bedeutung</th></tr>
-      <tr>
-	<td valign="top" nowrap>G&lt;Adresse&gt;</td>
-	</td>
-	  Go<br/>
-	  Start eines Maschinencodeunterprogramms
-	  ab der angegebenen Adresse.<br/>
-	  Bei einem RETURN-Befehl wird in die Kommandoschleife
-	  zur&uuml;ckgesprungen.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top" nowrap>M&lt;Adr1&gt;-&lt;Adr2&gt;-&lt;Adr3&gt;</td>
-	<td>
-	  Move<br/>
-	  Kopieren des Speicherbereichs von &lt;Adr1&gt; bis &lt;Adr2&gt;
-	  nach &lt;Adr3&gt;,<br/>
-	  Die Speicherbereiche k&ouml;nnen sich &uuml;berlappen.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top" nowrap>S&lt;Adresse&gt;</td>
-	</td>
-	  Substitute<br/>
-	  Beschreiben von Speicherzellen ab der angegebenen Adresse,<br/>
-	  Mit den Tasten <em>O</em>, <em>L</em>, <em>I</em> und <em>P</em>
-	  k&ouml;nnen Sie den Cursor auf die gew&uuml;nschte
-	  Speicherzelle setzen.
-	  Geben Sie nun das zu schreibende Byte hexadezimal ein
-	  und dr&uuml;cken die ENTER-Taste.
-	  Die Taste <em>Q</em> f&uuml;hrt in die Kommandoschleife zur&uuml;ck.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top" nowrap>T&lt;Adresse&gt;</td>
-	</td>
-	  Test<br/>
-	  Wie Kommando G, nur mit dem Unterschied,
-	  dass bei R&uuml;ckkehr aus dem Maschinencodeunterprogramm
-	  die Register AF, BC, DE und HL ausgegeben werden.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top" nowrap>Q</td>
-	</td>
-	  Quit<br/>
-	  R&uuml;ckkehr zu BASIC-SE 3.1
-	</td>
-      </tr>
-    </table>
-  <br/><br/>
+ <h2>Kommandos</h2>
+  <table border="1">
+   <tr><th>Kommando</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top" nowrap>G&lt;Adresse&gt;</td>
+    <td valign="top">
+     Go<br/>
+     Start eines Maschinencodeunterprogramms
+     ab der angegebenen Adresse.<br/>
+     Bei einem RETURN-Befehl wird in die Kommandoschleife
+     zur&uuml;ckgesprungen.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap>M&lt;Adr1&gt;-&lt;Adr2&gt;-&lt;Adr3&gt;</td>
+    <td valign="top">
+     Move<br/>
+     Kopieren des Speicherbereichs von &lt;Adr1&gt; bis &lt;Adr2&gt;
+     nach &lt;Adr3&gt;,<br/>
+     Die Speicherbereiche k&ouml;nnen sich &uuml;berlappen.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap>S&lt;Adresse&gt;</td>
+    <td valign="top">
+     Substitute<br/>
+     Beschreiben von Speicherzellen ab der angegebenen Adresse,<br/>
+     Mit den Tasten <em>O</em>, <em>L</em>, <em>I</em> und <em>P</em>
+     k&ouml;nnen Sie den Cursor auf die gew&uuml;nschte
+     Speicherzelle setzen.
+     Geben Sie nun das zu schreibende Byte hexadezimal ein
+     und dr&uuml;cken die ENTER-Taste.
+     Die Taste <em>Q</em> f&uuml;hrt in die Kommandoschleife zur&uuml;ck.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap>T&lt;Adresse&gt;</td>
+    <td valign="top">
+     Test<br/>
+     Wie Kommando G, nur mit dem Unterschied,
+     dass bei R&uuml;ckkehr aus dem Maschinencodeunterprogramm
+     die Register AF, BC, DE und HL ausgegeben werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap>Q</td>
+    <td valign="top">
+     Quit<br/>
+     R&uuml;ckkehr zu BASIC-SE 3.1
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
 
-  <h2>Literatur</h2>
-    Musiol, Torsten: Maschinenkode-Editor,<br/>
-    in radio fernsehen elektronik, Heft 1/1989, S. 50-52,<br/>
-    Berlin 1989
+ <h2>Literatur</h2>
+  Musiol, Torsten: Maschinenkode-Editor,<br/>
+  in radio fernsehen elektronik, Heft 1/1989, S. 50-52,<br/>
+  Berlin 1989
 </body>
 </html>
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,7 @@
 
 package jkcemu.base;
 
-import java.awt.Color;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.*;
 import java.lang.*;
@@ -17,8 +17,9 @@ import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.audio.*;
 import jkcemu.disk.*;
+import jkcemu.emusys.*;
+import jkcemu.joystick.*;
 import jkcemu.print.PrintMngr;
-import jkcemu.system.*;
 import z80emu.*;
 
 
@@ -28,79 +29,77 @@ public class EmuThread extends Thread implements
 {
   public enum ResetLevel { NO_RESET, WARM_RESET, COLD_RESET, POWER_ON };
 
-  private ScreenFrm           screenFrm;
-  private Z80CPU              z80cpu;
-  private Object              monitor;
-  private byte[]              ram;
-  private byte[]              ramExtended;
-  private RAMFloppy           ramFloppy1;
-  private RAMFloppy           ramFloppy2;
-  private PrintMngr           printMngr;
-  private volatile ExtFile    extFont;
-  private volatile ExtROM[]   extROMs;
-  private volatile AudioIn    audioIn;
-  private volatile AudioOut   audioOut;
-  private volatile LoadData   loadData;
-  private volatile ResetLevel resetLevel;
-  private volatile boolean    emuRunning;
-  private volatile EmuSys     emuSys;
-  private volatile EmuSys     nextEmuSys;
-  private volatile ExtROM[]   nextExtROMs;
+  private ScreenFrm                 screenFrm;
+  private Z80CPU                    z80cpu;
+  private Object                    monitor;
+  private JoystickFrm               joyFrm;
+  private JoystickThread[]          joyThreads;
+  private byte[]                    ram;
+  private byte[]                    ramExtended;
+  private RAMFloppy                 ramFloppy1;
+  private RAMFloppy                 ramFloppy2;
+  private PrintMngr                 printMngr;
+  private Collection<ResetListener> resetListeners;
+  private volatile AudioIn          audioIn;
+  private volatile AudioOut         audioOut;
+  private volatile LoadData         loadData;
+  private volatile ResetLevel       resetLevel;
+  private volatile boolean          emuRunning;
+  private volatile EmuSys           emuSys;
+  private volatile Boolean          iso646de;
 
 
   public EmuThread( ScreenFrm screenFrm, Properties props )
   {
-    super( "Emulation Thread" );
-    this.screenFrm   = screenFrm;
-    this.z80cpu      = new Z80CPU( this, this );
-    this.monitor     = "a monitor object for synchronization";
-    this.ram         = new byte[ 0x10000 ];
-    this.ramExtended = null;
-    this.ramFloppy1  = new RAMFloppy();
-    this.ramFloppy2  = new RAMFloppy();
-    this.printMngr   = new PrintMngr();
-    this.extFont     = null;
-    this.extROMs     = null;
-    this.audioIn     = null;
-    this.audioOut    = null;
-    this.loadData    = null;
-    this.resetLevel  = ResetLevel.POWER_ON;
-    this.emuRunning  = false;
-    this.emuSys      = null;
-    this.nextEmuSys  = null;
-    this.nextExtROMs = null;
+    super( "JKCEMU cpu emulation" );
+    this.screenFrm      = screenFrm;
+    this.z80cpu         = new Z80CPU( this, this );
+    this.monitor        = "a monitor object for synchronization";
+    this.joyFrm         = null;
+    this.joyThreads     = new JoystickThread[ 2 ];
+    Arrays.fill( this.joyThreads, null );
+    this.ram            = new byte[ 0x10000 ];
+    this.ramExtended    = null;
+    this.ramFloppy1     = new RAMFloppy();
+    this.ramFloppy2     = new RAMFloppy();
+    this.printMngr      = new PrintMngr();
+    this.resetListeners = new ArrayList<ResetListener>();
+    this.audioIn        = null;
+    this.audioOut       = null;
+    this.loadData       = null;
+    this.resetLevel     = ResetLevel.POWER_ON;
+    this.emuRunning     = false;
+    this.emuSys         = null;
     applySettings( props );
-    fireReset( ResetLevel.POWER_ON );
   }
 
 
-  public void applySettings( Properties props )
+  public synchronized void addResetListener( ResetListener listener )
   {
-    applySettings(
-		props,
-		EmuUtil.readExtFont( this.screenFrm, props ),
-		EmuUtil.readExtROMs( this.screenFrm, props ),
-		false );
+    this.resetListeners.add( listener );
   }
 
 
-  public synchronized void applySettings(
-				Properties props,
-				ExtFile    extFont,
-				ExtROM[]   extROMs,
-				boolean    reqReset )
+  public synchronized void applySettings( Properties props )
   {
     // zu emulierendes System ermitteln
-    EmuSys emuSys = this.emuSys;
-    if( !reqReset && (emuSys != null) ) {
-      reqReset = emuSys.requiresReset( props );
+    boolean done   = false;
+    EmuSys  emuSys = this.emuSys;
+    if( emuSys != null ) {
+      if( emuSys.canApplySettings( props ) ) {
+	done = true;
+      }
     }
-    if( (emuSys == null) || reqReset ) {
+    if( (emuSys != null) && done ) {
+      emuSys.applySettings( props );
+    } else {
       if( emuSys != null ) {
 	emuSys.die();
       }
       String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-      if( sysName.startsWith( "BCS3" ) ) {
+      if( sysName.startsWith( "AC1" ) ) {
+	emuSys = new AC1( this, props );
+      } else if( sysName.startsWith( "BCS3" ) ) {
 	emuSys = new BCS3( this, props );
       } else if( sysName.startsWith( "C80" ) ) {
 	emuSys = new C80( this, props );
@@ -128,7 +127,7 @@ public class EmuThread extends Thread implements
 	emuSys = new LLC1( this, props );
       } else if( sysName.startsWith( "LLC2" ) ) {
 	emuSys = new LLC2( this, props );
-      } else if( sysName.startsWith( "PCM" ) ) {
+      } else if( sysName.startsWith( "PC/M" ) ) {
 	emuSys = new PCM( this, props );
       } else if( sysName.startsWith( "Poly880" ) ) {
 	emuSys = new Poly880( this, props );
@@ -141,34 +140,10 @@ public class EmuThread extends Thread implements
       } else if( sysName.startsWith( "Z1013" ) ) {
 	emuSys = new Z1013( this, props );
       } else {
-	emuSys = new AC1( this, props );
+	emuSys = new A5105( this, props );
       }
-    }
-    if( reqReset && (this.emuSys != null) ) {
-      synchronized( this.monitor ) {
-	this.nextEmuSys  = emuSys;
-	this.nextExtROMs = extROMs;
-      }
-    } else {
-      this.emuSys  = emuSys;
-      this.extROMs = extROMs;
-    }
-    emuSys.applySettings( props );
-    this.extFont = extFont;
-    if( reqReset || (this.emuSys == null) ) {
+      this.emuSys = emuSys;
       fireReset( ResetLevel.COLD_RESET );
-    }
-
-    // RAM-Floppies
-    if( props != null ) {
-      checkLoadRF(
-		this.ramFloppy1,
-		'1',
-		props.getProperty( "jkcemu.ramfloppy.1.file.name" ) );
-      checkLoadRF(
-		this.ramFloppy2,
-		'2',
-		props.getProperty( "jkcemu.ramfloppy.2.file.name" ) );
     }
 
     // Floppy Disks
@@ -181,30 +156,86 @@ public class EmuThread extends Thread implements
       }
     }
 
+    // Joysticks
+    int nJoys = emuSys.getSupportedJoystickCount();
+    for( int i = 0; i < this.joyThreads.length; i++ ) {
+      JoystickThread jt = null;
+      synchronized( this.joyThreads ) {
+	jt = this.joyThreads[ i ];
+	if( jt != null ) {
+	  if( i >= nJoys ) {
+	    jt.fireStop();
+	    this.joyThreads[ i ] = null;
+	  }
+	  jt = null;
+	} else {
+	  if( i < nJoys ) {
+	    jt = new JoystickThread( this, i, false );
+	    this.joyThreads[ i ] = jt;
+	  }
+	}
+      }
+      if( jt != null ) {
+	jt.start();
+      }
+      updJoystickFrm( i );
+    }
 
     // CPU-Geschwindigkeit
     updCPUSpeed( props );
+
+    // sonstiges
+    this.iso646de = null;
+  }
+
+
+  public void changeJoystickConnectState( int joyNum )
+  {
+    JoystickThread jt = null;
+    synchronized( this.joyThreads ) {
+      if( (joyNum >= 0) && (joyNum < this.joyThreads.length) ) {
+	jt = this.joyThreads[ joyNum ];
+	if( jt != null ) {
+	  try {
+	    jt.fireStop();
+	    jt.join( 500 );
+	  }
+	  catch( InterruptedException ex ) {}
+	  this.joyThreads[ joyNum ] = null;
+	} else {
+	  jt = new JoystickThread( this, joyNum, true );
+	  this.joyThreads[ joyNum ] = jt;
+	  jt.start();
+	}
+	updJoystickFrm( joyNum );
+      }
+    }
+  }
+
+
+  public void fireShowJoystickError( final String msg )
+  {
+    final Component owner = this.joyFrm;
+    if( (owner != null) && (msg != null) ) {
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    BasicDlg.showErrorDlg( owner, msg );
+		  }
+		} );
+    }
   }
 
 
   public static int getDefaultSpeedKHz( Properties props )
   {
-    int    rv      = AC1.getDefaultSpeedKHz();
+    int    rv      = A5105.getDefaultSpeedKHz();
     String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
     if( sysName != null ) {
-      if( sysName.startsWith( "KC85/1" )
-	  || sysName.startsWith( "KC87" )
-	  || sysName.startsWith( "Z9001" ) )
-      {
-	rv = Z9001.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "HC900" )
-	       || sysName.startsWith( "KC85/2" )
-	       || sysName.startsWith( "KC85/3" )
-	       || sysName.startsWith( "KC85/4" )
-	       || sysName.startsWith( "KC85/5" ) )
-      {
-	rv = KC85.getDefaultSpeedKHz();
+      if( sysName.startsWith( "AC1" ) ) {
+	rv = AC1.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "BCS3" ) ) {
 	rv = BCS3.getDefaultSpeedKHz( props );
@@ -212,11 +243,25 @@ public class EmuThread extends Thread implements
       else if( sysName.startsWith( "C80" ) ) {
 	rv = C80.getDefaultSpeedKHz();
       }
+      else if( sysName.startsWith( "HC900" )
+	       || sysName.startsWith( "KC85/2" )
+	       || sysName.startsWith( "KC85/3" )
+	       || sysName.startsWith( "KC85/4" )
+	       || sysName.startsWith( "KC85/5" ) )
+      {
+	rv = KC85.getDefaultSpeedKHz( props );
+      }
       else if( sysName.startsWith( "HueblerEvertMC" ) ) {
 	rv = HueblerEvertMC.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
 	rv = HueblerGraphicsMC.getDefaultSpeedKHz();
+      }
+      else if( sysName.startsWith( "KC85/1" )
+	       || sysName.startsWith( "KC87" )
+	       || sysName.startsWith( "Z9001" ) )
+      {
+	rv = Z9001.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "KramerMC" ) ) {
 	rv = KramerMC.getDefaultSpeedKHz();
@@ -230,7 +275,7 @@ public class EmuThread extends Thread implements
       else if( sysName.startsWith( "LLC2" ) ) {
 	rv = LLC2.getDefaultSpeedKHz();
       }
-      else if( sysName.startsWith( "PCM" ) ) {
+      else if( sysName.startsWith( "PC/M" ) ) {
 	rv = PCM.getDefaultSpeedKHz();
       }
       else if( sysName.startsWith( "Poly880" ) ) {
@@ -259,9 +304,9 @@ public class EmuThread extends Thread implements
   }
 
 
-  public EmuSys getNextEmuSys()
+  public Boolean getISO646DE()
   {
-    return this.nextEmuSys;
+    return this.iso646de;
   }
 
 
@@ -290,25 +335,6 @@ public class EmuThread extends Thread implements
       }
     }
     return rv;
-  }
-
-
-  public ExtFile getExtFont()
-  {
-    return this.extFont;
-  }
-
-
-  public byte[] getExtFontBytes()
-  {
-    ExtFile extFont = this.extFont;
-    return extFont != null ? extFont.getBytes() : null;
-  }
-
-
-  public ExtROM[] getExtROMs()
-  {
-    return this.extROMs;
   }
 
 
@@ -354,34 +380,59 @@ public class EmuThread extends Thread implements
    * oder einen evtl. vorhandenen Lautsprecheranschluss
    * emuliert werden soll.
    */
-  public boolean isLoudspeakerEmulationEnabled()
+  public boolean isSoundOutEnabled()
   {
-    return audioOut != null ? audioOut.isLoudspeakerEmulationEnabled() : false;
+    return audioOut != null ? audioOut.isSoundOutEnabled() : false;
+  }
+
+
+  public void joystickThreadTerminated( JoystickThread t )
+  {
+    synchronized( this.joyThreads ) {
+      for( int i = 0; i < this.joyThreads.length; i++ ) {
+	if( this.joyThreads[ i ] == t ) {
+	  this.joyThreads[ i ] = null;
+	  updJoystickFrm( i );
+	}
+      }
+    }
   }
 
 
   public boolean keyPressed( KeyEvent e )
   {
-    return this.emuSys.keyPressed( e.getKeyCode(), e.isShiftDown() );
+    return this.emuSys != null ?
+		this.emuSys.keyPressed(
+				e.getKeyCode(),
+				e.isControlDown(),
+				e.isShiftDown() )
+		: false;
   }
 
 
   public void keyReleased()
   {
-    this.emuSys.keyReleased();
+    if( this.emuSys != null )
+      this.emuSys.keyReleased();
   }
 
 
   public void keyTyped( char ch )
   {
-    if( this.emuSys.getSwapKeyCharCase() ) {
-      if( Character.isUpperCase( ch ) ) {
-        ch = Character.toLowerCase( ch );
-      } else if( Character.isLowerCase( ch ) ) {
-        ch = Character.toUpperCase( ch );
+    if( this.emuSys != null ) {
+      if( this.emuSys.getSwapKeyCharCase() ) {
+	if( Character.isUpperCase( ch ) ) {
+	  ch = Character.toLowerCase( ch );
+	} else if( Character.isLowerCase( ch ) ) {
+	  ch = Character.toUpperCase( ch );
+	}
+      }
+      if( this.emuSys.getConvertKeyCharToISO646DE() ) {
+	this.emuSys.keyTyped( EmuUtil.toISO646DE( ch ) );
+      } else {
+	this.emuSys.keyTyped( ch );
       }
     }
-    this.emuSys.keyTyped( EmuUtil.toISO646DE( ch ) );
   }
 
 
@@ -405,6 +456,43 @@ public class EmuThread extends Thread implements
   public void setAudioOut( AudioOut audioOut )
   {
     this.audioOut = audioOut;
+  }
+
+
+  public void setISO646DE( boolean state )
+  {
+    this.iso646de = state;
+  }
+
+
+  public void setJoystickAction( int joyNum, int actionMask )
+  {
+    EmuSys emuSys = this.emuSys;
+    if( emuSys != null ) {
+      emuSys.setJoystickAction( joyNum, actionMask );
+    }
+    JoystickFrm joyFrm = this.joyFrm;
+    if( joyFrm != null ) {
+      joyFrm.setJoystickAction( joyNum, actionMask );
+    }
+  }
+
+
+  public void setJoystickFrm( JoystickFrm joyFrm )
+  {
+    this.joyFrm = joyFrm;
+    synchronized( this.joyThreads ) {
+      for( int i = 0; i < this.joyThreads.length; i++ ) {
+	updJoystickFrm( i );
+      }
+    }
+  }
+
+
+  public void setMemWord( int addr, int value )
+  {
+    setMemByte( addr, value & 0xFF );
+    setMemByte( addr + 1, (value >> 8) & 0xFF );
   }
 
 
@@ -466,7 +554,10 @@ public class EmuThread extends Thread implements
   public void fireReset( ResetLevel resetLevel )
   {
     this.screenFrm.clearScreenSelection();
-    this.screenFrm.stopPastingText();
+    EmuSys emuSys = this.emuSys;
+    if( emuSys != null ) {
+      emuSys.cancelPastingText();
+    }
     synchronized( this.monitor ) {
       this.resetLevel = resetLevel;
       this.loadData   = null;
@@ -503,6 +594,12 @@ public class EmuThread extends Thread implements
 
   public void stopEmulator()
   {
+    for( int i = 0; i < this.joyThreads.length; i++ ) {
+      JoystickThread jt = this.joyThreads[ i ];
+      if( jt != null ) {
+	jt.fireStop();
+      }
+    }
     this.emuRunning = false;
     this.z80cpu.fireExit();
   }
@@ -510,91 +607,65 @@ public class EmuThread extends Thread implements
 
 	/* --- Z80IOSystem --- */
 
+  @Override
   public int readIOByte( int port )
   {
-    return this.emuSys.readIOByte( port );
-  }
-
-
-  public void writeIOByte( int port, int value )
-  {
-    this.emuSys.writeIOByte( port, value );
-  }
-
-
-	/* --- Z80Memory --- */
-
-  public int getMemByte( int addr, boolean m1 )
-  {
-    addr &= 0xFFFF;
-
-    int rv = 0;
-    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
-      rv = getExtROMByte( addr );
-      if( rv < 0 ) {
-	rv = this.emuSys.getMemByte( addr, m1 );
-      }
-    } else {
-      rv = this.emuSys.getMemByte( addr, m1 );
+    int rv = 0xFF;
+    if( this.emuSys != null ) {
+      rv = this.emuSys.readIOByte( port );
     }
     return rv;
   }
 
 
+  @Override
+  public void writeIOByte( int port, int value )
+  {
+    if( this.emuSys != null )
+      this.emuSys.writeIOByte( port, value );
+  }
+
+
+	/* --- Z80Memory --- */
+
+  @Override
+  public int getMemByte( int addr, boolean m1 )
+  {
+    return this.emuSys.getMemByte( addr & 0xFFFF, m1 );
+  }
+
+
+  @Override
   public int getMemWord( int addr )
   {
     return (getMemByte( addr + 1, false ) << 8) | getMemByte( addr, false );
   }
 
 
+  @Override
   public int readMemByte( int addr, boolean m1 )
   {
-    return getMemByte( addr, m1 );
+    return this.emuSys.readMemByte( addr & 0xFFFF, m1 );
   }
 
 
+  @Override
   public boolean setMemByte( int addr, int value )
   {
-    addr &= 0xFFFF;
-
-    boolean rv   = false;
-    boolean done = false;
-    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
-      if( getExtROMByte( addr ) >= 0 ) {
-	done = true;
-      }
-    }
-    if( !done ) {
-      rv = this.emuSys.setMemByte( addr, value );
-    }
-    return rv;
+    return this.emuSys.setMemByte( addr & 0xFFFF, value );
   }
 
 
-  public void setMemWord( int addr, int value )
-  {
-    setMemByte( addr, value & 0xFF );
-    setMemByte( addr + 1, (value >> 8) & 0xFF );
-  }
-
-
+  @Override
   public void writeMemByte( int addr, int value )
   {
-    addr &= 0xFFFF;
-
-    boolean done = false;
-    if( this.emuSys.isExtROMSwitchableAt( addr ) ) {
-      if( getExtROMByte( addr ) >= 0 ) {
-	done = true;
-      }
-    }
-    if( !done )
-      this.emuSys.writeMemByte( addr, value );
+    this.emuSys.writeMemByte( addr & 0xFFFF, value );
   }
 
 
-	/* --- Methoden fuer Thread --- */
+	/* --- ueberschriebene Methoden fuer Thread --- */
 
+  @Override
   public void run()
   {
     this.emuRunning = true;
@@ -611,25 +682,19 @@ public class EmuThread extends Thread implements
 	  if( loadData != null ) {
 	    this.loadData = null;
 	  } else {
-	    if( this.nextEmuSys != null ) {
-	      this.emuSys      = this.nextEmuSys;
-	      this.extROMs     = this.nextExtROMs;
-	      this.nextEmuSys  = null;
-	      this.nextExtROMs = null;
-	    }
 	    if( this.resetLevel == ResetLevel.POWER_ON ) {
-	      for( int i = 0; i < this.ram.length; i++ ) {
-		this.ram[ i ] = (byte) 0;
-	      }
+	      Arrays.fill( this.ram, (byte) 0 );
 	    }
 	  }
 	}
 	if( loadData != null ) {
 	  loadData.loadIntoMemory( this );
 	  this.z80cpu.setRegPC( loadData.getStartAddr() );
-	  int spInitValue = this.emuSys.getAppStartStackInitValue();
-	  if( spInitValue > 0 ) {
-	    this.z80cpu.setRegSP( spInitValue );
+	  if( this.emuSys != null ) {
+	    int spInitValue = this.emuSys.getAppStartStackInitValue();
+	    if( spInitValue > 0 ) {
+	      this.z80cpu.setRegSP( spInitValue );
+	    }
 	  }
 	} else {
 	  if( (this.resetLevel == ResetLevel.COLD_RESET)
@@ -639,9 +704,11 @@ public class EmuThread extends Thread implements
 	  } else {
 	    this.z80cpu.resetCPU( false );
 	  }
-	  this.emuSys.reset( this.resetLevel, Main.getProperties() );
-	  this.z80cpu.setRegPC(
+	  if( this.emuSys != null ) {
+	    this.emuSys.reset( this.resetLevel, Main.getProperties() );
+	    this.z80cpu.setRegPC(
 			this.emuSys.getResetStartAddress( this.resetLevel ) );
+	  }
 	}
 	this.resetLevel = ResetLevel.NO_RESET;
 
@@ -649,13 +716,22 @@ public class EmuThread extends Thread implements
 	this.ramFloppy1.reset();
 	this.ramFloppy2.reset();
 	this.printMngr.reset();
+	Collection<ResetListener> resetListeners = this.resetListeners;
+	if( resetListeners != null ) {
+	  synchronized( resetListeners ) {
+	    for( ResetListener listener : resetListeners ) {
+	      listener.resetFired();
+	    }
+	  }
+	}
 
 	// in die Z80-Emulation verzweigen
 	this.z80cpu.run();
       }
       catch( Z80ExternalException ex ) {}
       catch( Exception ex ) {
-	SwingUtilities.invokeLater( new ErrorMsg( this.screenFrm, ex ) );
+	this.emuRunning = false;
+	EventQueue.invokeLater( new ErrorMsg( this.screenFrm, ex ) );
       }
     }
   }
@@ -663,74 +739,29 @@ public class EmuThread extends Thread implements
 
 	/* --- private Methoden --- */
 
-  private void checkLoadRF(
-			RAMFloppy ramFloppy,
-			char      rfChar,
-			String    fileName )
+  private void updJoystickFrm( final int joyNum )
   {
-    if( fileName != null ) {
-      if( fileName.length() > 0 ) {
-	File    file    = new File( fileName );
-	boolean changed = ramFloppy.hasDataChanged();
-	boolean load    = true;
-	if( changed ) {
-	  File oldFile = ramFloppy.getFile();
-	  if( oldFile != null ) {
-	    if( file.equals( oldFile ) ) {
-	      changed = false;
-	      load    = false;
-	    }
-	  }
-	}
-	if( changed ) {
-	  if( JOptionPane.showConfirmDialog(
-		this.screenFrm,
-		String.format(
-			"Die Daten in der RAM-Floppy %c wurden"
-				+ " ge\u00E4ndert und nicht gespeichert.\n"
-				+ "Soll trotzdem die Datei \'%s\'\n"
-				+ "in die RAM-Floppy geladen werden?",
-			rfChar,
-			fileName ),
-		"Daten ge\u00E4ndert",
-		JOptionPane.YES_NO_OPTION,
-		JOptionPane.WARNING_MESSAGE ) != JOptionPane.YES_OPTION )
-	  {
-	    load = false;
-	  }
-	}
-	if( load ) {
-	  try {
-	    ramFloppy.load( file );
-	  }
-	  catch( IOException ex ) {
-	    String msg = ex.getMessage();
-	    this.screenFrm.fireShowErrorDlg(
-			String.format(
-				"RAM-Floppy %c kann nicht geladen werden\n%s",
-				rfChar,
-				msg != null ? msg : "" ) );
-	  }
-	}
+    final JoystickFrm joyFrm = this.joyFrm;
+    if( (joyFrm != null)
+	&& (joyNum >= 0)
+	&& (joyNum < this.joyThreads.length) )
+    {
+      int    nJoys  = 0;
+      EmuSys emuSys = this.emuSys;
+      if( emuSys != null ) {
+	nJoys = emuSys.getSupportedJoystickCount();
       }
+      final boolean emulated  = (joyNum < nJoys);
+      final boolean connected = (this.joyThreads[ joyNum ] != null);
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    joyFrm.setJoystickState( joyNum, emulated, connected );
+		  }
+		} );
     }
-  }
-
-
-  private int getExtROMByte( int addr )
-  {
-    int      rv      = -1;
-    ExtROM[] extROMs = this.extROMs;
-    if( extROMs != null ) {
-      for( int i = 0; i < extROMs.length; i++ ) {
-	ExtROM rom = this.extROMs[ i ];
-	if( (addr >= rom.getBegAddress()) && (addr <= rom.getEndAddress()) ) {
-	  rv = rom.getByte( addr );
-	  break;
-	}
-      }
-    }
-    return rv;
   }
 }
 

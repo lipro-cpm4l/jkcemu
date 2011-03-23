@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,57 +26,12 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   private JCheckBox    btnAllowUndocInst;
   private JCheckBox    btnLabelsCaseSensitive;
   private JCheckBox    btnPrintLabels;
+  private JCheckBox    btnLabelsToDebugger;
+  private JCheckBox    btnLabelsToReass;
   private JCheckBox    btnFormatSource;
 
 
-  public static PrgOptions showOptionsDlg(
-					Frame      owner,
-					EmuThread  emuThread,
-					PrgOptions options )
-  {
-    AsmOptionsDlg dlg = new AsmOptionsDlg( owner, emuThread, options );
-    dlg.setVisible( true );
-    return dlg.getAppliedOptions();
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  protected void doApply()
-  {
-    try {
-      PrgOptions.Syntax syntax = PrgOptions.Syntax.ALL;
-      if( this.btnSyntaxZilog.isSelected() ) {
-	syntax = PrgOptions.Syntax.ZILOG_ONLY;
-      }
-      else if( this.btnSyntaxRobotron.isSelected() ) {
-	syntax = PrgOptions.Syntax.ROBOTRON_ONLY;
-      }
-      this.appliedOptions = new PrgOptions();
-      this.appliedOptions.setSyntax( syntax );
-      this.appliedOptions.setAllowUndocInst(
-				this.btnAllowUndocInst.isSelected() );
-      this.appliedOptions.setLabelsCaseSensitive(
-				this.btnLabelsCaseSensitive.isSelected() );
-      this.appliedOptions.setPrintLabels( this.btnPrintLabels.isSelected() );
-      this.appliedOptions.setFormatSource( this.btnFormatSource.isSelected() );
-      try {
-	applyCodeDestOptionsTo( this.appliedOptions );
-	doClose();
-      }
-      catch( UserInputException ex ) {
-	showErrorDlg( this, "Erzeugter Programmcode:\n" + ex.getMessage() );
-      }
-    }
-    catch( NumberFormatException ex ) {
-      showErrorDlg( this, ex.getMessage() );
-    }
-  }
-
-
-	/* --- private Konstruktoren und Methoden --- */
-
-  private AsmOptionsDlg( Frame owner, EmuThread emuThread, PrgOptions options )
+  public AsmOptionsDlg( Frame owner, EmuThread emuThread, PrgOptions options )
   {
     super( owner, emuThread, "Assembler-Optionen" );
 
@@ -160,18 +115,45 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 
 
     // Bereich Sonstiges
-    JPanel panelEtc = new JPanel( new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
+    JPanel panelEtc = new JPanel( new GridBagLayout() );
     panelEtc.setBorder( BorderFactory.createTitledBorder( "Sonstiges" ) );
     gbc.gridy++;
     add( panelEtc, gbc );
 
+    GridBagConstraints gbcEtc = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
+
+
     this.btnFormatSource = new JCheckBox( "Quelltext formatieren" );
-    panelEtc.add( this.btnFormatSource );
+    panelEtc.add( this.btnFormatSource, gbcEtc );
+
+    this.btnLabelsToDebugger = new JCheckBox(
+		"Im Debugger Haltepunkte auf Marken anlegen"
+			+ " (nur bei Programmcode in Emulator laden)" );
+    this.btnLabelsToDebugger.setEnabled( false );
+    gbcEtc.insets.top = 0;
+    gbcEtc.gridy++;
+    panelEtc.add( this.btnLabelsToDebugger, gbcEtc );
+
+    this.btnLabelsToReass = new JCheckBox(
+		"Marken im Reassembler verwenden"
+			+ " (nur bei Programmcode in Emulator laden)" );
+    this.btnLabelsToReass.setEnabled( false );
+    gbcEtc.insets.bottom = 5;
+    gbcEtc.gridy++;
+    panelEtc.add( this.btnLabelsToReass, gbcEtc );
 
 
     // Bereich Knoepfe
-    gbc.fill    = GridBagConstraints.NONE;
-    gbc.weightx = 0.0;
+    gbc.fill          = GridBagConstraints.NONE;
+    gbc.weightx       = 0.0;
+    gbc.insets.bottom = 10;
     gbc.gridy++;
     add( createButtons( "Assemblieren" ), gbc );
 
@@ -194,12 +176,16 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 					options.getLabelsCaseSensitive() );
       this.btnPrintLabels.setSelected( options.getPrintLabels() );
       this.btnFormatSource.setSelected( options.getFormatSource() );
+      this.btnLabelsToDebugger.setSelected( options.getLabelsToDebugger() );
+      this.btnLabelsToReass.setSelected( options.getLabelsToReassembler() );
     } else {
       this.btnSyntaxBoth.setSelected( true );
       this.btnAllowUndocInst.setSelected( false );
       this.btnLabelsCaseSensitive.setSelected( false );
       this.btnPrintLabels.setSelected( false );
       this.btnFormatSource.setSelected( false );
+      this.btnLabelsToDebugger.setSelected( false );
+      this.btnLabelsToReass.setSelected( false );
     }
     updCodeDestFields( options );
 
@@ -208,6 +194,54 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
     pack();
     setParentCentered();
     setResizable( false );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected void codeToEmuChanged( boolean state )
+  {
+    this.btnLabelsToDebugger.setEnabled( state );
+    this.btnLabelsToReass.setEnabled( state );
+  }
+
+
+  @Override
+  protected void doApply()
+  {
+    try {
+      PrgOptions.Syntax syntax = PrgOptions.Syntax.ALL;
+      if( this.btnSyntaxZilog.isSelected() ) {
+	syntax = PrgOptions.Syntax.ZILOG_ONLY;
+      }
+      else if( this.btnSyntaxRobotron.isSelected() ) {
+	syntax = PrgOptions.Syntax.ROBOTRON_ONLY;
+      }
+      this.appliedOptions = new PrgOptions();
+      this.appliedOptions.setSyntax( syntax );
+      this.appliedOptions.setAllowUndocInst(
+				this.btnAllowUndocInst.isSelected() );
+      this.appliedOptions.setLabelsCaseSensitive(
+				this.btnLabelsCaseSensitive.isSelected() );
+      this.appliedOptions.setPrintLabels( this.btnPrintLabels.isSelected() );
+      this.appliedOptions.setLabelsToDebugger(
+				this.btnLabelsToDebugger.isSelected() );
+      this.appliedOptions.setLabelsToReassembler(
+				this.btnLabelsToReass.isSelected() );
+      this.appliedOptions.setFormatSource(
+				this.btnFormatSource.isSelected() );
+      try {
+	applyCodeDestOptionsTo( this.appliedOptions );
+	doClose();
+      }
+      catch( UserInputException ex ) {
+	showErrorDlg( this, "Erzeugter Programmcode:\n" + ex.getMessage() );
+      }
+    }
+    catch( NumberFormatException ex ) {
+      showErrorDlg( this, ex.getMessage() );
+    }
   }
 }
 

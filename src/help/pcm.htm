@@ -1,320 +1,334 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des PC/M</h1>
-    Der PC/M, auch Mugler/Mathes-PC oder nur Mugler-PC genannt,
-    ist ein Selbstbaucomputer mit CP/M-Kompatibilit&auml;t.
-    Das Grundkonzept sieht als Laufwerke RAM-Floppies vor,
-    deren Inhalte auf Kassette gespeichert werden.
-  <br/><br/>
+ <h1>Hinweise zur Emulation des PC/M</h1>
+  Der PC/M, auch Mugler/Mathes-PC oder nur Mugler-PC genannt,
+  ist ein Selbstbaucomputer mit CP/M-Kompatibilit&auml;t.
+  Das Grundkonzept sieht als Laufwerke RAM-Floppies vor,
+  deren Inhalte auf Kassette gespeichert werden.
+ <br/><br/>
+  <ul>
+   <li><a href="pcm.htm#hardware">1. Emulierte Hardware</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="pcm.htm#ram">1.1. RAM-B&auml;nke</a>
+   </li>
+   <li><a href="pcm.htm#software">2. Im ROM enthaltene Software</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="pcm.htm#soft_sys">2.1. Hinweise zur Systemsoftware</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="pcm.htm#soft_base">2.1.1. Grundbetriebssystem</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="pcm.htm#soft_rf"> 2.1.2. RAM-Floppy-System</a>
+   </li>
+   <li><a href="pcm.htm#basicc">3. JKCEMU-BASIC-Compiler</a></li>
+  </ul>
+ <br/>
+
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  <ul>
+   <li>8&nbsp;KByte ROM</li>
+   <li>3&nbsp;RAM-B&auml;nke mit je/nbsp;62&nbsp;KByte</li>
+   <li>2&nbsp;KByte Bildwiederholspeicher</li>
+   <li>Kassettenrecorderanschluss</li>
+   <li>Druckeranschluss an der System-SIO Port&nbsp;A</li>
+  </ul>
+ <br/>
+
+ <h3><a name="ram">1.1. RAM-B&auml;nke</a></h3>
+  Die RAM-B&auml;nke&nbsp;1 und 2 liegen hintereinander
+  in der RAM-Floppy&nbsp;1.
+  Das ist deshalb sinnvoll, da das RAM-Floppy-System
+  diese beiden B&auml;nke als RAM-Floppy verwendet.
+  Somit kann die RAM-Floppy mit den Emulatorfunktionen
+  geladen und gespeichert werden.
+ <br/><br/>
 
 
-  <h2>1. Emulierte Hardware</h2>
+ <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
+  <ul>
+   <li>
+    PC/M Systemsoftware Version&nbsp;2.02, bestehend aus:<br/>
     <ul>
-      <li>8&nbsp;KByte ROM</li>
-      <li>3&nbsp;RAM-B&auml;nke mit je 62 KByte</li>
-      <li>2&nbsp;KByte Bildwiederholspeicher</li>
-      <li>Kassettenrecorderanschluss</li>
-      <li>Druckeranschluss an der System-SIO Port A</li>
+     <li>BIOS</li>
+     <li>Kommandoprozessor CCP</li>
+     <li>Kassettenmodel V-Tape</li>
+     <li>Debugger</li>
     </ul>
-  <br/>
+   </li>
+  </ul>
+ <br/>
+  Das enthaltene BIOS stellt ein Laufwerk in Form einer
+  124&nbsp;KByte gro&szlig;en RAM-Floppy zur Verf&uuml;gung,
+  die in den RAM-B&auml;nken&nbsp;1 und 2 liegt.
+  Aus diesem Grund emuliert JKCEMU diese beiden RAM-B&auml;nke
+  auch physisch in der RAM-Floppy&nbsp;1,
+  sodass Sie mit JKCEMU-Mitteln, d.h. von &quot;au&szlig;en&quot;,
+  diese Floppy speichern und wieder laden k&ouml;nnen.
+ <br/><br/>
 
-  <h3>1.1. RAM-B&auml;nke</h3>
-    Die RAM-Bank&nbsp;0 liegt in einem globalen RAM-Bereich,
-    der von allen emulierten Systemen benutzt wird.
-    Die RAM-B&auml;nke&nbsp;1 und 2 liegen hintereinander
-    in der RAM-Floppy&nbsp;1.
-    Das ist deshalb sinnvoll, da das RAM-Floppy-System
-    diese beiden B&auml;nke auch als RAM-Floppy verwendet.
-    Somit kann die RAM-Floppy mit den Emulatorfunktionen
-    geladen und gespeichert werden.
-  <br/><br/>
+ <h3><a name="soft_sys">2.1. Hinweise zur Systemsoftware</a></h3>
+  Bei einem RESET wird die Systemsoftware vom ROM in den RAM geladen
+  und anschlie&szlig;end der ROM ausgeblendet.
+  Der Arbeitsspeicher ist dann folgenderma&szlig;en belegt:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Adresse</th><th>Belegung</th></tr>
+   <tr><td>FC00h - FFFFh</td><td>Bildwiederholspeicher</td></tr>
+   <tr>
+    <td>F800h - FBFFh</td>
+    <td>Bildwiederholspeicher f&uuml;r Zwischenzeilen</td>
+   </tr>
+   <tr><td>F000h - F7FFh</td><td>V-Tape</td></tr>
+   <tr><td>E800h - EFFFh</td><td>Debugger</td></tr>
+   <tr><td>DE00h - E7FFh</td><td>BIOS</td></tr>
+   <tr><td>D000h - DBFFh</td><td>BDOS (nur wenn es geladen wurde)</td></tr>
+   <tr><td>C800h - CFFFh</td><td>CCP</td></tr>
+   <tr><td>0100h - C7FFh</td><td>frei</td></tr>
+   <tr>
+    <td>0000h - 00FFh</td>
+    <td>Verst&auml;ndigungsbereich f&uuml;r CP/V</td>
+   </tr>
+  </table>
+ <br/><br/>
 
+ <h3><a name="soft_base">2.1.1. Grundbetriebssystem</a></h3>
+  Nach einem RESET meldet sich der PC/M-Prompt:
+ <br/><br/>
+  <tt>V&gt;</tt>
+ <br/><br/>
+  Nun k&ouml;nnen Sie Kommandos eingeben, wobei jedes Kommando
+  mit <em>Enter</em> abgeschlossen werden muss.
+  Folgende Kommandos sind m&ouml;glich:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Kommando</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top"><tt>0</tt></td>
+    <td valign="top">
+     Speicherbank&nbsp;0 als aktuellen Arbeitsspeicher einstellen
+     (Standard)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>1</tt></td>
+    <td valign="top">
+     Speicherbank&nbsp;1 als aktuellen Arbeitsspeicher einstellen
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>2</tt></td>
+    <td valign="top">
+     Speicherbank&nbsp;2 als aktuellen Arbeitsspeicher einstellen
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>B</tt></td>
+    <td valign="top">Betriebssystem-ROM einblenden</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>C</tt></td>
+    <td valign="top">
+     RAM-Floppy-System (CP/V) starten,<br/>
+     Dazu muss vorher das BDOS geladen werden.
+     Im Original l&auml;dt man es von Kassette.
+     Der Einfachheit halber kann JKCEMU das BDOS auch automatisch
+     bei jedem RESET laden,
+     wenn Sie es in den <a href="settings.htm">Einstellungen</a>
+     so festgelegen.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>D</tt></td>
+    <td valign="top">Debugger aufrufen</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>F X</tt></td>
+    <td valign="top">Laufwerk <em>X</em> formatieren</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>G aaaa</tt></td>
+    <td valign="top">
+     Sprung zur Adresse <i>aaaa</i>,<br/>
+     Damit kann ein im Arbeitsspeicher befindliches Programm
+     gestartet werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>I</tt></td>
+    <td valign="top">
+     &quot;Inhaltsverzeichnis&quot; der Kassette anzeigen,<br/>
+     Ein separates Inhaltsverzeichnis gibt es jedoch gar nicht.
+     Das Kommando gibt zuerst das Signal zum Starten des
+     Magnetbandger&auml;tes aus (hat im Emulator jedoch keine Wirkung)
+     und lauscht dann am Kassettenrecorderanschluss,
+     um jede gerade gelesene Datei anzuzeigen.
+     In JKCEMU m&uuml;ssen Sie dazu eine entsprechende
+     <a href="audio.htm">Audio-Funktion</a> aktivieren.
+     Das Kommando kann mit <em>CTRL-C</em> abgebrochen werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>L Dateiname.Typ [aaaa [bbbb [cccc]]]</tt></td>
+    <td valign="top">
+     Es wird die Datei mit dem Namen <em>Dateiname.Typ</em>
+     von Kassette in den Arbeitsspeicher geladen.
+     Optional kann die Ladeadresse (<em>aaaa</em>),
+     die Nummer des ersten zu ladenden Blocks (<em>bbbb</em>)
+     und die Nummer des letzten zu ladenden Blocks (<em>cccc</em>)
+     angegeben werden.
+     Bei Lesefehlern k&ouml;nnen Sie einfach zur&uuml;ckspulen
+     und das Lesen der fehlerhaften Stelle noch einmal versuchen.
+     Beachten Sie bitte, dass in JKCEMU muss zum Laden von Kassette
+     eine entsprechende <a href="audio.htm">Audio-Funktion</a>
+     aktiviert werden muss.
+     Das Laden k&ouml;nnen Sie mit <em>CTRL-C</em> abbrechen.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>R Dateiname.Typ X</tt></td>
+    <td valign="top">
+     Es wird die Datei mit dem Namen <em>Dateiname.Typ</em>
+     von Kassette in die RAM-Floppy <em>X</em> geladen.
+     Das Laden kann mit <em>CTRL-C</em> abgebrochen werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     <tt>S Dateiname.Typ aaaa bbbb [cccc] [/F] [dddd]</tt>
+    </td>
+    <td valign="top">
+     Der Adressbereich von <em>aaaa</em> bis <em>bbbb</em>
+     wird mit dem Namen <em>Dateiname.Typ</em> auf Kassette gespeichert.
+     Optional kann bei ausf&uuml;hrbaren Programmen
+     (COM-Dateien) eine Startadresse (<em>cccc</em>) angegeben werden.
+     Die Option <em>/F</em> verhindert das Schreiben der Dateiendekennung,
+     und die Datei kann mit der n&auml;chsten freien Rahmennummer
+     (<em>dddd</em>) fortgesetzt werden.
+     Das f&uuml;hrt dann allerdings zu gr&ouml;&szlig;eren
+     Blockabst&auml;nden.
+     Das Speichern k&ouml;nnen Sie mit <em>CTRL-C</em> abbrechen.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>V Dateiname.Typ aaaa [bbbb [cccc]]</tt></td>
+    <td valign="top">
+     Die auf Kassette befindliche Datei mit dem Namen
+     <em>Dateiname.Typ</em> wird mit dem Arbeitsspeicher
+     ab Adresse <em>aaaa</em> verglichen.
+     Die optionalen Argumente <em>bbbb</em> und <em>cccc</em>
+     haben die gleiche Bedeutung wie beim L-Kommando.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>X Dateiname.Typ aaaa [bbbb [cccc]]</tt></td>
+    <td valign="top">
+     Die Datei mit dem Namen <em>Dateiname.Typ</em> wird von Kassette
+     in den Arbeitsspeicher geladen und auf der beim Speichern
+     angegebenen Adresse gestartet.
+     Die Argumente haben die gleiche Bedeutung wie beim L-Kommando.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>Z aaaa</tt></td>
+    <td valign="top">
+     Festlegen der Bitrate f&uuml;r die Kassettenschnittstelle,<br/>
+     M&ouml;gliche Werte sind 1200, 2400, 3600 und 4800.
+     Standardm&auml;&szlig;ig ist 3600 eingestellt.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>Dateiname</tt></td>
+    <td valign="top">
+      Geben Sie nur einen Dateinamen ohne Typ an,
+      wird die Datei mit dem Typ <em>COM</em> von Kassette geladen
+      und auf der beim Speichern angegebenen Adresse gestartet.
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
 
-  <h2>2. Im ROM enthaltene Software</h2>
-    <ul>
-      <li>
-	PC/M Systemsoftware Version&nbsp;2.02, bestehend aus:<br/>
-	<ul>
-	  <li>BIOS</li>
-	  <li>Kommandoprozessor CCP</li>
-	  <li>Kassettenmodel V-Tape</li>
-	  <li>Debugger</li>
-	</ul>
-      </li>
-    </ul>
-  <br/>
-    Das enthaltene BIOS stellt ein Laufwerk in Form einer
-    124&nbsp;KByte gro&szlig;en RAM-Floppy zur Verf&uuml;gung,
-    die in den RAM-B&auml;nken&nbsp;1 und 2 liegt.
-    Aus diesem Grund emuliert JKCEMU diese beiden RAM-B&auml;nke
-    auch physisch in der RAM-Floppy&nbsp;1,
-    sodass Sie mit JKCEMU-Mitteln, d.h. von &quot;au&szlig;en&quot;,
-    diese Floppy speichern und wieder laden k&ouml;nnen.
-  <br/><br/>
-    Durch Einbinden einer anderen BIOS-Version in Form eines externen
-    ROM-Images sind auch zwei Laufwerke mit je 62&nbsp;KByte m&ouml;glich.
-    Ein solches BIOS m&uuml;ssten Sie allerdings selbst bereitstellen,
-    da es im Emulator nicht enthalten ist.
-  <br/><br/>
-
-  <h3>2.1. Hinweise zur Systemsoftware</h3>
-    Bei einem RESET wird die Systemsoftware vom ROM in den RAM geladen
-    und anschlie&szlig;end der ROM ausgeblendet.
-    Der Arbeitsspeicher ist dann folgenderma&szlig;en belegt:
-  <br/><br/>
-    <table border="1">
-      <tr><th>Adresse</th><th>Belegung</th></tr>
-      <tr><td>FC00 - FFFF</td><td>Bildwiederholspeicher</td></tr>
-      <tr>
-	<td>F800 - FBFF</td>
-	<td>Bildwiederholspeicher f&uuml;r Zwischenzeilen</td>
-      </tr>
-      <tr><td>F000 - F7FF</td><td>V-Tape</td></tr>
-      <tr><td>E800 - EFFF</td><td>Debugger</td></tr>
-      <tr><td>DE00 - E7FF</td><td>BIOS</td></tr>
-      <tr><td>D000 - DBFF</td><td>BDOS (nur wenn es geladen wurde)</td></tr>
-      <tr><td>C800 - CFFF</td><td>CCP</td></tr>
-      <tr><td>0100 - C7FF</td><td>frei</td></tr>
-      <tr>
-	<td>0000 - 00FF</td>
-	<td>Verst&auml;ndigungsbereich f&uuml;r CP/V</td>
-      </tr>
-    </table>
-  <br/><br/>
-
-  <h4>2.1.1. Grundbetriebssystem</h4>
-    Nach einem RESET meldet sich der PC/M-Prompt:
-  <br/><br/>
-    <tt>V&gt;</tt>
-  <br/><br/>
-    Nun k&ouml;nnen Sie Kommandos eingeben, wobei jedes Kommando
-    mit <em>Enter</em> abgeschlossen werden muss.
-    Folgende Kommandos sind m&ouml;glich:
-  <br/><br/>
-    <table border="1">
-      <tr><th>Kommando</th><th>Bedeutung</th></tr>
-      <tr>
-	<td valign="top"><tt>0</tt></td>
-	<td valign="top">
-	  Speicherbank&nbsp;0 als aktuellen Arbeitsspeicher einstellen
-	  (Standard)
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>1</tt></td>
-	<td valign="top">
-	  Speicherbank&nbsp;1 als aktuellen Arbeitsspeicher einstellen
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>2</tt></td>
-	<td valign="top">
-	  Speicherbank&nbsp;2 als aktuellen Arbeitsspeicher einstellen
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>B</tt></td>
-	<td valign="top">Betriebssystem-ROM einblenden</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>C</tt></td>
-	<td valign="top">
-	  RAM-Floppy-System (CP/V) starten,<br/>
-	  Dazu muss vorher das BDOS geladen werden.
-	  Im Original l&auml;dt man es von Kassette.
-	  Der Einfachheit halber kann JKCEMU das BDOS auch automatisch
-	  bei jedem RESET laden,
-	  wenn Sie es in den <a href="settings.htm">Einstellungen</a>
-	  so festgelegen.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>D</tt></td>
-	<td valign="top">Debugger aufrufen</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>F X</tt></td>
-	<td valign="top">Laufwerk <em>X</em> formatieren</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>G aaaa</tt></td>
-	<td valign="top">
-	  Sprung zur Adresse <i>aaaa</i>,<br/>
-	  Damit kann ein im Arbeitsspeicher befindliches Programm
-	  gestartet werden.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>I</tt></td>
-	<td valign="top">
-	  &quot;Inhaltsverzeichnis&quot; der Kassette anzeigen,<br/>
-	  Ein separates Inhaltsverzeichnis gibt es jedoch gar nicht.
-	  Das Kommando gibt zuerst das Signal zum Starten des
-	  Magnetbandger&auml;tes aus (hat im Emulator jedoch keine Wirkung)
-	  und lauscht dann am Kassettenrecorderanschluss,
-	  um jede gerade gelesene Datei anzuzeigen.
-	  In JKCEMU m&uuml;ssen Sie dazu eine entsprechende
-	  <a href="audio.htm">Audio-Funktion</a> aktivieren.
-	  Das Kommando kann mit <em>CTRL-C</em> abgebrochen werden.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>L Dateiname.Typ [aaaa [bbbb [cccc]]]</tt></td>
-	<td valign="top">
-	  Es wird die Datei mit dem Namen <em>Dateiname.Typ</em>
-	  von Kassette in den Arbeitsspeicher geladen.
-	  Optional kann die Ladeadresse (<em>aaaa</em>),
-	  die Nummer des ersten zu ladenden Blocks (<em>bbbb</em>)
-	  und die Nummer des letzten zu ladenden Blocks (<em>cccc</em>)
-	  angegeben werden.
-	  Bei Lesefehlern k&ouml;nnen Sie einfach zur&uuml;ckspulen
-	  und das Lesen der fehlerhaften Stelle noch einmal versuchen.
-	  Beachten Sie bitte, dass in JKCEMU muss zum Laden von Kassette
-	  eine entsprechende <a href="audio.htm">Audio-Funktion</a>
-	  aktiviert werden muss.
-	  Das Laden k&ouml;nnen Sie mit <em>CTRL-C</em> abbrechen.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>R Dateiname.Typ X</tt></td>
-	<td valign="top">
-	  Es wird die Datei mit dem Namen <em>Dateiname.Typ</em>
-	  von Kassette in die RAM-Floppy <em>X</em> geladen.
-	  Das Laden kann mit <em>CTRL-C</em> abgebrochen werden.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top">
-	  <tt>S Dateiname.Typ aaaa bbbb [cccc] [/F] [dddd]</tt>
-	</td>
-	<td valign="top">
-	  Der Adressbereich von <em>aaaa</em> bis <em>bbbb</em>
-	  wird mit dem Namen <em>Dateiname.Typ</em> auf Kassette gespeichert.
-	  Optional kann bei ausf&uuml;hrbaren Programmen
-	  (COM-Dateien) eine Startadresse (<em>cccc</em>) angegeben werden.
-	  Die Option <em>/F</em> verhindert das Schreiben der Dateiendekennung,
-	  und die Datei kann mit der n&auml;chsten freien Rahmennummer
-	  (<em>dddd</em>) fortgesetzt werden.
-	  Das f&uuml;hrt dann allerdings zu gr&ouml;&szlig;eren
-	  Blockabst&auml;nden.
-	  Das Speichern k&ouml;nnen Sie mit <em>CTRL-C</em> abbrechen.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>V Dateiname.Typ aaaa [bbbb [cccc]]</tt></td>
-	<td valign="top">
-	  Die auf Kassette befindliche Datei mit dem Namen
-	  <em>Dateiname.Typ</em> wird mit dem Arbeitsspeicher
-	  ab Adresse <em>aaaa</em> verglichen.
-	  Die optionalen Argumente <em>bbbb</em> und <em>cccc</em>
-	  haben die gleiche Bedeutung wie beim L-Kommando.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>X Dateiname.Typ aaaa [bbbb [cccc]]</tt></td>
-	<td valign="top">
-	  Die Datei mit dem Namen <em>Dateiname.Typ</em> wird von Kassette
-	  in den Arbeitsspeicher geladen und auf der beim Speichern
-	  angegebenen Adresse gestartet.
-	  Die Argumente haben die gleiche Bedeutung wie beim L-Kommando.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>Z aaaa</tt></td>
-	<td valign="top">
-	  Festlegen der Bitrate f&uuml;r die Kassettenschnittstelle,<br/>
-	  M&ouml;gliche Werte sind 1200, 2400, 3600 und 4800.
-	  Standardm&auml;&szlig;ig ist 3600 eingestellt.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>Dateiname</tt></td>
-	<td valign="top">
-	  Geben Sie nur einen Dateinamen ohne Typ an,
-	  wird die Datei mit dem Typ <em>COM</em> von Kassette geladen
-	  und auf der beim Speichern angegebenen Adresse gestartet.
-	</td>
-      </tr>
-    </table>
-  <br/><br/>
-
-  <h4>2.1.2. RAM-Floppy-System</h4>
-    Im Grundbetriebssystem k&ouml;nnen Sie mit dem Kommando
-    <em>C</em> das RAM-Floppy-System starten.
-    Dazu muss allerdings vorher das BDOS geladen worden sein.
-    JKCEMU bietet Ihnen die M&ouml;glichkeit,
-    das BDOS bei jedem RESET automatisch laden zu lassen.
-  <br/><br/>
-    Das RAM-Floppy-System ist kompatibel zu CP/M 2.2.
-    Folgende resistente Kommandos stehen zur Verf&uuml;gung:
-  <br/><br/>
-    <table border="1">
-      <tr><th>Kommando</th><th>Bedeutung</th></tr>
-      <tr>
-	<td valign="top"><tt>X:</tt></td>
-	<td valign="top">
-	  Auf Laufwerk <em>X</em> umschalten, d.h.,
-	  <em>X</em> ist nun das aktuelle Laufwerk.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>DIR</tt></td>
-	<td valign="top">
-	  Inhaltsverzeichnis des aktuellen Laufwerks anzeigen
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>ERA Dateiname.Typ</tt></td>
-	<td valign="top">
-	  Die Datei mit dem Namen <em>Dateiname.Typ</em> wird gel&ouml;scht.
-	  Die Platzhalterzeichen <em>?</em> und <em>*</em> sind zul&auml;ssig.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>REN Dateiname_neu.Typ=Dateiname.Typ</tt></td>
-	<td valign="top">
-	  Die Datei mit dem Namen <em>Dateiname.Typ</em> wird wird umbenannt
-	  in <em>Dateiname_neu.Typ</em>.
-	  Platzhalterzeichen k&ouml;nnen nicht verwendet werden.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>TYPE Dateiname.Typ</tt></td>
-	<td valign="top">Anzeigen der Datei <em>Dateiname.Typ</em></td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>SAVE n Dateiname.Typ</tt></td>
-	<td valign="top">
-	  Es werden ab Adresse&nbsp;0100 <em>n</em>&nbsp;Bl&ouml;cke
-	  des Arbeitsspeichers auf das aktuelle Laufwerk in die Datei
-	  <em>Dateiname.Typ</em> gespeichert.
-	  Ein Block ist 256&nbsp;Byte gro&szlig;.<br/>
-	  Haben Sie CP/M-Programme als einzelne Dateien vorliegen
-	  und m&ouml;chten diese im Emulator starten,
-	  dann laden Sie so ein Programm zuerst in den Arbeitsspeicher
-	  auf Adresse 0100 und speichern es dann mit dem Kommando
-	  <em>SAVE</em> auf das aktuelle Laufwerk.
-	  Nun k&ouml;nnen Sie das Programm durch Aufruf der entsprechenden
-	  <em>COM</em>-Datei starten.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top"><tt>USER n</tt></td>
-	<td valign="top">
-	  Festlegen eines Nutzerbereichs (n = 0..15),<br/>
-	  Das ist bei einer RAM-Floppy aber nur wenig sinnvoll.</td>
-      </tr>
-    </table>
-  <br/><br/>
+ <h3><a name="soft_rf">2.1.2. RAM-Floppy-System</a></h3>
+  Im Grundbetriebssystem k&ouml;nnen Sie mit dem Kommando
+  <em>C</em> das RAM-Floppy-System starten.
+  Dazu muss allerdings vorher das BDOS geladen worden sein.
+  JKCEMU bietet Ihnen die M&ouml;glichkeit,
+  das BDOS bei jedem RESET automatisch laden zu lassen.
+ <br/><br/>
+  Das RAM-Floppy-System ist kompatibel zu CP/M 2.2.
+  Folgende resistente Kommandos stehen zur Verf&uuml;gung:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Kommando</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top"><tt>X:</tt></td>
+    <td valign="top">
+     Auf Laufwerk <em>X</em> umschalten, d.h.,
+     <em>X</em> ist nun das aktuelle Laufwerk.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>DIR</tt></td>
+    <td valign="top">
+     Inhaltsverzeichnis des aktuellen Laufwerks anzeigen
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>ERA Dateiname.Typ</tt></td>
+    <td valign="top">
+     Die Datei mit dem Namen <em>Dateiname.Typ</em> wird gel&ouml;scht.
+     Die Platzhalterzeichen <em>?</em> und <em>*</em> sind zul&auml;ssig.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>REN Dateiname_neu.Typ=Dateiname.Typ</tt></td>
+    <td valign="top">
+     Die Datei mit dem Namen <em>Dateiname.Typ</em> wird wird umbenannt
+     in <em>Dateiname_neu.Typ</em>.
+     Platzhalterzeichen k&ouml;nnen nicht verwendet werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>TYPE Dateiname.Typ</tt></td>
+    <td valign="top">Anzeigen der Datei <em>Dateiname.Typ</em></td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>SAVE n Dateiname.Typ</tt></td>
+    <td valign="top">
+     Es werden ab Adresse&nbsp;0100 <em>n</em>&nbsp;Bl&ouml;cke
+     des Arbeitsspeichers auf das aktuelle Laufwerk in die Datei
+     <em>Dateiname.Typ</em> gespeichert.
+     Ein Block ist 256&nbsp;Byte gro&szlig;.<br/>
+     Haben Sie CP/M-Programme als einzelne Dateien vorliegen
+     und m&ouml;chten diese im Emulator starten,
+     dann laden Sie so ein Programm zuerst in den Arbeitsspeicher
+     auf Adresse 0100 und speichern es dann mit dem Kommando
+     <em>SAVE</em> auf das aktuelle Laufwerk.
+     Nun k&ouml;nnen Sie das Programm durch Aufruf der entsprechenden
+     <em>COM</em>-Datei starten.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>USER n</tt></td>
+    <td valign="top">
+     Festlegen eines Nutzerbereichs (n = 0..15),<br/>
+     Das ist bei einer RAM-Floppy aber nur wenig sinnvoll.</td>
+   </tr>
+  </table>
+ <br/><br/>
 
 
-  <h2>3. JKCEMU-BASIC-Compiler</h2>
-    Der PC/M ist als ein CP/M-kompatibles System konzipiert.
-    Aus diesem Grund erzeugt der JKCEMU-BASIC-Compiler
-    auch CP/M-kompatiblen Programmcode.
-    Dieser wiederum ruft BDOS-Funktionen auf.
-    Sie m&uuml;ssen deshalb das RAM-Floppy-System gestartet haben,
-    um mit dem BASIC-Compiler erzeugte Programme ausf&uuml;hren zu k&ouml;nnen.
+ <h2><a name="basicc">3. JKCEMU-BASIC-Compiler</a></h2>
+  Der PC/M ist als ein CP/M-kompatibles System konzipiert.
+  Aus diesem Grund erzeugt der JKCEMU-BASIC-Compiler
+  auch CP/M-kompatiblen Programmcode.
+  Dieser wiederum ruft BDOS-Funktionen auf.
+  Sie m&uuml;ssen deshalb das RAM-Floppy-System gestartet haben,
+  um mit dem BASIC-Compiler erzeugte Programme ausf&uuml;hren zu k&ouml;nnen.
 </body>
 </html>
 

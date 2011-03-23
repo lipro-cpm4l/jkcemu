@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -110,7 +110,7 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
   private volatile int      tStatesPerMilli;
   private volatile int      tStatesPerRotation;
   private volatile int      tStatesPerStep;
-  private int               seekDriveMask;
+  private int[]             seekStatus;
   private int[]             remainSeekSteps;
   private byte[]            dataBuf;
   private int               dataPos;
@@ -136,14 +136,21 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
     this.args               = new int[ 9 ];
     this.results            = new int[ 7 ];
     this.remainSeekSteps    = new int[ 4 ];
+    this.seekStatus         = new int[ 4 ];
 
-    String text= System.getProperty( "jkcemu.debug.fdc" );
+    String text = System.getProperty( "jkcemu.debug.fdc" );
     if( text != null ) {
       if( Boolean.parseBoolean( text ) ) {
 	this.debugEnabled = true;
       }
     }
     reset( true );
+  }
+
+
+  public void dmaAcknowledge()
+  {
+    this.dmaReq = false;
   }
 
 
@@ -232,20 +239,6 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
   }
 
 
-  public int readDMA()
-  {
-    int rv = -1;
-    if( this.dmaReq ) {
-      rv          = readFromDisk();
-      this.dmaReq = false;
-    }
-    if( this.debugEnabled ) {
-      System.out.printf( "FDC: read dma: %02X\n", rv );
-    }
-    return rv;
-  }
-
-
   public void reset( boolean powerOn )
   {
     if( powerOn ) {
@@ -272,7 +265,7 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
     this.tStatesTillOverrun    = -1;
     this.tStateRotationCounter = 0;
     this.tStateStepCounter     = 0;
-    this.seekDriveMask         = 0;
+    Arrays.fill( this.seekStatus, -1 );
     clearSectorID();
     clearRegs012();
     Arrays.fill( this.args, 0 );
@@ -311,24 +304,9 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
   }
 
 
-  public void writeDMA( int value )
-  {
-    if( this.dmaReq ) {
-      if( this.debugEnabled ) {
-	System.out.printf( "FDC: write dma: %02X\n", value );
-      }
-      writeData( value );
-      this.dmaReq = false;
-    } else {
-      if( this.debugEnabled ) {
-	System.out.printf( "FDC: write dma: %02X -> ignored\n", value );
-      }
-    }
-  }
-
-
 	/* --- Z80MaxSpeedListener --- */
 
+  @Override
   public void z80MaxSpeedChanged( Z80CPU cpu )
   {
     setTStatesPerMilli( cpu.getMaxSpeedKHz() );
@@ -337,6 +315,7 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 
 	/* --- Z80TStatesListener --- */
 
+  @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     processTStates( tStates );
@@ -415,8 +394,12 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 		    changeHead = true;
 		    this.args[ 0 ] &= 0x7F;
 		  } else {
-		    // kein Multi Track -> Zylinder hochzaehlen
+		    /*
+		     * kein Multi Track
+		     * -> Zylinder hochzaehlen und Lesen beenden
+		     */
 		    this.sectorIdCyl++;
+		    abort = true;
 		  }
 		  this.sectorIdRec = 1;
 		} else {
@@ -468,7 +451,7 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 		  this.statusReg2 |= 0x20;	// Data Error
 		} else if( sector.isEmpty() ) {
 		  this.statusReg1 |= 0x01;	// Missing Address Mark
-		  this.statusReg1 |= 0x01;	// Missing Data Address Mark
+		  this.statusReg2 |= 0x01;	// Missing Data Address Mark
 		}
 	      }
 	      break;
@@ -683,23 +666,20 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 	if( drive != null ) {
 	  --this.remainSeekSteps[ i ];
 	  if( drive.seekStep() ) {
-	    this.statusReg0 = 0x20;		// Seek End
-	    updStatusReg0( i, drive.getHead() );
+	    this.seekStatus[ i ] |= 0x20;	// Seek End
 	    this.interruptReq = true;
 	  } else {
 	    if( this.remainSeekSteps[ i ] > 0 ) {
 	      driveSeekMode = true;
 	    } else {
 	      // Abnormal termination, Seek End, Equiment Check
-	      this.statusReg0 = 0x70;
-	      updStatusReg0( i, drive.getHead() );
+	      this.seekStatus[ i ] |= 0x70;
 	      this.interruptReq = true;
 	    }
 	  }
 	} else {
 	  // Abnormal termination, Seek End, Not Ready
-	  this.statusReg0 = 0xE8;
-	  updStatusReg0( i, drive.getHead() );
+	  this.seekStatus[ i ] |= 0xE8;
 	  this.interruptReq = true;
 	}
       }
@@ -716,11 +696,20 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 
   private void execSenseDriveStatus()
   {
-    int driveNum = this.args[ 1 ] & 0x03;
-    updStatusReg3(
-		driveNum,
-		(this.args[ 1 ] >> 2) & 0x01,
-		getDrive( driveNum ) );
+    this.statusReg3       = (this.args[ 1 ] & 0x07);;
+    FloppyDiskDrive drive = getDrive( this.args[ 1 ] & 0x03 );
+    if( drive != null ) {
+      this.statusReg3 |= 0x08;		// doppelseitiges Laufwerk
+      if( drive.getCylinder() == 0 ) {
+	this.statusReg3 |= 0x10;
+      }
+      if( drive.isReady() ) {
+	this.statusReg3 |= 0x20;
+      }
+      if( drive.isReadOnly() ) {
+	this.statusReg3 |= 0x40;
+      }
+    }
     this.cancelable   = true;
     this.results[ 0 ] = this.statusReg3;
     this.resultIdx    = 0;
@@ -730,28 +719,29 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 
   private void execSenseInterruptStatus()
   {
-    if( this.seekDriveMask != 0 ) {
-      int driveMask = 0x01;
-      int driveNum  = this.statusReg0 & 0x03;
-      if( driveNum > 0 ) {
-	driveMask = (0x01 << driveNum);
-      }
-      this.seekDriveMask &= ~driveMask;
-      this.statusRegMain &= ~driveMask;
+    this.results[ 0 ] = 0;		// Zylinder
+    this.results[ 1 ] = 0x80;		// Invalid Command Issue
 
-      FloppyDiskDrive drive = getDrive( driveNum );
-      if( drive != null ) {
-	this.results[ 0 ] = drive.getCylinder();
-      } else {
-	this.results[ 0 ] = 0;
+    int driveMask = 0x01;
+    for( int i = 0; i < this.seekStatus.length; i++ ) {
+      int v = this.seekStatus[ i ];
+      if( v >= 0 ) {
+	if( (v & 0xF8) != 0 ) {
+	  this.results[ 1 ] = v | i;
+	  FloppyDiskDrive drive = getDrive( i );
+	  if( drive != null ) {
+	    this.results[ 0 ] = drive.getCylinder();
+	  }
+	  this.statusRegMain &= ~driveMask;
+	  this.seekStatus[ i ] = -1;
+	  break;
+	}
+	this.results[ 1 ] = 0;
       }
-    } else {
-      this.results[ 1 ] = 0x80;		// Invalid Command Issue
+      driveMask <<= 1;
     }
-    this.results[ 1 ] = this.statusReg0;
-    this.resultIdx    = 1;
-    this.statusReg0   = 0;
-    this.cancelable   = true;
+    this.resultIdx  = 1;
+    this.cancelable = true;
     setResultMode();
   }
 
@@ -792,7 +782,10 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 		  }
 		  this.args[ 0 ] &= 0x7F;	// kein weiterer Track-Wechsel
 		} else {
-		  // kein Multi Track -> Zylinder hochzaehlen
+		  /*
+		   * kein Multi Track
+		   * -> Zylinder hochzaehlen und Schreiben beenden
+		   */
 		  this.sectorIdCyl++;
 		  abort = true;
 		}
@@ -1057,36 +1050,35 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
 
   private void seek( int driveNum, int head, int cyl )
   {
-    this.statusRegMain &= 0xEF;		// Busy=0
+    this.statusRegMain &= 0xEF;			// Busy=0
     this.statusReg0 = 0;
-    if( driveNum > 0 ) {
-      this.seekDriveMask = (1 << driveNum);
-    } else {
-      this.seekDriveMask = 0x01;
-    }
-    FloppyDiskDrive drive = getDrive( driveNum );
-    if( drive != null ) {
-      if( drive.getCylinder() == cyl ) {
-	this.statusReg0 = 0x20;		// Seek End
-	updStatusReg0( driveNum, head );
-	this.interruptReq = true;
-      } else {
-	if( driveNum > 0 ) {
-	  this.statusRegMain |= (1 << driveNum);
+    if( (driveNum >= 0) && (driveNum < this.seekStatus.length) ) {
+      this.seekStatus[ driveNum ] = ((head << 2) & 0x04) | driveNum;
+      FloppyDiskDrive drive = getDrive( driveNum );
+      if( drive != null ) {
+	if( drive.getCylinder() == cyl ) {
+	  this.seekStatus[ driveNum ] |= 0x20;	// Seek End
+	  this.interruptReq = true;
 	} else {
-	  this.statusRegMain |= 0x01;
+	  if( driveNum > 0 ) {
+	    this.statusRegMain |= (1 << driveNum);
+	  } else {
+	    this.statusRegMain |= 0x01;
+	  }
+	  drive.setSeekMode( head, cyl );
+	  this.remainSeekSteps[ driveNum ] = 77;
+	  if( !this.seekMode ) {
+	    this.tStateStepCounter = 0;
+	    this.seekMode          = true;
+	  }
 	}
-	drive.setSeekMode( head, cyl );
-	this.remainSeekSteps[ driveNum ] = 77;
-	if( !this.seekMode ) {
-	  this.tStateStepCounter = 0;
-	  this.seekMode          = true;
-	}
+      } else {
+	// Not Ready, Seek End, Abnormal Termination
+	this.seekStatus[ driveNum ] |= 0xE8;
+	this.interruptReq = true;
       }
     } else {
-      // Not Ready, Seek End, Abnormal Termination
-      this.statusReg0 = 0xE8;
-      updStatusReg0( driveNum, head );
+      this.statusReg0 = 0xE8 | ((driveNum << 2) & 0x04) | (driveNum & 0x03);
       this.interruptReq = true;
     }
   }
@@ -1347,37 +1339,6 @@ public class FDC8272 implements Z80TStatesListener, Z80MaxSpeedListener
     this.statusReg0 |= (this.args[ 1 ] & 0x07);
     this.interruptReq = true;
     setResultMode();
-  }
-
-
-  private void updStatusReg0( int driveNum, int head )
-  {
-    this.statusReg0 &= 0xF8;
-    this.statusReg0 |= (driveNum & 0x03);
-    if( (head & 0x01) != 0 ) {
-      this.statusReg0 |= 0x04;
-    }
-  }
-
-
-  private void updStatusReg3( int driveNum, int head, FloppyDiskDrive drive )
-  {
-    this.statusReg3 = (driveNum & 0x03);
-    if( (head & 0x01) != 0 ) {
-      this.statusReg3 |= 0x04;
-    }
-    if( drive != null ) {
-      this.statusReg3 |= 0x08;		// doppelseitiges Laufwerk
-      if( drive.getCylinder() == 0 ) {
-	this.statusReg3 |= 0x10;
-      }
-      if( drive.isReady() ) {
-	this.statusReg3 |= 0x20;
-      }
-      if( drive.isReadOnly() ) {
-	this.statusReg3 |= 0x40;
-      }
-    }
   }
 
 

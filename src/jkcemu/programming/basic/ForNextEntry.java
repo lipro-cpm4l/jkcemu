@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,16 +19,18 @@ public class ForNextEntry
   private Integer endValue;
   private String  counterVarAddrExpr;
   private String  loopLabel;
+  private boolean optimized;
 
 
   public ForNextEntry( int sourceLineNum, long basicLineNum )
   {
     this.sourceLineNum      = sourceLineNum;
     this.basicLineNum       = basicLineNum;
-    this.stepValue          = -1;
+    this.stepValue          = 0;
     this.endValue           = null;
     this.counterVarAddrExpr = null;
     this.loopLabel          = null;
+    this.optimized          = false;
   }
 
 
@@ -68,6 +70,12 @@ public class ForNextEntry
   }
 
 
+  public boolean isOptimized()
+  {
+    return this.optimized;
+  }
+
+
   public void setCounterVariableAddrExpr( String expr )
   {
     this.counterVarAddrExpr = expr;
@@ -83,6 +91,12 @@ public class ForNextEntry
   public void setLoopLabel( String label )
   {
     this.loopLabel = label;
+  }
+
+
+  public void setOptimized( boolean state )
+  {
+    this.optimized = state;
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -38,6 +38,7 @@ public class DirSelectDlg
 
 	/* --- TreeSelectionListener --- */
 
+  @Override
   public void valueChanged( TreeSelectionEvent e )
   {
     if( e.getSource() == this.tree ) {
@@ -48,6 +49,7 @@ public class DirSelectDlg
 
 	/* --- TreeWillExpandListener --- */
 
+  @Override
   public void treeWillCollapse( TreeExpansionEvent e )
 					throws ExpandVetoException
   {
@@ -55,6 +57,7 @@ public class DirSelectDlg
   }
 
 
+  @Override
   public void treeWillExpand( TreeExpansionEvent e )
 					throws ExpandVetoException
   {
@@ -74,13 +77,14 @@ public class DirSelectDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
     if( e != null ) {
       Object src = e.getSource();
       if( src != null ) {
-	if( src == this.btnApprove ) {
+	if( (src == this.tree) || (src == this.btnApprove) ) {
 	  rv = true;
 	  doApprove();
 	}
@@ -149,6 +153,7 @@ public class DirSelectDlg
     // Listener
     this.tree.addTreeSelectionListener( this );
     this.tree.addTreeWillExpandListener( this );
+    this.tree.addKeyListener( this );
 
     this.btnApprove.addActionListener( this );
     this.btnApprove.addKeyListener( this );

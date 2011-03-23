@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,27 +14,27 @@ import java.lang.*;
 import java.nio.channels.FileLock;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
-import jkcemu.base.EmuUtil;
+import jkcemu.base.*;
 
 
 public class PlainFileFloppyDisk extends AbstractFloppyDisk
 {
-  private String           fileName;
-  private FileLock         fileLock;
-  private RandomAccessFile raf;
-  private byte[]           diskBytes;
-  private boolean          readOnly;
-  private boolean          appendable;
-  private boolean          drive;
-  private int              sectorSizeCode;
+  private String                      fileName;
+  private FileLock                    fileLock;
+  private DeviceIO.RandomAccessDevice rad;
+  private RandomAccessFile            raf;
+  private byte[]                      diskBytes;
+  private boolean                     readOnly;
+  private boolean                     appendable;
+  private int                         sectorSizeCode;
 
 
   public static PlainFileFloppyDisk createForDrive(
-					Frame            owner,
-					String           driveFileName,
-					RandomAccessFile raf,
-					boolean          readOnly,
-					FloppyDiskFormat fmt )
+				Frame                       owner,
+				String                      driveFileName,
+				DeviceIO.RandomAccessDevice rad,
+				boolean                     readOnly,
+				FloppyDiskFormat            fmt )
   {
     return new PlainFileFloppyDisk(
 			owner,
@@ -43,8 +43,8 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 			fmt.getSectorsPerCylinder(),
 			fmt.getSectorSize(),
 			driveFileName,
-			true,
-			raf,
+			rad,
+			null,
 			null,
 			null,
 			readOnly,
@@ -67,7 +67,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 				fmt.getSectorsPerCylinder(),
 				fmt.getSectorSize(),
 				fileName,
-				false,
+				null,
 				null,
 				null,
 				fileBytes,
@@ -75,6 +75,29 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 				false );
     }
     return rv;
+  }
+
+
+  public static PlainFileFloppyDisk createForFile(
+				Frame            owner,
+				String           driveFileName,
+				RandomAccessFile raf,
+				boolean          readOnly,
+				FloppyDiskFormat fmt )
+  {
+    return new PlainFileFloppyDisk(
+			owner,
+			fmt.getSides(),
+			fmt.getCylinders(),
+			fmt.getSectorsPerCylinder(),
+			fmt.getSectorSize(),
+			driveFileName,
+			null,
+			raf,
+			null,
+			null,
+			readOnly,
+			false );
   }
 
 
@@ -139,7 +162,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 			cyl,
 			sector.getSectorNum() ) );
 	    }
-	    int n = sector.writeTo( out, cyl, head, sectorSize );
+	    int n = sector.writeTo( out, sectorSize );
 	    while( n < sectorSize ) {
 	      out.write( 0 );
 	      n++;
@@ -174,7 +197,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 			0,
 			0,
 			file.getPath(),
-			false,
+			null,
 			raf,
 			fl,
 			null,
@@ -212,7 +235,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 			fmt.getSectorsPerCylinder(),
 			fmt.getSectorSize(),
 			file.getPath(),
-			false,
+			null,
 			raf,
 			fl,
 			null,
@@ -231,13 +254,16 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public synchronized void doClose()
   {
     EmuUtil.doRelease( this.fileLock );
     EmuUtil.doClose( this.raf );
+    EmuUtil.doClose( this.rad );
   }
 
 
+  @Override
   public boolean formatTrack(
 			int        physCyl,
 			int        physHead,
@@ -246,7 +272,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
   {
     boolean rv = false;
     if( !this.readOnly
-	&& (this.raf != null)
+	&& ((this.rad != null) || (this.raf != null))
 	&& (sectorIDs != null)
 	&& (dataBuf != null) )
     {
@@ -261,8 +287,13 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 	    int  sectorIdx = sectorIDs[ i ].getSectorNum() - 1;
 	    long filePos   = calcFilePos( physCyl, physHead, sectorIdx );
 	    if( filePos >= 0 ) {
-	      this.raf.seek( filePos );
-	      this.raf.write( dataBuf );
+	      if( this.rad != null ) {
+		this.rad.seek( filePos );
+		this.rad.write( dataBuf, 0, dataBuf.length );
+	      } else {
+		this.raf.seek( filePos );
+		this.raf.write( dataBuf );
+	      }
 	      int sides = ((physHead & 0x01) != 0 ? 2 : 1);
 	      if( sides > getSides() ) {
 		setSides( sides );
@@ -286,7 +317,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 	}
 	catch( IOException ex ) {
 	  rv = false;
-	  showError( "Anh\u00E4ngen von Sektoren fehlgeschlagen", ex );
+	  fireShowError( "Anh\u00E4ngen von Sektoren fehlgeschlagen", ex );
 	}
       } else {
 	rv = super.formatTrack( physCyl, physHead, sectorIDs, dataBuf );
@@ -296,6 +327,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public synchronized SectorData getSectorByIndex(
 					int physCyl,
 					int physHead,
@@ -321,20 +353,31 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 			sectorSize );
 	  }
 	}
-	else if( this.raf != null ) {
+	else if( (this.rad != null) || (this.raf != null) ) {
 	  try {
-	    this.raf.seek( filePos );
-
 	    byte[] buf = new byte[ sectorSize ];
-	    int    len = this.raf.read( buf );
+	    int    len = -1;
+	    if( this.rad != null ) {
+	      this.rad.seek( filePos );
+	      len = this.rad.read( buf, 0, buf.length );
+	    } else {
+	      this.raf.seek( filePos );
+	      len = this.raf.read( buf );
+	    }
 	    if( len > 0 ) {
 	      // falls nicht vollstaendig gelesen wurde
 	      while( len < buf.length ) {
-		int b = this.raf.read();
-		if( b == -1 ) {
+		int n = -1;
+		if( this.rad != null ) {
+		  n = this.rad.read( buf, len, buf.length - len );
+		} else {
+		  n = this.raf.read( buf, len, buf.length - len );
+		}
+		if( n > 0 ) {
+		  len += n;
+		} else {
 		  break;
 		}
-		buf[ len++ ] = (byte) b;
 	      }
 	    }
 	    if( len > 0 ) {
@@ -352,7 +395,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 	    }
 	  }
 	  catch( IOException ex ) {
-	    showReadError( physCyl, physHead, sectorIdx + 1, ex );
+	    fireShowReadError( physCyl, physHead, sectorIdx + 1, ex );
 	    rv = new SectorData(
 			sectorIdx,
 			physCyl,
@@ -378,6 +421,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public SectorData getSectorByID(
 				int physCyl,
 				int physHead,
@@ -400,17 +444,19 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public boolean isReadOnly()
   {
     return this.readOnly;
   }
 
 
+  @Override
   public void putSettingsTo( Properties props, String prefix )
   {
     super.putSettingsTo( props, prefix );
     if( (props != null) && (fileName != null) ) {
-      if( this.drive ) {
+      if( this.rad != null ) {
 	props.setProperty( prefix + "drive", this.fileName );
       } else {
 	props.setProperty( prefix + "file", this.fileName );
@@ -419,6 +465,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public boolean writeSector(
 			int        physCyl,
 			int        physHead,
@@ -429,7 +476,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
   {
     boolean rv = false;
     if( !this.readOnly
-	&& (this.raf != null)
+	&& ((this.rad != null) || (this.raf != null))
 	&& (sector != null)
 	&& (dataBuf != null)
 	&& !deleted )
@@ -439,14 +486,19 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 	long filePos   = calcFilePos( physCyl, physHead, sectorIdx );
 	if( filePos == sector.getFilePos() ) {
 	  try {
-	    this.raf.seek( filePos );
-	    this.raf.write( dataBuf, 0, dataLen );
+	    if( this.rad != null ) {
+	      this.rad.seek( filePos );
+	      this.rad.write( dataBuf, 0, dataLen );
+	    } else {
+	      this.raf.seek( filePos );
+	      this.raf.write( dataBuf, 0, dataLen );
+	    }
 	    sector.setData( deleted, dataBuf, dataLen );
 	    putSectorToCache( sector, physCyl, physHead, sectorIdx );
 	    rv = true;
 	  }
 	  catch( IOException ex ) {
-	    showWriteError(
+	    fireShowWriteError(
 			physCyl,
 			physHead,
 			sector.getSectorNum(),
@@ -463,22 +515,22 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
 	/* --- private Methoden --- */
 
   private PlainFileFloppyDisk(
-		Frame            owner,
-		int              sides,
-		int              cyls,
-		int              sectorsPerCyl,
-		int              sectorSize,
-		String           fileName,
-		boolean          drive,
-		RandomAccessFile raf,
-		FileLock         fileLock,
-		byte[]           diskBytes,
-		boolean          readOnly,
-		boolean          appendable )
+		Frame                       owner,
+		int                         sides,
+		int                         cyls,
+		int                         sectorsPerCyl,
+		int                         sectorSize,
+		String                      fileName,
+		DeviceIO.RandomAccessDevice rad,
+		RandomAccessFile            raf,
+		FileLock                    fileLock,
+		byte[]                      diskBytes,
+		boolean                     readOnly,
+		boolean                     appendable )
   {
     super( owner, sides, cyls, sectorsPerCyl, sectorSize );
     this.fileName       = fileName;
-    this.drive          = drive;
+    this.rad            = rad;
     this.raf            = raf;
     this.fileLock       = fileLock;
     this.diskBytes      = diskBytes;
@@ -499,6 +551,7 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
       int cyls          = getCylinders();
       int sectorsPerCyl = getSectorsPerCylinder();
       if( (head < sides)
+	  //&& (cyl < cyls)
 	  && (sectorIdx < sectorsPerCyl)
 	  && (sectorSize > 0) )
       {
@@ -535,4 +588,3 @@ public class PlainFileFloppyDisk extends AbstractFloppyDisk
     return rv;
   }
 }
-

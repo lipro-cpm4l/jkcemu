@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,6 +28,7 @@ public class FileSelectRenderer extends DefaultListCellRenderer
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public Component getListCellRendererComponent(
 					JList   list,
 					Object  value,
@@ -40,8 +41,10 @@ public class FileSelectRenderer extends DefaultListCellRenderer
     String text  = null;
     int    level = -1;
     if( value != null ) {
+      FileSelectDlg.DirItem dirItem = null;
       if( value instanceof FileSelectDlg.DirItem ) {
-	file = ((FileSelectDlg.DirItem) value).getDirectory();
+        dirItem = (FileSelectDlg.DirItem) value;
+	file    = dirItem.getDirectory();
 	if( index >= 0 ) {
 	  level = ((FileSelectDlg.DirItem) value).getLevel();
 	} else {
@@ -56,7 +59,18 @@ public class FileSelectRenderer extends DefaultListCellRenderer
 	  icon = this.fsv.getSystemIcon( file );
 	  text = this.fsv.getSystemDisplayName( file );
 	} else {
+	  text = file.getName();
+	}
+	if( text != null ) {
+	  if( text.isEmpty() ) {
+	    text = null;
+	  }
+	}
+	if( text == null ) {
 	  text = file.getPath();
+	}
+	if( (dirItem == null) && (icon == null) && file.isDirectory() ) {
+	  text += File.separatorChar;
 	}
 	value = text;
       }
@@ -80,4 +94,3 @@ public class FileSelectRenderer extends DefaultListCellRenderer
     return rv;
   }
 }
-

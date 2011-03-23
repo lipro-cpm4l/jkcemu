@@ -1,66 +1,66 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project basedir="." default="compile" name="JKCEMU">
-
-  <property name="build"   location="${basedir}/build"/>
-  <property name="javadoc" location="${basedir}/javadoc"/>
-  <property name="source"  location="${basedir}/src"/>
-  <property name="disks"   location="${source}/disks"/>
-  <property name="help"    location="${source}/help"/>
-  <property name="images"  location="${source}/images"/>
-  <property name="rom"     location="${source}/rom"/>
-
-  <target name="clean">
-    <delete dir="${build}"/>
-    <delete dir="${javadoc}"/>
-    <delete file="${basedir}/jkcemu.jar"/>
-  </target>
-
-  <target name="init">
-    <mkdir dir="${build}"/>
-    <copy todir="${build}/disks">
-      <fileset dir="${disks}"/>
-    </copy>
-    <copy todir="${build}/help">
-      <fileset dir="${help}"/>
-    </copy>
-    <copy todir="${build}/images">
-      <fileset dir="${images}"/>
-    </copy>
-    <copy todir="${build}/rom">
-      <fileset dir="${rom}"/>
-    </copy>
-  </target>
-
-  <target name="compile" depends="init">
-    <javac srcdir="${source}" destdir="${build}" debug="on"/>
-  </target>
-
-  <target name="jar" depends="compile">
-    <jar destfile="${basedir}/jkcemu.jar" basedir="${build}">
-      <manifest>
-        <attribute name="Built-By" value="${user.name}"/>
-        <attribute name="Main-Class" value="jkcemu.Main"/>
-      </manifest>
-    </jar>
-  </target>
-
-  <target name="javadoc" depends="compile">
-    <mkdir dir="${javadoc}"/>
-    <javadoc packagenames="*" destdir="${javadoc}"
-             use="false" version="true" author="true" verbose="true">
-      <fileset dir="${source}">
-        <include name="**/*.java"/>
-      </fileset>
-    </javadoc>
-  </target>
-
-  <target name="jkcemu" depends="compile">
-    <java classname="jkcemu.Main" fork="true">
-      <classpath>
-        <pathelement path="${build}"/>
-      </classpath>
-    </java>
-  </target>
-
-</project>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="compile" name="JKCEMU">
+
+  <property name="build"   location="${basedir}/build"/>
+  <property name="javadoc" location="${basedir}/javadoc"/>
+  <property name="source"  location="${basedir}/src"/>
+  <property name="disks"   location="${source}/disks"/>
+  <property name="help"    location="${source}/help"/>
+  <property name="images"  location="${source}/images"/>
+  <property name="rom"     location="${source}/rom"/>
+
+  <target name="clean">
+    <delete dir="${build}"/>
+    <delete dir="${javadoc}"/>
+    <delete file="${basedir}/jkcemu.jar"/>
+  </target>
+
+  <target name="init">
+    <mkdir dir="${build}"/>
+    <copy todir="${build}/disks">
+      <fileset dir="${disks}"/>
+    </copy>
+    <copy todir="${build}/help">
+      <fileset dir="${help}"/>
+    </copy>
+    <copy todir="${build}/images">
+      <fileset dir="${images}"/>
+    </copy>
+    <copy todir="${build}/rom">
+      <fileset dir="${rom}"/>
+    </copy>
+  </target>
+
+  <target name="compile" depends="init">
+    <javac srcdir="${source}" destdir="${build}" debug="on"/>
+  </target>
+
+  <target name="jar" depends="compile">
+    <jar destfile="${basedir}/jkcemu.jar" basedir="${build}">
+      <manifest>
+        <attribute name="Built-By" value="${user.name}"/>
+        <attribute name="Main-Class" value="jkcemu.Main"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="javadoc" depends="compile">
+    <mkdir dir="${javadoc}"/>
+    <javadoc packagenames="*" destdir="${javadoc}"
+             use="false" version="true" author="true" verbose="true">
+      <fileset dir="${source}">
+        <include name="**/*.java"/>
+      </fileset>
+    </javadoc>
+  </target>
+
+  <target name="jkcemu" depends="compile">
+    <java classname="jkcemu.Main" fork="true">
+      <classpath>
+        <pathelement path="${build}"/>
+      </classpath>
+    </java>
+  </target>
+
+</project>
+

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,13 +31,15 @@ public class MemEditFrm extends AbstractHexCharFrm
   private String      textFind;
   private JMenuItem   mnuRefresh;
   private JMenuItem   mnuClose;
-  private JMenuItem   mnuCopy;
+  private JMenuItem   mnuCopyBytes;
+  private JMenuItem   mnuCopyText;
   private JMenuItem   mnuPrintOptions;
   private JMenuItem   mnuPrint;
   private JMenuItem   mnuOverwrite;
   private JMenuItem   mnuSaveAddr;
   private JMenuItem   mnuGotoSavedAddr;
   private JMenuItem   mnuSelectToSavedAddr;
+  private JMenuItem   mnuChecksum;
   private JMenuItem   mnuFind;
   private JMenuItem   mnuFindNext;
   private JMenuItem   mnuHelpContent;
@@ -94,9 +96,13 @@ public class MemEditFrm extends AbstractHexCharFrm
     mnuEdit.setMnemonic( KeyEvent.VK_B );
     mnuBar.add( mnuEdit );
 
-    this.mnuCopy = createJMenuItem( "Markierte Bytes kopieren" );
-    this.mnuCopy.setEnabled( false );
-    mnuEdit.add( this.mnuCopy );
+    this.mnuCopyBytes = createJMenuItem( "Ausgew\u00E4hlte Bytes kopieren" );
+    this.mnuCopyBytes.setEnabled( false );
+    mnuEdit.add( this.mnuCopyBytes );
+
+    this.mnuCopyText = createJMenuItem( "Ausgew\u00E4hlten Text kopieren" );
+    this.mnuCopyText.setEnabled( false );
+    mnuEdit.add( this.mnuCopyText );
     mnuEdit.addSeparator();
 
     this.mnuOverwrite = createJMenuItem(
@@ -116,9 +122,14 @@ public class MemEditFrm extends AbstractHexCharFrm
     mnuEdit.add( this.mnuGotoSavedAddr );
 
     this.mnuSelectToSavedAddr = createJMenuItem(
-                                "Bis zur gemerkten Adresse markieren" );
+                                "Bis zur gemerkten Adresse ausw\u00E4hlen" );
     this.mnuSelectToSavedAddr.setEnabled( false );
     mnuEdit.add( this.mnuSelectToSavedAddr );
+    mnuEdit.addSeparator();
+
+    this.mnuChecksum = createJMenuItem( "Pr\u00FCfsumme/Hash-Wert..." );
+    this.mnuChecksum.setEnabled( false );
+    mnuEdit.add( this.mnuChecksum );
     mnuEdit.addSeparator();
 
     this.mnuFind = createJMenuItem(
@@ -129,9 +140,7 @@ public class MemEditFrm extends AbstractHexCharFrm
 
     this.mnuFindNext = createJMenuItem(
 		"Weitersuchen",
-		KeyStroke.getKeyStroke(
-			KeyEvent.VK_F,
-			Event.CTRL_MASK | Event.SHIFT_MASK ) );
+		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
     this.mnuFindNext.setEnabled( false );
     mnuEdit.add( this.mnuFindNext );
 
@@ -219,6 +228,7 @@ public class MemEditFrm extends AbstractHexCharFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
@@ -239,7 +249,10 @@ public class MemEditFrm extends AbstractHexCharFrm
       } else if( src == this.mnuClose ) {
 	rv = true;
 	doClose();
-      } else if( src == this.mnuCopy ) {
+      } else if( src == this.mnuCopyText ) {
+	rv = true;
+	this.hexCharFld.copySelectedText();
+      } else if( src == this.mnuCopyBytes ) {
 	rv = true;
 	doBytesCopy();
       } else if( src == this.mnuOverwrite ) {
@@ -254,6 +267,9 @@ public class MemEditFrm extends AbstractHexCharFrm
       } else if( src == this.mnuSelectToSavedAddr ) {
         rv = true;
         doGotoSavedAddr( true );
+      } else if( src == this.mnuChecksum ) {
+	rv = true;
+	doChecksum();
       } else if( src == this.mnuFind ) {
 	rv = true;
 	doFind();
@@ -271,12 +287,14 @@ public class MemEditFrm extends AbstractHexCharFrm
   }
 
 
+  @Override
   public int getAddrOffset()
   {
     return this.begAddr > 0 ? this.begAddr : 0;
   }
 
 
+  @Override
   public byte getDataByte( int idx )
   {
     byte rv = (byte) 0;
@@ -287,6 +305,7 @@ public class MemEditFrm extends AbstractHexCharFrm
   }
 
 
+  @Override
   public int getDataLength()
   {
     return (this.begAddr >= 0) && (this.begAddr <= this.endAddr) ?
@@ -295,6 +314,7 @@ public class MemEditFrm extends AbstractHexCharFrm
   }
 
 
+  @Override
   protected void setContentActionsEnabled( boolean state )
   {
     this.mnuPrint.setEnabled( state );
@@ -302,16 +322,20 @@ public class MemEditFrm extends AbstractHexCharFrm
   }
 
 
+  @Override
   protected void setFindNextActionsEnabled( boolean state )
   {
     this.mnuFindNext.setEnabled( state );
   }
 
 
+  @Override
   protected void setSelectedByteActionsEnabled( boolean state )
   {
-    this.mnuCopy.setEnabled( state );
+    this.mnuCopyBytes.setEnabled( state );
+    this.mnuCopyText.setEnabled( state );
     this.mnuOverwrite.setEnabled( state );
+    this.mnuChecksum.setEnabled( state );
     this.mnuSaveAddr.setEnabled( state );
     this.mnuSelectToSavedAddr.setEnabled( state && (this.savedAddr >= 0) );
   }

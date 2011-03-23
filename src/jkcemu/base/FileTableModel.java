@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,6 +25,7 @@ public class FileTableModel
 		SIZE,
 		LAST_MODIFIED,
 		FILE,
+		USER_NUM,
 		VALUE,
 		READ_ONLY,
 		SYSTEM_FILE,
@@ -136,6 +137,7 @@ public class FileTableModel
 
 	/* --- Comparator --- */
 
+  @Override
   public int compare( FileEntry f1, FileEntry f2 )
   {
     int rv = 0;
@@ -157,6 +159,10 @@ public class FileTableModel
 	  rv = compareFile( f1.getFile(), f2.getFile() );
 	  break;
 
+	case USER_NUM:
+	  rv = compareObject( f1.getUserNum(), f2.getUserNum() );
+	  break;
+
 	case VALUE:
 	  rv = compareObject( f1.getValue(), f2.getValue() );
 	  break;
@@ -171,6 +177,7 @@ public class FileTableModel
 
 	/* --- TableModel --- */
 
+  @Override
   public Class<?> getColumnClass( int col )
   {
     Class<?> rv = Object.class;
@@ -181,14 +188,17 @@ public class FileTableModel
 	  rv = String.class;
 	  break;
 
-	case SIZE:
-	  rv = Long.class;
-	  break;
-
 	case FILE:
 	  rv = File.class;
 	  break;
 
+	case SIZE:
+	  rv = Long.class;
+	  break;
+
+	case USER_NUM:
+	  rv = Integer.class;
+	  break;
 
 	case READ_ONLY:
 	case SYSTEM_FILE:
@@ -201,12 +211,14 @@ public class FileTableModel
   }
 
 
+  @Override
   public int getColumnCount()
   {
     return this.cols.length;
   }
 
 
+  @Override
   public String getColumnName( int col )
   {
     String rv = "";
@@ -232,6 +244,10 @@ public class FileTableModel
 	  rv = "Datei";
 	  break;
 
+	case USER_NUM:
+	  rv = "User";
+	  break;
+
 	case VALUE:
 	  rv = "Wert";
 	  break;
@@ -253,12 +269,14 @@ public class FileTableModel
   }
 
 
+  @Override
   public int getRowCount()
   {
     return this.rows.size();
   }
 
 
+  @Override
   public Object getValueAt( int row, int col )
   {
     Object rv = null;
@@ -297,6 +315,10 @@ public class FileTableModel
 	  rv = entry.getFile();
 	  break;
 
+	case USER_NUM:
+	  rv = entry.getUserNum();
+	  break;
+
 	case VALUE:
 	  rv = entry.getValue();
 	  break;
@@ -318,6 +340,7 @@ public class FileTableModel
   }
 
 
+  @Override
   public boolean isCellEditable( int row, int col )
   {
     boolean rv = false;
@@ -334,6 +357,7 @@ public class FileTableModel
   }
 
 
+  @Override
   public void setValueAt( Object value, int row, int col )
   {
     if( (row >= 0) && (row < this.rows.size())

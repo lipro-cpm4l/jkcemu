@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,6 +30,7 @@ public class DiskUnpacker extends AbstractThreadDlg
   private int                sectPerBlock;
   private boolean            blockNum16Bit;
   private boolean            applyReadOnly;
+  private boolean            forceLowerCase;
   private boolean            fileErr;
 
 
@@ -41,7 +42,8 @@ public class DiskUnpacker extends AbstractThreadDlg
 		int                sysTracks,
 		int                blockSize,
 		boolean            blockNum16Bit,
-		boolean            applyReadOnly )
+		boolean            applyReadOnly,
+		boolean            forceLowerCase )
   {
     Dialog dlg = new DiskUnpacker(
 				owner,
@@ -51,7 +53,8 @@ public class DiskUnpacker extends AbstractThreadDlg
 				sysTracks,
 				blockSize,
 				blockNum16Bit,
-				applyReadOnly );
+				applyReadOnly,
+				forceLowerCase );
     dlg.setTitle( diskDesc + " entpacken" );
     dlg.setVisible( true );
   }
@@ -59,6 +62,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected void doProgress()
   {
     if( (this.sides < 1) || (this.sides > 2)
@@ -98,11 +102,11 @@ public class DiskUnpacker extends AbstractThreadDlg
 	try {
 	  out = new FileOutputStream( file );
 
-	  int sectPerCyl = disk.getSectorsPerCylinder();
+	  int sectPerCyl = this.disk.getSectorsPerCylinder();
 	  for( int cyl = 0; cyl < this.sysTracks; cyl++ ) {
-	    for( int head = 0; head < disk.getSides(); head++ ) {
+	    for( int head = 0; head < this.disk.getSides(); head++ ) {
 	      for( int sectorIdx = 0; sectorIdx < sectPerCyl; sectorIdx++ ) {
-		SectorData sector = disk.getSectorByID(
+		SectorData sector = this.disk.getSectorByID(
 						cyl,
 						head,
 						cyl,
@@ -113,7 +117,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 		  if( sector.checkError() ) {
 		    err = true;
 		  }
-		  sector.writeTo( out, cyl, head, -1 );
+		  sector.writeTo( out, -1 );
 		}
 	      }
 	    }
@@ -159,91 +163,90 @@ public class DiskUnpacker extends AbstractThreadDlg
       } else {
 	this.outDir.mkdirs();
 	for( byte[] dirBlockBuf : dirBlocks ) {
-	if( dirBlockBuf != null ) {
-	  int entryPos = 0;
-	  while( (entryPos + 31) < dirBlockBuf.length ) {
-	    /*
-	     * Gueltige Extent-0-Eintraege suchen,
-	     * Das 1. Bye wird dabei mit ausgeblendetem Bit 4 (Passwort-Bit)
-	     * auswertet.
-	     */
-	    int b0 = (int) dirBlockBuf[ entryPos ] & 0xEF;
-	    if( (b0 >= 0) && (b0 <= 0x1F)
-		&& (((int) dirBlockBuf[ entryPos + 12 ] & 0xFF) == 0)
-		&& (((int) dirBlockBuf[ entryPos + 14 ] & 0xFF) == 0) )
-	    {
-	      String fileName = getFileName( dirBlockBuf, entryPos + 1 );
-	      if( fileName != null ) {
-		this.fileErr = false;
+	  if( dirBlockBuf != null ) {
+	    int entryPos = 0;
+	    while( (entryPos + 31) < dirBlockBuf.length ) {
+	      /*
+	       * Gueltige Extent-0-Eintraege suchen,
+	       * Das 1. Bye wird dabei mit ausgeblendetem Bit 4 (Passwort-Bit)
+	       * auswertet.
+	       */
+	      int b0 = (int) dirBlockBuf[ entryPos ] & 0xEF;
+	      if( (b0 >= 0) && (b0 <= 0x1F)
+		  && (((int) dirBlockBuf[ entryPos + 12 ] & 0xFF) == 0)
+		  && (((int) dirBlockBuf[ entryPos + 14 ] & 0xFF) == 0) )
+	      {
+		String fileName = getFileName( dirBlockBuf, entryPos + 1 );
+		if( fileName != null ) {
+		  this.fileErr = false;
 
-		boolean readOnly = false;
-		if( this.applyReadOnly ) {
-		  readOnly = (((int) dirBlockBuf[ entryPos + 9 ] & 0x80) != 0);
-		}
+		  boolean readOnly = false;
+		  if( this.applyReadOnly ) {
+		    readOnly = (((int) dirBlockBuf[ entryPos + 9 ]
+							& 0x80) != 0);
+		  }
 
-		File outDir = this.outDir;
-		if( b0 > 0 ) {
-		  String subDir = String.valueOf( b0 );
-		  outDir        = new File( this.outDir, subDir );
-		  outDir.mkdirs();
-		  appendToLog( subDir + File.separatorChar + fileName + "\n" );
-		} else {
-		  appendToLog( fileName + "\n" );
-		}
-		File         file = new File( outDir, fileName );
-		OutputStream out  = null;
-		try {
-		  out = new FileOutputStream( file );
+		  File outDir = this.outDir;
+		  if( b0 > 0 ) {
+		    String subDir = String.valueOf( b0 );
+		    outDir        = new File( this.outDir, subDir );
+		    outDir.mkdirs();
+		    appendToLog(
+			subDir + File.separatorChar + fileName + "\n" );
+		  } else {
+		    appendToLog( fileName + "\n" );
+		  }
+		  File         file = new File( outDir, fileName );
+		  OutputStream out  = null;
+		  try {
+		    out = new FileOutputStream( file );
 
-		  int extentNum = 0;
-		  writeEntryContentTo(
+		    int extentNum = 0;
+		    writeEntryContentTo(
 				out,
 				dirBlockBuf,
 				entryPos,
 				extentNum );
-		  do {
-		    if( extentNum > 0x3FF ) {
-		      break;
-		    }
-		    extentNum++;
-		  } while( writeExtentContentTo(
+		    do {
+		      if( extentNum > 0x3FF ) {
+			break;
+		      }
+		      extentNum++;
+		    } while( writeExtentContentTo(
 					out,
 					dirBlocks,
 					dirBlockBuf,
 					entryPos,
 					extentNum ) );
-		  out.close();
-		  out = null;
-		}
-		catch( IOException ex ) {
-		  appendErrorToLog( ex );
-		  incErrorCount();
-		  this.fileErr = true;
-		}
-		finally {
-		  EmuUtil.doClose( out );
-		}
-		if( this.fileErr ) {
-		  String fName2 = fileName + ".error";
-		  if( file.renameTo( new File( this.outDir, fName2 ) ) ) {
-		    appendToLog( "  Umbenannt in " );
-		    appendToLog( fName2 );
-		    appendToLog( "\n" );
-		    disableAutoClose();
+		    out.close();
+		    out = null;
 		  }
-		} else {
-		  if( readOnly ) {
-		    if( !file.setWritable( false ) ) {
-		      file.setWritable( true );
+		  catch( IOException ex ) {
+		    appendErrorToLog( ex );
+		    incErrorCount();
+		    this.fileErr = true;
+		  }
+		  finally {
+		    EmuUtil.doClose( out );
+		  }
+		  if( this.fileErr ) {
+		    String fName2 = fileName + ".error";
+		    if( file.renameTo( new File( this.outDir, fName2 ) ) ) {
+		      appendToLog( "  Umbenannt in " );
+		      appendToLog( fName2 );
+		      appendToLog( "\n" );
+		      disableAutoClose();
 		    }
-		    file.setReadOnly();
+		  } else {
+		    if( readOnly ) {
+		      EmuUtil.setFileWritable( file, false );
+		    }
 		  }
 		}
 	      }
+	      entryPos += 32;
 	    }
-	    entryPos += 32;
 	  }
-	}
 	}
       }
       ScreenFrm screenFrm = Main.getScreenFrm();
@@ -265,9 +268,10 @@ public class DiskUnpacker extends AbstractThreadDlg
 		int                sysTracks,
 		int                blockSize,
 		boolean            blockNum16Bit,
-		boolean            applyReadOnly )
+		boolean            applyReadOnly,
+		boolean            forceLowerCase )
   {
-    super( owner, false );
+    super( owner, "JKCEMU disk unpacker", false );
     this.disk              = disk;
     this.diskDesc          = diskDesc;
     this.outDir            = outDir;
@@ -280,6 +284,7 @@ public class DiskUnpacker extends AbstractThreadDlg
     this.maxBlocksPerEntry = (blockNum16Bit ? 8 : 16);
     this.blockNum16Bit     = blockNum16Bit;
     this.applyReadOnly     = applyReadOnly;
+    this.forceLowerCase    = forceLowerCase;
     this.fileErr           = false;
   }
 
@@ -313,7 +318,10 @@ public class DiskUnpacker extends AbstractThreadDlg
 	  buf[ idx++ ] = '_';
 	  --nSp;
 	}
-	char ch = Character.toLowerCase( (char) b );
+	char ch = (char) b;
+	if( this.forceLowerCase ) {
+	  ch = Character.toLowerCase( ch );
+	}
 	if( DiskUtil.isValidCPMFileNameChar( ch ) ) {
 	  buf[ idx++ ] = ch;
 	} else {
@@ -348,7 +356,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 	head++;
 	sectIdx -= this.sectPerCyl;
       }
-      SectorData sector = disk.getSectorByID(
+      SectorData sector = this.disk.getSectorByID(
 					cyl,
 					head,
 					cyl,
@@ -409,7 +417,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 	  head++;
 	  sectIdx -= this.sectPerCyl;
 	}
-	SectorData sector = disk.getSectorByID(
+	SectorData sector = this.disk.getSectorByID(
 					cyl,
 					head,
 					cyl,
@@ -428,7 +436,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 	    incErrorCount();
 	    this.fileErr = true;
 	  }
-	  nBytes -= sector.writeTo( out, cyl,head, nBytes );
+	  nBytes -= sector.writeTo( out, nBytes );
 	} else {
 	  throw new IOException(
 		String.format(
@@ -473,10 +481,14 @@ public class DiskUnpacker extends AbstractThreadDlg
 	    }
 	    if( rv ) {
 	      writeEntryContentTo( out, dirBlockBuf, entryPos, extentNum );
+	      break;
 	    }
 	  }
 	  entryPos += 32;
 	}
+      }
+      if( rv ) {
+	break;
       }
     }
     return rv;
