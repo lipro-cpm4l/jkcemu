@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -20,31 +20,30 @@ public class Z80PIO implements Z80InterruptSource
 {
   public enum PortInfo { A, B };
 
+  public enum Mode {
+		BYTE_OUT,
+		BYTE_IN,
+		BYTE_INOUT,
+		BIT_INOUT };
+
   public enum Status {
 		MODE_CHANGED,
 		READY_FOR_INPUT,
 		OUTPUT_AVAILABLE,
 		OUTPUT_CHANGED };
 
-  public static final int MODE_BYTE_OUT   = 0;
-  public static final int MODE_BYTE_IN    = 1;
-  public static final int MODE_BYTE_INOUT = 2;
-  public static final int MODE_BIT_INOUT  = 3;
+  private enum Ctrl { NONE, IO_MASK, INTERRUPT_MASK };
 
-  private static final int CTRL_NONE           = 0;
-  private static final int CTRL_IO_MASK        = 1;
-  private static final int CTRL_INTERRUPT_MASK = 2;
-
-  private Z80CPU      cpu;
+  private String      title;
   private Z80PIO.Port portA;
   private Z80PIO.Port portB;
 
 
-  public Z80PIO( Z80CPU cpu )
+  public Z80PIO( String title )
   {
-    this.cpu    = cpu;
-    this.portA  = new Z80PIO.Port( PortInfo.A );
-    this.portB  = new Z80PIO.Port( PortInfo.B );
+    this.title = title;
+    this.portA = new Z80PIO.Port( PortInfo.A );
+    this.portB = new Z80PIO.Port( PortInfo.B );
   }
 
 
@@ -111,12 +110,12 @@ public class Z80PIO implements Z80InterruptSource
   }
 
 
-  public synchronized int getModePortA()
+  public synchronized Mode getModePortA()
   {
     return this.portA.mode;
   }
 
-  public synchronized int getModePortB()
+  public synchronized Mode getModePortB()
   {
     return this.portB.mode;
   }
@@ -167,6 +166,20 @@ public class Z80PIO implements Z80InterruptSource
   public synchronized boolean putInValuePortB( int value, int mask )
   {
     return putInValue( this.portB, value, mask, false );
+  }
+
+
+  /*
+   * Diese beiden Methoden markieren einen Strobe-Impulse.
+   */
+  public void strobePortA()
+  {
+    strobePort( this.portA );
+  }
+
+  public void strobePortB()
+  {
+    strobePort( this.portB );
   }
 
 
@@ -224,16 +237,128 @@ public class Z80PIO implements Z80InterruptSource
 
 	/* --- Methoden fuer Z80InterruptSource --- */
 
-  public synchronized int interruptAccepted()
+  @Override
+  public void appendStatusHTMLTo( StringBuilder buf )
+  {
+    Port[] ports = { this.portA, this.portB };
+    buf.append( "<table border=\"1\">\n"
+	+ "<tr><th></th><th>Tor&nbsp;A</th><th>Tor&nbsp;B</th></tr>\n"
+	+ "<tr><td>Betriebsart:</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      buf.append( "<td>" );
+      switch( ports[ i ].mode ) {
+	case BYTE_OUT:
+	  buf.append( "Byte-Ausgabe" );
+	  break;
+	case BYTE_IN:
+	  buf.append( "Byte-Eingabe" );
+	  break;
+	case BYTE_INOUT:
+	  buf.append( "Byte-Ein-/Ausgabe" );
+	  break;
+	case BIT_INOUT:
+	  buf.append( "Bit-Ein-/Ausgabe" );
+	  break;
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>E/A-Maske:</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      buf.append( "<td>" );
+      if( ports[ i ].mode == Mode.BIT_INOUT ) {
+	int v = ports[ i ].ioMask;
+	for( int k = 0; k < 8; k++ ) {
+	  buf.append( (char) ((v & 0x80) != 0 ? 'E' : 'A') );
+	  v <<= 1;
+	}
+      } else {
+	buf.append( "nicht relevant" );
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Eingabe-Register:</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      buf.append( String.format( "<td>%02Xh</td>", ports[ i ].inValue ) );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Ausgabe-Register:</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      buf.append( String.format( "<td>%02Xh</td>", ports[ i ].outValue ) );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Interrupt-Status:</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      buf.append( "<td>" );
+      if( ports[ i ].interruptAccepted ) {
+	buf.append( "angenommen (wird gerade bedient)" );
+      } else if( ports[ i ].interruptRequested ) {
+	buf.append( "angefordert" );
+      } else if( ports[ i ].interruptEnabled ) {
+	buf.append( "freigegeben" );
+      } else {
+	buf.append( "gesperrt" );
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Interrupt-Maske (L-aktiv):</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      buf.append( "<td>" );
+      if( ports[ i ].mode == Mode.BIT_INOUT ) {
+	int v = ports[ i ].interruptMask;
+	buf.append( String.format( "%02Xh (Bits: ", v ) );
+	char ch = '7';
+	for( int k = 0; k < 8; k++ ) {
+	  buf.append( (char) ((v & 0x80) == 0 ? ch : '-') );
+	  v <<= 1;
+	  --ch;
+	}
+	buf.append( (char) ')' );
+      } else {
+	buf.append( "nicht relevant" );
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Interrupt-Anforderung&nbsp;bei:</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      buf.append( "<td>" );
+      if( ports[ i ].mode == Mode.BIT_INOUT ) {
+	buf.append( (char) (ports[ i ].interruptFireAtH ? 'H' : 'L') );
+	buf.append( "-Pegel, " );
+	buf.append( ports[ i ].interruptBitsAnd ? "UND" : "ODER" );
+	buf.append( "-verkn&uuml;pft" );
+      } else {
+	buf.append( "nicht relevant" );
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Interrupt-Vektor:</td>" );
+    for( int i = 0; i < ports.length; i++ ) {
+      int iv = ports[ i ].interruptVector;
+      buf.append( String.format(
+			"<td>%02Xh</td>",
+			ports[ i ].interruptVector ) );
+    }
+    buf.append( "</tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
+  public synchronized int interruptAccept()
   {
     int rv = 0;
     if( this.portA.interruptRequested ) {
-      this.portA.interruptPending   = true;
+      this.portA.interruptAccepted  = true;
       this.portA.interruptRequested = false;
       rv = this.portA.interruptVector;
     }
     else if( this.portB.interruptRequested ) {
-      this.portB.interruptPending   = true;
+      this.portB.interruptAccepted  = true;
       this.portB.interruptRequested = false;
       rv = this.portB.interruptVector;
     }
@@ -241,41 +366,54 @@ public class Z80PIO implements Z80InterruptSource
   }
 
 
-  public synchronized void interruptFinished()
+  @Override
+  public synchronized void interruptFinish()
   {
-    if( this.portA.interruptPending ) {
-      this.portA.interruptPending      = false;
+    if( this.portA.interruptAccepted ) {
+      this.portA.interruptAccepted     = false;
       this.portA.interruptRequested    = false;
       this.portA.interruptCondRealized = false;
     }
-    else if( this.portB.interruptPending ) {
-      this.portB.interruptPending      = false;
+    else if( this.portB.interruptAccepted ) {
+      this.portB.interruptAccepted     = false;
       this.portB.interruptRequested    = false;
       this.portB.interruptCondRealized = false;
     }
   }
 
 
-  public boolean isInterruptPending()
+  @Override
+  public boolean isInterruptAccepted()
   {
-    return this.portA.interruptPending || this.portB.interruptPending;
+    return this.portA.interruptAccepted || this.portB.interruptAccepted;
   }
 
 
+  @Override
   public boolean isInterruptRequested()
   {
     boolean rv = (this.portA.interruptEnabled
 				&& this.portA.interruptRequested);
-    if( !rv && !this.portA.interruptPending ) {
+    if( !rv && !this.portA.interruptAccepted ) {
       rv = (this.portB.interruptEnabled && this.portB.interruptRequested);
     }
     return rv;
   }
 
 
+  @Override
   public void reset()
   {
     reset( false );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public String toString()
+  {
+    return this.title;
   }
 
 
@@ -287,15 +425,15 @@ public class Z80PIO implements Z80InterruptSource
     public int                            inValue;
     public int                            outValue;
     public boolean                        ready;
-    public int                            mode;
-    public int                            nextCtrl;
+    public Mode                           mode;
+    public Ctrl                           nextCtrl;
     public int                            ioMask;
     public int                            interruptVector;
     public int                            interruptMask;
     public boolean                        interruptFireAtH;
     public boolean                        interruptBitsAnd;
     public boolean                        interruptEnabled;
-    public volatile boolean               interruptPending;
+    public volatile boolean               interruptAccepted;
     public volatile boolean               interruptRequested;
     public boolean                        interruptCondRealized;
     public Collection<Z80PIOPortListener> listeners;
@@ -315,14 +453,14 @@ public class Z80PIO implements Z80InterruptSource
       }
       this.inValue               = 0xFF;
       this.outValue              = 0xFF;
-      this.mode                  = MODE_BYTE_IN;
-      this.nextCtrl              = CTRL_NONE;
+      this.mode                  = Mode.BYTE_IN;
+      this.nextCtrl              = Ctrl.NONE;
       this.ioMask                = 0;
       this.interruptMask         = 0;
       this.interruptFireAtH      = false;
       this.interruptBitsAnd      = false;
       this.interruptEnabled      = false;
-      this.interruptPending      = false;
+      this.interruptAccepted     = false;
       this.interruptRequested    = false;
       this.interruptCondRealized = false;
       this.ready                 = false;
@@ -359,7 +497,7 @@ public class Z80PIO implements Z80InterruptSource
 
   private void tryInterrupt( Z80PIO.Port port )
   {
-    if( port.interruptEnabled && !port.interruptPending )
+    if( port.interruptEnabled && !port.interruptAccepted )
       port.interruptRequested = true;
   }
 
@@ -370,11 +508,11 @@ public class Z80PIO implements Z80InterruptSource
     if( strobe ) {
       rv = port.outValue;
       if( ((port.portInfo == PortInfo.A)
-	   && ((port.mode == MODE_BYTE_OUT)
-	       || (port.mode == MODE_BYTE_INOUT)))
+	   && ((port.mode == Mode.BYTE_OUT)
+	       || (port.mode == Mode.BYTE_INOUT)))
 	  || ((port.portInfo == PortInfo.B)
-	      && (port.mode == MODE_BYTE_OUT)
-	      && (this.portA.mode != MODE_BYTE_INOUT)) )
+	      && (port.mode == Mode.BYTE_OUT)
+	      && (this.portA.mode != Mode.BYTE_INOUT)) )
       {
 	port.ready = false;
 	tryInterrupt( port );
@@ -394,14 +532,14 @@ public class Z80PIO implements Z80InterruptSource
   {
     boolean rv = false;
     switch( port.mode ) {
-      case MODE_BYTE_IN:
-      case MODE_BYTE_INOUT:
+      case BYTE_IN:
+      case BYTE_INOUT:
 	port.inValue = (value & mask) | (port.inValue & ~mask);
 	if( strobe
 	    && ((port.portInfo == PortInfo.A)
 		|| ((port.portInfo == PortInfo.B)
-		    && (port.mode == MODE_BYTE_IN)
-		    && (this.portA.mode != MODE_BYTE_INOUT))) )
+		    && (port.mode == Mode.BYTE_IN)
+		    && (this.portA.mode != Mode.BYTE_INOUT))) )
 	{
 	  port.ready = false;
 	  tryInterrupt( port );
@@ -409,7 +547,7 @@ public class Z80PIO implements Z80InterruptSource
 	rv = true;
 	break;
 
-      case MODE_BIT_INOUT:
+      case BIT_INOUT:
 	port.inValue = (value & mask) | (port.inValue & ~mask);
 	if( port.interruptEnabled ) {
 	  boolean iCondRealized = false;
@@ -428,8 +566,10 @@ public class Z80PIO implements Z80InterruptSource
 	    }
 	  }
 
-	  // Interrupt nur ausloesen, wenn die Interrupt-Bedingungen
-	  // vorher nicht erfuellt waren
+	  /*
+	   * Interrupt nur ausloesen, wenn die Interrupt-Bedingungen
+	   * vorher nicht erfuellt waren
+	   */
 	  if( iCondRealized && !port.interruptCondRealized ) {
 	    port.interruptCondRealized = true;
 	    tryInterrupt( port );
@@ -443,33 +583,50 @@ public class Z80PIO implements Z80InterruptSource
   }
 
 
+  private void strobePort( Z80PIO.Port port )
+  {
+    if( ((port.portInfo == PortInfo.A)
+	 && ((port.mode == Mode.BYTE_IN)
+	     || (port.mode == Mode.BYTE_OUT)
+	     || (port.mode == Mode.BYTE_INOUT)))
+	|| ((port.portInfo == PortInfo.B)
+	    && ((port.mode == Mode.BYTE_IN) || (port.mode == Mode.BYTE_OUT))
+	    && (this.portA.mode != Mode.BYTE_INOUT))
+	|| ((port.portInfo == PortInfo.B)
+	    && (this.portA.mode == Mode.BYTE_INOUT)) )
+    {
+      tryInterrupt( port );
+    }
+  }
+
+
   private int readPort( Z80PIO.Port port )
   {
     int value = 0xFF;
     switch( port.mode ) {
-      case MODE_BYTE_OUT:
+      case BYTE_OUT:
 	value = port.outValue;
 	break;
 
-      case MODE_BYTE_IN:
-      case MODE_BYTE_INOUT:
+      case BYTE_IN:
+      case BYTE_INOUT:
 	value = port.inValue;
 	if( (port.portInfo == PortInfo.A)
 	    || ((port.portInfo == PortInfo.B)
-		&& (port.mode == MODE_BYTE_IN)
-		&& (this.portA.mode != MODE_BYTE_INOUT)) )
+		&& (port.mode == Mode.BYTE_IN)
+		&& (this.portA.mode != Mode.BYTE_INOUT)) )
 	{
 	  port.ready = true;
 	}
 	break;
 
-      case MODE_BIT_INOUT:
+      case BIT_INOUT:
 	value = composeBitInValue( port );
 	break;
     }
-    if( (port.mode == MODE_BYTE_IN)
-	|| (port.mode == MODE_BYTE_INOUT)
-	|| (port.mode == MODE_BIT_INOUT) )
+    if( (port.mode == Mode.BYTE_IN)
+	|| (port.mode == Mode.BYTE_INOUT)
+	|| (port.mode == Mode.BIT_INOUT) )
     {
       informListeners( port, Status.READY_FOR_INPUT );
     }
@@ -479,7 +636,21 @@ public class Z80PIO implements Z80InterruptSource
 
   private int readControl( Z80PIO.Port port )
   {
-    return ((port.mode << 6) | 0x3F) & 0xFF;
+    int rv = 0x3F;		// BYTE_OUT
+    switch( port.mode ) {
+      case BYTE_IN:
+	rv = 0x7F;
+	break;
+
+      case BYTE_INOUT:
+	rv = 0xBF;
+	break;
+
+      case BIT_INOUT:
+	rv = 0xFF;
+	break;
+    }
+    return rv;
   }
 
 
@@ -488,17 +659,17 @@ public class Z80PIO implements Z80InterruptSource
     int oldValue = port.outValue;
     port.outValue = value;
     if( ((port.portInfo == PortInfo.A)
-	 && ((port.mode == MODE_BYTE_OUT) || (port.mode == MODE_BYTE_INOUT)))
+	 && ((port.mode == Mode.BYTE_OUT) || (port.mode == Mode.BYTE_INOUT)))
 	|| ((port.portInfo == PortInfo.B)
-	    && (port.mode == MODE_BYTE_OUT)
-	    && (this.portA.mode != MODE_BYTE_INOUT)) )
+	    && (port.mode == Mode.BYTE_OUT)
+	    && (this.portA.mode != Mode.BYTE_INOUT)) )
     {
       port.ready = true;
     }
-    if( (port.mode == MODE_BYTE_OUT) || (port.mode == MODE_BYTE_INOUT) ) {
+    if( (port.mode == Mode.BYTE_OUT) || (port.mode == Mode.BYTE_INOUT) ) {
       informListeners( port, Status.OUTPUT_AVAILABLE );
     }
-    else if( port.mode == MODE_BIT_INOUT ) {
+    else if( port.mode == Mode.BIT_INOUT ) {
       if( oldValue != value )
 	informListeners( port, Status.OUTPUT_CHANGED );
     }
@@ -508,58 +679,56 @@ public class Z80PIO implements Z80InterruptSource
   private void writeControl( Z80PIO.Port port, int value )
   {
     switch( port.nextCtrl ) {
-      case CTRL_IO_MASK:
+      case IO_MASK:
 	port.ioMask   = value;
-	port.nextCtrl = CTRL_NONE;
+	port.nextCtrl = Ctrl.NONE;
 	break;
 
-      case CTRL_INTERRUPT_MASK:
+      case INTERRUPT_MASK:
 	port.interruptMask = value;
-	port.nextCtrl      = CTRL_NONE;
+	port.nextCtrl      = Ctrl.NONE;
 	break;
 
       default:
 	if( (value & 0x0F) == 0x0F ) {		// Betriebsart
-	  int oldMode = port.mode;
+	  Mode oldMode = port.mode;
 	  switch( (value >> 6) & 0x03 ) {
 	    case 0:
-	      port.mode = MODE_BYTE_OUT;
+	      port.mode = Mode.BYTE_OUT;
 	      if( (port.portInfo == PortInfo.A)
 		  || ((port.portInfo == PortInfo.B)
-		      && (this.portA.mode != MODE_BYTE_INOUT)) )
+		      && (this.portA.mode != Mode.BYTE_INOUT)) )
 	      {
 		port.ready = false;
 	      }
 	      break;
 
 	    case 2:
-	      port.mode = MODE_BYTE_INOUT;
+	      port.mode = Mode.BYTE_INOUT;
 	      if( port.portInfo == PortInfo.A ) {
 		port.ready = false;
 	      }
 	      break;
 
 	    case 3:
-	      port.mode  = MODE_BIT_INOUT;
-	      port.ready = false;
+	      port.mode     = Mode.BIT_INOUT;
+	      port.nextCtrl = Ctrl.IO_MASK;
+	      port.ready    = false;
 	      break;
 
 	    default:
-	      port.mode = MODE_BYTE_IN;
+	      port.mode = Mode.BYTE_IN;
 	      if( (port.portInfo == PortInfo.A)
 		  || ((port.portInfo == PortInfo.B)
-		      && (this.portA.mode != MODE_BYTE_INOUT)) )
+		      && (this.portA.mode != Mode.BYTE_INOUT)) )
 	      {
 		port.ready = true;
 	      }
 	      break;
 	  }
-	  if( port.mode == MODE_BIT_INOUT ) {
-	    port.nextCtrl = CTRL_IO_MASK;
-	  }
 	  if( oldMode != port.mode ) {
 	    informListeners( port, Status.MODE_CHANGED );
-	    if( oldMode == MODE_BYTE_OUT ) {
+	    if( oldMode == Mode.BYTE_OUT ) {
 	      informListeners( port, Status.READY_FOR_INPUT );
 	    }
 	  }
@@ -572,7 +741,7 @@ public class Z80PIO implements Z80InterruptSource
 	}
 	else if( (value & 0x0F) == 0x07 ) {	// Interrupt-Steuerwort
 	  if( (value & 0x10) != 0 ) {
-	    port.nextCtrl = CTRL_INTERRUPT_MASK;
+	    port.nextCtrl = Ctrl.INTERRUPT_MASK;
 	  }
 	  port.interruptFireAtH      = ((value & 0x20) != 0);
 	  port.interruptBitsAnd      = ((value & 0x40) != 0);

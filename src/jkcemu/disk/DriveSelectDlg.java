@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
 import javax.swing.*;
+import jkcemu.Main;
 import jkcemu.base.BasicDlg;
 
 
@@ -56,12 +57,23 @@ public class DriveSelectDlg extends BasicDlg
       this.comboDrive.setEditable( true );
       this.comboDrive.addItem( "/dev/fd0" );
       this.comboDrive.addItem( "/dev/fd1" );
+      this.comboDrive.addItem( "/dev/sdb" );
+      this.comboDrive.addItem( "/dev/sdc" );
     } else {
       add( new JLabel( "Laufwerk:" ), gbc );
       this.comboDrive.setEditable( false );
       for( char ch = 'A'; ch <= 'Z'; ch++ ) {
 	this.comboDrive.addItem( String.format( "%c:", ch ) );
       }
+    }
+    String lastDriveFileName = Main.getLastDriveFileName();
+    if( lastDriveFileName != null ) {
+      if( (lastDriveFileName.length() > 4)
+	  && lastDriveFileName.startsWith( "\\\\.\\" ) )
+      {
+	lastDriveFileName = lastDriveFileName.substring( 4 );
+      }
+      this.comboDrive.setSelectedItem( lastDriveFileName );
     }
     this.comboDrive.addKeyListener( this );
     gbc.anchor = GridBagConstraints.WEST;
@@ -113,6 +125,7 @@ public class DriveSelectDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -149,6 +162,7 @@ public class DriveSelectDlg extends BasicDlg
    * Focus auf OK-Knopf setzen,
    * damit man einfach Enter druecken kann.
    */
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( (e.getWindow() == this) && (this.btnOK != null) )

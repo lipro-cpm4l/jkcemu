@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,55 +23,35 @@ package jkcemu.audio;
 
 import java.io.InputStream;
 import java.lang.*;
+import jkcemu.base.EmuUtil;
 
 
 public class AudioDataQueue extends InputStream
 {
-  private byte[] phaseData;
-  private int    size;
-  private int    pos;
-  private int    len;
-  private String errorText;
+  private byte[]  phaseData;
+  private int     size;
+  private int     pos;
+  private int     len;
+  private int     remainSamples;
+  private boolean lastPhase;
+  private String  errorText;
 
 
   public AudioDataQueue( int initSize )
   {
-    this.phaseData = new byte[ initSize ];
-    this.size      = 0;
-    this.pos       = 0;
-    this.len       = 0;
-    this.errorText = null;
+    this.phaseData     = new byte[ initSize ];
+    this.size          = 0;
+    this.pos           = 0;
+    this.len           = 0;
+    this.remainSamples = 0;
+    this.lastPhase     = false;
+    this.errorText     = null;
   }
 
 
-  public void addOpposedPhase()
+  public void appendPauseFrames( int nSamples )
   {
-    if( (this.phaseData != null) && (this.size > 0) ) {
-      int v = 0;
-      int p = this.size - 1;
-      while( p >= 0 ) {
-	if( v == 0 ) {
-	  v = this.phaseData[ p ];
-	} else {
-	  int m = this.phaseData[ p ];
-	  if( ((v < 0) && (m >= 0))
-	      || ((v > 0) && (m <= 0)) )
-	  {
-	    break;
-	  }
-	}
-	--p;
-      }
-      int e = this.size;
-      while( p < e ) {
-	if( ensureSize() ) {
-	  this.phaseData[ this.size ] = (byte) -this.phaseData[ p++ ];
-	  this.size++;
-	} else {
-	  break;
-	}
-      }
-    }
+    this.remainSamples += nSamples;
   }
 
 
@@ -83,13 +63,10 @@ public class AudioDataQueue extends InputStream
 
   public int length()
   {
+    if( this.len < this.remainSamples ) {
+      this.len = this.remainSamples;
+    }
     return this.len;
-  }
-
-
-  public boolean markSupported()
-  {
-    return false;
   }
 
 
@@ -97,35 +74,49 @@ public class AudioDataQueue extends InputStream
   {
     if( this.phaseData != null ) {
       if( this.size > 0 ) {
-	boolean lastPhase = (this.phaseData[ this.size - 1 ] > 0);
-	if( phase == lastPhase ) {
+	this.lastPhase = (this.phaseData[ this.size - 1 ] > 0);
+	if( phase == this.lastPhase ) {
 	  putLastPhaseAgain();
 	} else {
 	  if( ensureSize() ) {
 	    this.phaseData[ this.size ] = (byte) (phase ? 1 : -1);
 	    this.size++;
 	  }
+	  this.lastPhase = !phase;
 	}
       } else {
 	this.phaseData[ 0 ] = (byte) (phase ? 1 : -1);
 	this.size           = 1;
       }
-      this.len++;
+      this.remainSamples++;
     }
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean markSupported()
+  {
+    return false;
+  }
+
+
+  @Override
   public int read()
   {
+    int rv = -1;
     while( this.pos < this.size ) {
       if( this.phaseData[ this.pos ] > 0 ) {
 	this.phaseData[ this.pos ]--;
-	return AudioOut.PHASE1_VALUE;
+	rv = AudioOut.PHASE1_VALUE;
+	break;
       }
 
       if( this.phaseData[ this.pos ] < 0 ) {
 	this.phaseData[ this.pos ]++;
-	return AudioOut.PHASE0_VALUE;
+	rv = AudioOut.PHASE0_VALUE;
+	break;
       }
 
       /*
@@ -134,7 +125,12 @@ public class AudioDataQueue extends InputStream
        */
       this.pos++;
     }
-    return -1;
+    if( (rv == -1) && (this.remainSamples > 0) ) {
+      --this.remainSamples;
+      rv = AudioOut.PHASE0_VALUE
+		+ ((AudioOut.PHASE1_VALUE - AudioOut.PHASE0_VALUE) / 2);
+    }
+    return rv;
   }
 
 
@@ -194,4 +190,3 @@ public class AudioDataQueue extends InputStream
     }
   }
 }
-

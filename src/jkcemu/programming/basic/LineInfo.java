@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -52,6 +52,7 @@ public class LineInfo implements Comparable<LineInfo>
 
 	/* --- Comparable --- */
 
+  @Override
   public int compareTo( LineInfo data )
   {
     int rv = this.sourceLineNum - data.sourceLineNum;

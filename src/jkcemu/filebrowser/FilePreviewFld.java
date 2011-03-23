@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -151,6 +151,7 @@ public class FilePreviewFld extends JPanel
 
 	/* --- DragGestureListener --- */
 
+  @Override
   public void dragGestureRecognized( DragGestureEvent e )
   {
     int[] rowNums = this.fileTable.getSelectedRows();
@@ -178,6 +179,7 @@ public class FilePreviewFld extends JPanel
 
 	/* --- MouseListener --- */
 
+  @Override
   public void mouseClicked( MouseEvent e )
   {
     if( (e.getSource() == this.fileTableHeader) && (e.getClickCount() > 0) ) {
@@ -193,24 +195,28 @@ public class FilePreviewFld extends JPanel
   }
 
 
+  @Override
   public void mouseEntered( MouseEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void mouseExited( MouseEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void mousePressed( MouseEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void mouseReleased( MouseEvent e )
   {
     // leer
@@ -219,6 +225,7 @@ public class FilePreviewFld extends JPanel
 
 	/* --- Runnable --- */
 
+  @Override
   public void run()
   {
     while( this.thread != null ) {
@@ -266,8 +273,9 @@ public class FilePreviewFld extends JPanel
 	      }
 	      String fName = file.getName();
 	      if( fName != null ) {
-		if( fName.length() > 0 )
+		if( !fName.isEmpty() ) {
 		  infoItems.put( FileInfoFld.Item.NAME, fName );
+		}
 	      }
 	      if( !fileNode.isLeaf() ) {
 		addDirectoryInfo(
@@ -322,6 +330,22 @@ public class FilePreviewFld extends JPanel
 				AnadiskFloppyDisk.readFile(
 							this.owner,
 							file ),
+				sortCaseSensitive ) )
+		      {
+			cardName = "file.table";
+		      }
+		    }
+		    catch( IOException ex ) {}
+		  }
+		} else if( fileNode.isCopyQMFile() ) {
+		  if( checkFileSize( file.length(), maxFileSize ) ) {
+		    try {
+		      if( addDiskInfo(
+				infoItems,
+				fileNode.isCompressedFile() ?
+						"Komprimierte CopyQM-Datei"
+						: "CopyQM-Datei",
+				CopyQMFloppyDisk.readFile( this.owner, file ),
 				sortCaseSensitive ) )
 		      {
 			cardName = "file.table";
@@ -387,10 +411,11 @@ public class FilePreviewFld extends JPanel
 	      }
 	    }
 	  }
+
 	  final Map<FileInfoFld.Item,Object> theInfoItems  = infoItems;
 	  final String[]                     theAddonLines = addonLines;
 	  final String                       theCardName   = cardName;
-	  SwingUtilities.invokeLater(
+	  EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -407,11 +432,12 @@ public class FilePreviewFld extends JPanel
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void addNotify()
   {
     super.addNotify();
     if( this.thread == null ) {
-      Thread thread = new Thread( this );
+      Thread thread = new Thread( this, "JKCEMU file browser details viewer" );
       this.thread   = thread;
       thread.setDaemon( true );
       thread.start();
@@ -419,6 +445,7 @@ public class FilePreviewFld extends JPanel
   }
 
 
+  @Override
   public void removeNotify()
   {
     super.removeNotify();
@@ -442,8 +469,9 @@ public class FilePreviewFld extends JPanel
 	if( aFmt != null ) {
 	  String fmtText = AudioUtil.getAudioFormatText( aFmt );
 	  if( fmtText != null ) {
-	    if( fmtText.length() > 0 )
+	    if( !fmtText.isEmpty() ) {
 	      infoItems.put( FileInfoFld.Item.FORMAT, fmtText );
+	    }
 	  }
 	  if( fFmt != null ) {
 	    infoItems.put( FileInfoFld.Item.TYPE, "Audio-Datei" );
@@ -620,28 +648,57 @@ public class FilePreviewFld extends JPanel
     boolean rv = false;
     if( checkFileSize( file.length(), maxFileSize ) ) {
       try {
-	BufferedImage image = ImageIO.read( file );
-	if( image != null ) {
-	  StringBuilder buf = new StringBuilder( 256 );
-	  buf.append( image.getWidth() );
-	  buf.append( "x" );
-	  buf.append( image.getHeight() );
-	  buf.append( " Pixel" );
-	  infoItems.put( FileInfoFld.Item.TYPE, "Bilddatei" );
-	  infoItems.put( FileInfoFld.Item.FORMAT, buf.toString() );
-	  Object date = image.getProperty( "date" );
-	  if( date != null ) {
-	    if( !date.equals( Image.UndefinedProperty ) )
-	      infoItems.put( FileInfoFld.Item.DATE, date );
+	Image image = null;
+	/*
+	 * GIF-Bilder mit der klassischen API laden,
+	 * damit auch animierte GIFs abgespielt werden koennen.
+	 */
+	if( file.getPath().toLowerCase().endsWith( ".gif" ) ) {
+	  try {
+	    Toolkit tk = getToolkit();
+	    if( tk != null ) {
+	      image = tk.createImage( file.getPath() );
+	    }
 	  }
-	  Object comment = image.getProperty( "comment" );
+	  catch( Exception ex ) {}
+	}
+	if( image != null ) {
+	  try {
+	    MediaTracker mt = new MediaTracker( this );
+	    mt.addImage( image, 1 );
+	    mt.waitForID( 1, 100 );
+	  }
+	  catch( InterruptedException ex ) {}
+	} else {
+	  image = ImageIO.read( file );
+	}
+	if( image != null ) {
+	  infoItems.put( FileInfoFld.Item.TYPE, "Bilddatei" );
+	  int w = image.getWidth( this );
+	  int h = image.getHeight( this );
+	  StringBuilder buf = new StringBuilder( 256 );
+	  if( (w > 0) && (h > 0) ) {
+	    buf.append( w );
+	    buf.append( "x" );
+	    buf.append( h );
+	    buf.append( " Pixel" );
+	    infoItems.put( FileInfoFld.Item.FORMAT, buf.toString() );
+	  }
+	  Object date = image.getProperty( "date", this );
+	  if( date != null ) {
+	    if( !date.equals( Image.UndefinedProperty ) ) {
+	      infoItems.put( FileInfoFld.Item.DATE, date );
+	    }
+	  }
+	  Object comment = image.getProperty( "comment", this );
 	  if( comment != null ) {
 	    if( !comment.equals( Image.UndefinedProperty ) ) {
 	      String s = comment.toString();
 	      if( s != null ) {
 		s = s.trim();
-		if( s.length() > 0 )
+		if( !s.isEmpty() ) {
 		  infoItems.put( FileInfoFld.Item.COMMENT, s );
+		}
 	      }
 	    }
 	  }

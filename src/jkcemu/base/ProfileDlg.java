@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -49,9 +49,9 @@ public class ProfileDlg extends BasicDlg implements
     String preSelectedName = null;
     this.listModel         = new DefaultListModel();
     try {
-      File profileDir = Main.getProfileDir();
-      if( profileDir != null ) {
-	File[] entries = profileDir.listFiles();
+      File configDir = Main.getConfigDir();
+      if( configDir != null ) {
+	File[] entries = configDir.listFiles();
 	if( entries != null ) {
 	  Arrays.sort( entries );
 	  for( int i = 0; i < entries.length; i++ ) {
@@ -59,8 +59,11 @@ public class ProfileDlg extends BasicDlg implements
 	      String fileName = entries[ i ].getName();
 	      if( fileName != null ) {
 		int len = fileName.length();
-		if( (len > 4) && fileName.endsWith( ".prf" ) ) {
-		  String itemText = fileName.substring( 0, len - 4 );
+		if( (len > 8)
+		    && fileName.startsWith( "prf_" )
+		    && fileName.endsWith( ".xml" ) )
+		{
+		  String itemText = fileName.substring( 4, len - 4 );
 		  if( preSelection != null ) {
 		    if( preSelection.equals( entries[ i ] ) ) {
 		      preSelectedIdx  = this.listModel.getSize();
@@ -193,18 +196,21 @@ public class ProfileDlg extends BasicDlg implements
 
 	/* --- Methoden fuer DocumentListener --- */
 
+  @Override
   public void changedUpdate( DocumentEvent e )
   {
     updOKButton();
   }
 
 
+  @Override
   public void insertUpdate( DocumentEvent e )
   {
     updOKButton();
   }
 
 
+  @Override
   public void removeUpdate( DocumentEvent e )
   {
     updOKButton();
@@ -213,6 +219,7 @@ public class ProfileDlg extends BasicDlg implements
 
 	/* --- Methoden fuer ListSelectionListener --- */
 
+  @Override
   public void valueChanged( ListSelectionEvent e )
   {
     Object o = this.list.getSelectedValue();
@@ -230,6 +237,7 @@ public class ProfileDlg extends BasicDlg implements
 
 	/* --- ueberschriebene Methoden fuer MouseListener --- */
 
+  @Override
   public void mouseClicked( MouseEvent e )
   {
     if( e != null ) {
@@ -247,6 +255,7 @@ public class ProfileDlg extends BasicDlg implements
 
 	/* --- ueberschriebene Methoden fuer WindowListener --- */
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( this.fldProfileName != null ) {
@@ -259,6 +268,7 @@ public class ProfileDlg extends BasicDlg implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -338,8 +348,9 @@ public class ProfileDlg extends BasicDlg implements
       if( o != null ) {
 	String s = o.toString();
 	if( s != null ) {
-	  if( s.length() > 0 )
+	  if( !s.isEmpty() ) {
 	    this.selectedProfile = getProfile( s );
+	  }
 	}
       }
     }
@@ -375,11 +386,11 @@ public class ProfileDlg extends BasicDlg implements
 
   private static File getProfile( String profileName )
   {
-    profileName += ".prf";
-    File profileDir = Main.getProfileDir();
-    return profileDir != null ?
-		new File( profileDir, profileName )
-		: new File( profileName );
+    String fileName = "prf_" + profileName + ".xml";
+    File configDir = Main.getConfigDir();
+    return configDir != null ?
+		new File( configDir, fileName )
+		: new File( fileName );
   }
 
 
@@ -392,8 +403,9 @@ public class ProfileDlg extends BasicDlg implements
 	try {
 	  String s = this.docProfileName.getText( 0, len );
 	  if( s != null ) {
-	    if( s.trim().length() > 0 )
+	    if( !s.trim().isEmpty() ) {
 	      state = true;
+	    }
 	  }
 	}
 	catch( BadLocationException ex ) {}

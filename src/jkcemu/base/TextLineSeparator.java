@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -51,6 +51,7 @@ public class TextLineSeparator
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public boolean equals( Object o )
   {
     if( o != null ) {
@@ -68,6 +69,7 @@ public class TextLineSeparator
   }
 
 
+  @Override
   public String toString()
   {
     return getDisplayText( this.lineEnd );

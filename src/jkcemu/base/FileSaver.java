@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,7 @@ import java.io.*;
 import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
-import jkcemu.system.Z1013;
+import jkcemu.emusys.Z1013;
 import z80emu.*;
 
 
@@ -22,6 +22,8 @@ public class FileSaver
   public static final String KCC        = "KCC";
   public static final String KCTAP_0    = "KCTAP_0";
   public static final String KCTAP_1    = "KCTAP_1";
+  public static final String KCBASIC    = "KCBASIC";
+  public static final String RBASIC     = "RBASIC";
   public static final String INTELHEX   = "INTELHEX";
   public static final String BIN        = "BIN";
 
@@ -58,7 +60,13 @@ public class FileSaver
 	rv = "KC-TAP-Datei mit Block 0 (KC85/1, KC87, Z9001)";
       }
       else if( format.equals( KCTAP_1 ) ) {
-	rv = "KC-TAP-Datei mit Block 1 (KC85/2-4, HC900)";
+	rv = "KC-TAP-Datei mit Block 1 (HC900, KC85/2-5, KC-BASIC)";
+      }
+      else if( format.equals( KCBASIC ) ) {
+	rv = "KC-BASIC-Programmdatei";
+      }
+      else if( format.equals( RBASIC ) ) {
+	rv = "RBASIC-Programmdatei";
       }
       else if( format.equals( INTELHEX ) ) {
 	rv = "Intel-HEX-Datei";
@@ -97,6 +105,7 @@ public class FileSaver
 			int        begAddr,
 			int        endAddr,
 			boolean    kcbasic,
+			boolean    rbasic,
 			int        headBegAddr,
 			Integer    headStartAddr,
 			int        headFileType,
@@ -105,20 +114,26 @@ public class FileSaver
   {
     if( file != null ) {
       boolean isHS    = false;
-      boolean isKC    = false;
+      boolean isKCC   = false;
       boolean isTAP_0 = false;
       boolean isTAP_1 = false;
+      boolean isSSS   = false;
+      boolean isRBAS  = false;
       boolean isHEX   = false;
       boolean isBIN   = false;
       if( format != null ) {
 	if( format.equals( HEADERSAVE ) ) {
 	  isHS = true;
 	} else if( format.equals( KCC ) ) {
-	  isKC = true;
+	  isKCC = true;
 	} else if( format.equals( KCTAP_0 ) ) {
 	  isTAP_0 = true;
 	} else if( format.equals( KCTAP_1 ) ) {
 	  isTAP_1 = true;
+	} else if( format.equals( KCBASIC ) ) {
+	  isSSS = true;
+	} else if( format.equals( RBASIC ) ) {
+	  isRBAS = true;
 	} else if( format.equals( INTELHEX ) ) {
 	  isHEX = true;
 	} else {
@@ -240,25 +255,20 @@ public class FileSaver
 				hsHeaderBytes[ i ] );
 	    }
 	  }
-	} else if( isKC ) {
-	  if( kcbasic ) {
-	    byte[] a = prepareKCBasicProgram( memory, begAddr, endAddr );
-	    if( a != null ) {
-	      out.write( a );
-	    }
-	  } else {
-	    writeKCHeader(
+
+	} else if( isKCC ) {
+	  writeKCHeader(
 			out,
 			headBegAddr,
 			headEndAddr,
 			headStartAddr,
 			headFileDesc );
-	    int addr = begAddr;
-	    while( addr <= endAddr ) {
-	      out.write( memory.getMemByte( addr, false ) );
-	      addr++;
-	    }
+	  int addr = begAddr;
+	  while( addr <= endAddr ) {
+	    out.write( memory.getMemByte( addr, false ) );
+	    addr++;
 	  }
+
 	} else if( isTAP_0 || isTAP_1 ) {
 	  String s = "\u00C3KC-TAPE by AF.\u0020";
 	  int    n = s.length();
@@ -289,20 +299,31 @@ public class FileSaver
 	      --n;
 	    }
 
-	    byte[] a = prepareKCBasicProgram( memory, begAddr, endAddr );
-	    if( a != null ) {
-	      for( int i = 0; i < a.length; i++ ) {
-		if( n == 0 ) {
-		  out.write( blkNum++ );
-		  n = 128;
-		}
-		out.write( a[ i ] );
-		--n;
+	    int addr = begAddr + 65;
+	    int len  = endAddr - addr + 1;
+	    out.write( len & 0xFF );
+	    out.write( (len >> 8) & 0xFF );
+	    n -= 2;
+
+	    while( addr <= endAddr ) {
+	      if( n == 0 ) {
+		out.write( blkNum++ );
+		n = 128;
 	      }
-	      while( n > 0 ) {
-		out.write( 0 );
-		--n;
-	      }
+	      out.write( memory.getMemByte( addr, false ) );
+	      addr++;
+	      --n;
+	    }
+	    if( n == 0 ) {
+	      out.write( blkNum++ );
+	      n = 128;
+	    }
+	    out.write( 3 );
+	    --n;
+
+	    while( n > 0 ) {
+	      out.write( 0 );
+	      --n;
 	    }
 	  } else {
 	    out.write( blkNum++ );
@@ -327,8 +348,28 @@ public class FileSaver
 	      --n;
 	    }
 	  }
-	}
-	else if( isHEX ) {
+
+	} else if( isSSS ) {
+	  int addr = begAddr + 65;
+	  int len  = endAddr - addr + 1;
+	  out.write( len & 0xFF );
+	  out.write( (len >> 8) & 0xFF );
+	  while( addr <= endAddr ) {
+	    out.write( memory.getMemByte( addr, false ) );
+	    addr++;
+	  }
+	  out.write( 3 );
+
+	} else if( isRBAS ) {
+	  out.write( 0xFF );
+	  int addr = begAddr;
+	  while( addr <= endAddr ) {
+	    out.write( memory.getMemByte( addr, false ) );
+	    addr++;
+	  }
+	  out.write( 0x1A );
+
+	} else if( isHEX ) {
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
 	    int cnt = writeHexSegment(
@@ -348,7 +389,10 @@ public class FileSaver
 	  writeHexByte( out, 0xFF );
 	  out.write( 0x0D );
 	  out.write( 0x0A );
+
 	} else {
+
+	  // BIN-Datei
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
 	    out.write( memory.getMemByte( addr, false ) );
@@ -366,67 +410,6 @@ public class FileSaver
 
 
 	/* --- private Methoden --- */
-
-  /*
-   * Diese Methode liest ein KC-BASIC-Programm und bereitet es
-   * fuer das Speichern in einer KC-Datei auf.
-   * Als Anfangsadresse wird 0x03C0 fuer ROM-
-   * und 2BC0 fuer RAM-BASIC erwartet.
-   *
-   * Das zurueckgelieferte Byte-Array hat folgenden Aufbau:
-   *   2 Bytes Laenge des Programms
-   *   n Bytes eigentliches KC-BASIC-Programm
-   *           Die Adressen sind so veraendert,
-   *           als befinde sich das Programm ab Adresse 0401h (ROM-BASIC)
-   *   1 Byte  0x03
-   */
-  private static byte[] prepareKCBasicProgram(
-				Z80MemView memory,
-				int        begAddr,
-				int        endAddr )
-  {
-    begAddr += 0x41;
-    int len = endAddr - begAddr + 4;
-    if( len < 0x1000 ) {
-      len = 0x1000;
-    }
-    ByteArrayOutputStream buf = new ByteArrayOutputStream( len );
-
-    buf.write( 0 );     // 2 Bytes Laenge, werden spaeter ersetzt
-    buf.write( 0 );
-
-    int curLineAddr  = begAddr;
-    int nextLineAddr = memory.getMemWord( curLineAddr );
-    while( (nextLineAddr > curLineAddr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
-    {
-      int a = nextLineAddr - begAddr + 0x0401;
-      buf.write( a & 0xFF );
-      buf.write( (a >> 8) & 0xFF );
-
-      int pos = curLineAddr + 2;
-      while( pos < nextLineAddr ) {
-	buf.write( memory.getMemByte( pos++, false ) );
-      }
-
-      curLineAddr  = nextLineAddr;
-      nextLineAddr = memory.getMemWord( curLineAddr );
-    }
-    buf.write( 0 );
-    buf.write( 0 );
-    buf.write( 3 );
-
-    byte[] rv = buf.toByteArray();
-    if( rv != null ) {
-      if( rv.length > 2 ) {
-	len     = rv.length - 3;
-	rv[ 0 ] = (byte) (len  & 0xFF);
-	rv[ 1 ] = (byte) ((len >> 8) & 0xFF);
-      }
-    }
-    return rv;
-  }
-
 
   private static void writeHexByte(
 				OutputStream out,

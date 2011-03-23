@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -35,6 +35,7 @@ public class ZipPacker extends AbstractThreadDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected void doProgress()
   {
     boolean         failed = false;
@@ -87,7 +88,7 @@ public class ZipPacker extends AbstractThreadDlg
 		Collection<File> srcFiles,
 		File             outFile )
   {
-    super( owner, true );
+    super( owner, "JKCEMU zip packer", true );
     this.srcFiles = srcFiles;
     this.outFile  = outFile;
   }

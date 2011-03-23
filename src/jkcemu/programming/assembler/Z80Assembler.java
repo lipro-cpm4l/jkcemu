@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,16 @@
 
 package jkcemu.programming.assembler;
 
+import java.awt.EventQueue;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
-import javax.swing.SwingUtilities;
+import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.programming.*;
 import jkcemu.text.*;
+import jkcemu.tools.ReassFrm;
+import jkcemu.tools.debugger.*;
 
 
 public class Z80Assembler extends PrgThread
@@ -22,6 +25,7 @@ public class Z80Assembler extends PrgThread
   private StringBuilder         sourceOut;
   private ByteArrayOutputStream codeOut;
   private Map<String,AsmLabel>  labels;
+  private AsmLabel[]            sortedLabels;
   private Integer               entryAddr;
   private boolean               status;
   private boolean               addrOverflow;
@@ -40,10 +44,18 @@ public class Z80Assembler extends PrgThread
 		PrgOptions options,
 		boolean    forceRun )
   {
-    super( emuThread, editText, sourceText, logOut, options, forceRun );
+    super(
+	"JKCEMU assembler",
+	emuThread,
+	editText,
+	sourceText,
+	logOut,
+	options,
+	forceRun );
     this.sourceOut       = null;
     this.codeOut         = null;
     this.labels          = new Hashtable<String,AsmLabel>();
+    this.sortedLabels    = null;
     this.entryAddr       = null;
     this.status          = true;
     this.addrOverflow    = false;
@@ -83,11 +95,11 @@ public class Z80Assembler extends PrgThread
 	    byte[] aCode = this.codeOut.toByteArray();
 	    if( aCode != null ) {
 	      if( this.options.getCodeToEmu() ) {
-		writeCodeToEmu( aCode );
+		writeCodeToEmu( aCode, this.options.getCodeToSecondSystem() );
 	      }
 	      if( this.options.getCodeToFile() ) {
 		writeCodeToFile(
-			this.options.getCodeFileName(),
+			this.options.getCodeFile(),
 			this.options.getCodeFileFormat(),
 			this.options.getCodeFileType(),
 			this.options.getCodeFileDesc(),
@@ -96,11 +108,18 @@ public class Z80Assembler extends PrgThread
 	    }
 	  }
 	}
-	if( this.running
-	    && this.status
-	    && this.options.getPrintLabels() )
-	{
-	  printLabels();
+	if( this.running && this.status ) {
+	  if( this.options.getPrintLabels() ) {
+	    printLabels();
+	  }
+	  if( this.options.getCodeToEmu() ) {
+	    if( this.options.getLabelsToDebugger() ) {
+	      labelsToDebugger( this.options.getCodeToSecondSystem() );
+	    }
+	    if( this.options.getLabelsToReassembler() ) {
+	      labelsToReass( this.options.getCodeToSecondSystem() );
+	    }
+	  }
 	}
       }
     }
@@ -115,6 +134,7 @@ public class Z80Assembler extends PrgThread
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void run()
   {
     EditFrm editFrm = this.editText.getEditFrm();
@@ -139,7 +159,7 @@ public class Z80Assembler extends PrgThread
       }
     }
     catch( Exception ex ) {
-      SwingUtilities.invokeLater( new ErrorMsg( editFrm, ex ) );
+      EventQueue.invokeLater( new ErrorMsg( editFrm, ex ) );
     }
     if( editFrm != null )
       editFrm.threadTerminated( this );
@@ -189,6 +209,7 @@ public class Z80Assembler extends PrgThread
 	    this.labels.put(
 			labelName,
 			new AsmLabel( labelName, this.curAddr ) );
+	    this.sortedLabels = null;
 	  }
 	}
 	String instruction = asmLine.getInstruction();
@@ -878,16 +899,16 @@ public class Z80Assembler extends PrgThread
 	  char ch0 = text.charAt( 0 );
 	  if( (ch0 == '\'') || (ch0 == '\"') ) {
 	    if( text.indexOf( ch0, 1 ) == 2 ) {
-	      putCode( getByte( text ) );
+	      putChar( text.charAt( 1 ) );
 	    } else {
-	      int pos = 1;
-	      int ch  = 0;
+	      int  pos = 1;
+	      char ch  = (char) 0;
 	      while( pos < len ) {
 		ch = text.charAt( pos++ );
 		if( ch == ch0 ) {
 		  break;
 		}
-		putCode( ch );
+		putChar( ch );
 	      }
 	      if( ch != ch0 ) {
 		throw new PrgException( "Zeichenkette nicht geschlossen" );
@@ -900,8 +921,6 @@ public class Z80Assembler extends PrgThread
 	  } else {
 	    putCode( getByte( text ) );
 	  }
-	} else {
-	  putCode( getByte( text ) );
 	}
       }
     } while( asmLine.hasMoreArgs() );
@@ -1623,6 +1642,7 @@ public class Z80Assembler extends PrgThread
       int w = getWord( a2.getIndirectText() );
       putCode( 0xED );
       putCode( 0x4B + codeDiff );
+      putWord( w );
     } else {
       putCode( 0x01 + codeDiff );
       putWord( getWord( a2 ) );
@@ -2126,8 +2146,9 @@ public class Z80Assembler extends PrgThread
     int v = 0;
     if( this.passNum == 2 ) {
       v = getWord( asmArg ) - ((this.curAddr + 2) & 0xFFFF);
-      if( (v < ~0x7F) || (v > 0x7F) )
+      if( (v < ~0x7F) || (v > 0x7F) ) {
 	throw new PrgException( "Relative Sprungdistanz zu gro\u00DF" );
+      }
     }
     return v;
   }
@@ -2195,6 +2216,55 @@ public class Z80Assembler extends PrgThread
 					+ "Bits gehen verloren" );
     }
     return v;
+  }
+
+
+  private AsmLabel[] getSortedLabels()
+  {
+    AsmLabel[] rv = this.sortedLabels;
+    if( rv == null ) {
+      try {
+	Collection<AsmLabel> c = this.labels.values();
+	if( c != null ) {
+	  int n = c.size();
+	  if( n > 0 ) {
+	    rv = c.toArray( new AsmLabel[ n ] );
+	    if( rv != null ) {
+	      Arrays.sort( rv );
+	    }
+	  } else {
+	    rv = new AsmLabel[ 0 ];
+	  }
+	}
+      }
+      catch( ArrayStoreException ex ) {}
+      catch( ClassCastException ex ) {}
+      finally {
+	this.sortedLabels = rv;
+      }
+    }
+    return rv;
+  }
+
+
+  private void putChar( char ch ) throws PrgException
+  {
+    if( ch > 0x7F ) {
+      if( ch <= 0xFF ) {
+	putWarning(
+		String.format(
+			"\'%c\' ist kein ASCII-Zeichen, entsprechend Unicode"
+				+ " mit %02XH \u00FCbersetzt",
+			ch,
+			(int) ch ) );
+      } else {
+	throw new PrgException(
+		String.format(
+			"\'%c\': 16-Bit-Unicodezeichen nicht erlaubt",
+			ch ) );
+      }
+    }
+    putCode( ch );
   }
 
 
@@ -2302,15 +2372,27 @@ public class Z80Assembler extends PrgThread
   }
 
 
-  private void writeCodeToEmu( byte[] aCode )
+  private void writeCodeToEmu( byte[] aCode, boolean secondSys )
   {
     if( aCode.length > 0 ) {
       int begAddr   = this.begAddr;
       int startAddr = (this.entryAddr != null ?
 				this.entryAddr.intValue() : begAddr);
       if( (this.emuThread != null) && (begAddr >= 0) && (begAddr <= 0xFFFF) ) {
+	String secondSysName = null;
+	EmuSys emuSys        = null;
+	if( secondSys ) {
+	  emuSys = this.emuThread.getEmuSys();
+	  if( emuSys != null ) {
+	    secondSysName = emuSys.getSecondSystemName();
+	  }
+	}
 	StringBuilder buf = new StringBuilder( 256 );
 	buf.append( "Lade Programmcode in Arbeitsspeicher (" );
+	if( secondSysName != null ) {
+	  buf.append( secondSysName );
+	  buf.append( ", " );
+	}
 	if( begAddr != this.begAddr ) {
 	  buf.append( "alternativer " );
 	}
@@ -2333,7 +2415,13 @@ public class Z80Assembler extends PrgThread
 	}
 	buf.append( (char) '\n' );
 	appendToLog( buf.toString() );
-	this.emuThread.loadIntoMemory(
+	if( (emuSys != null) && (secondSysName != null) ) {
+	  emuSys.loadIntoSecondSystem(
+			aCode,
+			begAddr,
+			this.forceRun ? startAddr : -1 );
+	} else {
+	  this.emuThread.loadIntoMemory(
 		new LoadData(
 			aCode,
 			0,
@@ -2341,6 +2429,7 @@ public class Z80Assembler extends PrgThread
 			begAddr,
 			this.forceRun ? startAddr : -1,
 			null ) );
+	}
       }
     } else {
       StringBuilder buf = new StringBuilder( 256 );
@@ -2355,18 +2444,14 @@ public class Z80Assembler extends PrgThread
 
 
   private void writeCodeToFile(
-			String fileName,
+			File   file,
 			String fileFmt,
 			char   fileType,
 			String fileDesc,
 			byte[] aCode )
   {
     if( aCode.length > 0 ) {
-      if( fileName != null ) {
-	if( fileName.length() < 1)
-	  fileName = null;
-      }
-      if( fileName != null ) {
+      if( file != null ) {
 	if( (fileType < '\u0020') || (fileType > 0x7E) ) {
 	  fileType = '\u0020';
 	}
@@ -2381,7 +2466,7 @@ public class Z80Assembler extends PrgThread
 	}
 	try {
 	  FileSaver.saveFile(
-		new File( fileName ),
+		file,
 		fileFmt,
 		new LoadData(
 			aCode,
@@ -2392,6 +2477,7 @@ public class Z80Assembler extends PrgThread
 			fileFmt ),
 		this.begAddr,
 		begAddr + aCode.length - 1,
+		false,
 		false,
 		this.begAddr,
 		sAddr,
@@ -2423,31 +2509,78 @@ public class Z80Assembler extends PrgThread
   }
 
 
-  private void printLabels()
+  private void labelsToDebugger( boolean secondSys )
   {
-    boolean firstLabel = true;
-    if( this.labels != null ) {
-      Collection<AsmLabel> c = this.labels.values();
-      if( c != null ) {
-	try {
-	  AsmLabel[] aLabels = c.toArray( new AsmLabel[ c.size() ] );
-	  Arrays.sort( aLabels );
-	  for( int i = 0; i < aLabels.length; i++ ) {
-	    if( firstLabel ) {
-	      firstLabel = false;
-	      appendToLog( "\nMarkentabelle:\n" );
+    AsmLabel[] labels = getSortedLabels();
+    if( labels != null ) {
+      if( labels.length > 0 ) {
+	boolean  done     = false;
+	DebugFrm debugFrm = null;
+	if( secondSys && (this.emuThread != null) ) {
+	  EmuSys emuSys = this.emuThread.getEmuSys();
+	  if( emuSys != null ) {
+	    if( emuSys.getSecondSystemName() != null ) {
+	      debugFrm = Main.getScreenFrm().openSecondDebugger();
+	      done     = true;
 	    }
-	    String        name = aLabels[ i ].getLabelName();
-	    StringBuilder buf  = new StringBuilder( 13 + name.length() );
-	    buf.append( "    " );
-	    buf.append( aLabels[ i ].toHex16String() );
-	    buf.append( "h   " );
-	    buf.append( name );
-	    buf.append( (char) '\n' );
-	    appendToLog( buf.toString() );
 	  }
 	}
-	catch( Exception ex ) {}
+	if( !done ) {
+	  debugFrm = Main.getScreenFrm().openPrimaryDebugger();
+	}
+	if( debugFrm != null ) {
+	  debugFrm.setLabels( labels );
+	}
+      }
+    }
+  }
+
+
+  private void labelsToReass( boolean secondSys )
+  {
+    AsmLabel[] labels = getSortedLabels();
+    if( labels != null ) {
+      if( labels.length > 0 ) {
+	boolean  done     = false;
+	ReassFrm reassFrm = null;
+	if( secondSys && (this.emuThread != null) ) {
+	  EmuSys emuSys = this.emuThread.getEmuSys();
+	  if( emuSys != null ) {
+	    if( emuSys.getSecondSystemName() != null ) {
+	      reassFrm = Main.getScreenFrm().openSecondReassembler();
+	      done     = true;
+	    }
+	  }
+	}
+	if( !done ) {
+	  reassFrm = Main.getScreenFrm().openPrimaryReassembler();
+	}
+	if( reassFrm != null ) {
+	  reassFrm.setLabels( labels );
+	}
+      }
+    }
+  }
+
+
+  private void printLabels()
+  {
+    boolean    firstLabel = true;
+    AsmLabel[] labels     = getSortedLabels();
+    if( labels != null ) {
+      for( int i = 0; i < labels.length; i++ ) {
+	if( firstLabel ) {
+	  firstLabel = false;
+	  appendToLog( "\nMarkentabelle:\n" );
+	}
+	String        name = labels[ i ].getLabelName();
+	StringBuilder buf  = new StringBuilder( 13 + name.length() );
+	buf.append( "    " );
+	buf.append( labels[ i ].toHex16String() );
+	buf.append( "h   " );
+	buf.append( name );
+	buf.append( (char) '\n' );
+	appendToLog( buf.toString() );
       }
     }
     if( firstLabel ) {

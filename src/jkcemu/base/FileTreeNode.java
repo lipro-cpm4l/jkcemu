@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -116,6 +116,7 @@ public class FileTreeNode implements TreeNode
 
 	/* --- TreeNode --- */
 
+  @Override
   public Enumeration children()
   {
     if( this.vChildren == null ) {
@@ -125,12 +126,14 @@ public class FileTreeNode implements TreeNode
   }
 
 
+  @Override
   public boolean getAllowsChildren()
   {
     return !this.leaf;
   }
 
 
+  @Override
   public TreeNode getChildAt( int pos )
   {
     TreeNode rv = null;
@@ -143,24 +146,28 @@ public class FileTreeNode implements TreeNode
   }
 
 
+  @Override
   public int getChildCount()
   {
     return this.vChildren != null ? this.vChildren.size() : 0;
   }
 
 
+  @Override
   public int getIndex( TreeNode item )
   {
     return this.vChildren != null ? this.vChildren.indexOf( item ) : -1;
   }
 
 
+  @Override
   public TreeNode getParent()
   {
     return this.parent;
   }
 
 
+  @Override
   public boolean isLeaf()
   {
     return this.leaf;
@@ -169,6 +176,7 @@ public class FileTreeNode implements TreeNode
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public String toString()
   {
     return this.nodeName;

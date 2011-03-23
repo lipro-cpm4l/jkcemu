@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,10 +9,10 @@
 package jkcemu.tools.hexedit;
 
 import java.awt.*;
-import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.awt.print.*;
 import java.lang.*;
+import java.security.NoSuchAlgorithmException;
 import java.util.EventObject;
 import javax.swing.*;
 import jkcemu.Main;
@@ -32,6 +32,7 @@ public abstract class AbstractHexCharFrm
   protected ReplyBytesDlg.InputFormat lastInputFmt;
   protected boolean                   lastBigEndian;
 
+  private String     lastCksAlgorithm;
   private String     lastFindText;
   private int        findPos;
   private byte[]     findBytes;
@@ -52,12 +53,13 @@ public abstract class AbstractHexCharFrm
 
   public AbstractHexCharFrm()
   {
-    this.lastInputFmt  = null;
-    this.lastBigEndian = false;
-    this.lastFindText  = null;
-    this.findPos       = 0;
-    this.findBytes     = null;
-    this.asciiSelected = false;
+    this.lastBigEndian    = false;
+    this.lastInputFmt     = null;
+    this.lastCksAlgorithm = null;
+    this.lastFindText     = null;
+    this.findPos          = 0;
+    this.findBytes        = null;
+    this.asciiSelected    = false;
     Main.updIcon( this );
   }
 
@@ -332,6 +334,7 @@ public abstract class AbstractHexCharFrm
 
 	/* --- AdjustmentListener --- */
 
+  @Override
   public void adjustmentValueChanged( AdjustmentEvent e )
   {
     if( e.getSource() == this.vScrollBar ) {
@@ -369,24 +372,28 @@ public abstract class AbstractHexCharFrm
 
 	/* --- ComponentListener --- */
 
+  @Override
   public void componentHidden( ComponentEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void componentMoved( ComponentEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void componentResized( ComponentEvent e )
   {
     updScrollBar( e.getComponent() );
   }
 
 
+  @Override
   public void componentShown( ComponentEvent e )
   {
     updScrollBar( e.getComponent() );
@@ -395,6 +402,7 @@ public abstract class AbstractHexCharFrm
 
 	/* --- MouseMotionListener --- */
 
+  @Override
   public void mouseDragged( MouseEvent e )
   {
     if( (getDataLength() > 0)
@@ -409,6 +417,7 @@ public abstract class AbstractHexCharFrm
   }
 
 
+  @Override
   public void mouseMoved( MouseEvent e )
   {
     // leer
@@ -417,6 +426,7 @@ public abstract class AbstractHexCharFrm
 
 	/* --- MouseWheelListener --- */
 
+  @Override
   public void mouseWheelMoved( MouseWheelEvent e )
   {
     if( e.getComponent() == this.hexCharFld ) {
@@ -441,6 +451,7 @@ public abstract class AbstractHexCharFrm
 
 	/* --- Printable --- */
 
+  @Override
   public int print(
 		Graphics   g,
 		PageFormat pf,
@@ -546,6 +557,7 @@ public abstract class AbstractHexCharFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
@@ -570,32 +582,34 @@ public abstract class AbstractHexCharFrm
   }
 
 
+  @Override
   public void keyPressed( KeyEvent e )
   {
     if( e.getSource() == this.hexCharFld ) {
       int hRow     = 0;
       int caretPos = this.hexCharFld.getCaretPosition();
       if( caretPos >= 0 ) {
-	int dataLen = getDataLength();
+	boolean state   = false;
+	int     dataLen = getDataLength();
 	switch( e.getKeyCode() ) {
 	  case KeyEvent.VK_LEFT:
 	    --caretPos;
-	    e.consume();
+	    state = true;
 	    break;
 
 	  case KeyEvent.VK_RIGHT:
 	    caretPos++;
-	    e.consume();
+	    state = true;
 	    break;
 
 	  case KeyEvent.VK_UP:
 	    caretPos -= HexCharFld.BYTES_PER_ROW;
-	    e.consume();
+	    state = true;
 	    break;
 
 	  case KeyEvent.VK_DOWN:
 	    caretPos += HexCharFld.BYTES_PER_ROW;
-	    e.consume();
+	    state = true;
 	    break;
 
 	  case KeyEvent.VK_PAGE_UP:
@@ -607,7 +621,7 @@ public abstract class AbstractHexCharFrm
 		caretPos += HexCharFld.BYTES_PER_ROW;
 	      }
 	    }
-	    e.consume();
+	    state = true;
 	    break;
 
 	  case KeyEvent.VK_PAGE_DOWN:
@@ -619,33 +633,38 @@ public abstract class AbstractHexCharFrm
 		caretPos += HexCharFld.BYTES_PER_ROW;
 	      }
 	    }
-	    e.consume();
+	    state = true;
 	    break;
 
 	  case KeyEvent.VK_BEGIN:
 	    caretPos = 0;
-	    e.consume();
+	    state    = true;
 	    break;
 
 	  case KeyEvent.VK_END:
 	    caretPos = dataLen - 1;
-	    e.consume();
+	    state    = true;
 	    break;
 	}
-	if( (caretPos >= 0) && (caretPos < dataLen) ) {
-	  setCaretPosition( caretPos, e.isShiftDown() );
+	if( state ) {
+	  e.consume();
+	  if( (caretPos >= 0) && (caretPos < dataLen) ) {
+	    setCaretPosition( caretPos, e.isShiftDown() );
+	  }
 	}
       }
     }
   }
 
 
+  @Override
   public void lookAndFeelChanged()
   {
     this.hexCharFld.repaint();
   }
 
 
+  @Override
   public void mousePressed( MouseEvent e )
   {
     if( e.getComponent() == this.hexCharFld ) {
@@ -695,17 +714,50 @@ public abstract class AbstractHexCharFrm
 	sp = true;
       }
       if( buf.length() > 0 ) {
+	EmuUtil.copyToClipboard( this, buf.toString() );
+      }
+    }
+  }
+
+
+  protected void doChecksum()
+  {
+    int dataLen  = getDataLength();
+    int caretPos = this.hexCharFld.getCaretPosition();
+    int markPos  = this.hexCharFld.getMarkPosition();
+    int m1       = -1;
+    int m2       = -1;
+    if( (caretPos >= 0) && (markPos >= 0) ) {
+      m1 = Math.min( caretPos, markPos );
+      m2 = Math.max( caretPos, markPos );
+    }
+    if( (m1 >= 0) && (m1 <= m2) ) {
+      String algorithm = ReplyCksAlgorithmDlg.askCksAlgorithm(
+						this,
+						this.lastCksAlgorithm );
+      if( algorithm != null ) {
 	try {
-	  Toolkit tk = getToolkit();
-	  if( tk != null ) {
-	    Clipboard clipboard = tk.getSystemClipboard();
-	    if( clipboard != null ) {
-	      StringSelection ss = new StringSelection( buf.toString() );
-	      clipboard.setContents( ss, ss );
-	    }
+	  CksCalculator cc      = new CksCalculator( algorithm );
+	  this.lastCksAlgorithm = algorithm;
+	  while( m1 <= m2 ) {
+	    cc.update( getDataByte( m1++ ) );
+	  }
+	  String value = cc.getValue();
+	  if( value != null ) {
+	    BasicDlg.showInfoDlg(
+		this,
+		String.format(
+			"%s des ausgew\u00E4hlten Bereichs: %s",
+			cc.getAlgorithm(),
+			value ) );
 	  }
 	}
-	catch( IllegalStateException ex ) {}
+	catch( NoSuchAlgorithmException ex ) {
+	  BasicDlg.showErrorDlg(
+		this,
+		algorithm + ": Unbekannter bzw. nicht"
+			+ " unterst\u00FCtzter Algorithmus" );
+	}
       }
     }
   }
@@ -768,9 +820,13 @@ public abstract class AbstractHexCharFrm
 	  }
 	}
 	if( foundAt >= 0 ) {
+	  /*
+	   * Es wird rueckwaerts selektiert, damit der Cursor
+	   * auf der ersten, d.h. der gefundenen Position steht.
+	   */
 	  this.hexCharFld.setSelection(
-				foundAt,
-				foundAt + this.findBytes.length - 1 );
+				foundAt + this.findBytes.length - 1,
+				foundAt );
 	  this.findPos = foundAt + 1;
 	  updCaretPosFields();
 	} else {

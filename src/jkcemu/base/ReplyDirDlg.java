@@ -39,6 +39,7 @@ public class ReplyDirDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -61,6 +62,7 @@ public class ReplyDirDlg extends BasicDlg
   }
 
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( (e.getWindow() == this) && (this.textFld != null) ) {

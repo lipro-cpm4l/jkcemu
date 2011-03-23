@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -39,17 +39,16 @@ public class SelectEncodingDlg extends BasicDlg
 
 
     // Fensterinhalt
-    Container contentPane = getContentPane();
-    contentPane.setLayout( new GridBagLayout() );
+    setLayout( new GridBagLayout() );
 
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.anchor     = GridBagConstraints.CENTER;
-    gbc.fill       = GridBagConstraints.NONE;
-    gbc.insets     = new Insets( 5, 5, 5, 5 );
-    gbc.gridwidth  = 2;
-    gbc.gridheight = 1;
-    gbc.gridx      = 0;
-    gbc.gridy      = 0;
+    GridBagConstraints gbc = new GridBagConstraints(
+					0, 0,
+					2, 1,
+					0.0, 0.0,
+					GridBagConstraints.CENTER,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
 
 
     // Auswahlfeld
@@ -70,7 +69,7 @@ public class SelectEncodingDlg extends BasicDlg
     this.comboEncoding.addItem( "UTF-16BE (Big-Endian)" );
     this.comboEncoding.addItem( "UTF-16LE (Little-Endian)" );
     this.comboEncoding.setEditable( false );
-    contentPane.add( this.comboEncoding, gbc );
+    add( this.comboEncoding, gbc );
 
 
     // Knoepfe
@@ -88,7 +87,7 @@ public class SelectEncodingDlg extends BasicDlg
     panelBtn.add( this.btnCancel );
 
     gbc.gridy++;
-    contentPane.add( panelBtn, gbc );
+    add( panelBtn, gbc );
 
 
     // Fenstergroesse und -position
@@ -124,6 +123,7 @@ public class SelectEncodingDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;

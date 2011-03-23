@@ -411,8 +411,8 @@ public class ExprParser
       fireError( "Ung\u00FCltige Flie\u00DFkommazahl" );
     }
 
-    // auf Oktalzahl und Hexadezimalzahl mit nachgestelltem 'H' pruefen
-    if( (ch == 'O') || (ch == 'o') || (ch == 'Q') || (ch == 'q') ) {
+    // auf Oktalzahl bzw. Hexadezimalzahl pruefen
+    if( (ch == 'Q') || (ch == 'q') ) {
       this.iter.next();
       if( isOctal ) {
 	if( nPre > MAX_OCTAL_DIGITS ) {

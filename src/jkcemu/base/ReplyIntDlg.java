@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -45,6 +45,7 @@ public class ReplyIntDlg extends AbstractReplyDlg
 
 	/* --- ueberschriebende Methoden --- */
 
+  @Override
   protected boolean approveSelection()
   {
     boolean rv = false;

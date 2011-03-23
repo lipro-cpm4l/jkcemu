@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -39,74 +39,6 @@ public class HTMLViewFrm extends BasicFrm implements
   {
     this.screenFrm = screenFrm;
     Main.updIcon( this );
-  }
-
-
-  protected void appendHTML( StringBuilder buf, String text )
-  {
-    if( text != null ) {
-      int len = text.length();
-      for( int i = 0; i < len; i++ ) {
-	char ch = text.charAt( i );
-	switch( ch ) {
-	  case '<':
-	    buf.append( "&lt;" );
-	    break;
-
-	  case '>':
-	    buf.append( "&gt;" );
-	    break;
-
-	  case '\"':
-	    buf.append( "&quot;" );
-	    break;
-
-	  case '&':
-	    buf.append( "&amp;" );
-	    break;
-
-	  case '\u00C4':
-	    buf.append( "&Auml;" );
-	    break;
-
-	  case '\u00D6':
-	    buf.append( "&Ouml;" );
-	    break;
-
-	  case '\u00DC':
-	    buf.append( "&Uuml;" );
-	    break;
-
-	  case '\u00E4':
-	    buf.append( "&auml;" );
-	    break;
-
-	  case '\u00F6':
-	    buf.append( "&ouml;" );
-	    break;
-
-	  case '\u00FC':
-	    buf.append( "&uuml;" );
-	    break;
-
-	  case '\u00DF':
-	    buf.append( "&szlig;" );
-	    break;
-
-	  default:
-	    if( ch < '\u0020' ) {
-	      buf.append( (char) '\u0020' );
-	    }
-	    else if( ch > '\u007E' ) {
-	      buf.append( "&#" );
-	      buf.append( String.valueOf( ch ) );
-	      buf.append( (char) ';' );
-	    } else {
-	      buf.append( (char) ch );
-	    }
-	}
-      }
-    }
   }
 
 
@@ -201,6 +133,7 @@ public class HTMLViewFrm extends BasicFrm implements
 
 	/* --- CaretListener --- */
 
+  @Override
   public void caretUpdate( CaretEvent e )
   {
     int a = this.editorPane.getSelectionStart();
@@ -211,6 +144,7 @@ public class HTMLViewFrm extends BasicFrm implements
 
 	/* --- Printable --- */
 
+  @Override
   public int print(
 		Graphics   g,
 		PageFormat pf,
@@ -273,6 +207,7 @@ public class HTMLViewFrm extends BasicFrm implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
@@ -307,6 +242,7 @@ public class HTMLViewFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )

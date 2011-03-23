@@ -1,0 +1,182 @@
+<html>
+<body>
+ <h1>Hinweise zur Emulation des A5105 (BIC, ALBA PC 1505)</h1>
+  <ul>
+   <li><a href="a5105.htm#hardware">1. Emulierte Hardware</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="a5105.htm#keyboard">1.1. Tastatur</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="a5105.htm#printer">1.2. V24-Schnittstelle mit Drucker</a>
+   </li>
+   <li><a href="a5105.htm#software">2. Im ROM enthaltene Software</a></li>
+   <li><a href="a5105.htm#disks">3. Enthaltene Diskettenabbilder</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="a5105.htm#scpx">3.1. Hinweise zur SCPX-Systemdiskette</a>
+   </li>
+   <li><a href="a5105.htm#etc">4. Sonstiges</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="a5105.htm#basic">4.1. BASIC-Programme speichern und laden</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="a5105.htm#font">4.2. Zeichensatz</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="a5105.htm#paste">4.3. Einf&uuml;gen von Text aus der Zwischenablage</a>
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  Emuliert werden das Grundger&auml;t ohne Tongeneratoren sowie optional
+  die Floppy-Disk-Station und bis zu zwei RAM-Floppies.
+ <br/><br/>
+
+ <h3><a name="keyboard">1.1. Tastatur</a></h3>
+  Einige Tasten das A5105 sind auf der Tastatur des Emulatorrechners
+  &uuml;blicherweise nicht zu finden oder anders beschriftet.
+  Diese Tasten werden deshalb folgenderma&szlig;en gemappt:
+ <br/>
+  <table border="1">
+   <tr><th>A5105-Taste</th><th>JKCEMU-Taste</th></tr>
+   <tr><td>PF1</td><td>F1</td></tr>
+   <tr><td>PF2</td><td>F2</td></tr>
+   <tr><td>PF3</td><td>F3</td></tr>
+   <tr><td>PF4</td><td>F4</td></tr>
+   <tr><td>PF5</td><td>F5</td></tr>
+   <tr><td>HOME</td><td>F6</td></tr>
+   <tr><td>ALT</td><td>F7</td></tr>
+   <tr><td>GRAPH</td><td>F8</td></tr>
+   <tr><td>STOP</td><td>F9</td></tr>
+  </table>
+ <br/>
+  <b>Achtung!</b> Die ALT-Taste l&ouml;st in Verbindung mit anderen Tasten
+  bestimmte JKCEMU-Funktionen aus.
+  Aus diesem Grund kann die ALT-Taste auf der Tastatur des Emulatorrechners
+  nicht zur Emulation der ALT-Taste des A5105 verwendet werden.
+  Daf&uuml;r dient die Taste F7.
+ <br/><br/>
+
+ <h3><a name="printer">1.2. V24-Schnittstelle mit Drucker</a></h3>
+  Es wird ein an der V24-Schnittelle des Grundger&auml;tes angeschlossener
+  <a href="print.htm">Drucker</a> emuliert.
+  Sowohl diese Schnittstelle als auch die emulierten V24-Parameter
+  entsprechen den Standardeinstellungen des A5105,
+  d.h. eine spezielle Druckereinstellung ist im A5105-Betriebssystem
+  nicht notwendig.
+ <br/><br/>
+
+ <h2><a name="software">2. Im ROM enthaltende Software</a></h2>
+  <ul>
+   <li>RBASIC Version&nbsp;2.01</li>
+   <li>
+    RBASIC Disk Version&nbsp;2.00
+    (nur bei Emulation der Floppy Disk Station)
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h2><a name="disks">3. Enthaltene Diskettenabbilder</a></h2>
+  <ul>
+   <li>
+    RBASIC-Programmdiskette mit einigen ausgew&auml;hlten
+    Demonstrations-, Spiel- und Anwendungsprogrammen
+   </li>
+   <li>RBASIC-Systemdiskette, enth&auml;lt u.a. das BIC-DEMO-Programm</li>
+   <li>SCPX-Systemdiskette</li>
+  </ul>
+ <br/>
+
+ <h3><a name="scpx">3.1. Hinweise zur SCPX-Systemdiskette</a></h3>
+  Das SCPX verlangt beim Booten eine beschreibbare Diskette.
+  Da die im Emulator integrierten Diskettenabbilder aber nicht
+  beschreibbar sind,
+  sollte die SCPX-Systemdiskette im Fenster
+  <em>JKCEMU Diskettenstation</em> zuerst exportiert
+  und dann die so entstandene Abbilddatei ohne Schreibschutz
+  ge&ouml;ffnet werden.
+  Aus diesem Grund finden Sie die SCPX-Systemdiskette auch nur in den
+  Untermen&uuml;s <em>Andere Diskette einlegen</em>
+  und <em>Diskette exportieren</em>.
+ <br/><br/>
+  Sie k&ouml;nnen die SCPX-Systemdiskette aber auch &uuml;ber
+  das Untermen&uuml; <em>Andere Diskette einlegen</em>
+  direkt einlegen und davon booten.
+  Allerdings erscheint dann eine Fehlerausschrift.
+  Diese k&ouml;nnen Sie jedoch mit einem Tastendruck &uuml;bergehen
+  und so trotzdem mit SCPX arbeiten.
+ <br/><br/>
+  Die SCPX-Systemdiskette enth&auml;lt auch Treiber f&uuml;r
+  die beiden RAM-Floppies
+  (<em>RAFBIC20.COM</em> und <em>RAFBIC24.COM</em>).
+ <br/><br/>
+
+
+ <h2><a name="etc">4. Sonstiges</a></h2>
+
+ <h3><a name="basic">4.1. BASIC-Programme speichern und laden</a></h3>
+  JKCEMU bietet eine spezielle Unterst&uuml;tzung
+  f&uuml;r das Speichern und Laden von BASIC-Programmen
+  unter dem Betriebssystem RBASIC.
+  Zum Speichern nutzen Sie bitte die Funktion
+  <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
+  und speichern das Programm als
+  <a href="fileformats.htm#rbasic">RBASIC</a>-Datei.
+ <br/><br/>
+  Nur wenn Sie das BASIC-Programm so speichern,
+  werden sp&auml;ter beim Laden der Datei die Systemzellen des
+  BASIC-Interpreters richtig angepasst.
+  Sie k&ouml;nnen ein RBASIC-Programm zwar auch in einem anderen
+  Dateiformat speichern, jedoch werden dann beim sp&auml;teren Laden
+  die Systemzellen nicht angepasst,
+  und das Programm l&auml;sst sich nicht mehr richtig nutzen.
+ <br/><br/>
+  Haben Sie in den <a href="settings.htm">Einstellungen</a>
+  zum A5105 die Emulation des Floppy Disk Moduls aktiviert,
+  k&ouml;nnen Sie alternativ auch die BASIC-Programme
+  mit Hilfe der RBASIC-Kommandos <em>SAVE</em>
+  und <em>LOAD</em> auf einer emulierten Diskette speichern
+  und von dort wieder laden.
+ <br/><br/>
+
+ <h3><a name="font">4.2. Zeichensatz</a></h3>
+  Der A5105 enth&auml;lt einen programmierbaren Zeichengenerator,
+  der standardm&auml;&szlig;ig mit dem alten DOS-Zeichensatz
+  (Codepage&nbsp;437) gef&uuml;llt ist.
+  Sollte der Zeichengenerator softwarem&auml;&szlig;ig anders
+  programmiert werden, kann das der Emulator nicht wissen.
+  Aus diesem Grund konvertiert JKCEMU beim Kopieren
+  aus der Bildschirmausgabe des A5105 die Zeichen immer entsprechend
+  der Codepage&nbsp;437 in den Zeichensatz des Emulatorrechners,
+  unabh&auml;ngig davon,
+  wie der Zeichengenerator tats&auml;chlich programmiert ist.
+ <br/><br/>
+
+ <h3>
+  <a name="paste">4.3. Einf&uuml;gen von Text aus der Zwischenablage</a>
+ </h3>
+  Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt gew&ouml;hnlich
+  in der Form, dass f&uuml;r jedes einzuf&uuml;gende Zeichen
+  das Dr&uuml;cken der entsprechenden Taste bzw. Tastenkombination
+  simuliert wird. Dieses Prinzip ist recht langsam.
+  F&uuml;r den A5105 gibt es in den
+  <a href="settings.htm">Einstellungen</a> die Option
+  <em>Einf&uuml;gen von Text durch Abfangen des Systemaufrufs</em>.
+  Bei dieser Option lauscht der Emulator auf der Einsprungadresse
+  f&uuml;r die Systemfunktion CONIN.
+  Wenn diese Systemfunktion aufgerufen wird, pr&uuml;ft JKCEMU,
+  ob ein Zeichen eingef&uuml;gt werden soll.
+  Wenn ja, schreibt er das n&auml;chste einzuf&uuml;gende Zeichen
+  in das entsprechende Prozessorregister und simuliert einen RETURN-Befehl.
+  Sollten das Betriebssystem oder das Anwendungsprogramm die Tastatur nicht
+  &uuml;ber die CONIN-Systemfunktion abfragen,
+  funktioniert das Einf&uuml;gen von Text nicht,
+  und Sie m&uuml;ssen die Option ausschalten.
+</body>
+</html>

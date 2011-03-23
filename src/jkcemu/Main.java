@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,11 +21,16 @@ import jkcemu.base.*;
 public class Main
 {
   private static Map<String,Image> images    = new Hashtable<String,Image>();
-  private static Map<String,File>  lastPaths = new Hashtable<String,File>();
+  private static Map<String,File>  lastFiles = new Hashtable<String,File>();
+  private static Properties        lastDirs  = new Properties();
 
-  private static File                     profileDir        = null;
+  private static String                   lastDriveFileName = null;
+  private static File                     configDir         = null;
+  private static File                     lastDirsFile      = null;
   private static File                     profileFile       = null;
   private static Properties               properties        = null;
+  private static Integer                  nProcessors       = null;
+  private static boolean                  firstExec         = true;
   private static boolean                  printPageNum      = true;
   private static boolean                  printFileName     = true;
   private static int                      printFontSize     = 12;
@@ -50,11 +55,36 @@ public class Main
     }
     catch( SecurityException ex ) {}
     if( baseDirName != null ) {
-      profileDir = new File( baseDirName, subDirName );
+      configDir = new File( baseDirName, subDirName );
     } else {
-      profileDir = new File( subDirName );
+      configDir = new File( subDirName );
     }
-    screenFrm = new ScreenFrm();
+    lastDirsFile = new File( configDir, "lastdirs.xml" );
+    screenFrm    = new ScreenFrm();
+    if( configDir.exists() ) {
+      firstExec      = false;
+      InputStream in = null;
+      try {
+	in = new FileInputStream( lastDirsFile );
+	lastDirs.loadFromXML( in );
+      }
+      catch( Exception ex ) {}
+      finally {
+	EmuUtil.doClose( in );
+      }
+    } else {
+      if( !configDir.mkdirs() ) {
+	BasicDlg.showErrorDlg(
+		screenFrm,
+		"Das Verzeichnis " + configDir.getPath()
+			+ "\nkonnte nicht angelegt werden."
+			+ "\nDadurch ist JKCEMU nur mit einigen"
+			+ " Einschr\u00E4nkungen lauff\u00E4hig."
+			+ "\nInsbesondere k\u00F6nnen keine Einstellungen"
+			+ " und Profile gespeichert werden." );
+	configDir = null;
+      }
+    }
 
     // Icons
     addIconImage( "/images/icon/jkcemu16x16.png" );
@@ -66,17 +96,41 @@ public class Main
     // Profil laden
     String prfName = "standard";
     if( args.length > 0 ) {
-      if( args[ 0 ].length() > 0 )
+      if( !args[ 0 ].isEmpty() ) {
 	prfName = args[ 0 ];
+      }
     }
     Properties props = null;
-    File       file  = new File( profileDir, prfName + ".prf" );
-    if( file.exists() ) {
-      props = loadProperties( file );
+    File       file  = null;
+    if( configDir != null ) {
+      file = new File( configDir, "prf_" + prfName + ".xml" );
+      if( file.exists() ) {
+	props = loadProperties( file );
+      }
     }
-    screenFrm.setEmuThread( new EmuThread( screenFrm, props ) );
+
+    /*
+     * Standard-Erscheinungsbild einstellen, aber nur,
+     * wenn im, Profil keins zu finden ist
+     */
+    boolean lafState = false;
     if( props != null ) {
-      applyProfileToFrames( file, props, true, null );
+      String className = props.getProperty(
+				"jkcemu.lookandfeel.classname" );
+      if( className != null ) {
+	if( !className.isEmpty() ) {
+	  lafState = true;
+	}
+      }
+    }
+    if( !lafState ) {
+      setDefaultLAF();
+    }
+
+    // Profil anwenden
+    screenFrm.setEmuThread( new EmuThread( screenFrm, props ) );
+    applyProfileToFrames( file, props, true, null );
+    if( props != null ) {
       screenFrm.getFloppyDiskStationFrm().openDisks( props );
     } else {
       screenFrm.applySettings( null, screenFrm.isResizable() );
@@ -98,14 +152,14 @@ public class Main
 				boolean    checkLAF,
 				Frame      frameToIgnore )
   {
-    if( props != null ) {
-      profileFile = file;
-      properties  = props;
+    profileFile = file;
+    properties  = props;
 
-      // Erscheinungsbild
-      boolean lafChanged = false;
+    // Erscheinungsbild
+    boolean lafChanged = false;
+    if( props != null ) {
       if( checkLAF ) {
-	String  className = props.getProperty(
+	String className = props.getProperty(
 				"jkcemu.lookandfeel.classname" );
 	if( className != null ) {
 	  if( className.length() > 0 ) {
@@ -121,31 +175,51 @@ public class Main
 	  }
 	}
       }
+    }
 
-      // Frames aktualisieren
-      Frame[] frms = Frame.getFrames();
-      if( frms != null ) {
-	for( int i = 0; i < frms.length; i++ ) {
-	  Frame f = frms[ i ];
-	  if( f != null ) {
-	    if( lafChanged ) {
-	      SwingUtilities.updateComponentTreeUI( f );
-	      if( f instanceof BasicFrm ) {
-		((BasicFrm) f).lookAndFeelChanged();
-	      }
-	      if( !f.isResizable() ) {
-		f.pack();
-	      }
+    // Frames aktualisieren
+    Frame[] frms = Frame.getFrames();
+    if( frms != null ) {
+      for( int i = 0; i < frms.length; i++ ) {
+	Frame f = frms[ i ];
+	if( f != null ) {
+	  if( lafChanged ) {
+	    SwingUtilities.updateComponentTreeUI( f );
+	    if( f instanceof BasicFrm ) {
+	      ((BasicFrm) f).lookAndFeelChanged();
 	    }
-	    if( (f instanceof BasicFrm)
-		&& ((frameToIgnore == null) || (frameToIgnore != f)) )
-	    {
-	      ((BasicFrm) f).applySettings( props, f.isResizable() );
+	    if( !f.isResizable() ) {
+	      f.pack();
 	    }
+	  }
+	  if( (f instanceof BasicFrm)
+	      && ((frameToIgnore == null) || (frameToIgnore != f)) )
+	  {
+	    ((BasicFrm) f).applySettings( props, f.isResizable() );
 	  }
 	}
       }
     }
+  }
+
+
+  /*
+   * Da nicht sicher ist, ob sich zur Laufzeit die Anzahl der fuer die JavaVM
+   * zur Verfuegung stehenden Prozessoren bzw. -kerne aendern kann,
+   * wird der Wert nur einmal ermittelt und dann gemerkt.
+   */
+  public static int availableProcessors()
+  {
+    if( nProcessors == null ) {
+      nProcessors = new Integer( Runtime.getRuntime().availableProcessors() );
+    }
+    return nProcessors.intValue();
+  }
+
+
+  public static File getConfigDir()
+  {
+    return configDir;
   }
 
 
@@ -156,17 +230,37 @@ public class Main
       URL url = screenFrm.getClass().getResource( imgName );
       if( url != null ) {
 	img = screenFrm.getToolkit().createImage( url );
-	if( img != null )
+	if( img != null ) {
 	  images.put( imgName, img );
+	}
       }
     }
     return img;
   }
 
 
+  public static String getLastDriveFileName()
+  {
+    return lastDriveFileName;
+  }
+
+
   public static File getLastPathFile( String category )
   {
-    return lastPaths.get( category != null ? category : "" );
+    if( category == null ) {
+      category = "";
+    }
+    File file = lastFiles.get( category );
+    if( file == null ) {
+      String s = lastDirs.getProperty( category );
+      if( s != null ) {
+	if( !s.isEmpty() ) {
+	  file = new File( s );
+	  lastFiles.put( category, file );
+	}
+      }
+    }
+    return file;
   }
 
 
@@ -191,12 +285,6 @@ public class Main
   public static PrintRequestAttributeSet getPrintRequestAttributeSet()
   {
     return printRequestAttrs;
-  }
-
-
-  public static File getProfileDir()
-  {
-    return profileDir;
   }
 
 
@@ -250,7 +338,7 @@ public class Main
       String s = properties.getProperty( keyword );
       if( s != null ) {
 	s = s.trim();
-	if( s.length() > 0 ) {
+	if( !s.isEmpty() ) {
 	  try {
 	    rv = Integer.valueOf( s );
 	  }
@@ -277,7 +365,13 @@ public class Main
 
   public static String getVersion()
   {
-    return "JKCEMU Version 0.7";
+    return "JKCEMU Version 0.8";
+  }
+
+
+  public static boolean isFirstExecution()
+  {
+    return firstExec;
   }
 
 
@@ -289,7 +383,7 @@ public class Main
       try {
 	in    = new FileInputStream( file );
 	props = new Properties();
-	props.load( in );
+	props.loadFromXML( in );
 	in.close();
 	in = null;
       }
@@ -320,19 +414,38 @@ public class Main
   }
 
 
+  public static void setLastDriveFileName( String drvFileName )
+  {
+    lastDriveFileName = drvFileName;
+  }
+
+
   public static void setLastFile( File file, String category )
   {
     if( file != null ) {
       File pathFile = file.getParentFile();
-      if( pathFile != null )
-	lastPaths.put( category != null ? category : "", pathFile );
+      if( pathFile != null ) {
+	if( category == null ) {
+	  category = "";
+	}
+	lastFiles.put( category, pathFile );
+	if( configDir.exists() ) {
+	  String path = pathFile.getPath();
+	  if( path != null ) {
+	    lastDirs.setProperty( category, path );
+	    OutputStream out = null;
+	    try {
+	      out = new FileOutputStream( lastDirsFile );
+	      lastDirs.storeToXML( out, "JKCEMU Zuletzt verwendete Pfade" );
+	    }
+	    catch( Exception ex ) {}
+	    finally {
+	      EmuUtil.doClose( out );
+	    }
+	  }
+	}
+      }
     }
-  }
-
-
-  public static void setLastFile( String fileName, String category )
-  {
-    setLastFile( new File( fileName ), category );
   }
 
 
@@ -406,10 +519,52 @@ public class Main
   private static String emptyToNull( String text )
   {
     if( text != null ) {
-      if( text.length() < 1 )
+      if( text.isEmpty() ) {
 	text = null;
+      }
     }
     return text;
   }
-}
 
+
+  private static void setDefaultLAF()
+  {
+    String className = null;
+    String lafText   = null;
+    String osName    = System.getProperty( "os.name" );
+    if( osName != null ) {
+      osName = osName.toLowerCase();
+      if( osName.startsWith( "windows" ) ) {
+	lafText = "windows";
+      }
+      else if( osName.startsWith( "mac" ) ) {
+	lafText = "mac";
+      }
+    }
+    if( lafText != null ) {
+      UIManager.LookAndFeelInfo[] a = UIManager.getInstalledLookAndFeels();
+      if( a != null ) {
+	for( int i = 0; i < a.length; i++ ) {
+	  String s = a[ i ].getName();
+	  if( s != null ) {
+	    s = s.toLowerCase();
+	    if( s.equals( lafText ) ) {
+	      className = a[ i ].getClassName();
+	      break;
+	    }
+	    if( s.startsWith( lafText ) ) {
+	      className = a[ i ].getClassName();
+	    }
+	  }
+	}
+      }
+    }
+    if( className != null ) {
+      try {
+	UIManager.setLookAndFeel( className );
+	SwingUtilities.updateComponentTreeUI( screenFrm );
+      }
+      catch( Exception ex ) {}
+    }
+  }
+}

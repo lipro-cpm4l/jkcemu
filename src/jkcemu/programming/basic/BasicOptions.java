@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,9 +11,9 @@ package jkcemu.programming.basic;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.*;
+import jkcemu.emusys.*;
 import jkcemu.programming.PrgOptions;
 import jkcemu.text.EditText;
-import jkcemu.system.*;
 
 
 public class BasicOptions extends PrgOptions
@@ -35,6 +35,7 @@ public class BasicOptions extends PrgOptions
   private boolean                allowLongVarNames;
   private boolean                checkStack;
   private boolean                checkArray;
+  private boolean                forceCPM;
   private boolean                showAsm;
   private boolean                strictAC1Basic;
   private boolean                strictZ1013Basic;
@@ -55,6 +56,7 @@ public class BasicOptions extends PrgOptions
     this.allowLongVarNames = false;
     this.checkStack        = true;
     this.checkArray        = true;
+    this.forceCPM          = false;
     this.showAsm           = false;
     this.strictAC1Basic    = false;
     this.strictZ1013Basic  = false;
@@ -81,6 +83,7 @@ public class BasicOptions extends PrgOptions
     this.allowLongVarNames = src.allowLongVarNames;
     this.checkStack        = src.checkStack;
     this.checkArray        = src.checkArray;
+    this.forceCPM          = src.forceCPM;
     this.showAsm           = src.showAsm;
     this.strictAC1Basic    = src.strictAC1Basic;
     this.strictZ1013Basic  = src.strictZ1013Basic;
@@ -146,6 +149,10 @@ public class BasicOptions extends PrgOptions
 			props,
 			"jkcemu.programmimg.basic.stack.check" );
 
+      Boolean forceCPM = getBoolean(
+			props,
+			"jkcemu.programmimg.basic.force_cpm" );
+
       Boolean showAsm = getBoolean(
 			props,
 			"jkcemu.programmimg.basic.show_assembler_source" );
@@ -181,6 +188,8 @@ public class BasicOptions extends PrgOptions
 	  || (allowLongVarNames != null)
 	  || (checkArray != null)
 	  || (checkStack != null)
+	  || (forceCPM != null)
+	  || (showAsm != null)
 	  || (strictAC1Basic != null)
 	  || (strictZ1013Basic != null)
 	  || (structuredForNext != null)
@@ -213,6 +222,9 @@ public class BasicOptions extends PrgOptions
 	}
 	if( endOfMem != null ) {
 	  options.endOfMem = endOfMem.intValue();
+	}
+	if( forceCPM != null ) {
+	  options.forceCPM = forceCPM.booleanValue();
 	}
 	if( showAsm != null ) {
 	  options.showAsm = showAsm.booleanValue();
@@ -304,6 +316,12 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public boolean getForceCPM()
+  {
+    return this.forceCPM;
+  }
+
+
   public BasicCompiler.Platform getPlatform()
   {
     return this.platform;
@@ -365,86 +383,6 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public void putOptionsTo( Properties props )
-  {
-    super.putOptionsTo( props );
-    if( props != null ) {
-      props.setProperty(
-		"jkcemu.programmimg.basic.name",
-		this.appName != null ? this.appName : "" );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.address.begin",
-                Integer.toString( this.begAddr ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.address.top",
-                Integer.toString( this.endOfMem ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.array.size",
-                Integer.toString( this.arraySize ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.array.check",
-                Boolean.toString( this.checkArray ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.stack.size",
-                Integer.toString( this.stackSize ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.stack.check",
-                Boolean.toString( this.checkStack ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.allow_long_variable_names",
-                Boolean.toString( this.allowLongVarNames ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.show_assembler_source",
-                Boolean.toString( this.showAsm ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.strict_ac1_minibasic",
-                Boolean.toString( this.strictAC1Basic ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.strict_z1013_tinybasic",
-                Boolean.toString( this.strictZ1013Basic ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.structured_for_next",
-                Boolean.toString( this.structuredForNext ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.prefer_relative_jumps",
-                Boolean.toString( this.preferRelJumps ) );
-
-      props.setProperty(
-		"jkcemu.programmimg.basic.print_calls",
-                Boolean.toString( this.printCalls ) );
-
-      if( this.breakPossibility != null ) {
-	switch( this.breakPossibility ) {
-	  case BREAK_NEVER:
-	    props.setProperty( "jkcemu.programmimg.basic.breakable", "never" );
-	    break;
-
-	  case BREAK_INPUT:
-	    props.setProperty( "jkcemu.programmimg.basic.breakable", "input" );
-	    break;
-
-	  default:
-	    props.setProperty(
-			"jkcemu.programmimg.basic.breakable",
-			"always" );
-	}
-      }
-    }
-  }
-
-
   public void setAllowLongVarNames( boolean state )
   {
     this.allowLongVarNames = state;
@@ -493,6 +431,12 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public void setForceCPM( boolean state )
+  {
+    this.forceCPM = state;
+  }
+
+
   public void setPlatform( BasicCompiler.Platform platform )
   {
     this.platform = platform;
@@ -538,6 +482,93 @@ public class BasicOptions extends PrgOptions
   public void setStructuredForNext( boolean state )
   {
     this.structuredForNext = state;
+  }
+
+
+	/* --- ueberschrieben Methoden --- */
+
+  @Override
+  public void putOptionsTo( Properties props )
+  {
+    super.putOptionsTo( props );
+    if( props != null ) {
+      props.setProperty(
+		"jkcemu.programmimg.basic.name",
+		this.appName != null ? this.appName : "" );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.address.begin",
+                Integer.toString( this.begAddr ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.address.top",
+                Integer.toString( this.endOfMem ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.array.size",
+                Integer.toString( this.arraySize ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.array.check",
+                Boolean.toString( this.checkArray ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.stack.size",
+                Integer.toString( this.stackSize ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.stack.check",
+                Boolean.toString( this.checkStack ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.allow_long_variable_names",
+                Boolean.toString( this.allowLongVarNames ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.force_cpm",
+                Boolean.toString( this.forceCPM ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.show_assembler_source",
+                Boolean.toString( this.showAsm ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.strict_ac1_minibasic",
+                Boolean.toString( this.strictAC1Basic ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.strict_z1013_tinybasic",
+                Boolean.toString( this.strictZ1013Basic ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.structured_for_next",
+                Boolean.toString( this.structuredForNext ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.prefer_relative_jumps",
+                Boolean.toString( this.preferRelJumps ) );
+
+      props.setProperty(
+		"jkcemu.programmimg.basic.print_calls",
+                Boolean.toString( this.printCalls ) );
+
+      if( this.breakPossibility != null ) {
+	switch( this.breakPossibility ) {
+	  case BREAK_NEVER:
+	    props.setProperty( "jkcemu.programmimg.basic.breakable", "never" );
+	    break;
+
+	  case BREAK_INPUT:
+	    props.setProperty( "jkcemu.programmimg.basic.breakable", "input" );
+	    break;
+
+	  default:
+	    props.setProperty(
+			"jkcemu.programmimg.basic.breakable",
+			"always" );
+	}
+      }
+    }
   }
 }
 

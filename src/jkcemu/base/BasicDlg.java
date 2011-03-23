@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -106,6 +106,7 @@ public class BasicDlg extends JDialog implements
 
 	/* --- ActionListener --- */
 
+  @Override
   public void actionPerformed( ActionEvent e )
   {
     doActionInternal( e );
@@ -114,28 +115,33 @@ public class BasicDlg extends JDialog implements
 
 	/* --- MouseListener --- */
 
+  @Override
   public void mouseClicked( MouseEvent e )
   {
     if( showPopupInternal( e ) )
       e.consume();
   }
 
+  @Override
   public void mouseEntered( MouseEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void mouseExited( MouseEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void mousePressed( MouseEvent e )
   {
     if( showPopupInternal( e ) )
       e.consume();
   }
 
+  @Override
   public void mouseReleased( MouseEvent e )
   {
     if( showPopupInternal( e ) )
@@ -145,62 +151,73 @@ public class BasicDlg extends JDialog implements
 
 	/* --- KeyListener --- */
 
+  @Override
   public void keyPressed( KeyEvent e )
   {
     if( e != null ) {
       if( e.getKeyCode() == KeyEvent.VK_ENTER ) {
-	if( doActionInternal( e ) )
+	if( doActionInternal( e ) ) {
 	  e.consume();
+	}
       }
     }
   }
 
+  @Override
   public void keyReleased( KeyEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void keyTyped( KeyEvent e )
   {
-    // empty
+    // leer
   }
 
 
 	/* --- WindowListener --- */
 
+  @Override
   public void windowActivated( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowClosing( WindowEvent e )
   {
     doClose();
   }
 
+  @Override
   public void windowDeactivated( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowDeiconified( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowIconified( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
 
@@ -238,7 +255,7 @@ public class BasicDlg extends JDialog implements
     if( msg == null ) {
       msg = exMsg;
     }
-    showErrorDlg( owner, msg );
+    showErrorDlg( owner, msg != null ? msg : "Unbekannter Fehler" );
   }
 
 
@@ -256,6 +273,7 @@ public class BasicDlg extends JDialog implements
 
   public static void showErrorDlg( Component owner, String msg, String title )
   {
+    EmuUtil.frameToFront( owner );
     JOptionPane.showMessageDialog(
 		owner,
 		msg != null ? msg : "Unbekannter Fehler",
@@ -290,7 +308,8 @@ public class BasicDlg extends JDialog implements
 				String    title,
 				String[]  options )
   {
-    int         rv   = -1;
+    int rv = -1;
+    EmuUtil.frameToFront( owner );
     JOptionPane pane = new JOptionPane( msg, JOptionPane.QUESTION_MESSAGE );
     pane.setOptions( options );
     pane.createDialog( owner, title ).setVisible( true );
@@ -323,6 +342,7 @@ public class BasicDlg extends JDialog implements
 				String    msg,
 				String    title )
   {
+    EmuUtil.frameToFront( owner );
     JOptionPane.showMessageDialog(
 		owner,
 		msg,
@@ -336,6 +356,7 @@ public class BasicDlg extends JDialog implements
    */
   public static void showWarningDlg( Component owner, String msg )
   {
+    EmuUtil.frameToFront( owner );
     JOptionPane.showMessageDialog(
 		owner,
 		msg,
@@ -362,6 +383,7 @@ public class BasicDlg extends JDialog implements
 				String    msg,
 				String    title )
   {
+    EmuUtil.frameToFront( owner );
     return showYesNoDlg( owner, msg, title, JOptionPane.QUESTION_MESSAGE );
   }
 
@@ -371,6 +393,7 @@ public class BasicDlg extends JDialog implements
 				String    msg,
 				String    title )
   {
+    EmuUtil.frameToFront( owner );
     return showYesNoDlg( owner, msg, title, JOptionPane.WARNING_MESSAGE );
   }
 
@@ -401,11 +424,13 @@ public class BasicDlg extends JDialog implements
 
   private boolean showPopupInternal( MouseEvent e )
   {
+    boolean rv = false;
     if( e != null ) {
-      if( e.isPopupTrigger() )
-        return showPopup( e );
+      if( e.isPopupTrigger() ) {
+        rv = showPopup( e );
+      }
     }
-    return false;
+    return rv;
   }
 
 
@@ -415,18 +440,19 @@ public class BasicDlg extends JDialog implements
 				String    title,
 				int       msgType )
   {
-    String optionYes = "Ja";
-    String optionNo  = "Nein";
+    final String optionYes = "Ja";
+    final String optionNo  = "Nein";
 
-    String[] options = new String[ 2 ];
-    options[ 0 ] = optionYes;
-    options[ 1 ] = optionNo;
+    String[] options = { optionYes, optionNo };
 
+    EmuUtil.frameToFront( owner );
     JOptionPane pane = new JOptionPane( msg, msgType );
     pane.setOptions( options );
     pane.createDialog( owner, title ).setVisible( true );
 
     Object selOption = pane.getValue();
-    return ((selOption != null) && (selOption == optionYes)) ? true : false;
+    return ((selOption != null) && (selOption == options[ 0 ])) ?
+								true : false;
   }
 }
+

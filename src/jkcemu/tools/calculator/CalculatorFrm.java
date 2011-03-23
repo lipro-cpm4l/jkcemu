@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -135,7 +135,7 @@ public class CalculatorFrm extends BasicFrm implements
 						new Insets( 5, 5, 5, 5 ),
 						0, 0 );
 
-    panelInput.add( new JLabel( "Formel/Ausdruck:" ), gbcInput );
+    panelInput.add( new JLabel( "Ausdruck:" ), gbcInput );
 
     this.fldInput = new JTextField();
     this.fldInput.addActionListener( this );
@@ -145,8 +145,9 @@ public class CalculatorFrm extends BasicFrm implements
     if( this.docInput != null ) {
       this.docInput.addDocumentListener( this );
     }
-    gbcInput.fill    = GridBagConstraints.HORIZONTAL;
-    gbcInput.weightx = 1.0;
+    gbcInput.fill      = GridBagConstraints.HORIZONTAL;
+    gbcInput.weightx   = 1.0;
+    gbcInput.gridwidth = GridBagConstraints.REMAINDER;
     gbcInput.gridx++;
     panelInput.add( this.fldInput, gbcInput );
 
@@ -154,7 +155,7 @@ public class CalculatorFrm extends BasicFrm implements
     gbcInput.fill          = GridBagConstraints.NONE;
     gbcInput.insets.bottom = 0;
     gbcInput.weightx       = 0.0;
-    gbcInput.gridx         = 0;
+    gbcInput.gridwidth     = 1;
     gbcInput.gridy++;
     panelInput.add( new JLabel( "Bin\u00E4rzahl:" ), gbcInput );
 
@@ -164,7 +165,7 @@ public class CalculatorFrm extends BasicFrm implements
 
     gbcInput.anchor     = GridBagConstraints.EAST;
     gbcInput.insets.top = 0;
-    gbcInput.gridx      = 0;
+    gbcInput.gridx      = 1;
     gbcInput.gridy++;
     panelInput.add( new JLabel( "Oktalzahl:" ), gbcInput );
 
@@ -174,7 +175,7 @@ public class CalculatorFrm extends BasicFrm implements
 
     gbcInput.anchor        = GridBagConstraints.EAST;
     gbcInput.insets.bottom = 5;
-    gbcInput.gridx         = 0;
+    gbcInput.gridx         = 1;
     gbcInput.gridy++;
     panelInput.add( new JLabel( "Hexadezimalzahl:" ), gbcInput );
 
@@ -261,18 +262,21 @@ public class CalculatorFrm extends BasicFrm implements
 
 	/* --- DocumentListener --- */
 
+  @Override
   public void changedUpdate( DocumentEvent e )
   {
     docChanged( e );
   }
 
 
+  @Override
   public void insertUpdate( DocumentEvent e )
   {
     docChanged( e );
   }
 
 
+  @Override
   public void removeUpdate( DocumentEvent e )
   {
     docChanged( e );
@@ -281,6 +285,7 @@ public class CalculatorFrm extends BasicFrm implements
 
 	/* --- CaretListener --- */
 
+  @Override
   public void caretUpdate( CaretEvent e )
   {
     updCutCopyButtons();
@@ -289,6 +294,7 @@ public class CalculatorFrm extends BasicFrm implements
 
 	/* --- FlavorListener --- */
 
+  @Override
   public void flavorsChanged( FlavorEvent e )
   {
     updClipboardStatus();
@@ -298,6 +304,7 @@ public class CalculatorFrm extends BasicFrm implements
 
 	/* --- FocusListener --- */
 
+  @Override
   public void focusGained( FocusEvent e )
   {
     JTextComponent fld = null;
@@ -312,6 +319,7 @@ public class CalculatorFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void focusLost( FocusEvent e )
   {
     // empty
@@ -320,6 +328,7 @@ public class CalculatorFrm extends BasicFrm implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public boolean applySettings( Properties props, boolean resizable )
   {
     boolean rv = false;
@@ -341,6 +350,7 @@ public class CalculatorFrm extends BasicFrm implements
   }
 
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -349,6 +359,10 @@ public class CalculatorFrm extends BasicFrm implements
       if( src == this.fldInput ) {
 	rv = true;
 	updOutput();
+      }
+      else if( src == this.mnuFileClose ) {
+	rv = true;
+	doClose();
       }
       else if( src == this.mnuEditCut ) {
 	rv = true;
@@ -375,6 +389,7 @@ public class CalculatorFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void putSettingsTo( Properties props )
   {
     if( props != null ) {
@@ -386,6 +401,7 @@ public class CalculatorFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -393,6 +409,7 @@ public class CalculatorFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( e.getWindow() == this )

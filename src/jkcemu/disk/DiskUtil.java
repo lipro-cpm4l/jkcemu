@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,20 +13,21 @@ import java.io.*;
 import java.lang.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
+import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileSystemView;
+import jkcemu.Main;
 import jkcemu.base.*;
 
 
 public class DiskUtil
 {
   public static final String[] anadiskFileExt   = { ".dump" };
+  public static final String[] copyQMFileExt    = { ".cqm", ".qm" };
   public static final String[] telediskFileExt  = { ".td0" };
-  public static final String[] plainDiskFileExt = {
-						".img",
-						".image",
-						".raw" };
+  public static final String[] plainDiskFileExt = { ".img", ".image", ".raw" };
 
   public static final String[] gzAnadiskFileExt   = { ".dump.gz" };
+  public static final String[] gzCopyQMFileExt    = { ".cqm.gz", ".qm.gz" };
   public static final String[] gzTelediskFileExt  = { ".td0.gz" };
   public static final String[] gzPlainDiskFileExt = {
 						".img.gz",
@@ -34,6 +35,29 @@ public class DiskUtil
 						".raw.gz" };
 
   private static final int DEFAULT_BLOCK_SIZE = 2048;
+
+
+  public static boolean checkAndConfirmWarning(
+				Component          owner,
+				AbstractFloppyDisk disk )
+  {
+    boolean rv = true;
+    if( disk != null ) {
+      String msg = disk.getWarningText();
+      if( msg != null ) {
+	if( JOptionPane.showConfirmDialog(
+		owner,
+		msg,
+		"Warnung",
+		JOptionPane.OK_CANCEL_OPTION,
+		JOptionPane.WARNING_MESSAGE ) != JOptionPane.OK_OPTION )
+	{
+	  rv = false;
+	}
+      }
+    }
+    return rv;
+  }
 
 
   public static boolean checkFileExt(
@@ -68,7 +92,9 @@ public class DiskUtil
   }
 
 
-  public static boolean equalsDiskSize( RandomAccessFile raf, int diskSize )
+  public static boolean equalsDiskSize(
+				DeviceIO.RandomAccessDevice rad,
+				int                         diskSize )
   {
     boolean rv = false;
     try {
@@ -81,10 +107,10 @@ public class DiskUtil
        */
       byte[] buf = new byte[ 1024 ];
       if( diskSize >= buf.length ) {
-	raf.seek( diskSize - buf.length );
-	if( raf.read( buf ) == buf.length ) {
+	rad.seek( diskSize - buf.length );
+	if( rad.read( buf, 0, buf.length ) == buf.length ) {
 	  try {
-	    if( raf.read( buf ) <= 0 ) {
+	    if( rad.read( buf, 0, buf.length ) <= 0 ) {
 	      rv = true;
 	    }
 	  }
@@ -121,7 +147,7 @@ public class DiskUtil
 						AbstractFloppyDisk disk )
   {
     java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
-    readDirBlocks( dirBlocks, null, null, disk );
+    readDirBlocks( dirBlocks, null, null, null, disk );
     return extractDirectory( dirBlocks );
   }
 
@@ -137,7 +163,7 @@ public class DiskUtil
 	  in = new GZIPInputStream( in );
 	}
 	java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
-	readDirBlocks( dirBlocks, in, null, null );
+	readDirBlocks( dirBlocks, in, null, null, null );
 	rv = extractDirectory( dirBlocks );
       }
       catch( IOException ex ) {}
@@ -150,10 +176,11 @@ public class DiskUtil
 
 
   public static java.util.List<FileEntry> readDirFromPlainDisk(
-						RandomAccessFile raf )
+					DeviceIO.RandomAccessDevice rad,
+					RandomAccessFile            raf )
   {
     java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
-    readDirBlocks( dirBlocks, null, raf, null );
+    readDirBlocks( dirBlocks, null, rad, raf, null );
     return extractDirectory( dirBlocks );
   }
 
@@ -163,7 +190,8 @@ public class DiskUtil
    * die in dem mit raf geoeffneten Laufwerk liegt.
    * Kann dies nicht ermittelt werden, wird -1 zurueckgegeben.
    */
-  public static int readDiskSize( RandomAccessFile raf ) throws IOException
+  public static int readDiskSize(
+			DeviceIO.RandomAccessDevice rad ) throws IOException
   {
     int   diskSize  = -1;
     int[] diskSizes = {
@@ -173,7 +201,7 @@ public class DiskUtil
 		1440 * 1024,
 		2880 * 1024 };
     for( int i = 0; i < diskSizes.length; i++ ) {
-      if( equalsDiskSize( raf, diskSizes[ i ] ) ) {
+      if( equalsDiskSize( rad, diskSizes[ i ] ) ) {
 	diskSize = diskSizes[ i ];
 	break;
       }
@@ -191,7 +219,7 @@ public class DiskUtil
     // sinnvolle Vorbelegung ermitteln
     java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
     int preSysTracks = 0;
-    int preSysBlocks = readDirBlocks( dirBlocks, null, null, disk );
+    int preSysBlocks = readDirBlocks( dirBlocks, null, null, null, disk );
     if( preSysBlocks > 0 ) {
       int blocksPerTrack = (disk.getSides()
 				* disk.getSectorsPerCylinder()
@@ -209,7 +237,8 @@ public class DiskUtil
 			FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
 			FloppyDiskFormatDlg.Flag.BLOCK_SIZE,
 			FloppyDiskFormatDlg.Flag.BLOCK_NUM_SIZE,
-			FloppyDiskFormatDlg.Flag.APPLY_READONLY );
+			FloppyDiskFormatDlg.Flag.APPLY_READONLY,
+			FloppyDiskFormatDlg.Flag.FORCE_LOWERCASE );
     dlg.setSystemTracks( preSysTracks );
     dlg.setBlockSize( DEFAULT_BLOCK_SIZE );
     dlg.setBlockNum16Bit( blockNum16Bit );
@@ -232,7 +261,8 @@ public class DiskUtil
 			sysTracks,
 			blockSize,
 			dlg.getBlockNum16Bit(),
-			dlg.getApplyReadOnly() );
+			dlg.getApplyReadOnly(),
+			dlg.getForceLowerCase() );
 	}
       }
     }
@@ -243,23 +273,25 @@ public class DiskUtil
 			Frame  owner,
 			String driveFileName ) throws IOException
   {
-    RandomAccessFile raf = null;
+    DeviceIO.RandomAccessDevice rad = null;
     try {
-      raf = new RandomAccessFile( driveFileName, "r" );
+      rad = DeviceIO.openDeviceForRandomAccess( driveFileName, true );
+      Main.setLastDriveFileName( driveFileName );
       if( unpackPlainDisk(
 			owner,
 			driveFileName,
-			raf,
+			rad,
+			null,
 			"Diskette",
-			readDiskSize( raf ),
+			readDiskSize( rad ),
 			getHomeDirFile(),
 			"diskette" ) )
       {
-	raf = null;	// nachfolgendes Schliessen verhindern
+	rad = null;		// Schliessen verhindern
       }
     }
     finally {
-      EmuUtil.doClose( raf );
+      EmuUtil.doClose( rad );
     }
   }
 
@@ -284,13 +316,14 @@ public class DiskUtil
       if( unpackPlainDisk(
 			owner,
 			diskFile.getPath(),
+			null,
 			raf,
 			"Einfache Abbilddatei",
 			fileLen,
 			diskFile.getParentFile(),
 			presetName ) )
       {
-	raf = null;	// nachfolgendes Schliessen verhindern
+	raf = null;		// Schliessen verhindern
       }
     }
     finally {
@@ -511,11 +544,12 @@ public class DiskUtil
 
 
   private static boolean readBlock(
-				byte[]             buf,
-				int                blockIdx,
-				RandomAccessFile   raf,
-				AbstractFloppyDisk disk,
-				int                blockSize )
+				byte[]                      buf,
+				int                         blockIdx,
+				DeviceIO.RandomAccessDevice rad,
+				RandomAccessFile            raf,
+				AbstractFloppyDisk          disk,
+				int                         blockSize )
   {
     boolean rv = false;
     if( (blockSize > 0) && (blockSize <= buf.length) ) {
@@ -582,10 +616,11 @@ public class DiskUtil
    * Rueckgabewert: Anzahl der Bloecke der Systemspuren
    */
   private static int readDirBlocks(
-				java.util.List<byte[]> list,
-				InputStream            in,
-				RandomAccessFile       raf,
-				AbstractFloppyDisk     disk )
+				java.util.List<byte[]>      list,
+				InputStream                 in,
+				DeviceIO.RandomAccessDevice rad,
+				RandomAccessFile            raf,
+				AbstractFloppyDisk          disk )
   {
     byte[]  blockBuf      = null;
     int     firstDirBlock = -1;
@@ -605,6 +640,7 @@ public class DiskUtil
 	  readStatus = readBlock(
 				blockBuf,
 				blockIdx,
+				rad,
 				raf,
 				disk,
 				DEFAULT_BLOCK_SIZE );
@@ -641,13 +677,14 @@ public class DiskUtil
 
 
   private static boolean unpackPlainDisk(
-			Frame            owner,
-			String           diskFileName,
-			RandomAccessFile raf,
-			String           diskDesc,
-			long             diskSize,
-			File             presetDir,
-			String           presetName ) throws IOException
+		Frame                       owner,
+		String                      diskFileName,
+		DeviceIO.RandomAccessDevice rad,
+		RandomAccessFile            raf,
+		String                      diskDesc,
+		long                        diskSize,
+		File                        presetDir,
+		String                      presetName ) throws IOException
   {
     boolean                rv           = false;
     int                    preSysTracks = 0;
@@ -658,7 +695,7 @@ public class DiskUtil
     if( (diskSize > 0) && (diskSize < Integer.MAX_VALUE) ) {
       if( fmt != null ) {
 	dirBlocks        = new ArrayList<byte[]>();
-	int preSysBlocks = readDirBlocks( dirBlocks, null, raf, null );
+	int preSysBlocks = readDirBlocks( dirBlocks, null, rad, raf, null );
 	if( preSysBlocks > 0 ) {
 	  int blocksPerTrack = (fmt.getSides()
 				* fmt.getSectorsPerCylinder()
@@ -677,7 +714,8 @@ public class DiskUtil
 			FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
 			FloppyDiskFormatDlg.Flag.BLOCK_SIZE,
 			FloppyDiskFormatDlg.Flag.BLOCK_NUM_SIZE,
-			FloppyDiskFormatDlg.Flag.APPLY_READONLY );
+			FloppyDiskFormatDlg.Flag.APPLY_READONLY,
+			FloppyDiskFormatDlg.Flag.FORCE_LOWERCASE );
     dlg.setSystemTracks( preSysTracks );
     dlg.setBlockSize( DEFAULT_BLOCK_SIZE );
     dlg.setBlockNum16Bit( blockNum16Bit );
@@ -694,21 +732,35 @@ public class DiskUtil
 					"Entpacken nach:",
 					diskDesc + " entpacken" );
 	if( outDir != null ) {
-	  DiskUnpacker.unpackDisk(
-			owner,
-			PlainFileFloppyDisk.createForDrive(
+	  AbstractFloppyDisk disk = null;
+	  if( rad != null ) {
+	    disk = PlainFileFloppyDisk.createForDrive(
+						owner,
+						diskFileName,
+						rad,
+						true,
+						fmt );
+	  } else if( raf != null ) {
+	    disk = PlainFileFloppyDisk.createForFile(
 						owner,
 						diskFileName,
 						raf,
 						true,
-						fmt ),
+						fmt );
+	  }
+	  if( disk != null ) {
+	    DiskUnpacker.unpackDisk(
+			owner,
+			disk,
 			diskDesc,
 			outDir,
 			sysTracks,
 			blockSize,
 			dlg.getBlockNum16Bit(),
-			dlg.getApplyReadOnly() );
-	  rv = true;
+			dlg.getApplyReadOnly(),
+			dlg.getForceLowerCase() );
+	    rv = true;
+	  }
 	}
       }
     }

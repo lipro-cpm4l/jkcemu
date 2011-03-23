@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,6 +23,7 @@ public class AudioOutFile extends AudioOut
   private File                 file;
   private AudioFileFormat.Type fileType;
   private AudioDataQueue       queue;
+  private int                  sampleRate;
 
 
   public AudioOutFile(
@@ -32,18 +33,22 @@ public class AudioOutFile extends AudioOut
 		AudioFileFormat.Type fileType )
   {
     super( z80cpu );
-    this.audioFrm = audioFrm;
-    this.file     = file;
-    this.fileType = fileType;
-    this.audioFmt = null;
-    this.queue    = null;
+    this.audioFrm   = audioFrm;
+    this.file       = file;
+    this.fileType   = fileType;
+    this.audioFmt   = null;
+    this.queue      = null;
+    this.sampleRate = 0;
   }
 
+
+	/* --- ueberschrieben Methoden --- */
 
   /*
    * Wenn die Pause zu groess ist,
    * wird das Schreiben der Sound-Datei abgebrochen.
    */
+  @Override
   protected void currentTStates( int tStates, int diffTStates )
   {
     if( diffTStates > this.maxPauseTStates ) {
@@ -54,6 +59,7 @@ public class AudioOutFile extends AudioOut
   }
 
 
+  @Override
   public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     if( this.queue == null ) {
@@ -61,6 +67,7 @@ public class AudioOutFile extends AudioOut
 	if( sampleRate <= 0 ) {
 	  sampleRate = 44100;
 	}
+	this.sampleRate      = sampleRate;
 	this.queue           = new AudioDataQueue( sampleRate * 60 );
 	this.maxPauseTStates = speedKHz * 1000;		// 1 Sekunde
 	this.enabled         = true;
@@ -72,13 +79,13 @@ public class AudioOutFile extends AudioOut
 					false );
 	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
 					/ this.audioFmt.getFrameRate() );
-
       }
     }
     return this.audioFmt;
   }
 
 
+  @Override
   public void stopAudio()
   {
     closeMonitorLine();
@@ -90,8 +97,9 @@ public class AudioOutFile extends AudioOut
 	&& (queue.length() > 0)
 	&& (this.audioFmt != null) )
     {
+      // Puffer leeren
       try {
-	queue.addOpposedPhase();	// Halbschwingung anhaengen
+	queue.appendPauseFrames( this.sampleRate / 10 );
 	AudioSystem.write(
 		new AudioInputStream(
 			queue,
@@ -112,12 +120,14 @@ public class AudioOutFile extends AudioOut
   }
 
 
+  @Override
   protected boolean supportsMonitor()
   {
     return true;
   }
 
 
+  @Override
   protected void writeSamples( int nSamples, boolean phase )
   {
     if( nSamples > 0 ) {
@@ -126,10 +136,10 @@ public class AudioOutFile extends AudioOut
       }
       if( isMonitorActive() ) {
 	int value = (phase ? PHASE1_VALUE : PHASE0_VALUE);
-	for( int i = 0; i < nSamples; i++ )
+	for( int i = 0; i < nSamples; i++ ) {
 	  writeMonitorLine( value );
+	}
       }
     }
   }
 }
-

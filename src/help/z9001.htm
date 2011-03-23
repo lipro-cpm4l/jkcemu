@@ -1,286 +1,569 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des Z9001, KC85/1 und KC87</h1>
-    Die Computer Z9001, KC85/1 und KC87 wurden im
-    VEB Robotron-Me&szlig;elektronik Dresden hergestellt.
-    Beim KC85/1 handelt es sich eigentlich nur um einen umbenannten Z9001.
-    Es wurde allerdings im Laufe der Zeit das Betriebssystem fehlerbereinigt,
-    sodass die ersten als Z9001 ausgelieferten Ger&auml;te
-    die Betriebssystemversion&nbsp;1.1 enthielten und sp&auml;ter erst
-    die Version&nbsp;1.2 eingef&uuml;hrt wurde.
-    Da einige Monate nach Produktionsbeginn auch die Umbenennung
-    in KC85/1 erfolgte, kann man grob folgende Zuordnung treffen:
-    <em>Z9001 &rarr; Betriebssystemversion&nbsp;1.1</em> und
-    <em>KC85/1 &rarr; Betriebssystemversion&nbsp;1.2</em>.
-    Obwohl diese Zuordnung nicht ganz der Realit&auml;t entspricht
-    (der Versionssprung hat mit der Umbenennung eigentlich nichts zu tun,
-    sie liegen nur zeitlich relativ nah beieinander.),
-    emuliert JKCEMU beide Ger&auml;te als separate Systeme
-    mit unterschiedlichen Betriebssystemversionen.
-  <br/><br/>
-    Das Z9001-Betriebssystem ist als Version&nbsp;1.3 auch im KC87 enthalten.
-    Deshalb meldet sich der KC87 ebenfalls als Z9001.
-  <br/><br/>
+ <h1>Hinweise zur Emulation des Z9001, KC85/1 und KC87</h1>
+  Die Computer Z9001, KC85/1 und KC87 wurden im
+  VEB Robotron-Me&szlig;elektronik Dresden hergestellt.
+  Beim KC85/1 handelt es sich eigentlich nur um einen umbenannten Z9001.
+  Es wurde allerdings im Laufe der Zeit das Betriebssystem fehlerbereinigt,
+  sodass die ersten als Z9001 ausgelieferten Ger&auml;te
+  die Betriebssystemversion&nbsp;1.1 enthielten und sp&auml;ter erst
+  die Version&nbsp;1.2 eingef&uuml;hrt wurde.
+  Da einige Monate nach Produktionsbeginn auch die Umbenennung
+  in KC85/1 erfolgte, kann man grob folgende Zuordnung treffen:
+  <em>Z9001 &rarr; Betriebssystemversion&nbsp;1.1</em> und
+  <em>KC85/1 &rarr; Betriebssystemversion&nbsp;1.2</em>.
+  Obwohl diese Zuordnung nicht ganz der Realit&auml;t entspricht
+  (der Versionssprung hat mit der Umbenennung eigentlich nichts zu tun,
+  sie liegen nur zeitlich relativ nah beieinander.),
+  emuliert JKCEMU beide Ger&auml;te als separate Systeme
+  mit unterschiedlichen Betriebssystemversionen.
+ <br/><br/>
+  Das Z9001-Betriebssystem ist als Version&nbsp;1.3 auch im KC87 enthalten.
+  Deshalb meldet sich der KC87 ebenfalls als Z9001.
+ <br/>
+  <ul>
+   <li><a href="z9001.htm#hardware">1. Emulierte Hardware</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#keyboard">1.1. Tastatur</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#printer">1.2. Drucker</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="z9001.htm#v24">1.2.1. Emulation eines V24-Druckermoduls</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="z9001.htm#print_calls">1.2.2. BOS-Aufrufe f&uuml;r Druckerausgaben abfangen</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#graphic">1.3. Vollgrafik</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="z9001.htm#gr_robotron">1.3.1. Robotron-Vollgrafikerweiterung</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <a href="z9001.htm#gr_krt">1.3.2. KRT-Vollgrafikerweiterung</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#prg_font">1.4. Programmierbarer Zeichengenerator</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#80chars">1.5. 80-Zeichen-Modus mit Zeichensatzumschaltung</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#fdc">1.6. Floppy-Disk-Modul</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#boot">1.7. Boot-Modul</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#mega">1.8. Mega-ROM-Modul</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#rom16k">1.9. 10/16&nbsp;KByte ROM-Modul</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#rom32k">1.10. 32&nbsp;KByte ROM-Modul</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#ram64k">1.11. 64&nbsp;KByte RAM-Modul</a>
+   </li>
+   <li><a href="z9001.htm#software">2. Im ROM enthaltene Software</a></li>
+   <li><a href="z9001.htm#disks">3. Enthaltene Diskettenabbilder</a></li>
+   <li><a href="z9001.htm#etc">4. Sonstiges</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#save_basic">4.1. Speichern eines BASIC-Programms</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="z9001.htm#paste_text">4.2. Einf&uuml;gen von Text</a>
+   </li>
+  </ul>
+ <br/>
 
-  <h2>1. Emulierte Hardware</h2>
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  <ul>
+   <li>4&nbsp;KByte ROM f&uuml;r Betriebssystem</li>
+   <li>
+    bei KC87 zus&auml;tzlich 10&nbsp;KByte ROM
+    f&uuml;r BASIC-Interpreter
+   </li>
+   <li>16&nbsp;KByte RAM</li>
+   <li>1&nbsp;KByte Bildwiederholspeicher</li>
+   <li>Kassettenrecorderanschluss</li>
+   <li>2&nbsp;<a href="joystick.htm">Joysticks</a></li>
+   <li>
+    optional:
     <ul>
-      <li>4&nbsp;KByte ROM f&uuml;r Betriebssystem</li>
-      <li>
-	bei KC87 zus&auml;tzlich 10&nbsp;KByte ROM
-	f&uuml;r BASIC-Interpreter
-      </li>
-      <li>16&nbsp;KByte RAM</li>
-      <li>1&nbsp;KByte Bildwiederholspeicher</li>
-      <li>Kassettenrecorderanschluss</li>
-      <li>
-	2&nbsp;RAM-Floppies an den IO-Adressen&nbsp;20h/21h und 24h/25h
-      </li>
-      <li>
-	optional:
-	<ul>
-	  <li>
-	    RAM-Erweiterung:
-	    <ul>
-	      <li>ein 16&nbsp;KByte RAM-Modul oder</li>
-	      <li>zwei 16&nbsp;KByte RAM-Module oder</li>
-	      <li>
-		ein <a href="z9001.htm#ram64k">64&nbsp;KByte RAM-Modul</a>
-		(davon nur 58&nbsp;KByte nutzbar)
-	      </li>
-	    </ul>
-	  </li>
-	  <li>
-	    <a href="z9001.htm#printer">Drucker</a>:
-	    <ul>
-	      <li>Abfangen der entsprechenden BOS-Aufrufe oder</li>
-	      <li>Emulation eines V24-Druckermoduls</li>
-	    </ul>
-	  </li>
-	  <li>Farbmodul inkl. 1&nbsp;KByte Farbattributspeicher</li>
-	  <li>
-	    <a href="z9001.htm#graph_r">Robotron-Vollgrafikerweiterung</a>
-	    (nur in Verbindung mit Farbmodul)
-	  </li>
-	  <li>
-	    <a href="z9001.htm#graph_p">KRT-Vollgrafikerweiterung</a>
-	  </li>
-	  <li>
-	    <a href="z9001.htm#boot">Boot</a>- und
-	    <a href="z9001.htm#floppydisk">Floppy-Disk</a>-Modul
-	  </li>
-	</ul>
-      </li>
+     <li>
+      RAM-Erweiterung:
+      <ul>
+       <li>ein 16&nbsp;KByte RAM-Modul oder</li>
+       <li>zwei 16&nbsp;KByte RAM-Module oder</li>
+       <li>
+	ein <a href="z9001.htm#ram64k">64&nbsp;KByte RAM-Modul</a>
+	(davon nur 58&nbsp;KByte nutzbar)
+       </li>
+      </ul>
+     </li>
+     <li>
+      ROM-Module:
+      <ul>
+       <li><a href="z9001.htm#rom16k">10/16&nbsp;KByte ROM-Modul</a></li>
+       <li><a href="z9001.htm#rom32k">32&nbsp;KByte ROM-Modul</a></li>
+       <li><a href="z9001.htm#boot">Boot-Modul</a></li>
+       <li><a href="z9001.htm#mega">Mega-ROM-Modul</a></li>
+      </ul>
+     </li>
+     <li>
+     <a href="print.htm">Drucker</a>:
+      <ul>
+       <li>
+	<a href="z9001.htm#v24">Emulation eines V24-Druckermoduls</a> oder
+       </li>
+       <li>
+	<a href="z9001.htm#print_calls">Abfangen der entsprechenden BOS-Aufrufe</a>
+       </li>
+      </ul>
+     </li>
+     <li>Farbmodul inkl. 1&nbsp;KByte Farbattributspeicher</li>
+     <li>
+      <a href="z9001.htm#gr_robotron">Robotron-Vollgrafikerweiterung</a>
+      (nur in Verbindung mit Farbmodul)
+     </li>
+     <li><a href="z9001.htm#gr_krt">KRT-Vollgrafikerweiterung</a></li>
+     <li><a href="z9001.htm#prg_font">Programmierbarer Zeichengenerator</a></li>
+     <li>
+      <a href="z9001.htm#80chars">80-Zeichen-Modus mit Zeichensatzumschaltung</a>
+     </li>
+     <li><a href="z9001.htm#boot">Boot-Modul</a></li>
+     <li><a href="z9001.htm#mega">Mega-ROM-Modul</a></li>
+     <li><a href="z9001.htm#fdc">Floppy-Disk-Modul</a></li>
+     <li>
+      bis zu 2&nbsp;<a href="ramfloppy.htm">RAM-Floppies</a>
+      mit je 128, 512 oder 2048&nbsp;KByte Gr&ouml;&szlig;e
+      an den E/A-Adressen&nbsp;20h/21h und 24h/25h
+     </li>
     </ul>
-  <br/>
+   </li>
+  </ul>
+ <br/>
 
-  <h3>1.1. Tastatur</h3>
-    F&uuml;r einige Tasten auf der Z9001-Tastatur gibt es &uuml;blicherweise
-    keine direkten gleichnamigen Tasten auf der Tastatur des Emulator-Rechners.
-    Diese Tasten werden aber trotzdem emuliert, und zwar:
-  <br/>
-    <table border="1">
-      <tr><th>Z9001-Taste</th><th>Emuliert mittels</th></tr>
-      <tr><td>Zeilenanfang</td><td>Shift-Links</td></tr>
-      <tr><td>Zeilenende</td><td>Shift-Rechts</td></tr>
-      <tr><td>ESC</td><td>Escape</td></tr>
-      <tr><td>INS</td><td>Einfg</td></tr>
-      <tr><td>DEL</td><td>Entf oder Shift-Einfg</td></tr>
-      <tr><td>GRAPHIC</td><td>F1</td></tr>
-      <tr><td>COLOR</td><td>F2</td></tr>
-      <tr><td>LIST</td><td>F3</td></tr>
-      <tr><td>RUN</td><td>F4</td></tr>
-      <tr><td>STOP</td><td>F5</td></tr>
-      <tr><td>PAUSE</td><td>F6</td></tr>
-      <tr><td>CONT</td><td>F7 oder Shift-F6</td></tr>
-      <tr><td>CR-LN</td><td>F8 oder Shift-Escape</td></tr>
-    </table>
-  <br/><br/>
+ <h3><a name="keyboard">1.1. Tastatur</a></h3>
+  F&uuml;r einige Tasten auf der Z9001-Tastatur gibt es &uuml;blicherweise
+  keine direkten gleichnamigen Tasten auf der Tastatur des Emulatorrechners.
+  Diese Tasten werden aber trotzdem emuliert, und zwar:
+ <br/>
+  <table border="1">
+   <tr><th>Z9001-Taste</th><th>Emuliert mittels</th></tr>
+   <tr><td>Zeilenanfang</td><td>Control-Links</td></tr>
+   <tr><td>Zeilenende</td><td>Control-Rechts</td></tr>
+   <tr><td>ESC</td><td>Escape</td></tr>
+   <tr><td>INS</td><td>Einfg</td></tr>
+   <tr><td>DEL</td><td>Entf oder Shift-Einfg</td></tr>
+   <tr><td>LIST</td><td>F1</td></tr>
+   <tr><td>RUN</td><td>F2</td></tr>
+   <tr><td>STOP</td><td>F3</td></tr>
+   <tr><td>PAUSE</td><td>F4</td></tr>
+   <tr><td>CONT</td><td>F5 oder Shift-F4</td></tr>
+   <tr><td>CR-LN</td><td>F6 oder Shift-Escape</td></tr>
+   <tr><td>COLOR</td><td>F7</td></tr>
+   <tr><td>GRAPHIC</td><td>F8</td></tr>
+  </table>
+ <br/><br/>
 
-  <h3><a name="ram64k">1.2. 64&nbsp;KByte RAM-Modul</a></h3>
-    Dieses Modul stellt zus&auml;tzlichen RAM im Bereich
-    von 4000 bis E7FF sowie einen Hintergrund-RAM im Bereich 4000-7FFF
-    zur Verf&uuml;gung.
-    Da der Bereich ab E800 dem Farbattribut- und Bildwiederholspeicher
-    sowie dem Betriebssystem-ROM vorbehalten ist und somit nicht
-    durch das RAM-Modul belegt werden kann,
-    sind nur 58&nbsp;KByte des Moduls nutzbar.
-    Insgesamt stehen somit 74&nbsp;KByte RAM zur Verf&uuml;gung.
-  <br/><br/>
-    Ein IO-Befehl auf Port&nbsp;5 schaltet den Hintergrund-RAM ab 4000 ein.
-    Ein IO-Befehl auf Port&nbsp;4 deaktiviert diesen wieder.
-    Port&nbsp;7 dient zum Einblenden des RAMs im Bereich ab C000.
-    Beim KC87 wird damit auch der BASIC-ROM ausgeblendet.
-    Ein IO-Befehl auf Port&nbsp;6 macht das wieder r&uuml;ckg&auml;ngig.
-  <br/><br/>
+ <h3><a name="printer">1.2. Drucker</a></h3>
+  In den <a href="settings.htm">Einstellungen</a> k&ouml;nnen Sie
+  eine von zwei M&ouml;glichkeiten zur Emulation eines Druckers aktivieren:
+  die Emulation eines V24-Druckermoduls oder das Abfangen der BOS-Aufrufe
+  f&uuml;r Druckerausgaben.
+ <br/><br/>
 
-  <h3><a name="printer">1.3. Drucker</a></h3>
-    In den <a href="settings.htm">Einstellungen</a> k&ouml;nnen Sie
-    eine von zwei M&ouml;glichkeiten zur Emulation eines Druckers aktivieren:
-    die Emulation eines V24-Druckermoduls oder das Abfangen der BOS-Aufrufe
-    f&uuml;r Druckerausgaben.
-  <br/><br/>
+ <h3><a name="v24">1.2.1. Emulation eines V24-Druckermoduls</a></h3>
+  Haben Sie diese Option aktiviert,
+  werden zus&auml;tzlich eine CTC und eine SIO emuliert
+  und die am Kanal&nbsp;A der SIO ausgegebenen Daten an den aktiven
+  Druckauftrag angeh&auml;ngt
+  (siehe <a href="print.htm#jobs">Drucken und Druckauftr&auml;ge</a>).
+  Damit das Drucken auch in den Anwendungsprogrammen funktioniert,
+  m&uuml;ssen Sie noch einen Treiber laden,
+  der die datentechnische Verbindung zwischen dem Betriebssystem
+  und dem Druckermodul herstellt.
+  Das Druckermodul enth&auml;lt im Adressbereich B800h-BFFFh
+  auch einen ROM mit den relativ universellen Treibern
+  <em>V24A1</em>, <em>V24A2</em> und <em>V24A3</em>.
+  Allerdings muss dieser ROM ausgeschaltet werden,
+  wenn im gleichen Adressbereich ein RAM-Modul aktiv ist.
+  JKCEMU emuliert deshalb diesen ROM nur,
+  wenn die emulierte RAM-Gr&ouml;&szlig;e max. 32 KByte betr&auml;gt.
+ <br/><br/>
 
-  <h3>1.3.1. Emulation eines V24-Druckermoduls</h3>
-    Haben Sie diese Option aktiviert,
-    werden zus&auml;tzlich eine CTC und eine SIO emuliert
-    und die am Kanal&nbsp;A der SIO ausgegebenen Daten an den aktiven
-    Druckauftrag angeh&auml;ngt
-    (siehe <a href="print.htm#jobs">Drucken und Druckauftr&auml;ge</a>).
-    Damit das Drucken auch in den Anwendungsprogrammen funktioniert,
-    m&uuml;ssen Sie noch einen Treiber laden,
-    der die datentechnische Verbindung zwischen dem Betriebssystem
-    und dem Druckermodul herstellt.
-    Das Druckermodul enth&auml;lt im Adressbereich B800-BFFF
-    auch einen ROM mit den relativ universellen Treibern
-    <em>V24A1</em>, <em>V24A2</em> und <em>V24A3</em>.
-    Allerdings muss dieser ROM ausgeschaltet werden,
-    wenn im gleichen Adressbereich ein RAM-Modul aktiv ist.
-    JKCEMU emuliert deshalb diesen ROM nur,
-    wenn die emulierte RAM-Gr&ouml;&szlig;e max. 32 KByte betr&auml;gt.
-  <br/><br/>
+ <h3>
+  <a name="print_calls">1.2.2. BOS-Aufrufe f&uuml;r Druckerausgaben abfangen</a>
+ </h3>
+  Bei dieser Option k&ouml;nnen Sie auch ohne einen Treiber drucken,
+  da JKCMEU einfach die entsprechenden Betriebssystemaufrufe abf&auml;ngt.
+  Allerdings kann man dann auch nicht die Vorteile eines Treibers nutzen
+  wie z.B. eine spezielle Aufbereitung der Druckdaten.
+ <br/><br/>
 
-  <h3>1.3.2. BOS-Aufrufe f&uuml;r Druckerausgaben abfangen</h3>
-    Bei dieser Option k&ouml;nnen Sie auch ohne einen Treiber drucken,
-    da JKCMEU einfach die entsprechenden Betriebssystemaufrufe abf&auml;ngt.
-    Allerdings kann man dann auch nicht die Vorteile eines Treibers nutzen
-    wie z.B. eine spezielle Aufbereitung der Druckdaten.
-  <br/><br/>
+ <h3><a name="graphic">1.3. Vollgrafik</a></h3>
+  Der Z9001 und seine Nachfolger haben keine Vollgrafik an Board,
+  sondern nur eine Blockgrafik.
+  Es gibt jedoch Vollgrafikerweiterungen.
+ <br/><br/>
 
-  <h3>1.4. Vollgrafik</h3>
-    Der Z9001 und seine Nachfolger haben keine Vollgrafik an Board,
-    sondern nur eine Blockgrafik.
-    Es gibt jedoch Vollgrafikerweiterungen.
-  <br/><br/>
+ <h3><a name="gr_robotron">1.3.1. Robotron-Vollgrafikerweiterung</a></h3>
+  Die von Robotron entwickelte Vollgrafikerweiterung
+  wurde nicht als industriell hergestelltes Modul vertrieben,
+  sondern stand nur als Bauanleitung zur Nachnutzung zur Verf&uuml;gung.
+  Die Vollgrafikerweiterung kommt mit einem separaten Bildwiederholspeicher
+  f&uuml;r 320x192&nbsp;Pixel daher und arbeitet mit nur zwei Farben,
+  die aus der Farbpalette des Farbmoduls programmtechnisch
+  ausgew&auml;hlt werden k&ouml;nnen.
+  Das Farbmodul ist somit zwingend erforderlich.
+  Aus diesem Grund emuliert JKCEMU die Robotron-Vollgrafikerweiterung
+  auch nur in Verbindung mit dem Farbmodul.
+ <br/><br/>
 
-  <h4><a name="graph_r">1.4.1. Robotron-Vollgrafikerweiterung</a></h4>
-    Die von Robotron entwickelte Vollgrafikerweiterung
-    wurde nicht als industriell hergestelltes Modul vertrieben,
-    sondern stand nur als Bauanleitung zur Nachnutzung zur Verf&uuml;gung.
-    Die Vollgrafikerweiterung kommt mit einem separaten Bildwiederholspeicher
-    f&uuml;r 320x192&nbsp;Pixel daher und arbeitet mit nur zwei Farben,
-    die aus der Farbpalette des Farbmoduls programmtechnisch
-    ausgew&auml;hlt werden k&ouml;nnen.
-    Das Farbmodul ist somit zwingend erforderlich.
-    Aus diesem Grund emuliert JKCEMU die Robotron-Vollgrafikerweiterung
-    auch nur in Verbindung mit dem Farbmodul.
-  <br/><br/>
+ <h3><a name="gr_krt">1.3.2. KRT-Vollgrafikerweiterung</a></h3>
+  In den Kleinstrechnertips Heft&nbsp;11 wurde eine relativ
+  einfache Vollgrafikerweiterung f&uuml;r den Z1013 vorgestellt.
+  Volker Pohlers und Ulrich Zander haben diese Schaltung
+  mit kleinen Modifikationen
+  (andere IO-Adressen, Pixeldaten nicht invertierend)
+  an den Z9001 angepasst und ihr in Anlehnung an
+  <em>Kleinstrechnertips</em> den Name
+  <em>KRT-Vollgrafikerweiterung</em> gegeben.
+ <br/><br/>
+  Im Adressbereich des Bildwiederholspeichers liegen zus&auml;tzlich
+  8&nbsp;parallele Speicherb&auml;nke.
+  Jede dieser B&auml;nke enth&auml;lt die Pixeldaten
+  f&uuml;r eine bestimmte Pixelzeile innerhalb einer Zeichenposition
+  (Bank&nbsp;0: oberste Pixelzeile innerhalb einer Zeichenzeile,
+  Bank&nbsp;7: unterste Pixelzeile innerhalb einer Zeichenzeile).
+  Ein Byte in diesen Speicherb&auml;nken repr&auml;sentiert
+  8&nbsp;nebeneinander stehende Pixel (h&ouml;chstwertiges Bit links).
+ <br/><br/>
+  Die Steuerung erfolgt &uuml;ber das Ausgabetor B8h.
+  Ein gesetztes Bit&nbsp;3 aktiviert die Vollgrafik,
+  d.h. aus dem Adressraum wird der originale Bildwiederholspeicher
+  ausgeblendet und daf&uuml;r die mit Bit&nbsp;0 bis 2 angegebene
+  Speicherbank eingeblendet.
+ <br/><br/>
 
-  <h4><a name="graph_p">1.4.2. KRT-Vollgrafikerweiterung</a></h4>
-    In den Kleinstrechnertips Heft&nbsp;11 wurde eine relativ
-    einfache Vollgrafikerweiterung f&uuml;r den Z1013 vorgestellt.
-    Volker Pohlers und Ulrich Zander haben diese Schaltung
-    mit kleinen Modifikationen
-    (andere IO-Adressen, Pixeldaten nicht invertierend)
-    an den Z9001 angepasst und ihr in Anlehnung an
-    <em>Kleinstrechnertips</em> den Name
-    <em>KRT-Vollgrafikerweiterung</em> gegeben.
-  <br/><br/>
-    Im Adressbereich des Bildwiederholspeichers liegen zus&auml;tzlich
-    8&nbsp;parallele Speicherb&auml;nke.
-    Jede dieser B&auml;nke enth&auml;lt die Pixeldaten
-    f&uuml;r eine bestimmte Pixelzeile innerhalb einer Zeichenposition
-    (Bank&nbsp;0: oberste Pixelzeile innerhalb einer Zeichenzeile,
-    Bank&nbsp;7: unterste Pixelzeile innerhalb einer Zeichenzeile).
-    Ein Byte in diesen Speicherb&auml;nken repr&auml;sentiert
-    8&nbsp;nebeneinander stehende Pixel (h&ouml;chstwertiges Bit links).
-  <br/><br/>
-    Die Steuerung erfolgt &uuml;ber das Ausgabetor B8h.
-    Ein gesetztes Bit&nbsp;3 aktiviert die Vollgrafik,
-    d.h. aus dem Adressraum wird der originale Bildwiederholspeicher
-    ausgeblendet und daf&uuml;r die mit Bit&nbsp;0 bis 2 angegebene
-    Speicherbank eingeblendet.
-  <br/><br/>
+ <h3><a name="prg_font">1.4. Programmierbarer Zeichengenerator</a></h3>
+  Beim programmierbaren Zeichengenerator handelt es sich um einen
+  zus&auml;tzlichen 1&nbsp;KByte gro&szlig;en RAM,
+  der softwarem&auml;&szlig;ig f&uuml;r die grafische Darstellung
+  der oberen 128&nbsp;Zeichen (ab Code 80h) aktiviert und
+  wieder deaktiviert werden kann.
+ <br/><br/>
+  Mit einem Schreibzugriff auf die Adresse EBFCh wird der
+  Zeichengenerator im Bereich E800h-EBFFh im Arbeitsspeicher eingeblendet.
+  Damit kann er nun programmiert und wieder ausgelesen werden.
+ <br/><br/>
+  Ein Schreibzugriff auf die Adresse EBFEh aktiviert den programmierbaren
+  Zeichengenerator, d.h., aus ihm werden nun die Pixeldaten
+  f&uuml;r die oberen 128&nbsp;Zeichen gelesen.
+  F&uuml;r die Zeichen kleiner 80h wird weiterhin der
+  standardm&auml;&szlig;ige Zeichengenerator verwendet.
+ <br/><br/>
+  Mit einem Schreibzugriff auf die Adresse EBFFh wird der Grundzustand
+  hergestellt, d.h. der programmierbare Zeichengeneratorn ist nicht
+  im Adressraum eingeblendet und auch nicht f&uuml;r die Visualisierung aktiv.
+ <br/><br/>
 
-  <h3><a name="boot">1.5. Boot-Modul</a></h3>
-    Das Boot-Modul meldet sich mit <em>CP/M-System</em>
-    und gestattet durch Eingabe des Kommandos <tt>BOOT</tt>
-    das Booten von Diskette.
-    Da es nur in Verbindung mit dem Floppy Disk Modul sinnvoll ist,
-    werden beide Module zusammen emuliert.
-  <br/><br/>
-    <b>Achtung!</b> Das Boot-Modul enth&auml;lt einen ROM,
-    der im gleichen Adressbereich liegt wie der BASIC-Interpreter
-    des KC87.
-    Aus diesem Grund ist der KC87-BASIC-ROM standardm&auml;&szlig;ig
-    deaktiviert.
-    Er kann zwar softwarem&auml;&szlig;ig aktiviert werden,
-    allerdings gibt es daf&uuml;r kein Benutzerkommando.
-    Aus diesem Grund ist bei Emulation des Boot-Moduls
-    das BASIC im KC87 praktisch nicht nutzbar.
-  <br/><br/>
+ <h3><a name="80chars">1.5. 80-Zeichen-Modus mit Zeichensatzumschaltung</a></h3>
+  In der Zeitschrift <em>Mikroprozessortechnik</em> Heft&nbsp;6/1990
+  wurde eine Schaltung vorgestellt, die einen softwarem&auml;&szlig;ig
+  ein- und ausschaltbaren 80-Zeichen-Modus erm&ouml;glicht.
+  F&uuml;r die Steuerung werden E/A-Adressen verwendet,
+  die allerdings auch vom Floppy-Disk- und vom Drucker-Modul belegt sind.
+  Ulrich Zander hat auf Grundlage der Ver&ouml;ffentlichung
+  eine neue Schaltung entwickelt, die zus&auml;tzlich eine
+  Zeichensatzumschaltung bietet,
+  die aber auch andere E/A-Adressen verwendet
+  und somit nicht mehr mit anderen Modulen kollidiert.
+ <br/><br/>
+  F&uuml;r den 80-Zeichen-Modus wird der Video- und ggf. auch der
+  Farbattributspeicher verdoppelt.
+  Der so zus&auml;tzlich entstandene Speicher liegt auf den
+  gleichen Adressen wie der originale und ist &uuml;ber E/A-Befehle
+  ein- und ausblendbar.
+ <br/><br/>
+  JKCEMU emuliert optional den 80-Zeichen-Modus,
+  wobei die Steuerung sowohl mit den E/A-Adressen laut der
+  Ver&ouml;ffentlichung als auch nach Ulrich Zander m&ouml;glich ist.
+  Wird das Floppy-Disk- und/oder das Drucker-Modul emuliert,
+  wirken die kollidierenden E/A-Adressen nicht auf den 80-Zeichen-Modus.
+ <br/><br/>
+  Gesteuert wird der 80-Zeichen-Modus mit Schreibzugriffen auf
+  folgende E/A-Adressen:
+  <table border="1">
+   <tr><th>E/A-Adresse</th><th>Funktion</th></tr>
+   <tr>
+    <td valign="top">
+     A8h&nbsp;(nicht&nbsp;bei&nbsp;Drucker-Modul)<br/>
+     BCh
+    </td>
+    <td valign="top">
+     80-Zeichen-Modus ausschalten<br/>
+     (Zustand nach RESET)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     A9h&nbsp;(nicht&nbsp;bei&nbsp;Drucker-Modul)<br/>
+     BDh
+    </td>
+    <td valign="top">80-Zeichen-Modus einschalten</td>
+   </tr>
+   <tr>
+    <td valign="top">
+     A0h&nbsp;(nicht&nbsp;bei&nbsp;Floppy-Disk-Modul)<br/>
+     BEh
+    </td>
+    <td valign="top">
+     Originaler Video- und Farbattributspeicher einblenden<br/>
+     (Zustand nach RESET)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     A1h&nbsp;(nicht&nbsp;bei&nbsp;Floppy-Disk-Modul)<br/>
+     BFh
+    </td>
+    <td valign="top">
+     Zus&auml;tzlicher Video- und Farbattributspeicher einblenden
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Wird die 40/80-Zeichen-Umschaltung emuliert, steht auch der umschaltbare
+  Zeichengenerator nach Ulrich Zanders Schaltung zur Verf&uuml;gung,
+  der neben dem originalen auch einen Zeichensatz mit deutschen
+  Umlauten enth&auml;lt.
+  Jeder Schreibzugriff auf die E/A-Adresse 0BBh schaltet zwischen
+  diesen beiden Zeichens&auml;tzen um.
+  Die Zeichensatzumschaltung funktioniert auch bei einer extern
+  eingebundenen Zeichensatzdatei, vorausgesetzt,
+  diese ist gr&ouml;&szlig;er als 2&nbsp;KByte.
+  In dem Fall wird dann zwischen den unteren und den oberen 2&nbsp;KByte
+  umgeschaltet.
+ <br/><br/>
+  Auf der in JKCEMU enthaltenen <em>Z9001 CP/A Systemdiskette</em>
+  befinden sich auch Treiber f&uuml;r den 80-Zeichen-Modus.
+  Da diese Treiber die Hardware &uuml;ber die E/A-Adressen
+  nach Ulrich Zander ansteuern, beginnen sie mit <em>uz80...</em>.
+  <table border="1">
+   <tr><th>Dateiname</th><th>Bedeutung</th></tr>
+   <tr>
+    <td>uz80c.com</td>
+    <td>
+     Einschalten der 80-Zeichen-Darstellung (Farbe)
+     und Umschalten des Zeichensatzes
+    </td>
+   </tr>
+   <tr>
+    <td>uz80bw.com</td>
+    <td>
+     Einschalten der 80-Zeichen-Darstellung (schwarz/wei&szlig;)
+     und Umschalten des Zeichensatzes
+    </td>
+   </tr>
+   <tr>
+    <td>uz80ex.com</td>
+    <td>
+     Ausschalten der 80-Zeichen-Darstellung
+     und Umschalten (Zur&uuml;ckschalten) des Zeichensatzes
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
 
-  <h3><a name="floppydisk">1.6. Floppy Disk Modul</a></h3>
-    Es gibt ein Floppy Disk Modul von Robotron und eins vom
-    Zentralinstitut f&uuml;r Kernforschung der DDR in Rossendorf.
-    Beide Varianten unterscheiden sich nur in den IO-Adressen
-    und in der Ausl&ouml;sung des TC-Impulses.
-    JKCEMU <a href="disk/floppydiskintro.htm">emuliert</a> beide Varianten.
-  <br/><br/>
-    <b>Achtung!</b> Im Emulator ist ein Abbild einer CP/A-Systemdiskette
-    enthalten (CP/M-Variante f&uuml;r Z9001 von Dr. Frank Schwarzenberg).
-    Zum Booten dieses CP/M-Systems muss zus&auml;tzlich auch das
-    <a href="z9001.htm#ram64k">64&nbsp;KByte RAM-Modul</a> aktiviert werden.
-  <br/><br/>
+ <h3><a name="fdc">1.6. Floppy-Disk-Modul</a></h3>
+  Es gibt ein Floppy-Disk-Modul von Robotron und eins vom
+  Zentralinstitut f&uuml;r Kernforschung der DDR in Rossendorf.
+  Beide Varianten unterscheiden sich nur in den E/A-Adressen
+  und in der Ausl&ouml;sung des TC-Impulses.
+  JKCEMU <a href="disk/floppydiskintro.htm">emuliert</a> beide Varianten.
+ <br/><br/>
+  <b>Achtung!</b> Im Emulator ist ein Abbild einer CP/A-Systemdiskette
+  enthalten (CP/M-Variante f&uuml;r Z9001 von Dr. Frank Schwarzenberg).
+  Zum Booten dieses CP/M-Systems muss zus&auml;tzlich auch das
+  <a href="z9001.htm#ram64k">64&nbsp;KByte RAM-Modul</a> aktiviert sein.
+ <br/><br/>
 
-  <h2>2. Im ROM enthaltene Software</h2>
-    <table border="1">
-      <tr><th>Emuliertes System</th><th>Software</th></tr>
-      <tr><td valign="top">Z9001</td><td>Z9001-OS&nbsp;1.1</td></tr>
-      <tr><td valign="top">KC85/1</td><td>Z9001-OS&nbsp;1.2</td></tr>
-      <tr>
-	<td valign="top">KC87</td>
-	<td>
-	  Z9001-OS&nbsp;1.3<br/>
-	  HC-BASIC&nbsp;86 (Plotter-BASIC)
-	</td>
-      </tr>
-    </table>
-  <br/><br/>
+ <h3><a name="boot">1.7. Boot-Modul</a></h3>
+  Das Boot-Modul ist ein spezielles ROM-Modul,
+  welches softwarem&auml;&szlig;ig abgeschaltet werden kann.
+  Nach einem RESET meldet es sich mit <em>CP/M-System</em>
+  und gestattet durch Eingabe des Kommandos <tt>BOOT</tt>
+  das Booten von Diskette.
+  Dazu ist nat&uuml;rlich auch die Aktivierung des Floppy-Disk-Moduls
+  notwendig.
+ <br/><br/>
+  Das Boot-Modul kann in der Emulation mit keinem anderen ROM-Modul
+  kombiniert werden.
+ <br/><br/>
+  <b>Achtung!</b> Der ROM des Boot-Moduls liegt im gleichen Adressbereich
+  wie der des BASIC-Interpreters des KC87.
+  Aus diesem Grund ist der KC87-BASIC-ROM standardm&auml;&szlig;ig
+  deaktiviert.
+  Er kann zwar softwarem&auml;&szlig;ig aktiviert werden,
+  allerdings gibt es daf&uuml;r kein Benutzerkommando.
+  Aus diesem Grund ist bei Emulation des Boot-Moduls
+  das BASIC im KC87 praktisch nicht nutzbar.
+ <br/><br/>
+
+ <h3><a name="mega">1.8. Mega-ROM-Modul</a></h3>
+  Das Mega-ROM-Modul bietet 2,5&nbsp;MByte Speicher,
+  aufgeteilt auf 256 einzelne 10&nbsp;KByte Segmente.
+  Der in JKCEMU enthaltene Inhalt f&uuml;r dieses Modul f&uuml;llt
+  den m&ouml;glichen Speicher zwar bei weitem nicht aus,
+  enth&auml;lt jedoch trotzdem eine ganze Menge von Programmen,
+  u.a. auch eine Verwaltungssoftware.
+  Diese startet nach einem RESET automatisch und wird mit Kommandos bedient.
+  Besonders interessant ist das Kommando <em>MENU</em>,
+  welches eine grafische Oberfl&auml;che startet,
+  &uuml;ber die man die anderen im Mega-ROM-Modul befindlichen Programme
+  aufrufen kann.
+ <br/><br/>
+  Das Kommando <em>BOOT</em> versucht von Diskette zu booten,
+  d.h., das Mega-ROM-Modul kann auch das
+  <a href="z9001.htm#boot">BOOT-Modul</a> ersetzen.
+ <br/><br/>
+  Das Mega-ROM-Modul ist in der Emulation mit keinem anderen
+  ROM-Modul kombinierbar.
+ <br/><br/>
+
+ <h3><a name="rom16k">1.9. 10/16&nbsp;KByte ROM-Modul</a></h3>
+  Es wird ein ROM-Modul emuliert, welches wahlweise
+  im Adressbereich 4000h-7FFFh, 8000h-BFFFh (jeweils 16&nbsp;KByte)
+  oder C000-E7FF (10&nbsp;KByte) sichtbar ist.
+  Den Inhalt des ROM-Moduls m&uuml;ssen Sie in den
+  <a href="settings.htm">Einstellungen</a>
+  durch Angabe einer ROM-Datei festlegen.
+  Diese ROM-Datei wird bei jedem emulierten <em>Einschalten</em>
+  neu geladen.
+ <br/><br/>
+  Es kann nur ein ROM-Modul emuliert werden,
+  d.h., das ROM-Modul ist mit keinem weiteren und auch nicht
+  mit dem Boot- oder Mega-ROM-Modul kombinierbar.
+ <br/><br/>
+
+ <h3><a name="rom32k">1.10. 32&nbsp;KByte ROM-Modul</a></h3>
+  Das 32&nbsp;KByte gro&szlig;e ROM-Modul liegt im Adressbereich
+  4000h bis BFFFh.
+  Den Inhalt legen Sie durch Angabe einer ROM-Datei fest.
+  Wenn Sie z.B. den Inhalt des KCPASCAL-Moduls als Datei angeben,
+  wird das KCPASCAL-Modul emuliert.
+ <br/><br/>
+  Das 32&nbsp;KByte ROM-Modul ist mit keinem anderen
+  ROM- oder RAM-Modul kombinierbar,
+  auch nicht mit dem Boot- oder Mega-ROM-Modul.
+ <br/><br/>
+
+ <h3><a name="ram64k">1.11. 64&nbsp;KByte RAM-Modul</a></h3>
+  Dieses Modul stellt zus&auml;tzlichen RAM im Bereich
+  von 4000h bis E7FFh sowie einen Hintergrund-RAM im Bereich 4000h-7FFFh
+  zur Verf&uuml;gung.
+  Da der Bereich ab E800h dem Farbattribut- und Bildwiederholspeicher
+  sowie dem Betriebssystem-ROM vorbehalten ist und somit nicht
+  durch das RAM-Modul belegt werden kann,
+  sind nur 58&nbsp;KByte des Moduls nutzbar.
+  Insgesamt stehen somit 74&nbsp;KByte RAM zur Verf&uuml;gung.
+ <br/><br/>
+  Ein IO-Befehl auf Port&nbsp;5 schaltet den Hintergrund-RAM ab 4000h ein.
+  Ein IO-Befehl auf Port&nbsp;4 deaktiviert diesen wieder.
+  Port&nbsp;7 dient zum Einblenden des RAMs im Bereich ab C000h.
+  Beim KC87 wird damit auch der BASIC-ROM ausgeblendet.
+  Ein IO-Befehl auf Port&nbsp;6 macht das wieder r&uuml;ckg&auml;ngig.
+ <br/><br/>
+
+ <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
+  <table border="1">
+   <tr><th>Emuliertes System</th><th>Software</th></tr>
+   <tr><td valign="top">Z9001</td><td>Z9001-OS&nbsp;1.1</td></tr>
+   <tr><td valign="top">KC85/1</td><td>Z9001-OS&nbsp;1.2</td></tr>
+   <tr>
+    <td valign="top">KC87</td>
+    <td>
+     Z9001-OS&nbsp;1.3<br/>
+     HC-BASIC&nbsp;86 (Plotter-BASIC)
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Das Boot-Modul enth&auml;lt die Robotron-Software zum Booten
+  von Diskette.
+  Im Mega-ROM-Modul sind diverse Programme zu finden
+  (Mega-ROM-Verwaltungssoftware, Spiele, Programmiersprachen,
+  B&uuml;ro- und Hilfsprogramme).
+ <br/><br/>
+  Die ROM-Inhalte k&ouml;nnen in den
+  <a href="settings.htm">Einstellungen</a>
+  durch Angabe externer ROM-Dateien ersetzt werden.
+  Extern eingebundene ROM-Dateien werden bei jedem emulierten
+  <em>Einschalten</em> neu geladen.
+ <br/><br/>
 
 
-  <h2>3. Sonstiges</h2>
+ <h2><a name="disks">3. Enthaltene Diskettenabbilder</a></h2>
+  <ul>
+   <li>Z9001 CP/A-Systemdiskette</li>
+  </ul>
+ <br/>
 
-  <h3>3.1. Einbindung externer ROM-Images</h3>
-    Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>
-    externe ROM-Images an jeder beliebigen Adresse einbinden.
-    Bei der Emulation des 64K-RAM-Moduls gilt allerdings zu beachten,
-    dass ein im Adressbereich 4000 bis 7FFF eingebundenes ROM-Image
-    immer nur dann sichtbar ist, wenn der Hintergrund-RAM ausgeblendet ist.
-    Des weiteren ist ein im Adressbereich C000 bis E7FF
-    eingebundenes ROM-Image nur dann sichtbar,
-    wenn in diesem Bereich das 64K-RAM-Modul nicht eingeblendet ist.
-  <br/><br/>
 
-  <h3>3.2. Speichern eines BASIC-Programms</h3>
-    JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
-    <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>.
-    Wird ein Z9001 bzw. KC85/1 emuliert,
-    d.h., im ROM ist kein BASIC-Interpreter enthalten,
-    sucht JKCEMU das BASIC-Programm im Adressbereich
-    des RAM-BASIC-Interpreters (ab Adresse 2C01).
-    Beim KC87 wird dagegen das BASIC-Programm gespeichert,
-    das im Adressbereich des ROM-BASIC-Interpreters liegt (ab Adresse 0401).
-  <br/><br/>
+ <h2><a name="etc">4. Sonstiges</a></h2>
 
-  <h3>3.3. Einf&uuml;gen von Text</h3>
-    Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt normalerweise
-    in der Art und Weise, indem f&uuml;r jedes einzuf&uuml;gende Zeichen
-    das Dr&uuml;cken der entsprechenden Taste simuliert wird.
-    Dieses Prinzip ist recht langsam.
-    F&uuml;r den Z9001 gibt es in den
-    <a href="settings.htm">Einstellungen</a> die Option
-    <em>Einf&uuml;gen von Text direkt in den Tastaturpuffer</em>.
-    Bei dieser Option, die standardm&auml;&szlig;ig aktiv ist,
-    werden die einzuf&uuml;genden Zeichen
-    direkt in den Tastaturpuffer geschrieben.
-    Das ist wesentlich schneller, da dadurch das Dr&uuml;cken der
-    entsprechenden Tasten nicht simuliert werden muss.
-  <br/><br/>
-    Sollten Sie jedoch in der Emulation ein anderes als das
-    in JKCEMU integrierte Betriebssystem verwenden,
-    wird diese Option m&ouml;glicherweise nicht mehr funktionieren,
-    da dort die Tastaturabfrage anders gestaltet sein kann.
-    In dem Fall m&uuml;ssten Sie die Option ausschalten.
+ <h3><a name="save_basic">4.1. Speichern eines BASIC-Programms</a></h3>
+  JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
+  <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>.
+  Wird ein Z9001 bzw. KC85/1 emuliert,
+  d.h., im ROM ist kein BASIC-Interpreter enthalten,
+  sucht JKCEMU das BASIC-Programm im Adressbereich
+  des RAM-BASIC-Interpreters (ab Adresse&nbsp;2C01h).
+  Beim KC87 wird dagegen das BASIC-Programm gespeichert,
+  das im Adressbereich des ROM-BASIC-Interpreters liegt
+  (ab Adresse&nbsp;0401h).
+ <br/><br/>
+
+ <h3><a name="paste_text">4.2. Einf&uuml;gen von Text</a></h3>
+  Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt gew&ouml;hnlich
+  in der Form, dass f&uuml;r jedes einzuf&uuml;gende Zeichen
+  das Dr&uuml;cken der entsprechenden Taste bzw. Tastenkombination
+  simuliert wird. Dieses Prinzip ist recht langsam.
+  F&uuml;r KC85/1, KC87 und Z9001 gibt es in den
+  <a href="settings.htm">Einstellungen</a> die Option
+  <em>Einf&uuml;gen von Text direkt in den Tastaturpuffer</em>.
+  Bei dieser Option werden die einzuf&uuml;genden Zeichen
+  direkt in den Tastaturpuffer geschrieben.
+  Das ist wesentlich schneller, da dadurch das Dr&uuml;cken der
+  entsprechenden Tasten nicht simuliert werden muss.
+ <br/><br/>
+  Sollten Sie jedoch ein anderes als das in JKCEMU integrierte
+  Betriebssystem verwenden,
+  wird diese Option m&ouml;glicherweise nicht mehr funktionieren,
+  da dort die Tastaturabfrage anders gestaltet sein kann.
+  In dem Fall m&uuml;ssen Sie die Option ausschalten.
 </body>
 </html>
-

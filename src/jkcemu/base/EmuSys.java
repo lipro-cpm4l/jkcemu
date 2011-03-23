@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.ImageObserver;
 import java.io.*;
 import java.lang.*;
+import java.text.*;
 import java.util.*;
 import javax.swing.JOptionPane;
 import jkcemu.base.ScreenFrm;
@@ -20,7 +21,7 @@ import jkcemu.disk.*;
 import z80emu.*;
 
 
-public abstract class EmuSys implements ImageObserver
+public abstract class EmuSys implements ImageObserver, Runnable
 {
   public enum Chessman {
 		WHITE_PAWN,
@@ -39,13 +40,15 @@ public abstract class EmuSys implements ImageObserver
   protected static final int BLACK = 0;
   protected static final int WHITE = 1;
 
-  protected EmuThread emuThread;
-  protected ScreenFrm screenFrm;
-  protected Color     colorWhite;
-  protected Color     colorRedLight;
-  protected Color     colorRedDark;
-  protected Color     colorGreenLight;
-  protected Color     colorGreenDark;
+  protected EmuThread         emuThread;
+  protected ScreenFrm         screenFrm;
+  protected Color             colorWhite;
+  protected Color             colorRedLight;
+  protected Color             colorRedDark;
+  protected Color             colorGreenLight;
+  protected Color             colorGreenDark;
+  protected Thread            pasteThread;
+  protected CharacterIterator pasteIter;
 
   private static final int CHESSBOARD_SQUARE_WIDTH = 48;
 
@@ -55,8 +58,6 @@ public abstract class EmuSys implements ImageObserver
 
   // Basiskoordinaten eines vertikalen Segments einer 7-Segment-Anzeige
   private static final int[] base7SegVXPoints = { 3, 0, 4, 7, 10, 6, 3 };
-
-  //private static final int[] base7SegVYPoints = { 40, 37, 8, 5, 8, 37, 40 };
   private static final int[] base7SegVYPoints = { 5, 2, -27, -30, -27, 2, 5 };
 
   private static int[] tmp7SegXPoints = new int[ base7SegHXPoints.length ];
@@ -65,8 +66,10 @@ public abstract class EmuSys implements ImageObserver
 
   public EmuSys( EmuThread emuThread, Properties props )
   {
-    this.emuThread  = emuThread;
-    this.screenFrm  = emuThread.getScreenFrm();
+    this.emuThread   = emuThread;
+    this.screenFrm   = emuThread.getScreenFrm();
+    this.pasteThread = null;
+    this.pasteIter   = null;
     createColors( props );
   }
 
@@ -90,6 +93,37 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
+  public synchronized void cancelPastingText()
+  {
+    Thread thread = this.pasteThread;
+    if( thread != null ) {
+      try {
+	thread.interrupt();
+      }
+      catch( Exception ex ) {}
+      this.pasteThread = null;
+    }
+    if( this.pasteIter != null ) {
+      this.pasteIter = null;
+      this.screenFrm.firePastingTextFinished();
+    }
+  }
+
+
+  /*
+   * Wenn sich die Einstellungen geaendert haben,
+   * wird mit dieser Methode geprueft,
+   * ob die neuen Einstellungen auf das gegebene EmuSys-Objekt angewendet
+   * werden koennen, d.h. ob die neuen Einstellungen kompatibel sind
+   * und somit die Methode applySettings(...) aufgerufen werden kann.
+   * Wenn nein, wird ein neue neue EmuSys-Instanz angelegt.
+   */
+  public boolean canApplySettings( Properties props )
+  {
+    return false;
+  }
+
+
   public boolean canExtractScreenText()
   {
     return false;
@@ -98,7 +132,7 @@ public abstract class EmuSys implements ImageObserver
 
   public void die()
   {
-    // leer
+    cancelPastingText();
   }
 
 
@@ -171,7 +205,7 @@ public abstract class EmuSys implements ImageObserver
 
   public int getColorIndex( int x, int y )
   {
-    return WHITE;
+    return BLACK;
   }
 
 
@@ -199,9 +233,21 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
+  public int getCharTopLine()
+  {
+    return 0;
+  }
+
+
   public int getCharWidth()
   {
     return -1;
+  }
+
+
+  protected boolean getConvertKeyCharToISO646DE()
+  {
+    return true;
   }
 
 
@@ -240,19 +286,19 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public long getDelayMillisAfterPasteChar()
+  protected long getDelayMillisAfterPasteChar()
   {
     return 150;
   }
 
 
-  public long getDelayMillisAfterPasteEnter()
+  protected long getDelayMillisAfterPasteEnter()
   {
     return 250;
   }
 
 
-  public long getHoldMillisPasteChar()
+  protected long getHoldMillisPasteChar()
   {
     return 100;
   }
@@ -358,19 +404,19 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public String getSecondarySystemName()
+  public String getSecondSystemName()
   {
     return null;
   }
 
 
-  public Z80CPU getSecondaryZ80CPU()
+  public Z80CPU getSecondZ80CPU()
   {
     return null;
   }
 
 
-  public Z80Memory getSecondaryZ80Memory()
+  public Z80Memory getSecondZ80Memory()
   {
     return null;
   }
@@ -388,7 +434,7 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public int getSupportedRAMFloppyCount()
+  public int getSupportedJoystickCount()
   {
     return 0;
   }
@@ -426,30 +472,16 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  /*
-   * Die Methode besagt, * ob an der uebergebenen Adresse
-   * ein extern eingebundenes ROM-Image eingeblendet werden kann.
-   * Abgeleitete Klassen koennen die Methode ueberschreiben,
-   * um z.B. bei Bankswitching das extern eingebundene ROM-Image
-   * nur in der ROM-Ebene einzublenden.
-   */
-  protected boolean isExtROMSwitchableAt( int addr )
+  protected boolean isReloadExtROMsOnPowerOnEnabled( Properties props )
   {
-    return true;
+    return EmuUtil.getBooleanProperty(
+			props,
+			"jkcemu.external_rom.reload_on_poweron",
+			false );
   }
 
 
-  /*
-   * Diese Methode besagt, ob der Zeichensatz Zeichen
-   * nach der deutschen Variante von ISO646 enthaelt.
-   */
-  public boolean isISO646DE()
-  {
-    return false;
-  }
-
-
-  public boolean isSecondarySystemRunning()
+  public boolean isSecondSystemRunning()
   {
     return false;
   }
@@ -461,7 +493,10 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public boolean keyPressed( int keyCode, boolean shiftDown )
+  public boolean keyPressed(
+			int     keyCode,
+			boolean ctrlDown,
+			boolean shiftDown )
   {
     return false;
   }
@@ -476,6 +511,28 @@ public abstract class EmuSys implements ImageObserver
   public boolean keyTyped( char keyChar )
   {
     return false;
+  }
+
+
+  public void loadIntoSecondSystem(
+			byte[] loadData,
+			int    loadAddr,
+			int    startAddr )
+  {
+    // leer
+  }
+
+
+  /*
+   * Ueber diese Methode werden Dateien in den Arbeitsspeicher
+   * geladen.
+   * Soll bei Systemen mit Bank-Switching eine Datei in eine andere
+   * als die gerade aktuelle Bank geladen werden,
+   * muss die Methode ueberschrieben werden.
+   */
+  public void loadMemByte( int addr, int value )
+  {
+    setMemByte( addr & 0xFFFF, value );
   }
 
 
@@ -533,17 +590,17 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
-  public boolean pasteChar( char ch )
+  protected boolean pasteChar( char ch )
   {
     boolean rv = false;
     switch( ch ) {
       case '\n':
       case '\r':
-	rv = keyPressed( KeyEvent.VK_ENTER, false );
+	rv = keyPressed( KeyEvent.VK_ENTER, false, false );
 	break;
 
       case '\u0020':
-	rv = keyPressed( KeyEvent.VK_SPACE, false );
+	rv = keyPressed( KeyEvent.VK_SPACE, false, false );
 	break;
 
       default:
@@ -565,26 +622,11 @@ public abstract class EmuSys implements ImageObserver
 
   protected byte[] readFile( String fileName, int maxLen, String objName )
   {
-    byte[] rv = null;
-    if( fileName != null ) {
-      if( !fileName.isEmpty() ) {
-	try {
-	  rv = EmuUtil.readFile( new File( fileName ), maxLen );
-	}
-	catch( IOException ex ) {
-	  String msg = ex.getMessage();
-	  BasicDlg.showErrorDlg(
+    return EmuUtil.readFile(
 			this.emuThread.getScreenFrm(),
-			String.format(
-				"%s kann nicht geladen werden%s%s",
-				objName,
-				msg != null ? ":\n" : ".",
-				msg != null ? msg : "" ) );
-	  rv = null;
-	}
-      }
-    }
-    return rv;
+			fileName,
+			maxLen,
+			objName );
   }
 
 
@@ -603,6 +645,24 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
+  protected byte[] readFontByProperty(
+				Properties props,
+				String     propName,
+				int        maxLen )
+  {
+    return readFileByProperty( props, propName, maxLen, "Zeichensatzdatei" );
+  }
+
+
+  protected byte[] readROMByProperty(
+				Properties props,
+				String     propName,
+				int        maxLen )
+  {
+    return readFileByProperty( props, propName, maxLen, "ROM-Datei" );
+  }
+
+
   public int readIOByte( int port )
   {
     return 0xFF;
@@ -617,7 +677,7 @@ public abstract class EmuSys implements ImageObserver
 
   protected byte[] readResource( String resource )
   {
-    return EmuUtil.readResource( this.emuThread.getScreenFrm(), resource );
+    return EmuUtil.readResource( this.screenFrm, resource );
   }
 
 
@@ -631,6 +691,7 @@ public abstract class EmuSys implements ImageObserver
 			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
+			boolean       sourceOnly,
 			int           colMnemonic,
 			int           colArgs )
   {
@@ -663,19 +724,21 @@ public abstract class EmuSys implements ImageObserver
       }
       if( n > 0 ) {
 	int begOfLine = buf.length();
-	buf.append( String.format( "%04X ", addr ) );
-	addr = a;
-
+	addr          = a;
+	if( !sourceOnly ) {
+	  buf.append( String.format( "%04X ", addr ) );
+	}
 	long m1 = 0;
 	for( int i = 0; i < n; i++ ) {
 	  m1 = (m1 << 8) | (r & 0xFF);
 	  r >>= 8;
 	}
 	long m2 = m1;
-
-	for( int i = 0; i < n; i++ ) {
-	  buf.append( String.format( " %02X", (int) m1 & 0xFF ) );
-	  m1 >>= 8;
+	if( !sourceOnly ) {
+	  for( int i = 0; i < n; i++ ) {
+	    buf.append( String.format( " %02X", (int) m1 & 0xFF ) );
+	    m1 >>= 8;
+	  }
 	}
 	appendSpacesToCol( buf, begOfLine, colMnemonic );
 	buf.append( "DB" );
@@ -753,6 +816,7 @@ public abstract class EmuSys implements ImageObserver
 			int           sysCallTableAddr,
 			String[]      sysCallNames,
 			StringBuilder buf,
+			boolean       sourceOnly,
 			int           colMnemonic,
 			int           colArgs,
 			int           colRemark )
@@ -775,12 +839,14 @@ public abstract class EmuSys implements ImageObserver
 	int idx = m / 3;
 	if( ((idx * 3) == m) && (idx < sysCallNames.length) ) {
 	  int bol = buf.length();
-	  buf.append( String.format(
+	  if( !sourceOnly ) {
+	    buf.append( String.format(
 				"%04X  %02X %02X %02X",
 				addr,
 				b,
 				w & 0xFF,
 				w >> 8 ) );
+	  }
 	  appendSpacesToCol( buf, bol, colMnemonic );
 	  buf.append( s );
 	  appendSpacesToCol( buf, bol, colArgs );
@@ -817,17 +883,12 @@ public abstract class EmuSys implements ImageObserver
   public int reassembleSysCall(
 			int           addr,
 			StringBuilder buf,
+			boolean       sourceOnly,
 			int           colMnemonic,
 			int           colArgs,
 			int           colRemark )
   {
     return 0;		// kein Byte reassembliert
-  }
-
-
-  public boolean requiresReset( Properties props )
-  {
-    return true;
   }
 
 
@@ -849,6 +910,12 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
+  public void setJoystickAction( int joyNum, int actionMask )
+  {
+    // leer
+  }
+
+
   public abstract boolean setMemByte( int addr, int value );
 
 
@@ -858,6 +925,37 @@ public abstract class EmuSys implements ImageObserver
 	this.screenFrm,
 	"Es ist kein BASIC-Programm im entsprechenden\n"
 		+ "Adressbereich des Arbeitsspeichers vorhanden." );
+  }
+
+
+  /*
+   * Diese Methode besagt, ob die mit getScreenChar() und getScreenText()
+   * gelieferten Zeichen moeglicherweise noch konvertiert werden muessen.
+   * Das ist dann der Fall, wenn die Zeichensatzdatei
+   * bzw. bei einem Vollgrafiksystem das Betriebssystem
+   * von extern geladen wird und der Zeichensatz somit nicht bekannt ist.
+   */
+  public boolean shouldAskConvertScreenChar()
+  {
+    return false;
+  }
+
+
+  public synchronized void startPastingText( String text )
+  {
+    boolean done = false;
+    if( text != null ) {
+      if( !text.isEmpty() ) {
+	cancelPastingText();
+	this.pasteIter   = new StringCharacterIterator( text );
+	this.pasteThread = new Thread( this );
+	this.pasteThread.start();
+	done = true;
+      }
+    }
+    if( !done ) {
+      this.screenFrm.firePastingTextFinished();
+    }
   }
 
 
@@ -879,7 +977,37 @@ public abstract class EmuSys implements ImageObserver
   }
 
 
+  public boolean supportsOpenBasic()
+  {
+    return false;
+  }
+
+
   public boolean supportsPasteFromClipboard()
+  {
+    return false;
+  }
+
+
+  public boolean supportsPrinter()
+  {
+    return false;
+  }
+
+
+  public boolean supportsRAMFloppy1()
+  {
+    return false;
+  }
+
+
+  public boolean supportsRAMFloppy2()
+  {
+    return false;
+  }
+
+
+  public boolean supportsSaveBasic()
   {
     return false;
   }
@@ -909,9 +1037,79 @@ public abstract class EmuSys implements ImageObserver
 
 	/* --- ImageObserver --- */
 
-  public boolean imageUpdate( Image img, int flags, int x, int y, int w, int h )
+  @Override
+  public boolean imageUpdate(
+			Image img,
+			int   flags,
+			int   x,
+			int   y,
+			int   w,
+			int   h )
   {
     return (flags & (ALLBITS | FRAMEBITS)) != 0;
+  }
+
+
+	/* --- Runnable --- */
+
+  @Override
+  public void run()
+  {
+    long    delay   = 0L;
+    boolean isFirst = true;
+    while( this.pasteThread != null ) {
+
+      // kurze Wartezeit vor dem naechsten Zeichen
+      if( delay > 0L ) {
+	try {
+	  Thread.sleep( delay );
+	}
+	catch( InterruptedException ex ) {}
+      }
+
+      // naechstes Zeichen holen und uebergeben
+      CharacterIterator iter = this.pasteIter;
+      if( iter != null ) {
+	char ch = '\u0000';
+	if( isFirst ) {
+	  ch      = iter.first();
+	  isFirst = false;
+	} else {
+	  ch = iter.next();
+	}
+	if( ch == CharacterIterator.DONE ) {
+	  cancelPastingText();
+	} else {
+	  if( getConvertKeyCharToISO646DE() ) {
+	    ch = EmuUtil.toISO646DE( ch );
+	  }
+	  if( pasteChar( ch ) ) {
+	    if( (ch == '\n') || (ch == '\r') ) {
+	      delay = getDelayMillisAfterPasteEnter();
+	    } else {
+	      delay = getDelayMillisAfterPasteChar();
+	    }
+	  } else {
+	    if( this.pasteThread != null ) {
+	      if( JOptionPane.showConfirmDialog(
+			this.screenFrm,
+			String.format(
+				"Das Zeichen mit dem hexadezimalen Code %02X\n"
+					+ "kann nicht eingef\u00FCgt werden.",
+				(int) ch ),
+			"Text einf\u00FCgen",
+			JOptionPane.OK_CANCEL_OPTION,
+			JOptionPane.WARNING_MESSAGE )
+					!= JOptionPane.OK_OPTION )
+	      {
+		cancelPastingText();
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    this.screenFrm.firePastingTextFinished();
   }
 
 

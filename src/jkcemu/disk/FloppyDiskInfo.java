@@ -68,6 +68,7 @@ public class FloppyDiskInfo implements Comparable<FloppyDiskInfo>
 
 	/* --- Comparable --- */
 
+  @Override
   public int compareTo( FloppyDiskInfo info )
   {
     String s1 = this.infoText;
@@ -81,6 +82,7 @@ public class FloppyDiskInfo implements Comparable<FloppyDiskInfo>
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public String toString()
   {
     return this.infoText;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,6 +31,7 @@ public class ZipUnpacker extends AbstractThreadDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected void doProgress()
   {
     boolean dirExists = this.outDir.exists();
@@ -139,7 +140,7 @@ public class ZipUnpacker extends AbstractThreadDlg
 	entry = inZip.getNextEntry();
       }
     }
-    catch( IOException ex ) {
+    catch( Exception ex ) {
       StringBuilder buf = new StringBuilder( 256 );
       buf.append( "\nFehler beim Lesen der Datei " );
       buf.append( this.srcFile.getPath() );
@@ -170,7 +171,7 @@ public class ZipUnpacker extends AbstractThreadDlg
 
   private ZipUnpacker( Window owner, File srcFile, File outDir )
   {
-    super( owner, true );
+    super( owner, "JKCEMU zip unpacker", true );
     this.srcFile = srcFile;
     this.outDir  = outDir;
   }

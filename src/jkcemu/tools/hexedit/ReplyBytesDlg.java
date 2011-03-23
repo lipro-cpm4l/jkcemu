@@ -123,8 +123,8 @@ public class ReplyBytesDlg extends BasicDlg
     gbc.gridy++;
     add( this.btnDec32, gbc );
 
-    this.btnString = new JRadioButton( "Zeichenkette (ISO-8859-1)", false );
-    this.btnString.setMnemonic( KeyEvent.VK_Z );
+    this.btnString = new JRadioButton( "ASCII-Zeichenkette", false );
+    this.btnString.setMnemonic( KeyEvent.VK_A );
     this.btnString.addActionListener( this );
     grpType.add( this.btnString );
     gbc.insets.bottom = 5;
@@ -251,12 +251,7 @@ public class ReplyBytesDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
-  public void windowOpened( WindowEvent e )
-  {
-    this.fldInput.requestFocus();
-  }
-
-
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -290,7 +285,14 @@ public class ReplyBytesDlg extends BasicDlg
       }
     }
     return rv;
- }
+  }
+
+
+  @Override
+  public void windowOpened( WindowEvent e )
+  {
+    this.fldInput.requestFocus();
+  }
 
 
 	/* --- private Methoden --- */
@@ -310,13 +312,10 @@ public class ReplyBytesDlg extends BasicDlg
 	    rv       = new byte[ len ];
 	    for( int i = 0; i < len; i++ ) {
 	      char ch = text.charAt( i );
-	      if( ch > 0xFF ) {
+	      if( (ch < 0x20) || (ch > 0x7E) ) {
 		throw new ParseException(
 			String.format(
-				"Das Zeichen \'%c\' ist"
-					+ " gr\u00F6\u00DFer als 8 Bit und\n"
-					+ "kann deshalb hier nicht verwendet"
-					+ " werden.",
+				"Das Zeichen \'%c\' ist kein ASCII-Zeichen.",
 				ch ),
 			i );
 	      }

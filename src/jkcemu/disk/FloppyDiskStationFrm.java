@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,49 +17,64 @@ import java.nio.channels.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import javax.swing.*;
+import javax.swing.event.*;
 import jkcemu.Main;
 import jkcemu.base.*;
-import jkcemu.system.*;
+import jkcemu.emusys.*;
 
 
 public class FloppyDiskStationFrm
 			extends BasicFrm
-			implements DropTargetListener
+			implements
+				ChangeListener,
+				DropTargetListener
 {
   private static final String DRIVE_EMPTY_TEXT = "--- leer ---";
   private static final int    MAX_DRIVE_COUNT  = 4;
 
   private ScreenFrm         screenFrm;
   private EmuSys            emuSys;
+  private FloppyDiskInfo[]  allDisks;
   private FloppyDiskInfo[]  suitableDisks;
   private FloppyDiskInfo[]  etcDisks;
   private FloppyDiskDrive[] drives;
   private FloppyDiskFormat  lastFmt;
+  private volatile boolean  diskErrorShown;
+  private int[]             driveAccessCounters;
+  private int               driveCnt;
   private int               lastSysTracks;
   private int               lastBlockSize;
+  private int               lastDirBlocks;
   private boolean           lastBlockNum16Bit;
   private boolean           lastAutoRefresh;
-  private int               lastDirBlocks;
-  private int               driveCnt;
+  private boolean           lastForceLowerCase;
+  private boolean           refreshInfoEnabled;
+  private boolean           ledState;
+  private JComponent        ledFld;
   private JTextArea[]       textAreas;
   private JTabbedPane       tabbedPane;
   private JButton           btnOpen;
   private JPopupMenu        mnuPopup;
+  private JMenuItem         mnuPopupRefresh;
   private JMenuItem         mnuPopupRemove;
 
 
   public FloppyDiskStationFrm( ScreenFrm screenFrm )
   {
-    this.screenFrm         = screenFrm;
-    this.emuSys            = null;
-    this.suitableDisks     = null;
-    this.etcDisks          = null;
-    this.lastFmt           = null;
-    this.lastSysTracks     = -1;
-    this.lastBlockSize     = -1;
-    this.lastDirBlocks     = -1;
-    this.lastBlockNum16Bit = false;
-    this.lastAutoRefresh   = false;
+    this.screenFrm          = screenFrm;
+    this.emuSys             = null;
+    this.suitableDisks      = null;
+    this.etcDisks           = null;
+    this.lastFmt            = null;
+    this.lastSysTracks      = -1;
+    this.lastBlockSize      = -1;
+    this.lastDirBlocks      = -1;
+    this.lastBlockNum16Bit  = false;
+    this.lastAutoRefresh    = false;
+    this.lastForceLowerCase = false;
+    this.ledState           = false;
+    this.diskErrorShown     = false;
+    this.refreshInfoEnabled = true;
     setTitle( "JKCEMU Diskettenstation" );
     Main.updIcon( this );
 
@@ -76,8 +91,10 @@ public class FloppyDiskStationFrm
       textArea.setText( DRIVE_EMPTY_TEXT );
       (new DropTarget( textArea, this )).setActive( true );
       this.textAreas[ i ] = textArea;
-      this.drives[ i ]    = new FloppyDiskDrive();
+      this.drives[ i ]    = new FloppyDiskDrive( this );
     }
+    this.driveAccessCounters = new int[ this.drives.length ];
+    Arrays.fill( this.driveAccessCounters, 0 );
 
 
     // Menu
@@ -103,9 +120,9 @@ public class FloppyDiskStationFrm
 
     GridBagConstraints gbc = new GridBagConstraints(
 						0, 0,
-						1, 1,
+						2, 1,
 						1.0, 1.0,
-						GridBagConstraints.SOUTHEAST,
+						GridBagConstraints.CENTER,
 						GridBagConstraints.BOTH,
 						new Insets( 5, 5, 5, 5 ),
 						0, 0 );
@@ -113,13 +130,35 @@ public class FloppyDiskStationFrm
     this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
     add( this.tabbedPane, gbc );
 
+    Dimension ledSize = new Dimension( 30, 15 );
+    this.ledFld = new JPanel()
+		{
+		  public void paintComponent( Graphics g )
+		  {
+		    paintLED( g, getWidth(), getHeight() );
+		  }
+		};
+    this.ledFld.setBorder( BorderFactory.createLoweredBevelBorder() );
+    this.ledFld.setOpaque( true );
+    this.ledFld.setPreferredSize( ledSize );
+    this.ledFld.setMinimumSize( ledSize );
+    this.ledFld.setMaximumSize( ledSize );
+    gbc.anchor      = GridBagConstraints.WEST;
+    gbc.fill        = GridBagConstraints.NONE;
+    gbc.weightx     = 0.0;
+    gbc.weighty     = 0.0;
+    gbc.insets.left = 50;
+    gbc.gridwidth   = 1;
+    gbc.gridy++;
+    add( this.ledFld, gbc );
+
     this.btnOpen = createImageButton(
 				"/images/disk/eject.png",
 				"\u00D6ffnen/Laden" );
-    gbc.fill     = GridBagConstraints.NONE;
-    gbc.weightx  = 0.0;
-    gbc.weighty  = 0.0;
-    gbc.gridy++;
+    gbc.anchor       = GridBagConstraints.EAST;
+    gbc.insets.left  = 0;
+    gbc.insets.right = 50;
+    gbc.gridx++;
     add( this.btnOpen, gbc );
 
 
@@ -136,9 +175,25 @@ public class FloppyDiskStationFrm
     }
 
 
+    // Timer
+    (new javax.swing.Timer(
+		100,
+		new ActionListener()
+		{
+		  public void actionPerformed( ActionEvent e )
+		  {
+		    checkDriveAccessState();
+		  }
+		} )).start();
+
+
+    // Listener
+    this.tabbedPane.addChangeListener( this );
+
+
     // Sonstiges
     Runtime.getRuntime().addShutdownHook(
-		new Thread()
+		new Thread( "JKCEMU disk closer" )
 		{
 		  public void run()
 		  {
@@ -148,9 +203,41 @@ public class FloppyDiskStationFrm
   }
 
 
+  public void fireShowDiskError(
+			final AbstractFloppyDisk disk,
+			final String             msg,
+			final Exception          ex )
+  {
+    /*
+     * Da bei Diskettenzugriffen i.d.R. mehrere Sektoren
+     * unmittelbar hintereinander gelesen bzw. geschrieben werden,
+     * wurden im bei Fehlern beim Zugriff auf das darunter liegende
+     * Medium auch mehrere Fehlermeldungen erscheinen,
+     * was recht unschoen ist.
+     * Stattdessen soll pro Serie von Diskettenzugriffen,
+     * d.h. bis zum Erloeschen der Zugriff-LED,
+     * maximal nur eine Fehlermeldung erscheinen.
+     */
+    if( !this.diskErrorShown ) {
+      this.diskErrorShown = true;
+
+      final Component owner = this;
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    selectDiskTab( disk );
+		    BasicDlg.showErrorDlg( owner, msg, ex );
+		  }
+		} );
+    }
+  }
+
+
   public void fireDiskFormatChanged( final AbstractFloppyDisk disk )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -158,6 +245,16 @@ public class FloppyDiskStationFrm
 		    diskFormatChanged( disk );
 		  }
 		} );
+  }
+
+
+  public void fireDriveAccess( FloppyDiskDrive drive )
+  {
+    for( int i = 0; i < this.drives.length; i++ ) {
+      if( this.drives[ i ] == drive ) {
+	this.driveAccessCounters[ i ] = 10;
+      }
+    }
   }
 
 
@@ -173,8 +270,11 @@ public class FloppyDiskStationFrm
 
   public void openDisks( Properties props )
   {
-    for( int i = 0; i < MAX_DRIVE_COUNT; i++ )
-      openDisk( i, props );
+    for( int i = 0; i < MAX_DRIVE_COUNT; i++ ) {
+      if( !openDisk( i, props ) ) {
+	removeDisk( i );
+      }
+    }
   }
 
 
@@ -182,7 +282,7 @@ public class FloppyDiskStationFrm
   {
     if( n != this.driveCnt ) {
       this.driveCnt = n;
-      SwingUtilities.invokeLater(
+      EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -194,8 +294,21 @@ public class FloppyDiskStationFrm
   }
 
 
+	/* --- ChangeListener --- */
+
+  @Override
+  public void stateChanged( ChangeEvent e )
+  {
+    if( e.getSource() == this.tabbedPane ) {
+      checkDriveAccessState();
+      updRefreshBtn();
+    }
+  }
+
+
 	/* --- DropTargetListener --- */
 
+  @Override
   public void dragEnter( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -203,18 +316,21 @@ public class FloppyDiskStationFrm
   }
 
 
+  @Override
   public void dragExit( DropTargetEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void dragOver( DropTargetDragEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void drop( DropTargetDropEvent e )
   {
     File file = EmuUtil.fileDrop( this, e );
@@ -228,7 +344,11 @@ public class FloppyDiskStationFrm
 	       i++ )
 	  {
 	    if( c == this.textAreas[ i ] ) {
-	      openFile( i, file, null, true, null, null );
+	      if( file.isDirectory() ) {
+		openDirectory( i, file );
+	      } else {
+		openFile( i, file, null, true, null, null );
+	      }
 	      break;
 	    }
 	  }
@@ -238,6 +358,7 @@ public class FloppyDiskStationFrm
   }
 
 
+  @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -247,15 +368,13 @@ public class FloppyDiskStationFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public boolean applySettings( Properties props, boolean resizable )
   {
     EmuSys emuSys = null;
     EmuThread emuThread = this.screenFrm.getEmuThread();
     if( emuThread != null ) {
-      emuSys = emuThread.getNextEmuSys();
-      if( emuSys == null ) {
-	emuSys = emuThread.getEmuSys();
-      }
+      emuSys = emuThread.getEmuSys();
     }
     boolean          differs       = true;
     boolean          hasDefaultFmt = false;
@@ -283,19 +402,26 @@ public class FloppyDiskStationFrm
 	this.lastBlockSize = -1;
 	this.lastDirBlocks = -1;
       }
+      this.allDisks = null;
       this.etcDisks = null;
       try {
-	Set<FloppyDiskInfo> etcDisks = new TreeSet<FloppyDiskInfo>();
-	addFloppyDiskInfo( etcDisks, KC85.getAvailableFloppyDisks() );
-	addFloppyDiskInfo( etcDisks, Z9001.getAvailableFloppyDisks() );
+	Set<FloppyDiskInfo> disks = new TreeSet<FloppyDiskInfo>();
+	addFloppyDiskInfo( disks, A5105.getAvailableFloppyDisks() );
+	addFloppyDiskInfo( disks, KC85.getAvailableFloppyDisks() );
+	addFloppyDiskInfo( disks, Z1013.getAvailableFloppyDisks() );
+	addFloppyDiskInfo( disks, Z9001.getAvailableFloppyDisks() );
+	int n = disks.size();
+	if( n > 0 ) {
+	  this.allDisks = disks.toArray( new FloppyDiskInfo[ n ] );
+	}
 	if( this.suitableDisks != null ) {
 	  for( int i = 0; i < this.suitableDisks.length; i++ ) {
-	    etcDisks.remove( this.suitableDisks[ i ] );
+	    disks.remove( this.suitableDisks[ i ] );
 	  }
 	}
-	int n = etcDisks.size();
+	n = disks.size();
 	if( n > 0 ) {
-	  this.etcDisks = etcDisks.toArray( new FloppyDiskInfo[ n ] );
+	  this.etcDisks = disks.toArray( new FloppyDiskInfo[ n ] );
 	}
       }
       catch( Exception ex ) {}
@@ -305,6 +431,7 @@ public class FloppyDiskStationFrm
   }
 
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -341,6 +468,16 @@ public class FloppyDiskStationFrm
 	    rv = true;
 	    doDiskOpen( cmd.substring( 14 ), this.etcDisks );
 	  }
+	  else if( cmd.startsWith( "disk.export." )
+		   && (cmd.length() > 12) )
+	  {
+	    rv = true;
+	    doDiskExport( cmd.substring( 12 ), this.allDisks );
+	  }
+	  else if( cmd.equals( "disk.refresh" ) ) {
+	    rv = true;
+	    doDiskRefresh();
+	  }
 	  else if( cmd.equals( "drive.open" ) ) {
 	    rv = true;
 	    doDriveOpen();
@@ -368,6 +505,7 @@ public class FloppyDiskStationFrm
   }
 
 
+  @Override
   public void lookAndFeelChanged()
   {
     if( this.mnuPopup != null )
@@ -375,6 +513,7 @@ public class FloppyDiskStationFrm
   }
 
 
+  @Override
   public void putSettingsTo( Properties props )
   {
     super.putSettingsTo( props );
@@ -414,71 +553,88 @@ public class FloppyDiskStationFrm
       File file = DirSelectDlg.selectDirectory( this );
       if( file != null ) {
 	if( file.isDirectory() ) {
-	  int              sysTracks     = -1;
-	  int              blockSize     = -1;
-	  boolean          blockNum16Bit = false;
-	  int              dirBlocks     = -1;
-	  FloppyDiskFormat defaultFmt    = this.lastFmt;
-	  if( lastFmt != null ) {
-	    sysTracks     = this.lastSysTracks;
-	    blockSize     = this.lastBlockSize;
-	    blockNum16Bit = this.lastBlockNum16Bit;
-	    dirBlocks     = this.lastDirBlocks;
-	  } else {
-	    if( this.emuSys != null ) {
-	      defaultFmt    = this.emuSys.getDefaultFloppyDiskFormat();
-	      sysTracks     = this.emuSys.getDefaultFloppyDiskSystemTracks();
-	      blockSize     = this.emuSys.getDefaultFloppyDiskBlockSize();
-	      blockNum16Bit = this.emuSys.getDefaultFloppyDiskBlockNum16Bit();
-	      dirBlocks     = this.emuSys.getDefaultFloppyDiskDirBlocks();
+	  openDirectory( idx, file );
+	}
+      }
+    }
+  }
+
+
+  private void doDiskExport( String srcIdxText, FloppyDiskInfo[] disks )
+  {
+    int idx = this.tabbedPane.getSelectedIndex();
+    if( (idx >= 0) && (idx < this.drives.length) ) {
+      if( (srcIdxText != null) && (disks != null) ) {
+	if( !srcIdxText.isEmpty() ) {
+	  try {
+	    int srcIdx = Integer.parseInt( srcIdxText );
+	    if( (srcIdx >= 0) && (srcIdx < disks.length) ) {
+	      String resource = disks[ srcIdx ].getResource();
+	      if( resource != null ) {
+		String  fName = "";
+		boolean gzip  = false;
+		int     pos   = resource.lastIndexOf( '/' );
+		if( pos >= 0 ) {
+		  if( (pos + 1) < resource.length() ) {
+		    fName = resource.substring( pos + 1 );
+		  }
+		} else {
+		  fName = resource;
+		}
+		if( fName.endsWith( ".gz" ) ) {
+		  fName = fName.substring( 0, fName.length() - 3 );
+		  gzip  = true;
+		}
+		if( !fName.isEmpty() ) {
+		  File preSel = Main.getLastPathFile( "disk" );
+		  if( preSel != null ) {
+		    preSel = new File( preSel, fName );
+		  } else {
+		    preSel = new File( fName );
+		  }
+		  File file = EmuUtil.showFileSaveDlg(
+					this,
+					"Diskette exportieren",
+					preSel,
+					EmuUtil.getAnadiskFileFilter() );
+		  if( file != null ) {
+		    OutputStream out = null;
+		    InputStream  in  = null;
+		    InputStream  is  = null;
+		    try {
+		      in = getClass().getResourceAsStream( resource );
+		      if( in != null ) {
+			if( gzip ) {
+			  is = in;
+			  in = new GZIPInputStream( in );
+			}
+			out = new BufferedOutputStream(
+					new FileOutputStream( file ) );
+			int b = in.read();
+			while( b >= 0 ) {
+			  out.write( b );
+			  b = in.read();
+			}
+			out.close();
+			out = null;
+		      }
+		    }
+		    finally {
+		      EmuUtil.doClose( out );
+		      EmuUtil.doClose( in );
+		      EmuUtil.doClose( is );
+		    }
+		    Main.setLastFile( file, "disk" );
+		    BasicDlg.showInfoDlg( this, "Export fertig" );
+		  }
+		}
+	      }
 	    }
 	  }
-	  FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
-			this,
-			defaultFmt,
-			FloppyDiskFormatDlg.Flag.PHYS_FORMAT,
-			FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
-			FloppyDiskFormatDlg.Flag.BLOCK_SIZE,
-			FloppyDiskFormatDlg.Flag.BLOCK_NUM_SIZE,
-			FloppyDiskFormatDlg.Flag.DIR_BLOCKS,
-			FloppyDiskFormatDlg.Flag.AUTO_REFRESH );
-	  if( sysTracks >= 0 ) {
-	    dlg.setSystemTracks( sysTracks );
+	  catch( IOException ex ) {
+	    BasicDlg.showErrorDlg( this, ex );
 	  }
-	  if( blockSize > 0 ) {
-	    dlg.setBlockSize( blockSize );
-	  }
-	  dlg.setBlockNum16Bit( blockNum16Bit );
-	  if( dirBlocks > 0 ) {
-	    dlg.setDirBlocks( dirBlocks );
-	  }
-	  dlg.setAutoRefresh( this.lastAutoRefresh );
-	  dlg.setVisible( true );
-	  FloppyDiskFormat fmt = dlg.getFormat();
-	  if( fmt != null ) {
-	    this.lastFmt           = fmt;
-	    this.lastSysTracks     = dlg.getSystemTracks();
-	    this.lastBlockSize     = dlg.getBlockSize();
-	    this.lastBlockNum16Bit = dlg.getBlockNum16Bit();
-	    this.lastDirBlocks     = dlg.getDirBlocks();
-	    this.lastAutoRefresh   = dlg.getAutoRefresh();
-	    setDisk(
-		idx,
-		"Verzeichnis: " + file.getPath(),
-		new DirectoryFloppyDisk(
-				this,
-				fmt.getSides(),
-				fmt.getCylinders(),
-				fmt.getSectorsPerCylinder(),
-				fmt.getSectorSize(),
-				this.lastSysTracks,
-				this.lastBlockSize,
-				this.lastBlockNum16Bit,
-				this.lastDirBlocks,
-				file,
-				this.lastAutoRefresh ),
-				null );
-	  }
+	  catch( NumberFormatException ex ) {}
 	}
       }
     }
@@ -490,7 +646,7 @@ public class FloppyDiskStationFrm
     int idx = this.tabbedPane.getSelectedIndex();
     if( (idx >= 0) && (idx < this.drives.length) ) {
       if( (srcIdxText != null) && (disks != null) ) {
-	if( srcIdxText.length() > 0 ) {
+	if( !srcIdxText.isEmpty() ) {
 	  try {
 	    int srcIdx = Integer.parseInt( srcIdxText );
 	    if( (srcIdx >= 0) && (srcIdx < disks.length) ) {
@@ -508,15 +664,14 @@ public class FloppyDiskStationFrm
   {
     int idx = this.tabbedPane.getSelectedIndex();
     if( (idx >= 0) && (idx < this.drives.length) ) {
-      boolean        readOnly = (File.separatorChar != '/');
-      DriveSelectDlg dlg      = new DriveSelectDlg( this, !readOnly );
+      DriveSelectDlg dlg = new DriveSelectDlg( this, true );
       dlg.setVisible( true );
-      String fileName = dlg.getSelectedDriveFileName();
-      if( fileName != null ) {
+      String driveFileName = dlg.getSelectedDriveFileName();
+      if( driveFileName != null ) {
 	openDrive(
 		idx,
-		fileName,
-		readOnly || dlg.isReadOnlySelected(),
+		driveFileName,
+		dlg.isReadOnlySelected(),
 		true,
 		null,
 		null );
@@ -535,6 +690,7 @@ public class FloppyDiskStationFrm
 			Main.getLastPathFile( "disk" ),
 			EmuUtil.getPlainDiskFileFilter(),
 			EmuUtil.getAnadiskFileFilter(),
+			EmuUtil.getCopyQMFileFilter(),
 			EmuUtil.getTelediskFileFilter() );
       if( file != null ) {
 	openFile( idx, file, null, true, null, null );
@@ -556,12 +712,14 @@ public class FloppyDiskStationFrm
 	if( DiskUtil.checkFileExt( this, file, DiskUtil.anadiskFileExt ) ) {
 	  if( confirmNewFileNotFormatted() ) {
 	    try {
-	      setDisk(
-		idx, 
-		"Anadisk-Datei: " + file.getPath(),
-		AnadiskFloppyDisk.newFile( this, file ),
-		null );
-	      Main.setLastFile( file, "disk" );
+	      if( setDisk(
+			idx, 
+			"Anadisk-Datei: " + file.getPath(),
+			AnadiskFloppyDisk.newFile( this, file ),
+			null ) )
+	      {
+		Main.setLastFile( file, "disk" );
+	      }
 	    }
 	    catch( IOException ex ) {
 	      showError( ex );
@@ -586,16 +744,35 @@ public class FloppyDiskStationFrm
 	if( DiskUtil.checkFileExt( this, file, DiskUtil.plainDiskFileExt ) ) {
 	  if( confirmNewFileNotFormatted() ) {
 	    try {
-	      setDisk(
-		idx, 
-		"Einfache Abbilddatei: " + file.getPath(),
-		PlainFileFloppyDisk.newFile( this, file ),
-		null );
-	      Main.setLastFile( file, "disk" );
+	      if( setDisk(
+			idx, 
+			"Einfache Abbilddatei: " + file.getPath(),
+			PlainFileFloppyDisk.newFile( this, file ),
+			null ) )
+	      {
+		Main.setLastFile( file, "disk" );
+	      }
 	    }
 	    catch( IOException ex ) {
 	      showError( ex );
 	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doDiskRefresh()
+  {
+    int idx = this.tabbedPane.getSelectedIndex();
+    if( (idx >= 0) && (idx < this.drives.length) ) {
+      AbstractFloppyDisk disk = this.drives[ idx ].getDisk();
+      if( disk != null ) {
+	if( disk instanceof DirectoryFloppyDisk ) {
+	  ((DirectoryFloppyDisk) disk).fireRefresh();
+	  if( this.refreshInfoEnabled ) {
+	    showRefreshInfo();
 	  }
 	}
       }
@@ -656,6 +833,30 @@ public class FloppyDiskStationFrm
 	break;
     }
     return rv;
+  }
+
+
+  private void checkDriveAccessState()
+  {
+    boolean state  = false;
+    int     tabIdx = this.tabbedPane.getSelectedIndex();
+    for( int i = 0; i < this.driveAccessCounters.length; i++ ) {
+      if( this.driveAccessCounters[ i ] > 0 ) {
+	--this.driveAccessCounters[ i ];
+	if( i == tabIdx ) {
+	  state = true;
+	}
+      }
+    }
+    if( state != this.ledState ) {
+      this.ledState = state;
+      this.ledFld.repaint();
+    }
+
+    // Anzeige von Fehlermeildungen wieder ermoeglichen
+    if( !this.ledState ) {
+      this.diskErrorShown = false;
+    }
   }
 
 
@@ -730,6 +931,10 @@ public class FloppyDiskStationFrm
     this.mnuPopup.add( createJMenuItem(
 				"Verzeichnis \u00F6ffnen...",
 				"directory.open" ) );
+    this.mnuPopupRefresh = createJMenuItem(
+				"Emulierte Diskette aktualisieren",
+				"disk.refresh" );
+    this.mnuPopup.add( this.mnuPopupRefresh );
     this.mnuPopup.addSeparator();
     this.mnuPopup.add( createJMenuItem(
 				"Neue einfache Abbilddatei anlegen...",
@@ -753,9 +958,9 @@ public class FloppyDiskStationFrm
       if( this.etcDisks.length > 0 ) {
 	JMenu mnuEtcDisks = null;
 	if( hasSuitableDisks ) {
-	  mnuEtcDisks = new JMenu( "Weitere Disketten" );
+	  mnuEtcDisks = new JMenu( "Andere Diskette einlegen" );
 	} else {
-	  mnuEtcDisks = new JMenu( "Disketten" );
+	  mnuEtcDisks = new JMenu( "Diskette einlegen" );
 	}
 	for( int i = 0; i < this.etcDisks.length; i++ ) {
 	  mnuEtcDisks.add(
@@ -766,10 +971,24 @@ public class FloppyDiskStationFrm
 	this.mnuPopup.add( mnuEtcDisks );
       }
     }
+    if( this.allDisks != null ) {
+      if( this.allDisks.length > 0 ) {
+	JMenu mnuExportDisks = new JMenu( "Diskette exportieren" );
+	for( int i = 0; i < this.allDisks.length; i++ ) {
+	  mnuExportDisks.add(
+		createJMenuItem(
+			this.allDisks[ i ].toString(),
+			String.format( "disk.export.%d", i ) ) );
+	}
+	this.mnuPopup.add( mnuExportDisks );
+      }
+    }
     this.mnuPopup.addSeparator();
     this.mnuPopupRemove = createJMenuItem(
 				"Diskette/Abbilddatei schlie\u00DFen" );
     this.mnuPopup.add( this.mnuPopupRemove );
+
+    updRefreshBtn();
   }
 
 
@@ -782,6 +1001,180 @@ public class FloppyDiskStationFrm
 	  this.textAreas[ i ].setText(
 		createDiskInfoText( disk, drive.getSkipOddCylinders() ) );
 	}
+      }
+    }
+  }
+
+
+  private void openDirectory( int idx, File file )
+  {
+    int              sysTracks     = -1;
+    int              blockSize     = -1;
+    int              dirBlocks     = -1;
+    boolean          blockNum16Bit = false;
+    boolean          readOnly      = false;
+    FloppyDiskFormat defaultFmt    = this.lastFmt;
+    if( lastFmt != null ) {
+      sysTracks     = this.lastSysTracks;
+      blockSize     = this.lastBlockSize;
+      blockNum16Bit = this.lastBlockNum16Bit;
+      dirBlocks     = this.lastDirBlocks;
+    } else {
+      if( this.emuSys != null ) {
+	defaultFmt    = this.emuSys.getDefaultFloppyDiskFormat();
+	sysTracks     = this.emuSys.getDefaultFloppyDiskSystemTracks();
+	blockSize     = this.emuSys.getDefaultFloppyDiskBlockSize();
+	blockNum16Bit = this.emuSys.getDefaultFloppyDiskBlockNum16Bit();
+	dirBlocks     = this.emuSys.getDefaultFloppyDiskDirBlocks();
+      }
+    }
+    FloppyDiskFormatDlg dlg = null;
+    if( file.canWrite() ) {
+      dlg = new FloppyDiskFormatDlg(
+		this,
+		defaultFmt,
+		FloppyDiskFormatDlg.Flag.PHYS_FORMAT,
+		FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
+		FloppyDiskFormatDlg.Flag.BLOCK_SIZE,
+		FloppyDiskFormatDlg.Flag.BLOCK_NUM_SIZE,
+		FloppyDiskFormatDlg.Flag.DIR_BLOCKS,
+		FloppyDiskFormatDlg.Flag.READONLY,
+		FloppyDiskFormatDlg.Flag.AUTO_REFRESH,
+		FloppyDiskFormatDlg.Flag.FORCE_LOWERCASE );
+    } else {
+      dlg = new FloppyDiskFormatDlg(
+		this,
+		defaultFmt,
+		FloppyDiskFormatDlg.Flag.PHYS_FORMAT,
+		FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
+		FloppyDiskFormatDlg.Flag.BLOCK_SIZE,
+		FloppyDiskFormatDlg.Flag.BLOCK_NUM_SIZE,
+		FloppyDiskFormatDlg.Flag.DIR_BLOCKS,
+		FloppyDiskFormatDlg.Flag.AUTO_REFRESH );
+      readOnly = true;
+    }
+    if( sysTracks >= 0 ) {
+      dlg.setSystemTracks( sysTracks );
+    }
+    if( blockSize > 0 ) {
+      dlg.setBlockSize( blockSize );
+    }
+    dlg.setBlockNum16Bit( blockNum16Bit );
+    if( dirBlocks > 0 ) {
+      dlg.setDirBlocks( dirBlocks );
+    }
+    dlg.setAutoRefresh( this.lastAutoRefresh );
+    dlg.setForceLowerCase( this.lastForceLowerCase );
+    dlg.setVisible( true );
+    FloppyDiskFormat fmt = dlg.getFormat();
+    if( fmt != null ) {
+      this.lastFmt            = fmt;
+      this.lastSysTracks      = dlg.getSystemTracks();
+      this.lastBlockSize      = dlg.getBlockSize();
+      this.lastBlockNum16Bit  = dlg.getBlockNum16Bit();
+      this.lastDirBlocks      = dlg.getDirBlocks();
+      this.lastAutoRefresh    = dlg.getAutoRefresh();
+      this.lastForceLowerCase = dlg.getForceLowerCase();
+      if( !readOnly ) {
+	readOnly = dlg.getReadOnly();
+      }
+      boolean state = true;
+      if( !readOnly ) {
+	if( JOptionPane.showConfirmDialog(
+		this,
+		"Sie \u00F6ffnen das Verzeichnis ohne Schreibschutz.\n"
+			+ "Schreibzugriffe auf die emulierte Diskette wirken"
+			+ " sich somit direkt auf die Dateien in dem"
+			+ " Verzeichnis aus.\n\n"
+			+ "Wenn die falsche Directory-Gr\u00F6\u00DFe"
+			+ " eingestellt ist\n"
+			+ "oder die emulierte Diskette zu einem"
+			+ " ung\u00FCnstigen Zeitpunkt aktualisiert wird\n"
+			+ "oder nach dem Aktualisieren im Emulator das"
+			+ " erneute Einlesen des Directorys"
+			+ " nicht veranlasst wird,\n"
+			+ "kann es zum ungewollten L\u00F6schen oder"
+			+ " \u00DCberschreiben der in dem Verzeichnis"
+			+ " liegenden Dateien kommen!\n\n"
+			+ "Stellen Sie bitte sicher, dass die Dateien"
+			+ " in dem Verzeichnis an einer anderen Stelle"
+			+ " nochmals gesichert sind!",
+		"Warnung",
+		JOptionPane.OK_CANCEL_OPTION,
+		JOptionPane.WARNING_MESSAGE ) != JOptionPane.OK_OPTION )
+	{
+	  state = false;
+	}
+      }
+      if( state ) {
+	File sysFile = new File( file, DirectoryFloppyDisk.SYS_FILE_NAME );
+	if( this.lastSysTracks > 0 ) {
+	  if( !sysFile.isFile() && !sysFile.exists() ) {
+	    if( this.lastSysTracks == 1 ) {
+	      BasicDlg.showInfoDlg(
+		this,
+		"Sie haben ein Diskettenformat mit einer Systemspur"
+			+ " ausgew\u00E4hlt.\n"
+			+ "In dem Verzeichnis gibt es aber die Datei "
+			+ DirectoryFloppyDisk.SYS_FILE_NAME
+			+ " nicht,\n"
+			+ "aus der JKCEMU den Inhalt der Systemspur"
+			+ " liest\n"
+			+ "Diese ist deshalb leer." );
+	    } else {
+	      BasicDlg.showInfoDlg(
+		this,
+		"Sie haben ein Diskettenformat mit Systemspuren"
+			+ " ausgew\u00E4hlt.\n"
+			+ "In dem Verzeichnis gibt es aber die Datei "
+			+ DirectoryFloppyDisk.SYS_FILE_NAME
+			+ " nicht,\n"
+			+ "aus der JKCEMU den Inhalt der Systemspuren"
+			+ " liest\n"
+			+ "Diese sind deshalb leer." );
+	    }
+	  }
+	} else {
+	  if( sysFile.exists() && sysFile.isFile() ) {
+	    if( JOptionPane.showConfirmDialog(
+		this,
+		"Sie haben ein Diskettenformat ohne Systemspuren"
+			+ " ausgew\u00E4hlt.\n"
+			+ "In dem Verzeichnis gibt es aber die Datei "
+			+ DirectoryFloppyDisk.SYS_FILE_NAME
+			+ ",\n"
+			+ "die bei JKCEMU f\u00FCr die Systemspuren steht.\n"
+			+ "Best\u00E4tigen Sie bitte, dass die emulierte"
+			+ " Diskette\n"
+			+ "keine Systemspuren enthalten soll.",
+		"Hinweis",
+		JOptionPane.OK_CANCEL_OPTION,
+		JOptionPane.INFORMATION_MESSAGE ) != JOptionPane.OK_OPTION )
+	    {
+	      state = false;
+	    }
+	  }
+	}
+      }
+      if( state ) {
+	setDisk(
+		idx,
+		"Verzeichnis: " + file.getPath(),
+		new DirectoryFloppyDisk(
+				this,
+				fmt.getSides(),
+				fmt.getCylinders(),
+				fmt.getSectorsPerCylinder(),
+				fmt.getSectorSize(),
+				this.lastSysTracks,
+				this.lastBlockSize,
+				this.lastBlockNum16Bit,
+				this.lastDirBlocks,
+				file,
+				this.lastAutoRefresh,
+				readOnly,
+				this.lastForceLowerCase ),
+		null );
       }
     }
   }
@@ -806,8 +1199,9 @@ public class FloppyDiskStationFrm
   }
 
 
-  private void openDisk( int idx, Properties props )
+  private boolean openDisk( int idx, Properties props )
   {
+    boolean rv = false;
     if( props != null ) {
       String prefix    = String.format( "jkcemu.floppydisk.%d.", idx );
       String dirName   = EmuUtil.getProperty( props, prefix + "directory" );
@@ -873,8 +1267,17 @@ public class FloppyDiskStationFrm
 				this.lastBlockNum16Bit,
 				this.lastDirBlocks,
 				file,
-				this.lastAutoRefresh ),
+				this.lastAutoRefresh,
+				EmuUtil.getBooleanProperty(
+						props,
+						prefix + "readonly",
+						true ),
+				EmuUtil.getBooleanProperty(
+						props,
+						prefix + "force_lowercase",
+						true ) ),
 		skipOddCyls );
+	      rv = true;
 	    }
 	  }
 	}
@@ -889,6 +1292,7 @@ public class FloppyDiskStationFrm
 		false,
 		fmt,
 		skipOddCyls );
+	  rv = true;
 	}
 	else if( !fileName.isEmpty() ) {
 	  File file = new File( fileName );
@@ -903,6 +1307,7 @@ public class FloppyDiskStationFrm
 		false,
 		fmt,
 		skipOddCyls );
+	    rv = true;
 	  }
 	}
 	else if( !resource.isEmpty() ) {
@@ -912,6 +1317,7 @@ public class FloppyDiskStationFrm
 	      if( resource.equals( this.suitableDisks[ i ].getResource() ) ) {
 		openDisk( idx, this.suitableDisks[ i ], skipOddCyls );
 		done = true;
+		rv   = true;
 		break;
 	      }
 	    }
@@ -920,6 +1326,7 @@ public class FloppyDiskStationFrm
 	    for( int i = 0; i < this.etcDisks.length; i++ ) {
 	      if( resource.equals( this.etcDisks[ i ].getResource() ) ) {
 		openDisk( idx, this.etcDisks[ i ], skipOddCyls );
+		rv = true;
 		break;
 	      }
 	    }
@@ -927,6 +1334,7 @@ public class FloppyDiskStationFrm
 	}
       }
     }
+    return rv;
   }
 
 
@@ -938,18 +1346,19 @@ public class FloppyDiskStationFrm
 			FloppyDiskFormat fmt,
 			Boolean          skipOddCyls )
   {
-    RandomAccessFile raf       = null;
-    boolean          done      = true;
-    String           errMsg    = null;
-    String           driveName = fileName;
+    DeviceIO.RandomAccessDevice rad       = null;
+    boolean                     done      = true;
+    String                      errMsg    = null;
+    String                      driveName = fileName;
     if( fileName.startsWith( "\\\\.\\" ) && (fileName.length() > 4) ) {
       driveName = fileName.substring( 4 );
     }
     try {
-      raf = new RandomAccessFile( fileName, readOnly ? "r" : "rw" );
+      rad = DeviceIO.openDeviceForRandomAccess( fileName, readOnly );
+      Main.setLastDriveFileName( fileName );
 
       // Format erfragen
-      int     diskSize   = DiskUtil.readDiskSize( raf );
+      int     diskSize   = DiskUtil.readDiskSize( rad );
       boolean diskSizeOK = false;
       if( fmt == null ) {
 	if( interactive ) {
@@ -969,7 +1378,7 @@ public class FloppyDiskStationFrm
 	} else {
 	  int selectedDiskSize = fmt.getDiskSize();
 	  if( selectedDiskSize != diskSize ) {
-	    diskSizeOK = DiskUtil.equalsDiskSize( raf, fmt.getDiskSize() );
+	    diskSizeOK = DiskUtil.equalsDiskSize( rad, fmt.getDiskSize() );
 	  }
 	}
 	if( !diskSizeOK ) {
@@ -1009,18 +1418,17 @@ public class FloppyDiskStationFrm
 	  }
 	}
       }
-      if( (fmt != null) && (raf != null) ) {
-	setDisk(
+      if( (fmt != null) && (rad != null) ) {
+	done = setDisk(
 		idx,
 		"Laufwerk: " + driveName,
 		PlainFileFloppyDisk.createForDrive(
 					this,
 					fileName,
-					raf,
+					rad,
 					readOnly,
 					fmt ),
 		skipOddCyls );
-	done = true;
       }
     }
     catch( IOException ex ) {
@@ -1035,7 +1443,7 @@ public class FloppyDiskStationFrm
     }
     finally {
       if( !done ) {
-	EmuUtil.doClose( raf );
+	EmuUtil.doClose( rad );
       }
     }
     if( errMsg != null ) {
@@ -1078,35 +1486,68 @@ public class FloppyDiskStationFrm
 	      }
 	    }
 	    if( disk != null ) {
-	      setDisk(
-		idx,
-		"Anadisk-Datei: " + file.getPath(),
-		disk,
-		skipOddCyls );
-	      Main.setLastFile( file, "disk" );
+	      if( setDisk(
+			idx,
+			"Anadisk-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	      {
+		Main.setLastFile( file, "disk" );
+	      }
 	    }
 	  }
 	} else if( EmuUtil.endsWith( fileName, DiskUtil.gzAnadiskFileExt ) ) {
 	  AnadiskFloppyDisk disk = AnadiskFloppyDisk.readFile( this, file );
 	  if( disk != null ) {
-	    setDisk(
-		idx,
-		"Komprimierte Anadisk-Datei: " + file.getPath(),
-		disk,
-		skipOddCyls );
-	    Main.setLastFile( file, "disk" );
+	    if( setDisk(
+			idx,
+			"Komprimierte Anadisk-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	    {
+	      Main.setLastFile( file, "disk" );
+	    }
+	  }
+	} else if( EmuUtil.endsWith( fileName, DiskUtil.copyQMFileExt ) ) {
+	  CopyQMFloppyDisk disk = CopyQMFloppyDisk.readFile( this, file );
+	  if( disk != null ) {
+	    if( setDisk(
+			idx,
+			"CopyQM-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	    {
+	      Main.setLastFile( file, "disk" );
+	    }
+	  }
+	} else if( EmuUtil.endsWith(
+				fileName,
+				DiskUtil.gzCopyQMFileExt ) )
+	{
+	  CopyQMFloppyDisk disk = CopyQMFloppyDisk.readFile( this, file );
+	  if( disk != null ) {
+	    if( setDisk(
+			idx,
+			"Komprimierte CopyQM-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	    {
+	      Main.setLastFile( file, "disk" );
+	    }
 	  }
 	} else if( EmuUtil.endsWith( fileName, DiskUtil.telediskFileExt ) ) {
 	  TelediskFloppyDisk disk = TelediskFloppyDisk.readFile(
 								this,
 								file );
 	  if( disk != null ) {
-	    setDisk(
-		idx,
-		"Teledisk-Datei: " + file.getPath(),
-		disk,
-		skipOddCyls );
-	    Main.setLastFile( file, "disk" );
+	    if( setDisk(
+			idx,
+			"Teledisk-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	    {
+	      Main.setLastFile( file, "disk" );
+	    }
 	  }
 	} else if( EmuUtil.endsWith(
 				fileName,
@@ -1114,12 +1555,14 @@ public class FloppyDiskStationFrm
 	{
 	  TelediskFloppyDisk disk = TelediskFloppyDisk.readFile( this, file );
 	  if( disk != null ) {
-	    setDisk(
-		idx,
-		"Komprimierte Teledisk-Datei: " + file.getPath(),
-		disk,
-		skipOddCyls );
-	    Main.setLastFile( file, "disk" );
+	    if( setDisk(
+			idx,
+			"Komprimierte Teledisk-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	    {
+	      Main.setLastFile( file, "disk" );
+	    }
 	  }
 	} else if( EmuUtil.endsWith(
 				fileName,
@@ -1154,12 +1597,14 @@ public class FloppyDiskStationFrm
 								fBuf,
 								fmt );
 	      if( disk != null ) {
-		setDisk(
+		if( setDisk(
 			idx,
 			"Komprimierte einfache Abbilddatei: " + fName,
 			disk,
-			skipOddCyls );
-		Main.setLastFile( file, "disk" );
+			skipOddCyls ) )
+		{
+		  Main.setLastFile( file, "disk" );
+		}
 	      }
 	    }
 	  }
@@ -1251,12 +1696,14 @@ public class FloppyDiskStationFrm
 		}
 	      }
 	      if( disk != null ) {
-		setDisk(
+		if( setDisk(
 			idx,
 			"Einfache Diskettenabbilddatei: " + file.getPath(),
 			disk,
-			skipOddCyls );
-		Main.setLastFile( file, "disk" );
+			skipOddCyls ) )
+		{
+		  Main.setLastFile( file, "disk" );
+		}
 	      }
 	    }
 	  }
@@ -1265,6 +1712,15 @@ public class FloppyDiskStationFrm
     }
     catch( IOException ex ) {
       showError( ex );
+    }
+  }
+
+
+  private void paintLED( Graphics g, int w, int h )
+  {
+    if( (w > 0) && (h > 0) ) {
+      g.setColor( this.ledState ? Color.red : Color.gray );
+      g.fillRect( 0, 0, w, h );
     }
   }
 
@@ -1297,20 +1753,41 @@ public class FloppyDiskStationFrm
       this.drives[ idx ].removeDisk();
     }
     this.textAreas[ idx ].setText( DRIVE_EMPTY_TEXT );
+    updRefreshBtn();
   }
 
 
-  private void setDisk(
-		int                idx,
-		String             mediaText,
-		AbstractFloppyDisk disk,
-		Boolean            skipOddCyls )
+  private void selectDiskTab( AbstractFloppyDisk disk )
   {
     if( disk != null ) {
-      if( skipOddCyls == null ) {
-	int cyls = disk.getCylinders();
-	if( (cyls > 0) && (cyls < 50) ) {
-	  switch( OptionDlg.showOptionDlg(
+      int n = Math.min( this.drives.length, this.driveCnt );
+      for( int i = 0; i < n; i++ ) {
+	if( this.drives[ i ] != null ) {
+	  if( this.drives[ i ].getDisk() == disk ) {
+	    try {
+	      this.tabbedPane.setSelectedIndex( i );
+	    }
+	    catch( IndexOutOfBoundsException ex ) {}
+	  }
+	}
+      }
+    }
+  }
+
+
+  private boolean setDisk(
+			int                idx,
+			String             mediaText,
+			AbstractFloppyDisk disk,
+			Boolean            skipOddCyls )
+  {
+    boolean rv = false;
+    if( disk != null ) {
+      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
+	if( skipOddCyls == null ) {
+	  int cyls = disk.getCylinders();
+	  if( (cyls > 0) && (cyls < 50) ) {
+	    switch( OptionDlg.showOptionDlg(
 		this,
 		"Soll ein 40- oder 80-Spuren-Laufwerk emuliert werden?\n\n"
 			+ "Wenn die im Emulator laufende Software von einem"
@@ -1324,28 +1801,37 @@ public class FloppyDiskStationFrm
 		"40-Spuren-Laufwerk (z.B. K5600.10 / MFS 1.2)",
 		"80-Spuren-Laufwerk (z.B. K5600.20 / MFS 1.4,"
 						+ " K5601 / MFS 1.6)" ) )
-	  {
-	    case 0:
-	      skipOddCyls = Boolean.FALSE;
-	      break;
-	    case 1:
-	      skipOddCyls = Boolean.TRUE;
-	      break;
+	    {
+	      case 0:
+		skipOddCyls = Boolean.FALSE;
+		break;
+	      case 1:
+		skipOddCyls = Boolean.TRUE;
+		break;
+	    }
+	  } else {
+	    skipOddCyls = Boolean.FALSE;
 	  }
-	} else {
-	  skipOddCyls = Boolean.FALSE;
 	}
+      } else {
+	skipOddCyls = null;
       }
-    }
-    if( skipOddCyls != null ) {
-      removeDisk( idx );
-      disk.setMediaText( mediaText );
-      this.drives[ idx ].setDisk( disk, skipOddCyls.booleanValue() );
-      this.textAreas[ idx ].setText(
-		createDiskInfoText( disk, skipOddCyls.booleanValue() ) );
+      if( skipOddCyls != null ) {
+	removeDisk( idx );
+	disk.setMediaText( mediaText );
+	this.drives[ idx ].setDisk( disk, skipOddCyls.booleanValue() );
+	this.textAreas[ idx ].setText(
+		  createDiskInfoText( disk, skipOddCyls.booleanValue() ) );
+	rv = true;
+      } else {
+	disk.doClose();
+      }
     } else {
-      disk.doClose();
+      removeDisk( idx );
+      rv = true;
     }
+    updRefreshBtn();
+    return rv;
   }
 
 
@@ -1368,6 +1854,79 @@ public class FloppyDiskStationFrm
       }
       this.mnuPopup.show( this.btnOpen, 0, this.btnOpen.getHeight() );
     }
+  }
+
+
+  private void showRefreshInfo()
+  {
+    JPanel panel = new JPanel( new GridBagLayout() );
+
+    GridBagConstraints gbc = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.BOTH,
+						new Insets( 5, 5, 0, 5 ),
+						0, 0 );
+
+    panel.add(
+	new JLabel(
+		"Vergessen Sie bitte nicht, umgehend auch in dem im Emulator"
+			+ " laufenden Programm bzw. Betriebssystem" ),
+	gbc );
+
+    gbc.insets.top = 0;
+    gbc.gridy++;
+    panel.add(
+	new JLabel(
+		"die Diskette zu aktualisieren bzw. das erneute Einlesen"
+			+ " des Directorys zu veranlassen!" ),
+	gbc );
+
+    gbc.gridy++;
+    panel.add(
+	new JLabel(
+		"(bei CP/M-kompatiblen Betriebssystemen meistens"
+			+ " mit CTRL-C bzw. Strg-C)" ),
+	gbc );
+
+    JCheckBox cb = new JCheckBox(
+			"Diese Meldung zuk\u00FCnftig nicht mehr anzeigen",
+			false );
+    gbc.anchor        = GridBagConstraints.CENTER;
+    gbc.insets.top    = 10;
+    gbc.insets.bottom = 5;
+    gbc.gridy++;
+    panel.add( cb, gbc );
+
+    JOptionPane.showMessageDialog(
+			this,
+			panel,
+			"Wichtiger Hinweis",
+			JOptionPane.WARNING_MESSAGE );
+
+    if( cb.isSelected() ) {
+      this.refreshInfoEnabled = false;
+    }
+  }
+
+
+  private void updRefreshBtn()
+  {
+    boolean state = false;
+    int     idx   = this.tabbedPane.getSelectedIndex();
+    if( (idx >= 0) && (idx < this.drives.length) ) {
+      if( this.drives[ idx ] != null ) {
+	AbstractFloppyDisk disk = this.drives[ idx ].getDisk();
+	if( disk != null ) {
+	  if( disk instanceof DirectoryFloppyDisk ) {
+	    state = true;
+	  }
+	}
+      }
+    }
+    this.mnuPopupRefresh.setEnabled( state );
   }
 }
 

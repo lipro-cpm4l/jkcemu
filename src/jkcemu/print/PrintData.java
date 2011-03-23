@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.print.*;
 import java.io.*;
 import java.lang.*;
 import jkcemu.Main;
+import jkcemu.base.EmuUtil;
 
 
 public class PrintData implements Printable
@@ -58,7 +59,7 @@ public class PrintData implements Printable
 
   public void saveToFile( File file ) throws IOException
   {
-    FileOutputStream out = null;
+    OutputStream out = null;
     try {
       out = new FileOutputStream( file );
 
@@ -70,12 +71,7 @@ public class PrintData implements Printable
       out = null;
     }
     finally {
-      if( out != null ) {
-	try {
-	  out.close();
-	}
-	catch( IOException ex ) {}
-      }
+      EmuUtil.doClose( out );
     }
   }
 
@@ -88,6 +84,7 @@ public class PrintData implements Printable
 
 	/* --- Printable --- */
 
+  @Override
   public int print(
 		Graphics   g,
 		PageFormat pf,

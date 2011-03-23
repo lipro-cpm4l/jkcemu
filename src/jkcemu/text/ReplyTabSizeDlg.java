@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -36,20 +36,19 @@ public class ReplyTabSizeDlg extends BasicDlg
 
 
     // Fensterinhalt
-    Container contentPane = getContentPane();
-    contentPane.setLayout( new GridBagLayout() );
+    setLayout( new GridBagLayout() );
 
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.anchor     = GridBagConstraints.CENTER;
-    gbc.fill       = GridBagConstraints.NONE;
-    gbc.insets     = new Insets( 5, 5, 0, 5 );
-    gbc.gridwidth  = 1;
-    gbc.gridheight = 1;
-    gbc.gridx      = 0;
-    gbc.gridy      = 0;
+    GridBagConstraints gbc = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					0.0, 0.0,
+					GridBagConstraints.CENTER,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
 
     JPanel panelTabSize = new JPanel( new FlowLayout( FlowLayout.CENTER ) );
-    contentPane.add( panelTabSize, gbc );
+    add( panelTabSize, gbc );
     panelTabSize.add( new JLabel( "Tabulatorbreite:" ) );
 
     int tabSize = this.textArea.getTabSize();
@@ -66,7 +65,7 @@ public class ReplyTabSizeDlg extends BasicDlg
     gbc.gridwidth     = GridBagConstraints.REMAINDER;
     gbc.gridx         = 0;
     gbc.gridy++;
-    contentPane.add( this.tglAsDefault, gbc );
+    add( this.tglAsDefault, gbc );
 
     // Knoepfe
     JPanel panelBtn = new JPanel();
@@ -84,7 +83,7 @@ public class ReplyTabSizeDlg extends BasicDlg
 
     gbc.insets.top = 5;
     gbc.gridy++;
-    contentPane.add( panelBtn, gbc );
+    add( panelBtn, gbc );
 
     // Fenstergroesse und -position
     pack();
@@ -95,6 +94,7 @@ public class ReplyTabSizeDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -115,6 +115,7 @@ public class ReplyTabSizeDlg extends BasicDlg
   }
 
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( (e.getWindow() == this) && (this.spinnerTabSize != null) ) {

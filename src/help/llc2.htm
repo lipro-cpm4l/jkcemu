@@ -1,231 +1,297 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des LLC2</h1>
+ <h1>Hinweise zur Emulation des LLC2</h1>
+  Der LLC2 ist ein von Dr. Gerd Maudrich 1985 entwickelter
+  Eigenbau-Computer.
+ <br/>
+  <ul>
+   <li><a href="llc2.htm#hardware">1. Emulierte Hardware</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#memory">1.1. Speicher</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#scch_mod1">1.2. SCCH-Modul&nbsp;1</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#scch_mod3">1.3. SCCH-Modul&nbsp;3</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#scch_inverse">1.4. SCCH-Inversschaltung</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#inverse_key">1.6. Inverstaste (F1)</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#graphic_key">1.7. Grafiktaste (F2)</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#fdc">1.8. Floppy-Disk-Modul</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#printer">1.9. V24-Schnittstelle mit Drucker</a>
+   </li>
+   <li><a href="llc2.htm#software">2. Im ROM enthaltene Software</a></li>
+   <li><a href="llc2.htm#basic">3. BASIC</a>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#gsbasic">3.1. Grafik/Sound-BASIC</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="llc2.htm#basic_save">3.2. Speichern von BASIC-Programmen</a>
+   </li>
+  </ul>
+ <br/>
 
-  <h2>1. Emulierte Hardware</h2>
-    <ul>
-      <li>4 KByte ROM f&uuml;r Monitorprogramm</li>
-      <li>64 KByte RAM inklusive Bildwiederholspeicher</li>
-      <li>CTC mit Verbindung von Ausgang Kanal 1 auf Eingang Kanal 3</li>
-      <li>Kassettenrecorderanschluss</li>
-      <li>
-	Zwei RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
-	Heft 3/1988 an den IO-Basisadressen D0h (RAM-Floppy 1)
-	und B0h (RAM-Floppy 2)
-      </li>
-      <li>
-	<a href="llc2.htm#scch_mod1">SCCH-Modul&nbsp;1</a>
-	(zus&auml;tzlicher ROM)
-      </li>
-      <li>
-	<a href="llc2.htm#scch_mod3">SCCH-Modul&nbsp;3</a>
-	(zus&auml;tzlicher RAM)
-      </li>
-      <li><a href="llc2.htm#scch_fdc">SCCH-Floppy-Disk-Modul</a></li>
-      <li><a href="llc2.htm#scch_inverse">SCCH-Inversschaltung</a></li>
-      <li>
-	<a href="llc2.htm#pio_inverse">Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
-      </li>
-      <li>Vollgrafikerweiterung HIRES</li>
-    </ul>
-  <br/><br/>
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  <ul>
+   <li>4 KByte ROM f&uuml;r Monitorprogramm</li>
+   <li>64 KByte RAM inklusive Bildwiederholspeicher</li>
+   <li>CTC mit Verbindung von Ausgang Kanal 1 auf Eingang Kanal 3</li>
+   <li>Kassettenrecorderanschluss</li>
+   <li>
+    Zwei RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
+    Heft&nbsp;3/1988 an den IO-Basisadressen&nbsp;D0h und&nbsp;B0h
+   </li>
+   <li>
+    <a href="llc2.htm#scch_mod1">SCCH-Modul&nbsp;1</a>
+    (zus&auml;tzlicher ROM)
+   </li>
+   <li>
+    <a href="llc2.htm#scch_mod3">SCCH-Modul&nbsp;3</a>
+    (zus&auml;tzlicher RAM)
+   </li>
+   <li><a href="llc2.htm#scch_inverse">SCCH-Inversschaltung</a></li>
+   <li>
+    <a href="llc2.htm#pio_inverse">Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+   </li>
+   <li><a href="llc2.htm#inverse_key">Inverstaste (F1)</a></li>
+   <li><a href="llc2.htm#graphic_key">Grafiktaste (F2)</a></li>
+   <li><a href="llc2.htm#fdc">Floppy-Disk-Modul</a></li>
+   <li>
+    <a href="llc2.htm#printer">V24-Schnittstelle mit Drucker</a>
+   </li>
+   <li>1&nbsp;<a href="joystick.htm">Joystick</a></li>
+   <li>Vollgrafikerweiterung HIRES</li>
+  </ul>
+ <br/>
 
-  <h3>1.1. Speicher</h3>
-    Der RAM befindet sich physisch in einem globalen RAM-Bereich,
-    der von allen emulierten Systemen gemeinsam genutzt wird.
-    Die unteren 48 KByte sind nach dem Einschalten bzw. nach einem RESET
-    nicht sichtbar.
-    Erst mit einem Ein-/Ausgabebefehl auf der Adresse E0h
-    werden der ROM ein- und der RAM ausgeblendet.
-    Mit diesem Mechanismus l&auml;dt sich das Monitorprogramm
-    vom ROM in den RAM um.
-  <br/><br/>
+ <h3><a name="memory">1.1. Speicher</a></h3>
+  Die unteren 48 KByte RAM sind nach dem Einschalten bzw.
+  nach einem RESET nicht sichtbar.
+  Erst mit einem Ein-/Ausgabebefehl auf die Adresse E0h
+  werden der ROM aus- und der RAM eingeblendet.
+  Mit diesem Mechanismus l&auml;dt sich das Monitorprogramm
+  vom ROM in den RAM um.
+ <br/><br/>
 
-  <h3><a name="scch_mod1">1.2. SCCH-Modul&nbsp;1</a></h3>
-    Das SCCH-Modul&nbsp;1 stellt zus&auml;tzlichen ROM zur Verf&uuml;gung,
-    und zwar:
-    <ul>
-      <li>8&nbsp;KByte f&uuml;r Grafik/Sound-BASIC-Interpreter</li>
-      <li>8&nbsp;KByte f&uuml;r Programmpaket X</li>
-      <li>256&nbsp;KByte f&uuml;r ROM-Disk</li>
-    </ul>
-  <br/>
-    Gesteuert wird das Modul &uuml;ber das Ausgabetor&nbsp;ECh:<br/>
-    <table border="1">
-      <tr>
-	<td valign="top">Bit&nbsp;0:</td>
-	<td>Programmpaket&nbsp;X im Bereich E000-FFFF einblenden</td>
-      </tr>
-      <tr>
-	<td valign="top">Bit&nbsp;1:</td>
-	<td>Grafik/Sound-BASIC im Bereich 4000-5FFF einblenden</td>
-      </tr>
-      <tr>
-	<td valign="top">Bit&nbsp;3:</td>
-	<td>
-	  Ein Segment der ROM-Disk im Bereich C000-FFFF einblenden,<br/>
-	  Die Bits&nbsp;0, 4, 5 und 6 legen das entsprechende
-	  16K-Segment fest.
-	</td>
-      </tr>
-    </table>
-  <br/>
-    JKCEMU liefert keinen Inhalt f&uuml;r das Programmpaket&nbsp;X
-    und die ROM-Disk mit.
-    Diesen m&uuml;ssen Sie in den <a href="settings.htm">Einstellungen</a>,
-    Rubrik ROM, durch Einbinden von ROM-Image-Dateien festlegen.
-  <br/><br/>
+ <h3><a name="scch_mod1">1.2. SCCH-Modul&nbsp;1</a></h3>
+  Das SCCH-Modul&nbsp;1 stellt zus&auml;tzlichen ROM zur Verf&uuml;gung,
+  und zwar:
+  <ul>
+   <li>8&nbsp;KByte f&uuml;r Grafik/Sound-BASIC-Interpreter</li>
+   <li>8&nbsp;KByte f&uuml;r Programmpaket X</li>
+   <li>256&nbsp;KByte f&uuml;r ROM-Disk</li>
+  </ul>
+ <br/>
+  Gesteuert wird das Modul &uuml;ber das Ausgabetor&nbsp;ECh:<br/>
+  <table border="1">
+   <tr>
+    <td valign="top">Bit&nbsp;0:</td>
+    <td>Programmpaket&nbsp;X im Bereich E000-FFFF einblenden</td>
+   </tr>
+   <tr>
+    <td valign="top">Bit&nbsp;1:</td>
+    <td>Grafik/Sound-BASIC im Bereich 4000-5FFF einblenden</td>
+   </tr>
+   <tr>
+    <td valign="top">Bit&nbsp;3:</td>
+    <td>
+     Ein Segment der ROM-Disk im Bereich C000-FFFF einblenden,<br/>
+     Die Bits&nbsp;0, 4, 5 und 6 legen das entsprechende
+     16K-Segment fest.
+    </td>
+   </tr>
+  </table>
+ <br/>
+  JKCEMU liefert keinen Inhalt f&uuml;r das Programmpaket&nbsp;X
+  und die ROM-Disk mit.
+  Diesen m&uuml;ssen Sie in den <a href="settings.htm">Einstellungen</a>
+  durch Einbinden von ROM-Dateien festlegen.
+ <br/><br/>
 
-  <h3><a name="scch_mod3">1.3. SCCH-Modul&nbsp;3</a></h3>
-    Das SCCH-Modul&nbsp;3 stellt je nach Best&uuml;ckung
-    64, 128, 256, 320 oder 512 KByte zus&auml;tzlichen RAM zur Verf&uuml;gung,
-    der &uuml;ber IO-Befehle in den Arbeitsspeicher eingeblendet werden kann.
-    Konkret wird &uuml;ber die Bits 0 bis 3 des IO-Ports&nbsp;EDh
-    einer von 16 m&ouml;glichen 64 KByte gr&ouml;&szlig;en Bl&ouml;cken
-    ausgew&auml;hlt, der dann entsprehend der Bits 4 bis 7 des gleichen
-    IO-Ports nur lesend, nur schreibend oder lesend und schreibend
-    (dann aber nur&nbsp;32 KByte) eingeblendet wird.
-  <br/><br/>
-    Der Adressraum f&uuml;r den zus&auml;tzlichen RAM betr&auml;gt
-    1&nbsp;MByte (16 x 64 KByte).
-    Obwohl das Originalmodul nur mit max. 512 KByte best&uuml;ckt werden kann,
-    emuliert JKCEMU die max. m&ouml;glichen 1 MByte.
-    Das hat den Vorteil, dass Software,
-    die diesen zus&auml;tzlichen RAM verwendet,
-    nicht speziell f&uuml;r den Einsatz in JKCEMU konfiguriert werden muss,
-    denn auf jeder Adresse, wo die jeweilige Software RAM voraussetzt,
-    wird sie in JKCEMU auch RAM vorfinden.
-  <br/><br/>
+ <h3><a name="scch_mod3">1.3. SCCH-Modul&nbsp;3</a></h3>
+  Das SCCH-Modul&nbsp;3 stellt je nach Best&uuml;ckung
+  64, 128, 256, 320 oder 512 KByte zus&auml;tzlichen RAM zur Verf&uuml;gung,
+  der &uuml;ber IO-Befehle in den Arbeitsspeicher eingeblendet werden kann.
+  Konkret wird &uuml;ber die Bits 0 bis 3 des IO-Ports&nbsp;EDh
+  einer von 16 m&ouml;glichen 64 KByte gr&ouml;&szlig;en Bl&ouml;cken
+  ausgew&auml;hlt, der dann entsprehend der Bits 4 bis 7 des gleichen
+  IO-Ports nur lesend, nur schreibend oder lesend und schreibend
+  (dann aber nur&nbsp;32 KByte) eingeblendet wird.
+ <br/><br/>
+  Der Adressraum f&uuml;r den zus&auml;tzlichen RAM betr&auml;gt
+  1&nbsp;MByte (16 x 64&nbsp;KByte).
+  Obwohl das Originalmodul nur mit max. 512 KByte best&uuml;ckt werden kann,
+  emuliert JKCEMU die max. m&ouml;glichen 1 MByte.
+  Das hat den Vorteil, dass Software,
+  die diesen zus&auml;tzlichen RAM verwendet,
+  nicht speziell f&uuml;r den Einsatz in JKCEMU konfiguriert werden muss,
+  denn auf jeder Adresse, wo die jeweilige Software RAM voraussetzt,
+  wird sie in JKCEMU auch RAM vorfinden.
+ <br/><br/>
 
-  <h3><a name="scch_fdc">1.4. SCCH-Floppy-Disk-Modul</a></h3>
-    Das Floppy-Disk-Modul wird an folgenden IO-Adressen emuliert:
-  <br/>
-    <table border="1">
-      <tr>
-	<th>IO-Adresse (hexadezimal)</th>
-	<th>Zugriff</th><th>Bedeutung</th>
-      </tr>
-      <tr>
-	<td valign="top">A0</td>
-	<td valign="top">R</td>
-	<td>FDC-Statusregister</td>
-      </tr>
-      <tr>
-	<td valign="top">A1</td>
-	<td valign="top">RW</td>
-	<td>FDC-Datenregister</td>
-      </tr>
-      <tr>
-	<td valign="top">A2,&nbsp;A3</td>
-	<td valign="top">RW</td>
-	<td>simulierter DMA-Zugriff auf FDC-Datenregister</td>
-      </tr>
-      <tr>
-	<td valign="top">A4,&nbsp;A5</td>
-	<td valign="top">R</td>
-	<td>
-	  Input Gate f&uuml;r Laufwerks- und FDC-Signale:
-	  <ul>
-	    <li>Bit&nbsp;4:&nbsp;Indeximpuls&nbsp;(negiert)</li>
-	    <li>Bit&nbsp;5:&nbsp;Ready-Signal</li>
-	    <li>Bit&nbsp;6:&nbsp;Interrupt-Signal&nbsp;(negiert)</li>
-	    <li>Bit&nbsp;4:&nbsp;DMA-Request&nbsp;(negiert)</li>
-	  </ul>
-	</td>
-      </tr>
-      <tr>
-	<td valign="top">A6,&nbsp;A7</td>
-	<td valign="top">W</td>
-	<td>Bit&nbsp;0...3:&nbsp;Auswahl&nbsp;Laufwerk</td>
-      </tr>
-      <tr>
-	<td valign="top">A8,&nbsp;A9</td>
-	<td valign="top">RW</td>
-	<td>
-	  Terminal&nbsp;Count,<br/>
-	  Der ausgegebene bzw. gelesene Wert hat keine Bedeutung.
-	</td>
-      </tr>
-    </table>
-  <br/><br/>
+ <h3><a name="scch_inverse">1.4. SCCH-Inversschaltung</a></h3>
+  Die SCCH-Inversschaltung erkennt die im Bildwiederholspeicher
+  stehenden Bytes mit den Werten 10h und 11h.
+  Bei 11h wird die Inversdarstellung ein- und bei 10h wieder ausgeschaltet.
+  Unabh&auml;ngig davon wird am Zeilenende die Inversdarstellung
+  immer ausgeschaltet.
+ <br/><br/>
 
-  <h3><a name="scch_inverse">1.5. SCCH-Inversschaltung</a></h3>
-    Die SCCH-Inversschaltung erkennt die im Bildwiederholspeicher
-    stehenden Bytes mit den Werten 10h und 11h.
-    Bei 11h wird die Inversdarstellung ein- und bei 10h wieder ausgeschaltet.
-    Unabh&auml;ngig davon wird am Zeilenende die Inversdarstellung
-    immer ausgeschaltet.
-  <br/><br/>
+ <h3>
+  <a name="pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+ </h3>
+  Bei dieser Schaltung wird der Inversmodus mit Bit&nbsp;5 am Tor&nbsp;B
+  der System-PIO (IO-Adresse&nbsp;E9h) aktiviert.
+  Im Inversmodus werden dann alle Zeichen invertiert ausgegeben,
+  bei denen Bit 7 gesetzt ist.
+ <br/><br/>
 
-  <h3>
-    <a name="pio_inverse">
-      1.6. Inversschaltung &uuml;ber System-PIO&nbsp;B5
-    </a>
-  </h3>
-    Bei dieser Schaltung wird der Inversmodus mit Bit&nbsp;5 am Tor&nbsp;B
-    der System-PIO (IO-Adresse E9h) aktiviert.
-    Im Inversmodus werden dann alle Zeichen invertiert ausgegeben,
-    bei denen Bit 7 gesetzt ist.
-  <br/><br/>
+ <h3><a name="inverse_key">1.6. Inverstaste (F1)</a></h3>
+  Die SCCH-Inversschaltung enth&auml;lt im Original auch einen Schalter,
+  mit dem der gesamte Bildschirm invertiert werden kann.
+  JKCEMU emulierte diesen Schalter mit der Taste&nbsp;F1.
+ <br/><br/>
 
+ <h3><a name="graphic_key">1.7. Grafiktaste (F2)</a></h3>
+  Mit der Grafiktaste&nbsp;(F2) ist die Eingabe von Grafikzeichen
+  &uuml;ber die Tastatur m&ouml;glich.
+  Dies muss allerdings vom jeweiligen Anwendungsprogramm auch so
+  unterst&uuml;tzt werden.
+  Das in JKCEMU enthaltene <em>Grafik/Sound-BASIC</em>
+  unterst&uuml;tzt die Grafiktaste.
+ <br/><br/>
 
-  <h2>2. Im ROM enthaltene Software</h2>
-    <ul>
-      <li>SCCH-Monitor Version 9.1</li>
-      <li>Grafik/Sound-BASIC Version 3.2</li>
-    </ul>
-  <br/><br/>
+ <h3><a name="fdc">1.8. Floppy-Disk-Modul</a></h3>
+  Das Floppy-Disk-Modul wird an folgenden E/A-Adressen emuliert:
+ <br/>
+  <table border="1">
+   <tr>
+    <th>E/A-Adresse (hexadezimal)</th>
+    <th>Zugriff</th><th>Bedeutung</th>
+   </tr>
+   <tr>
+    <td valign="top">A0</td>
+    <td valign="top">R</td>
+    <td>FDC-Statusregister</td>
+   </tr>
+   <tr>
+    <td valign="top">A1</td>
+    <td valign="top">RW</td>
+    <td>FDC-Datenregister</td>
+   </tr>
+   <tr>
+    <td valign="top">A2,&nbsp;A3</td>
+    <td valign="top">RW</td>
+    <td>simulierter DMA-Zugriff auf FDC-Datenregister</td>
+   </tr>
+   <tr>
+    <td valign="top">A4,&nbsp;A5</td>
+    <td valign="top">R</td>
+    <td>
+     Input Gate f&uuml;r Laufwerks- und FDC-Signale:
+     <ul>
+      <li>Bit&nbsp;4:&nbsp;Indeximpuls&nbsp;(negiert)</li>
+      <li>Bit&nbsp;5:&nbsp;Ready-Signal</li>
+      <li>Bit&nbsp;6:&nbsp;Interrupt-Signal&nbsp;(negiert)</li>
+      <li>Bit&nbsp;4:&nbsp;DMA-Request&nbsp;(negiert)</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">A6,&nbsp;A7</td>
+    <td valign="top">W</td>
+    <td>Bit&nbsp;0...3:&nbsp;Auswahl&nbsp;Laufwerk</td>
+   </tr>
+   <tr>
+    <td valign="top">A8,&nbsp;A9</td>
+    <td valign="top">RW</td>
+    <td>
+     Terminal&nbsp;Count,<br/>
+     Der ausgegebene bzw. gelesene Wert hat keine Bedeutung.
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
 
-
-  <h2>3. BASIC</h2>
-
-  <h3>3.1. Grafik/Sound-BASIC</h3>
-    Der Grafik/Sound-BASIC-Interpreter Version 3.2 liegt
-    in einem Hintergrund-ROM im Adressbereich 4000-5FFF.
-    Standardm&auml;&szlig;ig befindet sich in diesem Adressbereich RAM.
-    &Uuml;ber das Bit 1 des IO-Ports ECh kann der ROM in den Vordergrund
-    geholt und somit der BASIC-Interpreter in dem Adressbereich sichtbar
-    gemacht werden.
-  <br/><br/>
-    Mit den im Emulator integrierten SCCH-Monitorprogrammen k&ouml;nnen
-    Sie das BASIC mit dem Kommando <em>b</em> direkt aufrufen (Kaltstart).
-    Dabei wird auch der BASIC-ROM in den Vordergrund geholt.
-    Einen Warmstart des Interpreters f&uuml;hren Sie mit dem Kommando
-    <em>r</em> aus.
-  <br/><br/>
-
-  <h3>3.2. Speichern von BASIC-Programmen</h3>
-    JKCEMU bietet spezielle Unterst&uuml;tzung f&uuml;r das Speichern
-    und Laden von BASIC-Programmen.
-    Zum Speichern nutzen Sie bitte die Funktion
-    <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
-    und speichern das Programm als
-    <a href="fileformats.htm#headersave">Headersave</a>-Datei
-    mit dem Dateityp <tt>B</tt>.
-  <br/><br/>
-    Nur wenn Sie das BASIC-Programm so speichern,
-    werden beim Laden des Programms die Systemzellen des
-    BASIC-Interpreters richtig angepasst.
-    In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
-    aber im Interpreter nicht richtig nutzen.
-  <br/><br/>
+ <h3><a name="printer">1.9. V24-Schnittstelle mit Drucker</a> </h3>
+  Es wird die zus&auml;tzliche PIO (E/A-Adressen E4h-E7h)
+  mit der dar&uuml;ber realisierten V24-Schnittstelle
+  und einem daran angeschlossenen Drucker emuliert.
+  Die Druckerschnittstelle ist dabei auf die Parameter eingestellt,
+  die das integrierte Monitorprogramm nach einem RESET einnimmt.
+  So k&ouml;nnen &uuml;ber die Funktionen des Monitorprogramms
+  Zeichen auf dem emulierten Drucker ausgegeben werden,
+  ohne die V24-Parameter &auml;ndern zu m&uuml;ssen.
+ <br/><br/>
+  Zum einfachen Ausprobieren der Druckeremulation k&ouml;nnen Sie
+  im Monitorprogramm mit <em>Ctrl-X</em> die Bildschirmausgabe
+  zus&auml;tzlich auf den Drucker leiten.
+  Mit <em>Ctrl-Y</em> schalten Sie das wieder aus.
+ <br/><br/>
 
 
-  <h2>4. Sonstiges</h2>
+ <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
+  <ul>
+   <li>SCCH-Monitor Version 9.1</li>
+   <li>Grafik/Sound-BASIC Version 3.2</li>
+  </ul>
+ <br/>
 
-  <h3>4.1. Einbindung externer ROM-Images</h3>
-    Sie k&ouml;nnen in den <a href="settings.htm">Einstellungen</a>
-    externe ROM-Images an jeder beliebigen Adresse einbinden.
-    F&uuml;r die unteren 48 KByte des Adressraumes gilt aber,
-    dass das extern eingebundene ROM-Image nur sichtbar ist
-    und auch sonst kein anderer Speicher (z.B. SCCH-Modul 1 oder 3)
-    in dem jeweiligen Adressbereich eingeblendet ist.
-    Dies ist &uuml;blicherweise nur unmittelbar nach einem RESET der Fall,
-    denn der LLC2 ist so konzipiert,
-    dass sich das Betriebssystem vom ROM in den RAM kopiert
-    und anschlie&szlig;end den ROM ausblendet.
-    Damit sind dann auch extern eingebundene ROM-Images
-    in den unteren 48 KByte nicht sichtbar.
+
+ <h2><a name="basic">3. BASIC</a></h2>
+
+ <h3><a name="gsbasic">3.1. Grafik/Sound-BASIC</a></h3>
+  Der Grafik/Sound-BASIC-Interpreter Version 3.2 liegt
+  in einem Hintergrund-ROM im Adressbereich 4000h-5FFFh.
+  Standardm&auml;&szlig;ig befindet sich in diesem Adressbereich RAM.
+  &Uuml;ber das Bit 1 des IO-Ports ECh kann der ROM in den Vordergrund
+  geholt und somit der BASIC-Interpreter in dem Adressbereich sichtbar
+  gemacht werden.
+ <br/><br/>
+  Mit den im Emulator integrierten SCCH-Monitorprogrammen k&ouml;nnen
+  Sie das BASIC mit dem Kommando <em>b</em> direkt aufrufen (Kaltstart).
+  Dabei wird auch der BASIC-ROM in den Vordergrund geholt.
+  Einen Warmstart des Interpreters f&uuml;hren Sie mit dem Kommando
+  <em>r</em> aus.
+ <br/><br/>
+
+ <h3><a name="basic_save">3.2. Speichern von BASIC-Programmen</a></h3>
+  JKCEMU bietet spezielle Unterst&uuml;tzung f&uuml;r das Speichern
+  und Laden von BASIC-Programmen.
+  Zum Speichern nutzen Sie bitte die Funktion
+  <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
+  und speichern das Programm als
+  <a href="fileformats.htm#headersave">Headersave</a>-Datei
+  mit dem Dateityp <tt>B</tt>.
+ <br/><br/>
+  Nur wenn Sie das BASIC-Programm so speichern,
+  werden beim Laden des Programms die Systemzellen des
+  BASIC-Interpreters richtig angepasst.
+  In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
+  aber im Interpreter nicht richtig nutzen.
 </body>
 </html>
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -56,6 +56,9 @@ public class EditFrm extends BasicFrm implements
   private JMenuItem                mnuEditLower;
   private JMenuItem                mnuEditTabSize;
   private JMenuItem                mnuEditTabToSpaces;
+  private JMenuItem                mnuEditShiftIn;
+  private JMenuItem                mnuEditShiftOut;
+  private JMenuItem                mnuEditShiftWidth;
   private JMenuItem                mnuEditUmlautGerToUni;
   private JMenuItem                mnuEditUmlautDosToUni;
   private JMenuItem                mnuEditFind;
@@ -102,25 +105,34 @@ public class EditFrm extends BasicFrm implements
   private Clipboard                clipboard;
   private LogFrm                   logFrm;
   private PrgThread                prgThread;
+  private AbstractOptionsDlg       prgOptionsDlg;
   private EditText                 unusedEditText;
   private int                      lastNewTextNum;
+  private int                      shiftWidth;
+  private boolean                  shiftUseTabs;
 
 
   public EditFrm( ScreenFrm screenFrm )
   {
-    this.screenFrm      = screenFrm;
-    this.emuThread      = screenFrm.getEmuThread();
-    this.editTexts      = new ArrayList<EditText>();
-    this.hasTextFind    = false;
-    this.findIgnoreCase = true;
-    this.textFind       = null;
-    this.textReplace    = null;
-    this.clipboard      = null;
-    this.logFrm         = null;
-    this.prgThread      = null;
-    this.unusedEditText = null;
-    this.lastNewTextNum = 0;
-
+    this.screenFrm       = screenFrm;
+    this.emuThread       = screenFrm.getEmuThread();
+    this.editTexts       = new ArrayList<EditText>();
+    this.hasTextFind     = false;
+    this.findIgnoreCase  = true;
+    this.textFind        = null;
+    this.textReplace     = null;
+    this.clipboard       = null;
+    this.logFrm          = null;
+    this.prgThread       = null;
+    this.prgOptionsDlg   = null;
+    this.unusedEditText  = null;
+    this.lastNewTextNum  = 0;
+    this.shiftWidth      = Main.getIntProperty(
+					"jkcemu.texteditor.shift.width",
+					2 );
+    this.shiftUseTabs   = Main.getBooleanProperty(
+					"jkcemu.texteditor.shift.use_tabs",
+					true );
     Main.updIcon( this );
 
 
@@ -233,6 +245,22 @@ public class EditFrm extends BasicFrm implements
     mnuEdit.add( this.mnuEditTabToSpaces );
     mnuEdit.addSeparator();
 
+    this.mnuEditShiftIn = createJMenuItem(
+		"Einr\u00FCcken",
+		KeyStroke.getKeyStroke( KeyEvent.VK_I, Event.CTRL_MASK ) );
+    mnuEdit.add( this.mnuEditShiftIn );
+
+    this.mnuEditShiftOut = createJMenuItem(
+		"Herausr\u00FCcken",
+		KeyStroke.getKeyStroke(
+				KeyEvent.VK_I,
+				Event.CTRL_MASK | Event.SHIFT_MASK ) );
+    mnuEdit.add( this.mnuEditShiftOut );
+
+    this.mnuEditShiftWidth = createJMenuItem( "Einr\u00FCcktiefe..." );
+    mnuEdit.add( this.mnuEditShiftWidth );
+    mnuEdit.addSeparator();
+
     JMenu mnuEditUmlaut = new JMenu( "Deutsche Umlaute konvertieren" );
 
     this.mnuEditUmlautGerToUni = createJMenuItem(
@@ -253,9 +281,7 @@ public class EditFrm extends BasicFrm implements
 
     this.mnuEditFindNext = createJMenuItem(
 		"Weitersuchen",
-		KeyStroke.getKeyStroke(
-			KeyEvent.VK_F,
-			Event.CTRL_MASK | Event.SHIFT_MASK ) );
+		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
     mnuEdit.add( this.mnuEditFindNext );
 
     this.mnuEditReplace = createJMenuItem(
@@ -533,6 +559,18 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  public boolean getShiftUseTabs()
+  {
+    return this.shiftUseTabs;
+  }
+
+
+  public int getShiftWidth()
+  {
+    return this.shiftWidth;
+  }
+
+
   public static javax.swing.filechooser.FileFilter[] getTextFileFilters()
   {
     if( textFileFilters == null ) {
@@ -722,12 +760,24 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  public void setShiftUseTabs( boolean state )
+  {
+    this.shiftUseTabs = state;
+  }
+
+
+  public void setShiftWidth( int shiftWidth )
+  {
+    this.shiftWidth = shiftWidth;
+  }
+
+
   public void threadTerminated( Thread thread )
   {
     if( (thread != null) && (thread == this.prgThread) ) {
       this.prgThread = null;
       final JMenuItem mnuPrgCancel = this.mnuPrgCancel;
-      SwingUtilities.invokeLater(
+      EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -774,6 +824,7 @@ public class EditFrm extends BasicFrm implements
 
 	/* --- ChangeListener --- */
 
+  @Override
   public void stateChanged( ChangeEvent e )
   {
     if( e != null ) {
@@ -791,6 +842,7 @@ public class EditFrm extends BasicFrm implements
 
 	/* --- DropTargetListener --- */
 
+  @Override
   public void dragEnter( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -798,18 +850,21 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void dragExit( DropTargetEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void dragOver( DropTargetDragEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void drop( DropTargetDropEvent e )
   {
     File file = EmuUtil.fileDrop( this, e );
@@ -818,6 +873,7 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -827,6 +883,7 @@ public class EditFrm extends BasicFrm implements
 
 	/* --- FlavorListener --- */
 
+  @Override
   public void flavorsChanged( FlavorEvent e )
   {
     if( (this.clipboard != null) && (e.getSource() == this.clipboard) )
@@ -836,6 +893,19 @@ public class EditFrm extends BasicFrm implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
+  public boolean applySettings( Properties props, boolean resizable )
+  {
+    boolean rv = super.applySettings( props, resizable );
+    AbstractOptionsDlg dlg = this.prgOptionsDlg;
+    if( dlg != null ) {
+      dlg.settingsChanged();
+    }
+    return rv;
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -921,6 +991,18 @@ public class EditFrm extends BasicFrm implements
       else if( src == this.mnuEditTabToSpaces ) {
 	rv = true;
 	doEditTabToSpaces();
+      }
+      else if( src == this.mnuEditShiftIn ) {
+	rv = true;
+	doEditShift( false );
+      }
+      else if( src == this.mnuEditShiftOut ) {
+	rv = true;
+	doEditShift( true );
+      }
+      else if( src == this.mnuEditShiftWidth ) {
+	rv = true;
+	(new ReplyShiftWidthDlg( this )).setVisible( true );
       }
       else if( src == this.mnuEditUmlautGerToUni ) {
 	rv = true;
@@ -1010,6 +1092,7 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  @Override
   public boolean doClose()
   {
     boolean rv = true;
@@ -1031,6 +1114,7 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void lookAndFeelChanged()
   {
     if( this.mnuPopup != null )
@@ -1038,6 +1122,7 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  @Override
   protected boolean showPopup( MouseEvent e )
   {
     boolean   rv = false;
@@ -1050,6 +1135,7 @@ public class EditFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -1386,6 +1472,115 @@ public class EditFrm extends BasicFrm implements
 	    showConvResult( cnt );
 	    if( newCaretPos >= 0 )
 	      editText.setCaretPosition( newCaretPos );
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doEditShift( boolean shiftOut )
+  {
+    JTextArea textArea = getSelectedJTextArea();
+    if( textArea != null ) {
+      String text   = textArea.getText();
+      int    begPos = textArea.getSelectionStart();
+      int    endPos = textArea.getSelectionEnd();
+      if( endPos < begPos ) {
+	int m  = endPos;
+	endPos = begPos;
+	begPos = m;
+      }
+      if( text != null ) {
+	int len = text.length();
+	if( (begPos >= 0) && (begPos < len) ) {
+	  boolean hasSelection = (endPos > begPos);
+	  if( endPos < begPos ) {
+	    endPos = begPos;
+	  } else if( endPos > len ) {
+	    endPos = len;
+	  }
+	  int tabSize = textArea.getTabSize();
+	  if( tabSize < 1 ) {
+	    tabSize = 8;
+	  }
+	  // Anfang des markierten Bereichs auf den Zeilenanfang setzen
+	  while( begPos > 0 ) {
+	    if( text.charAt( begPos - 1 ) == '\n' ) {
+	      break;
+	    }
+	    --begPos;
+	  }
+	  /*
+	   * Ende des markierten Bereichs hinter das Zeilenende setzen;
+	   * Wenn das Ende der Markierung am Zeilenanfang steht
+	   * und Text markiert wurde,
+	   * muss der Markierungsanfang vor der aktuellen Zeile sein.
+	   * In dem Fall bedeutet das Markierungsende das Ende
+	   * der vorherigen Zeile.
+	   */
+	  boolean done = false;
+	  if( hasSelection && (endPos > 0) ) {
+	    if( text.charAt( endPos - 1 ) == '\n' ) {
+	      done = true;
+	    }
+	  }
+	  if( !done ) {
+	    while( endPos < len ) {
+	      if( text.charAt( endPos++ ) == '\n' ) {
+		break;
+	      }
+	    }
+	  }
+	  // markierten Text in Zeilen zerlegen und verarbeiten
+	  StringBuilder buf = new StringBuilder( 2 * len );
+	  int           pos = begPos;
+	  while( pos < endPos ) {
+	    int eol = text.indexOf( '\n', pos );
+	    if( (eol >= pos) && ((eol + 1) < len) ) {
+	      appendShiftedLine(
+			buf,
+			text.substring( pos, Math.min( eol + 1, endPos ) ),
+			tabSize,
+			shiftOut );
+	      pos = eol + 1;
+	    } else {
+	      if( endPos < (len - 1) ) {
+		appendShiftedLine(
+			buf,
+			text.substring( pos, endPos ),
+			tabSize,
+			shiftOut );
+	      } else {
+		appendShiftedLine(
+			buf,
+			text.substring( pos ),
+			tabSize,
+			shiftOut );
+	      }
+	      break;
+	    }
+	  }
+	  /*
+	   * Block ersetzen, aber nur, wenn er sich unterescheidet,
+	   * damit keine sinnlosen UndoableEdits erzeugt werden
+	   */
+	  String newStr = buf.toString();
+	  String oldStr = ((endPos + 1) < len ?
+				text.substring( begPos, endPos )
+				: text.substring( begPos ));
+	  if( !newStr.equals( oldStr ) ) {
+	    try {
+	      textArea.replaceRange( buf.toString(), begPos, endPos );
+	      if( hasSelection ) {
+		textArea.setCaretPosition( endPos );
+		textArea.setSelectionStart( begPos );
+		textArea.setSelectionEnd( begPos + buf.length() );
+	      } else {
+		textArea.setCaretPosition( begPos );
+	      }
+	    }
+	    catch( IllegalArgumentException ex ) {}
 	  }
 	}
       }
@@ -1732,10 +1927,13 @@ public class EditFrm extends BasicFrm implements
 	    forceOptionsDlg = true;
 	}
 	if( forceOptionsDlg || (options == null) ) {
-	  options = AsmOptionsDlg.showOptionsDlg(
+	  this.prgOptionsDlg = new AsmOptionsDlg(
 					this,
 					this.emuThread,
 					options );
+	  this.prgOptionsDlg.setVisible( true );
+	  options = this.prgOptionsDlg.getAppliedOptions();
+	  this.prgOptionsDlg = null;
 	}
 	if( options != null ) {
 	  editText.setPrgOptions( options );
@@ -1785,15 +1983,18 @@ public class EditFrm extends BasicFrm implements
 	  }
 	}
 	if( forceOptionsDlg || (basicOptions == null) ) {
-	  basicOptions = null;
-	  options      = BasicOptionsDlg.showOptionsDlg(
+	  basicOptions       = null;
+	  this.prgOptionsDlg = new BasicOptionsDlg(
 						this,
 						this.emuThread,
 						options );
+	  this.prgOptionsDlg.setVisible( true );
+	  options = this.prgOptionsDlg.getAppliedOptions();
 	  if( options != null ) {
 	    if( options instanceof BasicOptions )
 	      basicOptions = (BasicOptions) options;
 	  }
+	  this.prgOptionsDlg = null;
 	}
 	if( basicOptions != null ) {
 	  basicOptions.setPlatform( platform );
@@ -1853,6 +2054,59 @@ public class EditFrm extends BasicFrm implements
 
 
 	/* --- private Methoden --- */
+
+  private void appendShiftedLine(
+			StringBuilder buf,
+			String        line,
+			int           tabSize,
+			boolean       shiftOut )
+  {
+    // Anzahl der sichtbaren Leerstellen ermitteln
+    int len     = line.length();
+    int pos     = 0;
+    int nSpaces = 0;
+    while( pos < len ) {
+      char ch = line.charAt( pos );
+      if( ch == '\u0020' ) {
+	nSpaces++;
+	pos++;
+      } else if( ch == '\t' ) {
+	nSpaces += (tabSize - (nSpaces % tabSize));
+	pos++;
+      } else {
+	break;
+      }
+    }
+    if( shiftOut ) {
+      nSpaces -= this.shiftWidth;
+      if( nSpaces < 0 ) {
+	nSpaces = 0;
+      }
+    } else {
+      nSpaces += this.shiftWidth;
+    }
+    if( pos < len ) {
+      // Leerzeichen/Tabs einfuegen, aber nur bei gefuellten Zeilen
+      if( line.charAt( pos ) != '\n' ) {
+	if( this.shiftUseTabs ) {
+	  while( nSpaces >= tabSize ) {
+	    buf.append( (char) '\t' );
+	    nSpaces -= tabSize;
+	  }
+	}
+	for( int i = 0; i < nSpaces; i++ ) {
+	  buf.append( (char) '\u0020' );
+	}
+      }
+      // Rest der Zeile anhaengen
+      if( pos > 0 ) {
+	buf.append( line.substring( pos ) );
+      } else {
+	buf.append( line );
+      }
+    }
+  }
+
 
   private JTextArea createJTextArea()
   {

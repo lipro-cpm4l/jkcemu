@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,7 @@ package jkcemu.programming.assembler;
 import java.lang.*;
 
 
-public class AsmLabel implements Comparable<AsmLabel>
+public class AsmLabel implements /*Comparable<AsmLabel>,*/ jkcemu.tools.Label
 {
   private String labelName;
   private String hex16String;
@@ -26,18 +26,6 @@ public class AsmLabel implements Comparable<AsmLabel>
   }
 
 
-  public String getLabelName()
-  {
-    return this.labelName;
-  }
-
-
-  public int getLabelValue()
-  {
-    return this.labelValue;
-  }
-
-
   public void setLabelValue( int value )
   {
     this.labelValue = value;
@@ -47,35 +35,33 @@ public class AsmLabel implements Comparable<AsmLabel>
   public String toHex16String()
   {
     if( this.hex16String == null ) {
-      StringBuilder buf = new StringBuilder( 4 );
-      appendHexDigit( buf, this.labelValue >> 12 );
-      appendHexDigit( buf, this.labelValue >> 8 );
-      appendHexDigit( buf, this.labelValue >> 4 );
-      appendHexDigit( buf, this.labelValue );
-      this.hex16String = buf.toString();
+      this.hex16String = String.format( "%04X", this.labelValue );
     }
     return this.hex16String;
   }
 
 
+	/* --- jkcemu.tools.Label --- */
+
+  @Override
+  public String getLabelName()
+  {
+    return this.labelName;
+  }
+
+
+  @Override
+  public int getLabelValue()
+  {
+    return this.labelValue;
+  }
+
+
 	/* --- Comparable --- */
 
-  public int compareTo( AsmLabel label )
+  @Override
+  public int compareTo( jkcemu.tools.Label label )
   {
-    return label != null ? (this.labelValue - label.labelValue) : -1;
-  }
-
-
-	/* --- private Methoden --- */
-
-  private static void appendHexDigit( StringBuilder buf, int value )
-  {
-    value &= 0x0F;
-    if( value < 10 ) {
-      buf.append( (char) (value + '0') );
-    } else {
-      buf.append( (char) (value - 10 + 'A') );
-    }
+    return label != null ? (this.labelValue - label.getLabelValue()) : -1;
   }
 }
-

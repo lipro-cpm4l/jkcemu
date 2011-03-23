@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -144,7 +144,7 @@ public class BasicFrm extends JFrame implements
 
   public String getSettingsPrefix()
   {
-    return "jkcemu." + getClass().getName();
+    return getClass().getName();
   }
 
 
@@ -161,7 +161,7 @@ public class BasicFrm extends JFrame implements
    */
   public void lookAndFeelChanged()
   {
-    // empty
+    // leer
   }
 
 
@@ -234,7 +234,7 @@ public class BasicFrm extends JFrame implements
   /*
    * Die Methode schaltet den Warte-Cursor ein bzw. aus.
    */
-  protected void setWaitCursor( boolean state )
+  public void setWaitCursor( boolean state )
   {
     Component c = getGlassPane();
     if( c != null ) {
@@ -247,6 +247,7 @@ public class BasicFrm extends JFrame implements
 
 	/* --- ActionListener --- */
 
+  @Override
   public void actionPerformed( ActionEvent e )
   {
     doActionInternal( e );
@@ -255,28 +256,38 @@ public class BasicFrm extends JFrame implements
 
 	/* --- MouseListener --- */
 
+  @Override
   public void mouseClicked( MouseEvent e )
   {
-    if( showPopupInternal( e ) )
+    if( showPopupInternal( e ) ) {
       e.consume();
+    } else if( e.getClickCount() > 1 ) {
+      if( doActionInternal( e ) ) {
+	e.consume();
+      }
+    }
   }
 
+  @Override
   public void mouseEntered( MouseEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void mouseExited( MouseEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void mousePressed( MouseEvent e )
   {
     if( showPopupInternal( e ) )
       e.consume();
   }
 
+  @Override
   public void mouseReleased( MouseEvent e )
   {
     if( showPopupInternal( e ) )
@@ -286,62 +297,73 @@ public class BasicFrm extends JFrame implements
 
 	/* --- KeyListener --- */
 
+  @Override
   public void keyPressed( KeyEvent e )
   {
     if( e != null ) {
       if( e.getKeyCode() == KeyEvent.VK_ENTER ) {
-	if( doActionInternal( e ) )
+	if( doActionInternal( e ) ) {
 	  e.consume();
+	}
       }
     }
   }
 
+  @Override
   public void keyReleased( KeyEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void keyTyped( KeyEvent e )
   {
-    // empty
+    // leer
   }
 
 
 	/* --- WindowListener --- */
 
+  @Override
   public void windowActivated( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowClosing( WindowEvent e )
   {
     doClose();
   }
 
+  @Override
   public void windowDeactivated( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowDeiconified( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowIconified( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
-    // empty
+    // leer
   }
 
 
@@ -378,11 +400,13 @@ public class BasicFrm extends JFrame implements
 
   private boolean showPopupInternal( MouseEvent e )
   {
+    boolean rv = false;
     if( e != null ) {
-      if( e.isPopupTrigger() )
-	return showPopup( e );
+      if( e.isPopupTrigger() ) {
+	rv = showPopup( e );
+      }
     }
-    return false;
+    return rv;
   }
 }
 

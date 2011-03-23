@@ -1,47 +1,77 @@
 <html>
 <body>
-  <h1>Hex-Editor</h1>
-    Der Hex-Editor erm&ouml;glicht Ihnen
-    das Ansehen und Ver&auml;ndern von Dateien in ihrer bin&auml;ren Form.
-  <br/><br/>
-    Nach dem Start befinden Sie sich im Modus <em>Neue Datei</em>,
-    d.h., Sie k&ouml;nnen durch <em>Bytes am Ende anh&auml;ngen</em>
-    und anschlie&szlig;endem Speichern eine neue Datei anlegen.
+ <h1>Hex-Editor</h1>
+  Der Hex-Editor erm&ouml;glicht Ihnen
+  das Ansehen und Ver&auml;ndern von Dateien in ihrer bin&auml;ren Form.
+ <br/><br/>
+  Nach dem Start befinden Sie sich im Modus <em>Neue Datei</em>,
+  d.h., Sie k&ouml;nnen durch <em>Bytes am Ende anh&auml;ngen</em>
+  und anschlie&szlig;endem Speichern eine neue Datei anlegen.
+ <br/><br/>
+
+ <h2>1. Funktionen</h2>
+  Im Men&uuml; <em>Datei</em> finden Sie die Funktionen zum &Ouml;ffnen
+  und Speichern der Datei.
+  Das Ver&auml;ndern des Dateiinhalts erfolgt &uuml;ber die Funktionen
+  im Men&uuml; <em>Bearbeiten</em>.
+  Viele Funktionen erfordern die Auswahl eines Bytes,
+  auf das bzw. ab dem die Funktion wirkt
+  (siehe weiter unten den Abschnitt <em>Zu einer Position springen</em>).
+  Manche Funktionen gestatten auch die Auswahl mehrerer Bytes
+  (siehe weiter unten den Abschnitt <em>Bereich ausw&auml;hlen</em>).
+ <br/><br/>
+  Die Eingabe der Bytes erfolgt in einem separaten Dialogfenster,
+  in dem Sie auch die Form angeben,
+  in der die Bytes eingegeben werden sollen.
+  Wenn Sie als Form <em>16-Bit-Dezimalzahlen</em> oder
+  <em>32-Bit-Dezimalzahlen</em> w&auml;hlen,
+  wird die Umschaltoption zwischen <em>Little Endian</em> und
+  <em>Big Endian</em> aktiv.
+  <em>Little Endian</em> bedeutet, dass das niederwertige Byte vor dem
+  h&ouml;herwertigen steht.
+  Das ist die Byte-Anordnung, die auch bei den emulierten Systemen
+  zu finden ist.
+  Bei <em>Big Endian</em> kommt dagegen das h&ouml;herwertige Byte
+  vor dem niederwertigen.
+ <br/><br/>
+  Mit dem Men&uuml;punkt <em>Datei am Ende anh&auml;ngen</em>
+  haben Sie die M&ouml;glichkeit,
+  mehrere Dateien zu einer zusammenzuketten.
+  Umgekehrt k&ouml;nnen Sie mit <em>Ausgew&auml;hlte Bytes speichern...</em>
+  und anschlie&szlig;endem <em>Ausgew&auml;hlte Bytes entfernen</em>
+  die ge&ouml;ffnete Datei in mehrere zerlegen.
+ <br/><br/>
+
+ <h2>2. Zu einer Position springen</h2>
+  Mit einem Mausklick setzen Sie den Cursor auf die gew&uuml;nschte
+  Position.
+  Sie k&ouml;nnen aber auch in einem der beiden Felder im Bereich
+  <em>Cursor-Position</em> die gew&uuml;nschte Position eingeben
+  und <em>Enter</em> dr&uuml;cken.
+ <br/><br/>
+
+ <h2>3. Bereich ausw&auml;hlen</h2>
+  Einen Bereich w&auml;hlen Sie aus durch Ziehen der Maus
+  mit gedr&uuml;ckter Maustaste
+  oder durch Benutzung der Cursor-Tasten bei gedr&uuml;ckter Shift-Taste.
+ <br/><br/>
+  Eine andere M&ouml;glichkeit, die vorallem bei der Auswahl von
+  gr&ouml;&szlig;eren Bereichen sinnvoll ist,
+  bietet sich durch das Merken einer Position an:
+  Zuerst klicken Sie auf das erste der auszuw&auml;hlenden Bytes
+  und rufen den Men&uuml;eintrag <em>Position merken</em> auf.
+  Danach springen Sie zum letzten zu markierenden Byte
+  und benutzen den Men&uuml;eintrag
+  <em>Bis zur gemerkten Position ausw&auml;hlen</em>.
   <br/><br/>
 
-  <h2>1. Funktionen</h2>
-    Im Men&uuml; <em>Datei</em> finden Sie die Funktionen zum &Ouml;ffnen
-    und Speichern der Datei.
-    Das Ver&auml;ndern des Dateiinhalts erfolgt &uuml;ber die Funktionen
-    im Men&uuml; <em>Bearbeiten</em>.
-    F&uuml;r das Einf&uuml;gen, &Uuml;berschreiben und L&ouml;schen
-    von Bytes m&uuml;ssen Sie den Cursor auf die gew&uuml;nschte Position
-    setzen.
-    F&uuml;r das L&ouml;schen k&ouml;nnen Sie auch mehrere Bytes markieren,
-    entweder durch Ziehen der Maus mit gedr&uuml;ckter Maustaste
-    oder durch Benutzung der Cursor-Tasten bei gedr&uuml;ckter Shift-Taste.
-  <br/><br/>
-    Die Eingabe der Bytes erfolgt in einem separaten Dialogfenster,
-    in dem Sie auch die Form angeben,
-    in der die Bytes eingegeben werden sollen.
-    Wenn Sie als Form <em>16-Bit-Dezimalzahlen</em> oder
-    <em>32-Bit-Dezimalzahlen</em> w&auml;hlen,
-    wird die Umschaltoption zwischen <em>Little Endian</em> und
-    <em>Big Endian</em> aktiv.
-    <em>Little Endian</em> bedeutet, dass das niederwertige Byte vor dem
-    h&ouml;herwertigen steht.
-    Das ist die Byte-Anordnung, die auch bei den emulierten Systemen
-    zu finden ist.
-    Bei <em>Big Endian</em> kommt dagegen das h&ouml;herwertige Byte
-    vor dem niederwertigen.
-  <br/><br/>
 
-  <h2>2. Zu einer Position springen</h2>
-    Mit einem Mausklick setzen Sie den Cursor auf die gew&uuml;nschte
-    Position.
-    Sie k&ouml;nnen aber auch in einem der beiden Felder im Bereich
-    <em>Cursor-Position</em> die gew&uuml;nschte Position eingeben
-    und <em>Enter</em> dr&uuml;cken.
+ <h2>4. Ausgew&auml;hlte Bytes kopieren</h2>
+  Mit dieser Funktion, die Sie im Men&uuml; <em>Bearbeiten</em> finden,
+  k&ouml;nnen Sie die ausgew&auml;hlten Bytes als Hex-String
+  in die Zwischenablage kopieren
+  und von da aus dann z.B. in den Dialog zur Eingabe von Bytes
+  wieder einf&uuml;gen.
 </body>
 </html>
 
