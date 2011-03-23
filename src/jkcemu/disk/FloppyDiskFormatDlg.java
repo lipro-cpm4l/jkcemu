@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,7 @@ package jkcemu.disk;
 import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.lang.*;
-import java.util.EventObject;
+import java.util.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.base.BasicDlg;
@@ -19,15 +19,19 @@ import jkcemu.base.BasicDlg;
 
 public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 {
-  public enum Flag {
-		READONLY,
-		PHYS_FORMAT,
-		SYSTEM_TRACKS,
-		BLOCK_SIZE,
-		BLOCK_NUM_SIZE,
-		DIR_BLOCKS,
-		APPLY_READONLY,
-		AUTO_REFRESH };
+  public static enum Flag {
+			READONLY,
+			PHYS_FORMAT,
+			SYSTEM_TRACKS,
+			BLOCK_SIZE,
+			BLOCK_NUM_SIZE,
+			DIR_BLOCKS,
+			APPLY_READONLY,
+			AUTO_REFRESH,
+			FORCE_LOWERCASE };
+
+  private static boolean lastApplyReadOnly  = false;
+  private static boolean lastForceLowerCase = true;
 
   private boolean          approved;
   private FloppyDiskFormat selectedFmt;
@@ -35,6 +39,7 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
   private JCheckBox        btnReadOnly;
   private JCheckBox        btnApplyReadOnly;
   private JCheckBox        btnAutoRefresh;
+  private JCheckBox        btnForceLowerCase;
   private JSpinner         spinnerSysTracks;
   private JComboBox        comboBlockSize;
   private JRadioButton     btnBlockNum8Bit;
@@ -109,18 +114,6 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
       gbc.gridy++;
     } else {
       this.comboFmt = null;
-    }
-
-    // Schreibschutz
-    if( containsFlag( flags, Flag.READONLY ) ) {
-      this.btnReadOnly = new JCheckBox(
-				"Schreibschutz (Nur-Lese-Modus)",
-				true );
-      gbc.anchor = GridBagConstraints.WEST;
-      add( this.btnReadOnly, gbc );
-      gbc.gridy++;
-    } else {
-      this.btnReadOnly = null;
     }
 
     // Systemspuren
@@ -206,31 +199,71 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
       updDirSizeUnitLabel();
     }
 
-    // Schreibschutzattribut
-    if( containsFlag( flags, Flag.APPLY_READONLY ) ) {
-      this.btnApplyReadOnly = new JCheckBox(
+    // Checkboxen
+    java.util.List<JCheckBox> checkBoxes = null;
+    this.btnApplyReadOnly                = null;
+    this.btnReadOnly                     = null;
+    this.btnAutoRefresh                  = null;
+    this.btnForceLowerCase               = null;
+    if( flags != null ) {
+      checkBoxes = new ArrayList<JCheckBox>( 4 );
+      for( int i = 0; i < flags.length; i++ ) {
+	if( flags[ i ] != null ) {
+	  switch( flags[ i ] ) {
+	    case APPLY_READONLY:
+	      this.btnApplyReadOnly = new JCheckBox(
 				"Schreibschutzattribut anwenden",
-				false );
-      gbc.anchor    = GridBagConstraints.CENTER;
-      gbc.gridwidth = GridBagConstraints.REMAINDER;
-      add( this.btnApplyReadOnly, gbc );
-      gbc.gridy++;
-    } else {
-      this.btnApplyReadOnly = null;
-    }
+				lastApplyReadOnly );
+	      checkBoxes.add( this.btnApplyReadOnly );
+	      break;
 
-    // Automatische Aktualisierung
-    if( containsFlag( flags, Flag.AUTO_REFRESH ) ) {
-      this.btnAutoRefresh = new JCheckBox(
+	    case READONLY:
+	      this.btnReadOnly = new JCheckBox(
+				"Schreibschutz (Nur-Lese-Modus)",
+				true );
+	      checkBoxes.add( this.btnReadOnly );
+	      break;
+
+	    case AUTO_REFRESH:
+	      this.btnAutoRefresh = new JCheckBox(
 				"Automatisch aktualisieren",
 				false );
-      gbc.anchor    = GridBagConstraints.CENTER;
-      gbc.gridwidth = GridBagConstraints.REMAINDER;
-      add( this.btnAutoRefresh, gbc );
-      gbc.gridy++;
-    } else {
-      this.btnAutoRefresh = null;
+	      checkBoxes.add( this.btnAutoRefresh );
+	      break;
+
+	    case FORCE_LOWERCASE:
+	      this.btnForceLowerCase = new JCheckBox(
+				"Dateinamen klein schreiben",
+				lastForceLowerCase );
+	      checkBoxes.add( this.btnForceLowerCase );
+	      break;
+	  }
+	}
+      }
     }
+    if( checkBoxes != null ) {
+      int n = checkBoxes.size();
+      if( n > 0 ) {
+	if( n > 1 ) {
+	  gbc.anchor = GridBagConstraints.WEST;
+	} else {
+	  gbc.anchor = GridBagConstraints.CENTER;
+	}
+	gbc.insets.bottom = 0;
+	gbc.gridwidth     = GridBagConstraints.REMAINDER;
+	for( int i = 0; i < n; i++ ) {
+	  if( i == 1 ) {
+	    gbc.insets.top = 0;
+	  }
+	  if( i == (n - 1) ) {
+	    gbc.insets.bottom = 5;
+	  }
+	  add( checkBoxes.get( i ), gbc );
+	  gbc.gridy++;
+	}
+      }
+    }
+    updReadOnlyDependingFlds();
 
     // Knoepfe
     JPanel panelBtns = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
@@ -261,6 +294,9 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 	this.comboBlockSize.addActionListener( this );
       }
     }
+    if( this.btnReadOnly != null ) {
+      this.btnReadOnly.addActionListener( this );
+    }
 
 
     // Fenstergroesse und -position
@@ -280,9 +316,13 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
   public boolean getAutoRefresh()
   {
-    return this.btnAutoRefresh != null ?
-				this.btnAutoRefresh.isSelected()
-				: false;
+    boolean state = false;
+    if( this.btnAutoRefresh != null ) {
+      if( this.btnAutoRefresh.isEnabled() ) {
+	state = this.btnAutoRefresh.isSelected();
+      }
+    }
+    return state;
   }
 
 
@@ -312,6 +352,14 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
   public int getDirBlocks()
   {
     return getIntValue( this.spinnerDirBlocks );
+  }
+
+
+  public boolean getForceLowerCase()
+  {
+    return this.btnForceLowerCase != null ?
+				this.btnForceLowerCase.isSelected()
+				: false;
   }
 
 
@@ -375,6 +423,13 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
   }
 
 
+  public void setForceLowerCase( boolean state )
+  {
+    if( this.btnForceLowerCase != null )
+      this.btnForceLowerCase.setSelected( state );
+  }
+
+
   public void setSystemTracks( int value )
   {
     if( this.spinnerSysTracks != null ) {
@@ -394,6 +449,7 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
 	/* --- ChangeListener --- */
 
+  @Override
   public void stateChanged( ChangeEvent e )
   {
     if( e.getSource() == this.spinnerDirBlocks )
@@ -403,6 +459,7 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -423,6 +480,12 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 	    this.approved = true;
 	  }
 	  if( this.approved ) {
+	    if( this.btnApplyReadOnly != null ) {
+	      lastApplyReadOnly = this.btnApplyReadOnly.isSelected();
+	    }
+	    if( this.btnForceLowerCase != null ) {
+	      lastForceLowerCase = this.btnForceLowerCase.isSelected();
+	    }
 	    doClose();
 	  }
 	}
@@ -433,6 +496,10 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 	else if( src == this.comboBlockSize ) {
 	  rv = true;
 	  updDirSizeUnitLabel();
+	}
+	else if( src == this.btnReadOnly ) {
+	  rv = true;
+	  updReadOnlyDependingFlds();
 	}
       }
     }
@@ -445,6 +512,7 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
    * wird der Focus auf den OK-Knopf gesetzt,
    * damit man einfach Enter druecken kann.
    */
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( (e.getWindow() == this)
@@ -508,6 +576,20 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 	buf.append( " Eintr\u00E4ge)" );
       }
       this.labelDirSizeUnit.setText( buf.toString() );
+    }
+  }
+
+
+  private void updReadOnlyDependingFlds()
+  {
+    if( this.btnReadOnly != null ) {
+      boolean state = this.btnReadOnly.isSelected();
+      if( this.btnAutoRefresh != null ) {
+	this.btnAutoRefresh.setEnabled( state );
+      }
+      if( this.btnForceLowerCase != null ) {
+	this.btnForceLowerCase.setEnabled( !state );
+      }
     }
   }
 }

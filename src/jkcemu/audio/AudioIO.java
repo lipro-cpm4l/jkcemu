@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -139,6 +139,14 @@ public abstract class AudioIO
   }
 
 
+  public abstract AudioFormat startAudio(
+					Mixer mixer,
+					int   speedKHz,
+					int   sampleRate );
+
+  public abstract void stopAudio();
+
+
   protected boolean supportsMonitor()
   {
     return false;
@@ -166,13 +174,5 @@ public abstract class AudioIO
       this.monitorPos++;
     }
   }
-
-
-  public abstract AudioFormat startAudio(
-					Mixer mixer,
-					int   speedKHz,
-					int   sampleRate );
-
-  public abstract void stopAudio();
 }
 

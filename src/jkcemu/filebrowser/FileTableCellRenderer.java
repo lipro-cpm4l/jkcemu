@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -33,6 +33,7 @@ public class FileTableCellRenderer
 
 	/* --- TableCellRenderer --- */
 
+  @Override
   public Component getTableCellRendererComponent(
 					JTable  table,
 					Object  value,

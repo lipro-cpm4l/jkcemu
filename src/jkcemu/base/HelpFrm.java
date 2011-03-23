@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -136,6 +136,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 
 	/* --- HyperlinkListener --- */
 
+  @Override
   public void hyperlinkUpdate( HyperlinkEvent e )
   {
     if( e.getEventType() == HyperlinkEvent.EventType.ACTIVATED )
@@ -145,6 +146,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;

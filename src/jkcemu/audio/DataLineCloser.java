@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -40,6 +40,7 @@ public class DataLineCloser extends Thread
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void run()
   {
     if( this.dataLine != null ) {
@@ -67,6 +68,7 @@ public class DataLineCloser extends Thread
 
   private DataLineCloser( DataLine dataLine )
   {
+    super( "JKCEMU data line closer" );
     this.dataLine = dataLine;
   }
 }

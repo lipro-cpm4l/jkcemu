@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,8 +19,8 @@ import z80emu.*;
 
 public abstract class AudioOut extends AudioIO
 {
-  public static final int PHASE0_VALUE = (-100 & 0xFF);
-  public static final int PHASE1_VALUE = 100;
+  public static final int PHASE0_VALUE = 35;
+  public static final int PHASE1_VALUE = 220;
 
   protected EmuThread emuThread;
   protected boolean   enabled;
@@ -38,7 +38,7 @@ public abstract class AudioOut extends AudioIO
   }
 
 
-  public boolean isLoudspeakerEmulationEnabled()
+  public boolean isSoundOutEnabled()
   {
     return false;
   }
@@ -49,7 +49,13 @@ public abstract class AudioOut extends AudioIO
 
   protected void writeSamples( int nSamples, byte value )
   {
-    // standardmaessig nicht unterstuetzt, deshalb leere Methode
+    /*
+     * Die Moeglichkeit, beliebige Audio-Werte auszugeben,
+     * wird nicht allgemein unterstuetzt.
+     * Deshalb ist die Methode hier leer.
+     * Sie muss in der abgeleiteten Klasse ueberschrieben werden,
+     * wo dieses Feature unterstuetzt werden soll.
+     */
   }
 
 

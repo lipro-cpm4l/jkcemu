@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -71,13 +71,14 @@ public class AboutDlg extends BasicDlg
     gbcGeneral.insets.top = 0;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "...ein in Java geschriebener Kleincomputer-Emulator" ),
+	new JLabel( "...ein in Java geschriebener"
+				+ " DDR-Kleincomputer-Emulator" ),
 	gbcGeneral );
 
     gbcGeneral.insets.top = 12;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "(c) 2008-2010 Jens M\u00FCller" ),
+	new JLabel( "(c) 2008-2011 Jens M\u00FCller" ),
 	gbcGeneral );
 
     gbcGeneral.gridy++;
@@ -98,7 +99,7 @@ public class AboutDlg extends BasicDlg
 
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "Lesen Sie dazu bitte auch die Hinweise zu den"
+	new JLabel( "Lesen Sie dazu bitte die Hinweise zu den"
 			+ " Urheberschaften!" ),
 	gbcGeneral );
     gbcGeneral.insets.top = 12;
@@ -167,6 +168,7 @@ public class AboutDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;

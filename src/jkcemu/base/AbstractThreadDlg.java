@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,12 +30,15 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
   private JButton      btnClose;
 
 
-  protected AbstractThreadDlg( Window owner, boolean withProgressBar )
+  protected AbstractThreadDlg(
+			Window  owner,
+			String  threadName,
+			boolean withProgressBar )
   {
     super( owner, Dialog.ModalityType.MODELESS );
     this.autoClose  = true;
     this.canceled   = false;
-    this.thread     = new Thread( this );
+    this.thread     = new Thread( this, threadName );
     this.errorCount = 0;
 
 
@@ -89,7 +92,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
 
     // Starten des Threads veranlassen
     final Thread thread = this.thread;
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -127,7 +130,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
   {
     if( !this.canceled ) {
       final JTextArea fld = this.fldLog;
-      SwingUtilities.invokeLater(
+      EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -178,10 +181,11 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
 
 	/* --- Runnable --- */
 
+  @Override
   public void run()
   {
     doProgress();
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -194,6 +198,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public boolean doAction( EventObject e )
   {
     boolean matched = false;

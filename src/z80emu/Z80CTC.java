@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -15,15 +15,15 @@ import java.util.Collection;
 
 public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 {
-  private Z80CPU                     cpu;
+  private String                     title;
   private Collection<Z80CTCListener> listeners;
   private int                        interruptVector;
   private Timer[]                    timer;
 
 
-  public Z80CTC( Z80CPU cpu )
+  public Z80CTC( String title )
   {
-    this.cpu             = cpu;
+    this.title           = title;
     this.listeners       = null;
     this.interruptVector = 0;
     this.timer           = new Timer[ 4 ];
@@ -79,10 +79,16 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-  public synchronized void systemUpdate( int pulses )
+  /*
+   * Diese Methode stellt eine Verbindung
+   * vom Ausgang fromTimerNum zum Eingang toTimerNum her.
+   */
+  public void setTimerConnection( int fromTimerNum, int toTimerNum )
   {
-    for( int i = 0; i < this.timer.length; i++ )
-      this.timer[ i ].systemUpdate( pulses );
+    if( (fromTimerNum >= 0) && (fromTimerNum < this.timer.length) ) {
+      this.timer[ fromTimerNum ].toTimer    = this.timer[ toTimerNum ];
+      this.timer[ toTimerNum ].fromTimerNum = fromTimerNum;
+    }
   }
 
 
@@ -109,13 +115,100 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
 	/* --- Z80InterruptSource --- */
 
-  public synchronized int interruptAccepted()
+  @Override
+  public void appendStatusHTMLTo( StringBuilder buf )
+  {
+    boolean showISR = false;
+    buf.append( "<table border=\"1\">\n"
+	+ "<tr><th></th><th>Kanal&nbsp;0</th><th>Kanal&nbsp;1</th>"
+	+ "<th>Kanal&nbsp;2</th><th>Kanal&nbsp;3</th></tr>\n"
+	+ "<tr><td>Status:</td>" );
+    for( int i = 0; i < this.timer.length; i++ ) {
+      buf.append( "<td>" );
+      if( this.timer[ i ].running ) {
+	buf.append( "l&auml;uft" );
+      } else if( this.timer[ i ].waitForTrigger ) {
+	buf.append( "wartet auf Trigger-Impuls" );
+      } else {
+	buf.append( "angehalten" );
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Vorteiler:</td>" );
+    for( int i = 0; i < this.timer.length; i++ ) {
+      buf.append( "<td>" );
+      if( this.timer[ i ].extMode ) {
+	buf.append( "nicht aktiv" );
+      } else {
+	buf.append( this.timer[ i ].preCounter );
+	if( this.timer[ i ].pre256 ) {
+	  buf.append( "/256" );
+	} else {
+	  buf.append( "/16" );
+	}
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Z&auml;hler:</td>" );
+    for( int i = 0; i < this.timer.length; i++ ) {
+      buf.append( "<td>" );
+      buf.append( this.timer[ i ].counter & 0xFF );
+      buf.append( (char) '/' );
+      buf.append( this.timer[ i ].counterInit );
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Takt:</td>" );
+    for( int i = 0; i < this.timer.length; i++ ) {
+      buf.append( "<td>" );
+      if( this.timer[ i ].extMode ) {
+	if( this.timer[ i ].fromTimerNum >= 0 ) {
+	  buf.append( "Kanal " );
+	  buf.append( this.timer[ i ].fromTimerNum );
+	} else {
+	  buf.append( "extern" );
+	}
+      } else {
+	buf.append( "Systemtakt" );
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Interrupt-Status:</td>" );
+    for( int i = 0; i < this.timer.length; i++ ) {
+      buf.append( "<td>" );
+      if( this.timer[ i ].interruptAccepted ) {
+	buf.append( "angenommen (wird gerade bedient)" );
+	showISR = true;
+      } else if( this.timer[ i ].interruptRequested ) {
+	buf.append( "angefordert" );
+	showISR = true;
+      } else if( this.timer[ i ].interruptEnabled ) {
+	buf.append( "freigegeben" );
+	showISR = true;
+      } else {
+	buf.append( "gesperrt" );
+      }
+      buf.append( "</td>" );
+    }
+    buf.append( "</tr>\n"
+	+ "<tr><td>Interrupt-Vektor:</td><td colspan=\"4\">" );
+    buf.append( String.format( "%02Xh", this.interruptVector ) );
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
+  public synchronized int interruptAccept()
   {
     int rv = 0;
     for( int i = 0; i < this.timer.length; i++ ) {
       if( this.timer[ i ].interruptRequested ) {
 	this.timer[ i ].interruptRequested = false;
-	this.timer[ i ].interruptPending   = true;
+	this.timer[ i ].interruptAccepted  = true;
 	rv = this.interruptVector + (i * 2);
 	break;
       }
@@ -124,31 +217,34 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-  public synchronized void interruptFinished()
+  @Override
+  public synchronized void interruptFinish()
   {
     for( int i = 0; i < this.timer.length; i++ ) {
-      if( this.timer[ i ].interruptPending ) {
-	this.timer[ i ].interruptPending = false;
+      if( this.timer[ i ].interruptAccepted ) {
+	this.timer[ i ].interruptAccepted = false;
 	break;
       }
     }
   }
 
 
-  public boolean isInterruptPending()
+  @Override
+  public boolean isInterruptAccepted()
   {
-    return this.timer[ 0 ].interruptPending
-		|| this.timer[ 1 ].interruptPending
-		|| this.timer[ 2 ].interruptPending
-		|| this.timer[ 3 ].interruptPending;
+    return this.timer[ 0 ].interruptAccepted
+		|| this.timer[ 1 ].interruptAccepted
+		|| this.timer[ 2 ].interruptAccepted
+		|| this.timer[ 3 ].interruptAccepted;
   }
 
 
+  @Override
   public boolean isInterruptRequested()
   {
     boolean rv = false;
     for( int i = 0; i < this.timer.length; i++ ) {
-      if( this.timer[ i ].interruptPending ) {
+      if( this.timer[ i ].interruptAccepted ) {
 	break;
       }
       if( this.timer[ i ].interruptEnabled
@@ -162,6 +258,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
+  @Override
   public void reset()
   {
     for( int i = 0; i < this.timer.length; i++ )
@@ -171,9 +268,23 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
 	/* --- Z80TStatesListener --- */
 
+  @Override
   public synchronized void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
-    systemUpdate( tStates );
+    if( tStates > 0 ) {
+      for( int i = 0; i < this.timer.length; i++ ) {
+	this.timer[ i ].systemUpdate( tStates );
+      }
+    }
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public String toString()
+  {
+    return this.title;
   }
 
 
@@ -182,6 +293,8 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   private class Timer
   {
     private int     timerNum;
+    private int     fromTimerNum;
+    private Timer   toTimer;
     private int     ignoreInternalPulses;
     private int     counterInit;
     private int     counter;
@@ -191,34 +304,37 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     private boolean slope;
     private boolean waitForTrigger;
     private boolean interruptEnabled;
-    private boolean interruptPending;
+    private boolean interruptAccepted;
     private boolean interruptRequested;
     private boolean nextIsCounterValue;
     private boolean running;
     private Boolean lastInSlope;
 
 
-    public Timer( int timerNum )
+    private Timer( int timerNum )
     {
-      this.timerNum = timerNum;
+      this.timerNum     = timerNum;
+      this.fromTimerNum = -1;
+      this.toTimer      = null;
       reset();
     }
 
 
-    public boolean expectsCounterValue()
+    private boolean expectsCounterValue()
     {
       return this.nextIsCounterValue;
     }
 
 
-    public int externalUpdate( boolean slope )
+    private int externalUpdate( boolean slope )
     {
       int rv = 0;
       if( slope == this.slope ) {
         Boolean lastInSlope = this.lastInSlope;
         if( lastInSlope != null ) {
-	  if( slope != lastInSlope.booleanValue() )
+	  if( slope != lastInSlope.booleanValue() ) {
 	    rv = externalUpdate2( 1 );
+	  }
 	}
       }
       this.lastInSlope = slope ? Boolean.TRUE : Boolean.FALSE;
@@ -226,20 +342,20 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     }
 
 
-    public int externalUpdate( int pulses )
+    private int externalUpdate( int pulses )
     {
       this.lastInSlope = null;
       return externalUpdate2( pulses );
     }
 
 
-    public int read()
+    private int read()
     {
       return this.counter & 0xFF;
     }
 
 
-    public void reset()
+    private void reset()
     {
       this.ignoreInternalPulses = 0;
       this.counterInit          = 0x100;
@@ -250,7 +366,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
       this.slope                = false;
       this.waitForTrigger       = false;
       this.interruptEnabled     = false;
-      this.interruptPending     = false;
+      this.interruptAccepted    = false;
       this.interruptRequested   = false;
       this.nextIsCounterValue   = false;
       this.running              = false;
@@ -258,23 +374,21 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     }
 
 
-    public void systemUpdate( int pulses )
+    private void systemUpdate( int pulses )
     {
-      if( pulses > 0 ) {
-	if( pulses < this.ignoreInternalPulses ) {
-	  this.ignoreInternalPulses -= pulses;
-	} else {
-	  pulses -= this.ignoreInternalPulses;
-	  this.ignoreInternalPulses = 0;
-	  if( (pulses > 0) && !this.extMode ) {
-	    updCounter( updPreCounter( pulses ) );
-	  }
+      if( pulses > this.ignoreInternalPulses ) {
+	pulses -= this.ignoreInternalPulses;
+	this.ignoreInternalPulses = 0;
+	if( !this.extMode ) {
+	  updCounter( updPreCounter( pulses ) );
 	}
+      } else {
+	this.ignoreInternalPulses -= pulses;
       }
     }
 
 
-    public void write( int value )
+    private void write( int value )
     {
       value &= 0xFF;
       if( this.nextIsCounterValue ) {
@@ -284,12 +398,13 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	  /*
 	   * Die Taktzyklen des Ausgabebefehls,
 	   * mit dem der CTC-Kanal programmiert wird,
-	   * duerfen nicht alle zum Herunterzaehlen des Kanals
+	   * duerfen nicht zum Herunterzaehlen des Kanals
 	   * verwendet werden.
-	   * Aus diesem Grund werden einige der naechsten
-	   * internen Taktzyklen ignoriert.
+	   * Aus diesem Grund werden einige Taktzyklen ignoriert.
+	   * Der konkrete Wert wurde der Einfachheit halber
+	   * durch praktische Tests ermittelt.
 	   */
-	  this.ignoreInternalPulses = 8;
+	  this.ignoreInternalPulses = 16;
 	  this.preCounter           = 0;
 	  this.counter              = this.counterInit;
 	  this.running              = true;
@@ -339,10 +454,13 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	  pulses -= this.counter;
 	  this.counter = this.counterInit;
 	  rv++;
-	  informListeners( this.timerNum );
-	  if( this.interruptEnabled && !this.interruptPending ) {
+	  if( this.interruptEnabled && !this.interruptAccepted ) {
 	    this.interruptRequested = true;
 	  }
+	  if( this.toTimer != null ) {
+	    this.toTimer.externalUpdate( 1 );
+	  }
+	  informListeners( this.timerNum );
 	}
       }
       return rv;
@@ -376,8 +494,9 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   {
     Collection<Z80CTCListener> listeners = this.listeners;
     if( listeners != null ) {
-      for( Z80CTCListener listener : listeners )
+      for( Z80CTCListener listener : listeners ) {
 	listener.z80CTCUpdate( this, timerNum );
+      }
     }
   }
 }

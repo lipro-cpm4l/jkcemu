@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -13,6 +13,8 @@ import java.lang.*;
 
 public interface Z80StatusListener
 {
-  public void z80StatusChanged();
+  public void z80StatusChanged(
+			Z80Breakpoint      breakpoint,
+			Z80InterruptSource iSource );
 }
 

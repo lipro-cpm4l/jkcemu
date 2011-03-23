@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -228,12 +228,29 @@ public class SourceUtil
 				int       begAddr,
 				String[]  tokens )
   {
+    if( begAddr == 0x0401 ) {
+      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x035F );
+      if( tmpAddr > 0 ) {
+	begAddr = tmpAddr;
+      }
+    } else if( begAddr == 0x2C01 ) {
+      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x2B5F );
+      if( tmpAddr > 0 ) {
+	begAddr = tmpAddr;
+      }
+    }
     String text = getKCBasicStyleProgram(
 				screenFrm.getEmuThread(),
 				begAddr,
 				tokens );
     if( text != null ) {
-      screenFrm.openText( text );
+      Component owner = screenFrm.openText( text );
+      if( (begAddr != 0x0401) && (begAddr != 0x2C01) ) {
+	BasicDlg.showInfoDlg(
+		owner,
+		"Das BASIC-Programm befindet sich au\u00DFerhalb\n"
+			+ "des standardm\u00E4\u00DFigen Adressbereichs." );
+      }
     } else {
       showNoKCBasic( screenFrm );
     }
@@ -244,15 +261,37 @@ public class SourceUtil
 				ScreenFrm screenFrm,
 				int       begAddr )
   {
+    if( begAddr == 0x0401 ) {
+      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x035F );
+      if( tmpAddr > 0 ) {
+	begAddr = tmpAddr;
+      }
+    } else if( begAddr == 0x2C01 ) {
+      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x2B5F );
+      if( tmpAddr > 0 ) {
+	begAddr = tmpAddr;
+      }
+    }
     int endAddr = getKCBasicStyleEndAddr( screenFrm.getEmuThread(), begAddr );
     if( endAddr >= begAddr ) {
-      (new SaveDlg(
+      if( (begAddr == 0x0401) || (begAddr == 0x2C01) ) {
+	(new SaveDlg(
 		screenFrm,
 		begAddr - 0x41,
 		endAddr,
 		'B',
 		true,		// KC-BASIC
+		false,		// kein RBASIC
 		"KC-BASIC-Programm speichern" )).setVisible( true );
+      } else {
+	BasicDlg.showErrorDlg(
+		screenFrm,
+		"Es ist zwar ein BASIC-Programm vorhanden, jedoch befindet\n"
+			+ "es sich au\u00DFerhalb des"
+			+ " standardm\u00E4\u00DFigen Adressbereichs.\n"
+			+ "Es kann deshalb nicht auf diese Art und Weise"
+			+ " gespeichert werden." );
+      }
     } else {
       showNoKCBasic( screenFrm );
     }
@@ -276,9 +315,9 @@ public class SourceUtil
       }
       else if( ((begAddr == 0x0401) || (begAddr == 0x2C01))
 	       && (fileFmt.equals( FileInfo.KCB )
-			|| fileFmt.equals( FileInfo.KCBASIC_HEAD )
-			|| fileFmt.equals( FileInfo.KCBASIC_PURE )
-			|| fileFmt.equals( FileInfo.KCTAP_BASIC )) )
+			|| fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG )
+			|| fileFmt.equals( FileInfo.KCBASIC_PRG )
+			|| fileFmt.equals( FileInfo.KCTAP_BASIC_PRG )) )
       {
 	state = true;
       }

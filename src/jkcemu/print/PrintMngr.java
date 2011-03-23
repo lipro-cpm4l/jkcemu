@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -34,8 +34,6 @@ public class PrintMngr extends AbstractTableModel
   }
 
 
-	/* --- Thread-sichere Methoden --- */
-
   public void deactivatePrintData( PrintData data )
   {
     if( data != null ) {
@@ -52,6 +50,18 @@ public class PrintMngr extends AbstractTableModel
   public PrintData getActivePrintData()
   {
     return this.activeEntry;
+  }
+
+
+  public PrintData getPrintData( int row )
+  {
+    PrintData data = null;
+    synchronized( this.entries ) {
+      if( (row >= 0) && (row < this.entries.size()) ) {
+	data = this.entries.get( row );
+      }
+    }
+    return data;
   }
 
 
@@ -101,38 +111,30 @@ public class PrintMngr extends AbstractTableModel
   }
 
 
-	/* --- Methoden nur fuer Swing-Thread --- */
+	/* --- ueberschriebene Methoden --- */
 
-  public Class getColumnClass( int col )
+  @Override
+  public Class<?> getColumnClass( int col )
   {
     return (col == 0) || (col == 1) ? Integer.class : Object.class;
   }
 
 
+  @Override
   public int getColumnCount()
   {
     return colNames.length;
   }
 
 
+  @Override
   public String getColumnName( int col )
   {
     return (col >= 0) && (col < colNames.length) ? colNames[ col ] : "";
   }
 
 
-  public PrintData getPrintData( int row )
-  {
-    PrintData data = null;
-    synchronized( this.entries ) {
-      if( (row >= 0) && (row < this.entries.size()) ) {
-	data = this.entries.get( row );
-      }
-    }
-    return data;
-  }
-
-
+  @Override
   public int getRowCount()
   {
     int n = 0;
@@ -143,6 +145,7 @@ public class PrintMngr extends AbstractTableModel
   }
 
 
+  @Override
   public Object getValueAt( int row, int col )
   {
     Object    rv   = null;
@@ -169,6 +172,7 @@ public class PrintMngr extends AbstractTableModel
   }
 
 
+  @Override
   public boolean isCellEditable( int row, int col )
   {
     return false;

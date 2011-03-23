@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -106,18 +106,21 @@ public class LoadData implements Z80MemView
   public void loadIntoMemory( EmuThread emuThread )
   {
     if( (emuThread != null) && (this.data != null) ) {
-      int src = this.offset;
-      int dst = this.begAddr;
-      int len = this.len;
-      while( (src < this.data.length) && (dst < 0x10000) && (len > 0) ) {
-	emuThread.setMemByte( dst++, this.data[ src++ ] );
-	--len;
+      EmuSys emuSys = emuThread.getEmuSys();
+      if( emuSys != null ) {
+	int src = this.offset;
+	int dst = this.begAddr;
+	int len = this.len;
+	while( (src < this.data.length) && (dst < 0x10000) && (len > 0) ) {
+	  emuSys.loadMemByte( dst++, this.data[ src++ ] );
+	  --len;
+	}
+	emuSys.updSysCells(
+			this.begAddr,
+			this.len,
+			this.fileFmt,
+			this.fileType );
       }
-      emuThread.getEmuSys().updSysCells(
-				this.begAddr,
-				this.len,
-				this.fileFmt,
-				this.fileType );
     }
   }
 
@@ -210,12 +213,14 @@ public class LoadData implements Z80MemView
 
 	/* --- Z80MemView --- */
 
+  @Override
   public int getMemByte( int addr, boolean m1 )
   {
     return getAbsoluteByte( this.offset + addr - this.begAddr );
   }
 
 
+  @Override
   public int getMemWord( int addr )
   {
     return (getMemByte( addr + 1, false ) << 8) | getMemByte( addr, false );

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,17 +14,19 @@ import java.util.Properties;
 
 public class FloppyDiskDrive
 {
-  private AbstractFloppyDisk disk;
-  private boolean            skipOddCyls;
-  private int                lastFormattedCyl;
-  private int                head;
-  private int                pcn;	// present cylinder number
-  private int                ncn;	// new cylinder number
+  private FloppyDiskStationFrm owner;
+  private AbstractFloppyDisk   disk;
+  private boolean              skipOddCyls;
+  private int                  lastFormattedCyl;
+  private int                  head;
+  private int                  pcn;	// present cylinder number
+  private int                  ncn;	// new cylinder number
 
 
-  protected FloppyDiskDrive()
+  public FloppyDiskDrive( FloppyDiskStationFrm owner )
   {
-    this.disk = null;
+    this.owner = owner;
+    this.disk  = null;
     reset();
   }
 
@@ -37,6 +39,7 @@ public class FloppyDiskDrive
     boolean rv = false;
     this.head  = head;
     if( (sectorIDs != null) && (this.disk != null) ) {
+      fireDriveAccess();
       if( sectorIDs.length > 0 ) {
 	if( this.pcn == 0 ) {
 	  this.skipOddCyls = false;
@@ -126,6 +129,7 @@ public class FloppyDiskDrive
 					int sizeCode )
   {
     SectorData sector = null;
+    fireDriveAccess();
     if( this.disk != null ) {
       int physCyl = getDiskCyl();
       sector      = this.disk.getSectorByID(
@@ -166,6 +170,7 @@ public class FloppyDiskDrive
 					int physHead,
 					int sectorIdx )
   {
+    fireDriveAccess();
     return this.disk != null ?
 		this.disk.getSectorByIndex( getDiskCyl(), physHead, sectorIdx )
 		: null;
@@ -200,6 +205,7 @@ public class FloppyDiskDrive
    */
   public synchronized boolean seekStep()
   {
+    fireDriveAccess();
     if( this.pcn < this.ncn ) {
       this.pcn++;
     } else if( pcn > this.ncn ) {
@@ -220,6 +226,7 @@ public class FloppyDiskDrive
 
   public synchronized void setSeekMode( int head, int cyl )
   {
+    fireDriveAccess();
     this.head = head;
     this.ncn  = cyl;
   }
@@ -233,6 +240,7 @@ public class FloppyDiskDrive
 				boolean    deleted )
   {
     boolean rv = false;
+    fireDriveAccess();
     if( this.disk != null ) {
       rv = this.disk.writeSector(
 				getDiskCyl(),
@@ -248,6 +256,12 @@ public class FloppyDiskDrive
 
 	/* --- private Methoden --- */
 
+  private void fireDriveAccess()
+  {
+    this.owner.fireDriveAccess( this );
+  }
+
+
   private int getDiskCyl()
   {
     int rv = this.pcn;
@@ -259,4 +273,3 @@ public class FloppyDiskDrive
     return rv;
   }
 }
-

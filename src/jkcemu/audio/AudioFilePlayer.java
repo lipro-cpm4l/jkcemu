@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -24,12 +24,15 @@ public class AudioFilePlayer implements Runnable
   public static void play( Component owner, File file )
   {
     if( (owner != null) && (file != null) )
-      (new Thread( new AudioFilePlayer( owner, file ) )).start();
+      (new Thread(
+		new AudioFilePlayer( owner, file ),
+		"JKCEMU audio file player" )).start();
   }
 
 
 	/* --- Runnable --- */
 
+  @Override
   public void run()
   {
     AudioInputStream           inAudio = null;
@@ -103,8 +106,6 @@ public class AudioFilePlayer implements Runnable
     this.file  = file;
   }
 
-
-	/* --- private Methoden --- */
 
   private static void closeStream( Closeable stream )
   {

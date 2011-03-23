@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,11 +16,24 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
-import jkcemu.system.*;
+import jkcemu.emusys.*;
 
 
 public class LoadDlg extends BasicDlg implements DocumentListener
 {
+  private static final String[] fileFormats = {
+					FileInfo.KCB,
+					FileInfo.KCC,
+					FileInfo.KCTAP_SYS,
+					FileInfo.KCTAP_BASIC_PRG,
+					FileInfo.KCBASIC_HEAD_PRG,
+					FileInfo.KCBASIC_PRG,
+					FileInfo.RBASIC,
+					FileInfo.HEADERSAVE,
+					FileInfo.INTELHEX,
+					FileInfo.BIN };
+
+  private static final String textSelectFmt = "--- Bitte ausw\u00E4hlen ---";
   private static final String errMsgEmptyFile =
 	"Die Datei enth\u00E4lt keine Daten,\n"
 			+ "die geladen werden k\u00F6nnten.";
@@ -65,14 +78,19 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 			boolean   startEnabled,
 			boolean   startSelected )
   {
-    byte[] fileBuf = readFile( owner, file );
-    if( fileBuf != null ) {
+    EmuThread emuThread = screenFrm.getEmuThread();
+    EmuSys    emuSys    = screenFrm.getEmuSys();
+    byte[]    fileBuf   = readFile( owner, file );
+    if( (emuThread != null) && (emuSys != null) && (fileBuf != null) ) {
 
       /*
        * pruefen, ob das gerade emulierte System eine Ladeadresse vorgibt,
        * Wenn ja, dann Dialog mit der eingetragenen Ladeadresse anzeigen
        */
-      Integer begAddr = screenFrm.getEmuThread().getEmuSys().getLoadAddr();
+      Integer begAddr = null;
+      if( emuSys != null ) {
+	begAddr = emuSys.getLoadAddr();
+      }
 
       // ggf. muss Dialog mit den Ladeoptionen angezeigt muss
       boolean  done     = false;
@@ -89,14 +107,12 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	  if( loadData != null ) {
 	    int originBegAddr = loadData.getBegAddr();
 	    if( originBegAddr >= 0 ) {
-	      EmuThread emuThread  = screenFrm.getEmuThread();
-	      EmuSys    emuSys     = emuThread.getEmuSys();
-	      boolean   isAC1      = (emuSys instanceof AC1);
-	      boolean   isLLC2     = (emuSys instanceof LLC2);
-	      boolean   isHGMC     = (emuSys instanceof HueblerGraphicsMC);
-	      boolean   isKramerMC = (emuSys instanceof KramerMC);
-	      boolean   isZ1013    = (emuSys instanceof Z1013);
-	      boolean   isKC       = ((emuSys instanceof KC85)
+	      boolean isAC1      = (emuSys instanceof AC1);
+	      boolean isLLC2     = (emuSys instanceof LLC2);
+	      boolean isHGMC     = (emuSys instanceof HueblerGraphicsMC);
+	      boolean isKramerMC = (emuSys instanceof KramerMC);
+	      boolean isZ1013    = (emuSys instanceof Z1013);
+	      boolean isKC       = ((emuSys instanceof KC85)
 					|| (emuSys instanceof Z9001));
 	      if( !startSelected ) {
 		loadData.setStartAddr( -1 );
@@ -146,7 +162,6 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	      }
 	      if( !done ) {
 
-
 		// Datei in Arbeitsspeicher laden und ggf. starten
 		if( confirmLoadDataInfo( owner, loadData ) ) {
 		  emuThread.loadIntoMemory( loadData );
@@ -176,8 +191,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 				file,
 				fileBuf,
 				fileInfo.getNextTAPOffset() );
-		  done = true;
 		}
+		done = true;
 	      }
 	    }
 	  }
@@ -200,18 +215,21 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
 	/* --- DocumentListener --- */
 
+  @Override
   public void changedUpdate( DocumentEvent e )
   {
     updStartButton();
   }
 
 
+  @Override
   public void insertUpdate( DocumentEvent e )
   {
     updStartButton();
   }
 
 
+  @Override
   public void removeUpdate( DocumentEvent e )
   {
     updStartButton();
@@ -220,6 +238,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -272,8 +291,9 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     super( owner, "Datei laden" );
     if( file != null ) {
       String fileName = file.getName();
-      if( fileName != null )
+      if( fileName != null ) {
 	setTitle( getTitle() + ": " + fileName );
+      }
     }
     this.owner        = owner;
     this.screenFrm    = screenFrm;
@@ -309,18 +329,28 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
+    boolean fmtSupported = false;
+    if( fileFmt != null ) {
+      for( String s : fileFormats ) {
+	if( s.equals( fileFmt ) ) {
+	  fmtSupported = true;
+	  break;
+	}
+      }
+    }
     this.comboFileFmt = new JComboBox();
     this.comboFileFmt.setEditable( false );
-    this.comboFileFmt.addItem( FileInfo.KCB );
-    this.comboFileFmt.addItem( FileInfo.KCC );
-    this.comboFileFmt.addItem( FileInfo.KCTAP_SYS );
-    this.comboFileFmt.addItem( FileInfo.KCTAP_BASIC );
-    this.comboFileFmt.addItem( FileInfo.KCBASIC_HEAD );
-    this.comboFileFmt.addItem( FileInfo.KCBASIC_PURE );
-    this.comboFileFmt.addItem( FileInfo.HEADERSAVE );
-    this.comboFileFmt.addItem( FileInfo.INTELHEX );
-    this.comboFileFmt.addItem( FileInfo.BIN );
-    this.comboFileFmt.setSelectedItem( fileFmt );
+    if( !fmtSupported ) {
+      this.comboFileFmt.addItem( textSelectFmt );
+    }
+    for( String s : fileFormats ) {
+      this.comboFileFmt.addItem( s );
+    }
+    if( fmtSupported ) {
+      this.comboFileFmt.setSelectedItem( fileFmt );
+    } else {
+      this.comboFileFmt.setSelectedItem( textSelectFmt );
+    }
     this.comboFileFmt.addActionListener( this );
     panelFmt.add( this.comboFileFmt, gbcFmt );
 
@@ -447,24 +477,24 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
     ButtonGroup grpLoadBasic = new ButtonGroup();
 
-    this.btnLoadForRAMBasic = new JRadioButton(
-					"2C01h f\u00FCr RAM-BASIC",
-					true );
-    grpLoadBasic.add( this.btnLoadForRAMBasic );
-    gbcLoad.insets.top    = 2;
-    gbcLoad.insets.bottom = 0;
-    gbcLoad.insets.left   = 40;
-    gbcLoad.gridy++;
-    panelLoad.add( this.btnLoadForRAMBasic, gbcLoad );
-
     this.btnLoadForROMBasic = new JRadioButton(
 					"0401h f\u00FCr ROM-BASIC",
 					false );
     grpLoadBasic.add( this.btnLoadForROMBasic );
+    gbcLoad.insets.top    = 2;
+    gbcLoad.insets.bottom = 0;
+    gbcLoad.insets.left   = 40;
+    gbcLoad.gridy++;
+    panelLoad.add( this.btnLoadForROMBasic, gbcLoad );
+
+    this.btnLoadForRAMBasic = new JRadioButton(
+					"2C01h f\u00FCr RAM-BASIC",
+					true );
+    grpLoadBasic.add( this.btnLoadForRAMBasic );
     gbcLoad.insets.top    = 0;
     gbcLoad.insets.bottom = 5;
     gbcLoad.gridy++;
-    panelLoad.add( this.btnLoadForROMBasic, gbcLoad );
+    panelLoad.add( this.btnLoadForRAMBasic, gbcLoad );
 
     this.btnKeepHeader = new JCheckBox( "Kopfdaten nach 00E0-00FF laden" );
     gbcLoad.insets.top  = 5;
@@ -514,12 +544,14 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
 
     // Felder aktualisieren
-    EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
-    this.btnKeepHeader.setSelected(
+    EmuSys emuSys = this.screenFrm.getEmuSys();
+    if( emuSys != null ) {
+      this.btnKeepHeader.setSelected(
 		(emuSys instanceof Z1013)
 		&& EmuUtil.parseBoolean(
 			Main.getProperty( "jkcemu.loadsave.header.keep" ),
 			false ) );
+    }
     updFields();
 
 
@@ -614,7 +646,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     boolean rv      = true;
     String  infoMsg = loadData.getInfoMsg();
     if( infoMsg != null ) {
-      if( infoMsg.length() > 0 ) {
+      if( !infoMsg.isEmpty() ) {
 	if( JOptionPane.showConfirmDialog(
 		owner,
 		infoMsg,
@@ -632,8 +664,9 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
   private void doLoad( boolean startSelected )
   {
-    Object fileFmt = this.comboFileFmt.getSelectedItem();
-    if( fileFmt != null ) {
+    EmuThread emuThread = this.screenFrm.getEmuThread();
+    Object    fileFmt   = this.comboFileFmt.getSelectedItem();
+    if( (emuThread != null) && (fileFmt != null) ) {
       try {
 
 	// Eingaben pruefen
@@ -684,7 +717,6 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
 	// ggf. Info bestaetigen
 	if( confirmLoadDataInfo( this, loadData ) ) {
-	  EmuThread emuThread = this.screenFrm.getEmuThread();
 
 	  // Datei in Arbeitsspeicher laden und ggf. starten
 	  if( !startEnabled || !startSelected ) {
@@ -711,7 +743,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
 	  // Multi-TAP-Handling
 	  if( fileFmt.equals( FileInfo.KCTAP_SYS )
-	      || fileFmt.equals( FileInfo.KCTAP_BASIC ) )
+	      || fileFmt.equals( FileInfo.KCTAP_BASIC_PRG ) )
 	  {
 	    FileInfo fileInfo = FileInfo.analyzeFile(
 						this.fileBuf,
@@ -803,30 +835,38 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
   private void updFields()
   {
-    boolean isHS           = false;
-    boolean isKCB          = false;
-    boolean isKCC          = false;
-    boolean isKCTAP_SYS    = false;
-    boolean isKCTAP_BASIC  = false;
-    boolean isKCBASIC_HEAD = false;
-    boolean isKCBASIC_PURE = false;
-    boolean isINTELHEX     = false;
-    int     begAddr        = -1;
-    int     endAddr        = -1;
-    int     startAddr      = -1;
-    int     fileType       = -1;
-    String  fileDesc       = null;
+    boolean isHS                = false;
+    boolean isKCB               = false;
+    boolean isKCC               = false;
+    boolean isKCTAP_SYS         = false;
+    boolean isKCTAP_BASIC_PRG   = false;
+    boolean isKCTAP_BASIC_DATA  = false;
+    boolean isKCTAP_BASIC_ASC   = false;
+    boolean isKCBASIC_HEAD_PRG  = false;
+    boolean isKCBASIC_HEAD_DATA = false;
+    boolean isKCBASIC_HEAD_ASC  = false;
+    boolean isKCBASIC_PRG       = false;
+    boolean isRBASIC            = false;
+    boolean isINTELHEX          = false;
+    boolean loadable            = false;
+    int     begAddr             = -1;
+    int     endAddr             = -1;
+    int     startAddr           = -1;
+    int     fileType            = -1;
+    String  fileDesc            = null;
 
     Object fileFmt = this.comboFileFmt.getSelectedItem();
     if( fileFmt != null ) {
-      isHS           = fileFmt.equals( FileInfo.HEADERSAVE );
-      isKCB          = fileFmt.equals( FileInfo.KCB );
-      isKCC          = fileFmt.equals( FileInfo.KCC );
-      isKCTAP_SYS    = fileFmt.equals( FileInfo.KCTAP_SYS );
-      isKCTAP_BASIC  = fileFmt.equals( FileInfo.KCTAP_BASIC );
-      isKCBASIC_HEAD = fileFmt.equals( FileInfo.KCBASIC_HEAD );
-      isKCBASIC_PURE = fileFmt.equals( FileInfo.KCBASIC_PURE );
-      isINTELHEX     = fileFmt.equals( FileInfo.INTELHEX );
+      isHS               = fileFmt.equals( FileInfo.HEADERSAVE );
+      isKCB              = fileFmt.equals( FileInfo.KCB );
+      isKCC              = fileFmt.equals( FileInfo.KCC );
+      isKCTAP_SYS        = fileFmt.equals( FileInfo.KCTAP_SYS );
+      isKCTAP_BASIC_PRG  = fileFmt.equals( FileInfo.KCTAP_BASIC_PRG );
+      isKCBASIC_HEAD_PRG = fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG );
+      isKCBASIC_PRG      = fileFmt.equals( FileInfo.KCBASIC_PRG );
+      isRBASIC           = fileFmt.equals( FileInfo.RBASIC );
+      isINTELHEX         = fileFmt.equals( FileInfo.INTELHEX );
+      loadable           = !fileFmt.equals( textSelectFmt );
 
       begAddr = FileInfo.getBegAddr( this.fileBuf, fileFmt );
       if( begAddr >= 0 ) {
@@ -838,9 +878,9 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     }
 
     boolean stateBegAddr = (isHS || isKCB || isKCC
-				|| isKCTAP_SYS || isKCTAP_BASIC
-				|| isKCBASIC_HEAD || isKCBASIC_PURE
-				|| isINTELHEX);
+				|| isKCTAP_SYS || isKCTAP_BASIC_PRG
+				|| isKCBASIC_HEAD_PRG || isKCBASIC_PRG
+				|| isRBASIC || isINTELHEX);
     this.labelInfoBegAddr.setEnabled( stateBegAddr );
     if( stateBegAddr && (begAddr >= 0) ) {
       this.fldInfoBegAddr.setText( String.format( "%04X", begAddr ) );
@@ -849,8 +889,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     }
 
     boolean stateEndAddr = (isHS || isKCB || isKCC
-				|| isKCTAP_SYS || isKCTAP_BASIC
-				|| isKCBASIC_HEAD || isKCBASIC_PURE);
+				|| isKCTAP_SYS || isKCTAP_BASIC_PRG
+				|| isKCBASIC_HEAD_PRG || isKCBASIC_PRG);
     this.labelInfoEndAddr.setEnabled( stateEndAddr );
     if( stateEndAddr && (endAddr >= 0) ) {
       this.fldInfoEndAddr.setText( String.format( "%04X", endAddr ) );
@@ -874,7 +914,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     }
 
     boolean stateInfoDesc = (isHS || isKCB || isKCC
-				|| isKCTAP_SYS || isKCTAP_BASIC);
+				|| isKCTAP_SYS || isKCTAP_BASIC_PRG);
     this.labelInfoDesc.setEnabled( stateInfoDesc );
     if( stateInfoDesc && (fileDesc != null) ) {
       this.fldInfoDesc.setText( fileDesc );
@@ -882,29 +922,32 @@ public class LoadDlg extends BasicDlg implements DocumentListener
       this.fldInfoDesc.setText( "" );
     }
 
-    boolean stateKCBasic = (isKCB || isKCTAP_BASIC
-				|| isKCBASIC_HEAD || isKCBASIC_PURE);
-    this.labelLoadBegAddr.setEnabled( !stateKCBasic );
-    this.labelLoadEndAddr.setEnabled( !stateKCBasic );
-    this.fldLoadBegAddr.setEditable( !stateKCBasic );
-    this.fldLoadEndAddr.setEditable( !stateKCBasic );
-    this.labelLoadBasicAddr.setEnabled( stateKCBasic );
-    this.btnLoadForRAMBasic.setEnabled( stateKCBasic );
-    this.btnLoadForROMBasic.setEnabled( stateKCBasic );
-    if( stateKCBasic ) {
-      if( this.screenFrm.getEmuThread().getEmuSys().hasKCBasicInROM() ) {
+    boolean stateKCBasicPrg = (isKCB || isKCTAP_BASIC_PRG
+				|| isKCBASIC_HEAD_PRG || isKCBASIC_PRG);
+    boolean stateLoadAddr = loadable && !stateKCBasicPrg && !isRBASIC;
+    this.labelLoadBegAddr.setEnabled( stateLoadAddr );
+    this.labelLoadEndAddr.setEnabled( stateLoadAddr );
+    this.fldLoadBegAddr.setEditable( stateLoadAddr );
+    this.fldLoadEndAddr.setEditable( stateLoadAddr );
+    this.labelLoadBasicAddr.setEnabled( stateKCBasicPrg );
+    this.btnLoadForRAMBasic.setEnabled( stateKCBasicPrg );
+    this.btnLoadForROMBasic.setEnabled( stateKCBasicPrg );
+    if( stateKCBasicPrg ) {
+      if( this.screenFrm.getEmuSys().hasKCBasicInROM() ) {
 	this.btnLoadForROMBasic.setSelected( true );
       } else {
 	this.btnLoadForRAMBasic.setSelected( true );
       }
     }
 
-    EmuSys emuSys = this.screenFrm.getEmuThread().getEmuSys();
-    this.btnKeepHeader.setEnabled(
+    EmuSys emuSys = this.screenFrm.getEmuSys();
+    if( emuSys != null ) {
+      this.btnKeepHeader.setEnabled(
 			(emuSys instanceof Z1013)
 			&& fileFmt.equals( FileInfo.HEADERSAVE ) );
-    this.btnLoad.setEnabled( this.fileBuf.length > 0 );
-    updStartButton( begAddr, endAddr, startAddr );
+    }
+    this.btnLoad.setEnabled( loadable && (this.fileBuf.length > 0) );
+    updStartButton( loadable, begAddr, endAddr, startAddr );
   }
 
 
@@ -914,11 +957,15 @@ public class LoadDlg extends BasicDlg implements DocumentListener
    *  2. Ladeadresse nicht angegeben oder
    *     mit der originalen Ladeadresse uebereinstimmt
    */
-  private void updStartButton( int begAddr, int endAddr, int startAddr )
+  private void updStartButton(
+			boolean loadable,
+			int     begAddr,
+			int     endAddr,
+			int     startAddr )
   {
     if( this.btnStart != null ) {
       boolean state = false;
-      if( this.startEnabled ) {
+      if( loadable && this.startEnabled ) {
 	if( (startAddr >= 0) && (startAddr >= begAddr) ) {
 	  state = true;
 	}
@@ -926,18 +973,20 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	// Anfangsadresse muss mit der originalen uebereinstimmen
 	String text = this.fldLoadBegAddr.getText();
 	if( text != null ) {
-	  if( text.length() > 0 ) {
-	    if( (this.docLoadBegAddr.intValue() & 0xFFFF) != begAddr )
+	  if( !text.isEmpty() ) {
+	    if( (this.docLoadBegAddr.intValue() & 0xFFFF) != begAddr ) {
 	      state = false;
+	    }
 	  }
 	}
 
 	// Endadresse muss gleich oder groesser der originalen sein
 	text = this.fldLoadEndAddr.getText();
 	if( text != null ) {
-	  if( text.length() > 0 ) {
-	    if( (this.docLoadEndAddr.intValue() & 0xFFFF) < endAddr )
+	  if( !text.isEmpty() ) {
+	    if( (this.docLoadEndAddr.intValue() & 0xFFFF) < endAddr ) {
 	      state = false;
+	    }
 	  }
 	}
       }
@@ -949,18 +998,22 @@ public class LoadDlg extends BasicDlg implements DocumentListener
   private void updStartButton()
   {
     if( this.btnStart != null ) {
-      int    begAddr   = -1;
-      int    endAddr   = -1;
-      int    startAddr = -1;
+      boolean loadable  = false;
+      int     begAddr   = -1;
+      int     endAddr   = -1;
+      int     startAddr = -1;
       Object fileFmt   = this.comboFileFmt.getSelectedIndex();
       if( fileFmt != null ) {
-	begAddr = FileInfo.getBegAddr( this.fileBuf, fileFmt );
-	if( begAddr >= 0 ) {
-	  endAddr   = FileInfo.getEndAddr( this.fileBuf, fileFmt );
-	  startAddr = FileInfo.getStartAddr( this.fileBuf, fileFmt );
+	loadable = !fileFmt.equals( textSelectFmt );
+	if( loadable ) {
+	  begAddr = FileInfo.getBegAddr( this.fileBuf, fileFmt );
+	  if( begAddr >= 0 ) {
+	    endAddr   = FileInfo.getEndAddr( this.fileBuf, fileFmt );
+	    startAddr = FileInfo.getStartAddr( this.fileBuf, fileFmt );
+	  }
 	}
       }
-      updStartButton( begAddr, endAddr, startAddr );
+      updStartButton( loadable, begAddr, endAddr, startAddr );
     }
   }
 }

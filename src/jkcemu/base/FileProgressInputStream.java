@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,10 @@
 
 package jkcemu.base;
 
+import java.awt.EventQueue;
 import java.io.*;
 import java.lang.*;
-import javax.swing.*;
+import javax.swing.JProgressBar;
 
 
 public class FileProgressInputStream extends InputStream
@@ -63,12 +64,14 @@ public class FileProgressInputStream extends InputStream
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void close() throws IOException
   {
     this.in.close();
   }
 
 
+  @Override
   public int read() throws IOException
   {
     this.inRead++;
@@ -88,6 +91,7 @@ public class FileProgressInputStream extends InputStream
   }
 
 
+  @Override
   public long skip( long nCnt ) throws IOException
   {
     long rv  = nCnt;
@@ -108,7 +112,7 @@ public class FileProgressInputStream extends InputStream
 			final int value )
   {
     final JProgressBar progressBar = this.progressBar;
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()

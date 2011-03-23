@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -146,11 +146,18 @@ public class SectorData extends SectorID
   {
     int rv = -1;
     if( sectorSize >= 0 ) {
-      rv    = 0;
-      int t = sectorSize;
-      while( t > 255 ) {
-	t >>= 1;
-	rv++;
+      if( sectorSize > 128 ) {
+	int m = 128;
+	int v = 0;
+	while( (m > 0) && (m < sectorSize) ) {
+	  v++;
+	  m <<= 1;
+	}
+	if( m == sectorSize ) {
+	  rv = v;
+	}
+      } else {
+	rv = 0;
       }
     }
     return rv;
@@ -273,8 +280,6 @@ public class SectorData extends SectorID
 
   public int writeTo(
 		OutputStream out,
-		int          physCyl,
-		int          physHead,
 		int          maxDataLen ) throws IOException
   {
     int n = 0;
@@ -289,6 +294,28 @@ public class SectorData extends SectorID
     }
     while( ((maxDataLen < 0) || (n < maxDataLen)) && (n < this.dataLen) ) {
       out.write( 0 );
+      n++;
+    }
+    return n;
+  }
+
+
+  public int writeTo(
+		RandomAccessFile raf,
+		int              maxDataLen ) throws IOException
+  {
+    int n = 0;
+    if( this.dataBuf != null ) {
+      n = Math.min( this.dataLen, this.dataBuf.length - this.dataPos );
+      if( n > 0 ) {
+	if( (maxDataLen >= 0) && (maxDataLen < n) ) {
+	  n = maxDataLen;
+	}
+	raf.write( this.dataBuf, this.dataPos, n );
+      }
+    }
+    while( ((maxDataLen < 0) || (n < maxDataLen)) && (n < this.dataLen) ) {
+      raf.write( 0 );
       n++;
     }
     return n;

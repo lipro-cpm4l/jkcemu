@@ -1,0 +1,82 @@
+<html>
+<body>
+ <h1>Importieren von Marken und Haltepunkten</h1>
+  <a href="debugger.htm">Debugger</a> und
+  <a href="reassembler.htm">Reassembler</a> bieten die M&ouml;glichkeit,
+  eine Markentabelle (z.B. von einem Assembler) zu importieren.
+  Im Debugger wird dabei f&uuml;r jede Marke ein Haltepunkt angelegt,
+  sodass dies auch einem Import von Haltepunkten gleichkommt.
+ <br/><br/>
+  Die Markentabelle muss keinem strengen Format entsprechen:
+  Pro Zeile werden die ersten beiden Ziffern-/Buchstabengruppen ausgewertet.
+  Eine davon muss eine vierstellige hexadezimale Zahl sein,
+  an der ein <em>H</em> angeh&auml;ngt sein kann.
+  Die Gro&szlig;-/Kleinschreibung ist dabei egal.
+  Diese hexadezimale Zahl wird als Adresse gewertet.
+  Die andere Ziffern-/Buchstabengruppen ist demzufolge die Marke,
+  vorausgesetzt, sie enth&auml;lt nur Buchstaben, Ziffern, den Unterstrich
+  und/oder das Dollarzeichen, z.B.:
+ <br/><br/>
+  <table border="0">
+   <tr><td>&nbsp;</td><td><tt>1234</tt></td><td><tt>Marke1</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>2345h</tt></td><td><tt>Marke2</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>ABCD</tt></td><td><tt>Marke3</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>BCDEh</tt></td><td><tt>Marke4</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>0CDEF</tt></td><td><tt>Marke5</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>0FFFFh</tt></td><td><tt>Marke6</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>0BCDE</tt></td><td><tt>Marke7</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>Marke8</tt></td><td><tt>3456</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>Marke9</tt></td><td><tt>4567h</tt></td></tr>
+  </table>
+ <br/><br/>
+  Leerzeichen und Tabulatoren vor der ersten Ziffern-/Buchstabengruppen
+  st&ouml;ren nicht und werden einfach ignoriert:
+ <br/><br/>
+  <table border="0">
+   <tr><td>&nbsp;</td><td><tt>1234</tt></td><td><tt>Marke1</tt></td></tr>
+   <tr>
+    <td>&nbsp;</td>
+    <td><tt>&nbsp;&nbsp;2345h</tt></td>
+    <td><tt>Marke2</tt></td>
+   </tr>
+   <tr><td>&nbsp;</td><td><tt>ABCD</tt></td><td><tt>Marke3</tt></td></tr>
+  </table>
+ <br/><br/>
+  Steht die Marke vor der Adresse,
+  kann sie auch mit einem Doppelpunkt abgeschlossen sein, z.B.:
+ <br/><br/>
+  <table border="0">
+   <tr><td>&nbsp;</td><td><tt>Marke8:</tt></td><td><tt>3456</tt></td></tr>
+   <tr><td>&nbsp;</td><td><tt>Marke9:</tt></td><td><tt>4567h</tt></td></tr>
+  </table>
+ <br/><br/>
+  Text hinter der Adresse und der Marke (z.B. Kommentar) wird ignoriert.
+  Demzufolge sind auch solchen Zeilen m&ouml;glich:
+ <br/><br/>
+  <table border="0">
+   <tr>
+    <td>&nbsp;</td>
+    <td><tt>1234</tt></td>
+    <td><tt>Marke1</tt></td>
+    <td><tt>Kommentar</tt></td>
+   </tr>
+   <tr>
+    <td>&nbsp;</td>
+    <td><tt>2345h</tt></td>
+    <td><tt>Marke2</tt></td>
+    <td><tt>;Kommentar</tt></td>
+   </tr>
+  </table>
+ <br/><br/>
+  Enth&auml;lt eine Zeile nur eine vierstellige hexadezimale Zahl
+  ohne eine Marke, wird Sie in den Debugger trotzdem importiert
+  und dort ein Haltepunkt angelegt.
+  Der Reassembler dagegen kann mit einer einzelnen Adresse nichts
+  anfangen und ignoriert so eine Zeile.
+ <br/><br/>
+  Alle anderen Zeilen werden ignoriert.
+  Demzufolge st&ouml;rt es i.d.R. auch nicht, wenn die Markentabelle
+  davor oder dahinter noch anderen Text enth&auml;lt.
+</body>
+</html>
+

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -27,6 +27,7 @@ public class ErrorMsg implements Runnable
 
 	/* --- Methoden fuer Runnable --- */
 
+  @Override
   public void run()
   {
     EmuUtil.exitSysError( this.parent, null, this.ex );

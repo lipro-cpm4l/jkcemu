@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -102,6 +102,7 @@ public class ImgFld extends Component implements Printable
 
 	/* --- Printable --- */
 
+  @Override
   public int print( Graphics g, PageFormat pf, int pageNum )
   {
     int rv = NO_SUCH_PAGE;

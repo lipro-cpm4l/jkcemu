@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,8 +8,8 @@
 
 package jkcemu.image;
 
-import java.awt.Frame;
-import java.awt.image.BufferedImage;
+import java.awt.*;
+import java.awt.image.*;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
@@ -21,6 +21,9 @@ import jkcemu.base.*;
 
 public class ImgUtil
 {
+  public static final int ROUND_PIXELS_MAX = 9;
+
+
   public static FileNameExtensionFilter createFileFilter( String[] suffixes )
   {
     FileNameExtensionFilter rv = null;
@@ -35,15 +38,114 @@ public class ImgUtil
   }
 
 
+  public static void ensureImageLoaded( Component owner, Image image )
+  {
+    if( image != null ) {
+      MediaTracker mt = new MediaTracker( owner );
+      mt.addImage( image, 0 );
+      try {
+	mt.waitForID( 0 );
+      }
+      catch( InterruptedException ex ) {}
+    }
+  }
+
+
+  public static BufferedImage roundCorners(
+					Component owner,
+					Image     image,
+					int       nTopPixels,
+					int       nBottomPixels )
+  {
+    BufferedImage retImg = null;
+    if( (image != null) && ((nTopPixels > 0) || (nBottomPixels > 0)) ) {
+      /*
+       * Wenn das Bild ein BufferedImage ist und Transparenz beherrscht,
+       * kann es verwendet werden.
+       * Anderenfalls wird ein neues BufferedImage angelegt.
+       */
+      if( image instanceof BufferedImage ) {
+	int t = ((BufferedImage) image).getType();
+	if( (t == BufferedImage.TYPE_4BYTE_ABGR)
+	    || (t == BufferedImage.TYPE_4BYTE_ABGR_PRE)
+	    || (t == BufferedImage.TYPE_INT_ARGB)
+	    || (t == BufferedImage.TYPE_INT_ARGB_PRE) )
+	{
+	  retImg = (BufferedImage) image;
+	} else {
+	  ColorModel cm = ((BufferedImage) image).getColorModel();
+	  if( cm != null ) {
+	    if( cm instanceof IndexColorModel ) {
+	      if( ((IndexColorModel) cm).getTransparentPixel() >= 0 ) {
+		retImg = (BufferedImage) image;
+	      }
+	    }
+	  }
+	}
+      }
+      if( retImg == null ) {
+	ensureImageLoaded( owner, image );
+	int w = image.getWidth( owner );
+	int h = image.getHeight( owner );
+	if( (w > 0) && (h > 0) ) {
+	  retImg = new BufferedImage( w, h, BufferedImage.TYPE_4BYTE_ABGR );
+	  Graphics g = retImg.createGraphics();
+	  if( g != null ) {
+	    g.drawImage( image, 0, 0, owner );
+	    g.dispose();
+	  } else {
+	    retImg = null;
+	  }
+	}
+      }
+      if( retImg != null ) {
+	int w = retImg.getWidth();
+	int h = retImg.getHeight();
+	int m = 2 * Math.max( nTopPixels, nBottomPixels );
+	if( (w > m) && (h > m) ) {
+	  int r = nTopPixels - 1;
+	  for( int x = 0; x < nTopPixels; x++ ) {
+	    int dx = nTopPixels - 1 - x;
+	    for( int y = 0; y < nTopPixels; y++ ) {
+	      int    dy = nTopPixels - 1 - y;
+	      double d  = Math.sqrt( (double) ((dx * dx) + (dy * dy)) );
+	      if( Math.round( d ) >= r ) {
+		retImg.setRGB( x, y, 0 );
+		retImg.setRGB( w - x - 1, y, 0 );
+	      }
+	    }
+	  }
+	  r = nBottomPixels - 1;
+	  for( int x = 0; x < nBottomPixels; x++ ) {
+	    int dx = nBottomPixels - 1 - x;
+	    for( int y = 0; y < nBottomPixels; y++ ) {
+	      int    dy = nBottomPixels - 1 - y;
+	      double d  = Math.sqrt( (double) ((dx * dx) + (dy * dy)) );
+	      if( Math.round( d ) >= r ) {
+		retImg.setRGB( x, h - y - 1, 0 );
+		retImg.setRGB( w - x - 1, h - y - 1, 0 );
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    return retImg;
+  }
+
+
   public static File saveImage(
 			Frame         owner,
-			BufferedImage image )
+			BufferedImage image,
+			File          preSelection )
   {
     File rv   = null;
     File file = EmuUtil.showFileSaveDlg(
 			owner,
 			"Bilddatei speichern",
-			Main.getLastPathFile( "image" ),
+			preSelection != null ?
+				preSelection
+				: Main.getLastPathFile( "image" ),
 			createFileFilter( ImageIO.getWriterFileSuffixes() ) );
     if( file != null ) {
       String fileName = file.getPath();

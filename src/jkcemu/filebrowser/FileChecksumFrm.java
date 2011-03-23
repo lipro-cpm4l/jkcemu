@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,9 +28,7 @@ public class FileChecksumFrm extends BasicFrm
 					ListSelectionListener,
 					Runnable
 {
-  private static final String BUTTON_TEXT_CALCULATE  = "Berechnen";
-  private static final String CHECKSUM_ADLER32_CODE  = "Adler-32";
-  private static final String CHECKSUM_CRC32_CODE    = "CRC-32";
+  private static final String BTN_TEXT_CALCULATE = "Berechnen";
 
   private ScreenFrm        screenFrm;
   private JMenuItem        mnuClose;
@@ -49,8 +47,7 @@ public class FileChecksumFrm extends BasicFrm
   private FileTableModel   tableModel;
   private Thread           thread;
   private String           algorithm;
-  private Checksum         checksum;
-  private MessageDigest    digest;
+  private CksCalculator    cks;
   private volatile boolean cancelled;
   private volatile boolean filesChanged;
 
@@ -60,8 +57,7 @@ public class FileChecksumFrm extends BasicFrm
     this.screenFrm    = screenFrm;
     this.thread       = null;
     this.algorithm    = null;
-    this.checksum     = null;
-    this.digest       = null;
+    this.cks          = null;
     this.cancelled    = false;
     this.filesChanged = false;
 
@@ -136,21 +132,14 @@ public class FileChecksumFrm extends BasicFrm
     this.labelAlgorithm.setEnabled( false );
     add( this.labelAlgorithm, gbc );
 
-    this.comboAlgorithm = new JComboBox();
-    this.comboAlgorithm.addItem( CHECKSUM_ADLER32_CODE );
-    this.comboAlgorithm.addItem( CHECKSUM_CRC32_CODE );
-    this.comboAlgorithm.addItem( "MD2" );
-    this.comboAlgorithm.addItem( "MD5" );
-    this.comboAlgorithm.addItem( "SHA-1" );
-    this.comboAlgorithm.addItem( "SHA-256" );
-    this.comboAlgorithm.addItem( "SHA-384" );
-    this.comboAlgorithm.addItem( "SHA-512" );
+    this.comboAlgorithm = new JComboBox(
+				CksCalculator.getAvailableAlgorithms() );
     this.comboAlgorithm.setEditable( false );
     this.comboAlgorithm.setEnabled( false );
     gbc.gridx++;
     add( this.comboAlgorithm, gbc );
 
-    this.btnAction = new JButton( BUTTON_TEXT_CALCULATE );
+    this.btnAction = new JButton( BTN_TEXT_CALCULATE );
     this.btnAction.setEnabled( false );
     this.btnAction.addActionListener( this );
     gbc.gridx++;
@@ -210,7 +199,10 @@ public class FileChecksumFrm extends BasicFrm
       if( files != null ) {
 	for( File file : files ) {
 	  if( file.isFile() ) {
-	    this.tableModel.addRow( new ExtendedFileEntry( file ), false );
+	    FileEntry entry = new FileEntry();
+	    entry.setName( file.getName() );
+	    entry.setFile( file );
+	    this.tableModel.addRow( entry, false );
 	  }
 	}
       }
@@ -222,6 +214,7 @@ public class FileChecksumFrm extends BasicFrm
 
 	/* --- ListSelectionListener --- */
 
+  @Override
   public void valueChanged( ListSelectionEvent e )
   {
     updEditBtns();
@@ -230,16 +223,15 @@ public class FileChecksumFrm extends BasicFrm
 
 	/* --- Runnable --- */
 
+  @Override
   public void run()
   {
     String        algorithm = null;
-    Checksum      checksum  = null;
-    MessageDigest digest    = null;
+    CksCalculator cks       = null;
     int           nRows     = 0;
     synchronized( this.tableModel ) {
       algorithm = this.algorithm;
-      checksum  = this.checksum;
-      digest    = this.digest;
+      cks       = this.cks;
       nRows     = this.tableModel.getRowCount();
       if( nRows > 0 ) {
 	for( int i = 0; i < nRows; i++ ) {
@@ -251,47 +243,31 @@ public class FileChecksumFrm extends BasicFrm
 	fireTableRowsUpdated( 0, nRows - 1 );
       }
     }
-    if( ((checksum != null) || (digest != null)) && (nRows > 0) ) {
+    if( (cks != null) && (nRows > 0) ) {
       for( int i = 0; !this.cancelled && (i < nRows); i++ ) {
 	FileEntry entry = null;
 	synchronized( this.tableModel ) {
-	  if( i < this.tableModel.getRowCount() )
+	  if( i < this.tableModel.getRowCount() ) {
 	    entry = this.tableModel.getRow( i );
+	  }
 	}
 	if( entry != null ) {
 	  InputStream in = null;
+	  cks.reset();
 	  try {
 	    in = new BufferedInputStream(
 				new FileInputStream( entry.getFile() ) );
 	    entry.setMarked( true );
 	    entry.setValue( "Wird berechnet..." );
 	    fireTableRowsUpdated( i, i );
-	    if( checksum != null ) {
+	    if( cks != null ) {
 	      int b = in.read();
 	      while( !this.cancelled && (b != -1) ) {
-		checksum.update( b );
+		cks.update( b );
 		b = in.read();
 	      }
 	      if( !this.cancelled ) {
-		entry.setValue( String.format( "%08X", checksum.getValue() ) );
-	      }
-	    }
-	    else if( digest != null ) {
-	      int b = in.read();
-	      while( !this.cancelled && (b != -1) ) {
-		digest.update( (byte) b );
-		b = in.read();
-	      }
-	      byte[] result = digest.digest();
-	      if( result != null ) {
-		StringBuilder buf = new StringBuilder( 2 * result.length );
-		for( int k = 0; k < result.length; k++ ) {
-		  buf.append(
-			String.format( "%02X", ((int) result[ k ] & 0xFF) ) );
-		}
-		if( !this.cancelled ) {
-		  entry.setValue( buf.toString() );
-		}
+		entry.setValue( cks.getValue() );
 	      }
 	    }
 	    if( this.cancelled ) {
@@ -321,7 +297,7 @@ public class FileChecksumFrm extends BasicFrm
 	} else {
 	  this.cancelled = true;
 	}
-	SwingUtilities.invokeLater(
+	EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -331,7 +307,7 @@ public class FileChecksumFrm extends BasicFrm
 		} );
       }
     }
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -344,6 +320,7 @@ public class FileChecksumFrm extends BasicFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -385,6 +362,7 @@ public class FileChecksumFrm extends BasicFrm
   }
 
 
+  @Override
   public void lookAndFeelChanged()
   {
     if( this.mnuPopup != null )
@@ -392,6 +370,7 @@ public class FileChecksumFrm extends BasicFrm
   }
 
 
+  @Override
   protected boolean showPopup( MouseEvent e )
   {
     boolean rv = false;
@@ -406,6 +385,7 @@ public class FileChecksumFrm extends BasicFrm
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -471,8 +451,9 @@ public class FileChecksumFrm extends BasicFrm
 					DataFlavor.stringFlavor ) )
 	      {
 		Object o = clipboard.getData( DataFlavor.stringFlavor );
-		if( o != null )
+		if( o != null ) {
 		  text = o.toString();
+		}
 	      }
 	    }
 	  }
@@ -530,20 +511,15 @@ public class FileChecksumFrm extends BasicFrm
 	if( o != null ) {
 	  String algorithm = o.toString();
 	  if( algorithm != null ) {
-	    this.checksum = null;
-	    this.digest   = null;
+	    this.cks = null;
 	    try {
-	      if( algorithm.equals( CHECKSUM_ADLER32_CODE ) ) {
-		checksum = new Adler32();
-	      } else if( algorithm.equals( CHECKSUM_CRC32_CODE ) ) {
-		checksum = new CRC32();
-	      } else {
-		digest = MessageDigest.getInstance( algorithm );
-	      }
-	      this.algorithm    = o.toString();
+	      this.cks          = new CksCalculator( algorithm );
+	      this.algorithm    = algorithm;
 	      this.cancelled    = false;
 	      this.filesChanged = false;
-	      this.thread       = new Thread( this );
+	      this.thread       = new Thread(
+					this,
+					"JKCEMU checksum calculator" );
 	      this.thread.start();
 	      updFields();
 	    }
@@ -562,7 +538,7 @@ public class FileChecksumFrm extends BasicFrm
   private void fireTableRowsUpdated( final int fromRow, final int toRow )
   {
     final FileTableModel tableModel = this.tableModel;
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -583,8 +559,9 @@ public class FileChecksumFrm extends BasicFrm
       if( entry != null ) {
 	if( !entry.isMarked() ) {
 	  Object value = entry.getValue();
-	  if( value != null )
+	  if( value != null ) {
 	    rv = value.toString();
+	  }
 	}
       }
     }
@@ -598,8 +575,9 @@ public class FileChecksumFrm extends BasicFrm
     int     row   = this.table.getSelectedRow();
     if( row >= 0 ) {
       FileEntry entry = this.tableModel.getRow( row );
-      if( entry != null )
+      if( entry != null ) {
 	state = !entry.isMarked() && (entry.getValue() != null);
+      }
     }
     this.mnuCopyUpper.setEnabled( state );
     this.mnuCopyLower.setEnabled( state );
@@ -620,9 +598,8 @@ public class FileChecksumFrm extends BasicFrm
       boolean state = (this.tableModel.getRowCount() > 0);
       this.labelAlgorithm.setEnabled( state );
       this.comboAlgorithm.setEnabled( state );
-      this.btnAction.setText( BUTTON_TEXT_CALCULATE );
+      this.btnAction.setText( BTN_TEXT_CALCULATE );
       this.btnAction.setEnabled( state );
     }
   }
 }
-

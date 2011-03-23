@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -85,6 +85,9 @@ public class ExtendedFileEntry extends jkcemu.base.FileEntry
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
   public Object getInfo()
   {
     Object rv = null;

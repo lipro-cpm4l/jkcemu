@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,7 @@
 
 package jkcemu.disk;
 
-import java.awt.Frame;
+import java.awt.*;
 import java.io.File;
 import java.lang.*;
 import java.util.*;
@@ -24,6 +24,7 @@ public abstract class AbstractFloppyDisk
   private volatile int           sectorSize;
   private volatile String        fmtText;
   private String                 mediaText;
+  private String                 warningText;
   private Map<String,SectorData> sectorCache;
 
 
@@ -41,6 +42,7 @@ public abstract class AbstractFloppyDisk
     this.sectorSize     = sectorSize;
     this.fmtText        = null;
     this.mediaText      = null;
+    this.warningText    = null;
     this.sectorCache    = null;
   }
 
@@ -48,6 +50,56 @@ public abstract class AbstractFloppyDisk
   public void doClose()
   {
     // leer
+  }
+
+
+  protected void fireShowError( final String msg, final Exception ex )
+  {
+    if( this.owner instanceof FloppyDiskStationFrm ) {
+      ((FloppyDiskStationFrm) this.owner).fireShowDiskError( this, msg, ex );
+    } else {
+      final Frame owner = this.owner;
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    BasicDlg.showErrorDlg( owner, msg, ex );
+		  }
+		} );
+    }
+  }
+
+
+  protected void fireShowReadError(
+				int       cyl,
+				int       head,
+				int       sectorNum,
+				Exception ex )
+  {
+    fireShowError(
+	String.format(
+		"Sektor [C=%d,H=%d,R=%d] kann nicht gelesen werden",
+		cyl,
+		head,
+		sectorNum ),
+	ex );
+  }
+
+
+  protected void fireShowWriteError(
+				int       cyl,
+				int       head,
+				int       sectorNum,
+				Exception ex )
+  {
+    fireShowError(
+	String.format(
+		"Sektor [C=%d,H=%d,R=%d] kann nicht geschrieben werden",
+		cyl,
+		head,
+		sectorNum ),
+	ex );
   }
 
 
@@ -118,6 +170,12 @@ public abstract class AbstractFloppyDisk
 	  && (this.sectorsPerCyl > 0)
 	  && (this.sectorSize > 0) )
       {
+	int sysCyls = getSystemCylinders();
+	if( (sysCyls > 0) && (sysCyls < this.cyls) ) {
+	  buf.append( this.sides * (this.cyls - sysCyls)
+			* this.sectorsPerCyl * this.sectorSize / 1024 );
+	  buf.append( (char) '/' );
+	}
 	buf.append( this.sides * this.cyls * this.sectorsPerCyl
 					* this.sectorSize / 1024 );
 	buf.append( " KByte, " );
@@ -271,6 +329,18 @@ public abstract class AbstractFloppyDisk
   }
 
 
+  protected int getSystemCylinders()
+  {
+    return 0;
+  }
+
+
+  public String getWarningText()
+  {
+    return this.warningText;
+  }
+
+
   public boolean isReadOnly()
   {
     return true;
@@ -382,51 +452,9 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  protected void showError( String msg, Exception ex )
+  public void setWarningText( String text )
   {
-    showError( this.owner, msg, ex );
-  }
-
-
-  protected static void showError( Frame owner, String msg, Exception ex )
-  {
-    if( owner != null ) {
-      owner.setState( Frame.NORMAL );
-      owner.toFront();
-      BasicDlg.showErrorDlg( owner, msg, ex );
-    }
-  }
-
-
-  protected void showReadError(
-				int       cyl,
-				int       head,
-				int       sectorNum,
-				Exception ex )
-  {
-    showError(
-	String.format(
-		"Sektor [C=%d,H=%d,R=%d] kann nicht gelesen werden",
-		cyl,
-		head,
-		sectorNum ),
-	ex );
-  }
-
-
-  protected void showWriteError(
-				int       cyl,
-				int       head,
-				int       sectorNum,
-				Exception ex )
-  {
-    showError(
-	String.format(
-		"Sektor [C=%d,H=%d,R=%d] kann nicht geschrieben werden",
-		cyl,
-		head,
-		sectorNum ),
-	ex );
+    this.warningText = text;
   }
 
 

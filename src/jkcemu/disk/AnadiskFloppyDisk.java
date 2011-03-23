@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -69,7 +69,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
 	      out.write( len & 0xFF );
 	      out.write( len >> 8 );
 	      if( len > 0 ) {
-		sector.writeTo( out, cyl, head, len );
+		sector.writeTo( out, len );
 	      }
 	    }
 	  }
@@ -174,6 +174,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public synchronized void doClose()
   {
     EmuUtil.doRelease( this.fileLock );
@@ -181,6 +182,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public boolean formatTrack(
 			int        physCyl,
 			int        physHead,
@@ -265,7 +267,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
 	  }
 	  catch( IOException ex ) {
 	    rv = false;
-	    showError( "Anh\u00E4ngen von Sektoren fehlgeschlagen", ex );
+	    fireShowError( "Anh\u00E4ngen von Sektoren fehlgeschlagen", ex );
 	  }
 	} else {
 	  rv = super.formatTrack( physCyl, physHead, sectorIDs, dataBuf );
@@ -276,6 +278,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public synchronized SectorData getSectorByIndex(
 					int physCyl,
 					int physHead,
@@ -295,6 +298,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public int getSectorsOfCylinder( int physCyl, int physHead )
   {
     java.util.List<SectorData> sectors = getSectorsOfCyl( physCyl, physHead );
@@ -302,12 +306,14 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public boolean isReadOnly()
   {
     return this.raf == null;
   }
 
 
+  @Override
   public void putSettingsTo( Properties props, String prefix )
   {
     if( (props != null) && (this.fileName != null) ) {
@@ -323,6 +329,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  @Override
   public boolean writeSector(
 			int        physCyl,
 			int        physHead,
@@ -353,7 +360,7 @@ public class AnadiskFloppyDisk extends AbstractFloppyDisk
 	    rv = true;
 	  }
 	  catch( IOException ex ) {
-	    showWriteError( physCyl, physHead, sectorNum, ex );
+	    fireShowWriteError( physCyl, physHead, sectorNum, ex );
 	    sector.setError( true );
 	  }
 	}

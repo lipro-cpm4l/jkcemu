@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -13,15 +13,34 @@ import java.lang.*;
 
 public class Z80Reassembler
 {
+  public static String createWordText( Integer value )
+  {
+    return value != null ? createWordText( value.intValue() ) : null;
+  }
+
+
+  public static String createAddrText( Integer addr, boolean indirect )
+  {
+    String rv = createWordText( addr );
+    if( (rv != null) && indirect ) {
+      rv = String.format( "(%s)", rv );
+    }
+    return rv;
+  }
+
+
   public static Z80ReassInstr reassInstruction(
-					int addr,
-					int b0,
-					int b1,
-					int b2,
-					int b3 )
+					Z80MemView memory,
+					int        addr )
   {
     Z80ReassInstr instr = null;
 
+    int     b0    = memory.getMemByte( addr, true );
+    boolean b1_m1 = ((b0 == 0xCB) || (b0 == 0xED)
+				|| (b0 == 0xDD) || (b0 == 0xFD));
+    int     b1    = memory.getMemByte( addr + 1, b1_m1 );
+    int     b2    = memory.getMemByte( addr + 2, true );
+    int     b3    = memory.getMemByte( addr + 3, true );
     if( (b0 >= 0) && (b0 <= 0x3F) ) {
       instr = reass00to3F( addr, b0, b1, b2 );
     }
@@ -79,7 +98,9 @@ public class Z80Reassembler
     } else {
       instr = reassC0toFF( addr, b0, b1, b2, b3 );
     }
-
+    if( instr != null ) {
+      instr.setBytes( b0, b1, b2, b3 );
+    }
     return instr;
   }
 
@@ -96,7 +117,9 @@ public class Z80Reassembler
       case 0x00:
 	return new Z80ReassInstr( 1, "NOP" );
       case 0x01:
-	return new Z80ReassInstr( 3, "LD", "BC", getWordText( b1, b2 ) );
+	return new Z80ReassInstr(
+			3,
+			"LD", "BC", createWordText( b1, b2 ) );
       case 0x02:
 	return new Z80ReassInstr( 1, "LD", "(BC)", "A" );
       case 0x03:
@@ -125,13 +148,12 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "LD", "C", getByteText( b1 ) );
       case 0x0F:
 	return new Z80ReassInstr( 1, "RRCA" );
-
       case 0x10:
 	return new Z80ReassInstr(
 			2,
-			"DJNZ", getRelAddrText( addr + 2, b1 ) );
+			"DJNZ", getRelAddr( addr + 2, b1 ) );
       case 0x11:
-	return new Z80ReassInstr( 3, "LD", "DE", getWordText( b1, b2 ) );
+	return new Z80ReassInstr( 3, "LD", "DE", createWordText( b1, b2 ) );
       case 0x12:
 	return new Z80ReassInstr( 1, "LD", "(DE)", "A" );
       case 0x13:
@@ -147,7 +169,7 @@ public class Z80Reassembler
       case 0x18:
 	return new Z80ReassInstr(
 			2,
-			"JR", getRelAddrText( addr + 2, b1 ) );
+			"JR", getRelAddr( addr + 2, b1 ) );
       case 0x19:
 	return new Z80ReassInstr( 1, "ADD", "HL", "DE" );
       case 0x1A:
@@ -162,17 +184,18 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "LD", "E", getByteText( b1 ) );
       case 0x1F:
 	return new Z80ReassInstr( 1, "RRA" );
-
       case 0x20:
 	return new Z80ReassInstr(
 			2,
-			"JR", "NZ", getRelAddrText( addr + 2, b1 ) );
+			"JR", "NZ", getRelAddr( addr + 2, b1 ) );
       case 0x21:
-	return new Z80ReassInstr( 3, "LD", "HL", getWordText( b1, b2 ) );
+	return new Z80ReassInstr(
+			3,
+			"LD", "HL", createWordText( b1, b2 ) );
       case 0x22:
 	return new Z80ReassInstr(
-			3, "LD",
-			"(" + getWordText( b1, b2 ) + ")", "HL" );
+			3,
+			"LD", getWord( b1, b2 ), true, "HL" );
       case 0x23:
 	return new Z80ReassInstr( 1, "INC", "HL" );
       case 0x24:
@@ -186,13 +209,13 @@ public class Z80Reassembler
       case 0x28:
 	return new Z80ReassInstr(
 			2,
-			"JR", "Z", getRelAddrText( addr + 2, b1 ) );
+			"JR", "Z", getRelAddr( addr + 2, b1 ) );
       case 0x29:
 	return new Z80ReassInstr( 1, "ADD", "HL", "HL" );
       case 0x2A:
 	return new Z80ReassInstr(
 			3,
-			"LD", "HL", "(" + getWordText( b1, b2 ) + ")" );
+			"LD", "HL", getWord( b1, b2 ), true );
       case 0x2B:
 	return new Z80ReassInstr( 1, "DEC", "HL" );
       case 0x2C:
@@ -203,17 +226,18 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "LD", "L", getByteText( b1 ) );
       case 0x2F:
 	return new Z80ReassInstr( 1, "CPL" );
-
       case 0x30:
 	return new Z80ReassInstr(
 			2,
-			"JR", "NC", getRelAddrText( addr + 2, b1 ) );
+			"JR", "NC", getRelAddr( addr + 2, b1 ) );
       case 0x31:
-	return new Z80ReassInstr( 3, "LD", "SP", getWordText( b1, b2 ) );
+	return new Z80ReassInstr(
+			3,
+			"LD", "SP", getWord( b1, b2 ) );
       case 0x32:
 	return new Z80ReassInstr(
 			3,
-			"LD", "(" + getWordText( b1, b2 ) + ")", "A" );
+			"LD", getWord( b1, b2 ), true, "A" );
       case 0x33:
 	return new Z80ReassInstr( 1, "INC", "SP" );
       case 0x34:
@@ -227,13 +251,13 @@ public class Z80Reassembler
       case 0x38:
 	return new Z80ReassInstr(
 			2,
-			"JR", "C", getRelAddrText( addr + 2, b1 ) );
+			"JR", "C", getRelAddr( addr + 2, b1 ) );
       case 0x39:
 	return new Z80ReassInstr( 1, "ADD", "HL", "SP" );
       case 0x3A:
 	return new Z80ReassInstr(
 			3,
-			"LD", "A", "(" + getWordText( b1, b2 ) + ")" );
+			"LD", "A", getWord( b1, b2 ), true );
       case 0x3B:
 	return new Z80ReassInstr( 1, "DEC", "SP" );
       case 0x3C:
@@ -264,15 +288,13 @@ public class Z80Reassembler
       case 0xC2:
 	return new Z80ReassInstr(
 			3,
-			"JP", "NZ", getWordText( b1, b2 ) );
+			"JP", "NZ", getWord( b1, b2 ) );
       case 0xC3:
-	return new Z80ReassInstr(
-			3,
-			"JP", getWordText( b1, b2 ) );
+	return new Z80ReassInstr( 3, "JP", getWord( b1, b2 ) );
       case 0xC4:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "NZ", getWordText( b1, b2 ) );
+			"CALL", "NZ", getWord( b1, b2 ) );
       case 0xC5:
 	return new Z80ReassInstr( 1, "PUSH", "BC" );
       case 0xC6:
@@ -286,22 +308,21 @@ public class Z80Reassembler
       case 0xCA:
 	return new Z80ReassInstr(
 			3,
-			"JP", "Z", getWordText( b1, b2 ) );
+			"JP", "Z", getWord( b1, b2 ) );
       case 0xCB:
 	return reassCB( b1 );
       case 0xCC:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "Z", getWordText( b1, b2 ) );
+			"CALL", "Z", getWord( b1, b2 ) );
       case 0xCD:
 	return new Z80ReassInstr(
 			3,
-			"CALL", getWordText( b1, b2 ) );
+			"CALL", getWord( b1, b2 ) );
       case 0xCE:
 	return new Z80ReassInstr( 2, "ADC", "A", getByteText( b1 ) );
       case 0xCF:
 	return new Z80ReassInstr( 1, "RST", "08H" );
-
       case 0xD0:
 	return new Z80ReassInstr( 1, "RET", "NC" );
       case 0xD1:
@@ -309,14 +330,14 @@ public class Z80Reassembler
       case 0xD2:
 	return new Z80ReassInstr(
 			3,
-			"JP", "NC", getWordText( b1, b2 ) );
+			"JP", "NC", getWord( b1, b2 ) );
       case 0xD3:
 	return new Z80ReassInstr(
-			2, "OUT", "(" + getByteText( b1 ) + ")", "A" );
+			2, "OUT", getIndirectByteText( b1 ), "A" );
       case 0xD4:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "NC", getWordText( b1, b2 ) );
+			"CALL", "NC", getWord( b1, b2 ) );
       case 0xD5:
 	return new Z80ReassInstr( 1, "PUSH", "DE" );
       case 0xD6:
@@ -330,14 +351,14 @@ public class Z80Reassembler
       case 0xDA:
 	return new Z80ReassInstr(
 			3,
-			"JP", "C", getWordText( b1, b2 ) );
+			"JP", "C", getWord( b1, b2 ) );
       case 0xDB:
 	return new Z80ReassInstr(
-			2, "IN", "A", "(" + getByteText( b1 ) + ")" );
+			2, "IN", "A", getIndirectByteText( b1 ) );
       case 0xDC:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "C", getWordText( b1, b2 ) );
+			"CALL", "C", getWord( b1, b2 ) );
       case 0xDD:
 	return ((b1 == 0xDD) || (b1 == 0xED) || (b1 == 0xFD)) ?
 	    new Z80ReassInstr( 1, "*NOP" ) :
@@ -346,7 +367,6 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "SBC", getByteText( b1 ) );
       case 0xDF:
 	return new Z80ReassInstr( 1, "RST", "18H" );
-
       case 0xE0:
 	return new Z80ReassInstr( 1, "RET", "PO" );
       case 0xE1:
@@ -354,13 +374,13 @@ public class Z80Reassembler
       case 0xE2:
 	return new Z80ReassInstr(
 			3,
-			"JP", "PO", getWordText( b1, b2 ) );
+			"JP", "PO", getWord( b1, b2 ) );
       case 0xE3:
 	return new Z80ReassInstr( 1, "EX", "(SP)", "HL" );
       case 0xE4:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "PO", getWordText( b1, b2 ) );
+			"CALL", "PO", getWord( b1, b2 ) );
       case 0xE5:
 	return new Z80ReassInstr( 1, "PUSH", "HL" );
       case 0xE6:
@@ -374,20 +394,19 @@ public class Z80Reassembler
       case 0xEA:
 	return new Z80ReassInstr(
 			3,
-			"JP", "PE", getWordText( b1, b2 ) );
+			"JP", "PE", getWord( b1, b2 ) );
       case 0xEB:
 	return new Z80ReassInstr( 1, "EX", "DE", "HL" );
       case 0xEC:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "PE", getWordText( b1, b2 ) );
+			"CALL", "PE", getWord( b1, b2 ) );
       case 0xED:
 	return reassED( b1, b2, b3 );
       case 0xEE:
 	return new Z80ReassInstr( 2, "XOR", getByteText( b1 ) );
       case 0xEF:
 	return new Z80ReassInstr( 1, "RST", "28H" );
-
       case 0xF0:
 	return new Z80ReassInstr( 1, "RET", "P" );
       case 0xF1:
@@ -395,13 +414,13 @@ public class Z80Reassembler
       case 0xF2:
 	return new Z80ReassInstr(
 			3,
-			"JP", "P", getWordText( b1, b2 ) );
+			"JP", "P", getWord( b1, b2 ) );
       case 0xF3:
 	return new Z80ReassInstr( 1, "DI" );
       case 0xF4:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "P", getWordText( b1, b2 ) );
+			"CALL", "P", getWord( b1, b2 ) );
       case 0xF5:
 	return new Z80ReassInstr( 1, "PUSH", "AF" );
       case 0xF6:
@@ -415,13 +434,13 @@ public class Z80Reassembler
       case 0xFA:
 	return new Z80ReassInstr(
 			3,
-			"JP", "M", getWordText( b1, b2 ) );
+			"JP", "M", getWord( b1, b2 ) );
       case 0xFB:
 	return new Z80ReassInstr( 1, "EI" );
       case 0xFC:
 	return new Z80ReassInstr(
 			3,
-			"CALL", "M", getWordText( b1, b2 ) );
+			"CALL", "M", getWord( b1, b2 ) );
       case 0xFD:
 	return ((b1 == 0xDD) || (b1 == 0xED) || (b1 == 0xFD)) ?
 	    new Z80ReassInstr( 1, "*NOP" ) :
@@ -474,7 +493,7 @@ public class Z80Reassembler
       case 0x43:
 	return new Z80ReassInstr(
 			4,
-			"LD", "(" + getWordText( b2, b3 ) + ")", "BC" );
+			"LD", getWord( b2, b3 ), true, "BC" );
       case 0x44:
 	return new Z80ReassInstr( 2, "NEG" );
       case 0x45:
@@ -492,7 +511,7 @@ public class Z80Reassembler
       case 0x4B:
 	return new Z80ReassInstr(
 			4,
-			"LD", "BC", "(" + getWordText( b2, b3 ) + ")" );
+			"LD", "BC", getWord( b2, b3 ) );
       case 0x4C:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x4D:
@@ -501,7 +520,6 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "*IM", "0" );
       case 0x4F:
 	return new Z80ReassInstr( 2, "LD", "R", "A" );
-
       case 0x50:
 	return new Z80ReassInstr( 2, "IN", "D", "(C)" );
       case 0x51:
@@ -511,7 +529,7 @@ public class Z80Reassembler
       case 0x53:
 	return new Z80ReassInstr(
 			4,
-			"LD", "(" + getWordText( b2, b3 ) + ")", "DE" );
+			"LD", getWord( b2, b3 ), true, "DE" );
       case 0x54:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x55:
@@ -529,7 +547,7 @@ public class Z80Reassembler
       case 0x5B:
 	return new Z80ReassInstr(
 			4,
-			"LD", "DE", "(" + getWordText( b2, b3 ) + ")" );
+			"LD", "DE", getWord( b2, b3 ), true );
       case 0x5C:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x5D:
@@ -538,7 +556,6 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "IM", "2" );
       case 0x5F:
 	return new Z80ReassInstr( 2, "LD", "A", "R" );
-
       case 0x60:
 	return new Z80ReassInstr( 2, "IN", "H", "(C)" );
       case 0x61:
@@ -548,7 +565,7 @@ public class Z80Reassembler
       case 0x63:
 	return new Z80ReassInstr(
 			4,
-			"LD", "(" + getWordText( b2, b3 ) + ")", "HL" );
+			"*LD", getWord( b2, b3 ), true, "HL" );
       case 0x64:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x65:
@@ -566,7 +583,7 @@ public class Z80Reassembler
       case 0x6B:
 	return new Z80ReassInstr(
 			4,
-			"LD", "HL", "(" + getWordText( b2, b3 ) + ")" );
+			"*LD", "HL", getWord( b2, b3 ) );
       case 0x6C:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x6D:
@@ -575,7 +592,6 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "*IM", "0" );
       case 0x6F:
 	return new Z80ReassInstr( 2, "RLD" );
-
       case 0x70:
 	return new Z80ReassInstr( 2, "*IN", "F", "(C)" );
       case 0x71:
@@ -585,7 +601,7 @@ public class Z80Reassembler
       case 0x73:
 	return new Z80ReassInstr(
 			4,
-			"LD", "(" + getWordText( b2, b3 ) + ")", "SP" );
+			"LD", getWord( b2, b3 ), true, "SP" );
       case 0x74:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x75:
@@ -601,14 +617,13 @@ public class Z80Reassembler
       case 0x7B:
 	return new Z80ReassInstr(
 			4,
-			"LD", "SP", "(" + getWordText( b2, b3 ) + ")" );
+			"LD", "SP", getWord( b2, b3 ), true );
       case 0x7C:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x7D:
 	return new Z80ReassInstr( 2, "*RETN" );
       case 0x7E:
 	return new Z80ReassInstr( 2, "*IM", "2" );
-
       case 0xA0:
 	return new Z80ReassInstr( 2, "LDI" );
       case 0xA1:
@@ -625,7 +640,6 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 2, "IND" );
       case 0xAB:
 	return new Z80ReassInstr( 2, "OUTD" );
-
       case 0xB0:
 	return new Z80ReassInstr( 2, "LDIR" );
       case 0xB1:
@@ -762,7 +776,9 @@ public class Z80Reassembler
       case 0x00:
 	return new Z80ReassInstr( 2, "*NOP" );
       case 0x01:
-	return new Z80ReassInstr( 4, "*LD", "BC", getWordText( b2, b3 ) );
+	return new Z80ReassInstr(
+			4,
+			"*LD", "BC", createWordText( b2, b3 ) );
       case 0x02:
 	return new Z80ReassInstr( 2, "*LD", "(BC)", "A" );
       case 0x03:
@@ -791,13 +807,14 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 3, "*LD", "C", getByteText( b2 ) );
       case 0x0F:
 	return new Z80ReassInstr( 2, "*RRCA" );
-
       case 0x10:
 	return new Z80ReassInstr(
 			3,
-			"*DJNZ", getRelAddrText( addr + 3, b2 ) );
+			"*DJNZ", getRelAddr( addr + 3, b2 ) );
       case 0x11:
-	return new Z80ReassInstr( 4, "*LD", "DE", getWordText( b2, b3 ) );
+	return new Z80ReassInstr(
+			4,
+			"*LD", "DE", createWordText( b2, b3 ) );
       case 0x12:
 	return new Z80ReassInstr( 2, "*LD", "(DE)", "A" );
       case 0x13:
@@ -813,7 +830,7 @@ public class Z80Reassembler
       case 0x18:
 	return new Z80ReassInstr(
 			3,
-			"*JR", getRelAddrText( addr + 3, b2 ) );
+			"*JR", getRelAddr( addr + 3, b2 ) );
       case 0x19:
 	return new Z80ReassInstr( 2, "ADD", ixy, "DE" );
       case 0x1A:
@@ -828,17 +845,18 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 3, "*LD", "E", getByteText( b2 ) );
       case 0x1F:
 	return new Z80ReassInstr( 2, "*RRA" );
-
       case 0x20:
 	return new Z80ReassInstr(
 			3,
-			"*JR", "NZ", getRelAddrText( addr + 3, b2 ) );
+			"*JR", "NZ", getRelAddr( addr + 3, b2 ) );
       case 0x21:
-	return new Z80ReassInstr( 4, "LD", ixy, getWordText( b2, b3 ) );
+	return new Z80ReassInstr(
+			4,
+			"LD", ixy, createWordText( b2, b3 ) );
       case 0x22:
 	return new Z80ReassInstr(
 			4,
-			"LD", "(" + getWordText( b2, b3 ) + ")", ixy );
+			"LD", getWord( b2, b3 ), true, ixy );
       case 0x23:
 	return new Z80ReassInstr( 2, "INC", ixy );
       case 0x24:
@@ -852,13 +870,13 @@ public class Z80Reassembler
       case 0x28:
 	return new Z80ReassInstr(
 			3,
-			"*JR", "Z", getRelAddrText( addr + 3, b2 ) );
+			"*JR", "Z", getRelAddr( addr + 3, b2 ) );
       case 0x29:
 	return new Z80ReassInstr( 2, "ADD", ixy, ixy );
       case 0x2A:
 	return new Z80ReassInstr(
 			4,
-			"LD", ixy, "(" + getWordText( b2, b3 ) + ")" );
+			"LD", ixy, getWord( b2, b3 ), true );
       case 0x2B:
 	return new Z80ReassInstr( 2, "DEC", ixy );
       case 0x2C:
@@ -869,17 +887,18 @@ public class Z80Reassembler
 	return new Z80ReassInstr( 3, "*LD", ixy + "L", getByteText( b2 ) );
       case 0x2F:
 	return new Z80ReassInstr( 2, "*CPL" );
-
       case 0x30:
 	return new Z80ReassInstr(
 			3,
-			"*JR", "NC", getRelAddrText( addr + 3, b1 ) );
+			"*JR", "NC", getRelAddr( addr + 3, b2 ) );
       case 0x31:
-	return new Z80ReassInstr( 4, "*LD", "SP", getWordText( b2, b3 ) );
+	return new Z80ReassInstr(
+			4,
+			"*LD", "SP", getWord( b2, b3 ) );
       case 0x32:
 	return new Z80ReassInstr(
 			4,
-			"*LD", "(" + getWordText( b2, b3 ) + ")", "A" );
+			"*LD", getWord( b2, b3 ), true, "A" );
       case 0x33:
 	return new Z80ReassInstr( 2, "*INC", "SP" );
       case 0x34:
@@ -894,13 +913,13 @@ public class Z80Reassembler
       case 0x38:
 	return new Z80ReassInstr(
 			3,
-			"*JR", "C", getRelAddrText( addr + 3, b2 ) );
+			"*JR", "C", getRelAddr( addr + 3, b2 ) );
       case 0x39:
 	return new Z80ReassInstr( 2, "ADD", ixy, "SP" );
       case 0x3A:
 	return new Z80ReassInstr(
 			4,
-			"*LD", "A", "(" + getWordText( b2, b3 ) + ")" );
+			"*LD", "A", getWord( b2, b3 ), true );
       case 0x3B:
 	return new Z80ReassInstr( 2, "*DEC", "SP" );
       case 0x3C:
@@ -931,15 +950,15 @@ public class Z80Reassembler
       case 0xC2:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "NZ", getWordText( b2, b3 ) );
+			"*JP", "NZ", getWord( b2, b3 ) );
       case 0xC3:
 	return new Z80ReassInstr(
 			4,
-			"*JP", getWordText( b2, b3 ) );
+			"*JP", getWord( b2, b3 ) );
       case 0xC4:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "NZ", getWordText( b2, b3 ) );
+			"*CALL", "NZ", getWord( b2, b3 ) );
       case 0xC5:
 	return new Z80ReassInstr( 2, "*PUSH", "BC" );
       case 0xC6:
@@ -953,22 +972,21 @@ public class Z80Reassembler
       case 0xCA:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "Z", getWordText( b2, b3 ) );
+			"*JP", "Z", getWord( b2, b3 ) );
       case 0xCB:
 	return reassIXY_CB( ixy, b2, b3 );
       case 0xCC:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "Z", getWordText( b2, b3 ) );
+			"*CALL", "Z", getWord( b2, b3 ) );
       case 0xCD:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", getWordText( b2, b3 ) );
+			"*CALL", getWord( b2, b3 ) );
       case 0xCE:
 	return new Z80ReassInstr( 3, "*ADC", "A", getByteText( b2 ) );
       case 0xCF:
 	return new Z80ReassInstr( 2, "*RST", "08H" );
-
       case 0xD0:
 	return new Z80ReassInstr( 2, "*RET", "NC" );
       case 0xD1:
@@ -976,14 +994,14 @@ public class Z80Reassembler
       case 0xD2:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "NC", getWordText( b2, b3 ) );
+			"*JP", "NC", getWord( b2, b3 ) );
       case 0xD3:
 	return new Z80ReassInstr(
 			3, "*OUT", "(" + getByteText( b2 ) + ")", "A" );
       case 0xD4:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "NC", getWordText( b2, b3 ) );
+			"*CALL", "NC", getWord( b2, b3 ) );
       case 0xD5:
 	return new Z80ReassInstr( 2, "*PUSH", "DE" );
       case 0xD6:
@@ -997,21 +1015,20 @@ public class Z80Reassembler
       case 0xDA:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "C", getWordText( b2, b3 ) );
+			"*JP", "C", getWord( b2, b3 ) );
       case 0xDB:
 	return new Z80ReassInstr(
 			3, "*IN", "A", "(" + getByteText( b2 ) + ")" );
       case 0xDC:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "C", getWordText( b2, b3 ) );
+			"*CALL", "C", getWord( b2, b3 ) );
       case 0xDD:
 	return new Z80ReassInstr( 2, "*?" );
       case 0xDE:
 	return new Z80ReassInstr( 3, "*SBC", getByteText( b2 ) );
       case 0xDF:
 	return new Z80ReassInstr( 2, "*RST", "18H" );
-
       case 0xE0:
 	return new Z80ReassInstr( 2, "*RET", "PO" );
       case 0xE1:
@@ -1019,13 +1036,13 @@ public class Z80Reassembler
       case 0xE2:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "PO", getWordText( b2, b3 ) );
+			"*JP", "PO", getWord( b2, b3 ) );
       case 0xE3:
 	return new Z80ReassInstr( 2, "EX", "(SP)", ixy );
       case 0xE4:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "PO", getWordText( b2, b3 ) );
+			"*CALL", "PO", getWord( b2, b3 ) );
       case 0xE5:
 	return new Z80ReassInstr( 2, "PUSH", ixy );
       case 0xE6:
@@ -1039,20 +1056,19 @@ public class Z80Reassembler
       case 0xEA:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "PE", getWordText( b2, b3 ) );
+			"*JP", "PE", getWord( b2, b3 ) );
       case 0xEB:
 	return new Z80ReassInstr( 2, "*EX", "DE", "HL" );
       case 0xEC:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "PE", getWordText( b2, b3 ) );
+			"*CALL", "PE", getWord( b2, b3 ) );
       case 0xED:
 	return new Z80ReassInstr( 2, "*?" );
       case 0xEE:
 	return new Z80ReassInstr( 3, "*XOR", getByteText( b2 ) );
       case 0xEF:
 	return new Z80ReassInstr( 2, "*RST", "28H" );
-
       case 0xF0:
 	return new Z80ReassInstr( 2, "*RET", "P" );
       case 0xF1:
@@ -1060,13 +1076,13 @@ public class Z80Reassembler
       case 0xF2:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "P", getWordText( b2, b3 ) );
+			"*JP", "P", getWord( b2, b3 ) );
       case 0xF3:
 	return new Z80ReassInstr( 2, "*DI" );
       case 0xF4:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "P", getWordText( b2, b3 ) );
+			"*CALL", "P", getWord( b2, b3 ) );
       case 0xF5:
 	return new Z80ReassInstr( 2, "*PUSH", "AF" );
       case 0xF6:
@@ -1080,13 +1096,13 @@ public class Z80Reassembler
       case 0xFA:
 	return new Z80ReassInstr(
 			4,
-			"*JP", "M", getWordText( b2, b3 ) );
+			"*JP", "M", getWord( b2, b3 ) );
       case 0xFB:
 	return new Z80ReassInstr( 2, "*EI" );
       case 0xFC:
 	return new Z80ReassInstr(
 			4,
-			"*CALL", "M", getWordText( b2, b3 ) );
+			"*CALL", "M", getWord( b2, b3 ) );
       case 0xFD:
 	return new Z80ReassInstr( 2, "*?" );
       case 0xFE:
@@ -1140,11 +1156,27 @@ public class Z80Reassembler
 			4,
 			"*LD",
 			getRegName( b3 ),
-			instrName
-				+ " "
-				+ String.valueOf( (b3 >> 3) & 0x07 )
-				+ ","
-				+ getIXYMem( ixy, b2 ) );
+			String.format(
+				"%s %d,%s",
+				instrName,
+				(b3 >> 3) & 0x07,
+				getIXYMem( ixy, b2 ) ) );
+  }
+
+
+  private static String createWordText( int value )
+  {
+    value &= 0xFFFF;
+    return String.format(
+			"%s%04XH",
+			(value >= 0xA000 ? "0" : ""),
+			value );
+  }
+
+
+  private static String createWordText( int l, int h )
+  {
+    return String.format( "%s%02X%02XH", h >= 0xA0 ? "0" : "", h, l );
   }
 
 
@@ -1223,12 +1255,6 @@ public class Z80Reassembler
   }
 
 
-  private static int getAddr( int l, int h )
-  {
-    return ((h & 0xFF) << 8) | (l & 0xFF);
-  }
-
-
   private static String getByteText( int v )
   {
     v &= 0xFF;
@@ -1236,17 +1262,10 @@ public class Z80Reassembler
   }
 
 
-
-  private static String getWordText( int v )
+  private static String getIndirectByteText( int v )
   {
-    v &= 0xFFFF;
-    return String.format( "%s%04XH", (v >= 0xA000 ? "0" : ""), v );
-  }
-
-
-  private static String getWordText( int l, int h )
-  {
-    return getWordText( getAddr( l, h ) );
+    v &= 0xFF;
+    return String.format( "(%s%02XH)", (v >= 0xA0 ? "0" : ""), v );
   }
 
 
@@ -1258,13 +1277,12 @@ public class Z80Reassembler
 
   private static int getRelAddr( int nextInstAddr, int d )
   {
-    return (nextInstAddr + (int) ((byte) d)) & 0xFFFF;
+    return nextInstAddr + (int) ((byte) d);
   }
 
 
-  private static String getRelAddrText( int nextInstAddr, int d )
+  private static int getWord( int l, int h )
   {
-    return getWordText( getRelAddr( nextInstAddr, d ) );
+    return ((h << 8) & 0xFF00) | (l & 0x00FF);
   }
 }
-

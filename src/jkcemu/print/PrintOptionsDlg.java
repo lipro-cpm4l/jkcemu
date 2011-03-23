@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -48,6 +48,7 @@ public class PrintOptionsDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -194,8 +195,9 @@ public class PrintOptionsDlg extends BasicDlg
 	if( s != null ) {
 	  try {
 	    int fontSize = Integer.parseInt( s );
-	    if( fontSize > 0 )
+	    if( fontSize > 0 ) {
 	      Main.setPrintFontSize( fontSize );
+	    }
 	  }
 	  catch( NumberFormatException ex ) {}
 	}

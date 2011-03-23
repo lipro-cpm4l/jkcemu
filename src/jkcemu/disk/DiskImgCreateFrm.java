@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -27,17 +27,20 @@ public class DiskImgCreateFrm
 			implements
 				ChangeListener,
 				DropTargetListener,
+				FlavorListener,
 				ListSelectionListener
 {
   private ScreenFrm         screenFrm;
+  private Clipboard         clipboard;
   private File              lastOutFile;
-  private File              sysFile;
   private boolean           dataChanged;
   private JMenuItem         mnuClose;
   private JMenuItem         mnuFileAdd;
   private JMenuItem         mnuFileRemove;
   private JMenuItem         mnuSort;
   private JMenuItem         mnuSave;
+  private JMenuItem         mnuChangeUser;
+  private JMenuItem         mnuPaste;
   private JMenuItem         mnuHelpContent;
   private JButton           btnFileAdd;
   private JButton           btnFileRemove;
@@ -50,9 +53,10 @@ public class DiskImgCreateFrm
   private FileTableModel    tableModel;
   private JTable            table;
   private JScrollPane       scrollPane;
-  private JRadioButton      btnFmtKC85;
-  private JRadioButton      btnFmtLLC2;
-  private JRadioButton      btnFmtZ9001;
+  private JRadioButton      btnFmt800K;
+  private JRadioButton      btnFmt780K;
+  private JRadioButton      btnFmt720K;
+  private JRadioButton      btnFmtCPL;
   private JRadioButton      btnFmtEtc;
   private JLabel            labelSides;
   private JLabel            labelCyls;
@@ -75,7 +79,7 @@ public class DiskImgCreateFrm
   private JComboBox         comboBlockSize;
   private JComboBox         comboBlockNumSize;
   private JSpinner          spinnerDirBlocks;
-  private JTextField        fldSysFileName;
+  private FileNameFld       fldSysFileName;
   private JLabel            labelStatus;
   private DropTarget        dropTargetFile1;
   private DropTarget        dropTargetFile2;
@@ -85,11 +89,16 @@ public class DiskImgCreateFrm
   public DiskImgCreateFrm( ScreenFrm screenFrm )
   {
     this.screenFrm   = screenFrm;
+    this.clipboard   = null;
     this.lastOutFile = null;
-    this.sysFile     = null;
     this.dataChanged = false;
     setTitle( "JKCEMU CP/M-Diskettenabbilddatei erstellen" );
     Main.updIcon( this );
+
+    Toolkit tk = getToolkit();
+    if( tk != null ) {
+      this.clipboard = tk.getSystemClipboard();
+    }
 
 
     // Menu
@@ -122,6 +131,19 @@ public class DiskImgCreateFrm
 
     this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
     mnuFile.add( this.mnuClose );
+
+
+    // Menu Bearbeiten
+    JMenu mnuEdit = new JMenu( "Bearbeiten" );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
+    mnuBar.add( mnuEdit );
+
+    this.mnuPaste = createJMenuItem( "Einf\u00FCgen" );
+    mnuEdit.add( this.mnuPaste );
+    mnuEdit.addSeparator();
+
+    this.mnuChangeUser = createJMenuItem( "User-Bereich \u00E4ndern..." );
+    mnuEdit.add( this.mnuChangeUser );
 
 
     // Menu Hilfe
@@ -194,6 +216,7 @@ public class DiskImgCreateFrm
 				FileTableModel.Column.FILE,
 				FileTableModel.Column.SIZE,
 				FileTableModel.Column.LAST_MODIFIED,
+				FileTableModel.Column.USER_NUM,
 				FileTableModel.Column.READ_ONLY,
 				FileTableModel.Column.SYSTEM_FILE,
 				FileTableModel.Column.ARCHIVED );
@@ -212,7 +235,8 @@ public class DiskImgCreateFrm
 			ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
     this.table.addMouseListener( this );
 
-    EmuUtil.setTableColWidths( this.table, 100, 280, 70, 130, 40, 40, 40 );
+    EmuUtil.setTableColWidths(
+		this.table, 100, 280, 70, 130, 40, 40, 40, 40 );
 
     ListSelectionModel selectionModel = this.table.getSelectionModel();
     if( selectionModel != null ) {
@@ -239,24 +263,32 @@ public class DiskImgCreateFrm
 
     ButtonGroup grpFmt = new ButtonGroup();
 
-    this.btnFmtKC85 = new JRadioButton(
-			"MicroDOS, ML-DOS f\u00FCr HC900 und KC85/2..5",
+    this.btnFmt800K = new JRadioButton(
+			"800K (A5105, KC85/1, KC87, Z9001)",
 			false );
-    grpFmt.add( this.btnFmtKC85 );
-    panelFmt.add( this.btnFmtKC85, gbcFmt );
+    grpFmt.add( this.btnFmt800K );
+    panelFmt.add( this.btnFmt800K, gbcFmt );
 
-    this.btnFmtZ9001 = new JRadioButton(
-			"CP/A f\u00FCr KC85/1, KC87 und Z9001",
+    this.btnFmt780K = new JRadioButton(
+			"780K (A5105, AC1 mit ZDOS, HC900, KC85/2..5, Z1013)",
 			false );
-    grpFmt.add( this.btnFmtZ9001 );
+    grpFmt.add( this.btnFmt780K );
     gbcFmt.insets.top = 0;
     gbcFmt.gridy++;
-    panelFmt.add( this.btnFmtZ9001, gbcFmt );
+    panelFmt.add( this.btnFmt780K, gbcFmt );
 
-    this.btnFmtLLC2 = new JRadioButton( "CP/L f\u00FCr LLC2", false );
-    grpFmt.add( this.btnFmtLLC2 );
+    this.btnFmt720K = new JRadioButton(
+			"720K (A5105, KC85/1, KC87, Z9001)",
+			false );
+    grpFmt.add( this.btnFmt720K );
+    gbcFmt.insets.top = 0;
     gbcFmt.gridy++;
-    panelFmt.add( this.btnFmtLLC2, gbcFmt );
+    panelFmt.add( this.btnFmt720K, gbcFmt );
+
+    this.btnFmtCPL = new JRadioButton( "LLC2 mit CP/L", false );
+    grpFmt.add( this.btnFmtCPL );
+    gbcFmt.gridy++;
+    panelFmt.add( this.btnFmtCPL, gbcFmt );
 
     this.btnFmtEtc = new JRadioButton( "Sonstiges Format:", true );
     grpFmt.add( this.btnFmtEtc );
@@ -376,7 +408,7 @@ public class DiskImgCreateFrm
     gbcFmt.gridy++;
     panelFmt.add( this.labelSysFile, gbcFmt );
 
-    this.fldSysFileName = new JTextField();
+    this.fldSysFileName = new FileNameFld();
     this.fldSysFileName.setEditable( false );
     gbcFmt.fill      = GridBagConstraints.HORIZONTAL;
     gbcFmt.weightx   = 1.0;
@@ -424,9 +456,10 @@ public class DiskImgCreateFrm
 
     // Listener
     this.tabbedPane.addChangeListener( this );
-    this.btnFmtKC85.addActionListener( this );
-    this.btnFmtLLC2.addActionListener( this );
-    this.btnFmtZ9001.addActionListener( this );
+    this.btnFmt800K.addActionListener( this );
+    this.btnFmt780K.addActionListener( this );
+    this.btnFmt720K.addActionListener( this );
+    this.btnFmtCPL.addActionListener( this );
     this.btnFmtEtc.addActionListener( this );
     this.comboSides.addActionListener( this );
     this.comboCyls.addActionListener( this );
@@ -435,6 +468,9 @@ public class DiskImgCreateFrm
     this.comboSectorSize.addActionListener( this );
     this.comboBlockSize.addActionListener( this );
     this.spinnerDirBlocks.addChangeListener( this );
+    if( this.clipboard != null ) {
+      this.clipboard.addFlavorListener( this );
+    }
 
 
     // Drop-Ziele
@@ -450,11 +486,13 @@ public class DiskImgCreateFrm
     // sonstiges
     updActionButtons();
     updBgColor();
+    updPasteButton();
   }
 
 
 	/* --- ChangeListener --- */
 
+  @Override
   public void stateChanged( ChangeEvent e )
   {
     if( e != null ) {
@@ -478,6 +516,7 @@ public class DiskImgCreateFrm
 
 	/* --- DropTargetListener --- */
 
+  @Override
   public void dragEnter( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -485,60 +524,39 @@ public class DiskImgCreateFrm
   }
 
 
+  @Override
   public void dragExit( DropTargetEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void dragOver( DropTargetDragEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void drop( DropTargetDropEvent e )
   {
-    try {
-      Object src = e.getSource();
-      if( (src == this.dropTargetFile1) || (src == this.dropTargetFile2) ) {
-	if( EmuUtil.isFileDrop( e ) ) {
-	  e.acceptDrop( DnDConstants.ACTION_COPY );  // Quelle nicht loeschen
-	  Transferable t = e.getTransferable();
-	  if( t != null ) {
-	    Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
-	    if( o != null ) {
-	      if( o instanceof Collection ) {
-		for( Object item : (Collection) o ) {
-		  if( item != null ) {
-		    File file = null;
-		    if( item instanceof File ) {
-		      file = (File) item;
-		    } else if( item instanceof String ) {
-		      file= new File( (String) item );
-		    }
-		    if( file != null ) {
-		      if( !addFile( file ) ) {
-			break;
-		      }
-		    }
-		  }
-		}
-	      }
-	    }
-	  }
-	}
-      } else if( src == this.dropTargetSysFile ) {
-	File file = EmuUtil.fileDrop( this, e );
-	if( file != null ) {
-	  addSysFile( file );
-	}
+    Object src = e.getSource();
+    if( (src == this.dropTargetFile1) || (src == this.dropTargetFile2) ) {
+      if( EmuUtil.isFileDrop( e ) ) {
+	e.acceptDrop( DnDConstants.ACTION_COPY );  // Quelle nicht loeschen
+	pasteFiles( e.getTransferable() );
+      }
+    } else if( src == this.dropTargetSysFile ) {
+      File file = EmuUtil.fileDrop( this, e );
+      if( file != null ) {
+	addSysFile( file );
       }
     }
-    catch( Exception ex ) {}
   }
 
 
+  @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -546,8 +564,18 @@ public class DiskImgCreateFrm
   }
 
 
+	/* --- FlavorListener --- */
+
+  @Override
+  public void flavorsChanged( FlavorEvent e )
+  {
+    updPasteButton();
+  }
+
+
 	/* --- ListSelectionListener --- */
 
+  @Override
   public void valueChanged( ListSelectionEvent e )
   {
     updActionButtons();
@@ -556,6 +584,7 @@ public class DiskImgCreateFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -594,17 +623,26 @@ public class DiskImgCreateFrm
 	rv = true;
 	doSysFileSelect();
       }
+      else if( src == this.mnuChangeUser ) {
+	rv = true;
+	doChangeUser();
+      }
+      else if( src == this.mnuPaste ) {
+	rv = true;
+	doPaste();
+      }
       else if( src == this.btnSysFileRemove ) {
 	rv = true;
 	doSysFileRemove();
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	this.screenFrm.showHelp( "/help/disk/create_img_by_hand.htm" );
+	this.screenFrm.showHelp( "/help/disk/creatediskimg.htm" );
       }
-      else if( (src == this.btnFmtKC85)
-	       || (src == this.btnFmtLLC2)
-	       || (src == this.btnFmtZ9001)
+      else if( (src == this.btnFmt800K)
+	       || (src == this.btnFmt780K)
+	       || (src == this.btnFmt720K)
+	       || (src == this.btnFmtCPL)
 	       || (src == this.btnFmtEtc) )
       {
 	rv = true;
@@ -627,6 +665,7 @@ public class DiskImgCreateFrm
   }
 
 
+  @Override
   public boolean doClose()
   {
     boolean rv = true;
@@ -654,6 +693,84 @@ public class DiskImgCreateFrm
 
 
 	/* --- Aktionen --- */
+
+  private void doChangeUser()
+  {
+    int[] rowNums = this.table.getSelectedRows();
+    if( rowNums != null ) {
+      if( rowNums.length > 0 ) {
+
+	// voreingestellten User-Bereich ermitteln
+	int value = -1;
+	for( int i = 0; i< rowNums.length; i++ ) {
+	  FileEntry entry = this.tableModel.getRow( rowNums[ i ] );
+	  if( entry != null ) {
+	    Integer userNum = entry.getUserNum();
+	    if( userNum != null ) {
+	      if( value >= 0 ) {
+		if( userNum.intValue() != value ) {
+		  value = -1;
+		  break;
+		}
+	      } else {
+		value = userNum.intValue();
+	      }
+	    }
+	  }
+	}
+	if( (value < 0) || (value > 15) ) {
+	  value = 0;
+	}
+
+	// Dialog anzeigen
+	JPanel panel = new JPanel(
+		new FlowLayout( FlowLayout.CENTER, 5, 5 ) );
+	panel.add( new JLabel( "User-Bereich:" ) );
+
+	JSpinner spinner = new JSpinner(
+		new SpinnerNumberModel( value, 0, 15, 1 ) );
+	panel.add( spinner );
+
+	int option = JOptionPane.showConfirmDialog(
+			this,
+			panel,
+			"User-Bereich \u00E4ndern",
+			JOptionPane.OK_CANCEL_OPTION,
+			JOptionPane.PLAIN_MESSAGE );
+	if( option == JOptionPane.OK_OPTION ) {
+	  Object o = spinner.getValue();
+	  if( o != null ) {
+	    if( o instanceof Number ) {
+	      value = ((Number) o).intValue();
+	      if( (value >= 0) && (value <= 15) ) {
+		Integer userNum = new Integer( value );
+		for( int i = 0; i< rowNums.length; i++ ) {
+		  int       rowNum = rowNums[ i ];
+		  FileEntry entry  = this.tableModel.getRow( rowNum );
+		  if( entry != null ) {
+		    entry.setUserNum( userNum );
+		    this.tableModel.fireTableRowsUpdated( rowNum, rowNum );
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doPaste()
+  {
+    if( this.clipboard != null ) {
+      try {
+	pasteFiles( this.clipboard.getContents( this ) );
+      }
+      catch( IllegalStateException ex ) {}
+    }
+  }
+
 
   private void doSave()
   {
@@ -696,20 +813,21 @@ public class DiskImgCreateFrm
 	if( anadisk || plainDisk ) {
 	  OutputStream out = null;
 	  try {
-	    int sides       = getIntValue( this.comboSides );
-	    int cyls        = getIntValue( this.comboCyls );
-	    int sysCyls     = getIntValue( this.spinnerSysCyls );
-	    int sectPerCyl  = getIntValue( this.comboSectPerCyl );
-	    int sectorSize  = getIntValue( this.comboSectorSize );
-	    int blockSize   = getIntValue( this.comboBlockSize ) * 1024;
-	    int dirBlocks   = getIntValue( this.spinnerDirBlocks );
-	    int diskSize    = sides * cyls * sectPerCyl * sectorSize;
-	    int dstDirPos   = sysCyls * sides * sectPerCyl * sectorSize;
-	    int dirSize     = dirBlocks * blockSize;
-	    int begFileArea = dstDirPos + dirSize;
-	    int dstFilePos  = begFileArea;
-	    if( this.sysFile != null ) {
-	      if( this.sysFile.length() > dstDirPos ) {
+	    int  sides       = getIntValue( this.comboSides );
+	    int  cyls        = getIntValue( this.comboCyls );
+	    int  sysCyls     = getIntValue( this.spinnerSysCyls );
+	    int  sectPerCyl  = getIntValue( this.comboSectPerCyl );
+	    int  sectorSize  = getIntValue( this.comboSectorSize );
+	    int  blockSize   = getIntValue( this.comboBlockSize ) * 1024;
+	    int  dirBlocks   = getIntValue( this.spinnerDirBlocks );
+	    int  diskSize    = sides * cyls * sectPerCyl * sectorSize;
+	    int  dstDirPos   = sysCyls * sides * sectPerCyl * sectorSize;
+	    int  dirSize     = dirBlocks * blockSize;
+	    int  begFileArea = dstDirPos + dirSize;
+	    int  dstFilePos  = begFileArea;
+	    File sysFile     = this.fldSysFileName.getFile();
+	    if( sysFile != null ) {
+	      if( sysFile.length() > dstDirPos ) {
 		  throw new IOException(
 			"Die Datei f\u00FCr die Systemspuren"
 				+ " ist zu gro\u00DF\n"
@@ -742,10 +860,10 @@ public class DiskImgCreateFrm
 			(byte) 0xE5 );
 	    }
 	    if( dstFilePos < diskBuf.length ) {
-	      Arrays.fill( diskBuf, dstFilePos, diskBuf.length, (byte) 0 );
+	      Arrays.fill( diskBuf, dstFilePos, diskBuf.length, (byte) 0x1A );
 	    }
-	    if( this.sysFile != null ) {
-	      readFile( this.sysFile, diskBuf, 0 );
+	    if( sysFile != null ) {
+	      readFile( sysFile, diskBuf, 0 );
 	    }
 	    boolean blockNum16Bit = false;
 	    int     extendSize    = 16 * blockSize;
@@ -779,8 +897,18 @@ public class DiskImgCreateFrm
 		      throw new IOException( "Directory zu klein" );
 		    }
 
-		    int entryBegPos        = dstDirPos;
-		    diskBuf[ dstDirPos++ ] = (byte) 0;
+		    int entryBegPos = dstDirPos;
+
+		    diskBuf[ dstDirPos ] = (byte) 0;
+		    Integer userNum      = entry.getUserNum();
+		    if( userNum != null ) {
+		      if( (userNum.intValue() > 0)
+			  && (userNum.intValue() <= 15) )
+		      {
+			diskBuf[ dstDirPos ] = userNum.byteValue();
+		      }
+		    }
+		    dstDirPos++;
 
 		    int[] sizes = { 8, 3 };
 		    int   len   = entryName.length();
@@ -1027,8 +1155,7 @@ public class DiskImgCreateFrm
 
   private void doSysFileRemove()
   {
-    this.sysFile = null;
-    this.fldSysFileName.setText( "" );
+    this.fldSysFileName.setFile( null );
     this.btnSysFileRemove.setEnabled( false );
   }
 
@@ -1053,6 +1180,29 @@ public class DiskImgCreateFrm
       else if( size > (1024 * 16 * 32) ) {
 	BasicDlg.showErrorDlg( this, "Datei ist zu gro\u00DF!" );
 	file = null;
+      } else {
+	String fileName = file.getName();
+	if( fileName != null ) {
+	  if( fileName.equalsIgnoreCase(
+			DirectoryFloppyDisk.SYS_FILE_NAME ) )
+	  {
+	    if( BasicDlg.showYesNoDlg(
+			this,
+			"Datei " + DirectoryFloppyDisk.SYS_FILE_NAME + ":\n"
+				+ "JKCEMU verwendet Dateien mit diesem Namen"
+				+ " f\u00FCr den Inhalt der Systemspuren.\n"
+				+ "M\u00F6chten Sie deshalb nun diese Datei"
+				+ " f\u00FCr die Systemspuren verwenden,\n"
+				+ "anstelle Sie als gew\u00F6hnliche Datei"
+				+ " im Directory einzubinden?" ) )
+	    {
+	      this.fldSysFileName.setFile( file );
+	      this.btnSysFileRemove.setEnabled( true );
+	      file = null;
+	      rv   = true;
+	    }
+	  }
+	}
       }
     } else {
       BasicDlg.showErrorDlg(
@@ -1143,6 +1293,7 @@ public class DiskImgCreateFrm
 		"Es existiert bereits ein Eintrag mit diesem Namen." );
 	} else {
 	  FileEntry entry = new FileEntry( entryName );
+	  entry.setUserNum( new Integer( 0 ) );
 	  if( size >= 0 ) {
 	    entry.setSize( new Long( size ) );
 	  }
@@ -1180,8 +1331,7 @@ public class DiskImgCreateFrm
     if( errMsg != null ) {
       BasicDlg.showErrorDlg( this, errMsg );
     } else {
-      this.sysFile = file;
-      this.fldSysFileName.setText( file.getPath() );
+      this.fldSysFileName.setFile( file );
       this.btnSysFileRemove.setEnabled( true );
     }
   }
@@ -1261,7 +1411,7 @@ public class DiskImgCreateFrm
   private void fireSelectRow( final int row )
   {
     final JTable table = this.table;
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -1301,6 +1451,37 @@ public class DiskImgCreateFrm
       }
     }
     return rv;
+  }
+
+
+  private void pasteFiles( Transferable t )
+  {
+    try {
+      if( t != null ) {
+	Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
+	if( o != null ) {
+	  if( o instanceof Collection ) {
+	    for( Object item : (Collection) o ) {
+	      if( item != null ) {
+		File file = null;
+		if( item instanceof File ) {
+		  file = (File) item;
+		} else if( item instanceof String ) {
+		  file= new File( (String) item );
+		}
+		if( file != null ) {
+		  if( !addFile( file ) ) {
+		    break;
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    catch( IOException ex ) {}
+    catch( UnsupportedFlavorException ex ) {}
   }
 
 
@@ -1382,6 +1563,7 @@ public class DiskImgCreateFrm
     this.btnFileRemove.setEnabled( nSel > 0 );
     this.btnFileDown.setEnabled( (rowNum >= 0) && (rowNum < (rowCnt - 1)) );
     this.btnFileUp.setEnabled( (rowNum >= 1) && (rowNum < rowCnt) );
+    this.mnuChangeUser.setEnabled( nSel > 0 );
   }
 
 
@@ -1410,25 +1592,7 @@ public class DiskImgCreateFrm
   private void updFmtDetailsFields()
   {
     boolean state = false;
-    if( this.btnFmtKC85.isSelected() ) {
-      setValue( this.comboSides, 2 );
-      setValue( this.comboCyls, 80 );
-      setValue( this.spinnerSysCyls, 2 );
-      setValue( this.comboSectPerCyl, 5 );
-      setValue( this.comboSectorSize, 1024 );
-      setValue( this.comboBlockSize, 2 );
-      setValue( this.comboBlockNumSize, 16 );
-      setValue( this.spinnerDirBlocks, 2 );
-    } else if( this.btnFmtLLC2.isSelected() ) {
-      setValue( this.comboSides, 1 );
-      setValue( this.comboCyls, 80 );
-      setValue( this.spinnerSysCyls, 0 );
-      setValue( this.comboSectPerCyl, 5 );
-      setValue( this.comboSectorSize, 1024 );
-      setValue( this.comboBlockSize, 2 );
-      setValue( this.comboBlockNumSize, 8 );
-      setValue( this.spinnerDirBlocks, 1 );
-    } else if( this.btnFmtZ9001.isSelected() ) {
+    if( this.btnFmt800K.isSelected() ) {
       setValue( this.comboSides, 2 );
       setValue( this.comboCyls, 80 );
       setValue( this.spinnerSysCyls, 0 );
@@ -1437,6 +1601,33 @@ public class DiskImgCreateFrm
       setValue( this.comboBlockSize, 2 );
       setValue( this.comboBlockNumSize, 16 );
       setValue( this.spinnerDirBlocks, 3 );
+    } else if( this.btnFmt780K.isSelected() ) {
+      setValue( this.comboSides, 2 );
+      setValue( this.comboCyls, 80 );
+      setValue( this.spinnerSysCyls, 2 );
+      setValue( this.comboSectPerCyl, 5 );
+      setValue( this.comboSectorSize, 1024 );
+      setValue( this.comboBlockSize, 2 );
+      setValue( this.comboBlockNumSize, 16 );
+      setValue( this.spinnerDirBlocks, 2 );
+    } else if( this.btnFmt720K.isSelected() ) {
+      setValue( this.comboSides, 2 );
+      setValue( this.comboCyls, 80 );
+      setValue( this.spinnerSysCyls, 0 );
+      setValue( this.comboSectPerCyl, 9 );
+      setValue( this.comboSectorSize, 512 );
+      setValue( this.comboBlockSize, 2 );
+      setValue( this.comboBlockNumSize, 16 );
+      setValue( this.spinnerDirBlocks, 3 );
+    } else if( this.btnFmtCPL.isSelected() ) {
+      setValue( this.comboSides, 1 );
+      setValue( this.comboCyls, 80 );
+      setValue( this.spinnerSysCyls, 0 );
+      setValue( this.comboSectPerCyl, 5 );
+      setValue( this.comboSectorSize, 1024 );
+      setValue( this.comboBlockSize, 2 );
+      setValue( this.comboBlockNumSize, 8 );
+      setValue( this.spinnerDirBlocks, 1 );
     } else if( this.btnFmtEtc.isSelected() ) {
       state = true;
     }
@@ -1463,6 +1654,20 @@ public class DiskImgCreateFrm
     this.spinnerDirBlocks.setEnabled( state );
     this.labelDirEntriesInfo.setEnabled( state );
     updSysFileFieldsEnabled();
+  }
+
+
+  private void updPasteButton()
+  {
+    boolean state = false;
+    if( this.clipboard != null ) {
+      try {
+	state = this.clipboard.isDataFlavorAvailable(
+					DataFlavor.javaFileListFlavor );
+      }
+      catch( IllegalStateException ex ) {}
+    }
+    this.mnuPaste.setEnabled( state );
   }
 
 
@@ -1527,7 +1732,8 @@ public class DiskImgCreateFrm
     this.labelSysFile.setEnabled( state );
     this.fldSysFileName.setEnabled( state );
     this.btnSysFileSelect.setEnabled( state );
-    this.btnSysFileRemove.setEnabled( state && (this.sysFile != null) );
+    this.btnSysFileRemove.setEnabled(
+		state && (this.fldSysFileName.getFile() != null) );
   }
 }
 

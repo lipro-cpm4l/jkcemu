@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,7 @@ import java.lang.*;
 
 public class ImageCard extends Component
 {
-  private BufferedImage image;
+  private Image image;
 
 
   public ImageCard()
@@ -24,7 +24,7 @@ public class ImageCard extends Component
   }
 
 
-  public void setImage( BufferedImage image )
+  public void setImage( Image image )
   {
     this.image = image;
     repaint();
@@ -33,13 +33,14 @@ public class ImageCard extends Component
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void paint( Graphics g )
   {
     if( this.image != null ) {
       int w    = getWidth();
       int h    = getHeight();
-      int wImg = this.image.getWidth();
-      int hImg = this.image.getHeight();
+      int wImg = this.image.getWidth( this );
+      int hImg = this.image.getHeight( this );
       if( (w > 0) && (h > 0) && (wImg > 0) && (hImg > 0) ) {
 	if( (wImg > w) || (hImg > h) ) {
 	  double scale = Math.min(

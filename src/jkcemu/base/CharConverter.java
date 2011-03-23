@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,7 +23,14 @@ public class CharConverter
 
 
   private static final String cp437ToUnicode =
-	"\u00C7\u00FC\u00E9\u00E2\u00E4\u00E0\u00E5\u00E7"
+	"\u0000\u263A\u263B\u2665\u2666\u2663\u2660\u2022"
+		+ "\u25D8\u25CB\u25D9\u2642\u2640\u266A\u266B\u263C"
+		+ "\u25BA\u25C4\u2195\u203C\u00B6\u00A7\u25AC\u21A8"
+		+ "\u2191\u2193\u2192\u2190\u221F\u2194\u25B2\u25BC"
+		+ "\u0020!\"#$%&\'()*+,-./0123456789:;<=>?"
+		+ "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+		+ "\u0060abcdefghijklmnopqrstuvwxyz{|}~\u2302"
+		+ "\u00C7\u00FC\u00E9\u00E2\u00E4\u00E0\u00E5\u00E7"
 		+ "\u00EA\u00EB\u00E8\u00EF\u00EE\u00EC\u00C4\u00C5"
 		+ "\u00C9\u00E6\u00C6\u00F4\u00F6\u00F2\u00FB\u00F9"
 		+ "\u00FF\u00D6\u00DC\u00A2\u00A3\u00A5\u20A7\u0192"
@@ -41,7 +48,14 @@ public class CharConverter
 		+ "\u00B0\u2219\u00B7\u221A\u207F\u00B2\u25A0\u00A0";
 
   private static final String cp850ToUnicode =
-	"\u00C7\u00FC\u00E9\u00E2\u00E4\u00E0\u00E5\u00E7"
+	"\u0000\u263A\u263B\u2665\u2666\u2663\u2660\u2022"
+		+ "\u25D8\u25CB\u25D9\u2642\u2640\u266A\u266B\u263C"
+		+ "\u25BA\u25C4\u2195\u203C\u00B6\u00A7\u25AC\u21A8"
+		+ "\u2191\u2193\u2192\u2190\u221F\u2194\u25B2\u25BC"
+		+ "\u0020!\"#$%&\'()*+,-./0123456789:;<=>?"
+		+ "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+		+ "\u0060abcdefghijklmnopqrstuvwxyz{|}~\u2302"
+		+ "\u00C7\u00FC\u00E9\u00E2\u00E4\u00E0\u00E5\u00E7"
 		+ "\u00EA\u00EB\u00E8\u00EF\u00EE\u00EC\u00C4\u00C5"
 		+ "\u00C9\u00E6\u00C6\u00F4\u00F6\u00F2\u00FB\u00F9"
 		+ "\u00FF\u00D6\u00DC\u00F8\u00A3\u00D8\u00D7\u0192"
@@ -113,65 +127,13 @@ public class CharConverter
   }
 
 
-  public static CharConverter getInstance( String encodingName )
-  {
-    CharConverter rv = null;
-    if( encodingName != null ) {
-      if( encodingName != null ) {
-	encodingName = encodingName.toLowerCase();
-	if( encodingName.equals( "ascii" )
-	    || encodingName.equals( "us-ascii" ) )
-	{
-	  rv = new CharConverter( Encoding.ASCII_7BIT );
-	}
-	else if( encodingName.equals( "german" ) ) {
-	  rv = new CharConverter( Encoding.ISO646DE );
-	}
-	else if( encodingName.equals( "cp437" ) ) {
-	  rv = new CharConverter( Encoding.CP437 );
-	}
-	else if( encodingName.equals( "cp850" ) ) {
-	  rv = new CharConverter( Encoding.CP850 );
-	}
-	else if( encodingName.equals( "latin1" )
-		 || encodingName.equals( "iso88591" )
-		 || encodingName.equals( "iso8859-1" )
-		 || encodingName.equals( "iso-8859-1" ) )
-	{
-	  rv = new CharConverter( Encoding.LATIN1 );
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  public static CharConverter getInstanceByCurrentSettings(
-						boolean fontAltEnabled )
-  {
-    CharConverter rv = null;
-
-    String propsPrefix = fontAltEnabled ?
-				"jkcemu.font.alternate"
-				: "jkcemu.font.standard";
-
-    String fontSource   = Main.getProperty( propsPrefix + ".source" );
-    String fontFileName = Main.getProperty( propsPrefix + ".filename" );
-    if( (fontSource != null) && (fontFileName != null) ) {
-      if( fontSource.equals( "file" ) && (fontFileName.length() > 0) )
-	rv = getInstance( Main.getProperty( propsPrefix + ".encoding" ) );
-    }
-    return rv;
-  }
-
-
   public char toUnicode( int ch )
   {
     char rv = '\u0000';
     if( this.encoding == Encoding.ASCII_7BIT ) {
-      rv = '\u0000';
-      if( (ch > 0) && (ch < 0x7F) )
+      if( (ch > 0) && (ch < 0x7F) ) {
 	rv = (char) ch;
+      }
     }
     else if( encoding == Encoding.ISO646DE ) {
       switch( ch ) {
@@ -205,18 +167,24 @@ public class CharConverter
 
 	default:
 	  rv = '\u0000';
-	  if( (ch > 0) && (ch < 0x7F) )
+	  if( (ch > 0) && (ch < 0x7F) ) {
 	    rv = (char) ch;
+	  }
       }
     }
     else if( encoding == Encoding.CP437 ) {
-      rv = toUnicode( cp437ToUnicode, ch );
+      if( (ch >= 0) && (ch < cp437ToUnicode.length()) ) {
+	rv = cp437ToUnicode.charAt( ch );
+      }
     }
     else if( encoding == Encoding.CP850 ) {
-      rv = toUnicode( cp850ToUnicode, ch );
+      if( (ch >= 0) && (ch < cp850ToUnicode.length()) ) {
+	rv = cp850ToUnicode.charAt( ch );
+      }
     } else {
-      if( (ch > 0) && (ch < 0xFF) )
+      if( (ch > 0) && (ch <= 0xFF) ) {
 	rv = (char) ch;
+      }
     }
     return rv;
   }
@@ -226,8 +194,9 @@ public class CharConverter
   {
     int rv = 0;
     if( this.encoding == Encoding.ASCII_7BIT ) {
-      if( (ch > 0) && (ch < 0x7F) )
+      if( (ch > 0) && (ch < 0x7F) ) {
 	rv = ch;
+      }
     }
     else if( encoding == Encoding.ISO646DE ) {
       if( (ch != '[') && (ch != '\\') && (ch != ']')
@@ -263,26 +232,29 @@ public class CharConverter
 	    break;
 
 	  default:
-	    if( (ch > 0) && (ch < 0x7F) )
+	    if( (ch > 0) && (ch < 0x7F) ) {
 	      rv = ch;
+	    }
 	}
       }
     }
     else if( encoding == Encoding.CP437 ) {
-      rv = toCharsetByte( cp437ToUnicode, ch );
+      rv = cp437ToUnicode.indexOf( ch );
     }
     else if( encoding == Encoding.CP850 ) {
-      rv = toCharsetByte( cp850ToUnicode, ch );
+      rv = cp850ToUnicode.indexOf( ch );
     } else {
-      if( (ch > 0) && (ch < 0xFF) )
+      if( (ch > 0) && (ch < 0xFF) ) {
 	rv = ch;
+      }
     }
-    return rv;
+    return rv > 0 ? rv : 0;
   }
 
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public boolean equals( Object o )
   {
     if( o != null ) {
@@ -293,41 +265,10 @@ public class CharConverter
   }
 
 
+  @Override
   public String toString()
   {
     return this.encodingDisplayText;
-  }
-
-
-	/* --- private Methoden --- */
-
-  private int toCharsetByte( String tab, char ch )
-  {
-    int rv = 0;
-    if( ch > 0 ) {
-      if( ch < 0x7F ) {
-	rv = ch;
-      } else {
-	int pos = tab.indexOf( ch );
-	if( pos >= 0 )
-	  rv = pos + 0x80;
-      }
-    }
-    return rv;
-  }
-
-
-  private char toUnicode( String tab, int ch )
-  {
-    char rv = '\u0000';
-    if( (ch > 0) && (ch < 0x7F) ) {
-      rv = (char) ch;
-    } else {
-      int pos = (int) ch - 0x80;
-      if( (pos >= 0) && (pos < tab.length()) )
-	rv = tab.charAt( pos );
-    }
-    return rv;
   }
 }
 

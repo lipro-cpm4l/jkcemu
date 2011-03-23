@@ -180,6 +180,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
 	/* --- DropTargetListener --- */
 
+  @Override
   public void dragEnter( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -187,18 +188,21 @@ public class HexDiffFrm extends HTMLViewFrm implements
   }
 
 
+  @Override
   public void dragExit( DropTargetEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void dragOver( DropTargetDragEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void drop( DropTargetDropEvent e )
   {
     File file = EmuUtil.fileDrop( this, e );
@@ -207,6 +211,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
   }
 
 
+  @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -216,6 +221,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
 	/* --- ListSelectionListener --- */
 
+  @Override
   public void valueChanged( ListSelectionEvent e )
   {
     if( e.getSource() == this.listFiles ) {
@@ -228,6 +234,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;

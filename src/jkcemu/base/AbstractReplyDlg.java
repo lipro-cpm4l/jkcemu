@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -110,6 +110,7 @@ public class AbstractReplyDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -131,6 +132,7 @@ public class AbstractReplyDlg extends BasicDlg
   }
 
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( (e.getWindow() == this) && (this.replyTextField != null) ) {

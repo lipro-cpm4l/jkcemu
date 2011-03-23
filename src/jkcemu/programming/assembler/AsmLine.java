@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -291,15 +291,16 @@ public class AsmLine
       ch = iter.next();
     }
     StringBuilder buf = null;
-    if( ch == '\'' ) {
-      buf = new StringBuilder();
+    if( (ch == '\'') || (ch == '\"') ) {
+      char chEnd = ch;
+      buf        = new StringBuilder();
       buf.append( ch );
       ch = iter.next();
-      while( (ch != CharacterIterator.DONE) && (ch != '\'') ) {
+      while( (ch != CharacterIterator.DONE) && (ch != chEnd) ) {
 	buf.append( ch );
 	ch = iter.next();
       }
-      if( ch == '\'' ) {
+      if( ch == chEnd ) {
 	buf.append( ch );
 	ch = iter.next();
       }
@@ -322,8 +323,9 @@ public class AsmLine
     String rv = null;
     if( buf != null ) {
       rv = buf.toString().trim();
-      if( rv.length() < 1 )
+      if( rv.isEmpty() ) {
 	rv = null;
+      }
     }
     return rv;
   }

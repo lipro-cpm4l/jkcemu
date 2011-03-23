@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -52,8 +52,9 @@ public class PrintDataScanner
       if( (b == 0x0A) || (b == 0x0D) || (b == 0x1E) ) {
 	if( b == 0x0D ) {
 	  if( this.pos < this.dataBytes.length ) {
-	    if( this.dataBytes[ this.pos ] == 0x0A )
+	    if( this.dataBytes[ this.pos ] == 0x0A ) {
 	      this.pos++;
+	    }
 	  }
 	}
 	break;
@@ -84,8 +85,9 @@ public class PrintDataScanner
     boolean rv = false;
     while( this.pos < this.dataBytes.length ) {
       int b = ((int) this.dataBytes[ this.pos ]) & 0xFF;
-      if( b == 0x0C )
+      if( b == 0x0C ) {
 	break;
+      }
 
       // Zeile vorhanden
       this.pos++;
@@ -95,8 +97,9 @@ public class PrintDataScanner
       if( (b == 0x0A) || (b == 0x0D) || (b == 0x1E) ) {
 	if( b == 0x0D ) {
 	  if( this.pos < this.dataBytes.length ) {
-	    if( this.dataBytes[ this.pos ] == 0x0A )
+	    if( this.dataBytes[ this.pos ] == 0x0A ) {
 	      this.pos++;
+	    }
 	  }
 	}
 	break;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -41,6 +41,7 @@ public class TarPacker extends AbstractThreadDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected void doProgress()
   {
     boolean          failed  = false;
@@ -102,7 +103,7 @@ public class TarPacker extends AbstractThreadDlg
 		File             outFile,
 		boolean          compression )
   {
-    super( owner, true );
+    super( owner, "JKCEMU tar packer", true );
     this.srcFiles    = srcFiles;
     this.outFile     = outFile;
     this.compression = compression;

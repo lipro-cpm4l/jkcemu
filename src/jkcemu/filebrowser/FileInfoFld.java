@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,8 +10,9 @@ package jkcemu.filebrowser;
 
 import java.awt.*;
 import java.lang.*;
-import java.text.*;
+import java.text.DateFormat;
 import java.util.*;
+import jkcemu.base.EmuUtil;
 
 
 public class FileInfoFld extends Component
@@ -37,8 +38,6 @@ public class FileInfoFld extends Component
   private String[]     values;
   private String[]     addonRows;
   private DateFormat   dateFmt;
-  private NumberFormat decFmt;
-  private NumberFormat intFmt;
 
 
   FileInfoFld( int minRows )
@@ -51,15 +50,6 @@ public class FileInfoFld extends Component
     this.dateFmt    = DateFormat.getDateTimeInstance(
 						DateFormat.MEDIUM,
 						DateFormat.MEDIUM );
-    NumberFormat numFmt = NumberFormat.getNumberInstance();
-    if( numFmt instanceof DecimalFormat ) {
-      this.decFmt = (DecimalFormat) numFmt;
-    } else {
-      this.decFmt = new DecimalFormat();
-    }
-    this.decFmt.setMaximumFractionDigits( 1 );
-    this.intFmt = NumberFormat.getIntegerInstance();
-    this.intFmt.setGroupingUsed( true );
   }
 
 
@@ -79,7 +69,7 @@ public class FileInfoFld extends Component
     Object item = items.get( Item.NAME );
     if( item != null ) {
       String s = item.toString().trim();
-      if( s.length() > 0 ) {
+      if( !s.isEmpty() ) {
 	labels.add( "Name:" );
 	values.add( item.toString() );
 	item = items.get( Item.TYPE );
@@ -114,7 +104,8 @@ public class FileInfoFld extends Component
 				seconds % 60 ) );
 		}
 	      } else {
-		values.add( this.decFmt.format( dSeconds ) + " Sekunden" );
+		values.add( EmuUtil.getDecimalFormatMax1().format(
+						dSeconds ) + " Sekunden" );
 	      }
 	    }
 	  }
@@ -142,37 +133,16 @@ public class FileInfoFld extends Component
 	item = items.get( Item.SIZE );
 	if( item != null ) {
 	  if( item instanceof Number ) {
-	    long fSize = ((Number) item).longValue();
-	    StringBuilder buf = new StringBuilder( 64 );
-	    final long    kb  = 1024L;
-	    final long    mb  = kb * 1024L;
-	    final long    gb  = mb * 1024L;
-	    if( fSize >= gb ) {
-	      buf.append( this.decFmt.format( (double) fSize / (double) gb ) );
-	      buf.append( " GByte" );
-	    }
-	    else if( fSize >= mb ) {
-	      buf.append( this.decFmt.format( (double) fSize / (double) mb ) );
-	      buf.append( " MByte" );
-	    }
-	    else if( fSize >= kb ) {
-	      buf.append( this.decFmt.format( (double) fSize / (double) kb ) );
-	      buf.append( " KByte" );
-	    }
-	    boolean enclose = (buf.length() > 0);
-	    if( enclose ) {
-	      buf.append( " (" );
-	    }
-	    buf.append( this.intFmt.format( fSize ) );
-	    buf.append( " Bytes" );
-	    if( enclose ) {
-	      buf.append( (char) ')' );
-	    }
 	    labels.add( "Gr\u00F6\u00DFe:" );
-	    values.add( buf.toString() );
+	    values.add( EmuUtil.formatSize(
+				((Number) item).longValue(),
+				false,
+				true ) );
 	  }
 	}
-	String lastModifiedText = getDateTimeText( items, Item.LAST_MODIFIED );
+	String lastModifiedText = getDateTimeText(
+					items,
+					Item.LAST_MODIFIED );
 	if( lastModifiedText != null ) {
 	  labels.add( "Ge\u00E4ndert:" );
 	  values.add( lastModifiedText );
@@ -189,6 +159,7 @@ public class FileInfoFld extends Component
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public Font getFont()
   {
     Font font = super.getFont();
@@ -200,6 +171,7 @@ public class FileInfoFld extends Component
   }
 
 
+  @Override
   public Dimension getPreferredSize()
   {
     int w     = 1;
@@ -225,6 +197,7 @@ public class FileInfoFld extends Component
   }
 
 
+  @Override
   public void paint( Graphics g )
   {
     g.setFont( getFont() );
@@ -310,4 +283,3 @@ public class FileInfoFld extends Component
     return text != null ? (text.length() > 0) : false;
   }
 }
-

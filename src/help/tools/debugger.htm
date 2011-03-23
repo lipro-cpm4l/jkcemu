@@ -1,156 +1,245 @@
 <html>
 <body>
-  <h1>Debugger</h1>
-    Der Debugger dient dazu, die Programmausf&uuml;hrung
-    an beliebiger Stelle anzuhalten,
-    einzelne Befehle im Schrittbetrieb abzuarbeiten
-    und so das Geschehen im Emulator zu &uuml;berwachen.
-    Dabei ist es auch m&ouml;glich,
-    die Speicher- und Registerinhalte anzusehen.
-  <br/><br/>
+ <h1>Debugger</h1>
+  Der Debugger dient dazu, die Programmausf&uuml;hrung
+  an beliebiger Stelle anzuhalten,
+  einzelne Befehle im Schrittbetrieb abzuarbeiten
+  und so das Geschehen im Emulator zu &uuml;berwachen.
+  Dabei ist es auch m&ouml;glich,
+  die Speicher- und Registerinhalte anzusehen.
+  Die Registerihalte k&ouml;nnen auch ge&auml;ndert werden.
+  Zum &Auml;ndern des Speicherinhalts gibt es den
+  <a href="memeditor.htm">Speichereditor</a>.
+ <br/><br/>
 
 
-  <h2>1. Debugger starten</h2>
-    Sie befinden sich im Hauptfenster und klicken im Men&uuml;
-    <em>Extra</em>, Untermen&uuml; <em>Werkzeuge</em>, den Punkt
-    <em>Debugger...</em> an.
-    Die weitere Beschreibung bezieht sich auf das Debugger-Fenster.
-  <br/><br/>
+ <h2>1. Debugger starten</h2>
+  Sie befinden sich im Hauptfenster und klicken im Men&uuml;
+  <em>Extra</em>, Untermen&uuml; <em>Werkzeuge</em>, den Punkt
+  <em>Debugger...</em> an.
+  Die weitere Beschreibung bezieht sich auf das Debugger-Fenster.
+ <br/><br/>
 
 
-  <h2>2. Programmausf&uuml;hrung anhalten</h2>
-    Damit Sie die Speicher- und Registerinhalte ansehen k&ouml;nnen,
-    muss die Programmausf&uuml;hrung angehalten werden.
-    Daf&uuml;r gibt es zwei M&ouml;glichkeiten:
-    <ol>
-      <li>
-	Sie legen einen oder mehrere Haltepunkte an.
-        Wenn die Befehlsabarbeitung auf einen solchen Haltepunkt
-        st&ouml;&szlig;t, der zudem auch aktiviert sein muss,
-	wird angehalten.
-      </li>
-      <li>
-	Sie klicken im Men&uuml; <em>Debuggen</em> auf den Punkt
-        <em>Programmausf&uuml;hrung anhalten</em>.
-      </li>
-    </ol>
-    Jedesmal wenn die Programmausf&uuml;hrung anh&auml;lt,
-    wird der Inhalt des Debugger-Fensters aktualisiert, d.h.,
-    Sie sehen im linken Bereich des Fensters die Registerinhalte,
-    in der Mitte die ersten Bytes der Speicherbereiche,
-    auf denen die Doppelregister zeigen und
-    unten die n&auml;chsten auszuf&uuml;hrenden Befehle.
-  <br/><br/>
+ <h2>2. Programmausf&uuml;hrung anhalten</h2>
+  Damit Sie die Speicher- und Registerinhalte ansehen k&ouml;nnen,
+  muss die Programmausf&uuml;hrung angehalten werden.
+  Daf&uuml;r gibt es zwei M&ouml;glichkeiten:
+  <ol>
+   <li>
+    Sie legen einen oder mehrere Haltepunkte an.
+    Wenn w&auml;hrend der Befehlsabarbeitung ein solcher Haltepunkt
+    zutrifft, der zudem auch aktiviert sein muss, wird angehalten.
+   </li>
+   <li>
+    Sie klicken im Men&uuml; <em>Debuggen</em> auf den Punkt
+    <em>Programmausf&uuml;hrung anhalten</em>.
+   </li>
+  </ol>
+  Jedesmal wenn die Programmausf&uuml;hrung anh&auml;lt,
+  wird der Inhalt des Debugger-Fensters aktualisiert, d.h.,
+  Sie sehen im linken Bereich des Fensters die Registerinhalte,
+  in der Mitte die ersten Bytes der Speicherbereiche,
+  auf denen die Doppelregister zeigen und
+  unten die n&auml;chsten auszuf&uuml;hrenden Befehle.
+ <br/><br/>
 
 
-  <h2><a name="breakpoint">3. Haltepunkte</a></h2>
-    &Uuml;ber das Men&uuml; <em>Debuggen</em>,
-    Eintrag <em>Haltepunkt hinzuf&uuml;gen...</em>,
-    k&ouml;nnen Sie beliebig viele Haltepunkte anlegen.
-    Dazu m&uuml;ssen Sie die Haltepunktadressen hexadezimal angeben.
-  <br/><br/>
-    Der Debugger ist nur solange aktiv, wie das Debugger-Fenster
-    sichtbar ist.
-    Wenn Sie Haltepunkte angelegt haben und Sie schlie&szlig;en
-    das Fenster, werden die Haltepunkte zwar nicht gel&ouml;scht,
-    jedoch wird dann dort auch nicht mehr angehalten.
-  <br/><br/>
-    Um einen Haltepunkt wieder zu entfernen,
-    m&uuml;ssen Sie diesen im rechten Bereich des Debugger-Fensters
-    durch Anklicken markieren.
-    Anschlie&szlig;end klicken Sie im Men&uuml; <em>Debuggen</em>
-    auf den Eintrag <em>Haltepunkt entfernen</em>.
-  <br/><br/>
-    Optional k&ouml;nnen Sie auch alle Haltepunkte auf einmal entfernen
-    (Men&uuml;eintrag <em>Alle Haltepunkte entfernen</em>).
-  <br/><br/>
-    Haltepunkte, die Sie tempor&auml;r nicht ben&ouml;tigen,
-    m&uuml;ssen Sie nicht unbedingt entfernen.
-    Sie k&ouml;nnen diese Haltepunkte auch einfach deaktivieren
-    und sp&auml;ter bei Bedarf wieder aktivieren.
-  <br/><br/>
+ <h2><a name="breakpoint">3. Haltepunkte</a></h2>
+  Es gibt vier verschiedene Arten von Haltepunkten,
+  die bei unterschiedlichen Bedingungen zum Anhalten
+  der Programmausf&uuml;hrung f&uuml;hren.
+ <br/><br/>
+
+ <h3>3.1. Haltepunkt auf Adresse</h3>
+  Das ist die klassische Form eines Haltepunktes.
+  Es wird angehalten, wenn die Programmausf&uuml;hrung
+  auf die angegebene Adresse st&ouml;&szlig;t.
+ <br/><br/>
+
+ <h3>3.2. Haltepunkt auf Speicher</h3>
+  Ein solcher Haltepunkt reagiert auf Zugriffe auf eine Speicherzelle
+  bzw. auf einen Speicherbereich.
+  Sie k&ouml;nnen angeben, ob nur bei Lese-, nur bei Schreib-
+  oder bei Lese- und Schreibzugriffe angehalten werden soll.
+ <br/><br/>
+  Zus&auml;tzlich k&ouml;nnen ein Wert und eine Maske angeben werden.
+  Dann wird nur angehalten, wenn der angegebene Wert mit dem gelesenen
+  bzw. zu schreibenden &uuml;bereinstimmt.
+  Dabei werden nur die Bits verglichen, die in der Maske gesetzt sind.
+ <br/><br/>
+
+ <h3>3.3. Haltepunkt auf E/A-Tor</h3>
+  So ein Haltepunkt ist &auml;hnlich wie einer auf den Speicher.
+  Anstelle einer Speicherzelle oder eines Speicherbereichs
+  wird eine Ein-/Ausgabeadresse oder eine Gruppe von zusammenliegenden
+  IO-Ports &uuml;berwacht.
+ <br/><br/>
+  Die E/A-Haltepunktadresse k&ouml;nnen Sie als 8&nbsp;Bit-
+  (2&nbsp;hexadezimale Ziffern) oder 16&nbsp;Bit-Wert
+  (4&nbsp;hexadezimale Ziffern) angeben.
+  Der emulierte Mikroprozessor unterst&uuml;tzt offiziell nur
+  E/A-Adressen mit 8&nbsp;Bit.
+  Allerdings sind aufrund seines undokumentierten Verhaltens
+  auch 16-Bit-E/A-Adressen m&ouml;glich.
+  Ob Sie nun die E/A-Haltepunktadresse mit 8 oder 16&nbsp;Bit angeben
+  (m&uuml;ssen), h&auml;ngt davon ab, ob das emulierte System
+  mit 8 oder 16-Bit-IO-Ports arbeitet.
+ <br/><br/>
+  Auch bei Haltepunkte auf E/A-Tore k&ouml;nnen ein Wert und eine Maske
+  als zus&auml;tzliches Kriterium angegeben werden.
+  Allerdings zeigt das nur bei Ausgabebefehlen eine Wirkung.
+ <br/><br/>
+  Bei Eingabebefehlen wird ein Wert als zus&auml;tzliches Kriterium
+  deshalb nicht unterst&uuml;tzt, weil immer vor Ausf&uuml;hrung
+  des betreffenden Befehls angehalten wird und der Emulator
+  nicht in jedem Fall wissen kann, welcher Wert dann bei der
+  eigentlichen Befehlsausf&uuml;hrung gelesen werden w&uuml;rde.
+ <br/><br/>
+
+ <h3>3.4. Haltepunkt auf Interrupt-Quelle</h3>
+  Bei dieser Form eines Haltepunktes geben Sie eine im emulierten
+  System vorhandene Interrupt-Quelle (z.B. PIO oder CTC) an.
+  Es wird dann angehalten, sobald die Interrupt-Quelle
+  einen Interrupt ausl&ouml;st und dieser vom Mikroprozessor
+  auch angenommen wird, d.h.,
+  es wird vor dem ersten Befehl der Interrupt-Service-Routine angehalten.
+ <br/><br/>
+
+ <h3>3.5. Verwaltung der Haltepunkte</h3>
+  &Uuml;ber das Men&uuml; <em>Debuggen</em> k&ouml;nnen Sie beliebig
+  viele Haltepunkte anlegen.
+  Mit dem Kontextmen&uuml; &uuml;ber der jeweiligen Haltepunktliste
+  ist das auch m&ouml;glich.
+ <br/><br/>
+  Um einen Haltepunkt wieder zu entfernen,
+  m&uuml;ssen Sie diesen im rechten Bereich des Debugger-Fensters
+  durch Anklicken markieren.
+  Anschlie&szlig;end klicken Sie im Men&uuml; <em>Debuggen</em>
+  auf den Eintrag <em>Haltepunkt entfernen</em>.
+ <br/><br/>
+  Optional k&ouml;nnen Sie auch alle Haltepunkte auf einmal entfernen
+  (Men&uuml;eintrag <em>Alle Haltepunkte entfernen</em>).
+ <br/><br/>
+  Haltepunkte, die Sie tempor&auml;r nicht ben&ouml;tigen,
+  m&uuml;ssen Sie nicht unbedingt entfernen.
+  Sie k&ouml;nnen diese Haltepunkte auch einfach deaktivieren
+  und sp&auml;ter bei Bedarf wieder aktivieren.
+ <br/><br/>
+  Der Debugger ist nur solange aktiv, wie das Debugger-Fenster
+  sichtbar ist.
+  Wenn Sie Haltepunkte angelegt haben und Sie schlie&szlig;en
+  das Fenster, werden die Haltepunkte zwar nicht gel&ouml;scht,
+  jedoch wird dann dort auch nicht mehr angehalten.
+ <br/><br/>
 
 
-  <h2>4. Schrittbetrieb</h2>
-    Mit Schrittbetrieb ist gemeint, dass nach dem Anhalten der
-    Programmausf&uuml;hrung einzelne Befehle oder Befehlsgruppen
-    abgearbeitet werden und danach automatisch wieder
-    die Programmausf&uuml;hrung angehalten wird.
-  <br/><br/>
-    Die Funktionalit&auml;ten des Schrittbetriebs finden Sie im Men&uuml;
-    <em>Debuggen</em> unter den Punkten <em>&Uuml;ber Aufruf springen</em>,
-    <em>In Aufruf springen</em> und <em>Aus Aufruf herausspringen</em>.
-  <br/><br/>
-    Den Schrittbetrieb beenden Sie ganz einfach durch Fortsetzung
-    der Programmausf&uuml;hrung.
-    Klicken Sie dazu im Men&uuml; <em>Debuggen</em> den Punkt
-    <em>Bis Haltepunkt ausf&uuml;hren</em> an.
-  <br/><br/>
-    Wenn Sie sich im Schrittbetrieb befinden und Sie schlie&szlig;en
-    des Debugger-Fenster, geht der Emulator in den
-    <a href="../otherfunc.htm#pause">Pause-Zustand</a> &uuml;ber.
-    Sie k&ouml;nnen dann im Hauptfenster im Men&uuml;
-    <em>Extra</em> auf <em>Fortsetzen</em> klicken,
-    oder Sie &ouml;ffnen wieder den Debugger.
-  <br/><br/>
+ <h3>3.6. Haltepunkte importieren</h3>
+  Der Debugger bietet die M&ouml;glichkeit,
+  Haltepunkte aus einer Datei oder aus der Zwischenablage zu
+  <a href="labelimport.htm">importieren</a>.
+  Diese Haltepunkte k&ouml;nnen dabei auch einen Namen haben.
+  So ist z.B. der Import der Markentabelle eines Assemblers m&ouml;glich,
+  um f&uuml;r jede Marke einen Haltepunkt anzulegen.
+ <br/><br/>
+  Die Markentabelle des JKCEMU-Assemblers k&ouml;nnen Sie sogar
+  automatisch in den Debugger importieren lassen.
+  Schalten Sie dazu die entsprechende
+  <a href="assembler.htm#options">Assembler-Option</a> ein.
+ <br/><br/>
 
-  <h3>4.1. &Uuml;ber Aufruf springen</h3>
-    Es wird ein einzelner Maschinenbefehl abgearbeitet.
-    Handelt es sich dabei um den Aufruf eines Unterprogramms,
-    so wird das ganze Unterprogramm ausgef&uuml;hrt und
-    erst danach wieder angehalten.
-  <br/><br/>
+ <h2>4. Schrittbetrieb</h2>
+  Mit Schrittbetrieb ist gemeint, dass nach dem Anhalten der
+  Programmausf&uuml;hrung einzelne Befehle oder Befehlsgruppen
+  abgearbeitet werden und danach automatisch wieder
+  die Programmausf&uuml;hrung angehalten wird.
+ <br/><br/>
+  Die Funktionalit&auml;ten des Schrittbetriebs finden Sie im Men&uuml;
+  <em>Debuggen</em> unter den Punkten <em>&Uuml;ber Aufruf springen</em>,
+  <em>In Aufruf springen</em> und <em>Aus Aufruf herausspringen</em>.
+ <br/><br/>
+  Den Schrittbetrieb beenden Sie ganz einfach durch Fortsetzung
+  der Programmausf&uuml;hrung.
+  Klicken Sie dazu im Men&uuml; <em>Debuggen</em> den Punkt
+  <em>Bis Haltepunkt ausf&uuml;hren</em> an.
+ <br/><br/>
+  Wenn Sie sich im Schrittbetrieb befinden und Sie schlie&szlig;en
+  des Debugger-Fenster, geht der Emulator in den Pause-Zustand &uuml;ber.
+  Sie k&ouml;nnen dann im Hauptfenster im Men&uuml;
+  <em>Extra</em> auf <em>Fortsetzen</em> klicken,
+  oder Sie &ouml;ffnen wieder den Debugger.
+ <br/><br/>
 
-  <h3>4.2. In Aufruf springen</h3>
-    Es wird immer nur ein einzelner Maschinenbefehl abgearbeitet.
-    Handelt es sich um den Aufruf eines Unterprogramms,
-    so wird vor dem ersten Maschinenbefehl des Unterprogramms
-    wieder angehalten.
-  <br/><br/>
+ <h3>4.1. &Uuml;ber Aufruf springen</h3>
+  Es wird ein einzelner Maschinenbefehl abgearbeitet.
+  Handelt es sich jedoch um den Aufruf eines Unterprogramms,
+  so wird das ganze Unterprogramm ausgef&uuml;hrt und
+  erst danach wieder angehalten.
+  Das Ende eines Unterprogramms wird dabei anhand des Stack Pointers erkannt.
+  Sobald dieser wieder den gleichen Wert wie vor dem Unterprogrammaufruf
+  hat, wird angehalten.
+ <br/><br/>
+  Blockbefehle und leere DJNZ-Schleifen werden ebenfalls &uuml;bersprungen,
+  d.h. sie werden bis zum Ende abgearbeitet.
+  Bei der Funktion <em>&Uuml;ber Aufruf springen</em> wird n&auml;mlich
+  die Programmausf&uuml;hrung niemals angehalten,
+  wenn der Befehlszeiger (Program Counter) nach Abarbeitung
+  eines Maschinenbefehls immer noch auf den gleichen Befehl zeigt.
+ <br/><br/>
 
-  <h3>4.3. Aus Aufruf herausspringen</h3>
-    Es werden die Maschinenbefehle bis zum n&auml;chsten Return-Befehl
-    ausgef&uuml;hrt.
-    Werden dabei Unterprogramme aufgerufen,
-    so werden diese vollst&auml;ndig ausgef&uuml;hrt.
-  <br/><br/>
+ <h3>4.2. In Aufruf springen</h3>
+  Es wird immer nur ein einzelner Maschinenbefehl abgearbeitet.
+  Handelt es sich um den Aufruf eines Unterprogramms,
+  so wird nur der CALL-Befehl abgearbeitet und somit vor dem
+  ersten Maschinenbefehl des Unterprogramms wieder angehalten.
+ <br/><br/>
+  Bei Blockbefehlen wird nur ein Zyklus des Blockbefehls abgearbeitet
+  und danach wieder angehalten.
+ <br/><br/>
 
-  <h3>4.4. Registerinhalte und Flags &auml;ndern</h3>
-    Im Schrittbetrieb, d.h. wenn die Programmausf&uuml;hrung angehalten
-    wurde, k&ouml;nnen die Inhalte der Register ge&auml;ndert werden.
-    Geben Sie dazu den gew&uuml;nschten neuen Wert in das jeweilige Feld
-    hexadezimal ein.
-    Die Werte der einzelnen Flags k&ouml;nnen Sie festlegen,
-    indem Sie auf die entsprechenden Boxen im oberen Bereich des Fensters
-    klicken und so ein H&auml;kchen setzen oder entfernen.
-  <br/><br/>
+ <h3>4.3. Aus Aufruf herausspringen</h3>
+  Es werden die Maschinenbefehle bis zum n&auml;chsten Return-Befehl
+  ausgef&uuml;hrt.
+  Werden dabei Unterprogramme aufgerufen,
+  so werden diese vollst&auml;ndig ausgef&uuml;hrt.
+ <br/><br/>
+
+ <h3>4.4. Registerinhalte und Flags &auml;ndern</h3>
+  Im Schrittbetrieb, d.h. wenn die Programmausf&uuml;hrung angehalten
+  wurde, k&ouml;nnen die Inhalte der Register ge&auml;ndert werden.
+  Geben Sie dazu den gew&uuml;nschten neuen Wert in das jeweilige Feld
+  hexadezimal ein.
+  Die Werte der einzelnen Flags k&ouml;nnen Sie festlegen,
+  indem Sie auf die entsprechenden Boxen im oberen Bereich des Fensters
+  klicken und so ein H&auml;kchen setzen oder entfernen.
+ <br/><br/>
 
 
-  <h2>5. Befehle aufzeichnen</h2>
-    Eine weitere M&ouml;glichkeit der Verfolgung des Geschehens
-    im Emulator ist die Befehlsaufzeichnung.
-    Dabei werden vor der Abarbeitung eines jeden Maschinenbefehls
-    die Adresse, die Inhalte der wichtigsten Register und der
-    anstehende Maschinenbefehl in Form einer Zeile in
-    eine Textdatei geschrieben.
-    Diese k&ouml;nnen Sie sich dann mit einem Editor ansehen,
-    z.B. mit dem in JKCEMU eingebauten
-    <a href="texteditor.htm">Texteditor</a>.
-  <br/><br/>
-    Die Befehlsaufzeichnung schalten Sie &uuml;ber den Schalter
-    <em>Befehle aufzeichnen</em> im Men&uuml; <em>Debuggen</em>
-    ein und wieder aus.
-    Immer wenn Sie die Befehlsaufzeichnung einschalten,
-    werden Sie nach dem Namen der Datei gefragt,
-    in der die Befehle aufgezeichnet werden sollen.
-  <br/><br/>
-    <b>Achtung!</b> Die Befehlsaufzeichnung schreibt pro Maschinenbefehl
-    eine ganze Zeile in eine Textdatei.
-    Diese Textdatei w&auml;chst deshalb sehr schnell und sehr stark an.
-    Sie sollten deshalb die Befehlsaufzeichnung nicht zu lange
-    eingeschaltet lassen und sicherstellen, dass auf dem Speichermedium
-    ausreichend Platz ist.
-    Au&szlig;erdem wird die Programmausf&uuml;hrung in Abh&auml;ngigkeit
-    von der Schreibgeschwindigkeit des Speichermediums deutlich gebremst.
+ <h2>5. Befehle aufzeichnen</h2>
+  Eine weitere M&ouml;glichkeit der Verfolgung des Geschehens
+  im Emulator ist die Befehlsaufzeichnung.
+  Dabei werden vor der Abarbeitung eines jeden Maschinenbefehls
+  die Adresse, die Inhalte der wichtigsten Register und der
+  anstehende Maschinenbefehl in Form einer Zeile in
+  eine Textdatei geschrieben.
+  Diese k&ouml;nnen Sie sich dann mit einem Editor ansehen,
+  z.B. mit dem in JKCEMU eingebauten
+  <a href="texteditor.htm">Texteditor</a>.
+ <br/><br/>
+  Die Befehlsaufzeichnung schalten Sie &uuml;ber den Schalter
+  <em>Befehle aufzeichnen</em> im Men&uuml; <em>Debuggen</em>
+  ein und wieder aus.
+  Immer wenn Sie die Befehlsaufzeichnung einschalten,
+  werden Sie nach dem Namen der Datei gefragt,
+  in der die Befehle aufgezeichnet werden sollen.
+ <br/><br/>
+  <b>Achtung!</b> Die Befehlsaufzeichnung schreibt pro Maschinenbefehl
+  eine ganze Zeile in eine Textdatei.
+  Diese Textdatei w&auml;chst deshalb sehr schnell und sehr stark an.
+  Sie sollten deshalb die Befehlsaufzeichnung nicht zu lange
+  eingeschaltet lassen und sicherstellen, dass auf dem Speichermedium
+  ausreichend Platz ist.
+  Au&szlig;erdem wird die Programmausf&uuml;hrung in Abh&auml;ngigkeit
+  von der Schreibgeschwindigkeit des Speichermediums deutlich gebremst.
 </body>
 </html>

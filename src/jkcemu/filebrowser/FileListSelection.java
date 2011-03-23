@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,7 @@ import java.lang.*;
 import java.util.*;
 
 
-public class FileListSelection implements Transferable
+public class FileListSelection implements ClipboardOwner, Transferable
 {
   private java.util.List<File> files;
 
@@ -26,6 +26,18 @@ public class FileListSelection implements Transferable
   }
 
 
+	/* --- ClipboardOwner --- */
+
+  @Override
+  public void lostOwnership( Clipboard clipboard, Transferable contents )
+  {
+    // leer
+  }
+
+
+	/* --- Transferable --- */
+
+  @Override
   public Object getTransferData( DataFlavor flavor )
 					throws UnsupportedFlavorException
   {
@@ -36,6 +48,7 @@ public class FileListSelection implements Transferable
   }
 
 
+  @Override
   public DataFlavor[] getTransferDataFlavors()
   {
     DataFlavor[] rv = { DataFlavor.javaFileListFlavor };
@@ -43,6 +56,7 @@ public class FileListSelection implements Transferable
   }
 
 
+  @Override
   public boolean isDataFlavorSupported( DataFlavor flavor )
   {
     return flavor.equals( DataFlavor.javaFileListFlavor );

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -103,52 +103,65 @@ public class FileSelectDlg
     this.fsv                     = FileSystemView.getFileSystemView();
     this.baseDirItems            = new ArrayList<DirItem>();
 
-    File defaultDir = null;
+    File   defaultDir = null;
+    File[] roots      = null;
     if( this.fsv != null ) {
-      File[] files0 = this.fsv.getRoots();
-      if( files0 != null ) {
-	for( int i0 = 0; i0 < files0.length; i0++ ) {
-	  File f0 = files0[ i0 ];
-	  if( f0.isDirectory() && !f0.isHidden() ) {
-	    this.baseDirItems.add( new DirItem( f0, 0 ) );
-	    File[] files1 = this.fsv.getFiles( f0, false );
-	    if( files1 != null ) {
-	      for( int i1 = 0; i1 < files1.length; i1++ ) {
-		File f1 = files1[ i1 ];
-		if( f1.isDirectory()
-		    && (!this.fsv.isFileSystem( f1 )
-			|| this.fsv.isFileSystemRoot( f1 )) )
-		{
-		  this.baseDirItems.add( new DirItem( f1, 1 ) );
-		  File[] files2 = this.fsv.getFiles( f1, false );
-		  if( files2 != null ) {
-		    for( int i2 = 0; i2 < files2.length; i2++ ) {
-		      File f2 = files2[ i2 ];
-		      if( f2.isDirectory() && this.fsv.isFileSystemRoot( f2 ) )
-			this.baseDirItems.add( new DirItem( f2, 2 ) );
-		    }
-		  }
+      roots = this.fsv.getRoots();
+      defaultDir = this.fsv.getDefaultDirectory();
+      if( defaultDir == null ) {
+	File homeDir = this.fsv.getHomeDirectory();
+	if( homeDir != null ) {
+	  defaultDir = homeDir;
+	}
+      }
+    }
+    if( roots == null ) {
+      roots = File.listRoots();
+    }
+    if( roots != null ) {
+      EmuUtil.sortFilesByName( roots );
+      for( int i = 0; i < roots.length; i++ ) {
+	File file = roots[ i ];
+	if( file.isDirectory() && !file.isHidden() ) {
+	  this.baseDirItems.add( new DirItem( file, 0 ) );
+	}
+      }
+    }
+    if( (this.fsv != null) && (roots != null) ) {
+      if( roots.length == 1 ) {
+	File rootFile = roots[ 0 ];
+	if( rootFile.isDirectory() ) {
+	  boolean unixLike     = (File.separatorChar == '/');
+	  File    computerNode = null;
+	  File[]  subFiles     = this.fsv.getFiles( roots[ 0 ], true );
+	  if( subFiles != null ) {
+	    EmuUtil.sortFilesByName( subFiles );
+	    for( int i = subFiles.length - 1; i >= 0; --i ) {
+	      File file = subFiles[ i ];
+	      if( this.fsv.isComputerNode( file ) ) {
+		addDirItem( this.baseDirItems, file );
+		computerNode = file;
+		if( unixLike ) {
+		  break;
+		}
+	      } else {
+		if( !unixLike ) {
+		  addDirItem( this.baseDirItems, file );
 		}
 	      }
 	    }
 	  }
-	}
-      }
-      defaultDir = this.fsv.getDefaultDirectory();
-      addDirItem( this.baseDirItems, defaultDir );
-
-      File homeDir = this.fsv.getHomeDirectory();
-      addDirItem( this.baseDirItems, homeDir );
-      if( defaultDir == null ) {
-	defaultDir = homeDir;
-      }
-    } else {
-      File[] roots = File.listRoots();
-      if( roots != null ) {
-	for( int i = 0; i < roots.length; i++ ) {
-	  File file = roots[ i ];
-	  if( file.isDirectory() && !file.isHidden() )
-	    this.baseDirItems.add( new DirItem( file, 0 ) );
+	  if( !unixLike && (computerNode != null) ) {
+	    if( computerNode.isDirectory() ) {
+	      subFiles = this.fsv.getFiles( computerNode, true );
+	      if( subFiles != null ) {
+		EmuUtil.sortFilesByName( subFiles );
+		for( int i = subFiles.length - 1; i >= 0; --i ) {
+		  addDirItem( this.baseDirItems, subFiles[ i ] );
+		}
+	      }
+	    }
+	  }
 	}
       }
     }
@@ -157,9 +170,11 @@ public class FileSelectDlg
       if( homeDirText != null ) {
 	if( !homeDirText.isEmpty() ) {
 	  defaultDir = new File( homeDirText );
-	  addDirItem( this.baseDirItems, defaultDir );
 	}
       }
+    }
+    if( defaultDir != null ) {
+      addDirItem( this.baseDirItems, defaultDir );
     }
 
 
@@ -268,8 +283,10 @@ public class FileSelectDlg
     int idx = 0;
     if( fileFilters != null ) {
       if( fileFilters.length == 1 ) {
-	this.comboFileType.addItem( fileFilters[ 0 ].getDescription() );
-	idx = 1;
+	if( fileFilters[ 0 ] != null ) {
+	  this.comboFileType.addItem( fileFilters[ 0 ].getDescription() );
+	  idx = 1;
+	}
       } else {
 	for( int i = 0; i < fileFilters.length; i++ ) {
 	  if( fileFilters[ i ] != null ) {
@@ -384,7 +401,7 @@ public class FileSelectDlg
 	if( parentDir == null ) {
 	  parentDir = preSelection.getParentFile();
 	}
-	setCurDir( parentDir );
+	setCurDir( parentDir != null ? parentDir : defaultDir );
 	this.fldFileName.setText( preSelection.getName() );
 	if( !selectFile( preSelection ) ) {
 	  fileSelected( preSelection );
@@ -433,18 +450,21 @@ public class FileSelectDlg
 
 	/* --- DocumentListener --- */
 
+  @Override
   public void changedUpdate( DocumentEvent e )
   {
     docChanged( e );
   }
 
 
+  @Override
   public void insertUpdate( DocumentEvent e )
   {
     docChanged( e );
   }
 
 
+  @Override
   public void removeUpdate( DocumentEvent e )
   {
     docChanged( e );
@@ -453,11 +473,12 @@ public class FileSelectDlg
 
 	/* --- FocusListener --- */
 
+  @Override
   public void focusGained( FocusEvent e )
   {
     if( !e.isTemporary() && (e.getComponent() == this.fldFileName) ) {
       final JList list = this.list;
-      SwingUtilities.invokeLater(
+      EventQueue.invokeLater(
 			new Runnable()
 			{
 			  public void run()
@@ -469,6 +490,7 @@ public class FileSelectDlg
   }
 
 
+  @Override
   public void focusLost( FocusEvent e )
   {
     // leer
@@ -477,6 +499,7 @@ public class FileSelectDlg
 
 	/* --- ListSelectionListener --- */
 
+  @Override
   public void valueChanged( ListSelectionEvent e )
   {
     if( e.getSource() == this.list ) {
@@ -514,6 +537,7 @@ public class FileSelectDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -567,6 +591,7 @@ public class FileSelectDlg
   }
 
 
+  @Override
   public void mouseClicked( MouseEvent e )
   {
     if( (e.getComponent() == this.list)
@@ -587,6 +612,7 @@ public class FileSelectDlg
   }
 
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -705,55 +731,41 @@ public class FileSelectDlg
     DirItem rv = null;
     if( file != null ) {
       if( file.isDirectory() ) {
-
-	/*
-	 * Liste mit allen uebergeordneten Verzeichnissen erstellen,
-	 * das erste Element repraesentiert die oberste Ebene.
-	 */
-	java.util.List<File> srcList = new ArrayList<File>();
+	java.util.List<File> srcList = null;
+	int                  dstPos  = -1;
 	while( file != null ) {
-	  if( srcList.contains( file ) ) {	// Ring verhindern
-	    file = null;
+	  dstPos = getIndexOf( dstList, file );
+	  if( dstPos >= 0 ) {
+	    break;
+	  }
+	  if( srcList == null ) {
+	    srcList = new ArrayList<File>();
+	  }
+	  srcList.add( file );
+	  if( this.fsv != null ) {
+	    file = this.fsv.getParentDirectory( file );
 	  } else {
-	    srcList.add( 0, file );
-	    if( this.fsv != null ) {
-	      file = this.fsv.getParentDirectory( file );
+	    file = file.getParentFile();
+	  }
+	}
+	int level = 0;
+	if( (dstPos >= 0) && (dstPos < dstList.size()) ) {
+	  rv    = dstList.get( dstPos );
+	  level = rv.getLevel() + 1;
+	  dstPos++;
+	}
+	if( srcList != null ) {
+	  if( dstPos >= dstList.size() ) {
+	    dstPos = -1;	// nicht einfuegen, sondern anhaengen
+	  }
+	  int srcLen = srcList.size();
+	  for( int i = srcLen - 1; i >= 0; --i ) {
+	    rv = new DirItem( srcList.get( i ), level++ );
+	    if( dstPos >= 0 ) {
+	      dstList.add( dstPos++, rv );
 	    } else {
-	      file = file.getParentFile();
+	      dstList.add( rv );
 	    }
-	  }
-	}
-
-	// in die uebergebene Liste einfuegen oder anhaengen
-	boolean done   = false;
-	int     dstLen = dstList.size();
-	int     srcLen = srcList.size();
-	for( int i = srcLen - 1; !done && (i >= 0); --i ) {
-	  File f = srcList.get( i );
-	  for( int k = 0; !done && (k < dstLen); k++ ) {
-	    DirItem dstItem = dstList.get( k );
-	    if( dstItem.getDirectory().equals( f ) ) {
-	      rv        = dstItem;
-	      int level = dstItem.getLevel() + 1;
-	      int pos   = k + 1;
-	      for( int l = i + 1; l < srcLen; l++ ) {
-		rv = new DirItem( srcList.get( l ), level++ );
-		if( pos < dstLen ) {
-		  dstList.add( pos, rv );
-		} else {
-		  dstList.add( rv );
-		}
-		pos++;
-	      }
-	      done = true;
-	    }
-	  }
-	}
-	if( !done ) {
-	  int level = 0;
-	  for( File f : srcList ) {
-	    rv = new DirItem( f, level++ );
-	    dstList.add( rv );
 	  }
 	}
       }
@@ -886,7 +898,7 @@ public class FileSelectDlg
 
   private void fireSetListData( final File dirFile, final File[] files )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 			new Runnable()
 			{
 			  public void run()
@@ -894,6 +906,23 @@ public class FileSelectDlg
 			    setListData( dirFile, files );
 			  }
 			} );
+  }
+
+
+  private static int getIndexOf( java.util.List<DirItem> list, File file )
+  {
+    int rv = -1;
+    if( (list != null) && (file != null) ) {
+      int i = 0;
+      for( DirItem item : list ) {
+	if( EmuUtil.equals( item.getDirectory(), file ) ) {
+	  rv = i;
+	  break;
+	}
+	i++;
+      }
+    }
+    return rv;
   }
 
 
@@ -919,10 +948,12 @@ public class FileSelectDlg
 	for( int i = 0; i < n; i++ ) {
 	  Object o = model.getElementAt( i );
 	  if( o != null ) {
-	    if( o.equals( file ) ) {
-	      this.list.setSelectedIndex( i );
-	      rv = true;
-	      break;
+	    if( o instanceof File ) {
+	      if( EmuUtil.equals( (File) o, file ) ) {
+		this.list.setSelectedIndex( i );
+		rv = true;
+		break;
+	      }
 	    }
 	  }
 	}
@@ -961,10 +992,7 @@ public class FileSelectDlg
     if( (this.curDir != null) && (dirFile != null) && (files != null) ) {
       if( this.curDir.equals( dirFile ) ) {
 	javax.swing.filechooser.FileFilter fileFilter = null;
-	try {
-	  Arrays.sort( files );
-	}
-	catch( ClassCastException ex ) {}
+	EmuUtil.sortFilesByName( files );
 	if( this.fileFilters != null ) {
 	  int idx = this.comboFileType.getSelectedIndex() - 1;
 	  if( (idx >= 0) && (idx < this.fileFilters.length) ) {
@@ -1115,14 +1143,14 @@ public class FileSelectDlg
 	}
       }
       this.labelStatus.setText( "Lese Verzeichnis..." );
-      Thread t = new Thread()
+      Thread t = new Thread( "JKCEMU directory reader of file select dialog" )
 			{
 			  public void run()
 			  {
 			    File[] files = null;
 			    try {
 			      if( fsv != null ) {
-				files = fsv.getFiles( dirFile, false );
+				files = fsv.getFiles( dirFile, true );
 			      } else {
 				files = dirFile.listFiles();
 			      }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,7 +23,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   private static final int MIN_STACK_SIZE = 64;
 
   private static final String textBegAddr   = "Anfangsadresse:";
-  private static final String textEndOfMem  = "Maximale Endadresse:";
+  private static final String textEndOfMem  = "Adresse Speicherende:";
   private static final String textArraySize =
 				"Gr\u00F6\u00DFe des @-Variablen-Arrays:";
 
@@ -36,6 +36,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   private JRadioButton    btnBreakAnywhere;
   private JRadioButton    btnBreakInput;
   private JRadioButton    btnBreakNever;
+  private JCheckBox       btnForceCPM;
   private JCheckBox       btnCheckStack;
   private JCheckBox       btnCheckArray;
   private JCheckBox       btnStrictAC1Basic;
@@ -48,8 +49,11 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   private JCheckBox       btnPreferRelJumps;
   private JTextField      fldAppName;
   private JTextField      fldArraySize;
-  private JTextField      fldEndOfMem;
+  private JTextField      fldBegAddr;
   private JTextField      fldStackSize;
+  private JLabel          labelAppName;
+  private JLabel          labelBegAddr;
+  private JLabel          labelBegAddrUnit;
   private JLabel          labelStackSize;
   private JLabel          labelStackUnit;
   private LimitedDocument docAppName;
@@ -59,60 +63,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   private IntegerDocument docStackSize;
 
 
-  public static PrgOptions showOptionsDlg(
-					Frame      owner,
-					EmuThread  emuThread,
-					PrgOptions options )
-  {
-    BasicOptionsDlg dlg = new BasicOptionsDlg( owner, emuThread, options );
-    dlg.setVisible( true );
-    return dlg.getAppliedOptions();
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = super.doAction( e );
-    if( !rv && (e != null) ) {
-      Object src = e.getSource();
-      if( (src == this.btnStackSystem)
-	  || (src == this.btnStackSeparate) )
-      {
-	rv = true;
-	updStackFieldsEnabled();
-      }
-      else if( src == this.btnCheckAll ) {
-	rv = true;
-	this.btnBreakInput.setSelected( true );
-	this.btnCheckArray.setSelected( true );
-	this.btnCheckStack.setSelected( true );
-	updCheckFieldsEnabled();
-      }
-      else if( src == this.btnCheckNone ) {
-	rv = true;
-	this.btnBreakNever.setSelected( true );
-	this.btnCheckArray.setSelected( false );
-	this.btnCheckStack.setSelected( false );
-	updCheckFieldsEnabled();
-      }
-      else if( src == this.btnCheckCustom ) {
-	rv = true;
-	updCheckFieldsEnabled();
-      } else {
-	rv = true;
-	if( src instanceof JTextField )
-	  ((JTextField) src).transferFocus();
-      }
-    }
-    return rv;
-  }
-
-
-	/* --- private Konstruktoren und Methoden --- */
-
-  private BasicOptionsDlg(
+  public BasicOptionsDlg(
 		Frame      owner,
 		EmuThread  emuThread,
 		PrgOptions options )
@@ -142,41 +93,66 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
     GridBagConstraints gbcGeneral = new GridBagConstraints(
 					0, 0,
-					1, 1,
+					GridBagConstraints.REMAINDER, 1,
 					0.0, 0.0,
 					GridBagConstraints.WEST,
 					GridBagConstraints.NONE,
-					new Insets( 5, 5, 5, 5 ),
+					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    panelGeneral.add( new JLabel( "Name des Programms:" ), gbcGeneral );
+    this.btnForceCPM = new JCheckBox(
+		"Programmcode f\u00FCr ein CP/M-kompatibles"
+			+ " Betriebssystem erzeugen",
+		false );
+    this.btnForceCPM.addActionListener( this );
+    panelGeneral.add( this.btnForceCPM, gbcGeneral );
 
-    this.docAppName = new LimitedDocument( 8 );
-    this.fldAppName = new JTextField( this.docAppName, "", 8 );
+    this.labelAppName     = new JLabel( "Name des Programms:" );
+    gbcGeneral.insets.top = 20;
+    gbcGeneral.gridwidth  = 1;
+    gbcGeneral.gridy++;
+    panelGeneral.add( this.labelAppName, gbcGeneral );
+
+    this.docAppName      = new LimitedDocument( 8 );
+    this.fldAppName      = new JTextField( this.docAppName, "", 8 );
     gbcGeneral.gridwidth = 2;
     gbcGeneral.gridx++;
     panelGeneral.add( this.fldAppName, gbcGeneral );
 
-    gbcGeneral.insets.top = 20;
-    gbcGeneral.gridwidth  = 1;
-    gbcGeneral.gridx      = 0;
+    this.labelBegAddr    = new JLabel( textBegAddr );
+    gbcGeneral.gridwidth = 1;
+    gbcGeneral.gridx     = 0;
     gbcGeneral.gridy++;
-    panelGeneral.add( new JLabel( textBegAddr ), gbcGeneral );
+    panelGeneral.add( this.labelBegAddr, gbcGeneral );
+
+    this.fldBegAddr = new JTextField( 5 );
+    this.fldBegAddr.addActionListener( this );
+    this.docBegAddr = new HexDocument( this.fldBegAddr, 4, textBegAddr );
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.fldBegAddr, gbcGeneral );
+
+    this.labelBegAddrUnit = new JLabel( "hex" );
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.labelBegAddrUnit, gbcGeneral );
+
+    ButtonGroup grpStack = new ButtonGroup();
+
+    this.btnStackSystem = new JRadioButton( "System-Stack verwenden", true );
+    this.btnStackSystem.addActionListener( this );
+    grpStack.add( this.btnStackSystem );
+    gbcGeneral.insets.left = 20;
+    gbcGeneral.gridwidth   = GridBagConstraints.REMAINDER;
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.btnStackSystem, gbcGeneral );
+
+    gbcGeneral.insets.top  = 2;
+    gbcGeneral.insets.left = 5;
+    gbcGeneral.gridwidth   = 1;
+    gbcGeneral.gridx       = 0;
+    gbcGeneral.gridy++;
+    panelGeneral.add( new JLabel( textEndOfMem ), gbcGeneral );
 
     JTextField fld = new JTextField( 5 );
-    fld.addActionListener( this );
-    this.docBegAddr = new HexDocument( fld, 4, textBegAddr );
-    gbcGeneral.gridx++;
-    panelGeneral.add( fld, gbcGeneral );
-    gbcGeneral.gridx++;
-    panelGeneral.add( new JLabel( "hex" ), gbcGeneral );
-
-    gbcGeneral.insets.top = 2;
-    gbcGeneral.gridx      = 0;
-    gbcGeneral.gridy++;
-    panelGeneral.add( new JLabel( textEndOfMem), gbcGeneral );
-
-    fld = new JTextField( 5 );
     fld.addActionListener( this );
     this.docEndOfMem = new HexDocument( fld, 4, textEndOfMem );
     gbcGeneral.gridx++;
@@ -184,45 +160,34 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     gbcGeneral.gridx++;
     panelGeneral.add( new JLabel( "hex" ), gbcGeneral );
 
-    gbcGeneral.gridx = 0;
+    this.btnStackSeparate = new JRadioButton(
+					"Eigener Stack-Bereich:",
+					false );
+    this.btnStackSeparate.addActionListener( this );
+    grpStack.add( this.btnStackSeparate );
+    gbcGeneral.insets.left = 20;
+    gbcGeneral.gridwidth   = GridBagConstraints.REMAINDER;
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.btnStackSeparate, gbcGeneral );
+
+    gbcGeneral.insets.left   = 5;
+    gbcGeneral.insets.bottom = 5;
+    gbcGeneral.gridwidth     = 1;
+    gbcGeneral.gridx         = 0;
     gbcGeneral.gridy++;
     panelGeneral.add( new JLabel( textArraySize ), gbcGeneral );
 
     fld = new JTextField( 5 );
     fld.addActionListener( this );
     this.docArraySize    = new IntegerDocument( fld, new Integer( 0 ), null );
-    gbcGeneral.insets.bottom = 5;
     gbcGeneral.gridx++;
     panelGeneral.add( fld, gbcGeneral );
     gbcGeneral.gridx++;
     panelGeneral.add( new JLabel( "Variablen" ), gbcGeneral );
 
-    ButtonGroup grpStack = new ButtonGroup();
-
-    this.btnStackSystem = new JRadioButton( "System-Stack verwenden", true );
-    this.btnStackSystem.addActionListener( this );
-    grpStack.add( this.btnStackSystem );
-    gbcGeneral.gridwidth     = GridBagConstraints.REMAINDER;
-    gbcGeneral.insets.top    = 5;
-    gbcGeneral.insets.bottom = 0;
-    gbcGeneral.insets.left   = 20;
-    gbcGeneral.gridy         = 1;
-    gbcGeneral.gridx++;
-    panelGeneral.add( this.btnStackSystem, gbcGeneral );
-
-    this.btnStackSeparate = new JRadioButton(
-					"Eigener Stack-Bereich:",
-					false );
-    this.btnStackSeparate.addActionListener( this );
-    grpStack.add( this.btnStackSeparate );
-    gbcGeneral.insets.top = 0;
-    gbcGeneral.gridy++;
-    panelGeneral.add( this.btnStackSeparate, gbcGeneral );
-
     this.labelStackSize = new JLabel( "Gr\u00F6\u00DFe:" );
-    gbcGeneral.gridwidth   = 1;
     gbcGeneral.insets.left = 50;
-    gbcGeneral.gridy++;
+    gbcGeneral.gridx++;
     panelGeneral.add( this.labelStackSize, gbcGeneral );
     
     this.fldStackSize = new JTextField( 5 );
@@ -416,31 +381,25 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
 
     // Bereich Knoepfe
-    gbc.fill    = GridBagConstraints.NONE;
-    gbc.weightx = 0.0;
-    gbc.weighty = 0.0;
+    gbc.fill          = GridBagConstraints.NONE;
+    gbc.weightx       = 0.0;
+    gbc.weighty       = 0.0;
+    gbc.insets.bottom = 10;
     gbc.gridy++;
     add( createButtons( "Compilieren" ), gbc );
 
 
     // Vorbelegungen
-    EmuSys                 emuSys   = emuThread.getEmuSys();
-    BasicCompiler.Platform platform = BasicCompiler.getPlatform( emuSys );
-    if( (platform != BasicCompiler.Platform.HUEBLERMC)
-	&& (platform != BasicCompiler.Platform.KC85)
-	&& (platform != BasicCompiler.Platform.Z9001) )
-    {
-      this.fldAppName.setEditable( false );
-      this.fldAppName.setEnabled( false );
-    }
     BasicOptions basicOptions = null;
     if( options != null ) {
-      if( options instanceof BasicOptions )
+      if( options instanceof BasicOptions ) {
 	basicOptions = (BasicOptions) options;
+      }
     }
     int stackSize = BasicOptions.DEFAULT_STACK_SIZE;
     if( basicOptions != null ) {
       stackSize = basicOptions.getStackSize();
+      this.btnForceCPM.setSelected( basicOptions.getForceCPM() );
       this.fldAppName.setText( basicOptions.getAppName() );
       this.docBegAddr.setValue( basicOptions.getBegAddr(), 4 );
       this.docArraySize.setValue( basicOptions.getArraySize() );
@@ -475,12 +434,14 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       // Bei Aenderung der Plattform die Anfangsadresse neu setzen
       BasicCompiler.Platform lastPlatform = basicOptions.getPlatform();
       if( lastPlatform != null ) {
-	if( !lastPlatform.equals( platform ) ) {
+	EmuSys emuSys = emuThread.getEmuSys();
+	if( !lastPlatform.equals( BasicCompiler.getPlatform( emuSys ) ) ) {
 	  this.docBegAddr.setValue(
 			BasicOptions.getDefaultBegAddr( emuSys ), 4 );
 	}
       }
     } else {
+      this.btnForceCPM.setSelected( false );
       this.fldAppName.setText( "MYAPP" );
       this.docBegAddr.setValue(
 		BasicOptions.getDefaultBegAddr( emuThread.getEmuSys() ), 4 );
@@ -522,6 +483,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     updCodeDestFields( options );
     updCheckFieldsEnabled();
     updStackFieldsEnabled();
+    settingsChanged();
 
 
     // Fenstergroesse und -position
@@ -535,14 +497,21 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   {
     String labelText = null;
     try {
-      labelText   = textBegAddr;
-      int begAddr = this.docBegAddr.intValue();
+      labelText      = textBegAddr;
+      int begAddr    = this.docBegAddr.intValue();
+      int actualAddr = begAddr;
+      if( this.btnForceCPM.isSelected() ) {
+	actualAddr = 0x0100;
+      }
 
       labelText     = textArraySize;
       int arraySize = this.docArraySize.intValue();
 
       labelText    = textEndOfMem;
       int endOfMem = this.docEndOfMem.intValue();
+      if( endOfMem <= actualAddr ) {
+	throw new NumberFormatException( "Wert zu klein" );
+      }
 
       labelText     = "Stack-Gr\u00F6\u00DFe:";
       int stackSize = 0;
@@ -561,6 +530,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       }
 
       BasicOptions options = new BasicOptions( this.emuThread );
+      options.setForceCPM( this.btnForceCPM.isSelected() );
       options.setAppName( this.fldAppName.getText() );
       options.setBegAddr( begAddr );
       options.setArraySize( arraySize );
@@ -572,7 +542,8 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       options.setPrintCalls( this.btnPrintCalls.isSelected() );
       options.setAllowLongVarNames( this.btnAllowLongVarNames.isSelected() );
       options.setStrictAC1MiniBASIC( this.btnStrictAC1Basic.isSelected() );
-      options.setStrictZ1013TinyBASIC( this.btnStrictZ1013Basic.isSelected() );
+      options.setStrictZ1013TinyBASIC(
+				this.btnStrictZ1013Basic.isSelected() );
       options.setFormatSource( this.btnFormatSource.isSelected() );
       options.setShowAsm( this.btnShowAsm.isSelected() );
       options.setStructuredForNext( this.btnStructuredForNext.isSelected() );
@@ -595,6 +566,79 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     }
   }
 
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = super.doAction( e );
+    if( !rv && (e != null) ) {
+      Object src = e.getSource();
+      if( src == this.btnForceCPM ) {
+	rv = true;
+	settingsChanged();
+      }
+      else if( (src == this.btnStackSystem)
+	       || (src == this.btnStackSeparate) )
+      {
+	rv = true;
+	updStackFieldsEnabled();
+      }
+      else if( src == this.btnCheckAll ) {
+	rv = true;
+	this.btnBreakInput.setSelected( true );
+	this.btnCheckArray.setSelected( true );
+	this.btnCheckStack.setSelected( true );
+	updCheckFieldsEnabled();
+      }
+      else if( src == this.btnCheckNone ) {
+	rv = true;
+	this.btnBreakNever.setSelected( true );
+	this.btnCheckArray.setSelected( false );
+	this.btnCheckStack.setSelected( false );
+	updCheckFieldsEnabled();
+      }
+      else if( src == this.btnCheckCustom ) {
+	rv = true;
+	updCheckFieldsEnabled();
+      } else {
+	rv = true;
+	if( src instanceof JTextField )
+	  ((JTextField) src).transferFocus();
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void settingsChanged()
+  {
+    super.settingsChanged();
+    boolean stateCPM  = this.btnForceCPM.isSelected();
+    boolean stateName = false;
+    if( !stateCPM ) {
+      BasicCompiler.Platform platform = BasicCompiler.getPlatform(
+					this.emuThread.getEmuSys() );
+
+      stateName = (platform == BasicCompiler.Platform.HUEBLERMC)
+			|| (platform == BasicCompiler.Platform.KC85)
+			|| (platform == BasicCompiler.Platform.Z9001);
+    }
+    this.labelAppName.setEnabled( stateName );
+    this.fldAppName.setEditable( stateName );
+    this.fldAppName.setEnabled( stateName );
+
+    boolean stateAddr = !stateCPM;
+    this.labelBegAddr.setEnabled( stateAddr );
+    this.fldBegAddr.setEditable( stateAddr );
+    this.fldBegAddr.setEnabled( stateAddr );
+    this.labelBegAddrUnit.setEnabled( stateAddr );
+  }
+
+
+	/* --- private Methoden --- */
 
   private void updCheckFieldsEnabled()
   {

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.filebrowser;
 
 import java.awt.*;
+import java.awt.datatransfer.*;
 import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.*;
@@ -30,6 +31,7 @@ import jkcemu.text.EditFrm;
 public class FileBrowserFrm extends BasicFrm
 					implements
 						DragGestureListener,
+						FlavorListener,
 						FocusListener,
 						ListSelectionListener,
 						TreeSelectionListener,
@@ -62,6 +64,9 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuFileProp;
   private JMenuItem            mnuFileRefresh;
   private JMenuItem            mnuFileClose;
+  private JMenuItem            mnuEditPathCopy;
+  private JMenuItem            mnuEditFileCopy;
+  private JMenuItem            mnuEditFilePaste;
   private JCheckBoxMenuItem    mnuHiddenFiles;
   private JCheckBoxMenuItem    mnuSortCaseSensitive;
   private JCheckBoxMenuItem    mnuLoadOnDoubleClick;
@@ -92,6 +97,9 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuPopupRAMFloppy1Load;
   private JMenuItem            mnuPopupRAMFloppy2Load;
   private JMenuItem            mnuPopupChecksum;
+  private JMenuItem            mnuPopupPathCopy;
+  private JMenuItem            mnuPopupFileCopy;
+  private JMenuItem            mnuPopupFilePaste;
   private JMenuItem            mnuPopupCreateDir;
   private JMenuItem            mnuPopupRename;
   private JMenuItem            mnuPopupDelete;
@@ -109,12 +117,16 @@ public class FileBrowserFrm extends BasicFrm
   private FileNode             rootNode;
   private FilePreviewFld       filePreviewFld;
   private Component            lastActiveFld;
+  private Clipboard            clipboard;
+  private boolean              filePasteState;
 
 
   public FileBrowserFrm( ScreenFrm screenFrm )
   {
-    this.screenFrm     = screenFrm;
-    this.lastActiveFld = null;
+    this.screenFrm      = screenFrm;
+    this.lastActiveFld  = null;
+    this.clipboard      = null;
+    this.filePasteState = false;
     setTitle( "JKCEMU Datei-Browser" );
     Main.updIcon( this );
 
@@ -232,6 +244,21 @@ public class FileBrowserFrm extends BasicFrm
     mnuFile.add( this.mnuFileClose );
 
 
+    // Menu Bearbeiten
+    JMenu mnuEdit = new JMenu( "Bearbeiten" );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
+
+    this.mnuEditPathCopy = createJMenuItem(
+		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
+    mnuEdit.add( this.mnuEditPathCopy );
+
+    this.mnuEditFileCopy = createJMenuItem( "Kopieren" );
+    mnuEdit.add( this.mnuEditFileCopy );
+
+    this.mnuEditFilePaste = createJMenuItem( "Einf\u00FCgen" );
+    mnuEdit.add( this.mnuEditFilePaste );
+
+
     // Menu Einstellungen
     JMenu mnuSettings = new JMenu( "Einstellungen" );
     mnuSettings.setMnemonic( KeyEvent.VK_E );
@@ -302,6 +329,7 @@ public class FileBrowserFrm extends BasicFrm
     // Menu zusammenbauen
     JMenuBar mnuBar = new JMenuBar();
     mnuBar.add( mnuFile );
+    mnuBar.add( mnuEdit );
     mnuBar.add( mnuSettings );
     mnuBar.add( mnuHelp );
     setJMenuBar( mnuBar );
@@ -379,7 +407,18 @@ public class FileBrowserFrm extends BasicFrm
     this.mnuPopup.add( this.mnuPopupRAMFloppy2Load );
     this.mnuPopup.addSeparator();
 
-    this.mnuPopupCreateDir = createJMenuItem( "Verszeichnis erstellen..." );
+    this.mnuPopupPathCopy = createJMenuItem(
+		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
+    mnuPopup.add( this.mnuPopupPathCopy );
+
+    this.mnuPopupFileCopy = createJMenuItem( "Kopieren" );
+    mnuPopup.add( this.mnuPopupFileCopy );
+
+    this.mnuPopupFilePaste = createJMenuItem( "Einf\u00FCgen" );
+    mnuPopup.add( this.mnuPopupFilePaste );
+    this.mnuPopup.addSeparator();
+
+    this.mnuPopupCreateDir = createJMenuItem( "Verzeichnis erstellen..." );
     this.mnuPopup.add( this.mnuPopupCreateDir );
 
     this.mnuPopupRename = createJMenuItem( "Umbenennen..." );
@@ -446,8 +485,8 @@ public class FileBrowserFrm extends BasicFrm
 
 
     // Dateibaum
-    DefaultTreeSelectionModel selectionModel = new DefaultTreeSelectionModel();
-    selectionModel.setSelectionMode(
+    DefaultTreeSelectionModel selModel = new DefaultTreeSelectionModel();
+    selModel.setSelectionMode(
 		TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION );
 
     this.rootNode = new FileNode( null, null, true );
@@ -459,11 +498,12 @@ public class FileBrowserFrm extends BasicFrm
 
     this.treeModel = new DefaultTreeModel( this.rootNode );
     this.tree      = new JTree( this.treeModel );
-    this.tree.setSelectionModel( selectionModel );
+    this.tree.setSelectionModel( selModel );
     this.tree.setEditable( false );
     this.tree.setRootVisible( false );
     this.tree.setScrollsOnExpand( true );
     this.tree.setShowsRootHandles( true );
+    this.tree.setCellRenderer( new FileTreeCellRenderer() );
     this.tree.addFocusListener( this );
     this.tree.addKeyListener( this );
     this.tree.addMouseListener( this );
@@ -478,10 +518,12 @@ public class FileBrowserFrm extends BasicFrm
     this.table = this.filePreviewFld.getJTable();
     if( this.table != null ) {
       this.table.addFocusListener( this );
+      this.table.addKeyListener( this );
       this.table.addMouseListener( this );
       ListSelectionModel lsm = this.table.getSelectionModel();
-      if( lsm != null )
+      if( lsm != null ) {
 	lsm.addListSelectionListener( this );
+      }
     }
 
 
@@ -497,6 +539,17 @@ public class FileBrowserFrm extends BasicFrm
     gbc.weighty = 1.0;
     gbc.gridy++;
     add( this.splitPane, gbc );
+
+
+    // Zwischenablage
+    this.clipboard = null;
+    Toolkit tk = getToolkit();
+    if( tk != null ) {
+      this.clipboard = tk.getSystemClipboard();
+      if( this.clipboard != null ) {
+	this.clipboard.addFlavorListener( this );
+      }
+    }
 
 
     // Dateibaum als Drag-Quelle
@@ -516,12 +569,13 @@ public class FileBrowserFrm extends BasicFrm
 
     // sonstiges
     updActionButtons();
+    updFilePasteState( true );
   }
 
 
   public void fireDirectoryChanged( final File dirFile )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -534,7 +588,7 @@ public class FileBrowserFrm extends BasicFrm
 
   public void showErrorMsg( final String msg )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
@@ -547,21 +601,11 @@ public class FileBrowserFrm extends BasicFrm
 
 	/* --- DragGestureListener --- */
 
+  @Override
   public void dragGestureRecognized( DragGestureEvent e )
   {
-    TreePath[] treePaths = this.tree.getSelectionPaths();
-    if( treePaths != null ) {
-      Collection<File> files = new ArrayList<File>();
-      for( int i = 0; i < treePaths.length; i++ ) {
-	Object o = treePaths[ i ].getLastPathComponent();
-	if( o != null ) {
-	  if( o instanceof FileNode ) {
-	    File file = ((FileNode) o).getFile();
-	    if( file != null )
-	      files.add( file );
-	  }
-	}
-      }
+    Collection<File> files = getSelectedFiles();
+    if( files != null ) {
       if( !files.isEmpty() ) {
 	try {
 	  e.startDrag( null, new FileListSelection( files ) );
@@ -572,8 +616,19 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+	/* --- FlavorListener --- */
+
+  @Override
+  public void flavorsChanged( FlavorEvent e )
+  {
+    if( e.getSource() == this.clipboard )
+      updFilePasteState( false );
+  }
+
+
 	/* --- FocusListener --- */
 
+  @Override
   public void focusGained( FocusEvent e )
   {
     if( !e.isTemporary() ) {
@@ -583,6 +638,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void focusLost( FocusEvent e )
   {
     // leer
@@ -591,6 +647,7 @@ public class FileBrowserFrm extends BasicFrm
 
 	/* --- ListSelectionListener --- */
 
+  @Override
   public void valueChanged( ListSelectionEvent e )
   {
     updActionButtons();
@@ -599,6 +656,7 @@ public class FileBrowserFrm extends BasicFrm
 
 	/* --- TreeSelectionListener --- */
 
+  @Override
   public void valueChanged( TreeSelectionEvent e )
   {
     if( e.getSource() == this.tree ) {
@@ -610,6 +668,7 @@ public class FileBrowserFrm extends BasicFrm
 
 	/* --- TreeWillExpandListener --- */
 
+  @Override
   public void treeWillCollapse( TreeExpansionEvent e )
 					throws ExpandVetoException
   {
@@ -617,6 +676,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void treeWillExpand( TreeExpansionEvent e )
 					throws ExpandVetoException
   {
@@ -626,11 +686,7 @@ public class FileBrowserFrm extends BasicFrm
       Object o = treePath.getLastPathComponent();
       if( o != null ) {
 	if( o instanceof FileNode ) {
-	  ((FileNode) o).refresh(
-				this.treeModel,
-				true,
-				this.mnuHiddenFiles.isSelected(),
-				getFileComparator() );
+	  refreshNode( (FileNode) o, true );
 	}
       }
       setWaitCursor( false );
@@ -640,6 +696,7 @@ public class FileBrowserFrm extends BasicFrm
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public boolean applySettings( Properties props, boolean resizable )
   {
     boolean rv = super.applySettings( props, resizable );
@@ -708,6 +765,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -878,6 +936,24 @@ public class FileBrowserFrm extends BasicFrm
 	    rv = true;
 	    doClose();
 	  }
+	  else if( (src == this.mnuEditPathCopy)
+		   || (src == this.mnuPopupPathCopy) )
+	  {
+	    rv = true;
+	    doEditPathCopy();
+	  }
+	  else if( (src == this.mnuEditFileCopy)
+		   || (src == this.mnuPopupFileCopy) )
+	  {
+	    rv = true;
+	    doEditFileCopy();
+	  }
+	  else if( (src == this.mnuEditFilePaste)
+		   || (src == this.mnuPopupFilePaste) )
+	  {
+	    rv = true;
+	    doEditFilePaste();
+	  }
 	  else if( (src == this.mnuHiddenFiles)
 		   || (src == this.mnuSortCaseSensitive) )
 	  {
@@ -899,6 +975,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void lookAndFeelChanged()
   {
     if( this.mnuPopup != null )
@@ -906,6 +983,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void putSettingsTo( Properties props )
   {
     if( props != null ) {
@@ -943,6 +1021,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void mouseClicked( MouseEvent e )
   {
     if( checkPopup( e ) ) {
@@ -970,6 +1049,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void mousePressed( MouseEvent e )
   {
     if( checkPopup( e ) )
@@ -979,6 +1059,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void mouseReleased( MouseEvent e )
   {
     if( checkPopup( e ) )
@@ -988,6 +1069,7 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -996,6 +1078,99 @@ public class FileBrowserFrm extends BasicFrm
 
 
 	/* --- Aktionen --- */
+
+  private void doEditFileCopy()
+  {
+    try {
+      if( this.clipboard != null ) {
+      Collection<File> files = getSelectedFiles();
+	if( files != null ) {
+	  if( !files.isEmpty() ) {
+	    FileListSelection fls = new FileListSelection( files );
+	    this.clipboard.setContents( fls, fls );
+	  }
+	}
+      }
+    }
+    catch( IllegalStateException ex ) {}
+  }
+
+
+  private void doEditFilePaste()
+  {
+    if( this.clipboard != null ) {
+      File     dstDir   = null;
+      FileNode fileNode = getSelectedFileNode();
+      if( fileNode != null ) {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  if( file.isDirectory() ) {
+	    dstDir = file;
+	  }
+	}
+      }
+      if( (fileNode != null) && (dstDir != null) ) {
+	boolean changed = false;
+	try {
+	  Object o = this.clipboard.getData( DataFlavor.javaFileListFlavor );
+	  if( o != null ) {
+	    if( o instanceof File ) {
+	      changed = pasteFile( dstDir, (File) o );
+	    }
+	    else if( o instanceof java.util.List ) {
+	      for( Object e : (java.util.List) o ) {
+		if( e != null ) {
+		  if( e instanceof File ) {
+		    if( pasteFile( dstDir, (File) e ) ) {
+		      changed = true;
+		    } else {
+		      break;
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+	catch( IllegalStateException ex ) {}
+	catch( UnsupportedFlavorException ex ) {}
+	catch( IOException ex ) {}
+	if( changed ) {
+	  fileNode.refresh(
+		this.treeModel,
+		false,
+		this.mnuHiddenFiles.isSelected(),
+		getFileComparator() );
+	}
+      } else {
+	BasicDlg.showErrorDlg(
+		this,
+		"Zielverzeichnis nicht ausgew\u00E4hlt" );
+      }
+    }
+  }
+
+
+  private void doEditPathCopy()
+  {
+    try {
+      FileNode fileNode = getSelectedFileNode();
+      if( fileNode != null ) {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  String fileName = file.getPath();
+	  if( fileName != null ) {
+	    if( !fileName.isEmpty() ) {
+	      StringSelection ss = new StringSelection( fileName );
+	      this.clipboard.setContents( ss, ss );
+	    }
+	  }
+	}
+      }
+    }
+    catch( IllegalStateException ex ) {}
+  }
+
 
   private void doFileAction( Object src ) throws IOException
   {
@@ -1006,11 +1181,7 @@ public class FileBrowserFrm extends BasicFrm
 	if( path != null ) {
 	  setWaitCursor( true );
 	  this.tree.setSelectionPath( new TreePath( path ) );
-	  fileNode.refresh(
-			this.treeModel,
-			true,
-			this.mnuHiddenFiles.isSelected(),
-			getFileComparator() );
+	  refreshNode( fileNode, true );
 	  this.filePreviewFld.setFileNode(
 				fileNode,
 				getPreviewMaxFileSize(),
@@ -1041,8 +1212,11 @@ public class FileBrowserFrm extends BasicFrm
 	      boolean  loadable = false;
 	      FileInfo fileInfo = fileNode.getFileInfo();
 	      if( fileInfo != null ) {
-		if( fileInfo.getBegAddr() >= 0 ) {
-		  loadable = true;
+		String fileFmt = fileInfo.getFileFormat();
+		if( fileFmt != null ) {
+		  if( !fileFmt.isEmpty() && !fileFmt.equals( FileInfo.BIN ) ) {
+		    loadable = true;
+		  }
 		}
 	      }
 	      if( !loadable ) {
@@ -1163,11 +1337,15 @@ public class FileBrowserFrm extends BasicFrm
 	      disk = PlainFileFloppyDisk.openFile( this, file, true, fmt );
 	    }
 	  }
+	  else if( fileNode.isCopyQMFile() ) {
+	    disk = CopyQMFloppyDisk.readFile( this, file );
+	  }
 	  else if( fileNode.isTelediskFile() ) {
 	    disk = TelediskFloppyDisk.readFile( this, file );
 	  }
 	  if( disk != null ) {
-	    outFile = EmuUtil.showFileSaveDlg(
+	    if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
+	      outFile = EmuUtil.showFileSaveDlg(
 				this,
 				"Anadisk-Datei speichern",
 				EmuUtil.getDestFile(
@@ -1175,15 +1353,16 @@ public class FileBrowserFrm extends BasicFrm
 					".dump",
 					Main.getLastPathFile( "disk" ) ),
 				EmuUtil.getAnadiskFileFilter() );
-	    if( outFile != null ) {
-	      if( DiskUtil.checkFileExt(
+	      if( outFile != null ) {
+		if( DiskUtil.checkFileExt(
 				this,
 				outFile,
 				DiskUtil.anadiskFileExt ) )
-	      {
-		AnadiskFloppyDisk.export( disk, outFile );
-		fireDirectoryChanged( outFile.getParentFile() );
-		showExportFinished();
+		{
+		  AnadiskFloppyDisk.export( disk, outFile );
+		  fireDirectoryChanged( outFile.getParentFile() );
+		  showExportFinished();
+		}
 	      }
 	    }
 	  }
@@ -1216,10 +1395,12 @@ public class FileBrowserFrm extends BasicFrm
 	  if( fileNode.isAnadiskFile() ) {
 	    disk = AnadiskFloppyDisk.readFile( this, file );
 	  }
+	  else if( fileNode.isCopyQMFile() ) {
+	    disk = CopyQMFloppyDisk.readFile( this, file );
+	  }
 	  else if( fileNode.isTelediskFile() ) {
 	    disk = TelediskFloppyDisk.readFile( this, file );
 	  }
-
 	  else if( fileNode.isPlainDiskFile() ) {
 	    FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
 			this,
@@ -1231,10 +1412,9 @@ public class FileBrowserFrm extends BasicFrm
 	      disk = PlainFileFloppyDisk.openFile( this, file, true, fmt );
 	    }
 	  }
-
-
 	  if( disk != null ) {
-	    outFile = EmuUtil.showFileSaveDlg(
+	    if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
+	      outFile = EmuUtil.showFileSaveDlg(
 				this,
 				"Einfache Abbilddatei speichern",
 				EmuUtil.getDestFile(
@@ -1242,15 +1422,16 @@ public class FileBrowserFrm extends BasicFrm
 					".img",
 					Main.getLastPathFile( "disk" ) ),
 				EmuUtil.getPlainDiskFileFilter() );
-	    if( outFile != null ) {
-	      if( DiskUtil.checkFileExt(
+	      if( outFile != null ) {
+		if( DiskUtil.checkFileExt(
 				this,
 				outFile,
 				DiskUtil.plainDiskFileExt ) )
-	      {
-		PlainFileFloppyDisk.export( disk, outFile );
-		fireDirectoryChanged( outFile.getParentFile() );
-		showExportFinished();
+		{
+		  PlainFileFloppyDisk.export( disk, outFile );
+		  fireDirectoryChanged( outFile.getParentFile() );
+		  showExportFinished();
+		}
 	      }
 	    }
 	  }
@@ -1371,7 +1552,17 @@ public class FileBrowserFrm extends BasicFrm
 								this,
 								file );
 	    if( disk != null ) {
-	      DiskUtil.unpackDisk( this, file, disk, "Anadisk-Datei" );
+	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
+		DiskUtil.unpackDisk( this, file, disk, "Anadisk-Datei" );
+	      }
+	    }
+	  }
+	  else if( fileNode.isCopyQMFile() ) {
+	    AbstractFloppyDisk disk = CopyQMFloppyDisk.readFile( this, file );
+	    if( disk != null ) {
+	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
+		DiskUtil.unpackDisk( this, file, disk, "CopyQM-Datei" );
+	      }
 	    }
 	  }
 	  else if( fileNode.isTelediskFile() ) {
@@ -1379,7 +1570,9 @@ public class FileBrowserFrm extends BasicFrm
 								this,
 								file );
 	    if( disk != null ) {
-	      DiskUtil.unpackDisk( this, file, disk, "Teledisk-Datei" );
+	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
+		DiskUtil.unpackDisk( this, file, disk, "Teledisk-Datei" );
+	      }
 	    }
 	  }
 	  else if( fileNode.isPlainDiskFile() ) {
@@ -1506,28 +1699,15 @@ public class FileBrowserFrm extends BasicFrm
     if( fileNode != null ) {
       File file = fileNode.getFile();
       if( file != null ) {
-	boolean state = true;
-	if( ramFloppy.hasDataChanged() ) {
-	  if( BasicDlg.showYesNoDlg(
-		this,
-		"Die Daten in der RAM-Floppy sind nicht gespeichert.\n"
-			+ "M\u00F6chten Sie trotzdem die RAM-Floppy mit der\n"
-			+ "ausgew\u00E5hlten Datei laden?" ) )
-	  {
-	    state = true;
-	  }
+	try {
+	  ramFloppy.load( file );
+	  Main.setLastFile( file, "ramfloppy" );
 	}
-	if( state ) {
-	  try {
-	    ramFloppy.load( file );
-	    Main.setLastFile( file, "ramfloppy" );
-	  }
-	  catch( IOException ex ) {
-	    BasicDlg.showErrorDlg(
+	catch( IOException ex ) {
+	  BasicDlg.showErrorDlg(
 		this,
 		"Die RAM-Floppy kann nicht geladen werden.\n\n"
 						+ ex.getMessage() );
-	  }
 	}
       }
     }
@@ -1550,11 +1730,7 @@ public class FileBrowserFrm extends BasicFrm
 	File dirFile = EmuUtil.createDir( this, file );
 	if( dirFile != null ) {
 	  if( parent instanceof FileNode ) {
-	    ((FileNode) parent).refresh(
-					this.treeModel,
-					false,
-					this.mnuHiddenFiles.isSelected(),
-					getFileComparator() );
+	    refreshNode( (FileNode) parent, false );
 	  }
 	  selectNode( parent, dirFile );
 	  updActionButtons();
@@ -1581,38 +1757,127 @@ public class FileBrowserFrm extends BasicFrm
 
   private void doFileDelete()
   {
-    Collection<FileNode> nodes = getSelectedFileNodes();
-    if( nodes != null ) {
-      int n = nodes.size();
-      if( n > 0 ) {
-	Set<FileNode>    parents = new HashSet<FileNode>();
-	Collection<File> files   = new ArrayList<File>( n );
-	for( FileNode node : nodes ) {
-	  File file = node.getFile();
-	  if( file != null ) {
-	    Object parent = node.getParent();
-	    if( parent != null ) {
-	      if( parent instanceof FileNode )
-		parents.add( (FileNode) parent );
+    if( this.lastActiveFld != null ) {
+      if( this.lastActiveFld == this.table ) {
+	TableModel tm = this.table.getModel();
+	if( tm != null ) {
+	  if( tm instanceof FileTableModel ) {
+	    int[] rows = this.table.getSelectedRows();
+	    if( rows != null ) {
+	      if( rows.length > 0 ) {
+		Arrays.sort( rows );
+		int           firstRow = rows[ 0 ];
+		Set<FileNode> parents  = new HashSet<FileNode>();
+		File[]        files    = new File[ rows.length ];
+		Arrays.fill( files, null );
+		for( int i = 0; i < rows.length; i++ ) {
+		  int mRow = this.table.convertRowIndexToModel( rows[ i ] );
+		  if( mRow >= 0 ) {
+		    FileEntry entry = ((FileTableModel) tm).getRow( mRow );
+		    if( entry != null ) {
+		      files[ i ] = entry.getFile();
+		      if( entry instanceof ExtendedFileEntry ) {
+			FileNode fileNode
+				= ((ExtendedFileEntry) entry).getFileNode();
+			if( fileNode != null ) {
+			  TreeNode parent = fileNode.getParent();
+			  if( parent != null ) {
+			    if( parent instanceof FileNode ) {
+			      parents.add( (FileNode) parent );
+			    }
+			  }
+			  files[ i ] = fileNode.getFile();
+			}
+		      }
+		    }
+		  }
+		}
+		if( EmuUtil.deleteFiles( this, files ) ) {
+		  refreshNodes( parents );
+		  updPreview();
+		  this.table.clearSelection();
+		  updActionButtons();
+		  if( firstRow >= 0 ) {
+		    final int row = firstRow;
+		    EventQueue.invokeLater(
+				new Runnable()
+				{
+				  public void run()
+				  {
+				    selectTableRow( row );
+				  }
+				} );
+		  }
+		}
+	      }
 	    }
-	    files.add( file );
 	  }
 	}
-	n = files.size();
-	if( n > 0 ) {
-	  if( EmuUtil.deleteFiles(
+      } else {
+	Collection<FileNode> nodes = getSelectedTreeFileNodes();
+	if( nodes != null ) {
+	  int n = nodes.size();
+	  if( n > 0 ) {
+	    int      firstSelSubIdx = -1;
+	    TreePath firstSelParent = null;
+	    TreePath firstSelPath   = this.tree.getSelectionPath();
+	    if( firstSelPath != null ) {
+	      firstSelParent = firstSelPath.getParentPath();
+	      if( firstSelParent != null ) {
+		Object parent = firstSelParent.getLastPathComponent();
+		Object child  = firstSelPath.getLastPathComponent();
+		if( (parent != null) && (child != null) ) {
+		  if( parent instanceof FileNode ) {
+		    if( !nodes.contains( parent ) ) {
+		      firstSelSubIdx = this.treeModel.getIndexOfChild(
+								parent,
+								child );
+		    }
+		  }
+		}
+	      }
+	    }
+	    Set<FileNode>    parents = new HashSet<FileNode>();
+	    Collection<File> files   = new ArrayList<File>( n );
+	    for( FileNode node : nodes ) {
+	      File file = node.getFile();
+	      if( file != null ) {
+		Object parent = node.getParent();
+		if( parent != null ) {
+		  if( parent instanceof FileNode ) {
+		    parents.add( (FileNode) parent );
+		  }
+		}
+		files.add( file );
+	      }
+	    }
+	    n = files.size();
+	    if( n > 0 ) {
+	      if( EmuUtil.deleteFiles(
 				this,
 				files.toArray( new File[ n ] ) ) )
-	  {
-	    for( FileNode parent : parents ) {
-	      parent.refresh(
-			this.treeModel,
-			false,
-			this.mnuHiddenFiles.isSelected(),
-			getFileComparator() );
+	      {
+		refreshNodes( parents );
+		this.tree.clearSelection();
+		if( (firstSelParent != null) && (firstSelSubIdx >= 0) ) {
+		  Object o = firstSelParent.getLastPathComponent();
+		  if( o != null ) {
+		    if( o instanceof TreeNode ) {
+		      if( firstSelSubIdx < ((TreeNode) o).getChildCount() ) {
+			TreeNode child = ((TreeNode) o).getChildAt(
+							firstSelSubIdx );
+			if( child != null ) {
+			  this.tree.addSelectionPath(
+				firstSelParent.pathByAddingChild( child ) );
+			}
+		      }
+		    }
+		  }
+		}
+		updPreview();
+		updActionButtons();
+	      }
 	    }
-	    updPreview();
-	    updActionButtons();
 	  }
 	}
       }
@@ -1642,11 +1907,12 @@ public class FileBrowserFrm extends BasicFrm
 
   private void doFileRefresh()
   {
-    this.rootNode.refresh(
-			this.treeModel,
-			false,
-			this.mnuHiddenFiles.isSelected(),
-			getFileComparator() );
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      refreshNode( fileNode, false );
+    } else {
+      refreshNode( this.rootNode, false );
+    }
     updActionButtons();
   }
 
@@ -1877,8 +2143,9 @@ public class FileBrowserFrm extends BasicFrm
 	rv = new ArrayList<File>( n );
 	for( FileNode node : nodes ) {
 	  File file = node.getFile();
-	  if( file != null )
+	  if( file != null ) {
 	    rv.add( file );
+	  }
 	}
       }
     }
@@ -1935,6 +2202,92 @@ public class FileBrowserFrm extends BasicFrm
       }
     }
     return rv;
+  }
+
+
+  private boolean pasteFile( File dstDir, File srcFile )
+  {
+    boolean done = false;
+    if( srcFile.isFile() ) {
+      String orgName = srcFile.getName();
+      if( orgName != null ) {
+	if( !orgName.isEmpty() ) {
+	  String  fileName = orgName;
+	  File    dstFile  = null;
+	  while( fileName != null ) {
+	    dstFile = new File( dstDir, fileName );
+	    if( dstFile.exists() ) {
+	      dstFile = null;
+
+	      String text = JOptionPane.showInputDialog(
+			this,
+			"Einf\u00FCgen von " + orgName + ":\n"
+				+ "Es existiert bereits eine Datei oder"
+				+ " ein Verzeichnis mit diesem Namen.\n"
+				+ "Geben Sie deshalb bitte einen anderen"
+				+ " Dateinamen ein.\n\n"
+				+ "Name der Datei:",
+			"Einf\u00FCgen einer Datei",
+			JOptionPane.WARNING_MESSAGE );
+	      if( text != null ) {
+		if( text.isEmpty() ) {
+		  fileName = orgName;
+		} else {
+		  fileName = text;
+		}
+	      } else {
+		fileName = null;
+	      }
+	    } else {
+	      break;
+	    }
+	  }
+	  if( dstFile != null ) {
+	    try {
+	      done = EmuUtil.copyFile( srcFile, dstFile );
+	    }
+	    catch( Exception ex ) {
+	      BasicDlg.showErrorDlg( this, ex );
+	    }
+	  }
+	}
+      }
+    } else {
+      if( srcFile.isDirectory() ) {
+	BasicDlg.showErrorDlg(
+		this,
+		"Das Einf\u00FCgen von Verzeichnissen\n"
+			+ "wird nicht unterst\u00FCtzt." );
+      } else {
+	BasicDlg.showErrorDlg(
+		this,
+		"Nicht regul\u00E4re Dateien k\u00F6nnen nicht\n"
+			+ "eingef\u00FCgt werden." );
+      }
+    }
+    return done;
+  }
+
+
+  private void refreshNode( FileNode node, boolean forceLoadChildren )
+  {
+    if( node != null ) {
+      node.refresh(
+		this.treeModel,
+		forceLoadChildren,
+		this.mnuHiddenFiles.isSelected(),
+		getFileComparator() );
+    }
+  }
+
+
+  private void refreshNodes( Collection<FileNode> nodes )
+  {
+    if( nodes != null ) {
+      for( FileNode node : nodes ) {
+	refreshNode( node, false );
+      }
+    }
   }
 
 
@@ -1998,6 +2351,14 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
+  private void selectTableRow( int row )
+  {
+    if( (row >= 0) && (row < this.table.getRowCount()) ) {
+      this.table.addRowSelectionInterval( row, row );
+    }
+  }
+
+
   private void showErrorMsgInternal( String msg )
   {
     BasicDlg.showErrorDlg( this, msg );
@@ -2014,6 +2375,7 @@ public class FileBrowserFrm extends BasicFrm
   {
     int                  nNodes    = 0;
     int                  nFiles    = 0;
+    int                  nDirs     = 0;
     File                 file      = null;
     FileNode             fileNode  = null;
     Collection<FileNode> fileNodes = getSelectedFileNodes();
@@ -2027,6 +2389,9 @@ public class FileBrowserFrm extends BasicFrm
 	    file = tmpFile;
 	    nFiles++;
 	  }
+	  else if( tmpFile.isDirectory() ) {
+	    nDirs++;
+	  }
 	}
       }
     }
@@ -2039,8 +2404,10 @@ public class FileBrowserFrm extends BasicFrm
     }
     boolean stateEntries   = (nNodes > 0);
     boolean stateOneEntry  = (nNodes == 1);
-    boolean stateFilesOnly = ((nFiles > 0) && (nFiles == nNodes));
+    boolean stateOneDir    = ((nDirs == 1) && (nDirs == nNodes));
     boolean stateOneFile   = ((nFiles == 1) && (nFiles == nNodes));
+    boolean stateFilesOnly = ((nFiles > 0) && (nFiles == nNodes));
+    boolean stateDirsFiles = ((nNodes > 0) && ((nFiles + nDirs) == nNodes));
     if( fileNode != null ) {
       boolean isStartable = fileNode.isStartableFile();
       this.mnuFileStartInEmu.setEnabled( isStartable );
@@ -2064,13 +2431,18 @@ public class FileBrowserFrm extends BasicFrm
 
       boolean isPlainDisk = fileNode.isPlainDiskFile();
       boolean isAnadisk   = fileNode.isAnadiskFile();
+      boolean isCopyQM    = fileNode.isCopyQMFile();
       boolean isTeledisk  = fileNode.isTelediskFile();
 
-      this.mnuFileExportToPlainDisk.setEnabled( isAnadisk || isTeledisk );
-      this.mnuPopupExportToPlainDisk.setEnabled( isAnadisk || isTeledisk );
+      this.mnuFileExportToPlainDisk.setEnabled(
+			isAnadisk || isCopyQM || isTeledisk );
+      this.mnuPopupExportToPlainDisk.setEnabled(
+			isAnadisk || isCopyQM || isTeledisk );
 
-      this.mnuFileExportToAnadisk.setEnabled( isPlainDisk || isTeledisk );
-      this.mnuPopupExportToAnadisk.setEnabled( isPlainDisk || isTeledisk );
+      this.mnuFileExportToAnadisk.setEnabled(
+			isPlainDisk || isCopyQM || isTeledisk );
+      this.mnuPopupExportToAnadisk.setEnabled(
+			isPlainDisk || isCopyQM || isTeledisk );
 
       boolean isTAP = fileNode.isTAPFile();
       this.mnuFileExportToSound.setEnabled( isTAP );
@@ -2080,17 +2452,13 @@ public class FileBrowserFrm extends BasicFrm
 					|| fileNode.isCompressedFile()
 					|| isPlainDisk
 					|| isAnadisk
+					|| isCopyQM
 					|| isTeledisk);
       this.mnuFileUnpack.setEnabled( isUnpackable );
       this.mnuPopupUnpack.setEnabled( isUnpackable );
 
-      boolean stateDir = false;
-      if( file != null ) {
-	if( (fileNode.getParent() != null) || file.isDirectory() )
-	  stateDir = true;
-      }
-      this.mnuFileCreateDir.setEnabled( stateDir );
-      this.mnuPopupCreateDir.setEnabled( stateDir );
+      this.mnuFileCreateDir.setEnabled( stateOneDir );
+      this.mnuPopupCreateDir.setEnabled( stateOneDir );
 
       this.mnuFileRename.setEnabled( stateOneEntry );
       this.mnuPopupRename.setEnabled( stateOneEntry );
@@ -2152,14 +2520,14 @@ public class FileBrowserFrm extends BasicFrm
     this.mnuFilePackGZip.setEnabled( stateOneFile );
     this.mnuPopupPackGZip.setEnabled( stateOneFile );
 
-    this.mnuFilePackTar.setEnabled( stateEntries );
-    this.mnuPopupPackTar.setEnabled( stateEntries );
+    this.mnuFilePackTar.setEnabled( stateDirsFiles );
+    this.mnuPopupPackTar.setEnabled( stateDirsFiles );
 
-    this.mnuFilePackTgz.setEnabled( stateEntries );
-    this.mnuPopupPackTgz.setEnabled( stateEntries );
+    this.mnuFilePackTgz.setEnabled( stateDirsFiles );
+    this.mnuPopupPackTgz.setEnabled( stateDirsFiles );
 
-    this.mnuFilePackZip.setEnabled( stateEntries );
-    this.mnuPopupPackZip.setEnabled( stateEntries );
+    this.mnuFilePackZip.setEnabled( stateDirsFiles );
+    this.mnuPopupPackZip.setEnabled( stateDirsFiles );
 
     this.mnuFileRAMFloppy1Load.setEnabled( stateOneFile );
     this.mnuPopupRAMFloppy1Load.setEnabled( stateOneFile );
@@ -2170,8 +2538,33 @@ public class FileBrowserFrm extends BasicFrm
     this.mnuFileLastModified.setEnabled( stateEntries );
     this.mnuPopupLastModified.setEnabled( stateEntries );
 
-    this.mnuFileDelete.setEnabled( stateEntries );
-    this.mnuPopupDelete.setEnabled( stateEntries );
+    this.mnuFileDelete.setEnabled( stateDirsFiles );
+    this.mnuPopupDelete.setEnabled( stateDirsFiles );
+
+    this.mnuEditPathCopy.setEnabled( stateOneDir || stateOneFile );
+    this.mnuPopupPathCopy.setEnabled( stateOneDir || stateOneFile );
+
+    this.mnuEditFileCopy.setEnabled( stateEntries );
+    this.mnuPopupFileCopy.setEnabled( stateEntries );
+
+    this.mnuEditFilePaste.setEnabled( stateOneDir && this.filePasteState );
+    this.mnuPopupFilePaste.setEnabled( stateOneDir && this.filePasteState );
+  }
+
+
+  private void updFilePasteState( boolean force )
+  {
+    boolean state = false;
+    try {
+      if( this.clipboard != null ) {
+	state = this.clipboard.isDataFlavorAvailable(
+					DataFlavor.javaFileListFlavor );
+      }
+    }
+    catch( IllegalStateException ex ) {}
+    this.filePasteState = state;
+    this.mnuEditFilePaste.setEnabled( state );
+    this.mnuPopupFilePaste.setEnabled( state );
   }
 
 
@@ -2183,11 +2576,7 @@ public class FileBrowserFrm extends BasicFrm
       if( o != null ) {
 	if( o instanceof FileNode ) {
 	  fileNode = (FileNode) o;
-	  fileNode.refresh(
-			this.treeModel,
-			true,
-			this.mnuHiddenFiles.isSelected(),
-			getFileComparator() );
+	  refreshNode( fileNode, true );
 	}
       }
     }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -16,10 +16,12 @@ public class Z80SIO implements Z80InterruptSource
 {
   private Channel channelA;
   private Channel channelB;
+  private String  title;
 
 
-  public Z80SIO()
+  public Z80SIO( String title )
   {
+    this.title    = title;
     this.channelA = new Channel( 0 );
     this.channelB = new Channel( 1 );
   }
@@ -107,34 +109,56 @@ public class Z80SIO implements Z80InterruptSource
 
 	/* --- Methoden fuer Z80InterruptSource --- */
 
-  public synchronized int interruptAccepted()
+  @Override
+  public void appendStatusHTMLTo( StringBuilder buf )
+  {
+// TODO
+    buf.append( "Keine Details verf&uuml;gbar\n" );
+  }
+
+
+  @Override
+  public synchronized int interruptAccept()
   {
     return 0;
   }
 
 
-  public synchronized void interruptFinished()
+  @Override
+  public synchronized void interruptFinish()
   {
     // leer
   }
 
 
-  public boolean isInterruptPending()
+  @Override
+  public boolean isInterruptAccepted()
   {
     return false;
   }
 
 
+  @Override
   public boolean isInterruptRequested()
   {
     return false;
   }
 
 
+  @Override
   public void reset()
   {
     this.channelA.reset();
     this.channelB.reset();
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public String toString()
+  {
+    return this.title;
   }
 
 

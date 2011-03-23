@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,21 +30,21 @@ public class ImageFrm extends BasicFrm implements
 {
   private ScreenFrm   screenFrm;
   private Clipboard   clipboard;
+  private File        file;
   private Image       image;
   private JButton     btnOpen;
   private JButton     btnSaveAs;
   private JButton     btnPrint;
-  private JButton     btnSnapshot;
   private JButton     btnRotateLeft;
   private JButton     btnRotateRight;
   private JComboBox   comboScale;
   private JMenuItem   mnuOpen;
   private JMenuItem   mnuSaveAs;
   private JMenuItem   mnuPrint;
-  private JMenuItem   mnuSnapshot;
   private JMenuItem   mnuClose;
   private JMenuItem   mnuImgCopy;
   private JMenuItem   mnuImgPaste;
+  private JMenuItem   mnuRoundCorners;
   private JMenuItem   mnuBgSystem;
   private JMenuItem   mnuBgBlack;
   private JMenuItem   mnuBgWhite;
@@ -52,27 +52,33 @@ public class ImageFrm extends BasicFrm implements
   private JMenuItem   mnuHelpContent;
   private ImgFld      imgFld;
   private JScrollPane scrollPane;
-  private int         wUnscaled;
-  private int         hUnscaled;
+  private int         lastRoundTopPixels;
+  private int         lastRoundBottomPixels;
+  private int         maxUnscaledWidth;
+  private int         maxUnscaledHeight;
   private boolean     scaleEnabled;
 
 
   public ImageFrm( ScreenFrm screenFrm )
   {
-    this.screenFrm    = screenFrm;
-    this.clipboard    = null;
-    this.image        = null;
-    this.wUnscaled    = 0;
-    this.hUnscaled    = 0;
-    this.scaleEnabled = true;
+    this.screenFrm             = screenFrm;
+    this.clipboard             = null;
+    this.file                  = null;
+    this.image                 = null;
+    this.lastRoundTopPixels    = 0;
+    this.lastRoundBottomPixels = 0;
+    this.maxUnscaledWidth      = 0;
+    this.maxUnscaledHeight     = 0;
+    this.scaleEnabled          = true;
     setTitleInternal( null );
     Main.updIcon( this );
 
     Toolkit tk = getToolkit();
     if( tk != null ) {
       this.clipboard = tk.getSystemClipboard();
-      if( this.clipboard != null )
+      if( this.clipboard != null ) {
 	this.clipboard.addFlavorListener( this );
+      }
     }
 
 
@@ -94,10 +100,6 @@ public class ImageFrm extends BasicFrm implements
     mnuFile.add( this.mnuPrint );
     mnuFile.addSeparator();
 
-    this.mnuSnapshot = createJMenuItem( "Schnappschuss erzeugen" );
-    mnuFile.add( this.mnuSnapshot );
-    mnuFile.addSeparator();
-
     this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
     mnuFile.add( this.mnuClose );
 
@@ -112,6 +114,11 @@ public class ImageFrm extends BasicFrm implements
 
     this.mnuImgPaste = createJMenuItem( "Bild einf\u00FCgen" );
     mnuEdit.add( this.mnuImgPaste );
+    mnuEdit.addSeparator();
+
+    this.mnuRoundCorners = createJMenuItem( "Ecken abrunden..." );
+    this.mnuRoundCorners.setEnabled( false );
+    mnuEdit.add( this.mnuRoundCorners );
 
 
     // Menu Einstellungen
@@ -192,12 +199,6 @@ public class ImageFrm extends BasicFrm implements
     toolBar.add( this.btnPrint );
     toolBar.addSeparator();
 
-    this.btnSnapshot = createImageButton(
-				"/images/file/snapshot.png",
-				"Schnappschuss erzeugen" );
-    toolBar.add( this.btnSnapshot );
-    toolBar.addSeparator();
-
     this.btnRotateLeft = createImageButton(
 				"/images/edit/rotate_left.png",
 				"Nach links drehen" );
@@ -261,22 +262,40 @@ public class ImageFrm extends BasicFrm implements
     if( image != null ) {
 
       /*
-       * Wenn das Bild kleiner ist als 90% des Bildschirms,
-       * wird es nicht skaliert,
-       * sonst entsprechend der Fenstergroesse.
+       * Wenn die Option "Fenstergroesse anpassen" gesetzt ist,
+       * soll das Bild bei Bedarf auf den ganzen Bildschirm abzueglich
+       * der Fensterraender und der Menuleiste ausgebreitet werden.
+       * Das Bild wird deshalb erst skaliert, wenn es mehr als 90%
+       * des Bildschirms einnehmen wuerde.
+       *
+       * Ist die Option "Fenstergroesse anpassen" ausgeschaltet,
+       * soll sich das Bild nur im aktuellen Fensterbereich ausbreiten.
        */
-      if( (this.wUnscaled < 1) || (this.hUnscaled < 1) ) {
+      if( (this.maxUnscaledWidth < 1) || (this.maxUnscaledHeight < 1) ) {
 	Toolkit tk = getToolkit();
 	if( tk != null ) {
 	  Dimension screenSize = tk.getScreenSize();
 	  if( screenSize != null ) {
-	    this.wUnscaled = (screenSize.width * 9) / 10;
-	    this.hUnscaled = (screenSize.height * 9) / 10;
+	    this.maxUnscaledWidth  = (screenSize.width * 9) / 10;
+	    this.maxUnscaledHeight = (screenSize.height * 9) / 10;
 	  }
 	}
-	if( (this.wUnscaled < 1) || (this.hUnscaled < 1) ) {
-	  this.wUnscaled = 640;
-	  this.hUnscaled = 480;
+	if( (this.maxUnscaledWidth < 1) || (this.maxUnscaledHeight < 1) ) {
+	  this.maxUnscaledWidth  = 640;
+	  this.maxUnscaledHeight = 480;
+	}
+      }
+      int maxUnscaledWidth  = this.maxUnscaledWidth;
+      int maxUnscaledHeight = this.maxUnscaledHeight;
+      if( !this.mnuAutoResize.isSelected() ) {
+	JViewport vp = this.scrollPane.getViewport();
+	if( vp != null ) {
+	  int wVP = vp.getWidth();
+	  int hVP = vp.getHeight();
+	  if( (wVP > 0) && (hVP > 0) ) {
+	    maxUnscaledWidth  = wVP;
+	    maxUnscaledHeight = hVP;
+	  }
 	}
       }
 
@@ -287,12 +306,7 @@ public class ImageFrm extends BasicFrm implements
 	wImg = ((BufferedImage) image).getWidth();
 	hImg = ((BufferedImage) image).getHeight();
       } else {
-	MediaTracker mt = new MediaTracker( this );
-	mt.addImage( image, 0 );
-	try {
-	  mt.waitForID( 0 );
-	}
-	catch( InterruptedException ex ) {}
+	ImgUtil.ensureImageLoaded( this, image );
 	wImg = image.getWidth( this );
 	hImg = image.getHeight( this );
       }
@@ -300,11 +314,11 @@ public class ImageFrm extends BasicFrm implements
       // Skalierung ermitteln
       double scale = 1.0;
       if( (wImg > 0) && (hImg > 0)
-	  && ((wImg > this.wUnscaled) || (hImg > this.hUnscaled)) )
+	  && ((wImg > maxUnscaledWidth) || (hImg > maxUnscaledHeight)) )
       {
 	scale = Math.min(
-			(double) this.wUnscaled / (double) wImg,
-			(double) this.hUnscaled / (double) hImg );
+			(double) maxUnscaledWidth / (double) wImg,
+			(double) maxUnscaledHeight / (double) hImg );
       }
 
       // Bild anzeigen
@@ -326,6 +340,8 @@ public class ImageFrm extends BasicFrm implements
       this.mnuSaveAs.setEnabled( true );
       this.mnuPrint.setEnabled( true );
       this.mnuImgCopy.setEnabled( true );
+      this.mnuRoundCorners.setEnabled( true );
+      this.file = null;
     }
   }
 
@@ -342,6 +358,7 @@ public class ImageFrm extends BasicFrm implements
 	image = ImageIO.read( in );
 	if( image != null ) {
 	  showImage( image, file.getPath() );
+	  this.file = file;
 	  rv = true;
 	} else {
 	  errMsg = "Dateiformat nicht unterst\u00FCtzt";
@@ -380,18 +397,21 @@ public class ImageFrm extends BasicFrm implements
 
 	/* --- ComponentListener --- */
 
+  @Override
   public void componentHidden( ComponentEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void componentMoved( ComponentEvent e )
   {
     // leer
   }
 
 
+  @Override
   public void componentResized( ComponentEvent e )
   {
     JViewport vp = this.scrollPane.getViewport();
@@ -400,6 +420,7 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void componentShown( ComponentEvent e )
   {
     // leer
@@ -408,6 +429,7 @@ public class ImageFrm extends BasicFrm implements
 
 	/* --- DropTargetListener --- */
 
+  @Override
   public void dragEnter( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -415,18 +437,21 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void dragExit( DropTargetEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void dragOver( DropTargetDragEvent e )
   {
     // empty
   }
 
 
+  @Override
   public void drop( DropTargetDropEvent e )
   {
     File file = EmuUtil.fileDrop( this, e );
@@ -435,6 +460,7 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
     if( !EmuUtil.isFileDrop( e ) )
@@ -444,6 +470,7 @@ public class ImageFrm extends BasicFrm implements
 
 	/* --- FlavorListener --- */
 
+  @Override
   public void flavorsChanged( FlavorEvent e )
   {
     if( e.getSource() == this.clipboard )
@@ -453,6 +480,7 @@ public class ImageFrm extends BasicFrm implements
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public boolean applySettings( Properties props, boolean resizable )
   {
     boolean rv = false;
@@ -466,8 +494,9 @@ public class ImageFrm extends BasicFrm implements
 			  true );
       if( autoResize != this.mnuAutoResize.isSelected() ) {
 	this.mnuAutoResize.setSelected( autoResize );
-	if( autoResize )
+	if( autoResize ) {
 	  updWindowSize();
+	}
       }
 
       AbstractButton btn   = this.mnuBgSystem;
@@ -491,6 +520,7 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -525,10 +555,6 @@ public class ImageFrm extends BasicFrm implements
 	if( this.image != null )
 	  PrintUtil.doPrint( this, this.imgFld, "Bildbetrachter" );
       }
-      else if( (src == this.btnSnapshot) || (src == this.mnuSnapshot) ) {
-	rv = true;
-	doSnapshot();
-      }
       else if( src == this.mnuImgCopy ) {
 	rv = true;
 	doImgCopy();
@@ -536,6 +562,10 @@ public class ImageFrm extends BasicFrm implements
       else if( src == this.mnuImgPaste ) {
 	rv = true;
 	doImgPaste();
+      }
+      else if( src == this.mnuRoundCorners ) {
+	rv = true;
+	doRoundCorners();
       }
       else if( src == this.mnuAutoResize ) {
 	rv = true;
@@ -565,6 +595,7 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
   public boolean doClose()
   {
     boolean rv = super.doClose();
@@ -575,6 +606,7 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void putSettingsTo( Properties props )
   {
     if( props != null ) {
@@ -598,6 +630,7 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -638,8 +671,9 @@ public class ImageFrm extends BasicFrm implements
 	  if( imgType == BufferedImage.TYPE_CUSTOM ) {
 	    ColorModel cm = ((BufferedImage) this.image).getColorModel();
 	    if( cm != null ) {
-	      if( !cm.hasAlpha() )
+	      if( !cm.hasAlpha() ) {
 		imgType = BufferedImage.TYPE_INT_RGB;
+	      }
 	    }
 	  }
 	}
@@ -673,17 +707,13 @@ public class ImageFrm extends BasicFrm implements
 	  imgToSave = getBufferedImage();
 	}
       }
-      if( imgToSave != null )
-	ImgUtil.saveImage( this, imgToSave );
+      if( imgToSave != null ) {
+	File file = ImgUtil.saveImage( this, imgToSave, this.file );
+	if( file != null ) {
+	  this.file = file;
+	}
+      }
     }
-  }
-
-
-  private void doSnapshot()
-  {
-    Image image = this.screenFrm.createSnapshot();
-    if( image != null )
-      showImage( image, "Schnappschuss" );
   }
 
 
@@ -706,8 +736,10 @@ public class ImageFrm extends BasicFrm implements
 	if( this.clipboard.isDataFlavorAvailable( DataFlavor.imageFlavor ) ) {
 	  Object o = this.clipboard.getData( DataFlavor.imageFlavor );
 	  if( o != null ) {
-	    if( o instanceof Image )
+	    if( o instanceof Image ) {
 	      showImage( (Image) o, "Eingef\u00FCgtes Bild" );
+	      this.file = null;
+	    }
 	  }
 	}
       }
@@ -768,6 +800,36 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  private void doRoundCorners()
+  {
+    if( this.image != null ) {
+      RoundCornersDlg dlg = new RoundCornersDlg(
+					this,
+					this.lastRoundTopPixels,
+					this.lastRoundBottomPixels );
+      dlg.setVisible( true );
+      int nTopPixels    = dlg.getNumTopPixels();
+      int nBottomPixels = dlg.getNumBottomPixels();
+      if( (nTopPixels > 0) || (nBottomPixels > 0) ) {
+	BufferedImage image = ImgUtil.roundCorners(
+						this,
+						this.image,
+						nTopPixels,
+						nBottomPixels );
+	if( image != null ) {
+	  this.image = image;
+	  this.scrollPane.invalidate();
+	  this.imgFld.setImage( image );
+	  this.scrollPane.validate();
+	  this.scrollPane.repaint();
+	}
+	this.lastRoundTopPixels    = nTopPixels;
+	this.lastRoundBottomPixels = nBottomPixels;
+      }
+    }
+  }
+
+
   private void doScale()
   {
     if( this.scaleEnabled ) {
@@ -796,6 +858,8 @@ public class ImageFrm extends BasicFrm implements
     }
   }
 
+
+	/* --- private Methoden --- */
 
   private BufferedImage getBufferedImage()
   {

@@ -6,13 +6,6 @@
     aufrufen k&ouml;nnen, d.h., den BASIC-Quelltext
     &ouml;ffnen, bearbeiten und compilieren Sie im Texteditor.
   <br/><br/>
-    Der BASIC-Compiler erzeugt immer Programmcode f&uuml;r das gerade
-    emulierte System.
-    Wenn Sie in den <a href="../settings.htm#system">Einstellungen</a>
-    ein anderes zu emulierendes System ausw&auml;hlen und
-    das BASIC-Programm erneut compilieren,
-    wird auch ein anderer Programmcode erzeugt.
-  <br/><br/>
     Die Beschreibung des BASIC-Compilers unterteilt sich in folgende Rubriken:
     <ul>
       <li><a href="basicc.htm#introduction">Allgemeines</a></li>
@@ -29,13 +22,33 @@
 		gegen&uuml;ber dem AC1-Mini- und dem Z1013-Tiny-BASIC</a>
       </li>
     </ul>
-  <br/><br/>
+  <br/>
 
   <h2><a name="introduction">Allgemeines</a></h2>
     Der Compiler dient dazu, BASIC-Programme in Maschinencode
     zu &uuml;bersetzen.
     Die auf diese Weise erzeugten Maschinencodeprogramme k&ouml;nnen direkt
     im Emulator gestartet oder in einer Programmdatei gespeichert werden.
+  <br/><br/>
+    Der BASIC-Compiler kann Programmcode f&uuml;r folgende Systeme
+    erzeugen:
+    <ul>
+      <li>AC1</li>
+      <li>CP/M (inkl. CP/A, CP/L, PC/M, SCP)</li>
+      <li>LLC2</li>
+      <li>H&uuml;bler/Evert-MC</li>
+      <li>H&uuml;bler-BASIC-Grafik-MC</li>
+      <li>HC900, KC85/2..5</li>
+      <li>Kramer-MC</li>
+      <li>LLC2</li>
+      <li>Z1013</li>
+      <li>Z9001, KC85/1, KC87</li>
+    </ul>
+  <br/>
+    Wenn Sie in den <a href="basicc/options.htm">Compiler-Optionen</a>
+    das H&auml;kchen <em>Programmcode f&uuml;r ein CP/M-kompatibles
+    Betriebssystem erzeugen</em> nicht angeklickt haben,
+    wird Programmcode f&uuml;r das gerade emulierte System erzeugt.
   <br/><br/>
     Der Compiler unterst&uuml;tzt den BASIC-Dialekt des
     AC1-Mini-BASIC-Interpreters und des Z1013-Tiny-BASIC-Interpreters,

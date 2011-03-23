@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -37,17 +37,16 @@ public class FilePropDlg extends BasicDlg
 
 
     // Layout
-    Container contentPane = getContentPane();
-    contentPane.setLayout( new GridBagLayout() );
+    setLayout( new GridBagLayout() );
 
-    GridBagConstraints gbc = new GridBagConstraints();
-    gbc.anchor     = GridBagConstraints.WEST;
-    gbc.fill       = GridBagConstraints.NONE;
-    gbc.insets     = new Insets( 5, 5, 0, 5 );
-    gbc.gridwidth  = 1;
-    gbc.gridheight = 1;
-    gbc.gridx      = 0;
-    gbc.gridy      = 0;
+    GridBagConstraints gbc = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
 
 
     // Fensterinhalt
@@ -55,17 +54,17 @@ public class FilePropDlg extends BasicDlg
     if( text != null ) {
       if( text.length() > 0 ) {
 	if( isDir ) {
-	  contentPane.add( new JLabel( "Verzeichnisname:" ), gbc );
+	  add( new JLabel( "Verzeichnisname:" ), gbc );
 	}
 	else if( isFile ) {
-	  contentPane.add( new JLabel( "Dateiname:" ), gbc );
+	  add( new JLabel( "Dateiname:" ), gbc );
 	} else {
-	  contentPane.add( new JLabel( "Name:" ), gbc );
+	  add( new JLabel( "Name:" ), gbc );
 	}
 	text = file.getName();
 	if( text != null ) {
 	  gbc.gridx++;
-	  contentPane.add( new JLabel( text ), gbc );
+	  add( new JLabel( text ), gbc );
 	}
       }
     }
@@ -77,12 +76,12 @@ public class FilePropDlg extends BasicDlg
 	if( n >= 0 ) {
 	  gbc.gridx = 0;
 	  gbc.gridy++;
-	  contentPane.add( new JLabel( "Gr\u00F6\u00DFe:" ), gbc );
+	  add( new JLabel( "Gr\u00F6\u00DFe:" ), gbc );
 	  gbc.gridx++;
-	  contentPane.add(
-		new JLabel( NumberFormat.getNumberInstance().format( n )
+	  add(
+	    new JLabel( NumberFormat.getNumberInstance().format( n )
 								+ " Bytes" ),
-		gbc );
+	    gbc );
 	}
       }
       catch( Exception ex ) {}
@@ -93,43 +92,43 @@ public class FilePropDlg extends BasicDlg
       if( t > 0L ) {
 	gbc.gridx = 0;
 	gbc.gridy++;
-	contentPane.add( new JLabel( "Zuletzt ge\u00E4ndert:" ), gbc );
+	add( new JLabel( "Zuletzt ge\u00E4ndert:" ), gbc );
 	gbc.gridx++;
-	contentPane.add(
-		new JLabel( DateFormat.getDateTimeInstance(
+	add(
+	    new JLabel( DateFormat.getDateTimeInstance(
 				DateFormat.MEDIUM,
 				DateFormat.MEDIUM ).format(
 					new java.util.Date( t ) ) ),
-		gbc );
+	    gbc );
       }
     }
     catch( Exception ex ) {}
 
     gbc.gridx = 0;
     gbc.gridy++;
-    contentPane.add( new JLabel( "Lesezugriff:" ), gbc );
+    add( new JLabel( "Lesezugriff:" ), gbc );
     try {
       gbc.gridx++;
-      contentPane.add( new JLabel( file.canRead() ? "ja" : "nein" ), gbc );
+      add( new JLabel( file.canRead() ? "ja" : "nein" ), gbc );
     }
     catch( Exception ex ) {}
 
     gbc.gridx = 0;
     gbc.gridy++;
-    contentPane.add( new JLabel( "Schreibzugriff:" ), gbc );
+    add( new JLabel( "Schreibzugriff:" ), gbc );
     try {
       gbc.gridx++;
-      contentPane.add( new JLabel( file.canWrite() ? "ja" : "nein" ), gbc );
+      add( new JLabel( file.canWrite() ? "ja" : "nein" ), gbc );
     }
     catch( Exception ex ) {}
 
     gbc.insets.bottom = 5;
     gbc.gridx         = 0;
     gbc.gridy++;
-    contentPane.add( new JLabel( "Versteckt:" ), gbc );
+    add( new JLabel( "Versteckt:" ), gbc );
     try {
       gbc.gridx++;
-      contentPane.add( new JLabel( file.isHidden() ? "ja" : "nein" ), gbc );
+      add( new JLabel( file.isHidden() ? "ja" : "nein" ), gbc );
     }
     catch( Exception ex ) {}
 
@@ -143,7 +142,7 @@ public class FilePropDlg extends BasicDlg
     gbc.gridwidth  = GridBagConstraints.REMAINDER;
     gbc.gridx      = 0;
     gbc.gridy++;
-    contentPane.add( this.btnOK, gbc );
+    add( this.btnOK, gbc );
 
 
     // Fenstergroesse und -position
@@ -155,6 +154,7 @@ public class FilePropDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;

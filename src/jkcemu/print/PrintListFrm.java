@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -228,6 +228,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 
 	/* --- ListSelectionListener --- */
 
+  @Override
   public void valueChanged( ListSelectionEvent e )
   {
     updActionButtons();
@@ -236,6 +237,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -296,6 +298,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
   }
 
 
+  @Override
   public void lookAndFeelChanged()
   {
     if( this.mnuPopup != null ) {
@@ -305,6 +308,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
   }
 
 
+  @Override
   protected boolean showPopup( MouseEvent e )
   {
     boolean   rv = false;
@@ -317,6 +321,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
   }
 
 
+  @Override
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -479,7 +484,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 
   private void fireUpdActionButtons()
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()

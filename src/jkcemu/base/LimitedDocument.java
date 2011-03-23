@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -39,6 +39,7 @@ public class LimitedDocument extends PlainDocument
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public void insertString( int offs, String str, AttributeSet a )
 						throws BadLocationException
   {

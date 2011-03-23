@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,7 @@ import java.awt.event.*;
 import java.lang.*;
 import java.util.EventObject;
 import javax.swing.*;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.*;
 
 
 public class FindTextDlg extends BasicDlg
@@ -114,6 +114,16 @@ public class FindTextDlg extends BasicDlg
     gbc.gridx++;
     add( panelBtn, gbc );
 
+    // Tab-Sequenz
+    setFocusTraversalPolicy(
+	new ListFocusTraversalPolicy(
+			this.textFieldFind,
+			this.textFieldReplace,
+			this.tglNoticeCase,
+			this.btnFindNext,
+			this.btnReplaceAll,
+			this.btnCancel ) );
+
     // Fenstergroesse und -position
     pack();
     setParentCentered();
@@ -149,6 +159,7 @@ public class FindTextDlg extends BasicDlg
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -179,6 +190,7 @@ public class FindTextDlg extends BasicDlg
   }
 
 
+  @Override
   public void windowClosing( WindowEvent e )
   {
     this.action = Action.NO_ACTION;
@@ -186,6 +198,7 @@ public class FindTextDlg extends BasicDlg
   }
 
 
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( (e.getWindow() == this) && (this.textFieldFind != null) ) {

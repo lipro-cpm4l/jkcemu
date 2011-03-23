@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,21 +28,6 @@ public class ChessboardFld extends JComponent
   private Color     colorWhiteSquare;
   private Color     colorBlackSquare;
   private boolean   swapped;
-
-
-  public BufferedImage createImage()
-  {
-    BufferedImage img = new BufferedImage(
-				PREFERRED_WIDTH,
-				PREFERRED_WIDTH,
-				BufferedImage.TYPE_INT_RGB );
-    Graphics g = img.createGraphics();
-    if( g != null ) {
-      drawChessboard( g, 0, 0 );
-      g.dispose();
-    }
-    return img;
-  }
 
 
   public ChessboardFld( EmuThread emuThread )
@@ -89,6 +74,21 @@ public class ChessboardFld extends JComponent
   }
 
 
+  public BufferedImage createImage()
+  {
+    BufferedImage img = new BufferedImage(
+				PREFERRED_WIDTH,
+				PREFERRED_WIDTH,
+				BufferedImage.TYPE_INT_RGB );
+    Graphics g = img.createGraphics();
+    if( g != null ) {
+      drawChessboard( g, 0, 0 );
+      g.dispose();
+    }
+    return img;
+  }
+
+
   public void swap()
   {
     this.swapped = !this.swapped;
@@ -98,12 +98,14 @@ public class ChessboardFld extends JComponent
 
 	/* --- ueberschriebene Methoden --- */
 
+  @Override
   public Dimension getPreferredSize()
   {
     return new Dimension( PREFERRED_WIDTH, PREFERRED_WIDTH );
   }
 
 
+  @Override
   public void paintComponent( Graphics g )
   {
     int x = Math.min( (getWidth() - PREFERRED_WIDTH) / 2, 0 );

@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2010 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -51,6 +51,7 @@ public class FileComparator implements java.util.Comparator<File>
 
 	/* --- Comparator --- */
 
+  @Override
   public int compare( File f1, File f2 )
   {
     int rv = -1;
@@ -95,6 +96,7 @@ public class FileComparator implements java.util.Comparator<File>
   }
 
 
+  @Override
   public boolean equals( Object o )
   {
     return o == this;
