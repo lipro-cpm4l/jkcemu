@@ -511,7 +511,7 @@ public class Z80Reassembler
       case 0x4B:
 	return new Z80ReassInstr(
 			4,
-			"LD", "BC", getWord( b2, b3 ) );
+			"LD", "BC", getWord( b2, b3 ), true );
       case 0x4C:
 	return new Z80ReassInstr( 2, "*NEG" );
       case 0x4D:

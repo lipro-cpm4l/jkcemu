@@ -180,6 +180,7 @@ public class AC1
   private FDC8272           fdc;
   private FloppyDiskDrive[] fdDrives;
   private boolean           fdcWaitEnabled;
+  private boolean           tcEnabled;
   private boolean           mode64x16;
   private boolean           scchMode;
   private boolean           fontSwitchable;
@@ -1155,13 +1156,15 @@ public class AC1
 
 	case 0x40:
 	  if( this.fdc != null ) {
-	    rv = this.fdc.readMainStatusReg();
+	    rv             = this.fdc.readMainStatusReg();
+	    this.tcEnabled = true;
 	  }
 	  break;
 
 	case 0x41:
 	  if( this.fdc != null ) {
-	    rv = this.fdc.readData();
+	    rv             = this.fdc.readData();
+	    this.tcEnabled = true;
 	  }
 	  break;
       }
@@ -1212,6 +1215,7 @@ public class AC1
     this.screenInverseMode = false;
     this.pio1B3State       = false;
     this.fdcWaitEnabled    = false;
+    this.tcEnabled         = true;
     this.keyboardUsed      = false;
     this.joystickSelected  = false;
     this.graphicKeyState   = false;
@@ -1690,6 +1694,7 @@ public class AC1
 	case 0x41:
 	  if( this.fdc != null ) {
 	    this.fdc.write( value );
+	    this.tcEnabled = true;
 	  }
 	  break;
 
@@ -1706,15 +1711,17 @@ public class AC1
 	case 0x45:
 	  if( this.fdc != null ) {
 	    this.fdcWaitEnabled = ((value & 0x02) != 0);
-	    if( (value & 0x10) != 0 ) {
+	    if( ((value & 0x10) != 0) && this.tcEnabled ) {
 	      this.fdc.fireTC();
+	      this.tcEnabled = false;
 	    }
 	  }
 	  break;
 
 	case 0x48:
-	  if( this.fdc != null ) {
+	  if( (this.fdc != null) && this.tcEnabled ) {
 	    this.fdc.fireTC();
+	    this.tcEnabled = false;
 	  }
 	  break;
       }
