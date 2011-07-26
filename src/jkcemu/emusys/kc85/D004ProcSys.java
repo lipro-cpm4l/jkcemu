@@ -426,6 +426,7 @@ public class D004ProcSys implements
       ctc.externalUpdate( 0, 1 );
       this.ctcTStateCounter -= 8;
     }
+    this.ctc.z80TStatesProcessed( cpu, tStates );
     this.fdc.z80TStatesProcessed( cpu, tStates );
   }
 
