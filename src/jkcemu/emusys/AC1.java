@@ -38,8 +38,11 @@ public class AC1
    * Damit im Emulator die Ausgabe auf den emulierten Drucker ueber diese
    * serielle Schnittstelle funktioniert,
    * wird somit der Drucker ebenfalls mit dieser Bitrate emuliert.
+   * Ist allerdings eine externe ROM-Datei als Monitorprogramm eingebunden,
+   * werden 9600 Baud emuliert.
    */
-  private static int V24_TSTATES_PER_BIT = 248;
+  private static int V24_TSTATES_PER_BIT_INTERN = 248;
+  private static int V24_TSTATES_PER_BIT_EXTERN = 208;
 
   private enum BasicType {
 			AC1_MINI,
@@ -210,6 +213,7 @@ public class AC1
   private int               v24BitNum;
   private int               v24ShiftBuf;
   private int               v24TStateCounter;
+  private int               v24TStatesPerBit;
 
 
   public AC1( EmuThread emuThread, Properties props )
@@ -286,6 +290,8 @@ public class AC1
       cpu.setInterruptSources( this.ctc, this.pio1 );
     }
     this.ctc.setTimerConnection( 0, 1 );
+    this.ctc.setTimerConnection( 1, 2 );
+    this.ctc.setTimerConnection( 2, 3 );
     cpu.addTStatesListener( this );
     if( this.fdc != null ) {
       this.fdc.setTStatesPerMilli( cpu.getMaxSpeedKHz() );
@@ -435,7 +441,7 @@ public class AC1
 	    if( this.v24BitOut ) {
 	      this.v24ShiftBuf |= 0x80;
 	    }
-	    this.v24TStateCounter = V24_TSTATES_PER_BIT;
+	    this.v24TStateCounter = this.v24TStatesPerBit;
 	    this.v24BitNum++;
 	  }
 	}
@@ -1236,6 +1242,11 @@ public class AC1
     this.v24BitNum         = 0;
     this.v24ShiftBuf       = 0;
     this.v24TStateCounter  = 0;
+    if( (this.osBytes == scchOS80) || (this.osBytes == scchOS1088) ) {
+      this.v24TStatesPerBit = V24_TSTATES_PER_BIT_INTERN;
+    } else {
+      this.v24TStatesPerBit = V24_TSTATES_PER_BIT_EXTERN;
+    }
     this.pio1.putInValuePortB( 0, 0x04 );
   }
 
@@ -1613,7 +1624,7 @@ public class AC1
 	       */
 	      if( !state && this.v24BitOut && (this.v24BitNum == 0) ) {
 		this.v24ShiftBuf      = 0;
-		this.v24TStateCounter = 3 * V24_TSTATES_PER_BIT / 2;
+		this.v24TStateCounter = 3 * this.v24TStatesPerBit / 2;
 		this.v24BitNum++;
 	      }
 	      this.v24BitOut = state;
