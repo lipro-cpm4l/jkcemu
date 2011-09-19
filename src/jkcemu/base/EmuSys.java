@@ -724,7 +724,6 @@ public abstract class EmuSys implements ImageObserver, Runnable
       }
       if( n > 0 ) {
 	int begOfLine = buf.length();
-	addr          = a;
 	if( !sourceOnly ) {
 	  buf.append( String.format( "%04X ", addr ) );
 	}
@@ -799,7 +798,8 @@ public abstract class EmuSys implements ImageObserver, Runnable
 	  buf.append( (char) '\'' );
 	}
 	buf.append( (char) '\n' );
-	rv += n;
+	addr += n;
+	rv   += n;
       }
     }
     return rv;
@@ -1186,7 +1186,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
   {
     BasicDlg.showErrorDlg(
 	this.screenFrm,
-	"Diese Funktion steht f\u00Fcr das gerade emulierte System\n"
+	"Diese Funktion steht f\u00FCr das gerade emulierte System\n"
 		+ "nicht zur Verf\u00FCgung." );
   }
 }
