@@ -294,7 +294,7 @@ public class Z80PIO implements Z80InterruptSource
       if( ports[ i ].interruptAccepted ) {
 	buf.append( "angenommen (wird gerade bedient)" );
       } else if( ports[ i ].interruptRequested ) {
-	buf.append( "angefordert" );
+	buf.append( "angemeldet" );
       } else if( ports[ i ].interruptEnabled ) {
 	buf.append( "freigegeben" );
       } else {
@@ -371,12 +371,10 @@ public class Z80PIO implements Z80InterruptSource
   {
     if( this.portA.interruptAccepted ) {
       this.portA.interruptAccepted     = false;
-      this.portA.interruptRequested    = false;
       this.portA.interruptCondRealized = false;
     }
     else if( this.portB.interruptAccepted ) {
       this.portB.interruptAccepted     = false;
-      this.portB.interruptRequested    = false;
       this.portB.interruptCondRealized = false;
     }
   }
@@ -497,7 +495,7 @@ public class Z80PIO implements Z80InterruptSource
 
   private void tryInterrupt( Z80PIO.Port port )
   {
-    if( port.interruptEnabled && !port.interruptAccepted )
+    if( port.interruptEnabled )
       port.interruptRequested = true;
   }
 
@@ -670,8 +668,9 @@ public class Z80PIO implements Z80InterruptSource
       informListeners( port, Status.OUTPUT_AVAILABLE );
     }
     else if( port.mode == Mode.BIT_INOUT ) {
-      if( oldValue != value )
+      if( oldValue != value ) {
 	informListeners( port, Status.OUTPUT_CHANGED );
+      }
     }
   }
 

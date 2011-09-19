@@ -183,7 +183,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	buf.append( "angenommen (wird gerade bedient)" );
 	showISR = true;
       } else if( this.timer[ i ].interruptRequested ) {
-	buf.append( "angefordert" );
+	buf.append( "angemeldet" );
 	showISR = true;
       } else if( this.timer[ i ].interruptEnabled ) {
 	buf.append( "freigegeben" );
@@ -207,8 +207,8 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     int rv = 0;
     for( int i = 0; i < this.timer.length; i++ ) {
       if( this.timer[ i ].interruptRequested ) {
-	this.timer[ i ].interruptRequested = false;
 	this.timer[ i ].interruptAccepted  = true;
+	this.timer[ i ].interruptRequested = false;
 	rv = this.interruptVector + (i * 2);
 	break;
       }
@@ -454,7 +454,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	  pulses -= this.counter;
 	  this.counter = this.counterInit;
 	  rv++;
-	  if( this.interruptEnabled && !this.interruptAccepted ) {
+	  if( this.interruptEnabled ) {
 	    this.interruptRequested = true;
 	  }
 	  if( this.toTimer != null ) {
