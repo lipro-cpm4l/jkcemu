@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -96,10 +96,10 @@ public class M003 extends AbstractKC85Module implements
 
 
   @Override
-  public void reset()
+  public void reset( boolean powerOn )
   {
-    this.sio.reset();
-    this.ctc.reset();
+    this.sio.reset( powerOn );
+    this.ctc.reset( powerOn );
   }
 
 
@@ -168,13 +168,6 @@ public class M003 extends AbstractKC85Module implements
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public void reset( EmuThread.ResetLevel resetLevel )
-  {
-    reset();
   }
 
 

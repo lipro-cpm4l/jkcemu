@@ -31,48 +31,45 @@
   die diesen zus&auml;tzlichen Speicher verwalten kann.
  <br/><br/>
   <ul>
-   <li><a href="kc85.htm#hardware">1. Emulierte Hardware</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#keyboard">1.1. Tastatur</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="kc85.htm#key_ctrl">1.1.1. Ctrl-A...Z, ESC und TAB direkt in den Tastaturpuffer</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#modules">1.2. Module</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#printer">1.3. Drucker</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#sound">1.4. Tongeneratoren und Kassettenrecorderanschluss</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#d004">1.5. Diskettenerweiterung D004</a>
+    <a href="kc85.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li>
+      <a href="kc85.htm#keyboard">1.1. Tastatur</a>
+      <ul>
+       <li>
+	<a href="kc85.htm#key_umlauts">1.1.1. Deutsche Umlaute und andere fehlende Zeichen</a>
+       </li>
+       <li>
+	<a href="kc85.htm#key_ctrl">1.1.2. Ctrl-A...Z, ESC und TAB direkt in den Tastaturpuffer</a>
+       </li>
+      </ul>
+     </li>
+     <li><a href="kc85.htm#modules">1.2. Module</a></li>
+     <li><a href="kc85.htm#printer">1.3. Drucker</a></li>
+     <li>
+      <a href="kc85.htm#sound">1.4. Tongeneratoren und Kassettenrecorderanschluss</a>
+     </li>
+     <li><a href="kc85.htm#d004">1.5. Diskettenerweiterung D004</a></li>
+    </ul>
    </li>
    <li><a href="kc85.htm#software">2. Im ROM enthaltene Software</a></li>
-   <li><a href="kc85.htm#etc">3. Sonstiges</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#basic_save">3.1. Speichern eines BASIC-Programms</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#paste">3.2. Einf&uuml;gen von Text aus der Zwischenablage</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#video_timing">3.3. Zeitverhalten der Bildschirmsteuerung</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="kc85.htm#d004memerror">3.4. Vermeintlicher D004-Speicherfehler</a>
+    <a href="kc85.htm#etc">3. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="kc85.htm#basic_save">3.1. Speichern eines BASIC-Programms</a>
+     </li>
+     <li>
+      <a href="kc85.htm#paste">3.2. Einf&uuml;gen von Text aus der Zwischenablage</a>
+     </li>
+     <li>
+      <a href="kc85.htm#video_timing">3.3. Zeitverhalten der Bildschirmsteuerung</a>
+     </li>
+     <li>
+      <a href="kc85.htm#d004memerror">3.4. Vermeintlicher D004-Speicherfehler</a>
+     </li>
+    </ul>
    </li>
   </ul>
  <br/>
@@ -165,9 +162,9 @@
    <tr><td>F4</td><td>F4</td><td>0F4h</td><td>FA</td><td>0FAh</td></tr>
    <tr><td>F5</td><td>F5</td><td>0F5h</td><td>FB</td><td>0FBh</td></tr>
    <tr><td>F6</td><td>F6</td><td>0F6h</td><td>FC</td><td>0FCh</td></tr>
-   <tr><td>CLR</td><td>F7</td><td>01h</td><td>HCOPY</td><td>0Fh</td></tr>
+   <tr><td>BRK</td><td>F7</td><td>03h</td><td></td><td></td></tr>
    <tr><td>STOP</td><td>F8</td><td>13h</td><td>ESC</td><td>1Bh</td></tr>
-   <tr><td>BRK</td><td>F9</td><td>03h</td><td></td><td></td></tr>
+   <tr><td>CLR</td><td>F9</td><td>01h</td><td>HCOPY</td><td>0Fh</td></tr>
    <tr><td>INS</td><td>Einfg</td><td>1Ah</td><td>CLICK</td><td>14h</td></tr>
    <tr><td>DEL</td><td>Entf</td><td>1Fh</td><td></td><td></td></tr>
    <tr>
@@ -181,7 +178,34 @@
  <br/><br/>
 
  <h3>
-  <a name="key_ctrl">1.1.1. Ctrl-A...Z, ESC und TAB direkt in den Tastaturpuffer</a>
+  <a name="key_umlauts">1.1.1. Deutsche Umlaute und andere fehlende Zeichen</a>
+ </h3>
+  Deutsche Umlaute, eckige und geschweifte Klammern sowie Backslash und Tilde
+  k&ouml;nnen mit der originalen KC85-Tastatur nicht eingegeben werden,
+  da es daf&uuml;r keine Tastencodes gibt.
+  Aus diesem Grund k&ouml;nnen diese Zeichen auch im Emulator
+  nicht eingegeben werden.
+  Die KC85-Komforttastatur&nbsp;D005 kann aber in einen spezielles Mode
+  (MicroDOS-Mode) geschaltet werden, mit dem diese Zeichen eingegeben
+  und in Form von 2-Byte-Tastencodes an das KC85-Grundger&auml;t
+  gesendet werden.
+  Das CAOS-Betriebssystem kann zwar mit diesen 2-Byte-Tastencodes
+  nichts anfangen bzw. interpretiert sie falsch,
+  doch unter MicroDOS werden damit die richtigen Zeichen angezeigt.
+ <br/><br/>
+  Im JKCEMU gibt es die Option
+  <em>Tasten f&uuml;r &Auml;&Ouml;&Uuml;&auml;&ouml;&uuml;&szlig;[]{}\~
+  entsprechend MicroDOS-Mode der D005 behandeln</em>.
+  Ist diese Option eingeschaltet, werden beim Dr&uuml;cken
+  der betreffenen Tasten auf der Emulatortastatur 2-Byte-Tastencodes
+  entsprechend dem D005-MircoDOS-Mode erzeugt,
+  d.h. diese Tasten haben dann im MicroDOS eine Wirkung.
+  Unsch&ouml;n ist allerdings, dass das CAOS-Betriebssystem
+  bei diesen Tastencodes falsche Zeichen anzeigt.
+ <br/><br/>
+
+ <h3>
+  <a name="key_ctrl">1.1.2. Ctrl-A...Z, ESC und TAB direkt in den Tastaturpuffer</a>
  </h3>
   Auf der originalen Tastatur gibt es keine Control-Taste,
   was bei Verwendung eines CP/M-kompatiblen Betriebssystems
@@ -231,10 +255,23 @@
    <tr><td>M035</td><td>1&nbsp;MByte Segmented RAM</td></tr>
    <tr><td>M035x4</td><td>4&nbsp;MByte Segmented RAM</td></tr>
    <tr><td>M036</td><td>128&nbsp;KByte Segmented RAM</td></tr>
+   <tr><td>M040</td><td>8/16&nbsp;KByte User PROM</td></tr>
+   <tr><td>M052</td><td>USB/Netzwerk</td></tr>
+   <tr><td>M120</td><td>8&nbsp;KByte CMOS RAM</td></tr>
+   <tr><td>M122</td><td>16&nbsp;KByte CMOS RAM</td></tr>
+   <tr><td>M124</td><td>32&nbsp;KByte CMOS RAM</td></tr>
   </table>
  <br/>
-  Bei den User-PROM-Modulen M025 und M028 m&uuml;ssen Sie eine ROM-Datei
-  angeben, die den Inhalt des Moduls enth&auml;lt.
+  Bei den User-PROM-Modulen M025, M028 und M040 m&uuml;ssen Sie
+  eine ROM-Datei angeben, die den Inhalt des Moduls enth&auml;lt.
+ <br/><br/>
+  Die CMOS-RAM-Module unterscheiden sich von den anderen RAM-Modulen
+  in der Form, dass die CMOS-RAM-Module beim emulierten
+  &quot;Einschalten&quot; ihren Inhalt nicht verlieren.
+ <br/><br/>
+  Mit dem Modul M052 wird USB- und Netzwerkunterst&uuml;tzung geboten.
+  Lesen Sie dazu bitte auch die Hinweise zur
+  <a href="kcnet.htm">Netzwerkemulation</a>.
  <br/><br/>
 
  <h3><a name="printer">1.3. Drucker</a></h3>
@@ -267,7 +304,7 @@
   Welche erzeugten T&ouml;ne vom Emulator ausgegeben werden,
   legen Sie durch Auswahl einer entsprechenden Funktion in dem Fenster
   <a href="audio.htm">Audio/Kassette</a> fest. Bei der Funktion
-  <a href="audio.htm#sound_out">T&ouml;ne ausgeben (Emulation des Lautsprechers)</a>
+  <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a>
   h&ouml;ren Sie das Mischsignal aus beiden Tongeneratoren,
   welches auch der Lautst&auml;rkebeeinflussung unterliegt.
   Bei allen anderen Audio-Funktionen wird das Signal des Tongenerators 1
@@ -284,7 +321,7 @@
   <a href="settings.htm">Einstellungen</a> frei w&auml;hlen.
   Zur Auswahl stehen die originale ROM-Version&nbsp;2.0 von Robotron und
   die sp&auml;ter von Mario Leubner weiterentwickelten
-  Version&nenbsp;3.2 oder&nbsp;3.3,
+  Versionen&nbsp;3.2 oder&nbsp;3.3,
   oder Sie binden eine externe ROM-Datei ein.
   Standardm&auml;&szlig;ig wird folgende ROM-Version verwendet:
  <br/>
@@ -351,6 +388,24 @@
     <td valign="top">M006</td>
     <td>HC901-CAOS<br/>HC-BASIC</td>
    </tr>
+   <tr><td valign="top">M012</td><td>TEXOR&nbsp;2.3</td></tr>
+   <tr><td valign="top">M026</td><td>KC-FORTH&nbsp;3.1</td></tr>
+   <tr>
+    <td valign="top">M027</td>
+    <td>EDAS&nbsp;1.4<br/>DISASS<br/>TEMO</td>
+   </tr>
+   <tr><td valign="top">M033</td><td>TYPESTAR&nbsp;90</td></tr>
+   <tr>
+    <td valign="top">M052</td>
+    <td>
+     Vinculum Terminal&nbsp;2.2<br/>
+     ULOAD<br/>
+     USAVE<br/>
+     NCFG&nbsp;1.0<br/>
+     PING&nbsp;1.1<br/>
+     TFTP&nbsp;1.1
+    </td>
+   </tr>
    <tr>
     <td valign="top">D004</td>
     <td>je nach Einstellung Version&nbsp;2.0, 3.2 oder&nbsp;3.3</td>
@@ -405,18 +460,22 @@
   die mit der Ausgabe der einzelnen Pixelzeilen auf dem Bildschirm
   synchron l&auml;uft.
   Manche Programmierer nutzen diese M&ouml;glichkeit aus,
-  um spezielle Effekte zu erzeugen (z.B. Farbscrolling, siehe Spiel DIGGER).
+  um spezielle Effekte zu erzeugen (z.B. Farbscrolling).
   Damit solche Effekte auch im Emulator zu sehen sind,
   muss die Visualisierung mit dem Zeitregime an den CTC-Eing&auml;ngen
   synchron emuliert werden.
   Und genau das macht die Option
   <em>Zeitverhalten der Bildschirmsteuerung emulieren</em>.
  <br/><br/>
-  Diese zeitsynchrone Emulation ist allerdings sehr rechenintensiv.
-  Au&szlig;erdem gibt es auch nur sehr wenige Programme,
+  Die zeitsynchrone Emulation der Bildschirmsteuerung ist sehr rechenintensiv.
+  Au&szlig;erdem gibt es auch nur wenige Programme,
   die diese M&ouml;glichkeit nutzen.
   Aus diesem Grund ist die zeitsynchrone Emulation zwischen
   Bildschirmausgabe und CTC in Form einer Option ein- und ausschaltbar.
+ <br/><br/>
+  Ist die Option eingeschaltet, wird auch die Bildschirmausgabe
+  sychron aktualisiert, d.h. der in den Einstellungen festgelegte
+  Aktualiserungszyklus findet keine Anwendung.
  <br/><br/>
 
  <h3><a name="d004memerror">3.4. Vermeintlicher D004-Speicherfehler</a></h3>

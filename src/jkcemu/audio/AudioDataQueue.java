@@ -109,13 +109,13 @@ public class AudioDataQueue extends InputStream
     while( this.pos < this.size ) {
       if( this.phaseData[ this.pos ] > 0 ) {
 	this.phaseData[ this.pos ]--;
-	rv = AudioOut.PHASE1_VALUE;
+	rv = AudioOut.MAX_VALUE;
 	break;
       }
 
       if( this.phaseData[ this.pos ] < 0 ) {
 	this.phaseData[ this.pos ]++;
-	rv = AudioOut.PHASE0_VALUE;
+	rv = 0;
 	break;
       }
 
@@ -127,8 +127,7 @@ public class AudioDataQueue extends InputStream
     }
     if( (rv == -1) && (this.remainSamples > 0) ) {
       --this.remainSamples;
-      rv = AudioOut.PHASE0_VALUE
-		+ ((AudioOut.PHASE1_VALUE - AudioOut.PHASE0_VALUE) / 2);
+      rv = 0;
     }
     return rv;
   }

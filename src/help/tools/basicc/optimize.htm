@@ -72,26 +72,24 @@
     Folgendes Beispiel demonstriert diesen Fall:
   <br/><br/>
     <tt>
-      100 E=0<br/>
-      110 PRINT "1. SCHLEIFE"<br/>
-      120 FOR I=1 TO 5<br/>
-      130 PRINT I<br/>
-      140 NEXT I<br/>
-      150 IF E=1 GOTO 200<br/>
-      160 E=1<br/>
-      170 PRINT "2. SCHLEIFE"<br/>
-      180 FOR I=5 TO 1 STEP -1<br/>
-      190 GOTO 130<br/>
-      200 PRINT "FERTIG"<br/>
+      100 PRINT "1. SCHLEIFE"<br/>
+      110 FOR I=1 TO 5<br/>
+      120 PRINT I<br/>
+      130 NEXT I<br/>
+      140 IF I&lt;1 GOTO 180<br/>
+      150 PRINT "2. SCHLEIFE"<br/>
+      160 FOR I=5 TO 1 STEP -1<br/>
+      170 GOTO 120<br/>
+      180 PRINT "FERTIG"<br/>
     </tt>
   <br/>
     Das kurze BASIC-Programm ist zwar unstrukturiert
     und damit auch un&uuml;bersichtlich,
     aber inhaltlich v&ouml;llig korrekt.
-    Die zweite FOR-Schleife in Zeile 180 benutzt einfach
+    Die zweite FOR-Schleife in Zeile 160 benutzt einfach
     Teile der ersten Schleife mit,
-    und zwar den Schleifeninhalt (PRINT-Anweisung in Zeile 130)
-    und das Schleifenende (NEXT-Anweisung in Zeile 140).
+    und zwar den Schleifeninhalt (PRINT-Anweisung in Zeile 120)
+    und das Schleifenende (NEXT-Anweisung in Zeile 130).
     Die eine NEXT-Anweisung schlie&szlig;t somit zwei Schleifen ab.
     Ja, das ist in BASIC erlaubt!
     Folglich muss der Compiler die FOR-Schleife so &uuml;bersetzen,

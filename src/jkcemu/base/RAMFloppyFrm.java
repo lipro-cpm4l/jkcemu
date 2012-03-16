@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.Main;
+import jkcemu.text.TextUtil;
 
 
 public class RAMFloppyFrm extends BasicFrm
@@ -199,6 +200,18 @@ public class RAMFloppyFrm extends BasicFrm
   }
 
 
+  @Override
+  public void resetFired()
+  {
+    if( this.rfFld1 != null ) {
+      this.rfFld1.fireRAMFloppyChanged();
+    }
+    if( this.rfFld2 != null ) {
+      this.rfFld2.fireRAMFloppyChanged();
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void checkLEDState()
@@ -217,7 +230,7 @@ public class RAMFloppyFrm extends BasicFrm
     boolean rv = false;
     if( rf != null ) {
       if( (rf.getSize() == size)
-	  && EmuUtil.equals( rf.getInfoText(), info ) )
+	  && TextUtil.equals( rf.getInfoText(), info ) )
       {
 	rv = true;
       }

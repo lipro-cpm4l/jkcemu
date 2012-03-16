@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,6 +22,8 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   private SCCHModule1SettingsFld tabSCCH;
   private RAMFloppiesSettingsFld tabRF;
   private JCheckBox              btnFloppyDisk;
+  private JCheckBox              btnKCNet;
+  private JCheckBox              btnVDIP;
   private ROMFileSettingsFld     fldAltOS;
   private ROMFileSettingsFld     fldAltFont;
   private JPanel                 tabEtc;
@@ -61,17 +63,30 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 					0.0, 0.0,
 					GridBagConstraints.WEST,
 					GridBagConstraints.NONE,
-					new Insets( 5, 5, 5, 5 ),
+					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnFloppyDisk = new JCheckBox(
-				"Floppy-Disk-Modul emulieren ",
-				false );
+    this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Modul", false );
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnFloppyDisk, gbcEtc );
 
-    gbcEtc.fill    = GridBagConstraints.HORIZONTAL;
-    gbcEtc.weightx = 1.0;
+    this.btnKCNet = new JCheckBox(
+			"KCNet-kompatible Netzwerkkarte",
+			false );
+    gbcEtc.insets.top = 0;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnKCNet, gbcEtc );
+
+    this.btnVDIP = new JCheckBox(
+			"USB-Anschluss (Vinculum VDIP Modul)",
+			false );
+    gbcEtc.insets.bottom = 5;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnVDIP, gbcEtc );
+
+    gbcEtc.fill       = GridBagConstraints.HORIZONTAL;
+    gbcEtc.weightx    = 1.0;
+    gbcEtc.insets.top = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( new JSeparator(), gbcEtc );
 
@@ -92,6 +107,8 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 
     // Listener
     this.btnFloppyDisk.addActionListener( this );
+    this.btnKCNet.addActionListener( this );
+    this.btnVDIP.addActionListener( this );
   }
 
 
@@ -113,8 +130,16 @@ public class LLC2SettingsFld extends AbstractSettingsFld
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
-		"jkcemu.llc2.floppydisk.enabled",
+		this.propPrefix + "floppydisk.enabled",
 		this.btnFloppyDisk.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "kcnet.enabled",
+		this.btnKCNet.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "vdip.enabled",
+		this.btnVDIP.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
     }
@@ -157,10 +182,22 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     this.tabRF.updFields( props );
 
     this.btnFloppyDisk.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.llc2.floppydisk.enabled",
-				false ) );
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "floppydisk.enabled",
+			false ) );
+
+    this.btnKCNet.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "kcnet.enabled",
+			false ) );
+
+    this.btnVDIP.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "vdip.enabled",
+			false ) );
 
     this.fldAltOS.updFields( props );
     this.fldAltFont.updFields( props );

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,6 +26,11 @@ public class ImageCard extends Component
 
   public void setImage( Image image )
   {
+    if( this.image != null ) {
+      if( image != this.image ) {
+	this.image.flush();
+      }
+    }
     this.image = image;
     repaint();
   }

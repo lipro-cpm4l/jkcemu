@@ -1,246 +1,293 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des C-80</h1>
-    Der C-80 ist ein von Joachim Czepa 1986 vorgestellter
-    Einplatinenrechner f&uuml;r den Eigenbau.
-  <br/><br/>
-
-  <h2>1. Emulierte Hardware</h2>
+ <h1>Hinweise zur Emulation des C-80</h1>
+  Der C-80 ist ein von Joachim Czepa 1986 vorgestellter
+  Einplatinenrechner f&uuml;r den Eigenbau.
+ <br/><br/>
+  <ul>
+   <li>
+    <a href="c80.htm#hardware">1. Emulierte Hardware</a>
     <ul>
-      <li>1&nbsp;KByte ROM im Adressbereich 0000-03FF</li>
-      <li>1&nbsp;KByte RAM im Adressbereich 0C00-0FFF</li>
-      <li>8-stellige 7-Segment-Anzeige</li>
-      <li>Hexadezimaltastatur mit zus&auml;tzlichen Funktionstasten</li>
-      <li>Kassettenrecorderanschluss</li>
+     <li><a href="c80.htm#keyboard">1.1. Tastatur</a></li>
     </ul>
-    Aufgrund der unvollst&auml;ndigen Adressdekodierung
-    ist der RAM auch im Bereich 0800-0BFF sichtbar.
-  <br/><br/>
-
-  <h3>1.1. Tastatur</h3>
-    Die Tabelle zeigt, wie die Tasten des C-80 auf der Tastatur
-    des Emulatorrechners abgebildet werden:
-    <br/>
-    <table border="1">
-      <tr>
-	<th valign="top">C-80-Taste</th>
-	<th valign="top">Taste im Emulator</th>
-	<th valign="top">Bedeutung</th>
-      </tr>
-      <tr>
-	<td valign="top">RES</td>
-	<td valign="top">Escape</td>
-	<td valign="top">Zur&uuml;cksetzen</td>
-      </tr>
-      <tr>
-	<td valign="top">BRK</td>
-	<td valign="top">N</td>
-	<td valign="top">Abbrechen (NMI)</td>
-      </tr>
-      <tr>
-	<td valign="top">FCT</td>
-	<td valign="top">F1</td>
-	<td valign="top">
-	  Funktionstaste,<br/>
-	  Durch Dr&uuml;cken, wieder Loslassen und anschlie&szlig;endes
-	  Dr&uuml;cken einer der Tasten <em>1</em> bis <em>6</em>
-	  wird eine Funktion aufgerufen,
-	  f&uuml;r die keine separate Taste vorhanden ist.
-	</td>
-      </tr>
-      <tr>
-	<td valign="top">MEM</td>
-	<td valign="top">M</td>
-	<td valign="top">Speicheranzeige</td>
-      </tr>
-      <tr>
-	<td valign="top">GO</td>
-	<td valign="top">G</td>
-	<td valign="top">Programm starten</td>
-      </tr>
-      <tr>
-	<td valign="top">REG</td>
-	<td valign="top">R</td>
-	<td valign="top">Register anzeigen</td>
-      </tr>
-      <tr>
-	<td valign="top">-</td>
-	<td valign="top">-</td>
-	<td valign="top">Wert/Adresse dekrementieren</td>
-      </tr>
-      <tr>
-	<td valign="top">+</td>
-	<td valign="top">+ oder Enter</td>
-	<td valign="top">Wert/Adresse inkrementieren oder &uuml;bernehmen</td>
-      </tr>
-      <tr>
-	<td valign="top">0...9</td>
-	<td valign="top">0...9</td>
-	<td valign="top">Adress-/Dateneingabe</td>
-      </tr>
-      <tr>
-	<td valign="top">A...F</td>
-	<td valign="top">A...F oder a...f</td>
-	<td valign="top">Adress-/Dateneingabe</td>
-      </tr>
-    </table>
-  <br/>
-    <b>Achtung!</b> Escape und N l&ouml;sen der Einfachheit halber
-    RESET bzw. NMI ohne Sicherheitsabfrage aus,
-    auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
-    aktiviert ist.
-  <br/><br/>
-
-
-  <h2>2. Im ROM enthaltene Software</h2>
+   </li>
+   <li>
+    <a href="c80.htm#software">2. Im ROM enthaltene Software</a>
     <ul>
-      <li>Originales Monitorprprogramm</li>
+     <li>
+      <a href="c80.htm#usage">2.1. Hinweise zur Bedienung des Monitorprogramms</a>
+      <ul>
+       <li>
+	<a href="c80.htm#mem">2.1.1. Speicherzellen anzeigen/&auml;ndern</a>
+       </li>
+       <li>
+	<a href="c80.htm#run">2.1.2. Programmstart</a>
+       </li>
+       <li>
+	<a href="c80.htm#reg">2.1.3. Register anzeigen/&auml;ndern</a>
+       </li>
+       <li>
+	<a href="c80.htm#fill">2.1.4. Datenbereich f&uuml;llen</a>
+       </li>
+       <li>
+	<a href="c80.htm#save">2.1.5. Datenbereich auf Kassette speichern</a>
+       </li>
+       <li>
+	<a href="c80.htm#load">2.1.6. Datenbereich von Kassette laden</a>
+       </li>
+       <li>
+	<a href="c80.htm#trans">2.1.7. Datenbereich umladen</a>
+       </li>
+       <li>
+	<a href="c80.htm#port_in">2.1.8. Port-Eingabe</a>
+       </li>
+       <li>
+	<a href="c80.htm#port_out">2.1.9. Port-Ausgabe</a>
+       </li>
+      </ul>
+     </li>
     </ul>
+   </li>
+  </ul>
+ <br/>
+
+
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  <ul>
+   <li>1&nbsp;KByte ROM im Adressbereich 0000h-03FFh</li>
+   <li>1&nbsp;KByte RAM im Adressbereich 0C00h-0FFFh</li>
+   <li>8-stellige 7-Segment-Anzeige</li>
+   <li>Hexadezimaltastatur mit zus&auml;tzlichen Funktionstasten</li>
+   <li>Kassettenrecorderanschluss</li>
+  </ul>
+  Aufgrund der unvollst&auml;ndigen Adressdekodierung
+  ist der RAM auch im Bereich 0800h-0BFFh sichtbar.
+ <br/><br/>
+
+ <h3><a name="keyboard">1.1. Tastatur</a></h3>
+  Die Tabelle zeigt, wie die Tasten des C-80 auf der Tastatur
+  des Emulatorrechners abgebildet werden:
   <br/>
+  <table border="1">
+   <tr>
+    <th valign="top">C-80-Taste</th>
+    <th valign="top">Taste im Emulator</th>
+    <th valign="top">Bedeutung</th>
+   </tr>
+   <tr>
+    <td valign="top">RES</td>
+    <td valign="top">Escape</td>
+    <td valign="top">Zur&uuml;cksetzen</td>
+   </tr>
+   <tr>
+    <td valign="top">BRK</td>
+    <td valign="top">N</td>
+    <td valign="top">Abbrechen (NMI)</td>
+   </tr>
+   <tr>
+    <td valign="top">FCT</td>
+    <td valign="top">F1</td>
+    <td valign="top">
+     Funktionstaste,<br/>
+     Durch Dr&uuml;cken, wieder Loslassen und anschlie&szlig;endes
+     Dr&uuml;cken einer der Tasten <em>1</em> bis <em>6</em>
+     wird eine Funktion aufgerufen,
+     f&uuml;r die keine separate Taste vorhanden ist.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">MEM</td>
+    <td valign="top">M</td>
+    <td valign="top">Speicheranzeige</td>
+   </tr>
+   <tr>
+    <td valign="top">GO</td>
+    <td valign="top">G</td>
+    <td valign="top">Programm starten</td>
+   </tr>
+   <tr>
+    <td valign="top">REG</td>
+    <td valign="top">R</td>
+    <td valign="top">Register anzeigen</td>
+   </tr>
+   <tr>
+    <td valign="top">-</td>
+    <td valign="top">-</td>
+    <td valign="top">Wert/Adresse dekrementieren</td>
+   </tr>
+   <tr>
+    <td valign="top">+</td>
+    <td valign="top">+ oder Enter</td>
+    <td valign="top">Wert/Adresse inkrementieren oder &uuml;bernehmen</td>
+   </tr>
+   <tr>
+    <td valign="top">0...9</td>
+    <td valign="top">0...9</td>
+    <td valign="top">Adress-/Dateneingabe</td>
+   </tr>
+   <tr>
+    <td valign="top">A...F</td>
+    <td valign="top">A...F oder a...f</td>
+    <td valign="top">Adress-/Dateneingabe</td>
+   </tr>
+  </table>
+ <br/>
+  <b>Achtung!</b> Escape und N l&ouml;sen der Einfachheit halber
+  RESET bzw. NMI ohne Sicherheitsabfrage aus,
+  auch wenn in den Einstellungen daf&uuml;r die Sicherheitsabfrage
+  aktiviert ist.
+ <br/><br/>
 
-  <h3>2.1. Hinweise zur Bedienung des Monitorprogramms</h3>
-    Nach einem RESET ist nur ein Dezimalpunkt zu sehen.
-  <br/><br/>
 
-  <h3>2.1.1. Speicherzellen anzeigen/&auml;ndern</h3>
-    <ol>
-      <li>Zur&uuml;cksetzen (Taste <em>RESET&nbsp;(Escape)</em>)</li>
-      <li>Speicheranzeige aufrufen (Taste <em>MEM&nbsp;(M)</em>)</li>
-      <li>
-	Adresse eingeben (Tasten <em>0</em>...<em>9</em>
-	und <em>A</em>...<em>F</em>)
-      </li>
-      <li>Adresse &uuml;bernehmen (Taste <em>+</em>)</li>
-      <li>
-	Gegebenfalls Adresse &auml;ndern (Tasten <em>+</em> und <em>-</em>)
-      </li>
-      <li>
-	Gegebenfalls Wert eingeben und mit Taste <em>+</em> &uuml;bernehmen
-      </li>
-      <li>Weiter mit Punkt 5</li>
-    </ol>
-  <br/><br/>
+ <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
+  <ul>
+   <li>Originales Monitorprprogramm</li>
+  </ul>
+ <br/>
 
-  <h3>2.1.2. Programmstart</h3>
-    <em>RESET&nbsp;(Escape)</em> &rarr; <em>GO&nbsp;(G)</em>
-    &rarr; &lt;Startadresse&gt;
-    [ &rarr; <em>-</em> &rarr; &lt;Haltepunktadresse&gt; ]
-    &rarr; <em>+</em>
-  <br/><br/>
-    Das Dr&uuml;cken des Minuszeichens mit Eingabe der Haltepunktadresse
-    kann auch weggelassen werden.
-  <br/><br/>
-    <b>Achtung! </b> Ein Haltepunkt kann nur im RAM und nur
-    auf das erste Byte eines Befehls gesetzt werden.
-  <br/><br/>
-    Die <em>BRK&nbsp;(N)</em>-Taste (NMI) hat die gleiche Bedeutung
-    wie das Erreichen des Haltepunktes.
-  <br/><br/>
+ <h3><a name="usage">2.1. Hinweise zur Bedienung des Monitorprogramms</a></h3>
+  Nach einem RESET ist nur ein Dezimalpunkt zu sehen.
+ <br/><br/>
 
-  <h3>2.1.3. Register anzeigen/&auml;ndern</h3>
-    <em>RESET&nbsp;(Escape)</em> &rarr; <em>REG&nbsp;(R)</em>
-  <br/><br/>
-    Es wird ein Doppelregister angezeigt.
-    Mit den Tasten <em>+</em> und <em>-</em> wechseln Sie
-    zum n&auml;chsten bzw. vorherigen Doppelregister.
-  <br/><br/>
-    Die Register werden ge&auml;ndert,
-    indem Sie ein Byte eingeben und dieses dann mit <em>+</em>
-    dem h&ouml;herwertigen oder mit <em>-</em> dem niederwertigen
-    Register des angezeigten Doppelregisters zuweisen.
-  <br/><br/>
+ <h3><a name="mem">2.1.1. Speicherzellen anzeigen/&auml;ndern</a></h3>
+  <ol>
+   <li>Zur&uuml;cksetzen (Taste <em>RESET&nbsp;(Escape)</em>)</li>
+   <li>Speicheranzeige aufrufen (Taste <em>MEM&nbsp;(M)</em>)</li>
+   <li>
+    Adresse eingeben (Tasten <em>0</em>...<em>9</em>
+    und <em>A</em>...<em>F</em>)
+   </li>
+   <li>Adresse &uuml;bernehmen (Taste <em>+</em>)</li>
+   <li>
+    Gegebenfalls Adresse &auml;ndern (Tasten <em>+</em> und <em>-</em>)
+   </li>
+   <li>
+    Gegebenfalls Wert eingeben und mit Taste <em>+</em> &uuml;bernehmen
+   </li>
+   <li>Weiter mit Punkt 5</li>
+  </ol>
+ <br/><br/>
 
-  <h3>2.1.4. Datenbereich f&uuml;llen</h3>
+ <h3><a name="run">2.1.2. Programmstart</a></h3>
+  <em>RESET&nbsp;(Escape)</em> &rarr; <em>GO&nbsp;(G)</em>
+  &rarr; &lt;Startadresse&gt;
+  [ &rarr; <em>-</em> &rarr; &lt;Haltepunktadresse&gt; ]
+  &rarr; <em>+</em>
+ <br/><br/>
+  Das Dr&uuml;cken des Minuszeichens mit Eingabe der Haltepunktadresse
+  kann auch weggelassen werden.
+ <br/><br/>
+  <b>Achtung! </b> Ein Haltepunkt kann nur im RAM und nur
+  auf das erste Byte eines Befehls gesetzt werden.
+ <br/><br/>
+  Die <em>BRK&nbsp;(N)</em>-Taste (NMI) hat die gleiche Bedeutung
+  wie das Erreichen des Haltepunktes.
+ <br/><br/>
+
+ <h3><a name="reg">2.1.3. Register anzeigen/&auml;ndern</a></h3>
+  <em>RESET&nbsp;(Escape)</em> &rarr; <em>REG&nbsp;(R)</em>
+ <br/><br/>
+  Es wird ein Doppelregister angezeigt.
+  Mit den Tasten <em>+</em> und <em>-</em> wechseln Sie
+  zum n&auml;chsten bzw. vorherigen Doppelregister.
+ <br/><br/>
+  Die Register werden ge&auml;ndert,
+  indem Sie ein Byte eingeben und dieses dann mit <em>+</em>
+  dem h&ouml;herwertigen oder mit <em>-</em> dem niederwertigen
+  Register des angezeigten Doppelregisters zuweisen.
+ <br/><br/>
+
+ <h3><a name="fill">2.1.4. Datenbereich f&uuml;llen</a></h3>
+  <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+  &rarr; <em>0</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
+  &rarr; &lt;Endadresse&gt; &rarr; <em>+</em> &lt;Wert&gt; &rarr; <em>+</em>
+ <br/><br/>
+  Ist die Anfangsadresse kleiner als die Endadresse,
+  wird ein <em>E</em> als Fehlermeldung ausgegeben.
+ <br/><br/>
+
+ <h3><a name="save">2.1.5. Datenbereich auf Kassette speichern</a></h3>
+  <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+  &rarr; <em>1</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
+  &rarr; &lt;Endadresse&gt; &rarr; <em>+</em>
+ <br/><br/>
+  Ist die Anfangsadresse kleiner als die Endadresse,
+  wird ein <em>E</em> als Fehlermeldung ausgegeben.
+ <br/><br/>
+  Das Aufzeichnungsformat ist kompatibel zum
+  <a href="poly880.htm">Poly-Computer 880</a>.
+  Abweichend davon wird der letzte Block auf 32 Bytes aufgef&uuml;llt.
+  Au&szlig;erdem schreibt der C-80 zus&auml;tzlich einen Endeblock
+  mit der Blockkennung FFFFh.
+  Sowohl die aufgef&uuml;llten Bytes als auch der Endeblock
+  werden beim Einlesen in den Poly-Computer nicht ausgewertet.
+ <br/><br/>
+  <b>Achtung!</b> Vergessen Sie nicht,
+  im Emulator eine entsprechende <a href="audio.htm">Audio-Funktion</a>
+  zu aktivieren.
+ <br/><br/>
+
+ <h3><a name="load">2.1.6. Datenbereich von Kassette laden</a></h3>
+  Es gibt zwei Funktionen zum Laden von Kassette:
+  <ol>
+   <li>
     <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
-    &rarr; <em>0</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
-    &rarr; &lt;Endadresse&gt; &rarr; <em>+</em> &lt;Wert&gt; &rarr; <em>+</em>
-  <br/><br/>
-    Ist die Anfangsadresse kleiner als die Endadresse,
-    wird ein <em>E</em> als Fehlermeldung ausgegeben.
-  <br/><br/>
-
-  <h3>2.1.5. Datenbereich auf Kassette speichern</h3>
-    <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
-    &rarr; <em>1</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
+    &rarr; <em>2</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
     &rarr; &lt;Endadresse&gt; &rarr; <em>+</em>
-  <br/><br/>
-    Ist die Anfangsadresse kleiner als die Endadresse,
-    wird ein <em>E</em> als Fehlermeldung ausgegeben.
-  <br/><br/>
-    Das Aufzeichnungsformat ist kompatibel zum
-    <a href="poly880.htm">Poly-Computer 880</a>.
-    Abweichend davon wird der letzte Block auf 32 Bytes aufgef&uuml;llt.
-    Au&szlig;erdem schreibt der C-80 zus&auml;tzlich einen Endeblock
-    mit der Blockkennung FFFF.
-    Sowohl die aufgef&uuml;llten Bytes als auch der Endeblock
-    werden beim Einlesen in den Poly-Computer nicht ausgewertet.
-  <br/><br/>
-    <b>Achtung!</b> Vergessen Sie nicht,
-    im Emulator eine entsprechende <a href="audio.htm">Audio-Funktion</a>
-    zu aktivieren.
-  <br/><br/>
-
-  <h3>2.1.6. Datenbereich von Kassette laden</h3>
-    Es gibt zwei Funktionen zum Laden von Kassette:
-    <ol>
-      <li>
-	<em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
-	&rarr; <em>2</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
-	&rarr; &lt;Endadresse&gt; &rarr; <em>+</em>
-      </li>
-      <li>
-	<em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
-	&rarr; <em>3</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
-	&rarr; &lt;Endadresse&gt; &rarr; <em>+</em>
-      </li>
-    </ol>
-  <br/>
-    Im ersten Fall wird das Lesen abgebrochen,
-    wenn die eingegebene Endadresse erreicht wurde
-    oder das Dateiende (Block mit Endekennung) gelesen wird.
-  <br/><br/>
-    Im zweiten Fall wird dagegen das Lesen nur abgebrochen,
-    wenn die eingegebene Endadresse erreicht wurde.
-    Ist die auf Kassette befindliche Datei kleiner als der
-    angegebene Datenbereich,
-    bleibt der C-80 beim Einlesen h&auml;ngen.
-  <br/><br/>
-    Ist die eingegebene Anfangsadresse kleiner als die Endadresse,
-    wird ein <em>E</em> als Fehlermeldung ausgegeben.
-  <br/><br/>
-    <b>Achtung!</b> Vergessen Sie nicht,
-    im Emulator eine entsprechende <a href="audio.htm">Audio-Funktion</a>
-    zu aktivieren.
-  <br/><br/>
-
-  <h3>2.1.7. Datenbereich umladen</h3>
+   </li>
+   <li>
     <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
-    &rarr; <em>4</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
+    &rarr; <em>3</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
     &rarr; &lt;Endadresse&gt; &rarr; <em>+</em>
-    &rarr; &lt;Zieladresse&gt; &rarr; <em>+</em>
-  <br/><br/>
-    Ist die Anfangsadresse kleiner als die Endadresse,
-    wird ein <em>E</em> als Fehlermeldung ausgegeben.
-  <br/><br/>
+   </li>
+  </ol>
+ <br/>
+  Im ersten Fall wird das Lesen abgebrochen,
+  wenn die eingegebene Endadresse erreicht wurde
+  oder das Dateiende (Block mit Endekennung) gelesen wird.
+ <br/><br/>
+  Im zweiten Fall wird dagegen das Lesen nur abgebrochen,
+  wenn die eingegebene Endadresse erreicht wurde.
+  Ist die auf Kassette befindliche Datei kleiner als der
+  angegebene Datenbereich,
+  bleibt der C-80 beim Einlesen h&auml;ngen.
+ <br/><br/>
+  Ist die eingegebene Anfangsadresse kleiner als die Endadresse,
+  wird ein <em>E</em> als Fehlermeldung ausgegeben.
+ <br/><br/>
+  <b>Achtung!</b> Vergessen Sie nicht,
+  im Emulator eine entsprechende <a href="audio.htm">Audio-Funktion</a>
+  zu aktivieren.
+ <br/><br/>
 
-  <h3>2.1.8. Port-Eingabe</h3>
-    <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
-    &rarr; <em>5</em> &rarr; &lt;Port-Adresse&gt; &rarr; <em>+</em>
-  <br/><br/>
-    Die Port-Adresse muss als 16-Bit-Wert eingegeben werden.
-    Mit jedem Dr&uuml;cken der Taste <em>+</em> wird das Eingabetor
-    gelesen und der Wert angezeigt.
-    Jede andere Taste bricht die Funktion ab.
-  <br/><br/>
+ <h3><a name="trans">2.1.7. Datenbereich umladen</a></h3>
+  <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+  &rarr; <em>4</em> &rarr; &lt;Anfangsadresse&gt; &rarr; <em>-</em>
+  &rarr; &lt;Endadresse&gt; &rarr; <em>+</em>
+  &rarr; &lt;Zieladresse&gt; &rarr; <em>+</em>
+ <br/><br/>
+  Ist die Anfangsadresse kleiner als die Endadresse,
+  wird ein <em>E</em> als Fehlermeldung ausgegeben.
+ <br/><br/>
 
-  <h3>2.1.9. Port-Ausgabe</h3>
-    <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
-    &rarr; <em>6</em> &rarr; &lt;Port-Adresse&gt; &rarr; <em>+</em>
-    &rarr; &lt;Wert&gt; &rarr; <em>+</em>
-  <br/><br/>
-    Die Port-Adresse muss als 16-Bit-Wert eingegeben werden.
-    Mit jedem Dr&uuml;cken der Taste <em>+</em> wird der eingegebene Wert
-    in das Ausgabetor geschrieben.
+ <h3><a name="port_in">2.1.8. Port-Eingabe</a></h3>
+  <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+  &rarr; <em>5</em> &rarr; &lt;Port-Adresse&gt; &rarr; <em>+</em>
+ <br/><br/>
+  Die Port-Adresse muss als 16-Bit-Wert eingegeben werden.
+  Mit jedem Dr&uuml;cken der Taste <em>+</em> wird das Eingabetor
+  gelesen und der Wert angezeigt.
+  Jede andere Taste bricht die Funktion ab.
+ <br/><br/>
+
+ <h3><a name="port_out">2.1.9. Port-Ausgabe</a></h3>
+  <em>RESET&nbsp;(Escape)</em> &rarr; <em>FCT&nbsp;(F1)</em>
+  &rarr; <em>6</em> &rarr; &lt;Port-Adresse&gt; &rarr; <em>+</em>
+  &rarr; &lt;Wert&gt; &rarr; <em>+</em>
+ <br/><br/>
+  Die Port-Adresse muss als 16-Bit-Wert eingegeben werden.
+  Mit jedem Dr&uuml;cken der Taste <em>+</em> wird der eingegebene Wert
+  in das Ausgabetor geschrieben.
 </body>
 </html>
 

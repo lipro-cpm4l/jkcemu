@@ -81,7 +81,11 @@ public class M028 extends AbstractKC85Module
   @Override
   public void reload( Component owner )
   {
-    this.rom = EmuUtil.readFile( owner, fileName, 0x4000, "M028 ROM-Datei" );
+    this.rom = EmuUtil.readFile(
+			owner,
+			this.fileName,
+			0x4000,
+			"M028 ROM-Datei" );
   }
 
 

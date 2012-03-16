@@ -108,7 +108,7 @@ public class MemBreakpoint extends AbstractBreakpoint
 
   public int getEndAddress()
   {
-    return this.begAddr;
+    return this.endAddr;
   }
 
 
@@ -757,7 +757,7 @@ public class MemBreakpoint extends AbstractBreakpoint
     if( !rv && (iSource != null) ) {
       /*
        * Im Fall einer Interrupt-Annahme wurde der PC gekellert,
-       * weshalb auch auf diese beiden Bytes geprueft werden muessen.
+       * weshalb auch diese beiden Bytes geprueft werden muessen.
        */
       int sp = cpu.getRegSP();
       rv = matchesWriteAccess( sp, cpu.getMemByte( sp, false ) );

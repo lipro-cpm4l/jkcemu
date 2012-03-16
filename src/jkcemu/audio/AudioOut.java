@@ -19,14 +19,14 @@ import z80emu.*;
 
 public abstract class AudioOut extends AudioIO
 {
-  public static final int PHASE0_VALUE = 35;
-  public static final int PHASE1_VALUE = 220;
+  public static final int MAX_VALUE = 220;
 
   protected EmuThread emuThread;
   protected boolean   enabled;
   protected int       maxPauseTStates;
 
   private boolean firstPhaseChange;
+  private long    lastTStates;
 
 
   protected AudioOut( Z80CPU z80cpu )
@@ -47,15 +47,13 @@ public abstract class AudioOut extends AudioIO
   protected abstract void writeSamples( int nSamples, boolean phase );
 
 
-  protected void writeSamples( int nSamples, byte value )
+  /*
+   * Wo ein direkter Zugriff auf den Audio-Kanal notwendig ist,
+   * muss die Methode ueberschrieben werden.
+   */
+  public void writeSamples( int nSamples, byte value )
   {
-    /*
-     * Die Moeglichkeit, beliebige Audio-Werte auszugeben,
-     * wird nicht allgemein unterstuetzt.
-     * Deshalb ist die Methode hier leer.
-     * Sie muss in der abgeleiteten Klasse ueberschrieben werden,
-     * wo dieses Feature unterstuetzt werden soll.
-     */
+    // leer
   }
 
 
@@ -80,24 +78,22 @@ public abstract class AudioOut extends AudioIO
 	    this.firstPhaseChange = false;
 	    this.lastTStates      = this.z80cpu.getProcessedTStates();
 	  } else {
-	    int tStates     = this.z80cpu.getProcessedTStates();
-	    int diffTStates = this.z80cpu.calcTStatesDiff(
+	    long tStates     = this.z80cpu.getProcessedTStates();
+	    long diffTStates = this.z80cpu.calcTStatesDiff(
 						  this.lastTStates,
 						  tStates );
 	    if( diffTStates > 0 ) {
-	      currentTStates( tStates, diffTStates );
-	      if( tStates > this.lastTStates ) {
+	      currentDiffTStates( diffTStates );
 
-		// Anzahl der zu erzeugenden Samples
-		int nSamples  = diffTStates / this.tStatesPerFrame;
-		writeSamples( nSamples, phase );
+	      // Anzahl der zu erzeugenden Samples
+	      int nSamples = (int) (diffTStates / this.tStatesPerFrame);
+	      writeSamples( nSamples, phase );
 
-		/*
-		 * Anzahl der verstrichenen Taktzyklen auf den Wert
-		 * des letzten ausgegebenen Samples korrigieren
-		 */
-		this.lastTStates += (nSamples * this.tStatesPerFrame);
-	      }
+	      /*
+	       * Anzahl der verstrichenen Taktzyklen auf den Wert
+	       * des letzten ausgegebenen Samples korrigieren
+	       */
+	      this.lastTStates += (nSamples * this.tStatesPerFrame);
 	    }
 	  }
 	}
@@ -121,16 +117,16 @@ public abstract class AudioOut extends AudioIO
 
       } else {
 
-	int tStates     = this.z80cpu.getProcessedTStates();
-	int diffTStates = this.z80cpu.calcTStatesDiff(
+	long tStates     = this.z80cpu.getProcessedTStates();
+	long diffTStates = this.z80cpu.calcTStatesDiff(
 					      this.lastTStates,
 					      tStates );
 	if( diffTStates > 0 ) {
-	  currentTStates( tStates, diffTStates );
+	  currentDiffTStates( diffTStates );
 	  if( tStates > this.lastTStates ) {
 
 	    // Anzahl der zu erzeugenden Samples
-	    int nSamples  = diffTStates / this.tStatesPerFrame;
+	    int nSamples  = (int) (diffTStates / this.tStatesPerFrame);
 	    writeSamples( nSamples, value );
 
 	    /*

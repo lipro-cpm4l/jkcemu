@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -62,7 +62,7 @@ public class JoystickThread extends Thread
 	/*
 	 * Beim manuellen Verbinden auch alternativen Joystick zulassen,
 	 * sodass bei nur einem angeschlossenen Joystick auch
-	 * der zweite emulierte Spielhebel bedienet werden kann.
+	 * der zweite emulierte Spielhebel bedient werden kann.
 	 */
 	int physJoyNum = this.joyNum + 1;
 	while( physJoyNum > 0 ) {

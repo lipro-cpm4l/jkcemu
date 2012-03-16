@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -24,7 +24,8 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
    * Damit sich die Fenstergroesse durch das Umprogrammieren
    * nicht staendig aendert, werden hier fest 250 Pixel gesetzt.
    */
-  private static final int SCREEN_HEIGHT = 250;
+  private static final int DEFAULT_SCREEN_HEIGHT = 250;
+  private static final int DEFAULT_SCREEN_WIDTH  = 320;
 
 
   private GDC82720        gdc;
@@ -35,6 +36,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   private Color[]         colors;
   private int[]           colorRGBs;
   private boolean         colorMode;
+  private boolean         fixedScreenSize;
   private boolean         fontGenVisAccess;
   private boolean         fontGenEnabled;
   private boolean         lightColors;
@@ -55,6 +57,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   {
     this.screenFrm   = screenFrm;
     this.gdc         = gdc;
+    this.screenWidth = DEFAULT_SCREEN_WIDTH;
     this.fontBytes   = new byte[ 0x0800 ];
     this.vram        = new short[ 0x10000 ];
     this.colorModel  = null;
@@ -72,15 +75,15 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   }
 
 
-  public void createColors( double brightness )
+  public void createColors( float brightness )
   {
     synchronized( this.colors ) {
       byte[] ar = new byte[ this.colors.length ];
       byte[] ag = new byte[ this.colors.length ];
       byte[] ab = new byte[ this.colors.length ];
-      int    v3 = (int) Math.round( 255 * brightness );
-      int    v2 = (int) Math.round( 180 * brightness );
-      int    v1 = (int) Math.round( 70 * brightness );
+      int    v3 = Math.round( 255 * brightness );
+      int    v2 = Math.round( 180 * brightness );
+      int    v1 = Math.round( 70 * brightness );
       for( int i = 0; i < this.colors.length; i++ ) {
 	int r = 0;
 	int g = 0;
@@ -129,17 +132,21 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 
   public int getCharTopLine()
   {
-    int yMargin = (SCREEN_HEIGHT - this.gdc.getDisplayLines()) / 2;
+    int yMargin = (DEFAULT_SCREEN_HEIGHT - this.gdc.getDisplayLines()) / 2;
     if( yMargin < 0 ) {
       yMargin = 0;
     }
-    return yMargin + this.gdc.getCharTopLine();
+    int rv = yMargin + this.gdc.getCharTopLine();
+    if( this.fixedScreenSize ) {
+      rv *= 2;
+    }
+    return rv;
   }
 
 
   public int getCharWidth()
   {
-    return 8;
+    return 8 * getScreenWidth() / this.screenWidth;
   }
 
 
@@ -159,13 +166,28 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 
   public int getScreenHeight()
   {
-    return SCREEN_HEIGHT;
+    return this.fixedScreenSize ?
+		(2 * DEFAULT_SCREEN_HEIGHT) : DEFAULT_SCREEN_HEIGHT;
   }
 
 
   public int getScreenWidth()
   {
-    return this.screenWidth;
+    int rv = DEFAULT_SCREEN_WIDTH;
+    if( this.fixedScreenSize ) {
+      rv = 2 * DEFAULT_SCREEN_WIDTH;
+    } else {
+      if( this.screenWidth > DEFAULT_SCREEN_WIDTH ) {
+	rv = this.screenWidth;
+      }
+    }
+    return rv;
+  }
+
+
+  public boolean isFixedScreenSize()
+  {
+    return this.fixedScreenSize;
   }
 
 
@@ -173,13 +195,16 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   {
     BufferedImage img = getScreenImage();
     if( img != null ) {
-      int     width     = img.getWidth();
-      int     height    = img.getHeight();
-      int     borderRGB = this.colorRGBs[ colorReg0 ];
-      int     cLine     = 0;
-      int     yMargin   = (SCREEN_HEIGHT - this.gdc.getDisplayLines()) / 2;
+      int width   = img.getWidth();
+      int height  = img.getHeight();
+      int border  = this.colorRGBs[ colorReg0 ];
+      int cLine   = 0;
+      int yMargin = (DEFAULT_SCREEN_HEIGHT - this.gdc.getDisplayLines()) / 2;
       if( yMargin > 0 ) {
 	yOffs += yMargin;
+	if( this.fixedScreenSize ) {
+	  yOffs += yMargin;
+	}
       }
       for( int y = 0; y < height; y++ ) {
 	int x   = 0;
@@ -187,7 +212,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 	int a   = this.gdc.getDisplayValue( xCh++, y );
 	if( a < 0 ) {
 	  for( int i = 0; i < width; i++ ) {
-	    img.setRGB( i, y, borderRGB );
+	    img.setRGB( i, y, border );
 	  }
 	} else {
 	  if( (this.mode == 0) && ((a & GDC82720.DISPL_IMAGE_MASK) == 0) ) {
@@ -328,19 +353,29 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 	  }
 	}
 	while( x < width ) {
-	  img.setRGB( x++, y, borderRGB );
+	  img.setRGB( x++, y, border );
 	}
       }
-      if( screenScale > 0 ) {
+      if( this.fixedScreenSize ) {
 	g.drawImage(
+		img,
+		xOffs,
+		yOffs,
+		2 * DEFAULT_SCREEN_WIDTH * screenScale,
+		2 * img.getHeight() * screenScale,
+		this.screenFrm );
+      } else {
+	if( screenScale > 1 ) {
+	  g.drawImage(
 		img,
 		xOffs,
 		yOffs,
 		img.getWidth() * screenScale,
 		img.getHeight() * screenScale,
 		this.screenFrm );
-      } else {
-	g.drawImage( img, xOffs, yOffs, this.screenFrm );
+	} else {
+	  g.drawImage( img, xOffs, yOffs, this.screenFrm );
+	}
       }
     }
   }
@@ -381,6 +416,12 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
       this.w640        = false;
     }
     this.screenFrm.setScreenDirty( true );
+  }
+
+
+  public void setFixedScreenSize( boolean state )
+  {
+    this.fixedScreenSize = state;
   }
 
 
@@ -518,26 +559,24 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
     BufferedImage img = this.screenImage;
     synchronized( this.colors ) {
       int height = this.gdc.getDisplayLines();
+      int width  = this.screenWidth;
       if( img != null ) {
-	if( (img.getHeight() != height)
-	    || (img.getWidth() != this.screenWidth) )
-	{
+	if( (img.getHeight() != height) || (img.getWidth() != width) ) {
 	  img = null;
 	}
       }
       if( (img == null) && (height > 0) ) {
-	int w = this.screenWidth;
-	if( w > 0 ) {
+	if( width > 0 ) {
 	  IndexColorModel cm = this.colorModel;
 	  if( cm != null ) {
 	    img = new BufferedImage(
-				w,
+				width,
 				height,
 				BufferedImage.TYPE_BYTE_INDEXED,
 				cm );
 	  } else {
 	    img = new BufferedImage(
-				w,
+				width,
 				height,
 				BufferedImage.TYPE_BYTE_INDEXED );
 	  }
@@ -551,13 +590,14 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 
   private void updScreenWidth()
   {
-    int w = (this.w640 ? 640 : 320);
+    int oldWidth = getScreenWidth();
+    int newWidth = (this.w640 ? 640 : 320);
     if( this.mode == 2 ) {
       // Im Mode 2 laeuft VIS mit halben Bildpunkttakt
-      w /= 2;
+      newWidth /= 2;
     }
-    if( w != this.screenWidth ) {
-      this.screenWidth = w;
+    this.screenWidth = newWidth;
+    if( newWidth != oldWidth ) {
       this.screenFrm.fireScreenSizeChanged();
     }
   }

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,6 +31,7 @@ public class BreakpointDlg extends BasicDlg
   private JComboBox          comboIntSource;
   private JCheckBox          btnOnRead;
   private JCheckBox          btnOnWrite;
+  private JCheckBox          btnBpEnabled;
   private JTextField         fldBegAddr;
   private JTextField         fldEndAddr;
   private JTextField         fldValue;
@@ -98,7 +99,7 @@ public class BreakpointDlg extends BasicDlg
 		"Zus\u00E4tzlich k\u00F6nnen Sie einen Wert angeben.",
 		"Bei Ausgabebefehlen wird dann nur angehalten,",
 		"wenn auch dieser Wert entsprechend der Maske",
-		" mit dem auszugebenden \u00FCbereinstimmt",
+		"mit dem auszugebenden \u00FCbereinstimmt",
 		"(nicht relevant bei Lesebefehlen)." ),
 	  gbc );
 	break;
@@ -114,13 +115,17 @@ public class BreakpointDlg extends BasicDlg
 
 
     // Knoepfe
-    JPanel panelBtn   = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    this.btnBpEnabled = new JCheckBox( "Haltepunkt aktiv", true );
     gbc.anchor        = GridBagConstraints.CENTER;
     gbc.fill          = GridBagConstraints.NONE;
     gbc.insets.bottom = 5;
     gbc.weightx       = 0.0;
     gbc.weighty       = 0.0;
     gbc.gridx         = 0;
+    gbc.gridy++;
+    add( this.btnBpEnabled, gbc );
+
+    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.gridy++;
     add( panelBtn, gbc );
 
@@ -165,6 +170,7 @@ public class BreakpointDlg extends BasicDlg
 		((InterruptBreakpoint) breakpoint).getInterruptSource() );
 	}
       }
+      this.btnBpEnabled.setSelected( breakpoint.isEnabled() );
     }
 
 
@@ -498,6 +504,7 @@ public class BreakpointDlg extends BasicDlg
       }
     }
     if( this.approvedBreakpoint != null ) {
+      this.approvedBreakpoint.setEnabled( this.btnBpEnabled.isSelected() );
       doClose();
     }
   }
@@ -511,10 +518,10 @@ public class BreakpointDlg extends BasicDlg
 			int                           value,
 			int                           mask )
   {
-    if( this.docBegAddr != null ) {
+    if( (this.docBegAddr != null) && (begAddr >= 0) ) {
       this.docBegAddr.setValue( begAddr, is8Bit ? 2 : 4 );
     }
-    if( this.docEndAddr != null ) {
+    if( (this.docEndAddr != null) && (endAddr >= 0) ) {
       this.docEndAddr.setValue( endAddr, is8Bit ? 2 : 4 );
     }
     if( (this.btnOnRead != null) && (accessMode != null) ) {

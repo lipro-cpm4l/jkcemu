@@ -47,18 +47,16 @@ public class AudioOutLine extends AudioOut
 	/* --- ueberschriebene Methoden --- */
 
   /*
-   * Mit dieser Methode erfaehrt die Klasse den aktuellen
-   * Taktzyklenzahlerstand und die Anzahl der seit dem letzten
-   * Aufruf vergangenen Taktzyklen.
+   * Mit dieser Methode erfaehrt die Klasse die Anzahl
+   * der seit dem letzten Aufruf vergangenen Taktzyklen.
    *
    * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
    * Audio-Daten ignoriert.
    */
   @Override
-  protected void currentTStates( int tStates, int diffTStates )
+  protected void currentDiffTStates( long diffTStates )
   {
     if( diffTStates > this.maxPauseTStates ) {
-      this.lastTStates  = tStates;
       this.audioDataPos = 0;
       DataLine line = this.dataLine;
       if( line != null ) {
@@ -153,12 +151,12 @@ public class AudioOutLine extends AudioOut
   @Override
   protected void writeSamples( int nSamples, boolean phase )
   {
-    writeSamples( nSamples, (byte) (phase ? PHASE1_VALUE : PHASE0_VALUE) );
+    writeSamples( nSamples, (byte) (phase ? MAX_VALUE : 0) );
   }
 
 
   @Override
-  protected void writeSamples( int nSamples, byte value )
+  public void writeSamples( int nSamples, byte value )
   {
     SourceDataLine line         = this.dataLine;
     byte[]         audioDataBuf = this.audioDataBuf;
@@ -211,7 +209,7 @@ public class AudioOutLine extends AudioOut
 	}
       }
       if( line != null ) {
-	line.open( fmt );
+	line.open( fmt, sampleRate / (this.isSound ? 8 : 4) );
 	line.start();
       }
     }

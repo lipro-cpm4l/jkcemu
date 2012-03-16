@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,9 +11,9 @@ package jkcemu.emusys;
 import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
-import javax.swing.JOptionPane;
 import jkcemu.base.*;
 import jkcemu.disk.*;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -22,9 +22,17 @@ public class PCM extends EmuSys implements
 					Z80CTCListener,
 					Z80SIOChannelListener
 {
-  private static byte[] bdos         = null;
-  private static byte[] rom1RF       = null;
-  private static byte[] pcmFontBytes = null;
+  private static final FloppyDiskInfo[] availableFloppyDisks = {
+		new FloppyDiskInfo(
+			"/disks/pcm/pcmsys.dump.gz",
+			"PC/M Boot-Diskette" ) };
+
+  private static byte[] bdos              = null;
+  private static byte[] romRF64x16        = null;
+  private static byte[] romFDC64x16       = null;
+  private static byte[] romFDC80x24       = null;
+  private static byte[] pcmFontBytes64x16 = null;
+  private static byte[] pcmFontBytes80x24 = null;
 
   private byte[]            fontBytes;
   private byte[]            romBytes;
@@ -40,6 +48,7 @@ public class PCM extends EmuSys implements
   private boolean           fdcTC;
   private boolean           audioOutPhase;
   private boolean           keyboardUsed;
+  private boolean           mode80x24;
   private boolean           romEnabled;
   private boolean           upperBank0Enabled;
   private int               ramBank;
@@ -55,6 +64,7 @@ public class PCM extends EmuSys implements
     this.ramVideo      = new byte[ 0x0800 ];
     this.audioOutPhase = false;
     this.fdcTC         = false;
+    this.mode80x24     = emulates80x24( props );
     this.curFDDrive    = null;
     this.fdc           = null;
     this.fdDrives      = null;
@@ -62,6 +72,9 @@ public class PCM extends EmuSys implements
       this.fdc      = new FDC8272( this, 4 );
       this.fdDrives = new FloppyDiskDrive[ 4 ];
       Arrays.fill( this.fdDrives, null );
+    } else {
+      this.fdc      = null;
+      this.fdDrives = null;
     }
 
     this.ramFloppy = this.emuThread.getRAMFloppy1();
@@ -82,6 +95,7 @@ public class PCM extends EmuSys implements
     this.sio   = new Z80SIO( "SIO (88-8B)" );
     cpu.setInterruptSources( this.ctc, this.pio, this.sio );
     if( this.fdc != null ) {
+      this.fdc.setTStatesPerMilli( cpu.getMaxSpeedKHz() );
       cpu.addMaxSpeedListener( this.fdc );
       cpu.addTStatesListener( this.fdc );
     }
@@ -91,7 +105,12 @@ public class PCM extends EmuSys implements
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
-    reset( EmuThread.ResetLevel.POWER_ON, props );
+  }
+
+
+  public static FloppyDiskInfo[] getAvailableFloppyDisks()
+  {
+    return availableFloppyDisks;
   }
 
 
@@ -151,14 +170,15 @@ public class PCM extends EmuSys implements
 			props,
 			"jkcemu.system" ).equals( "PC/M" );
     if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.romFile,
 		EmuUtil.getProperty( props,  "jkcemu.pcm.rom.file" ) );
     }
-    if( rv ) {
-      if( emulatesFloppyDisk( props ) != (this.fdc != null) ) {
-	rv = false;
-      }
+    if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
+      rv = false;
+    }
+    if( rv && emulates80x24( props ) != this.mode80x24 ) {
+      rv = false;
     }
     return rv;
   }
@@ -185,6 +205,7 @@ public class PCM extends EmuSys implements
     if( this.fdc != null ) {
       cpu.removeTStatesListener( this.fdc );
       cpu.removeMaxSpeedListener( this.fdc );
+      this.fdc.die();
     }
   }
 
@@ -201,25 +222,50 @@ public class PCM extends EmuSys implements
   {
     int rv = BLACK;
     if( this.fontBytes != null ) {
-      int rPix = y % 16;
-      int row  = y / 16;
-      int col  = x / 8;
-      int offs = 0x0400;
-      if( rPix >= 8 ) {
-	offs = 0;		// Zwischenzeile
-	rPix -= 8;
-      }
-      int mIdx = offs + (row * 64) + col;
-      if( (mIdx >= 0) && (mIdx < this.ramVideo.length) ) {
-	int fIdx = (((int) this.ramVideo[ mIdx ] & 0xFF) * 8) + rPix;
-	if( (fIdx >= 0) && (fIdx < this.fontBytes.length ) ) {
-	  int m = 0x80;
-	  int n = x % 8;
-	  if( n > 0 ) {
-	    m >>= n;
+      if( this.mode80x24 ) {
+	int rPix = y % 10;
+	int row  = y / 10;
+	int col  = x / 6;
+	int mIdx = (row * 80) + col;
+	if( (mIdx >= 0) && (mIdx < this.ramVideo.length) ) {
+	  int ch = (int) this.ramVideo[ mIdx ] & 0xFF;
+	  if( (rPix == 8) && ((ch & 0x80) != 0) ) {
+	    rv = WHITE;					// Cursor
+	  } else {
+	    int fIdx = ((ch & 0x7F) * 16) + rPix;
+	    if( (fIdx >= 0) && (fIdx < this.fontBytes.length ) ) {
+	      int m = 0x80;
+	      int n = x % 6;
+	      if( n > 0 ) {
+		m >>= n;
+	      }
+	      if( (this.fontBytes[ fIdx ] & m) == 0 ) {
+		rv = WHITE;
+	      }
+	    }
 	  }
-	  if( (this.fontBytes[ fIdx ] & m) != 0 ) {
-	    rv = WHITE;
+	}
+      } else {
+	int rPix = y % 16;
+	int row  = y / 16;
+	int col  = x / 7;
+	int offs = 0x0400;
+	if( rPix >= 8 ) {
+	  offs = 0;		// Zwischenzeile
+	  rPix -= 8;
+	}
+	int mIdx = offs + (row * 64) + col;
+	if( (mIdx >= 0) && (mIdx < this.ramVideo.length) ) {
+	  int fIdx = (((int) this.ramVideo[ mIdx ] & 0xFF) * 8) + rPix;
+	  if( (fIdx >= 0) && (fIdx < this.fontBytes.length ) ) {
+	    int m = 0x80;
+	    int n = x % 7;
+	    if( n > 0 ) {
+	      m >>= n;
+	    }
+	    if( (this.fontBytes[ fIdx ] & m) != 0 ) {
+	      rv = WHITE;
+	    }
 	  }
 	}
       }
@@ -231,35 +277,72 @@ public class PCM extends EmuSys implements
   @Override
   public int getCharColCount()
   {
-    return 64;
+    return this.mode80x24 ? 80 : 64;
   }
 
 
   @Override
   public int getCharHeight()
   {
-    return 8;
+    return this.mode80x24 ? 10 : 8;
   }
 
 
   @Override
   public int getCharRowCount()
   {
-    return 32;
+    return this.mode80x24 ? 24 : 32;
   }
 
 
   @Override
   public int getCharRowHeight()
   {
-    return 8;
+    return this.mode80x24 ? 10 : 8;
   }
 
 
   @Override
   public int getCharWidth()
   {
-    return 8;
+    return this.mode80x24 ? 6 : 7;
+  }
+
+
+  @Override
+  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  {
+    return true;
+  }
+
+
+  @Override
+  public int getDefaultFloppyDiskBlockSize()
+  {
+    return this.fdc != null ? 2048 : -1;
+  }
+
+
+  @Override
+  public int getDefaultFloppyDiskDirBlocks()
+  {
+    return this.fdc != null ? 2 : -1;
+  }
+
+
+  @Override
+  public FloppyDiskFormat getDefaultFloppyDiskFormat()
+  {
+    return this.fdc != null ?
+		FloppyDiskFormat.getFormat( 2, 80, 16, 256 )
+		: null;
+  }
+
+
+  @Override
+  public int getDefaultFloppyDiskSystemTracks()
+  {
+    return this.fdc != null ? 2 : -1;
   }
 
 
@@ -310,7 +393,7 @@ public class PCM extends EmuSys implements
       }
     } else {
       if( (this.ramBank == 0)
-	  || ((addr >= 0xC00) && this.upperBank0Enabled) )
+	  || ((addr >= 0xC000) && this.upperBank0Enabled) )
       {
 	rv = this.emuThread.getRAMByte( addr );
       }
@@ -328,19 +411,80 @@ public class PCM extends EmuSys implements
   @Override
   protected int getScreenChar( int chX, int chY )
   {
-    int ch  = -1;
-    int idx = -1;
-    if( (chY & 0x01) == 0 ) {
-      chY /= 2;
-      idx = 0x0400 + (chY * 64) + chX;
+    int ch = -1;
+    if( this.mode80x24 ) {
+      int idx = (chY * 80) + chX;
+      if( (idx >= 0) && (idx < this.ramVideo.length) ) {
+	int b = (int) this.ramVideo[ idx ];
+	switch( b ) {
+	  case 0x01:
+	    ch = '\u00C4';		// Ae
+	    break;
+	  case 0x02:
+	    ch = '\u00D6';		// Oe
+	    break;
+	  case 0x03:
+	    ch = '\u00DC';		// Ue
+	    break;
+	  case 0x04:
+	    ch = '\u00E4';		// ae
+	    break;
+	  case 0x05:
+	    ch = '\u00F6';		// oe
+	    break;
+	  case 0x06:
+	    ch = '\u00FC';		// ue
+	    break;
+	  case 0x07:
+	    ch = '\u00DF';		// sz 
+	    break;
+	  default:
+	    if( (b >= 0x20) && (b < 0x7F) ) {
+	      ch = b;
+	    }
+	}
+      }
     } else {
-      chY /= 2;
-      idx = (chY * 64) + chX;
-    }
-    if( (idx >= 0) && (idx < this.ramVideo.length) ) {
-      int b = (int) this.ramVideo[ idx ];
-      if( (b >= 0x20) && (b < 0x7F) ) {
-	ch = b;
+      int idx = -1;
+      if( (chY & 0x01) == 0 ) {
+	chY /= 2;
+	idx = 0x0400 + (chY * 64) + chX;
+      } else {
+	chY /= 2;
+	idx = (chY * 64) + chX;
+      }
+      if( (idx >= 0) && (idx < this.ramVideo.length) ) {
+	int b = (int) this.ramVideo[ idx ];
+	switch( b ) {
+	  case 0x18:
+	    ch = '\u00C4';		// Ae
+	    break;
+	  case 0x19:
+	    ch = '\u00E4';		// ae
+	    break;
+	  case 0x1A:
+	    ch = '\u00D6';		// Oe
+	    break;
+	  case 0x1B:
+	    ch = '\u00F6';		// oe
+	    break;
+	  case 0x1C:
+	    ch = '\u00DC';		// Ue
+	    break;
+	  case 0x1D:
+	    ch = '\u00FC';		// ue
+	    break;
+	  case 0x1E:
+	    ch = '\u00DF';		// sz 
+	    break;
+	  default:
+	    if( (b >= 0x20) && (b < 0x7F) ) {
+	      ch = b;
+	    }
+	}
+	if( (b >= 0x20) && (b < 0x7F) ) {
+	  ch = b;
+	}
       }
     }
     return ch;
@@ -350,14 +494,21 @@ public class PCM extends EmuSys implements
   @Override
   public int getScreenHeight()
   {
-    return 256;
+    return this.mode80x24 ? 240 : 256;
   }
 
 
   @Override
   public int getScreenWidth()
   {
-    return 512;
+    return this.mode80x24 ? 480 : 448;
+  }
+
+
+  @Override
+  public FloppyDiskInfo[] getSuitableFloppyDisks()
+  {
+    return this.fdc != null ? availableFloppyDisks : null;
   }
 
 
@@ -522,6 +673,13 @@ public class PCM extends EmuSys implements
 	rv = this.sio.readControlB();
 	break;
 
+      case 0x98:
+      case 0x99:
+      case 0x9A:
+      case 0x9B:
+	this.nmiCounter = 3;
+	break;
+
       case 0xC0:
 	if( this.fdc != null ) {
 	  rv = this.fdc.readMainStatusReg();
@@ -595,6 +753,7 @@ public class PCM extends EmuSys implements
 	}
       }
     }
+    this.curFDDrive        = null;
     this.fdcTC             = false;
     this.keyboardUsed      = false;
     this.romEnabled        = true;
@@ -631,7 +790,7 @@ public class PCM extends EmuSys implements
     } else {
       if( (addr >= 0x2000) || !this.romEnabled ) {
 	if( (this.ramBank == 0)
-	    || ((addr >= 0xC00) && this.upperBank0Enabled) )
+	    || ((addr >= 0xC000) && this.upperBank0Enabled) )
 	{
 	  this.emuThread.setRAMByte( addr, value );
 	  rv = true;
@@ -653,7 +812,8 @@ public class PCM extends EmuSys implements
   @Override
   public boolean shouldAskConvertScreenChar()
   {
-    return this.fontBytes != pcmFontBytes;
+    return (this.fontBytes != pcmFontBytes64x16)
+		&& (this.fontBytes != pcmFontBytes80x24);
   }
 
 
@@ -767,9 +927,10 @@ public class PCM extends EmuSys implements
 	if( this.fdc != null ) {
 	  if( this.fdDrives != null ) {
 	    FloppyDiskDrive fdd  = null;
+	    int             v    = (value - 1) & 0x03;
 	    int             mask = 0x01;
 	    for( int i = 0; i < this.fdDrives.length; i++ ) {
-	      if( (value & mask) != 0 ) {
+	      if( (v & mask) != 0 ) {
 		fdd = this.fdDrives[ i ];
 		break;
 	      }
@@ -790,6 +951,14 @@ public class PCM extends EmuSys implements
 
 	/* --- private Methoden --- */
 
+  private static boolean emulates80x24( Properties props )
+  {
+    return EmuUtil.getProperty(
+			props,
+			"jkcemu.pcm.graphic" ).equals( "80x24" );
+  }
+
+
   private static boolean emulatesFloppyDisk( Properties props )
   {
     return EmuUtil.getBooleanProperty(
@@ -806,10 +975,17 @@ public class PCM extends EmuSys implements
 				"jkcemu.pcm.font.file",
 				0x0800 );
     if( this.fontBytes == null ) {
-      if( pcmFontBytes == null ) {
-	pcmFontBytes = readResource( "/rom/pcm/pcmfont.bin" );
+      if( this.mode80x24 ) {
+	if( pcmFontBytes80x24 == null ) {
+	  pcmFontBytes80x24 = readResource( "/rom/pcm/pcmfont_80x24.bin" );
+	}
+	this.fontBytes = pcmFontBytes80x24;
+      } else {
+	if( pcmFontBytes64x16 == null ) {
+	  pcmFontBytes64x16 = readResource( "/rom/pcm/pcmfont_64x16.bin" );
+	}
+	this.fontBytes = pcmFontBytes64x16;
       }
-      this.fontBytes = pcmFontBytes;
     }
   }
 
@@ -822,10 +998,24 @@ public class PCM extends EmuSys implements
 			0x2000,
 			"ROM-Inhalt (Grundbetriebssystem)" );
     if( this.romBytes == null ) {
-      if( rom1RF == null ) {
-	rom1RF = readResource( "/rom/pcm/pcm_1rf.bin" );
+      if( this.fdc != null ) {
+	if( this.mode80x24 ) {
+	  if( romFDC80x24 == null ) {
+	    romFDC80x24 = readResource( "/rom/pcm/pcmsys330_80x24.bin" );
+	  }
+	  this.romBytes = romFDC80x24;
+	} else {
+	  if( romFDC64x16 == null ) {
+	    romFDC64x16 = readResource( "/rom/pcm/pcmsys330_64x16.bin" );
+	  }
+	  this.romBytes = romFDC64x16;
+	}
+      } else {
+	if( romRF64x16 == null ) {
+	  romRF64x16 = readResource( "/rom/pcm/pcmsys210_64x16.bin" );
+	}
+	this.romBytes = romRF64x16;
       }
-      this.romBytes = rom1RF;
     }
     loadFont( props );
   }

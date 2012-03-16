@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,6 +20,7 @@ import jkcemu.disk.*;
 import jkcemu.emusys.*;
 import jkcemu.joystick.*;
 import jkcemu.print.PrintMngr;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -29,54 +30,46 @@ public class EmuThread extends Thread implements
 {
   public enum ResetLevel { NO_RESET, WARM_RESET, COLD_RESET, POWER_ON };
 
-  private ScreenFrm                 screenFrm;
-  private Z80CPU                    z80cpu;
-  private Object                    monitor;
-  private JoystickFrm               joyFrm;
-  private JoystickThread[]          joyThreads;
-  private byte[]                    ram;
-  private byte[]                    ramExtended;
-  private RAMFloppy                 ramFloppy1;
-  private RAMFloppy                 ramFloppy2;
-  private PrintMngr                 printMngr;
-  private Collection<ResetListener> resetListeners;
-  private volatile AudioIn          audioIn;
-  private volatile AudioOut         audioOut;
-  private volatile LoadData         loadData;
-  private volatile ResetLevel       resetLevel;
-  private volatile boolean          emuRunning;
-  private volatile EmuSys           emuSys;
-  private volatile Boolean          iso646de;
+  private ScreenFrm           screenFrm;
+  private Z80CPU              z80cpu;
+  private Object              monitor;
+  private JoystickFrm         joyFrm;
+  private JoystickThread[]    joyThreads;
+  private byte[]              ram;
+  private byte[]              ramExtended;
+  private RAMFloppy           ramFloppy1;
+  private RAMFloppy           ramFloppy2;
+  private PrintMngr           printMngr;
+  private volatile AudioIn    audioIn;
+  private volatile AudioOut   audioOut;
+  private volatile LoadData   loadData;
+  private volatile ResetLevel resetLevel;
+  private volatile boolean    emuRunning;
+  private volatile EmuSys     emuSys;
+  private volatile Boolean    iso646de;
 
 
   public EmuThread( ScreenFrm screenFrm, Properties props )
   {
-    super( "JKCEMU cpu emulation" );
-    this.screenFrm      = screenFrm;
-    this.z80cpu         = new Z80CPU( this, this );
-    this.monitor        = "a monitor object for synchronization";
-    this.joyFrm         = null;
-    this.joyThreads     = new JoystickThread[ 2 ];
+    super( "JKCEMU CPU" );
+    this.screenFrm   = screenFrm;
+    this.z80cpu      = new Z80CPU( this, this );
+    this.monitor     = "a monitor object for synchronization";
+    this.joyFrm      = null;
+    this.joyThreads  = new JoystickThread[ 2 ];
+    this.ram         = new byte[ 0x10000 ];
+    this.ramExtended = null;
+    this.ramFloppy1  = new RAMFloppy();
+    this.ramFloppy2  = new RAMFloppy();
+    this.printMngr   = new PrintMngr();
+    this.audioIn     = null;
+    this.audioOut    = null;
+    this.loadData    = null;
+    this.resetLevel  = ResetLevel.POWER_ON;
+    this.emuRunning  = false;
+    this.emuSys      = null;
     Arrays.fill( this.joyThreads, null );
-    this.ram            = new byte[ 0x10000 ];
-    this.ramExtended    = null;
-    this.ramFloppy1     = new RAMFloppy();
-    this.ramFloppy2     = new RAMFloppy();
-    this.printMngr      = new PrintMngr();
-    this.resetListeners = new ArrayList<ResetListener>();
-    this.audioIn        = null;
-    this.audioOut       = null;
-    this.loadData       = null;
-    this.resetLevel     = ResetLevel.POWER_ON;
-    this.emuRunning     = false;
-    this.emuSys         = null;
     applySettings( props );
-  }
-
-
-  public synchronized void addResetListener( ResetListener listener )
-  {
-    this.resetListeners.add( listener );
   }
 
 
@@ -94,6 +87,7 @@ public class EmuThread extends Thread implements
       emuSys.applySettings( props );
     } else {
       if( emuSys != null ) {
+	emuSys.cancelPastingText();
 	emuSys.die();
       }
       String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
@@ -119,6 +113,8 @@ public class EmuThread extends Thread implements
 		 || sysName.startsWith( "KC85/5" ) )
       {
 	emuSys = new KC85( this, props );
+      } else if( sysName.startsWith( "KCcompact" ) ) {
+	emuSys = new KCcompact( this, props );
       } else if( sysName.startsWith( "KramerMC" ) ) {
 	emuSys = new KramerMC( this, props );
       } else if( sysName.startsWith( "LC80" ) ) {
@@ -142,8 +138,18 @@ public class EmuThread extends Thread implements
       } else {
 	emuSys = new A5105( this, props );
       }
+      ResetLevel resetLevel = ResetLevel.POWER_ON;
+      if( this.emuSys != null ) {
+	String s1 = this.emuSys.getTitle();
+	String s2 = emuSys.getTitle();
+	if( (s1 != null) && (s2 != null) ) {
+	  if( s1.equals( s2 ) ) {
+	    resetLevel = ResetLevel.COLD_RESET;
+	  }
+	}
+      }
       this.emuSys = emuSys;
-      fireReset( ResetLevel.COLD_RESET );
+      fireReset( resetLevel );
     }
 
     // Floppy Disks
@@ -263,6 +269,9 @@ public class EmuThread extends Thread implements
       {
 	rv = Z9001.getDefaultSpeedKHz();
       }
+      else if( sysName.startsWith( "KCcompact" ) ) {
+	rv = KCcompact.getDefaultSpeedKHz();
+      }
       else if( sysName.startsWith( "KramerMC" ) ) {
 	rv = KramerMC.getDefaultSpeedKHz();
       }
@@ -374,6 +383,13 @@ public class EmuThread extends Thread implements
   }
 
 
+  public static boolean isColdReset( EmuThread.ResetLevel resetLevel )
+  {
+    return (resetLevel == EmuThread.ResetLevel.POWER_ON)
+		|| (resetLevel == EmuThread.ResetLevel.POWER_ON);
+  }
+
+
   /*
    * Mit diese Methode wird ermittelt,
    * ob die Tonausgabe auf dem Kassettenrecorderanschluss
@@ -428,7 +444,7 @@ public class EmuThread extends Thread implements
 	}
       }
       if( this.emuSys.getConvertKeyCharToISO646DE() ) {
-	this.emuSys.keyTyped( EmuUtil.toISO646DE( ch ) );
+	this.emuSys.keyTyped( TextUtil.toISO646DE( ch ) );
       } else {
 	this.emuSys.keyTyped( ch );
       }
@@ -456,6 +472,10 @@ public class EmuThread extends Thread implements
   public void setAudioOut( AudioOut audioOut )
   {
     this.audioOut = audioOut;
+    EmuSys emuSys = this.emuSys;
+    if( emuSys != null ) {
+      emuSys.audioOutChanged( audioOut );
+    }
   }
 
 
@@ -710,22 +730,34 @@ public class EmuThread extends Thread implements
 			this.emuSys.getResetStartAddress( this.resetLevel ) );
 	  }
 	}
-	this.resetLevel = ResetLevel.NO_RESET;
 
 	// RAM-Floppies und Druckmanager zuruecksetzen
+	this.printMngr.reset();
 	this.ramFloppy1.reset();
 	this.ramFloppy2.reset();
-	this.printMngr.reset();
-	Collection<ResetListener> resetListeners = this.resetListeners;
-	if( resetListeners != null ) {
-	  synchronized( resetListeners ) {
-	    for( ResetListener listener : resetListeners ) {
-	      listener.resetFired();
-	    }
-	  }
+	if( this.resetLevel == ResetLevel.POWER_ON ) {
+	  this.screenFrm.fireAskClearRAMFloppies();
+	}
+
+	// Fenster informieren
+	final Frame[] frms = Frame.getFrames();
+	if( frms != null ) {
+	  EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    for( Frame f : frms ) {
+		      if( f instanceof BasicFrm ) {
+			((BasicFrm) f).resetFired();
+		      }
+		    }
+		  }
+		} );
 	}
 
 	// in die Z80-Emulation verzweigen
+	this.resetLevel = ResetLevel.NO_RESET;
 	this.z80cpu.run();
       }
       catch( Z80ExternalException ex ) {}

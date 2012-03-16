@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,9 +21,7 @@ import jkcemu.Main;
 import jkcemu.base.*;
 
 
-public class VideoCaptureFrm
-		extends BasicFrm
-		implements ResetListener, Runnable
+public class VideoCaptureFrm extends BasicFrm implements Runnable
 {
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
 
@@ -284,20 +282,14 @@ public class VideoCaptureFrm
     gbcOpt.gridx++;
     panelOpt.add( this.btnPlayInfinite, gbcOpt );
 
-    EmuThread emuThread = this.screenFrm.getEmuThread();
-    if( emuThread != null ) {
-      emuThread.addResetListener( this );
-      this.btnStartAfterReset = new JCheckBox(
+    this.btnStartAfterReset = new JCheckBox(
 					"Aufnahme erst nach RESET starten",
 					false );
-      gbcOpt.insets.bottom = (this.robot != null ? 0: 5);
-      gbcOpt.gridwidth     = GridBagConstraints.REMAINDER;
-      gbcOpt.gridx         = 0;
-      gbcOpt.gridy++;
-      panelOpt.add( this.btnStartAfterReset, gbcOpt );
-    } else {
-      this.btnStartAfterReset = null;
-    }
+    gbcOpt.insets.bottom = (this.robot != null ? 0: 5);
+    gbcOpt.gridwidth     = GridBagConstraints.REMAINDER;
+    gbcOpt.gridx         = 0;
+    gbcOpt.gridy++;
+    panelOpt.add( this.btnStartAfterReset, gbcOpt );
 
     if( this.robot != null ) {
       this.btnFocusedWindowOnly = new JCheckBox(
@@ -415,26 +407,6 @@ public class VideoCaptureFrm
       setScreenCentered();
     }
     setResizable( true );
-  }
-
-
-	/* --- ResetListener --- */
-
-  @Override
-  public void resetFired()
-  {
-    if( this.waitForReset ) {
-      this.waitForReset = false;
-      final JButton btnPause = this.btnPause;
-      EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    btnPause.setEnabled( true );
-		  }
-		} );
-    }
   }
 
 
@@ -594,6 +566,16 @@ public class VideoCaptureFrm
   public void lookAndFeelChanged()
   {
     pack();
+  }
+
+
+  @Override
+  public void resetFired()
+  {
+    if( this.waitForReset ) {
+      this.waitForReset = false;
+      btnPause.setEnabled( true );
+    }
   }
 
 
@@ -767,9 +749,8 @@ public class VideoCaptureFrm
 		}
 	      }
 	    }
-	    if( (this.btnCaptureEmuSysScreen.isSelected()
-			|| this.btnCaptureScreenFrm.isSelected())
-		&& (this.btnStartAfterReset != null) )
+	    if( this.btnCaptureEmuSysScreen.isSelected()
+			|| this.btnCaptureScreenFrm.isSelected() )
 	    {
 	      this.waitForReset = this.btnStartAfterReset.isSelected();
 	    }
@@ -784,9 +765,7 @@ public class VideoCaptureFrm
 	    this.btnCaptureScreenFrm.setEnabled( false );
 	    this.btnCaptureOtherWindow.setEnabled( false );
 	  } else {
-	    if( this.btnStartAfterReset != null ) {
-	      this.waitForReset = this.btnStartAfterReset.isSelected();
-	    }
+	    this.waitForReset = this.btnStartAfterReset.isSelected();
 	  }
 	  if( this.labelWinSelectTime != null ) {
 	    this.labelWinSelectTime.setEnabled( false );
@@ -811,9 +790,7 @@ public class VideoCaptureFrm
 	  this.labelPlayCnt.setEnabled( false );
 	  this.btnPlayOnce.setEnabled( false );
 	  this.btnPlayInfinite.setEnabled( false );
-	  if( this.btnStartAfterReset != null ) {
-	    this.btnStartAfterReset.setEnabled( false );
-	  }
+	  this.btnStartAfterReset.setEnabled( false );
 	  if( this.btnFocusedWindowOnly != null ) {
 	    this.btnFocusedWindowOnly.setEnabled( false );
 	  }

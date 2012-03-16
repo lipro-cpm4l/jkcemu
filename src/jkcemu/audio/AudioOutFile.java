@@ -49,12 +49,11 @@ public class AudioOutFile extends AudioOut
    * wird das Schreiben der Sound-Datei abgebrochen.
    */
   @Override
-  protected void currentTStates( int tStates, int diffTStates )
+  protected void currentDiffTStates( long diffTStates )
   {
     if( diffTStates > this.maxPauseTStates ) {
-      this.lastTStates = tStates;
-      this.enabled     = false;
-      this.audioFrm.fireDisable();
+      this.enabled = false;
+      this.audioFrm.fireFinished();
     }
   }
 
@@ -135,7 +134,7 @@ public class AudioOutFile extends AudioOut
 	this.queue.putPhase( phase );
       }
       if( isMonitorActive() ) {
-	int value = (phase ? PHASE1_VALUE : PHASE0_VALUE);
+	int value = (phase ? MAX_VALUE : 0);
 	for( int i = 0; i < nSamples; i++ ) {
 	  writeMonitorLine( value );
 	}

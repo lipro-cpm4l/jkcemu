@@ -2,52 +2,40 @@
 <body>
  <h1>Hinweise zur Emulation des AC1</h1>
   <ul>
-   <li><a href="ac1.htm#hardware">1. Emulierte Hardware</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#ram64k">1.1. 64&nbsp;KByte&nbsp;RAM</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#fdc">1.2. Floppy-Disk-Modul</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#scch_mod1">1.3. SCCH-Modul&nbsp;1</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#scch_mod3">1.4. SCCH-Modul&nbsp;3</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#scch_inverse">1.5. SCCH-Inversschaltung</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#inverse_key">1.6. Inverstaste (F1)</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#graphic_key">1.7. Grafiktaste (F2)</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#font_switch">1.8. Zeichensatzumschaltung</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#printer">1.9. V24-Schnittstelle mit Drucker</a>
+    <a href="ac1.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="ac1.htm#keyboard">1.1. Tastatur</a></li>
+     <li><a href="ac1.htm#ram64k">1.2. 64&nbsp;KByte&nbsp;RAM</a></li>
+     <li><a href="ac1.htm#color">1.3. Farbgrafik</a></li>
+     <li><a href="ac1.htm#fdc">1.4. Floppy-Disk-Modul</a></li>
+     <li><a href="ac1.htm#scch_mod1">1.5. SCCH-Modul&nbsp;1</a></li>
+     <li><a href="ac1.htm#scch_mod3">1.6. SCCH-Modul&nbsp;3</a></li>
+     <li><a href="ac1.htm#scch_inverse">1.7. SCCH-Inversschaltung</a></li>
+     <li><a href="ac1.htm#inverse_key">1.8. Inverstaste (F1)</a></li>
+     <li><a href="ac1.htm#graphic_key">1.9. Grafiktaste (F2)</a></li>
+     <li><a href="ac1.htm#font_switch">1.10. Zeichensatzumschaltung</a></li>
+     <li><a href="ac1.htm#printer">1.11. V24-Schnittstelle mit Drucker</a></li>
+     <li><a href="ac1.htm#rom2010">1.12. AC1-2010 ROM-B&auml;nke</a></li>
+    </ul>
    </li>
    <li><a href="ac1.htm#software">2. Im ROM enthaltene Software</a></li>
-   <li><a href="ac1.htm#basic">3. BASIC</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#basic_io">3.1. Laden, Speichern und &Ouml;ffnen von BASIC-Programmen</a>
+    <a href="ac1.htm#basic">3. BASIC</a>
+    <ul>
+     <li>
+      <a href="ac1.htm#basic_io">3.1. Laden, Speichern und &Ouml;ffnen von BASIC-Programmen</a>
+     </li>
+     <li><a href="ac1.htm#gsbasic">3.2. Grafik/Sound-BASIC</a></li>
+    </ul>
    </li>
    <li>
-    &nbsp;&nbsp;
-    <a href="ac1.htm#gsbasic">3.2. Grafik/Sound-BASIC</a>
+    <a href="ac1.htm#etc">4. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="ac1.htm#paste">4.1. Einf&uuml;gen von Text aus der Zwischenablage</a>
+     </li>
+    </ul>
    </li>
   </ul>
  <br/>
@@ -58,7 +46,7 @@
   AC1-ACC (die Weiterentwicklung des Amateur Computerclubs Berlin)
   und AC1-SCCH (die Weiterentwicklung des Studio Computerclubs Halle).
   Hinzu kommt ein mit AC1-2010 bezeichneter Entwurf aus dem Jahr&nbsp;2010,
-  der auf dem SCCH-Konzept basiert.
+  der teilweise auf dem SCCH-Konzept basiert.
  <br/><br/>
   Da der AC1 als Bauanleitung ver&ouml;ffentlicht wurde, sind auch
   viele andere Konfigurationen und Weiterentwicklungen anzutreffen.
@@ -72,7 +60,8 @@
      <li>1&nbsp;KByte statischer RAM (SRAM)</li>
      <li>1&nbsp;KByte Bildwiederholspeicher f&uuml;r 64x16 Zeichen</li>
      <li>
-      CTC mit Verbindung von Ausgang Kanal&nbsp;0 auf Eingang Kanal&nbsp;1
+      CTC mit Verbindungen zwischen allen vier Kan&auml;len
+      (0&rarr;1, 1&rarr;2 und 2&rarr;3)
      </li>
      <li>Kassettenrecorderanschluss</li>
     </ul>
@@ -85,7 +74,8 @@
      <li><a href="ac1.htm#ram64k">64&nbsp;KByte&nbsp;RAM</a></li>
      <li>2&nbsp;KByte Bildwiederholspeicher f&uuml;r 64x32 Zeichen</li>
      <li>
-      CTC mit Verbindung von Ausgang Kanal&nbsp;0 auf Eingang Kanal&nbsp;1
+      CTC mit Verbindungen zwischen allen vier Kan&auml;len
+      (0&rarr;1, 1&rarr;2 und 2&rarr;3)
      </li>
      <li>Kassettenrecorderanschluss</li>
     </ul>
@@ -129,39 +119,87 @@
    <li>
     AC1-2010:
     <ul>
-     <li> 
-      Alles wie beim AC1-SCCH,<br/>
-      Im Zeichengenerator ist aber ein anderer Zeichensatz enthalten.
+     <li>
+      Alles wie beim AC1-ACC,<br/>
+      Der ROM enth&auml;lt aber ein 4&nbsp;KByte gro&szlig;es
+      Monitorprogramm,
+      daf&uuml;r entf&auml;llt der Mini-BASIC-Interpreter.
      </li>
-     <li>Inversschaltung &uuml;ber System-PIO&nbsp;B3</li>
+     <li>
+      &quot;Durchschreiben&quot; auf die
+      <a href="ac1.htm#ram64k">64&nbsp;KByte&nbsp;RAM</a>,
+      wenn in dem betreffenden Adressbereich ROM eingeblendet ist
+     </li>
+     <li><a href="ac1.htm#rom2010">AC1-2010 ROM-B&auml;nke</a></li>
+     <li><a href="ac1.htm#scch_inverse">SCCH-Inversschaltung</a></li>
+     <li>
+      Inversschaltung des gesamten Bildschirms &uuml;ber System-PIO&nbsp;B3
+     </li>
+     <li><a href="ac1.htm#graphic_key">Grafiktaste (F2)</a></li>
+     <li><a href="ac1.htm#printer">V24-Schnittstelle mit Drucker</a></li>
+     <li>1&nbsp;<a href="joystick.htm">Joystick</a></li>
     </ul>
    </li>
    <li>
     Optional:
     <ul>
-      <li>
-       Eine RAM-Floppy nach Zeitschrift
-       <em>Mikroprozessortechnik</em> Heft&nbsp;3/1988
-       an der E/A-Basisadresse&nbsp;E0h
-      </li>
-      <li>
-       <a href="ac1.htm#fdc">Floppy-Disk-Modul</a>
-       mit 4&nbsp;Diskettenlaufwerken
-      </li>
-      <li>
-       <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten,<br/>
-       Die E/A-Basisadresse f&uuml;r das GIDE ist einstellbar.
-      </li>
+     <li>
+      <a href="ac1.htm#color">Farbgrafik</a>
+     </li>
+     <li>
+      <a href="ramfloppy.htm">RAM-Floppy</a> nach Zeitschrift
+      <em>Mikroprozessortechnik</em> Heft&nbsp;3/1988
+      an der E/A-Basisadresse&nbsp;E0h
+     </li>
+     <li>
+      <a href="ac1.htm#fdc">Floppy-Disk-Modul</a>
+      mit 4&nbsp;Diskettenlaufwerken
+     </li>
+     <li>
+      <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
+      an der E/A-Basisadressen 80h
+     </li>
+     <li>
+      <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
+      an der E/A-Basisadressen C0h
+     </li>
+     <li>
+      <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
+      an der E/A-Basisadressen FCh
+     </li>
     </ul>
    </li>
   </ul>
  <br/>
 
- <h3><a name="ram64k">1.1. 64&nbsp;KByte&nbsp;RAM</a></h3>
+ <h3><a name="keyboard">1.1. Tastatur</a></h3>
+  Neben den gew&ouml;hnlichen Tasten f&uuml;r Buchstaben, Ziffern und
+  Sonderzeichen werden folgende Steuertasten unterst&uuml;tzt:
+ <br/>
+  <table border="1">
+   <tr><th>Taste</th><th>Erzeugter Tastencode / Bedeutung</th></tr>
+   <tr><td>Home / Pos1</td><td>1</td></tr>
+   <tr><td>Cursor&nbsp;links</td><td>8</td></tr>
+   <tr><td>Cursor&nbsp;rechts</td><td>9</td></tr>
+   <tr><td>Cursor&nbsp;runter</td><td>0Ah</td></tr>
+   <tr><td>Cursor&nbsp;hoch</td><td>0Bh</td></tr>
+   <tr><td>Enter / Return</td><td>0Dh</td></tr>
+   <tr><td>Backspace</td><td>SCCH-Mode: 7Fh, sonst 8</td></tr>
+   <tr><td>Delete / Entf</td><td>SCCH-Mode: 4, sonst 7Fh</td></tr>
+   <tr><td>Insert / Einfg</td><td>5</td></tr>
+   <tr><td>Bild auf</td><td>11h</td></tr>
+   <tr><td>Bild ab</td><td>15h</td></tr>
+   <tr><td>End / Ende</td><td>1Ah</td></tr>
+   <tr><td>F1</td><td><a href="ac1.htm#inverse_key">Inverstaste</a></td></tr>
+   <tr><td>F2</td><td><a href="ac1.htm#graphic_key">Grafiktaste</a></td></tr>
+  </table>
+ <br/><br/>
+
+ <h3><a name="ram64k">1.2. 64&nbsp;KByte&nbsp;RAM</a></h3>
   Bei AC1-ACC, AC1-SCCH und AC1-2010 werden 64&nbsp;KByte&nbsp;RAM emuliert.
   Die unteren 8&nbsp;KByte liegen parallel zum ROM f&uuml;r das Monitorprogramm,
   Bildwiederholspeicher und SRAM und k&ouml;nnen &uuml;ber die IO-Ports
-  1Ch bis 1Fh sowie bei AC1-SCCH und AC1-2010 auch &uuml;ber IO-Port&nbsp;14h
+  1Ch bis 1Fh sowie bei AC1-SCCH auch &uuml;ber IO-Port&nbsp;14h
   ein- und wieder ausgeblendet werden.
  <br/><br/>
   <b>Achtung!</b> Bei AC1-SCCH und AC1-2010 k&ouml;nnen die
@@ -170,8 +208,62 @@
   (sogenanntes &quot;Durchschreiben&quot;).
  <br/><br/>
 
- <h3><a name="fdc">1.2. Floppy-Disk-Modul</a></h3>
-  Das Floppy-Disk-Modul wird an folgenden E/A-Adressen emuliert:
+ <h3><a name="color">1.3. Farbgrafik</a></h3>
+  Optional wird die von Heiko Poppe und Ralph H&auml;nsel entwickelte
+  Farbgrafikkarte emuliert, die auch eine Taktfrequenzumschaltung bietet.
+  Der Farbspeicher liegt parallel zum Zeichenspeicher und
+  enth&auml;lt pro Zeichen eine Vorder- und eine Hintergrundfarbe.
+  Das Ein- und Ausblenden des Farbspeichers erfolgt &uuml;ber
+  das r&uuml;cklesbare Ein-/Ausgabetor F0h, &uuml;ber das zus&auml;tzlich
+  auch die Taktfrequenz umgeschaltet werden kann.
+ <br/><br/>
+  Bedeutung des Ein-/Ausgabetors F0h:
+  <table border="1">
+   <tr>
+    <th></th><th>Bedeutung bei Wert 0</th><th>Bedeutung bei Wert 1</th>
+   </tr>
+   <tr>
+    <td>Bit 0:</td><td>2&nbsp;MHz</td><td>4&nbsp;MHz</td>
+   </tr>
+   <tr>
+    <td>Bit 2:</td>
+    <td>Bildwiederholspeicher f&uuml;r die Zeichencodes eingeblendet</td>
+    <td>Farbspeicher eingeblendet</td>
+   </tr>
+  </table>
+ <br/><br/>
+  Bedeutung einer Speicherzelle im Farbspeicher:
+  <table border="1">
+   <tr><th>Bit</th><th>Bedeutung</th></tr>
+   <tr><td>0</td><td>Vordergrundfarbe rot</td></tr>
+   <tr><td>1</td><td>Vordergrundfarbe gr&uuml;n</td></tr>
+   <tr><td>2</td><td>Vordergrundfarbe blau</td></tr>
+   <tr><td>3</td><td>Vordergrundfarbe intensiv</td></tr>
+   <tr><td>4</td><td>Hintergrundgrundfarbe rot</td></tr>
+   <tr><td>5</td><td>Hintergrundgrundfarbe gr&uuml;n</td></tr>
+   <tr><td>6</td><td>Hintergrundgrundfarbe blau</td></tr>
+   <tr><td>7</td><td>Hintergrundgrundfarbe intensiv</td></tr>
+  </table>
+ <br/><br/>
+  Ist die Emulation der Farbgrafik aktiviert,
+  muss auch das Monitorprogramm den Farbspeicher initialisieren.
+  Anderenfalls sehen Sie nur ein buntes Zufallsbild.
+  Da aber die meisten der in JKCEMU integrierten AC1-Monitorprogramme
+  keine Farbgrafik kennen und somit auch keinen Farbspeicher initialisieren,
+  erledigt das der Emulator bei jedem RESET automatisch,
+  allerdings nur f&uuml;r die betreffenden integrierten Monitorprogramme.
+  Haben Sie das Monitorprogramm als externe Datei eingebunden,
+  dann muss dieses auch die Farbgrafik unterst&uuml;tzen,
+  oder Sie schalten die Emulation der Farbgrafik aus.
+ <br/><br/>
+
+ <h3><a name="fdc">1.4. Floppy-Disk-Modul</a></h3>
+  F&uuml;r den AC1 wurden mehrere Schaltungen f&uuml;r eine
+  Diskettenanbindung entwickelt, die sich teilweise funktional
+  und in den verwendeten Ein-/Ausgabeadressen etwas unterscheiden.
+  JKCEMU <a href="floppydisk.htm">emuliert</a> gleichzeitig
+  mehrere der gel&auml;ufigsten Schaltungen.
+  Konkret werden folgende E/A-Adressen unterst&uuml;tzt:
  <br/>
   <table border="1">
    <tr>
@@ -204,7 +296,7 @@
     </td>
    </tr>
    <tr>
-    <td valign="top">48</td>
+    <td valign="top">48,&nbsp;49</td>
     <td valign="top">W</td>
     <td>Terminal&nbsp;Count (unabh&auml;ngig vom ausgegebenen Wert)</td>
    </tr>
@@ -212,7 +304,7 @@
  <br/><br/>
 
 
- <h3><a name="scch_mod1">1.3. SCCH-Modul&nbsp;1</a></h3>
+ <h3><a name="scch_mod1">1.5. SCCH-Modul&nbsp;1</a></h3>
   Das SCCH-Modul 1 stellt zus&auml;tzlichen ROM zur Verf&uuml;gung,
   und zwar:
   <ul>
@@ -248,7 +340,7 @@
   durch Einbinden von ROM-Dateien festlegen.
  <br/><br/>
 
- <h3><a name="scch_mod3">1.4. SCCH-Modul&nbsp;3</a></h3>
+ <h3><a name="scch_mod3">1.6. SCCH-Modul&nbsp;3</a></h3>
   Das SCCH-Modul 3 stellt je nach Best&uuml;ckung
   64, 128, 256, 320 oder 512&nbsp;KByte zus&auml;tzlichen RAM
   zur Verf&uuml;gung,
@@ -271,7 +363,7 @@
   wird sie in JKCEMU auch RAM vorfinden.
  <br/><br/>
 
- <h3><a name="scch_inverse">1.5. SCCH-Inversschaltung</a></h3>
+ <h3><a name="scch_inverse">1.7. SCCH-Inversschaltung</a></h3>
   Die SCCH-Inversschaltung erkennt die im Bildwiederholspeicher
   stehenden Bytes mit den Werten 10h und 11h.
   Bei 11h wird die Inversdarstellung ein- und bei 10h wieder ausgeschaltet.
@@ -279,7 +371,7 @@
   immer ausgeschaltet.
  <br/><br/>
 
- <h3><a name="inverse_key">1.6. Inverstaste (F1)</a></h3>
+ <h3><a name="inverse_key">1.8. Inverstaste (F1)</a></h3>
   Die SCCH-Inversschaltung enth&auml;lt im Original auch einen Schalter,
   mit dem der gesamte Bildschirm invertiert werden kann.
   JKCEMU emulierte diesen Schalter mit der Taste&nbsp;F1.
@@ -287,7 +379,7 @@
   auch beim Ur-AC1 und beim AC1-ACC emuliert.
  <br/><br/>
 
- <h3><a name="graphic_key">1.7. Grafiktaste (F2)</a></h3>
+ <h3><a name="graphic_key">1.9. Grafiktaste (F2)</a></h3>
   Mit der Grafiktaste&nbsp;(F2) ist die Eingabe von Grafikzeichen
   &uuml;ber die Tastatur m&ouml;glich.
   Dies muss allerdings vom jeweiligen Anwendungsprogramm auch so
@@ -296,7 +388,7 @@
   unterst&uuml;tzt die Grafiktaste.
  <br/><br/>
 
- <h3><a name="font_switch">1.8. Zeichensatzumschaltung</a></h3>
+ <h3><a name="font_switch">1.10. Zeichensatzumschaltung</a></h3>
   Die Zeichensatzumschaltung wird nur beim Monitorprogramm&nbsp;10/88
   emuliert.
   &Uuml;ber die System-PIO kann zwischen dem Zeichensatz des AC1-ACC
@@ -309,7 +401,7 @@
   wird zwichen den unteren und den oberen 2&nbsp;KByte umgeschaltet.
  <br/><br/>
 
- <h3><a name="printer">1.9. V24-Schnittstelle mit Drucker</a></h3>
+ <h3><a name="printer">1.11. V24-Schnittstelle mit Drucker</a></h3>
   Es wird die zus&auml;tzliche PIO (E/A-Adressen&nbsp;08-0Bh)
   mit der dar&uuml;ber realisierten V24-Schnittstelle
   und einem daran angeschlossenen Drucker emuliert.
@@ -325,6 +417,55 @@
   Mit <em>Ctrl-Y</em> schalten Sie das wieder aus.
  <br/><br/>
 
+ <h3><a name="rom2010">1.12. AC1-2010 ROM-B&auml;nke</a></h3>
+  Beim AC1-2010 kann zus&auml;tzlicher ROM in den Arbeitsspeicher
+  eingeblendet werden.
+  Durch Ausgabe des Wertes 10h, 20h, 40h oder 60h auf dem
+  Ausgabetor 0Fh wird im Adressbereich 2000h bis 27FFh
+  eine von vier m&ouml;glichen ROM-B&auml;nken der PIO2-Karte eingeblendet.
+  Der Wert 0 blendet die ROM-Bank aus.
+  Den Inhalt dieser ROM-B&auml;nke k&ouml;nnen Sie in den Einstellungen
+  durch Einbinden einer 8&nbsp;KByte gro&szlig;en ROM-Datei festlegen.
+  Haben Sie keine solche ROM-Datei eingebunden,
+  enth&auml;lt die erste Bank ein Diskettenverwaltungsprogramm
+  und die zweite ein Verwaltungsprogramm f&uuml;r weitere ROM-B&auml;nke.
+ <br/><br/>
+  Diese weiteren ROM-B&auml;nke (16&nbsp;St&uuml;ck) k&ouml;nnen
+  durch Ausgabe eines der Werte F0h bis FFh auf dem Ausgabetor 0Eh
+  im Bereich ab A000h eingeblendet werden.
+  Dabei wird der RAM ab Adresse 8000h ausgeblendet.
+  Die einzelnen Segmente haben unterschiedliche L&auml;ngen.
+  Den Inhalt der ROM-B&auml;nke legen Sie durch Einbinden einer
+  ROM-Datei fest, in der einfach alle Segmente hintereinander
+  enthalten sind (88&nbsp;KByte).
+  Die Tabelle zeigt die Gr&ouml;&szlig;e der einzelnen Segmente
+  sowie deren Anfangsposition in der einzubindenden ROM-Datei:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Segment-Nummer (Ausgabe auf Port&nbsp;0Eh)</th>
+    <th>Segmentgr&ouml;&szlig;e in KByte</th>
+    <th>Anfangsposition in der ROM-Datei</th>
+   </tr>
+   <tr><td>F0h</td><td>8</td><td align="right">0</td></tr>
+   <tr><td>F1h</td><td>8</td><td align="right">2000h</td></tr>
+   <tr><td>F2h</td><td>8</td><td align="right">4000h</td></tr>
+   <tr><td>F3h</td><td>8</td><td align="right">6000h</td></tr>
+   <tr><td>F4h</td><td>4</td><td align="right">8000h</td></tr>
+   <tr><td>F5h</td><td>4</td><td align="right">9000h</td></tr>
+   <tr><td>F6h</td><td>2</td><td align="right">A000h</td></tr>
+   <tr><td>F7h</td><td>2</td><td align="right">A800h</td></tr>
+   <tr><td>F8h</td><td>8</td><td align="right">B000h</td></tr>
+   <tr><td>F9h</td><td>8</td><td align="right">D000h</td></tr>
+   <tr><td>FAh</td><td>8</td><td align="right">F000h</td></tr>
+   <tr><td>FBh</td><td>8</td><td align="right">11000h</td></tr>
+   <tr><td>FCh</td><td>4</td><td align="right">13000h</td></tr>
+   <tr><td>FDh</td><td>4</td><td align="right">14000h</td></tr>
+   <tr><td>FEh</td><td>2</td><td align="right">15000h</td></tr>
+   <tr><td>FFh</td><td>2</td><td align="right">15800h</td></tr>
+  </table>
+ <br/><br/>
+
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   <ul>
@@ -336,13 +477,21 @@
     </ul>
    </li>
    <li>
-    Bei AC1-SCCH und AC1-2010:
+    Bei AC1-SCCH:
     <ul>
      <li>
       Je nach Einstellung SCCH-Monitor Version&nbsp;8.0
       oder Version&nbsp;10/88
      </li>
      <li>Grafik/Sound-BASIC Version&nbsp;3.2</li>
+    </ul>
+   </li>
+   <li>
+    Bei AC1-2010:
+    <ul>
+     <li>AC1-2010-Monitorprogramm f&uuml;r Farbgrafik</li>
+     <li>FDC-Routinen Version&nbsp;1.17</li>
+     <li>ROM-Bank-Verwaltungssoftware Version&nbsp;3.1</li>
     </ul>
    </li>
   </ul>
@@ -394,6 +543,33 @@
   Dabei wird auch der BASIC-ROM in den Vordergrund geholt.
   Einen Warmstart des Interpreters f&uuml;hren Sie mit dem Kommando
   <em>r</em> aus.
+ <br/><br/>
+
+ <h2><a name="etc">4. Sonstiges</a></h2>
+
+ <h3>
+  <a name="paste">4.1. Einf&uuml;gen von Text aus der Zwischenablage</a>
+ </h3>
+  Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt gew&ouml;hnlich
+  in der Form, dass f&uuml;r jedes einzuf&uuml;gende Zeichen
+  das Dr&uuml;cken der entsprechenden Taste bzw. Tastenkombination
+  simuliert wird. Dieses Prinzip ist recht langsam.
+  F&uuml;r den AC1 gibt es in den
+  <a href="settings.htm">Einstellungen</a> die Option
+  <em>Einf&uuml;gen von Text durch Abfangen des Systemaufrufs</em>.
+  Bei dieser Option lauscht der Emulator auf der Adresse 1802h,
+  dem Einsprung zur Systemfunktion zum Lesen eines Zeichens
+  von der Tastatur.
+  Wenn diese Systemfunktion aufgerufen wird, pr&uuml;ft JKCEMU,
+  ob ein Zeichen eingef&uuml;gt werden soll.
+  Wenn ja, schreibt er das n&auml;chste einzuf&uuml;gende Zeichen
+  in das entsprechende Prozessorregister und simuliert einen RETURN-Befehl.
+  Sollten das Betriebssystem oder das Anwendungsprogramm die Tastatur nicht
+  &uuml;ber diesen Einsprungpunkt abfragen,
+  funktioniert das Einf&uuml;gen von Text nicht,
+  und Sie m&uuml;ssen die Option ausschalten.
+  Ebenfalls ausschalten m&uuml;ssen Sie die Option bei Verwendung
+  eines anderen (z.B. CP/M-kompatiblen) Betriebssystems.
 </body>
 </html>
 

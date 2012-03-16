@@ -5,52 +5,31 @@
   Eigenbau-Computer.
  <br/>
   <ul>
-   <li><a href="llc2.htm#hardware">1. Emulierte Hardware</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#memory">1.1. Speicher</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#scch_mod1">1.2. SCCH-Modul&nbsp;1</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#scch_mod3">1.3. SCCH-Modul&nbsp;3</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#scch_inverse">1.4. SCCH-Inversschaltung</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#inverse_key">1.6. Inverstaste (F1)</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#graphic_key">1.7. Grafiktaste (F2)</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#fdc">1.8. Floppy-Disk-Modul</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#printer">1.9. V24-Schnittstelle mit Drucker</a>
+    <a href="llc2.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="llc2.htm#memory">1.1. Speicher</a></li>
+     <li><a href="llc2.htm#scch_mod1">1.2. SCCH-Modul&nbsp;1</a></li>
+     <li><a href="llc2.htm#scch_mod3">1.3. SCCH-Modul&nbsp;3</a></li>
+     <li><a href="llc2.htm#scch_inverse">1.4. SCCH-Inversschaltung</a></li>
+     <li>
+      <a href="llc2.htm#pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+     </li>
+     <li><a href="llc2.htm#inverse_key">1.6. Inverstaste (F1)</a></li>
+     <li><a href="llc2.htm#graphic_key">1.7. Grafiktaste (F2)</a></li>
+     <li><a href="llc2.htm#fdc">1.8. Floppy-Disk-Modul</a></li>
+     <li><a href="llc2.htm#printer">1.9. V24-Schnittstelle mit Drucker</a></li>
+    </ul>
    </li>
    <li><a href="llc2.htm#software">2. Im ROM enthaltene Software</a></li>
-   <li><a href="llc2.htm#basic">3. BASIC</a>
    <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#gsbasic">3.1. Grafik/Sound-BASIC</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="llc2.htm#basic_save">3.2. Speichern von BASIC-Programmen</a>
+    <a href="llc2.htm#basic">3. BASIC</a>
+    <ul>
+     <li><a href="llc2.htm#gsbasic">3.1. Grafik/Sound-BASIC</a></li>
+     <li>
+      <a href="llc2.htm#basic_save">3.2. Speichern von BASIC-Programmen</a>
+     </li>
+    </ul>
    </li>
   </ul>
  <br/>
@@ -61,10 +40,6 @@
    <li>64 KByte RAM inklusive Bildwiederholspeicher</li>
    <li>CTC mit Verbindung von Ausgang Kanal 1 auf Eingang Kanal 3</li>
    <li>Kassettenrecorderanschluss</li>
-   <li>
-    Zwei RAM-Floppies nach Zeitschrift <em>Mikroprozessortechnik</em>
-    Heft&nbsp;3/1988 an den IO-Basisadressen&nbsp;D0h und&nbsp;B0h
-   </li>
    <li>
     <a href="llc2.htm#scch_mod1">SCCH-Modul&nbsp;1</a>
     (zus&auml;tzlicher ROM)
@@ -79,12 +54,30 @@
    </li>
    <li><a href="llc2.htm#inverse_key">Inverstaste (F1)</a></li>
    <li><a href="llc2.htm#graphic_key">Grafiktaste (F2)</a></li>
-   <li><a href="llc2.htm#fdc">Floppy-Disk-Modul</a></li>
    <li>
     <a href="llc2.htm#printer">V24-Schnittstelle mit Drucker</a>
    </li>
    <li>1&nbsp;<a href="joystick.htm">Joystick</a></li>
    <li>Vollgrafikerweiterung HIRES</li>
+   <li>
+    Optional:
+    <ul>
+     <li>
+      Zwei <a href="ramfloppy.htm">RAM-Floppies</a>
+      nach Zeitschrift <em>Mikroprozessortechnik</em>
+      Heft&nbsp;3/1988 an den IO-Basisadressen&nbsp;D0h und&nbsp;B0h
+     </li>
+     <li><a href="llc2.htm#fdc">Floppy-Disk-Modul</a></li>
+     <li>
+       <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
+       an der E/A-Basisadressen C0h
+      </li>
+      <li>
+       <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
+       an der E/A-Basisadressen FCh
+      </li>
+     </ul>
+    </li>
   </ul>
  <br/>
 
@@ -186,7 +179,8 @@
  <br/><br/>
 
  <h3><a name="fdc">1.8. Floppy-Disk-Modul</a></h3>
-  Das Floppy-Disk-Modul wird an folgenden E/A-Adressen emuliert:
+  Das Floppy-Disk-Modul wird an folgenden E/A-Adressen
+  <a href="floppydisk.htm">emuliert</a>:
  <br/>
   <table border="1">
    <tr>

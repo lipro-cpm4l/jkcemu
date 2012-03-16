@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,11 @@ import jkcemu.emusys.a5105.A5105SettingsFld;
 import jkcemu.emusys.ac1_llc2.*;
 import jkcemu.emusys.etc.*;
 import jkcemu.emusys.kc85.KC85SettingsFld;
+import jkcemu.emusys.kccompact.KCcompactSettingsFld;
+import jkcemu.emusys.lc80.LC80SettingsFld;
 import jkcemu.emusys.z1013.Z1013SettingsFld;
+import jkcemu.emusys.z9001.Z9001SettingsFld;
+import jkcemu.net.KCNetSettingsFld;
 
 
 public class SettingsFrm extends BasicFrm
@@ -39,6 +43,7 @@ public class SettingsFrm extends BasicFrm
   private File                        profileFile;
   private Map<String,AbstractButton>  lafClass2Button;
   private SpinnerNumberModel          spinnerModelMargin;
+  private KCNetSettingsFld            tabKCNet;
   private JPanel                      tabConfirm;
   private JPanel                      tabEtc;
   private JPanel                      tabLAF;
@@ -67,6 +72,7 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                btnSysKC85_4;
   private JRadioButton                btnSysKC85_5;
   private JRadioButton                btnSysKC87;
+  private JRadioButton                btnSysKCcompact;
   private JRadioButton                btnSysKramerMC;
   private JRadioButton                btnSysLC80;
   private JRadioButton                btnSysLLC1;
@@ -101,6 +107,8 @@ public class SettingsFrm extends BasicFrm
   private KC85SettingsFld             kc85_3_SettingsFld;
   private KC85SettingsFld             kc85_4_SettingsFld;
   private KC85SettingsFld             kc85_5_SettingsFld;
+  private KCcompactSettingsFld        kcCompactSettingsFld;
+  private LC80SettingsFld             lc80SettingsFld;
   private PCMSettingsFld              pcmSettingsFld;
   private Z1013SettingsFld            z1013SettingsFld;
   private Z9001SettingsFld            kc87SettingsFld;
@@ -247,18 +255,24 @@ public class SettingsFrm extends BasicFrm
     this.btnSysKC85_5 = new JRadioButton( "KC85/5", false );
     this.btnSysKC85_5.addActionListener( this );
     grpSys.add( this.btnSysKC85_5 );
-    gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC85_5, gbcSys );
 
     this.btnSysKC87 = new JRadioButton( "KC87", false );
     this.btnSysKC87.addActionListener( this );
     grpSys.add( this.btnSysKC87 );
+    gbcSys.insets.bottom = 5;
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysKC87, gbcSys );
+
+    this.btnSysKCcompact = new JRadioButton( "KC compact", false );
+    this.btnSysKCcompact.addActionListener( this );
+    grpSys.add( this.btnSysKCcompact );
     gbcSys.insets.top    = 5;
     gbcSys.insets.bottom = 0;
     gbcSys.gridy         = 0;
     gbcSys.gridx++;
-    panelSys.add( this.btnSysKC87, gbcSys );
+    panelSys.add( this.btnSysKCcompact, gbcSys );
 
     this.btnSysKramerMC = new JRadioButton( "Kramer-MC", false );
     this.btnSysKramerMC.addActionListener( this );
@@ -324,7 +338,6 @@ public class SettingsFrm extends BasicFrm
     this.btnSysZ9001 = new JRadioButton( "Z9001", false );
     this.btnSysZ9001.addActionListener( this );
     grpSys.add( this.btnSysZ9001 );
-    gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysZ9001, gbcSys );
 
@@ -523,6 +536,13 @@ public class SettingsFrm extends BasicFrm
     this.panelSysOpt.add( this.kc87SettingsFld, "KC87" );
 
 
+    // Optionen fuer KC compact
+    this.kcCompactSettingsFld = new KCcompactSettingsFld(
+						this,
+						"jkcemu.kccompact." );
+    this.panelSysOpt.add( this.kcCompactSettingsFld, "KCcompact" );
+
+
     // Optionen fuer Kramer-MC
     JPanel panelKramerMC = new JPanel( new GridBagLayout() );
     this.panelSysOpt.add( panelKramerMC, "KramerMC" );
@@ -544,52 +564,8 @@ public class SettingsFrm extends BasicFrm
 
 
     // Optionen fuer LC80
-    JPanel panelLC80 = new JPanel( new GridBagLayout() );
-    this.panelSysOpt.add( panelLC80, "LC80" );
-
-    GridBagConstraints gbcLC80 = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.NORTHWEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
-
-    ButtonGroup grpLC80 = new ButtonGroup();
-
-    this.btnLC80_U505 = new JRadioButton(
-		"LC-80, 2 KByte ROM (2xU505), 1 KByte RAM",
-		false );
-    this.btnLC80_U505.addActionListener( this );
-    grpLC80.add( this.btnLC80_U505 );
-    panelLC80.add( this.btnLC80_U505, gbcLC80 );
-
-    this.btnLC80_2716 = new JRadioButton(
-		"LC-80, 2 KByte ROM (2716), 4 KByte RAM",
-		true );
-    this.btnLC80_2716.addActionListener( this );
-    grpLC80.add( this.btnLC80_2716 );
-    gbcLC80.insets.top = 0;
-    gbcLC80.gridy++;
-    panelLC80.add( this.btnLC80_2716, gbcLC80 );
-
-    this.btnLC80_2 = new JRadioButton(
-		"LC-80.2, 4 KByte ROM mit Buschendorf-Monitor, 4 KByte RAM",
-		false );
-    this.btnLC80_2.addActionListener( this );
-    grpLC80.add( this.btnLC80_2 );
-    gbcLC80.gridy++;
-    panelLC80.add( this.btnLC80_2, gbcLC80 );
-
-    this.btnLC80e = new JRadioButton(
-		"LC-80e, 12 KByte ROM mit Schachprogramm SC-80, 4 KByte RAM",
-		false );
-    this.btnLC80e.addActionListener( this );
-    grpLC80.add( this.btnLC80e );
-    gbcLC80.insets.bottom = 5;
-    gbcLC80.gridy++;
-    panelLC80.add( this.btnLC80e, gbcLC80 );
+    this.lc80SettingsFld = new LC80SettingsFld( this, "jkcemu.lc80." );
+    this.panelSysOpt.add( this.lc80SettingsFld, "LC80" );
 
 
     // Optionen fuer LLC2
@@ -600,6 +576,7 @@ public class SettingsFrm extends BasicFrm
     // Optionen fuer PC/M
     this.pcmSettingsFld = new PCMSettingsFld( this, "jkcemu.pcm." );
     this.panelSysOpt.add( this.pcmSettingsFld, "PC/M" );
+
 
     // Optionen fuer Z1013
     this.z1013SettingsFld = new Z1013SettingsFld( this, "jkcemu.z1013." );
@@ -858,6 +835,11 @@ public class SettingsFrm extends BasicFrm
 	}
       }
     }
+
+
+    // Bereich Netzwerk
+    this.tabKCNet = new KCNetSettingsFld( this, "jkcemu.net." );
+    this.tabbedPane.addTab( "Netzwerk", this.tabKCNet );
 
 
     // Bereich Sonstiges
@@ -1121,6 +1103,7 @@ public class SettingsFrm extends BasicFrm
 		   || (src == this.btnSysKC85_4)
 		   || (src == this.btnSysKC85_5)
 		   || (src == this.btnSysKC87)
+		   || (src == this.btnSysKCcompact)
 		   || (src == this.btnSysKramerMC)
 		   || (src == this.btnSysLC80)
 		   || (src == this.btnSysLLC1)
@@ -1164,6 +1147,7 @@ public class SettingsFrm extends BasicFrm
   @Override
   public void lookAndFeelChanged()
   {
+    this.tabKCNet.lookAndFeelChanged();
     this.a5105SettingsFld.lookAndFeelChanged();
     this.ac1SettingsFld.lookAndFeelChanged();
     this.llc2SettingsFld.lookAndFeelChanged();
@@ -1196,14 +1180,23 @@ public class SettingsFrm extends BasicFrm
 
   private void doApply() throws UserInputException
   {
-    Properties props = new Properties();
-    Component  tab   = null;
+    Properties props    = new Properties();
+    Properties oldProps = Main.getProperties();
+    if( oldProps != null ) {
+      props.putAll( oldProps );
+    }
+    Component tab = null;
     try {
       tab = this.tabConfirm;
       applyConfirm( props );
 
       tab = this.tabEtc;
       applyEtc( props );
+
+      tab = this.tabKCNet;
+      this.tabKCNet.applyInput(
+		props,
+		this.tabbedPane.getSelectedComponent() == this.tabKCNet );
 
       tab = this.tabScreen;
       applyScreen( props );
@@ -1617,19 +1610,14 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysKC87.isSelected() ) {
       valueSys = "KC87";
     }
+    else if( this.btnSysKCcompact.isSelected() ) {
+      valueSys = "KCcompact";
+    }
     else if( this.btnSysKramerMC.isSelected() ) {
       valueSys = "KramerMC";
     }
     else if( this.btnSysLC80.isSelected() ) {
-      if( this.btnLC80_U505.isSelected() ) {
-	valueSys = "LC80_U505";
-      } else if( this.btnLC80_2.isSelected() ) {
-	valueSys = "LC80.2";
-      } else if( this.btnLC80e.isSelected() ) {
-	valueSys = "LC80e";
-      } else {
-	valueSys = "LC80_2716";
-      }
+      valueSys = this.lc80SettingsFld.getModelText();
     }
     else if( this.btnSysLLC1.isSelected() ) {
       valueSys = "LLC1";
@@ -1712,11 +1700,21 @@ public class SettingsFrm extends BasicFrm
     // Optionen fuer KC87
     this.kc87SettingsFld.applyInput( props, valueSys.equals( "KC87" ) );
 
+    // Optionen fuer KC compact
+    this.kcCompactSettingsFld.applyInput(
+					props,
+					valueSys.equals( "KCcompact" ) );
+
     // Optionen fuer Kramer-MC
     props.setProperty(
 		"jkcemu.kramermc.catch_print_calls",
 		Boolean.toString(
 			this.btnKramerMCCatchPrintCalls.isSelected() ) );
+
+    // Optionen fuer LC80
+    this.lc80SettingsFld.applyInput(
+		props,
+		valueSys.startsWith( "LC80" ) );
 
     // Optionen fuer LLC2
     this.llc2SettingsFld.applyInput( props, valueSys.equals( "LLC2" ) );
@@ -1872,6 +1870,9 @@ public class SettingsFrm extends BasicFrm
     else if( sysName.startsWith( "KC87" ) ) {
       this.btnSysKC87.setSelected( true );
     }
+    else if( sysName.startsWith( "KCcompact" ) ) {
+      this.btnSysKCcompact.setSelected( true );
+    }
     else if( sysName.startsWith( "KramerMC" ) ) {
       this.btnSysKramerMC.setSelected( true );
     }
@@ -1980,6 +1981,9 @@ public class SettingsFrm extends BasicFrm
     // Optionen fuer KC87
     this.kc87SettingsFld.updFields( props );
 
+    // Optionen fuer KC compact
+    this.kcCompactSettingsFld.updFields( props );
+
     // Optionen fuer LLC2
     this.llc2SettingsFld.updFields( props );
 
@@ -1987,15 +1991,7 @@ public class SettingsFrm extends BasicFrm
     this.pcmSettingsFld.updFields( props );
 
     // Optionen fuer LC80
-    if( sysName.startsWith( "LC80_U505" ) ) {
-      this.btnLC80_U505.setSelected( true );
-    } else if( sysName.startsWith( "LC80.2" ) ) {
-      this.btnLC80_2.setSelected( true );
-    } else if( sysName.startsWith( "LC80e" ) ) {
-      this.btnLC80e.setSelected( true );
-    } else {
-      this.btnLC80_2716.setSelected( true );
-    }
+    this.lc80SettingsFld.updFields( props );
 
     // Optionen fuer Z1013
     this.z1013SettingsFld.updFields( props );
@@ -2099,7 +2095,11 @@ public class SettingsFrm extends BasicFrm
     }
 
 
-    // sonstiges
+    // Netzwerk
+    this.tabKCNet.updFields( props );
+
+
+    // Sonstiges
     if( EmuUtil.getProperty(
 		props,
 		"jkcemu.filedialog" ).toLowerCase().equals( "native" ) )
@@ -2170,6 +2170,9 @@ public class SettingsFrm extends BasicFrm
     }
     else if( this.btnSysKC87.isSelected() ) {
       cardName = "KC87";
+    }
+    else if( this.btnSysKCcompact.isSelected() ) {
+      cardName = "KCcompact";
     }
     else if( this.btnSysKramerMC.isSelected() ) {
       cardName = "KramerMC";

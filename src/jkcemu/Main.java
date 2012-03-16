@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,6 +20,8 @@ import jkcemu.base.*;
 
 public class Main
 {
+  public static final String VERSION = "JKCEMU Version 0.9";
+
   private static Map<String,Image> images    = new Hashtable<String,Image>();
   private static Map<String,File>  lastFiles = new Hashtable<String,File>();
   private static Properties        lastDirs  = new Properties();
@@ -36,7 +38,9 @@ public class Main
   private static int                      printFontSize     = 12;
   private static PrintRequestAttributeSet printRequestAttrs = null;
   private static ScreenFrm                screenFrm         = null;
+  private static MediaTracker             mediaTracker      = null;
   private static java.util.List<Image>    iconImages        = null;
+  private static int                      imageIDCounter    = 0;
 
 
   public static void main( String[] args )
@@ -48,7 +52,7 @@ public class Main
       baseDirName = emptyToNull( System.getenv( "APPDATA" ) );
       if( baseDirName == null ) {
 	baseDirName = emptyToNull( System.getProperty( "user.home" ) );
-	if( File.separatorChar == '/' ) {
+	if( isUnixLikeOS() ) {
 	  subDirName = ".jkcemu";
 	}
       }
@@ -61,6 +65,7 @@ public class Main
     }
     lastDirsFile = new File( configDir, "lastdirs.xml" );
     screenFrm    = new ScreenFrm();
+    mediaTracker = new MediaTracker( screenFrm );
     if( configDir.exists() ) {
       firstExec      = false;
       InputStream in = null;
@@ -130,6 +135,7 @@ public class Main
     // Profil anwenden
     screenFrm.setEmuThread( new EmuThread( screenFrm, props ) );
     applyProfileToFrames( file, props, true, null );
+    screenFrm.lookAndFeelChanged();
     if( props != null ) {
       screenFrm.getFloppyDiskStationFrm().openDisks( props );
     } else {
@@ -162,7 +168,7 @@ public class Main
 	String className = props.getProperty(
 				"jkcemu.lookandfeel.classname" );
 	if( className != null ) {
-	  if( className.length() > 0 ) {
+	  if( !className.isEmpty() ) {
 	    lafChanged = !EmuUtil.equalsLookAndFeel( className );
 	    if( lafChanged ) {
 	      try {
@@ -231,6 +237,11 @@ public class Main
       if( url != null ) {
 	img = screenFrm.getToolkit().createImage( url );
 	if( img != null ) {
+	  try {
+	    mediaTracker.addImage( img, imageIDCounter++ );
+	    mediaTracker.waitForAll();
+	  }
+	  catch( InterruptedException ex ) {}
 	  images.put( imgName, img );
 	}
       }
@@ -363,15 +374,15 @@ public class Main
   }
 
 
-  public static String getVersion()
-  {
-    return "JKCEMU Version 0.8.2";
-  }
-
-
   public static boolean isFirstExecution()
   {
     return firstExec;
+  }
+
+
+  public static boolean isUnixLikeOS()
+  {
+    return File.separatorChar == '/';
   }
 
 

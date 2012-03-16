@@ -48,21 +48,19 @@ public class AudioInLine extends AudioIn
 	/* --- ueberschriebene Methoden --- */
 
   /*
-   * Mit dieser Methode erfaehrt die Klasse den aktuellen
-   * Taktzyklenzahlerstand und die Anzahl der seit dem letzten
-   * Aufruf vergangenen Taktzyklen.
+   * Mit dieser Methode erfaehrt die Klasse die Anzahl
+   * der seit dem letzten Aufruf vergangenen Taktzyklen.
    *
    * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
    * Audio-Daten ignoriert.
    */
   @Override
-  protected void currentTStates( int tStates, int diffTStates )
+  protected void currentDiffTStates( long diffTStates )
   {
     if( diffTStates > this.maxPauseTStates ) {
-      this.lastTStates = tStates;
-      this.minValue    = 0;
-      this.maxValue    = 0;
-      DataLine line    = this.dataLine;
+      this.minValue = 0;
+      this.maxValue = 0;
+      DataLine line = this.dataLine;
       if( line != null ) {
 	line.flush();
       }

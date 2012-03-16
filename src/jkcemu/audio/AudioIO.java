@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,7 +21,7 @@ public abstract class AudioIO
   protected boolean     firstCall;
   protected boolean     progressEnabled;
   protected boolean     lastPhase;
-  protected int         lastTStates;
+  protected long        lastTStates;
   protected int         tStatesPerFrame;
   protected String      errorText;
 
@@ -36,7 +36,7 @@ public abstract class AudioIO
     this.firstCall       = true;
     this.progressEnabled = false;
     this.lastPhase       = false;
-    this.lastTStates     = 0;
+    this.lastTStates     = 0L;
     this.tStatesPerFrame = 0;
     this.errorText       = null;
     this.monitorLine     = null;
@@ -46,15 +46,20 @@ public abstract class AudioIO
 
 
   /*
-   * Die Methode wird aufgerufen um den aktuellen Zaehlerstand
-   * der Taktzyklen sowie die Anzahl der Taktzyklen seit dem
-   * letzten Aufruf mitzuteilen.
+   * Die Methode wird aufgerufen, um die Anzahl der Taktzyklen
+   * seit dem letzten Aufruf mitzuteilen.
    * Abgeleitete Klassen koennen diese Methode ueberschreiben,
    * um z.B. auf eine zu lange Pause zu reagieren.
    */
-  protected void currentTStates( int tStates, int diffTStates )
+  protected void currentDiffTStates( long diffTStates )
   {
     // empty
+  }
+
+
+  public AudioFormat getAudioFormat()
+  {
+    return this.audioFmt;
   }
 
 

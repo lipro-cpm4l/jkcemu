@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,6 +25,7 @@ import javax.swing.table.*;
 import jkcemu.audio.AudioUtil;
 import jkcemu.base.*;
 import jkcemu.disk.*;
+import jkcemu.image.ImgUtil;
 
 
 public class FilePreviewFld extends JPanel
@@ -319,53 +320,18 @@ public class FilePreviewFld extends JPanel
 		  {
 		    cardName = "file.table";
 		  }
-		} else if( fileNode.isAnadiskFile() ) {
+		} else if( fileNode.isNonPlainDiskFile() ) {
 		  if( checkFileSize( file.length(), maxFileSize ) ) {
 		    try {
-		      if( addDiskInfo(
+		      AbstractFloppyDisk disk = DiskUtil.readNonPlainDiskFile(
+								this.owner,
+								file );
+		      if( disk != null ) {
+			addDiskInfo(
 				infoItems,
-				fileNode.isCompressedFile() ?
-						"Komprimierte Anadisk-Datei"
-						: "Anadisk-Datei",
-				AnadiskFloppyDisk.readFile(
-							this.owner,
-							file ),
-				sortCaseSensitive ) )
-		      {
-			cardName = "file.table";
-		      }
-		    }
-		    catch( IOException ex ) {}
-		  }
-		} else if( fileNode.isCopyQMFile() ) {
-		  if( checkFileSize( file.length(), maxFileSize ) ) {
-		    try {
-		      if( addDiskInfo(
-				infoItems,
-				fileNode.isCompressedFile() ?
-						"Komprimierte CopyQM-Datei"
-						: "CopyQM-Datei",
-				CopyQMFloppyDisk.readFile( this.owner, file ),
-				sortCaseSensitive ) )
-		      {
-			cardName = "file.table";
-		      }
-		    }
-		    catch( IOException ex ) {}
-		  }
-		} else if( fileNode.isTelediskFile() ) {
-		  if( checkFileSize( file.length(), maxFileSize ) ) {
-		    try {
-		      if( addDiskInfo(
-				infoItems,
-				fileNode.isCompressedFile() ?
-						"Komprimierte Teledisk-Datei"
-						: "Teledisk-Datei",
-				TelediskFloppyDisk.readFile(
-							this.owner,
-							file ),
-				sortCaseSensitive ) )
-		      {
+				fileNode.isCompressedFile(),
+				disk,
+				sortCaseSensitive );
 			cardName = "file.table";
 		      }
 		    }
@@ -437,7 +403,7 @@ public class FilePreviewFld extends JPanel
   {
     super.addNotify();
     if( this.thread == null ) {
-      Thread thread = new Thread( this, "JKCEMU file browser details viewer" );
+      Thread thread = new Thread( this, "JKCEMU File Browser Details Viewer" );
       this.thread   = thread;
       thread.setDaemon( true );
       thread.start();
@@ -474,7 +440,7 @@ public class FilePreviewFld extends JPanel
 	    }
 	  }
 	  if( fFmt != null ) {
-	    infoItems.put( FileInfoFld.Item.TYPE, "Audio-Datei" );
+	    infoItems.put( FileInfoFld.Item.TYPE, "Sound-Datei" );
 	    Object author = fFmt.getProperty( "author" );
 	    if( author != null ) {
 	      infoItems.put( FileInfoFld.Item.AUTHOR, author );
@@ -620,14 +586,20 @@ public class FilePreviewFld extends JPanel
 
   private boolean addDiskInfo(
 			Map<FileInfoFld.Item,Object> infoItems,
-			String                       typeText,
+			boolean                      compressed,
 			AbstractFloppyDisk           disk,
 			boolean                      sortCaseSensitive )
   {
     boolean               rv      = false;
     Collection<FileEntry> entries = DiskUtil.readDirectory( disk );
     if( entries != null ) {
-      infoItems.put( FileInfoFld.Item.TYPE, typeText );
+      String fmtText = disk.getFileFormatText();
+      if( fmtText == null ) {
+	fmtText = "Diskettenabbilddatei";
+      }
+      if( compressed ) {
+	fmtText = "Komprimierte " + fmtText;
+      }
       this.fileTableModel.clear( false );
       for( FileEntry entry : entries ) {
 	this.fileTableModel.addRow( entry, false );
@@ -663,12 +635,7 @@ public class FilePreviewFld extends JPanel
 	  catch( Exception ex ) {}
 	}
 	if( image != null ) {
-	  try {
-	    MediaTracker mt = new MediaTracker( this );
-	    mt.addImage( image, 1 );
-	    mt.waitForID( 1, 100 );
-	  }
-	  catch( InterruptedException ex ) {}
+	  ImgUtil.ensureImageLoaded( this, image );
 	} else {
 	  image = ImageIO.read( file );
 	}
@@ -676,13 +643,10 @@ public class FilePreviewFld extends JPanel
 	  infoItems.put( FileInfoFld.Item.TYPE, "Bilddatei" );
 	  int w = image.getWidth( this );
 	  int h = image.getHeight( this );
-	  StringBuilder buf = new StringBuilder( 256 );
 	  if( (w > 0) && (h > 0) ) {
-	    buf.append( w );
-	    buf.append( "x" );
-	    buf.append( h );
-	    buf.append( " Pixel" );
-	    infoItems.put( FileInfoFld.Item.FORMAT, buf.toString() );
+	    infoItems.put(
+			FileInfoFld.Item.FORMAT,
+			String.format( "%dx%d Pixel", w, h ) );
 	  }
 	  Object date = image.getProperty( "date", this );
 	  if( date != null ) {

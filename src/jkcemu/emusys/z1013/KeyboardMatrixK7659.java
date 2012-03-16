@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -42,9 +42,9 @@ public class KeyboardMatrixK7659 extends KeyboardMatrix12x8
     this.matrixNormal = myMatrixNormal;
     this.matrixShift  = myMatrixShift;
     this.ctrlCol      = 7;
-    this.ctrlValue    = 8;
+    this.ctrlValue    = 0x80;
     this.shiftCol     = 7;
-    this.shiftValue   = 7;
+    this.shiftValue   = 0x40;
   }
 
 
@@ -64,33 +64,27 @@ public class KeyboardMatrixK7659 extends KeyboardMatrix12x8
     reset();
     switch( keyCode ) {
       case KeyEvent.VK_ENTER:
-	this.keyCharCode   = '\r';
-	this.rowMasks[ 1 ] = 0x40;		// Taste "Enter"
+	this.keyboardMatrix[ 6 ] = 0x02;
 	break;
 
       case KeyEvent.VK_LEFT:
-	this.keyCharCode   = 8;
-	this.rowMasks[ 3 ] = 0x40;		// Taste "Links"
+	this.keyboardMatrix[ 6 ] = 0x08;
 	break;
 
       case KeyEvent.VK_RIGHT:
-	this.keyCharCode   = '\t';
-	this.rowMasks[ 7 ] = 0x40;		// Taste "Rechts"
+	this.keyboardMatrix[ 6 ] = 0x80;
 	break;
 
       case KeyEvent.VK_SPACE:
-	this.keyCharCode   = '\u0020';
-	this.rowMasks[ 4 ] = 0x40;		// Taste "Space"
+	this.keyboardMatrix[ 6 ] = 0x10;
 	break;
 
       case KeyEvent.VK_UP:
-	this.keyCharCode   = 11;
-	this.rowMasks[ 2 ] = 0x40;		// Taste "Hoch"
+	this.keyboardMatrix[ 6 ] = 0x04;
 	break;
 
       case KeyEvent.VK_DOWN:
-	this.keyCharCode   = 10;
-	this.rowMasks[ 6 ] = 0x40;		// Taste "Runter"
+	this.keyboardMatrix[ 6 ] = 0x40;
 	break;
 
       case KeyEvent.VK_BACK_SPACE:
@@ -101,9 +95,12 @@ public class KeyboardMatrixK7659 extends KeyboardMatrix12x8
 	setKeyCharCode( '\t', false );
 	break;
 
+      case KeyEvent.VK_ESCAPE:
+	this.keyboardMatrix[ 8 ] = 0x10;
+	break;
+
       case KeyEvent.VK_DELETE:
-	this.keyCharCode   = '\u007F';
-	this.rowMasks[ 1 ] = 0x100;		// Taste "Del"
+	this.keyboardMatrix[ 8 ] = 0x02;
 	break;
 
       default:

@@ -44,12 +44,15 @@ public class AudioFrm
   private FloatControl      controlVolume;
   private File              curFile;
   private File              lastFile;
-  private boolean           lastIsTAP;
   private int               lastVolumeSliderValue;
+  private boolean           lastIsTAP;
+  private boolean           maxSpeedTriggered;
+  private volatile int      usedKHz;
   private boolean           blinkState;
   private Color             blinkColor0;
   private Color             blinkColor1;
   private javax.swing.Timer blinkTimer;
+  private javax.swing.Timer disableTimer;
   private JRadioButton      btnSoundOut;
   private JRadioButton      btnDataOut;
   private JRadioButton      btnDataIn;
@@ -77,22 +80,25 @@ public class AudioFrm
   private JButton           btnDisable;
   private JButton           btnHelp;
   private JButton           btnClose;
+  private JButton           btnMaxSpeed;
   private JButton           btnPlay;
   private JButton           btnPause;
 
 
   public AudioFrm( ScreenFrm screenFrm )
   {
-    this.screenFrm             = screenFrm;
-    this.emuThread             = screenFrm.getEmuThread();
-    this.z80cpu                = this.emuThread.getZ80CPU();
-    this.mixers                = AudioSystem.getMixerInfo();
-    this.audioFmt              = null;
-    this.audioIO               = null;
-    this.controlVolume         = null;
-    this.curFile               = null;
-    this.lastFile              = null;
-    this.lastIsTAP             = false;
+    this.screenFrm         = screenFrm;
+    this.emuThread         = screenFrm.getEmuThread();
+    this.z80cpu            = this.emuThread.getZ80CPU();
+    this.mixers            = AudioSystem.getMixerInfo();
+    this.audioFmt          = null;
+    this.audioIO           = null;
+    this.controlVolume     = null;
+    this.curFile           = null;
+    this.lastFile          = null;
+    this.lastIsTAP         = false;
+    this.maxSpeedTriggered = false;
+    this.usedKHz           = -1;
 
     setTitle( "JKCEMU Audio/Kassette" );
     Main.updIcon( this );
@@ -127,8 +133,8 @@ public class AudioFrm
     ButtonGroup grpFct = new ButtonGroup();
 
     this.btnSoundOut = new JRadioButton(
-			"T\u00F6ne ausgeben (Emulation des Lautsprechers)",
-			true );
+	"T\u00F6ne ausgeben (Emulation des Lautsprechers/Sound-Generators)",
+	true );
     grpFct.add( this.btnSoundOut );
     this.btnSoundOut.addActionListener( this );
     panelFct.add( this.btnSoundOut, gbcFct );
@@ -327,23 +333,34 @@ public class AudioFrm
 						0, 0 );
 
     this.btnEnable = new JButton( "Aktivieren" );
+    this.btnEnable.setToolTipText( "Audio-Funktion aktivieren" );
     this.btnEnable.addActionListener( this );
     panelLeft.add( this.btnEnable, gbcLeft );
 
     this.btnDisable = new JButton( "Deaktivieren" );
+    this.btnDisable.setToolTipText( "Audio-Funktion deaktivieren" );
     this.btnDisable.addActionListener( this );
     gbcLeft.gridy++;
     panelLeft.add( this.btnDisable, gbcLeft );
 
     this.btnPlay = new JButton( "Abspielen" );
+    this.btnPlay.setToolTipText( "Abspielen starten" );
     this.btnPlay.addActionListener( this );
     gbcLeft.gridy++;
     panelLeft.add( this.btnPlay, gbcLeft );
 
     this.btnPause = new JButton( "Pause" );
+    this.btnPause.setToolTipText( "Abspielen anhalten" );
     this.btnPause.addActionListener( this );
     gbcLeft.gridy++;
     panelLeft.add( this.btnPause, gbcLeft );
+
+    this.btnMaxSpeed = new JButton( "Turbo" );
+    this.btnMaxSpeed.setToolTipText( "Auf max. Geschwindigkeit schalten" );
+    this.btnMaxSpeed.setEnabled( false );
+    this.btnMaxSpeed.addActionListener( this );
+    gbcLeft.gridy++;
+    panelLeft.add( this.btnMaxSpeed, gbcLeft );
 
     this.btnHelp = new JButton( "Hilfe" );
     this.btnHelp.addActionListener( this );
@@ -393,6 +410,20 @@ public class AudioFrm
 			  }
 			} );
 
+    /*
+     * Timer, der nach dem Ende einer eingelesenen Sound- oder TAP-Datei
+     * Die Audio-Funktion deaktiviert
+     */
+    this.disableTimer  = new javax.swing.Timer(
+			10000,
+			new ActionListener()
+			{
+			  public void actionPerformed( ActionEvent e )
+			  {
+			    doDisable();
+			  }
+			} );
+
     // Initialzustand
     setAudioState( false, false );
     this.lastVolumeSliderValue = -1;	// nach setAudioState(...) !!!
@@ -408,14 +439,14 @@ public class AudioFrm
   }
 
 
-  public void fireDisable()
+  public void fireFinished()
   {
     EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
 		  {
-		    doDisable();
+		    audioFinished();
 		  }
 		} );
   }
@@ -442,11 +473,22 @@ public class AudioFrm
   }
 
 
-  public void openTAP( File file, byte[] fileBytes, int offs )
+  public void openFile( File file, byte[] fileBytes, int offs )
   {
-    int speedKHz = getSpeedKHz();
-    if( speedKHz > 0 ) {
-      enableAudioInFile( speedKHz, file, fileBytes, offs, true );
+    if( checkSpeed() ) {
+      boolean tap = false;
+      if( fileBytes != null ) {
+	tap = FileInfo.isTAPHeaderAt(
+				fileBytes,
+				fileBytes.length - offs,
+				offs );
+      } else if( file != null ) {
+	String fName = file.getName();
+	if( fName != null ) {
+	  tap = fName.toLowerCase().endsWith( ".tap" );
+	}
+      }
+      enableAudioInFile( this.usedKHz, file, fileBytes, offs, tap );
     }
   }
 
@@ -520,8 +562,7 @@ public class AudioFrm
 	  String fName = file.getName();
 	  if( fName != null ) {
 	    stopAudio();
-	    int speedKHz = getSpeedKHz();
-	    if( speedKHz > 0 ) {
+	    if( checkSpeed() ) {
 	      boolean tap = fName.toLowerCase().endsWith( ".tap" );
 	      if( tap ) {
 		this.btnTAPFileIn.setSelected( true );
@@ -529,7 +570,7 @@ public class AudioFrm
 		this.btnSoundFileIn.setSelected( true );
 	      }
 	      updOptFields( tap );
-	      enableAudioInFile( speedKHz, file, null, 0, tap );
+	      enableAudioInFile( this.usedKHz, file, null, 0, tap );
 	    }
 	    done = true;
 	  }
@@ -557,8 +598,6 @@ public class AudioFrm
   /*
    * Wenn sich die Emulationsgeschwindigkeit aendert,
    * stimmt die Synchronisation mit dem Audio-System nicht mehr.
-   * Aus diesem Grund die Audiokanaele schliessen und
-   * bei Ein-/Ausgabe ueber das Sound-System wieder oeffnen.
    */
   @Override
   public void z80MaxSpeedChanged( Z80CPU cpu )
@@ -601,6 +640,9 @@ public class AudioFrm
       }
       else if( src == this.btnMonitor ) {
 	rv = true;
+	if( this.btnMonitor.isSelected() ) {
+	  setMaxSpeed( false );
+	}
 	updMonitorEnabled();
       }
       else if( src == this.btnEnable ) {
@@ -619,6 +661,10 @@ public class AudioFrm
 	rv = true;
 	doPause();
       }
+      else if( src == this.btnMaxSpeed ) {
+	rv = true;
+	doMaxSpeed();
+      }
       else if( src == this.btnHelp ) {
 	rv = true;
 	this.screenFrm.showHelp( "/help/audio.htm" );
@@ -633,6 +679,30 @@ public class AudioFrm
 
 
 	/* --- private Methoden --- */
+
+  private void audioFinished()
+  {
+    File    file      = null;
+    byte[]  fileBytes = null;
+    boolean tap       = false;
+    int     speedKHz  = 0;
+    if( (this.audioFmt != null) && (this.audioIO != null) ) {
+      if( this.audioIO instanceof AudioInFile ) {
+	// Datei noch einmal oeffnen
+	speedKHz  = ((AudioInFile) this.audioIO).getSpeedKHz();
+	file      = ((AudioInFile) this.audioIO).getFile();
+	fileBytes = ((AudioInFile) this.audioIO).getFileBytes();
+	tap       = ((AudioInFile) this.audioIO).isTAPFile();
+      }
+    }
+    doDisable();
+    if( (speedKHz > 0) && (file != null) ) {
+      if( enableAudioInFileInternal( speedKHz, file, fileBytes, 0, tap ) ) {
+	this.disableTimer.start();
+      }
+    }
+  }
+
 
   private void changeBlinkState()
   {
@@ -650,27 +720,44 @@ public class AudioFrm
   }
 
 
+  private boolean checkSpeed()
+  {
+    boolean rv  = false;
+    int     khz = this.z80cpu.getMaxSpeedKHz();
+    if( khz > 0 ) {
+      this.usedKHz = khz;
+      rv           = true;
+    } else {
+      BasicDlg.showErrorDlg(
+		this,
+		"Sie m\u00Fcssen die Geschwindigkeit des Emulators\n"
+			+ "auf einen konkreten Wert begrenzen, da dieser\n"
+			+ "als Zeitbasis f\u00FCr das AudioSystem dient.\n" );
+    }
+    return rv;
+  }
+
+
   private void doEnable()
   {
-    int speedKHz = getSpeedKHz();
-    if( speedKHz > 0 ) {
+    if( checkSpeed() ) {
       if( this.btnSoundOut.isSelected() || this.btnDataOut.isSelected() ) {
-	doEnableAudioOutLine( speedKHz, this.btnDataOut.isSelected() );
+	doEnableAudioOutLine( this.usedKHz, this.btnDataOut.isSelected() );
       }
       else if( this.btnDataIn.isSelected() ) {
-	doEnableAudioInLine( speedKHz );
+	doEnableAudioInLine( this.usedKHz );
       }
       else if( this.btnSoundFileOut.isSelected() ) {
-	doEnableAudioOutFile( speedKHz );
+	doEnableAudioOutFile( this.usedKHz );
       }
       else if( this.btnSoundFileIn.isSelected() ) {
-	doEnableAudioInFile( speedKHz, null, false );
+	doEnableAudioInFile( this.usedKHz, null, false );
       }
       else if( this.btnTAPFileIn.isSelected() ) {
-	doEnableAudioInFile( speedKHz, null, true );
+	doEnableAudioInFile( this.usedKHz, null, true );
       }
       else if( this.btnFileLastIn.isSelected() ) {
-	doEnableAudioInFile( speedKHz, this.lastFile, this.lastIsTAP );
+	doEnableAudioInFile( this.usedKHz, this.lastFile, this.lastIsTAP );
       }
     }
   }
@@ -780,7 +867,19 @@ public class AudioFrm
     stopAudio();
     this.curFile  = null;
     this.audioFmt = null;
+    if( this.maxSpeedTriggered ) {
+      setMaxSpeed( false );
+    }
     setAudioState( false, false );
+  }
+
+
+  private void doMaxSpeed()
+  {
+    if( this.z80cpu.isBrakeEnabled() ) {
+      this.maxSpeedTriggered = true;
+      setMaxSpeed( true );
+    }
   }
 
 
@@ -789,9 +888,13 @@ public class AudioFrm
     AudioIO audioIO = this.audioIO;
     if( audioIO != null ) {
       if( audioIO instanceof AudioInFile ) {
+	if( this.disableTimer.isRunning() ) {
+	  this.disableTimer.stop();
+	}
 	((AudioInFile) audioIO).setPause( false );
 	this.btnPlay.setEnabled( false );
 	this.btnPause.setEnabled( true );
+	this.btnMaxSpeed.setEnabled( true );
       }
     }
   }
@@ -802,9 +905,15 @@ public class AudioFrm
     AudioIO audioIO = this.audioIO;
     if( audioIO != null ) {
       if( audioIO instanceof AudioInFile ) {
+	if( this.maxSpeedTriggered ) {
+	  setMaxSpeed( false );
+	}
 	((AudioInFile) audioIO).setPause( true );
+	this.btnMonitor.setEnabled( true );
 	this.btnPlay.setEnabled( true );
 	this.btnPause.setEnabled( false );
+	this.btnMaxSpeed.setEnabled( false );
+	this.btnMonitor.setEnabled( true );
       }
     }
   }
@@ -817,6 +926,20 @@ public class AudioFrm
 			int     offs,
 			boolean tap )
   {
+    if( !enableAudioInFileInternal( speedKHz, file, fileBytes, offs, tap ) ) {
+      showError( this.audioIO.getErrorText() );
+    }
+  }
+
+
+  private boolean enableAudioInFileInternal(
+				int     speedKHz,
+				File    file,
+				byte[]  fileBytes,
+				int     offs,
+				boolean tap )
+  {
+    boolean rv = false;
     stopAudio();
     AudioIn audioIn = new AudioInFile(
 				this.z80cpu,
@@ -838,9 +961,9 @@ public class AudioFrm
       updMonitorEnabled();
       this.btnPlay.requestFocus();
       this.blinkTimer.restart();
-    } else {
-      showError( this.audioIO.getErrorText() );
+      rv = true;
     }
+    return rv;
   }
 
 
@@ -889,32 +1012,21 @@ public class AudioFrm
   }
 
 
-  private int getSpeedKHz()
-  {
-    int speedKHz = this.z80cpu.getMaxSpeedKHz();
-    if( speedKHz <= 0 ) {
-      BasicDlg.showErrorDlg(
-		this,
-		"Sie m\u00Fcssen die Geschwindigkeit des Emulators\n"
-			+ "auf einen konkreten Wert begrenzen, da dieser\n"
-			+ "als Zeitbasis f\u00FCr das AudioSystem dient.\n" );
-    }
-    return speedKHz;
-  }
-
-
   private void maxSpeedChanged()
   {
-    boolean state = (this.audioFmt != null);
-    doDisable();
-    if( state ) {
-      int speedKHz = this.z80cpu.getMaxSpeedKHz();
-      if( speedKHz > 0 ) {
-	if( this.btnSoundOut.isSelected() || this.btnDataOut.isSelected() ) {
-	  doEnableAudioOutLine( speedKHz, this.btnDataOut.isSelected() );
+    int khz = this.z80cpu.getMaxSpeedKHz();
+    if( khz != this.usedKHz ) {
+      boolean state = (this.audioFmt != null);
+      doDisable();
+      if( state && (khz > 0) ) {
+	this.usedKHz = khz;
+	if( this.btnSoundOut.isSelected()
+	    || this.btnDataOut.isSelected() )
+	{
+	  doEnableAudioOutLine( khz, this.btnDataOut.isSelected() );
 	}
 	else if( this.btnDataIn.isSelected() ) {
-	  doEnableAudioInLine( speedKHz );
+	  doEnableAudioInLine( khz );
 	}
       }
     }
@@ -972,6 +1084,10 @@ public class AudioFrm
 	  pause  = ((AudioInFile) audioIO).isPause();
 	}
       }
+    } else {
+      if( this.disableTimer.isRunning() ) {
+	this.disableTimer.stop();
+      }
     }
     this.btnPlay.setEnabled( fileIn && pause );
     this.btnPause.setEnabled( fileIn && !pause );
@@ -988,6 +1104,28 @@ public class AudioFrm
     this.btnTAPFileIn.setEnabled( state );
     this.btnFileLastIn.setEnabled( state && (this.lastFile != null) );
     updOptFields( tap );
+  }
+
+
+  private void setMaxSpeed( boolean state )
+  {
+    if( state ) {
+      AudioIO audioIO = this.audioIO;
+      if( audioIO != null ) {
+	if( audioIO instanceof AudioInFile ) {
+	  if( this.btnMonitor.isSelected() ) {
+	    this.btnMonitor.setSelected( false );
+	    updMonitorEnabled();
+	  }
+	  this.btnMonitor.setEnabled( false );
+	  this.btnMaxSpeed.setEnabled( false );
+	  this.screenFrm.setMaxSpeed( true );
+	}
+      }
+    } else {
+      this.screenFrm.setMaxSpeed( false );
+      this.maxSpeedTriggered = false;
+    }
   }
 
 
@@ -1025,10 +1163,10 @@ public class AudioFrm
   {
     if( this.blinkTimer.isRunning() ) {
       this.blinkTimer.stop();
-      if( this.blinkState && (this.blinkColor0 != null) ) {
-	this.btnPlay.setForeground( this.blinkColor0 );
-	this.blinkState = false;
-      }
+    }
+    if( this.blinkState && (this.blinkColor0 != null) ) {
+      this.btnPlay.setForeground( this.blinkColor0 );
+      this.blinkState = false;
     }
   }
 

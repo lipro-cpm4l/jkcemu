@@ -10,7 +10,7 @@ package jkcemu.emusys.kc85;
 
 import java.awt.Component;
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 
 
 public abstract class AbstractKC85Module
@@ -29,6 +29,12 @@ public abstract class AbstractKC85Module
   }
 
 
+  public void clearRAM()
+  {
+    // leer
+  }
+
+
   public void die()
   {
     // leer;
@@ -40,11 +46,11 @@ public abstract class AbstractKC85Module
 			String typeByteText,
 			String fileName )
   {
-    boolean rv = EmuUtil.equals( getModuleName(), moduleName );
+    boolean rv = TextUtil.equals( getModuleName(), moduleName );
     if( rv ) {
       if( typeByteText != null ) {
 	if( !typeByteText.isEmpty() ) {
-	  if( !EmuUtil.equalsIgnoreCase(
+	  if( !TextUtil.equalsIgnoreCase(
 				getTypeByteText(),
 				typeByteText ) )
 	  {
@@ -57,7 +63,7 @@ public abstract class AbstractKC85Module
       String myFileName = getFileName();
       if( myFileName != null ) {
 	if( !myFileName.isEmpty() ) {
-	  rv = EmuUtil.equals( myFileName, fileName );
+	  rv = TextUtil.equals( myFileName, fileName );
 	}
       }
     }
@@ -117,12 +123,6 @@ public abstract class AbstractKC85Module
 
 
   public void reload( Component owner )
-  {
-    // leer
-  }
-
-
-  public void reset( EmuThread.ResetLevel resetLevel )
   {
     // leer
   }

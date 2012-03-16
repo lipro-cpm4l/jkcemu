@@ -2,41 +2,60 @@
 <body>
  <h1>Hinweise zur Emulation des A5105 (BIC, ALBA PC 1505)</h1>
   <ul>
-   <li><a href="a5105.htm#hardware">1. Emulierte Hardware</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="a5105.htm#keyboard">1.1. Tastatur</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="a5105.htm#printer">1.2. V24-Schnittstelle mit Drucker</a>
+    <a href="a5105.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="a5105.htm#keyboard">1.1. Tastatur</a></li>
+     <li><a href="a5105.htm#sound">1.2. Sound-Generator</a></li>
+     <li><a href="a5105.htm#printer">1.3. V24-Schnittstelle mit Drucker</a></li>
+    </ul>
    </li>
    <li><a href="a5105.htm#software">2. Im ROM enthaltene Software</a></li>
-   <li><a href="a5105.htm#disks">3. Enthaltene Diskettenabbilder</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="a5105.htm#scpx">3.1. Hinweise zur SCPX-Systemdiskette</a>
-   </li>
-   <li><a href="a5105.htm#etc">4. Sonstiges</a></li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="a5105.htm#basic">4.1. BASIC-Programme speichern und laden</a>
+    <a href="a5105.htm#disks">3. Enthaltene Diskettenabbilder</a>
+    <ul>
+     <li><a href="a5105.htm#scpx">3.1. Hinweise zur SCPX-Systemdiskette</a></li>
+    </ul>
    </li>
    <li>
-    &nbsp;&nbsp;
-    <a href="a5105.htm#font">4.2. Zeichensatz</a>
-   </li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="a5105.htm#paste">4.3. Einf&uuml;gen von Text aus der Zwischenablage</a>
+    <a href="a5105.htm#etc">4. Sonstiges</a>
+    <ul>
+     <li><a href="a5105.htm#basic">4.1. BASIC-Programme speichern und laden</a></li>
+     <li><a href="a5105.htm#font">4.2. Zeichensatz</a></li>
+     <li>
+      <a href="a5105.htm#screensize">4.3. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis der Bildschirmausgabe</a>
+     </li>
+     <li>
+      <a href="a5105.htm#paste">4.4. Einf&uuml;gen von Text aus der Zwischenablage</a>
+     </li>
+    </ul>
    </li>
   </ul>
  <br/><br/>
 
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
-  Emuliert werden das Grundger&auml;t ohne Tongeneratoren sowie optional
-  die Floppy-Disk-Station und bis zu zwei RAM-Floppies.
- <br/><br/>
+  Emuliert werden:
+  <ul>
+   <li>Grundger&auml;t</li>
+   <li><a href="print.htm">Drucker</a></li>
+   <li>Zwei <a href="joystick.htm">Joysticks</a></li>
+   <li>
+    Optional:
+    <ul>
+     <li><a href="floppydisk.htm">Floppy-Disk-Station</a></li>
+     <li>Zwei <a href="ramfloppy.htm">RAM-Floppies</a></li>
+     <li>
+      <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
+      an der E/A-Basisadressen C0h
+     </li>
+     <li>
+      <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
+      an der E/A-Basisadressen FCh
+     </li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
 
  <h3><a name="keyboard">1.1. Tastatur</a></h3>
   Einige Tasten das A5105 sind auf der Tastatur des Emulatorrechners
@@ -51,8 +70,8 @@
    <tr><td>PF4</td><td>F4</td></tr>
    <tr><td>PF5</td><td>F5</td></tr>
    <tr><td>HOME</td><td>F6</td></tr>
-   <tr><td>ALT</td><td>F7</td></tr>
-   <tr><td>GRAPH</td><td>F8</td></tr>
+   <tr><td>GRAPH</td><td>F7</td></tr>
+   <tr><td>ALT</td><td>F8</td></tr>
    <tr><td>STOP</td><td>F9</td></tr>
   </table>
  <br/>
@@ -60,10 +79,23 @@
   bestimmte JKCEMU-Funktionen aus.
   Aus diesem Grund kann die ALT-Taste auf der Tastatur des Emulatorrechners
   nicht zur Emulation der ALT-Taste des A5105 verwendet werden.
-  Daf&uuml;r dient die Taste F7.
+  Daf&uuml;r dient die Taste F8.
  <br/><br/>
 
- <h3><a name="printer">1.2. V24-Schnittstelle mit Drucker</a></h3>
+ <h3><a name="sound">1.2. Sound-Generator</a></h3>
+  Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
+  m&uuml;ssen Sie die Audio-Funktion
+  <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> aktivieren.
+  Alle anderen Audio-Funktionen beziehen sich auf den emulierten
+  Kassettenrecorderanchluss.
+ <br/><br/>
+  Der Sound-Generator wird immer mit der originalen Taktfrequenz emuliert,
+  d.h., wenn Sie in den <a href="settings.htm">Einstellungen</a>
+  eine andere Taktfrequenz angeben,
+  wirkt sich das nur auf die Emulation des Mikroprozessors aus.
+ <br/><br/>
+
+ <h3><a name="printer">1.3. V24-Schnittstelle mit Drucker</a></h3>
   Es wird ein an der V24-Schnittelle des Grundger&auml;tes angeschlossener
   <a href="print.htm">Drucker</a> emuliert.
   Sowohl diese Schnittstelle als auch die emulierten V24-Parameter
@@ -158,8 +190,22 @@
   wie der Zeichengenerator tats&auml;chlich programmiert ist.
  <br/><br/>
 
+ <h3><a name="screensize">4.3. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis der Bildschirmausgabe</a></h3>
+  Der A5105 bietet verschiedene Bildschirmaufl&ouml;sungen.
+  Wenn zwischen diesen umgeschaltet wird
+  (z.B. mit dem BASIC-Befehl <tt>screen&nbsp;1</tt> in den 80-Zeichenmodus),
+  &auml;ndern sich auch die Gr&ouml;&szlig;e des Emulatorfensters
+  sowie das Seitenverh&auml;ltnis.
+  Beim Original bleibt dagegen die Gr&ouml;&szlig;e
+  des Bildschirmausgabebereichs immer gleich.  Mit der Option
+  <em>Gleiche Fenstergr&ouml;&szlig;e in allen Bildschirmmodi</em>
+  k&ouml;nnen Sie das Verhalten an das des Originals anpassen.
+  Allerdings ist dann auch das Emulatorfenster immer so gro&szlig;,
+  dass die h&ouml;chste Bildschirmaufl&ouml;sung dargestellt werden kann.
+ <br/><br/>
+
  <h3>
-  <a name="paste">4.3. Einf&uuml;gen von Text aus der Zwischenablage</a>
+  <a name="paste">4.4. Einf&uuml;gen von Text aus der Zwischenablage</a>
  </h3>
   Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt gew&ouml;hnlich
   in der Form, dass f&uuml;r jedes einzuf&uuml;gende Zeichen

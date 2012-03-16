@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -106,6 +106,7 @@ public class D004ProcSys implements
     this.cpu.removeTStatesListener( this );
     this.cpu.removeMaxSpeedListener( this.fdc );
     this.ctc.removeCTCListener( this );
+    this.fdc.die();
   }
 
 
@@ -263,8 +264,7 @@ public class D004ProcSys implements
 
 	case 0xF2:
 	case 0xF3:
-	  rv = this.fdc.readData();
-	  this.fdc.dmaAcknowledge();
+	  rv = this.fdc.readDMA();
 	  break;
 
 	case 0xF4:		// Input Gate
@@ -318,8 +318,7 @@ public class D004ProcSys implements
 
 	case 0xF2:
 	case 0xF3:
-	  this.fdc.write( value );
-	  this.fdc.dmaAcknowledge();
+	  this.fdc.writeDMA( value );
 	  break;
 
 	case 0xF6:

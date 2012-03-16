@@ -1,9 +1,9 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Fenster zum Erzeugen einer einfachen Abbilddatei
+ * Fenster zum manuellen Erzeugen einer Diskettenabbilddatei
  */
 
 package jkcemu.disk;
@@ -20,6 +20,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 
 
 public class DiskImgCreateFrm
@@ -56,6 +57,7 @@ public class DiskImgCreateFrm
   private JRadioButton      btnFmt800K;
   private JRadioButton      btnFmt780K;
   private JRadioButton      btnFmt720K;
+  private JRadioButton      btnFmt624K;
   private JRadioButton      btnFmtCPL;
   private JRadioButton      btnFmtEtc;
   private JLabel            labelSides;
@@ -125,7 +127,7 @@ public class DiskImgCreateFrm
     mnuFile.add( this.mnuSort );
     mnuFile.addSeparator();
 
-    this.mnuSave = createJMenuItem( "Abbilddatei speichern..." );
+    this.mnuSave = createJMenuItem( "Diskettenabbilddatei speichern..." );
     mnuFile.add( this.mnuSave );
     mnuFile.addSeparator();
 
@@ -189,7 +191,7 @@ public class DiskImgCreateFrm
 
     this.btnSave = createImageButton(
 				"/images/file/save_as.png",
-				"Abbilddatei speichern" );
+				"Diskettenabbilddatei speichern" );
     toolBar.add( this.btnSave );
     toolBar.addSeparator();
 
@@ -281,9 +283,13 @@ public class DiskImgCreateFrm
 			"720K (A5105, KC85/1, KC87, Z9001)",
 			false );
     grpFmt.add( this.btnFmt720K );
-    gbcFmt.insets.top = 0;
     gbcFmt.gridy++;
     panelFmt.add( this.btnFmt720K, gbcFmt );
+
+    this.btnFmt624K = new JRadioButton( "624K (PC/M)", false );
+    grpFmt.add( this.btnFmt624K );
+    gbcFmt.gridy++;
+    panelFmt.add( this.btnFmt624K, gbcFmt );
 
     this.btnFmtCPL = new JRadioButton( "LLC2 mit CP/L", false );
     grpFmt.add( this.btnFmtCPL );
@@ -459,6 +465,7 @@ public class DiskImgCreateFrm
     this.btnFmt800K.addActionListener( this );
     this.btnFmt780K.addActionListener( this );
     this.btnFmt720K.addActionListener( this );
+    this.btnFmt624K.addActionListener( this );
     this.btnFmtCPL.addActionListener( this );
     this.btnFmtEtc.addActionListener( this );
     this.comboSides.addActionListener( this );
@@ -642,6 +649,7 @@ public class DiskImgCreateFrm
       else if( (src == this.btnFmt800K)
 	       || (src == this.btnFmt780K)
 	       || (src == this.btnFmt720K)
+	       || (src == this.btnFmt624K)
 	       || (src == this.btnFmtCPL)
 	       || (src == this.btnFmtEtc) )
       {
@@ -779,38 +787,42 @@ public class DiskImgCreateFrm
       status = BasicDlg.showYesNoDlg(
 		this,
 		"Es wurden keine Dateien hinzugef\u00FCgt.\n"
-			+ "M\u00F6chten Sie eine leere Abbilddatei"
+			+ "M\u00F6chten Sie eine leere Diskettenabbilddatei"
 			+ " erstellen?" );
     }
     if( status ) {
       File file = EmuUtil.showFileSaveDlg(
 				this,
-				"Abbilddatei speichern",
+				"Diskettenabbilddatei speichern",
 				this.lastOutFile != null ?
 					this.lastOutFile
 					: Main.getLastPathFile( "disk" ),
 				EmuUtil.getPlainDiskFileFilter(),
-				EmuUtil.getAnadiskFileFilter() );
+				EmuUtil.getAnaDiskFileFilter(),
+				EmuUtil.getDskFileFilter(),
+				EmuUtil.getImageDiskFileFilter() );
       if( file != null ) {
-	boolean anadisk   = false;
 	boolean plainDisk = false;
+	boolean anaDisk   = false;
+	boolean cpcDisk   = false;
+	boolean imageDisk = false;
 	String  fileName  = file.getName();
 	if( fileName != null ) {
 	  String lowerName = fileName.toLowerCase();
-	  anadisk =  EmuUtil.endsWith(
+	  plainDisk =  TextUtil.endsWith(
 				lowerName,
-				DiskUtil.anadiskFileExt )
-			|| EmuUtil.endsWith(
+				DiskUtil.plainDiskFileExt );
+	  anaDisk   =  TextUtil.endsWith(
 				lowerName,
-				DiskUtil.gzAnadiskFileExt );
-	  plainDisk =  EmuUtil.endsWith(
+				DiskUtil.anaDiskFileExt );
+	  cpcDisk   =  TextUtil.endsWith(
 				lowerName,
-				DiskUtil.plainDiskFileExt )
-			|| EmuUtil.endsWith(
+				DiskUtil.dskFileExt );
+	  imageDisk =  TextUtil.endsWith(
 				lowerName,
-				DiskUtil.gzAnadiskFileExt );
+				DiskUtil.imageDiskFileExt );
 	}
-	if( anadisk || plainDisk ) {
+	if( plainDisk || anaDisk || cpcDisk || imageDisk ) {
 	  OutputStream out = null;
 	  try {
 	    int  sides       = getIntValue( this.comboSides );
@@ -825,14 +837,15 @@ public class DiskImgCreateFrm
 	    int  dirSize     = dirBlocks * blockSize;
 	    int  begFileArea = dstDirPos + dirSize;
 	    int  dstFilePos  = begFileArea;
-	    File sysFile     = this.fldSysFileName.getFile();
-	    if( sysFile != null ) {
-	      if( sysFile.length() > dstDirPos ) {
+	    File sysFile     = null;
+	    if( dstDirPos > 0 ) {
+	      sysFile = this.fldSysFileName.getFile();
+	      if( sysFile != null ) {
+		if( sysFile.length() > dstDirPos ) {
 		  throw new IOException(
 			"Die Datei f\u00FCr die Systemspuren"
-				+ " ist zu gro\u00DF\n"
-				+ "bzw. die Anzahl der Systemspuren"
-				+ " ist zu klein!" );
+				+ " ist zu gro\u00DF!" );
+		}
 	      }
 	    }
 	    if( diskSize < (dstFilePos + (calcFileAreaKBytes( blockSize )
@@ -995,54 +1008,35 @@ public class DiskImgCreateFrm
 		}
 	      }
 	    }
-	    out = new FileOutputStream( file );
-	    if( EmuUtil.isGZipFile( file ) ) {
-	      out = new GZIPOutputStream( out );
-	    }
-	    if( anadisk ) {
-	      int sizeCode = SectorData.getSizeCode( sectorSize );
-	      int cyl      = 0;
-	      int head     = 0;
-	      int rec      = 1;
-	      int pos      = 0;
-	      while( pos < diskBuf.length ) {
-		out.write( cyl );
-		out.write( head );
-		out.write( cyl );
-		out.write( head );
-		out.write( rec );
-		out.write( sizeCode );
-		out.write( sectorSize & 0xFF );
-		out.write( sectorSize >> 8 );
-		out.write(
-			diskBuf,
-			pos,
-			Math.min( sectorSize, diskBuf.length - pos ) );
-		pos += sectorSize;
-		if( rec < sectPerCyl ) {
-		  rec++;
-		} else {
-		  rec = 1;
-		  head++;
-		  if( head >= sides ) {
-		    head = 0;
-		    cyl++;
-		  }
+	    if( plainDisk ) {
+	      out = new FileOutputStream( file );
+	      out.write( diskBuf );
+	      out.close();
+	      out = null;
+	    } else {
+	      PlainDisk disk = PlainDisk.createForByteArray(
+					this,
+					file.getPath(),
+					diskBuf,
+					new FloppyDiskFormat(
+						sides,
+						cyls,
+						sectPerCyl,
+						sectorSize ) );
+	      if( disk != null ) {
+		if( anaDisk ) {
+		  AnaDisk.export( disk, file );
+		} else if( cpcDisk ) {
+		  CPCDisk.export( disk, file );
+		} else if( imageDisk ) {
+		  ImageDisk.export( disk, file, "Created by JKCEMU" );
 		}
 	      }
-	    } else {
-	      out.write( diskBuf );
 	    }
-	    out.close();
-	    out              = null;
 	    this.dataChanged = false;
-	    if( anadisk ) {
-	      this.labelStatus.setText( "Anadisk-Datei gespeichert" );
-	    } else {
-	      this.labelStatus.setText( "Einfache Abbilddatei gespeichert" );
-	    }
 	    this.lastOutFile = file;
 	    Main.setLastFile( file, "disk" );
+	    this.labelStatus.setText( "Diskettenabbilddatei gespeichert" );
 	  }
 	  catch( Exception ex ) {
 	    BasicDlg.showErrorDlg( this, ex );
@@ -1053,13 +1047,12 @@ public class DiskImgCreateFrm
 	} else {
 	  BasicDlg.showErrorDlg(
 		this,
-		"Aus der Dateiendung der ausgew\u00E4hlten Datei"
-			+ " kann JKCEMU nicht erkennen,\n"
-			+ "ob Sie eine einfache Abbilddatei oder eine"
-			+ " Anadisk-Datei erzeugen m\u00F6chten.\n"
+		"Aus der Dateiendung der ausgew\u00E4hlten Datei\n"
+			+ "kann JKCEMU das Dateiformat nicht erkennen.\n"
 			+ "W\u00E4hlen Sie bitte einen Dateinamen"
-			+ " mit einer f\u00FCr das gew\u00FCnschte Format\n"
-			+ "\u00FCblichen Dateiendung." );
+			+ " mit einer f\u00FCr\n"
+			+ "das gew\u00FCnschte Format \u00FCblichen"
+			+ " Dateiendung aus." );
 	}
       }
     }
@@ -1169,9 +1162,19 @@ public class DiskImgCreateFrm
     if( file.isFile() ) {
       size = file.length();
       if( size < 1 ) {
+	String fName = file.getName();
+	if( fName != null ) {
+	  if( fName.isEmpty() ) {
+	    fName = null;
+	  }
+	}
+	if( fName == null ) {
+	  fName = file.getPath();
+	}
 	if( !BasicDlg.showYesNoDlg(
 		this,
-		"Die Datei ist leer!\n"
+		"Datei " + fName
+			+ ":\nDie Datei ist leer!\n"
 			+ "Trotzdem hinzuf\u00FCgen?" ) )
 	{
 	  file = null;
@@ -1508,7 +1511,7 @@ public class DiskImgCreateFrm
 	if( pos >= buf.length ) {
 	  if( in.read() == -1 ) {
 	    throw new IOException(
-		"Die Abbilddatei bietet nicht gen\u00FCgend Platz!" );
+		"Die Diskettenabbilddatei bietet nicht gen\u00FCgend Platz!" );
 	  }
 	}
       }
@@ -1619,6 +1622,15 @@ public class DiskImgCreateFrm
       setValue( this.comboBlockSize, 2 );
       setValue( this.comboBlockNumSize, 16 );
       setValue( this.spinnerDirBlocks, 3 );
+    } else if( this.btnFmt624K.isSelected() ) {
+      setValue( this.comboSides, 2 );
+      setValue( this.comboCyls, 80 );
+      setValue( this.spinnerSysCyls, 2 );
+      setValue( this.comboSectPerCyl, 16 );
+      setValue( this.comboSectorSize, 256 );
+      setValue( this.comboBlockSize, 2 );
+      setValue( this.comboBlockNumSize, 16 );
+      setValue( this.spinnerDirBlocks, 2 );
     } else if( this.btnFmtCPL.isSelected() ) {
       setValue( this.comboSides, 1 );
       setValue( this.comboCyls, 80 );

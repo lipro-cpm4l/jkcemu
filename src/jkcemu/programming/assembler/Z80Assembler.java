@@ -170,7 +170,13 @@ public class Z80Assembler extends PrgThread
 
   private void checkAddr() throws PrgException
   {
-    if( !this.addrOverflow && ((this.curAddr & ~0xFFFF) != 0) ) {
+    /*
+     * Wenn Code bis zur Adresse 0xFFFF erzeugt wurde,
+     * steht this.curAddr auf 0x10000.
+     * Wurde dieser Wert allerdings ueberschritten,
+     * liegt ein Adressueberlauf vor.
+     */
+    if( !this.addrOverflow && (this.curAddr > 0x10000) ) {
       this.addrOverflow = true;
       throw new PrgException( "\u00DCberlauf: Adressz\u00E4hler > 0FFFFh" );
     }

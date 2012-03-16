@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -142,6 +142,19 @@ public class BasicFrm extends JFrame implements
   }
 
 
+  public void fireRepaint()
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    repaint();
+		  }
+		} );
+  }
+
+
   public String getSettingsPrefix()
   {
     return getClass().getName();
@@ -194,6 +207,12 @@ public class BasicFrm extends JFrame implements
 	}
       }
     }
+  }
+
+
+  public void resetFired()
+  {
+    // leer
   }
 
 

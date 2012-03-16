@@ -70,15 +70,6 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-  public synchronized void reset( boolean powerOn )
-  {
-    if( powerOn ) {
-      this.interruptVector = 0;
-    }
-    reset();
-  }
-
-
   /*
    * Diese Methode stellt eine Verbindung
    * vom Ausgang fromTimerNum zum Eingang toTimerNum her.
@@ -259,10 +250,14 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
 
   @Override
-  public void reset()
+  public synchronized void reset( boolean powerOn )
   {
-    for( int i = 0; i < this.timer.length; i++ )
+    if( powerOn ) {
+      this.interruptVector = 0;
+    }
+    for( int i = 0; i < this.timer.length; i++ ) {
       this.timer[ i ].reset();
+    }
   }
 
 

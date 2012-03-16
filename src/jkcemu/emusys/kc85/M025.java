@@ -13,7 +13,7 @@ import java.lang.*;
 import jkcemu.base.*;
 
 
-public class M025 extends AbstractROM8KModule
+public class M025 extends KC85ROM8KModule
 {
   private int    typeByte;
   private String fileName;

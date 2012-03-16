@@ -13,10 +13,12 @@ del %SRC_DIR%\jkcemu\emusys\etc\*.class
 del %SRC_DIR%\jkcemu\emusys\huebler\*.class
 del %SRC_DIR%\jkcemu\emusys\kc85\*.class
 del %SRC_DIR%\jkcemu\emusys\z1013\*.class
+del %SRC_DIR%\jkcemu\emusys\z9001\*.class
 del %SRC_DIR%\jkcemu\etc\*.class
 del %SRC_DIR%\jkcemu\filebrowser\*.class
 del %SRC_DIR%\jkcemu\image\*.class
 del %SRC_DIR%\jkcemu\joystick\*.class
+del %SRC_DIR%\jkcemu\net\*.class
 del %SRC_DIR%\jkcemu\print\*.class
 del %SRC_DIR%\jkcemu\programming\*.class
 del %SRC_DIR%\jkcemu\programming\assembler\*.class
@@ -25,6 +27,7 @@ del %SRC_DIR%\jkcemu\text\*.class
 del %SRC_DIR%\jkcemu\tools\*.class
 del %SRC_DIR%\jkcemu\tools\calculator\*.class
 del %SRC_DIR%\jkcemu\tools\debugger\*.class
+del %SRC_DIR%\jkcemu\tools\fileconverter\*.class
 del %SRC_DIR%\jkcemu\tools\hexdiff\*.class
 del %SRC_DIR%\jkcemu\tools\hexedit\*.class
 del %SRC_DIR%\z80emu\*.class

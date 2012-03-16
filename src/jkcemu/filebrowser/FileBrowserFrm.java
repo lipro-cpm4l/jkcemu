@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,6 +25,9 @@ import jkcemu.Main;
 import jkcemu.audio.*;
 import jkcemu.base.*;
 import jkcemu.disk.*;
+import jkcemu.emusys.ac1_llc2.*;
+import jkcemu.emusys.kc85.KCAudioDataStream;
+import jkcemu.emusys.z1013.Z1013AudioDataStream;
 import jkcemu.text.EditFrm;
 
 
@@ -44,15 +47,21 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuFileEditText;
   private JMenuItem            mnuFileEditHex;
   private JMenuItem            mnuFileDiffHex;
-  private JMenuItem            mnuFileExportToPlainDisk;
-  private JMenuItem            mnuFileExportToAnadisk;
-  private JMenuItem            mnuFileExportToSound;
+  private JMenuItem            mnuFileConvert;
   private JMenuItem            mnuFileUnpack;
   private JMenuItem            mnuFilePackGZip;
   private JMenuItem            mnuFilePackZip;
   private JMenuItem            mnuFilePackTar;
   private JMenuItem            mnuFilePackTgz;
+  private JMenuItem            mnuFileAudioIn;
   private JMenuItem            mnuFilePlay;
+  private JMenuItem            mnuFilePlayAC1;
+  private JMenuItem            mnuFilePlayAC1Basic;
+  private JMenuItem            mnuFilePlaySCCH;
+  private JMenuItem            mnuFilePlayKC85;
+  private JMenuItem            mnuFilePlayZ1013;
+  private JMenuItem            mnuFilePlayZ1013HS;
+  private JMenuItem            mnuFilePlayZ9001;
   private JMenuItem            mnuFileShowImage;
   private JMenuItem            mnuFileRAMFloppy1Load;
   private JMenuItem            mnuFileRAMFloppy2Load;
@@ -84,10 +93,16 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuPopupEditText;
   private JMenuItem            mnuPopupEditHex;
   private JMenuItem            mnuPopupDiffHex;
+  private JMenuItem            mnuPopupConvert;
+  private JMenuItem            mnuPopupAudioIn;
   private JMenuItem            mnuPopupPlay;
-  private JMenuItem            mnuPopupExportToPlainDisk;
-  private JMenuItem            mnuPopupExportToAnadisk;
-  private JMenuItem            mnuPopupExportToSound;
+  private JMenuItem            mnuPopupPlayAC1;
+  private JMenuItem            mnuPopupPlayAC1Basic;
+  private JMenuItem            mnuPopupPlaySCCH;
+  private JMenuItem            mnuPopupPlayKC85;
+  private JMenuItem            mnuPopupPlayZ1013;
+  private JMenuItem            mnuPopupPlayZ1013HS;
+  private JMenuItem            mnuPopupPlayZ9001;
   private JMenuItem            mnuPopupUnpack;
   private JMenuItem            mnuPopupPackGZip;
   private JMenuItem            mnuPopupPackZip;
@@ -166,28 +181,49 @@ public class FileBrowserFrm extends BasicFrm
     mnuFile.add( this.mnuFileEditHex );
 
     this.mnuFileDiffHex = createJMenuItem(
-			"Zum Hex-Dateivergleicher hinzuf\u00FCgen..." );
+				"Im Hex-Dateivergleicher \u00F6ffnen..." );
     mnuFile.add( this.mnuFileDiffHex );
+
+    this.mnuFileConvert = createJMenuItem(
+				"Im Dateikonverter \u00F6ffnen..." );
+    mnuFile.add( this.mnuFileConvert );
 
     this.mnuFileChecksum = createJMenuItem(
 				"Pr\u00FCfsumme/Hash-Wert berechnen..." );
     mnuFile.add( this.mnuFileChecksum );
 
+    this.mnuFileAudioIn = createJMenuItem(
+				"In Audio/Kassette \u00F6ffnen..." );
+    mnuFile.add( this.mnuFileAudioIn );
+
     this.mnuFilePlay = createJMenuItem( "Wiedergeben" );
     mnuFile.add( this.mnuFilePlay );
 
-    JMenu mnuExport = new JMenu( "Exportieren in" );
-    mnuFile.add( mnuExport );
+    JMenu mnuFilePlayAs = new JMenu( "Wiedergeben im" );
+    mnuFile.add( mnuFilePlayAs );
 
-    this.mnuFileExportToPlainDisk = createJMenuItem(
-				"einfache Diskettenabbilddatei..." );
-    mnuExport.add( this.mnuFileExportToPlainDisk );
+    this.mnuFilePlayAC1 = createJMenuItem( "AC1-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayAC1 );
 
-    this.mnuFileExportToAnadisk = createJMenuItem( "Anadisk-Datei..." );
-    mnuExport.add( this.mnuFileExportToAnadisk );
+    this.mnuFilePlayAC1Basic = createJMenuItem( "AC1-BASIC-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayAC1Basic );
 
-    this.mnuFileExportToSound = createJMenuItem( "Sound-Datei..." );
-    mnuExport.add( this.mnuFileExportToSound );
+    this.mnuFilePlaySCCH = createJMenuItem( "AC1/LLC2-TurboSave-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlaySCCH );
+
+    this.mnuFilePlayKC85 = createJMenuItem(
+				"KC-Format (HC900, KC85/2..5, KC-BASIC)" );
+    mnuFilePlayAs.add( this.mnuFilePlayKC85 );
+
+    this.mnuFilePlayZ9001 = createJMenuItem(
+				"KC-Format (KC85/1, KC87, Z9001)" );
+    mnuFilePlayAs.add( this.mnuFilePlayZ9001 );
+
+    this.mnuFilePlayZ1013 = createJMenuItem( "Z1013-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayZ1013 );
+
+    this.mnuFilePlayZ1013HS = createJMenuItem( "Z1013-Headersave-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayZ1013HS );
 
     this.mnuFileUnpack = createJMenuItem( "Entpacken..." );
     mnuFile.add( this.mnuFileUnpack );
@@ -357,28 +393,49 @@ public class FileBrowserFrm extends BasicFrm
     this.mnuPopup.add( this.mnuPopupEditHex );
 
     this.mnuPopupDiffHex = createJMenuItem(
-			"Zum Hex-Dateivergleicher hinzuf\u00FCgen..." );
+				"Im Hex-Dateivergleicher \u00F6ffnen" );
     this.mnuPopup.add( this.mnuPopupDiffHex );
+
+    this.mnuPopupConvert = createJMenuItem(
+				"Im Dateikonverter \u00F6ffnen" );
+    this.mnuPopup.add( this.mnuPopupConvert );
 
     this.mnuPopupChecksum = createJMenuItem(
 				"Pr\u00FCfsumme/Hash-Wert berechnen..." );
     this.mnuPopup.add( this.mnuPopupChecksum );
 
+    this.mnuPopupAudioIn = createJMenuItem(
+				"In Audio/Kassette \u00F6ffnen..." );
+    this.mnuPopup.add( this.mnuPopupAudioIn );
+
     this.mnuPopupPlay = createJMenuItem( "Wiedergeben" );
     this.mnuPopup.add( this.mnuPopupPlay );
 
-    JMenu mnuPopupExport = new JMenu( "Exportieren in" );
-    this.mnuPopup.add( mnuPopupExport );
+    JMenu mnuPopupPlayAs = new JMenu( "Wiedergeben im" );
+    this.mnuPopup.add( mnuPopupPlayAs );
 
-    this.mnuPopupExportToPlainDisk = createJMenuItem(
-				"einfache Diskettenabbilddatei..." );
-    mnuPopupExport.add( this.mnuPopupExportToPlainDisk );
+    this.mnuPopupPlayAC1 = createJMenuItem( "AC1-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayAC1 );
 
-    this.mnuPopupExportToAnadisk = createJMenuItem( "Anadisk-Datei..." );
-    mnuPopupExport.add( this.mnuPopupExportToAnadisk );
+    this.mnuPopupPlayAC1Basic = createJMenuItem( "AC1-BASIC-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayAC1Basic );
 
-    this.mnuPopupExportToSound = createJMenuItem( "Sound-Datei..." );
-    mnuPopupExport.add( this.mnuPopupExportToSound );
+    this.mnuPopupPlaySCCH = createJMenuItem( "AC1/LLC2-TurboSave-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlaySCCH );
+
+    this.mnuPopupPlayKC85 = createJMenuItem(
+				"KC-Format (HC900, KC85/2..5, KC-BASIC)" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayKC85 );
+
+    this.mnuPopupPlayZ9001 = createJMenuItem(
+				"KC-Format (KC85/1, KC87, Z9001)" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayZ9001 );
+
+    this.mnuPopupPlayZ1013 = createJMenuItem( "Z1013-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayZ1013 );
+
+    this.mnuPopupPlayZ1013HS = createJMenuItem( "Z1013-Headersave-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayZ1013HS );
 
     this.mnuPopupUnpack = createJMenuItem( "Entpacken..." );
     this.mnuPopup.add( this.mnuPopupUnpack );
@@ -827,6 +884,12 @@ public class FileBrowserFrm extends BasicFrm
 	    rv = true;
 	    doFileDiffHex();
 	  }
+	  else if( (src == this.mnuFileConvert)
+		   || (src == this.mnuPopupConvert) )
+	  {
+	    rv = true;
+	    doFileConvert();
+	  }
 	  else if( (src == this.mnuFileChecksum)
 		   || (src == this.mnuPopupChecksum) )
 	  {
@@ -840,23 +903,53 @@ public class FileBrowserFrm extends BasicFrm
 	    rv = true;
 	    doFilePlay();
 	  }
-	  else if( (src == this.mnuFileExportToPlainDisk)
-		   || (src == this.mnuPopupExportToPlainDisk) )
+	  else if( (src == this.mnuFilePlayAC1)
+		   || (src == this.mnuPopupPlayAC1) )
 	  {
 	    rv = true;
-	    doFileExportToPlainDisk();
+	    doFilePlayAC1();
 	  }
-	  else if( (src == this.mnuFileExportToAnadisk)
-		   || (src == this.mnuPopupExportToAnadisk) )
+	  else if( (src == this.mnuFilePlayAC1Basic)
+		   || (src == this.mnuPopupPlayAC1Basic) )
 	  {
 	    rv = true;
-	    doFileExportToAnadisk();
+	    doFilePlayAC1Basic();
 	  }
-	  else if( (src == this.mnuFileExportToSound)
-		   || (src == this.mnuPopupExportToSound) )
+	  else if( (src == this.mnuFilePlaySCCH)
+		   || (src == this.mnuPopupPlaySCCH) )
 	  {
 	    rv = true;
-	    doFileExportToSound();
+	    doFilePlaySCCH();
+	  }
+	  else if( (src == this.mnuFilePlayKC85)
+		   || (src == this.mnuPopupPlayKC85) )
+	  {
+	    rv = true;
+	    doFilePlayKC( 1 );
+	  }
+	  else if( (src == this.mnuFilePlayZ1013)
+		   || (src == this.mnuPopupPlayZ1013) )
+	  {
+	    rv = true;
+	    doFilePlayZ1013( false );
+	  }
+	  else if( (src == this.mnuFilePlayZ1013HS)
+		   || (src == this.mnuPopupPlayZ1013HS) )
+	  {
+	    rv = true;
+	    doFilePlayZ1013( true );
+	  }
+	  else if( (src == this.mnuFilePlayZ9001)
+		   || (src == this.mnuPopupPlayZ9001) )
+	  {
+	    rv = true;
+	    doFilePlayKC( 0 );
+	  }
+	  else if( (src == this.mnuFileAudioIn)
+		   || (src == this.mnuPopupAudioIn) )
+	  {
+	    rv = true;
+	    doFileAudioIn();
 	  }
 	  else if( (src == this.mnuFileUnpack)
 		   || (src == this.mnuPopupUnpack) )
@@ -1195,7 +1288,7 @@ public class FileBrowserFrm extends BasicFrm
 	    if( fileNode.isArchiveFile() || fileNode.isCompressedFile() ) {
 	      doFileUnpack( fileNode );
 	    } else if( fileNode.isAudioFile() ) {
-	      AudioFilePlayer.play( this, file );
+	      AudioPlayer.play( this, file );
 	    } else if( fileNode.isImageFile() ) {
 	      this.screenFrm.showImageFile( file );
 	    } else if( fileNode.isTextFile() ) {
@@ -1286,8 +1379,9 @@ public class FileBrowserFrm extends BasicFrm
     if( fileNode != null ) {
       File file = fileNode.getFile();
       if( file != null ) {
-	if( file.isFile() )
+	if( file.isFile() ) {
 	  this.screenFrm.openTextFile( file );
+	}
       }
     }
   }
@@ -1299,8 +1393,9 @@ public class FileBrowserFrm extends BasicFrm
     if( fileNode != null ) {
       File file = fileNode.getFile();
       if( file != null ) {
-	if( file.isFile() )
+	if( file.isFile() ) {
 	  this.screenFrm.openHexEditor( file );
+	}
       }
     }
   }
@@ -1311,188 +1406,21 @@ public class FileBrowserFrm extends BasicFrm
     java.util.List<File> files = getSelectedFiles();
     if( files != null ) {
       int n = files.size();
-      if( n > 0 )
+      if( n > 0 ) {
 	this.screenFrm.addToHexDiff( files );
-    }
-  }
-
-
-  private void doFileExportToAnadisk()
-  {
-    FileNode fileNode = getSelectedFileNode();
-    if( fileNode != null ) {
-      File file = fileNode.getFile();
-      if( file != null ) {
-	AbstractFloppyDisk disk    = null;
-	File               outFile = null;
-	try {
-	  if( fileNode.isPlainDiskFile() ) {
-	    FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
-			this,
-			FloppyDiskFormat.getFormatByDiskSize( file.length() ),
-			FloppyDiskFormatDlg.Flag.PHYS_FORMAT );
-	    dlg.setVisible( true );
-	    FloppyDiskFormat fmt = dlg.getFormat();
-	    if( fmt != null ) {
-	      disk = PlainFileFloppyDisk.openFile( this, file, true, fmt );
-	    }
-	  }
-	  else if( fileNode.isCopyQMFile() ) {
-	    disk = CopyQMFloppyDisk.readFile( this, file );
-	  }
-	  else if( fileNode.isTelediskFile() ) {
-	    disk = TelediskFloppyDisk.readFile( this, file );
-	  }
-	  if( disk != null ) {
-	    if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
-	      outFile = EmuUtil.showFileSaveDlg(
-				this,
-				"Anadisk-Datei speichern",
-				EmuUtil.getDestFile(
-					file,
-					".dump",
-					Main.getLastPathFile( "disk" ) ),
-				EmuUtil.getAnadiskFileFilter() );
-	      if( outFile != null ) {
-		if( DiskUtil.checkFileExt(
-				this,
-				outFile,
-				DiskUtil.anadiskFileExt ) )
-		{
-		  AnadiskFloppyDisk.export( disk, outFile );
-		  fireDirectoryChanged( outFile.getParentFile() );
-		  showExportFinished();
-		}
-	      }
-	    }
-	  }
-	}
-	catch( IOException ex ) {
-	  if( outFile != null ) {
-	    outFile.delete();
-	  }
-	  BasicDlg.showErrorDlg( this, ex );
-	}
-	finally {
-	  if( disk != null ) {
-	    disk.doClose();
-	  }
-	}
       }
     }
   }
 
 
-  private void doFileExportToPlainDisk()
+  private void doFileConvert()
   {
     FileNode fileNode = getSelectedFileNode();
     if( fileNode != null ) {
       File file = fileNode.getFile();
       if( file != null ) {
-	AbstractFloppyDisk disk    = null;
-	File               outFile = null;
-	try {
-	  if( fileNode.isAnadiskFile() ) {
-	    disk = AnadiskFloppyDisk.readFile( this, file );
-	  }
-	  else if( fileNode.isCopyQMFile() ) {
-	    disk = CopyQMFloppyDisk.readFile( this, file );
-	  }
-	  else if( fileNode.isTelediskFile() ) {
-	    disk = TelediskFloppyDisk.readFile( this, file );
-	  }
-	  else if( fileNode.isPlainDiskFile() ) {
-	    FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
-			this,
-			FloppyDiskFormat.getFormatByDiskSize( file.length() ),
-			FloppyDiskFormatDlg.Flag.PHYS_FORMAT );
-	    dlg.setVisible( true );
-	    FloppyDiskFormat fmt = dlg.getFormat();
-	    if( fmt != null ) {
-	      disk = PlainFileFloppyDisk.openFile( this, file, true, fmt );
-	    }
-	  }
-	  if( disk != null ) {
-	    if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
-	      outFile = EmuUtil.showFileSaveDlg(
-				this,
-				"Einfache Abbilddatei speichern",
-				EmuUtil.getDestFile(
-					file,
-					".img",
-					Main.getLastPathFile( "disk" ) ),
-				EmuUtil.getPlainDiskFileFilter() );
-	      if( outFile != null ) {
-		if( DiskUtil.checkFileExt(
-				this,
-				outFile,
-				DiskUtil.plainDiskFileExt ) )
-		{
-		  PlainFileFloppyDisk.export( disk, outFile );
-		  fireDirectoryChanged( outFile.getParentFile() );
-		  showExportFinished();
-		}
-	      }
-	    }
-	  }
-	}
-	catch( IOException ex ) {
-	  if( outFile != null ) {
-	    outFile.delete();
-	  }
-	  BasicDlg.showErrorDlg( this, ex );
-	}
-	finally {
-	  if( disk != null ) {
-	    disk.doClose();
-	  }
-	}
-      }
-    }
-  }
-
-
-  private void doFileExportToSound()
-  {
-    FileNode fileNode = getSelectedFileNode();
-    if( fileNode != null ) {
-      if( fileNode.isTAPFile() ) {
-	File file = fileNode.getFile();
-	if( file != null ) {
-	  File outFile = EmuUtil.showFileSaveDlg(
-				this,
-				"Sound-Datei speichern",
-				Main.getLastPathFile( "audio" ),
-				AudioUtil.getAudioOutFileFilter() );
-	  if( outFile != null ) {
-	    AudioFileFormat.Type fileType = AudioUtil.getAudioFileType(
-								this,
-								outFile );
-	    if( fileType != null ) {
-	      Exception        ex = null;
-	      AudioInputStream in = null;
-	      try {
-		KCTapAudioInputStream tapIn = new KCTapAudioInputStream(
-				EmuUtil.readFile( file, 0x100000 ) );
-		in = new AudioInputStream(
-				tapIn,
-				tapIn.getAudioFormat(),
-				tapIn.getFrameLength() );
-		AudioSystem.write( in, fileType, outFile );
-		fireDirectoryChanged( outFile.getParentFile() );
-		showExportFinished();
-	      }
-	      catch( Exception ex1 ) {
-		ex = ex1;
-	      }
-	      finally {
-		EmuUtil.doClose( in );
-	      }
-	      if( ex != null ) {
-		BasicDlg.showErrorDlg( this, ex );
-	      }
-	    }
-	  }
+	if( file.isFile() ) {
+	  this.screenFrm.openFileConverter( file );
 	}
       }
     }
@@ -1547,36 +1475,18 @@ public class FileBrowserFrm extends BasicFrm
 	      ZipUnpacker.unpackFile( this, file, outDir );
 	    }
 	  }
-	  else if( fileNode.isAnadiskFile() ) {
-	    AbstractFloppyDisk disk = AnadiskFloppyDisk.readFile(
-								this,
-								file );
-	    if( disk != null ) {
-	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
-		DiskUtil.unpackDisk( this, file, disk, "Anadisk-Datei" );
-	      }
-	    }
-	  }
-	  else if( fileNode.isCopyQMFile() ) {
-	    AbstractFloppyDisk disk = CopyQMFloppyDisk.readFile( this, file );
-	    if( disk != null ) {
-	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
-		DiskUtil.unpackDisk( this, file, disk, "CopyQM-Datei" );
-	      }
-	    }
-	  }
-	  else if( fileNode.isTelediskFile() ) {
-	    AbstractFloppyDisk disk = TelediskFloppyDisk.readFile(
-								this,
-								file );
-	    if( disk != null ) {
-	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
-		DiskUtil.unpackDisk( this, file, disk, "Teledisk-Datei" );
-	      }
-	    }
-	  }
 	  else if( fileNode.isPlainDiskFile() ) {
 	    DiskUtil.unpackPlainDiskFile( this, file );
+	  }
+	  else if( fileNode.isNonPlainDiskFile() ) {
+	    AbstractFloppyDisk disk = DiskUtil.readNonPlainDiskFile(
+								this,
+								file );
+	    if( disk != null ) {
+	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
+		DiskUtil.unpackDisk( this, file, disk );
+	      }
+	    }
 	  }
 	}
       }
@@ -1677,8 +1587,306 @@ public class FileBrowserFrm extends BasicFrm
   {
     FileNode fileNode = getSelectedFileNode();
     if( fileNode != null ) {
-      if( fileNode.isAudioFile() )
-	AudioFilePlayer.play( this, fileNode.getFile() );
+      if( fileNode.isAudioFile() ) {
+	AudioPlayer.play( this, fileNode.getFile() );
+      }
+    }
+  }
+
+
+  private void doFilePlayAC1() throws IOException
+  {
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      if( fileNode.isBinFile() ) {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  String           title = "AC1-Wiedergabe von " + file.getName();
+	  ReplyFileHeadDlg dlg   = new ReplyFileHeadDlg(
+			this,
+			file.getName(),
+			"Wiedergeben",
+			title,
+			ReplyFileHeadDlg.Option.BEGIN_ADDRESS,
+			ReplyFileHeadDlg.Option.START_ADDRESS,
+			ReplyFileHeadDlg.Option.FILE_NAME_16 );
+	  dlg.setVisible( true );
+	  if( dlg.wasApproved() ) {
+	    int startAddr = dlg.getApprovedStartAddress();
+	    if( startAddr < 0 ) {
+	      startAddr = 0;
+	    }
+	    AudioPlayer.play(
+		this,
+		new AC1AudioDataStream(
+			false,
+			EmuUtil.readFile( file, 0x10000 ),
+			dlg.getApprovedFileName(),
+			dlg.getApprovedBeginAddress(),
+			startAddr ),
+		title + "..." );
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doFilePlayAC1Basic() throws IOException
+  {
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      if( fileNode.isBinFile() || fileNode.isHeadersaveFile() ) {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  byte[] buf  = EmuUtil.readFile( file, 0x10000 );
+	  int    len  = buf.length;
+	  if( len > 0 ) {
+	    String fileName = file.getName();
+	    int    offs     = 0;
+	    if( len > 32 ) {
+	      if( (buf[ 13 ] == (byte) 0xD3)
+		  && (buf[ 14 ] == (byte) 0xD3)
+		  && (buf[ 15 ] == (byte) 0xD3) )
+	      {
+		offs += 32;
+		len  -= 32;
+		String s = EmuUtil.extractSingleAsciiLine( buf, 16, 16 );
+		if( s != null ) {
+		  fileName = s;
+		}
+	      }
+	    }
+	    String title = "AC1-BASIC-Wiedergabe von " + file.getName();
+	    ReplyFileHeadDlg dlg = new ReplyFileHeadDlg(
+			this,
+			fileName,
+			"Wiedergeben",
+			title,
+			ReplyFileHeadDlg.Option.FILE_NAME_6 );
+	    dlg.setVisible( true );
+	    if( dlg.wasApproved() ) {
+	      AudioPlayer.play(
+			this,
+			new AC1AudioDataStream(
+				true,
+				buf,
+				offs,
+				len,
+				dlg.getApprovedFileName(),
+				-1,
+				-1 ),
+			title + "..." );
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doFilePlaySCCH() throws IOException
+  {
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      if( fileNode.isBinFile() || fileNode.isHeadersaveFile() ) {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  byte[] buf = EmuUtil.readFile( file, 0x10000 );
+	  int    len = buf.length;
+	  if( len > 0 ) {
+	    ReplyFileHeadDlg.Option[] options = null;
+	    String fileName = file.getName();
+	    int    offs     = 0;
+	    int    begAddr  = -1;
+	    int    endAddr  = -1;
+	    int    fType    = -1;
+	    if( len > 32 ) {
+	      if( (buf[ 13 ] == (byte) 0xD3)
+		  && (buf[ 14 ] == (byte) 0xD3)
+		  && (buf[ 15 ] == (byte) 0xD3) )
+	      {
+		offs += 32;
+		len  -= 32;
+		begAddr = EmuUtil.getWord( buf, 0 );
+		endAddr = EmuUtil.getWord( buf, 2 );
+		if( (begAddr == 0x60F7) && (buf[ 12 ] == (byte) 'B') ) {
+		  fType   = 'B';
+		  options = new ReplyFileHeadDlg.Option[] {
+			ReplyFileHeadDlg.Option.FILE_NAME_16 };
+		} else {
+		  options = new ReplyFileHeadDlg.Option[] {
+			ReplyFileHeadDlg.Option.FILE_NAME_16,
+			ReplyFileHeadDlg.Option.SCCH_FILE_TYPE };
+		}
+		String s = EmuUtil.extractSingleAsciiLine( buf, 16, 16 );
+		if( s != null ) {
+		  fileName = s;
+		}
+	      }
+	    }
+	    if( options == null ) {
+	      options = new ReplyFileHeadDlg.Option[] {
+				ReplyFileHeadDlg.Option.BEGIN_ADDRESS,
+				ReplyFileHeadDlg.Option.END_ADDRESS,
+				ReplyFileHeadDlg.Option.FILE_NAME_16,
+				ReplyFileHeadDlg.Option.SCCH_FILE_TYPE };
+	    }
+	    String title = "AC1/LLC2-TurboSave-Wiedergabe von "
+							+ file.getName();
+	    ReplyFileHeadDlg dlg = new ReplyFileHeadDlg(
+						this,
+						fileName,
+						"Wiedergeben",
+						title,
+						options );
+	    dlg.setVisible( true );
+	    if( dlg.wasApproved() ) {
+	      if( begAddr < 0 ) {
+		begAddr = dlg.getApprovedBeginAddress();
+	      }
+	      if( endAddr < 0 ) {
+		endAddr = dlg.getApprovedEndAddress();
+		if( endAddr < 0 ) {
+		  endAddr = begAddr + len - 1;
+		}
+	      }
+	      if( fType < 0 ) {
+		fType = dlg.getApprovedSCCHFileType();
+	      }
+	      AudioPlayer.play(
+			this,
+			new SCCHAudioDataStream(
+				buf,
+				offs,
+				len,
+				dlg.getApprovedFileName(),
+				(char) fType,
+				begAddr,
+				endAddr ),
+			title + "..." );
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doFilePlayKC( int firstBlkNum ) throws IOException
+  {
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      File file = fileNode.getFile();
+      if( file != null ) {
+	String title = "KC-Wiedergabe von " + file.getName() + "...";
+	if( fileNode.isKCBasicHeadFile() ) {
+	  AudioPlayer.play(
+		this,
+		new KCAudioDataStream(
+			false,
+			1,
+			EmuUtil.readFile( file, 0x10000 ) ),
+		title );
+	}
+	else if( fileNode.isKCBasicFile() ) {
+	  byte[] fileBytes = EmuUtil.readFile( file, 0x10000 );
+	  if( fileBytes != null ) {
+	    if( fileBytes.length > 0 ) {
+	      ReplyFileHeadDlg dlg = new ReplyFileHeadDlg(
+			this,
+			file.getName(),
+			"Wiedergeben",
+			title,
+			ReplyFileHeadDlg.Option.FILE_NAME_8 );
+	      dlg.setVisible( true );
+	      if( dlg.wasApproved() ) {
+		String name  = dlg.getApprovedFileName();
+		byte[] buf   = new byte[ fileBytes.length + 11 ];
+		int    dst   = 0;
+		buf[ dst++ ] = (byte) 0xD3;
+		buf[ dst++ ] = (byte) 0xD3;
+		buf[ dst++ ] = (byte) 0xD3;
+		if( name != null ) {
+		  int len = name.length();
+		  int src = 0;
+		  while( (dst < 11) && (src < len) ) {
+		    buf[ dst++ ] = (byte) (name.charAt( src++ ) & 0x7F);
+		  }
+		}
+		while( dst < 11 ) {
+		  buf[ dst++ ] = (byte) 0x20;
+		}
+		AudioPlayer.play(
+			this,
+			new KCAudioDataStream( false, 1, buf ),
+			title );
+	      }
+	    }
+	  }
+	}
+	else if( fileNode.isKCSysFile() ) {
+	  AudioPlayer.play(
+		this,
+		new KCAudioDataStream(
+			false,
+			firstBlkNum,
+			EmuUtil.readFile( file, 0x10000 ) ),
+		title );
+	}
+	else if( (fileNode.isKC85TapFile() && (firstBlkNum == 1))
+		 || (fileNode.isZ9001TapFile() && (firstBlkNum == 0)) )
+	{
+	  AudioPlayer.play(
+		this,
+		new KCAudioDataStream(
+			true,
+			0,
+			EmuUtil.readFile( file, 0x10110 ) ),
+		title );
+	}
+      }
+    }
+  }
+
+
+  private void doFilePlayZ1013( boolean headersave ) throws IOException
+  {
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      if( fileNode.isBinFile()
+	  || (headersave && fileNode.isHeadersaveFile()) )
+      {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  AudioPlayer.play(
+		this,
+		new Z1013AudioDataStream(
+				headersave,
+				EmuUtil.readFile( file, 0x10020 ) ),
+		String.format(
+			"Z1013%s-Wiedergabe von %s...",
+			headersave ? "-Headersave" : "",
+			file.getName() ) );
+	}
+      }
+    }
+  }
+
+
+  private void doFileAudioIn()
+  {
+    FileNode fileNode = getSelectedFileNode();
+    if( fileNode != null ) {
+      if( fileNode.isAudioFile()
+	  || fileNode.isKC85TapFile()
+	  || fileNode.isZ9001TapFile() )
+      {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  this.screenFrm.openAudioInFile( file );
+	}
+      }
     }
   }
 
@@ -2365,12 +2573,6 @@ public class FileBrowserFrm extends BasicFrm
   }
 
 
-  private void showExportFinished()
-  {
-    BasicDlg.showInfoDlg( this, "Export erfolgreich beendet" );
-  }
-
-
   private void updActionButtons()
   {
     int                  nNodes    = 0;
@@ -2424,36 +2626,58 @@ public class FileBrowserFrm extends BasicFrm
       this.mnuPopupPlay.setEnabled( isAudio );
       this.btnPlay.setEnabled( isAudio );
 
+      boolean isHS          = fileNode.isHeadersaveFile();
+      boolean isBin         = fileNode.isBinFile();
+      boolean isKCBasicHead = fileNode.isKCBasicHeadFile();
+      boolean isKCBasic     = fileNode.isKCBasicFile();
+      boolean isKCSys       = fileNode.isKCSysFile();
+      boolean isKC85Tap     = fileNode.isKC85TapFile();
+      boolean isZ9001Tap    = fileNode.isZ9001TapFile();
+      boolean isBasic60F7   = false;
+      if( isHS ) {
+	FileInfo info = fileNode.getFileInfo();
+	if( info != null ) {
+	  if( (info.getBegAddr() == 0x60F7) && (info.getFileType() == 'B') ) {
+	    isBasic60F7 = true;
+	  }
+	}
+      }
+
+      this.mnuFilePlayAC1.setEnabled( isBin );
+      this.mnuPopupPlayAC1.setEnabled( isBin );
+
+      this.mnuFilePlayAC1Basic.setEnabled( isBasic60F7 );
+      this.mnuPopupPlayAC1Basic.setEnabled( isBasic60F7 );
+
+      this.mnuFilePlaySCCH.setEnabled( isBin || isBasic60F7 );
+      this.mnuPopupPlaySCCH.setEnabled( isBin || isBasic60F7 );
+
+      this.mnuFilePlayKC85.setEnabled(
+			isKCBasicHead || isKCBasic || isKCSys || isKC85Tap );
+      this.mnuPopupPlayKC85.setEnabled(
+			isKCBasicHead || isKCBasic || isKCSys || isKC85Tap );
+
+      this.mnuFilePlayZ9001.setEnabled( isKCSys || isZ9001Tap );
+      this.mnuPopupPlayZ9001.setEnabled( isKCSys || isZ9001Tap );
+
+      this.mnuFilePlayZ1013.setEnabled( isBin );
+      this.mnuPopupPlayZ1013.setEnabled( isBin );
+
+      this.mnuFilePlayZ1013HS.setEnabled( isHS );
+      this.mnuPopupPlayZ1013HS.setEnabled( isHS );
+
+      this.mnuFileAudioIn.setEnabled( isAudio || isKC85Tap || isZ9001Tap );
+      this.mnuPopupAudioIn.setEnabled( isAudio || isKC85Tap || isZ9001Tap );
+
       boolean isText = (stateOneFile && !isImage && !isAudio);
       this.mnuFileEditText.setEnabled( isText );
       this.mnuPopupEditText.setEnabled( isText );
       this.btnEditText.setEnabled( isText );
 
-      boolean isPlainDisk = fileNode.isPlainDiskFile();
-      boolean isAnadisk   = fileNode.isAnadiskFile();
-      boolean isCopyQM    = fileNode.isCopyQMFile();
-      boolean isTeledisk  = fileNode.isTelediskFile();
-
-      this.mnuFileExportToPlainDisk.setEnabled(
-			isAnadisk || isCopyQM || isTeledisk );
-      this.mnuPopupExportToPlainDisk.setEnabled(
-			isAnadisk || isCopyQM || isTeledisk );
-
-      this.mnuFileExportToAnadisk.setEnabled(
-			isPlainDisk || isCopyQM || isTeledisk );
-      this.mnuPopupExportToAnadisk.setEnabled(
-			isPlainDisk || isCopyQM || isTeledisk );
-
-      boolean isTAP = fileNode.isTAPFile();
-      this.mnuFileExportToSound.setEnabled( isTAP );
-      this.mnuPopupExportToSound.setEnabled( isTAP );
-
       boolean isUnpackable = (fileNode.isArchiveFile()
 					|| fileNode.isCompressedFile()
-					|| isPlainDisk
-					|| isAnadisk
-					|| isCopyQM
-					|| isTeledisk);
+					|| fileNode.isNonPlainDiskFile()
+					|| fileNode.isPlainDiskFile());
       this.mnuFileUnpack.setEnabled( isUnpackable );
       this.mnuPopupUnpack.setEnabled( isUnpackable );
 
@@ -2480,15 +2704,33 @@ public class FileBrowserFrm extends BasicFrm
       this.mnuPopupPlay.setEnabled( false );
       this.btnPlay.setEnabled( false );
 
+      this.mnuFilePlayAC1.setEnabled( false );
+      this.mnuPopupPlayAC1.setEnabled( false );
+
+      this.mnuFilePlayAC1Basic.setEnabled( false );
+      this.mnuPopupPlayAC1Basic.setEnabled( false );
+
+      this.mnuFilePlaySCCH.setEnabled( false );
+      this.mnuPopupPlaySCCH.setEnabled( false );
+
+      this.mnuFilePlayKC85.setEnabled( false );
+      this.mnuPopupPlayKC85.setEnabled( false );
+
+      this.mnuFilePlayZ9001.setEnabled( false );
+      this.mnuPopupPlayZ9001.setEnabled( false );
+
+      this.mnuFilePlayZ1013.setEnabled( false );
+      this.mnuPopupPlayZ1013.setEnabled( false );
+
+      this.mnuFilePlayZ1013HS.setEnabled( false );
+      this.mnuPopupPlayZ1013HS.setEnabled( false );
+
+      this.mnuFileAudioIn.setEnabled( false );
+      this.mnuPopupAudioIn.setEnabled( false );
+
       this.mnuFileEditText.setEnabled( false );
       this.mnuPopupEditText.setEnabled( false );
       this.btnEditText.setEnabled( false );
-
-      this.mnuFileExportToPlainDisk.setEnabled( false );
-      this.mnuPopupExportToPlainDisk.setEnabled( false );
-
-      this.mnuFileExportToSound.setEnabled( false );
-      this.mnuPopupExportToSound.setEnabled( false );
 
       this.mnuFileUnpack.setEnabled( false );
       this.mnuPopupUnpack.setEnabled( false );
@@ -2513,6 +2755,9 @@ public class FileBrowserFrm extends BasicFrm
 
     this.mnuFileDiffHex.setEnabled( stateFilesOnly );
     this.mnuPopupDiffHex.setEnabled( stateFilesOnly );
+
+    this.mnuFileConvert.setEnabled( stateOneFile );
+    this.mnuPopupConvert.setEnabled( stateOneFile );
 
     this.mnuFileChecksum.setEnabled( stateFilesOnly );
     this.mnuPopupChecksum.setEnabled( stateFilesOnly );

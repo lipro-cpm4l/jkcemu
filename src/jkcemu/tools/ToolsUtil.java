@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,7 @@ import jkcemu.base.EmuUtil;
 
 public class ToolsUtil
 {
-  public static jkcemu.tools.Label[] readLabels( Reader  reader )
+  public static jkcemu.tools.Label[] readLabels( Reader reader )
 							throws IOException
   {
     Set<jkcemu.tools.Label> labels = null;
@@ -72,9 +72,13 @@ public class ToolsUtil
 			  @Override
 			  public int compareTo( jkcemu.tools.Label label )
 			  {
-			    return EmuUtil.compare(
+			    int rv =  EmuUtil.compare(
 					lName,
 					label.getLabelName() );
+			    if( rv == 0 ) {
+			      rv = lValue - label.getLabelValue();
+			    }
+			    return rv;
 			  }
 			} );
 	    }

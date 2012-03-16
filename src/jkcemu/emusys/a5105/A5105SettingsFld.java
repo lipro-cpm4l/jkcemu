@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,7 +21,10 @@ public class A5105SettingsFld extends AbstractSettingsFld
   private JPanel                 tabEtc;
   private RAMFloppiesSettingsFld tabRF;
   private JCheckBox              btnFloppyDisk;
+  private JCheckBox              btnKCNet;
+  private JCheckBox              btnVDIP;
   private JCheckBox              btnPasteFast;
+  private JCheckBox              btnFixedScreenSize;
 
 
   public A5105SettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -57,20 +60,38 @@ public class A5105SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnFloppyDisk = new JCheckBox(
-		"Floppy-Disk-Station emulieren",
-		true );
-    this.btnFloppyDisk.addActionListener( this );
+    this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Station", true );
     this.tabEtc.add( this.btnFloppyDisk, gbcEtc );
+
+    this.btnKCNet = new JCheckBox( "KCNet-kompatible Netzwerkkarte", false );
+    gbcEtc.insets.top = 0;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnKCNet, gbcEtc );
+
+    this.btnVDIP = new JCheckBox(
+			"USB-Anschluss (Vinculum VDIP Modul)",
+			false );
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnVDIP, gbcEtc );
 
     this.btnPasteFast = new JCheckBox(
 		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs",
 		true );
     this.btnPasteFast.addActionListener( this );
-    gbcEtc.insets.top    = 0;
-    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnPasteFast, gbcEtc );
+
+    this.btnFixedScreenSize = new JCheckBox(
+		"Gleiche Fenstergr\u00F6\u00DFe in allen Bildschirmmodi" );
+    this.btnFixedScreenSize.addActionListener( this );
+    gbcEtc.insets.bottom = 5;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnFixedScreenSize, gbcEtc );
+
+    // Listener
+    this.btnFloppyDisk.addActionListener( this );
+    this.btnKCNet.addActionListener( this );
+    this.btnVDIP.addActionListener( this );
   }
 
 
@@ -89,12 +110,26 @@ public class A5105SettingsFld extends AbstractSettingsFld
       this.tabRF.applyInput( props, selected );
 
       // Sonstiges
-      props.setProperty(
+      EmuUtil.setProperty(
+		props,
 		this.propPrefix + "floppydisk.enabled",
 		Boolean.toString( this.btnFloppyDisk.isSelected() ) );
-      props.setProperty(
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "kcnet.enabled",
+		this.btnKCNet.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "vdip.enabled",
+                this.btnVDIP.isSelected() );
+      EmuUtil.setProperty(
+		props,
 		this.propPrefix + "paste.fast",
 		Boolean.toString( this.btnPasteFast.isSelected() ) );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "fixed_screen_size",
+		this.btnFixedScreenSize.isSelected() );
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -125,14 +160,30 @@ public class A5105SettingsFld extends AbstractSettingsFld
   {
     this.tabRF.updFields( props );
     this.btnFloppyDisk.setSelected(
-	EmuUtil.getBooleanProperty(
+		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + "floppydisk.enabled",
 			true ) );
+    this.btnKCNet.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "kcnet.enabled",
+			false ) );
+
+    this.btnVDIP.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "vdip.enabled",
+			false ) );
     this.btnPasteFast.setSelected(
-	EmuUtil.getBooleanProperty(
+		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + "paste.fast",
 			true ) );
+    this.btnFixedScreenSize.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "fixed_screen_size",
+			false ) );
   }
 }

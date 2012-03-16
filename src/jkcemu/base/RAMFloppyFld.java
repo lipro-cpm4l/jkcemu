@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -126,6 +126,13 @@ public class RAMFloppyFld extends JComponent implements ActionListener
   }
 
 
+  public void clear()
+  {
+    this.ramFloppy.clear();
+    updFields();
+  }
+
+
   public void fireRAMFloppyAccess()
   {
     this.accessCounter = 5;
@@ -176,8 +183,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
 			+ "Dabei gehen alle in ihr gespeicherten Daten"
 			+ " verloren!" ) )
       {
-	this.ramFloppy.clear();
-	updFields();
+	clear();
       }
     }
   }

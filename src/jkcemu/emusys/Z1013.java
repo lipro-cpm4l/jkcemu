@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,9 +14,11 @@ import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.disk.*;
 import jkcemu.emusys.z1013.*;
-import jkcemu.etc.RTC7242X;
+import jkcemu.etc.*;
 import jkcemu.joystick.JoystickThread;
+import jkcemu.net.KCNet;
 import jkcemu.print.PrintMngr;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -26,10 +28,8 @@ public class Z1013 extends EmuSys implements
 					Z80PCListener,
 					Z80TStatesListener
 {
-  public static final int MEM_ARG1   = 0x001B;
-  public static final int MEM_HEAD   = 0x00E0;
-  public static final int MEM_SCREEN = 0xEC00;
-  public static final int MEM_OS     = 0xF000;
+  public static final int MEM_ARG1 = 0x001B;
+  public static final int MEM_HEAD = 0x00E0;
 
   public static final String[] basicTokens = {
     "END",       "FOR",      "NEXT",    "DATA",		// 0x80
@@ -89,50 +89,60 @@ public class Z1013 extends EmuSys implements
 			CENTR7_PRACTIC_2_1989,
 			CENTR8_FA_10_1990 };
 
-  private static byte[] mon202      = null;
-  private static byte[] monA2       = null;
-  private static byte[] monRB_K7659 = null;
-  private static byte[] monRB_S6009 = null;
-  private static byte[] monJM_1992  = null;
-  private static byte[] bl4_K7659   = null;
-  private static byte[] fontStd     = null;
-  private static byte[] fontAlt     = null;
+  private static byte[] mon202         = null;
+  private static byte[] monA2          = null;
+  private static byte[] monRB_K7659    = null;
+  private static byte[] monRB_S6009    = null;
+  private static byte[] monINCOM_K7669 = null;
+  private static byte[] monJM_1992     = null;
+  private static byte[] bl4_K7659      = null;
+  private static byte[] modBasic       = null;
+  private static byte[] fontStd        = null;
+  private static byte[] fontAlt        = null;
 
-  private Z80PIO            pio;
-  private FDC8272           fdc;
-  private RTC7242X          rtc;
-  private GraphicCCJ        graphCCJ;
-  private Keyboard          keyboard;
-  private RAMFloppy         ramFloppy1;
-  private RAMFloppy         ramFloppy2;
-  private int               ramPixelBank;
-  private int               ramEndAddr;
-  private byte[][]          ramPixel;
-  private byte[]            ramStatic;
-  private byte[]            ramVideo;
-  private byte[]            stdFontBytes;
-  private byte[]            altFontBytes;
-  private byte[]            osBytes;
-  private String            osFile;
-  private String            monCode;
-  private boolean           romDisabled;
-  private boolean           altFontEnabled;
-  private boolean           graphCCJActive;
-  private boolean           catchPrintCalls;
-  private boolean           mode4MHz;
-  private boolean           mode64x16;
-  private volatile boolean  modeGraph;
-  private volatile boolean  pasteFast;
-  private volatile int      charToPaste;
-  private int               centrTStatesToAck;
-  private int               lastWrittenAddr;
-  private int[]             pcListenerAddrs;
-  private FloppyDiskDrive[] floppyDiskDrives;
-  private BasicType         lastBasicType;
-  private UserPort          userPort;
-  private volatile int      joy0ActionMask;
-  private volatile int      joy1ActionMask;
-  private volatile boolean  catchJoyCalls;
+  private Z80PIO              pio;
+  private FDC8272             fdc;
+  private RTC7242X            rtc;
+  private GraphicCCJ          graphCCJ;
+  private Z1013Keyboard       keyboard;
+  private AbstractKeyboardFld keyboardFld;
+  private KCNet               kcNet;
+  private VDIP                vdip;
+  private RAMFloppy           ramFloppy1;
+  private RAMFloppy           ramFloppy2;
+  private int                 ramPixelBank;
+  private int                 ramEndAddr;
+  private byte[][]            ramPixel;
+  private byte[]              ramStatic;
+  private byte[]              ramVideo;
+  private byte[]              romBasic;
+  private byte[]              romMega;
+  private byte[]              stdFontBytes;
+  private byte[]              altFontBytes;
+  private byte[]              osBytes;
+  private String              osFile;
+  private String              romBasicFile;
+  private String              romMegaFile;
+  private String              monCode;
+  private boolean             romDisabled;
+  private boolean             altFontEnabled;
+  private boolean             graphCCJActive;
+  private boolean             catchPrintCalls;
+  private boolean             mode4MHz;
+  private boolean             mode64x16;
+  private volatile boolean    modeGraph;
+  private volatile boolean    pasteFast;
+  private volatile int        charToPaste;
+  private int                 centrTStatesToAck;
+  private int                 romMegaSeg;
+  private int                 lastWrittenAddr;
+  private int[]               pcListenerAddrs;
+  private FloppyDiskDrive[]   floppyDiskDrives;
+  private BasicType           lastBasicType;
+  private UserPort            userPort;
+  private volatile int        joy0ActionMask;
+  private volatile int        joy1ActionMask;
+  private volatile boolean    catchJoyCalls;
 
 
   public Z1013( EmuThread emuThread, Properties props )
@@ -143,6 +153,10 @@ public class Z1013 extends EmuSys implements
     this.osBytes           = null;
     this.osFile            = null;
     this.monCode           = null;
+    this.romBasic          = null;
+    this.romBasicFile      = null;
+    this.romMega           = null;
+    this.romMegaFile       = null;
     this.romDisabled       = false;
     this.altFontEnabled    = false;
     this.graphCCJActive    = false;
@@ -156,6 +170,7 @@ public class Z1013 extends EmuSys implements
     this.pasteFast         = false;
     this.charToPaste       = 0;
     this.centrTStatesToAck = 0;
+    this.romMegaSeg        = 0;
     this.ramPixelBank      = 0;
     this.ramEndAddr        = getRAMEndAddr( props );
     this.ramVideo          = new byte[ 0x0400 ];
@@ -190,7 +205,6 @@ public class Z1013 extends EmuSys implements
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     this.pio   = new Z80PIO( "PIO (IO-Adressen 00-03)" );
-    cpu.setInterruptSources( this.pio );
     cpu.addAddressListener( this );
     checkAddPCListener( props );
 
@@ -208,23 +222,56 @@ public class Z1013 extends EmuSys implements
 
     this.rtc = emulatesRTC( props ) ? new RTC7242X() : null;
 
-    this.graphCCJ = null;
     if( emulatesGraphCCJ( props ) ) {
       this.graphCCJ = new GraphicCCJ(
 		this.screenFrm,
 		EmuUtil.getProperty(
 			props,
 			"jkcemu.z1013.graph_ccj.font.file" ) );
+    } else {
+      this.graphCCJ = null;
     }
 
-    this.keyboard = new Keyboard( this.pio );
+    if( emulatesKCNet( props ) ) {
+      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+    } else {
+      this.kcNet = null;
+    }
+
+    if( emulatesUSB( props ) ) {
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+    } else {
+      this.vdip = null;
+    }
+
+    java.util.List<Z80InterruptSource> iSources
+				= new ArrayList<Z80InterruptSource>();
+    iSources.add( this.pio );
+    if( this.kcNet != null ) {
+      iSources.add( this.kcNet );
+      cpu.addMaxSpeedListener( this.kcNet );
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
+    if( this.vdip != null ) {
+      iSources.add( this.vdip );
+    }
+    try {
+      cpu.setInterruptSources(
+        iSources.toArray( new Z80InterruptSource[ iSources.size() ] ) );
+    }
+    catch( ArrayStoreException ex ) {}
+
+    this.keyboardFld = null;
+    this.keyboard    = new Z1013Keyboard( this.pio );
     this.keyboard.applySettings( props );
 
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
     applyUserPortSettings( props );
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
-    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
@@ -243,18 +290,18 @@ public class Z1013 extends EmuSys implements
   }
 
 
-  public Keyboard getKeyboard()
-  {
-    return this.keyboard;
-  }
-
-
   public static String getTinyBasicProgram( Z80MemView memory )
   {
     return SourceUtil.getTinyBasicProgram(
 				memory,
 				0x1152,
 				memory.getMemWord( 0x101F ) );
+  }
+
+
+  public Z1013Keyboard getZ1013Keyboard()
+  {
+    return this.keyboard;
   }
 
 
@@ -350,7 +397,7 @@ public class Z1013 extends EmuSys implements
       case 0xFFE5:	// Bildschirm drucken
 	{
 	  PrintMngr printMngr = this.emuThread.getPrintMngr();
-	  int       addr      = MEM_SCREEN;
+	  int       addr      = 0xEC00;
 	  for( int i = 0; i < 32; i++ ) {
 	    for( int k = 0; k < 32; k++ ) {
 	      printMngr.putByte( getMemByte( addr++, false ) );
@@ -375,6 +422,9 @@ public class Z1013 extends EmuSys implements
   {
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
     }
     if( this.centrTStatesToAck > 0 ) {
       this.centrTStatesToAck -= tStates;
@@ -402,6 +452,9 @@ public class Z1013 extends EmuSys implements
     checkAddPCListener( props );
     loadFont( props );
     applyUserPortSettings( props );
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
   }
 
 
@@ -412,22 +465,46 @@ public class Z1013 extends EmuSys implements
 				props,
 				"jkcemu.system" ).startsWith( "Z1013" );
     if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.osFile,
 		EmuUtil.getProperty( props,  "jkcemu.z1013.os.file" ) );
     }
     if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.monCode,
 		EmuUtil.getProperty( props,  "jkcemu.z1013.monitor" ) );
     }
     if( rv && (getRAMEndAddr( props ) != this.ramEndAddr) ) {
       rv = false;
     }
-    if( rv ) {
-      if( emulatesFloppyDisk( props ) != (this.fdc != null) ) {
+    if( rv && emulatesModuleBasic( props ) == (this.romBasic != null) ) {
+      if( (this.romBasic != null)
+	  && !TextUtil.equals(
+		this.romBasicFile,
+		EmuUtil.getProperty(
+			props,
+			"jkcemu.z1013.rom_basic.file" ) ) )
+      {
 	rv = false;
       }
+    } else {
+      rv = false;
+    }
+    if( rv && emulatesModuleMegaROM( props ) == (this.romMega != null) ) {
+      if( (this.romMega != null)
+	  && !TextUtil.equals(
+		this.romMegaFile,
+		EmuUtil.getProperty(
+			props,
+			"jkcemu.z1013.rom_mega.file" ) ) )
+      {
+	rv = false;
+      }
+    } else {
+      rv = false;
+    }
+    if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
+      rv = false;
     }
     if( rv && (emulatesRTC( props ) != (this.rtc != null)) ) {
       rv = false;
@@ -436,6 +513,12 @@ public class Z1013 extends EmuSys implements
       rv = false;
     }
     if( rv && (emulatesGraphic( props ) != (this.ramPixel != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
       rv = false;
     }
     if( rv ) {
@@ -470,6 +553,28 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
+  public AbstractKeyboardFld createKeyboardFld()
+					throws UnsupportedOperationException
+  {
+    AbstractKeyboardFld kbFld    = null;
+    KeyboardMatrix      kbMatrix = this.keyboard.getKeyboardMatrix();
+    if( kbMatrix != null ) {
+      if( kbMatrix instanceof KeyboardMatrix8x4 ) {
+	kbFld = new Z1013KeyboardFld8x4( this );
+      }
+      else if( kbMatrix instanceof KeyboardMatrix8x8 ) {
+	kbFld = new Z1013KeyboardFld8x8( this );
+      }
+    }
+    this.keyboardFld = kbFld;
+    if( kbFld == null ) {
+      throw new UnsupportedOperationException();
+    }
+    return kbFld;
+  }
+
+
+  @Override
   public void die()
   {
     if( this.ramFloppy1 != null ) {
@@ -484,10 +589,18 @@ public class Z1013 extends EmuSys implements
     cpu.removeTStatesListener( this );
     if( this.fdc != null ) {
       cpu.removeMaxSpeedListener( this.fdc );
+      this.fdc.die();
     }
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
     if( this.pcListenerAddrs != null ) {
       cpu.removePCListener( this );
+    }
+    if( this.kcNet != null ) {
+      cpu.removeMaxSpeedListener( this.kcNet );
+      this.kcNet.die();
+    }
+    if( this.vdip != null ) {
+      this.vdip.die();
     }
   }
 
@@ -718,13 +831,37 @@ public class Z1013 extends EmuSys implements
 
     int     rv   = 0xFF;
     boolean done = false;
-    if( !this.romDisabled && (this.osBytes != null) ) {
-      if( (addr >= MEM_OS) && (addr < MEM_OS + this.osBytes.length) ) {
-	rv   = (int) this.osBytes[ addr - MEM_OS ] & 0xFF;
-	done = true;
+    if( (addr >= 0xC000) && (addr < 0xEC00) ) {
+      byte[] rom = this.romBasic;
+      if( rom != null ) {
+	int idx = addr - 0xC000;
+	if( idx < rom.length ) {
+	  rv   = (int) rom[ idx ] & 0xFF;
+	  done = true;
+	}
+      } else {
+	rom = this.romMega;
+	if( (rom != null) && (addr < 0xE800) ) {
+	  int idx = 0;
+	  if( addr < 0xC800 ) {
+	    idx = addr - 0xC000 + (this.romMegaSeg * 2048);
+	  } else if( addr < 0xD000 ) {
+	    idx = addr - 0xC800 + ((256 + this.romMegaSeg) * 2048);
+	  } else if( addr < 0xD800 ) {
+	    idx = addr - 0xD000 + (((2 * 256) + this.romMegaSeg) * 2048);
+	  } else if( addr < 0xE000 ) {
+	    idx = addr - 0xD800 + (((3 * 256) + this.romMegaSeg) * 2048);
+	  } else {
+	    idx = addr - 0xE000 + (((4 * 256) + this.romMegaSeg) * 2048);
+	  }
+	  if( (idx >= 0) && (idx < this.romMega.length) ) {
+	    rv = (int) rom[ idx ] & 0xFF;
+	  }
+	  done = true;
+	}
       }
     }
-    if( (addr >= MEM_SCREEN) && (addr < MEM_SCREEN + this.ramVideo.length) ) {
+    else if( (addr >= 0xEC00) && (addr < (0xEC00 + this.ramVideo.length)) ) {
       byte[] ram = null;
       if( (this.ramPixel != null) && this.modeGraph ) {
 	if( (this.ramPixelBank >= 0)
@@ -736,12 +873,22 @@ public class Z1013 extends EmuSys implements
 	ram = this.ramVideo;
       }
       if( ram != null ) {
-	int idx = addr - MEM_SCREEN;
+	int idx = addr - 0xEC00;
 	if( (idx >= 0) && (idx < ram.length) ) {
 	  rv = (int) ram[ idx ] & 0xFF;
 	}
       }
       done = true;
+    }
+    else if( (addr >= 0xF000) && !this.romDisabled ) {
+      byte[] rom = this.osBytes;
+      if( rom != null ) {
+	int idx = addr - 0xF000;
+	if( idx < rom.length ) {
+	  rv   = (int) rom[ idx ] & 0xFF;
+	  done = true;
+	}
+      }
     }
     if( !done && (this.ramStatic != null) ) {
       if( addr < this.ramStatic.length ) {
@@ -759,7 +906,7 @@ public class Z1013 extends EmuSys implements
   @Override
   public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
-    return MEM_OS;
+    return 0xF000;
   }
 
 
@@ -860,6 +1007,13 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
+  public boolean getSwapKeyCharCase()
+  {
+    return true;
+  }
+
+
+  @Override
   public String getTitle()
   {
     return "Z1013";
@@ -867,9 +1021,9 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
-  public boolean getSwapKeyCharCase()
+  protected VDIP getVDIP()
   {
-    return true;
+    return this.vdip;
   }
 
 
@@ -879,7 +1033,11 @@ public class Z1013 extends EmuSys implements
 			boolean ctrlDown,
 			boolean shiftDown )
   {
-    return this.keyboard.setKeyCode( keyCode );
+    boolean rv = this.keyboard.setKeyCode( keyCode );
+    if( rv ) {
+      updKeyboardFld();
+    }
+    return rv;
   }
 
 
@@ -887,6 +1045,7 @@ public class Z1013 extends EmuSys implements
   public void keyReleased()
   {
     this.keyboard.setKeyReleased();
+    updKeyboardFld();
   }
 
 
@@ -900,7 +1059,11 @@ public class Z1013 extends EmuSys implements
     else if( this.osBytes == monJM_1992 ) {
       hexMode = (getMemByte( 0x003E, false ) == 0x48);
     }
-    return this.keyboard.setKeyChar( ch, hexMode );
+    boolean rv = this.keyboard.setKeyChar( ch, hexMode );
+    if( rv ) {
+      updKeyboardFld();
+    }
+    return rv;
   }
 
 
@@ -1034,6 +1197,12 @@ public class Z1013 extends EmuSys implements
     else if( ((port & 0xF8) == 0x58) && (this.ramFloppy2 != null) ) {
       rv = this.ramFloppy2.readByte( port & 0x07 );
     }
+    else if( ((port & 0xF0) == 0xC0) && (this.kcNet != null) ) {
+      rv = this.kcNet.read( port );
+    }
+    else if( ((port & 0xFC) == 0xDC) && (this.vdip != null) ) {
+      rv = this.vdip.read( port );
+    }
     else if( (port >= 0xF0) && (port <= 0xFF) ) {
       switch( port ) {
 	case 0xF0:
@@ -1057,6 +1226,15 @@ public class Z1013 extends EmuSys implements
 	case 0xFA:
 	  if( this.fdc != null ) {
 	    this.fdc.reset( false );
+	  }
+	  break;
+
+	case 0xFC:
+	case 0xFD:
+	case 0xFE:
+	case 0xFF:
+	  if( (this.romMega == null) && (this.vdip != null) ) {
+	    rv = this.vdip.read( port );
 	  }
 	  break;
       }
@@ -1177,6 +1355,7 @@ public class Z1013 extends EmuSys implements
     this.centrTStatesToAck = 0;
     this.joy0ActionMask    = 0;
     this.joy1ActionMask    = 0;
+    this.romMegaSeg        = 0;
     this.lastWrittenAddr   = -1;
     this.romDisabled       = false;
     this.altFontEnabled    = false;
@@ -1356,39 +1535,45 @@ public class Z1013 extends EmuSys implements
 
     boolean rv   = false;
     boolean done = false;
-    if( !this.romDisabled && (this.osBytes != null) ) {
-      if( (addr >= MEM_OS) && (addr < MEM_OS + this.osBytes.length) ) {
-	done = true;
+    if( (addr >= 0xC000) && (addr < 0xEC00) ) {
+      if( (this.romBasic != null)
+	  || ((this.romMega != null) && (addr < 0xE800)) )
+      {
+	done = false;
       }
     }
-    if( !done ) {
-      if( (addr >= MEM_SCREEN)
-	  && (addr < MEM_SCREEN + this.ramVideo.length) )
-      {
-	byte[] ram = null;
-	if( (this.ramPixel != null) && this.modeGraph ) {
-	  if( (this.ramPixelBank >= 0)
-	      && (this.ramPixelBank < this.ramPixel.length) )
-	  {
-	    ram = this.ramPixel[ this.ramPixelBank ];
-	  }
-	} else {
-	  ram = this.ramVideo;
+    else if( (addr >= 0xEC00) && (addr < (0xEC00 + this.ramVideo.length)) ) {
+      byte[] ram = null;
+      if( (this.ramPixel != null) && this.modeGraph ) {
+	if( (this.ramPixelBank >= 0)
+	    && (this.ramPixelBank < this.ramPixel.length) )
+	{
+	  ram = this.ramPixel[ this.ramPixelBank ];
 	}
-	if( ram != null ) {
-	  int idx = addr - MEM_SCREEN;
-	  if( (idx >= 0) && (idx < ram.length) ) {
-	    ram[ idx ] = (byte) value;
-	    this.screenFrm.setScreenDirty( true );
-	    rv = true;
-	  }
+      } else {
+	ram = this.ramVideo;
+      }
+      if( ram != null ) {
+	int idx = addr - 0xEC00;
+	if( (idx >= 0) && (idx < ram.length) ) {
+	  ram[ idx ] = (byte) value;
+	  this.screenFrm.setScreenDirty( true );
+	  rv = true;
 	}
+      }
+      done = true;
+    }
+    else if( (addr >= 0xF000) && !this.romDisabled
+	     && (this.osBytes != null) )
+    {
+      if( addr < (0xF000 + this.osBytes.length) ) {
 	done = true;
       }
     }
     if( !done && (this.ramStatic != null) ) {
       if( addr < this.ramStatic.length ) {
 	this.ramStatic[ addr ] = (byte) value;
+	rv   = true;
 	done = true;
       }
     }
@@ -1432,6 +1617,22 @@ public class Z1013 extends EmuSys implements
   public boolean supportsCopyToClipboard()
   {
     return true;
+  }
+
+
+  @Override
+  public boolean supportsKeyboardFld()
+  {
+    boolean        rv       = false;
+    KeyboardMatrix kbMatrix = this.keyboard.getKeyboardMatrix();
+    if( kbMatrix != null ) {
+      if( (kbMatrix instanceof KeyboardMatrix8x4)
+	  || (kbMatrix instanceof KeyboardMatrix8x8) )
+      {
+	rv = true;
+      }
+    }
+    return rv;
   }
 
 
@@ -1551,6 +1752,12 @@ public class Z1013 extends EmuSys implements
     else if( ((port & 0xF8) == 0x58) && (this.ramFloppy2 != null) ) {
       this.ramFloppy2.writeByte( port & 0x07, value );
     }
+    else if( ((port & 0xF0) == 0xC0) && (this.kcNet != null) ) {
+      this.kcNet.write( port, value );
+    }
+    else if( ((port & 0xFC) == 0xDC) && (this.vdip != null) ) {
+      this.vdip.write( port, value );
+    }
     else if( (port >= 0xF0) && (port <= 0xFF) ) {
       switch( port ) {
 	case 0xF1:
@@ -1568,6 +1775,21 @@ public class Z1013 extends EmuSys implements
 	case 0xFA:
 	  if( this.fdc != null ) {
 	    this.fdc.reset( false );
+	  }
+	  break;
+
+	case 0xFC:
+	case 0xFD:
+	case 0xFE:
+	case 0xFF:
+	  if( this.romMega != null ) {
+	    if( port == 0xFF ) {
+	      this.romMegaSeg = value;
+	    }
+	  } else {
+	    if( this.vdip != null ) {
+	      this.vdip.write( port, value );
+	    }
 	  }
 	  break;
       }
@@ -1798,11 +2020,47 @@ public class Z1013 extends EmuSys implements
   }
 
 
+  private boolean emulatesKCNet( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.z1013.kcnet.enabled",
+				false );
+  }
+
+
+  private boolean emulatesModuleBasic( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.z1013.rom_basic.enabled",
+				false );
+  }
+
+
+  private boolean emulatesModuleMegaROM( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.z1013.rom_mega.enabled",
+				false );
+  }
+
+
   private static boolean emulatesRTC( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 				props,
 				"jkcemu.z1013.rtc.enabled",
+				false );
+  }
+
+
+  private boolean emulatesUSB( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.z1013.vdip.enabled",
 				false );
   }
 
@@ -1872,6 +2130,11 @@ public class Z1013 extends EmuSys implements
 	  monRB_S6009 = readResource( "/rom/z1013/mon_rb_s6009.bin" );
 	}
 	this.osBytes = monRB_S6009;
+      } else if( this.monCode.equals( "INCOM_K7669" ) ) {
+	if( monINCOM_K7669 == null ) {
+	  monINCOM_K7669 = readResource( "/rom/z1013/mon_incom_k7669.bin" );
+	}
+	this.osBytes = monINCOM_K7669;
       } else if( this.monCode.equals( "JM_1992" ) ) {
 	if( monJM_1992 == null ) {
 	  monJM_1992 = readResource( "/rom/z1013/mon_jm_1992.bin" );
@@ -1888,6 +2151,23 @@ public class Z1013 extends EmuSys implements
 	}
 	this.osBytes = mon202;
       }
+    }
+    if( emulatesModuleBasic( props ) ) {
+      this.romBasicFile = EmuUtil.getProperty(
+					props,
+					"jkcemu.z1013.rom_basic.file" );
+      this.romBasic = readFile( this.romBasicFile, 0x2C00, "KC-BASIC-Modul" );
+      if( this.romBasic == null ) {
+	if( modBasic == null ) {
+	  modBasic = readResource( "/rom/z1013/kcbasic.bin" );
+	}
+	this.romBasic = modBasic;
+      }
+    } else if( emulatesModuleMegaROM( props ) ) {
+      this.romMegaFile = EmuUtil.getProperty(
+					props,
+					"jkcemu.z1013.rom_mega.file" );
+      this.romMega = readFile( this.romMegaFile, 0x280000, "Mega-ROM-Modul" );
     }
     loadFont( props );
   }
@@ -2006,6 +2286,17 @@ public class Z1013 extends EmuSys implements
       value ^= 0x10;
     }
     this.pio.putInValuePortA( value, 0xFF );
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null ) {
+      KeyboardMatrix km = this.keyboard.getKeyboardMatrix();
+      if( km != null ) {
+	km.updKeyboardFld( this.keyboardFld );
+      }
+    }
   }
 }
 

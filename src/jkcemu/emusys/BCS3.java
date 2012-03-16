@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -223,8 +223,6 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     this.ctc.setTimerConnection( 1, 2 );
     this.ctc.addCTCListener( this );
     cpu.addTStatesListener( this.ctc );
-
-    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 

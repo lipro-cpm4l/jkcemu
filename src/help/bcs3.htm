@@ -1,8 +1,32 @@
 <html>
 <body>
  <h1>Hinweise zur Emulation des BCS3</h1>
+  <ul>
+   <li>
+    <a href="bcs3.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="bcs3.htm#screen">1.1. Bildschirmausgabe</a></li>
+     <li><a href="bcs3.htm#tape">1.2. Kassettenrecorderanschluss</a></li>
+    </ul>
+   </li>
+   <li>
+    <a href="bcs3.htm#software">2. Im ROM enthaltene Software</a>
+    <ul>
+     <li><a href="bcs3.htm#basic_v3">2.1. Hinweise zu BASIC-SE&nbsp;3.1 und S/P-BASIC&nbsp;V3.3</a></li>
+    </ul>
+   </li>
+   <li>
+    <a href="bcs3.htm#etc">3. Sonstiges</a>
+    <ul>
+     <li><a href="bcs3.htm#basic_io">3.1. Speichern und Laden von BASIC-Programmen</a></li>
+     <li><a href="bcs3.htm#basic_cc">3.2. JKCEMU-BASIC-Compiler</a></li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
 
- <h2>1. Emulierte Hardware</h2>
+
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
   <ul>
    <li>Je nach Einstellung 2, 4 oder 5&nbsp;KByte ROM</li>
    <li>1&nbsp;KByte RAM</li>
@@ -11,7 +35,7 @@
   </ul>
  <br/>
 
- <h3>1.1. Bildschirmausgabe</h3>
+ <h3><a name="screen">1.1. Bildschirmausgabe</a></h3>
   Beim BCS3 wird das Bildsignal ma&szlig;geblich durch eine
   zyklisch aufgerufene Software-Routine erzeugt.
   Diese Routine liest die auszugebenden Zeichen aus dem Arbeitsspeicher
@@ -28,7 +52,7 @@
   Anderenfalls werden die falschen Zeichen angezeigt.
  <br/><br/>
 
- <h3>1.2. Kassettenrecorderanschluss</h3>
+ <h3><a name="tape">1.2. Kassettenrecorderanschluss</a></h3>
   Der Kassettenrecorderanschluss wird ausgangsseitig vom gleichen
   CTC-Kanal bedient, der auch die Zeilensynchronimpulse f&uuml;r
   die Bildschirmausgabe liefert.
@@ -54,7 +78,7 @@
  <br/><br/>
 
 
- <h2>2. Im ROM enthaltene Software</h2>
+ <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   Je nach Einstellung:<br/>
   <ul>
    <li>
@@ -84,7 +108,9 @@
   </ul>
  <br/>
 
- <h3>2.1. Hinweise zu BASIC-SE&nbsp;3.1 und S/P-BASIC&nbsp;V3.3</h3>
+ <h3>
+  <a name="basic_v3">2.1. Hinweise zu BASIC-SE&nbsp;3.1 und S/P-BASIC&nbsp;V3.3</a>
+ </h3>
   <ul>
    <li>
     Beim Systemstart pr&uuml;ft das BASIC,
@@ -133,9 +159,11 @@
  <br/>
 
 
- <h2>3. Sonstiges</h2>
+ <h2><a name="etc">3. Sonstiges</a></h2>
 
- <h3>3.1. Speichern und Laden von BASIC-Programmen</h3>
+ <h3>
+  <a name="basic_io">3.1. Speichern und Laden von BASIC-Programmen</a>
+ </h3>
   Speichern Sie die BASIC-Programme mit der entsprechenden Funktion
   des Emulator (Men&uuml; <em>Datei</em> &rarr;
   <em>BASIC-Programm speichern...</em>).
@@ -155,7 +183,7 @@
   Bei Speicherabbilddateien ohne Kopfdaten ist das immer der Fall.
  <br/><br/>
 
- <h3>3.2. JKCEMU-BASIC-Compiler</h3>
+ <h3><a name="basic_cc">3.2. JKCEMU-BASIC-Compiler</a></h3>
   Der BCS3 ist von seinem Konzept her als reiner BASIC-Rechner ausgelegt.
   Zur Verwaltung und Benutzung von Maschinencodeprogrammen,
   d.h. von solchen Programmen, die auch ein BASIC-Compiler erzeugt,

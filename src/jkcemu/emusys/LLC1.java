@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.lang.*;
 import java.util.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.emusys.etc.LLC1KeyboardFld;
 import z80emu.*;
 
 
@@ -27,23 +28,24 @@ public class LLC1 extends EmuSys implements
   private static byte[] rom0800 = null;
   private static byte[] romFont = null;
 
-  private byte[]  ramStatic;
-  private byte[]  ramVideo;
-  private int[]   keyMatrixValues;
-  private int[]   digitStatus;
-  private int[]   digitValues;
-  private int     digitIdx;
-  private int     keyChar;
-  private int     keyAlphaTStates;
-  private int     keyAlphaTStateCounter;
-  private int     keyStartTStates;
-  private int     keyStartTStateCounter;
-  private boolean pio1B7Value;
-  private long    curDisplayTStates;
-  private long    displayCheckTStates;
-  private Z80CTC  ctc;
-  private Z80PIO  pio1;
-  private Z80PIO  pio2;
+  private byte[]          ramStatic;
+  private byte[]          ramVideo;
+  private LLC1KeyboardFld keyboardFld;
+  private int[]           keyboardMatrix;
+  private int[]           digitStatus;
+  private int[]           digitValues;
+  private int             digitIdx;
+  private int             keyChar;
+  private int             keyAlphaTStates;
+  private int             keyAlphaTStateCounter;
+  private int             keyStartTStates;
+  private int             keyStartTStateCounter;
+  private boolean         pio1B7Value;
+  private long            curDisplayTStates;
+  private long            displayCheckTStates;
+  private Z80CTC          ctc;
+  private Z80PIO          pio1;
+  private Z80PIO          pio2;
 
 
   public LLC1( EmuThread emuThread, Properties props )
@@ -60,7 +62,8 @@ public class LLC1 extends EmuSys implements
     }
     this.ramStatic           = new byte[ 0x0800 ];
     this.ramVideo            = new byte[ 0x0400 ];
-    this.keyMatrixValues     = new int[ 4 ];
+    this.keyboardFld         = null;
+    this.keyboardMatrix      = new int[ 4 ];
     this.digitStatus         = new int[ 8 ];
     this.digitValues         = new int[ 8 ];
     this.digitIdx            = 0;
@@ -72,9 +75,9 @@ public class LLC1 extends EmuSys implements
     this.pio1  = new Z80PIO( "PIO 1" );	// nicht in der Interrupt-Kette!
     this.pio2  = new Z80PIO( "PIO 2" );
     cpu.setInterruptSources( this.ctc, this.pio2 );
+    cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged( cpu );
   }
 
@@ -94,6 +97,30 @@ public class LLC1 extends EmuSys implements
   }
 
 
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    boolean pressed = false;
+    synchronized( this.keyboardMatrix ) {
+      int n = Math.min( kbMatrix.length, this.keyboardMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	if( (~this.keyboardMatrix[ i ] & kbMatrix[ i ]) != 0 ) {
+	  pressed = true;
+	}
+	this.keyboardMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.keyboardMatrix.length ) {
+	this.keyboardMatrix[ i ] = 0;
+	i++;
+      }
+    }
+    if( pressed ) {
+      this.ctc.externalUpdate( 3, 1 );
+    }
+  }
+
+
 	/* --- Z80MaxSpeedListener --- */
 
   @Override
@@ -101,9 +128,9 @@ public class LLC1 extends EmuSys implements
   {
     int maxSpeedKHz          = cpu.getMaxSpeedKHz();
     this.displayCheckTStates = maxSpeedKHz * 50;
-    synchronized( this.keyMatrixValues ) {
-      this.keyAlphaTStates = maxSpeedKHz;		// 1 Sekunde
-      this.keyStartTStates = maxSpeedKHz / 10;		// 1/100 Sekunde
+    synchronized( this.keyboardMatrix ) {
+      this.keyAlphaTStates = maxSpeedKHz * 1000;	// 1 Sekunde
+      this.keyStartTStates = maxSpeedKHz * 10;		// 1/100 Sekunde
     }
   }
 
@@ -139,7 +166,7 @@ public class LLC1 extends EmuSys implements
     if( (this.keyAlphaTStateCounter > 0)
 	|| (this.keyStartTStateCounter > 0) )
     {
-      synchronized( this.keyMatrixValues ) {
+      synchronized( this.keyboardMatrix ) {
 	if( this.keyAlphaTStateCounter > 0 ) {
 	  this.keyAlphaTStateCounter -= tStates;
 	}
@@ -170,10 +197,19 @@ public class LLC1 extends EmuSys implements
 
 
   @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new LLC1KeyboardFld( this );
+    return this.keyboardFld;
+  }
+
+
+  @Override
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
+    cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
@@ -505,10 +541,11 @@ public class LLC1 extends EmuSys implements
 	break;
 
       case KeyEvent.VK_ENTER:
-	synchronized( this.keyMatrixValues ) {
-	  this.keyMatrixValues[ 2 ] = 0x82;
+	synchronized( this.keyboardMatrix ) {
+	  this.keyboardMatrix[ 2 ] = 0x82;		// ST
 	  if( this.keyAlphaTStateCounter <= 0 ) {
 	    this.ctc.externalUpdate( 3, 1 );
+	    updKeyboardFld();
 	  }
 	}
 	ch = 0x0D;
@@ -520,7 +557,7 @@ public class LLC1 extends EmuSys implements
 	break;
     }
     if( ch > 0 ) {
-      synchronized( this.keyMatrixValues ) {
+      synchronized( this.keyboardMatrix ) {
 	this.keyChar               = ch;
 	this.keyStartTStateCounter = this.keyStartTStates;
       }
@@ -533,11 +570,12 @@ public class LLC1 extends EmuSys implements
   @Override
   public void keyReleased()
   {
-    synchronized( this.keyMatrixValues ) {
-      Arrays.fill( this.keyMatrixValues, 0 );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
       this.keyChar               = 0;
       this.keyStartTStateCounter = 0;
     }
+    updKeyboardFld();
   }
 
 
@@ -546,13 +584,13 @@ public class LLC1 extends EmuSys implements
   {
     boolean rv = false;
     if( (ch > 0) && (ch < 0x7F) ) {
-      synchronized( this.keyMatrixValues ) {
+      synchronized( this.keyboardMatrix ) {
 	switch( ch ) {
 	  case '0':
 	  case '1':
 	  case '2':
 	  case '3':
-	    this.keyMatrixValues[ ch - '0' ] = 0x01;
+	    this.keyboardMatrix[ ch - '0' ] = 0x01;
 	    rv = true;
 	    break;
 
@@ -560,80 +598,80 @@ public class LLC1 extends EmuSys implements
 	  case '5':
 	  case '6':
 	  case '7':
-	    this.keyMatrixValues[ ch - '4' ] = 0x02;
+	    this.keyboardMatrix[ ch - '4' ] = 0x02;
 	    rv = true;
 	    break;
 
 	  case '8':
 	  case '9':
-	    this.keyMatrixValues[ ch - '8' ] = 0x04;
+	    this.keyboardMatrix[ ch - '8' ] = 0x04;
 	    rv = true;
 	    break;
 
 	  case 'A':
 	  case 'a':
-	    this.keyMatrixValues[ 2 ] = 0x04;
+	    this.keyboardMatrix[ 2 ] = 0x04;
 	    rv = true;
 	    break;
 
 	  case 'B':
 	  case 'b':
-	    this.keyMatrixValues[ 3 ] = 0x04;
+	    this.keyboardMatrix[ 3 ] = 0x04;
 	    rv = true;
 	    break;
 
 	  case 'C':
 	  case 'c':
-	    this.keyMatrixValues[ 0 ] = 0x81;
+	    this.keyboardMatrix[ 0 ] = 0x81;
 	    rv = true;
 	    break;
 
 	  case 'D':
 	  case 'd':
-	    this.keyMatrixValues[ 1 ] = 0x81;
+	    this.keyboardMatrix[ 1 ] = 0x81;
 	    rv = true;
 	    break;
 
 	  case 'E':
 	  case 'e':
-	    this.keyMatrixValues[ 2 ] = 0x81;
+	    this.keyboardMatrix[ 2 ] = 0x81;
 	    rv = true;
 	    break;
 
 	  case 'F':
 	  case 'f':
-	    this.keyMatrixValues[ 3 ] = 0x81;
+	    this.keyboardMatrix[ 3 ] = 0x81;
 	    rv = true;
 	    break;
 
 	  case 'R':
-	    this.keyMatrixValues[ 0 ] = 0x82;
+	    this.keyboardMatrix[ 0 ] = 0x82;		// REG
 	    rv = true;
 	    break;
 
 	  case 'M':
-	    this.keyMatrixValues[ 1 ] = 0x82;
+	    this.keyboardMatrix[ 1 ] = 0x82;		// EIN
 	    rv = true;
 	    break;
 
 	  case 'X':
-	    this.keyMatrixValues[ 2 ] = 0x82;
+	    this.keyboardMatrix[ 2 ] = 0x82;		// ST
 	    rv = true;
 	    break;
 
 	  case 'S':
-	    this.keyMatrixValues[ 0 ] = 0x84;
+	    this.keyboardMatrix[ 0 ] = 0x84;		// ES
 	    rv = true;
 	    break;
 
 	  case 'G':
 	  case 'J':
-	    this.keyMatrixValues[ 1 ] = 0x84;
+	    this.keyboardMatrix[ 1 ] = 0x84;		// DL
 	    rv = true;
 	    break;
 
 	  case 'H':
-	    this.keyMatrixValues[ 2 ] = 0x84;
+	    this.keyboardMatrix[ 2 ] = 0x84;		// HP
 	    rv = true;
 	    break;
 
@@ -774,6 +812,7 @@ public class LLC1 extends EmuSys implements
 	}
 	if( rv && (this.keyAlphaTStateCounter <= 0) ) {
 	  this.ctc.externalUpdate( 3, 1 );
+	  updKeyboardFld();
 	}
 	if( ch > 0 ) {
 	  this.keyChar               = ch;
@@ -891,7 +930,7 @@ public class LLC1 extends EmuSys implements
     else if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  synchronized( this.keyMatrixValues ) {
+	  synchronized( this.keyboardMatrix ) {
 	    this.pio1.putInValuePortA( getHexKeyMatrixValue(), 0x8F );
 	  }
 	  rv &= this.pio1.readPortA();
@@ -917,7 +956,7 @@ public class LLC1 extends EmuSys implements
 	  break;
 
 	case 1:
-	  synchronized( this.keyMatrixValues ) {
+	  synchronized( this.keyboardMatrix ) {
 	    this.pio2.putInValuePortB(
 			this.keyStartTStateCounter > 0 ? 0xFF : this.keyChar,
 			false );
@@ -957,8 +996,8 @@ public class LLC1 extends EmuSys implements
       this.pio1.reset( false );
       this.pio2.reset( false );
     }
-    synchronized( this.keyMatrixValues ) {
-      Arrays.fill( this.keyMatrixValues, 0 );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
     }
     synchronized( this.digitValues ) {
       Arrays.fill( this.digitStatus, 0 );
@@ -1030,6 +1069,13 @@ public class LLC1 extends EmuSys implements
 
   @Override
   public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsKeyboardFld()
   {
     return true;
   }
@@ -1133,14 +1179,21 @@ public class LLC1 extends EmuSys implements
     if( this.keyAlphaTStateCounter <= 0 ) {
       int a = (~this.pio1.fetchOutValuePortA( false ) >> 4) & 0x07;
       int m = 0x01;
-      for( int i = 0; i < this.keyMatrixValues.length; i++ ) {
-	if( (this.keyMatrixValues[ i ] & a) != 0 ) {
-	  rv |= (m | (this.keyMatrixValues[ i ] & 0x80));
+      for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
+	if( (this.keyboardMatrix[ i ] & a) != 0 ) {
+	  rv |= (m | (this.keyboardMatrix[ i ] & 0x80));
 	}
 	m <<= 1;
       }
     }
     return rv;
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.keyboardMatrix );
   }
 }
 
