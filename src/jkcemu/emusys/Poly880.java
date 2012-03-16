@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
+import jkcemu.emusys.etc.Poly880KeyboardFld;
 import z80emu.*;
 
 
@@ -21,24 +22,25 @@ public class Poly880 extends EmuSys implements
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
-  private static final int[] key4 = { 'G', 0,   'X', '-', 'R', -1,  'S', 'M' };
+  private static final int[] key4 = { 'G', -1,  'X', '-', 'R', -1,  'S', 'M' };
   private static final int[] key5 = { '0', '2', '3', '1', '8', '9', 'B', 'A' };
   private static final int[] key7 = { '4', '6', '7', '5', 'C', 'D', 'F', 'E' };
 
   private static byte[] mon0000 = null;
   private static byte[] mon1000 = null;
 
-  private byte[]  ram;
-  private int[]   keyMatrixValues;
-  private int[]   digitStatus;
-  private int[]   digitValues;
-  private int     colMask;
-  private long    curDisplayTStates;
-  private long    displayCheckTStates;
-  private boolean nmiEnabled;
-  private Z80CTC  ctc;
-  private Z80PIO  pio1;
-  private Z80PIO  pio2;
+  private byte[]             ram;
+  private int[]              keyboardMatrix;
+  private int[]              digitStatus;
+  private int[]              digitValues;
+  private int                colMask;
+  private long               curDisplayTStates;
+  private long               displayCheckTStates;
+  private boolean            nmiEnabled;
+  private Z80CTC             ctc;
+  private Z80PIO             pio1;
+  private Z80PIO             pio2;
+  private Poly880KeyboardFld keyboardFld;
 
 
   public Poly880( EmuThread emuThread, Properties props )
@@ -56,7 +58,8 @@ public class Poly880 extends EmuSys implements
     this.displayCheckTStates = 0;
     this.digitStatus         = new int[ 8 ];
     this.digitValues         = new int[ 8 ];
-    this.keyMatrixValues     = new int[ 8 ];
+    this.keyboardMatrix      = new int[ 8 ];
+    this.keyboardFld         = null;
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.pio1  = new Z80PIO( "PIO (80-83)" );
@@ -69,7 +72,6 @@ public class Poly880 extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged( cpu );
   }
 
@@ -77,6 +79,23 @@ public class Poly880 extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 922;		// eigentlich 921,6
+  }
+
+
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    synchronized( this.keyboardMatrix ) {
+      int n = Math.min( kbMatrix.length, this.keyboardMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	this.keyboardMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.keyboardMatrix.length ) {
+	this.keyboardMatrix[ i ] = 0;
+	i++;
+      }
+    }
   }
 
 
@@ -139,6 +158,14 @@ public class Poly880 extends EmuSys implements
   public boolean canApplySettings( Properties props )
   {
     return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "Poly880" );
+  }
+
+
+  @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new Poly880KeyboardFld( this.screenFrm, this );
+    return this.keyboardFld;
   }
 
 
@@ -236,7 +263,7 @@ public class Poly880 extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "Poly-880";
+    return "Poly-Computer 880";
   }
 
 
@@ -247,10 +274,15 @@ public class Poly880 extends EmuSys implements
 			boolean shiftDown )
   {
     boolean rv = false;
-    synchronized( this.keyMatrixValues ) {
+    synchronized( this.keyboardMatrix ) {
       switch( keyCode ) {
+	case KeyEvent.VK_BACK_SPACE:
+	  this.keyboardMatrix[ 3 ] |= 0x10;	// BACK
+	  rv = true;
+	  break;
+
 	case KeyEvent.VK_ENTER:
-	  this.keyMatrixValues[ 2 ] |= 0x10;	// EXEC
+	  this.keyboardMatrix[ 2 ] |= 0x10;	// EXEC
 	  rv = true;
 	  break;
 
@@ -260,10 +292,13 @@ public class Poly880 extends EmuSys implements
 	  break;
 
 	case KeyEvent.VK_F1:
-	  this.keyMatrixValues[ 5 ] |= 0x10;	// FCT
+	  this.keyboardMatrix[ 5 ] |= 0x10;	// FCT
 	  rv = true;
 	  break;
       }
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -272,9 +307,10 @@ public class Poly880 extends EmuSys implements
   @Override
   public void keyReleased()
   {
-    synchronized( this.keyMatrixValues ) {
-      Arrays.fill( this.keyMatrixValues, 0 );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
     }
+    updKeyboardFld();
   }
 
 
@@ -282,28 +318,18 @@ public class Poly880 extends EmuSys implements
   public boolean keyTyped( char keyChar )
   {
     boolean rv = false;
-    switch( keyChar ) {
-      case 'B':
-	this.keyMatrixValues[ 3 ] |= 0x10;	// BACK
-	rv = true;
-	break;
-
-      case 'F':
-	this.keyMatrixValues[ 5 ] |= 0x10;	// FCT
-	rv = true;
-	break;
-
-      default:
-	if( keyChar > 0 ) {
-	  int ch = Character.toUpperCase( keyChar );
-	  rv = setKeyMatrixValue( key4, ch, 0x10 );
-	  if( !rv ) {
-	    rv = setKeyMatrixValue( key5, ch, 0x20 );
-	  }
-	  if( !rv ) {
-	    rv = setKeyMatrixValue( key7, ch, 0x80 );
-	  }
-	}
+    if( keyChar > 0 ) {
+      int ch = Character.toUpperCase( keyChar );
+      rv = setKeyMatrixValue( key4, ch, 0x10 );
+      if( !rv ) {
+	rv = setKeyMatrixValue( key5, ch, 0x20 );
+      }
+      if( !rv ) {
+	rv = setKeyMatrixValue( key7, ch, 0x80 );
+      }
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -346,11 +372,11 @@ public class Poly880 extends EmuSys implements
       case 0x82:
 	{
 	  int v = 0;
-	  synchronized( this.keyMatrixValues ) {
+	  synchronized( this.keyboardMatrix ) {
 	    int m = 0x01;
-	    for( int i = 0; i < this.keyMatrixValues.length; i++ ) {
+	    for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
 	      if( (this.colMask & m) != 0 ) {
-		v |= this.keyMatrixValues[ i ];
+		v |= this.keyboardMatrix[ i ];
 	      }
 	      m <<= 1;
 	    }
@@ -404,8 +430,8 @@ public class Poly880 extends EmuSys implements
       Arrays.fill( this.digitStatus, 0 );
       Arrays.fill( this.digitValues, 0 );
     }
-    synchronized( this.keyMatrixValues ) {
-      Arrays.fill( this.keyMatrixValues, 0 );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
     }
     this.colMask    = 0;
     this.nmiEnabled = true;
@@ -431,6 +457,13 @@ public class Poly880 extends EmuSys implements
 
   @Override
   public boolean supportsAudio()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsKeyboardFld()
   {
     return true;
   }
@@ -510,31 +543,16 @@ public class Poly880 extends EmuSys implements
 
 	/* --- private Methoden --- */
 
-  private void putKeyMatrixValueToPort()
-  {
-    int v = 0;
-    synchronized( this.keyMatrixValues ) {
-      int m = 0x80;
-      for( int i = 0; i < this.keyMatrixValues.length; i++ ) {
-	if( (this.colMask & m) != 0 ) {
-	  v |= this.keyMatrixValues[ i ];
-	}
-	m >>= 1;
-      }
-    }
-    this.pio1.putInValuePortB( v, 0xB0 );
-  }
-
-
   private boolean setKeyMatrixValue( int[] rowKeys, int ch, int value )
   {
     boolean rv = false;
-    synchronized( this.keyMatrixValues ) {
-      int n  = Math.min( rowKeys.length, this.keyMatrixValues.length );
+    synchronized( this.keyboardMatrix ) {
+      int n  = Math.min( rowKeys.length, this.keyboardMatrix.length );
       for( int i = 0; i < n; i++ ) {
 	if( ch == rowKeys[ i ] ) {
-	  this.keyMatrixValues[ i ] |= value;
+	  this.keyboardMatrix[ i ] |= value;
 	  rv = true;
+	  break;
 	}
       }
     }
@@ -588,6 +606,13 @@ public class Poly880 extends EmuSys implements
       rv |= 0x02;
     }
     return rv;
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.keyboardMatrix );
   }
 }
 

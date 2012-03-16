@@ -1,0 +1,198 @@
+<html>
+<body>
+ <h1>Hinweise zur Emulation des KC&nbsp;compact</h1>
+  <ul>
+   <li>
+    <a href="kccompact.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="kccompact.htm#keyboard">1.1. Tastatur</a></li>
+     <li>
+      <a href="kccompact.htm#fdc">1.2. Floppy-Disk-Station</a>
+      <ul>
+       <li>
+	<a href="kccompact.htm#fdcrom">1.2.1. ROM in der Floppy-Disk-Station</a>
+       </li>
+      </ul>
+     </li>
+     <li><a href="kccompact.htm#sound">1.3. Sound-Generator</a></li>
+    </ul>
+   </li>
+   <li><a href="kccompact.htm#disks">2. Enthaltene Diskettenabbilder</a></li>
+   <li>
+    <a href="kccompact.htm#etc">3. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="kccompact.htm#screen">3.1. Bildschirmausgabe</a>
+      <ul>
+       <li>
+	<a href="kccompact.htm#screensize">3.1.1. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis</a>
+       </li>
+      </ul>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ <br/><br/>
+
+
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  Emuliert werden Grundger&auml;t, <a href="print.htm">Drucker</a>
+  und zwei <a href="joystick.htm">Joysticks</a>
+  sowie optional die <a href="floppydisk.htm">Floppy-Disk-Station</a>.
+ <br/><br/>
+
+ <h3><a name="keyboard">1.1. Tastatur</a></h3>
+  F&uuml;r einige Tasten auf der KC-compact-Tastatur gibt es
+  &uuml;blicherweise keine direkten gleichnamigen Tasten auf der Tastatur
+  des Emulatorrechners.
+  Diese Tasten werden trotzdem emuliert.
+  Die Tabelle zeigt das Tastenmapping f&uuml;r einige ausgew&auml;hlte Tasten:
+ <br/>
+  <table border="1">
+   <tr><th>KC-compact-Taste</th><th>Emuliert mittels</th></tr>
+   <tr><td>RETURN</td><td>ENTER/RETURN</td></tr>
+   <tr><td>DEL</td><td>BACKSPACE</td></tr>
+   <tr><td>CLR</td><td>Entf</td></tr>
+   <tr><td>F0</td><td>F5</td></tr>
+   <tr><td>F1</td><td>F1</td></tr>
+   <tr><td>F2</td><td>F2</td></tr>
+   <tr><td>F3</td><td>F3</td></tr>
+   <tr><td>F4</td><td>F4</td></tr>
+   <tr><td>ENTER</td><td>F6</td></tr>
+   <tr><td>Punkt</td><td>F7</td></tr>
+   <tr><td>COPY</td><td>F8</td></tr>
+  </table>
+ <br/>
+  Wird eine Funktions- oder Steuerungstasten zusammen mit der Control-
+  (Strg-) oder Shift-Taste bet&auml;tigt,
+  dann wird diese Tastenkombination auch direkt auf der emulierten
+  KC-compact-Tastatur nachgebildet.
+  Bei allen anderen Tasten (Buchstaben, Ziffern, Sonderzeichen)
+  wird das Dr&uuml;cken der Control- und Shift-Tasten so nachgebildet,
+  dass im emulierten KC&nbsp;compact das gleiche Zeichen erscheint
+  wie auf der Emulatortastatur.
+  Das ist deshalb notwendig, da die Zeichen auf der emulierten
+  KC-compact-Tastatur in einer anderen Shift-Ebene liegen k&ouml;nnen
+  als auf der Tastatur des Emulatorrechners.
+ <br/><br/>
+
+ <h3><a name="fdc">1.2. Floppy-Disk-Station</a></h3>
+  Die optional als Beistellger&auml;t zum KC&nbsp;compact erh&auml;tlich
+  gewesene Floppy-Disk-Station wird emuliert, wenn Sie das in den
+  <a href="settings.htm">Einstellungen</a> so angegeben haben.
+  Mit der Floppy-Disk-Station stehen zwei Diskettenlaufwerke und
+  zus&auml;tzlich 64&nbsp;KByte RAM sowie 32&nbsp;KByte ROM
+  zur Verf&uuml;gung.
+ <br/><br/>
+  Da mit dem KC&nbsp;compact eine weitgehende Kompatibilit&auml;t
+  zun den CPC-Computern von Amstrad bzw. Schneider angestrebt wurde,
+  sind auch beim Floppy-Disk-System einige Eigenheiten dieser
+  Computer &uuml;bernommen worden:
+  <ul>
+   <li>
+    Es kann softwarem&auml;&szlig;ig kein Terminal Count ausgel&ouml;st
+    werden. Beim Lesen und Schreiben von Sektoren wird deshalb am Ende
+    immer ein Overrun-Fehler gemeldet.
+   </li>
+   <li>
+    Die Laufwerksauswahl erfolgt intern nur &uuml;ber die Leitung DS0.
+    DS1 wird nicht ausgewertet.
+    Deshalb haben die internen Laufwerksnummern 2 und 3 die gleiche
+    Wirkung wie 0 und 1.
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h3><a name="fdcrom">1.2.1 ROM in der Floppy-Disk-Station</a></h3>
+  In der Floppy-Disk-Station gibt es einen 32&nbsp;KByte gro&szlig;en ROM.
+  Die unteren 16&nbsp;KByte enthalten das BASDOS und sind als ROM&nbsp;7
+  (Ausgabe einer 7 auf dem ROM-Select-Port) ab der Adresse C000h einblendbar.
+  &Uuml;ber die oberen 16&nbsp;KByte schweigt sich die Dokumentation
+  des KC&nbsp;compact v&ouml;llig aus.
+  Es ist aber m&ouml;glich, diesen ROM-Bereich durch Ausgabe einer 6
+  auf dem ROM-Select-Port einzublenden.
+  Bei den CPC-Computern gibt es so einen ROM&nbsp;6 dagegen nicht.
+ <br/><br/>
+  JKCEMU emuliert zwar die vollen 32&nbsp;KByte ROM,
+  allerdings ist nur in den unteren 16&nbsp;KByte ein sinnvoller Inhalt
+  enthalten (BASDOS).
+  Sie k&ouml;nnen aber auch den ROM&nbsp;6 mit einem Inhalt versehen,
+  indem Sie in den Einstellungen eine externe 32&nbsp;KByte gro&szlig;
+  ROM-Datei einbinden.
+  Die unteren 16&nbsp;KByte dieser ROM-Datei werden als ROM&nbsp;7
+  und die oberen als ROM&nbsp;6 behandelt.
+  Ist die externe ROM-Datei nur 16&nbsp;KByte gro&szlig;,
+  wird nur ROM&nbsp;7 mit einem anderen Inhalt belegt.
+ <br/><br/>
+
+ <h3><a name="sound">1.3. Sound-Generator</a></h3>
+  Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
+  m&uuml;ssen Sie die Audio-Funktion
+  <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> aktivieren.
+  Alle anderen Audio-Funktionen beziehen sich auf den emulierten
+  Kassettenrecorderanschluss.
+ <br/><br/>
+  Der Sound-Generator wird immer mit der originalen Taktfrequenz emuliert,
+  d.h., wenn Sie in den <a href="settings.htm">Einstellungen</a>
+  eine andere Taktfrequenz angeben,
+  wirkt sich das nur auf die Emulation des Mikroprozessors aus.
+ <br/><br/>
+
+
+ <h2><a name="disks">2. Enthaltene Diskettenabbilder</a></h2>
+  <ul>
+   <li>MicroDOS-Systemdiskette f&uuml;r den KC&nbsp;compact</li>
+  </ul>
+  Sie starten MicroDOS durch Eingabe des Befehls: <tt>|cpm</tt>
+ <br/>
+  Dazu muss die Emulation der
+  <a href="kccompact.htm#fdc">Floppy-Disk-Station</a> aktiviert und
+  die MicroDOS-Systemdiskette eingelegt sein.
+ <br/><br/>
+
+
+ <h2><a name="etc">3. Sonstiges</a></h2>
+
+ <h3><a name="screen">3.1. Bildschirmausgabe</a></h3>
+  Der KC&nbsp;compact ist ein vollgrafikf&auml;higer Computer,
+  der ohne Textspeicher f&uuml;r die Bildschirmausgabe arbeitet.
+  Die auszugebenden Textzeichen werden in die entsprechenden Pixeldaten
+  umgewandelt und anschlie&szlig;end in den Pixelspeicher kopiert.
+  Die ASCII-Codes der ausgegebenen Zeichen merkt sich der
+  KC&nbsp;compact nicht in seinem Speicher.
+  Dadurch hat der Emulator auch keine M&ouml;glichkeit,
+  die auf dem Bildschirm ausgegebenen Textzeichen mit ihren ASCII-Codes
+  aus dem Speicher auszulesen.
+  Das aber ben&ouml;tigen einige Emulatorfunktionen,
+  die dadurch nicht zur Verf&uuml;gung stehen.
+  Konkret kann in der Bildschirmausgabe kein Text markiert und kopiert
+  werden.
+  Au&szlig;erdem kann auch ein Schnappschuss der Bildschirmausgabe
+  nicht als Text kopiert, gespeichert oder im Texteditor angezeigt werden.
+ <br/><br/>
+  Eine andere Besonderheit der Bildschirmausgabe ist,
+  dass deren Aktualisierung immer synchron zur Emulation
+  der Bildschirmsteuerung erfolgt.
+  Dies ist f&uuml;r die korrekte Darstellungn von schnellen
+  Bewegungsabl&auml;ufen (z.B. bei Spielprogrammen) notwendig.
+  Der in den Einstellungen festgelegte Aktualisierungszyklus
+  findet somit keine Anwendung.
+ <br/><br/>
+
+ <h3>
+  <a name="screensize">3.1.1. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis</a>
+ </h3>
+  Der KC&nbsp;compact bietet drei Bildschirmaufl&ouml;sungen.
+  Wenn zwischen diesen umgeschaltet wird
+  (z.B. mit dem BASIC-Befehl <tt>mode&nbsp;2</tt> in den 80-Zeichenmodus),
+  &auml;ndern sich auch die Gr&ouml;&szlig;e des Emulatorfensters
+  sowie das Seitenverh&auml;ltnis.
+  Beim Original bleibt dagegen die Gr&ouml;&szlig;e
+  des Bildschirmausgabebereichs immer gleich.  Mit der Option
+  <em>Gleiche Fenstergr&ouml;&szlig;e in allen Bildschirmmodi</em>
+  k&ouml;nnen Sie das Verhalten an das des Originals anpassen.
+  Allerdings ist dann auch das Emulatorfenster immer so gro&szlig;,
+  dass die h&ouml;chste Bildschirmaufl&ouml;sung dargestellt werden kann.
+</body>
+</html>
+

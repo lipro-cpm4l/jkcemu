@@ -1,16 +1,18 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Beschreibung eines Zustandes (gedrueckte Tasten)
- * der Z1013-Alpha-Tastatur (8x8-Matrix).
+ * der Z1013-Alphatastatur (8x8-Matrix).
  */
 
 package jkcemu.emusys.z1013;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
+import java.util.Arrays;
+import jkcemu.base.AbstractKeyboardFld;
 
 
 public class KeyboardMatrix8x8 extends KeyboardMatrix
@@ -36,13 +38,28 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
 	+ "xvn<?\u007F";
 
 
-  private int[] rowMasks;
+  private int[] keyboardMatrix;
 
 
   public KeyboardMatrix8x8()
   {
-    this.rowMasks = new int[ 8 ];
+    this.keyboardMatrix = new int[ 8 ];
     reset();
+  }
+
+
+  public synchronized void updKeyboardMatrix( int[] kbMatrix )
+  {
+    int n = Math.min( kbMatrix.length, this.keyboardMatrix.length );
+    int i = 0;
+    while( i < n ) {
+      this.keyboardMatrix[ i ] = kbMatrix[ i ];
+      i++;
+    }
+    while( i < this.keyboardMatrix.length ) {
+      this.keyboardMatrix[ i ] = 0;
+      i++;
+    }
   }
 
 
@@ -58,32 +75,24 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
   @Override
   public int getRowValues( int col, boolean pioB4State )
   {
-    int colMask	= (1 << col);
-
-    int r0 = 0;
-    int r1 = 0;
-    int r2 = 0;
-    int r3 = 0;
-
-    if( onlyShiftKeysReadable() ) {
-      if( pioB4State ) {
-	r1 = ((this.rowMasks[ 5 ] & colMask & 0x40) != 0 ? 2 : 0);  // Control
-	r2 = ((this.rowMasks[ 6 ] & colMask & 0x80) != 0 ? 4 : 0);  // Shift
-      }
-    } else {
-      if( pioB4State ) {
-	r0 = ((this.rowMasks[ 4 ] & colMask) != 0 ? 1 : 0);
-	r1 = ((this.rowMasks[ 5 ] & colMask) != 0 ? 2 : 0);
-	r2 = ((this.rowMasks[ 6 ] & colMask) != 0 ? 4 : 0);
-	r3 = ((this.rowMasks[ 7 ] & colMask) != 0 ? 8 : 0);
+    int rv = 0;
+    if( col >= 0 ) {
+      if( onlyShiftKeysReadable() ) {
+        if( col == 6 ) {
+          rv = this.keyboardMatrix[ col ] & 0x20;	// Control
+        } else if( col == 7 ) {
+          rv = this.keyboardMatrix[ col ] & 0x40;	// Shift
+        }
       } else {
-	r0 = ((this.rowMasks[ 0 ] & colMask) != 0 ? 1 : 0);
-	r1 = ((this.rowMasks[ 1 ] & colMask) != 0 ? 2 : 0);
-	r2 = ((this.rowMasks[ 2 ] & colMask) != 0 ? 4 : 0);
-	r3 = ((this.rowMasks[ 3 ] & colMask) != 0 ? 8 : 0);
+        if( col < this.keyboardMatrix.length ) {
+          rv = this.keyboardMatrix[ col ];
+	  if( pioB4State ) {
+	    rv >>= 4;
+	  }
+        }
       }
     }
-    return r0 | r1 | r2 | r3;
+    return rv & 0x0F;
   }
 
 
@@ -91,8 +100,7 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
   public void reset()
   {
     super.reset();
-    for( int i = 0; i < this.rowMasks.length; i++ )
-      this.rowMasks[ i ] = 0;
+    Arrays.fill( this.keyboardMatrix, 0 );
   }
 
 
@@ -103,33 +111,27 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
     reset();
     switch( keyCode ) {
       case KeyEvent.VK_ENTER:
-	this.keyCharCode   = '\r';
-	this.rowMasks[ 1 ] = 0x40;		// Taste "Enter"
+	this.keyboardMatrix[ 6 ] = 0x02;
 	break;
 
       case KeyEvent.VK_LEFT:
-	this.keyCharCode   = 8;
-	this.rowMasks[ 2 ] = 0x40;		// Taste "Links"
+	this.keyboardMatrix[ 6 ] = 0x04;
 	break;
 
       case KeyEvent.VK_RIGHT:
-	this.keyCharCode   = '\t';
-	this.rowMasks[ 3 ] = 0x40;		// Taste "Rechts"
+	this.keyboardMatrix[ 6 ] = 0x08;
 	break;
 
       case KeyEvent.VK_SPACE:
-	this.keyCharCode   = '\u0020';
-	this.rowMasks[ 4 ] = 0x40;		// Taste "Space"
+	this.keyboardMatrix[ 6 ] = 0x10;
 	break;
 
       case KeyEvent.VK_UP:
-	this.keyCharCode   = 11;
-	this.rowMasks[ 6 ] = 0x40;		// Taste "Hoch"
+	this.keyboardMatrix[ 6 ] = 0x40;
 	break;
 
       case KeyEvent.VK_DOWN:
-	this.keyCharCode   = 10;
-	this.rowMasks[ 7 ] = 0x40;		// Taste "Runter"
+	this.keyboardMatrix[ 6 ] = 0x80;
 	break;
 
       case KeyEvent.VK_BACK_SPACE:
@@ -153,11 +155,20 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
 
 
   @Override
-  protected boolean updRowMasks( boolean hexMode )
+  public void updKeyboardFld( AbstractKeyboardFld keyboardFld )
   {
-    boolean rv          = false;
-    boolean ctrl        = false;
-    int     keyCharCode = this.keyCharCode;
+    if( keyboardFld != null )
+      keyboardFld.updKeySelection( this.keyboardMatrix );
+  }
+
+
+  @Override
+  protected boolean updKeyboardMatrix(
+				int     keyCharCode,
+				boolean hexMode )
+  {
+    boolean rv   = false;
+    boolean ctrl = false;
     if( (keyCharCode > 0) && (keyCharCode < '\u0020') ) {
       keyCharCode += '@';
       ctrl        = true;
@@ -165,21 +176,21 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
 
     int pos = this.matrixNormal.indexOf( keyCharCode );
     if( pos >= 0 ) {
-      int m = (1 << (pos % 6));
-      this.rowMasks[ pos / 6 ] |= m;
+      int m = (1 << (pos / 6));
+      this.keyboardMatrix[ pos % 6 ] |= m;
       rv = true;
     } else {
       pos = this.matrixShift.indexOf( keyCharCode );
       if( pos >= 0 ) {
-	int m = (1 << (pos % 6));
-	this.rowMasks[ pos / 6 ] |= m;
-	this.rowMasks[ 6 ] |= 0x80;		// Shift-Taste
+	int m = (1 << (pos / 6));
+	this.keyboardMatrix[ pos % 6 ] |= m;
+	this.keyboardMatrix[ 7 ] |= 0x40;		// Shift
 	rv = true;
       }
     }
     if( rv ) {
       if( ctrl ) {
-	this.rowMasks[ 5 ] |= 0x40;		// Control-Taste
+	this.keyboardMatrix[ 6 ] |= 0x20;		// Control
       }
       updShiftKeysPressed();
     }
@@ -192,8 +203,8 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
   private void updShiftKeysPressed()
   {
     setShiftKeysPressed(
-	((this.rowMasks[ 5 ] & 0x40) != 0)
-	|| ((this.rowMasks[ 6 ] & 0x80) != 0) );
+	((this.keyboardMatrix[ 6 ] & 0x20) != 0)
+	|| ((this.keyboardMatrix[ 7 ] & 0x40) != 0) );
   }
 }
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,13 +14,13 @@ import java.util.Properties;
 
 public class FloppyDiskDrive
 {
-  private FloppyDiskStationFrm owner;
-  private AbstractFloppyDisk   disk;
-  private boolean              skipOddCyls;
-  private int                  lastFormattedCyl;
-  private int                  head;
-  private int                  pcn;	// present cylinder number
-  private int                  ncn;	// new cylinder number
+  private FloppyDiskStationFrm        owner;
+  private volatile AbstractFloppyDisk disk;
+  private boolean                     skipOddCyls;
+  private int                         lastFormattedCyl;
+  private int                         head;
+  private int                         pcn;	// present cylinder number
+  private int                         ncn;	// new cylinder number
 
 
   public FloppyDiskDrive( FloppyDiskStationFrm owner )
@@ -36,23 +36,23 @@ public class FloppyDiskDrive
 			SectorID[] sectorIDs,
 			byte[]     dataBuf )
   {
-    boolean rv = false;
-    this.head  = head;
-    if( (sectorIDs != null) && (this.disk != null) ) {
-      fireDriveAccess();
+    boolean            rv   = false;
+    AbstractFloppyDisk disk = this.disk;
+    fireDriveAccess();
+    if( (disk != null) && (sectorIDs != null) ) {
       if( sectorIDs.length > 0 ) {
 	if( this.pcn == 0 ) {
 	  this.skipOddCyls = false;
 	}
 	else if( (this.pcn == 2)
 		 && (this.lastFormattedCyl == 0)
-		 && (this.disk.getCylinders() < 2) )
+		 && (disk.getCylinders() < 2) )
 	{
 	  this.skipOddCyls = true;
 	} else if( (this.pcn % 2) != 0 ) {
 	  this.skipOddCyls = false;
 	}
-	if( this.disk.formatTrack(
+	if( disk.formatTrack(
 			getDiskCyl(),
 			head,
 			sectorIDs,
@@ -63,6 +63,7 @@ public class FloppyDiskDrive
 	}
       }
     }
+    this.head = head;
     return rv;
   }
 
@@ -93,7 +94,8 @@ public class FloppyDiskDrive
 
   public synchronized boolean isReadOnly()
   {
-    return this.disk != null ? this.disk.isReadOnly() : true;
+    AbstractFloppyDisk disk = this.disk;
+    return disk != null ? disk.isReadOnly() : true;
   }
 
 
@@ -111,7 +113,8 @@ public class FloppyDiskDrive
 
   public synchronized void putSettingsTo( Properties props, String prefix )
   {
-    if( (props != null) && (this.disk != null) ) {
+    AbstractFloppyDisk disk = this.disk;
+    if( (props != null) && (disk != null) ) {
       disk.putSettingsTo( props, prefix );
       props.setProperty(
 		prefix + "skip_odd_cylinders",
@@ -128,21 +131,22 @@ public class FloppyDiskDrive
 					int sectorNum,
 					int sizeCode )
   {
-    SectorData sector = null;
+    SectorData         sector = null;
+    AbstractFloppyDisk disk   = this.disk;
     fireDriveAccess();
-    if( this.disk != null ) {
+    if( disk != null ) {
       int physCyl = getDiskCyl();
-      sector      = this.disk.getSectorByID(
-					physCyl,
-					physHead,
-					cyl,
-					head,
-					sectorNum,
-					sizeCode );
+      sector      = disk.getSectorByID(
+				physCyl,
+				physHead,
+				cyl,
+				head,
+				sectorNum,
+				sizeCode );
       if( sector != null ) {
 	if( sector.getIndexOnCylinder() < startIdx ) {
 	  do {
-	    sector = this.disk.getSectorByIndex(
+	    sector = disk.getSectorByIndex(
 					physCyl,
 					physHead,
 					startIdx );
@@ -162,6 +166,7 @@ public class FloppyDiskDrive
 	}
       }
     }
+    this.head = head;
     return sector;
   }
 
@@ -171,16 +176,18 @@ public class FloppyDiskDrive
 					int sectorIdx )
   {
     fireDriveAccess();
-    return this.disk != null ?
-		this.disk.getSectorByIndex( getDiskCyl(), physHead, sectorIdx )
+    AbstractFloppyDisk disk = this.disk;
+    return disk != null ?
+		disk.getSectorByIndex( getDiskCyl(), physHead, sectorIdx )
 		: null;
   }
 
 
   public synchronized void removeDisk()
   {
-    if( this.disk != null ) {
-      this.disk.doClose();
+    AbstractFloppyDisk disk = this.disk;
+    if( disk != null ) {
+      disk.doClose();
       this.disk = null;
     }
   }
@@ -239,16 +246,17 @@ public class FloppyDiskDrive
 				int        dataLen,
 				boolean    deleted )
   {
-    boolean rv = false;
+    boolean            rv   = false;
+    AbstractFloppyDisk disk = this.disk;
     fireDriveAccess();
-    if( this.disk != null ) {
-      rv = this.disk.writeSector(
-				getDiskCyl(),
-				physHead,
-				sector,
-				dataBuf,
-				dataLen,
-				deleted );
+    if( disk != null ) {
+      rv = disk.writeSector(
+			getDiskCyl(),
+			physHead,
+			sector,
+			dataBuf,
+			dataLen,
+			deleted );
     }
     return rv;
   }

@@ -272,7 +272,7 @@ public class HexCharFld extends JComponent
   }
 
 
-	/* --- ueverschriebene Methoden --- */
+	/* --- ueberschriebene Methoden --- */
 
   @Override
   public Dimension getPreferredSize()

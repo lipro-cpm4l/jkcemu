@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -57,7 +57,6 @@ public class HueblerEvertMC extends AbstractHueblerMC
 					this.pio,
 					this.pio2 );
     checkAddPCListener( props );
-    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 

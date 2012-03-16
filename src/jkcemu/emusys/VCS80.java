@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
+import jkcemu.emusys.etc.VCS80KeyboardFld;
 import z80emu.*;
 
 
@@ -21,21 +22,22 @@ public class VCS80 extends EmuSys implements
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
-  private static final int[][] keyMatrix = {
+  private static final int[][] kbMatrix = {
 		{ '7', '6', '5', '4', '3', '2', '1', '0' },
 		{ 'F', 'E', 'D', 'C', 'B', 'A', '9', '8' },
 		{ 'P', 'S', 'T', 'G', 'R', 'M', '-', '+' } };
 
   private static byte[] mon = null;
 
-  private byte[]  ram;
-  private int[]   keyMatrixValues;
-  private int[]   digitValues;
-  private int     colValue;
-  private boolean curDispCycleState;
-  private long    curDispTStates;
-  private long    dispHCycleTStates;
-  private Z80PIO  pio;
+  private VCS80KeyboardFld keyboardFld;
+  private int[]            keyboardMatrix;
+  private int[]            digitValues;
+  private byte[]           ram;
+  private int              colValue;
+  private boolean          curDispCycleState;
+  private long             curDispTStates;
+  private long             dispHCycleTStates;
+  private Z80PIO           pio;
 
 
   public VCS80( EmuThread emuThread, Properties props )
@@ -50,8 +52,9 @@ public class VCS80 extends EmuSys implements
     this.curDispTStates    = 0;
     this.dispHCycleTStates = 0;
     this.colValue          = 0;
+    this.keyboardFld       = null;
+    this.keyboardMatrix    = new int[ 8 ];
     this.digitValues       = new int[ 9 ];
-    this.keyMatrixValues   = new int[ 8 ];
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.pio   = new Z80PIO( "PIO" );
@@ -60,7 +63,6 @@ public class VCS80 extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged( cpu );
   }
 
@@ -68,6 +70,23 @@ public class VCS80 extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 2500;
+  }
+
+
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    synchronized( this.keyboardMatrix ) {
+      int n = Math.min( kbMatrix.length, this.keyboardMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	this.keyboardMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.keyboardMatrix.length ) {
+	this.keyboardMatrix[ i ] = 0;
+	i++;
+      }
+    }
   }
 
 
@@ -136,10 +155,10 @@ public class VCS80 extends EmuSys implements
 
 	// Port-A-Eingaenge aktualisieren
 	int v = 0x70 | this.colValue;
-	synchronized( this.keyMatrixValues ) {
+	synchronized( this.keyboardMatrix ) {
 	  int idx = ~this.colValue & 0x07;
-	  if( idx < this.keyMatrixValues.length ) {
-	    v &= ~this.keyMatrixValues[ idx ];
+	  if( idx < this.keyboardMatrix.length ) {
+	    v &= ~this.keyboardMatrix[ idx ];
 	  }
 	}
 	if( this.curDispCycleState ) {
@@ -157,6 +176,14 @@ public class VCS80 extends EmuSys implements
   public boolean canApplySettings( Properties props )
   {
     return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "VCS80" );
+  }
+
+
+  @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new VCS80KeyboardFld( this );
+    return this.keyboardFld;
   }
 
 
@@ -269,9 +296,10 @@ public class VCS80 extends EmuSys implements
   @Override
   public void keyReleased()
   {
-    synchronized( this.keyMatrixValues ) {
-      Arrays.fill( this.keyMatrixValues, 0 );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
     }
+    updKeyboardFld();
   }
 
 
@@ -280,19 +308,22 @@ public class VCS80 extends EmuSys implements
   {
     boolean rv = false;
     if( keyChar > 0 ) {
-      synchronized( this.keyMatrixValues ) {
+      synchronized( this.keyboardMatrix ) {
 	int ch = Character.toUpperCase( keyChar );
 	int m  = 0x10;
-	for( int i = 0; !rv && (i < keyMatrix.length); i++ ) {
-	  for( int k = 0; !rv && (k < keyMatrix[ i ].length); k++ ) {
-	    if( ch == keyMatrix[ i ][ k ] ) {
-	      this.keyMatrixValues[ k ] |= m;
+	for( int i = 0; !rv && (i < kbMatrix.length); i++ ) {
+	  for( int k = 0; !rv && (k < kbMatrix[ i ].length); k++ ) {
+	    if( ch == kbMatrix[ i ][ k ] ) {
+	      this.keyboardMatrix[ k ] |= m;
 	      rv = true;
 	    }
 	  }
 	  m <<= 1;
 	}
       }
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -353,8 +384,8 @@ public class VCS80 extends EmuSys implements
     synchronized( this.digitValues ) {
       Arrays.fill( this.digitValues, 0 );
     }
-    synchronized( this.keyMatrixValues ) {
-      Arrays.fill( this.keyMatrixValues, 0 );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
     }
   }
 
@@ -373,6 +404,13 @@ public class VCS80 extends EmuSys implements
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public boolean supportsKeyboardFld()
+  {
+    return true;
   }
 
 
@@ -433,5 +471,11 @@ public class VCS80 extends EmuSys implements
     }
     return rv;
   }
-}
 
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.keyboardMatrix );
+  }
+}

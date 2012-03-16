@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -112,69 +112,67 @@ public abstract class AudioIn extends AudioIO
 
       } else {
 
-	int tStates     = z80cpu.getProcessedTStates();
-	int diffTStates = z80cpu.calcTStatesDiff( this.lastTStates, tStates );
+	long tStates     = z80cpu.getProcessedTStates();
+	long diffTStates = z80cpu.calcTStatesDiff( this.lastTStates, tStates );
 
 	if( diffTStates > 0 ) {
-	  currentTStates( tStates, diffTStates );
-	  if( tStates > this.lastTStates ) {
+	  currentDiffTStates( diffTStates );
 
-	    // bis zum naechsten auszuwertenden Samples lesen
-	    int nSamples = diffTStates / this.tStatesPerFrame;
-	    if( nSamples > 0 ) {
-	      int v = 0;
-	      int i = nSamples;
-	      do {
-		v = readSample();
-		if( v != -1 ) {
+	  // bis zum naechsten auszuwertenden Samples lesen
+	  int nSamples = (int) (diffTStates / this.tStatesPerFrame);
+	  if( nSamples > 0 ) {
+	    int v = 0;
+	    int i = nSamples;
+	    do {
+	      v = readSample();
+	      if( v != -1 ) {
 
-		  // dynamische Mittelwertbestimmung
-		  if( this.adjustPeriodCnt > 0 ) {
-		    --this.adjustPeriodCnt;
-		  } else {
-		    this.adjustPeriodCnt = this.adjustPeriodLen;
-		    if( this.minValue < this.maxValue ) {
-		      this.minValue++;
-		    }
-		    if( this.maxValue > this.minValue ) {
-		      --this.maxValue;
-		    }
+		// dynamische Mittelwertbestimmung
+		if( this.adjustPeriodCnt > 0 ) {
+		  --this.adjustPeriodCnt;
+		} else {
+		  this.adjustPeriodCnt = this.adjustPeriodLen;
+		  if( this.minValue < this.maxValue ) {
+		    this.minValue++;
 		  }
-
-		  // Wenn gelesender Wert negativ ist, Zahl korrigieren
-		  if( this.dataSigned && ((v & this.sampleSignMask) != 0) ) {
-		    v |= ~this.sampleBitMask;
-		  }
-
-		  // Minimum-/Maximum-Werte aktualisieren
-		  if( v < this.minValue ) {
-		    this.minValue = v;
-		  }
-		  else if( v > this.maxValue ) {
-		    this.maxValue = v;
+		  if( this.maxValue > this.minValue ) {
+		    --this.maxValue;
 		  }
 		}
-	      } while( --i > 0 );
 
-	      if( v != -1 ) {
-		int d = this.maxValue - this.minValue;
-		if( this.lastPhase ) {
-		  if( v < this.minValue + (d / 3) ) {
-		    this.lastPhase = false;
-		  }
-		} else {
-		  if( v > this.maxValue - (d / 3) ) {
-		    this.lastPhase = true;
-		  }
+		// Wenn gelesender Wert negativ ist, Zahl korrigieren
+		if( this.dataSigned && ((v & this.sampleSignMask) != 0) ) {
+		  v |= ~this.sampleBitMask;
+		}
+
+		// Minimum-/Maximum-Werte aktualisieren
+		if( v < this.minValue ) {
+		  this.minValue = v;
+		}
+		else if( v > this.maxValue ) {
+		  this.maxValue = v;
 		}
 	      }
+	    } while( --i > 0 );
 
-	      /*
-	       * Anzahl der verstrichenen Taktzyklen auf den Wert
-	       * des letzten gelesenen Samples korrigieren
-	       */
-	      this.lastTStates += nSamples * this.tStatesPerFrame;
+	    if( v != -1 ) {
+	      int d = this.maxValue - this.minValue;
+	      if( this.lastPhase ) {
+		if( v < this.minValue + (d / 3) ) {
+		  this.lastPhase = false;
+		}
+	      } else {
+		if( v > this.maxValue - (d / 3) ) {
+		  this.lastPhase = true;
+		}
+	      }
 	    }
+
+	    /*
+	     * Anzahl der verstrichenen Taktzyklen auf den Wert
+	     * des letzten gelesenen Samples korrigieren
+	     */
+	    this.lastTStates += nSamples * this.tStatesPerFrame;
 	  }
 	}
       }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -164,55 +164,55 @@ public class PrgOptions
   {
     PrgOptions options = BasicOptions.getBasicOptions( emuThread, props );
     if( props != null ) {
-      String syntaxText = props.getProperty( "jkcemu.programmimg.asm.syntax" );
+      String syntaxText = props.getProperty( "jkcemu.programming.asm.syntax" );
 
       Boolean allowUndocInst = getBoolean(
 		props,
-		"jkcemu.programmimg.asm.allow_undocumented_instructions" );
+		"jkcemu.programming.asm.allow_undocumented_instructions" );
 
       Boolean labelsCaseSensitive = getBoolean(
 		props,
-		"jkcemu.programmimg.asm.labels.case_sensitive" );
+		"jkcemu.programming.asm.labels.case_sensitive" );
 
       Boolean printLabels = getBoolean(
 		props,
-		"jkcemu.programmimg.asm.labels.print" );
+		"jkcemu.programming.asm.labels.print" );
 
       Boolean codeToEmu = getBoolean(
 		props,
-		"jkcemu.programmimg.code.to_emulator" );
+		"jkcemu.programming.code.to_emulator" );
 
       Boolean codeToSecondSys = getBoolean(
 		props,
-		"jkcemu.programmimg.code.to_second_system" );
+		"jkcemu.programming.code.to_second_system" );
 
       Boolean codeToFile = getBoolean(
 		props,
-		"jkcemu.programmimg.code.to_file" );
+		"jkcemu.programming.code.to_file" );
 
       String codeFileName = props.getProperty(
-		"jkcemu.programmimg.code.file.name" );
+		"jkcemu.programming.code.file.name" );
 
       String codeFileFmt = props.getProperty(
-		"jkcemu.programmimg.code.file.format" );
+		"jkcemu.programming.code.file.format" );
 
       String codeFileType = props.getProperty(
-		"jkcemu.programmimg.code.file.type" );
+		"jkcemu.programming.code.file.type" );
 
       String codeFileDesc = props.getProperty(
-		"jkcemu.programmimg.code.file.description" );
+		"jkcemu.programming.code.file.description" );
 
       Boolean labelsToDebugger = getBoolean(
 		props,
-		"jkcemu.programmimg.labels_to_debugger" );
+		"jkcemu.programming.labels_to_debugger" );
 
       Boolean labelsToReass = getBoolean(
 		props,
-		"jkcemu.programmimg.labels_to_reassembler" );
+		"jkcemu.programming.labels_to_reassembler" );
 
       Boolean formatSource = getBoolean(
 		props,
-		"jkcemu.programmimg.format.source" );
+		"jkcemu.programming.format.source" );
 
       if( (syntaxText != null)
 	  || (allowUndocInst != null)
@@ -300,40 +300,40 @@ public class PrgOptions
       if( this.syntax != null ) {
 	switch( this.syntax ) {
 	  case ZILOG_ONLY:
-	    props.setProperty( "jkcemu.programmimg.asm.syntax", "zilog" );
+	    props.setProperty( "jkcemu.programming.asm.syntax", "zilog" );
 	    break;
 
 	  case ROBOTRON_ONLY:
-	    props.setProperty( "jkcemu.programmimg.asm.syntax", "robotron" );
+	    props.setProperty( "jkcemu.programming.asm.syntax", "robotron" );
 	    break;
 
 	  default:
-	    props.setProperty( "jkcemu.programmimg.asm.syntax", "all" );
+	    props.setProperty( "jkcemu.programming.asm.syntax", "all" );
 	}
       }
 
       props.setProperty(
-		"jkcemu.programmimg.asm.allow_undocumented_instructions",
+		"jkcemu.programming.asm.allow_undocumented_instructions",
 		Boolean.toString( this.allowUndocInst ) );
 
       props.setProperty(
-		"jkcemu.programmimg.asm.labels.case_sensitive",
+		"jkcemu.programming.asm.labels.case_sensitive",
 		Boolean.toString( this.labelsCaseSensitive ) );
 
       props.setProperty(
-		"jkcemu.programmimg.asm.labels.print",
+		"jkcemu.programming.asm.labels.print",
 		Boolean.toString( this.printLabels ) );
 
       props.setProperty(
-		"jkcemu.programmimg.code.to_emulator",
+		"jkcemu.programming.code.to_emulator",
 		Boolean.toString( this.codeToEmu ) );
 
       props.setProperty(
-		"jkcemu.programmimg.code.to_second_system",
+		"jkcemu.programming.code.to_second_system",
 		Boolean.toString( this.codeToSecondSys ) );
 
       props.setProperty(
-		"jkcemu.programmimg.code.to_file",
+		"jkcemu.programming.code.to_file",
 		Boolean.toString( this.codeToFile ) );
 
       String codeFileName = null;
@@ -341,31 +341,31 @@ public class PrgOptions
 	codeFileName = this.codeFile.getPath();
       }
       props.setProperty(
-		"jkcemu.programmimg.code.file.name",
+		"jkcemu.programming.code.file.name",
 		codeFileName != null ? codeFileName : "" );
 
       props.setProperty(
-		"jkcemu.programmimg.code.file.format",
+		"jkcemu.programming.code.file.format",
 		this.codeFileFmt != null ? this.codeFileFmt : "" );
 
       props.setProperty(
-		"jkcemu.programmimg.code.file.type",
+		"jkcemu.programming.code.file.type",
 		Character.toString( this.codeFileType ) );
 
       props.setProperty(
-		"jkcemu.programmimg.code.file.description",
+		"jkcemu.programming.code.file.description",
 		this.codeFileDesc != null ? this.codeFileDesc : "" );
 
       props.setProperty(
-		"jkcemu.programmimg.labels_to_debugger",
+		"jkcemu.programming.labels_to_debugger",
 		Boolean.toString( this.labelsToDebugger ) );
 
       props.setProperty(
-		"jkcemu.programmimg.labels_to_reassembler",
+		"jkcemu.programming.labels_to_reassembler",
 		Boolean.toString( this.labelsToReass ) );
 
       props.setProperty(
-		"jkcemu.programmimg.format.source",
+		"jkcemu.programming.format.source",
 		Boolean.toString( this.formatSource ) );
     }
   }

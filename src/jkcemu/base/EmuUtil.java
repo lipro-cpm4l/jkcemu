@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.datatransfer.*;
 import java.awt.dnd.*;
 import java.io.*;
 import java.lang.*;
+import java.net.*;
 import java.nio.channels.*;
 import java.text.*;
 import java.util.*;
@@ -22,11 +23,20 @@ import javax.swing.*;
 import javax.swing.filechooser.*;
 import javax.swing.table.*;
 import jkcemu.Main;
-import jkcemu.base.BasicDlg;
+import jkcemu.text.TextUtil;
 
 
 public class EmuUtil
 {
+  public static final String[] archiveFileExtensions  = {
+					".jar", ".tar.gz", ".tar", ".tgz",
+					".zip" };
+
+  public static final String[] textFileExtensions  = {
+					".asc", ".asm", ".bas", ".bat",
+					".c", ".cc", ".cmd", ".cpp", ".csh",
+					".h", ".java", ".log", ".sh", ".txt" };
+
   private static DecimalFormat decFmtFix1 = null;
   private static DecimalFormat decFmtMax1 = null;
   private static NumberFormat  intFmt     = null;
@@ -400,6 +410,58 @@ public class EmuUtil
   }
 
 
+  public static InputStream createInputStream( final RandomAccessFile raf )
+  {
+    return new InputStream()
+		{
+		  @Override
+		  public void close() throws IOException
+		  {
+		    raf.close();
+		  }
+
+		  @Override
+		  public int read() throws IOException
+		  {
+		    return raf.read();
+		  }
+
+		  @Override
+		  public int read( byte[] buf ) throws IOException
+		  {
+		    return raf.read( buf );
+		  }
+
+		  @Override
+		  public int read( byte[] buf, int pos, int len )
+							throws IOException
+		  {
+		    return raf.read( buf, pos, len );
+		  }
+
+		  @Override
+		  public long skip( long n ) throws IOException
+		  {
+		    long rv = 0L;
+		    if( n > Integer.MAX_VALUE ) {
+		      long filePos = raf.getFilePointer();
+		      long fileLen = raf.length();
+		      if( (filePos + n) > fileLen ) {
+			raf.seek( fileLen );
+			rv = fileLen - filePos;
+		      } else {
+			raf.seek( filePos + n );
+			rv = n;
+		      }
+		    } else {
+		      rv = raf.skipBytes( (int) n );
+		    }
+		    return rv;
+		  }
+		};
+  }
+
+
   /*
    * Rueckgabewert:
    *  true:  Aktion ausgefuehrt
@@ -497,6 +559,28 @@ public class EmuUtil
   }
 
 
+  public static void doClose( ServerSocket serverSocket )
+  {
+    if( serverSocket != null ) {
+      try {
+	serverSocket.close();
+      }
+      catch( IOException ex ) {}
+    }
+  }
+
+
+  public static void doClose( Socket socket )
+  {
+    if( socket != null ) {
+      try {
+	socket.close();
+      }
+      catch( IOException ex ) {}
+    }
+  }
+
+
   public static void doRelease( FileLock fileLock )
   {
     if( fileLock != null ) {
@@ -508,68 +592,11 @@ public class EmuUtil
   }
 
 
-  public static String emptyToNull( String text )
-  {
-    if( text != null ) {
-      boolean empty = true;
-      int     len   = text.length();
-      for( int i = 0; i < len; i++ ) {
-	if( !Character.isWhitespace( text.charAt( i ) ) ) {
-	  empty = false;
-	  break;
-	}
-      }
-      if( empty ) {
-	text = null;
-      }
-    }
-    return text;
-  }
-
-
-  public static boolean endsWith( String text, String[]... suffixes )
-  {
-    boolean rv = false;
-    if( (text != null) && (suffixes != null) ) {
-      for( int i = 0; i < suffixes.length; i++ ) {
-	String[] subSuffixes = suffixes[ i ];
-	if( subSuffixes != null ) {
-	  for( int k = 0; k < subSuffixes.length; k++ ) {
-	    if( text.endsWith( subSuffixes[ k ] ) ) {
-	      rv = true;
-	      break;
-	    }
-	  }
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  public static boolean equals( String s1, String s2 )
-  {
-    if( s1 == null ) {
-      s1 = "";
-    }
-    return s1.equals( s2 != null ? s2 : "" );
-  }
-
-
   public static boolean equals( File f1, File f2 )
   {
     return (f1 != null) && (f2 != null) ?
-			equals( f1.getPath(), f2.getPath() )
+			TextUtil.equals( f1.getPath(), f2.getPath() )
 			: false;
-  }
-
-
-  public static boolean equalsIgnoreCase( String s1, String s2 )
-  {
-    if( s1 == null ) {
-      s1 = "";
-    }
-    return s1.equalsIgnoreCase( s2 != null ? s2 : "" );
   }
 
 
@@ -622,7 +649,7 @@ public class EmuUtil
       errWriter.println( "Please send this file to info@jens-mueller.org" );
       errWriter.println();
       errWriter.println( "--- Program ---" );
-      errWriter.write( Main.getVersion() );
+      errWriter.write( Main.VERSION );
       errWriter.println();
 
       if( msg != null ) {
@@ -681,6 +708,106 @@ public class EmuUtil
 		+ "Vielen Dank!" );
     BasicDlg.showErrorDlg( parent, errBuf.toString(), "Applikationsfehler" );
     System.exit( 1 );
+  }
+
+
+  public static int[] extractAddressesFromFileName( String fileName )
+  {
+    int[] rv = null;
+    if( fileName != null ) {
+      long m   = 0L;
+      int  n   = 0;
+      int  len = fileName.length();
+      int  pos = fileName.indexOf( '_' );
+      while( (n < 3) && (pos >= 0) ) {
+	if( (pos + 4) >= len ) {
+	  break;
+	}
+	pos++;
+	boolean hex   = true;
+	long    value = 0;
+	for( int i = 0; i < 4; i++ ) {
+	  char ch = fileName.charAt( pos + i );
+	  if( (ch >= '0') && (ch <= '9') ) {
+	    value = (value << 4) | (ch - '0');
+	  } else if( (ch >= 'A') && (ch <= 'F') ) {
+	    value = (value << 4) | (ch - 'A' + 10);
+	  } else if( (ch >= 'a') && (ch <= 'f') ) {
+	    value = (value << 4) | (ch - 'a' + 10);
+	  } else {
+	    hex = false;
+	    break;
+	  }
+	}
+	if( (pos + 4) < len ) {
+	  char ch = fileName.charAt( pos + 4 );
+	  if( ((ch >= '0') && (ch <= '9'))
+	      || ((ch >= 'A') && (ch <= 'Z'))
+	      || ((ch >= 'a') && (ch <= 'z')) )
+	  {
+	    hex = false;
+	  }
+	}
+	if( hex ) {
+	  m = (m << 16) | value;
+	  n++;
+	  pos += 4;
+	}
+	if( pos >= len ) {
+	  break;
+	}
+	pos = fileName.indexOf( '_', pos );
+      }
+      if( n > 0 ) {
+	rv = new int[ n ];
+	for( int i = n - 1; i >= 0; --i ) {
+	  rv[ i ] = (int) (m & 0xFFFFL);
+	  m >>= 16;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  public static String extractSingleAsciiLine(
+					byte[] buf,
+					int    pos,
+					int    len )
+  {
+    String rv = null;
+    if( buf != null ) {
+      StringBuilder tmpBuf  = null;
+      int           nSp     = 0;
+      int           nRemain = len;
+      while( (pos < buf.length) && (nRemain > 0) ) {
+	int ch = (int) buf[ pos++ ] & 0xFF;
+	if( (ch == 0) || (ch == '\r') || (ch == '\n') ) {
+	  break;
+	}
+	if( ch <= 0x20 ) {
+	  nSp++;
+	} else {
+	  if( ch > 0x7E ) {
+	    ch = '_';
+	  }
+	  if( tmpBuf == null ) {
+	    tmpBuf = new StringBuilder( len );
+	  } else {
+	    for( int i = 0; i < nSp; i++ ) {
+	      tmpBuf.append( (char) '\u0020' );
+	    }
+	  }
+	  tmpBuf.append( (char) ch );
+	  nSp = 0;
+	}
+	--nRemain;
+      }
+      if( tmpBuf != null ) {
+	rv = tmpBuf.toString();
+      }
+    }
+    return rv;	
   }
 
 
@@ -768,6 +895,19 @@ public class EmuUtil
   }
 
 
+  public static void fireSelectRow( final JList list, final int row )
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    list.setSelectedIndex( row );
+		  }
+		} );
+  }
+
+
   public static void fireSelectRow( final JTable table, final int row )
   {
     EventQueue.invokeLater(
@@ -813,6 +953,21 @@ public class EmuUtil
 		  public void run()
 		  {
 		    BasicDlg.showErrorDlg( owner, msg, ex );
+		  }
+		} );
+  }
+
+
+  public static void fireShowInfo(
+			final Component owner,
+			final String    msg )
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    BasicDlg.showInfoDlg( owner, msg );
 		  }
 		} );
   }
@@ -1020,15 +1175,15 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getAnadiskFileFilter()
+  public static javax.swing.filechooser.FileFilter getAnaDiskFileFilter()
   {
-    return getFileFilter( "Anadisk-Dateien (*.dump)", "dump" );
+    return getFileFilter( "AnaDisk-Dateien (*.dump)", "dump" );
   }
 
 
   public static javax.swing.filechooser.FileFilter getBinaryFileFilter()
   {
-    return getFileFilter( "Speicherabbilddateien (*.bin)", "bin" );
+    return getFileFilter( "Einfache Speicherabbilddateien (*.bin)", "bin" );
   }
 
 
@@ -1041,6 +1196,12 @@ public class EmuUtil
   public static javax.swing.filechooser.FileFilter getCopyQMFileFilter()
   {
     return getFileFilter( "CopyQM-Dateien (*.cqm; *.qm)", "cqm", "qm" );
+  }
+
+
+  public static javax.swing.filechooser.FileFilter getDskFileFilter()
+  {
+    return getFileFilter( "CPC-Disk-Dateien (*.dsk)", "dsk" );
   }
 
 
@@ -1059,6 +1220,12 @@ public class EmuUtil
   public static javax.swing.filechooser.FileFilter getHexFileFilter()
   {
     return getFileFilter( "HEX-Dateien (*.hex)", "hex" );
+  }
+
+
+  public static javax.swing.filechooser.FileFilter getImageDiskFileFilter()
+  {
+    return getFileFilter( "ImageDisk-Dateien (*.imd)", "imd" );
   }
 
 
@@ -1106,7 +1273,7 @@ public class EmuUtil
 
   public static javax.swing.filechooser.FileFilter getROMFileFilter()
   {
-    return getFileFilter( "ROM-Dateien (*.bin; *.rom)", "bin", "rom" );
+    return getFileFilter( "ROM-Dateien (*.bin; *.rom)", "rom", "bin" );
   }
 
 
@@ -1116,9 +1283,9 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getTelediskFileFilter()
+  public static javax.swing.filechooser.FileFilter getTeleDiskFileFilter()
   {
-    return getFileFilter( "Teledisk-Dateien (*.td0)", "td0" );
+    return getFileFilter( "TeleDisk-Dateien (*.td0)", "td0" );
   }
 
 
@@ -1230,7 +1397,7 @@ public class EmuUtil
 
   public static boolean isNativeFileDialogSelected()
   {
-    return equalsIgnoreCase(
+    return TextUtil.equalsIgnoreCase(
 			Main.getProperty( "jkcemu.filedialog" ),
 			"native" );
   }
@@ -1408,7 +1575,7 @@ public class EmuUtil
   }
 
 
-  public static byte[] readResource( Window owner, String resource )
+  public static byte[] readResource( Component owner, String resource )
   {
     ByteArrayOutputStream buf  = new ByteArrayOutputStream( 0x0800 );
     boolean               done = false;
@@ -1611,14 +1778,15 @@ public class EmuUtil
 			File                                  preSelection,
 			javax.swing.filechooser.FileFilter... fileFilters )
   {
+    File file = null;
     if( isNativeFileDialogSelected() ) {
-      return showNativeFileDlg(
+      file = showNativeFileDlg(
 			owner,
 			true,
 			title,
 			preSelection );
-    }
-    FileSelectDlg dlg = new FileSelectDlg(
+    } else {
+      FileSelectDlg dlg = new FileSelectDlg(
 				owner,
 				true,		// fuer Speichern
 				false,		// kein Startknopf
@@ -1626,8 +1794,52 @@ public class EmuUtil
 				title,
 				preSelection,
 				fileFilters );
-    dlg.setVisible( true );
-    return dlg.getSelectedFile();
+      dlg.setVisible( true );
+      file = dlg.getSelectedFile();
+    }
+
+    // Dateiname aufbereiten
+    if( file != null ) {
+      String fName = file.getName();
+      if( fName != null ) {
+	if( fName.startsWith( "\"" ) && fName.endsWith( "\"" ) ) {
+	  if( fName.length() > 2 ) {
+	    fName = fName.substring( 1, fName.length() - 1 );
+	  } else {
+	    fName = "";
+	  }
+	  file = replaceName( file, fName );
+	} else {
+	  // ggf. Dateiendung anhaengen
+	  if( fileFilters != null ) {
+	    if( fileFilters.length == 1 ) {
+	      javax.swing.filechooser.FileFilter ff = fileFilters[ 0 ];
+	      if( ff != null ) {
+		if( ff instanceof FileNameExtensionFilter ) {
+		  String[] extensions = ((FileNameExtensionFilter) ff)
+							.getExtensions();
+		  if( extensions != null ) {
+		    if( extensions.length == 1 ) {
+		      String ext = extensions[ 0 ];
+		      if( ext != null ) {
+			if( !fName.toUpperCase().endsWith(
+						ext.toUpperCase() ) )
+			{
+			  file = replaceName(
+					file,
+					String.format( "%s.%s", fName, ext ) );
+			}
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    return file;
   }
 
 
@@ -1665,107 +1877,16 @@ public class EmuUtil
   }
 
 
-  public static char toISO646DE( char ch )
-  {
-    switch( ch ) {
-      case '\u00A7':  // Paragraf-Zeichen
-	ch = '@';
-	break;
-
-      case '\u00C4':  // Ae
-	ch = '[';
-	break;
-
-      case '\u00D6':  // Oe
-	ch = '\\';
-	break;
-
-      case '\u00DC':  // Ue
-	ch = ']';
-	break;
-
-      case '\u00E4':  // ae
-	ch = '{';
-	break;
-
-      case '\u00F6':  // oe
-	ch = '|';
-	break;
-
-      case '\u00FC':  // ue
-	ch = '}';
-	break;
-
-      case '\u00DF':  // sz
-	ch = '~';
-	break;
-    }
-    return ch;
-  }
-
-
-  /*
-   * Umwandlung eines Textes in Grossbuchstaben,
-   * wobei sichergestellt ist,
-   * dass sich die Anzahl der Zeichen nicht aendert.
-   */
-  public static String toLowerCase( String text )
+  public static void writeASCII(
+			OutputStream out,
+			String       text ) throws IOException
   {
     if( text != null ) {
       int len = text.length();
-      if( len > 0 ) {
-	char[] buf = new char[ len ];
-	for( int i = 0; i < len; i++ ) {
-	  buf[ i ] = Character.toLowerCase( text.charAt( i ) );
-	}
-	text = new String( buf );
+      for( int i = 0; i < len; i++ ) {
+	out.write( text.charAt( i ) & 0x7F );
       }
     }
-    return text;
-  }
-
-
-  public static String toReverseCase( String text )
-  {
-    if( text != null ) {
-      int len = text.length();
-      if( len > 0 ) {
-	char[] buf = new char[ len ];
-	for( int i = 0; i < len; i++ ) {
-	  char ch = text.charAt( i );
-	  if( Character.isUpperCase( ch ) ) {
-	    buf[ i ] = Character.toLowerCase( ch );
-	  } else if( Character.isLowerCase( ch ) ) {
-	    buf[ i ] = Character.toUpperCase( ch );
-	  } else {
-	    buf[ i ] = ch;
-	  }
-	}
-	text = new String( buf );
-      }
-    }
-    return text;
-  }
-
-
-  /*
-   * Umwandlung eines Textes in Grossbuchstaben,
-   * wobei sichergestellt ist,
-   * dass sich die Anzahl der Zeichen nicht aendert.
-   */
-  public static String toUpperCase( String text )
-  {
-    if( text != null ) {
-      int len = text.length();
-      if( len > 0 ) {
-	char[] buf = new char[ len ];
-	for( int i = 0; i < len; i++ ) {
-	  buf[ i ] = Character.toUpperCase( text.charAt( i ) );
-	}
-	text = new String( buf );
-      }
-    }
-    return text;
   }
 
 
@@ -1919,5 +2040,18 @@ public class EmuUtil
     }
     return rv;
   }
-}
 
+
+  private static File replaceName( File file, String fName )
+  {
+    if( file != null ) {
+      File parent = file.getParentFile();
+      if( parent != null ) {
+	file = new File( parent, fName );
+      } else {
+	file = new File( fName );
+      }
+    }
+    return file;
+  }
+}

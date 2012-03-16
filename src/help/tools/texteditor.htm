@@ -1,238 +1,291 @@
 <html>
 <body>
-  <h1>Texteditor</h1>
-
-  <h2>1. Vorbemerkungen</h2>
-    Die Text- und Dokumentationsdateien der emulierten Computer
-    sind h&auml;ufig in einem Format gespeichert,
-    welches aufgrund eines anderen Zeilenendezeichens
-    mit heute &uuml;blichen Texteditoren nicht angesehen werden kann.
-    Des weiteren werden deutsche Umlaute h&auml;ufig in einem
-    speziellen Zeichensatz (ISO-646 Variante 21) dargestellt,
-    der heute nicht mehr gebr&auml;uchlich ist.
-    Wird ein solcher Text in einem ASCII-Editor angezeigt,
-    so sind anstelle der deutschen Umlaute die Zeichen
-    <tt>[\]{|}~</tt> zu sehen.
-    Des weiteren muss zum Anzeigen von Assembler-Quelltexten und
-    BASIC-Programmen immer erst der Assembler bzw. der BASIC-Interpreter
-    gestartet werden.
-    Zusammengefasst ist das Betrachten von alten Dateien,
-    die in irgendeiner Form Text enthalten,
-    auf heutigen Computern recht m&uuml;hselig.
-  <br/><br/>
-    Der JKCEMU-Texteditor dient dazu, Textdateien,
-    EDAS*4-Assemblerquelltexte, AC1-BASIC, AC1-Mini-BASIC-,
-    KC-BASIC- und Z1013-Tiny-BASIC-Programme anzuzeigen
-    und in heute &uuml;bliche Textdateien zu konvertieren.
-    Au&szlig;erdem bietet der Texteditor Zugriff auf den
-    <a href="assembler.htm">Assembler</a> und den
-    <a href="basicc.htm">BASIC-Compiler</a>, d.h,
-    die zu &uuml;bersetzenden Quelltexte m&uuml;ssen
-    in dem Texteditor ge&ouml;ffnet oder geschrieben werden.
-    Ein angefangenes Assembler- oder BASIC-Programm k&ouml;nnen Sie auch
-    als <a href="prjfiles.htm">Projekt</a> speichern und wieder &ouml;ffnen.
-  <br/><br/>
-
-
-  <h2>2. Texteditor starten</h2>
-    Sie befinden sich im JKCEMU Hauptfenster und klicken im Men&uuml;
-    <em>Datei</em> den Punkt <em>Texteditor/Programmierung...</em> an.
-  <br/><br/>
-    Die weitere Beschreibung bezieht sich auf das Fenster des Texteditors.
-  <br/><br/>
-
-
-  <h2>3. Funktionen</h2>
-    Im Editor k&ouml;nnen gleichzeitig mehrere Textdateien
-    angezeigt und bearbeitet werden.
-    Erstellen Sie einen neuen Text (Punkt <em>Neuer Text</em>
-    im Men&uuml; <em>Datei</em>) oder &ouml;ffnen Sie eine Datei
-    (Men&uuml;punkte <em>&Ouml;ffnen...</em> und
-    <em>&Ouml;ffnen mit Zeichensatz...</em>),
-    so wird daf&uuml;r ein neues Unterfenster angelegt.
-    Der bereits angezeigte Text bleibt in seinem Unterfenster erhalten.
-    F&uuml;r jedes Unterfenster sehen Sie oberhalb des Textbereiches
-    eine Lasche mit dem Dateinamen.
-    Durch Mausklick auf die entsprechende Lasche k&ouml;nnen
-    Sie zwischen den einzelnen Unterfenstern,
-    d.h. zwischen den einzelnen Texten, hin- und herschalten.
-  <br/><br/>
-    Die Editier-Funktionen finden Sie im Men&uuml;
-    <em>Bearbeiten</em>, z.B. letzte &Auml;nderung r&uuml;ckg&auml;ngig machen,
-    Arbeiten mit der Zwischenablage, Suchen und Ersetzen,
-    mit dem Cursor zu einer bestimmten Zeile springen usw.
-  <br/><br/>
-    Nachfolgend wird auf einige Funktionen n&auml;her eingegangen.
-    Die nicht n&auml;her erl&auml;uterten Funktionen entsprechen denen
-    gew&ouml;hnlicher Texteditoren.
-  <br/><br/>
-
-  <h3>3.1. Datei &ouml;ffnen</h3>
-    Mit dieser Funktion &ouml;ffnen Sie eine Datei und laden
-    den darin enthaltenen Text in den Editor.
-    Dazu erscheint ein Dateiauswahldialog, in dem Sie die zu
-    &ouml;ffnende Datei bestimmen.
-  <br/><br/>
-    Der Texteditor erkennt die Dateieigenschaften automatisch und merkt
-    sie sich intern.
-    Allerdings kann der Zeichensatz nicht automatisch erkannt werden,
-    d.h., der Datei muss der Systemzeichensatz oder
-    ein dazu kompatibler Zeichensatz zugrunde liegen.
-    Ist das nicht der Fall,
-    m&uuml;ssen Sie die Datei mit einer anderen Funktion laden,
-    bei der Sie den Zeichensatz angeben k&ouml;nnen (siehe weiter unten).
-  <br/><br/>
-
-  <h3>3.1.1. Dateien der emulierten Systeme lesen</h3>
-    Der Texteditor ist in der Lage, einige Dateien der emulierten Systeme
-    zu lesen und den eventuell darin enthaltenen Text zu extrahieren.
-    Dieser wird dann als neue Textdatei (<em>Neuer Text</em>) angezeigt.
-    Wird nun dieser Text gespeichert, hat man somit die Datei
-    in eine heute &uuml;bliche Textdatei konvertiert.
-  <br/><br/>
-    Konkret kann der Editor Texte aus folgenden Dateitypen extrahieren:
-  <br/>
+ <h1>Texteditor</h1>
+  <ul>
+   <li><a href="texteditor.htm#intro">1. Vorbemerkungen</a></li>
+   <li><a href="texteditor.htm#start">2. Texteditor starten</a></li>
+   <li>
+    <a href="texteditor.htm#fct">3. Funktionen</a>
     <ul>
-      <li>
-	Headersave-Datei mit Dateityp &quot;A&quot;,
-	wenn die Datei einen EDAS*4-Quelltext enth&auml;lt
-      </li>
-      <li>Headersave-Datei mit Dateityp &quot;B&quot; (BASIC-Programm)</li>
-      <li>
-	Headersave-Datei mit Dateityp &quot;b&quot; (Mini-/Tiny-BASIC-Programm)
-      </li>
-      <li>
-	Headersave-Datei mit Dateityp &quot;I&quot; oder &quot;T&quot;,
-	wenn die Datei eine Textdatei enth&auml;lt.
-	Dabei wird als Zeilenende auch der hexdezimalen Wert 1E
-	unterst&uuml;tzt.
-      </li>
-      <li>KCB-Datei</li>
-      <li>KC-BASIC-Programmdatei</li>
-      <li>
-	KC-TAP-Datei, wenn die darin enthaltenen Bytes dem Format einer
-	KC-BASIC-Programmdatei entsprechen.
-	H&auml;ufig sind jedoch KC-BASIC-Programme nicht als
-	KC-BASIC-Programmdatei gespeichert, sondern als KC-Systemdatei,
-	um einen Autostart zu erm&ouml;glichen.
-	Diese Dateien k&ouml;nnen zwar nicht direkt im Texteditor
-	ge&ouml;ffnet werden,
-	jedoch k&ouml;nnen Sie diese Dateien in den Emulator laden
-	und das BASIC-Programm aus dem Arbeitsspeicher heraus extrahieren
-	(siehe auch <a href="../tips/kcc_tap_basic.htm">KC-BASIC-Programm
-	aus KCC-/KC-TAP-Datei extrahieren</a>).
-      </li>
+     <li>
+      <a href="texteditor.htm#open">3.1. Datei &ouml;ffnen</a>
+      <ul>
+       <li>
+	<a href="texteditor.htm#emusys">3.1.1. Dateien der emulierten Systeme</a>
+       </li>
+       <li>
+	<a href="texteditor.htm#wordstar">3.1.2. WordStar-Dateien</a>
+       </li>
+      </ul>
+     </li>
+     <li>
+      <a href="texteditor.htm#open_with">3.2. Datei &ouml;ffnen mit Zeichensatz</a>
+     </li>
+     <li><a href="texteditor.htm#save">3.3. Datei speichern</a></li>
+     <li>
+      <a href="texteditor.htm#save_as">3.4. Datei speichern unter...</a>
+     </li>
+     <li><a href="texteditor.htm#print">3.5. Drucken</a></li>
+     <li><a href="texteditor.htm#props">3.6. Eigenschaften</a></li>
+     <li><a href="texteditor.htm#tabsize">3.7. Tabulatorbreite</a></li>
+     <li>
+      <a href="texteditor.htm#check_bracket">3.8. Klammer pr&uuml;fen</a>
+     </li>
+     <li>
+      <a href="texteditor.htm#conv_umlauts">3.9. Deutsche Umlaute konvertieren</a>
+     </li>
     </ul>
-  <br/><br/>
+   </li>
+  </ul>
+ <br/>
 
-  <h3>3.2. Datei &ouml;ffnen mit Zeichensatz</h3>
-    Mit dieser Funktion &ouml;ffnen Sie eine Datei,
-    die in einem anderen als den Systemzeichensatz gespeichert wurde.
-    Nach der Dateiauswahl werden Sie nach dem Zeichensatz gefragt,
-    mit der die Datei geladen werden soll.
-  <br/><br/>
-    <b>Achtung!</b> Wenn Sie eine Datei mit einem anderen Zeichensatz laden,
-    als sie einmal erzeugt oder gespeichert wurde,
-    werden m&ouml;glicherweise einige Zeichen falsch angezeigt
-    oder fehlen ganz.
-  <br/><br/>
 
-  <h3>3.3. Datei speichern</h3>
-    Diese Funktion speichert den angezeigten Text in eine Datei.
-    Die Dabei hat den gleichen Namen, den gleichen Zeichensatz und
-    auch sonst die gleichen Eigenschaften wie beim &Ouml;ffnen
-    beziehungsweise beim letzten Speichern.
-  <br/><br/>
-    Wenn Sie einen neuen Text angelegt haben und diesen erstmalig
-    speichern, wird automatisch die Funktionen <em>Speichern unter...</em>
-    aufgerufen, d.h., Sie m&uuml;ssen den Dateinamen und
-    die Eigenschaften festlegen.
-  <br/><br/>
+ <h2><a name="intro">1. Vorbemerkungen</a></h2>
+  Die Text- und Dokumentationsdateien der emulierten Computer
+  sind h&auml;ufig in einem Format gespeichert,
+  welches aufgrund eines anderen Zeilenendezeichens
+  mit heute &uuml;blichen Texteditoren nicht angesehen werden kann.
+  Au&szlig;erdem werden deutsche Umlaute h&auml;ufig in einem
+  speziellen Zeichensatz (ISO-646 Variante&nbsp;21) dargestellt,
+  der heute nicht mehr gebr&auml;uchlich ist.
+  Wird ein solcher Text in einem ASCII-Editor angezeigt,
+  so sind anstelle der deutschen Umlaute die Zeichen
+  <tt>[\]{|}~</tt> zu sehen.
+  Des Weiteren muss zum Anzeigen von Assembler-Quelltexten und
+  BASIC-Programmen immer erst der Assembler bzw. der BASIC-Interpreter
+  gestartet werden.
+  Zusammengefasst ist das Betrachten von alten Dateien,
+  die in irgendeiner Form Text enthalten,
+  auf heutigen Computern recht m&uuml;hselig.
+ <br/><br/>
+  Der JKCEMU-Texteditor dient dazu, Textdateien,
+  EDAS*4-Assemblerquelltexte, AC1-BASIC, AC1-Mini-BASIC-,
+  KC-BASIC- und Z1013-Tiny-BASIC-Programme anzuzeigen
+  und in heute &uuml;bliche Textdateien zu konvertieren.
+  Au&szlig;erdem bietet der Texteditor Zugriff auf den
+  <a href="assembler.htm">Assembler</a> und den
+  <a href="basicc.htm">BASIC-Compiler</a>, d.h,
+  die zu &uuml;bersetzenden Quelltexte m&uuml;ssen
+  in dem Texteditor ge&ouml;ffnet oder geschrieben werden.
+  Ein angefangenes Assembler- oder BASIC-Programm k&ouml;nnen Sie auch
+  als <a href="prjfiles.htm">Projekt</a> speichern und wieder &ouml;ffnen.
+ <br/><br/>
 
-  <h3>3.4. Datei speichern unter...</h3>
-    Sie k&ouml;nnen den angezeigten Text in einer Datei mit einem
-    anderen Namen und/oder mit anderen Eigenschaften speichern.
-    Zuerst erscheint ein Dateiauswahldialog, in dem Sie den Namen
-    der zu speichernden Datei bestimmen.
-    Nach dem Best&auml;tigen sehen Sie ein neues Fenster,
-    in dem Sie die Eigenschaften angeben k&ouml;nnen.
-    Damit ist es auch m&ouml;glich, eine Textdatei in einem anderen
-    als den Systemzeichensatz zu speichern.
-  <br/><br/>
 
-  <h3><a name="print">3.5. Drucken</a></h3>
-    Der angezeigte Text wird gedruckt.
-    Mit der Funktion <em>Druckoptionen...</em> bestimmen Sie die
-    zu verwendende Schriftgr&ouml;&szlig;e und legen fest,
-    ob die Seitenzahl und der Dateiname gedruckt werden sollen.
-  <br/><br/>
+ <h2><a name="start">2. Texteditor starten</a></h2>
+  Sie befinden sich im JKCEMU Hauptfenster und klicken im Men&uuml;
+  <em>Datei</em> den Punkt <em>Texteditor/Programmierung...</em> an.
+ <br/><br/>
+  Die weitere Beschreibung bezieht sich auf das Fenster des Texteditors.
+ <br/><br/>
 
-  <h3>3.6. Eigenschaften</h3>
-    Jede Textdatei besitzt Eigenschaften, die Sie sich mit
-    dieser Funktion anzeigen lassen k&ouml;nnen.
-    Zu den Eigenschaften geh&ouml;ren der vollst&auml;ndige Dateiname,
-    der Zeichensatz, die Tabulatorbreite, die Zeilenendekennung und
-    die Option, ob beim Speichern nicht sichtbare Zeichen am Zeilenende
-    (angeh&auml;ngte Leerzeichen und Tabulatoren) abgeschnitten werden sollen.
-  <br/><br/>
-    M&ouml;chten Sie die Eigenschaften &auml;ndern,
-    so speichern Sie die Datei mit der Funktion <em>Speichern unter...</em>
-    und geben dort die neuen Eigenschaften an.
-  <br/><br/>
 
-  <h3><a name="tabsize">3.7. Tabulatorbreite</a></h3>
-    Die Tabulatorbreite wird nicht in der Textdatei gespeichert,
-    d.h., es wird immer die Tabulatorbreite verwendet,
-    die Sie gerade eingestellt haben.
-  <br/><br/>
-    Einstellen k&ouml;nnen Sie die Tabulatorbreite im Men&uuml;
-    <em>Bearbeiten</em>.
-    Dabei k&ouml;nnen Sie angeben,
-    ob der Wert als Standardwert gesetzt werden soll.
-    Wenn nein, gilt die Tabulatorbreite nur f&uuml;r das
-    aktuelle Unterfenster.
-    Wenn ja, werden alle weiteren Textdateien, die Sie &ouml;ffnen
-    oder neu anlegen, mit dieser Tabulatorbreite angezeigt.
-    Dauerhaft gespeichert wird die Standardtabulatorbreite aber erst,
-    wenn Sie in den <a href="../settings.htm">Einstellungen</a>
-    ein Profil speichern.
-  <br/><br/>
+ <h2><a name="fct">3. Funktionen</a></h2>
+  Im Editor k&ouml;nnen gleichzeitig mehrere Textdateien
+  angezeigt und bearbeitet werden.
+  Erstellen Sie einen neuen Text (Punkt <em>Neuer Text</em>
+  im Men&uuml; <em>Datei</em>) oder &ouml;ffnen Sie eine Datei
+  (Men&uuml;punkte <em>&Ouml;ffnen...</em> und
+  <em>&Ouml;ffnen mit Zeichensatz...</em>),
+  so wird daf&uuml;r ein neues Unterfenster angelegt.
+  Der bereits angezeigte Text bleibt in seinem Unterfenster erhalten.
+  F&uuml;r jedes Unterfenster sehen Sie oberhalb des Textbereiches
+  eine Lasche mit dem Dateinamen.
+  Durch Mausklick auf die entsprechende Lasche k&ouml;nnen
+  Sie zwischen den einzelnen Unterfenstern,
+  d.h. zwischen den einzelnen Texten, hin- und herschalten.
+ <br/><br/>
+  Die Editier-Funktionen finden Sie im Men&uuml;
+  <em>Bearbeiten</em>, z.B. letzte &Auml;nderung r&uuml;ckg&auml;ngig machen,
+  Arbeiten mit der Zwischenablage, Suchen und Ersetzen,
+  mit dem Cursor zu einer bestimmten Zeile springen usw.
+ <br/><br/>
+  Nachfolgend wird auf einige Funktionen n&auml;her eingegangen.
+  Die nicht n&auml;her erl&auml;uterten Funktionen entsprechen denen
+  gew&ouml;hnlicher Texteditoren.
+ <br/><br/>
 
-  <h3><a name="check_bracket">3.8. Klammer pr&uuml;fen</a></h3>
-    Mit dieser Funktion finden Sie die zugeh&ouml;rige Klammer,
-    wenn sich der Cursor unmittelbar vor einer Klammer befindet.
-    Steht dagegen der Cursor an einer anderen Stelle,
-    springt er zur n&auml;chsten schlie&szlig;enden Klammer.
-  <br/><br/>
+ <h3><a name="open">3.1. Datei &ouml;ffnen</a></h3>
+  Mit dieser Funktion &ouml;ffnen Sie eine Datei und laden
+  den darin enthaltenen Text in den Editor.
+  Dazu erscheint ein Dateiauswahldialog, in dem Sie die zu
+  &ouml;ffnende Datei bestimmen.
+ <br/><br/>
+  Der Texteditor erkennt die Dateieigenschaften automatisch und merkt
+  sie sich intern.
+  Allerdings kann der Zeichensatz nicht automatisch erkannt werden,
+  d.h., der Datei muss der Systemzeichensatz oder
+  ein dazu kompatibler Zeichensatz zugrunde liegen.
+  Ist das nicht der Fall,
+  m&uuml;ssen Sie die Datei mit einer anderen Funktion laden,
+  bei der Sie den Zeichensatz angeben k&ouml;nnen (siehe weiter unten).
+ <br/><br/>
 
-  <h3><a name="conv_umlauts">3.9. Deutsche Umlaute konvertieren</a></h3>
-    Die emulierten Computer kennen in ihrem Originalzustand keine
-    deutschen Umlaute.
-    Um trotzdem deutschsprachige Texte anzeigen zu k&ouml;nnen,
-    verwendeten einige Anwender die deutsche Variante des
-    ISO-646-Zeichensatzes,
-    bei dem anstelle der Zeichen <tt>[\]{|}~</tt> die Umlaute zu finden sind.
-    Wird nun ein solcher Text in einem gew&ouml;hnlichen Texteditor
-    angezeigt, so sind anstelle der deutschen Umlaute eben die Zeichen
-    <tt>[\]{|}~</tt> zu sehen.
-  <br/><br/>
-    Manche Anwender haben auch einen DOS-kompatiblen Zeichensatz installiert.
-    Wenn Sie nun eine im DOS-Zeichensatz erstellte Textdatei &ouml;ffnen,
-    sehen Sie anstelle der deutschen Umlaute ebenfalls andere Zeichen.
-  <br/><br/>
-    Zwar k&ouml;nnen Sie mit der Funktion
-    <em>&Ouml;ffnen mit Zeichensatz...</em>
-    die Datei gleich mit dem richtigen Zeichensatz laden,
-    doch falls Sie diesen nicht kennen, ist es umst&auml;ndlich,
-    alle m&ouml;glichen Zeichens&auml;tze erst auszuprobieren.
-    Mit den Funktionen im Untermen&uuml; <em>Deutsche Umlaute konvertieren</em>
-    k&ouml;nnen Sie die deutschen Umlaute aus dem DOS-Zeichensatz
-    beziehungsweise aus der deutschen Variante des ISO-646-Zeichensatzes
-    nachtr&auml;glich umwandeln, sodass sie richtig angezeigt werden.
-  <br/><br/>
-    <b>Achtung!</b> Vergewissern Sie sich bitte vor jedem Konvertieren,
-    mit welchem Zeichensatz der Text erstellt wurde
-    und &uuml;berlegen Sie bitte sorgf&auml;ltig,
-    ob und wie Sie Zeichen umwandeln m&uuml;ssen.
+ <h3><a name="emusys">3.1.1. Dateien der emulierten Systeme</a></h3>
+  Der Texteditor ist in der Lage, einige Dateien der emulierten Systeme
+  zu lesen und den eventuell darin enthaltenen Text zu extrahieren.
+  Dieser wird dann als neue Textdatei (<em>Neuer Text</em>) angezeigt.
+  Wird nun dieser Text gespeichert, hat man somit die Datei
+  in eine heute &uuml;bliche Textdatei konvertiert.
+ <br/><br/>
+  Konkret kann der Editor Texte aus folgenden Dateitypen extrahieren:
+ <br/>
+  <ul>
+   <li>
+    Headersave-Datei mit Dateityp &quot;A&quot;,
+    wenn die Datei einen EDAS*4-Quelltext enth&auml;lt
+   </li>
+   <li>Headersave-Datei mit Dateityp &quot;B&quot; (BASIC-Programm)</li>
+   <li>
+    Headersave-Datei mit Dateityp &quot;b&quot; (Mini-/Tiny-BASIC-Programm)
+   </li>
+   <li>
+    Headersave-Datei mit Dateityp &quot;I&quot; oder &quot;T&quot;,
+    wenn die Datei eine Textdatei enth&auml;lt.
+    Dabei wird als Zeilenende auch der hexdezimalen Wert 1E
+    unterst&uuml;tzt.
+   </li>
+   <li>KCB-Datei</li>
+   <li>KC-BASIC-Programmdatei</li>
+   <li>
+    KC-TAP-Datei, wenn die darin enthaltenen Bytes dem Format einer
+    KC-BASIC-Programmdatei entsprechen.
+    H&auml;ufig sind jedoch KC-BASIC-Programme nicht als
+    KC-BASIC-Programmdatei gespeichert, sondern als KC-Systemdatei,
+    um einen Autostart zu erm&ouml;glichen.
+    Diese Dateien k&ouml;nnen zwar nicht direkt im Texteditor
+    ge&ouml;ffnet werden,
+    jedoch k&ouml;nnen Sie diese Dateien in den Emulator laden
+    und das BASIC-Programm aus dem Arbeitsspeicher heraus extrahieren
+    (siehe auch <a href="../tips/kcc_tap_basic.htm">KC-BASIC-Programm
+    aus KCC-/KC-TAP-Datei extrahieren</a>).
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h3><a name="wordstar">3.1.2. WordStar-Dateien</a></h3>
+  Erkennt der Texteditor beim &Ouml;ffnen einer Datei
+  WordStar-artige Formatierungen, werden Sie gefragt,
+  ob Sie die Datei als WordStar-Datei importieren oder
+  als Textdatei &ouml;ffnen m&ouml;chten.
+  Beim Importieren wird der in der Datei enthaltene Text extrahiert
+  und ohne Formatierungen als neue Textdatei ge&ouml;ffnet.
+  So haben Sie die M&ouml;glichkeit, WordStar-Dateien vern&uuml;nftig
+  zu lesen, wenn auch ohne Formatierungen.
+ <br/><br/>
+  Die andere M&ouml;glichkeit, das &Ouml;ffnen als Textdatei,
+  ist f&uuml;r den Fall gedacht, dass die Datei keine WordStar-Datei ist
+  und nur f&auml;lschlicherweise als solche erkannt wurde.
+ <br/><br/>
+
+ <h3><a name="open_with">3.2. Datei &ouml;ffnen mit Zeichensatz</a></h3>
+  Mit dieser Funktion &ouml;ffnen Sie eine Datei,
+  die in einem anderen als den Systemzeichensatz gespeichert wurde.
+  Nach der Dateiauswahl werden Sie nach dem Zeichensatz gefragt,
+  mit der die Datei geladen werden soll.
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie eine Datei mit einem anderen Zeichensatz laden,
+  als sie einmal erzeugt oder gespeichert wurde,
+  werden m&ouml;glicherweise einige Zeichen falsch angezeigt
+  oder fehlen ganz.
+ <br/><br/>
+
+ <h3><a name="save">3.3. Datei speichern</a></h3>
+  Diese Funktion speichert den angezeigten Text in eine Datei.
+  Die Dabei hat den gleichen Namen, den gleichen Zeichensatz und
+  auch sonst die gleichen Eigenschaften wie beim &Ouml;ffnen
+  beziehungsweise beim letzten Speichern.
+ <br/><br/>
+  Wenn Sie einen neuen Text angelegt haben und diesen erstmalig
+  speichern, wird automatisch die Funktionen <em>Speichern unter...</em>
+  aufgerufen, d.h., Sie m&uuml;ssen den Dateinamen und
+  die Eigenschaften festlegen.
+ <br/><br/>
+
+ <h3><a name="save_as">3.4. Datei speichern unter...</a></h3>
+  Sie k&ouml;nnen den angezeigten Text in einer Datei mit einem
+  anderen Namen und/oder mit anderen Eigenschaften speichern.
+  Zuerst erscheint ein Dateiauswahldialog, in dem Sie den Namen
+  der zu speichernden Datei bestimmen.
+  Nach dem Best&auml;tigen sehen Sie ein neues Fenster,
+  in dem Sie die Eigenschaften angeben k&ouml;nnen.
+  Damit ist es auch m&ouml;glich, eine Textdatei in einem anderen
+  als den Systemzeichensatz zu speichern.
+ <br/><br/>
+
+ <h3><a name="print">3.5. Drucken</a></h3>
+  Der angezeigte Text wird gedruckt.
+  Mit der Funktion <em>Druckoptionen...</em> bestimmen Sie die
+  zu verwendende Schriftgr&ouml;&szlig;e und legen fest,
+  ob die Seitenzahl und der Dateiname gedruckt werden sollen.
+ <br/><br/>
+
+ <h3><a name="props">3.6. Eigenschaften</a></h3>
+  Jede Textdatei besitzt Eigenschaften, die Sie sich mit
+  dieser Funktion anzeigen lassen k&ouml;nnen.
+  Zu den Eigenschaften geh&ouml;ren der vollst&auml;ndige Dateiname,
+  der Zeichensatz, die Tabulatorbreite, die Zeilenendekennung und
+  die Option, ob beim Speichern nicht sichtbare Zeichen am Zeilenende
+  (angeh&auml;ngte Leerzeichen und Tabulatoren) abgeschnitten werden sollen.
+ <br/><br/>
+  M&ouml;chten Sie die Eigenschaften &auml;ndern,
+  so speichern Sie die Datei mit der Funktion <em>Speichern unter...</em>
+  und geben dort die neuen Eigenschaften an.
+ <br/><br/>
+
+ <h3><a name="tabsize">3.7. Tabulatorbreite</a></h3>
+  Die Tabulatorbreite wird nicht in der Textdatei gespeichert,
+  d.h., es wird immer die Tabulatorbreite verwendet,
+  die Sie gerade eingestellt haben.
+ <br/><br/>
+  Einstellen k&ouml;nnen Sie die Tabulatorbreite im Men&uuml;
+  <em>Bearbeiten</em>.
+  Dabei k&ouml;nnen Sie angeben,
+  ob der Wert als Standardwert gesetzt werden soll.
+  Wenn nein, gilt die Tabulatorbreite nur f&uuml;r das
+  aktuelle Unterfenster.
+  Wenn ja, werden alle weiteren Textdateien, die Sie &ouml;ffnen
+  oder neu anlegen, mit dieser Tabulatorbreite angezeigt.
+  Dauerhaft gespeichert wird die Standardtabulatorbreite aber erst,
+  wenn Sie in den <a href="../settings.htm">Einstellungen</a>
+  ein Profil speichern.
+ <br/><br/>
+
+ <h3><a name="check_bracket">3.8. Klammer pr&uuml;fen</a></h3>
+  Mit dieser Funktion finden Sie die zugeh&ouml;rige Klammer,
+  wenn sich der Cursor unmittelbar vor einer Klammer befindet.
+  Steht dagegen der Cursor an einer anderen Stelle,
+  springt er zur n&auml;chsten schlie&szlig;enden Klammer.
+ <br/><br/>
+
+ <h3><a name="conv_umlauts">3.9. Deutsche Umlaute konvertieren</a></h3>
+  Die emulierten Computer kennen in ihrem Originalzustand keine
+  deutschen Umlaute.
+  Um trotzdem deutschsprachige Texte anzeigen zu k&ouml;nnen,
+  verwendeten einige Anwender die deutsche Variante des
+  ISO-646-Zeichensatzes,
+  bei dem anstelle der Zeichen <tt>[\]{|}~</tt> die Umlaute zu finden sind.
+  Wird nun ein solcher Text in einem gew&ouml;hnlichen Texteditor
+  angezeigt, so sind anstelle der deutschen Umlaute eben die Zeichen
+  <tt>[\]{|}~</tt> zu sehen.
+ <br/><br/>
+  Manche Anwender haben auch einen DOS-kompatiblen Zeichensatz installiert.
+  Wenn Sie nun eine im DOS-Zeichensatz erstellte Textdatei &ouml;ffnen,
+  sehen Sie anstelle der deutschen Umlaute ebenfalls andere Zeichen.
+ <br/><br/>
+  Zwar k&ouml;nnen Sie mit der Funktion
+  <em>&Ouml;ffnen mit Zeichensatz...</em>
+  die Datei gleich mit dem richtigen Zeichensatz laden,
+  doch falls Sie diesen nicht kennen, ist es umst&auml;ndlich,
+  alle m&ouml;glichen Zeichens&auml;tze erst auszuprobieren.
+  Mit den Funktionen im Untermen&uuml; <em>Deutsche Umlaute konvertieren</em>
+  k&ouml;nnen Sie die deutschen Umlaute aus dem DOS-Zeichensatz
+  beziehungsweise aus der deutschen Variante des ISO-646-Zeichensatzes
+  nachtr&auml;glich umwandeln, so dass sie richtig angezeigt werden.
+ <br/><br/>
+  <b>Achtung!</b> Vergewissern Sie sich bitte vor jedem Konvertieren,
+  mit welchem Zeichensatz der Text erstellt wurde
+  und &uuml;berlegen Sie bitte sorgf&auml;ltig,
+  ob und wie Sie Zeichen umwandeln m&uuml;ssen.
 </body>
 </html>

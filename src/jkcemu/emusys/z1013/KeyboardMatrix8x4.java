@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,18 +11,18 @@ package jkcemu.emusys.z1013;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
+import java.util.Arrays;
+import jkcemu.base.AbstractKeyboardFld;
 
 
 public class KeyboardMatrix8x4 extends KeyboardMatrix
 {
-  private int rowMask0;
-  private int rowMask1;
-  private int rowMask2;
-  private int rowMask3;
+  private int[] keyboardMatrix;
 
 
   public KeyboardMatrix8x4()
   {
+    this.keyboardMatrix = new int[ 8 ];
     reset();
   }
 
@@ -33,50 +33,28 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
    */
   public boolean isAnyControlKeyPressed()
   {
-    return (this.rowMask3 & 0xF0) != 0;
+    boolean rv = false;
+    for( int i = 0; i < 4; i++ ) {
+      if( (this.keyboardMatrix[ i ] & 0x08) != 0 ) {
+	rv = true;
+	break;
+      }
+    }
+    return rv;
   }
 
 
-  public void setRowMasks( int rm0, int rm1, int rm2, int rm3 )
+  public synchronized void updKeyboardMatrix( int[] kbMatrix )
   {
-    this.rowMask0    = rm0;
-    this.rowMask1    = rm1;
-    this.rowMask2    = rm2;
-    this.rowMask3    = rm3;
-    this.keyCharCode = '\0';
-
-    if( (this.rowMask3 & 0x10) != 0 ) {
-      this.keyCharCode = '\u0008';
+    int n = Math.min( kbMatrix.length, this.keyboardMatrix.length );
+    int i = 0;
+    while( i < n ) {
+      this.keyboardMatrix[ i ] = kbMatrix[ i ];
+      i++;
     }
-    else if( (this.rowMask3 & 0x20) != 0 ) {
-      this.keyCharCode = '\u0020';
-    }
-    else if( (this.rowMask3 & 0x40) != 0 ) {
-      this.keyCharCode = '\t';
-    }
-    else if( (this.rowMask3 & 0x80) != 0 ) {
-      this.keyCharCode = '\r';
-    } else {
-      int shiftNum = 0;
-      for( int i = 0; i < 4; i++ ) {
-	if( (this.rowMask3 & (1 << i)) != 0 ) {
-	  shiftNum = i + 1;
-	  break;
-	}
-      }
-      Character ch = computeKeyChar( this.rowMask0, shiftNum,
-				'@', 'X', 'x', '\u0060', '\u0010' );
-      if( ch == null ) {
-	ch = computeKeyChar( this.rowMask1, shiftNum,
-				'H', '0', '\u0020', 'h', '\u0000' );
-      }
-      if( ch == null ) {
-	ch = computeKeyChar( this.rowMask2, shiftNum,
-				'P', '8', '(', 'p', '\u0008' );
-      }
-      if( ch != null ) {
-	this.keyCharCode = ch.charValue();
-      }
+    while( i < this.keyboardMatrix.length ) {
+      this.keyboardMatrix[ i ] = 0;
+      i++;
     }
     updShiftKeysPressed();
   }
@@ -97,17 +75,17 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
   @Override
   public int getRowValues( int col, boolean pioB4State )
   {
-    int rv	= 0;
-    int colMask	= (1 << col);
-
-    if( onlyShiftKeysReadable() ) {
-      rv = ((this.rowMask3 & colMask & 0x0F) != 0 ? 8 : 0);
-    } else {
-      int r0 = ((this.rowMask0 & colMask) != 0 ? 1 : 0);
-      int r1 = ((this.rowMask1 & colMask) != 0 ? 2 : 0);
-      int r2 = ((this.rowMask2 & colMask) != 0 ? 4 : 0);
-      int r3 = ((this.rowMask3 & colMask) != 0 ? 8 : 0);
-      rv = r0 | r1 | r2 | r3;
+    int rv = 0;
+    if( col >= 0 ) {
+      if( onlyShiftKeysReadable() ) {
+	if( col < 4 ) {
+	  rv = this.keyboardMatrix[ col ] & 0x08;
+	}
+      } else {
+	if( col < this.keyboardMatrix.length ) {
+	  rv = this.keyboardMatrix[ col ];
+	}
+      }
     }
     return rv;
   }
@@ -117,10 +95,7 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
   public void reset()
   {
     super.reset();
-    this.rowMask0 = 0;
-    this.rowMask1 = 0;
-    this.rowMask2 = 0;
-    this.rowMask3 = 0;
+    Arrays.fill( this.keyboardMatrix, 0 );
   }
 
 
@@ -131,23 +106,19 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
     reset();
     switch( keyCode ) {
       case KeyEvent.VK_LEFT:
-	this.keyCharCode = 8;
-	this.rowMask3    = 0x10;	// Taste "Links"
+	this.keyboardMatrix[ 4 ] = 0x08;
 	break;
 
       case KeyEvent.VK_RIGHT:
-	this.keyCharCode = '\t';
-	this.rowMask3    = 0x40;	// Taste "Rechts"
+	this.keyboardMatrix[ 6 ] = 0x08;
 	break;
 
       case KeyEvent.VK_ENTER:
-	this.keyCharCode = '\r';
-	this.rowMask3    = 0x80;	// Taste "Enter"
+	this.keyboardMatrix[ 7 ] = 0x08;
 	break;
 
       case KeyEvent.VK_SPACE:
-	this.keyCharCode = '\u0020';
-	this.rowMask3    = 0x20;	// Taste "Space"
+	this.keyboardMatrix[ 5 ] = 0x08;
 	break;
 
       case KeyEvent.VK_BACK_SPACE:
@@ -171,20 +142,21 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
 	break;
 
       case KeyEvent.VK_F1:
-	this.rowMask3 = 0x01;		// Taste "S1"
+	this.keyboardMatrix[ 0 ] = 0x08;
 	break;
 
       case KeyEvent.VK_F2:
-	this.rowMask3 = 0x02;		// Taste "S2"
+	this.keyboardMatrix[ 1 ] = 0x08;
 	break;
 
       case KeyEvent.VK_F3:
-	this.rowMask3 = 0x04;		// Taste "S3"
+	this.keyboardMatrix[ 2 ] = 0x08;
 	break;
 
       case KeyEvent.VK_F4:
-	this.rowMask3 = 0x08;		// Taste "S4"
+	this.keyboardMatrix[ 3 ] = 0x08;
 	break;
+
       default:
 	rv = false;
     }
@@ -193,8 +165,16 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
   }
 
 
+  @Override
+  public void updKeyboardFld( AbstractKeyboardFld keyboardFld )
+  {
+    if( keyboardFld != null )
+      keyboardFld.updKeySelection( this.keyboardMatrix );
+  }
+
+
   /*
-   * Diese Methode bildet den in "this.keyCharCode" enthaltenen Tastencode
+   * Diese Methode bildet den in "keyCharCode" enthaltenen Tastencode
    * auf der Tastaturmatrix ab.
    * Die Codes 08h, 09h, 0Dh und 20h werden nicht in die Sondertasten,
    * sondern in Tastenkombinationen mit S4 umgesetzt,
@@ -202,97 +182,96 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
    * Enter, Leer- und Cursor-Tasten werden separat behandelt.
    */
   @Override
-  protected synchronized boolean updRowMasks( boolean hexMode )
+  protected synchronized boolean updKeyboardMatrix(
+						int     keyCharCode,
+						boolean hexMode )
   {
     boolean rv = false;
-    if( this.keyCharCode > 0 ) {
-
-      // einzelne 8er-Gruppen pruefen
-      int rowMask = (1 << (this.keyCharCode & 0x07));
-
-      rv = true;
-      switch( this.keyCharCode & 0xF8 ) {
-
-	// standardmaessig ohne Shift
+    if( keyCharCode > 0 ) {
+      int col = keyCharCode & 0x07;
+      switch( keyCharCode & 0xF8 ) {
 	case '@':
-	  this.rowMask0 = rowMask;
+	  this.keyboardMatrix[ col ] |= 0x01;
+	  rv = true;
 	  break;
 	case 'H':
-	  this.rowMask1 = rowMask;
+	  this.keyboardMatrix[ col ] |= 0x02;
 	  if( hexMode ) {
-	    this.rowMask3 = 1;
+	    this.keyboardMatrix[ 0 ] |= 0x08;		// S1
 	  }
+	  rv = true;
 	  break;
 	case 'P':
-	  this.rowMask2 = rowMask;
+	  this.keyboardMatrix[ col ] |= 0x04;
 	  if( hexMode ) {
-	    this.rowMask3 = 1;
+	    this.keyboardMatrix[ 0 ] |= 0x08;		// S1
 	  }
+	  rv = true;
 	  break;
-
-	// standardmaessig mit Shift 1
 	case 'X':
-	  this.rowMask0 = rowMask;
-	  this.rowMask3 = 1;
+	  this.keyboardMatrix[ col ] |= 0x01;
+	  this.keyboardMatrix[ 0 ]   |= 0x08;		// S1
+	  rv = true;
 	  break;
 	case '0':
-	  this.rowMask1 = rowMask;
+	  this.keyboardMatrix[ col ] |= 0x02;
 	  if( !hexMode ) {
-	    this.rowMask3 = 1;
+	    this.keyboardMatrix[ 0 ] |= 0x08;		// S1
 	  }
+	  rv = true;
 	  break;
 	case '8':
-	  this.rowMask2 = rowMask;
+	  this.keyboardMatrix[ col ] |= 0x04;
 	  if( !hexMode ) {
-	    this.rowMask3 = 1;
+	    this.keyboardMatrix[ 0 ] |= 0x08;		// S1
 	  }
+	  rv = true;
 	  break;
-
-	// Shift 2
 	case 'x':
-	  this.rowMask0 = rowMask;
-	  this.rowMask3 = 2;
+	  this.keyboardMatrix[ col ] |= 0x01;
+	  this.keyboardMatrix[ 1 ]   |= 0x08;		// S2
+	  rv = true;
 	  break;
 	case '\u0020':
-	  this.rowMask1 = rowMask;
-	  this.rowMask3 = 2;
+	  this.keyboardMatrix[ col ] |= 0x02;
+	  this.keyboardMatrix[ 1 ]   |= 0x08;		// S2
+	  rv = true;
 	  break;
 	case '(':
-	  this.rowMask2 = rowMask;
-	  this.rowMask3 = 2;
+	  this.keyboardMatrix[ col ] |= 0x04;
+	  this.keyboardMatrix[ 1 ]   |= 0x08;		// S2
+	  rv = true;
 	  break;
-
-	// Shift 3
 	case '\u0060':
-	  this.rowMask0 = rowMask;
-	  this.rowMask3 = 4;
+	  this.keyboardMatrix[ col ] |= 0x01;
+	  this.keyboardMatrix[ 2 ]   |= 0x08;		// S3
+	  rv = true;
 	  break;
 	case 'h':
-	  this.rowMask1 = rowMask;
-	  this.rowMask3 = 4;
+	  this.keyboardMatrix[ col ] |= 0x02;
+	  this.keyboardMatrix[ 2 ]   |= 0x08;		// S3
+	  rv = true;
 	  break;
 	case 'p':
-	  this.rowMask2 = rowMask;
-	  this.rowMask3 = 4;
+	  this.keyboardMatrix[ col ] |= 0x04;
+	  this.keyboardMatrix[ 2 ]   |= 0x08;		// S3
+	  rv = true;
 	  break;
-
-	// Shift 4
-	case '\u0010':
-	  this.rowMask0 = rowMask;
-	  this.rowMask3 = 8;
+	case 0x10:
+	  this.keyboardMatrix[ col ] |= 0x01;
+	  this.keyboardMatrix[ 3 ]   |= 0x08;		// S4
+	  rv = true;
 	  break;
-	case '\u0000':
-	  this.rowMask1 = rowMask;
-	  this.rowMask3 = 8;
+	case 0:
+	  this.keyboardMatrix[ col ] |= 0x02;
+	  this.keyboardMatrix[ 3 ]   |= 0x08;		// S4
+	  rv = true;
 	  break;
-	case '\u0008':
-	  this.rowMask2 = rowMask;
-	  this.rowMask3 = 8;
+	case 8:
+	  this.keyboardMatrix[ col ] |= 0x04;
+	  this.keyboardMatrix[ 3 ]   |= 0x08;		// S4
+	  rv = true;
 	  break;
-
-	// Code auf Tastaturmatrix nicht abbildbar
-	default:
-	  rv = false;
       }
     }
     if( rv ) {
@@ -304,48 +283,9 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
 
 	/* --- private Methoden --- */
 
-  private static Character computeKeyChar(
-				int  rowMask,
-				int  shiftNum,
-				int  ch0,
-				int  ch1,
-				int  ch2,
-				int  ch3,
-				int  ch4 )
-  {
-    int colNum = 0;
-    for( int i = 0; i < 8; i++ ) {
-      if( (rowMask & 0x01) != 0 ) {
-	break;
-      }
-      rowMask >>= 1;
-      colNum++;
-    }
-    if( colNum < 8 ) {
-      switch( shiftNum ) {
-	case 1:
-	  return new Character( (char) (ch1 + colNum) );
-
-	case 2:
-	  return new Character( (char) (ch2 + colNum) );
-
-	case 3:
-	  return new Character( (char) (ch3 + colNum) );
-
-	case 4:
-	  return new Character( (char) (ch4 + colNum) );
-
-	default:
-	  return new Character( (char) (ch0 + colNum) );
-      }
-    }
-    return null;
-  }
-
-
   private void updShiftKeysPressed()
   {
-    setShiftKeysPressed( (this.rowMask3 & 0x0F) != 0 );
+    setShiftKeysPressed( isAnyControlKeyPressed() );
   }
 }
 

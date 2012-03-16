@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -46,9 +46,11 @@ public class TextPropDlg extends BasicDlg
     add( new JLabel( "Tabulatorbreite:" ), gbc );
     gbc.gridy++;
     add( new JLabel( "Zeilenende:" ), gbc );
-    gbc.insets.bottom = 5;
     gbc.gridy++;
     add( new JLabel( "Zeilen trimmen:" ), gbc );
+    gbc.insets.bottom = 5;
+    gbc.gridy++;
+    add( new JLabel( "Dateiendezeichen:" ), gbc );
 
     gbc.insets.top    = 5;
     gbc.insets.bottom = 2;
@@ -59,7 +61,7 @@ public class TextPropDlg extends BasicDlg
       add( new JLabel( file.getAbsolutePath() ), gbc );
     }
 
-    String displayText = editText.getEncodingDisplayText();
+    String displayText = editText.getEncodingDescription();
     gbc.insets.top = 2;
     gbc.gridy++;
     add( new JLabel( displayText != null ? displayText : "System" ), gbc );
@@ -82,6 +84,14 @@ public class TextPropDlg extends BasicDlg
       displayText = "Ja, Leerzeichen am Zeilenende entfernen";
     } else {
       displayText = "Nein";
+    }
+    gbc.gridy++;
+    add( new JLabel( displayText ), gbc );
+
+    if( editText.getTrailing1A() ) {
+      displayText = "1Ah";
+    } else {
+      displayText = "Nicht vorhanden";
     }
     gbc.insets.bottom = 5;
     gbc.gridy++;

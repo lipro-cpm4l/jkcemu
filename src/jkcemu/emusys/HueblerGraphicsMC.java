@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -84,7 +84,6 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     this.videoBaseAddr = 0;
     createIOSystem();
     checkAddPCListener( props );
-    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 

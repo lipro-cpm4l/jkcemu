@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -45,11 +45,17 @@ public class SelectEncodingDlg extends BasicDlg
 					0, 0,
 					2, 1,
 					0.0, 0.0,
-					GridBagConstraints.CENTER,
+					GridBagConstraints.WEST,
 					GridBagConstraints.NONE,
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
+    // Fragetext
+    add(
+	new JLabel(
+		"Mit welchem Zeichensatz soll die Datei"
+			+ " ge\u00F6ffnet werden?" ),
+	gbc );
 
     // Auswahlfeld
     this.comboEncoding = new JComboBox();
@@ -65,11 +71,45 @@ public class SelectEncodingDlg extends BasicDlg
     this.comboEncoding.addItem( new CharConverter(
 		CharConverter.Encoding.LATIN1 ) );
     this.comboEncoding.addItem( "UTF-8" );
-    this.comboEncoding.addItem( "UTF-16 (mit Byte-Order-Markierung)" );
-    this.comboEncoding.addItem( "UTF-16BE (Big-Endian)" );
-    this.comboEncoding.addItem( "UTF-16LE (Little-Endian)" );
+    this.comboEncoding.addItem( "UTF-16BE (Big Endian)" );
+    this.comboEncoding.addItem( "UTF-16LE (Little Endian)" );
     this.comboEncoding.setEditable( false );
+    gbc.anchor = GridBagConstraints.CENTER;
+    gbc.gridy++;
     add( this.comboEncoding, gbc );
+
+    // Hinweistext
+    JLabel label = new JLabel( "Achtung!" );
+    Font font = label.getFont();
+    if( font != null ) {
+      label.setFont( font.deriveFont( Font.BOLD ) );
+    }
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.insets.top    = 20;
+    gbc.insets.bottom = 0;
+    gbc.gridy++;
+    add( label, gbc );
+
+    gbc.insets.top = 0;
+    gbc.gridy++;
+    add(
+	new JLabel(
+		"Die Datei wird als Textdatei mit dem"
+			+ " ausgew\u00E4hlten Zeichensatz ge\u00F6ffnet." ),
+	gbc );
+
+    gbc.gridy++;
+    add(
+	new JLabel(
+		"Das gilt auch, wenn die Datei gar keine"
+			+ " Textdatei ist oder in einem" ),
+	gbc );
+
+    gbc.insets.bottom = 5;
+    gbc.gridy++;
+    add(
+	new JLabel( "anderem Zeichensatz gespeichert wurde." ),
+	gbc );
 
 
     // Knoepfe
@@ -86,6 +126,8 @@ public class SelectEncodingDlg extends BasicDlg
     this.btnCancel.addKeyListener( this );
     panelBtn.add( this.btnCancel );
 
+    gbc.anchor = GridBagConstraints.CENTER;
+    gbc.insets.top = 5;
     gbc.gridy++;
     add( panelBtn, gbc );
 

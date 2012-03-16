@@ -83,20 +83,22 @@ James A. Woods, Joe Orost, David Rowley:
 
 4.2.  Urheberschaften an den ROM- und Disketteninhalten
 
+- Akademie der Wissenschaften der DDR, Berlin (CP/A)
 - International Research Institute for Management Sciences (IRIMS), Moskau
   (MicroDOS)
 - Universitaet Rostock (MicroDOS)
 - VEB Messelektronik Dresden (A5105, KC85/1, KC87, Z9001)
 - VEB Mikroelektronik Erfurt (LC80, SC2)
-- VEB Mikroelektronik Muehlhausen (HC900, KC85/2...5, MicroDOS)
+- VEB Mikroelektronik Muehlhausen (HC900, KC85/2...5, KC-compact, MicroDOS)
 - VEB Polytechnik Karl-Marx-Stadt (Poly-Computer 880)
 - VEB Robotron-Elektronik Riesa (Z1013)
 - Prof. Dr. Albrecht Mugler (PC/M)
 - Dr. Dieter Scheuschner (SLC1)
 - Dr. Frank Schwarzenberg (CP/A fuer KC85/1, KC87 und Z9001)
 - Dr. Gerd Maudrich (LLC1)
-- Dr. Hans-Juergen Gatsche (RBASIC-Programme fuer BIC A5105)
+- Dr. Hans-Juergen Gatsche (RBASIC-Programme fuer A5105)
 - Dr. Rainer Brosig (erweitertes Z1013-Monitorprogramm sowie CP/M fuer Z1013)
+- Andreas Suske (FDC-Programm und ROM-Bank-Verwaltung fuer AC1-2010)
 - Bernd Huebler (Huebler/Evert-MC, Huebler-Grafik-MC)
 - Christian Schiewe (80-Zeichen-Treiber fuer KC85/1, KC87 und Z9001)
 - Eckart Buschendorf (LC-80.2-Monitorprogramm)
@@ -104,15 +106,16 @@ James A. Woods, Joe Orost, David Rowley:
 - Eckhard Schiller (BCS3 und VCS80)
 - Frank Heyder (Monitorprogramm 3.1 und MiniBASIC fuer AC1)
 - Frank Pruefer (S/P-BASIC V3.3 fuer BCS3)
-- Harald Saegert (RBASIC-Programme fuer BIC A5105)
+- Harald Saegert (RBASIC-Programme fuer A5105)
 - Herbert Mathes (PC/M)
 - Joachim Czepa (C-80)
 - Klaus-Peter Evert (Huebler/Evert-MC)
 - Manfred Kramer (Kramer-MC)
-- Mario Leubner (CAOS 4.5 und EDAS fuer KC85/5
-  sowie D004-ROM-Versionen 3.2 und 3.3)
+- Mario Leubner (CAOS 4.5 und EDAS fuer KC85/5,
+  D004-ROM-Versionen 3.2 und 3.3 sowie USB-Software)
+- Ralf Kaestner (KCNet-Software)
 - Torsten Musiol (Maschinenkode-Editor fuer BCS3)
-- Ulrich Zander (Treiberanpassungen fuer BIC A5105, KC81/1, KC87 und Z9001)
+- Ulrich Zander (Treiberanpassungen fuer A5105, KC81/1, KC87 und Z9001)
 
 
 5. Installation
@@ -168,18 +171,25 @@ Besonders bedanken moechte ich mich bei:
 - Dr. Gerd Maudrich fuer die freundliche Genehmigung zur Integration
   des LLC1-ROM-Images (Monitorprogramm und Tiny-BASIC-Interpreter) in JKCEMU
 - Dr. Hans-Juergen Gatsche fuer die freundliche Genehmigung,
-  von ihm entwickelte RBASIC-Programme fuer den BIC A5105
+  von ihm entwickelte RBASIC-Programme fuer den A5105
   in JKCEMU integrieren zu duerfen
 - Andre Schenk fuer das ANT-Skript
-- Andreas Suske fuer Informationen und Software zum AC1
+- Andreas Suske fuer die freundliche Genehmigung
+  zur Integration seiner AC1-2010-Software
+  (Monitorprogramm, FDC-Programm und ROM-Bank-Verwaltung)
+  in JKCEMU sowie fuer seine Hilfe bei der AC1-Emulation
 - Claus-Peter Fischer fuer die Bereitstellung eines ROM-Images zum PC/M
 - Eckhard Schiller fuer die freundliche Genehmigung zur Integration
   des VCS80- und der BCS3-ROM-Images in JKCEMU
+- Enrico Graemer fuer die Bereitstellung von Material zum KC compact
 - Frank Pruefer fuer die freundliche Genehmigung zur Integration
   von S/P-BASIC 3.3 in JKCEMU und fuer die Unterstuetzung
   bei der BCS3-Emulation
+- Gunar Haenke fuer seine Hilfe bei der AC1- und Diskettenemulation
+- Heiko Poppe fuer seine Hilfe bei der AC1- und USB-Emulation
 - Herbert Mathes fuer die freundliche Genehmigung zur Integration
   der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
+- Jan Kuhnert fuer das intensive Testen des Emulators
 - Johann Spannenkrebs fuer seine Homepage http://www.ac1-info.de
   sowie fuer seine Hilfe bei der AC1- und Poly880-Emulation
 - John Elliott fuer die freundliche Genehmigung,
@@ -189,25 +199,29 @@ Besonders bedanken moechte ich mich bei:
 - Manfred Kramer fuer die freundliche Genehmigung zur Integration
   der Systemsoftware des Kramer-MC in JKCEMU
 - Mario Leubner fuer die freundliche Genehmigung zur Integration
-  der von ihm weiterentwickelten CAOS-, EDAS- und D004-ROM-Versionen
-  sowie fuer seine Hilfe bei KC85/2..5 und der Festplattenemulation
+  der von ihm weiterentwickelten CAOS-, EDAS-, D004- und USB-Software
+  sowie fuer seine aktive Hilfe bei der KC85/2..5,
+  USB- und Festplattenemulation
 - Norbert Richter fuer die Bereitstellung von Informationen
   und Software zum AC1
 - Peter Salomon fuer seine Homepage http://www.robotron-net.de
-- Ralf Kaestner fuer seine Homepage http://susowa.homeftp.net
-  und fuer die Bereitstellung von Informationen und Software zum KC85/4
-- Ralph Haensel fuer die Hilfe
-  bei der AC1-, Disketten- und Festplattenemulation
+- Ralf Kaestner fuer die freundliche Genehmigung zur Integration
+  der von ihm entwickelten KCNet-Software,
+  fuer seine Homepage http://susowa.homeftp.net
+  sowie fuer die Hilfe bei der KC85/2..5- und Netzwerk-Emulation
+- Ralph Haensel fuer seine umfangreiche Hilfe
+  bei der AC1-, Disketten-, Festplatten- und USB-Emulation
 - Rolf Weidlich fuer die Unterstuetzung bei der AC1- und LLC1-Emulation
 - Siegfried Schenk fuer die Bereitstellung von Informationen
   und Software zum LLC2 und zu den SCCH-Modulen
+- Steffen Gruhn fuer seine Hilfe bei der A5105- und KC-compact-Emulation
 - Stephan Linz fuer seine Homepage http://www.li-pro.net
 - Thomas Scherrer fuer seine Z80-Seite http://www.z80.info
 - Torsten Paul fuer seinen Emulator KCemu (http://kcemu.sourceforge.net)
   und fuer die Bereitstellung von Informationen und ROM-Images
   zu diversen Computern
 - Ulrich Zander fuer seine Homepage http://www.sax.de/~zander
-  und fuer seine Unterstuetzung bei der A5105-, KC85/1-, KC87-
+  und fuer seine Unterstuetzung bei der BIC A5105-, KC85/1-, KC87-
   und Z9001-Emulation
 - Volker Pohlers fuer seine Homepage http://www.homecomputer-ddr.de.vu
   sowie fuer seine vielseitige Unterstuetzung

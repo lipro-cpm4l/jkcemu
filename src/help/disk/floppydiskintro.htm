@@ -1,179 +1,177 @@
 <html>
 <body>
-  <h1>Floppy-Disk-Emulation in JKCEMU</h1>
-    JKCEMU emuliert den Floppy Disk Controller U8272,
-    der kompatibel zum Intel&nbsp;8272 und zum NEC&nbsp;765 ist.
-    Dieser kann bis zu vier Diskettenlaufwerke bedienen,
-    die logischerweise auch emuliert werden.
-  <br/><br/>
-    Die emulierten Laufwerke sind f&uuml;r den Anwender im Fenster
-    <em>JKCEMU Diskettenstation</em> sichtbar,
-    dass Sie &uuml;ber das Haupfenster, Men&uuml; <em>Datei</em>
-    &rarr; <em>Diskettenstation</em> aufrufen k&ouml;nnen.
-    Dieses Fenster steht nur zur Verf&uuml;gung,
-    wenn das emulierte System im Original auch Diskettenlaufwerke
-    bietet bzw. unterst&uuml;tzt.
-    Des weiteren werden auch nicht unbedingt vier,
-    sondern nur so viele Laufwerke emuliert wie auch im Original
-    m&ouml;glich sind.
-  <br/><br/>
-    F&uuml;r jedes Laufwerk gibt es einen eigenen Reiter (Tab).
-    Weiterhin finden Sie unten rechts im Fenster einen Knopf
-    zum &Ouml;ffnen/Laden, womit Sie gedanklich eine Diskette einlegen
-    und wieder entnehmen k&ouml;nnen.
-    Da der Emulatorrechner m&ouml;glicherweise &uuml;ber gar kein
-    physisches Diskettenlaufwerk verf&uuml;gt,
-    bietet JKCEMU mehrere M&ouml;glichkeiten zur Emulation
-    einer Diskette an.
-    Eine emulierte Diskette kann abgebildet werden durch:
-    <ol>
-      <li>
-	eine reale Diskette,
-	die in einem physischen Diskettenlaufwerk steckt,
-	welches am Emulatorrechner angeschlossen ist
-      </li>
-      <li>eine <a href="diskimgformats.htm">Diskettenabbilddatei</a></li>
-      <li>ein Verzeichnis im Dateisystem des Emulatorrechner</li>
-    </ol>
-  <br/>
-    Durch Dr&uuml;cken auf den <em>&Ouml;ffnen/Laden</em>-Knopf
-    &ouml;ffnet sich ein Men&uuml;, in dem Sie die verschiedenen
-    M&ouml;glichkeiten ausw&auml;hlen k&ouml;nnen.
-  <br/><br/>
+ <h1>Floppy-Disk-Emulation in JKCEMU</h1>
+  JKCEMU emuliert den Floppy Disk Controller U8272,
+  der kompatibel zum Intel&nbsp;8272A und zum NEC&nbsp;765A ist.
+  Dieser kann bis zu vier Diskettenlaufwerke bedienen,
+  die logischerweise auch emuliert werden.
+ <br/><br/>
+  Die emulierten Laufwerke sind f&uuml;r den Anwender im Fenster
+  <em>JKCEMU Diskettenstation</em> sichtbar,
+  dass Sie &uuml;ber das Haupfenster, Men&uuml; <em>Datei</em>
+  &rarr; <em>Diskettenstation</em> aufrufen k&ouml;nnen.
+  Dieses Fenster steht nur zur Verf&uuml;gung,
+  wenn das emulierte System im Original auch Diskettenlaufwerke
+  bietet bzw. unterst&uuml;tzt.
+  Des Weiteren werden auch nicht unbedingt vier,
+  sondern nur so viele Laufwerke emuliert wie auch im Original
+  m&ouml;glich sind.
+ <br/><br/>
+  F&uuml;r jedes Laufwerk gibt es einen eigenen Reiter (Tab).
+  Weiterhin finden Sie unten rechts im Fenster einen Knopf
+  zum &Ouml;ffnen/Laden, womit Sie gedanklich eine Diskette einlegen
+  und wieder entnehmen k&ouml;nnen.
+  Da der Emulatorrechner m&ouml;glicherweise &uuml;ber gar kein
+  physisches Diskettenlaufwerk verf&uuml;gt,
+  bietet JKCEMU mehrere M&ouml;glichkeiten zur Emulation
+  einer Diskette an.
+  Eine emulierte Diskette kann abgebildet werden durch:
+  <ol>
+   <li>
+    eine reale Diskette,
+    die in einem physischen Diskettenlaufwerk steckt,
+    welches am Emulatorrechner angeschlossen ist
+   </li>
+   <li>eine <a href="diskimgformats.htm">Diskettenabbilddatei</a></li>
+   <li>ein Verzeichnis im Dateisystem des Emulatorrechner</li>
+  </ol>
+ <br/>
+  Durch Dr&uuml;cken auf den <em>&Ouml;ffnen/Laden</em>-Knopf
+  &ouml;ffnet sich ein Men&uuml;, in dem Sie die verschiedenen
+  M&ouml;glichkeiten ausw&auml;hlen k&ouml;nnen.
+ <br/><br/>
 
-  <h2><a name="disk">1. Emulation mit einer realen Diskette</a></h2>
-    M&ouml;chten Sie vom emulierten System aus auf eine Diskette zugreifen,
-    die in einem am Emulatorrechner angeschlossenen Diskettenlaufwerk steckt,
-    dann w&auml;hlen Sie im <em>&Ouml;ffnen/Laden</em>-Men&uuml;
-    den Punkt <em>Diskette &ouml;ffnen...</em>.
-    Sie werden nun nach dem Laufwerk gefragt.
-    Auf einem Windows-System w&auml;hlen Sie den Laufwerksbuchstaben aus,
-    mit dem das Diskettenlaufwerk im Windows sichtbar ist.
-    Auf einem Linux/Unix-System geben Sie die entsprechende
-    Ger&auml;tedatei an.
-    Anschlie&szlig;end m&uuml;ssen Sie nur noch das Diskettenformat
-    ausw&auml;hlen.
-  <br/><br/>
-    Bei der Emulation eines Diskettenlaufwerkes mit einer realen Diskette
-    gelten folgende Einschr&auml;nkungen:
-    <ul>
-     <li>
-	Das physische Diskettenformat, d.h. die Anzahl der Spuren,
-	die Anzahl der Sektoren pro Spur und die Sektorgr&ouml;&szlig;e,
-	muss vom Betriebssystem des Emulatorrechners unterst&uuml;tzt werden.
-	<br/>
-	Dagegen muss das logische Format, d.h. das CP/M-Dateisystem,
-	vom Emulatorrechner nicht unterst&uuml;tzt werden
-	(und wird i.d.R. auch nicht), d.h., 
-	die Dateien auf der Diskette werden Sie im Dateisystem
-	des Emulatorrechners nicht sehen k&ouml;nnen.
-      </li>
-      <li>
-	Wenn Sie im emulierten System die Diskette formatieren,
-	wird sie nicht physisch formatiert.
-	Das Formatieren ist m&ouml;glich,
-	solange das neue Format mit dem alten identisch ist.
-	Unterscheiden sich die Formate, wird ein Schreibfehler emuliert,
-	und das Formatierprogramm sollte diesen Fehler auch ausgeben.
-      </li>
-    </ul>
-  <br/><br/>
+ <h2><a name="disk">1. Emulation mit einer realen Diskette</a></h2>
+  M&ouml;chten Sie vom emulierten System aus auf eine Diskette zugreifen,
+  die in einem am Emulatorrechner angeschlossenen Diskettenlaufwerk steckt,
+  dann w&auml;hlen Sie im <em>&Ouml;ffnen/Laden</em>-Men&uuml;
+  den Punkt <em>Diskette &ouml;ffnen...</em>.
+  Sie werden nun nach dem Laufwerk gefragt.
+  Auf einem Windows-System w&auml;hlen Sie den Laufwerksbuchstaben aus,
+  mit dem das Diskettenlaufwerk im Windows sichtbar ist.
+  Auf einem Linux/Unix-System geben Sie die entsprechende
+  Ger&auml;tedatei an.
+  Anschlie&szlig;end m&uuml;ssen Sie nur noch das Diskettenformat
+  ausw&auml;hlen.
+ <br/><br/>
+  Bei der Emulation eines Diskettenlaufwerkes mit einer realen Diskette
+  gelten folgende Einschr&auml;nkungen:
+  <ul>
+   <li>
+    Das physische Diskettenformat, d.h. die Anzahl der Spuren,
+    die Anzahl der Sektoren pro Spur und die Sektorgr&ouml;&szlig;e,
+    muss vom Betriebssystem des Emulatorrechners unterst&uuml;tzt werden.
+    <br/>
+    Dagegen muss das logische Format, d.h. das CP/M-Dateisystem,
+    vom Emulatorrechner nicht unterst&uuml;tzt werden
+    (und wird i.d.R. auch nicht), d.h., 
+    die Dateien auf der Diskette werden Sie im Dateisystem
+    des Emulatorrechners nicht sehen k&ouml;nnen.
+   </li>
+   <li>
+    Wenn Sie im emulierten System die Diskette formatieren,
+    wird sie nicht physisch formatiert.
+    Das Formatieren ist m&ouml;glich,
+    solange das neue Format mit dem alten identisch ist.
+    Unterscheiden sich die Formate, wird ein Schreibfehler emuliert,
+    und das Formatierprogramm sollte diesen Fehler auch ausgeben.
+   </li>
+  </ul>
+ <br/><br/>
 
-  <h2><a name="file">2. Emulation mit einer Diskettenabbilddatei</a></h2>
-    Eine Diskettenabbilddatei (Disk Image File) ist ein 1:1-Abbild
-    einer Diskette und enth&auml;lt somit auch die Spuren und Sektoren,
-    wie sie auf einer realen Diskette zu finden sind.
-    Es gibt verschiedene <a href="diskimgformats.htm">Dateiformate</a>
-    f&uuml;r Abbilddateien, die sich inhaltlich vorallem im Umfang
-    der gespeicherten Geometrie- und Verwaltungsdaten unterscheiden.
-  <br/><br/>
+ <h2><a name="file">2. Emulation mit einer Diskettenabbilddatei</a></h2>
+  Eine Diskettenabbilddatei (Disk Image File) ist ein 1:1-Abbild
+  einer Diskette und enth&auml;lt somit auch die Spuren und Sektoren,
+  wie sie auf einer realen Diskette zu finden sind.
+  Es gibt verschiedene <a href="diskimgformats.htm">Dateiformate</a>
+  f&uuml;r Abbilddateien, die sich inhaltlich vorallem im Umfang
+  der gespeicherten Geometrie- und Verwaltungsdaten unterscheiden.
+ <br/><br/>
 
-  <h2>3. Abbildung einer emulierten Diskette auf ein Verzeichnis</h2>
-    Bei dieser Form w&auml;hlen Sie ein Verzeichnis im Dateisystem
-    des Emulatorrechners aus.
-    Die Dateien, die sich in dem Verzeichnis befinden und
-    die der Dateinamenskonvention von CP/M entsprechen,
-    werden in eine virtuelle Diskette gepackt und
-    sind somit vom emulierten System aus sichtbar.
-    Damit ist ein sehr einfacher Weg zum Austausch von Dateien zwischen
-    dem Emulatorrechner und dem im Emulator laufenden System gegeben.
-  <br/><br/>
-    Wenn die virtuelle Diskette voll ist,
-    werden die restlichen Dateien in dem Verzeichnis ignoriert.
-    Das gleiche gilt f&uuml;r Dateien, die zu gro&szlig; sind.
-  <br/><br/>
-    Die User-Bereiche 1 bis 15 werden durch Unterverzeichnisse
-    mit den Namen <em>1</em> bis <em>15</em> repr&auml;sentiert,
-    d.h., Dateien in diesen Unterverzeichnissen sehen Sie
-    dann in dem entsprechenden User-Bereich.
-  <br/><br/>
-    Nach der Auswahl des Verzeichnisses werden Sie nach dem
-    Diskettenformat gefragt.
-    Bei einem Format mit Systemspuren wird der Inhalt der Datei
-    <em>@boot.sys</em> in diese Systemspuren kopiert.
-    Damit ist es m&ouml;glich, auch von einem Verzeichnis zu booten.
-    Ist die Datei <em>@boot.sys</em> in dem Verzeichnis nicht zu finden,
-    enthalten die Systemspuren Null-Bytes.
-  <br/><br/>
-    <b>Achtung!</b> JKCEMU bietet bei einer Diskette,
-    die auf Basis eines Verzeichnis emuliert wird,
-    auch eine Schreibunterst&uuml;tzung.
-    &Ouml;ffnen Sie dazu das Verzeichnis ohne Schreibschutz.
-    In dem Fall wirken sich Schreibzugriffe auf die virtuelle Diskette
-    direkt auf die darunter liegenden Dateien aus,
-    d.h. auf die Dateien, die in dem Verzeichnis liegen.
-    Wenn die eingestellte Directory-Gr&ouml;&szlig;e nicht mit der
-    &uuml;bereinstimmt, die das im Emulator laufende Programm bzw.
-    Betriebssystem verwendet oder wenn Sie die emulierte Diskette
-    zu einem ung&uuml;nstigen Zeitpunkt aktualisieren (siehe weiter unten),
-    kann das zum L&ouml;schen oder ungewollten
-    &Uuml;berschreiben der darunter liegenden Dateien
-    und damit zum Datenverlust f&uuml;hren!
-    Noch schlimmer ist, wenn das im Emulator laufende Programm fehlerhaft
-    die Directory-Sektoren der virtuellen Diskette beschreiben sollte.
-    Aus diesen Gr&uuml;nden <b>wird dringend empfohlen,
-    ein Verzeichnis zur Emulation einer Diskette
-    nur dann ohne Schreibschutz zu &ouml;ffnen,
-    wenn die darin liegenden Dateien an einer anderen Stelle
-    nochmals gesichert sind!</b>
-  <br/><br/>
+ <h2>3. Abbildung einer emulierten Diskette auf ein Verzeichnis</h2>
+  Bei dieser Form w&auml;hlen Sie ein Verzeichnis im Dateisystem
+  des Emulatorrechners aus.
+  Die Dateien, die sich in dem Verzeichnis befinden und
+  die der Dateinamenskonvention von CP/M entsprechen,
+  werden in eine virtuelle Diskette gepackt und
+  sind somit vom emulierten System aus sichtbar.
+  Damit ist ein sehr einfacher Weg zum Austausch von Dateien zwischen
+  dem Emulatorrechner und dem im Emulator laufenden System gegeben.
+ <br/><br/>
+  Wenn die virtuelle Diskette voll ist,
+  werden die restlichen Dateien in dem Verzeichnis ignoriert.
+  Das gleiche gilt f&uuml;r Dateien, die zu gro&szlig; sind.
+ <br/><br/>
+  Die User-Bereiche 1 bis 15 werden durch Unterverzeichnisse
+  mit den Namen <em>1</em> bis <em>15</em> repr&auml;sentiert,
+  d.h., Dateien in diesen Unterverzeichnissen sehen Sie
+  dann in dem entsprechenden User-Bereich.
+ <br/><br/>
+  Nach der Auswahl des Verzeichnisses werden Sie nach dem
+  Diskettenformat gefragt.
+  Bei einem Format mit Systemspuren wird der Inhalt der Datei
+  <em>@boot.sys</em> in diese Systemspuren kopiert.
+  Damit ist es m&ouml;glich, auch von einem Verzeichnis zu booten.
+  Ist die Datei <em>@boot.sys</em> in dem Verzeichnis nicht zu finden,
+  enthalten die Systemspuren Null-Bytes.
+ <br/><br/>
+  <b>Achtung!</b> JKCEMU bietet bei einer Diskette,
+  die auf Basis eines Verzeichnis emuliert wird,
+  auch eine Schreibunterst&uuml;tzung.
+  &Ouml;ffnen Sie dazu das Verzeichnis ohne Schreibschutz.
+  In dem Fall wirken sich Schreibzugriffe auf die virtuelle Diskette
+  direkt auf die darunter liegenden Dateien aus,
+  d.h. auf die Dateien, die in dem Verzeichnis liegen.
+  Wenn die eingestellte Directory-Gr&ouml;&szlig;e nicht mit der
+  &uuml;bereinstimmt, die das im Emulator laufende Programm bzw.
+  Betriebssystem verwendet oder wenn Sie die emulierte Diskette
+  zu einem ung&uuml;nstigen Zeitpunkt aktualisieren (siehe weiter unten),
+  kann das zum L&ouml;schen oder ungewollten
+  &Uuml;berschreiben der darunter liegenden Dateien
+  und damit zum Datenverlust f&uuml;hren!
+  Noch schlimmer ist, wenn das im Emulator laufende Programm fehlerhaft
+  die Directory-Sektoren der virtuellen Diskette beschreiben sollte.
+  Aus diesen Gr&uuml;nden <b>wird dringend empfohlen,
+  ein Verzeichnis zur Emulation einer Diskette
+  nur dann ohne Schreibschutz zu &ouml;ffnen,
+  wenn die darin liegenden Dateien an einer anderen Stelle
+  nochmals gesichert sind!</b>
+ <br/><br/>
 
-  <h3>
-    <a name="refresh">3.1. Aktualisierung der emulierten Diskette</a>
-  </h3>
-    Wenn eine Diskette auf Basis eines Verzeichnisses emuliert wird,
-    ist es m&ouml;glich, dass die im Verzeichnis liegenden Dateien
-    neben dem Emulator auch von anderen Programmen benutzt
-    und ge&auml;ndert werden.
-    Sollen sich die &Auml;nderungen in dem Verzeichnis
-    auch in der emulierten Diskette widerspiegeln,
-    muss diese aktualisiert werden.
-    W&auml;hlen Sie dazu in dem Men&uuml; am <em>&Ouml;ffnen/Laden</em>-Knopf
-    den Punkt <em>Emulierte Diskette aktualisieren</em> an.
-    Sobald von der emulierten Diskette das n&auml;chste mal das Directory
-    gelesen wird, erzeugt JKCEMU einen neuen Inhalt f&uuml;r die Diskette.
-    Bei einem CP/M-kompatiblen Betriebssystem im Emulator sollten Sie
-    <em>Control-C</em> bzw. <em>Strg-C</em> dr&uuml;cken,
-    um das Lesen des Directorys zu veranlassen.
-  <br/><br/>
-    JKCEMU bietet auch eine automatische Aktualisierung.
-    Dazu m&uuml;ssen Sie in dem Dialog zur Auswahl des Diskettenformats
-    die Option <em>Automatisch aktualisieren</em> einschalten.
-    Diese Option kann nur zusammen mit dem Schreibschutz eingeschaltet
-    werden.
-  <br/><br/>
-    <b>Achtung!</b> Manche Programme oder Betriebssysteme kommen
-    m&ouml;glicherweise mit der automatischen Aktualisierung
-    des Disketteninhalts nicht klar und lesen dadurch falsche Daten ein.
-    In dem Fall m&uuml;ssen Sie die Option ausschalten.
-  <br/><br/>
-    <b>Achtung!</b> Wenn Sie das Verzeichnis ohne Schreibschutz
-    ge&ouml;ffnet haben, sollten Sie unbedingt darauf achten,
-    dass Sie die emulierte Diskette nur zu solchen Zeitpunkten aktualisieren,
-    wenn sich das im Emulator laufende Programm oder Betriebssystem
-    in der Eingabeschleife befindet und gerade nicht auf die Diskette zugreift!
-    Au&szlig;erdem sollten Sie unbedingt auch das erneute Einlesen
-    des Directorys erzwingen (<em>Control-C</em> bzw. <em>Strg-C</em>).
+ <h3><a name="refresh">3.1. Aktualisierung der emulierten Diskette</a></h3>
+  Wenn eine Diskette auf Basis eines Verzeichnisses emuliert wird,
+  ist es m&ouml;glich, dass die im Verzeichnis liegenden Dateien
+  neben dem Emulator auch von anderen Programmen benutzt
+  und ge&auml;ndert werden.
+  Sollen sich die &Auml;nderungen in dem Verzeichnis
+  auch in der emulierten Diskette widerspiegeln,
+  muss diese aktualisiert werden.
+  W&auml;hlen Sie dazu in dem Men&uuml; am <em>&Ouml;ffnen/Laden</em>-Knopf
+  den Punkt <em>Emulierte Diskette aktualisieren</em> an.
+  Sobald von der emulierten Diskette das n&auml;chste mal das Directory
+  gelesen wird, erzeugt JKCEMU einen neuen Inhalt f&uuml;r die Diskette.
+  Bei einem CP/M-kompatiblen Betriebssystem im Emulator sollten Sie
+  <em>Control-C</em> bzw. <em>Strg-C</em> dr&uuml;cken,
+  um das Lesen des Directorys zu veranlassen.
+ <br/><br/>
+  JKCEMU bietet auch eine automatische Aktualisierung.
+  Dazu m&uuml;ssen Sie in dem Dialog zur Auswahl des Diskettenformats
+  die Option <em>Automatisch aktualisieren</em> einschalten.
+  Diese Option kann nur zusammen mit dem Schreibschutz eingeschaltet
+  werden.
+ <br/><br/>
+  <b>Achtung!</b> Manche Programme oder Betriebssysteme kommen
+  m&ouml;glicherweise mit der automatischen Aktualisierung
+  des Disketteninhalts nicht klar und lesen dadurch falsche Daten ein.
+  In dem Fall m&uuml;ssen Sie die Option ausschalten.
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie das Verzeichnis ohne Schreibschutz
+  ge&ouml;ffnet haben, sollten Sie unbedingt darauf achten,
+  dass Sie die emulierte Diskette nur zu solchen Zeitpunkten aktualisieren,
+  wenn sich das im Emulator laufende Programm oder Betriebssystem
+  in der Eingabeschleife befindet und gerade nicht auf die Diskette zugreift!
+  Au&szlig;erdem sollten Sie unbedingt auch das erneute Einlesen
+  des Directorys erzwingen (<em>Control-C</em> bzw. <em>Strg-C</em>).
 </body>
 </html>
 

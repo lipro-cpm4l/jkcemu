@@ -48,10 +48,7 @@ public class FloppyDiskInfo implements Comparable<FloppyDiskInfo>
       }
       if( this.resource.endsWith( ".dump.gz" ) ) {
 	gz   = new GZIPInputStream( in );
-	disk = AnadiskFloppyDisk.readResourceStream(
-						owner,
-						gz,
-						this.resource );
+	disk = AnaDisk.readResourceStream( owner, gz, this.resource );
       }
     }
     finally {

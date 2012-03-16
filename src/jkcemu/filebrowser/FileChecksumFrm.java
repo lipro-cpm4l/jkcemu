@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -519,7 +519,7 @@ public class FileChecksumFrm extends BasicFrm
 	      this.filesChanged = false;
 	      this.thread       = new Thread(
 					this,
-					"JKCEMU checksum calculator" );
+					"JKCEMU Checksum Calculator" );
 	      this.thread.start();
 	      updFields();
 	    }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -245,12 +245,25 @@ public class BasicDlg extends JDialog implements
     String exMsg = null;
     if( ex != null ) {
       exMsg = ex.getMessage();
-      if( exMsg == null ) {
-	exMsg = ex.getClass().getName();
+      if( exMsg != null ) {
+	if( exMsg.trim().isEmpty() ) {
+	  exMsg = null;
+	}
       }
     }
-    if( (msg != null) && (exMsg != null) ) {
-      msg = msg + "\n\n" + exMsg;
+    if( (msg != null) && (ex != null) ) {
+      String exName = ex.getClass().getName();
+      if( exMsg != null ) {
+	if( exName.startsWith( "jkcemu." )
+	    || exName.startsWith( "z80emu." ) )
+	{
+	  msg = msg + "\n\n" + exMsg;
+	} else {
+	  msg = msg + "\n\n" + "Fehlermeldung des Betriebssystems:\n" + exMsg;
+	}
+      } else {
+	msg = msg + "\n\n" + exName;
+      }
     }
     if( msg == null ) {
       msg = exMsg;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -202,7 +202,7 @@ public class FileSaver
 	    int begOfVars   = memory.getMemWord( begAddr + 0x17 );
 	    int begOfFields = memory.getMemWord( begAddr + 0x19 );
 	    int topAddr     = memory.getMemWord( begAddr + 0x1B );
-	    if( (endOfMem < begAddr) || (endOfMem >= Z1013.MEM_SCREEN)
+	    if( (endOfMem < begAddr) || (endOfMem >= 0xFF00)
 		|| (begOfVars < begAddr) || (begOfVars > endOfMem)
 		|| (begOfFields < begAddr) || (begOfFields > endOfMem)
 		|| (topAddr < begAddr) || (topAddr > endOfMem) )
@@ -270,7 +270,7 @@ public class FileSaver
 	  }
 
 	} else if( isTAP_0 || isTAP_1 ) {
-	  String s = "\u00C3KC-TAPE by AF.\u0020";
+	  String s = FileInfo.KCTAP_HEADER;
 	  int    n = s.length();
 	  for( int i = 0; i < n; i++ ) {
 	    out.write( s.charAt( i ) );
@@ -307,7 +307,11 @@ public class FileSaver
 
 	    while( addr <= endAddr ) {
 	      if( n == 0 ) {
-		out.write( blkNum++ );
+		if( (addr + 128) <= endAddr ) {
+		  out.write( blkNum++ );
+		} else {
+		  out.write( 0xFF );
+		}
 		n = 128;
 	      }
 	      out.write( memory.getMemByte( addr, false ) );
@@ -409,6 +413,51 @@ public class FileSaver
   }
 
 
+  public static void writeKCHeader(
+				OutputStream out,
+				int          begAddr,
+				int          endAddr,
+				Integer      startAddr,
+				String       fileDesc ) throws IOException
+  {
+    int n   = 11;
+    int src = 0;
+    if( fileDesc != null ) {
+      int len = fileDesc.length();
+      while( (src < len) && (n > 0) ) {
+        char ch = fileDesc.charAt( src++ );
+        if( (ch >= '\u0020') && (ch <= 0xFF) ) {
+          out.write( ch );
+          --n;
+        }
+      }
+    }
+    while( n > 0 ) {
+      out.write( '\u0020' );
+      --n;
+    }
+    for( int i = 0; i < 5; i++ ) {
+      out.write( 0 );
+    }
+    out.write( startAddr != null ? 3 : 2 );
+    out.write( begAddr & 0xFF );
+    out.write( begAddr >> 8 );
+    endAddr++;
+    out.write( endAddr & 0xFF );
+    out.write( endAddr >> 8 );
+    if( startAddr != null ) {
+      out.write( startAddr.intValue() & 0xFF );
+      out.write( startAddr.intValue() >> 8 );
+    } else {
+      out.write( 0 );
+      out.write( 0 );
+    }
+    for( int i = 0; i < 105; i++ ) {
+      out.write( 0 );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private static void writeHexByte(
@@ -457,51 +506,6 @@ public class FileSaver
       out.write( 0x0A );
     }
     return cnt;
-  }
-
-
-  private static void writeKCHeader(
-				OutputStream out,
-				int          begAddr,
-				int          endAddr,
-				Integer      startAddr,
-				String       fileDesc ) throws IOException
-  {
-    int n   = 11;
-    int src = 0;
-    if( fileDesc != null ) {
-      int len = fileDesc.length();
-      while( (src < len) && (n > 0) ) {
-        char ch = fileDesc.charAt( src++ );
-        if( (ch >= '\u0020') && (ch <= 0xFF) ) {
-          out.write( ch );
-          --n;
-        }
-      }
-    }
-    while( n > 0 ) {
-      out.write( '\u0020' );
-      --n;
-    }
-    for( int i = 0; i < 5; i++ ) {
-      out.write( 0 );
-    }
-    out.write( startAddr != null ? 3 : 2 );
-    out.write( begAddr & 0xFF );
-    out.write( begAddr >> 8 );
-    endAddr++;
-    out.write( endAddr & 0xFF );
-    out.write( endAddr >> 8 );
-    if( startAddr != null ) {
-      out.write( startAddr.intValue() & 0xFF );
-      out.write( startAddr.intValue() >> 8 );
-    } else {
-      out.write( 0 );
-      out.write( 0 );
-    }
-    for( int i = 0; i < 105; i++ ) {
-      out.write( 0 );
-    }
   }
 }
 

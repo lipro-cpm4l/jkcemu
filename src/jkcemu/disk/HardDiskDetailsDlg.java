@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,6 +16,7 @@ import java.util.*;
 import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 
 
 public class HardDiskDetailsDlg extends BasicDlg
@@ -196,15 +197,15 @@ public class HardDiskDetailsDlg extends BasicDlg
       if( this.comboProducer != null ) {
 	Object o = this.comboProducer.getSelectedItem();
 	if( o != null ) {
-	  producer = EmuUtil.emptyToNull( o.toString() );
+	  producer = TextUtil.emptyToNull( o.toString() );
 	}
       } else if( this.fldProducer != null ) {
-	producer = EmuUtil.emptyToNull( this.fldProducer.getText() );
+	producer = TextUtil.emptyToNull( this.fldProducer.getText() );
       }
-      String model      = EmuUtil.emptyToNull( this.fldModel.getText() );
-      String cylText    = EmuUtil.emptyToNull( this.fldCylinders.getText() );
-      String headText   = EmuUtil.emptyToNull( this.fldHeads.getText() );
-      String sectorText = EmuUtil.emptyToNull( this.fldSectors.getText() );
+      String model      = TextUtil.emptyToNull( this.fldModel.getText() );
+      String cylText    = TextUtil.emptyToNull( this.fldCylinders.getText() );
+      String headText   = TextUtil.emptyToNull( this.fldHeads.getText() );
+      String sectorText = TextUtil.emptyToNull( this.fldSectors.getText() );
       if( (model != null)
 	  && (cylText != null)
 	  && (headText != null)

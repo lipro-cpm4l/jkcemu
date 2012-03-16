@@ -23,63 +23,42 @@ import jkcemu.base.*;
 import jkcemu.print.PrintUtil;
 
 
-public class ImageFrm extends BasicFrm implements
-						ComponentListener,
+public class ImageFrm extends AbstractImageFrm implements
 						DropTargetListener,
-						FlavorListener
+						FlavorListener,
+						MouseMotionListener
 {
-  private ScreenFrm   screenFrm;
-  private Clipboard   clipboard;
-  private File        file;
-  private Image       image;
-  private JButton     btnOpen;
-  private JButton     btnSaveAs;
-  private JButton     btnPrint;
-  private JButton     btnRotateLeft;
-  private JButton     btnRotateRight;
-  private JComboBox   comboScale;
-  private JMenuItem   mnuOpen;
-  private JMenuItem   mnuSaveAs;
-  private JMenuItem   mnuPrint;
-  private JMenuItem   mnuClose;
-  private JMenuItem   mnuImgCopy;
-  private JMenuItem   mnuImgPaste;
-  private JMenuItem   mnuRoundCorners;
-  private JMenuItem   mnuBgSystem;
-  private JMenuItem   mnuBgBlack;
-  private JMenuItem   mnuBgWhite;
-  private JMenuItem   mnuAutoResize;
-  private JMenuItem   mnuHelpContent;
-  private ImgFld      imgFld;
-  private JScrollPane scrollPane;
-  private int         lastRoundTopPixels;
-  private int         lastRoundBottomPixels;
-  private int         maxUnscaledWidth;
-  private int         maxUnscaledHeight;
-  private boolean     scaleEnabled;
+  private static final String DEFAULT_STATUS_TEXT = "Bereit";
+
+  private JButton   btnOpen;
+  private JButton   btnSaveAs;
+  private JButton   btnPrint;
+  private JButton   btnRotateLeft;
+  private JButton   btnRotateRight;
+  private JMenuItem mnuOpen;
+  private JMenuItem mnuSaveAs;
+  private JMenuItem mnuPrint;
+  private JMenuItem mnuClose;
+  private JMenuItem mnuImgCopy;
+  private JMenuItem mnuImgPaste;
+  private JMenuItem mnuRoundCorners;
+  private JMenuItem mnuBgSystem;
+  private JMenuItem mnuBgBlack;
+  private JMenuItem mnuBgWhite;
+  private JMenuItem mnuAutoResize;
+  private JMenuItem mnuHelpContent;
+  private JLabel    labelStatus;
+  private int       lastRoundTopPixels;
+  private int       lastRoundBottomPixels;
 
 
   public ImageFrm( ScreenFrm screenFrm )
   {
-    this.screenFrm             = screenFrm;
-    this.clipboard             = null;
-    this.file                  = null;
-    this.image                 = null;
+    super( screenFrm );
     this.lastRoundTopPixels    = 0;
     this.lastRoundBottomPixels = 0;
-    this.maxUnscaledWidth      = 0;
-    this.maxUnscaledHeight     = 0;
-    this.scaleEnabled          = true;
     setTitleInternal( null );
     Main.updIcon( this );
-
-    Toolkit tk = getToolkit();
-    if( tk != null ) {
-      this.clipboard = tk.getSystemClipboard();
-      if( this.clipboard != null ) {
-	this.clipboard.addFlavorListener( this );
-      }
-    }
 
 
     // Menu
@@ -127,8 +106,7 @@ public class ImageFrm extends BasicFrm implements
 
     this.mnuAutoResize = new JCheckBoxMenuItem(
 				"Fenstergr\u00F6\u00DFe anpassen",
-				true );
-    this.mnuAutoResize.addActionListener( this );
+				false );
     mnuSettings.add( this.mnuAutoResize );
     mnuSettings.addSeparator();
 
@@ -170,10 +148,6 @@ public class ImageFrm extends BasicFrm implements
     setJMenuBar( mnuBar );
 
 
-    // Fensterinhalt
-    setLayout( new BorderLayout( 0, 0 ) );
-
-
     // Werkzeugleiste
     JPanel panelToolBar = new JPanel(
 		new FlowLayout( FlowLayout.LEFT, 0, 0 ) );
@@ -212,34 +186,16 @@ public class ImageFrm extends BasicFrm implements
     toolBar.add( this.btnRotateRight );
     toolBar.addSeparator();
 
-    this.comboScale = new JComboBox();
-    this.comboScale.setEditable( true );
-    this.comboScale.addItem( "25 %" );
-    this.comboScale.addItem( "33 %" );
-    this.comboScale.addItem( "50 %" );
-    this.comboScale.addItem( "75 %" );
-    this.comboScale.addItem( "100 %" );
-    this.comboScale.addItem( "150 %" );
-    this.comboScale.addItem( "200 %" );
-    this.comboScale.addItem( "300 %" );
-    this.comboScale.addItem( "400 %" );
-    this.comboScale.setSelectedItem( "100 %" );
-    this.comboScale.setToolTipText( "Skalierungsfaktor" );
-    this.comboScale.addActionListener( this );
-    toolBar.add( this.comboScale );
+    toolBar.add( createScaleComboBox(
+			100, 25, 33, 50, 75, 100, 200, 300, 400 ) );
 
 
-    /*
-     * Bildanzeige
-     * Anfangsgroesse im Verhaeltnis 4:3, aber so,
-     * dass ein Schnappschuss der Bildschirmausgabe hineinpasst.
-     */
-    this.imgFld     = new ImgFld( 342, 256 );
-    this.scrollPane = new JScrollPane(
-				this.imgFld,
-				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-				JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS );
-    add( this.scrollPane, BorderLayout.CENTER );
+    // Statuszeile
+    this.labelStatus = new JLabel( DEFAULT_STATUS_TEXT );
+    JPanel panelStatus = new JPanel(
+		new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
+    panelStatus.add( this.labelStatus );
+    add( panelStatus, BorderLayout.SOUTH );
 
 
     // Drop-Ziele
@@ -247,13 +203,19 @@ public class ImageFrm extends BasicFrm implements
     (new DropTarget( this.scrollPane, this )).setActive( true );
 
 
-    // sonstiges
+    // Fenstergroesse
     if( !applySettings( Main.getProperties(), true ) ) {
       pack();
       setScreenCentered();
     }
     setResizable( true );
-    addComponentListener( this );
+
+
+    // sonstiges
+    this.imgFld.addMouseMotionListener( this );
+    if( this.clipboard != null ) {
+      this.clipboard.addFlavorListener( this );
+    }
   }
 
 
@@ -262,41 +224,59 @@ public class ImageFrm extends BasicFrm implements
     if( image != null ) {
 
       /*
-       * Wenn die Option "Fenstergroesse anpassen" gesetzt ist,
-       * soll das Bild bei Bedarf auf den ganzen Bildschirm abzueglich
-       * der Fensterraender und der Menuleiste ausgebreitet werden.
-       * Das Bild wird deshalb erst skaliert, wenn es mehr als 90%
-       * des Bildschirms einnehmen wuerde.
+       * Bild moeglichst in ein BufferedImage umwandeln,
+       * Sollte das nicht moeglich sein, dann eben als Image behalten.
+       * In dem Fall ist dann die Anzeige der Farbwerte
+       * in der Statuszeile nicht moeglich.
+       */
+      if( !(image instanceof BufferedImage) ) {
+	BufferedImage bImg = ImgUtil.createBufferedImage( this, image );
+	if( bImg != null ) {
+	  if( bImg != image ) {
+	    image.flush();
+	  }
+	  image = bImg;
+	}
+      }
+
+      /*
+       * Wenn das Fenster noch unsichtbar oder
+       * die Option "Fenstergroesse anpassen" eingeschaltet ist,
+       * soll das Bild je nach Groesse entweder unskaliert oder
+       * auf 80% der Bildschirmgroesse (abzueglich Fensterraender
+       * und Menuleiste) skaliert angezeigt werden.
        *
        * Ist die Option "Fenstergroesse anpassen" ausgeschaltet,
        * soll sich das Bild nur im aktuellen Fensterbereich ausbreiten.
        */
-      if( (this.maxUnscaledWidth < 1) || (this.maxUnscaledHeight < 1) ) {
+      int     maxW      = 0;
+      int     maxH      = 0;
+      boolean autoScale = true;
+      if( isVisible() && !this.mnuAutoResize.isSelected() ) {
+	JViewport vp = this.scrollPane.getViewport();
+	if( vp != null ) {
+	  int vpW = vp.getWidth();
+	  int vpH = vp.getHeight();
+	  if( (vpW > 0) && (vpH > 0) ) {
+	    maxW      = vpW;
+	    maxH      = vpH;
+	    autoScale = false;
+	  }
+        }
+      }
+      if( (maxW < 1) || (maxH < 1) ) {
 	Toolkit tk = getToolkit();
 	if( tk != null ) {
 	  Dimension screenSize = tk.getScreenSize();
 	  if( screenSize != null ) {
-	    this.maxUnscaledWidth  = (screenSize.width * 9) / 10;
-	    this.maxUnscaledHeight = (screenSize.height * 9) / 10;
+	    maxW  = (screenSize.width * 8) / 10;
+	    maxH = (screenSize.height * 8) / 10;
 	  }
-	}
-	if( (this.maxUnscaledWidth < 1) || (this.maxUnscaledHeight < 1) ) {
-	  this.maxUnscaledWidth  = 640;
-	  this.maxUnscaledHeight = 480;
 	}
       }
-      int maxUnscaledWidth  = this.maxUnscaledWidth;
-      int maxUnscaledHeight = this.maxUnscaledHeight;
-      if( !this.mnuAutoResize.isSelected() ) {
-	JViewport vp = this.scrollPane.getViewport();
-	if( vp != null ) {
-	  int wVP = vp.getWidth();
-	  int hVP = vp.getHeight();
-	  if( (wVP > 0) && (hVP > 0) ) {
-	    maxUnscaledWidth  = wVP;
-	    maxUnscaledHeight = hVP;
-	  }
-	}
+      if( (maxW < 1) || (maxH < 1) ) {
+	maxW = 640;
+	maxH = 480;
       }
 
       // Bildgroesse ermitteln
@@ -314,15 +294,16 @@ public class ImageFrm extends BasicFrm implements
       // Skalierung ermitteln
       double scale = 1.0;
       if( (wImg > 0) && (hImg > 0)
-	  && ((wImg > maxUnscaledWidth) || (hImg > maxUnscaledHeight)) )
+	  && ((wImg > maxW) || (hImg > maxH)) )
       {
 	scale = Math.min(
-			(double) maxUnscaledWidth / (double) wImg,
-			(double) maxUnscaledHeight / (double) hImg );
+			(double) maxW / (double) wImg,
+			(double) maxH / (double) hImg );
       }
 
       // Bild anzeigen
-      this.image = image;
+      Image oldImage = this.image;
+      this.image     = image;
       this.scrollPane.invalidate();
       this.imgFld.setImage( image );
       this.imgFld.setRotation( ImgFld.Rotation.NONE );
@@ -331,8 +312,9 @@ public class ImageFrm extends BasicFrm implements
       this.scrollPane.repaint();
       setTitleInternal( title );
       updDisplayScale();
-      updWindowSize();
-
+      if( oldImage != null ) {
+	oldImage.flush();
+      }
       this.btnSaveAs.setEnabled( true );
       this.btnPrint.setEnabled( true );
       this.btnRotateLeft.setEnabled( true );
@@ -342,6 +324,9 @@ public class ImageFrm extends BasicFrm implements
       this.mnuImgCopy.setEnabled( true );
       this.mnuRoundCorners.setEnabled( true );
       this.file = null;
+      if( autoScale ) {
+	pack();
+      }
     }
   }
 
@@ -395,38 +380,6 @@ public class ImageFrm extends BasicFrm implements
 
 
 
-	/* --- ComponentListener --- */
-
-  @Override
-  public void componentHidden( ComponentEvent e )
-  {
-    // leer
-  }
-
-
-  @Override
-  public void componentMoved( ComponentEvent e )
-  {
-    // leer
-  }
-
-
-  @Override
-  public void componentResized( ComponentEvent e )
-  {
-    JViewport vp = this.scrollPane.getViewport();
-    if( vp != null )
-      this.imgFld.setViewportSize( vp.getExtentSize() );
-  }
-
-
-  @Override
-  public void componentShown( ComponentEvent e )
-  {
-    // leer
-  }
-
-
 	/* --- DropTargetListener --- */
 
   @Override
@@ -478,6 +431,59 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
+  @Override
+  public void mouseDragged( MouseEvent e )
+  {
+    mouseMoved( e );
+  }
+
+
+  @Override
+  public void mouseMoved( MouseEvent e )
+  {
+    if( e.getComponent() == this.imgFld ) {
+      String text = DEFAULT_STATUS_TEXT;
+      if( this.image != null ) {
+	int    w = this.image.getWidth( this );
+	int    h = this.image.getHeight( this );
+	if( (w > 0) && (h > 0) ) {
+	  double f = this.imgFld.getCurScale();
+	  int    x = (int) Math.round( (double) e.getX() / f );
+	  int    y = (int) Math.round( (double) e.getY() / f );
+	  if( (x >= 0) && (x < w) && (y >= 0) && (y < h) ) {
+	    if( this.image instanceof BufferedImage ) {
+	      if( ImgUtil.hasAlpha( (BufferedImage) this.image ) ) {
+		int rgba = ((BufferedImage) this.image).getRGB( x, y );
+		text = String.format(
+				"X,Y=%d,%d  RGB=%d,%d,%d  Alpha=%d",
+				x,
+				y,
+				(rgba >> 16) & 0xFF,
+				(rgba >> 8) & 0xFF,
+				rgba & 0xFF,
+				(rgba >> 24) & 0xFF );
+	      } else {
+		int rgb = ((BufferedImage) this.image).getRGB( x, y );
+		text = String.format(
+				"X,Y=%d,%d  RGB=%d,%d,%d",
+				x,
+				y,
+				(rgb >> 16) & 0xFF,
+				(rgb >> 8) & 0xFF,
+				rgb & 0xFF );
+	      }
+	    } else {
+	      text = String.format( "X=%d Y=%d", x, y );
+	    }
+	  }
+	}
+      }
+      this.labelStatus.setText( text );
+      e.consume();
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -489,15 +495,10 @@ public class ImageFrm extends BasicFrm implements
 
       String prefix = getSettingsPrefix();
 
-      boolean autoResize = EmuUtil.parseBoolean(
-			  props.getProperty( prefix + ".auto_resize" ),
-			  true );
-      if( autoResize != this.mnuAutoResize.isSelected() ) {
-	this.mnuAutoResize.setSelected( autoResize );
-	if( autoResize ) {
-	  updWindowSize();
-	}
-      }
+      this.mnuAutoResize.setSelected(
+		EmuUtil.parseBoolean(
+			props.getProperty( prefix + ".auto_resize" ),
+			false ) );
 
       AbstractButton btn   = this.mnuBgSystem;
       Color          color = SystemColor.window;
@@ -526,11 +527,7 @@ public class ImageFrm extends BasicFrm implements
     boolean rv = false;
     if( e != null ) {
       Object src = e.getSource();
-      if( src == this.comboScale ) {
-	rv = true;
-	doScale();
-      }
-      else if( src == this.btnRotateLeft ) {
+      if( src == this.btnRotateLeft ) {
 	rv = true;
 	doRotateLeft();
       }
@@ -548,7 +545,7 @@ public class ImageFrm extends BasicFrm implements
       }
       else if( (src == this.btnSaveAs) || (src == this.mnuSaveAs) ) {
 	rv = true;
-	doSave();
+	doSaveAs();
       }
       else if( (src == this.btnPrint) || (src == this.mnuPrint) ) {
 	rv = true;
@@ -566,10 +563,6 @@ public class ImageFrm extends BasicFrm implements
       else if( src == this.mnuRoundCorners ) {
 	rv = true;
 	doRoundCorners();
-      }
-      else if( src == this.mnuAutoResize ) {
-	rv = true;
-	updWindowSize();
       }
       else if( src == this.mnuBgSystem ) {
 	rv = true;
@@ -591,16 +584,8 @@ public class ImageFrm extends BasicFrm implements
         this.screenFrm.showHelp( "/help/tools/imageviewer.htm" );
       }
     }
-    return rv;
-  }
-
-
-  @Override
-  public boolean doClose()
-  {
-    boolean rv = super.doClose();
     if( !rv ) {
-      this.screenFrm.childFrameClosed( this );
+      rv = super.doAction( e );
     }
     return rv;
   }
@@ -631,10 +616,10 @@ public class ImageFrm extends BasicFrm implements
 
 
   @Override
-  public void windowClosed( WindowEvent e )
+  protected void updWindowSize()
   {
-    if( e.getWindow() == this )
-      this.screenFrm.childFrameClosed( this );
+    if( this.mnuAutoResize.isSelected() )
+      pack();
   }
 
 
@@ -655,80 +640,6 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
-  private void doSave()
-  {
-    if( this.image != null ) {
-      BufferedImage   imgToSave = null;
-      ImgFld.Rotation rotation  = this.imgFld.getRotation();
-      if( rotation == ImgFld.Rotation.NONE ) {
-	imgToSave = getBufferedImage();
-      } else {
-	int w       = this.image.getWidth( this );
-	int h       = this.image.getHeight( this );
-	int imgType = BufferedImage.TYPE_CUSTOM;
-	if( this.image instanceof BufferedImage ) {
-	  imgType = ((BufferedImage) this.image).getType();
-	  if( imgType == BufferedImage.TYPE_CUSTOM ) {
-	    ColorModel cm = ((BufferedImage) this.image).getColorModel();
-	    if( cm != null ) {
-	      if( !cm.hasAlpha() ) {
-		imgType = BufferedImage.TYPE_INT_RGB;
-	      }
-	    }
-	  }
-	}
-	if( imgType == BufferedImage.TYPE_CUSTOM ) {
-	  imgType = BufferedImage.TYPE_INT_ARGB;
-	}
-	if( (w > 0) && (h > 0) ) {
-	  int option = JOptionPane.showConfirmDialog(
-				this,
-				"Soll das Bild gedreht gespeichert werden,\n"
-					+ "so wie Sie es gerade sehen?",
-				"Bild gedreht",
-				JOptionPane.YES_NO_CANCEL_OPTION,
-				JOptionPane.QUESTION_MESSAGE );
-	  if( option == JOptionPane.YES_OPTION ) {
-	    if( (rotation == ImgFld.Rotation.LEFT)
-		|| (rotation == ImgFld.Rotation.RIGHT) )
-	    {
-	      imgToSave = new BufferedImage( h, w, imgType );
-	    } else {
-	      imgToSave = new BufferedImage( w, h, imgType );
-	    }
-	    Graphics g = imgToSave.createGraphics();
-	    this.imgFld.drawImage( g, 0, 0, w, h );
-	    g.dispose();
-	  }
-	  else if( option == JOptionPane.NO_OPTION ) {
-	    imgToSave = getBufferedImage();
-	  }
-	} else {
-	  imgToSave = getBufferedImage();
-	}
-      }
-      if( imgToSave != null ) {
-	File file = ImgUtil.saveImage( this, imgToSave, this.file );
-	if( file != null ) {
-	  this.file = file;
-	}
-      }
-    }
-  }
-
-
-  private void doImgCopy()
-  {
-    if( (this.clipboard != null) && (this.image != null) ) {
-      try {
-	ImgSelection ims = new ImgSelection( this.image );
-	this.clipboard.setContents( ims, ims );
-      }
-      catch( IllegalStateException ex ) {}
-    }
-  }
-
-
   private void doImgPaste()
   {
     if( this.clipboard != null ) {
@@ -745,58 +656,6 @@ public class ImageFrm extends BasicFrm implements
       }
       catch( Exception ex ) {}
     }
-  }
-
-
-  private void doRotateLeft()
-  {
-    this.scrollPane.invalidate();
-    switch( this.imgFld.getRotation() ) {
-      case NONE:
-	this.imgFld.setRotation( ImgFld.Rotation.LEFT );
-	break;
-
-      case LEFT:
-	this.imgFld.setRotation( ImgFld.Rotation.DOWN );
-	break;
-
-      case RIGHT:
-	this.imgFld.setRotation( ImgFld.Rotation.NONE );
-	break;
-
-      case DOWN:
-	this.imgFld.setRotation( ImgFld.Rotation.RIGHT );
-	break;
-    }
-    this.scrollPane.validate();
-    this.scrollPane.repaint();
-    updWindowSize();
-  }
-
-
-  private void doRotateRight()
-  {
-    this.scrollPane.invalidate();
-    switch( this.imgFld.getRotation() ) {
-      case NONE:
-	this.imgFld.setRotation( ImgFld.Rotation.RIGHT );
-	break;
-
-      case LEFT:
-	this.imgFld.setRotation( ImgFld.Rotation.NONE );
-	break;
-
-      case RIGHT:
-	this.imgFld.setRotation( ImgFld.Rotation.DOWN );
-	break;
-
-      case DOWN:
-	this.imgFld.setRotation( ImgFld.Rotation.LEFT );
-	break;
-    }
-    this.scrollPane.validate();
-    this.scrollPane.repaint();
-    updWindowSize();
   }
 
 
@@ -830,59 +689,7 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
-  private void doScale()
-  {
-    if( this.scaleEnabled ) {
-      Object o = this.comboScale.getSelectedItem();
-      if( o != null ) {
-	String s = o.toString();
-	if( s != null ) {
-	  int pos = s.indexOf( '%' );
-	  if( pos >= 0 ) {
-	    s = s.substring( 0, pos );
-	  }
-	  try {
-	    int value = Integer.parseInt( s.trim() );
-	    if( value >= 0 ) {
-	      this.scrollPane.invalidate();
-	      this.imgFld.setScale( (double) value / 100.0 );
-	      this.scrollPane.validate();
-	      this.scrollPane.repaint();
-	      updDisplayScale();
-	      updWindowSize();
-	    }
-	  }
-	  catch( NumberFormatException ex ) {}
-	}
-      }
-    }
-  }
-
-
 	/* --- private Methoden --- */
-
-  private BufferedImage getBufferedImage()
-  {
-    BufferedImage rv = null;
-    if( this.image != null ) {
-      if( this.image instanceof BufferedImage ) {
-	rv = (BufferedImage) this.image;
-      } else {
-	int w = this.image.getWidth( this );
-        int h = this.image.getHeight( this );
-        if( (w > 0) && (h > 0) ) {
-          rv = new BufferedImage( w, h, BufferedImage.TYPE_INT_ARGB );
-          Graphics g = rv.createGraphics();
-          g.drawImage( this.image, 0, 0, this );
-          g.dispose();
-	  this.image.flush();
-	  this.image = rv;
-        }
-      }
-    }
-    return rv;
-  }
-
 
   private void setTitleInternal( String title )
   {
@@ -905,16 +712,6 @@ public class ImageFrm extends BasicFrm implements
   }
 
 
-  private void updDisplayScale()
-  {
-    this.scaleEnabled = false;
-    this.comboScale.setSelectedItem(
-		String.valueOf( Math.round( this.imgFld.getScale() * 100.0 ) )
-								+ " %" );
-    this.scaleEnabled = true;
-  }
-
-
   private void updPasteBtn()
   {
     boolean state = false;
@@ -925,13 +722,6 @@ public class ImageFrm extends BasicFrm implements
       catch( IllegalStateException ex ) {}
     }
     this.mnuImgPaste.setEnabled( state );
-  }
-
-
-  private void updWindowSize()
-  {
-    if( this.mnuAutoResize.isSelected() )
-      pack();
   }
 }
 

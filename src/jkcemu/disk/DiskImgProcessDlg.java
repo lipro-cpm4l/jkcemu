@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,11 +12,12 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.lang.*;
-import java.util.EventObject;
+import java.util.*;
 import java.util.zip.*;
 import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 
 
 public class DiskImgProcessDlg extends BasicDlg implements Runnable
@@ -27,12 +28,16 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
   private String            drvFileName;
   private File              imgFile;
   private StringBuilder     statusBuf;
+  private char[]            runningBuf;
+  private int               runningIdx;
   private JLabel            labelMsg;
   private JLabel            labelStatus;
+  private JLabel            labelRunning;
   private JButton           btnCancel;
   private javax.swing.Timer timer;
   private volatile Thread   thread;
   private volatile long     nBytesProcessed;
+  private long              lastBytesProcessed;
 
 
   public static void createDiskImageFromDrive( Frame owner )
@@ -76,10 +81,13 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
       boolean state    = false;
       String  fileName = imgFile.getName();
       if( fileName != null ) {
-	state = EmuUtil.endsWith(
-				fileName.toLowerCase(),
-				DiskUtil.plainDiskFileExt,
-				DiskUtil.gzPlainDiskFileExt );
+	String lowerFileName = fileName.toLowerCase();
+	state = (TextUtil.endsWith(
+				lowerFileName,
+				DiskUtil.plainDiskFileExt )
+			|| TextUtil.endsWith(
+				lowerFileName,
+				DiskUtil.gzPlainDiskFileExt ));
       }
       if( !state ) {
 	state = BasicDlg.showYesNoWarningDlg(
@@ -162,6 +170,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    this.imgFile.delete();
 	  }
 	}
+	catch( EOFException ex ) {}
 	catch( IOException ex ) {
 	  /* Windows meldet beim Lesen hinter dem Diskettenende
 	   * einen Fehler.
@@ -170,7 +179,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	   * Diskettengroesse entspricht, und wenn ja,
 	   * wird der Fehler ignoriert.
 	   */
-	  if( (File.separatorChar == '/')
+	  if( Main.isUnixLikeOS()
 	      || ((this.nBytesProcessed != (720 * 1024))
 		  && (this.nBytesProcessed != (800 * 1024))
 		  && (this.nBytesProcessed != (1200 * 1024))
@@ -271,11 +280,15 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 			File      imgFile )
   {
     super( owner, "Abbilddatei" );
-    this.direction       = direction;
-    this.drvFileName     = drvFileName;
-    this.imgFile         = imgFile;
-    this.statusBuf       = new StringBuilder( 80 );
-    this.nBytesProcessed = 0;
+    this.direction          = direction;
+    this.drvFileName        = drvFileName;
+    this.imgFile            = imgFile;
+    this.statusBuf          = new StringBuilder( 80 );
+    this.runningBuf         = new char[ 10 ];
+    this.runningIdx         = 0;
+    this.nBytesProcessed    = 0;
+    this.lastBytesProcessed = -1;
+    Arrays.fill( this.runningBuf, '*' );
 
     setLayout( new GridBagLayout() );
 
@@ -296,9 +309,14 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     add( new JLabel( "Bitte warten!" ), gbc );
 
     this.labelStatus = new JLabel();
-    gbc.insets.top   = 20;
+    gbc.insets.top   = 10;
     gbc.gridy++;
     add( this.labelStatus, gbc );
+
+    this.labelRunning = new JLabel();
+    this.labelRunning.setFont( new Font( "Monospaced", Font.BOLD, 12 ) );
+    gbc.gridy++;
+    add( this.labelRunning, gbc );
 
     this.btnCancel = new JButton( "Abbrechen" );
     this.btnCancel.addActionListener( this );
@@ -311,7 +329,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     setParentCentered();
 
     this.timer = new javax.swing.Timer(
-			500,
+			200,
 			new ActionListener()
 			{
 			  public void actionPerformed( ActionEvent e )
@@ -370,22 +388,41 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 
   private void updStatusText()
   {
-    this.statusBuf.setLength( 0 );
-    EmuUtil.appendSizeText(
-		this.statusBuf,
-		this.nBytesProcessed,
-		true,
-		false );
-    switch( this.direction ) {
-      case DISK_TO_FILE:
-	this.statusBuf.append( " gelesen" );
-	break;
+    long nBytes = this.nBytesProcessed;
+    if( (this.lastBytesProcessed < 0)
+	|| (nBytes != this.lastBytesProcessed) )
+    {
+      // Anzahl gelesene bzw. geschriebene Bytes
+      this.statusBuf.setLength( 0 );
+      EmuUtil.appendSizeText( this.statusBuf, nBytes, true, false );
+      switch( this.direction ) {
+	case DISK_TO_FILE:
+	  this.statusBuf.append( " gelesen" );
+	  break;
 
-      case FILE_TO_DISK:
-	this.statusBuf.append( " geschrieben" );
-	break;
+	case FILE_TO_DISK:
+	  this.statusBuf.append( " geschrieben" );
+	  break;
+      }
+      this.labelStatus.setText( this.statusBuf.toString() );
+      this.lastBytesProcessed = nBytes;
+
+      // Bewegungsanzeige
+      if( this.runningBuf[ this.runningIdx ] == '*' ) {
+	this.runningBuf[ this.runningIdx ] = '\u0020';
+	if( this.runningIdx == (this.runningBuf.length - 1) ) {
+	  this.runningIdx = 0;
+	  this.runningBuf[ this.runningIdx ] = '*';
+	}
+      } else {
+	this.runningBuf[ this.runningIdx ] = '*';
+      }
+      this.runningIdx++;
+      if( this.runningIdx >= this.runningBuf.length ) {
+	this.runningIdx = 0;
+      }
+      this.labelRunning.setText( new String( this.runningBuf ) );
     }
-    this.labelStatus.setText( this.statusBuf.toString() );
   }
 }
 

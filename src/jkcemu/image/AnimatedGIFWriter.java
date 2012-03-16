@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -137,6 +137,7 @@ public class AnimatedGIFWriter implements ImageObserver
 	}
       }
     }
+    image.flush();
   }
 
 
@@ -428,7 +429,7 @@ public class AnimatedGIFWriter implements ImageObserver
 	p++;
       }
       // 254-255: weiss (davon Position 255 fuer Transparenz reserviert)
-      this.indexColorModel255 = new IndexColorModel( 8, 255, r, g, b );
+      this.indexColorModel255 = new IndexColorModel( 8, 255, r, g, b, 255 );
     }
     return this.indexColorModel255;
   }
@@ -472,6 +473,14 @@ public class AnimatedGIFWriter implements ImageObserver
       this.out.write( 0 );		// Hintergrundfarbe
       this.out.write( 0 );		// Pixelzuordnung 1:1
       writeColorTab( this.globalColorTabSize, this.globalColorTab );
+
+      // Kommentar
+      final String comment = "Created by JKCEMU";
+      this.out.write( 0x21 );		// Extension Block
+      this.out.write( 0xFE );		// Kommentar
+      this.out.write( comment.length() );
+      writeASCII( comment );
+      this.out.write( 0 );		// Blockende
 
       // Anzahl der Wiederholungen
       if( this.infinite ) {

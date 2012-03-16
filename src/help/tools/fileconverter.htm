@@ -1,0 +1,111 @@
+<html>
+<body>
+ <h1>Dateikonverter</h1>
+  Der JKCEMU Dateikonverter dient dazu, Speicherabbild- und
+  Diskettenabbilddateien sowie Sound-Dateien in verschiedene Formate
+  umzuwandeln.
+  Starten Sie dazu den Konverter &uuml;ber den Men&uuml;punkt
+  <em>Extra</em> &rarr; <em>Werkzeuge</em> &rarr; <em>Dateikonverter</em>.
+  Im Fenster des Dateikonverters, welches nun erscheint,
+  w&auml;hlen Sie bei <em>Quelldatei</em> die zu konvertierende Datei aus.
+  Sie k&ouml;nnen die Datei auch von einem Datei-Browser aus
+  per Drag&amp;Drop in das Fenster ziehen und
+  &uuml;ber dem Dateinamensfeld loslassen.
+ <br/><br/>
+  Nachdem die Datei ausgew&auml;hlt wurde, analysiert der Konverter
+  die Datei und zeigt bei <em>Ausgabedatei</em>
+  die m&ouml;glichen Dateiformate an,
+  in die die Quelldatei konvertiert werden kann.
+  Markieren Sie nun das gew&uuml;nschte Ausgabeformat und dr&uuml;cken Sie
+  auf <em>Konvertieren</em>.
+  In einem Dateiauswahldialog werden Sie noch nach dem Namen
+  der Ausgabedatei gefragt, und schon ist die Konvertierung beendet.
+  Eine Fertigmeldung erscheint nicht.
+  Die Quelldatei bleibt weiterhin erhalten.
+ <br/><br/>
+  Bei einer Sound-Datei oder eine Diskettenabbilddatei als Ausgabedatei
+  legen Sie mit der Dateiendung das konkrete Format fest.
+  Welche Sound-Dateiformate m&ouml;glich sind,
+  h&auml;ngt von der Java-Plattform ab, auf der JKCEMU l&auml;uft.
+  Des Weiteren k&ouml;nnen Sie die erzeugte Sound-Datei gleich
+  abspielen bzw. wiedergeben, ohne dass sie gespeichert werden muss.
+  So ist z.B. die &Uuml;bertragung per Audiokabel an einen
+  realen Computer m&ouml;glich.
+ <br/><br/>
+  Sollte nach Auswahl der Quelldatei die Liste der m&ouml;glichen
+  Ausgabeformate leer bleiben,
+  besteht keine Konvertierungsm&ouml;glichkeit, d.h.,
+  das Format der Quelldatei wird vom Konverter nicht unterst&uuml;tzt.
+ <br/><br/>
+  Die Tabelle zeigt die Konvertierungsm&ouml;glichkeiten:
+  <table border="1">
+   <tr>
+    <th>Art der Quelldatei</th>
+    <th>Ausgabeformate</th>
+   </tr>
+   <tr>
+    <td valign="top">
+     Diskettenabbilddatei<br/>
+     (*.cqm; *.dump; *.img; *.image; *.qm; *.raw; *.td0)
+    </td>
+    <td valign="top">
+     <ul>
+      <li>Einfache Diskettenabbilddatei (*.img; *.image; *.raw)</li>
+      <li>AnaDisk-Datei (*.dump)</li>
+      <li>CPC-Disk-Datei (*.dsk)</li>
+      <li>ImageDisk-Datei (*.imd)</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Speicherabbilddatei f&uuml;r Systemprogramme und Daten<br/>
+     (*.bin; *.kcb; *,kcc; *.rom; *.tap)
+    </td>
+    <td valign="top">
+     <ul>
+      <li>Einfache Speicherabbilddatei (*.bin)</li>
+      <li>Headersave-Datei (*.z80)</li>
+      <li>Intel-HEX-Datei (*.hex)</li>
+      <li>KC-Systemdatei (*.kcc)</li>
+      <li>KC-TAP-Systemdatei f&uuml;r KC85/1, KC87 und Z9001 (*.tap)</li>
+      <li>KC-TAP-Systemdatei f&uuml;r HC900 und KC85/2..5 (*.tap)</li>
+      <li>Sound-Datei im AC1-Format</li>
+      <li>Sound-Datei im KC-Systemformat f&uuml;r KC85/1, KC87 und Z9001</li>
+      <li>Sound-Datei im KC-Systemformat f&uuml;r HC900 und KC85/2..5</li>
+      <li>Sound-Datei im AC1/LLC2-TurboSave-Format</li>
+      <li>Sound-Datei im Z1013-Format</li>
+      <li>Sound-Datei im Z1013-Headersave-Format</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Speicherabbilddatei f&uuml;r KC-BASIC-Programme<br/>
+     (*.kcb; *.sss; *.tap)
+    </td>
+    <td valign="top">
+     <ul>
+      <li>KC-BASIC-Datei (*.sss)</li>
+      <li>KC-TAP-BASIC-Datei (*.tap)</li>
+      <li>Sound-Datei im KC-BASIC-Format</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">Sound-Datei (*.aif; *.au; *.wav)</td>
+    <td valign="top">Sound-Datei (*.aif; *.au; *.wav)</td>
+   </tr>
+  </table>
+ <br/><br/>
+  <b>Achtung!</b> KCB-Dateien und bestimmte Headersave-Dateien enthalten
+  KC-BASIC-Programme mit eventuell zus&auml;tzlichen Maschinencode-
+  und Datenbereichen.
+  Diese Dateien k&ouml;nnen sowohl in ein Format f&uuml;r Systemprogramme
+  als auch in ein Format f&uuml;r KC-BASIC-Programme konvertiert werden.
+  Bei letzterem enth&auml;lt die Ausgabedatei nur das eigentliche
+  BASIC-Programm, d.h., eventuelle Maschinencode- oder Datenbereiche
+  gehen dabei verloren.
+</body>
+</html>
+

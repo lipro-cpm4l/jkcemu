@@ -19,6 +19,7 @@ import javax.swing.event.*;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.text.Document;
 import javax.swing.table.*;
+import jkcemu.Main;
 
 
 public class FileSelectDlg
@@ -131,7 +132,7 @@ public class FileSelectDlg
       if( roots.length == 1 ) {
 	File rootFile = roots[ 0 ];
 	if( rootFile.isDirectory() ) {
-	  boolean unixLike     = (File.separatorChar == '/');
+	  boolean unixLikeOS   = Main.isUnixLikeOS();
 	  File    computerNode = null;
 	  File[]  subFiles     = this.fsv.getFiles( roots[ 0 ], true );
 	  if( subFiles != null ) {
@@ -141,17 +142,17 @@ public class FileSelectDlg
 	      if( this.fsv.isComputerNode( file ) ) {
 		addDirItem( this.baseDirItems, file );
 		computerNode = file;
-		if( unixLike ) {
+		if( unixLikeOS ) {
 		  break;
 		}
 	      } else {
-		if( !unixLike ) {
+		if( !unixLikeOS ) {
 		  addDirItem( this.baseDirItems, file );
 		}
 	      }
 	    }
 	  }
-	  if( !unixLike && (computerNode != null) ) {
+	  if( !unixLikeOS && (computerNode != null) ) {
 	    if( computerNode.isDirectory() ) {
 	      subFiles = this.fsv.getFiles( computerNode, true );
 	      if( subFiles != null ) {
@@ -784,13 +785,14 @@ public class FileSelectDlg
 	setCurDir( file );
       } else {
 	if( this.forSave && file.exists() ) {
-	  if( !BasicDlg.showYesNoDlg(
+	  if( !BasicDlg.showYesNoWarningDlg(
 			this,
 			"Die Datei \'"
 				+ file.getName()
 				+ "\' existiert bereits.\n"
 				+ "M\u00F6chten Sie die Datei"
-				+ " \u00FCberschreiben?" ) )
+				+ " \u00FCberschreiben?",
+			"Best\u00E4tigung" ) )
 	  {
 	    file = null;
 	  }
@@ -839,7 +841,7 @@ public class FileSelectDlg
 	}
 	try {
 	  int flags = Pattern.DOTALL;
-	  if( File.separatorChar != '/' ) {
+	  if( !Main.isUnixLikeOS() ) {
 	    flags |= Pattern.CASE_INSENSITIVE;
 	  }
 	  pattern = Pattern.compile( buf.toString(), flags );

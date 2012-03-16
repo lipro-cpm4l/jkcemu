@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,6 +19,7 @@ import jkcemu.base.*;
 
 public class SaveTextDlg extends BasicDlg
 {
+  private JCheckBox    btnTrailing1A;
   private JCheckBox    btnTrimLines;
   private JComboBox    comboEncoding;
   private JComboBox    comboLineEnd;
@@ -90,9 +91,12 @@ public class SaveTextDlg extends BasicDlg
     this.comboEncoding.addItem( new CharConverter(
 		CharConverter.Encoding.LATIN1 ) );
     this.comboEncoding.addItem( "UTF-8" );
-    this.comboEncoding.addItem( "UTF-16 (mit Byte-Order-Markierung)" );
-    this.comboEncoding.addItem( "UTF-16BE (Big-Endian)" );
-    this.comboEncoding.addItem( "UTF-16LE (Little-Endian)" );
+    this.comboEncoding.addItem( "UTF-8" + EditText.TEXT_WITH_BOM );
+    this.comboEncoding.addItem( "UTF-16" + EditText.TEXT_WITH_BOM );
+    this.comboEncoding.addItem( "UTF-16BE" );
+    this.comboEncoding.addItem( "UTF-16BE" + EditText.TEXT_WITH_BOM );
+    this.comboEncoding.addItem( "UTF-16LE" );
+    this.comboEncoding.addItem( "UTF-16LE" + EditText.TEXT_WITH_BOM );
     this.comboEncoding.setEditable( false );
     gbcProp.anchor = GridBagConstraints.WEST;
     gbcProp.gridx++;
@@ -118,6 +122,11 @@ public class SaveTextDlg extends BasicDlg
     gbcProp.insets.bottom = 5;
     gbcProp.gridy++;
     panelProp.add( this.btnTrimLines, gbcProp );
+
+    this.btnTrailing1A = new JCheckBox(
+		"Datei mit Byte 1Ah abschlie\u00DFen" );
+    gbcProp.gridy++;
+    panelProp.add( this.btnTrailing1A, gbcProp );
 
 
     // Bereich Knoepfe
@@ -147,11 +156,12 @@ public class SaveTextDlg extends BasicDlg
 
 
     // Vorbelegungen
+    this.btnTrailing1A.setSelected( this.editText.getTrailing1A() );
     this.btnTrimLines.setSelected( this.editText.getTrimLines() );
 
     Object encObj = editText.getCharConverter();
     if( encObj == null ) {
-      encObj = editText.getEncodingDisplayText();
+      encObj = editText.getEncodingDescription();
     }
     if( encObj != null ) {
       this.comboEncoding.setSelectedItem( encObj );
@@ -182,7 +192,9 @@ public class SaveTextDlg extends BasicDlg
 			file,
 			editText.getCharConverter(),
 			editText.getEncodingName(),
-			editText.getEncodingDisplayText(),
+			editText.getEncodingDescription(),
+			editText.hasByteOrderMark(),
+			editText.getTrailing1A(),
 			editText.getTrimLines(),
 			editText.getLineEnd() );
       saved = true;
@@ -260,21 +272,28 @@ public class SaveTextDlg extends BasicDlg
     try {
 
       // Zeichendsatz ermitteln
-      CharConverter charConverter       = null;
-      String        encodingName        = null;
-      String        encodingDisplayText = null;
-      Object        encodingObj         = this.comboEncoding.getSelectedItem();
+      CharConverter charConverter = null;
+      String        encodingName  = null;
+      String        encodingDesc  = null;
+      boolean       byteOrderMark = false;
+      Object        encodingObj   = this.comboEncoding.getSelectedItem();
       if( encodingObj != null ) {
-	encodingDisplayText = encodingObj.toString();
+	encodingDesc = encodingObj.toString();
 	if( encodingObj instanceof CharConverter ) {
 	  charConverter = (CharConverter) encodingObj;
 	  encodingName  = charConverter.getEncodingName();
 	} else {
-	  String s = encodingObj.toString();
-	  if( s != null ) {
-	    if( s.startsWith( "ISO" ) || s.startsWith( "UTF" ) ) {
-	      int posSpace = s.indexOf( '\u0020' );
-	      encodingName = (posSpace > 0 ? s.substring( 0, posSpace ) : s);
+	  if( encodingDesc != null ) {
+	    if( encodingDesc.startsWith( "ISO" )
+		|| encodingDesc.startsWith( "UTF" ) )
+	    {
+	      int posSpace = encodingDesc.indexOf( '\u0020' );
+	      encodingName = (posSpace > 0 ?
+				encodingDesc.substring( 0, posSpace )
+				: encodingDesc);
+	    }
+	    if( encodingDesc.indexOf( EditText.TEXT_WITH_BOM ) >= 0 ) {
+	      byteOrderMark = true;
 	    }
 	  }
 	}
@@ -294,7 +313,9 @@ public class SaveTextDlg extends BasicDlg
 			this.file,
 			charConverter,
 			encodingName,
-			encodingDisplayText,
+			encodingDesc,
+			byteOrderMark,
+			this.btnTrailing1A.isSelected(),
 			this.btnTrimLines.isSelected(),
 			lineEnd );
       this.fileSaved = true;

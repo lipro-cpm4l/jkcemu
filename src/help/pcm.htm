@@ -7,97 +7,115 @@
   deren Inhalte auf Kassette gespeichert werden.
  <br/><br/>
   <ul>
-   <li><a href="pcm.htm#hardware">1. Emulierte Hardware</a></li>
    <li>
-    &nbsp;&nbsp;
-    <a href="pcm.htm#ram">1.1. RAM-B&auml;nke</a>
-   </li>
-   <li><a href="pcm.htm#software">2. Im ROM enthaltene Software</a></li>
-   <li>
-    &nbsp;&nbsp;
-    <a href="pcm.htm#soft_sys">2.1. Hinweise zur Systemsoftware</a>
+    <a href="pcm.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="pcm.htm#ram">1.1. RAM-B&auml;nke</a></li>
+     <li><a href="pcm.htm#fdc">1.2. Floppy-Disk-Modul</a></li>
+     <li><a href="pcm.htm#nmi">1.3. NMI-Generator</a></li>
+    </ul>
    </li>
    <li>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="pcm.htm#soft_base">2.1.1. Grundbetriebssystem</a>
+    <a href="pcm.htm#software">2. Im ROM enthaltene Software</a>
+    <ul>
+     <li><a href="pcm.htm#soft_base">2.1. Grundbetriebssystem</a></li>
+     <li><a href="pcm.htm#soft_rf"> 2.2. RAM-Floppy-System</a></li>
+     <li><a href="pcm.htm#soft_fdc"> 2.3. Floppy-Disk-System</a></li>
+    </ul>
    </li>
+   <li><a href="pcm.htm#disks">3. Enthaltene Diskettenabbilder</a></li>
    <li>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="pcm.htm#soft_rf"> 2.1.2. RAM-Floppy-System</a>
+    <a href="pcm.htm#etc">4. Sonstiges</a>
+    <ul>
+     <li><a href="pcm.htm#font">4.1. Zeichensatzdateien</a></li>
+     <li><a href="pcm.htm#basicc">4.2. JKCEMU-BASIC-Compiler</a></li>
+    </ul>
    </li>
-   <li><a href="pcm.htm#basicc">3. JKCEMU-BASIC-Compiler</a></li>
   </ul>
  <br/>
+
 
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
   <ul>
    <li>8&nbsp;KByte ROM</li>
-   <li>3&nbsp;RAM-B&auml;nke mit je/nbsp;62&nbsp;KByte</li>
-   <li>2&nbsp;KByte Bildwiederholspeicher</li>
+   <li>3&nbsp;RAM-B&auml;nke mit je&nbsp;62&nbsp;KByte</li>
+   <li>
+    Bildschirmsteuerung mit den Aufl&ouml;sungen:
+    <ul>
+     <li>64x16 Zeichen (mit Zwischenzeilen 64x32 Zeichen)</li>
+     <li>80x24 Zeichen (nur bei Floppy-Disk-System m&ouml;glich)</li>
+    </ul>
+   </li>
    <li>Kassettenrecorderanschluss</li>
-   <li>Druckeranschluss an der System-SIO Port&nbsp;A</li>
+   <li>
+    <a href="print.htm">Druckeranschluss</a>
+    an der System-SIO Port&nbsp;A
+   </li>
+   <li><a href="pcm.htm#nmi">NMI-Generator</a></li>
+   <li>
+    optional:
+    <ul>
+     <li><a href="pcm.htm#fdc">Floppy-Disk-Modul</a></li>
+    </ul>
+   </li>
   </ul>
  <br/>
 
  <h3><a name="ram">1.1. RAM-B&auml;nke</a></h3>
   Die RAM-B&auml;nke&nbsp;1 und 2 liegen hintereinander
   in der RAM-Floppy&nbsp;1.
-  Das ist deshalb sinnvoll, da das RAM-Floppy-System
-  diese beiden B&auml;nke als RAM-Floppy verwendet.
+  Das ist deshalb sinnvoll, da das im ROM enthaltene BIOS
+  diese beiden B&auml;nke ebenfalls als eine RAM-Floppy verwendet.
   Somit kann die RAM-Floppy mit den Emulatorfunktionen
   geladen und gespeichert werden.
  <br/><br/>
 
-
- <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
-  <ul>
-   <li>
-    PC/M Systemsoftware Version&nbsp;2.02, bestehend aus:<br/>
-    <ul>
-     <li>BIOS</li>
-     <li>Kommandoprozessor CCP</li>
-     <li>Kassettenmodel V-Tape</li>
-     <li>Debugger</li>
-    </ul>
-   </li>
-  </ul>
- <br/>
-  Das enthaltene BIOS stellt ein Laufwerk in Form einer
-  124&nbsp;KByte gro&szlig;en RAM-Floppy zur Verf&uuml;gung,
-  die in den RAM-B&auml;nken&nbsp;1 und 2 liegt.
-  Aus diesem Grund emuliert JKCEMU diese beiden RAM-B&auml;nke
-  auch physisch in der RAM-Floppy&nbsp;1,
-  sodass Sie mit JKCEMU-Mitteln, d.h. von &quot;au&szlig;en&quot;,
-  diese Floppy speichern und wieder laden k&ouml;nnen.
- <br/><br/>
-
- <h3><a name="soft_sys">2.1. Hinweise zur Systemsoftware</a></h3>
-  Bei einem RESET wird die Systemsoftware vom ROM in den RAM geladen
-  und anschlie&szlig;end der ROM ausgeblendet.
-  Der Arbeitsspeicher ist dann folgenderma&szlig;en belegt:
- <br/><br/>
+ <h3><a name="fdc">1.2. Floppy-Disk-Modul</a></h3>
+  Das Floppy-Disk-Modul wird <a href="floppydisk.htm">emuliert</a>,
+  wenn Sie in den Einstellungen eine der beiden PC/M-Ausbaustufen
+  mit Floppy-Disk-System aktiviert haben.
+  Das erste Laufwerk hat jedoch nicht wie sonst &uuml;blich
+  die interne Nummer&nbsp;0, sondern die Nummer&nbsp;1.
+  Der Grund liegt in der PC/M-Systemsoftware,
+  denn diese versucht von der internen Laufwerksnummer&nbsp;1
+  beginnend zu booten.
+  Damit also von dem ersten Laufwerk der im Fenster
+  <em>JKCEMU Diskettenstation</em> angezeigten Laufwerke gebootet
+  werden kann, werden die Laufwerksnummern folgenderma&szlig;en gemappt:
   <table border="1">
-   <tr><th>Adresse</th><th>Belegung</th></tr>
-   <tr><td>FC00h - FFFFh</td><td>Bildwiederholspeicher</td></tr>
-   <tr>
-    <td>F800h - FBFFh</td>
-    <td>Bildwiederholspeicher f&uuml;r Zwischenzeilen</td>
-   </tr>
-   <tr><td>F000h - F7FFh</td><td>V-Tape</td></tr>
-   <tr><td>E800h - EFFFh</td><td>Debugger</td></tr>
-   <tr><td>DE00h - E7FFh</td><td>BIOS</td></tr>
-   <tr><td>D000h - DBFFh</td><td>BDOS (nur wenn es geladen wurde)</td></tr>
-   <tr><td>C800h - CFFFh</td><td>CCP</td></tr>
-   <tr><td>0100h - C7FFh</td><td>frei</td></tr>
-   <tr>
-    <td>0000h - 00FFh</td>
-    <td>Verst&auml;ndigungsbereich f&uuml;r CP/V</td>
-   </tr>
+   <tr><th>Interne Laufwerksnummer</th><th>Sichtbares Laufwerk</th></tr>
+   <tr><td>0</td><td>4</td></tr>
+   <tr><td>1</td><td>1</td></tr>
+   <tr><td>2</td><td>2</td></tr>
+   <tr><td>3</td><td>3</td></tr>
   </table>
  <br/><br/>
 
- <h3><a name="soft_base">2.1.1. Grundbetriebssystem</a></h3>
-  Nach einem RESET meldet sich der PC/M-Prompt:
+ <h3><a name="nmi">1.3. NMI-Generator</a></h3>
+  Der NMI-Generator erm&ouml;glicht einen Schrittbetrieb und wird
+  von dem im Grundbetriebssystem des RAM-Floppy-Systems
+  enthaltenen Debuggers benutzt
+  (CTRL-I im Debugger f&uuml;hrt einen Schritt aus).
+ <br/><br/>
+  Aktiviert wird der NMI-Generator durch einen Ein-/Ausgabebefehl
+  auf eine der Adressen 98h bis 9Bh.
+  Daraufhin wird dann nach dem dritten Befehl hinter dem Ein-/Ausgabebefehl
+  ein nicht maskierter Interrupt ausl&ouml;st.
+ <br/><br/>
+
+
+ <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
+  <table border="1">
+   <tr><th>System</th><th>Software</th></tr>
+   <tr><td>RAM-Floppy-System</td><td>Version&nbsp;2.10</td></tr>
+   <tr><td>Floppy-Disk-System</td><td>Version&nbsp;3.30</td></tr>
+  </table>
+ <br/><br/>
+
+ <h3><a name="soft_base">2.1. Grundbetriebssystem</a></h3>
+  Bei einem RESET wird die Systemsoftware vom ROM in den RAM geladen
+  und anschlie&szlig;end der ROM ausgeblendet.
+  Danach meldet sich das Grundbetriebssystem mit dem PC/M-Prompt:
  <br/><br/>
   <tt>V&gt;</tt>
  <br/><br/>
@@ -133,18 +151,32 @@
    <tr>
     <td valign="top"><tt>C</tt></td>
     <td valign="top">
-     RAM-Floppy-System (CP/V) starten,<br/>
-     Dazu muss vorher das BDOS geladen werden.
-     Im Original l&auml;dt man es von Kassette.
-     Der Einfachheit halber kann JKCEMU das BDOS auch automatisch
-     bei jedem RESET laden,
-     wenn Sie es in den <a href="settings.htm">Einstellungen</a>
-     so festgelegen.
+     CP/M-kompatibles System starten:<br/>
+     <ul>
+      <li>
+       Beim RAM-Floppy-System wird CP/V gestartet.
+       Dazu muss vorher das BDOS geladen worden sein.
+       Im Original l&auml;dt man es von Kassette.
+       Der Einfachheit halber kann JKCEMU das BDOS auch automatisch
+       bei jedem RESET laden,
+       wenn Sie es in den <a href="settings.htm">Einstellungen</a>
+       so festgelegen.<br/>
+      </li>
+      <li>
+       Beim Floppy-Disk-System wird zuerst versucht,
+       das System von der RAM-Floppy zu starten.
+       Ist dort keins zu finden, wird von Diskette gebootet.
+       Dabei wird das von Diskette geladene System in die RAM-Floppy kopiert,
+       damit es beim n&auml;chsten mal gleich von dort gestartet werden kann.
+       M&ouml;chten Sie nach einem RESET das Booten von Diskette erzwingen,
+       muss die RAM-Floppy leer bzw. vorher gel&ouml;scht worden sein.
+      </li>
+     </ul>
     </td>
    </tr>
    <tr>
     <td valign="top"><tt>D</tt></td>
-    <td valign="top">Debugger aufrufen</td>
+    <td valign="top">Debugger aufrufen (nur RAM-Floppy-System)</td>
    </tr>
    <tr>
     <td valign="top"><tt>F X</tt></td>
@@ -156,20 +188,6 @@
      Sprung zur Adresse <i>aaaa</i>,<br/>
      Damit kann ein im Arbeitsspeicher befindliches Programm
      gestartet werden.
-    </td>
-   </tr>
-   <tr>
-    <td valign="top"><tt>I</tt></td>
-    <td valign="top">
-     &quot;Inhaltsverzeichnis&quot; der Kassette anzeigen,<br/>
-     Ein separates Inhaltsverzeichnis gibt es jedoch gar nicht.
-     Das Kommando gibt zuerst das Signal zum Starten des
-     Magnetbandger&auml;tes aus (hat im Emulator jedoch keine Wirkung)
-     und lauscht dann am Kassettenrecorderanschluss,
-     um jede gerade gelesene Datei anzuzeigen.
-     In JKCEMU m&uuml;ssen Sie dazu eine entsprechende
-     <a href="audio.htm">Audio-Funktion</a> aktivieren.
-     Das Kommando kann mit <em>CTRL-C</em> abgebrochen werden.
     </td>
    </tr>
    <tr>
@@ -252,8 +270,9 @@
   </table>
  <br/><br/>
 
- <h3><a name="soft_rf">2.1.2. RAM-Floppy-System</a></h3>
-  Im Grundbetriebssystem k&ouml;nnen Sie mit dem Kommando
+ <h3><a name="soft_rf">2.2. RAM-Floppy-System</a></h3>
+  Haben Sie in den Einstellungen das RAM-Floppy-System aktiviert,
+  dann k&ouml;nnen Sie im Grundbetriebssystem mit dem Kommando
   <em>C</em> das RAM-Floppy-System starten.
   Dazu muss allerdings vorher das BDOS geladen worden sein.
   JKCEMU bietet Ihnen die M&ouml;glichkeit,
@@ -321,13 +340,64 @@
   </table>
  <br/><br/>
 
+ <h3><a name="soft_fdc">2.3. Floppy-Disk-System</a></h3>
+  Haben Sie in den Einstellungen ein Floppy-Disk-System aktiviert,
+  dann k&ouml;nnen Sie im Grundbetriebssystem mit dem Kommando
+  <em>C</em> von Diskette booten.
+  Dazu muss eine passende Diskette,
+  z.B. die in JKCEMU mitgelieferte PC/M-Bootdiskette,
+  im Fenster <em>JKCEMU Diskettenstation</em>
+  in Laufwerk&nbsp;1 eingelegt worden sein.
+ <br/><br/>
 
- <h2><a name="basicc">3. JKCEMU-BASIC-Compiler</a></h2>
+
+ <h2><a name="disks">3. Enthaltene Diskettenabbilder</a></h2>
+  <ul>
+   <li>PC/M-Boot-Diskette f&uuml;r 64x16 und 80x24 Zeichen</li>
+  </ul>
+  Die PC/M-Boot-Diskette dient nur zum Booten und enth&auml;lt au&szlig;er
+  einer README-Datei keine CP/M-Kommandos oder Programme.
+ <br/><br/>
+
+
+ <h2><a name="etc">4. Sonstiges</a></h2>
+
+ <h3><a name="font">4.1. Zeichensatzdateien</a></h3>
+  Sie k&ouml;nnen in den Einstellungen eine externe Zeichensatzdatei
+  angeben, die dann anstelle der in JKCEMU integrierten verwendet wird.
+  Es ist allerdings zu beachten, dass das Format dieser Datei zwischen
+  den Bildschirmaufl&ouml;sungen 64x16 Zeichen und 80x24 Zeichen
+  unterschiedlich ist.
+ <br/><br/>
+  Bei der Bildschirmaufl&ouml;sung 64x16&nbsp;Zeichen
+  (mit Zwischenzeilen 64x32 Zeichen) enth&auml;lt die Zeichensatzdatei
+  256&nbsp;Zeichen mit jeweils 8x7&nbsp;Pixel.
+  Acht hintereinander stehende Bytes repr&auml;sentieren
+  die 8&nbsp;Pixelzeilen eines Zeichens,
+  wobei nur die Bits&nbsp;1 bis 7 ausgewertet werden.
+  Bit&nbsp;7 enth&auml;lt das am weitesten links stehende Pixel.
+ <br/><br/>
+  Bei der Bildschirmaufl&ouml;sung 80x24&nbsp;Zeichen enth&auml;lt
+  die Zeichensatzdatei 128&nbsp;Zeichen mit jeweils 10x6&nbsp;Pixel,
+  d.h., es wird nur mit einem 7-Bit-Zeichensatz gearbeitet.
+  Das 8.&nbsp;Bit dient zur Cursor-Steuerung.
+  Ist es gesetzt, wird der Cursor in Form einer Linie in Pixelzeile&nbsp;8
+  gezeichnet.
+  In der Zeichensatzdatei bilden 16&nbsp;hintereinander stehende Bytes
+  ein Zeichen, wobei nur die ersten 10&nbsp;Bytes und davon
+  nur die Bits&nbsp;2 bis 7 verwendet werden.
+  Bit&nbsp;7 enth&auml;lt das am weitesten links stehende Pixel.
+  Entgegen der Aufl&ouml;sung 64x16&nbsp;Zeichen ergibt ein nicht gesetztes
+  Bit ein leuchtendes Pixel.
+ <br/><br/>
+
+ <h3><a name="basicc">4.2. JKCEMU-BASIC-Compiler</a></h3>
   Der PC/M ist als ein CP/M-kompatibles System konzipiert.
   Aus diesem Grund erzeugt der JKCEMU-BASIC-Compiler
   auch CP/M-kompatiblen Programmcode.
   Dieser wiederum ruft BDOS-Funktionen auf.
-  Sie m&uuml;ssen deshalb das RAM-Floppy-System gestartet haben,
+  Sie m&uuml;ssen deshalb mit dem Kommando <em>C</em>
+  das CP/M-kompatible System gestartet haben,
   um mit dem BASIC-Compiler erzeugte Programme ausf&uuml;hren zu k&ouml;nnen.
 </body>
 </html>

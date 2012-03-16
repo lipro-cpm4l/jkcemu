@@ -24,7 +24,7 @@ import jkcemu.emusys.KC85;
 
 public class KC85SettingsFld
 			extends AbstractSettingsFld
-			implements ListSelectionListener
+			implements ListSelectionListener, MouseListener
 {
   private static final String moduleAddPrefix  = "kc85.module.add.";
 
@@ -45,43 +45,56 @@ public class KC85SettingsFld
 	{ "M034", "512 KByte Segmented RAM" },
 	{ "M035", "1 MByte Segmented RAM" },
 	{ "M035x4", "4 MByte Segmented RAM" },
-	{ "M036", "128 KByte Segmented RAM" } };
+	{ "M036", "128 KByte Segmented RAM" },
+	{ "M040", "8/16 KByte User PROM" },
+	{ "M052", "USB/Netzwerk" },
+	{ "M120", "8 KByte CMOS RAM" },
+	{ "M122", "16 KByte CMOS RAM" },
+	{ "M124", "32 KByte CMOS RAM" } };
 
   private static final String[] altRomTitles2 = {
 					"CAOS-ROM E000-E7FF",
-					"CAOS-ROM F000-F7FF" };
+					"CAOS-ROM F000-F7FF",
+					"M052-ROM (USB/Netzwerk)" };
 
   private static final String[] altRomKeys2 = {
 					"rom.caos_e.file",
-					"rom.caos_f.file" };
+					"rom.caos_f.file",
+					"rom.m052.file" };
 
   private static final String[] altRomTitles3 = {
 					"BASIC-ROM C000-DFFF",
-					"CAOS-ROM E000-FFFF" };
+					"CAOS-ROM E000-FFFF",
+					"M052-ROM (USB/Netzwerk)" };
 
   private static final String[] altRomKeys3 = {
 					"rom.basic.file",
-					"rom.caos_e.file" };
+					"rom.caos_e.file",
+					"rom.m052.file" };
 
   private static final String[] altRomTitles4 = {
 					"BASIC-ROM C000-DFFF",
 					"CAOS-ROM C000-CFFF",
-					"CAOS-ROM E000-FFFF" };
+					"CAOS-ROM E000-FFFF",
+					"M052-ROM (USB/Netzwerk)" };
 
   private static final String[] altRomKeys4 = {
 					"rom.basic.file",
 					"rom.caos_c.file",
-					"rom.caos_e.file" };
+					"rom.caos_e.file",
+					"rom.m052.file" };
 
   private static final String[] altRomTitles5 = {
 					"BASIC-/USER-ROM C000-DFFF (4x8K)",
 					"CAOS-ROM C000-DFFF",
-					"CAOS-ROM E000-FFFF" };
+					"CAOS-ROM E000-FFFF",
+					"M052-ROM (USB/Netzwerk)" };
 
   private static final String[] altRomKeys5 = {
 					"rom.basic.file",
 					"rom.caos_c.file",
-					"rom.caos_e.file" };
+					"rom.caos_e.file",
+					"rom.m052.file" };
 
   private int                  kcTypeNum;
   private String               modulePropPrefix;
@@ -97,6 +110,7 @@ public class KC85SettingsFld
   private JPanel               tabEtc;
   private JPopupMenu           popupModule;
   private JButton              btnModuleAdd;
+  private JButton              btnModuleEdit;
   private JButton              btnModuleRemove;
   private JButton              btnModuleUp;
   private JButton              btnModuleDown;
@@ -116,6 +130,7 @@ public class KC85SettingsFld
   private JButton[]            altRomRemoveBtns;
   private JCheckBox            btnCtrlKeysDirect;
   private JCheckBox            btnPasteFast;
+  private JCheckBox            btnUmlautsTo2Codes;
   private JCheckBox            btnVideoTiming;
 
 
@@ -174,6 +189,7 @@ public class KC85SettingsFld
     this.tableModule.setRowSelectionAllowed( true );
     this.tableModule.setSelectionMode(
 			ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
+    this.tableModule.addMouseListener( this );
 
     this.tabModule.add( new JScrollPane( this.tableModule ), gbcModule );
 
@@ -192,7 +208,7 @@ public class KC85SettingsFld
     this.btnModuleDown = createImageButton( "/images/nav/down.png", "Ab" );
     panelModBtnRight.add( this.btnModuleDown );
 
-    JPanel panelModBtnBottom = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelModBtnBottom = new JPanel( new GridLayout( 1, 3, 5, 5 ) );
     gbcModule.gridx = 0;
     gbcModule.gridy++;
     this.tabModule.add( panelModBtnBottom, gbcModule );
@@ -201,6 +217,11 @@ public class KC85SettingsFld
     this.btnModuleAdd.addActionListener( this );
     this.btnModuleAdd.addKeyListener( this );
     panelModBtnBottom.add( this.btnModuleAdd );
+
+    this.btnModuleEdit = new JButton( "Bearbeiten" );
+    this.btnModuleEdit.addActionListener( this );
+    this.btnModuleEdit.addKeyListener( this );
+    panelModBtnBottom.add( this.btnModuleEdit );
 
     this.btnModuleRemove = new JButton( "Entfernen" );
     this.btnModuleRemove.addActionListener( this );
@@ -212,6 +233,7 @@ public class KC85SettingsFld
       this.selModelModule.addListSelectionListener( this );
       this.btnModuleUp.setEnabled( false );
       this.btnModuleDown.setEnabled( false );
+      this.btnModuleEdit.setEnabled( false );
       this.btnModuleRemove.setEnabled( false );
     }
 
@@ -328,7 +350,7 @@ public class KC85SettingsFld
 
 
     // Tab GIDE
-    this.tabGIDE = new HardDiskSettingsFld( settingsFrm, propPrefix, 0 );
+    this.tabGIDE = new HardDiskSettingsFld( settingsFrm, propPrefix );
     this.tabbedPane.addTab( "GIDE", this.tabGIDE );
 
 
@@ -398,17 +420,25 @@ public class KC85SettingsFld
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
+    this.btnUmlautsTo2Codes = new JCheckBox(
+	"Tasten f\u00FCr \u00C4\u00D6\u00DC\u00E4\u00F6\u00FC[]{}\\~"
+		+ " entsprechend MicroDOS-Mode der D005 behandeln",
+	false );
+    this.btnUmlautsTo2Codes.addActionListener( this );
+    this.tabEtc.add( this.btnUmlautsTo2Codes, gbcEtc );
+
     this.btnCtrlKeysDirect = new JCheckBox(
 			"Ctrl-A...Z, ESC und TAB direkt in den"
 				+ " Tastaturpuffer schreiben",
 			true );
     this.btnCtrlKeysDirect.addActionListener( this );
+    gbcEtc.insets.top = 0;
+    gbcEtc.gridy++;
     this.tabEtc.add( this.btnCtrlKeysDirect, gbcEtc );
 
     this.btnPasteFast = new JCheckBox(
 		"Einf\u00FCgen von Text direkt in den Tastaturpuffer",
 		true );
-    gbcEtc.insets.top = 0;
     gbcEtc.gridy++;
     this.btnPasteFast.addActionListener( this );
     this.tabEtc.add( this.btnPasteFast, gbcEtc );
@@ -464,14 +494,78 @@ public class KC85SettingsFld
   public void valueChanged( ListSelectionEvent e )
   {
     if( e.getSource() == this.selModelModule ) {
-      int nRows     = this.tableModule.getRowCount();
-      int nSelRows  = this.tableModule.getSelectedRowCount();
-      int selRowNum = this.tableModule.getSelectedRow();
+      int     nRows     = this.tableModule.getRowCount();
+      int     nSelRows  = this.tableModule.getSelectedRowCount();
+      int     selRowNum = this.tableModule.getSelectedRow();
+      boolean stateOne  = (nSelRows == 1) && (selRowNum >= 0);
+      boolean stateEdit = false;
       this.btnModuleUp.setEnabled( (nSelRows == 1) && (selRowNum > 0) );
-      this.btnModuleDown.setEnabled(
-		(nSelRows == 1) && (selRowNum < (nRows - 1)) );
+      this.btnModuleDown.setEnabled( stateOne && (selRowNum < (nRows - 1)) );
       this.btnModuleRemove.setEnabled( nSelRows > 0 );
+      if( stateOne ) {
+	int row = this.tableModule.convertRowIndexToModel( selRowNum );
+	if( row >= 0 ) {
+	  String[] cells = this.tableModelModule.getRow( row );
+	  if( cells != null ) {
+	    if( cells.length > 1 ) {
+	      String moduleName = cells[ 1 ];
+	      if( moduleName != null ) {
+		if( moduleName.equals( "M025" )
+		    || moduleName.equals( "M028" )
+		    || moduleName.equals( "M040" ) )
+		{
+		  stateEdit = true;
+		}
+	      }
+	    }
+	  }
+	}
+      }
+      this.btnModuleEdit.setEnabled( stateEdit );
     }
+  }
+
+
+	/* --- MouseListener --- */
+
+  @Override
+  public void mouseClicked( MouseEvent e )
+  {
+    if( (e.getButton() == MouseEvent.BUTTON1)
+	&& (e.getClickCount() > 1)
+	&& (e.getComponent() == this.tableModule) )
+    {
+      doModuleEdit();
+      e.consume();
+    }
+  }
+
+
+  @Override
+  public void mouseEntered( MouseEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void mouseExited( MouseEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void mousePressed( MouseEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void mouseReleased( MouseEvent e )
+  {
+    // leer
   }
 
 
@@ -585,6 +679,9 @@ public class KC85SettingsFld
 		this.propPrefix + "paste.fast",
 		Boolean.toString( this.btnPasteFast.isSelected() ) );
       props.setProperty(
+		this.propPrefix + "umlauts_to_2_keycodes",
+		Boolean.toString( this.btnUmlautsTo2Codes.isSelected() ) );
+      props.setProperty(
 		this.propPrefix + "emulate_video_timing",
 		Boolean.toString( this.btnVideoTiming.isSelected() ) );
     }
@@ -608,6 +705,9 @@ public class KC85SettingsFld
       if( src == this.btnModuleAdd ) {
 	rv = true;
 	doModuleAdd();
+      } else if( src == this.btnModuleEdit ) {
+	rv = true;
+	doModuleEdit();
       } else if( src == this.btnModuleRemove ) {
 	rv = true;
 	doModuleRemove();
@@ -830,6 +930,11 @@ public class KC85SettingsFld
 				props,
 				this.propPrefix + "paste.fast",
 				true ) );
+    this.btnUmlautsTo2Codes.setSelected(
+			EmuUtil.getBooleanProperty(
+				props,
+				this.propPrefix + "umlauts_to_2_keycodes",
+				false ) );
     this.btnVideoTiming.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
@@ -869,6 +974,58 @@ public class KC85SettingsFld
 		this.btnModuleAdd,
 		0,
 		this.btnModuleAdd.getHeight() );
+  }
+
+
+  private void doModuleEdit()
+  {
+    int[] viewRows = this.tableModule.getSelectedRows();
+    if( viewRows != null ) {
+      if( viewRows.length == 1 ) {
+	int row = this.tableModule.convertRowIndexToModel( viewRows[ 0 ] );
+	if( row >= 0 ) {
+	  String[] cells = this.tableModelModule.getRow( row );
+	  if( cells != null ) {
+	    if( cells.length > 1 ) {
+	      String moduleName = cells[ 1 ];
+	      if( moduleName != null ) {
+		if( moduleName.equals( "M025" )
+		    || moduleName.equals( "M028" )
+		    || moduleName.equals( "M040" ) )
+		{
+		  KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
+				this.settingsFrm,
+				moduleName,
+				cells.length > 3 ? cells[ 3 ] : null,
+				cells.length > 4 ? cells[ 4 ] : null );
+		  dlg.setVisible( true );
+		  String approvedFileName     = dlg.getApprovedFileName();
+		  String approvedTypeByteText = dlg.getApprovedTypeByteText();
+		  if( approvedTypeByteText != null ) {
+		    if( !approvedTypeByteText.isEmpty() ) {
+		      if( cells.length > 2 ) {
+			cells[ 2 ] = createModuleDesc(
+						moduleName,
+						approvedTypeByteText,
+						approvedFileName );
+		      }
+		      if( cells.length > 3 ) {
+			cells[ 3 ] = approvedTypeByteText;
+		      }
+		      if( cells.length > 4 ) {
+			cells[ 4 ] = approvedFileName;
+		      }
+		      this.tableModelModule.fireTableRowsUpdated( row, row );
+		      fireDataChanged();
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
   }
 
 
@@ -945,31 +1102,15 @@ public class KC85SettingsFld
 	    if( slotText == null ) {
 	      slotText = String.format( "%02X", (nRows + 2) * 4 );
 	    }
-	    String moduleDesc = modules[ i ][ 1 ];
-	    if( (typeByteText != null) && (fileName != null) ) {
-	      if( moduleName.equals( "M025" ) ) {
-		if( typeByteText.equals( "FB" ) ) {
-		  moduleDesc = "8 KByte ROM: ";
-		} else {
-		  moduleDesc = "8 KByte User PROM: ";
-		}
-		moduleDesc += fileName;
-	      }
-	      else if( moduleName.equals( "M028" ) ) {
-		if( typeByteText.equals( "FC" ) ) {
-		  moduleDesc = "16 KByte ROM: ";
-		} else {
-		  moduleDesc = "16 KByte User PROM: ";
-		}
-		moduleDesc += fileName;
-	      }
-	    }
 	    this.tableModelModule.addRow(
-					slotText,
+				slotText,
+				moduleName,
+				createModuleDesc(
 					moduleName,
-					moduleDesc,
 					typeByteText,
-					fileName );
+					fileName ),
+				typeByteText,
+				fileName );
 	    rv = true;
 	    break;
 	  }
@@ -986,36 +1127,26 @@ public class KC85SettingsFld
       if( !moduleName.isEmpty() ) {
 	String typeText = null;
 	String fileName = null;
-	if( moduleName.equals( "M025" ) ) {
+	if( moduleName.equals( "M025" )
+	    || moduleName.equals( "M028" )
+	    || moduleName.equals( "M040" ) )
+	{
+	  boolean                 ok  = false;
 	  KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
 							this.settingsFrm,
-							"F7",
-							"FB",
-							"M025 - 8K User PROM" );
+							moduleName,
+							null,
+							null );
 	  dlg.setVisible( true );
-	  moduleName = null;
 	  typeText   = dlg.getApprovedTypeByteText();
 	  fileName   = dlg.getApprovedFileName();
 	  if( (typeText != null) && (fileName != null) ) {
 	    if( !typeText.isEmpty() && !fileName.isEmpty() ) {
-	      moduleName = "M025";
+	      ok = true;
 	    }
 	  }
-	}
-	else if( moduleName.equals( "M028" ) ) {
-	  KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
-							this.settingsFrm,
-							"F8",
-							"FC",
-							"M028 - 16K User PROM" );
-	  dlg.setVisible( true );
-	  moduleName = null;
-	  typeText   = dlg.getApprovedTypeByteText();
-	  fileName   = dlg.getApprovedFileName();
-	  if( (typeText != null) && (fileName != null) ) {
-	    if( !typeText.isEmpty() && !fileName.isEmpty() ) {
-	      moduleName = "M028";
-	    }
+	  if( !ok ) {
+	    moduleName = null;
 	  }
 	}
 	if( moduleName != null ) {
@@ -1027,6 +1158,59 @@ public class KC85SettingsFld
 	}
       }
     }
+  }
+
+
+  private static String createModuleDesc(
+				String moduleName,
+				String typeByteText,
+				String fileName )
+  {
+    String moduleDesc = null;
+    if( moduleName != null ) {
+      if( typeByteText != null ) {
+	if( moduleName.equals( "M025" ) ) {
+	  if( typeByteText.equals( "F7" ) ) {
+	    moduleDesc = "8K User PROM";
+	  } else if( typeByteText.equals( "FB" ) ) {
+	    moduleDesc = "8 KByte ROM";
+	  }
+	}
+	else if( moduleName.equals( "M028" ) ) {
+	  if( typeByteText.equals( "F8" ) ) {
+	    moduleDesc = "16K User PROM";
+	  } else if( typeByteText.equals( "FC" ) ) {
+	    moduleDesc = "16K ROM";
+	  }
+	}
+	else if( moduleName.equals( "M040" ) ) {
+	  if( typeByteText.equals( "1" )
+	      || typeByteText.equals( "01" ) )
+	  {
+	    moduleDesc = "8/16K Autostart User PROM";
+	  } else if( typeByteText.equals( "F7" ) ) {
+	    moduleDesc = "8K User ROM";
+	  } if( typeByteText.equals( "F8" ) ) {
+	    moduleDesc = "16K User PROM";
+	  }
+	}
+      }
+      if( moduleDesc == null ) {
+	for( String[] cells : modules ) {
+	  if( cells.length > 1 ) {
+	    if( cells[ 0 ].equals( moduleName ) ) {
+	      moduleDesc = cells[ 1 ];
+	    }
+	  }
+	}
+      }
+      if( (moduleDesc != null) && (fileName != null) ) {
+	if( !fileName.isEmpty() ) {
+	  moduleDesc = String.format( "%s: %s", moduleDesc, fileName );
+	}
+      }
+    }
+    return moduleDesc;
   }
 
 

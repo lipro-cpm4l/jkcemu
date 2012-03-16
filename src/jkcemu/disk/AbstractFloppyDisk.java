@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,10 +9,10 @@
 package jkcemu.disk;
 
 import java.awt.*;
-import java.io.File;
+import java.io.*;
 import java.lang.*;
 import java.util.*;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.*;
 
 
 public abstract class AbstractFloppyDisk
@@ -155,10 +155,19 @@ public abstract class AbstractFloppyDisk
   }
 
 
+  public java.util.Date getDiskDate()
+  {
+    return null;
+  }
+
+
   public int getDiskSize()
   {
     return this.sides * this.cyls * this.sectorsPerCyl * this.sectorSize;
   }
+
+
+  public abstract String getFileFormatText();
 
 
   public String getFormatText()
@@ -341,6 +350,15 @@ public abstract class AbstractFloppyDisk
   }
 
 
+  public static boolean isDiskFileHeader( byte[] header )
+  {
+    return CopyQMDisk.isCopyQMFileHeader( header )
+		|| CPCDisk.isCPCDiskFileHeader( header )
+		|| ImageDisk.isImageDiskFileHeader( header )
+		|| TeleDisk.isTeleDiskFileHeader( header );
+  }
+
+
   public boolean isReadOnly()
   {
     return true;
@@ -386,6 +404,16 @@ public abstract class AbstractFloppyDisk
 		prefix + "sectorsize",
 		Integer.toString( getSectorSize() ) );
     }
+  }
+
+
+  protected static int readByte( InputStream in ) throws IOException
+  {
+    int b = in.read();
+    if( b < 0 ) {
+      throwUnexpectedEOF();
+    }
+    return b;
   }
 
 
@@ -455,6 +483,35 @@ public abstract class AbstractFloppyDisk
   public void setWarningText( String text )
   {
     this.warningText = text;
+  }
+
+
+  public boolean supportsDeletedSectors()
+  {
+    return false;
+  }
+
+
+  protected static void throwSectorSpaceTooSmall(
+				int cyl,
+				int head,
+				int sectorNum ) throws IOException
+  {
+    throw new IOException(
+	String.format(
+		"Seite %d, Spur %d, Sektor %d: Datenfeld zu klein,\n"
+			+ "Der Sektor kann nicht geschrieben werden,\n"
+			+ "weil das Datenfeld des Sektors kleiner ist,\n"
+			+ "als es laut Diskettenformat sein m\u00FCsste.",
+		head - 1,
+		cyl,
+		sectorNum ) );
+  }
+
+
+  protected static void throwUnexpectedEOF() throws IOException
+  {
+    throw new IOException( "Unerwartetes Dateiende" );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
+import jkcemu.emusys.etc.SLC1KeyboardFld;
 import z80emu.*;
 
 
@@ -23,17 +24,18 @@ public class SLC1 extends EmuSys implements
 {
   private static byte[] rom = null;
 
-  private byte[]  ram;
-  private int[]   keyValues;
-  private int[]   digitStatus;
-  private int[]   digitValues;
-  private int     displayTStates;
-  private int     curKeyCol;
-  private int     curSegValue;
-  private long    curDisplayTStates;
-  private int     ledStatus;
-  private boolean ledValue;
-  private boolean chessMode;
+  private SLC1KeyboardFld keyboardFld;
+  private int[]           keyboardMatrix;
+  private int[]           digitStatus;
+  private int[]           digitValues;
+  private byte[]          ram;
+  private int             displayTStates;
+  private int             curKeyCol;
+  private int             curSegValue;
+  private long            curDisplayTStates;
+  private int             ledStatus;
+  private boolean         ledValue;
+  private boolean         chessMode;
 
 
   public SLC1( EmuThread emuThread, Properties props )
@@ -42,17 +44,20 @@ public class SLC1 extends EmuSys implements
     if( rom == null ) {
       rom = readResource( "/rom/slc1/slc1_0000.bin" );
     }
-    this.ram         = new byte[ 0x0400 ];
-    this.keyValues   = new int[ 3 ];
-    this.digitStatus = new int[ 6 ];
-    this.digitValues = new int[ 6 ];
+    this.keyboardFld    = null;
+    this.keyboardMatrix = new int[ 3 ];
+    this.digitStatus    = new int[ 6 ];
+    this.digitValues    = new int[ 6 ];
+    this.ram            = new byte[ 0x0400 ];
+    this.ledStatus      = 0;
+    this.ledValue       = false;
+    this.chessMode      = true;
 
     Z80CPU cpu = emuThread.getZ80CPU();
     cpu.addMaxSpeedListener( this );
     cpu.addPCListener( this, 0x0000, 0x0615 );
     cpu.addTStatesListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged( cpu );
   }
 
@@ -60,6 +65,29 @@ public class SLC1 extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 2500;
+  }
+
+
+  public boolean isChessMode()
+  {
+    return this.chessMode;
+  }
+
+
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    synchronized( this.keyboardMatrix ) {
+      int n = Math.min( kbMatrix.length, this.keyboardMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	this.keyboardMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.keyboardMatrix.length ) {
+	this.keyboardMatrix[ i ] = 0;
+	i++;
+      }
+    }
   }
 
 
@@ -79,11 +107,11 @@ public class SLC1 extends EmuSys implements
   {
     switch( pc ) {
       case 0x0000:
-	this.chessMode = true;
+	setChessMode( true );
 	break;
 
       case 0x0615:
-	this.chessMode = false;
+	setChessMode( false );
 	break;
     }
   }
@@ -135,12 +163,21 @@ public class SLC1 extends EmuSys implements
 
 
   @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new SLC1KeyboardFld( this.screenFrm, this );
+    return this.keyboardFld;
+  }
+
+
+  @Override
   public void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
     cpu.removePCListener( this );
     cpu.removeMaxSpeedListener( this );
+    super.die();
   }
 
 
@@ -283,42 +320,45 @@ public class SLC1 extends EmuSys implements
 			boolean shiftDown )
   {
     boolean rv = false;
-    synchronized( this.keyValues ) {
+    synchronized( this.keyboardMatrix ) {
       if( this.chessMode ) {
 	switch( keyCode ) {
 	  case KeyEvent.VK_ESCAPE:	// Rueckstellen
-	    this.keyValues[ 2 ] = 0xEF;
+	    this.keyboardMatrix[ 2 ] = 0x10;
 	    rv = true;
 	    break;
 
 	  case KeyEvent.VK_ENTER:	// Figurenwahl, Zug quittieren
-	    this.keyValues[ 2 ] = 0x7F;
+	    this.keyboardMatrix[ 2 ] = 0x80;
 	    rv = true;
 	    break;
 
-	  case KeyEvent.VK_F1:		// in Spielmode wechseln
-	    this.keyValues[ 2 ] = 0xBF;
+	  case KeyEvent.VK_F1:		// Spielstaerke
+	    this.keyboardMatrix[ 2 ] = 0x20;
 	    rv = true;
 	    break;
 
-	  case KeyEvent.VK_F2:		// Spielstaerke
-	    this.keyValues[ 2 ] = 0xDF;
+	  case KeyEvent.VK_F2:		// in Spielmode wechseln
+	    this.keyboardMatrix[ 2 ] = 0x40;
 	    rv = true;
 	    break;
 	}
       } else {
 	switch( keyCode ) {
 	  case KeyEvent.VK_F1:		// ADR
-	    this.keyValues[ 2 ] = 0x7F;
+	    this.keyboardMatrix[ 2 ] = 0x80;
 	    rv = true;
 	    break;
 
 	  case KeyEvent.VK_F2:		// Fu
-	    this.keyValues[ 2 ] = 0xBF;
+	    this.keyboardMatrix[ 2 ] = 0x40;
 	    rv = true;
 	    break;
 	}
       }
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -327,9 +367,10 @@ public class SLC1 extends EmuSys implements
   @Override
   public void keyReleased()
   {
-    synchronized( this.keyValues ) {
-      Arrays.fill( this.keyValues, 0xFF );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
     }
+    updKeyboardFld();
   }
 
 
@@ -337,65 +378,65 @@ public class SLC1 extends EmuSys implements
   public boolean keyTyped( char keyChar )
   {
     boolean rv = false;
-    synchronized( this.keyValues ) {
+    synchronized( this.keyboardMatrix ) {
       keyChar = Character.toUpperCase( keyChar );
       if( this.chessMode ) {
 	switch( keyChar ) {
 	  case 'S':			// in Spielmode wechseln
-	    this.keyValues[ 2 ] = 0xBF;
+	    this.keyboardMatrix[ 2 ] = 0x40;
 	    rv = true;
 	    break;
 
 	  case 'Z':			// Figurenwahl, Zug quittieren
-	    this.keyValues[ 2 ] = 0x7F;
+	    this.keyboardMatrix[ 2 ] = 0x80;
 	    rv = true;
 	    break;
 
 	  case 'A':			// Spalte A bzw. Zeile 1
 	  case '1':
-	    this.keyValues[ 0 ] = 0x7F;
+	    this.keyboardMatrix[ 0 ] = 0x80;
 	    rv = true;
 	    break;
 
 	  case 'B':			// Spalte B bzw. Zeile 2
 	  case '2':
-	    this.keyValues[ 0 ] = 0xBF;
+	    this.keyboardMatrix[ 0 ] = 0x40;
 	    rv = true;
 	    break;
 
 	  case 'C':			// Spalte C bzw. Zeile 3
 	  case '3':
-	    this.keyValues[ 0 ] = 0xDF;
+	    this.keyboardMatrix[ 0 ] = 0x20;
 	    rv = true;
 	    break;
 
 	  case 'D':			// Spalte D bzw. Zeile 4
 	  case '4':
-	    this.keyValues[ 0 ] = 0xEF;
+	    this.keyboardMatrix[ 0 ] = 0x10;
 	    rv = true;
 	    break;
 
 	  case 'E':			// Spalte E bzw. Zeile 5
 	  case '5':
-	    this.keyValues[ 1 ] = 0xEF;
+	    this.keyboardMatrix[ 1 ] = 0x10;
 	    rv = true;
 	    break;
 
 	  case 'F':			// Spalte F bzw. Zeile 6
 	  case '6':
-	    this.keyValues[ 1 ] = 0xDF;
+	    this.keyboardMatrix[ 1 ] = 0x20;
 	    rv = true;
 	    break;
 
 	  case 'G':			// Spalte G bzw. Zeile 7
 	  case '7':
-	    this.keyValues[ 1 ] = 0xBF;
+	    this.keyboardMatrix[ 1 ] = 0x40;
 	    rv = true;
 	    break;
 
 	  case 'H':			// Spalte H bzw. Zeile 8
 	  case '8':
-	    this.keyValues[ 1 ] = 0x7F;
+	    this.keyboardMatrix[ 1 ] = 0x80;
 	    rv = true;
 	    break;
 	}
@@ -403,64 +444,67 @@ public class SLC1 extends EmuSys implements
 	switch( keyChar ) {
 	  case '0':			// 0 bzw. 8
 	  case '8':
-	    this.keyValues[ 0 ] = 0x7F;
+	    this.keyboardMatrix[ 0 ] = 0x80;
 	    rv = true;
 	    break;
 
 	  case '1':			// 1 bzw. 9
 	  case '9':
-	    this.keyValues[ 0 ] = 0xBF;
+	    this.keyboardMatrix[ 0 ] = 0x40;
 	    rv = true;
 	    break;
 
 	  case '2':			// 2 bzw. A
 	  case 'A':
-	    this.keyValues[ 0 ] = 0xDF;
+	    this.keyboardMatrix[ 0 ] = 0x20;
 	    rv = true;
 	    break;
 
 	  case '3':			// 3 bzw. B
 	  case 'B':
-	    this.keyValues[ 0 ] = 0xEF;
+	    this.keyboardMatrix[ 0 ] = 0x10;
 	    rv = true;
 	    break;
 
 	  case '4':			// 4 bzw. C
 	  case 'C':
-	    this.keyValues[ 1 ] = 0xEF;
+	    this.keyboardMatrix[ 1 ] = 0x10;
 	    rv = true;
 	    break;
 
 	  case '5':			// 5 bzw. D
 	  case 'D':
-	    this.keyValues[ 1 ] = 0xDF;
+	    this.keyboardMatrix[ 1 ] = 0x20;
 	    rv = true;
 	    break;
 
 	  case '6':			// 6 bzw. E
 	  case 'E':
-	    this.keyValues[ 1 ] = 0xBF;
+	    this.keyboardMatrix[ 1 ] = 0x40;
 	    rv = true;
 	    break;
 
 	  case '7':			// 7 bzw. F
 	  case 'F':
-	    this.keyValues[ 1 ] = 0x7F;
+	    this.keyboardMatrix[ 1 ] = 0x80;
 	    rv = true;
 	    break;
 
 	  case 'S':			// Shift
-	    this.keyValues[ 2 ] = 0xEF;
+	    this.keyboardMatrix[ 2 ] = 0x10;
 	    rv = true;
 	    break;
 
 	  case '+':			// +/- 1
 	  case '-':
-	    this.keyValues[ 2 ] = 0xDF;
+	    this.keyboardMatrix[ 2 ] = 0x20;
 	    rv = true;
 	    break;
 	}
       }
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -499,11 +543,11 @@ public class SLC1 extends EmuSys implements
   public int readIOByte( int port )
   {
     int rv = 0xFF;
-    synchronized( this.keyValues ) {
+    synchronized( this.keyboardMatrix ) {
       if( (this.curKeyCol >= 0)
-	  && (this.curKeyCol < this.keyValues.length) )
+	  && (this.curKeyCol < this.keyboardMatrix.length) )
       {
-	rv = this.keyValues[ this.curKeyCol ];
+	rv = ~this.keyboardMatrix[ this.curKeyCol ] & 0xFF;
       }
     }
     return rv;
@@ -516,8 +560,8 @@ public class SLC1 extends EmuSys implements
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ram, props );
     }
-    synchronized( this.keyValues ) {
-      Arrays.fill( this.keyValues, 0xFF );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
       this.curKeyCol = 0;
     }
     synchronized( this.digitStatus ) {
@@ -528,7 +572,7 @@ public class SLC1 extends EmuSys implements
     }
     this.curSegValue       = 0;
     this.curDisplayTStates = 0;
-    this.chessMode         = true;
+    setChessMode( true );
   }
 
 
@@ -558,11 +602,17 @@ public class SLC1 extends EmuSys implements
 
 
   @Override
+  public boolean supportsKeyboardFld()
+  {
+    return true;
+  }
+
+  @Override
   public void writeIOByte( int port, int value )
   {
     // Tastaturspalten
     int col = value & 0x0F;
-    synchronized( this.keyValues ) {
+    synchronized( this.keyboardMatrix ) {
       this.curKeyCol = col - 3;
     }
 
@@ -611,6 +661,26 @@ public class SLC1 extends EmuSys implements
     if( dirty ) {
       this.screenFrm.setScreenDirty( true );
     }
+  }
+
+
+	/* --- privated Methoden --- */
+
+  private void setChessMode( boolean state )
+  {
+    if( state != this.chessMode ) {
+      this.chessMode = state;
+      if( this.keyboardFld != null ) {
+	this.keyboardFld.fireRepaint();
+      }
+    }
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.keyboardMatrix );
   }
 }
 

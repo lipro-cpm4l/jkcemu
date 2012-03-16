@@ -22,29 +22,30 @@ public class KC85UserPROMSettingsDlg
 			extends BasicDlg
 			implements DropTargetListener
 {
-  private Frame        owner;
-  private String       approvedFileName;
-  private String       approvedTypeByteText;
-  private String       typeByteUserPROM;
-  private String       typeByteROM;
-  private JRadioButton btnTypeByteUserPROM;
-  private JRadioButton btnTypeByteROM;
-  private FileNameFld  fileNameFld;
-  private JButton      btnSelect;
-  private JButton      btnOK;
-  private JButton      btnCancel;
+  private static String[][] moduleTable = {
+		{ "M025", "F7: 8K User PROM/EPROM", "FB: 8K ROM" },
+		{ "M028", "F8: 16K User PROM/EPROM", "FC: 16K ROM" },
+		{ "M040", "01: Autostart", "F7: 8K User PROM/EPROM",
+					"F8: 16K User PROM/EPROM" } };
+
+  private Frame          owner;
+  private String         approvedFileName;
+  private String         approvedTypeByteText;
+  private JRadioButton[] typeByteBtns;
+  private FileNameFld    fileNameFld;
+  private JButton        btnSelect;
+  private JButton        btnOK;
+  private JButton        btnCancel;
 
 
   public KC85UserPROMSettingsDlg(
 			Frame  owner,
-			String typeByteUserPROM,
-			String typeByteROM,
-			String title )
+			String moduleName,
+			String typeByteText,
+			String fileName )
   {
-    super( owner, title );
-    this.owner            = owner;
-    this.typeByteUserPROM = typeByteUserPROM;
-    this.typeByteROM      = typeByteROM;
+    super( owner, moduleName );
+    this.owner = owner;
 
     // Fensterinhalt
     setLayout( new GridBagLayout() );
@@ -59,26 +60,44 @@ public class KC85UserPROMSettingsDlg
 					0, 0 );
 
     // Strukturbyte
-    add( new JLabel( "Strukturbyte:" ), gbc );
+    this.typeByteBtns = null;
+    for( String[] moduleRow : this.moduleTable ) {
+      if( moduleRow.length > 1 ) {
+	if( moduleRow[ 0 ].equals( moduleName ) ) {
+	  add( new JLabel( "Strukturbyte:" ), gbc );
 
-    ButtonGroup grpTypeByte = new ButtonGroup();
+	  ButtonGroup grpTypeByte = new ButtonGroup();
+	  boolean     selected    = false;
 
-    this.btnTypeByteUserPROM = new JRadioButton(
-				typeByteUserPROM + ": User PROM/EPROM",
-				true );
-    grpTypeByte.add( this.btnTypeByteUserPROM );
-    gbc.insets.left   = 50;
-    gbc.insets.bottom = 0;
-    gbc.gridy++;
-    add( this.btnTypeByteUserPROM, gbc );
-
-    this.btnTypeByteROM = new JRadioButton(
-				typeByteROM + ": ROM",
-				false );
-    grpTypeByte.add( this.btnTypeByteROM );
-    gbc.insets.top = 0;
-    gbc.gridy++;
-    add( this.btnTypeByteROM, gbc );
+	  gbc.insets.bottom = 0;
+	  this.typeByteBtns = new JRadioButton[ moduleRow.length - 1 ];
+	  for( int i = 0; i < this.typeByteBtns.length; i++ ) {
+	    String       text = moduleRow[ i + 1 ];
+	    JRadioButton btn  = new JRadioButton( text );
+	    grpTypeByte.add( btn );
+	    if( typeByteText != null ) {
+	      if( text.startsWith( typeByteText ) ) {
+		btn.setSelected( true );
+		selected = true;
+	      }
+	    }
+	    gbc.insets.left   = 50;
+	    if( i > 0 ) {
+	      gbc.insets.top = 0;
+	    }
+	    if( i == (this.typeByteBtns.length - 1) ) {
+	      gbc.insets.bottom = 5;
+	    }
+	    gbc.gridy++;
+	    add( btn, gbc );
+	    this.typeByteBtns[ i ] = btn;
+	  }
+	  if( !selected ) {
+	    this.typeByteBtns[ 0 ].setSelected( true );
+	  }
+	}
+      }
+    }
 
     // ROM-Datei
     gbc.insets.top  = 10;
@@ -87,6 +106,9 @@ public class KC85UserPROMSettingsDlg
     add( new JLabel( "ROM-Datei:" ), gbc );
 
     this.fileNameFld = new FileNameFld();
+    if( fileName != null ) {
+      this.fileNameFld.setFileName( fileName );
+    }
     gbc.fill       = GridBagConstraints.HORIZONTAL;
     gbc.weightx    = 1.0;
     gbc.insets.top = 0;
@@ -117,7 +139,7 @@ public class KC85UserPROMSettingsDlg
     add( panelBtn, gbc );
 
     this.btnOK = new JButton( "OK" );
-    this.btnOK.setEnabled( false );
+    this.btnOK.setEnabled( this.fileNameFld.getFile() != null );
     this.btnOK.addActionListener( this );
     this.btnOK.addKeyListener( this );
     panelBtn.add( this.btnOK );
@@ -236,10 +258,20 @@ public class KC85UserPROMSettingsDlg
   {
     File file = this.fileNameFld.getFile();
     if( file != null ) {
-      if( this.btnTypeByteROM.isSelected() ) {
-	this.approvedTypeByteText = this.typeByteROM;
-      } else {
-	this.approvedTypeByteText = this.typeByteUserPROM;
+      if( this.typeByteBtns != null ) {
+	for( JRadioButton btn : this.typeByteBtns ) {
+	  if( btn.isSelected() ) {
+	    String text = btn.getText();
+	    if( text != null ) {
+	      int pos = text.indexOf( ':' );
+	      if( pos >= 0 ) {
+		text = text.substring( 0, pos );
+	      }
+	    }
+	    this.approvedTypeByteText = text;
+	    break;
+	  }
+	}
       }
       this.approvedFileName = file.getPath();
       doClose();
@@ -265,6 +297,7 @@ public class KC85UserPROMSettingsDlg
     if( file != null ) {
       this.fileNameFld.setFile( file );
       this.btnOK.setEnabled( true );
+      Main.setLastFile( file, "rom" );
     }
   }
 }

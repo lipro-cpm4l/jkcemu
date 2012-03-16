@@ -25,6 +25,13 @@ public class LimitedDocument extends PlainDocument
   }
 
 
+  public LimitedDocument( int maxLen, boolean swapCase )
+  {
+    this.maxLen   = maxLen;
+    this.swapCase = swapCase;
+  }
+
+
   public void setMaxLength( int maxLen )
   {
     this.maxLen = maxLen;

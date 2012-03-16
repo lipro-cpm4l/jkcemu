@@ -27,6 +27,8 @@ public class Z80PIO implements Z80InterruptSource
 		BIT_INOUT };
 
   public enum Status {
+		INTERRUPT_ENABLED,
+		INTERRUPT_DISABLED,
 		MODE_CHANGED,
 		READY_FOR_INPUT,
 		OUTPUT_AVAILABLE,
@@ -81,13 +83,6 @@ public class Z80PIO implements Z80InterruptSource
 	removePIOPortListener( listener, this.portB );
 	break;
     }
-  }
-
-
-  public synchronized void reset( boolean powerOn )
-  {
-    this.portA.reset( powerOn );
-    this.portB.reset( powerOn );
   }
 
 
@@ -400,9 +395,10 @@ public class Z80PIO implements Z80InterruptSource
 
 
   @Override
-  public void reset()
+  public synchronized void reset( boolean powerOn )
   {
-    reset( false );
+    this.portA.reset( powerOn );
+    this.portB.reset( powerOn );
   }
 
 
@@ -736,7 +732,7 @@ public class Z80PIO implements Z80InterruptSource
 	  port.interruptVector = value;
 	}
 	else if( (value & 0x0F) == 0x03 ) {	// Interrupt-Freigabe
-	  port.interruptEnabled = ((value & 0x80) != 0);
+	  setInterruptEnabled( port, (value & 0x80) != 0 );
 	}
 	else if( (value & 0x0F) == 0x07 ) {	// Interrupt-Steuerwort
 	  if( (value & 0x10) != 0 ) {
@@ -744,8 +740,8 @@ public class Z80PIO implements Z80InterruptSource
 	  }
 	  port.interruptFireAtH      = ((value & 0x20) != 0);
 	  port.interruptBitsAnd      = ((value & 0x40) != 0);
-	  port.interruptEnabled      = ((value & 0x80) != 0);
 	  port.interruptCondRealized = false;
+	  setInterruptEnabled( port, (value & 0x80) != 0 );
 	}
     }
   }
@@ -755,8 +751,21 @@ public class Z80PIO implements Z80InterruptSource
   {
     Collection<Z80PIOPortListener> listeners = port.listeners;
     if( listeners != null ) {
-      for( Z80PIOPortListener listener : listeners )
+      for( Z80PIOPortListener listener : listeners ) {
 	listener.z80PIOPortStatusChanged( this, port.portInfo, status );
+      }
+    }
+  }
+
+
+  private void setInterruptEnabled( Z80PIO.Port port, boolean state )
+  {
+    boolean oldState = port.interruptEnabled;
+    port.interruptEnabled = state;
+    if( state != oldState ) {
+      informListeners(
+	port,
+	state ? Status.INTERRUPT_ENABLED : Status.INTERRUPT_DISABLED );
     }
   }
 }

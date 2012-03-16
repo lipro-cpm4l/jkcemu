@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,7 @@ import z80emu.Z80MemView;
 
 public class SourceUtil
 {
-  public static String getAssemblerText(
+  public static String getEDAS4Text(
 				Z80MemView memory,
 				int        addr )
   {
