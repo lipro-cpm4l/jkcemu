@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -24,14 +24,22 @@ public class AC1SettingsFld extends AbstractSettingsFld
   private JRadioButton           btnMon31_64x32;
   private JRadioButton           btnMonSCCH80;
   private JRadioButton           btnMonSCCH1088;
-  private JRadioButton           btnMonSCCH80_2010;
+  private JRadioButton           btnMon2010;
+  private JCheckBox              btnColor;
   private JCheckBox              btnFloppyDisk;
+  private JCheckBox              btnKCNet;
+  private JCheckBox              btnVDIP;
+  private JCheckBox              btnPasteFast;
   private ROMFileSettingsFld     fldAltOS;
   private ROMFileSettingsFld     fldAltFont;
+  private ROMFileSettingsFld     fldAltPio2Rom2010;
+  private ROMFileSettingsFld     fldRomBank2010;
+  private JPanel                 tab2010;
   private JPanel                 tabModel;
   private RAMFloppySettingsFld   tabRF;
   private HardDiskSettingsFld    tabGIDE;
   private SCCHModule1SettingsFld tabSCCH;
+  private JPanel                 tabExt;
   private JPanel                 tabEtc;
 
 
@@ -88,19 +96,50 @@ public class AC1SettingsFld extends AbstractSettingsFld
     gbcModel.gridy++;
     this.tabModel.add( this.btnMonSCCH1088, gbcModel );
 
-    this.btnMonSCCH80_2010 = new JRadioButton(
-		"AC1-2010 mit Monitorprogramm 8.0 und Inversschaltung",
+    this.btnMon2010 = new JRadioButton(
+		"AC1-2010 mit Monitorprogramm f\u00FCr Farbgrafik",
 		true );
-    grpModel.add( this.btnMonSCCH80_2010 );
+    grpModel.add( this.btnMon2010 );
     gbcModel.insets.bottom = 5;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnMonSCCH80_2010, gbcModel );
+    this.tabModel.add( this.btnMon2010, gbcModel );
 
 
     // SCCH-Modul 1
-    this.tabSCCH = new SCCHModule1SettingsFld( settingsFrm, propPrefix );
+    this.tabSCCH = new SCCHModule1SettingsFld(
+					settingsFrm,
+					propPrefix + "scch.");
     this.tabbedPane.addTab( "SCCH-Modul 1", this.tabSCCH );
     updSCCHFieldsEnabled();
+
+
+    // AC1-2010
+    this.tab2010 = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "AC1-2010", this.tab2010 );
+
+    GridBagConstraints gbc2010 = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
+
+    this.fldAltPio2Rom2010 = new ROMFileSettingsFld(
+		settingsFrm,
+		propPrefix + "2010.pio2rom.",
+		"Alternativer Inhalt des ROMs auf der PIO2-Karte"
+					+ " (4 x 2000h-27FFh):" );
+    this.tab2010.add( this.fldAltPio2Rom2010, gbc2010 );
+
+    this.fldRomBank2010 = new ROMFileSettingsFld(
+			settingsFrm,
+			propPrefix + "2010.rombank.",
+			"Inhalt der ROM-Bank (16 x ab A000h):" );
+    gbc2010.gridy++;
+    this.tab2010.add( this.fldRomBank2010, gbc2010 );
+    upd2010FieldsEnabled();
 
 
     // Bereich RAM-Floppy
@@ -113,24 +152,44 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
 
     // GIDE
-    this.tabGIDE = new HardDiskSettingsFld(
-					settingsFrm,
-					propPrefix,
-					0x80,
-					0x20,
-					0x30,
-					0x50,
-					0x60,
-					0x70,
-					0x80,
-					0x90,
-					0xA0,
-					0xB0,
-					0xC0,
-					0xD0,
-					0xF0 );
+    this.tabGIDE = new HardDiskSettingsFld( settingsFrm, propPrefix );
     this.tabbedPane.addTab( "GIDE", this.tabGIDE );
     updGIDEFieldsEnabled();
+
+
+    // Erweiterungen
+    this.tabExt = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
+
+    GridBagConstraints gbcExt = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
+
+    this.btnColor = new JCheckBox(
+			"Farbgrafik mit Taktfrequenzumschaltung",
+			false );
+    this.tabExt.add( this.btnColor, gbcExt );
+
+    this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Modul", false );
+    gbcExt.insets.top = 0;
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnFloppyDisk, gbcExt );
+
+    this.btnKCNet = new JCheckBox( "KCNet-kompatible Netzwerkkarte", false );
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnKCNet, gbcExt );
+
+    this.btnVDIP = new JCheckBox(
+			"USB-Anschluss (Vinculum VDIP Modul)",
+			false );
+    gbcExt.insets.bottom = 5;
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnVDIP, gbcExt );
 
 
     // Sonstiges
@@ -146,11 +205,10 @@ public class AC1SettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.btnFloppyDisk = new JCheckBox(
-				"Floppy-Disk-Modul emulieren ",
-				false );
-    gbcEtc.gridy++;
-    this.tabEtc.add( this.btnFloppyDisk, gbcEtc );
+    this.btnPasteFast = new JCheckBox(
+		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs",
+		true );
+    this.tabEtc.add( this.btnPasteFast, gbcEtc );
 
     gbcEtc.fill    = GridBagConstraints.HORIZONTAL;
     gbcEtc.weightx = 1.0;
@@ -177,8 +235,12 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.btnMon31_64x32.addActionListener( this );
     this.btnMonSCCH80.addActionListener( this );
     this.btnMonSCCH1088.addActionListener( this );
-    this.btnMonSCCH80_2010.addActionListener( this );
+    this.btnMon2010.addActionListener( this );
+    this.btnColor.addActionListener( this );
     this.btnFloppyDisk.addActionListener( this );
+    this.btnKCNet.addActionListener( this );
+    this.btnVDIP.addActionListener( this );
+    this.btnPasteFast.addActionListener( this );
   }
 
 
@@ -203,8 +265,8 @@ public class AC1SettingsFld extends AbstractSettingsFld
       else if( this.btnMonSCCH1088.isSelected() ) {
 	os = "SCCH10/88";
       }
-      else if( this.btnMonSCCH80_2010.isSelected() ) {
-	os = "SCCH8.0_2010";
+      else if( this.btnMon2010.isSelected() ) {
+	os = "2010";
       }
       props.setProperty( this.propPrefix + "os.version", os );
 
@@ -217,11 +279,33 @@ public class AC1SettingsFld extends AbstractSettingsFld
       tab = this.tabSCCH;
       this.tabSCCH.applyInput( props, selected );
 
+      tab = this.tab2010;
+      this.fldAltPio2Rom2010.applyInput( props, selected );
+      this.fldRomBank2010.applyInput( props, selected );
+
+      tab = this.tabExt;
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "color",
+		this.btnColor.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "floppydisk.enabled",
+		this.btnFloppyDisk.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "kcnet.enabled",
+		this.btnKCNet.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "vdip.enabled",
+		this.btnVDIP.isSelected() );
+
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
-		"jkcemu.ac1.floppydisk.enabled",
-		this.btnFloppyDisk.isSelected() );
+		this.propPrefix + "paste.fast",
+		this.btnPasteFast.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
     }
@@ -246,9 +330,10 @@ public class AC1SettingsFld extends AbstractSettingsFld
 	  || (src == this.btnMon31_64x32)
 	  || (src == this.btnMonSCCH80)
 	  || (src == this.btnMonSCCH1088)
-	  || (src == this.btnMonSCCH80_2010) )
+	  || (src == this.btnMon2010) )
       {
 	rv = true;
+	upd2010FieldsEnabled();
 	updSCCHFieldsEnabled();
 	updGIDEFieldsEnabled();
 	fireDataChanged();
@@ -283,45 +368,78 @@ public class AC1SettingsFld extends AbstractSettingsFld
       this.btnMon31_64x32.setSelected( true );
     } else if( os.equals( "SCCH8.0" ) ) {
       this.btnMonSCCH80.setSelected( true );
-    } else if( os.equals( "SCCH8.0_2010" ) ) {
-      this.btnMonSCCH80_2010.setSelected( true );
+    } else if( os.equals( "2010" ) ) {
+      this.btnMon2010.setSelected( true );
     } else {
       this.btnMonSCCH1088.setSelected( true );
     }
     this.tabRF.updFields( props );
     this.tabGIDE.updFields( props );
     this.tabSCCH.updFields( props );
+    this.fldAltPio2Rom2010.updFields( props );
+    this.fldRomBank2010.updFields( props );
+
+    this.btnColor.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "color",
+			false ) );
 
     this.btnFloppyDisk.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.ac1.floppydisk.enabled",
-				false ) );
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "floppydisk.enabled",
+			false ) );
+
+    this.btnKCNet.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "kcnet.enabled",
+			false ) );
+
+    this.btnVDIP.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "vdip.enabled",
+			false ) );
+
+    this.btnPasteFast.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "ac1.paste.fast",
+			false ) );
 
     this.fldAltOS.updFields( props );
     this.fldAltFont.updFields( props );
 
-    updGIDEFieldsEnabled();
     updSCCHFieldsEnabled();
+    upd2010FieldsEnabled();
+    updGIDEFieldsEnabled();
   }
 
 
 	/* --- private Methoden --- */
+
+  private void upd2010FieldsEnabled()
+  {
+    boolean state = this.btnMon2010.isSelected();
+    this.fldAltPio2Rom2010.setEnabled( state );
+    this.fldRomBank2010.setEnabled( state );
+  }
+
 
   private void updGIDEFieldsEnabled()
   {
     this.tabGIDE.setEnabled( this.btnMon31_64x32.isSelected()
 				|| this.btnMonSCCH80.isSelected()
 				|| this.btnMonSCCH1088.isSelected()
-				|| this.btnMonSCCH80_2010.isSelected() );
+				|| this.btnMon2010.isSelected() );
   }
 
 
   private void updSCCHFieldsEnabled()
   {
     this.tabSCCH.setEnabled( this.btnMonSCCH80.isSelected()
-				|| this.btnMonSCCH1088.isSelected()
-				|| this.btnMonSCCH80_2010.isSelected() );
+				|| this.btnMonSCCH1088.isSelected() );
   }
 }
-

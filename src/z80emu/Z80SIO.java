@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -146,7 +146,7 @@ public class Z80SIO implements Z80InterruptSource
 
 
   @Override
-  public void reset()
+  public void reset( boolean powerOn )
   {
     this.channelA.reset();
     this.channelB.reset();

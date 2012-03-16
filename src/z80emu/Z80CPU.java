@@ -42,7 +42,7 @@ public class Z80CPU
 
 
   // Nach wieviel Taktzyklen die Zaehlung bei Null beginnen soll
-  private static final int tStatesWrap = 1000000000;
+  private static final long tStatesWrap = Long.MAX_VALUE - 1000000L;
 
 
   // Masken fuer die einzelnen Bits
@@ -69,13 +69,16 @@ public class Z80CPU
   private Collection<Z80HaltStateListener>  haltStateListeners;
   private Collection<Z80MaxSpeedListener>   maxSpeedListeners;
   private Collection<Z80StatusListener>     statusListeners;
+  private volatile Z80InstrTStatesMngr      instTStatesMngr;
   private boolean[]                         parity;
+  private volatile boolean                  brakeEnabled;
   private volatile int                      maxSpeedKHz;
   private volatile long                     speedUnlimitedTill;
   private volatile long                     speedNanosBeg;
   private volatile long                     speedNanosEnd;
-  private volatile int                      speedTStates;
   private int                               speedBrakeTStates;
+  private volatile long                     speedTStates;
+  private volatile long                     processedTStates;
   private volatile int                      instTStates;
   private volatile int                      debugCallLevel;
   private volatile Action                   action;
@@ -137,10 +140,12 @@ public class Z80CPU
     this.haltStateListeners    = new ArrayList<Z80HaltStateListener>();
     this.maxSpeedListeners     = new ArrayList<Z80MaxSpeedListener>();
     this.statusListeners       = new ArrayList<Z80StatusListener>();
+    this.instTStatesMngr       = null;
     this.breakpoints           = null;
     this.debugTracer           = null;
     this.haltPC                = null;
     this.maxSpeedKHz           = -1;
+    this.brakeEnabled          = true;
     this.active                = false;
     this.haltState             = false;
     this.debugEnabled          = false;
@@ -182,12 +187,11 @@ public class Z80CPU
    * wenn zwischen den beiden Aufrufen von "getProcessedTStates()"
    * der Zaehler einmal zurueckgesetzt wurde.
    */
-  public static int calcTStatesDiff( int tStates1, int tStates2 )
+  public static long calcTStatesDiff( long tStates1, long tStates2 )
   {
-    while( tStates2 < tStates1 ) {
-      tStates2 += tStatesWrap;
-    }
-    return tStates2 - tStates1;
+    return tStates2 < tStates1 ?
+		(tStatesWrap - tStates1 + tStates2)
+		: (tStates2 - tStates1);
   }
 
 
@@ -346,10 +350,28 @@ public class Z80CPU
   }
 
 
+  public boolean isBrakeEnabled()
+  {
+    return this.brakeEnabled;
+  }
+
 
   public boolean isPause()
   {
     return this.pause;
+  }
+
+
+  public synchronized void setBrakeEnabled( boolean state )
+  {
+    if( state != this.brakeEnabled ) {
+      this.speedNanosBeg      = System.nanoTime();
+      this.speedNanosEnd      = -1L;
+      this.speedBrakeTStates  = 0;
+      this.speedTStates       = 0L;
+      this.speedUnlimitedTill = 0L;
+      this.brakeEnabled       = state;
+    }
   }
 
 
@@ -365,21 +387,9 @@ public class Z80CPU
   }
 
 
-  public void setSpeedCalculationEnabled( boolean state )
+  public void setInstrTStatesMngr( Z80InstrTStatesMngr instrTStatesMngr )
   {
-    if( state ) {
-
-      /*
-       * wenn zwischenzeitlich die Geschwindigkeit nicht
-       * zurueckgesetzt wurde, dann korrigieren
-       */
-      if( this.speedNanosEnd > 0L ) {
-	this.speedNanosBeg += (System.nanoTime() - this.speedNanosEnd);
-      }
-      this.speedNanosEnd = -1L;
-    } else {
-      this.speedNanosEnd = System.nanoTime();
-    }
+    this.instTStatesMngr = instrTStatesMngr;
   }
 
 
@@ -393,12 +403,15 @@ public class Z80CPU
   public void waitFor()
   {
     synchronized( this.waitMonitor ) {
-      setSpeedCalculationEnabled( false );
+      this.speedNanosEnd = System.nanoTime();
       try {
 	this.waitMonitor.wait();
       }
       catch( InterruptedException ex ) {}
-      setSpeedCalculationEnabled( true );
+      if( this.speedNanosEnd > 0L ) {
+        this.speedNanosBeg += (System.nanoTime() - this.speedNanosEnd);
+      }
+      this.speedNanosEnd = -1L;
     }
   }
 
@@ -419,7 +432,7 @@ public class Z80CPU
     Z80InterruptSource[] iSources = this.interruptSources;
     if( iSources != null ) {
       for( int i = 0; i < iSources.length; i++ )
-	iSources[ i ].reset();
+	iSources[ i ].reset( powerOn );
     }
     this.nmiFired          = false;
     this.iff1              = false;
@@ -465,17 +478,18 @@ public class Z80CPU
 
   public void resetSpeed()
   {
-    this.speedUnlimitedTill = 0L;
-    this.speedBrakeTStates  = 0;
-    this.speedTStates       = 0;
     this.speedNanosBeg      = System.nanoTime();
     this.speedNanosEnd      = -1L;
+    this.speedUnlimitedTill = 0L;
+    this.speedBrakeTStates  = 0;
+    this.speedTStates       = 0L;
+    this.processedTStates   = 0L;
   }
 
 
-  public int getProcessedTStates()
+  public long getProcessedTStates()
   {
-    return this.speedTStates;
+    return this.processedTStates;
   }
 
 
@@ -485,7 +499,7 @@ public class Z80CPU
      * Werte moeglichst schnell auslesen, da die Methode
      * in einem anderen Thread aufgerufen werden kann
      */
-    int  tStates  = this.speedTStates;
+    long tStates  = this.speedTStates;
     long nanosBeg = this.speedNanosBeg;
     long nanosEnd = this.speedNanosEnd;
     if( nanosEnd <= 0 ) {
@@ -540,9 +554,9 @@ public class Z80CPU
    * Diese Methode schaltet die Geschwindigkeitsbremse
    * fuer die Dauer der uebergebenen Anzahl an Z80-Taktzyklen aus.
    */
-  public void setSpeedUnlimitedFor( int unlimitedSpeedTStates )
+  public void setSpeedUnlimitedFor( long unlimitedSpeedTStates )
   {
-    this.speedUnlimitedTill = this.speedTStates + (long) unlimitedSpeedTStates;
+    this.speedUnlimitedTill = this.speedTStates + unlimitedSpeedTStates;
   }
 
 
@@ -1078,12 +1092,18 @@ public class Z80CPU
 	  Z80TStatesListener[] tStatesListeners = this.tStatesListeners;
 	  if( tStatesListeners != null ) {
 	    while( this.active && this.waitMode ) {
+	      this.processedTStates++;
 	      this.speedTStates++;
 	      for( int i = 0; i < tStatesListeners.length; i++ ) {
 		tStatesListeners[ i ].z80TStatesProcessed( this, 1 );
 	      }
 	    }
 	  }
+	}
+
+	// Zaehler fuer die Taktzyklen darf nicht ueberlaufen
+	if( this.processedTStates >= tStatesWrap ) {
+	  this.processedTStates -= tStatesWrap;
 	}
 
 	/*
@@ -1261,24 +1281,25 @@ public class Z80CPU
 	opCode         = readMemByteM1( this.regPC );
 	this.regPC     = (this.regPC + 1) & 0xFFFF;
 	execInst( -1, opCode );
-	this.instTStates  += this.waitStates.getAndSet( 0 );
-	this.speedTStates += this.instTStates;
+
+	Z80InstrTStatesMngr tStatesMngr = this.instTStatesMngr;
+	if( tStatesMngr != null ) {
+	  this.instTStates = tStatesMngr.z80IntructionProcessed(
+							this,
+							this.instBegPC,
+							this.instTStates );
+	}
+	this.instTStates      += this.waitStates.getAndSet( 0 );
+	this.processedTStates += this.instTStates;
+	this.speedTStates     += this.instTStates;
 
 	// verbrauchte Anzahl Taktzyklen melden
 	Z80TStatesListener[] tStatesListeners = this.tStatesListeners;
 	if( tStatesListeners != null ) {
-	  while( this.instTStates >= 4 ) {
-	    for( int i = 0; i < tStatesListeners.length; i++ ) {
-	      tStatesListeners[ i ].z80TStatesProcessed( this, 4 );
-	    }
-	    this.instTStates -= 4;
-	  }
-	  if( this.instTStates > 0 ) {
-	    for( int i = 0; i < tStatesListeners.length; i++ ) {
-	      tStatesListeners[ i ].z80TStatesProcessed(
+	  for( int i = 0; i < tStatesListeners.length; i++ ) {
+	    tStatesListeners[ i ].z80TStatesProcessed(
 						this,
 						this.instTStates );
-	    }
 	  }
 	}
       }
@@ -1294,7 +1315,9 @@ public class Z80CPU
 
   private void checkSpeedBrake()
   {
-    if( this.speedUnlimitedTill < this.speedTStates ) {
+    if( this.brakeEnabled
+	&& (this.speedUnlimitedTill < this.speedTStates) )
+    {
       if( this.speedBrakeTStates < 200 ) {
 	this.speedBrakeTStates++;
       } else {

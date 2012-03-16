@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -62,7 +62,7 @@ public class AboutDlg extends BasicDlg
       gbcGeneral.gridx++;
     }
 
-    JLabel label = new JLabel( Main.getVersion() );
+    JLabel label = new JLabel( Main.VERSION );
     label.setFont( new Font( "SansSerif", Font.BOLD, 18 ) );
     gbcGeneral.insets.bottom = 0;
     gbcGeneral.gridheight    = 1;
@@ -71,14 +71,13 @@ public class AboutDlg extends BasicDlg
     gbcGeneral.insets.top = 0;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "...ein in Java geschriebener"
-				+ " DDR-Kleincomputer-Emulator" ),
+	new JLabel( "...ein in Java geschriebener Kleincomputer-Emulator" ),
 	gbcGeneral );
 
     gbcGeneral.insets.top = 12;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "(c) 2008-2011 Jens M\u00FCller" ),
+	new JLabel( "(c) 2008-2012 Jens M\u00FCller" ),
 	gbcGeneral );
 
     gbcGeneral.gridy++;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.io.*;
 import java.lang.*;
 import javax.sound.sampled.*;
 import jkcemu.base.EmuUtil;
+import jkcemu.emusys.kc85.KCAudioDataStream;
 import z80emu.Z80CPU;
 
 
@@ -30,6 +31,7 @@ public class AudioInFile extends AudioIn
   private long             framePos;
   private int              progressStepSize;
   private int              progressStepCnt;
+  private int              speedKHz;
   private volatile boolean pause;
 
 
@@ -53,13 +55,32 @@ public class AudioInFile extends AudioIn
     this.framePos         = 0L;
     this.progressStepSize = 0;
     this.progressStepCnt  = 0;
+    this.speedKHz         = 0;
     this.pause            = false;
   }
 
 
-  public boolean isPause()
+  public File getFile()
   {
-    return this.pause;
+    return this.file;
+  }
+
+
+  public byte[] getFileBytes()
+  {
+    return this.fileBytes;
+  }
+
+
+  public int getSpeedKHz()
+  {
+    return this.speedKHz;
+  }
+
+
+  public boolean isTAPFile()
+  {
+    return this.tapFile;
   }
 
 
@@ -72,11 +93,19 @@ public class AudioInFile extends AudioIn
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public boolean isPause()
+  {
+    return this.pause;
+  }
+
+
+  @Override
   public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     AudioFormat fmt = null;
     if( (this.in == null) && (speedKHz > 0) ) {
-      this.pause = true;
+      this.pause    = true;
+      this.framePos = 0;
       try {
 	if( this.tapFile ) {
 	  if( this.fileBytes == null ) {
@@ -91,25 +120,29 @@ public class AudioInFile extends AudioIn
 	   * Aus diesem Grund wird in dem Fall sowohl die Gesamtlaenge
 	   * als auch die Restlaenge der Multi-TAP-Datei ermittelt.
 	   */
-	  KCTapAudioInputStream tapIn = new KCTapAudioInputStream(
+	  KCAudioDataStream ads = new KCAudioDataStream(
+						true,
+						0,
 						this.fileBytes,
 						0,
 						this.fileBytes.length - offs );
-	  this.frameCount = tapIn.getFrameLength();
+	  this.frameCount = ads.getFrameLength();
 	  if( this.offs > 0 ) {
-	    tapIn = new KCTapAudioInputStream(
-					this.fileBytes,
-					this.offs,
-					this.fileBytes.length - offs );
-	    this.framePos = this.frameCount - tapIn.getFrameLength();
+	    ads = new KCAudioDataStream(
+				true,
+				0,
+				this.fileBytes,
+				this.offs,
+				this.fileBytes.length - offs );
+	    this.framePos = this.frameCount - ads.getFrameLength();
 	    if( this.framePos < 0 ) {
 	      this.framePos = 0;
 	    }
 	  }
 	  this.in = new AudioInputStream(
-				tapIn, 
-				tapIn.getAudioFormat(),
-				tapIn.getFrameLength() );
+				ads,
+				ads.getAudioFormat(),
+				ads.getFrameLength() );
 	} else {
 	  this.in         = AudioSystem.getAudioInputStream( this.file );
 	  this.frameCount = this.in.getFrameLength();
@@ -119,6 +152,8 @@ public class AudioInFile extends AudioIn
 	  this.progressStepSize = (int) this.frameCount / 100;
 	  this.progressStepCnt  = this.progressStepSize;
 	  this.progressEnabled  = true;
+	  this.firstCall        = true;
+	  this.speedKHz         = speedKHz;
 	  this.audioFrm.fireProgressUpdate(
 			(float) this.framePos / (float) this.frameCount );
 	}
@@ -135,7 +170,7 @@ public class AudioInFile extends AudioIn
 	  }
 	}
       }
-      if( (this.in != null) || (fmt != null) ) {
+      if( (this.in != null) && (fmt != null) ) {
 	this.frameBuf        = new byte[ fmt.getFrameSize() ];
 	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
 						/ fmt.getFrameRate());
@@ -152,17 +187,10 @@ public class AudioInFile extends AudioIn
   public void stopAudio()
   {
     closeMonitorLine();
-
-    InputStream in       = this.in;
+    EmuUtil.doClose( this.in );
     this.in              = null;
     this.frameBuf        = null;
     this.progressEnabled = false;
-    if( in != null ) {
-      try {
-	in.close();
-      }
-      catch( Exception ex ) {}
-    }
   }
 
 
@@ -194,7 +222,9 @@ public class AudioInFile extends AudioIn
 	  }
 	} else {
 	  buf = null;
-	  this.audioFrm.fireDisable();
+	  EmuUtil.doClose( this.in );
+	  this.in = null;
+	  this.audioFrm.fireFinished();
 	}
       }
       catch( IOException ex ) {
@@ -204,3 +234,4 @@ public class AudioInFile extends AudioIn
     return buf;
   }
 }
+

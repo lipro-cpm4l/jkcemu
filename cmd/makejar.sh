@@ -1,7 +1,8 @@
-!/bin/sh
+#!/bin/sh
 
 cd ../src
 jar cvmf Manifest.txt ../jkcemu.jar \
+  cs/wdnsfile.exe \
   lib/jkcemu_*.dll \
   jkcemu/*.class \
   jkcemu/audio/*.class \
@@ -12,12 +13,16 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/emusys/ac1_llc2/*.class \
   jkcemu/emusys/etc/*.class \
   jkcemu/emusys/huebler/*.class \
+  jkcemu/emusys/kccompact/*.class \
   jkcemu/emusys/kc85/*.class \
+  jkcemu/emusys/lc80/*.class \
   jkcemu/emusys/z1013/*.class \
+  jkcemu/emusys/z9001/*.class \
   jkcemu/etc/*.class \
   jkcemu/filebrowser/*.class \
   jkcemu/image/*.class \
   jkcemu/joystick/*.class \
+  jkcemu/net/*.class \
   jkcemu/print/*.class \
   jkcemu/programming/*.class \
   jkcemu/programming/assembler/*.class \
@@ -26,6 +31,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/tools/*.class \
   jkcemu/tools/calculator/*.class \
   jkcemu/tools/debugger/*.class \
+  jkcemu/tools/fileconverter/*.class \
   jkcemu/tools/hexdiff/*.class \
   jkcemu/tools/hexedit/*.class \
   z80emu/*.class \
@@ -35,6 +41,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   rom/c80/*.bin \
   rom/huebler/*.bin \
   rom/kc85/*.bin \
+  rom/kccompact/*.bin \
   rom/kramermc/*.bin \
   rom/lc80/*.bin \
   rom/llc1/*.bin \
@@ -53,10 +60,20 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   images/edit/*.png \
   images/file/*.png \
   images/icon/*.png \
+  images/keyboard/*.png \
+  images/keyboard/a5105/*.png \
+  images/keyboard/kc85/*.png \
+  images/keyboard/lc80/*.png \
+  images/keyboard/poly880/*.png \
+  images/keyboard/sc2/*.png \
+  images/keyboard/z1013/*.png \
+  images/keyboard/z9001/*.png \
   images/nav/*.png \
   disks/harddisks.csv \
   disks/a5105/*.gz \
   disks/kc85/*.gz \
+  disks/kccompact/*.gz \
+  disks/pcm/*.gz \
   disks/z1013/*.gz \
   disks/z9001/*.gz \
   help/*.htm \

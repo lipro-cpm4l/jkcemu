@@ -1,9 +1,16 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Emulation des BIC A5105 und des ALBA PC 1505
+ *
+ * Emulation des Sound-Generators:
+ * Die Bedeutung der Sound-Register ist fast identisch zu dem Schaltkreis
+ * AY-3-8910. Den einzigen Unterschied gibt es beim Register 7.
+ * Dort sind die Bits beim A5105 Bits H-aktiv, beim AY-3-8910 dagegen L-aktiv.
+ * Aus diesem Grund wird zur Sound-Emulation die Klasse PSG8910 verwendet
+ * und das Register 7 entsprechend anders behandelt.
  */
 
 package jkcemu.emusys;
@@ -13,16 +20,20 @@ import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.text.*;
 import java.util.*;
+import javax.sound.sampled.AudioFormat;
+import jkcemu.audio.AudioOut;
 import jkcemu.base.*;
 import jkcemu.disk.*;
-import jkcemu.emusys.a5105.VIS;
-import jkcemu.etc.GDC82720;
+import jkcemu.emusys.a5105.*;
+import jkcemu.etc.*;
+import jkcemu.net.KCNet;
 import jkcemu.joystick.JoystickThread;
 import z80emu.*;
 
 
 public class A5105 extends EmuSys implements
 					FDC8272.DriveSelector,
+					PSG8910.Callback,
 					Z80MaxSpeedListener,
 					Z80PCListener,
 					Z80TStatesListener
@@ -35,7 +46,7 @@ public class A5105 extends EmuSys implements
    * exportiert und die so entstandene Abbilddatei ohne Schreibschutz
    * verwendet werden.
    * Aus diesem Grund wird die SCPX-Systemdiskette nur als "verfuegbare",
-   * nicht aber als "geeignete" Diskette angeboten.
+   * nicht aber als "direkt zum Einlegen geeignete" Diskette angeboten.
    */
   private static FloppyDiskInfo rbasicPrgDisk =
 		new FloppyDiskInfo(
@@ -88,7 +99,7 @@ public class A5105 extends EmuSys implements
   private static int[][] kbMatrixShift = {
 	{ '=',      '!',      '\"', '\\', '$',      '%',      '&',      '/' },
 	{ '(',      ')',      '>',  '*',  '\u00D6', '\u00C4', '\u00DC', '^' },
-	{ '\u003C', '\u00DF', ';',  ':',  '_',      '=',      'A',      'B' },
+	{ '\u0060', '\u00DF', ';',  ':',  '_',      '=',      'A',      'B' },
 	{ 'C',      'D',      'E',  'F',  'G',      'H',      'I',      'J' },
 	{ 'K',      'L',      'M',  'N',  'O',      'P',      'Q',      'R' },
 	{ 'S',      'T',      'U',  'V',  'W',      'X',      'Y',      'Z' } };
@@ -105,8 +116,12 @@ public class A5105 extends EmuSys implements
   private Z80PIO            pio90;
   private GDC82720          gdc;
   private VIS               vis;
+  private PSG8910           psg;
+  private AudioOut          psgAudioOut;
   private FDC8272           fdc;
   private FloppyDiskDrive[] floppyDiskDrives;
+  private KCNet             kcNet;
+  private VDIP              vdip;
   private RAMFloppy         ramFloppy1;
   private RAMFloppy         ramFloppy2;
   private boolean           fdcReset;
@@ -114,13 +129,19 @@ public class A5105 extends EmuSys implements
   private boolean           joy1Selected;
   private int               joy0ActionMask;
   private int               joy1ActionMask;
+  private boolean           capsLockLED;
+  private boolean           tapeLED;
   private boolean           v24BitOut;
   private int               v24BitNum;
   private int               v24ShiftBuf;
   private int               v24TStateCounter;
+  private int               shiftTStateCounter;
   private int               memConfig;
+  private int               ledValues;
+  private int               psgRegNum;
   private int               keyboardCol;
   private int[]             keyboardMatrix;
+  private A5105KeyboardFld  keyboardFld;
   private volatile boolean  pasteFast;
 
 
@@ -131,6 +152,9 @@ public class A5105 extends EmuSys implements
       romK1505 = readResource( "/rom/a5105/k1505_0000.bin" );
     }
     this.pasteFast      = false;
+    this.capsLockLED    = false;
+    this.tapeLED        = false;
+    this.keyboardFld    = null;
     this.keyboardCol    = -1;
     this.keyboardMatrix = new int[ 9 ];
     Arrays.fill( keyboardMatrix, 0 );
@@ -148,6 +172,7 @@ public class A5105 extends EmuSys implements
     }
     this.gdc = new GDC82720();
     this.vis = new VIS( this.screenFrm, this.gdc );
+    this.vis.setFixedScreenSize( isFixedScreenSize( props ) );
     this.gdc.setVRAM( this.vis );
     this.gdc.setGDCListener( this.vis );
     createColors( props );
@@ -168,19 +193,56 @@ public class A5105 extends EmuSys implements
 				props,
 				"jkcemu.a5105.ramfloppy.2." );
 
-    Z80CPU cpu = this.emuThread.getZ80CPU();
-    this.gdc.z80MaxSpeedChanged( cpu );
+    this.psgAudioOut = null;
+    this.psg         = new PSG8910(
+				getDefaultSpeedKHz() * 1000 / 2,
+				AudioOut.MAX_VALUE,
+				this );
+    this.psg.start();
+
     this.ctc80 = new Z80CTC( "CTC (IO-Adressen 80-83)" );
     this.pio90 = new Z80PIO( "PIO (IO-Adressen 90-93)" );
-    cpu.setInterruptSources( this.ctc80, this.pio90 );
+
+    this.kcNet = null;
+    if( emulatesKCNet( props ) ) {
+      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+    }
+
+    this.vdip = null;
+    if( emulatesUSB( props ) ) {
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+    }
+
+    java.util.List<Z80InterruptSource> iSources
+                                = new ArrayList<Z80InterruptSource>();
+    iSources.add( this.ctc80 );
+    iSources.add( this.pio90 );
+    if( this.kcNet != null ) {
+      iSources.add( this.kcNet );
+    }
+    if( this.vdip != null ) {
+      iSources.add( this.vdip );
+    }
+    Z80CPU cpu = emuThread.getZ80CPU();
+    try {
+      cpu.setInterruptSources(
+	iSources.toArray( new Z80InterruptSource[ iSources.size() ] ) );
+    }
+    catch( ArrayStoreException ex ) {}
+
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     this.ctc80.setTimerConnection( 0, 2 );
     this.ctc80.setTimerConnection( 2, 3 );
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+      cpu.addMaxSpeedListener( this.kcNet );
+    }
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
+    z80MaxSpeedChanged( cpu );
     checkAddPCListener( props );
-
-    reset( EmuThread.ResetLevel.POWER_ON, props );
-    applySettingsInternal( props );
   }
 
 
@@ -190,9 +252,39 @@ public class A5105 extends EmuSys implements
   }
 
 
+  public boolean getCapsLockLED()
+  {
+    return this.capsLockLED;
+  }
+
+
   public static int getDefaultSpeedKHz()
   {
     return 3750;
+  }
+
+
+  public boolean getTapeLED()
+  {
+    return this.tapeLED;
+  }
+
+
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    synchronized( this.keyboardMatrix ) {
+      int n = Math.min( kbMatrix.length, this.keyboardMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	this.keyboardMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.keyboardMatrix.length ) {
+	this.keyboardMatrix[ i ] = 0;
+	i++;
+      }
+      this.shiftTStateCounter = 0;
+    }
   }
 
 
@@ -208,6 +300,32 @@ public class A5105 extends EmuSys implements
       }
     }
     return rv;
+  }
+
+
+	/* --- PSG8910.Callback --- */
+
+  @Override
+  public int psgReadPort( PSG8910 psg, int port )
+  {
+    return 0xFF;
+  }
+
+
+  @Override
+  public void psgWritePort( PSG8910 psg, int port, int value )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void psgWriteSample( PSG8910 psg, int a, int b, int c )
+  {
+    AudioOut audioOut = this.psgAudioOut;
+    if( audioOut != null ) {
+      audioOut.writeSamples( 1, (byte) ((a + b + c) / 6) );
+    }
   }
 
 
@@ -229,7 +347,6 @@ public class A5105 extends EmuSys implements
   public synchronized void z80PCChanged( Z80CPU cpu, int pc )
   {
     if( this.pasteFast && (pc == BIOS_ADDR_CONIN) ) {
-      keyReleased();
       CharacterIterator iter = this.pasteIter;
       if( iter != null ) {
 	char ch = iter.next();
@@ -242,6 +359,7 @@ public class A5105 extends EmuSys implements
 	  ch = iter.next();
 	}
 	if( ch == CharacterIterator.DONE ) {
+	  keyReleased();
 	  cancelPastingText();
 	}
       }
@@ -258,6 +376,14 @@ public class A5105 extends EmuSys implements
     this.gdc.z80TStatesProcessed( cpu, tStates );
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
+    }
+    synchronized( this.keyboardMatrix ) {
+      if( this.shiftTStateCounter > 0 ) {
+	this.shiftTStateCounter -= tStates;
+      }
     }
     if( this.v24BitNum > 0 ) {
       synchronized( this ) {
@@ -286,9 +412,31 @@ public class A5105 extends EmuSys implements
   public void applySettings( Properties props )
   {
     super.applySettings( props );
+
+    boolean state = isFixedScreenSize( props );
+    if( state != this.vis.isFixedScreenSize() ) {
+      this.vis.setFixedScreenSize( state );
+      this.screenFrm.fireScreenSizeChanged();
+    }
     createColors( props );
     checkAddPCListener( props );
-    applySettingsInternal( props );
+  }
+
+
+  @Override
+  public void audioOutChanged( AudioOut audioOut )
+  {
+    int sampleRate = 0;
+    if( audioOut != null ) {
+      if( audioOut.isSoundOutEnabled() ) {
+	AudioFormat fmt = audioOut.getAudioFormat();
+	if( fmt != null ) {
+	  sampleRate = Math.round( fmt.getSampleRate() );
+	}
+      }
+    }
+    this.psg.setSampleRate( sampleRate );
+    this.psgAudioOut = (sampleRate > 0 ? audioOut : null);
   }
 
 
@@ -298,11 +446,6 @@ public class A5105 extends EmuSys implements
     boolean rv = EmuUtil.getProperty(
 				props,
 				"jkcemu.system" ).equals( "A5105" );
-    if( rv ) {
-      if( (this.fdc != null) != emulatesFloppyDisk( props ) ) {
-	rv = false;
-      }
-    }
     if( rv ) {
       rv = RAMFloppy.complies(
 			this.ramFloppy1,
@@ -319,6 +462,15 @@ public class A5105 extends EmuSys implements
 			props,
 			"jkcemu.a5105.ramfloppy.2." );
     }
+    if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
+      rv = false;
+    }
+    if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
+      rv = false;
+    }
     return rv;
   }
 
@@ -331,15 +483,25 @@ public class A5105 extends EmuSys implements
 
 
   @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new A5105KeyboardFld( this );
+    return this.keyboardFld;
+  }
+
+
+  @Override
   public synchronized void die()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
+    cpu.setInterruptSources( (Z80InterruptSource[]) null );
     if( this.pasteFast ) {
       cpu.removePCListener( this );
       this.pasteFast = false;
     }
+    this.psg.die();
     this.gdc.setGDCListener( this.vis );
     this.gdc.setVRAM( null );
     if( this.ramFloppy1 != null ) {
@@ -347,6 +509,16 @@ public class A5105 extends EmuSys implements
     }
     if( this.ramFloppy2 != null ) {
       this.ramFloppy2.deinstall();
+    }
+    if( this.fdc != null ) {
+      this.fdc.die();
+    }
+    if( this.kcNet != null ) {
+      cpu.removeMaxSpeedListener( this.kcNet );
+      this.kcNet.die();
+    }
+    if( this.vdip != null ) {
+      this.vdip.die();
     }
   }
 
@@ -368,7 +540,11 @@ public class A5105 extends EmuSys implements
   @Override
   public int getCharHeight()
   {
-    return Math.min( getCharRowHeight(), 8 );
+    int rv = Math.min( this.gdc.getCharRowHeight(), 8 );
+    if( this.vis.isFixedScreenSize() ) {
+      rv *= 2;
+    }
+    return rv;
   }
 
 
@@ -382,7 +558,11 @@ public class A5105 extends EmuSys implements
   @Override
   public int getCharRowHeight()
   {
-    return this.gdc.getCharRowHeight();
+    int rv = this.gdc.getCharRowHeight();
+    if( this.vis.isFixedScreenSize() ) {
+      rv *= 2;
+    }
+    return rv;
   }
 
 
@@ -594,6 +774,13 @@ public class A5105 extends EmuSys implements
 
 
   @Override
+  protected VDIP getVDIP()
+  {
+    return this.vdip;
+  }
+
+
+  @Override
   public boolean keyPressed(
 			int     keyCode,
 			boolean ctrlDown,
@@ -664,11 +851,11 @@ public class A5105 extends EmuSys implements
 	  this.keyboardMatrix[ 8 ] |= 0x02;
 	  rv = true;
 	  break;
-	case KeyEvent.VK_F7:			// Alt, rv=false!
-	  this.keyboardMatrix[ 6 ] |= 0x10;
-	  break;
-	case KeyEvent.VK_F8:			// Graph, rv=false!
+	case KeyEvent.VK_F7:			// Graph, rv=false!
 	  this.keyboardMatrix[ 7 ] |= 0x04;
+	  break;
+	case KeyEvent.VK_F8:			// Alt, rv=false!
+	  this.keyboardMatrix[ 6 ] |= 0x10;
 	  break;
 	case KeyEvent.VK_F9:			// STOP
 	  this.keyboardMatrix[ 7 ] |= 0x10;
@@ -682,6 +869,9 @@ public class A5105 extends EmuSys implements
 	  break;
       }
     }
+    if( rv ) {
+      updKeyboardFld();
+    }
     return rv;
   }
 
@@ -692,6 +882,7 @@ public class A5105 extends EmuSys implements
     synchronized( this.keyboardMatrix ) {
       Arrays.fill( this.keyboardMatrix, 0 );
     }
+    updKeyboardFld();
   }
 
 
@@ -700,69 +891,93 @@ public class A5105 extends EmuSys implements
   {
     boolean rv = false;
     if( ch > 0 ) {
-      switch( ch ) {
-	case '@':
-	  this.keyboardMatrix[ 6 ] = 0x10;	// Alt
-	  this.keyboardMatrix[ 0 ] = 0x04;
-	  rv = true;
-	  break;
+      /*
+       * Da die Control- und Shift-Taste direkt auf die emulierte
+       * Tastaturmatrix abgebildet wird, kommt es zu fehlerhaften Eingaben,
+       * wenn z.B. ein Zeichen auf der A5105-Tastaur nicht,
+       * aber auf der Tastatur des Emulatorrechners in der Shift-Ebene liegt.
+       * Aus diesem Grund wird geprueft,
+       * ob sich der Control- oder Shift-Status aendert.
+       * Ist das der Fall, werden eine Zeit lang erstmal nur die
+       * Control- und Shift-Taste gelesen und spaeter dann
+       * die anderen Tasten eingeblendet.
+       */
+      synchronized( this.keyboardMatrix ) {
+	boolean oldControl = ((this.keyboardMatrix[ 6 ] & 0x04) != 0);
+	boolean oldShift   = ((this.keyboardMatrix[ 6 ] & 0x01) != 0);
+	Arrays.fill( this.keyboardMatrix, 0 );
+	switch( ch ) {
+	  case '@':
+	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
+	    this.keyboardMatrix[ 0 ] = 0x04;
+	    rv = true;
+	    break;
 
-	case '\u00A7':			// Paragraph
-	  this.keyboardMatrix[ 6 ] = 0x10;	// Alt
-	  this.keyboardMatrix[ 0 ] = 0x08;
-	  rv = true;
-	  break;
+	  case '\u00A7':			// Paragraph
+	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
+	    this.keyboardMatrix[ 0 ] = 0x08;
+	    rv = true;
+	    break;
 
-	case '|':
-	  this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
-	  this.keyboardMatrix[ 1 ] = 0x20;
-	  rv = true;
-	  break;
+	  case '|':
+	    this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
+	    this.keyboardMatrix[ 1 ] = 0x20;
+	    rv = true;
+	    break;
 
-	case '[':
-	  this.keyboardMatrix[ 6 ] = 0x10;	// Alt
-	  this.keyboardMatrix[ 1 ] = 0x01;
-	  rv = true;
-	  break;
+	  case '[':
+	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
+	    this.keyboardMatrix[ 1 ] = 0x01;
+	    rv = true;
+	    break;
 
-	case ']':
-	  this.keyboardMatrix[ 6 ] = 0x10;	// Alt
-	  this.keyboardMatrix[ 1 ] = 0x02;
-	  rv = true;
-	  break;
+	  case ']':
+	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
+	    this.keyboardMatrix[ 1 ] = 0x02;
+	    rv = true;
+	    break;
 
-	case '{':
-	  this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
-	  this.keyboardMatrix[ 1 ] = 0x01;
-	  rv = true;
-	  break;
+	  case '{':
+	    this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
+	    this.keyboardMatrix[ 1 ] = 0x01;
+	    rv = true;
+	    break;
 
-	case '}':
-	  this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
-	  this.keyboardMatrix[ 1 ] = 0x02;
-	  rv = true;
-	  break;
+	  case '}':
+	    this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
+	    this.keyboardMatrix[ 1 ] = 0x02;
+	    rv = true;
+	    break;
 
-	case '~':
-	  this.keyboardMatrix[ 7 ] = 0x04;	// Graph
-	  this.keyboardMatrix[ 6 ] = 0x01;	// Shift
-	  this.keyboardMatrix[ 1 ] = 0x80;
-	  rv = true;
-	  break;
+	  case '~':
+	    this.keyboardMatrix[ 7 ] = 0x04;	// Graph
+	    this.keyboardMatrix[ 6 ] = 0x01;	// Shift
+	    this.keyboardMatrix[ 1 ] = 0x80;
+	    rv = true;
+	    break;
 
-	default:
-	  rv = setCharInKBMatrix( kbMatrixNormal, ch );
-	  if( !rv ) {
-	    rv = setCharInKBMatrix( kbMatrixShift, ch );
-	    if( rv ) {
-	      this.keyboardMatrix[ 6 ] = 0x01;
-	    } else {
-	      rv = setCharInKBMatrix( kbMatrixControl, ch );
+	  default:
+	    rv = setCharInKBMatrix( kbMatrixNormal, ch );
+	    if( !rv ) {
+	      rv = setCharInKBMatrix( kbMatrixShift, ch );
 	      if( rv ) {
-		this.keyboardMatrix[ 6 ] |= 0x04;
+		this.keyboardMatrix[ 6 ] = 0x01;
+	      } else {
+		rv = setCharInKBMatrix( kbMatrixControl, ch );
+		if( rv ) {
+		  this.keyboardMatrix[ 6 ] |= 0x04;
+		}
 	      }
 	    }
-	  }
+	}
+	boolean newControl = ((this.keyboardMatrix[ 6 ] & 0x04) != 0);
+	boolean newShift   = ((this.keyboardMatrix[ 6 ] & 0x01) != 0);
+	if( (newControl != oldControl) || (newShift != oldShift) ) {
+	  this.shiftTStateCounter = 100000;
+	}
+      }
+      if( rv ) {
+	updKeyboardFld();
       }
     }
     return rv;
@@ -853,6 +1068,14 @@ public class A5105 extends EmuSys implements
 	rv = this.vis.readFontByte();
 	break;
 
+      case 0xA1:				// Sound-Register lesen
+	if( this.psgRegNum == 7 ) {
+	  rv = ~this.psg.getRegister( this.psgRegNum ) & 0xFF;
+	} else if( this.psgRegNum <= 13 ) {
+	  rv = this.psg.getRegister( this.psgRegNum );
+	}
+	break;
+
       case 0xA8:				// SVG Port A
 	rv = this.memConfig;
 	break;
@@ -892,9 +1115,34 @@ public class A5105 extends EmuSys implements
 	  synchronized( this.keyboardMatrix ) {
 	    int col = this.keyboardCol;
 	    if( (col >= 0) && (col < this.keyboardMatrix.length) ) {
-	      rv = ~this.keyboardMatrix[ col ] & 0xFF;
+	      if( this.shiftTStateCounter > 0 ) {
+		// nur Shift- und Control-Taste lesen
+		if( col == 6 ) {
+		  rv = ~(this.keyboardMatrix[ col ] & 0x05) & 0xFF;
+		}
+	      } else {
+		rv = ~this.keyboardMatrix[ col ] & 0xFF;
+	      }
 	    }
 	  }
+	}
+	break;
+
+      case 0xC0:
+      case 0xC1:
+      case 0xC2:
+      case 0xC3:
+	if( this.kcNet != null ) {
+	  rv = this.kcNet.read( port );
+	}
+	break;
+
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  rv = this.vdip.read( port );
 	}
 	break;
     }
@@ -926,16 +1174,20 @@ public class A5105 extends EmuSys implements
 	}
       }
     }
-    this.fdcReset         = false;
-    this.joyEnabled       = false;
-    this.joy1Selected     = false;
-    this.joy0ActionMask   = 0;
-    this.joy1ActionMask   = 0;
-    this.memConfig        = 0;
-    this.v24BitOut        = true;	// V24: H-Pegel
-    this.v24BitNum        = 0;
-    this.v24ShiftBuf      = 0;
-    this.v24TStateCounter = 0;
+    this.fdcReset           = false;
+    this.joyEnabled         = false;
+    this.joy1Selected       = false;
+    this.joy0ActionMask     = 0;
+    this.joy1ActionMask     = 0;
+    this.memConfig          = 0;
+    this.psgRegNum          = 0;
+    this.v24BitOut          = true;	// V24: H-Pegel
+    this.v24BitNum          = 0;
+    this.v24ShiftBuf        = 0;
+    this.v24TStateCounter   = 0;
+    this.shiftTStateCounter = 0;
+    setCapsLockLED( false );
+    setTapeLED( false );
   }
 
 
@@ -1048,6 +1300,13 @@ public class A5105 extends EmuSys implements
 
   @Override
   public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsKeyboardFld()
   {
     return true;
   }
@@ -1226,6 +1485,20 @@ public class A5105 extends EmuSys implements
 	this.vis.writeFontAddr( value );
 	break;
 
+      case 0xA0:				// Auswahl Sound-Register
+	this.psgRegNum = value & 0x0F;
+	break;
+
+      case 0xA1:				// Sound-Register schreiben
+	if( this.psgRegNum <= 13 ) {
+	  if( this.psgRegNum == 7 ) {
+	    this.psg.setRegister( this.psgRegNum, ~value );
+	  } else {
+	    this.psg.setRegister( this.psgRegNum, value );
+	  }
+	}
+	break;
+
       case 0xA8:				// SVG Port A
 	this.memConfig = value;
 	break;
@@ -1235,8 +1508,36 @@ public class A5105 extends EmuSys implements
 	break;
 
       case 0xAB:
-	if( (value & 0x0E) == 0x0A ) {
-	  this.emuThread.writeAudioPhase( (value & 0x01) != 0 );
+	switch( value & 0x0E ) {
+	  case 0x08:
+	    setTapeLED( (value & 0x01) == 0 );
+	    break;
+	  case 0x0A:
+	    if( this.psgAudioOut == null ) {
+	      this.emuThread.writeAudioPhase( (value & 0x01) != 0 );
+	    }
+	    break;
+	  case 0x0C:
+	    setCapsLockLED( (value & 0x01) == 0 );
+	    break;
+	}
+	break;
+
+      case 0xC0:
+      case 0xC1:
+      case 0xC2:
+      case 0xC3:
+	if( this.kcNet != null ) {
+	  this.kcNet.write( port, value );
+	}
+	break;
+
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  this.vdip.write( port, value );
 	}
 	break;
     }
@@ -1244,12 +1545,6 @@ public class A5105 extends EmuSys implements
 
 
 	/* --- private Methoden --- */
-
-  private void applySettingsInternal( Properties props )
-  {
-    z80MaxSpeedChanged( this.emuThread.getZ80CPU() );
-  }
-
 
   private synchronized void checkAddPCListener( Properties props )
   {
@@ -1273,8 +1568,8 @@ public class A5105 extends EmuSys implements
 
   private void createColors( Properties props )
   {
-    double brightness = getBrightness( props );
-    if( (brightness >= 0.0) && (brightness <= 1.0) ) {
+    float brightness = getBrightness( props );
+    if( (brightness >= 0F) && (brightness <= 1F) ) {
       this.vis.createColors( brightness );
     }
   }
@@ -1286,6 +1581,44 @@ public class A5105 extends EmuSys implements
 			props,
 			"jkcemu.a5105.floppydisk.enabled",
 			true );
+  }
+
+
+  private boolean emulatesKCNet( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.a5105.kcnet.enabled",
+				false );
+  }
+
+
+  private boolean emulatesUSB( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.a5105.vdip.enabled",
+				false );
+  }
+
+
+  private static boolean isFixedScreenSize( Properties props )
+  {
+    return EmuUtil.parseBooleanProperty(
+			props,
+			"jkcemu.a5105.fixed_screen_size",
+			false );
+  }
+
+
+  private void setCapsLockLED( boolean state )
+  {
+    if( state != this.capsLockLED ) {
+      this.capsLockLED = state;
+      if( this.keyboardFld != null ) {
+	this.keyboardFld.fireRepaint();
+      }
+    }
   }
 
 
@@ -1309,4 +1642,23 @@ public class A5105 extends EmuSys implements
     }
     return rv;
   }
+
+
+  private void setTapeLED( boolean state )
+  {
+    if( state != this.tapeLED ) {
+      this.tapeLED = state;
+      if( this.keyboardFld != null ) {
+	this.keyboardFld.fireRepaint();
+      }
+    }
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.keyboardMatrix );
+  }
 }
+

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,6 +19,7 @@ import javax.swing.event.*;
 import javax.swing.table.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 
 
 public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
@@ -311,7 +312,7 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
     for( int i = 0; i < nRows; i++ ) {
       HardDiskInfo info = this.tableModel.getRow( i );
       if( info != null ) {
-	String producer = EmuUtil.emptyToNull( info.getProducer() );
+	String producer = TextUtil.emptyToNull( info.getProducer() );
 	if( producer != null ) {
 	  producers.add( producer );
 	}
@@ -327,8 +328,8 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
       for( int i = 0; i < nRows; i++ ) {
 	HardDiskInfo info = this.tableModel.getRow( i );
 	if( info != null ) {
-	  if( EmuUtil.equals( data.getProducer(), info.getProducer() )
-	      && EmuUtil.equals( data.getDiskModel(), info.getDiskModel() ) )
+	  if( TextUtil.equals( data.getProducer(), info.getProducer() )
+	      && TextUtil.equals( data.getDiskModel(), info.getDiskModel() ) )
 	  {
 	    if( (data.getCylinders() != info.getCylinders())
 		|| (data.getHeads() != info.getHeads())

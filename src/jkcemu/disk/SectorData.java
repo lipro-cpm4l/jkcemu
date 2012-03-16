@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -115,6 +115,21 @@ public class SectorData extends SectorID
   public int getDataLength()
   {
     return this.dataLen;
+  }
+
+
+  public synchronized int getDataByte( int idx )
+  {
+    int rv = -1;
+    if( (idx >= 0) && (idx < this.dataLen) ) {
+      rv = 0;
+      if( this.dataBuf != null ) {
+	if( idx < this.dataBuf.length ) {
+	  rv = (int) this.dataBuf[ idx ] & 0xFF;
+	}
+      }
+    }
+    return rv;
   }
 
 

@@ -122,7 +122,7 @@ public class ImageCaptureFrm extends BasicFrm
     add( this.labelWinSelectTime, gbc );
 
     this.spinnerWinSelectSec = new JSpinner(
-				new SpinnerNumberModel( 5, 1, 9, 1 ) );
+				new SpinnerNumberModel( 3, 1, 9, 1 ) );
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
     gbc.insets.left = 5;

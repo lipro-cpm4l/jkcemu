@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,10 @@ import java.util.*;
 import jkcemu.base.*;
 import jkcemu.disk.*;
 import jkcemu.emusys.ac1_llc2.AbstractSCCHSys;
+import jkcemu.etc.VDIP;
 import jkcemu.joystick.JoystickThread;
+import jkcemu.net.KCNet;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -37,8 +40,11 @@ public class LLC2
    * Damit im Emulator die Ausgabe auf den emulierten Drucker ueber diese
    * serielle Schnittstelle funktioniert,
    * wird somit der Drucker ebenfalls mit dieser Bitrate emuliert.
+   * Ist allerdings eine externe ROM-Datei als Monitorprogramm eingebunden,
+   * werden 9600 Baud emuliert.
    */
-  private static int V24_TSTATES_PER_BIT = 337;
+  private static int V24_TSTATES_PER_BIT_INTERN = 337;
+  private static int V24_TSTATES_PER_BIT_EXTERN = 312;
 
   private static byte[] llc2Font  = null;
   private static byte[] scchMon91 = null;
@@ -88,9 +94,12 @@ public class LLC2
   private int               v24BitNum;
   private int               v24ShiftBuf;
   private int               v24TStateCounter;
+  private int               v24TStatesPerBit;
   private int               romdiskBankAddr;
   private FloppyDiskDrive   curFDDrive;
   private FloppyDiskDrive[] fdDrives;
+  private KCNet             kcNet;
+  private VDIP              vdip;
 
 
   public LLC2( EmuThread emuThread, Properties props )
@@ -133,11 +142,37 @@ public class LLC2
       this.fdc = new FDC8272( this, 4 );
     }
 
-    Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( "CTC (IO-Adressen F8-FB)" );
     this.pio1  = new Z80PIO( "PIO (IO-Adressen E8-EB)" );
     this.pio2  = new Z80PIO( "V24-PIO (IO-Adressen E4-E7)" );
-    cpu.setInterruptSources( this.ctc, this.pio1, this.pio2 );
+
+    this.kcNet = null;
+    if( emulatesKCNet( props ) ) {
+      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+    }
+
+    this.vdip = null;
+    if( emulatesUSB( props ) ) {
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+    }
+
+    java.util.List<Z80InterruptSource> iSources
+				= new ArrayList<Z80InterruptSource>();
+    iSources.add( this.ctc );
+    iSources.add( this.pio1 );
+    iSources.add( this.pio2 );
+    if( this.kcNet != null ) {
+      iSources.add( this.kcNet );
+    }
+    if( this.vdip != null ) {
+      iSources.add( this.vdip );
+    }
+    Z80CPU cpu = emuThread.getZ80CPU();
+    try {
+      cpu.setInterruptSources(
+	iSources.toArray( new Z80InterruptSource[ iSources.size() ] ) );
+    }
+    catch( ArrayStoreException ex ) {}
 
     this.ctc.setTimerConnection( 1, 3 );
     this.ctc.addCTCListener( this );
@@ -146,11 +181,16 @@ public class LLC2
       this.fdc.setTStatesPerMilli( cpu.getMaxSpeedKHz() );
       cpu.addMaxSpeedListener( this.fdc );
     }
-
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+      cpu.addMaxSpeedListener( this.kcNet );
+    }
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
-    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
@@ -194,6 +234,9 @@ public class LLC2
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
     }
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
+    }
     if( this.v24BitNum > 0 ) {
       synchronized( this ) {
 	this.v24TStateCounter -= tStates;
@@ -206,7 +249,7 @@ public class LLC2
 	    if( this.v24BitOut ) {
 	      this.v24ShiftBuf |= 0x80;
 	    }
-	    this.v24TStateCounter = V24_TSTATES_PER_BIT;
+	    this.v24TStateCounter = this.v24TStatesPerBit;
 	    this.v24BitNum++;
 	  }
 	}
@@ -232,22 +275,22 @@ public class LLC2
 				props,
 				"jkcemu.system" ).equals( "LLC2" );
     if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.osFile,
 		EmuUtil.getProperty( props,  "jkcemu.llc2.os.file" ) );
     }
     if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.basicFile,
 		EmuUtil.getProperty( props,  "jkcemu.llc2.basic.file" ) );
     }
     if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.prgXFile,
 		EmuUtil.getProperty( props,  "jkcemu.llc2.program_x.file" ) );
     }
     if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.romdiskFile,
 		EmuUtil.getProperty( props,  "jkcemu.llc2.romdisk.file" ) );
     }
@@ -267,10 +310,14 @@ public class LLC2
 			props,
 			"jkcemu.llc2.ramfloppy.2." );
     }
-    if( rv ) {
-      if( emulatesFloppyDisk( props ) != (this.fdc != null) ) {
-	rv = false;
-      }
+    if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
+      rv = false;
+    }
+    if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
+      rv = false;
     }
     return rv;
   }
@@ -295,11 +342,20 @@ public class LLC2
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
-    if( this.fdc != null ) {
-      cpu.removeMaxSpeedListener( this.fdc );
-    }
     cpu.removeTStatesListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+
+    if( this.fdc != null ) {
+      cpu.removeMaxSpeedListener( this.fdc );
+      this.fdc.die();
+    }
+    if( this.kcNet != null ) {
+      cpu.removeMaxSpeedListener( this.kcNet );
+      this.kcNet.die();
+    }
+    if( this.vdip != null ) {
+      this.vdip.die();
+    }
   }
 
 
@@ -434,14 +490,10 @@ public class LLC2
     {
       int idx = this.rfAddr16to19 | addr;
       if( this.rf32NegA15 ) {
-	if( (idx & 0x8000) != 0 ) {
-	  idx &= 0xF7FFF;
-	} else {
-	  idx |= 0x8000;
-	}
-	if( (idx >= 0) && (idx < this.ramModule3.length) ) {
-	  rv = (int) this.ramModule3[ idx ] & 0xFF;
-	}
+	idx ^= 0x8000;
+      }
+      if( (idx >= 0) && (idx < this.ramModule3.length) ) {
+	rv = (int) this.ramModule3[ idx ] & 0xFF;
       }
       done = true;
     }
@@ -545,6 +597,13 @@ public class LLC2
   public String getTitle()
   {
     return "LLC2";
+  }
+
+
+  @Override
+  protected VDIP getVDIP()
+  {
+    return this.vdip;
   }
 
 
@@ -757,8 +816,7 @@ public class LLC2
 	case 0xA2:
 	case 0xA3:
 	  if( this.fdc != null ) {
-	    rv = this.fdc.readData();
-	    this.fdc.dmaAcknowledge();
+	    rv = this.fdc.readDMA();
 	  }
 	  break;
 
@@ -788,6 +846,15 @@ public class LLC2
 	case 0xA9:
 	  if( this.fdc != null ) {
 	    this.fdc.fireTC();
+	  }
+	  break;
+
+	case 0xC0:
+	case 0xC1:
+	case 0xC2:
+	case 0xC3:
+	  if( this.kcNet != null ) {
+	    rv = this.kcNet.read( port );
 	  }
 	  break;
 
@@ -854,6 +921,15 @@ public class LLC2
 	case 0xFB:
 	  rv = this.ctc.read( port & 0x03 );
 	  break;
+
+	case 0xFC:
+	case 0xFD:
+	case 0xFE:
+	case 0xFF:
+	  if( this.vdip != null ) {
+	    rv = this.vdip.read( port );
+	  }
+	  break;
       }
     }
     return rv;
@@ -890,6 +966,7 @@ public class LLC2
 	}
       }
     }
+    this.curFDDrive         = null;
     this.romEnabled         = true;
     this.romdiskEnabled     = false;
     this.romdiskA15         = false;
@@ -918,7 +995,11 @@ public class LLC2
     this.v24BitNum          = 0;
     this.v24ShiftBuf        = 0;
     this.v24TStateCounter   = 0;
-    this.curFDDrive         = null;
+    if( this.osBytes == scchMon91 ) {
+      this.v24TStatesPerBit = V24_TSTATES_PER_BIT_INTERN;
+    } else {
+      this.v24TStatesPerBit = V24_TSTATES_PER_BIT_EXTERN;
+    }
   }
 
 
@@ -1002,11 +1083,7 @@ public class LLC2
     {
       int idx = this.rfAddr16to19 | addr;
       if( this.rf32NegA15 ) {
-	if( (idx & 0x8000) != 0 ) {
-	  idx &= 0xF7FFF;
-	} else {
-	  idx |= 0x8000;
-	}
+	idx ^= 0x8000;
       }
       if( (idx >= 0) && (idx < this.ramModule3.length) ) {
 	this.ramModule3[ idx ] = (byte) value;
@@ -1130,8 +1207,7 @@ public class LLC2
 	case 0xA2:
 	case 0xA3:
 	  if( this.fdc != null ) {
-	    this.fdc.write( value );
-	    this.fdc.dmaAcknowledge();
+	    this.fdc.writeDMA( value );
 	  }
 	  break;
 
@@ -1158,6 +1234,15 @@ public class LLC2
 	  }
 	  break;
 
+	case 0xC0:
+	case 0xC1:
+	case 0xC2:
+	case 0xC3:
+	  if( this.kcNet != null ) {
+	    this.kcNet.write( port, value );
+	  }
+	  break;
+
 	case 0xE0:
 	case 0xE1:
 	case 0xE2:
@@ -1176,7 +1261,7 @@ public class LLC2
 	     */
 	    if( !state && this.v24BitOut && (this.v24BitNum == 0) ) {
 	      this.v24ShiftBuf      = 0;
-	      this.v24TStateCounter = 3 * V24_TSTATES_PER_BIT / 2;
+	      this.v24TStateCounter = 3 * this.v24TStatesPerBit / 2;
 	      this.v24BitNum++;
 	    }
 	    this.v24BitOut = state;
@@ -1302,6 +1387,15 @@ public class LLC2
 	case 0xFB:
 	  this.ctc.write( port & 0x03, value );
 	  break;
+
+	case 0xFC:
+	case 0xFD:
+	case 0xFE:
+	case 0xFF:
+	  if( this.vdip != null ) {
+	    this.vdip.write( port, value );
+	  }
+	  break;
       }
       if( dirty ) {
 	this.screenFrm.setScreenDirty( true );
@@ -1318,6 +1412,24 @@ public class LLC2
 			props,
 			"jkcemu.llc2.floppydisk.enabled",
 			false );
+  }
+
+
+  private boolean emulatesKCNet( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.llc2.kcnet.enabled",
+				false );
+  }
+
+
+  private boolean emulatesUSB( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.llc2.vdip.enabled",
+				false );
   }
 
 

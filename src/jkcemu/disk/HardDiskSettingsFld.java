@@ -31,15 +31,11 @@ public class HardDiskSettingsFld extends AbstractSettingsFld
   private JButton[]      diskTypeBtns;
   private FileNameFld[]  fileNameFlds;
   private JButton[]      selectBtns;
-  private JLabel         labelIOAddr;
-  private JComboBox      comboIOAddr;
 
 
   public HardDiskSettingsFld(
 			SettingsFrm settingsFrm,
-			String      propPrefix,
-			int         defaultIOAddress,
-			int...      possibleIOAddresses )
+			String      propPrefix )
   {
     super( settingsFrm, propPrefix );
     this.popupDiskIdx  = -1;
@@ -67,41 +63,6 @@ public class HardDiskSettingsFld extends AbstractSettingsFld
     for( int i = 0; i < DISK_CNT; i++ ) {
       addDiskFlds( i, gbc );
       gbc.gridy++;
-    }
-
-    this.labelIOAddr = null;
-    this.comboIOAddr = null;
-    if( possibleIOAddresses != null ) {
-      if( possibleIOAddresses.length > 0 ) {
-	gbc.fill          = GridBagConstraints.HORIZONTAL;
-	gbc.weightx       = 1.0;
-	gbc.insets.top    = 5;
-	gbc.insets.left   = 5;
-	gbc.insets.right  = 5;
-	gbc.insets.bottom = 5;
-	gbc.gridwidth     = GridBagConstraints.REMAINDER;
-	gbc.gridx         = 0;
-	add( new JSeparator(), gbc );
-	gbc.gridy++;
-
-	this.labelIOAddr = new JLabel( "E/A-Basisadresse:" );
-	gbc.fill      = GridBagConstraints.NONE;
-	gbc.weightx   = 0.0;
-	gbc.gridwidth = 1;
-	add( this.labelIOAddr, gbc );
-
-	this.comboIOAddr = new JComboBox();
-	this.comboIOAddr.setEditable( false );
-	for( int i = 0; i < possibleIOAddresses.length; i++ ) {
-	  this.comboIOAddr.addItem(
-		String.format( "%02Xh", possibleIOAddresses[ i ] ) );
-	}
-	this.comboIOAddr.setSelectedItem(
-		String.format( "%02Xh", defaultIOAddress ) );
-	this.comboIOAddr.addActionListener( this );
-	gbc.gridx++;
-	add( this.comboIOAddr, gbc );
-      }
     }
   }
 
@@ -155,12 +116,6 @@ public class HardDiskSettingsFld extends AbstractSettingsFld
 	    props.setProperty( prefix + "file", "" );
 	  }
 	}
-	if( this.comboIOAddr != null ) {
-	  EmuUtil.setProperty(
-			props,
-			this.propPrefix + "gide.io_address",
-			this.comboIOAddr.getSelectedItem() );
-	}
       }
     }
     catch( NumberFormatException ex ) {
@@ -185,12 +140,6 @@ public class HardDiskSettingsFld extends AbstractSettingsFld
 	if( idx >= 0 ) {
 	  rv = true;
 	  doFileSelect( idx );
-	}
-      }
-      if( !rv ) {
-	if( src == this.comboIOAddr ) {
-	  rv = true;
-	  fireDataChanged();
 	}
       }
       if( !rv && (e instanceof ActionEvent) ) {
@@ -320,12 +269,6 @@ public class HardDiskSettingsFld extends AbstractSettingsFld
 	  catch( IllegalArgumentException ex ) {}
 	}
       }
-    }
-    if( this.comboIOAddr != null ) {
-      this.comboIOAddr.setSelectedItem(
-			EmuUtil.getProperty(
-				props,
-				this.propPrefix + "gide.io_address" ) );
     }
     updFieldsEnabled();
   }
@@ -521,14 +464,6 @@ public class HardDiskSettingsFld extends AbstractSettingsFld
       if( state ) {
 	if( this.diskTypes[ i ] == null ) {
 	  state = false;
-	}
-      }
-      if( i == 0 ) {
-	if( this.labelIOAddr != null ) {
-	  this.labelIOAddr.setEnabled( state );
-	}
-	if( this.comboIOAddr != null ) {
-	  this.comboIOAddr.setEnabled( state );
 	}
       }
       this.fileNameFlds[ i ].setEnabled( state );

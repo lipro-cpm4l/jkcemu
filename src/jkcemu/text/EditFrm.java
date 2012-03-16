@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -1203,15 +1203,18 @@ public class EditFrm extends BasicFrm implements
     boolean  wasSaved = false;
     EditText editText = getSelectedEditText();
     if( editText != null ) {
+      askFileName |= editText.getAskFileNameOnSave();
       try {
         if( SaveTextDlg.saveFile( editText, this.editTexts, askFileName ) ) {
           Component tabComponent = editText.getTabComponent();
           if( tabComponent != null ) {
             int i = tabbedPane.indexOfComponent( tabComponent );
-            if( i >= 0 )
+            if( i >= 0 ) {
               tabbedPane.setTitleAt( i, editText.getName() );
+	    }
           }
           wasSaved = true;
+	  editText.setAskFileNameOnSave( false );
           this.labelStatus.setText( "Datei gespeichert" );
         }
       }
@@ -1291,12 +1294,14 @@ public class EditFrm extends BasicFrm implements
 	  if( value.equals( options[ 0 ] ) ) {
 	    rv = true;
 	    if( textChanged ) {
-	      if( !doFileSave( false ) )
+	      if( !doFileSave( false ) ) {
 		rv = false;
+	      }
 	    }
 	    if( rv && prjChanged ) {
-	      if( !editText.saveProject( this, false ) )
+	      if( !editText.saveProject( this, false ) ) {
 		rv = false;
+	      }
 	    }
 	  }
 	  else if( value.equals( options[ 1 ] ) ) {
@@ -1309,8 +1314,9 @@ public class EditFrm extends BasicFrm implements
       if( rv ) {
 	PrgThread prgThread = this.prgThread;
 	if( prgThread != null ) {
-	  if( editText == prgThread.getEditText() )
+	  if( editText == prgThread.getEditText() ) {
 	    prgThread.fireStop();
+	  }
 	}
 	Component tabComponent = editText.getTabComponent();
 	if( tabComponent != null ) {
@@ -1336,8 +1342,9 @@ public class EditFrm extends BasicFrm implements
       }
     } else {
       rv = super.doClose();
-      if( rv )
+      if( rv ) {
         this.screenFrm.childFrameClosed( this );
+      }
     }
     return rv;
   }

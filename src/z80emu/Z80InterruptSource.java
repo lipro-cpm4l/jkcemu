@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -18,6 +18,6 @@ public interface Z80InterruptSource
   public void    interruptFinish();
   public boolean isInterruptAccepted();
   public boolean isInterruptRequested();
-  public void    reset();
+  public void    reset( boolean powerOn );
 }
 

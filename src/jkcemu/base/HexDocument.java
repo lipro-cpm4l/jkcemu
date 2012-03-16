@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -52,8 +52,9 @@ public class HexDocument extends PlainDocument
     Integer rv = null;
     String  s  = this.textComp.getText();
     if( s != null ) {
-      if( s.length() > 0 )
+      if( !s.isEmpty() ) {
 	rv = new Integer( parseHex( s ) );
+      }
     }
     return rv;
   }

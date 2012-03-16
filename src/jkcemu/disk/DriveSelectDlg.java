@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -52,7 +52,7 @@ public class DriveSelectDlg extends BasicDlg
 					0, 0 );
 
     this.comboDrive = new JComboBox();
-    if( File.separatorChar == '/' ) {
+    if( Main.isUnixLikeOS() ) {
       add( new JLabel( "Ger\u00E4tedatei:" ), gbc );
       this.comboDrive.setEditable( true );
       this.comboDrive.addItem( "/dev/fd0" );
@@ -138,7 +138,7 @@ public class DriveSelectDlg extends BasicDlg
 	  if( s != null ) {
 	    int len = s.length();
 	    if( len > 0 ) {
-	      if( File.separatorChar == '/' ) {
+	      if( Main.isUnixLikeOS() ) {
 		this.driveFileName = s;
 	      } else {
 		this.driveFileName = "\\\\.\\" + s;

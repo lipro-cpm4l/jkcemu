@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
+import jkcemu.emusys.etc.SC2KeyboardFld;
 import z80emu.*;
 
 
@@ -23,23 +24,24 @@ public class SC2 extends EmuSys implements
   private static byte[] rom0000 = null;
   private static byte[] rom2000 = null;
 
-  private byte[]  ram;
-  private int[]   keyMatrixValues;
-  private int[]   digitStatus;
-  private int[]   digitValues;
-  private int     beepStatus;
-  private int     ledChessStatus;
-  private int     ledMateStatus;
-  private boolean ledChessValue;
-  private boolean ledMateValue;
-  private boolean audioOutPhase;
-  private long    curBeepCheckTStates;
-  private long    curBeepFreqTStates;
-  private long    curDisplayTStates;
-  private long    displayCheckTStates;
-  private long    beepCheckTStates;
-  private long    beepFreqTStates;
-  private Z80PIO  pio;
+  private byte[]         ram;
+  private int[]          digitStatus;
+  private int[]          digitValues;
+  private int[]          keyboardMatrix;
+  private SC2KeyboardFld keyboardFld;
+  private int            beepStatus;
+  private int            ledChessStatus;
+  private int            ledMateStatus;
+  private boolean        ledChessValue;
+  private boolean        ledMateValue;
+  private boolean        audioOutPhase;
+  private long           curBeepCheckTStates;
+  private long           curBeepFreqTStates;
+  private long           curDisplayTStates;
+  private long           displayCheckTStates;
+  private long           beepCheckTStates;
+  private long           beepFreqTStates;
+  private Z80PIO         pio;
 
 
   public SC2( EmuThread emuThread, Properties props )
@@ -51,10 +53,11 @@ public class SC2 extends EmuSys implements
     if( rom2000 == null ) {
       rom2000 = readResource( "/rom/sc2/sc2_2000.bin" );
     }
-    this.ram             = new byte[ 0x0400 ];
-    this.keyMatrixValues = new int[ 4 ];
-    this.digitStatus     = new int[ 4 ];
-    this.digitValues     = new int[ 4 ];
+    this.ram            = new byte[ 0x0400 ];
+    this.keyboardFld    = null;
+    this.keyboardMatrix = new int[ 4 ];
+    this.digitStatus    = new int[ 4 ];
+    this.digitValues    = new int[ 4 ];
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.pio   = new Z80PIO( "PIO" );
@@ -62,7 +65,6 @@ public class SC2 extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
-    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged( cpu );
   }
 
@@ -70,6 +72,35 @@ public class SC2 extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 2458;		// eigentlich 2,4576 MHz
+  }
+
+
+  public boolean getLEDChessValue()
+  {
+    return this.ledChessValue;
+  }
+
+
+  public boolean getLEDMateValue()
+  {
+    return this.ledMateValue;
+  }
+
+
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    synchronized( this.keyboardMatrix ) {
+      int n = Math.min( this.keyboardMatrix.length, kbMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	this.keyboardMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.keyboardMatrix.length ) {
+	this.keyboardMatrix[ i ] = 0;
+	i++;
+      }
+    }
   }
 
 
@@ -93,7 +124,8 @@ public class SC2 extends EmuSys implements
     if( this.displayCheckTStates > 0 ) {
       this.curDisplayTStates += tStates;
       if( this.curDisplayTStates > this.displayCheckTStates ) {
-	boolean dirty = false;
+	boolean displayDirty = false;
+	boolean ledDirty     = false;
 	synchronized( this.digitValues ) {
 	  for( int i = 0; i < this.digitValues.length; i++ ) {
 	    int status = this.digitStatus[ i ];
@@ -103,7 +135,7 @@ public class SC2 extends EmuSys implements
 	      } else {
 		if( this.digitValues[ i ] != 0 ) {
 		  this.digitValues[ i ] = 0;
-		  dirty = true;
+		  displayDirty = true;
 		}
 	      }
 	    }
@@ -114,7 +146,7 @@ public class SC2 extends EmuSys implements
 	    } else {
 	      if( this.ledChessValue ) {
 		this.ledChessValue = false;
-		dirty = true;
+		ledDirty = true;
 	      }
 	    }
 	  }
@@ -124,13 +156,16 @@ public class SC2 extends EmuSys implements
 	    } else {
 	      if( this.ledMateValue ) {
 		this.ledMateValue = false;
-		dirty = true;
+		ledDirty = true;
 	      }
 	    }
 	  }
 	}
-	if( dirty ) {
+	if( displayDirty || ledDirty ) {
 	  this.screenFrm.setScreenDirty( true );
+	}
+	if( ledDirty && (this.keyboardFld != null) ) {
+	  this.keyboardFld.fireRepaint();
 	}
 	this.curDisplayTStates = 0;
       }
@@ -162,6 +197,14 @@ public class SC2 extends EmuSys implements
   public boolean canApplySettings( Properties props )
   {
     return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "SC2" );
+  }
+
+
+  @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new SC2KeyboardFld( this.screenFrm, this );
+    return this.keyboardFld;
   }
 
 
@@ -324,20 +367,23 @@ public class SC2 extends EmuSys implements
   {
     boolean rv = false;
     if( keyCode == KeyEvent.VK_BACK_SPACE ) {
-      synchronized( this.keyMatrixValues ) {
-	this.keyMatrixValues[ 0 ] |= 0x40;
+      synchronized( this.keyboardMatrix ) {
+	this.keyboardMatrix[ 0 ] |= 0x40;
         rv = true;
       }
     }
     else if( keyCode == KeyEvent.VK_ENTER ) {
-      synchronized( this.keyMatrixValues ) {
-	this.keyMatrixValues[ 0 ] |= 0x80;
+      synchronized( this.keyboardMatrix ) {
+	this.keyboardMatrix[ 0 ] |= 0x80;
         rv = true;
       }
     }
     else if( keyCode == KeyEvent.VK_ESCAPE ) {
       this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
       rv = true;
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -346,9 +392,10 @@ public class SC2 extends EmuSys implements
   @Override
   public void keyReleased()
   {
-    synchronized( this.keyMatrixValues ) {
-      Arrays.fill( this.keyMatrixValues, 0 );
+    synchronized( this.keyboardMatrix ) {
+      Arrays.fill( this.keyboardMatrix, 0 );
     }
+    updKeyboardFld();
   }
 
 
@@ -356,88 +403,91 @@ public class SC2 extends EmuSys implements
   public boolean keyTyped( char keyChar )
   {
     boolean rv = false;
-    synchronized( this.keyMatrixValues ) {
+    synchronized( this.keyboardMatrix ) {
       switch( Character.toUpperCase( keyChar ) ) {
 	case '1':
 	case 'A':
-	  this.keyMatrixValues[ 1 ] |= 0x10;
+	  this.keyboardMatrix[ 1 ] |= 0x10;
 	  rv = true;
 	  break;
 
 	case '2':
 	case 'B':
-	  this.keyMatrixValues[ 1 ] |= 0x20;
+	  this.keyboardMatrix[ 1 ] |= 0x20;
 	  rv = true;
 	  break;
 
 	case '3':
 	case 'C':
-	  this.keyMatrixValues[ 1 ] |= 0x40;
+	  this.keyboardMatrix[ 1 ] |= 0x40;
 	  rv = true;
 	  break;
 
 	case '4':
 	case 'D':
-	  this.keyMatrixValues[ 1 ] |= 0x80;
+	  this.keyboardMatrix[ 1 ] |= 0x80;
 	  rv = true;
 	  break;
 
 	case '5':
 	case 'E':
-	  this.keyMatrixValues[ 2 ] |= 0x10;
+	  this.keyboardMatrix[ 2 ] |= 0x10;
 	  rv = true;
 	  break;
 
 	case '6':
 	case 'F':
-	  this.keyMatrixValues[ 2 ] |= 0x20;
+	  this.keyboardMatrix[ 2 ] |= 0x20;
 	  rv = true;
 	  break;
 
 	case '7':
 	case 'G':
-	  this.keyMatrixValues[ 2 ] |= 0x40;
+	  this.keyboardMatrix[ 2 ] |= 0x40;
 	  rv = true;
 	  break;
 
 	case '8':
 	case 'H':
-	  this.keyMatrixValues[ 2 ] |= 0x80;
+	  this.keyboardMatrix[ 2 ] |= 0x80;
 	  rv = true;
 	  break;
 
 	case 'K':
 	case '+':
-	  this.keyMatrixValues[ 3 ] |= 0x10;
+	  this.keyboardMatrix[ 3 ] |= 0x10;
 	  rv = true;
 	  break;
 
 	case 'L':
-	  this.keyMatrixValues[ 0 ] |= 0x40;
+	  this.keyboardMatrix[ 0 ] |= 0x40;
 	  rv = true;
 	  break;
 
 	case 'P':
-	  this.keyMatrixValues[ 3 ] |= 0x80;
+	  this.keyboardMatrix[ 3 ] |= 0x80;
 	  rv = true;
 	  break;
 
 	case 'Q':
-	  this.keyMatrixValues[ 0 ] |= 0x80;
+	  this.keyboardMatrix[ 0 ] |= 0x80;
 	  rv = true;
 	  break;
 
 	case 'S':
 	case 'W':
-	  this.keyMatrixValues[ 3 ] |= 0x20;
+	  this.keyboardMatrix[ 3 ] |= 0x20;
 	  rv = true;
 	  break;
 
 	case 'T':
-	  this.keyMatrixValues[ 0 ] |= 0x20;
+	  this.keyboardMatrix[ 0 ] |= 0x20;
 	  rv = true;
 	  break;
       }
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -499,11 +549,11 @@ public class SC2 extends EmuSys implements
         case 1:
 	  {
 	    int v = this.pio.fetchOutValuePortB( false ) & 0x0F;
-	    synchronized( this.keyMatrixValues ) {
+	    synchronized( this.keyboardMatrix ) {
 	      int m = 0x01;
-	      for( int i = 0; i < this.keyMatrixValues.length; i++ ) {
+	      for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
 		if( (v & m) != 0 ) {
-		  v |= (this.keyMatrixValues[ i ] & 0xF0);
+		  v |= (this.keyboardMatrix[ i ] & 0xF0);
 		}
 		m <<= 1;
 	      }
@@ -586,6 +636,13 @@ public class SC2 extends EmuSys implements
 
 
   @Override
+  public boolean supportsKeyboardFld()
+  {
+    return true;
+  }
+
+
+  @Override
   public void writeIOByte( int port, int value )
   {
     if( (port & 0x08) == 0 ) {
@@ -661,11 +718,12 @@ public class SC2 extends EmuSys implements
 
   private void updDisplay()
   {
-    int     portAValue = this.pio.fetchOutValuePortA( false );
-    int     digitValue = toDigitValue( portAValue & 0x7F );
-    int     colValue   = this.pio.fetchOutValuePortB( false );
-    boolean ledValue   = ((portAValue & 0x80) != 0);
-    boolean dirty      = false;
+    int     portAValue   = this.pio.fetchOutValuePortA( false );
+    int     digitValue   = toDigitValue( portAValue & 0x7F );
+    int     colValue     = this.pio.fetchOutValuePortB( false );
+    boolean ledValue     = ((portAValue & 0x80) != 0);
+    boolean displayDirty = false;
+    boolean ledDirty     = false;
     synchronized( this.digitValues ) {
       int m = 0x01;
       for( int i = 0; i < this.digitValues.length; i++ ) {
@@ -673,7 +731,7 @@ public class SC2 extends EmuSys implements
 	  if( digitValue != 0 ) {
 	    if( digitValue != this.digitValues[ i ] ) {
 	      this.digitValues[ i ] = digitValue;
-	      dirty                 = true;
+	      displayDirty          = true;
 	    }
 	    this.digitStatus[ i ] = 4;
 	  } else {
@@ -687,7 +745,7 @@ public class SC2 extends EmuSys implements
       if( ledValue && ((colValue & 0x01) == 0) ) {
 	if( ledValue != this.ledChessValue ) {
 	  this.ledChessValue = ledValue;
-	  dirty              = true;
+	  ledDirty           = true;
 	}
 	this.ledChessStatus = 4;
       } else {
@@ -698,7 +756,7 @@ public class SC2 extends EmuSys implements
       if( ledValue && ((colValue & 0x02) == 0) ) {
 	if( ledValue != this.ledMateValue ) {
 	  this.ledMateValue = ledValue;
-	  dirty             = true;
+	  ledDirty          = true;
 	}
 	this.ledMateStatus = 4;
       } else {
@@ -707,9 +765,19 @@ public class SC2 extends EmuSys implements
 	}
       }
     }
-    if( dirty ) {
+    if( displayDirty || ledDirty ) {
       this.screenFrm.setScreenDirty( true );
     }
+    if( ledDirty && (this.keyboardFld != null) ) {
+      this.keyboardFld.fireRepaint();
+    }
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.keyboardMatrix );
   }
 }
 

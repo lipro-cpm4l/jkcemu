@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,6 +19,7 @@ public class ImgFld extends Component implements Printable
 
   private int       defaultWidth;
   private int       defaultHeight;
+  private double    curScale;
   private double    scale;
   private Rotation  rotation;
   private Image     image;
@@ -31,6 +32,7 @@ public class ImgFld extends Component implements Printable
     this.defaultHeight = defaultHeight;
     this.rotation      = Rotation.NONE;
     this.scale         = 1.0;
+    this.curScale      = this.scale;
     this.image         = null;
     this.vpSize        = null;
   }
@@ -38,26 +40,34 @@ public class ImgFld extends Component implements Printable
 
   public void drawImage( Graphics g, int x, int y, int w, int h )
   {
-    if( (this.rotation != Rotation.NONE)&& (g instanceof Graphics2D) ) {
-      Graphics2D g2d = (Graphics2D) g;
-      switch( this.rotation ) {
-	case LEFT:
-	  x = -w;
-	  g2d.rotate( -(Math.PI / 2.0) );
-	  break;
+    if( this.image != null ) {
+      if( (this.rotation != Rotation.NONE)&& (g instanceof Graphics2D) ) {
+	Graphics2D g2d = (Graphics2D) g;
+	switch( this.rotation ) {
+	  case LEFT:
+	    x = -w;
+	    g2d.rotate( -(Math.PI / 2.0) );
+	    break;
 
-	case RIGHT:
-	  y = -h;
-	  g2d.rotate( Math.PI / 2.0 );
-	  break;
+	  case RIGHT:
+	    y = -h;
+	    g2d.rotate( Math.PI / 2.0 );
+	    break;
 
-	case DOWN:
-	  x = -w;
-	  y = -h;
-	  g2d.rotate( Math.PI );
+	  case DOWN:
+	    x = -w;
+	    y = -h;
+	    g2d.rotate( Math.PI );
+	}
       }
+      g.drawImage( this.image, x, y, w, h, this );
     }
-    g.drawImage( image, x, y, w, h, this );
+  }
+
+
+  public double getCurScale()
+  {
+    return this.curScale;
   }
 
 
@@ -191,8 +201,11 @@ public class ImgFld extends Component implements Printable
 	}
       }
       if( scale > 0.0 ) {
-	w = (int) Math.round( (double) w * scale );
-	h = (int) Math.round( (double) h * scale );
+	w             = (int) Math.round( (double) w * scale );
+	h             = (int) Math.round( (double) h * scale );
+	this.curScale = scale;
+      } else {
+	this.curScale = 1.0;
       }
       drawImage( g, 0, 0, w, h );
     }

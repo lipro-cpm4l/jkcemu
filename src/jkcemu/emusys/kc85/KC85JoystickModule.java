@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -121,9 +121,9 @@ public abstract class KC85JoystickModule
 
 
   @Override
-  public void reset()
+  public void reset( boolean powerOn )
   {
-    this.pio.reset();
+    this.pio.reset( powerOn );
   }
 
 
@@ -164,13 +164,6 @@ public abstract class KC85JoystickModule
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public void reset( EmuThread.ResetLevel resetLevel )
-  {
-    reset();
   }
 
 

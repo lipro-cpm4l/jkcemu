@@ -19,6 +19,9 @@ import jkcemu.base.*;
 public class PCMSettingsFld extends AbstractSettingsFld
 {
   private JCheckBox          btnAutoLoadBDOS;
+  private JRadioButton       btnRF64x16;
+  private JRadioButton       btnFDC64x16;
+  private JRadioButton       btnFDC80x24;
   private ROMFileSettingsFld fldAltROM;
   private ROMFileSettingsFld fldAltFont;
 
@@ -35,14 +38,44 @@ public class PCMSettingsFld extends AbstractSettingsFld
 					0.0, 0.0,
 					GridBagConstraints.WEST,
 					GridBagConstraints.NONE,
-					new Insets( 5, 5, 5, 5 ),
+					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
+
+    ButtonGroup grpSys = new ButtonGroup();
+
+    this.btnRF64x16 = new JRadioButton(
+				"RAM-Floppy-System, 64x16 Zeichen",
+				true );
+    grpSys.add( this.btnRF64x16 );
+    this.btnRF64x16.addActionListener( this );
+    add( this.btnRF64x16, gbc );
 
     this.btnAutoLoadBDOS = new JCheckBox(
 				"Bei RESET automatisch BDOS laden",
 				true );
     this.btnAutoLoadBDOS.addActionListener( this );
+    gbc.insets.top  = 0;
+    gbc.insets.left = 50;
+    gbc.gridy++;
     add( this.btnAutoLoadBDOS, gbc );
+
+    this.btnFDC64x16 = new JRadioButton(
+				"Floppy-Disk-System, 64x16 Zeichen",
+				false );
+    grpSys.add( this.btnFDC64x16 );
+    this.btnFDC64x16.addActionListener( this );
+    gbc.insets.left = 5;
+    gbc.gridy++;
+    add( this.btnFDC64x16, gbc );
+
+    this.btnFDC80x24 = new JRadioButton(
+				"Floppy-Disk-System, 80x24 Zeichen",
+				false );
+    grpSys.add( this.btnFDC80x24 );
+    this.btnFDC80x24.addActionListener( this );
+    gbc.insets.bottom = 5;
+    gbc.gridy++;
+    add( this.btnFDC80x24, gbc );
 
     gbc.fill       = GridBagConstraints.HORIZONTAL;
     gbc.weightx    = 1.0;
@@ -73,6 +106,16 @@ public class PCMSettingsFld extends AbstractSettingsFld
 			Properties props,
 			boolean    selected ) throws UserInputException
   {
+    boolean fdc64x16 = this.btnFDC64x16.isSelected();
+    boolean fdc80x24 = this.btnFDC80x24.isSelected();
+    EmuUtil.setProperty(
+		props,
+		this.propPrefix + "floppydisk.enabled",
+		fdc64x16 || fdc80x24 );
+    EmuUtil.setProperty(
+		props,
+		this.propPrefix + "graphic",
+		fdc80x24 ? "80x24" : "64x16" );
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + "auto_load_bdos",
@@ -88,7 +131,12 @@ public class PCMSettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( src instanceof AbstractButton ) {
+      if( src instanceof JRadioButton ) {
+	updAutoLoadBDOSFieldEnabled();
+	fireDataChanged();
+	rv = true;
+      }
+      else if( src instanceof AbstractButton ) {
 	fireDataChanged();
 	rv = true;
       }
@@ -100,6 +148,22 @@ public class PCMSettingsFld extends AbstractSettingsFld
   @Override
   public void updFields( Properties props )
   {
+    if( EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "floppydisk.enabled",
+			false ) )
+    {
+      if( EmuUtil.getProperty(
+			props,
+			this.propPrefix + "graphic" ).equals( "80x24" ) )
+      {
+	this.btnFDC80x24.setSelected( true );
+      } else {
+	this.btnFDC64x16.setSelected( true );
+      }
+    } else {
+      this.btnRF64x16.setSelected( true );
+    }
     this.btnAutoLoadBDOS.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
@@ -107,6 +171,15 @@ public class PCMSettingsFld extends AbstractSettingsFld
 				true ) );
     this.fldAltROM.updFields( props );
     this.fldAltFont.updFields( props );
+    updAutoLoadBDOSFieldEnabled();
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void updAutoLoadBDOSFieldEnabled()
+  {
+    this.btnAutoLoadBDOS.setEnabled( this.btnRF64x16.isSelected() );
   }
 }
 

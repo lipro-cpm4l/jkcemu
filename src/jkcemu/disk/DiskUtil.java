@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,18 +17,23 @@ import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileSystemView;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 
 
 public class DiskUtil
 {
-  public static final String[] anadiskFileExt   = { ".dump" };
+  public static final String[] anaDiskFileExt   = { ".dump" };
   public static final String[] copyQMFileExt    = { ".cqm", ".qm" };
-  public static final String[] telediskFileExt  = { ".td0" };
+  public static final String[] dskFileExt       = { ".dsk" };
+  public static final String[] imageDiskFileExt = { ".imd" };
+  public static final String[] teleDiskFileExt  = { ".td0" };
   public static final String[] plainDiskFileExt = { ".img", ".image", ".raw" };
 
-  public static final String[] gzAnadiskFileExt   = { ".dump.gz" };
+  public static final String[] gzAnaDiskFileExt   = { ".dump.gz" };
   public static final String[] gzCopyQMFileExt    = { ".cqm.gz", ".qm.gz" };
-  public static final String[] gzTelediskFileExt  = { ".td0.gz" };
+  public static final String[] gzDskFileExt       = { ".dsk.gz" };
+  public static final String[] gzImageDiskFileExt = { ".imd.gz" };
+  public static final String[] gzTeleDiskFileExt  = { ".td0.gz" };
   public static final String[] gzPlainDiskFileExt = {
 						".img.gz",
 						".image.gz",
@@ -70,7 +75,7 @@ public class DiskUtil
     if( s != null ) {
       s = s.toLowerCase();
       for( int i = 0; i < extensions.length; i++ ) {
-	if( EmuUtil.endsWith( s, extensions[ i ] ) ) {
+	if( TextUtil.endsWith( s, extensions[ i ] ) ) {
 	  rv = true;
 	  break;
 	}
@@ -175,16 +180,6 @@ public class DiskUtil
   }
 
 
-  public static java.util.List<FileEntry> readDirFromPlainDisk(
-					DeviceIO.RandomAccessDevice rad,
-					RandomAccessFile            raf )
-  {
-    java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
-    readDirBlocks( dirBlocks, null, rad, raf, null );
-    return extractDirectory( dirBlocks );
-  }
-
-
   /*
    * Diese Methode testet die Kapazitaet der Diskette,
    * die in dem mit raf geoeffneten Laufwerk liegt.
@@ -210,11 +205,47 @@ public class DiskUtil
   }
 
 
+  public static AbstractFloppyDisk readNonPlainDiskFile(
+					Frame owner,
+					File  file ) throws IOException
+  {
+    AbstractFloppyDisk disk = null;
+    if( file != null ) {
+      String fName = file.getName();
+      if( fName != null ) {
+	fName = fName.toLowerCase();
+	if( TextUtil.endsWith( fName, DiskUtil.anaDiskFileExt )
+	    || TextUtil.endsWith( fName, DiskUtil.gzAnaDiskFileExt ) )
+	{
+	  disk = AnaDisk.readFile( owner, file );
+	}
+      }
+      if( disk == null ) {
+	byte[] header = EmuUtil.readFile( file, 0x100 );
+	if( header != null ) {
+	  if( CopyQMDisk.isCopyQMFileHeader( header ) ) {
+	    disk = CopyQMDisk.readFile( owner, file );
+	  }
+	  else if( CPCDisk.isCPCDiskFileHeader( header ) ) {
+	    disk = CPCDisk.readFile( owner, file );
+	  }
+	  else if( ImageDisk.isImageDiskFileHeader( header ) ) {
+	    disk = ImageDisk.readFile( owner, file );
+	  }
+	  else if( TeleDisk.isTeleDiskFileHeader( header ) ) {
+	    disk = TeleDisk.readFile( owner, file );
+	  }
+	}
+      }
+    }
+    return disk;
+  }
+
+
   public static void unpackDisk(
 			Window             owner,
 			File               diskFile,
-			AbstractFloppyDisk disk,
-			String             fileDesc )
+			AbstractFloppyDisk disk )
   {
     // sinnvolle Vorbelegung ermitteln
     java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
@@ -247,16 +278,20 @@ public class DiskUtil
       int sysTracks = dlg.getSystemTracks();
       int blockSize = dlg.getBlockSize();
       if( (sysTracks >= 0) && (blockSize > 0) ) {
+	String fileFmtText = disk.getFileFormatText();
+	if( fileFmtText == null ) {
+	  fileFmtText = "Diskettenabbilddatei";
+	}
 	File outDir = EmuUtil.askForOutputDir(
 					owner,
 					diskFile,
 					"Entpacken nach:",
-					fileDesc + " entpacken" );
+					fileFmtText + " entpacken" );
 	if( outDir != null ) {
 	  DiskUnpacker.unpackDisk(
 			owner,
 			disk,
-			fileDesc,
+			fileFmtText,
 			outDir,
 			sysTracks,
 			blockSize,
@@ -734,19 +769,19 @@ public class DiskUtil
 	if( outDir != null ) {
 	  AbstractFloppyDisk disk = null;
 	  if( rad != null ) {
-	    disk = PlainFileFloppyDisk.createForDrive(
-						owner,
-						diskFileName,
-						rad,
-						true,
-						fmt );
+	    disk = PlainDisk.createForDrive(
+					owner,
+					diskFileName,
+					rad,
+					true,
+					fmt );
 	  } else if( raf != null ) {
-	    disk = PlainFileFloppyDisk.createForFile(
-						owner,
-						diskFileName,
-						raf,
-						true,
-						fmt );
+	    disk = PlainDisk.createForFile(
+					owner,
+					diskFileName,
+					raf,
+					true,
+					fmt );
 	  }
 	  if( disk != null ) {
 	    DiskUnpacker.unpackDisk(

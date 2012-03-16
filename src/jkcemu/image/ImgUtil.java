@@ -41,13 +41,44 @@ public class ImgUtil
   public static void ensureImageLoaded( Component owner, Image image )
   {
     if( image != null ) {
-      MediaTracker mt = new MediaTracker( owner );
-      mt.addImage( image, 0 );
-      try {
-	mt.waitForID( 0 );
+      boolean done  = false;
+      Toolkit tk    = owner.getToolkit();
+      if( tk != null ) {
+	int flags = tk.checkImage( image, -1, -1, owner );
+	if( (flags & (ImageObserver.ABORT
+			| ImageObserver.ALLBITS
+			| ImageObserver.ERROR
+			| ImageObserver.FRAMEBITS)) != 0 )
+	{
+	  done = true;
+	}
       }
-      catch( InterruptedException ex ) {}
+      if( !done ) {
+	MediaTracker mt = new MediaTracker( owner );
+	mt.addImage( image, 0 );
+	try {
+	  mt.waitForID( 0 );
+	}
+	catch( InterruptedException ex ) {}
+      }
     }
+  }
+
+
+  public static boolean hasAlpha( BufferedImage image )
+  {
+    boolean rv = false;
+    if( image != null ) {
+      int t = image.getType();
+      if( (t == BufferedImage.TYPE_4BYTE_ABGR)
+	  || (t == BufferedImage.TYPE_4BYTE_ABGR_PRE)
+	  || (t == BufferedImage.TYPE_INT_ARGB)
+	  || (t == BufferedImage.TYPE_INT_ARGB_PRE) )
+      {
+	rv = true;
+      }
+    }
+    return rv;
   }
 
 
@@ -65,12 +96,7 @@ public class ImgUtil
        * Anderenfalls wird ein neues BufferedImage angelegt.
        */
       if( image instanceof BufferedImage ) {
-	int t = ((BufferedImage) image).getType();
-	if( (t == BufferedImage.TYPE_4BYTE_ABGR)
-	    || (t == BufferedImage.TYPE_4BYTE_ABGR_PRE)
-	    || (t == BufferedImage.TYPE_INT_ARGB)
-	    || (t == BufferedImage.TYPE_INT_ARGB_PRE) )
-	{
+	if( hasAlpha( (BufferedImage) image ) ) {
 	  retImg = (BufferedImage) image;
 	} else {
 	  ColorModel cm = ((BufferedImage) image).getColorModel();
@@ -84,19 +110,7 @@ public class ImgUtil
 	}
       }
       if( retImg == null ) {
-	ensureImageLoaded( owner, image );
-	int w = image.getWidth( owner );
-	int h = image.getHeight( owner );
-	if( (w > 0) && (h > 0) ) {
-	  retImg = new BufferedImage( w, h, BufferedImage.TYPE_4BYTE_ABGR );
-	  Graphics g = retImg.createGraphics();
-	  if( g != null ) {
-	    g.drawImage( image, 0, 0, owner );
-	    g.dispose();
-	  } else {
-	    retImg = null;
-	  }
-	}
+	retImg = createBufferedImage( owner, image );
       }
       if( retImg != null ) {
 	int w = retImg.getWidth();
@@ -182,7 +196,7 @@ public class ImgUtil
 	      formatOK = ImageIO.write( image, usedFmt, out );
 	      out.close();
 	      out = null;
-	      Main.setLastFile( file, "screen" );
+	      Main.setLastFile( file, "image" );
 	    }
 	    finally {
 	      if( out != null ) {
@@ -255,6 +269,30 @@ public class ImgUtil
       }
     }
     return rv;
+  }
+
+
+  public static BufferedImage createBufferedImage(
+					Component owner,
+					Image     image )
+  {
+    BufferedImage retImg = null;
+    if( image != null ) {
+      ensureImageLoaded( owner, image );
+      int w = image.getWidth( owner );
+      int h = image.getHeight( owner );
+      if( (w > 0) && (h > 0) ) {
+	retImg = new BufferedImage( w, h, BufferedImage.TYPE_4BYTE_ABGR );
+	Graphics g = retImg.createGraphics();
+	if( g != null ) {
+	  g.drawImage( image, 0, 0, owner );
+	  g.dispose();
+	} else {
+	  retImg = null;
+	}
+      }
+    }
+    return retImg;
   }
 }
 

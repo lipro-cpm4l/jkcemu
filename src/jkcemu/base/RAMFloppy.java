@@ -13,6 +13,7 @@ import java.io.*;
 import java.lang.*;
 import java.util.*;
 import jkcemu.Main;
+import jkcemu.text.TextUtil;
 
 
 public class RAMFloppy
@@ -77,7 +78,7 @@ public class RAMFloppy
     }
     if( rf != null ) {
       if( state ) {
-	rv = EmuUtil.equals( sysName, rf.sysName )
+	rv = TextUtil.equals( sysName, rf.sysName )
 		&& (rfType == rf.rfType)
 		&& (size == rf.size);
       }
@@ -152,10 +153,10 @@ public class RAMFloppy
 		String     infoText,
 		String     fileName )
   {
-    if( !EmuUtil.equals( sysName, this.sysName )
+    if( !TextUtil.equals( sysName, this.sysName )
 	|| (rfType != this.rfType)
 	|| (size != this.size)
-	|| !EmuUtil.equals( infoText, this.infoText ) )
+	|| !TextUtil.equals( infoText, this.infoText ) )
     {
       this.rfType      = rfType;
       this.size        = size;
@@ -173,7 +174,7 @@ public class RAMFloppy
 	if( !fileName.isEmpty() ) {
 	  boolean state = true;
 	  if( this.file != null ) {
-	    if( EmuUtil.equals( fileName, this.file.getPath() ) ) {
+	    if( TextUtil.equals( fileName, this.file.getPath() ) ) {
 	      state = false;
 	    }
 	  }

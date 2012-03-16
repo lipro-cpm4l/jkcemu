@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,6 +32,13 @@ public class M011 extends AbstractKC85Module
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void clearRAM()
+  {
+    Arrays.fill( this.ram, (byte) 0 );
+  }
+
+
+  @Override
   public String getModuleName()
   {
     return "M011";
@@ -56,14 +63,6 @@ public class M011 extends AbstractKC85Module
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public void reset( EmuThread.ResetLevel resetLevel )
-  {
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON )
-      Arrays.fill( this.ram, (byte) 0 );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,6 +21,7 @@ import javax.swing.event.*;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.*;
+import jkcemu.text.TextUtil;
 
 
 public class FloppyDiskStationFrm
@@ -408,6 +409,8 @@ public class FloppyDiskStationFrm
 	Set<FloppyDiskInfo> disks = new TreeSet<FloppyDiskInfo>();
 	addFloppyDiskInfo( disks, A5105.getAvailableFloppyDisks() );
 	addFloppyDiskInfo( disks, KC85.getAvailableFloppyDisks() );
+	addFloppyDiskInfo( disks, KCcompact.getAvailableFloppyDisks() );
+	addFloppyDiskInfo( disks, PCM.getAvailableFloppyDisks() );
 	addFloppyDiskInfo( disks, Z1013.getAvailableFloppyDisks() );
 	addFloppyDiskInfo( disks, Z9001.getAvailableFloppyDisks() );
 	int n = disks.size();
@@ -488,7 +491,11 @@ public class FloppyDiskStationFrm
 	  }
 	  else if( cmd.equals( "file.anadisk.new" ) ) {
 	    rv = true;
-	    doFileAnadiskNew();
+	    doFileAnaDiskNew();
+	  }
+	  else if( cmd.equals( "file.cpcdsk.new" ) ) {
+	    rv = true;
+	    doFileCPCDskNew();
 	  }
 	  else if( cmd.equals( "file.plain.new" ) ) {
 	    rv = true;
@@ -596,7 +603,7 @@ public class FloppyDiskStationFrm
 					this,
 					"Diskette exportieren",
 					preSel,
-					EmuUtil.getAnadiskFileFilter() );
+					EmuUtil.getAnaDiskFileFilter() );
 		  if( file != null ) {
 		    OutputStream out = null;
 		    InputStream  in  = null;
@@ -625,7 +632,14 @@ public class FloppyDiskStationFrm
 		      EmuUtil.doClose( is );
 		    }
 		    Main.setLastFile( file, "disk" );
-		    BasicDlg.showInfoDlg( this, "Export fertig" );
+		    BasicDlg.showInfoDlg(
+			this,
+			"Die Datei wurde im AnaDisk-Format"
+				+ " exportiert.\n"
+				+ "Bei Bedarf k\u00F6nnen Sie diese nun"
+				+ " mit dem JKCEMU Dateikonverter\n"
+				+ "in ein anderes Format umwandeln.",
+			"Export fertig" );
 		  }
 		}
 	      }
@@ -689,9 +703,11 @@ public class FloppyDiskStationFrm
 			"Diskettenabbilddatei \u00F6ffnen",
 			Main.getLastPathFile( "disk" ),
 			EmuUtil.getPlainDiskFileFilter(),
-			EmuUtil.getAnadiskFileFilter(),
+			EmuUtil.getAnaDiskFileFilter(),
 			EmuUtil.getCopyQMFileFilter(),
-			EmuUtil.getTelediskFileFilter() );
+			EmuUtil.getDskFileFilter(),
+			EmuUtil.getImageDiskFileFilter(),
+			EmuUtil.getTeleDiskFileFilter() );
       if( file != null ) {
 	openFile( idx, file, null, true, null, null );
       }
@@ -699,23 +715,55 @@ public class FloppyDiskStationFrm
   }
 
 
-  private void doFileAnadiskNew()
+  private void doFileAnaDiskNew()
   {
     int idx = this.tabbedPane.getSelectedIndex();
     if( (idx >= 0) && (idx < this.drives.length) ) {
       File file = EmuUtil.showFileSaveDlg(
 			this,
-			"Neue Anadisk-Datei anlegen",
+			"Neue AnaDisk-Datei anlegen",
 			Main.getLastPathFile( "disk" ),
-			EmuUtil.getAnadiskFileFilter() );
+			EmuUtil.getAnaDiskFileFilter() );
       if( file != null ) {
-	if( DiskUtil.checkFileExt( this, file, DiskUtil.anadiskFileExt ) ) {
+	if( DiskUtil.checkFileExt( this, file, DiskUtil.anaDiskFileExt ) ) {
 	  if( confirmNewFileNotFormatted() ) {
 	    try {
 	      if( setDisk(
 			idx, 
-			"Anadisk-Datei: " + file.getPath(),
-			AnadiskFloppyDisk.newFile( this, file ),
+			"AnaDisk-Datei: " + file.getPath(),
+			AnaDisk.newFile( this, file ),
+			null ) )
+	      {
+		Main.setLastFile( file, "disk" );
+	      }
+	    }
+	    catch( IOException ex ) {
+	      showError( ex );
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doFileCPCDskNew()
+  {
+    int idx = this.tabbedPane.getSelectedIndex();
+    if( (idx >= 0) && (idx < this.drives.length) ) {
+      File file = EmuUtil.showFileSaveDlg(
+			this,
+			"Neue CPC-Disk-Datei anlegen",
+			Main.getLastPathFile( "disk" ),
+			EmuUtil.getDskFileFilter() );
+      if( file != null ) {
+	if( DiskUtil.checkFileExt( this, file, DiskUtil.dskFileExt ) ) {
+	  if( confirmNewFileNotFormatted() ) {
+	    try {
+	      if( setDisk(
+			idx, 
+			"CPC-Disk-Datei: " + file.getPath(),
+			CPCDisk.newFile( this, file ),
 			null ) )
 	      {
 		Main.setLastFile( file, "disk" );
@@ -747,7 +795,7 @@ public class FloppyDiskStationFrm
 	      if( setDisk(
 			idx, 
 			"Einfache Abbilddatei: " + file.getPath(),
-			PlainFileFloppyDisk.newFile( this, file ),
+			PlainDisk.newFile( this, file ),
 			null ) )
 	      {
 		Main.setLastFile( file, "disk" );
@@ -940,8 +988,11 @@ public class FloppyDiskStationFrm
 				"Neue einfache Abbilddatei anlegen...",
 				"file.plain.new" ) );
     this.mnuPopup.add( createJMenuItem(
-				"Neue Anadisk-Datei anlegen...",
+				"Neue AnaDisk-Datei anlegen...",
 				"file.anadisk.new" ) );
+    this.mnuPopup.add( createJMenuItem(
+				"Neue CPC-Disk-Datei anlegen...",
+				"file.cpcdsk.new" ) );
     this.mnuPopup.addSeparator();
 
     boolean hasSuitableDisks = false;
@@ -1422,12 +1473,12 @@ public class FloppyDiskStationFrm
 	done = setDisk(
 		idx,
 		"Laufwerk: " + driveName,
-		PlainFileFloppyDisk.createForDrive(
-					this,
-					fileName,
-					rad,
-					readOnly,
-					fmt ),
+		PlainDisk.createForDrive(
+				this,
+				fileName,
+				rad,
+				readOnly,
+				fmt ),
 		skipOddCyls );
       }
     }
@@ -1470,101 +1521,16 @@ public class FloppyDiskStationFrm
 	  && (idx >= 0) && (idx < MAX_DRIVE_COUNT) )
       {
 	fileName = fileName.toLowerCase();
-	if( EmuUtil.endsWith( fileName, DiskUtil.anadiskFileExt ) ) {
-	  if( interactive && (readOnly == null) ) {
-	    readOnly = askOpenFileReadOnly();
-	  }
-	  if( readOnly != null ) {
-	    AnadiskFloppyDisk disk = null;
-	    if( readOnly.booleanValue() ) {
-	      disk = AnadiskFloppyDisk.readFile( this, file );
-	    } else {
-	      if( fileLen > 0 ) {
-		disk = AnadiskFloppyDisk.openFile( this, file );
-	      } else {
-		disk = AnadiskFloppyDisk.newFile( this, file );
-	      }
-	    }
-	    if( disk != null ) {
-	      if( setDisk(
+	if( TextUtil.endsWith( fileName, DiskUtil.plainDiskFileExt ) ) {
+	  openPlainDiskFile(
 			idx,
-			"Anadisk-Datei: " + file.getPath(),
-			disk,
-			skipOddCyls ) )
-	      {
-		Main.setLastFile( file, "disk" );
-	      }
-	    }
-	  }
-	} else if( EmuUtil.endsWith( fileName, DiskUtil.gzAnadiskFileExt ) ) {
-	  AnadiskFloppyDisk disk = AnadiskFloppyDisk.readFile( this, file );
-	  if( disk != null ) {
-	    if( setDisk(
-			idx,
-			"Komprimierte Anadisk-Datei: " + file.getPath(),
-			disk,
-			skipOddCyls ) )
-	    {
-	      Main.setLastFile( file, "disk" );
-	    }
-	  }
-	} else if( EmuUtil.endsWith( fileName, DiskUtil.copyQMFileExt ) ) {
-	  CopyQMFloppyDisk disk = CopyQMFloppyDisk.readFile( this, file );
-	  if( disk != null ) {
-	    if( setDisk(
-			idx,
-			"CopyQM-Datei: " + file.getPath(),
-			disk,
-			skipOddCyls ) )
-	    {
-	      Main.setLastFile( file, "disk" );
-	    }
-	  }
-	} else if( EmuUtil.endsWith(
-				fileName,
-				DiskUtil.gzCopyQMFileExt ) )
-	{
-	  CopyQMFloppyDisk disk = CopyQMFloppyDisk.readFile( this, file );
-	  if( disk != null ) {
-	    if( setDisk(
-			idx,
-			"Komprimierte CopyQM-Datei: " + file.getPath(),
-			disk,
-			skipOddCyls ) )
-	    {
-	      Main.setLastFile( file, "disk" );
-	    }
-	  }
-	} else if( EmuUtil.endsWith( fileName, DiskUtil.telediskFileExt ) ) {
-	  TelediskFloppyDisk disk = TelediskFloppyDisk.readFile(
-								this,
-								file );
-	  if( disk != null ) {
-	    if( setDisk(
-			idx,
-			"Teledisk-Datei: " + file.getPath(),
-			disk,
-			skipOddCyls ) )
-	    {
-	      Main.setLastFile( file, "disk" );
-	    }
-	  }
-	} else if( EmuUtil.endsWith(
-				fileName,
-				DiskUtil.gzTelediskFileExt ) )
-	{
-	  TelediskFloppyDisk disk = TelediskFloppyDisk.readFile( this, file );
-	  if( disk != null ) {
-	    if( setDisk(
-			idx,
-			"Komprimierte Teledisk-Datei: " + file.getPath(),
-			disk,
-			skipOddCyls ) )
-	    {
-	      Main.setLastFile( file, "disk" );
-	    }
-	  }
-	} else if( EmuUtil.endsWith(
+			file,
+			fileLen,
+			readOnly,
+			interactive,
+			fmt,
+			skipOddCyls );
+	} else if( TextUtil.endsWith(
 				fileName,
 				DiskUtil.gzPlainDiskFileExt ) )
 	{
@@ -1590,16 +1556,15 @@ public class FloppyDiskStationFrm
 	    }
 	    if( fmt != null ) {
 	      String              fName = file.getPath();
-	      PlainFileFloppyDisk disk
-			= PlainFileFloppyDisk.createForByteArray(
-								this,
-								fName,
-								fBuf,
-								fmt );
+	      PlainDisk disk = PlainDisk.createForByteArray(
+							this,
+							fName,
+							fBuf,
+							fmt );
 	      if( disk != null ) {
 		if( setDisk(
 			idx,
-			"Komprimierte einfache Abbilddatei: " + fName,
+			"Einfache Abbilddatei: " + fName,
 			disk,
 			skipOddCyls ) )
 		{
@@ -1608,103 +1573,116 @@ public class FloppyDiskStationFrm
 	      }
 	    }
 	  }
-	} else {
-	  boolean state = true;
-	  if( interactive ) {
-	    state = EmuUtil.endsWith( fileName, DiskUtil.plainDiskFileExt );
-	    if( !state ) {
-	      StringBuilder buf = new StringBuilder( 512 );
-	      int           pos = fileName.lastIndexOf( '.' );
-	      if( (pos >= 0) && (pos < (fileName.length() - 1)) ) {
-		buf.append( "Dateiendung \'" );
-		buf.append( fileName.substring( pos ) );
-		buf.append( "\': Unbekannter Dateityp\n\n" );
+	} else if( TextUtil.endsWith( fileName, DiskUtil.anaDiskFileExt ) ) {
+	  if( interactive && (readOnly == null) ) {
+	    readOnly = askOpenFileReadOnly();
+	  }
+	  if( readOnly != null ) {
+	    AnaDisk disk = null;
+	    if( readOnly.booleanValue() ) {
+	      disk = AnaDisk.readFile( this, file );
+	    } else {
+	      if( fileLen > 0 ) {
+		disk = AnaDisk.openFile( this, file );
+	      } else {
+		disk = AnaDisk.newFile( this, file );
 	      }
-	      buf.append( "JKCEMU kann den Dateityp nicht erkennen,\n"
+	    }
+	    if( disk != null ) {
+	      if( setDisk(
+			idx,
+			"AnaDisk-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	      {
+		Main.setLastFile( file, "disk" );
+	      }
+	    }
+	  }
+	} else if( TextUtil.endsWith( fileName, DiskUtil.dskFileExt ) ) {
+	  if( interactive && (readOnly == null) ) {
+	    readOnly = askOpenFileReadOnly();
+	  }
+	  if( readOnly != null ) {
+	    CPCDisk disk = null;
+	    if( readOnly.booleanValue() ) {
+	      disk = CPCDisk.readFile( this, file );
+	    } else {
+	      if( fileLen > 0 ) {
+		disk = CPCDisk.openFile( this, file );
+	      } else {
+		disk = CPCDisk.newFile( this, file );
+	      }
+	    }
+	    if( disk != null ) {
+	      if( setDisk(
+			idx,
+			"CPC-Disk-Datei: " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	      {
+		Main.setLastFile( file, "disk" );
+	      }
+	    }
+	  }
+	} else {
+	  AbstractFloppyDisk disk = DiskUtil.readNonPlainDiskFile(
+								this,
+								file );
+	  if( disk != null ) {
+	    String fmtText = disk.getFileFormatText();
+	    if( fmtText == null ) {
+	      fmtText = "Diskettenabbilddatei";
+	    }
+	    if( setDisk(
+			idx,
+			fmtText + ": " + file.getPath(),
+			disk,
+			skipOddCyls ) )
+	    {
+	      Main.setLastFile( file, "disk" );
+	    }
+	  } else {
+	    boolean state = true;
+	    if( interactive ) {
+	      state = TextUtil.endsWith(
+				fileName,
+				DiskUtil.plainDiskFileExt );
+	      if( !state ) {
+		StringBuilder buf = new StringBuilder( 512 );
+		int           pos = fileName.lastIndexOf( '.' );
+		if( (pos >= 0) && (pos < (fileName.length() - 1)) ) {
+		  buf.append( "Dateiendung \'" );
+		  buf.append( fileName.substring( pos ) );
+		  buf.append( "\': Unbekannter Dateityp\n\n" );
+		}
+		buf.append( "JKCEMU kann den Dateityp nicht erkennen,\n"
 			+ "da die Dateiendung keiner der bei"
 			+ " Diskettenabbilddateien\n"
 			+ "\u00FCblicherweise verwendeten entspricht.\n"
 			+ "Die Datei wird deshalb als einfache Abbilddatei"
 			+ " ge\u00F6ffnet." );
-	      if( JOptionPane.showConfirmDialog(
+		if( JOptionPane.showConfirmDialog(
 			this,
 			buf.toString(),
 			"Dateiformat",
 			JOptionPane.OK_CANCEL_OPTION,
 			JOptionPane.WARNING_MESSAGE )
 					== JOptionPane.OK_OPTION )
-	      {
-		state = true;
-	      }
-	    }
-	  }
-	  if( state ) {
-	    if( interactive && (fmt == null) ) {
-	      FloppyDiskFormatDlg dlg = null;
-	      if( readOnly == null ) {
-		dlg = new FloppyDiskFormatDlg(
-			this,
-			FloppyDiskFormat.getFormatByDiskSize( fileLen ),
-			FloppyDiskFormatDlg.Flag.PHYS_FORMAT,
-			FloppyDiskFormatDlg.Flag.READONLY );
-		dlg.setVisible( true );
-		fmt      = dlg.getFormat();
-		readOnly = (dlg.getReadOnly() ? Boolean.TRUE : Boolean.FALSE);
-	      } else {
-		dlg = new FloppyDiskFormatDlg(
-			this,
-			FloppyDiskFormat.getFormatByDiskSize( fileLen ),
-			FloppyDiskFormatDlg.Flag.PHYS_FORMAT );
-		dlg.setVisible( true );
-		fmt = dlg.getFormat();
-	      }
-	    }
-	    if( (fmt != null) && (readOnly != null) ) {
-	      if( (fileLen >= 0) && (fileLen != fmt.getDiskSize()) ) {
-		StringBuilder buf = new StringBuilder( 512 );
-		buf.append( "Das von Ihnen ausgew\u00E4hlte"
-			+ " Diskettenformat scheint nicht zu passen.\n" );
-		if( !readOnly.booleanValue() ) {
-		  buf.append( "Sie k\u00F6nnen trotzdem fortsetzen,"
-			+ "allerdings wird dann\n"
-			+ "die Datei nur mit Schreibschutz ge\u00F6ffnet.\n\n"
-			+ "M\u00F6chten Sie fortsetzen?" );
-		} else {
-		  buf.append( "M\u00F6chten Sie trotzdem fortsetzen?" );
-		}
-		if( !BasicDlg.showYesNoWarningDlg(
-					this,
-					buf.toString(),
-					"Diskettenformat" ) )
 		{
-		  fmt = null;
+		  state = true;
 		}
-		readOnly = Boolean.TRUE;
 	      }
 	    }
-	    if( readOnly != null ) {
-	      PlainFileFloppyDisk disk = null;
-	      if( !readOnly.booleanValue() && (file.length() == 0) ) {
-		disk = PlainFileFloppyDisk.newFile( this, file );
-	      } else {
-		if( fmt != null ) {
-		  disk = PlainFileFloppyDisk.openFile(
-					this,
-					file,
-					readOnly.booleanValue(),
-					fmt );
-		}
-	      }
-	      if( disk != null ) {
-		if( setDisk(
+	    if( state ) {
+	      openPlainDiskFile(
 			idx,
-			"Einfache Diskettenabbilddatei: " + file.getPath(),
-			disk,
-			skipOddCyls ) )
-		{
-		  Main.setLastFile( file, "disk" );
-		}
-	      }
+			file,
+			fileLen,
+			readOnly,
+			interactive,
+			fmt,
+			skipOddCyls );
 	    }
 	  }
 	}
@@ -1712,6 +1690,85 @@ public class FloppyDiskStationFrm
     }
     catch( IOException ex ) {
       showError( ex );
+    }
+  }
+
+
+  private void openPlainDiskFile(
+			int              idx,
+			File             file,
+			long             fileLen,
+			Boolean          readOnly,
+			boolean          interactive,
+			FloppyDiskFormat fmt,
+			Boolean          skipOddCyls ) throws IOException
+  {
+    if( interactive && (fmt == null) ) {
+      FloppyDiskFormatDlg dlg = null;
+      if( readOnly == null ) {
+	dlg = new FloppyDiskFormatDlg(
+			this,
+			FloppyDiskFormat.getFormatByDiskSize( fileLen ),
+			FloppyDiskFormatDlg.Flag.PHYS_FORMAT,
+			FloppyDiskFormatDlg.Flag.READONLY );
+	dlg.setVisible( true );
+	fmt      = dlg.getFormat();
+	readOnly = (dlg.getReadOnly() ? Boolean.TRUE : Boolean.FALSE);
+      } else {
+	dlg = new FloppyDiskFormatDlg(
+			this,
+			FloppyDiskFormat.getFormatByDiskSize( fileLen ),
+			FloppyDiskFormatDlg.Flag.PHYS_FORMAT );
+	dlg.setVisible( true );
+	fmt = dlg.getFormat();
+      }
+    }
+    if( (fmt != null) && (readOnly != null) ) {
+      if( (fileLen >= 0) && (fileLen != fmt.getDiskSize()) ) {
+	StringBuilder buf = new StringBuilder( 512 );
+	buf.append( "Das von Ihnen ausgew\u00E4hlte"
+			+ " Diskettenformat scheint nicht zu passen.\n" );
+	if( !readOnly.booleanValue() ) {
+	  buf.append( "Sie k\u00F6nnen trotzdem fortsetzen,"
+			+ "allerdings wird dann\n"
+			+ "die Datei nur mit Schreibschutz ge\u00F6ffnet.\n\n"
+			+ "M\u00F6chten Sie fortsetzen?" );
+	} else {
+	  buf.append( "M\u00F6chten Sie trotzdem fortsetzen?" );
+	}
+	if( !BasicDlg.showYesNoWarningDlg(
+					this,
+					buf.toString(),
+					"Diskettenformat" ) )
+	{
+	  fmt = null;
+	}
+	readOnly = Boolean.TRUE;
+      }
+    }
+    if( readOnly != null ) {
+      PlainDisk disk = null;
+      if( !readOnly.booleanValue() && (file.length() == 0) ) {
+	disk = PlainDisk.newFile( this, file );
+      } else {
+	if( fmt != null ) {
+	  disk = PlainDisk.openFile(
+				this,
+				file,
+				readOnly.booleanValue(),
+				fmt );
+	}
+      }
+      if( disk != null ) {
+	if( setDisk(
+	      idx,
+	      "Einfache Diskettenabbilddatei: " + file.getPath(),
+	      disk,
+	      skipOddCyls ) )
+	{
+	  Main.setLastFile( file, "disk" );
+	}
+      }
     }
   }
 

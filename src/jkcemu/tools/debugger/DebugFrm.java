@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,11 +19,13 @@ import javax.swing.event.*;
 import javax.swing.text.JTextComponent;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 import jkcemu.tools.*;
 import z80emu.*;
 
 
 public class DebugFrm extends BasicFrm implements
+						ComponentListener,
 						FocusListener,
 						ListSelectionListener,
 						Z80StatusListener
@@ -46,8 +48,9 @@ public class DebugFrm extends BasicFrm implements
   private PrintWriter           traceWriter;
   private int                   popupBreakGroupIdx;
   private JMenuItem             mnuFileClose;
-  private JMenuItem             mnuFileBreakpointImportClp;
-  private JMenuItem             mnuFileBreakpointImportFile;
+  private JMenuItem             mnuFileBreakImportClp;
+  private JMenuItem             mnuFileBreakImportFile;
+  private JMenuItem             mnuFileBreakRemoveImported;
   private JMenuItem             mnuFileOpenTrace;
   private JMenuItem             mnuDebugRun;
   private JMenuItem             mnuDebugStop;
@@ -162,13 +165,19 @@ public class DebugFrm extends BasicFrm implements
     JMenu mnuFile = new JMenu( "Datei" );
     mnuFile.setMnemonic( KeyEvent.VK_D );
 
-    mnuFileBreakpointImportFile = createJMenuItem(
+    this.mnuFileBreakImportFile = createJMenuItem(
 			"Haltepunkte aus Datei importieren..." );
-    mnuFile.add( mnuFileBreakpointImportFile );
+    mnuFile.add( this.mnuFileBreakImportFile );
 
-    mnuFileBreakpointImportClp = createJMenuItem(
+    this.mnuFileBreakImportClp = createJMenuItem(
 			"Haltepunkte aus Zwischenablage importieren" );
-    mnuFile.add( mnuFileBreakpointImportClp );
+    mnuFile.add( this.mnuFileBreakImportClp );
+    mnuFile.addSeparator();
+
+    this.mnuFileBreakRemoveImported = createJMenuItem(
+			"Importierte Haltepunkte entfernen" );
+    this.mnuFileBreakRemoveImported.setEnabled( false );
+    mnuFile.add( this.mnuFileBreakRemoveImported );
     mnuFile.addSeparator();
 
     this.mnuFileClose = createJMenuItem( "Schlie\u00DFen" );
@@ -181,33 +190,33 @@ public class DebugFrm extends BasicFrm implements
 
     this.mnuDebugStop = createJMenuItem(
 			"Programmausf\u00FChrung anhalten",
-			KeyEvent.VK_F4, 0 );
+			KeyEvent.VK_S, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugStop );
 
     this.mnuDebugRun = createJMenuItem(
 			"Programmausf\u00FChrung bis Haltepunkt fortsetzen",
-			KeyEvent.VK_F5, 0 );
+			KeyEvent.VK_R, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugRun );
 
     this.mnuDebugStepOver = createJMenuItem(
 			"Einzelschritt \u00FCber Aufruf hinweg",
-			KeyEvent.VK_F6, 0 );
+			KeyEvent.VK_O, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugStepOver );
 
     this.mnuDebugStepInto = createJMenuItem(
 			"Einzelschritt in Aufruf hinein",
-			KeyEvent.VK_F7, 0 );
+			KeyEvent.VK_I, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugStepInto );
 
     this.mnuDebugStepUp = createJMenuItem(
 			"Bis RETURN ausf\u00FChren",
-			KeyEvent.VK_F8, 0 );
+			KeyEvent.VK_Z, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugStepUp );
     mnuDebug.addSeparator();
 
     this.mnuDebugBreakPCAdd = createJMenuItem(
 			"Haltepunkt auf Adresse hinzuf\u00FCgen...",
-			KeyEvent.VK_F9, 0 );
+			KeyEvent.VK_A, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakPCAdd );
 
     this.mnuDebugBreakMemAdd = createJMenuItem(
@@ -217,12 +226,11 @@ public class DebugFrm extends BasicFrm implements
 
     this.mnuDebugBreakIOAdd = createJMenuItem(
 			"Haltepunkt auf Ein-/Ausgabetor hinzuf\u00FCgen...",
-			KeyEvent.VK_O, InputEvent.CTRL_MASK );
+			KeyEvent.VK_P, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakIOAdd );
 
     this.mnuDebugBreakIntAdd = createJMenuItem(
-			"Haltepunkt auf Interrupt-Quelle hinzuf\u00FCgen...",
-			KeyEvent.VK_I, InputEvent.CTRL_MASK );
+			"Haltepunkt auf Interrupt-Quelle hinzuf\u00FCgen..." );
     mnuDebug.add( this.mnuDebugBreakIntAdd );
 
     this.mnuDebugBreakRemove = createJMenuItem(
@@ -358,53 +366,87 @@ public class DebugFrm extends BasicFrm implements
 
 
     // Bereich Flags
-    JPanel panelFlag = new JPanel( new FlowLayout( FlowLayout.CENTER ) );
+    JPanel panelFlag = new JPanel( new GridBagLayout() );
     panelFlag.setBorder( BorderFactory.createTitledBorder( "Flags" ) );
     panelCPU.add( panelFlag, gbcCPU );
 
-    this.btnFlagSign = createFlagField( "S" );
-    panelFlag.add( this.btnFlagSign );
+    GridBagConstraints gbcFlag = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 2, 2, 2, 2 ),
+						0, 0 );
 
-    this.btnFlagZero = createFlagField( "Z" );
-    panelFlag.add( this.btnFlagZero );
+    this.btnFlagSign = createFlagField( "S" );
+    panelFlag.add( this.btnFlagSign, gbcFlag );
+
+    this.btnFlagZero    = createFlagField( "Z" );
+    gbcFlag.insets.left = 5;
+    gbcFlag.gridx++;
+    panelFlag.add( this.btnFlagZero, gbcFlag );
 
     this.btnFlagHalf = createFlagField( "H" );
-    panelFlag.add( this.btnFlagHalf );
+    gbcFlag.gridx++;
+    panelFlag.add( this.btnFlagHalf, gbcFlag );
 
     this.btnFlagPV = createFlagField( "PV" );
-    panelFlag.add( this.btnFlagPV );
+    gbcFlag.gridx++;
+    panelFlag.add( this.btnFlagPV, gbcFlag );
 
     this.btnFlagN = createFlagField( "N" );
-    panelFlag.add( this.btnFlagN );
+    gbcFlag.gridx++;
+    panelFlag.add( this.btnFlagN, gbcFlag );
 
     this.btnFlagCarry = createFlagField( "C" );
-    panelFlag.add( this.btnFlagCarry );
+    gbcFlag.gridx++;
+    panelFlag.add( this.btnFlagCarry, gbcFlag );
 
 
     // Bereich Interrupt
-    JPanel panelInt = new JPanel( new FlowLayout() );
+    JPanel panelInt = new JPanel( new GridBagLayout() );
     panelInt.setBorder( BorderFactory.createTitledBorder( "Interrupt" ) );
     gbcCPU.gridx++;
     panelCPU.add( panelInt, gbcCPU );
 
+    GridBagConstraints gbcInt = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 2, 2, 2, 2 ),
+						0, 0 );
     this.labelIntMode = new JLabel( "IM:" );
-    panelInt.add( this.labelIntMode );
-    this.spinnerIntMode = new JSpinner( new SpinnerNumberModel( 0, 0, 2, 1 ) );
-    panelInt.add( this.spinnerIntMode );
+    panelInt.add( this.labelIntMode, gbcInt );
 
-    this.labelRegI = new JLabel( "IR:" );
-    panelInt.add( this.labelRegI );
+    this.spinnerIntMode = new JSpinner( new SpinnerNumberModel( 0, 0, 2, 1 ) );
+    gbcInt.insets.left  = 0;
+    gbcInt.gridx++;
+    panelInt.add( this.spinnerIntMode, gbcInt );
+
+    this.labelRegI     = new JLabel( "IR:" );
+    gbcInt.insets.left = 5;
+    gbcInt.gridx++;
+    panelInt.add( this.labelRegI, gbcInt );
+
     this.fldRegI = new JTextField( 3 );
     this.fldRegI.addActionListener( this );
     this.fldRegI.addFocusListener( this );
     this.fldRegI.setEditable( false );
-    panelInt.add( this.fldRegI );
+    gbcInt.insets.left = 0;
+    gbcInt.gridx++;
+    panelInt.add( this.fldRegI, gbcInt );
 
-    this.btnIFF1 = createFlagField( "IFF1" );
-    panelInt.add( this.btnIFF1 );
+    this.btnIFF1       = createFlagField( "IFF1" );
+    gbcInt.insets.left = 5;
+    gbcInt.gridx++;
+    panelInt.add( this.btnIFF1, gbcInt );
 
     this.btnIFF2 = createFlagField( "IFF2" );
-    panelInt.add( this.btnIFF2 );
+    gbcInt.gridx++;
+    panelInt.add( this.btnIFF2, gbcInt );
 
 
     // Bereich Register
@@ -434,7 +476,7 @@ public class DebugFrm extends BasicFrm implements
     gbcReg.gridwidth = 1;
     gbcReg.gridx += 2;
     panelReg.add( new JLabel( "Zeigt im Speicher auf" ), gbcReg );
-    gbcReg.gridx++;
+    gbcReg.gridx += 2;
     panelReg.add( new JLabel( "Hex" ), gbcReg );
 
 
@@ -464,7 +506,7 @@ public class DebugFrm extends BasicFrm implements
 
 
     // Register BC
-    gbcReg.gridx = 0;
+    gbcReg.gridx  = 0;
     gbcReg.gridy++;
     panelReg.add( new JLabel( "BC:" ), gbcReg );
 
@@ -482,15 +524,17 @@ public class DebugFrm extends BasicFrm implements
     gbcReg.gridx++;
     panelReg.add( this.fldRegAsciiC, gbcReg );
 
-    this.fldMemBC = new JTextField( 24 );
+    this.fldMemBC = new JTextField();
     this.fldMemBC.setEditable( false );
-    gbcReg.fill = GridBagConstraints.HORIZONTAL;
+    gbcReg.fill    = GridBagConstraints.HORIZONTAL;
+    gbcReg.weightx = 1.0;
     gbcReg.gridx++;
     panelReg.add( this.fldMemBC, gbcReg );
 
 
     // Register BC2
-    gbcReg.fill = GridBagConstraints.NONE;
+    gbcReg.fill    = GridBagConstraints.NONE;
+    gbcReg.weightx = 0.0;
     gbcReg.gridx++;
     panelReg.add( new JLabel( "BC\':" ), gbcReg );
 
@@ -518,15 +562,17 @@ public class DebugFrm extends BasicFrm implements
     gbcReg.gridx++;
     panelReg.add( this.fldRegAsciiE, gbcReg );
 
-    this.fldMemDE = new JTextField( 24 );
+    this.fldMemDE = new JTextField();
     this.fldMemDE.setEditable( false );
-    gbcReg.fill = GridBagConstraints.HORIZONTAL;
+    gbcReg.fill    = GridBagConstraints.HORIZONTAL;
+    gbcReg.weightx = 1.0;
     gbcReg.gridx++;
     panelReg.add( this.fldMemDE, gbcReg );
 
 
     // Register DE2
-    gbcReg.fill = GridBagConstraints.NONE;
+    gbcReg.fill    = GridBagConstraints.NONE;
+    gbcReg.weightx = 0.0;
     gbcReg.gridx++;
     panelReg.add( new JLabel( "DE\':" ), gbcReg );
 
@@ -554,15 +600,17 @@ public class DebugFrm extends BasicFrm implements
     gbcReg.gridx++;
     panelReg.add( this.fldRegAsciiL, gbcReg );
 
-    this.fldMemHL = new JTextField( 24 );
+    this.fldMemHL = new JTextField();
     this.fldMemHL.setEditable( false );
-    gbcReg.fill = GridBagConstraints.HORIZONTAL;
+    gbcReg.fill    = GridBagConstraints.HORIZONTAL;
+    gbcReg.weightx = 1.0;
     gbcReg.gridx++;
     panelReg.add( this.fldMemHL, gbcReg );
 
 
     // Register HL2
-    gbcReg.fill = GridBagConstraints.NONE;
+    gbcReg.fill    = GridBagConstraints.NONE;
+    gbcReg.weightx = 0.0;
     gbcReg.gridx++;
     panelReg.add( new JLabel( "HL\':" ), gbcReg );
 
@@ -593,6 +641,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldMemIX = new JTextField();
     this.fldMemIX.setEditable( false );
     gbcReg.fill      = GridBagConstraints.HORIZONTAL;
+    gbcReg.weightx   = 1.0;
     gbcReg.gridwidth = GridBagConstraints.REMAINDER;
     gbcReg.gridx++;
     panelReg.add( this.fldMemIX, gbcReg );
@@ -600,6 +649,7 @@ public class DebugFrm extends BasicFrm implements
 
     // Register IY
     gbcReg.fill      = GridBagConstraints.NONE;
+    gbcReg.weightx   = 0.0;
     gbcReg.gridwidth = 1;
     gbcReg.gridx     = 0;
     gbcReg.gridy++;
@@ -622,6 +672,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldMemIY = new JTextField();
     this.fldMemIY.setEditable( false );
     gbcReg.fill      = GridBagConstraints.HORIZONTAL;
+    gbcReg.weightx   = 1.0;
     gbcReg.gridwidth = GridBagConstraints.REMAINDER;
     gbcReg.gridx++;
     panelReg.add( this.fldMemIY, gbcReg );
@@ -629,6 +680,7 @@ public class DebugFrm extends BasicFrm implements
 
     // Register SP
     gbcReg.fill      = GridBagConstraints.NONE;
+    gbcReg.weightx   = 0.0;
     gbcReg.gridwidth = 1;
     gbcReg.gridx     = 0;
     gbcReg.gridy++;
@@ -641,6 +693,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldMemSP = new JTextField();
     this.fldMemSP.setEditable( false );
     gbcReg.fill      = GridBagConstraints.HORIZONTAL;
+    gbcReg.weightx   = 1.0;
     gbcReg.gridwidth = GridBagConstraints.REMAINDER;
     gbcReg.gridx += 3;
     panelReg.add( this.fldMemSP, gbcReg );
@@ -648,6 +701,7 @@ public class DebugFrm extends BasicFrm implements
 
     // Register PC
     gbcReg.fill      = GridBagConstraints.NONE;
+    gbcReg.weightx   = 0.0;
     gbcReg.gridwidth = 1;
     gbcReg.gridx     = 0;
     gbcReg.gridy++;
@@ -661,7 +715,7 @@ public class DebugFrm extends BasicFrm implements
     // Programmcode-Anzeige
     this.fldMemPC = new JTextArea( 5, 38 );
     this.fldMemPC.setEditable( false );
-    this.spMemPC = new JScrollPane( this.fldMemPC );
+    this.spMemPC     = new JScrollPane( this.fldMemPC );
     gbcReg.anchor    = GridBagConstraints.WEST;
     gbcReg.fill      = GridBagConstraints.BOTH;
     gbcReg.weightx   = 1.0;
@@ -773,6 +827,7 @@ public class DebugFrm extends BasicFrm implements
       updBreakpointList( i, null );
     }
     updBreakpointActionsEnabled();
+    addComponentListener( this );
   }
 
 
@@ -791,6 +846,38 @@ public class DebugFrm extends BasicFrm implements
   public void setLabels( jkcemu.tools.Label[] labels )
   {
     importLabels( labels, true );
+  }
+
+
+	/* --- Methoden fuer ComponentListener --- */
+
+  @Override
+  public void componentHidden( ComponentEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void componentMoved( ComponentEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void componentResized( ComponentEvent e )
+  {
+    if( (e.getComponent() == this) && this.cpu.isPause() ) {
+      updFieldsPC();
+    }
+  }
+
+
+  @Override
+  public void componentShown( ComponentEvent e )
+  {
+    // leer
   }
 
 
@@ -900,13 +987,17 @@ public class DebugFrm extends BasicFrm implements
 
       // Aktion auswerten
       Object src = e.getSource();
-      if( src == this.mnuFileBreakpointImportFile ) {
+      if( src == this.mnuFileBreakImportFile ) {
 	rv = true;
 	doBreakpointImportFile();
       }
-      else if( src == this.mnuFileBreakpointImportClp ) {
+      else if( src == this.mnuFileBreakImportClp ) {
 	rv = true;
 	doBreakpointImportClp();
+      }
+      else if( src == this.mnuFileBreakRemoveImported ) {
+	rv = true;
+	doBreakpointRemoveImported();
       }
       else if( src == this.mnuFileClose ) {
 	rv = true;
@@ -1293,6 +1384,27 @@ public class DebugFrm extends BasicFrm implements
       }
       catch( IOException ex ) {
 	BasicDlg.showErrorDlg( this, ex );
+      }
+    }
+  }
+
+
+  private void doBreakpointRemoveImported()
+  {
+    BreakpointListModel model = this.bpModels[ BP_PC_IDX ];
+    if( model != null ) {
+      int size = model.size();
+      if( size > 0 ) {
+	boolean changed = false;
+	for( int i = size - 1; i >= 0; --i ) {
+	  if( model.get( i ) instanceof LabelBreakpoint ) {
+	    model.remove( i );
+	    changed = true;
+	  }
+	}
+	if( changed ) {
+	  updBreakpointList( BP_PC_IDX, null );
+	}
       }
     }
   }
@@ -2051,6 +2163,9 @@ public class DebugFrm extends BasicFrm implements
       catch( ClassCastException ex ) {}
       this.bpLists[ BP_PC_IDX ].setModel( model );
       updBreakpointList( BP_PC_IDX, null );
+      if( this.cpu.isPause() ) {
+	updFieldsPC();
+      }
     }
     return rv;
   }
@@ -2171,6 +2286,13 @@ public class DebugFrm extends BasicFrm implements
     this.listIntSrc.setEnabled( true );
     this.fldIntSrc.setEnabled( true );
     updIntSrcFields();
+    ListModel lm = this.listIntSrc.getModel();
+    if( lm != null ) {
+      if( lm.getSize() == 1 ) {
+	this.listIntSrc.setSelectedIndex( 0 );
+      }
+    }
+
     setDebuggerEditable( true );
     String text = "Programmausf\u00FChrung angehalten";
     if( iSource != null ) {
@@ -2258,6 +2380,7 @@ public class DebugFrm extends BasicFrm implements
 			int                bpGroupIdx,
 			AbstractBreakpoint bpToSelect )
   {
+    boolean hasImported = false;
     if( (bpGroupIdx >= 0) && (bpGroupIdx < BP_GROUP_CNT) ) {
       if( (this.bpModels[ bpGroupIdx ] != null)
 	  && (this.bpLists[ bpGroupIdx ] != null) )
@@ -2281,6 +2404,9 @@ public class DebugFrm extends BasicFrm implements
 		    list.add( (Z80Breakpoint) bp );
 		  }
 		}
+		if( bp instanceof LabelBreakpoint ) {
+		  hasImported = true;
+		}
 	      }
 	    }
 	  }
@@ -2289,6 +2415,9 @@ public class DebugFrm extends BasicFrm implements
 		list.toArray( new Z80Breakpoint[ list.size() ] )
 		: null );
       }
+    }
+    if( bpGroupIdx == BP_PC_IDX ) {
+      this.mnuFileBreakRemoveImported.setEnabled( hasImported );
     }
   }
 
@@ -2391,7 +2520,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldRegBC.setText( String.format( "%04X", v ) );
     this.fldRegAsciiB.setText( getAscii( this.cpu.getRegB() ) );
     this.fldRegAsciiC.setText( getAscii( this.cpu.getRegC() ) );
-    this.fldMemBC.setText( getMemInfo( v, 4 ) );
+    this.fldMemBC.setText( getMemInfo( v, 6 ) );
   }
 
 
@@ -2407,7 +2536,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldRegDE.setText( String.format( "%04X", v ) );
     this.fldRegAsciiD.setText( getAscii( this.cpu.getRegD() ) );
     this.fldRegAsciiE.setText( getAscii( this.cpu.getRegE() ) );
-    this.fldMemDE.setText( getMemInfo( v, 4 ) );
+    this.fldMemDE.setText( getMemInfo( v, 6 ) );
   }
 
 
@@ -2423,7 +2552,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldRegHL.setText( String.format( "%04X", v ) );
     this.fldRegAsciiH.setText( getAscii( this.cpu.getRegH() ) );
     this.fldRegAsciiL.setText( getAscii( this.cpu.getRegL() ) );
-    this.fldMemHL.setText( getMemInfo( v, 4 ) );
+    this.fldMemHL.setText( getMemInfo( v, 6 ) );
   }
 
 
@@ -2439,7 +2568,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldRegIX.setText( String.format( "%04X", v ) );
     this.fldRegAsciiIXH.setText( getAscii( this.cpu.getRegIXH() ) );
     this.fldRegAsciiIXL.setText( getAscii( this.cpu.getRegIXL() ) );
-    this.fldMemIX.setText( getMemInfo( v, 6 ) );
+    this.fldMemIX.setText( getMemInfo( v, 8 ) );
   }
 
 
@@ -2449,7 +2578,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldRegIY.setText( String.format( "%04X", v ) );
     this.fldRegAsciiIYH.setText( getAscii( this.cpu.getRegIYH() ) );
     this.fldRegAsciiIYL.setText( getAscii( this.cpu.getRegIYL() ) );
-    this.fldMemIY.setText( getMemInfo( v, 6 ) );
+    this.fldMemIY.setText( getMemInfo( v, 8 ) );
   }
 
 
@@ -2465,7 +2594,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldRegSP.setText( String.format( "%04X", addr ) );
 
     // ersten Eintraege auf dem Stack anzeigen
-    int           n   = 4;
+    int           n   = 6;
     StringBuilder buf = new StringBuilder( n * 5 );
 
     for( int i = 0; i < n; i++ ) {
@@ -2481,6 +2610,9 @@ public class DebugFrm extends BasicFrm implements
 
   private void updFieldsPC()
   {
+    javax.swing.text.Document doc     = this.fldMemPC.getDocument();
+    BreakpointListModel       bpModel = this.bpModels[ BP_PC_IDX ];
+
     int addr = this.cpu.getRegPC();
     this.fldRegPC.setText( String.format( "%04X", addr ) );
 
@@ -2492,6 +2624,31 @@ public class DebugFrm extends BasicFrm implements
 	this.fldMemPC.append( "\n" );
       }
       row++;
+
+      int    linePos = 0;
+      String label   = null;
+      if( (doc != null) && (bpModel != null) ) {
+	linePos = doc.getLength();
+	for( AbstractBreakpoint breakpoint : bpModel ) {
+	  if( breakpoint instanceof LabelBreakpoint ) {
+	    if( ((LabelBreakpoint) breakpoint).getAddress() == addr ) {
+	      String s = ((LabelBreakpoint) breakpoint).getLabelText();
+	      if( s != null ) {
+		if( s.isEmpty() ) {
+		  s = null;
+		}
+	      }
+	      if( s != null ) {
+		if( label != null ) {
+		  label = label + ", " + s;
+		} else {
+		  label = s;
+		}
+	      }
+	    }
+	  }
+	}
+      }
 
       Z80ReassInstr instr = Z80Reassembler.reassInstruction(
 						      this.memory,
@@ -2545,6 +2702,21 @@ public class DebugFrm extends BasicFrm implements
 				this.memory.getMemByte( addr, true ) ) );
 	addr++;
       }
+
+      if( (label != null) && (doc != null) ) {
+	int lineLen = doc.getLength() - linePos;
+	do {
+	  this.fldMemPC.append( "\u0020" );
+	  lineLen++;
+	} while( lineLen < 40 );
+	this.fldMemPC.append( ";" );
+	if( label.length() > 20 ) {
+	  this.fldMemPC.append( label.substring( 0, 17 ) );
+	  this.fldMemPC.append( "..." );
+	} else {
+	  this.fldMemPC.append( label );
+	}
+      }
     }
     try {
       this.fldMemPC.setCaretPosition( 0 );
@@ -2568,7 +2740,7 @@ public class DebugFrm extends BasicFrm implements
 	    if( iSource != null ) {
 	      String s = iSource.toString();
 	      for( int k = 0; k < iSources.length; k++ ) {
-		if( EmuUtil.equals( s, iSources[ k ].toString() ) ) {
+		if( TextUtil.equals( s, iSources[ k ].toString() ) ) {
 		  /*
 		   * Breakpoint-Objekt nicht neu anlegen,
 		   * sondern darin nur die Interrupt-Quelle ersetzen,

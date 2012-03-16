@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,10 +30,15 @@ public class EditText implements
 				DocumentListener,
 				UndoableEditListener
 {
+  public static final String TEXT_WITH_BOM = " mit Byte-Order-Markierung";
+
   private boolean       used;
   private boolean       dataChanged;
   private boolean       prjChanged;
   private boolean       saved;
+  private boolean       askFileNameOnSave;
+  private boolean       byteOrderMark;
+  private boolean       trailing1A;
   private boolean       trimLines;
   private EmuThread     emuThread;
   private PrgOptions    prgOptions;
@@ -41,7 +46,7 @@ public class EditText implements
   private File          prjFile;
   private CharConverter charConverter;
   private String        encodingName;
-  private String        encodingDisplayText;
+  private String        encodingDesc;
   private String        lineEnd;
   private String        textName;
   private String        textValue;
@@ -79,11 +84,11 @@ public class EditText implements
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
-		String        encodingDisplayText )
+		String        encodingDesc )
 				throws IOException, UserCancelException
   {
     init( editFrm, emuThread );
-    loadFile( file, charConverter, encodingName, encodingDisplayText );
+    loadFile( file, charConverter, encodingName, encodingDesc );
   }
 
 
@@ -104,17 +109,23 @@ public class EditText implements
 	doc.removeUndoableEditListener( this );
       }
     }
-    this.editFrm             = null;
-    this.file                = null;
-    this.charConverter       = null;
-    this.encodingDisplayText = null;
-    this.encodingName        = null;
-    this.lineEnd             = null;
-    this.textName            = null;
-    this.textValue           = null;
-    this.textArea            = null;
-    this.tabComponent        = null;
+    this.editFrm       = null;
+    this.file          = null;
+    this.charConverter = null;
+    this.encodingDesc  = null;
+    this.encodingName  = null;
+    this.lineEnd       = null;
+    this.textName      = null;
+    this.textValue     = null;
+    this.textArea      = null;
+    this.tabComponent  = null;
     this.undoMngr.discardAllEdits();
+  }
+
+
+  public boolean getAskFileNameOnSave()
+  {
+    return this.askFileNameOnSave;
   }
 
 
@@ -136,9 +147,9 @@ public class EditText implements
   }
 
 
-  public String getEncodingDisplayText()
+  public String getEncodingDescription()
   {
-    return this.encodingDisplayText;
+    return this.encodingDesc;
   }
 
 
@@ -233,6 +244,12 @@ public class EditText implements
   }
 
 
+  public boolean getTrailing1A()
+  {
+    return this.trailing1A;
+  }
+
+
   public boolean getTrimLines()
   {
     return this.trimLines;
@@ -245,6 +262,12 @@ public class EditText implements
     this.editFrm.toFront();
     this.editFrm.setSelectedTabComponent( this.tabComponent );
     this.editFrm.gotoLine( this.textArea, lineNum );
+  }
+
+
+  public boolean hasByteOrderMark()
+  {
+    return this.byteOrderMark;
   }
 
 
@@ -284,167 +307,282 @@ public class EditText implements
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
-		String        encodingDisplayText )
+		String        encodingDesc )
 			throws IOException, UserCancelException
   {
     PushbackInputStream inStream  = null;
     PushbackReader      reader    = null;
     boolean             charsLost = false;
+    boolean             hasBOM    = false;
     boolean             hasCR     = false;
     boolean             hasNL     = false;
     boolean             has1E     = false;
 
     try {
-      boolean  filtered = false;
-      FileInfo fileInfo = null;
-      String   text     = null;
-      byte[]  fileBytes = EmuUtil.readFile( file, Integer.MAX_VALUE );
+      boolean  filtered  = false;
+      FileInfo fileInfo  = null;
+      String   text      = null;
+      String   info      = null;
+      byte[]   fileBytes = EmuUtil.readFile( file, Integer.MAX_VALUE );
       if( fileBytes != null ) {
-	fileInfo = FileInfo.analyzeFile( fileBytes, fileBytes.length, file );
-	if( fileInfo != null ) {
-	  String fileFmt = fileInfo.getFileFormat();
-	  if( fileFmt != null ) {
-	    try {
-	      if( fileFmt.equals( FileInfo.BIN ) ) {
-		text = BCS3.getBasicProgram( fileBytes );
-	      }
-	      else if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-		LoadData loadData = null;
-		switch( fileInfo.getFileType() ) {
-		  case 'A':
-		    loadData = FileInfo.createLoadData( fileBytes, fileFmt );
-		    if( loadData != null ) {
-		      text = SourceUtil.getAssemblerText(
+	if( (charConverter == null) && (encodingName == null) ) {
+
+	  // Speicherabbilddatei?
+	  fileInfo = FileInfo.analyzeFile( fileBytes, fileBytes.length, file );
+	  if( fileInfo != null ) {
+	    String fileFmt = fileInfo.getFileFormat();
+	    if( fileFmt != null ) {
+	      try {
+		if( fileFmt.equals( FileInfo.BIN ) ) {
+		  info = "BCS3-BASIC-Programm";
+		  text = BCS3.getBasicProgram( fileBytes );
+		}
+		else if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+		  LoadData loadData = null;
+		  switch( fileInfo.getFileType() ) {
+		    case 'A':
+		      loadData = FileInfo.createLoadData( fileBytes, fileFmt );
+		      if( loadData != null ) {
+			info = "EDAS*4-Quelltext";
+			text = SourceUtil.getEDAS4Text(
 						loadData,
 						fileInfo.getBegAddr() );
-		    }
-		    break;
-
-		  case 'B':
-		    loadData = FileInfo.createLoadData( fileBytes, fileFmt );
-		    if( loadData != null ) {
-		      int addr = fileInfo.getBegAddr();
-		      switch( addr ) {
-			case 0x03C0:
-			case 0x0400:
-			case 0x0401:
-			  text = getKCBasicProgram( loadData, 0x0401 );
-			  break;
-
-			case 0x1001:
-			  text = KramerMC.getBasicProgram( loadData );
-			  break;
-
-			case 0x2BC0:
-			case 0x2C00:
-			case 0x2C01:
-			  text = getKCBasicProgram( loadData, 0x2C01 );
-			  break;
-
-			case 0x60F7:
-			case 0x6FB7:
-			  /*
-			   * Das SCCH-BASIC fuer den LLC2 ist bzgl.
-			   * des BASIC-Dialekts und
-			   * der Adressen des Quelltextes
-			   * identisch zu der Version fuer den AC1.
-			   * Aus diesem Grund gibt es hier keine
-			   * spezielle Behandlung fuer LLC2-BASIC-Programme.
-			   */
-			  text = AC1.getBasicProgram( this.editFrm, loadData );
-			  break;
-
-			default:
-			  text = BCS3.getBasicProgram( fileBytes );
 		      }
-		    }
-		    break;
+		      break;
 
-		  case 'b':
-		    loadData = FileInfo.createLoadData( fileBytes, fileFmt );
-		    if( loadData != null ) {
-		      switch( loadData.getBegAddr() ) {
-			case 0x1000:
-			  text = Z1013.getTinyBasicProgram( loadData );
-			  break;
+		    case 'B':
+		      loadData = FileInfo.createLoadData( fileBytes, fileFmt );
+		      if( loadData != null ) {
+			int addr = fileInfo.getBegAddr();
+			switch( addr ) {
+			  case 0x03C0:
+			  case 0x0400:
+			  case 0x0401:
+			    info = "KC-BASIC-Programm";
+			    text = getKCBasicProgram( loadData, 0x0401 );
+			    break;
 
-			case 0x1400:
-			  text = LLC1.getBasicProgram( loadData );
-			  break;
+			  case 0x1001:
+			    info = "KramerMC-BASIC-Programm";
+			    text = KramerMC.getBasicProgram( loadData );
+			    break;
 
-			case 0x18C0:
-			  text = AC1.getTinyBasicProgram( loadData );
-			  break;
-		      }
-		    }
-		    break;
+			  case 0x2BC0:
+			  case 0x2C00:
+			  case 0x2C01:
+			    info = "KC-BASIC-Programm";
+			    text = getKCBasicProgram( loadData, 0x2C01 );
+			    break;
 
-		  case 'I':
-		  case 'T':
-		    if( fileBytes.length > 32 ) {
-		      StringBuilder buf = new StringBuilder(
-						fileBytes.length - 32 );
-		      boolean cr = false;
-		      for( int i = 32; i < fileBytes.length; i++ ) {
-			int b = fileBytes[ i ] & 0xFF;
-			if( b == '\r' ) {
-			  cr = true;
-			  buf.append( (char) '\n' );
+			  case 0x60F7:
+			  case 0x6FB7:
+			    /*
+			     * Das SCCH-BASIC fuer den LLC2 ist bzgl.
+			     * des BASIC-Dialekts und
+			     * der Adressen des Quelltextes
+			     * identisch zu der Version fuer den AC1.
+			     * Aus diesem Grund gibt es hier keine
+			     * spezielle Behandlung fuer LLC2-BASIC-Programme.
+			     */
+			    info = "AC1/LLC2-BASIC-Programm";
+			    text = AC1.getBasicProgram(
+						this.editFrm,
+						loadData );
+			    break;
+
+			  default:
+			    info = "BCS3-BASIC-Programm";
+			    text = BCS3.getBasicProgram( fileBytes );
 			}
-			else if( b == '\n' ) {
-			  if( cr ) {
-			    cr = false;
-			  } else {
+		      }
+		      break;
+
+		    case 'b':
+		      loadData = FileInfo.createLoadData( fileBytes, fileFmt );
+		      if( loadData != null ) {
+			switch( loadData.getBegAddr() ) {
+			  case 0x1000:
+			    info = "Z1013-TinyBASIC-Programm";
+			    text = Z1013.getTinyBasicProgram( loadData );
+			    break;
+
+			  case 0x1400:
+			    info = "LLC1-TinyBASIC-Programm";
+			    text = LLC1.getBasicProgram( loadData );
+			    break;
+
+			  case 0x18C0:
+			    info = "AC1-MiniBASIC-Programm";
+			    text = AC1.getTinyBasicProgram( loadData );
+			    break;
+			}
+		      }
+		      break;
+
+		    case 'I':
+		    case 'T':
+		      if( fileBytes.length > 32 ) {
+			StringBuilder buf = new StringBuilder(
+						fileBytes.length - 32 );
+			boolean cr = false;
+			for( int i = 32; i < fileBytes.length; i++ ) {
+			  int b = fileBytes[ i ] & 0xFF;
+			  if( b == '\r' ) {
+			    cr = true;
 			    buf.append( (char) '\n' );
 			  }
+			  else if( b == '\n' ) {
+			    if( cr ) {
+			      cr = false;
+			    } else {
+			      buf.append( (char) '\n' );
+			    }
+			  }
+			  else if( b == 0x1E ) {
+			    buf.append( (char) '\n' );
+			  }
+			  else if( (b == '\t') || (b >= 0x20) ) {
+			    buf.append( (char) b );
+			  }
 			}
-			else if( b == 0x1E ) {
-			  buf.append( (char) '\n' );
-			}
-			else if( (b == '\t') || (b >= 0x20) ) {
-			  buf.append( (char) b );
-			}
+			text = buf.toString();
+			info = "Headersave-Textdatei";
 		      }
-		      text = buf.toString();
-		    }
-		    break;
+		      break;
+		  }
 		}
-	      }
-	      else if( fileFmt.equals( FileInfo.KCB )
-		       || fileFmt.equals( FileInfo.KCTAP_BASIC_PRG )
-		       || fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG )
-		       || fileFmt.equals( FileInfo.KCBASIC_PRG ) )
-	      {
-		LoadData loadData = FileInfo.createLoadData(
+		else if( fileFmt.equals( FileInfo.KCB )
+			 || fileFmt.equals( FileInfo.KCTAP_BASIC_PRG )
+			 || fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG )
+			 || fileFmt.equals( FileInfo.KCBASIC_PRG ) )
+		{
+		  LoadData loadData = FileInfo.createLoadData(
 							fileBytes,
 							fileFmt );
-		if( loadData != null ) {
-		  text = getKCBasicProgram( loadData, fileInfo.getBegAddr() );
+		  if( loadData != null ) {
+		    text = getKCBasicProgram( loadData, fileInfo.getBegAddr() );
+		    info = "KC-BASIC-Programm";
+		  }
 		}
 	      }
+	      catch( IOException ex ) {
+		text = null;
+	      }
 	    }
-	    catch( IOException ex ) {
-	      text = null;
+	  }
+	  if( text != null ) {
+	    if( info != null ) {
+	      info += ":\n";
+	    } else {
+	      info = "";
+	    }
+	    BasicDlg.showInfoDlg(
+		this.editFrm,
+		info + "Die Datei ist keine reine Textdatei und kann\n"
+			+ "deshalb auch nicht als solche ge\u00F6ffnet"
+			+ " werden.\n"
+			+ "Der in der Datei enthaltene Text wird aber\n"
+			+ "extrahiert und als neue Textdatei"
+			+ " ge\u00F6ffnet." );
+	  }
+
+	  // WordStar-Datei?
+	  if( (text == null) && (file != null) && (fileBytes.length > 2) ) {
+	    if( fileBytes[ 0 ] == '.' ) {
+	      int b1 = (int) fileBytes[ 1 ] & 0xFF;
+	      if( ((b1 >= '0') && (b1 <= '9'))
+		  || ((b1 >= 'a') && (b1 <= 'z')) )
+	      {
+		if( BasicDlg.showYesNoDlg(
+			this.editFrm,
+			"Die Datei scheint eine WordStar-Datei zu sein.\n"
+				+ "Sie k\u00F6nnen die Datei als"
+				+ " WordStar-Datei importieren oder als"
+				+ " Textdatei \u00F6ffnen.\n"
+				+ "Beim Importieren wird nur der Text"
+				+ " ohne Formatierungen als neue Textdatei"
+				+ " ge\u00F6ffnet.\n\n"
+				+ "M\u00F6chten Sie die Datei als"
+				+ " WordStar-Datei importieren?",
+			"WordStar-Datei importieren" ) )
+		{
+		  text = TextUtil.wordStarToPlainText( fileBytes );
+		}
+	      }
 	    }
 	  }
 	}
-      }
-      if( text != null ) {
-	filtered      = true;
-	charConverter = null;
-      } else {
-	if( fileBytes != null ) {
+	if( text != null ) {
+	  filtered      = true;
+	  charConverter = null;
+	} else {
 	  if( fileBytes.length > 0 ) {
 	    StringBuilder textBuf = new StringBuilder( fileBytes.length );
 
-	    inStream = new PushbackInputStream(
-				new ByteArrayInputStream( fileBytes ) );
+	    // Byte-Order-Markierung pruefen
+	    String bomEnc = null;
+	    int    bomLen = 0;
+	    if( fileBytes.length >= 2 ) {
+	      int b0 = (int) fileBytes[ 0 ] & 0xFF;
+	      int b1 = (int) fileBytes[ 1 ] & 0xFF;
+	      if( (b0 == 0xFE) && (b1 == 0xFF) ) {
+		bomEnc = "UTF-16BE";
+		bomLen = 2;
+	      } else if( (b0 == 0xFF) && (b1 == 0xFE) ) {
+		bomEnc = "UTF-16LE";
+		bomLen = 2;
+	      } else if( (b0 == 0xEF) && (b1 == 0xBB) ) {
+		if( fileBytes.length >= 3 ) {
+		  if( ((int) fileBytes[ 2 ] & 0xFF) == 0xBF ) {
+		    bomEnc = "UTF-8";
+		    bomLen = 3;
+		  }
+		}
+	      }
+	    }
 
-	    // ggf. Zeichensatzumwandlung aktivieren
+	    /*
+	     * Wenn eine Byte-Order-Markierung existiert,
+	     * dann wird daraus das Encoding ausgewertet.
+	     * Wurde allerdings ein Encoding uebergeben,
+	     * dass nicht dem der Byte-Order-Markierung entspricht,
+	     * dann hat das uebergebene die hoehere Prioritaet, d.h.,
+	     * die Bytes der Byte-Order-Markierung werden als Text gewertet.
+	     */
+	    if( bomEnc != null ) {
+	      if( (charConverter == null) && (encodingName == null) ) {
+		encodingName = bomEnc;
+		encodingDesc = bomEnc + TEXT_WITH_BOM;
+		hasBOM       = true;
+	      } else {
+		if( encodingName != null ) {
+		  if( encodingName.equals( bomEnc ) ) {
+		    encodingDesc = bomEnc + TEXT_WITH_BOM;
+		    hasBOM       = true;
+		  }
+		}
+	      }
+	    }
+
+	    // Eingabestraems mit evtl. Zeichensatzumwandlung oeffnen
+	    if( !hasBOM ) {
+	      bomLen = 0;
+	    }
+	    inStream = new PushbackInputStream(
+				new ByteArrayInputStream(
+					fileBytes,
+					bomLen,
+					fileBytes.length - bomLen ) );
 	    if( charConverter == null ) {
-	      reader = new PushbackReader( encodingName != null ?
-				new InputStreamReader( inStream, encodingName )
-				: new InputStreamReader( inStream ) );
+	      if( encodingName != null ) {
+		reader = new PushbackReader(
+				new InputStreamReader(
+						inStream,
+						encodingName ) );
+	      } else {
+		reader = new PushbackReader(
+				new InputStreamReader( inStream ) );
+	      }
 	    }
 
 	    // erste Zeile bis zum Zeilenende lesen
@@ -454,8 +592,9 @@ public class EditText implements
 		   && (ch != '\u001E') )
 	    {
 	      if( ch == 0 ) {
-		if( charConverter != null )
+		if( charConverter != null ) {
 		  charsLost = true;
+		}
 	      } else {
 		textBuf.append( (char) ch );
 	      }
@@ -519,8 +658,8 @@ public class EditText implements
 		  }
 		  // Null-Bytes und Textendezeichen herausfiltern
 		  else if( (ch != 0)
-			   && (ch != '\u0003') && (ch != '\u0004')
-			   && (ch != '\u001A') )
+			   && (ch != '\u0003')
+			   && (ch != '\u0004') )
 		  {
 		    textBuf.append( (char) ch );
 		  }
@@ -557,13 +696,30 @@ public class EditText implements
 	  }
 	}
       }
-      this.used                = true;
-      this.charConverter       = charConverter;
-      this.encodingName        = encodingName;
-      this.encodingDisplayText = encodingDisplayText;
+      this.used           = true;
+      this.byteOrderMark  = hasBOM;
+      this.trailing1A     = false;
+      this.charConverter  = charConverter;
+      this.encodingName   = encodingName;
+      this.encodingDesc   = encodingDesc;
+      if( text != null ) {
+	int len = text.length();
+	int pos = len - 1;
+	while( pos >= 0 ) {
+	  if( text.charAt( pos ) != 0x1A ) {
+	    break;
+	  }
+	  this.trailing1A = true;
+	  --pos;
+	}
+	pos++;
+	if( this.trailing1A && (pos >= 0) && (pos < len) ) {
+	  text = text.substring( 0, pos );
+	}
+      }
       if( filtered ) {
 	this.file     = null;
-	this.textName = "Neuer Text (" + file.getName() + ")";
+	this.textName = "Neuer Text (Quelle: " + file.getName() + ")";
 	setDataUnchanged( false );
       } else {
 	this.file     = file;
@@ -585,12 +741,12 @@ public class EditText implements
       if( charsLost ) {
 	BasicDlg.showWarningDlg(
 		this.editFrm,
-		"Die Datei enth\u00E4lt Zeichen, die in dem gew\u00FCnschten\n"
-			+ "Zeichensatz nicht existieren und somit auch nicht\n"
-			+ "geladen werden k\u00F6nnen, d.h.,\n"
-			+ "diese Zeichen fehlen in dem angezeigten Text.\n"
-			+ "Sie sollten versuchen, die Datei mit einem\n"
-			+ "anderen Zeichensatz zu laden." );
+		"Die Datei enth\u00E4lt Zeichen, die in dem ausgew\u00E4hlten"
+			+ " Zeichensatz nicht existieren.\n"
+			+ "Diese Zeichen fehlen in dem angezeigten Text."
+			+ " Sie sollten deshalb versuchen,\n"
+			+ "die Datei mit einem anderen Zeichensatz"
+			+ " zu \u00F6ffnen." );
       }
     }
     catch( UnsupportedEncodingException ex ) {
@@ -648,15 +804,18 @@ public class EditText implements
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
-		String        encodingDisplayText,
+		String        encodingDesc,
+		boolean       byteOrderMark,
+		boolean       trailing1A,
 		boolean       trimLines,
 		String        lineEnd ) throws IOException
   {
     boolean charsLost = false;
     String  text      = (this.textArea != null ?
 				this.textArea.getText() : this.textValue);
-    if( text == null )
+    if( text == null ) {
       text = "";
+    }
 
     // Zeilenende
     if( lineEnd == null ) {
@@ -682,9 +841,33 @@ public class EditText implements
 
       BufferedWriter outWriter = null;
       if( charConverter == null ) {
-	outWriter = new BufferedWriter( encodingName != null ?
-			new OutputStreamWriter( outStream, encodingName )
-			: new OutputStreamWriter( outStream ) );
+	if( encodingName != null ) {
+	  if( byteOrderMark ) {
+	    if( encodingName.equalsIgnoreCase( "UTF-8" ) ) {
+	      outStream.write( 0xEF );
+	      outStream.write( 0xBB );
+	      outStream.write( 0xBF );
+	    } else if( encodingName.equalsIgnoreCase( "UTF-16BE" ) ) {
+	      outStream.write( 0xFE );
+	      outStream.write( 0xFF );
+	    } else if( encodingName.equalsIgnoreCase( "UTF-16LE" ) ) {
+	      outStream.write( 0xFF );
+	      outStream.write( 0xFE );
+	    } else {
+	      /*
+	       * Bei UTF-16 wird die Byte-Order-Markierung
+	       * automatisch erzeugt und muss deshalb hier entfallen.
+	       */
+	      byteOrderMark = false;
+	    }
+	  }
+	  outWriter = new BufferedWriter(
+			new OutputStreamWriter( outStream, encodingName ) );
+	} else {
+	  byteOrderMark = false;
+	  outWriter     = new BufferedWriter(
+				new OutputStreamWriter( outStream ) );
+	}
       }
 
       int len = text.length();
@@ -759,9 +942,15 @@ public class EditText implements
       }
 
       if( outWriter != null ) {
-	outWriter.flush();		// schliesst auch "this.outStream"
-	outWriter.close();
+	if( trailing1A ) {
+	  outWriter.write( 0x1A );
+	}
+	outWriter.flush();
+	outWriter.close();		// schliesst auch "outStream"
       } else {
+	if( trailing1A ) {
+	  outStream.write( 0x1A );
+	}
 	outStream.close();
       }
       outStream = null;
@@ -770,13 +959,15 @@ public class EditText implements
 	setProjectChanged( true );
       }
 
-      this.file                = file;
-      this.charConverter       = charConverter;
-      this.encodingName        = encodingName;
-      this.encodingDisplayText = encodingDisplayText;
-      this.trimLines           = trimLines;
-      this.lineEnd             = lineEnd;
-      this.textName            = this.file.getName();
+      this.file          = file;
+      this.charConverter = charConverter;
+      this.encodingName  = encodingName;
+      this.encodingDesc  = encodingDesc;
+      this.byteOrderMark = byteOrderMark;
+      this.trailing1A    = trailing1A;
+      this.trimLines     = trimLines;
+      this.lineEnd       = lineEnd;
+      this.textName      = this.file.getName();
       setDataUnchanged( true );
       this.editFrm.updTitle();
 
@@ -791,7 +982,7 @@ public class EditText implements
     }
     catch( UnsupportedEncodingException ex ) {
       throw new IOException(
-		encodingName + ": Der Zeichensatz wird auf dieser Plattform"
+		encodingDesc + ": Der Zeichensatz wird auf dieser Plattform"
 			+ " nicht unterst\u00FCtzt." );
     }
     finally {
@@ -875,6 +1066,13 @@ public class EditText implements
 			+ "und dann das Projekt." );
     }
     return rv;
+  }
+
+
+
+  public void setAskFileNameOnSave( boolean state )
+  {
+    this.askFileNameOnSave = state;
   }
 
 
@@ -1036,27 +1234,45 @@ public class EditText implements
 
   private void init( EditFrm editFrm, EmuThread emuThread )
   {
-    this.editFrm             = editFrm;
-    this.emuThread           = emuThread;
-    this.undoMngr            = new UndoManager();
-    this.prgOptions          = null;
-    this.file                = null;
-    this.charConverter       = null;
-    this.encodingName        = null;
-    this.encodingDisplayText = null;
-    this.lineEnd             = null;
-    this.resultEditText      = null;
-    this.textName            = null;
-    this.textValue           = null;
-    this.textArea            = null;
-    this.tabComponent        = null;
-    this.dropTarget1         = null;
-    this.dropTarget2         = null;
-    this.used                = false;
-    this.dataChanged         = false;
-    this.prjChanged          = false;
-    this.saved               = true;
-    this.trimLines           = false;
+    this.editFrm           = editFrm;
+    this.emuThread         = emuThread;
+    this.undoMngr          = new UndoManager();
+    this.prgOptions        = null;
+    this.file              = null;
+    this.charConverter     = null;
+    this.encodingName      = null;
+    this.encodingDesc      = null;
+    this.lineEnd           = null;
+    this.resultEditText    = null;
+    this.textName          = null;
+    this.textValue         = null;
+    this.textArea          = null;
+    this.tabComponent      = null;
+    this.dropTarget1       = null;
+    this.dropTarget2       = null;
+    this.used              = false;
+    this.dataChanged       = false;
+    this.prjChanged        = false;
+    this.saved             = true;
+    this.askFileNameOnSave = false;
+    this.byteOrderMark     = false;
+    this.trailing1A        = false;
+    this.trimLines         = false;
+  }
+
+
+  private void disableDropTargets()
+  {
+    DropTarget dt = this.dropTarget1;
+    if( dt != null ) {
+      this.dropTarget1 = null;
+      dt.setActive( false );
+    }
+    dt = this.dropTarget2;
+    if( dt != null ) {
+      this.dropTarget2 = null;
+      dt.setActive( false );
+    }
   }
 
 
@@ -1156,21 +1372,6 @@ public class EditText implements
   }
 
 
-  private void disableDropTargets()
-  {
-    DropTarget dt = this.dropTarget1;
-    if( dt != null ) {
-      this.dropTarget1 = null;
-      dt.setActive( false );
-    }
-    dt = this.dropTarget2;
-    if( dt != null ) {
-      this.dropTarget2 = null;
-      dt.setActive( false );
-    }
-  }
-
-
   private int readChar(
 		Reader        reader,
 		InputStream   inStream,
@@ -1181,8 +1382,9 @@ public class EditText implements
       ch = reader.read();
     } else {
       ch = inStream.read();
-      if( (ch != -1) && (charConverter != null) )
+      if( (ch != -1) && (charConverter != null) ) {
 	ch = charConverter.toUnicode( ch );
+      }
     }
     return ch;
   }

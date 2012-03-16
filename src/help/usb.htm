@@ -1,0 +1,137 @@
+<html>
+<body>
+ <h1>Emulation eines USB-Anschlusses</h1>
+  F&uuml;r einige der von JKCEMU emulierten Computer wurden L&ouml;sungen
+  zum Anschluss von USB-Ger&auml;ten entwickelt.
+  Alle diese L&ouml;sungen basieren auf einen Entwurf von Mario Leubner,
+  der ein Vinculum-VDIP-Modul mit VDAP-Firmware verwendet.
+  JKCEMU emuliert diese USB-L&ouml;sungen sowie ein
+  daran angeschlossenes USB-Massenspeicherger&auml;t.
+  Andere USB-Ger&auml;te werden nicht unterst&uuml;tzt.
+ <br/><br/>
+  Der emulierte USB-Massenspeicher wird auf ein beliebiges Verzeichnis
+  im Dateisystem des Emulatorrechners abgebildet.
+  Damit kann auch dann ein USB-Speicherstick emuliert werden,
+  wenn am Emulatorrechner gar kein physischer USB-Massenspeicher
+  angeschlossen ist.
+ <br/><br/>
+  An den im JKCEMU emulierten Computer stecken Sie gedanklich einen
+  USB-Speicherstick an, indem Sie im Fenster <em>JKCEMU USB-Anschluss</em>
+  ein Verzeichnis ausw&auml;hlen oder per Drag&amp;Drop
+  dort eins hineinziehen.
+  Umgekehrt bedeutet das Entfernen des Verzeichnisses das Abziehen
+  des Speichersticks.
+  Das Fenster <em>JKCEMU USB-Anschluss</em> rufen Sie im Hauptfenster
+  mit dem Men&uuml;punkt <em>Extra</em> &rarr; <em>USB-Anschluss</em> auf.
+ <br/><br/>
+  <b>Achtung!</b> Die VDAP-Firmware auf den Vinculum-VDIP-Modulen
+  unterst&uuml;tzt keine langen Dateinamen,
+  sondern nur welche im 8:3-Format.
+  Diese Einschr&auml;nkung gilt somit auch in der Emulation.
+  Allerdings gibt es trotzdem einen Unterschied:
+  Im Original werden nur FAT-formatierte USB-Massenspeicher
+  unterst&uuml;tzt.
+  Bei FAT gibt es f&uuml;r jeden langen Dateinamen auch einen kurzen
+  &Auml;quivalenznamen im 8:3-Format.
+  &Uuml;ber diese kurzen Namen sind alle Dateien auf dem Datentr&auml;ger
+  f&uuml;r die VDAP-Firmware sichtbar.
+  In der Emulation aber kann jedes beliebige Verzeichnis als
+  emulierter Speicherstick verwendet werden, unabh&auml;gig
+  vom Dateisystem.
+  Aus diesem Grund gibt es dort auch keine kurzen &Auml;quivalenznamen,
+  was zur Folge hat, dass das emulierte VDIP-Modul nur die Dateien
+  und Verzeichnisse sieht, die dem 8:3-Schema entsprechen.
+  Dateien und Verzeichnisse mit langen Namen werden ausgeblendet.
+ <br/><br/>
+
+
+ <h2>Optionen</h2>
+  Im Fenster <em>JKCEMU USB-Anschluss</em> k&ouml;nnen Sie neben
+  dem Verzeichnis des emulierten USB-Speichersticks auch drei Optionen
+  angeben:
+  <ul>
+   <li>
+    <em>Schreibschutz (Nur-Lese-Modus)</em><br/>
+    Ist diese Option eingeschaltet, werden s&auml;mtliche
+    Schreiboperationen unterbunden.
+   </li>
+   <li>
+    <em>Dateinamen klein schreiben</em><br/>
+    Diese Option gilt ausschlie&szlig;lich f&uuml;r das Anlegen
+    neuer Dateien und Verzeichnisse.
+    Standardm&auml;&szlig;ig werden diese mit gro&szlig;geschriebenen
+    Namen angelegt, da das die Vinculum-VDIP-Module auch so tun.
+    Mit der Option k&ouml;nnen Sie das auf Kleinschreibung &auml;ndern.
+   </li>
+   <li>
+    <em>Immer aktueller Zeitstempel bei Schreibzugriffen</em><br/>
+    Ist diese Option ausgeschaltet, wird der Zeitstempel der letzten
+    &Auml;nderung entsprechend den Vinculum-VDIP-Modulen gesetzt:
+    Der Zeitstempel muss beim &Ouml;ffnen einer Datei zum Schreiben
+    oder beim Anlegen eines Verzeichnisses von der Anwendungs- bzw.
+    Treibersoftware mitgeliefert werden oder, falls nicht,
+    dann wird der Standard-Zeitstempel 20.12.2004 00:00:00 verwendet.
+    Wenn nun aber im emulierten System gar keine Systemuhr l&auml;uft
+    oder sie f&uuml;hrt die falsche Zeit, weil sie z.B. per Hand
+    gesetzt werden muss und der Anwender keine Lust zur korrekten
+    Eingabe hatte, werden auch die Zeitstempel der letzten &Auml;nderung
+    falsch gesetzt werden.
+    Genau f&uuml;r diesen Fall gibt es die Option.
+    Ist sie eingeschaltet, werden die von der Anwendungs- bzw.
+    Treibersoftware mitgelieferten Zeitstempel ignoriert und
+    der Zeitpunkt der letzten &Auml;nderung immer auf die aktuelle
+    Zeit (Systemzeit des Emulatorrechners) gesetzt.
+    Allerdings hat das auch den Nachteil, dass beim Kopieren einer Datei
+    auf dem USB-Speicher die neue Datei auch den aktuellen
+    Zeitstempel erh&auml;lt und nicht den der Quelldatei.
+   </li>
+  </ul>
+ <br/>
+
+
+ <h2>Besonderheiten/Einschr&auml;nkungen der USB-Emulation</h2>
+
+ <h3>Unterst&uuml;tzte Kommandos</h3>
+  JKCEMU simuliert alle Kommandos der VDAP-Firmware.
+  Der Zugriff auf den emulierten USB-Massenspeicher ist aber nur
+  &uuml;ber die Disk-Kommandos m&ouml;glich (Dateisystemebene).
+  Eine Kommunikation auf Sektorebene (z.B. mit Debug-Kommandos)
+  oder direkte auf USB-Protokollebene (Device-Kommandos oder Data Mode)
+  ist dagegen nicht m&ouml;glich.
+  Schreibende Debug- und Device-Kommandos liefern entweder
+  einen Fehlercode oder haben keine Wirkung,
+  je nachdem ob das Kommando laut Beschreibung einen Fehler liefern kann.
+  Lesende Debug- und Device-Kommandos liefern je nach Kommando
+  entweder Dummy-Werte oder gar keine Daten,
+  evtl. auch in Verbindung mit einem Fehlercode.
+  Das <em>DATAREQ</em>-Signal zur Anforderung des Data-Modes
+  hat ebenfalls keine Wirkung.
+  Demzufolge wird auch das <em>DATAACK#</em>-Signal
+  (Best&auml;tigung Data-Mode) niemals aktiv.
+ <br/><br/>
+
+ <h3>Fehlermeldungen bei unterbundenen Schreibzugriffen</h3>
+  Wenn Schreibzugriffe aufgrund eines gesetzten Schreibschutzes
+  unterbunden werden (z.B. weil man keine Schreibberechtigung auf das
+  Verzeichnis hat oder weil man das Verzeichnis im JKCEMU nur mit
+  Schreibschutz ge&ouml;ffnet hat)
+  erscheint die Fehlermeldung <em>Read Only</em> nur dann,
+  wenn sie f&uuml;r das gerade ausgef&uuml;hrte VDAP-Kommando
+  auch dokumentiert ist.
+  Ist das nicht der Fall, wird aus Kompatibilit&auml;tsgr&uuml;nden
+  <em>Command Failed</em> oder, falls auch dieser Fehlermeldung
+  f&uuml;r das gerade ausgef&uuml;hrte Kommando nicht dokumentiert ist,
+  <em>Disk Full</em> ausgegeben.
+  In diesen F&auml;llen entspricht somit die angezeigte Fehlermeldungen
+  nicht ganz dem wirklichen Grund des missgl&uuml;ckten Schreibzugriffs.
+ <br/><br/>
+
+ <h3>Zeitstempel</h3>
+  Als Zeitstempel wird nur der letzte &Auml;nderungszeitpunkt
+  unterst&uuml;tzt.
+  Beim VDAP-Kommando <em>DIRT</em> haben deshalb alle drei
+  Zeitstempel (Dateierzeugung, letzter Zugriff und letzte &Auml;nderung)
+  immer den gleichen Wert, n&auml;mlich den der letzten &Auml;nderung.
+</body>
+</html>
+

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -119,66 +119,66 @@ public class BasicOptions extends PrgOptions
   {
     BasicOptions options = null;
     if( props != null ) {
-      String  appName = props.getProperty( "jkcemu.programmimg.basic.name" );
+      String  appName = props.getProperty( "jkcemu.programming.basic.name" );
 
       Integer begAddr = getInteger(
 			props,
-			"jkcemu.programmimg.basic.address.begin" );
+			"jkcemu.programming.basic.address.begin" );
 
       Integer endOfMem = getInteger(
 			props,
-			"jkcemu.programmimg.basic.address.top" );
+			"jkcemu.programming.basic.address.top" );
 
       Integer arraySize = getInteger(
 			props,
-			"jkcemu.programmimg.basic.array.size" );
+			"jkcemu.programming.basic.array.size" );
 
       Integer stackSize = getInteger(
 			props,
-			"jkcemu.programmimg.basic.stack.size" );
+			"jkcemu.programming.basic.stack.size" );
 
       Boolean allowLongVarNames = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.allow_long_variable_names" );
+			"jkcemu.programming.basic.allow_long_variable_names" );
 
       Boolean checkArray = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.array.check" );
+			"jkcemu.programming.basic.array.check" );
 
       Boolean checkStack = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.stack.check" );
+			"jkcemu.programming.basic.stack.check" );
 
       Boolean forceCPM = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.force_cpm" );
+			"jkcemu.programming.basic.force_cpm" );
 
       Boolean showAsm = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.show_assembler_source" );
+			"jkcemu.programming.basic.show_assembler_source" );
 
       Boolean strictAC1Basic = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.strict_ac1_minibasic" );
+			"jkcemu.programming.basic.strict_ac1_minibasic" );
 
       Boolean strictZ1013Basic = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.strict_z1013_tinybasic" );
+			"jkcemu.programming.basic.strict_z1013_tinybasic" );
 
       Boolean structuredForNext = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.structured_for_next" );
+			"jkcemu.programming.basic.structured_for_next" );
 
       Boolean preferRelJumps = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.prefer_relative_jumps" );
+			"jkcemu.programming.basic.prefer_relative_jumps" );
 
       Boolean printCalls = getBoolean(
 			props,
-			"jkcemu.programmimg.basic.print_calls" );
+			"jkcemu.programming.basic.print_calls" );
 
       String breakPossibilityText = props.getProperty(
-			"jkcemu.programmimg.basic.breakable" );
+			"jkcemu.programming.basic.breakable" );
 
       if( (appName != null)
 	  || (begAddr != null)
@@ -292,15 +292,12 @@ public class BasicOptions extends PrgOptions
       {
 	rv = 0x2000;
       }
-      else if( (emuSys instanceof PCM)
+      else if( (emuSys instanceof HueblerEvertMC)
+	       || (emuSys instanceof HueblerGraphicsMC)
+	       || (emuSys instanceof PCM)
 	       || (emuSys instanceof Z1013) )
       {
 	rv = 0x0100;
-      }
-      else if( (emuSys instanceof HueblerEvertMC)
-	       || (emuSys instanceof HueblerGraphicsMC) )
-      {
-	rv = 0x8000;
       }
       else if( emuSys instanceof KramerMC ) {
 	rv = 0x1000;
@@ -493,78 +490,78 @@ public class BasicOptions extends PrgOptions
     super.putOptionsTo( props );
     if( props != null ) {
       props.setProperty(
-		"jkcemu.programmimg.basic.name",
+		"jkcemu.programming.basic.name",
 		this.appName != null ? this.appName : "" );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.address.begin",
+		"jkcemu.programming.basic.address.begin",
                 Integer.toString( this.begAddr ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.address.top",
+		"jkcemu.programming.basic.address.top",
                 Integer.toString( this.endOfMem ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.array.size",
+		"jkcemu.programming.basic.array.size",
                 Integer.toString( this.arraySize ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.array.check",
+		"jkcemu.programming.basic.array.check",
                 Boolean.toString( this.checkArray ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.stack.size",
+		"jkcemu.programming.basic.stack.size",
                 Integer.toString( this.stackSize ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.stack.check",
+		"jkcemu.programming.basic.stack.check",
                 Boolean.toString( this.checkStack ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.allow_long_variable_names",
+		"jkcemu.programming.basic.allow_long_variable_names",
                 Boolean.toString( this.allowLongVarNames ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.force_cpm",
+		"jkcemu.programming.basic.force_cpm",
                 Boolean.toString( this.forceCPM ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.show_assembler_source",
+		"jkcemu.programming.basic.show_assembler_source",
                 Boolean.toString( this.showAsm ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.strict_ac1_minibasic",
+		"jkcemu.programming.basic.strict_ac1_minibasic",
                 Boolean.toString( this.strictAC1Basic ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.strict_z1013_tinybasic",
+		"jkcemu.programming.basic.strict_z1013_tinybasic",
                 Boolean.toString( this.strictZ1013Basic ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.structured_for_next",
+		"jkcemu.programming.basic.structured_for_next",
                 Boolean.toString( this.structuredForNext ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.prefer_relative_jumps",
+		"jkcemu.programming.basic.prefer_relative_jumps",
                 Boolean.toString( this.preferRelJumps ) );
 
       props.setProperty(
-		"jkcemu.programmimg.basic.print_calls",
+		"jkcemu.programming.basic.print_calls",
                 Boolean.toString( this.printCalls ) );
 
       if( this.breakPossibility != null ) {
 	switch( this.breakPossibility ) {
 	  case BREAK_NEVER:
-	    props.setProperty( "jkcemu.programmimg.basic.breakable", "never" );
+	    props.setProperty( "jkcemu.programming.basic.breakable", "never" );
 	    break;
 
 	  case BREAK_INPUT:
-	    props.setProperty( "jkcemu.programmimg.basic.breakable", "input" );
+	    props.setProperty( "jkcemu.programming.basic.breakable", "input" );
 	    break;
 
 	  default:
 	    props.setProperty(
-			"jkcemu.programmimg.basic.breakable",
+			"jkcemu.programming.basic.breakable",
 			"always" );
 	}
       }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -58,6 +58,12 @@ public class LoadData implements Z80MemView
       }
     }
     return rv;
+  }
+
+
+  public byte[] getByteArray()
+  {
+    return this.data;
   }
 
 
@@ -194,20 +200,6 @@ public class LoadData implements Z80MemView
   public void setStartAddr( int addr )
   {
     this.startAddr = addr;
-  }
-
-
-  public byte[] toByteArray()
-  {
-    byte[] rv = null;
-    if( this.data != null ) {
-      int n = Math.min( this.len, this.data.length - this.offset );
-      if( n > 0 ) {
-	rv = new byte[ n ];
-	System.arraycopy( this.data, this.offset, rv, 0, n );
-      }
-    }
-    return rv;
   }
 
 

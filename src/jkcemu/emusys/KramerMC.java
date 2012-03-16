@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -128,8 +128,6 @@ public class KramerMC extends EmuSys implements
 
     this.pcListenerAdded = false;
     checkAddPCListener( props );
-
-    reset( EmuThread.ResetLevel.POWER_ON, props );
     z80MaxSpeedChanged( cpu );
   }
 

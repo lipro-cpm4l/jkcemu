@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@
 package jkcemu.emusys.z1013;
 
 import java.lang.*;
+import java.util.Arrays;
 
 
 public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
@@ -21,7 +22,7 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
   protected int shiftCol;
   protected int shiftValue;
 
-  protected int[] rowMasks;
+  protected int[] keyboardMatrix;
 
   protected boolean ctrlPressed;
   protected boolean shiftPressed;
@@ -38,7 +39,7 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
     this.shiftValue   = 0;
 
     // eigentliche Initialisierungen
-    this.rowMasks = new int[ 8 ];
+    this.keyboardMatrix = new int[ 12 ];
     reset();
   }
 
@@ -51,31 +52,48 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
 
 	/* --- ueberschriebene Methoden --- */
 
-  /*
-   * Bei der 12x8-Matrix wird der Wert von PIO B4 nicht ausgewertet.
-   */
   @Override
   public int getRowValues( int col, boolean pioB4State )
   {
     int rv = 0;
-    if( (col >= 0) && (col <= 15) ) {
-
-      if( !onlyShiftKeysReadable() ) {
-	int colMask = (col == 15 ? 0x0FFF : (1 << col));
-
-	rv = 0;
-	for( int i = 0; i < this.rowMasks.length; i++ ) {
-	  if( (this.rowMasks[ i ] & colMask) != 0 )
-	    rv |= i + 1;
-	}
+    int m  = 0;
+    if( col >= 0 ) {
+      if( ((col == 15) || (col == this.ctrlCol))
+	  && this.ctrlPressed
+	  && (this.ctrlCol >= 0)
+	  && (this.ctrlCol < this.keyboardMatrix.length) )
+      {
+	m |= this.ctrlValue;
       }
-
-      if( col < 15 ) {
-	if( this.ctrlPressed && (col == this.ctrlCol) )
-	  rv |= this.ctrlValue;
-
-	if( this.shiftPressed && (col == this.shiftCol) )
-	  rv |= this.shiftValue;
+      if( ((col == 15) || (col == this.shiftCol))
+	  && this.shiftPressed
+	  && (this.shiftCol >= 0)
+	  && (this.shiftCol < this.keyboardMatrix.length) )
+      {
+	m |= this.shiftValue;
+      }
+      if( !onlyShiftKeysReadable() ) {
+	if( col == 15 ) {
+	  for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
+	    m |= this.keyboardMatrix[ i ];
+	  }
+	} else {
+	  if( col < this.keyboardMatrix.length ) {
+	    m |= this.keyboardMatrix[ col ];
+	  }
+        }
+      }
+      if( (m & 0x55) != 0 ) {
+	rv |= 0x01;
+      }
+      if( (m & 0x66) != 0 ) {
+	rv |= 0x02;
+      }
+      if( (m & 0x78) != 0 ) {
+	rv |= 0x04;
+      }
+      if( (m & 0x80) != 0 ) {
+	rv |= 0x08;
       }
     }
     return rv;
@@ -88,18 +106,19 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
     super.reset();
     this.ctrlPressed  = false;
     this.shiftPressed = false;
-    for( int i = 0; i < this.rowMasks.length; i++ )
-      this.rowMasks[ i ] = 0;
+    Arrays.fill( this.keyboardMatrix, 0 );
   }
 
 
   @Override
-  protected boolean updRowMasks( boolean hexMode )
+  protected synchronized boolean updKeyboardMatrix(
+                                                int     keyCharCode,
+                                                boolean hexMode )
   {
-    boolean rv = updRowMasks( this.keyCharCode );
+    boolean rv = updKeyboardMatrixInternal( keyCharCode );
     if( !rv ) {
       if( keyCharCode < '\u0020' ) {
-	if( updRowMasks( this.keyCharCode + 'A' - 1 ) ) {
+	if( updKeyboardMatrixInternal( keyCharCode + 'A' - 1 ) ) {
 	  this.ctrlPressed = true;
 	  rv               = true;
 	}
@@ -114,21 +133,21 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
 
 	/* --- private Methoden --- */
 
-  private boolean updRowMasks( int keyCharCode )
+  private boolean updKeyboardMatrixInternal( int keyCharCode )
   {
     boolean rv = false;
     if( keyCharCode > 0 ) {
       int pos = indexOf( this.matrixNormal, keyCharCode );
       if( pos >= 0 ) {
 	rv    = true;
-	int m = (1 << (pos % 12));
-	this.rowMasks[ pos / 12 ] |= m;
+	int m = (1 << (pos / 12));
+	this.keyboardMatrix[ pos % 12 ] |= m;
       } else {
 	pos = indexOf( this.matrixShift, keyCharCode );
 	if( pos >= 0 ) {
 	  rv    = true;
-	  int m = (1 << (pos % 12));
-	  this.rowMasks[ pos / 12 ] |= m;
+	  int m = (1 << (pos / 12));
+	  this.keyboardMatrix[ pos % 12 ] |= m;
 	  this.shiftPressed = true;
 	}
       }
@@ -139,11 +158,14 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
 
   private int indexOf( int[] a, int value )
   {
+    int rv = -1;
     for( int i = 0; i < a.length; i++ ) {
-      if( a[ i ] == value )
-	return i;
+      if( a[ i ] == value ) {
+	rv = i;
+	break;
+      }
     }
-    return -1;
+    return rv;
   }
 }
 

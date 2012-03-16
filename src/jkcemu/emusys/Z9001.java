@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,17 @@
 
 package jkcemu.emusys;
 
-import java.awt.Color;
+import java.awt.*;
 import java.awt.event.*;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
 import jkcemu.disk.*;
+import jkcemu.emusys.z9001.Z9001KeyboardFld;
+import jkcemu.etc.*;
 import jkcemu.joystick.JoystickThread;
+import jkcemu.net.KCNet;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -95,6 +99,8 @@ public class Z9001 extends EmuSys implements
   private static final int GRAPHIC_NONE     = 0;
   private static final int GRAPHIC_ROBOTRON = 1;
   private static final int GRAPHIC_KRT      = 2;
+  private static final int PLOTTER_WIDTH    = 1800;
+  private static final int PLOTTER_HEIGHT   = 2550;
 
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 		new FloppyDiskInfo(
@@ -139,8 +145,12 @@ public class Z9001 extends EmuSys implements
   private int               graphFgColor;
   private boolean           graphBorder;
   private boolean           graphMode;
+  private boolean           graphicLED;
+  private volatile boolean  fixedScreenSize;
   private boolean           kc87;
   private boolean           pasteFast;
+  private boolean           plotterPenState;
+  private boolean           plotterMoveState;
   private boolean           printerModule;
   private boolean           pcListenerAdded;
   private boolean           mode20Rows;
@@ -180,6 +190,10 @@ public class Z9001 extends EmuSys implements
   private Z80CTC            ctcA8;		// CTC im Druckermodul
   private Z80SIO            sioB0;		// SIO im Druckermodul
   private FDC8272           fdc;
+  private Plotter           plotter;
+  private KCNet             kcNet;
+  private VDIP              vdip;
+  private Z9001KeyboardFld  keyboardFld;
   private javax.swing.Timer blinkTimer;
   private Color[]           colors;
   private FloppyDiskDrive[] floppyDiskDrives;
@@ -202,6 +216,8 @@ public class Z9001 extends EmuSys implements
     this.ram16k4000    = false;
     this.ram16k8000    = false;
     this.ram64k        = false;
+    this.graphicLED    = false;
+    this.keyboardFld   = null;
 
     this.sysName = EmuUtil.getProperty( props, "jkcemu.system" );
     if( this.sysName.equals( "KC87" ) ) {
@@ -223,20 +239,39 @@ public class Z9001 extends EmuSys implements
       this.floppyDiskDrives = null;
       this.fdc              = null;
     }
+    if( emulatesPlotter( props ) ) {
+      this.plotter = new Plotter();
+      this.plotter.applySettings( props );
+      this.plotter.setPageSize( PLOTTER_WIDTH, PLOTTER_HEIGHT );
+    } else {
+      this.plotter = null;
+    }
+    if( emulatesKCNet( props ) ) {
+      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+    } else {
+      this.kcNet = null;
+    }
+    if( emulatesUSB( props ) ) {
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen DC-DF)" );
+      this.vdip.applySettings( props );
+    } else {
+      this.vdip = null;
+    }
     this.printerModule = emulatesPrinterModule( props );
     if( this.printerModule ) {
       if( printerModBytes == null ) {
 	printerModBytes = readResource( "/rom/z9001/modprinter.bin" );
       }
     }
-    this.c80Enabled = emulates80CharsMode( props );
-    this.c80Active  = false;
-    this.ramVideo   = new byte[ 0x0400 ];
-    this.ramVideo2  = (this.c80Enabled ? new byte[ 0x0400 ] : null);
-    this.ram16k4000 = emulatesRAM16K4000( props );
-    this.ram16k8000 = emulatesRAM16K8000( props );
-    this.ram64k     = emulatesRAM64K( props );
-    this.ramExt     = null;
+    this.c80Active       = false;
+    this.c80Enabled      = emulates80CharsMode( props );
+    this.fixedScreenSize = isFixedScreenSize( props );
+    this.ramVideo        = new byte[ 0x0400 ];
+    this.ramVideo2       = (this.c80Enabled ? new byte[ 0x0400 ] : null);
+    this.ram16k4000      = emulatesRAM16K4000( props );
+    this.ram16k8000      = emulatesRAM16K8000( props );
+    this.ram64k          = emulatesRAM64K( props );
+    this.ramExt          = null;
     if( this.ram64k ) {
       this.ramExt = this.emuThread.getExtendedRAM( 0x4000 );
     }
@@ -272,20 +307,39 @@ public class Z9001 extends EmuSys implements
 
     this.kbMatrix = new int[ 8 ];
 
-    Z80CPU cpu = emuThread.getZ80CPU();
+
+    java.util.List<Z80InterruptSource> iSources
+				= new ArrayList<Z80InterruptSource>();
+
     this.pio90 = new Z80PIO( "Tastatur-PIO (IO-Adressen 90-93)" );
     this.pio88 = new Z80PIO( "System-PIO (IO-Adressen 88-8B)" );
     this.ctc80 = new Z80CTC( "System-CTC (IO-Adressen 80-83)" );
+    iSources.add( this.pio90 );
+    iSources.add( this.pio88 );
+    iSources.add( this.ctc80 );
     if( this.printerModule ) {
       this.ctcA8 = new Z80CTC( "Druckermodul-CTC (IO-Adressen A8-AB)" );
       this.sioB0 = new Z80SIO( "Druckermodul-SIO (IO-Adressen B0-B3)" );
-      cpu.setInterruptSources(
-		this.pio90, this.pio88, this.ctc80, this.ctcA8, this.sioB0 );
-      this.sioB0.addChannelListener( this, 0 );
+      iSources.add( this.ctcA8 );
+      iSources.add( this.sioB0 );
     } else {
       this.ctcA8 = null;
       this.sioB0 = null;
-      cpu.setInterruptSources( this.pio90, this.pio88, this.ctc80 );
+    }
+    if( this.kcNet != null ) {
+      iSources.add( this.kcNet );
+    }
+    if( this.vdip != null ) {
+      iSources.add( this.vdip );
+    }
+    Z80CPU cpu = emuThread.getZ80CPU();
+    try {
+      cpu.setInterruptSources(
+	iSources.toArray( new Z80InterruptSource[ iSources.size() ] ) );
+    }
+    catch( ArrayStoreException ex ) {}
+    if( this.sioB0 != null ) {
+      this.sioB0.addChannelListener( this, 0 );
     }
     this.ctc80.setTimerConnection( 2, 3 );
     this.ctc80.addCTCListener( this );
@@ -322,7 +376,6 @@ public class Z9001 extends EmuSys implements
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
-    reset( EmuThread.ResetLevel.POWER_ON, props );
   }
 
 
@@ -335,6 +388,30 @@ public class Z9001 extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 2458;	// eigentlich 2,4576 MHz
+  }
+
+
+  public boolean getGraphicLED()
+  {
+    return this.graphicLED;
+  }
+
+
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    synchronized( this.kbMatrix ) {
+      int n = Math.min( kbMatrix.length, this.kbMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	this.kbMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.kbMatrix.length ) {
+	this.kbMatrix[ i ] = 0;
+	i++;
+      }
+      putKeyboardMatrixValuesToPorts();
+    }
   }
 
 
@@ -396,6 +473,9 @@ public class Z9001 extends EmuSys implements
     if( this.fdc != null ) {
       this.fdc.setTStatesPerMilli( maxSpeedKHz );
     }
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
   }
 
 
@@ -433,6 +513,9 @@ public class Z9001 extends EmuSys implements
     }
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
     }
     this.audioInTStates += tStates;
 
@@ -477,10 +560,22 @@ public class Z9001 extends EmuSys implements
   public void applySettings( Properties props )
   {
     super.applySettings( props );
+
+    boolean state = isFixedScreenSize( props );
+    if( state != this.fixedScreenSize ) {
+      this.fixedScreenSize = state;
+      this.screenFrm.fireScreenSizeChanged();
+    }
     checkAddPCListener( props );
     createColors( props );
     loadFont( props );
     applyPasteFast( props );
+    if( this.plotter != null ) {
+      this.plotter.applySettings( props );
+    }
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
   }
 
 
@@ -489,28 +584,22 @@ public class Z9001 extends EmuSys implements
   {
     boolean rv = this.sysName.equals(
 			EmuUtil.getProperty( props, "jkcemu.system" ) );
-    if( rv ) {
-      if( emulatesRAM16K4000( props ) != this.ram16k4000 ) {
-	rv = false;
-      }
+    if( rv && (emulatesRAM16K4000( props ) != this.ram16k4000) ) {
+      rv = false;
+    }
+    if( rv && (emulatesRAM16K8000( props ) != this.ram16k8000) ) {
+      rv = false;
+    }
+    if( rv && (emulatesRAM64K( props ) != this.ram64k) ) {
+      rv = false;
     }
     if( rv ) {
-      if( emulatesRAM16K8000( props ) != this.ram16k8000 ) {
-	rv = false;
-      }
-    }
-    if( rv ) {
-      if( emulatesRAM64K( props ) != this.ram64k ) {
-	rv = false;
-      }
-    }
-    if( rv ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.romOSFile,
 		EmuUtil.getProperty( props,  propPrefix + "os.file" ) );
     }
     if( rv && this.kc87 ) {
-      rv = EmuUtil.equals(
+      rv = TextUtil.equals(
 		this.romBasicFile,
 		EmuUtil.getProperty( props,  propPrefix + "basic.file" ) );
     }
@@ -562,15 +651,20 @@ public class Z9001 extends EmuSys implements
 		this.propPrefix + "rom_mega.enabled",
 		this.propPrefix + "rom_module.file" );
     }
-    if( rv ) {
-      if( emulatesFloppyDisk( props ) != (this.fdc != null) ) {
-	rv = false;
-      }
+    if( rv && (emulatesFloppyDisk( props ) != (this.fdc != null)) ) {
+      rv = false;
     }
-    if( rv ) {
-      if( emulatesPrinterModule( props ) != this.printerModule ) {
-	rv = false;
-      }
+    if( rv && (emulatesPrinterModule( props ) != this.printerModule) ) {
+      rv = false;
+    }
+    if( rv && (emulatesPlotter( props ) != (this.plotter != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
+      rv = false;
     }
     if( rv ) {
       rv = RAMFloppy.complies(
@@ -598,15 +692,11 @@ public class Z9001 extends EmuSys implements
 	rv = false;
       }
     }
-    if( rv ) {
-      if( emulatesProgrammableFont( props ) != (this.ramFont != null) ) {
-	rv = false;
-      }
+    if( rv && (emulatesProgrammableFont( props ) != (this.ramFont != null)) ) {
+      rv = false;
     }
-    if( rv ) {
-      if( emulates80CharsMode( props ) != this.c80Enabled ) {
-	rv = false;
-      }
+    if( rv && (emulates80CharsMode( props ) != this.c80Enabled) ) {
+      rv = false;
     }
     return rv;
   }
@@ -616,6 +706,14 @@ public class Z9001 extends EmuSys implements
   public boolean canExtractScreenText()
   {
     return !this.graphMode;
+  }
+
+
+  @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new Z9001KeyboardFld( this.screenFrm, this );
+    return this.keyboardFld;
   }
 
 
@@ -643,6 +741,18 @@ public class Z9001 extends EmuSys implements
     if( this.ramFloppy2 != null ) {
       this.ramFloppy2.deinstall();
     }
+    if( this.fdc != null ) {
+      this.fdc.die();
+    }
+    if( this.plotter != null ) {
+      this.plotter.die();
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.die();
+    }
+    if( this.vdip != null ) {
+      this.vdip.die();
+    }
   }
 
 
@@ -663,7 +773,11 @@ public class Z9001 extends EmuSys implements
   @Override
   public int getCharHeight()
   {
-    return this.graphMode ? -1 : 8;
+    int rv = -1;
+    if( !this.graphMode ) {
+      rv = (this.fixedScreenSize ? 16 : 8);
+    }
+    return rv;
   }
 
 
@@ -677,14 +791,28 @@ public class Z9001 extends EmuSys implements
   @Override
   public int getCharRowHeight()
   {
-    return this.graphMode ? -1 : (this.mode20Rows ? 9 : 8);
+    int rv = -1;
+    if( !this.graphMode ) {
+      rv = (this.mode20Rows ? 9 : 8);
+      if( this.fixedScreenSize ) {
+	rv *= 2;
+      }
+    }
+    return rv;
   }
 
 
   @Override
   public int getCharWidth()
   {
-    return this.graphMode ? -1 : 8;
+    int rv = -1;
+    if( !this.graphMode ) {
+      rv = 8;
+      if( this.fixedScreenSize && !this.c80Active ) {
+	rv = 16;
+      }
+    }
+    return rv;
   }
 
 
@@ -716,11 +844,17 @@ public class Z9001 extends EmuSys implements
   public int getColorIndex( int x, int y )
   {
     int rv = 0;
+    if( this.fixedScreenSize ) {
+      y /= 2;
+    }
     if( this.graphMode
 	&& (this.graphType == GRAPHIC_ROBOTRON)
 	&& (this.ramPixel != null) )
     {
       boolean done = false;
+      if( this.fixedScreenSize ) {
+	x /= 2;
+      }
       x -= 32;		// Grafikausgabe ueber Alpha-Ausgabe zentrieren
       if( (x >= 0) && (x < 256) ) {
 	int col = x / 8;
@@ -740,14 +874,19 @@ public class Z9001 extends EmuSys implements
 	rv = this.borderColorIdx;
       }
     } else {
-      int    b    = 0;
-      int    col  = x / 8;
+      int b    = 0;
+      int col  = x / 8;
       byte[] vram = this.ramVideo;
       if( this.c80Active && (this.ramVideo2 != null) ) {
 	if( (col & 0x01) != 0 ) {
 	  vram = this.ramVideo2;
 	}
 	col /= 2;
+      } else {
+	if( this.fixedScreenSize ) {
+	  x   /= 2;
+	  col /= 2;
+	}
       }
       int row  = 0;
       int yChr = 0;
@@ -902,6 +1041,13 @@ public class Z9001 extends EmuSys implements
 
 
   @Override
+  public Plotter getPlotter()
+  {
+    return this.plotter;
+  }
+
+
+  @Override
   public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
     return 0xF000;
@@ -960,14 +1106,18 @@ public class Z9001 extends EmuSys implements
   @Override
   public int getScreenHeight()
   {
-    return 192;
+    return this.fixedScreenSize ? 384 : 192;
   }
 
 
   @Override
   public int getScreenWidth()
   {
-    return this.c80Active && !this.graphMode ? 640 : 320;
+    int rv = 320;
+    if( this.fixedScreenSize || (this.c80Active && !this.graphMode) ) {
+      rv = 640;
+    }
+    return rv;
   }
 
 
@@ -1010,6 +1160,13 @@ public class Z9001 extends EmuSys implements
   public boolean hasKCBasicInROM()
   {
     return this.romBasic != null;
+  }
+
+
+  @Override
+  protected VDIP getVDIP()
+  {
+    return this.vdip;
   }
 
 
@@ -1087,6 +1244,9 @@ public class Z9001 extends EmuSys implements
 	  break;
 
 	case KeyEvent.VK_INSERT:
+	  if( shiftDown ) {
+	    this.kbMatrix[ 0 ] = 0x80;		// Shift
+	  }
 	  this.kbMatrix[ 5 ] = 0x20;
 	  rv = true;
 	  break;
@@ -1143,6 +1303,7 @@ public class Z9001 extends EmuSys implements
     }
     if( rv ) {
       putKeyboardMatrixValuesToPorts();
+      updKeyboardFld();
     }
     return rv;
   }
@@ -1155,6 +1316,7 @@ public class Z9001 extends EmuSys implements
       Arrays.fill( this.kbMatrix, 0 );
     }
     putKeyboardMatrixValuesToPorts();
+    updKeyboardFld();
   }
 
 
@@ -1183,6 +1345,7 @@ public class Z9001 extends EmuSys implements
     }
     if( rv ) {
       putKeyboardMatrixValuesToPorts();
+      updKeyboardFld();
     }
     return rv;
   }
@@ -1409,6 +1572,24 @@ public class Z9001 extends EmuSys implements
 	  }
 	}
 	break;
+
+      case 0xC0:
+      case 0xC1:
+      case 0xC2:
+      case 0xC3:
+	if( this.kcNet != null ) {
+	  rv = this.kcNet.read( port );
+	}
+	break;
+
+      case 0xDC:
+      case 0xDD:
+      case 0xDE:
+      case 0xDF:
+	if( this.vdip != null ) {
+	  rv = this.vdip.read( port );
+	}
+	break;
     }
     return rv;
   }
@@ -1445,7 +1626,9 @@ public class Z9001 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    boolean coldReset = false;
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+      coldReset = true;
       if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
 	loadROMs( props );
       }
@@ -1476,28 +1659,20 @@ public class Z9001 extends EmuSys implements
 	fillRandom( this.ramPixel );
       }
     }
-    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
-	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
-    {
-      this.ctc80.reset( true );
-      this.pio88.reset( true );
-      this.pio90.reset( true );
-      if( this.ctcA8 != null ) {
-	this.ctcA8.reset( true );
-      }
-    } else {
-      this.ctc80.reset( false );
-      this.pio88.reset( false );
-      this.pio90.reset( false );
-      if( this.ctcA8 != null ) {
-	this.ctcA8.reset( false );
-      }
+    if( resetLevel == EmuThread.ResetLevel.COLD_RESET) {
+      coldReset = true;
+    }
+    this.ctc80.reset( coldReset );
+    this.pio88.reset( coldReset );
+    this.pio90.reset( coldReset );
+    if( this.ctcA8 != null ) {
+      this.ctcA8.reset( coldReset );
     }
     if( this.sioB0 != null ) {
-      this.sioB0.reset();
+      this.sioB0.reset( coldReset );
     }
     if( this.fdc != null ) {
-      this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
+      this.fdc.reset( coldReset );
     }
     if( this.floppyDiskDrives != null ) {
       for( int i = 0; i < this.floppyDiskDrives.length; i++ ) {
@@ -1521,6 +1696,8 @@ public class Z9001 extends EmuSys implements
     this.graphBorder       = false;
     this.graphMode         = false;
     this.c80MemSwap        = false;
+    this.plotterPenState   = false;
+    this.plotterMoveState  = false;
     this.fdcReset          = false;
     this.fdcTC             = false;
     this.rf1ReadOnly       = false;
@@ -1531,6 +1708,11 @@ public class Z9001 extends EmuSys implements
     this.ramFontEnabled    = false;
     this.romModuleEnabled  = ((this.romBoot != null)
 					|| (this.romMega != null));
+    if( this.plotter != null ) {
+      this.plotter.reset();
+      this.pio88.putInValuePortB( 0x00, 0x20 );		// Plotter Ready
+    }
+    setGraphicLED( false );
     upd80CharsMode( false );
     updScreenConfig( 0 );
   }
@@ -1591,6 +1773,13 @@ public class Z9001 extends EmuSys implements
 
   @Override
   public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsKeyboardFld()
   {
     return true;
   }
@@ -1723,18 +1912,41 @@ public class Z9001 extends EmuSys implements
       case 0x88:				// A2=0
       case 0x8C:				// A2=1
 	this.pio88.writePortA( value );
-	int v = this.pio88.fetchOutValuePortA( false );
-	updScreenConfig( v );
-	if( this.emuThread.isSoundOutEnabled()
-	    && ((v & 0x80) != 0) )
 	{
-	  this.emuThread.writeAudioPhase( this.audioOutPhase );
+	  int v = this.pio88.fetchOutValuePortA( false );
+	  updScreenConfig( v );
+	  if( this.emuThread.isSoundOutEnabled()
+	      && ((v & 0x80) != 0) )
+	  {
+	    this.emuThread.writeAudioPhase( this.audioOutPhase );
+	  }
+	  setGraphicLED( (v & 0x40) != 0 );
 	}
 	break;
 
       case 0x89:				// A2=0
       case 0x8D:				// A2=1
 	this.pio88.writePortB( value );
+	if( this.plotter != null ) {
+	  int     v = this.pio88.fetchOutValuePortB( false );
+	  boolean p = ((v & 0x80) != 0);
+	  boolean m = ((v & 0x04) != 0);
+	  if( p != this.plotterPenState ) {
+	    this.plotterPenState = p;
+	    this.plotter.setPenState( p );
+	  }
+	  if( m != this.plotterMoveState ) {
+	    this.plotterMoveState = m;
+	    if( m ) {
+	      int d = ((v & 0x01) != 0 ? 1 : -1);
+	      if( (v & 0x02) != 0 ) {
+		this.plotter.movePen( 0, d );
+	      } else {
+		this.plotter.movePen( d, 0 );
+	      }
+	    }
+	  }
+	}
 	break;
 
       case 0x8A:				// A2=0
@@ -1928,6 +2140,24 @@ public class Z9001 extends EmuSys implements
 	}
 	break;
 
+      case 0xC0:
+      case 0xC1:
+      case 0xC2:
+      case 0xC3:
+	if( this.kcNet != null ) {
+	  this.kcNet.write( port, value );
+	}
+	break;
+
+      case 0xDC:
+      case 0xDD:
+      case 0xDE:
+      case 0xDF:
+	if( this.vdip != null ) {
+	  this.vdip.write( port, value );
+	}
+	break;
+
       case 0xFF:
 	this.megaROMSeg = (value & 0xFF);
 	break;
@@ -2007,13 +2237,13 @@ public class Z9001 extends EmuSys implements
 
   private void createColors( Properties props )
   {
-    double brightness = getBrightness( props );
-    if( (brightness >= 0.0) && (brightness <= 1.0) ) {
+    float brightness = getBrightness( props );
+    if( (brightness >= 0F) && (brightness <= 1F) ) {
       for( int i = 0; i < this.colors.length; i++ ) {
 	this.colors[ i ] = new Color(
-		(int) Math.round( basicRGBValues[ i ][ 0 ] * brightness ),
-		(int) Math.round( basicRGBValues[ i ][ 1 ] * brightness ),
-		(int) Math.round( basicRGBValues[ i ][ 2 ] * brightness ) );
+		Math.round( basicRGBValues[ i ][ 0 ] * brightness ),
+		Math.round( basicRGBValues[ i ][ 1 ] * brightness ),
+		Math.round( basicRGBValues[ i ][ 2 ] * brightness ) );
       }
     }
   }
@@ -2024,6 +2254,15 @@ public class Z9001 extends EmuSys implements
     return EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + "80_chars.enabled",
+				false );
+  }
+
+
+  private boolean emulatesPlotter( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				this.propPrefix + "plotter.enabled",
 				false );
   }
 
@@ -2109,6 +2348,15 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  private boolean emulatesKCNet( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				this.propPrefix + "kcnet.enabled",
+				false );
+  }
+
+
   private boolean emulatesMegaROM( Properties props )
   {
     return EmuUtil.getBooleanProperty(
@@ -2136,6 +2384,15 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  private boolean emulatesUSB( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				this.propPrefix + "vdip.enabled",
+				false );
+  }
+
+
   private static boolean equalsROMModule(
 				byte[]     currentBytes,
 				String     currentFile,
@@ -2146,7 +2403,7 @@ public class Z9001 extends EmuSys implements
     boolean rv = false;
     if( EmuUtil.getBooleanProperty( props, propEnabled, false ) ) {
       if( (currentBytes != null)
-	  && EmuUtil.equals(
+	  && TextUtil.equals(
 		currentFile,
 		EmuUtil.getProperty( props, propFile ) ) )
       {
@@ -2435,6 +2692,16 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  private boolean isFixedScreenSize( Properties props )
+  {
+    return this.c80Enabled
+	   && EmuUtil.parseBooleanProperty(
+			props,
+			this.propPrefix + "fixed_screen_size",
+			false );
+  }
+
+
   private void loadFont( Properties props )
   {
     this.fontBytes = readFontByProperty(
@@ -2577,6 +2844,17 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  private void setGraphicLED( boolean state )
+  {
+    if( state != this.graphicLED ) {
+      this.graphicLED = state;
+      if( this.keyboardFld != null ) {
+	this.keyboardFld.fireRepaint();
+      }
+    }
+  }
+
+
   private boolean setMemByteInternal(
 				int     addr,
 				int     value,
@@ -2675,9 +2953,18 @@ public class Z9001 extends EmuSys implements
   {
     if( this.c80Active != state ) {
       this.c80Active = state;
-      this.screenFrm.fireScreenSizeChanged();
       this.screenFrm.setScreenDirty( true );
+      if( !this.fixedScreenSize ) {
+	this.screenFrm.fireScreenSizeChanged();
+      }
     }
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.kbMatrix );
   }
 
 

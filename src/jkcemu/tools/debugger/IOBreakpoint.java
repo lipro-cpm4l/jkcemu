@@ -35,7 +35,7 @@ public class IOBreakpoint extends AbstractBreakpoint
     this.endPort = (endPort >= 0 ? (endPort & 0xFFFF) : -1);
     this.value   = (value >= 0 ? (value & 0xFF) : -1);
     this.mask    = mask & 0xFF;
-    if( is8Bit ) {
+    if( this.is8Bit ) {
       this.begPort &= 0xFF;
       if( this.endPort >= 0 ) {
 	this.endPort &= 0xFF;
@@ -58,7 +58,7 @@ public class IOBreakpoint extends AbstractBreakpoint
 
   public int getEndPort()
   {
-    return this.begPort;
+    return this.endPort;
   }
 
 
@@ -168,7 +168,7 @@ public class IOBreakpoint extends AbstractBreakpoint
     boolean rv    = false;
     int     port  = -1;
     int     value = -1;
-    if( op0 == 0xD3 ) {			// IN A
+    if( op0 == 0xD3 ) {			// OUT A
       int regA = cpu.getRegA();
       port     = (regA << 8) | op1;
       value    = regA;
@@ -211,7 +211,14 @@ public class IOBreakpoint extends AbstractBreakpoint
 	case 0xAB:			// OUTD
 	case 0xB3:			// OTIR
 	case 0xBB:			// OTDR
-	  port  = cpu.getRegBC();
+	  port = cpu.getRegBC();
+	  if( !this.is8Bit ) {
+	    /*
+	     * Bei den Blockausgabebefehlen wird Das B-Register
+	     * dekrementiert, bevor es auf den Adressbus gelegt wird.
+	     */
+	    port = ((port - 0x0100) & 0xFF00) | (port & 0x00FF);
+	  }
 	  value = cpu.getMemByte( cpu.getRegHL(), false );
 	  break;
       }

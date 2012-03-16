@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2009 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.io.File;
 import java.lang.*;
 import java.util.*;
 import javax.sound.sampled.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.base.BasicDlg;
 
 
@@ -22,68 +23,56 @@ public class AudioUtil
   private static javax.swing.filechooser.FileFilter audioOutFileFilter = null;
 
 
-  public static AudioFileFormat.Type getAudioFileType(
-						Component owner,
-						File      file )
+  public static void appendAudioFileExtensionText(
+					StringBuilder buf,
+					int           maxItems,
+					String...     extensions )
   {
-    Collection<AudioFileFormat.Type> types =
-				new ArrayList<AudioFileFormat.Type>();
-    if( AudioSystem.isFileTypeSupported( AudioFileFormat.Type.AIFC ) ) {
-      types.add( AudioFileFormat.Type.AIFC );
-    }
-    if( AudioSystem.isFileTypeSupported( AudioFileFormat.Type.AIFF ) ) {
-      types.add( AudioFileFormat.Type.AIFF );
-    }
-    if( AudioSystem.isFileTypeSupported( AudioFileFormat.Type.AU ) ) {
-      types.add( AudioFileFormat.Type.AU );
-    }
-    if( AudioSystem.isFileTypeSupported( AudioFileFormat.Type.SND ) ) {
-      types.add( AudioFileFormat.Type.SND );
-    }
-    if( AudioSystem.isFileTypeSupported( AudioFileFormat.Type.WAVE ) ) {
-      types.add( AudioFileFormat.Type.WAVE );
-    }
-
-    String fileName = file.getName();
-    if( fileName != null ) {
-      fileName = fileName.toUpperCase( Locale.ENGLISH );
-      for( AudioFileFormat.Type fileType : types ) {
-	String ext = fileType.getExtension();
-	if( ext != null ) {
-	  ext = ext.toUpperCase();
-	  if( !ext.startsWith( "." ) ) {
-	    ext = "." + ext;
+    if( extensions != null ) {
+      /*
+       * Sortieren und von hinten beginnen, damit in einer
+       * evt. lmit "..." abgekuerzten Liste moeglichst
+       * "*.wav" und "*.snd" sichtbar bleiben.
+       */
+      try {
+	Arrays.sort( extensions );
+      }
+      catch( ClassCastException ex ) {}
+      int     nAdded  = 0;
+      boolean isFirst = true;
+      for( int i = extensions.length - 1; i >= 0; --i ) {
+	if( isFirst ) {
+	  if( buf.length() > 0 ) {
+	    buf.append( (char) '\u0020' );
 	  }
-	  if( fileName.endsWith( ext ) )
-	    return fileType;
+	  buf.append( (char) '(' );
+	  isFirst = false;
+	} else {
+	  buf.append( "; " );
 	}
+	String s = extensions[ i ];
+	if( (maxItems > 0) && (nAdded >= maxItems) ) {
+	  buf.append( " ..." );
+	  break;
+	}
+	buf.append( (char) '*' );
+	if( !s.startsWith( "." ) ) {
+	  buf.append( (char) '.' );
+	}
+	buf.append( s );
+	nAdded++;
+      }
+      if( !isFirst ) {
+	buf.append( (char) ')' );
       }
     }
-
-    StringBuilder buf = new StringBuilder( 64 );
-    buf.append( "Das Dateiformat wird nicht unterst\u00FCtzt." );
-    if( !types.isEmpty() ) {
-      buf.append( "\nM\u00F6gliche Dateiendungen sind:\n" );
-      String delim = null;
-      for( AudioFileFormat.Type fileType : types ) {
-	String ext = fileType.getExtension();
-	if( ext != null ) {
-	  if( delim != null ) {
-	    buf.append( delim );
-	  }
-	  buf.append( ext );
-	  delim = ", ";
-	}
-      }
-    }
-    BasicDlg.showErrorDlg( owner, buf.toString() );
-    return null;
   }
 
 
-  public static String getAudioFormatText( AudioFormat fmt )
+  public static void appendAudioFormatText(
+				StringBuilder buf,
+				AudioFormat   fmt )
   {
-    StringBuilder buf = new StringBuilder( 64 );
     if( fmt != null ) {
       buf.append( (int) fmt.getSampleRate() );
       buf.append( " Hz, " );
@@ -105,6 +94,57 @@ public class AudioUtil
 	  break;
       }
     }
+  }
+
+
+  public static AudioFileFormat.Type getAudioFileType(
+						Component owner,
+						File      file )
+  {
+    AudioFileFormat.Type[] fTypes = AudioSystem.getAudioFileTypes();
+    String                 fName  = file.getName();
+    if( (fTypes != null) && (fName != null) ) {
+      fName = fName.toUpperCase();
+      for( AudioFileFormat.Type fType : fTypes ) {
+	String ext = fType.getExtension();
+	if( ext != null ) {
+	  ext = ext.toUpperCase();
+	  if( !ext.startsWith( "." ) ) {
+	    ext = "." + ext;
+	  }
+	  if( fName.endsWith( ext ) )
+	    return fType;
+	}
+      }
+    }
+
+    StringBuilder buf = new StringBuilder( 64 );
+    buf.append( "Das Dateiformat wird nicht unterst\u00FCtzt." );
+    if( fTypes != null ) {
+      if( fTypes.length > 0 ) {
+	buf.append( "\nM\u00F6gliche Dateiendungen sind:\n" );
+	String delim = null;
+	for( AudioFileFormat.Type fType : fTypes ) {
+	  String ext = fType.getExtension();
+	  if( ext != null ) {
+	    if( delim != null ) {
+	      buf.append( delim );
+	    }
+	    buf.append( ext );
+	    delim = ", ";
+	  }
+	}
+      }
+    }
+    BasicDlg.showErrorDlg( owner, buf.toString() );
+    return null;
+  }
+
+
+  public static String getAudioFormatText( AudioFormat fmt )
+  {
+    StringBuilder buf = new StringBuilder( 64 );
+    appendAudioFormatText( buf, fmt );
     return buf.toString();
   }
 
@@ -112,63 +152,82 @@ public class AudioUtil
   public static javax.swing.filechooser.FileFilter getAudioInFileFilter()
   {
     if( audioInFileFilter == null ) {
-      audioInFileFilter = createAudioFileFilter(
-				"Audiodateien",
-				AudioFileFormat.Type.AIFC,
-				AudioFileFormat.Type.AIFF,
-				AudioFileFormat.Type.AU,
-				AudioFileFormat.Type.SND,
-				AudioFileFormat.Type.WAVE );
+      String[] ext = getAudioOutFileExtensions( null, null );
+      if( ext != null ) {
+	if( ext.length == 0 ) {
+	  ext = null;
+	}
+      }
+      if( ext == null ) {
+	ext = new String[] {
+			AudioFileFormat.Type.WAVE.getExtension(),
+			AudioFileFormat.Type.AU.getExtension(),
+			AudioFileFormat.Type.AIFF.getExtension(),
+			AudioFileFormat.Type.AIFC.getExtension(),
+			AudioFileFormat.Type.SND.getExtension() };
+      }
+      StringBuilder buf = new StringBuilder( 256 );
+      buf.append( "Sound-Dateien" );
+      appendAudioFileExtensionText( buf, 3, ext );
+      audioInFileFilter = new FileNameExtensionFilter( buf.toString(), ext );
     }
     return audioInFileFilter;
+  }
+
+
+  public static String[] getAudioOutFileExtensions(
+					AudioInputStream ais,
+					String           extToExclude )
+  {
+    String[]               rv = null;
+    AudioFileFormat.Type[] t  = null;
+    if( ais != null ) {
+      t = AudioSystem.getAudioFileTypes( ais );
+    } else {
+      t = AudioSystem.getAudioFileTypes();
+    }
+    if( t != null ) {
+      if( t.length > 0 ) {
+	java.util.List<String> list = new ArrayList<String>( t.length );
+	for( AudioFileFormat.Type tmpT : t ) {
+	  String s = tmpT.getExtension();
+	  if( s != null ) {
+	    if( !s.isEmpty() ) {
+	      s = s.toLowerCase();
+	      if( extToExclude != null ) {
+		if( s.equalsIgnoreCase( extToExclude ) ) {
+		  s = null;
+		}
+	      }
+	      if( s != null ) {
+		list.add( s );
+	      }
+	    }
+	  }
+	}
+	int n = list.size();
+	if( n > 0 ) {
+	  try {
+	    rv = list.toArray( new String[ n ] );
+	  }
+	  catch( ArrayStoreException ex ) {}
+	}
+      }
+    }
+    return rv;
   }
 
 
   public static javax.swing.filechooser.FileFilter getAudioOutFileFilter()
   {
     if( audioOutFileFilter == null ) {
-      audioOutFileFilter = createAudioFileFilter(
-				"Unterst\u00FCtzte Audiodateien",
-				AudioSystem.getAudioFileTypes() );
+      String[]      ext = getAudioOutFileExtensions( null, null );
+      StringBuilder buf = new StringBuilder( 256 );
+      buf.append( "Sound-Dateien" );
+      appendAudioFileExtensionText( buf, 3, ext );
+      audioOutFileFilter = new FileNameExtensionFilter( buf.toString(), ext );
     }
     return audioOutFileFilter;
-  }
-
-
-	/* --- private Methoden --- */
-
-  private static javax.swing.filechooser.FileFilter createAudioFileFilter(
-					String text,
-					AudioFileFormat.Type... types )
-  {
-    javax.swing.filechooser.FileFilter rv = null;
-    if( types != null ) {
-      if( types.length > 0 ) {
-	java.util.List<String> lst = new ArrayList<String>( types.length );
-	for( int i = 0; i < types.length; i++ ) {
-	  String s = types[ i ].getExtension();
-	  if( s != null ) {
-	    s = s.toLowerCase();
-	    if( !lst.contains( s ) ) {
-	      lst.add( s );
-	    }
-	  }
-	}
-	int n = lst.size();
-	if( n > 0 ) {
-	  String[] extensions = lst.toArray( new String[ n ] );
-	  if( extensions != null ) {
-	    if( extensions.length > 0 ) {
-	      Arrays.sort( extensions );
-	      rv = new javax.swing.filechooser.FileNameExtensionFilter(
-								text,
-								extensions );
-	    }
-	  }
-	}
-      }
-    }
-    return rv;
   }
 }
 

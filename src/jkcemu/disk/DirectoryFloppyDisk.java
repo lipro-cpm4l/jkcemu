@@ -135,6 +135,13 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public String getFileFormatText()
+  {
+    return null;
+  }
+
+
+  @Override
   public String getRemark()
   {
     return this.remark;

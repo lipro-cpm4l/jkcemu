@@ -92,7 +92,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	begAddr = emuSys.getLoadAddr();
       }
 
-      // ggf. muss Dialog mit den Ladeoptionen angezeigt muss
+      // ggf. muss Dialog mit den Ladeoptionen angezeigt werden
       boolean  done     = false;
       String   fileFmt  = null;
       FileInfo fileInfo = FileInfo.analyzeFile( fileBuf, file );
@@ -110,10 +110,11 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	      boolean isAC1      = (emuSys instanceof AC1);
 	      boolean isLLC2     = (emuSys instanceof LLC2);
 	      boolean isHGMC     = (emuSys instanceof HueblerGraphicsMC);
+	      boolean isKC85     = (emuSys instanceof KC85);
 	      boolean isKramerMC = (emuSys instanceof KramerMC);
 	      boolean isZ1013    = (emuSys instanceof Z1013);
-	      boolean isKC       = ((emuSys instanceof KC85)
-					|| (emuSys instanceof Z9001));
+	      boolean isZ9001    = (emuSys instanceof Z9001);
+
 	      if( !startSelected ) {
 		loadData.setStartAddr( -1 );
 	      }
@@ -130,7 +131,11 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	      if( loadData.getStartAddr() >= 0 ) {
 		if( ((isAC1 || isHGMC || isKramerMC || isLLC2 || isZ1013)
 				&& !fileFmt.equals( FileInfo.HEADERSAVE ))
-		    || (isKC && !fileFmt.equals( FileInfo.KCC )
+		    || (isKC85 && !fileFmt.equals( FileInfo.KCC )
+				&& !fileFmt.equals( FileInfo.KCTAP_KC85 )
+				&& !fileFmt.equals( FileInfo.KCTAP_SYS ))
+		    || (isZ9001 && !fileFmt.equals( FileInfo.KCC )
+				&& !fileFmt.equals( FileInfo.KCTAP_Z9001 )
 				&& !fileFmt.equals( FileInfo.KCTAP_SYS )) )
 		{
 		  String[] options = {
@@ -331,10 +336,17 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
     boolean fmtSupported = false;
     if( fileFmt != null ) {
-      for( String s : fileFormats ) {
-	if( s.equals( fileFmt ) ) {
-	  fmtSupported = true;
-	  break;
+      if( fileFmt.equals( FileInfo.KCTAP_KC85 )
+	  || fileFmt.equals( FileInfo.KCTAP_Z9001 ) )
+      {
+	fileFmt      = FileInfo.KCTAP_SYS;
+	fmtSupported = true;
+      } else {
+	for( String s : fileFormats ) {
+	  if( s.equals( fileFmt ) ) {
+	    fmtSupported = true;
+	    break;
+	  }
 	}
       }
     }
@@ -561,37 +573,14 @@ public class LoadDlg extends BasicDlg implements DocumentListener
      */
     if( (file != null) && (fileFmt != null) ) {
       if( fileFmt.equals( FileInfo.BIN ) ) {
-	String fileName = file.getName();
-	if( fileName != null ) {
-	  int len = fileName.length();
-	  int pos = fileName.indexOf( '_' );
-	  while( (pos >= 0) && ((pos + 4) < len) ) {
-	    if( EmuUtil.isHexChar( fileName.charAt( pos + 1 ) )
-		&& EmuUtil.isHexChar( fileName.charAt( pos + 2 ) )
-		&& EmuUtil.isHexChar( fileName.charAt( pos + 3 ) )
-		&& EmuUtil.isHexChar( fileName.charAt( pos + 4 ) ) )
-	    {
-	      this.fldLoadBegAddr.setText(
-				fileName.substring( pos + 1, pos + 5 ) );
-	      if( (pos + 9) < len ) {
-		char ch = fileName.charAt( pos + 5 );
-		if( ((ch == '_') || (ch == '-'))
-		    && EmuUtil.isHexChar( fileName.charAt( pos + 6 ) )
-		    && EmuUtil.isHexChar( fileName.charAt( pos + 7 ) )
-		    && EmuUtil.isHexChar( fileName.charAt( pos + 8 ) )
-		    && EmuUtil.isHexChar( fileName.charAt( pos + 9 ) ) )
-		{
-		  this.fldLoadEndAddr.setText(
-				fileName.substring( pos + 6, pos + 10 ) );
-		}
-	      }
-	      break;
-	    }
-	    if( pos + 5 < len ) {
-	      pos = fileName.indexOf( '_', pos + 1 );
-	    } else {
-	      pos = -1;
-	    }
+	int[] addrs = EmuUtil.extractAddressesFromFileName(
+							file.getName() );
+	if( addrs != null ) {
+	  if( addrs.length > 0 ) {
+	    this.fldLoadBegAddr.setText( String.format( "%04X", addrs[ 0 ] ) );
+	  }
+	  if( addrs.length > 1 ) {
+	    this.fldLoadEndAddr.setText( String.format( "%04X", addrs[ 1 ] ) );
 	  }
 	}
       }
@@ -633,7 +622,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 		JOptionPane.YES_NO_OPTION,
 		JOptionPane.WARNING_MESSAGE ) == JOptionPane.YES_OPTION )
       {
-	screenFrm.openTAPViaAudio( file, fileBytes, nextTAPOffs );
+	screenFrm.openAudioInFile( file, fileBytes, nextTAPOffs );
       }
     }
   }
@@ -743,6 +732,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
 	  // Multi-TAP-Handling
 	  if( fileFmt.equals( FileInfo.KCTAP_SYS )
+	      || fileFmt.equals( FileInfo.KCTAP_Z9001 )
+	      || fileFmt.equals( FileInfo.KCTAP_KC85 )
 	      || fileFmt.equals( FileInfo.KCTAP_BASIC_PRG ) )
 	  {
 	    FileInfo fileInfo = FileInfo.analyzeFile(
@@ -860,7 +851,9 @@ public class LoadDlg extends BasicDlg implements DocumentListener
       isHS               = fileFmt.equals( FileInfo.HEADERSAVE );
       isKCB              = fileFmt.equals( FileInfo.KCB );
       isKCC              = fileFmt.equals( FileInfo.KCC );
-      isKCTAP_SYS        = fileFmt.equals( FileInfo.KCTAP_SYS );
+      isKCTAP_SYS        = fileFmt.equals( FileInfo.KCTAP_SYS )
+				|| fileFmt.equals( FileInfo.KCTAP_Z9001 )
+				|| fileFmt.equals( FileInfo.KCTAP_KC85 );
       isKCTAP_BASIC_PRG  = fileFmt.equals( FileInfo.KCTAP_BASIC_PRG );
       isKCBASIC_HEAD_PRG = fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG );
       isKCBASIC_PRG      = fileFmt.equals( FileInfo.KCBASIC_PRG );

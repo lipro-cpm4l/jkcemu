@@ -718,9 +718,15 @@ public class ReassFrm extends BasicFrm implements CaretListener
       catch( Exception ex ) {}
 
       // Pass 2: eigentliche Texterzeugung
+      addr = this.begAddr;
       buf.setLength( 0 );
-      int  nExtLabels = 0;
-      addr            = this.begAddr;
+      buf.append( "\tORG     " );
+      if( addr >= 0xA000 ) {
+	buf.append( (char) '0' );
+      }
+      buf.append( String.format( "%04XH\n", addr ) );
+
+      int nExtLabels = 0;
       while( addr <= this.endAddr ) {
 	boolean addrLabelEnabled = true;
 	if( this.addr2Labels != null ) {

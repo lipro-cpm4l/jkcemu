@@ -11,7 +11,8 @@ package jkcemu.disk;
 import java.lang.*;
 import java.util.*;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.text.TextUtil;
 
 
 public class HardDiskInfo implements Comparable<HardDiskInfo>
@@ -33,8 +34,8 @@ public class HardDiskInfo implements Comparable<HardDiskInfo>
 		int    heads,
 		int    sectorsPerTrack ) throws IllegalArgumentException
   {
-    this.producer      = EmuUtil.emptyToNull( producer );
-    this.diskModel     = EmuUtil.emptyToNull( diskModel );
+    this.producer      = TextUtil.emptyToNull( producer );
+    this.diskModel     = TextUtil.emptyToNull( diskModel );
     this.fullInfo      = null;
     this.fullDiskModel = null;
     this.typeSizeInfo  = null;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,8 +16,11 @@ import java.lang.*;
 import java.text.*;
 import java.util.*;
 import javax.swing.JOptionPane;
+import jkcemu.audio.AudioOut;
 import jkcemu.base.ScreenFrm;
 import jkcemu.disk.*;
+import jkcemu.etc.*;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -93,6 +96,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public void audioOutChanged( AudioOut audioOut )
+  {
+    // leer
+  }
+
+
   public synchronized void cancelPastingText()
   {
     Thread thread = this.pasteThread;
@@ -130,9 +139,16 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public AbstractKeyboardFld createKeyboardFld()
+		throws UnsupportedOperationException, UserCancelException
+  {
+    throw new UnsupportedOperationException();
+  }
+
+
   public void die()
   {
-    cancelPastingText();
+    // leer
   }
 
 
@@ -164,22 +180,23 @@ public abstract class EmuSys implements ImageObserver, Runnable
    * damit man auch im unteren und mittleren Einstellbereich
    * noch etwas sieht.
    */
-  protected static double getBrightness( Properties props )
+  protected static float getBrightness( Properties props )
   {
     int value = EmuUtil.getIntProperty(
 				props,
 				"jkcemu.brightness",
 				SettingsFrm.DEFAULT_BRIGHTNESS );
-    double rv = 1.0;
+    float rv = 1F;
     if( (value > 0) && (value < 100) ) {
-      rv = 1.0 - Math.abs( Math.log10( (double) (value + 10) / 110.0 ) );
+      rv = 1F - (float) Math.abs(
+			  Math.log10( (double) (value + 10) / 110.0 ) );
     } else {
-      rv = (double) value / 100.0;
+      rv = (float) value / 100F;
     }
-    if( rv < 0.0 ) {
-      rv = 0.0;
-    } else if( rv > 1.0 ) {
-      rv = 1.0;
+    if( rv < 0F ) {
+      rv = 0F;
+    } else if( rv > 1F ) {
+      rv = 1F;
     }
     return rv;
   }
@@ -322,10 +339,10 @@ public abstract class EmuSys implements ImageObserver, Runnable
    */
   public static int getMaxRGBValue( Properties props )
   {
-    int    value      = 255 * SettingsFrm.DEFAULT_BRIGHTNESS / 100;
-    double brightness = getBrightness( props );
-    if( (brightness >= 0.0) && (brightness <= 1.0) ) {
-      value = (int) Math.round( 255 * brightness );
+    int   value      = 255 * SettingsFrm.DEFAULT_BRIGHTNESS / 100;
+    float brightness = getBrightness( props );
+    if( (brightness >= 0F) && (brightness <= 1F) ) {
+      value = Math.round( 255 * brightness );
     }
     return value;
   }
@@ -343,6 +360,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
     return 0;
+  }
+
+
+  public Plotter getPlotter()
+  {
+    return null;
   }
 
 
@@ -451,6 +474,44 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public abstract String getTitle();
 
 
+  public File getUSBMemStickDirectory()
+  {
+    VDIP vdip = getVDIP();
+    return vdip != null ? vdip.getMemStickDirectory() : null;
+  }
+
+
+  public boolean getUSBMemStickForceCurrentTimestamp()
+  {
+    VDIP vdip = getVDIP();
+    return vdip != null ?
+		vdip.getMemStickForceCurrentTimestamp()
+		: true;
+  }
+
+
+  public boolean getUSBMemStickForceLowerCaseFileNames()
+  {
+    VDIP vdip = getVDIP();
+    return vdip != null ?
+		vdip.getMemStickForceLowerCaseFileNames()
+		: false;
+  }
+
+
+  public boolean getUSBMemStickReadOnly()
+  {
+    VDIP vdip = getVDIP();
+    return vdip != null ? vdip.getMemStickReadOnly() : false;
+  }
+
+
+  protected VDIP getVDIP()
+  {
+    return null;
+  }
+
+
   public boolean hasKCBasicInROM()
   {
     return false;
@@ -469,6 +530,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
 	Arrays.fill( a, (byte) 0 );
       }
     }
+  }
+
+
+  public boolean isAutoScreenRefresh()
+  {
+    return false;
   }
 
 
@@ -928,6 +995,42 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public void setUSBMemStickDirectory( File dirFile )
+  {
+    VDIP vdip = getVDIP();
+    if( vdip != null ) {
+      vdip.setMemStickDirectory( dirFile );
+    }
+  }
+
+
+  public void setUSBMemStickForceCurrentTimestamp( boolean state )
+  {
+    VDIP vdip = getVDIP();
+    if( vdip != null ) {
+      vdip.setMemStickForceCurrentTimestamp( state );
+    }
+  }
+
+
+  public void setUSBMemStickForceLowerCaseFileNames( boolean state )
+  {
+    VDIP vdip = getVDIP();
+    if( vdip != null ) {
+      vdip.setMemStickForceLowerCaseFileNames( state );
+    }
+  }
+
+
+  public void setUSBMemStickReadOnly( boolean state )
+  {
+    VDIP vdip = getVDIP();
+    if( vdip != null ) {
+      vdip.setMemStickReadOnly( state );
+    }
+  }
+
+
   /*
    * Diese Methode besagt, ob die mit getScreenChar() und getScreenText()
    * gelieferten Zeichen moeglicherweise noch konvertiert werden muessen.
@@ -977,6 +1080,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public boolean supportsKeyboardFld()
+  {
+    return false;
+  }
+
+
   public boolean supportsOpenBasic()
   {
     return false;
@@ -1010,6 +1119,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public boolean supportsSaveBasic()
   {
     return false;
+  }
+
+
+  public boolean supportsUSB()
+  {
+    return (getVDIP() != null);
   }
 
 
@@ -1081,7 +1196,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
 	  cancelPastingText();
 	} else {
 	  if( getConvertKeyCharToISO646DE() ) {
-	    ch = EmuUtil.toISO646DE( ch );
+	    ch = TextUtil.toISO646DE( ch );
 	  }
 	  if( pasteChar( ch ) ) {
 	    if( (ch == '\n') || (ch == '\r') ) {

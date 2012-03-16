@@ -5,7 +5,7 @@
     Programme und Dateien besonders bequem zu laden bzw. zu &ouml;ffnen.
     W&auml;hrend beim gew&ouml;hnlichen Laden mit einem Dateiauswahldialog
     viele Mausklicks notwendig sind, kann der Datei-Browser offen bleiben,
-    sodass zu jedem Zeitpunkt eine Datei ausgew&auml;hlt und mit nur wenigen
+    so dass zu jedem Zeitpunkt eine Datei ausgew&auml;hlt und mit nur wenigen
     Mausklicks geladen bzw. ge&ouml;ffnet werden kann.
     Au&szlig;erdem sind je nach Einstellung auch versteckte Dateien sichtbar,
     was beim JKCEMU-Dateiauswahldialog nicht der Fall ist.
@@ -104,6 +104,91 @@
     Packen und Entpacken sowie
     den &Auml;nderungszeitpunkt auf einen beliebigen Wert setzen.
     Alle diese Funktionen finden Sie im Men&uuml; <em>Datei</em>.
+  <br/><br/>
+
+  <h3>
+   <a name="play_bin">4.1. Audio-Wiedergabe von Speicherabbilddateien</a>
+  </h3>
+   Eine Besonderheit des JKCEMU-Datei-Browsers ist,
+   dass er Speicherabbilddateien im Kassettenaufzeichnungsformat
+   einiger der emulierten Computer wiedergeben kann.
+   Damit eignet sich JKCEMU als Zuspieler f&uuml;r diese 8-Bit-Computer.
+   Die entsprechenden Funktionen finden Sie im Untermen&uuml;
+   <em>Datei</em> &rarr; <em>Wiedergeben im</em>
+  <br/><br/>
+   Die Tabelle zeigt, welche Dateiformate in welchem
+   Kassettenaufzeichnungsformat wiedergegeben werden k&ouml;nnen:
+   <table border="1">
+    <tr>
+     <th>Format der Speicherabbilddatei</th>
+     <th>Audio-Wiedergabe im Kassettenaufzeichnungsformat</th>
+    </tr>
+    <tr>
+     <td valign="top">Einfache Speicherabbilddateien (*.bin)</td>
+     <td valign="top">
+      <ul>
+       <li>AC1</li>
+       <li>AC1/LLC2 TurboSave</li>
+       <li>Z1013</li>
+      </ul>
+     </td>
+    </tr>
+    <tr>
+     <td valign="top">Headersave-Dateien (*.z80)</td>
+     <td valign="top">
+      <ul>
+       <li>Z1013-Headersave</li>
+      </ul>
+     </td>
+    </tr>
+    <tr>
+     <td valign="top">
+      Headersave-Dateien (*.z80)<br/>
+      mit Typ <em>B</em> und Anfangsadresse 60F7<br/>
+      (Format, in dem JKCEMU AC1- und LLC2-BASIC-Programme speichert)
+     </td>
+     <td valign="top">
+      <ul>
+       <li>AC1-BASIC</li>
+       <li>AC1/LLC2 TurboSave</li>
+       <li>Z1013-Headersave</li>
+      </ul>
+     </td>
+    </tr>
+    <tr>
+     <td valign="top">
+      KC-System-Dateien (*.kcc)<br>
+      KC-System-Dateien mit BASIC-Programm (*.kcb)<br>
+     </td>
+     <td valign="top">
+      <ul>
+       <li>KC-Format</li>
+      </ul>
+     </td>
+    </tr>
+    <tr>
+     <td valign="top">KC-BASIC-Dateien (*.sss)</td>
+     <td valign="top">
+      <ul>
+       <li>KC-Format</li>
+      </ul>
+     </td>
+    </tr>
+    <tr>
+     <td valign="top">KC-TAP-Dateien (*.tap)</td>
+     <td valign="top">
+      <ul>
+       <li>KC-Format</li>
+      </ul>
+     </td>
+    </tr>
+   </table>
+  <br/><br/>
+   Der <a href="fileconverter.htm">Dateikonverter</a> bietet ebensfalls
+   die M&ouml;glichkeit zur Audio-Wiedergabe von Speicherabbilddateien.
+   Aufgrund der dort vorhandenen Konvertierungsfunktionen lassen sich
+   sogar noch mehr Speicherabbilddateiformate in den unterst&uuml;tzten
+   Kassettenaufzeichnungsformaten wiedergeben.
   <br/><br/>
 
   <h2>5. Tastaturbedienung</h2>

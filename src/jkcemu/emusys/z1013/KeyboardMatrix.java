@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2011 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,27 +11,19 @@ package jkcemu.emusys.z1013;
 
 import java.lang.*;
 import jkcemu.Main;
-import jkcemu.base.EmuUtil;
+import jkcemu.base.*;
 
 
 public abstract class KeyboardMatrix
 {
-  protected int  keyCharCode;
   protected int  shiftPreHoldMillis;
   private   long readShiftKeysOnlyTill;
 
 
   protected KeyboardMatrix()
   {
-    this.keyCharCode           = 0;
     this.shiftPreHoldMillis    = 50;
     this.readShiftKeysOnlyTill = -1L;
-  }
-
-
-  public int getKeyCharCode()
-  {
-    return this.keyCharCode;
   }
 
 
@@ -63,7 +55,6 @@ public abstract class KeyboardMatrix
 
   public void reset()
   {
-    this.keyCharCode           = 0;
     this.readShiftKeysOnlyTill = -1L;
   }
 
@@ -82,15 +73,10 @@ public abstract class KeyboardMatrix
   public boolean setKeyCharCode( int keyCharCode, boolean hexMode )
   {
     boolean rv = false;
-
     reset();
-    this.keyCharCode = keyCharCode;
-
-    // Tastencode in Matrix abbilden
-    if( (this.keyCharCode > 0) && (this.keyCharCode <= 0xFF) ) {
-      rv = updRowMasks( hexMode );
+    if( (keyCharCode > 0) && (keyCharCode <= 0xFF) ) {
+      rv = updKeyboardMatrix( keyCharCode, hexMode );
     } else {
-      this.keyCharCode = 0;
       setShiftKeysPressed( false );
     }
     return rv;
@@ -106,6 +92,14 @@ public abstract class KeyboardMatrix
   }
 
 
-  protected abstract boolean updRowMasks( boolean hexMode );
+  public void updKeyboardFld( AbstractKeyboardFld keyboardFld )
+  {
+    // leer
+  }
+
+
+  protected abstract boolean updKeyboardMatrix(
+					int     keyCharCode,
+					boolean hexMode );
 }
 

@@ -107,6 +107,13 @@ public class D004 extends AbstractKC85Module
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void clearRAM()
+  {
+    this.procSys.clearRAM();
+  }
+
+
+  @Override
   public void die()
   {
     this.procSys.die();
@@ -154,16 +161,6 @@ public class D004 extends AbstractKC85Module
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public void reset( EmuThread.ResetLevel resetLevel )
-  {
-    fireStop();
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      this.procSys.clearRAM();
-    }
   }
 
 
