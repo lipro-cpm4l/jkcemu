@@ -26,7 +26,7 @@ public class ReplyHexDlg extends AbstractReplyDlg
   {
     super( owner, msg, "Eingabe Hexadezimalzahl", null );
     this.reply  = null;
-    this.docHex = new HexDocument( this.replyTextField, numDigits );
+    this.docHex = new HexDocument( numDigits, this.getReplyText() );
     if( value != null ) {
       this.docHex.setValue( value.intValue(), numDigits );
     }
