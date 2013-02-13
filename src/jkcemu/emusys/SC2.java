@@ -165,7 +165,7 @@ public class SC2 extends EmuSys implements
 	  this.screenFrm.setScreenDirty( true );
 	}
 	if( ledDirty && (this.keyboardFld != null) ) {
-	  this.keyboardFld.fireRepaint();
+	  this.keyboardFld.repaint();
 	}
 	this.curDisplayTStates = 0;
       }
@@ -769,7 +769,7 @@ public class SC2 extends EmuSys implements
       this.screenFrm.setScreenDirty( true );
     }
     if( ledDirty && (this.keyboardFld != null) ) {
-      this.keyboardFld.fireRepaint();
+      this.keyboardFld.repaint();
     }
   }
 

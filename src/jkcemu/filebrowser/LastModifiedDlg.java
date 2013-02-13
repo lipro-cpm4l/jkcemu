@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,7 @@ import java.awt.*;
 import java.io.File;
 import java.lang.*;
 import java.util.*;
-import java.text.DateFormat;
+import java.text.*;
 import javax.swing.*;
 import jkcemu.base.*;
 
@@ -23,10 +23,11 @@ public class LastModifiedDlg extends BasicDlg
   private java.util.List<File> files;
   private int                  numChanged;
   private int                  numUnchanged;
+  private DateFormat           dateFmt;
   private JRadioButton         btnCurrentTime;
   private JRadioButton         btnTimeInput;
   private JCheckBox            btnRecursive;
-  private JFormattedTextField  fldTime;
+  private JTextField           fldTime;
   private JButton              btnOK;
   private JButton              btnCancel;
 
@@ -40,6 +41,10 @@ public class LastModifiedDlg extends BasicDlg
     this.files          = files;
     this.numChanged     = 0;
     this.numUnchanged   = 0;
+    this.dateFmt        = DateFormat.getDateTimeInstance(
+					DateFormat.MEDIUM,
+					DateFormat.MEDIUM );
+    this.dateFmt.setLenient( false );
 
 
     // Layout
@@ -75,11 +80,7 @@ public class LastModifiedDlg extends BasicDlg
     gbc.gridy++;
     add( this.btnTimeInput, gbc );
 
-    DateFormat dateFmt = DateFormat.getDateTimeInstance(
-						DateFormat.MEDIUM,
-						DateFormat.MEDIUM );
-    dateFmt.setLenient( false );
-    this.fldTime = new JFormattedTextField( dateFmt );
+    this.fldTime = new JTextField();
     this.fldTime.setEditable( false );
     this.fldTime.addActionListener( this );
     gbc.insets.left = 5;
@@ -130,15 +131,16 @@ public class LastModifiedDlg extends BasicDlg
 
     // Vorbelegung
     java.util.Date date = null;
-    if( files.size() > 0 ) {
+    if( !files.isEmpty() ) {
       long t = files.get( 0 ).lastModified();
-      if( t > 0L )
+      if( t > 0L ) {
 	date = new java.util.Date( t );
+      }
     }
     if( date == null ) {
       date = new java.util.Date();
     }
-    this.fldTime.setText( dateFmt.format( date ) );
+    this.fldTime.setText( this.dateFmt.format( date ) );
 
 
     // Fenstergroesse und -position
@@ -179,51 +181,61 @@ public class LastModifiedDlg extends BasicDlg
 
   private void doApply()
   {
-    long time = -1L;
-    if( this.btnCurrentTime.isSelected() ) {
-      time = System.currentTimeMillis();
-    }
-    else if( this.btnTimeInput.isSelected() ) {
-      Object value = this.fldTime.getValue();
-      if( value != null ) {
-	if( value instanceof java.util.Date )
-	  time = ((java.util.Date) value).getTime();
+    try {
+      long time = -1L;
+      if( this.btnCurrentTime.isSelected() ) {
+	time = System.currentTimeMillis();
       }
-    }
-    if( time <= 0 ) {
-      showErrorDlg( this, "Sie m\u00FCssen eine Zeit festlegen." );
-    } else {
-      this.numChanged   = 0;
-      this.numUnchanged = 0;
-      try {
-	boolean recursive = this.btnRecursive.isSelected();
-	for( File file : this.files ) {
-	  setLastModified( file, time, recursive );
+      else if( this.btnTimeInput.isSelected() ) {
+	String text = this.fldTime.getText();
+	if( text != null ) {
+	  java.util.Date date = this.dateFmt.parse( text );
+	  if( date != null ) {
+	    time = date.getTime();
+	  }
 	}
       }
-      catch( Exception ex ) {}
-
-      StringBuilder buf = new StringBuilder();
-      buf.append( "\u00C4nderungszeitpunkt von\n" );
-      buf.append( this.numChanged );
-      if( this.numChanged == 1 ) {
-        buf.append( " Datei/Verzeichnis" );
+      if( time <= 0 ) {
+	showErrorDlg( this, "Sie m\u00FCssen eine Zeit festlegen." );
       } else {
-        buf.append( " Dateien/Verzeichnissen" );
-      }
-      buf.append( " ge\u00E4ndert" );
-      if( this.numUnchanged > 0 ) {
-	buf.append( "\n" );
-	buf.append( this.numUnchanged );
-	if( this.numUnchanged == 1 ) {
-	  buf.append( " Datei/Verzeichnis konnte" );
-	} else {
-	  buf.append( " Dateien/Verzeichnisse konnten" );
+	this.numChanged   = 0;
+	this.numUnchanged = 0;
+	try {
+	  boolean recursive = false;
+	  if( this.btnRecursive != null ) {
+	    recursive = this.btnRecursive.isSelected();
+	  }
+	  for( File file : this.files ) {
+	    setLastModified( file, time, recursive );
+	  }
 	}
-	buf.append( " nicht ge\u00E4ndert werden." );
+	catch( Exception ex ) {}
+
+	StringBuilder buf = new StringBuilder();
+	buf.append( "\u00C4nderungszeitpunkt von\n" );
+	buf.append( this.numChanged );
+	if( this.numChanged == 1 ) {
+	  buf.append( " Datei/Verzeichnis" );
+	} else {
+	  buf.append( " Dateien/Verzeichnissen" );
+	}
+	buf.append( " ge\u00E4ndert" );
+	if( this.numUnchanged > 0 ) {
+	  buf.append( "\n" );
+	  buf.append( this.numUnchanged );
+	  if( this.numUnchanged == 1 ) {
+	    buf.append( " Datei/Verzeichnis konnte" );
+	  } else {
+	    buf.append( " Dateien/Verzeichnisse konnten" );
+	  }
+	  buf.append( " nicht ge\u00E4ndert werden." );
+	}
+	showInfoDlg( this, buf.toString() );
+	doClose();
       }
-      showInfoDlg( this, buf.toString() );
-      doClose();
+    }
+    catch( ParseException ex ) {
+      showErrorDlg( this, "Datum/Uhrzeit: ung\u00FCltige Eingabe" );
     }
   }
 
@@ -231,8 +243,7 @@ public class LastModifiedDlg extends BasicDlg
   private void setLastModified( File file, long time, boolean recursive )
   {
     try {
-      file.setLastModified( time );
-      if( file.lastModified() == time ) {
+      if( file.setLastModified( time ) ) {
 	this.numChanged++;
       } else {
 	this.numUnchanged++;
@@ -247,8 +258,9 @@ public class LastModifiedDlg extends BasicDlg
 	for( int i = 0; i < files.length; i++ ) {
 	  String name = files[ i ].getName();
 	  if( name != null ) {
-	    if( !name.equals( "." ) && !name.equals( ".." ) )
+	    if( !name.equals( "." ) && !name.equals( ".." ) ) {
 	      setLastModified( files[ i ], time, recursive );
+	    }
 	  }
 	}
       }

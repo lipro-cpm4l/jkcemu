@@ -41,7 +41,6 @@ public class FileNode extends FileTreeNode
   private boolean            kc85TapFile;
   private boolean            z9001TapFile;
   private boolean            startableFile;
-  private EmuSys             emuSys;
   private FileInfo           fileInfo;
   private Map<File,FileNode> fileToChild;
 
@@ -66,7 +65,6 @@ public class FileNode extends FileTreeNode
     this.kc85TapFile      = false;
     this.z9001TapFile     = false;
     this.startableFile    = false;
-    this.emuSys           = null;
     this.fileInfo         = null;
     this.fileToChild      = null;
   }
@@ -370,8 +368,7 @@ public class FileNode extends FileTreeNode
   private synchronized void ensureFileChecked()
   {
     if( !this.fileSystemRoot && (this.file != null) ) {
-      EmuSys emuSys = Main.getScreenFrm().getEmuSys();
-      if( !this.fileChecked || (emuSys != this.emuSys) ) {
+      if( !this.fileChecked ) {
 	if( this.file.isFile() && this.file.canRead() ) {
 	  this.hsFileType       = -1;
 	  this.audioFile        = false;
@@ -557,7 +554,6 @@ public class FileNode extends FileTreeNode
 	    catch( Exception ex ) {}
 	  }
 	}
-	this.emuSys = emuSys;
       }
       this.fileChecked = true;
     }

@@ -95,13 +95,6 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld
 
 
   @Override
-  public String getKeyboardName()
-  {
-    return "VCS80-Tastatur";
-  }
-
-
-  @Override
   protected void keySelectionChanged()
   {
     Arrays.fill( this.kbMatrix, 0 );

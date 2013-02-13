@@ -48,13 +48,16 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 				owner,
 				"Einfache Diskettenabbilddatei speichern",
 				Main.getLastPathFile( "disk" ),
-				EmuUtil.getPlainDiskFileFilter() );
+				EmuUtil.getPlainDiskFileFilter(),
+				EmuUtil.getISOFileFilter() );
       if( imgFile != null ) {
 	if( DiskUtil.checkFileExt(
 				owner,
 				imgFile,
 				DiskUtil.plainDiskFileExt,
-				DiskUtil.gzPlainDiskFileExt ) )
+				DiskUtil.gzPlainDiskFileExt,
+				DiskUtil.isoFileExt,
+				DiskUtil.gzISOFileExt ) )
 	{
 	  (new DiskImgProcessDlg(
 			owner,
@@ -142,12 +145,13 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	  InputStream  in  = null;
 	  OutputStream out = null;
 	  try {
-	    in  = new FileInputStream( this.drvFileName );
+	    in  = DeviceIO.openDeviceForSequentialRead( this.drvFileName );
 	    out = new FileOutputStream( this.imgFile );
 	    if( EmuUtil.isGZipFile( this.imgFile ) ) {
 	      out = new GZIPOutputStream( out );
 	    }
 	    Main.setLastDriveFileName( this.drvFileName );
+	    Main.setLastFile( this.imgFile, "disk" );
 
 	    byte[] buf = new byte[ 2048 ];	// max. Sektorgroesse
 	    int    n   = in.read( buf );
@@ -171,23 +175,8 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	  }
 	}
 	catch( EOFException ex ) {}
-	catch( IOException ex ) {
-	  /* Windows meldet beim Lesen hinter dem Diskettenende
-	   * einen Fehler.
-	   * Aus diesem Grund wird einfach geprueft,
-	   * ob die Anzahl der gelesenen Bytes einer ueblichen
-	   * Diskettengroesse entspricht, und wenn ja,
-	   * wird der Fehler ignoriert.
-	   */
-	  if( Main.isUnixLikeOS()
-	      || ((this.nBytesProcessed != (720 * 1024))
-		  && (this.nBytesProcessed != (800 * 1024))
-		  && (this.nBytesProcessed != (1200 * 1024))
-		  && (this.nBytesProcessed != (1440 * 1024))
-		  && (this.nBytesProcessed != (2880 * 1024))) )
-	  {
-	    retEx = ex;
-	  }
+	catch( Exception ex ) {
+	  retEx = ex;
 	}
 	break;
 
@@ -202,6 +191,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    }
 	    out = DeviceIO.openDeviceForSequentialWrite( this.drvFileName );
 	    Main.setLastDriveFileName( this.drvFileName );
+	    Main.setLastFile( this.imgFile, "disk" );
 
 	    byte[] buf = new byte[ 2048 ];	// max. Sektorgroesse
 	    int    n   = in.read( buf );
@@ -226,7 +216,6 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	}
 	break;
     }
-    this.thread = null;
     fireThreadFinished( retEx );
   }
 
@@ -369,6 +358,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    threadFinished( ex );
@@ -381,7 +371,21 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
   {
     if( ex != null ) {
       showErrorDlg( this, ex );
+    } else {
+      if( this.thread != null ) {
+	String msg = "Fertig!";
+	if( (this.direction == Direction.DISK_TO_FILE)
+	    && (this.imgFile != null) )
+	{
+	  if( this.imgFile.exists() ) {
+	    msg = "Die Abbilddatei wurde erfolgreich erzeugt:\n"
+					+ this.imgFile.getPath();
+	  }
+	}
+	showInfoDlg( this, msg );
+      }
     }
+    this.thread = null;
     doClose();
   }
 

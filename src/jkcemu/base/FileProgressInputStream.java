@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -115,6 +115,7 @@ public class FileProgressInputStream extends InputStream
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    if( minValue >= 0 ) {

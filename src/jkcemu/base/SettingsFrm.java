@@ -24,6 +24,7 @@ import jkcemu.emusys.etc.*;
 import jkcemu.emusys.kc85.KC85SettingsFld;
 import jkcemu.emusys.kccompact.KCcompactSettingsFld;
 import jkcemu.emusys.lc80.LC80SettingsFld;
+import jkcemu.emusys.poly880.Poly880SettingsFld;
 import jkcemu.emusys.z1013.Z1013SettingsFld;
 import jkcemu.emusys.z9001.Z9001SettingsFld;
 import jkcemu.net.KCNetSettingsFld;
@@ -37,6 +38,8 @@ public class SettingsFrm extends BasicFrm
   public static final int DEFAULT_BRIGHTNESS = 80;
 
   private static final int MAX_MARGIN = 199;
+
+  private static SettingsFrm instance = null;
 
   private ScreenFrm                   screenFrm;
   private EmuThread                   emuThread;
@@ -55,6 +58,7 @@ public class SettingsFrm extends BasicFrm
   private JCheckBox                   btnConfirmReset;
   private JCheckBox                   btnConfirmPowerOn;
   private JCheckBox                   btnConfirmQuit;
+  private JCheckBox                   btnClearRFsOnPowerOn;
   private JCheckBox                   btnReloadROMsOnPowerOn;
   private JComboBox                   comboScreenRefresh;
   private CardLayout                  cardLayoutSysOpt;
@@ -110,6 +114,7 @@ public class SettingsFrm extends BasicFrm
   private KCcompactSettingsFld        kcCompactSettingsFld;
   private LC80SettingsFld             lc80SettingsFld;
   private PCMSettingsFld              pcmSettingsFld;
+  private Poly880SettingsFld          poly880SettingsFld;
   private Z1013SettingsFld            z1013SettingsFld;
   private Z9001SettingsFld            kc87SettingsFld;
   private Z9001SettingsFld            z9001SettingsFld;
@@ -138,7 +143,457 @@ public class SettingsFrm extends BasicFrm
   private JTabbedPane                 tabbedPane;
 
 
-  public SettingsFrm( ScreenFrm screenFrm )
+  public static void open( ScreenFrm screenFrm )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new SettingsFrm( screenFrm );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+  public void fireDataChanged()
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    setDataChanged();
+		  }
+		} );
+  }
+
+
+	/* --- ChangeListener --- */
+
+  @Override
+  public void stateChanged( ChangeEvent e )
+  {
+    Object src = e.getSource();
+    if( (src == this.sliderBrightness) || (src == this.spinnerMargin) )
+      setDataChanged();
+  }
+
+
+	/* --- DocumentListener --- */
+
+  @Override
+  public void changedUpdate( DocumentEvent e )
+  {
+    docChanged( e );
+  }
+
+
+  @Override
+  public void insertUpdate( DocumentEvent e )
+  {
+    docChanged( e );
+  }
+
+
+  @Override
+  public void removeUpdate( DocumentEvent e )
+  {
+    docChanged( e );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean applySettings( Properties props, boolean resizable )
+  {
+    updFields( props, UIManager.getLookAndFeel(), null );
+    return super.applySettings( props, resizable );
+  }
+
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    try {
+      if( e != null ) {
+	Object src = e.getSource();
+	if( src != null ) {
+	  if( src == this.btnApply ) {
+	    rv = true;
+	    doApply();
+	  }
+	  else if( src == this.btnLoad ) {
+	    rv = true;
+	    doLoad();
+	  }
+	  else if( src == this.btnSave ) {
+	    rv = true;
+	    doSave();
+	  }
+	  else if( src == this.btnHelp ) {
+	    rv = true;
+	    HelpFrm.open( "/help/settings.htm" );
+	  }
+	  else if( src == this.btnClose ) {
+	    rv = true;
+	    doClose();
+	  }
+	  else if( src == this.btnDeleteConfigDir ) {
+	    rv = true;
+	    doDeleteConfigDir();
+	  }
+	  else if( (src == this.btnSysA5105)
+		   || (src == this.btnSysAC1)
+		   || (src == this.btnSysBCS3)
+		   || (src == this.btnSysC80)
+		   || (src == this.btnSysHC900)
+		   || (src == this.btnSysHEMC)
+		   || (src == this.btnSysHGMC)
+		   || (src == this.btnSysKC85_1)
+		   || (src == this.btnSysKC85_2)
+		   || (src == this.btnSysKC85_3)
+		   || (src == this.btnSysKC85_4)
+		   || (src == this.btnSysKC85_5)
+		   || (src == this.btnSysKC87)
+		   || (src == this.btnSysKCcompact)
+		   || (src == this.btnSysKramerMC)
+		   || (src == this.btnSysLC80)
+		   || (src == this.btnSysLLC1)
+		   || (src == this.btnSysLLC2)
+		   || (src == this.btnSysPCM)
+		   || (src == this.btnSysPoly880)
+		   || (src == this.btnSysSC2)
+		   || (src == this.btnSysSLC1)
+		   || (src == this.btnSysVCS80)
+		   || (src == this.btnSysZ1013)
+		   || (src == this.btnSysZ9001) )
+	  {
+	    rv = true;
+	    updSysOptCard();
+	    setDataChanged();
+	  }
+	  else if( (src == this.btnSpeedDefault)
+		   || (src == this.btnSpeedValue) )
+	  {
+	    rv = true;
+	    updSpeedFieldsEnabled();
+	    setDataChanged();
+	  }
+	  else if( (src instanceof JCheckBox)
+		   || (src instanceof JComboBox)
+		   || (src instanceof JRadioButton) )
+	  {
+	    rv = true;
+	    setDataChanged();
+	  }
+	}
+      }
+    }
+    catch( UserInputException ex ) {
+      BasicDlg.showErrorDlg( this, ex );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    this.tabKCNet.lookAndFeelChanged();
+    this.a5105SettingsFld.lookAndFeelChanged();
+    this.ac1SettingsFld.lookAndFeelChanged();
+    this.llc2SettingsFld.lookAndFeelChanged();
+    this.hc900SettingsFld.lookAndFeelChanged();
+    this.kc85_1_SettingsFld.lookAndFeelChanged();
+    this.kc85_2_SettingsFld.lookAndFeelChanged();
+    this.kc85_3_SettingsFld.lookAndFeelChanged();
+    this.kc85_4_SettingsFld.lookAndFeelChanged();
+    this.kc85_5_SettingsFld.lookAndFeelChanged();
+    this.z1013SettingsFld.lookAndFeelChanged();
+    this.kc87SettingsFld.lookAndFeelChanged();
+    this.z9001SettingsFld.lookAndFeelChanged();
+  }
+
+
+  @Override
+  public void setVisible( boolean state )
+  {
+    if( state && !isVisible() ) {
+      updFields(
+		Main.getProperties(),
+		UIManager.getLookAndFeel(),
+		Integer.toString( this.screenFrm.getScreenRefreshMillis() ) );
+    }
+    super.setVisible( state );
+  }
+
+
+	/* --- Aktionen --- */
+
+  private void doApply() throws UserInputException
+  {
+    Properties props    = new Properties();
+    Properties oldProps = Main.getProperties();
+    if( oldProps != null ) {
+      props.putAll( oldProps );
+    }
+    Component tab = null;
+    try {
+      tab = this.tabConfirm;
+      applyConfirm( props );
+
+      tab = this.tabEtc;
+      applyEtc( props );
+
+      tab = this.tabKCNet;
+      this.tabKCNet.applyInput(
+		props,
+		this.tabbedPane.getSelectedComponent() == this.tabKCNet );
+
+      tab = this.tabScreen;
+      applyScreen( props );
+
+      tab = this.tabSpeed;
+      applySpeed( props );
+
+      tab = this.tabSys;
+      applySys( props );
+
+      /*
+       * Das Look&Feel als letztes setzen,
+       * Anderenfalls koennte noch eine nachfolgende Aktion einen Fehler
+       * erzeugen und das Uebernehmen der Einstellungen abbrechen.
+       * In dem Fall waere das neue Erscheinungsbild schon eingestellt,
+       * was vom Programmverhalten her inkonsistent waere.
+       */
+      tab = this.tabLAF;
+      applyLAF( props );
+
+      // neue Eigenschaften anwenden
+      Properties appProps = Main.getProperties();
+      if( appProps != null ) {
+	appProps.putAll( props );
+      } else {
+	appProps = props;
+      }
+      this.emuThread.applySettings( appProps );
+      Main.applyProfileToFrames( this.profileFile, appProps, false, this );
+
+      if( !this.btnSpeedValue.isSelected() ) {
+	EmuSys emuSys = this.emuThread.getEmuSys();
+	setSpeedValueFld( EmuThread.getDefaultSpeedKHz( props ) );
+      }
+
+      this.btnApply.setEnabled( false );
+      if( this.btnSave != null ) {
+	this.btnSave.setEnabled( true );
+      }
+    }
+    catch( UserInputException ex ) {
+      if( tab != null ) {
+	this.tabbedPane.setSelectedComponent( tab );
+      }
+      throw ex;
+    }
+  }
+
+
+  private void doDeleteConfigDir()
+  {
+    File configDir = Main.getConfigDir();
+    if( configDir != null ) {
+      if( BasicDlg.showYesNoDlg(
+		this,
+		"M\u00F6chten Sie das JKCEMU-Konfigurationsverzeichnis"
+			+ " l\u00F6schen?\n"
+			+ "Dabei gehen alle gespeicherten Einstellungen"
+			+ " und Profile sowie eventuell\n"
+			+ "selbst erfasste Stammdaten f\u00FCr die"
+			+ " zu emulierenden Festplatten verloren.\n"
+			+ "Beim n\u00E4chsten Start meldet sich der Emulator"
+			+ " dann so,\n"
+			+ "als w\u00FCrde er das erste mal"
+			+ " gestartet werden.\n" ) )
+      {
+	boolean done  = false;
+	boolean state = true;
+	if( configDir.isDirectory() ) {
+	  /*
+	   * Auf Dateien und Unterverzeichniss pruefen,
+	   * die offensichtlich nicht von JKCEMU stammen
+	   */
+	  File[] files = configDir.listFiles();
+	  if( files != null ) {
+	    for( int i = 0; i < files.length; i++ ) {
+	      File file = files[ i ];
+	      if( file.isDirectory() ) {
+		state = false;
+		break;
+	      } else {
+		String s = file.getName();
+		if( s != null ) {
+		  if( !s.equals( "." )
+		      && !s.equals( ".." )
+		      && !s.equals( "harddisks.csv" )
+		      && !s.equals( "jkcemu_win32.dll" )
+		      && !s.equals( "jkcemu_win64.dll" )
+		      && !s.endsWith( "lastdirs.xml" )
+		      && !s.endsWith( "wdnsfile.exe" )
+		      && !(s.startsWith( "prf_" ) && s.endsWith( ".xml" )) )
+		  {
+		    state = false;
+		    break;
+		  }
+		}
+	      }
+	    }
+	    if( !state ) {
+	      state = BasicDlg.showYesNoWarningDlg(
+			this,
+			"Das JKCEMU-Datenverzeichnis enth\u00E4lt Dateien"
+				+ " und/oder Unterverzeichnisse,\n"
+				+ "die offensichtlich nicht von JKCEMU"
+				+ " stammen.\n"
+				+ "Soll das Verzeichnis trotzdem"
+				+ " gel\u00F6scht werden?",
+			"Warnung" );
+	    }
+	    if( state ) {
+	      done = deleteDir( configDir );
+	    }
+	  }
+	}
+	if( state ) {
+	  if( done ) {
+	    if( this.btnDeleteConfigDir != null ) {
+	      this.btnDeleteConfigDir.setEnabled( false );
+	    }
+	    if( BasicDlg.showYesNoWarningDlg(
+		this,
+		"Wenn Sie sichergehen wollen,\n"
+			+ "dass keine alten Einstellungen \u00FCbernommen"
+			+ " werden,\n"
+			+ "sollten Sie jetzt den Emulator beenden.\n\n"
+			+ "M\u00F6chten Sie den Emulator jetzt beenden?",
+		"Hinweis" ) )
+	    {
+	      this.screenFrm.doQuit();
+	    }
+	  } else {
+	    BasicDlg.showErrorDlg(
+		this,
+		"Das JKCEMU-Konfigurationsverzeichnis konnte nicht"
+			+ " gel\u00F6scht werden.\n"
+			+ "M\u00F6glicherweise sind einige Dateien"
+			+ " durch den Emulator selbst gesperrt.\n"
+			+ "Schlie\u00DFen Sie bitte JKCEMU und"
+			+ " l\u00F6schen Sie das Verzeichnis per Hand." );
+	    if( Desktop.isDesktopSupported() ) {
+	      try {
+		Desktop.getDesktop().open( configDir );
+	      }
+	      catch( Exception ex ) {}
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doLoad()
+  {
+    ProfileDlg dlg = new ProfileDlg(
+				this,
+				"Profil laden",
+				"Laden",
+				Main.getProfileFile(),
+				false );
+    dlg.setVisible( true );
+    File file = dlg.getSelectedProfile();
+    if( file != null ) {
+      Properties props = Main.loadProperties( file );
+      if( props != null ) {
+        updFields( props, null, null );
+        setDataChanged();
+        this.profileFile = file;
+      }
+    }
+  }
+
+
+  private void doSave()
+  {
+    Properties props = Main.getProperties();
+    if( props == null ) {
+      props = new Properties();
+    }
+
+    // Profile-Auswahlbox
+    ProfileDlg dlg = new ProfileDlg(
+				this,
+				"Profil speichern",
+				"Speichern",
+				this.profileFile,
+				true );
+    dlg.setVisible( true );
+    File profileFile = dlg.getSelectedProfile();
+    if( profileFile != null ) {
+
+      // Eigenschaften sammeln
+      Frame[] frms = Frame.getFrames();
+      if( frms != null ) {
+	for( int i = 0; i < frms.length; i++ ) {
+	  Frame f = frms[ i ];
+	  if( f != null ) {
+	    if( f instanceof BasicFrm ) {
+	      ((BasicFrm) f).putSettingsTo( props );
+	    }
+	  }
+	}
+      }
+
+      // ggf. Verzeichnis anlegen
+      File configDir = profileFile.getParentFile();
+      if( configDir != null ) {
+	if( configDir.exists() ) {
+	  if( this.btnDeleteConfigDir != null ) {
+	    this.btnDeleteConfigDir.setEnabled( true );
+	  }
+	}
+      }
+
+      // eigentliches Speichern
+      OutputStream out  = null;
+      try {
+	out = new FileOutputStream( profileFile );
+	props.storeToXML( out, "JKCEMU Profil" );
+	out.close();
+	out = null;
+	this.profileFile = profileFile;
+	Main.setProfile( this.profileFile, props );
+      }
+      catch( IOException ex ) {
+	BasicDlg.showErrorDlg(
+		this,
+		"Die Einstellungen k\u00F6nnen nicht in die Datei\n\'"
+			+ profileFile.getPath()
+			+ "\'\ngespeichert werden." );
+      }
+      finally {
+	EmuUtil.doClose( out );
+      }
+    }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private SettingsFrm( ScreenFrm screenFrm )
   {
     setTitle( "JKCEMU Einstellungen" );
     Main.updIcon( this );
@@ -222,7 +677,7 @@ public class SettingsFrm extends BasicFrm
     gbcSys.gridy++;
     panelSys.add( this.btnSysHEMC, gbcSys );
 
-    this.btnSysHGMC = new JRadioButton( "H\u00FCbler-BASIC-Grafik-MC", false );
+    this.btnSysHGMC = new JRadioButton( "H\u00FCbler-Grafik-MC", false );
     this.btnSysHGMC.addActionListener( this );
     grpSys.add( this.btnSysHGMC );
     gbcSys.gridy++;
@@ -578,6 +1033,13 @@ public class SettingsFrm extends BasicFrm
     this.panelSysOpt.add( this.pcmSettingsFld, "PC/M" );
 
 
+    // Optionen fuer Poly880
+    this.poly880SettingsFld = new Poly880SettingsFld(
+					this,
+					"jkcemu.poly880." );
+    this.panelSysOpt.add( this.poly880SettingsFld, "Poly880" );
+
+
     // Optionen fuer Z1013
     this.z1013SettingsFld = new Z1013SettingsFld( this, "jkcemu.z1013." );
     this.panelSysOpt.add( this.z1013SettingsFld, "Z1013" );
@@ -877,9 +1339,8 @@ public class SettingsFrm extends BasicFrm
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnFileDlgNative, gbcEtc );
 
-    gbcEtc.insets.top    = 20;
-    gbcEtc.insets.left   = 5;
-    gbcEtc.insets.bottom = 0;
+    gbcEtc.insets.top  = 20;
+    gbcEtc.insets.left = 5;
     gbcEtc.gridy++;
     this.tabEtc.add(
 	new JLabel( "Statische RAM-Bereiche (SRAM) initialisieren mit:" ),
@@ -900,22 +1361,31 @@ public class SettingsFrm extends BasicFrm
 			false );
     grpSRAMInit.add( this.btnSRAMInitRandom );
     this.btnSRAMInitRandom.addActionListener( this );
-    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnSRAMInitRandom, gbcEtc );
+
+    this.btnClearRFsOnPowerOn = new JCheckBox(
+		"RAM-Floppies bei jedem \"Einschalten\" l\u00F6schen",
+		false );
+    this.btnClearRFsOnPowerOn.addActionListener( this );
+    gbcEtc.insets.top  = 15;
+    gbcEtc.insets.left = 5;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnClearRFsOnPowerOn, gbcEtc );
 
     this.btnReloadROMsOnPowerOn = new JCheckBox(
 		"Eingebundene ROM-Dateien bei jedem \"Einschalten\""
 			+ " neu laden",
 		false );
     this.btnReloadROMsOnPowerOn.addActionListener( this );
-    gbcEtc.insets.top  = 15;
-    gbcEtc.insets.left = 5;
+    gbcEtc.insets.top    = 0;
+    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnReloadROMsOnPowerOn, gbcEtc );
 
     File configDir = Main.getConfigDir();
     if( configDir != null ) {
+      gbcEtc.insets.top    = 15;
       gbcEtc.insets.bottom = 0;
       gbcEtc.gridy++;
       this.tabEtc.add(
@@ -1001,439 +1471,6 @@ public class SettingsFrm extends BasicFrm
   }
 
 
-  public void fireDataChanged()
-  {
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    setDataChanged();
-		  }
-		} );
-  }
-
-
-	/* --- ChangeListener --- */
-
-  @Override
-  public void stateChanged( ChangeEvent e )
-  {
-    Object src = e.getSource();
-    if( (src == this.sliderBrightness) || (src == this.spinnerMargin) )
-      setDataChanged();
-  }
-
-
-	/* --- DocumentListener --- */
-
-  @Override
-  public void changedUpdate( DocumentEvent e )
-  {
-    docChanged( e );
-  }
-
-
-  @Override
-  public void insertUpdate( DocumentEvent e )
-  {
-    docChanged( e );
-  }
-
-
-  @Override
-  public void removeUpdate( DocumentEvent e )
-  {
-    docChanged( e );
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean applySettings( Properties props, boolean resizable )
-  {
-    updFields( props, UIManager.getLookAndFeel(), null );
-    return super.applySettings( props, resizable );
-  }
-
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    try {
-      if( e != null ) {
-	Object src = e.getSource();
-	if( src != null ) {
-	  if( src == this.btnApply ) {
-	    rv = true;
-	    doApply();
-	  }
-	  else if( src == this.btnLoad ) {
-	    rv = true;
-	    doLoad();
-	  }
-	  else if( src == this.btnSave ) {
-	    rv = true;
-	    doSave();
-	  }
-	  else if( src == this.btnHelp ) {
-	    rv = true;
-	    this.screenFrm.showHelp( "/help/settings.htm" );
-	  }
-	  else if( src == this.btnClose ) {
-	    rv = true;
-	    doClose();
-	  }
-	  else if( src == this.btnDeleteConfigDir ) {
-	    rv = true;
-	    doDeleteConfigDir();
-	  }
-	  else if( (src == this.btnSysA5105)
-		   || (src == this.btnSysAC1)
-		   || (src == this.btnSysBCS3)
-		   || (src == this.btnSysC80)
-		   || (src == this.btnSysHC900)
-		   || (src == this.btnSysHEMC)
-		   || (src == this.btnSysHGMC)
-		   || (src == this.btnSysKC85_1)
-		   || (src == this.btnSysKC85_2)
-		   || (src == this.btnSysKC85_3)
-		   || (src == this.btnSysKC85_4)
-		   || (src == this.btnSysKC85_5)
-		   || (src == this.btnSysKC87)
-		   || (src == this.btnSysKCcompact)
-		   || (src == this.btnSysKramerMC)
-		   || (src == this.btnSysLC80)
-		   || (src == this.btnSysLLC1)
-		   || (src == this.btnSysLLC2)
-		   || (src == this.btnSysPCM)
-		   || (src == this.btnSysPoly880)
-		   || (src == this.btnSysSC2)
-		   || (src == this.btnSysSLC1)
-		   || (src == this.btnSysVCS80)
-		   || (src == this.btnSysZ1013)
-		   || (src == this.btnSysZ9001) )
-	  {
-	    rv = true;
-	    updSysOptCard();
-	    setDataChanged();
-	  }
-	  else if( (src == this.btnSpeedDefault)
-		   || (src == this.btnSpeedValue) )
-	  {
-	    rv = true;
-	    updSpeedFieldsEnabled();
-	    setDataChanged();
-	  }
-	  else if( (src instanceof JCheckBox)
-		   || (src instanceof JComboBox)
-		   || (src instanceof JRadioButton) )
-	  {
-	    rv = true;
-	    setDataChanged();
-	  }
-	}
-      }
-    }
-    catch( UserInputException ex ) {
-      BasicDlg.showErrorDlg( this, ex );
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    this.tabKCNet.lookAndFeelChanged();
-    this.a5105SettingsFld.lookAndFeelChanged();
-    this.ac1SettingsFld.lookAndFeelChanged();
-    this.llc2SettingsFld.lookAndFeelChanged();
-    this.hc900SettingsFld.lookAndFeelChanged();
-    this.kc85_1_SettingsFld.lookAndFeelChanged();
-    this.kc85_2_SettingsFld.lookAndFeelChanged();
-    this.kc85_3_SettingsFld.lookAndFeelChanged();
-    this.kc85_4_SettingsFld.lookAndFeelChanged();
-    this.kc85_5_SettingsFld.lookAndFeelChanged();
-    this.z1013SettingsFld.lookAndFeelChanged();
-    this.kc87SettingsFld.lookAndFeelChanged();
-    this.z9001SettingsFld.lookAndFeelChanged();
-  }
-
-
-  @Override
-  public void setVisible( boolean state )
-  {
-    if( state && !isVisible() ) {
-      updFields(
-		Main.getProperties(),
-		UIManager.getLookAndFeel(),
-		Integer.toString( this.screenFrm.getScreenRefreshMillis() ) );
-    }
-    super.setVisible( state );
-  }
-
-
-	/* --- Aktionen --- */
-
-  private void doApply() throws UserInputException
-  {
-    Properties props    = new Properties();
-    Properties oldProps = Main.getProperties();
-    if( oldProps != null ) {
-      props.putAll( oldProps );
-    }
-    Component tab = null;
-    try {
-      tab = this.tabConfirm;
-      applyConfirm( props );
-
-      tab = this.tabEtc;
-      applyEtc( props );
-
-      tab = this.tabKCNet;
-      this.tabKCNet.applyInput(
-		props,
-		this.tabbedPane.getSelectedComponent() == this.tabKCNet );
-
-      tab = this.tabScreen;
-      applyScreen( props );
-
-      tab = this.tabSpeed;
-      applySpeed( props );
-
-      tab = this.tabSys;
-      applySys( props );
-
-      /*
-       * Das Look&Feel als letztes setzen,
-       * Anderenfalls koennte noch eine nachfolgende Aktion einen Fehler
-       * erzeugen und das Uebernehmen der Einstellungen abbrechen.
-       * In dem Fall waere das neue Erscheinungsbild schon eingestellt,
-       * was vom Programmverhalten her inkonsistent waere.
-       */
-      tab = this.tabLAF;
-      applyLAF( props );
-
-      // neue Eigenschaften anwenden
-      Properties appProps = Main.getProperties();
-      if( appProps != null ) {
-	appProps.putAll( props );
-      } else {
-	appProps = props;
-      }
-      this.emuThread.applySettings( appProps );
-      Main.applyProfileToFrames( this.profileFile, appProps, false, this );
-
-      if( !this.btnSpeedValue.isSelected() ) {
-	EmuSys emuSys = this.emuThread.getEmuSys();
-	setSpeedValueFld( EmuThread.getDefaultSpeedKHz( props ) );
-      }
-
-      this.btnApply.setEnabled( false );
-      if( this.btnSave != null ) {
-	this.btnSave.setEnabled( true );
-      }
-    }
-    catch( UserInputException ex ) {
-      if( tab != null ) {
-	this.tabbedPane.setSelectedComponent( tab );
-      }
-      throw ex;
-    }
-  }
-
-
-  private void doDeleteConfigDir()
-  {
-    File configDir = Main.getConfigDir();
-    if( configDir != null ) {
-      if( BasicDlg.showYesNoDlg(
-		this,
-		"M\u00F6chten Sie das JKCEMU-Konfigurationsverzeichnis"
-			+ " l\u00F6schen?\n"
-			+ "Dabei gehen alle gespeicherten Einstellungen"
-			+ " und Profile sowie eventuell\n"
-			+ "selbst erfasste Stammdaten f\u00FCr die"
-			+ " zu emulierenden Festplatten verloren.\n"
-			+ "Beim n\u00E4chsten Start meldet sich der Emulator"
-			+ " dann so,\n"
-			+ "als w\u00FCrde er das erste mal"
-			+ " gestartet werden.\n" ) )
-      {
-	boolean done  = false;
-	boolean state = true;
-	if( configDir.isDirectory() ) {
-	  /*
-	   * Auf Dateien und Unterverzeichniss pruefen,
-	   * die offensichtlich nicht von JKCEMU stammen
-	   */
-	  File[] files = configDir.listFiles();
-	  if( files != null ) {
-	    for( int i = 0; i < files.length; i++ ) {
-	      File file = files[ i ];
-	      if( file.isDirectory() ) {
-		state = false;
-		break;
-	      } else {
-		String s = file.getName();
-		if( s != null ) {
-		  if( !s.equals( "." )
-		      && !s.equals( ".." )
-		      && !s.equals( "harddisks.csv" )
-		      && !s.equals( "jkcemu_win32.dll" )
-		      && !s.equals( "jkcemu_win64.dll" )
-		      && !s.endsWith( "lastdirs.xml" )
-		      && !(s.startsWith( "prf_" ) && s.endsWith( ".xml" )) )
-		  {
-		    state = false;
-		    break;
-		  }
-		}
-	      }
-	    }
-	    if( !state ) {
-	      state = BasicDlg.showYesNoWarningDlg(
-			this,
-			"Das JKCEMU-Datenverzeichnis enth\u00E4lt Dateien"
-				+ " und/oder Unterverzeichnisse,\n"
-				+ "die offensichtlich nicht von JKCEMU"
-				+ " stammen.\n"
-				+ "Soll das Verzeichnis trotzdem"
-				+ " gel\u00F6scht werden?",
-			"Warnung" );
-	    }
-	    if( state ) {
-	      done = deleteDir( configDir );
-	    }
-	  }
-	}
-	if( state ) {
-	  if( done ) {
-	    if( this.btnDeleteConfigDir != null ) {
-	      this.btnDeleteConfigDir.setEnabled( false );
-	    }
-	    if( BasicDlg.showYesNoWarningDlg(
-		this,
-		"Wenn Sie sichergehen wollen,\n"
-			+ "dass keine alten Einstellungen \u00FCbernommen"
-			+ " werden,\n"
-			+ "sollten Sie jetzt den Emulator beenden.\n\n"
-			+ "M\u00F6chten Sie den Emulator jetzt beenden?",
-		"Hinweis" ) )
-	    {
-	      this.screenFrm.doQuit();
-	    }
-	  } else {
-	    BasicDlg.showErrorDlg(
-		this,
-		"Das JKCEMU-Konfigurationsverzeichnis konnte nicht"
-			+ " gel\u00F6scht werden.\n"
-			+ "M\u00F6glicherweise sind einige Dateien"
-			+ " durch den Emulator selbst gesperrt.\n"
-			+ "Schlie\u00DFen Sie bitte JKCEMU und"
-			+ " l\u00F6schen Sie das Verzeichnis per Hand." );
-	    if( Desktop.isDesktopSupported() ) {
-	      try {
-		Desktop.getDesktop().open( configDir );
-	      }
-	      catch( Exception ex ) {}
-	    }
-	  }
-	}
-      }
-    }
-  }
-
-
-  private void doLoad()
-  {
-    ProfileDlg dlg = new ProfileDlg(
-				this,
-				"Profil laden",
-				"Laden",
-				Main.getProfileFile(),
-				false );
-    dlg.setVisible( true );
-    File file = dlg.getSelectedProfile();
-    if( file != null ) {
-      Properties props = Main.loadProperties( file );
-      if( props != null ) {
-        updFields( props, null, null );
-        setDataChanged();
-        this.profileFile = file;
-      }
-    }
-  }
-
-
-  private void doSave()
-  {
-    Properties props = Main.getProperties();
-    if( props == null ) {
-      props = new Properties();
-    }
-
-    // Profile-Auswahlbox
-    ProfileDlg dlg = new ProfileDlg(
-				this,
-				"Profil speichern",
-				"Speichern",
-				this.profileFile,
-				true );
-    dlg.setVisible( true );
-    File profileFile = dlg.getSelectedProfile();
-    if( profileFile != null ) {
-
-      // Eigenschaften sammeln
-      Frame[] frms = Frame.getFrames();
-      if( frms != null ) {
-	for( int i = 0; i < frms.length; i++ ) {
-	  Frame f = frms[ i ];
-	  if( f != null ) {
-	    if( f instanceof BasicFrm ) {
-	      ((BasicFrm) f).putSettingsTo( props );
-	    }
-	  }
-	}
-      }
-
-      // ggf. Verzeichnis anlegen
-      File configDir = profileFile.getParentFile();
-      if( configDir != null ) {
-	if( configDir.exists() ) {
-	  if( this.btnDeleteConfigDir != null ) {
-	    this.btnDeleteConfigDir.setEnabled( true );
-	  }
-	}
-      }
-
-      // eigentliches Speichern
-      OutputStream out  = null;
-      try {
-	out = new FileOutputStream( profileFile );
-	props.storeToXML( out, "JKCEMU Profil" );
-	out.close();
-	out = null;
-	this.profileFile = profileFile;
-	Main.setProfile( this.profileFile, props );
-      }
-      catch( IOException ex ) {
-	BasicDlg.showErrorDlg(
-		this,
-		"Die Einstellungen k\u00F6nnen nicht in die Datei\n\'"
-			+ profileFile.getPath()
-			+ "\'\ngespeichert werden." );
-      }
-      finally {
-	EmuUtil.doClose( out );
-      }
-    }
-  }
-
-
 	/* --- private Methoden --- */
 
   private void applyConfirm( Properties props )
@@ -1462,7 +1499,11 @@ public class SettingsFrm extends BasicFrm
 		"jkcemu.sram.init",
 		this.btnSRAMInit00.isSelected() ? "00" : "random" );
     props.setProperty(
-		"jkcemu.external_rom.reload_on_poweron",
+		"jkcemu.ramfloppy.clear_on_power_on",
+		Boolean.toString(
+			this.btnClearRFsOnPowerOn.isSelected() ) );
+    props.setProperty(
+		"jkcemu.external_rom.reload_on_power_on",
 		Boolean.toString(
 			this.btnReloadROMsOnPowerOn.isSelected() ) );
   }
@@ -1721,6 +1762,9 @@ public class SettingsFrm extends BasicFrm
 
     // Optionen fuer PC/M
     this.pcmSettingsFld.applyInput( props, valueSys.equals( "PC/M" ) );
+
+    // Optionen fuer Poly880
+    this.poly880SettingsFld.applyInput( props, valueSys.equals( "Poly880" ) );
 
     // Optionen fuer Z1013
     this.z1013SettingsFld.applyInput(
@@ -1990,6 +2034,9 @@ public class SettingsFrm extends BasicFrm
     // Optionen fuer PC/M
     this.pcmSettingsFld.updFields( props );
 
+    // Optionen fuer Poly880
+    this.poly880SettingsFld.updFields( props );
+
     // Optionen fuer LC80
     this.lc80SettingsFld.updFields( props );
 
@@ -2116,10 +2163,15 @@ public class SettingsFrm extends BasicFrm
     } else {
       this.btnSRAMInit00.setSelected( true );
     }
+    this.btnClearRFsOnPowerOn.setSelected(
+		EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.ramfloppy.clear_on_power_on",
+				false ) );
     this.btnReloadROMsOnPowerOn.setSelected(
 		EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.external_rom.reload_on_poweron",
+				"jkcemu.external_rom.reload_on_power_on",
 				false ) );
   }
 
@@ -2182,6 +2234,9 @@ public class SettingsFrm extends BasicFrm
     }
     else if( this.btnSysPCM.isSelected() ) {
       cardName = "PC/M";
+    }
+    else if( this.btnSysPoly880.isSelected() ) {
+      cardName = "Poly880";
     }
     else if( this.btnSysLLC2.isSelected() ) {
       cardName = "LLC2";

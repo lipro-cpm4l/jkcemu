@@ -428,10 +428,87 @@
   durch Einbinden einer 8&nbsp;KByte gro&szlig;en ROM-Datei festlegen.
   Haben Sie keine solche ROM-Datei eingebunden,
   enth&auml;lt die erste Bank ein Diskettenverwaltungsprogramm
-  und die zweite ein Verwaltungsprogramm f&uuml;r weitere ROM-B&auml;nke.
+  und die zweite ein Verwaltungsprogramm f&uuml;r weitere ROM-B&auml;nke,
+  die ab Adresse A000h eingeblendet werden k&ouml;nnen.
+  Diese weiteren ROM-B&auml;nke werden weiter unten beschrieben.
+  Zur&uuml;ck zu den vier ROM-B&auml;nken auf der PIO2-Karte:
+  Zum Ein- und Ausblenden dieser B&auml;nke stehen im
+  AC1-2010-Monitorprogramm folgende Kommandos zur Verf&uuml;gung:
  <br/><br/>
-  Diese weiteren ROM-B&auml;nke (16&nbsp;St&uuml;ck) k&ouml;nnen
-  durch Ausgabe eines der Werte F0h bis FFh auf dem Ausgabetor 0Eh
+  <table border="1">
+   <tr><th>Kommando</th><th>Bedeutung</th></tr>
+   <tr><td>6</td><td>Bank&nbsp;1 im Bereich 2000h-27FFh einblenden</td></tr>
+   <tr><td>7</td><td>Bank&nbsp;2 im Bereich 2000h-27FFh einblenden</td></tr>
+   <tr><td>8</td><td>Bank&nbsp;3 im Bereich 2000h-27FFh einblenden</td></tr>
+   <tr><td>9</td><td>Bank&nbsp;4 im Bereich 2000h-27FFh einblenden</td></tr>
+   <tr><td>0</td><td>Keine Bank einblenden</td></tr>
+  </table>
+ <br/>
+  Wird mit dem Kommando&nbsp;6 die Bank&nbsp;1 eingeblendet,
+  steht ein Programm f&uuml;r die Arbeit mit Disketten zur Verf&uuml;gung,
+  vorausgesetzt die Emulation des FDC-Moduls ist aktiviert und
+  f&uuml;r die ROM-B&auml;nke wurde keine externe ROM-Datei eingebunden.
+  Das Diskettenverwaltungsprogramm bietet folgende Kommandos:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Kommando</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">i&lt;X&gt;</td>
+    <td>Laufwerk wechseln, z.B.: <tt>iA</tt> oder <tt>iB</tt></td>
+   </tr>
+   <tr><td valign="top">d</td><td>Directory anzeigen</td></tr>
+   <tr>
+    <td valign="top">f</td>
+    <td>
+     Diskette formatieren
+     (Format: 2x80x5x1024 mit 192&nbsp;Directory-Eintr&auml;gen),<br/>
+     <b>Achtung!</b> AC1-spezifisches Format, nicht CP/M-kompatibel!
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">k</td>
+    <td>
+     Datei l&ouml;schen,<br/>
+     Der Dateiname wird nicht in der Kommandozeile angegeben,
+     sondern vom Programm abgefragt.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">l &lt;Offset&gt;</td>
+    <td>
+     Datei laden,<br/>
+     Die Datei wird an die beim Speichern angegebene Adresse geladen.
+     Dine Offsetangabe in der Kommandozeile kann entfallen.
+     Wird ein Offset angegeben,
+     verschiebt sich die Ladeadresse um diesen Offset.
+     Der Dateiname wird nicht in der Kommandozeile angegeben,
+     sondern vom Programm abgefragt.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">s aaaa bbbb &lt;cccc&gt;</td>
+    <td>
+     Adressbereich <em>aaaa</em> bis <em>bbbb</em> als Datei speichern,<br/>
+     Optional kann die Startadresse cccc angegeben werden.
+     Der Dateiname wird nicht in der Kommandozeile angegeben,
+     sondern vom Programm abgefragt.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">x</td>
+    <td>
+     SCCH-BASIC-Programm speichern,<br/>
+     Da beim AC1-2010 das SCCH-Modul&nbsp;1 mit dem BASIC-ROM
+     nicht emuliert wird, d&uuml;rfte dieses Kommando im JKCEMU
+     kaum angewendet werden, es sei denn, man l&auml;dt das
+     SCCH-BASIC in den RAM.
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Nun zu den oben bereits ertw&auml;hnten weiteren ROM-B&auml;nken:
+  Diese sind 16&nbsp;St&uuml;ck und k&ouml;nnen durch Ausgabe
+  eines der Werte F0h bis FFh auf dem Ausgabetor 0Eh
   im Bereich ab A000h eingeblendet werden.
   Dabei wird der RAM ab Adresse 8000h ausgeblendet.
   Die einzelnen Segmente haben unterschiedliche L&auml;ngen.
@@ -464,6 +541,10 @@
    <tr><td>FEh</td><td>2</td><td align="right">15000h</td></tr>
    <tr><td>FFh</td><td>2</td><td align="right">15800h</td></tr>
   </table>
+ <br/>
+  Ein Programm zur Verwaltung dieser weiteren ROM-B&auml;nke
+  kann mit dem Kommando&nbsp;7 (Einblenden der ROM-Bank&nbsp;2
+  der PIO2-Karte) gestartet werden.
  <br/><br/>
 
 

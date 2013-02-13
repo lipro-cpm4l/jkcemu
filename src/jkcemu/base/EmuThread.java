@@ -153,7 +153,8 @@ public class EmuThread extends Thread implements
     }
 
     // Floppy Disks
-    FloppyDiskStationFrm frm = this.screenFrm.getFloppyDiskStationFrm();
+    FloppyDiskStationFrm frm = FloppyDiskStationFrm.getSharedInstance(
+							this.screenFrm );
     if( frm != null ) {
       int n = emuSys.getSupportedFloppyDiskDriveCount();
       frm.setDriveCount( n );
@@ -226,6 +227,7 @@ public class EmuThread extends Thread implements
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    BasicDlg.showErrorDlg( owner, msg );
@@ -735,8 +737,22 @@ public class EmuThread extends Thread implements
 	this.printMngr.reset();
 	this.ramFloppy1.reset();
 	this.ramFloppy2.reset();
-	if( this.resetLevel == ResetLevel.POWER_ON ) {
-	  this.screenFrm.fireAskClearRAMFloppies();
+	if( (this.emuSys != null)
+	    && (this.resetLevel == ResetLevel.POWER_ON)
+	    && Main.getBooleanProperty(
+                        "jkcemu.ramfloppy.clear_on_power_on",
+                        false ) )
+	{
+	  if( this.emuSys.supportsRAMFloppy1()
+	      && (this.ramFloppy1.getUsedSize() > 0) )
+	  {
+	    this.ramFloppy1.clear();
+	  }
+	  if( this.emuSys.supportsRAMFloppy2()
+	      && (this.ramFloppy2.getUsedSize() > 0) )
+	  {
+	    this.ramFloppy2.clear();
+	  }
 	}
 
 	// Fenster informieren
@@ -745,6 +761,7 @@ public class EmuThread extends Thread implements
 	  EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    for( Frame f : frms ) {
@@ -788,6 +805,7 @@ public class EmuThread extends Thread implements
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    joyFrm.setJoystickState( joyNum, emulated, connected );

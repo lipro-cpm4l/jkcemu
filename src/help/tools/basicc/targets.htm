@@ -1,0 +1,237 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Zielsysteme</h2>
+  Der BASIC-Compiler kann Programmcode f&uuml;r verschiedene Systeme
+  erzeugen.
+  Mehrere Systeme, die miteinander verwandt sind
+  und auf denen der gleiche Programmcode lauff&auml;hig ist,
+  werden zu einer Gruppe zusammengefasst.
+  Diese Gruppe bildet ein Zielsystem.
+  Programme, die f&uuml;r ein bestimmtes Zielsystem compiliert werden,
+  sind somit auf allen Computern lauff&auml;hig,
+  die dem angegebenen Zielsystem entsprechen.
+ <br/><br/>
+  Folgende Zielsystem werden unterst&uuml;tzt:
+  <ul>
+   <li><a href="targets.htm#cpm">CP/M-kpmpatibel</a></li>
+   <li><a href="targets.htm#hgmc">H&uuml;bler-Grafik-MC</a></li>
+   <li><a href="targets.htm#kramer">Kramer-MC</a></li>
+   <li><a href="targets.htm#llc2">LLC2 mit HIRES-Grafik</a></li>
+   <li><a href="targets.htm#z9001">KC85/1, KC87, Z9001</a></li>
+   <li>
+    <a href="targets.htm#z9001krt">KC85/1, KC87, Z9001 mit KRT-Grafik</a>
+   </li>
+   <li><a href="targets.htm#kc85">KC85/2...5, HC900</a></li>
+   <li><a href="targets.htm#scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a></li>
+   <li><a href="targets.htm#z1013">Z1013</a></li>
+  </ul>
+ <br/>
+  Nicht alle BASIC-Funktionalit&auml;ten lassen sich auf allen Zielsystemen
+  umsetzen. Insbesondere bei den Grafik- und Cursor-Funktionalit&auml;ten
+  gibt es Einschr&auml;nkungen.
+  Aus diesem Grund finden Sie hier Hinweise zu den konkreten Umsetzungen
+  und damit verbunden auch zu den gegebenen Einschr&auml;nkungen.
+ <br/><br/>
+
+ <h3><a name="cpm">CP/M-kompatibel</a></h3>
+  <ul>
+   <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
+   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
+   <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>TARGET_ID$ liefert "CP/M"</li>
+  </ul>
+ <br/>
+
+ <h3><a name="hgmc">H&uuml;bler-Grafik-MC</a></h3>
+  <ul>
+   <li>
+    Die Grafikanweisungen greifen direkt auf den Bildwiederholspeicher zu.
+    Dieser muss dazu auf die Standardadresse C000h eingestellt sein.
+   </li>
+   <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>TARGET_ID$ liefert "HUEBLER"</li>
+  </ul>
+ <br/>
+  <b>Achtung!</b> F&uuml;r den H&uuml;bler-Grafik-MC compilierte Programme
+  sind auch auf dem H&uuml;bler/Evert-MC lauff&auml;hig,
+  wenn auf die Grafikfunktionalit&auml;ten und
+  auf die <em>INKEY</em>-Funktion verzichtet sowie das Programm
+  nicht mit der Option <em>CTRL-C bricht Programm immer ab</em>
+  compiliert wird.
+ <br/><br/>
+
+
+ <h3><a name="kramer">Kramer-MC</a></h3>
+  <ul>
+   <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
+   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
+   <li>Die LOCATE-Anweisung steht nicht zur Verf&uuml;gung.</li>
+   <li>
+    Das in JKCEMU integrierte Monitorprogramm des KramerMC erkennt
+    bei der INKEY-Funktion nur die Tastenkombination <em>CTRL-C</em>.
+   </li>
+   <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>
+    Sie d&uuml;rfen die Compiler-Option <em>System-Stack verwenden</em>
+    nicht einschalten, da beim Starten eines Maschinencodeprogramms
+    mit dem Kommando <tt>G&lt;Adresse&gt;</tt> der Stack-Pointer
+    den Wert&nbsp;0000 hat und somit in den Bildwiederholspeicher
+    hineinlaufen w&uuml;rde.
+    Compilieren Sie immer mit der Option <em>Eigener Stack-Bereich</em>.
+   </li>
+   <li>TARGET_ID$ liefert "KRAMER"</li>
+  </ul>
+ <br/>
+
+ <h3><a name="llc2">LLC2 mit HIRES-Grafik</a></h3>
+  <ul>
+   <li>
+    <tt>SCREEN&nbsp;0</tt> ist ein reiner Textbildschirm,
+    in dem die Grafikbefehle nicht verwendet werden k&ouml;nnen.
+   </li>
+   <li>
+    Die HIRES-Vollgrafikerweiterung mit 512x256&nbsp;Pixel steht im
+    <tt>SCREEN&nbsp;1</tt> zur Verf&uuml;gung,
+    d.h., hier k&ouml;nnen die Grafikbefehle angewendet werden.
+    Textausgaben, die mit anderen als der
+    <a href="instructions.htm#label">LABEL</a>-Anweisung get&auml;tigt werden,
+    gehen in <tt>SCREEN&nbsp;0</tt>,
+    der allerdings in dem Augenblick nicht sichtbar ist.
+    Im <tt>SCREEN&nbsp;1</tt> liegt der Bildwiederholspeicher
+    auf Adresse&nbsp;8000h und belegt damit einen anderen Bereich
+    als der im <tt>SCREEN&nbsp;0</tt>.
+   </li>
+   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
+   <li>
+    Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
+    die Systemfunktion auf Adresse&nbsp;0EB4h auf.
+   </li>
+   <li>TARGET_ID$ liefert "LLC2_HIRES"</li>
+  </ul>
+ <br/>
+
+ <h3><a name="z9001">KC85/1, KC87, Z9001</a></h3>
+  <ul>
+   <li>
+    Im <tt>SCREEN&nbsp;0</tt> wird mit Hilfe der Blockgrafik
+    eine Vollgrafik mit 80x48&nbsp;Pixel simuliert,
+    die mit den Grafikbefehlen angesprochen werden kann.
+   </li>
+   <li>
+    Werden im BASIC-Programm die Anweisungen BORDER, COLOR, INK oder PAPER
+    verwendet, wird Programmcode mit Farbunterst&uuml;tzung erzeugt,
+    d.h., in dem Fall wird bei jeder Pixel setzenden Grafikanweisung
+    zus&auml;tzlich auch der Farbspeicher beschrieben.
+    Kommen dagegen keine Anweisungen zum Setzen der Farbe vor,
+    wird Programmcode erzeugt, der nicht auf den Farbspeicher zugreift.
+   </li>
+   <li>TARGET_ID$ liefert "Z9001"</li>
+  </ul>
+ <br/>
+
+ <h3><a name="z9001krt">KC85/1, KC87, Z9001 mit KRT-Grafik</a></h3>
+  <ul>
+   <li>
+    <tt>SCREEN&nbsp;0</tt> ist ein reiner Textbildschirm.
+    Eine Vollgrafik wird nicht simuliert, d.h.,
+    die Grafikbefehle k&ouml;nnen hier nicht verwendet werden.
+   </li>
+   <li>
+    Die KRT-Vollgrafik mit 320x192&nbsp;Pixel steht im
+    <tt>SCREEN&nbsp;1</tt> zur Verf&uuml;gung,
+    d.h., hier k&ouml;nnen die Grafikbefehle angewendet werden.
+    Textausgaben sind allerdings nicht m&ouml;glich (au&szlig;er
+    mit der <a href="instructions.htm#label">LABEL</a>-Anweisung).
+   </li>
+   <li>
+    Bez&uuml;glich Farbunterst&uuml;tzung gilt das gleiche wie
+    beim Zielsystem <em>KC85/1, KC87, Z9001</em>.
+   </li>
+   <li>TARGET_ID$ liefert "Z9001_KRT"</li>
+  </ul>
+ <br/>
+
+ <h3><a name="kc85">KC85/2...5, HC900</a></h3>
+  <ul>
+   <li>
+    Die LOCATE-Anweisung bezieht sich auf das im CAOS eingestellte Fenster.
+   </li>
+   <li>
+    Die CURSOR-Anweisung hat keine Wirkung.
+    CAOS schaltet den Cursor automatisch aus,
+    wenn nicht auf eine Eingabe gewartet wird.
+   </li>
+   <li>
+    Die JOYST-Funktion fragt direkt das Joystick-Modul (M008 bzw. M021) ab,
+    d.h., es muss kein spezieller Joystick-Treiber geladen werden.
+    Das compilierte Programm initialisiert dazu beim Start
+    die entsprechende PIO im Joystick-Modul, allerdings nur,
+    wenn im BASIC-Programm auch ein JOYST-Aufruf vorkommt.
+    Die Joystick-PIO wird dabei auf die gleiche Betriebsart programmiert,
+    wie es auch der Joystick-Treiber im CAOS&nbsp;4.5 tut.
+    Dieser wird dadurch nicht beeintr&auml;chtigt.
+   </li>
+   <li>
+    Beim HC900 und beim KC85/2 ist standardm&auml;&szlig;ig
+    das aktuelle Fenster kleiner eingestellt als maximal m&ouml;glich.
+    Die CLS-Anweisung l&ouml;scht in dem Fall nicht den ganzen Bildschirm.
+    Da das unsch&ouml;n aussieht, pr&uuml;ft der Compiler,
+    ob im Programm CLS-Anweisungen vorkommen.
+    Wenn ja, wird bei Programmstart die Gr&ouml;&szlig;e
+    des aktuell im CAOS eingestellten Fensters gepr&uuml;ft
+    und dieses gegebenfalls maximiert.
+   </li>
+   <li>TARGET_ID$ liefert "KC85"</li>
+  </ul>
+ <br/>
+
+ <h3><a name="scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a></h3>
+  Ist dieses Zielsystem ausgew&auml;hlt, wird Programmcode f&uuml;r
+  einen AC1 bzw. LLC2 mit einem SCCH-Monitorprogramm erzeugt.
+  Der Programmcode ist auch auf einem AC1 mit dem Monitorprogramm&nbsp;3.1
+  lauff&auml;hig, wenn auf die LOCATE-Anweisung und die JOYST-Funktion
+  verzichtet wird.
+ <br/>
+  <ul>
+   <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
+   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
+   <li>
+    Die PAUSE-Anweisung ist auf die Standard-Taktfrequenz des AC1
+    (2&nbsp;MHz) abgestimmt.
+    Auf einem LLC2 ist aufgrund der h&ouml;heren Taktfrequenz
+    die Wartezeit entsprechend k&uuml;rzer.
+   </li>
+   <li>
+    Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
+    die Systemfunktion auf Adresse&nbsp;0EB4h auf,
+   </li>
+   <li>TARGET_ID$ liefert "SCCH"</li>
+  </ul>
+ <br/>
+
+ <h3><a name="z1013">Z1013</a></h3>
+  <ul>
+   <li>
+    Es wird im SCREEN&nbsp;0 eine Vollgrafik mit 64x64&nbsp;Pixel
+    simuliert, die mit den Grafikbefehlen angesprochen werden kann.
+   </li>
+   <li>
+    Die Funktion <em>JOYST</em> ruft den Sprungverteiler auf, aber nur,
+    wenn auf der Adresse&nbsp;FFBBh (Einsprung zur Joystick-Abfrage)
+    ein Sprungbefehl (Byte&nbsp;C3h) steht.
+    Dies ist ein Schutz, damit das compilierte Programm nicht abst&uuml;rzt,
+    falls der Sprungverteiler nicht initialisiert sein sollte.
+   </li>
+   <li>
+    Die Option <em>CTRL-C bricht Programm immer ab</em> verlangsamt
+    das Programm erheblich. Der Grund liegt in der langsamen INKEY-Routine
+    des Z1013-Monitorprogramms, die f&uuml;r den Test auf Abbruch
+    regelm&auml;&szlig;ig aufgerufen wird.
+   </li>
+   <li>TARGET_ID$ liefert "Z1013"</li>
+  </ul>
+ <br/>
+</body>
+</html>

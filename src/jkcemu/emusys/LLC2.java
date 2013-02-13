@@ -729,7 +729,7 @@ public class LLC2
 	      m >>= n;
 	    }
 	    pixel = ((b & m) != 0);
-	  } else {
+	  } else if( fontBytes != null ) {
 	    int ch = this.emuThread.getRAMByte(
 				this.videoTextAddr + (row * 64) + col );
 	    if( ch == 0x10 ) {
@@ -1369,7 +1369,7 @@ public class LLC2
 		vAddr = 0x0000;
 		break;
 	    }
-	    if( vAddr != videoPixelAddr ) {
+	    if( vAddr != this.videoPixelAddr ) {
 	      this.videoPixelAddr = vAddr;
 	      dirty               = true;
 	    }

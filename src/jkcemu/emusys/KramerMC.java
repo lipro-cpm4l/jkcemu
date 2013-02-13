@@ -588,6 +588,7 @@ public class KramerMC extends EmuSys implements
 
   @Override
   public int reassembleSysCall(
+			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
 			boolean       sourceOnly,
@@ -596,6 +597,7 @@ public class KramerMC extends EmuSys implements
 			int           colRemark )
   {
     return reassSysCallTable(
+			memory,
 			addr,
 			0x00E0,
 			sysCallNames,

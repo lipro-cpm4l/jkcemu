@@ -13,6 +13,7 @@ import java.awt.event.*;
 import java.lang.*;
 import java.util.*;
 import javax.swing.*;
+import jkcemu.Main;
 
 
 public class BasicFrm extends JFrame implements
@@ -25,6 +26,7 @@ public class BasicFrm extends JFrame implements
   {
     setDefaultCloseOperation( DO_NOTHING_ON_CLOSE );
     addWindowListener( this );
+    Main.frameCreated( this );
   }
 
 
@@ -55,7 +57,7 @@ public class BasicFrm extends JFrame implements
    */
   protected JButton createImageButton( String imgName, String text )
   {
-    JButton btn = EmuUtil.createImageButton( imgName, text );
+    JButton btn = EmuUtil.createImageButton( this, imgName, text );
     btn.addActionListener( this );
     return btn;
   }
@@ -142,11 +144,23 @@ public class BasicFrm extends JFrame implements
   }
 
 
+  /*
+   * Die Methode wird aufgerufen, wenn das Fenster geschlossen
+   * und zusaetzlich auch alle sonst im Hintergrund weiterlaufenden
+   * Aktivitaeten beendet werden sollen.
+   */
+  public boolean doQuit()
+  {
+    return doClose();
+  }
+
+
   public void fireRepaint()
   {
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    repaint();

@@ -105,13 +105,6 @@ public class C80KeyboardFld extends AbstractKeyboardFld
 
 
   @Override
-  public String getKeyboardName()
-  {
-    return "C-80-Tastatur";
-  }
-
-
-  @Override
   protected void keySelectionChanged()
   {
     Arrays.fill( this.kbMatrix, 0 );

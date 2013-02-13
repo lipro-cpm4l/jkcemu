@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -29,6 +29,7 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   private JCheckBox    btnLabelsToDebugger;
   private JCheckBox    btnLabelsToReass;
   private JCheckBox    btnFormatSource;
+  private JCheckBox    btnWarnNonAsciiChars;
 
 
   public AsmOptionsDlg( Frame owner, EmuThread emuThread, PrgOptions options )
@@ -70,21 +71,22 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
     grpSyntax.add( this.btnSyntaxBoth );
     panelSyntax.add( this.btnSyntaxBoth, gbcSyntax );
 
-    this.btnSyntaxZilog = new JRadioButton( "Nur Zilog-Mnemonik/-Syntax" );
+    this.btnSyntaxZilog = new JRadioButton(
+				"Nur Zilog-Mnemonik/-Syntax erlauben" );
     grpSyntax.add( this.btnSyntaxZilog );
     gbcSyntax.insets.top = 0;
     gbcSyntax.gridy++;
     panelSyntax.add( this.btnSyntaxZilog, gbcSyntax );
 
     this.btnSyntaxRobotron = new JRadioButton(
-					"Nur Robotron-Mnemonik/-Syntax" );
+				"Nur Robotron-Mnemonik/-Syntax erlauben" );
     grpSyntax.add( this.btnSyntaxRobotron );
     gbcSyntax.insets.bottom = 5;
     gbcSyntax.gridy++;
     panelSyntax.add( this.btnSyntaxRobotron, gbcSyntax );
 
     this.btnAllowUndocInst = new JCheckBox(
-					"Erlaube undokumentierte Befehle" );
+				"Undokumentierte Befehle erlauben" );
     gbcSyntax.insets.top = 0;
     gbcSyntax.gridy++;
     panelSyntax.add( this.btnAllowUndocInst, gbcSyntax );
@@ -130,14 +132,19 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 					0, 0 );
 
 
+    this.btnWarnNonAsciiChars = new JCheckBox(
+					"Bei Nicht-ASCII-Zeichen warnen" );
+    panelEtc.add( this.btnWarnNonAsciiChars, gbcEtc );
+
     this.btnFormatSource = new JCheckBox( "Quelltext formatieren" );
+    gbcEtc.insets.top = 0;
+    gbcEtc.gridy++;
     panelEtc.add( this.btnFormatSource, gbcEtc );
 
     this.btnLabelsToDebugger = new JCheckBox(
 		"Im Debugger Haltepunkte auf Marken anlegen"
 			+ " (nur bei Programmcode in Emulator laden)" );
     this.btnLabelsToDebugger.setEnabled( false );
-    gbcEtc.insets.top = 0;
     gbcEtc.gridy++;
     panelEtc.add( this.btnLabelsToDebugger, gbcEtc );
 
@@ -160,7 +167,7 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 
     // Vorbelegungen
     if( options != null ) {
-      switch( options.getSyntax() ) {
+      switch( options.getAsmSyntax() ) {
 	case ZILOG_ONLY:
 	  this.btnSyntaxZilog.setSelected( true );
 	  break;
@@ -175,19 +182,22 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
       this.btnLabelsCaseSensitive.setSelected(
 					options.getLabelsCaseSensitive() );
       this.btnPrintLabels.setSelected( options.getPrintLabels() );
+      this.btnWarnNonAsciiChars.setSelected( options.getWarnNonAsciiChars() );
       this.btnFormatSource.setSelected( options.getFormatSource() );
       this.btnLabelsToDebugger.setSelected( options.getLabelsToDebugger() );
       this.btnLabelsToReass.setSelected( options.getLabelsToReassembler() );
+      updCodeDestFields( options, false );
     } else {
       this.btnSyntaxBoth.setSelected( true );
       this.btnAllowUndocInst.setSelected( false );
       this.btnLabelsCaseSensitive.setSelected( false );
       this.btnPrintLabels.setSelected( false );
+      this.btnWarnNonAsciiChars.setSelected( true );
       this.btnFormatSource.setSelected( false );
       this.btnLabelsToDebugger.setSelected( false );
       this.btnLabelsToReass.setSelected( false );
+      updCodeDestFields( options, true );
     }
-    updCodeDestFields( options );
 
 
     // Fenstergroesse und -position
@@ -211,15 +221,15 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   protected void doApply()
   {
     try {
-      PrgOptions.Syntax syntax = PrgOptions.Syntax.ALL;
+      Z80Assembler.Syntax syntax = Z80Assembler.Syntax.ALL;
       if( this.btnSyntaxZilog.isSelected() ) {
-	syntax = PrgOptions.Syntax.ZILOG_ONLY;
+	syntax = Z80Assembler.Syntax.ZILOG_ONLY;
       }
       else if( this.btnSyntaxRobotron.isSelected() ) {
-	syntax = PrgOptions.Syntax.ROBOTRON_ONLY;
+	syntax = Z80Assembler.Syntax.ROBOTRON_ONLY;
       }
       this.appliedOptions = new PrgOptions();
-      this.appliedOptions.setSyntax( syntax );
+      this.appliedOptions.setAsmSyntax( syntax );
       this.appliedOptions.setAllowUndocInst(
 				this.btnAllowUndocInst.isSelected() );
       this.appliedOptions.setLabelsCaseSensitive(
@@ -231,6 +241,8 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 				this.btnLabelsToReass.isSelected() );
       this.appliedOptions.setFormatSource(
 				this.btnFormatSource.isSelected() );
+      this.appliedOptions.setWarnNonAsciiChars(
+				this.btnWarnNonAsciiChars.isSelected() );
       try {
 	applyCodeDestOptionsTo( this.appliedOptions );
 	doClose();

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -72,10 +72,14 @@ public class KCSystemFileTarget extends AbstractConvertTarget
 			begAddr + this.len,
 			startAddr >= 0 ? new Integer( startAddr ) : null,
 			fileDesc );
-      out.write(
-		this.dataBytes,
-		this.offs,
-		Math.min( this.dataBytes.length - this.offs, this.len ) );
+      int n = Math.min( this.dataBytes.length - this.offs, this.len );
+      out.write( this.dataBytes, this.offs, n );
+      n = n % 0x80;
+      if( n > 0 ) {
+	for( int i = n; i < 0x80; i++ ) {
+	  out.write( 0 );
+	}
+      }
       out.close();
       out = null;
     }

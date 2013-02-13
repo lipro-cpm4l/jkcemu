@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -42,14 +42,8 @@ public abstract class AbstractOptionsDlg extends BasicDlg
   private JCheckBox       btnCodeToFile;
   private JRadioButton    btnCodeToPrimarySys;
   private JRadioButton    btnCodeToSecondSys;
-  private JComboBox       comboFileFmt;
   private FileNameFld     fldFileName;
-  private JTextField      fldFileType;
-  private JTextField      fldFileDesc;
-  private JLabel          labelFileFmt;
   private JLabel          labelFileName;
-  private JLabel          labelFileType;
-  private JLabel          labelFileDesc;
   private JButton         btnFileSelect;
   private JButton         btnApply;
   private JButton         btnCancel;
@@ -64,7 +58,7 @@ public abstract class AbstractOptionsDlg extends BasicDlg
 
   public void settingsChanged()
   {
-    updCodeToEmuFields();
+    updCodeToEmuFieldsVisible();
     updCodeToEmuFieldsEnabled();
   }
 
@@ -86,28 +80,17 @@ public abstract class AbstractOptionsDlg extends BasicDlg
   protected void applyCodeDestOptionsTo( PrgOptions options )
 						throws UserInputException
   {
-    char fileType = '\u0020';
-    String text = this.fldFileType.getText();
-    if( text != null ) {
-      if( text.length() > 0 ) {
-	fileType = text.charAt( 0 );
-	if( (fileType < '\u0020') || (fileType >= '\u007E') ) {
-	  fileType = '\u0020';
-	}
-      }
-    }
-    FileSaver.checkFileDesc(
-			getSelectedFileFmt(),
-			false,
-			this.fldFileDesc.getText() );
     options.setCodeToFile(
 			this.btnCodeToFile.isSelected(),
-			this.fldFileName.getFile(),
-			getSelectedFileFmt(),
-			fileType,
-			this.fldFileDesc.getText() );
-    options.setCodeToEmu( this.btnCodeToEmu.isSelected() );
-    options.setCodeToSecondSystem( this.btnCodeToSecondSys.isSelected() );
+			this.fldFileName.getFile() );
+    options.setCodeToEmu(
+		this.btnCodeToEmu != null ?
+				this.btnCodeToEmu.isSelected()
+				: false );
+    options.setCodeToSecondSystem(
+		this.btnCodeToSecondSys != null ?
+				this.btnCodeToSecondSys.isSelected()
+				: false );
   }
 
 
@@ -148,36 +131,45 @@ public abstract class AbstractOptionsDlg extends BasicDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.btnCodeToEmu = new JCheckBox();
-    this.btnCodeToEmu.addActionListener( this );
-    panel.add( this.btnCodeToEmu, gbc );
+    if( this.emuThread != null ) {
+      this.btnCodeToEmu = new JCheckBox();
+      this.btnCodeToEmu.addActionListener( this );
+      panel.add( this.btnCodeToEmu, gbc );
 
-    ButtonGroup grpCodeToEmu = new ButtonGroup();
+      ButtonGroup grpCodeToEmu = new ButtonGroup();
 
-    this.btnCodeToPrimarySys = new JRadioButton( "Grundger\u00E4t", true );
-    grpCodeToEmu.add( this.btnCodeToPrimarySys );
-    gbc.insets.left = 20;
-    gbc.gridx++;
-    panel.add( this.btnCodeToPrimarySys, gbc );
+      this.btnCodeToPrimarySys = new JRadioButton( "Grundger\u00E4t", true );
+      grpCodeToEmu.add( this.btnCodeToPrimarySys );
+      gbc.insets.left = 20;
+      gbc.gridx++;
+      panel.add( this.btnCodeToPrimarySys, gbc );
 
-    this.btnCodeToSecondSys = new JRadioButton();
-    grpCodeToEmu.add( this.btnCodeToSecondSys );
-    gbc.insets.left = 5;
-    gbc.gridx++;
-    panel.add( this.btnCodeToSecondSys, gbc );
+      this.btnCodeToSecondSys = new JRadioButton();
+      grpCodeToEmu.add( this.btnCodeToSecondSys );
+      gbc.insets.left = 5;
+      gbc.gridx++;
+      panel.add( this.btnCodeToSecondSys, gbc );
+
+      gbc.gridy++;
+    } else {
+      this.btnCodeToEmu        = null;
+      this.btnCodeToPrimarySys = null;
+      this.btnCodeToSecondSys  = null;
+    }
 
     this.btnCodeToFile = new JCheckBox( "Programmcode in Datei speichern" );
     this.btnCodeToFile.addActionListener( this );
     gbc.insets.left = 5;
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
     gbc.gridx       = 0;
-    gbc.gridy++;
     panel.add( this.btnCodeToFile, gbc );
 
     JPanel panelFile = new JPanel( new GridBagLayout() );
     gbc.insets.left   = 50;
     gbc.insets.top    = 0;
     gbc.insets.bottom = 5;
+    gbc.fill          = GridBagConstraints.HORIZONTAL;
+    gbc.weightx       = 1.0;
     gbc.gridy++;
     panel.add( panelFile, gbc );
 
@@ -190,65 +182,23 @@ public abstract class AbstractOptionsDlg extends BasicDlg
 					new Insets( 2, 2, 2, 2 ),
 					0, 0 );
 
-    this.labelFileFmt = new JLabel( "Dateiformat:" );
-    gbcFile.gridwidth = 1;
-    gbcFile.gridy++;
-    panelFile.add( this.labelFileFmt, gbcFile );
-
-    this.comboFileFmt = new JComboBox();
-    this.comboFileFmt.setEditable( false );
-    for( int i = 0; i < fileFmtItems.length; i++ ) {
-      this.comboFileFmt.addItem(
-		FileSaver.getFormatText( fileFmtItems[ i ] ) );
-    }
-    this.comboFileFmt.addItem( "CP/M-Programmdatei" );
-    this.comboFileFmt.addActionListener( this );
-    gbcFile.gridwidth = 3;
-    gbcFile.gridx++;
-    panelFile.add( this.comboFileFmt, gbcFile );
-
     this.labelFileName = new JLabel( "Dateiname:" );
-    gbcFile.gridwidth  = 1;
-    gbcFile.gridx      = 0;
-    gbcFile.gridy++;
     panelFile.add( this.labelFileName, gbcFile );
 
     this.fldFileName = new FileNameFld();
     this.fldFileName.setEditable( false );
-    gbcFile.fill      = GridBagConstraints.HORIZONTAL;
-    gbcFile.weightx   = 1.0;
-    gbcFile.gridwidth = 3;
+    gbcFile.fill    = GridBagConstraints.HORIZONTAL;
+    gbcFile.weightx = 1.0;
     gbcFile.gridx++;
     panelFile.add( this.fldFileName, gbcFile );
 
     this.btnFileSelect = createImageButton(
 				"/images/file/open.png",
 				"\u00D6ffnen..." );
-    gbcFile.fill      = GridBagConstraints.NONE;
-    gbcFile.weightx   = 0.0;
-    gbcFile.gridwidth = 1;
-    gbcFile.gridx += 3;
+    gbcFile.fill    = GridBagConstraints.NONE;
+    gbcFile.weightx = 0.0;
+    gbcFile.gridx++;
     panelFile.add( this.btnFileSelect, gbcFile );
-
-    this.labelFileType = new JLabel( "Dateityp:" );
-    gbcFile.gridx = 0;
-    gbcFile.gridy++;
-    panelFile.add( this.labelFileType, gbcFile );
-
-    this.fldFileType = new JTextField( new LimitedDocument( 1 ), "", 2 );
-    gbcFile.gridx ++;
-    panelFile.add( this.fldFileType, gbcFile );
-
-    this.labelFileDesc = new JLabel( "Beschreibung:" );
-    gbcFile.gridx++;
-    panelFile.add( this.labelFileDesc, gbcFile );
-
-    this.docFileDesc = new LimitedDocument( FileSaver.getMaxFileDescLength() );
-    this.fldFileDesc = new JTextField( this.docFileDesc, "", 0 );
-    gbcFile.fill    = GridBagConstraints.HORIZONTAL;
-    gbcFile.weightx = 1.0;
-    gbcFile.gridx++;
-    panelFile.add( this.fldFileDesc, gbcFile );
 
     return panel;
   }
@@ -257,43 +207,33 @@ public abstract class AbstractOptionsDlg extends BasicDlg
   protected abstract void doApply();
 
 
-  protected void updCodeDestFields( PrgOptions options )
+  protected void setCodeToEmu( boolean state )
   {
-    updCodeToEmuFields();
+    if( this.btnCodeToEmu != null )
+      this.btnCodeToEmu.setSelected( state );
+  }
+
+
+  protected void updCodeDestFields(
+				PrgOptions options,
+				boolean    forceCodeToEmu )
+  {
+    updCodeToEmuFieldsVisible();
     if( options != null ) {
-      this.btnCodeToEmu.setSelected( options.getCodeToEmu() );
-      this.btnCodeToSecondSys.setSelected( options.getCodeToSecondSystem() );
+      if( this.btnCodeToEmu != null ) {
+	this.btnCodeToEmu.setSelected( options.getCodeToEmu() );
+      }
+      if( this.btnCodeToSecondSys != null ) {
+	this.btnCodeToSecondSys.setSelected(
+				options.getCodeToSecondSystem() );
+      }
       this.btnCodeToFile.setSelected( options.getCodeToFile() );
       this.fldFileName.setFile( options.getCodeFile() );
-
-      String fileFmt = options.getCodeFileFormat();
-      if( fileFmt != null ) {
-	String text = FileSaver.getFormatText( fileFmt );
-	if( text != null ) {
-	  this.comboFileFmt.setSelectedItem( text );
-	}
-      }
-      char fileType = options.getCodeFileType();
-      if( (fileType > '\u0020') && (fileType <= '\u007E') ) {
-	this.fldFileType.setText( String.valueOf( fileType ) );
-      }
-      String fileDesc = options.getCodeFileDesc();
-      if( fileDesc != null ) {
-        this.fldFileDesc.setText( fileDesc );
-      }
     } else {
-      this.btnCodeToEmu.setSelected( false );
-      this.btnCodeToFile.setSelected( false );
-
-      EmuSys emuSys = this.emuThread.getEmuSys();
-      if( (emuSys instanceof AC1) || (emuSys instanceof Z1013) ) {
-	this.comboFileFmt.setSelectedItem(
-			FileSaver.getFormatText( FileSaver.HEADERSAVE ) );
-      } else {
-	this.comboFileFmt.setSelectedItem(
-			FileSaver.getFormatText( FileSaver.KCC ) );
+      if( this.btnCodeToEmu != null ) {
+	this.btnCodeToEmu.setSelected( forceCodeToEmu );
       }
-      this.fldFileType.setText( "C" );
+      this.btnCodeToFile.setSelected( false );
     }
     updCodeToEmuFieldsEnabled();
     updCodeToFileFieldsEnabled();
@@ -312,7 +252,7 @@ public abstract class AbstractOptionsDlg extends BasicDlg
 	rv = true;
 	updCodeToEmuFieldsEnabled();
       }
-      else if( (src == this.btnCodeToFile) || (src == this.comboFileFmt) ) {
+      else if( src == this.btnCodeToFile ) {
 	rv = true;
 	updCodeToFileFieldsEnabled();
       }
@@ -320,11 +260,7 @@ public abstract class AbstractOptionsDlg extends BasicDlg
 	rv = true;
 	doSelectFile();
       }
-      else if( src == this.fldFileType ) {
-	rv = true;
-	this.fldFileDesc.requestFocus();
-      }
-      else if( (src == this.fldFileDesc) || (src == this.btnApply) ) {
+      else if( src == this.btnApply ) {
 	rv = true;
 	doApply();
       }
@@ -353,82 +289,61 @@ public abstract class AbstractOptionsDlg extends BasicDlg
 				EmuUtil.getComFileFilter() );
     if( file != null ) {
       this.fldFileName.setFile( file );
-      this.fldFileType.requestFocus();
     }
   }
 
 
-  private String getSelectedFileFmt()
+  private void updCodeToEmuFieldsVisible()
   {
-    int idx = this.comboFileFmt.getSelectedIndex();
-    return (idx >= 0) && (idx < fileFmtItems.length) ?
-					fileFmtItems[ idx ]
-					: FileSaver.BIN;
-  }
-
-
-  public void updCodeToEmuFields()
-  {
-    String secondarySysName = null;
-    EmuSys emuSys           = this.emuThread.getEmuSys();
-    if( emuSys != null ) {
-      secondarySysName = emuSys.getSecondSystemName();
-    }
-    if( secondarySysName != null ) {
-      this.btnCodeToEmu.setText( "Programmmcode in Emulator laden:" );
-      btnCodeToSecondSys.setText( secondarySysName );
-      btnCodeToSecondSys.setVisible( true );
-      btnCodeToPrimarySys.setVisible( true );
-    } else {
-      this.btnCodeToEmu.setText( "Programmmcode in Emulator laden" );
-      btnCodeToSecondSys.setVisible( false );
-      btnCodeToPrimarySys.setVisible( false );
+    if( (this.btnCodeToEmu != null)
+	&& (this.btnCodeToSecondSys != null)
+	&& (this.btnCodeToPrimarySys != null) )
+    {
+      String secondarySysName = null;
+      if( this.emuThread != null ) {
+	EmuSys emuSys = this.emuThread.getEmuSys();
+	if( emuSys != null ) {
+	  secondarySysName = emuSys.getSecondSystemName();
+	}
+      }
+      if( secondarySysName != null ) {
+	this.btnCodeToEmu.setText( "Programmmcode in Emulator laden:" );
+	this.btnCodeToSecondSys.setText( secondarySysName );
+	this.btnCodeToSecondSys.setVisible( true );
+	this.btnCodeToPrimarySys.setVisible( true );
+      } else {
+	this.btnCodeToEmu.setText( "Programmmcode in Emulator laden" );
+	this.btnCodeToSecondSys.setVisible( false );
+	this.btnCodeToPrimarySys.setVisible( false );
+      }
     }
   }
 
 
   private void updCodeToEmuFieldsEnabled()
   {
-    boolean state = this.btnCodeToEmu.isSelected();
-    if( btnCodeToPrimarySys.isVisible() ) {
-      btnCodeToPrimarySys.setEnabled( state );
+    if( (this.btnCodeToEmu != null)
+	&& (this.btnCodeToSecondSys != null)
+	&& (this.btnCodeToPrimarySys != null) )
+    {
+      boolean state = this.btnCodeToEmu.isSelected();
+      if( btnCodeToPrimarySys.isVisible() ) {
+	btnCodeToPrimarySys.setEnabled( state );
+      }
+      if( btnCodeToSecondSys.isVisible() ) {
+	btnCodeToSecondSys.setEnabled( state );
+      }
+      codeToEmuChanged( this.btnCodeToEmu.isSelected() );
     }
-    if( btnCodeToSecondSys.isVisible() ) {
-      btnCodeToSecondSys.setEnabled( state );
-    }
-    codeToEmuChanged( this.btnCodeToEmu.isSelected() );
   }
 
 
   private void updCodeToFileFieldsEnabled()
   {
     boolean state = this.btnCodeToFile.isSelected();
-    this.labelFileFmt.setEnabled( state );
-    this.comboFileFmt.setEnabled( state );
     this.labelFileName.setEnabled( state );
     this.fldFileName.setEnabled( state );
     this.btnFileSelect.setEnabled( state );
-    if( state ) {
-      String fileFmt = getSelectedFileFmt();
-
-      state = fileFmt.equals( FileSaver.HEADERSAVE );
-      this.labelFileType.setEnabled( state );
-      this.fldFileType.setEnabled( state );
-
-      state = state
-		|| fileFmt.equals( FileSaver.KCC )
-		|| fileFmt.equals( FileSaver.KCTAP_0 )
-		|| fileFmt.equals( FileSaver.KCTAP_1 );
-      this.labelFileDesc.setEnabled( state );
-      this.fldFileDesc.setEnabled( state );
-      this.docFileDesc.setMaxLength(
-		FileSaver.getMaxFileDescLength( fileFmt, false ) );
-    } else {
-      this.labelFileType.setEnabled( state );
-      this.fldFileType.setEnabled( state );
-      this.labelFileDesc.setEnabled( state );
-      this.fldFileDesc.setEnabled( state );
-    }
   }
 }
 

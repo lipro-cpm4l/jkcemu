@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -77,7 +77,7 @@ public class AboutDlg extends BasicDlg
     gbcGeneral.insets.top = 12;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "(c) 2008-2012 Jens M\u00FCller" ),
+	new JLabel( "(c) 2008-2013 Jens M\u00FCller" ),
 	gbcGeneral );
 
     gbcGeneral.gridy++;

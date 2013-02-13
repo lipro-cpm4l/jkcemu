@@ -1,0 +1,206 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>BASIC-Compiler mit Kommandozeile aufrufen</h2>
+  Der JKCEMU-BASIC-Compiler kann mit einer Kommandozeile auch ohne
+  den eigentlichen Emulator als eigenst&auml;ndiges Programm
+  aufgerufen werden.
+  Unter Windows m&uuml;ssen Sie dazu die Eingabeaufforderung starten
+  (ggf. nach <em>cmd.exe</em> suchen).
+  Die Kommandozeile zum Aufruf des BASIC-Compiler sieht
+  folgenderma&szlig;en aus
+  (Name und Pfad der JKCEMU-JAR-Datei sind entsprechend anzupassen):
+ <br/><br/>
+  <tt>java -jar jkcemu.jar --bc [Optionen] &lt;Quelltextdatei&gt;</tt>
+ <br/><br/>
+   oder
+ <br/><br/>
+  <tt>java -jar jkcemu.jar --basiccompiler [Optionen] &lt;Quelltextdatei&gt;</tt>
+ <br/><br/>
+  Folgende Optionen k&ouml;nnen angegeben werden
+  (Gro&szlig;-/Kleinschreibung beachten!):
+ <br/>
+  <table border="1">
+   <tr><th>Option</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">-h</td>
+    <td>Hilfe zu den BASIC-Compiler-Optionen anzeigen</td>
+   </tr>
+   <tr>
+    <td valign="top">-g</td>
+    <td>
+     bei Abbruch aufgrund eines Fehlers Zeilennummer ausgeben
+     (erzeugt zus&auml;tzlichen Programmcode)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">-o&nbsp;&lt;Ausgabedatei&gt;</td>
+    <td>
+     Der erzeugte Programmcode wird in die angegebene Datei geschrieben.
+     Das Format der Ausgabedatei h&auml;ngt von der Endung ab
+     (*.com; *.bin; *.hex; *.kcc; *.tap; *.z80).
+     <br/>
+     Fehlt die Option, hat die Ausgabedatei mit Ausnahme der Endung
+     den gleichen Namen wie die Quelltextdatei.
+     Die Endung lautet dann entweder <em>*.s</em>
+     (wenn die Option&nbsp;<em>-S</em> angegeben wurde)
+     oder <em>*.com</em>
+     (wenn das Zielsystem <em>CPM</em> mit Anfangsadresse&nbsp;0100h ist)
+     oder <em>*.bin</em> (in allen anderen F&auml;llen).
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-t&nbsp;&lt;System&gt;</td>
+    <td>
+     <a href="targets.htm">Zielsystem</a> festlegen,<br/>
+     Diese Option muss angegeben werden.
+     M&ouml;gliche Schl&uuml;sselw&ouml;rter sind:
+     <ul>
+      <li><tt>CPM</tt></li>
+      <li><tt>HUEBLER</tt></li>
+      <li><tt>KC85</tt></li>
+      <li><tt>KRAMER</tt></li>
+      <li><tt>LLC2_HIRES</tt></li>
+      <li><tt>SCCH</tt></li>
+      <li><tt>Z1013</tt></li>
+      <li><tt>Z9001</tt></li>
+      <li><tt>Z9001_KRT</tt></li>
+     </ul>
+     Die Schl&uuml;sselw&ouml;rter k&ouml;nnen gro&szlig; oder klein
+     geschrieben werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-A&nbsp;&lt;Adresse&gt;</td>
+    <td>
+     Anfangsadresse festlegen (hexadezimal),<br/>
+     Fehlt die Option, gilt abh&auml;ngig vom Zielsystem
+     folgende Anfangsadresse:
+     <ul>
+      <li>0100h bei CPM, HUEBLER und Z1013</li>
+      <li>0300h bei KC85, Z9001 und Z9001_KRT</li>
+      <li>1000h bei KRAMER</li>
+      <li>2000h bei SCCH und LLC2_HIRES</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-L&nbsp;&lt;Sprache&gt;</td>
+    <td>
+     Sprache der Laufzeitauschriften (z.B. Fehlermeldungen) festlegen,<br/>
+     Die Sprache wird in Form des zweistelligen ISO-Codes angegeben,
+     wobei die Gro&szlig;-/Kleinschreibung egal ist.
+     M&ouml;gliche Sprachen sind <em>de</em> (Deutsch)
+     und <em>en</em> (Englisch).
+     Fehlt die Option, erscheinen Laufzeitauschriften in Deutsch.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-M&nbsp;&lt;Zahl&gt;</td>
+    <td>
+     Stack-Gr&ouml;&szlig;e festlegen,<br/>
+     Bei einer Stack-Gr&ouml;&szlig;e&nbsp;0 wird der System-Stack verwendet
+     und somit kein eigener Stack-Bereich angelegt.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-N&nbsp;&lt;Name&gt;</td>
+    <td>
+     Programmname festlegen,<br/>
+     Mit diesem Namen wird das Programm auf dem Zielsystem gestartet
+     (nur relevant bei KC85, HUEBLER, Z9001 und Z9001_KRT).
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-B...</td>
+    <td>
+     Abbruchm&ouml;glichkeit festlegen:<br/>
+     <table border="1">
+      <tr><th>Option</th><th>Bedeutung</th></tr>
+      <tr>
+       <td valign="top"><tt>-B0</tt></td>
+       <td>CTRL-C bricht Programm nicht ab</td>
+      </tr>
+      <tr>
+       <td valign="top"><tt>-B1</tt></td>
+       <td>CTRL-C bricht Programm nur bei Eingaben ab</td>
+      </tr>
+      <tr>
+       <td valign="top"><tt>-B2</tt></td>
+       <td>CTRL-C bricht Programm ab</td>
+      </tr>
+     </table>
+     <br/>
+     Fehlt die Option, wird automatisch <em>-B2</em> angenommen,
+     <br/><br/>
+     <b>Achtung!</b> Bei der Option <em>-B2</em> wird das Programm
+     aufgrund der st&auml;ndigen Tastaturabfragen entsprechend langsamer!
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-O...</td>
+    <td>
+     Programmcodeoptimierung festlegen:<br/>
+     <table border="1">
+      <tr><th>Option</th><th>Bedeutung</th></tr>
+      <tr>
+       <td valign="top"><tt>-O1</tt></td>
+       <td>Stack-Pr&uuml;fungen ausschalten</td>
+      </tr>
+      <tr>
+       <td valign="top"><tt>-O2</tt></td>
+       <td>zus&auml;tzlich Feldpr&uuml;fungen ausschalten</td>
+      </tr>
+      <tr>
+       <td valign="top"><tt>-O3</tt></td>
+       <td>zus&auml;tzlich relative Spr&uuml;nge bevorzugen</td>
+      </tr>
+     </table>
+     <br/>
+     Die Option <tt>-O</tt> hat die gleiche Wirkung wie <tt>-O2</tt>.<br/>
+     Wurde keine Option zur Programmcodeoptimierung angegeben,
+     sind alle Laufzeitpr&uuml;fungen aktiv (identisch mit <em>-O0</em>).
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-S</td>
+    <td>
+     nur Assembler-Quelltext ausgeben,<br/>
+     Die Ausgabedatei hat in dem Fall immer das Format
+     einer einfachen Textdatei, unabh&auml;ngig von ihrer Endung.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-W&nbsp;&lt;Schl&uuml;sselwort&gt;</td>
+    <td>
+     Warnungen festlegen, die der Compiler ausgeben soll,<br/>
+     Folgende Schl&uuml;sselw&ouml;rter sind m&ouml;glich:<br/>
+     <table border="1">
+      <tr><th>Schl&uuml;sselwort</th><th>Bedeutung</th></tr>
+      <tr>
+       <td valign="top"><tt>ALL</tt></td>
+       <td>Alle Warnungen aktivieren</td>
+      </tr>
+      <tr>
+       <td valign="top"><tt>NONASCII</tt></td>
+       <td>Bei Nicht-ASCII-Zeichen warnen</td>
+      </tr>
+      <tr>
+       <td valign="top"><tt>UNUSED</tt></td>
+       <td>
+        Bei nicht verwendezen Funktionen, Prozeduren und Variablen warnen
+       </td>
+      </tr>
+      <tr>
+       <td valign="top"><tt>NONE</tt></td>
+       <td>Keine Warnungen ausgeben</td>
+      </tr>
+     </table>
+    </td>
+   </tr>
+  </table>
+ <br/>
+</body>
+</html>
+

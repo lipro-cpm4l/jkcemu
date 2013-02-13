@@ -11,7 +11,6 @@ package jkcemu.emusys.kccompact;
 import java.awt.*;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.KCcompact;
 
@@ -55,15 +54,15 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
   {
     super( 69 );
     this.kccompact    = kccompact;
-    this.imgKey40x40  = Main.getImage( "/images/keyboard/key40x40.png" );
-    this.imgKey50x40  = Main.getImage( "/images/keyboard/key50x40.png" );
-    this.imgKey60x40  = Main.getImage( "/images/keyboard/key60x40.png" );
-    this.imgKey320x40 = Main.getImage( "/images/keyboard/key320x40.png" );
-    this.imgLeft      = Main.getImage( "/images/keyboard/left.png" );
-    this.imgRight     = Main.getImage( "/images/keyboard/right.png" );
-    this.imgUp        = Main.getImage( "/images/keyboard/up.png" );
-    this.imgDown      = Main.getImage( "/images/keyboard/down.png" );
-    this.imgPoint     = Main.getImage( "/images/keyboard/point.png" );
+    this.imgKey40x40  = getImage( "/images/keyboard/key40x40.png" );
+    this.imgKey50x40  = getImage( "/images/keyboard/key50x40.png" );
+    this.imgKey60x40  = getImage( "/images/keyboard/key60x40.png" );
+    this.imgKey320x40 = getImage( "/images/keyboard/key320x40.png" );
+    this.imgLeft      = getImage( "/images/keyboard/left.png" );
+    this.imgRight     = getImage( "/images/keyboard/right.png" );
+    this.imgUp        = getImage( "/images/keyboard/up.png" );
+    this.imgDown      = getImage( "/images/keyboard/down.png" );
+    this.imgPoint     = getImage( "/images/keyboard/point.png" );
     this.fontText     = new Font( "SansSerif", Font.PLAIN, TEXT_FONT_SIZE );
     this.fontLetter   = new Font( "SansSerif", Font.PLAIN, LETTER_FONT_SIZE );
     this.fontDigit    = new Font( "SansSerif", Font.PLAIN, DIGIT_FONT_SIZE );

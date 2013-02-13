@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,12 +14,42 @@ import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
 import javax.swing.*;
+import javax.swing.filechooser.FileSystemView;
 import jkcemu.Main;
 import jkcemu.base.BasicDlg;
 
 
 public class DriveSelectDlg extends BasicDlg
 {
+  private static final String[] unixDevFiles = {
+					"/dev/floppy",
+					"/dev/cdrom",
+					"/dev/dvd",
+					"/dev/fd0",
+					"/dev/fd1",
+					"/dev/sdb",
+					"/dev/sdc",
+					"/dev/sr0" };
+
+  private class DriveItem
+  {
+    private String itemText;
+    private String fileName;
+
+    private DriveItem( String itemText, String fileName )
+    {
+      this.itemText = itemText;
+      this.fileName = fileName;
+    }
+
+    @Override
+    public String toString()
+    {
+      return this.itemText;
+    }
+  };
+
+
   private String    driveFileName;
   private JComboBox comboDrive;
   private JCheckBox btnReadOnly;
@@ -51,29 +81,110 @@ public class DriveSelectDlg extends BasicDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
+    String lastDriveFileName = Main.getLastDriveFileName();
     this.comboDrive = new JComboBox();
     if( Main.isUnixLikeOS() ) {
       add( new JLabel( "Ger\u00E4tedatei:" ), gbc );
       this.comboDrive.setEditable( true );
-      this.comboDrive.addItem( "/dev/fd0" );
-      this.comboDrive.addItem( "/dev/fd1" );
-      this.comboDrive.addItem( "/dev/sdb" );
-      this.comboDrive.addItem( "/dev/sdc" );
+      for( String s : unixDevFiles ) {
+	if( (new File( s )).exists() ) {
+	  this.comboDrive.addItem( s );
+	}
+      }
+      if( lastDriveFileName != null ) {
+	if( !lastDriveFileName.isEmpty() ) {
+	  this.comboDrive.setSelectedItem( lastDriveFileName );
+	}
+      }
     } else {
       add( new JLabel( "Laufwerk:" ), gbc );
       this.comboDrive.setEditable( false );
-      for( char ch = 'A'; ch <= 'Z'; ch++ ) {
-	this.comboDrive.addItem( String.format( "%c:", ch ) );
+      boolean        done      = false;
+      int            presetIdx = -1;
+
+      // vorhandene Laufwerke ermitteln
+      FileSystemView fsv = FileSystemView.getFileSystemView();
+      if( fsv != null ) {
+	File[] roots = File.listRoots();
+	if( roots != null ) {
+	  int floppyIdx = -1;
+	  for( File f : roots ) {
+	    if( fsv.isDrive( f ) ) {
+	      String drive = f.getPath();
+	      if( drive != null ) {
+		int len = drive.length();
+		if( len >= 2 ) {
+		  if( drive.charAt( 1 ) == ':' ) {
+		    if( len > 2 ) {
+		      drive = drive.substring( 0, 2 );
+		    }
+		    String text = fsv.getSystemDisplayName( f );
+		    if( text != null ) {
+		      if( text.isEmpty() ) {
+			text = null;
+		      }
+		    }
+		    if( text == null ) {
+		      text = drive;
+		    }
+		    String fName = "\\\\.\\" + drive;
+		    if( (presetIdx < 0) && (lastDriveFileName != null) ) {
+		      if( fName.equals( lastDriveFileName ) ) {
+			presetIdx = this.comboDrive.getItemCount();
+		      }
+		    }
+		    if( fsv.isFloppyDrive( f ) ) {
+		      floppyIdx = this.comboDrive.getItemCount();
+		    }
+		    this.comboDrive.addItem( new DriveItem( text, fName ) );
+		    done = true;
+		  }
+		}
+	      }
+	    }
+	  }
+	  if( presetIdx < 0 ) {
+	    if( floppyIdx >= 0 ) {
+	      presetIdx = floppyIdx;
+	    } else {
+	      /*
+	       * Wenn kein Laufwerk vorausgewaehlt und
+	       * kein Diskettenlaufwerk erkannt wurde,
+	       * soll moeglichst ein Laufwerk mit einem
+	       * Wechselspeichermedium vorausgewaehlt werden.
+	       * Mit einer gewissen Wahrscheinlichkeit wird ein
+	       * Wechselspeicherlaufwerk hinter dem Systemlaufwerk liegen.
+	       * Aus diesem Grund wird hier einfach das zweite Laufwerk
+	       * vorausgewaehlt.
+	       */
+	      presetIdx = 1;
+	    }
+	  }
+	}
       }
-    }
-    String lastDriveFileName = Main.getLastDriveFileName();
-    if( lastDriveFileName != null ) {
-      if( (lastDriveFileName.length() > 4)
-	  && lastDriveFileName.startsWith( "\\\\.\\" ) )
+      if( !done ) {
+	/*
+	 * Es konnten keine physischen Laufwerke ermittelt werden.
+	 * Aus diesem Grund werden alle moeglichen Laufwerksbuchstaben
+	 * angeboten.
+	 */
+	for( char ch = 'A'; ch <= 'Z'; ch++ ) {
+	  String fName = String.format( "\\\\.\\%c:", ch );
+	  if( (presetIdx < 0) && (lastDriveFileName != null) ) {
+	    if( fName.equals( lastDriveFileName ) ) {
+	      presetIdx = this.comboDrive.getItemCount();
+	    }
+	  }
+	}
+      }
+      if( (presetIdx >= 0)
+	  && (presetIdx < this.comboDrive.getItemCount()) )
       {
-	lastDriveFileName = lastDriveFileName.substring( 4 );
+	try {
+	  this.comboDrive.setSelectedIndex( presetIdx );
+	}
+	catch( IllegalArgumentException ex ) {}
       }
-      this.comboDrive.setSelectedItem( lastDriveFileName );
     }
     this.comboDrive.addKeyListener( this );
     gbc.anchor = GridBagConstraints.WEST;
@@ -134,16 +245,16 @@ public class DriveSelectDlg extends BasicDlg
       if( (src == this.btnOK) || (src == this.comboDrive) ) {
 	Object obj = this.comboDrive.getSelectedItem();
 	if( obj != null ) {
-	  String s = obj.toString();
-	  if( s != null ) {
-	    int len = s.length();
-	    if( len > 0 ) {
-	      if( Main.isUnixLikeOS() ) {
+	  if( obj instanceof DriveItem ) {
+	    this.driveFileName = ((DriveItem) obj).fileName;
+	    doClose();
+	  } else {
+	    String s = obj.toString();
+	    if( s != null ) {
+	      if( !s.isEmpty() ) {
 		this.driveFileName = s;
-	      } else {
-		this.driveFileName = "\\\\.\\" + s;
+		doClose();
 	      }
-	      doClose();
 	    }
 	  }
 	}

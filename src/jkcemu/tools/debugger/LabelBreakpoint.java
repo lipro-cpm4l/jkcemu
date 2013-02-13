@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,7 +18,7 @@ public class LabelBreakpoint extends PCBreakpoint
 
   public LabelBreakpoint( String labelText, int addr )
   {
-    super( addr );
+    super( addr, null, 0xFF, null, 0 );
     this.labelText = labelText;
     setText( String.format( "%04X", addr ) );
     if( labelText != null ) {

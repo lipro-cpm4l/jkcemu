@@ -1,355 +1,197 @@
 <html>
 <body>
-  <h1>BASIC-Compiler-Optionen</h1>
-    Beim erstmaligen Compilieren eines Quelltextes oder
-    wenn Sie den Men&uuml;punkt <em>BASIC-Programm compilieren mit...</em>
-    aufrufen, erscheint ein Fenster,
-    in dem Sie Optionen einstellen k&ouml;nnen.
-    Diese Optionen beeinflussen die Arbeitsweise des Compilers.
-  <br/><br/>
-    Haben Sie mehrere BASIC-Quelltexte im Texteditor ge&ouml;ffnet,
-    werden die Compiler-Optionen f&uuml;r jeden Quelltext separat verwaltet.
-  <br/><br/>
-    Die BASIC-Compiler-Optionen unterteilen sich in mehrere Gruppen,
-    die nachfolgend beschrieben werden.
-  <br/><br/>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
-  <h2>1. Optionen in der Gruppe <em>Allgemein</em></h2>
-    In dieser Gruppe finden Sie allgemeine Einstellm&ouml;glichkeiten
-    wie z.B. den Namen des Programms und die Speicheraufteilung.
-    Der Programmname kann nur bei einigen emulierten Systemen eingegeben
-    werden und dient zur Erzeugung eines entsprechenden Men&uuml;eintrags
-    bzw. Kommandorahmens.
-  <br/><br/>
-    Die Speicheraufteilung ist dagegen bei allen emulierten Systemen
-    relevant.
-    Die Tabelle skizziert die Speicheraufteilung von unten nach oben.
-    Das untere Ende geben Sie im Feld <em>Anfangsadresse</em> an,
-    das obere Ende im Feld <em>Max. Endadresse</em>.
-    Die Anfangsadresse ist auch gleichzeitig die Startadresse.
-  <br/><br/>
-    <table border="1">
-      <tr>
-	<td nowrap>
-	  frei f&uuml;r BASIC-Programm,<br/>
-	  Anfang: <em>TOP</em>, Gr&ouml;&szlig;e: <em>SIZE</em>
-	</td>
-      </tr>
-      <tr><td nowrap>eigener Stack (falls angegeben)</td></tr>
-      <tr><td nowrap>Variablen-Array (@-Variablen)</td></tr>
-      <tr><td nowrap>einfache Variablen</td></tr>
-      <tr><td nowrap>Eingabepuffer</td></tr>
-      <tr><td nowrap>interne Speicherzellen</td></tr>
-      <tr><td nowrap>erzeugter Maschinencode</td></tr>
-    </table>
-  <br/><br/>
-    Sollten Sie in Ihrem BASIC-Programm mit @-Variablen arbeiten,
-    muss f&uuml;r dieses Variablen-Array Platz reserviert werden.
-    Die Gr&ouml;&szlig;e des Arrays geben Sie als Anzahl der Variablen
-    im Feld <em>Gr&ouml;&szlig;e des @-Variablen-Arrays</em> an.
-    Wenn das BASIC-Programm keine @-Variablen enth&auml;lt,
-    wird auch kein Variablen-Array angelegt.
-    In dem Fall ist die Angabe in den Optionen nicht relevant.
-  <br/><br/>
-    Zum Schluss legen Sie fest,
-    ob das compilierte Programm den Systemstack verwenden soll
-    oder einen eigenen Stack-Bereich,
-    dessen Gr&ouml;&szlig;e Sie allerdings angeben m&uuml;ssen.
-    Ein eigener Stack-Bereich ist dann erforderlich,
-    wenn das BASIC-Programm viele geschachtelte FOR-Schleifen
-    oder geschachtelte GOSUB-Aufrufe enth&auml;lt.
-  <br/><br/>
-    Mit der BASIC-Funktion <a href="functions.htm#top">TOP</a> k&ouml;nnen Sie
-    die Adresse der ersten nicht mehr verwendeten Speicherzelle erfragen.
-    Der Speicherbereich ab dieser Adresse bis zur maximalen Endadresse
-    ist f&uuml;r das BASIC-Programm reserviert und kann von diesem
-    auch frei verwendet werden,
-    z.B. mit <a href="instructions.htm#poke">POKE</a>
-    und <a href="functions.htm#peek">PEEK</a>.
-    Die Gr&ouml;&szlig;e dieses Speicherbereichs ermitteln Sie
-    mit der <a href="functions.htm#size">SIZE</a>-Funktion.
-  <br/><br/>
-    <b>Achtung!</b> Mit der Anfangsadresse legen Sie den Standort
-    des Programms fest. Diese Adresse muss nat&uuml;rlich im RAM liegen.
-    Wenn Sie ein Programm das erste mal compilieren,
-    wird die Anfangsadresse mit einem f&uuml;r das gerade emulierte System
-    sinnvollen Wert vorbelegt.
-    Sollten Sie nun, w&auml;hrend der BASIC-Quelltext noch ge&ouml;ffnet ist,
-    in den <a href="../../settings.htm#system">Einstellungen</a> ein anderes
-    zu emulierendes System ausw&auml;hlen,
-    wodurch der Compiler beim n&auml;chsten Compilieren
-    auch den Programmcode f&uuml;r dieses andere System erzeugen wird,
-    werden die Compiler-Optionen nicht mehr automatisch angepasst.
-    In dem Fall m&uuml;ssen Sie eventuell selbst eine andere Startadresse
-    und ggf. auch eine andere maximale Endadresse eingeben.
-  <br/><br/>
+ <h2>Compiler-Optionen</h2>
+  Beim erstmaligen Compilieren eines Quelltextes oder
+  wenn Sie den Men&uuml;punkt <em>BASIC-Programm compilieren mit...</em>
+  aufrufen, erscheint ein Fenster,
+  in dem Sie Optionen einstellen k&ouml;nnen.
+  Diese Optionen beeinflussen die Arbeitsweise des Compilers.
+ <br/><br/>
+  Haben Sie mehrere BASIC-Quelltexte im
+  <a href="../texteditor.htm">Texteditor</a> ge&ouml;ffnet,
+  werden die Compiler-Optionen f&uuml;r jeden Quelltext separat verwaltet.
+ <br/><br/>
+  Die BASIC-Compiler-Optionen unterteilen sich in mehrere Gruppen,
+  die nachfolgend beschrieben werden.
+ <br/><br/>
 
-  <h2>2. Optionen in der Gruppe <em>Laufzeiteigenschaften</em></h2>
-    Mit den Optionen in dieser Gruppe geben Sie an,
-    welche Pr&uuml;fungen der Compiler in den Programmcode einbauen soll.
-    Solange Sie an einem BASIC-Programm entwickeln,
-    sind Programmfehler nicht ausgeschlossen und k&ouml;nnen
-    im compilierten Programm auch zu einem Absturz f&uuml;hren.
-    Die eingebauten Pr&uuml;fungen dienen dazu,
-    dass das Programm nicht unkontrolliert abst&uuml;rzt und
-    so vielleicht auch noch Daten im Arbeitsspeicher zerst&ouml;rt,
-    sondern dass das Programm bei einem Fehler kontrolliert beendet wird.
-    Je mehr Pr&uuml;fungen in den Programmcode eingebaut werden,
-    desto sicherer, aber auch gr&ouml;&szlig;er und langsamer
-    wird das Programm.
-    Aus diesem Grund sollte man w&auml;hrend der Entwicklungsphase
-    die Pr&uuml;fungen aktivieren
-    und wenn das Programm fertig und hoffentlich fehlerfrei ist,
-    die Pr&uuml;fungen wieder deaktivieren.
-  <br/><br/>
-    Mit dem Knopf <em>Max. Sicherheit</em> werden die Pr&uuml;fungen
-    aktiviert, die f&uuml;r die Programmentwicklung sinnvoll sind,
-    d.h. Fehler im BASIC-Programm f&uuml;hren schlimmstenfalls
-    zu einer kontrollierten Programmbeendigung mit einer Fehlermeldung.
-    Von den Pr&uuml;fungen ausgenommen sind allerdings Fehler,
-    die in mit CALL aufgerufenen Maschinencodeunterprogrammen auftreten,
-    oder die darauf zur&uuml;ckzuf&uuml;hren sind,
-    dass mit POKE und DOKE der Stack oder der eigene Programmcode
-    im Arbeitsspeicher zerst&ouml;rt wurde.
-  <br/><br/>
-    Wenn Sie das Programm fertig entwickelt haben und sicher sind,
-    dass keine Fehler mehr enthalten sind,
-    k&ouml;nnen Sie den Knopf <em>Max. Geschwindigkeit</em> einschalten.
-    In dem Fall werden nur noch unbedingt notwendige Pr&uuml;fungen,
-    z.B. arithmetischer &Uuml;berlauf oder Division durch Null, eingebaut.
-  <br/><br/>
-    Beim dritten Knopf <em>Benutzerdefiniert</em> k&ouml;nnen Sie
-    auf der rechten Seite die einzelnen Pr&uuml;fungen selbst ausw&auml;hlen,
-    die in den Programmcode einflie&szlig;en sollen.
-    Nachfolgend werden die m&ouml;glichen Pr&uuml;fungen beschrieben.
-  <br/><br/>
-
-  <h3>2.1. CTRL-C bricht Programm ab</h3>
-    Bei dieser Option wird regelm&auml;&szlig;ig die Tastatur abgefragt,
-    ob der Anwender die Tastenkombination <em>CTRL-C</em>
-    (<em>S4-K</em> auf der Z1013-Folienflachtastatur) gedr&uuml;ckt hat.
-    Ist das der Fall, wird das Programm mit der Meldung &quot;BREAK&quot;
-    beendet.
-    Diese Option ist sinnvoll, wenn das Programm aufgrund eines Fehlers
-    in einer Endlosschleife h&auml;ngt oder wenn,
-    was aber ein schlechter Programmierstil ist,
-    das Programm prinzipiell keine M&ouml;glichkeit zum Beenden bietet.
-    F&uuml;r beide F&auml;lle kann man aber zumindest im Emulator
-    auch problemlos einen RESET ausl&ouml;sen.
-  <br/><br/>
-    Diese Option verlangsamt die Programmausf&uuml;hrung mitunter erheblich,
-    da die Abfrage der Tastatur viel Rechenzeit kostet.
-  <br/><br/>
-
-  <h3>2.2. CTRL-C bricht Programm bei Eingaben ab</h3>
-    Bei dieser Option kann der Anwender das Programm mit der besagten
-    Tastenkombination abbrechen, aber nur,
-    wenn das Programm die Tastatur sowieso gerade abfragt,
-    z.B. weil es auf eine Eingabe wartet oder weil die INKEY-Funktion
-    aufgerufen wird.
-  <br/><br/>
-    Diese Option verlangsamt die Programmausf&uuml;hrung praktisch nicht,
-    da die Tastatur ja nicht zus&auml;tzlich abgefragt wird.
-  <br/><br/>
-
-  <h3>2.3. CTRL-C bricht Programm nicht ab</h3>
-    Bei dieser Option kann das Programm mit <em>CTRL-C</em>
-    nicht abgebrochen werden.
-  <br/><br/>
-
-  <h3>2.4. Grenzen des @-Variablen-Arrays pr&uuml;fen</h3>
-    Bei dieser Option wird gepr&uuml;ft,
-    ob der Zugriff auf eine Variable des @-Variablen-Arrays au&szlig;erhalb
-    des Bereichs liegt, der im Feld
-    <em>Gr&ouml;&szlig;e des @-Variablen-Arrays</em> angegeben wurde.
-  <br/><br/>
-
-  <h3>2.5. Stack bez&uuml;glich GOSUB/RETURN und FOR/NEXT pr&uuml;fen</h3>
-    Bei der GOSUB-Anweisung wird die R&uuml;ckkehradresse auf den Stack
-    geschrieben, die bei RETURN wieder gelesen wird.
-    Auch die FOR-Anweisung schreibt Werte auf den Stack,
-    die wieder bei NEXT ben&ouml;tigt werden.
-    Wenn nun der Stack durcheinander ger&auml;t,
-    d.h. wenn auf ein GOSUB ein NEXT oder auf ein FOR ein RETURN folgt,
-    f&uuml;hrt das unweigerlich zum Programmabsturz.
-  <br/><br/>
-    Bei dieser Option werden zus&auml;tzlich sogenannte Magic-Werte
-    auf den Stack geschrieben, mit denen erkannt werden kann,
-    ob die GOSUB/RETURN- und die FOR/NEXT-Paarung eingehalten wurde.
-    Au&szlig;erdem wird gepr&uuml;ft, ob der Stack &uuml;berl&auml;uft.
-  <br/><br/>
-
-  <h2>3. Optionen in der Gruppe <em>Erzeugter Programmcode</em></h2>
-    Mit den Optionen in dieser Gruppe geben Sie an,
-    ob der erzeugte Programmcode in den Emulator und/oder in eine Datei
-    geschrieben werden soll.
-    Wenn Sie den Compiler aufrufen mit dem Men&uuml;punkt
-    <em>BASIC-Programm compilieren und starten</em>,
-    wird der Programmcode auch dann in den Emulator geladen,
-    wenn Sie die Option <em>Programmcode in Emulator laden</em>
-    nicht eingeschaltet haben,
-  <br/><br/>
-    Der erzeugte Programmcode wird nur dann in den Emulator geladen
-    oder in eine Datei geschrieben,
-    wenn der Compiler keine Fehler gemeldet hat.
-  <br/><br/>
-
-  <h2>4. Optionen in der Gruppe <em>Sonstiges</em></h2>
-    <h3>4.1. CALL-Anweisungen melden</h3>
-      Mit der CALL-Anweisung k&ouml;nnen Maschinencodeunterprogramme
-      aufgerufen werden, wovon z.B. originale Z1013-Tiny-BASIC-Programme
-      auch reichlich Gebrauch machen.
-      Gelegentlich werden Maschinencoderoutinen des BASIC-Interpreters
-      oder des Monitorprogramms aufgerufen.
-      Manchmal wird jedoch der ben&ouml;tigte Maschinencode auch als Kommentar
-      oder auf eine ganz andere undurchsichtige Art und Weise
-      im BASIC-Programm untergebracht.
-      Solche BASIC-Programme k&ouml;nnen wahrscheinlich fehlerfrei
-      in JKCEMU compiliert werden,
-      nur ist dann der ben&ouml;tigte Maschinencode nicht mehr enthalten.
-      Wenn Sie nun das compilierte BASIC-Programm ausf&uuml;hren,
-      ist ein Programmabsturz so gut wie sicher.
+ <h3>1. Optionen in der Gruppe <em>Allgemein</em></h3>
+  <ul>
+   <li>
+    <b>Zielsystem</b><br/>
+    Diese Einstellung gibt an, f&uuml;r welches
+    <a href="targets.htm">Zielsystem</a> der Programmcode erzeugt werden soll.
+    Standardm&auml;&szlig;ig ist ein Zielsystem voreingestellt,
+    dass dem gerade emulierten System entspricht, vorausgesetzt,
+    dieses wird vom Compiler auch unterst&uuml;tzt.
     <br/><br/>
-      Die Moral aus der Geschichte ist,
-      dass Sie vor dem Compilieren von BASIC-Programmen,
-      die im originalen Interpreter problemlos laufen,
-      alle CALL-Anweisungen dahingehend pr&uuml;fen m&uuml;ssen,
-      ob der aufgerufende Programmcode auch tats&auml;chlich vorhanden ist.
-      Und genau daf&uuml;r ist die Option gedacht.
-      Sie meldet n&auml;mlich das Vorhandensein einer jeden CALL-Anweisung
-      im Quelltext, damit Sie keine einzige &uuml;bersehen.
+   </li>
+   <li>
+    <b>Name des Programms</b><br/>
+    Diese Einstellung gibt es nur bei bestimmten Zielsystemen.
+    Damit wird der Name angegeben, mit dem das Programm gestartet wird.
     <br/><br/>
-      Maschinencode m&uuml;ssen Sie im BASIC-Programm mit offiziellen
-      BASIC-Mitteln unterbringen,
-      damit nichts durch den Compiler verloren geht.
-      Sehr kurze Maschinencoderoutinen lassen sich mit einer Reihe
-      von POKE-Anweisungen programmieren, z.B.:
+   </li>
+   <li>
+    <b>Anfangsadresse</b><br/>
+    Mit der Anfangsadresse legen Sie den Programmstandort im Adressbereich
+    des Arbeitsspeichers fest.
+    Ein f&uuml;r das Zielsystem passenden Wert ist voreingestellt.
+    Der Wert kann beliebig ge&auml;ndert werden.
+    Allerdings m&uuml;ssen Sie selbst darauf achten,
+    dass das compilierte Programm vollst&auml;ndig in einem geeigneten
+    Adressbereich liegt bzw. dort hineinpasst.
     <br/><br/>
-      <tt>
-        100 POKE TOP,HEX(E7)<br/>
-        110 POKE TOP+1,2<br/>
-        120 POKE TOP+2,'H'<br/>
-        130 POKE TOP+3,'A'<br/>
-        140 POKE TOP+4,'L'<br/>
-        150 POKE TOP+5,'L'<br/>
-        160 POKE TOP+6,'O'<br/>
-        170 POKE TOP+7,HEX(8D)<br/>
-        180 POKE TOP+8,HEX(C9)<br/>
-        190 CALL TOP<br/>
-      </tt>
+   </li>
+   <li>
+    <b>Gr&ouml;&szlig;e Zeichenkettenspeicher</b><br/>
+    Im Zeichenkettenspeicher werden die Zeichenketten abgelegt,
+    die in String-Variablen gespeichert sind.
+    Die ben&ouml;tigte Gr&ouml;&szlig;e des Speichers h&auml;ngt
+    wesentlich von der Anzahl der String-Variablen und
+    der L&auml;nge der darin gespeicherten Zeichenketten ab,
+    aber auch von der Anzahl der get&auml;tigten Wertzuweisungen.
+    <br/><br/>
+   </li>
+   <li>
+    <b>Stack</b><br/>
+    Hier wird die Gr&ouml;&szlig;e des Stack-Bereichs festgelegt.
+    Dieser muss um so gr&ouml;&szlig;er sein,
+    je mehr Unterprogramme geschachtelt aufgerufen werden.
+    Insbesondere bei
+    <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>
+    ist ein gro&szlig;er Stack-Bereich erforderlich,
+    da die Argumente und lokalen Variablen auf dem Stack abgelegt werden.
+    Die Verwendung des System-Stacks ist auch m&ouml;glich,
+    aber nur dann zu empfehlen, wenn das BASIC-Programm kaum Unterprogramme
+    aufruft und man sich auch sonst sicher ist,
+    dass der System-Stack ausreichend gro&szlig; ist.
+    <br/><br/>
+   </li>
+   <li>
+    <b>Sprache der Laufzeitausschriften</b><br/>
+    Hier geben Sie an, in welcher Sprache Fehlermeldungen und sonstige
+    Ausschriften im compilierten Programms erscheinen sollen.
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h3>2. Optionen in der Gruppe <em>Laufzeiteigenschaften</em></h3>
+  <ul>
+   <li>
+    <b>Compilieren f&uuml;r Test und Debugging</b><br/>
+    Diese Option sollte aktiviert sein,
+    wenn sich das BASIC-Programm noch in der Entwicklung befindet.
+    Dabei werden in das Programm diverse Laufzeitpr&uuml;fungen
+    hineincompiliert, die bei Programmfehlern daf&uuml;r sorgen,
+    dass das Programmm nicht unkontrolliert abst&uuml;rzt,
+    sondern mit einer Fehlerausschrift kontrolliert beendet wird.
+    Durch diese zus&auml;tzlichen Laufzeitpr&uuml;fungen
+    wird das compilierte Programm entsprechend gr&ouml;&szlig;er
+    und auch etwas langsamer.
+    <br/><br/>
+   </li>
+   <li>
+    <b>Compilieren f&uuml;r Produktiveinsatz</b><br/>
+    Bei dieser Option werden keine zus&auml;tzlichen Laufzeitpr&uuml;fungen
+    hineincompiliert.
+    Programmfehler k&ouml;nnen zu einem unkontrollierten Absturz f&uuml;hren.
+    Die Option sollte dann eingeschaltet werden,
+    wenn das BASIC-Programm fertig entwickelt und ausreichend
+    getestet ist und man den k&uuml;rzesten und schnellsten Programmcode
+    erzeugen m&ouml;chte.
+    <br/><br/>
+   </li>
+   <li>
+    <b>Benutzerdefiniert</b><br/>
+    Bei dieser Option legen Sie selbst fest,
+    welche einzelnen Laufzeitpr&uuml;fungen in das Programm
+    hineincompiliert werden.
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h3>3. Optionen in der Gruppe <em>Erzeugter Programmcode</em></h3>
+  <ul>
+   <li>
+    <b>Programmcode in Emulator laden</b><br/>
+    Ist die Option eingeschaltet, wird nach jedem erfolgreichen
+    Compiler-Lauf der erzeugte Programmcode in den Arbeitsspeicher
+    des Emulators geladen.
+    Das Programm kann dann im Emulator gestartet werden.
+    <br/><br/>
+   </li>
+   <li>
+    <b>Programmcode in Datei speichern</b><br/>
+    Bei dieser Option wird der erzeugte Programmcode in eine Datei
+    geschrieben, deren Namen Sie angeben m&uuml;ssen.
+    Das Format der Datei h&auml;ngt von der angegebenen Dateiendung ab.
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h3>4. Optionen in der Gruppe <em>Sonstiges</em></h3>
+  <ul>
+   <li>
+    <b>Bei Nicht-ASCII-Zeichen warnen</b><br/>
+    Der Zeichensatz des Texteditor kann sich
+    (und wird es in den meisten F&auml;llen wohl auch)
+    vom Zeichensatz des Zielsystems unterscheiden.
+    Wenn Sie im BASIC-Programm in einer Zeichenkette ein Nicht-ASCII-Zeichen
+    schreiben (z.B. einen deutschen Umlaut),
+    wird dieses Zeichen auf dem Zielsystem wahrscheinlich anders aussehen.
+    Ist die Option eingeschaltet, werden Sie auf solche Zeichen
+    aufmerksam gemacht.
+    <br/><br/>
+   </li>
+   <li>
+    <b>Bei nicht verwendeten Funktionen, Prozeduren und Variablen warnen</b>
     <br/>
-      Bei gr&ouml;&szlig;eren Maschinencodeteilen lassen sich die Anweisungen
-      DATA und READ gut verwenden,
-      die allerdings der originale AC1-Mini-BASIC- und
-      Z1013-Tiny-BASIC-Interpreter nicht kennt:
+    Haben Sie Funktionen, Prozeduren oder Variablen deklariert oder
+    implementiert, die nirgends aufgerufen oder verwendet werden,
+    meldet der Compiler ein Warnung.
+    H&auml;ufig ist das ein Indiz f&uuml;r einen Schreibfehler
+    im Namen der betreffenden Funktion, Prozedur oder Variable.
     <br/><br/>
-      <tt>
-        100 DATA HEX(E7),2,'H','A','L','L','O',HEX(8D),HEX(C9)<br/>
-        110 FOR I=1 TO 9<br/>
-        120 READ B<br/>
-        130 POKE TOP+I,B<br/>
-        140 NEXT I<br/>
-        150 CALL TOP<br/>
-      </tt>
-    <br/>
-
-    <h3>
-      4.2. Abweichungen von der originalen AC1-Mini-BASIC bzw.
-           Z1013-Tiny-BASIC-Syntax melden
-    </h3>
-      Der JKCEMU-BASIC-Compiler unterst&uuml;tzt einen gr&ouml;&szlig;eren
-      Sprachumfang als der originale AC1-Mini-BASIC- bzw.
-      Z1013-Tiny-BASIC-Interpreter.
-      M&ouml;chten Sie jedoch mit dem Compiler ein BASIC-Programm entwickeln,
-      welches auch im Interpreter fehlerfrei l&auml;uft,
-      sollten Sie diese Option f&uuml;r den AC1 bzw. Z1013 einschalten.
-      Der Compiler erzeugt dann immer eine Warnung,
-      wenn der BASIC-Quelltext etwas enth&auml;lt,
-      was im originalen BASIC-Interpreter nicht erlaubt ist.
+   </li>
+   <li>
+    <b>Relative Spr&uuml;nge bevorzugen</b><br/>
+    Spr&uuml;nge zu bestimmten Anweisungen werden als absolute Spr&uuml;nge
+    mit drei Bytes &uuml;bersetzt,
+    da beim Compilieren die Sprungdistanz nicht bekannt ist.
+    Wird die Option eingeschaltet,
+    &uuml;bersetzt der Compiler die Spr&uuml;nge,
+    die wahrscheinlich nur eine kurze Sprungweite haben,
+    mit relativen Sprungbefehlen, die nur zwei Bytes lang sind
+    und auch schneller ausgef&uuml;hrt werden als absolute Spr&uuml;nge.
+   <br/><br/>
+    Spr&uuml;nge mit einer wahrscheinlich kurzen Sprungweite
+    sind z.B. Spr&uuml;nge zum ELSE-Zweig innerhalb einer
+    einzeiligen IF-Anweisung.
+   <br/><br/>
+    In seltenen F&auml;llen kann es vorkommen,
+    dass die Sprungdistanz f&uuml;r einen relativen Sprung zu gro&szlig; ist,
+    z.B. wenn sehr viele Anweisungen in einer Programmzeile
+    mit einer IF-Anweisung stehen.
+    In dem Fall meldet dann der Assembler,
+    der automatisch nach dem eigentlichen Compiler gestartet wird,
+    &quot;Relative Sprungdistanz zu gro&szlig;&quot;.
+    F&uuml;r Sie bedeutet das nur,
+    dass Sie die Option ausschalten m&uuml;ssen,
+    wenn die besagte Fehlermeldung erscheint.
     <br/><br/>
-
-    <h3>4.3. Variablennamen mit mehr als einem Zeichen L&auml;nge erlauben</h3>
-      Bei den originalen BASIC-Interpretern sind f&uuml;r
-      einfache Variablen nur die Namen <em>A</em> bis <em>Z</em> erlaubt.
-      <em>AA</em> und <em>A1</em> f&uuml;hren z.B. zu einem Syntax-Fehler.
-      Der JKCEMU-BASIC-Compiler h&auml;lt sich
-      aus Kompatibilit&auml;tsgr&uuml;nden standardm&auml;&szlig;ig
-      an diese Einschr&auml;nkung.
-      Ist jedoch die Option eingeschaltet,
-      k&ouml;nnen Variablennamen auch l&auml;nger als ein Zeichen sein.
-      Ab der zweiten Stelle sind neben Buchstaben auch Ziffern erlaubt.
-    <br/><br/>
-      Nun k&ouml;nnte man auch l&auml;ngere Variablennamen immer erlauben
-      und einfach nur bei eingeschalteter Option
-      &quot;Abweichungen von der originalen ... BASIC-Syntax melden&quot;
-      eine Warnung erzeugen,
-      wenn eine Variable l&auml;nger als ein Zeichen ist.
-      Doch dann lie&szlig;en sich manche Programme nicht mehr &uuml;bersetzen,
-      obwohl sie der originalen BASIC-Syntax entsprechen.
-      Folgendes Beispiel soll dies verdeutlichen:
-    <br/><br/>
-      <tt>
-        100 A=1<br/>
-        110 B=5<br/>
-        120 FOR I=ATOB<br/>
-        130 PRINT I<br/>
-        140 NEXT I<br/>
-      </tt>
-     <br/>
-      Bei diesem Programm muss die Option ausgeschaltet sein.
-      Anderenfalls meldet der Compiler in Zeile 120 einen Syntax-Fehler,
-      da er ATOB als Name einer Variable ansieht
-      und somit das Schl&uuml;sselwort TO und den Endwert vermisst.
-      Der originale Z1013-Tiny-BASIC-Interpreter f&uuml;hrt das Programm
-      anstandslos aus.
-    <br/><br/>
-
-    <h3>4.4. BASIC-Quelltext formatieren</h3>
-      Bei dieser Option formatiert der Compiler den BASIC-Quelltext,
-      d.h. Variablennamen und Schl&uuml;sselw&ouml;rter werden gro&szlig;-
-      und, sofern sie mit einem Punkt abgek&uuml;rzt wurden,
-      auch ausgeschrieben sowie Leerzeichen entfernt bzw. neu gesetzt.
-      Nach dem erfolgreichen Compilieren, und nur dann,
-      sehen Sie im Editor den formatierten Quelltext.
-      Sollte Ihnen dieser nicht gefallen,
-      k&ouml;nnen Sie mit der Editorfunktion <em>R&uuml;ckg&auml;ngig</em>
-      Ihren urspr&uuml;nglichen Quelltext wieder herstellen.
-    <br/><br/>
-
-    <h3>4.5. Erzeugten Assembler-Quelltext anzeigen</h3>
-      Die &Uuml;bersetzung des BASIC-Quelltextes in Maschinencode
-      erfolgt in zwei Stufen: Zuerst ist der eigentliche Compiler dran,
-      der als Ergebnis einen Assembler-Quelltext erzeugt.
-      Im zweiten Schritt wird dieser Assembler-Quelltext durch den Assembler
-      in Maschinencode &uuml;bersetzt.
-      Wenn Sie die Option einschalten, wird der vom Compiler erzeugte
-      Assembler-Quelltext im Texteditor angezeigt.
-    <br/><br/>
-
-    <h3>4.6. FOR/NEXT als strukturierte Schleife &uuml;bersetzen</h3>
-      Diese Option dient der Optimierung des Programmcodes
-      und ist erst dann wirklich relevant,
-      wenn das BASIC-Programm fertig entwickelt ist
-      und endg&uuml;ltig compiliert werden soll.
-      Sie darf nur eingeschaltet werden,
-      wenn alle FOR/NEXT-Schleifen in einer strukturierten Form
-      angewendet werden, d.h.,
-      dass zu jeder FOR-Anweisung genau eine NEXT-Anweisung geh&ouml;rt
-      und dass niemals mit GOTO aus einer Schleife heraus oder
-      in eine Schleife hinein gesprungen wird.
-      Weitere Details zu dieser Option finden Sie unter
-      <a href="optimize.htm#structured_for_next">Optimierung
-      des Programmcodes</a>.
-    <br/><br/>
-
-    <h3>4.7. Relative Spr&uuml;nge bevorzugen</h3>
-      Diese Option dient der Optimierung des Programmcodes
-      und ist erst dann wirklich relevant,
-      wenn das BASIC-Programm fertig entwickelt ist
-      und endg&uuml;ltig compiliert werden soll.
-      Weitere Details zu dieser Option finden Sie unter
-      <a href="optimize.htm#prefer_rel_jumps">Optimierung
-      des Programmcodes</a>.
+   </li>
+   <li>
+    <b>Erzeugten Assembler-Code anzeigen</b><br/>
+    Schalten Sie die Option ein, wenn Sie sich f&uuml;r den
+    vom BASIC-Compiler erzeugten Programmcode interessieren.
+    Dieser wird dann in einem neuen Unterfenster
+    im <a href="../texteditor.htm">Texteditor</a> angezeigt.
+   </li>
+  </ul>
+ <br/>
 </body>
 </html>
 

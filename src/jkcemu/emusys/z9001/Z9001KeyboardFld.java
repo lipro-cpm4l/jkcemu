@@ -12,7 +12,6 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.Z9001;
 
@@ -74,12 +73,12 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
     super( 65 );
     this.screenFrm = screenFrm;
     this.z9001     = z9001;
-    this.imgLeft   = Main.getImage( "/images/keyboard/z9001/left.png" );
-    this.imgRight  = Main.getImage( "/images/keyboard/z9001/right.png" );
-    this.imgUp     = Main.getImage( "/images/keyboard/z9001/up.png" );
-    this.imgDown   = Main.getImage( "/images/keyboard/z9001/down.png" );
-    this.imgFirst  = Main.getImage( "/images/keyboard/z9001/first.png" );
-    this.imgLast   = Main.getImage( "/images/keyboard/z9001/last.png" );
+    this.imgLeft   = getImage( "/images/keyboard/z9001/left.png" );
+    this.imgRight  = getImage( "/images/keyboard/z9001/right.png" );
+    this.imgUp     = getImage( "/images/keyboard/z9001/up.png" );
+    this.imgDown   = getImage( "/images/keyboard/z9001/down.png" );
+    this.imgFirst  = getImage( "/images/keyboard/z9001/first.png" );
+    this.imgLast   = getImage( "/images/keyboard/z9001/last.png" );
 
     this.colorKeyLight    = new Color( 180, 180, 180 );
     this.colorKeyDark     = new Color( 20, 20, 20 );
@@ -105,7 +104,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
     addDarkKey( X_KEY8, y, 0, 0x02 );			// 8
     addDarkKey( X_KEY9, y, 1, 0x02 );			// 9
     addDarkKey( X_KEY10, y, 0, 0x01 );			// 0
-    addDarkKey( X_KEY11, y, 2, 0x04 );			// @
+    addDarkKey( X_KEY11, y, 0, 0x04 );			// @
     addLightKey( X_KEY12, y, 4, 0x20 );			// PAUSE
     this.resetKey = new KeyData(                                              
 				X_KEY13,                                        

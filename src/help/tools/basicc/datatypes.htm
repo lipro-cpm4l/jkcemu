@@ -1,0 +1,28 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Datentypen</h2>
+  Der JKCEMU-BASIC-Compiler kennt zwei Datentypen:
+  <ul>
+   <li>
+    <em>Integer</em> f&uuml;r ganze Zahlen im Bereich -32767 bis +32767
+   </li>
+   <li><em>String</em> f&uuml;r Zeichenketten</li>
+  </ul>
+ <br/>
+  Beim numerischen Datentyp <em>Integer</em> werden die Zahlen intern
+  im 16-Bit-Zweierkomplement dargestellt.
+  Damit umfasst der Wertebereich auch die Zahl -32768.
+  Allerdings kann diese Zahl nicht immer errechnet werden,
+  da deren absoluter Betrag (+32768),
+  der bei manchen Berechnungen intern gebildet werden muss,
+  nicht mehr im Wertebereich liegt
+ <br/><br/>
+  Der Datentyp <em>String</em> wird mit einem nachgestellten $-Zeichen
+  markiert, d.h., alle Variablen und Funktionen, deren Namen auf ein
+  Dollarzeichen enden, sind String-Variablen bzw. Funktionen,
+  die eine Zeichenkette liefern.
+ <br/>
+</body>
+</html>

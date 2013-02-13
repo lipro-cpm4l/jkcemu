@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,17 +20,17 @@ import jkcemu.base.BasicDlg;
 
 public class ReplyShiftWidthDlg extends BasicDlg
 {
-  private EditFrm   editFrm;
-  private JSpinner  spinnerShiftWidth;
-  private JCheckBox tglUseTabs;
-  private JButton   btnApply;
-  private JButton   btnClose;
+  private TextEditFrm textEditFrm;
+  private JSpinner    spinnerShiftWidth;
+  private JCheckBox   tglUseTabs;
+  private JButton     btnApply;
+  private JButton     btnClose;
 
 
-  public ReplyShiftWidthDlg( EditFrm editFrm )
+  public ReplyShiftWidthDlg( TextEditFrm textEditFrm )
   {
-    super( editFrm, "Einr\u00FCcktiefe \u00E4ndern" );
-    this.editFrm = editFrm;
+    super( textEditFrm, "Einr\u00FCcktiefe \u00E4ndern" );
+    this.textEditFrm = textEditFrm;
 
 
     // Fensterinhalt
@@ -49,7 +49,7 @@ public class ReplyShiftWidthDlg extends BasicDlg
     add( panelShiftWidth, gbc );
     panelShiftWidth.add( new JLabel( "Einr\u00FCcktiefe:" ) );
 
-    int shiftWidth = this.editFrm.getShiftWidth();
+    int shiftWidth = this.textEditFrm.getShiftWidth();
     if( shiftWidth < 1 ) {
       shiftWidth = 1;
     } else if( shiftWidth > 99 ) {
@@ -61,7 +61,7 @@ public class ReplyShiftWidthDlg extends BasicDlg
 
     this.tglUseTabs = new JCheckBox(
 				"Tabulatoren verwenden",
-				this.editFrm.getShiftUseTabs() );
+				this.textEditFrm.getShiftUseTabs() );
     gbc.insets.top    = 0;
     gbc.insets.bottom = 5;
     gbc.gridwidth     = GridBagConstraints.REMAINDER;
@@ -140,12 +140,12 @@ public class ReplyShiftWidthDlg extends BasicDlg
       if( value instanceof Number ) {
 	int shiftWidth = ((Number) value).intValue();
 	if( shiftWidth > 0 ) {
-	  this.editFrm.setShiftWidth( shiftWidth );
+	  this.textEditFrm.setShiftWidth( shiftWidth );
 	  Main.setProperty(
 			"jkcemu.texteditor.shift.width",
 			value.toString() );
 	  boolean useTabs = this.tglUseTabs.isSelected();
-	  this.editFrm.setShiftUseTabs( useTabs );
+	  this.textEditFrm.setShiftUseTabs( useTabs );
 	  Main.setProperty(
 			"jkcemu.texteditor.shift.use_tabs",
 			Boolean.toString( useTabs ) );

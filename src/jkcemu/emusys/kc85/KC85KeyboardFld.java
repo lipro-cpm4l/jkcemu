@@ -10,7 +10,6 @@ package jkcemu.emusys.kc85;
 
 import java.awt.*;
 import java.lang.*;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.KC85;
 
@@ -68,7 +67,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     this.imgDown            = getImage( "down.png" );
     this.imgEnter           = getImage( "enter.png" );
     this.imgShift           = getImage( "shift.png" );
-    this.imgShLock = getImage( "shiftlock.png" );
+    this.imgShLock          = getImage( "shiftlock.png" );
     prepareLayout();
     this.wKey = 0;
     this.hKey = 0;
@@ -258,6 +257,13 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 
 
   @Override
+  protected Image getImage( String resource )
+  {
+    return super.getImage( "/images/keyboard/kc85/" + resource );
+  }
+
+
+  @Override
   public void setEmuSys( EmuSys emuSys ) throws IllegalArgumentException
   {
     if( emuSys instanceof KC85 ) {
@@ -438,12 +444,6 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     } else {
       g.drawString( text, x, y );
     }
-  }
-
-
-  private static Image getImage( String resource )
-  {
-    return Main.getImage( "/images/keyboard/kc85/" + resource );
   }
 
 

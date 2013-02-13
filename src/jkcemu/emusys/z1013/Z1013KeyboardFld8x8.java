@@ -11,7 +11,6 @@ package jkcemu.emusys.z1013;
 import java.awt.*;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.Z1013;
 
@@ -46,10 +45,10 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
   {
     super( 59 );
     this.z1013      = z1013;
-    this.imgLeft    = Main.getImage( "/images/keyboard/left.png" );
-    this.imgRight   = Main.getImage( "/images/keyboard/right.png" );
-    this.imgUp      = Main.getImage( "/images/keyboard/up.png" );
-    this.imgDown    = Main.getImage( "/images/keyboard/down.png" );
+    this.imgLeft    = getImage( "/images/keyboard/left.png" );
+    this.imgRight   = getImage( "/images/keyboard/right.png" );
+    this.imgUp      = getImage( "/images/keyboard/up.png" );
+    this.imgDown    = getImage( "/images/keyboard/down.png" );
     this.fontText   = new Font( "SansSerif", Font.PLAIN, TEXT_FONT_SIZE );
     this.fontLetter = new Font( "SansSerif", Font.PLAIN, LETTER_FONT_SIZE );
     this.fontDigit  = new Font( "SansSerif", Font.PLAIN, DIGIT_FONT_SIZE );
@@ -270,7 +269,7 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
   @Override
   public String getKeyboardName()
   {
-    return "Z1013-Alphatastatur";
+    return "Z1013 Alphatastatur";
   }
 
 

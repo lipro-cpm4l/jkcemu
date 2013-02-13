@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -109,10 +109,9 @@ public class ReplyDirDlg extends BasicDlg
     gbc.gridx++;
     add( this.textFld, gbc );
 
-    this.btnSelect = EmuUtil.createImageButton(
-					"/images/file/open.png",
-					"Ausw\u00E4hlen" );
-    this.btnSelect.addActionListener( this );
+    this.btnSelect = createImageButton(
+				"/images/file/open.png",
+				"Ausw\u00E4hlen" );
     gbc.fill    = GridBagConstraints.NONE;
     gbc.weightx = 0.0;
     gbc.gridx++;

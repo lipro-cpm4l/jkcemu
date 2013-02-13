@@ -26,6 +26,7 @@ public class DiskUtil
   public static final String[] copyQMFileExt    = { ".cqm", ".qm" };
   public static final String[] dskFileExt       = { ".dsk" };
   public static final String[] imageDiskFileExt = { ".imd" };
+  public static final String[] isoFileExt       = { ".iso" };
   public static final String[] teleDiskFileExt  = { ".td0" };
   public static final String[] plainDiskFileExt = { ".img", ".image", ".raw" };
 
@@ -33,6 +34,7 @@ public class DiskUtil
   public static final String[] gzCopyQMFileExt    = { ".cqm.gz", ".qm.gz" };
   public static final String[] gzDskFileExt       = { ".dsk.gz" };
   public static final String[] gzImageDiskFileExt = { ".imd.gz" };
+  public static final String[] gzISOFileExt       = { ".iso.gz" };
   public static final String[] gzTeleDiskFileExt  = { ".td0.gz" };
   public static final String[] gzPlainDiskFileExt = {
 						".img.gz",

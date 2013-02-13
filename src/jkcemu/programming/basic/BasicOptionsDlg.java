@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,41 +15,51 @@ import java.util.*;
 import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.emusys.*;
 import jkcemu.programming.*;
+import jkcemu.programming.basic.target.*;
 
 
 public class BasicOptionsDlg extends AbstractOptionsDlg
 {
-  private static final int MIN_STACK_SIZE = 64;
+  private static final String textBegAddr  = "Anfangsadresse:";
+  private static final String textHeapSize =
+			"Gr\u00F6\u00DFe des Zeichenkettenspeichers:";
 
-  private static final String textBegAddr   = "Anfangsadresse:";
-  private static final String textEndOfMem  = "Adresse Speicherende:";
-  private static final String textArraySize =
-				"Gr\u00F6\u00DFe des @-Variablen-Arrays:";
+  private static final AbstractTarget[] targets = {
+				new CPMTarget(),
+				new SCCHTarget(),
+				new LLC2HIRESTarget(),
+				new HueblerGraphicsMCTarget(),
+				new Z9001Target(),
+				new Z9001KRTTarget(),
+				new KC85Target(),
+				new KramerMCTarget(),
+				new Z1013Target() };
 
+  private EmuSys          emuSys;
   private JTabbedPane     tabbedPane;
   private JRadioButton    btnStackSystem;
   private JRadioButton    btnStackSeparate;
+  private JRadioButton    btnLangDE;
+  private JRadioButton    btnLangEN;
   private JRadioButton    btnCheckAll;
   private JRadioButton    btnCheckNone;
   private JRadioButton    btnCheckCustom;
-  private JRadioButton    btnBreakAnywhere;
+  private JRadioButton    btnBreakAlways;
   private JRadioButton    btnBreakInput;
   private JRadioButton    btnBreakNever;
-  private JCheckBox       btnForceCPM;
+  private JComboBox       comboTarget;
+  private JCheckBox       btnCheckBounds;
   private JCheckBox       btnCheckStack;
-  private JCheckBox       btnCheckArray;
-  private JCheckBox       btnStrictAC1Basic;
-  private JCheckBox       btnStrictZ1013Basic;
-  private JCheckBox       btnPrintCalls;
-  private JCheckBox       btnAllowLongVarNames;
-  private JCheckBox       btnFormatSource;
-  private JCheckBox       btnShowAsm;
-  private JCheckBox       btnStructuredForNext;
   private JCheckBox       btnPreferRelJumps;
+  private JCheckBox       btnPrintLineNumOnAbort;
+  private JCheckBox       btnShowAsm;
+  private JCheckBox       btnWarnNonAsciiChars;
+  private JCheckBox       btnWarnUnusedItems;
   private JTextField      fldAppName;
-  private JTextField      fldArraySize;
   private JTextField      fldBegAddr;
+  private JTextField      fldHeapSize;
   private JTextField      fldStackSize;
   private JLabel          labelAppName;
   private JLabel          labelBegAddr;
@@ -58,8 +68,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   private JLabel          labelStackUnit;
   private LimitedDocument docAppName;
   private HexDocument     docBegAddr;
-  private IntegerDocument docArraySize;
-  private HexDocument     docEndOfMem;
+  private IntegerDocument docHeapSize;
   private IntegerDocument docStackSize;
 
 
@@ -69,6 +78,36 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 		PrgOptions options )
   {
     super( owner, emuThread, "BASIC-Compiler-Optionen" );
+    this.emuThread = emuThread;
+    this.emuSys    = (emuThread != null ? emuThread.getEmuSys() : null);
+
+    BasicOptions basicOptions = null;
+    if( options != null ) {
+      if( options instanceof BasicOptions ) {
+	basicOptions = (BasicOptions) options;
+      }
+    }
+
+
+    // vorausgewaehltes Zielsystem festlegen
+    String  targetText   = null;
+    boolean resetBegAddr = false;
+    if( basicOptions != null ) {
+      targetText = basicOptions.getTargetText();
+      if( targetText != null ) {
+	/*
+	 * Wenn sich das emulierte System geaendert hat,
+	 * wird das Zielsystem entsprechend neu ausgewaehlt.
+	 */
+	EmuSys lastEmuSys = basicOptions.getEmuSys();
+	if( (this.emuSys != null) && (lastEmuSys != null) ) {
+	  if( this.emuSys != lastEmuSys ) {
+	    targetText   = null;
+	    resetBegAddr = true;
+	  }
+	}
+      }
+    }
 
 
     // Fensterinhalt
@@ -93,115 +132,190 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
     GridBagConstraints gbcGeneral = new GridBagConstraints(
 					0, 0,
-					GridBagConstraints.REMAINDER, 1,
+					1, 1,
 					0.0, 0.0,
-					GridBagConstraints.WEST,
+					GridBagConstraints.EAST,
 					GridBagConstraints.NONE,
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnForceCPM = new JCheckBox(
-		"Programmcode f\u00FCr ein CP/M-kompatibles"
-			+ " Betriebssystem erzeugen",
-		false );
-    this.btnForceCPM.addActionListener( this );
-    panelGeneral.add( this.btnForceCPM, gbcGeneral );
-
-    this.labelAppName     = new JLabel( "Name des Programms:" );
-    gbcGeneral.insets.top = 20;
-    gbcGeneral.gridwidth  = 1;
+    panelGeneral.add( new JLabel( "Zielsystem:" ), gbcGeneral );
     gbcGeneral.gridy++;
+    this.labelAppName = new JLabel( "Name des Programms:" );
     panelGeneral.add( this.labelAppName, gbcGeneral );
+    gbcGeneral.gridy++;
+    this.labelBegAddr = new JLabel( textBegAddr );
+    panelGeneral.add( this.labelBegAddr, gbcGeneral );
+    gbcGeneral.gridy++;
+    panelGeneral.add(
+		new JLabel( "Gr\u00F6\u00DFe Zeichenkettenspeicher:" ),
+		gbcGeneral );
+    gbcGeneral.gridy++;
+    panelGeneral.add( new JLabel( "Stack:" ), gbcGeneral );
+
+    boolean forceCodeToEmu  = false;
+    int     presetTargetIdx = -1;
+    if( targetText != null ) {
+      for( int i = 0; i < targets.length; i++ ) {
+	if( targetText.equals( targets[ i ].toString() ) ) {
+	  presetTargetIdx = i;
+	  break;
+	}
+      }
+    } else if( emuSys != null ) {
+      for( int i = 0; i < targets.length; i++ ) {
+	if( targets[ i ].createsCodeFor( emuSys ) ) {
+	  presetTargetIdx = i;
+	  forceCodeToEmu  = true;
+	  break;
+	}
+      }
+    }
+    if( presetTargetIdx >= 0 ) {
+      this.comboTarget = new JComboBox( targets );
+      this.comboTarget.setEditable( false );
+    } else {
+      this.comboTarget = new JComboBox();
+      this.comboTarget.setEditable( false );
+      this.comboTarget.addItem( "Bitte ausw\u00E4hlen" );
+      for( AbstractTarget target : targets ) {
+	this.comboTarget.addItem( target );
+      }
+      presetTargetIdx = 0;
+    }
+    try {
+      this.comboTarget.setSelectedIndex( presetTargetIdx );
+    }
+    catch( IllegalArgumentException ex ) {}
+    this.comboTarget.addActionListener( this );
+    gbcGeneral.anchor      = GridBagConstraints.WEST;
+    gbcGeneral.insets.left = 0;
+    gbcGeneral.gridwidth   = GridBagConstraints.REMAINDER;
+    gbcGeneral.gridy       = 0;
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.comboTarget, gbcGeneral );
 
     this.docAppName      = new LimitedDocument( 8 );
-    this.fldAppName      = new JTextField( this.docAppName, "", 8 );
+    this.fldAppName      = new JTextField( this.docAppName, "", 0 );
+    gbcGeneral.fill      = GridBagConstraints.HORIZONTAL;
     gbcGeneral.gridwidth = 2;
-    gbcGeneral.gridx++;
+    gbcGeneral.gridy++;
     panelGeneral.add( this.fldAppName, gbcGeneral );
 
-    this.labelBegAddr    = new JLabel( textBegAddr );
-    gbcGeneral.gridwidth = 1;
-    gbcGeneral.gridx     = 0;
-    gbcGeneral.gridy++;
-    panelGeneral.add( this.labelBegAddr, gbcGeneral );
-
-    this.fldBegAddr = new JTextField( 5 );
+    this.docBegAddr = new HexDocument( 4, textBegAddr );
+    this.fldBegAddr = new JTextField( this.docBegAddr, "", 0 );
     this.fldBegAddr.addActionListener( this );
-    this.docBegAddr = new HexDocument( this.fldBegAddr, 4, textBegAddr );
-    gbcGeneral.gridx++;
+    gbcGeneral.gridwidth = 1;
+    gbcGeneral.gridy++;
     panelGeneral.add( this.fldBegAddr, gbcGeneral );
 
     this.labelBegAddrUnit = new JLabel( "hex" );
+    gbcGeneral.fill       = GridBagConstraints.NONE;
     gbcGeneral.gridx++;
     panelGeneral.add( this.labelBegAddrUnit, gbcGeneral );
 
+    JTextField fldHeapSize = new JTextField();
+    fldHeapSize.addActionListener( this );
+    this.docHeapSize = new IntegerDocument(
+				fldHeapSize,
+				new Integer( BasicOptions.MIN_HEAP_SIZE ),
+				new Integer( BasicOptions.MAX_HEAP_SIZE ) );
+    gbcGeneral.fill  = GridBagConstraints.HORIZONTAL;
+    gbcGeneral.gridx = 1;
+    gbcGeneral.gridy++;
+    panelGeneral.add( fldHeapSize, gbcGeneral );
+    gbcGeneral.fill         = GridBagConstraints.NONE;
+    gbcGeneral.insets.right = 50;
+    gbcGeneral.gridx++;
+    panelGeneral.add( new JLabel( "Bytes" ), gbcGeneral );
+
     ButtonGroup grpStack = new ButtonGroup();
 
-    this.btnStackSystem = new JRadioButton( "System-Stack verwenden", true );
+    this.btnStackSystem = new JRadioButton(
+					"System-Stack verwenden",
+					true );
     this.btnStackSystem.addActionListener( this );
     grpStack.add( this.btnStackSystem );
-    gbcGeneral.insets.left = 20;
-    gbcGeneral.gridwidth   = GridBagConstraints.REMAINDER;
-    gbcGeneral.gridx++;
-    panelGeneral.add( this.btnStackSystem, gbcGeneral );
-
-    gbcGeneral.insets.top  = 2;
-    gbcGeneral.insets.left = 5;
-    gbcGeneral.gridwidth   = 1;
-    gbcGeneral.gridx       = 0;
+    gbcGeneral.insets.right = 5;
+    gbcGeneral.gridwidth    = GridBagConstraints.REMAINDER;
+    gbcGeneral.gridx        = 1;
     gbcGeneral.gridy++;
-    panelGeneral.add( new JLabel( textEndOfMem ), gbcGeneral );
-
-    JTextField fld = new JTextField( 5 );
-    fld.addActionListener( this );
-    this.docEndOfMem = new HexDocument( fld, 4, textEndOfMem );
-    gbcGeneral.gridx++;
-    panelGeneral.add( fld, gbcGeneral );
-    gbcGeneral.gridx++;
-    panelGeneral.add( new JLabel( "hex" ), gbcGeneral );
+    panelGeneral.add( this.btnStackSystem, gbcGeneral );
 
     this.btnStackSeparate = new JRadioButton(
 					"Eigener Stack-Bereich:",
 					false );
     this.btnStackSeparate.addActionListener( this );
     grpStack.add( this.btnStackSeparate );
-    gbcGeneral.insets.left = 20;
-    gbcGeneral.gridwidth   = GridBagConstraints.REMAINDER;
-    gbcGeneral.gridx++;
+    gbcGeneral.insets.top = 0;
+    gbcGeneral.gridy++;
     panelGeneral.add( this.btnStackSeparate, gbcGeneral );
 
+    this.labelStackSize    = new JLabel( "Gr\u00F6\u00DFe:" );
+    gbcGeneral.anchor      = GridBagConstraints.EAST;
+    gbcGeneral.insets.left = 50;
+    gbcGeneral.gridwidth   = 1;
+    gbcGeneral.gridy++;
+    panelGeneral.add( this.labelStackSize, gbcGeneral );
+
+    this.fldStackSize = new JTextField();
+    this.fldStackSize.addActionListener( this );
+    this.docStackSize = new IntegerDocument(
+				this.fldStackSize,
+				new Integer( BasicOptions.MIN_STACK_SIZE ),
+				null );
+    gbcGeneral.anchor      = GridBagConstraints.WEST;
+    gbcGeneral.fill        = GridBagConstraints.HORIZONTAL;
+    gbcGeneral.insets.left = 0;
+    gbcGeneral.gridwidth   = 2;
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.fldStackSize, gbcGeneral );
+
+    this.labelStackUnit = new JLabel( "Bytes" );
+    gbcGeneral.gridx++;
+    panelGeneral.add( this.labelStackUnit, gbcGeneral );
+
+    gbcGeneral.anchor        = GridBagConstraints.EAST;
+    gbcGeneral.fill          = GridBagConstraints.NONE;
+    gbcGeneral.insets.top    = 5;
     gbcGeneral.insets.left   = 5;
     gbcGeneral.insets.bottom = 5;
     gbcGeneral.gridwidth     = 1;
     gbcGeneral.gridx         = 0;
     gbcGeneral.gridy++;
-    panelGeneral.add( new JLabel( textArraySize ), gbcGeneral );
+    panelGeneral.add(
+		new JLabel( "Sprache der Laufzeitausschriften:" ),
+		gbcGeneral );
 
-    fld = new JTextField( 5 );
-    fld.addActionListener( this );
-    this.docArraySize    = new IntegerDocument( fld, new Integer( 0 ), null );
+    JPanel panelLang       = new JPanel( new GridBagLayout() );
+    gbcGeneral.anchor      = GridBagConstraints.WEST;
+    gbcGeneral.insets.left = 0;
+    gbcGeneral.gridwidth   = GridBagConstraints.REMAINDER;
     gbcGeneral.gridx++;
-    panelGeneral.add( fld, gbcGeneral );
-    gbcGeneral.gridx++;
-    panelGeneral.add( new JLabel( "Variablen" ), gbcGeneral );
+    panelGeneral.add( panelLang, gbcGeneral );
 
-    this.labelStackSize = new JLabel( "Gr\u00F6\u00DFe:" );
-    gbcGeneral.insets.left = 50;
-    gbcGeneral.gridx++;
-    panelGeneral.add( this.labelStackSize, gbcGeneral );
-    
-    this.fldStackSize = new JTextField( 5 );
-    this.fldStackSize.addActionListener( this );
-    this.docStackSize = new IntegerDocument(
-					this.fldStackSize,
-					new Integer( MIN_STACK_SIZE ),
-					null );
-    gbcGeneral.insets.left = 5;
-    gbcGeneral.gridx++;
-    panelGeneral.add( this.fldStackSize, gbcGeneral );
-    this.labelStackUnit = new JLabel( "Bytes" );
-    gbcGeneral.gridx++;
-    panelGeneral.add( this.labelStackUnit, gbcGeneral );
+    GridBagConstraints gbcLang = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 0, 0, 0, 0 ),
+					0, 0 );
+
+    ButtonGroup grpLang = new ButtonGroup();
+
+    this.btnLangDE = new JRadioButton( "Deutsch" );
+    grpLang.add( this.btnLangDE );
+    this.btnLangDE.addActionListener( this );
+    panelLang.add( this.btnLangDE, gbcLang );
+
+    this.btnLangEN = new JRadioButton( "Englisch" );
+    grpLang.add( this.btnLangEN );
+    this.btnLangEN.addActionListener( this );
+    gbcLang.insets.left = 5;
+    gbcLang.gridx++;
+    panelLang.add( this.btnLangEN, gbcLang );
 
 
     // Bereich Laufzeiteigenschaften
@@ -219,12 +333,16 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
     ButtonGroup grpCheck = new ButtonGroup();
 
-    this.btnCheckAll = new JRadioButton( "Max. Sicherheit", true );
+    this.btnCheckAll = new JRadioButton(
+				"Compilieren f\u00FCr Test und Debugging",
+				true );
     this.btnCheckAll.addActionListener( this );
     grpCheck.add( this.btnCheckAll );
     panelCheck.add( this.btnCheckAll, gbcCheck );
 
-    this.btnCheckNone = new JRadioButton( "Max. Geschwindigkeit", false );
+    this.btnCheckNone = new JRadioButton(
+				"Compilieren f\u00FCr Produktiveinsatz",
+				false );
     this.btnCheckNone.addActionListener( this );
     grpCheck.add( this.btnCheckNone );
     gbcCheck.insets.top = 0;
@@ -240,20 +358,20 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
     ButtonGroup grpBreak = new ButtonGroup();
 
-    this.btnBreakAnywhere = new JRadioButton(
+    this.btnBreakAlways = new JRadioButton(
 		"CTRL-C bricht Programm ab",
-		false );
-    grpBreak.add( this.btnBreakAnywhere );
+		true );
+    grpBreak.add( this.btnBreakAlways );
     gbcCheck.insets.top    = 5;
     gbcCheck.insets.bottom = 0;
     gbcCheck.insets.left   = 20;
     gbcCheck.gridy         = 0;
     gbcCheck.gridx++;
-    panelCheck.add( this.btnBreakAnywhere, gbcCheck );
+    panelCheck.add( this.btnBreakAlways, gbcCheck );
 
     this.btnBreakInput = new JRadioButton(
 		"CTRL-C bricht Programm nur bei Eingaben ab",
-		true );
+		false );
     grpBreak.add( this.btnBreakInput );
     gbcCheck.insets.top = 0;
     gbcCheck.gridy++;
@@ -266,18 +384,22 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     gbcCheck.gridy++;
     panelCheck.add( this.btnBreakNever, gbcCheck );
 
-    this.btnCheckArray = new JCheckBox(
-		"Grenzen des @-Variablen-Arrays pr\u00FCfen",
-		true );
+    this.btnCheckBounds = new JCheckBox( "Feldgrenzen pr\u00FCfen", true );
+    gbcCheck.insets.top = 5;
     gbcCheck.gridy++;
-    panelCheck.add( this.btnCheckArray, gbcCheck );
+    panelCheck.add( this.btnCheckBounds, gbcCheck );
 
-    this.btnCheckStack = new JCheckBox(
-		"Stack bez\u00FCglich GOSUB/RETURN und FOR/NEXT pr\u00FCfen",
+    this.btnCheckStack = new JCheckBox( "Stack pr\u00FCfen", true );
+    gbcCheck.insets.top = 0;
+    gbcCheck.gridy++;
+    panelCheck.add( this.btnCheckStack, gbcCheck );
+
+    this.btnPrintLineNumOnAbort = new JCheckBox(
+		"Bei Abbruch aufgrund eines Fehlers Zeilennummer ausgeben",
 		true );
     gbcCheck.insets.bottom = 5;
     gbcCheck.gridy++;
-    panelCheck.add( this.btnCheckStack, gbcCheck );
+    panelCheck.add( this.btnPrintLineNumOnAbort, gbcCheck );
 
 
     // Bereich Erzeugter Programmcode
@@ -302,82 +424,46 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     // Unterbereich Fehlervermeidung
     panelEtc.add( new JLabel( "Fehlervermeidung:" ), gbcEtc );
 
-    this.btnPrintCalls = new JCheckBox(
-				"Auf CALL-Anweisungen hinweisen",
-				true );
+    this.btnWarnNonAsciiChars = new JCheckBox(
+					"Bei Nicht-ASCII-Zeichen warnen" );
     gbcEtc.insets.top  = 0;
     gbcEtc.insets.left = 50;
     gbcEtc.gridy++;
-    panelEtc.add( this.btnPrintCalls, gbcEtc );
+    panelEtc.add( this.btnWarnNonAsciiChars, gbcEtc );
 
-
-    // Unterbereich Syntax
-    gbcEtc.insets.top    = 10;
-    gbcEtc.insets.left   = 5;
-    gbcEtc.insets.bottom = 0;
+    this.btnWarnUnusedItems = new JCheckBox(
+		"Bei nicht verwendeten Funktionen, Prozeduren"
+					+ " und Variablen warnen" );
     gbcEtc.gridy++;
-    panelEtc.add( new JLabel( "Syntax:" ), gbcEtc );
-
-    this.btnAllowLongVarNames = new JCheckBox(
-		"Variablennamen mit mehr als einem Zeichen L\u00E4nge"
-			+ " erlauben" );
-    gbcEtc.insets.top  = 0;
-    gbcEtc.insets.left = 50;
-    gbcEtc.gridy++;
-    panelEtc.add( this.btnAllowLongVarNames, gbcEtc );
-
-    this.btnStrictAC1Basic = new JCheckBox(
-	"Abweichungen von der originalen AC1-Mini-BASIC-Syntax melden" );
-    gbcEtc.gridy++;
-    panelEtc.add( this.btnStrictAC1Basic, gbcEtc );
-
-    this.btnStrictZ1013Basic = new JCheckBox(
-	"Abweichungen von der originalen Z1013-Tiny-BASIC-Syntax melden" );
-    gbcEtc.insets.bottom = 5;
-    gbcEtc.gridy++;
-    panelEtc.add( this.btnStrictZ1013Basic, gbcEtc );
-
-
-    // Unterbereich Quelltext
-    gbcEtc.insets.top    = 10;
-    gbcEtc.insets.left   = 5;
-    gbcEtc.insets.bottom = 0;
-    gbcEtc.gridy++;
-    panelEtc.add( new JLabel( "Quelltext:" ), gbcEtc );
-
-    this.btnFormatSource = new JCheckBox( "BASIC-Quelltext formatieren" );
-    gbcEtc.insets.top  = 0;
-    gbcEtc.insets.left = 50;
-    gbcEtc.gridy++;
-    panelEtc.add( this.btnFormatSource, gbcEtc );
-
-    this.btnShowAsm = new JCheckBox(
-			"Erzeugten Assembler-Quelltext anzeigen" );
-    gbcEtc.insets.bottom = 5;
-    gbcEtc.gridy++;
-    panelEtc.add( this.btnShowAsm, gbcEtc );
+    panelEtc.add( this.btnWarnUnusedItems, gbcEtc );
 
 
     // Unterbereich Optimierung
-    gbcEtc.insets.top    = 10;
-    gbcEtc.insets.left   = 5;
-    gbcEtc.insets.bottom = 0;
+    gbcEtc.insets.top  = 15;
+    gbcEtc.insets.left = 5;
     gbcEtc.gridy++;
     panelEtc.add( new JLabel( "Optimierung:" ), gbcEtc );
 
-    this.btnStructuredForNext = new JCheckBox(
-		"FOR/NEXT als strukturierte Schleife \u00FCbersetzten"
-			+ " - siehe Hilfe!!!" );
+    this.btnPreferRelJumps = new JCheckBox(
+				"Relative Spr\u00FCnge bevorzugen" );
     gbcEtc.insets.top  = 0;
     gbcEtc.insets.left = 50;
     gbcEtc.gridy++;
-    panelEtc.add( this.btnStructuredForNext, gbcEtc );
+    panelEtc.add( this.btnPreferRelJumps, gbcEtc );
 
-    this.btnPreferRelJumps = new JCheckBox(
-				"Relative Spr\u00FCnge bevorzugen" );
+
+    // Unterbereich Assembler-Code
+    gbcEtc.insets.top  = 15;
+    gbcEtc.insets.left = 5;
+    gbcEtc.gridy++;
+    panelEtc.add( new JLabel( "Assembler-Code:" ), gbcEtc );
+
+    this.btnShowAsm = new JCheckBox( "Erzeugten Assembler-Code anzeigen" );
+    gbcEtc.insets.top    = 0;
+    gbcEtc.insets.left   = 50;
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
-    panelEtc.add( this.btnPreferRelJumps, gbcEtc );
+    panelEtc.add( this.btnShowAsm, gbcEtc );
 
 
     // Bereich Knoepfe
@@ -390,84 +476,71 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
 
     // Vorbelegungen
-    BasicOptions basicOptions = null;
-    if( options != null ) {
-      if( options instanceof BasicOptions ) {
-	basicOptions = (BasicOptions) options;
-      }
-    }
-    int stackSize = BasicOptions.DEFAULT_STACK_SIZE;
+    String langCode  = null;
+    int    stackSize = BasicOptions.DEFAULT_STACK_SIZE;
     if( basicOptions != null ) {
+      langCode  = basicOptions.getLangCode();
       stackSize = basicOptions.getStackSize();
-      this.btnForceCPM.setSelected( basicOptions.getForceCPM() );
       this.fldAppName.setText( basicOptions.getAppName() );
-      this.docBegAddr.setValue( basicOptions.getBegAddr(), 4 );
-      this.docArraySize.setValue( basicOptions.getArraySize() );
-      this.docEndOfMem.setValue( basicOptions.getEndOfMemory(), 4 );
-      switch( basicOptions.getBreakPossibility() ) {
-	case BREAK_INPUT:
+      if( !updBegAddr( basicOptions.getBegAddr() ) ) {
+	resetBegAddr = true;
+      }
+      this.docHeapSize.setValue( basicOptions.getHeapSize() );
+      switch( basicOptions.getBreakOption() ) {
+	case INPUT:
 	  this.btnBreakInput.setSelected( true );
 	  break;
-	case BREAK_NEVER:
+	case NEVER:
 	  this.btnBreakNever.setSelected( true );
 	  break;
 	default:
-	  this.btnBreakAnywhere.setSelected( true );
+	  this.btnBreakAlways.setSelected( true );
 	  break;
       }
-      this.btnCheckArray.setSelected( basicOptions.getCheckArray() );
+      this.btnCheckBounds.setSelected( basicOptions.getCheckBounds() );
       this.btnCheckStack.setSelected( basicOptions.getCheckStack() );
-      this.btnPrintCalls.setSelected( basicOptions.getPrintCalls() );
-      this.btnAllowLongVarNames.setSelected(
-				basicOptions.getAllowLongVarNames() );
-      this.btnStrictAC1Basic.setSelected(
-				basicOptions.getStrictAC1MiniBASIC() );
-      this.btnStrictZ1013Basic.setSelected(
-				basicOptions.getStrictZ1013TinyBASIC() );
-      this.btnFormatSource.setSelected( basicOptions.getFormatSource() );
-      this.btnShowAsm.setSelected( basicOptions.getShowAsm() );
-      this.btnStructuredForNext.setSelected(
-				basicOptions.getStructuredForNext() );
       this.btnPreferRelJumps.setSelected(
 				basicOptions.getPreferRelativeJumps() );
-
-      // Bei Aenderung der Plattform die Anfangsadresse neu setzen
-      BasicCompiler.Platform lastPlatform = basicOptions.getPlatform();
-      if( lastPlatform != null ) {
-	EmuSys emuSys = emuThread.getEmuSys();
-	if( !lastPlatform.equals( BasicCompiler.getPlatform( emuSys ) ) ) {
-	  this.docBegAddr.setValue(
-			BasicOptions.getDefaultBegAddr( emuSys ), 4 );
-	}
+      this.btnPrintLineNumOnAbort.setSelected(
+				basicOptions.getPrintLineNumOnAbort() );
+      this.btnShowAsm.setSelected( basicOptions.getShowAssemblerText() );
+      this.btnWarnNonAsciiChars.setSelected(
+				basicOptions.getWarnNonAsciiChars() );
+      this.btnWarnUnusedItems.setSelected(
+				basicOptions.getWarnUnusedItems() );
+    } else {
+      this.fldAppName.setText( "MYAPP" );
+      this.docHeapSize.setValue( BasicOptions.DEFAULT_HEAP_SIZE );
+      this.btnBreakAlways.setSelected( true );
+      this.btnCheckBounds.setSelected( true );
+      this.btnCheckStack.setSelected( true );
+      this.btnPreferRelJumps.setSelected( true );
+      this.btnPrintLineNumOnAbort.setSelected( true );
+      this.btnShowAsm.setSelected( false );
+      this.btnWarnNonAsciiChars.setSelected( true );
+      this.btnWarnUnusedItems.setSelected( true );
+      resetBegAddr = true;
+    }
+    if( langCode != null ) {
+      if( langCode.equalsIgnoreCase( "DE" ) ) {
+	this.btnLangDE.setSelected( true );
+      } else {
+	this.btnLangEN.setSelected( true );
       }
     } else {
-      this.btnForceCPM.setSelected( false );
-      this.fldAppName.setText( "MYAPP" );
-      this.docBegAddr.setValue(
-		BasicOptions.getDefaultBegAddr( emuThread.getEmuSys() ), 4 );
-      this.docArraySize.setValue( BasicOptions.DEFAULT_ARRAY_SIZE );
-      this.docEndOfMem.setValue( BasicOptions.DEFAULT_END_OF_MEM, 4 );
-      this.btnBreakInput.setSelected( true );
-      this.btnCheckArray.setSelected( true );
-      this.btnCheckStack.setSelected( true );
-      this.btnPrintCalls.setSelected( true );
-      this.btnAllowLongVarNames.setSelected( false );
-      this.btnStrictAC1Basic.setSelected( false );
-      this.btnStrictZ1013Basic.setSelected( false );
-      this.btnFormatSource.setSelected( false );
-      this.btnShowAsm.setSelected( false );
-      this.btnStructuredForNext.setSelected( false );
-      this.btnPreferRelJumps.setSelected( true );
+      this.btnLangDE.setSelected( true );
     }
-    if( this.btnBreakInput.isSelected()
-	&& this.btnCheckArray.isSelected()
-	&& this.btnCheckStack.isSelected() )
+    if( this.btnBreakAlways.isSelected()
+	&& this.btnCheckBounds.isSelected()
+	&& this.btnCheckStack.isSelected()
+	&& this.btnPrintLineNumOnAbort.isSelected() )
     {
       this.btnCheckAll.setSelected( true );
     }
     else if( this.btnBreakNever.isSelected()
-	&& !this.btnCheckArray.isSelected()
-	&& !this.btnCheckStack.isSelected() )
+	&& !this.btnCheckBounds.isSelected()
+	&& !this.btnCheckStack.isSelected()
+	&& !this.btnPrintLineNumOnAbort.isSelected() )
     {
       this.btnCheckNone.setSelected( true );
     } else {
@@ -480,16 +553,19 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       this.btnStackSystem.setSelected( true );
     }
     this.docAppName.setSwapCase( true );
-    updCodeDestFields( options );
+    if( resetBegAddr ) {
+      updBegAddrFromSelectedTarget();
+    }
+    updCodeDestFields( options, forceCodeToEmu );
+    updAppNameFieldsEnabled();
     updCheckFieldsEnabled();
     updStackFieldsEnabled();
-    settingsChanged();
 
 
     // Fenstergroesse und -position
     pack();
     setParentCentered();
-    setResizable( false );
+    setResizable( true );
   }
 
 
@@ -497,57 +573,56 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   {
     String labelText = null;
     try {
+      AbstractTarget target = null;
+      Object         obj    = this.comboTarget.getSelectedItem();
+      if( obj != null ) {
+	if( obj instanceof AbstractTarget ) {
+	  target = (AbstractTarget) obj;
+	}
+      }
+      if( target == null ) {
+	throw new UserInputException(
+			"Sie m\u00FCssen ein Zielsystem ausw\u00E4hlen!" );
+      }
+
       labelText      = textBegAddr;
       int begAddr    = this.docBegAddr.intValue();
       int actualAddr = begAddr;
-      if( this.btnForceCPM.isSelected() ) {
-	actualAddr = 0x0100;
-      }
 
-      labelText     = textArraySize;
-      int arraySize = this.docArraySize.intValue();
+      labelText      = textHeapSize;
+      int heapSize   = this.docHeapSize.intValue();
 
-      labelText    = textEndOfMem;
-      int endOfMem = this.docEndOfMem.intValue();
-      if( endOfMem <= actualAddr ) {
-	throw new NumberFormatException( "Wert zu klein" );
-      }
-
-      labelText     = "Stack-Gr\u00F6\u00DFe:";
-      int stackSize = 0;
+      labelText      = "Stack-Gr\u00F6\u00DFe:";
+      int stackSize  = 0;
       if( this.btnStackSeparate.isSelected() ) {
 	stackSize = this.docStackSize.intValue();
       }
       labelText = null;
 
-      BasicOptions.BreakPossibility breakPossibility =
-			BasicOptions.BreakPossibility.BREAK_ALWAYS;
+      BasicOptions.BreakOption breakOption = BasicOptions.BreakOption.ALWAYS;
       if( this.btnBreakInput.isSelected() ) {
-	breakPossibility = BasicOptions.BreakPossibility.BREAK_INPUT;
+	breakOption = BasicOptions.BreakOption.INPUT;
       }
       else if( this.btnBreakNever.isSelected() ) {
-	breakPossibility = BasicOptions.BreakPossibility.BREAK_NEVER;
+	breakOption = BasicOptions.BreakOption.NEVER;
       }
 
-      BasicOptions options = new BasicOptions( this.emuThread );
-      options.setForceCPM( this.btnForceCPM.isSelected() );
+      BasicOptions options = new BasicOptions();
+      options.setTarget( target );
       options.setAppName( this.fldAppName.getText() );
       options.setBegAddr( begAddr );
-      options.setArraySize( arraySize );
-      options.setEndOfMemory( endOfMem );
+      options.setHeapSize( heapSize );
       options.setStackSize( stackSize );
-      options.setBreakPossibility( breakPossibility );
-      options.setCheckArray( this.btnCheckArray.isSelected() );
+      options.setLangCode( this.btnLangDE.isSelected() ? "DE" : "EN" );
+      options.setBreakOption( breakOption );
+      options.setCheckBounds( this.btnCheckBounds.isSelected() );
       options.setCheckStack( this.btnCheckStack.isSelected() );
-      options.setPrintCalls( this.btnPrintCalls.isSelected() );
-      options.setAllowLongVarNames( this.btnAllowLongVarNames.isSelected() );
-      options.setStrictAC1MiniBASIC( this.btnStrictAC1Basic.isSelected() );
-      options.setStrictZ1013TinyBASIC(
-				this.btnStrictZ1013Basic.isSelected() );
-      options.setFormatSource( this.btnFormatSource.isSelected() );
-      options.setShowAsm( this.btnShowAsm.isSelected() );
-      options.setStructuredForNext( this.btnStructuredForNext.isSelected() );
       options.setPreferRelativeJumps( this.btnPreferRelJumps.isSelected() );
+      options.setPrintLineNumOnAbort(
+			this.btnPrintLineNumOnAbort.isSelected() );
+      options.setShowAssemblerText( this.btnShowAsm.isSelected() );
+      options.setWarnNonAsciiChars( this.btnWarnNonAsciiChars.isSelected() );
+      options.setWarnUnusedItems( this.btnWarnUnusedItems.isSelected() );
       try {
 	applyCodeDestOptionsTo( options );
 	this.appliedOptions = options;
@@ -564,6 +639,9 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       }
       showErrorDlg( this, msg );
     }
+    catch( UserInputException ex ) {
+      showErrorDlg( this, ex );
+    }
   }
 
 
@@ -575,9 +653,11 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     boolean rv = super.doAction( e );
     if( !rv && (e != null) ) {
       Object src = e.getSource();
-      if( src == this.btnForceCPM ) {
+      if( src == this.comboTarget ) {
 	rv = true;
-	settingsChanged();
+	updAppNameFieldsEnabled();
+	updBegAddrFromSelectedTarget();
+	updCodeToEmuFields();
       }
       else if( (src == this.btnStackSystem)
 	       || (src == this.btnStackSeparate) )
@@ -587,16 +667,18 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       }
       else if( src == this.btnCheckAll ) {
 	rv = true;
-	this.btnBreakInput.setSelected( true );
-	this.btnCheckArray.setSelected( true );
+	this.btnBreakAlways.setSelected( true );
+	this.btnCheckBounds.setSelected( true );
 	this.btnCheckStack.setSelected( true );
+	this.btnPrintLineNumOnAbort.setSelected( true );
 	updCheckFieldsEnabled();
       }
       else if( src == this.btnCheckNone ) {
 	rv = true;
 	this.btnBreakNever.setSelected( true );
-	this.btnCheckArray.setSelected( false );
+	this.btnCheckBounds.setSelected( false );
 	this.btnCheckStack.setSelected( false );
+	this.btnPrintLineNumOnAbort.setSelected( false );
 	updCheckFieldsEnabled();
       }
       else if( src == this.btnCheckCustom ) {
@@ -604,8 +686,9 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 	updCheckFieldsEnabled();
       } else {
 	rv = true;
-	if( src instanceof JTextField )
+	if( src instanceof JTextField ) {
 	  ((JTextField) src).transferFocus();
+	}
       }
     }
     return rv;
@@ -616,38 +699,112 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   public void settingsChanged()
   {
     super.settingsChanged();
-    boolean stateCPM  = this.btnForceCPM.isSelected();
-    boolean stateName = false;
-    if( !stateCPM ) {
-      BasicCompiler.Platform platform = BasicCompiler.getPlatform(
-					this.emuThread.getEmuSys() );
-
-      stateName = (platform == BasicCompiler.Platform.HUEBLERMC)
-			|| (platform == BasicCompiler.Platform.KC85)
-			|| (platform == BasicCompiler.Platform.Z9001);
+    if( this.emuThread != null ) {
+      EmuSys curEmuSys = this.emuThread.getEmuSys();
+      if( curEmuSys != null ) {
+	boolean state = true;
+	if( this.emuSys != null ) {
+	  if( this.emuSys.equals( curEmuSys ) ) {
+	    state = false;
+	  }
+	}
+	int   targetIdx = 0;
+	this.emuSys     = curEmuSys;
+	if( emuSys != null ) {
+	  int n = this.comboTarget.getItemCount();
+	  for( int i = 0; i < n; i++ ) {
+	    Object o = this.comboTarget.getItemAt( i );
+	    if( o != null ) {
+	      if( o instanceof AbstractTarget ) {
+		if( ((AbstractTarget) o).createsCodeFor( emuSys ) ) {
+		  targetIdx = i;
+		  break;
+		}
+	      }
+	    }
+	  }
+	}
+	try {
+	  this.comboTarget.setSelectedIndex( targetIdx );
+	}
+	catch( IllegalArgumentException ex ) {}
+      }
     }
-    this.labelAppName.setEnabled( stateName );
-    this.fldAppName.setEditable( stateName );
-    this.fldAppName.setEnabled( stateName );
-
-    boolean stateAddr = !stateCPM;
-    this.labelBegAddr.setEnabled( stateAddr );
-    this.fldBegAddr.setEditable( stateAddr );
-    this.fldBegAddr.setEnabled( stateAddr );
-    this.labelBegAddrUnit.setEnabled( stateAddr );
   }
 
 
 	/* --- private Methoden --- */
 
+  private void updAppNameFieldsEnabled()
+  {
+    boolean state = false;
+    Object  obj   = this.comboTarget.getSelectedItem();
+    if( obj != null ) {
+      if( obj instanceof AbstractTarget ) {
+	state = ((AbstractTarget) obj).supportsAppName();
+      }
+    }
+    this.labelAppName.setEnabled( state );
+    this.fldAppName.setEnabled( state );
+  }
+
+
+  private boolean updBegAddr( int addr )
+  {
+    boolean rv = false;
+    if( addr >= 0 ) {
+      this.docBegAddr.setValue( addr, 4 );
+      rv = true;
+    } else {
+      this.fldBegAddr.setText( "" );
+    }
+    return rv;
+  }
+
+
+  private void updBegAddrFromSelectedTarget()
+  {
+    int     addr = -1;
+    Object  obj  = this.comboTarget.getSelectedItem();
+    if( obj != null ) {
+      if( obj instanceof AbstractTarget ) {
+	addr = ((AbstractTarget) obj).getDefaultBegAddr();
+      }
+    }
+    updBegAddr( addr );
+  }
+
+
   private void updCheckFieldsEnabled()
   {
     boolean state = this.btnCheckCustom.isSelected();
-    this.btnBreakAnywhere.setEnabled( state );
+    this.btnBreakAlways.setEnabled( state );
     this.btnBreakInput.setEnabled( state );
     this.btnBreakNever.setEnabled( state );
-    this.btnCheckArray.setEnabled( state );
+    this.btnCheckBounds.setEnabled( state );
     this.btnCheckStack.setEnabled( state );
+    this.btnPrintLineNumOnAbort.setEnabled( state );
+  }
+
+
+  private void updCodeToEmuFields()
+  {
+    boolean codeToEmu = false;
+    if( this.emuSys != null ) {
+      Object o = this.comboTarget.getSelectedItem();
+      if( o != null ) {
+	if( o instanceof AbstractTarget ) {
+	  codeToEmu = ((AbstractTarget) o).createsCodeFor( this.emuSys );
+	}
+      }
+    }
+    /*
+     * Programmcode nicht in Emulator laden, wenn das aktuell
+     * emulierte System vom Compiler nicht unterstuetzt wird.
+     */
+    if( !codeToEmu ) {
+      setCodeToEmu( false );
+    }
   }
 
 

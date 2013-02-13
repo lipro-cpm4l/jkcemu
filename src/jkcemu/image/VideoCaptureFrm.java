@@ -25,6 +25,8 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 {
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
 
+  private static VideoCaptureFrm instance = null;
+
   private ScreenFrm         screenFrm;
   private volatile boolean  pause;
   private volatile boolean  focusedWindowOnly;
@@ -68,7 +70,193 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
   private JButton           btnClose;
 
 
-  public VideoCaptureFrm( ScreenFrm screenFrm )
+  public static void open( ScreenFrm screenFrm )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new VideoCaptureFrm( screenFrm );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+	/* --- Runnable --- */
+
+  @Override
+  public void run()
+  {
+    this.recordedMillis = 0;
+    boolean   delete    = false;
+    Exception errEx     = null;
+    File      file      = this.fldFile.getFile();
+    if( file != null ) {
+      OutputStream out = null;
+      try {
+	boolean smoothColorReduction = true;
+	if( this.btnColorReductionSmooth != null ) {
+	  smoothColorReduction = this.btnColorReductionSmooth.isSelected();
+	}
+	out = new BufferedOutputStream( new FileOutputStream( file ) );
+	AnimatedGIFWriter animGIF = new AnimatedGIFWriter(
+				out,
+				smoothColorReduction,
+				this.btnPlayInfinite.isSelected() );
+
+	long begMillis = System.currentTimeMillis();
+	long millis    = 0;
+	try {
+	  while( this.running ) {
+	    millis += this.frameMillis;
+	    long diffMillis = begMillis + millis - System.currentTimeMillis();
+	    if( diffMillis > 0 ) {
+	      Thread.sleep( diffMillis );
+	    }
+	    if( !this.pause && !this.waitForReset ) {
+	      BufferedImage image = null;
+	      if( this.focusedWindowOnly ) {
+		Window window = this.captureWindow;
+		if( window != null ) {
+		  if( window.isFocused() ) {
+		    image = createSnapshot();
+		    if( !window.isFocused() ) {
+		      image = null;
+		    }
+		  }
+		}
+	      } else {
+		image = createSnapshot();
+	      }
+	      if( image != null ) {
+		animGIF.addFrame( this.frameMillis, image );
+		this.recordedMillis += this.frameMillis;
+		this.capturing = true;
+	      } else {
+		this.capturing = false;
+	      }
+	    }
+	  }
+	}
+	catch( InterruptedException ex ) {};
+	if( !animGIF.finish() ) {
+	  delete = true;
+	}
+        out.close();
+	out = null;
+      }
+      catch( Exception ex ) {
+	errEx = ex;
+	if( out != null ) {
+	  delete = true;
+	}
+      }
+      finally {
+	EmuUtil.doClose( out );
+      }
+      if( (file != null) && delete ) {
+	file.delete();
+      }
+    }
+    final Exception retEx = errEx;
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    threadTerminated( retEx );
+		  }
+		} );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( (src == this.btnCaptureEmuSysScreen)
+	  || (src == this.btnCaptureScreenFrm)
+	  || (src == this.btnCaptureOtherWindow) )
+      {
+	rv = true;
+	updOptionFieldsEnabled();
+      } else if( src == this.btnFileSelect ) {
+	rv = true;
+	doFileSelect();
+      }
+      else if( src == this.btnRecord ) {
+	rv = true;
+	doRecord();
+      }
+      else if( src == this.btnPause ) {
+	rv = true;
+	doPause();
+      }
+      else if( src == this.btnStop ) {
+	rv = true;
+	doStop();
+      }
+      else if( src == this.btnPlay ) {
+	rv = true;
+	doPlay();
+      }
+      else if( src == this.btnClose ) {
+	rv = true;
+	doClose();
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      setIdle();
+      if( this.videoPlayFrm != null ) {
+	this.videoPlayFrm.doClose();
+      }
+      if( this.thread != null ) {
+	doStop();
+	try {
+	  this.thread.join( 1000 );
+	}
+	catch( InterruptedException ex ) {}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    pack();
+  }
+
+
+  @Override
+  public void resetFired()
+  {
+    if( this.waitForReset ) {
+      this.waitForReset = false;
+      btnPause.setEnabled( true );
+    }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private VideoCaptureFrm( ScreenFrm screenFrm )
   {
     this.screenFrm           = screenFrm;
     this.pause               = false;
@@ -407,175 +595,6 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
       setScreenCentered();
     }
     setResizable( true );
-  }
-
-
-	/* --- Runnable --- */
-
-  @Override
-  public void run()
-  {
-    this.recordedMillis = 0;
-    boolean   delete    = false;
-    Exception errEx     = null;
-    File      file      = this.fldFile.getFile();
-    if( file != null ) {
-      OutputStream out = null;
-      try {
-	boolean smoothColorReduction = true;
-	if( this.btnColorReductionSmooth != null ) {
-	  smoothColorReduction = this.btnColorReductionSmooth.isSelected();
-	}
-	out = new BufferedOutputStream( new FileOutputStream( file ) );
-	AnimatedGIFWriter animGIF = new AnimatedGIFWriter(
-				out,
-				smoothColorReduction,
-				this.btnPlayInfinite.isSelected() );
-
-	long begMillis = System.currentTimeMillis();
-	long millis    = 0;
-	try {
-	  while( this.running ) {
-	    millis += this.frameMillis;
-	    long diffMillis = begMillis + millis - System.currentTimeMillis();
-	    if( diffMillis > 0 ) {
-	      Thread.sleep( diffMillis );
-	    }
-	    if( !this.pause && !this.waitForReset ) {
-	      BufferedImage image = null;
-	      if( this.focusedWindowOnly ) {
-		Window window = this.captureWindow;
-		if( window != null ) {
-		  if( window.isFocused() ) {
-		    image = createSnapshot();
-		    if( !window.isFocused() ) {
-		      image = null;
-		    }
-		  }
-		}
-	      } else {
-		image = createSnapshot();
-	      }
-	      if( image != null ) {
-		animGIF.addFrame( this.frameMillis, image );
-		this.recordedMillis += this.frameMillis;
-		this.capturing = true;
-	      } else {
-		this.capturing = false;
-	      }
-	    }
-	  }
-	}
-	catch( InterruptedException ex ) {};
-	if( !animGIF.finish() ) {
-	  delete = true;
-	}
-        out.close();
-	out = null;
-      }
-      catch( Exception ex ) {
-	errEx = ex;
-	if( out != null ) {
-	  delete = true;
-	}
-      }
-      finally {
-	EmuUtil.doClose( out );
-      }
-      if( (file != null) && delete ) {
-	file.delete();
-      }
-    }
-    final Exception retEx = errEx;
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    threadTerminated( retEx );
-		  }
-		} );
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( (src == this.btnCaptureEmuSysScreen)
-	  || (src == this.btnCaptureScreenFrm)
-	  || (src == this.btnCaptureOtherWindow) )
-      {
-	rv = true;
-	updOptionFieldsEnabled();
-      } else if( src == this.btnFileSelect ) {
-	rv = true;
-	doFileSelect();
-      }
-      else if( src == this.btnRecord ) {
-	rv = true;
-	doRecord();
-      }
-      else if( src == this.btnPause ) {
-	rv = true;
-	doPause();
-      }
-      else if( src == this.btnStop ) {
-	rv = true;
-	doStop();
-      }
-      else if( src == this.btnPlay ) {
-	rv = true;
-	doPlay();
-      }
-      else if( src == this.btnClose ) {
-	rv = true;
-	doClose();
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public boolean doClose()
-  {
-    boolean rv = super.doClose();
-    if( rv ) {
-      setIdle();
-      if( this.videoPlayFrm != null ) {
-	this.videoPlayFrm.doClose();
-      }
-      if( this.thread != null ) {
-	doStop();
-	try {
-	  this.thread.join( 1000 );
-	}
-	catch( InterruptedException ex ) {}
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    pack();
-  }
-
-
-  @Override
-  public void resetFired()
-  {
-    if( this.waitForReset ) {
-      this.waitForReset = false;
-      btnPause.setEnabled( true );
-    }
   }
 
 

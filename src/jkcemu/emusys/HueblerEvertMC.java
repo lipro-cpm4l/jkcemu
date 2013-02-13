@@ -488,6 +488,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
   @Override
   public int reassembleSysCall(
+			Z80MemView    memory,
                         int           addr,
                         StringBuilder buf,
 			boolean       sourceOnly,
@@ -496,6 +497,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
                         int           colRemark )
   {
     return reassSysCallTable(
+			memory,
 			addr,
 			0xF000,
 			sysCallNames,

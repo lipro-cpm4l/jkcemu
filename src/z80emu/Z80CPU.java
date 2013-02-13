@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -26,7 +26,7 @@ public class Z80CPU
 			DEBUG_STOP,
 			DEBUG_STEP_OVER,
 			DEBUG_STEP_INTO,
-			DEBUG_STEP_UP };
+			DEBUG_STEP_TO_RET };
 
   private static class PCListenerItem
   {
@@ -241,7 +241,7 @@ public class Z80CPU
 
 
   /*
-   * Der erste Argument bzw. der erste Eintrag in der Argumentliste
+   * Das erste Argument bzw. der erste Eintrag in der Argumentliste
    * hat die hochste Interrupt-Prioritaet.
    */
   public void setInterruptSources( Z80InterruptSource... iSources )
@@ -612,7 +612,7 @@ public class Z80CPU
 				|| (this.action == Action.DEBUG_STOP)
 				|| (this.action == Action.DEBUG_STEP_OVER)
 				|| (this.action == Action.DEBUG_STEP_INTO)
-				|| (this.action == Action.DEBUG_STEP_UP));
+				|| (this.action == Action.DEBUG_STEP_TO_RET));
 
     if( (this.action != Action.PAUSE) && (this.action != Action.DEBUG_STOP) ) {
       wakeUp();
@@ -1237,7 +1237,7 @@ public class Z80CPU
 			|| ((this.action == Action.DEBUG_STEP_OVER)
 				&& (this.debugCallLevel <= 0)
 				&& (this.instBegPC != this.regPC))
-			|| ((this.action == Action.DEBUG_STEP_UP)
+			|| ((this.action == Action.DEBUG_STEP_TO_RET)
 				&& (this.debugCallLevel <= 0)
 				&& debugMatchesRETX()) )
 	    {
@@ -1452,11 +1452,11 @@ public class Z80CPU
 	}
 	break;
       case 0x09:
-	if( preCode == 0xDD ) {				// ADD IX,BC
+	if( preCode == 0xDD ) {			// ADD IX,BC
 	  this.regIX = doInstADD16( this.regIX, getRegBC() );
-	} else if( preCode == 0xFD ) {			// ADD IY,BC
+	} else if( preCode == 0xFD ) {		// ADD IY,BC
 	  this.regIY = doInstADD16( this.regIY, getRegBC() );
-	} else {					// ADD HL,BC
+	} else {				// ADD HL,BC
 	  setRegHL( doInstADD16( getRegHL(), getRegBC() ) );
 	}
 	this.instTStates += 11;
@@ -2136,12 +2136,12 @@ public class Z80CPU
 	}
 	break;
       case 0xCB:				// Befehle mit Vorbyte CB
-	incRegR();
 	if( preCode == 0xDD ) {
 	  this.regIX = execIXY_CB( this.regIX );
 	} else if( preCode == 0xFD ) {
 	  this.regIY = execIXY_CB( this.regIY );
 	} else {
+	  incRegR();
 	  execCB();
 	}
 	break;
@@ -2282,12 +2282,11 @@ public class Z80CPU
 	break;
       case 0xDB:				// IN A,(n)
 	{
-	  int p = nextByte();
+	  int v = 0xFF;
 	  if( this.ioSys != null ) {
-	    this.regA = this.ioSys.readIOByte( (this.regA << 8) | p ) & 0xFF;
-	  } else {
-	    this.regA = 0;
+	    v = this.ioSys.readIOByte( (this.regA << 8) | nextByte() ) & 0xFF;
 	  }
+	  this.regA        = v;
 	  this.instTStates += 11;
 	}
 	break;
@@ -3336,7 +3335,7 @@ public class Z80CPU
 	doInstIN( this.regC );
 	this.instTStates += 12;
 	break;
-      case 0x71:				// *OUT (C),?
+      case 0x71:				// *OUT (C),0
 	if( this.ioSys != null ) {
 	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, 0 );
 	}
@@ -3438,7 +3437,6 @@ public class Z80CPU
 	if( !this.flagPV ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -3448,7 +3446,6 @@ public class Z80CPU
 	if( this.flagZero || !this.flagPV ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -3458,7 +3455,6 @@ public class Z80CPU
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -3468,7 +3464,6 @@ public class Z80CPU
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -3478,7 +3473,6 @@ public class Z80CPU
 	if( !this.flagPV ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -3488,7 +3482,6 @@ public class Z80CPU
 	if( this.flagZero || !this.flagPV ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -3498,7 +3491,6 @@ public class Z80CPU
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -3508,7 +3500,6 @@ public class Z80CPU
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
-	  incRegR();
 	  setPCRel( -2 );
 	  this.instTStates += 21;
 	}
@@ -4091,11 +4082,11 @@ public class Z80CPU
   private void doInstBlockIN( int addValue )
   {
     int regHL = getRegHL();
-    writeMemByte(
-	regHL,
-	this.ioSys != null ?
-		this.ioSys.readIOByte( (this.regB << 8) | this.regC )
-		: 0 );
+    int value = 0xFF;
+    if( this.ioSys != null ) {
+      value = this.ioSys.readIOByte( (this.regB << 8) | this.regC ) & 0xFF;
+    }
+    writeMemByte( regHL, value );
     setRegHL( regHL + addValue );
     this.regB     = (this.regB - 1) & 0xFF;
     this.flagSign = ((this.regB & BIT7) != 0);
@@ -4134,9 +4125,10 @@ public class Z80CPU
 
   private int doInstIN( int port )
   {
-    int value = (this.ioSys != null ?
-			this.ioSys.readIOByte( (this.regB << 8) | this.regC )
-			: 0) & 0xFF;
+    int value = 0xFF;
+    if( this.ioSys != null ) {
+      value = this.ioSys.readIOByte( (this.regB << 8) | this.regC ) & 0xFF;
+    }
     this.flagSign = ((value & BIT7) != 0);
     this.flagZero = (value == 0);
     this.flagHalf = false;
@@ -4284,12 +4276,12 @@ public class Z80CPU
       opCode = this.memory.getMemByte( this.regPC + 1, true );
       if( (opCode == 0x4D)				// RETI
 	  || (opCode == 0x45)				// RETN
-	  || (opCode == 0x55)				// RETN
-	  || (opCode == 0x5D)				// RETN
-	  || (opCode == 0x65)				// RETN
-	  || (opCode == 0x6D)				// RETN
-	  || (opCode == 0x75)				// RETN
-	  || (opCode == 0x7D) )				// RETN
+	  || (opCode == 0x55)				// *RETN
+	  || (opCode == 0x5D)				// *RETN
+	  || (opCode == 0x65)				// *RETN
+	  || (opCode == 0x6D)				// *RETN
+	  || (opCode == 0x75)				// *RETN
+	  || (opCode == 0x7D) )				// *RETN
       {
 	rv = true;
       }

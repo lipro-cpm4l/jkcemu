@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,7 +32,9 @@ public class SaveTextDlg extends BasicDlg
 
   public SaveTextDlg( File file, EditText editText )
   {
-    super( editText.getEditFrm(), "Textdatei speichern: " + file.getName() );
+    super(
+	editText.getTextEditFrm(),
+	"Textdatei speichern: " + file.getName() );
 
     this.file      = file;
     this.editText  = editText;
@@ -188,7 +190,7 @@ public class SaveTextDlg extends BasicDlg
     File file = editText.getFile();
     if( (file != null) && !askFileName ) {
       editText.saveFile(
-			editText.getEditFrm(),
+			editText.getTextEditFrm(),
 			file,
 			editText.getCharConverter(),
 			editText.getEncodingName(),
@@ -203,11 +205,11 @@ public class SaveTextDlg extends BasicDlg
       File preSelection = editText.getFile();
 
       file = EmuUtil.showFileSaveDlg(
-		editText.getEditFrm(),
+		editText.getTextEditFrm(),
 		"Textdatei speichern",
 		preSelection != null ?
 			 preSelection : Main.getLastPathFile( "text" ),
-		EditFrm.getTextFileFilters() );
+		TextEditFrm.getTextFileFilters() );
       if( file != null ) {
 
 	/*
@@ -218,7 +220,7 @@ public class SaveTextDlg extends BasicDlg
 	  for( EditText tmpTxt : allTexts ) {
 	    if( (tmpTxt != editText) && tmpTxt.isSameFile( file ) ) {
 	      BasicDlg.showInfoDlg(
-		editText.getEditFrm(),
+		editText.getTextEditFrm(),
 		"Diese Datei ist bereits ge\u00F6ffnet.\n"
 			+ "Bitte w\u00E4hlen Sie einen anderen Dateinamen.",
 		"Hinweis" );

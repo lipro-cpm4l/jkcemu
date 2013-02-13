@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,6 +25,8 @@ public class HexDiffFrm extends HTMLViewFrm implements
 						DropTargetListener,
 						ListSelectionListener
 {
+  private static HexDiffFrm instance = null;
+
   private int              lastDiffs;
   private Vector<FileData> files;
   private JMenuItem        mnuFileAdd;
@@ -35,102 +37,18 @@ public class HexDiffFrm extends HTMLViewFrm implements
   private JButton          btnFileRemove;
 
 
-  public HexDiffFrm( ScreenFrm screenFrm )
+  public static HexDiffFrm open()
   {
-    super( screenFrm );
-    setTitle( "JKCEMU Hex-Dateivergleicher" );
-    this.files     = new Vector<FileData>();
-    this.lastDiffs = 0;
-
-
-    // Menu
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-
-    this.mnuFileAdd = createJMenuItem( "Datei hinzuf\u00FCgen..." );
-    mnuFile.add( this.mnuFileAdd );
-
-    this.mnuFileRemove = createJMenuItem( "Datei entfernen" );
-    this.mnuFileRemove.setEnabled( false );
-    mnuFile.add( this.mnuFileRemove );
-    mnuFile.addSeparator();
-
-    JMenu mnuSettings = new JMenu( "Einstellungen" );
-    mnuSettings.setMnemonic( KeyEvent.VK_E );
-
-    this.mnuMaxDiffs = createJMenuItem( "Max. Dateiunterschiede..." );
-    mnuSettings.add( this.mnuMaxDiffs );
-
-    createMenuBar( mnuFile, mnuSettings, "/help/tools/hexdiff.htm" );
-
-
-    // Fensterinhalt
-    setLayout( new GridBagLayout() );
-
-    GridBagConstraints gbc = new GridBagConstraints(
-						0, 0,
-						1, 2,
-						0.0, 0.0,
-						GridBagConstraints.NORTHWEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 5, 5 ),
-						0, 0 );
-
-    // Dateiliste
-    add( new JLabel( "Dateien:" ), gbc );
-
-    this.listFiles = new JList();
-    this.listFiles.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
-    this.listFiles.setVisibleRowCount( 2 );
-    gbc.fill    = GridBagConstraints.BOTH;
-    gbc.weightx = 1.0;
-    gbc.gridx++;
-    add( new JScrollPane( this.listFiles ), gbc );
-
-    this.btnFileAdd = createImageButton(
-				"/images/file/open.png",
-				"Datei hinzuf\u00FCgen" );
-    gbc.fill       = GridBagConstraints.NONE;
-    gbc.weightx    = 0.0;
-    gbc.gridheight = 1;
-    gbc.gridx++;
-    add( this.btnFileAdd, gbc );
-
-    this.btnFileRemove = createImageButton(
-				"/images/file/delete.png",
-				"Datei entfernen" );
-    this.btnFileRemove.setEnabled( false );
-    gbc.gridy++;
-    add( this.btnFileRemove, gbc );
-
-    this.listFiles.addListSelectionListener( this );
-
-
-    // Ergebnis
-    gbc.fill      = GridBagConstraints.BOTH;
-    gbc.weightx   = 1.0;
-    gbc.weighty   = 1.0;
-    gbc.gridwidth = GridBagConstraints.REMAINDER;
-    gbc.gridx     = 0;
-    gbc.gridy++;
-    createEditorPane( gbc );
-
-
-    // Drag&Drop aktivieren
-    (new DropTarget( this.listFiles, this )).setActive( true );
-    (new DropTarget( this.editorPane, this )).setActive( true );
-    (new DropTarget( this.scrollPane, this )).setActive( true );
-
-
-    // sonstiges
-    if( !applySettings( Main.getProperties(), true ) ) {
-      this.editorPane.setPreferredSize( new Dimension( 300, 300 ) );
-      pack();
-      this.editorPane.setPreferredSize( null );
-      setScreenCentered();
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new HexDiffFrm();
     }
-    setResizable( true );
-    updResult();
+    instance.setVisible( true );
+    instance.toFront();
+    return instance;
   }
 
 
@@ -150,13 +68,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 	      break;
 	    }
 	  }
-	  if( alreadyAdded ) {
-	    BasicDlg.showErrorDlg(
-			this,
-			file.getPath()
-				+ ":\nDie Datei wurde bereits vorher"
-				+ " schon hinzugef\u00FCgt." );
-	  } else {
+	  if( !alreadyAdded ) {
 	    FileData fileData = new FileData( file );
 	    if( file.length() > 0 ) {
 	      this.files.add( fileData );
@@ -260,6 +172,122 @@ public class HexDiffFrm extends HTMLViewFrm implements
   }
 
 
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      Main.checkQuit( this );
+    } else {
+      // damit beim erneuten Oeffnen das Fenster leer ist
+      this.files.clear();
+      this.listFiles.setListData( this.files );
+      updResult();
+    }
+    return rv;
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private HexDiffFrm()
+  {
+    setTitle( "JKCEMU Hex-Dateivergleicher" );
+    this.files     = new Vector<FileData>();
+    this.lastDiffs = 0;
+
+
+    // Menu
+    JMenu mnuFile = new JMenu( "Datei" );
+    mnuFile.setMnemonic( KeyEvent.VK_D );
+
+    this.mnuFileAdd = createJMenuItem( "Datei hinzuf\u00FCgen..." );
+    mnuFile.add( this.mnuFileAdd );
+
+    this.mnuFileRemove = createJMenuItem( "Datei entfernen" );
+    this.mnuFileRemove.setEnabled( false );
+    mnuFile.add( this.mnuFileRemove );
+    mnuFile.addSeparator();
+
+    JMenu mnuSettings = new JMenu( "Einstellungen" );
+    mnuSettings.setMnemonic( KeyEvent.VK_E );
+
+    this.mnuMaxDiffs = createJMenuItem( "Max. Dateiunterschiede..." );
+    mnuSettings.add( this.mnuMaxDiffs );
+
+    createMenuBar( mnuFile, mnuSettings, "/help/tools/hexdiff.htm" );
+
+
+    // Fensterinhalt
+    setLayout( new GridBagLayout() );
+
+    GridBagConstraints gbc = new GridBagConstraints(
+						0, 0,
+						1, 2,
+						0.0, 0.0,
+						GridBagConstraints.NORTHWEST,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 5, 5 ),
+						0, 0 );
+
+    // Dateiliste
+    add( new JLabel( "Dateien:" ), gbc );
+
+    this.listFiles = new JList();
+    this.listFiles.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
+    this.listFiles.setVisibleRowCount( 2 );
+    gbc.fill    = GridBagConstraints.BOTH;
+    gbc.weightx = 1.0;
+    gbc.gridx++;
+    add( new JScrollPane( this.listFiles ), gbc );
+
+    this.btnFileAdd = createImageButton(
+				"/images/file/open.png",
+				"Datei hinzuf\u00FCgen" );
+    gbc.fill       = GridBagConstraints.NONE;
+    gbc.weightx    = 0.0;
+    gbc.gridheight = 1;
+    gbc.gridx++;
+    add( this.btnFileAdd, gbc );
+
+    this.btnFileRemove = createImageButton(
+				"/images/file/delete.png",
+				"Datei entfernen" );
+    this.btnFileRemove.setEnabled( false );
+    gbc.gridy++;
+    add( this.btnFileRemove, gbc );
+
+    this.listFiles.addListSelectionListener( this );
+
+
+    // Ergebnis
+    gbc.fill      = GridBagConstraints.BOTH;
+    gbc.weightx   = 1.0;
+    gbc.weighty   = 1.0;
+    gbc.gridwidth = GridBagConstraints.REMAINDER;
+    gbc.gridx     = 0;
+    gbc.gridy++;
+    createEditorPane( gbc );
+
+
+    // Drag&Drop aktivieren
+    (new DropTarget( this.listFiles, this )).setActive( true );
+    (new DropTarget( this.editorPane, this )).setActive( true );
+    (new DropTarget( this.scrollPane, this )).setActive( true );
+
+
+    // sonstiges
+    if( !applySettings( Main.getProperties(), true ) ) {
+      this.editorPane.setPreferredSize( new Dimension( 300, 300 ) );
+      pack();
+      this.editorPane.setPreferredSize( null );
+      setScreenCentered();
+    }
+    setResizable( true );
+    updResult();
+  }
+
+
 	/* --- private Methoden --- */
 
   private boolean addFile( File file )
@@ -303,8 +331,9 @@ public class HexDiffFrm extends HTMLViewFrm implements
 				"Datei \u00F6ffnen",
 				Main.getLastPathFile( "software" ) );
     if( file != null ) {
-      if( addFile( file ) )
+      if( addFile( file ) ) {
 	Main.setLastFile( file, "software" );
+      }
     }
   }
 

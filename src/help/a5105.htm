@@ -7,6 +7,11 @@
     <ul>
      <li><a href="a5105.htm#keyboard">1.1. Tastatur</a></li>
      <li><a href="a5105.htm#sound">1.2. Sound-Generator</a></li>
+     <li>
+      <ul>
+       <li><a href="#sound_ex">1.2.1. Sound-Beispielprogramme</a></li>
+      </ul>
+     </li>
      <li><a href="a5105.htm#printer">1.3. V24-Schnittstelle mit Drucker</a></li>
     </ul>
    </li>
@@ -87,12 +92,66 @@
   m&uuml;ssen Sie die Audio-Funktion
   <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> aktivieren.
   Alle anderen Audio-Funktionen beziehen sich auf den emulierten
-  Kassettenrecorderanchluss.
+  Kassettenrecorderanschluss.
  <br/><br/>
   Der Sound-Generator wird immer mit der originalen Taktfrequenz emuliert,
   d.h., wenn Sie in den <a href="settings.htm">Einstellungen</a>
   eine andere Taktfrequenz angeben,
   wirkt sich das nur auf die Emulation des Mikroprozessors aus.
+ <br/><br/>
+
+ <h3><a name="sound_ex">1.2.1. Sound-Beispielprogramme</a></h3>
+  <table border="0">
+   <tr>
+    <td valign="top">
+     <tt>
+      10&nbsp;PRINT:PRINT&nbsp;"Explosion"<br/>
+      20&nbsp;SOUND&nbsp;5,20<br/>
+      30&nbsp;SOUND&nbsp;11,0<br/>
+      40&nbsp;SOUND&nbsp;12,31<br/>
+      50&nbsp;SOUND&nbsp;13,0<br/>
+      60&nbsp;SOUND&nbsp;9,16<br/>
+      70&nbsp;SOUND&nbsp;7,16<br/>
+      80&nbsp;END
+     </tt>
+    </td>
+    <td>&nbsp;</td>
+    <td valign="top">
+     <tt>
+      100&nbsp;PRINT:PRINT&nbsp;"Meeresrauschen"<br/>
+      110&nbsp;SOUND&nbsp;6,20<br/>
+      120&nbsp;SOUND&nbsp;8,0<br/>
+      130&nbsp;SOUND&nbsp;9,16<br/>
+      140&nbsp;SOUND&nbsp;10,8<br/>
+      150&nbsp;SOUND&nbsp;11,0<br/>
+      160&nbsp;SOUND&nbsp;12,50<br/>
+      170&nbsp;SOUND&nbsp;13,14<br/>
+      180&nbsp;SOUND&nbsp;7,48<br/>
+      190&nbsp;PRINT:PRINT&nbsp;"Abbruch&nbsp;mit&nbsp;beliebiger&nbsp;Taste"<br/>
+      200&nbsp;IF LEN(INKEY$)=0 THEN 200<br/>
+      210&nbsp;SOUND&nbsp;7,0<br/>
+      220&nbsp;END
+     </tt>
+    </td>
+    <td>&nbsp;</td>
+    <td valign="top">
+     <tt>
+      100&nbsp;PRINT:PRINT&nbsp;"Schranke"<br/>
+      110&nbsp;SOUND&nbsp;2,200<br/>
+      120&nbsp;SOUND&nbsp;3,1<br/>
+      130&nbsp;SOUND&nbsp;9,16<br/>
+      140&nbsp;SOUND&nbsp;11,0<br/>
+      150&nbsp;SOUND&nbsp;12,40<br/>
+      160&nbsp;SOUND&nbsp;13,8<br/>
+      170&nbsp;SOUND&nbsp;7,2<br/>
+      180&nbsp;PRINT:PRINT&nbsp;"Abbruch&nbsp;mit&nbsp;beliebiger&nbsp;Taste"<br/>
+      190&nbsp;IF LEN(INKEY$)=0 THEN 190<br/>
+      200&nbsp;SOUND&nbsp;7,0<br/>
+      210&nbsp;END
+     </tt>
+    </td>
+   </tr>
+  </table>
  <br/><br/>
 
  <h3><a name="printer">1.3. V24-Schnittstelle mit Drucker</a></h3>

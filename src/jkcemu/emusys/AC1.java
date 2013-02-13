@@ -738,6 +738,18 @@ public class AC1
   }
 
 
+  public boolean emulates2010Mode()
+  {
+    return this.mode2010;
+  }
+
+
+  public boolean emulatesSCCHMode()
+  {
+    return this.modeSCCH;
+  }
+
+
   @Override
   public int getAppStartStackInitValue()
   {

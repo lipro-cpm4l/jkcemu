@@ -613,9 +613,8 @@ public class W5100
 	{
 	  /*
 	   * ICMP Paket empfangen,
-	   * Das kann in der Emulation nur eine simulierte
-	   * Ping-Antwort sein.
-	   * Dazu wird die Liste der gesendeten Pings durchgehen.
+	   * Das kann in der Emulation nur eine simulierte Ping-Antwort sein.
+	   * Dazu wird die Liste der gesendeten Pings durchgegangen.
 	   * Pings mit einer Antwort (Echo, Timeout oder Fehler)
 	   * werden in jedem Fall aus der Liste entfernt.
 	   * Im Falle einer positiven Antwort oder eines Fehlers
@@ -2031,7 +2030,7 @@ public class W5100
       --socketNum;
     }
     if( (a + rv) > 0x8000 ) {
-      // Puffer lieget ausserhalb des Speichers -> 0 zurueckliefern
+      // Puffer liegt ausserhalb des Speichers -> 0 zurueckliefern
       rv = 0;
     }
     return rv;
@@ -2089,7 +2088,7 @@ public class W5100
       --socketNum;
     }
     if( (a + rv) > 0x8000 ) {
-      // Puffer lieget ausserhalb des Speichers -> 0 zurueckliefern
+      // Puffer liegt ausserhalb des Speichers -> 0 zurueckliefern
       rv = 0;
     }
     return rv;

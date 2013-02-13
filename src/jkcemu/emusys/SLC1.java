@@ -671,7 +671,7 @@ public class SLC1 extends EmuSys implements
     if( state != this.chessMode ) {
       this.chessMode = state;
       if( this.keyboardFld != null ) {
-	this.keyboardFld.fireRepaint();
+	this.keyboardFld.repaint();
       }
     }
   }

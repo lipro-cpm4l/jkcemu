@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.programming.assembler;
 
-import java.awt.EventQueue;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
@@ -16,157 +15,238 @@ import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.programming.*;
 import jkcemu.text.*;
-import jkcemu.tools.ReassFrm;
-import jkcemu.tools.debugger.*;
 
 
-public class Z80Assembler extends PrgThread
+public class Z80Assembler
 {
-  private StringBuilder         sourceOut;
-  private ByteArrayOutputStream codeOut;
+  public static enum Syntax { ALL, ZILOG_ONLY, ROBOTRON_ONLY };
+
+  private String                srcText;
+  private String                srcName;
+  private PrgOptions            options;
+  private PrgLogger             logger;
   private Map<String,AsmLabel>  labels;
   private AsmLabel[]            sortedLabels;
-  private Integer               entryAddr;
-  private boolean               status;
+  private StringBuilder         srcOut;
+  private ByteArrayOutputStream codeBuf;
+  private byte[]                codeOut;
   private boolean               addrOverflow;
   private boolean               endReached;
-  private int                   passNum;
+  private boolean               interactive;
+  private boolean               relJumpsTooLong;
+  private boolean               status;
+  private volatile boolean      execEnabled;
+  private Integer               entryAddr;
   private int                   begAddr;
   private int                   endAddr;
   private int                   curAddr;
+  private int                   curLineNum;
+  private int                   passNum;
+  private int                   errCnt;
 
 
   public Z80Assembler(
-		EmuThread  emuThread,
-		EditText   editText,
-		String     sourceText,
-		Appendable logOut,
+		String     srcText,
+		String     srcName,
 		PrgOptions options,
-		boolean    forceRun )
+		PrgLogger  logger,
+		boolean    interactive )
   {
-    super(
-	"JKCEMU assembler",
-	emuThread,
-	editText,
-	sourceText,
-	logOut,
-	options,
-	forceRun );
-    this.sourceOut       = null;
-    this.codeOut         = null;
+    this.srcText         = srcText;
+    this.srcName         = srcName;
+    this.options         = options;
+    this.logger          = logger;
+    this.interactive     = interactive;
     this.labels          = new Hashtable<String,AsmLabel>();
     this.sortedLabels    = null;
-    this.entryAddr       = null;
-    this.status          = true;
+    this.srcOut          = null;
+    this.codeBuf         = null;
+    this.codeOut         = null;
     this.addrOverflow    = false;
     this.endReached      = false;
-    this.passNum         = 0;
+    this.relJumpsTooLong = false;
+    this.status          = true;
+    this.execEnabled     = true;
+    this.entryAddr       = null;
     this.begAddr         = -1;
     this.endAddr         = -1;
     this.curAddr         = 0;
+    this.curLineNum      = 0;
+    this.passNum         = 0;
+    this.errCnt          = 0;
+    if( this.options.getFormatSource() && (this.srcText != null) ) {
+      this.srcOut = new StringBuilder( Math.max( srcText.length(), 16 ) );
+    }
+    if( this.options.getCreateCode() ) {
+      this.codeBuf = new ByteArrayOutputStream( 0x8000 );
+    }
   }
 
 
-  public void assemble() throws IOException
+  public boolean assemble() throws IOException
   {
-    clearErrorCount();
-    this.passNum    = 1;
-    this.endReached = false;
+    this.errCnt      = 0;
+    this.passNum     = 1;
+    this.execEnabled = true;
+    this.endReached  = false;
     try {
-      appendToLog( "Assembliere...\nLauf 1:\n" );
       parseAsm();
-      if( this.running && this.status ) {
+      if( this.execEnabled && this.status ) {
 	this.passNum    = 2;
 	this.endReached = false;
-	if( this.options.getCodeToEmu() || this.options.getCodeToFile() ) {
-	  this.codeOut = new ByteArrayOutputStream( 0x1000 );
-
-	}
-	appendToLog( "Lauf 2:\n" );
-	if( this.options.getFormatSource() ) {
-	  this.sourceOut = new StringBuilder(
-				Math.max( getSourceLength(), 16 ) );
-	}
-	resetSource();
 	parseAsm();
-	if( this.codeOut != null ) {
-	  this.codeOut.close();
-	  if( this.running && this.status ) {
-	    byte[] aCode = this.codeOut.toByteArray();
-	    if( aCode != null ) {
-	      if( this.options.getCodeToEmu() ) {
-		writeCodeToEmu( aCode, this.options.getCodeToSecondSystem() );
-	      }
-	      if( this.options.getCodeToFile() ) {
-		writeCodeToFile(
-			this.options.getCodeFile(),
-			this.options.getCodeFileFormat(),
-			this.options.getCodeFileType(),
-			this.options.getCodeFileDesc(),
-			aCode );
-	      }
-	    }
+	if( this.codeBuf != null ) {
+	  this.codeBuf.close();
+	  if( this.execEnabled && this.status ) {
+	    this.codeOut = this.codeBuf.toByteArray();
 	  }
 	}
-	if( this.running && this.status ) {
+	if( this.execEnabled && this.status ) {
 	  if( this.options.getPrintLabels() ) {
 	    printLabels();
 	  }
-	  if( this.options.getCodeToEmu() ) {
-	    if( this.options.getLabelsToDebugger() ) {
-	      labelsToDebugger( this.options.getCodeToSecondSystem() );
-	    }
-	    if( this.options.getLabelsToReassembler() ) {
-	      labelsToReass( this.options.getCodeToSecondSystem() );
-	    }
+	  if( this.options.getCodeToFile() ) {
+	    writeCodeToFile();
 	  }
 	}
       }
     }
     catch( TooManyErrorsException ex ) {
-      appendToLog( "\nAbgebrochen aufgrund zu vieler Fehler\n" );
+      appendToErrLog( "\nAbgebrochen aufgrund zu vieler Fehler\n" );
+      this.codeOut = null;
     }
-    if( getErrorCount() > 0 ) {
-      appendErrorCountToLog();
+    if( this.execEnabled && (this.errCnt > 0) ) {
+      appendToErrLog( String.format( "%d Fehler\n", this.errCnt ) );
+      this.codeOut = null;
     }
+    return this.status;
   }
 
 
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public void run()
+  public void cancel()
   {
-    EditFrm editFrm = this.editText.getEditFrm();
-    try {
-      assemble();
-      if( this.running && this.status ) {
-	appendToLog( "Fertig\n" );
-	if( this.sourceOut != null )
-	  fireReplaceSourceText( this.sourceOut.toString() );
-      }
-    }
-    catch( IOException ex ) {
-      String msg = ex.getMessage();
-      if( msg != null ) {
-	if( msg.endsWith( "\n" ) ) {
-	  appendToLog( "Fehler: " + msg );
-	} else {
-	  appendToLog( "Fehler: " + msg + "\n" );
+    this.execEnabled = false;
+  }
+
+
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
+
+  public int getEndAddr()
+  {
+    return this.endAddr;
+  }
+
+
+  public byte[] getCreatedCode()
+  {
+    return this.codeOut;
+  }
+
+
+  public Integer getEntryAddr()
+  {
+    return this.entryAddr;
+  }
+
+
+  public String getFormattedSourceText()
+  {
+    return this.srcOut != null ? this.srcOut.toString() : null;
+  }
+
+
+  public boolean getRelJumpsTooLong()
+  {
+    return this.relJumpsTooLong;
+  }
+
+
+  public AsmLabel[] getSortedLabels()
+  {
+    AsmLabel[] rv = this.sortedLabels;
+    if( rv == null ) {
+      try {
+	Collection<AsmLabel> c = this.labels.values();
+	if( c != null ) {
+	  int n = c.size();
+	  if( n > 0 ) {
+	    rv = c.toArray( new AsmLabel[ n ] );
+	    if( rv != null ) {
+	      Arrays.sort( rv );
+	    }
+	  } else {
+	    rv = new AsmLabel[ 0 ];
+	  }
 	}
-      } else {
-	appendToLog( "Ein-/Ausgabefehler\n" );
+      }
+      catch( ArrayStoreException ex ) {}
+      catch( ClassCastException ex ) {}
+      finally {
+	this.sortedLabels = rv;
       }
     }
-    catch( Exception ex ) {
-      EventQueue.invokeLater( new ErrorMsg( editFrm, ex ) );
-    }
-    if( editFrm != null )
-      editFrm.threadTerminated( this );
+    return rv;
+  }
+
+
+  public void putWarning( String msg )
+  {
+    if( this.passNum == 2 )
+      appendLineNumMsgToErrLog( msg, "Warnung" );
   }
 
 
 	/* --- private Methoden --- */
+
+  public void appendLineNumMsgToErrLog( String msg, String msgType )
+  {
+    StringBuilder buf = new StringBuilder( 128 );
+    if( this.curLineNum > 0 ) {
+      if( this.srcName != null ) {
+	buf.append( this.srcName );
+	buf.append( (char) ':' );
+	buf.append( this.curLineNum );
+	if( msgType != null ) {
+	  buf.append( ": " );
+	  buf.append( msgType );
+	}
+      } else {
+	if( msgType != null ) {
+	  buf.append( msgType );
+	  buf.append( " in " );
+	}
+	buf.append( "Zeile " );
+	buf.append( this.curLineNum );
+      }
+      buf.append( ": " );
+    }
+    if( msg != null ) {
+      buf.append( msg );
+    }
+    if( !msg.endsWith( "\n" ) ) {
+      buf.append( (char) '\n' );
+    }
+    appendToErrLog( buf.toString() );
+  }
+
+
+  private void appendToErrLog( String text )
+  {
+    if( this.logger != null )
+      this.logger.appendToErrLog( text );
+  }
+
+
+  private void appendToOutLog( String text )
+  {
+    if( this.logger != null )
+      this.logger.appendToOutLog( text );
+  }
+
 
   private void checkAddr() throws PrgException
   {
@@ -185,13 +265,19 @@ public class Z80Assembler extends PrgThread
 
   private void parseAsm() throws IOException, TooManyErrorsException
   {
-    this.begAddr = -1;
-    this.endAddr = -1;
-    this.curAddr = 0;
-    String line = readLine();
-    while( this.running && !this.endReached && (line != null) ) {
-      parseLine( line );
-      line = readLine();
+    this.begAddr    = -1;
+    this.endAddr    = -1;
+    this.curAddr    = 0;
+    this.curLineNum = 0;
+    if( this.srcText != null ) {
+      BufferedReader reader = new BufferedReader(
+					new StringReader( this.srcText ) );
+      String line = reader.readLine();
+      while( this.execEnabled && !this.endReached && (line != null) ) {
+	this.curLineNum++;
+	parseLine( line );
+	line = reader.readLine();
+      }
     }
   }
 
@@ -693,9 +779,9 @@ public class Z80Assembler extends PrgThread
 	    }
 	  }
 	}
-	if( this.sourceOut != null ) {
-	  asmLine.appendFormattedTo( this.sourceOut );
-	  this.sourceOut.append( (char) '\n' );
+	if( (this.srcOut != null) && (this.passNum == 2) ) {
+	  asmLine.appendFormattedTo( this.srcOut );
+	  this.srcOut.append( (char) '\n' );
 	}
       }
     }
@@ -704,9 +790,12 @@ public class Z80Assembler extends PrgThread
       if( msg == null ) {
         msg = "Unbekannter Fehler";
       }
-      appendLineNumMsgToLog( msg, "Fehler" );
+      appendLineNumMsgToErrLog( msg, "Fehler" );
       this.status = false;
-      incErrorCount();
+      this.errCnt++;
+      if( this.errCnt >= 100 ) {
+	throw new TooManyErrorsException();
+      }
     }
   }
 
@@ -1560,7 +1649,7 @@ public class Z80Assembler extends PrgThread
 	putCode( 0xF9 );
       }
       else if( a2.equalsUpper( "IY" ) ) {
-	putCode( 0xDD );
+	putCode( 0xFD );
 	putCode( 0xF9 );
       }
       else if( a2.isIndirectAddr() ) {
@@ -1691,15 +1780,15 @@ public class Z80Assembler extends PrgThread
     else if( ((preCode == 0xDD)
 		&& (a2.equalsUpper( "IXH" ) || a2.equalsUpper( "HX" )))
 	     || ((preCode == 0xFD)
-		&& (a2.equalsUpper( "IYH" ) || a2.equalsUpper( "YX" ))) )
+		&& (a2.equalsUpper( "IYH" ) || a2.equalsUpper( "HY" ))) )
     {
       putCode( preCode );
       putCode( 0x64 + baseCode );
     }
     else if( ((preCode == 0xDD)
-		&& (a2.equalsUpper( "IXL" ) || a2.equalsUpper( "HL" )))
+		&& (a2.equalsUpper( "IXL" ) || a2.equalsUpper( "LX" )))
 	     || ((preCode == 0xFD)
-		&& (a2.equalsUpper( "IYL" ) || a2.equalsUpper( "YL" ))) )
+		&& (a2.equalsUpper( "IYL" ) || a2.equalsUpper( "LY" ))) )
     {
       putCode( preCode );
       putCode( 0x65 + baseCode );
@@ -1884,9 +1973,7 @@ public class Z80Assembler extends PrgThread
       if( isHex ) {
 	zilogSyntax();
       } else {
-	if( (this.options.getSyntax() == PrgOptions.Syntax.ZILOG_ONLY)
-	    && (v > 9) )
-	{
+	if( (this.options.getAsmSyntax() == Syntax.ZILOG_ONLY) && (v > 9) ) {
 	  putWarning( "Hexadezimalkonstante endet nicht mit \'H\'" );
 	}
       }
@@ -2130,12 +2217,6 @@ public class Z80Assembler extends PrgThread
   }
 
 
-  private int nextByteArg( AsmLine asmLine ) throws PrgException
-  {
-    return getByte( asmLine.nextArg() );
-  }
-
-
   private int nextWordArg( AsmLine asmLine ) throws PrgException
   {
     return getWord( asmLine.nextArg() );
@@ -2153,6 +2234,7 @@ public class Z80Assembler extends PrgThread
     if( this.passNum == 2 ) {
       v = getWord( asmArg ) - ((this.curAddr + 2) & 0xFFFF);
       if( (v < ~0x7F) || (v > 0x7F) ) {
+	this.relJumpsTooLong = true;
 	throw new PrgException( "Relative Sprungdistanz zu gro\u00DF" );
       }
     }
@@ -2165,7 +2247,7 @@ public class Z80Assembler extends PrgThread
     int    v    = 0;
     String text = a.getIndirectIXYDist();
     if( text != null ) {
-      if( text.length() > 0 ) {
+      if( !text.isEmpty() ) {
 	v = ExprParser.parse(
 			text,
 			this.labels,
@@ -2225,50 +2307,23 @@ public class Z80Assembler extends PrgThread
   }
 
 
-  private AsmLabel[] getSortedLabels()
-  {
-    AsmLabel[] rv = this.sortedLabels;
-    if( rv == null ) {
-      try {
-	Collection<AsmLabel> c = this.labels.values();
-	if( c != null ) {
-	  int n = c.size();
-	  if( n > 0 ) {
-	    rv = c.toArray( new AsmLabel[ n ] );
-	    if( rv != null ) {
-	      Arrays.sort( rv );
-	    }
-	  } else {
-	    rv = new AsmLabel[ 0 ];
-	  }
-	}
-      }
-      catch( ArrayStoreException ex ) {}
-      catch( ClassCastException ex ) {}
-      finally {
-	this.sortedLabels = rv;
-      }
-    }
-    return rv;
-  }
-
-
   private void putChar( char ch ) throws PrgException
   {
-    if( ch > 0x7F ) {
-      if( ch <= 0xFF ) {
-	putWarning(
-		String.format(
-			"\'%c\' ist kein ASCII-Zeichen, entsprechend Unicode"
-				+ " mit %02XH \u00FCbersetzt",
-			ch,
-			(int) ch ) );
-      } else {
-	throw new PrgException(
+    if( ch > 0xFF ) {
+      throw new PrgException(
 		String.format(
 			"\'%c\': 16-Bit-Unicodezeichen nicht erlaubt",
 			ch ) );
-      }
+    }
+    if( this.options.getWarnNonAsciiChars()
+	&& ((ch < '\u0020') || (ch > '\u007F')) )
+    {
+      putWarning(
+		String.format(
+			"\'%c\': kein ASCII-Zeichen, entsprechend Unicode"
+				+ " mit %02XH \u00FCbersetzt",
+			ch,
+			(int) ch ) );
     }
     putCode( ch );
   }
@@ -2276,19 +2331,19 @@ public class Z80Assembler extends PrgThread
 
   private void putCode( int b ) throws PrgException
   {
-    if( this.codeOut != null ) {
+    if( (this.codeBuf != null) && (this.passNum == 2) ) {
       if( this.begAddr < 0 ) {
 	this.begAddr = this.curAddr;
       } else {
 	if( this.endAddr + 1 < this.curAddr ) {
 	  int n = this.curAddr - this.endAddr - 1;
 	  for( int i = 0; i < n; i++ ) {
-	    this.codeOut.write( 0 );
+	    this.codeBuf.write( 0 );
 	  }
 	}
       }
       this.endAddr = this.curAddr;
-      this.codeOut.write( b );
+      this.codeBuf.write( b );
     }
     this.curAddr++;
     checkAddr();
@@ -2316,7 +2371,7 @@ public class Z80Assembler extends PrgThread
    */
   private void robotronMnemonic()
   {
-    if( this.options.getSyntax() == PrgOptions.Syntax.ZILOG_ONLY )
+    if( this.options.getAsmSyntax() == Syntax.ZILOG_ONLY )
       putWarning( "Robotron-Mnemonik" );
   }
 
@@ -2328,7 +2383,7 @@ public class Z80Assembler extends PrgThread
    */
   private void robotronSyntax()
   {
-    if( this.options.getSyntax() == PrgOptions.Syntax.ZILOG_ONLY )
+    if( this.options.getAsmSyntax() == Syntax.ZILOG_ONLY )
       putWarning( "Robotron-Syntax" );
   }
 
@@ -2340,7 +2395,7 @@ public class Z80Assembler extends PrgThread
    */
   private void zilogSyntax()
   {
-    if( this.options.getSyntax() == PrgOptions.Syntax.ROBOTRON_ONLY )
+    if( this.options.getAsmSyntax() == Syntax.ROBOTRON_ONLY )
       putWarning( "Zilog-Syntax" );
   }
 
@@ -2352,7 +2407,7 @@ public class Z80Assembler extends PrgThread
    */
   private void zilogMnemonic()
   {
-    if( this.options.getSyntax() == PrgOptions.Syntax.ROBOTRON_ONLY )
+    if( this.options.getAsmSyntax() == Syntax.ROBOTRON_ONLY )
       putWarning( "Zilog-Mnemonik" );
   }
 
@@ -2378,197 +2433,6 @@ public class Z80Assembler extends PrgThread
   }
 
 
-  private void writeCodeToEmu( byte[] aCode, boolean secondSys )
-  {
-    if( aCode.length > 0 ) {
-      int begAddr   = this.begAddr;
-      int startAddr = (this.entryAddr != null ?
-				this.entryAddr.intValue() : begAddr);
-      if( (this.emuThread != null) && (begAddr >= 0) && (begAddr <= 0xFFFF) ) {
-	String secondSysName = null;
-	EmuSys emuSys        = null;
-	if( secondSys ) {
-	  emuSys = this.emuThread.getEmuSys();
-	  if( emuSys != null ) {
-	    secondSysName = emuSys.getSecondSystemName();
-	  }
-	}
-	StringBuilder buf = new StringBuilder( 256 );
-	buf.append( "Lade Programmcode in Arbeitsspeicher (" );
-	if( secondSysName != null ) {
-	  buf.append( secondSysName );
-	  buf.append( ", " );
-	}
-	if( begAddr != this.begAddr ) {
-	  buf.append( "alternativer " );
-	}
-	buf.append(
-		String.format(
-			"Bereich %04X-%04X)",
-			begAddr,
-			begAddr + aCode.length -  1) );
-	if( this.forceRun && (startAddr >= 0) ) {
-	  buf.append(
-		String.format(
-			"\nund starte Programm auf Adresse %04X",
-			startAddr ) );
-	} else {
-	  if( this.forceRun ) {
-	    buf.append( "\nStart des Programms nicht m\u00F6glich,\n"
-		+ "da Quelltext keine ENT-Anweisung (Programmeintrittspunkt)"
-		+ " enth\u00E4lt" );
-	  }
-	}
-	buf.append( (char) '\n' );
-	appendToLog( buf.toString() );
-	if( (emuSys != null) && (secondSysName != null) ) {
-	  emuSys.loadIntoSecondSystem(
-			aCode,
-			begAddr,
-			this.forceRun ? startAddr : -1 );
-	} else {
-	  this.emuThread.loadIntoMemory(
-		new LoadData(
-			aCode,
-			0,
-			aCode.length,
-			begAddr,
-			this.forceRun ? startAddr : -1,
-			null ) );
-	}
-      }
-    } else {
-      StringBuilder buf = new StringBuilder( 256 );
-      buf.append( "Programmcode kann nicht in Emulator geladen" );
-      if( this.forceRun ) {
-	buf.append( " und dort gestartet" );
-      }
-      buf.append( " werden,\nda kein einziges Byte erzeugt wurde.\n" );
-      appendToLog( buf.toString() );
-    }
-  }
-
-
-  private void writeCodeToFile(
-			File   file,
-			String fileFmt,
-			char   fileType,
-			String fileDesc,
-			byte[] aCode )
-  {
-    if( aCode.length > 0 ) {
-      if( file != null ) {
-	if( (fileType < '\u0020') || (fileType > 0x7E) ) {
-	  fileType = '\u0020';
-	}
-	int     begAddr = this.begAddr;
-	Integer sAddr   = null;
-	if( fileType == 'C' ) {
-	  if( this.entryAddr != null ) {
-	    sAddr = this.entryAddr;
-	  } else {
-	    sAddr = new Integer( begAddr );
-	  }
-	}
-	try {
-	  FileSaver.saveFile(
-		file,
-		fileFmt,
-		new LoadData(
-			aCode,
-			0,
-			aCode.length,
-			this.begAddr,
-			-1,
-			fileFmt ),
-		this.begAddr,
-		begAddr + aCode.length - 1,
-		false,
-		false,
-		this.begAddr,
-		sAddr,
-		fileType,
-		fileDesc,
-		null );
-	}
-	catch( IOException ex ) {
-	  StringBuilder buf = new StringBuilder( 256 );
-	  buf.append( "Ein-/Ausgabefehler" );
-	  String msg = ex.getMessage();
-	  if( msg != null ) {
-	    if( msg.length() > 0 ) {
-	      buf.append( ":\n" );
-	      buf.append( msg );
-	    }
-	  }
-	  buf.append( (char) '\n' );
-	  appendToLog( buf.toString() );
-	}
-      } else {
-	appendToLog( "Programmcode kann nicht gespeichert werden,\n"
-			+ "da kein Dateiname ausgew\u00E4hlt wurde.\n" );
-      }
-    } else {
-      appendToLog( "Programmcode kann nicht gespeichert werden,\n"
-			+ "da kein einziges Byte erzeugt wurde.\n" );
-    }
-  }
-
-
-  private void labelsToDebugger( boolean secondSys )
-  {
-    AsmLabel[] labels = getSortedLabels();
-    if( labels != null ) {
-      if( labels.length > 0 ) {
-	boolean  done     = false;
-	DebugFrm debugFrm = null;
-	if( secondSys && (this.emuThread != null) ) {
-	  EmuSys emuSys = this.emuThread.getEmuSys();
-	  if( emuSys != null ) {
-	    if( emuSys.getSecondSystemName() != null ) {
-	      debugFrm = Main.getScreenFrm().openSecondDebugger();
-	      done     = true;
-	    }
-	  }
-	}
-	if( !done ) {
-	  debugFrm = Main.getScreenFrm().openPrimaryDebugger();
-	}
-	if( debugFrm != null ) {
-	  debugFrm.setLabels( labels );
-	}
-      }
-    }
-  }
-
-
-  private void labelsToReass( boolean secondSys )
-  {
-    AsmLabel[] labels = getSortedLabels();
-    if( labels != null ) {
-      if( labels.length > 0 ) {
-	boolean  done     = false;
-	ReassFrm reassFrm = null;
-	if( secondSys && (this.emuThread != null) ) {
-	  EmuSys emuSys = this.emuThread.getEmuSys();
-	  if( emuSys != null ) {
-	    if( emuSys.getSecondSystemName() != null ) {
-	      reassFrm = Main.getScreenFrm().openSecondReassembler();
-	      done     = true;
-	    }
-	  }
-	}
-	if( !done ) {
-	  reassFrm = Main.getScreenFrm().openPrimaryReassembler();
-	}
-	if( reassFrm != null ) {
-	  reassFrm.setLabels( labels );
-	}
-      }
-    }
-  }
-
-
   private void printLabels()
   {
     boolean    firstLabel = true;
@@ -2577,22 +2441,19 @@ public class Z80Assembler extends PrgThread
       for( int i = 0; i < labels.length; i++ ) {
 	if( firstLabel ) {
 	  firstLabel = false;
-	  appendToLog( "\nMarkentabelle:\n" );
+	  appendToOutLog( "\nMarkentabelle:\n" );
 	}
-	String        name = labels[ i ].getLabelName();
-	StringBuilder buf  = new StringBuilder( 13 + name.length() );
-	buf.append( "    " );
-	buf.append( labels[ i ].toHex16String() );
-	buf.append( "h   " );
-	buf.append( name );
-	buf.append( (char) '\n' );
-	appendToLog( buf.toString() );
+	appendToOutLog(
+		String.format(
+			"    %04Xh   %s\n",
+			labels[ i ].getLabelValue(),
+			labels[ i ].getLabelName() ) );
       }
     }
     if( firstLabel ) {
-      appendToLog( "Markentabelle ist leer.\n" );
+      appendToOutLog( "Markentabelle ist leer.\n" );
     } else {
-      appendToLog( "\n" );
+      appendToOutLog( "\n" );
     }
   }
 
@@ -2601,6 +2462,95 @@ public class Z80Assembler extends PrgThread
   {
     putWarning( "Numerischer Wert au\u00DFerhalb 8-Bit-Bereich:"
 					+ "Bits gehen verloren" );
+  }
+
+
+  private boolean writeCodeToFile()
+  {
+    boolean status = false;
+    byte[] codeBytes = this.codeOut;
+    if( codeBytes != null ) {
+      if( codeBytes.length == 0 ) {
+	codeBytes = null;
+      }
+    }
+    if( codeBytes != null ) {
+      File file = this.options.getCodeFile();
+      if( file != null ) {
+	int     begAddr = this.begAddr;
+	Integer sAddr   = this.entryAddr;
+	if( sAddr == null ) {
+	  sAddr = new Integer( begAddr );
+	}
+	String fileFmt  = FileSaver.BIN;
+	String fileDesc = "";
+	String fileName = file.getName();
+	if( fileName != null ) {
+	  String upperName = fileName.toUpperCase();
+	  int    pos       = fileName.lastIndexOf( '.' );
+	  if( pos > 0 ) {
+	    fileDesc = upperName.substring( 0, pos );
+	  }
+	  if( upperName.endsWith( ".HEX" ) ) {
+	    fileFmt = FileSaver.INTELHEX;
+	  } else if( upperName.endsWith( ".KCC" )
+		     || upperName.endsWith( ".KCM" ) )
+	  {
+	    fileFmt = FileSaver.KCC;
+	  } else if( upperName.endsWith( ".TAP" ) ) {
+	    fileFmt = FileSaver.KCTAP_0;
+	  } else if( upperName.endsWith( ".Z80" ) ) {
+	    fileFmt = FileSaver.HEADERSAVE;
+	  }
+	}
+	try {
+	  if( this.interactive ) {
+	    appendToOutLog( "Speichere Programmcode in Datei \'"
+				+ file.getPath() + "\'...\n" );
+	  }
+	  FileSaver.saveFile(
+		file,
+		fileFmt,
+		new LoadData(
+			codeBytes,
+			0,
+			codeBytes.length,
+			this.begAddr,
+			-1,
+			fileFmt ),
+		this.begAddr,
+		begAddr + codeBytes.length - 1,
+		false,
+		false,
+		this.begAddr,
+		sAddr,
+		'C',
+		fileDesc,
+		null );
+	  status = true;
+	}
+	catch( IOException ex ) {
+	  StringBuilder buf = new StringBuilder( 256 );
+	  buf.append( "Ein-/Ausgabefehler" );
+	  String msg = ex.getMessage();
+	  if( msg != null ) {
+	    if( !msg.isEmpty() ) {
+	      buf.append( ":\n" );
+	      buf.append( msg );
+	    }
+	  }
+	  buf.append( (char) '\n' );
+	  appendToErrLog( buf.toString() );
+	}
+      } else {
+	appendToErrLog( "Programmcode kann nicht gespeichert werden,\n"
+			+ "da kein Dateiname ausgew\u00E4hlt wurde.\n" );
+      }
+    } else {
+      appendToErrLog( "Programmcode kann nicht gespeichert werden,\n"
+			+ "da kein einziges Byte erzeugt wurde.\n" );
+    }
+    return status;
   }
 }
 
