@@ -6,13 +6,12 @@
  * Komponente fuer die Tastatur des Poly-Computers 880
  */
 
-package jkcemu.emusys.etc;
+package jkcemu.emusys.poly880;
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.Poly880;
 
@@ -26,8 +25,8 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 		"Der Poly-Computer 880 bietet einen",
 		"Schrittbetrieb auf Maschinenzyklusebene.",
 		"Dieser wird von JKCEMU aber nicht emuliert.",
-		"Aus diesem Grund haben die Tasten MON,",
-		"M/CYCL und CYCL auch keine Wirkung." };
+		"Aus diesem Grund haben die Tasten",
+		"M/CYCL und CYCL keine Wirkung." };
 
   private ScreenFrm screenFrm;
   private Poly880   poly880;
@@ -102,10 +101,10 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addHexKey( "4", "AF/MI", 0, 0x80 );
-    addHexKey( "5", "BC/MO", 3, 0x80 );
-    addHexKey( "6", "DE", 1, 0x80 );
-    addHexKey( "7", "HL", 2, 0x80 );
+    addHexKey( "4", "AF\'/MI", 0, 0x80 );
+    addHexKey( "5", "BC\'/MO", 3, 0x80 );
+    addHexKey( "6", "DE\'", 1, 0x80 );
+    addHexKey( "7", "HL\'", 2, 0x80 );
     this.curX += (KEY_SIZE / 2);
     addWhiteKey( "FCT", 5, 0x10 );
     addWhiteKey( "BACK", 3, 0x10 );
@@ -154,7 +153,7 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
   @Override
   public String getKeyboardName()
   {
-    return "PolyComputer-Tastatur";
+    return "Poly-Computer Tastatur";
   }
 
 
@@ -180,6 +179,9 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
       if( hits( this.resetKey, e ) ) {
 	this.screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
 	e.consume();
+      } else if( hits( this.monKey, e ) ) {
+	this.poly880.fireMonKey();
+	e.consume();
       } else {
 	super.mousePressed( e );
       }
@@ -196,10 +198,7 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
     for( KeyData key : this.keys ) {
       Image image = null;
       if( isKeySelected( key ) ) {
-	if( (key == this.mCyclKey)
-	    || (key == this.cyclKey)
-	    || (key == this.monKey) )
-	{
+	if( (key == this.mCyclKey) || (key == this.cyclKey) ) {
 	  info  = true;
 	  image = key.image;
 	} else {
@@ -343,12 +342,6 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 			int    value )
   {
     addKey( this.imgKeyWhite, text, null, null, col, value );
-  }
-
-
-  private static Image getImage( String resource )
-  {
-    return Main.getImage( resource );
   }
 }
 

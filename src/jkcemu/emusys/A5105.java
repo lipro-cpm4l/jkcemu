@@ -502,7 +502,7 @@ public class A5105 extends EmuSys implements
       this.pasteFast = false;
     }
     this.psg.die();
-    this.gdc.setGDCListener( this.vis );
+    this.gdc.setGDCListener( null );
     this.gdc.setVRAM( null );
     if( this.ramFloppy1 != null ) {
       this.ramFloppy1.deinstall();
@@ -618,7 +618,7 @@ public class A5105 extends EmuSys implements
   @Override
   public int getDefaultFloppyDiskDirBlocks()
   {
-    return this.fdc != null ? 3 : -1;
+    return this.fdc != null ? 2 : -1;
   }
 
 
@@ -1616,7 +1616,7 @@ public class A5105 extends EmuSys implements
     if( state != this.capsLockLED ) {
       this.capsLockLED = state;
       if( this.keyboardFld != null ) {
-	this.keyboardFld.fireRepaint();
+	this.keyboardFld.repaint();
       }
     }
   }
@@ -1649,7 +1649,7 @@ public class A5105 extends EmuSys implements
     if( state != this.tapeLED ) {
       this.tapeLED = state;
       if( this.keyboardFld != null ) {
-	this.keyboardFld.fireRepaint();
+	this.keyboardFld.repaint();
       }
     }
   }

@@ -28,7 +28,11 @@ import jkcemu.disk.*;
 import jkcemu.emusys.ac1_llc2.*;
 import jkcemu.emusys.kc85.KCAudioDataStream;
 import jkcemu.emusys.z1013.Z1013AudioDataStream;
-import jkcemu.text.EditFrm;
+import jkcemu.image.ImageFrm;
+import jkcemu.text.TextEditFrm;
+import jkcemu.tools.fileconverter.FileConvertFrm;
+import jkcemu.tools.hexdiff.HexDiffFrm;
+import jkcemu.tools.hexedit.HexEditFrm;
 
 
 public class FileBrowserFrm extends BasicFrm
@@ -40,6 +44,8 @@ public class FileBrowserFrm extends BasicFrm
 						TreeSelectionListener,
 						TreeWillExpandListener
 {
+  private static FileBrowserFrm instance = null;
+
   private ScreenFrm            screenFrm;
   private JMenuItem            mnuFileLoadIntoEmuOpt;
   private JMenuItem            mnuFileLoadIntoEmu;
@@ -136,497 +142,17 @@ public class FileBrowserFrm extends BasicFrm
   private boolean              filePasteState;
 
 
-  public FileBrowserFrm( ScreenFrm screenFrm )
+  public static void open( ScreenFrm screenFrm )
   {
-    this.screenFrm      = screenFrm;
-    this.lastActiveFld  = null;
-    this.clipboard      = null;
-    this.filePasteState = false;
-    setTitle( "JKCEMU Datei-Browser" );
-    Main.updIcon( this );
-
-
-    // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-
-    this.mnuFileLoadIntoEmuOpt = createJMenuItem(
-		"In Emulator laden mit...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_L, Event.CTRL_MASK ) );
-    mnuFile.add( this.mnuFileLoadIntoEmuOpt );
-
-    this.mnuFileLoadIntoEmu = createJMenuItem(
-		"In Emulator laden",
-		KeyStroke.getKeyStroke(
-				KeyEvent.VK_L,
-				Event.CTRL_MASK | Event.SHIFT_MASK) );
-    mnuFile.add( this.mnuFileLoadIntoEmu );
-
-    this.mnuFileStartInEmu = createJMenuItem(
-		"Im Emulator starten",
-		KeyStroke.getKeyStroke( KeyEvent.VK_R, Event.CTRL_MASK ) );
-    mnuFile.add( this.mnuFileStartInEmu );
-
-    this.mnuFileEditText = createJMenuItem(
-		"Im Texteditor \u00F6ffnen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_E, Event.CTRL_MASK ) );
-    mnuFile.add( this.mnuFileEditText );
-
-    this.mnuFileShowImage = createJMenuItem(
-		"Im Bildbetrachter anzeigen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_B, Event.CTRL_MASK ) );
-    mnuFile.add( this.mnuFileShowImage );
-
-    this.mnuFileEditHex = createJMenuItem( "Im Hex-Editor \u00F6ffnen..." );
-    mnuFile.add( this.mnuFileEditHex );
-
-    this.mnuFileDiffHex = createJMenuItem(
-				"Im Hex-Dateivergleicher \u00F6ffnen..." );
-    mnuFile.add( this.mnuFileDiffHex );
-
-    this.mnuFileConvert = createJMenuItem(
-				"Im Dateikonverter \u00F6ffnen..." );
-    mnuFile.add( this.mnuFileConvert );
-
-    this.mnuFileChecksum = createJMenuItem(
-				"Pr\u00FCfsumme/Hash-Wert berechnen..." );
-    mnuFile.add( this.mnuFileChecksum );
-
-    this.mnuFileAudioIn = createJMenuItem(
-				"In Audio/Kassette \u00F6ffnen..." );
-    mnuFile.add( this.mnuFileAudioIn );
-
-    this.mnuFilePlay = createJMenuItem( "Wiedergeben" );
-    mnuFile.add( this.mnuFilePlay );
-
-    JMenu mnuFilePlayAs = new JMenu( "Wiedergeben im" );
-    mnuFile.add( mnuFilePlayAs );
-
-    this.mnuFilePlayAC1 = createJMenuItem( "AC1-Format" );
-    mnuFilePlayAs.add( this.mnuFilePlayAC1 );
-
-    this.mnuFilePlayAC1Basic = createJMenuItem( "AC1-BASIC-Format" );
-    mnuFilePlayAs.add( this.mnuFilePlayAC1Basic );
-
-    this.mnuFilePlaySCCH = createJMenuItem( "AC1/LLC2-TurboSave-Format" );
-    mnuFilePlayAs.add( this.mnuFilePlaySCCH );
-
-    this.mnuFilePlayKC85 = createJMenuItem(
-				"KC-Format (HC900, KC85/2..5, KC-BASIC)" );
-    mnuFilePlayAs.add( this.mnuFilePlayKC85 );
-
-    this.mnuFilePlayZ9001 = createJMenuItem(
-				"KC-Format (KC85/1, KC87, Z9001)" );
-    mnuFilePlayAs.add( this.mnuFilePlayZ9001 );
-
-    this.mnuFilePlayZ1013 = createJMenuItem( "Z1013-Format" );
-    mnuFilePlayAs.add( this.mnuFilePlayZ1013 );
-
-    this.mnuFilePlayZ1013HS = createJMenuItem( "Z1013-Headersave-Format" );
-    mnuFilePlayAs.add( this.mnuFilePlayZ1013HS );
-
-    this.mnuFileUnpack = createJMenuItem( "Entpacken..." );
-    mnuFile.add( this.mnuFileUnpack );
-
-    JMenu mnuFilePack = new JMenu( "Packen in" );
-    mnuFile.add( mnuFilePack );
-
-    this.mnuFilePackTar = createJMenuItem( "TAR-Archiv..." );
-    mnuFilePack.add( this.mnuFilePackTar );
-
-    this.mnuFilePackTgz = createJMenuItem( "TGZ-Archiv..." );
-    mnuFilePack.add( this.mnuFilePackTgz );
-
-    this.mnuFilePackZip = createJMenuItem( "ZIP-Archiv..." );
-    mnuFilePack.add( this.mnuFilePackZip );
-    mnuFilePack.addSeparator();
-
-    this.mnuFilePackGZip = createJMenuItem( "GZip-Datei..." );
-    mnuFilePack.add( this.mnuFilePackGZip );
-    mnuFile.addSeparator();
-
-    this.mnuFileRAMFloppy1Load = createJMenuItem( "In RAM-Floppy 1 laden" );
-    mnuFile.add( this.mnuFileRAMFloppy1Load );
-
-    this.mnuFileRAMFloppy2Load = createJMenuItem( "In RAM-Floppy 2 laden" );
-    mnuFile.add( this.mnuFileRAMFloppy2Load );
-    mnuFile.addSeparator();
-
-    this.mnuFileCreateDir = createJMenuItem( "Verzeichnis erstellen..." );
-    mnuFile.add( this.mnuFileCreateDir );
-
-    this.mnuFileRename = createJMenuItem( "Umbenennen..." );
-    mnuFile.add( this.mnuFileRename );
-
-    this.mnuFileDelete = createJMenuItem(
-			"L\u00F6schen",
-			KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
-    mnuFile.add( this.mnuFileDelete );
-
-    this.mnuFileLastModified = createJMenuItem(
-				"\u00C4nderungszeitpunkt setzen..." );
-    mnuFile.add( this.mnuFileLastModified );
-    mnuFile.addSeparator();
-
-    this.mnuFileProp = createJMenuItem( "Eigenschaften..." );
-    mnuFile.add( this.mnuFileProp );
-    mnuFile.addSeparator();
-
-    this.mnuFileRefresh = createJMenuItem( "Aktualisieren" );
-    mnuFile.add( this.mnuFileRefresh );
-    mnuFile.addSeparator();
-
-    this.mnuFileClose = createJMenuItem( "Schlie\u00DFen" );
-    mnuFile.add( this.mnuFileClose );
-
-
-    // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-
-    this.mnuEditPathCopy = createJMenuItem(
-		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
-    mnuEdit.add( this.mnuEditPathCopy );
-
-    this.mnuEditFileCopy = createJMenuItem( "Kopieren" );
-    mnuEdit.add( this.mnuEditFileCopy );
-
-    this.mnuEditFilePaste = createJMenuItem( "Einf\u00FCgen" );
-    mnuEdit.add( this.mnuEditFilePaste );
-
-
-    // Menu Einstellungen
-    JMenu mnuSettings = new JMenu( "Einstellungen" );
-    mnuSettings.setMnemonic( KeyEvent.VK_E );
-
-    this.mnuHiddenFiles = new JCheckBoxMenuItem(
-					"Versteckte Dateien anzeigen",
-					false );
-    this.mnuHiddenFiles.addActionListener( this );
-    mnuSettings.add( this.mnuHiddenFiles );
-
-    this.mnuSortCaseSensitive = new JCheckBoxMenuItem(
-			"Gro\u00DF-/Kleinschreibung bei Sortierung beachten",
-			true );
-    this.mnuSortCaseSensitive.addActionListener( this );
-    mnuSettings.add( this.mnuSortCaseSensitive );
-
-    this.mnuLoadOnDoubleClick = new JCheckBoxMenuItem(
-		"Doppelklick f\u00FChrt Laden/Starten ohne Nachfrage aus",
-		false );
-    this.mnuLoadOnDoubleClick.addActionListener( this );
-    mnuSettings.add( this.mnuLoadOnDoubleClick );
-    mnuSettings.addSeparator();
-
-    JMenu mnuSettingsPreview = new JMenu(
-			"Max. Dateigr\u00F6\u00DFe f\u00FCr Vorschau" );
-    mnuSettings.add( mnuSettingsPreview );
-
-    ButtonGroup grpPreviewMaxFileSize = new ButtonGroup();
-
-    this.mnuNoPreview = new JRadioButtonMenuItem( "Keine Vorschau" );
-    this.mnuNoPreview.addActionListener( this );
-    grpPreviewMaxFileSize.add( this.mnuNoPreview );
-    mnuSettingsPreview.add( this.mnuNoPreview );
-
-    this.mnuPreviewMaxFileSize100K = new JRadioButtonMenuItem( "100 KByte" );
-    this.mnuPreviewMaxFileSize100K.addActionListener( this );
-    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize100K );
-    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize100K );
-
-    this.mnuPreviewMaxFileSize1M = new JRadioButtonMenuItem( "1 MByte" );
-    this.mnuPreviewMaxFileSize1M.addActionListener( this );
-    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize1M );
-    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize1M );
-
-    this.mnuPreviewMaxFileSize10M = new JRadioButtonMenuItem( "10 MByte" );
-    this.mnuPreviewMaxFileSize10M.addActionListener( this );
-    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize10M );
-    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize10M );
-
-    this.mnuPreviewMaxFileSize100M = new JRadioButtonMenuItem( "100 MByte" );
-    this.mnuPreviewMaxFileSize100M.addActionListener( this );
-    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize100M );
-    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize100M );
-
-    this.mnuPreviewNoFileSizeLimit = new JRadioButtonMenuItem( "Unbegrenzt" );
-    this.mnuPreviewNoFileSizeLimit.addActionListener( this );
-    grpPreviewMaxFileSize.add( this.mnuPreviewNoFileSizeLimit );
-    mnuSettingsPreview.add( this.mnuPreviewNoFileSizeLimit );
-
-
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
-    mnuHelp.add( this.mnuHelpContent );
-
-
-    // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuEdit );
-    mnuBar.add( mnuSettings );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
-
-
-    // Popup-Menu
-    this.mnuPopup = new JPopupMenu();
-
-    this.mnuPopupLoadIntoEmuOpt = createJMenuItem( "In Emulator laden mit..." );
-    this.mnuPopup.add( this.mnuPopupLoadIntoEmuOpt );
-
-    this.mnuPopupLoadIntoEmu = createJMenuItem( "In Emulator laden" );
-    this.mnuPopup.add( this.mnuPopupLoadIntoEmu );
-
-    this.mnuPopupStartInEmu = createJMenuItem( "Im Emulator starten" );
-    this.mnuPopup.add( this.mnuPopupStartInEmu );
-
-    this.mnuPopupEditText = createJMenuItem( "Im Texteditor \u00F6ffnen" );
-    this.mnuPopup.add( this.mnuPopupEditText );
-
-    this.mnuPopupShowImage = createJMenuItem( "Im Bildbetrachter anzeigen" );
-    this.mnuPopup.add( this.mnuPopupShowImage );
-
-    this.mnuPopupEditHex = createJMenuItem( "Im Hex-Editor \u00F6ffnen" );
-    this.mnuPopup.add( this.mnuPopupEditHex );
-
-    this.mnuPopupDiffHex = createJMenuItem(
-				"Im Hex-Dateivergleicher \u00F6ffnen" );
-    this.mnuPopup.add( this.mnuPopupDiffHex );
-
-    this.mnuPopupConvert = createJMenuItem(
-				"Im Dateikonverter \u00F6ffnen" );
-    this.mnuPopup.add( this.mnuPopupConvert );
-
-    this.mnuPopupChecksum = createJMenuItem(
-				"Pr\u00FCfsumme/Hash-Wert berechnen..." );
-    this.mnuPopup.add( this.mnuPopupChecksum );
-
-    this.mnuPopupAudioIn = createJMenuItem(
-				"In Audio/Kassette \u00F6ffnen..." );
-    this.mnuPopup.add( this.mnuPopupAudioIn );
-
-    this.mnuPopupPlay = createJMenuItem( "Wiedergeben" );
-    this.mnuPopup.add( this.mnuPopupPlay );
-
-    JMenu mnuPopupPlayAs = new JMenu( "Wiedergeben im" );
-    this.mnuPopup.add( mnuPopupPlayAs );
-
-    this.mnuPopupPlayAC1 = createJMenuItem( "AC1-Format" );
-    mnuPopupPlayAs.add( this.mnuPopupPlayAC1 );
-
-    this.mnuPopupPlayAC1Basic = createJMenuItem( "AC1-BASIC-Format" );
-    mnuPopupPlayAs.add( this.mnuPopupPlayAC1Basic );
-
-    this.mnuPopupPlaySCCH = createJMenuItem( "AC1/LLC2-TurboSave-Format" );
-    mnuPopupPlayAs.add( this.mnuPopupPlaySCCH );
-
-    this.mnuPopupPlayKC85 = createJMenuItem(
-				"KC-Format (HC900, KC85/2..5, KC-BASIC)" );
-    mnuPopupPlayAs.add( this.mnuPopupPlayKC85 );
-
-    this.mnuPopupPlayZ9001 = createJMenuItem(
-				"KC-Format (KC85/1, KC87, Z9001)" );
-    mnuPopupPlayAs.add( this.mnuPopupPlayZ9001 );
-
-    this.mnuPopupPlayZ1013 = createJMenuItem( "Z1013-Format" );
-    mnuPopupPlayAs.add( this.mnuPopupPlayZ1013 );
-
-    this.mnuPopupPlayZ1013HS = createJMenuItem( "Z1013-Headersave-Format" );
-    mnuPopupPlayAs.add( this.mnuPopupPlayZ1013HS );
-
-    this.mnuPopupUnpack = createJMenuItem( "Entpacken..." );
-    this.mnuPopup.add( this.mnuPopupUnpack );
-
-    JMenu mnuPopupPack = new JMenu( "Packen in" );
-    this.mnuPopup.add( mnuPopupPack );
-
-    this.mnuPopupPackTar = createJMenuItem( "TAR-Archiv..." );
-    mnuPopupPack.add( this.mnuPopupPackTar );
-
-    this.mnuPopupPackTgz = createJMenuItem( "TGZ-Archiv..." );
-    mnuPopupPack.add( this.mnuPopupPackTgz );
-
-    this.mnuPopupPackZip = createJMenuItem( "Zip-Archiv..." );
-    mnuPopupPack.add( this.mnuPopupPackZip );
-    mnuPopupPack.addSeparator();
-
-    this.mnuPopupPackGZip = createJMenuItem( "GZip-Datei..." );
-    mnuPopupPack.add( this.mnuPopupPackGZip );
-    this.mnuPopup.addSeparator();
-
-    this.mnuPopupRAMFloppy1Load = createJMenuItem( "In RAM-Floppy 1 laden" );
-    this.mnuPopup.add( this.mnuPopupRAMFloppy1Load );
-
-    this.mnuPopupRAMFloppy2Load = createJMenuItem( "In RAM-Floppy 2 laden" );
-    this.mnuPopup.add( this.mnuPopupRAMFloppy2Load );
-    this.mnuPopup.addSeparator();
-
-    this.mnuPopupPathCopy = createJMenuItem(
-		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
-    mnuPopup.add( this.mnuPopupPathCopy );
-
-    this.mnuPopupFileCopy = createJMenuItem( "Kopieren" );
-    mnuPopup.add( this.mnuPopupFileCopy );
-
-    this.mnuPopupFilePaste = createJMenuItem( "Einf\u00FCgen" );
-    mnuPopup.add( this.mnuPopupFilePaste );
-    this.mnuPopup.addSeparator();
-
-    this.mnuPopupCreateDir = createJMenuItem( "Verzeichnis erstellen..." );
-    this.mnuPopup.add( this.mnuPopupCreateDir );
-
-    this.mnuPopupRename = createJMenuItem( "Umbenennen..." );
-    this.mnuPopup.add( this.mnuPopupRename );
-
-    this.mnuPopupDelete = createJMenuItem(
-			"L\u00F6schen",
-			KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
-    this.mnuPopup.add( this.mnuPopupDelete );
-
-    this.mnuPopupLastModified = createJMenuItem(
-					"\u00C4nderungszeitpunkt setzen..." );
-    this.mnuPopup.add( this.mnuPopupLastModified );
-    this.mnuPopup.addSeparator();
-
-    this.mnuPopupProp = createJMenuItem( "Eigenschaften..." );
-    this.mnuPopup.add( this.mnuPopupProp );
-
-
-    // Fensterinhalt
-    setLayout( new GridBagLayout() );
-    GridBagConstraints gbc = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 0, 0, 0, 0 ),
-						0, 0 );
-
-
-    // Werkzeugleiste
-    JToolBar toolBar = new JToolBar();
-    toolBar.setFloatable( false );
-    toolBar.setBorderPainted( false );
-    toolBar.setOrientation( JToolBar.HORIZONTAL );
-    toolBar.setRollover( true );
-    add( toolBar, gbc );
-
-    this.btnLoadIntoEmu = createImageButton(
-			"/images/file/load.png",
-			"In Emulator laden" );
-    toolBar.add( this.btnLoadIntoEmu );
-
-    this.btnStartInEmu = createImageButton(
-			"/images/file/start.png",
-			"Im Emulator starten" );
-    toolBar.add( this.btnStartInEmu );
-
-    this.btnEditText = createImageButton(
-			"/images/file/edit.png",
-			"Im Texteditor \u00F6ffnen" );
-    toolBar.add( this.btnEditText );
-
-    this.btnShowImage = createImageButton(
-			"/images/file/image.png",
-			"Im Bildbetrachter anzeigen" );
-    toolBar.add( this.btnShowImage );
-
-    this.btnPlay = createImageButton(
-			"/images/file/play.png",
-			"Wiedergeben" );
-    toolBar.add( this.btnPlay );
-
-
-    // Dateibaum
-    DefaultTreeSelectionModel selModel = new DefaultTreeSelectionModel();
-    selModel.setSelectionMode(
-		TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION );
-
-    this.rootNode = new FileNode( null, null, true );
-    this.rootNode.refresh(
-			null,
-			true,
-			this.mnuHiddenFiles.isSelected(),
-			getFileComparator() );
-
-    this.treeModel = new DefaultTreeModel( this.rootNode );
-    this.tree      = new JTree( this.treeModel );
-    this.tree.setSelectionModel( selModel );
-    this.tree.setEditable( false );
-    this.tree.setRootVisible( false );
-    this.tree.setScrollsOnExpand( true );
-    this.tree.setShowsRootHandles( true );
-    this.tree.setCellRenderer( new FileTreeCellRenderer() );
-    this.tree.addFocusListener( this );
-    this.tree.addKeyListener( this );
-    this.tree.addMouseListener( this );
-    this.tree.addTreeSelectionListener( this );
-    this.tree.addTreeWillExpandListener( this );
-
-
-    // Dateivorschau
-    this.filePreviewFld = new FilePreviewFld( this );
-    this.filePreviewFld.setBorder( BorderFactory.createEtchedBorder() );
-
-    this.table = this.filePreviewFld.getJTable();
-    if( this.table != null ) {
-      this.table.addFocusListener( this );
-      this.table.addKeyListener( this );
-      this.table.addMouseListener( this );
-      ListSelectionModel lsm = this.table.getSelectionModel();
-      if( lsm != null ) {
-	lsm.addListSelectionListener( this );
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
       }
+    } else {
+      instance = new FileBrowserFrm( screenFrm );
     }
-
-
-    // Anzeigebereich
-    this.splitPane = new JSplitPane(
-				JSplitPane.HORIZONTAL_SPLIT,
-				new JScrollPane( this.tree ),
-				this.filePreviewFld );
-    this.splitPane.setContinuousLayout( false );
-    gbc.anchor  = GridBagConstraints.CENTER;
-    gbc.fill    = GridBagConstraints.BOTH;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.gridy++;
-    add( this.splitPane, gbc );
-
-
-    // Zwischenablage
-    this.clipboard = null;
-    Toolkit tk = getToolkit();
-    if( tk != null ) {
-      this.clipboard = tk.getSystemClipboard();
-      if( this.clipboard != null ) {
-	this.clipboard.addFlavorListener( this );
-      }
-    }
-
-
-    // Dateibaum als Drag-Quelle
-    DragSource dragSource = DragSource.getDefaultDragSource();
-    dragSource.createDefaultDragGestureRecognizer(
-			this.tree,
-			DnDConstants.ACTION_COPY,
-			this );
-
-
-    // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
-      setBoundsToDefaults();
-    }
-    setResizable( true );
-
-
-    // sonstiges
-    updActionButtons();
-    updFilePasteState( true );
+    instance.toFront();
+    instance.setVisible( true );
   }
 
 
@@ -635,6 +161,7 @@ public class FileBrowserFrm extends BasicFrm
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    refreshNodeFor( dirFile );
@@ -648,6 +175,7 @@ public class FileBrowserFrm extends BasicFrm
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    showErrorMsgInternal( msg );
@@ -894,7 +422,7 @@ public class FileBrowserFrm extends BasicFrm
 		   || (src == this.mnuPopupChecksum) )
 	  {
 	    rv = true;
-	    this.screenFrm.openFileChecksumFrm( getSelectedFiles() );
+	    FileChecksumFrm.open( getSelectedFiles() );
 	  }
 	  else if( (src == this.mnuFilePlay)
 		   || (src == this.mnuPopupPlay)
@@ -985,15 +513,23 @@ public class FileBrowserFrm extends BasicFrm
 		   || (src == this.mnuPopupRAMFloppy1Load) )
 	  {
 	    rv = true;
-	    doFileRAMFloppyLoad(
-			this.screenFrm.getEmuThread().getRAMFloppy1() );
+	    if( this.screenFrm != null ) {
+	      EmuThread emuThread = this.screenFrm.getEmuThread();
+	      if( emuThread != null ) {
+		doFileRAMFloppyLoad( emuThread.getRAMFloppy1() );
+	      }
+	    }
 	  }
 	  else if( (src == this.mnuFileRAMFloppy2Load)
 		   || (src == this.mnuPopupRAMFloppy2Load) )
 	  {
 	    rv = true;
-	    doFileRAMFloppyLoad(
-			this.screenFrm.getEmuThread().getRAMFloppy2() );
+	    if( this.screenFrm != null ) {
+	      EmuThread emuThread = this.screenFrm.getEmuThread();
+	      if( emuThread != null ) {
+		doFileRAMFloppyLoad( emuThread.getRAMFloppy2() );
+	      }
+	    }
 	  }
 	  else if( (src == this.mnuFileCreateDir)
 		   || (src == this.mnuPopupCreateDir) )
@@ -1056,13 +592,24 @@ public class FileBrowserFrm extends BasicFrm
 	  }
 	  else if( src == this.mnuHelpContent ) {
 	    rv = true;
-	    this.screenFrm.showHelp( "/help/tools/filebrowser.htm" );
+	    HelpFrm.open( "/help/tools/filebrowser.htm" );
 	  }
 	}
       }
     }
     catch( IOException ex ) {
       BasicDlg.showErrorDlg( this, ex );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      Main.checkQuit( this );
     }
     return rv;
   }
@@ -1159,14 +706,6 @@ public class FileBrowserFrm extends BasicFrm
       e.consume();
     else
       super.mouseReleased( e );
-  }
-
-
-  @Override
-  public void windowClosed( WindowEvent e )
-  {
-    if( e.getWindow() == this )
-      this.screenFrm.childFrameClosed( this );
   }
 
 
@@ -1290,15 +829,23 @@ public class FileBrowserFrm extends BasicFrm
 	    } else if( fileNode.isAudioFile() ) {
 	      AudioPlayer.play( this, file );
 	    } else if( fileNode.isImageFile() ) {
-	      this.screenFrm.showImageFile( file );
+	      ImageFrm.open( file );
 	    } else if( fileNode.isTextFile() ) {
-	      this.screenFrm.openTextFile( file );
+	      EmuThread emuThread = null;
+	      if( this.screenFrm != null ) {
+		emuThread = this.screenFrm.getEmuThread();
+	      }
+	      TextEditFrm.open( emuThread ).openFile( file );
 	    } else if( fileNode.fileNameEndsWith( ".prj" ) ) {
-	      Properties props = EditFrm.loadProject( file );
+	      Properties props = TextEditFrm.loadProject( file );
 	      if( props != null ) {
-		this.screenFrm.openProject( file, props );
+		EmuThread emuThread = null;
+		if( this.screenFrm != null ) {
+		  emuThread = this.screenFrm.getEmuThread();
+		}
+		TextEditFrm.open( emuThread ).openProject( file, props );
 	      } else {
-		throw new IOException(
+		  throw new IOException(
 			"Die PRJ-Datei ist keine JKCEMU-Projektdatei." );
 	      }
 	    } else {
@@ -1321,13 +868,15 @@ public class FileBrowserFrm extends BasicFrm
 		}
 	      }
 	      if( loadable ) {
-		LoadDlg.loadFile(
+		if( this.screenFrm != null ) {
+		  LoadDlg.loadFile(
 			this,		// owner
 			this.screenFrm,
 			file,
 			!this.mnuLoadOnDoubleClick.isSelected(),
 			true,		// startEnabled
 			fileNode.isStartableFile() );
+		}
 	      } else {
 		if( file.canRead() ) {
 		  try {
@@ -1355,18 +904,20 @@ public class FileBrowserFrm extends BasicFrm
 
   private void doFileLoadIntoEmu( boolean interactive, boolean startSelected )
   {
-    FileNode fileNode = getSelectedFileNode();
-    if( fileNode != null ) {
-      File file = fileNode.getFile();
-      if( file != null ) {
-	if( file.isFile() ) {
-	  LoadDlg.loadFile(
+    if( this.screenFrm != null ) {
+      FileNode fileNode = getSelectedFileNode();
+      if( fileNode != null ) {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  if( file.isFile() ) {
+	    LoadDlg.loadFile(
 			this,		// owner
 			this.screenFrm,
 			file,
 			interactive,
 			true,		// startEnabled
 			startSelected );
+	  }
 	}
       }
     }
@@ -1380,7 +931,7 @@ public class FileBrowserFrm extends BasicFrm
       File file = fileNode.getFile();
       if( file != null ) {
 	if( file.isFile() ) {
-	  this.screenFrm.openTextFile( file );
+	  TextEditFrm.open( null ).openFile( file );
 	}
       }
     }
@@ -1394,7 +945,7 @@ public class FileBrowserFrm extends BasicFrm
       File file = fileNode.getFile();
       if( file != null ) {
 	if( file.isFile() ) {
-	  this.screenFrm.openHexEditor( file );
+	  HexEditFrm.open( file );
 	}
       }
     }
@@ -1407,7 +958,7 @@ public class FileBrowserFrm extends BasicFrm
     if( files != null ) {
       int n = files.size();
       if( n > 0 ) {
-	this.screenFrm.addToHexDiff( files );
+	HexDiffFrm.open().addFiles( files );
       }
     }
   }
@@ -1420,7 +971,7 @@ public class FileBrowserFrm extends BasicFrm
       File file = fileNode.getFile();
       if( file != null ) {
 	if( file.isFile() ) {
-	  this.screenFrm.openFileConverter( file );
+	  FileConvertFrm.open( file );
 	}
       }
     }
@@ -1876,15 +1427,17 @@ public class FileBrowserFrm extends BasicFrm
 
   private void doFileAudioIn()
   {
-    FileNode fileNode = getSelectedFileNode();
-    if( fileNode != null ) {
-      if( fileNode.isAudioFile()
-	  || fileNode.isKC85TapFile()
-	  || fileNode.isZ9001TapFile() )
-      {
-	File file = fileNode.getFile();
-	if( file != null ) {
-	  this.screenFrm.openAudioInFile( file );
+    if( this.screenFrm != null ) {
+      FileNode fileNode = getSelectedFileNode();
+      if( fileNode != null ) {
+	if( fileNode.isAudioFile()
+	    || fileNode.isKC85TapFile()
+	    || fileNode.isZ9001TapFile() )
+	{
+	  File file = fileNode.getFile();
+	  if( file != null ) {
+	    this.screenFrm.openAudioInFile( file );
+	  }
 	}
       }
     }
@@ -1895,8 +1448,9 @@ public class FileBrowserFrm extends BasicFrm
   {
     FileNode fileNode = getSelectedFileNode();
     if( fileNode != null ) {
-      if( fileNode.isImageFile() )
-	this.screenFrm.showImageFile( fileNode.getFile() );
+      if( fileNode.isImageFile() ) {
+	ImageFrm.open( fileNode.getFile() );
+      }
     }
   }
 
@@ -2010,6 +1564,7 @@ public class FileBrowserFrm extends BasicFrm
 		    EventQueue.invokeLater(
 				new Runnable()
 				{
+				  @Override
 				  public void run()
 				  {
 				    selectTableRow( row );
@@ -2133,6 +1688,530 @@ public class FileBrowserFrm extends BasicFrm
       if( file != null )
 	(new FilePropDlg( this, file )).setVisible( true );
     }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private FileBrowserFrm( ScreenFrm screenFrm )
+  {
+    this.screenFrm      = screenFrm;
+    this.lastActiveFld  = null;
+    this.clipboard      = null;
+    this.filePasteState = false;
+    setTitle( "JKCEMU Datei-Browser" );
+    Main.updIcon( this );
+
+
+    // Menu Datei
+    JMenu mnuFile = new JMenu( "Datei" );
+    mnuFile.setMnemonic( KeyEvent.VK_D );
+
+    if( this.screenFrm != null ) {
+      this.mnuFileLoadIntoEmuOpt = createJMenuItem(
+		"In Emulator laden mit...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_L, Event.CTRL_MASK ) );
+      mnuFile.add( this.mnuFileLoadIntoEmuOpt );
+
+      this.mnuFileLoadIntoEmu = createJMenuItem(
+		"In Emulator laden",
+		KeyStroke.getKeyStroke(
+				KeyEvent.VK_L,
+				Event.CTRL_MASK | Event.SHIFT_MASK) );
+      mnuFile.add( this.mnuFileLoadIntoEmu );
+
+      this.mnuFileStartInEmu = createJMenuItem(
+		"Im Emulator starten",
+		KeyStroke.getKeyStroke( KeyEvent.VK_R, Event.CTRL_MASK ) );
+      mnuFile.add( this.mnuFileStartInEmu );
+    } else {
+      this.mnuFileLoadIntoEmuOpt = null;
+      this.mnuFileLoadIntoEmu    = null;
+      this.mnuFileStartInEmu     = null;
+    }
+
+    this.mnuFileEditText = createJMenuItem(
+		"Im Texteditor \u00F6ffnen...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_E, Event.CTRL_MASK ) );
+    mnuFile.add( this.mnuFileEditText );
+
+    this.mnuFileShowImage = createJMenuItem(
+		"Im Bildbetrachter anzeigen...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_B, Event.CTRL_MASK ) );
+    mnuFile.add( this.mnuFileShowImage );
+
+    this.mnuFileEditHex = createJMenuItem( "Im Hex-Editor \u00F6ffnen..." );
+    mnuFile.add( this.mnuFileEditHex );
+
+    this.mnuFileDiffHex = createJMenuItem(
+				"Im Hex-Dateivergleicher \u00F6ffnen..." );
+    mnuFile.add( this.mnuFileDiffHex );
+
+    this.mnuFileConvert = createJMenuItem(
+				"Im Dateikonverter \u00F6ffnen..." );
+    mnuFile.add( this.mnuFileConvert );
+
+    this.mnuFileChecksum = createJMenuItem(
+				"Pr\u00FCfsumme/Hash-Wert berechnen..." );
+    mnuFile.add( this.mnuFileChecksum );
+
+    this.mnuFileAudioIn = createJMenuItem(
+				"In Audio/Kassette \u00F6ffnen..." );
+    mnuFile.add( this.mnuFileAudioIn );
+
+    this.mnuFilePlay = createJMenuItem( "Wiedergeben" );
+    mnuFile.add( this.mnuFilePlay );
+
+    JMenu mnuFilePlayAs = new JMenu( "Wiedergeben im" );
+    mnuFile.add( mnuFilePlayAs );
+
+    this.mnuFilePlayAC1 = createJMenuItem( "AC1-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayAC1 );
+
+    this.mnuFilePlayAC1Basic = createJMenuItem( "AC1-BASIC-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayAC1Basic );
+
+    this.mnuFilePlaySCCH = createJMenuItem( "AC1/LLC2-TurboSave-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlaySCCH );
+
+    this.mnuFilePlayKC85 = createJMenuItem(
+				"KC-Format (HC900, KC85/2..5, KC-BASIC)" );
+    mnuFilePlayAs.add( this.mnuFilePlayKC85 );
+
+    this.mnuFilePlayZ9001 = createJMenuItem(
+				"KC-Format (KC85/1, KC87, Z9001)" );
+    mnuFilePlayAs.add( this.mnuFilePlayZ9001 );
+
+    this.mnuFilePlayZ1013 = createJMenuItem( "Z1013-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayZ1013 );
+
+    this.mnuFilePlayZ1013HS = createJMenuItem( "Z1013-Headersave-Format" );
+    mnuFilePlayAs.add( this.mnuFilePlayZ1013HS );
+
+    this.mnuFileUnpack = createJMenuItem( "Entpacken..." );
+    mnuFile.add( this.mnuFileUnpack );
+
+    JMenu mnuFilePack = new JMenu( "Packen in" );
+    mnuFile.add( mnuFilePack );
+
+    this.mnuFilePackTar = createJMenuItem( "TAR-Archiv..." );
+    mnuFilePack.add( this.mnuFilePackTar );
+
+    this.mnuFilePackTgz = createJMenuItem( "TGZ-Archiv..." );
+    mnuFilePack.add( this.mnuFilePackTgz );
+
+    this.mnuFilePackZip = createJMenuItem( "ZIP-Archiv..." );
+    mnuFilePack.add( this.mnuFilePackZip );
+    mnuFilePack.addSeparator();
+
+    this.mnuFilePackGZip = createJMenuItem( "GZip-Datei..." );
+    mnuFilePack.add( this.mnuFilePackGZip );
+    mnuFile.addSeparator();
+
+    if( this.screenFrm != null ) {
+      this.mnuFileRAMFloppy1Load = createJMenuItem( "In RAM-Floppy 1 laden" );
+      mnuFile.add( this.mnuFileRAMFloppy1Load );
+
+      this.mnuFileRAMFloppy2Load = createJMenuItem( "In RAM-Floppy 2 laden" );
+      mnuFile.add( this.mnuFileRAMFloppy2Load );
+      mnuFile.addSeparator();
+    } else {
+      this.mnuFileRAMFloppy1Load = null;
+      this.mnuFileRAMFloppy2Load = null;
+    }
+
+    this.mnuFileCreateDir = createJMenuItem( "Verzeichnis erstellen..." );
+    mnuFile.add( this.mnuFileCreateDir );
+
+    this.mnuFileRename = createJMenuItem( "Umbenennen..." );
+    mnuFile.add( this.mnuFileRename );
+
+    this.mnuFileDelete = createJMenuItem(
+			"L\u00F6schen",
+			KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
+    mnuFile.add( this.mnuFileDelete );
+
+    this.mnuFileLastModified = createJMenuItem(
+				"\u00C4nderungszeitpunkt setzen..." );
+    mnuFile.add( this.mnuFileLastModified );
+    mnuFile.addSeparator();
+
+    this.mnuFileProp = createJMenuItem( "Eigenschaften..." );
+    mnuFile.add( this.mnuFileProp );
+    mnuFile.addSeparator();
+
+    this.mnuFileRefresh = createJMenuItem( "Aktualisieren" );
+    mnuFile.add( this.mnuFileRefresh );
+    mnuFile.addSeparator();
+
+    this.mnuFileClose = createJMenuItem( "Schlie\u00DFen" );
+    mnuFile.add( this.mnuFileClose );
+
+
+    // Menu Bearbeiten
+    JMenu mnuEdit = new JMenu( "Bearbeiten" );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
+
+    this.mnuEditPathCopy = createJMenuItem(
+		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
+    mnuEdit.add( this.mnuEditPathCopy );
+
+    this.mnuEditFileCopy = createJMenuItem( "Kopieren" );
+    mnuEdit.add( this.mnuEditFileCopy );
+
+    this.mnuEditFilePaste = createJMenuItem( "Einf\u00FCgen" );
+    mnuEdit.add( this.mnuEditFilePaste );
+
+
+    // Menu Einstellungen
+    JMenu mnuSettings = new JMenu( "Einstellungen" );
+    mnuSettings.setMnemonic( KeyEvent.VK_E );
+
+    this.mnuHiddenFiles = new JCheckBoxMenuItem(
+					"Versteckte Dateien anzeigen",
+					false );
+    this.mnuHiddenFiles.addActionListener( this );
+    mnuSettings.add( this.mnuHiddenFiles );
+
+    this.mnuSortCaseSensitive = new JCheckBoxMenuItem(
+			"Gro\u00DF-/Kleinschreibung bei Sortierung beachten",
+			true );
+    this.mnuSortCaseSensitive.addActionListener( this );
+    mnuSettings.add( this.mnuSortCaseSensitive );
+
+    this.mnuLoadOnDoubleClick = new JCheckBoxMenuItem(
+		"Doppelklick f\u00FChrt Laden/Starten ohne Nachfrage aus",
+		false );
+    this.mnuLoadOnDoubleClick.addActionListener( this );
+    mnuSettings.add( this.mnuLoadOnDoubleClick );
+    mnuSettings.addSeparator();
+
+    JMenu mnuSettingsPreview = new JMenu(
+			"Max. Dateigr\u00F6\u00DFe f\u00FCr Vorschau" );
+    mnuSettings.add( mnuSettingsPreview );
+
+    ButtonGroup grpPreviewMaxFileSize = new ButtonGroup();
+
+    this.mnuNoPreview = new JRadioButtonMenuItem( "Keine Vorschau" );
+    this.mnuNoPreview.addActionListener( this );
+    grpPreviewMaxFileSize.add( this.mnuNoPreview );
+    mnuSettingsPreview.add( this.mnuNoPreview );
+
+    this.mnuPreviewMaxFileSize100K = new JRadioButtonMenuItem( "100 KByte" );
+    this.mnuPreviewMaxFileSize100K.addActionListener( this );
+    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize100K );
+    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize100K );
+
+    this.mnuPreviewMaxFileSize1M = new JRadioButtonMenuItem( "1 MByte" );
+    this.mnuPreviewMaxFileSize1M.addActionListener( this );
+    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize1M );
+    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize1M );
+
+    this.mnuPreviewMaxFileSize10M = new JRadioButtonMenuItem( "10 MByte" );
+    this.mnuPreviewMaxFileSize10M.addActionListener( this );
+    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize10M );
+    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize10M );
+
+    this.mnuPreviewMaxFileSize100M = new JRadioButtonMenuItem( "100 MByte" );
+    this.mnuPreviewMaxFileSize100M.addActionListener( this );
+    grpPreviewMaxFileSize.add( this.mnuPreviewMaxFileSize100M );
+    mnuSettingsPreview.add( this.mnuPreviewMaxFileSize100M );
+
+    this.mnuPreviewNoFileSizeLimit = new JRadioButtonMenuItem( "Unbegrenzt" );
+    this.mnuPreviewNoFileSizeLimit.addActionListener( this );
+    grpPreviewMaxFileSize.add( this.mnuPreviewNoFileSizeLimit );
+    mnuSettingsPreview.add( this.mnuPreviewNoFileSizeLimit );
+
+
+    // Menu Hilfe
+    JMenu mnuHelp = new JMenu( "?" );
+
+    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    mnuHelp.add( this.mnuHelpContent );
+
+
+    // Menu zusammenbauen
+    JMenuBar mnuBar = new JMenuBar();
+    mnuBar.add( mnuFile );
+    mnuBar.add( mnuEdit );
+    mnuBar.add( mnuSettings );
+    mnuBar.add( mnuHelp );
+    setJMenuBar( mnuBar );
+
+
+    // Popup-Menu
+    this.mnuPopup = new JPopupMenu();
+
+    if( this.screenFrm != null ) {
+      this.mnuPopupLoadIntoEmuOpt = createJMenuItem(
+					"In Emulator laden mit..." );
+      this.mnuPopup.add( this.mnuPopupLoadIntoEmuOpt );
+
+      this.mnuPopupLoadIntoEmu = createJMenuItem( "In Emulator laden" );
+      this.mnuPopup.add( this.mnuPopupLoadIntoEmu );
+
+      this.mnuPopupStartInEmu = createJMenuItem( "Im Emulator starten" );
+      this.mnuPopup.add( this.mnuPopupStartInEmu );
+    } else {
+      this.mnuPopupLoadIntoEmuOpt = null;
+      this.mnuPopupLoadIntoEmu    = null;
+      this.mnuPopupStartInEmu     = null;
+    }
+
+    this.mnuPopupEditText = createJMenuItem( "Im Texteditor \u00F6ffnen" );
+    this.mnuPopup.add( this.mnuPopupEditText );
+
+    this.mnuPopupShowImage = createJMenuItem( "Im Bildbetrachter anzeigen" );
+    this.mnuPopup.add( this.mnuPopupShowImage );
+
+    this.mnuPopupEditHex = createJMenuItem( "Im Hex-Editor \u00F6ffnen" );
+    this.mnuPopup.add( this.mnuPopupEditHex );
+
+    this.mnuPopupDiffHex = createJMenuItem(
+				"Im Hex-Dateivergleicher \u00F6ffnen" );
+    this.mnuPopup.add( this.mnuPopupDiffHex );
+
+    this.mnuPopupConvert = createJMenuItem(
+				"Im Dateikonverter \u00F6ffnen" );
+    this.mnuPopup.add( this.mnuPopupConvert );
+
+    this.mnuPopupChecksum = createJMenuItem(
+				"Pr\u00FCfsumme/Hash-Wert berechnen..." );
+    this.mnuPopup.add( this.mnuPopupChecksum );
+
+    this.mnuPopupAudioIn = createJMenuItem(
+				"In Audio/Kassette \u00F6ffnen..." );
+    this.mnuPopup.add( this.mnuPopupAudioIn );
+
+    this.mnuPopupPlay = createJMenuItem( "Wiedergeben" );
+    this.mnuPopup.add( this.mnuPopupPlay );
+
+    JMenu mnuPopupPlayAs = new JMenu( "Wiedergeben im" );
+    this.mnuPopup.add( mnuPopupPlayAs );
+
+    this.mnuPopupPlayAC1 = createJMenuItem( "AC1-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayAC1 );
+
+    this.mnuPopupPlayAC1Basic = createJMenuItem( "AC1-BASIC-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayAC1Basic );
+
+    this.mnuPopupPlaySCCH = createJMenuItem( "AC1/LLC2-TurboSave-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlaySCCH );
+
+    this.mnuPopupPlayKC85 = createJMenuItem(
+				"KC-Format (HC900, KC85/2..5, KC-BASIC)" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayKC85 );
+
+    this.mnuPopupPlayZ9001 = createJMenuItem(
+				"KC-Format (KC85/1, KC87, Z9001)" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayZ9001 );
+
+    this.mnuPopupPlayZ1013 = createJMenuItem( "Z1013-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayZ1013 );
+
+    this.mnuPopupPlayZ1013HS = createJMenuItem( "Z1013-Headersave-Format" );
+    mnuPopupPlayAs.add( this.mnuPopupPlayZ1013HS );
+
+    this.mnuPopupUnpack = createJMenuItem( "Entpacken..." );
+    this.mnuPopup.add( this.mnuPopupUnpack );
+
+    JMenu mnuPopupPack = new JMenu( "Packen in" );
+    this.mnuPopup.add( mnuPopupPack );
+
+    this.mnuPopupPackTar = createJMenuItem( "TAR-Archiv..." );
+    mnuPopupPack.add( this.mnuPopupPackTar );
+
+    this.mnuPopupPackTgz = createJMenuItem( "TGZ-Archiv..." );
+    mnuPopupPack.add( this.mnuPopupPackTgz );
+
+    this.mnuPopupPackZip = createJMenuItem( "Zip-Archiv..." );
+    mnuPopupPack.add( this.mnuPopupPackZip );
+    mnuPopupPack.addSeparator();
+
+    this.mnuPopupPackGZip = createJMenuItem( "GZip-Datei..." );
+    mnuPopupPack.add( this.mnuPopupPackGZip );
+    this.mnuPopup.addSeparator();
+
+    if( this.screenFrm != null ) {
+      this.mnuPopupRAMFloppy1Load = createJMenuItem( "In RAM-Floppy 1 laden" );
+      this.mnuPopup.add( this.mnuPopupRAMFloppy1Load );
+
+      this.mnuPopupRAMFloppy2Load = createJMenuItem( "In RAM-Floppy 2 laden" );
+      this.mnuPopup.add( this.mnuPopupRAMFloppy2Load );
+      this.mnuPopup.addSeparator();
+    } else {
+      this.mnuPopupRAMFloppy1Load = null;
+      this.mnuPopupRAMFloppy2Load = null;
+    }
+
+    this.mnuPopupPathCopy = createJMenuItem(
+		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
+    mnuPopup.add( this.mnuPopupPathCopy );
+
+    this.mnuPopupFileCopy = createJMenuItem( "Kopieren" );
+    mnuPopup.add( this.mnuPopupFileCopy );
+
+    this.mnuPopupFilePaste = createJMenuItem( "Einf\u00FCgen" );
+    mnuPopup.add( this.mnuPopupFilePaste );
+    this.mnuPopup.addSeparator();
+
+    this.mnuPopupCreateDir = createJMenuItem( "Verzeichnis erstellen..." );
+    this.mnuPopup.add( this.mnuPopupCreateDir );
+
+    this.mnuPopupRename = createJMenuItem( "Umbenennen..." );
+    this.mnuPopup.add( this.mnuPopupRename );
+
+    this.mnuPopupDelete = createJMenuItem(
+			"L\u00F6schen",
+			KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
+    this.mnuPopup.add( this.mnuPopupDelete );
+
+    this.mnuPopupLastModified = createJMenuItem(
+					"\u00C4nderungszeitpunkt setzen..." );
+    this.mnuPopup.add( this.mnuPopupLastModified );
+    this.mnuPopup.addSeparator();
+
+    this.mnuPopupProp = createJMenuItem( "Eigenschaften..." );
+    this.mnuPopup.add( this.mnuPopupProp );
+
+
+    // Fensterinhalt
+    setLayout( new GridBagLayout() );
+    GridBagConstraints gbc = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 0, 0, 0, 0 ),
+						0, 0 );
+
+
+    // Werkzeugleiste
+    JToolBar toolBar = new JToolBar();
+    toolBar.setFloatable( false );
+    toolBar.setBorderPainted( false );
+    toolBar.setOrientation( JToolBar.HORIZONTAL );
+    toolBar.setRollover( true );
+    add( toolBar, gbc );
+
+    if( this.screenFrm != null ) {
+      this.btnLoadIntoEmu = createImageButton(
+				"/images/file/load.png",
+				"In Emulator laden" );
+      toolBar.add( this.btnLoadIntoEmu );
+
+      this.btnStartInEmu = createImageButton(
+				"/images/file/start.png",
+				"Im Emulator starten" );
+      toolBar.add( this.btnStartInEmu );
+    } else {
+      this.btnLoadIntoEmu = null;
+      this.btnStartInEmu  = null;
+    }
+
+    this.btnEditText = createImageButton(
+			"/images/file/edit.png",
+			"Im Texteditor \u00F6ffnen" );
+    toolBar.add( this.btnEditText );
+
+    this.btnShowImage = createImageButton(
+			"/images/file/image.png",
+			"Im Bildbetrachter anzeigen" );
+    toolBar.add( this.btnShowImage );
+
+    this.btnPlay = createImageButton(
+			"/images/file/play.png",
+			"Wiedergeben" );
+    toolBar.add( this.btnPlay );
+
+
+    // Dateibaum
+    DefaultTreeSelectionModel selModel = new DefaultTreeSelectionModel();
+    selModel.setSelectionMode(
+		TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION );
+
+    this.rootNode = new FileNode( null, null, true );
+    this.rootNode.refresh(
+			null,
+			true,
+			this.mnuHiddenFiles.isSelected(),
+			getFileComparator() );
+
+    this.treeModel = new DefaultTreeModel( this.rootNode );
+    this.tree      = new JTree( this.treeModel );
+    this.tree.setSelectionModel( selModel );
+    this.tree.setEditable( false );
+    this.tree.setRootVisible( false );
+    this.tree.setScrollsOnExpand( true );
+    this.tree.setShowsRootHandles( true );
+    this.tree.setCellRenderer( new FileTreeCellRenderer() );
+    this.tree.addFocusListener( this );
+    this.tree.addKeyListener( this );
+    this.tree.addMouseListener( this );
+    this.tree.addTreeSelectionListener( this );
+    this.tree.addTreeWillExpandListener( this );
+
+
+    // Dateivorschau
+    this.filePreviewFld = new FilePreviewFld( this );
+    this.filePreviewFld.setBorder( BorderFactory.createEtchedBorder() );
+
+    this.table = this.filePreviewFld.getJTable();
+    if( this.table != null ) {
+      this.table.addFocusListener( this );
+      this.table.addKeyListener( this );
+      this.table.addMouseListener( this );
+      ListSelectionModel lsm = this.table.getSelectionModel();
+      if( lsm != null ) {
+	lsm.addListSelectionListener( this );
+      }
+    }
+
+
+    // Anzeigebereich
+    this.splitPane = new JSplitPane(
+				JSplitPane.HORIZONTAL_SPLIT,
+				new JScrollPane( this.tree ),
+				this.filePreviewFld );
+    this.splitPane.setContinuousLayout( false );
+    gbc.anchor  = GridBagConstraints.CENTER;
+    gbc.fill    = GridBagConstraints.BOTH;
+    gbc.weightx = 1.0;
+    gbc.weighty = 1.0;
+    gbc.gridy++;
+    add( this.splitPane, gbc );
+
+
+    // Zwischenablage
+    this.clipboard = null;
+    Toolkit tk = getToolkit();
+    if( tk != null ) {
+      this.clipboard = tk.getSystemClipboard();
+      if( this.clipboard != null ) {
+	this.clipboard.addFlavorListener( this );
+      }
+    }
+
+
+    // Dateibaum als Drag-Quelle
+    DragSource dragSource = DragSource.getDefaultDragSource();
+    dragSource.createDefaultDragGestureRecognizer(
+			this.tree,
+			DnDConstants.ACTION_COPY,
+			this );
+
+
+    // Fenstergroesse
+    if( !applySettings( Main.getProperties(), true ) ) {
+      setBoundsToDefaults();
+    }
+    setResizable( true );
+
+
+    // sonstiges
+    updActionButtons();
+    updFilePasteState( true );
   }
 
 
@@ -2604,28 +2683,19 @@ public class FileBrowserFrm extends BasicFrm
     if( nFiles > 1 ) {
       file = null;
     }
-    boolean stateEntries   = (nNodes > 0);
-    boolean stateOneEntry  = (nNodes == 1);
-    boolean stateOneDir    = ((nDirs == 1) && (nDirs == nNodes));
-    boolean stateOneFile   = ((nFiles == 1) && (nFiles == nNodes));
-    boolean stateFilesOnly = ((nFiles > 0) && (nFiles == nNodes));
-    boolean stateDirsFiles = ((nNodes > 0) && ((nFiles + nDirs) == nNodes));
+    boolean stateEntries    = (nNodes > 0);
+    boolean stateOneEntry   = (nNodes == 1);
+    boolean stateOneDir     = ((nDirs == 1) && (nDirs == nNodes));
+    boolean stateOneFile    = ((nFiles == 1) && (nFiles == nNodes));
+    boolean stateFilesOnly  = ((nFiles > 0) && (nFiles == nNodes));
+    boolean stateDirsFiles  = ((nNodes > 0) && ((nFiles + nDirs) == nNodes));
+    boolean stateStartable  = false;
+    boolean stateImage      = false;
+    boolean stateAudio      = false;
+    boolean stateText       = false;
+    boolean stateUnpackable = false;
     if( fileNode != null ) {
-      boolean isStartable = fileNode.isStartableFile();
-      this.mnuFileStartInEmu.setEnabled( isStartable );
-      this.mnuPopupStartInEmu.setEnabled( isStartable );
-      this.btnStartInEmu.setEnabled( isStartable );
-
-      boolean isImage = fileNode.isImageFile();
-      this.mnuFileShowImage.setEnabled( isImage );
-      this.mnuPopupShowImage.setEnabled( isImage );
-      this.btnShowImage.setEnabled( isImage );
-
-      boolean isAudio = fileNode.isAudioFile();
-      this.mnuFilePlay.setEnabled( isAudio );
-      this.mnuPopupPlay.setEnabled( isAudio );
-      this.btnPlay.setEnabled( isAudio );
-
+      boolean isAudio       = fileNode.isAudioFile();
       boolean isHS          = fileNode.isHeadersaveFile();
       boolean isBin         = fileNode.isBinFile();
       boolean isKCBasicHead = fileNode.isKCBasicHeadFile();
@@ -2669,18 +2739,6 @@ public class FileBrowserFrm extends BasicFrm
       this.mnuFileAudioIn.setEnabled( isAudio || isKC85Tap || isZ9001Tap );
       this.mnuPopupAudioIn.setEnabled( isAudio || isKC85Tap || isZ9001Tap );
 
-      boolean isText = (stateOneFile && !isImage && !isAudio);
-      this.mnuFileEditText.setEnabled( isText );
-      this.mnuPopupEditText.setEnabled( isText );
-      this.btnEditText.setEnabled( isText );
-
-      boolean isUnpackable = (fileNode.isArchiveFile()
-					|| fileNode.isCompressedFile()
-					|| fileNode.isNonPlainDiskFile()
-					|| fileNode.isPlainDiskFile());
-      this.mnuFileUnpack.setEnabled( isUnpackable );
-      this.mnuPopupUnpack.setEnabled( isUnpackable );
-
       this.mnuFileCreateDir.setEnabled( stateOneDir );
       this.mnuPopupCreateDir.setEnabled( stateOneDir );
 
@@ -2690,19 +2748,17 @@ public class FileBrowserFrm extends BasicFrm
       this.mnuFileProp.setEnabled( stateOneEntry );
       this.mnuPopupProp.setEnabled( stateOneEntry );
 
+      stateStartable  = (stateOneFile && fileNode.isStartableFile());
+      stateImage      = (stateOneFile && fileNode.isImageFile());
+      stateAudio      = (stateOneFile && isAudio);
+      stateText       = (stateOneFile && !stateImage && !stateAudio);
+      stateUnpackable = (stateOneFile
+				&& (fileNode.isArchiveFile()
+				    || fileNode.isCompressedFile()
+				    || fileNode.isNonPlainDiskFile()
+				    || fileNode.isPlainDiskFile()));
+
     } else {
-
-      this.mnuFileStartInEmu.setEnabled( false );
-      this.mnuPopupStartInEmu.setEnabled( false );
-      this.btnStartInEmu.setEnabled( false );
-
-      this.mnuFileShowImage.setEnabled( false );
-      this.mnuPopupShowImage.setEnabled( false );
-      this.btnShowImage.setEnabled( false );
-
-      this.mnuFilePlay.setEnabled( false );
-      this.mnuPopupPlay.setEnabled( false );
-      this.btnPlay.setEnabled( false );
 
       this.mnuFilePlayAC1.setEnabled( false );
       this.mnuPopupPlayAC1.setEnabled( false );
@@ -2728,13 +2784,6 @@ public class FileBrowserFrm extends BasicFrm
       this.mnuFileAudioIn.setEnabled( false );
       this.mnuPopupAudioIn.setEnabled( false );
 
-      this.mnuFileEditText.setEnabled( false );
-      this.mnuPopupEditText.setEnabled( false );
-      this.btnEditText.setEnabled( false );
-
-      this.mnuFileUnpack.setEnabled( false );
-      this.mnuPopupUnpack.setEnabled( false );
-
       this.mnuFileCreateDir.setEnabled( false );
       this.mnuPopupCreateDir.setEnabled( false );
 
@@ -2744,11 +2793,42 @@ public class FileBrowserFrm extends BasicFrm
       this.mnuFileProp.setEnabled( false );
       this.mnuPopupProp.setEnabled( false );
     }
-    this.mnuFileLoadIntoEmuOpt.setEnabled( stateOneFile );
-    this.mnuFileLoadIntoEmu.setEnabled( stateOneFile );
-    this.mnuPopupLoadIntoEmuOpt.setEnabled( stateOneFile );
-    this.mnuPopupLoadIntoEmu.setEnabled( stateOneFile );
-    this.btnLoadIntoEmu.setEnabled( stateOneFile );
+    if( this.mnuFileLoadIntoEmuOpt != null ) {
+      this.mnuFileLoadIntoEmuOpt.setEnabled( stateOneFile );
+    }
+    if( this.mnuFileLoadIntoEmu != null ) {
+      this.mnuFileLoadIntoEmu.setEnabled( stateOneFile );
+    }
+    if( this.mnuPopupLoadIntoEmuOpt != null ) {
+      this.mnuPopupLoadIntoEmuOpt.setEnabled( stateOneFile );
+    }
+    if( this.mnuPopupLoadIntoEmu != null ) {
+      this.mnuPopupLoadIntoEmu.setEnabled( stateOneFile );
+    }
+    if( this.btnLoadIntoEmu != null ) {
+      this.btnLoadIntoEmu.setEnabled( stateOneFile );
+    }
+    if( this.mnuFileStartInEmu != null ) {
+      this.mnuFileStartInEmu.setEnabled( stateStartable );
+    }
+    if( this.mnuPopupStartInEmu != null ) {
+      this.mnuPopupStartInEmu.setEnabled( stateStartable );
+    }
+    if( this.btnStartInEmu != null ) {
+      this.btnStartInEmu.setEnabled( stateStartable );
+    }
+
+    this.mnuFileShowImage.setEnabled( stateImage );
+    this.mnuPopupShowImage.setEnabled( stateImage );
+    this.btnShowImage.setEnabled( stateImage );
+
+    this.mnuFilePlay.setEnabled( stateAudio );
+    this.mnuPopupPlay.setEnabled( stateAudio );
+    this.btnPlay.setEnabled( stateAudio );
+
+    this.mnuFileEditText.setEnabled( stateText );
+    this.mnuPopupEditText.setEnabled( stateText );
+    this.btnEditText.setEnabled( stateText );
 
     this.mnuFileEditHex.setEnabled( stateOneFile );
     this.mnuPopupEditHex.setEnabled( stateOneFile );
@@ -2774,11 +2854,21 @@ public class FileBrowserFrm extends BasicFrm
     this.mnuFilePackZip.setEnabled( stateDirsFiles );
     this.mnuPopupPackZip.setEnabled( stateDirsFiles );
 
-    this.mnuFileRAMFloppy1Load.setEnabled( stateOneFile );
-    this.mnuPopupRAMFloppy1Load.setEnabled( stateOneFile );
+    this.mnuFileUnpack.setEnabled( stateUnpackable );
+    this.mnuPopupUnpack.setEnabled( stateUnpackable );
 
-    this.mnuFileRAMFloppy2Load.setEnabled( stateOneFile );
-    this.mnuPopupRAMFloppy2Load.setEnabled( stateOneFile );
+    if( this.mnuFileRAMFloppy1Load != null ) {
+      this.mnuFileRAMFloppy1Load.setEnabled( stateOneFile );
+    }
+    if( this.mnuPopupRAMFloppy1Load != null ) {
+      this.mnuPopupRAMFloppy1Load.setEnabled( stateOneFile );
+    }
+    if( this.mnuFileRAMFloppy2Load != null ) {
+      this.mnuFileRAMFloppy2Load.setEnabled( stateOneFile );
+    }
+    if( this.mnuPopupRAMFloppy2Load != null ) {
+      this.mnuPopupRAMFloppy2Load.setEnabled( stateOneFile );
+    }
 
     this.mnuFileLastModified.setEnabled( stateEntries );
     this.mnuPopupLastModified.setEnabled( stateEntries );

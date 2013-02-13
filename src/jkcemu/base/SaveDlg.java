@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -117,13 +117,12 @@ public class SaveDlg extends BasicDlg implements
     // Anfangsadresse
     panelMem.add( new JLabel( "Anfangsadresse:" ), gbcMem );
 
-    this.fldMemBegAddr = new JTextField( 5 );
-    this.fldMemBegAddr.addActionListener( this );
-    this.fldMemBegAddr.addFocusListener( this );
     this.docMemBegAddr = new HexDocument(
-				this.fldMemBegAddr,
 				4,
 				"Anfangsadresse des Speicherbereichs"  );
+    this.fldMemBegAddr = new JTextField( this.docMemBegAddr, "", 5 );
+    this.fldMemBegAddr.addActionListener( this );
+    this.fldMemBegAddr.addFocusListener( this );
     this.docMemBegAddr.addDocumentListener( this );
     if( begAddr >= 0 ) {
       this.fldMemBegAddr.setText( String.format( "%04X", begAddr ) );
@@ -140,12 +139,11 @@ public class SaveDlg extends BasicDlg implements
     gbcMem.gridx++;
     panelMem.add( new JLabel( "Endadresse:" ), gbcMem );
 
-    this.fldMemEndAddr = new JTextField( 5 );
-    this.fldMemEndAddr.addActionListener( this );
     this.docMemEndAddr = new HexDocument(
-				this.fldMemEndAddr,
 				4,
 				"Endadresse des Speicherbereichs"  );
+    this.fldMemEndAddr = new JTextField( this.docMemEndAddr, "", 5 );
+    this.fldMemEndAddr.addActionListener( this );
     this.docMemEndAddr.addDocumentListener( this );
     if( (begAddr >= 0) && (endAddr >= 0) ) {
       this.fldMemEndAddr.setText( String.format( "%04X", endAddr ) );
@@ -267,12 +265,11 @@ public class SaveDlg extends BasicDlg implements
     gbcFileHead.gridy++;
     panelFileHead.add( this.labelHeadBegAddr, gbcFileHead );
 
-    this.fldHeadBegAddr = new JTextField( 5 );
-    this.fldHeadBegAddr.addActionListener( this );
     this.docHeadBegAddr = new HexDocument(
-				this.fldHeadBegAddr,
 				4,
 				"Anfangsadresse in den Kopfdaten" );
+    this.fldHeadBegAddr = new JTextField( this.docHeadBegAddr, "", 5 );
+    this.fldHeadBegAddr.addActionListener( this );
     if( begAddr >= 0 ) {
       this.fldHeadBegAddr.setText( String.format( "%04X", begAddr ) );
     }
@@ -288,12 +285,11 @@ public class SaveDlg extends BasicDlg implements
     gbcFileHead.gridx++;
     panelFileHead.add( this.labelHeadStartAddr, gbcFileHead );
 
-    this.fldHeadStartAddr = new JTextField( 5 );
-    this.fldHeadStartAddr.addActionListener( this );
     this.docHeadStartAddr = new HexDocument(
-				this.fldHeadStartAddr,
 				4,
 				"Startadresse in den Kopfdaten" );
+    this.fldHeadStartAddr = new JTextField( this.docHeadStartAddr, "", 5 );
+    this.fldHeadStartAddr.addActionListener( this );
     gbcFileHead.fill    = GridBagConstraints.HORIZONTAL;
     gbcFileHead.weightx = 0.5;
     gbcFileHead.gridx++;
@@ -545,7 +541,7 @@ public class SaveDlg extends BasicDlg implements
       }
       else if( src == this.btnHelp ) {
 	rv = true;
-	this.screenFrm.showHelp( "/help/loadsave.htm" );
+	HelpFrm.open( "/help/loadsave.htm" );
       }
       else if( src == this.btnCancel ) {
 	rv = true;

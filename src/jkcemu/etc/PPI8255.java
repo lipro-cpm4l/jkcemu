@@ -1,9 +1,9 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Emulation des Programmable Periperal Interface 8255
+ * Emulation des Programmable Peripheral Interface 8255
  */
 
 package jkcemu.etc;

@@ -23,7 +23,6 @@
  * Die Tastatur kennt zwei Betriebsmodi: CAOS und MicroDOS (PC-Mode)
  * Im PC-Mode sind einige Tasten anders belegt.
  * Ausserdem gibt es auch Zwei-Byte-Tastencodes.
- * F
  */
 
 package jkcemu.emusys.kc85;
@@ -31,7 +30,6 @@ package jkcemu.emusys.kc85;
 import java.awt.*;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.KC85;
 
@@ -94,15 +92,15 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
   public D005KeyboardFld( KC85 kc85 )
   {
     super( kc85, 69 );
-    this.imgKey40x40  = Main.getImage( "/images/keyboard/key40x40.png" );
-    this.imgKey50x40  = Main.getImage( "/images/keyboard/key50x40.png" );
-    this.imgKey60x40  = Main.getImage( "/images/keyboard/key60x40.png" );
-    this.imgKey320x40 = Main.getImage( "/images/keyboard/key320x40.png" );
-    this.imgLeft      = Main.getImage( "/images/keyboard/left.png" );
-    this.imgRight     = Main.getImage( "/images/keyboard/right.png" );
-    this.imgUp        = Main.getImage( "/images/keyboard/up.png" );
-    this.imgDown      = Main.getImage( "/images/keyboard/down.png" );
-    this.imgPoint     = Main.getImage( "/images/keyboard/point.png" );
+    this.imgKey40x40  = getImage( "/images/keyboard/key40x40.png" );
+    this.imgKey50x40  = getImage( "/images/keyboard/key50x40.png" );
+    this.imgKey60x40  = getImage( "/images/keyboard/key60x40.png" );
+    this.imgKey320x40 = getImage( "/images/keyboard/key320x40.png" );
+    this.imgLeft      = getImage( "/images/keyboard/left.png" );
+    this.imgRight     = getImage( "/images/keyboard/right.png" );
+    this.imgUp        = getImage( "/images/keyboard/up.png" );
+    this.imgDown      = getImage( "/images/keyboard/down.png" );
+    this.imgPoint     = getImage( "/images/keyboard/point.png" );
 
     this.colorLEDRedOn  = Color.red;
     this.colorLEDRedOff = new Color( 120, 60, 60 );
@@ -311,14 +309,14 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
   {
     this.capsLockMode = false;
     this.pcMode       = false;
-    fireRepaint();
+    repaint();
   }
 
 
   @Override
   public String getKeyboardName()
   {
-    return "KC85 Komforttastatur D005";
+    return "Komforttastatur D005";
   }
 
 

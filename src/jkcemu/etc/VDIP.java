@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -1247,6 +1247,7 @@ public class VDIP implements
   {
     String fName = nextArgFileName( true );
     synchronized( this.lockObj ) {
+      putResultByte( '\r' );	// Leerzeile, auch bei Fehlermeldung
       checkDisk();
       if( (this.raf != null) && this.fileWrite ) {
 	throwFileOpen();
@@ -1304,8 +1305,9 @@ public class VDIP implements
 
   private void execFreeSpace( boolean extendedOutput ) throws VdipException
   {
-    long freeSpace = 0;
-    File file      = this.curDir;
+    long    freeSpace = 0;
+    boolean found     = false;
+    File    file      = this.curDir;
     if( file == null ) {
       file = this.rootDir;
     }
@@ -1327,9 +1329,13 @@ public class VDIP implements
 	}
       }
       if( (freeSpace > 0) || (file.getTotalSpace() > 0) ) {
+	found = true;
 	break;
       }
       file = file.getParentFile();
+    }
+    if( !found ) {
+      throwCommandFailed();
     }
     this.freeDiskSpace = new Long( freeSpace );
     if( extendedOutput ) {
@@ -1958,7 +1964,7 @@ public class VDIP implements
     if( err ) {
       /*
        * Fehlermeldung "Command Failed" ist fuer dieses Kommando
-       * nicht dokumentiert, deshalb wrid "Disk Full" gemeldet.
+       * nicht dokumentiert, deshalb wird "Disk Full" gemeldet.
        */
       throw new VdipException( VdipErr.DISK_FULL );
     }
@@ -2501,7 +2507,7 @@ public class VDIP implements
     fireRunIOTask();
     closeFile();
     this.pio.putInValuePortB( 0xF7, 0xFF );
-    putString( "\rVer 03.68VDAPF On-Line:\r" );
+    putString( "\rVer 03.69VDAPF On-Line:\r" );
     if( this.rootDir != null ) {
       putDiskDetected();
     }

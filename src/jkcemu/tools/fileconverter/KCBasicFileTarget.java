@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -61,6 +61,12 @@ public class KCBasicFileTarget extends AbstractConvertTarget
       out.write( len >> 8 );
       out.write( this.dataBytes, this.offs, len );
       out.write( 0x03 );
+      int n = (len + 3) % 0x80;
+      if( n > 0 ) {
+	for( int i = n; i < 0x80; i++ ) {
+	  out.write( 0 );
+	}
+      }
       out.close();
       out = null;
     }

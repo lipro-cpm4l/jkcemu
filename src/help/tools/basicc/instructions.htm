@@ -1,723 +1,2006 @@
 <html>
 <body>
-  <h1>BASIC-Anweisungen</h1>
-    Nachfolgend werden die BASIC-Anweisungen beschrieben,
-    die der Compiler versteht.
-    Es wird auch auf die Unterschiede zum AC1-Mini-BASIC
-    und Z1013-Tiny-BASIC eingegangen.
-  <br/><br/>
-    Wenn zu einer Anweisung keine Syntax angegeben ist,
-    hat die Anweisung keine Argumente.
-  <br/><br/>
-    <table border="1">
-      <tr>
-	<th nowrap>Anweisung</th>
-	<th nowrap>Bedeutung</th>
-	<th nowrap>AC1-Mini-BASIC</th>
-	<th nowrap>Z1013-Tiny-BASIC</th>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#byte"><tt>BYTE</tt></a></td>
-	<td>Hexadezimale Ausgabe eines 8-Bit-Wertes auf dem Bildschirm</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#call"><tt>CALL</tt></a></td>
-	<td>Aufruf eines in Maschinencode vorliegenden Unterprogramms</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#cls"><tt>CLS</tt></a></td>
-	<td>Bildschirm l&ouml;schen</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#data"><tt>DATA</tt></a></td>
-	<td>
-	  Angabe von numerischen Werten,
-	  die mit READ gelesen werden k&ouml;nnen
-	</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#doke"><tt>DOKE</tt></a></td>
-	<td>16-Bit-Wert in den Arbeitsspeicher schreiben</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#end"><tt>END</tt></a></td>
-	<td>Beenden des BASIC-Programms</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#for"><tt>FOR</tt></a></td>
-	<td>Beginn einer Schleife</td>
-	<td>nein</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#gosub"><tt>GOSUB</tt></a></td>
-	<td>Aufruf eines Unterprogramms</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#goto"><tt>GOTO</tt></a></td>
-	<td>Spung zu einer anderen Programmstelle</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#in_string"><tt>I$</tt></a></td>
-	<td>Eingabe einer Zeichenkette</td>
-	<td>nein</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#if"><tt>IF</tt></a></td>
-	<td>Bedingte Verzweigung</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#input"><tt>INPUT</tt></a></td>
-	<td>Eingabe von Zahlen</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#let"><tt>LET</tt></a></td>
-	<td>Einer Variablen einen Wert zuweisen</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#next"><tt>NEXT</tt></a></td>
-	<td>Ende einer FOR-Schleife</td>
-	<td>nein</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#out_string"><tt>O$</tt></a></td>
-	<td>Ausgabe einer Zeichenkette auf dem Bildschirm</td>
-	<td>nein</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#out"><tt>OUT</tt></a></td>
-	<td>Ausgabe eines Wertes an einem Ausgabetor (Port)</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#outchar"><tt>OUTCHAR</tt></a></td>
-	<td>Ausgabe eines einzelnen Zeichens auf dem Bildschirm</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#poke"><tt>POKE</tt></a></td>
-	<td>8-Bit-Wert in den Arbeitsspeicher schreiben</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#print"><tt>PRINT</tt></a></td>
-	<td>Ausgabe von Text und Zahlen auf dem Bildschirm</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#read"><tt>READ</tt></a></td>
-	<td>Lesen von Werten aus mit DATA angegeben Daten</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#restore"><tt>RESTORE</tt></a></td>
-	<td>Setzen oder Zur&uuml;cksetzen der Leseposition f&uuml;r READ</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#rem"><tt>REM</tt></a></td>
-	<td>Kommentar</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#return"><tt>RETURN</tt></a></td>
-	<td>Ende eines Unterprogramms</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#stop"><tt>STOP</tt></a></td>
-	<td>Beenden des BASIC-Programms</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#tab"><tt>TAB</tt></a></td>
-	<td>Ausgabe von Leerzeichen auf dem Bildschirm</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr valign="top">
-	<td><a href="instructions.htm#word"><tt>WORD</tt></a></td>
-	<td>Hexadezimale Ausgabe eines 16-Bit-Wertes auf dem Bildschirm</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-    </table>
-  <br/><br/>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
-  <h2>Erl&auml;uterungen zu den Anweisungen</h2>
-    In spitzen Klammern eingeschlossene Elemente dienen als Platzhalter
-    und sind entsprechend zu ersetzten.
-    In eckigen Klammern eingeschlossene Elemente sind optional
-    und k&ouml;nnen weggelassen werden.
-  <br/><br/>
+ <h2>Anweisungen</h2>
+  Nachfolgend werden die BASIC-Anweisungen beschrieben,
+  die der Compiler versteht.
+  Wenn zu einer Anweisung keine Syntax angegeben ist,
+  hat die Anweisung keine Argumente.
+ <br/><br/>
+  <table border="1">
+   <tr><th nowrap>Anweisung</th><th nowrap>Bedeutung</th></tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#asm"><tt>ASM</tt></a></td>
+    <td>Assemblerquelltext einf&uuml;gen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#border"><tt>BORDER</tt></a></td>
+    <td>Randfarbe setzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#call"><tt>CALL</tt></a></td>
+    <td>Aufruf eines in Maschinencode vorliegenden Unterprogramms</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#circle"><tt>CIRCLE</tt></a></td>
+    <td>Kreis zeichnen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#cls"><tt>CLS</tt></a></td>
+    <td>Bildschirm l&ouml;schen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#color"><tt>COLOR</tt></a></td>
+    <td>Farben setzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#cursor"><tt>CURSOR</tt></a></td>
+    <td>Cursor aus- oder einschalten</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#data"><tt>DATA</tt></a></td>
+    <td>
+     Angabe von numerischen Werten,
+     die mit READ gelesen werden k&ouml;nnen
+    </td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#declare"><tt>DECLARE</tt></a></td>
+    <td>Benutzerdefinierte Funktion oder Prozedur deklarieren</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#defusr"><tt>DEF</tt></a></td>
+    <td>Adresse einer USR-Funktion festlegen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#defusr"><tt>DEFUSR</tt></a></td>
+    <td>Adresse einer USR-Funktion festlegen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#dim"><tt>DIM</tt></a></td>
+    <td>Feldvariable anlegen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#do"><tt>DO</tt></a></td>
+    <td>Beginn einer DO-Schleife</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#doke"><tt>DOKE</tt></a></td>
+    <td>16-Bit-Wert in den Arbeitsspeicher schreiben</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#draw"><tt>DRAW</tt></a></td>
+    <td>Linie zeichnen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#drawr"><tt>DRAWR</tt></a></td>
+    <td>Linie zeichnen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#if"><tt>ELSE</tt></a></td>
+    <td>Teil einer IF-Anweisung</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#if"><tt>ELSEIF</tt></a></td>
+    <td>Weitere Verzweigung in einer IF-Anweisung</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#end"><tt>END</tt></a></td>
+    <td>Funktion, Prozedur oder BASIC-Programm beenden</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#if"><tt>ENDIF</tt></a></td>
+    <td>Ende einer IF-Anweisung</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#exit"><tt>EXIT</tt></a></td>
+    <td>Vorzeitiges Verlassen einer Schleife</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#for"><tt>FOR</tt></a></td>
+    <td>Beginn einer FOR-Schleife</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#function"><tt>FUNCTION</tt></a></td>
+    <td>Implementierung einer benutzerdefinierten Funktion</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#gosub"><tt>GOSUB</tt></a></td>
+    <td>Aufruf eines Unterprogramms</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#goto"><tt>GOTO</tt></a></td>
+    <td>Spung zu einer anderen Programmstelle</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#if"><tt>IF</tt></a></td>
+    <td>Bedingte Verzweigung</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#ink"><tt>INK</tt></a></td>
+    <td>Vordergrundfarbe setzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#input"><tt>INPUT</tt></a></td>
+    <td>Eingabe von Zahlen und Zeichenkette</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#label"><tt>LABEL</tt></a></td>
+    <td>Text im Grafikmodus ausgeben</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#let"><tt>LET</tt></a></td>
+    <td>Einer Variable einen Wert zuweisen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#line"><tt>LINE</tt></a></td>
+    <td>Linie oder Rechteck zeichnen</td>
+   </tr>
+   <tr valign="top">
+    <td>
+     <a href="instructions.htm#line_input"><tt>LINE&nbsp;INPUT</tt></a>
+    </td>
+    <td>Eingabe einer Textzeile</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#local"><tt>LOCAL</tt></a></td>
+    <td>Lokale Variablen deklarieren</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#locate"><tt>LOCATE</tt></a></td>
+    <td>Cursor positionieren</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#loop"><tt>LOOP</tt></a></td>
+    <td>Ende einer DO-Schleife</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#move"><tt>MOVE</tt></a></td>
+    <td>Grafik-Cursor absolut positionieren</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#mover"><tt>MOVER</tt></a></td>
+    <td>Grafik-Cursor relativ positionieren</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#next"><tt>NEXT</tt></a></td>
+    <td>Ende einer FOR-Schleife</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#on_gosub"><tt>ON...GOSUB</tt></a></td>
+    <td>Aufruf eines Unterprogramms aus einer Liste von Unterprogrammen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#on_goto"><tt>ON...GOTO</tt></a></td>
+    <td>
+     Sprung zu einer Zeile aus einer Liste von Zeilennummern oder Marken
+    </td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#out"><tt>OUT</tt></a></td>
+    <td>Ausgabe eines Wertes an einem Ausgabetor (Port)</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#paper"><tt>PAPER</tt></a></td>
+    <td>Hintergrundfarbe setzen</td>
+   </tr>
+   <tr valign="top">
+    <td>
+     <a href="instructions.htm#password_input"><tt>PASSWORD&nbsp;INPUT</tt></a>
+    </td>
+    <td>Eingabe eines Kennworts</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#pause"><tt>PAUSE</tt></a></td>
+    <td>Programm f&uuml;r eine vorgegebene Zeit anhalten</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#pen"><tt>PEN</tt></a></td>
+    <td>Grafikstift (Art des Pixelsetzens) festlegen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#plot"><tt>PLOT</tt></a></td>
+    <td>Grafik-Cursor absolut positionieren und Pixel setzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#plotr"><tt>PLOTR</tt></a></td>
+    <td>Grafik-Cursor relativ positionieren und Pixel setzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#poke"><tt>POKE</tt></a></td>
+    <td>8-Bit-Wert in den Arbeitsspeicher schreiben</td>
+   </tr>
+   <tr valign="top">
+    <td>
+     <a href="instructions.htm#preset"><tt>PRESET</tt></a>
+    </td>
+    <td>Pixel auf dem Bildschirm zur&uuml;cksetzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#print"><tt>PRINT</tt></a></td>
+    <td>Ausgabe von Text und Zahlen auf dem Bildschirm</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#pset"><tt>PSET</tt></a></td>
+    <td>Pixel auf dem Bildschirm setzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#read"><tt>READ</tt></a></td>
+    <td>Lesen von Werten aus mit DATA angegeben Daten</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#rem"><tt>REM</tt></a></td>
+    <td>Kommentar</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#restore"><tt>RESTORE</tt></a></td>
+    <td>Setzen oder Zur&uuml;cksetzen der Leseposition f&uuml;r READ</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#return"><tt>RETURN</tt></a></td>
+    <td>Ende eines Unterprogramms</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#screen"><tt>SCREEN</tt></a></td>
+    <td>Einstellen eines Bildschirm- bzw. Grafikmodus</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#sub"><tt>SUB</tt></a></td>
+    <td>Implementierung einer benutzerdefinierten Prozedur</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#wait"><tt>WAIT</tt></a></td>
+    <td>Warten auf einen bestimmten Wert an einem Eingabetor</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#wend"><tt>WEND</tt></a></td>
+    <td>Ende einer WHILE-Schleife</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#while"><tt>WHILE</tt></a></td>
+    <td>Beginn einer WHILE-Schleife</td>
+   </tr>
+  </table>
+ <br/><br/>
 
-  <h3><a name="byte">BYTE</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>BYTE &nbsp; &lt;numerischer Ausdruck&gt;</td>
-      </tr>
-    </table>
+ <h3>Erl&auml;uterungen zu den Anweisungen</h3>
+  In spitzen Klammern eingeschlossene Elemente dienen als Platzhalter
+  und sind entsprechend zu ersetzten.
+  In eckigen Klammern eingeschlossene Elemente sind optional
+  und k&ouml;nnen weggelassen werden.
+ <br/><br/>
+
+ <h3><a name="asm">ASM</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>ASM</tt> [ <tt>CODE</tt> ] &nbsp;&lt;Zeichenkette&gt;
+     [, &lt;Zeichenkette&gt; [, ...]]<br/>
+     <tt>ASM</tt> <tt>DATA</tt> &nbsp;&lt;Zeichenkette&gt;
+     [, &lt;Zeichenkette&gt; [, ...]]<br/>
+     <tt>ASM</tt> <tt>BSS</tt> &nbsp;&lt;Zeichenkette&gt;
+     [, &lt;Zeichenkette&gt; [, ...]]<br/>
+    </td>
+   </tr>
+   <tr><td>Zeichenkette:</td><td>String-Literal</td></tr>
+  </table>
+ <br/>
+  Mit der ASM-Anweisung kann man im BASIC-Programm
+  eigene Assemblerroutinen schreiben.
+  Dabei werden die angegebenen Zeichenketten unver&auml;ndert
+  in Form von jeweils einer Zeile in den vom Compiler erzeugten
+  Assemblerquelltext eingef&uuml;gt.
+ <br/><br/>
+  Die erste Version mit dem Schl&uuml;sselwort CODE
+  f&uuml;gt den Assemblertext an der aktuellen Stelle im Code-Segment ein.
+  Das Schl&uuml;sselwort CODE kann auch weggelassen werden.
+  Beim Schl&uuml;sselwort DATA wird der Assemblercode
+  an das Datensegment angeh&auml;ngt.
+  In den Zeichenketten sollten deshalb nur die Mnemoniks
+  DB und DW bzw. deren &auml;quivalente Pseudobefehle
+  vorkommen.
+  Bei BSS wird der Assemblercode in das Segment f&uuml;r
+  die Speicherzellen geschrieben und sollte deshalb nur
+  DS-Mnemoniks enthalten.
+ <br/><br/>
+  <b>Achtung!</b> Diese ASM-Anweisung greift direkt
+  in die Programmcodeerzeugung ein und ist deshalb nur
+  f&uuml;r Experten gedacht, die genau wissen, was sie tun!
+ <br/><br/>
+
+ <h3><a name="border">BORDER</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">BORDER&nbsp;&lt;numerischer Ausdruck&gt;</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung setzt die Farbe des Bildschirmrandes.
+  Die Nummer der Farbe h&auml;ngt vom Zielsystem ab.
+  Zum Schreiben von portablen Quelltext kann man die Nummer der Farbe
+  auch mit einer Farbfunktion ermitteln, z.B.:
+ <br/><br/>
+  <tt>&nbsp;BORDER&nbsp;GREEN</tt>
+ <br/><br/>
+  Auf einem Zielsystem, auf dem keine Randfarbe gesetzt werden kann,
+  hat die Anweisung keine Wirkung.
+ <br/><br/>
+
+ <h3><a name="call">CALL</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>CALL</tt> &lt;Adresse&gt;<br/>
+     <tt>CALL</tt> <tt>*</tt> &lt;Hex-Adresse&gt;
+    </td>
+   </tr>
+   <tr><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+   <tr><td>Hex-Adresse:</td><td>Adresse als Hexadezimalzahl</td></tr>
+  </table>
+ <br/>
+  Die CALL-Anweisung ruft ein Maschinencodeunterprogramm auf,
+  welches auf der angegebenen Adresse beginnt und
+  mit einem Return-Befehl abgeschlossen sein muss.
+  Im Gegensatz zur <a href="functions.htm#usr">USR</a>-Funktion
+  k&ouml;nnen keine Werte &uuml;bergeben werden.
+ <br/><br/>
+
+ <h3><a name="circle">CIRCLE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>CIRCLE</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;
+      <tt>,</tt> &lt;Radius&gt;<br/>
+     <tt>CIRCLE (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+      <tt>,</tt> &lt;Radius&gt;<br/>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Radius:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die CIRCLE-Anweisung zeichnet einen Kreis mit dem Mittelpunkt
+  (X,Y) und dem angegebenen Radius.
+  Der Grafik-Cursor wird nicht beeinflusst.
+ <br/><br/>
+
+ <h3><a name="cls">CLS</a></h3>
+  Die CLS-Anweisung l&ouml;scht den Bildschirm und setzt den Cursor
+  in die linke obere Ecke.
+  Wurde im Monitorprogramm oder &uuml;ber die entsprechende Systemfunktion
+  ein Fenster eingestellt,
+  gilt die CLS-Anweisung nur f&uuml;r den Fensterbereich.
+ <br/><br/>
+
+ <h3><a name="color">COLOR</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>COLOR</tt> &lt;Vordergrundfarbe&gt;<br/>
+     <tt>COLOR</tt> &lt;Vordergrundfarbe&gt;
+	<tt>,</tt> &lt;Hintergrundfarbe&gt;<br/>
+     <tt>COLOR</tt> &lt;Vordergrundfarbe&gt;
+	<tt>,</tt> &lt;Hintergrundfarbe&gt;
+	<tt>,</tt> &lt;Randfarbe&gt;
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Vordergrunddarbe:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Hintergrundfarbe:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Randfarbe:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die COLOR-Anweisung dient zum Festlegen der Vordergrundfarbe und optional
+  auch der Hintegrund- bzw. Randfarbe.
+  Die Farben k&ouml;nnen auch einzeln mit den Anweisungen
+  <a href="instructions.htm#ink">INK</a>,
+  <a href="instructions.htm#paper">PAPER</a> und
+  <a href="instructions.htm#border">BORDER</a> festgelegt werden.
+ <br/><br/>
+
+ <h3><a name="cursor">CURSOR</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>CURSOR</tt> &lt;numerischer Ausdruck&gt;
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die CURSOR-Anweisung dient zum Ein- und Ausschalten des Text-Cursors.
+  Wird der Wert&nbsp;0 &uuml;bergeben,
+  schaltet die Anweisung den Cursor aus, bei jedem anderen Wert dagegen ein.
+ <br/><br/>
+  <b>Achtung!</b> Die CURSOR-Anweisung wird nicht f&uuml;r alle
+  Zielsysteme unterst&uuml;tzt (siehe Hinweise zu den
+  <a href="targets.htm">Zielsystemen</a>).
+  Wenn sie f&uuml;r ein System nicht unterst&uuml;tzt wird,
+  kann sie aber zum Schreiben von portablen BASIC-Programmen
+  trotzdem verwendet werden.
+  Sie hat dann nur keine Wirkung.
+ <br/><br/>
+
+ <h3><a name="data">DATA</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DATA</tt> &lt;konstanter Ausdruck&gt; [ <tt>,</tt> ... ]
+    </td>
+   </tr>
+   <tr>
+    <td>konstanter Ausdruck:</td>
+    <td>Zahlen- oder Zeichenkettenliteral</td>
+   </tr>
+  </table>
+ <br/>
+  Mit DATA werden Daten (numerische Werte oder Zeichenketten)
+  einem applikationsweiten Datenbereich hinzugef&uuml;gt.
+  Die Daten sind durch Komma zu trennen und m&uuml;ssen Literale sein,
+  d.h. Zahlen oder in Doppelhochkomma eingeschlossene Zeichenketten.
+ <br/><br/>
+  Das Lesen und damit die Nutzbarmachung dieser Daten
+  erfolgt mit der Anweisung <a href="instructions.htm#read">READ</a>, z.B.:
+ <br/><br/>
+  <tt>
+   100 FOR I=1 TO 12<br/>
+   110 READ M$,N<br/>
+   120 PRINT M$;":";N;"Tage"<br/>
+   130 NEXT I<br/>
+   140 END<br/>
+   200 DATA "Jan",31,"Feb",28,"Mar",31,"Apr",30,"Mai",31,"Jun",30<br/>
+   210 DATA "Jul",31,"Aug",31,"Sep",30,"Okt",31,"Nov",31,"Dez",30
+ <br/><br/>
+
+ <h3><a name="declare">DECLARE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DECLARE FUNCTION</tt> &lt;Funktionsname&gt;<br/>
+     <tt>DECLARE FUNCTION</tt> &lt;Funktionsname&gt;
+	<tt>(</tt> &lt;Argument&gt; [ <tt>,</tt> ... ] <tt>)</tt><br/>
+     <tt>DECLARE SUB</tt> &lt;Prozedurname&gt;<br/>
+     <tt>DECLARE SUB</tt> &lt;Prozedurname&gt;
+	<tt>(</tt> &lt;Argumentname&gt; [ <tt>,</tt> ... ] <tt>)</tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung deklariert eine benutzerdefinierte Funktion
+  oder Prozedur, damit sie vor deren eigentliche Implementierung
+  (Anweisungen <a href="instructions.htm#function">FUNCTION</a>
+  und <a href="instructions.htm#sub">SUB</a>) aufgerufen werden kann.
+  Lesen Sie bitte auch die Erl&auml;uterungen zu den
+  <a href="usersubs.htm">Benutzerdefinierten Funktionen und Prozeduren</a>.
+ <br/><br/>
+
+ <h3>
+  <a name="defusr">
+   DEF&nbsp;USR<br/>
+   DEFUSR<br/>
+  </a>
+ </h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DEF&nbsp;USR</tt> &lt;Funktionsnummer&gt; <tt>=</tt> &lt;Adresse&gt;
+     <br/>
+     <tt>DEFUSR</tt> &lt;Funktionsnummer&gt; <tt>=</tt> &lt;Adresse&gt;
+    </td>
+   </tr>
+   <tr valign="top"><td>Funktionsnummer:</td><td>0...9</td></tr>
+   <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die Anweisung legt die Adresse f&uuml;r eine der zehn m&ouml;glichen
+  <a href="functions.htm#usr">USR</a>-Funktionen fest.
+  Die Adresse kann w&auml;hrend der Programmausf&uuml;hrung beliebig oft
+  neu festgelegt werden.
+ <br/><br/>
+  <tt>
+   DEF USR 0=&H4000;<br/>
+   PRINT USR 0 (123)
+  </tt>
+ <br/><br/>
+  Die einzelnen Teile k&ouml;nnen auch zusammengeschrieben werden.
+  Damit ergeben sich folgende m&ouml;gliche Schreibweisen:
+ <br/><br/>
+  <tt>
+   DEF USR 0 = &H4000;<br/>
+   DEF USR0 = &H4000;<br/>
+   DEFUSR 0 = &H4000;<br/>
+   DEFUSR0 = &H4000;<br/>
+   PRINT USR0(123)<br/>
+   PRINT USR 0(123)
+  </tt>
+ <br/><br/>
+
+ <h3><a name="dim">DIM</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DIM</tt> &lt;Name&gt; <tt>(</tt> &lt;Dimension&gt; <tt>)</tt>
+	[, ... ]<br/>
+     <tt>DIM</tt> &lt;Name&gt; <tt>(</tt> &lt;Dimension&gt;
+	<tt>,</tt> &lt;Dimension&gt; <tt>)</tt> [, ... ]<br/>
+    </td>
+   </tr>
+   <tr valign="top"><td>Name:</td>
+    <td>Name der zu deklarierenden Feldvariable</td>
+   </tr>
+   <tr valign="top">
+    <td>Dimension:</td><td>Zahlen-Literal</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung deklariert ein- und zweidimensionale Felder.
+  Felder mit mehr als zwei Dimensionen werden nicht unterst&uuml;tzt.
+  In den Klammern hinter dem Variablennamen sind die einzelnen
+  Dimensionen mit konstanten Werten anzugeben.
+  Variable Dimensionsangeben sind nicht m&ouml;glich.
+  Die Anzahl der Elemente in einer Dimension ist um eins gr&ouml;&szlig;er
+  als die Dimensionsangabe selbst, da das erste Element den Index&nbsp;0 hat.
+ <br/><br/>
+  Wenn der Name der Feldvariable mit einem $-Zeichen endet,
+  haben alle Elemete des Feldes den Typ String,
+  anderenfalls den Typ Integer.
+ <br/><br/>
+  Die DIM-Anweisung muss im BASIC-Quelltext vor der ersten Benutzung
+  der Feldvariablen stehen.
+  Das ist unabh&auml;ngig vom eigentlichen Programmablauf.
+  Folgendes Beipiel w&uuml;rde in einem BASIC-Interpreter funktionieren,
+  bringt aber im JKCEMU-BASIC-Compiler in Zeile&nbsp;110 einen Syntax-Fehler,
+  da zu dem Zeitpunkt die DIM-Anweisung in Zeile&nbsp;200 noch nicht
+  compiliert wurde und deshalb die Variable&nbsp;<em>A</em> in Zeile&nbsp;110
+  als einfache Variable angesehen wird:
+ <br><br/>
+  <tt>
+   100 GOSUB 200<br/>
+   110 A(1,0)=12<br/>
+   120 ...<br/>
+   200 DIM A(10,20)<br/>
+   210 RETURN
+  </tt>
+ <br/><br/>
+  Richtig ist:
+ <br><br/>
+  <tt>
+   100 DIM A(10,20)<br/>
+   110 A(1,0)=12<br/>
+   120 ...<br/>
+  </tt>
+ <br/><br/>
+
+ <h3><a name="do">DO</a></h3>
+  Die DO-Anweisung markiert den Anfang einer nicht abweisenden Schleife,
+  d.h. die Schleife wird in jedem Fall mindestens einmal durchlaufen.
+  Das Ende der Schleife wird mit der
+  <a href="instructions.htm#loop">LOOP</a>-Anweisung festgelegt.
+  Dort kann eine Bedingung angegeben werden,
+  mit der die Anzahl der Schleifendurchl&auml;ufe gesteuert wird.
+  Ohne eine Bedingung ist die DO-Schleife eine Endlosschleife.
+ <br/><br/>
+
+ <h3><a name="doke">DOKE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DOKE</tt> &lt;Adresse&gt; <tt>,</tt> &lt;Wert&gt;
+    </td>
+   </tr>
+   <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Der 16-Bit-Wert des zweiten numerischen Ausdrucks
+  wird in Form von zwei Bytes in den Arbeitsspeicher
+  ab der angegebenen Adresse geschrieben.
+ <br/><br/>
+
+ <h3><a name="draw">DRAW</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DRAW</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>DRAW (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
+     <tt>DRAW STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die DRAW-Anweisung zieht eine Linie von der aktuellen Position
+  des Grafik-Cursors zu der angegebenen Position (Endpunkt der Linie).
+  Der Grafik-Cursor zieht dabei mit, d.h.,
+  er steht nach dem Zeichnen auf dem Endpunkt der Linie.
+ <br/><br/>
+  Bei der Variante mit dem Schl&uuml;sselwort <em>STEP</em>
+  wird der Endpunkt nicht absolut sondern relativ angegeben,
+  d.h., diese Variante ist identisch zur
+  <a href="instructions.htm#mover">DRAWR</a>-Anweisung.
+ <br/><br/>
+  Die DRAW-Anweisung setzt nicht das Pixel im Anfangspunkt,
+  sondern beginnt erst mit dem ersten Pixel hinter dem Anfangspunkt.
+  Dadurch wird sichergestellt, dass beim Zeichnen von Polygonen
+  mit Hilfe mehrerer hintereinander folgender DRAW-Anweisungen
+  kein Pixel doppelt gesetzt wird.
+  Das ist besonders wichtig bei der Verwendung des XOR-Stiftes
+  (siehe <a href="instructions.htm#pen">PEN</a>-Anweisung).
+  Wegen diesem Verhalten gibt es auch die unterschiedlichen
+  Anweisungen <a href="instructions.htm#move">MOVE</a>
+  und <a href="instructions.htm#plot">PLOT</a>
+  bzw. deren Varianten <a href="instructions.htm#mover">MOVER</a>
+  und <a href="instructions.htm#plotr">PLOTR</a>.
+  M&ouml;chte man ein geschlossenes Polygon zeichnen,
+  muss man mit <em>MOVE</em> den Grafik-Cursor setzten,
+  damit kein Pixel doppelt gezeichnet wird.
+  Bei einem offenen Polygon empfiehlt sich <em>PLOT</em>,
+  damit kein Pixel fehlt.
+ <br/><br/>
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
+
+ <h3><a name="drawr">DRAWR</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DRAWR</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>DRAWR (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die DRAWR-Anweisung zieht eine Linie von der aktuellen Position
+  des Grafik-Cursors zu der mit relativen Koordinaten angegebenen Position
+  (Endpunkt der Linie).
+  Ansonsten gilt das gleiche wie bei der
+  <a href="instructions.htm#draw">DRAW</a>-Anweisung.
+ <br/><br/>
+
+ <h3><a name="end">END</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>
+      END<br/>
+      END FUNCTION<br/>
+      END SUB
+    </td>
+   </tr>
+  </table>
+  Steht die END-Anweisung innerhalb einer benutzerdefinierten Funktion
+  oder Prozedur, wird diese beendet.
+  In dem Fall kann hinter END zus&auml;tzlich das Schl&uuml;sselwort
+  FUNCTION bzw. SUB angegeben werden, je nachdem,
+  ob es sich um eine Funktion oder Prozedur handelt.
+  Au&szlig;erhalb einer Funktion bzw. Prozedur beendet
+  die END-Anweisung das BASIC-Programm.
+ <br/><br/>
+
+ <h3><a name="exit">EXIT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>
+      EXIT<br/>
+      EXIT DO<br/>
+      EXIT FOR<br/>
+      EXIT WHILE
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Mit einer EXIT-Anweisung kann eine Schleife vorzeitig verlassen werden,
+  d.h., die Schleife wird abgebrochen und die Programmausf&uuml;hrung
+  hinter der Schleife fortgesetzt.
+  Optional kann hinter dem Schl&uuml;sselwort <tt>EXIT</tt>
+  auch die Art der Schleife angegeben werden (entweder Schl&uuml;sselwort
+  <tt>DO</tt>, <tt>FOR</tt> oder <tt>WHILE</tt>), die abgebrochen wird.
+ <br/><br/>
+  <tt>
+   I=0<br/>
+   DO<br/>
+   &nbsp; I=I+1<br/>
+   &nbsp; PRINT I<br/>
+   &nbsp; IF I=5 THEN EXIT DO<br/>
+   LOOP<br/>
+   PRINT "Schleife zu Ende"
+  </tt>
+ <br/><br/>
+
+ <h3><a name="for">FOR</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>FOR</tt>
+     &lt;Variable&gt;<tt>=</tt>&lt;Startwert&gt;
+     <tt>TO</tt>
+     &lt;Endwert&gt;
+     [ <tt>STEP</tt> &lt;Schrittweite&gt; ]
+    </td>
+   </tr>
+   <tr valign="top"><td>Startwert:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Endwert:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Schrittweite:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Zuerst wird der Variable, auch Laufvariable genannt,
+  der Startwert zugewiesen.
+  Anschlie&szlig;end setzt die Programmabarbeitung mit dem ersten Befehl
+  hinter der FOR-Anweisung fort.
+  Bei Erreichen der <a href="instructions.htm#next">NEXT</a>-Anweisung
+  wird die Variable mit dem Wert der Schrittweite addiert.
+  Ist der Endwert noch nicht erreicht,
+  wird zum ersten Befehl hinter der FOR-Anweisung gesprungen.
+  Anderenfalls wird die FOR-Schleife verlassen, d.h.,
+  die Programmabarbeitung setzt hinter der NEXT-Anweisung fort.
+ <br/><br/>
+  Ist die Schrittweite gr&ouml;&szlig;er Null,
+  gilt der Endwert als erreicht, wenn der Wert der Variable
+  gleich oder gr&ouml;&szlig;er dem Endwert ist.
+  Ist dagegen die Schrittweite kleiner Null,
+  gilt der Endwert als erreicht,
+  wenn der Wert der Variable gleich oder kleiner dem Endwert ist.
+ <br/><br/>
+  Das Schl&uuml;sselwort STEP und die nachfolgende Schrittweite
+  k&ouml;nnen weggelassen werden.
+  In dem Fall ist die Schrittweite eins.
+ <br/><br/>
+  <b>Achtung!</b> Bereits beim Compilieren muss der konkrete
+  Speicherplatz der Laufvariable ermittelbar sein.
+  Das ist bei allen einfachen Variablen gegeben.
+  Ist die Laufvariable dagegen ein Element einer Feldvariable,
+  ist diese Bedinngung nur gegeben,
+  wenn die Indexe mit konstanten Werten angegeben werden, z.B.:
+ <br/><br/>
+  <tt>
+   DIM A(5)<br/>
+   FOR A(2)=1 TO 10<br/>
+   ...<br/>
+   NEXT A(2)
+  </tt>
+ <br/><br/>
+  Ein variabler Index wird dagegen vom Compiler mit einem Fehler beantwortet:
+ <br/><br/>
+  <tt>
+   DIM A(5)<br/>
+   I=2<br/>
+   FOR A(I)=1 TO 10 &nbsp; &nbsp; <em>Fehler!</em><br/>
+   ...<br/>
+   NEXT A(I)
+  </tt>
+ <br/><br/>
+
+ <h3><a name="function">FUNCTION</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>FUNCTION</tt> &lt;Funktionsname&gt;<br/>
+     <tt>FUNCTION</tt> &lt;Funktionsname&gt;
+	<tt>(</tt> &lt;Argument&gt; [ <tt>,</tt> ... ] <tt>)</tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Mit der Anweisung wird die Implementierung einer benutzerdefinierten
+  Funktion eingeleitet.
+  Implizit wird damit auch das Hauptprogramm beendet.
+  Die Funktion endet mit der Anweisung <tt>END FUNCTION</tt>.
+ <br/><br/>
+  Lesen Sie bitte auch die Erl&auml;uterungen zu den
+  <a href="usersubs.htm">Benutzerdefinierten Funktionen und Prozeduren</a>.
+ <br/><br/>
+
+ <h3><a name="gosub">GOSUB</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>
+      GOSUB &lt;Zeilennummer&gt;<br/>
+      GOSUB &lt;Marke&gt;
+     </tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung ruft ein Unterprogramm auf,
+  welches an der angegebenen Stelle beginnt.
+  Das Unterprogramm muss mit <a href="instructions.htm#return">RETURN</a>
+  abgeschlossen sein.
+ <br/><br/>
+
+ <h3><a name="goto">GOTO</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>
+      GOTO &lt;Zeilennummer&gt;<br/>
+      GOTO &lt;Marke&gt;
+     </tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung veranlasst einen Sprung zu der angegebenen Stelle,
+  d.h., die Programmausf&uuml;hrung wird an dieser Stelle fortgesetzt.
+ <br/><br/>
+  <b>Achtung!</b> Die GOTO-Anweisung stammt aus einer Zeit,
+  in der BASIC noch keine strukturierte Programmierung unterst&uuml;tzte.
+  Der JKCEMU-BASIC-Compiler bietet aber mit alternativen
+  Schleifenarten (DO...LOOP..., WHILE...WEND) inklusive
+  der dazugeh&ouml;rigen Kontrollanweisung EXIT
+  sowie mehrzeiligen IF-Konstrukten diverse M&ouml;glichenkeiten
+  zur strukturierten Programmierung, die die Verwendung von GOTO
+  weitestgehend, wenn nicht sogar komplett, &uuml;berfl&uuml;ssig machen.
+  Es ist deshalb empfehlenswert, bei neu zu entwickelnder Software
+  auf die Verwendung von GOTO zu verzichten und anstelle dessen
+  die M&ouml;glichkeiten der strukturierten Programmierung zu nutzen.
+ <br/><br/>
+
+ <h3><a name="if">IF</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>IF</tt> &lt;Bedingung&gt; [ <tt>THEN</tt> ] &lt;Anweisungen&gt;
+                 [ <tt>: ELSE :</tt> &lt;Anweisungen&gt; ]<br/>
+     <tt>IF</tt> &lt;Bedingung&gt; [ <tt>THEN</tt> ] &lt;Zeilennummer&gt;
+                 [ <tt>: ELSE :</tt> &lt;Anweisungen&gt; ]<br/><br/>
+     <tt>IF</tt> &lt;Bedingung&gt; [ <tt>THEN</tt> ]<br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
+     [ <tt>ELSEIF</tt> &lt;Bedingung&gt; <tt>THEN</tt><br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br>
+     [ <tt>ELSEIF</tt> &lt;Bedingung&gt; <tt>THEN</tt><br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br>
+     [ <tt>ELSE</tt><br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br>
+     <tt>ENDIF</tt><br/><br/>
+    </td>
+   </tr>
+   <tr valign="top"><td>Bedingung:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die IF-Anweisung stellt eine bedingte Programmverzweigung dar.
+  Wenn die Bedingung erf&uuml;llt ist,
+  werden die Anweisungen hinter <tt>THEN</tt> ausgef&uuml;hrt.
+  Wenn nicht, wird die Bedingung hinter dem ersten ELSEIF gepr&uuml;ft
+  und ggf. die dahinter stehenden Anweisungen ausgef&uuml;hrt.
+  Ist auch diese Bedingung nicht erf&uuml;llt,
+  ist das n&auml;chste ELSEIF an der Reihe usw.
+  Wenn keine Bedingung erf&uuml;lt war,
+  werden die Anweisungen hinter <tt>ELSE</tt> ausgef&uuml;hrt.
+ <br/><br/>
+  Es sind beliebig viele ELSEIF-Zweige erlaubt.
+  Auch kann ELSEIF ganz weggelassen werden.
+  Der ELSE-Zweig ist ebenfalls optional und kann weggelassen werden.
+  Das Schl&uuml;sselwort <tt>THEN</tt> kann ebenfalls weggelassen werden,
+  ist aber aufgrund der besseren Lesbarkeit und mit Blick auf die
+  bei anderen BASIC-Dialekten &uuml;blichen Syntax nicht zu empfehlen.
+ <br/><br/>
+  Eine Bedingung ist erf&uuml;llte,
+  wenn der numerische Ausdruck einen Wert ungleich Null liefert
+  (siehe <a href="expressions.htm#operators">Operatoren</a>,
+  insbesondere auch die Vergleichsoperatoren).
+ <br/><br/>
+  Die IF-Anweisung gibt es in einer einzeiligen und in einer
+  mehrzeiligen Variante.
+  Bei der einzeiligen Variante endet die IF-Anweisung am Zeilenende, z.B.:
+ <br/><br/>
+  <tt>
+   IF A=0 THEN PRINT "Null" : ELSE : PRINT "ungleich Null"<br/>
+   IF A&lt;100 THEN GOTO 200
+  </tt>
+ <br/><br/>
+  Wie bereits oben erw&auml;hnt,
+  kann das Schl&uuml;sselwort <tt>THEN</tt> weggelassen werden.
+  Ist es aber vorhanden und direkt dahinter steht eine Zahl,
+  dann wird diese Zahl als Zeilennummer einer
+  <a href="instructions.htm#goto">GOTO</a>-Anweisung gewertet, z.B.:
+ <br/><br/>
+  <tt>IF A&lt;100 THEN 200</tt>
+ <br/><br/>
+  Folgt hinter der Bedingung bzw. hinter dem Schl&uuml;sselwort <tt>THEN</tt>
+  nichts mehr in der Zeile, wird die IF-Anweisung als mehrzeilig erkannt,
+  d.h., in dem Fall muss es ein ENDIF geben.
+ <br/><br/>
+  <tt>
+   IF A=1 THEN<br/>
+   &nbsp; PRINT "eins"<br/>
+   ELSEIF A=2 THEN<br/>
+   &nbsp; PRINT "zwei"<br/>
+   ELSEIF A=3 THEN<br/>
+   &nbsp; PRINT "drei"<br/>
+   ELSE<br/>
+   &nbsp; PRINT "nichts von alldem"<br/>
+   ENDIF
+  </tt>
+ <br/><br/>
+  IF-Anweisungen k&ouml;nnen in sich geschachtelt verwendet werden:
+ <br/><br/>
+  <tt>
+   IF A=0 THEN<br/>
+   &nbsp; IF B=0 THEN<br/>
+   &nbsp; &nbsp; PRINT "A und B sind Null."<br/>
+   &nbsp; ELSEIF B=1 THEN<br/>
+   &nbsp; &nbsp; PRINT "A=0 und B=1"<br/>
+   &nbsp; ENDIF<br/>
+   ELSE<br/>
+   &nbsp; PRINT "A ist nicht Null."<br/>
+   ENDIF
+  </tt>
+ <br/><br/>
+
+ <h3><a name="ink">INK</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">INK&nbsp;&lt;numerischer Ausdruck&gt;</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung setzt die Vordergrundfarbe.
+  Die Nummer der Farbe h&auml;ngt vom Zielsystem ab.
+  Zum Schreiben von portablen Quelltext kann man die Nummer der Farbe
+  auch mit einer Farbfunktion ermitteln, z.B.:
+ <br/><br/>
+  <tt>&nbsp;INK&nbsp;YELLOW</tt>
+ <br/><br/>
+  Auf einem Zielsystem ohne Farbunterst&uuml;tzung hat die Anweisung
+  keine Wirkung.
+ <br/><br/>
+
+ <h3><a name="input">INPUT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>INPUT</tt> [ &lt;String-Literal&gt; <tt>;</tt> ] &lt;Variable&gt;
+     [ <tt>;</tt> ... ]<br/>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die INPUT-Anweisung kann mehrere Abschnitte enthalten,
+  die durch Semikolon getrennt sind.
+  Jeder Abschnitt steht f&uuml;r eine eigenst&auml;ndige Eingabe.
+  Pro Abschnitt kann entweder nur eine Variable oder ein
+  <a href="strings.htm#literal">String-Literal</a>
+  gefolgt von einem Semikolon und einer Variable angegeben werden.
+  Ist ein String-Literal vorhanden, wird zuerst dieses ausgegeben.
+  Anderenfalls erscheint ein Fragezeichen, das zur Eingabe auffordert.
+  Mit Dr&uuml;cken der ENTER-Taste wird die eingegebene Zahl
+  bzw. im Fall einer String-Variable der eingegebene Text
+  der Variable zugewiesen.
+  Bei der Eingabe eines Textes werden f&uuml;hrende Leerzeichen
+  abgeschnitten.
+ <br/><br/>
+
+ <h3><a name="label">LABEL</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>LABEL</tt> &lt;String-Ausdruck&gt;
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Diese Anweisung gibt im Grafikmodus Text aus.
+  Dazu muss vorher der Grafik-Cursor auf die gew&uuml;nschte Position
+  verschoben worden sein, z.B. mit der
+  <a href="instructions.htm#move">MOVE</a>-Anweisung.
+  Nach der Ausgabe steht der Grafik-Cursor hinter dem Text,
+  d.h., mehrere LABEL-Anweisungen hintereinander geben den Text
+  auch zusammenh&auml;ngend aus.
+ <br/><br/>
+  <tt>
+   MOVE 10,10<br/>
+   LABEL "ABC"<br/>
+   LABEL "DEF"<br/>
+   LINE 10,7,XPOS-3,7<br/>
+  </tt>
   <br/>
-    Die unteren 8 Bits des Wertes des angegebenen Ausdrucks werden hexadezimal,
-    d.h. in Form von zwei Zeichen, auf dem Bildschirm ausgegeben.
-  <br/><br/>
-    Beim originalen AC1-Mini- und Z1013-Tiny-BASIC muss der
-    numersiche Ausdruck in Klammern eingeschlossen sein.
-  <br/><br/>
+  Beispiel: Ausgabe eines zusammenh&auml;ngenden und unterstrichenen Textes
+ <br/><br/>
+  Bei Systemen mit einem getrennten Text- und
+  Grafik-<a href="instructions.htm#screen">SCREEN</a>
+  ist die LABEL-Anweisung die einzige M&ouml;glichkeit,
+  Text im Grafikmodus auszugeben.
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="call">CALL</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>CALL</tt>&nbsp;&lt;Adresse&gt;<br/>
-	  <tt>CALL</tt>&nbsp;<tt>*</tt>&nbsp;&lt;Hex-Adresse&gt;
-	</td>
-      </tr>
-      <tr><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
-      <tr><td>Hex-Adresse:</td><td>Adresse als Hexadezimalzahl</td></tr>
-    </table>
-  <br/>
-    Die CALL-Anweisung ruft ein Maschinencodeunterprogramm auf,
-    welches auf der angegebenen Adresse beginnt und
-    mit einem Return-Befehl abgeschlossen sein muss.
-  <br/><br/>
-    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC ist nur
-    die erste Syntax erlaubt.
-  <br/><br/>
+ <h3><a name="let">LET</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     [ <tt>LET</tt> ]
+     &lt;Variable&gt;
+     <tt>=</tt>
+     &lt;Ausdruck&gt;
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Das Schl&uuml;sselwort LET kann entfallen.
+ <br/><br/>
 
-  <h3><a name="cls">CLS</a></h3>
-    Die CLS-Anweisung l&ouml;scht den Bildschirm und setzt den Cursor
-    in die linke obere Ecke.
-    Wurde im Monitorprogramm oder &uuml;ber die entsprechende Systemfunktion
-    ein Fenster eingestellt,
-    gilt die CLS-Anweisung nur f&uuml;r den Fensterbereich.
-  <br/><br/>
+ <h3><a name="line">LINE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>LINE</tt> &lt;X1&gt; <tt>,</tt> &lt;Y1&gt; <tt>,</tt>
+	&lt;X2&gt; <tt>,</tt> &lt;Y2&gt;<br/>
+     <tt>LINE (</tt> &lt;X1&gt; <tt>,</tt> &lt;Y1&gt; <tt>) - (</tt>
+	&lt;X2&gt; <tt>,</tt> &lt;Y2&gt; <tt>)</tt><br/><br/>
+     <tt>LINE</tt> &lt;X1&gt; <tt>,</tt> &lt;Y1&gt; <tt>,</tt>
+	&lt;X2&gt; <tt>,</tt> &lt;Y2&gt; <tt>, B</tt><br/>
+     <tt>LINE (</tt> &lt;X1&gt; <tt>,</tt> &lt;Y1&gt; <tt>) - (</tt>
+	&lt;X2&gt; <tt>,</tt> &lt;Y2&gt; <tt>) , B</tt><br/><br/>
+     <tt>LINE</tt> &lt;X1&gt; <tt>,</tt> &lt;Y1&gt; <tt>,</tt>
+	&lt;X2&gt; <tt>,</tt> &lt;Y2&gt; <tt>, BF</tt><br/>
+     <tt>LINE (</tt> &lt;X1&gt; <tt>,</tt> &lt;Y1&gt; <tt>) - (</tt>
+	&lt;X2&gt; <tt>,</tt> &lt;Y2&gt; <tt>) , BF</tt><br/>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X1:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y1:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>X1:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y2:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  In der Variante ohne dem Argument <tt>B</tt> bzw. <tt>BF</tt>
+  zeichnet die Anweisung eine Linie vom Punkt (X1,Y1) zum Punkt (X2,Y2).
+  Wird dagegen das Argument <em>B</em> angegeben, erscheint ein Rechteck
+  mit den vier Eckpunkten (X1,Y1), (X1,Y2), (X2,Y1) und (X2,Y2).
+  Beim Argument <em>BF</em> wird ein gef&uuml;lltes Rechteck gezeichnet.
+ <br/><br/>
+  Die LINE-Anweisung beeinflusst nicht den Grafik-Cursor.
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="data">DATA</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>DATA</tt>
-	  &nbsp;
-	  &lt;konstanter Ausdruck&gt;
-	  [ <tt>,</tt> ... ]
-	  </td>
-      </tr>
-    </table>
-  <br/>
-    Mit DATA werden Daten (numerische 16-Bit-Werte) einem applikationsweiten
-    Datenbereich hinzugef&uuml;gt.
-    Die Daten sind durch Komma zu trennen und m&uuml;ssen
-    konstante numerische Ausdr&uuml;cke sein.
-  <br/><br/>
-    Das Lesen und damit die Nutzbarmachung dieser Daten im Programm
-    erfolgt mit der Anweisung <a href="instructions.htm#read">READ</a>.
-  <br/><br/>
+ <h3><a name="line_input">LINE INPUT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>LINE INPUT</tt> [ &lt;String-Literal&gt; <tt>;</tt> ]
+	&lt;String-Variable&gt;
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die LINE&nbsp;INPUT-Anweisung dient zur Eingabe eines Textes.
+  Im Gegensatz zur INPUT-Anweisung werden f&uuml;hrende Leerzeichen
+  nicht abgeschnitten, d.h., die eingegebene Textzeile wird
+  unver&auml;ndert in der angegebenen String-Variable gespeichert.
+ <br/><br/>
+  Optional kann ein String-Literal angegeben werden,
+  welches als Prompt ausgegeben wird.
+  Fehlt dieses String-Literal, erscheint in Gegensatz zur
+  INPUT-Anweisung kein Fragezeichen.
+ <br/><br/>
 
-  <h3><a name="doke">DOKE</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>DOKE</tt>
-	  &nbsp;
-	  &lt;Adresse&gt;
-	  <tt>,</tt>
-	  &lt;Wert&gt;
-	</td>
-      </tr>
-      <tr valign="top">
-	<td>Adresse:</td>
-	<td>numerischer Ausdruck</td>
-      </tr>
-      <tr valign="top">
-	<td>Wert:</td>
-	<td>numerischer Ausdruck</td>
-      </tr>
-    </table>
-  <br/>
-    Der 16-Bit-Wert des zweiten numerischen Ausdrucks
-    wird in Form von zwei Bytes in den Arbeitsspeicher
-    ab der angegebenen Adresse geschrieben.
-  <br/><br/>
+ <h3><a name="local">LOCAL</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>LOCALE</tt> &lt;Name&gt; [, ... ]</td>
+   </tr>
+   <tr valign="top">
+    <td>Name:</td>
+    <td>Name der zu deklarierenden Variable</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung deklariert eine oder mehrere lokale Variablen
+  innerhalb einer Funktion oder Prozedur.
+  Endet der Variablenname auf ein $-Zeichen, wird eine lokale
+  String-Variable deklariert, anderenfalls eine lokale Integer-Variable.
+  Lokale Feldvariablen sind nicht m&ouml;glich.
+ <br/><br/>
+  Lokale Variablen verdecken gleichnamige globale Variablen, d.h.,
+  hat eine lokale Variable den gleichen Namen wie eine im Hauptprogramm,
+  kann in der Funktion/Prozedur auf die Variable
+  im Hauptprogramm nicht zugegriffen werden.
+ <br/><br/>
+  Lokale Variablen werden auf dem Stack angelegt.
+  Dieser muss dazu ausreichend gro&szlig; dimensioniert sein.
+  Ruft eine Funktion/Prozedur sich selbst auf (Rekursion),
+  werden bei jedem Aufruf die lokalen Variablen neu angelegt,
+  d.h., f&uuml;r jeden Aufruf gibt es separate lokale Variablen.
+ <br/><br/>
 
-  <h3><a name="end">END</a></h3>
-    Die END-Anweisung dient bei den meisten BASIC-Dialekten
-    zum Beenden des Programms und wird deshalb auch hier unterst&uuml;tzt.
-    Im originalen AC1-Mini-BASIC- und Z1013-Tiny-BASIC-Interpreter
-    ist dagegen END ein Kommando zum Festlegen des Endes
-    des zu verwendenten Speicherbereichs
-    und kann im BASIC-Programm nicht verwendet werden.
-    Zum Beenden gibt es dort die
-    <a href="instructions.htm#stop">STOP</a>-Anweisung.
-  <br/><br/>
+ <h3><a name="locate">LOCATE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>LOCATE</tt> &lt;Zeile&gt; <tt>,</tt> &lt;Spalte&gt;
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Zeile:</td>
+    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+   </tr>
+   <tr valign="top">
+    <td>Spalte:</td>
+    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+   </tr>
+  </table>
+ <br/>
+  Die LOCATE-Anweisung positioniert den Cursor auf die angegebene Position.
+  Die linke obere Ecke hat die Position (0,0).
+ <br/><br/>
+  <b>Achtung!</b> Die LOCATE-Anweisung wird nicht f&uuml;r alle
+  Zielsysteme unterst&uuml;tzt (siehe Hinweise zu den
+  <a href="targets.htm">Zielsystemen</a>).
+ <br/><br/>
 
-  <h3><a name="for">FOR</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>FOR</tt>
-	  &nbsp;
-	  &lt;Variable&gt;<tt>=</tt>&lt;Startwert&gt;
-	  &nbsp;
-	  <tt>TO</tt>
-	  &nbsp;
-	  &lt;Endwert&gt;
-	  &nbsp;
-	  [ <tt>STEP</tt> &nbsp; &lt;Schrittweite&gt; ]
-	</td>
-      </tr>
-      <tr valign="top"><td>Startwert:</td><td>numerischer Ausdruck</td></tr>
-      <tr valign="top"><td>Endwert:</td><td>numerischer Ausdruck</td></tr>
-      <tr valign="top"><td>Schrittweite:</td><td>numerischer Ausdruck</td></tr>
-    </table>
-  <br/>
-    Zuerst wird der Variablen der Startwert zugewiesen.
-    Anschlie&szlig;end setzt die Programmabarbeitung mit dem ersten Befehl
-    hinter der FOR-Anweisung fort.
-    Bei Erreichen der <a href="instructions.htm#next">NEXT</a>-Anweisung
-    wird die Variable mit dem Wert der Schrittweite addiert.
-    Ist der Endwert noch nicht erreicht, wird zum ersten Befehl
-    hinter der FOR-Anweisung gesprungen.
-    Anderenfalls wird die FOR-Schleife verlassen, d.h.,
-    die Programmabarbeitung setzt mit dem ersten Befehl hinter der
-    NEXT-Anweisung fort.
-  <br/><br/>
-    Ist die Schrittweite gr&ouml;&szlig;er Null,
-    gilt der Endwert als erreicht, wenn der Wert der Variablen
-    gleich oder gr&ouml;&szlig;er dem Endwert ist.
-    Ist dagegen die Schrittweite kleiner Null,
-    gilt der Endwert als erreicht, wenn der Wert der Variablen
-    gleich oder kleiner dem Endwert ist.
-  <br/><br/>
-    Das Schl&uuml;sselwort STEP und die nachfolgende Schrittweite
-    k&ouml;nnen weggelassen werden.
-    In dem Fall ist die Schrittweite eins.
-  <br/><br/>
+ <h3><a name="loop">LOOP</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>LOOP</tt><br/>
+     <tt>LOOP UNTIL</tt> &lt;Bedingung&gt;<br/>
+     <tt>LOOP WHILE</tt> &lt;Bedingung&gt;
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Bedingung:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die LOOP-Anweisung markiert das Ende einer Schleife,
+  die vorher mit der <a href="instructions.htm#do">DO</a>-Anweisung
+  er&ouml;ffnet worden ist.
+ <br/><br/>
+  Die DO...LOOP-Schleife gibt es in drei verschiedenen Auspr&auml;gungen.
+  Wird hinter dem Schl&uuml;sselwort LOOP nichts weiter angegeben,
+  handelt es sich um eine Endlosschleife:
+ <br/><br/>
+  <tt>
+   DO<br/>
+   &nbsp; PRINT "Endlosschleife"<br/>
+   LOOP
+  </tt>
+ <br/><br/>
+  Mit dem Schl&uuml;sselwort UNTIL kann eine Bedingung angegeben werden.
+  Die Schleife bricht ab, sobald die Bedingung erf&uuml;llt ist:
+ <br/><br/>
+  <tt>
+   I=1<br/>
+   DO<br/>
+   &nbsp; PRINT I<br/>
+   &nbsp; I=I+1<br/>
+   LOOP UNTIL I=10
+  </tt>
+ <br/><br/>
+  Das Gegenteil erreicht man mit dem Schl&uuml;sselwort WHILE.
+  In dem Fall l&auml;uft die Schleife solange,
+  wie die angegebene Bedingung erf&uuml;llt ist.
+  Die Schleife bricht also ab,
+  sobald die Bedingung nicht mehr erf&uuml;llt ist:
+ <br/><br/>
+  <tt>
+   I=1<br/>
+   DO<br/>
+   &nbsp; PRINT I<br/>
+   &nbsp; I=I+1<br/>
+   LOOP WHILE I&lt;10
+  </tt>
+ <br/><br/>
 
-  <h3><a name="gosub">GOSUB</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>GOSUB</tt> &nbsp; &lt;Zeilennummer&gt;</td>
-      </tr>
-    </table>
-  <br/>
-    Das Unterprogramm muss mit <a href="instructions.htm#return">RETURN</a>
-    abgeschlossen sein.
-  <br/><br/>
+ <h3><a name="move">MOVE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>MOVE</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>MOVE (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
+     <tt>MOVE STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die MOVE-Anweisung setzt den Grafik-Cursor auf die angegebene Position.
+  Bei der Variante mit dem Schl&uuml;sselwort <em>STEP</em>
+  wird der Grafik-Cursor nicht absolut, sondern relativ positioniert,
+  d.h., diese Variante ist identisch zur
+  <a href="instructions.htm#mover">MOVER</a>-Anweisung.
+ <br/><br/>
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="goto">GOTO</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>GOTO</tt> &nbsp; &lt;Zeilennummer&gt;</td>
-      </tr>
-    </table>
-  <br/><br/>
+ <h3><a name="mover">MOVER</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>MOVER</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>MOVER (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die MOVER-Anweisung verschiebt den Grafik-Cursor um den angegebenen
+  X- und Y-Wert, d.h., die Positionsangabe ist relativ.
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="in_string">I$</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>I$</tt> &nbsp; &lt;Adresse&gt;</td>
-      </tr>
-      <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
-    </table>
-  <br/>
-    Die I$-Anweisung wartet auf die Eingabe einer Zeichenkette
-    die max. 63 Zeichen lang sein kann und
-    nach Dr&uuml;cken der ENTER-Taste im Arbeitsspeicher
-    ab der durch den numerischen Ausdruck angegebenen Adresse zu finden ist.
-    Die Zeichenkette wird mit einem Null-Byte abgeschlossen,
-    d.h., max. 64 Bytes werden im Arbeitsspeicher mit der Eingabe belegt.
-  <br/><br/>
+ <h3><a name="next">NEXT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>NEXT</tt> [ &lt;Variable&gt; ]</td>
+   </tr>
+  </table>
+ <br/>
+  Die Schleifenvariable wird mit dem Wert der Schrittweite
+  (siehe <a href="instructions.htm#for">FOR</a>-Anweisung) addiert.
+  Ist der Endwert noch nicht erreicht, wird an den Anfang der FOR-Schleife
+  gesprungen.
+  Anderenfalls wird die FOR-Schleife verlassen.
+ <br/><br/>
+  Die NEXT-Anweisung darf nicht ohne ein vorheriges FOR aufgerufen werden!
+ <br/><br/>
+  Die Angabe einer Variable ist optional.
+  Wird jedoch eine Variable angegeben,
+  so muss es die gleiche sein wie bei der zugeh&ouml;rigen FOR-Anweisung.
+ <br/><br/>
 
-  <h3><a name="if">IF</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>IF</tt>
-	  &nbsp;
-	  &lt;Bedingung&gt;
-	  &nbsp;
-	  [ <tt>THEN</tt> ]
-	  &nbsp;
-	  &lt;Anweisungen&gt;
-	  &nbsp;
-	  [ <tt>ELSE</tt> &nbsp; &lt;Anweisungen&gt; ]<br/>
-	  <tt>IF</tt>
-	  &nbsp;
-	  &lt;Bedingung&gt;
-	  &nbsp;
-	  <tt>THEN</tt>
-	  &nbsp;
-	  &lt;Zeilennummer&gt;
-	  &nbsp;
-	  [ <tt>ELSE</tt> &nbsp; &lt;Anweisungen&gt; ]<br/>
-	</td>
-      </tr>
-      <tr valign="top"><td>Bedingung:</td><td>numerischer Ausdruck</td></tr>
-    </table>
-  <br/>
-    Nur wenn die Bedingung erf&uuml;llt ist, d.h.,
-    wenn der Wert des Ausdrucks ungleich Null ist,
-    werden die nachfolgenden Anweisungen ausgef&uuml;hrt
-    beziehungsweise zu der hinten THEN angegeben Zeilennummer gesprungen.
-    Existiert ein ELSE-Zweig, werden die Anweisungen hinter ELSE
-    ausgef&uuml;hrt, wenn die Bedingung nicht erf&uuml;llt ist.
-  <br/><br/>
-    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC sind
-    das Schl&uuml;sselwort THEN und der ELSE-Zweig nicht m&ouml;glich.
-  <br/><br/>
+ <h3><a name="on_gosub">ON...GOSUB</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>ON</tt> &lt;Auswahl&gt; <tt>GOSUB</tt>
+     &lt;Zeilennummer&gt; <tt>,<tt> &lt;Zeilennummer&gt;
+     [ <tt>,</tt> &lt;Zeilennummer&gt; [ <tt>,</tt> ... ] ]<br/>
+     <tt>ON</tt> &lt;Auswahl&gt; <tt>GOSUB</tt>
+     &lt;Marke&gt; <tt>,<tt> &lt;Marke&gt;
+     [ <tt>,</tt> &lt;Marke&gt; [ <tt>,</tt> ... ] ]
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Auswahl:</td><td>numerischer Ausdruck &gt;= 0</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung ruft aus einer Liste von Unterprogrammen eins auf,
+  wobei die Auswahl anhand des Wertes des hinter dem
+  Schl&uuml;sselwort&nbsp;<tt>ON</tt> stehenden Ausdrucks erfolgt.
+  Ist der Wert&nbsp;1, wird das Unterprogramm entsprechend der ersten
+  derhinter dem Schl&uuml;sselwort&nbsp;<tt>GOSUB</tt> stehenden
+  Zeilennummer bzw. Marke aufgerufen,
+  beim Wert&nbsp;2 das zweite usw.
+  Beim Wert&nbsp;0 oder einem Wert gr&ouml;&szlig;er als die Anzahl
+  der angegebenen Zeilennummern wird kein Unterprogramm aufgerufen.
+ <br/><br/>
+  Beispiel mit BASIC-Zeilennummern:
+ <br/><br/>
+  <tt>
+   100 ON A GOSUB 1000,2000,3000<br/>
+   ...<br/>
+   1000 PRINT "UP 1":RETURN<br/>
+   2000 PRINT "UP 2":RETURN<br/>
+   3000 PRINT "UP 3":RETURN
+  </tt>
+ <br/><br/>
+  Beispiel mit Marken:
+ <br/><br/>
+  <tt>
+   ON A GOSUB up1,up2,up3<br/>
+   ...<br/>
+   up1:<br/>
+   &nbsp; PRINT "UP 1":RETURN<br/>
+   up2:<br/>
+   &nbsp; PRINT "UP 2":RETURN<br/>
+   up3:<br/>
+   &nbsp; PRINT "UP 3":RETURN
+  </tt>
+ <br/><br/>
 
-  <h3><a name="input">INPUT</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>INPUT</tt>
-	  &nbsp;
-	  [ &lt;String-Literal&gt; ]
-	  &nbsp;
-	  &lt;Variable&gt;
-	  &nbsp;
-	  [ <tt>,</tt> ... ]
-	</td>
-      </tr>
-    </table>
-  <br/>
-    Die INPUT-Anweisung kann mehrere Abschnitte enthalten,
-    die durch Komma getrennt sind.
-    Jeder Abschnitt steht f&uuml;r eine eigenst&auml;ndige Eingabe.
-    Pro Abschnitt kann entweder nur eine Variable oder ein
-    <a name="instructions.htm#string_literal">String-Literal</a>
-    gefolgt von einer Variablen angegeben werden.
-    Ist ein String-Literal vorhanden, wird zuerst dieses ausgegeben.
-    Anderenfalls erscheint der Name der Variablen.
-    Anschlie&szlig;end wird ein Doppelpunkt ausgegeben,
-    der zur Eingabe einer Zahl auffordert.
-    Mit Dr&uuml;cken der ENTER-Taste wird die eingegebene Zahl
-    der Variablen zugewiesen.
-  <br/><br/>
+ <h3><a name="on_goto">ON...GOTO</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>ON</tt> &lt;Auswahl&gt; <tt>GOTO</tt>
+     &lt;Zeilennummer&gt; <tt>,<tt>  &lt;Zeilennummer&gt;
+     [ <tt>,</tt> &lt;Zeilennummer&gt; [ <tt>,</tt> ... ] ]<br/>
+     <tt>ON</tt> &lt;Auswahl&gt; <tt>GOTO</tt>
+     &lt;Marke&gt; <tt>,<tt>  &lt;Marke&gt;
+     [ <tt>,</tt> &lt;Marke&gt; [ <tt>,</tt> ... ] ]
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Auswahl:</td><td>numerischer Ausdruck &gt;= 0</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung springt zu einer Zeile,
+  die aus einer Liste von BASIC-Zeilennummern oder Marken
+  entsprechend dem Wert des hinter dem Schl&uuml;sselwort&nbsp;<tt>ON</tt>
+  stehenden Ausdrucks ausgew&auml;hlt wird.
+  Ist der Wert&nbsp;1, wird zur ersten hinter dem
+  Schl&uuml;sselwort&nbsp;<tt>GOTO</tt> stehenden Zeile gesprungen,
+  beim Wert&nbsp;2 zur zweiten usw.
+  Beim Wert&nbsp;0 oder einem Wert gr&ouml;&szlig;er als die Anzahl
+  der angegebenen Zeilennummern erfolgt kein Sprung, d.h.,
+  in dem Fall wird die Programmausf&uuml;hrung mit der n&auml;chsten Zeile
+  fortgesetzt.
+ <br/><br/>
+  Beispiel mit BASIC-Zeilennummern:
+ <br/><br/>
+  <tt>
+   100 ON A GOTO 1000,2000,3000<br/>
+   ...<br/>
+   1000 PRINT "A war 1":END<br/>
+   2000 PRINT "A war 2":END<br/>
+   3000 PRINT "A war 3":END
+  </tt>
+ <br/><br/>
+  Beispiel mit Marken:
+ <br/><br/>
+  <tt>
+   ON A GOTO up1,up2,up3<br/>
+   ...<br/>
+   up1:<br/>
+   &nbsp; PRINT "A war 1":END<br/>
+   up2:<br/>
+   &nbsp; PRINT "A war 2":END<br/>
+   up3:<br/>
+   &nbsp; PRINT "A war 3":END
+  </tt>
+ <br/><br/>
 
-  <h3><a name="let">LET</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  [ <tt>LET</tt> ]
-	  &nbsp;
-	  &lt;Variable&gt;
-	  <tt>=</tt>
-	  &lt;numerischer Ausdruck&gt;
-	</td>
-      </tr>
-    </table>
-  <br/>
-    Das Schl&uuml;sselwort LET kann entfallen.
-  <br/><br/>
+ <h3><a name="out">OUT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>OUT</tt> <tt>(</tt> &lt;Port&gt; <tt>)</tt> <tt>=</tt> &lt;Wert&gt;
+     <br/>
+     <tt>OUT</tt> &lt;Port&gt; <tt>,</tt> &lt;Wert&gt;<br/>
+    </td>
+   </tr>
+   <tr valign="top"><td>Port:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die OUT-Anweisung gibt einen Wert an einem Ausgabetor (Port) aus.
+  Der erste Ausdruck legt die Ausgabeadresse fest,
+  der zweite Ausdruck bestimmt den auszugebenden Wert,
+  wobei nur die unteren 8 Bits relevant sind.
+ <br/><br/>
 
-  <h3><a name="next">NEXT</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>NEXT</tt> &nbsp; [ &lt;Variable&gt; ]</td>
-      </tr>
-    </table>
-  <br/>
-    Die Schleifenvariable wird mit dem Wert der Schrittweite
-    (siehe <a href="instructions.htm#for">FOR</a>-Anweisung)
-    addiert.
-    Ist der Endwert noch nicht erreicht, wird an den Anfang der FOR-Schleife
-    gesprungen.
-    Anderenfalls wird die FOR-Schleife verlassen.
-  <br/><br/>
-    Die NEXT-Anweisung darf nicht ohne ein vorheriges FOR aufgerufen werden!
-  <br/><br/>
-    Die Angabe einer Variable ist optional.
-    Wird jedoch eine Variable angegeben,
-    so muss es die gleiche sein wie bei der zugeh&ouml;rigen FOR-Anweisung.
-  <br/><br/>
-    Beim Z1013-Tiny-BASIC-Interpreter muss die Variable immer
-    angegeben werden.
-  <br/><br/>
+ <h3><a name="paper">PAPER</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">PAPER&nbsp;&lt;numerischer Ausdruck&gt;</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung setzt die Hintergrundfarbe.
+  Die Nummer der Farbe h&auml;ngt vom Zielsystem ab.
+  Zum Schreiben von portablen Quelltext kann man die Nummer der Farbe
+  auch mit einer Farbfunktion ermitteln, z.B.:
+ <br/><br/>
+  <tt>&nbsp;PAPER&nbsp;BLUE</tt>
+ <br/><br/>
+  Auf einem Zielsystem ohne Farbunterst&uuml;tzung hat die Anweisung
+  keine Wirkung.
+ <br/><br/>
 
-  <h3><a name="out_string">O$</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>O$</tt> &nbsp; &lt;Adresse&gt;</td>
-      </tr>
-      <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
-    </table>
-  <br/>
-    Die O$-Anweisung gibt eine Zeichenkette auf dem Bildschirm aus,
-    die im Arbeitsspeicher liegt und mit einem Null-Byte abgeschlossen ist.
-    Die Adresse der Zeichenkette wird durch den numerischen Ausdruck angegeben.
-  <br/><br/>
+ <h3><a name="password_input">PASSWORD INPUT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>PASSWORD INPUT</tt> [ &lt;String-Literal&gt; <tt>;</tt> ]
+	&lt;String-Variable&gt;
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die PASSWORD&nbsp;INPUT-Anweisung dient zur Eingabe eines Kennworts.
+  Dazu werden die eingegebenen Zeichen auf dem Bildschirm
+  nicht im Klartext ausgegeben, sondern mit Sternchen quittiert.
+  Optional kann ein String-Literal angegeben werden,
+  welches als Prompt ausgegeben wird.
+ <br/><br/>
 
-  <h3><a name="out">OUT</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>OUT</tt>
-	  &nbsp;
-	  <tt>(</tt>&lt;Port&gt;<tt>)</tt>
-	  <tt>=</tt>
-	  &lt;Wert&gt;<br/>
-	  <tt>OUT</tt>
-	  &nbsp;
-	  &lt;Port&gt;<tt>,</tt>&lt;Wert&gt;<br/>
-	</td>
-      </tr>
-      <tr valign="top"><td>Port:</td><td>numerischer Ausdruck</td></tr>
-      <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
-    </table>
-  <br/>
-    Die OUT-Anweisung gibt einen Wert an einem Ausgabetor (Port) aus.
-    Der erste Ausdruck legt die Ausgabeadresse fest,
-    der zweite Ausdruck bestimmt den auszugebenden Wert,
-    wobei nur die unteren 8 Bits relevant sind.
-  <br/><br/>
-    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC ist nur die erste
-    Syntax mit den Klammern und dem Gleichheitszeichen erlaubt.
-  <br/><br/>
+ <h3><a name="pause">PAUSE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>PAUSE</tt> &lt;numerischer Ausdruck&gt;</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung h&auml;lt das Programm an,
+  bis die angegebene Zeit abgelaufern ist oder
+  die Leertaste gedr&uuml;ckt wurde.
+  Der numerische Ausdruck gibt die Wartezeit in Zehntel&nbsp;Sekunden an,
+  d.h., der Wert&nbsp;30 entspricht einer Wartezeit von 3&nbsp;Sekunden.
+ <br/><br/>
+  <b>Achtung!</b> Die Wartezeite entspricht nur in ungef&auml;hr
+  dem angegebenen Wert und h&auml;ngt ma&szlig;geblich
+  von der Taktfrequenz ab.
+ <br/><br/>
 
-  <h3><a name="outchar">OUTCHAR</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>OUTCHAR</tt> &nbsp; &lt;numerischer Ausdruck&gt;</td>
-      </tr>
-    </table>
-  <br/>
-    Die OUTCHAR-Anweisung gibt das Zeichen auf dem Bildschirm aus,
-    dass durch den Wert des Ausdrucks angegeben wird.
-    Handelt es sich dabei um ein Steuerzeichen,
-    so ist dieses auch aktiv.
-  <br/><br/>
+ <h3><a name="pen">PEN</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>PEN</tt> &lt;numerischer Ausdruck&gt;</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung legt den Stift fest, mit dem gezeichnet wird.
+  Ein Stift steht f&uuml;r eine bestimmte Art und Weise,
+  wie die Pixel gesetzt werden.
+  Es gibt vier verschiedene Stifte:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Stift</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">0</td>
+    <td nowrap="nowrap">
+     Stift angehoben,<br/>
+     Bei diesem Stift passiert nichts.
+     Es wird weder etwas gezeichnet noch etwas gel&ouml;scht.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">1</td>
+    <td nowrap="nowrap">
+     Zeichnen,<br/>
+     Die zu zeichnenden Pixel werden auf die Vordergrundfarbe gesetzt.
+     Bereits auf dem Bildschirm befindliche Texte und Grafiken
+     werden somit &uuml;bermalt.
+     Dieser Stift ist der &quot;normale&quot; Zeichenstift und
+     wird bei Programmstart automatisch eingestellt.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">2</td>
+    <td nowrap="nowrap">
+     L&ouml;schen,<br/>
+     Die zu zeichnenden Pixel werden auf die Hintergrundfarbe gesetzt.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">3</td>
+    <td nowrap="nowrap">
+     XOR-Modus,<br/>
+     Bei jedem zu zeichnenden Pixel wird gepr&uuml;ft,
+     ob es bereits gesetzt ist.
+     Wenn ja, wird das Pixel gel&ouml;scht (auf Hintergrundfarbe gesetzt).
+     Wenn nein, wird es normal gezeichnet (auf Vordergrundfarbe gesetzt).
+     Dadurch bleiben auf dem Bildschirm bereits befindliche Texte
+     und Grafiken weiterhin sichtbar, aber invers.
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="poke">POKE</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>POKE</tt>
-	  &nbsp;
-	  &lt;Adresse&gt;
-	  <tt>,</tt>
-	  &lt;Wert&gt;
-	</td>
-      </tr>
-      <tr valign="top">
-	<td>Adresse:</td>
-	<td>numerischer Ausdruck</td>
-      </tr>
-      <tr valign="top">
-	<td>Wert:</td>
-	<td>numerischer Ausdruck</td>
-      </tr>
-    </table>
-  <br/>
-    Die durch die Adresse angegebene Speicherzelle wird
-    mit den unteren 8 Bits des Wertes des zweiten numerischen Ausdrucks
-    beschrieben.
-  <br/><br/>
+ <h3><a name="plot">PLOT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>PLOT</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>PLOT (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
+     <tt>PLOT STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die PLOT-Anweisung positioniert den Grafik-Cursor
+  und setzt das dortige Pixel.
+  Damit eignet sich z.B. die PLOT-Anweisung in Verbindung mit der
+  <a href="instructions.htm#draw">DRAW</a>-Anweisungen zum Zeichnen
+  von nicht geschlossenen Polygonen.
+ <br/><br/>
+  Bei der Variante mit dem Schl&uuml;sselwort <em>STEP</em>
+  werden relative Koordinaten angegeben.
+  Diese Variante ist identisch mit der
+  <a href="instructions.htm#plotr">PLOTR</a>-Anweisung.
+ <br/><br/>
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="print">PRINT</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>
-	  <tt>PRINT</tt><br/>
-	  <tt>PRINT</tt>
-	  &nbsp;
-	  &lt;String-Literal&gt;
-	  &nbsp;
-	  [ <tt>,</tt> ... ]
-	  &nbsp;
-	  [ <tt>,</tt> ]<br/>
-	  <tt>PRINT</tt>
-	  &nbsp;
-	  &lt;numerischer Ausdruck&gt;
-	  &nbsp;
-	  [ <tt>,</tt> ... ]
-	  &nbsp;
-	  [ <tt>,</tt> ]<br/>
-	  <tt>PRINT</tt>
-	  &nbsp;
-	  <tt>#</tt> &lt;numerischer Ausdruck&gt;
-	  &nbsp;
-	  [ <tt>,</tt> ... ]
-	  &nbsp;
-	  [ <tt>,</tt> ]
-	</td>
-      </tr>
-    </table>
-  <br/>
-    Die PRINT-Anweisung kann mehrere Abschnitte enthalten,
-    die durch Kommas getrennt werden.
-    Ein Abschnitt dient entweder zur Ausgabe einer Zeichenkette
-    (<a href="instructions.htm#string_literal">String-Literal</a>),
-    einer Dezimalzahl (Angabe eines numerischen Ausdrucks) oder
-    zum Festlegen der Feldbreite nachfolgender Ausgaben von Dezimalzahlen
-    (Doppelkreuz gefolgt von einem numerischen Ausdruck).
-  <br/><br/>
-    Dezimalzahlen werden rechtsb&uuml;ndig ausgegeben,
-    wof&uuml;r eine Feldbreite notwendig ist.
-    Wurde vorher keine Feldbreite explizit angegeben,
-    wird die Dezimalzahl auf sechs Zeichen Breite formatiert.
-    Die Feldbreite gilt immer nur f&uuml;r die PRINT-Anweisung,
-    in der sie angegeben wurde.
-  <br/><br/>
-    Wird die PRINT-Anweisung mit einem Komma abgeschlossen,
-    bleibt der Cursor hinter der Ausgabe stehen,
-    d.h., nachfolgende Ausgaben schlie&szlig;en unmittelbar
-    an die mit der PRINT-Anweisung gemachten Ausgaben an.
-    Wird dagegen die PRINT-Anweisung ohne Komma abgeschlossen,
-    geht der Cursor an den Anfang der n&auml;chsten Zeile.
-  <br/><br/>
+ <h3><a name="plotr">PLOTR</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>PLOTR</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>PLOTR (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die PLOTR-Anweisung verschiebt den Grafik-Cursor um den angegebenen
+  X- und Y-Wert und setzt das dortige Pixel.
+  Die Positionsangabe ist relativ. Ansonsten gilt das bei der
+  <a href="instructions.htm#plot">PLOT</a>-Anweisung geschriebene.
+ <br/><br/>
 
-  <h3><a name="read">READ</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>READ</tt> &nbsp; &lt;Variable&gt; [ <tt>,</tt> ... ]</td>
-      </tr>
-    </table>
-  <br/>
-    READ liest den n&auml;chsten Wert aus dem Datenbereich,
-    der mit den <a href="instructions.htm#data">DATA</a>-Anweisungen
-    erzeugt wurde und schreibt ihn in die angegebene Variable.
-    Durch Komma getrennt k&ouml;nnen mehrere Variablen angegeben werden.
-  <br/><br/>
+ <h3><a name="poke">POKE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>POKE</tt> &lt;Adresse&gt; <tt>,</tt> &lt;Wert&gt;
+    </td>
+   </tr>
+   <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die durch die Adresse angegebene Speicherzelle wird
+  mit den unteren 8 Bits des Wertes des zweiten numerischen Ausdrucks
+  beschrieben.
+ <br/><br/>
 
-  <h3><a name="rem">REM</a></h3>
-    Der Rest der Programmzeile wird als Kommentar gewertet und somit ignoriert.
-    Anstelle des Schl&uuml;sselwortes REM kann auch ein Ausrufezeichen
-    verwendet werden.
-  <br/><br/>
-    Der AC1-Mini-BASIC- und der Z1013-Tiny-BASIC-Interpreter gestatten
-    die Verwendung eines Ausrufezeichens anstelle von REM nicht.
-  <br/><br/>
+ <h3><a name="preset">PRESET</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>PRESET</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>PRESET</tt> ( &lt;X&gt; <tt>,</tt> &lt;Y&gt; )
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+   </tr>
+  </table>
+ <br/>
+  Die PRESET-Anweisung setzt auf dem Bildschirm
+  ein Pixel auf die Hintergrundfarbe zur&uuml;ck.
+  Der mit der PEN-Anweisung eingestellte Stift spielt dabei
+  keine Rolle.
+  Die Position des Grafik-Cursors wird nicht ver&auml;ndert.
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="restore">RESTORE</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td><tt>RESTORE</tt> &nbsp; [ &lt;Zeilennummer&gt; ]</td>
-      </tr>
-    </table>
-  <br/>
-    RESTORE setzt die Leseposition der
-    <a href="instructions.htm#read">READ</a>-Anweisung
-    auf das erste Datenfeld der ersten
-    <a href="instructions.htm#data">DATA</a>-Anweisung,
-    die in der angegebenen Zeile steht.
-    Wird keine Zeilennummer angegeben,
-    setzt RESTORE die Leseposition auf das erste Datenfeld
-    der ersten DATA-Anweisung im BASIC-Programm,
-    d.h., die Leseposition wird auf den Wert zum Zeitpunkt
-    des Programmstarts zur&uuml;ck gesetzt.
-  <br/><br/>
+ <h3><a name="print">PRINT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>PRINT</tt><br/>
+     <tt>PRINT</tt> &lt;Abschnitt&gt;<br/>
+     <tt>PRINT</tt> &lt;Abschnitt&gt; &lt;Trennzeichen&gt;<br/>
+     <tt>PRINT</tt> &lt;Abschnitt&gt; &lt;Trennzeichen&gt;
+	&lt;weitere Abschnitte&gt;<br/>
+     <tt>PRINT</tt> &lt;Abschnitt&gt; &lt;Trennzeichen&gt;
+	&lt;weitere Abschnitte&gt; &lt;Trennzeichen&gt;<br/>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Abschnitt:</td>
+    <td>String-Ausdruck oder numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Trennzeichen:</td>
+    <td>Komma oder Semikolon</td>
+   </tr>
+  </table>
+ <br/>
+  Die PRINT-Anweisung kann mehrere Abschnitte enthalten,
+  die durch Kommas oder Semikolons getrennt sind.
+  Ein Abschnitt dient entweder zur Ausgabe einer Zeichenkette
+  oder einer Dezimalzahl.
+ <br/><br/>
+  Ist ein Abschnitt zur Ausgabe einer Dezimalzahl vom vorherigen Abschnitt
+  mit einem Komma getrennt, wird die Zahl in einem 14&nbsp;Zeichen breiten
+  Feld rechtsb&uuml;ndig ausgegeben.
+  Anderenfalls erfolgt die Ausgabe linksb&uuml;ndig.
+  Folgende Beispiele demonstrieren das:
+ <br><br/>
+  <table border="1">
+   <tr>
+    <th>linksb&uuml;ndige Ausgabe</th>
+    <th>rechtsb&uuml;ndige Ausgabe</th>
+   </tr>
+   <tr>
+    <td>
+     <tt>
+      10 A=12<br/>
+      20 PRINT "A=";A
+     </tt>
+    </td>
+    <td>
+     <tt>
+      10 A=12<br/>
+      20 PRINT "A=",A
+     </tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Bei der linksb&uuml;ndigen Ausgabe enth&auml;lt die erste Stelle
+  entweder das Vorzeichen oder ein Leerzeichen.
+  Wenn das Leerzeichen st&ouml;rt, muss man die Zahl vor das Ausgabe
+  in eine Zeichenkette umwandeln und die f&uuml;hrenden Leerzeichen
+  abschneiden:
+ <br/><br/>
+  <tt>
+   10 A=12<br/>
+   20 PRINT "A=";LTRIM$(STR$(A))
+  </tt>
+ <br/><br/>
+  Wenn hinter einem Abschnitt zur Ausgabe einer Dezimalzahl ein weiterer
+  Abschnitt folgt, wird dieser entsprechend den g&auml;ngigen
+  BASIC-Dialekten mit einem Leerzeichen von der Zahl getrennt.
+  Sollte dieses Leerzeichen st&ouml;ren,
+  muss auch in diesem Fall die Zahl in eine Zeichenkette umgewandelt werden.
+  Folgendes Beispiel zeigt, wie das Prozentzeichen direkt hinter der Zahl
+  ausgegeben wird:
+ <br/><br/>
+  <tt>
+   10 P=17<br/>
+   20 PRINT "Anteil: ";STR$(P);"%"
+  </tt>
+ <br/><br/>
+  Die PRINT-Anweisung setzt nach der Ausgabe aller Abschnitte
+  standardm&auml;&szlig;ig den Cursor auf den Anfang der n&auml;chsten Zeile.
+  Diese Zeilenschaltung kann unterdr&uuml;ckt werden,
+  indem die Anweisung mit einem Komma oder Semikolon abgeschlossen wird:
+ <br/><br/>
+  <tt>
+   PRINT "A und ";<br/>
+   PRINT "B stehen in der gleichen Zeile"
+  </tt>
+ <br/><br/>
 
-  <h3><a name="return">RETURN</a></h3>
-    Die Programmabarbeitung setzt hinter der zugeh&ouml;rigen
-    <a href="instructions.htm#gosub">GOSUB</a>-Anweisung fort.
-    Die RETURN-Anweisung darf nicht ohne ein vorheriges GOSUB
-    aufgerufen werden!
-  <br/><br/>
+ <h3><a name="pset">PSET</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>PSET</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>PSET</tt> ( &lt;X&gt; <tt>,</tt> &lt;Y&gt; )
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+   </tr>
+  </table>
+ <br/>
+  Die PSET-Anweisung setzt ein Pixel auf dem Bildschirm
+  unter Anwendung des mit der Anweisung
+  <a href="instructions.htm#pen">PEN</a> eingestellten Stiftes.
+  Die Position des Grafik-Cursors wird nicht ver&auml;ndert.
+  Lesen Sie bitte auch die Hinweise zur
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+ <br/><br/>
 
-  <h3><a name="stop">STOP</a></h3>
-    Die STOP-Anweisung beendet ein Programm.
-    Die meisten BASIC-Dialekte allerdings verwenden STOP nur zum
-    Unterbrechen eines Programms, um es sp&auml;ter
-    mit einem speziellen Kommando wieder fortsetzen zu k&ouml;nnen.
-    Der JKCEMU-BASIC-Compiler aber orientiert sich an dem BASIC-Dialekt
-    des AC1-Mini- und Z1013-Tiny-BASIC-Interpreters.
-    Und dort dient eben STOP zum Beenden eines Programms.
-    Alternativ kann aber auch die sonst &uuml;blichere
-    <a href="instructions.htm#end">END</a>-Anweisung verwendet werden.
-  <br/><br/>
+ <h3><a name="read">READ</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>READ</tt> &lt;Variable&gt; [ <tt>,</tt> ... ]</td>
+   </tr>
+  </table>
+ <br/>
+  READ liest den n&auml;chsten Wert aus dem Datenbereich,
+  der mit den <a href="instructions.htm#data">DATA</a>-Anweisungen
+  erzeugt wurde und schreibt ihn in die angegebene Variable.
+  Durch Komma getrennt k&ouml;nnen mehrere Variablen angegeben werden.
+ <br/><br/>
 
-  <h3><a name="tab">TAB</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>TAB &nbsp; &lt;Anzahl&gt;</td>
-      </tr>
-      <tr><td>Anzahl:</td><td>numerischer Ausdruck</td></tr>
-    </table>
-  <br/>
-    Es werden so viele Leerzeichen auf dem Bildschirm ausgegeben,
-    wie durch das Argument angegeben ist.
-  <br/><br/>
-    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC muss
-    der numersiche Ausdruck in Klammern eingeschlossen sein.
-  <br/><br/>
+ <h3><a name="rem">REM</a></h3>
+  Der Rest der Programmzeile wird als Kommentar gewertet und somit ignoriert.
+  Anstelle des Schl&uuml;sselwortes REM kann auch ein Ausrufezeichen
+  oder ein Apostroph (Quote-Zeichen) verwendet werden.
+ <br/><br/>
 
-  <h3><a name="word">WORD</a></h3>
-    <table border="1">
-      <tr valign="top">
-	<td>Syntax:</td>
-	<td>WORD &nbsp; &lt;numerischer Ausdruck&gt;</td>
-      </tr>
-    </table>
-  <br/>
-    Der Wert des angegebenen Ausdrucks wird hexadezimal,
-    d.h. in Form von vier Zeichen, auf dem Bildschirm ausgegeben.
-  <br/><br/>
-    Beim originalen AC1-Mini-BASIC und Z1013-Tiny-BASIC muss
-    der numersiche Ausdruck in Klammern eingeschlossen sein.
-  <br/><br/>
+ <h3><a name="restore">RESTORE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>
+      RESTORE</tt><br/>
+      RESTORE</tt> &lt;Zeilennummer&gt;<br/>
+      RESTORE</tt> &lt;Marke&gt;
+     </tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  RESTORE setzt die Leseposition der
+  <a href="instructions.htm#read">READ</a>-Anweisung
+  auf das erste Datenfeld der ersten
+  <a href="instructions.htm#data">DATA</a>-Anweisung,
+  die in der angegebenen Zeile bzw. hinter der angegebenen Marke steht, z.B.:
+ <br/><br/>
+  <tt>
+   RESTORE Wochentage<br/>
+   FOR I=1 TO 7<br/>
+   &nbsp; READ A$<br/>
+   &nbsp; PRINT A$<br/>
+   NEXT I<br/>
+   END<br/>
+   <br/>
+   Wochentage:<br/>
+   &nbsp; DATA "Mo","Di","Mi","Do","Fr","Sa","So"
+  </tt>
+ <br/><br/>
+  Wird keine Zeilennummer bzw. keine Marke angegeben,
+  setzt RESTORE die Leseposition auf das erste Datenfeld
+  der ersten DATA-Anweisung im BASIC-Programm,
+  d.h., die Leseposition wird auf den Wert zum Zeitpunkt
+  des Programmstarts zur&uuml;ckgesetzt.
+ <br/><br/>
+  <b>Achtung!</b> Wenn eine Marke angegeben wird, muss es die Marke sein,
+  die unmittelbar vor der betreffenden DATA-Anweisung steht.
+  Wenn zwischen der angegebenen Marke und der DATA-Anweisung
+  eine weitere Marke oder BASIC-Zeilennummer steht,
+  meldet der Compiler einen Fehler.
+ <br/><br/>
 
-  <h3><a name="string_literal">String-Literal</a></h3>
-    Bei INPUT- und PRINT-Anweisungen k&ouml;nnen String-Literale
-    verwendet werden.
-    Ein String-Literal ist eine beliebig lange Zeichenkette,
-    die entweder in einfachen Hochkommas (Quote-Zeichen)
-    oder in doppelten Hochkommas eingeschlossen ist.
+ <h3><a name="return">RETURN</a></h3>
+  Diese Anweisung beendet ein Unterprogramm, dass mit
+  <a href="instructions.htm#gosub">GOSUB</a> aufgerufen wurde.
+  Die Programmabarbeitung setzt somit hinter der aufrufenden
+  GOSUB-Anweisung fort.
+  Die RETURN-Anweisung darf nicht ohne ein vorheriges GOSUB
+  aufgerufen werden!
+ <br/><br/>
+
+ <h3><a name="screen">SCREEN</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>SCREEN</tt> &lt;numerischer Ausdruck&gt;</td>
+   </tr>
+  </table>
+ <br/>
+  Mit der SCREEN-Anweisung kann ein Bildschirm- oder Grafikmodus
+  eingestellt werden.
+  Welche bzw. wieviele Modi zur Verf&uuml;gung stehen,
+  h&auml;ngt vom Zielsystem ab.
+  Lesen Sie dazu bitte die Hinweise zu den
+  <a href="targets.htm">Zielsystemen</a>.
+ <br/><br/>
+  Mit <tt>SCREEN&nbsp;0</tt> kann man den Standardmodus einstellen,
+  der die M&ouml;glichkeit zur Textausgabe bietet und der in jedem Fall
+  zur Verf&uuml;gung steht.
+  Ob in diesem Modus auch Grafikanweisungen m&ouml;glich sind,
+  h&auml;ngt wiederum vom konkreten Zielsystem ab.
+  Bei manchen Systemen wird hardwarem&auml;&szlig;ig zwischen
+  Text- und Grafikmodus umgeschaltet.
+  In solchen F&auml;llen stehen mehrere Modi zur Verf&uuml;gung,
+  z.B. <tt>SCREEN&nbsp;0</tt> f&uuml;r den Text- und
+  <tt>SCREEN&nbsp;1</tt> f&uuml;r den Grafikmodus.
+  Mit der <a href="functions.htm#lastscreen">LASTSCREEN</a>-Funktion
+  kann man ermitteln, ob mehrere Modi zur Verf&uuml;gung stehen.
+  So ist es z.B. m&ouml;glich, mit
+ <br/><br/>
+  <tt>&nbsp;SCREEN&nbsp;LASTSCREEN</tt>
+ <br/><br/>
+  einen Grafikmodus einzustellen, vorausgesetzt,
+  das Zielsystem unterst&uuml;tzt Grafik.
+ <br/><br/>
+  Ruft man die SCREEN-Anweisung mit der SCREEN-Nummer auf,
+  in der man sich gerade befindet, passiert nichts.
+ <br/><br/>
+
+ <h3><a name="sub">SUB</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>SUB</tt> &lt;Prozedurname&gt;<br/>
+     <tt>SUB</tt> &lt;Prozedurname&gt;
+	<tt>(</tt> &lt;Argument&gt; [ <tt>,</tt> ... ] <tt>)</tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Mit der Anweisung wird die Implementierung einer benutzerdefinierten
+  Prozedur eingeleitet.
+  Implizit wird damit auch das Hauptprogramm beendet.
+  Die Prozedur endet mit der Anweisung <tt>END SUB</tt>.
+ <br/><br/>
+  Lesen Sie bitte auch die Erl&auml;uterungen zu den
+  <a href="usersubs.htm">Benutzerdefinierten Funktionen und Prozeduren</a>.
+ <br/><br/>
+
+ <h3><a name="wait">WAIT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     WAIT &lt;E/A-Adresse&gt; <tt>,</tt> &lt;Maske&gt;
+     [ <tt>,</tt> &lt;Inversion&gt; ]
+    </td>
+   </tr>
+   <tr><td>E/A-Adresse:</td><td>numerischer Ausdruck</td></tr>
+   <tr><td>Maske:</td><td>numerischer Ausdruck</td></tr>
+   <tr><td>Inversion:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die Funktion wartet auf das Eintreten eines bestimmten Zustandes
+  an dem mit dem ersten Parameter angegeben Eingabetor.
+  Dazu wird st&auml;ndig von diesem Eingabetor (Port) gelesen
+  und der gelesene Wert bitweise mit der Maske UND-verkn&uuml;pft.
+  Ist das Ergebnis&nbsp;0, wird erneut gelesen.
+  Die Funktion wartet also solange, bis eins der gelesenen
+  und durch die Maske ausgew&auml;hlten Bits gesetzt ist.
+ <br/><br/>
+  Damit man auch auf auf das Zur&uuml;cksetzen von Bits warten kann,
+  gibt es optional den dritten Parameter.
+  Bei allen Bits, die dort gesetzt sind, gilt die umgekehrte Logik,
+  d.h., es wird solange gewartet, bis eins der gelesenen Bits&nbsp;0 ist.
+ <br/><br/>
+  Die WAIT-Funktion wartet solange,
+  bis der folgende Ausdruck einen Wert ungleich&nbsp;0 liefert:
+ <br/><br/>
+  (&lt;gelesener Wert&gt; <tt>XOR</tt> &lt;Inversion&gt;) AND &lt;Maske&gt;
+ <br/><br/>
+
+ <h3><a name="wend">WEND</a></h3>
+  Diese Anweisung markiert das Ende einer Schleife,
+  die vorher mit der WHILE-Anweisung er&ouml;ffnet worden ist.
+ <br/><br/>
+
+ <h3><a name="while">WHILE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>WHILE</tt> &lt;Bedingung&gt;</td>
+   </tr>
+   <tr valign="top"><td>Bedingung:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die WHILE-Anweisung markiert den Anfang einer abweisenden Schleife,
+  d.h. vor dem Schleifendurchlauf wird gep&uuml;ft,
+  ob die Bedingung erf&uuml;llt ist.
+  Wenn ja, werden die Anweisungen in der Schleife durchlaufen.
+  Wenn nein, wird an das Ende der Schleife
+  (siehe <a href="instructions.htm#wend">WEND</a>) gesprungen.
+  Jede WHILE-Schleife muss mit WEND abgeschlossen werden.
+ <br/><br/>
+  <tt>
+   I=1<br/>
+   WHILE i&lt;10<br/>
+   &nbsp; PRINT I<br/>
+   &nbsp; I=I+1<br/>
+   WEND
+  </tt>
+ <br/>
 </body>
 </html>
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,6 @@ import z80emu.Z80Memory;
 
 public class MemEditFrm extends AbstractHexCharFrm
 {
-  private ScreenFrm   screenFrm;
   private Z80Memory   memory;
   private int         begAddr;
   private int         endAddr;
@@ -49,9 +48,8 @@ public class MemEditFrm extends AbstractHexCharFrm
   private HexDocument docEndAddr;
 
 
-  public MemEditFrm( ScreenFrm screenFrm, Z80Memory memory )
+  public MemEditFrm( Z80Memory memory )
   {
-    this.screenFrm = screenFrm;
     this.memory    = memory;
     this.begAddr   = -1;
     this.endAddr   = -1;
@@ -168,7 +166,8 @@ public class MemEditFrm extends AbstractHexCharFrm
     // Adresseingabe
     add( new JLabel( "Anfangsadresse:" ), gbc );
 
-    this.fldBegAddr = new JTextField( 4 );
+    this.docBegAddr = new HexDocument( 4, "Anfangsadresse" );
+    this.fldBegAddr = new JTextField( this.docBegAddr, "", 4 );
     this.fldBegAddr.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 0.5;
@@ -180,15 +179,13 @@ public class MemEditFrm extends AbstractHexCharFrm
     gbc.gridx++;
     add( new JLabel( "Endadresse:" ), gbc );
 
-    this.fldEndAddr = new JTextField( 4 );
+    this.docEndAddr = new HexDocument( 4, "Endadresse" );
+    this.fldEndAddr = new JTextField( this.docEndAddr, "", 4 );
     this.fldEndAddr.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 0.5;
     gbc.gridx++;
     add( this.fldEndAddr, gbc );
-
-    this.docBegAddr = new HexDocument( this.fldBegAddr, 4, "Anfangsadresse" );
-    this.docEndAddr = new HexDocument( this.fldEndAddr, 4, "Endadresse" );
 
     // Hex-ASCII-Anzeige
     gbc.anchor    = GridBagConstraints.CENTER;
@@ -278,7 +275,7 @@ public class MemEditFrm extends AbstractHexCharFrm
 	doFindNext();
       } else if( src == this.mnuHelpContent ) {
 	rv = true;
-	this.screenFrm.showHelp( "/help/tools/memeditor.htm" );
+	HelpFrm.open( "/help/tools/memeditor.htm" );
       } else {
 	rv = super.doAction( e );
       }

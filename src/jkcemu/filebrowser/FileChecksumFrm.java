@@ -30,7 +30,8 @@ public class FileChecksumFrm extends BasicFrm
 {
   private static final String BTN_TEXT_CALCULATE = "Berechnen";
 
-  private ScreenFrm        screenFrm;
+  private static FileChecksumFrm instance = null;
+
   private JMenuItem        mnuClose;
   private JMenuItem        mnuCopyUpper;
   private JMenuItem        mnuCopyLower;
@@ -52,9 +53,252 @@ public class FileChecksumFrm extends BasicFrm
   private volatile boolean filesChanged;
 
 
-  public FileChecksumFrm( ScreenFrm screenFrm )
+  public static void open()
   {
-    this.screenFrm    = screenFrm;
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new FileChecksumFrm();
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+  public static void open( Collection<File> files )
+  {
+    open();
+    instance.setFiles( files );
+  }
+
+
+  public void setFiles( Collection<File> files )
+  {
+    this.cancelled = true;
+    synchronized( this.tableModel ) {
+      this.filesChanged = true;
+      this.tableModel.clear( false );
+      if( files != null ) {
+	for( File file : files ) {
+	  if( file.isFile() ) {
+	    FileEntry entry = new FileEntry();
+	    entry.setName( file.getName() );
+	    entry.setFile( file );
+	    this.tableModel.addRow( entry, false );
+	  }
+	}
+      }
+      this.tableModel.fireTableDataChanged();
+    }
+    updFields();
+  }
+
+
+	/* --- ListSelectionListener --- */
+
+  @Override
+  public void valueChanged( ListSelectionEvent e )
+  {
+    updEditBtns();
+  }
+
+
+	/* --- Runnable --- */
+
+  @Override
+  public void run()
+  {
+    String        algorithm = null;
+    CksCalculator cks       = null;
+    int           nRows     = 0;
+    synchronized( this.tableModel ) {
+      algorithm = this.algorithm;
+      cks       = this.cks;
+      nRows     = this.tableModel.getRowCount();
+      if( nRows > 0 ) {
+	for( int i = 0; i < nRows; i++ ) {
+	  FileEntry entry = this.tableModel.getRow( i );
+	  if( entry != null ) {
+	    entry.setValue( null );
+	  }
+	}
+	fireTableRowsUpdated( 0, nRows - 1 );
+      }
+    }
+    if( (cks != null) && (nRows > 0) ) {
+      for( int i = 0; !this.cancelled && (i < nRows); i++ ) {
+	FileEntry entry = null;
+	synchronized( this.tableModel ) {
+	  if( i < this.tableModel.getRowCount() ) {
+	    entry = this.tableModel.getRow( i );
+	  }
+	}
+	if( entry != null ) {
+	  InputStream in = null;
+	  cks.reset();
+	  try {
+	    in = new BufferedInputStream(
+				new FileInputStream( entry.getFile() ) );
+	    entry.setMarked( true );
+	    entry.setValue( "Wird berechnet..." );
+	    fireTableRowsUpdated( i, i );
+	    if( cks != null ) {
+	      int b = in.read();
+	      while( !this.cancelled && (b != -1) ) {
+		cks.update( b );
+		b = in.read();
+	      }
+	      if( !this.cancelled ) {
+		entry.setValue( cks.getValue() );
+	      }
+	    }
+	    if( this.cancelled ) {
+	      entry.setValue( null );
+	    }
+	    entry.setMarked( false );
+	  }
+	  catch( IOException ex ) {
+	    String msg = ex.getMessage();
+	    if( msg != null ) {
+	      entry.setValue( "Fehler: " + msg );
+	    } else {
+	      entry.setValue( "Fehler" );
+	    }
+	  }
+	  finally {
+	    if( in != null ) {
+	      try {
+		in.close();
+	      }
+	      catch( IOException ex ) {}
+	    }
+	  }
+	  if( !this.filesChanged ) {
+	    fireTableRowsUpdated( i, i );
+	  }
+	} else {
+	  this.cancelled = true;
+	}
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    updEditBtns();
+		  }
+		} );
+      }
+    }
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    calculationFinished();
+		  }
+		} );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src == this.mnuClose ) {
+	rv = true;
+	doClose();
+      }
+      else if( src == this.btnAction ) {
+	rv = true;
+	doCalculate();
+      }
+      else if( (src == this.mnuCopyUpper)
+	       || (src == this.mnuPopupCopyUpper) )
+      {
+	rv = true;
+	doCopyUpper();
+      }
+      else if( (src == this.mnuCopyLower)
+	       || (src == this.mnuPopupCopyLower) )
+      {
+	rv = true;
+	doCopyLower();
+      }
+      else if( (src == this.mnuCompare)
+	       || (src == this.mnuPopupCompare) )
+      {
+	rv = true;
+	doCompare();
+      }
+      else if( src == this.mnuHelpContent ) {
+	rv = true;
+	HelpFrm.open( "/help/tools/filechecksum.htm" );
+      }
+
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.cancelled = true;
+      Thread thread  = this.thread;
+      if( thread != null ) {
+	thread.interrupt();
+      }
+      instance = null;
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    if( this.mnuPopup != null )
+      SwingUtilities.updateComponentTreeUI( this.mnuPopup );
+  }
+
+
+  @Override
+  protected boolean showPopup( MouseEvent e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Component c = e.getComponent();
+      if( c != null ) {
+	this.mnuPopup.show( c, e.getX(), e.getY() );
+	rv = true;
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void windowClosed( WindowEvent e )
+  {
+    if( e.getWindow() == this )
+      this.cancelled = true;
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private FileChecksumFrm()
+  {
     this.thread       = null;
     this.algorithm    = null;
     this.cks          = null;
@@ -187,209 +431,6 @@ public class FileChecksumFrm extends BasicFrm
       this.table.setPreferredScrollableViewportSize( new Dimension( 1, 1 ) );
     }
     setResizable( true );
-  }
-
-
-  public void setFiles( Collection<File> files )
-  {
-    this.cancelled = true;
-    synchronized( this.tableModel ) {
-      this.filesChanged = true;
-      this.tableModel.clear( false );
-      if( files != null ) {
-	for( File file : files ) {
-	  if( file.isFile() ) {
-	    FileEntry entry = new FileEntry();
-	    entry.setName( file.getName() );
-	    entry.setFile( file );
-	    this.tableModel.addRow( entry, false );
-	  }
-	}
-      }
-      this.tableModel.fireTableDataChanged();
-    }
-    updFields();
-  }
-
-
-	/* --- ListSelectionListener --- */
-
-  @Override
-  public void valueChanged( ListSelectionEvent e )
-  {
-    updEditBtns();
-  }
-
-
-	/* --- Runnable --- */
-
-  @Override
-  public void run()
-  {
-    String        algorithm = null;
-    CksCalculator cks       = null;
-    int           nRows     = 0;
-    synchronized( this.tableModel ) {
-      algorithm = this.algorithm;
-      cks       = this.cks;
-      nRows     = this.tableModel.getRowCount();
-      if( nRows > 0 ) {
-	for( int i = 0; i < nRows; i++ ) {
-	  FileEntry entry = this.tableModel.getRow( i );
-	  if( entry != null ) {
-	    entry.setValue( null );
-	  }
-	}
-	fireTableRowsUpdated( 0, nRows - 1 );
-      }
-    }
-    if( (cks != null) && (nRows > 0) ) {
-      for( int i = 0; !this.cancelled && (i < nRows); i++ ) {
-	FileEntry entry = null;
-	synchronized( this.tableModel ) {
-	  if( i < this.tableModel.getRowCount() ) {
-	    entry = this.tableModel.getRow( i );
-	  }
-	}
-	if( entry != null ) {
-	  InputStream in = null;
-	  cks.reset();
-	  try {
-	    in = new BufferedInputStream(
-				new FileInputStream( entry.getFile() ) );
-	    entry.setMarked( true );
-	    entry.setValue( "Wird berechnet..." );
-	    fireTableRowsUpdated( i, i );
-	    if( cks != null ) {
-	      int b = in.read();
-	      while( !this.cancelled && (b != -1) ) {
-		cks.update( b );
-		b = in.read();
-	      }
-	      if( !this.cancelled ) {
-		entry.setValue( cks.getValue() );
-	      }
-	    }
-	    if( this.cancelled ) {
-	      entry.setValue( null );
-	    }
-	    entry.setMarked( false );
-	  }
-	  catch( IOException ex ) {
-	    String msg = ex.getMessage();
-	    if( msg != null ) {
-	      entry.setValue( "Fehler: " + msg );
-	    } else {
-	      entry.setValue( "Fehler" );
-	    }
-	  }
-	  finally {
-	    if( in != null ) {
-	      try {
-		in.close();
-	      }
-	      catch( IOException ex ) {}
-	    }
-	  }
-	  if( !this.filesChanged ) {
-	    fireTableRowsUpdated( i, i );
-	  }
-	} else {
-	  this.cancelled = true;
-	}
-	EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    updEditBtns();
-		  }
-		} );
-      }
-    }
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    calculationFinished();
-		  }
-		} );
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.mnuClose ) {
-	rv = true;
-	doClose();
-      }
-      else if( src == this.btnAction ) {
-	rv = true;
-	doCalculate();
-      }
-      else if( (src == this.mnuCopyUpper)
-	       || (src == this.mnuPopupCopyUpper) )
-      {
-	rv = true;
-	doCopyUpper();
-      }
-      else if( (src == this.mnuCopyLower)
-	       || (src == this.mnuPopupCopyLower) )
-      {
-	rv = true;
-	doCopyLower();
-      }
-      else if( (src == this.mnuCompare)
-	       || (src == this.mnuPopupCompare) )
-      {
-	rv = true;
-	doCompare();
-      }
-      else if( src == this.mnuHelpContent ) {
-	rv = true;
-	this.screenFrm.showHelp( "/help/tools/filechecksum.htm" );
-      }
-
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    if( this.mnuPopup != null )
-      SwingUtilities.updateComponentTreeUI( this.mnuPopup );
-  }
-
-
-  @Override
-  protected boolean showPopup( MouseEvent e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Component c = e.getComponent();
-      if( c != null ) {
-	this.mnuPopup.show( c, e.getX(), e.getY() );
-	rv = true;
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void windowClosed( WindowEvent e )
-  {
-    if( e.getWindow() == this )
-      this.cancelled = true;
   }
 
 
@@ -541,6 +582,7 @@ public class FileChecksumFrm extends BasicFrm
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    if( toRow < tableModel.getRowCount() )

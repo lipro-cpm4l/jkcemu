@@ -79,7 +79,8 @@ public class ScreenFrm extends BasicFrm implements
   private JButton              btnAudio;
   private JButton              btnChessboard;
   private JButton              btnFloppyDiskStation;
-  private JButton              btnJoystick;
+  private JButton              btnKeyboard;
+  private JButton              btnSettings;
   private JButton              btnReset;
   private JLabel               labelStatus;
   private boolean              ignoreKeyChar;
@@ -92,17 +93,15 @@ public class ScreenFrm extends BasicFrm implements
   private javax.swing.Timer    screenRefreshTimer;
   private javax.swing.Timer    statusRefreshTimer;
   private NumberFormat         speedFmt;
-  private Map<Class,BasicFrm>  subFrms;
   private EmuThread            emuThread;
   private Clipboard            clipboard;
-  private ChessboardFrm        chessboardFrm;
-  private FloppyDiskStationFrm floppyDiskStationFrm;
   private KeyboardFrm          keyboardFrm;
+  private DebugFrm             primDebugFrm;
+  private MemEditFrm           primMemEditFrm;
+  private ReassFrm             primReassFrm;
   private DebugFrm             secondDebugFrm;
   private MemEditFrm           secondMemEditFrm;
   private ReassFrm             secondReassFrm;
-  private PlotterFrm           plotterFrm;
-  private USBInterfaceFrm      usbInterfaceFrm;
 
 
   public ScreenFrm()
@@ -111,21 +110,21 @@ public class ScreenFrm extends BasicFrm implements
 
 
     // Initialisierungen
-    this.emuThread            = null;
-    this.chessboardFrm        = null;
-    this.floppyDiskStationFrm = null;
-    this.secondDebugFrm       = null;
-    this.secondMemEditFrm     = null;
-    this.secondReassFrm       = null;
-    this.plotterFrm           = null;
-    this.usbInterfaceFrm      = null;
-    this.ignoreKeyChar        = false;
-    this.copyEnabled          = false;
-    this.pasteEnabled         = false;
-    this.chessboardDirty      = false;
-    this.screenDirty          = false;
-    this.screenRefreshMillis  = getDefaultScreenRefreshMillis();
-    this.screenRefreshTimer   = new javax.swing.Timer(
+    this.emuThread           = null;
+    this.keyboardFrm         = null;
+    this.primDebugFrm        = null;
+    this.primMemEditFrm      = null;
+    this.primReassFrm        = null;
+    this.secondDebugFrm      = null;
+    this.secondMemEditFrm    = null;
+    this.secondReassFrm      = null;
+    this.ignoreKeyChar       = false;
+    this.copyEnabled         = false;
+    this.pasteEnabled        = false;
+    this.chessboardDirty     = false;
+    this.screenDirty         = false;
+    this.screenRefreshMillis = getDefaultScreenRefreshMillis();
+    this.screenRefreshTimer  = new javax.swing.Timer(
 					this.screenRefreshMillis,
 					this );
 
@@ -135,7 +134,6 @@ public class ScreenFrm extends BasicFrm implements
       this.clipboard = tk.getSystemClipboard();
     }
 
-    this.subFrms  = new Hashtable<Class,BasicFrm>();
     this.speedFmt = NumberFormat.getNumberInstance();
     if( this.speedFmt instanceof DecimalFormat ) {
       ((DecimalFormat) this.speedFmt).applyPattern( "###,###,##0.0#" );
@@ -214,7 +212,7 @@ public class ScreenFrm extends BasicFrm implements
     mnuFile.add( createJMenuItem( "Datei-Browser...", "file.browser" ) );
     mnuFile.add( createJMenuItem(
 			"Texteditor/Programmierung...",
-			"file.editor" ) );
+			"file.texteditor" ) );
     mnuFile.addSeparator();
     mnuFile.add( createJMenuItem( "Beenden", "file.quit" ) );
 
@@ -383,10 +381,10 @@ public class ScreenFrm extends BasicFrm implements
     mnuExtraTools.add( createJMenuItem( "Rechner...", "extra.calculator" ) );
     mnuExtraTools.add( createJMenuItem(
 				"Hex-Dateivergleicher...",
-				"extra.hex.diff" ) );
+				"extra.hexdiff" ) );
     mnuExtraTools.add( createJMenuItem(
 		"Hex-Editor...",
-		"extra.hex.editor",
+		"extra.hexeditor",
 		KeyStroke.getKeyStroke(
 			KeyEvent.VK_H,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) ) );
@@ -567,10 +565,15 @@ public class ScreenFrm extends BasicFrm implements
 				"Diskettenstation",
 				"file.floppydisk.station" );
 
-    this.btnJoystick = createImageButton(
-				"/images/file/joystick.png",
-				"Joystick",
-				"extra.joystick" );
+    this.btnKeyboard = createImageButton(
+				"/images/keyboard/keyboard.png",
+				"Tastatur",
+				"extra.keyboard" );
+
+    this.btnSettings = createImageButton(
+				"/images/file/settings.png",
+				"Einstellungen",
+				"extra.settings" );
 
     this.btnReset = createImageButton(
 				"/images/file/reset.png",
@@ -619,25 +622,6 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  public void addToHexDiff( Collection<File> files )
-  {
-    doExtraHexDiff().addFiles( files );
-  }
-
-
-  public void fireAskClearRAMFloppies()
-  {
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    askClearRAMFloppies();
-		  }
-		} );
-  }
-
-
   /*
    * Die Methode wird aufgerufen,
    * wenn sich ein untergeordnetes Fenster schliesst.
@@ -645,12 +629,8 @@ public class ScreenFrm extends BasicFrm implements
   public void childFrameClosed( Frame frm )
   {
     if( frm != null ) {
-      if( this.subFrms.containsValue( frm ) ) {
-	this.subFrms.remove( frm.getClass() );
-      } else {
-	if( frm == this.keyboardFrm ) {
-	  this.keyboardFrm = null;
-	}
+      if( frm == this.keyboardFrm ) {
+	this.keyboardFrm = null;
       }
     }
   }
@@ -669,95 +649,14 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  public boolean doQuit()
-  {
-    // Programmbeendigung nicht durch Exception verhindern lassen
-    try {
-
-      // untergeordnete Fenster schliessen
-      if( this.floppyDiskStationFrm != null ) {
-	if( !this.floppyDiskStationFrm.doClose() ) {
-	  return false;
-	}
-      }
-      if( this.chessboardFrm != null ) {
-	if( !this.chessboardFrm.doClose() ) {
-	  return false;
-	}
-      }
-      if( this.keyboardFrm != null ) {
-	if( !this.keyboardFrm.doClose() ) {
-	  return false;
-	}
-      }
-      if( this.plotterFrm != null ) {
-	if( !this.plotterFrm.doClose() ) {
-	  return false;
-	}
-      }
-      if( this.secondDebugFrm != null ) {
-	if( !this.secondDebugFrm.doClose() ) {
-	  return false;
-	}
-      }
-      if( this.secondMemEditFrm != null ) {
-	if( !this.secondMemEditFrm.doClose() ) {
-	  return false;
-	}
-      }
-      if( this.secondReassFrm != null ) {
-	if( !this.secondReassFrm.doClose() ) {
-	  return false;
-	}
-      }
-      if( this.usbInterfaceFrm != null ) {
-	if( !this.usbInterfaceFrm.doClose() ) {
-	  return false;
-	}
-      }
-      Collection<BasicFrm> c = this.subFrms.values();
-      if( c != null ) {
-	int n = c.size();
-	if( n > 0 ) {
-	  BasicFrm[] frms = c.toArray( new BasicFrm[ n ] );
-	  if( frms != null ) {
-	    for( int i = 0; i < frms.length; i++ ) {
-	      BasicFrm frm = frms[ i ];
-	      if( frm instanceof AudioFrm ) {
-		((AudioFrm) frm).doQuit();
-	      }
-	      else if( !frm.doClose() ) {
-		return false;
-	      }
-	    }
-	  }
-	}
-      }
-
-      // Emulator-Thread beenden
-      if( this.emuThread != null ) {
-	this.emuThread.stopEmulator();
-
-	// max. eine halbe Sekunde auf Thread-Beendigung warten
-	try {
-	  this.emuThread.join( 500 );
-	}
-	catch( InterruptedException ex ) {}
-      }
-      super.doClose();
-    }
-    catch( Exception ex ) {}
-    System.exit( 0 );
-    return true;
-  }
-
-
   public void fireDirectoryChanged( File dirFile )
   {
-    Frame frm = this.subFrms.get( FileBrowserFrm.class );
-    if( frm != null ) {
-      if( frm instanceof FileBrowserFrm ) {
-	((FileBrowserFrm) frm).fireDirectoryChanged( dirFile );
+    Frame[] frms = Frame.getFrames();
+    if( frms != null ) {
+      for( Frame f : frms ) {
+	if( f instanceof FileBrowserFrm ) {
+	  ((FileBrowserFrm) f).fireDirectoryChanged( dirFile );
+	}
       }
     }
   }
@@ -768,6 +667,7 @@ public class ScreenFrm extends BasicFrm implements
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    pastingTextFinished();
@@ -781,6 +681,7 @@ public class ScreenFrm extends BasicFrm implements
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    execReset( resetLevel );
@@ -796,6 +697,7 @@ public class ScreenFrm extends BasicFrm implements
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    screenFld.updPreferredSize();
@@ -830,97 +732,46 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  public FloppyDiskStationFrm getFloppyDiskStationFrm()
-  {
-    if( this.floppyDiskStationFrm == null ) {
-      this.floppyDiskStationFrm = new FloppyDiskStationFrm( this );
-    }
-    return this.floppyDiskStationFrm;
-  }
-
-
   public int getScreenRefreshMillis()
   {
     return this.screenRefreshMillis;
   }
 
 
-  public void openHexEditor( byte[] data )
-  {
-    doExtraHexEditor().newFile( data );
-  }
-
-
-  public void openHexEditor( File file )
-  {
-    doExtraHexEditor().openFile( file );
-  }
-
-
-  public void openFileChecksumFrm( Collection<File> files )
-  {
-    FileChecksumFrm f = (FileChecksumFrm) reopenSubFrm(
-						FileChecksumFrm.class );
-    if( f != null ) {
-      f.setFiles( files );
-    } else {
-      f = new FileChecksumFrm( this );
-      f.setFiles( files );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-  }
-
-
-  public void openFileConverter( File file )
-  {
-    doExtraFileConverter().openFile( file );
-  }
-
-
-  public void openProject( File file, Properties props )
-  {
-    doFileEditor().openProject( file, props );
-  }
-
-
   public DebugFrm openPrimaryDebugger()
   {
-    DebugFrm frm = null;
-    if( this.emuThread != null ) {
-      frm = (DebugFrm) reopenSubFrm( DebugFrm.class );
-      if( frm == null ) {
-	frm = new DebugFrm(
-			this,
-			this.emuThread.getZ80CPU(),
-			this.emuThread );
-	frm.setVisible( true );
-	this.subFrms.put( frm.getClass(), frm );
+    if( this.primDebugFrm != null ) {
+      EmuUtil.frameToFront( this.primDebugFrm );
+    } else {
+      if( this.emuThread != null ) {
+	this.primDebugFrm = new DebugFrm(
+				this.emuThread.getZ80CPU(),
+				this.emuThread );
+	this.primDebugFrm.setVisible( true );
       }
     }
-    return frm;
+    return this.primDebugFrm;
   }
 
 
   public ReassFrm openPrimaryReassembler()
   {
-    ReassFrm frm = null;
-    if( this.emuThread != null ) {
-      frm = (ReassFrm) reopenSubFrm( ReassFrm.class );
-      if( frm == null ) {
-	frm = new ReassFrm( this, this.emuThread );
-	frm.setVisible( true );
-	this.subFrms.put( frm.getClass(), frm );
+    if( this.primReassFrm != null ) {
+      EmuUtil.frameToFront( this.primReassFrm );
+    } else {
+      if( this.emuThread != null ) {
+	this.primReassFrm = new ReassFrm( this.emuThread );
+	this.primReassFrm.setVisible( true );
       }
     }
-    return frm;
+    return this.primReassFrm;
   }
 
 
   public DebugFrm openSecondDebugger()
   {
     DebugFrm debugFrm = null;
-    EmuSys   emuSys   = emuThread.getEmuSys();
+    EmuSys   emuSys   = getEmuSys();
     if( emuSys != null ) {
       debugFrm = openSecondDebugger(
 			emuSys.getSecondZ80CPU(),
@@ -934,7 +785,7 @@ public class ScreenFrm extends BasicFrm implements
   public ReassFrm openSecondReassembler()
   {
     ReassFrm reassFrm = null;
-    EmuSys   emuSys   = emuThread.getEmuSys();
+    EmuSys   emuSys   = getEmuSys();
     if( emuSys != null ) {
       reassFrm = openSecondReassembler(
 			emuSys.getSecondZ80Memory(),
@@ -949,27 +800,24 @@ public class ScreenFrm extends BasicFrm implements
 			byte[] fileBytes,
 			int    offs )
   {
-    doExtraAudio().openFile( file, fileBytes, offs );
+    AudioFrm.open( this ).openFile( file, fileBytes, offs );
   }
 
 
   public void openAudioInFile( File file )
   {
-    doExtraAudio().openFile( file, null, 0 );
+    AudioFrm.open( this ).openFile( file, null, 0 );
   }
 
 
-  public EditFrm openText( String text )
-  {
-    EditFrm editFrm = doFileEditor();
-    editFrm.openText( text );
-    return editFrm;
-  }
 
-
-  public void openTextFile( File file )
+  public TextEditFrm openText( String text )
   {
-    doFileEditor().openFile( file );
+    TextEditFrm frm = TextEditFrm.open( this.emuThread );
+    if( frm != null ) {
+      frm.openText( text );
+    }
+    return frm;
   }
 
 
@@ -1032,35 +880,6 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  public void showHelp( final String page )
-  {
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    showHelpInternal( page );
-		  }
-		} );
-  }
-
-
-  public void showImageFile( File file )
-  {
-    ImageFrm frm = getImageFrm();
-    frm.showImageFile( file );
-    EmuUtil.frameToFront( frm );
-  }
-
-
-  public void showImage( BufferedImage image, String title )
-  {
-    ImageFrm frm = getImageFrm();
-    frm.showImage( image, title );
-    EmuUtil.frameToFront( frm );
-  }
-
-
   public void showStatusText( String text )
   {
     this.statusRefreshTimer.stop();
@@ -1072,7 +891,8 @@ public class ScreenFrm extends BasicFrm implements
 
   public void startEmulationThread()
   {
-    this.emuThread.start();
+    if( this.emuThread != null )
+      this.emuThread.start();
   }
 
 
@@ -1154,6 +974,7 @@ public class ScreenFrm extends BasicFrm implements
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    updPauseBtn();
@@ -1171,8 +992,8 @@ public class ScreenFrm extends BasicFrm implements
       Object src = e.getSource();
       if( src != null ) {
 	if( src == this.screenRefreshTimer ) {
-	  if( this.chessboardDirty && (this.chessboardFrm != null) ) {
-	    this.chessboardFrm.repaintChessboard();
+	  if( this.chessboardDirty ) {
+	    ChessboardFrm.repaintChessboard();
 	  }
 	  if( this.screenDirty ) {
 	    this.screenFld.repaint();
@@ -1198,7 +1019,7 @@ public class ScreenFrm extends BasicFrm implements
   @Override
   public void keyPressed( KeyEvent e )
   {
-    if( !e.isAltDown() ) {
+    if( (this.emuThread != null) && !e.isAltDown() ) {
       int keyCode = e.getKeyCode();
       if( keyCode != KeyEvent.VK_F10 ) {
 	if( this.emuThread.keyPressed( e ) ) {
@@ -1213,7 +1034,7 @@ public class ScreenFrm extends BasicFrm implements
   @Override
   public void keyReleased( KeyEvent e )
   {
-    if( !e.isAltDown() ) {
+    if( (this.emuThread != null) && !e.isAltDown() ) {
       /*
        * Das Loslassen von F10 und CONTROL nicht melden,
        * da F10 von Java selbst verwendet wird und CONTROL
@@ -1232,7 +1053,7 @@ public class ScreenFrm extends BasicFrm implements
   @Override
   public void keyTyped( KeyEvent e )
   {
-    if( !e.isAltDown() ) {
+    if( (this.emuThread != null) && !e.isAltDown() ) {
       if( this.ignoreKeyChar ) {
 	this.ignoreKeyChar = false;
       } else {
@@ -1277,11 +1098,8 @@ public class ScreenFrm extends BasicFrm implements
   @Override
   public void windowDeactivated( WindowEvent e )
   {
-    if( e.getWindow() == this ) {
-      if( this.emuThread != null ) {
-	this.emuThread.keyReleased();
-      }
-    }
+    if( (e.getWindow() == this) && (this.emuThread != null) )
+      this.emuThread.keyReleased();
   }
 
 
@@ -1295,7 +1113,7 @@ public class ScreenFrm extends BasicFrm implements
 	this.screenFld.requestFocus();
       }
       if( Main.isFirstExecution() ) {
-	doExtraSettings();
+	SettingsFrm.open( this );
       }
     }
   }
@@ -1310,16 +1128,14 @@ public class ScreenFrm extends BasicFrm implements
     boolean   canExtractText      = false;
     boolean   supportsChessboard  = false;
     boolean   supportsFloppyDisks = false;
+    boolean   supportsRAMFloppies = false;
     boolean   supportsUSB         = false;
     Z80CPU    secondCPU           = null;
     Z80Memory secondMem           = null;
     int       oldMargin           = this.screenFld.getMargin();
     int       oldScreenScale      = this.screenFld.getScreenScale();
     EmuSys    oldEmuSys           = this.screenFld.getEmuSys();
-    EmuSys    emuSys              = null;
-    if( this.emuThread != null ) {
-      emuSys = this.emuThread.getEmuSys();
-    }
+    EmuSys    emuSys              = getEmuSys();
     if( emuSys != null ) {
       setTitle( "JKCEMU: " + emuSys.getTitle() );
       this.mnuHelpSys.setEnabled( emuSys.getHelpPage() != null );
@@ -1328,6 +1144,7 @@ public class ScreenFrm extends BasicFrm implements
       canExtractText      = emuSys.canExtractScreenText();
       supportsChessboard  = emuSys.supportsChessboard();
       supportsFloppyDisks = (emuSys.getSupportedFloppyDiskDriveCount() > 0);
+      supportsRAMFloppies = emuSys.supportsRAMFloppies();
       supportsUSB         = emuSys.supportsUSB();
       secondCPU           = emuSys.getSecondZ80CPU();
       secondMem           = emuSys.getSecondZ80Memory();
@@ -1425,15 +1242,11 @@ public class ScreenFrm extends BasicFrm implements
     }
 
     // ggf. nicht relevante Fenster schliessen
-    if( !supportsChessboard && (this.chessboardFrm != null) ) {
-      if( this.chessboardFrm.isVisible() ) {
-	this.chessboardFrm.setVisible( false );
-      }
+    if( !supportsChessboard ) {
+      ChessboardFrm.close();
     }
-    if( !supportsFloppyDisks && (this.floppyDiskStationFrm != null) ) {
-      if( this.floppyDiskStationFrm.isVisible() ) {
-	this.floppyDiskStationFrm.setVisible( false );
-      }
+    if( !supportsFloppyDisks ) {
+      FloppyDiskStationFrm.close();
     }
     if( this.keyboardFrm != null ) {
       if( emuSys != null ) {
@@ -1444,12 +1257,11 @@ public class ScreenFrm extends BasicFrm implements
 	this.keyboardFrm.doClose();
       }
     }
-    if( this.plotterFrm != null ) {
-      Plotter plotter = emuSys.getPlotter();
-      if( plotter == null ) {
-	this.plotterFrm.setVisible( false );
-      }
-      this.plotterFrm.setPlotter( plotter );
+    Plotter plotter = emuSys.getPlotter();
+    if( plotter != null ) {
+      PlotterFrm.lazySetPlotter( plotter );
+    } else {
+      PlotterFrm.close();
     }
     if( this.secondDebugFrm != null ) {
       if( (secondCPU == null) || (secondMem == null)
@@ -1476,10 +1288,11 @@ public class ScreenFrm extends BasicFrm implements
 	this.secondReassFrm = null;
       }
     }
-    if( !supportsUSB && (this.usbInterfaceFrm != null) ) {
-      if( this.usbInterfaceFrm.isVisible() ) {
-	this.usbInterfaceFrm.setVisible( false );
-      }
+    if( !supportsRAMFloppies ) {
+      RAMFloppyFrm.close();
+    }
+    if( !supportsUSB ) {
+      USBInterfaceFrm.close();
     }
     return rv;
   }
@@ -1553,11 +1366,11 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "file.browser" ) ) {
 	    rv = true;
-	    doFileBrowser();
+	    FileBrowserFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "file.editor" ) ) {
+	  else if( actionCmd.equals( "file.texteditor" ) ) {
 	    rv = true;
-	    doFileEditor();
+	    TextEditFrm.open( this.emuThread );
 	  }
 	  else if( actionCmd.equals( "edit.copy" ) ) {
 	    rv = true;
@@ -1593,7 +1406,7 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "extra.audio" ) ) {
 	    rv = true;
-	    doExtraAudio();
+	    AudioFrm.open( this );
 	  }
 	  else if( actionCmd.equals( "extra.chessboard" ) ) {
 	    rv = true;
@@ -1601,7 +1414,7 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "extra.joystick" ) ) {
 	    rv = true;
-	    doExtraJoystick();
+	    JoystickFrm.open( this.emuThread );
 	  }
 	  else if( actionCmd.equals( "extra.keyboard" ) ) {
 	    rv = true;
@@ -1613,7 +1426,7 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "extra.print" ) ) {
 	    rv = true;
-	    doExtraPrintList();
+	    PrintListFrm.open( this );
 	  }
 	  else if( actionCmd.equals( "extra.usb" ) ) {
 	    rv = true;
@@ -1621,15 +1434,15 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "extra.screen.photo" ) ) {
 	    rv = true;
-	    doExtraScreenPhoto();
+	    ImageCaptureFrm.open( this );
 	  }
 	  else if( actionCmd.equals( "extra.screen.video" ) ) {
 	    rv = true;
-	    doExtraScreenVideo();
+	    VideoCaptureFrm.open( this );
 	  }
 	  else if( actionCmd.equals( "extra.imageviewer" ) ) {
 	    rv = true;
-	    EmuUtil.frameToFront( getImageFrm() );
+	    ImageFrm.open();
 	  }
 	  else if( actionCmd.equals( "extra.debugger" ) ) {
 	    rv = true;
@@ -1645,23 +1458,23 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "extra.calculator" ) ) {
 	    rv = true;
-	    doExtraCalculator();
+	    CalculatorFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.hex.diff" ) ) {
+	  else if( actionCmd.equals( "extra.hexdiff" ) ) {
 	    rv = true;
-	    doExtraHexDiff();
+	    HexDiffFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.hex.editor" ) ) {
+	  else if( actionCmd.equals( "extra.hexeditor" ) ) {
 	    rv = true;
-	    doExtraHexEditor();
+	    HexEditFrm.open();
 	  }
 	  else if( actionCmd.equals( "extra.fileconverter" ) ) {
 	    rv = true;
-	    doExtraFileConverter();
+	    FileConvertFrm.open();
 	  }
 	  else if( actionCmd.equals( "extra.diskimage.create_manually" ) ) {
 	    rv = true;
-	    doExtraDiskImgCreate();
+	    DiskImgCreateFrm.open();
 	  }
 	  else if( actionCmd.equals( "extra.diskimage.unpack" ) ) {
 	    rv = true;
@@ -1681,7 +1494,7 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "extra.settings" ) ) {
 	    rv = true;
-	    doExtraSettings();
+	    SettingsFrm.open( this );
 	  }
 	  else if( actionCmd.equals( "extra.profile" ) ) {
 	    rv = true;
@@ -1709,7 +1522,7 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "help.content" ) ) {
 	    rv = true;
-	    showHelp( "/help/home.htm" );
+	    HelpFrm.open( "/help/home.htm" );
 	  }
 	  else if( actionCmd.equals( "help.system" ) ) {
 	    rv = true;
@@ -1721,7 +1534,7 @@ public class ScreenFrm extends BasicFrm implements
 	  }
 	  else if( actionCmd.equals( "help.license" ) ) {
 	    rv = true;
-	    showHelp( "/help/license.htm" );
+	    HelpFrm.open( "/help/license.htm" );
 	  }
 	}
       }
@@ -1750,6 +1563,49 @@ public class ScreenFrm extends BasicFrm implements
       rv = doQuit();
     }
     return rv;
+  }
+
+
+  @Override
+  public boolean doQuit()
+  {
+    // Programmbeendigung nicht durch Exception verhindern lassen
+    try {
+
+      // untergeordnete Fenster schliessen
+      Frame[] frms = Frame.getFrames();
+      if( frms != null ) {
+	for( Frame f : frms ) {
+	  if( f != this ) {
+	    if( f instanceof BasicFrm ) {
+	      if( !((BasicFrm) f).doQuit() ) {
+		return false;
+	      }
+	    } else {
+	      f.setVisible( false );
+	      f.dispose();
+	    }
+	  }
+	}
+      }
+
+      // Emulator-Thread beenden
+      if( this.emuThread != null ) {
+	this.emuThread.stopEmulator();
+
+	// max. eine halbe Sekunde auf Thread-Beendigung warten
+	try {
+	  this.emuThread.join( 500 );
+	}
+	catch( InterruptedException ex ) {}
+      }
+      if( !super.doClose() ) {
+	return false;
+      }
+    }
+    catch( Exception ex ) {}
+    Main.exitSuccess();
+    return true;
   }
 
 
@@ -1884,7 +1740,7 @@ public class ScreenFrm extends BasicFrm implements
 
   private void doFileScreenImageShow()
   {
-    showImage( this.screenFld.createBufferedImage(), "Schnappschuss" );
+    ImageFrm.open( this.screenFld.createBufferedImage(), "Schnappschuss" );
   }
 
 
@@ -1953,31 +1809,9 @@ public class ScreenFrm extends BasicFrm implements
     if( emuSys != null ) {
       String screenText = checkConvertScreenText( emuSys.getScreenText() );
       if( screenText != null ) {
-	doFileEditor().openText( screenText );
+	openText( screenText );
       }
     }
-  }
-
-
-  private void doFileBrowser()
-  {
-    if( reopenSubFrm( FileBrowserFrm.class ) == null ) {
-      FileBrowserFrm f = new FileBrowserFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-  }
-
-
-  private EditFrm doFileEditor()
-  {
-    EditFrm f = (EditFrm) reopenSubFrm( EditFrm.class );
-    if( f == null ) {
-      f = new EditFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-    return f;
   }
 
 
@@ -1987,7 +1821,8 @@ public class ScreenFrm extends BasicFrm implements
     if( emuSys != null ) {
       int n = emuSys.getSupportedFloppyDiskDriveCount();
       if( n > 0 ) {
-	FloppyDiskStationFrm frm = getFloppyDiskStationFrm();
+	FloppyDiskStationFrm frm
+			= FloppyDiskStationFrm.getSharedInstance( this );
 	frm.setDriveCount( n );
 	EmuUtil.frameToFront( frm );
       } else {
@@ -2005,11 +1840,7 @@ public class ScreenFrm extends BasicFrm implements
     EmuSys emuSys = getEmuSys();
     if( emuSys != null ) {
       if( emuSys.supportsRAMFloppy1() || emuSys.supportsRAMFloppy2() ) {
-	if( reopenSubFrm( RAMFloppyFrm.class ) == null ) {
-	  RAMFloppyFrm f = new RAMFloppyFrm( this );
-	  f.setVisible( true );
-	  this.subFrms.put( f.getClass(), f );
-	}
+	RAMFloppyFrm.open( this.emuThread );
       }
     }
   }
@@ -2103,29 +1934,12 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  private AudioFrm doExtraAudio()
-  {
-    AudioFrm f = (AudioFrm) reopenSubFrm( AudioFrm.class );
-    if( f == null ) {
-      f = new AudioFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-    return f;
-  }
-
-
   private void doExtraChessboard()
   {
     EmuSys emuSys = getEmuSys();
     if( emuSys != null ) {
       if( emuSys.supportsChessboard() ) {
-	if( this.chessboardFrm != null ) {
-	  EmuUtil.frameToFront( this.chessboardFrm );
-	} else {
-	  this.chessboardFrm = new ChessboardFrm( this );
-	  this.chessboardFrm.setVisible( true );
-	}
+	ChessboardFrm.open( this.emuThread );
       } else {
         BasicDlg.showInfoDlg(
 		this,
@@ -2135,17 +1949,6 @@ public class ScreenFrm extends BasicFrm implements
 			+ "Das trifft jedoch f\u00FCr das gerade"
 			+ " emulierte System nicht zu." );
       }
-    }
-  }
-
-
-  private void doExtraJoystick()
-  {
-    JoystickFrm f = (JoystickFrm) reopenSubFrm( JoystickFrm.class );
-    if( f == null ) {
-      f = new JoystickFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
     }
   }
 
@@ -2188,15 +1991,7 @@ public class ScreenFrm extends BasicFrm implements
     if( emuSys != null ) {
       Plotter plotter = emuSys.getPlotter();
       if( plotter != null ) {
-	if( this.plotterFrm != null ) {
-	  if( !this.plotterFrm.isVisible() ) {
-	    this.plotterFrm.setVisible( true );
-	  }
-	  EmuUtil.frameToFront( this.plotterFrm );
-	} else {
-	  this.plotterFrm = new PlotterFrm( this, plotter );
-	  this.plotterFrm.setVisible( true );
-	}
+	PlotterFrm.open( plotter );
       } else {
         BasicDlg.showInfoDlg(
 		this,
@@ -2205,28 +2000,6 @@ public class ScreenFrm extends BasicFrm implements
 			+ "Das ist aber bei der gerade eingestellten"
 			+ " Konfiguration nicht der Fall." );
       }
-    }
-  }
-
-
-  private void doExtraPrintList()
-  {
-    if( reopenSubFrm( PrintListFrm.class ) == null ) {
-      PrintListFrm f = new PrintListFrm(
-				this,
-				this.emuThread.getPrintMngr() );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-  }
-
-
-  private void doExtraCalculator()
-  {
-    if( reopenSubFrm( CalculatorFrm.class ) == null ) {
-      CalculatorFrm f = new CalculatorFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
     }
   }
 
@@ -2253,18 +2026,6 @@ public class ScreenFrm extends BasicFrm implements
       else if( sysNum == 1 ) {
 	openSecondDebugger();
       }
-    }
-  }
-
-
-  private void doExtraDiskImgCreate()
-  {
-    DiskImgCreateFrm f = (DiskImgCreateFrm) reopenSubFrm(
-						DiskImgCreateFrm.class );
-    if( f == null ) {
-      f = new DiskImgCreateFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
     }
   }
 
@@ -2358,18 +2119,18 @@ public class ScreenFrm extends BasicFrm implements
 	sysNum = askAccessToSysNum( secondName );
       }
       if( sysNum == 0 ) {
-	MemEditFrm frm = (MemEditFrm) reopenSubFrm( MemEditFrm.class );
-	if( frm == null ) {
-	  frm = new MemEditFrm( this, this.emuThread );
-	  frm.setVisible( true );
-	  this.subFrms.put( frm.getClass(), frm );
+	if( this.primMemEditFrm != null ) {
+	  EmuUtil.frameToFront( this.primMemEditFrm );
+	} else {
+	  this.primMemEditFrm = new MemEditFrm( this.emuThread );
+	  this.primMemEditFrm.setVisible( true );
 	}
       }
       else if( sysNum == 1 ) {
 	if( this.secondMemEditFrm != null ) {
 	  EmuUtil.frameToFront( this.secondMemEditFrm );
 	} else {
-	  this.secondMemEditFrm = new MemEditFrm( this, secondMem );
+	  this.secondMemEditFrm = new MemEditFrm( secondMem );
 	  if( secondName != null ) {
 	    this.secondMemEditFrm.setTitle(
 			"JKCEMU Speichereditor: " + secondName );
@@ -2408,52 +2169,6 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  private HexDiffFrm doExtraHexDiff()
-  {
-    HexDiffFrm f = (HexDiffFrm) reopenSubFrm( HexDiffFrm.class );
-    if( f == null ) {
-      f = new HexDiffFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-    return f;
-  }
-
-
-  private FileEditFrm doExtraHexEditor()
-  {
-    FileEditFrm f = (FileEditFrm) reopenSubFrm( FileEditFrm.class );
-    if( f == null ) {
-      f = new FileEditFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-    return f;
-  }
-
-
-  private FileConvertFrm doExtraFileConverter()
-  {
-    FileConvertFrm f = (FileConvertFrm) reopenSubFrm( FileConvertFrm.class );
-    if( f == null ) {
-      f = new FileConvertFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-    return f;
-  }
-
-
-  private void doExtraSettings()
-  {
-    if( reopenSubFrm( SettingsFrm.class ) == null ) {
-      SettingsFrm f = new SettingsFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-  }
-
-
   private void doExtraProfile()
   {
     ProfileDlg dlg = new ProfileDlg(
@@ -2469,7 +2184,7 @@ public class ScreenFrm extends BasicFrm implements
       if( props != null ) {
 	this.emuThread.applySettings( props );
 	Main.applyProfileToFrames( file, props, true, null );
-	getFloppyDiskStationFrm().openDisks( props );
+	FloppyDiskStationFrm.getSharedInstance( this ).openDisks( props );
 	fireReset( EmuThread.ResetLevel.COLD_RESET );
       }
     }
@@ -2543,30 +2258,6 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  private void doExtraScreenPhoto()
-  {
-    ImageCaptureFrm f = (ImageCaptureFrm) reopenSubFrm(
-						ImageCaptureFrm.class );
-    if( f == null ) {
-      f = new ImageCaptureFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-  }
-
-
-  private void doExtraScreenVideo()
-  {
-    VideoCaptureFrm f = (VideoCaptureFrm) reopenSubFrm(
-						VideoCaptureFrm.class );
-    if( f == null ) {
-      f = new VideoCaptureFrm( this );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
-  }
-
-
   private void doExtraPowerOn()
   {
     if( EmuUtil.parseBoolean(
@@ -2594,15 +2285,7 @@ public class ScreenFrm extends BasicFrm implements
     EmuSys emuSys = getEmuSys();
     if( emuSys != null ) {
       if( emuSys.supportsUSB() ) {
-	if( this.usbInterfaceFrm != null ) {
-	  if( !this.usbInterfaceFrm.isVisible() ) {
-	    this.usbInterfaceFrm.setVisible( true );
-	  }
-	  EmuUtil.frameToFront( this.usbInterfaceFrm );
-	} else {
-	  this.usbInterfaceFrm = new USBInterfaceFrm( this );
-	  this.usbInterfaceFrm.setVisible( true );
-	}
+	USBInterfaceFrm.open( this );
       } else {
         BasicDlg.showInfoDlg(
 		this,
@@ -2624,7 +2307,7 @@ public class ScreenFrm extends BasicFrm implements
     if( emuSys != null ) {
       String page = emuSys.getHelpPage();
       if( page != null ) {
-	showHelp( page );
+	HelpFrm.open( page );
       }
     }
   }
@@ -2658,34 +2341,6 @@ public class ScreenFrm extends BasicFrm implements
       }
     }
     return rv;
-  }
-
-
-  private void askClearRAMFloppies()
-  {
-    EmuSys emuSys = getEmuSys();
-    if( (emuSys != null) && (this.emuThread != null) ) {
-      boolean   st1 = emuSys.supportsRAMFloppy1();
-      boolean   st2 = emuSys.supportsRAMFloppy2();
-      RAMFloppy rf1 = this.emuThread.getRAMFloppy1();
-      RAMFloppy rf2 = this.emuThread.getRAMFloppy2();
-      if( (st1 && (rf1.getUsedSize() > 0))
-	  || (st2 && (rf2.getUsedSize() > 0)) )
-      {
-	String msg = "Soll auch die RAM-Floppy gel\u00F6scht werden?";
-	if( st1 && st2 ) {
-	  msg = "Sollen auch die RAM-Floppies gel\u00F6scht werden?";
-	}
-	if( BasicDlg.showYesNoDlg( this, msg ) ) {
-	  if( st1 && (rf1.getUsedSize() > 0) ) {
-	    rf1.clear();
-	  }
-	  if( st2 && (rf2.getUsedSize() > 0) ) {
-	    rf2.clear();
-	  }
-	}
-      }
-    }
   }
 
 
@@ -2848,23 +2503,6 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  private ImageFrm getImageFrm()
-  {
-    ImageFrm imgFrm = null;
-    Frame    tmpFrm = this.subFrms.get( ImageFrm.class );
-    if( tmpFrm != null ) {
-      if( tmpFrm instanceof ImageFrm ) {
-	imgFrm = (ImageFrm) tmpFrm;
-      }
-    }
-    if( imgFrm == null ) {
-      imgFrm = new ImageFrm( this );
-      this.subFrms.put( imgFrm.getClass(), imgFrm );
-    }
-    return imgFrm;
-  }
-
-
   private DebugFrm openSecondDebugger(
 				Z80CPU    secondCPU,
 				Z80Memory secondMem,
@@ -2878,10 +2516,7 @@ public class ScreenFrm extends BasicFrm implements
       if( this.secondDebugFrm != null ) {
 	EmuUtil.frameToFront( this.secondDebugFrm );
       } else {
-	this.secondDebugFrm = new DebugFrm(
-					this,
-					secondCPU,
-					secondMem );
+	this.secondDebugFrm = new DebugFrm( secondCPU, secondMem );
 	if( secondName != null ) {
 	  this.secondDebugFrm.setTitle(
 			"JKCEMU Debugger: " + secondName );
@@ -2906,7 +2541,7 @@ public class ScreenFrm extends BasicFrm implements
       if( this.secondReassFrm != null ) {
 	EmuUtil.frameToFront( this.secondReassFrm );
       } else {
-	this.secondReassFrm = new ReassFrm( this, secondMem );
+	this.secondReassFrm = new ReassFrm( secondMem );
 	if( secondName != null ) {
 	  this.secondReassFrm.setTitle(
 			"JKCEMU Reassembler: " + secondName );
@@ -2990,20 +2625,6 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  private Frame reopenSubFrm( Class frmClass )
-  {
-    Frame rv  = null;
-    Frame frm = this.subFrms.get( frmClass );
-    if( frm != null ) {
-      if( frmClass.isInstance( frm ) ) {
-	EmuUtil.frameToFront( frm );
-	rv = frm;
-      }
-    }
-    return rv;
-  }
-
-
   public void setMaxSpeedInternal( boolean state )
   {
     if( this.emuThread != null ) {
@@ -3027,20 +2648,6 @@ public class ScreenFrm extends BasicFrm implements
     this.mnuScreenTextShow.setEnabled( state );
     this.mnuScreenTextCopy.setEnabled( state );
     this.mnuScreenTextSave.setEnabled( state );
-  }
-
-
-  private void showHelpInternal( String page )
-  {
-    HelpFrm f = (HelpFrm) reopenSubFrm( HelpFrm.class );
-    if( f != null ) {
-      f.setPage( page );
-    } else {
-      f = new HelpFrm( this );
-      f.setPage( page );
-      f.setVisible( true );
-      this.subFrms.put( f.getClass(), f );
-    }
   }
 
 
@@ -3068,8 +2675,7 @@ public class ScreenFrm extends BasicFrm implements
       supportsPlotter     = (emuSys.getPlotter() != null);
       supportsPrinter     = emuSys.supportsPrinter();
       supportsUSB         = emuSys.supportsUSB();
-      supportsRAMFloppies = emuSys.supportsRAMFloppy1()
-					|| emuSys.supportsRAMFloppy2();
+      supportsRAMFloppies = emuSys.supportsRAMFloppies();
     }
 
     // Menueeintrage
@@ -3105,12 +2711,14 @@ public class ScreenFrm extends BasicFrm implements
     if( supportsFloppyDisks ) {
       this.toolBar.add( this.btnFloppyDiskStation );
     }
-    if( supportsJoystick ) {
-      this.toolBar.add( this.btnJoystick );
+    if( supportsKeyboardFld ) {
+      this.toolBar.add( this.btnKeyboard );
     }
     if( supportsAudio ) {
       this.toolBar.add( this.btnAudio );
     }
+    this.toolBar.add( this.btnSettings );
+    this.toolBar.addSeparator();
     this.toolBar.add( this.btnReset );
     SwingUtilities.updateComponentTreeUI( this.toolBar );
   }

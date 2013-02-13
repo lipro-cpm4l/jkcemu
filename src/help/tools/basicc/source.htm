@@ -1,0 +1,155 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Quelltext</h2>
+  <ul>
+   <li><a href="source.htm#fileformat">1. Dateiformat</a></li>
+   <li><a href="source.htm#case">2. Gro&szlig;-/Kleinschreibung</a></li>
+   <li><a href="source.htm#linenumbers">3. Zeilennummern</a></li>
+   <li><a href="source.htm#labels">4. Marken</a></li>
+   <li><a href="source.htm#line_syntax">5. Syntax einer Programmzeile</a></li>
+   <li><a href="source.htm#comments">6. Kommentare</a></li>
+  </ul>
+ <br/>
+
+ <h3><a name="fileformat">1. Dateiformat</a></h3>
+  Das BASIC-Programm ist der Quelltext f&uuml;r den Compiler.
+  Es muss in Form einer einfachen Textdatei vorliegen.
+  Bei der Programmierung innerhalb von JKCEMU bietet sich daf&uuml;r
+  der integrierte <a href="../texteditor.htm">Texteditor</a> an.
+  Damit ist es m&ouml;glich, das compilierte Programm automatisch
+  direkt in den Arbeitsspeicher des Emulators laden zu lassen.
+  Wer einen anderen Texteditor nutzen m&ouml;chte,
+  kann das BASIC-Programm mit der
+  <a href="cmdline.htm">Kommandozeilenversion</a> des Compilers
+  &uuml;bersetzen.
+ <br/><br/>
+
+ <h3><a name="case">2. Gro&szlig;-/Kleinschreibung</a></h3>
+  Gro&szlig;-/Kleinschreibung spielt au&szlig;er in Zeichenketten
+  und Zeichenkonstanten keine Rolle.
+  Alle Anweisungen, Funktionen, Prozeduren, Variablen und Marken
+  k&ouml;nnen beliebig gro&szlig;, klein oder gro&szlig; und klein
+  geschrieben werden.
+  Zur besseren &Uuml;bersichtlichkeit k&ouml;nnen Leerzeilen eingef&uuml;gt
+  sowie Anweisungen und Syntax-Elemente einger&uuml;ckt
+  oder mit Leerzeichen getrennt werden.
+ <br/><br/>
+
+ <h3><a name="linenumbers">3. Zeilennummern</a></h3>
+  Der Compiler versteht BASIC-Programme sowohl in der klassischen Form
+  mit Zeilennummern am Anfang jeder Zeile als auch ohne Zeilennummern.
+  Speziell f&uuml;r den zweiten Fall wurden Marken als Ersatz
+  f&uuml;r die Zeilennummern eingef&uuml;hrt.
+ <br/><br/>
+  Das Bespiel zeigt ein Programm mit und ohne Zeilennummern.
+  In der Version ohne Zeilennummern wird eine Marke verwendet.
+  Marken werden im n&auml;chsten Abschnitt beschrieben.
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th nowrap="nowrap">Programm mit Zeilennummern</th>
+    <th nowrap="nowrap">Programm ohne Zeilennummern</th>
+   </tr>
+   <tr>
+    <td valign="top">
+     <tt>
+      10 I=0<br/>
+      20 I=I+1<br/>
+      30 PRINT I<br/>
+      40 IF I&lt;100 THEN GOTO 20<br/>
+      50 END
+     </tt>
+    </td>
+    <td valign="top">
+     <tt>
+      I=0<br/>
+      schleife:<br/>
+      I=I+1<br/>
+      PRINT I<br/>
+      IF I&lt;100 THEN GOTO schleife<br/>
+      END
+     </tt>
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
+  Im BASIC-Programm stehende Zeilennummern werden in JKCEMU
+  und der Hilfe <em>BASIC-Zeilennummern</em> genannt.
+ <br/><br/>
+
+ <h3><a name="labels">4. Marken</a></h3>
+  Es gibt BASIC-Anweisungen, die auf eine Zeilennummer verweisen,
+  z.B. GOTO, GOSUB, RESTORE.
+  Wird nun ohne BASIC-Zeilennummern gearbeitet, ben&ouml;tigt man
+  eine andere Form zur Referenzierung einer Quelltextstelle.
+  Daf&uuml;r kennt der BASIC-Compiler Marken.
+  Eine Marke ist eine Markierung einer Quelltextzeile
+  mit einer frei w&auml;hlbaren Bezeichnung,
+  die jedoch kein reserviertes Schl&uuml;sselwort sein darf
+  und auch sonst mit keiner Variable, Funktion oder Prozedur
+  namentlich &uuml;bereinstimmen darf.
+ <br/><br/>
+  Eine Marke muss allein in einer Zeile stehen,
+  am Zeilenanfang beginnen (keine vorangestellten Leerzeichen)
+  und mit einem Doppelpunkt abgeschlossen sein.
+  Referenziert wird auf die Marke ohne dem Doppelpunkt.
+  Das Beispiel demonstriert die Verwendung einer Marke
+  mit dem Namen <em>datenanfang</em>.
+ <br/><br/>
+  <tt>
+   RESTORE datenanfang<br/>
+   ...<br/>
+   datenanfang:<br/>
+   &nbsp; DATA 1,2,3
+  </tt>
+ <br/><br/>
+  <b>Achtung!</b> Hinter dem abschlie&szlig;enden Dopppelpunkt der Marke
+  darf nichts mehr in der Zeile stehen, damit der Compiler
+  eine Marke syntaktisch von einer Anweisung unterscheiden kann.
+ <br/><br/>
+
+ <h3><a name="line_syntax">5. Syntax einer Programmzeile</a></h3>
+  Es gibt drei Arten von Programmzeilen:
+  <ol>
+   <li>Leerzeile</li>
+   <li>Zeile mit einer Marke</li>
+   <li>Zeile mit Anweisungen</li>
+  </ol>
+ <br/>
+  Leerzeilen dienen zur besseren &Uuml;bersichtlichkeit.
+  Eine Zeile mit einer Marke dient zur Markierung einer
+  Quelltextstelle und ist ein Ersatz f&uuml;r die BASIC-Zeilennummern.
+  Zeilen mit Anweisungen k&ouml;nnen eine oder mehrere Anweisungen enthalten.
+  Im Fall von mehreren Anweisungen sind diese durch einen Doppelpunkt
+  voneinander zu trennen.
+  Ein Liste der Anweisungen finden Sie <a href="instructions.htm">hier</a>.
+ <br/><br/>
+  Leerzeilen und Zeilen mit Anweisungen k&ouml;nnen eine
+  BASIC-Zeilennummer enthalten.
+  Bei Zeilen mit einer Marke ist das nicht m&ouml;glich.
+ <br/><br/>
+
+ <h3><a name="comments">6. Kommentare</a></h3>
+  F&uuml;r Kommentare gibt es die Anweisung
+  <a href="instructions.htm#rem">REM</a>.
+  Anstelle des Schl&uuml;sselworts&nbsp;REM kann auch ein Ausrufezeichen
+  oder ein Apostroph (Quote-Zeichen) geschrieben werden.
+  Ein Kommentar geht immer bis zum Zeilenende,
+  auch wenn im Kommentar ein Doppelpunkt vorkommt.
+ <br/><br/>
+  Beispiele f&uuml;r Kommentare:
+ <br/><br/>
+  <tt>
+   REM Kommentar<br/>
+   !Kommentar<br/>
+   'Kommentar<br/>
+   A=100:REM Kommentar<br/>
+   B=200:!Kommentar<br/>
+   C=300:'Kommentar: auch noch Kommentar
+  </tt>
+ <br/>
+</body>
+</html>
+

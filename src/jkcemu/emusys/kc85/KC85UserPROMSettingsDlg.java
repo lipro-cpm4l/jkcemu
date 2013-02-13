@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -116,10 +116,9 @@ public class KC85UserPROMSettingsDlg
     gbc.gridy++;
     add( this.fileNameFld, gbc );
 
-    this.btnSelect = EmuUtil.createImageButton(
-					"/images/file/open.png",
-					"ROM-Datei ausw\u00E4hlen" );
-    this.btnSelect.addActionListener( this );
+    this.btnSelect = createImageButton(
+				"/images/file/open.png",
+				"ROM-Datei ausw\u00E4hlen" );
     this.btnSelect.addKeyListener( this );
     gbc.fill        = GridBagConstraints.NONE;
     gbc.weightx     = 0.0;

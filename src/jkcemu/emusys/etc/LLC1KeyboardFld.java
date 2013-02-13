@@ -94,7 +94,7 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
   @Override
   public String getKeyboardName()
   {
-    return "LLC1-Hexadezimaltastatur";
+    return "LLC1 Hexadezimaltastatur";
   }
 
 

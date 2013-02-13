@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -24,7 +24,6 @@ import jkcemu.base.*;
 
 public class AbstractImageFrm extends BasicFrm implements ComponentListener
 {
-  protected ScreenFrm   screenFrm;
   protected Clipboard   clipboard;
   protected File        file;
   protected Image       image;
@@ -34,9 +33,8 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
   private boolean     scaleEnabled;
 
 
-  public AbstractImageFrm( ScreenFrm screenFrm )
+  protected AbstractImageFrm()
   {
-    this.screenFrm    = screenFrm;
     this.clipboard    = null;
     this.file         = null;
     this.image        = null;
@@ -260,6 +258,7 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    setScaleEnabled();
@@ -320,25 +319,6 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public boolean doClose()
-  {
-    boolean rv = super.doClose();
-    if( !rv ) {
-      this.screenFrm.childFrameClosed( this );
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void windowClosed( WindowEvent e )
-  {
-    if( e.getWindow() == this )
-      this.screenFrm.childFrameClosed( this );
   }
 
 

@@ -275,9 +275,9 @@ public class ImageDisk extends AbstractFloppyDisk
 	cBuf[ pos++ ] = (char) readByte( in );
       }
       try {
-	(new SimpleDateFormat(
-			"dd/MM/yyyy HH:mm:ss",
-			Locale.US )).parse( new String( cBuf ) );
+	diskDate = (new SimpleDateFormat(
+				"dd/MM/yyyy HH:mm:ss",
+				Locale.US )).parse( new String( cBuf ) );
       }
       catch( ParseException ex ) {}
 

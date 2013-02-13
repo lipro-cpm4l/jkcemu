@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,7 +32,6 @@ public class ReassFrm extends BasicFrm implements CaretListener
   private static final int COL_SRC_ARGS     = COL_SRC_MNEMONIC + 8;
   private static final int COL_SRC_REMARK   = COL_SRC_ARGS + 18;
 
-  private ScreenFrm                  screenFrm;
   private Z80Memory                  memory;
   private int                        begAddr;
   private int                        endAddr;
@@ -63,11 +62,8 @@ public class ReassFrm extends BasicFrm implements CaretListener
   private HexDocument                docEndAddr;
 
 
-  public ReassFrm(
-		ScreenFrm screenFrm,
-		Z80Memory memory )
+  public ReassFrm( Z80Memory memory )
   {
-    this.screenFrm      = screenFrm;
     this.memory         = memory;
     this.begAddr        = -1;
     this.endAddr        = -1;
@@ -209,7 +205,8 @@ public class ReassFrm extends BasicFrm implements CaretListener
 
     panelHead.add( new JLabel( "Anfangsadresse:" ), gbcHead );
 
-    this.fldBegAddr = new JTextField( 4 );
+    this.docBegAddr = new HexDocument( 4, "Anfangsadresse" );
+    this.fldBegAddr = new JTextField( this.docBegAddr, "", 4 );
     this.fldBegAddr.addActionListener( this );
     this.fldBegAddr.addCaretListener( this );
     gbcHead.fill    = GridBagConstraints.HORIZONTAL;
@@ -222,16 +219,14 @@ public class ReassFrm extends BasicFrm implements CaretListener
     gbcHead.gridx++;
     panelHead.add( new JLabel( "Endadresse:" ), gbcHead );
 
-    this.fldEndAddr = new JTextField( 4 );
+    this.docEndAddr = new HexDocument( 4, "Endadresse" );
+    this.fldEndAddr = new JTextField( this.docEndAddr, "", 4 );
     this.fldEndAddr.addActionListener( this );
     this.fldEndAddr.addCaretListener( this );
     gbcHead.fill    = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx = 0.5;
     gbcHead.gridx++;
     panelHead.add( this.fldEndAddr, gbcHead );
-
-    this.docBegAddr = new HexDocument( this.fldBegAddr, 4, "Anfangsadresse" );
-    this.docEndAddr = new HexDocument( this.fldEndAddr, 4, "Endadresse" );
 
 
     // Ergebnisbereich
@@ -262,9 +257,22 @@ public class ReassFrm extends BasicFrm implements CaretListener
   }
 
 
-  public void setLabels( jkcemu.tools.Label[] labels )
+  public void setLabels(
+		jkcemu.tools.Label[] labels,
+		int                  begAddr,
+		int                  endAddr )
   {
     importLabels( labels, true );
+    if( (this.begAddr < 0)
+	&& (begAddr >= 0) && (begAddr <= endAddr)
+	&& (endAddr < 0x10000) )
+    {
+      this.docBegAddr.setValue( begAddr, 4 );
+      this.docEndAddr.setValue( endAddr, 4 );
+      this.begAddr = begAddr;
+      this.endAddr = endAddr;
+      reassemble();
+    }
   }
 
 
@@ -360,7 +368,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 	}
 	else if( src == this.mnuHelpContent ) {
 	  rv = true;
-	  this.screenFrm.showHelp( "/help/tools/reassembler.htm" );
+	  HelpFrm.open( "/help/tools/reassembler.htm" );
 	}
       }
     }
@@ -669,6 +677,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 	int len = 0;
 	if( emuSys != null ) {
 	  len = emuSys.reassembleSysCall(
+					this.memory,
 					addr,
 					buf,
 					true,
@@ -751,6 +760,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 	int len = 0;
 	if( emuSys != null ) {
 	  len = emuSys.reassembleSysCall(
+					this.memory,
 					addr,
 					buf,
 					true,
@@ -991,6 +1001,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 	int len = 0;
 	if( emuSys != null ) {
 	  len = emuSys.reassembleSysCall(
+					this.memory,
 					addr,
 					buf,
 					false,

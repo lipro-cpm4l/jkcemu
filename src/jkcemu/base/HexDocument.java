@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,23 +14,20 @@ import javax.swing.text.*;
 
 public class HexDocument extends PlainDocument
 {
-  private JTextComponent textComp;
-  private int            maxLen;
-  private String         preErrText;
+  private int    maxLen;
+  private String preErrText;
 
 
-  public HexDocument( JTextComponent textComp, int maxLen )
+  public HexDocument( int maxLen )
   {
-    this( textComp, maxLen, null );
+    this( maxLen, null );
   }
 
 
-  public HexDocument( JTextComponent textComp, int maxLen, String label )
+  public HexDocument( int maxLen, String label )
   {
-    this.textComp   = textComp;
     this.maxLen     = maxLen;
     this.preErrText = "";
-    this.textComp.setDocument( this );
     if( label != null ) {
       if( label.endsWith( ":" ) ) {
 	this.preErrText = label + "\n";
@@ -43,30 +40,78 @@ public class HexDocument extends PlainDocument
 
   public void clear()
   {
-    this.textComp.setText( "" );
+    int len = getLength();
+    if( len > 0 ) {
+      try {
+	remove( 0, len );
+      }
+      catch( BadLocationException ex ) {}
+    }
   }
 
 
   public Integer getInteger() throws NumberFormatException
   {
     Integer rv = null;
-    String  s  = this.textComp.getText();
-    if( s != null ) {
-      if( !s.isEmpty() ) {
-	rv = new Integer( parseHex( s ) );
+    try {
+      String s = getText( 0, getLength() );
+      if( s != null ) {
+	if( !s.isEmpty() ) {
+	  rv = new Integer( parseHex( s ) );
+	}
       }
     }
+    catch( BadLocationException ex ) {}
     return rv;
+  }
+
+
+  public int getMaxLength()
+  {
+    return this.maxLen;
   }
 
 
   public int intValue() throws NumberFormatException
   {
-    String s = this.textComp.getText();
-    if( s == null ) {
-      s = "";
+    String s = null;
+    try {
+      s = getText( 0, getLength() );
     }
-    return parseHex( s );
+    catch( BadLocationException ex ) {}
+    return parseHex( s != null ? s : "" );
+  }
+
+
+  public void setMaxLength( int maxLen )
+  {
+    if( maxLen > 0 ) {
+      try {
+	int n = getLength() - maxLen;
+	if( n > 0 ) {
+	  remove( 0, n );	// zuviele Zeichen links herausloeschen
+	}
+	this.maxLen = maxLen;
+      }
+      catch( BadLocationException ex ) {}
+    }
+  }
+
+
+  public void setMaxLength( int maxLen, char leadingChar )
+  {
+    setMaxLength( maxLen );
+    int n = maxLen - getLength();
+    if( n > 0 ) {
+      try {
+	String leadingStr = Character.toString( leadingChar );
+	while( n > 0 ) {
+	  insertString( 0, leadingStr, null );
+	  --n;
+	}
+      }
+      catch( BadLocationException ex ) {}
+    }
   }
 
 
@@ -81,10 +126,21 @@ public class HexDocument extends PlainDocument
 	  buf.append( (char) '0' );
 	}
 	buf.append( text );
-	text = buf.toString();
+	if( (numDigits > this.maxLen) && (this.maxLen > 0) ) {
+	  text = buf.substring( numDigits - this.maxLen );
+	} else {
+	  text = buf.toString();
+	}
       }
     }
-    this.textComp.setText( text );
+    try {
+      int len = getLength();
+      if( len > 0 ) {
+	remove( 0, len );
+      }
+      insertString( 0, text, null );
+    }
+    catch( BadLocationException ex ) {}
   }
 
 
@@ -110,12 +166,14 @@ public class HexDocument extends PlainDocument
 	}
 
 	// Laenge pruefen
-	if( pos > this.maxLen - getLength() )
+	if( pos > this.maxLen - getLength() ) {
 	  pos = this.maxLen - getLength();
+	}
 
 	// Text einfuegen
-	if( pos > 0 )
+	if( pos > 0 ) {
 	  super.insertString( offs, new String( buf, 0, pos ), a );
+	}
       }
     }
   }
@@ -130,7 +188,6 @@ public class HexDocument extends PlainDocument
       value = Integer.parseInt( s.trim(), 16 );
     }
     catch( NumberFormatException ex ) {
-      this.textComp.requestFocus();
       throw new NumberFormatException(
 		this.preErrText
 			+ "Ung\u00FCltiges Format!\n"
@@ -139,4 +196,3 @@ public class HexDocument extends PlainDocument
     return value;
   }
 }
-

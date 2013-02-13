@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -35,6 +35,8 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
   };
 
 
+  private static HelpFrm instance = null;
+
   private javax.swing.Timer    timer;
   private Double               posToScroll;
   private URL                  urlHome;
@@ -46,9 +48,73 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
   private JButton              btnPrint;
 
 
-  public HelpFrm( ScreenFrm screenFrm )
+  /*
+   * Das Oeffnen bzw. Anzeigen des Fensters erfolgt erst im naechsten
+   * Event-Verarbeitungszyklus, damit es keine Probleme gibt,
+   * wenn die Methode aus einem modalen Dialog heraus aufgerufen werden.
+   */
+  public static void open( final String page )
   {
-    super( screenFrm );
+    SwingUtilities.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    openInternal( page );
+		  }
+		} );
+  }
+
+
+	/* --- HyperlinkListener --- */
+
+  @Override
+  public void hyperlinkUpdate( HyperlinkEvent e )
+  {
+    if( e.getEventType() == HyperlinkEvent.EventType.ACTIVATED )
+      setUrl( e.getURL(), null );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src == this.btnPrint ) {
+	rv = true;
+	doPrint();
+      }
+      else if( (src == this.mnuNavBack) || (src == this.btnBack) ) {
+	rv = true;
+	doBack();
+      }
+      else if( (src == this.mnuNavHome) || (src == this.btnHome) ) {
+	rv = true;
+	setUrl( null, null );
+      }
+      else if( src == this.timer ) {
+	rv = true;
+	this.timer.stop();
+	doScrollTo( this.posToScroll );
+	this.posToScroll = null;
+      }
+    }
+    if( !rv ) {
+      super.doAction( e );
+    }
+    return rv;
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private HelpFrm()
+  {
     setTitle( "JKCEMU Hilfe" );
     Main.updIcon( this );
     this.timer    = new javax.swing.Timer( 500, this );
@@ -128,56 +194,6 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
   }
 
 
-  public void setPage( String page )
-  {
-    setUrl( page != null ? getClass().getResource( page ) : null, null );
-  }
-
-
-	/* --- HyperlinkListener --- */
-
-  @Override
-  public void hyperlinkUpdate( HyperlinkEvent e )
-  {
-    if( e.getEventType() == HyperlinkEvent.EventType.ACTIVATED )
-      setUrl( e.getURL(), null );
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.btnPrint ) {
-	rv = true;
-	doPrint();
-      }
-      else if( (src == this.mnuNavBack) || (src == this.btnBack) ) {
-	rv = true;
-	doBack();
-      }
-      else if( (src == this.mnuNavHome) || (src == this.btnHome) ) {
-	rv = true;
-	setUrl( null, null );
-      }
-      else if( src == this.timer ) {
-	rv = true;
-	this.timer.stop();
-	doScrollTo( this.posToScroll );
-	this.posToScroll = null;
-      }
-    }
-    if( !rv ) {
-      super.doAction( e );
-    }
-    return rv;
-  }
-
-
 	/* --- private Methoden --- */
 
   private void doBack()
@@ -206,6 +222,27 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 	}
       }
     }
+  }
+
+
+  private static void openInternal( String page )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+        instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new HelpFrm();
+    }
+    instance.toFront();
+    instance.setVisible( true );
+    instance.setPage( page );
+  }
+
+
+  private void setPage( String page )
+  {
+    setUrl( page != null ? getClass().getResource( page ) : null, null );
   }
 
 

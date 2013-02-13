@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -144,10 +144,14 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
 	out.write( 0x20 );
 	--n;
       }
-      out.write(
-		this.dataBytes,
-		this.offs,
-		Math.min( this.dataBytes.length - this.offs, this.len ) );
+      n = Math.min( this.dataBytes.length - this.offs, this.len );
+      out.write( this.dataBytes, this.offs, n );
+      n = n % 0x20;
+      if( n > 0 ) {
+	for( int i = n; i < 0x20; i++ ) {
+	  out.write( 0 );
+	}
+      }
       out.close();
       out = null;
     }

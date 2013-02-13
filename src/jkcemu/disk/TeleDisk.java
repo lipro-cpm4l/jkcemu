@@ -248,7 +248,7 @@ public class TeleDisk extends AbstractFloppyDisk
 				String.format(
 					"Sektorunterkodierung %02X"
 						+ " nicht unterst\u00FCtzt",
-				t ) );
+					t ) );
 		    }
 		  }
 		  break;

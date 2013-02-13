@@ -16,11 +16,56 @@ import java.util.*;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.swing.*;
 import jkcemu.base.*;
+import jkcemu.disk.*;
+import jkcemu.filebrowser.*;
+import jkcemu.image.ImageFrm;
+import jkcemu.programming.assembler.CmdLineAssembler;
+import jkcemu.programming.basic.CmdLineBasicCompiler;
+import jkcemu.text.TextEditFrm;
+import jkcemu.tools.calculator.CalculatorFrm;
+import jkcemu.tools.fileconverter.FileConvertFrm;
+import jkcemu.tools.hexdiff.HexDiffFrm;
+import jkcemu.tools.hexedit.HexEditFrm;
 
 
 public class Main
 {
-  public static final String VERSION = "JKCEMU Version 0.9";
+  public static final String VERSION = "JKCEMU Version 0.9.1";
+
+  public static PrintWriter consoleWriter = null;
+
+
+  private static String[] iconResources = {
+				"/images/icon/jkcemu16x16.png",
+				"/images/icon/jkcemu20x20.png",
+				"/images/icon/jkcemu32x32.png",
+				"/images/icon/jkcemu50x50.png" };
+
+  private static String[] usageLines = {
+	"",
+	"Aufruf:",
+	"  java -jar jkcemu.jar <Argumente>",
+	"",
+	"Argumente:",
+	"  <kein Argument>              Emulator mit Profil \"standard\""
+								+ " starten",
+	"  <Profil>                     Emulator mit dem angegebenen Profil"
+								+ " starten",
+	"  -h oder --help               diese Hilfe anzeigen",
+	"  -v oder --version            Versionsnummer anzeigen",
+	"  --as oder --assembler        Assembler starten",
+	"  --as -h                      Hilfe zum Assembler anzeigen",
+	"  --bc oder --basiccompiler    BASIC-Compiler starten",
+	"  --bc -h                      Hilfe zum BASIC-Compiler anzeigen",
+	"  --ca oder --calculator       Rechner starten",
+	"  --dc oder --diskcreator      Diskettenabbilddatei erstellen",
+	"  --fb oder --filebrowser      Datei-Browser starten",
+	"  --fc oder --fileconverter    Dateikonverter starten",
+	"  --hd oder --hexdiff          Hex-Dateivergeicher starten",
+	"  --he oder --hexeditor        Hex-Editor starten",
+	"  --iv oder --imageviewer      Bildbetrachter starten",
+	"  --te oder --texteditor       Texteditor starten",
+	"" };
 
   private static Map<String,Image> images    = new Hashtable<String,Image>();
   private static Map<String,File>  lastFiles = new Hashtable<String,File>();
@@ -37,14 +82,29 @@ public class Main
   private static boolean                  printFileName     = true;
   private static int                      printFontSize     = 12;
   private static PrintRequestAttributeSet printRequestAttrs = null;
+  private static BasicFrm                 topFrm            = null;
   private static ScreenFrm                screenFrm         = null;
-  private static MediaTracker             mediaTracker      = null;
   private static java.util.List<Image>    iconImages        = null;
-  private static int                      imageIDCounter    = 0;
 
 
   public static void main( String[] args )
   {
+    /*
+     * In der DOS-Box von Windows ist der DOS-Zeichensatz installiert.
+     * Deshalb werden ueber System.out und System.err ausgegebene Umlaute
+     * dort falsch angezeigt.
+     * Ueber System.console() erfolgt die Ausgabe dagegen richtig.
+     * Aus diesem Grund wird unter Windows die Console verwendet,
+     * wenn sie vorhanden ist.
+     */
+    consoleWriter = null;
+    if( File.separatorChar == '\\' ) {
+      Console console = System.console();
+      if( console != null ) {
+	consoleWriter = console.writer();
+      }
+    }
+
     // Initialisierungen
     String subDirName  = "jkcemu";
     String baseDirName = null;
@@ -64,10 +124,7 @@ public class Main
       configDir = new File( subDirName );
     }
     lastDirsFile = new File( configDir, "lastdirs.xml" );
-    screenFrm    = new ScreenFrm();
-    mediaTracker = new MediaTracker( screenFrm );
-    if( configDir.exists() ) {
-      firstExec      = false;
+    if( lastDirsFile.exists() ) {
       InputStream in = null;
       try {
 	in = new FileInputStream( lastDirsFile );
@@ -77,9 +134,192 @@ public class Main
       finally {
 	EmuUtil.doClose( in );
       }
-    } else {
-      if( !configDir.mkdirs() ) {
-	BasicDlg.showErrorDlg(
+    }
+
+    // Kommenadozeile auswerten
+    boolean done    = false;
+    String  prfName = "standard";
+    int    argIdx  = 0;
+    if( argIdx < args.length ) {
+      String arg = args[ argIdx++ ];
+      if( arg.equals( "-?" )
+	  || arg.equalsIgnoreCase( "-h" )
+	  || arg.equalsIgnoreCase( "--help" ) )
+      {
+	EmuUtil.printlnOut();
+	EmuUtil.printlnOut( VERSION );
+	for( String s : usageLines ) {
+	  EmuUtil.printlnOut( s );
+	}
+	exitSuccess();
+      }
+      else if( arg.equals( "-v" ) || arg.equalsIgnoreCase( "--version" ) ) {
+	System.out.println( VERSION );
+	exitSuccess();
+      }
+      else if( arg.equals( "--as" )
+	       || arg.equalsIgnoreCase( "--assembler" ) )
+      {
+	if( CmdLineAssembler.execute( args, argIdx ) ) {
+	  exitSuccess();
+	} else {
+	  exitFailure();
+	}
+      }
+      else if( arg.equals( "--bc" )
+	       || arg.equalsIgnoreCase( "--basiccompiler" ) )
+      {
+	if( CmdLineBasicCompiler.execute( args, argIdx ) ) {
+	  exitSuccess();
+	} else {
+	  exitFailure();
+	}
+      }
+      else if( arg.equalsIgnoreCase( "--ca" )
+	       || arg.equalsIgnoreCase( "--calculator" ) )
+      {
+	properties = loadProfileAndSetLAF( prfName );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    CalculatorFrm.open();
+		  }
+		} );
+	done = true;
+      }
+      else if( arg.equalsIgnoreCase( "--dc" )
+	       || arg.equalsIgnoreCase( "--diskcreator" ) )
+      {
+	properties = loadProfileAndSetLAF( prfName );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    DiskImgCreateFrm.open();
+		  }
+		} );
+	done = true;
+      }
+      else if( arg.equalsIgnoreCase( "--fb" )
+	       || arg.equalsIgnoreCase( "--filebrowser" ) )
+      {
+	properties = loadProfileAndSetLAF( prfName );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    FileBrowserFrm.open( null );
+		  }
+		} );
+	done = true;
+      }
+      else if( arg.equalsIgnoreCase( "--fc" )
+	       || arg.equalsIgnoreCase( "--fileconverter" ) )
+      {
+	properties      = loadProfileAndSetLAF( prfName );
+	final File file = getArgFile( args, argIdx );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    FileConvertFrm.open( file );
+		  }
+		} );
+	done = true;
+      }
+      else if( arg.equalsIgnoreCase( "--hd" )
+	       || arg.equalsIgnoreCase( "--hexdiff" ) )
+      {
+	properties                       = loadProfileAndSetLAF( prfName );
+	final java.util.List<File> files = getArgFileList( args, argIdx );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    HexDiffFrm frm = HexDiffFrm.open();
+		    if( files != null ) {
+		      frm.addFiles( files );
+		    }
+		  }
+		} );
+	done = true;
+      }
+      else if( arg.equalsIgnoreCase( "--he" )
+	       || arg.equalsIgnoreCase( "--hexeditor" ) )
+      {
+	properties      = loadProfileAndSetLAF( prfName );
+	final File file = getArgFile( args, argIdx );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    HexEditFrm.open( file );
+		  }
+		} );
+	done = true;
+      }
+      else if( arg.equalsIgnoreCase( "--iv" )
+	       || arg.equalsIgnoreCase( "--imageviewer" ) )
+      {
+	properties      = loadProfileAndSetLAF( prfName );
+	final File file = getArgFile( args, argIdx );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    ImageFrm.open( file );
+		  }
+		} );
+	done = true;
+      }
+      else if( arg.equalsIgnoreCase( "--te" )
+	       || arg.equalsIgnoreCase( "--texteditor" ) )
+      {
+	properties = loadProfileAndSetLAF( prfName );
+	final File file  = getArgFile( args, argIdx );
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    TextEditFrm.open( null, file );
+		  }
+		} );
+	done = true;
+      } else {
+	if( arg.startsWith( "-" ) ) {
+	  EmuUtil.printlnErr();
+	  EmuUtil.printErr( VERSION );
+	  EmuUtil.printlnErr( ":" );
+	  EmuUtil.printErr( arg );
+	  EmuUtil.printlnErr( ": Unbekannte Option" );
+	  for( String s : usageLines ) {
+	    EmuUtil.printlnErr( s );
+	  }
+	  exitFailure();
+	}
+	if( !arg.isEmpty() ) {
+	  prfName = arg;
+	}
+      }
+    }
+
+    // Emulator starten
+    if( !done ) {
+      screenFrm = new ScreenFrm();
+      if( configDir.exists() ) {
+	firstExec = false;
+      } else {
+	if( !configDir.mkdirs() ) {
+	  BasicDlg.showErrorDlg(
 		screenFrm,
 		"Das Verzeichnis " + configDir.getPath()
 			+ "\nkonnte nicht angelegt werden."
@@ -87,68 +327,58 @@ public class Main
 			+ " Einschr\u00E4nkungen lauff\u00E4hig."
 			+ "\nInsbesondere k\u00F6nnen keine Einstellungen"
 			+ " und Profile gespeichert werden." );
-	configDir = null;
-      }
-    }
-
-    // Icons
-    addIconImage( "/images/icon/jkcemu16x16.png" );
-    addIconImage( "/images/icon/jkcemu20x20.png" );
-    addIconImage( "/images/icon/jkcemu32x32.png" );
-    addIconImage( "/images/icon/jkcemu50x50.png" );
-    updIcon( screenFrm );
-
-    // Profil laden
-    String prfName = "standard";
-    if( args.length > 0 ) {
-      if( !args[ 0 ].isEmpty() ) {
-	prfName = args[ 0 ];
-      }
-    }
-    Properties props = null;
-    File       file  = null;
-    if( configDir != null ) {
-      file = new File( configDir, "prf_" + prfName + ".xml" );
-      if( file.exists() ) {
-	props = loadProperties( file );
-      }
-    }
-
-    /*
-     * Standard-Erscheinungsbild einstellen, aber nur,
-     * wenn im, Profil keins zu finden ist
-     */
-    boolean lafState = false;
-    if( props != null ) {
-      String className = props.getProperty(
-				"jkcemu.lookandfeel.classname" );
-      if( className != null ) {
-	if( !className.isEmpty() ) {
-	  lafState = true;
+	  configDir = null;
 	}
       }
-    }
-    if( !lafState ) {
-      setDefaultLAF();
-    }
 
-    // Profil anwenden
-    screenFrm.setEmuThread( new EmuThread( screenFrm, props ) );
-    applyProfileToFrames( file, props, true, null );
-    screenFrm.lookAndFeelChanged();
-    if( props != null ) {
-      screenFrm.getFloppyDiskStationFrm().openDisks( props );
-    } else {
-      screenFrm.applySettings( null, screenFrm.isResizable() );
-      screenFrm.pack();
-      screenFrm.setScreenCentered();
+      // Icon
+      updIcon( screenFrm );
+
+      // Profil laden
+      Properties props = null;
+      File       file  = buildProfileFile( prfName );
+      if( file != null ) {
+	if( file.exists() ) {
+	  props = loadProperties( file );
+	}
+      }
+
+      /*
+       * Standard-Erscheinungsbild einstellen, aber nur,
+       * wenn im, Profil keins zu finden ist
+       */
+      boolean lafState = false;
+      if( props != null ) {
+	String className = props.getProperty(
+				  "jkcemu.lookandfeel.classname" );
+	if( className != null ) {
+	  if( !className.isEmpty() ) {
+	    lafState = true;
+	  }
+	}
+      }
+      if( !lafState ) {
+	setDefaultLAF();
+      }
+
+      // Profil anwenden
+      screenFrm.setEmuThread( new EmuThread( screenFrm, props ) );
+      applyProfileToFrames( file, props, true, null );
+      screenFrm.lookAndFeelChanged();
+      if( props != null ) {
+	FloppyDiskStationFrm.getSharedInstance( screenFrm ).openDisks( props );
+      } else {
+	screenFrm.applySettings( null, screenFrm.isResizable() );
+	screenFrm.pack();
+	screenFrm.setScreenCentered();
+      }
+
+      // Emulations-Thread starten
+      screenFrm.startEmulationThread();
+
+      // Fenster anzeigen
+      screenFrm.setVisible( true );
     }
-
-    // Emulations-Thread starten
-    screenFrm.startEmulationThread();
-
-    // Fenster anzeigen
-    screenFrm.setVisible( true );
   }
 
 
@@ -223,23 +453,65 @@ public class Main
   }
 
 
+  public static boolean checkQuit( Frame frm )
+  {
+    boolean rv = false;
+    if( frm == topFrm ) {
+      Frame[] frms = Frame.getFrames();
+      if( frms != null ) {
+	for( Frame f : frms ) {
+	  if( (f != frm) && (f instanceof BasicFrm) ) {
+	    ((BasicFrm) f).doClose();
+	  } else {
+	    f.setVisible( false );
+	    f.dispose();
+	  }
+	}
+      }
+      exitSuccess();
+      rv = true;
+    }
+    return rv;
+  }
+
+
+  public static void exitFailure()
+  {
+    System.exit( -1 );
+  }
+
+
+  public static void exitSuccess()
+  {
+    System.exit( 0 );
+  }
+
+
+  public static void frameCreated( BasicFrm frm )
+  {
+    if( topFrm == null )
+      topFrm = frm;
+  }
+
+
   public static File getConfigDir()
   {
     return configDir;
   }
 
 
-  public static Image getImage( String imgName )
+  public static Image getImage( Window window, String imgName )
   {
     Image img = images.get( imgName );
     if( img == null ) {
-      URL url = screenFrm.getClass().getResource( imgName );
+      URL url = window.getClass().getResource( imgName );
       if( url != null ) {
-	img = screenFrm.getToolkit().createImage( url );
+	img = window.getToolkit().createImage( url );
 	if( img != null ) {
 	  try {
-	    mediaTracker.addImage( img, imageIDCounter++ );
-	    mediaTracker.waitForAll();
+	    MediaTracker mt = new MediaTracker( window );
+	    mt.addImage( img, 0 );
+	    mt.waitForAll();
 	  }
 	  catch( InterruptedException ex ) {}
 	  images.put( imgName, img );
@@ -400,18 +672,15 @@ public class Main
       }
       catch( Exception ex ) {
 	props = null;
-	BasicDlg.showErrorDlg(
+	if( screenFrm != null ) {
+	  BasicDlg.showErrorDlg(
 		screenFrm,
 		"Profildatei \'" + file.getPath()
 			+ "\'\nkann nicht geladen werden." );
+	}
       }
       finally {
-	if( in != null ) {
-	  try {
-	    in.close();
-	  }
-	  catch( IOException ex ) {}
-	}
+	EmuUtil.doClose( in );
       }
     }
     return props;
@@ -505,25 +774,33 @@ public class Main
 
   public static void updIcon( Window window )
   {
-    if( iconImages != null )
+    if( iconImages == null ) {
+      iconImages = new ArrayList<Image>();
+      for( String resource : iconResources ) {
+	URL url = window.getClass().getResource( resource );
+	if( url != null ) {
+	  Image img = window.getToolkit().createImage( url );
+	  if( img != null ) {
+	    iconImages.add( img );
+	  }
+	}
+      }
+    }
+    if( !iconImages.isEmpty() ) {
       window.setIconImages( iconImages );
+    }
   }
 
 
 	/* --- private Methoden --- */
 
-  private static void addIconImage( String imgName )
+  private static File buildProfileFile( String prfName )
   {
-    URL url = screenFrm.getClass().getResource( imgName );
-    if( url != null ) {
-      Image img = screenFrm.getToolkit().createImage( url );
-      if( img != null ) {
-	if( iconImages == null ) {
-	  iconImages = new ArrayList<Image>();
-	}
-	iconImages.add( img );
-      }
+    File file = null;
+    if( configDir != null ) {
+      file = new File( configDir, "prf_" + prfName + ".xml" );
     }
+    return file;
   }
 
 
@@ -535,6 +812,78 @@ public class Main
       }
     }
     return text;
+  }
+
+
+  private static File getArgFile( String[] args, int pos )
+  {
+    File file = null;
+    if( (pos >= 0) && (pos < args.length) ) {
+      String arg = args[ pos ];
+      if( arg != null ) {
+	if( !arg.isEmpty() ) {
+	  file = new File( arg );
+	}
+      }
+    }
+    return file;
+  }
+
+
+  private static java.util.List<File> getArgFileList( String[] args, int pos )
+  {
+    java.util.List<File> list = null;
+    if( (pos >= 0) && (pos < args.length) ) {
+      list = new ArrayList<File>( args.length - pos );
+      for( int i = pos; i < args.length; i++ ) {
+	String arg = args[ i ];
+	if( arg != null ) {
+	  if( !arg.isEmpty() ) {
+	    list.add( new File( arg ) );
+	  }
+	}
+      }
+    }
+    return list;
+  }
+
+
+  private static Properties loadProfileAndSetLAF( String prfName )
+  {
+    Properties props = null;
+    File       file  = buildProfileFile( prfName );
+    if( file != null ) {
+      props = loadPropertiesAndSetLAF( file );
+    }
+    return props;
+  }
+
+
+  private static Properties loadPropertiesAndSetLAF( File file )
+  {
+    Properties props = null;
+    boolean    done  = false;
+    if( file != null ) {
+      if( file.exists() ) {
+	props = loadProperties( file );
+	if( props != null ) {
+	  String cn = props.getProperty( "jkcemu.lookandfeel.classname" );
+	  if( cn != null ) {
+	    if( !cn.isEmpty() ) {
+	      try {
+		UIManager.setLookAndFeel( cn );
+		done = true;
+	      }
+	      catch( Exception ex ) {}
+	    }
+	  }
+	}
+      }
+    }
+    if( !done ) {
+      setDefaultLAF();
+    }
+    return props;
   }
 
 
@@ -573,9 +922,12 @@ public class Main
     if( className != null ) {
       try {
 	UIManager.setLookAndFeel( className );
-	SwingUtilities.updateComponentTreeUI( screenFrm );
+	if( screenFrm != null ) {
+	  SwingUtilities.updateComponentTreeUI( screenFrm );
+	}
       }
       catch( Exception ex ) {}
     }
   }
 }
+

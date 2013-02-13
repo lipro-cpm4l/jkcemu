@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -210,12 +210,7 @@ public class DeviceIO
     @Override
     public int read( byte[] buf, int offs, int len ) throws IOException
     {
-      int[] lenOut  = new int[ 1 ];
-      int   errCode = readDevice( this.handle, buf, offs, len, lenOut );
-      if( errCode != 0 ) {
-	throwErrMsg( errCode );
-      }
-      return lenOut[ 0 ] > 0 ? lenOut[ 0 ] : -1;
+      return readInternal( this.handle, buf, offs, len );
     }
 
     @Override
@@ -330,12 +325,7 @@ public class DeviceIO
       if( this.raf != null ) {
 	rv = this.raf.read( buf, offs, len );
       } else {
-	int[] lenOut  = new int[ 1 ];
-	int   errCode = readDevice( this.handle, buf, 0, buf.length, lenOut );
-	if( errCode != 0 ) {
-	  throwErrMsg( errCode );
-	}
-	rv = lenOut[ 0 ];
+	rv = readInternal( this.handle, buf, offs, len );
       }
       return rv;
     }
@@ -650,6 +640,42 @@ public class DeviceIO
       libChecked = true;
     }
     return libLoaded;
+  }
+
+
+  private static int readInternal(
+			long   handle,
+			byte[] buf,
+			int    offs,
+			int    len ) throws IOException
+  {
+    int rv = 0;
+    if( len > 0 ) {
+      int[] lenOut  = new int[ 1 ];
+      int   errCode = readDevice( handle, buf, offs, len, lenOut );
+      if( errCode == 0 ) {
+	if( lenOut[ 0 ] > 0 ) {
+	  rv = lenOut[ 0 ];		// Anzahl der gelesenen Bytes
+	} else {
+	  rv = -1;			// Dateiende
+	}
+      } else if( errCode == 1 ) {
+	/*
+	 * Bei Leseoperationen hinter dem Ende der Geraetedatei
+	 * kommt bei Windows ein Fehler mit dem Code 1.
+	 * Bei den anderen ueblichen Fehlerursachen
+	 * (z.B. Geraet nicht verfuegbar oder CRC-Fehler)
+	 * kommt ein anderer Fehlercode.
+	 * Aus diesem Grund wird hier der Fehlercode 1
+	 * als Dateiende gewertet, auch wenn im konkreten Fall
+	 * der Fehler eine andere Ursache haben sollte.
+	 */
+	rv = -1;
+      } else {
+	throwErrMsg( errCode );		// Fehler
+      }
+    }
+    return rv;
   }
 
 

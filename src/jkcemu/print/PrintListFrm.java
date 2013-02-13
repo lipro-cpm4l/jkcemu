@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,10 +17,13 @@ import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.tools.hexedit.HexEditFrm;
 
 
 public class PrintListFrm extends BasicFrm implements ListSelectionListener
 {
+  private static PrintListFrm instance = null;
+
   private ScreenFrm   screenFrm;
   private PrintMngr   printMngr;
   private JMenuItem   mnuFileFinish;
@@ -47,10 +50,272 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
   private JScrollPane scrollPane;
 
 
-  public PrintListFrm( ScreenFrm screenFrm, PrintMngr printMngr )
+  public static void open( ScreenFrm screenFrm )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new PrintListFrm( screenFrm );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+	/* --- ListSelectionListener --- */
+
+  @Override
+  public void valueChanged( ListSelectionEvent e )
+  {
+    updActionButtons();
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( (src == this.mnuFileFinish) || (src == this.mnuPopupFinish) ) {
+	rv = true;
+	doFinish();
+      }
+      else if( src == this.mnuFilePrintOptions ) {
+	rv = true;
+	PrintOptionsDlg.showPrintOptionsDlg( this, true, false );
+      }
+      else if((src == this.mnuFilePrint)
+	      || (src == this.mnuPopupPrint)
+	      || (src == this.btnPrint) )
+      {
+	rv = true;
+	doPrint();
+      }
+      else if( (src == this.mnuFileOpenText)
+	       || (src == this.mnuPopupOpenText)
+	       || (src == this.btnOpenText) )
+      {
+	rv = true;
+	doOpenText();
+      }
+      else if( (src == this.mnuFileOpenHex)
+	       || (src == this.mnuPopupOpenText) )
+      {
+	rv = true;
+	doOpenHex();
+      }
+      else if( (src == this.mnuFileSave)
+	       || (src == this.mnuPopupSave)
+	       || (src == this.btnSave) )
+      {
+	rv = true;
+	doSave();
+      }
+      else if( (src == this.mnuFileDelete)
+	       || (src == this.mnuPopupDelete)
+	       || (src == this.btnDelete) )
+      {
+	rv = true;
+	doDelete();
+      }
+      else if( src == this.mnuFileClose ) {
+	rv = true;
+	doClose();
+      }
+      else if( src == this.mnuHelpContent ) {
+        rv = true;
+        HelpFrm.open( "/help/print.htm" );
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    if( this.mnuPopup != null ) {
+      SwingUtilities.updateComponentTreeUI( this.mnuPopup );
+    }
+    updBgColor();
+  }
+
+
+  @Override
+  protected boolean showPopup( MouseEvent e )
+  {
+    boolean   rv = false;
+    Component c  = e.getComponent();
+    if( c != null ) {
+      this.mnuPopup.show( c, e.getX(), e.getY() );
+      rv = true;
+    }
+    return rv;
+  }
+
+
+	/* --- Aktionen --- */
+
+  private void doFinish()
+  {
+    int[] rows = this.table.getSelectedRows();
+    if( rows != null ) {
+      if( rows.length == 1 ) {
+	int row = this.table.convertRowIndexToModel( rows[ 0 ] );
+	if( row >= 0 ) {
+	  int modelRow = this.table.convertRowIndexToModel( row );
+	  if( modelRow >= 0 ) {
+	    PrintData data = this.printMngr.getPrintData( modelRow );
+	    if( data != null ) {
+	      if( isActivePrintData( data ) ) {
+		if( BasicDlg.showYesNoDlg(
+			this,
+			"M\u00F6chten Sie den Druckauftrag"
+						+ " abschlie\u00DFen?" ) )
+		{
+		  this.printMngr.deactivatePrintData( data );
+		  fireUpdActionButtons();
+		}
+	      } else {
+		BasicDlg.showInfoDlg(
+			this,
+			"Der Druckauftrag ist bereits abgeschlossen." );
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doPrint()
+  {
+    PrintData data = getSelectedPrintData();
+    if( data != null ) {
+      PrintUtil.doPrint(
+		this,
+		data,
+		String.format(
+			"JKCEMU Druckauftrag %d",
+			data.getEntryNum() ) );
+    }
+  }
+
+
+  private void doOpenText()
+  {
+    PrintData data = getSelectedPrintData();
+    if( data != null ) {
+      StringBuilder buf = new StringBuilder( data.size() );
+
+      byte[] dataBytes = data.getBytes();
+      if( dataBytes != null ) {
+	PrintDataScanner scanner = new PrintDataScanner( dataBytes );
+	while( !scanner.endReached() ) {
+	  String line = scanner.readLine();
+	  while( line != null ) {
+	    buf.append( line );
+	    buf.append( (char) '\n' );
+	    line = scanner.readLine();
+	  }
+	  if( !scanner.skipFormFeed() )
+	    break;
+	}
+      }
+      this.screenFrm.openText( buf.toString() );
+    }
+  }
+
+
+  private void doOpenHex()
+  {
+    PrintData data = getSelectedPrintData();
+    if( data != null ) {
+      byte[] dataBytes = data.getBytes();
+      if( dataBytes != null ) {
+	HexEditFrm.open( dataBytes );
+      }
+    }
+  }
+
+
+  private void doSave()
+  {
+    try {
+      PrintData data = getSelectedPrintData();
+      if( data != null ) {
+	File file = EmuUtil.showFileSaveDlg(
+				this,
+				"Druckauftrag speichern",
+				Main.getLastPathFile( "print" ),
+				EmuUtil.getTextFileFilter() );
+	if( file != null ) {
+	  data.saveToFile( file );
+	  this.printMngr.fireTableDataChanged();
+	  Main.setLastFile( file, "print" );
+	}
+      }
+    }
+    catch( IOException ex ) {
+      BasicDlg.showErrorDlg(
+		this,
+		"Der Druckauftrag kann nicht gespeichert werden."
+						+ ex.getMessage() );
+    }
+  }
+
+
+  private void doDelete()
+  {
+    int[] rows = this.table.getSelectedRows();
+    if( rows != null ) {
+      if( rows.length == 1 ) {
+	if( !BasicDlg.showYesNoDlg(
+		this,
+		"M\u00F6chten Sie den Druckauftrag l\u00F6schen?" ) )
+	{
+	  rows = null;
+	}
+      } else if( rows.length > 1 ) {
+	if( !BasicDlg.showYesNoDlg(
+		this,
+		"M\u00F6chten Sie die ausgew\u00E4hlten"
+			+ " Druckauftr\u00E4ge l\u00F6schen?" ) )
+	{
+	  rows = null;
+	}
+      } else {
+	rows = null;
+      }
+    }
+    if( rows != null ) {
+      for( int i = 0; i < rows.length; i++ ) {
+	rows[ i ] = this.table.convertRowIndexToModel( rows[ i ] );
+      }
+      Arrays.sort( rows );
+      for( int i = rows.length - 1; i >= 0; --i ) {
+	int row = rows[ i ];
+	if( row >= 0 ) {
+	  this.printMngr.removeRow( row );
+	}
+      }
+      fireUpdActionButtons();
+    }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private PrintListFrm( ScreenFrm screenFrm )
   {
     this.screenFrm = screenFrm;
-    this.printMngr = printMngr;
+    this.printMngr = screenFrm.getEmuThread().getPrintMngr();
 
     setTitle( "JKCEMU Druckauftr\u00E4ge" );
     Main.updIcon( this );
@@ -226,260 +491,6 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
   }
 
 
-	/* --- ListSelectionListener --- */
-
-  @Override
-  public void valueChanged( ListSelectionEvent e )
-  {
-    updActionButtons();
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( (src == this.mnuFileFinish) || (src == this.mnuPopupFinish) ) {
-	rv = true;
-	doFinish();
-      }
-      else if( src == this.mnuFilePrintOptions ) {
-	rv = true;
-	PrintOptionsDlg.showPrintOptionsDlg( this, true, false );
-      }
-      else if((src == this.mnuFilePrint)
-	      || (src == this.mnuPopupPrint)
-	      || (src == this.btnPrint) )
-      {
-	rv = true;
-	doPrint();
-      }
-      else if( (src == this.mnuFileOpenText)
-	       || (src == this.mnuPopupOpenText)
-	       || (src == this.btnOpenText) )
-      {
-	rv = true;
-	doOpenText();
-      }
-      else if( (src == this.mnuFileOpenHex)
-	       || (src == this.mnuPopupOpenText) )
-      {
-	rv = true;
-	doOpenHex();
-      }
-      else if( (src == this.mnuFileSave)
-	       || (src == this.mnuPopupSave)
-	       || (src == this.btnSave) )
-      {
-	rv = true;
-	doSave();
-      }
-      else if( (src == this.mnuFileDelete)
-	       || (src == this.mnuPopupDelete)
-	       || (src == this.btnDelete) )
-      {
-	rv = true;
-	doDelete();
-      }
-      else if( src == this.mnuFileClose ) {
-	rv = true;
-	doClose();
-      }
-      else if( src == this.mnuHelpContent ) {
-        rv = true;
-        this.screenFrm.showHelp( "/help/print.htm" );
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    if( this.mnuPopup != null ) {
-      SwingUtilities.updateComponentTreeUI( this.mnuPopup );
-    }
-    updBgColor();
-  }
-
-
-  @Override
-  protected boolean showPopup( MouseEvent e )
-  {
-    boolean   rv = false;
-    Component c  = e.getComponent();
-    if( c != null ) {
-      this.mnuPopup.show( c, e.getX(), e.getY() );
-      rv = true;
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void windowClosed( WindowEvent e )
-  {
-    if( e.getWindow() == this )
-      this.screenFrm.childFrameClosed( this );
-  }
-
-
-	/* --- Aktionen --- */
-
-  private void doFinish()
-  {
-    int[] rows = this.table.getSelectedRows();
-    if( rows != null ) {
-      if( rows.length == 1 ) {
-	int row = this.table.convertRowIndexToModel( rows[ 0 ] );
-	if( row >= 0 ) {
-	  int modelRow = this.table.convertRowIndexToModel( row );
-	  if( modelRow >= 0 ) {
-	    PrintData data = this.printMngr.getPrintData( modelRow );
-	    if( data != null ) {
-	      if( isActivePrintData( data ) ) {
-		if( BasicDlg.showYesNoDlg(
-			this,
-			"M\u00F6chten Sie den Druckauftrag"
-						+ " abschlie\u00DFen?" ) )
-		{
-		  this.printMngr.deactivatePrintData( data );
-		  fireUpdActionButtons();
-		}
-	      } else {
-		BasicDlg.showInfoDlg(
-			this,
-			"Der Druckauftrag ist bereits abgeschlossen." );
-	      }
-	    }
-	  }
-	}
-      }
-    }
-  }
-
-
-  private void doPrint()
-  {
-    PrintData data = getSelectedPrintData();
-    if( data != null ) {
-      PrintUtil.doPrint(
-		this,
-		data,
-		String.format(
-			"JKCEMU Druckauftrag %d",
-			data.getEntryNum() ) );
-    }
-  }
-
-
-  private void doOpenText()
-  {
-    PrintData data = getSelectedPrintData();
-    if( data != null ) {
-      StringBuilder buf = new StringBuilder( data.size() );
-
-      byte[] dataBytes = data.getBytes();
-      if( dataBytes != null ) {
-	PrintDataScanner scanner = new PrintDataScanner( dataBytes );
-	while( !scanner.endReached() ) {
-	  String line = scanner.readLine();
-	  while( line != null ) {
-	    buf.append( line );
-	    buf.append( (char) '\n' );
-	    line = scanner.readLine();
-	  }
-	  if( !scanner.skipFormFeed() )
-	    break;
-	}
-      }
-      this.screenFrm.openText( buf.toString() );
-    }
-  }
-
-
-  private void doOpenHex()
-  {
-    PrintData data = getSelectedPrintData();
-    if( data != null ) {
-      byte[] dataBytes = data.getBytes();
-      if( dataBytes != null ) {
-	this.screenFrm.openHexEditor( dataBytes );
-      }
-    }
-  }
-
-
-  private void doSave()
-  {
-    try {
-      PrintData data = getSelectedPrintData();
-      if( data != null ) {
-	File file = EmuUtil.showFileSaveDlg(
-				this,
-				"Druckauftrag speichern",
-				Main.getLastPathFile( "print" ),
-				EmuUtil.getTextFileFilter() );
-	if( file != null ) {
-	  data.saveToFile( file );
-	  this.printMngr.fireTableDataChanged();
-	  Main.setLastFile( file, "print" );
-	}
-      }
-    }
-    catch( IOException ex ) {
-      BasicDlg.showErrorDlg(
-		this,
-		"Der Druckauftrag kann nicht gespeichert werden."
-						+ ex.getMessage() );
-    }
-  }
-
-
-  private void doDelete()
-  {
-    int[] rows = this.table.getSelectedRows();
-    if( rows != null ) {
-      if( rows.length == 1 ) {
-	if( !BasicDlg.showYesNoDlg(
-		this,
-		"M\u00F6chten Sie den Druckauftrag l\u00F6schen?" ) )
-	{
-	  rows = null;
-	}
-      } else if( rows.length > 1 ) {
-	if( !BasicDlg.showYesNoDlg(
-		this,
-		"M\u00F6chten Sie die ausgew\u00E4hlten"
-			+ " Druckauftr\u00E4ge l\u00F6schen?" ) )
-	{
-	  rows = null;
-	}
-      } else {
-	rows = null;
-      }
-    }
-    if( rows != null ) {
-      for( int i = 0; i < rows.length; i++ ) {
-	rows[ i ] = this.table.convertRowIndexToModel( rows[ i ] );
-      }
-      Arrays.sort( rows );
-      for( int i = rows.length - 1; i >= 0; --i ) {
-	int row = rows[ i ];
-	if( row >= 0 ) {
-	  this.printMngr.removeRow( row );
-	}
-      }
-      fireUpdActionButtons();
-    }
-  }
-
-
 	/* --- private Methoden --- */
 
   private void fireUpdActionButtons()
@@ -487,6 +498,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    updActionButtons();

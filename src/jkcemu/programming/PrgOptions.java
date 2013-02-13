@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,33 +12,30 @@ import java.io.File;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.EmuThread;
+import jkcemu.programming.assembler.Z80Assembler;
 import jkcemu.programming.basic.BasicOptions;
 
 
 public class PrgOptions
 {
-  public static enum Syntax { ALL, ZILOG_ONLY, ROBOTRON_ONLY };
-
-
-  private Syntax  syntax;
-  private boolean allowUndocInst;
-  private boolean labelsCaseSensitive;
-  private boolean printLabels;
-  private boolean codeToEmu;
-  private boolean codeToSecondSys;
-  private boolean codeToFile;
-  private File    codeFile;
-  private String  codeFileFmt;
-  private char    codeFileType;
-  private String  codeFileDesc;
-  private boolean labelsToDebugger;
-  private boolean labelsToReass;
-  private boolean formatSource;
+  private Z80Assembler.Syntax asmSyntax;
+  private boolean             allowUndocInst;
+  private boolean             labelsCaseSensitive;
+  private boolean             printLabels;
+  private boolean             codeToEmu;
+  private boolean             codeToSecondSys;
+  private boolean             codeToFile;
+  private File                codeFile;
+  private boolean             forceRun;
+  private boolean             labelsToDebugger;
+  private boolean             labelsToReass;
+  private boolean             formatSource;
+  private boolean             warnNonAsciiChars;
 
 
   public PrgOptions()
   {
-    this.syntax              = Syntax.ALL;
+    this.asmSyntax           = Z80Assembler.Syntax.ALL;
     this.allowUndocInst      = false;
     this.labelsCaseSensitive = false;
     this.printLabels         = false;
@@ -46,37 +43,11 @@ public class PrgOptions
     this.codeToSecondSys     = false;
     this.codeToFile          = false;
     this.codeFile            = null;
-    this.codeFileFmt         = null;
-    this.codeFileType        = '\u0020';
-    this.codeFileDesc        = null;
+    this.forceRun            = false;
     this.labelsToDebugger    = false;
     this.labelsToReass       = false;
     this.formatSource        = false;
-  }
-
-
-  public PrgOptions( PrgOptions src )
-  {
-    this.syntax              = src.syntax;
-    this.allowUndocInst      = src.allowUndocInst;
-    this.labelsCaseSensitive = src.labelsCaseSensitive;
-    this.printLabels         = src.printLabels;
-    this.labelsToDebugger    = src.labelsToDebugger;
-    this.labelsToReass       = src.labelsToReass;
-    this.formatSource        = src.formatSource;
-    copyCodeDestOptionsFrom( src );
-  }
-
-
-  public void copyCodeDestOptionsFrom( PrgOptions src )
-  {
-    this.codeToEmu       = src.codeToEmu;
-    this.codeToSecondSys = src.codeToSecondSys;
-    this.codeToFile      = src.codeToFile;
-    this.codeFile        = src.codeFile;
-    this.codeFileFmt     = src.codeFileFmt;
-    this.codeFileType    = src.codeFileType;
-    this.codeFileDesc    = src.codeFileDesc;
+    this.warnNonAsciiChars   = true;
   }
 
 
@@ -86,27 +57,15 @@ public class PrgOptions
   }
 
 
+  public Z80Assembler.Syntax getAsmSyntax()
+  {
+    return this.asmSyntax;
+  }
+
+
   public File getCodeFile()
   {
     return this.codeFile;
-  }
-
-
-  public char getCodeFileType()
-  {
-    return this.codeFileType;
-  }
-
-
-  public String getCodeFileDesc()
-  {
-    return this.codeFileDesc;
-  }
-
-
-  public String getCodeFileFormat()
-  {
-    return this.codeFileFmt;
   }
 
 
@@ -128,6 +87,30 @@ public class PrgOptions
   }
 
 
+  public boolean getCreateCode()
+  {
+    return this.codeToEmu || this.codeToFile || this.forceRun;
+  }
+
+
+  public boolean getForceRun()
+  {
+    return this.forceRun;
+  }
+
+
+  public boolean getFormatSource()
+  {
+    return this.formatSource;
+  }
+
+
+  public boolean getLabelsCaseSensitive()
+  {
+    return this.labelsCaseSensitive;
+  }
+
+
   public boolean getLabelsToDebugger()
   {
     return this.labelsToDebugger;
@@ -140,29 +123,15 @@ public class PrgOptions
   }
 
 
-  public boolean getFormatSource()
-  {
-    return this.formatSource;
-  }
-
-
   public boolean getPrintLabels()
   {
     return this.printLabels;
   }
 
 
-  public boolean getLabelsCaseSensitive()
+  public static PrgOptions getPrgOptions( Properties props )
   {
-    return this.labelsCaseSensitive;
-  }
-
-
-  public static PrgOptions getPrgOptions(
-				EmuThread  emuThread,
-				Properties props )
-  {
-    PrgOptions options = BasicOptions.getBasicOptions( emuThread, props );
+    PrgOptions options = BasicOptions.getBasicOptions( props );
     if( props != null ) {
       String syntaxText = props.getProperty( "jkcemu.programming.asm.syntax" );
 
@@ -193,15 +162,6 @@ public class PrgOptions
       String codeFileName = props.getProperty(
 		"jkcemu.programming.code.file.name" );
 
-      String codeFileFmt = props.getProperty(
-		"jkcemu.programming.code.file.format" );
-
-      String codeFileType = props.getProperty(
-		"jkcemu.programming.code.file.type" );
-
-      String codeFileDesc = props.getProperty(
-		"jkcemu.programming.code.file.description" );
-
       Boolean labelsToDebugger = getBoolean(
 		props,
 		"jkcemu.programming.labels_to_debugger" );
@@ -214,6 +174,10 @@ public class PrgOptions
 		props,
 		"jkcemu.programming.format.source" );
 
+      Boolean warnNonAsciiChars = getBoolean(
+		props,
+		"jkcemu.programming.warn_non_ascii_chars" );
+
       if( (syntaxText != null)
 	  || (allowUndocInst != null)
 	  || (labelsCaseSensitive != null)
@@ -222,23 +186,21 @@ public class PrgOptions
 	  || (codeToSecondSys != null)
 	  || (codeToFile != null)
 	  || (codeFileName != null)
-	  || (codeFileFmt != null)
-	  || (codeFileType != null)
-	  || (codeFileDesc != null)
 	  || (labelsToDebugger != null)
 	  || (labelsToReass != null)
-	  || (formatSource != null) )
+	  || (formatSource != null)
+	  || (warnNonAsciiChars != null) )
       {
 	if( options == null ) {
 	  options = new PrgOptions();
 	}
 	if( syntaxText != null ) {
 	  if( syntaxText.equals( "zilog" ) ) {
-	    options.syntax = Syntax.ZILOG_ONLY;
+	    options.asmSyntax = Z80Assembler.Syntax.ZILOG_ONLY;
 	  } else if( syntaxText.equals( "robotron" ) ) {
-	    options.syntax = Syntax.ROBOTRON_ONLY;
+	    options.asmSyntax = Z80Assembler.Syntax.ROBOTRON_ONLY;
 	  } else {
-	    options.syntax = Syntax.ALL;
+	    options.asmSyntax = Z80Assembler.Syntax.ALL;
 	  }
 	  if( allowUndocInst != null ) {
 	    options.allowUndocInst = allowUndocInst.booleanValue();
@@ -264,14 +226,7 @@ public class PrgOptions
 	      codeFile = new File( codeFileName );
 	    }
 	  }
-	  options.codeFile    = codeFile;
-	  options.codeFileFmt = codeFileFmt;
-	  if( codeFileType != null ) {
-	    if( !codeFileType.isEmpty() ) {
-	      options.codeFileType = codeFileType.charAt( 0 );
-	    }
-	  }
-	  options.codeFileDesc = codeFileDesc;
+	  options.codeFile = codeFile;
 	  if( labelsToDebugger != null ) {
 	    options.labelsToDebugger = labelsToDebugger.booleanValue();
 	  }
@@ -281,6 +236,9 @@ public class PrgOptions
 	  if( formatSource != null ) {
 	    options.formatSource = formatSource.booleanValue();
 	  }
+	  if( warnNonAsciiChars != null ) {
+	    options.warnNonAsciiChars = warnNonAsciiChars.booleanValue();
+	  }
 	}
       }
     }
@@ -288,17 +246,17 @@ public class PrgOptions
   }
 
 
-  public Syntax getSyntax()
+  public boolean getWarnNonAsciiChars()
   {
-    return this.syntax;
+    return this.warnNonAsciiChars;
   }
 
 
   public void putOptionsTo( Properties props )
   {
     if( props != null ) {
-      if( this.syntax != null ) {
-	switch( this.syntax ) {
+      if( this.asmSyntax != null ) {
+	switch( this.asmSyntax ) {
 	  case ZILOG_ONLY:
 	    props.setProperty( "jkcemu.programming.asm.syntax", "zilog" );
 	    break;
@@ -345,18 +303,6 @@ public class PrgOptions
 		codeFileName != null ? codeFileName : "" );
 
       props.setProperty(
-		"jkcemu.programming.code.file.format",
-		this.codeFileFmt != null ? this.codeFileFmt : "" );
-
-      props.setProperty(
-		"jkcemu.programming.code.file.type",
-		Character.toString( this.codeFileType ) );
-
-      props.setProperty(
-		"jkcemu.programming.code.file.description",
-		this.codeFileDesc != null ? this.codeFileDesc : "" );
-
-      props.setProperty(
 		"jkcemu.programming.labels_to_debugger",
 		Boolean.toString( this.labelsToDebugger ) );
 
@@ -367,6 +313,10 @@ public class PrgOptions
       props.setProperty(
 		"jkcemu.programming.format.source",
 		Boolean.toString( this.formatSource ) );
+
+      props.setProperty(
+		"jkcemu.programming.warn_non_ascii_chars",
+		Boolean.toString( this.warnNonAsciiChars ) );
     }
   }
 
@@ -377,30 +327,40 @@ public class PrgOptions
   }
 
 
+  public void setAsmSyntax( Z80Assembler.Syntax asmSyntax )
+  {
+    this.asmSyntax = asmSyntax;
+  }
+
+
   public void setCodeToEmu( boolean state )
   {
     this.codeToEmu = state;
   }
 
 
-  public void setCodeToFile(
-		boolean state,
-		File    file,
-		String  fileFmt,
-		char    fileType,
-		String  fileDesc )
+  public void setCodeToFile( boolean state, File file )
   {
-    this.codeToFile   = state;
-    this.codeFile     = file;
-    this.codeFileFmt  = fileFmt;
-    this.codeFileType = fileType;
-    this.codeFileDesc = fileDesc;
+    this.codeToFile = state;
+    this.codeFile   = file;
   }
 
 
   public void setCodeToSecondSystem( boolean state )
   {
     this.codeToSecondSys = state;
+  }
+
+
+  public void setFormatSource( boolean state )
+  {
+    this.formatSource = state;
+  }
+
+
+  public void setForceRun( boolean state )
+  {
+    this.forceRun = state;
   }
 
 
@@ -416,12 +376,6 @@ public class PrgOptions
   }
 
 
-  public void setFormatSource( boolean state )
-  {
-    this.formatSource = state;
-  }
-
-
   public void setLabelsCaseSensitive( boolean state )
   {
     this.labelsCaseSensitive = state;
@@ -434,9 +388,9 @@ public class PrgOptions
   }
 
 
-  public void setSyntax( Syntax syntax )
+  public void setWarnNonAsciiChars( boolean state )
   {
-    this.syntax = syntax;
+    this.warnNonAsciiChars = state;
   }
 
 
@@ -473,5 +427,41 @@ public class PrgOptions
     }
     return rv;
   }
-}
 
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean equals( Object o )
+  {
+    boolean rv = false;
+    if( o != null ) {
+      rv = super.equals( o );
+      if( !rv && (o instanceof PrgOptions) ) {
+	PrgOptions options = (PrgOptions) o;
+	if( options.asmSyntax.equals( this.asmSyntax )
+	    && (options.allowUndocInst      == this.allowUndocInst)
+	    && (options.labelsCaseSensitive == this.labelsCaseSensitive)
+	    && (options.printLabels         == this.printLabels)
+	    && (options.codeToEmu           == this.codeToEmu)
+	    && (options.codeToSecondSys     == this.codeToSecondSys)
+	    && (options.codeToFile          == this.codeToFile)
+	    && (options.forceRun            == this.forceRun)
+	    && (options.labelsToDebugger    == this.labelsToDebugger)
+	    && (options.labelsToReass       == this.labelsToReass)
+	    && (options.formatSource        == this.formatSource)
+	    && (options.warnNonAsciiChars      == this.warnNonAsciiChars) )
+	{
+	  if( (options.codeFile != null) && (this.codeFile != null) ) {
+	    rv = options.codeFile.equals( this.codeFile );
+	  } else {
+	    if( (options.codeFile == null) && (this.codeFile == null) ) {
+	      rv = true;
+	    }
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+}

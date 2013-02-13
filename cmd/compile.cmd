@@ -12,6 +12,9 @@ del %SRC_DIR%\jkcemu\emusys\ac1_llc2\*.class
 del %SRC_DIR%\jkcemu\emusys\etc\*.class
 del %SRC_DIR%\jkcemu\emusys\huebler\*.class
 del %SRC_DIR%\jkcemu\emusys\kc85\*.class
+del %SRC_DIR%\jkcemu\emusys\kccompact\*.class
+del %SRC_DIR%\jkcemu\emusys\lc80\*.class
+del %SRC_DIR%\jkcemu\emusys\poly880\*.class
 del %SRC_DIR%\jkcemu\emusys\z1013\*.class
 del %SRC_DIR%\jkcemu\emusys\z9001\*.class
 del %SRC_DIR%\jkcemu\etc\*.class
@@ -23,6 +26,7 @@ del %SRC_DIR%\jkcemu\print\*.class
 del %SRC_DIR%\jkcemu\programming\*.class
 del %SRC_DIR%\jkcemu\programming\assembler\*.class
 del %SRC_DIR%\jkcemu\programming\basic\*.class
+del %SRC_DIR%\jkcemu\programming\basic\target\*.class
 del %SRC_DIR%\jkcemu\text\*.class
 del %SRC_DIR%\jkcemu\tools\*.class
 del %SRC_DIR%\jkcemu\tools\calculator\*.class

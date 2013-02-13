@@ -129,14 +129,14 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.fldAltPio2Rom2010 = new ROMFileSettingsFld(
 		settingsFrm,
 		propPrefix + "2010.pio2rom.",
-		"Alternativer Inhalt des ROMs auf der PIO2-Karte"
+		"Alternativer Inhalt der ROM-B\u00E4nke auf der PIO2-Karte"
 					+ " (4 x 2000h-27FFh):" );
     this.tab2010.add( this.fldAltPio2Rom2010, gbc2010 );
 
     this.fldRomBank2010 = new ROMFileSettingsFld(
-			settingsFrm,
-			propPrefix + "2010.rombank.",
-			"Inhalt der ROM-Bank (16 x ab A000h):" );
+		settingsFrm,
+		propPrefix + "2010.rombank.",
+		"Inhalt der weiteren 16 ROM-B\u00E4nke (16 x ab A000h):" );
     gbc2010.gridy++;
     this.tab2010.add( this.fldRomBank2010, gbc2010 );
     upd2010FieldsEnabled();

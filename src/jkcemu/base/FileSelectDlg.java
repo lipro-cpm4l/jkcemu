@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -482,6 +482,7 @@ public class FileSelectDlg
       EventQueue.invokeLater(
 			new Runnable()
 			{
+			  @Override
 			  public void run()
 			  {
 			    list.clearSelection();
@@ -903,6 +904,7 @@ public class FileSelectDlg
     EventQueue.invokeLater(
 			new Runnable()
 			{
+			  @Override
 			  public void run()
 			  {
 			    setListData( dirFile, files );
@@ -1147,6 +1149,7 @@ public class FileSelectDlg
       this.labelStatus.setText( "Lese Verzeichnis..." );
       Thread t = new Thread( "JKCEMU directory reader of file select dialog" )
 			{
+			  @Override
 			  public void run()
 			  {
 			    File[] files = null;

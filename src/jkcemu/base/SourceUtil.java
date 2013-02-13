@@ -245,7 +245,7 @@ public class SourceUtil
 				tokens );
     if( text != null ) {
       Component owner = screenFrm.openText( text );
-      if( (begAddr != 0x0401) && (begAddr != 0x2C01) ) {
+      if( (owner != null) && (begAddr != 0x0401) && (begAddr != 0x2C01) ) {
 	BasicDlg.showInfoDlg(
 		owner,
 		"Das BASIC-Programm befindet sich au\u00DFerhalb\n"

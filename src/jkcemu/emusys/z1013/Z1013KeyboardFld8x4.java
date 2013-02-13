@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.emusys.z1013;
 import java.awt.*;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.Z1013;
 
@@ -80,7 +79,7 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
 	  x = MARGIN;
 	  y += (this.keyHeight + MARGIN);
 	}
-	Image img = Main.getImage( keyImgResources[ i ] );
+	Image img = getImage( keyImgResources[ i ] );
 	if( img != null ) {
 	  if( this.keyWidth <= 0 ) {
 	    this.keyWidth = Math.max( 0, img.getWidth( this ) );
@@ -133,7 +132,7 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
   @Override
   public String getKeyboardName()
   {
-    return "Z1013-Folienflachtastatur";
+    return "Z1013 Folienflachtastatur";
   }
 
 

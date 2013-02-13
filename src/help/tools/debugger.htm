@@ -7,7 +7,7 @@
   und so das Geschehen im Emulator zu &uuml;berwachen.
   Dabei ist es auch m&ouml;glich,
   die Speicher- und Registerinhalte anzusehen.
-  Die Registerihalte k&ouml;nnen auch ge&auml;ndert werden.
+  Die Registerinhalte k&ouml;nnen auch ge&auml;ndert werden.
   Zum &Auml;ndern des Speicherinhalts gibt es den
   <a href="memeditor.htm">Speichereditor</a>.
  <br/><br/>
@@ -46,58 +46,68 @@
 
 
  <h2><a name="breakpoint">3. Haltepunkte</a></h2>
-  Es gibt vier verschiedene Arten von Haltepunkten,
+  Es gibt f&uuml;nf verschiedene Arten von Haltepunkten,
   die bei unterschiedlichen Bedingungen zum Anhalten
   der Programmausf&uuml;hrung f&uuml;hren.
  <br/><br/>
 
- <h3>3.1. Haltepunkt auf Adresse</h3>
+ <h3>3.1. Haltepunkt auf Programmadresse</h3>
   Das ist die klassische Form eines Haltepunktes.
   Es wird angehalten, wenn die Programmausf&uuml;hrung
-  auf die angegebene Adresse st&ouml;&szlig;t.
+  an der angegebenen Adresse (Haltepunktadresse) angelangt ist.
+  Zus&auml;tzlich k&ouml;nnen Sie den Wert eines Registers
+  pr&uuml;fen lassen.
+  Dann wird nur angehalten, wenn neben der Haltepunktadresse
+  auch die Registerwertpr&uuml;fung erfolgreich war.
+  Diese l&auml;uft folgenderma&szlig;en ab:
+  Vor Abarbeitung des Befehls auf der Haltepunktadresse wird der Wert
+  des ausgew&auml;hlten Registers mit einer von Ihnen anzugebenden Maske
+  UND-verkn&uuml;pft und das Ergebnis dann mit einem ebenfalls von Ihnen
+  anzugebenden Vergleichswert verglichen.
+  Dabei ist nicht nur ein Vergleich auf Gleichheit m&ouml;glich,
+  sondern auch auf Ungleichheit sowie auf gr&ouml;&szlig;er als
+  und kleiner als.
  <br/><br/>
 
- <h3>3.2. Haltepunkt auf Speicher</h3>
+ <h3>3.2. Haltepunkt auf Speicherbereich</h3>
   Ein solcher Haltepunkt reagiert auf Zugriffe auf eine Speicherzelle
   bzw. auf einen Speicherbereich.
   Sie k&ouml;nnen angeben, ob nur bei Lese-, nur bei Schreib-
   oder bei Lese- und Schreibzugriffe angehalten werden soll.
+  Zus&auml;tzlich k&ouml;nnen Sie den Wert der betreffenden Speicherzelle
+  (Lesezugriff) bzw. den zu schreibenden Wert (Schreibzugriff)
+  &uuml;berpr&uuml;fen lassen.
+  Auch hier geben Sie Maske, Vergleichsoperator und Vergleichswert an.
  <br/><br/>
-  Zus&auml;tzlich k&ouml;nnen ein Wert und eine Maske angeben werden.
-  Dann wird nur angehalten, wenn der angegebene Wert mit dem gelesenen
-  bzw. zu schreibenden &uuml;bereinstimmt.
-  Dabei werden nur die Bits verglichen, die in der Maske gesetzt sind.
- <br/><br/>
-
- <h3>3.3. Haltepunkt auf E/A-Tor</h3>
-  So ein Haltepunkt ist &auml;hnlich wie einer auf den Speicher.
-  Anstelle einer Speicherzelle oder eines Speicherbereichs
-  wird eine Ein-/Ausgabeadresse oder eine Gruppe von zusammenliegenden
-  IO-Ports &uuml;berwacht.
- <br/><br/>
-  Die E/A-Haltepunktadresse k&ouml;nnen Sie als 8&nbsp;Bit-
-  (2&nbsp;hexadezimale Ziffern) oder 16&nbsp;Bit-Wert
-  (4&nbsp;hexadezimale Ziffern) angeben.
-  Der emulierte Mikroprozessor unterst&uuml;tzt offiziell nur
-  E/A-Adressen mit 8&nbsp;Bit.
-  Allerdings sind aufrund seines undokumentierten Verhaltens
-  auch 16-Bit-E/A-Adressen m&ouml;glich.
-  Ob Sie nun die E/A-Haltepunktadresse mit 8 oder 16&nbsp;Bit angeben
-  (m&uuml;ssen), h&auml;ngt davon ab, ob das emulierte System
-  mit 8 oder 16-Bit-IO-Ports arbeitet.
- <br/><br/>
-  Auch bei Haltepunkte auf E/A-Tore k&ouml;nnen ein Wert und eine Maske
-  als zus&auml;tzliches Kriterium angegeben werden.
-  Allerdings zeigt das nur bei Ausgabebefehlen eine Wirkung.
- <br/><br/>
-  Bei Eingabebefehlen wird ein Wert als zus&auml;tzliches Kriterium
-  deshalb nicht unterst&uuml;tzt, weil immer vor Ausf&uuml;hrung
-  des betreffenden Befehls angehalten wird und der Emulator
-  nicht in jedem Fall wissen kann, welcher Wert dann bei der
-  eigentlichen Befehlsausf&uuml;hrung gelesen werden w&uuml;rde.
+  <b>Achtung!</b> Der Debugger pr&uuml;ft vor der Ausf&uuml;hrung eines
+  jeden Maschinenbefehls, ob dieser auf den angegebenen Speicherbereich
+  zugreift.
+  Aufgrund dieser Arbeitsweise werden jedoch die Speicherzugriffe,
+  die w&auml;hrend einer Interrupt-Annahme get&auml;tigt werden
+  (Lesen der Interrupt-Tabelle im Interrupt-Mode&nbsp;2 und
+  Kellern der R&uuml;ckkehradresse) von keinem Haltepunkt erkannt.
  <br/><br/>
 
- <h3>3.4. Haltepunkt auf Interrupt-Quelle</h3>
+ <h3>3.3. Haltepunkt auf Eingabetor</h3>
+  Bei diesem Haltepunkt geben Sie die Adresse oder den Adressbereich
+  eines Eingabetors an.
+  Es wird dann an einem Eingabebefehl angehalten,
+  der von diesem Eingabetor liest.
+ <br/><br/>
+  Die Eingabeadresse kann sowohl mit 8&nbsp;Bit (2&nbsp;hexadezimale Ziffern)
+  als auch mit 16&nbsp;Bit (4&nbsp;hexadezimale Ziffern) angegeben werden.
+  Dementsprechend wird dann auch die Adresse mit 8 oder 16&nbsp;Bit
+  gepr&uuml;ft.
+ <br/><br/>
+
+ <h3>3.4. Haltepunkt auf Ausgabetor</h3>
+  Dieser Haltepunkt ist &auml;hnlich wie einer auf einem Eingabetor,
+  nur dass er auf Ausgabebefehle reagiert.
+  Zus&auml;tzlich k&ouml;nnen Sie den auszugebenden Wert
+  &uuml;berpr&uuml;fen lassen.
+ <br/><br/>
+
+ <h3>3.5. Haltepunkt auf Interrupt-Quelle</h3>
   Bei dieser Form eines Haltepunktes geben Sie eine im emulierten
   System vorhandene Interrupt-Quelle (z.B. PIO oder CTC) an.
   Es wird dann angehalten, sobald die Interrupt-Quelle
@@ -106,7 +116,7 @@
   es wird vor dem ersten Befehl der Interrupt-Service-Routine angehalten.
  <br/><br/>
 
- <h3>3.5. Verwaltung der Haltepunkte</h3>
+ <h3>3.6. Verwaltung der Haltepunkte</h3>
   &Uuml;ber das Men&uuml; <em>Debuggen</em> k&ouml;nnen Sie beliebig
   viele Haltepunkte anlegen.
   Mit dem Kontextmen&uuml; &uuml;ber der jeweiligen Haltepunktliste
@@ -115,14 +125,15 @@
   Um einen Haltepunkt wieder zu entfernen,
   m&uuml;ssen Sie diesen im rechten Bereich des Debugger-Fensters
   durch Anklicken markieren.
+  Sie k&ouml;nnen auch mehrere Haltepunkte markieren.
   Anschlie&szlig;end klicken Sie im Men&uuml; <em>Debuggen</em>
-  auf den Eintrag <em>Haltepunkt entfernen</em>.
+  auf den Eintrag <em>Haltepunkte entfernen</em>.
  <br/><br/>
   Optional k&ouml;nnen Sie auch alle Haltepunkte auf einmal entfernen
   (Men&uuml;eintrag <em>Alle Haltepunkte entfernen</em>).
  <br/><br/>
   Haltepunkte, die Sie tempor&auml;r nicht ben&ouml;tigen,
-  m&uuml;ssen Sie nicht unbedingt entfernen.
+  m&uuml;ssen nicht unbedingt entfernt werden.
   Sie k&ouml;nnen diese Haltepunkte auch einfach deaktivieren
   und sp&auml;ter bei Bedarf wieder aktivieren.
  <br/><br/>
@@ -130,11 +141,10 @@
   sichtbar ist.
   Wenn Sie Haltepunkte angelegt haben und Sie schlie&szlig;en
   das Fenster, werden die Haltepunkte zwar nicht gel&ouml;scht,
-  jedoch wird dann dort auch nicht mehr angehalten.
+  jedoch wird dann dort nicht mehr angehalten.
  <br/><br/>
 
-
- <h3>3.6. Haltepunkte importieren</h3>
+ <h3>3.7. Haltepunkte importieren</h3>
   Der Debugger bietet die M&ouml;glichkeit,
   Haltepunkte aus einer Datei oder aus der Zwischenablage zu
   <a href="labelimport.htm">importieren</a>.
@@ -155,8 +165,10 @@
   die Programmausf&uuml;hrung angehalten wird.
  <br/><br/>
   Die Funktionalit&auml;ten des Schrittbetriebs finden Sie im Men&uuml;
-  <em>Debuggen</em> unter den Punkten <em>&Uuml;ber Aufruf springen</em>,
-  <em>In Aufruf springen</em> und <em>Aus Aufruf herausspringen</em>.
+  <em>Debuggen</em> unter den Punkten
+  <em>Einzelschritt &uuml;ber Aufruf hinweg</em>,
+  <em>Einzelschritt in Aufruf hinein</em> und
+  <em>Bis RETURN ausf&uuml;hren</em>.
  <br/><br/>
   Den Schrittbetrieb beenden Sie ganz einfach durch Fortsetzung
   der Programmausf&uuml;hrung.
@@ -170,7 +182,7 @@
   oder Sie &ouml;ffnen wieder den Debugger.
  <br/><br/>
 
- <h3>4.1. &Uuml;ber Aufruf springen</h3>
+ <h3>4.1. Einzelschritt &uuml;ber Aufruf hinweg</h3>
   Es wird ein einzelner Maschinenbefehl abgearbeitet.
   Handelt es sich jedoch um den Aufruf eines Unterprogramms,
   so wird das ganze Unterprogramm ausgef&uuml;hrt und
@@ -181,13 +193,13 @@
  <br/><br/>
   Blockbefehle und leere DJNZ-Schleifen werden ebenfalls &uuml;bersprungen,
   d.h. sie werden bis zum Ende abgearbeitet.
-  Bei der Funktion <em>&Uuml;ber Aufruf springen</em> wird n&auml;mlich
-  die Programmausf&uuml;hrung niemals angehalten,
+  Bei der Funktion <em>Einzelschritt &uuml;ber Aufruf hinweg</em>
+  wird n&auml;mlich die Programmausf&uuml;hrung niemals angehalten,
   wenn der Befehlszeiger (Program Counter) nach Abarbeitung
   eines Maschinenbefehls immer noch auf den gleichen Befehl zeigt.
  <br/><br/>
 
- <h3>4.2. In Aufruf springen</h3>
+ <h3>4.2. Einzelschritt in Aufruf hinein</h3>
   Es wird immer nur ein einzelner Maschinenbefehl abgearbeitet.
   Handelt es sich um den Aufruf eines Unterprogramms,
   so wird nur der CALL-Befehl abgearbeitet und somit vor dem
@@ -197,7 +209,7 @@
   und danach wieder angehalten.
  <br/><br/>
 
- <h3>4.3. Aus Aufruf herausspringen</h3>
+ <h3>4.3. Bis RETURN ausf&uuml;hren</h3>
   Es werden die Maschinenbefehle bis zum n&auml;chsten Return-Befehl
   ausgef&uuml;hrt.
   Werden dabei Unterprogramme aufgerufen,
@@ -235,7 +247,7 @@
  <br/><br/>
   <b>Achtung!</b> Die Befehlsaufzeichnung schreibt pro Maschinenbefehl
   eine ganze Zeile in eine Textdatei.
-  Diese Textdatei w&auml;chst deshalb sehr schnell und sehr stark an.
+  Diese Textdatei w&auml;chst somit sehr schnell und sehr stark an.
   Sie sollten deshalb die Befehlsaufzeichnung nicht zu lange
   eingeschaltet lassen und sicherstellen, dass auf dem Speichermedium
   ausreichend Platz ist.

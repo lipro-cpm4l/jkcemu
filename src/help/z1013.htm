@@ -148,9 +148,7 @@
     <td valign="top">4</td>
     <td valign="top">ROM eingeblendet</td>
     <td valign="top">
-     ROM aus- und daf&uuml;r RAM eingeblendet,<br/>
-     Im Emulator extern eingebundene ROM-Images
-     werden nicht ausgeblendet.
+     ROM aus- und daf&uuml;r RAM eingeblendet
     </td>
    </tr>
    <tr>
@@ -159,15 +157,32 @@
     <td valign="top">
      alternativer Zeichensatz,<br/>
      Der Emulator schaltet auf einen Zeichensatz mit deutschen Umlauten
-     nach ISO&nbsp;646 und inversen Zeichen um.
+     nach ISO&nbsp;646 und inversen Zeichen um.<br/><br/>
+     <b>Achtung!</b> Wurde in den Z1013-Einstellungen,
+     Bereich <em>Sonstiges</em>,
+     eine alternative Zeichensatzdatei eingebunden, gilt folgendes:
+     <ul>
+      <li>
+       Ist die extern eingebundene Zeichensatzdatei kleiner als 4&nbsp;KByte,
+       wird diese f&uuml;r den Standard- und den alternativen Zeichensatz
+       verwendet, d.h., eine Umschaltung &uuml;ber Port&nbsp;4
+       hat keine Wirkung.
+      </li>
+      <li>
+       Ist die extern eingebundene Zeichensatzdatei 4&nbsp;KByte gro&szlig;,
+       werden die unteren 2&nbsp;KByte als Standard- und die oberen
+       2&nbsp;KByte als alternativer Zeichensatz verwendet.
+       In dem Fall zeigt die Umschaltung des Zeichensatzes eine Wirkung.
+      </li>
+     </ul>
     </td>
    </tr>
    <tr>
     <td valign="top">6</td>
     <td valign="top">Taktfrequenz 2&nbsp;MHz</td>
     <td valign="top">
-     Taktfrequenz 4&nbsp;MHz,<br/>
-     Der Emulator schaltet nur dann auf 4&nbsp;MHz um,
+     Taktfrequenz 4&nbsp;MHz,<br/><br/>
+     <b>Achtung!</b> Der Emulator schaltet nur dann auf 4&nbsp;MHz um,
      wenn in den <a href="settings.htm#speed">Einstellungen</a>
      der Standardwert von 2&nbsp;MHz angegeben ist.
     </td>

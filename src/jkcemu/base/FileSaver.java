@@ -248,6 +248,12 @@ public class FileSaver
 	    out.write( memory.getMemByte( addr, false ) );
 	    addr++;
 	  }
+	  int n = (addr - begAddr) % 0x20;
+	  if( n > 0 ) {
+	    for( int i = n; i < 0x20; i++ ) {
+	      out.write( 0 );
+	    }
+	  }
 	  if( isHS && (memForHeader != null) ) {
 	    for( int i = 0; i < hsHeaderBytes.length; i++ ) {
 	      memForHeader.setMemByte(
@@ -267,6 +273,12 @@ public class FileSaver
 	  while( addr <= endAddr ) {
 	    out.write( memory.getMemByte( addr, false ) );
 	    addr++;
+	  }
+	  int n = (addr - begAddr) % 0x80;
+	  if( n > 0 ) {
+	    for( int i = n; i < 0x80; i++ ) {
+	      out.write( 0 );
+	    }
 	  }
 
 	} else if( isTAP_0 || isTAP_1 ) {
@@ -356,22 +368,38 @@ public class FileSaver
 	} else if( isSSS ) {
 	  int addr = begAddr + 65;
 	  int len  = endAddr - addr + 1;
+	  int n    = 2;
 	  out.write( len & 0xFF );
 	  out.write( (len >> 8) & 0xFF );
 	  while( addr <= endAddr ) {
 	    out.write( memory.getMemByte( addr, false ) );
+	    n++;
 	    addr++;
 	  }
 	  out.write( 3 );
+	  n = (n + 1) % 0x80;
+	  if( n > 0 ) {
+	    for( int i = n; i < 0x80; i++ ) {
+	      out.write( 0 );
+	    }
+	  }
 
 	} else if( isRBAS ) {
 	  out.write( 0xFF );
+	  int n    = 1;
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
 	    out.write( memory.getMemByte( addr, false ) );
+	    n++;
 	    addr++;
 	  }
 	  out.write( 0x1A );
+	  n = (n + 1) % 0x80;
+	  if( n > 0 ) {
+	    for( int i = n; i < 0x80; i++ ) {
+	      out.write( 0 );
+	    }
+	  }
 
 	} else if( isHEX ) {
 	  int addr = begAddr;

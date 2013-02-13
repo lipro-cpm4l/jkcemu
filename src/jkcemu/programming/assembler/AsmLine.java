@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,7 @@ package jkcemu.programming.assembler;
 import java.lang.*;
 import java.text.*;
 import java.util.*;
-import jkcemu.programming.PrgException;
+import jkcemu.programming.*;
 
 
 public class AsmLine
@@ -62,7 +62,7 @@ public class AsmLine
 	      ch = iter.next();
 	    }
 	    if( (ch != CharacterIterator.DONE)
-		&& !Character.isWhitespace( ch )
+		&& !PrgUtil.isWhitespace( ch )
 		&& (ch != ':') && (ch != ';') )
 	    {
 	      throwInvalidCharInLabel( ch );
@@ -88,7 +88,7 @@ public class AsmLine
 	    }
 	  } else {
 	    if( (ch != CharacterIterator.DONE)
-		&& !Character.isWhitespace( ch ) )
+		&& !PrgUtil.isWhitespace( ch ) )
 	    {
 	      throwInvalidCharInLabel( ch );
 	    }
@@ -96,14 +96,14 @@ public class AsmLine
 
 	  // Befehl extrahieren
 	  while( (ch != CharacterIterator.DONE)
-		 && Character.isWhitespace( ch ) )
+		 && PrgUtil.isWhitespace( ch ) )
 	  {
 	    ch = iter.next();
 	  }
 	  if( (ch != CharacterIterator.DONE) && (ch != ';') ) {
 	    StringBuilder buf = new StringBuilder();
 	    while( (ch != CharacterIterator.DONE)
-		   && !Character.isWhitespace( ch )
+		   && !PrgUtil.isWhitespace( ch )
 		   && (ch != ';') )
 	    {
 	      buf.append( Character.toUpperCase( ch ) );
@@ -126,14 +126,14 @@ public class AsmLine
 	// Kommentar scannen und Objekt anlegen
 	ch = iter.current();
 	while( (ch != CharacterIterator.DONE)
-	       && Character.isWhitespace( ch ) )
+	       && PrgUtil.isWhitespace( ch ) )
 	{
 	  ch = iter.next();
 	}
 	if( ch == ';' ) {
 	  ch = iter.next();
 	  while( (ch != CharacterIterator.DONE)
-		 && Character.isWhitespace( ch ) )
+		 && PrgUtil.isWhitespace( ch ) )
 	  {
 	    ch = iter.next();
 	  }
@@ -286,7 +286,7 @@ public class AsmLine
   {
     char ch  = iter.current();
     while( (ch != CharacterIterator.DONE)
-	   && Character.isWhitespace( ch ) )
+	   && PrgUtil.isWhitespace( ch ) )
     {
       ch = iter.next();
     }

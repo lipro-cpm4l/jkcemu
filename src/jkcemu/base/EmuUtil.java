@@ -396,10 +396,13 @@ public class EmuUtil
   }
 
 
-  public static JButton createImageButton( String imgName, String text )
+  public static JButton createImageButton(
+				Window  window,
+				String imgName,
+				String text )
   {
     JButton btn = null;
-    Image   img = Main.getImage( imgName );
+    Image   img = Main.getImage( window, imgName );
     if( img != null ) {
       btn = new JButton( new ImageIcon( img ) );
       btn.setToolTipText( text );
@@ -594,9 +597,15 @@ public class EmuUtil
 
   public static boolean equals( File f1, File f2 )
   {
-    return (f1 != null) && (f2 != null) ?
-			TextUtil.equals( f1.getPath(), f2.getPath() )
-			: false;
+    boolean rv = false;
+    if( (f1 != null) && (f2 != null) ) {
+      rv = TextUtil.equals( f1.getPath(), f2.getPath() );
+    } else {
+      if( (f1 == null) && (f2 == null) ) {
+	rv = true;
+      }
+    }
+    return rv;
   }
 
 
@@ -707,7 +716,7 @@ public class EmuUtil
 		+ "info@jens-mueller.org\n\n"
 		+ "Vielen Dank!" );
     BasicDlg.showErrorDlg( parent, errBuf.toString(), "Applikationsfehler" );
-    System.exit( 1 );
+    Main.exitFailure();
   }
 
 
@@ -886,6 +895,7 @@ public class EmuUtil
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    list.setSelectedValue( value, true );
@@ -900,6 +910,7 @@ public class EmuUtil
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    list.setSelectedIndex( row );
@@ -913,6 +924,7 @@ public class EmuUtil
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    if( (row >= 0) && (row < table.getRowCount()) ) {
@@ -930,6 +942,7 @@ public class EmuUtil
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    try {
@@ -950,6 +963,7 @@ public class EmuUtil
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    BasicDlg.showErrorDlg( owner, msg, ex );
@@ -965,6 +979,7 @@ public class EmuUtil
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    BasicDlg.showInfoDlg( owner, msg );
@@ -1229,9 +1244,21 @@ public class EmuUtil
   }
 
 
+  public static javax.swing.filechooser.FileFilter getISOFileFilter()
+  {
+    return getFileFilter( "CD-/DVD-Abbilddateien (*.iso)", "iso" );
+  }
+
+
   public static javax.swing.filechooser.FileFilter getKCBasicFileFilter()
   {
     return getFileFilter( "KC-BASIC-Dateien (*.sss)", "sss" );
+  }
+
+
+  public static javax.swing.filechooser.FileFilter getKCBasicSystemFileFilter()
+  {
+    return getFileFilter( "KC-BASIC-Systemdateien (*.kcb)", "kcb" );
   }
 
 
@@ -1475,6 +1502,67 @@ public class EmuUtil
   }
 
 
+  public static void printErr( String text )
+  {
+    if( Main.consoleWriter != null ) {
+      Main.consoleWriter.print( text );
+      Main.consoleWriter.flush();
+    } else {
+      System.err.print( text );
+    }
+  }
+
+
+  public static void printOut( String text )
+  {
+    if( Main.consoleWriter != null ) {
+      Main.consoleWriter.print( text );
+    } else {
+      System.out.print( text );
+    }
+  }
+
+
+  public static void printlnErr()
+  {
+    if( Main.consoleWriter != null ) {
+      Main.consoleWriter.println();
+    } else {
+      System.err.println();
+    }
+  }
+
+
+  public static void printlnOut()
+  {
+    if( Main.consoleWriter != null ) {
+      Main.consoleWriter.println();
+    } else {
+      System.out.println();
+    }
+  }
+
+
+  public static void printlnErr( String text )
+  {
+    if( Main.consoleWriter != null ) {
+      Main.consoleWriter.println( text );
+    } else {
+      System.err.println( text );
+    }
+  }
+
+
+  public static void printlnOut( String text )
+  {
+    if( Main.consoleWriter != null ) {
+      Main.consoleWriter.println( text );
+    } else {
+      System.out.println( text );
+    }
+  }
+
+
   /*
    * Diese Methode liesst von einem Stream solange Daten,
    * bis das Ziel-Array voll ist oder das Streamende erreicht wurde.
@@ -1570,6 +1658,29 @@ public class EmuUtil
 	  rv = null;
 	}
       }
+    }
+    return rv;
+  }
+
+
+  public static String readTextFile( File file ) throws IOException
+  {
+    String         rv = "";
+    BufferedReader in = null;
+    try {
+      in = new BufferedReader( new FileReader( file ) );
+
+      StringBuilder buf  = new StringBuilder( 0x8000 );
+      String        line = in.readLine();
+      while( line != null ) {
+	buf.append( line );
+	buf.append( (char) '\n' );
+	line = in.readLine();
+      }
+      rv = buf.toString();
+    }
+    finally {
+      doClose( in );
     }
     return rv;
   }

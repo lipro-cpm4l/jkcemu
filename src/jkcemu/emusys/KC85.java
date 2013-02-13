@@ -343,8 +343,6 @@ public class KC85 extends EmuSys implements
 	String resource = null;
 	if( this.d004RomProp.equals( "2.0" ) ) {
 	  resource = "/rom/kc85/d004_20.bin";
-	} else if( this.d004RomProp.equals( "3.2" ) ) {
-	  resource = "/rom/kc85/d004_32.bin";
 	} else if( this.d004RomProp.equals( "3.3" ) ) {
 	  if( this.kcTypeNum >= 4 ) {
 	    resource = "/rom/kc85/d004_33_4.bin";
@@ -1127,101 +1125,7 @@ public class KC85 extends EmuSys implements
   @Override
   public int getMemByte( int addr, boolean m1 )
   {
-    addr &= 0xFFFF;
-
-    int rv = -1;
-    if( (addr >= 0) && (addr < 0x4000) ) {
-      if( this.ram0Enabled ) {
-	rv = this.emuThread.getRAMByte( addr );
-      }
-    } else if( (addr >= 0x4000) && (addr < 0x8000) ) {
-      if( this.ram4Enabled ) {
-	rv = this.emuThread.getRAMByte( addr );
-      }
-    } else if( (addr >= 0x8000) && (addr < 0xC000) ) {
-      int idx = addr - 0x8000;
-      if( this.irmEnabled ) {
-	byte[] a = null;
-	if( (addr < 0xA800)
-	    || (this.caosC000Enabled && !this.caosE000Enabled) )
-	{
-	  if( this.screen1Enabled ) {
-	    a = this.ramColorEnabled ? this.ramColor1 : this.ramPixel1;
-	  } else {
-	    a = this.ramColorEnabled ? this.ramColor0 : this.ramPixel0;
-	  }
-	} else {
-	  a = this.ramPixel0;
-	}
-	if( a != null ) {
-	  if( idx < a.length ) {
-	    rv = (int) a[ idx ] & 0xFF;
-	  }
-	}
-      } else if( this.ram8Enabled && (this.ram8 != null) ) {
-	if( this.kcTypeNum == 4 ) {
-	  if( (this.ram8SegNum & 0x01) != 0 ) {
-	    idx += 0x4000;
-	  }
-	  if( idx < this.ram8.length ) {
-	    rv = (int) this.ram8[ idx ] & 0xFF;
-	  }
-	} else if( this.kcTypeNum > 4 ) {
-	  if( this.ram8SegNum == 0 ) {
-	    rv = this.emuThread.getRAMByte( addr - 0x8000 );
-	  } else if( this.ram8SegNum == 1 ) {
-	    rv = this.emuThread.getRAMByte( addr - 0x4000 );
-	  } else {
-	    idx = ((this.ram8SegNum - 2) * 0x4000) + addr - 0x8000;
-	    if( (idx >= 0) && (idx < this.ram8.length) ) {
-	      rv = (int) this.ram8[ idx ] & 0xFF;
-	    }
-	  }
-	}
-      }
-    } else if( (addr >= 0xC000) && (addr < 0xE000) ) {
-      int idx = addr - 0xC000;
-      if( this.caosC000Enabled && (this.caosC000 != null) ) {
-	if( idx < this.caosC000.length ) {
-	  rv = (int) this.caosC000[ idx ] & 0xFF;
-	}
-      } else if( this.basicC000Enabled && (this.basicC000 != null) ) {
-	if( (this.kcTypeNum > 4) && (this.basicC000.length > 0x2000) ) {
-	  idx += this.basicSegAddr;
-	}
-	if( idx < this.basicC000.length ) {
-	  rv = (int) basicC000[ idx ] & 0xFF;
-	}
-      }
-    } else if( addr >= 0xE000 ) {
-      if( this.caosE000Enabled ) {
-	if( (this.kcTypeNum >= 3) || (addr < 0xF000) ) {
-	  if( this.caosE000 != null ) {
-	    int idx = addr - 0xE000;
-	    if( idx < this.caosE000.length ) {
-	      rv = (int) this.caosE000[ idx ] & 0xFF;
-	    }
-	  }
-	} else {
-	  if( this.caosF000 != null ) {
-	    int idx = addr - 0xF000;
-	    if( idx < this.caosF000.length ) {
-	      rv = (int) this.caosF000[ idx ] & 0xFF;
-	    }
-	  }
-	}
-      }
-    }
-    if( (rv < 0) && (this.modules != null) ) {
-      for( int i = 0; i < this.modules.length; i++ ) {
-	int v = this.modules[ i ].readMemByte( addr );
-	if( v >= 0 ) {
-	  rv = v;
-	  break;
-	}
-      }
-    }
-    return rv >= 0 ? rv : 0xFF;
+    return getMemByteInternal( addr, this.irmEnabled );
   }
 
 
@@ -1448,7 +1352,7 @@ public class KC85 extends EmuSys implements
 
       case KeyEvent.VK_TAB:
 	if( this.ctrlKeysDirect ) {
-	  pasteCharToKeyBuffer( '\u0009' );
+	  pasteCharToKeyBuffer( '\u0009', false );
 	  rv = true;
 	} else {
 	  keyNum = 122;
@@ -1457,7 +1361,7 @@ public class KC85 extends EmuSys implements
 
       case KeyEvent.VK_ESCAPE:
 	if( this.ctrlKeysDirect ) {
-	  pasteCharToKeyBuffer( '\u001B' );
+	  pasteCharToKeyBuffer( '\u001B', false );
 	  rv = true;
 	} else {
 	  keyNum = 77;
@@ -1530,7 +1434,7 @@ public class KC85 extends EmuSys implements
   {
     boolean rv = false;
     if( this.ctrlKeysDirect && (ch > 0) && (ch < 0x20) ) {
-      pasteCharToKeyBuffer( ch );
+      pasteCharToKeyBuffer( ch, false );
       rv = true;
     } else {
       rv = keyTypedInternal( ch );
@@ -1557,7 +1461,7 @@ public class KC85 extends EmuSys implements
   @Override
   public void loadMemByte( int addr, int value )
   {
-    setMemByteInternal( addr, value, true );
+    setMemByteInternal( addr, value, false );
   }
 
 
@@ -1580,7 +1484,7 @@ public class KC85 extends EmuSys implements
 	if( ch == '\n' ) {
 	  ch = '\r';
 	}
-	pasteCharToKeyBuffer( ch );
+	pasteCharToKeyBuffer( ch, true );
 	rv = true;
       }
     } else {
@@ -1647,6 +1551,7 @@ public class KC85 extends EmuSys implements
 
   @Override
   public int reassembleSysCall(
+			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
 			boolean       sourceOnly,
@@ -1654,44 +1559,45 @@ public class KC85 extends EmuSys implements
 			int           colArgs,
 			int           colRemark )
   {
-    int rv     = 0;
-    int ix     = this.emuThread.getZ80CPU().getRegIX();
-    int prolog = this.emuThread.getMemByte( ix + 9, false );
-    int b      = this.emuThread.getMemByte( addr, false );
-    if( (addr <= 0xFFFE) && ((b == 0x7F) || (b == prolog)) ) {
-      if( this.emuThread.getMemByte( addr + 1, false ) == b ) {
+    int rv = 0;
+    if( memory == this.emuThread ) {
+      int ix     = this.emuThread.getZ80CPU().getRegIX();
+      int prolog = memory.getMemByte( ix + 9, false );
+      int b      = memory.getMemByte( addr, false );
+      if( (addr <= 0xFFFE) && ((b == 0x7F) || (b == prolog)) ) {
+	if( memory.getMemByte( addr + 1, false ) == b ) {
 
-	// Prolog-Bytes gefunden
-	int bot = buf.length();
-	int bol = bot;
-	if( !sourceOnly ) {
-	  buf.append( String.format( "%04X  %02X %02X", addr, b, b ) );
-	}
-	appendSpacesToCol( buf, bol, colMnemonic );
-	buf.append( "DB" );
-	appendSpacesToCol( buf, bol, colArgs );
-	if( b >= 0xA0 ) {
-	  buf.append( String.format( "0%02XH,0%02XH", b, b ) );
-	} else {
-	  buf.append( String.format( "%02XH,%02XH", b, b ) );
-	}
-	appendSpacesToCol( buf, bol, colRemark );
-	buf.append( ";MENU ITEM\n" );
+	  // Prolog-Bytes gefunden
+	  int bot = buf.length();
+	  int bol = bot;
+	  if( !sourceOnly ) {
+	    buf.append( String.format( "%04X  %02X %02X", addr, b, b ) );
+	  }
+	  appendSpacesToCol( buf, bol, colMnemonic );
+	  buf.append( "DB" );
+	  appendSpacesToCol( buf, bol, colArgs );
+	  if( b >= 0xA0 ) {
+	    buf.append( String.format( "0%02XH,0%02XH", b, b ) );
+	  } else {
+	    buf.append( String.format( "%02XH,%02XH", b, b ) );
+	  }
+	  appendSpacesToCol( buf, bol, colRemark );
+	  buf.append( ";MENU ITEM\n" );
 
-	// Menuewort parsen
-	bol = buf.length();
-	long m = 0;
-	int  n = 0;
-	int  rowAddr = addr + 2;
-	int  curAddr = rowAddr;
-	b = this.emuThread.getMemByte( curAddr++, false );
-	while( (curAddr < 0xFFFF)
-	       && (b >= 0x30)
-	       && ((b < 0x60) || ((b < 0x7F) && (this.kcTypeNum > 4))) )
-	{
-	  if( n == 5 ) {
-	    if( !sourceOnly ) {
-	      buf.append( String.format(
+	  // Menuewort parsen
+	  bol = buf.length();
+	  long m = 0;
+	  int  n = 0;
+	  int  rowAddr = addr + 2;
+	  int  curAddr = rowAddr;
+	  b = memory.getMemByte( curAddr++, false );
+	  while( (curAddr < 0xFFFF)
+		 && (b >= 0x30)
+		 && ((b < 0x60) || ((b < 0x7F) && (this.kcTypeNum > 4))) )
+	  {
+	    if( n == 5 ) {
+	      if( !sourceOnly ) {
+		buf.append( String.format(
 				"%04X  %02X %02X %02X %02X %02X",
 				rowAddr,
 				(m >> 32) & 0xFF,
@@ -1700,171 +1606,173 @@ public class KC85 extends EmuSys implements
 				(m >> 8) & 0xFF,
 				m & 0xFF ) );
 
+	      }
+	      appendSpacesToCol( buf, bol, colMnemonic );
+	      buf.append( "DB" );
+	      appendSpacesToCol( buf, bol, colArgs );
+	      buf.append( (char) '\'' );
+	      buf.append( (char) ((m >> 32) & 0xFF) );
+	      buf.append( (char) ((m >> 24) & 0xFF) );
+	      buf.append( (char) ((m >> 16) & 0xFF) );
+	      buf.append( (char) ((m >> 8) & 0xFF) );
+	      buf.append( (char) (m & 0xFF) );
+	      buf.append( "\'\n" );
+	      rowAddr = curAddr - 1;
+	      n       = 0;
+	      bol     = buf.length();
+	    }
+	    m = (m << 8) | (b & 0xFF);
+	    n++;
+	    b = memory.getMemByte( curAddr++, false );
+	  }
+	  if( n > 0 ) {
+	    if( !sourceOnly ) {
+	      buf.append( String.format( "%04X ", rowAddr ) );
+	      for( int i = 0; i < n; i++ ) {
+		buf.append( String.format(
+				" %02X",
+				(m >> ((n - i - 1) * 8)) & 0xFF ) );
+	      }
 	    }
 	    appendSpacesToCol( buf, bol, colMnemonic );
 	    buf.append( "DB" );
 	    appendSpacesToCol( buf, bol, colArgs );
 	    buf.append( (char) '\'' );
-	    buf.append( (char) ((m >> 32) & 0xFF) );
-	    buf.append( (char) ((m >> 24) & 0xFF) );
-	    buf.append( (char) ((m >> 16) & 0xFF) );
-	    buf.append( (char) ((m >> 8) & 0xFF) );
-	    buf.append( (char) (m & 0xFF) );
-	    buf.append( "\'\n" );
-	    rowAddr = curAddr - 1;
-	    n       = 0;
-	    bol     = buf.length();
-	  }
-	  m = (m << 8) | (b & 0xFF);
-	  n++;
-	  b = this.emuThread.getMemByte( curAddr++, false );
-	}
-	if( n > 0 ) {
-	  if( !sourceOnly ) {
-	    buf.append( String.format( "%04X ", rowAddr ) );
 	    for( int i = 0; i < n; i++ ) {
-	      buf.append( String.format(
-				" %02X",
-				(m >> ((n - i - 1) * 8)) & 0xFF ) );
+	      buf.append( (char) ((m >> ((n - i - 1) * 8)) & 0xFF) );
 	    }
+	    buf.append( "\'\n" );
 	  }
-	  appendSpacesToCol( buf, bol, colMnemonic );
-	  buf.append( "DB" );
-	  appendSpacesToCol( buf, bol, colArgs );
-	  buf.append( (char) '\'' );
-	  for( int i = 0; i < n; i++ ) {
-	    buf.append( (char) ((m >> ((n - i - 1) * 8)) & 0xFF) );
+	  if( (curAddr >= (addr + 4))
+	      && (b >= 0)
+	      && ((b <= 1) || ((b <= 0x1F) && (this.kcTypeNum > 4))) )
+	  {
+	    // Epilog gefunden
+	    bol = buf.length();
+	    if( !sourceOnly ) {
+	      buf.append( String.format( "%04X  %02X", curAddr - 1, b ) );
+	    }
+	    appendSpacesToCol( buf, bol, colMnemonic );
+	    buf.append( "DB" );
+	    appendSpacesToCol( buf, bol, colArgs );
+	    buf.append( String.format( "%02XH", b ) );
+	    buf.append( (char) '\n' );
+	    rv = curAddr - addr;
+	  } else {
+	    // war doch ein Menueeintrag -> Text loeschen
+	    buf.setLength( bot );
 	  }
-	  buf.append( "\'\n" );
-	}
-	if( (curAddr >= (addr + 4))
-	    && (b >= 0)
-	    && ((b <= 1) || ((b <= 0x1F) && (this.kcTypeNum > 4))) )
-	{
-	  // Epilog gefunden
-	  bol = buf.length();
-	  if( !sourceOnly ) {
-	    buf.append( String.format( "%04X  %02X", curAddr - 1, b ) );
-	  }
-	  appendSpacesToCol( buf, bol, colMnemonic );
-	  buf.append( "DB" );
-	  appendSpacesToCol( buf, bol, colArgs );
-	  buf.append( String.format( "%02XH", b ) );
-	  buf.append( (char) '\n' );
-	  rv = curAddr - addr;
-	} else {
-	  // war doch ein Menueeintrag -> Text loeschen
-	  buf.setLength( bot );
 	}
       }
-    }
-    if( rv == 0 ) {
-      // Aufruf des Sprungverteilers pruefen
-      b = this.emuThread.getMemByte( addr, true );
-      String s = null;
-      switch( b ) {
-	case 0xC3:
-	  s = "JP";
-	  break;
-	case 0xCD:
-	  s = "CALL";
-	  break;
-      }
-      if( s != null ) {
-	if( getMemWord( addr + 1 ) == 0xF003 ) {
-	  int bol = buf.length();
-	  int idx = this.emuThread.getMemByte( addr + 3, false );
-	  if( !sourceOnly ) {
-	    buf.append( String.format( "%04X  %02X 03 F0", addr, b ) );
-	  }
-	  appendSpacesToCol( buf, bol, colMnemonic );
-	  buf.append( s );
-	  appendSpacesToCol( buf, bol, colArgs );
-	  buf.append( "0F003H\n" );
-	  bol = buf.length();
-	  if( !sourceOnly ) {
-	    buf.append( String.format(
+      if( rv == 0 ) {
+	// Aufruf des Sprungverteilers pruefen
+	b = memory.getMemByte( addr, true );
+	String s = null;
+	switch( b ) {
+	  case 0xC3:
+	    s = "JP";
+	    break;
+	  case 0xCD:
+	    s = "CALL";
+	    break;
+	}
+	if( s != null ) {
+	  if( memory.getMemWord( addr + 1 ) == 0xF003 ) {
+	    int bol = buf.length();
+	    int idx = memory.getMemByte( addr + 3, false );
+	    if( !sourceOnly ) {
+	      buf.append( String.format( "%04X  %02X 03 F0", addr, b ) );
+	    }
+	    appendSpacesToCol( buf, bol, colMnemonic );
+	    buf.append( s );
+	    appendSpacesToCol( buf, bol, colArgs );
+	    buf.append( "0F003H\n" );
+	    bol = buf.length();
+	    if( !sourceOnly ) {
+	      buf.append( String.format(
 				"%04X  %02X",
 				(addr + 3) & 0xFFFF,
 				idx ) );
+	    }
+	    appendSpacesToCol( buf, bol, colMnemonic );
+	    buf.append( "DB" );
+	    appendSpacesToCol( buf, bol, colArgs );
+	    if( idx >= 0xA0 ) {
+	      buf.append( (char) '0' );
+	    }
+	    buf.append( String.format( "%02XH", idx ) );
+	    if( (idx >= 0) && (idx < sysCallNames.length) ) {
+	      appendSpacesToCol( buf, bol, colRemark );
+	      buf.append( (char) ';' );
+	      buf.append( sysCallNames[ idx ] );
+	    }
+	    buf.append( (char) '\n' );
+	    rv = 4;
 	  }
-	  appendSpacesToCol( buf, bol, colMnemonic );
-	  buf.append( "DB" );
-	  appendSpacesToCol( buf, bol, colArgs );
-	  if( idx >= 0xA0 ) {
-	    buf.append( (char) '0' );
-	  }
-	  buf.append( String.format( "%02XH", idx ) );
-	  if( (idx >= 0) && (idx < sysCallNames.length) ) {
-	    appendSpacesToCol( buf, bol, colRemark );
-	    buf.append( (char) ';' );
-	    buf.append( sysCallNames[ idx ] );
-	  }
-	  buf.append( (char) '\n' );
-	  rv = 4;
 	}
       }
-    }
-    if( rv == 0 ) {
-      // direkter Aufruf einer Systemfunktion pruefen
-      b = this.emuThread.getMemByte( addr, true );
-      String s1 = null;
-      String s2 = null;
-      String s3 = null;
-      if( (b & 0xC7) == 0xC2 ) {
-	s1 = "JP";
-      } else if( (b & 0xC7) == 0xC4 ) {
-	s1 = "CALL";
-      }
-      if( s1 != null ) {
-	int idx = ((b >> 3) & 0x07);
-	if( (idx >= 0) && (idx < cpuFlags.length) ) {
-	  s2 = cpuFlags[ idx ];
-	} else {
-	  s1 = null;
-	}
-      } else {
-	if( b == 0xC3 ) {
+      if( rv == 0 ) {
+	// direkter Aufruf einer Systemfunktion pruefen
+	b = memory.getMemByte( addr, true );
+	String s1 = null;
+	String s2 = null;
+	String s3 = null;
+	if( (b & 0xC7) == 0xC2 ) {
 	  s1 = "JP";
-	} else if( b == 0xCD ) {
+	} else if( (b & 0xC7) == 0xC4 ) {
 	  s1 = "CALL";
 	}
-      }
-      if( s1 != null ) {
-	int a   = getMemWord( addr + 1 );
-	int p   = getMemWord( SUTAB );
-	int idx = 0;
-	while( idx < sysCallNames.length ) {
-	  if( a == getMemWord( p ) ) {
-	    int bol = buf.length();
-	    if( !sourceOnly ) {
-	      buf.append( String.format(
+	if( s1 != null ) {
+	  int idx = ((b >> 3) & 0x07);
+	  if( (idx >= 0) && (idx < cpuFlags.length) ) {
+	    s2 = cpuFlags[ idx ];
+	  } else {
+	    s1 = null;
+	  }
+	} else {
+	  if( b == 0xC3 ) {
+	    s1 = "JP";
+	  } else if( b == 0xCD ) {
+	    s1 = "CALL";
+	  }
+	}
+	if( s1 != null ) {
+	  int a = memory.getMemWord( addr + 1 );
+	  int p = ((getMemByteInternal( SUTAB + 1, true ) << 8) & 0xFF00)
+			| (getMemByteInternal( SUTAB, true ) & 0x00FF);
+	  int idx = 0;
+	  while( idx < sysCallNames.length ) {
+	    if( a == memory.getMemWord( p ) ) {
+	      int bol = buf.length();
+	      if( !sourceOnly ) {
+		buf.append( String.format(
 				"%04X  %02X %02X %02X",
 				addr,
 				b,
 				(a >> 8) & 0xFF,
 				a & 0xFF ) );
+	      }
+	      appendSpacesToCol( buf, bol, colMnemonic );
+	      buf.append( s1 );
+	      appendSpacesToCol( buf, bol, colArgs );
+	      if( s2 != null ) {
+		buf.append( s2 );
+		buf.append( (char) ',' );
+	      }
+	      if( a >= 0xA000 ) {
+		buf.append( (char) '0' );
+	      }
+	      buf.append( String.format( "%04XH", a ) );
+	      appendSpacesToCol( buf, bol, colRemark );
+	      buf.append( (char) ';' );
+	      buf.append( sysCallNames[ idx ] );
+	      buf.append( (char) '\n' );
+	      rv = 3;
+	      break;
 	    }
-	    appendSpacesToCol( buf, bol, colMnemonic );
-	    buf.append( s1 );
-	    appendSpacesToCol( buf, bol, colArgs );
-	    if( s2 != null ) {
-	      buf.append( s2 );
-	      buf.append( (char) ',' );
-	    }
-	    if( a >= 0xA000 ) {
-	      buf.append( (char) '0' );
-	    }
-	    buf.append( String.format( "%04XH", a ) );
-	    appendSpacesToCol( buf, bol, colRemark );
-	    buf.append( (char) ';' );
-	    buf.append( sysCallNames[ idx ] );
-	    buf.append( (char) '\n' );
-	    rv = 3;
-	    break;
+	    idx++;
+	    p += 2;
 	  }
-	  idx++;
-	  p += 2;
 	}
       }
     }
@@ -1971,7 +1879,7 @@ public class KC85 extends EmuSys implements
   @Override
   public boolean setMemByte( int addr, int value )
   {
-    return setMemByteInternal( addr, value, false );
+    return setMemByteInternal( addr, value, this.irmEnabled );
   }
 
 
@@ -2446,6 +2354,106 @@ public class KC85 extends EmuSys implements
   }
 
 
+  private int getMemByteInternal( int addr, boolean irmEnabled )
+  {
+    addr &= 0xFFFF;
+
+    int rv = -1;
+    if( (addr >= 0) && (addr < 0x4000) ) {
+      if( this.ram0Enabled ) {
+	rv = this.emuThread.getRAMByte( addr );
+      }
+    } else if( (addr >= 0x4000) && (addr < 0x8000) ) {
+      if( this.ram4Enabled ) {
+	rv = this.emuThread.getRAMByte( addr );
+      }
+    } else if( (addr >= 0x8000) && (addr < 0xC000) ) {
+      int idx = addr - 0x8000;
+      if( irmEnabled ) {
+	byte[] a = null;
+	if( (addr < 0xA800)
+	    || (this.caosC000Enabled && !this.caosE000Enabled) )
+	{
+	  if( this.screen1Enabled ) {
+	    a = this.ramColorEnabled ? this.ramColor1 : this.ramPixel1;
+	  } else {
+	    a = this.ramColorEnabled ? this.ramColor0 : this.ramPixel0;
+	  }
+	} else {
+	  a = this.ramPixel0;
+	}
+	if( a != null ) {
+	  if( idx < a.length ) {
+	    rv = (int) a[ idx ] & 0xFF;
+	  }
+	}
+      } else if( this.ram8Enabled && (this.ram8 != null) ) {
+	if( this.kcTypeNum == 4 ) {
+	  if( (this.ram8SegNum & 0x01) != 0 ) {
+	    idx += 0x4000;
+	  }
+	  if( idx < this.ram8.length ) {
+	    rv = (int) this.ram8[ idx ] & 0xFF;
+	  }
+	} else if( this.kcTypeNum > 4 ) {
+	  if( this.ram8SegNum == 0 ) {
+	    rv = this.emuThread.getRAMByte( addr - 0x8000 );
+	  } else if( this.ram8SegNum == 1 ) {
+	    rv = this.emuThread.getRAMByte( addr - 0x4000 );
+	  } else {
+	    idx = ((this.ram8SegNum - 2) * 0x4000) + addr - 0x8000;
+	    if( (idx >= 0) && (idx < this.ram8.length) ) {
+	      rv = (int) this.ram8[ idx ] & 0xFF;
+	    }
+	  }
+	}
+      }
+    } else if( (addr >= 0xC000) && (addr < 0xE000) ) {
+      int idx = addr - 0xC000;
+      if( this.caosC000Enabled && (this.caosC000 != null) ) {
+	if( idx < this.caosC000.length ) {
+	  rv = (int) this.caosC000[ idx ] & 0xFF;
+	}
+      } else if( this.basicC000Enabled && (this.basicC000 != null) ) {
+	if( (this.kcTypeNum > 4) && (this.basicC000.length > 0x2000) ) {
+	  idx += this.basicSegAddr;
+	}
+	if( idx < this.basicC000.length ) {
+	  rv = (int) basicC000[ idx ] & 0xFF;
+	}
+      }
+    } else if( addr >= 0xE000 ) {
+      if( this.caosE000Enabled ) {
+	if( (this.kcTypeNum >= 3) || (addr < 0xF000) ) {
+	  if( this.caosE000 != null ) {
+	    int idx = addr - 0xE000;
+	    if( idx < this.caosE000.length ) {
+	      rv = (int) this.caosE000[ idx ] & 0xFF;
+	    }
+	  }
+	} else {
+	  if( this.caosF000 != null ) {
+	    int idx = addr - 0xF000;
+	    if( idx < this.caosF000.length ) {
+	      rv = (int) this.caosF000[ idx ] & 0xFF;
+	    }
+	  }
+	}
+      }
+    }
+    if( (rv < 0) && (this.modules != null) ) {
+      for( int i = 0; i < this.modules.length; i++ ) {
+	int v = this.modules[ i ].readMemByte( addr );
+	if( v >= 0 ) {
+	  rv = v;
+	  break;
+	}
+      }
+    }
+    return rv >= 0 ? rv : 0xFF;
+  }
+
+
   private String getProperty( Properties props, String keyword )
   {
     return EmuUtil.getProperty( props, this.propPrefix + keyword );
@@ -2684,22 +2692,28 @@ public class KC85 extends EmuSys implements
   }
 
 
-  private void pasteCharToKeyBuffer( char ch )
+  private void pasteCharToKeyBuffer( char ch, boolean forceWait )
   {
     try {
       Z80CPU cpu = emuThread.getZ80CPU();
       int    ix  = cpu.getRegIX();
-      while( (getMemByte( ix + 8, false ) & 0x01) != 0 ) {
+      int    n   = 10;
+      while( (n > 0) && (getMemByte( ix + 8, false ) & 0x01) != 0 ) {
 	Thread.sleep( 10 );
+	if( !forceWait ) {
+	  --n;
+	}
       }
-      setMemByte( ix + 13, ch );
-      setMemByte( ix + 8, getMemByte( ix + 8, false ) | 0x01 );
+      if( n > 0 ) {
+	setMemByte( ix + 13, ch );
+	setMemByte( ix + 8, getMemByte( ix + 8, false ) | 0x01 );
+      }
     }
     catch( InterruptedException ex ) {}
   }
 
 
-  private boolean setMemByteInternal( int addr, int value, boolean ignoreIRM )
+  private boolean setMemByteInternal( int addr, int value, boolean irmEnabled )
   {
     addr &= 0xFFFF;
 
@@ -2723,7 +2737,7 @@ public class KC85 extends EmuSys implements
       }
     } else if( (addr >= 0x8000) && (addr < 0xC000) ) {
       int idx = addr - 0x8000;
-      if( !ignoreIRM && this.irmEnabled ) {
+      if( irmEnabled ) {
 	byte[] a = null;
 	if( (addr < 0xA800)
 	    || (this.caosC000Enabled && !this.caosE000Enabled) )

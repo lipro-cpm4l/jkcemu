@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -821,8 +821,9 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		      if( this.blockNum16Bit ) {
 			for( int m = 0; m < 8; m++ ) {
 			  if( nBlocks > 0 ) {
-			    this.dirBytes[ dirIdx++ ] = (byte) blkIdx++;
+			    this.dirBytes[ dirIdx++ ] = (byte) blkIdx;
 			    this.dirBytes[ dirIdx++ ] = (byte) (blkIdx >> 8);
+			    blkIdx++;
 			    --nBlocks;
 			    --nRemainBlocks;
 			    fSize -= this.blockSize;
@@ -1072,9 +1073,11 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		"Anlegen der Datei nicht m\u00F6glich, da der Dateiname"
 			+ " nicht konforme Zeichen enthalten w\u00FCrde.\n\n"
 			+ "M\u00F6glicherweise stimmt aber auch die"
-			+ " eingestellte Verzeichnisgr\u00F6\u00DFe"
-			+ " nicht mit der \u00FCberein,\n"
-			+ "mit der das im Emulator laufende Programm"
+			+ " beim Diskettenformat eingestellte"
+			+ " Directory-Gr\u00F6\u00DFe"
+			+ " (Anzahl der Bl\u00F6cke)\n"
+			+ "nicht mit der \u00FCberein,"
+			+ " mit der das im Emulator laufende Programm"
 			+ " bzw. Betriebssystem arbeitet." );
 	    }
 	  }

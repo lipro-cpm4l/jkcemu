@@ -543,7 +543,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.external_rom.reload_on_poweron",
+			"jkcemu.external_rom.reload_on_power_on",
 			false );
   }
 
@@ -879,6 +879,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
    * Rueckgabewert: Anzahl der reassemlierten Bytes
    */
   protected int reassSysCallTable(
+			Z80MemView    memory,
 			int           addr,
 			int           sysCallTableAddr,
 			String[]      sysCallNames,
@@ -890,7 +891,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
   {
     int rv = 0;
     String s = null;
-    int    b = getMemByte( addr, true );
+    int    b = memory.getMemByte( addr, true );
     switch( b ) {
       case 0xC3:
 	s = "JP";
@@ -900,7 +901,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
 	break;
     }
     if( s != null ) {
-      int w = getMemWord( addr + 1 );
+      int w = memory.getMemWord( addr + 1 );
       if( w >= sysCallTableAddr ) {
 	int m = w - sysCallTableAddr;
 	int idx = m / 3;
@@ -948,6 +949,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
    * Rueckgabewert: Anzahl der reassemlierten Bytes
    */
   public int reassembleSysCall(
+			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
 			boolean       sourceOnly,
@@ -1113,6 +1115,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public boolean supportsRAMFloppy2()
   {
     return false;
+  }
+
+
+  public boolean supportsRAMFloppies()
+  {
+    return supportsRAMFloppy1() || supportsRAMFloppy2();
   }
 
 

@@ -13,7 +13,8 @@ import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
-import jkcemu.emusys.etc.Poly880KeyboardFld;
+import jkcemu.emusys.poly880.Poly880KeyboardFld;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -30,6 +31,14 @@ public class Poly880 extends EmuSys implements
   private static byte[] mon1000 = null;
 
   private byte[]             ram;
+  private byte[]             rom0Bytes;
+  private byte[]             rom1Bytes;
+  private byte[]             rom2Bytes;
+  private byte[]             rom3Bytes;
+  private String             rom0File;
+  private String             rom1File;
+  private String             rom2File;
+  private String             rom3File;
   private int[]              keyboardMatrix;
   private int[]              digitStatus;
   private int[]              digitValues;
@@ -37,6 +46,8 @@ public class Poly880 extends EmuSys implements
   private long               curDisplayTStates;
   private long               displayCheckTStates;
   private boolean            nmiEnabled;
+  private boolean            ram8000;
+  private boolean            extRomsNegated;
   private Z80CTC             ctc;
   private Z80PIO             pio1;
   private Z80PIO             pio2;
@@ -46,14 +57,17 @@ public class Poly880 extends EmuSys implements
   public Poly880( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    if( mon0000 == null ) {
-      mon0000 = readResource( "/rom/poly880/poly880_0000.bin" );
-    }
-    if( mon1000 == null ) {
-      mon1000 = readResource( "/rom/poly880/poly880_1000.bin" );
-    }
-    this.ram = new byte[ 0x0400 ];
-
+    this.rom0Bytes           = null;
+    this.rom1Bytes           = null;
+    this.rom2Bytes           = null;
+    this.rom3Bytes           = null;
+    this.rom0File            = null;
+    this.rom1File            = null;
+    this.rom2File            = null;
+    this.rom3File            = null;
+    this.ram                 = new byte[ 0x0400 ];
+    this.ram8000             = emulatesRAM8000( props );
+    this.extRomsNegated      = emulatesNegatedROMs( props );
     this.curDisplayTStates   = 0;
     this.displayCheckTStates = 0;
     this.digitStatus         = new int[ 8 ];
@@ -73,6 +87,17 @@ public class Poly880 extends EmuSys implements
     cpu.addTStatesListener( this );
 
     z80MaxSpeedChanged( cpu );
+
+    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
+      loadROMs( props );
+    }
+  }
+
+
+  public void fireMonKey()
+  {
+    if( this.nmiEnabled )
+      this.emuThread.getZ80CPU().fireNMI();
   }
 
 
@@ -157,7 +182,41 @@ public class Poly880 extends EmuSys implements
   @Override
   public boolean canApplySettings( Properties props )
   {
-    return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "Poly880" );
+    boolean rv = EmuUtil.getProperty(
+				props,
+				"jkcemu.system" ).equals( "Poly880" );
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.rom0File,
+		EmuUtil.getProperty( props, "jkcemu.poly880.rom_0000.file" ) );
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.rom1File,
+		EmuUtil.getProperty( props, "jkcemu.poly880.rom_1000.file" ) );
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.rom2File,
+		EmuUtil.getProperty( props, "jkcemu.poly880.rom_2000.file" ) );
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.rom3File,
+		EmuUtil.getProperty( props, "jkcemu.poly880.rom_3000.file" ) );
+    }
+    if( rv
+	&& ((this.rom0File != null) || (this.rom1File != null)
+	    || (this.rom2File != null) || (this.rom3File != null)) )
+    {
+      if( emulatesNegatedROMs( props ) != this.extRomsNegated ) {
+	rv = false;
+      }
+    }
+    if( rv && (emulatesRAM8000( props ) != this.ram8000) ) {
+      rv = false;
+    }
+    return rv;
   }
 
 
@@ -222,24 +281,49 @@ public class Poly880 extends EmuSys implements
   @Override
   public int getMemByte( int addr, boolean m1 )
   {
-    int rv = 0xFF;
+    addr &= 0xFFFF;
 
-    addr &= 0xF3FF;		// A10 und A11 ignorieren
-    if( (addr < 0x1000) && (mon0000 != null) ) {
-      if( addr < mon0000.length ) {
-	rv = (int) mon0000[ addr ] & 0xFF;
+    int rv = 0xFF;
+    if( addr < 0x8000 ) {
+      addr &= 0xF3FF;		// A10 und A11 ignorieren
+      if( (addr < 0x1000) && (this.rom0Bytes != null) ) {
+	if( addr < this.rom0Bytes.length ) {
+	  rv = (int) this.rom0Bytes[ addr ] & 0xFF;
+	}
       }
-    }
-    else if( (addr >= 0x1000) && (addr < 0x2000) && (mon1000 != null) ) {
-      int idx = addr - 0x1000;
-      if( idx < mon1000.length ) {
-	rv = (int) mon1000[ idx ] & 0xFF;
+      else if( (addr >= 0x1000) && (addr < 0x2000)
+	       && (this.rom1Bytes != null) )
+      {
+	int idx = addr - 0x1000;
+	if( idx < this.rom1Bytes.length ) {
+	  rv = (int) this.rom1Bytes[ idx ] & 0xFF;
+	}
       }
-    }
-    else if( addr >= 0x4000 ) {
-      int idx = addr - 0x4000;
-      if( idx < this.ram.length ) {
-	rv = (int) this.ram[ idx ] & 0xFF;
+      else if( (addr >= 0x2000) && (addr < 0x3000)
+	       && (this.rom2Bytes != null) )
+      {
+	int idx = addr - 0x2000;
+	if( idx < this.rom2Bytes.length ) {
+	  rv = (int) this.rom2Bytes[ idx ] & 0xFF;
+	}
+      }
+      else if( (addr >= 0x3000) && (addr < 0x4000)
+	       && (this.rom3Bytes != null) )
+      {
+	int idx = addr - 0x3000;
+	if( idx < this.rom3Bytes.length ) {
+	  rv = (int) this.rom3Bytes[ idx ] & 0xFF;
+	}
+      }
+      else if( addr >= 0x4000 ) {
+	int idx = addr - 0x4000;
+	if( idx < this.ram.length ) {
+	  rv = (int) this.ram[ idx ] & 0xFF;
+	}
+      }
+    } else {
+      if( this.ram8000 ) {
+	rv = this.emuThread.getRAMByte( addr );
       }
     }
     return rv;
@@ -293,6 +377,11 @@ public class Poly880 extends EmuSys implements
 
 	case KeyEvent.VK_F1:
 	  this.keyboardMatrix[ 5 ] |= 0x10;	// FCT
+	  rv = true;
+	  break;
+
+	case KeyEvent.VK_F2:			// MON
+	  fireMonKey();
 	  rv = true;
 	  break;
       }
@@ -424,6 +513,9 @@ public class Poly880 extends EmuSys implements
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
+	loadROMs( props );
+      }
       initSRAM( this.ram, props );
     }
     synchronized( this.digitValues ) {
@@ -443,11 +535,19 @@ public class Poly880 extends EmuSys implements
   {
     boolean rv = false;
 
-    addr &= 0xF3FF;		// A10 und A11 ignorieren
-    if( addr >= 0x4000 ) {
-      int idx = addr - 0x4000;
-      if( idx < this.ram.length ) {
-	this.ram[ idx ] = (byte) value;
+    addr &= 0xFFFF;
+    if( addr < 0x8000 ) {
+      addr &= 0xF3FF;		// A10 und A11 ignorieren
+      if( addr >= 0x4000 ) {
+	int idx = addr - 0x4000;
+	if( idx < this.ram.length ) {
+	  this.ram[ idx ] = (byte) value;
+	  rv = true;
+	}
+      }
+    } else {
+      if( this.ram8000 ) {
+	this.emuThread.setRAMByte( addr, value );
 	rv = true;
       }
     }
@@ -542,6 +642,72 @@ public class Poly880 extends EmuSys implements
 
 
 	/* --- private Methoden --- */
+
+  private static boolean emulatesNegatedROMs( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.poly880.rom.negated",
+				false );
+  }
+
+
+  private static boolean emulatesRAM8000( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.poly880.ram_8000.enabled",
+				false );
+  }
+
+
+  private void loadROMs( Properties props )
+  {
+    this.rom0File  = EmuUtil.getProperty(
+				props,
+				"jkcemu.poly880.rom_0000.file" );
+    this.rom0Bytes = readROMFile( this.rom0File, "ROM 0" );
+    if( this.rom0Bytes == null ) {
+      if( mon0000 == null ) {
+	mon0000 = readResource( "/rom/poly880/poly880_0000.bin" );
+      }
+      this.rom0Bytes = mon0000;
+    }
+
+    this.rom1File = EmuUtil.getProperty(
+				props,
+				"jkcemu.poly880.rom_1000.file" );
+    this.rom1Bytes = readROMFile( this.rom1File, "ROM 1" );
+    if( this.rom1Bytes == null ) {
+      if( mon1000 == null ) {
+	mon1000 = readResource( "/rom/poly880/poly880_1000.bin" );
+      }
+      this.rom1Bytes = mon1000;
+    }
+
+    this.rom2File  = EmuUtil.getProperty(
+				props,
+				"jkcemu.poly880.rom_2000.file" );
+    this.rom2Bytes = readROMFile( this.rom2File, "ROM 2" );
+
+    this.rom3File  = EmuUtil.getProperty(
+				props,
+				"jkcemu.poly880.rom_3000.file" );
+    this.rom3Bytes = readROMFile( this.rom3File, "ROM 3" );
+  }
+
+
+  private byte[] readROMFile( String fileName, String objName )
+  {
+    byte[] rom = readFile( fileName, 0x0400, objName );
+    if( (rom != null) && this.extRomsNegated ) {
+      for( int i = 0; i < rom.length; i++ ) {
+	rom[ i ] = (byte) ~rom[ i ];
+      }
+    }
+    return rom;
+  }
+
 
   private boolean setKeyMatrixValue( int[] rowKeys, int ch, int value )
   {

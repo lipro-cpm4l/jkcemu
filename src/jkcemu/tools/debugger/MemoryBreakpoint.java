@@ -1,9 +1,9 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Haltepunkte auf eine Programmadresse bzw. Adressbereich
+ * Haltepunkt auf eine Speicherzelle oder einen Speicherbereich
  */
 
 package jkcemu.tools.debugger;
@@ -12,7 +12,7 @@ import java.lang.*;
 import z80emu.*;
 
 
-public class MemBreakpoint extends AbstractBreakpoint
+public class MemoryBreakpoint extends AbstractBreakpoint
 {
   // Laenge der einzelnen Befehle
   private static int[] instLen = {
@@ -69,40 +69,73 @@ public class MemBreakpoint extends AbstractBreakpoint
 	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,		// 0xE0
 	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };	// 0xF0
 
-  // Masken fuer die einzelnen Bits
-  private static final int BIT0 = 0x01;
-  private static final int BIT7 = 0x80;
+  private int     begAddr;
+  private int     endAddr;
+  private boolean onRead;
+  private boolean onWrite;
+  private int     mask;
+  private String  cond;
+  private int     value;
 
-  private int begAddr;
-  private int endAddr;
-  private int value;
-  private int mask;
 
-
-  public MemBreakpoint(
-		AccessMode accessMode,
-		int        begAddr,
-		int        endAddr,
-		int        value,
-		int        mask )
+  public MemoryBreakpoint(
+		int     begAddr,
+		int     endAddr,
+		boolean onRead,
+		boolean onWrite,
+		int     mask,
+		String  cond,
+		int     value )
   {
-    super( accessMode );
     this.begAddr = begAddr & 0xFFFF;
     this.endAddr = (endAddr >= 0 ? (endAddr & 0xFFFF) : -1);
-    this.value   = (value >= 0 ? (value & 0xFF) : -1);
+    this.onRead  = onRead;
+    this.onWrite = onWrite;
     this.mask    = mask & 0xFF;
-    createAndSetText(
-		this.begAddr,
-		this.endAddr,
-		false,
-		this.value,
-		this.mask );
+    this.cond    = cond;
+    this.value   = value & 0xFF;
+
+    StringBuilder buf = new StringBuilder();
+    buf.append( String.format( "%04X", this.begAddr ) );
+    if( this.endAddr >= 0 ) {
+      buf.append( String.format( "-%04X", this.endAddr ) );
+    }
+    buf.append( (char) ':' );
+    if( this.onRead ) {
+      buf.append( (char) 'R' );
+    }
+    if( this.onWrite ) {
+      buf.append( (char) 'W' );
+    }
+    if( this.cond != null ) {
+      if( this.mask != 0xFF ) {
+        buf.append(
+                String.format(
+                        ":(Wert&%02X)%s%02X",
+                        this.mask,
+                        this.cond,
+                        this.value ) );
+      } else {
+        buf.append(
+                String.format(
+                        ":Wert%s%02X",
+                        this.cond,
+                        this.value ) );
+      }
+    }
+    setText( buf.toString() );
   }
 
 
   public int getBegAddress()
   {
     return this.begAddr;
+  }
+
+
+  public String getCondition()
+  {
+    return this.cond;
   }
 
 
@@ -118,24 +151,21 @@ public class MemBreakpoint extends AbstractBreakpoint
   }
 
 
-  public int getValue()
+  public boolean getOnRead()
   {
-    return this.value;
+    return this.onRead;
   }
 
 
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public void completeAccessMode( AccessMode accessMode )
+  public boolean getOnWrite()
   {
-    super.completeAccessMode( accessMode );
-    createAndSetText(
-		this.begAddr,
-		this.endAddr,
-		false,
-		this.value,
-		this.mask );
+    return this.onWrite;
+  }
+
+
+  public int getValue()
+  {
+    return this.value;
   }
 
 
@@ -150,19 +180,11 @@ public class MemBreakpoint extends AbstractBreakpoint
     int     op1 = cpu.getMemByte( pc + 1, false );
     int     op2 = cpu.getMemByte( pc + 2, false );
     int     op3 = cpu.getMemByte( pc + 3, false );
-    switch( getAccessMode() ) {
-      case READ:
-	rv = matchesRead( cpu, pc, op0, op1, op2, op3 );
-	break;
-      case WRITE:
-	rv = matchesWrite( cpu, iSource, pc, op0, op1, op2, op3 );
-	break;
-      case READ_WRITE:
-	rv = matchesRead( cpu, pc, op0, op1, op2, op3 );
-	if( !rv ) {
-	  rv = matchesWrite( cpu, iSource, pc, op0, op1, op2, op3 );
-	}
-	break;
+    if( this.onRead ) {
+      rv = matchesRead( cpu, pc, op0, op1, op2, op3 );
+    }
+    if( !rv && this.onWrite ) {
+      rv = matchesWrite( cpu, iSource, pc, op0, op1, op2, op3 );
     }
     return rv;
   }
@@ -176,94 +198,92 @@ public class MemBreakpoint extends AbstractBreakpoint
   }
 
 
-  private static int getCBValue( int value, int opc, Z80CPU cpu )
+  private static int getBitInstValue( Z80CPU cpu, int opc, int value )
   {
-    int rv = opc;
+    int rv = -1;
     switch( opc & 0xF8 ) {
-      case 0x00:                        // RLC
+      case 0x00:                                        // RLC
+	rv = (value << 1) & 0xFE;
 	if( (value & 0x80) != 0 ) {
-	  rv = ((value << 1) | BIT0) & 0xFF;
-	} else {
-	  rv = (value << 1) & 0xFF;
+	  rv |= 0x01;
 	}
 	break;
-      case 0x08:                        // RRC
+      case 0x08:                                        // RRC
+	rv = (value >> 1) & 0x7F;
 	if( (value & 0x01) != 0 ) {
-	  rv = (value >> 1) | BIT7;
-	} else {
-	  rv = value >> 1;
+	  rv |= 0x80;
 	}
 	break;
-      case 0x10:                        // RL
-	rv = (value << 1) & 0xFF;
+      case 0x10:                                        // RL
+	rv = (value << 1) & 0xFE;
 	if( cpu.getFlagCarry() ) {
-	  rv |= BIT0;
+	  rv |= 0x01;
 	}
 	break;
-      case 0x18:                        // RR
-	rv = value >> 1;
+      case 0x18:                                        // RR
+	rv = (value >> 1) & 0x7F;
 	if( cpu.getFlagCarry() ) {
-	  rv |= BIT7;
+	  rv |= 0x80;
 	}
 	break;
-      case 0x20:                        // SLA
-	rv = (value << 1) & 0xFF;
+      case 0x20:                                        // SLA
+	rv = (value << 1) & 0xFE;
 	break;
-      case 0x28:                        // SRA
-	rv = (value >> 1) | (value & 0x80);
+      case 0x28:                                        // SRA
+	rv = ((value >> 1) & 0x7F) | (value & 0x80);
 	break;
-      case 0x30:                        // *SLL
-	rv = ((value << 1) | BIT0) & 0xFF;
+      case 0x30:                                        // *SLL
+	rv = ((value << 1) & 0xFE) | 0x01;
 	break;
-      case 0x38:                        // SRL
-	rv = value >> 1;
+      case 0x38:                                        // SRL
+	rv = (value >> 1) & 0x7F;
 	break;
-      case 0x80:                        // RES 0
+      case 0x80:                                        // RES 0
 	rv = value & 0xFE;
 	break;
-      case 0x88:                        // RES 1
+      case 0x88:                                        // RES 1
 	rv = value & 0xFD;
 	break;
-      case 0x90:                        // RES 2
+      case 0x90:                                        // RES 2
 	rv = value & 0xFB;
 	break;
-      case 0x98:                        // RES 3
+      case 0x98:                                        // RES 3
 	rv = value & 0xF7;
 	break;
-      case 0xA0:                        // RES 4
+      case 0xA0:                                        // RES 4
 	rv = value & 0xEF;
 	break;
-      case 0xA8:                        // RES 5
+      case 0xA8:                                        // RES 5
 	rv = value & 0xDF;
 	break;
-      case 0xB0:                        // RES 6
+      case 0xB0:                                        // RES 6
 	rv = value & 0xBF;
 	break;
-      case 0xB8:                        // RES 7
+      case 0xB8:                                        // RES 7
 	rv = value & 0x7F;
 	break;
-      case 0xC0:                        // SET 0
+      case 0xC0:                                        // SET 0
 	rv = value | 0x01;
 	break;
-      case 0xC8:                        // SET 1
+      case 0xC8:                                        // SET 1
 	rv = value | 0x02;
 	break;
-      case 0xD0:                        // SET 2
+      case 0xD0:                                        // SET 2
 	rv = value | 0x04;
 	break;
-      case 0xD8:                        // SET 3
+      case 0xD8:                                        // SET 3
 	rv = value | 0x08;
 	break;
-      case 0xE0:                        // SET 4
+      case 0xE0:                                        // SET 4
 	rv = value | 0x10;
 	break;
-      case 0xE8:                        // SET 5
+      case 0xE8:                                        // SET 5
 	rv = value | 0x20;
 	break;
-      case 0xF0:                        // SET 6
+      case 0xF0:                                        // SET 6
 	rv = value | 0x40;
 	break;
-      case 0xF8:                        // SET 7
+      case 0xF8:                                        // SET 7
 	rv = value | 0x80;
 	break;
     }
@@ -467,11 +487,11 @@ public class MemBreakpoint extends AbstractBreakpoint
     if( (addr == this.begAddr)
 	|| ((addr >= this.begAddr) && (addr <= this.endAddr)) )
     {
-      if( this.value >= 0 ) {
-	int value = cpu.getMemByte( addr, false );
-	if( (this.value & this.mask) == (value & this.mask) ) {
-	  rv = true;
-	}
+      if( this.cond != null ) {
+	rv = checkValues(
+		cpu.getMemByte( addr, false ) & this.mask,
+		this.cond,
+		this.value );
       } else {
 	rv = true;
       }
@@ -609,10 +629,10 @@ public class MemBreakpoint extends AbstractBreakpoint
 	     && (op1 & 0x07) == 0x06 )		// (HL)
 	{
 	  addr1  = cpu.getRegHL();
-	  value1 = getCBValue(
-			cpu.getMemByte( addr1, false ),
+	  value1 = getBitInstValue(
+			cpu,
 			op1,
-			cpu );
+			cpu.getMemByte( addr1, false ) );
 	}
 	break;
       case 0xE3:				// EX (SP),HL
@@ -726,10 +746,10 @@ public class MemBreakpoint extends AbstractBreakpoint
 	    case 0xCB:
 	      if( (op3 < 0x40) || (op3 >= 0x80) ) {
 		addr1  = computeRelAddr( ixy, op2 );
-		value1 = getCBValue(
-				cpu.getMemByte( addr1, false ),
+		value1 = getBitInstValue(
+				cpu,
 				op3,
-				cpu );
+				cpu.getMemByte( addr1, false ) );
 	      }
 	      break;
 	    case 0xE3:				// EX (SP),IX/IY
@@ -776,10 +796,8 @@ public class MemBreakpoint extends AbstractBreakpoint
     if( (addr == this.begAddr)
 	|| ((addr >= this.begAddr) && (addr <= this.endAddr)) )
     {
-      if( this.value >= 0 ) {
-	if( (this.value & this.mask) == (value & this.mask) ) {
-	  rv = true;
-	}
+      if( this.cond != null ) {
+	rv = checkValues( value & this.mask, this.cond, this.value );
       } else {
 	rv = true;
       }
@@ -787,3 +805,4 @@ public class MemBreakpoint extends AbstractBreakpoint
     return rv;
   }
 }
+

@@ -114,6 +114,7 @@ public class Z9001 extends EmuSys implements
   private static byte[] bootROMBytes    = null;
   private static byte[] megaROMBytes    = null;
   private static byte[] printerModBytes = null;
+  private static byte[] kc87FontBytes   = null;
   private static byte[] z9001FontBytes  = null;
 
   private byte[]            fontBytes;
@@ -376,6 +377,12 @@ public class Z9001 extends EmuSys implements
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
+  }
+
+
+  public boolean emulatesGraphicsKRT()
+  {
+    return (this.graphType == GRAPHIC_KRT);
   }
 
 
@@ -1604,6 +1611,7 @@ public class Z9001 extends EmuSys implements
 
   @Override
   public int reassembleSysCall(
+			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
 			boolean       sourceOnly,
@@ -1612,6 +1620,7 @@ public class Z9001 extends EmuSys implements
 			int           colRemark )
   {
     return reassSysCallTable(
+			memory,
 			addr,
 			0xF000,
 			biosCallNames,
@@ -1760,7 +1769,8 @@ public class Z9001 extends EmuSys implements
   @Override
   public boolean shouldAskConvertScreenChar()
   {
-    return this.fontBytes != z9001FontBytes;
+    return (this.fontBytes != z9001FontBytes)
+	   && (this.fontBytes != kc87FontBytes);
   }
 
 
@@ -2709,10 +2719,17 @@ public class Z9001 extends EmuSys implements
 				this.propPrefix + "font.file",
 				0x1000 );
     if( this.fontBytes == null ) {
-      if( z9001FontBytes == null ) {
-	z9001FontBytes = readResource( "/rom/z9001/z9001font.bin" );
+      if( this.sysName.equals( "KC87" ) ) {
+	if( kc87FontBytes == null ) {
+	  kc87FontBytes = readResource( "/rom/z9001/kc87font.bin" );
+	}
+	this.fontBytes = kc87FontBytes;
+      } else {
+	if( z9001FontBytes == null ) {
+	  z9001FontBytes = readResource( "/rom/z9001/z9001font.bin" );
+	}
+	this.fontBytes = z9001FontBytes;
       }
-      this.fontBytes = z9001FontBytes;
     }
   }
 
@@ -2849,7 +2866,7 @@ public class Z9001 extends EmuSys implements
     if( state != this.graphicLED ) {
       this.graphicLED = state;
       if( this.keyboardFld != null ) {
-	this.keyboardFld.fireRepaint();
+	this.keyboardFld.repaint();
       }
     }
   }

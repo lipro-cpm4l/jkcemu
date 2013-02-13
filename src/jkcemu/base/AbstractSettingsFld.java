@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -60,7 +60,7 @@ public abstract class AbstractSettingsFld
 
   protected JButton createImageButton( String imgName, String text )
   {
-    JButton btn = EmuUtil.createImageButton( imgName, text );
+    JButton btn = EmuUtil.createImageButton( this.settingsFrm, imgName, text );
     btn.addActionListener( this );
     btn.addKeyListener( this );
     return btn;

@@ -1,0 +1,125 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Grafik</h2>
+  Zum Sprachumfang des BASIC-Compilers z&auml;hlen auch Anweisungen
+  und Funktionen f&uuml;r eine Vollgrafik.
+  Alle Anweisungen, die auf dem Bildschirm zeichnen und somit
+  Pixel setzen bzw. l&ouml;schen werden im weiteren einfach nur
+  Grafikbefehle genannt.
+  Diese Grafikbefehle k&ouml;nnen nur in einer Grafikumgebung
+  verwendet werden.
+  Dazu muss das konkrete Zielsystem eine Vollgrafik unterst&uuml;tzen,
+  und es muss ein Grafikmodus eingestellt sein.
+ <br/><br/>
+  Unterst&uuml;tzt das Zielsystem keine Vollgrafik,
+  lassen sich die Grafikbefehle nicht compilieren.
+ <br/><br/>
+  Wird eine Vollgrafik unterst&uuml;tzt, h&auml;ngt es wiederum vom
+  Zielsystem ab, ob im Standardmodus (<tt>SCREEN&nbsp;0</tt>)
+  die Grafik zur Verf&uuml;gung steht oder ob mit der SCREEN-Anweisung
+  erst ein Grafikmodus eingestellt werden muss.
+  Lesen Sie dazu bitte die Hinweise zu den
+  <a href="targets.htm">Zielsystemen</a>.
+ <br/><br/>
+  Die Funktionen <em>H_PIXEL</em> und <em>W_PIXEL</em> liefern
+  die H&ouml;he und Breite des aktuell eingestellten Bildschirmmodes.
+  Liefern diese Funktionen den Wert&nbsp;0,
+  steht im aktuellen Bildschirmmodus keine Grafik zur Verf&uuml;gung.
+ <br/><br/>
+  Mit diesen beiden Funktionen sowie mit der Funktion LASTSCREEN
+  kann in gewissem Umfang der Quelltext portabel gestaltet werden.
+  Darunter versteht man die M&ouml;glichkeit,
+  das BASIC-Programm so zu schreiben, dass es sich ohne &Auml;nderung
+  f&uuml;r verschiedene Zielsysteme &uuml;bersetzen l&auml;sst
+  und dabei trotzdem auf jedem Zielsystem ein zumindest &auml;hnliches
+  Aussehen hat.
+  Dazu muss man die Pixelkoordinaten nicht fest,
+  sondern relativ in Abh&auml;ngigkeit der von H_PIXEL und W_PIXEL
+  zur&uuml;ckgelieferten Werte setzen.
+  Einen Grafikmodus kann man portabel so einstellen:
+ <br/><br/>
+  <tt>&nbsp;SCREEN&nbsp;LASTSCREEN</tt>
+ <br/><br/>
+  Voraussetzung ist nat&uuml;rlich,
+  dass das Zielsystem &uuml;berhaupt Grafik unterst&uuml;tzt.
+ <br/><br/>
+
+ <h3>Grafikbefehle</h3>
+  Folgende Anweisungen f&uuml;hren grafische Operationen aus
+  bzw. spielen in Bezug auf Grafik eine Rolle:
+ <br/>
+  <ul>
+   <li><a href=instructions.htm#circle">CIRCLE</a></li>
+   <li><a href=instructions.htm#draw">DRAW</a></li>
+   <li><a href=instructions.htm#drawr">DRAWR</a></li>
+   <li><a href=instructions.htm#label">LABEL</a></li>
+   <li><a href=instructions.htm#move">MOVE</a></li>
+   <li><a href=instructions.htm#mover">MOVER</a></li>
+   <li><a href=instructions.htm#pen">PEN</a></li>
+   <li><a href=instructions.htm#plot">PLOT</a></li>
+   <li><a href=instructions.htm#plotr">PLOTR</a></li>
+   <li><a href=instructions.htm#preset">PRESET</a></li>
+   <li><a href=instructions.htm#pset">PSET</a></li>
+   <li><a href=instructions.htm#screen">SCREEN</a></li>
+  </ul>
+ <br/>
+
+ <h3>Programmbeispiel</h3>
+  Das Beispiel gibt im Grafikmodus einen eingerahmten Text aus.
+  Das Programm ist portabel gehalten, d.h.,
+  es ist ohne &Auml;nderung auf allen Zielsystemen lauff&auml;hig,
+  die Grafik unterst&uuml;tzten.
+ <br/><br/>
+  <table border="0">
+   <tr>
+    <td valign="top">
+     <tt>
+      DECLARE SUB boxed_text(x,y,t$)<br/>
+      <br/>
+      CURSOR 0<br/>
+      SCREEN LASTSCREEN<br/>
+      CLS<br/>
+      x=W_PIXEL/5<br/>
+      y=H_PIXEL/5<br/>
+      boxed_text(x,y,"Hallo")<br/>
+      PAUSE 50<br/>
+      CLS<br/>
+      SCREEN 0<br/>
+      END<br/>
+      <br/>
+      SUB boxed_text(x,y,t$)<br/>
+      &nbsp; MOVE x+3,y+2<br/>
+      &nbsp; LABEL t$<br/>
+      &nbsp; LINE (x,y)-(XPOS,y+12),B<br/>
+      END SUB
+     </tt>
+    </td>
+    <td valign="top">
+     <tt>
+      :'Prozedur deklarieren<br/>
+      <br/>
+      :'Cursor ausschalten<br/>
+      :'Grafikmodus einschalten<br/>
+      :'Grafikbildschirm loeschen<br/>
+      :'X-Koordinate<br/>
+      :'Y-Koordinate<br/>
+      :'eingerahmten Text ausgeben<br/>
+      :'5 Sekunden warten<br/>
+      :'Bildschirm loeschen<br/>
+      :'Textbildschirm einschalten<br/>
+      :'Programmende<br/>
+      <br/>
+      :'Prozedur implementieren<br/>
+      :'linke untere Ecke des Textes<br/>
+      :'Text ausgeben<br/>
+      :'Rahmen zeichnen<br/>
+     </tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+</body>
+</html>
+

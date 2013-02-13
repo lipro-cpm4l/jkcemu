@@ -2,7 +2,6 @@
 
 cd ../src
 jar cvmf Manifest.txt ../jkcemu.jar \
-  cs/wdnsfile.exe \
   lib/jkcemu_*.dll \
   jkcemu/*.class \
   jkcemu/audio/*.class \
@@ -16,6 +15,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/emusys/kccompact/*.class \
   jkcemu/emusys/kc85/*.class \
   jkcemu/emusys/lc80/*.class \
+  jkcemu/emusys/poly880/*.class \
   jkcemu/emusys/z1013/*.class \
   jkcemu/emusys/z9001/*.class \
   jkcemu/etc/*.class \
@@ -27,6 +27,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/programming/*.class \
   jkcemu/programming/assembler/*.class \
   jkcemu/programming/basic/*.class \
+  jkcemu/programming/basic/target/*.class \
   jkcemu/text/*.class \
   jkcemu/tools/*.class \
   jkcemu/tools/calculator/*.class \

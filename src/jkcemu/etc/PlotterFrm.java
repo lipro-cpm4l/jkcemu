@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,6 +22,8 @@ import jkcemu.print.PrintUtil;
 
 public class PlotterFrm extends AbstractImageFrm
 {
+  private static PlotterFrm instance = null;
+
   private Plotter              plotter;
   private javax.swing.Timer    refreshTimer;
   private volatile boolean     dirty;
@@ -42,9 +44,207 @@ public class PlotterFrm extends AbstractImageFrm
   private JButton              btnRotateRight;
 
 
-  public PlotterFrm( ScreenFrm screenFrm, Plotter plotter )
+  public static void close()
   {
-    super( screenFrm );
+    if( instance != null )
+      instance.doClose();
+  }
+
+
+  public static void lazySetPlotter( Plotter plotter )
+  {
+    if( instance != null ) {
+      if( instance.plotter != null ) {
+	instance.plotter.setPlotterFrm( null );
+      }
+      instance.plotter = plotter;
+      if( instance.plotter != null ) {
+	instance.plotter.setPlotterFrm( instance );
+      }
+    }
+  }
+
+
+  public static void open( Plotter plotter )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+        instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new PlotterFrm( plotter );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+  public void setDirty()
+  {
+    this.dirty = true;
+  }
+
+
+  public void setImage( Image image )
+  {
+    this.image = image;
+    this.imgFld.setImage( image );
+  }
+
+
+  public void setPenThickness( int value )
+  {
+    switch( value ) {
+      case 2:
+	this.mnuPenThk2.setSelected( true );
+	break;
+      case 3:
+	this.mnuPenThk3.setSelected( true );
+	break;
+      case 4:
+	this.mnuPenThk4.setSelected( true );
+	break;
+      case 5:
+	this.mnuPenThk5.setSelected( true );
+	break;
+      default:
+	this.mnuPenThk1.setSelected( true );
+    }
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean applySettings( Properties props, boolean resizable )
+  {
+    this.mnuConfirmNewPage.setSelected(
+		EmuUtil.parseBooleanProperty(
+			props,
+			getSettingsPrefix() + ".confirm_new_page",
+			true ) );
+    return super.applySettings( props, resizable );
+  }
+
+
+  @Override
+  public void componentHidden( ComponentEvent e )
+  {
+    if( e.getComponent() == this ) {
+      this.refreshTimer.stop();
+    }
+  }
+
+
+  @Override
+  public void componentShown( ComponentEvent e )
+  {
+    if( e.getComponent() == this ) {
+      this.refreshTimer.start();
+    }
+  }
+
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src != null ) {
+	if( src == this.btnRotateLeft ) {
+	  rv = true;
+	  doRotateLeft();
+	}
+	else if( src == this.btnRotateRight ) {
+	  rv = true;
+	  doRotateRight();
+	}
+	if( (src == this.mnuNewPage) || (src == this.btnNewPage) ) {
+	  rv = true;
+	  doNewPage();
+	}
+	else if( (src == this.mnuPrint) || (src == this.btnPrint) ) {
+	  rv = true;
+	  if( this.image != null ) {
+	    PrintUtil.doPrint( this, this.imgFld, "Plotter" );
+	  }
+	}
+	else if( (src == this.mnuSaveAs) || (src == this.btnSaveAs) ) {
+	  rv = true;
+	  doSaveAs();
+	}
+	else if( src == this.mnuCopy ) {
+	  rv = true;
+	  doImgCopy();
+	}
+	else if( (src == this.mnuPenThk1)
+		 || (src == this.mnuPenThk2)
+		 || (src == this.mnuPenThk3)
+		 || (src == this.mnuPenThk4)
+		 || (src == this.mnuPenThk5) )
+	{
+	  rv = true;
+	  if( this.plotter != null ) {
+	    int thk = 1;
+	    if( this.mnuPenThk2.isSelected() ) {
+	      thk = 2;
+	    }
+	    else if( this.mnuPenThk3.isSelected() ) {
+	      thk = 3;
+	    }
+	    else if( this.mnuPenThk4.isSelected() ) {
+	      thk = 4;
+	    }
+	    else if( this.mnuPenThk5.isSelected() ) {
+	      thk = 5;
+	    }
+	    this.plotter.setPenThickness( thk );
+	    Main.setProperty(
+			"jkcemu.plotter.pen.thickness",
+			Integer.toString( thk ) );
+	  }
+	}
+	else if( src == this.mnuConfirmNewPage ) {
+	  rv = true;
+	  Main.setProperty(
+		getSettingsPrefix() + ".confirm_new_page",
+		Boolean.toString( this.mnuConfirmNewPage.isSelected() ) );
+	}
+      }
+      if( !rv && (e instanceof ActionEvent) ) {
+	String cmd = ((ActionEvent) e).getActionCommand();
+	if( cmd != null ) {
+	  if( cmd.equals( "close" ) ) {
+	    rv = true;
+	    doClose();
+	  }
+	  else if( cmd.equals( "color.pen" ) ) {
+	    rv = true;
+	    doColorPen();
+          }
+	  else if( cmd.equals( "color.paper" ) ) {
+	    rv = true;
+	    doColorPaper();
+          }
+	  else if( cmd.equals( "help" ) ) {
+	    rv = true;
+	    HelpFrm.open( "/help/plotter.htm" );
+          }
+	}
+      }
+    }
+    if( !rv ) {
+      rv = super.doAction( e );
+    }
+    return rv;
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private PlotterFrm( Plotter plotter )
+  {
     this.plotter = plotter;
     this.dirty   = false;
     this.file    = null;
@@ -200,180 +400,6 @@ public class PlotterFrm extends AbstractImageFrm
 				    repaintImage();
 				  }
 				} );
-  }
-
-
-  public void setDirty()
-  {
-    this.dirty = true;
-  }
-
-
-  public void setImage( Image image )
-  {
-    this.image = image;
-    this.imgFld.setImage( image );
-  }
-
-
-  public void setPenThickness( int value )
-  {
-    switch( value ) {
-      case 2:
-	this.mnuPenThk2.setSelected( true );
-	break;
-      case 3:
-	this.mnuPenThk3.setSelected( true );
-	break;
-      case 4:
-	this.mnuPenThk4.setSelected( true );
-	break;
-      case 5:
-	this.mnuPenThk5.setSelected( true );
-	break;
-      default:
-	this.mnuPenThk1.setSelected( true );
-    }
-  }
-
-
-  public void setPlotter( Plotter plotter )
-  {
-    if( this.plotter != null ) {
-      this.plotter.setPlotterFrm( null );
-    }
-    this.plotter = plotter;
-    if( this.plotter != null ) {
-      this.plotter.setPlotterFrm( this );
-    }
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean applySettings( Properties props, boolean resizable )
-  {
-    this.mnuConfirmNewPage.setSelected(
-		EmuUtil.parseBooleanProperty(
-			props,
-			getSettingsPrefix() + ".confirm_new_page",
-			true ) );
-    return super.applySettings( props, resizable );
-  }
-
-
-  @Override
-  public void componentHidden( ComponentEvent e )
-  {
-    if( e.getComponent() == this ) {
-      this.refreshTimer.stop();
-    }
-  }
-
-
-  @Override
-  public void componentShown( ComponentEvent e )
-  {
-    if( e.getComponent() == this ) {
-      this.refreshTimer.start();
-    }
-  }
-
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src != null ) {
-	if( src == this.btnRotateLeft ) {
-	  rv = true;
-	  doRotateLeft();
-	}
-	else if( src == this.btnRotateRight ) {
-	  rv = true;
-	  doRotateRight();
-	}
-	if( (src == this.mnuNewPage) || (src == this.btnNewPage) ) {
-	  rv = true;
-	  doNewPage();
-	}
-	else if( (src == this.mnuPrint) || (src == this.btnPrint) ) {
-	  rv = true;
-	  if( this.image != null ) {
-	    PrintUtil.doPrint( this, this.imgFld, "Plotter" );
-	  }
-	}
-	else if( (src == this.mnuSaveAs) || (src == this.btnSaveAs) ) {
-	  rv = true;
-	  doSaveAs();
-	}
-	else if( src == this.mnuCopy ) {
-	  rv = true;
-	  doImgCopy();
-	}
-	else if( (src == this.mnuPenThk1)
-		 || (src == this.mnuPenThk2)
-		 || (src == this.mnuPenThk3)
-		 || (src == this.mnuPenThk4)
-		 || (src == this.mnuPenThk5) )
-	{
-	  rv = true;
-	  if( this.plotter != null ) {
-	    int thk = 1;
-	    if( this.mnuPenThk2.isSelected() ) {
-	      thk = 2;
-	    }
-	    else if( this.mnuPenThk3.isSelected() ) {
-	      thk = 3;
-	    }
-	    else if( this.mnuPenThk4.isSelected() ) {
-	      thk = 4;
-	    }
-	    else if( this.mnuPenThk5.isSelected() ) {
-	      thk = 5;
-	    }
-	    this.plotter.setPenThickness( thk );
-	    Main.setProperty(
-			"jkcemu.plotter.pen.thickness",
-			Integer.toString( thk ) );
-	  }
-	}
-	else if( src == this.mnuConfirmNewPage ) {
-	  rv = true;
-	  Main.setProperty(
-		getSettingsPrefix() + ".confirm_new_page",
-		Boolean.toString( this.mnuConfirmNewPage.isSelected() ) );
-	}
-      }
-      if( !rv && (e instanceof ActionEvent) ) {
-	String cmd = ((ActionEvent) e).getActionCommand();
-	if( cmd != null ) {
-	  if( cmd.equals( "close" ) ) {
-	    rv = true;
-	    doClose();
-	  }
-	  else if( cmd.equals( "color.pen" ) ) {
-	    rv = true;
-	    doColorPen();
-          }
-	  else if( cmd.equals( "color.paper" ) ) {
-	    rv = true;
-	    doColorPaper();
-          }
-	  else if( cmd.equals( "help" ) ) {
-	    rv = true;
-	    this.screenFrm.showHelp( "/help/plotter.htm" );
-          }
-	}
-      }
-    }
-    if( !rv ) {
-      rv = super.doAction( e );
-    }
-    return rv;
   }
 
 

@@ -31,7 +31,8 @@ public class DiskImgCreateFrm
 				FlavorListener,
 				ListSelectionListener
 {
-  private ScreenFrm         screenFrm;
+  private static DiskImgCreateFrm instance = null;
+
   private Clipboard         clipboard;
   private File              lastOutFile;
   private boolean           dataChanged;
@@ -88,412 +89,17 @@ public class DiskImgCreateFrm
   private DropTarget        dropTargetSysFile;
 
 
-  public DiskImgCreateFrm( ScreenFrm screenFrm )
+  public static void open()
   {
-    this.screenFrm   = screenFrm;
-    this.clipboard   = null;
-    this.lastOutFile = null;
-    this.dataChanged = false;
-    setTitle( "JKCEMU CP/M-Diskettenabbilddatei erstellen" );
-    Main.updIcon( this );
-
-    Toolkit tk = getToolkit();
-    if( tk != null ) {
-      this.clipboard = tk.getSystemClipboard();
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+        instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new DiskImgCreateFrm();
     }
-
-
-    // Menu
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
-
-
-    // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuBar.add( mnuFile );
-
-    this.mnuFileAdd = createJMenuItem( "Hinzuf\u00FCgen..." );
-    mnuFile.add( this.mnuFileAdd );
-
-    this.mnuFileRemove = createJMenuItem(
-			"Entfernen",
-			KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
-    mnuFile.add( this.mnuFileRemove );
-    mnuFile.addSeparator();
-
-    this.mnuSort = createJMenuItem( "Sortieren" );
-    this.mnuSort.setEnabled( false );
-    mnuFile.add( this.mnuSort );
-    mnuFile.addSeparator();
-
-    this.mnuSave = createJMenuItem( "Diskettenabbilddatei speichern..." );
-    mnuFile.add( this.mnuSave );
-    mnuFile.addSeparator();
-
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
-    mnuFile.add( this.mnuClose );
-
-
-    // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-    mnuBar.add( mnuEdit );
-
-    this.mnuPaste = createJMenuItem( "Einf\u00FCgen" );
-    mnuEdit.add( this.mnuPaste );
-    mnuEdit.addSeparator();
-
-    this.mnuChangeUser = createJMenuItem( "User-Bereich \u00E4ndern..." );
-    mnuEdit.add( this.mnuChangeUser );
-
-
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-    mnuBar.add( mnuHelp );
-
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
-    mnuHelp.add( this.mnuHelpContent );
-
-
-    // Fensterinhalt
-    setLayout( new GridBagLayout() );
-
-    GridBagConstraints gbc = new GridBagConstraints(
-					0, 0,
-					1, 1,
-					1.0, 0.0,
-					GridBagConstraints.WEST,
-					GridBagConstraints.HORIZONTAL,
-					new Insets( 5, 5, 5, 5 ),
-					0, 0 );
-
-
-
-    // Werkzeugleiste
-    JToolBar toolBar = new JToolBar();
-    toolBar.setFloatable( false );
-    toolBar.setBorderPainted( false );
-    toolBar.setOrientation( JToolBar.HORIZONTAL );
-    toolBar.setRollover( true );
-    add( toolBar, gbc );
-
-    this.btnFileAdd = createImageButton(
-				"/images/file/open.png",
-				"Hinzuf\u00FCgen" );
-    toolBar.add( this.btnFileAdd );
-
-    this.btnFileRemove = createImageButton(
-				"/images/file/delete.png",
-				"Entfernen" );
-    toolBar.add( this.btnFileRemove );
-    toolBar.addSeparator();
-
-    this.btnSave = createImageButton(
-				"/images/file/save_as.png",
-				"Diskettenabbilddatei speichern" );
-    toolBar.add( this.btnSave );
-    toolBar.addSeparator();
-
-    this.btnFileDown = createImageButton(
-				"/images/nav/down.png",
-				"Nach unten" );
-    toolBar.add( this.btnFileDown );
-
-    this.btnFileUp = createImageButton( "/images/nav/up.png", "Nach oben" );
-    toolBar.add( this.btnFileUp );
-
-
-    // TabbedPane
-    this.tabbedPane = new JTabbedPane();
-    gbc.fill = GridBagConstraints.BOTH;
-    gbc.weighty = 1.0;
-    gbc.gridy++;
-    add( this.tabbedPane, gbc );
-
-
-    // Tabellenfeld
-    this.tableModel = new FileTableModel(
-				FileTableModel.Column.NAME,
-				FileTableModel.Column.FILE,
-				FileTableModel.Column.SIZE,
-				FileTableModel.Column.LAST_MODIFIED,
-				FileTableModel.Column.USER_NUM,
-				FileTableModel.Column.READ_ONLY,
-				FileTableModel.Column.SYSTEM_FILE,
-				FileTableModel.Column.ARCHIVED );
-
-    this.table = new JTable( this.tableModel );
-    this.table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
-    this.table.setColumnSelectionAllowed( false );
-    this.table.setPreferredScrollableViewportSize(
-					new Dimension( 700, 300 ) );
-    this.table.setRowSelectionAllowed( true );
-    this.table.setRowSorter( null );
-    this.table.setShowGrid( false );
-    this.table.setShowHorizontalLines( false );
-    this.table.setShowVerticalLines( false );
-    this.table.setSelectionMode(
-			ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
-    this.table.addMouseListener( this );
-
-    EmuUtil.setTableColWidths(
-		this.table, 100, 280, 70, 130, 40, 40, 40, 40 );
-
-    ListSelectionModel selectionModel = this.table.getSelectionModel();
-    if( selectionModel != null ) {
-      selectionModel.addListSelectionListener( this );
-      updActionButtons();
-    }
-
-    this.scrollPane = new JScrollPane( this.table );
-    this.tabbedPane.addTab( "Dateien", this.scrollPane );
-
-
-    // Format
-    JPanel panelFmt = new JPanel( new GridBagLayout() );
-    this.tabbedPane.addTab( "Format", new JScrollPane( panelFmt ) );
-
-    GridBagConstraints gbcFmt = new GridBagConstraints(
-					0, 0,
-					GridBagConstraints.REMAINDER, 1,
-					0.0, 0.0,
-					GridBagConstraints.WEST,
-					GridBagConstraints.NONE,
-					new Insets( 5, 5, 0, 5 ),
-					0, 0 );
-
-    ButtonGroup grpFmt = new ButtonGroup();
-
-    this.btnFmt800K = new JRadioButton(
-			"800K (A5105, KC85/1, KC87, Z9001)",
-			false );
-    grpFmt.add( this.btnFmt800K );
-    panelFmt.add( this.btnFmt800K, gbcFmt );
-
-    this.btnFmt780K = new JRadioButton(
-			"780K (A5105, AC1 mit ZDOS, HC900, KC85/2..5, Z1013)",
-			false );
-    grpFmt.add( this.btnFmt780K );
-    gbcFmt.insets.top = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmt780K, gbcFmt );
-
-    this.btnFmt720K = new JRadioButton(
-			"720K (A5105, KC85/1, KC87, Z9001)",
-			false );
-    grpFmt.add( this.btnFmt720K );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmt720K, gbcFmt );
-
-    this.btnFmt624K = new JRadioButton( "624K (PC/M)", false );
-    grpFmt.add( this.btnFmt624K );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmt624K, gbcFmt );
-
-    this.btnFmtCPL = new JRadioButton( "LLC2 mit CP/L", false );
-    grpFmt.add( this.btnFmtCPL );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmtCPL, gbcFmt );
-
-    this.btnFmtEtc = new JRadioButton( "Sonstiges Format:", true );
-    grpFmt.add( this.btnFmtEtc );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmtEtc, gbcFmt );
-
-    this.labelSides = new JLabel( "Seiten:" );
-    gbcFmt.insets.left = 50;
-    gbcFmt.gridwidth   = 1;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelSides, gbcFmt );
-
-    this.comboSides    = createJComboBox( 1, 2 );
-    gbcFmt.insets.left = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboSides, gbcFmt );
-
-    this.labelCyls     = new JLabel( "Spuren:" );
-    gbcFmt.insets.left = 50;
-    gbcFmt.gridx       = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelCyls, gbcFmt );
-
-    this.comboCyls     = createJComboBox( 40, 80 );
-    gbcFmt.insets.left = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboCyls, gbcFmt );
-
-    this.labelSysCyls  = new JLabel( "davon Systemspuren:" );
-    gbcFmt.gridx += 2;
-    panelFmt.add( this.labelSysCyls, gbcFmt );
-
-    this.spinnerSysCyls = new JSpinner( new SpinnerNumberModel( 0, 0, 9, 1 ) );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.spinnerSysCyls, gbcFmt );
-
-    this.labelSectPerCyl = new JLabel( "Sektoren pro Spur:" );
-    gbcFmt.insets.left   = 50;
-    gbcFmt.gridx         = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelSectPerCyl, gbcFmt );
-
-    this.comboSectPerCyl = createJComboBox( 5, 8, 9, 15, 16, 18, 36 );
-    gbcFmt.insets.left   = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboSectPerCyl, gbcFmt );
-
-    this.labelSectorSize = new JLabel( "Sektorgr\u00F6\u00DFe:" );
-    gbcFmt.insets.left   = 50;
-    gbcFmt.gridx         = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelSectorSize, gbcFmt );
-
-    this.comboSectorSize = createJComboBox( 256, 512, 1024 );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboSectorSize, gbcFmt );
-
-    this.labelSectorSizeUnit = new JLabel( "Byte" );
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelSectorSizeUnit, gbcFmt );
-
-    this.labelBlockSize = new JLabel( "Blockgr\u00F6\u00DFe:" );
-    gbcFmt.insets.left  = 50;
-    gbcFmt.gridx        = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelBlockSize, gbcFmt );
-
-    this.comboBlockSize = createJComboBox( 1, 2, 4, 8, 16 );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboBlockSize, gbcFmt );
-
-    this.labelBlockSizeUnit = new JLabel( "KByte" );
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelBlockSizeUnit, gbcFmt );
-
-    this.labelBlockNumSize = new JLabel( "Blocknummern:" );
-    gbcFmt.anchor = GridBagConstraints.EAST;
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelBlockNumSize, gbcFmt );
-
-    this.comboBlockNumSize = createJComboBox( 8, 16 );
-    gbcFmt.anchor        = GridBagConstraints.WEST;
-    gbcFmt.insets.left   = 5;
-    gbcFmt.insets.bottom = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboBlockNumSize, gbcFmt );
-
-    this.labelBlockNumSizeUnit = new JLabel( "Bit" );
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelBlockNumSizeUnit, gbcFmt );
-
-    this.labelDirBlocks = new JLabel( "Directory:" );
-    gbcFmt.insets.left  = 50;
-    gbcFmt.gridx        = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelDirBlocks, gbcFmt );
-
-    this.spinnerDirBlocks = new JSpinner(
-			new SpinnerNumberModel( 2, 1, 9, 1 ) );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.spinnerDirBlocks, gbcFmt );
-
-    this.labelDirEntriesInfo = new JLabel( "Bl\u00F6cke" );
-    gbcFmt.gridwidth         = GridBagConstraints.REMAINDER;
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelDirEntriesInfo, gbcFmt );
-
-    this.labelSysFile  = new JLabel( "Datei f\u00FCr Systemspuren:" );
-    gbcFmt.insets.top  = 5;
-    gbcFmt.insets.left = 5;
-    gbcFmt.gridwidth   = 1;
-    gbcFmt.gridx       = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelSysFile, gbcFmt );
-
-    this.fldSysFileName = new FileNameFld();
-    this.fldSysFileName.setEditable( false );
-    gbcFmt.fill      = GridBagConstraints.HORIZONTAL;
-    gbcFmt.weightx   = 1.0;
-    gbcFmt.gridwidth = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.fldSysFileName, gbcFmt );
-
-    this.btnSysFileSelect = createImageButton(
-				"/images/file/open.png",
-				"\u00D6ffnen" );
-    gbcFmt.fill      = GridBagConstraints.NONE;
-    gbcFmt.weightx   = 0.0;
-    gbcFmt.gridwidth = 1;
-    gbcFmt.gridx += 5;
-    panelFmt.add( this.btnSysFileSelect, gbcFmt );
-
-    this.btnSysFileRemove = createImageButton(
-				"/images/file/delete.png",
-				"\u00D6ffnen" );
-    this.btnSysFileRemove.setEnabled( false );
-    gbcFmt.gridx++;
-    panelFmt.add( this.btnSysFileRemove, gbcFmt );
-
-    updFmtDetailsFields();
-    updDirEntriesInfo();
-
-
-    // Statuszeile
-    this.labelStatus = new JLabel();
-    gbc.fill         = GridBagConstraints.HORIZONTAL;
-    gbc.weighty      = 0.0;
-    gbc.insets.top   = 0;
-    gbc.gridy++;
-    add( this.labelStatus, gbc );
-    updStatusText();
-
-
-    // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
-      pack();
-      setScreenCentered();
-    }
-    setResizable( true );
-
-
-    // Listener
-    this.tabbedPane.addChangeListener( this );
-    this.btnFmt800K.addActionListener( this );
-    this.btnFmt780K.addActionListener( this );
-    this.btnFmt720K.addActionListener( this );
-    this.btnFmt624K.addActionListener( this );
-    this.btnFmtCPL.addActionListener( this );
-    this.btnFmtEtc.addActionListener( this );
-    this.comboSides.addActionListener( this );
-    this.comboCyls.addActionListener( this );
-    this.spinnerSysCyls.addChangeListener( this );
-    this.comboSectPerCyl.addActionListener( this );
-    this.comboSectorSize.addActionListener( this );
-    this.comboBlockSize.addActionListener( this );
-    this.spinnerDirBlocks.addChangeListener( this );
-    if( this.clipboard != null ) {
-      this.clipboard.addFlavorListener( this );
-    }
-
-
-    // Drop-Ziele
-    this.dropTargetFile1   = new DropTarget( this.table, this );
-    this.dropTargetFile2   = new DropTarget( this.scrollPane, this );
-    this.dropTargetSysFile = new DropTarget( this.fldSysFileName, this );
-
-    this.dropTargetFile1.setActive( true );
-    this.dropTargetFile1.setActive( true );
-    this.dropTargetSysFile.setActive( true );
-
-
-    // sonstiges
-    updActionButtons();
-    updBgColor();
-    updPasteButton();
+    instance.toFront();
+    instance.setVisible( true );
   }
 
 
@@ -644,7 +250,7 @@ public class DiskImgCreateFrm
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	this.screenFrm.showHelp( "/help/disk/creatediskimg.htm" );
+	HelpFrm.open( "/help/disk/creatediskimg.htm" );
       }
       else if( (src == this.btnFmt800K)
 	       || (src == this.btnFmt780K)
@@ -690,11 +296,12 @@ public class DiskImgCreateFrm
     }
     if( rv ) {
       this.tableModel.clear( true );
+      updStatusText();
       rv = super.doClose();
     }
     if( rv ) {
       this.dataChanged = false;
-      this.screenFrm.childFrameClosed( this );
+      Main.checkQuit( this );
     }
     return rv;
   }
@@ -1153,6 +760,416 @@ public class DiskImgCreateFrm
   }
 
 
+	/* --- Konstruktor --- */
+
+  private DiskImgCreateFrm()
+  {
+    this.clipboard   = null;
+    this.lastOutFile = null;
+    this.dataChanged = false;
+    setTitle( "JKCEMU CP/M-Diskettenabbilddatei erstellen" );
+    Main.updIcon( this );
+
+    Toolkit tk = getToolkit();
+    if( tk != null ) {
+      this.clipboard = tk.getSystemClipboard();
+    }
+
+
+    // Menu
+    JMenuBar mnuBar = new JMenuBar();
+    setJMenuBar( mnuBar );
+
+
+    // Menu Datei
+    JMenu mnuFile = new JMenu( "Datei" );
+    mnuFile.setMnemonic( KeyEvent.VK_D );
+    mnuBar.add( mnuFile );
+
+    this.mnuFileAdd = createJMenuItem( "Hinzuf\u00FCgen..." );
+    mnuFile.add( this.mnuFileAdd );
+
+    this.mnuFileRemove = createJMenuItem(
+			"Entfernen",
+			KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
+    mnuFile.add( this.mnuFileRemove );
+    mnuFile.addSeparator();
+
+    this.mnuSort = createJMenuItem( "Sortieren" );
+    this.mnuSort.setEnabled( false );
+    mnuFile.add( this.mnuSort );
+    mnuFile.addSeparator();
+
+    this.mnuSave = createJMenuItem( "Diskettenabbilddatei speichern..." );
+    mnuFile.add( this.mnuSave );
+    mnuFile.addSeparator();
+
+    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    mnuFile.add( this.mnuClose );
+
+
+    // Menu Bearbeiten
+    JMenu mnuEdit = new JMenu( "Bearbeiten" );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
+    mnuBar.add( mnuEdit );
+
+    this.mnuPaste = createJMenuItem( "Einf\u00FCgen" );
+    mnuEdit.add( this.mnuPaste );
+    mnuEdit.addSeparator();
+
+    this.mnuChangeUser = createJMenuItem( "User-Bereich \u00E4ndern..." );
+    mnuEdit.add( this.mnuChangeUser );
+
+
+    // Menu Hilfe
+    JMenu mnuHelp = new JMenu( "?" );
+    mnuBar.add( mnuHelp );
+
+    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    mnuHelp.add( this.mnuHelpContent );
+
+
+    // Fensterinhalt
+    setLayout( new GridBagLayout() );
+
+    GridBagConstraints gbc = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
+
+
+
+    // Werkzeugleiste
+    JToolBar toolBar = new JToolBar();
+    toolBar.setFloatable( false );
+    toolBar.setBorderPainted( false );
+    toolBar.setOrientation( JToolBar.HORIZONTAL );
+    toolBar.setRollover( true );
+    add( toolBar, gbc );
+
+    this.btnFileAdd = createImageButton(
+				"/images/file/open.png",
+				"Hinzuf\u00FCgen" );
+    toolBar.add( this.btnFileAdd );
+
+    this.btnFileRemove = createImageButton(
+				"/images/file/delete.png",
+				"Entfernen" );
+    toolBar.add( this.btnFileRemove );
+    toolBar.addSeparator();
+
+    this.btnSave = createImageButton(
+				"/images/file/save_as.png",
+				"Diskettenabbilddatei speichern" );
+    toolBar.add( this.btnSave );
+    toolBar.addSeparator();
+
+    this.btnFileDown = createImageButton(
+				"/images/nav/down.png",
+				"Nach unten" );
+    toolBar.add( this.btnFileDown );
+
+    this.btnFileUp = createImageButton( "/images/nav/up.png", "Nach oben" );
+    toolBar.add( this.btnFileUp );
+
+
+    // TabbedPane
+    this.tabbedPane = new JTabbedPane();
+    gbc.fill = GridBagConstraints.BOTH;
+    gbc.weighty = 1.0;
+    gbc.gridy++;
+    add( this.tabbedPane, gbc );
+
+
+    // Tabellenfeld
+    this.tableModel = new FileTableModel(
+				FileTableModel.Column.NAME,
+				FileTableModel.Column.FILE,
+				FileTableModel.Column.SIZE,
+				FileTableModel.Column.LAST_MODIFIED,
+				FileTableModel.Column.USER_NUM,
+				FileTableModel.Column.READ_ONLY,
+				FileTableModel.Column.SYSTEM_FILE,
+				FileTableModel.Column.ARCHIVED );
+
+    this.table = new JTable( this.tableModel );
+    this.table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
+    this.table.setColumnSelectionAllowed( false );
+    this.table.setPreferredScrollableViewportSize(
+					new Dimension( 700, 300 ) );
+    this.table.setRowSelectionAllowed( true );
+    this.table.setRowSorter( null );
+    this.table.setShowGrid( false );
+    this.table.setShowHorizontalLines( false );
+    this.table.setShowVerticalLines( false );
+    this.table.setSelectionMode(
+			ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
+    this.table.addMouseListener( this );
+
+    EmuUtil.setTableColWidths(
+		this.table, 100, 280, 70, 130, 40, 40, 40, 40 );
+
+    ListSelectionModel selectionModel = this.table.getSelectionModel();
+    if( selectionModel != null ) {
+      selectionModel.addListSelectionListener( this );
+      updActionButtons();
+    }
+
+    this.scrollPane = new JScrollPane( this.table );
+    this.tabbedPane.addTab( "Dateien", this.scrollPane );
+
+
+    // Format
+    JPanel panelFmt = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Format", new JScrollPane( panelFmt ) );
+
+    GridBagConstraints gbcFmt = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
+
+    ButtonGroup grpFmt = new ButtonGroup();
+
+    this.btnFmt800K = new JRadioButton(
+			"800K (A5105, KC85/1, KC87, Z9001)",
+			false );
+    grpFmt.add( this.btnFmt800K );
+    panelFmt.add( this.btnFmt800K, gbcFmt );
+
+    this.btnFmt780K = new JRadioButton(
+			"780K (A5105, AC1 mit ZDOS, HC900, KC85/2..5, Z1013)",
+			false );
+    grpFmt.add( this.btnFmt780K );
+    gbcFmt.insets.top = 0;
+    gbcFmt.gridy++;
+    panelFmt.add( this.btnFmt780K, gbcFmt );
+
+    this.btnFmt720K = new JRadioButton(
+			"720K (A5105, KC85/1, KC87, Z9001)",
+			false );
+    grpFmt.add( this.btnFmt720K );
+    gbcFmt.gridy++;
+    panelFmt.add( this.btnFmt720K, gbcFmt );
+
+    this.btnFmt624K = new JRadioButton( "624K (PC/M)", false );
+    grpFmt.add( this.btnFmt624K );
+    gbcFmt.gridy++;
+    panelFmt.add( this.btnFmt624K, gbcFmt );
+
+    this.btnFmtCPL = new JRadioButton( "LLC2 mit CP/L", false );
+    grpFmt.add( this.btnFmtCPL );
+    gbcFmt.gridy++;
+    panelFmt.add( this.btnFmtCPL, gbcFmt );
+
+    this.btnFmtEtc = new JRadioButton( "Sonstiges Format:", true );
+    grpFmt.add( this.btnFmtEtc );
+    gbcFmt.gridy++;
+    panelFmt.add( this.btnFmtEtc, gbcFmt );
+
+    this.labelSides = new JLabel( "Seiten:" );
+    gbcFmt.insets.left = 50;
+    gbcFmt.gridwidth   = 1;
+    gbcFmt.gridy++;
+    panelFmt.add( this.labelSides, gbcFmt );
+
+    this.comboSides    = createJComboBox( 1, 2 );
+    gbcFmt.insets.left = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.comboSides, gbcFmt );
+
+    this.labelCyls     = new JLabel( "Spuren:" );
+    gbcFmt.insets.left = 50;
+    gbcFmt.gridx       = 0;
+    gbcFmt.gridy++;
+    panelFmt.add( this.labelCyls, gbcFmt );
+
+    this.comboCyls     = createJComboBox( 40, 80 );
+    gbcFmt.insets.left = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.comboCyls, gbcFmt );
+
+    this.labelSysCyls  = new JLabel( "davon Systemspuren:" );
+    gbcFmt.gridx += 2;
+    panelFmt.add( this.labelSysCyls, gbcFmt );
+
+    this.spinnerSysCyls = new JSpinner( new SpinnerNumberModel( 0, 0, 9, 1 ) );
+    gbcFmt.insets.left  = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.spinnerSysCyls, gbcFmt );
+
+    this.labelSectPerCyl = new JLabel( "Sektoren pro Spur:" );
+    gbcFmt.insets.left   = 50;
+    gbcFmt.gridx         = 0;
+    gbcFmt.gridy++;
+    panelFmt.add( this.labelSectPerCyl, gbcFmt );
+
+    this.comboSectPerCyl = createJComboBox( 5, 8, 9, 15, 16, 18, 36 );
+    gbcFmt.insets.left   = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.comboSectPerCyl, gbcFmt );
+
+    this.labelSectorSize = new JLabel( "Sektorgr\u00F6\u00DFe:" );
+    gbcFmt.insets.left   = 50;
+    gbcFmt.gridx         = 0;
+    gbcFmt.gridy++;
+    panelFmt.add( this.labelSectorSize, gbcFmt );
+
+    this.comboSectorSize = createJComboBox( 256, 512, 1024 );
+    gbcFmt.insets.left  = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.comboSectorSize, gbcFmt );
+
+    this.labelSectorSizeUnit = new JLabel( "Byte" );
+    gbcFmt.gridx++;
+    panelFmt.add( this.labelSectorSizeUnit, gbcFmt );
+
+    this.labelBlockSize = new JLabel( "Blockgr\u00F6\u00DFe:" );
+    gbcFmt.insets.left  = 50;
+    gbcFmt.gridx        = 0;
+    gbcFmt.gridy++;
+    panelFmt.add( this.labelBlockSize, gbcFmt );
+
+    this.comboBlockSize = createJComboBox( 1, 2, 4, 8, 16 );
+    gbcFmt.insets.left  = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.comboBlockSize, gbcFmt );
+
+    this.labelBlockSizeUnit = new JLabel( "KByte" );
+    gbcFmt.gridx++;
+    panelFmt.add( this.labelBlockSizeUnit, gbcFmt );
+
+    this.labelBlockNumSize = new JLabel( "Blocknummern:" );
+    gbcFmt.anchor = GridBagConstraints.EAST;
+    gbcFmt.gridx++;
+    panelFmt.add( this.labelBlockNumSize, gbcFmt );
+
+    this.comboBlockNumSize = createJComboBox( 8, 16 );
+    gbcFmt.anchor        = GridBagConstraints.WEST;
+    gbcFmt.insets.left   = 5;
+    gbcFmt.insets.bottom = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.comboBlockNumSize, gbcFmt );
+
+    this.labelBlockNumSizeUnit = new JLabel( "Bit" );
+    gbcFmt.gridx++;
+    panelFmt.add( this.labelBlockNumSizeUnit, gbcFmt );
+
+    this.labelDirBlocks = new JLabel( "Directory:" );
+    gbcFmt.insets.left  = 50;
+    gbcFmt.gridx        = 0;
+    gbcFmt.gridy++;
+    panelFmt.add( this.labelDirBlocks, gbcFmt );
+
+    this.spinnerDirBlocks = new JSpinner(
+			new SpinnerNumberModel( 2, 1, 9, 1 ) );
+    gbcFmt.insets.left  = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.spinnerDirBlocks, gbcFmt );
+
+    this.labelDirEntriesInfo = new JLabel( "Bl\u00F6cke" );
+    gbcFmt.gridwidth         = GridBagConstraints.REMAINDER;
+    gbcFmt.gridx++;
+    panelFmt.add( this.labelDirEntriesInfo, gbcFmt );
+
+    this.labelSysFile  = new JLabel( "Datei f\u00FCr Systemspuren:" );
+    gbcFmt.insets.top  = 5;
+    gbcFmt.insets.left = 5;
+    gbcFmt.gridwidth   = 1;
+    gbcFmt.gridx       = 0;
+    gbcFmt.gridy++;
+    panelFmt.add( this.labelSysFile, gbcFmt );
+
+    this.fldSysFileName = new FileNameFld();
+    this.fldSysFileName.setEditable( false );
+    gbcFmt.fill      = GridBagConstraints.HORIZONTAL;
+    gbcFmt.weightx   = 1.0;
+    gbcFmt.gridwidth = 5;
+    gbcFmt.gridx++;
+    panelFmt.add( this.fldSysFileName, gbcFmt );
+
+    this.btnSysFileSelect = createImageButton(
+				"/images/file/open.png",
+				"\u00D6ffnen" );
+    gbcFmt.fill      = GridBagConstraints.NONE;
+    gbcFmt.weightx   = 0.0;
+    gbcFmt.gridwidth = 1;
+    gbcFmt.gridx += 5;
+    panelFmt.add( this.btnSysFileSelect, gbcFmt );
+
+    this.btnSysFileRemove = createImageButton(
+				"/images/file/delete.png",
+				"\u00D6ffnen" );
+    this.btnSysFileRemove.setEnabled( false );
+    gbcFmt.gridx++;
+    panelFmt.add( this.btnSysFileRemove, gbcFmt );
+
+    updFmtDetailsFields();
+    updDirEntriesInfo();
+
+
+    // Statuszeile
+    this.labelStatus = new JLabel();
+    gbc.fill         = GridBagConstraints.HORIZONTAL;
+    gbc.weighty      = 0.0;
+    gbc.insets.top   = 0;
+    gbc.gridy++;
+    add( this.labelStatus, gbc );
+    updStatusText();
+
+
+    // Fenstergroesse
+    if( !applySettings( Main.getProperties(), true ) ) {
+      pack();
+      setScreenCentered();
+    }
+    setResizable( true );
+
+
+    // Listener
+    this.tabbedPane.addChangeListener( this );
+    this.btnFmt800K.addActionListener( this );
+    this.btnFmt780K.addActionListener( this );
+    this.btnFmt720K.addActionListener( this );
+    this.btnFmt624K.addActionListener( this );
+    this.btnFmtCPL.addActionListener( this );
+    this.btnFmtEtc.addActionListener( this );
+    this.comboSides.addActionListener( this );
+    this.comboCyls.addActionListener( this );
+    this.spinnerSysCyls.addChangeListener( this );
+    this.comboSectPerCyl.addActionListener( this );
+    this.comboSectorSize.addActionListener( this );
+    this.comboBlockSize.addActionListener( this );
+    this.spinnerDirBlocks.addChangeListener( this );
+    if( this.clipboard != null ) {
+      this.clipboard.addFlavorListener( this );
+    }
+
+
+    // Drop-Ziele
+    this.dropTargetFile1   = new DropTarget( this.table, this );
+    this.dropTargetFile2   = new DropTarget( this.scrollPane, this );
+    this.dropTargetSysFile = new DropTarget( this.fldSysFileName, this );
+
+    this.dropTargetFile1.setActive( true );
+    this.dropTargetFile1.setActive( true );
+    this.dropTargetSysFile.setActive( true );
+
+
+    // sonstiges
+    updActionButtons();
+    updBgColor();
+    updPasteButton();
+  }
+
+
 	/* --- private Methoden --- */
 
   private boolean addFile( File file )
@@ -1417,6 +1434,7 @@ public class DiskImgCreateFrm
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    if( (row >= 0) && (row < table.getRowCount()) ) {

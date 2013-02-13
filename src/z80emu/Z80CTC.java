@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -328,7 +328,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
         Boolean lastInSlope = this.lastInSlope;
         if( lastInSlope != null ) {
 	  if( slope != lastInSlope.booleanValue() ) {
-	    rv = externalUpdate2( 1 );
+	    rv = externalUpdateIntern( 1 );
 	  }
 	}
       }
@@ -340,7 +340,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     private int externalUpdate( int pulses )
     {
       this.lastInSlope = null;
-      return externalUpdate2( pulses );
+      return externalUpdateIntern( pulses );
     }
 
 
@@ -396,8 +396,10 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	   * duerfen nicht zum Herunterzaehlen des Kanals
 	   * verwendet werden.
 	   * Aus diesem Grund werden einige Taktzyklen ignoriert.
-	   * Der konkrete Wert wurde der Einfachheit halber
-	   * durch praktische Tests ermittelt.
+	   * Durch praktische Tests wurden folgende Werte ermittelt:
+	   *
+	   * gueltige Werte:
+	   *   LLC2: 15-18
 	   */
 	  this.ignoreInternalPulses = 16;
 	  this.preCounter           = 0;
@@ -405,6 +407,8 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	  this.running              = true;
 	}
       } else {
+	this.interruptAccepted  = false;
+	this.interruptRequested = false;
 	this.interruptEnabled   = ((value & 0x80) != 0);
 	this.extMode            = ((value & 0x40) != 0);
 	this.pre256             = ((value & 0x20) != 0);
@@ -419,7 +423,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     }
 
 
-    private int externalUpdate2( int pulses )
+    private int externalUpdateIntern( int pulses )
     {
       int rv = 0;
       if( pulses > 0 ) {

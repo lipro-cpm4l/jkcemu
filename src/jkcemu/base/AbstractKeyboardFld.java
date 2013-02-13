@@ -13,6 +13,7 @@ import java.awt.event.*;
 import java.lang.*;
 import java.util.*;
 import javax.swing.JComponent;
+import jkcemu.Main;
 
 
 public abstract class AbstractKeyboardFld
@@ -165,20 +166,6 @@ public abstract class AbstractKeyboardFld
   }
 
 
-  public void fireRepaint()
-  {
-    final Component c = this;
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    c.repaint();
-		  }
-		} );
-  }
-
-
   public boolean getHoldShift()
   {
     return this.holdShift;
@@ -188,6 +175,12 @@ public abstract class AbstractKeyboardFld
   public String getKeyboardName()
   {
     return null;
+  }
+
+
+  protected Image getImage( String resource )
+  {
+    return Main.getImage( Main.getScreenFrm(), resource );
   }
 
 

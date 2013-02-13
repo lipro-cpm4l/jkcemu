@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,7 +20,8 @@ import jkcemu.image.ImgSelection;
 
 public class ChessboardFrm extends BasicFrm
 {
-  private ScreenFrm     screenFrm;
+  private static ChessboardFrm instance = null;
+
   private JMenuItem     mnuClose;
   private JMenuItem     mnuCopy;
   private JMenuItem     mnuSwap;
@@ -28,9 +29,67 @@ public class ChessboardFrm extends BasicFrm
   private ChessboardFld chessboardFld;
 
 
-  public ChessboardFrm( ScreenFrm screenFrm )
+  public static void close()
   {
-    this.screenFrm = screenFrm;
+    if( instance != null )
+      instance.doClose();
+  }
+
+
+  public static void open( EmuThread emuThread )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new ChessboardFrm( emuThread );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+  public static void repaintChessboard()
+  {
+    if( instance != null )
+      instance.chessboardFld.repaint();
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src == this.mnuClose ) {
+	rv = true;
+	doClose();
+      }
+      else if( src == this.mnuCopy ) {
+	rv = true;
+	doCopy();
+      }
+      else if( src == this.mnuSwap ) {
+	rv = true;
+	this.chessboardFld.swap();
+      }
+      else if( src == this.mnuHelpContent ) {
+	rv = true;
+	HelpFrm.open( "/help/chessboard.htm" );
+      }
+    }
+    return rv;
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private ChessboardFrm( EmuThread emuThread )
+  {
     setTitle( "JKCEMU Schachbrett" );
     Main.updIcon( this );
 
@@ -78,7 +137,7 @@ public class ChessboardFrm extends BasicFrm
     // Fensterinhalt
     setLayout( new BorderLayout() );
 
-    this.chessboardFld = new ChessboardFld( screenFrm.getEmuThread() );
+    this.chessboardFld = new ChessboardFld( emuThread );
     add( this.chessboardFld, BorderLayout.CENTER );
 
 
@@ -88,41 +147,6 @@ public class ChessboardFrm extends BasicFrm
       pack();
     }
     setResizable( false );
-  }
-
-
-  public void repaintChessboard()
-  {
-    this.chessboardFld.repaint();
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.mnuClose ) {
-	rv = true;
-	doClose();
-      }
-      else if( src == this.mnuCopy ) {
-	rv = true;
-	doCopy();
-      }
-      else if( src == this.mnuSwap ) {
-	rv = true;
-	this.chessboardFld.swap();
-      }
-      else if( src == this.mnuHelpContent ) {
-	rv = true;
-	this.screenFrm.showHelp( "/help/chessboard.htm" );
-      }
-    }
-    return rv;
   }
 
 
