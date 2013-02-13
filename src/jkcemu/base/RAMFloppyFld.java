@@ -144,6 +144,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    updFields();

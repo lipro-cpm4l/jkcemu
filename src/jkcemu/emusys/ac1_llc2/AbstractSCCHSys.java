@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.emusys.ac1_llc2;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.*;
+import z80emu.Z80MemView;
 
 
 public abstract class AbstractSCCHSys extends EmuSys
@@ -71,6 +72,7 @@ public abstract class AbstractSCCHSys extends EmuSys
 
   @Override
   public int reassembleSysCall(
+			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
 			boolean       sourceOnly,
@@ -80,7 +82,7 @@ public abstract class AbstractSCCHSys extends EmuSys
   {
     int    rv  = 0;
     int    bol = buf.length();
-    int    b   = this.emuThread.getMemByte( addr, true );
+    int    b   = memory.getMemByte( addr, true );
     int    w   = 0;
     String s   = null;
     switch( b ) {
@@ -130,7 +132,7 @@ public abstract class AbstractSCCHSys extends EmuSys
 	break;
 
       case 0xC3:
-	w = this.emuThread.getMemWord( addr + 1 );
+	w = memory.getMemWord( addr + 1 );
 	s = null;
 	switch( w ) {
 	  case 0x0008:
@@ -170,7 +172,7 @@ public abstract class AbstractSCCHSys extends EmuSys
 	break;
 
       case 0xCD:
-	w = this.emuThread.getMemWord( addr + 1 );
+	w = memory.getMemWord( addr + 1 );
 	switch( w ) {
 	  case 0x0008:
 	  case 0x1802:

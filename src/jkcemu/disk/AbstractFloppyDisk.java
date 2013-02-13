@@ -62,6 +62,7 @@ public abstract class AbstractFloppyDisk
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    BasicDlg.showErrorDlg( owner, msg, ex );

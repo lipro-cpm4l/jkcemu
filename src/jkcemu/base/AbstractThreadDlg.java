@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -95,6 +95,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    thread.start();
@@ -133,6 +134,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    fld.append( msg );
@@ -188,6 +190,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    progressFinished();

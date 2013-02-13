@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -34,6 +34,8 @@ public class AudioFrm
   private static final int[] sampleRates = {
 				96000, 48000, 44100, 32000,
 				22050, 16000, 11025, 8000 };
+
+  private static AudioFrm instance = null;
 
   private ScreenFrm         screenFrm;
   private EmuThread         emuThread;
@@ -85,7 +87,267 @@ public class AudioFrm
   private JButton           btnPause;
 
 
-  public AudioFrm( ScreenFrm screenFrm )
+  public static AudioFrm open( ScreenFrm screenFrm )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new AudioFrm( screenFrm );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+    return instance;
+  }
+
+
+  public void fireFinished()
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    audioFinished();
+		  }
+		} );
+  }
+
+
+  public void fireProgressUpdate( final float value )
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    updProgressBar( value );
+		  }
+		} );
+  }
+
+
+  public void openFile( File file, byte[] fileBytes, int offs )
+  {
+    if( checkSpeed() ) {
+      boolean tap = false;
+      if( fileBytes != null ) {
+	tap = FileInfo.isTAPHeaderAt(
+				fileBytes,
+				fileBytes.length - offs,
+				offs );
+      } else if( file != null ) {
+	String fName = file.getName();
+	if( fName != null ) {
+	  tap = fName.toLowerCase().endsWith( ".tap" );
+	}
+      }
+      enableAudioInFile( this.usedKHz, file, fileBytes, offs, tap );
+    }
+  }
+
+
+	/* --- ChangeListener --- */
+
+  @Override
+  public void stateChanged( ChangeEvent e )
+  {
+    Object src = e.getSource();
+    if( src != null ) {
+      if( (src == this.sliderVolume) && (this.controlVolume != null) ) {
+	int vMinSlider  = this.sliderVolume.getMinimum();
+	int vMaxSlider  = this.sliderVolume.getMaximum();
+	int rangeSlider = vMaxSlider - vMinSlider;
+	if( rangeSlider > 0 ) {
+	  float vNorm = (float) (this.sliderVolume.getValue() - vMinSlider)
+							/ (float) rangeSlider;
+	  if( vNorm < 0F ) {
+	    vNorm = 0F;
+	  } else if( vNorm > 1F ) {
+	    vNorm = 1F;
+	  }
+	  float vMinCtrl = this.controlVolume.getMinimum();
+	  float vMaxCtrl = this.controlVolume.getMaximum();
+	  float vCtrl    = vMinCtrl + (vNorm * (vMaxCtrl - vMinCtrl));
+	  if( vCtrl < vMinCtrl ) {
+	    vCtrl = vMinCtrl;
+	  } else if( vCtrl > vMaxCtrl ) {
+	    vCtrl = vMaxCtrl;
+	  }
+	  this.controlVolume.setValue( vCtrl );
+	}
+      }
+    }
+  }
+
+
+	/* --- DropTargetListener --- */
+
+  @Override
+  public void dragEnter( DropTargetDragEvent e )
+  {
+    if( (this.audioIO != null) || !EmuUtil.isFileDrop( e ) )
+      e.rejectDrag();
+  }
+
+
+  @Override
+  public void dragExit( DropTargetEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void dragOver( DropTargetDragEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void drop( DropTargetDropEvent e )
+  {
+    boolean done = false;
+    if( (this.audioIO == null) && EmuUtil.isFileDrop( e ) ) {
+      File file = EmuUtil.fileDrop( this, e );
+      if( file != null ) {
+	if( file.isFile() ) {
+	  String fName = file.getName();
+	  if( fName != null ) {
+	    stopAudio();
+	    if( checkSpeed() ) {
+	      boolean tap = fName.toLowerCase().endsWith( ".tap" );
+	      if( tap ) {
+		this.btnTAPFileIn.setSelected( true );
+	      } else {
+		this.btnSoundFileIn.setSelected( true );
+	      }
+	      updOptFields( tap );
+	      enableAudioInFile( this.usedKHz, file, null, 0, tap );
+	    }
+	    done = true;
+	  }
+	}
+      }
+    }
+    if( done ) {
+      e.dropComplete( true );
+    } else {
+      e.rejectDrop();
+    }
+  }
+
+
+  @Override
+  public void dropActionChanged( DropTargetDragEvent e )
+  {
+    if( (this.audioIO != null) || !EmuUtil.isFileDrop( e ) )
+      e.rejectDrag();
+  }
+
+
+	/* --- Z80MaxSpeedListener --- */
+
+  /*
+   * Wenn sich die Emulationsgeschwindigkeit aendert,
+   * stimmt die Synchronisation mit dem Audio-System nicht mehr.
+   */
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    maxSpeedChanged();
+		  }
+		} );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    stopBlinking();
+    if( e != null ) {
+      Object src = e.getSource();
+      if( (src == this.btnSoundOut)
+	  || (src == this.btnDataOut)
+	  || (src == this.btnDataIn)
+	  || (src == this.btnSoundFileOut)
+	  || (src == this.btnSoundFileIn)
+	  || (src == this.btnTAPFileIn)
+	  || (src == this.btnFileLastIn) )
+      {
+	rv = true;
+	updOptFields( this.btnTAPFileIn.isSelected()
+		|| (this.btnFileLastIn.isSelected() && this.lastIsTAP) );
+      }
+      else if( (src == this.btnChannel0) || (src == this.btnChannel1) ) {
+	rv = true;
+	updChannel();
+      }
+      else if( src == this.btnMonitor ) {
+	rv = true;
+	if( this.btnMonitor.isSelected() ) {
+	  setMaxSpeed( false );
+	}
+	updMonitorEnabled();
+      }
+      else if( src == this.btnEnable ) {
+	rv = true;
+	doEnable();
+      }
+      else if( src == this.btnDisable ) {
+	rv = true;
+	doDisable();
+      }
+      else if( src == this.btnPlay ) {
+	rv = true;
+	doPlay();
+      }
+      else if( src == this.btnPause ) {
+	rv = true;
+	doPause();
+      }
+      else if( src == this.btnMaxSpeed ) {
+	rv = true;
+	doMaxSpeed();
+      }
+      else if( src == this.btnHelp ) {
+	rv = true;
+	HelpFrm.open( "/help/audio.htm" );
+      }
+      else if( src == this.btnClose ) {
+	rv = true;
+	doClose();
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doQuit()
+  {
+    stopBlinking();
+    doDisable();
+    return doClose();
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private AudioFrm( ScreenFrm screenFrm )
   {
     this.screenFrm         = screenFrm;
     this.emuThread         = screenFrm.getEmuThread();
@@ -436,245 +698,6 @@ public class AudioFrm
     setResizable( false );
     this.z80cpu.addMaxSpeedListener( this );
     (new DropTarget( this.fileNameFld, this )).setActive( true );
-  }
-
-
-  public void fireFinished()
-  {
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    audioFinished();
-		  }
-		} );
-  }
-
-
-  public void fireProgressUpdate( final float value )
-  {
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    updProgressBar( value );
-		  }
-		} );
-  }
-
-
-  public void doQuit()
-  {
-    stopBlinking();
-    doDisable();
-    doClose();
-  }
-
-
-  public void openFile( File file, byte[] fileBytes, int offs )
-  {
-    if( checkSpeed() ) {
-      boolean tap = false;
-      if( fileBytes != null ) {
-	tap = FileInfo.isTAPHeaderAt(
-				fileBytes,
-				fileBytes.length - offs,
-				offs );
-      } else if( file != null ) {
-	String fName = file.getName();
-	if( fName != null ) {
-	  tap = fName.toLowerCase().endsWith( ".tap" );
-	}
-      }
-      enableAudioInFile( this.usedKHz, file, fileBytes, offs, tap );
-    }
-  }
-
-
-	/* --- ChangeListener --- */
-
-  @Override
-  public void stateChanged( ChangeEvent e )
-  {
-    Object src = e.getSource();
-    if( src != null ) {
-      if( (src == this.sliderVolume) && (this.controlVolume != null) ) {
-	int vMinSlider  = this.sliderVolume.getMinimum();
-	int vMaxSlider  = this.sliderVolume.getMaximum();
-	int rangeSlider = vMaxSlider - vMinSlider;
-	if( rangeSlider > 0 ) {
-	  float vNorm = (float) (this.sliderVolume.getValue() - vMinSlider)
-							/ (float) rangeSlider;
-	  if( vNorm < 0F ) {
-	    vNorm = 0F;
-	  } else if( vNorm > 1F ) {
-	    vNorm = 1F;
-	  }
-	  float vMinCtrl = this.controlVolume.getMinimum();
-	  float vMaxCtrl = this.controlVolume.getMaximum();
-	  float vCtrl    = vMinCtrl + (vNorm * (vMaxCtrl - vMinCtrl));
-	  if( vCtrl < vMinCtrl ) {
-	    vCtrl = vMinCtrl;
-	  } else if( vCtrl > vMaxCtrl ) {
-	    vCtrl = vMaxCtrl;
-	  }
-	  this.controlVolume.setValue( vCtrl );
-	}
-      }
-    }
-  }
-
-
-	/* --- DropTargetListener --- */
-
-  @Override
-  public void dragEnter( DropTargetDragEvent e )
-  {
-    if( (this.audioIO != null) || !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
-  }
-
-
-  @Override
-  public void dragExit( DropTargetEvent e )
-  {
-    // leer
-  }
-
-
-  @Override
-  public void dragOver( DropTargetDragEvent e )
-  {
-    // leer
-  }
-
-
-  @Override
-  public void drop( DropTargetDropEvent e )
-  {
-    boolean done = false;
-    if( (this.audioIO == null) && EmuUtil.isFileDrop( e ) ) {
-      File file = EmuUtil.fileDrop( this, e );
-      if( file != null ) {
-	if( file.isFile() ) {
-	  String fName = file.getName();
-	  if( fName != null ) {
-	    stopAudio();
-	    if( checkSpeed() ) {
-	      boolean tap = fName.toLowerCase().endsWith( ".tap" );
-	      if( tap ) {
-		this.btnTAPFileIn.setSelected( true );
-	      } else {
-		this.btnSoundFileIn.setSelected( true );
-	      }
-	      updOptFields( tap );
-	      enableAudioInFile( this.usedKHz, file, null, 0, tap );
-	    }
-	    done = true;
-	  }
-	}
-      }
-    }
-    if( done ) {
-      e.dropComplete( true );
-    } else {
-      e.rejectDrop();
-    }
-  }
-
-
-  @Override
-  public void dropActionChanged( DropTargetDragEvent e )
-  {
-    if( (this.audioIO != null) || !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
-  }
-
-
-	/* --- Z80MaxSpeedListener --- */
-
-  /*
-   * Wenn sich die Emulationsgeschwindigkeit aendert,
-   * stimmt die Synchronisation mit dem Audio-System nicht mehr.
-   */
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  public void run()
-		  {
-		    maxSpeedChanged();
-		  }
-		} );
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    stopBlinking();
-    if( e != null ) {
-      Object src = e.getSource();
-      if( (src == this.btnSoundOut)
-	  || (src == this.btnDataOut)
-	  || (src == this.btnDataIn)
-	  || (src == this.btnSoundFileOut)
-	  || (src == this.btnSoundFileIn)
-	  || (src == this.btnTAPFileIn)
-	  || (src == this.btnFileLastIn) )
-      {
-	rv = true;
-	updOptFields( this.btnTAPFileIn.isSelected()
-		|| (this.btnFileLastIn.isSelected() && this.lastIsTAP) );
-      }
-      else if( (src == this.btnChannel0) || (src == this.btnChannel1) ) {
-	rv = true;
-	updChannel();
-      }
-      else if( src == this.btnMonitor ) {
-	rv = true;
-	if( this.btnMonitor.isSelected() ) {
-	  setMaxSpeed( false );
-	}
-	updMonitorEnabled();
-      }
-      else if( src == this.btnEnable ) {
-	rv = true;
-	doEnable();
-      }
-      else if( src == this.btnDisable ) {
-	rv = true;
-	doDisable();
-      }
-      else if( src == this.btnPlay ) {
-	rv = true;
-	doPlay();
-      }
-      else if( src == this.btnPause ) {
-	rv = true;
-	doPause();
-      }
-      else if( src == this.btnMaxSpeed ) {
-	rv = true;
-	doMaxSpeed();
-      }
-      else if( src == this.btnHelp ) {
-	rv = true;
-	this.screenFrm.showHelp( "/help/audio.htm" );
-      }
-      else if( src == this.btnClose ) {
-	rv = true;
-	doClose();
-      }
-    }
-    return rv;
   }
 
 

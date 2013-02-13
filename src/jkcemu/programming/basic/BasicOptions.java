@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,93 +11,73 @@ package jkcemu.programming.basic;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.*;
-import jkcemu.emusys.*;
 import jkcemu.programming.PrgOptions;
-import jkcemu.text.EditText;
+import jkcemu.programming.assembler.Z80Assembler;
+import jkcemu.text.TextUtil;
 
 
 public class BasicOptions extends PrgOptions
 {
-  public static enum BreakPossibility {
-				BREAK_NEVER,
-				BREAK_INPUT,
-				BREAK_ALWAYS };
+  public static enum BreakOption { NEVER, INPUT, ALWAYS };
 
-  public static final int DEFAULT_ARRAY_SIZE     = 128;
-  public static final int DEFAULT_STACK_SIZE     = 128;
-  public static final int DEFAULT_END_OF_MEM     = 0x3FFF;
-
-  private String                 appName;
-  private int                    begAddr;
-  private int                    arraySize;
-  private int                    stackSize;
-  private int                    endOfMem;
-  private boolean                allowLongVarNames;
-  private boolean                checkStack;
-  private boolean                checkArray;
-  private boolean                forceCPM;
-  private boolean                showAsm;
-  private boolean                strictAC1Basic;
-  private boolean                strictZ1013Basic;
-  private boolean                structuredForNext;
-  private boolean                preferRelJumps;
-  private boolean                printCalls;
-  private BreakPossibility       breakPossibility;
-  private BasicCompiler.Platform platform;
+  public static final int MAX_HEAP_SIZE      = 0x8000;
+  public static final int MIN_HEAP_SIZE      = 0x0200;
+  public static final int MIN_STACK_SIZE     = 64;
+  public static final int DEFAULT_HEAP_SIZE  = 1024;
+  public static final int DEFAULT_STACK_SIZE = 128;
 
 
-  public BasicOptions( EmuThread emuThread )
+  private String         appName;
+  private String         langCode;
+  private String         targetText;
+  private AbstractTarget target;
+  private EmuSys         emuSys;
+  private int            begAddr;
+  private int            heapSize;
+  private int            stackSize;
+  private boolean        checkStack;
+  private boolean        checkBounds;
+  private boolean        preferRelJumps;
+  private boolean        printLineNumOnAbort;
+  private boolean        showAsmText;
+  private boolean        warnUnusedItems;
+  private BreakOption    breakOption;
+
+
+  public BasicOptions()
   {
-    this.appName           = "MYAPP";
-    this.begAddr           = getDefaultBegAddr( emuThread.getEmuSys() );
-    this.arraySize         = DEFAULT_ARRAY_SIZE;
-    this.stackSize         = DEFAULT_STACK_SIZE;
-    this.endOfMem          = DEFAULT_END_OF_MEM;
-    this.allowLongVarNames = false;
-    this.checkStack        = true;
-    this.checkArray        = true;
-    this.forceCPM          = false;
-    this.showAsm           = false;
-    this.strictAC1Basic    = false;
-    this.strictZ1013Basic  = false;
-    this.structuredForNext = false;
-    this.preferRelJumps    = true;
-    this.printCalls        = true;
-    this.breakPossibility  = BreakPossibility.BREAK_INPUT;
-    this.platform          = null;
-    setSyntax( Syntax.ZILOG_ONLY );
+    this.appName             = "MYAPP";
+    this.langCode            = null;
+    this.targetText          = null;
+    this.target              = null;
+    this.emuSys              = null;
+    this.begAddr             = -1;
+    this.heapSize            = DEFAULT_HEAP_SIZE;
+    this.stackSize           = DEFAULT_STACK_SIZE;
+    this.checkStack          = true;
+    this.checkBounds         = true;
+    this.preferRelJumps      = true;
+    this.printLineNumOnAbort = true;
+    this.showAsmText         = false;
+    this.warnUnusedItems     = true;
+    this.breakOption         = BreakOption.ALWAYS;
+    setAsmSyntax( Z80Assembler.Syntax.ZILOG_ONLY );
     setAllowUndocInst( false );
     setLabelsCaseSensitive( false );
     setPrintLabels( false );
   }
 
 
-  public BasicOptions( BasicOptions src )
+  public boolean canBreakAlways()
   {
-    super( src );
-    this.appName           = src.appName;
-    this.begAddr           = src.begAddr;
-    this.arraySize         = src.arraySize;
-    this.stackSize         = src.stackSize;
-    this.endOfMem          = src.endOfMem;
-    this.allowLongVarNames = src.allowLongVarNames;
-    this.checkStack        = src.checkStack;
-    this.checkArray        = src.checkArray;
-    this.forceCPM          = src.forceCPM;
-    this.showAsm           = src.showAsm;
-    this.strictAC1Basic    = src.strictAC1Basic;
-    this.strictZ1013Basic  = src.strictZ1013Basic;
-    this.structuredForNext = src.structuredForNext;
-    this.preferRelJumps    = src.preferRelJumps;
-    this.printCalls        = src.printCalls;
-    this.breakPossibility  = src.breakPossibility;
-    this.platform          = src.platform;
+    return this.breakOption == BreakOption.ALWAYS;
   }
 
 
-  public boolean getAllowLongVarNames()
+  public boolean canBreakOnInput()
   {
-    return this.allowLongVarNames;
+    return (this.breakOption == BreakOption.ALWAYS)
+	   || (this.breakOption == BreakOption.INPUT);
   }
 
 
@@ -107,150 +87,117 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public int getArraySize()
-  {
-    return this.arraySize;
-  }
-
-
-  public static BasicOptions getBasicOptions(
-					EmuThread  emuThread,
-					Properties props )
+  public static BasicOptions getBasicOptions( Properties props )
   {
     BasicOptions options = null;
     if( props != null ) {
-      String  appName = props.getProperty( "jkcemu.programming.basic.name" );
+      String appName  = props.getProperty(
+			"jkcemu.programming.basic.name" );
+
+      String langCode = props.getProperty(
+			"jkcemu.programming.basic.language.code" );
+
+      String targetText = props.getProperty(
+			"jkcemu.programming.basic.target" );
 
       Integer begAddr = getInteger(
 			props,
 			"jkcemu.programming.basic.address.begin" );
 
-      Integer endOfMem = getInteger(
+      Integer heapSize = getInteger(
 			props,
-			"jkcemu.programming.basic.address.top" );
-
-      Integer arraySize = getInteger(
-			props,
-			"jkcemu.programming.basic.array.size" );
+			"jkcemu.programming.basic.heap.size" );
 
       Integer stackSize = getInteger(
 			props,
 			"jkcemu.programming.basic.stack.size" );
 
-      Boolean allowLongVarNames = getBoolean(
-			props,
-			"jkcemu.programming.basic.allow_long_variable_names" );
-
-      Boolean checkArray = getBoolean(
-			props,
-			"jkcemu.programming.basic.array.check" );
-
       Boolean checkStack = getBoolean(
 			props,
 			"jkcemu.programming.basic.stack.check" );
 
-      Boolean forceCPM = getBoolean(
+      Boolean checkBounds = getBoolean(
 			props,
-			"jkcemu.programming.basic.force_cpm" );
-
-      Boolean showAsm = getBoolean(
-			props,
-			"jkcemu.programming.basic.show_assembler_source" );
-
-      Boolean strictAC1Basic = getBoolean(
-			props,
-			"jkcemu.programming.basic.strict_ac1_minibasic" );
-
-      Boolean strictZ1013Basic = getBoolean(
-			props,
-			"jkcemu.programming.basic.strict_z1013_tinybasic" );
-
-      Boolean structuredForNext = getBoolean(
-			props,
-			"jkcemu.programming.basic.structured_for_next" );
+			"jkcemu.programming.basic.bounds.check" );
 
       Boolean preferRelJumps = getBoolean(
 			props,
 			"jkcemu.programming.basic.prefer_relative_jumps" );
 
-      Boolean printCalls = getBoolean(
+      Boolean printLineNumOnAbort = getBoolean(
 			props,
-			"jkcemu.programming.basic.print_calls" );
+			"jkcemu.programming.basic.print_line_num_on_abort" );
 
-      String breakPossibilityText = props.getProperty(
-			"jkcemu.programming.basic.breakable" );
+      Boolean showAsmText = getBoolean(
+			props,
+			"jkcemu.programming.basic.show_assembler_source" );
+
+      Boolean warnUnusedItems = getBoolean(
+			props,
+			"jkcemu.programming.basic.warn_unused_items" );
+
+      String breakOptionText = props.getProperty(
+			"jkcemu.programming.basic.breakoption" );
 
       if( (appName != null)
+	  || (langCode != null)
+	  || (targetText != null)
 	  || (begAddr != null)
-	  || (endOfMem != null)
-	  || (arraySize != null)
+	  || (heapSize != null)
 	  || (stackSize != null)
-	  || (allowLongVarNames != null)
-	  || (checkArray != null)
 	  || (checkStack != null)
-	  || (forceCPM != null)
-	  || (showAsm != null)
-	  || (strictAC1Basic != null)
-	  || (strictZ1013Basic != null)
-	  || (structuredForNext != null)
+	  || (checkBounds != null)
 	  || (preferRelJumps != null)
-	  || (printCalls != null)
-	  || (breakPossibilityText != null) )
+	  || (printLineNumOnAbort != null)
+	  || (showAsmText != null)
+	  || (warnUnusedItems != null)
+	  || (breakOptionText != null) )
       {
-	options = new BasicOptions( emuThread );
+	options = new BasicOptions();
 
 	if( appName != null ) {
 	  options.appName = appName;
 	}
+	if( langCode != null ) {
+	  options.langCode = langCode;
+	}
+	if( targetText != null ) {
+	  options.targetText = targetText;
+	}
 	if( begAddr != null ) {
 	  options.begAddr = begAddr.intValue();
 	}
-	if( arraySize != null ) {
-	  options.arraySize = arraySize.intValue();
+	if( heapSize != null ) {
+	  options.heapSize = heapSize.intValue();
 	}
 	if( stackSize != null ) {
 	  options.stackSize = stackSize.intValue();
 	}
-	if( allowLongVarNames != null ) {
-	  options.allowLongVarNames = allowLongVarNames.booleanValue();
-	}
-	if( checkArray != null ) {
-	  options.checkArray = checkArray.booleanValue();
-	}
 	if( checkStack != null ) {
 	  options.checkStack = checkStack.booleanValue();
 	}
-	if( endOfMem != null ) {
-	  options.endOfMem = endOfMem.intValue();
-	}
-	if( forceCPM != null ) {
-	  options.forceCPM = forceCPM.booleanValue();
-	}
-	if( showAsm != null ) {
-	  options.showAsm = showAsm.booleanValue();
-	}
-	if( strictAC1Basic != null ) {
-	  options.strictAC1Basic = strictAC1Basic.booleanValue();
-	}
-	if( strictZ1013Basic != null ) {
-	  options.strictZ1013Basic = strictZ1013Basic.booleanValue();
-	}
-	if( structuredForNext != null ) {
-	  options.structuredForNext = structuredForNext.booleanValue();
+	if( checkBounds != null ) {
+	  options.checkBounds = checkBounds.booleanValue();
 	}
 	if( preferRelJumps != null ) {
 	  options.preferRelJumps = preferRelJumps.booleanValue();
 	}
-	if( printCalls != null ) {
-	  options.printCalls = printCalls.booleanValue();
+	if( printLineNumOnAbort != null ) {
+	  options.printLineNumOnAbort = printLineNumOnAbort.booleanValue();
 	}
-	if( breakPossibilityText != null ) {
-	  if( breakPossibilityText.equals( "never" ) ) {
-	    options.breakPossibility = BreakPossibility.BREAK_NEVER;
-	  } else if( breakPossibilityText.equals( "input" ) ) {
-	    options.breakPossibility = BreakPossibility.BREAK_INPUT;
+	if( showAsmText != null ) {
+	  options.showAsmText = showAsmText.booleanValue();
+	}
+	if( warnUnusedItems != null ) {
+	  options.warnUnusedItems = warnUnusedItems.booleanValue();
+	}
+	if( breakOptionText != null ) {
+	  if( breakOptionText.equals( "never" ) ) {
+	    options.breakOption = BreakOption.NEVER;
+	  } else if( breakOptionText.equals( "input" ) ) {
+	    options.breakOption = BreakOption.INPUT;
 	  } else {
-	    options.breakPossibility = BreakPossibility.BREAK_ALWAYS;
+	    options.breakOption = BreakOption.ALWAYS;
 	  }
 	}
       }
@@ -265,15 +212,15 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public BreakPossibility getBreakPossibility()
+  public BreakOption getBreakOption()
   {
-    return this.breakPossibility;
+    return this.breakOption;
   }
 
 
-  public boolean getCheckArray()
+  public boolean getCheckBounds()
   {
-    return this.checkArray;
+    return this.checkBounds;
   }
 
 
@@ -283,45 +230,21 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public static int getDefaultBegAddr( EmuSys emuSys )
+  public EmuSys getEmuSys()
   {
-    int rv = 0x0300;		// KCs
-    if( emuSys != null ) {
-      if( (emuSys instanceof AC1)
-	  || (emuSys instanceof LLC2) )
-      {
-	rv = 0x2000;
-      }
-      else if( (emuSys instanceof HueblerEvertMC)
-	       || (emuSys instanceof HueblerGraphicsMC)
-	       || (emuSys instanceof PCM)
-	       || (emuSys instanceof Z1013) )
-      {
-	rv = 0x0100;
-      }
-      else if( emuSys instanceof KramerMC ) {
-	rv = 0x1000;
-      }
-    }
-    return rv;
+    return this.emuSys;
   }
 
 
-  public int getEndOfMemory()
+  public int getHeapSize()
   {
-    return this.endOfMem;
+    return this.heapSize;
   }
 
 
-  public boolean getForceCPM()
+  public String getLangCode()
   {
-    return this.forceCPM;
-  }
-
-
-  public BasicCompiler.Platform getPlatform()
-  {
-    return this.platform;
+    return this.langCode;
   }
 
 
@@ -331,15 +254,15 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public boolean getPrintCalls()
+  public boolean getPrintLineNumOnAbort()
   {
-    return this.printCalls;
+    return this.printLineNumOnAbort;
   }
 
 
-  public boolean getShowAsm()
+  public boolean getShowAssemblerText()
   {
-    return this.showAsm;
+    return this.showAsmText;
   }
 
 
@@ -349,40 +272,21 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public boolean getStrictAC1MiniBASIC()
+  public AbstractTarget getTarget()
   {
-    return this.strictAC1Basic;
+    return this.target;
   }
 
 
-  public boolean getStrictZ1013TinyBASIC()
+  public String getTargetText()
   {
-    return this.strictZ1013Basic;
+    return this.targetText;
   }
 
 
-  public boolean getStructuredForNext()
+  public boolean getWarnUnusedItems()
   {
-    return this.structuredForNext;
-  }
-
-
-  public boolean isBreakAlwaysPossible()
-  {
-    return this.breakPossibility == BreakPossibility.BREAK_ALWAYS;
-  }
-
-
-  public boolean isBreakOnInputPossible()
-  {
-    return (this.breakPossibility == BreakPossibility.BREAK_ALWAYS)
-	   || (this.breakPossibility == BreakPossibility.BREAK_INPUT);
-  }
-
-
-  public void setAllowLongVarNames( boolean state )
-  {
-    this.allowLongVarNames = state;
+    return this.warnUnusedItems;
   }
 
 
@@ -392,27 +296,21 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public void setArraySize( int value )
-  {
-    this.arraySize = value;
-  }
-
-
   public void setBegAddr( int value )
   {
     this.begAddr = value;
   }
 
 
-  public void setBreakPossibility( BreakPossibility value )
+  public void setBreakOption( BreakOption value )
   {
-    this.breakPossibility = value;
+    this.breakOption = value;
   }
 
 
-  public void setCheckArray( boolean state )
+  public void setCheckBounds( boolean state )
   {
-    this.checkArray = state;
+    this.checkBounds = state;
   }
 
 
@@ -422,21 +320,28 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public void setEndOfMemory( int value )
+  public void setEmuSys( EmuSys emuSys )
   {
-    this.endOfMem = value;
+    this.emuSys = emuSys;
   }
 
 
-  public void setForceCPM( boolean state )
+  public void setHeapSize( int value )
   {
-    this.forceCPM = state;
+    this.heapSize = value;
   }
 
 
-  public void setPlatform( BasicCompiler.Platform platform )
+  public void setLangCode( String langCode )
   {
-    this.platform = platform;
+    this.langCode = langCode;
+  }
+
+
+  public void setTarget( AbstractTarget target )
+  {
+    this.target     = target;
+    this.targetText = target.toString();
   }
 
 
@@ -446,15 +351,15 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public void setPrintCalls( boolean state )
+  public void setPrintLineNumOnAbort( boolean state )
   {
-    this.printCalls = state;
+    this.printLineNumOnAbort = state;
   }
 
 
-  public void setShowAsm( boolean state )
+  public void setShowAssemblerText( boolean state )
   {
-    this.showAsm = state;
+    this.showAsmText = state;
   }
 
 
@@ -464,25 +369,42 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public void setStrictAC1MiniBASIC( boolean state )
+  public void setWarnUnusedItems( boolean state )
   {
-    this.strictAC1Basic = state;
-  }
-
-
-  public void setStrictZ1013TinyBASIC( boolean state )
-  {
-    this.strictZ1013Basic = state;
-  }
-
-
-  public void setStructuredForNext( boolean state )
-  {
-    this.structuredForNext = state;
+    this.warnUnusedItems = state;
   }
 
 
 	/* --- ueberschrieben Methoden --- */
+
+  @Override
+  public boolean equals( Object o )
+  {
+    boolean rv = false;
+    if( o != null ) {
+      if( super.equals( o ) && (o instanceof BasicOptions) ) {
+	BasicOptions options = (BasicOptions) o;
+	if( TextUtil.equals( options.appName, this.appName )
+	    && TextUtil.equals( options.langCode, this.langCode )
+	    && TextUtil.equals( options.targetText, this.targetText )
+	    && (options.begAddr             == this.begAddr)
+	    && (options.heapSize            == this.heapSize)
+	    && (options.stackSize           == this.stackSize)
+	    && (options.checkStack          == this.checkStack)
+	    && (options.checkBounds         == this.checkBounds)
+	    && (options.preferRelJumps      == this.preferRelJumps)
+	    && (options.printLineNumOnAbort == this.printLineNumOnAbort)
+	    && (options.showAsmText         == this.showAsmText)
+	    && (options.warnUnusedItems     == this.warnUnusedItems)
+	    && (options.breakOption         == this.breakOption) )
+	{
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
 
   @Override
   public void putOptionsTo( Properties props )
@@ -494,76 +416,60 @@ public class BasicOptions extends PrgOptions
 		this.appName != null ? this.appName : "" );
 
       props.setProperty(
+		"jkcemu.programming.basic.language.code",
+		this.langCode != null ? this.langCode : "" );
+
+      props.setProperty(
+		"jkcemu.programming.basic.target",
+		this.targetText != null ? this.targetText : "" );
+
+      props.setProperty(
 		"jkcemu.programming.basic.address.begin",
                 Integer.toString( this.begAddr ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.address.top",
-                Integer.toString( this.endOfMem ) );
+		"jkcemu.programming.basic.heap.size",
+                Integer.toString( this.heapSize ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.array.size",
-                Integer.toString( this.arraySize ) );
-
-      props.setProperty(
-		"jkcemu.programming.basic.array.check",
-                Boolean.toString( this.checkArray ) );
-
-      props.setProperty(
-		"jkcemu.programming.basic.stack.size",
-                Integer.toString( this.stackSize ) );
+		"jkcemu.programming.basic.bounds.check",
+                Boolean.toString( this.checkBounds ) );
 
       props.setProperty(
 		"jkcemu.programming.basic.stack.check",
                 Boolean.toString( this.checkStack ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.allow_long_variable_names",
-                Boolean.toString( this.allowLongVarNames ) );
-
-      props.setProperty(
-		"jkcemu.programming.basic.force_cpm",
-                Boolean.toString( this.forceCPM ) );
-
-      props.setProperty(
-		"jkcemu.programming.basic.show_assembler_source",
-                Boolean.toString( this.showAsm ) );
-
-      props.setProperty(
-		"jkcemu.programming.basic.strict_ac1_minibasic",
-                Boolean.toString( this.strictAC1Basic ) );
-
-      props.setProperty(
-		"jkcemu.programming.basic.strict_z1013_tinybasic",
-                Boolean.toString( this.strictZ1013Basic ) );
-
-      props.setProperty(
-		"jkcemu.programming.basic.structured_for_next",
-                Boolean.toString( this.structuredForNext ) );
+		"jkcemu.programming.basic.stack.size",
+                Integer.toString( this.stackSize ) );
 
       props.setProperty(
 		"jkcemu.programming.basic.prefer_relative_jumps",
                 Boolean.toString( this.preferRelJumps ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.print_calls",
-                Boolean.toString( this.printCalls ) );
+		"jkcemu.programming.basic.print_line_num_on_abort",
+                Boolean.toString( this.printLineNumOnAbort ) );
 
-      if( this.breakPossibility != null ) {
-	switch( this.breakPossibility ) {
-	  case BREAK_NEVER:
-	    props.setProperty( "jkcemu.programming.basic.breakable", "never" );
+      props.setProperty(
+		"jkcemu.programming.basic.show_assembler_source",
+                Boolean.toString( this.showAsmText ) );
+
+      props.setProperty(
+		"jkcemu.programming.warn_unused_items",
+		Boolean.toString( this.warnUnusedItems ) );
+
+      if( this.breakOption != null ) {
+	String value = "always";
+	switch( this.breakOption ) {
+	  case NEVER:
+	    value = "never";
 	    break;
-
-	  case BREAK_INPUT:
-	    props.setProperty( "jkcemu.programming.basic.breakable", "input" );
+	  case INPUT:
+	    value = "input";
 	    break;
-
-	  default:
-	    props.setProperty(
-			"jkcemu.programming.basic.breakable",
-			"always" );
 	}
+	props.setProperty( "jkcemu.programming.basic.breakoption", value );
       }
     }
   }

@@ -19,7 +19,9 @@ import jkcemu.text.TextUtil;
 
 public class RAMFloppyFrm extends BasicFrm
 {
-  private ScreenFrm    screenFrm;
+  private static RAMFloppyFrm instance = null;
+
+  private EmuThread    emuThread;
   private RAMFloppyFld rfFld1;
   private RAMFloppyFld rfFld2;
   private String       rfInfo1;
@@ -28,9 +30,99 @@ public class RAMFloppyFrm extends BasicFrm
   private int          rfSize2;
 
 
-  public RAMFloppyFrm( ScreenFrm screenFrm )
+  public static void close()
   {
-    this.screenFrm = screenFrm;
+    if( instance != null )
+      instance.doClose();
+  }
+
+
+  public static void open( EmuThread emuThread )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+        instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new RAMFloppyFrm( emuThread );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean applySettings( Properties props, boolean resizable )
+  {
+    boolean   rv        = super.applySettings( props, resizable );
+    boolean   different = true;
+    if( this.emuThread != null ) {
+      EmuSys emuSys = this.emuThread.getEmuSys();
+      if( emuSys != null ) {
+	RAMFloppy rf1 = null;
+	RAMFloppy rf2 = null;
+	if( emuSys.supportsRAMFloppy1() ) {
+	  rf1 = this.emuThread.getRAMFloppy1();
+	}
+	if( emuSys.supportsRAMFloppy2() ) {
+	  rf2 = this.emuThread.getRAMFloppy2();
+	}
+	if( equalsRF( rf1, this.rfSize1, this.rfInfo1 )
+	    && equalsRF( rf2, this.rfSize2, this.rfInfo2 ) )
+	{
+	  different = false;
+	}
+      }
+    }
+    if( different ) {
+      doClose();
+    }
+    return rv;
+  }
+
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      if( e instanceof ActionEvent ) {
+	String cmd = ((ActionEvent) e).getActionCommand();
+	if( cmd != null ) {
+	  if( cmd.equals( "close" ) ) {
+	    rv = true;
+	    doClose();
+	  }
+	  else if( cmd.equals( "help" ) ) {
+	    rv = true;
+	    HelpFrm.open( "/help/ramfloppy.htm" );
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void resetFired()
+  {
+    if( this.rfFld1 != null ) {
+      this.rfFld1.fireRAMFloppyChanged();
+    }
+    if( this.rfFld2 != null ) {
+      this.rfFld2.fireRAMFloppyChanged();
+    }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private RAMFloppyFrm( EmuThread emuThread )
+  {
+    this.emuThread = emuThread;
     this.rfFld1    = null;
     this.rfFld2    = null;
     this.rfInfo1   = null;
@@ -43,7 +135,6 @@ public class RAMFloppyFrm extends BasicFrm
     int       nRFs      = 0;
     RAMFloppy rf1       = null;
     RAMFloppy rf2       = null;
-    EmuThread emuThread = screenFrm.getEmuThread();
     if( emuThread != null ) {
       EmuSys emuSys = emuThread.getEmuSys();
       if( emuSys != null ) {
@@ -130,85 +221,6 @@ public class RAMFloppyFrm extends BasicFrm
 		  }
 		} )).start();
 
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean applySettings( Properties props, boolean resizable )
-  {
-    boolean   rv        = super.applySettings( props, resizable );
-    boolean   different = true;
-    EmuThread emuThread = this.screenFrm.getEmuThread();
-    if( emuThread != null ) {
-      EmuSys emuSys = emuThread.getEmuSys();
-      if( emuSys != null ) {
-	RAMFloppy rf1 = null;
-	RAMFloppy rf2 = null;
-	if( emuSys.supportsRAMFloppy1() ) {
-	  rf1 = emuThread.getRAMFloppy1();
-	}
-	if( emuSys.supportsRAMFloppy2() ) {
-	  rf2 = emuThread.getRAMFloppy2();
-	}
-	if( equalsRF( rf1, this.rfSize1, this.rfInfo1 )
-	    && equalsRF( rf2, this.rfSize2, this.rfInfo2 ) )
-	{
-	  different = false;
-	}
-      }
-    }
-    if( different ) {
-      doClose();
-    }
-    return rv;
-  }
-
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      if( e instanceof ActionEvent ) {
-	String cmd = ((ActionEvent) e).getActionCommand();
-	if( cmd != null ) {
-	  if( cmd.equals( "close" ) ) {
-	    rv = true;
-	    doClose();
-	  }
-	  else if( cmd.equals( "help" ) ) {
-	    rv = true;
-	    this.screenFrm.showHelp( "/help/ramfloppy.htm" );
-	  }
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public boolean doClose()
-  {
-    boolean rv = super.doClose();
-    if( rv ) {
-      this.screenFrm.childFrameClosed( this );
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void resetFired()
-  {
-    if( this.rfFld1 != null ) {
-      this.rfFld1.fireRAMFloppyChanged();
-    }
-    if( this.rfFld2 != null ) {
-      this.rfFld2.fireRAMFloppyChanged();
-    }
   }
 
 

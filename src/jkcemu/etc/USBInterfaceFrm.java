@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,6 +23,8 @@ public class USBInterfaceFrm
 			extends BasicFrm
 			implements DropTargetListener
 {
+  private static USBInterfaceFrm instance = null;
+
   private ScreenFrm   screenFrm;
   private FileNameFld dirFld;
   private JButton     btnDirSelect;
@@ -32,7 +34,126 @@ public class USBInterfaceFrm
   private JCheckBox   btnForceCurTimestamp;
 
 
-  public USBInterfaceFrm( ScreenFrm screenFrm )
+  public static void close()
+  {
+    if( instance != null )
+      instance.doClose();
+  }
+
+
+  public static void open( ScreenFrm screenFrm )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new USBInterfaceFrm( screenFrm );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+	/* --- DropTargetListener --- */
+
+  @Override
+  public void dragEnter( DropTargetDragEvent e )
+  {
+    if( !EmuUtil.isFileDrop( e ) )
+      e.rejectDrag();
+  }
+
+
+  @Override
+  public void dragExit( DropTargetEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void dragOver( DropTargetDragEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void drop( DropTargetDropEvent e )
+  {
+    File file = EmuUtil.fileDrop( this, e );
+    if( file != null ) {
+      setDirFile( file );
+    }
+  }
+
+
+  @Override
+  public void dropActionChanged( DropTargetDragEvent e )
+  {
+    if( !EmuUtil.isFileDrop( e ) )
+      e.rejectDrag();
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean applySettings( Properties props, boolean resizable )
+  {
+    updFields();
+    return super.applySettings( props, resizable );
+  }
+
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src == this.btnDirSelect ) {
+	rv = true;
+	doDirSelect();
+      }
+      else if( src == this.btnDirRemove ) {
+	rv = true;
+	setDirFile( null );
+      }
+      else if( src == this.btnReadOnly ) {
+	rv = true;
+	setReadOnly( this.btnReadOnly.isSelected() );
+      }
+      else if( src == this.btnForceLowerCase ) {
+	rv = true;
+	setForceLowerCase( this.btnForceLowerCase.isSelected() );
+      }
+      else if( src == this.btnForceCurTimestamp ) {
+	rv = true;
+	setForceCurrentTimestamp( this.btnForceCurTimestamp.isSelected() );
+      }
+      if( !rv && (e instanceof ActionEvent) ) {
+	String cmd = ((ActionEvent) e).getActionCommand();
+	if( cmd != null ) {
+	  if( cmd.equals( "close" ) ) {
+	    rv = true;
+	    doClose();
+	  }
+	  else if( cmd.equals( "help" ) ) {
+	    rv = true;
+	    HelpFrm.open( "/help/usb.htm" );
+          }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private USBInterfaceFrm( ScreenFrm screenFrm )
   {
     this.screenFrm = screenFrm;
     setTitle( "JKCEMU USB-Anschluss" );
@@ -132,102 +253,6 @@ public class USBInterfaceFrm
     // Sonstiges
     (new DropTarget( this.dirFld, this )).setActive( true );
     updFields();
-  }
-
-
-	/* --- DropTargetListener --- */
-
-  @Override
-  public void dragEnter( DropTargetDragEvent e )
-  {
-    if( !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
-  }
-
-
-  @Override
-  public void dragExit( DropTargetEvent e )
-  {
-    // leer
-  }
-
-
-  @Override
-  public void dragOver( DropTargetDragEvent e )
-  {
-    // leer
-  }
-
-
-  @Override
-  public void drop( DropTargetDropEvent e )
-  {
-    File file = EmuUtil.fileDrop( this, e );
-    if( file != null ) {
-      setDirFile( file );
-    }
-  }
-
-
-  @Override
-  public void dropActionChanged( DropTargetDragEvent e )
-  {
-    if( !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean applySettings( Properties props, boolean resizable )
-  {
-    updFields();
-    return super.applySettings( props, resizable );
-  }
-
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.btnDirSelect ) {
-	rv = true;
-	doDirSelect();
-      }
-      else if( src == this.btnDirRemove ) {
-	rv = true;
-	setDirFile( null );
-      }
-      else if( src == this.btnReadOnly ) {
-	rv = true;
-	setReadOnly( this.btnReadOnly.isSelected() );
-      }
-      else if( src == this.btnForceLowerCase ) {
-	rv = true;
-	setForceLowerCase( this.btnForceLowerCase.isSelected() );
-      }
-      else if( src == this.btnForceCurTimestamp ) {
-	rv = true;
-	setForceCurrentTimestamp( this.btnForceCurTimestamp.isSelected() );
-      }
-      if( !rv && (e instanceof ActionEvent) ) {
-	String cmd = ((ActionEvent) e).getActionCommand();
-	if( cmd != null ) {
-	  if( cmd.equals( "close" ) ) {
-	    rv = true;
-	    doClose();
-	  }
-	  else if( cmd.equals( "help" ) ) {
-	    rv = true;
-	    this.screenFrm.showHelp( "/help/usb.htm" );
-          }
-	}
-      }
-    }
-    return rv;
   }
 
 

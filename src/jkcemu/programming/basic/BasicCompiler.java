@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,120 +9,299 @@
 package jkcemu.programming.basic;
 
 import java.awt.*;
-import java.io.IOException;
+import java.io.*;
 import java.lang.*;
 import java.text.*;
 import java.util.*;
 import jkcemu.base.*;
-import jkcemu.emusys.*;
-import jkcemu.text.*;
 import jkcemu.programming.*;
-import jkcemu.programming.assembler.Z80Assembler;
 
 
-public class BasicCompiler extends PrgThread
+public class BasicCompiler
 {
-  public enum Platform {
-			AC1_LLC2, CPM, HUEBLERMC, KC85, KRAMERMC,
-			Z1013, Z9001, UNKNOWN };
+  public static final int    DATA_INT1   = 0x01;
+  public static final int    DATA_INT2   = 0x02;
+  public static final int    DATA_STRING = 0x11;
+  public static final int    MAGIC_GOSUB = 'G';
+  public static final int    MAX_VALUE   = 32767;
+  public static final int    MAX_STR_LEN = 255;
+  public static final String ERR_POS_TEXT = " ??? ";
 
-  private enum LibItem { INLN, R_INT, P_HEXA, P_INT, P_LTXT, P_TEXT, P_TAB,
-			DATA, DREAD,
-			F_RND, F_SGN, F_SIZE, F_SQR,
-			O_OR, O_AND, O_NOT,
-			O_LT, O_LE, O_GT, O_GE, O_EQ, O_NE,
-			O_ADD, O_SUB, O_MUL, O_DIV, O_INC, O_DEC,
-			ABS_NEG_HL,
-			H_CP, H_DIV, H_NEXT, CKSTCK, JP_HL,
-			INCHR, INKEY, CKBRK, ARYADR,
-			E_ARG, E_ARIT, E_BRK, E_NXWF, E_REWG,
-			OUTNL, M_RND, M_KBCH, M_LEN, M_WINT, M_ARY, M_TOP,
-			XOUTCH, XINCH, XINKEY, XINSTS };
+  public static enum DataType { INTEGER, STRING };
 
-  private static final int MAX_VALUE   = 32767;
-  private static final int MIN_VALUE   = -32768;
-  private static final int MAGIC_FOR   = 'F';
-  private static final int MAGIC_GOSUB = 'G';
 
-  private BasicOptions         basicOptions;
-  private BasicSourceFormatter sourceFormatter;
-  private StringBuilder        asmOut;
-  private StringBuilder        dataOut;
-  private String               sysTitle;
-  private String               endOfLineLabel;
-  private Stack<String>        elseLabels;
-  private Platform             platform;
-  private Set<LibItem>         libItems;
-  private Set<String>          varLabels;
-  private Set<Long>            basicLineNums;
-  private Map<Long,LineInfo>   destBasicLineNums;
-  private Map<Long,LineInfo>   restoreBasicLineNums;
-  private Collection<Long>     dataBasicLineNums;
-  private Stack<ForNextEntry>  forNextEntries;
-  private boolean              ac1CompatibilityChecked;
-  private boolean              z1013CompatibilityChecked;
-  private boolean              printStringOpen;
-  private boolean              defmStringOpen;
-  private boolean              suppressExit;
-  private int                  labelNum;
-  private long                 curBasicLineNum;
-  private long                 lastBasicLineNum;
+  // sortierte Liste der reservierten Schluesselwoeter
+  private static final String[] sortedReservedWords = {
+	"ABS", "ADD", "AND", "APPEND", "AS", "ASC", "ASM", "AT",
+	"BIN$", "BLACK", "BLINKING", "BLUE", "BORDER", "BSS",
+	"CALL", "CHR$", "CIRCLE", "CLOSE", "CLS",
+	"CODE", "COLOR", "CURSOR", "CYAN",
+	"DATA", "DECLARE", "DEEK", "DEF", "DEFUSR",
+	"DEFUSR0", "DEFUSR1", "DEFUSR2", "DEFUSR3", "DEFUSR4",
+	"DEFUSR5", "DEFUSR6", "DEFUSR7", "DEFUSR8", "DEFUSR9",
+	"DIM", "DO", "DOKE", "DRAW", "DRAWR",
+	"ELSE", "ELSEIF", "END", "ENDIF", "EOF", "ERR", "ERR$", "EXIT",
+	"FALSE", "FOR", "FUNCTION",
+	"GOSUB", "GOTO", "GREEN",
+	"HEX$", "H_CHAR", "H_PIXEL",
+	"IF", "IN", "INCHAR$", "INCLUDE", "INK", "INKEY$",
+	"INP", "INPUT", "INSTR",
+	"JOYST",
+	"LABEL", "LASTSCREEN", "LEFT$", "LEN", "LET", "LINE",
+	"LOCAL", "LOCATE", "LOOP", "LOWER$", "LTRIM$",
+	"MAGENTA", "MAX", "MEMSTR$", "MID$", "MIN", "MIRROR$",
+	"MOD", "MOVE", "MOVER",
+	"NEXT", "NOT",
+	"ON", "OPEN", "OR", "OUT", "OUTPUT",
+	"PAPER", "PASSWORD", "PAUSE", "PEEK", "PEN",
+	"PLOT", "PLOTR", "POINT", "POKE",
+	"PRESET", "PRINT", "PSET", "PTEST",
+	"READ", "RED", "REM", "RESTORE", "RETURN", "RIGHT$",
+	"RND", "RTRIM$",
+	"SCREEN", "SGN", "SHL", "SHR", "SPACE$",
+	"SQR", "STEP", "STOP", "STR$", "STRING$", "SUB",
+	"TARGET_ADDR", "TARGET_ID$", "TEXT", "THEN", "TO", "TOP",
+	"TRIM$", "TRUE",
+	"UNTIL", "UPPER$", "USING", "USR",
+	"USR0", "USR1", "USR2", "USR3", "USR4",
+	"USR5", "USR6", "USR7", "USR8", "USR9",
+	"VAL",
+	"WAIT", "WEND", "WHILE", "WHITE", "WRITE", "W_CHAR", "W_PIXEL",
+	"XOR", "XPOS",
+	"YELLOW", "YPOS" };
+
+  private String                    srcText;
+  private AbstractTarget            target;
+  private BasicOptions              options;
+  private PrgLogger                 logger;
+  private Set<BasicLibrary.LibItem> libItems;
+  private Set<String>               basicLines;
+  private Collection<BasicLineExpr> destBasicLines;
+  private Set<String>               dataBasicLines;
+  private Collection<BasicLineExpr> restoreBasicLines;
+  private Stack<StructureEntry>     structureStack;
+  private Map<String,CallableEntry> name2Callable;
+  private Map<String,VarDecl>       name2GlobalVar;
+  private Map<String,String>        str2Label;
+  private Set<String>               usrLabels;
+  private AsmCodeBuf                asmOut;
+  private AsmCodeBuf                dataOut;
+  private StringBuilder             userData;
+  private StringBuilder             userBSS;
+  private boolean                   codeGenEnabled;
+  private boolean                   gcRequired;
+  private boolean                   execEnabled;
+  private boolean                   mainPrg;
+  private boolean                   separatorChecked;
+  private boolean                   suppressExit;
+  private boolean                   tmpStrBufUsed;
+  private int                       errCnt;
+  private int                       labelNum;
+  private int                       codePosAtBegOfSrcLine;
+  private int                       curSourceLineNum;
+  private long                      curBasicLineNum;
+  private long                      lastBasicLineNum;
+  private String                    lastBasicLineExpr;
 
 
   public BasicCompiler(
-		EmuThread    emuThread,
-		EditText     editText,
-		String       sourceText,
-		Appendable   logOut,
+		String       srcText,
 		BasicOptions options,
-		boolean      forceRunProgram )
+		PrgLogger    logger )
   {
-    super(
-	"JKCEMU basic compiler",
-	emuThread,
-	editText,
-	sourceText,
-	logOut,
-	options,
-	forceRunProgram );
-    this.basicOptions    = options;
-    this.sourceFormatter = null;
-    if( this.basicOptions.getFormatSource() ) {
-      int capacity = 1024;
-      if( sourceText != null ) {
-	capacity += sourceText.length();
-      }
-      this.sourceFormatter = new BasicSourceFormatter( capacity );
-    }
-    EmuSys emuSys = emuThread.getEmuSys();
-    this.sysTitle = emuSys.getTitle();
-    this.platform = getPlatform( emuSys );
-    if( this.basicOptions.getForceCPM() ) {
-      this.platform = Platform.CPM;
-    }
-    this.libItems                  = new HashSet<LibItem>();
-    this.varLabels                 = new HashSet<String>();
-    this.basicLineNums             = new HashSet<Long>();
-    this.destBasicLineNums         = new HashMap<Long,LineInfo>();
-    this.dataBasicLineNums         = null;
-    this.restoreBasicLineNums      = null;
-    this.forNextEntries            = null;
-    this.asmOut                    = null;
-    this.dataOut                   = null;
-    this.endOfLineLabel            = null;
-    this.elseLabels                = null;
-    this.ac1CompatibilityChecked   = false;
-    this.z1013CompatibilityChecked = false;
-    this.printStringOpen           = false;
-    this.defmStringOpen            = false;
-    this.suppressExit              = false;
-    this.labelNum                  = 1;
-    this.curBasicLineNum           = -1;
-    this.lastBasicLineNum          = -1;
+    this.srcText           = srcText;
+    this.target            = options.getTarget();
+    this.options           = options;
+    this.logger            = logger;
+    this.libItems          = new HashSet<BasicLibrary.LibItem>();
+    this.basicLines        = new TreeSet<String>();
+    this.destBasicLines    = new ArrayList<BasicLineExpr>( 1024 );
+    this.dataBasicLines    = null;
+    this.restoreBasicLines = null;
+    this.structureStack    = new Stack<StructureEntry>();
+    this.name2Callable     = new HashMap<String,CallableEntry>();
+    this.str2Label         = new HashMap<String,String>();
+    this.name2GlobalVar    = new HashMap<String,VarDecl>();
+    this.usrLabels         = new TreeSet<String>();
+    this.asmOut            = new AsmCodeBuf( 4 * this.srcText.length() );
+    this.dataOut           = null;
+    this.userData          = null;
+    this.userBSS           = null;
+    this.codeGenEnabled    = true;
+    this.execEnabled       = true;
+    this.mainPrg           = true;
+    this.gcRequired        = false;
+    this.separatorChecked  = false;
+    this.suppressExit      = false;
+    this.tmpStrBufUsed     = false;
+    this.errCnt            = 0;
+    this.labelNum          = 1;
+    this.curSourceLineNum  = 0;
+    this.curBasicLineNum   = -1;
+    this.lastBasicLineNum  = -1;
+    this.lastBasicLineExpr = null;
   }
 
 
-  public void appendLineNumMsgToLog(
+  public void cancel()
+  {
+    this.execEnabled = false;
+  }
+
+
+  public String compile() throws IOException
+  {
+    String asmText      = null;
+    this.codeGenEnabled = true;
+    this.execEnabled    = true;
+    this.errCnt         = 0;
+    this.target.reset();
+    try {
+      if( this.options.getShowAssemblerText() ) {
+	this.asmOut.append( ";\n"
+		+ ";Dieser Quelltext wurde vom JKCEMU-BASIC-Compiler"
+		+ " erzeugt.\n"
+		+ ";http://www.jens-mueller.org/jkcemu/\n"
+		+ ";\n"
+		+ "\n" );
+      }
+      this.asmOut.append( "\tORG\t" );
+      this.asmOut.appendHex4( this.options.getBegAddr() );
+      this.asmOut.newLine();
+      this.target.appendProlog(
+			this,
+			this.asmOut,
+			this.options.getAppName() );
+      this.asmOut.append( "\tJP\tMINIT\n" );
+      this.target.appendMenuItem(
+			this,
+			this.asmOut,
+			this.options.getAppName() );
+      if( this.options.getShowAssemblerText() ) {
+	this.asmOut.append( "\n;Programmstart\n" );
+      }
+      this.asmOut.append( "MSTART:\n" );
+      parseSourceText();
+      if( this.execEnabled ) {
+	BasicLibrary.appendCodeTo( this.asmOut, this.target, this );
+	BasicLibrary.appendInitTo(
+				this.asmOut,
+				this.target,
+				this.options,
+				this.libItems,
+				this.name2GlobalVar,
+				this.usrLabels );
+	this.asmOut.append( "\tJP\tMSTART\n" );
+	if( libItems.contains( BasicLibrary.LibItem.DATA ) ) {
+	  if( this.options.getShowAssemblerText() ) {
+	    this.asmOut.append( "\n;DATA-Zeilen\n" );
+	  }
+	  this.asmOut.append( "DBEG:\n" );
+	  if( this.dataOut != null ) {
+	    this.asmOut.append( this.dataOut );
+	    this.asmOut.append( "\tDB\t00H\n" );
+	  }
+	}
+	BasicLibrary.appendData(
+			this.asmOut,
+			this.target,
+			this.options ,
+			this.libItems,
+			this.str2Label,
+			this.userData );
+	BasicLibrary.appendBSS(
+			this.asmOut,
+			this.target,
+			this.options,
+			this.libItems,
+			this.name2GlobalVar,
+			this.usrLabels,
+			this.userBSS );
+	if( this.errCnt == 0 ) {
+	  asmText = this.asmOut.toString();
+	}
+      }
+    }
+    catch( TooManyErrorsException ex ) {
+      appendToErrLog( "\nAbgebrochen aufgrund zu vieler Fehler\n" );
+    }
+    if( this.execEnabled && (this.errCnt > 0) ) {
+      appendToErrLog( String.format( "%d Fehler\n", this.errCnt ) );
+    }
+    return asmText;
+  }
+
+
+  public BasicOptions getBasicOptions()
+  {
+    return this.options;
+  }
+
+
+  public Set<BasicLibrary.LibItem> getLibItems()
+  {
+    return this.libItems;
+  }
+
+
+  public boolean isLangCode( String langCode )
+  {
+    boolean rv = false;
+    if( langCode != null ) {
+      String curLangCode = this.options.getLangCode();
+      if( curLangCode != null ) {
+	rv = langCode.equalsIgnoreCase( curLangCode );
+      }
+    }
+    return rv;
+  }
+
+
+  public boolean usesLibItem( BasicLibrary.LibItem libItem )
+  {
+    return this.libItems.contains( libItem );
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void appendLineNotFoundToErrLog(
+		BasicLineExpr lineExpr,
+		String        trailingMsg ) throws TooManyErrorsException
+  {
+    if( lineExpr != null ) {
+      StringBuilder buf = new StringBuilder( 128 );
+      buf.append( "Fehler" );
+      if( lineExpr.getSourceLineNum() > 0 ) {
+	buf.append( " in Zeile " );
+	buf.append( lineExpr.getSourceLineNum() );
+	if( lineExpr.getSourceBasicLineNum() >= 0 ) {
+	  buf.append( " (BASIC-Zeilennummer " );
+	  buf.append( lineExpr.getSourceBasicLineNum() );
+	  buf.append( (char) ')' );
+	}
+      }
+      buf.append( ": " );
+      if( lineExpr.isLabel() ) {
+	buf.append( "Marke \'" );
+	buf.append( lineExpr.getExprText() );
+	buf.append( (char) '\'' );
+      } else {
+	buf.append( "BASIC-Zeilennummer " );
+	buf.append( lineExpr.getExprText() );
+      }
+      buf.append( " nicht gefunden" );
+      if( trailingMsg != null ) {
+	buf.append( trailingMsg );
+      }
+      buf.append( (char) '\n' );
+      appendToErrLog( buf.toString() );
+      incErrorCount();
+    }
+  }
+
+
+  private void appendLineNumMsgToErrLog(
 			int    sourceLineNum,
 			long   basicLineNum,
 			String msg,
@@ -153,250 +332,24 @@ public class BasicCompiler extends PrgThread
     if( !msg.endsWith( "\n" ) ) {
       buf.append( (char) '\n' );
     }
-    appendToLog( buf.toString() );
+    appendToErrLog( buf.toString() );
   }
 
 
-  public void appendLineNumMsgToLog( String msg, String msgType )
+  private void appendLineNumMsgToErrLog( String msg, String msgType )
   {
-    appendLineNumMsgToLog(
-		getSourceLineNum(),
+    appendLineNumMsgToErrLog(
+		this.curSourceLineNum,
 		this.curBasicLineNum,
 		msg,
 		msgType );
   }
 
 
-  public static Platform getPlatform( EmuSys emuSys )
+  private void appendToErrLog( String text )
   {
-    Platform platform = Platform.UNKNOWN;
-    if( emuSys != null ) {
-      if( (emuSys instanceof AC1)
-	  || (emuSys instanceof LLC2) )
-      {
-	platform = Platform.AC1_LLC2;
-      }
-      else if( (emuSys instanceof HueblerEvertMC)
-	       || (emuSys instanceof HueblerGraphicsMC) )
-      {
-	platform = Platform.HUEBLERMC;
-      }
-      else if( emuSys instanceof KC85 ) {
-	platform = Platform.KC85;
-      }
-      else if( emuSys instanceof KramerMC ) {
-	platform = Platform.KRAMERMC;
-      }
-      else if( emuSys instanceof PCM ) {
-	platform  = Platform.CPM;
-      }
-      else if( emuSys instanceof Z1013 ) {
-	platform  = Platform.Z1013;
-      }
-      else if( emuSys instanceof Z9001 ) {
-	platform = Platform.Z9001;
-      }
-    }
-    return platform;
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public void run()
-  {
-    EditFrm editFrm = this.editText.getEditFrm();
-    this.asmOut     = new StringBuilder( 4 * getSourceLength() );
-    try {
-      try {
-	clearErrorCount();
-	appendToLog( "Compiliere...\n" );
-	if( this.platform == Platform.UNKNOWN ) {
-	  appendToLog(
-		String.format(
-			"Fehler: %s wird als Zielsystem"
-					+ " nicht unterst\u00FCtzt.\n",
-			this.sysTitle ) );
-	  incErrorCount();
-	} else {
-	  String text = null;
-	  switch( this.platform ) {
-	    case AC1_LLC2:
-	      text = "AC1, LLC2";
-	      break;
-
-	    case CPM:
-	      text = "CP/M";
-	      break;
-
-	    case HUEBLERMC:
-	      text = "H\u00FCbler-MC";
-	      break;
-
-	    case KC85:
-	      text = "HC900, KC85/2..5";
-	      break;
-
-	    case KRAMERMC:
-	      text = "Kramer-MC";
-	      break;
-
-	    case Z1013:
-	      text = "Z1013";
-	      break;
-
-	    case Z9001:
-	      text = "Z9001, KC85/1, KC87";
-	      break;
-	  }
-	  if( text != null ) {
-	    appendToLog( String.format( "Zielsystem: %s\n", text ) );
-	  }
-	  parseSource();
-	  closePrintString();
-	  if( this.running ) {
-	    int stackSize = this.basicOptions.getStackSize();
-	    putLibrary( stackSize );
-	    writeInit();
-	    putDefMem( stackSize );
-	    if( (getErrorCount() == 0)
-		&& (this.forceRun
-		    || this.options.getCodeToEmu()
-		    || this.options.getCodeToFile()) )
-	    {
-	      (new Z80Assembler(
-			this.emuThread,
-			this.editText,
-			this.asmOut.toString(),
-			this.logOut,
-			this.options,
-			this.forceRun )).assemble();
-	    }
-	  }
-	}
-      }
-      catch( TooManyErrorsException ex ) {
-	appendToLog( "\nAbgebrochen aufgrund zu vieler Fehler\n" );
-      }
-      if( this.running ) {
-	if( getErrorCount() > 0 ) {
-	  appendErrorCountToLog();
-	} else {
-	  if( this.sourceFormatter != null ) {
-	    fireReplaceSourceText( this.sourceFormatter.toString() );
-	  }
-	  if( this.basicOptions.getShowAsm() && (this.asmOut != null) ) {
-	    final String       text    = this.asmOut.toString();
-	    final BasicOptions options = new BasicOptions( this.basicOptions );
-	    EventQueue.invokeLater(
-			new Runnable()
-			{
-			  public void run()
-			  {
-			    openAsmText( text, options );
-			  }
-			} );
-	  }
-	  appendToLog( "Fertig\n" );
-	}
-      }
-    }
-    catch( IOException ex ) {
-      String msg = ex.getMessage();
-      if( msg != null ) {
-	if( msg.endsWith( "\n" ) ) {
-	  appendToLog( "Fehler: " + msg );
-	} else {
-	  appendToLog( "Fehler: " + msg + "\n" );
-	}
-      } else {
-	appendToLog( "Ein-/Ausgabefehler\n" );
-      }
-    }
-    catch( Exception ex ) {
-      EventQueue.invokeLater( new ErrorMsg( editFrm, ex ) );
-    }
-    if( editFrm != null )
-      editFrm.threadTerminated( this );
-  }
-
-
-	/* --- private Methoden --- */
-
-  private int appendAppName( StringBuilder buf, String preText, int nameLen )
-  {
-    boolean invalidChars = false;
-    int     nChars       = 0;
-    String  appName      = this.basicOptions.getAppName();
-    if( appName != null ) {
-      int len = appName.length();
-      for( int i = 0;
-	   (i < len) && ((nameLen < 0) || (nChars < nameLen));
-	   i++ )
-      {
-	char ch = appName.charAt( i );
-	if( (ch >= '\u0020') && (ch < 0x7F) ) {
-	  if( nChars == 0 ) {
-	    if( preText != null ) {
-	      buf.append( preText );
-	    }
-	    buf.append( "\tDEFM\t\'" );
-	  }
-	  buf.append( ch );
-	  nChars++;
-	} else {
-	  invalidChars = true;
-	}
-      }
-    }
-    int rv = nChars;
-    if( nameLen > 0 ) {
-      if( (nChars == 0) && (nameLen > 0) ) {
-	if( preText != null ) {
-	  buf.append( preText );
-	}
-	buf.append( "\tDEFM\t\'" );
-      }
-      while( nChars < nameLen ) {
-	buf.append( (char) '\u0020');
-	nChars++;
-      }
-    }
-    if( nChars > 0 ) {
-      buf.append( "\'\n" );
-    }
-    if( invalidChars ) {
-      putWarning( "Nicht erlaubte Zeichen aus Programmnamen entfernt" );
-    }
-    return rv;
-  }
-
-
-  private void appendToLogLineNotFound( LineInfo lineInfo )
-						throws TooManyErrorsException
-  {
-    if( lineInfo != null ) {
-      Long missingBasicLineNum = lineInfo.getMissingBasicLineNum();
-      if( missingBasicLineNum != null ) {
-	StringBuilder buf = new StringBuilder( 128 );
-	if( lineInfo.getSourceLineNum() > 0 ) {
-	  buf.append( "Fehler in Zeile " );
-	  buf.append( lineInfo.getSourceLineNum() );
-	  if( lineInfo.getBasicLineNum() >= 0 ) {
-	    buf.append( " (BASIC-Zeilennummer " );
-	    buf.append( lineInfo.getBasicLineNum() );
-	    buf.append( (char) ')' );
-	  }
-	  buf.append( ": " );
-	}
-	buf.append( "Zeile mit BASIC-Zeilennummer " );
-	buf.append( missingBasicLineNum );
-	buf.append( " nicht gefunden\n" );
-	appendToLog( buf.toString() );
-	incErrorCount();
-      }
-    }
+    if( this.logger != null )
+      this.logger.appendToErrLog( text );
   }
 
 
@@ -418,379 +371,583 @@ public class BasicCompiler extends PrgThread
 			boolean           fmtSource,
 			boolean           space )
   {
-    char ch     = skipSpaces( iter );
-    int  begPos = iter.getIndex();
-    int  len    = keyword.length();
+    boolean rv = true;
+    char    ch     = skipSpaces( iter );
+    int     begPos = iter.getIndex();
+    int     len    = keyword.length();
     for( int i = 0; i < len; i++ ) {
-      if( ch == '.' ) {
-	iter.next();
-	break;
-      }
       if( keyword.charAt( i ) != Character.toUpperCase( ch ) ) {
 	iter.setIndex( begPos );
-	return false;
+	rv = false;
+	break;
       }
       ch = iter.next();
     }
-    if( fmtSource && (this.sourceFormatter != null) ) {
-      this.sourceFormatter.replaceByKeyword( begPos, keyword, space );
-    }
-    return true;
-  }
-
-
-  private boolean checkPrintStringLiteral( CharacterIterator iter )
-							throws PrgException
-  {
-    boolean rv = false;
-    char    ch = skipSpaces( iter );
-    if( (ch == '\'') || (ch == '\"') ) {
-      if( this.sourceFormatter != null ) {
-	this.sourceFormatter.formatLast();
-      }
-      rv           = true;
-      char endChar = ch;
-      ch           = iter.next();
-      while( (ch != CharacterIterator.DONE) && (ch != endChar) ) {
-	putCharToPrintString( ch );
-	ch = iter.next();
-      }
-      if( ch == endChar ) {
-	iter.next();
-	if( this.sourceFormatter != null ) {
-	  this.sourceFormatter.copyLast();
-	}
-      } else {
-	if( this.sourceFormatter != null ) {
-	  this.sourceFormatter.copyLast();
-	  this.sourceFormatter.append( endChar );
-	}
-	putWarning( "String-Literal nicht geschlossen" );
-      }
-    }
-    return rv;
-  }
-
-
-  private String checkVarGetAddrExpr( CharacterIterator iter )
-							throws PrgException
-  {
-    String rv = null;
-    char   ch = skipSpaces( iter );
-    if( ((ch >= 'A') && (ch <= 'Z'))
-	|| ((ch >= 'a') && (ch <= 'z')) )
-    {
-      String varName = readSimpleVarName( iter );
-      int    len     = varName.length();
-      if( len > 0 ) {
-	if( varName.equals( "ABS" )
-	    || varName.equals( "DEEK" )
-	    || varName.equals( "ELSE" )
-	    || varName.equals( "HEX" )
-	    || varName.equals( "INCHAR" )
-	    || varName.equals( "INKEY" )
-	    || varName.equals( "INP" )
-	    || varName.equals( "IN" )
-	    || varName.equals( "LEN" )
-	    || varName.equals( "PEEK" )
-	    || varName.equals( "RND" )
-	    || varName.equals( "SIZE" )
-	    || varName.equals( "SGN" )
-	    || varName.equals( "SQR" )
-	    || varName.equals( "TOP" ) )
-	{
-	  throw new PrgException( varName
-			+ ": Der Name der Variable ist ein reserviertes"
-			+ " Schl\u00FCsselwort und somit nicht erlaubt" );
-	}
-	if( len > 1 ) {
-	  ac1BasicMismatch();
-	  z1013BasicMismatch();
-	}
-	rv = "M_V" + varName;
-	this.varLabels.add( rv );
-      }
-    }
-    else if( ch == '@' ) {
-      iter.next();
-      Integer value = checkEnclosedConstExpr( iter );
-      if( value != null ) {
-	rv = getArrayVarAddrExpr( value.intValue() );
-      } else {
-	parseEnclosedExpr( iter );
-	putCode( "\tCALL\tARYADR\n" );
-	this.libItems.add( LibItem.ARYADR );
-	rv = "HL";
-      }
-    }
-    return rv;
-  }
-
-
-  private void closePrintString()
-  {
-    if( this.printStringOpen ) {
-      if( this.defmStringOpen ) {
-	writeCode( "\'\n" );
-	this.defmStringOpen = false;
-      }
-      writeCode( "\tDEFB\t0\n" );
-      this.printStringOpen = false;
-    }
-  }
-
-
-  private static String createBasicLineLabel( long basicLineNum )
-  {
-    return "L" + String.valueOf( basicLineNum );
-  }
-
-
-  private String createLabelForDestBasicLine( long basicLineNum )
-  {
-    Long keyObj = new Long( basicLineNum );
-    if( !this.destBasicLineNums.containsKey( keyObj ) ) {
-      this.destBasicLineNums.put(
-		keyObj,
-		new LineInfo( getSourceLineNum(), this.curBasicLineNum ) );
-    }
-    return createBasicLineLabel( basicLineNum );
-  }
-
-
-  private String getArrayVarAddrExpr( int idx ) throws PrgException
-  {
-    StringBuilder buf = new StringBuilder();
-    buf.append( "M_ARY" );
-    this.libItems.add( LibItem.M_ARY );
-    if( idx < 0 ) {
-      throw new PrgException( "Negativer Index in Array nicht erlaubt" );
-    }
-    if( idx >= this.basicOptions.getArraySize() ) {
-      appendLineNumMsgToLog(
-		"@( " + String.valueOf( idx ) + " ) liegt au\u00DFerhalb"
-			+ " der in den Optionen eingestellten Gr\u00F6\u00DFe"
-			+ " des @-Variablen-Arrays",
-		"Warnung" );
-    }
-    if( idx > 0 ) {
-      buf.append( (char) '+' );
-      buf.append( getHex4( idx * 2 ) );
-    }
-    return buf.toString();
-  }
-
-
-  private static String getHex2( int value )
-  {
-    value &= 0xFF;
-    return value < 0xA0 ?
-		String.format( "%02XH", value )
-		: String.format( "0%02XH", value );
-  }
-
-
-  private static String getHex4( int value )
-  {
-    value &= 0xFFFF;
-    return value < 0xA000 ?
-		String.format( "%04XH", value )
-		: String.format( "0%04XH", value );
-  }
-
-
-  private void parseSource() throws IOException, TooManyErrorsException
-  {
-    if( this.basicOptions.getStructuredForNext() ) {
-      this.forNextEntries = new Stack<ForNextEntry>();
-    } else {
-      this.forNextEntries = null;
-    }
-    String line = readLine();
-    while( this.running && (line != null) ) {
-      parseLine( line.trim() );
-      line = readLine();
-    }
-    if( this.basicOptions.getShowAsm() && !this.suppressExit ) {
-      putCode( "\n;Programmende\n" );
-    }
-    putExit();
-
-    // Pruefen, ob zu jeder FOR-Anweisung auch eine NEXT-Anweisung existiert
-    if( this.forNextEntries != null ) {
-      for( ForNextEntry entry : this.forNextEntries ) {
-	appendLineNumMsgToLog(
-			entry.getSourceLineNum(),
-			entry.getBasicLineNum(),
-			"FOR-Schleife nicht mit NEXT abgeschlossen",
-			"Warnung" );
-      }
-    }
-
-    // Vorhandensein der Sprungziele und der RESTORE-Zeilennummern pruefen
-    java.util.List<LineInfo> lineInfos = null;
-
-    Collection<Long> reqBasicLineNums = this.destBasicLineNums.keySet();
-    if( reqBasicLineNums != null ) {
-      for( Long reqBasicLineNum : reqBasicLineNums ) {
-	if( !this.basicLineNums.contains( reqBasicLineNum ) ) {
-	  LineInfo lineInfo = this.destBasicLineNums.get( reqBasicLineNum );
-	  if( lineInfo == null ) {
-	    lineInfo = new LineInfo( -1, -1 );
-	  }
-	  lineInfo.setMissingBasicLineNum( reqBasicLineNum );
-	  if( lineInfos == null ) {
-	    lineInfos = new ArrayList<LineInfo>();
-	  }
-	  lineInfos.add( lineInfo );
-	}
-      }
-    }
-    if( this.restoreBasicLineNums != null ) {
-      reqBasicLineNums = this.restoreBasicLineNums.keySet();
-      if( reqBasicLineNums != null ) {
-	for( Long reqBasicLineNum : reqBasicLineNums ) {
-	  boolean exists = false;
-	  if( this.dataBasicLineNums != null ) {
-	    exists = this.dataBasicLineNums.contains( reqBasicLineNum );
-	  }
-	  if( !exists ) {
-	    LineInfo lineInfo = this.destBasicLineNums.get( reqBasicLineNum );
-	    if( lineInfo == null ) {
-	      lineInfo = new LineInfo( -1, -1 );
-	    }
-	    lineInfo.setMissingBasicLineNum( reqBasicLineNum );
-	    if( lineInfos == null ) {
-	      lineInfos = new ArrayList<LineInfo>();
-	    }
-	    lineInfos.add( lineInfo );
-	  }
-        }
-      }
-    }
-    if( lineInfos != null ) {
-      try {
-	Collections.sort( lineInfos );
-      }
-      catch( ClassCastException ex ) {}
-      for( LineInfo lineInfo : lineInfos ) {
-	appendToLogLineNotFound( lineInfo );
-      }
-    }
-
-    /*
-     * Reservierung fuer Variablen-Array pruefen
-     * Array-Zugriffe mit einem konstanten Index werden bereits
-     * bei deren Parsen geprueft.
-     * Dehalb erfolgt hier nur eine Warnung,
-     * wenn es Array-Zugriffe mit variablen Index gibt,
-     * jedoch fuer das Array kein Platz reserviert wurde.
-     */
-    if( this.libItems.contains( LibItem.ARYADR )
-	&& (this.basicOptions.getArraySize() <= 0) )
-    {
-      appendToLog( "Warnung: Es werden @-Variablen verwendet,"
-		+ " ohne dass in den Optionen daf\u00FCr Platz"
-		+ " reserviert wurde.\n" );
-    }
-  }
-
-
-  private void parseLine( String lineText ) throws
-						IOException,
-						TooManyErrorsException
-  {
-    this.ac1CompatibilityChecked   = false;
-    this.z1013CompatibilityChecked = false;
-    this.endOfLineLabel            = null;
-    if( this.elseLabels != null ) {
-      this.elseLabels.clear();
-    }
-    if( this.basicOptions.getShowAsm() && (lineText.length() > 0) ) {
-      putCode( "\n;" );
-      putCode( lineText );
-      putCode( '\n' );
-    }
-    CharacterIterator iter = null;
-    try {
-      iter = new StringCharacterIterator( lineText );
-
-      // Zeilenummer
-      char ch = iter.first();
-      while( (ch != CharacterIterator.DONE)
-	     && Character.isWhitespace( ch ) )
+    if( rv ) {
+      if( ((ch >= 'A') && (ch <= 'Z'))
+	  || ((ch >= 'a') && (ch <= 'z'))
+	  || (ch == '$') )
       {
-	ch = iter.next();
+	rv = false;
       }
-      this.curBasicLineNum = -1;
-      if( (ch >= '0') && (ch <= '9') ) {
-	this.curBasicLineNum = ch - '0';
-	ch = iter.next();
-	while( (ch >= '0') && (ch <= '9') ) {
-	  this.curBasicLineNum = (this.curBasicLineNum * 10L) + (ch - '0');
-	  if( this.curBasicLineNum > Integer.MAX_VALUE ) {
-	    throw new PrgException( "BASIC-Zeilennummer zu gro\u00DF" );
+    }
+    return rv;
+  }
+
+
+  private Integer checkSignedNumber( CharacterIterator iter )
+						throws PrgException
+  {
+    boolean neg = false;
+    char    ch  = skipSpaces( iter );
+    int     pos = iter.getIndex();
+    if( ch == '+' ) {
+      iter.next();
+    } else if( ch == '-' ) {
+      iter.next();
+      neg = true;
+    }
+    Integer rv = readNumber( iter );
+    if( (rv != null) && neg ) {
+      rv = new Integer( -rv.intValue() );
+    }
+    if( rv == null ) {
+      iter.setIndex( pos );
+    }
+    return rv;
+  }
+
+
+  private SimpleVarInfo checkVariable(
+				CharacterIterator iter ) throws PrgException
+  {
+    int           begPos  = iter.getIndex();
+    SimpleVarInfo varInfo = checkVariable(
+				iter,
+				checkIdentifier( iter ) );
+    if( varInfo == null ) {
+      iter.setIndex( begPos );
+    }
+    return varInfo;
+  }
+
+
+  /*
+   * Die Methode prueft, ob der uebergebene Name eine Variable ist
+   * bzw. als einfach Variable gewertet werden kann (implizite Deklaration).
+   * Wenn ja, wird die Variable vollstaendig geparst (evtl. Indexe)
+   * und ein VarInfo-Objekt zurueckgeliefert.
+   * Ist in dem Objekt das Attribute "addrExpr" gefuellt,
+   * bescheibt dieses die Adresse der Variablen.
+   * Im dem Fall wurde keine Code erzeugt.
+   * Ist dagegen "addrExpr" null, wurde Code erzeugt,
+   * der im HL-Register die Adresse der Variablen enthaelt.
+   */
+  private SimpleVarInfo checkVariable(
+			CharacterIterator iter,
+			String            varName ) throws PrgException
+  {
+    SimpleVarInfo varInfo = null;
+    if( varName != null ) {
+      if( !varName.isEmpty() ) {
+	if( Arrays.binarySearch( sortedReservedWords, varName ) < 0 ) {
+	  boolean done     = false;
+	  String  addrExpr = null;
+	  Integer iyOffs   = null;
+
+	  // auf lokale Variable prufen
+	  CallableEntry callableEntry = getCallableEntry();
+	  if( callableEntry != null ) {
+	    if( !varName.equals( callableEntry.getName() ) ) {
+	      iyOffs = callableEntry.getIYOffs( varName );
+	      if( iyOffs != null ) {
+		callableEntry.setVarUsed( varName );
+		done = true;
+	      }
+	    }
 	  }
-	  ch = iter.next();
+
+	  /*
+	   * Wenn es keine benutzerdefinierte Funktion/Prozedur ist,
+	   * muss es eine globale Variable sein.
+	   */
+	  if( !done && !this.name2Callable.containsKey( varName ) ) {
+	    VarDecl varDecl  = this.name2GlobalVar.get( varName );
+	    if( varDecl != null ) {
+	      varDecl.setUsed();
+	      if( varDecl.getDimCount() > 0 ) {
+		parseToken( iter, '(' );
+		if( varDecl.getDimCount() == 1 ) {
+		  int pos = this.asmOut.length();
+		  parseExpr( iter );
+		  Integer idx = removeLastCodeIfConstExpr( pos );
+		  if( idx != null ) {
+		    if( (idx.intValue() < 0) || (idx > varDecl.getDim1()) ) {
+		      throwIndexOutOfRange();
+		    }
+		    if( idx.intValue() > 0 ) {
+		      if( idx.intValue() >= 0xA000 ) {
+			addrExpr = String.format(
+					"%s+0%04XH",
+					varDecl.getLabel(),
+					idx.intValue() * 2 );
+		      } else {
+			addrExpr = String.format(
+					"%s+%04XH",
+					varDecl.getLabel(),
+					idx.intValue() * 2 );
+		      }
+		    } else {
+		      addrExpr = varDecl.getLabel();
+		    }
+		  } else {
+		    if( this.options.getCheckBounds() ) {
+		      this.asmOut.append_LD_BC_nn( varDecl.getDim1() + 1 );
+		      this.asmOut.append_LD_DE_xx( varDecl.getLabel() );
+		      this.asmOut.append( "\tCALL\tARYADR\n" );
+		      addLibItem( BasicLibrary.LibItem.ARYADR );
+		    } else {
+		      this.asmOut.append( "\tADD\tHL,HL\n" );
+		      this.asmOut.append_LD_DE_xx( varDecl.getLabel() );
+		      this.asmOut.append( "\tADD\tHL,DE\n" );
+		    }
+		  }
+		} else if( varDecl.getDimCount() == 2 ) {
+		  int pos = this.asmOut.length();
+		  parseExpr( iter );
+		  Integer idx1 = removeLastCodeIfConstExpr( pos );
+		  if( idx1 != null ) {
+		    if( (idx1.intValue() < 0)
+			|| (idx1.intValue() > varDecl.getDim1()) )
+		    {
+		      throwIndexOutOfRange();
+		    }
+		  } else {
+		    if( this.options.getCheckBounds() ) {
+		      this.asmOut.append_LD_BC_nn( varDecl.getDim1() + 1 );
+		      this.asmOut.append( "\tCALL\tCKIDX\n" );
+		      addLibItem( BasicLibrary.LibItem.CKIDX );
+		    }
+		  }
+		  parseToken( iter, ',' );
+		  pos = this.asmOut.length();
+		  parseExpr( iter );
+		  Integer idx2 = removeLastCodeIfConstExpr( pos );
+		  if( idx2 != null ) {
+		    if( (idx2.intValue() < 0)
+			|| (idx2.intValue() > varDecl.getDim2()) )
+		    {
+		      throwIndexOutOfRange();
+		    }
+		    if( idx1 != null ) {
+		      this.asmOut.append( "\tLD\tHL," );
+		      this.asmOut.append( varDecl.getLabel() );
+		      int offs = ((idx1.intValue() * (varDecl.getDim2() + 1))
+						+ idx2.intValue()) * 2;
+		      if( offs > 0 ) {
+			this.asmOut.append( '+' );
+			this.asmOut.appendHex4( offs );
+		      }
+		      this.asmOut.newLine();
+		    } else {
+		      if( varDecl.getDim2() == 1 ) {
+			this.asmOut.append( "\tADD\tHL,HL\n" );
+		      } else {
+			this.asmOut.append_LD_DE_nn( varDecl.getDim2() + 1 );
+			this.asmOut.append( "\tCALL\tO_MUL\n" );
+			addLibItem( BasicLibrary.LibItem.O_MUL );
+		      }
+		      if( idx2.intValue() == 1 ) {
+			this.asmOut.append( "\tINC\tHL\n" );
+		      } else if( idx2.intValue() > 1 ) {
+			this.asmOut.append_LD_DE_nn( idx2.intValue() );
+			this.asmOut.append( "\tADD\tHL,DE\n" );
+		      }
+		      this.asmOut.append( "\tADD\tHL,HL\n"
+					  + "\tLD\tDE," );
+		      this.asmOut.append( varDecl.getLabel() );
+		      this.asmOut.append( "\n"
+					  + "\tADD\tHL,DE\n" );
+		    }
+		  } else {
+		    if( this.options.getCheckBounds() ) {
+		      this.asmOut.append_LD_BC_nn( varDecl.getDim2() + 1 );
+		      this.asmOut.append( "\tCALL\tCKIDX\n" );
+		      addLibItem( BasicLibrary.LibItem.CKIDX );
+		    }
+		    if( idx1 != null ) {
+		      this.asmOut.append_LD_DE_nn(
+				  idx1.intValue() * (varDecl.getDim2() + 1) );
+		    } else {
+		      if( varDecl.getDim2() == 1 ) {
+			this.asmOut.insert(
+				pos,
+				"\tADD\tHL,HL\n"
+					+ "\tPUSH\tHL\n" );
+		      } else {
+			this.asmOut.insert(
+				pos,
+				String.format(
+					"\tLD\tDE,%04XH\n"
+						+ "\tCALL\tO_MUL\n"
+						+ "\tPUSH\tHL\n",
+				varDecl.getDim2() + 1 ) );
+			addLibItem( BasicLibrary.LibItem.O_MUL );
+		      }
+		      this.asmOut.append( "\tPOP\tDE\n" );
+		    }
+		    this.asmOut.append( "\tADD\tHL,DE\n"
+					+ "\tADD\tHL,HL\n"
+					+ "\tLD\tDE," );
+		    this.asmOut.append( varDecl.getLabel() );
+		    this.asmOut.append( "\n"
+					+ "\tADD\tHL,DE\n" );
+		  }
+		}
+		parseToken( iter, ')' );
+	      } else {
+		addrExpr = varDecl.getLabel();
+	      }
+	    } else {
+	      if( callableEntry != null ) {
+		throw new PrgException( "Implizite Variablendeklaration"
+			+ " in einer Funktion/Prozedur nicht erlaubt" );
+	      }
+	      // implizite Variablendeklaration, aber nur im Hauptprogramm
+	      varDecl = new VarDecl(
+				this.curSourceLineNum,
+				this.curBasicLineNum,
+				varName );
+	      varDecl.setUsed();
+	      this.name2GlobalVar.put( varName, varDecl );
+	      addrExpr = varDecl.getLabel();
+	    }
+	    done = true;
+	  }
+	  if( done ) {
+	    if( varName.endsWith( "$" ) ) {
+	      varInfo = new SimpleVarInfo(
+					DataType.STRING,
+					addrExpr,
+					iyOffs );
+	    } else {
+	      varInfo = new SimpleVarInfo(
+					DataType.INTEGER,
+					addrExpr,
+					iyOffs );
+	    }
+	  }
 	}
-	if( this.basicOptions.getStrictAC1MiniBASIC() ) {
-	  if( this.curBasicLineNum == 0 ) {
-	    putWarning( "BASIC-Zeilennummer 0 nicht m\u00F6glich"
-		+ " im originalen AC1-Mini-BASIC" );
-	  }
-	  else if( this.curBasicLineNum > MAX_VALUE ) {
-	    putWarning( "BASIC-Zeilennummer "
-		+ String.valueOf( this.curBasicLineNum )
-		+ " zu gro\u00DF f\u00FCr originales AC1-Mini-BASIC" );
-	  }
+      }
+    }
+    return varInfo;
+  }
+
+
+  private static String createBasicLineLabel( String lineExprText )
+  {
+    return "L_" + lineExprText.toUpperCase();
+  }
+
+
+  private static String createDataLineLabel( String lineExprText )
+  {
+    return "D_" + lineExprText.toUpperCase();
+  }
+
+
+  private void incErrorCount() throws TooManyErrorsException
+  {
+    this.errCnt++;
+    if( this.errCnt >= 100 ) {
+      throw new TooManyErrorsException();
+    }
+  }
+
+
+  private void parseSourceText()
+			throws IOException, TooManyErrorsException
+  {
+    this.structureStack.clear();
+    this.mainPrg          = true;
+    this.gcRequired       = false;
+    this.curSourceLineNum = 0;
+    if( this.srcText != null ) {
+      BufferedReader reader = new BufferedReader(
+					new StringReader( this.srcText ) );
+      String line = reader.readLine();
+      while( this.execEnabled && (line != null) ) {
+        this.curSourceLineNum++;
+        parseSourceLine( line );
+        line = reader.readLine();
+      }
+    }
+    if( this.mainPrg && !this.suppressExit ) {
+      if( this.options.getShowAssemblerText() ) {
+	this.asmOut.append( "\n;Programmende\n" );
+      }
+      this.asmOut.append( "\tJP\tXEXIT\n" );
+    }
+
+    // Pruefen, ob alle Strukturen geschlossen wurden
+    for( StructureEntry entry : this.structureStack ) {
+      appendLineNumMsgToErrLog(
+		entry.getSourceLineNum(),
+		entry.getBasicLineNum(),
+		entry.toString() + " nicht abgeschlossen",
+		"Fehler" );
+      this.errCnt++;
+    }
+
+    // Vorhandensein der Sprungziele und RESTORE-Positionen pruefen
+    if( this.destBasicLines != null ) {
+      for( BasicLineExpr lineExpr : this.destBasicLines ) {
+	if( !this.basicLines.contains(
+			lineExpr.getExprText().toUpperCase() ) )
+	{
+	  appendLineNotFoundToErrLog( lineExpr, null );
 	}
-	if( this.basicOptions.getStrictZ1013TinyBASIC() ) {
-	  if( this.curBasicLineNum == 0 ) {
-	    putWarning( "BASIC-Zeilennummer 0 nicht m\u00F6glich"
-		+ " im originalen Z1013-Tiny-BASIC" );
-	  }
-	  else if( this.curBasicLineNum > MAX_VALUE ) {
-	    putWarning( "BASIC-Zeilennummer "
-		+ String.valueOf( this.curBasicLineNum )
-		+ " zu gro\u00DF f\u00FCr originales Z1013-Tiny-BASIC" );
-	  }
+      }
+    }
+    if( this.restoreBasicLines != null ) {
+      for( BasicLineExpr lineExpr : this.restoreBasicLines ) {
+	boolean found = false;
+	if( this.dataBasicLines != null ) {
+	  found = this.dataBasicLines.contains(
+			lineExpr.getExprText().toUpperCase() );
 	}
-	if( this.basicLineNums.contains( this.curBasicLineNum ) ) {
-	  super.appendLineNumMsgToLog(
-			"BASIC-Zeilennummer "
-				+ String.valueOf( this.curBasicLineNum )
-				+ " bereits vorhanden",
+	if( !found ) {
+	  appendLineNotFoundToErrLog(
+		lineExpr,
+		" oder enth\u00E4lt keine DATA-Anweisung" );
+	}
+      }
+    }
+
+    // benutzerdefinierte Funktionen und Prozeduren pruefen
+    Collection<CallableEntry> callables = this.name2Callable.values();
+    if( callables != null ) {
+      for( CallableEntry entry : callables ) {
+	if( !entry.isCalled()
+	    && (this.errCnt == 0)
+	    && this.options.getWarnUnusedItems() )
+	{
+	  putWarning(
+		entry.getSourceLineNum(),
+		entry.getBasicLineNum(),
+		entry.toString() + " wird nicht aufgerufen" );
+	}
+	if( entry.isImplemented() ) {
+	  if( this.options.getWarnUnusedItems() ) {
+	    int nVars = entry.getVarCount();
+	    for( int i = 0; i < nVars; i++ ) {
+	      String varName = entry.getVarName( i );
+	      if( varName != null ) {
+		if( !entry.isVarUsed( varName ) ) {
+		  putWarning(
+			entry.getVarSourceLineNum( varName ),
+			entry.getVarBasicLineNum( varName ),
+			"Lokale Variable " + varName
+				+ " wird nicht verwendet" );
+		}
+	      }
+	    }
+	  }
+	} else {
+	  long basicLineNum      = entry.getBasicLineNum();
+	  int  sourceLineNum     = entry.getSourceLineNum();
+	  int  callSourceLineNum = entry.getFirstCallSourceLineNum();
+	  if( callSourceLineNum > 0 ) {
+	    sourceLineNum = callSourceLineNum;
+	    basicLineNum  = entry.getFirstCallBasicLineNum();
+	  }
+	  appendLineNumMsgToErrLog(
+			sourceLineNum,
+			basicLineNum,
+			entry.toString() + " nicht implementiert",
 			"Fehler" );
 	  incErrorCount();
 	}
-	if( this.curBasicLineNum < this.lastBasicLineNum ) {
-	  putWarning(
+      }
+    }
+
+    // globale Variablen pruefen
+    if( this.options.getWarnUnusedItems() ) {
+      Collection<VarDecl> globalVars = name2GlobalVar.values();
+      if( globalVars != null ) {
+	for( VarDecl varDecl : globalVars ) {
+	  if( !varDecl.isUsed() ) {
+	    putWarning(
+		varDecl.getSourceLineNum(),
+		varDecl.getBasicLineNum(),
+		varDecl.toString() + " wird nicht verwendet" );
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void parseSourceLine( String lineText ) throws
+						IOException,
+						TooManyErrorsException
+  {
+    /*
+     * Pruefen, ob im Fall eines impliziten Endes des Hauptprogramms
+     * auf Code zur Beendigung des Programms verzichtet werden kann.
+     */
+    this.suppressExit   = false;
+    int     lastLinePos = this.asmOut.getLastLinePos();
+    String  lastInst    = this.asmOut.substring( lastLinePos );
+    int     tabPos      = lastInst.indexOf( (char) '\t' );
+    if( tabPos > 0 ) {
+      lastInst = lastInst.substring( lastLinePos );
+    }
+    if( lastInst.startsWith( "\tJP" ) || lastInst.startsWith( "\tJR" ) ) {
+      if( lastInst.indexOf( (char) ',' ) < 0 ) {
+	// unbedingter Sprungbefehl
+	this.suppressExit = true;
+      }
+    } else if( lastInst.equals( "\tRET\n" ) ) {
+      this.suppressExit = true;
+    }
+
+    // Zeile verarbeiten
+    CharacterIterator iter = null;
+    try {
+      iter = new StringCharacterIterator( lineText );
+      this.curBasicLineNum = -1;
+
+      // Quelltextzeile als Kommentar
+      if( this.options.getShowAssemblerText() ) {
+	char ch = skipSpaces( iter );
+	if( ch != CharacterIterator.DONE ) {
+	  this.asmOut.append( "\n;" );
+	  while( ch != CharacterIterator.DONE ) {
+	    this.asmOut.append( ch );
+	    ch = iter.next();
+	  }
+	  this.asmOut.newLine();
+	}
+      }
+      iter.setIndex( 0 );
+
+      /*
+       * auf Marke prufen,
+       * Eine Marke wird mit einem Doppelpunkt abgeschlossen
+       * und muss einzeln auf einer Zeile stehen, damit sie
+       * syntaktisch von einer Anweisung unterschieden werden kann.
+       */
+      String labelText = null;
+      char ch          = skipSpaces( iter );
+      int  begPos      = iter.getIndex();
+      int  destLinePos = this.asmOut.length();
+      if( ((ch >= 'A') && (ch <= 'Z'))
+	  || ((ch >= 'a') && (ch <= 'z')) )
+      {
+	ch = iter.next();
+	while( ((ch >= 'A') && (ch <= 'Z'))
+	       || ((ch >= 'a') && (ch <= 'z'))
+	       || ((ch >= '0') && (ch <= '9'))
+	       || (ch == '_') )
+	{
+	  ch = iter.next();
+	}
+	if( ch == ':' ) {
+	  iter.next();
+	  if( skipSpaces( iter ) == CharacterIterator.DONE ) {
+	    int           endPos = iter.getIndex() - 1;
+	    StringBuilder buf    = new StringBuilder( endPos - begPos );
+	    iter.setIndex( begPos );
+	    while( iter.getIndex() < endPos ) {
+	      buf.append( (char) iter.current() );
+	      iter.next();
+	    }
+	    labelText         = buf.toString();
+	    String upperLabel = labelText.toUpperCase();
+	    if( Arrays.binarySearch( sortedReservedWords, upperLabel ) >= 0 ) {
+	      throw new PrgException( "Reserviertes Schl\u00FCsselwort"
+					+ " als Marke nicht erlaubt" );
+	    }
+	    if( this.basicLines.contains( upperLabel ) ) {
+	      appendLineNumMsgToErrLog(
+			"\'" + labelText + "\': Marke bereits vorhanden",
+			"Fehler" );
+	      incErrorCount();
+	    }
+	    this.basicLines.add( upperLabel );
+	    this.lastBasicLineExpr = upperLabel;
+	    this.asmOut.append( createBasicLineLabel( upperLabel ) );
+	    this.asmOut.append( ":\n" );
+	    destLinePos = this.asmOut.length();
+	  }
+	}
+      }
+      if( labelText == null ) {
+
+	// Zeilenummer
+	iter.setIndex( 0 );
+	ch = skipSpaces( iter );
+	Long lineNum = readLineNum( iter );
+	if( lineNum != null ) {
+	  this.lastBasicLineExpr = lineNum.toString();
+	  if( this.basicLines.contains( this.lastBasicLineExpr ) ) {
+	    appendLineNumMsgToErrLog(
+		String.format(
+			"BASIC-Zeilennummer %s bereits vorhanden",
+			this.lastBasicLineExpr ),
+		"Fehler" );
+	    incErrorCount();
+	  }
+	  this.curBasicLineNum = lineNum.longValue();
+	  if( this.curBasicLineNum <= this.lastBasicLineNum ) {
+	    putWarning(
 		"BASIC-Zeilennummer nicht in aufsteigender Reihenfolge" );
+	  }
+	  this.basicLines.add( this.lastBasicLineExpr );
+	  this.lastBasicLineNum = this.curBasicLineNum;
+	  this.asmOut.append( createBasicLineLabel( this.lastBasicLineExpr ) );
+	  this.asmOut.append( ":\n" );
+	  destLinePos = this.asmOut.length();
 	}
-	this.basicLineNums.add( this.curBasicLineNum );
-	this.lastBasicLineNum = this.curBasicLineNum;
-	putCode( createBasicLineLabel( this.curBasicLineNum ) );
-	putCode( ":\n" );
-      }
 
-      // ggf. Quelltext formatieren
-      if( this.sourceFormatter != null ) {
-	this.sourceFormatter.beginLine( iter, this.curBasicLineNum );
-      }
-
-      // Anweisungen
-      parseInstructions( iter );
-
-      // Labels, die auf das Zeilenende zeigen
-      if( this.elseLabels != null ) {
-	while( !this.elseLabels.isEmpty() ) {
-	  putCode( this.elseLabels.pop() );
-	  putCode( ":\n" );
+	/*
+	 * Zeilennummer ggf. im Programm vermerken,
+	 * aber nur, wenn dieser Code auch durchlaufen wuerde
+	 */
+	if( !this.suppressExit ) {
+	  if( this.options.getPrintLineNumOnAbort()
+	      && (this.curSourceLineNum < MAX_VALUE) )
+	  {
+	    this.asmOut.append_LD_HL_nn( this.curSourceLineNum );
+	    this.asmOut.append( "\tLD\t(M_SRLN),HL\n" );
+	    if( (this.curBasicLineNum >= 0)
+		&& (this.curBasicLineNum < MAX_VALUE) )
+	    {
+	      this.asmOut.append_LD_HL_nn( (int) this.curBasicLineNum );
+	      this.asmOut.append( "\tLD\t(M_BALN),HL\n" );
+	    }
+	  }
 	}
-      }
-      if( this.endOfLineLabel != null ) {
-	putCode( this.endOfLineLabel );
-	putCode( ":\n" );
+
+	// Anweisungen
+	int destInstPos = this.asmOut.length();
+	parseInstructions( iter );
+	if( this.gcRequired ) {
+	  this.gcRequired = false;
+	  this.asmOut.append( "\tCALL\tMRGC\n" );
+	  addLibItem( BasicLibrary.LibItem.MRGC );
+	}
+
+	/*
+	 * Wenn kein Code erzeugt wurde,
+	 * muss auch die Zeilennummer nicht gemerkt werden.
+	 */
+	if( (this.asmOut.length() == destInstPos)
+	    && (destInstPos > destLinePos) )
+	{
+	  this.asmOut.setLength( destLinePos );
+	}
       }
     }
     catch( PrgException ex ) {
@@ -798,28 +955,49 @@ public class BasicCompiler extends PrgThread
       if( msg == null ) {
 	msg = "Unbekannter Fehler";
       }
-      appendLineNumMsgToLog( msg, "Fehler" );
+      appendLineNumMsgToErrLog( msg, "Fehler" );
       if( iter != null ) {
 	StringBuilder buf = new StringBuilder( iter.getEndIndex() + 16 );
 	buf.append( "    " );
-	int  pos = iter.getIndex();
-	char ch  = iter.first();
+	int     pos  = iter.getIndex();
+	char    ch   = iter.first();
+	boolean done = false;
 	while( ch != CharacterIterator.DONE ) {
 	  buf.append( ch );
 	  if( iter.getIndex() == pos ) {
-	    buf.append( " ??? " );
+	    buf.append( ERR_POS_TEXT );
+	    done = true;
 	  }
 	  ch = iter.next();
 	}
+	if( !done ) {
+	  buf.append( ERR_POS_TEXT );
+	}
 	buf.append( (char) '\n' );
-	appendToLog( buf.toString() );
+	appendToErrLog( buf.toString() );
       }
       incErrorCount();
     }
-
-    // ggf. Zeile bis zum Ende formatieren
-    if( this.sourceFormatter != null ) {
-      this.sourceFormatter.finishLine();
+    finally {
+      // einzeilige IF-Anweisungen schliessen
+      while( !this.structureStack.isEmpty() ) {
+	StructureEntry entry = this.structureStack.peek();
+	if( !(entry instanceof IfEntry) ) {
+	  break;
+	}
+	IfEntry ifEntry = (IfEntry) entry;
+	if( ifEntry.isMultiLine() ) {
+	  break;
+	}
+	this.structureStack.pop();
+	String elseLabel = ifEntry.getElseLabel();
+	if( elseLabel != null ) {
+	  this.asmOut.append( elseLabel );
+	  this.asmOut.append( ":\n" );
+	}
+	this.asmOut.append( ifEntry.getEndifLabel() );
+	this.asmOut.append( ":\n" );
+      }
     }
   }
 
@@ -827,524 +1005,962 @@ public class BasicCompiler extends PrgThread
   private void parseInstructions( CharacterIterator iter ) throws PrgException
   {
     if( skipSpaces( iter ) != CharacterIterator.DONE ) {
-      boolean loop = true;
-      while( loop ) {
+      for(;;) {
+	this.separatorChecked = false;
 	parseInstruction( iter );
 	char ch = skipSpaces( iter );
-	if( ch == ';' ) {
-	  if( this.sourceFormatter != null ) {
-	    this.sourceFormatter.formatLast();
-	    this.sourceFormatter.setSpace( false );
-	  }
-	  ch = iter.next();
+	if( ch == CharacterIterator.DONE ) {
+	  break;
 	}
-	else if( ch == ':' ) {
-	  if( this.sourceFormatter != null ) {
-	    this.sourceFormatter.formatLast();
-	    this.sourceFormatter.setSpace( false );
+	if( !this.separatorChecked ) {
+	  if( ch != ':' ) {
+	    throwUnexpectedChar( ch );
 	  }
-	  ch = iter.next();
-	  ac1BasicMismatch();
-	  z1013BasicMismatch();
-	} else {
-
-	  /*
-	   * Das Schluesselwort ELSE kann ohne einen Doppelpunkt
-	   * oder Semikolon hinter der vorherigen Anweisung stehen.
-	   * Aus diesem Grund muss es hier bereits behandelt werden.
-	   */
-	  if( checkInstruction( iter, "ELSE" ) ) {
-	    ac1BasicMismatch();
-	    z1013BasicMismatch();
-	    boolean elseDone = false;
-	    if( this.endOfLineLabel == null ) {
-	      this.endOfLineLabel = nextLabel();
-	    }
-	    if( this.basicOptions.getPreferRelativeJumps() ) {
-	      putCode( "\tJR\t" );
-	    } else {
-	      putCode( "\tJP\t" );
-	    }
-	    putCode( this.endOfLineLabel );
-	    putCode( '\n' );
-	    if( this.elseLabels != null ) {
-	      if( !this.elseLabels.isEmpty() ) {
-		putCode( this.elseLabels.pop() );
-		putCode( ":\n" );
-		elseDone = true;
-	      }
-	    }
-	    if( !elseDone ) {
-	      throw new PrgException(
-			"ELSE ohne zugeh\u00F6riger IF-Anweisung" );
-	    }
-	  } else {
-	    loop = false;
-	    if( ch != CharacterIterator.DONE )
-	      throwUnexpectedChar( ch );
-	  }
+	  iter.next();
 	}
       }
     }
   }
 
 
-  /*
-   * Die Methode parst eine BASIC-Anweisung.
-   * Die Suchreihenfolge entspricht der des originalen Z1013-BASIC,
-   * damit die Kompatibilitaet auch gegeben ist,
-   * wenn die Anweisungsnamen mit einem Punkt abgekuerzt werden.
-   * Anweisungen, die es im originalen Z1013-BASIC nicht gibt,
-   * stehen am Ende der Suchreihenfolge,
-   * um die Kompatibilitaet zu bewahren.
-   */
   private void parseInstruction( CharacterIterator iter ) throws PrgException
   {
+    this.tmpStrBufUsed = false;
+
     char ch     = skipSpaces( iter );
     int  begPos = iter.getIndex();
-    if( ch == '!' ) {
+    if( (ch == '!') || (ch == '\'') ) {		// Kommentar
       iter.next();
-      if( this.sourceFormatter != null ) {
-	this.sourceFormatter.replaceByKeyword( begPos, "REM", true );
-      }
-      ac1BasicMismatch();
-      z1013BasicMismatch();
       parseREM( iter );
     }
     else if( ch == '?' ) {
       iter.next();
-      if( this.sourceFormatter != null ) {
-	this.sourceFormatter.replaceByKeyword( begPos, "PRINT", true );
-      }
-      ac1BasicMismatch();
-      z1013BasicMismatch();
+      checkMainPrgScope();
+      checkCreateStackFrame();
       parsePRINT( iter );
     } else {
-      if( checkInstruction( iter, "NEXT" ) ) {
-	ac1BasicMismatch();
-	parseNEXT( iter );
-      }
-      else if( checkInstruction( iter, "LET" ) ) {
-	parseLET( iter );
-      }
-      else if( checkInstruction( iter, "IF" ) ) {
-	parseIF( iter );
-      }
-      else if( checkInstruction( iter, "GOTO" ) ) {
-	parseGOTO( iter );
-      }
-      else if( checkInstruction( iter, "GOSUB" ) ) {
-	parseGOSUB( iter );
-      }
-      else if( checkInstruction( iter, "RETURN" ) ) {
-	parseRETURN();
-      }
-      else if( checkKeyword( iter, "REM" ) ) {
-	parseREM( iter );
-      }
-      else if( checkInstruction( iter, "FOR" ) ) {
-	ac1BasicMismatch();
-	parseFOR( iter );
-      }
-      else if( checkInstruction( iter, "INPUT" ) ) {
-	parseINPUT( iter );
-      }
-      else if( checkInstruction( iter, "PRINT" ) ) {
-	parsePRINT( iter );
-      }
-      else if( checkInstruction( iter, "STOP" ) ) {
-	putExit();
-      }
-      else if( checkInstruction( iter, "CALL" ) ) {
-	parseCALL( iter );
-      }
-      else if( checkInstruction( iter, "OUTCHAR" ) ) {
-	parseOUTCHAR( iter );
-      }
-      else if( checkInstruction( iter, "OUT" ) ) {
-	parseOUT( iter );
-      }
-      else if( checkInstruction( iter, "O$" ) ) {
-	ac1BasicMismatch();
-	parseOutString( iter );
-      }
-      else if( checkInstruction( iter, "I$" ) ) {
-	ac1BasicMismatch();
-	parseInString( iter );
-      }
-      else if( checkInstruction( iter, "POKE" ) ) {
-	parsePOKE( iter );
-      }
-      else if( checkInstruction( iter, "TAB" ) ) {
-	parseTAB( iter );
-      }
-      else if( checkInstruction( iter, "BYTE" ) ) {
-	parseBYTE( iter );
-      }
-      else if( checkInstruction( iter, "WORD" ) ) {
-	parseWORD( iter );
-      }
-      else if( checkInstruction( iter, "CLS" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseCLS();
-      }
-      else if( checkInstruction( iter, "DATA" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseDATA( iter );
-      }
-      else if( checkInstruction( iter, "DOKE" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseDOKE( iter );
-      }
-      else if( checkKeyword( iter, "ELSE", false, false ) ) {
-	// ELSE wird hinter einer Anweisung behandelt
-	iter.setIndex( begPos );
-      }
-      else if( checkInstruction( iter, "READ" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseREAD( iter );
-      }
-      else if( checkInstruction( iter, "RESTORE" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseRESTORE( iter );
-      }
-      else if( checkInstruction( iter, "END" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	putExit();
-      } else {
-	String varAddrExpr = checkVarGetAddrExpr( iter );
-	if( varAddrExpr != null ) {
-	  parseAssignment( iter, varAddrExpr );
+      boolean done = false;
+      String  name = checkIdentifier( iter );
+      if( name != null ) {
+	done = true;
+	if( name.equals( "ASM" ) ) {
+	  checkCreateStackFrame();
+	  parseASM( iter );
+	} else if( name.equals( "DECLARE" ) ) {
+	  parseDECLARE( iter );
+	} else if( name.equals( "REM" ) ) {
+	  parseREM( iter );
+	} else if( name.equals( "FUNCTION" ) ) {
+	  parseCallableImpl( iter, true );
+	} else if( name.equals( "LOCAL" ) ) {
+	  parseLOCAL( iter );
+	} else if( name.equals( "SUB" ) ) {
+	  parseCallableImpl( iter, false );
 	} else {
-	  if( skipSpaces( iter ) != CharacterIterator.DONE ) {
-	    throw new PrgException( "Variable oder Anweisung erwartet" );
+	  /*
+	   * Alle weiteren Anweisungen duerfen nur im Hauptprogramm
+	   * oder in einer Funktion bzw. Prozedur vorkommen.
+	   * Ausserdem muss im Fall einer Funktion bzw. Prozedur
+	   * der Stack-Rahmen angelegt sein.
+	   */
+	  checkMainPrgScope();
+	  checkCreateStackFrame();
+	  if( name.equals( "BORDER" ) ) {
+	    parseBORDER( iter );
+	  } else if( name.equals( "CALL" ) ) {
+	    parseCALL( iter );
+	  } else if( name.equals( "CIRCLE" ) ) {
+	    parseCIRCLE( iter );
+	  } else if( name.equals( "CLS" ) ) {
+	    parseCLS();
+	  } else if( name.equals( "COLOR" ) ) {
+	    parseCOLOR( iter );
+	  } else if( name.equals( "CURSOR" ) ) {
+	    parseCURSOR( iter );
+	  } else if( name.equals( "DATA" ) ) {
+	    parseDATA( iter );
+	  } else if( name.equals( "DEF" ) ) {
+	    parseDEF( iter );
+	  } else if( name.equals( "DEFUSR" ) ) {
+	    parseDEFUSR( iter );
+	  } else if( name.equals( "DEFUSR0" ) ) {
+	    parseDEFUSR( iter, 0 );
+	  } else if( name.equals( "DEFUSR1" ) ) {
+	    parseDEFUSR( iter, 1 );
+	  } else if( name.equals( "DEFUSR2" ) ) {
+	    parseDEFUSR( iter, 2 );
+	  } else if( name.equals( "DEFUSR3" ) ) {
+	    parseDEFUSR( iter, 3 );
+	  } else if( name.equals( "DEFUSR4" ) ) {
+	    parseDEFUSR( iter, 4 );
+	  } else if( name.equals( "DEFUSR5" ) ) {
+	    parseDEFUSR( iter, 5 );
+	  } else if( name.equals( "DEFUSR6" ) ) {
+	    parseDEFUSR( iter, 6 );
+	  } else if( name.equals( "DEFUSR7" ) ) {
+	    parseDEFUSR( iter, 7 );
+	  } else if( name.equals( "DEFUSR8" ) ) {
+	    parseDEFUSR( iter, 8 );
+	  } else if( name.equals( "DEFUSR9" ) ) {
+	    parseDEFUSR( iter, 9 );
+	  } else if( name.equals( "DIM" ) ) {
+	    parseDIM( iter );
+	  } else if( name.equals( "DOKE" ) ) {
+	    parseDOKE( iter );
+	  } else if( name.equals( "DO" ) ) {
+	    parseDO( iter );
+	  } else if( name.equals( "DRAW" ) ) {
+	    parseDRAW( iter );
+	  } else if( name.equals( "DRAWR" ) ) {
+	    parseDRAWR( iter );
+	  } else if( name.equals( "ELSE" ) ) {
+	    parseELSE( iter );
+	  } else if( name.equals( "ELSEIF" ) ) {
+	    parseELSEIF( iter );
+	  } else if( name.equals( "END" ) ) {
+	    parseEND( iter );
+	  } else if( name.equals( "ENDIF" ) ) {
+	    parseENDIF( iter );
+	  } else if( name.equals( "EXIT" ) ) {
+	    parseEXIT( iter );
+	  } else if( name.equals( "FOR" ) ) {
+	    parseFOR( iter );
+	  } else if( name.equals( "GOSUB" ) ) {
+	    parseGOSUB( iter );
+	  } else if( name.equals( "GOTO" ) ) {
+	    parseGOTO( iter );
+	  } else if( name.equals( "IF" ) ) {
+	    parseIF( iter );
+	  } else if( name.equals( "INK" ) ) {
+	    parseINK( iter );
+	  } else if( name.equals( "INPUT" ) ) {
+	    parseINPUT( iter );
+	  } else if( name.equals( "LABEL" ) ) {
+	    parseLABEL( iter );
+	  } else if( name.equals( "LET" ) ) {
+	    parseLET( iter );
+	  } else if( name.equals( "LINE" ) ) {
+	    parseLINE( iter );
+	  } else if( name.equals( "LOCATE" ) ) {
+	    parseLOCATE( iter );
+	  } else if( name.equals( "LOOP" ) ) {
+	    parseLOOP( iter );
+	  } else if( name.equals( "MOVE" ) ) {
+	    parseMOVE( iter );
+	  } else if( name.equals( "MOVER" ) ) {
+	    parseMOVER( iter );
+	  } else if( name.equals( "NEXT" ) ) {
+	    parseNEXT( iter );
+	  } else if( name.equals( "ON" ) ) {
+	    parseON( iter );
+	  } else if( name.equals( "OUT" ) ) {
+	    parseOUT( iter );
+	  } else if( name.equals( "PAPER" ) ) {
+	    parsePAPER( iter );
+	  } else if( name.equals( "PASSWORD" ) ) {
+	    parsePASSWORD( iter );
+	  } else if( name.equals( "PAUSE" ) ) {
+	    parsePAUSE( iter );
+	  } else if( name.equals( "PEN" ) ) {
+	    parsePEN( iter );
+	  } else if( name.equals( "PLOT" ) ) {
+	    parsePLOT( iter );
+	  } else if( name.equals( "PLOTR" ) ) {
+	    parsePLOTR( iter );
+	  } else if( name.equals( "POKE" ) ) {
+	    parsePOKE( iter );
+	  } else if( name.equals( "PRESET" ) ) {
+	    parsePRESET( iter );
+	  } else if( name.equals( "PRINT" ) ) {
+	    parsePRINT( iter );
+	  } else if( name.equals( "PSET" ) ) {
+	    parsePSET( iter );
+	  } else if( name.equals( "READ" ) ) {
+	    parseREAD( iter );
+	  } else if( name.equals( "REM" ) ) {
+	    parseREM( iter );
+	  } else if( name.equals( "RESTORE" ) ) {
+	    parseRESTORE( iter );
+	  } else if( name.equals( "RETURN" ) ) {
+	    parseRETURN();
+	  } else if( name.equals( "SCREEN" ) ) {
+	    parseSCREEN( iter );
+	  } else if( name.equals( "WAIT" ) ) {
+	    parseWAIT( iter );
+	  } else if( name.equals( "WEND" ) ) {
+	    parseWEND( iter );
+	  } else if( name.equals( "WHILE" ) ) {
+	    parseWHILE( iter );
+	  } else {
+	    if( !checkReturnValueAssignment( iter, name ) ) {
+	      CallableEntry entry = this.name2Callable.get( name );
+	      if( entry != null ) {
+		parseCallableCall( iter, entry );
+	      } else {
+		SimpleVarInfo varInfo = checkVariable( iter, name );
+		if( varInfo != null ) {
+		  parseAssignment( iter, varInfo );
+		} else {
+		  done = false;
+		}
+	      }
+	    }
 	  }
 	}
+      }
+      if( !done ) {
+	throw new PrgException(
+			"Anweisung, Prozedur oder Variable erwartet" );
       }
     }
   }
 
 
-  private void parseBYTE( CharacterIterator iter ) throws PrgException
+  private void parseASM( CharacterIterator iter ) throws PrgException
   {
-    boolean enclosed = false;
-    if( skipSpaces( iter ) == '(' ) {
-      iter.next();
-      enclosed = true;
-    }
-    Integer value = checkConstExpr( iter );
-    if( value != null ) {
-      putCode( "\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'" );
-      putCode( String.format( "%02X", value.intValue() & 0xFF ) );
-      putCode( "\'\n"
-		+ "\tDEFB\t0\n" );
-      this.libItems.add( LibItem.P_LTXT );
-    } else {
+    do {
+      boolean data = false;
+      boolean bss  = false;
+      if( !checkKeyword( iter, "CODE" ) ) {
+	if( checkKeyword( iter, "DATA" ) ) {
+	  data = true;
+	} else if( checkKeyword( iter, "BSS" ) ) {
+	  bss = true;
+	}
+      }
+      String text = checkStringLiteral( iter );
+      if( text == null ) {
+	throw new PrgException( "String-Literal erwartet" );
+      }
+      if( data ) {
+	if( this.userData == null ) {
+	  this.userData = new StringBuilder( 0x0800 );
+	}
+	this.userData.append( text );
+	this.userData.append( (char) '\n' );
+      } else if( bss ) {
+	if( this.userBSS == null ) {
+	  this.userBSS = new StringBuilder( 0x0800 );
+	}
+	this.userBSS.append( text );
+	this.userBSS.append( (char) '\n' );
+      } else {
+	this.asmOut.append( text );
+	this.asmOut.newLine();
+      }
+    } while( checkToken( iter, ',' ) );
+  }
+
+
+  private void parseBORDER( CharacterIterator iter ) throws PrgException
+  {
+    if( this.target.supportsBorderColor() ) {
       parseExpr( iter );
-      putCode( "\tLD\tA,L\n" );
-      putCode( "\tCALL\tP_HEXA\n" );
-      this.libItems.add( LibItem.P_HEXA );
-    }
-    if( enclosed ) {
-      parseToken( iter, ')' );
+      this.asmOut.append( "\tCALL\tXBORDER\n" );
+      addLibItem( BasicLibrary.LibItem.XBORDER );
     } else {
-      ac1BasicMismatch();
-      z1013BasicMismatch();
+      try {
+	setCodeGenEnabled( false );
+	parseExpr( iter );
+      }
+      finally {
+	setCodeGenEnabled( true );
+      }
     }
   }
 
 
   private void parseCALL( CharacterIterator iter ) throws PrgException
   {
-    if( skipSpaces( iter ) == '*' ) {
-      iter.next();
+    if( checkToken( iter, '*' ) ) {
       skipSpaces( iter );
       Integer value = readHex( iter );
       if( value == null ) {
-	throw new PrgException( "Hexadezimalziffer erwartet" );
+	throwHexDigitExpected();
       }
-      ac1BasicMismatch();
-      z1013BasicMismatch();
-      putCode_LD_HL_nn( value.intValue() );
+      this.asmOut.append_LD_HL_nn( value.intValue() );
     } else {
       parseExpr( iter );
     }
-    putCode( "\tCALL\tJP_HL\n" );
-    this.libItems.add( LibItem.JP_HL );
-    if( this.basicOptions.getPrintCalls() ) {
-      appendLineNumMsgToLog(
-		"Befindet sich an der aufgerufenen Adresse"
-			+ " auch der gew\u00FCnschte Maschinencode?",
-		"CALL-Anweisung" );
+    boolean insideCallable = (getCallableEntry() != null);
+    if( insideCallable ) {
+      this.asmOut.append( "\tPUSH\tIY\n" );
+    }
+    this.asmOut.append( "\tCALL\tJP_HL\n" );
+    if( insideCallable ) {
+      this.asmOut.append( "\tPOP\tIY\n" );
+    }
+    addLibItem( BasicLibrary.LibItem.JP_HL );
+  }
+
+
+  private void parseCIRCLE( CharacterIterator iter ) throws PrgException
+  {
+    checkGraphicsSupported();
+    parsePointToMem( iter, "M_CIMX", "M_CIMY" );
+    parseToken( iter, ',' );
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(M_CIRA),HL\n"
+		+ "\tCALL\tCIRCLE\n" );
+    addLibItem( BasicLibrary.LibItem.CIRCLE );
+  }
+
+
+  private void parseCLS()
+  {
+    if( this.target.supportsXCLS() ) {
+      this.asmOut.append( "\tCALL\tXCLS\n" );
+      addLibItem( BasicLibrary.LibItem.XCLS );
+    } else {
+      this.asmOut.append( "\tLD\tA,0CH\n"
+		+ "\tCALL\tXOUTCH\n" );
+      addLibItem( BasicLibrary.LibItem.XOUTCH );
     }
   }
 
 
-  private void parseCLS() throws PrgException
+  private void parseCOLOR( CharacterIterator iter ) throws PrgException
   {
-    putCode( "\tLD\tA,0CH\n"
-		+ "\tCALL\tXOUTCH\n" );
-    this.libItems.add( LibItem.XOUTCH );
+    if( this.target.supportsColors() ) {
+      parseExpr( iter );
+      if( checkToken( iter, ',' ) ) {
+	int pos = this.asmOut.length();
+	parseExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tEX\tHL,DE\n"
+			+ "\tPOP\tHL\n" );
+	}
+	this.asmOut.append( "\tCALL\tXCOLOR\n" );
+	addLibItem( BasicLibrary.LibItem.XCOLOR );
+      } else {
+	this.asmOut.append( "\tCALL\tXINK\n" );
+	addLibItem( BasicLibrary.LibItem.XINK );
+      }
+    } else {
+      try {
+	setCodeGenEnabled( false );
+	parseExpr( iter );
+	if( checkToken( iter, ',' ) ) {
+	  parseExpr( iter );
+	}
+      }
+      finally {
+	setCodeGenEnabled( true );
+      }
+    }
+    if( checkToken( iter, ',' ) ) {
+      parseBORDER( iter );
+    }
+  }
+
+
+  private void parseCURSOR( CharacterIterator iter ) throws PrgException
+  {
+    if( this.target.supportsXCURS() ) {
+      parseExpr( iter );
+      this.asmOut.append( "\tCALL\tXCURS\n" );
+      addLibItem( BasicLibrary.LibItem.XCURS );
+    } else {
+      try {
+	setCodeGenEnabled( false );
+	parseExpr( iter );
+      }
+      finally {
+	setCodeGenEnabled( true );
+      }
+    }
   }
 
 
   private void parseDATA( CharacterIterator iter ) throws PrgException
   {
     if( this.dataOut == null ) {
-      this.dataOut = new StringBuilder( 0x400 );
+      this.dataOut = new AsmCodeBuf( 0x400 );
     }
-    if( this.curBasicLineNum >= 0 ) {
-      if( this.dataBasicLineNums == null ) {
-	this.dataBasicLineNums = new HashSet<Long>();
+    if( this.lastBasicLineExpr != null ) {
+      if( this.dataBasicLines == null ) {
+	this.dataBasicLines = new TreeSet<String>();
       }
-      if( this.dataBasicLineNums.add( new Long( this.curBasicLineNum ) ) ) {
-	this.dataOut.append( (char) 'D' );
-	this.dataOut.append( this.curBasicLineNum );
+      if( this.dataBasicLines.add( this.lastBasicLineExpr ) ) {
+	this.dataOut.append( createDataLineLabel( this.lastBasicLineExpr ) );
 	this.dataOut.append( ":\n" );
       }
     }
-    boolean isFirst = true;
-    iter.previous();
     do {
-      iter.next();
-      Integer value = checkConstExpr( iter );
-      if( value == null ) {
-	throw new PrgException( "Konstanter Ausdruck bei DATA erforderlich" );
-      }
-      if( isFirst ) {
-	this.dataOut.append( "\tDEFW\t" );
-	isFirst = false;
+      String text = checkStringLiteral( iter );
+      if( text != null ) {
+	this.dataOut.append( "\tDB\t" );
+	this.dataOut.appendHex2( DATA_STRING );
+	this.dataOut.newLine();
+	this.dataOut.appendStringLiteral( text );
       } else {
-	this.dataOut.append( (char) ',' );
+	Integer value = checkSignedNumber( iter );
+	if( value == null ) {
+	  throw new PrgException( "Integer- oder String-Literal erwartet" );
+	}
+	if( (value.intValue() >= 0) && (value.intValue() < 0x0100) ) {
+	  this.dataOut.append( "\tDB\t" );
+	  this.dataOut.appendHex2( DATA_INT1 );
+	  this.dataOut.append( (char) ',' );
+	  this.dataOut.appendHex2( value.intValue() );
+	  this.dataOut.newLine();
+	} else {
+	  this.dataOut.append( "\tDB\t" );
+	  this.dataOut.appendHex2( DATA_INT2 );
+	  this.dataOut.newLine();
+	  this.dataOut.append( "\tDW\t" );
+	  this.dataOut.appendHex4( value.intValue() );
+	  this.dataOut.newLine();
+	}
       }
-      this.dataOut.append( getHex4( value.intValue() ) );
-    } while( skipSpaces( iter ) == ',' );
-    this.dataOut.append( '\n' );
-    this.libItems.add( LibItem.DATA );
+    } while( checkToken( iter, ',' ) );
+    addLibItem( BasicLibrary.LibItem.DATA );
+  }
+
+
+  private void parseDECLARE( CharacterIterator iter ) throws PrgException
+  {
+    CallableEntry entry = null;
+    if( checkKeyword( iter, "FUNCTION" ) ) {
+      parseCallableDecl( iter, true, false );
+    } else if( checkKeyword( iter, "SUB" ) ) {
+      parseCallableDecl( iter, false, false );
+    } else {
+      throw new PrgException( "FUNCTION oder SUB erwartet" );
+    }
+  }
+
+
+  private void parseDEF( CharacterIterator iter ) throws PrgException
+  {
+    if( !checkKeyword( iter, "USR" ) ) {
+      throw new PrgException( "USR erwartet" );
+    }
+    int usrNum = parseUsrNum( iter );
+    parseDEFUSR( iter, usrNum );
+  }
+
+
+  private void parseDEFUSR( CharacterIterator iter ) throws PrgException
+  {
+    int usrNum = parseUsrNum( iter );
+    parseDEFUSR( iter, usrNum );
+  }
+
+
+  private void parseDEFUSR(
+			CharacterIterator iter,
+			int               usrNum ) throws PrgException
+  {
+    parseToken( iter, '=' );
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(" );
+    this.asmOut.append( getUsrLabel( usrNum ) );
+    this.asmOut.append( "),HL\n" );
+    addLibItem( BasicLibrary.LibItem.E_USR );
+  }
+
+
+  private void parseDIM( CharacterIterator iter ) throws PrgException
+  {
+    CallableEntry entry = getCallableEntry();
+    if( entry != null ) {
+      throw new PrgException( "Anweisung in einer Funktion/Prozedur"
+			+ " nicht zul\u00E4ssig" );
+    }
+    do {
+      String varName = checkIdentifier( iter );
+      if( varName == null ) {
+	throwVarNameExpected();
+      }
+      checkVarName( varName );
+      parseToken( iter, '(' );
+      VarDecl var  = null;
+      int     dim1 = parseNumber( iter );
+      if( dim1 < 1 ) {
+	throwDimTooSmall();
+      }
+      if( checkToken( iter, ',' ) ) {
+	int dim2 = parseNumber( iter );
+	if( dim2 < 1 ) {
+	  throwDimTooSmall();
+	}
+	var = new VarDecl(
+			this.curSourceLineNum,
+			this.curBasicLineNum,
+			varName,
+			dim1,
+			dim2 );
+      } else {
+	var = new VarDecl(
+			this.curSourceLineNum,
+			this.curBasicLineNum,
+			varName,
+			dim1 );
+      }
+      VarDecl tmpVar = this.name2GlobalVar.get( varName );
+      if( tmpVar != null ) {
+	if( tmpVar.getDimCount() > 0 ) {
+	  throw new PrgException( "Feldvariable bereits deklariert" );
+	} else {
+	  throw new PrgException( "Variable implizit als einfache"
+					+ " Variable bereits deklariert" );
+	}
+      }
+      parseToken( iter, ')' );
+      this.name2GlobalVar.put( varName, var );
+    } while( checkToken( iter, ',' ) );
+  }
+
+
+  private void parseDO( CharacterIterator iter ) throws PrgException
+  {
+    String loopLabel = nextLabel();
+    this.asmOut.append( loopLabel );
+    this.asmOut.append( ":\n" );
+    checkAppendBreakCheck();
+    this.structureStack.push(
+		new DoEntry(
+			this.curSourceLineNum,
+			this.curBasicLineNum,
+			loopLabel,
+			nextLabel() ) );
   }
 
 
   private void parseDOKE( CharacterIterator iter ) throws PrgException
   {
-    Integer addr = checkConstExpr( iter );
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    parseToken( iter, ',' );
+    Integer addr = removeLastCodeIfConstExpr( pos );
     if( addr != null ) {
-      parseToken( iter, ',' );
       parseExpr( iter );
-      putCode( "\tLD\t(" );
-      putCode( getHex4( addr.intValue() ) );
-      putCode( "),HL\n" );
+      this.asmOut.append( "\tLD\t(" );
+      this.asmOut.appendHex4( addr.intValue() );
+      this.asmOut.append( "),HL\n" );
     } else {
+      pos = this.asmOut.length();
       parseExpr( iter );
-      parseToken( iter, ',' );
-      putCode( "\tPUSH\tHL\n" );
-      parseExpr( iter );
-      putCode( "\tPOP\tDE\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tLD\t(HL),E\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\t(HL),D\n" );
+      Integer value = removeLastCodeIfConstExpr( pos );
+      if( value != null ) {
+	this.asmOut.append( "\tLD\t(HL)," );
+	this.asmOut.appendHex2( value.intValue() );
+	this.asmOut.append( "\n"
+			+ "\tINC\tHL\n"
+			+ "\tLD\t(HL)," );
+	this.asmOut.appendHex2( value.intValue() >> 8 );
+	this.asmOut.newLine();
+      } else {
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tEX\tDE,HL\n"
+			  + "\tPOP\tHL\n" );
+	}
+	this.asmOut.append( "\tLD\t(HL),E\n"
+			+ "\tINC\tHL\n"
+			+ "\tLD\t(HL),D\n" );
+      }
     }
   }
 
 
-  /*
-   * Wenn die Adresse der Laufvariablen und die Schrittweite konstant sind,
-   * kann abhaengig von den Optionen die Schleife als strukturierte Schleife
-   * mit optimiertem Programmcode uebersetzt werden.
-   */
+  private void parseDRAW( CharacterIterator iter ) throws PrgException
+  {
+    if( checkKeyword( iter, "STEP" ) ) {
+      parseDRAWR( iter );
+    } else {
+      checkGraphicsSupported();
+      parsePointToMem( iter, "M_LNEX", "M_LNEY" );
+      this.asmOut.append( "\tCALL\tDRAW\n" );
+      addLibItem( BasicLibrary.LibItem.DRLINE );
+    }
+  }
+
+
+  private void parseDRAWR( CharacterIterator iter ) throws PrgException
+  {
+    checkGraphicsSupported();
+    parsePointTo_DE_HL( iter );
+    this.asmOut.append( "\tCALL\tDRAWR\n" );
+    addLibItem( BasicLibrary.LibItem.DRAWR );
+  }
+
+
+  private void parseELSE( CharacterIterator iter ) throws PrgException
+  {
+    for(;;) {
+      IfEntry ifEntry = null;
+      if( !this.structureStack.isEmpty() ) {
+	StructureEntry entry = this.structureStack.peek();
+	if( entry instanceof IfEntry ) {
+	  ifEntry = (IfEntry) entry;
+	}
+      }
+      if( ifEntry == null ) {
+	throw new PrgException( "ELSE ohne IF" );
+      }
+      String elseLabel = ifEntry.getElseLabel();
+      if( elseLabel != null ) {
+	if( this.options.getPreferRelativeJumps() ) {
+	  this.asmOut.append( "\tJR\t" );
+	} else {
+	  this.asmOut.append( "\tJP\t" );
+	}
+	this.asmOut.append( ifEntry.getEndifLabel() );
+	this.asmOut.newLine();
+	this.asmOut.append( elseLabel );
+	this.asmOut.append( ":\n" );
+	ifEntry.setElseLabel( null );		// ELSE als geparst markieren
+	break;
+      } else {
+	/*
+	 * ELSE wurde schon geparst.
+	 * Demzufolge muss sich das ELSE auf das vorherige IF beziehen.
+	 * Deshalb wird hier der ELSE-Zweig der aktuellen IF-Anweisung
+	 * geschlossen und im naechsten Schleifendurchlauf
+	 * das ELSE der vorherigen IF-Anweisung verarbeitet.
+	 */
+	this.asmOut.append( ifEntry.getEndifLabel() );
+	this.asmOut.append( ":\n" );
+	this.structureStack.pop();
+      }
+    }
+  }
+
+
+  private void parseELSEIF( CharacterIterator iter ) throws PrgException
+  {
+    IfEntry ifEntry = null;
+    if( !this.structureStack.isEmpty() ) {
+      StructureEntry entry = this.structureStack.peek();
+      if( entry instanceof IfEntry ) {
+	ifEntry = (IfEntry) entry;
+      }
+    }
+    if( ifEntry == null ) {
+      throw new PrgException( "ELSE ohne IF" );
+    }
+    String elseLabel = ifEntry.getElseLabel();
+    if( elseLabel == null ) {
+      throw new PrgException( "ELSEIF hinter ELSE nicht zul\u00E4ssig" );
+    }
+    if( this.options.getPreferRelativeJumps() ) {
+      this.asmOut.append( "\tJR\t" );
+    } else {
+      this.asmOut.append( "\tJP\t" );
+    }
+    this.asmOut.append( ifEntry.getEndifLabel() );
+    this.asmOut.newLine();
+    this.asmOut.append( elseLabel );
+    this.asmOut.append( ":\n" );
+    ifEntry.setElseLabel( nextLabel() );	// neue ELSE-Marke erzeugen
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\tA,H\n"
+		+ "\tOR\tL\n" );
+    checkKeyword( iter, "THEN" );
+    if( !ifEntry.isMultiLine() && this.options.getPreferRelativeJumps() ) {
+      this.asmOut.append( "\tJR\tZ," );
+    } else {
+      this.asmOut.append( "\tJP\tZ," );
+    }
+    this.asmOut.append( ifEntry.getElseLabel() );
+    this.asmOut.newLine();
+    if( isEndOfInstr( iter ) ) {
+      this.separatorChecked = true;
+    }
+  }
+
+
+  private void parseEND( CharacterIterator iter ) throws PrgException
+  {
+    CallableEntry callableEntry = getCallableEntry();
+    if( checkKeyword( iter, "FUNCTION" ) ) {
+      boolean ok = false;
+      if( callableEntry != null ) {
+	if( callableEntry instanceof FunctionEntry ) {
+	  ok = true;
+	}
+      }
+      if( !ok ) {
+	throw new PrgException(
+			"Anweisung nur am Ende einer Funktion erlaubt" );
+      }
+    } else if( checkKeyword( iter, "SUB" ) ) {
+      boolean ok = false;
+      if( callableEntry != null ) {
+	if( callableEntry instanceof SubEntry ) {
+	  ok = true;
+	}
+      }
+      if( !ok ) {
+	throw new PrgException(
+			"Anweisung nur am Ende einer Prozedur erlaubt" );
+      }
+    }
+    if( callableEntry != null ) {
+      if( callableEntry instanceof FunctionEntry ) {
+	this.asmOut.append_LD_HL_IndirectIY(
+		((FunctionEntry) callableEntry).getReturnVarIYOffs() );
+	this.asmOut.append( "\tLD\t(M_FRET),HL\n" );
+	addLibItem( BasicLibrary.LibItem.M_FRET );
+      }
+
+      // alle Strukturen abgeschlossen?
+      while( !this.structureStack.isEmpty() ) {
+	StructureEntry entry = this.structureStack.pop();
+	if( entry != callableEntry ) {
+	  appendLineNumMsgToErrLog(
+			entry.getSourceLineNum(),
+			entry.getBasicLineNum(),
+			entry.toString() + " nicht abgeschlossen",
+			"Fehler" );
+	  this.errCnt++;
+	}
+      }
+      if( callableEntry.hasStackFrame() ) {
+	int nVars = callableEntry.getVarCount();
+	// lokale String-Variablen freigeben
+	int nArgs = callableEntry.getArgCount();
+	if( nArgs > 0 ) {
+	  for( int i = 0; i < nArgs; i++ ) {
+	    if( callableEntry.getArgType( i ) == DataType.STRING ) {
+	      this.asmOut.append_LD_DE_IndirectIY(
+					callableEntry.getArgIYOffs( i ) );
+	      this.asmOut.append( "\tCALL\tMFREE\n" );
+	      addLibItem( BasicLibrary.LibItem.MFREE );
+	    }
+	  }
+	}
+	if( nVars > 0 ) {
+	  for( int i = 0; i < nVars; i++ ) {
+	    if( callableEntry.getVarType( i ) == DataType.STRING ) {
+	      boolean done   = false;
+	      int     iyOffs = callableEntry.getVarIYOffs( i );
+	      if( callableEntry instanceof FunctionEntry ) {
+		if( ((FunctionEntry) callableEntry).getReturnVarIYOffs()
+							== iyOffs )
+		{
+		  this.asmOut.append_LD_DE_IndirectIY( iyOffs );
+		  this.asmOut.append( "\tCALL\tMMGC\n" );
+		  addLibItem( BasicLibrary.LibItem.MMGC );
+		  done = true;
+		}
+	      }
+	      if( !done ) {
+		this.asmOut.append_LD_DE_IndirectIY( iyOffs );
+		this.asmOut.append( "\tCALL\tMFREE\n" );
+		addLibItem( BasicLibrary.LibItem.MFREE );
+	      }
+	    }
+	  }
+	  this.asmOut.append( "\tLD\tSP,IY\n" );
+	}
+	this.asmOut.append( "\tPOP\tIY\n" );
+      }
+      this.asmOut.append( "\tRET\n" );
+    } else {
+      this.asmOut.append( "\tJP\tXEXIT\n" );
+      this.suppressExit = true;
+    }
+  }
+
+
+  private void parseENDIF( CharacterIterator iter ) throws PrgException
+  {
+    IfEntry ifEntry = null;
+    if( !this.structureStack.isEmpty() ) {
+      StructureEntry entry = this.structureStack.peek();
+      if( entry instanceof IfEntry ) {
+	ifEntry = (IfEntry) entry;
+	this.structureStack.pop();
+      }
+    }
+    if( ifEntry == null ) {
+      throw new PrgException( "ENDIF ohne IF" );
+    }
+    String elseLabel = ifEntry.getElseLabel();
+    if( elseLabel != null ) {
+      this.asmOut.append( elseLabel );
+      this.asmOut.append( ":\n" );
+    }
+    this.asmOut.append( ifEntry.getEndifLabel() );
+    this.asmOut.append( ":\n" );
+  }
+
+
+  private void parseEXIT( CharacterIterator iter ) throws PrgException
+  {
+    LoopEntry loopEntry = null;
+    int       idx       = this.structureStack.size() - 1;
+    while( idx >= 0 ) {
+      StructureEntry entry = this.structureStack.get( idx );
+      if( entry instanceof LoopEntry ) {
+	loopEntry = (LoopEntry) entry;
+	break;
+      }
+      if( !(entry instanceof IfEntry) ) {
+	break;
+      }
+      --idx;
+    }
+    if( loopEntry == null ) {
+      throw new PrgException( "EXIT aus\u00DFerhalb einer Schleife" );
+    }
+    if( !isEndOfInstr( iter ) ) {
+      if( !checkKeyword( iter, loopEntry.getLoopBegKeyword() ) ) {
+	throw new PrgException( loopEntry.getLoopBegKeyword()
+				+ " oder Ende der Anweisung erwartet" );
+      }
+    }
+    this.asmOut.append( "\tJP\t" );
+    this.asmOut.append( loopEntry.getExitLabel() );
+    this.asmOut.newLine();
+  }
+
+
   private void parseFOR( CharacterIterator iter ) throws PrgException
   {
-    // Stack-Check
-    if( this.basicOptions.getCheckStack() ) {
-      putCode( "\tCALL\tCKSTCK\n" );
-      this.libItems.add( LibItem.CKSTCK );
+    SimpleVarInfo varInfo = checkVariable( iter );
+    if( varInfo != null ) {
+      if( varInfo.getDataType() != DataType.INTEGER ) {
+	varInfo = null;
+      }
     }
-
-    // Adresse der Laufvariablen parsen und Programmcode temporaer merken
-    StringBuilder varAddrOut = new StringBuilder( 16 );
-    StringBuilder asmOut     = this.asmOut;
-    String varAddrExpr       = null;
-    try {
-      this.asmOut = varAddrOut;
-      varAddrExpr = checkVarGetAddrExpr( iter );
+    if( varInfo == null ) {
+      throw new PrgException( "Integer-Variable erwartet" );
     }
-    finally {
-      this.asmOut = asmOut;
+    if( !varInfo.hasStaticAddr() ) {
+      throw new PrgException(
+		"Laufvariable darf keine Feldvariable mit variablen"
+						+ " Indexangaben sein." );
     }
-    if( varAddrExpr == null ) {
-      throwVarExpected();
-    }
-
-    // Schleifengrenzen parsen und Programmcode temporaer merken
-    StringBuilder boundsOut = new StringBuilder( 16 );
-    try {
-      this.asmOut = boundsOut;
-      parseAssignment( iter, varAddrExpr );
-    }
-    finally {
-      this.asmOut = asmOut;
-    }
+    parseAssignment( iter, varInfo );
     if( !checkInstruction( iter, "TO" ) ) {
-      throw new PrgException( "\'TO\' erwartet" );
+      throw new PrgException( "TO erwartet" );
     }
-    Integer endValue = checkConstExpr( iter );
-    if( endValue == null ) {
-      try {
-	this.asmOut = boundsOut;
-	parseExpr( iter );
-	putCode( "\tPUSH\tHL\n" );
-      }
-      finally {
-	this.asmOut = asmOut;
-      }
+    int toPos = this.asmOut.length();
+    parseExpr( iter );
+    Integer toValue = removeLastCodeIfConstExpr( toPos );
+    if( toValue == null ) {
+      this.asmOut.append( "\tPUSH\tHL\n" );
     }
-
-    // Schrittweite parsen und Programmcode temporaer merken
-    StringBuilder stepOut   = null;
-    Integer       stepValue = null;
+    Integer stepValue = null;
     if( checkInstruction( iter, "STEP" ) ) {
-      stepValue = checkConstExpr( iter );
+      int stepPos = this.asmOut.length();
+      parseExpr( iter );
+      stepValue = removeLastCodeIfConstExpr( stepPos );
       if( stepValue == null ) {
-	stepOut = new StringBuilder( 16 );
-	try {
-	  this.asmOut = stepOut;
-	  parseExpr( iter );
-	  putCode( "\tPUSH\tHL\n" );
-	}
-	finally {
-	  this.asmOut = asmOut;
-	}
+	this.asmOut.append( "\tPUSH\tHL\n" );
       }
     } else {
       stepValue = new Integer( 1 );
     }
-
-    // pruefen, ob die Schleife optimiert werden kann
-    ForNextEntry forNextEntry = null;
-    if( this.forNextEntries != null ) {
-      forNextEntry = new ForNextEntry(
-				getSourceLineNum(),
-				this.curBasicLineNum );
-      this.forNextEntries.push( forNextEntry );
-      if( !varAddrExpr.equals( "HL" ) && (stepValue != null) ) {
-	forNextEntry.setCounterVariableAddrExpr( varAddrExpr );
-	forNextEntry.setEndValue( endValue );
-	forNextEntry.setStepValue( stepValue.intValue() );
-	forNextEntry.setOptimized( true );
-      } else {
-	forNextEntry.setOptimized( false );
-	forNextEntry = null;	// keine Optimierung
-      }
-    }
-
-    // endgueltiger Programmcode erzeugen
-    String label = nextLabel();
-    if( forNextEntry != null ) {
-      this.asmOut.append( varAddrOut );
-      this.asmOut.append( boundsOut );
-      if( stepOut != null ) {
-	this.asmOut.append( stepOut );
-      }
-      forNextEntry.setLoopLabel( label );
-    } else {
-      this.asmOut.append( varAddrOut );
-      if( !varAddrExpr.equals( "HL" ) ) {
-	putCode( "\tLD\tHL," );
-	putCode( varAddrExpr );
-	putCode( '\n' );
-      }
-      putCode( "\tPUSH\tHL\n" );
-      this.asmOut.append( boundsOut );
-      if( endValue != null ) {
-	putCode_LD_HL_nn( endValue.intValue() );
-	putCode( "\tPUSH\tHL\n" );
-      }
-      if( stepOut != null ) {
-	this.asmOut.append( stepOut );
-      }
-      if( stepValue != null ) {
-	putCode_LD_HL_nn( stepValue.intValue() );
-	putCode( "\tPUSH\tHL\n" );
-      }
-      putCode( "\tLD\tHL," );
-      putCode( label );
-      putCode( "\n" );
-      putCode( "\tPUSH\tHL\n" );
-    }
-    if( this.basicOptions.getCheckStack() ) {
-      putCode_LD_A_n( MAGIC_FOR );
-      putCode( "\tPUSH\tAF\n" );
-    }
-    putCode( label );
-    putCode( ':' );
-    if( this.basicOptions.isBreakAlwaysPossible() ) {
-      putCode( "\tCALL\tCKBRK\n" );
-      this.libItems.add( LibItem.CKBRK );
-    }
-    putCode( '\n' );
+    String loopLabel = nextLabel();
+    this.asmOut.append( loopLabel );
+    this.asmOut.append( (char) ':' );
+    checkAppendBreakCheck();
+    this.asmOut.newLine();
+    this.structureStack.push(
+			new ForEntry(
+				this.curSourceLineNum,
+				this.curBasicLineNum,
+				loopLabel,
+				nextLabel(),
+				varInfo,
+				toValue,
+				stepValue ) );
   }
 
 
   private void parseGOSUB( CharacterIterator iter ) throws PrgException
   {
-    if( this.basicOptions.isBreakAlwaysPossible() ) {
-      putCode( "\tCALL\tCKBRK\n" );
-      this.libItems.add( LibItem.CKBRK );
+    checkAppendBreakCheck();
+    if( this.options.getCheckStack()
+	&& (this.options.getStackSize() > 0) )
+    {
+      this.asmOut.append( "\tCALL\tCKSTK\n" );
+      addLibItem( BasicLibrary.LibItem.CKSTK );
     }
-    if( this.basicOptions.getCheckStack() ) {
-      putCode( "\tCALL\tCKSTCK\n" );
-      this.libItems.add( LibItem.CKSTCK );
-    }
-    String label = createLabelForDestBasicLine( parseNumber( iter ) );
-    if( this.basicOptions.getCheckStack() ) {
+    String destLabel = parseDestLineExpr( iter );
+    if( this.options.getCheckStack() ) {
       String endOfInstLabel = nextLabel();
-      putCode( "\tLD\tHL," );
-      putCode( endOfInstLabel );
-      putCode( "\n"
+      this.asmOut.append( "\tLD\tHL," );
+      this.asmOut.append( endOfInstLabel );
+      this.asmOut.append( "\n"
 		+ "\tPUSH\tHL\n" );
-      putCode_LD_A_n( MAGIC_GOSUB );
-      putCode( "\tPUSH\tAF\n"
+      this.asmOut.append_LD_A_n( MAGIC_GOSUB );
+      this.asmOut.append( "\tPUSH\tAF\n"
 		+ "\tJP\t" );
-      putCode( label );
-      putCode( '\n' );
-      putCode( endOfInstLabel );
-      putCode( ":\n" );
+      this.asmOut.append( destLabel );
+      this.asmOut.newLine();
+      this.asmOut.append( endOfInstLabel );
+      this.asmOut.append( ":\n" );
     } else {
-      putCode( "\tCALL\t" );
-      putCode( label );
-      putCode( '\n' );
+      this.asmOut.append( "\tCALL\t" );
+      this.asmOut.append( destLabel );
+      this.asmOut.newLine();
     }
   }
 
 
   private void parseGOTO( CharacterIterator iter ) throws PrgException
   {
-    if( this.basicOptions.isBreakAlwaysPossible() ) {
-      putCode( "\tCALL\tCKBRK\n" );
-      this.libItems.add( LibItem.CKBRK );
-    }
-    String label = createLabelForDestBasicLine( parseNumber( iter ) );
-    putCode( "\tJP\t" );
-    putCode( label );
-    putCode( '\n' );
-    this.suppressExit = true;
+    checkAppendBreakCheck();
+    String destLabel = parseDestLineExpr( iter );
+    this.asmOut.append( "\tJP\t" );
+    this.asmOut.append( destLabel );
+    this.asmOut.newLine();
   }
 
 
   private void parseIF( CharacterIterator iter ) throws PrgException
   {
     parseExpr( iter );
-    putCode( "\tLD\tA,H\n"
+    this.asmOut.append( "\tLD\tA,H\n"
 		+ "\tOR\tL\n" );
-    if( this.sourceFormatter != null ) {
-      this.sourceFormatter.append( '\u0020' );
+
+    // auf GOTO und mehrzeiliges IF pruefen
+    BasicLineExpr gotoLineExpr = null;
+    boolean       multiLine    = false;
+    if( checkKeyword( iter, "THEN" ) ) {
+      if( isEndOfInstr( iter ) ) {
+	multiLine = true;
+      } else {
+	char ch = skipSpaces( iter );
+	if( (ch >= '0') && (ch <= '9') ) {
+	  gotoLineExpr = BasicLineExpr.checkBasicLineExpr(
+						iter,
+						this.curSourceLineNum,
+						this.curBasicLineNum );
+	}
+      }
+    } else {
+      if( isEndOfInstr( iter ) ) {
+	multiLine = true;
+      }
+    }
+    if( !multiLine && (gotoLineExpr == null) ) {
+      if( checkKeyword( iter, "GOTO" ) ) {
+	gotoLineExpr = BasicLineExpr.checkBasicLineExpr(
+						iter,
+						this.curSourceLineNum,
+						this.curBasicLineNum );
+	if( gotoLineExpr == null ) {
+	  throwBasicLineExprExpected();
+	}
+      }
     }
 
     /*
@@ -1352,478 +1968,788 @@ public class BasicCompiler extends PrgThread
      * und die Tastatur auch nicht auf Programmabbruch abgefragt werden muss,
      * kann der Programmcode optimiert werden.
      */
-    boolean orgBasicMismatch = false;
-    String  keywordText      = null;
-    Integer gotoLineNum      = null;
-    int     parsePos         = iter.getIndex();
-    if( !this.basicOptions.isBreakAlwaysPossible() ) {
-      if( checkKeyword( iter, "THEN", false, false ) ) {
-	keywordText = "THEN";
-	orgBasicMismatch = true;
-	gotoLineNum      = readNumber( iter );
-	if( gotoLineNum == null ) {
-	  if( checkKeyword( iter, "GOTO", false, false ) ) {
-	    keywordText = "THEN GOTO";
-	    gotoLineNum = readNumber( iter );
-	  }
-	}
+    if( (gotoLineExpr != null)
+	&& !this.options.canBreakAlways()
+	&& isEndOfInstr( iter ) )
+    {
+      this.asmOut.append( "\tJP\tNZ," );
+      this.asmOut.append(
+		createBasicLineLabel( gotoLineExpr.getExprText() ) );
+      this.asmOut.newLine();
+      this.destBasicLines.add( gotoLineExpr );
+    } else {
+      IfEntry ifEntry = new IfEntry(
+				this.curSourceLineNum,
+				this.curBasicLineNum,
+				multiLine,
+				nextLabel(),
+				nextLabel() );
+      this.structureStack.push( ifEntry );
+      if( !multiLine && this.options.getPreferRelativeJumps() ) {
+	this.asmOut.append( "\tJR\tZ," );
+      } else {
+	this.asmOut.append( "\tJP\tZ," );
       }
-      else if( checkKeyword( iter, "GOTO", false, false ) ) {
-	keywordText = "GOTO";
-	gotoLineNum = readNumber( iter );
-      }
-      if( gotoLineNum != null ) {
-	if( skipSpaces( iter ) != CharacterIterator.DONE ) {
-	  gotoLineNum = null;
-	}
+      this.asmOut.append( ifEntry.getElseLabel() );
+      this.asmOut.newLine();
+      if( gotoLineExpr != null ) {
+	checkAppendBreakCheck();
+	this.asmOut.append( "\tJP\t" );
+	this.asmOut.append(
+		createBasicLineLabel( gotoLineExpr.getExprText() ) );
+	this.asmOut.newLine();
+	this.destBasicLines.add( gotoLineExpr );
+      } else {
+	this.separatorChecked = true;
       }
     }
-    if( gotoLineNum != null ) {
-      if( this.sourceFormatter != null ) {
-	if( keywordText != null ) {
-	  this.sourceFormatter.replaceByKeyword( parsePos, keywordText, true );
-	}
-	this.sourceFormatter.append( (char) '\u0020' );
-	this.sourceFormatter.append( gotoLineNum.toString() );
-      }
-      if( orgBasicMismatch ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-      }
-      putCode( "\tJP\tNZ," );
-      putCode( createLabelForDestBasicLine( gotoLineNum.intValue() ) );
-      putCode( '\n' );
+  }
+
+
+  private void parseINK( CharacterIterator iter ) throws PrgException
+  {
+    if( this.target.supportsColors() ) {
+      parseExpr( iter );
+      this.asmOut.append( "\tCALL\tXINK\n" );
+      addLibItem( BasicLibrary.LibItem.XINK );
     } else {
-      iter.setIndex( parsePos );
-      String elseLabel = nextLabel();
-      if( this.elseLabels == null ) {
-	this.elseLabels = new Stack<String>();
+      try {
+	setCodeGenEnabled( false );
+	parseExpr( iter );
       }
-      this.elseLabels.push( elseLabel );
-      if( this.basicOptions.getPreferRelativeJumps() ) {
-	putCode( "\tJR\tZ," );
-      } else {
-	putCode( "\tJP\tZ," );
+      finally {
+	setCodeGenEnabled( true );
       }
-      putCode( elseLabel );
-      putCode( '\n' );
-      if( checkInstruction( iter, "THEN" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	char ch = skipSpaces( iter );
-	if( (ch >= '0') && (ch <= '9') ) {
-	  parseGOTO( iter );
-	} else {
-	  parseInstructions( iter );
-	}
-      } else {
-	parseInstructions( iter );
-      }
-      this.suppressExit = false;
     }
   }
 
 
   private void parseINPUT( CharacterIterator iter ) throws PrgException
   {
-    boolean loop = true;
-    while( loop ) {
+    do {
       String retryLabel = nextLabel();
-      putCode( retryLabel );
-      putCode( ":\n" );
+      this.asmOut.append( retryLabel );
+      this.asmOut.append( ":\n" );
 
-      boolean hasInfo = checkPrintStringLiteral( iter );
-
-      skipSpaces( iter );
-      int    begPos      = iter.getIndex();
-      String varAddrExpr = checkVarGetAddrExpr( iter );
-      if( varAddrExpr != null ) {
-	if( varAddrExpr.equals( "HL" ) ) {
-	  putCode( "\tPUSH\tHL\n" );
-	}
-	if( !hasInfo ) {
-	  int curPos = iter.getIndex();
-	  iter.setIndex( begPos );
-	  char ch = iter.current();
-	  while( (ch != CharacterIterator.DONE)
-		 && (iter.getIndex() < curPos) )
-	  {
-	    putCharToPrintString( Character.toUpperCase( ch ) );
-	    ch = iter.next();
-	  }
-	}
-	putCharToPrintString( ':' );
-      }
-      if( varAddrExpr != null ) {
-	putCode( "\tLD\tHL,M_IBUF\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tLD\tE,M_EBUF-M_IBUF\n"
-		+ "\tCALL\tINLN\n"
-		+ "\tPOP\tHL\n"
-		+ "\tCALL\tR_INT\n" );
-	this.libItems.add( LibItem.INLN );
-	this.libItems.add( LibItem.R_INT );
-	if( varAddrExpr.equals( "HL" ) ) {
-	  putCode( "\tEX\tDE,HL\n"
-		+ "\tPOP\tHL\n"
-		+ "\tJR\tC," );
-	  putCode( retryLabel );
-	  putCode( "\n"
-		+ "\tLD\t(HL),E\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\t(HL),D\n" );
+      // Prompt
+      String text = checkStringLiteral( iter );
+      if( text != null ) {
+	// String-Literal evtl. bereits vorhanden?
+	String label = this.str2Label.get( text );
+	if( label != null ) {
+	  this.asmOut.append( "\tLD\tHL," );
+	  this.asmOut.append( label );
+	  this.asmOut.append( "\n"
+		+ "\tCALL\tXOUTS\n" );
+	  addLibItem( BasicLibrary.LibItem.XOUTS );
 	} else {
-	  putCode( "\tJR\tC," );
-	  putCode( retryLabel );
-	  putCode( "\n"
-		+ "\tLD\t(" );
-	  putCode( varAddrExpr );
-	  putCode( "),HL\n" );
+	  this.asmOut.append( "\tCALL\tXOUTST\n" );
+	  this.asmOut.appendStringLiteral( text );
+	  addLibItem( BasicLibrary.LibItem.XOUTST );
 	}
-      }
-      if( (hasInfo || (varAddrExpr != null))
-	  && skipSpaces( iter ) == ',' )
-      {
-	iter.next();
+	checkToken( iter, ';' );
       } else {
-	loop = false;
+	this.asmOut.append_LD_A_n( '?' );
+	this.asmOut.append( "\tCALL\tXOUTCH\n" );
+	addLibItem( BasicLibrary.LibItem.XOUTCH );
       }
-    }
-  }
 
-
-  private void parseInString( CharacterIterator iter ) throws PrgException
-  {
-    parseExpr( iter );
-    putCode( "\tLD\tE,3FH\n"
-		+ "\tCALL\tINLN\n"
-		+ "\tLD\tA,D\n"
-		+ "\tLD\t(M_LEN),A\n" );
-    this.libItems.add( LibItem.INLN );
-    this.libItems.add( LibItem.M_LEN );
-
+      // Variable
+      SimpleVarInfo varInfo = checkVariable( iter );
+      if( varInfo == null ) {
+	if( text != null ) {
+	  throwVarExpected();
+	}
+	throwStringLitOrVarExpected();
+      }
+      if( varInfo.getDataType() == DataType.INTEGER ) {
+	varInfo.ensureAddrInHL( this.asmOut );
+	this.asmOut.append( "\tCALL\tINIV\n" );
+	if( this.options.getPreferRelativeJumps() ) {
+	  this.asmOut.append( "\tJR\tC," );
+	} else {
+	  this.asmOut.append( "\tJP\tC," );
+	}
+	this.asmOut.append( retryLabel );
+	this.asmOut.newLine();
+	addLibItem( BasicLibrary.LibItem.INIV );
+      } else if( varInfo.getDataType() == DataType.STRING ) {
+	varInfo.ensureAddrInHL( this.asmOut );
+	this.asmOut.append( "\tCALL\tINSV\n" );
+	addLibItem( BasicLibrary.LibItem.INSV );
+      }
+    } while( checkToken( iter, ';' ) );
   }
 
 
   private void parseLET( CharacterIterator iter ) throws PrgException
   {
-    String varAddrExpr = checkVarGetAddrExpr( iter );
-    if( varAddrExpr != null ) {
-      parseAssignment( iter, varAddrExpr );
-    } else {
+    String varName = checkIdentifier( iter );
+    if( varName == null ) {
       throwVarExpected();
     }
+    if( !checkReturnValueAssignment( iter, varName ) ) {
+      SimpleVarInfo varInfo = checkVariable( iter, varName );
+      if( varInfo != null ) {
+	parseAssignment( iter, varInfo );
+      } else {
+	throwVarExpected();
+      }
+    }
+  }
+
+
+  private void parseLABEL( CharacterIterator iter ) throws PrgException
+  {
+    checkGraphicsSupported();
+    for(;;) {
+      String text = checkStringLiteral( iter );
+      if( text != null ) {
+	if( !text.isEmpty() ) {
+	  // String-Literal evtl. bereits vorhanden?
+	  String label = this.str2Label.get( text );
+	  if( label != null ) {
+	    this.asmOut.append( "\tLD\tHL," );
+	    this.asmOut.append( label );
+	    this.asmOut.append( "\n"
+		+ "\tCALL\tDRLBL\n" );
+	    addLibItem( BasicLibrary.LibItem.DRLBL );
+	  } else {
+	    this.asmOut.append( "\tCALL\tDRLBLT\n" );
+	    this.asmOut.appendStringLiteral( text );
+	    addLibItem( BasicLibrary.LibItem.DRLBLT );
+	  }
+	}
+      } else {
+	if( !checkParseStringPrimVarExpr( iter ) ) {
+	  throwStringExprExpected();
+	}
+	this.asmOut.append( "\tCALL\tDRLBL\n" );
+	addLibItem( BasicLibrary.LibItem.DRLBL );
+      }
+      if( skipSpaces( iter ) != '+' ) {
+	break;
+      }
+      iter.next();
+    }
+  }
+
+
+  private void parseLINE( CharacterIterator iter ) throws PrgException
+  {
+    if( checkKeyword( iter, "INPUT" ) ) {
+
+      // Eingabe einer ganzen Zeile
+      parseInputLine( iter, false );
+
+    } else {
+
+      // Zeichnen einer Linie oder eines Rechtecks
+      checkGraphicsSupported();
+      boolean enclosed = checkToken( iter, '(' );
+      parseExpr( iter );
+      this.asmOut.append( "\tLD\t(M_LNBX),HL\n" );
+      parseToken( iter, ',' );
+      parseExpr( iter );
+      this.asmOut.append( "\tLD\t(M_LNBY),HL\n" );
+      if( enclosed ) {
+	parseToken( iter, ')' );
+	parseToken( iter, '-' );
+	parseToken( iter, '(' );
+      } else {
+	parseToken( iter, ',' );
+      }
+      parseExpr( iter );
+      this.asmOut.append( "\tLD\t(M_LNEX),HL\n" );
+      parseToken( iter, ',' );
+      parseExpr( iter );
+      this.asmOut.append( "\tLD\t(M_LNEY),HL\n" );
+      if( enclosed ) {
+	parseToken( iter, ')' );
+      }
+      if( checkToken( iter, ',' ) ) {
+	if( checkKeyword( iter, "BF" ) ) {
+	  this.asmOut.append( "\tCALL\tDRBOXF\n" );
+	  addLibItem( BasicLibrary.LibItem.DRBOXF );
+	} else {
+	  if( !checkKeyword( iter, "B" ) ) {
+	    throw new PrgException( "B oder BF erwartet" );
+	  }
+	  this.asmOut.append( "\tCALL\tDRBOX\n" );
+	  addLibItem( BasicLibrary.LibItem.DRBOX );
+	}
+      } else {
+	this.asmOut.append( "\tCALL\tDRLINE\n" );
+	addLibItem( BasicLibrary.LibItem.DRLINE );
+      }
+    }
+  }
+
+
+  private void parseLOCAL( CharacterIterator iter ) throws PrgException
+  {
+    CallableEntry entry = getCallableEntry();
+    if( entry == null ) {
+	throw new PrgException(
+		"Anweisung nur in einer Funktion/Prozedur erlaubt" );
+    }
+    do {
+      String varName = checkIdentifier( iter );
+      if( varName == null ) {
+	throwVarNameExpected();
+      }
+      checkVarName( varName );
+      if( varName.equals( entry.getName() ) ) {
+	throw new PrgException( "Name der Funktion/Prozedur"
+			+ " als Variablenname nicht zul\u00E4ssig" );
+      }
+      entry.addVar( this.curSourceLineNum, this.curBasicLineNum, varName );
+    } while( checkToken( iter, ',' ) );
+  }
+
+
+  private void parseLOCATE( CharacterIterator iter ) throws PrgException
+  {
+    parse2ArgsTo_DE_HL( iter );
+    if( this.target.supportsXLOCAT() ) {
+      this.asmOut.append( "\tCALL\tLOCATE\n" );
+      addLibItem( BasicLibrary.LibItem.LOCATE );
+    } else {
+      throw new PrgException( "LOCATE-Anweisung f\u00FCr das"
+				+ " Zielsystem nicht unterst\u00FCtzt" );
+    }
+  }
+
+
+  private void parseLOOP( CharacterIterator iter ) throws PrgException
+  {
+    DoEntry doEntry = null;
+    if( !this.structureStack.isEmpty() ) {
+      StructureEntry entry = this.structureStack.peek();
+      if( entry instanceof DoEntry ) {
+	doEntry = (DoEntry) entry;
+	this.structureStack.pop();
+      }
+    }
+    if( doEntry == null ) {
+      throw new PrgException( "LOOP ohne DO" );
+    }
+    if( checkKeyword( iter, "UNTIL" ) ) {
+      parseExpr( iter );
+      this.asmOut.append( "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tJP\tZ," + doEntry.getLoopLabel() + "\n" );
+    } else if( checkKeyword( iter, "WHILE" ) ) {
+      parseExpr( iter );
+      this.asmOut.append( "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tJP\tNZ," + doEntry.getLoopLabel() + "\n" );
+    } else {
+      if( !isEndOfInstr( iter ) ) {
+	throw new PrgException(
+		"UNTIL, WHILE oder Ende der Anweisung erwartet" );
+      }
+      this.asmOut.append( "\tJP\t" );
+      this.asmOut.append( doEntry.getLoopLabel() );
+      this.asmOut.newLine();
+    }
+    this.asmOut.append( doEntry.getExitLabel() );
+    this.asmOut.append( ":\n" );
+  }
+
+
+  private void parseMOVE( CharacterIterator iter ) throws PrgException
+  {
+    if( checkKeyword( iter, "STEP" ) ) {
+      parseMOVER( iter );
+    } else {
+      checkGraphicsSupported();
+      parsePointToMem( iter, "M_XPOS", "M_YPOS" );
+      addLibItem( BasicLibrary.LibItem.M_XYPO );
+    }
+  }
+
+
+  private void parseMOVER( CharacterIterator iter ) throws PrgException
+  {
+    checkGraphicsSupported();
+    parsePointTo_DE_HL( iter );
+    this.asmOut.append( "\tCALL\tMOVER\n" );
+    addLibItem( BasicLibrary.LibItem.MOVER );
   }
 
 
   private void parseNEXT( CharacterIterator iter ) throws PrgException
   {
-    /*
-     * Zuerst die Adresse der Laufvariablen ermitteln
-     * und den dazugehoerigen Programmcode temporaer merken
-     */
-    StringBuilder asmOut = this.asmOut;
-    StringBuilder asmTmp = new StringBuilder( 32 );
-    this.asmOut          = asmTmp;
-    String varAddrExpr = checkVarGetAddrExpr( iter );
-    if( varAddrExpr == null ) {
-      ac1BasicMismatch();
-      z1013BasicMismatch();
-    }
-    this.asmOut = asmOut;
-
-    /*
-     * Je nach Optionen und ob die Adresse der Laufvariablen konstant ist,
-     * Stack pruefen und optimierten Programmcode erzeugen
-     */
-    int          stepValue      = 0;
-    Integer      endValue       = null;
-    String       orgVarAddrExpr = null;
-    String       loopLabel      = null;
-    if( this.forNextEntries != null ) {
-      if( this.forNextEntries.isEmpty() ) {
-	throw new PrgException( "Bei Strukturierter Programmierung"
-		+ " unerwartetes NEXT\n"
-		+ "Deaktivieren Sie bitte die Option"
-		+ " \'FOR/NEXT als strukturierte Schleifen \u00FCbersetzen"
-		+ " und optimieren\'" );
-      }
-      ForNextEntry forNextEntry = this.forNextEntries.pop();
-      if( forNextEntry.isOptimized() ) {
-	loopLabel      = forNextEntry.getLoopLabel();
-	orgVarAddrExpr = forNextEntry.getCounterVariableAddrExpr();
-	endValue       = forNextEntry.getEndValue();
-	stepValue      = forNextEntry.getStepValue();
+    ForEntry forEntry = null;
+    if( !this.structureStack.isEmpty() ) {
+      StructureEntry entry = this.structureStack.peek();
+      if( entry instanceof ForEntry ) {
+	forEntry = (ForEntry) entry;
+	this.structureStack.pop();
       }
     }
-    if( (loopLabel != null) && (orgVarAddrExpr != null) ) {
-      if( varAddrExpr != null ) {
-	if( !varAddrExpr.equals( orgVarAddrExpr ) ) {
-	  throw new PrgException( "Unterschiedliche Laufvariablen"
-		+ " in FOR/NEXT-Schleife\n"
-		+ "Deaktivieren Sie bitte die Option"
-		+ " \'FOR/NEXT als strukturierte Schleifen \u00FCbersetzen"
-		+ " und optimieren\'" );
-	}
+    if( forEntry == null ) {
+      throw new PrgException( "NEXT ohne FOR" );
+    }
+    if( !isEndOfInstr( iter ) ) {
+      int len = this.asmOut.length();
+      SimpleVarInfo varInfo = checkVariable( iter );
+      this.asmOut.setLength( len );
+      if( varInfo == null ) {
+	throw new PrgException( "Variable oder Ende der Anweisung erwartet" );
       }
-      if( this.basicOptions.getCheckStack() ) {
-	putCode( "\tPOP\tAF\n"
-		+ "\tCP\t" );
-	putCode( getHex2( MAGIC_FOR ) );
-	putCode( "\n"
-		+ "\tJP\tNZ,E_NXWF\n" );
-	this.libItems.add( LibItem.E_NXWF );
+      if( !varInfo.equals( forEntry.getSimpleVarInfo() ) ) {
+	throw new PrgException( "Variable stimmt nicht mit der bei der"
+			+ " FOR-Anweisung angegebenen \u00FCberein." );
       }
-      putCode( "\tLD\tHL,(" );
-      putCode( orgVarAddrExpr );
-      putCode( ")\n" );
-      if( stepValue == -1 ) {
-	putCode( "\tDEC\tHL\n" );
-      } else if( stepValue == 1 ) {
-	putCode( "\tINC\tHL\n" );
+    }
+    forEntry.getSimpleVarInfo().ensureValueInHL( this.asmOut );
+    Integer stepValue = forEntry.getStepValue();
+    if( stepValue != null ) {
+      if( stepValue.intValue() == -1 ) {
+	this.asmOut.append( "\tCALL\tO_DEC\n" );
+	addLibItem( BasicLibrary.LibItem.O_DEC );
+      } else if( stepValue.intValue() == 1 ) {
+	this.asmOut.append( "\tCALL\tO_INC\n" );
+	addLibItem( BasicLibrary.LibItem.O_INC );
       } else {
-	putCode_LD_DE_nn( stepValue );
-	putCode( "\tOR\tA\n"
-		+ "\tADC\tHL,DE\n"
-		+ "\tJP\tPE,E_ARIT\n" );
-	this.libItems.add( LibItem.E_ARIT );
+	this.asmOut.append_LD_DE_nn( stepValue );
+	this.asmOut.append( "\tCALL\tO_ADD\n" );
+	addLibItem( BasicLibrary.LibItem.O_ADD );
       }
-      putCode( "\tLD\t(" );
-      putCode( orgVarAddrExpr );
-      putCode( "),HL\n" );
-      if( endValue != null ) {
-	putCode_LD_DE_nn( endValue );
-      } else {
-	putCode( "\tPOP\tDE\n" );
-      }
-      putCode( "\tCALL\tCPHLDE\n" );
-      this.libItems.add( LibItem.H_CP );
-      if( (endValue != null) && !this.basicOptions.getCheckStack() ) {
+    } else {
+      this.asmOut.append( "\tPOP\tDE\n"
+			+ "\tCALL\tO_ADD\n" );
+      addLibItem( BasicLibrary.LibItem.O_ADD );
+    }
+    forEntry.getSimpleVarInfo().writeCode_LD_Var_HL( this.asmOut );
+    Integer toValue = forEntry.getToValue();
+    if( stepValue != null ) {
+      if( toValue != null ) {
 	/*
 	 * Diese FOR-Schleife legt nichts auf den Stack.
 	 * Es kann somit direkt zum Anfang der Schleife gesprungen werden.
 	 */
-	if( stepValue < 0 ) {
-	  putCode( "\tJP\tNC," );
+	this.asmOut.append_LD_DE_nn( toValue );
+	this.asmOut.append( "\tCALL\tCPHLDE\n" );
+	addLibItem( BasicLibrary.LibItem.CPHLDE );
+	if( stepValue.intValue() < 0 ) {
+	  this.asmOut.append( "\tJP\tNC," );
 	} else {
-	  putCode( "\tJP\tZ," );
-	  putCode( loopLabel );
-	  putCode( '\n' );
-	  putCode( "\tJP\tC," );
+	  this.asmOut.append( "\tJP\tZ," );
+	  this.asmOut.append( forEntry.getLoopLabel() );
+	  this.asmOut.append( "\n"
+				+ "\tJP\tC," );
 	}
-	putCode( loopLabel );
-	putCode( '\n' );
+	this.asmOut.append( forEntry.getLoopLabel() );
+	this.asmOut.newLine();
       } else {
+	this.asmOut.append( "\tPOP\tDE\n" );
+	this.asmOut.append( "\tCALL\tCPHLDE\n" );
+	addLibItem( BasicLibrary.LibItem.CPHLDE );
 	String exitLabel = nextLabel();
-	if( stepValue < 0 ) {
-	  putCode( "\tJR\tC," );
-	  putCode( exitLabel );
-	  putCode( '\n' );
+	if( stepValue.intValue() < 0 ) {
+	  this.asmOut.append( "\tJR\tC," );
+	  this.asmOut.append( exitLabel );
+	  this.asmOut.newLine();
 	} else {
 	  String tmpLabel = nextLabel();
-	  putCode( "\tJR\tZ," );
-	  putCode( tmpLabel );
-	  putCode( '\n' );
-	  putCode( "\tJR\tNC," );
-	  putCode( exitLabel );
-	  putCode( '\n' );
-	  putCode( tmpLabel );
-	  putCode( ":\n" );
+	  this.asmOut.append( "\tJR\tZ," );
+	  this.asmOut.append( tmpLabel );
+	  this.asmOut.append( "\n"
+				+ "\tJR\tNC," );
+	  this.asmOut.append( exitLabel );
+	  this.asmOut.newLine();
+	  this.asmOut.append( tmpLabel );
+	  this.asmOut.append( (char) ':' );
 	}
-	if( endValue == null ) {
-	  putCode( "\tPUSH\tDE\n" );
-	}
-	if( this.basicOptions.getCheckStack() ) {
-	  putCode_LD_A_n( MAGIC_FOR );
-	  putCode( "\tPUSH\tAF\n" );
-	}
-	putCode( "\tJP\t" );
-	putCode( loopLabel );
-	putCode( '\n' );
-	putCode( exitLabel );
-	putCode( ":\n" );
+	this.asmOut.append( "\tPUSH\tDE\n"
+				+ "\tJP\t" );
+	this.asmOut.append( forEntry.getLoopLabel() );
+	this.asmOut.newLine();
+	this.asmOut.append( exitLabel );
+	this.asmOut.append( ":\n" );
       }
     } else {
-      if( this.basicOptions.getCheckStack() ) {
-	if( this.asmOut != null ) {
-	  this.asmOut.append( asmTmp );
-	  if( varAddrExpr != null ) {
-	    if( varAddrExpr.equals( "HL" ) ) {
-	      putCode( "\tEX\tDE,HL\n" );
-	    } else {
-	      putCode( "\tLD\tDE," );
-	      putCode( varAddrExpr );
-	      putCode( '\n' );
-	    }
-	  } else {
-	    putCode( "\tLD\tDE,0000H\n" );
-	  }
-	}
+      this.asmOut.append( "\tLD\tB,D\n"			// Schrittweite
+			+ "\tLD\tC,E\n" );
+      if( toValue != null ) {
+	this.asmOut.append_LD_DE_nn( toValue.intValue() );
+      } else {
+	this.asmOut.append( "\tPOP\tDE\n" );
       }
-      putCode( "\tCALL\tH_NEXT\n"
-		+ "\tLD\tA,L\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tNZ," );
-      this.libItems.add( LibItem.H_NEXT );
-      String label = nextLabel();
-      putCode( label );
-      putCode( '\n' );
-      if( this.basicOptions.getCheckStack() ) {
-	putCode( "\tPOP\tAF\n" );
+      this.asmOut.append( "\tLD\tA,B\n"
+			+ "\tOR\tA\n"
+			+ "\tJP\tM," );
+      String subLabel = nextLabel();
+      this.asmOut.append( subLabel );
+      this.asmOut.append( "\n"
+			+ "\tCALL\tCPHLDE\n" );
+      addLibItem( BasicLibrary.LibItem.CPHLDE );
+      String tmpLabel = nextLabel();
+      this.asmOut.append( "\tJR\tZ," );
+      this.asmOut.append( tmpLabel );
+      this.asmOut.append( "\n"
+			+ "\tJR\tC," );
+      this.asmOut.append( tmpLabel );
+      this.asmOut.append( "\n"
+			+ "\tJR\t" );
+      this.asmOut.append( forEntry.getExitLabel() );
+      this.asmOut.newLine();
+      this.asmOut.append( subLabel );
+      this.asmOut.append( ":\n"
+			+ "\tCALL\tCPHLDE\n"
+			+ "\tJR\tC," );
+      this.asmOut.append( forEntry.getExitLabel() );
+      this.asmOut.newLine();
+      this.asmOut.append( tmpLabel );
+      this.asmOut.append( ":\n" );
+      if( toValue == null ) {
+	this.asmOut.append( "\tPUSH\tDE\n" );
       }
-      putCode( "\tPOP\tHL\n"
-		+ "\tPUSH\tHL\n" );
-      if( this.basicOptions.getCheckStack() ) {
-	putCode( "\tPUSH\tAF\n" );
-      }
-      putCode( "\tJP\t(HL)\n" );
-      putCode( label );
-      putCode( ":\n" );
-      if( this.basicOptions.getCheckStack() ) {
-	putCode( "\tPOP\tAF\n" );
-      }
-      putCode( "\tPOP\tBC\n"
-		+ "\tPOP\tBC\n"
-		+ "\tPOP\tBC\n"
-		+ "\tPOP\tBC\n" );
+      this.asmOut.append( "\tPUSH\tBC\n"
+				+ "\tJP\t" );
+      this.asmOut.append( forEntry.getLoopLabel() );
+      this.asmOut.newLine();
     }
+    this.asmOut.append( forEntry.getExitLabel() );
+    this.asmOut.append( ":\n" );
   }
 
 
   private void parseOUT( CharacterIterator iter ) throws PrgException
   {
-    if( skipSpaces( iter ) == '(' ) {
-      iter.next();
-      parseExpr( iter );
+    boolean enclosed = checkToken( iter, '(' );
+    int     pos      = this.asmOut.length();
+    parseExpr( iter );
+    String tmpPortCode = this.asmOut.cut( pos );
+    String newPortCode = convertCodeToValueInBC( tmpPortCode );
+    if( enclosed ) {
       parseToken( iter, ')' );
-      if( skipSpaces( iter ) == ',' ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-      } else {
-	parseToken( iter, '=' );
+    }
+    if( enclosed ) {
+      if( !checkToken( iter, '=' ) ) {
+	parseToken( iter, ',' );
       }
     } else {
-      ac1BasicMismatch();
-      z1013BasicMismatch();
-      parseExpr( iter );
       parseToken( iter, ',' );
     }
-    putCode( "\tPUSH\tHL\n" );
     parseExpr( iter );
-    putCode( "\tPOP\tBC\n"
-		+ "\tOUT\t(C),L\n" );
-  }
-
-
-  private void parseOUTCHAR( CharacterIterator iter ) throws PrgException
-  {
-    Integer value = checkConstExpr( iter, 0, 0xFF );
+    Integer value = removeLastCodeIfConstExpr( pos );
     if( value != null ) {
-      if( value.intValue() == 0x0D ) {
-	putCode( "\tCALL\tOUTNL\n" );
-	this.libItems.add( LibItem.OUTNL );
+      if( newPortCode != null ) {
+	this.asmOut.append( newPortCode );
       } else {
-	putCode( "\tLD\tA," );
-	putCode( getHex2( value.intValue() ) );
-	putCode( "\n"
-		+ "\tCALL\tXOUTCH\n" );
-	this.libItems.add( LibItem.XOUTCH );
+	this.asmOut.append( tmpPortCode );
+	this.asmOut.append( "\tLD\tB,H\n"
+			+ "\tLD\tC,L\n" );
       }
+      this.asmOut.append_LD_A_n( value.intValue() );
+      this.asmOut.append( "\tOUT\t(C),A\n" );
     } else {
-      parseExpr( iter );
-      putCode( "\tLD\tA,L\n"
-		+ "\tCALL\tXOUTCH\n" );
-      this.libItems.add( LibItem.XOUTCH );
+      if( newPortCode != null ) {
+	this.asmOut.append( newPortCode );
+      } else {
+	String valueCode = this.asmOut.cut( pos );
+	if( isOnly_LD_HL_xx( valueCode ) ) {
+	  if( newPortCode != null ) {
+	    this.asmOut.append( newPortCode );
+	  } else {
+	    this.asmOut.append( tmpPortCode );
+	    this.asmOut.append( "\tLD\tB,H\n"
+			+ "\tLD\tC,L\n" );
+	  }
+	  this.asmOut.append( valueCode );
+	} else {
+	  this.asmOut.append( tmpPortCode );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( valueCode );
+	  this.asmOut.append( "\tPOP\tBC\n" );
+	}
+      }
+      this.asmOut.append( "\tOUT\t(C),L\n" );
     }
   }
 
 
-  private void parseOutString( CharacterIterator iter ) throws PrgException
+  private void parseON( CharacterIterator iter ) throws PrgException
   {
     parseExpr( iter );
-    putCode( "\tCALL\tP_TEXT\n" );
-    this.libItems.add( LibItem.P_TEXT );
+    if( checkKeyword( iter, "GOSUB" ) ) {
+      this.asmOut.append( "\tCALL\tONGOAD\n" );
+      parseLineExprList( iter );
+      String label = nextLabel();
+      this.asmOut.append( "\tJR\tZ," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+		+ "\tLD\tDE," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+		+ "\tPUSH\tDE\n" );
+      if( this.options.getCheckStack() ) {
+        this.asmOut.append_LD_A_n( MAGIC_GOSUB );
+        this.asmOut.append( "\tPUSH\tAF\n" );
+      }
+      this.asmOut.append( "\tJP\t(HL)\n" );
+      this.asmOut.append( label );
+      this.asmOut.append( ":\n" );
+      addLibItem( BasicLibrary.LibItem.ONGOAD );
+    } else if( checkKeyword( iter, "GOTO" ) ) {
+      this.asmOut.append( "\tCALL\tONGOAD\n" );
+      parseLineExprList( iter );
+      String label = nextLabel();
+      this.asmOut.append( "\tJR\tZ," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+		+ "\tJP\t(HL)\n" );
+      this.asmOut.append( label );
+      this.asmOut.append( ":\n" );
+      addLibItem( BasicLibrary.LibItem.ONGOAD );
+    } else {
+      throw new PrgException( "GOSUB oder GOTO erwartet" );
+    }
+  }
+
+
+  private void parsePAPER( CharacterIterator iter ) throws PrgException
+  {
+    if( this.target.supportsColors() ) {
+      parseExpr( iter );
+      this.asmOut.append( "\tCALL\tXPAPER\n" );
+      addLibItem( BasicLibrary.LibItem.XPAPER );
+    } else {
+      try {
+	setCodeGenEnabled( false );
+	parseExpr( iter );
+      }
+      finally {
+	setCodeGenEnabled( true );
+      }
+    }
+  }
+
+
+  private void parsePASSWORD( CharacterIterator iter ) throws PrgException
+  {
+    if( !checkKeyword( iter, "INPUT" ) ) {
+      throw new PrgException( "INPUT erwartet" );
+    }
+    parseInputLine( iter, true );
+  }
+
+
+  private void parsePAUSE( CharacterIterator iter ) throws PrgException
+  {
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    Integer value = removeLastCodeIfConstExpr( pos );
+    if( value != null ) {
+      if( (value.intValue() < 0) || (value.intValue() > 0x7FFF) ) {
+	putWarningOutOfRange();
+      }
+      this.asmOut.append_LD_HL_nn( value.intValue() );
+    } else {
+      parseExpr( iter );
+    }
+    this.asmOut.append( "\tCALL\tPAUSE\n" );
+    addLibItem( BasicLibrary.LibItem.PAUSE );
   }
 
 
   private void parsePOKE( CharacterIterator iter ) throws PrgException
   {
+    int pos = this.asmOut.length();
     parseExpr( iter );
+    Integer addr = removeLastCodeIfConstExpr( pos );
     parseToken( iter, ',' );
-    Integer value = checkConstExpr( iter );
-    if( value != null ) {
-      putCode( "\tLD\t(HL)," );
-      putCode( getHex2( value.intValue() ) );
-      putCode( '\n' );
+    pos = this.asmOut.length();
+    parseExpr( iter );
+    if( addr != null ) {
+      Integer value = removeLastCodeIfConstExpr( pos );
+      if( value != null ) {
+	if( (value & 0xFF) == 0 ) {
+	  this.asmOut.append( "\tXOR\tA\n" );
+	} else {
+	  this.asmOut.append( "\tLD\tA," );
+	  this.asmOut.appendHex2( value.intValue() );
+	  this.asmOut.newLine();
+	}
+      } else {
+	this.asmOut.append( "\tLD\tA,L\n" );
+      }
+      this.asmOut.append( "\tLD\t(" );
+      this.asmOut.appendHex4( addr.intValue() );
+      this.asmOut.append( "),A\n" );
     } else {
-      putCode( "\tPUSH\tHL\n" );
-      parseExpr( iter );
-      putCode( "\tLD\tA,L\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\t(HL),A\n" );
+      Integer value = removeLastCodeIfConstExpr( pos );
+      if( value != null ) {
+	this.asmOut.append( "\tLD\t(HL)," );
+	this.asmOut.appendHex2( value.intValue() );
+	this.asmOut.newLine();
+      } else {
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	  this.asmOut.append( "\tLD\t(HL),E\n" );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tLD\tA,L\n"
+			+ "\tPOP\tHL\n"
+			+ "\tLD\t(HL),A\n" );
+	}
+      }
     }
+  }
+
+
+  private void parsePEN( CharacterIterator iter ) throws PrgException
+  {
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    Integer value = removeLastCodeIfConstExpr( pos );
+    if( value != null ) {
+      if( (value.intValue() < 0) || (value.intValue() > 3) ) {
+	throw new PrgException( "Ung\u00FCltiger Wert bei PEN" );
+      }
+      this.asmOut.append_LD_A_n( value.intValue() );
+      this.asmOut.append( "\tCALL\tXPEN\n" );
+      addLibItem( BasicLibrary.LibItem.XPEN );
+    } else {
+      this.asmOut.append( "\tCALL\tPEN\n" );
+      addLibItem( BasicLibrary.LibItem.PEN );
+    }
+  }
+
+
+  private void parsePLOT( CharacterIterator iter ) throws PrgException
+  {
+    if( checkKeyword( iter, "STEP" ) ) {
+      parsePLOTR( iter );
+    } else {
+      checkGraphicsSupported();
+      parsePointTo_DE_HL( iter );
+      this.asmOut.append( "\tLD\t(M_XPOS),DE\n"
+		+ "\tLD\t(M_YPOS),HL\n"
+		+ "\tCALL\tXPSET\n" );
+      addLibItem( BasicLibrary.LibItem.XPSET );
+    }
+  }
+
+
+  private void parsePLOTR( CharacterIterator iter ) throws PrgException
+  {
+    checkGraphicsSupported();
+    parsePointTo_DE_HL( iter );
+    this.asmOut.append( "\tCALL\tPLOTR\n" );
+    addLibItem( BasicLibrary.LibItem.PLOTR );
+  }
+
+
+  private void parsePRESET( CharacterIterator iter ) throws PrgException
+  {
+    checkGraphicsSupported();
+    parsePointTo_DE_HL( iter );
+    this.asmOut.append( "\tCALL\tXPRES\n" );
+    addLibItem( BasicLibrary.LibItem.XPRES );
   }
 
 
   private void parsePRINT( CharacterIterator iter ) throws PrgException
   {
     boolean newLine   = true;
-    boolean loop      = true;
-    boolean widthDone = false;
+    boolean space     = false;
+    boolean formatted = false;
+    char    ch        = skipSpaces( iter );
+    while( !isEndOfInstr( iter ) ) {
+      this.tmpStrBufUsed = false;
+      newLine            = true;
+      space              = false;
+      boolean hasSeg     = false;
 
-    char ch = skipSpaces( iter );
-    while( loop && (ch != CharacterIterator.DONE)
-	   && (ch != ';') && (ch != ':') )
-    {
-      loop    = false;
-      int pos = iter.getIndex();
-      if( checkKeyword( iter, "ELSE", false, false ) ) {
-	iter.setIndex( pos );
-      } else {
-	newLine = true;
-	if( !checkPrintStringLiteral( iter ) ) {
-	  ch = iter.current();
-	  if( ch == '#' ) {
-	    iter.next();
-	    parseExpr( iter );
-	    putCode( "\tLD\tA,L\n"
-			+ "\tLD\t(M_WINT),A\n" );
-	    this.libItems.add( LibItem.M_WINT );
-	    widthDone = true;
+      // String-Segment pruefen
+      boolean mandatory = false;
+      for(;;) {
+	String text = checkStringLiteral( iter );
+	if( text != null ) {
+	  // String-Literal evtl. bereits vorhanden?
+	  String label = this.str2Label.get( text );
+	  if( label != null ) {
+	    this.asmOut.append( "\tLD\tHL," );
+	    this.asmOut.append( label );
+	    this.asmOut.append( "\n"
+		  + "\tCALL\tXOUTS\n" );
+	    addLibItem( BasicLibrary.LibItem.XOUTS );
 	  } else {
-	    if( !widthDone ) {
-	      putCode( "\tLD\tA,6\n"
-			+ "\tLD\t(M_WINT),A\n" );
-	      this.libItems.add( LibItem.M_WINT );
-	      widthDone = true;
-	    }
-	    parseExpr( iter );
-	    putCode( "\tCALL\tP_INT\n" );
-	    this.libItems.add( LibItem.P_INT );
+	    this.asmOut.append( "\tCALL\tXOUTST\n" );
+	    this.asmOut.appendStringLiteral( text );
+	    addLibItem( BasicLibrary.LibItem.XOUTST );
+	  }
+	  hasSeg = true;
+	} else if( checkParseStringPrimVarExpr( iter ) ) {
+	  this.asmOut.append( "\tCALL\tXOUTS\n" );
+	  addLibItem( BasicLibrary.LibItem.XOUTS );
+	  hasSeg = true;
+	} else {
+	  if( mandatory ) {
+	    throwStringExprExpected();
 	  }
 	}
-	ch = skipSpaces( iter );
-	if( ch == ',' ) {
-	  newLine = false;
-	  loop    = true;
-	  iter.next();
-	  ch = skipSpaces( iter );
+	if( skipSpaces( iter ) != '+' ) {
+	  break;
 	}
+	iter.next();
+	mandatory = true;
       }
+      if( !hasSeg ) {
+
+	// kann nur noch numerisches Segment sein
+	parseExpr( iter );
+	if( formatted ) {
+	  this.asmOut.append( "\tCALL\tP_INTF\n" );
+	  addLibItem( BasicLibrary.LibItem.P_INTF );
+	} else {
+	  this.asmOut.append( "\tCALL\tP_INT\n" );
+	  addLibItem( BasicLibrary.LibItem.P_INT );
+	}
+	space = true;
+      }
+
+      // weiteres Segment?
+      ch        = skipSpaces( iter );
+      formatted = (ch == ',');
+      if( (ch != ';') && (ch != ',') ) {
+	break;
+      }
+      if( space ) {
+	this.asmOut.append( "\tCALL\tOUTSP\n" );
+	addLibItem( BasicLibrary.LibItem.OUTSP );
+      }
+      newLine = false;
+      iter.next();
+      ch = skipSpaces( iter );
     }
     if( newLine ) {
-      putCode( "\tCALL\tOUTNL\n" );
-      this.libItems.add( LibItem.OUTNL );
+      this.asmOut.append( "\tCALL\tXOUTNL\n" );
+      addLibItem( BasicLibrary.LibItem.XOUTNL );
     }
+  }
+
+
+  private void parsePSET( CharacterIterator iter ) throws PrgException
+  {
+    checkGraphicsSupported();
+    parsePointTo_DE_HL( iter );
+    this.asmOut.append( "\tCALL\tXPSET\n" );
+    addLibItem( BasicLibrary.LibItem.XPSET );
   }
 
 
   private void parseREM( CharacterIterator iter )
   {
     iter.setIndex( iter.getEndIndex() );
-    if( this.sourceFormatter != null ) {
-      this.sourceFormatter.copyLast();
-    }
   }
 
 
@@ -1832,23 +2758,20 @@ public class BasicCompiler extends PrgThread
     iter.previous();
     do {
       iter.next();
-      String varAddrExpr = checkVarGetAddrExpr( iter );
-      if( varAddrExpr != null ) {
-	if( varAddrExpr.equals( "HL" ) ) {
-	  putCode( "\tPUSH\tHL\n"
-		+ "\tCALL\tDREAD\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\t(HL),E\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\t(HL),D\n" );
-	} else {
-	  putCode( "\tCALL\tDREAD\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tLD\t(" );
-	  putCode( varAddrExpr );
-	  putCode( "),HL\n" );
+      SimpleVarInfo varInfo = checkVariable( iter );
+      if( varInfo != null ) {
+	switch( varInfo.getDataType() ) {
+	  case INTEGER:
+	    varInfo.ensureAddrInHL( this.asmOut );
+	    this.asmOut.append( "\tCALL\tDREADI\n" );
+	    addLibItem( BasicLibrary.LibItem.DREADI );
+	    break;
+	  case STRING:
+	    varInfo.ensureAddrInHL( this.asmOut );
+	    this.asmOut.append( "\tCALL\tDREADS\n" );
+	    addLibItem( BasicLibrary.LibItem.DREADS );
+	    break;
 	}
-	this.libItems.add( LibItem.DREAD );
       } else {
 	throwVarExpected();
       }
@@ -1858,93 +2781,209 @@ public class BasicCompiler extends PrgThread
 
   private void parseRESTORE( CharacterIterator iter ) throws PrgException
   {
-    Integer value = readNumber( iter );
-    if( value != null ) {
-      if( this.restoreBasicLineNums == null ) {
-	this.restoreBasicLineNums = new HashMap<Long,LineInfo>();
+    BasicLineExpr lineExpr = BasicLineExpr.checkBasicLineExpr(
+						iter,
+						this.curSourceLineNum,
+						this.curBasicLineNum );
+    if( lineExpr != null ) {
+      if( this.restoreBasicLines == null ) {
+	this.restoreBasicLines = new ArrayList<BasicLineExpr>( 128 );
       }
-      Long keyObj = new Long( value.longValue() );
-      if( !this.restoreBasicLineNums.containsKey( keyObj ) ) {
-	this.restoreBasicLineNums.put(
-		keyObj,
-		new LineInfo( getSourceLineNum(), this.curBasicLineNum ) );
-      }
-      if( value.intValue() >= 0 ) {
-	putCode( "\tLD\tHL,D" );
-	putCode( value.toString() );
-	putCode( "\n"
-		+ "\tLD\t(M_READ),HL\n" );
-	this.libItems.add( LibItem.DATA );
-      }
+      this.restoreBasicLines.add( lineExpr );
+      this.asmOut.append_LD_HL_xx(
+			createDataLineLabel( lineExpr.getExprText() ) );
+      this.asmOut.append( "\tLD\t(M_READ),HL\n" );
     } else {
-      putCode( "\tCALL\tDINIT\n" );
-      this.libItems.add( LibItem.DATA );
+      if( !isEndOfInstr( iter ) ) {
+	throwBasicLineExprExpected();
+      }
+      this.asmOut.append( "\tCALL\tDINIT\n" );
     }
+    addLibItem( BasicLibrary.LibItem.DATA );
   }
 
 
   private void parseRETURN()
   {
-    if( this.basicOptions.getCheckStack() ) {
-      putCode( "\tPOP\tAF\n"
+    if( this.options.getCheckStack() ) {
+      this.asmOut.append( "\tPOP\tAF\n"
 		+ "\tCP\t" );
-      putCode( getHex2( MAGIC_GOSUB ) );
-      putCode( "\n"
+      this.asmOut.appendHex2( MAGIC_GOSUB );
+      this.asmOut.append( "\n"
 		+ "\tJP\tNZ,E_REWG\n" );
-      this.libItems.add( LibItem.E_REWG );
+      addLibItem( BasicLibrary.LibItem.E_REWG );
     }
-    putCode( "\tRET\n" );
+    this.asmOut.append( "\tRET\n" );
+    this.suppressExit = true;
   }
 
 
-  private void parseTAB( CharacterIterator iter ) throws PrgException
+  private void parseSCREEN( CharacterIterator iter ) throws PrgException
   {
-    boolean enclosed = false;
-    if( skipSpaces( iter ) == '(' ) {
-      iter.next();
-      enclosed = true;
-    }
     parseExpr( iter );
-    putCode( "\tCALL\tP_TAB\n" );
-    this.libItems.add( LibItem.P_TAB );
-    if( enclosed ) {
-      parseToken( iter, ')' );
+    this.asmOut.append( "\tCALL\tSCREEN\n" );
+    addLibItem( BasicLibrary.LibItem.SCREEN );
+  }
+
+
+  private void parseWAIT( CharacterIterator iter ) throws PrgException
+  {
+    // Code fuer erstes Argument erzeugen (in BC)
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    String oldCode1 = this.asmOut.cut( pos );
+    String newCode1 = convertCodeToValueInBC( oldCode1 );
+
+    // Code fuer zweites Argument erzeugen (in E)
+    parseToken( iter, ',' );
+    parseExpr( iter );
+    String  oldCode2 = this.asmOut.substring( pos );
+    String  newCode2 = null;
+    Integer mask     = removeLastCodeIfConstExpr( pos );
+    this.asmOut.setLength( pos );
+    if( mask != null ) {
+      int v    = mask.intValue() & 0xFF;
+      newCode2 = String.format(
+			"\tLD\tE,%s%02XH\n",
+			v >= 0xA0 ? "0" : "",
+			v );
     } else {
-      ac1BasicMismatch();
-      z1013BasicMismatch();
+      if( isOnly_LD_HL_xx( oldCode2 ) ) {
+	newCode2 = oldCode2 + "\tLD\tE,L\n";
+      }
+    }
+
+    // Code fuer optionales drittes Argument erzeugen (in L)
+    String oldCode3 = null;
+    String newCode3 = null;
+    if( checkToken( iter, ',' ) ) {
+      parseExpr( iter );
+      oldCode3    = this.asmOut.substring( pos );
+      Integer inv = removeLastCodeIfConstExpr( pos );
+      this.asmOut.setLength( pos );
+      if( inv != null ) {
+	int v    = inv.intValue() & 0xFF;
+	newCode3 = String.format(
+			"\tLD\tL,%s%02XH\n",
+			v >= 0xA0 ? "0" : "",
+			v );
+      } else {
+	if( isOnly_LD_HL_xx( oldCode3 ) ) {
+	  newCode3 = oldCode3;
+	}
+      }
+    }
+
+    /*
+     * Gesamtcode erzeugen
+     *   BC: Port
+     *   E:  Maske
+     *   L:  Inversion
+     */
+    if( (newCode1 != null)
+	&& (newCode2 != null)
+	&& ((oldCode3 == null) || (newCode3 != null)) )
+    {
+      this.asmOut.append( newCode1 );
+      this.asmOut.append( newCode2 );
+      if( newCode3 != null ) {
+	this.asmOut.append( newCode3 );
+      }
+    } else {
+      this.asmOut.append( oldCode1 );
+      this.asmOut.append( "\tPUSH\tHL\n" );
+      if( oldCode3 != null ) {
+	if( newCode3 != null ) {
+	  if( newCode2 != null ) {
+	    this.asmOut.append( newCode2 );
+	  } else {
+	    this.asmOut.append( oldCode2 );
+	    this.asmOut.append( "\tLD\tE,L\n" );
+	  }
+	  this.asmOut.append( newCode3 );
+	} else {
+	  this.asmOut.append( oldCode2 );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode3 );
+	  this.asmOut.append( "\tPOP\tDE\n" );
+	}
+      } else {
+	if( newCode2 != null ) {
+	  this.asmOut.append( newCode2 );
+	} else {
+	  this.asmOut.append( oldCode2 );
+	  this.asmOut.append( "\tLD\tE,L\n" );
+	}
+      }
+      this.asmOut.append( "\tPOP\tBC\n" );
+    }
+    String loopLabel = nextLabel();
+    this.asmOut.append( loopLabel );
+    this.asmOut.append( ":\tIN\tA,(C)\n" );
+    if( oldCode3 != null ) {
+      this.asmOut.append( "\tXOR\tL\n" );
+    }
+    this.asmOut.append( "\tAND\tE\n" );
+    if( this.options.canBreakAlways() ) {
+      String exitLabel = nextLabel();
+      this.asmOut.append( "\tJR\tNZ," );
+      this.asmOut.append( exitLabel );
+      this.asmOut.append( "\n"
+			+ "\tCALL\tXCKBRK\n"
+			+ "\tJR\t" );
+      this.asmOut.append( loopLabel );
+      this.asmOut.newLine();
+      this.asmOut.append( exitLabel );
+      this.asmOut.append( ":\n" );
+      addLibItem( BasicLibrary.LibItem.XCKBRK );
+    } else {
+      this.asmOut.append( "\tJR\tZ," );
+      this.asmOut.append( loopLabel );
+      this.asmOut.newLine();
     }
   }
 
 
-  private void parseWORD( CharacterIterator iter ) throws PrgException
+  private void parseWEND( CharacterIterator iter ) throws PrgException
   {
-    boolean enclosed = false;
-    if( skipSpaces( iter ) == '(' ) {
-      iter.next();
-      enclosed = true;
+    WhileEntry whileEntry = null;
+    if( !this.structureStack.isEmpty() ) {
+      StructureEntry entry = this.structureStack.peek();
+      if( entry instanceof WhileEntry ) {
+	whileEntry = (WhileEntry) entry;
+	this.structureStack.pop();
+      }
     }
-    Integer value = checkConstExpr( iter );
-    if( value != null ) {
-      putCode( "\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'" );
-      putCode( String.format( "%04X", value.intValue() & 0xFFFF ) );
-      putCode( "\'\n"
-		+ "\tDEFB\t0\n" );
-      this.libItems.add( LibItem.P_LTXT );
-    } else {
-      parseExpr( iter );
-      putCode( "\tLD\tA,H\n"
-		+ "\tCALL\tP_HEXA\n"
-		+ "\tLD\tA,L\n"
-		+ "\tCALL\tP_HEXA\n" );
-      this.libItems.add( LibItem.P_HEXA );
+    if( whileEntry == null ) {
+      throw new PrgException( "WEND ohne WHILE" );
     }
-    if( enclosed ) {
-      parseToken( iter, ')' );
-    } else {
-      ac1BasicMismatch();
-      z1013BasicMismatch();
-    }
+    this.asmOut.append( "\tJP\t" );
+    this.asmOut.append( whileEntry.getLoopLabel() );
+    this.asmOut.newLine();
+    this.asmOut.append( whileEntry.getExitLabel() );
+    this.asmOut.append( ":\n" );
+  }
+
+
+  private void parseWHILE( CharacterIterator iter ) throws PrgException
+  {
+    String loopLabel = nextLabel();
+    String exitLabel = nextLabel();
+
+    this.asmOut.append( loopLabel );
+    this.asmOut.append( ":\n" );
+    parseExpr( iter );
+    checkKeyword( iter, "DO" );
+    this.asmOut.append( "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tJP\tZ," + exitLabel + "\n" );
+    checkAppendBreakCheck();
+    this.structureStack.push(
+		new WhileEntry(
+			this.curSourceLineNum,
+			this.curBasicLineNum,
+			loopLabel,
+			exitLabel ) );
   }
 
 
@@ -1953,21 +2992,60 @@ public class BasicCompiler extends PrgThread
   private void parseABS( CharacterIterator iter ) throws PrgException
   {
     parseEnclosedExpr( iter );
-    putCode( "\tCALL\tABSHL\n" );
-    this.libItems.add( LibItem.ABS_NEG_HL );
+    this.asmOut.append( "\tCALL\tABSHL\n" );
+    addLibItem( BasicLibrary.LibItem.ABS_NEG_HL );
+  }
+
+
+  private void parseASC( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    parseToken( iter, ')' );
+    this.asmOut.append( "\tLD\tL,(HL)\n"
+		+ "\tLD\tH,00H\n" );
+  }
+
+
+  private void parseBLACK( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorBlack( this.asmOut );
+  }
+
+
+  private void parseBLINKING( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorBlinking( this.asmOut );
+  }
+
+
+  private void parseBLUE( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorBlue( this.asmOut );
+  }
+
+
+  private void parseCYAN( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorCyan( this.asmOut );
   }
 
 
   private void parseDEEK( CharacterIterator iter ) throws PrgException
   {
-    Integer addr = checkEnclosedConstExpr( iter );
+    int pos = this.asmOut.length();
+    parseEnclosedExpr( iter );
+    Integer addr = removeLastCodeIfConstExpr( pos );
     if( addr != null ) {
-      putCode( "\tLD\tHL,(" );
-      putCode( getHex4( addr.intValue() ) );
-      putCode( ")\n" );
+      this.asmOut.append( "\tLD\tHL,(" );
+      this.asmOut.appendHex4( addr.intValue() );
+      this.asmOut.append( ")\n" );
     } else {
-      parseEnclosedExpr( iter );
-      putCode( "\tLD\tA,(HL)\n"
+      this.asmOut.append( "\tLD\tA,(HL)\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\tH,(HL)\n"
 		+ "\tLD\tL,A\n" );
@@ -1975,448 +3053,882 @@ public class BasicCompiler extends PrgThread
   }
 
 
-  private void parseHEX( CharacterIterator iter ) throws PrgException
+  private void parseERR( CharacterIterator iter ) throws PrgException
   {
-    parseToken( iter, '(' );
-    skipSpaces( iter );
-    Integer value = readHex( iter );
-    if( value == null ) {
-      throw new PrgException( "Hexadezimalziffer erwartet" );
-    }
-    parseToken( iter, ')' );
-    putCode_LD_HL_nn( value.intValue() );
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tLD\tHL,(M_ERR)\n" );
+    addLibItem( BasicLibrary.LibItem.M_ERR );
+  }
+
+
+  private void parseFALSE( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tLD\tHL,0000H\n" );
+  }
+
+
+  private void parseGREEN( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorGreen( this.asmOut );
+  }
+
+
+  private void parseH_CHAR( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendHChar( this.asmOut );
+  }
+
+
+  private void parseH_PIXEL( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendHPixel( this.asmOut );
   }
 
 
   private void parseIN( CharacterIterator iter ) throws PrgException
   {
-    parseEnclosedExpr( iter );
-    putCode( "\tLD\tB,H\n"
-		+ "\tLD\tC,L\n"
-		+ "\tIN\tL,(C)\n"
-		+ "\tLD\tH,0\n" );
-  }
-
-
-  private void parseINCHAR() throws PrgException
-  {
-    putCode( "\tCALL\tINCHR\n" );
-    this.libItems.add( LibItem.INCHR );
-  }
-
-
-  private void parseINKEY() throws PrgException
-  {
-    if( this.basicOptions.isBreakOnInputPossible() ) {
-      putCode( "\tCALL\tINKEY\n" );
-      this.libItems.add( LibItem.INKEY );
-    } else {
-      putCode( "\tCALL\tXINKEY\n" );
-      this.libItems.add( LibItem.XINKEY );
+    parseToken( iter, '(' );
+    parseExpr( iter );
+    parseToken( iter, ')' );
+    if( !replaceLastCodeFrom_LD_HL_To_BC() ) {
+      this.asmOut.append( "\tLD\tB,H\n"
+		+ "\tLD\tC,L\n" );
     }
-    putCode( "\tLD\tL,A\n"
+    this.asmOut.append( "\tIN\tL,(C)\n"
 		+ "\tLD\tH,0\n" );
   }
 
 
-  private void parseLEN() throws PrgException
+  private void parseINSTR( CharacterIterator iter ) throws PrgException
   {
-    putCode( "\tLD\tA,(M_LEN)\n"
-		+ "\tLD\tL,A\n"
-		+ "\tLD\tH,0\n" );
-    this.libItems.add( LibItem.M_LEN );
+    parseToken( iter, '(' );
+    String text = checkStringLiteral( iter );
+    if( text == null ) {
+      parseStringPrimExpr( iter );
+    }
+    parseToken( iter, ',' );
+    String pattern = checkStringLiteral( iter );
+    if( pattern != null ) {
+      if( text != null ) {
+	this.asmOut.append( "\tLD\tHL," );
+	this.asmOut.append( getStringLiteralLabel( text ) );
+	this.asmOut.newLine();
+      }
+      this.asmOut.append( "\tLD\tDE," );
+      this.asmOut.append( getStringLiteralLabel( pattern ) );
+      this.asmOut.newLine();
+    } else {
+      if( text == null ) {
+	this.asmOut.append( "\tPUSH\tHL\n" );
+      }
+      parseStringPrimExpr( iter );
+      this.asmOut.append( "\tEX\tDE,HL\n" );
+      if( text != null ) {
+	this.asmOut.append( "\tLD\tHL," );
+	this.asmOut.append( getStringLiteralLabel( text ) );
+	this.asmOut.newLine();
+      } else {
+	this.asmOut.append( "\tPOP\tHL\n" );
+      }
+    }
+    this.asmOut.append( "\tCALL\tF_ISTR\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.F_ISTR );
+  }
+
+
+  private void parseJOYST( CharacterIterator iter ) throws PrgException
+  {
+    parseEnclosedExpr( iter );
+    this.asmOut.append( "\tCALL\tF_JOY\n" );
+    addLibItem( BasicLibrary.LibItem.F_JOY );
+  }
+
+
+  private void parseLASTSCREEN( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendLastScreenNum( this.asmOut );
+  }
+
+
+  private void parseLEN( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    String text = checkStringLiteral( iter );
+    if( text != null ) {
+      this.asmOut.append_LD_HL_nn( text.length() );
+    } else {
+      parseStringPrimExpr( iter );
+      this.asmOut.append( "\tCALL\tF_LEN\n" );
+      addLibItem( BasicLibrary.LibItem.F_LEN );
+    }
+    parseToken( iter, ')' );
+  }
+
+
+  private void parseMAX( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    parseExpr( iter );
+    while( checkToken( iter, ',' ) ) {
+      this.asmOut.append( "\tPUSH\tHL\n" );
+      parseExpr( iter );
+      String label = nextLabel();
+      this.asmOut.append( "\tPOP\tDE\n"
+	+ "\tCALL\tCPHLDE\n"
+	+ "\tJR\tNC," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+	+ "\tEX\tDE,HL\n" );
+      this.asmOut.append( label );
+      this.asmOut.append( ":\n" );
+    }
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.CPHLDE );
+  }
+
+
+  private void parseMAGENTA( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorMagenta( this.asmOut );
+  }
+
+
+  private void parseMIN( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    parseExpr( iter );
+    while( checkToken( iter, ',' ) ) {
+      this.asmOut.append( "\tPUSH\tHL\n" );
+      parseExpr( iter );
+      String label = nextLabel();
+      this.asmOut.append( "\tPOP\tDE\n"
+		+ "\tCALL\tCPHLDE\n"
+		+ "\tJR\tC," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+		+ "\tEX\tDE,HL\n" );
+      this.asmOut.append( label );
+      this.asmOut.append( ":\n" );
+    }
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.CPHLDE );
   }
 
 
   private void parsePEEK( CharacterIterator iter ) throws PrgException
   {
     parseEnclosedExpr( iter );
-    putCode( "\tLD\tL,(HL)\n"
+    this.asmOut.append( "\tLD\tL,(HL)\n"
 		+ "\tLD\tH,0\n" );
+  }
+
+
+  private void parseRED( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorRed( this.asmOut );
   }
 
 
   private void parseRND( CharacterIterator iter ) throws PrgException
   {
     parseEnclosedExpr( iter );
-    putCode( "\tCALL\tF_RND\n" );
-    this.libItems.add( LibItem.F_RND );
+    this.asmOut.append( "\tCALL\tF_RND\n" );
+    addLibItem( BasicLibrary.LibItem.F_RND );
+  }
+
+
+  private void parsePTEST( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    parse2ArgsTo_DE_HL( iter );
+    parseToken( iter, ')' );
+    this.asmOut.append( "\tCALL\tXPTEST\n" );
+    addLibItem( BasicLibrary.LibItem.XPTEST );
   }
 
 
   private void parseSGN( CharacterIterator iter ) throws PrgException
   {
     parseEnclosedExpr( iter );
-    putCode( "\tCALL\tF_SGN\n" );
-    this.libItems.add( LibItem.F_SGN );
-  }
-
-
-  private void parseSIZE() throws PrgException
-  {
-    putCode( "\tCALL\tF_SIZE\n" );
-    this.libItems.add( LibItem.F_SIZE );
+    this.asmOut.append( "\tCALL\tF_SGN\n" );
+    addLibItem( BasicLibrary.LibItem.F_SGN );
   }
 
 
   private void parseSQR( CharacterIterator iter ) throws PrgException
   {
-    Integer value = checkEnclosedConstExpr( iter );
+    int pos = this.asmOut.length();
+    parseEnclosedExpr( iter );
+    Integer value = removeLastCodeIfConstExpr( pos );
     if( value != null ) {
-      if( value < 0 ) {
+      if( value.intValue() < 0 ) {
 	throw new PrgException(
 			"Wurzel aus negativer Zahl nicht m\u00F6glich" );
       }
-      putCode_LD_HL_nn( (int) Math.floor( Math.sqrt( value.doubleValue() ) ) );
+      this.asmOut.append_LD_HL_nn(
+		(int) Math.floor( Math.sqrt( value.doubleValue() ) ) );
     } else {
-      parseEnclosedExpr( iter );
-      putCode( "\tCALL\tF_SQR\n" );
-      this.libItems.add( LibItem.F_SQR );
+      this.asmOut.append( "\tCALL\tF_SQR\n" );
+      addLibItem( BasicLibrary.LibItem.F_SQR );
     }
   }
 
 
-  private void parseTOP() throws PrgException
+  private void parseTARGET_ADDR( CharacterIterator iter ) throws PrgException
   {
-    putCode( "\tLD\tHL,M_TOP\n" );
-    this.libItems.add( LibItem.M_TOP );
+    checkParseDummyArg( iter );
+    this.asmOut.append_LD_HL_nn( this.options.getBegAddr() );
   }
 
 
-	/* --- Parsen arithmetischer Ausdruecke --- */
-
-  private Integer checkConstExpr( CharacterIterator iter ) throws PrgException
+  private void parseTOP( CharacterIterator iter ) throws PrgException
   {
-    int     pos   = iter.getIndex();
-    Integer value = checkConstOrExpr( iter );
-    if( value == null ) {
-      iter.setIndex( pos );
-    }
-    return value;
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tLD\tHL,M_TOP\n" );
+    addLibItem( BasicLibrary.LibItem.M_TOP );
   }
 
 
-  private Integer checkConstExpr(
+  private void parseTRUE( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tLD\tHL,0FFFFH\n" );
+  }
+
+
+  private void parseUSR( CharacterIterator iter ) throws PrgException
+  {
+    int usrNum = parseUsrNum( iter );
+    parseUSR( iter, usrNum );
+  }
+
+
+  private void parseUSR(
 			CharacterIterator iter,
-			int               minValue,
-			int               maxValue ) throws PrgException
+			int               usrNum ) throws PrgException
   {
-    int     pos   = iter.getIndex();
-    Integer value = checkConstOrExpr( iter );
-    if( value != null ) {
-      if( (value.intValue() < minValue) || (value.intValue() > maxValue) )
-	putWarning( "Wert des Ausdrucks au\u00DFerhalb des Wertebereiches" );
+    parseEnclosedExpr( iter );
+    if( !replaceLastCodeFrom_LD_HL_To_DE() ) {
+      this.asmOut.append( "\tEX\tDE,HL\n" );
     }
-    if( value == null ) {
-      iter.setIndex( pos );
+    boolean insideCallable = (getCallableEntry() != null);
+    if( insideCallable ) {
+      this.asmOut.append( "\tPUSH\tIY\n" );
     }
-    return value;
+    this.asmOut.append( "\tLD\tHL,(" );
+    this.asmOut.append( getUsrLabel( usrNum ) );
+    this.asmOut.append( ")\n"
+		+ "\tCALL\tJP_HL\n" );
+    if( insideCallable ) {
+      this.asmOut.append( "\tPOP\tIY\n" );
+    }
+    addLibItem( BasicLibrary.LibItem.JP_HL );
+    addLibItem( BasicLibrary.LibItem.E_USR );
   }
 
 
-  private Integer checkEnclosedConstExpr( CharacterIterator iter )
-							throws PrgException
+  private void parseVAL( CharacterIterator iter ) throws PrgException
   {
-    Integer value = null;
-    char    ch    = skipSpaces( iter );
-    int     pos   = iter.getIndex();
-    if( ch == '(' ) {
-      iter.next();
-      Integer v = checkConstOrExpr( iter );
-      if( v != null ) {
-	if( skipSpaces( iter ) == ')' ) {
-	  iter.next();
-	  value = v;
-	}
-      }
-    }
-    if( value == null ) {
-      iter.setIndex( pos );
-    }
-    return value;
-  }
-
-
-  private Integer checkConstOrExpr( CharacterIterator iter )
-							throws PrgException
-  {
-    Integer value = checkConstAndExpr( iter );
-    while( (value != null) && (checkKeyword( iter, "OR" ) ) ) {
-      Integer v2 = checkConstAndExpr( iter );
-      if( v2 != null ) {
-	if( (value.intValue() != 0) || (v2.intValue() != 0) ) {
-	  value = new Integer( 1 );
-	} else {
-	  value = new Integer( 0 );
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    if( checkToken( iter, ',' ) ) {
+      int pos = this.asmOut.length();
+      parseExpr( iter );
+      Integer radix = removeLastCodeIfConstExpr( pos );
+      if( radix != null ) {
+	switch( radix.intValue() ) {
+	  case 2:
+	    this.asmOut.append( "\tCALL\tF_VLB\n" );
+	    addLibItem( BasicLibrary.LibItem.F_VLB );
+	    break;
+	  case 10:
+	    this.asmOut.append( "\tCALL\tF_VLI\n" );
+	    addLibItem( BasicLibrary.LibItem.F_VLI );
+	    break;
+	  case 16:
+	    this.asmOut.append( "\tCALL\tF_VLH\n" );
+	    addLibItem( BasicLibrary.LibItem.F_VLH );
+	    break;
+	  default:
+	    throw new PrgException(
+		"Zahlenbasis in VAL-Funktion nicht unterst\u00FCtzt" );
 	}
       } else {
-	value = null;
-      }
-    }
-    return value;
-  }
-
-
-  private Integer checkConstAndExpr( CharacterIterator iter )
-							throws PrgException
-  {
-    Integer value = checkConstNotExpr( iter );
-    while( (value != null) && (checkKeyword( iter, "AND" ) ) ) {
-      Integer v2 = checkConstNotExpr( iter );
-      if( v2 != null ) {
-	if( (value.intValue() != 0) && (v2.intValue() != 0) ) {
-	  value = new Integer( 1 );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
 	} else {
-	  value = new Integer( 0 );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tEX\tDE,HL\n"
+				+ "\tPOP\tHL\n" );
 	}
-      } else {
-	value = null;
+	this.asmOut.append( "\tCALL\tF_VAL\n" );
+	addLibItem( BasicLibrary.LibItem.F_VAL );
       }
+    } else {
+      this.asmOut.append( "\tCALL\tF_VLI\n" );
+      addLibItem( BasicLibrary.LibItem.F_VLI );
     }
-    return value;
+    parseToken( iter, ')' );
   }
 
 
-  private Integer checkConstNotExpr( CharacterIterator iter )
-							throws PrgException
+  private void parseWHITE( CharacterIterator iter ) throws PrgException
   {
-    Integer value = null;
-    if( checkKeyword( iter, "NOT" ) ) {
-      value = checkConstCondExpr( iter );
+    checkParseDummyArg( iter );
+    this.target.appendColorWhite( this.asmOut );
+  }
+
+
+  private void parseW_CHAR( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendWChar( this.asmOut );
+  }
+
+
+  private void parseW_PIXEL( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendWPixel( this.asmOut );
+  }
+
+
+  private void parseXPOS( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tLD\tHL,(M_XPOS)\n" );
+    addLibItem( BasicLibrary.LibItem.M_XYPO );
+  }
+
+
+  private void parseYELLOW( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.target.appendColorYellow( this.asmOut );
+  }
+
+
+  private void parseYPOS( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tLD\tHL,(M_YPOS)\n" );
+    addLibItem( BasicLibrary.LibItem.M_XYPO );
+  }
+
+
+  private void parseStrBIN( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseExpr( iter );
+    if( checkToken( iter, ',' ) ) {
+      int pos = this.asmOut.length();
+      parseExpr( iter );
+      Integer value = removeLastCodeIfConstExpr( pos );
       if( value != null ) {
-	value = new Integer( value.intValue() == 0 ? 1 : 0 );
+	if( value.intValue() < 0 ) {
+	  putWarningOutOfRange();
+	}
+	this.asmOut.append_LD_BC_nn( value.intValue() );
+      } else {
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInBC( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tLD\tB,H\n"
+			+ "\tLD\tC,L\n"
+			+ "\tPOP\tHL\n" );
+	}
       }
+      this.asmOut.append( "\tCALL\tS_BINN\n" );
     } else {
-      value = checkConstCondExpr( iter );
+      this.asmOut.append( "\tCALL\tS_BIN\n" );
     }
-    return value;
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.S_BIN );
   }
 
 
-  private Integer checkConstCondExpr( CharacterIterator iter )
-							throws PrgException
+  private void parseStrCHR( CharacterIterator iter ) throws PrgException
   {
-    Integer value = checkConstArithmExpr( iter );
+    lockTmpStrBuf();
+    int pos = this.asmOut.length();
+    parseEnclosedExpr( iter );
+    Integer value = removeLastCodeIfConstExpr( pos );
     if( value != null ) {
-      char ch = skipSpaces( iter );
-      if( ch == '<' ) {
-	ch = iter.next();
-	if( ch == '=' ) {
-	  iter.next();
-	  Integer v2 = checkConstArithmExpr( iter );
-	  if( v2 != null ) {
-	    value = new Integer( value.intValue() <= v2.intValue() ? 1 : 0 );
-	  } else {
-	    value = null;
-	  }
-	}
-	else if( ch == '>' ) {
-	  iter.next();
-	  z1013BasicMismatch();
-	  Integer v2 = checkConstArithmExpr( iter );
-	  if( v2 != null ) {
-	    value = new Integer( value.intValue() != v2.intValue() ? 1 : 0 );
-	  } else {
-	    value = null;
-	  }
-	} else {
-	  Integer v2 = checkConstArithmExpr( iter );
-	  if( v2 != null ) {
-	    value = new Integer( value.intValue() < v2.intValue() ? 1 : 0 );
-	  } else {
-	    value = null;
-	  }
-	}
-      }
-      else if( ch == '>' ) {
-	ch = iter.next();
-	if( ch == '=' ) {
-	  iter.next();
-	  Integer v2 = checkConstArithmExpr( iter );
-	  if( v2 != null ) {
-	    value = new Integer( value.intValue() >= v2.intValue() ? 1 : 0 );
-	  } else {
-	    value = null;
-	  }
-	} else {
-	  Integer v2 = checkConstArithmExpr( iter );
-	  if( v2 != null ) {
-	    value = new Integer( value.intValue() > v2.intValue() ? 1 : 0 );
-	  } else {
-	    value = null;
-	  }
-	}
-      }
-      else if( ch == '=' ) {
-	iter.next();
-	Integer v2 = checkConstArithmExpr( iter );
-	if( v2 != null ) {
-	  value = new Integer( value.intValue() == v2.intValue() ? 1 : 0 );
-	} else {
-	  value = null;
-	}
-      }
-      else if( ch == '#' ) {
-	iter.next();
-	Integer v2 = checkConstArithmExpr( iter );
-	if( v2 != null ) {
-	  value = new Integer( value.intValue() != v2.intValue() ? 1 : 0 );
-	} else {
-	  value = null;
-	}
-      }
+      this.asmOut.append_LD_A_n( value.intValue() );
+      this.asmOut.append( "\tCALL\tS_CHRA\n" );
+    } else {
+      this.asmOut.append( "\tCALL\tS_CHRL\n" );
     }
-    return value;
+    addLibItem( BasicLibrary.LibItem.S_CHR );
   }
 
 
-  private Integer checkConstArithmExpr( CharacterIterator iter )
-							throws PrgException
+  private void parseStrHEX( CharacterIterator iter ) throws PrgException
   {
-    Integer value = null;
-    char    ch    = skipSpaces( iter );
-    if( ch == '-' ) {
-      iter.next();
-      value = checkConstAddExpr( iter );
-      if( value != null ) {
-	value = new Integer( -value.intValue() );
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseExpr( iter );
+    if( checkToken( iter, ',' ) ) {
+      int pos = this.asmOut.length();
+      parseExpr( iter );
+      String oldCode = this.asmOut.cut( pos );
+      String newCode = convertCodeToValueInBC( oldCode );
+      if( newCode != null ) {
+	this.asmOut.append( newCode );
+      } else {
+	this.asmOut.append( "\tPUSH\tHL\n" );
+	this.asmOut.append( oldCode );
+	this.asmOut.append( "\tLD\tB,H\n"
+		+ "\tLD\tC,L\n"
+		+ "\tPOP\tHL\n" );
+      }
+      this.asmOut.append( "\tCALL\tS_HEXN\n" );
+      addLibItem( BasicLibrary.LibItem.S_HEXN );
+    } else {
+      this.asmOut.append( "\tCALL\tS_HEX\n" );
+      addLibItem( BasicLibrary.LibItem.S_HEX );
+    }
+    parseToken( iter, ')' );
+  }
+
+
+  private void parseStrINCHAR( CharacterIterator iter )  throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tCALL\tS_INCH\n" );
+    addLibItem( BasicLibrary.LibItem.S_INCH );
+  }
+
+
+  private void parseStrINKEY( CharacterIterator iter )  throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tCALL\tS_INKY\n" );
+    addLibItem( BasicLibrary.LibItem.S_INKY );
+  }
+
+
+  private void parseStrLEFT( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    parseToken( iter, ',' );
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    String oldCode = this.asmOut.cut( pos );
+    String newCode = convertCodeToValueInBC( oldCode );
+    if( newCode != null ) {
+      this.asmOut.append( newCode );
+    } else {
+      this.asmOut.append( "\tPUSH\tHL\n" );
+      this.asmOut.append( oldCode );
+      this.asmOut.append( "\tLD\tB,H\n"
+			+ "\tLD\tC,L\n"
+			+ "\tPOP\tHL\n" );
+    }
+    this.asmOut.append( "\tCALL\tS_LEFT\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.S_LEFT );
+  }
+
+
+  private void parseStrLOWER( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    parseToken( iter, ')' );
+    this.asmOut.append( "\tCALL\tS_LWR\n" );
+    addLibItem( BasicLibrary.LibItem.S_LWR );
+  }
+
+
+  private void parseStrLTRIM( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    this.asmOut.append( "\tCALL\tS_LTRM\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.S_LTRM );
+  }
+
+
+  private void parseStrMEMSTR( CharacterIterator iter ) throws PrgException
+  {
+    parseEnclosedExpr( iter );
+  }
+
+
+  private void parseStrMIRROR( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    String text = checkStringLiteral( iter );
+    if( text != null ) {
+      if( text.isEmpty() ) {
+	this.asmOut.append_LD_HL_xx( "M_EMPT" );
+	addLibItem( BasicLibrary.LibItem.M_EMPT );
+      } else {
+	this.asmOut.appendStringLiteral(
+		(new StringBuilder( text ).reverse()).toString(),
+		"00H" );
       }
     } else {
-      if( ch == '+' ) {
-	ch = iter.next();
-      }
-      value = checkConstAddExpr( iter );
+      lockTmpStrBuf();
+      parseStringPrimExpr( iter );
+      this.asmOut.append( "\tCALL\tS_MIRR\n" );
+      addLibItem( BasicLibrary.LibItem.S_MIRR );
     }
-    return value;
+    parseToken( iter, ')' );
   }
 
 
-  private Integer checkConstAddExpr( CharacterIterator iter )
-							throws PrgException
+  private void parseStrMID( CharacterIterator iter ) throws PrgException
   {
-    Integer value = checkConstMulExpr( iter );
-    char ch = skipSpaces( iter );
-    while( (value != null) && ((ch == '+') || (ch == '-')) ) {
-      if( ch == '+' ) {
-	iter.next();
-	Integer v2 = checkConstMulExpr( iter );
-	if( v2 != null ) {
-	  value = new Integer( value.intValue() + v2.intValue() );
-	} else {
-	  value = null;
-	}
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    parseToken( iter, ',' );
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    String oldCode2 = this.asmOut.cut( pos );
+    String newCode2 = convertCodeToValueInDE( oldCode2 );
+    if( checkToken( iter, ',' ) ) {
+      parseExpr( iter );
+      String oldCode3 = this.asmOut.cut( pos );
+      String newCode3 = convertCodeToValueInBC( oldCode3 );
+      if( (newCode2 != null) && (newCode3 != null) ) {
+	this.asmOut.append( newCode2 );
+	this.asmOut.append( newCode3 );
       } else {
-	iter.next();
-	Integer v2 = checkConstMulExpr( iter );
-	if( v2 != null ) {
-	  value = new Integer( value.intValue() - v2.intValue() );
+	this.asmOut.append( "\tPUSH\tHL\n" );
+	if( newCode2 != null ) {
+	  this.asmOut.append( oldCode3 );
+	  this.asmOut.append( "\tLD\tB,H\n"
+				+ "\tLD\tC,L\n" );
+	  this.asmOut.append( newCode2 );
 	} else {
-	  value = null;
-	}
-      }
-      ch = skipSpaces( iter );
-    }
-    return value;
-  }
-
-
-  private Integer checkConstMulExpr( CharacterIterator iter )
-							throws PrgException
-  {
-    Integer value = checkConstPrimExpr( iter );
-    char ch = skipSpaces( iter );
-    while( (value != null) && ((ch == '*') || (ch == '/')) ) {
-      if( ch == '*' ) {
-	iter.next();
-	Integer v2 = checkConstPrimExpr( iter );
-	if( v2 != null ) {
-	  value = new Integer( value.intValue() * v2.intValue() );
-	} else {
-	  value = null;
-	}
-      } else {
-	iter.next();
-	Integer v2 = checkConstPrimExpr( iter );
-	if( v2 != null ) {
-	  value = new Integer( value.intValue() / v2.intValue() );
-	} else {
-	  value = null;
-	}
-      }
-      ch = skipSpaces( iter );
-    }
-    return value;
-  }
-
-
-  private Integer checkConstPrimExpr( CharacterIterator iter )
-							throws PrgException
-  {
-    Integer value = null;
-    char    ch    = skipSpaces( iter );
-    if( ch == '(' ) {
-      value = checkEnclosedConstExpr( iter );
-    }
-    else if( (ch >= '0') && (ch <= '9') ) {
-      value = readNumber( iter );
-    }
-    else if( ch == '\'' ) {
-      ch = iter.next();
-      if( (int) ch <= 0xFF ) {
-	if( iter.next() == '\'' ) {
-	  iter.next();
-	  value = new Integer( (int) ch );
-	}
-      }
-    } else {
-      if( checkKeyword( iter, "ABS" ) ) {
-	value = checkEnclosedConstExpr( iter );
-	if( value != null ) {
-	  if( value.intValue() < 0 ) {
-	    value = new Integer( -value.intValue() );
+	  if( newCode3 != null ) {
+	    this.asmOut.append( oldCode2 );
+	    this.asmOut.append( "\tEX\tDE,HL\n" );
+	    this.asmOut.append( newCode3 );
+	  } else {
+	    this.asmOut.append( oldCode2 );
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode3 );
+	    this.asmOut.append( "\tLD\tB,H\n"
+				+ "\tLD\tC,L\n"
+				+ "\tPOP\tDE\n" );
 	  }
 	}
+	this.asmOut.append( "\tPOP\tHL\n" );
       }
-      else if( checkKeyword( iter, "HEX" ) ) {
-	if( skipSpaces( iter ) == '(' ) {
-	  iter.next();
-	  skipSpaces( iter );
-	  value = readHex( iter );
-	  if( value != null ) {
-	    if( skipSpaces( iter ) == ')' ) {
-	      iter.next();
+      this.asmOut.append( "\tCALL\tS_MIDN\n" );
+      addLibItem( BasicLibrary.LibItem.S_MIDN );
+    } else {
+      if( newCode2 != null ) {
+	this.asmOut.append( newCode2 );
+      } else {
+	this.asmOut.append( "\tPUSH\tHL\n" );
+	this.asmOut.append( oldCode2 );
+	this.asmOut.append( "\tEX\tDE,HL\n"
+				+ "\tPOP\tHL\n" );
+      }
+      this.asmOut.append( "\tCALL\tS_MID\n" );
+      addLibItem( BasicLibrary.LibItem.S_MID );
+    }
+    parseToken( iter, ')' );
+  }
+
+
+  private void parseStrRIGHT( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    parseToken( iter, ',' );
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    String oldCode = this.asmOut.cut( pos );
+    String newCode = convertCodeToValueInBC( oldCode );
+    if( newCode != null ) {
+      this.asmOut.append( newCode );
+    } else {
+      this.asmOut.append( "\tPUSH\tHL\n" );
+      this.asmOut.append( oldCode );
+      this.asmOut.append( "\tLD\tB,H\n"
+			+ "\tLD\tC,L\n"
+			+ "\tPOP\tHL\n" );
+    }
+    this.asmOut.append( "\tCALL\tS_RGHT\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.S_RGHT );
+  }
+
+
+  private void parseStrRTRIM( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    this.asmOut.append( "\tCALL\tS_RTRM\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.S_RTRM );
+  }
+
+
+  private void parseStrSPACE( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    int pos = this.asmOut.length();
+    parseEnclosedExpr( iter );
+    String oldCode = this.asmOut.cut( pos );
+    String newCode = convertCodeToValueInBC( oldCode );
+    if( newCode != null ) {
+      this.asmOut.append( newCode );
+    } else {
+      this.asmOut.append( oldCode );
+      this.asmOut.append( "\tLD\tB,H\n"
+		+ "\tLD\tC,L\n" );
+    }
+    this.asmOut.append( "\tLD\tL,20H\n"
+		+ "\tCALL\tS_STC\n" );
+    addLibItem( BasicLibrary.LibItem.S_STC );
+  }
+
+
+  private void parseStrSTR( CharacterIterator iter ) throws PrgException
+  {
+    parseEnclosedExpr( iter );
+    this.asmOut.append( "\tCALL\tS_STR\n" );
+    addLibItem( BasicLibrary.LibItem.S_STR );
+  }
+
+
+  private void parseStrSTRING( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    parseToken( iter, ',' );
+    Integer cnt = removeLastCodeIfConstExpr( pos );
+    if( cnt != null ) {
+      if( checkParseStringPrimExpr( iter ) ) {
+	this.asmOut.append_LD_BC_nn( cnt.intValue() );
+	this.asmOut.append( "\tCALL\tS_STS\n" );
+	addLibItem( BasicLibrary.LibItem.S_STS );
+      } else {
+	parseExpr( iter );
+	this.asmOut.append_LD_BC_nn( cnt.intValue() );
+	this.asmOut.append( "\tCALL\tS_STC\n" );
+	addLibItem( BasicLibrary.LibItem.S_STC );
+      }
+    } else {
+      String  oldCode1 = this.asmOut.cut( pos );
+      String  newCode1 = convertCodeToValueInBC( oldCode1 );
+      boolean isStr    = false;
+      if( checkParseStringPrimExpr( iter ) ) {
+	isStr = true;
+      } else {
+	parseExpr( iter );
+      }
+      String code2 = this.asmOut.cut( pos );
+      if( isOnly_LD_HL_xx( code2 ) ) {
+	if( newCode1 != null ) {
+	  this.asmOut.append( newCode1 );
+	} else {
+	  this.asmOut.append( oldCode1 );
+	  this.asmOut.append( "\tLD\tB,H\n"
+			+ "\tLD\tC,L\n" );
+	}
+	this.asmOut.append( code2 );
+      } else {
+	if( newCode1 != null ) {
+	  this.asmOut.append( code2 );
+	  this.asmOut.append( newCode1 );
+	} else {
+	  this.asmOut.append( oldCode1 );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( code2 );
+	  this.asmOut.append( "\tPOP\tBC\n" );
+	}
+      }
+      if( isStr ) {
+	this.asmOut.append( "\tCALL\tS_STS\n" );
+	addLibItem( BasicLibrary.LibItem.S_STS );
+      } else {
+	this.asmOut.append( "\tCALL\tS_STC\n" );
+	addLibItem( BasicLibrary.LibItem.S_STC );
+      }
+    }
+    parseToken( iter, ')' );
+  }
+
+
+  private void parseStrTARGET_ID( CharacterIterator iter ) throws PrgException
+  {
+    checkParseDummyArg( iter );
+    this.asmOut.append( "\tLD\tHL,XTARID\n" );
+    addLibItem( BasicLibrary.LibItem.XTARID );
+  }
+
+
+  private void parseStrTRIM( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    this.asmOut.append( "\tCALL\tS_TRIM\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.S_TRIM );
+  }
+
+
+  private void parseStrUPPER( CharacterIterator iter ) throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    parseToken( iter, ')' );
+    this.asmOut.append( "\tCALL\tS_UPR\n" );
+    addLibItem( BasicLibrary.LibItem.S_UPR );
+  }
+
+
+	/* --- Parsen von Ausdruecke --- */
+
+  private boolean checkParseStringPrimExpr( CharacterIterator iter )
+							throws PrgException
+  {
+    boolean rv   = false;
+    String  text = checkStringLiteral( iter );
+    if( text != null ) {
+      this.asmOut.append( "\tLD\tHL," );
+      this.asmOut.append( getStringLiteralLabel( text ) );
+      this.asmOut.newLine();
+      rv = true;
+    } else {
+      rv = checkParseStringPrimVarExpr( iter );
+    }
+    return rv;
+  }
+
+
+  private boolean checkParseStringPrimVarExpr( CharacterIterator iter )
+							throws PrgException
+  {
+    boolean rv     = false;
+    int     begPos = iter.getIndex();
+    String  name   = checkIdentifier( iter );
+    if( name != null ) {
+      if( name.endsWith( "$" ) ) {
+	if( name.equals( "BIN$" ) ) {
+	  parseStrBIN( iter );
+	} else if( name.equals( "CHR$" ) ) {
+	  parseStrCHR( iter );
+	} else if( name.equals( "HEX$" ) ) {
+	  parseStrHEX( iter );
+	} else if( name.equals( "INCHAR$" ) ) {
+	  parseStrINCHAR( iter );
+	} else if( name.equals( "INKEY$" ) ) {
+	  parseStrINKEY( iter );
+	} else if( name.equals( "LEFT$" ) ) {
+	  parseStrLEFT( iter );
+	} else if( name.equals( "LOWER$" ) ) {
+	  parseStrLOWER( iter );
+	} else if( name.equals( "LTRIM$" ) ) {
+	  parseStrLTRIM( iter );
+	} else if( name.equals( "MEMSTR$" ) ) {
+	  parseStrMEMSTR( iter );
+	} else if( name.equals( "MID$" ) ) {
+	  parseStrMID( iter );
+	} else if( name.equals( "MIRROR$" ) ) {
+	  parseStrMIRROR( iter );
+	} else if( name.equals( "RIGHT$" ) ) {
+	  parseStrRIGHT( iter );
+	} else if( name.equals( "RTRIM$" ) ) {
+	  parseStrRTRIM( iter );
+	} else if( name.equals( "SPACE$" ) ) {
+	  parseStrSPACE( iter );
+	} else if( name.equals( "STR$" ) ) {
+	  parseStrSTR( iter );
+	} else if( name.equals( "STRING$" ) ) {
+	  parseStrSTRING( iter );
+	} else if( name.equals( "TARGET_ID$" ) ) {
+	  parseStrTARGET_ID( iter );
+	} else if( name.equals( "TRIM$" ) ) {
+	  parseStrTRIM( iter );
+	} else if( name.equals( "UPPER$" ) ) {
+	  parseStrUPPER( iter );
+	} else {
+	  CallableEntry entry = this.name2Callable.get( name );
+	  if( entry != null ) {
+	    if( entry instanceof FunctionEntry ) {
+	      if( ((FunctionEntry) entry).getReturnType()
+						!= DataType.STRING )
+	      {
+		throw  new PrgException( "String-Ausdruck erwartet" );
+	      }
+	      parseCallableCall( iter, entry );
 	    } else {
-	      value = null;
+	      throw new PrgException(
+		"Aufruf einer Prozedur an der Stelle nicht erlaubt" );
 	    }
-	  }
-	}
-      }
-      else if( checkKeyword( iter, "SGN" ) ) {
-	z1013BasicMismatch();
-	value = checkEnclosedConstExpr( iter );
-	if( value != null ) {
-	  if( value.intValue() < 0 ) {
-	    value = new Integer( -1 );
-	  }
-	  else if( value.intValue() > 0 ) {
-	    value = new Integer( 1 );
 	  } else {
-	    value = new Integer( 0 );
+	    parseVariableExpr( iter, name, DataType.STRING );
 	  }
 	}
-      }
-      else if( checkKeyword( iter, "SQR" ) ) {
-	z1013BasicMismatch();
-	value = checkEnclosedConstExpr( iter );
-	if( value != null ) {
-	  if( value.intValue() >= 0 ) {
-	    value = new Integer( (int) Math.floor(
-				Math.sqrt( value.doubleValue( )) ) );
-	  }
-	}
+	rv = true;
+      } else {
+	iter.setIndex( begPos );
       }
     }
-    return value;
+    return rv;
+  }
+
+
+  private String checkStringLiteral( CharacterIterator iter )
+							throws PrgException
+  {
+    StringBuilder buf       = null;
+    char          delimiter = skipSpaces( iter );
+    if( delimiter == '\"' ) {
+      buf        = new StringBuilder( 64 );
+      char    ch = iter.next();
+      while( (ch != CharacterIterator.DONE) && (ch != delimiter) ) {
+	if( ch > 0xFF ) {
+	  throw16BitChar( ch );
+	}
+	if( this.options.getWarnNonAsciiChars()
+	    && ((ch < '\u0020') || (ch > '\u007F')) )
+	{
+	  putWarningNonAsciiChar( ch );
+	}
+	buf.append( ch );
+	ch = iter.next();
+      }
+      if( ch != delimiter ) {
+	putWarning( "String-Literal nicht geschlossen" );
+      }
+      iter.next();
+    }
+    return buf != null ? buf.toString() : null;
   }
 
 
@@ -2430,26 +3942,55 @@ public class BasicCompiler extends PrgThread
 
   private void parseExpr( CharacterIterator iter ) throws PrgException
   {
-    parseAndExpr( iter );
-    while( checkKeyword( iter, "OR" ) ) {
-      putCode( "\tPUSH\tHL\n" );
-      parseAndExpr( iter );
-      putCode( "\tPOP\tDE\n"
-		+ "\tCALL\tO_OR\n" );
-      this.libItems.add( LibItem.O_OR );
-    }
-  }
-
-
-  private void parseAndExpr( CharacterIterator iter ) throws PrgException
-  {
     parseNotExpr( iter );
-    while( checkKeyword( iter, "AND" ) ) {
-      putCode( "\tPUSH\tHL\n" );
-      parseNotExpr( iter );
-      putCode( "\tPOP\tDE\n"
-		+ "\tCALL\tO_AND\n" );
-      this.libItems.add( LibItem.O_AND );
+    for(;;) {
+      if( checkKeyword( iter, "AND" ) ) {
+	int pos = this.asmOut.length();
+	parseNotExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tPOP\tDE\n" );
+	}
+	this.asmOut.append( "\tCALL\tO_AND\n" );
+	addLibItem( BasicLibrary.LibItem.O_AND );
+      } else if( checkKeyword( iter, "OR" ) ) {
+	int pos = this.asmOut.length();
+	parseNotExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	if( !oldCode.equals( "\tLD\tHL,0000H\n" ) ) {
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tPOP\tDE\n" );
+	  }
+	  this.asmOut.append( "\tCALL\tO_OR\n" );
+	  addLibItem( BasicLibrary.LibItem.O_OR );
+	}
+      } else if( checkKeyword( iter, "XOR" ) ) {
+	int pos = this.asmOut.length();
+	parseNotExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tPOP\tDE\n" );
+	}
+	this.asmOut.append( "\tCALL\tO_XOR\n" );
+	addLibItem( BasicLibrary.LibItem.O_XOR );
+      } else {
+	break;
+      }
     }
   }
 
@@ -2458,8 +3999,8 @@ public class BasicCompiler extends PrgThread
   {
     if( checkKeyword( iter, "NOT" ) ) {
       parseCondExpr( iter );
-      putCode( "\tCALL\tO_NOT\n" );
-      this.libItems.add( LibItem.O_NOT );
+      this.asmOut.append( "\tCALL\tO_NOT\n" );
+      addLibItem( BasicLibrary.LibItem.O_NOT );
     } else {
       parseCondExpr( iter );
     }
@@ -2468,131 +4009,221 @@ public class BasicCompiler extends PrgThread
 
   private void parseCondExpr( CharacterIterator iter ) throws PrgException
   {
-    parseArithmExpr( iter );
-    char ch = skipSpaces( iter );
-    if( ch == '<' ) {
-      ch = iter.next();
-      if( ch == '=' ) {
-	iter.next();
-	Integer value = checkConstArithmExpr( iter );
-	if( value != null ) {
-	  putCode_LD_DE_nn( value.intValue() );
-	  putCode( "\tCALL\tO_LE\n" );
-	  this.libItems.add( LibItem.O_LE );
+    if( checkParseStringPrimExpr( iter ) ) {
+
+      // String-Vergleich
+      char ch = skipSpaces( iter );
+      if( ch == '<' ) {
+	ch = iter.next();
+	if( ch == '=' ) {
+	  iter.next();
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  parseStringPrimExpr( iter );
+	  this.asmOut.append( "\tPOP\tDE\n"
+		+ "\tCALL\tO_STLE\n" );
+	  addLibItem( BasicLibrary.LibItem.O_STLE );
+	} else if( ch == '>' ) {
+	  iter.next();
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  parseStringPrimExpr( iter );
+	  this.asmOut.append( "\tPOP\tDE\n"
+		+ "\tCALL\tO_STNE\n" );
+	  addLibItem( BasicLibrary.LibItem.O_STNE );
 	} else {
-	  putCode( "\tPUSH\tHL\n" );
-	  parseArithmExpr( iter );
-	  putCode( "\tPOP\tDE\n"
-		+ "\tCALL\tO_GE\n" );
-	  this.libItems.add( LibItem.O_GE );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  parseStringPrimExpr( iter );
+	  this.asmOut.append( "\tPOP\tDE\n"
+		+ "\tCALL\tO_STLT\n" );
+	  addLibItem( BasicLibrary.LibItem.O_STLT );
 	}
+      } else if( ch == '=' ) {
+	iter.next();
+	this.asmOut.append( "\tPUSH\tHL\n" );
+	parseStringPrimExpr( iter );
+	this.asmOut.append( "\tPOP\tDE\n"
+		+ "\tCALL\tO_STEQ\n" );
+	addLibItem( BasicLibrary.LibItem.O_STEQ );
+      } else if( ch == '>' ) {
+	ch = iter.next();
+	if( ch == '=' ) {
+	  iter.next();
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  parseStringPrimExpr( iter );
+	  this.asmOut.append( "\tPOP\tDE\n"
+		+ "\tCALL\tO_STGE\n" );
+	  addLibItem( BasicLibrary.LibItem.O_STGE );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  parseStringPrimExpr( iter );
+	  this.asmOut.append( "\tPOP\tDE\n"
+		+ "\tCALL\tO_STGT\n" );
+	  addLibItem( BasicLibrary.LibItem.O_STGT );
+	}
+      } else {
+	throw new PrgException( "Vergleichsoperator erwartet" );
+      }
+
+    } else {
+
+      // prufen auf numerischen Vergleich
+      parseShiftExpr( iter );
+      char ch = skipSpaces( iter );
+      if( ch == '<' ) {
+	ch = iter.next();
+	if( ch == '=' ) {
+	  iter.next();
+	  int pos = this.asmOut.length();
+	  parseShiftExpr( iter );
+	  String oldCode = this.asmOut.cut( pos );
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	    this.asmOut.append( "\tCALL\tO_LE\n" );
+	    addLibItem( BasicLibrary.LibItem.O_LE );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tPOP\tDE\n"
+			+ "\tCALL\tO_GE\n" );
+	    addLibItem( BasicLibrary.LibItem.O_GE );
+	  }
+	} else if( ch == '>' ) {
+	  iter.next();
+	  int pos = this.asmOut.length();
+	  parseShiftExpr( iter );
+	  String oldCode = this.asmOut.cut( pos );
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tPOP\tDE\n" );
+	  }
+	  this.asmOut.append( "\tCALL\tO_NE\n" );
+	  addLibItem( BasicLibrary.LibItem.O_NE );
+	} else {
+	  int pos = this.asmOut.length();
+	  parseShiftExpr( iter );
+	  String oldCode = this.asmOut.cut( pos );
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	    this.asmOut.append( "\tCALL\tO_LT\n" );
+	    addLibItem( BasicLibrary.LibItem.O_LT );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tPOP\tDE\n"
+			+ "\tCALL\tO_GT\n" );
+	    addLibItem( BasicLibrary.LibItem.O_GT );
+	  }
+	}
+      }
+      else if( ch == '=' ) {
+	iter.next();
+	int pos = this.asmOut.length();
+	parseShiftExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tPOP\tDE\n" );
+	}
+	this.asmOut.append( "\tCALL\tO_EQ\n" );
+	addLibItem( BasicLibrary.LibItem.O_EQ );
       }
       else if( ch == '>' ) {
-	iter.next();
-	z1013BasicMismatch();
-	Integer value = checkConstArithmExpr( iter );
-	if( value != null ) {
-	  putCode_LD_DE_nn( value.intValue() );
+	ch = iter.next();
+	if( ch == '=' ) {
+	  iter.next();
+	  int pos = this.asmOut.length();
+	  parseShiftExpr( iter );
+	  String oldCode = this.asmOut.cut( pos );
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	    this.asmOut.append( "\tCALL\tO_GE\n" );
+	    addLibItem( BasicLibrary.LibItem.O_GE );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tPOP\tDE\n"
+				+ "\tCALL\tO_LE\n" );
+	    addLibItem( BasicLibrary.LibItem.O_LE );
+	  }
 	} else {
-	  putCode( "\tPUSH\tHL\n" );
-	  parseArithmExpr( iter );
-	  putCode( "\tPOP\tDE\n" );
-	}
-	putCode( "\tCALL\tO_NE\n" );
-	this.libItems.add( LibItem.O_NE );
-      } else {
-	Integer value = checkConstArithmExpr( iter );
-	if( value != null ) {
-	  putCode_LD_DE_nn( value.intValue() );
-	  putCode( "\tCALL\tO_LT\n" );
-	  this.libItems.add( LibItem.O_LT );
-	} else {
-	  putCode( "\tPUSH\tHL\n" );
-	  parseArithmExpr( iter );
-	  putCode( "\tPOP\tDE\n"
-		+ "\tCALL\tO_GT\n" );
-	  this.libItems.add( LibItem.O_GT );
-	}
-      }
-    }
-    else if( ch == '>' ) {
-      ch = iter.next();
-      if( ch == '=' ) {
-	iter.next();
-	Integer value = checkConstArithmExpr( iter );
-	if( value != null ) {
-	  putCode_LD_DE_nn( value.intValue() );
-	  putCode( "\tCALL\tO_GE\n" );
-	  this.libItems.add( LibItem.O_GE );
-	} else {
-	  putCode( "\tPUSH\tHL\n" );
-	  parseArithmExpr( iter );
-	  putCode( "\tPOP\tDE\n"
-		+ "\tCALL\tO_LE\n" );
-	  this.libItems.add( LibItem.O_LE );
-	}
-      } else {
-	Integer value = checkConstArithmExpr( iter );
-	if( value != null ) {
-	  putCode_LD_DE_nn( value.intValue() );
-	  putCode( "\tCALL\tO_GT\n" );
-	  this.libItems.add( LibItem.O_GT );
-	} else {
-	  putCode( "\tPUSH\tHL\n" );
-	  parseArithmExpr( iter );
-	  putCode( "\tPOP\tDE\n"
+	  int pos = this.asmOut.length();
+	  parseShiftExpr( iter );
+	  String oldCode = this.asmOut.cut( pos );
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	    this.asmOut.append( "\tCALL\tO_GT\n" );
+	    addLibItem( BasicLibrary.LibItem.O_GT );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tPOP\tDE\n"
 		+ "\tCALL\tO_LT\n" );
-	  this.libItems.add( LibItem.O_LT );
+	    addLibItem( BasicLibrary.LibItem.O_LT );
+	  }
 	}
       }
-    }
-    else if( ch == '=' ) {
-      iter.next();
-      Integer value = checkConstArithmExpr( iter );
-      if( value != null ) {
-	putCode_LD_DE_nn( value.intValue() );
-      } else {
-	putCode( "\tPUSH\tHL\n" );
-	parseArithmExpr( iter );
-	putCode( "\tPOP\tDE\n" );
-      }
-      putCode( "\tCALL\tO_EQ\n" );
-      this.libItems.add( LibItem.O_EQ );
-    }
-    else if( ch == '#' ) {
-      iter.next();
-      Integer value = checkConstArithmExpr( iter );
-      if( value != null ) {
-	putCode_LD_DE_nn( value.intValue() );
-      } else {
-	putCode( "\tPUSH\tHL\n" );
-	parseArithmExpr( iter );
-	putCode( "\tPOP\tDE\n" );
-      }
-      putCode( "\tCALL\tO_NE\n" );
-      this.libItems.add( LibItem.O_NE );
     }
   }
 
 
-  private void parseArithmExpr( CharacterIterator iter ) throws PrgException
+  private void parseShiftExpr( CharacterIterator iter ) throws PrgException
   {
-    char ch = skipSpaces( iter );
-    if( ch == '-' ) {
-      iter.next();
-      Integer value = checkConstExpr( iter );
-      if( value != null ) {
-	putCode_LD_HL_nn( -value.intValue() );
-      } else {
+    parseAddExpr( iter );
+    for(;;) {
+      if( checkKeyword( iter, "SHL" ) ) {
+	int pos = this.asmOut.length();
 	parseAddExpr( iter );
-	putCode( "\tCALL\tNEGHL\n" );
-	this.libItems.add( LibItem.ABS_NEG_HL );
+	String oldCode = this.asmOut.cut( pos );
+	if( oldCode.equals( "\tLD\tHL,0001H\n" ) ) {
+	  this.asmOut.append( "\tSLA\tL\n"
+		  + "\tRL\tH\n" );
+	} else {
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tEX\tDE,HL\n"
+				+ "\tPOP\tHL\n" );
+	  }
+	  this.asmOut.append( "\tCALL\tO_SHL\n" );
+	  addLibItem( BasicLibrary.LibItem.O_SHL );
+	}
+      } else if( checkKeyword( iter, "SHR" ) ) {
+	int pos = this.asmOut.length();
+	parseAddExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	if( oldCode.equals( "\tLD\tHL,0001H\n" ) ) {
+	  this.asmOut.append( "\tSRL\tH\n"
+			+ "\tRR\tL\n" );
+	} else {
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tEX\tDE,HL\n"
+				+ "\tPOP\tHL\n" );
+	  }
+	  this.asmOut.append( "\tCALL\tO_SHR\n" );
+	  addLibItem( BasicLibrary.LibItem.O_SHR );
+	}
+      } else {
+	break;
       }
-    } else {
-      if( ch == '+' ) {
-	ch = iter.next();
-      }
-      parseAddExpr( iter );
     }
   }
 
@@ -2600,86 +4231,186 @@ public class BasicCompiler extends PrgThread
   private void parseAddExpr( CharacterIterator iter ) throws PrgException
   {
     parseMulExpr( iter );
-    char ch = skipSpaces( iter );
-    while( (ch == '+') || (ch == '-') ) {
-      iter.next();
-      Integer value = checkConstMulExpr( iter );
-      if( value != null ) {
-	if( value.intValue() == 1 ) {
-	  if( ch == '+' ) {
-	    putCode( "\tCALL\tO_INC\n" );
-	    this.libItems.add( LibItem.O_INC );
+    for(;;) {
+      char ch = skipSpaces( iter );
+      if( ch == '+' ) {
+	iter.next();
+	int pos = this.asmOut.length();
+	parseMulExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	if( !oldCode.equals( "\tLD\tHL,0000H\n" ) ) {
+	  if( oldCode.equals( "\tLD\tHL,0001H\n" ) ) {
+	    this.asmOut.append( "\tCALL\tO_INC\n" );
+	    addLibItem( BasicLibrary.LibItem.O_INC );
+	  } else if( oldCode.equals( "\tLD\tHL,0FFFFH\n" ) ) {
+	    this.asmOut.append( "\tCALL\tO_DEC\n" );
+	    addLibItem( BasicLibrary.LibItem.O_DEC );
 	  } else {
-	    putCode( "\tCALL\tO_DEC\n" );
-	    this.libItems.add( LibItem.O_DEC );
+	    String newCode = convertCodeToValueInDE( oldCode );
+	    if( newCode != null ) {
+	      this.asmOut.append( newCode );
+	    } else {
+	      this.asmOut.append( "\tPUSH\tHL\n" );
+	      this.asmOut.append( oldCode );
+	      this.asmOut.append( "\tPOP\tDE\n" );
+	    }
+	    this.asmOut.append( "\tCALL\tO_ADD\n" );
+	    addLibItem( BasicLibrary.LibItem.O_ADD );
 	  }
-	} else {
-	  putCode_LD_DE_nn( value.intValue() );
-	  if( ch == '+' ) {
-	    putCode( "\tCALL\tO_ADD\n" );
-	    this.libItems.add( LibItem.O_ADD );
+	}
+      } else if( ch == '-' ) {
+	iter.next();
+	int pos = this.asmOut.length();
+	parseMulExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	if( !oldCode.equals( "\tLD\tHL,0000H\n" ) ) {
+	  if( oldCode.equals( "\tLD\tHL,0001H\n" ) ) {
+	    this.asmOut.append( "\tCALL\tO_DEC\n" );
+	    addLibItem( BasicLibrary.LibItem.O_DEC );
+	  } else if( oldCode.equals( "\tLD\tHL,0FFFFH\n" ) ) {
+	    this.asmOut.append( "\tCALL\tO_INC\n" );
+	    addLibItem( BasicLibrary.LibItem.O_INC );
 	  } else {
-	    putCode( "\tCALL\tO_SUB\n" );
-	    this.libItems.add( LibItem.O_SUB );
+	    String newCode = convertCodeToValueInDE( oldCode );
+	    if( newCode != null ) {
+	      this.asmOut.append( newCode );
+	    } else {
+	      this.asmOut.append( "\tPUSH\tHL\n" );
+	      this.asmOut.append( oldCode );
+	      this.asmOut.append( "\tPOP\tDE\n"
+				+ "\tEX\tDE,HL\n" );
+	    }
+	    this.asmOut.append( "\tCALL\tO_SUB\n" );
+	    addLibItem( BasicLibrary.LibItem.O_SUB );
+	  }
+	}
+      } else if( checkKeyword( iter, "ADD" ) ) {
+	int pos = this.asmOut.length();
+	parseMulExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	if( !oldCode.equals( "\tLD\tHL,0000H\n" ) ) {
+	  if( oldCode.equals( "\tLD\tHL,0001H\n" ) ) {
+	    this.asmOut.append( "\tINC\tHL\n" );
+	  } else if( oldCode.equals( "\tLD\tHL,0FFFFH\n" ) ) {
+	    this.asmOut.append( "\tDEC\tHL\n" );
+	  } else {
+	    String newCode = convertCodeToValueInDE( oldCode );
+	    if( newCode != null ) {
+	      this.asmOut.append( newCode );
+	    } else {
+	      this.asmOut.append( "\tPUSH\tHL\n" );
+	      this.asmOut.append( oldCode );
+	      this.asmOut.append( "\tPOP\tDE\n" );
+	    }
+	    this.asmOut.append( "\tADD\tHL,DE\n" );
+	  }
+	}
+      } else if( checkKeyword( iter, "SUB" ) ) {
+	int pos = this.asmOut.length();
+	parseMulExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	if( !oldCode.equals( "\tLD\tHL,0000H\n" ) ) {
+	  if( oldCode.equals( "\tLD\tHL,0001H\n" ) ) {
+	    this.asmOut.append( "\tDEC\tHL\n" );
+	  } else if( oldCode.equals( "\tLD\tHL,0FFFFH\n" ) ) {
+	    this.asmOut.append( "\tINC\tHL\n" );
+	  } else {
+	    String newCode = convertCodeToValueInDE( oldCode );
+	    if( newCode != null ) {
+	      this.asmOut.append( newCode );
+	    } else {
+	      this.asmOut.append( "\tPUSH\tHL\n" );
+	      this.asmOut.append( oldCode );
+	      this.asmOut.append( "\tPOP\tDE\n"
+				+ "\tEX\tDE,HL\n" );
+	    }
+	    this.asmOut.append( "\tOR\tA\n"
+				+ "\tSBC\tHL,DE\n" );
 	  }
 	}
       } else {
-	putCode( "\tPUSH\tHL\n" );
-	parseMulExpr( iter );
-	putCode( "\tPOP\tDE\n" );
-	if( ch == '+' ) {
-	  putCode( "\tCALL\tO_ADD\n" );
-	  this.libItems.add( LibItem.O_ADD );
-	} else {
-	  putCode( "\tEX\tDE,HL\n"
-		+ "\tCALL\tO_SUB\n" );
-	  this.libItems.add( LibItem.O_SUB );
-	}
+	break;
       }
-      ch = skipSpaces( iter );
     }
   }
 
 
   private void parseMulExpr( CharacterIterator iter ) throws PrgException
   {
-    parsePrimExpr( iter );
-    char ch = skipSpaces( iter );
-    while( (ch == '*') || (ch == '/') ) {
-      iter.next();
-      Integer value = checkConstPrimExpr( iter );
-      if( value != null ) {
-	if( ch == '*' ) {
-	  if( value.intValue() == 2 ) {
-	    putCode( "\tLD\tA,H\n"
-			+ "\tADD\tHL,HL\n"
-			+ "\tXOR\tH\n"
-			+ "\tJP\tM,E_ARIT\n" );
-	    this.libItems.add( LibItem.E_ARIT );
-	  } else {
-	    putCode_LD_DE_nn( value.intValue() );
-	    putCode( "\tCALL\tO_MUL\n" );
-	    this.libItems.add( LibItem.O_MUL );
-	  }
+    parseUnaryExpr( iter );
+    for(;;) {
+      char ch = skipSpaces( iter );
+      if( ch == '*' ) {
+	iter.next();
+	int pos = this.asmOut.length();
+	parseUnaryExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
 	} else {
-	  putCode_LD_DE_nn( value.intValue() );
-	  putCode( "\tCALL\tO_DIV\n" );
-	  this.libItems.add( LibItem.O_DIV );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tPOP\tDE\n" );
 	}
+	this.asmOut.append( "\tCALL\tO_MUL\n" );
+	addLibItem( BasicLibrary.LibItem.O_MUL );
+      } else if( ch == '/' ) {
+	iter.next();
+	int pos = this.asmOut.length();
+	parseUnaryExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tPOP\tDE\n"
+			+ "\tEX\tDE,HL\n" );
+	}
+	this.asmOut.append( "\tCALL\tO_DIV\n" );
+	addLibItem( BasicLibrary.LibItem.O_DIV );
+      } else if( checkKeyword( iter, "MOD" ) ) {
+	int pos = this.asmOut.length();
+	parseUnaryExpr( iter );
+	String oldCode = this.asmOut.cut( pos );
+	String newCode = convertCodeToValueInDE( oldCode );
+	if( newCode != null ) {
+	  this.asmOut.append( newCode );
+	} else {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tPOP\tDE\n"
+			+ "\tEX\tDE,HL\n" );
+	}
+	this.asmOut.append( "\tCALL\tO_MOD\n" );
+	addLibItem( BasicLibrary.LibItem.O_MOD );
       } else {
-	putCode( "\tPUSH\tHL\n" );
-	parsePrimExpr( iter );
-	putCode( "\tPOP\tDE\n" );
-	if( ch == '*' ) {
-	  putCode( "\tCALL\tO_MUL\n" );
-	  this.libItems.add( LibItem.O_MUL );
-	} else {
-	  putCode( "\tEX\tDE,HL\n"
-		+ "\tCALL\tO_DIV\n" );
-	  this.libItems.add( LibItem.O_DIV );
-	}
+	break;
       }
-      ch = skipSpaces( iter );
+    }
+  }
+
+
+  private void parseUnaryExpr( CharacterIterator iter ) throws PrgException
+  {
+    char ch = skipSpaces( iter );
+    if( ch == '-' ) {
+      iter.next();
+      Integer value = readNumber( iter );
+      if( value != null ) {
+	this.asmOut.append_LD_HL_nn( -value.intValue() );
+      } else {
+	parsePrimExpr( iter );
+	this.asmOut.append( "\tCALL\tNEGHL\n" );
+	addLibItem( BasicLibrary.LibItem.ABS_NEG_HL );
+      }
+    } else {
+      if( ch == '+' ) {
+	iter.next();
+      }
+      parsePrimExpr( iter );
     }
   }
 
@@ -2688,17 +4419,12 @@ public class BasicCompiler extends PrgThread
   {
     char ch = skipSpaces( iter );
     if( ch == '(' ) {
-      Integer value = checkEnclosedConstExpr( iter );
-      if( value != null ) {
-	putCode_LD_HL_nn( value.intValue() );
-      } else {
-	iter.next();
-	parseExpr( iter );
-	parseToken( iter, ')' );
-      }
+      iter.next();
+      parseExpr( iter );
+      parseToken( iter, ')' );
     }
     else if( (ch >= '0') && (ch <= '9') ) {
-      putCode_LD_HL_nn( parseNumber( iter ) );
+      this.asmOut.append_LD_HL_nn( parseNumber( iter ) );
     }
     else if( ch == '&' ) {
       ch = iter.next();
@@ -2713,9 +4439,7 @@ public class BasicCompiler extends PrgThread
 	    }
 	    ch = iter.next();
 	  }
-	  putCode_LD_HL_nn( value );
-	  ac1BasicMismatch();
-	  z1013BasicMismatch();
+	  this.asmOut.append_LD_HL_nn( value );
 	} else {
 	  throw new PrgException( "0 oder 1 erwartet" );
 	}
@@ -2723,11 +4447,9 @@ public class BasicCompiler extends PrgThread
 	iter.next();
 	Integer value = readHex( iter );
 	if( value == null ) {
-	  throw new PrgException( "Hexadezimalziffer erwartet" );
+	  throwHexDigitExpected();
 	}
-	putCode_LD_HL_nn( value );
-	ac1BasicMismatch();
-	z1013BasicMismatch();
+	this.asmOut.append_LD_HL_nn( value );
       } else {
 	throw new PrgException( "B oder H erwartet" );
       }
@@ -2735,95 +4457,157 @@ public class BasicCompiler extends PrgThread
     else if( ch == '\'' ) {
       ch = iter.next();
       iter.next();
+      if( this.options.getWarnNonAsciiChars()
+	  && ((ch < '\u0020') || (ch > '\u007F')) )
+      {
+	putWarningNonAsciiChar( ch );
+      }
       parseToken( iter, '\'' );
       check8BitChar( ch );
-      putCode_LD_HL_nn( ch );
-    }
-    else if( ch == '@' ) {
-      iter.next();
-      Integer value = checkEnclosedConstExpr( iter );
-      if( value != null ) {
-	putCode( "\tLD\tHL,(" );
-	putCode( getArrayVarAddrExpr( value.intValue() ) );
-	putCode( ")\n" );
-      } else {
-	parseEnclosedExpr( iter );
-	putCode( "\tCALL\tARYADR\n"
-		+ "\tLD\tE,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\tD,(HL)\n"
-		+ "\tEX\tDE,HL\n" );
-	this.libItems.add( LibItem.ARYADR );
-      }
+      this.asmOut.append_LD_HL_nn( ch );
     } else {
-      if( checkKeyword( iter, "ABS" ) ) {
-	parseABS( iter );
-      }
-      else if( checkKeyword( iter, "DEEK" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseDEEK( iter );
-      }
-      else if( checkKeyword( iter, "HEX" ) ) {
-	parseHEX( iter );
-      }
-      else if( checkKeyword( iter, "INCHAR" ) ) {
-	parseINCHAR();
-      }
-      else if( checkKeyword( iter, "INKEY" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseINKEY();
-      }
-      else if( checkKeyword( iter, "INP" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseIN( iter );
-      }
-      else if( checkKeyword( iter, "IN" ) ) {
-	parseIN( iter );
-      }
-      else if( checkKeyword( iter, "LEN" ) ) {
-	ac1BasicMismatch();
-	parseLEN();
-      }
-      else if( checkKeyword( iter, "PEEK" ) ) {
-	parsePEEK( iter );
-      }
-      else if( checkKeyword( iter, "RND" ) ) {
-	parseRND( iter );
-      }
-      else if( checkKeyword( iter, "SIZE" ) ) {
-	parseSIZE();
-      }
-      else if( checkKeyword( iter, "SGN" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseSGN( iter );
-      }
-      else if( checkKeyword( iter, "SQR" ) ) {
-	ac1BasicMismatch();
-	z1013BasicMismatch();
-	parseSQR( iter );
-      }
-      else if( checkKeyword( iter, "TOP" ) ) {
-	parseTOP();
-      } else {
-	String varName = readSimpleVarName( iter );
-	int    len     = varName.length();
-	if( len > 0 ) {
-	  if( len > 1 ) {
-	    z1013BasicMismatch();
-	  }
-	  String varLabel = "M_V" + varName;
-	  this.varLabels.add( varLabel );
-	  putCode( "\tLD\tHL,(" );
-	  putCode( varLabel );
-	  putCode( ")\n" );
+      String name = checkIdentifier( iter );
+      if( name != null ) {
+	if( name.equals( "ABS" ) ) {
+	  parseABS( iter );
+	} else if( name.equals( "ASC" ) ) {
+	  parseASC( iter );
+	} else if( name.equals( "BLACK" ) ) {
+	  parseBLACK( iter );
+	} else if( name.equals( "BLINKING" ) ) {
+	  parseBLINKING( iter );
+	} else if( name.equals( "BLUE" ) ) {
+	  parseBLUE( iter );
+	} else if( name.equals( "CYAN" ) ) {
+	  parseCYAN( iter );
+	} else if( name.equals( "DEEK" ) ) {
+	  parseDEEK( iter );
+	} else if( name.equals( "ERR" ) ) {
+	  parseERR( iter );
+	} else if( name.equals( "FALSE" ) ) {
+	  parseFALSE( iter );
+	} else if( name.equals( "GREEN" ) ) {
+	  parseGREEN( iter );
+	} else if( name.equals( "H_CHAR" ) ) {
+	  parseH_CHAR( iter );
+	} else if( name.equals( "H_PIXEL" ) ) {
+	  parseH_PIXEL( iter );
+	} else if( name.equals( "IN" ) || name.equals( "INP" ) ) {
+	  parseIN( iter );
+	} else if( name.equals( "INSTR" ) ) {
+	  parseINSTR( iter );
+	} else if( name.equals( "JOYST" ) ) {
+	  parseJOYST( iter );
+	} else if( name.equals( "LASTSCREEN" ) ) {
+	  parseLASTSCREEN( iter );
+	} else if( name.equals( "LEN" ) ) {
+	  parseLEN( iter );
+	} else if( name.equals( "MAGENTA" ) ) {
+	  parseMAGENTA( iter );
+	} else if( name.equals( "MAX" ) ) {
+	  parseMAX( iter );
+	} else if( name.equals( "MIN" ) ) {
+	  parseMIN( iter );
+	} else if( name.equals( "PEEK" ) ) {
+	  parsePEEK( iter );
+	} else if( name.equals( "POINT" ) || name.equals( "PTEST" ) ) {
+	  parsePTEST( iter );
+	} else if( name.equals( "RED" ) ) {
+	  parseRED( iter );
+	} else if( name.equals( "RND" ) ) {
+	  parseRND( iter );
+	} else if( name.equals( "SGN" ) ) {
+	  parseSGN( iter );
+	} else if( name.equals( "SQR" ) ) {
+	  parseSQR( iter );
+	} else if( name.equals( "TARGET_ADDR" ) ) {
+	  parseTARGET_ADDR( iter );
+	} else if( name.equals( "TOP" ) ) {
+	  parseTOP( iter );
+	} else if( name.equals( "TRUE" ) ) {
+	  parseTRUE( iter );
+	} else if( name.equals( "USR" ) ) {
+	  parseUSR( iter );
+	} else if( name.equals( "USR0" ) ) {
+	  parseUSR( iter, 0 );
+	} else if( name.equals( "USR1" ) ) {
+	  parseUSR( iter, 1 );
+	} else if( name.equals( "USR2" ) ) {
+	  parseUSR( iter, 2 );
+	} else if( name.equals( "USR3" ) ) {
+	  parseUSR( iter, 3 );
+	} else if( name.equals( "USR4" ) ) {
+	  parseUSR( iter, 4 );
+	} else if( name.equals( "USR5" ) ) {
+	  parseUSR( iter, 5 );
+	} else if( name.equals( "USR6" ) ) {
+	  parseUSR( iter, 6 );
+	} else if( name.equals( "USR7" ) ) {
+	  parseUSR( iter, 7 );
+	} else if( name.equals( "USR8" ) ) {
+	  parseUSR( iter, 8 );
+	} else if( name.equals( "USR9" ) ) {
+	  parseUSR( iter, 9 );
+	} else if( name.equals( "VAL" ) ) {
+	  parseVAL( iter );
+	} else if( name.equals( "WHITE" ) ) {
+	  parseWHITE( iter );
+	} else if( name.equals( "W_CHAR" ) ) {
+	  parseW_CHAR( iter );
+	} else if( name.equals( "W_PIXEL" ) ) {
+	  parseW_PIXEL( iter );
+	} else if( name.equals( "XPOS" ) ) {
+	  parseXPOS( iter );
+	} else if( name.equals( "YELLOW" ) ) {
+	  parseYELLOW( iter );
+	} else if( name.equals( "YPOS" ) ) {
+	  parseYPOS( iter );
 	} else {
-	  throwUnexpectedChar( skipSpaces( iter ) );
+	  CallableEntry entry = this.name2Callable.get( name );
+	  if( entry != null ) {
+	    if( entry instanceof FunctionEntry ) {
+	      if( ((FunctionEntry) entry).getReturnType()
+						!= DataType.INTEGER )
+	      {
+		throwIntExprExpected();
+	      }
+	      parseCallableCall( iter, entry );
+	    } else {
+	      throw new PrgException(
+		"Aufruf einer Prozedur an der Stelle nicht erlaubt" );
+	    }
+	  } else {
+	    if( name.endsWith( "$" ) ) {
+	      throwIntExprExpected();
+	    }
+	    parseVariableExpr( iter, name, DataType.INTEGER );
+	  }
 	}
+      } else {
+	throwUnexpectedChar( skipSpaces( iter ) );
       }
+    }
+  }
+
+
+  private void parseLineExprList( CharacterIterator iter ) throws PrgException
+  {
+    java.util.List<String> labels = new ArrayList<String>( 32 );
+    labels.add( parseDestLineExpr( iter ) );
+    while( checkToken( iter, ',' ) ) {
+      labels.add( parseDestLineExpr( iter ) );
+    }
+    int n = labels.size();
+    if( n >= 0xFF ) {
+      throw new PrgException( "Liste der Zeilennummern zu lang" );
+    }
+    this.asmOut.append( "\tDB\t" );
+    this.asmOut.appendHex2( n );
+    this.asmOut.newLine();
+    for( String label : labels ) {
+      this.asmOut.append( "\tDW\t" );
+      this.asmOut.append( label );
+      this.asmOut.newLine();
     }
   }
 
@@ -2835,6 +4619,23 @@ public class BasicCompiler extends PrgThread
       throw new PrgException( "Zahl erwartet" );
     }
     return value.intValue();
+  }
+
+
+  private void parseStringPrimExpr( CharacterIterator iter )
+							throws PrgException
+  {
+    String text = checkStringLiteral( iter );
+    if( text != null ) {
+      String label = getStringLiteralLabel( text );
+      this.asmOut.append( "\tLD\tHL," );
+      this.asmOut.append( label );
+      this.asmOut.newLine();
+    } else {
+      if( !checkParseStringPrimVarExpr( iter ) ) {
+	throwStringExprExpected();
+      }
+    }
   }
 
 
@@ -2870,26 +4671,23 @@ public class BasicCompiler extends PrgThread
   }
 
 
-  private String readSimpleVarName( CharacterIterator iter )
+  private Long readLineNum( CharacterIterator iter ) throws PrgException
   {
-    StringBuilder buf = new StringBuilder();
-    char          ch  = skipSpaces( iter );
-    if( ((ch >= 'A') && (ch <= 'Z'))
-	|| ((ch >= 'a') && (ch <= 'z')) )
-    {
-      buf.append( Character.toUpperCase( ch ) );
+    Long rv = null;
+    char ch = skipSpaces( iter );
+    if( (ch >= '0') && (ch <= '9') ) {
+      long lineNum = ch - '0';
       ch = iter.next();
-      if( this.basicOptions.getAllowLongVarNames() ) {
-	while( ((ch >= 'A') && (ch <= 'Z'))
-	       || ((ch >= 'a') && (ch <= 'z'))
-	       || ((ch >= '0') && (ch <= '9')) )
-	{
-	  buf.append( Character.toUpperCase( ch ) );
-	  ch = iter.next();
+      while( (ch >= '0') && (ch <= '9') ) {
+	lineNum = (lineNum * 10L) + (ch - '0');
+	if( lineNum > Integer.MAX_VALUE ) {
+	  throw new PrgException( "BASIC-Zeilennummer zu gro\u00DF" );
 	}
+	ch = iter.next();
       }
+      rv = new Long( lineNum );
     }
-    return buf.toString();
+    return rv;
   }
 
 
@@ -2920,1152 +4718,174 @@ public class BasicCompiler extends PrgThread
    */
   private void parseAssignment(
 			CharacterIterator iter,
-			String            varAddrExpr ) throws PrgException
+			SimpleVarInfo     dstVar ) throws PrgException
   {
     parseToken( iter, '=' );
-    if( varAddrExpr.equals( "HL" ) ) {
-      Integer value = checkConstExpr( iter );
-      if( value != null ) {
-	putCode( "\tLD\t(HL)," );
-	putCode( getHex2( value.intValue() ) );
-	putCode( "\n"
+    if( dstVar.getDataType() == DataType.INTEGER ) {
+      if( dstVar.hasStaticAddr() ) {
+	parseExpr( iter );
+	dstVar.writeCode_LD_Var_HL( this.asmOut );
+      } else {
+	int pos = this.asmOut.length();
+	parseExpr( iter );
+	Integer value = removeLastCodeIfConstExpr( pos );
+	if( value != null ) {
+	  this.asmOut.append( "\tLD\t(HL)," );
+	  this.asmOut.appendHex2( value.intValue() );
+	  this.asmOut.append( "\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\t(HL)," );
-	putCode( getHex2( value.intValue() >> 8 ) );
-	putCode( '\n' );
-      } else {
-	putCode( "\tPUSH\tHL\n" );
-	parseExpr( iter );
-	putCode( "\tEX\tDE,HL\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\t(HL),E\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\t(HL),D\n" );
+	  this.asmOut.appendHex2( value.intValue() >> 8 );
+	  this.asmOut.newLine();
+	} else {
+	  String oldCode = this.asmOut.cut( pos );
+	  String newCode = convertCodeToValueInDE( oldCode );
+	  if( newCode != null ) {
+	    this.asmOut.append( newCode );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldCode );
+	    this.asmOut.append( "\tEX\tDE,HL\n"
+			+ "\tPOP\tHL\n" );
+	  }
+	  this.asmOut.append( "\tLD\t(HL),E\n"
+			+ "\tINC\tHL\n"
+			+ "\tLD\t(HL),D\n" );
+	}
       }
-    } else {
-      parseExpr( iter );
-      putCode( "\tLD\t(" );
-      putCode( varAddrExpr );
-      putCode( "),HL\n" );
-    }
-  }
 
+    } else if( dstVar.getDataType() == DataType.STRING ) {
 
-	/* --- Bibliothek mit den benoetigten Funktionalitaeten --- */
+      boolean done   = false;
+      int     srcPos = iter.getIndex();
+      int     dstPos = this.asmOut.length();
 
-  private void putLibrary( int stackSize )
-  {
-    if( this.basicOptions.getShowAsm() ) {
-      putCode( "\n;Bibliotheksfunktionen\n" );
-    }
-    if( this.libItems.contains( LibItem.INLN ) ) {
-      /*
-       * Eingabe einer Zeile, die mit ENTER abgeschlossen wird
-       * Paramter:
-       *   HL: Anfangsadresse des Puffers
-       *   E:  max. Anzahl einzugebender Zeichen (Pufferlaenge - 1)
-       */
-      putCode( "INLN:\tPUSH\tHL\n"
-		+ "\tLD\tB,E\n"
-		+ "INLN1:\tLD\t(HL),20H\n"
-		+ "\tINC\tHL\n"
-		+ "\tDJNZ\tINLN1\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\tD,0\n"
-		+ "\tJR\tINLN3\n"
-		+ "INLN2:\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tLD\tA,B\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "INLN3:\tPUSH\tHL\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tXINCH\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\tB,A\n" );
-      this.libItems.add( LibItem.XINCH );
-      this.libItems.add( LibItem.XOUTCH );
-      if( this.basicOptions.isBreakOnInputPossible() ) {
-	putCode( "\tCP\t3\n"
-		+ "\tJP\tZ,E_BRK\n" );
-	this.libItems.add( LibItem.E_BRK );
+      // pruefen, ob nur ein Literal zugewiesen wird
+      String  text = checkStringLiteral( iter );
+      if( text != null ) {
+	char ch = skipSpaces( iter );
+	if( isEndOfInstr( iter ) ) {
+	  if( dstVar.hasStaticAddr() ) {
+	    dstVar.ensureStaticAddrInDE( this.asmOut, false );
+	  } else {
+	    if( !replaceLastCodeFrom_LD_HL_To_DE() ) {
+	      this.asmOut.append( "\tEX\tDE,HL\n" );
+	    }
+	  }
+	  this.asmOut.append( "\tLD\tHL," );
+	  this.asmOut.append( getStringLiteralLabel( text ) );
+	  this.asmOut.append( "\n"
+		+ "\tCALL\tASGSL\n" );
+	  addLibItem( BasicLibrary.LibItem.ASGSL );
+	  done = true;
+	}
       }
-      putCode( "\tCP\t8\n"
-		+ "\tJR\tZ,INLN5\n"
-		+ "\tCP\t9,\n"
-		+ "\tJR\tZ,INLN6\n"
-		+ "\tCP\t0DH\n"
-		+ "\tJR\tZ,INLN7\n"
-		+ "\tCP\t0\n"
-		+ "\tJR\tZ,INLN3\n"
-		+ "INLN4:\tLD\tA,D\n"
-		+ "\tCP\tE\n"
-		+ "\tJR\tNC,INLN3\n"
-		+ "\tLD\t(HL),B\n"
-		+ "\tINC\tHL\n"
-		+ "\tINC\tD\n"
-		+ "\tJR\tINLN2\n"
-		+ "INLN5:\tLD\tA,D\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,INLN3\n"
-		+ "\tDEC\tHL\n"
-		+ "\tDEC\tD\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tLD\tA,B\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tLD\tA,20H\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tJR\tINLN2\n"
-		+ "INLN6:\tLD\tA,D\n"
-		+ "\tCP\tE\n"
-		+ "\tJR\tNC,INLN3\n"
-		+ "\tINC\tHL\n"
-		+ "\tINC\tD\n"
-		+ "\tJR\tINLN2\n"
-		+ "INLN7:\tLD\t(HL),0\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tPOP\tDE\n"
-		+ "\tRET\n" );
-    }
-    if( this.libItems.contains( LibItem.P_INT ) ) {
-      /*
-       * Ausgabe einer Integer-Zahl auf dem Bildschirm
-       * Parameter:
-       *   HL:       auszugebende Zahl
-       *   (M_WINT): Feldbreite
-       */
-      putCode( "P_INT:\tLD\tA,(M_WINT)\n"
-		+ "\tLD\tB,0\n"
-		+ "\tLD\tC,A\n"
-		+ "\tCALL\tABSHL\n"
-		+ "\tJP\tP,P_INT1\n"
-		+ "\tLD\tB,'-'\n"
-		+ "\tDEC\tC\n"
-		+ "P_INT1:\tPUSH DE\n"
-		+ "\tLD\tDE,000AH\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tDEC\tC\n"
-		+ "\tPUSH\tBC\n"
-		+ "P_INT2:\tCALL\tH_DIV\n"
-		+ "\tLD\tA,B\n"
-		+ "\tOR\tC\n"
-		+ "\tJR\tZ,P_INT3\n"
-		+ "\tEX\t(SP),HL\n"
-		+ "\tDEC\tL\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tLD\tH,B\n"
-		+ "\tLD\tL,C\n"
-		+ "\tJR\tP_INT2\n"
-		+ "P_INT3:\tPOP\tBC\n"
-		+ "P_INT4:\tDEC\tC\n"
-		+ "\tLD\tA,C\n"
-		+ "\tOR\tA\n"
-		+ "\tJP\tM,P_INT5\n"
-		+ "\tLD\tA,20H\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tJR\tP_INT4\n"
-		+ "P_INT5:\tLD\tA,B\n"
-		+ "\tOR\tA\n"
-		+ "\tCALL\tNZ,XOUTCH\n"
-		+ "\tLD\tE,L\n"
-		+ "P_INT6:\tLD\tA,E\n"
-		+ "\tCP\t0AH\n"
-		+ "\tPOP\tDE\n"
-		+ "\tRET\tZ\n"
-		+ "\tADD\tA,'0'\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tJR\tP_INT6\n" );
-      this.libItems.add( LibItem.M_WINT );
-      this.libItems.add( LibItem.ABS_NEG_HL );
-      this.libItems.add( LibItem.H_DIV );
-      this.libItems.add( LibItem.XOUTCH );
-    }
-    if( this.libItems.contains( LibItem.R_INT ) ) {
-      /*
-       * Lesen und einer Integer-Zahl aus dem Eingabepuffer
-       * Rueckgabe:
-       *   HL:     gelesene Zahl
-       *   M_IBUF: Anfangsadresse des Eingabepuffers
-       */
-      putCode( "R_INT:\tLD\tBC,M_IBUF-1\n"
-		+ "R_INT1:\tINC\tBC\n"
-		+ "\tLD\tA,(BC)\n"
-		+ "\tCP\t20H\n"
-		+ "\tJR\tZ,R_INT1\n"
-		+ "\tCP\t2DH\n"
-		+ "\tJR\tNZ,R_INT2\n"
-		+ "\tINC\tBC\n"
-		+ "\tCALL\tR_INT2\n"
-		+ "\tRET\tC\n"
-		+ "\tLD\tDE,0000H\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\n"
-		+ "R_INT2:\tLD\tA,(BC)\n"
-		+ "\tINC\tBC\n"
-		+ "\tSUB\t30H\n"
-		+ "\tJR\tC,R_INT5\n"
-		+ "\tCP\t0AH\n"
-		+ "\tJR\tNC,R_INT5\n"
-		+ "\tLD\tL,A\n"
-		+ "\tLD\tH,0\n"
-		+ "R_INT3:\tLD\tA,(BC)\n"
-		+ "\tINC\tBC\n"
-		+ "\tCP\t0\n"
-		+ "\tRET\tZ\n"
-		+ "\tCP\t20H\n"
-		+ "\tJR\tZ,R_INT4\n"
-		+ "\tSUB\t30H\n"
-		+ "\tJR\tC,R_INT5\n"
-		+ "\tCP\t0AH\n"
-		+ "\tJR\tNC,R_INT5\n"
-		+ "\tLD\tD,H\n"
-		+ "\tLD\tE,L\n"
-		+ "\tADD\tHL,HL\n"
-		+ "\tADD\tHL,HL\n"
-		+ "\tADD\tHL,DE\n"
-		+ "\tADD\tHL,HL\n"
-		+ "\tADD\tA,L\n"
-		+ "\tLD\tL,A\n"
-		+ "\tLD\tA,0\n"
-		+ "\tADC\tA,H\n"
-		+ "\tLD\tH,A\n"
-		+ "\tJP\tP,R_INT3\n"
-		+ "\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'SORRY!\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n"
-		+ "\tSCF\n"
-		+ "\tRET\n"
-		+ "R_INT4:\tLD\tA,(BC)\n"
-		+ "\tINC\tBC\n"
-		+ "\tCP\t0\n"
-		+ "\tRET\tZ\n"
-		+ "\tCP\t20H\n"
-		+ "\tJR\tZ,R_INT4\n"
-		+ "R_INT5:\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'WHAT?\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n"
-		+ "\tSCF\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.CKSTCK ) ) {
-      /*
-       * Pruefen, ob der Stack ueberlaeuft
-       */
-      putCode( "CKSTCK:\tLD\tHL," );
-      if( stackSize > 0 ) {
-	putCode( "M_TOP-" );
-	putCode( getHex4( stackSize ) );
-	putCode( "+10H" );
-	this.libItems.add( LibItem.M_TOP );
-      } else {
-	putCode( "0070H" );
-      }
-      putCode( "\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,SP\n"
-		+ "\tRET\tC\n"
-		+ "\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'STACK OVERFLOW\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-      putExit();
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.F_RND ) ) {
-      /*
-       * Ermitteln einer Zufallszahl
-       * Parameter:
-       *   HL: maximaler Wert (groesser 0)
-       * Rueckgabe:
-       *   HL: Zufallszahl zwischen 1 und maximaler Wert
-       */
-      putCode( "F_RND:\tPUSH\tHL\n"
-		+ "\tLD\tHL,M_RND\n"
-		+ "\tLD\tA,R\n"
-		+ "\tRLD\n"
-		+ "\tINC\tHL\n"
-		+ "\tRLD\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tJP\tM,E_ARG\n"
-		+ "\tOR\tL\n"
-		+ "\tJP\tZ,E_ARG\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tBC\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tLD\tHL,(M_RND)\n"
-		+ "F_RND1:\tSBC\tHL,DE\n"
-		+ "\tJR\tNC,F_RND1\n"
-		+ "\tADD\tHL,DE\n"
-		+ "\tINC\tHL\n"
-		+ "\tPOP\tBC\n"
-		+ "\tPOP\tDE\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.E_ARG );
-      this.libItems.add( LibItem.M_RND );
-    }
-    if( this.libItems.contains( LibItem.F_SGN ) ) {
-      /*
-       * Ermitteln des Vorzeichens
-       * Parameter:
-       *   HL: zu pruefender Wert
-       * Rueckgabe:
-       *   HL: -1, 0 oder +1
-       */
-      putCode( "F_SGN:\tLD\tA,H\n"
-		+ "\tOR\tL\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tLD\tHL,0001H\n"
-		+ "\tRET\tP\n"
-		+ "\tDEC\tHL\n"
-		+ "\tDEC\tHL\n"
-		+ "\tRET\n" );
-    }
-    if( this.libItems.contains( LibItem.F_SIZE ) ) {
-      /*
-       * Ermitteln der Groesse des hinter dem Programms
-       * folgenden Speicherbereichs
-       * Rueckgabe:
-       *   HL: Groesse des Speicherbereichs, max. jedoch 32767
-       */
-      putCode( "F_SIZE:" );
-      putCode_LD_HL_nn( this.basicOptions.getEndOfMemory() );
-      putCode( "\tLD\tDE,M_TOP\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tC,F_SIZ1\n"
-		+ "\tBIT\t7,H\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tHL,7FFFH\n"
-		+ "\tRET\n"
-		+ "F_SIZ1:\tLD\tHL,0000H\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.M_TOP );
-    }
-    if( this.libItems.contains( LibItem.F_SQR ) ) {
-      /*
-       * Ermitteln des ganzzahligen Anteils einer Quadratwurzel
-       * Parameter:
-       *   HL: Wert, aus der die Quadratwurzel gezogen wird
-       * Rueckgabe:
-       *   HL: Quadratwurzel (nur ganzzahliger Anteil)
-       */
-      putCode( "F_SQR:\tBIT\t7,H\n"
-		+ "\tJP\tNZ,E_ARG\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tLD\tB,1\n"
-		+ "\tLD\tDE,0001H\n"
-		+ "F_SQR1:\tLD\tA,L\n"
-		+ "\tSUB\tE\n"
-		+ "\tLD\tL,A\n"
-		+ "\tLD\tA,H\n"
-		+ "\tSBC\tA,D\n"
-		+ "\tLD\tH,A\n"
-		+ "\tJR\tC,F_SQR2\n"
-		+ "\tOR\tL\n"
-		+ "\tJR\tZ,F_SQR3\n"
-		+ "\tLD\tA,E\n"
-		+ "\tADD\tA,2\n"
-		+ "\tLD\tE,A\n"
-		+ "\tLD\tA,D\n"
-		+ "\tADC\tA,0\n"
-		+ "\tLD\tD,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tINC\tA\n"
-		+ "\tLD\tB,A\n"
-		+ "\tJR\tF_SQR1\n"
-		+ "F_SQR2:\tLD\tA,B\n"
-		+ "\tDEC\tA\n"
-		+ "\tLD\tB,A\n"
-		+ "F_SQR3:\tLD\tL,B\n"
-		+ "\tLD\tH,0\n"
-		+ "\tPOP\tDE\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.E_ARG );
-    }
-    if( this.libItems.contains( LibItem.H_NEXT ) ) {
-      /*
-       * Ende einer FOR-Schleife
-       * Die Funktion liest vom Stack die Werte,
-       * die bei der FOR-Anweisung auf den Stack geschrieben wurden,
-       * und prueft, ob die Schleife nochmal durchlaufen werden muss.
-       * Wenn ja, wird in HL der Wert 1 zurueckgeliefert, anderenfalls 0.
-       *
-       * Parameter:
-       *   Stack:
-       *     Adresse der Schleifenvariable
-       *     Endwert
-       *     Schrittweite
-       *     Adresse des Schleifenanfangs
-       *     Kennung 'F' fuer FOR-Schleife (nur bei aktiver Stack-Pruefung)
-       *   DE:
-       *     Adresse der bei der NEXT-Anweisung angegebenen Variable
-       *     oder 0, wenn dort keine Variable angegeben wurde
-       *     (nur zu Pruefzwecken).
-       */
-      putCode( "H_NEXT:\tPOP\tBC\n" );
-      if( this.basicOptions.getCheckStack() ) {
-	putCode( "\tPOP\tAF\n"
-		+ "\tCP\t" );
-	putCode( getHex2( MAGIC_FOR ) );
-	putCode( "\n"
-		+ "\tJP\tNZ,E_NXWF\n" );
-	this.libItems.add( LibItem.E_NXWF );
-      }
-      putCode( "\tLD\tIY,0\n"
-		+ "\tADD\tIY,SP\n" );
-      if( this.basicOptions.getCheckStack() ) {
-	putCode( "\tPUSH\tAF\n" );
-      }
-      putCode( "\tPUSH\tBC\n"
-		+ "\tLD\tL,(IY+6)\n"
-		+ "\tLD\tH,(IY+7)\n" );
-      if( this.basicOptions.getCheckStack() ) {
-	putCode( "\tLD\tA,D\n"
-		+ "\tOR\tE\n"
-		+ "\tJR\tZ,H_NXT2\n"
-		+ "\tLD\tA,H\n"
-		+ "\tCP\tD\n"
-		+ "\tJR\tNZ,H_NXT1\n"
-		+ "\tLD\tA,L\n"
-		+ "\tCP\tE\n"
-		+ "\tJR\tZ,H_NXT2\n"
-		+ "H_NXT1:\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'NEXT WITH WRONG VARIABLE\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-	putExit();
-	putCode( "H_NXT2:" );
-	this.libItems.add( LibItem.P_LTXT );
-      }
-      putCode( "\tPUSH\tHL\n"
-		+ "\tLD\tE,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\tD,(HL)\n"
-		+ "\tLD\tL,(IY+2)\n"
-		+ "\tLD\tH,(IY+3)\n"
-		+ "\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tEX\tAF,AF\'\n"
-		+ "\tCALL\tO_ADD\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\t(HL),E\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\t(HL),D\n"
-		+ "\tLD\tL,(IY+4)\n"
-		+ "\tLD\tH,(IY+5)\n"
-		+ "\tEX\tAF,AF\'\n"
-		+ "\tJP\tM,O_GT\n"
-		+ "\tJR\tO_LT\n" );
-      this.libItems.add( LibItem.O_ADD );
-      this.libItems.add( LibItem.O_LT );
-      this.libItems.add( LibItem.O_GT );
-    }
-    if( this.libItems.contains( LibItem.O_OR ) ) {
-      /*
-       * Logisches ODER
-       * Parameter:
-       *   DE, HL: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_OR:\tLD\tA,L\n"
-		+ "\tOR\tE\n"
-		+ "\tJR\tNZ,O_OR1\n"
-		+ "\tLD\tA,H\n"
-		+ "\tOR\tD\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\tZ\n"
-		+ "O_OR1:\tLD\tHL,0001H\n"
-		+ "\tRET\n" );
-    }
-    if( this.libItems.contains( LibItem.O_AND ) ) {
-      /*
-       * Logisches UND
-       * Parameter:
-       *   DE, HL: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_AND:\tLD\tA,H\n"
-		+ "\tOR\tL\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tA,D\n"
-		+ "\tOR\tE\n"
-		+ "\tRET\tZ\n"
-		+ "\tINC\tL\n"
-		+ "\tRET\n" );
-    }
-    if( this.libItems.contains( LibItem.O_NOT ) ) {
-      /*
-       * Logisches NICHT
-       * Parameter:
-       *   HL: Operand
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_NOT:\tLD\tA,H\n"
-		+ "\tOR\tL\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\tNZ\n"
-		+ "\tINC\tL\n"
-		+ "\tRET\n" );
-    }
-    if( this.libItems.contains( LibItem.O_LT ) ) {
-      /*
-       * Vergleich HL < DE ?
-       * Parameter:
-       *   HL, DE: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_LT:\tCALL\tH_CP\n"
-		+ "\tRET\tNC\n"
-		+ "\tLD\tL,A\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.H_CP );
-    }
-    if( this.libItems.contains( LibItem.O_LE ) ) {
-      /*
-       * Vergleich HL <= DE ?
-       * Parameter:
-       *   HL, DE: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_LE:\tCALL\tH_CP\n"
-		+ "\tLD\tL,A\n"
-		+ "\tRET\tC\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tL,H\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.H_CP );
-    }
-    if( this.libItems.contains( LibItem.O_GT ) ) {
-      /*
-       * Vergleich HL > DE ?
-       * Parameter:
-       *   HL, DE: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_GT:\tCALL\tH_CP\n"
-		+ "\tRET\tC\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tL,A\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.H_CP );
-    }
-    if( this.libItems.contains( LibItem.O_GE ) ) {
-      /*
-       * Vergleich HL >= DE ?
-       * Parameter:
-       *   HL, DE: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_GE:\tCALL\tH_CP\n"
-		+ "\tRET\tC\n"
-		+ "\tLD\tL,A\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.H_CP );
-    }
-    if( this.libItems.contains( LibItem.O_EQ ) ) {
-      /*
-       * Vergleich HL == DE ?
-       * Parameter:
-       *   HL, DE: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_EQ:\tCALL\tH_CP\n"
-		+ "\tRET\tNZ\n"
-		+ "\tLD\tL,A\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.H_CP );
-    }
-    if( this.libItems.contains( LibItem.O_NE ) ) {
-      /*
-       * Vergleich HL != DE ?
-       * Parameter:
-       *   HL, DE: Operanden
-       * Rueckgabe:
-       *   HL: 0 oder 1
-       */
-      putCode( "O_NE:\tCALL\tH_CP\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tL,A\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.H_CP );
-    }
-    if( this.libItems.contains( LibItem.H_CP ) ) {
-      /*
-       * Vorzeichenbehafteter Vergleich von HL und DE
-       * Parameter:
-       *   HL, DE: Operanden
-       * Rueckgabe:
-       *   C-Flag: HL < DE
-       *   Z-Flag: HL == DE
-       *   A:  1  (nicht bei CPHLDE)
-       *   HL: 0  (nicht bei CPHLDE)
-       */
-      putCode( "H_CP:\tLD\tA,H\n"
-		+ "\tXOR\tD\n"
-		+ "\tJP\tP,H_CP1\n"
-		+ "\tEX\tDE,HL\n"
-		+ "H_CP1:\tCALL\tH_CP2\n"
-		+ "\tLD\tA,1\n"
-		+ "\tLD\tHL,0000\n"
-		+ "\tRET\n"
-		+ "CPHLDE:\tLD\tA,H\n"
-		+ "\tXOR\tD\n"
-		+ "\tJP\tP,H_CP2\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tCALL\tH_CP2\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tRET\n"
-		+ "H_CP2:\tLD\tA,H\n"
-		+ "\tCP\tD\n"
-		+ "\tRET\tNZ\n"
-		+ "\tLD\tA,L\n"
-		+ "\tCP\tE\n"
-		+ "\tRET\n" );
-    }
-    if( this.libItems.contains( LibItem.O_INC ) ) {
-      /*
-       * Addition: HL = HL + 1
-       */
-      putCode( "O_INC:\tINC\tHL\n"
-		+ "\tLD\tA,80H\n"
-		+ "\tXOR\tH\n"
-		+ "\tOR\tL\n"
-		+ "\tRET\tNZ\n"
-		+ "\tJP\tE_ARIT\n" );
-      this.libItems.add( LibItem.E_ARIT );
-    }
-    if( this.libItems.contains( LibItem.O_DEC ) ) {
-      /*
-       * Addition: HL = HL - 1
-       */
-      putCode( "O_DEC:\tLD\tA,80H\n"
-		+ "\tXOR\tH\n"
-		+ "\tOR\tL\n"
-		+ "\tJP\tZ,E_ARIT\n"
-		+ "\tDEC\tHL\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.E_ARIT );
-    }
-    if( this.libItems.contains( LibItem.O_SUB ) ) {
-      /*
-       * Subtraktion: HL = HL - DE
-       */
-      putCode( "O_SUB:\tPUSH\tHL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tCALL\tNEGHL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tPOP\tHL\n" );	// kein RET -> weiter mit O_ADD
-      this.libItems.add( LibItem.O_ADD );
-      this.libItems.add( LibItem.ABS_NEG_HL );
-    }
-    if( this.libItems.contains( LibItem.O_ADD ) ) {
-      /*
-       * Addition: HL = HL + DE
-       * O_ADD muss direkt hinter O_SUB folgen!
-       */
-      putCode( "O_ADD:\tLD\tA,H\n"
-		+ "\tXOR\tD\n"
-		+ "\tLD\tA,D\n"
-		+ "\tADD\tHL,DE\n"
-		+ "\tRET\tM\n"
-		+ "\tXOR\tH\n"
-		+ "\tRET\tP\n"
-		+ "\tJP\tE_ARIT\n" );
-      this.libItems.add( LibItem.E_ARIT );
-    }
-    if( this.libItems.contains( LibItem.O_MUL ) ) {
-      /*
-       * Multiplikation: HL = HL * DE
-       */
-      putCode( "O_MUL:\tLD\tB,0\n"
-		+ "\tCALL\tABSHL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tCALL\tABSHL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,O_MUL1\n"
-		+ "\tLD\tA,D\n"
-		+ "\tOR\tD\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tJP\tNZ,E_ARIT\n"
-		+ "O_MUL1:\tLD\tA,L\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,O_MUL3\n"
-		+ "O_MUL2:\tADD\tHL,DE\n"
-		+ "\tJP\tC,E_ARIT\n"
-		+ "\tDEC\tA\n"
-		+ "\tJR\tNZ,O_MUL2\n"
-		+ "O_MUL3:\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tJP\tM,E_ARIT\n"
-		+ "\tLD\tA,B\n"
-		+ "\tOR\tA\n"
-		+ "\tCALL\tM,NEGHL\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.ABS_NEG_HL );
-      this.libItems.add( LibItem.E_ARIT );
-    }
-    if( this.libItems.contains( LibItem.O_DIV ) ) {
-      /*
-       * Division: HL = HL / DE
-       */
-      putCode( "O_DIV:\tLD\tB,0\n"
-		+ "\tCALL\tABSHL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tCALL\tABSHL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tLD\tA,D\n"
-		+ "\tOR\tE\n"
-		+ "\tJR\tNZ,O_DIV1\n"
-		+ "\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'DIVISION BY ZERO\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-	putExit();
-	putCode( "O_DIV1:\tPUSH\tBC\n"
-		+ "\tCALL\tH_DIV\n"
-		+ "\tLD\tH,B\n"
-		+ "\tLD\tL,C\n"
-		+ "\tPOP\tBC\n"
-		+ "\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tJP\tM,E_ARIT\n"
-		+ "\tLD\tA,B\n"
-		+ "\tOR\tA\n"
-		+ "\tCALL\tM,NEGHL\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.H_DIV );
-      this.libItems.add( LibItem.ABS_NEG_HL );
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.H_DIV ) ) {
-      /*
-       * Vorzeichenlose Division: HL = HL / DE
-       */
-      putCode( "H_DIV:\tPUSH\tHL\n"
-		+ "\tLD\tL,H\n"
-		+ "\tLD\tH,0\n"
-		+ "\tCALL\tH_DIV1\n"
-		+ "\tLD\tB,C\n"
-		+ "\tLD\tA,L\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\tH,A\n"
-		+ "H_DIV1:\tLD\tC,0FFH\n"
-		+ "H_DIV2:\tINC\tC\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNC,H_DIV2\n"
-		+ "\tADD\tHL,DE\n"
-		+ "\tRET\n" );
-    }
-    if( this.libItems.contains( LibItem.ABS_NEG_HL ) ) {
-      /*
-       * Absolutwert und Negieren von Werten
-       * Parameter:
-       *   HL: zu veraendernder Wert
-       * Rueckgabe:
-       *   HL: Ergebnis
-       */
-      putCode( "ABSHL:\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tP\n"
-		+ "NEGHL:\tLD\tA,H\n"
-		+ "\tOR\tL\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tA,H\n"
-		+ "\tPUSH\tAF\n"
-		+ "\tCPL\n"
-		+ "\tLD\tH,A\n"
-		+ "\tLD\tA,L\n"
-		+ "\tCPL\n"
-		+ "\tLD\tL,A\n"
-		+ "\tINC\tHL\n"
-		+ "\tPOP\tAF\n"
-		+ "\tXOR\tH\n"
-		+ "\tJP\tP,E_ARIT\n"
-		+ "\tLD\tA,B\n"
-		+ "\tXOR\t80H\n"
-		+ "\tLD\tB,A\n"
-		+ "\tRET\n" );
-	this.libItems.add( LibItem.E_ARIT );
-    }
-    if( this.libItems.contains( LibItem.ARYADR ) ) {
-      /*
-       * Ermitteln der Adresse einer Variabeln im Variablen-Array
-       * Parameter:
-       *   HL: Index
-       * Rueckgabewert:
-       *   HL: Adresse der Variablen
-       */
-      putCode( "ARYADR:\tBIT\t7,H\n"
-		+ "\tJP\tNZ,E_ARG\n" );
-      if( this.basicOptions.getCheckArray() ) {
-	putCode( "\tEX\tDE,HL\n" );
-	putCode_LD_HL_nn( this.basicOptions.getArraySize() );
-	putCode( "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tJP\tC,E_ARG\n"
-		+ "\tJP\tZ,E_ARG\n"
-		+ "\tEX\tDE,HL\n" );
-      }
-      putCode( "\tADD\tHL,HL\n"
-		+ "\tLD\tBC,M_ARY\n"
-		+ "\tADD\tHL,BC\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.E_ARG );
-      this.libItems.add( LibItem.M_ARY );
-    }
-    if( this.libItems.contains( LibItem.DREAD ) ) {
-      /*
-       * Lesen eines Wertes aus dem Datenbereich
-       * Parameter:
-       *   (M_READ): aktuelle Leseposition
-       *   DEND:     erste Adresse hinter dem Datenbereich
-       * Rueckgabe:
-       *   HL: gelesener Wert
-       */
-      putCode( "DREAD:\tLD\tHL,(M_READ)\n"
-		+ "\tLD\tDE,DEND\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tC,DREAD1\n"
-		+ "\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'READ POSITION EXCEEDED\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-	putExit();
-	putCode( "DREAD1:"
-		+ "\tADD\tHL,DE\n"
-		+ "\tLD\tE,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\tD,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\t(M_READ),HL\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.DATA );
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.INCHR ) ) {
-      putCode( "INCHR:\tCALL\tXINCH\n" );
-      if( this.basicOptions.isBreakOnInputPossible() ) {
-	putCode( "\tCP\t3\n"
-		+ "\tJP\tZ,E_BRK\n" );
-	this.libItems.add( LibItem.E_BRK );
-      }
-      putCode( "\tLD\tL,A\n"
-		+ "\tLD\tH,0\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.XINCH );
-    }
-    if( this.libItems.contains( LibItem.INKEY ) ) {
-      /*
-       * Tastaturstatus abfragen und Wert des Zeichens zurueckliefern,
-       * welches durch die gerade gedrueckte(n) Taste(n) gebildet wird.
-       * Dabei wird auch auf Abbruch geprueft.
-       *
-       * Rueckgabe:
-       *   A: Wert des Zeichens oder 0
-       */
-      if( (this.platform == Platform.CPM)
-	  || (this.platform == Platform.HUEBLERMC)
-	  || (this.platform == Platform.KC85)
-	  || (this.platform == Platform.KRAMERMC)
-	  || (this.platform == Platform.Z9001) )
-      {
-	putCode( "INKEY:\tCALL\tXINKEY\n"
-		+ "\tCP\t3\n"
-		+ "\tJR\tZ,E_BRK\n"
-		+ "\tRET\n" );
-	this.libItems.add( LibItem.XINKEY );
-	this.libItems.add( LibItem.E_BRK );
-      } else {
-	putCode( "INKEY:\n" );		// weiter mit CKBRK
-	this.libItems.add( LibItem.CKBRK );
-      }
-    }
-    if( this.libItems.contains( LibItem.CKBRK ) ) {
-      /*
-       * Pruefen auf Abbruch
-       * Diese Funktion muss unmittelbar hinter LibItem.INKEY folgen!
-       */
-      if( (this.platform == Platform.CPM)
-	  || (this.platform == Platform.HUEBLERMC)
-	  || (this.platform == Platform.KC85)
-	  || (this.platform == Platform.KRAMERMC)
-	  || (this.platform == Platform.Z9001) )
-      {
-	putCode( "CKBRK:\tCALL\tXINSTS\n" );
-	this.libItems.add( LibItem.XINSTS );
-      } else {
-	putCode( "CKBRK:\tCALL\tXINKEY\n" );
-	this.libItems.add( LibItem.XINKEY );
-      }
-      putCode( "\tCP\t3\n"
-		+ "\tRET\tNZ\n" );
-      this.libItems.add( LibItem.E_BRK );
-    }
-    if( this.libItems.contains( LibItem.E_BRK ) ) {
-      /*
-       * Abbruch-Ausschrift erzeugen
-       * Diese Funktion muss unmittelbar hinter LibItem.CKBRK folgen!
-       */
-      putCode( "E_BRK:\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'BREAK\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-      putExit();
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.P_TAB ) ) {
-      /*
-       * Ausgabe von Leerzeichen auf dem Bildschirm
-       * Parameter:
-       *   HL: Anzahl der Leerzeichen (groesser oder gleich 0)
-       */
-      putCode( "P_TAB:\tBIT\t7,H\n"
-		+ "\tJP\tNZ,E_ARG\n"
-		+ "P_TAB1:\tLD\tA,H\n"
-		+ "\tOR\tL\n"
-		+ "\tRET\tZ\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tLD\tA,20H\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tPOP\tHL\n"
-		+ "\tDEC\tHL\n"
-		+ "\tJR\tP_TAB1\n" );
-      this.libItems.add( LibItem.E_ARG );
-      this.libItems.add( LibItem.XOUTCH );
-    }
-    if( this.libItems.contains( LibItem.E_ARG ) ) {
-      putCode( "E_ARG:\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'ARGUMENT OUT OF RANGE\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-      putExit();
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.E_ARIT ) ) {
-      putCode( "E_ARIT:\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'ARITHMETIC OVERFLOW\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-      putExit();
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.E_NXWF ) ) {
-      putCode( "E_NXWF:\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'NEXT WITHOUT FOR\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-      putExit();
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.E_REWG ) ) {
-      putCode( "E_REWG:\tCALL\tP_LTXT\n"
-		+ "\tDEFM\t\'RETURN WITHOUT GOSUB\'\n"
-		+ "\tDEFB\t0DH\n"
-		+ "\tDEFB\t0\n" );
-      putExit();
-      this.libItems.add( LibItem.P_LTXT );
-    }
-    if( this.libItems.contains( LibItem.P_LTXT ) ) {
-      /*
-       * Ausgabe eines mit einem Null-Byte abgeschlossenen Textes
-       * auf dem Bildschirm,
-       * der sich unmittelbar an den Funktionsaufruf anschliesst.
-       */
-      putCode( "P_LTXT:\tEX\t(SP),HL\n"
-		+ "\tCALL\tP_TEXT\n"
-		+ "\tEX\t(SP),HL\n"
-		+ "\tRET\n" );
-      this.libItems.add( LibItem.P_TEXT );
-    }
-    if( this.libItems.contains( LibItem.P_TEXT ) ) {
-      /*
-       * Ausgabe eines mit einem Null-Byte abgeschlossenen Textes
-       * auf dem Bildschirm
-       *
-       * Parameter:
-       *   HL: Adresse des Textes
-       * Rueckgabe:
-       *   HL: erstes Byte hinter dem abschliessenden Null-Byte
-       */
-      putCode( "P_TEXT:\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "\tPOP\tHL\n"
-		+ "\tJR\tP_TEXT\n" );
-      this.libItems.add( LibItem.XOUTCH );
-    }
-    if( this.libItems.contains( LibItem.P_HEXA ) ) {
-      /*
-       * Hexadezimale Ausgabe eines Bytes auf dem Bildschirm
-       * Parameter:
-       *   A: auszugebender Wert
-       */
-      putCode( "P_HEXA:\tPUSH\tAF\n"
-		+ "\tRRCA\n"
-		+ "\tRRCA\n"
-		+ "\tRRCA\n"
-		+ "\tRRCA\n"
-		+ "\tCALL\tP_HXA1\n"
-		+ "\tPOP\tAF\n"
-		+ "P_HXA1:\tAND\t0FH\n"
-		+ "\tADD\tA,90H\n"
-		+ "\tDAA\n"
-		+ "\tADC\tA,40H\n"
-		+ "\tDAA\n"
-		+ "\tJP\tXOUTCH\n" );
-      this.libItems.add( LibItem.XOUTCH );
-    }
-    if( this.libItems.contains( LibItem.JP_HL ) ) {
-      /*
-       * Sprung zu der Adresse, die im HL-Register steht
-       * Parameter:
-       *   HL: Adresse
-       */
-      putCode( "JP_HL:\tJP\t(HL)\n" );
-    }
-    if( this.libItems.contains( LibItem.OUTNL ) ) {
-      /*
-       * Ausgabe eines Zeilenumbruchs auf dem Bildschirm
-       */
-      putCode( "OUTNL:\tLD\tA,0DH\n"
-		+ "\tJP\tXOUTCH\n" );
-      this.libItems.add( LibItem.XOUTCH );
-    }
-    if( this.libItems.contains( LibItem.DATA ) ) {
-      /*
-       * Leseposition fuer Daten auf den Anfang des Datenbereichs setzen,
-       */
-      putCode( "DINIT:\tLD\tHL,DBEG\n"
-		+ "\tLD\t(M_READ),HL\n"
-		+ "\tRET\n" );
-    }
-  }
 
+      // pruefen, ob nur eine String-Variable zugewiesen wird
+      if( !done ) {
+	iter.setIndex( srcPos );
+	this.asmOut.setLength( dstPos );
+	SimpleVarInfo srcVar = checkVariable( iter );
+	if( srcVar != null ) {
+	  char ch = skipSpaces( iter );
+	  if( isEndOfInstr( iter ) ) {
+	    if( srcVar.hasStaticAddr() ) {
+	      srcVar.ensureAddrInHL( this.asmOut );
+	      dstVar.ensureStaticAddrInDE( this.asmOut, true );
+	    } else {
+	      this.asmOut.insert( dstPos, "\tPUSH\tHL\n" );
+	      srcVar.ensureAddrInHL( this.asmOut );
+	      this.asmOut.append( "\tPOP\tDE\n" );
+	    }
+	    this.asmOut.append( "\tCALL\tASGSV\n" );
+	    addLibItem( BasicLibrary.LibItem.ASGSV );
+	    done = true;
+	  }
+	}
+      }
 
-  private void putDefMem( int stackSize )
-  {
-    if( this.libItems.contains( LibItem.DATA ) ) {
-      /*
-       * Speicherzelle fuer Leseposition anlegen
-       */
-      putCode( "DBEG:\n" );
-      if( this.dataOut != null ) {
-	putCode( this.dataOut );
+      // pruefen, ob ein einfacher String-Ausdruck zugewiesen wird
+      if( !done ) {
+	iter.setIndex( srcPos );
+	this.asmOut.setLength( dstPos );
+	if( !dstVar.hasStaticAddr() ) {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	}
+	if( checkParseStringPrimExpr( iter ) ) {
+	  if( isEndOfInstr( iter ) ) {
+	    if( dstVar.hasStaticAddr() ) {
+	      dstVar.ensureStaticAddrInDE( this.asmOut, true );
+	    } else {
+	      this.asmOut.append( "\tPOP\tDE\n" );
+	    }
+	    this.asmOut.append( "\tCALL\tASGSM\n" );
+	    addLibItem( BasicLibrary.LibItem.ASGSM );
+	    done = true;
+	  }
+	}
       }
-      putCode( "DEND:\n"
-		+ "M_READ:\tDEFS\t2\n" );
-    }
-    if( this.libItems.contains( LibItem.M_KBCH ) ) {
-      /*
-       * Speicherzelle fuer das Zeichen, welches beim Pruefen
-       * auf Programmabbruch von der Tastatur gelesen wurde
-       */
-      this.asmOut.append( "M_KBCH:\tDEFS\t1\n" );
-    }
-    if( this.libItems.contains( LibItem.M_LEN ) ) {
-      /*
-       * Speicherzelle fuer die Laenge der letzten Zeichenketteneingabe
-       */
-      putCode( "M_LEN:\tDEFS\t1\n" );
-    }
-    if( this.libItems.contains( LibItem.M_WINT ) ) {
-      /*
-       * Speicherzelle fuer die Feldbreite bei Integer-Ausgaben
-       */
-      putCode( "M_WINT:\tDEFS\t1\n" );
-    }
-    if( this.libItems.contains( LibItem.M_RND ) ) {
-      /*
-       * Speicherzelle fuer den Zufallsgenerator
-       */
-      putCode( "M_RND:\tDEFS\t2\n" );
-    }
-    if( this.libItems.contains( LibItem.R_INT ) ) {
-      if( this.basicOptions.getShowAsm() ) {
-	putCode( "\n;Eingabepuffer fuer INPUT\n" );
+
+      // String in einem neuen Speicherbereich zusammenbauen
+      if( !done ) {
+	iter.setIndex( srcPos );
+	this.asmOut.setLength( dstPos );
+	if( !dstVar.hasStaticAddr() ) {
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	}
+	this.asmOut.append( "\tCALL\tMFIND\n"		// DE: Zielpuffer
+		+ "\tPUSH\tDE\n" );
+	this.asmOut.append_LD_BC_nn( MAX_STR_LEN );
+	addLibItem( BasicLibrary.LibItem.MFIND );
+	for(;;) {
+	  text = checkStringLiteral( iter );
+	  if( text != null ) {
+	    this.asmOut.append( "\tLD\tHL," );
+	    this.asmOut.append( getStringLiteralLabel( text ) );
+	    this.asmOut.newLine();
+	  } else {
+	    int pos = this.asmOut.length();
+	    if( !checkParseStringPrimVarExpr( iter ) ) {
+	      throwStringExprExpected();
+	    }
+	    String tmpCode = this.asmOut.cut( pos );
+	    if( isOnly_LD_HL_xx( tmpCode ) ) {
+	      this.asmOut.append( tmpCode );
+	    } else {
+	      this.asmOut.append( "\tPUSH\tBC\n"
+			+ "\tPUSH\tDE\n" );
+	      this.asmOut.append( tmpCode );
+	      this.asmOut.append( "\tPOP\tDE\n"
+			+ "\tPOP\tBC\n" );
+	    }
+	  }
+	  this.asmOut.append( "\tCALL\tSTNCP\n" );
+	  addLibItem( BasicLibrary.LibItem.STNCP );
+	  if( skipSpaces( iter ) != '+' ) {
+	    break;
+	  }
+	  iter.next();
+	}
+	this.asmOut.append( "\tPOP\tHL\n"
+		+ "\tCALL\tMALLOC\n" );
+	addLibItem( BasicLibrary.LibItem.MALLOC );
+	if( dstVar.hasStaticAddr() ) {
+	  dstVar.ensureStaticAddrInDE( this.asmOut, true );
+	} else {
+	  this.asmOut.append( "\tPOP\tDE\n" );
+	}
+	this.asmOut.append( "\tCALL\tASGSL\n" );
+	addLibItem( BasicLibrary.LibItem.ASGSL );
       }
-      putCode( "M_IBUF:\tDEFS\t7\n"
-		+ "M_EBUF:\tDEFS\t1\n" );
-    }
-    if( this.basicOptions.getShowAsm()
-	&& (!this.varLabels.isEmpty()
-		|| this.libItems.contains( LibItem.M_ARY )) )
-    {
-      putCode( "\n;BASIC-Variablen\n" );
-    }
-    for( String varLabel : this.varLabels ) {
-      putCode( varLabel );
-      putCode( ":\tDEFS\t2\n" );
-    }
-    if( this.libItems.contains( LibItem.M_ARY ) ) {
-      putCode( "M_ARY:" );
-      int arraySize = this.basicOptions.getArraySize();
-      if( arraySize > 0 ) {
-	putCode( "\tDEFS\t" );
-	putCode( getHex4( arraySize * 2 ) );
-      }
-      putCode( '\n' );
-    }
-    putCode( "M_STCK:\tDEFS\t2\n" );
-    if( stackSize > 0 ) {
-      if( this.basicOptions.getShowAsm() ) {
-	putCode( "\n;Stack-Bereich\n" );
-      }
-      putCode( "\tDEFS\t" );
-      putCode( getHex4( stackSize ) );
-      putCode( "\n"
-		+ "M_TOP:\n" );
-    } else {
-      if( this.libItems.contains( LibItem.M_TOP ) )
-	putCode( "M_TOP:\n" );
     }
   }
 
 
 	/* --- Hilfsfunktionen --- */
 
-  private void ac1BasicMismatch()
+  private void addLibItem( BasicLibrary.LibItem libItem )
   {
-    if( !this.ac1CompatibilityChecked
-	&& this.basicOptions.getStrictAC1MiniBASIC() )
-    {
-      putWarning( "Syntax entspricht nicht dem originalen AC1-Mini-BASIC" );
-      this.ac1CompatibilityChecked = true;
-    }
+    if( this.codeGenEnabled )
+      this.libItems.add( libItem );
   }
 
 
@@ -4078,32 +4898,667 @@ public class BasicCompiler extends PrgThread
   }
 
 
-  private String nextLabel()
+  private void checkAppendBreakCheck()
   {
-    return "M" + String.valueOf( this.labelNum++ );
+    if( this.options.canBreakAlways() ) {
+      this.asmOut.append( "\tCALL\tXCKBRK\n" );
+      addLibItem( BasicLibrary.LibItem.XCKBRK );
+    }
   }
 
 
-  private void openAsmText( String text, BasicOptions basicOptions )
+  private void checkCreateStackFrame()
   {
-    EditFrm editFrm = this.editText.getEditFrm();
-    if( editFrm != null ) {
-      EditText asmEditText = this.editText.getResultEditText();
-      if( asmEditText != null ) {
-	if( asmEditText.hasDataChanged() || !editFrm.contains( asmEditText ) )
-	  asmEditText = null;
-      }
-      if( asmEditText != null ) {
-	asmEditText.setText( text );
-	Component tabComponent = asmEditText.getTabComponent();
-	if( tabComponent != null ) {
-	  editFrm.setSelectedTabComponent( tabComponent );
+    CallableEntry entry = getCallableEntry();
+    if( entry != null ) {
+      int nVars = entry.getVarCount();
+      if( !entry.hasStackFrame()
+	  && ((entry.getArgCount() > 0) || (nVars > 0)) )
+      {
+	// Stack-Rahmen anlegen
+	this.asmOut.append( "\tPUSH\tIY\n"
+			+ "\tLD\tIY,0000H\n"
+			+ "\tADD\tIY,SP\n" );
+	int totalVarSize = entry.getTotalVarSize();
+	if( totalVarSize > 0 ) {
+	  this.asmOut.append_LD_HL_nn( -totalVarSize );
+	  this.asmOut.append( "\tADD\tHL,SP\n"
+			+ "\tLD\tSP,HL\n" );
 	}
-      } else {
-	asmEditText = editFrm.openText( text );
-	this.editText.setResultEditText( asmEditText );
+
+	// String-Variablen initialisieren
+	boolean hlLoaded = false;
+	for( int i = 0; i < nVars; i++ ) {
+	  if( entry.getVarType( i ) == DataType.STRING ) {
+	    if( !hlLoaded ) {
+	      this.asmOut.append_LD_HL_xx( "M_EMPT" );
+	      addLibItem( BasicLibrary.LibItem.M_EMPT );
+	      hlLoaded = true;
+	    }
+	    this.asmOut.append_LD_IndirectIY_HL( entry.getVarIYOffs( i ) );
+	  }
+	}
+	entry.setStackFrameCreated();
       }
-      asmEditText.setPrgOptions( options );
+    }
+  }
+
+
+  private void checkGraphicsSupported() throws PrgException
+  {
+    if( !this.target.supportsGraphics() ) {
+      throw new PrgException(
+		"Grafikanweisungen und -funktionen f\u00FCr"
+			+ " das Zielsystem nicht unterst\u00FCtzt" );
+    }
+  }
+
+
+  private String checkIdentifier( CharacterIterator iter )
+  {
+    String rv = null;
+    char   ch = skipSpaces( iter );
+    if( ((ch >= 'A') && (ch <= 'Z'))
+	|| ((ch >= 'a') && (ch <= 'z')) )
+    {
+      int pos = iter.getIndex();
+      ch      = iter.next();
+      while( ((ch >= 'A') && (ch <= 'Z'))
+	     || ((ch >= 'a') && (ch <= 'z'))
+	     || ((ch >= '0') && (ch <= '9'))
+	     || (ch == '_') )
+      {
+	ch = iter.next();
+      }
+      int len = iter.getIndex() - pos;
+      if( ch == '$' ) {
+	len++;
+      }
+      StringBuilder buf = new StringBuilder( len );
+      iter.setIndex( pos );
+      ch = iter.current();
+      do {
+	buf.append( Character.toUpperCase( ch ) );
+	ch = iter.next();
+	--len;
+      } while( len > 0 );
+      rv = buf.toString();
+    }
+    return rv;
+  }
+
+
+  private void checkMainPrgScope() throws PrgException
+  {
+    if( !this.mainPrg ) {
+      CallableEntry entry = getCallableEntry();
+      if( entry == null ) {
+	throw new PrgException( "Anweisung nur im Hauptprogramm"
+		+ " oder in einer Funktion/Prozedur zul\u00E4ssig" );
+      }
+    }
+  }
+
+
+  private void checkParseDummyArg( CharacterIterator iter )
+							throws PrgException
+  {
+    if( checkToken( iter, '(' ) ) {
+      readNumber( iter );
+      parseToken( iter,')' );
+    }
+  }
+
+
+  private boolean checkReturnValueAssignment(
+				CharacterIterator iter,
+				String            name ) throws PrgException
+  {
+    boolean       rv    = false;
+    CallableEntry entry = getCallableEntry();
+    if( entry != null ) {
+      if( entry.getName().equals( name ) ) {
+	if( entry instanceof FunctionEntry ) {
+	  Integer iyOffs = ((FunctionEntry) entry).getIYOffs( name );
+	  if( iyOffs == null ) {
+	    new PrgException( "R\u00FCckgabewert f\u00FCr eine"
+				+ " Prozedur nicht m\u00F6glich" );
+	  }
+	  parseAssignment( iter, ((FunctionEntry) entry).getReturnVarInfo() );
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  private static boolean checkToken( CharacterIterator iter, char ch )
+  {
+    boolean rv = false;
+    if( skipSpaces( iter ) == ch ) {
+      iter.next();
+      rv = true;
+    }
+    return rv;
+  }
+
+
+  private static void checkVarName( String varName ) throws PrgException
+  {
+    if( Arrays.binarySearch( sortedReservedWords, varName ) >= 0 ) {
+      throw new PrgException( "Reserviertes Schl\u00FCsselwort"
+			+ " als Variablenname nicht erlaubt" );
+    }
+  }
+
+
+  private String convertCodeToValueInBC( String text )
+  {
+    return convertCodeToValueInRR( text, "BC" );
+  }
+
+
+  private String convertCodeToValueInDE( String text )
+  {
+    return convertCodeToValueInRR( text, "DE" );
+  }
+
+
+  private String convertCodeToValueInRR( String text, String rr )
+  {
+    String rv = null;
+    if( (text != null) && (rr.length() == 2) ) {
+      String label  = "";
+      int    tabPos = text.indexOf( '\t' );
+      if( tabPos > 0 ) {
+	label = text.substring( 0, tabPos );
+	text  = text.substring( tabPos );
+      }
+      if( text.startsWith( "\tLD\tHL," ) ) {
+	if( text.indexOf( '\n' ) == (text.length() - 1) ) {
+	  rv = String.format(
+			"%s\tLD\t%s%s",
+			label,
+			rr,
+			text.substring( 6 ) );
+	}
+      }
+      else if( text.startsWith( "\tLD\tH," )
+	       || text.startsWith( "\tLD\tL," ) )
+      {
+	int len = text.length();
+	int eol = text.indexOf( '\n' );
+	if( (eol > 0) && ((eol + 1) < len) ) {
+	  String line1 = text.substring( 0, eol + 1 );
+	  String line2 = text.substring( eol + 1 );
+	  if( line2.indexOf( '\n' ) == (line2.length() - 1) ) {
+	    if( line1.startsWith( "\tLD\tH,(IY" )
+		&& line2.startsWith( "\tLD\tL,(IY" ) )
+	    {
+	      rv = String.format(
+			"%s\tLD\t%c%s\tLD\t%c%s",
+			label,
+			rr.charAt( 0 ),
+			line1.substring( 5 ),
+			rr.charAt( 1 ),
+			line2.substring( 5 ) );
+	    }
+	    else if( line1.startsWith( "\tLD\tL,(IY" )
+		     && line2.startsWith( "\tLD\tH,(IY" ) )
+	    {
+	      rv = String.format(
+			"%s\tLD\t%c%s\tLD\t%c%s",
+			label,
+			rr.charAt( 1 ),
+			line1.substring( 5 ),
+			rr.charAt( 0 ),
+			line2.substring( 5 ) );
+	    }
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  /*
+   * Ermittlung der umgebenden Funktion/Prozedur
+   *
+   * Diese kann nur der unterste Eintrag auf dem Stack sein.
+   */
+  private CallableEntry getCallableEntry()
+  {
+    CallableEntry rv = null;
+    if( !this.structureStack.isEmpty() ) {
+      StructureEntry entry = this.structureStack.get( 0 );
+      if( entry instanceof CallableEntry ) {
+	rv = (CallableEntry) entry;
+      }
+    }
+    return rv;
+  }
+
+
+  private String getStringLiteralLabel( String text )
+  {
+    String label = this.str2Label.get( text );
+    if( label == null ) {
+      label = nextLabel();
+      this.str2Label.put( text, label );
+    }
+    return label;
+  }
+
+
+  private String getUsrLabel( int usrNum )
+  {
+    String rv = String.format( "M_USR%d", usrNum );
+    this.usrLabels.add( rv );
+    return rv;
+  }
+
+
+  private boolean isEndOfInstr( CharacterIterator iter )
+  {
+    char ch = skipSpaces( iter );
+    return (ch == CharacterIterator.DONE) || (ch == ':');
+  }
+
+
+  private static boolean isOnly_LD_HL_xx( String text )
+  {
+    boolean rv = false;
+    if( text != null ) {
+      int tabPos = text.indexOf( '\t' );
+      if( tabPos > 0 ) {
+	text = text.substring( tabPos );
+      }
+      if( text.startsWith( "\tLD\tHL," ) ) {
+	if( text.indexOf( '\n' ) == (text.length() - 1) ) {
+	  rv = true;
+	}
+      }
+      else if( text.startsWith( "\tLD\tH," )
+	       || text.startsWith( "\tLD\tL," ) )
+      {
+	int len = text.length();
+	int eol = text.indexOf( '\n' );
+	if( (eol > 0) && ((eol + 1) < len) ) {
+	  String line1 = text.substring( 0, eol + 1 );
+	  String line2 = text.substring( eol + 1 );
+	  if( line2.indexOf( '\n' ) == (line2.length() - 1) ) {
+	    if( line1.startsWith( "\tLD\tH,(IY" )
+		&& line2.startsWith( "\tLD\tL,(IY" ) )
+	    {
+	      rv = true;
+	    }
+	    else if( line1.startsWith( "\tLD\tL,(IY" )
+		     && line2.startsWith( "\tLD\tH,(IY" ) )
+	    {
+	      rv = true;
+	    }
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  private void lockTmpStrBuf() throws PrgException
+  {
+    if( this.tmpStrBufUsed ) {
+      throw new PrgException( "String-Funktion hier nicht erlaubt,"
+		+ " da der interne String-Puffer bereits durch"
+		+ " eine andere String-Funktion belegt ist\n"
+		+ "Weisen Sie bitte den String-Ausdruck einer Variablen zu"
+		+ " und verwenden Sie diese hier." );
+    }
+    this.tmpStrBufUsed = true;
+  }
+
+
+  private String nextLabel()
+  {
+    return String.format( "M%d", this.labelNum++ );
+  }
+
+
+  private void parse2ArgsTo_DE_HL( CharacterIterator iter )
+							throws PrgException
+  {
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    parseToken( iter, ',' );
+    Integer v1 = removeLastCodeIfConstExpr( pos );
+    if( v1 != null ) {
+      parseExpr( iter );
+      this.asmOut.append_LD_DE_nn( v1.intValue() );
+    } else {
+      String oldCode1 = this.asmOut.cut( pos );
+      String newCode1 = convertCodeToValueInDE( oldCode1 );
+      parseExpr( iter );
+      String code2 = this.asmOut.cut( pos );
+      if( isOnly_LD_HL_xx( code2 ) ) {
+	if( newCode1 != null ) {
+	  this.asmOut.append( newCode1 );
+	} else {
+	  this.asmOut.append( oldCode1 );
+	  this.asmOut.append( "\tEX\tDE,HL\n" );
+	}
+	this.asmOut.append( code2 );
+      } else {
+	this.asmOut.append( oldCode1 );
+	this.asmOut.append( "\tPUSH\tHL\n" );
+	this.asmOut.append( code2 );
+	this.asmOut.append( "\tPOP\tDE\n" );
+      }
+    }
+  }
+
+
+  private CallableEntry parseCallableDecl(
+		CharacterIterator iter,
+		boolean           isFunc,
+		boolean           forImplementation ) throws PrgException
+  {
+    if( !this.structureStack.isEmpty() ) {
+      throw new PrgException( "Anweisung nur in der obersten Ebene erlaubt" );
+    }
+
+    // Name parsen
+    String name = checkIdentifier( iter );
+    if( name == null ) {
+      throw new PrgException( "Name der Funktion/Prozedur erwartet" );
+    }
+    if( Arrays.binarySearch( sortedReservedWords, name ) >= 0 ) {
+      throw new PrgException( "Reserviertes Schl\u00FCsselwort als"
+			+ " Name einer Funktion/Prozedur nicht erlaubt" );
+    }
+    if( !isFunc && (name.indexOf( '$' ) >= 0) ) {
+      throw new PrgException( "\'$\' im Namen einer Prozedur nicht erlaubt" );
+    }
+
+    // Funktion/Prozedur bereits vorhanden?
+    boolean       mismatch = false;
+    CallableEntry entry    = this.name2Callable.get( name );
+    if( entry != null ) {
+      if( (isFunc && !(entry instanceof FunctionEntry))
+	  || (!isFunc && !(entry instanceof SubEntry)) )
+      {
+	mismatch = true;
+      }
+    }
+
+    // Argumente parsen
+    Set<String>            argSet  = new TreeSet<String>();
+    java.util.List<String> argList = new ArrayList<String>();
+    if( checkToken( iter, '(' ) ) {
+      if( !checkToken( iter, ')' ) ) {
+	do {
+	  String argName = checkIdentifier( iter );
+	  if( argName == null ) {
+	    throwVarExpected();
+	  }
+	  checkVarName( argName );
+	  if( argName.equals( name ) ) {
+	    throw new PrgException( "Name der Funktion/Prozedur"
+				+ " als Variablenname nicht erlaubt" );
+	  }
+	  if( entry != null ) {
+	    int idx = argList.size();
+	    if( entry.equalsArgType( idx, argName ) ) {
+	      if( forImplementation ) {
+		/*
+		 * Die Variablennamen koennen sich zwischen Deklaration
+		 * und Implementierung unterscheiden.
+		 * Entscheident sind die bei der Implementierung.
+		 */
+		entry.setArg( idx, argName );
+	      }
+	    } else {
+	      mismatch = true;
+	    }
+	  }
+	  if( !argSet.add( argName ) ) {
+	    throw new PrgException( "Lokale Variable bereits vorhanden" );
+	  }
+	  argList.add( argName );
+	  if( argList.size() > 60 ) {
+	    throw new PrgException( "Anzahl der maximal m\u00F6glichen"
+				+ " Argumente \u00FCberschritten" );
+	  }
+	} while( checkToken( iter, ',' ) );
+	parseToken( iter, ')' );
+      }
+    }
+
+    // Uebereinstimmung mit vorheriger Deklaration?
+    if( entry != null ) {
+      int nArgs = 0;
+      if( argList != null ) {
+	nArgs = argList.size();
+      }
+      if( entry.getArgCount() != nArgs ) {
+	mismatch = true;
+      }
+    }
+    if( mismatch ) {
+      throw new PrgException( "Funktion/Prozedur stimmt nicht"
+			+ " mit vorheriger Deklaration \u00FCberein." );
+    }
+    if( entry == null ) {
+      if( isFunc ) {
+	entry = new FunctionEntry(
+			this.curSourceLineNum,
+			this.curBasicLineNum,
+			name );
+      } else {
+	entry = new SubEntry(
+			this.curSourceLineNum,
+			this.curBasicLineNum,
+			name );
+      }
+      if( argList != null ) {
+	entry.setArgs( argList );
+      }
+      this.name2Callable.put( name, entry );
+    }
+    return entry;
+  }
+
+
+  private void parseCallableImpl(
+			CharacterIterator iter,
+			boolean           isFunc ) throws PrgException
+  {
+    CallableEntry entry = parseCallableDecl( iter, isFunc, true );
+    if( entry.isImplemented() ) {
+      throw new PrgException( "Funktion/Prozedur bereits vorhanden" );
+    }
+    entry.setImplemented();
+    this.structureStack.push( entry );
+
+    // ggf. Haupprogramm beenden
+    if( this.mainPrg ) {
+      if( !this.suppressExit ) {
+	this.asmOut.append( "\tJP\tXEXIT\n" );
+	this.suppressExit = true;
+      }
+      this.mainPrg = false;
+    }
+
+    // eigentliche Implementierung
+    this.asmOut.append( entry.getLabel() );
+    this.asmOut.append( ":\n" );
+  }
+
+
+  private void parseCallableCall(
+			CharacterIterator iter,
+			CallableEntry     entry ) throws PrgException
+  {
+    if( this.options.getCheckStack()
+	&& (this.options.getStackSize() > 0) )
+    {
+      this.asmOut.append_LD_DE_nn( entry.getTotalArgSize()
+				+ entry.getTotalVarSize() );
+      this.asmOut.append( "\tCALL\tCKSTKN\n" );
+      addLibItem( BasicLibrary.LibItem.CKSTK );
+    }
+    int nArgs = entry.getArgCount();
+    if( nArgs > 0 ) {
+      parseToken( iter, '(' );
+      for( int i = 0; i < nArgs; i++ ) {
+	if( i > 0 ) {
+	  parseToken( iter, ',' );
+	}
+	if( entry.getArgType( i ) == DataType.STRING ) {
+	  String text = checkStringLiteral( iter );
+	  if( text != null ) {
+	    this.asmOut.append( "\tLD\tHL," );
+	    this.asmOut.append( getStringLiteralLabel( text ) );
+	    this.asmOut.append( "\n"
+				+ "\tPUSH\tHL\n" );
+	  } else {
+	    SimpleVarInfo srcVar = checkVariable( iter );
+	    if( srcVar != null ) {
+	      srcVar.ensureValueInDE( this.asmOut );
+	      this.asmOut.append( "\tCALL\tSVDUP\n"
+				+ "\tPUSH\tDE\n" );
+	      addLibItem( BasicLibrary.LibItem.SVDUP );
+	    } else {
+	      parseStringPrimExpr( iter );
+	      this.asmOut.append( "\tCALL\tSMACP\n"
+				+ "\tPUSH\tHL\n" );
+	      addLibItem( BasicLibrary.LibItem.SMACP );
+	    }
+	  }
+	} else {
+	  parseExpr( iter );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	}
+      }
+      parseToken( iter, ')' );
+    } else {
+      if( checkToken( iter, '(' ) ) {
+	parseToken( iter, ')' );
+      }
+    }
+    this.asmOut.append( "\tCALL\t" );
+    this.asmOut.append( entry.getLabel() );
+    this.asmOut.newLine();
+    if( nArgs > 0 ) {
+      if( nArgs > 5 ) {
+	this.asmOut.append_LD_HL_nn( -nArgs );
+	this.asmOut.append( "\tADD\tHL,SP\n"
+			+ "\tLD\tSP,HL\n" );
+      } else {
+	for( int i = 0; i < nArgs; i++ ) {
+	  this.asmOut.append( "\tPOP\tHL\n" );
+	}
+      }
+    }
+    if( entry instanceof FunctionEntry ) {
+      this.asmOut.append( "\tLD\tHL,(M_FRET)\n" );
+      addLibItem( BasicLibrary.LibItem.M_FRET );
+      if( ((FunctionEntry) entry).getReturnType() == DataType.STRING ) {
+	this.gcRequired = true;
+      }
+    }
+    entry.putCallLineNum( this.curSourceLineNum, this.curBasicLineNum );
+  }
+
+
+  private String parseDestLineExpr( CharacterIterator iter )
+						throws PrgException
+  {
+    BasicLineExpr lineExpr = BasicLineExpr.checkBasicLineExpr(
+						iter,
+						this.curSourceLineNum,
+						this.curBasicLineNum );
+    if( lineExpr == null ) {
+      throwBasicLineExprExpected();
+    }
+    this.destBasicLines.add( lineExpr );
+    return createBasicLineLabel( lineExpr.getExprText() );
+  }
+
+
+  private void parseInputLine(
+			CharacterIterator iter,
+			boolean           password ) throws PrgException
+  {
+    String text = checkStringLiteral( iter );
+    if( text != null ) {
+      // String-Literal evtl. bereits vorhanden?
+      String label = this.str2Label.get( text );
+      if( label != null ) {
+	this.asmOut.append( "\tLD\tHL," );
+	this.asmOut.append( label );
+	this.asmOut.append( "\n"
+		+ "\tCALL\tXOUTS\n" );
+	addLibItem( BasicLibrary.LibItem.XOUTS );
+      } else {
+	this.asmOut.append( "\tCALL\tXOUTST\n" );
+	this.asmOut.appendStringLiteral( text );
+	addLibItem( BasicLibrary.LibItem.XOUTST );
+      }
+      parseToken( iter, ';' );
+    }
+    SimpleVarInfo varInfo = checkVariable( iter );
+    if( varInfo != null ) {
+      if( varInfo.getDataType() != DataType.STRING ) {
+	varInfo = null;
+      }
+    }
+    if( varInfo == null ) {
+      if( text != null ) {
+	throw new PrgException( "String-Variable erwartet" );
+      }
+      throwStringLitOrVarExpected();
+    }
+    varInfo.ensureAddrInHL( this.asmOut );
+    if( password ) {
+      this.asmOut.append( "\tCALL\tINPWV\n" );
+      addLibItem( BasicLibrary.LibItem.INPWV );
+    } else {
+      this.asmOut.append( "\tCALL\tINRSV\n" );
+      addLibItem( BasicLibrary.LibItem.INRSV );
+    }
+  }
+
+
+  private void parsePointTo_DE_HL( CharacterIterator iter )
+							throws PrgException
+  {
+    boolean enclosed = checkToken( iter, '(' );
+    parse2ArgsTo_DE_HL( iter );
+    if( enclosed ) {
+      parseToken( iter, ')' );
+    }
+  }
+
+
+  private void parsePointToMem(
+			CharacterIterator iter,
+			String            labelX,
+			String            labelY ) throws PrgException
+  {
+    boolean enclosed = checkToken( iter, '(' );
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(" );
+    this.asmOut.append( labelX );
+    this.asmOut.append( "),HL\n" );
+    parseToken( iter, ',' );
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(" );
+    this.asmOut.append( labelY );
+    this.asmOut.append( "),HL\n" );
+    if( enclosed ) {
+      parseToken( iter, ')' );
     }
   }
 
@@ -4119,92 +5574,247 @@ public class BasicCompiler extends PrgThread
   }
 
 
-  private void putCode( CharSequence text )
+  private int parseUsrNum( CharacterIterator iter ) throws PrgException
   {
-    closePrintString();
-    writeCode( text );
-    this.suppressExit = false;
+    Integer usrNum = readNumber( iter );
+    if( usrNum == null ) {
+      throw new PrgException( "Nummer der USR-Funktion erwartet" );
+    }
+    if( (usrNum.intValue() < 0) || (usrNum.intValue() > 9) ) {
+      throw new PrgException(
+		"Ung\u00FCltige USR-Funktionsnummer (0...9 erlaubt)" );
+    }
+    return usrNum.intValue();
   }
 
 
-  private void putCode( char ch )
+  /*
+   * Die Methode parst eine Variable.
+   * Der Variablenname wurde zu dem Zeitpunkt bereits gelesen,
+   * weshalb er uebergeben wird.
+   */
+  private void parseVariableExpr(
+			CharacterIterator iter,
+			String            varName,
+			DataType          dataType ) throws PrgException
   {
-    closePrintString();
-    writeCode( ch );
-    this.suppressExit = false;
-  }
-
-
-  private void putCode_LD_A_n( int value )
-  {
-    putCode( "\tLD\tA," );
-    putCode( getHex2( value ) );
-    putCode( '\n' );
-  }
-
-
-  private void putCode_LD_DE_nn( int value )
-  {
-    putCode( "\tLD\tDE," );
-    putCode( getHex4( value ) );
-    putCode( '\n' );
-  }
-
-
-  private void putCode_LD_HL_nn( int value )
-  {
-    putCode( "\tLD\tHL," );
-    putCode( getHex4( value ) );
-    putCode( '\n' );
-  }
-
-
-  private void putCharToPrintString( char ch ) throws PrgException
-  {
-    if( ch > 0 ) {
-      check8BitChar( ch );
-      if( !this.printStringOpen ) {
-	writeCode( "\tCALL\tP_LTXT\n" );
-	this.libItems.add( LibItem.P_LTXT );
-	this.defmStringOpen  = false;
-	this.printStringOpen = true;
+    SimpleVarInfo varInfo = checkVariable( iter, varName );
+    if( varInfo != null ) {
+      if( varInfo.getDataType() != dataType ) {
+	varInfo = null;
       }
-      if( (ch >= '\u0020') && (ch != '\'') ) {
-	if( !this.defmStringOpen ) {
-	  writeCode( "\tDEFM\t\'" );
-	  this.defmStringOpen = true;
-	}
-	writeCode( ch );
+    }
+    if( varInfo == null ) {
+      if( dataType == DataType.STRING ) {
+	throw new PrgException(
+			"String-Variable oder String-Funktion erwartet" );
       } else {
-	if( this.defmStringOpen ) {
-	  writeCode( "\'\n" );
-	  this.defmStringOpen = false;
-	}
-	writeCode( "\tDEFB\t" );
-	writeCode( getHex2( ch ) );
-	writeCode( '\n' );
+	throw new PrgException(
+			"Numerische Variable oder Funktion erwartet" );
       }
     }
+    varInfo.ensureValueInHL( this.asmOut );
   }
 
 
-  private void putExit()
+  public void putWarning( String msg )
   {
-    closePrintString();
-    if( !this.suppressExit ) {
-      writeCode( "\tJP\tXEXIT\n" );
-      this.suppressExit = true;
+    appendLineNumMsgToErrLog( msg, "Warnung" );
+  }
+
+
+  public void putWarning( int sourceLineNum, long basicLineNum, String msg )
+  {
+    appendLineNumMsgToErrLog( sourceLineNum, basicLineNum, msg, "Warnung" );
+  }
+
+
+  private void putWarningNonAsciiChar( char ch )
+  {
+    
+    putWarning(
+	String.format(
+		"\'%c\': kein ASCII-Zeichen,"
+			+ " kann im Zielsystem ein anderes Zeichen sein",
+		ch ) );
+  }
+
+
+  private void putWarningOutOfRange()
+  {
+    putWarning( "Wert au\u00DFerhalb des Wertebereiches" );
+  }
+
+
+  /*
+   * Wenn die letzte erzeugte Code-Zeile das Laden
+   * des HL-Registers mit einem konstanten Wert darstellt,
+   * wird die Code-Zeile geloescht und der Wert zurueckgeliefert.
+   */
+  private Integer removeLastCodeIfConstExpr( int pos )
+  {
+    Integer rv       = null;
+    String  instText = this.asmOut.substring( pos );
+    int     tabPos   = instText.indexOf( '\t' );
+    if( tabPos > 0 ) {
+      pos      = tabPos;
+      instText = instText.substring( tabPos );
     }
+    if( instText.startsWith( "\tLD\tHL," ) && instText.endsWith( "H\n" ) ) {
+      try {
+	int v = Integer.parseInt(
+			instText.substring( 7, instText.length() - 2 ),
+			16 );
+	if( (v & 0x8000) != 0 ) {
+	  // negativer Wert
+	  v = -(0x10000 - (v & 0xFFFF));
+	}
+	rv = new Integer( v );
+      }
+      catch( NumberFormatException ex ) {}
+    }
+    if( rv != null ) {
+      this.asmOut.setLength( pos );
+    }
+    return rv;
+  }
+
+
+  private boolean replaceLastCodeFrom_LD_HL_To_BC()
+  {
+    return replaceLastCodeFrom_LD_HL_To_RR( "BC" );
+  }
+
+
+  private boolean replaceLastCodeFrom_LD_HL_To_DE()
+  {
+    return replaceLastCodeFrom_LD_HL_To_RR( "DE" );
+  }
+
+
+  private boolean replaceLastCodeFrom_LD_HL_To_RR( String rr )
+  {
+    boolean rv       = false;
+    int     pos      = this.asmOut.getLastLinePos();
+    String  instText = this.asmOut.substring( pos );
+    int     tabPos   = instText.indexOf( '\t' );
+    if( tabPos > 0 ) {
+      pos      = tabPos;
+      instText = instText.substring( tabPos );
+    }
+    if( instText.startsWith( "\tLD\tHL," ) ) {
+      this.asmOut.replace( pos + 4, pos + 6, rr );
+      rv = true;
+    } else {
+      // Zugriff auf lokale Variable?
+      if( (rr.length() == 2)
+	  && (instText.startsWith( "\tLD\tH," )
+	      || instText.startsWith( "\tLD\tL," )) )
+      {
+	String line2 = this.asmOut.cut( pos );
+	String line1 = this.asmOut.cut( this.asmOut.getLastLinePos() );
+	if( (line1.indexOf( "\tLD\tH,(IY" ) >= 0)
+	    && (line2.indexOf( "\tLD\tL,(IY" ) >= 0) )
+	{
+	  line1 = line1.replace(
+			"\tLD\tH,(IY",
+			String.format( "\tLD\t%c,(IY", rr.charAt( 0 ) ) );
+	  line2 = line2.replace(
+			"\tLD\tL,(IY",
+			String.format( "\tLD\t%c,(IY", rr.charAt( 1 ) ) );
+	  rv = true;
+	}
+	else if( (line1.indexOf( "\tLD\tL,(IY" ) >= 0)
+		 && (line2.indexOf( "\tLD\tH,(IY" ) >= 0) )
+	{
+	  line1 = line1.replace(
+			"\tLD\tL,(IY",
+			String.format( "\tLD\t%c,(IY", rr.charAt( 1 ) ) );
+	  line2 = line2.replace(
+			"\tLD\tH,(IY",
+			String.format( "\tLD\t%c,(IY", rr.charAt( 0 ) ) );
+	  rv = true;
+	}
+	this.asmOut.append( line1 );
+	this.asmOut.append( line2 );
+      }
+    }
+    return rv;
+  }
+
+
+  private void setCodeGenEnabled( boolean state )
+  {
+    this.codeGenEnabled = state;
+    this.asmOut.setEnabled( state );
   }
 
 
   private static char skipSpaces( CharacterIterator iter )
   {
     char ch = iter.current();
-    while( (ch != CharacterIterator.DONE) && Character.isWhitespace( ch ) ) {
+    while( (ch != CharacterIterator.DONE) && PrgUtil.isWhitespace( ch ) ) {
       ch = iter.next();
     }
     return ch;
+  }
+
+
+  private static void throw16BitChar( char ch ) throws PrgException
+  {
+    throw new PrgException(
+		String.format(
+			"\'%c\': 16-Bit-Unicodezeichen nicht erlaubt",
+			ch ) );
+  }
+
+
+  private static void throwBasicLineExprExpected() throws PrgException
+  {
+    throw new PrgException( "BASIC-Zeilennummer oder Marke erwartet" );
+  }
+
+
+  private static void throwDimTooSmall() throws PrgException
+  {
+    throw new PrgException( "Dimension zu klein" );
+  }
+
+
+  private static void throwDivisionByZero() throws PrgException
+  {
+    throw new PrgException( "Division durch 0" );
+  }
+
+
+  private static void throwHexDigitExpected() throws PrgException
+  {
+    throw new PrgException( "Hexadezimalziffer erwartet" );
+  }
+
+
+  private static void throwIndexOutOfRange() throws PrgException
+  {
+    throw new PrgException(
+		"Index au\u00DFerhalb des g\u00FCltigen Bereichs" );
+  }
+
+
+  private static void throwIntExprExpected() throws PrgException
+  {
+    throw new PrgException( "Integer-Ausdruck erwartet" );
+  }
+
+
+  private static void throwStringExprExpected() throws PrgException
+  {
+    throw new PrgException( "String-Ausdruck erwartet" );
+  }
+
+
+  private static void throwStringLitOrVarExpected() throws PrgException
+  {
+    throw new PrgException( "String-Literal oder String-Variable erwartet" );
   }
 
 
@@ -4230,374 +5840,9 @@ public class BasicCompiler extends PrgThread
   }
 
 
-  private void writeCode( CharSequence text )
+  private static void throwVarNameExpected() throws PrgException
   {
-    if( this.asmOut != null )
-      this.asmOut.append( text );
-  }
-
-
-  private void writeCode( char ch )
-  {
-    if( this.asmOut != null )
-      this.asmOut.append( ch );
-  }
-
-
-  private void writeInit()
-  {
-    if( this.asmOut != null ) {
-      StringBuilder buf = new StringBuilder( 0x4000 );
-      if( this.basicOptions.getShowAsm() ) {
-	buf.append( ";\n"
-		+ ";Dieser Quelltext wurde vom JKCEMU-BASIC-Compiler"
-		+ " erzeugt.\n"
-		+ ";Weitere Informationen unter www.jens-mueller.org/jkcemu/\n"
-		+ ";\n"
-		+ "\n" );
-      }
-      buf.append( "\tORG\t" );
-      int begAddr = this.basicOptions.getBegAddr();
-      if( this.basicOptions.getForceCPM() ) {
-	begAddr = 0x0100;
-      }
-      buf.append( getHex4( begAddr ) );
-      buf.append( (char) '\n' );
-      if( this.platform == Platform.KC85 ) {
-	buf.append( "\tDEFB\t7FH,7FH\n" );
-	if( appendAppName( buf, null, -1 ) == 0 ) {
-	  putWarning( "Programm kann im Betriebssystem nicht aufgerufen"
-				+ " werden, da der Programmname leer ist." );
-	}
-	buf.append( "\tDEFB\t1\n"
-		+ "\tENT\n" );
-      }
-      buf.append( "\tJP\tMSTART\n" );
-      if( this.platform == Platform.HUEBLERMC ) {
-	if( appendAppName( buf, "\tDEFB\t0EDH,0FFH\n", -1 ) > 0 ) {
-	  buf.append( "\tDEFB\t0\n"
-		+ "\tJP\tMSTART\n" );
-	}
-      }
-      else if( this.platform == Platform.Z9001 ) {
-	if( appendAppName( buf, null, 8 ) == 0 ) {
-	  putWarning( "Programm kann im Betriebssystem nicht aufgerufen"
-				+ " werden, da der Programmname leer ist." );
-	}
-	buf.append( "\tDEFB\t0\n" );
-      }
-      if( this.basicOptions.getShowAsm() ) {
-	buf.append( "\n;Aufruf der Systemfunktionen\n" );
-      }
-      buf.append( "XEXIT:\tLD\tSP,(M_STCK)\n" );
-      switch( this.platform ) {
-	case AC1_LLC2:
-	  buf.append( "\tJP\t07FDH\n" );
-	  break;
-
-	case HUEBLERMC:
-	  buf.append( "\tJP\t0F01EH\n" );
-	  break;
-
-	case KC85:
-	  buf.append( "\tRET\n" );
-	  break;
-
-	case Z1013:
-	  buf.append( "\tJP\t0038H\n" );
-	  break;
-
-	case CPM:
-	case KRAMERMC:
-	case Z9001:
-	  buf.append( "\tJP\t0000H\n" );
-	  break;
-      }
-      if( this.libItems.contains( LibItem.XOUTCH ) ) {
-	buf.append( "XOUTCH:\tPUSH\tAF\n"
-		+ "\tPUSH\tBC\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n" );
-	switch( this.platform ) {
-	  case AC1_LLC2:
-	    buf.append( "\tRST\t10H\n" );
-	    break;
-
-	  case HUEBLERMC:
-	    buf.append( "\tCP\t0DH\n"
-		+ "\tJR\tNZ,XOUTC1\n"
-		+ "\tLD\tC,A\n"
-		+ "\tCALL\t0F009H\n"
-		+ "\tLD\tA,0AH\n"
-		+ "XOUTC1:\tLD\tC,A\n"
-		+ "\tCALL\t0F009H\n" );
-	    break;
-
-	  case KC85:
-	    buf.append( "\tCP\t0DH\n"
-		+ "\tJR\tNZ,XOUTC1\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDEFB\t24H\n"
-		+ "\tLD\tA,0AH\n"
-		+ "XOUTC1:\tCALL\t0F003H\n"
-		+ "\tDEFB\t24H\n" );
-	    break;
-
-	  case KRAMERMC:
-	    buf.append( "\tCP\t0DH\n"
-		+ "\tJR\tNZ,XOUTC1\n"
-		+ "\tLD\tC,A\n"
-		+ "\tCALL\t00E6H\n"
-		+ "\tLD\tA,0AH\n"
-		+ "XOUTC1:\tLD\tC,A\n"
-		+ "\tCALL\t00E6H\n" );
-	    break;
-
-	  case Z1013:
-	    buf.append( "\tRST\t20H\n"
-		+ "\tDEFB\t0\n" );
-	    break;
-
-	  case CPM:
-	  case Z9001:
-	    buf.append( "\tLD\tC,2\n"
-		+ "\tLD\tE,A\n"
-		+ "\tCP\t0DH\n"
-		+ "\tJR\tNZ,XOUTC1\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tLD\tC,2\n"
-		+ "\tLD\tE,0AH\n"
-		+ "XOUTC1:\tCALL\t0005H\n" );
-	    break;
-	}
-	buf.append( "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tBC\n"
-		+ "\tPOP\tAF\n"
-		+ "\tRET\n" );
-      }
-      if( this.libItems.contains( LibItem.XINCH ) ) {
-	switch( this.platform ) {
-	  case AC1_LLC2:
-	    buf.append( "XINCH:\tJP\t0008H\n" );
-	    break;
-
-	  case CPM:
-	    buf.append( "XINCH:\tCALL\tXINKEY\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINCH\n"
-		+ "\tRET\n" );
-	    this.libItems.add( LibItem.XINKEY );
-	    break;
-
-	  case HUEBLERMC:
-	    buf.append( "XINCH:\tJP\t0F003H\n" );
-	    break;
-
-	  case KC85:
-	    buf.append( "XINCH:\tCALL\t0F003H\n"
-		+ "\tDEFB\t16h\n"
-		+ "\tRET\n" );
-	    break;
-
-	  case KRAMERMC:
-	    buf.append( "XINCH:\tJP\t00E0H\n" );
-	    break;
-
-	  case Z1013:
-	    buf.append( "XINCH:\tRST\t20H\n"
-		+ "\tDEFB\t1\n"
-		+ "\tRET\n" );
-	    break;
-
-	  case Z9001:
-	    buf.append( "XINCH:\tLD\tC,1\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINCH\n"
-		+ "\tRET\n" );
-	    break;
-	}
-      }
-      if( this.libItems.contains( LibItem.XINSTS ) ) {
-	switch( this.platform ) {
-	  case CPM:
-	    buf.append( "XINSTS:\tLD\tC,6\n"
-		+ "\tLD\tE,0FFH\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\t(M_KBCH),A\n"
-		+ "\tRET\n" );
-	    this.libItems.add( LibItem.M_KBCH );
-	    break;
-
-	  case HUEBLERMC:
-	    buf.append( "XINSTS:\tCALL\t0F012H\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\t(M_KBCH),A\n"
-		+ "\tRET\n" );
-	    this.libItems.add( LibItem.M_KBCH );
-	    break;
-
-	  case KRAMERMC:
-	    buf.append( "XINSTS:\tCALL\t00EFH\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tCALL\t00E0H\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\t(M_KBCH),A\n"
-		+ "\tRET\n" );
-	    this.libItems.add( LibItem.M_KBCH );
-	    break;
-
-	  case KC85:
-	    buf.append( "XINSTS:\tCALL\t0F003H\n"
-		+ "\tDB\t0CH\n"
-		+ "\tRET\tC\n"
-		+ "\tXOR\tA\n"
-		+ "\tRET\n" );
-	    break;
-
-	  case Z9001:
-	    buf.append( "XINSTS:\tLD\tC,11\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tRET\tC\n"
-		+ "\tXOR\tA\n"
-		+ "\tRET\n" );
-	    break;
-	}
-      }
-      if( this.libItems.contains( LibItem.XINKEY ) ) {
-	switch( this.platform ) {
-	  case AC1_LLC2:
-	    buf.append( "XINKEY:\tCALL\t07FAH\n"
-		+ "\tAND\t7FH\n"
-		+ "\tRET\n" );
-	    break;
-
-	  case CPM:
-	    if( this.libItems.contains( LibItem.M_KBCH ) ) {
-	      buf.append( "XINKEY:\tLD\tA,(M_KBCH)\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINKE1\n"
-		+ "\tPUSH\tAF\n"
-		+ "\tXOR\tA\n"
-		+ "\tLD\t(M_KBCH),A\n"
-		+ "\tPOP\tAF\n"
-		+ "\tRET\n"
-		+ "XINKE1:\tLD\tC,6\n" );
-	    } else {
-	      buf.append( "XINKEY:\tLD\tC,6\n" );
-	    }
-	    buf.append( "\tLD\tE,0FFH\n"
-		+ "\tJP\t0005H\n" );
-	    break;
-
-	  case HUEBLERMC:
-	    if( this.libItems.contains( LibItem.M_KBCH ) ) {
-	      buf.append( "XINKEY:\tLD\tA,(M_KBCH)\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINKE1\n"
-		+ "\tPUSH\tAF\n"
-		+ "\tXOR\tA\n"
-		+ "\tLD\t(M_KBCH),A\n"
-		+ "\tPOP\tAF\n"
-		+ "\tRET\n"
-		+ "XINKE1:\tCALL\t0F012H\n" );
-	    } else {
-	      buf.append( "XINKEY:\tCALL\t0F012H\n" );
-	    }
-	    buf.append( "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tJP\t0F003H\n" );
-	    break;
-
-	  case KC85:
-	    buf.append( "XINKEY:\tCALL\t0F003H\n"
-		+ "\tDB\t0CH\n"
-		+ "\tJR\tC,XINKE1\n"
-		+ "\tXOR\tA\n"
-		+ "\tRET\n"
-		+ "XINKE1:\tCALL\t0F003H\n"
-		+ "\tDB\t0EH\n"
-		+ "\tRET\n" );
-	    break;
-
-	  case KRAMERMC:
-	    if( this.libItems.contains( LibItem.M_KBCH ) ) {
-	      buf.append( "XINKEY:\tLD\tA,(M_KBCH)\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XINKE1\n"
-		+ "\tPUSH\tAF\n"
-		+ "\tXOR\tA\n"
-		+ "\tLD\t(M_KBCH),A\n"
-		+ "\tPOP\tAF\n"
-		+ "\tRET\n"
-		+ "XINKE1:\tCALL\t00EFH\n" );
-	    } else {
-	      buf.append( "XINKEY:\tCALL\t00EFH\n" );
-	    }
-	    buf.append( "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tJP\t00E0H\n" );
-	    break;
-
-	  case Z1013:
-	    buf.append( "XINKEY:\tXOR\tA\n"
-		+ "\tLD\t(0004H),A\n"
-		+ "\tRST\t20H\n"
-		+ "\tDEFB\t4\n"
-		+ "\tRET\n" );
-	    break;
-
-	  case Z9001:
-	    buf.append( "XINKEY:\tLD\tC,11\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINKE1\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tLD\tC,1\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tRET\tNC\n"
-		+ "XINKE1:\tXOR\tA\n"
-		+ "\tRET\n" );
-	    break;
-	}
-      }
-      if( this.basicOptions.getShowAsm() ) {
-	buf.append( "\n;Programmstart\n" );
-      }
-      buf.append( "MSTART:\tLD\t(M_STCK),SP\n" );
-      if( this.basicOptions.getStackSize() > 0 ) {
-	buf.append( "\tLD\tSP,M_TOP" );
-	this.libItems.add( LibItem.M_TOP );
-      }
-      buf.append( '\n' );
-      if( this.libItems.contains( LibItem.M_KBCH ) ) {
-	buf.append( "\tXOR\tA\n"
-		+ "\tLD\t(M_KBCH),A\n" );
-      }
-      if( this.libItems.contains( LibItem.DATA ) ) {
-	buf.append( "\tCALL\tDINIT\n" );
-      }
-      this.asmOut.insert( 0, buf );
-    }
-  }
-
-
-  private void z1013BasicMismatch()
-  {
-    if( !this.z1013CompatibilityChecked
-	&& this.basicOptions.getStrictZ1013TinyBASIC() )
-    {
-      putWarning( "Syntax entspricht nicht dem originalen Z1013-Tiny-BASIC" );
-      this.z1013CompatibilityChecked = true;
-    }
+    throw new PrgException( "Name einer Variable erwartet" );
   }
 }
 

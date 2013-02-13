@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,6 +21,7 @@ import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.*;
 import jkcemu.programming.PrgOptions;
+import jkcemu.programming.basic.BasicOptions;
 import jkcemu.print.*;
 import z80emu.Z80MemView;
 
@@ -40,7 +41,6 @@ public class EditText implements
   private boolean       byteOrderMark;
   private boolean       trailing1A;
   private boolean       trimLines;
-  private EmuThread     emuThread;
   private PrgOptions    prgOptions;
   private File          file;
   private File          prjFile;
@@ -56,21 +56,18 @@ public class EditText implements
   private DropTarget    dropTarget2;
   private UndoManager   undoMngr;
   private EditText      resultEditText;
-  private EditFrm       editFrm;
+  private TextEditFrm   textEditFrm;
 
 
   public EditText(
-		EditFrm   editFrm,
-		EmuThread emuThread,
-		Component tabComponent,
-		JTextArea textArea,
-		boolean   used )
+		TextEditFrm textEditFrm,
+		Component   tabComponent,
+		JTextArea   textArea )
   {
-    init( editFrm, emuThread );
-    this.used     = used;
+    init( textEditFrm );
     this.textName = "Neuer Text";
 
-    int n = this.editFrm.getNewTextNum();
+    int n = this.textEditFrm.getNewTextNum();
     if( n > 1 ) {
       this.textName += " <" + String.valueOf( n ) + ">";
     }
@@ -79,15 +76,14 @@ public class EditText implements
 
 
   public EditText(
-		EditFrm       editFrm,
-		EmuThread     emuThread,
+		TextEditFrm   textEditFrm,
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
 		String        encodingDesc )
 				throws IOException, UserCancelException
   {
-    init( editFrm, emuThread );
+    init( textEditFrm );
     loadFile( file, charConverter, encodingName, encodingDesc );
   }
 
@@ -109,7 +105,7 @@ public class EditText implements
 	doc.removeUndoableEditListener( this );
       }
     }
-    this.editFrm       = null;
+    this.textEditFrm   = null;
     this.file          = null;
     this.charConverter = null;
     this.encodingDesc  = null;
@@ -138,12 +134,6 @@ public class EditText implements
   public CharConverter getCharConverter()
   {
     return this.charConverter;
-  }
-
-
-  public EditFrm getEditFrm()
-  {
-    return this.editFrm;
   }
 
 
@@ -232,6 +222,12 @@ public class EditText implements
   }
 
 
+  public TextEditFrm getTextEditFrm()
+  {
+    return this.textEditFrm;
+  }
+
+
   public int getTextLength()
   {
     if( this.textArea != null ) {
@@ -258,10 +254,10 @@ public class EditText implements
 
   public void gotoLine( int lineNum )
   {
-    this.editFrm.setState( Frame.NORMAL );
-    this.editFrm.toFront();
-    this.editFrm.setSelectedTabComponent( this.tabComponent );
-    this.editFrm.gotoLine( this.textArea, lineNum );
+    this.textEditFrm.setState( Frame.NORMAL );
+    this.textEditFrm.toFront();
+    this.textEditFrm.setSelectedTabComponent( this.tabComponent );
+    this.textEditFrm.gotoLine( this.textArea, lineNum );
   }
 
 
@@ -386,7 +382,7 @@ public class EditText implements
 			     */
 			    info = "AC1/LLC2-BASIC-Programm";
 			    text = AC1.getBasicProgram(
-						this.editFrm,
+						this.textEditFrm,
 						loadData );
 			    break;
 
@@ -477,7 +473,7 @@ public class EditText implements
 	      info = "";
 	    }
 	    BasicDlg.showInfoDlg(
-		this.editFrm,
+		this.textEditFrm,
 		info + "Die Datei ist keine reine Textdatei und kann\n"
 			+ "deshalb auch nicht als solche ge\u00F6ffnet"
 			+ " werden.\n"
@@ -494,7 +490,7 @@ public class EditText implements
 		  || ((b1 >= 'a') && (b1 <= 'z')) )
 	      {
 		if( BasicDlg.showYesNoDlg(
-			this.editFrm,
+			this.textEditFrm,
 			"Die Datei scheint eine WordStar-Datei zu sein.\n"
 				+ "Sie k\u00F6nnen die Datei als"
 				+ " WordStar-Datei importieren oder als"
@@ -734,13 +730,13 @@ public class EditText implements
 	this.textValue = text;
       }
       this.undoMngr.discardAllEdits();
-      this.editFrm.updUndoButtons();
-      this.editFrm.updCaretButtons();
-      this.editFrm.updTitle();
+      this.textEditFrm.updUndoButtons();
+      this.textEditFrm.updCaretButtons();
+      this.textEditFrm.updTitle();
 
       if( charsLost ) {
 	BasicDlg.showWarningDlg(
-		this.editFrm,
+		this.textEditFrm,
 		"Die Datei enth\u00E4lt Zeichen, die in dem ausgew\u00E4hlten"
 			+ " Zeichensatz nicht existieren.\n"
 			+ "Diese Zeichen fehlen in dem angezeigten Text."
@@ -794,8 +790,8 @@ public class EditText implements
     if( !docChanged ) {
       this.undoMngr.discardAllEdits();
     }
-    this.editFrm.updUndoButtons();
-    this.editFrm.updCaretButtons();
+    this.textEditFrm.updUndoButtons();
+    this.textEditFrm.updCaretButtons();
   }
 
 
@@ -825,8 +821,9 @@ public class EditText implements
     if( lineEnd != null ) {
       lineEndBytes = lineEnd.getBytes();
       if( lineEndBytes != null ) {
-	if( lineEndBytes.length < 1 )
+	if( lineEndBytes.length < 1 ) {
 	  lineEndBytes = null;
+	}
       }
     }
     if( lineEnd == null ) {
@@ -957,6 +954,7 @@ public class EditText implements
 
       if( !isSameFile( file ) ) {
 	setProjectChanged( true );
+	this.prjFile = null;
       }
 
       this.file          = file;
@@ -969,7 +967,7 @@ public class EditText implements
       this.lineEnd       = lineEnd;
       this.textName      = this.file.getName();
       setDataUnchanged( true );
-      this.editFrm.updTitle();
+      this.textEditFrm.updTitle();
 
       if( charsLost ) {
 	BasicDlg.showWarningDlg(
@@ -1031,14 +1029,21 @@ public class EditText implements
 	  props.setProperty(
 			"jkcemu.programming.source.file.name",
 			this.file.getPath() );
-	  if( this.prgOptions != null ) {
-	    this.prgOptions.putOptionsTo( props );
+	  if( this.prgOptions == null ) {
+	    this.prgOptions = new BasicOptions();
 	  }
+	  this.prgOptions.putOptionsTo( props );
 	  props.storeToXML( out, "Programming Options" );
 	  out.close();
-	  out             = null;
+	  out = null;
+	  rv  = true;
+	  /*
+	   * Projekt erst auf "geaendert" und anschliessend
+	   * auf "nicht geaendert" setzen,
+	   * damit garantiert auch das Fenster informiert wird.
+	   */
 	  this.prjFile    = prjFile;
-	  rv              = true;
+	  this.prjChanged = true;
 	  setProjectChanged( false );
 	}
 	catch( IOException ex ) {
@@ -1110,11 +1115,11 @@ public class EditText implements
     // Komponenten als Drop-Ziele aktivieren
     disableDropTargets();
     if( tabComponent != null ) {
-      this.dropTarget1 = new DropTarget( tabComponent, this.editFrm );
+      this.dropTarget1 = new DropTarget( tabComponent, this.textEditFrm );
       this.dropTarget1.setActive( true );
     }
     if( textArea != null ) {
-      this.dropTarget2 = new DropTarget( textArea, this.editFrm );
+      this.dropTarget2 = new DropTarget( textArea, this.textEditFrm );
       this.dropTarget2.setActive( true );
     }
   }
@@ -1125,21 +1130,26 @@ public class EditText implements
     boolean wasChanged = this.dataChanged;
     this.dataChanged   = true;
     this.saved         = false;
-    if( this.dataChanged != wasChanged )
-      this.editFrm.dataChangedStateChanged( this );
+    if( this.dataChanged != wasChanged ) {
+      this.textEditFrm.dataChangedStateChanged( this );
+    }
   }
 
 
   public void setPrgOptions( PrgOptions options )
   {
+    boolean prjChanged = true;
+    if( (this.prgOptions != null) && (options != null) ) {
+      prjChanged = !this.prgOptions.equals( options );
+    }
     this.prgOptions = options;
-    setProjectChanged( true );
+    setProjectChanged( prjChanged );
   }
 
 
   public void setProject( File file, Properties props )
   {
-    this.prgOptions = PrgOptions.getPrgOptions( this.emuThread, props );
+    this.prgOptions = PrgOptions.getPrgOptions( props );
     this.prjFile    = file;
     this.prjChanged = false;
   }
@@ -1149,8 +1159,9 @@ public class EditText implements
   {
     boolean wasChanged = this.prjChanged;
     this.prjChanged    = state;
-    if( state && !wasChanged )
-      this.editFrm.dataChangedStateChanged( this );
+    if( this.prjChanged != wasChanged ) {
+      this.textEditFrm.dataChangedStateChanged( this );
+    }
   }
 
 
@@ -1164,9 +1175,10 @@ public class EditText implements
       this.textValue = text;
     }
     this.undoMngr.discardAllEdits();
-    this.editFrm.updUndoButtons();
-    this.editFrm.updCaretButtons();
-    setDataUnchanged( true );
+    this.textEditFrm.updUndoButtons();
+    this.textEditFrm.updCaretButtons();
+    this.textEditFrm.updTitle();
+    setDataUnchanged( false );
   }
 
 
@@ -1181,7 +1193,7 @@ public class EditText implements
     if( this.undoMngr.canUndo() ) {
       this.undoMngr.undo();
     }
-    this.editFrm.updUndoButtons();
+    this.textEditFrm.updUndoButtons();
   }
 
 
@@ -1190,7 +1202,7 @@ public class EditText implements
   @Override 
   public void caretUpdate( CaretEvent e )
   {
-    this.editFrm.caretPositionChanged();
+    this.textEditFrm.caretPositionChanged();
   }
 
 
@@ -1226,16 +1238,15 @@ public class EditText implements
   public void undoableEditHappened( UndoableEditEvent e )
   {
     this.undoMngr.undoableEditHappened( e );
-    this.editFrm.updUndoButtons();
+    this.textEditFrm.updUndoButtons();
   }
 
 
 	/* --- private Methoden --- */
 
-  private void init( EditFrm editFrm, EmuThread emuThread )
+  private void init( TextEditFrm textEditFrm )
   {
-    this.editFrm           = editFrm;
-    this.emuThread         = emuThread;
+    this.textEditFrm       = textEditFrm;
     this.undoMngr          = new UndoManager();
     this.prgOptions        = null;
     this.file              = null;
@@ -1353,7 +1364,7 @@ public class EditText implements
 	      pane.setOptions( options );
 	      pane.setWantsInput( false );
 	      pane.createDialog(
-			this.editFrm,
+			this.textEditFrm,
 			"BASIC-Version" ).setVisible( true );
 	      Object value = pane.getValue();
 	      if( value != null ) {
@@ -1396,13 +1407,16 @@ public class EditText implements
     editText.dataChanged      = false;
     editText.saved            = saved;
     EventQueue.invokeLater(
-	new Runnable() {
+	new Runnable()
+	{
+	  @Override
 	  public void run()
 	  {
 	    editText.dataChanged = false;
 	    editText.saved       = saved;
-	    if( editText.editFrm != null )
-	      editText.editFrm.dataChangedStateChanged( editText );
+	    if( editText.textEditFrm != null ) {
+	      editText.textEditFrm.dataChangedStateChanged( editText );
+	    }
 	  }
 	} );
   }

@@ -27,7 +27,7 @@ public class KeyboardFrm extends BasicFrm
   private JMenuItem           mnuHelpContent;
 
 
-  protected KeyboardFrm(
+  public KeyboardFrm(
 		ScreenFrm           screenFrm,
 		EmuSys              emuSys,
 		AbstractKeyboardFld keyboardFld )
@@ -124,7 +124,7 @@ public class KeyboardFrm extends BasicFrm
 	}
 	else if( src == this.mnuHelpContent ) {
 	  rv = true;
-	  this.screenFrm.showHelp( "/help/keyboard.htm" );
+	  HelpFrm.open( "/help/keyboard.htm" );
 	}
       }
     }

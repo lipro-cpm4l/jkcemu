@@ -16,18 +16,6 @@
    <li><a href="kramermc.htm#software">2. Im ROM enthaltene Software</a></li>
    <li><a href="kramermc.htm#mem">3. Speicheraufteilung</a></li>
    <li><a href="kramermc.htm#basic">4. BASIC</a></li>
-   <li>
-    <a href="kramermc.htm#etc">5. Sonstiges</a>
-    <ul>
-     <li>
-      <a href="kramermc.htm#basic_cc">5.1. JKCEMU-BASIC-Compiler</a>
-      <ul>
-       <li><a href="kramermc.htm#stack">5.1.1. Stack</a></li>
-       <li><a href="kramermc.htm#inkey">5.1.2. INKEY</a></li>
-      </ul>
-     </li>
-    </ul>
-   </li>
   </ul>
  <br/>
 
@@ -121,31 +109,5 @@
   BASIC-Interpreters richtig angepasst.
   In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
   aber im Interpreter nicht richtig nutzen.
- <br/><br/>
-
-
- <h2><a name="etc">5. Sonstiges</a></h2>
-
- <h3><a name="basic_cc">5.1. JKCEMU-BASIC-Compiler</a></h3>
-  Der JKCEMU-BASIC-Compiler kann Programmcode f&uuml;r den Kramer-MC
-  erzeugen, allerdings mit nachfolgend beschriebenen Einschr&auml;nkungen.
- <br/><br/>
-
- <h3><a name="stack">5.1.1. Stack</a></h3>
-  Sie d&uuml;rfen die Compiler-Option <em>System-Stack verwenden</em>
-  nicht einschalten, da beim Starten eines Maschinencodeprogramms
-  mit dem Kommando <tt>G&lt;SADR&gt;</tt> der Stack-Pointer den Wert 0000
-  hat und somit in den Bildwiederholspeicher hineinlaufen w&uuml;rde.
-  Compilieren Sie immer mit der Option <em>Eigener Stack-Bereich</em>.
- <br/><br/>
-
- <h3><a name="inkey">5.1.2. INKEY</a></h3>
-  Beim Kramer-MC, zumindest bei dem in JKCEMU integrierten Monitorprogramm,
-  funktioniert die Tastaturstatusabfrage nicht richtig.
-  Mit Ausnahme von Control-C (Abbruch) wird das Dr&uuml;cken
-  einer Taste nicht erkannt.
-  Aus diesem Grund funktioniert auch die INKEY-Funktion nicht
-  bzw. nicht richtig.
 </body>
 </html>
-

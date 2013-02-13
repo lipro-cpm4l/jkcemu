@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -96,11 +96,10 @@ public class PSG8910 extends Thread
 
 
   /*
-   * Die Methode wird aufgerufen, eine moegliche Aenderung
-   * der der drei Steuerleitungen mitzuteilen.
+   * Die Methode wird aufgerufen, um eine moegliche Aenderung
+   * der drei Steuerleitungen mitzuteilen.
    * Wenn sich daraus eine Leseoperation ergibt,
-   * wird der Wert entsprechende Wert zurueckgeliefert,
-   * ansonsten -1,
+   * wird der entsprechende Wert zurueckgeliefert, anderenfalls -1.
    */
   public int access(
 		boolean bdir,

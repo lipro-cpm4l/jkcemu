@@ -11,7 +11,6 @@ package jkcemu.emusys.a5105;
 import java.awt.*;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.A5105;
 import jkcemu.image.ImgUtil;
@@ -61,16 +60,16 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
   {
     super( 69 );
     this.a5105        = a5105;
-    this.imgKey40x40  = Main.getImage( "/images/keyboard/key40x40.png" );
-    this.imgKey50x40  = Main.getImage( "/images/keyboard/key50x40.png" );
-    this.imgKey60x40  = Main.getImage( "/images/keyboard/key60x40.png" );
-    this.imgKey320x40 = Main.getImage( "/images/keyboard/key320x40.png" );
-    this.imgLeft      = Main.getImage( "/images/keyboard/a5105/left.png" );
-    this.imgRight     = Main.getImage( "/images/keyboard/a5105/right.png" );
-    this.imgUp        = Main.getImage( "/images/keyboard/a5105/up.png" );
-    this.imgDown      = Main.getImage( "/images/keyboard/a5105/down.png" );
-    this.imgHome      = Main.getImage( "/images/keyboard/a5105/home.png" );
-    this.imgShift     = Main.getImage( "/images/keyboard/a5105/shift.png" );
+    this.imgKey40x40  = getImage( "/images/keyboard/key40x40.png" );
+    this.imgKey50x40  = getImage( "/images/keyboard/key50x40.png" );
+    this.imgKey60x40  = getImage( "/images/keyboard/key60x40.png" );
+    this.imgKey320x40 = getImage( "/images/keyboard/key320x40.png" );
+    this.imgLeft      = getImage( "/images/keyboard/a5105/left.png" );
+    this.imgRight     = getImage( "/images/keyboard/a5105/right.png" );
+    this.imgUp        = getImage( "/images/keyboard/a5105/up.png" );
+    this.imgDown      = getImage( "/images/keyboard/a5105/down.png" );
+    this.imgHome      = getImage( "/images/keyboard/a5105/home.png" );
+    this.imgShift     = getImage( "/images/keyboard/a5105/shift.png" );
 
     this.colorLEDGreenOn   = Color.green;
     this.colorLEDGreenOff  = new Color( 60, 120, 60 );

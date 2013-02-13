@@ -78,6 +78,12 @@ public class FDC8272 implements
 		Command.INVALID,			// 1 1 1 1 0
 		Command.INVALID };			// 1 1 1 1 1
 
+  private enum FormatStatus {
+			IDLE,
+			WAIT_FOR_HOLE,
+			RECEIVE_DATA,
+			BUSY };
+
   private enum IOTaskCmd {
 			IDLE,
 			FORMAT_TRACK,
@@ -123,6 +129,7 @@ public class FDC8272 implements
   private DriveSelector       driveSelector;
   private FloppyDiskDrive     executingDrive;
   private volatile Command    curCmd;
+  private FormatStatus        formatStatus;
   private Object              ioLock;
   private volatile IOTaskCmd  ioTaskCmd;
   private volatile Thread     ioTaskThread;
@@ -144,7 +151,6 @@ public class FDC8272 implements
   private int                 sectorIdRec;
   private int                 sectorIdSizeCode;
   private int                 mhz;
-  private int                 formattingStatus;
   private volatile int        statusRegMain;
   private int                 statusReg0;
   private int                 statusReg1;
@@ -229,11 +235,11 @@ public class FDC8272 implements
     switch( this.curCmd ) {
       case FORMAT_TRACK:
 	this.statusRegMain &= ~STM_REQUEST_FOR_MASTER;
-	switch( this.formattingStatus ) {
-	  case 1:
+	switch( this.formatStatus ) {
+	  case WAIT_FOR_HOLE:
 	    stopExecution();
 	    break;
-	  case 2:
+	  case RECEIVE_DATA:
 	    // Kommando wird gerade zu Ende gebracht -> nichts tun
 	    break;
 	  default:
@@ -249,8 +255,6 @@ public class FDC8272 implements
       case SCAN_HIGH_OR_EQUAL:
 	if( this.tcEnabled ) {
 	  stopExecution();
-	} else {
-	  setIdle();
 	}
 	break;
 
@@ -283,13 +287,9 @@ public class FDC8272 implements
 	    catch( IllegalMonitorStateException ex ) {
 	      this.ioTaskNoWait = true;
 	    }
-	  } else {
-	    setIdle();
 	  }
 	}
 	break;
-      default:
-	setIdle();
     }
   }
 
@@ -345,7 +345,7 @@ public class FDC8272 implements
     }
     this.interruptReq = false;
     if( this.debugLevel > 1 ) {
-      System.out.printf( "FDC: read: %02X\n", rv );
+      System.out.printf( "FDC: read data: %02X\n", rv );
     }
     return rv;
   }
@@ -383,7 +383,7 @@ public class FDC8272 implements
     this.interruptReq          = false;
     this.statusRegMain         = STM_REQUEST_FOR_MASTER;
     this.statusReg3            = 0;
-    this.formattingStatus      = 0;
+    this.formatStatus          = FormatStatus.IDLE;
     this.ioTaskCmd             = IOTaskCmd.IDLE;
     this.curSector             = null;
     this.curSectorReader       = null;
@@ -562,15 +562,15 @@ public class FDC8272 implements
     {
       this.tStateRotationCounter = 0;
       if( this.curCmd == Command.FORMAT_TRACK ) {
-	switch( this.formattingStatus ) {
-	  case 1:
-	    this.formattingStatus++;
+	switch( this.formatStatus ) {
+	  case WAIT_FOR_HOLE:
+	    this.formatStatus = FormatStatus.RECEIVE_DATA;
 	    this.dataPos = 0;
 	    setByteWritable( false );
 	    break;
-	  case 2:
+	  case RECEIVE_DATA:
 	    startIOTask( IOTaskCmd.FORMAT_TRACK, 0 );
-	    this.formattingStatus = 3;
+	    this.formatStatus = FormatStatus.BUSY;
 	    break;
 	}
       }
@@ -599,7 +599,7 @@ public class FDC8272 implements
     if( this.sectorIdRec == this.args[ 6 ] ) {
       if( (this.args[ 0 ] & ARG0_MT_MASK) != 0 ) {
 	// Multi Track
-	if( (this.args[ 1 ] & 0x04) == 0 ) {
+	if( (this.args[ 1 ] & HEAD_MASK) == 0 ) {
 	  // Seite 0
 	  this.sectorIdRec = 1;
 	  this.args[ 1 ] |= HEAD_MASK;
@@ -1180,7 +1180,7 @@ public class FDC8272 implements
     this.statusRegMain &= ~STM_BUSY;
     this.statusReg0 = 0;
     if( (driveNum >= 0) && (driveNum < this.seekStatus.length) ) {
-      this.seekStatus[ driveNum ] = ((head << 2) & 0x04) | driveNum;
+      this.seekStatus[ driveNum ] = ((head << 2) & HEAD_MASK) | driveNum;
       FloppyDiskDrive drive = getDrive( driveNum );
       if( drive != null ) {
 	if( drive.getCylinder() == cyl ) {
@@ -1313,10 +1313,10 @@ public class FDC8272 implements
 	  this.statusReg1 |= ST1_NOT_WRITABLE;
 	} else {
 	  setDataBuf( this.args[ 3 ] * 4 );
-	  this.dataPos          = -1;
-	  this.formattingStatus = 1;
-	  this.executingDrive   = drive;
-	  done                  = true;
+	  this.dataPos        = -1;
+	  this.formatStatus   = FormatStatus.WAIT_FOR_HOLE;
+	  this.executingDrive = drive;
+	  done                = true;
 	}
       }
     }
@@ -1520,19 +1520,19 @@ public class FDC8272 implements
       if( !this.eotReached ) {
 	this.tcEnabled = false;
       }
-      this.ioTaskCmd        = IOTaskCmd.IDLE;
-      this.ioTaskNoWait     = false;
-      this.tcFired          = false;
-      this.executingDrive   = null;
-      this.formattingStatus = 0;
-      this.results[ 0 ]     = this.sectorIdSizeCode;
-      this.results[ 1 ]     = this.sectorIdRec;
-      this.results[ 2 ]     = this.sectorIdHead;
-      this.results[ 3 ]     = this.sectorIdCyl;
-      this.results[ 4 ]     = this.statusReg2;
-      this.results[ 5 ]     = this.statusReg1;
-      this.results[ 6 ]     = this.statusReg0;
-      this.resultIdx        = 6;
+      this.ioTaskCmd      = IOTaskCmd.IDLE;
+      this.ioTaskNoWait   = false;
+      this.tcFired        = false;
+      this.executingDrive = null;
+      this.formatStatus   = FormatStatus.IDLE;
+      this.results[ 0 ]   = this.sectorIdSizeCode;
+      this.results[ 1 ]   = this.sectorIdRec;
+      this.results[ 2 ]   = this.sectorIdHead;
+      this.results[ 3 ]   = this.sectorIdCyl;
+      this.results[ 4 ]   = this.statusReg2;
+      this.results[ 5 ]   = this.statusReg1;
+      this.results[ 6 ]   = this.statusReg0;
+      this.resultIdx      = 6;
       this.statusReg0 &= ~HEAD_DRIVE_MASK;
       this.statusReg0 |= (this.args[ 1 ] & HEAD_DRIVE_MASK);
       this.interruptReq = true;

@@ -12,7 +12,6 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.SC2;
 
@@ -101,13 +100,6 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
   public boolean accepts( EmuSys emuSys )
   {
     return emuSys instanceof SC2;
-  }
-
-
-  @Override
-  public String getKeyboardName()
-  {
-    return "SC2-Tastatur";
   }
 
 
@@ -278,12 +270,6 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += KEY_SIZE;
     return keyData;
-  }
-
-
-  private static Image getImage( String resource )
-  {
-    return Main.getImage( resource );
   }
 }
 

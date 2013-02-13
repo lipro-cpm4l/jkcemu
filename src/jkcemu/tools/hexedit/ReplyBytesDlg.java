@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -185,10 +185,9 @@ public class ReplyBytesDlg extends BasicDlg
     this.fldInput.addActionListener( this );
     panelInput.add( this.fldInput, gbcInput );
 
-    this.btnPaste = EmuUtil.createImageButton(
+    this.btnPaste = createImageButton(
                                 "/images/edit/paste.png",
                                 "Einf\u00FCgen" );
-    this.btnPaste.addActionListener( this );
     gbcInput.fill        = GridBagConstraints.NONE;
     gbcInput.weightx     = 0.0;
     gbcInput.insets.left = 5;

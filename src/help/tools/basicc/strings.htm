@@ -1,0 +1,237 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Zeichenkettenverarbeitung</h2>
+  Der JKCEMU-BASIC-Compiler bietet eine weitreichende Unterst&uuml;tzung
+  f&uuml;r die Verarbeitung von Zeichenketten (Strings).
+  Diese Unterst&uuml;tzung umfasst String-Variablen zur Speicherung,
+  Funktionen zur Verarbeitung sowie Anweisungen zur Ein- und Ausgabe
+  von Zeichenketten.
+  Die Hinweise zur Zeichenkettenverarbeitung unterteilen sich
+  in folgende Abschnitte:
+ <br/>
+  <ul>
+   <li>
+    <a href="strings.htm#limit">L&auml;ngenbegrenzung einer Zeichenkette</a>
+   </li>
+   <li><a href="strings.htm#literal">String-Literale</a></li>
+   <li><a href="strings.htm#var">String-Variablen</a></li>
+   <li><a href="strings.htm#func">String-Funktionen</a></li>
+   <li><a href="strings.htm#expr">String-Ausdr&uuml;cke</a></li>
+   <li><a href="strings.htm#perf">Performance</a></li>
+  </ul>
+ <br/>
+
+ <h3><a name="limit">L&auml;ngenbegrenzung einer Zeichenkette</a></h3>
+  Die interne String-Verarbeitung kann Zeichenketten bis zu einer
+  L&auml;nge von 255&nbsp;Zeichen verarbeiten.
+  L&auml;ngere Zeichenketten werden abgeschnitten.
+ <br/><br/>
+  Die L&auml;ngenbegrenzung gilt nicht f&uuml;r String-Literale,
+  die Funktionen <a href="functions.htm#instr">INSTR</a>,
+  <a href="functions.htm#len">LEN</a>,
+  <a href="functions.htm#ltrim">LTRIM$</a> und
+  <a href="functions.htm#memstr">MEMSTR$</a> sowie f&uuml;r die Ausgabe
+  von Zeichenketten.
+ <br/><br/>
+
+ <h3><a name="literal">String-Literale</a></h3>
+  Ein String-Literal ist eine Zeichenkettenkonstante,
+  d.h., die Zeichenkette wird schon im BASIC-Quelltext geschrieben.
+  Ein String-Literal ist eine Folge von Zeichen,
+  die in doppelten Hochkommas eingeschlossen ist.
+ <br/><br/>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>&quot;</tt>&nbsp;&lt;Zeichenfolge&gt;&nbsp;<tt>&quot;</tt>
+    </td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="var">String-Variablen</a></h3>
+  String-Variablen dienen zur Speicherung von Zeichenketten,
+  wobei auch hier die Beschr&auml;nkung auf maximal 255&nbsp;Zeichen gilt.
+  Sowohl einfache als auch Feldvariablen k&ouml;nnen zur Speicherung
+  von Zeichenketten verwendet werden.
+ <br/><br/>
+  Der Name einer String-Variable muss mit einem $-Zeichen enden.
+ <br/><br/>
+
+ <h3><a name="func">String-Funktionen</a></h3>
+  Folgende Funktionen dienen der Verarbeitung von bzw. der Arbeit mit
+  Zeichenketten:
+ <br/>
+  <ul>
+   <li><a href="functions.htm#asc"><tt>ASC</tt></a></li>
+   <li><a href="functions.htm#bin"><tt>BIN$</tt></a></li>
+   <li><a href="functions.htm#chr"><tt>CHR$</tt></a></li>
+   <li><a href="functions.htm#hex"><tt>HEX$</tt></a></li>
+   <li><a href="functions.htm#inchar"><tt>INCHAR$</tt></a></li>
+   <li><a href="functions.htm#inkey"><tt>INKEY$</tt></a></li>
+   <li><a href="functions.htm#instr"><tt>INSTR</tt></a></li>
+   <li><a href="functions.htm#left"><tt>LEFT$</tt></a></li>
+   <li><a href="functions.htm#len"><tt>LEN</tt></a></li>
+   <li><a href="functions.htm#lower"><tt>LOWER$</tt></a></li>
+   <li><a href="functions.htm#ltrim"><tt>LTRIM$</tt></a></li>
+   <li><a href="functions.htm#memstr"><tt>MEMSTR$</tt></a></li>
+   <li><a href="functions.htm#mid"><tt>MID$</tt></a></li>
+   <li><a href="functions.htm#mirror"><tt>MIRROR$</tt></a></li>
+   <li><a href="functions.htm#right"><tt>RIGHT$</tt></a></li>
+   <li><a href="functions.htm#rtrim"><tt>RTRIM$</tt></a></li>
+   <li><a href="functions.htm#space"><tt>SPACE$</tt></a></li>
+   <li><a href="functions.htm#str"><tt>STR$</tt></a></li>
+   <li><a href="functions.htm#string"><tt>STRING$</tt></a></li>
+   <li><a href="functions.htm#target_id"><tt>TARGET_ID$</tt></a></li>
+   <li><a href="functions.htm#trim"><tt>TRIM$</tt></a></li>
+   <li><a href="functions.htm#upper"><tt>UPPER$</tt></a></li>
+   <li><a href="functions.htm#val"><tt>VAL</tt></a></li>
+  </ul>
+ <br/>
+  Der Begriff String-Funktion hat eine Doppelbedeutung.
+  In semantischer Hinsicht ist damit eine Funktion gemeint,
+  bei der Zeichenketten eine Rolle spielen.
+  Das betrifft alle oben aufgef&uuml;hrten Funktionen.
+  In syntaktischer Hinsicht sind nur das String-Funktionen,
+  die eine Zeichenkette zur&uuml;ckliefern.
+  Diese Funktionen tragen als letztes Zeichen ein $ in ihrem Namen.
+ <br/><br/>
+  Einige der String-Funktionen erzeugen eine neue Zeichenkette.
+  Daf&uuml;r wird Speicherplatz ben&ouml;tigt, und zwar nur kurzzeitig,
+  denn nachdem die aktuelle Anweisung abgearbeitet wurde,
+  ist die so entstandene Zeichenkette verarbeitet oder im Fall einer
+  <a href="instructions.htm#let">LET</a>-Anweisung in einer Variable
+  gespeichert worden.
+  Wie auch immer, f&uuml;r die interne Zeichenkettenverarbeitung wird
+  tempor&auml;rer Speicher ben&ouml;tigt.
+  Der JKCEMU-BASIC-Compiler verwendet daf&uuml;r einen statischen
+  String-Puffer.
+  Im Gegensatz zum dynamischen Allokieren und Freigeben
+  von Speicherbereichen erm&ouml;glicht dieses statische Verfahren
+  die Erzeugung von schnellem und kompaktem Programmcode.
+  Allerdings bedingt das auch einige kleinere Einschr&auml;nkungen:
+  Der statische String-Puffer kann n&auml;mlich zu einem Zeitpunkt
+  nur von einer Funktion verwendet werden.
+  Aus diesem Grund k&ouml;nnen solche Funktionen nicht in sich
+  geschachtelt werden, oder anders ausgedr&uuml;ckt:
+  Wenn Funktionen in sich geschachtelt werden, dann darf nur maximal
+  eine dabei sein, die den statischen String-Puffer verwendet.
+  Folgende Funktionen verwenden den internen String-Puffer:
+ <br/>
+  <ul>
+   <li><a href="functions.htm#bin"><tt>BIN$</tt></a></li>
+   <li><a href="functions.htm#chr"><tt>CHR$</tt></a></li>
+   <li><a href="functions.htm#hex"><tt>HEX$</tt></a></li>
+   <li><a href="functions.htm#left"><tt>LEFT$</tt></a></li>
+   <li><a href="functions.htm#lower"><tt>LOWER$</tt></a></li>
+   <li><a href="functions.htm#mid"><tt>MID$</tt></a></li>
+   <li><a href="functions.htm#mirror"><tt>MIRROR$</tt></a></li>
+   <li><a href="functions.htm#rtrim"><tt>RTRIM$</tt></a></li>
+   <li><a href="functions.htm#space"><tt>SPACE$</tt></a></li>
+   <li><a href="functions.htm#string"><tt>STRING$</tt></a></li>
+   <li><a href="functions.htm#trim"><tt>TRIM$</tt></a></li>
+   <li><a href="functions.htm#upper"><tt>UPPER$</tt></a></li>
+  </ul>
+ <br/>
+  Wird die Beschr&auml;nkung bzgl. der Schachtellung
+  von String-Funktionen nicht eingehalten,
+  gibt der Compiler eine entsprechende Fehlermeldung aus.
+  Allerdings kann ja der Bedarf trotzdem bestehen,
+  diese String-Funktionen in sich zu schachteln.
+  In dem Fall muss man eine Variable zur Hilfe nehmen:
+  Man speichert das Ergebnis der inneren String-Funktion in eine Variable
+  und verwendet diese dann als Argument in der &auml;u&szlig;eren, z.B.:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Problem (Compiler-Fehler)</th><th>L&ouml;sung</th></tr>
+   <tr>
+    <td valign="top">
+     <tt>
+      A$="Das ist ein Beispiel."<br/>
+      B$=TRIM$(MID$(A$,4,5))
+     <tt>
+    </td>
+    <td valign="top">
+     <tt>
+      A$="Das ist ein Beispiel."<br/>
+      M$=MID$(A$,4,5)<br/>
+      B$=TRIM$(M$)
+     <tt>
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
+
+ <h3><a name="expr">String-Ausdr&uuml;cke</a></h3>
+  Der BASIC-Compiler unterscheidet zwischen einfachen und
+  komplexen String-Ausdr&uuml;cken.
+  Ein komplexer String-Ausdruck besteht aus mit dem Plus-Operator
+  zusammengeketteten einfachen String-Ausdr&uuml;cken.
+  Ein einfacher String-Ausdruck ist entweder ein String-Literal,
+  eine String-Variable oder der Aufruf einer String-Funktion.
+ <br/><br/>
+  Komplexe String-Ausdr&uuml;cke sind nur bei Ausgaben und bei
+  der Zuweisung einer Variable erlaubt, z.B.:
+ <br/><br/>
+  <tt>
+   A$="Hallo"<br/>
+   B$="Welt"<br/>
+   C$=A$+SPACE$(1)+B$<br/>
+   LABEL "--"+C$+"--"
+  </tt>
+ <br/><br/>
+  Als Argumente bei Funktionsaufrufen sind nur einfache
+  String-Ausdr&uuml;cke erlaubt.
+  Gegebenfalls muss auch hier eine Variable zur Zwischenspeicherung
+  verwendet werden.
+ <br/><br/>
+
+ <h3><a name="perf">Performance</a></h3>
+  Die Zeichenkettenverarbeitung ben&ouml;tigt deutlich mehr Rechenzeit
+  als die Verarbeitung von Integer-Werten.
+  Insbesondere die Speicherung von Zeichenketten in String-Variablen
+  geht sehr zu Lasten der Performance, da je nach Bedarf
+  dynamisch Speicher allokiert und wieder freigegeben werden muss.
+  Aus diesem Grund sollten die Anzahl der Variablenzuweisungen m&ouml;glichst
+  gering gehalten bzw. unn&ouml;tige Zuweisungen vermieden werden.
+  Des Weiteren sollten bei der Arbeit mit einzelnen Zeichen
+  diese nach M&ouml;glichkeit in Integer-Werte umgewandelt
+  und dann weiterverarbeitet werden.
+  In der folgenden Tabelle werden am Beispiel der Tastaturabfrage
+  mit INKEY$ diese beiden Optimierungsm&ouml;glichkeiten gezeigt:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th nowrap="nowrap">Langsamer Code</th>
+    <th nowrap="nowrap">Schneller Code</th>
+    <th nowrap="nowrap">Noch schnellerer Code</th></tr>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">
+     <tt>
+      E$=INKEY$<br/>
+      IF E$="A" THEN ...
+     </tt>
+    </td>
+    <td align="left" valign="top" nowrap="nowrap">
+     <tt>
+      IF INKEY$="A" THEN ...
+     </tt>
+     <br/><br/>
+     &rarr; Variablenzuweisung eingespart
+    </td>
+    <td align="left" valign="top" nowrap="nowrap">
+     <tt>
+      IF ASC(INKEY$)='A' THEN ...
+     </tt>
+     <br/><br/>
+     &rarr; Integer- statt String-Vergleich
+    </td>
+   </tr>
+  </table>
+ <br/>
+</body>
+</html>

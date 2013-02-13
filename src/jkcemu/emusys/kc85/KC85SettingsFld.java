@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -281,7 +281,6 @@ public class KC85SettingsFld
     this.comboD004Rom = new JComboBox();
     this.comboD004Rom.setEditable( false );
     this.comboD004Rom.addItem( "Version 2.0" );
-    this.comboD004Rom.addItem( "Version 3.2" );
     this.comboD004Rom.addItem( "Version 3.3" );
     this.comboD004Rom.addItem( "Datei" );
     this.comboD004Rom.addActionListener( this );
@@ -453,21 +452,21 @@ public class KC85SettingsFld
     gbcEtc.weightx = 0.0;
     gbcEtc.gridy++;
     this.tabEtc.add(
-	new JLabel( "Die folgende Option zeigt nur in wenigen"
-				+ " F\u00E4llen eine Wirkung," ),
+	new JLabel( "Die folgende Option ist f\u00FCr die korrekte"
+			+ " Darstellung einiger Programme notwendig," ),
 	gbcEtc );
 
     gbcEtc.insets.top = 0;
     gbcEtc.gridy++;
     this.tabEtc.add(
-	new JLabel( "ben\u00F6tigt daf\u00FCr aber relativ viel"
-				+ " Rechenleistung. Sollte diese Leistung" ),
+	new JLabel( "ben\u00F6tigt aber relativ viel"
+			+ " Rechenleistung. Sollte diese Leistung nicht zur" ),
 	gbcEtc );
 
     gbcEtc.gridy++;
     this.tabEtc.add(
-	new JLabel( "nicht zur Verf\u00FCgung stehen,"
-				+ " dann schalten Sie die Option bitte aus." ),
+	new JLabel( "Verf\u00FCgung stehen,"
+			+ " dann schalten Sie die Option bitte aus." ),
 	gbcEtc );
 
     this.btnVideoTiming = new JCheckBox(
@@ -625,12 +624,9 @@ public class KC85SettingsFld
 	  d004Rom = "2.0";
 	  break;
 	case 1:
-	  d004Rom = "3.2";
-	  break;
-	case 2:
 	  d004Rom = "3.3";
 	  break;
-	case 3:
+	case 2:
 	  {
 	    File file = this.fldD004RomFile.getFile();
 	    if( (file == null) && d004Enabled ) {
@@ -878,19 +874,17 @@ public class KC85SettingsFld
 					this.propPrefix + "d004.rom" );
       if( d004Rom.equals( "2.0" ) ) {
 	this.comboD004Rom.setSelectedIndex( 0 );
-      } else if( d004Rom.equals( "3.2" ) ) {
-	this.comboD004Rom.setSelectedIndex( 1 );
       } else if( d004Rom.equals( "3.3" ) ) {
-	this.comboD004Rom.setSelectedIndex( 2 );
+	this.comboD004Rom.setSelectedIndex( 1 );
       } else if( d004Rom.startsWith( "file:" ) ) {
-	this.comboD004Rom.setSelectedIndex( 3 );
+	this.comboD004Rom.setSelectedIndex( 2 );
 	if( d004Rom.length() > 5 ) {
 	  this.fldD004RomFile.setFileName( d004Rom.substring( 5 ) );
 	} else {
 	  this.fldD004RomFile.setFile( null );
 	}
       } else {
-	this.comboD004Rom.setSelectedIndex( this.kcTypeNum > 4 ? 2 : 0 );
+	this.comboD004Rom.setSelectedIndex( this.kcTypeNum > 4 ? 1 : 0 );
       }
     }
     catch( IllegalArgumentException ex ) {}
@@ -1262,7 +1256,7 @@ public class KC85SettingsFld
     this.btnD004Speed4MHz.setEnabled( state );
     this.btnD004Speed8MHz.setEnabled( state );
     this.btnD004Speed16MHz.setEnabled( state );
-    if( state && (this.comboD004Rom.getSelectedIndex() != 3) ) {
+    if( state && (this.comboD004Rom.getSelectedIndex() != 2) ) {
       state = false;
     }
     this.fldD004RomFile.setEnabled( state );

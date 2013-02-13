@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -34,7 +34,8 @@ public class FileConvertFrm extends BasicFrm implements
   private static final String LABEL_BEG_ADDR   = "Anfangsadresse:";
   private static final String LABEL_START_ADDR = "Startadresse:";
 
-  private ScreenFrm                     screenFrm;
+  private static FileConvertFrm instance = null;
+
   private String                        orgFileDesc;
   private int                           orgFileType;
   private int                           orgStartAddr;
@@ -62,271 +63,28 @@ public class FileConvertFrm extends BasicFrm implements
   private JButton                       btnClose;
 
 
-  public FileConvertFrm( ScreenFrm screenFrm )
+  public static void open()
   {
-    this.screenFrm     = screenFrm;
-    this.orgFileDesc   = null;
-    this.orgFileType   = -1;
-    this.orgStartAddr  = -1;
-    this.orgIsBasicPrg = false;
-    setTitle( "JKCEMU Dateikonverter" );
-    Main.updIcon( this );
-
-
-    // Fensterinhalt
-    setLayout( new GridBagLayout() );
-
-    GridBagConstraints gbc = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						1.0, 0.0,
-						GridBagConstraints.CENTER,
-						GridBagConstraints.HORIZONTAL,
-						new Insets( 5, 5, 5, 5 ),
-						0, 0 );
-
-
-    // Bereich Quelldatei
-    JPanel panelSrc = new JPanel( new GridBagLayout() );
-    add( panelSrc, gbc );
-
-    panelSrc.setBorder( BorderFactory.createTitledBorder( "Quelldatei" ) );
-
-    GridBagConstraints gbcSrc = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
-
-    panelSrc.add( new JLabel( "Datei:" ), gbcSrc );
-
-    this.fldSrcFile    = new FileNameFld();
-    gbcSrc.weightx     = 1.0;
-    gbcSrc.fill        = GridBagConstraints.HORIZONTAL;
-    gbcSrc.insets.left = 0;
-    gbcSrc.gridx++;
-    panelSrc.add( this.fldSrcFile, gbcSrc );
-
-    this.btnSrcSelect = createImageButton(
-				"/images/file/open.png",
-				"Quelldatei ausw\u00E4hlen" );
-    gbcSrc.weightx = 0.0;
-    gbcSrc.fill    = GridBagConstraints.NONE;
-    gbcSrc.gridx++;
-    panelSrc.add( this.btnSrcSelect, gbcSrc );
-
-    this.btnSrcRemove = createImageButton(
-				"/images/file/delete.png",
-				"Quelldatei entfernen" );
-    this.btnSrcRemove.setEnabled( false );
-    gbcSrc.gridx++;
-    panelSrc.add( this.btnSrcRemove, gbcSrc );
-
-    gbcSrc.insets.left = 5;
-    gbcSrc.gridx       = 0;
-    gbcSrc.gridy++;
-    panelSrc.add( new JLabel( "Typ:" ), gbcSrc );
-
-    this.fldSrcInfo = new JTextField();
-    this.fldSrcInfo.setEditable( false );
-    gbcSrc.weightx     = 1.0;
-    gbcSrc.fill        = GridBagConstraints.HORIZONTAL;
-    gbcSrc.insets.left = 0;
-    gbcSrc.gridwidth   = GridBagConstraints.REMAINDER;
-    gbcSrc.gridx++;
-    panelSrc.add( this.fldSrcInfo, gbcSrc );
-
-
-    // Bereich Ausgabedatei
-    JPanel panelOut = new JPanel( new GridBagLayout() );
-    gbc.fill        = GridBagConstraints.BOTH;
-    gbc.weighty     = 1.0;
-    gbc.gridy++;
-    add( panelOut, gbc );
-
-    panelOut.setBorder( BorderFactory.createTitledBorder( "Ausgabedatei" ) );
-
-    GridBagConstraints gbcOut = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
-
-    panelOut.add( new JLabel( "Dateiformat:" ), gbcOut );
-
-    this.targets = new Vector<AbstractConvertTarget>();
-
-    this.listTarget = new JList();
-    this.listTarget.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
-    this.listTarget.addListSelectionListener( this );
-    gbcOut.fill    = GridBagConstraints.BOTH;
-    gbcOut.weightx = 1.0;
-    gbcOut.weighty = 1.0;
-    gbcOut.gridy++;
-    panelOut.add( new JScrollPane( this.listTarget ), gbcOut );
-
-    gbcOut.fill       = GridBagConstraints.NONE;
-    gbcOut.weightx    = 0.0;
-    gbcOut.weighty    = 0.0;
-    gbcOut.insets.top = 15;
-    gbcOut.gridy++;
-    panelOut.add( new JLabel( "Kopfdaten:" ), gbcOut );
-
-    JPanel panelHead = new JPanel( new GridBagLayout() );
-    panelHead.setBorder( BorderFactory.createEtchedBorder() );
-    gbcOut.fill          = GridBagConstraints.HORIZONTAL;
-    gbcOut.weightx       = 1.0;
-    gbcOut.insets.top    = 0;
-    gbcOut.insets.bottom = 5;
-    gbcOut.gridy++;
-    panelOut.add( panelHead, gbcOut );
-
-    GridBagConstraints gbcHead = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
-
-    this.labelFileType = new JLabel( "Dateityp:" );
-    panelHead.add( this.labelFileType, gbcHead );
-
-    this.comboFileType = new JComboBox();
-    this.comboFileType.setEditable( true );
-    this.comboFileType.addActionListener( this );
-    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
-    gbcHead.weightx     = 1.0;
-    gbcHead.insets.left = 0;
-    gbcHead.gridwidth   = 3;
-    gbcHead.gridx++;
-    panelHead.add( this.comboFileType, gbcHead );
-
-    this.labelBegAddr   = new JLabel( LABEL_BEG_ADDR );
-    gbcHead.fill        = GridBagConstraints.NONE;
-    gbcHead.weightx     = 0.0;
-    gbcHead.insets.left = 5;
-    gbcHead.gridwidth   = 1;
-    gbcHead.gridx       = 0;
-    gbcHead.gridy++;
-    panelHead.add( this.labelBegAddr, gbcHead );
-
-    this.fldBegAddr     = new JTextField();
-    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
-    gbcHead.weightx     = 0.5;
-    gbcHead.insets.left = 0;
-    gbcHead.gridx++;
-    panelHead.add( this.fldBegAddr, gbcHead );
-
-    Font font = this.fldBegAddr.getFont();
-    if( font != null ) {
-      this.comboFileType.setFont( font );
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+        instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new FileConvertFrm();
     }
-
-    this.labelStartAddr = new JLabel( LABEL_START_ADDR );
-    gbcHead.fill        = GridBagConstraints.NONE;
-    gbcHead.weightx     = 0.0;
-    gbcHead.insets.left = 5;
-    gbcHead.gridx++;
-    panelHead.add( this.labelStartAddr, gbcHead );
-
-    this.fldStartAddr   = new JTextField();
-    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
-    gbcHead.weightx     = 0.5;
-    gbcHead.insets.left = 0;
-    gbcHead.gridx++;
-    panelHead.add( this.fldStartAddr, gbcHead );
-
-    this.labelFileDesc    = new JLabel( "Beschreibung:" );
-    gbcHead.insets.left   = 5;
-    gbcHead.insets.bottom = 5;
-    gbcHead.gridx         = 0;
-    gbcHead.gridy++;
-    panelHead.add( this.labelFileDesc, gbcHead );
-
-    this.docFileDesc    = new LimitedDocument( 0, false );
-    this.fldFileDesc    = new JTextField( this.docFileDesc, "", 0 );
-    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
-    gbcHead.weightx     = 1.0;
-    gbcHead.insets.left = 0;
-    gbcHead.gridwidth   = 3;
-    gbcHead.gridx++;
-    panelHead.add( this.fldFileDesc, gbcHead );
-
-    this.docBegAddr = new HexDocument(
-				this.fldBegAddr,
-				4,
-				LABEL_BEG_ADDR );
-    this.docStartAddr = new HexDocument(
-				this.fldStartAddr,
-				4,
-				LABEL_START_ADDR );
-
-    JPanel panelOutFile = new JPanel( new GridBagLayout() );
-    gbcOut.fill      = GridBagConstraints.HORIZONTAL;
-    gbcOut.weightx   = 1.0;
-    gbcOut.gridwidth = GridBagConstraints.REMAINDER;
-    gbcOut.gridx     = 0;
-    gbcOut.gridy++;
-    panelOut.add( panelOutFile, gbcOut );
-
-    GridBagConstraints gbcOutFile = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 0, 0, 0, 0 ),
-						0, 0 );
-
-
-    // Knoepfe
-    JPanel panelBtn   = new JPanel( new GridLayout( 1, 4, 5, 5 ) );
-    gbc.fill          = GridBagConstraints.NONE;
-    gbc.weightx       = 0.0;
-    gbc.weighty       = 0.0;
-    gbc.insets.bottom = 10;
-    gbc.gridy++;
-    add( panelBtn, gbc );
-
-    this.btnConvert = new JButton( "Konvertieren" );
-    this.btnConvert.addActionListener( this );
-    panelBtn.add( this.btnConvert );
-
-    this.btnPlay = new JButton( "Wiedergeben" );
-    this.btnPlay.addActionListener( this );
-    panelBtn.add( this.btnPlay );
-
-    this.btnHelp = new JButton( "Hilfe" );
-    this.btnHelp.addActionListener( this );
-    panelBtn.add( this.btnHelp );
-
-    this.btnClose = new JButton( "Schlie\u00DFen" );
-    this.btnClose.addActionListener( this );
-    panelBtn.add( this.btnClose );
-
-
-    // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
-      this.listTarget.setVisibleRowCount( 7 );
-      pack();
-      this.listTarget.setVisibleRowCount( 1 );
-      setScreenCentered();
-    }
-    setResizable( true );
-
-
-    // sonstiges
-    (new DropTarget( this.fldSrcFile, this )).setActive( true );
-    clearOutFields();
+    instance.toFront();
+    instance.setVisible( true );
   }
+
+
+  public static void open( File file )
+  {
+    open();
+    if( file != null ) {
+      instance.openFile( file );
+    }
+  }
+
 
 
   public boolean getOrgIsBasicPrg()
@@ -657,6 +415,14 @@ public class FileConvertFrm extends BasicFrm implements
 					kcbasicOffs,
 					kcbasicLen ) );
 	    }
+	    if( !fileFmt.equals( FileInfo.KCB ) ) {
+	      this.targets.add(
+			new KCBasicSystemFileTarget(
+					this,
+					kcbasicBytes,
+					kcbasicOffs,
+					kcbasicLen ) );
+	    }
 	    if( !fileFmt.equals( FileInfo.KCTAP_BASIC_PRG ) ) {
 	      this.targets.add(
 			new KCTapBasicFileTarget(
@@ -778,6 +544,9 @@ public class FileConvertFrm extends BasicFrm implements
 	  this.listTarget.setListData( this.targets );
 	  EmuUtil.fireSelectRow( this.listTarget, 0 );
 	} else {
+	  if( infoBuf.length() == 0 ) {
+	    infoBuf.append( "unbekannt" );
+	  }
 	  infoBuf.append( " (nicht konvertierbar)" );
 	}
 	this.fldSrcFile.setFile( file );
@@ -877,7 +646,7 @@ public class FileConvertFrm extends BasicFrm implements
       }
       else if( src == this.btnHelp ) {
 	rv = true;
-	this.screenFrm.showHelp( "/help/tools/fileconverter.htm" );
+	HelpFrm.open( "/help/tools/fileconverter.htm" );
       }
       else if( src == this.comboFileType ) {
 	rv = true;
@@ -889,10 +658,16 @@ public class FileConvertFrm extends BasicFrm implements
 
 
   @Override
-  public void windowClosed( WindowEvent e )
+  public boolean doClose()
   {
-    if( e.getWindow() == this )
-      this.screenFrm.childFrameClosed( this );
+    boolean rv = super.doClose();
+    if( rv ) {
+      Main.checkQuit( this );
+    } else {
+      // damit beim erneuten Oeffnen das Fenster leer ist
+      doRemoveSrcFile();
+    }
+    return rv;
   }
 
 
@@ -1002,6 +777,267 @@ public class FileConvertFrm extends BasicFrm implements
 	}
       }
     }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private FileConvertFrm()
+  {
+    this.orgFileDesc   = null;
+    this.orgFileType   = -1;
+    this.orgStartAddr  = -1;
+    this.orgIsBasicPrg = false;
+    setTitle( "JKCEMU Dateikonverter" );
+    Main.updIcon( this );
+
+
+    // Fensterinhalt
+    setLayout( new GridBagLayout() );
+
+    GridBagConstraints gbc = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						1.0, 0.0,
+						GridBagConstraints.CENTER,
+						GridBagConstraints.HORIZONTAL,
+						new Insets( 5, 5, 5, 5 ),
+						0, 0 );
+
+
+    // Bereich Quelldatei
+    JPanel panelSrc = new JPanel( new GridBagLayout() );
+    add( panelSrc, gbc );
+
+    panelSrc.setBorder( BorderFactory.createTitledBorder( "Quelldatei" ) );
+
+    GridBagConstraints gbcSrc = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 0, 5 ),
+						0, 0 );
+
+    panelSrc.add( new JLabel( "Datei:" ), gbcSrc );
+
+    this.fldSrcFile    = new FileNameFld();
+    gbcSrc.weightx     = 1.0;
+    gbcSrc.fill        = GridBagConstraints.HORIZONTAL;
+    gbcSrc.insets.left = 0;
+    gbcSrc.gridx++;
+    panelSrc.add( this.fldSrcFile, gbcSrc );
+
+    this.btnSrcSelect = createImageButton(
+				"/images/file/open.png",
+				"Quelldatei ausw\u00E4hlen" );
+    gbcSrc.weightx = 0.0;
+    gbcSrc.fill    = GridBagConstraints.NONE;
+    gbcSrc.gridx++;
+    panelSrc.add( this.btnSrcSelect, gbcSrc );
+
+    this.btnSrcRemove = createImageButton(
+				"/images/file/delete.png",
+				"Quelldatei entfernen" );
+    this.btnSrcRemove.setEnabled( false );
+    gbcSrc.gridx++;
+    panelSrc.add( this.btnSrcRemove, gbcSrc );
+
+    gbcSrc.insets.left = 5;
+    gbcSrc.gridx       = 0;
+    gbcSrc.gridy++;
+    panelSrc.add( new JLabel( "Typ:" ), gbcSrc );
+
+    this.fldSrcInfo = new JTextField();
+    this.fldSrcInfo.setEditable( false );
+    gbcSrc.weightx     = 1.0;
+    gbcSrc.fill        = GridBagConstraints.HORIZONTAL;
+    gbcSrc.insets.left = 0;
+    gbcSrc.gridwidth   = GridBagConstraints.REMAINDER;
+    gbcSrc.gridx++;
+    panelSrc.add( this.fldSrcInfo, gbcSrc );
+
+
+    // Bereich Ausgabedatei
+    JPanel panelOut = new JPanel( new GridBagLayout() );
+    gbc.fill        = GridBagConstraints.BOTH;
+    gbc.weighty     = 1.0;
+    gbc.gridy++;
+    add( panelOut, gbc );
+
+    panelOut.setBorder( BorderFactory.createTitledBorder( "Ausgabedatei" ) );
+
+    GridBagConstraints gbcOut = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 0, 5 ),
+						0, 0 );
+
+    panelOut.add( new JLabel( "Dateiformat:" ), gbcOut );
+
+    this.targets = new Vector<AbstractConvertTarget>();
+
+    this.listTarget = new JList();
+    this.listTarget.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
+    this.listTarget.addListSelectionListener( this );
+    gbcOut.fill    = GridBagConstraints.BOTH;
+    gbcOut.weightx = 1.0;
+    gbcOut.weighty = 1.0;
+    gbcOut.gridy++;
+    panelOut.add( new JScrollPane( this.listTarget ), gbcOut );
+
+    gbcOut.fill       = GridBagConstraints.NONE;
+    gbcOut.weightx    = 0.0;
+    gbcOut.weighty    = 0.0;
+    gbcOut.insets.top = 15;
+    gbcOut.gridy++;
+    panelOut.add( new JLabel( "Kopfdaten:" ), gbcOut );
+
+    JPanel panelHead = new JPanel( new GridBagLayout() );
+    panelHead.setBorder( BorderFactory.createEtchedBorder() );
+    gbcOut.fill          = GridBagConstraints.HORIZONTAL;
+    gbcOut.weightx       = 1.0;
+    gbcOut.insets.top    = 0;
+    gbcOut.insets.bottom = 5;
+    gbcOut.gridy++;
+    panelOut.add( panelHead, gbcOut );
+
+    GridBagConstraints gbcHead = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 5, 5, 0, 5 ),
+						0, 0 );
+
+    this.labelFileType = new JLabel( "Dateityp:" );
+    panelHead.add( this.labelFileType, gbcHead );
+
+    this.comboFileType = new JComboBox();
+    this.comboFileType.setEditable( true );
+    this.comboFileType.addActionListener( this );
+    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx     = 1.0;
+    gbcHead.insets.left = 0;
+    gbcHead.gridwidth   = 3;
+    gbcHead.gridx++;
+    panelHead.add( this.comboFileType, gbcHead );
+
+    this.labelBegAddr   = new JLabel( LABEL_BEG_ADDR );
+    gbcHead.fill        = GridBagConstraints.NONE;
+    gbcHead.weightx     = 0.0;
+    gbcHead.insets.left = 5;
+    gbcHead.gridwidth   = 1;
+    gbcHead.gridx       = 0;
+    gbcHead.gridy++;
+    panelHead.add( this.labelBegAddr, gbcHead );
+
+    this.docBegAddr     = new HexDocument( 4, LABEL_BEG_ADDR );
+    this.fldBegAddr     = new JTextField( this.docBegAddr, "", 0 );
+    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx     = 0.5;
+    gbcHead.insets.left = 0;
+    gbcHead.gridx++;
+    panelHead.add( this.fldBegAddr, gbcHead );
+
+    Font font = this.fldBegAddr.getFont();
+    if( font != null ) {
+      this.comboFileType.setFont( font );
+    }
+
+    this.labelStartAddr = new JLabel( LABEL_START_ADDR );
+    gbcHead.fill        = GridBagConstraints.NONE;
+    gbcHead.weightx     = 0.0;
+    gbcHead.insets.left = 5;
+    gbcHead.gridx++;
+    panelHead.add( this.labelStartAddr, gbcHead );
+
+    this.docStartAddr   = new HexDocument( 4, LABEL_START_ADDR );
+    this.fldStartAddr   = new JTextField( this.docStartAddr, "", 0 );
+    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx     = 0.5;
+    gbcHead.insets.left = 0;
+    gbcHead.gridx++;
+    panelHead.add( this.fldStartAddr, gbcHead );
+
+    this.labelFileDesc    = new JLabel( "Beschreibung:" );
+    gbcHead.insets.left   = 5;
+    gbcHead.insets.bottom = 5;
+    gbcHead.gridx         = 0;
+    gbcHead.gridy++;
+    panelHead.add( this.labelFileDesc, gbcHead );
+
+    this.docFileDesc    = new LimitedDocument( 0, false );
+    this.fldFileDesc    = new JTextField( this.docFileDesc, "", 0 );
+    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx     = 1.0;
+    gbcHead.insets.left = 0;
+    gbcHead.gridwidth   = 3;
+    gbcHead.gridx++;
+    panelHead.add( this.fldFileDesc, gbcHead );
+
+    JPanel panelOutFile = new JPanel( new GridBagLayout() );
+    gbcOut.fill      = GridBagConstraints.HORIZONTAL;
+    gbcOut.weightx   = 1.0;
+    gbcOut.gridwidth = GridBagConstraints.REMAINDER;
+    gbcOut.gridx     = 0;
+    gbcOut.gridy++;
+    panelOut.add( panelOutFile, gbcOut );
+
+    GridBagConstraints gbcOutFile = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 0, 0, 0, 0 ),
+						0, 0 );
+
+
+    // Knoepfe
+    JPanel panelBtn   = new JPanel( new GridLayout( 1, 4, 5, 5 ) );
+    gbc.fill          = GridBagConstraints.NONE;
+    gbc.weightx       = 0.0;
+    gbc.weighty       = 0.0;
+    gbc.insets.bottom = 10;
+    gbc.gridy++;
+    add( panelBtn, gbc );
+
+    this.btnConvert = new JButton( "Konvertieren" );
+    this.btnConvert.addActionListener( this );
+    panelBtn.add( this.btnConvert );
+
+    this.btnPlay = new JButton( "Wiedergeben" );
+    this.btnPlay.addActionListener( this );
+    panelBtn.add( this.btnPlay );
+
+    this.btnHelp = new JButton( "Hilfe" );
+    this.btnHelp.addActionListener( this );
+    panelBtn.add( this.btnHelp );
+
+    this.btnClose = new JButton( "Schlie\u00DFen" );
+    this.btnClose.addActionListener( this );
+    panelBtn.add( this.btnClose );
+
+
+    // Fenstergroesse
+    if( !applySettings( Main.getProperties(), true ) ) {
+      this.listTarget.setVisibleRowCount( 7 );
+      pack();
+      this.listTarget.setVisibleRowCount( 1 );
+      setScreenCentered();
+    }
+    setResizable( true );
+
+
+    // sonstiges
+    (new DropTarget( this.fldSrcFile, this )).setActive( true );
+    clearOutFields();
   }
 
 

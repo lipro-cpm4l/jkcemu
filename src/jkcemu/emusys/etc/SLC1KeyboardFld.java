@@ -82,13 +82,6 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld
 
 
   @Override
-  public String getKeyboardName()
-  {
-    return "SLC1-Tastatur";
-  }
-
-
-  @Override
   protected void keySelectionChanged()
   {
     Arrays.fill( this.kbMatrix, 0 );

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -266,7 +266,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	}
 	else if( src == this.btnHelp ) {
 	  rv = true;
-	  this.screenFrm.showHelp( "/help/loadsave.htm" );
+	  HelpFrm.open( "/help/loadsave.htm" );
 	}
 	else if( src == this.btnCancel ) {
 	  rv = true;
@@ -443,9 +443,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     this.labelLoadBegAddr = new JLabel( "Anfangsadresse:" );
     panelLoad.add( labelLoadBegAddr, gbcLoad );
 
-    this.fldLoadBegAddr = new JTextField();
-    this.docLoadBegAddr = new HexDocument(
-				this.fldLoadBegAddr, 4, "Anfangsadresse" );
+    this.docLoadBegAddr = new HexDocument( 4, "Anfangsadresse" );
+    this.fldLoadBegAddr = new JTextField( this.docLoadBegAddr, "", 0 );
     this.docLoadBegAddr.addDocumentListener( this );
     this.fldLoadBegAddr.addActionListener( this );
     this.fldLoadBegAddr.setEditable( true );
@@ -467,9 +466,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     gbcLoad.gridy++;
     panelLoad.add( this.labelLoadEndAddr, gbcLoad );
 
-    this.fldLoadEndAddr = new JTextField();
-    this.docLoadEndAddr = new HexDocument(
-				this.fldLoadEndAddr, 4, "Endadresse" );
+    this.docLoadEndAddr = new HexDocument( 4, "Endadresse" );
+    this.fldLoadEndAddr = new JTextField( this.docLoadEndAddr, "", 0 );
     this.docLoadEndAddr.addDocumentListener( this );
     this.fldLoadEndAddr.addActionListener( this );
     this.fldLoadEndAddr.setEditable( true );

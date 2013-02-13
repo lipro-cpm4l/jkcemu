@@ -524,6 +524,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 
 	/* --- GDC82720.GDCListener --- */
 
+  @Override
   public void screenConfigChanged( GDC82720 gdc )
   {
     this.screenFrm.clearScreenSelection();
@@ -531,6 +532,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   }
 
 
+  @Override
   public void screenDirty( GDC82720 gdc )
   {
     this.screenFrm.setScreenDirty( true );
@@ -539,12 +541,14 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 
 	/* --- GDC82720.VRAM --- */
 
+  @Override
   public int getVRAMWord( int addr )
   {
     return (int) this.vram[ addr & 0xFFFF ] & 0xFFFF;
   }
 
 
+  @Override
   public void setVRAMWord( int addr, int value )
   {
     this.vram[ addr & 0xFFFF ]= (short) value;

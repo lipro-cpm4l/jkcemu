@@ -33,6 +33,8 @@ public class FloppyDiskStationFrm
   private static final String DRIVE_EMPTY_TEXT = "--- leer ---";
   private static final int    MAX_DRIVE_COUNT  = 4;
 
+  private static FloppyDiskStationFrm instance = null;
+
   private ScreenFrm         screenFrm;
   private EmuSys            emuSys;
   private FloppyDiskInfo[]  allDisks;
@@ -60,147 +62,19 @@ public class FloppyDiskStationFrm
   private JMenuItem         mnuPopupRemove;
 
 
-  public FloppyDiskStationFrm( ScreenFrm screenFrm )
+  public static void close()
   {
-    this.screenFrm          = screenFrm;
-    this.emuSys             = null;
-    this.suitableDisks      = null;
-    this.etcDisks           = null;
-    this.lastFmt            = null;
-    this.lastSysTracks      = -1;
-    this.lastBlockSize      = -1;
-    this.lastDirBlocks      = -1;
-    this.lastBlockNum16Bit  = false;
-    this.lastAutoRefresh    = false;
-    this.lastForceLowerCase = false;
-    this.ledState           = false;
-    this.diskErrorShown     = false;
-    this.refreshInfoEnabled = true;
-    setTitle( "JKCEMU Diskettenstation" );
-    Main.updIcon( this );
+    if( instance != null )
+      instance.doClose();
+  }
 
 
-    // Laufwerke anlegen
-    Font font      = new Font( "SansSerif", Font.PLAIN, 12 );
-    this.textAreas = new JTextArea[ MAX_DRIVE_COUNT ];
-    this.drives    = new FloppyDiskDrive[ MAX_DRIVE_COUNT ];
-    for( int i = 0; i < MAX_DRIVE_COUNT; i++ ) {
-      JTextArea textArea = new JTextArea( 5, 50 );
-      textArea.setBorder( BorderFactory.createLoweredBevelBorder() );
-      textArea.setFont( font );
-      textArea.setEditable( false );
-      textArea.setText( DRIVE_EMPTY_TEXT );
-      (new DropTarget( textArea, this )).setActive( true );
-      this.textAreas[ i ] = textArea;
-      this.drives[ i ]    = new FloppyDiskDrive( this );
+  public static FloppyDiskStationFrm getSharedInstance( ScreenFrm screenFrm )
+  {
+    if( instance == null ) {
+      instance = new FloppyDiskStationFrm( screenFrm );
     }
-    this.driveAccessCounters = new int[ this.drives.length ];
-    Arrays.fill( this.driveAccessCounters, 0 );
-
-
-    // Menu
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
-
-
-    // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuFile.add( createJMenuItem( "Schlie\u00DFen", "close" ) );
-    mnuBar.add( mnuFile );
-
-
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-    mnuHelp.add( createJMenuItem( "Hilfe...", "help" ) );
-    mnuBar.add( mnuHelp );
-
-
-    // Fensterinhalt
-    setLayout( new GridBagLayout() );
-
-    GridBagConstraints gbc = new GridBagConstraints(
-						0, 0,
-						2, 1,
-						1.0, 1.0,
-						GridBagConstraints.CENTER,
-						GridBagConstraints.BOTH,
-						new Insets( 5, 5, 5, 5 ),
-						0, 0 );
-
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
-    add( this.tabbedPane, gbc );
-
-    Dimension ledSize = new Dimension( 30, 15 );
-    this.ledFld = new JPanel()
-		{
-		  public void paintComponent( Graphics g )
-		  {
-		    paintLED( g, getWidth(), getHeight() );
-		  }
-		};
-    this.ledFld.setBorder( BorderFactory.createLoweredBevelBorder() );
-    this.ledFld.setOpaque( true );
-    this.ledFld.setPreferredSize( ledSize );
-    this.ledFld.setMinimumSize( ledSize );
-    this.ledFld.setMaximumSize( ledSize );
-    gbc.anchor      = GridBagConstraints.WEST;
-    gbc.fill        = GridBagConstraints.NONE;
-    gbc.weightx     = 0.0;
-    gbc.weighty     = 0.0;
-    gbc.insets.left = 50;
-    gbc.gridwidth   = 1;
-    gbc.gridy++;
-    add( this.ledFld, gbc );
-
-    this.btnOpen = createImageButton(
-				"/images/disk/eject.png",
-				"\u00D6ffnen/Laden" );
-    gbc.anchor       = GridBagConstraints.EAST;
-    gbc.insets.left  = 0;
-    gbc.insets.right = 50;
-    gbc.gridx++;
-    add( this.btnOpen, gbc );
-
-
-    // Fenstergroesse
-    this.driveCnt = 1;	// erstmal ein Tab anlegen fuer die Fenstergroesse
-    rebuildTabbedPane();
-    setLocationByPlatform( true );
-    if( !applySettings( Main.getProperties(), true ) ) {
-      pack();
-    }
-    setResizable( true );
-    for( int i = 0; i < this.textAreas.length; i++ ) {
-      this.textAreas[ i ].setPreferredSize( new Dimension( 1, 1 ) );
-    }
-
-
-    // Timer
-    (new javax.swing.Timer(
-		100,
-		new ActionListener()
-		{
-		  public void actionPerformed( ActionEvent e )
-		  {
-		    checkDriveAccessState();
-		  }
-		} )).start();
-
-
-    // Listener
-    this.tabbedPane.addChangeListener( this );
-
-
-    // Sonstiges
-    Runtime.getRuntime().addShutdownHook(
-		new Thread( "JKCEMU disk closer" )
-		{
-		  public void run()
-		  {
-		    removeAllDisks();
-		  }
-		} );
+    return instance;
   }
 
 
@@ -226,6 +100,7 @@ public class FloppyDiskStationFrm
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    selectDiskTab( disk );
@@ -241,6 +116,7 @@ public class FloppyDiskStationFrm
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    diskFormatChanged( disk );
@@ -286,6 +162,7 @@ public class FloppyDiskStationFrm
       EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    rebuildTabbedPane();
@@ -457,7 +334,7 @@ public class FloppyDiskStationFrm
 	  }
 	  else if( cmd.equals( "help" ) ) {
 	    rv = true;
-	    this.screenFrm.showHelp( "/help/floppydisk.htm" );
+	    HelpFrm.open( "/help/floppydisk.htm" );
 	  }
 	  else if( cmd.startsWith( "disk.open.suitable." )
 		   && (cmd.length() > 19) )
@@ -841,6 +718,153 @@ public class FloppyDiskStationFrm
 	}
       }
     }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private FloppyDiskStationFrm( ScreenFrm screenFrm )
+  {
+    this.screenFrm          = screenFrm;
+    this.emuSys             = null;
+    this.suitableDisks      = null;
+    this.etcDisks           = null;
+    this.lastFmt            = null;
+    this.lastSysTracks      = -1;
+    this.lastBlockSize      = -1;
+    this.lastDirBlocks      = -1;
+    this.lastBlockNum16Bit  = false;
+    this.lastAutoRefresh    = false;
+    this.lastForceLowerCase = false;
+    this.ledState           = false;
+    this.diskErrorShown     = false;
+    this.refreshInfoEnabled = true;
+    setTitle( "JKCEMU Diskettenstation" );
+    Main.updIcon( this );
+
+
+    // Laufwerke anlegen
+    Font font      = new Font( "SansSerif", Font.PLAIN, 12 );
+    this.textAreas = new JTextArea[ MAX_DRIVE_COUNT ];
+    this.drives    = new FloppyDiskDrive[ MAX_DRIVE_COUNT ];
+    for( int i = 0; i < MAX_DRIVE_COUNT; i++ ) {
+      JTextArea textArea = new JTextArea( 5, 50 );
+      textArea.setBorder( BorderFactory.createLoweredBevelBorder() );
+      textArea.setFont( font );
+      textArea.setEditable( false );
+      textArea.setText( DRIVE_EMPTY_TEXT );
+      (new DropTarget( textArea, this )).setActive( true );
+      this.textAreas[ i ] = textArea;
+      this.drives[ i ]    = new FloppyDiskDrive( this );
+    }
+    this.driveAccessCounters = new int[ this.drives.length ];
+    Arrays.fill( this.driveAccessCounters, 0 );
+
+
+    // Menu
+    JMenuBar mnuBar = new JMenuBar();
+    setJMenuBar( mnuBar );
+
+
+    // Menu Datei
+    JMenu mnuFile = new JMenu( "Datei" );
+    mnuFile.setMnemonic( KeyEvent.VK_D );
+    mnuFile.add( createJMenuItem( "Schlie\u00DFen", "close" ) );
+    mnuBar.add( mnuFile );
+
+
+    // Menu Hilfe
+    JMenu mnuHelp = new JMenu( "?" );
+    mnuHelp.add( createJMenuItem( "Hilfe...", "help" ) );
+    mnuBar.add( mnuHelp );
+
+
+    // Fensterinhalt
+    setLayout( new GridBagLayout() );
+
+    GridBagConstraints gbc = new GridBagConstraints(
+						0, 0,
+						2, 1,
+						1.0, 1.0,
+						GridBagConstraints.CENTER,
+						GridBagConstraints.BOTH,
+						new Insets( 5, 5, 5, 5 ),
+						0, 0 );
+
+    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    add( this.tabbedPane, gbc );
+
+    Dimension ledSize = new Dimension( 30, 15 );
+    this.ledFld = new JPanel()
+		{
+		  public void paintComponent( Graphics g )
+		  {
+		    paintLED( g, getWidth(), getHeight() );
+		  }
+		};
+    this.ledFld.setBorder( BorderFactory.createLoweredBevelBorder() );
+    this.ledFld.setOpaque( true );
+    this.ledFld.setPreferredSize( ledSize );
+    this.ledFld.setMinimumSize( ledSize );
+    this.ledFld.setMaximumSize( ledSize );
+    gbc.anchor      = GridBagConstraints.WEST;
+    gbc.fill        = GridBagConstraints.NONE;
+    gbc.weightx     = 0.0;
+    gbc.weighty     = 0.0;
+    gbc.insets.left = 50;
+    gbc.gridwidth   = 1;
+    gbc.gridy++;
+    add( this.ledFld, gbc );
+
+    this.btnOpen = createImageButton(
+				"/images/disk/eject.png",
+				"\u00D6ffnen/Laden" );
+    gbc.anchor       = GridBagConstraints.EAST;
+    gbc.insets.left  = 0;
+    gbc.insets.right = 50;
+    gbc.gridx++;
+    add( this.btnOpen, gbc );
+
+
+    // Fenstergroesse
+    this.driveCnt = 1;	// erstmal ein Tab anlegen fuer die Fenstergroesse
+    rebuildTabbedPane();
+    setLocationByPlatform( true );
+    if( !applySettings( Main.getProperties(), true ) ) {
+      pack();
+    }
+    setResizable( true );
+    for( int i = 0; i < this.textAreas.length; i++ ) {
+      this.textAreas[ i ].setPreferredSize( new Dimension( 1, 1 ) );
+    }
+
+
+    // Timer
+    (new javax.swing.Timer(
+		100,
+		new ActionListener()
+		{
+		  public void actionPerformed( ActionEvent e )
+		  {
+		    checkDriveAccessState();
+		  }
+		} )).start();
+
+
+    // Listener
+    this.tabbedPane.addChangeListener( this );
+
+
+    // Sonstiges
+    Runtime.getRuntime().addShutdownHook(
+		new Thread( "JKCEMU disk closer" )
+		{
+		  @Override
+		  public void run()
+		  {
+		    removeAllDisks();
+		  }
+		} );
   }
 
 

@@ -1280,6 +1280,7 @@ public class Z1013 extends EmuSys implements
 
   @Override
   public int reassembleSysCall(
+			Z80MemView    memory,
 			int           addr,
 			StringBuilder buf,
 			boolean       sourceOnly,
@@ -1289,7 +1290,7 @@ public class Z1013 extends EmuSys implements
   {
     int rv  = 0;
     int bol = buf.length();
-    int b   = this.emuThread.getMemByte( addr, true );
+    int b   = memory.getMemByte( addr, true );
     if( b == 0xE7 ) {
       if( !sourceOnly ) {
 	buf.append( String.format( "%04X  E7", addr ) );
@@ -1300,7 +1301,7 @@ public class Z1013 extends EmuSys implements
       buf.append( "20H\n" );
       rv = 1;
     } else if( b == 0xCD ) {
-      if( getMemWord( addr + 1 ) == 0x0020 ) {
+      if( memory.getMemWord( addr + 1 ) == 0x0020 ) {
 	if( !sourceOnly ) {
 	  buf.append( String.format( "%04X  CD 00 20", addr ) );
 	}
@@ -1315,7 +1316,7 @@ public class Z1013 extends EmuSys implements
       addr += rv;
 
       bol = buf.length();
-      b   = this.emuThread.getMemByte( addr, false );
+      b   = memory.getMemByte( addr, false );
       if( !sourceOnly ) {
 	buf.append( String.format( "%04X  %02X", addr, b ) );
       }
@@ -1335,7 +1336,7 @@ public class Z1013 extends EmuSys implements
       rv++;
       if( b == 2 ) {
 	rv += reassStringBit7(
-			this.emuThread,
+			memory,
 			addr + 1,
 			buf,
 			sourceOnly,
@@ -2086,15 +2087,21 @@ public class Z1013 extends EmuSys implements
     this.stdFontBytes = readFontByProperty(
 					props,
 					"jkcemu.z1013.font.file",
-					0x0800 );
-    this.altFontBytes = this.stdFontBytes;
-    if( this.stdFontBytes == null ) {
+					0x1000 );
+    if( this.stdFontBytes != null ) {
+      if( this.stdFontBytes.length >= 0x1000 ) {
+	this.altFontBytes = Arrays.copyOfRange(
+					this.stdFontBytes,
+					0x0800,
+					0x1000 );
+      } else {
+	this.altFontBytes = this.stdFontBytes;
+      }
+    } else {
       if( fontStd == null ) {
 	fontStd = readResource( "/rom/z1013/z1013font.bin" );
       }
       this.stdFontBytes = fontStd;
-    }
-    if( this.altFontBytes == null ) {
       if( fontAlt == null ) {
 	fontAlt = readResource( "/rom/z1013/altfont.bin" );
       }

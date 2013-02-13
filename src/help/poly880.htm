@@ -43,6 +43,14 @@
      </li>
     </ul>
    </li>
+   <li>
+    <a href="poly880.htm#etc">3. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="poly880.htm#ext_rom">3.1. Einbindung externer ROM-Dateien</a>
+     </li>
+    </ul>
+   </li>
   </ul>
  <br/>
 
@@ -54,12 +62,21 @@
    <li>8-stellige 7-Segment-Anzeige</li>
    <li>Hexadezimaltastatur mit zus&auml;tzlichen Funktionstasten</li>
    <li>Kassettenrecorderanschluss</li>
+   <li>
+    optional:
+    <ul>
+     <li>32&nbsp;KByte RAM-Erweiterung (8000h-FFFFh)</li>
+     <li>ROM&nbsp;2 (2000h-23FFh)</li>
+     <li>ROM&nbsp;3 (3000h-33FFh)</li>
+    </ul>
+   </li>
   </ul>
   Aufgrund der unvollst&auml;ndigen Adressdekodierung
-  sind die einzelnen ROM- und RAM-Speicherbereiche jeweils
+  sind au&szlig;er bei der optionalen RAM-Erweiterung
+  die einzelnen ROM- und RAM-Speicherbereiche jeweils
   vier mal hintereinander sichtbar,
   d.h. X000-X3FF sehen Sie auch in X400-X7FF, in X800-XBFF und in XC00-XFFF,
-  wobei X f&uuml;r 0, 1 oder 4 steht.
+  wobei X f&uuml;r 0...4 steht.
  <br/><br/>
 
  <h3><a name="keyboard">1.1. Tastatur</a></h3>
@@ -135,10 +152,11 @@
    </tr>
    <tr>
     <td valign="top">MON</td>
-    <td></td>
+    <td valign="top">F2</td>
     <td>
-     Hardware-Schrittbetrieb ausschalten,<br/>
-     von JKCEMU nicht emuliert
+     R&uuml;ckkehr in das Monitorprogramm<br/>
+     (Im Original wird damit auch der Hardware-Schrittbetrieb ausgeschaltet,
+     der von JKCEMU jedoch nicht emuliert wird.)
     </td>
    </tr>
   </table>
@@ -150,10 +168,13 @@
  <br/><br/>
 
  <h3><a name="hwstep">1.2. Hardware-Schrittbetrieb</a></h3>
-  Wie bereits oben erw&auml;hnt wird der Hardware-Schrittbetrieb
-  nicht emuliert.
-  Es gibt jedoch noch einen Software-Schrittbetrieb (Taste <em>STEP</em>),
-  der den NMI verwendet und der in JKCEMU auch funktioniert.
+  Im Original gibt es einen Hardware-Schrittbetrieb,
+  mit dem man die einzelnen Taktzyklen des Mikroprozessors
+  schrittweise abarbeiten kann.
+  JKCEMU emuliert diesen Hardware-Schrittbetrieb nicht.
+  Es wird jedoch der ebenfalls vorhandene Software-Schrittbetrieb
+  emuliert (Taste&nbsp;<em>STEP</em>),
+  der zur schrittweisen Abarbeitung ganzer Maschinenbefehle dient.
  <br/><br/>
 
 
@@ -299,6 +320,21 @@
   <em>EXEC&nbsp;(Enter)</em> dr&uuml;cken,
   bevor das Speichern beginnt.
   Nach Abschluss des Speicherns erscheint in der Anzeige ein <em>F</em>.
+ <br/><br/>
+
+
+ <h2><a name="etc">3. Sonstiges</a></h2>
+
+ <h3><a name="ext_rom">3.1. Einbindung externer ROM-Dateien</a></h3>
+  Im originalen Poly-Computer&nbsp;880 sind die Datenleitungen negiert,
+  d.h., die Bytes in den ROMs sind somit auch negiert.
+  Wenn Sie nun solche ROM-Inhalte einbinden m&ouml;chten, muss JKCEMU wissen,
+  ob die ROM-Dateien entsprechend dem Original negiert sind.
+  Daf&uuml;r gibt es in den <a href="settings.htm">Einstellungen</a>
+  die Option <em>ROM-Bytes sind negiert</em>.
+  Sie m&uuml;ssen diese Option in jedem Fall richtig setzen,
+  sobald sie eine externe ROM-Datei einbinden!
+  Diese Option gilt f&uuml;r alle eingebunden ROM-Dateien gleicherma&szlig;en.
 </body>
 </html>
 

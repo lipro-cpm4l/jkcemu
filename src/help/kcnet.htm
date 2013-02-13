@@ -9,11 +9,12 @@
 
  <h2><a name="intro">Allgemeines</a></h2>
   Ralf K&auml;stner hat eine TCP/IP-f&auml;hige L&ouml;sung
-  zum Anschluss von 8-Bit-Computern an ein Ethernet-Netzwerk entwickelt.
-  Diese L&ouml;sung nennt sich <em>KCNet</em> und steht als separate
+  zum Anschluss der KC85-Computer aus M&uuml;hlhausen
+  an ein Ethernet-Netzwerk entwickelt.
+  Diese L&ouml;sung nennt sich <em>KCNet</em> und findet sich
+  in dem Modul M052.
+  F&uuml;r andere 8-Bit-Computer steht KCNet in Form einer separaten
   Netzwerkkarte zur Verf&uuml;gung.
-  F&uuml;r die KC85-Computer aus M&uuml;hlhausen gibt es KCNet
-  in Form des Moduls M052.
  <br/><br/>
   Basis von KCNet ist der Chip <em>WIZnet W5100</em>,
   der einen vollst&auml;ndigen TCP/IPv4-Protokollstack enth&auml;lt.
@@ -21,7 +22,7 @@
   wobei der Protokollstack des Betriebssystems verwendet wird,
   auf dem der Emulator l&auml;uft.
   Dieses Prinzip, insbesondere das Berechtigungskonzept des Betriebssystems,
-  bedingen allerdings einige Einschr&auml;kungen:
+  bedingen allerdings einige Einschr&auml;nkungen:
   <ul>
    <li>
     Der Protokollstack wird nur auf der Ebene TCP und UDP emuliert,

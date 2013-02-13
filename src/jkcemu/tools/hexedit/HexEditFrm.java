@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,13 +22,14 @@ import jkcemu.base.*;
 import jkcemu.print.*;
 
 
-public class FileEditFrm
+public class HexEditFrm
 		extends AbstractHexCharFrm
 		implements DropTargetListener
 {
   private static final int BUF_EXTEND = 0x2000;
 
-  private ScreenFrm screenFrm;
+  private static HexEditFrm instance = null;
+
   private File      file;
   private byte[]    fileBytes;
   private int       fileLen;
@@ -64,241 +65,42 @@ public class FileEditFrm
   private JButton   btnFind;
 
 
-  public FileEditFrm( ScreenFrm screenFrm )
+  public static void open()
   {
-    this.screenFrm   = screenFrm;
-    this.file        = null;
-    this.fileBytes   = new byte[ 0x100 ];
-    this.fileLen     = 0;
-    this.savedPos    = -1;
-    this.dataChanged = false;
-    updTitle();
-
-
-    // Menu
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
-
-
-    // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuBar.add( mnuFile );
-
-    this.mnuNew = createJMenuItem( "Neu" );
-    mnuFile.add( this.mnuNew );
-
-    this.mnuOpen = createJMenuItem( "\u00D6ffnen..." );
-    mnuFile.add( this.mnuOpen );
-    mnuFile.addSeparator();
-
-    this.mnuSave = createJMenuItem(
-		"Speichern",
-		KeyStroke.getKeyStroke( KeyEvent.VK_S, Event.CTRL_MASK ) );
-    this.mnuSave.setEnabled( false );
-    mnuFile.add( this.mnuSave );
-
-    this.mnuSaveAs = createJMenuItem( "Speichern unter..." );
-    this.mnuSaveAs.setEnabled( false );
-    mnuFile.add( this.mnuSaveAs );
-    mnuFile.addSeparator();
-
-    this.mnuPrintOptions = createJMenuItem( "Druckoptionen..." );
-    mnuFile.add( this.mnuPrintOptions );
-
-    this.mnuPrint = createJMenuItem(
-			"Drucken...",
-			KeyStroke.getKeyStroke(
-				KeyEvent.VK_P,
-				InputEvent.CTRL_MASK ) );
-    this.mnuPrint.setEnabled( false );
-    mnuFile.add( this.mnuPrint );
-    mnuFile.addSeparator();
-
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
-    mnuFile.add( this.mnuClose );
-
-
-    // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-    mnuBar.add( mnuEdit );
-
-    this.mnuBytesCopy = createJMenuItem( "Ausgew\u00E4hlte Bytes kopieren" );
-    this.mnuBytesCopy.setEnabled( false );
-    mnuEdit.add( this.mnuBytesCopy );
-
-    this.mnuTextCopy = createJMenuItem( "Ausgew\u00E4hlten Text kopieren" );
-    this.mnuTextCopy.setEnabled( false );
-    mnuEdit.add( this.mnuTextCopy );
-    mnuEdit.addSeparator();
-
-    this.mnuBytesInsert = createJMenuItem(
-		"Bytes einf\u00FCgen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_I, Event.CTRL_MASK ) );
-    this.mnuBytesInsert.setEnabled( false );
-    mnuEdit.add( this.mnuBytesInsert );
-
-    this.mnuBytesOverwrite = createJMenuItem(
-		"Bytes \u00FCberschreiben...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_O, Event.CTRL_MASK ) );
-    this.mnuBytesOverwrite.setEnabled( false );
-    mnuEdit.add( this.mnuBytesOverwrite );
-
-    this.mnuBytesAppend = createJMenuItem(
-		"Bytes am Ende anh\u00E4ngen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_E, Event.CTRL_MASK ) );
-    mnuEdit.add( this.mnuBytesAppend );
-    mnuEdit.addSeparator();
-
-    this.mnuBytesSave = createJMenuItem(
-				"Ausgew\u00E4hlte Bytes speichern..." );
-    this.mnuBytesSave.setEnabled( false );
-    mnuEdit.add( this.mnuBytesSave );
-
-    this.mnuBytesInvert = createJMenuItem(
-				"Ausgew\u00E4hlte Bytes invertieren" );
-    this.mnuBytesInvert.setEnabled( false );
-    mnuEdit.add( this.mnuBytesInvert );
-
-    this.mnuBytesRemove = createJMenuItem(
-		"Ausgew\u00E4hlte Bytes entfernen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
-    this.mnuBytesRemove.setEnabled( false );
-    mnuEdit.add( this.mnuBytesRemove );
-    mnuEdit.addSeparator();
-
-    this.mnuFileInsert = createJMenuItem( "Datei einf\u00FCgen..." );
-    this.mnuFileInsert.setEnabled( false );
-    mnuEdit.add( this.mnuFileInsert );
-
-    this.mnuFileAppend = createJMenuItem( "Datei am Ende anh\u00E4ngen..." );
-    mnuEdit.add( this.mnuFileAppend );
-    mnuEdit.addSeparator();
-
-    this.mnuSavePos = createJMenuItem( "Position merken" );
-    this.mnuSavePos.setEnabled( false );
-    mnuEdit.add( this.mnuSavePos );
-
-    this.mnuGotoSavedPos = createJMenuItem(
-				"Zur gemerkten Position springen" );
-    this.mnuGotoSavedPos.setEnabled( false );
-    mnuEdit.add( this.mnuGotoSavedPos );
-
-    this.mnuSelectToSavedPos = createJMenuItem(
-			"Bis zur gemerkten Position ausw\u00E4hlen" );
-    this.mnuSelectToSavedPos.setEnabled( false );
-    mnuEdit.add( this.mnuSelectToSavedPos );
-    mnuEdit.addSeparator();
-
-    this.mnuChecksum = createJMenuItem( "Pr\u00FCfsumme/Hash-Wert..." );
-    this.mnuChecksum.setEnabled( false );
-    mnuEdit.add( this.mnuChecksum );
-    mnuEdit.addSeparator();
-
-    this.mnuFind = createJMenuItem(
-		"Suchen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F, Event.CTRL_MASK ) );
-    this.mnuFind.setEnabled( false );
-    mnuEdit.add( this.mnuFind );
-
-    this.mnuFindNext = createJMenuItem(
-		"Weitersuchen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
-    this.mnuFindNext.setEnabled( false );
-    mnuEdit.add( this.mnuFindNext );
-
-
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-    mnuBar.add( mnuHelp );
-
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
-    mnuHelp.add( this.mnuHelpContent );
-
-
-    // Fensterinhalt
-    setLayout( new GridBagLayout() );
-
-    GridBagConstraints gbc = new GridBagConstraints(
-					0, 0,
-					1, 1,
-					1.0, 0.0,
-					GridBagConstraints.WEST,
-					GridBagConstraints.HORIZONTAL,
-					new Insets( 5, 5, 5, 5 ),
-					0, 0 );
-
-
-    // Werkzeugleiste
-    JToolBar toolBar = new JToolBar();
-    toolBar.setFloatable( false );
-    toolBar.setBorderPainted( false );
-    toolBar.setOrientation( JToolBar.HORIZONTAL );
-    toolBar.setRollover( true );
-    add( toolBar, gbc );
-
-    this.btnNew = createImageButton( "/images/file/new.png", "Neu" );
-    toolBar.add( this.btnNew );
-
-    this.btnOpen = createImageButton( "/images/file/open.png", "\u00D6ffnen" );
-    toolBar.add( this.btnOpen );
-
-    this.btnSave = createImageButton( "/images/file/save.png", "Speichern" );
-    this.btnSave.setEnabled( false );
-    toolBar.add( this.btnSave );
-    toolBar.addSeparator();
-
-    this.btnFind = createImageButton( "/images/edit/find.png", "Suchen" );
-    this.btnFind.setEnabled( false );
-    toolBar.add( this.btnFind );
-
-
-    // Hex-ASCII-Anzeige
-    gbc.anchor  = GridBagConstraints.CENTER;
-    gbc.fill    = GridBagConstraints.BOTH;
-    gbc.weighty = 1.0;
-    gbc.gridy++;
-    add( createHexCharFld(), gbc );
-
-    // Anzeige der Cursor-Position
-    gbc.fill    = GridBagConstraints.HORIZONTAL;
-    gbc.weighty = 0.0;
-    gbc.gridy++;
-    add( createCaretPosFld( "Cursor-Position" ), gbc );
-
-    // Anzeige der Dezimalwerte der Bytes ab Cursor-Position
-    gbc.gridy++;
-    add( createValueFld(), gbc );
-
-
-    // Drag&Drop aktivieren
-    (new DropTarget( this.hexCharFld, this )).setActive( true );
-
-
-    // sonstiges
-    if( !applySettings( Main.getProperties(), true ) ) {
-      pack();
-      setScreenCentered();
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+        instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new HexEditFrm();
     }
-    setResizable( true );
+    instance.toFront();
+    instance.setVisible( true );
   }
 
 
-  public void newFile( byte[] data )
+  public static void open( byte[] data )
   {
-    if( confirmDataSaved() )
-      newFileInternal( data );
+    open();
+    if( (data != null) && instance.confirmDataSaved() ) {
+      instance.newFileInternal( data );
+    }
+  }
+
+
+  public static void open( File file )
+  {
+    open();
+    if( file != null ) {
+      instance.openFile( file );
+    }
   }
 
 
   public void openFile( File file )
   {
-    if( file != null ) {
-      if( confirmDataSaved() ) {
-	openFileInternal( file );
-      }
-    }
+    if( instance.confirmDataSaved() )
+      instance.openFileInternal( file );
   }
 
 
@@ -424,7 +226,7 @@ public class FileEditFrm
 	doFindNext();
       } else if( src == this.mnuHelpContent ) {
 	rv = true;
-	this.screenFrm.showHelp( "/help/tools/hexeditor.htm" );
+	HelpFrm.open( "/help/tools/hexeditor.htm" );
       } else {
 	rv = super.doAction( e );
       }
@@ -441,8 +243,10 @@ public class FileEditFrm
       rv = super.doClose();
     }
     if( rv ) {
-      // damit beim erneuten Oeffnen der Editor leer ist
-      newFileInternal( null );
+      if( !Main.checkQuit( this ) ) {
+	// damit beim erneuten Oeffnen der Editor leer ist
+	newFileInternal( null );
+      }
     }
     return rv;
   }
@@ -900,6 +704,228 @@ public class FileEditFrm
       this.mnuGotoSavedPos.setEnabled( true );
       this.mnuSelectToSavedPos.setEnabled( true );
     }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private HexEditFrm()
+  {
+    this.file        = null;
+    this.fileBytes   = new byte[ 0x100 ];
+    this.fileLen     = 0;
+    this.savedPos    = -1;
+    this.dataChanged = false;
+    updTitle();
+
+
+    // Menu
+    JMenuBar mnuBar = new JMenuBar();
+    setJMenuBar( mnuBar );
+
+
+    // Menu Datei
+    JMenu mnuFile = new JMenu( "Datei" );
+    mnuFile.setMnemonic( KeyEvent.VK_D );
+    mnuBar.add( mnuFile );
+
+    this.mnuNew = createJMenuItem( "Neu" );
+    mnuFile.add( this.mnuNew );
+
+    this.mnuOpen = createJMenuItem( "\u00D6ffnen..." );
+    mnuFile.add( this.mnuOpen );
+    mnuFile.addSeparator();
+
+    this.mnuSave = createJMenuItem(
+		"Speichern",
+		KeyStroke.getKeyStroke( KeyEvent.VK_S, Event.CTRL_MASK ) );
+    this.mnuSave.setEnabled( false );
+    mnuFile.add( this.mnuSave );
+
+    this.mnuSaveAs = createJMenuItem( "Speichern unter..." );
+    this.mnuSaveAs.setEnabled( false );
+    mnuFile.add( this.mnuSaveAs );
+    mnuFile.addSeparator();
+
+    this.mnuPrintOptions = createJMenuItem( "Druckoptionen..." );
+    mnuFile.add( this.mnuPrintOptions );
+
+    this.mnuPrint = createJMenuItem(
+			"Drucken...",
+			KeyStroke.getKeyStroke(
+				KeyEvent.VK_P,
+				InputEvent.CTRL_MASK ) );
+    this.mnuPrint.setEnabled( false );
+    mnuFile.add( this.mnuPrint );
+    mnuFile.addSeparator();
+
+    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    mnuFile.add( this.mnuClose );
+
+
+    // Menu Bearbeiten
+    JMenu mnuEdit = new JMenu( "Bearbeiten" );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
+    mnuBar.add( mnuEdit );
+
+    this.mnuBytesCopy = createJMenuItem( "Ausgew\u00E4hlte Bytes kopieren" );
+    this.mnuBytesCopy.setEnabled( false );
+    mnuEdit.add( this.mnuBytesCopy );
+
+    this.mnuTextCopy = createJMenuItem( "Ausgew\u00E4hlten Text kopieren" );
+    this.mnuTextCopy.setEnabled( false );
+    mnuEdit.add( this.mnuTextCopy );
+    mnuEdit.addSeparator();
+
+    this.mnuBytesInsert = createJMenuItem(
+		"Bytes einf\u00FCgen...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_I, Event.CTRL_MASK ) );
+    this.mnuBytesInsert.setEnabled( false );
+    mnuEdit.add( this.mnuBytesInsert );
+
+    this.mnuBytesOverwrite = createJMenuItem(
+		"Bytes \u00FCberschreiben...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_O, Event.CTRL_MASK ) );
+    this.mnuBytesOverwrite.setEnabled( false );
+    mnuEdit.add( this.mnuBytesOverwrite );
+
+    this.mnuBytesAppend = createJMenuItem(
+		"Bytes am Ende anh\u00E4ngen...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_E, Event.CTRL_MASK ) );
+    mnuEdit.add( this.mnuBytesAppend );
+    mnuEdit.addSeparator();
+
+    this.mnuBytesSave = createJMenuItem(
+				"Ausgew\u00E4hlte Bytes speichern..." );
+    this.mnuBytesSave.setEnabled( false );
+    mnuEdit.add( this.mnuBytesSave );
+
+    this.mnuBytesInvert = createJMenuItem(
+				"Ausgew\u00E4hlte Bytes invertieren" );
+    this.mnuBytesInvert.setEnabled( false );
+    mnuEdit.add( this.mnuBytesInvert );
+
+    this.mnuBytesRemove = createJMenuItem(
+		"Ausgew\u00E4hlte Bytes entfernen",
+		KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
+    this.mnuBytesRemove.setEnabled( false );
+    mnuEdit.add( this.mnuBytesRemove );
+    mnuEdit.addSeparator();
+
+    this.mnuFileInsert = createJMenuItem( "Datei einf\u00FCgen..." );
+    this.mnuFileInsert.setEnabled( false );
+    mnuEdit.add( this.mnuFileInsert );
+
+    this.mnuFileAppend = createJMenuItem( "Datei am Ende anh\u00E4ngen..." );
+    mnuEdit.add( this.mnuFileAppend );
+    mnuEdit.addSeparator();
+
+    this.mnuSavePos = createJMenuItem( "Position merken" );
+    this.mnuSavePos.setEnabled( false );
+    mnuEdit.add( this.mnuSavePos );
+
+    this.mnuGotoSavedPos = createJMenuItem(
+				"Zur gemerkten Position springen" );
+    this.mnuGotoSavedPos.setEnabled( false );
+    mnuEdit.add( this.mnuGotoSavedPos );
+
+    this.mnuSelectToSavedPos = createJMenuItem(
+			"Bis zur gemerkten Position ausw\u00E4hlen" );
+    this.mnuSelectToSavedPos.setEnabled( false );
+    mnuEdit.add( this.mnuSelectToSavedPos );
+    mnuEdit.addSeparator();
+
+    this.mnuChecksum = createJMenuItem( "Pr\u00FCfsumme/Hash-Wert..." );
+    this.mnuChecksum.setEnabled( false );
+    mnuEdit.add( this.mnuChecksum );
+    mnuEdit.addSeparator();
+
+    this.mnuFind = createJMenuItem(
+		"Suchen...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_F, Event.CTRL_MASK ) );
+    this.mnuFind.setEnabled( false );
+    mnuEdit.add( this.mnuFind );
+
+    this.mnuFindNext = createJMenuItem(
+		"Weitersuchen",
+		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
+    this.mnuFindNext.setEnabled( false );
+    mnuEdit.add( this.mnuFindNext );
+
+
+    // Menu Hilfe
+    JMenu mnuHelp = new JMenu( "?" );
+    mnuBar.add( mnuHelp );
+
+    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    mnuHelp.add( this.mnuHelpContent );
+
+
+    // Fensterinhalt
+    setLayout( new GridBagLayout() );
+
+    GridBagConstraints gbc = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
+
+
+    // Werkzeugleiste
+    JToolBar toolBar = new JToolBar();
+    toolBar.setFloatable( false );
+    toolBar.setBorderPainted( false );
+    toolBar.setOrientation( JToolBar.HORIZONTAL );
+    toolBar.setRollover( true );
+    add( toolBar, gbc );
+
+    this.btnNew = createImageButton( "/images/file/new.png", "Neu" );
+    toolBar.add( this.btnNew );
+
+    this.btnOpen = createImageButton( "/images/file/open.png", "\u00D6ffnen" );
+    toolBar.add( this.btnOpen );
+
+    this.btnSave = createImageButton( "/images/file/save.png", "Speichern" );
+    this.btnSave.setEnabled( false );
+    toolBar.add( this.btnSave );
+    toolBar.addSeparator();
+
+    this.btnFind = createImageButton( "/images/edit/find.png", "Suchen" );
+    this.btnFind.setEnabled( false );
+    toolBar.add( this.btnFind );
+
+
+    // Hex-ASCII-Anzeige
+    gbc.anchor  = GridBagConstraints.CENTER;
+    gbc.fill    = GridBagConstraints.BOTH;
+    gbc.weighty = 1.0;
+    gbc.gridy++;
+    add( createHexCharFld(), gbc );
+
+    // Anzeige der Cursor-Position
+    gbc.fill    = GridBagConstraints.HORIZONTAL;
+    gbc.weighty = 0.0;
+    gbc.gridy++;
+    add( createCaretPosFld( "Cursor-Position" ), gbc );
+
+    // Anzeige der Dezimalwerte der Bytes ab Cursor-Position
+    gbc.gridy++;
+    add( createValueFld(), gbc );
+
+
+    // Drag&Drop aktivieren
+    (new DropTarget( this.hexCharFld, this )).setActive( true );
+
+
+    // sonstiges
+    if( !applySettings( Main.getProperties(), true ) ) {
+      pack();
+      setScreenCentered();
+    }
+    setResizable( true );
   }
 
 

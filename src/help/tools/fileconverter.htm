@@ -6,6 +6,13 @@
   umzuwandeln.
   Starten Sie dazu den Konverter &uuml;ber den Men&uuml;punkt
   <em>Extra</em> &rarr; <em>Werkzeuge</em> &rarr; <em>Dateikonverter</em>.
+  Es ist auch m&ouml;glich, den Dateikonverter als eigenst&auml;ndiges
+  Programm ohne Emulator zu starten.
+  Geben Sie dazu beim Aufruf von JKCEMU in der Kommandozeile
+  die Option <em>--fc</em> oder <em>--fileconverter</em> an.
+  Optional kann dahinter auch eine Datei angegeben werden,
+  die dann im Konverter ge&ouml;ffnet wird.
+ <br/><br/>
   Im Fenster des Dateikonverters, welches nun erscheint,
   w&auml;hlen Sie bei <em>Quelldatei</em> die zu konvertierende Datei aus.
   Sie k&ouml;nnen die Datei auch von einem Datei-Browser aus
@@ -46,7 +53,7 @@
    <tr>
     <td valign="top">
      Diskettenabbilddatei<br/>
-     (*.cqm; *.dump; *.img; *.image; *.qm; *.raw; *.td0)
+     (*.cqm; *.dump; *.imd; *.img; *.image; *.qm; *.raw; *.td0)
     </td>
     <td valign="top">
      <ul>
@@ -60,7 +67,7 @@
    <tr>
     <td valign="top">
      Speicherabbilddatei f&uuml;r Systemprogramme und Daten<br/>
-     (*.bin; *.kcb; *,kcc; *.rom; *.tap)
+     (*.bin; *.hex; *.kcb; *,kcc; *.rom; *.tap; *.z80)
     </td>
     <td valign="top">
      <ul>
@@ -87,6 +94,7 @@
     <td valign="top">
      <ul>
       <li>KC-BASIC-Datei (*.sss)</li>
+      <li>KC-System-Datei mit KC-BASIC-Programm(*.kcb)</li>
       <li>KC-TAP-BASIC-Datei (*.tap)</li>
       <li>Sound-Datei im KC-BASIC-Format</li>
      </ul>

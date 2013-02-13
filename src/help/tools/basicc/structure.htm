@@ -1,0 +1,98 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Programmstrukturen</h2>
+  Der BASIC-Sprachumfang kennt Anweisungen zur Steuerung des
+  Programmablaufs (Strukturanweisungen) sowie Anweisungen,
+  die der eigentlichen Datenverarbeitung dienen.
+  In diesem Abschnitt werden die Strukturanweisungen beschrieben.
+ <br/><br/>
+
+ <h3>1. Verzweigungen</h3>
+  F&uuml;r Verzweigungen gibt es die Anweisung
+  <a href="instructions.htm#if">IF</a>.
+  Diese kann einzeilig und mehrzeilig angewendet werden.
+  Weitere M&ouml;glichkeiten zur Verzweigung werden durch
+  die Anweisungen <a href=instructions.htm#on_goto">ON...GOTO</a>
+  und <a href=instructions.htm#on_gosub">ON...GOSUB</a> geboten.
+ <br/><br/>
+
+ <h3><a name="loops">2. Schleifen</a></h3>
+  Die Tabelle zeigt die Schleifenarten:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Schleife</th><th>Bemerkung</th></tr>
+   <tr>
+    <td nowrap="nowrap">
+     <a href="instructions.htm#do">DO</a>
+     ...
+     <a href="instructions.htm#loop">LOOP</a>
+    </td>
+    <td>Endlosschleife</td>
+   </tr>
+   <tr>
+    <td nowrap="nowrap">
+     <a href="instructions.htm#do">DO</a>
+     ...
+     <a href="instructions.htm#loop">LOOP</a>&nbsp;UNTIL
+    </td>
+    <td>nicht abweisende Schleife</td>
+   </tr>
+   <tr>
+    <td nowrap="nowrap">
+     <a href="instructions.htm#do">DO</a>
+     ...
+     <a href="instructions.htm#loop">LOOP</a>&nbsp;WHILE
+    </td>
+    <td>nicht abweisende Schleife</td>
+   </tr>
+   <tr>
+    <td nowrap="nowrap">
+     <a href="instructions.htm#for">FOR</a>
+     ...
+     <a href="instructions.htm#next">NEXT</a>
+    </td>
+    <td>nicht abweisende Schleife</td>
+   </tr>
+   <tr>
+    <td nowrap="nowrap">
+     <a href="instructions.htm#while">WHILE</a>
+     ...
+     <a href="instructions.htm#wend">WEND</a>
+    </td>
+    <td>abweisende Schleife</td>
+   </tr>
+  </table>
+ <br/>
+  Alle Schleifen k&ouml;nnen mit der
+  <a href="instructions.htm#exit">EXIT</a>-Anweisung
+  (vorzeitig) verlassen werden.
+ <br/><br/>
+  Eine Schleife l&auml;sst sich auch mit der aus dem klassischen BASIC
+  her bekannten <a href="instructions.htm#goto">GOTO</a>-Anweisung
+  realisieren.
+  Da dies jedoch keiner strukturierten Programmierung entspricht,
+  sollte man auf GOTO m&ouml;glichst verzichten.
+ <br/><br/>
+
+ <h3>3. Unterprogramme</a></h3>
+  Im klassischen BASIC gibt es f&uuml;r Unterprogramme die
+  Anweisungen <a href="instructions.htm#gosub">GOSUB</a>
+  und <a href="instructions.htm#return">RETURN</a>,
+  die auch vom JKCEMU-BASIC-Compiler verstanden werden.
+  Es empfiehlt sich jedoch, die viel m&auml;chtigeren
+  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>
+  zu verwenden.
+  Mit diesen lassen sich BASIC-Programme wesentlich besser strukturieren,
+  denn man kann Argumente &uuml;bergeben, lokale Variablen verwenden
+  und im Fall einer Funktion auch einen Wert zur&uuml;ckgeben.
+ <br/><br/>
+
+ <h3>4. Programmende</a></h3>
+  F&uuml;r die Beendigung eines BASIC-Programms gibt es die
+  <a href="instructions.htm#end">END</a>-Anweisung.
+ <br/>
+</body>
+</html>
+

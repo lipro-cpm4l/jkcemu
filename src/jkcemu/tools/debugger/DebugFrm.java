@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,14 +32,25 @@ public class DebugFrm extends BasicFrm implements
 {
   private static final int BP_PC_IDX        = 0;
   private static final int BP_MEMORY_IDX    = 1;
-  private static final int BP_IO_IDX        = 2;
-  private static final int BP_INTERRUPT_IDX = 3;
-  private static final int BP_GROUP_CNT     = 4;
+  private static final int BP_INPUT_IDX     = 2;
+  private static final int BP_OUTPUT_IDX    = 3;
+  private static final int BP_INTERRUPT_IDX = 4;
+  private static final int BP_GROUP_CNT     = 5;
 
-  private ScreenFrm             screenFrm;
+  private static final String TEXT_STOP
+			= "Programmausf\u00FChrung anhalten";
+  private static final String TEXT_RUN
+			= "Programmausf\u00FChrung bis Haltepunkt fortsetzen";
+  private static final String TEXT_STEP_OVER
+			= "Einzelschritt \u00FCber Aufruf hinweg";
+  private static final String TEXT_STEP_INTO
+			= "Einzelschritt in Aufruf hinein";
+  private static final String TEXT_STEP_TO_RET
+			= "Bis RETURN ausf\u00FChren";
+
   private Z80CPU                cpu;
   private Z80Memory             memory;
-  private BreakpointDlg         bpDlg;
+  private AbstractBreakpointDlg bpDlg;
   private BreakpointListModel[] bpModels;
   private Z80InterruptSource[]  interruptSources;
   private Z80InterruptSource    lastSelectedIntSrc;
@@ -56,10 +67,11 @@ public class DebugFrm extends BasicFrm implements
   private JMenuItem             mnuDebugStop;
   private JMenuItem             mnuDebugStepOver;
   private JMenuItem             mnuDebugStepInto;
-  private JMenuItem             mnuDebugStepUp;
-  private JMenuItem             mnuDebugBreakIntAdd;
-  private JMenuItem             mnuDebugBreakIOAdd;
-  private JMenuItem             mnuDebugBreakMemAdd;
+  private JMenuItem             mnuDebugStepToRET;
+  private JMenuItem             mnuDebugBreakInterruptAdd;
+  private JMenuItem             mnuDebugBreakInputAdd;
+  private JMenuItem             mnuDebugBreakOutputAdd;
+  private JMenuItem             mnuDebugBreakMemoryAdd;
   private JMenuItem             mnuDebugBreakPCAdd;
   private JMenuItem             mnuDebugBreakRemove;
   private JMenuItem             mnuDebugBreakRemoveAll;
@@ -82,7 +94,7 @@ public class DebugFrm extends BasicFrm implements
   private JButton               btnStop;
   private JButton               btnStepOver;
   private JButton               btnStepInto;
-  private JButton               btnStepUp;
+  private JButton               btnStepToRET;
   private AbstractButton        btnFlagSign;
   private AbstractButton        btnFlagZero;
   private AbstractButton        btnFlagHalf;
@@ -124,6 +136,8 @@ public class DebugFrm extends BasicFrm implements
   private JTextField            fldMemSP;
   private JTextArea             fldMemPC;
   private JScrollPane           spMemPC;
+  private JTextField            fldTStates;
+  private JButton               btnResetTStates;
   private JLabel                labelIntMode;
   private JLabel                labelRegI;
   private JLabel                labelStatus;
@@ -134,12 +148,8 @@ public class DebugFrm extends BasicFrm implements
   private javax.swing.Timer     timerForClear;
 
 
-  public DebugFrm(
-		ScreenFrm screenFrm,
-		Z80CPU    cpu,
-		Z80Memory memory )
+  public DebugFrm( Z80CPU cpu, Z80Memory memory )
   {
-    this.screenFrm          = screenFrm;
     this.cpu                = cpu;
     this.memory             = memory;
     this.lastSelectedIntSrc = null;
@@ -188,50 +198,55 @@ public class DebugFrm extends BasicFrm implements
     JMenu mnuDebug = new JMenu( "Debuggen" );
     mnuDebug.setMnemonic( KeyEvent.VK_B );
 
-    this.mnuDebugStop = createJMenuItem(
-			"Programmausf\u00FChrung anhalten",
-			KeyEvent.VK_S, InputEvent.CTRL_MASK );
+    this.mnuDebugStop = createJMenuItem( TEXT_STOP, KeyEvent.VK_F4, 0 );
     mnuDebug.add( this.mnuDebugStop );
 
-    this.mnuDebugRun = createJMenuItem(
-			"Programmausf\u00FChrung bis Haltepunkt fortsetzen",
-			KeyEvent.VK_R, InputEvent.CTRL_MASK );
+    this.mnuDebugRun = createJMenuItem( TEXT_RUN, KeyEvent.VK_F5, 0 );
     mnuDebug.add( this.mnuDebugRun );
 
     this.mnuDebugStepOver = createJMenuItem(
-			"Einzelschritt \u00FCber Aufruf hinweg",
-			KeyEvent.VK_O, InputEvent.CTRL_MASK );
+					TEXT_STEP_OVER,
+					KeyEvent.VK_F6,
+					0 );
     mnuDebug.add( this.mnuDebugStepOver );
 
     this.mnuDebugStepInto = createJMenuItem(
-			"Einzelschritt in Aufruf hinein",
-			KeyEvent.VK_I, InputEvent.CTRL_MASK );
+					TEXT_STEP_INTO,
+					KeyEvent.VK_F7,
+					0 );
     mnuDebug.add( this.mnuDebugStepInto );
 
-    this.mnuDebugStepUp = createJMenuItem(
-			"Bis RETURN ausf\u00FChren",
-			KeyEvent.VK_Z, InputEvent.CTRL_MASK );
-    mnuDebug.add( this.mnuDebugStepUp );
+    this.mnuDebugStepToRET = createJMenuItem(
+					TEXT_STEP_TO_RET,
+					KeyEvent.VK_F8,
+					0 );
+    mnuDebug.add( this.mnuDebugStepToRET );
     mnuDebug.addSeparator();
 
     this.mnuDebugBreakPCAdd = createJMenuItem(
-			"Haltepunkt auf Adresse hinzuf\u00FCgen...",
+			"Haltepunkt auf Programmadresse hinzuf\u00FCgen...",
 			KeyEvent.VK_A, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakPCAdd );
 
-    this.mnuDebugBreakMemAdd = createJMenuItem(
-			"Haltepunkt auf Speicherzelle hinzuf\u00FCgen...",
+    this.mnuDebugBreakMemoryAdd = createJMenuItem(
+			"Haltepunkt auf Speicherbereich hinzuf\u00FCgen...",
 			KeyEvent.VK_M, InputEvent.CTRL_MASK );
-    mnuDebug.add( this.mnuDebugBreakMemAdd );
+    mnuDebug.add( this.mnuDebugBreakMemoryAdd );
 
-    this.mnuDebugBreakIOAdd = createJMenuItem(
-			"Haltepunkt auf Ein-/Ausgabetor hinzuf\u00FCgen...",
-			KeyEvent.VK_P, InputEvent.CTRL_MASK );
-    mnuDebug.add( this.mnuDebugBreakIOAdd );
+    this.mnuDebugBreakInputAdd = createJMenuItem(
+			"Haltepunkt auf Eingabetor hinzuf\u00FCgen...",
+			KeyEvent.VK_I, InputEvent.CTRL_MASK );
+    mnuDebug.add( this.mnuDebugBreakInputAdd );
 
-    this.mnuDebugBreakIntAdd = createJMenuItem(
-			"Haltepunkt auf Interrupt-Quelle hinzuf\u00FCgen..." );
-    mnuDebug.add( this.mnuDebugBreakIntAdd );
+    this.mnuDebugBreakOutputAdd = createJMenuItem(
+			"Haltepunkt auf Ausgabetor hinzuf\u00FCgen...",
+			KeyEvent.VK_O, InputEvent.CTRL_MASK );
+    mnuDebug.add( this.mnuDebugBreakOutputAdd );
+
+    this.mnuDebugBreakInterruptAdd = createJMenuItem(
+			"Haltepunkt auf Interrupt-Quelle hinzuf\u00FCgen...",
+			KeyEvent.VK_Q, InputEvent.CTRL_MASK );
+    mnuDebug.add( this.mnuDebugBreakInterruptAdd );
 
     this.mnuDebugBreakRemove = createJMenuItem(
 			"Haltepunkte entfernen",
@@ -320,30 +335,26 @@ public class DebugFrm extends BasicFrm implements
     toolBar.setRollover( true );
     add( toolBar, BorderLayout.NORTH );
 
-    this.btnRun = createImageButton(
-			"/images/debug/run.png",
-			"Bis Haltepunkt ausf\u00FChren" );
-    toolBar.add( this.btnRun );
-
-    this.btnStop = createImageButton(
-			"/images/debug/stop.png",
-			"Programmausf\u00FChrung anhalten" );
+    this.btnStop = createImageButton( "/images/debug/stop.png", TEXT_STOP );
     toolBar.add( this.btnStop );
+
+    this.btnRun = createImageButton( "/images/debug/run.png", TEXT_RUN );
+    toolBar.add( this.btnRun );
 
     this.btnStepOver = createImageButton(
 			"/images/debug/step_over.png",
-			"\u00DCber Aufruf springen" );
+			TEXT_STEP_OVER );
     toolBar.add( this.btnStepOver );
 
     this.btnStepInto = createImageButton(
 			"/images/debug/step_into.png",
-			"In Aufruf springen" );
+			TEXT_STEP_INTO );
     toolBar.add( this.btnStepInto );
 
-    this.btnStepUp = createImageButton(
+    this.btnStepToRET = createImageButton(
 			"/images/debug/step_up.png",
-			"Aus Aufruf herausspringen" );
-    toolBar.add( this.btnStepUp );
+			TEXT_STEP_TO_RET );
+    toolBar.add( this.btnStepToRET );
 
 
     // Hauptbereich
@@ -712,6 +723,42 @@ public class DebugFrm extends BasicFrm implements
     panelReg.add( this.fldRegPC, gbcReg );
 
 
+    // T-States
+    JPanel panelTStates = new JPanel( new GridBagLayout() );
+    gbcReg.anchor    = GridBagConstraints.WEST;
+    gbcReg.fill      = GridBagConstraints.HORIZONTAL;
+    gbcReg.weightx   = 1.0;
+    gbcReg.gridwidth = GridBagConstraints.REMAINDER;
+    gbcReg.gridx     = 4;
+    panelReg.add( panelTStates, gbcReg );
+
+    GridBagConstraints gbcTStates = new GridBagConstraints(
+						0, 0,
+						1, 1,
+						0.0, 0.0,
+						GridBagConstraints.WEST,
+						GridBagConstraints.NONE,
+						new Insets( 0, 0, 0, 0 ),
+						0, 0 );
+
+    panelTStates.add( new JLabel( "Taktzyklen:" ), gbcTStates );
+
+    this.fldTStates = new JTextField();
+    this.fldTStates.setEditable( false );
+    gbcTStates.fill        = GridBagConstraints.HORIZONTAL;
+    gbcTStates.weightx     = 1.0;
+    gbcTStates.insets.left = 5;
+    gbcTStates.gridx++;
+    panelTStates.add( this.fldTStates, gbcTStates );
+
+    this.btnResetTStates = new JButton( "Zur\u00FCcksetzen" );
+    this.btnResetTStates.addActionListener( this );
+    gbcTStates.fill    = GridBagConstraints.NONE;
+    gbcTStates.weightx = 0.0;
+    gbcTStates.gridx++;
+    panelTStates.add( this.btnResetTStates, gbcTStates );
+
+
     // Programmcode-Anzeige
     this.fldMemPC = new JTextArea( 5, 38 );
     this.fldMemPC.setEditable( false );
@@ -735,7 +782,8 @@ public class DebugFrm extends BasicFrm implements
 
     // Haltepunkte
     JPanel panelBreak = new JPanel( new GridBagLayout() );
-    panelBreak.setBorder( BorderFactory.createTitledBorder( "Haltepunkte" ) );
+    panelBreak.setBorder(
+		BorderFactory.createTitledBorder( "Haltepunkte auf..." ) );
     gbcCPU.fill       = GridBagConstraints.BOTH;
     gbcCPU.weightx    = 1.0;
     gbcCPU.gridheight = 2;
@@ -745,7 +793,7 @@ public class DebugFrm extends BasicFrm implements
 
     GridBagConstraints gbcBreak = new GridBagConstraints(
 						0, 0,
-						1, 1,
+						1, 2,
 						0.33, 1.0,
 						GridBagConstraints.CENTER,
 						GridBagConstraints.BOTH,
@@ -754,26 +802,36 @@ public class DebugFrm extends BasicFrm implements
 
     JPanel panelBreakPC = new JPanel( new BorderLayout( 0, 0 ) );
     panelBreakPC.setBorder(
-		BorderFactory.createTitledBorder( "Auf Adresse" ) );
+		BorderFactory.createTitledBorder( "P-Adresse" ) );
     panelBreak.add( panelBreakPC, gbcBreak );
     createBreakpointFields( panelBreakPC, BP_PC_IDX );
 
     JPanel panelBreakMem = new JPanel( new BorderLayout( 0, 0 ) );
     panelBreakMem.setBorder(
-		BorderFactory.createTitledBorder( "Auf Speicher" ) );
+		BorderFactory.createTitledBorder( "Speicher" ) );
     gbcBreak.gridx++;
     panelBreak.add( panelBreakMem, gbcBreak );
     createBreakpointFields( panelBreakMem, BP_MEMORY_IDX );
 
     JPanel panelBreakIO = new JPanel( new BorderLayout( 0, 0 ) );
-    panelBreakIO.setBorder( BorderFactory.createTitledBorder( "Auf E/A-Tor" ) );
+    panelBreakIO.setBorder(
+		BorderFactory.createTitledBorder( "Eingabetor" ) );
+    gbcBreak.weighty    = 0.5;
+    gbcBreak.gridheight = 1;
     gbcBreak.gridx++;
     panelBreak.add( panelBreakIO, gbcBreak );
-    createBreakpointFields( panelBreakIO, BP_IO_IDX );
+    createBreakpointFields( panelBreakIO, BP_INPUT_IDX );
+
+    JPanel panelBreakReg = new JPanel( new BorderLayout( 0, 0 ) );
+    panelBreakReg.setBorder(
+		BorderFactory.createTitledBorder( "Ausgabetor" ) );
+    gbcBreak.gridy++;
+    panelBreak.add( panelBreakReg, gbcBreak );
+    createBreakpointFields( panelBreakReg, BP_OUTPUT_IDX );
 
     JPanel panelBreakInt = new JPanel( new BorderLayout( 0, 0 ) );
     panelBreakInt.setBorder(
-		BorderFactory.createTitledBorder( "Auf Interrupt-Quelle" ) );
+		BorderFactory.createTitledBorder( "Interrupt-Quelle" ) );
     gbcBreak.fill      = GridBagConstraints.BOTH;
     gbcBreak.weightx   = 1.0;
     gbcBreak.weighty   = 0.0;
@@ -929,6 +987,7 @@ public class DebugFrm extends BasicFrm implements
 	EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    updBreakpointActionsEnabled();
@@ -1027,27 +1086,31 @@ public class DebugFrm extends BasicFrm implements
 	rv = true;
 	doDebugStepInto();
       }
-      else if( (src == this.mnuDebugStepUp)
-	       || (src == this.btnStepUp) )
+      else if( (src == this.mnuDebugStepToRET)
+	       || (src == this.btnStepToRET) )
       {
 	rv = true;
-	doDebugStepUp();
+	doDebugStepToRET();
       }
-      else if( src == this.mnuDebugBreakIOAdd ) {
+      else if( src == this.mnuDebugBreakInputAdd ) {
 	rv = true;
-	doDebugBreakIOAdd();
+	doDebugBreakInputAdd();
       }
-      else if( src == this.mnuDebugBreakMemAdd ) {
+      else if( src == this.mnuDebugBreakInterruptAdd ) {
 	rv = true;
-	doDebugBreakMemAdd();
+	doDebugBreakInterruptAdd();
+      }
+      else if( src == this.mnuDebugBreakMemoryAdd ) {
+	rv = true;
+	doDebugBreakMemoryAdd();
+      }
+      else if( src == this.mnuDebugBreakOutputAdd ) {
+	rv = true;
+	doDebugBreakOutputAdd();
       }
       else if( src == this.mnuDebugBreakPCAdd ) {
 	rv = true;
 	doDebugBreakPCAdd();
-      }
-      else if( src == this.mnuDebugBreakIntAdd ) {
-	rv = true;
-	doDebugBreakIntAdd();
       }
       else if( src == this.mnuDebugBreakRemove ) {
 	rv = true;
@@ -1079,7 +1142,7 @@ public class DebugFrm extends BasicFrm implements
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	this.screenFrm.showHelp( "/help/tools/debugger.htm" );
+	HelpFrm.open( "/help/tools/debugger.htm" );
       }
       else if( src == this.mnuPopupBreakAdd ) {
 	rv = true;
@@ -1163,6 +1226,11 @@ public class DebugFrm extends BasicFrm implements
 	  this.cpu.setIFF2( this.btnIFF2.isSelected() );
 	}
       }
+      else if( src == this.btnResetTStates ) {
+	rv = true;
+	this.cpu.resetSpeed();
+	updFieldsTStates();
+      }
       else if( src == this.timerForClear ) {
 	rv = true;
 	clear();
@@ -1188,18 +1256,19 @@ public class DebugFrm extends BasicFrm implements
       else if( src instanceof JList ) {
 	if( src == this.bpLists[ BP_PC_IDX ] ) {
 	  rv = true;
-	  editBreakpoint( BreakpointDlg.BreakpointType.PC, BP_PC_IDX );
+	  editBreakpoint( BP_PC_IDX );
 	} else if( src == this.bpLists[ BP_MEMORY_IDX ] ) {
 	  rv = true;
-	  editBreakpoint( BreakpointDlg.BreakpointType.MEMORY, BP_MEMORY_IDX );
-	} else if( src == this.bpLists[ BP_IO_IDX ] ) {
+	  editBreakpoint( BP_MEMORY_IDX );
+	} else if( src == this.bpLists[ BP_INPUT_IDX ] ) {
 	  rv = true;
-	  editBreakpoint( BreakpointDlg.BreakpointType.IO, BP_IO_IDX );
+	  editBreakpoint( BP_INPUT_IDX );
+	} else if( src == this.bpLists[ BP_OUTPUT_IDX ] ) {
+	  rv = true;
+	  editBreakpoint( BP_OUTPUT_IDX );
 	} else if( src == this.bpLists[ BP_INTERRUPT_IDX ] ) {
 	  rv = true;
-	  editBreakpoint(
-		BreakpointDlg.BreakpointType.INTERRUPT,
-		BP_INTERRUPT_IDX );
+	  editBreakpoint( BP_INTERRUPT_IDX );
 	}
       }
     }
@@ -1435,9 +1504,9 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private void doDebugStepUp()
+  private void doDebugStepToRET()
   {
-    this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_UP );
+    this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_TO_RET );
   }
 
 
@@ -1448,25 +1517,49 @@ public class DebugFrm extends BasicFrm implements
 	doDebugBreakPCAdd();
 	break;
       case BP_MEMORY_IDX:
-	doDebugBreakMemAdd();
+	doDebugBreakMemoryAdd();
 	break;
-      case BP_IO_IDX:
-	doDebugBreakIOAdd();
+      case BP_INPUT_IDX:
+	doDebugBreakInputAdd();
+	break;
+      case BP_OUTPUT_IDX:
+	doDebugBreakOutputAdd();
 	break;
       case BP_INTERRUPT_IDX:
-	doDebugBreakIntAdd();
+	doDebugBreakInterruptAdd();
 	break;
     }
   }
 
 
-  private void doDebugBreakIntAdd()
+  private void doDebugBreakInputAdd()
+  {
+    if( this.bpDlg == null ) {
+      this.bpDlg = new InputBreakpointDlg( this, null );
+      this.bpDlg.setVisible( true );
+      AbstractBreakpoint bp = this.bpDlg.getApprovedBreakpoint();
+      if( bp != null ) {
+	addBreakpoint( BP_INPUT_IDX, bp );
+      }
+      this.bpDlg = null;
+    }
+  }
+
+
+  private void doDebugBreakInterruptAdd()
   {
     if( this.interruptSources != null ) {
-      AbstractBreakpoint bp = openNewBreakpointDlg(
-				BreakpointDlg.BreakpointType.INTERRUPT );
-      if( bp != null ) {
-	addBreakpoint( BP_INTERRUPT_IDX, bp );
+      if( this.bpDlg == null ) {
+	this.bpDlg = new InterruptBreakpointDlg(
+					this,
+					null,
+					this.interruptSources );
+	this.bpDlg.setVisible( true );
+	AbstractBreakpoint bp = this.bpDlg.getApprovedBreakpoint();
+	if( bp != null ) {
+	  addBreakpoint( BP_INTERRUPT_IDX, bp );
+	}
+	this.bpDlg = null;
       }
     } else {
       BasicDlg.showErrorDlg(
@@ -1476,32 +1569,44 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private void doDebugBreakIOAdd()
+  private void doDebugBreakMemoryAdd()
   {
-    AbstractBreakpoint bp = openNewBreakpointDlg(
-				BreakpointDlg.BreakpointType.IO );
-    if( bp != null ) {
-      addBreakpoint( BP_IO_IDX, bp );
+    if( this.bpDlg == null ) {
+      this.bpDlg = new MemoryBreakpointDlg( this, null );
+      this.bpDlg.setVisible( true );
+      AbstractBreakpoint bp = this.bpDlg.getApprovedBreakpoint();
+      if( bp != null ) {
+	addBreakpoint( BP_MEMORY_IDX, bp );
+      }
+      this.bpDlg = null;
     }
   }
 
 
-  private void doDebugBreakMemAdd()
+  private void doDebugBreakOutputAdd()
   {
-    AbstractBreakpoint bp = openNewBreakpointDlg(
-				BreakpointDlg.BreakpointType.MEMORY );
-    if( bp != null ) {
-      addBreakpoint( BP_MEMORY_IDX, bp );
+    if( this.bpDlg == null ) {
+      this.bpDlg = new OutputBreakpointDlg( this, null );
+      this.bpDlg.setVisible( true );
+      AbstractBreakpoint bp = this.bpDlg.getApprovedBreakpoint();
+      if( bp != null ) {
+	addBreakpoint( BP_OUTPUT_IDX, bp );
+      }
+      this.bpDlg = null;
     }
   }
 
 
   private void doDebugBreakPCAdd()
   {
-    AbstractBreakpoint bp = openNewBreakpointDlg(
-				BreakpointDlg.BreakpointType.PC );
-    if( bp != null ) {
-      addBreakpoint( BP_PC_IDX, bp );
+    if( this.bpDlg == null ) {
+      this.bpDlg = new PCBreakpointDlg( this, null );
+      this.bpDlg.setVisible( true );
+      AbstractBreakpoint bp = this.bpDlg.getApprovedBreakpoint();
+      if( bp != null ) {
+	addBreakpoint( BP_PC_IDX, bp );
+      }
+      this.bpDlg = null;
     }
   }
 
@@ -1697,12 +1802,7 @@ public class DebugFrm extends BasicFrm implements
 	BreakpointListModel model = this.bpModels[ bpGroupIdx ];
 	if( model != null ) {
 	  int idx = Collections.binarySearch( model, bpToAdd );
-	  if( idx >= 0 ) {
-	    AbstractBreakpoint bp = model.get( idx );
-	    if( bp != null ) {
-	      bp.completeAccessMode( bpToAdd.getAccessMode() );
-	    }
-	  } else {
+	  if( idx < 0 ) {
 	    idx = -(idx + 1);
 	    if( idx < model.size() ) {
 	      model.add( idx, bpToAdd );
@@ -1763,6 +1863,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldMemIY.setText( "" );
     this.fldMemSP.setText( "" );
     this.fldMemPC.setText( "" );
+    this.fldTStates.setText( "" );
     this.listIntSrc.clearSelection();
     this.listIntSrc.setEnabled( false );
     this.fldIntSrc.setContentType( "text/plain" );
@@ -1800,8 +1901,32 @@ public class DebugFrm extends BasicFrm implements
 
     JList list = new JList( model );
     list.setVisibleRowCount( 4 );
-    list.setPrototypeCellValue( "123456789012" );
+    list.setPrototypeCellValue( "12345678901234" );
     list.setSelectionMode( ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
+    list.setCellRenderer(
+	new DefaultListCellRenderer()
+	{
+	  @Override
+	  public Component getListCellRendererComponent(
+					JList   list,
+					Object  value,
+					int     idx,
+					boolean selected,
+					boolean hasFocus )
+	  {
+	    String s = null;
+	    if( value != null ) {
+	      s = value.toString();
+	    }
+	    setToolTipText( s );
+	    return super.getListCellRendererComponent(
+						list,
+						value,
+						idx,
+						selected,
+						hasFocus );
+	  }
+	} );
     this.bpLists[ bpGroupIdx ] = list;
 
     JScrollPane sp = new JScrollPane( list );
@@ -1834,9 +1959,7 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private void editBreakpoint(
-			BreakpointDlg.BreakpointType bpType,
-			int                          bpGroupIdx )
+  private void editBreakpoint( int bpGroupIdx )
   {
     JList               list  = this.bpLists[ bpGroupIdx ];
     BreakpointListModel model = this.bpModels[ bpGroupIdx ];
@@ -1848,18 +1971,35 @@ public class DebugFrm extends BasicFrm implements
 	  if( (row >= 0) && (row < model.size()) ) {
 	    AbstractBreakpoint oldBP = model.get( row );
 	    if( (oldBP != null) && (this.bpDlg == null) ) {
-	      this.bpDlg = new BreakpointDlg(
+	      switch( bpGroupIdx ) {
+		case BP_PC_IDX:
+		  this.bpDlg = new PCBreakpointDlg( this, oldBP );
+		  break;
+		case BP_MEMORY_IDX:
+		  this.bpDlg = new MemoryBreakpointDlg( this, oldBP );
+		  break;
+		case BP_INPUT_IDX:
+		  this.bpDlg = new InputBreakpointDlg( this, oldBP );
+		  break;
+		case BP_OUTPUT_IDX:
+		  this.bpDlg = new OutputBreakpointDlg( this, oldBP );
+		  break;
+		case BP_INTERRUPT_IDX:
+		  this.bpDlg = new InterruptBreakpointDlg(
 					this,
-					bpType,
 					oldBP,
 					this.interruptSources );
-	      this.bpDlg.setVisible( true );
-	      AbstractBreakpoint newBP = this.bpDlg.getApprovedBreakpoint();
-	      if( newBP != null ) {
-		model.remove( row );
-		addBreakpoint( bpGroupIdx, newBP );
+		  break;
 	      }
-	      this.bpDlg = null;
+	      if( this.bpDlg != null ) {
+		this.bpDlg.setVisible( true );
+		AbstractBreakpoint newBP = this.bpDlg.getApprovedBreakpoint();
+		if( newBP != null ) {
+		  model.remove( row );
+		  addBreakpoint( bpGroupIdx, newBP );
+		}
+		this.bpDlg = null;
+	      }
 	    }
 	  }
 	}
@@ -1990,6 +2130,7 @@ public class DebugFrm extends BasicFrm implements
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    updDebugger( breakpoint, iSource );
@@ -2171,24 +2312,6 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private AbstractBreakpoint openNewBreakpointDlg(
-				BreakpointDlg.BreakpointType bpType )
-  {
-    AbstractBreakpoint bp = null;
-    if( this.bpDlg == null ) {
-      this.bpDlg = new BreakpointDlg(
-				this,
-				bpType,
-				null,
-				this.interruptSources );
-      this.bpDlg.setVisible( true );
-      bp         = this.bpDlg.getApprovedBreakpoint();
-      this.bpDlg = null;
-    }
-    return bp;
-  }
-
-
   private void setDebuggerEditable( boolean state )
   {
     this.btnFlagSign.setEnabled( state );
@@ -2226,12 +2349,13 @@ public class DebugFrm extends BasicFrm implements
     this.mnuDebugStop.setEnabled( false );
     this.mnuDebugStepOver.setEnabled( false );
     this.mnuDebugStepInto.setEnabled( false );
-    this.mnuDebugStepUp.setEnabled( false );
+    this.mnuDebugStepToRET.setEnabled( false );
     this.btnRun.setEnabled( false );
     this.btnStop.setEnabled( false );
     this.btnStepOver.setEnabled( false );
     this.btnStepInto.setEnabled( false );
-    this.btnStepUp.setEnabled( false );
+    this.btnStepToRET.setEnabled( false );
+    this.btnResetTStates.setEnabled( false );
     this.labelStatus.setText( statusText );
   }
 
@@ -2244,12 +2368,13 @@ public class DebugFrm extends BasicFrm implements
     this.mnuDebugStop.setEnabled( true );
     this.mnuDebugStepOver.setEnabled( false );
     this.mnuDebugStepInto.setEnabled( false );
-    this.mnuDebugStepUp.setEnabled( false );
+    this.mnuDebugStepToRET.setEnabled( false );
     this.btnRun.setEnabled( false );
     this.btnStop.setEnabled( true );
     this.btnStepOver.setEnabled( false );
     this.btnStepInto.setEnabled( false );
-    this.btnStepUp.setEnabled( false );
+    this.btnStepToRET.setEnabled( false );
+    this.btnResetTStates.setEnabled( false );
     this.labelStatus.setText( "Programm wird gerade ausgef\u00FChrt..." );
   }
 
@@ -2270,18 +2395,20 @@ public class DebugFrm extends BasicFrm implements
     updFieldsIY();
     updFieldsSP();
     updFieldsPC();
+    updFieldsTStates();
 
     this.mnuDebugRun.setEnabled( true );
     this.mnuDebugStop.setEnabled( false );
     this.mnuDebugStepOver.setEnabled( true );
     this.mnuDebugStepInto.setEnabled( true );
-    this.mnuDebugStepUp.setEnabled( true );
+    this.mnuDebugStepToRET.setEnabled( true );
 
     this.btnRun.setEnabled( true );
     this.btnStop.setEnabled( false );
     this.btnStepOver.setEnabled( true );
     this.btnStepInto.setEnabled( true );
-    this.btnStepUp.setEnabled( true );
+    this.btnStepToRET.setEnabled( true );
+    this.btnResetTStates.setEnabled( true );
 
     this.listIntSrc.setEnabled( true );
     this.fldIntSrc.setEnabled( true );
@@ -2725,6 +2852,13 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
+  private void updFieldsTStates()
+  {
+    this.fldTStates.setText(
+		Long.toString( this.cpu.getProcessedTStates() ) );
+  }
+
+
   private void updIntBreakpoints( Z80InterruptSource[] iSources )
   {
     BreakpointListModel model = this.bpModels[ BP_INTERRUPT_IDX ];
@@ -2774,9 +2908,11 @@ public class DebugFrm extends BasicFrm implements
     if( (this.interruptSources == null)
 	|| (iSources != this.interruptSources) )
     {
-      BreakpointDlg dlg = this.bpDlg;
+      AbstractBreakpointDlg dlg = this.bpDlg;
       if( dlg != null ) {
-	dlg.setInterruptSources( iSources );
+	if( dlg instanceof InterruptBreakpointDlg ) {
+	  ((InterruptBreakpointDlg) dlg).setInterruptSources( iSources );
+	}
       }
       updIntBreakpoints( iSources );
       if( iSources != null ) {

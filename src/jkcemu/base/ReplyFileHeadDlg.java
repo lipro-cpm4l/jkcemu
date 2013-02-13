@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -92,21 +92,18 @@ public class ReplyFileHeadDlg extends BasicDlg implements DocumentListener
 	switch( options[ i ] ) {
 	  case BEGIN_ADDRESS:
 	    labelText       = "Anfangsadresse:";
-	    component       = new JTextField();
-	    this.docBegAddr = new HexDocument(
-				(JTextField) component, 4, labelText );
+	    this.docBegAddr = new HexDocument( 4, labelText );
+	    component       = new JTextField( this.docBegAddr, "", 0 );
 	    break;
 	  case END_ADDRESS:
-	    labelText         = "Endadresse (optional):";
-	    component       = new JTextField();
-	    this.docEndAddr = new HexDocument(
-				(JTextField) component, 4, labelText );
+	    labelText       = "Endadresse (optional):";
+	    this.docEndAddr = new HexDocument( 4, labelText );
+	    component       = new JTextField( this.docEndAddr, "", 0 );
 	    break;
 	  case START_ADDRESS:
 	    labelText         = "Startadresse (optional):";
-	    component         = new JTextField();
-	    this.docStartAddr = new HexDocument(
-				(JTextField) component, 4, labelText );
+	    this.docStartAddr = new HexDocument( 4, labelText );
+	    component         = new JTextField( this.docStartAddr, "", 0 );
 	    break;
 	  case FILE_NAME_6:
 	  case FILE_NAME_8:

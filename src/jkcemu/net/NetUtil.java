@@ -10,7 +10,10 @@ package jkcemu.net;
 
 import java.io.*;
 import java.lang.*;
+import java.util.Hashtable;
 import java.util.regex.PatternSyntaxException;
+import javax.naming.Context;
+import javax.naming.directory.InitialDirContext;
 import jkcemu.Main;
 import jkcemu.base.EmuUtil;
 
@@ -19,62 +22,73 @@ public class NetUtil
 {
   public static byte[] getDNSServerIPAddr()
   {
-    byte[] ipAddr      = null;
-    String dnsFileName = null;
-    if( Main.isUnixLikeOS() ) {
-      ipAddr = getDNSServerIPAddr( "/etc/resolv.conf" );
-    }
-    if( ipAddr == null ) {
-      /*
-       * Externes C#-Programm aufrufen,
-       * welches eine Textdatei mit den DNS-Servern erzeugt
-       */
-      File configDir = Main.getConfigDir();
-      if( configDir != null ) {
-	File wdnsFile = new File( configDir, "wdnsfile.exe" );
-	if( !wdnsFile.exists() ) {
-	  InputStream  in  = null;
-	  OutputStream out = null;
-	  try {
-	    in = Main.class.getResourceAsStream( "/cs/wdnsfile.exe" );
-	    if( in != null ) {
-	      int b = in.read();
-	      if( b >= 0 ) {
-		out = new FileOutputStream( wdnsFile );
-		while( b >= 0 ) {
-		  out.write( b );
-		  b = in.read();
+    byte[] ipAddr = null;
+
+    /*
+     * Ermittlung des DNS-Servers entsprechend der
+     * JNDI-Beschreibung von Java 1.5
+     */
+    try {
+      Hashtable<String,String> env = new Hashtable<String,String>();
+      env.put(
+	    Context.INITIAL_CONTEXT_FACTORY,
+	    "com.sun.jndi.dns.DnsContextFactory" );
+      Object o = (new InitialDirContext( env )).getEnvironment().get(
+					"java.naming.provider.url" );
+      if( o != null ) {
+        String s = o.toString();
+        if( s != null ) {
+          String[] dnsServerURLs = s.split( "\\s" );
+          if( dnsServerURLs != null ) {
+            for( String url : dnsServerURLs ) {
+              if( (url.length() > 6) && url.startsWith( "dns://" ) ) {
+		ipAddr = getIPAddr( url.substring( 6 ) );
+		if( ipAddr != null ) {
+		  break;
 		}
-		out.close();
-		out = null;
+              }
+            }
+          }
+        }
+      }
+    }
+    catch( Exception ex ) {}
+
+    /*
+     * Falls der DNS-Server nicht ermittelt werden konnte,
+     * dann auf einem Unix/Linux-System die Datei /etc/resolv.conf auslesen
+     */
+    if( (ipAddr == null) && Main.isUnixLikeOS() ) {
+      BufferedReader in = null;
+      try {
+	in = new BufferedReader( new FileReader( "/etc/resolv.conf" ) );
+	String line = in.readLine();
+	while( (ipAddr == null) && (line != null) ) {
+	  line    = line.trim().toLowerCase();
+	  int eol = line.indexOf( '#' );
+	  if( eol != 0 ) {
+	    if( eol > 0 ) {
+	      line = line.substring( 0, eol );
+	    }
+	    if( line.startsWith( "nameserver" ) ) {
+	      String[] elems = line.split( "\\s" );
+	      if( elems != null ) {
+		for( int i = 1; i < elems.length; i++ ) {
+		  ipAddr = getIPAddr( elems[ i ] );
+		  if( ipAddr != null ) {
+		    break;
+		  }
+		}
 	      }
 	    }
 	  }
-	  catch( IOException ex ) {}
-	  finally {
-	    EmuUtil.doClose( in );
-	    EmuUtil.doClose( out );
-	  }
+	  line = in.readLine();
 	}
-	if( wdnsFile.exists() ) {
-	  File dnsFile = new File( configDir, "dns.lst" );
-	  dnsFile.delete();
-	  try {
-	    String[] cmd = null;
-	    if( Main.isUnixLikeOS() ) {
-	      cmd = new String[] {
-				"mono",
-				wdnsFile.getPath(),
-				dnsFile.getPath() };
-	    } else {
-	      cmd = new String[] { wdnsFile.getPath(), dnsFile.getPath() };
-	    }
-	    Runtime.getRuntime().exec( cmd ).waitFor();
-	    ipAddr = getDNSServerIPAddr( dnsFile.getPath() );
-	  }
-	  catch( Exception ex ) {}
-	  dnsFile.delete();
-	}
+      }
+      catch( IOException ex ) {}
+      catch( PatternSyntaxException ex ) {}
+      finally {
+	EmuUtil.doClose( in );
       }
     }
     return ipAddr;
@@ -117,44 +131,5 @@ public class NetUtil
   {
     // leer
   }
-
-
-  private static byte[] getDNSServerIPAddr( String dnsFileName )
-  {
-    byte[] ipAddr = null;
-    if( dnsFileName != null ) {
-      BufferedReader in = null;
-      try {
-	in = new BufferedReader( new FileReader( dnsFileName ) );
-	String line = in.readLine();
-	while( (ipAddr == null) && (line != null) ) {
-	  line    = line.trim().toLowerCase();
-	  int eol = line.indexOf( '#' );
-	  if( eol != 0 ) {
-	    if( eol > 0 ) {
-	      line = line.substring( 0, eol );
-	    }
-	    if( line.startsWith( "nameserver" ) ) {
-	      String[] elems = line.split( "\\s" );
-	      if( elems != null ) {
-		for( int i = 1; i < elems.length; i++ ) {
-		  ipAddr = getIPAddr( elems[ i ] );
-		  if( ipAddr != null ) {
-		    break;
-		  }
-		}
-	      }
-	    }
-	  }
-	  line = in.readLine();
-	}
-      }
-      catch( IOException ex ) {}
-      catch( PatternSyntaxException ex ) {}
-      finally {
-	EmuUtil.doClose( in );
-      }
-    }
-    return ipAddr;
-  }
 }
+

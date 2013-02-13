@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,7 @@ import java.awt.*;
 import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.lang.*;
-import java.math.BigDecimal;
+import java.math.*;
 import java.text.ParseException;
 import java.util.*;
 import javax.swing.*;
@@ -31,7 +31,8 @@ public class CalculatorFrm extends BasicFrm implements
   private static final String defaultText = "Geben Sie bitte ein Zeichen"
 		+ " oder einen numerischen Ausdruck ein!";
 
-  private ScreenFrm      screenFrm;
+  private static CalculatorFrm instance = null;
+
   private ExprParser     parser;
   private Clipboard      clipboard;
   private boolean        clipboardHasText;
@@ -49,9 +50,221 @@ public class CalculatorFrm extends BasicFrm implements
   private JEditorPane    fldOutput;
 
 
-  public CalculatorFrm( ScreenFrm screenFrm )
+  public static void open()
   {
-    this.screenFrm        = screenFrm;
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+        instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new CalculatorFrm();
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+	/* --- DocumentListener --- */
+
+  @Override
+  public void changedUpdate( DocumentEvent e )
+  {
+    docChanged( e );
+  }
+
+
+  @Override
+  public void insertUpdate( DocumentEvent e )
+  {
+    docChanged( e );
+  }
+
+
+  @Override
+  public void removeUpdate( DocumentEvent e )
+  {
+    docChanged( e );
+  }
+
+
+	/* --- CaretListener --- */
+
+  @Override
+  public void caretUpdate( CaretEvent e )
+  {
+    updCutCopyButtons();
+  }
+
+
+	/* --- FlavorListener --- */
+
+  @Override
+  public void flavorsChanged( FlavorEvent e )
+  {
+    updClipboardStatus();
+    updPasteButton();
+  }
+
+
+	/* --- FocusListener --- */
+
+  @Override
+  public void focusGained( FocusEvent e )
+  {
+    JTextComponent fld = null;
+    Component      c   = e.getComponent();
+    if( c != null ) {
+      if( c instanceof JTextComponent )
+	fld = (JTextComponent) c;
+    }
+    this.lastTextFld = fld;
+    updCutCopyButtons();
+    updPasteButton();
+  }
+
+
+  @Override
+  public void focusLost( FocusEvent e )
+  {
+    // empty
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean applySettings( Properties props, boolean resizable )
+  {
+    boolean rv = false;
+    if( props != null ) {
+      rv = super.applySettings( props, resizable );
+      if( this.docInput != null ) {
+	boolean updImmediately = EmuUtil.parseBooleanProperty(
+				props,
+				"jkcemu.calculator.computes_immediately",
+				true );
+	if( updImmediately ) {
+	  this.btnUpdImmediately.setSelected( true );
+	} else {
+	  this.btnUpdOnEnter.setSelected( true );
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src == this.fldInput ) {
+	rv = true;
+	updOutput();
+      }
+      else if( src == this.mnuFileClose ) {
+	rv = true;
+	doClose();
+      }
+      else if( src == this.mnuEditCut ) {
+	rv = true;
+	doEditCut();
+      }
+      else if( src == this.mnuEditCopy ) {
+	rv = true;
+	doEditCopy();
+      }
+      else if( src == this.mnuEditPaste ) {
+	rv = true;
+	doEditPaste();
+      }
+      else if( src == this.mnuEditSelectAll ) {
+	rv = true;
+	doEditSelectAll();
+      }
+      else if( src == this.mnuHelpContent ) {
+	rv = true;
+	HelpFrm.open( "/help/tools/calculator.htm" );
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      Main.checkQuit( this );
+    } else {
+      // damit beim erneuten Oeffnen das Eingabefeld leer ist
+      this.fldInput.setText( "" );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void putSettingsTo( Properties props )
+  {
+    if( props != null ) {
+      super.putSettingsTo( props );
+      props.setProperty(
+		"jkcemu.calculator.computes_immediately",
+		String.valueOf( isUpdImmediately() ) );
+    }
+  }
+
+
+  @Override
+  public void windowOpened( WindowEvent e )
+  {
+    if( e.getWindow() == this )
+      this.fldInput.requestFocus();
+  }
+
+
+	/* --- Aktionen im Menu Bearbeiten --- */
+
+  private void doEditCut()
+  {
+    JTextComponent textFld = this.lastTextFld;
+    if( textFld != null )
+      textFld.cut();
+  }
+
+
+  private void doEditCopy()
+  {
+    JTextComponent textFld = this.lastTextFld;
+    if( textFld != null )
+      textFld.copy();
+  }
+
+
+  private void doEditPaste()
+  {
+    JTextComponent textFld = this.lastTextFld;
+    if( textFld != null )
+      textFld.paste();
+  }
+
+
+  private void doEditSelectAll()
+  {
+    JTextComponent textFld = this.lastTextFld;
+    if( textFld != null )
+      textFld.selectAll();
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private CalculatorFrm()
+  {
     this.parser           = new ExprParser();
     this.lastTextFld      = null;
     this.clipboard        = null;
@@ -260,197 +473,6 @@ public class CalculatorFrm extends BasicFrm implements
   }
 
 
-	/* --- DocumentListener --- */
-
-  @Override
-  public void changedUpdate( DocumentEvent e )
-  {
-    docChanged( e );
-  }
-
-
-  @Override
-  public void insertUpdate( DocumentEvent e )
-  {
-    docChanged( e );
-  }
-
-
-  @Override
-  public void removeUpdate( DocumentEvent e )
-  {
-    docChanged( e );
-  }
-
-
-	/* --- CaretListener --- */
-
-  @Override
-  public void caretUpdate( CaretEvent e )
-  {
-    updCutCopyButtons();
-  }
-
-
-	/* --- FlavorListener --- */
-
-  @Override
-  public void flavorsChanged( FlavorEvent e )
-  {
-    updClipboardStatus();
-    updPasteButton();
-  }
-
-
-	/* --- FocusListener --- */
-
-  @Override
-  public void focusGained( FocusEvent e )
-  {
-    JTextComponent fld = null;
-    Component      c   = e.getComponent();
-    if( c != null ) {
-      if( c instanceof JTextComponent )
-	fld = (JTextComponent) c;
-    }
-    this.lastTextFld = fld;
-    updCutCopyButtons();
-    updPasteButton();
-  }
-
-
-  @Override
-  public void focusLost( FocusEvent e )
-  {
-    // empty
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean applySettings( Properties props, boolean resizable )
-  {
-    boolean rv = false;
-    if( props != null ) {
-      rv = super.applySettings( props, resizable );
-      if( this.docInput != null ) {
-	boolean updImmediately = EmuUtil.parseBooleanProperty(
-				props,
-				"jkcemu.calculator.computes_immediately",
-				true );
-	if( updImmediately ) {
-	  this.btnUpdImmediately.setSelected( true );
-	} else {
-	  this.btnUpdOnEnter.setSelected( true );
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.fldInput ) {
-	rv = true;
-	updOutput();
-      }
-      else if( src == this.mnuFileClose ) {
-	rv = true;
-	doClose();
-      }
-      else if( src == this.mnuEditCut ) {
-	rv = true;
-	doEditCut();
-      }
-      else if( src == this.mnuEditCopy ) {
-	rv = true;
-	doEditCopy();
-      }
-      else if( src == this.mnuEditPaste ) {
-	rv = true;
-	doEditPaste();
-      }
-      else if( src == this.mnuEditSelectAll ) {
-	rv = true;
-	doEditSelectAll();
-      }
-      else if( src == this.mnuHelpContent ) {
-	rv = true;
-	this.screenFrm.showHelp( "/help/tools/calculator.htm" );
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void putSettingsTo( Properties props )
-  {
-    if( props != null ) {
-      super.putSettingsTo( props );
-      props.setProperty(
-		"jkcemu.calculator.computes_immediately",
-		String.valueOf( isUpdImmediately() ) );
-    }
-  }
-
-
-  @Override
-  public void windowClosed( WindowEvent e )
-  {
-    if( e.getWindow() == this )
-      this.screenFrm.childFrameClosed( this );
-  }
-
-
-  @Override
-  public void windowOpened( WindowEvent e )
-  {
-    if( e.getWindow() == this )
-      this.fldInput.requestFocus();
-  }
-
-
-	/* --- Aktionen im Menu Bearbeiten --- */
-
-  private void doEditCut()
-  {
-    JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
-      textFld.cut();
-  }
-
-
-  private void doEditCopy()
-  {
-    JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
-      textFld.copy();
-  }
-
-
-  private void doEditPaste()
-  {
-    JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
-      textFld.paste();
-  }
-
-
-  private void doEditSelectAll()
-  {
-    JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
-      textFld.selectAll();
-  }
-
-
 	/* --- private Methoden --- */
 
   private void docChanged( DocumentEvent e )
@@ -519,6 +541,27 @@ public class CalculatorFrm extends BasicFrm implements
   private void appendResultRow( StringBuilder buf, String title, Number value )
   {
     if( value != null ) {
+      boolean isLong = false;
+      long    lValue = 0;
+      if( value instanceof BigDecimal ) {
+	if( ((BigDecimal) value).scale() <= 0 ) {
+	  try {
+	    lValue = ((BigDecimal) value).longValueExact();
+	    isLong = true;
+	  }
+	  catch( ArithmeticException ex ) {}
+	}
+      }
+      if( value instanceof BigInteger ) {
+	if( ((BigInteger) value).bitLength() < 64 ) {
+	  lValue = value.longValue();
+	  isLong = true;
+	}
+      }
+      else if( (value instanceof Integer) || (value instanceof Long) ) {
+	lValue = value.longValue();
+	isLong = true;
+      }
       if( buf.length() < 1 ) {
 	buf.append( "<html>\n"
 		+ "<table border=1>\n"
@@ -529,24 +572,33 @@ public class CalculatorFrm extends BasicFrm implements
       buf.append( "<tr><td nowrap>" );
       appendText( buf, title );
       buf.append( ":</td><td>" );
-      if( !isFloat( value ) ) {
-	appendText( buf, Long.toHexString( value.longValue() ).toUpperCase() );
+      if( isLong ) {
+	appendText( buf, Long.toHexString( lValue ).toUpperCase() );
       }
       buf.append( "</td><td nowrap>" );
-      appendText( buf, value.toString() );
+      String decText = null;
+      if( value instanceof BigDecimal ) {
+	if( Math.abs( ((BigDecimal) value).scale() ) < 10 ) {
+	  decText = ((BigDecimal) value).toPlainString();
+	}
+      }
+      if( decText == null ) {
+	decText = value.toString();
+      }
+      appendText( buf, decText );
       buf.append( "</td><td nowrap>" );
-      if( !isFloat( value ) ) {
-	appendText( buf, Long.toOctalString( value.longValue() ) );
+      if( isLong ) {
+	appendText( buf, Long.toOctalString( lValue ) );
       }
       buf.append( "</td><td nowrap>" );
-      if( !isFloat( value ) ) {
-	appendText( buf, Long.toBinaryString( value.longValue() ) );
+      if( isLong ) {
+	appendText( buf, Long.toBinaryString( lValue ) );
       }
       buf.append( "</td><td nowrap>" );
-      if( !isFloat( value ) ) {
-	long longValue = value.longValue();
-	if( (longValue > '\u0020') && (longValue <= '\u007E') )
-	  appendText( buf, Character.toString( (char) longValue ) );
+      if( isLong ) {
+	if( (lValue > '\u0020') && (lValue <= '\u007E') ) {
+	  appendText( buf, Character.toString( (char) lValue ) );
+	}
       }
       buf.append( "</td></tr>\n" );
     }
@@ -624,14 +676,6 @@ public class CalculatorFrm extends BasicFrm implements
 	}
       }
     }
-  }
-
-
-  private static boolean isFloat( Number value )
-  {
-    return (value instanceof BigDecimal)
-	   || (value instanceof Double)
-	   || (value instanceof Float);
   }
 
 

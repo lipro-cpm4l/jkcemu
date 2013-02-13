@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,7 +25,8 @@ public class JoystickFrm extends BasicFrm
   private static final String textConnect      = "Verbinden";
   private static final String textDisconnect   = "Trennen";
 
-  private ScreenFrm         screenFrm;
+  private static JoystickFrm instance = null;
+
   private EmuThread         emuThread;
   private JPanel            panel0;
   private JPanel            panel1;
@@ -39,10 +40,129 @@ public class JoystickFrm extends BasicFrm
   private JMenuItem         mnuHelpContent;
 
 
-  public JoystickFrm( ScreenFrm screenFrm )
+  public static void open( EmuThread emuThread )
   {
-    this.screenFrm = screenFrm;
-    this.emuThread = screenFrm.getEmuThread();
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new JoystickFrm( emuThread );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+  public void setJoystickAction( int joyNum, int actionMask )
+  {
+    if( joyNum == 0 ) {
+      this.joyFld0.setJoystickAction( actionMask );
+    } else if( joyNum == 1 ) {
+      this.joyFld1.setJoystickAction( actionMask );
+    }
+  }
+
+
+  public void setJoystickState(
+			int     joyNum,
+			boolean emulated,
+			boolean connected )
+  {
+    String btnText    = textConnect;
+    String statusText = textNotEmulated;
+    if( emulated ) {
+      if( connected ) {
+	btnText    = textDisconnect;
+	statusText = textConnected;
+      } else {
+	statusText = textNotConnected;
+      }
+    }
+    if( joyNum == 0 ) {
+      this.labelStatus0.setText( statusText );
+      this.joyFld0.setEnabled( emulated );
+      this.btnConnect0.setText( btnText );
+      this.btnConnect0.setEnabled( emulated );
+    } else if( joyNum == 1 ) {
+      this.labelStatus1.setText( statusText );
+      this.joyFld1.setEnabled( emulated );
+      this.btnConnect1.setText( btnText );
+      this.btnConnect1.setEnabled( emulated );
+    }
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src == this.btnConnect0 ) {
+	rv = true;
+	doConnect( 0 );
+      }
+      else if( src == this.btnConnect1 ) {
+	rv = true;
+	doConnect( 1 );
+      }
+      else if( src == this.mnuClose ) {
+	rv = true;
+	doClose();
+      }
+      else if( src == this.mnuHelpContent ) {
+	rv = true;
+	HelpFrm.open( "/help/joystick.htm" );
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void mousePressed( MouseEvent e )
+  {
+    Component c = e.getComponent();
+    if( c == this.joyFld0 ) {
+      this.emuThread.setJoystickAction(
+		0,
+		this.joyFld0.getJoystickAction( e.getX(), e.getY() ) );
+      e.consume();
+    } else if( c == this.joyFld1 ) {
+      this.emuThread.setJoystickAction(
+		1,
+		this.joyFld1.getJoystickAction( e.getX(), e.getY() ) );
+      e.consume();
+    } else {
+      super.mousePressed( e );
+    }
+  }
+
+
+  @Override
+  public void mouseReleased( MouseEvent e )
+  {
+    Component c = e.getComponent();
+    if( c == this.joyFld0 ) {
+      this.emuThread.setJoystickAction( 0, 0 );
+      e.consume();
+    } else if( c == this.joyFld1 ) {
+      this.emuThread.setJoystickAction( 1, 0 );
+      e.consume();
+    } else {
+      super.mousePressed( e );
+    }
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private JoystickFrm( EmuThread emuThread )
+  {
+    this.emuThread = emuThread;
     setTitle( "JKCEMU Spielhebel" );
     Main.updIcon( this );
 
@@ -129,110 +249,6 @@ public class JoystickFrm extends BasicFrm
       this.emuThread.setJoystickFrm( this );
       this.joyFld0.addMouseListener( this );
       this.joyFld1.addMouseListener( this );
-    }
-  }
-
-
-  public void setJoystickAction( int joyNum, int actionMask )
-  {
-    if( joyNum == 0 ) {
-      this.joyFld0.setJoystickAction( actionMask );
-    } else if( joyNum == 1 ) {
-      this.joyFld1.setJoystickAction( actionMask );
-    }
-  }
-
-
-  public void setJoystickState(
-			int     joyNum,
-			boolean emulated,
-			boolean connected )
-  {
-    String btnText    = textConnect;
-    String statusText = textNotEmulated;
-    if( emulated ) {
-      if( connected ) {
-	btnText    = textDisconnect;
-	statusText = textConnected;
-      } else {
-	statusText = textNotConnected;
-      }
-    }
-    if( joyNum == 0 ) {
-      this.labelStatus0.setText( statusText );
-      this.joyFld0.setEnabled( emulated );
-      this.btnConnect0.setText( btnText );
-      this.btnConnect0.setEnabled( emulated );
-    } else if( joyNum == 1 ) {
-      this.labelStatus1.setText( statusText );
-      this.joyFld1.setEnabled( emulated );
-      this.btnConnect1.setText( btnText );
-      this.btnConnect1.setEnabled( emulated );
-    }
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.btnConnect0 ) {
-	rv = true;
-	doConnect( 0 );
-      }
-      else if( src == this.btnConnect1 ) {
-	rv = true;
-	doConnect( 1 );
-      }
-      else if( src == this.mnuClose ) {
-	rv = true;
-	doClose();
-      }
-      else if( src == this.mnuHelpContent ) {
-	rv = true;
-	this.screenFrm.showHelp( "/help/joystick.htm" );
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void mousePressed( MouseEvent e )
-  {
-    Component c = e.getComponent();
-    if( c == this.joyFld0 ) {
-      this.emuThread.setJoystickAction(
-		0,
-		this.joyFld0.getJoystickAction( e.getX(), e.getY() ) );
-      e.consume();
-    } else if( c == this.joyFld1 ) {
-      this.emuThread.setJoystickAction(
-		1,
-		this.joyFld1.getJoystickAction( e.getX(), e.getY() ) );
-      e.consume();
-    } else {
-      super.mousePressed( e );
-    }
-  }
-
-
-  @Override
-  public void mouseReleased( MouseEvent e )
-  {
-    Component c = e.getComponent();
-    if( c == this.joyFld0 ) {
-      this.emuThread.setJoystickAction( 0, 0 );
-      e.consume();
-    } else if( c == this.joyFld1 ) {
-      this.emuThread.setJoystickAction( 1, 0 );
-      e.consume();
-    } else {
-      super.mousePressed( e );
     }
   }
 

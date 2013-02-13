@@ -1,238 +1,428 @@
 <html>
 <body>
-  <h1>Numerische Ausdr&uuml;cke</h1>
-    Numerische Ausdr&uuml;cke sind Kombinationen aus
-    Zahlen, Variablen, Funktionsaufrufen und Operatoren,
-    die einen numerischen Wert im Bereich von -32768 bis +32767
-    als Ergebnis liefern.
-  <br/><br/>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
-  <h2>1. Zahlen</h2>
-    Der Compiler versteht ganze Dezimalzahlen, Hexadezimalzahlen und
-    Bin&auml;rzahlen.
-    Hexadezimalzahlen beginnen mit <em>&amp;H...</em> (z.B. &amp;HA2BD),
-    und Bin&auml;rzahlen beginnen mit <em>&amp;B</em> (z.B. &amp;B1001011).
-  <br/><br/>
+ <h2>Ausdr&uuml;cke</h2>
+  Ausdr&uuml;cke sind Kombinationen aus Literalen
+  (im BASIC-Programm stehende Zahlen und Zeichenketten),
+  Variablen, Funktionsaufrufen, Operatoren und Klammern,
+  die als Ergebnis einen numerischen Wert oder eine Zeichenkette liefern.
+  Ausdr&uuml;cke, die einen numerischen Wert liefern,
+  sind <em>numerische Ausdr&uuml;cke</em>.
+  Ausdr&uuml;cke, die eine Zeichenkette liefern,
+  werden <em>String-Ausdr&uuml;cke</em> genannt.
+ <br/><br/>
 
-  <h2>2. Variablen</h2>
-    Es gibt einfache Variablen und genau ein Variablen-Array.
-    Einfache Variablen haben als Name einen Buchstaben von A bis Z,
-    d.h., es gibt somit 26 einfache Variablen.
-    In den <a href="options.htm">Compiler-Optionen</a>
-    k&ouml;nnen Sie aber angegeben,
-    dass Variablennamen auch mit mehr als einem Zeichen L&auml;nge
-    erlaubt sind.
-    In dem Fall sind mehr als 26 Variablen m&ouml;glich,
-    und der Variablenname kann ab dem zweiten Zeichen
-    neben Buchstaben auch Ziffern enthalten.
-  <br/><br/>
-    Das Variablen-Array hat den Namen @.
-    Die Gr&ouml;&szlig;e des Arrays wird in den
-    <a href="options.htm">Compiler-Optionen</a> festgelegt.
-    Der Zugriff auf ein Element des Variablen-Arrays
-    erfolgt mit Hilfe eines Indexes,
-    der in runden Klammern unmittelbar hinter dem @ angegeben wird.
-  <br/><br/>
+ <h3>1. Numerische Ausdr&uuml;cke</h3>
+  Numerische Ausdr&uuml;cke liefern einen numerischen Wert
+  im Bereich von -32768 bis +32767.
+ <br/><br/>
 
-  <h2>3. Funktionen</h2>
-    Eine Liste der Funktionen finden Sie
-    <a href="functions.htm">hier</a>.
-  <br/><br/>
+ <h3>1.1. Zahlen</h3>
+  Der Compiler versteht ganze Dezimalzahlen, Hexadezimalzahlen und
+  Bin&auml;rzahlen.
+  Hexadezimalzahlen beginnen mit <em>&amp;H...</em> (z.B. &amp;HA2BD),
+  und Bin&auml;rzahlen beginnen mit <em>&amp;B</em> (z.B. &amp;B1001011).
+ <br/><br/>
 
-  <h2>4. Operatoren</h2>
-    <table border=1>
-      <tr>
-	<th nowrap>Operator</th>
-	<th nowrap>Bedeutung</th>
-	<th nowrap>AC1-Mini-BASIC</th>
-	<th nowrap>Z1013-Tiny-BASIC</th>
-      </tr>
-      <tr>
-	<td><tt>AND</tt></td>
-	<td>Logisches UND</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr>
-	<td><tt>OR</tt></td>
-	<td>Logisches ODER</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr>
-	<td><tt>NOT</tt></td>
-	<td>Logisches NICHT</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr>
-	<td><tt>&lt;</tt></td>
-	<td>kleiner als</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>&lt;=</tt></td>
-	<td>kleiner oder gleich als</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>=</tt></td>
-	<td>gleich</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>&gt;=</tt></td>
-	<td>gr&ouml;&szlig;er oder gleich als</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>&gt;</tt></td>
-	<td>gr&ouml;&szlig;er als</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>&lt;&gt;</tt></td>
-	<td>ungleich</td>
-	<td>nein</td>
-	<td>nein</td>
-      </tr>
-      <tr>
-	<td><tt>#</tt></td>
-	<td>ungleich</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>+</tt></td>
-	<td>Addition</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>-</tt></td>
-	<td>Subtraktion</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>*</tt></td>
-	<td>Multiplikation</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-      <tr>
-	<td><tt>/</tt></td>
-	<td>Division</td>
-	<td>ja</td>
-	<td>ja</td>
-      </tr>
-    </table>
-  <br/>
-    Logische und Vergleichsoperatoren liefern als Ergebnis immer
-    0 oder 1 zur&uuml;ck.
-  <br/><br/>
+ <h3>1.2. Variablen</h3>
+  Es gibt einfache Variablen und Feldvariablen.
+  Der Variablennamen ist frei w&auml;hlbar.
+  Er muss mit einem Buchstaben beginnen und kann,
+  sofern er l&auml;nger als ein Zeichen ist,
+  ab der zweiten Stelle Buchstaben und Ziffern enthalten.
+  Gro&szlig;-/Kleinschreibung wird nicht unterschieden.
+  Der Variablenname darf kein reserviertes Schl&uuml;sselwort sein.
+ <br/><br/>
+  Feldvariablen m&uuml;ssen mit der
+  <a href="instructions.htm#dim">DIM</a>-Anweisung deklariert werden
+  und k&ouml;nnen eine oder zwei Dimensionen aufweisen.
+  Der Zugriff auf ein einzelnes Element erfolgt mit einem hinter dem
+  Variablennamen in runden Klammern stehenden Index bzw. Indexliste.
+ <br/><br/>
 
-  <h2>5. Grammatik</h2>
-    Folgende Grammatik beschreibt die Syntax der numerischen Ausdr&uuml;cke:
-  <br/><br/>
-    <i>Ausdruck:</i><br/>
-	&nbsp; <i>Logischer UND-Ausdruck</i><br/>
-	&nbsp; <i>Ausdruck</i>
-			&nbsp; <tt>OR</tt>
-			&nbsp; <i>Logischer UND-Ausdruck</i>
-  <br/><br/>
-    <i>Logischer UND-Ausdruck:</i><br/>
-	&nbsp; <i>Logischer NICHT-Ausdruck</i><br/>
-	&nbsp; <i>Logischer UND-Ausdruck</i>
-			&nbsp; <tt>AND</tt>
-			&nbsp; <i>Logischer NICHT-Ausdruck</i>
-  <br/><br/>
-    <i>Logischer NICHT-Ausdruck:</i><br/>
+ <h3>1.3. Funktionen</h3>
+  Eine Liste der Funktionen finden Sie <a href="functions.htm">hier</a>.
+  Funktionen, deren Name mit einem <tt>$</tt>-Zeichen endet,
+  sind String-Funktionen.
+  Diese liefern eine Zeichenkette zur&uuml;ck.
+ <br/><br/>
+
+ <h3><a name="operators">1.4. Operatoren mit einem Operanden</a></h3>
+  <table border=1>
+   <tr><th nowrap>Operator</th><th nowrap>Bedeutung</th></tr>
+   <tr>
+    <td valign="top"><tt>+</tt></td>
+    <td>positives Vorzeichen (Wert wird nicht ge&auml;ndert.)</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>-</tt></td>
+    <td>negatives Vorzeichen (mathematische Negation)</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>NOT</tt></td>
+    <td>
+     bitweise Negation,<br/>
+     Beispiel: <tt>A = NOT B</tt>
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
+
+ <h3><a name="operators">1.5. Operatoren mit zwei Operanden</a></h3>
+  <table border=1>
+   <tr><th nowrap>Operator</th><th nowrap>Bedeutung</th></tr>
+   <tr><td valign="top"><tt>AND</tt></td><td>bitweises UND</td></tr>
+   <tr><td valign="top"><tt>OR</tt></td><td>bitweises ODER</td></tr>
+   <tr>
+    <td valign="top"><tt>XOR</tt></td>
+    <td>bitweises Exklusiv-ODER</td>
+   </tr>
+   <tr><td valign="top"><tt>=</tt></td><td>Test auf Gleichheit</td></tr>
+   <tr>
+    <td valign="top"><tt>&lt;&gt;</tt></td>
+    <td>Test auf Ungleichheit</td>
+   </tr>
+   <tr><td valign="top"><tt>&lt;</tt></td><td>Test auf kleiner</td></tr>
+   <tr>
+    <td valign="top"><tt>&lt;=</tt></td>
+    <td>Test auf kleiner oder gleich</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>&gt;</tt></td>
+    <td>Test auf gr&ouml;&szlig;er</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>&gt;=</tt></td>
+    <td>Test auf gr&ouml;&szlig;er oder gleich</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>ADD</tt></td>
+    <td>Addition ohne &Uuml;berlaufpr&uuml;fung</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>SUB</tt></td>
+    <td>Subtraktion ohne &Uuml;berlaufpr&uuml;fung</td>
+   </tr>
+   <tr><td valign="top"><tt>+</tt></td><td>Addition</td></tr>
+   <tr><td valign="top"><tt>-</tt></td><td>Subtraktion</td></tr>
+   <tr><td valign="top"><tt>*</tt></td><td>Multiplikation</td></tr>
+   <tr><td valign="top"><tt>/</tt></td><td>Division</td></tr>
+   <tr>
+    <td valign="top"><tt>MOD</tt></td>
+    <td>Modulo (Rest einer Division)</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>SHL</tt></td>
+    <td>
+     links schieben ohne &Uuml;berlaufpr&uuml;fung,<br/>
+     Beispiel (B um zwei Stellen nach links schieben): <tt>B = B SHL 2</tt>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>SHR</tt></td>
+    <td>rechts schieben ohne &Uuml;berlaufpr&uuml;fung</td>
+   </tr>
+  </table>
+ <br/>
+  Vergleichsoperatoren liefern als Ergebnis entweder &nbsp;0
+  (Vergleich fehlgeschlagen, alle Bits zur&uuml;ckgesetzt)
+  oder&nbsp;-1 (Vergleich erfolgreich, alle Bits gesetzt).
+  Dadurch, dass immer alle Bits gesetzt oder zur&uuml;ckgesetzt werden,
+  k&ouml;nnen die bitweise wirkenden Operatoren AND, OR und NOT
+  auch als logische Operatoren zum Verkn&uuml;pfen von
+  Vergleichen verwendet werden.
+  Anhand des folgenden Beispiels soll das verdeutlicht werden:
+ <br/><br/>
+  <tt>
+   10 A$="ABC"<br/>
+   20 B$="XYZ"<br/>
+   30 C=1<br/>
+   40 D=2<br/>
+   50 PRINT (A$&lt;B$) AND (C&lt;D)
+  </tt>
+ <br/><br/>
+  In Zeile&nbsp;50 wird eine&nbsp;-1 ausgeben.
+  Und das kommt folgenderma&szlig;en:
+  Die Teilausdr&uuml;cke <tt>A$&lt;B$</tt> und
+  <tt>C&lt;D</tt> liefern jeweils den Wert&nbsp;-1,
+  d.h., es sind alle Bits gesetzt.
+  Die UND-Verkn&uuml;pfung (AND-Operator) zwischen
+  <em>alle Bits gesetzt</em> und <em>alle Bits gesetzt</em>
+  bleibt bei <em>alle Bits gesetzt</em>,
+  was den numerischen Wert&nbsp;-1 darstellt.
+ <br/><br/>
+  Die Operatoren <tt>ADD</tt> und <tt>SUB</tt> f&uuml;hren eine
+  Addition bzw. Subtraktion ohne &Uuml;berlaufpr&uuml;fung aus.
+  Das ist z.B. sinnvoll bei der Berechnung von Speicheradressen.
+  Folgendes Beispiel soll das verdeutlichen:
+ <br/><br/>
+  <tt>
+   10 A=&H7F00<br/>
+   20 N=0<br/>
+   30 FOR I=0 TO 999<br/>
+   40 IF PEEK(A+I)=0 THEN N=N+1<br/>
+   50 NEXT<br>
+   60 PRINT N
+  </tt>
+ <br/><br/>
+  Ab der Adresse 7F00h sollen in den folgenden 1000 Bytes die Anzahl
+  der Null-Bytes gez&auml;hlt werden.
+  Bei der Adresse 8000h bricht das Programm mit einem numerischen
+  &Uuml;berlauf ab, da der gr&ouml;&szlig;tm&ouml;gliche
+  vorzeichenbehaftete Wert von&nbsp;32767 (7FFFh) &uuml;berschritten wurde.
+  Mit dem ADD-Operator bricht das Programmm nicht ab:
+ <br/><br/>
+  <tt>
+   10 A=&H7F00<br/>
+   20 N=0<br/>
+   30 FOR I=0 TO 999<br/>
+   40 IF PEEK(A ADD I)=0 THEN N=N+1<br/>
+   50 NEXT<br>
+   60 PRINT N
+  </tt>
+ <br/><br/>
+
+ <h3>1.6. Vorrangregeln</h3>
+  Die verschiedenen Operatoren haben eine unterschiedliche Bindungskraft.
+  Operatoren mit einer h&ouml;heren Bindungskraft werden vor den
+  Operatoren mit einer niedrigeren Bindungskraft ausgef&uuml;hrt.
+  Innerhalb der gleichen Bindungskraft erfolgt die Ausf&uuml;hrung
+  von links nach rechts.
+  Die Tabelle zeigt die Rangfolge der einzlnen Operatoren.
+  Je weiter oben ein Operator steht, desto h&ouml;her ist die Bindungskraft.
+ <br/><br/>
+  <table border="1">
+   <tr><th>Rang</th><th>Operator</th><th>Bemerkung</th></tr>
+   <tr>
+    <td valign="top">1</td>
+    <td valign="top">(...)</td>
+    <td valign="top">in Klammern eingeschlossener Ausdruck</td>
+   </tr>
+   <tr>
+    <td valign="top">2</td>
+    <td valign="top">
+     *<br/>
+     /
+    </td>
+    <td valign="top">Multiplikation und Division</td>
+   </tr>
+   <tr>
+    <td valign="top">3</td>
+    <td valign="top">
+     +<br/>
+     -<br/>
+     ADD<br/>
+     SUB
+    </td>
+    <td valign="top">Addition und Subtraktion</td>
+   </tr>
+   <tr>
+    <td valign="top">4</td>
+    <td valign="top">
+     SHL<br/>
+     SHR
+    </td>
+    <td valign="top">Schiebeoperationen</td>
+   </tr>
+   <tr>
+    <td valign="top">5</td>
+    <td valign="top">
+     &lt;<br/>
+     &lt;=<br/>
+     &gt;<br/>
+     &gt;=<br/>
+     =<br/>
+     &lt;&gt;
+    </td>
+    <td valign="top">Vergleiche</td>
+   </tr>
+   <tr>
+    <td valign="top">6</td>
+    <td valign="top">NOT</td>
+    <td valign="top">bitweise Negation</td>
+   </tr>
+   <tr>
+    <td valign="top">7</td>
+    <td valign="top">
+     AND<br/>
+     OR<br/>
+     XOR
+    </td>
+    <td valign="top">bitweise bin&auml;re Operationen</td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3>2. String-Ausdr&uuml;cke</h3>
+  String-Ausdr&uuml;cke sind entweder ein String-Literal
+  (Zeichenkettenkonstante), eine String-Variable oder der Aufruf
+  einer String-Funktion.
+  Das Zusammenketten von String-Ausdr&uuml;cken mit dem Plus-Zeichen
+  ist nur bei der Zuweisung einer String-Variable
+  (<a href="instructions.htm#let">LET</a>-Anweisung) und
+  bei den Anweisungen <a href="instructions.htm#label">LABEL</a>
+  und <a href="instructions.htm#print">PRINT</a> erlaubt.
+ <br/><br/>
+  Lesen Sie bitte die Hinweise zur
+  <a href="strings.htm">String-Verarbeitung</a>.
+ <br/><br/>
+
+ <h3>3. Grammatik</h3>
+  Folgende Grammatik beschreibt die Syntax der Ausdr&uuml;cke:
+ <br/><br/>
+  <i>Ausdruck:</i><br/>
+	&nbsp; <i>Negationsausdruck</i><br/>
+	&nbsp; <i>Ausdruck</i> &nbsp; <tt>AND</tt>
+		&nbsp; <i>Negationsausdruck</i><br/>
+	&nbsp; <i>Ausdruck</i> &nbsp; <tt>OR</tt>
+		&nbsp; <i>Negationsausdruck</i><br/>
+	&nbsp; <i>Ausdruck</i> &nbsp; <tt>XOR</tt>
+		&nbsp; <i>Negationsausdruck</i>
+ <br/><br/>
+  <i>Negationsausdruck:</i><br/>
 	&nbsp; <i>Vergleichsausdruck</i><br/>
 	&nbsp; <tt>NOT</tt> &nbsp; <i>Vergleichsausdruck</i>
-  <br/><br/>
-    <i>Vergleichsausdruck:</i><br/>
-	&nbsp; <i>Arithmetischer Ausdruck</i><br/>
-	&nbsp; <i>Arithmetischer Ausdruck</i>
-			&nbsp; <i>Vergleichsoperator</i>
-			&nbsp; <i>Arithmetischer Ausdruck</i>
-  <br/><br/>
-    <i>Vergleichsoperator:</i><br/>
+ <br/><br/>
+  <i>Vergleichsausdruck:</i><br/>
+	&nbsp; <i>Verschiebeausdruck</i><br/>
+	&nbsp; <i>Vergleichsausdruck</i>
+		&nbsp; <i>Vergleichsoperator</i>
+		&nbsp; <i>Verschiebeausdruck</i><br/>
+	&nbsp; <i>Einfacher_String-Ausdruck</i>
+		&nbsp; <i>Vergleichsoperator</i>
+		&nbsp; <i>Einfacher_String-Ausdruck</i>
+ <br/><br/>
+  <i>Vergleichsoperator:</i><br/>
 	&nbsp; <tt>&lt;</tt><br/>
 	&nbsp; <tt>&lt;=</tt><br/>
 	&nbsp; <tt>=</tt><br/>
 	&nbsp; <tt>=&gt;</tt><br/>
 	&nbsp; <tt>&gt;</tt><br/>
-	&nbsp; <tt>&lt;&gt;</tt><br/>
-	&nbsp; <tt>#</tt>
-  <br/><br/>
-    <i>Arithmetischer Ausdruck:</i><br/>
+	&nbsp; <tt>&lt;&gt;</tt>
+ <br/><br/>
+  <i>Verschiebeausdruck:</i><br/>
 	&nbsp; <i>Additionsausdruck</i><br/>
-	&nbsp; <i>Vorzeichen</i> &nbsp; <i>Additionsausdruck</i>
-  <br/><br/>
-    <i>Vorzeichen:</i><br/>
-	&nbsp; <tt>+</tt><br/>
-	&nbsp; <tt>-</tt>
-  <br/><br/>
-    <i>Additionsausdruck:</i><br/>
+	&nbsp; <i>Verschiebeausdruck</i>
+		&nbsp; <i>Verschiebeoperator</i>
+		&nbsp; <i>Additionssausdruck</i>
+ <br/><br/>
+  <i>Verschiebeoperator:</i><br/>
+	&nbsp; <tt>SHL</tt><br/>
+	&nbsp; <tt>SHR</tt>
+ <br/><br/>
+  <i>Additionsausdruck:</i><br/>
 	&nbsp; <i>Multiplikationsausdruck</i><br/>
 	&nbsp; <i>Additionsausdruck</i>
-			&nbsp; <i>Additionsoperator</i>
-			&nbsp; <i>Multiplikationsausdruck</i>
-  <br/><br/>
-    <i>Additionsoperator:</i><br/>
+		&nbsp; <i>Additionsoperator</i>
+		&nbsp; <i>Multiplikationsausdruck</i>
+ <br/><br/>
+  <i>Additionsoperator:</i><br/>
+	&nbsp; <tt>ADD</tt><br/>
+	&nbsp; <tt>SUB</tt><br/>
 	&nbsp; <tt>+</tt><br/>
 	&nbsp; <tt>-</tt>
-  <br/><br/>
-    <i>Multiplikationsausdruck:</i><br/>
-	&nbsp; <i>Prim&auml;rausdruck</i><br/>
+ <br/><br/>
+  <i>Multiplikationsausdruck:</i><br/>
+	&nbsp; <i>Un&auml;rer_Ausdruck</i><br/>
 	&nbsp; <i>Multiplikationsausdruck</i>
-			&nbsp; <i>Multiplikationsoperator</i>
-			&nbsp; <i>Prim&auml;rausdruck</i>
-  <br/><br/>
-    <i>Multiplikationsoperator:</i><br/>
+		&nbsp; <i>Multiplikationsoperator</i>
+		&nbsp; <i>Un&auml;rer_Ausdruck</i>
+ <br/><br/>
+  <i>Multiplikationsoperator:</i><br/>
 	&nbsp; <tt>*</tt><br/>
-	&nbsp; <tt>/</tt>
-  <br/><br/>
-    <i>Prim&auml;rausdruck:</i><br/>
+	&nbsp; <tt>/</tt><br/>
+	&nbsp; <tt>MOD</tt>
+ <br/><br/>
+  <i>Un&auml;rer_Ausdruck:</i><br/>
+	&nbsp; <i>Prim&auml;rausdruck</i><br/>
+	&nbsp; <i>Vorzeichen</i> &nbsp; <i>Prim&auml;rausdruck</i>
+ <br/><br/>
+  <i>Vorzeichen:</i><br/>
+	&nbsp; <tt>+</tt><br/>
+	&nbsp; <tt>-</tt>
+ <br/><br/>
+  <i>Prim&auml;rausdruck:</i><br/>
 	&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i> &nbsp; <tt>)</tt><br/>
 	&nbsp; <i>Zahlenliteral</i><br/>
 	&nbsp; <i>Zeichenliteral</i><br/>
-	&nbsp; <i>Einfache Variable</i><br/>
-	&nbsp; <i>Array-Variable</i><br/>
-	&nbsp; <i>Funktionsaufruf</i>
-  <br/><br/>
-    <i>Zahlenliteral:</i><br/>
-	&nbsp; <i>Folge von Ziffern 0 bis 9</i><br/>
-	&nbsp; <tt>&amp;B</tt> <i>Folge von Ziffern 0 oder 1</i><br/>
-	&nbsp; <tt>&amp;H</tt> <i>Folge von Hexadezimalziffern</i>
-  <br/><br/>
-    <i>Zeichenliteral:</i><br/>
+	&nbsp; <i>Einfache_numerische_Variable</i><br/>
+	&nbsp; <i>Numerische_Feldvariable</i><br/>
+	&nbsp; <i>Numerischer_Funktionsaufruf</i>
+ <br/><br/>
+  <i>Zahlenliteral:</i><br/>
+	&nbsp; <i>Folge_von_Ziffern_0...9</i><br/>
+	&nbsp; <tt>&amp;B</tt> &nbsp; <i>Folge_von_Ziffern_0_oder_1</i><br/>
+	&nbsp; <tt>&amp;H</tt> &nbsp; <i>Folge_von_Hexadezimalziffern</i>
+ <br/><br/>
+  <i>Zeichenliteral:</i><br/>
 	&nbsp; <tt>'</tt> &nbsp; <i>8-Bit-Zeichen</i> &nbsp; <tt>'</tt>
-  <br/><br/>
-    <i>Einfache Variable:</i><br/>
-	&nbsp; <i>Buchstabe A bis Z</i>
-  <br/><br/>
-    <i>Array-Variable:</i><br/>
-	&nbsp; <tt>@</tt> &nbsp; <tt>(</tt>
-			&nbsp; <i>Array-Index</i> &nbsp; <tt>)</tt>
-  <br/><br/>
-    <i>Array-Index:</i><br/>
-	&nbsp; <i>Ausdruck</i>
-  <br/><br/>
-    <i>Funktionsaufruf:</i><br/>
-	&nbsp; <i>Funktionsname</i><br/>
-	&nbsp; <i>Funktionsname</i> &nbsp; <tt>(</tt>
-			&nbsp; <i>Argumentliste</i> &nbsp; <tt>)</tt>
-  <br/><br/>
-    <i>Argumentliste:</i><br/>
+ <br/><br/>
+  <i>Einfache_numerische_Variable:</i><br/>
+	&nbsp; <i>numerischer_Bezeichner</i>
+ <br/><br/>
+  <i>Numerische_Feldvariable:</i><br/>
+	&nbsp; <i>numerischer_Bezeichner</i>
+		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
+		&nbsp; <tt>)</tt><br/>
+	&nbsp; <i>numerischer_Bezeichner</i>
+		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
+		&nbsp; <tt>,</tt> &nbsp; <i>Ausdruck</i>
+		&nbsp; <tt>)</tt>
+ <br/><br/>
+  <i>Numerischer_Funktionsaufruf:</i><br/>
+	&nbsp; <i>numerischer_Bezeichner</i><br/>
+	&nbsp; <i>numerischer_Bezeichner</i>
+		&nbsp; <tt>(</tt> &nbsp; <i>Argumentliste</i>
+		&nbsp; <tt>)</tt>
+ <br/><br/>
+  <i>numerischer_Bezeichner:</i><br/>
+	&nbsp; <i>Buchstabe_A...Z</i><br/>
+	&nbsp; <i>Buchstabe_A...Z</i>
+		&nbsp; <i>Folge_von_Buchstaben_A...Z_und_Zifferrn_0...9</i>
+ <br/><br/>
+  <i>Argumentliste:</i><br/>
 	&nbsp; <i>Argument</i><br/>
-	&nbsp; <i>Argumentliste</i> &nbsp; <tt>,</tt> &nbsp; <i>Argument</i>
+	&nbsp; <i>Argumentliste</i>
+	&nbsp; <tt>,</tt> &nbsp; <i>Argument</i>
+ <br/><br/>
+  <i>Argument:</i><br/>
+	&nbsp; <i>Ausdruck</i><br/>
+	&nbsp; <i>Einfacher_String-Ausdruck</i>
+ <br/><br/>
+  <i>Einfacher_String-Ausdruck:</i><br/>
+	&nbsp; <i>String-Literal</i><br/>
+	&nbsp; <i>String-Variable</i><br/>
+	&nbsp; <i>String-Feldvariable</i><br/>
+	&nbsp; <i>String-Funktion</i>
+ <br/><br/>
+  <i>String-Literal:</i><br/>
+	&nbsp; <tt>&quot;</tt>
+	&nbsp; <i>Folge_von_8-Bit-Zeichen</i>
+	&nbsp; <tt>&quot;</tt>
+ <br/><br/>
+  <i>String-Variable:</i><br/>
+	&nbsp; <i>String-Bezeichner</i> &nbsp; <tt>$</tt>
+ <br/><br/>
+  <i>String-Feldvariable:</i><br/>
+	&nbsp; <i>String-Bezeichner</i> &nbsp; <tt>$</tt>
+		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
+		&nbsp; <tt>)</tt><br/>
+	&nbsp; <i>String-Bezeichner</i> &nbsp; <tt>$</tt>
+		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
+		&nbsp; <tt>,</tt> &nbsp; <i>Ausdruck</i> &nbsp; <tt>)</tt>
+ <br/><br/>
+  <i>String-Funktion:</i><br/>
+	&nbsp; <i>String-Bezeichner</i><br/>
+	&nbsp; <i>String-Bezeichner</i> <tt>(</tt>
+		&nbsp; <i>Argumentliste</i> &nbsp; <tt>)</tt>
+ <br/><br/>
+  <i>String-Bezeichner:</i><br/>
+	&nbsp; <i>Buchstabe&nbsp;A...Z</i> &nbsp; <tt>$</tt><br/>
+	&nbsp; <i>Buchstabe&nbsp;A...Z</i>
+		&nbsp; <i>Folge_von_Buchstaben_A...Z_und_Zifferrn_0...9</i>
+		&nbsp; <tt>$</tt>
+ <br/>
 </body>
 </html>
 

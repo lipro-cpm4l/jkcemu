@@ -42,7 +42,7 @@ public class BasicDlg extends JDialog implements
    */
   protected JButton createImageButton( String imgName, String text )
   {
-    JButton btn = EmuUtil.createImageButton( imgName, text );
+    JButton btn = EmuUtil.createImageButton( this, imgName, text );
     btn.addActionListener( this );
     return btn;
   }

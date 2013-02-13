@@ -1,0 +1,157 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Benutzerdefinierte Funktionen und Prozeduren</h2>
+  Mit benutzerdefinierten Funktionen und Prozeduren lassen sich
+  Programme wesentlich besser strukturieren als mit den klassischen
+  BASIC-Anweisungen <em>GOSUB</em> und <em>RETURN</em>.
+  Benutzerdefinierte Funktionen liefern einen Wert zur&uuml;ck
+  und werden genauso aufgerufen wie die BASIC-Funktionen.
+  Prozeduren dagegen liefern keinen Wert zur&uuml;ck
+  und werden deshalb wie BASIC-Anweisungen behandelt.
+ <br/><br/>
+
+ <h3>Struktur des BASIC-Programms</h3>
+  Benutzerdefinierte Funktionen und Prozeduren werden nach
+  dem Haupprogramm implementiert, d.h.,
+  die erste <a href="instructions.htm#function">FUNCTION</a>-
+  bzw. <a href="instructions.htm#sub">SUB</a>-Anweisung
+  beendet das Hauptprogramm.
+  Ab hier d&uuml;rfen au&szlig;er Kommentare nur noch Implementierungen
+  von benutzerdefinierten Funktionen und Prozeduren folgen.
+ <br/><br/>
+  Mit dem Begriff <em>Hauptprogramm</em> ist der erste Teil
+  des BASIC-Programms gemeint, bei dem die Programmausf&uuml;hrung beginnt.
+ <br/><br/>
+
+ <h3>Aufruf</h3>
+  Benutzerdefinierte Funktionen und Prozeduren werden anhand ihres
+  Namens aufgerufen.
+  Dieser Name darf kein reserviertes Schl&uuml;sselwort sein.
+  Damit der Compiler bei der Verwendung eines Funktions-
+  oder Prozedurnamens diesen nicht als Variable interpretiert,
+  muss eine benutzerdefinierte Funktion oder Prozedur bei ihrem Aufruf
+  dem BASIC-Compiler bereits bekannt sein.
+  Das ist der Fall, wenn sie weiter oben im BASIC-Programm
+  implementiert wurde.
+  Ist das nicht m&ouml;glich (z.B. bei Aufruf im Hauptprogramm
+  oder bei Rekursion), muss die Funktion bzw. Prozedur dem Compiler
+  vorher mit der <a href="instructions.htm#declare">DECARE</a>-Anweisung
+  bekanntgemacht werden.
+ <br/><br/>
+
+ <h3>Lokale Variablen</h3>
+  Eine Besonderheit von benutzerdefinierten Funktionen und Prozeduren ist,
+  dass sie lokale Variablen deklarieren und verwenden k&ouml;nnen
+  (siehe Anweisung <a href="instructions.htm#local">LOCAL</a>).
+  Diese Variablen werden bei jedem Aufruf der Funktion bzw. Prozedur
+  neu angelegt und sind nur innerhalb dieser Funktion bzw. Prozedur sichtbar.
+  Das gilt auch f&uuml;r Rekursionen, d.h., wenn sich eine Funktion
+  oder Prozedur selbst aufruft, hat sie in jeder Aufrufebene separate
+  lokale Variablen.
+  Allerdings muss in dem Fall der Stack-Bereich ausreichend gro&szlig;
+  gew&auml;hlt werden, da die lokalen Variablen auf dem Stack angelegt werden.
+ <br/><br/>
+  Innerhalb einer benutzerdefinierten Funktion oder Prozedur
+  m&uuml;ssen die lokalen Variablen zuerst angelegt werden,
+  d.h., alle <a href="instructions.htm#local">LOCAL</a>-Anweisungen
+  m&uuml;ssen unmittelbar hinter der
+  <a href="instructions.htm#function">FUNCTION</a>- bzw.
+  <a href="instructions.htm#sub">SUB</a>-Anweisung folgen.
+  Nur Kommentare sind dazwischen noch erlaubt.
+ <br/><br/>
+  Der JKCEMU-BASIC-Compiler unterst&uuml;tzt keine lokalen Feldvariablen,
+  d.h., bei <a href="instructions.htm#local">LOCAL</a> k&ouml;nnen
+  nur einfache Variablen angegeben werden.
+ <br/><br/>
+  Innerhalb einer benutzerdefinierten Funktion oder Prozedur
+  sind sowohl die lokalen als auch die globalen,
+  d.h. die im Hauptprogramm verwendeten, Variablen sichtbar.
+  Hat allerdings eine lokale Variable den gleichen Namen wie eine globale,
+  wird die globale verdeckt und ist somit nicht mehr sichtbar.
+ <br/><br/>
+
+ <h3>Argumente</h3>
+  Benutzerdefinierte Funktionen und Prozeduren k&ouml;nnen
+  Argumente haben.
+  Diese werden bei der Deklaration und Implementierung hinter dem
+  Funktions- bzw. Prozedurnamen in Form einer in runden Klammern
+  und mit Komma getrennten Liste von Argumentnamen angegeben.
+  Aus den Argumentnamen leitet sich auch der Datentyp ab
+  (Integer oder String, je nachdem, ob der Argumentname
+  auf ein $-Zeichen endet).
+ <br/><br/>
+  Innerhalb einer Funktion bzw. Prozedur sind die Argumente
+  als lokale Variablen implementiert,
+  d.h., ihnen kann auch ein Wert zugewiesen werden.
+  Der einzige Unterschied zwischen diesen &quot;Argumentvariablen&quot;
+  und mit <a href="instructions.htm#local">LOCAL</a>
+  deklarierten Variablen besteht darin,
+  dass Argumentvariablen beim Aufruf der Funktion bzw. Prozedur
+  von &quot;au&szlig;en&quot; initialisiert werden.
+ <br/><br/>
+
+ <h3>R&uuml;ckgabewert</h3>
+  Benutzerdefinierte Funktionen liefern einen Wert zur&uuml;ck.
+  Der Typ des R&uuml;ckgabewertes h&auml;ngt vom Funktionsnamen ab.
+  Endet dieser mit einem $-Zeichen,
+  wird eine Zeichenkette zur&uuml;ckgegeben, anderenfalls ein Integer-Wert.
+  Der gew&uuml;nschte R&uuml;ckgabewert ist syntaktisch
+  einer Variable zuzuweisen, die den gleichen Namen hat wie die Funktion.
+  Mehrfache Zuweisungen sind m&ouml;glich.
+  In dem Fall ist die letzte Zuweisung relevant.
+  Ein R&uuml;cklesen des zugewiesenen R&uuml;ckgabewerts ist aber
+  in der Funktion nicht m&ouml;glich.
+ <br/><br/>
+
+ <h3>Programmbeispiel</h3>
+  Das Beispiel zeigt die Programmierung einer benutzerdefinierten
+  Funktion mit lokalen Variablen.
+  Als weitere Besonderheit wird bei den DATA- und RESTORE-Anweisungen
+  eine Marke verwendet.
+ <br/><br/>
+  <tt>
+   'Eingabe einer Zahl und Ausgabe als roemische Zahl<br/>
+   'Hauptprogramm<br/>
+   <br/>
+   DECLARE FUNCTION roemische_zahl$(z)<br/>
+   <br/>
+   DO<br/>
+   &nbsp; INPUT "Zahl: ";Z<br/>
+   &nbsp; IF Z&gt;0 THEN<br/>
+   &nbsp; &nbsp; PRINT "Roemische Zahl: ";roemische_zahl$(Z)<br/>
+   &nbsp; ELSEIF Z=0 THEN<br/>
+   &nbsp; &nbsp; PRINT "Ende"<br/>
+   &nbsp; &nbsp; EXIT<br/>
+   &nbsp; ELSE<br/>
+   &nbsp; &nbsp; PRINT "Keine negative Zahl!"<br/>
+   &nbsp; ENDIF<br/>
+   LOOP<br/>
+   END<br/>
+   <br/>
+   'Zuordnung Dezimalzahl zu roemischer Zahl<br/>
+   roem_map:<br/>
+   &nbsp; DATA 1000,"M",900,"CM",500,"D",400,"CD"<br/>
+   &nbsp; DATA 100,"C",90,"XC",50,"L",40,"XL"<br/>
+   &nbsp; DATA 10,"X",9,"IX",5,"V",4,"IV",1,"I"<br/>
+   <br/>
+   'Implementierung der benutzerdefinierten Funktion<br/>
+   FUNCTION roemische_zahl$(z)<br/>
+   &nbsp; LOCAL n,t$,rv$<br/>
+   &nbsp; rv$=""<br/>
+   &nbsp; RESTORE roem_map<br/>
+   &nbsp; WHILE z&gt;0<br/>
+   &nbsp; &nbsp; READ n,t$<br/>
+   &nbsp; &nbsp; WHILE z&gt;=n<br/>
+   &nbsp; &nbsp; &nbsp; z=z-n<br/>
+   &nbsp; &nbsp; &nbsp; rv$=rv$+t$<br/>
+   &nbsp; &nbsp; WEND<br/>
+   &nbsp; WEND<br/>
+   &nbsp; roemische_zahl$=rv$:'Rueckgabewert zuweisen<br/>
+   END FUNCTION
+  </tt>
+ <br/>
+</body>
+</html>
+

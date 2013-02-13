@@ -12,7 +12,6 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.LC80;
 
@@ -53,8 +52,8 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
     super( 25 );
     this.screenFrm = screenFrm;
     this.lc80      = lc80;
-    this.imgBgLC80 = Main.getImage( "/images/keyboard/lc80/bg_lc80.png" );
-    this.imgBgSC80 = Main.getImage( "/images/keyboard/lc80/bg_sc80.png" );
+    this.imgBgLC80 = getImage( "/images/keyboard/lc80/bg_lc80.png" );
+    this.imgBgSC80 = getImage( "/images/keyboard/lc80/bg_sc80.png" );
     this.kbMatrix  = new int[ 6 ];
 
     this.colorKeySelected = new Color( 100, 100, 100 );
@@ -100,13 +99,6 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
   public boolean accepts( EmuSys emuSys )
   {
     return emuSys instanceof LC80;
-  }
-
-
-  @Override
-  public String getKeyboardName()
-  {
-    return "LC80-Tastatur";
   }
 
 

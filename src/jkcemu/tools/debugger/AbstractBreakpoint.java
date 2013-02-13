@@ -1,9 +1,9 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Basisklasse fuer Haltepunkte
+ * Basisklasse fuer einen Haltepunkt
  */
 
 package jkcemu.tools.debugger;
@@ -17,81 +17,38 @@ public abstract class AbstractBreakpoint
 				Comparable<AbstractBreakpoint>,
 				Z80Breakpoint
 {
-  public static enum AccessMode { READ, WRITE, READ_WRITE };
-
   private static final String DEFAULT_TEXT = "<unbekannt>";
 
-  private AccessMode accessMode;
-  private String     text;
-  private boolean    enabled;
-
-
-  protected AbstractBreakpoint( AccessMode accessMode )
-  {
-    this.accessMode = accessMode;
-    this.text       = DEFAULT_TEXT;
-    this.enabled    = true;
-  }
+  private String  text;
+  private boolean enabled;
 
 
   protected AbstractBreakpoint()
   {
-    this( null );
+    this.text    = DEFAULT_TEXT;
+    this.enabled = true;
   }
 
 
-  public void completeAccessMode( AccessMode accessMode )
+  protected static boolean checkValues( int v1, String cond, int v2 )
   {
-    if( this.accessMode != null ) {
-      if( accessMode != null ) {
-	if( (accessMode == AccessMode.READ_WRITE)
-	    || ((accessMode == AccessMode.READ)
-			&& (this.accessMode == AccessMode.WRITE))
-	    || ((accessMode == AccessMode.WRITE)
-			&& (this.accessMode == AccessMode.READ)) )
-	{
-	  this.accessMode = AccessMode.READ_WRITE;
-	}
+    boolean rv = false;
+    if( cond != null ) {
+      if( cond.equals( "<" ) ) {
+	rv = (v1 < v2);
+      } else if( cond.equals( "<=" ) ) {
+	rv = (v1 <= v2);
+      } else if( cond.equals( "<>" ) ) {
+	rv = (v1 != v2);
+      } else if( cond.equals( ">=" ) ) {
+	rv = (v1 >= v2);
+      } else if( cond.equals( ">" ) ) {
+	rv = (v1 > v2);
+      } else {
+	rv = (v1 == v2);
       }
     }
-  }
-
-
-  protected void createAndSetText(
-				int     begAddr,
-				int     endAddr,
-				boolean is8Bit,
-				int     value,
-				int     mask )
-  {
-    StringBuilder buf = new StringBuilder( 20 );
-    buf.append( String.format( is8Bit ? "%02X" : "%04X", begAddr ) );
-    if( endAddr >= 0 ) {
-      buf.append( String.format( is8Bit ? "-%02X" : "-%04X", endAddr ) );
-    }
-    if( value >= 0 ) {
-      buf.append( String.format( ":%02X/%02X", value, mask ) );
-    }
-    if( this.accessMode != null ) {
-      switch( this.accessMode ) {
-	case READ:
-	  buf.append( " R" );
-	  break;
-	case WRITE:
-	  buf.append( " W" );
-	  break;
-	case READ_WRITE:
-	  buf.append( " RW" );
-	  break;
-      }
-    }
-    setText( buf.toString() );
-  }
-
-
-  public AccessMode getAccessMode()
-  {
-    return this.accessMode;
+    return rv;
   }
 
 

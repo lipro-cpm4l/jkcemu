@@ -479,10 +479,11 @@
  <br/><br/>
 
  <h3><a name="d004memerror">3.4. Vermeintlicher D004-Speicherfehler</a></h3>
-  In den D004-ROM-Versionen&nbsp;3.2 und&nbsp;3.3 (Standard bei KC85/5)
-  ist ein Speichertest enthalten,
-  den Sie mit <tt>JUMP&nbsp;FC&nbsp;FF</tt> aufrufen k&ouml;nnen.
-  Es kann vorkommen, dass dieser Speichertest in JKCEMU einen Fehler meldet.
+  In den neueren D004-ROM-Versionen ist ein Speichertest enthalten,
+  so auch in der Version&nbsp;3.3, die in JKCEMU integriert ist.
+  Diesen Test k&ouml;nnen Sie mit <tt>JUMP&nbsp;FC&nbsp;FF</tt> starten.
+  Dabei kann es vorkommen,
+  dass der Speichertest in JKCEMU einen Fehler meldet.
   Die Ursache liegt dabei nicht etwa in einer fehlerhaften Speicherzelle,
   sondern in einem Timeout, der bedingt durch die Art und Weise
   der Emulation auftreten kann.

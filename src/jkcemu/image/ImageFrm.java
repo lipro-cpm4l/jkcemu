@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,6 +30,8 @@ public class ImageFrm extends AbstractImageFrm implements
 {
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
 
+  private static ImageFrm instance = null;
+
   private JButton   btnOpen;
   private JButton   btnSaveAs;
   private JButton   btnPrint;
@@ -52,332 +54,36 @@ public class ImageFrm extends AbstractImageFrm implements
   private int       lastRoundBottomPixels;
 
 
-  public ImageFrm( ScreenFrm screenFrm )
+  public static void open()
   {
-    super( screenFrm );
-    this.lastRoundTopPixels    = 0;
-    this.lastRoundBottomPixels = 0;
-    setTitleInternal( null );
-    Main.updIcon( this );
-
-
-    // Menu
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-
-    // Menu Datei
-    this.mnuOpen = createJMenuItem( "\u00D6ffnen..." );
-    mnuFile.add( this.mnuOpen );
-
-    this.mnuSaveAs = createJMenuItem( "Speichern unter..." );
-    this.mnuSaveAs.setEnabled( false );
-    mnuFile.add( this.mnuSaveAs );
-    mnuFile.addSeparator();
-
-    this.mnuPrint = createJMenuItem( "Drucken..." );
-    this.mnuPrint.setEnabled( false );
-    mnuFile.add( this.mnuPrint );
-    mnuFile.addSeparator();
-
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
-    mnuFile.add( this.mnuClose );
-
-
-    // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-
-    this.mnuImgCopy = createJMenuItem( "Bild kopieren" );
-    this.mnuImgCopy.setEnabled( false );
-    mnuEdit.add( this.mnuImgCopy );
-
-    this.mnuImgPaste = createJMenuItem( "Bild einf\u00FCgen" );
-    mnuEdit.add( this.mnuImgPaste );
-    mnuEdit.addSeparator();
-
-    this.mnuRoundCorners = createJMenuItem( "Ecken abrunden..." );
-    this.mnuRoundCorners.setEnabled( false );
-    mnuEdit.add( this.mnuRoundCorners );
-
-
-    // Menu Einstellungen
-    JMenu mnuSettings = new JMenu( "Einstellungen" );
-    mnuSettings.setMnemonic( KeyEvent.VK_E );
-
-    this.mnuAutoResize = new JCheckBoxMenuItem(
-				"Fenstergr\u00F6\u00DFe anpassen",
-				false );
-    mnuSettings.add( this.mnuAutoResize );
-    mnuSettings.addSeparator();
-
-    JMenu mnuBgColor = new JMenu( "Hintergrundfarbe" );
-    mnuSettings.add( mnuBgColor );
-
-    ButtonGroup grpBgColor = new ButtonGroup();
-
-    this.mnuBgSystem = new JRadioButtonMenuItem( "System", true );
-    this.mnuBgSystem.addActionListener( this );
-    grpBgColor.add( this.mnuBgSystem );
-    mnuBgColor.add( this.mnuBgSystem );
-    mnuBgColor.addSeparator();
-
-    this.mnuBgBlack = new JRadioButtonMenuItem( "schwarz", false );
-    this.mnuBgBlack.addActionListener( this );
-    grpBgColor.add( this.mnuBgBlack );
-    mnuBgColor.add( this.mnuBgBlack );
-
-    this.mnuBgWhite = new JRadioButtonMenuItem( "wei\u00DF", false );
-    this.mnuBgWhite.addActionListener( this );
-    grpBgColor.add( this.mnuBgWhite );
-    mnuBgColor.add( this.mnuBgWhite );
-
-
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
-    mnuHelp.add( this.mnuHelpContent );
-
-
-    // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuEdit );
-    mnuBar.add( mnuSettings );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
-
-
-    // Werkzeugleiste
-    JPanel panelToolBar = new JPanel(
-		new FlowLayout( FlowLayout.LEFT, 0, 0 ) );
-    add( panelToolBar, BorderLayout.NORTH );
-
-    JToolBar toolBar = new JToolBar();
-    toolBar.setFloatable( false );
-    toolBar.setBorderPainted( false );
-    toolBar.setOrientation( JToolBar.HORIZONTAL );
-    toolBar.setRollover( true );
-    panelToolBar.add( toolBar );
-
-    this.btnOpen = createImageButton( "/images/file/open.png", "\u00D6ffnen" );
-    toolBar.add( this.btnOpen );
-
-    this.btnSaveAs = createImageButton(
-			"/images/file/save_as.png", "Speichern unter" );
-    this.btnSaveAs.setEnabled( false );
-    toolBar.add( this.btnSaveAs );
-
-    this.btnPrint = createImageButton( "/images/file/print.png", "Drucken" );
-    this.btnPrint.setEnabled( false );
-    toolBar.add( this.btnPrint );
-    toolBar.addSeparator();
-
-    this.btnRotateLeft = createImageButton(
-				"/images/edit/rotate_left.png",
-				"Nach links drehen" );
-    this.btnRotateLeft.setEnabled( false );
-    toolBar.add( this.btnRotateLeft );
-
-    this.btnRotateRight = createImageButton(
-				"/images/edit/rotate_right.png",
-				"Nach rechts drehen" );
-    this.btnRotateRight.setEnabled( false );
-    toolBar.add( this.btnRotateRight );
-    toolBar.addSeparator();
-
-    toolBar.add( createScaleComboBox(
-			100, 25, 33, 50, 75, 100, 200, 300, 400 ) );
-
-
-    // Statuszeile
-    this.labelStatus = new JLabel( DEFAULT_STATUS_TEXT );
-    JPanel panelStatus = new JPanel(
-		new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
-    panelStatus.add( this.labelStatus );
-    add( panelStatus, BorderLayout.SOUTH );
-
-
-    // Drop-Ziele
-    (new DropTarget( this.imgFld, this )).setActive( true );
-    (new DropTarget( this.scrollPane, this )).setActive( true );
-
-
-    // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
-      pack();
-      setScreenCentered();
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new ImageFrm();
     }
-    setResizable( true );
-
-
-    // sonstiges
-    this.imgFld.addMouseMotionListener( this );
-    if( this.clipboard != null ) {
-      this.clipboard.addFlavorListener( this );
-    }
+    instance.toFront();
+    instance.setVisible( true );
   }
 
 
-  public void showImage( Image image, String title )
+  public static void open( Image image, String title )
   {
+    open();
     if( image != null ) {
-
-      /*
-       * Bild moeglichst in ein BufferedImage umwandeln,
-       * Sollte das nicht moeglich sein, dann eben als Image behalten.
-       * In dem Fall ist dann die Anzeige der Farbwerte
-       * in der Statuszeile nicht moeglich.
-       */
-      if( !(image instanceof BufferedImage) ) {
-	BufferedImage bImg = ImgUtil.createBufferedImage( this, image );
-	if( bImg != null ) {
-	  if( bImg != image ) {
-	    image.flush();
-	  }
-	  image = bImg;
-	}
-      }
-
-      /*
-       * Wenn das Fenster noch unsichtbar oder
-       * die Option "Fenstergroesse anpassen" eingeschaltet ist,
-       * soll das Bild je nach Groesse entweder unskaliert oder
-       * auf 80% der Bildschirmgroesse (abzueglich Fensterraender
-       * und Menuleiste) skaliert angezeigt werden.
-       *
-       * Ist die Option "Fenstergroesse anpassen" ausgeschaltet,
-       * soll sich das Bild nur im aktuellen Fensterbereich ausbreiten.
-       */
-      int     maxW      = 0;
-      int     maxH      = 0;
-      boolean autoScale = true;
-      if( isVisible() && !this.mnuAutoResize.isSelected() ) {
-	JViewport vp = this.scrollPane.getViewport();
-	if( vp != null ) {
-	  int vpW = vp.getWidth();
-	  int vpH = vp.getHeight();
-	  if( (vpW > 0) && (vpH > 0) ) {
-	    maxW      = vpW;
-	    maxH      = vpH;
-	    autoScale = false;
-	  }
-        }
-      }
-      if( (maxW < 1) || (maxH < 1) ) {
-	Toolkit tk = getToolkit();
-	if( tk != null ) {
-	  Dimension screenSize = tk.getScreenSize();
-	  if( screenSize != null ) {
-	    maxW  = (screenSize.width * 8) / 10;
-	    maxH = (screenSize.height * 8) / 10;
-	  }
-	}
-      }
-      if( (maxW < 1) || (maxH < 1) ) {
-	maxW = 640;
-	maxH = 480;
-      }
-
-      // Bildgroesse ermitteln
-      int wImg = 0;
-      int hImg = 0;
-      if( image instanceof BufferedImage ) {
-	wImg = ((BufferedImage) image).getWidth();
-	hImg = ((BufferedImage) image).getHeight();
-      } else {
-	ImgUtil.ensureImageLoaded( this, image );
-	wImg = image.getWidth( this );
-	hImg = image.getHeight( this );
-      }
-
-      // Skalierung ermitteln
-      double scale = 1.0;
-      if( (wImg > 0) && (hImg > 0)
-	  && ((wImg > maxW) || (hImg > maxH)) )
-      {
-	scale = Math.min(
-			(double) maxW / (double) wImg,
-			(double) maxH / (double) hImg );
-      }
-
-      // Bild anzeigen
-      Image oldImage = this.image;
-      this.image     = image;
-      this.scrollPane.invalidate();
-      this.imgFld.setImage( image );
-      this.imgFld.setRotation( ImgFld.Rotation.NONE );
-      this.imgFld.setScale( scale );
-      this.scrollPane.validate();
-      this.scrollPane.repaint();
-      setTitleInternal( title );
-      updDisplayScale();
-      if( oldImage != null ) {
-	oldImage.flush();
-      }
-      this.btnSaveAs.setEnabled( true );
-      this.btnPrint.setEnabled( true );
-      this.btnRotateLeft.setEnabled( true );
-      this.btnRotateRight.setEnabled( true );
-      this.mnuSaveAs.setEnabled( true );
-      this.mnuPrint.setEnabled( true );
-      this.mnuImgCopy.setEnabled( true );
-      this.mnuRoundCorners.setEnabled( true );
-      this.file = null;
-      if( autoScale ) {
-	pack();
-      }
+      instance.showImageInternal( image, title );
     }
   }
 
 
-  public boolean showImageFile( File file )
+  public static void open( File file )
   {
-    boolean rv = false;
+    open();
     if( file != null ) {
-      Image       image  = null;
-      String      errMsg = null;
-      InputStream in     = null;
-      try {
-	in    = new FileInputStream( file );
-	image = ImageIO.read( in );
-	if( image != null ) {
-	  showImage( image, file.getPath() );
-	  this.file = file;
-	  rv = true;
-	} else {
-	  errMsg = "Dateiformat nicht unterst\u00FCtzt";
-	}
-      }
-      catch( Exception ex ) {
-	errMsg = ex.getMessage();
-      }
-      catch( OutOfMemoryError ex ) {
-	errMsg = "Es steht nicht gen\u00FCgend Speicher zur Verf\u00FCgung.";
-      }
-      finally {
-	if( in != null ) {
-	  try {
-	    in.close();
-	  }
-	  catch( IOException ex ) {}
-	}
-      }
-      if( image == null ) {
-	StringBuilder buf = new StringBuilder( 64 );
-	buf.append( "Bilddatei kann nicht geladen werden" );
-	if( errMsg != null ) {
-	  buf.append( ":\n" );
-	  buf.append( errMsg );
-	} else {
-	  buf.append( (char) '.' );
-	}
-	BasicDlg.showErrorDlg( this, buf.toString() );
-      }
+      instance.showImageFile( file );
     }
-    return rv;
   }
-
 
 
 	/* --- DropTargetListener --- */
@@ -408,8 +114,9 @@ public class ImageFrm extends AbstractImageFrm implements
   public void drop( DropTargetDropEvent e )
   {
     File file = EmuUtil.fileDrop( this, e );
-    if( file != null )
+    if( file != null ) {
       showImageFile( file );
+    }
   }
 
 
@@ -581,13 +288,36 @@ public class ImageFrm extends AbstractImageFrm implements
       }
       else if( src == this.mnuHelpContent ) {
         rv = true;
-        this.screenFrm.showHelp( "/help/tools/imageviewer.htm" );
+        HelpFrm.open( "/help/tools/imageviewer.htm" );
       }
     }
     if( !rv ) {
       rv = super.doAction( e );
     }
     return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      Main.checkQuit( this );
+    } else {
+      // // damit beim erneuten Oeffnen das Fenster leer ist
+      showImageInternal( null, null );
+      this.labelStatus.setText( DEFAULT_STATUS_TEXT );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void mouseExited( MouseEvent e )
+  {
+    if( e.getComponent() == this.imgFld )
+      this.labelStatus.setText( DEFAULT_STATUS_TEXT );
   }
 
 
@@ -623,7 +353,7 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-	/* --- private Methoden --- */
+	/* --- Aktionen --- */
 
   private void doOpen()
   {
@@ -634,8 +364,9 @@ public class ImageFrm extends AbstractImageFrm implements
 			ImgUtil.createFileFilter(
 					ImageIO.getReaderFileSuffixes() ) );
     if( file != null ) {
-      if( showImageFile( file ) )
+      if( showImageFile( file ) ) {
 	Main.setLastFile( file, "image" );
+      }
     }
   }
 
@@ -648,7 +379,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  Object o = this.clipboard.getData( DataFlavor.imageFlavor );
 	  if( o != null ) {
 	    if( o instanceof Image ) {
-	      showImage( (Image) o, "Eingef\u00FCgtes Bild" );
+	      showImageInternal( (Image) o, "Eingef\u00FCgtes Bild" );
 	      this.file = null;
 	    }
 	  }
@@ -689,6 +420,175 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
+	/* --- Konstruktor --- */
+
+  private ImageFrm()
+  {
+    this.lastRoundTopPixels    = 0;
+    this.lastRoundBottomPixels = 0;
+    setTitleInternal( null );
+    Main.updIcon( this );
+
+
+    // Menu
+    JMenu mnuFile = new JMenu( "Datei" );
+    mnuFile.setMnemonic( KeyEvent.VK_D );
+
+    // Menu Datei
+    this.mnuOpen = createJMenuItem( "\u00D6ffnen..." );
+    mnuFile.add( this.mnuOpen );
+
+    this.mnuSaveAs = createJMenuItem( "Speichern unter..." );
+    this.mnuSaveAs.setEnabled( false );
+    mnuFile.add( this.mnuSaveAs );
+    mnuFile.addSeparator();
+
+    this.mnuPrint = createJMenuItem( "Drucken..." );
+    this.mnuPrint.setEnabled( false );
+    mnuFile.add( this.mnuPrint );
+    mnuFile.addSeparator();
+
+    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    mnuFile.add( this.mnuClose );
+
+
+    // Menu Bearbeiten
+    JMenu mnuEdit = new JMenu( "Bearbeiten" );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
+
+    this.mnuImgCopy = createJMenuItem( "Bild kopieren" );
+    this.mnuImgCopy.setEnabled( false );
+    mnuEdit.add( this.mnuImgCopy );
+
+    this.mnuImgPaste = createJMenuItem( "Bild einf\u00FCgen" );
+    mnuEdit.add( this.mnuImgPaste );
+    mnuEdit.addSeparator();
+
+    this.mnuRoundCorners = createJMenuItem( "Ecken abrunden..." );
+    this.mnuRoundCorners.setEnabled( false );
+    mnuEdit.add( this.mnuRoundCorners );
+
+
+    // Menu Einstellungen
+    JMenu mnuSettings = new JMenu( "Einstellungen" );
+    mnuSettings.setMnemonic( KeyEvent.VK_E );
+
+    this.mnuAutoResize = new JCheckBoxMenuItem(
+				"Fenstergr\u00F6\u00DFe anpassen",
+				false );
+    mnuSettings.add( this.mnuAutoResize );
+    mnuSettings.addSeparator();
+
+    JMenu mnuBgColor = new JMenu( "Hintergrundfarbe" );
+    mnuSettings.add( mnuBgColor );
+
+    ButtonGroup grpBgColor = new ButtonGroup();
+
+    this.mnuBgSystem = new JRadioButtonMenuItem( "System", true );
+    this.mnuBgSystem.addActionListener( this );
+    grpBgColor.add( this.mnuBgSystem );
+    mnuBgColor.add( this.mnuBgSystem );
+    mnuBgColor.addSeparator();
+
+    this.mnuBgBlack = new JRadioButtonMenuItem( "schwarz", false );
+    this.mnuBgBlack.addActionListener( this );
+    grpBgColor.add( this.mnuBgBlack );
+    mnuBgColor.add( this.mnuBgBlack );
+
+    this.mnuBgWhite = new JRadioButtonMenuItem( "wei\u00DF", false );
+    this.mnuBgWhite.addActionListener( this );
+    grpBgColor.add( this.mnuBgWhite );
+    mnuBgColor.add( this.mnuBgWhite );
+
+
+    // Menu Hilfe
+    JMenu mnuHelp = new JMenu( "?" );
+
+    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    mnuHelp.add( this.mnuHelpContent );
+
+
+    // Menu zusammenbauen
+    JMenuBar mnuBar = new JMenuBar();
+    mnuBar.add( mnuFile );
+    mnuBar.add( mnuEdit );
+    mnuBar.add( mnuSettings );
+    mnuBar.add( mnuHelp );
+    setJMenuBar( mnuBar );
+
+
+    // Werkzeugleiste
+    JPanel panelToolBar = new JPanel(
+		new FlowLayout( FlowLayout.LEFT, 0, 0 ) );
+    add( panelToolBar, BorderLayout.NORTH );
+
+    JToolBar toolBar = new JToolBar();
+    toolBar.setFloatable( false );
+    toolBar.setBorderPainted( false );
+    toolBar.setOrientation( JToolBar.HORIZONTAL );
+    toolBar.setRollover( true );
+    panelToolBar.add( toolBar );
+
+    this.btnOpen = createImageButton( "/images/file/open.png", "\u00D6ffnen" );
+    toolBar.add( this.btnOpen );
+
+    this.btnSaveAs = createImageButton(
+			"/images/file/save_as.png", "Speichern unter" );
+    this.btnSaveAs.setEnabled( false );
+    toolBar.add( this.btnSaveAs );
+
+    this.btnPrint = createImageButton( "/images/file/print.png", "Drucken" );
+    this.btnPrint.setEnabled( false );
+    toolBar.add( this.btnPrint );
+    toolBar.addSeparator();
+
+    this.btnRotateLeft = createImageButton(
+				"/images/edit/rotate_left.png",
+				"Nach links drehen" );
+    this.btnRotateLeft.setEnabled( false );
+    toolBar.add( this.btnRotateLeft );
+
+    this.btnRotateRight = createImageButton(
+				"/images/edit/rotate_right.png",
+				"Nach rechts drehen" );
+    this.btnRotateRight.setEnabled( false );
+    toolBar.add( this.btnRotateRight );
+    toolBar.addSeparator();
+
+    toolBar.add( createScaleComboBox(
+			100, 25, 33, 50, 75, 100, 200, 300, 400 ) );
+
+
+    // Statuszeile
+    this.labelStatus = new JLabel( DEFAULT_STATUS_TEXT );
+    JPanel panelStatus = new JPanel(
+		new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
+    panelStatus.add( this.labelStatus );
+    add( panelStatus, BorderLayout.SOUTH );
+
+
+    // Drop-Ziele
+    (new DropTarget( this.imgFld, this )).setActive( true );
+    (new DropTarget( this.scrollPane, this )).setActive( true );
+
+
+    // Fenstergroesse
+    if( !applySettings( Main.getProperties(), true ) ) {
+      pack();
+      setScreenCentered();
+    }
+    setResizable( true );
+
+
+    // sonstiges
+    this.imgFld.addMouseListener( this );
+    this.imgFld.addMouseMotionListener( this );
+    if( this.clipboard != null ) {
+      this.clipboard.addFlavorListener( this );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void setTitleInternal( String title )
@@ -696,7 +596,7 @@ public class ImageFrm extends AbstractImageFrm implements
     StringBuilder buf = new StringBuilder( 64 );
     buf.append( "JKCEMU Bildbetrachter" );
     if( title != null ) {
-      if( title.length() > 0 ) {
+      if( !title.isEmpty() ) {
 	buf.append( ": " );
 	buf.append( title );
       }
@@ -709,6 +609,170 @@ public class ImageFrm extends AbstractImageFrm implements
       }
     }
     setTitle( buf.toString() );
+  }
+
+
+  private boolean showImageFile( File file )
+  {
+    boolean rv = false;
+    if( file != null ) {
+      Image       image  = null;
+      String      errMsg = null;
+      InputStream in     = null;
+      try {
+	in    = new FileInputStream( file );
+	image = ImageIO.read( in );
+	if( image != null ) {
+	  showImageInternal( image, file.getPath() );
+	  this.file = file;
+	  rv = true;
+	} else {
+	  errMsg = "Dateiformat nicht unterst\u00FCtzt";
+	}
+      }
+      catch( Exception ex ) {
+	errMsg = ex.getMessage();
+      }
+      catch( OutOfMemoryError ex ) {
+	errMsg = "Es steht nicht gen\u00FCgend Speicher zur Verf\u00FCgung.";
+      }
+      finally {
+	if( in != null ) {
+	  try {
+	    in.close();
+	  }
+	  catch( IOException ex ) {}
+	}
+      }
+      if( image == null ) {
+	StringBuilder buf = new StringBuilder( 64 );
+	buf.append( "Bilddatei kann nicht geladen werden" );
+	if( errMsg != null ) {
+	  buf.append( ":\n" );
+	  buf.append( errMsg );
+	} else {
+	  buf.append( (char) '.' );
+	}
+	BasicDlg.showErrorDlg( this, buf.toString() );
+      }
+    }
+    return rv;
+  }
+
+
+  private void showImageInternal( Image image, String title )
+  {
+    boolean state     = false;
+    boolean autoScale = true;
+    double  scale     = 1.0;
+    if( image != null ) {
+
+      /*
+       * Bild moeglichst in ein BufferedImage umwandeln,
+       * Sollte das nicht moeglich sein, dann eben als Image behalten.
+       * In dem Fall ist dann die Anzeige der Farbwerte
+       * in der Statuszeile nicht moeglich.
+       */
+      if( !(image instanceof BufferedImage) ) {
+	BufferedImage bImg = ImgUtil.createBufferedImage( this, image );
+	if( bImg != null ) {
+	  if( bImg != image ) {
+	    image.flush();
+	  }
+	  image = bImg;
+	}
+      }
+
+      /*
+       * Wenn das Fenster noch unsichtbar oder
+       * die Option "Fenstergroesse anpassen" eingeschaltet ist,
+       * soll das Bild je nach Groesse entweder unskaliert oder
+       * auf 80% der Bildschirmgroesse (abzueglich Fensterraender
+       * und Menuleiste) skaliert angezeigt werden.
+       *
+       * Ist die Option "Fenstergroesse anpassen" ausgeschaltet,
+       * soll sich das Bild nur im aktuellen Fensterbereich ausbreiten.
+       */
+      int maxW = 0;
+      int maxH = 0;
+      if( isVisible() && !this.mnuAutoResize.isSelected() ) {
+	JViewport vp = this.scrollPane.getViewport();
+	if( vp != null ) {
+	  int vpW = vp.getWidth();
+	  int vpH = vp.getHeight();
+	  if( (vpW > 0) && (vpH > 0) ) {
+	    maxW      = vpW;
+	    maxH      = vpH;
+	    autoScale = false;
+	  }
+        }
+      }
+      if( (maxW < 1) || (maxH < 1) ) {
+	Toolkit tk = getToolkit();
+	if( tk != null ) {
+	  Dimension screenSize = tk.getScreenSize();
+	  if( screenSize != null ) {
+	    maxW  = (screenSize.width * 8) / 10;
+	    maxH = (screenSize.height * 8) / 10;
+	  }
+	}
+      }
+      if( (maxW < 1) || (maxH < 1) ) {
+	maxW = 640;
+	maxH = 480;
+      }
+
+      // Bildgroesse ermitteln
+      int wImg = 0;
+      int hImg = 0;
+      if( image instanceof BufferedImage ) {
+	wImg = ((BufferedImage) image).getWidth();
+	hImg = ((BufferedImage) image).getHeight();
+      } else {
+	ImgUtil.ensureImageLoaded( this, image );
+	wImg = image.getWidth( this );
+	hImg = image.getHeight( this );
+      }
+
+      // Skalierung ermitteln
+      if( (wImg > 0) && (hImg > 0)
+	  && ((wImg > maxW) || (hImg > maxH)) )
+      {
+	scale = Math.min(
+			(double) maxW / (double) wImg,
+			(double) maxH / (double) hImg );
+      }
+
+      // Bild vorhanden
+      state = true;
+    }
+
+    // Bild anzeigen
+    Image oldImage = this.image;
+    this.image     = image;
+    this.scrollPane.invalidate();
+    this.imgFld.setImage( image );
+    this.imgFld.setRotation( ImgFld.Rotation.NONE );
+    this.imgFld.setScale( scale );
+    this.scrollPane.validate();
+    this.scrollPane.repaint();
+    setTitleInternal( title );
+    updDisplayScale();
+    if( oldImage != null ) {
+      oldImage.flush();
+    }
+    this.btnSaveAs.setEnabled( state );
+    this.btnPrint.setEnabled( state );
+    this.btnRotateLeft.setEnabled( state );
+    this.btnRotateRight.setEnabled( state );
+    this.mnuSaveAs.setEnabled( state );
+    this.mnuPrint.setEnabled( state );
+    this.mnuImgCopy.setEnabled( state );
+    this.mnuRoundCorners.setEnabled( state );
+    this.file = null;
+    if( autoScale ) {
+      pack();
+    }
   }
 
 

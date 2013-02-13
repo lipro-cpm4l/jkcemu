@@ -1,0 +1,209 @@
+<html>
+<body>
+ <h1>Aufruf und Kommandozeile</h1>
+  JKCEMU wird ganz allgemein mit folgendem Aufruf gestartet:
+ <br/><br/>
+  <tt>java -jar jkcemu.jar [Argumente ...]</tt>
+ <br/><br/>
+  Gegebenfalls m&uuml;ssen der Java-Aufruf und/oder der Name bzw. Pfad
+  der JKCEMU-Programmdatei angepasst werden.
+ <br/><br/>
+  Wird JKCEMU ohne Argumente aufgerufen, dann startet der Emulator
+  und l&auml;dt seine Einstellungen aus dem Profil &quot;standard&quot;.
+  Es ist somit sinnvoll, die am h&auml;ufigsten verwendeten Einstellungen
+  in diesem Profil zu <a href="settings.htm#profiles">speichern</a>.
+  Existiert das Profil nicht (z.B. beim ersten mal),
+  startet JKCEMU mit Standardeinstellungen.
+ <br/><br/>
+  Der Emulator kann auch mit einem anderen Profil gestartet werden.
+  Dazu muss einfach der Name des Profils als Argument angegeben werden.
+ <br/><br/>
+  Beginnt das erste Argument mit einem Minuszeichen,
+  so wird es nicht als Name eines Profils, sondern als Option gewertet.
+  Bei einer Option wird nicht der eigentliche Emulator,
+  sondern eine andere JKCEMU-Funktion aufgerufen.
+  Die Tabelle zeigt die m&ouml;glichen Optionen:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Option</th><th>Kommandozeile</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      -?<br/>
+      -h<br/>
+      --help<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+      java -jar jkcemu.jar -?<br/>
+      java -jar jkcemu.jar -h<br/>
+      java -jar jkcemu.jar --help<br/>
+    </td>
+    <td valign="top">
+     Ausgabe einer kurzen Hilfe auf der Konsole (Textmode)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      -v<br/>
+      --version<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar -v<br/>
+     java -jar jkcemu.jar --version<br/>
+    </td>
+    <td valign="top">
+     Ausgabe der JKCEMU-Versionsnummer auf der Konsole (Textmode)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --as<br/>
+      --assembler<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --as [Optionen] &lt;Datei&gt;<br/>
+     java -jar jkcemu.jar --assembler [Optionen] &lt;Datei&gt;<br/>
+    </td>
+    <td valign="top">
+     <a href="tools/assembler.htm#cmdline">Assembler</a> starten
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --bc<br/>
+      --basiccompiler<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --bc [Optionen] &lt;Datei&gt;<br/>
+     java -jar jkcemu.jar --basiccompiler [Optionen] &lt;Datei&gt;<br/>
+    </td>
+    <td valign="top">
+     <a href="tools/basicc/cmdline.htm">BASIC-Compiler</a> starten
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --ca<br/>
+      --calculator<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --ca<br/>
+     java -jar jkcemu.jar --calculator<br/>
+    </td>
+    <td valign="top">Rechner starten</td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --dc<br/>
+      --diskcreator<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --dc<br/>
+     java -jar jkcemu.jar --diskcreator<br/>
+    </td>
+    <td valign="top">
+     Werkzeug zum Erzeugen einer Diskettenabbilddatei starten
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --fb<br/>
+      --filebrowser<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --fb<br/>
+     java -jar jkcemu.jar --filebrowser<br/>
+    </td>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --fc<br/>
+      --fileconverter<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --fc [&lt;Datei&gt;]<br/>
+     java -jar jkcemu.jar --fileconverter [&lt;Datei&gt;]<br/>
+    </td>
+    <td valign="top">
+     Dateikonverter starten,<br/>
+     Optional kann eine Datei angegeben werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --hd<br/>
+      --hexdiff<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --hd [&lt;Datei&gt; [...]] <br/>
+     java -jar jkcemu.jar --hexdiff [&lt;Datei&gt; [...]] <br/>
+    </td>
+    <td valign="top">
+     Hex-Dateivergeicher starten,<br/>
+     Optional k&ouml;nnen Dateien angegeben werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --he<br/>
+      --hexeditor<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --he [&lt;Datei&gt;]<br/>
+     java -jar jkcemu.jar --hexeditor [&lt;Datei&gt;]<br/>
+    </td>
+    <td valign="top">
+     Hex-Editor starten,<br/>
+     Optional kann eine Datei angegeben werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --iv<br/>
+      --imageviewer<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --iv [&lt;Datei&gt;]<br/>
+     java -jar jkcemu.jar --imageviewer [&lt;Datei&gt;]<br/>
+    </td>
+    <td valign="top">
+     Bildbetrachter starten,<br/>
+     Optional kann eine Datei angegeben werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      --te<br/>
+      --texteditor<br/>
+    </td>
+    <td valign="top" nowrap="nowrap">
+     java -jar jkcemu.jar --te [&lt;Datei&gt;]<br/>
+     java -jar jkcemu.jar --texteditor [&lt;Datei&gt;]<br/>
+    </td>
+    <td valign="top">
+     Texteditor starten,<br/>
+     Optional kann eine Datei angegeben werden.
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Bei Angabe einer Option kommen die im Profil &quot;standard&quot;
+  gespeicherten Einstellungen zur Anwendung.
+ <br/><br/>
+
+ <h2>Hinweis f&uuml;r Windows-Anwender</h2>
+  Unter Windows stehen f&uuml;r den Aufruf von Java die beiden Programme
+  <em>java.exe</em> und <em>javaw.exe</em> zur Verf&uuml;gung.
+  Bei <em>java.exe</em> erscheinen die Konsolenausgaben in der
+  Eingabeaufforderung (DOS-Box).
+  Bei <em>javaw.exe</em> gehen die Konsolenausgaben dagegen verloren.
+  Daf&uuml;r wird aber auch keine eventuell st&ouml;rende DOS-Box
+  ge&ouml;ffnet.
+  Wenn Sie also JKCEMU mit einer der Optionen <em>-?</em>, <em>-h</em>,
+  <em>--help</em>, <em>-v</em> oder <em>--version</em> aufrufen,
+  m&uuml;ssen Sie das in der Eingabeaufforderung und mit
+  <em>java.exe</em> tun.
+  In allen anderen F&auml;llen,
+  d.h., wenn JKCEMU als Fensterapplikation starten soll,
+  empfiehlt sich dagegen <em>javaw.exe</em>.
+</body>
+</html>
+

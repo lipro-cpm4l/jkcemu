@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,6 +22,8 @@ public class ImageCaptureFrm extends BasicFrm
 {
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
 
+  private static ImageCaptureFrm instance = null;
+
   private ScreenFrm         screenFrm;
   private int               waitForWindowMillis;
   private Robot             robot;
@@ -37,7 +39,73 @@ public class ImageCaptureFrm extends BasicFrm
   private JButton           btnClose;
 
 
-  public ImageCaptureFrm( ScreenFrm screenFrm )
+  public static void open( ScreenFrm screenFrm )
+  {
+    if( instance != null ) {
+      if( instance.getExtendedState() == Frame.ICONIFIED ) {
+	instance.setExtendedState( Frame.NORMAL );
+      }
+    } else {
+      instance = new ImageCaptureFrm( screenFrm );
+    }
+    instance.toFront();
+    instance.setVisible( true );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( (src == this.btnCaptureEmuSysScreen)
+	  || (src == this.btnCaptureScreenFrm)
+	  || (src == this.btnCaptureOtherWindow) )
+      {
+	rv = true;
+	updFieldsEnabled();
+      }
+      else if( src == this.btnTakePhoto ) {
+	rv = true;
+	doTakePhoto();
+      }
+      else if( src == this.btnClose ) {
+	rv = true;
+	doClose();
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      if( this.statusTimer.isRunning() ) {
+	this.statusTimer.stop();
+      }
+      this.btnTakePhoto.setEnabled( true );
+      updFieldsEnabled();
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    pack();
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private ImageCaptureFrm( ScreenFrm screenFrm )
   {
     this.screenFrm           = screenFrm;
     this.waitForWindowMillis = 0;
@@ -186,56 +254,6 @@ public class ImageCaptureFrm extends BasicFrm
   }
 
 
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( (src == this.btnCaptureEmuSysScreen)
-	  || (src == this.btnCaptureScreenFrm)
-	  || (src == this.btnCaptureOtherWindow) )
-      {
-	rv = true;
-	updFieldsEnabled();
-      }
-      else if( src == this.btnTakePhoto ) {
-	rv = true;
-	doTakePhoto();
-      }
-      else if( src == this.btnClose ) {
-	rv = true;
-	doClose();
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public boolean doClose()
-  {
-    boolean rv = super.doClose();
-    if( rv ) {
-      if( this.statusTimer.isRunning() ) {
-	this.statusTimer.stop();
-      }
-      this.btnTakePhoto.setEnabled( true );
-      updFieldsEnabled();
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    pack();
-  }
-
-
 	/* --- private Methoden --- */
 
   private void doTakePhoto()
@@ -274,6 +292,7 @@ public class ImageCaptureFrm extends BasicFrm
       EventQueue.invokeLater(
 			new Runnable()
 			{
+			  @Override
 			  public void run()
 			  {
 			    takePhoto( captureWindow );
@@ -315,7 +334,7 @@ public class ImageCaptureFrm extends BasicFrm
       image = this.screenFrm.createSnapshot();
     }
     if( image != null ) {
-      this.screenFrm.showImage( image, "Bildschirmfoto" );
+      ImageFrm.open( image, "Bildschirmfoto" );
     }
   }
 

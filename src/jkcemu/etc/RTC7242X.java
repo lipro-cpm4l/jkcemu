@@ -1,12 +1,12 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Emulation der Real Time Clock RTC-72421/72423
  *
  * Die emulierte RTC verwendet die Systemzeit.
- * Aus diesem Grund kann die Zeit in der RTC auch nicht gesetzt werden.
+ * Aus diesem Grund kann die Zeit in der RTC nicht gesetzt werden.
  */
 
 package jkcemu.etc;

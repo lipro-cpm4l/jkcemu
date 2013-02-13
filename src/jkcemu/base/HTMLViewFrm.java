@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,7 +23,6 @@ public class HTMLViewFrm extends BasicFrm implements
 						CaretListener,
 						Printable
 {
-  protected ScreenFrm   screenFrm;
   protected JEditorPane editorPane;
   protected JScrollPane scrollPane;
 
@@ -35,9 +34,8 @@ public class HTMLViewFrm extends BasicFrm implements
   private JMenuItem mnuHelpContent      = null;
 
 
-  protected HTMLViewFrm( ScreenFrm screenFrm )
+  protected HTMLViewFrm()
   {
-    this.screenFrm = screenFrm;
     Main.updIcon( this );
   }
 
@@ -235,18 +233,10 @@ public class HTMLViewFrm extends BasicFrm implements
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	this.screenFrm.showHelp( this.mnuHelpContent.getActionCommand() );
+	HelpFrm.open( this.mnuHelpContent.getActionCommand() );
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public void windowClosed( WindowEvent e )
-  {
-    if( e.getWindow() == this )
-      this.screenFrm.childFrameClosed( this );
   }
 }
 

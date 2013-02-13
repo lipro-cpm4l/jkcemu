@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2012 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -218,9 +218,10 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
     if( e.getWindow() == this ) {
       EditText editText = correspondingEditText;
       if( editText != null ) {
-	EditFrm editFrm = editText.getEditFrm();
-	if( editFrm != null )
-	  editFrm.doPrgCancel();
+	TextEditFrm textEditFrm = editText.getTextEditFrm();
+	if( textEditFrm != null ) {
+	  textEditFrm.doPrgCancel();
+	}
       }
     }
   }
@@ -234,6 +235,7 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
     EventQueue.invokeLater(
 		new Runnable()
 		{
+		  @Override
 		  public void run()
 		  {
 		    fldText.append( text != null ? text : "null" );
