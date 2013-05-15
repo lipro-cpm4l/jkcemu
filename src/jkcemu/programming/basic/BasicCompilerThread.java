@@ -15,6 +15,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.*;
 import jkcemu.programming.*;
 import jkcemu.programming.assembler.Z80Assembler;
+import jkcemu.programming.basic.target.*;
 import jkcemu.text.*;
 
 
@@ -85,7 +86,11 @@ public class BasicCompilerThread extends PrgThread
 						this.options,
 						this.logger,
 						true );
-	status = assembler.assemble();
+	status = assembler.assemble(
+			target.supportsAppName() ?
+				this.basicOptions.getAppName() : null,
+			(target instanceof Z9001Target)
+				|| (target instanceof Z9001KRTTarget) );
 	if( assembler.getRelJumpsTooLong() ) {
 	  appendToLog( "Compilieren Sie bitte mit ausgeschalteter Option"
 				+ " \'Relative Spr\u00FCnge bevorzugen\'" );

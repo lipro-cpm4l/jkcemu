@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,7 +30,7 @@ import jkcemu.tools.hexedit.HexEditFrm;
 
 public class Main
 {
-  public static final String VERSION = "JKCEMU Version 0.9.1";
+  public static final String VERSION = "JKCEMU Version 0.9.2";
 
   public static PrintWriter consoleWriter = null;
 

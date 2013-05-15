@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
+import jkcemu.disk.GIDESettingsFld;
 
 
 public class LLC2SettingsFld extends AbstractSettingsFld
@@ -22,10 +23,12 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   private SCCHModule1SettingsFld tabSCCH;
   private RAMFloppiesSettingsFld tabRF;
   private JCheckBox              btnFloppyDisk;
+  private JCheckBox              btnJoystick;
   private JCheckBox              btnKCNet;
   private JCheckBox              btnVDIP;
   private ROMFileSettingsFld     fldAltOS;
   private ROMFileSettingsFld     fldAltFont;
+  private GIDESettingsFld        tabGIDE;
   private JPanel                 tabEtc;
 
 
@@ -52,6 +55,11 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 		"RAM-Floppy nach MP 3/88 (256 KByte) an IO-Adressen B0h-B7h",
 		RAMFloppy.RFType.MP_3_1988 );
     this.tabbedPane.addTab( "RAM-Floppies", this.tabRF );
+
+
+    // GIDE
+    this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
+    this.tabbedPane.addTab( "GIDE", this.tabGIDE );
 
     // Sonstiges
     this.tabEtc = new JPanel( new GridBagLayout() );
@@ -80,9 +88,13 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     this.btnVDIP = new JCheckBox(
 			"USB-Anschluss (Vinculum VDIP Modul)",
 			false );
-    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnVDIP, gbcEtc );
+
+    this.btnJoystick     = new JCheckBox( "Joystick", false );
+    gbcEtc.insets.bottom = 5;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnJoystick, gbcEtc );
 
     gbcEtc.fill       = GridBagConstraints.HORIZONTAL;
     gbcEtc.weightx    = 1.0;
@@ -109,6 +121,7 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     this.btnFloppyDisk.addActionListener( this );
     this.btnKCNet.addActionListener( this );
     this.btnVDIP.addActionListener( this );
+    this.btnJoystick.addActionListener( this );
   }
 
 
@@ -127,6 +140,9 @@ public class LLC2SettingsFld extends AbstractSettingsFld
       tab = this.tabRF;
       this.tabRF.applyInput( props, selected );
 
+      tab = this.tabGIDE;
+      this.tabGIDE.applyInput( props, selected );
+
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
@@ -140,6 +156,10 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + "vdip.enabled",
 		this.btnVDIP.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "joystick.enabled",
+		this.btnJoystick.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
     }
@@ -155,6 +175,8 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   @Override
   protected boolean doAction( EventObject e )
   {
+    this.settingsFrm.setWaitCursor( true );
+
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
@@ -163,6 +185,10 @@ public class LLC2SettingsFld extends AbstractSettingsFld
         fireDataChanged();
       }
     }
+    if( !rv ) {
+      rv = this.tabGIDE.doAction( e );
+    }
+    this.settingsFrm.setWaitCursor( false );
     return rv;
   }
 
@@ -172,6 +198,7 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   {
     this.tabSCCH.lookAndFeelChanged();
     this.tabRF.lookAndFeelChanged();
+    this.tabGIDE.lookAndFeelChanged();
   }
 
 
@@ -180,6 +207,7 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   {
     this.tabSCCH.updFields( props );
     this.tabRF.updFields( props );
+    this.tabGIDE.updFields( props );
 
     this.btnFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
@@ -197,6 +225,12 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + "vdip.enabled",
+			false ) );
+
+    this.btnJoystick.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "joystick.enabled",
 			false ) );
 
     this.fldAltOS.updFields( props );

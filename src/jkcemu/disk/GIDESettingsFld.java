@@ -1,9 +1,9 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Komponente fuer die Einstellungen fuer Festplatten
+ * Komponente fuer die GIDE-Einstellungen
  */
 
 package jkcemu.disk;
@@ -18,7 +18,7 @@ import jkcemu.Main;
 import jkcemu.base.*;
 
 
-public class HardDiskSettingsFld extends AbstractSettingsFld
+public class GIDESettingsFld extends AbstractSettingsFld
 {
   private static final int DISK_CNT = 2;
 
@@ -33,7 +33,7 @@ public class HardDiskSettingsFld extends AbstractSettingsFld
   private JButton[]      selectBtns;
 
 
-  public HardDiskSettingsFld(
+  public GIDESettingsFld(
 			SettingsFrm settingsFrm,
 			String      propPrefix )
   {

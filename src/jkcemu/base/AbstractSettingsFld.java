@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -41,7 +41,9 @@ public abstract class AbstractSettingsFld
 
   public void applyInput(
 			Properties props,
-			boolean    selected ) throws UserInputException
+			boolean    selected ) throws
+						UserCancelException,
+						UserInputException
   {
     // leer
   }

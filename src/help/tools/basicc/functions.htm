@@ -2,7 +2,7 @@
 <body>
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
- <h2>Funktionen und Konstanten</h2>
+ <h2>Funktionen und Systemvariablen</h2>
 
  <h3>1. Datentyp des R&uuml;ckgabewertes</h3>
   Funktionen, die mit einem $-Zeichen enden,
@@ -10,38 +10,26 @@
   Alle anderen Funktionen haben einen numerischen R&uuml;ckgabewert.
  <br/><br/>
 
- <h3>2. Funktionen ohne Argumente</h3>
-  Funktionen ohne Argumente k&ouml;nnen mit oder ohne Klammern geschrieben
-  werden, d.h., sie k&ouml;nnen sowohl wie eine Variable gelesen
-  als auch wie eine Funktion aufgerufen werden.
-  Es wird in beiden F&auml;llen der gleiche Programmcode erzeugt.
- <br/><br/>
-  Wenn eine Funktion ohne Argumente mit Klammern geschrieben wird,
-  kann (muss aber nicht) in den Klammern ein konstantes numerisches
-  Dummy-Argument (Integer-Literal) angegeben werden,
-  welches keine Bedeutung hat.
-  Das Beispiel zeigt anhand der Funktion <em>ERR</em> alle drei
-  m&ouml;glichen Syntax-Varianten:
- <br/><br/>
-  <tt>A=ERR</tt><br/>
-  <tt>A=ERR()</tt><br/>
-  <tt>A=ERR(0)</tt><br/>
+ <h3>2. Argumente</h3>
+  Die Argumente bzw. Parameter werden in Klammern hinter
+  dem Funktionsnamen geschrieben.
+  Bei String-Funktionen ohne Argumente
+  (z.B.&nbsp;<a href="functions.htm#inkey$">INKEY$</a>)
+  entfallen diese Klammern.
  <br/><br/>
 
- <h3>3. Konstanten</h3>
-  Konstanten werden vom Compiler wie Funktionen ohne Argumente behandelt,
-  d.h., sie k&ouml;nnen so wie in anderen BASIC-Dialekten auch
-  verwendet werden:
+ <h3>3. Systemvariablen</h3>
+  Systemvariablen sind wie Funktionen ohne Argumente.
+  Sie k&ouml;nnen gelesen, nicht aber direkt beschrieben werden.
+  Systemvariablen werden vom System gesetzt.
+  Manche k&ouml;nnen auch mit Hilfe spezieller Anweisungen gesetzt werden
+  (z.B. <a href="functions.htm#xpos">XPOS</a> und
+  <a href="functions.htm#ypos">YPOS</a> durch die
+  <a href="instructions.htm#move">MOVE</a>-Anweisung).
  <br/><br/>
-  <tt>A=FALSE</tt>
- <br/><br/>
-  Alternativ ist auch der in dem Fall sicherlich un&uuml;bliche Aufruf
-  als Funktion m&ouml;glich:
- <br/><br/>
-  <tt>A=FALSE()</tt>
- <br/><br/>
-  Da der BASIC-Compiler nicht zwischen Konstanten und Funktionen
-  unterscheidet, werden nachfolgend nur noch Funktionen erw&auml;hnt.
+  Da sich Systemvariablen f&uuml;r den Softwareentwickler wie
+  Funktionen verhalten, werden sie hier in der Funktions&uuml;bersicht
+  aufgef&uuml;hrt und beschrieben.
  <br/><br/>
 
  <h3>4. Beschreibung der einzelnen Funktionen</h3>
@@ -56,48 +44,52 @@
     <td>Zeichencode des ersten Zeichens einer Zeichenkette ermiteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#bin"><tt>BIN$</tt></a></td>
+    <td><a href="functions.htm#asm"><tt>ASM</tt></a></td>
+    <td>Assemblerquelltext einf&uuml;gen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#available"><tt>AVAILABLE</tt></a></td>
+    <td>Anzahl der im Eingabekanal verf&uuml;gbaren Bytes ermitteln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#bin$"><tt>BIN$</tt></a></td>
     <td>numerischen Wert in eine Bin&auml;rzahl umwandeln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#black"><tt>BLACK</tt></a></td>
-    <td>Nummer der Farbe schwarz ermitteln</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#blinking"><tt>BLINKING</tt></a></td>
-    <td>Numerischer Wert des Blinkattributs ermitteln</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#blue"><tt>BLUE</tt></a></td>
-    <td>Nummer der Farbe blau ermitteln</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#chr"><tt>CHR$</tt></a></td>
+    <td><a href="functions.htm#chr$"><tt>CHR$</tt></a></td>
     <td>Zeichencode in Zeichenkette umwandeln</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#cyan"><tt>CYAN</tt></a></td>
-    <td>Nummer der Farbe t&uuml;rkis ermitteln</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#deek"><tt>DEEK</tt></a></td>
     <td>16-Bit-Wert (2&nbsp;Bytes) aus dem Arbeitsspeicher lesen</td>
    </tr>
    <tr valign="top">
+    <td><a href="functions.htm#dnsserver$"><tt>DNSSERVER$</tt></a></td>
+    <td>IP-Adresse des DNS-Servers ermitteln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#eof"><tt>EOF</tt></a></td>
+    <td>Ende eines Eingabekanals bzw. einer Datei erkennen</td>
+   </tr>
+   <tr valign="top">
     <td><a href="functions.htm#err"><tt>ERR</tt></a></td>
     <td>Letzten Fehlercode ermitteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#false"><tt>FALSE</tt></a></td>
-    <td>Liefert den Wert&nbsp;0</td>
+    <td><a href="functions.htm#err$"><tt>ERR$</tt></a></td>
+    <td>Letzten Fehlertext ermitteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#green"><tt>GREEN</tt></a></td>
-    <td>Nummer der Farbe gr&uuml;n ermitteln</td>
+    <td><a href="functions.htm#gateway$"><tt>GATEWAY$</tt></a></td>
+    <td>IP-Adresse des Gateways ermitteln</td>
    </tr>
-   <tr valign="hex">
-    <td><a href="functions.htm#hex"><tt>HEX$</tt></a></td>
+   <tr valign="top">
+    <td><a href="functions.htm#hex$"><tt>HEX$</tt></a></td>
     <td>numerischen Wert in eine Hexadezimalzahl umwandeln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#hostbyname$"><tt>HOSTBYNAME$</tt></a></td>
+    <td>IP-Adresse anhand des Hostnamens ermitteln</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#h_char"><tt>H_CHAR</tt></a></td>
@@ -114,16 +106,19 @@
     <td>Wert von einem Eingabetor lesen</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#inchar"><tt>INCHAR$</tt></a></td>
-    <td>Eingabe eines Zeichens von der Tastatur</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#inkey"><tt>INKEY$</tt></a></td>
+    <td><a href="functions.htm#inkey$"><tt>INKEY$</tt></a></td>
     <td>Tastaturstatus abfragen</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#in"><tt>INP</tt></a></td>
     <td>Wert von einem Eingabetor lesen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#input$"><tt>INPUT$</tt></a></td>
+    <td>
+     Tastatureingaben ohne Echo oder Bytes aus einem Eingabekanal
+     bzw. einer Datei lesen
+    </td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#instr"><tt>INSTR</tt></a></td>
@@ -134,11 +129,7 @@
     <td>Joystick abfragen</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#lastscreen"><tt>LASTSCREEN</tt></a></td>
-    <td>H&ouml;chste Bildschirmnummer ermitteln</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#left"><tt>LEFT$</tt></a></td>
+    <td><a href="functions.htm#left$"><tt>LEFT$</tt></a></td>
     <td>Anfang einer Zeichenkette extrahieren</td>
    </tr>
    <tr valign="top">
@@ -146,27 +137,35 @@
     <td>L&auml;nge einer Zeichenkette ermitteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#lower"><tt>LOWER$</tt></a></td>
+    <td><a href="functions.htm#localaddr$"><tt>LOCALADDR$</tt></a></td>
+    <td>Eigene IP-Adresse ermitteln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#localport"><tt>LOCALPORT</tt></a></td>
+    <td>Lokale Portnummer ermitteln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#lower$"><tt>LOWER$</tt></a></td>
     <td>Zeichenkette in Kleinbuchstaben wandeln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#ltrim"><tt>LTRIM$</tt></a></td>
+    <td><a href="functions.htm#ltrim$"><tt>LTRIM$</tt></a></td>
     <td>F&uuml;hrende wei&szlig;e Leerzeichen abschneiden</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#macaddr$"><tt>MACADDR$</tt></a></td>
+    <td>MAC-Adresse ermitteln</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#max"><tt>MAX</tt></a></td>
     <td>Gr&ouml;&szlig;ter Wert aus einer Liste von Werten ermitteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#magenta"><tt>MAGENTA</tt></a></td>
-    <td>Nummer der Farbe magenta ermitteln</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#memstr"><tt>MEMSTR$</tt></a></td>
+    <td><a href="functions.htm#memstr$"><tt>MEMSTR$</tt></a></td>
     <td>auf eine im Arbeitsspeicher liegende Zeichenkette zugreifen</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#mid"><tt>MID$</tt></a></td>
+    <td><a href="functions.htm#mid$"><tt>MID$</tt></a></td>
     <td>Teilzeichenkette aus einer Zeichenkette extrahieren</td>
    </tr>
    <tr valign="top">
@@ -174,8 +173,12 @@
     <td>Kleinster Wert aus einer Liste von Werten ermitteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#mirror"><tt>MIRROR$</tt></a></td>
+    <td><a href="functions.htm#mirror$"><tt>MIRROR$</tt></a></td>
     <td>Zeichenkette spiegeln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#netmask$"><tt>NETMASK$</tt></a></td>
+    <td>Netzwerkmaske ermitteln</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#peek"><tt>PEEK</tt></a></td>
@@ -190,11 +193,15 @@
     <td>Testen eines Pixels</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#red"><tt>RED</tt></a></td>
-    <td>Nummer der Farbe rot ermitteln</td>
+    <td><a href="functions.htm#remoteaddr$"><tt>REMOTEADDR$</tt></a></td>
+    <td>IP-Adresse der Gegenstelle ermitteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#right"><tt>RIGHT$</tt></a></td>
+    <td><a href="functions.htm#remoteport"><tt>REMOTEPORT</tt></a></td>
+    <td>Portnummer der Gegenstelle ermitteln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#right$"><tt>RIGHT$</tt></a></td>
     <td>Ende einer Zeichenkette extrahieren</td>
    </tr>
    <tr valign="top">
@@ -202,54 +209,39 @@
     <td>Ermitteln einer Zufallszahl</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#rtrim"><tt>RTRIM$</tt></a></td>
+    <td><a href="functions.htm#rtrim$"><tt>RTRIM$</tt></a></td>
     <td>angeh&auml;ngte wei&szlig;e Leerzeichen abschneiden</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#sgn"><tt>SGN</tt></a></td>
     <td>Ermitteln des Vorzeichens</td>
    </tr>
-   <tr valign="space">
-    <td><a href="functions.htm#space"><tt>SPACE$</tt></a></td>
+   <tr valign="top">
+    <td><a href="functions.htm#space$"><tt>SPACE$</tt></a></td>
     <td>mit Leerzeichen gef&uuml;llte Zeichenkette erzeugen</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#sqr"><tt>SQR</tt></a></td>
     <td>Ermitteln der Quadratwurzel</td>
    </tr>
-   <tr valign="str">
-    <td><a href="functions.htm#str"><tt>STR$</tt></a></td>
+   <tr valign="top">
+    <td><a href="functions.htm#str$"><tt>STR$</tt></a></td>
     <td>numerischen Wert in eine Dezimalzahl umwandeln</td>
    </tr>
-   <tr valign="string">
-    <td><a href="functions.htm#string"><tt>STRING$</tt></a></td>
+   <tr valign="top">
+    <td><a href="functions.htm#string$"><tt>STRING$</tt></a></td>
     <td>Zeichen oder Zeichenkette vervielf&auml;ltigen</td>
    </tr>
-   <tr valign="target_addr">
-    <td><a href="functions.htm#target_addr"><tt>TARGET_ADDR</tt></a></td>
-    <td>Anfangsadresse des compilierten BASIC-Programms ermitteln</td>
-   </tr>
    <tr valign="top">
-    <td><a href="functions.htm#target_id"><tt>TARGET_ID$</tt></a></td>
+    <td><a href="functions.htm#targetid$"><tt>TARGETID$</tt></a></td>
     <td>Zielsystem ermitteln</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#top"><tt>TOP</tt></a></td>
-    <td>
-     Ermitteln der Adresse des ersten freien Bytes
-     hinter dem Programm
-    </td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#trim"><tt>TRIM$</tt></a></td>
+    <td><a href="functions.htm#trim$"><tt>TRIM$</tt></a></td>
     <td>wei&szlig;e Leerzeichen abschneiden</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#true"><tt>TRUE</tt></a></td>
-    <td>Liefert den Wert&nbsp;-1</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#upper"><tt>UPPER$</tt></a></td>
+    <td><a href="functions.htm#upper$"><tt>UPPER$</tt></a></td>
     <td>Zeichenkette in Gro&szlig;buchstaben wandeln</td>
    </tr>
    <tr valign="top">
@@ -259,10 +251,6 @@
    <tr valign="top">
     <td><a href="functions.htm#val"><tt>VAL</tt></a></td>
     <td>Zeichenkette in einen numerischen Wert umwandeln</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="functions.htm#white"><tt>WHITE</tt></a></td>
-    <td>Nummer der Farbe wei&szlig; ermitteln</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#w_char"><tt>W_CHAR</tt></a></td>
@@ -310,7 +298,7 @@
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
-    <td><tt>ASC</tt> <tt>(</tt> &lt;Zeichenkette&gt; <tt>)</tt></td>
+    <td><tt>ASC (</tt> &lt;Zeichenkette&gt; <tt>)</tt></td>
    </tr>
    <tr><td>Zeichenkette:</td><td>einfacher String-Ausdruck</td></tr>
   </table>
@@ -320,7 +308,91 @@
    Ist die Zeichenkette leer, wird 0 zur&uuml;ckgegeben.
  <br/><br/>
 
- <h3><a name="bin">BIN$</a></h3>
+ <h3><a name="asm">ASM</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>ASM (</tt> &lt;Zeichenkette&gt;
+     [, &lt;Zeichenkette&gt; [, ...]] <tt>)</tt>
+    </td>
+   </tr>
+   <tr><td>Zeichenkette:</td><td>String-Literal</td></tr>
+  </table>
+ <br/>
+  Die ASM-Funktion f&uuml;gt in den vom Compiler erzeugten Assemblertext
+  eine oder mehrere Assemblerzeilen ein.
+  Im Gegensatz zur <a href="instructions.htm#asm">ASM</a>-Anweisung
+  wird bei der ASM-Funktion der Wert im HL-Register an das BASIC-Programm
+  zur&uuml;ckgegeben.
+  In Verbindung mit der <a href="functions.htm#memstr$">MEMSTR$</a>-Funktion
+  lassen sich auch in eigenen Assembler-Routinen
+  erzeugte Zeichenketten an das BASIC-Programm zur&uuml;ckgeben.
+ <br/><br/>
+  Das Beispiel zeigt eine m&ouml;gliche Anwendung der ASM-Funktion
+  in Verbindung mit <a href="functions.htm#usr">USR</a>,
+  um auf diese Art und Weise einen Parameter an die Assembler-Routine
+  zu &uuml;bergeben und einen numerischen Wert zur&uuml;ckgaben zu lassen:
+ <br/><br/>
+  <tt>
+   DEF USR0 = ASM(" LD HL,meine_negation")<br/>
+   PRINT USR0(123)<br/>
+   END<br/>
+   <br/>
+   ASM "meine_negation:"<br/>
+   ASM " LD HL,0000H"<br/>
+   ASM " OR A"<br/>
+   ASM " SBC HL,DE"<br/>
+   ASM " RET"
+  </tt>
+ <br/><br/>
+  Im zweiten Beispiel liefert die Assembler-Routine die Zeichenkette
+  <em>ABC</em> zur&uuml;ck:
+ <br/><br/>
+  <tt>
+   PRINT MEMSTR$( ASM$(" CALL meine_routine") )<br/>
+   END<br/>
+   <br/>
+   ASM CODE "meine_routine:"<br/>
+   ASM CODE " LD HL,mein_string"<br/>
+   ASM CODE " RET"<br/>
+   ASM DATA "mein_string: DB 'ABC',0"
+  </tt>
+ <br/><br/>
+  <b>Achtung!</b> Diese ASM-Funktion greift direkt
+  in die Programmcodeerzeugung ein und ist deshalb nur
+  f&uuml;r Experten gedacht, die genau wissen, was sie tun!
+ <br/><br/>
+
+ <h3><a name="available">AVAILABLE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>AVAILABLE</tt> <tt>(</tt> &lt;Kanal&gt; <tt>)</tt><br/>
+     <tt>AVAILABLE</tt> <tt>( #</tt> &lt;Kanal&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Funktion ermittelt die Anzahl der im Eingabekanal verf&uuml;gbaren
+  Bytes, die ohne zu warten gelesen werden k&ouml;nnen.
+  Bei einer Netzwerkkommunikation bedeutet das die Anzahl
+  der empfangenen Bytes, die noch nicht gelesen wurden.
+  Beim Lesen von einer Datei liefert die Funktion die Anzahl der Bytes
+  im Puffer, d.h., die Bytes,
+  die ohne Zugriff auf das Speichermedium gelesen werden k&ouml;nnen.
+ <br/><br/>
+  Die Funktion setzt die Fehlervariablen
+  <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a>.
+ <br/><br/>
+
+ <h3><a name="bin$">BIN$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -342,47 +414,7 @@
   nach der Gr&ouml;&szlig;e des &uuml;bergebenen Wertes.
  <br/><br/>
 
- <h3><a name="black">BLACK</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe schwarz
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;PAPER&nbsp;BLACK</tt>
- <br/><br/>
-
- <h3><a name="blinking">BLINKING</a></h3>
-  Die Funktion ermittelt den numerischen Wert des Blinkattributs.
-  Dieses wird in Verbindung mit der Vordergrundfarbe angewendet.
-  Setzt man eine Vordergrundfarbe mit addiertem oder ODER-verkn&uuml;pftem
-  Blinkattribut, werden nachfolgende Ausgaben blinkend dargestellt.
-  Das Setzen einer Vordergrundfarbe ohne Blinkattribut schaltet
-  f&uuml;r nachfolgende Ausgaben das Blinken wieder aus.
- <br/><br/>
-  <tt>
-   &nbsp;INK RED+BLINKING<br/>
-   &nbsp;PRINT "Ich blinke rot";<br/>
-   &nbsp;INK WHITE<br/>
-   &nbsp;PRINT "weiss ohne blinken";
-  </tt>
- <br/><br/>
-  Unterst&uuml;tzt des Zielsystem kein Blinken,
-  liefert die Funktion&nbsp;0 zur&uuml;ck.
-  Dadurch hat das Blinkattribut keine Wirkung,
-  d.h., ein BASIC-Programm, dass das Blinkattribut verwendet,
-  kann problemlos f&uuml;r Systeme mit und ohne
-  Blinkunterst&uuml;tzung &uuml;bersetzt werden.
- <br/><br/>
-
- <h3><a name="blue">BLUE</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe blau
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;PAPER&nbsp;BLUE</tt>
- <br/><br/>
-  Auf einem Zielsystem, dass keine Farbunterst&uuml;tzung bietet,
-  liefert die Funktion den gleichen Wert wie f&uuml;r die Farbe wei&szlig;.
- <br/><br/>
-
- <h3><a name="chr">CHR$</a></h3>
+ <h3><a name="chr$">CHR$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -400,15 +432,10 @@
   Wird der Wert Null &uuml;bergeben, ist die zur&uuml;ckgelieferte
   Zeichenkette leer.
  <br/><br/>
-
- <h3><a name="cyan">CYAN</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe t&uuml;rkis
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;INK&nbsp;CYAN</tt>
- <br/><br/>
-  Auf einem Zielsystem, dass keine Farbunterst&uuml;tzung bietet,
-  liefert die Funktion den gleichen Wert wie f&uuml;r die Farbe wei&szlig;.
+  <b>Achtung!</b> Bei den Anweisungen
+  <a href="instructions.htm#print">PRINT</a> und
+  <a href="instructions.htm#lprint">LPRINT</a> wird mit <tt>CHR$(0)</tt>
+  ein Null-Byte ausgegegen.
  <br/><br/>
 
  <h3><a name="deek">DEEK</a></h3>
@@ -426,51 +453,77 @@
   ab der angegebenen Adresse und liefert sie als 16-Bit-Wert zur&uuml;ck.
  <br/><br/>
 
- <h3><a name="err">ERR</a></h3>
-  Die Funktion ERR ermittelt den letzten Fehlercode.
-  Der Fehlercode wird nur von bestimmten Anweisungen und Funktionen
-  gesetzt und ist dort auch dokumentiert.
- <br/><br/>
-  Da ERR keine Argumente hat und somit wie eine Variable
-  gelesen werden kann,
-  wird der Einfachheit halber ERR auch als Fehlervariable bezeichnet.
-  Das ist zwar genau genommen nicht ganz korrekt,
-  entspricht aber der Handhabung von ERR in vielen anderen BASIC-Dialekten.
+ <h3><a name="dnsserver$">DNSSERVER$</a></h3>
+  Die Funktion liefert die im KCNet eingetragene IP-Adresse
+  des DNS-Servers zur&uuml;ck.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
  <br/><br/>
 
- <h3><a name="false">FALSE</a></h3>
-  Die Funktion FALSE liefert den Wert&nbsp;0 und dient dazu,
-  besser lesbaren Quelltext zu schreiben.
-  Da der BASIC-Compiler keinen Datentyp f&uuml;r <em>ja/nein</em>
-  bzw. <em>wahr/falsch</em> kennt,
-  werden daf&uuml;r numerische Wert verwendet.
-  <a href="functions.htm#true">TRUE</a> und FALSE dienen als Ersatz
-  f&uuml;r diese numerischen Werte und sollen deutlich machen,
-  dass der betreffende numerische Ausdruck eigentlich
-  f&uuml;r einen boolschen Wert steht.
+ <h3><a name="eof">EOF</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>EOF</tt> <tt>(</tt> &lt;Kanal&gt; <tt>)</tt><br/>
+     <tt>EOF</tt> <tt>( #</tt> &lt;Kanal&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Funktion testet,
+  ob das Ende des Eingabekanals bzw. der Datei erreicht wurde.
+  Dabei werden die Fehlervariablen&nbsp;<a href="functions.htm#err">ERR</a>
+  und <a href="functions.htm#err$">ERR$</a> gesetzt.
  <br/><br/>
-  FALSE liefert immer den gleichen Wert zur&uuml;ck und ist somit
-  eine Konstante, die mit der gleichen Syntax wie in anderen
-  g&auml;ngigen BASIC-Dialekten auch verwendet werden kann:
+
+ <h3><a name="err">ERR</a></h3>
+  Die Systemvariable ERR enth&auml;lt den letzten Fehlercode.
+  Der Wert&nbsp;0 (Konstante&nbsp;E_OK) bedeutet,
+  dass bei der letzten Anweisung oder Funktion,
+  die die Fehlervariable gesetzt hat, kein Fehler aufgetreten ist.
+  Ein Wert ungleich Null steht f&uuml;r einen Fehler.
+  Zum Auswerten der Fehlervariable&nbsp;ERR gibt es
+  <a href="constants.htm#error">Fehlercodekonstanten</a>.
+ <br/><br/>
+
+ <h3><a name="err$">ERR$</a></h3>
+  Die Systemvariable ERR$ enth&auml;lt den letzten Fehlertext.
+  In Verbindung mit der Systemvariable&nbsp;ERR
+  kann die Fehlerbehandlung recht einfach und f&uuml;r den Anwender
+  trotzdem komfortabel gestaltet werden, z.B.:
  <br/><br/>
   <tt>
-   A=FALSE<br/>
-   ...<br/>
-   IF A THEN ...<br/>
+   ...:'Funktion oder Anweisung, die die Fehlervariablen setzt<br/>
+   IF ERR THEN<br/>
+   &nbsp; PRINT ERR$<br/>
+   ELSE<br/>
+   ...:'kein Fehler aufgetreten<br/>
+   ENDIF
   </tt>
  <br/><br/>
+  <b>Achtung!</b> Wenn Sie die Systemvariable&nbsp;ERR$ verwenden,
+  wird das compilierte Programm entsprechend gr&ouml;&szlig;er,
+  da alle Fehlermeldungen, die auftreten k&ouml;nnen,
+  auch in das Programm hineincompiliert werden m&uuml;ssen.
+  Wenn Sie ein m&ouml;glichst kleines Programm anstreben
+  und auf die detaillierten Fehlertexte verzichten k&ouml;nnen,
+  sollten Sie nur die Fehlercodevariable&nbsp;ERR verwenden,
+  und nicht ERR$.
+ <br/><br/>
 
- <h3><a name="green">GREEN</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe gr&uuml;n
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;PAPER&nbsp;GREEN</tt>
- <br/><br/>
-  Auf einem Zielsystem, dass keine Farbunterst&uuml;tzung bietet,
-  liefert die Funktion den gleichen Wert wie f&uuml;r die Farbe wei&szlig;.
+ <h3><a name="gateway$">GATEWAY$</a></h3>
+  Die Funktion liefert die im KCNet eingetragene IP-Adresse
+  des Gateways zur&uuml;ck.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
  <br/><br/>
 
- <h3><a name="hex">HEX$</a></h3>
+ <h3><a name="hex$">HEX$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -492,12 +545,37 @@
   nach der Gr&ouml;&szlig;e des &uuml;bergebenen Wertes.
  <br/><br/>
 
+ <h3><a name="hostbyname$">HOSTBYNAME$</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>HOSTBYNAME$</tt> <tt>(</tt> &lt;Hostname&gt; <tt>)
+    </td>
+   </tr>
+   <tr><td>Hostname:</td><td>einfacher String-Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die Funktion ermittelt die IP-Adresse zu dem &uuml;bergebenen
+  Rechnernamen.
+  Dazu wird der im KCNet eingetragene DNS-Server angefragt.
+  Als Rechnername kann auch eine IP-Adresse in der &uuml;blichen
+  Schreibweise &uuml;bergeben werden.
+  In dem Fall wird der DNS-Server nicht angefragt,
+  sondern die &uuml;bergebene IP-Adresse ohne eventuell f&uuml;hrende
+  und angeh&auml;ngten Leerzeichen zur&uuml;ckgegeben.
+  Die Funktion setzt die Fehlervariablen
+  <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a>.
+ <br/><br/>
+
  <h3><a name="h_char">H_CHAR</a></h3>
-  Die Funktion ermittelt die H&ouml;he des Bildschirms in Zeichenpositionen,
-  d.h., es wird die Anzahl der sichtbaren Textzeilen zur&uuml;ckgeliefert.
+  Die Systemvariable enth&auml;lt die H&ouml;he des Bildschirms
+  in Zeichenpositionen, d.h.,
+  es wird die Anzahl der sichtbaren Textzeilen zur&uuml;ckgeliefert.
   Wenn dieser Wert nicht eindeutig feststeht bzw. bei dem Zielsystem
   unterschiedliche Werte m&ouml;glich sind (z.B. bei CP/M),
-  wird -1 zur&uuml;ckgeliefert.
+  enth&auml;lt die Variable den Wert&nbsp;-1.
  <br/><br/>
   Eine&nbsp;0 wird zur&uuml;ckgegeben, wenn mit der
   <a href="instructions.htm#screen">SCREEN</a>-Anweisung
@@ -506,23 +584,19 @@
  <br/><br/>
 
  <h3><a name="h_pixel">H_PIXEL</a></h3>
-  Die Funktion ermittelt die H&ouml;he des vollgrafikf&auml;higen
-  Bildschirms in Pixel.
+  Diese Systemvariable enth&auml;lt die H&ouml;he
+  des vollgrafikf&auml;higen Bildschirms in Pixel.
   Steht keine Vollgrafik zur Verf&uuml;gung,
-  liefert die Funktion&nbsp;0 zur&uuml;ck.
+  liefert die H_PIXEL&nbsp;0 zur&uuml;ck.
   In dem Fall k&ouml;nnen die Grafikbefehle nicht verwendet werden.
  <br/><br/>
 
- <h3><a name="inchar">INCHAR$</a></h3>
-  Die Funktion wartet auf die Bet&auml;tigung einer Taste und
-  liefert das so eingegebene Zeichen in Form einer Zeichenkette zur&uuml;ck.
- <br/><br/>
-
- <h3><a name="inkey">INKEY$</a></h3>
+ <h3><a name="inkey$">INKEY$</a></h3>
   Die Funktion pr&uuml;ft, ob gerade eine Taste gedr&uuml;ckt ist.
   Wenn ja, liefert die Funktion eine Zeichenkette mit dem eingegebenen
   Zeichen zur&uuml;ck.
   Anderenfalls wird eine leere Zeichenkette zur&uuml;ckgegeben.
+  INKEY$ hat keine Argumente.
  <br/><br/>
 
  <h3><a name="in">IN<br/>INP</a></h3>
@@ -540,6 +614,73 @@
   Die Funktionen IN und INP haben die gleiche Wirkung.
   Sie lesen ein Byte von dem durch die Adresse
   angegebenen Eingabetor und liefern den Wert des Bytes zur&uuml;ck.
+ <br/><br/>
+
+ <h3><a name="input$">INPUT$</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>INPUT$</tt> <tt>(</tt> &lt;Anzahl&gt; <tt>)</tt><br/>
+     <tt>INPUT$</tt> <tt>(</tt> &lt;Anzahl&gt; <tt>,</tt>
+		&lt;Kanal&gt; <tt>)</tt><br/>
+     <tt>INPUT$</tt> <tt>(</tt> &lt;Anzahl&gt; <tt>, #</tt>
+		&lt;Kanal&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Anzahl:</td>
+    <td>numerischer Ausdruck im Bereich 0 bis 255</td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Funktion gibt es in zwei Varianten, mit und ohne Kanalnummer.
+  In der Variante ohne Kanalnummer wird die angegebene Anzahl von Zeichen
+  von der Tastatur gelesen und als Zeichenkette zur&uuml;ckgegeben.
+  Steuertasten (z.B. Cursor-Tasten, Enter) werden nicht ausgewertet.
+  Stattdessen finden sich die entsprechenden Steuercodes
+  in der Zeichenkette wieder.
+  Es erfolgt keine Ausgabe auf dem Bildschirm.
+ <br/><br/>
+  In der Variante mit Kanalnummer liest die Funktion
+  die angegebene Anzahl von Zeichen aus dem Eingabekanal
+  bzw. der Datei und gibt diese als Zeichenkette zur&uuml;ck.
+  Dabei werden die Fehlervariablen <a href="functions.htm#err">ERR</a>
+  und <a href="functions.htm#err$">ERR$</a> gesetzt.
+ <br/><br/>
+  <b>Achtung!</b> Null-Bytes dienen bei Zeichenketten als Endezeichen,
+  d.h., wenn ein Null-Byte gelesen wird, enth&auml;lt die
+  zur&uuml;ckgelieferte Zeichenkette nur die Bytes bis zum ersten
+  gelesenen Null-Byte.
+  Es werden aber trotzdem soviele Bytes aus dem Eingabekanal gelesen,
+  wie im ersten Argument &uuml;bergeben wurde.
+  Wenn also die zur&uuml;ckgelieferte Zeichenkette k&uuml;rzer ist
+  als die Anzahl der gelesenen Bytes und in der Fehlervariable
+  <a href="functions.htm#err">ERR</a> steht der Wert&nbsp;0
+  (Konstante E_OK, kein Fehler aufgetreten),
+  dann wurde hinter der Zeichenkette ein Null-Byte gelesen.
+  Damit ist auch generell das Lesen von Bin&auml;rdateien m&ouml;glich.
+  Das Beispiel zeigt, wie eine Datei Byte f&uuml;r Byte
+  in die Variable&nbsp;<em>B</em> eingelesen wird:
+ <br/><br/>
+  <tt>
+   OPEN "Datei" FOR INPUT AS #1<br>
+   IF ERR THEN<br/>
+   &nbsp; PRINT ERR$<br/>
+   ELSE<br/>
+   &nbsp; WHILE NOT EOF(#1)<br/>
+   &nbsp; &nbsp; B=ASC(INPUT$(1,#1))<br/>
+   &nbsp; &nbsp; IF ERR THEN EXIT<br/>
+   &nbsp; &nbsp; ...:'mit dem gelesenen Byte etwas tun<br/>
+   &nbsp; WEND<br/>
+   &nbsp; IF ERR THEN PRINT ERR$<br/>
+   &nbsp; CLOSE #1<br/>
+   ENDIF
+  </tt>
  <br/><br/>
 
  <h3><a name="instr">INSTR</a></h3>
@@ -656,19 +797,7 @@
   liefert die JOYST-Funktion immer&nbsp;0.
  <br/><br/>
 
- <h3><a name="lastscreen">LASTSCREEN</a></h3>
-  Die Funktion ermittelt die h&ouml;chste Bildschirmnummer,
-  die mit der <a href="instructions.htm#screen">SCREEN</a>-Anweisung
-  eingestellt werden kann.
-  Wenn die Funktion den Wert&nbsp;0 zur&uuml;ckliefert,
-  steht nur <tt>SCREEN&nbsp;0</tt> zur Verf&uuml;gung, d.h.,
-  in dem Fall kann mit der SCREEN-Anweisung nichts umgeschaltet werden.
-  Lesen Sie bitte auch die Hinweise zu den
-  <a href="targets.htm">Zielsystemen</a> und zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
- <br/><br/>
-
- <h3><a name="left">LEFT$</a></h3>
+ <h3><a name="left$">LEFT$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -707,7 +836,39 @@
   Zeichenketten prinzipiell m&ouml;glich.
  <br/><br/>
 
- <h3><a name="lower">LOWER$</a></h3>
+ <h3><a name="localaddr$">LOCALADDR$</a></h3>
+  Die Funktion liefert die im KCNet eingetragene lokale,
+  d.h. eigene, IP-Adresse zur&uuml;ck.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
+ <br/><br/>
+
+ <h3><a name="localport">LOCALPORT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>LOCALPORT</tt> <tt>(</tt> &lt;Kanal&gt; <tt>)</tt><br/>
+     <tt>LOCALPORT</tt> <tt>( #</tt> &lt;Kanal&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Funktion ermittelt die lokale Portnummer,
+  die der Kanal verwendet.
+  Der Aufruf ist nur erlaubt, wenn der Kanal mit.
+  <a href="instructions.html#accept">ACCEPT</a>,
+  <a href="instructions.html#connect">CONNECT</a> oder
+  <a href="instructions.html#datagram">DATAGRAM</a> ge&ouml;ffnet wurde.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
+ <br/><br/>
+
+ <h3><a name="lower$">LOWER$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -724,7 +885,7 @@
   Eventuell vorhandene deutsche Umlaute bleiben unver&auml;ndert.
  <br/><br/>
 
- <h3><a name="ltrim">LTRIM$</a></h3>
+ <h3><a name="ltrim$">LTRIM$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -739,6 +900,12 @@
   die mit dem ersten Zeichen beginnt,
   welches kein Leer- oder Steuerzeichen ist.
   Es werden somit die f&uuml;hrenden wei&szlig;en Leerzeichen abgeschnitten.
+ <br/><br/>
+
+ <h3><a name="macaddr$">MACADDR$</a></h3>
+  Die Funktion liefert die MAC-Adresse des KCNet-Moduls zur&uuml;ck.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
  <br/><br/>
 
  <h3><a name="max">MAX</a></h3>
@@ -761,17 +928,7 @@
   angegebenen Werte zur&uuml;ck.
  <br/><br/>
 
- <h3><a name="magenta">MAGENTA</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe magenta
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;INK&nbsp;MAGENTA</tt>
- <br/><br/>
-  Auf einem Zielsystem, dass keine Farbunterst&uuml;tzung bietet,
-  liefert die Funktion den gleichen Wert wie f&uuml;r die Farbe wei&szlig;.
- <br/><br/>
-
- <h3><a name="memstr">MEMSTR$</a></h3>
+ <h3><a name="memstr$">MEMSTR$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -789,15 +946,15 @@
   <tt>
    A=TOP<br/>
    FOR I=65 TO 90<br/>
-   POKE A,I<br/>
-   A=A+1<br/>
+   &nbsp;POKE A,I<br/>
+   &nbsp;A=A+1<br/>
    NEXT I<br/>
    POKE A,0<br/>
    PRINT MEMSTR$(TOP)
   </tt>
  <br/><br/>
 
- <h3><a name="mid">MID$</a></h3>
+ <h3><a name="mid$">MID$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -841,7 +998,7 @@
   angegebenen Werte zur&uuml;ck.
  <br/><br/>
 
- <h3><a name="mirror">MIRROR$</a></h3>
+ <h3><a name="mirror$">MIRROR$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -854,6 +1011,12 @@
   &uuml;bergebenen Zeichenkette zur&uuml;ck, d.h.,
   das letzte Zeichen in der &uuml;bergebenen Zeichenkette
   ist das erste Zeichen in der zur&uuml;ckgelieferten.
+ <br/><br/>
+
+ <h3><a name="netmask$">NETMASK$</a></h3>
+  Die Funktion liefert die im KCNet eingetragene Netzwerkmaske zur&uuml;ck.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
  <br/><br/>
 
  <h3><a name="peek">PEEK</a></h3>
@@ -925,17 +1088,59 @@
   aus Gr&uuml;nden der Kompatibilit&auml;t zu diversen BASIC-Dialekten.
  <br/><br/>
 
- <h3><a name="red">RED</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe gr&uuml;n
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;INK&nbsp;RED</tt>
- <br/><br/>
-  Auf einem Zielsystem, dass keine Farbunterst&uuml;tzung bietet,
-  liefert die Funktion den gleichen Wert wie f&uuml;r die Farbe wei&szlig;.
+ <h3><a name="remoteaddr$">REMOTEADDR$</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>REMOTEADDR$</tt> <tt>(</tt> &lt;Kanal&gt; <tt>)</tt><br/>
+     <tt>REMOTEADDR$</tt> <tt>( #</tt> &lt;Kanal&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Funktion ermittelt die IP-Adresse der Gegenstelle.
+  Der Aufruf ist nur erlaubt, wenn der Kanal mit
+  <a href="instructions.html#accept">ACCEPT</a>,
+  <a href="instructions.html#connect">CONNECT</a> oder
+  <a href="instructions.html#datagram">DATAGRAM</a> ge&ouml;ffnet wurde.
+  Im Fall von DATAGRAM liefert die Funktion die Absenderadresse
+  der zuletzt empfangenen Daten.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
  <br/><br/>
 
- <h3><a name="right">RIGHT$</a></h3>
+ <h3><a name="remoteport">REMOTEPORT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>REMOTEPORT</tt> <tt>(</tt> &lt;Kanal&gt; <tt>)</tt><br/>
+     <tt>REMOTEPORT</tt> <tt>( #</tt> &lt;Kanal&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Funktion ermittelt die Portnummer der Gegenstelle.
+  Der Aufruf ist nur erlaubt, wenn der Kanal mit.
+  <a href="instructions.html#accept">ACCEPT</a>,
+  <a href="instructions.html#connect">CONNECT</a> oder
+  <a href="instructions.html#datagram">DATAGRAM</a> ge&ouml;ffnet wurde.
+  Im Fall von DATAGRAM liefert die Funktion die Absenderportnummer
+  der zuletzt empfangenen Daten.
+  Die Fehlervariablen <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> werden gesetzt.
+ <br/><br/>
+
+ <h3><a name="right$">RIGHT$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -968,7 +1173,7 @@
   und dem angegebenen Maximalwert.
  <br/><br/>
 
- <h3><a name="rtrim">RTRIM$</a></h3>
+ <h3><a name="rtrim$">RTRIM$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -998,7 +1203,7 @@
   und Null, wenn der Wert Null ist.
  <br/><br/>
 
- <h3><a name="space">SPACE$</a></h3>
+ <h3><a name="space$">SPACE$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -1023,7 +1228,7 @@
   aus dem Wert des angegebenen Ausdrucks zur&uuml;ck.
  <br/><br/>
 
- <h3><a name="str">STR$</a></h3>
+ <h3><a name="str$">STR$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -1038,7 +1243,7 @@
   ein Leer- oder ein Minuszeichen.
  <br/><br/>
 
- <h3><a name="string">STRING$</a></h3>
+ <h3><a name="string$">STRING$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -1062,15 +1267,8 @@
   In dem Fall wird eine leere Zeichenkette zur&uuml;ckgeliefert.
  <br/><br/>
 
- <h3><a name="target_addr">TARGET_ADDR</a></h3>
-  Die Funktion liefert die Zieladresse zur&uuml;ck, d.h.,
-  die Anfangsadresse des compilierten BASIC-Programms.
-  Diese Information kann helfen, wenn man vom BASIC-Programm aus
-  Maschinencode in den Arbeitsspeicher schreiben m&ouml;chte.
- <br/><br/>
-
- <h3><a name="target_id">TARGET_ID$</a></h3>
-  Die Funktion TARGET_ID$ liefert eine Zeichenkette,
+ <h3><a name="targetid$">TARGETID$</a></h3>
+  Die Funktion TARGETID$ liefert eine Zeichenkette,
   die das Zielsystem identifiziert.
   Mit Hilfe dieser Zeichenkette kann ein BASIC-Programm portabel geschrieben
   und dabei trotzdem auf ganz spezifische Eigenheiten des Zielsystems
@@ -1078,9 +1276,9 @@
   Folgendes Beispiel demonstriert die Anwendung:
  <br/><br/>
   <tt>
-   IF TARGET_ID$="KC85" THEN PRINT "Farbe"<br/>
-   IF INSTR(TARGET_ID$,"Z9001")&gt;0 THEN PRINT "Farbe optional"<br/>
-   IF TARGET_ID$="Z1013" THEN PRINT "schwarz/weiss"
+   IF TARGETID$="KC85" THEN PRINT "Farbe"<br/>
+   IF INSTR(TARGETID$,"Z9001")&gt;0 THEN PRINT "Farbe optional"<br/>
+   IF TARGETID$="Z1013" THEN PRINT "schwarz/weiss"
   </tt>
  <br/><br/>
   Welche Zeichenkette die einzelnen Zielsysteme liefern,
@@ -1096,17 +1294,13 @@
   auf die KRT-Grafik umschaltet.
   Solange das jedoch nicht der Fall ist, also in Textmodus,
   ist das Programm lauff&auml;hig.
-  TARGET_ID$ liefert in dem Fall &quot;Z9001_KRT&quot;,
+  TARGETID$ liefert in dem Fall &quot;Z9001_KRT&quot;,
   obwohl es auf einem Z9001 ohne KRT-Grafik ausgef&uuml;hrt wird.
  <br/><br/>
-
- <h3><a name="top">TOP</a></h3>
-  Die Funktion liefert die Adresse des ersten freien Bytes
-  hinter dem vom compilierten Programm belegten bzw. benutzen Speicherbereich
-  zur&uuml;ck.
+  Die Funktion TARGETID$ hat keine Argumente.
  <br/><br/>
 
- <h3><a name="trim">TRIM$</a></h3>
+ <h3><a name="trim$">TRIM$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -1124,29 +1318,7 @@
   wei&szlig;en Leerzeichen abgeschnitten.
  <br/><br/>
 
- <h3><a name="true">TRUE</a></h3>
-  Die Funktion TRUE liefert den Wert&nbsp;-1 (alle Bits gesetzt)
-  und dient dazu, besser lesbaren Quelltext zu schreiben.
-  Da der BASIC-Compiler keinen Datentyp f&uuml;r <em>ja/nein</em>
-  bzw. <em>wahr/falsch</em> kennt,
-  werden daf&uuml;r numerische Wert verwendet.
-  TRUE und <a href="functions.htm#false">FALSE</a> dienen als Ersatz
-  f&uuml;r diese numerischen Werte und sollen deutlich machen,
-  dass der betreffende numerische Ausdruck eigentlich
-  f&uuml;r einen boolschen Wert steht.
- <br/><br/>
-  TRUE liefert immer den gleichen Wert zur&uuml;ck und ist somit
-  eine Konstante, die mit der gleichen Syntax wie in anderen
-  g&auml;ngigen BASIC-Dialekten auch verwendet werden kann:
- <br/><br/>
-  <tt>
-   A=TRUE<br/>
-   ...<br/>
-   IF A THEN ...<br/>
-  </tt>
- <br/><br/>
-
- <h3><a name="upper">UPPER$</a></h3>
+ <h3><a name="upper$">UPPER$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -1186,6 +1358,16 @@
   Der Wert, der sich zum Funktionsende im HL-Register befindet,
   wird an das BASIC-Programm zur&uuml;ckgegeben.
  <br/><br/>
+  Das Schl&uuml;sselwort <tt>USR</tt> und die Funktionsnummer k&ouml;nnen
+  sowohl zusammen als auch getrennt geschrieben werden, z.B.:
+ <br/><br/>
+  <tt>
+   PRINT USR 0 (123)<br/>
+   PRINT USR0 (123)<br/>
+   PRINT USR 0(123)<br/>
+   PRINT USR0(123)
+  </tt>
+ <br/><br/>
   Im Gegensatz zur <a href="instructions.htm#call">CALL</a>-Anweisung
   kann man bei USR dem Maschinencodeunterprogramm einen Wert &uuml;bergeben
   und einen zur&uuml;ckgeben lassen.
@@ -1218,23 +1400,26 @@
   Bei Hexadezimalzahlen k&ouml;nnen die Buchstaben A bis F
   sowohl gro&szlig; als auch klein geschrieben sein.
  <br/><br/>
-  Die VAL-Funktion setzt die Fehlervariable
-  <a href="functions.htm#err">ERR</a>:
+  Die VAL-Funktion setzt die Fehlervariablen
+  <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a>.
+  Damit, insbesondere mit der ERR-Variable, kann gepr&uuml;ft werden,
+  ob die Funktion erfolgreich war:
   <table border="1">
    <tr><th>ERR-Wert</th><th>Bedeutung</th></tr>
    <tr>
-    <td valign="top">0</td>
+    <td valign="top"><a href="constants.htm#error">E_OK</a></td>
     <td>Zahl konnte gelesen werden</td>
    </tr>
    <tr>
-    <td valign="top">-2</td>
+    <td valign="top"><a href="constants.htm#error">E_INVALID</a></td>
     <td>
      ung&uuml;ltige Zeichen gelesen,
      R&uuml;ckgabewert ist&nbsp;0
     </td>
    </tr>
    <tr>
-    <td valign="top">-3</td>
+    <td valign="top"><a href="constants.htm#error">E_OVERFLOW</a></td>
     <td>
      numerischer &Uuml;berlauf, d.h. die Zahl ist zu gro&szlig;,
      R&uuml;ckgabewert ist&nbsp;0
@@ -1242,31 +1427,26 @@
    </tr>
   </table>
  <br/>
-  Das Beispiel zeigt die VAL-Funktion in Verbindung mit der Fehlervariable:
+  Das Beispiel zeigt die VAL-Funktion in Verbindung mit der
+  Fehlervariable&nbsp;ERR:
  <br/><br/>
   <tt>
    DO<br/>
    &nbsp; INPUT "Eingabe:";E$<br>
    &nbsp; V=VAL(E$,2)<br/>
-   &nbsp; IF ERR=0 THEN PRINT "Binaerzahl, Dezimalwert=";V<br/>
+   &nbsp; IF ERR=E_OK THEN PRINT "Binaerzahl, Dezimalwert=";V<br/>
    &nbsp; V=VAL(E$,10)<br/>
-   &nbsp; IF ERR=0 THEN PRINT "Dezimalzahl, Dezimalwert=";V<br/>
+   &nbsp; IF ERR=E_OK THEN PRINT "Dezimalzahl, Dezimalwert=";V<br/>
    &nbsp; V=VAL(E$,16)<br/>
-   &nbsp; IF ERR=0 THEN PRINT "Hexadezimalzahl, Dezimalwert=";V<br/>
+   &nbsp; IF ERR=E_OK THEN PRINT "Hexadezimalzahl, Dezimalwert=";V<br/>
    LOOP
   </tt>
  <br/><br/>
 
- <h3><a name="white">WHITE</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe wei&szlig;
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;INK&nbsp;WHITE</tt>
- <br/><br/>
-
  <h3><a name="w_char">W_CHAR</a></h3>
-  Die Funktion ermittelt die Breite des Bildschirms in Zeichenpositionen,
-  d.h., es wird die Anzahl der sichtbaren Textspalten zur&uuml;ckgeliefert.
+  Die Systemvariable enth&auml;lt die Breite des Bildschirms
+  in Zeichenpositionen, d.h.,
+  es wird die Anzahl der sichtbaren Textspalten zur&uuml;ckgeliefert.
   Wenn dieser Wert nicht eindeutig feststeht bzw. bei dem Zielsystem
   unterschiedliche Werte m&ouml;glich sind (z.B. bei CP/M),
   wird -1 zur&uuml;ckgeliefert.
@@ -1278,7 +1458,7 @@
  <br/><br/>
 
  <h3><a name="w_pixel">W_PIXEL</a></h3>
-  Die Funktion ermittelt die Breite des vollgrafikf&auml;higen
+  Die Systemvariable enth&auml;lt die Breite des vollgrafikf&auml;higen
   Bildschirms in Pixel.
   Steht keine Vollgrafik zur Verf&uuml;gung,
   liefert die Funktion&nbsp;0 zur&uuml;ck.
@@ -1286,25 +1466,18 @@
  <br/><br/>
 
  <h3><a name="xpos">XPOS</a></h3>
-  Die Funktion ermittelt die aktuelle X-Koordinate des Grafikcursors.
+  Die Systemvariable enth&auml;lt die aktuelle X-Koordinate
+  des Grafikcursors.
   Lesen Sie bitte auch die Hinweise zur
   <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
  <br/><br/>
 
- <h3><a name="yellow">YELLOW</a></h3>
-  Die Funktion ermittelt die Nummer der Farbe gelb
-  und dient zum Schreiben von portablen Quelltext, z.B.:
- <br/><br/>
-  <tt>&nbsp;INK&nbsp;YELLOW</tt>
- <br/><br/>
-  Auf einem Zielsystem, dass keine Farbunterst&uuml;tzung bietet,
-  liefert die Funktion den gleichen Wert wie f&uuml;r die Farbe wei&szlig;.
- <br/><br/>
-
  <h3><a name="ypos">YPOS</a></h3>
-  Die Funktion ermittelt die aktuelle Y-Koordinate des Grafikcursors.
+  Die Systemvariable enth&auml;lt die aktuelle Y-Koordinate
+  des Grafikcursors.
   Lesen Sie bitte auch die Hinweise zur
   <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
  <br/>
 </body>
 </html>
+

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,7 @@
  * entsprechend dem KC85- und Z9001-Kassettenaufzeichnungsformat um.
  * Laut KC85/3- bzw. KC85/4-Systemhandbuch arbeitet die Kassettenaufzeichnung
  * mit den Frequenzen 600, 1200 und 2400 Hz.
- * In der Realitaet lasst sich dass dann aber nicht in den KC85 einlesen.
+ * In der Realitaet laesst sich dass dann aber nicht in den KC85 einlesen.
  * Vielmehr muessen die drei Frquenzen etwa 10% bis 20% niedriger sein.
  * Bei den verschiedenen KC-BASIC-Interpretern fuer den Z1013
  * muessen die Frequenzen sogar etwa 15% bis 20% niedriger sein.

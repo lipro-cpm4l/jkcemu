@@ -11,6 +11,10 @@
   <table border="1">
    <tr><th nowrap>Anweisung</th><th nowrap>Bedeutung</th></tr>
    <tr valign="top">
+    <td><a href="instructions.htm#accept"><tt>ACCEPT</tt></a></td>
+    <td>Auf eine TCP-Verbindung warten</td>
+   </tr>
+   <tr valign="top">
     <td><a href="instructions.htm#asm"><tt>ASM</tt></a></td>
     <td>Assemblerquelltext einf&uuml;gen</td>
    </tr>
@@ -27,12 +31,20 @@
     <td>Kreis zeichnen</td>
    </tr>
    <tr valign="top">
+    <td><a href="instructions.htm#close"><tt>CLOSE</tt></a></td>
+    <td>Datei oder Ein-/Ausgabekanal schliessen</td>
+   </tr>
+   <tr valign="top">
     <td><a href="instructions.htm#cls"><tt>CLS</tt></a></td>
     <td>Bildschirm l&ouml;schen</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#color"><tt>COLOR</tt></a></td>
     <td>Farben setzen</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#connect"><tt>CONNECT</tt></a></td>
+    <td>TCP-Verbindung aufbauen</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#cursor"><tt>CURSOR</tt></a></td>
@@ -43,6 +55,12 @@
     <td>
      Angabe von numerischen Werten,
      die mit READ gelesen werden k&ouml;nnen
+    </td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#datagram"><tt>DATAGRAM</tt></a></td>
+    <td>
+     Verbindungslose Netzwerkkommunikation beginnen (UDP-Port &ouml;ffnen)
     </td>
    </tr>
    <tr valign="top">
@@ -98,6 +116,10 @@
     <td>Vorzeitiges Verlassen einer Schleife</td>
    </tr>
    <tr valign="top">
+    <td><a href="instructions.htm#flush"><tt>FLUSH</tt></a></td>
+    <td>Puffer  eines Ausgabekanals leeren</td>
+   </tr>
+   <tr valign="top">
     <td><a href="instructions.htm#for"><tt>FOR</tt></a></td>
     <td>Beginn einer FOR-Schleife</td>
    </tr>
@@ -141,7 +163,7 @@
     <td>
      <a href="instructions.htm#line_input"><tt>LINE&nbsp;INPUT</tt></a>
     </td>
-    <td>Eingabe einer Textzeile</td>
+    <td>Textzeile eingeben oder von einem Eingabekanal lesen</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#local"><tt>LOCAL</tt></a></td>
@@ -154,6 +176,10 @@
    <tr valign="top">
     <td><a href="instructions.htm#loop"><tt>LOOP</tt></a></td>
     <td>Ende einer DO-Schleife</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#lprint"><tt>LPRINT</tt></a></td>
+    <td>Ausgabe auf dem Drucker</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#move"><tt>MOVE</tt></a></td>
@@ -176,6 +202,10 @@
     <td>
      Sprung zu einer Zeile aus einer Liste von Zeilennummern oder Marken
     </td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#open"><tt>OPEN</tt></a></td>
+    <td>Datei oder Ein-/Ausgabekanal &ouml;ffnen</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#out"><tt>OUT</tt></a></td>
@@ -219,7 +249,7 @@
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#print"><tt>PRINT</tt></a></td>
-    <td>Ausgabe von Text und Zahlen auf dem Bildschirm</td>
+    <td>Ausgabe auf dem Bildschirm oder einem Ausgabekanal</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#pset"><tt>PSET</tt></a></td>
@@ -271,16 +301,77 @@
   und k&ouml;nnen weggelassen werden.
  <br/><br/>
 
+ <h3><a name="accept">ACCEPT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>ACCEPT</tt> &lt;Port&gt; <tt>AS #</tt> &lt;Kanal&gt;
+    </td>
+   </tr>
+   <tr><td>Port:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung dient zur Programmierung eines TCP-Servers.
+  Es wird ein <a href="../../kcnet.htm">KCNet</a>-Socket
+  ge&ouml;ffnet und an dem angegebenen Port gelauscht.
+  Sobald eine Verbindungsanforderung eintrifft, wird diese aktzeptiert.
+  Die Anweisung kehrt zur&uuml;ck,
+  wenn die Netzwerkverbindung steht oder ein Fehler aufgetreten ist
+  (siehe Fehlervariablen&nbsp;<a href="functions.htm#err">ERR</a>
+  und <a href="functions.htm#err$">ERR$</a>).
+ <br/><br/>
+  Das Beispiel zeigt einen einfachen Echo-Server:
+ <br/><br/>
+  <tt>
+   INPUT "Port: ";P<br/>
+   PRINT "Lausche am Port";P;"..."<br/>
+   ACCEPT P AS #1<br/>
+   IF ERR THEN<br/>
+   &nbsp; PRINT ERR$<br/>
+   ELSE<br/>
+   &nbsp; PRINT "Verbunden mit ";REMOTEADDR$(1)<br/>
+   &nbsp; DO<br/>
+   &nbsp; &nbsp; B=ASC(INPUT$(1,1))<br/>
+   &nbsp; &nbsp; IF ERR THEN EXIT<br/>
+   &nbsp; &nbsp; PRINT CHR$(B);<br/>
+   &nbsp; &nbsp; PRINT #1,CHR$(B);<br/>
+   &nbsp; &nbsp; IF AVAILABLE(1)=0 THEN FLUSH #1<br/>
+   &nbsp; LOOP<br/>
+   &nbsp; IF ERR=E_EOF THEN<br/>
+   &nbsp; &nbsp; PRINT "Verbindung beendet"<br/>
+   &nbsp; ELSE<br/>
+   &nbsp; &nbsp; PRINT ERR$<br/>
+   &nbsp; ENDIF<br/>
+   &nbsp; CLOSE #1<br/>
+   ENDIF
+  </tt>
+ <br/><br/>
+  <b>Achtung!</b> Portnummern bis 1024 sind privilegierte Ports.
+  Wenn Sie das Programm im Emulator laufen lassen und
+  es m&ouml;chte an so einem Port lauschen,
+  m&uuml;ssen Sie &uuml;ber entsprechende Berechtigungen verf&uuml;gen.
+  Benutzerkonten f&uuml;r gew&ouml;hnliche Anwender verf&uuml;gen
+  i.d.R. nicht &uuml;ber diese Berechtigungen.
+  In dem Fall zeigt JKCEMU eine entsprechende Fehlermeldung an.
+  Auf einem realen Zielsystem gibt es dieses Berechtigungsproblem
+  dagegen nicht.
+ <br/><br/>
+
  <h3><a name="asm">ASM</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
     <td nowrap="nowrap">
-     <tt>ASM</tt> [ <tt>CODE</tt> ] &nbsp;&lt;Zeichenkette&gt;
+     <tt>ASM</tt> [ <tt>CODE</tt> ] &lt;Zeichenkette&gt;
      [, &lt;Zeichenkette&gt; [, ...]]<br/>
-     <tt>ASM</tt> <tt>DATA</tt> &nbsp;&lt;Zeichenkette&gt;
+     <tt>ASM</tt> <tt>DATA</tt> &lt;Zeichenkette&gt;
      [, &lt;Zeichenkette&gt; [, ...]]<br/>
-     <tt>ASM</tt> <tt>BSS</tt> &nbsp;&lt;Zeichenkette&gt;
+     <tt>ASM</tt> <tt>BSS</tt> &lt;Zeichenkette&gt;
      [, &lt;Zeichenkette&gt; [, ...]]<br/>
     </td>
    </tr>
@@ -379,6 +470,27 @@
   Der Grafik-Cursor wird nicht beeinflusst.
  <br/><br/>
 
+ <h3><a name="close">CLOSE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>CLOSE #</tt> &lt;Kanal&gt;
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung schlie&szlig;t den angegebenen Ein-/Ausgabekanal
+  und setzt die Fehlervariablen <a href="functions.htm#err">ERR</a>
+  und <a href="functions.htm#err$">ERR$</a>.
+  Im Fall eines Ausgabekanals werden evtl. gepufferte Daten
+  noch geschrieben, bevor der Kanal geschlossen wird.
+ <br/><br/>
+
  <h3><a name="cls">CLS</a></h3>
   Die CLS-Anweisung l&ouml;scht den Bildschirm und setzt den Cursor
   in die linke obere Ecke.
@@ -420,6 +532,65 @@
   <a href="instructions.htm#ink">INK</a>,
   <a href="instructions.htm#paper">PAPER</a> und
   <a href="instructions.htm#border">BORDER</a> festgelegt werden.
+ <br/><br/>
+
+ <h3><a name="connect">CONNECT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>CONNECT</tt> &lt;Host&gt; <tt>,</tt> &lt;Port&gt;
+	<tt>AS #</tt> &lt;Kanal&gt;
+    </td>
+   </tr>
+   <tr><td>Host:</td><td>einfacher String-Ausdruck</td></tr>
+   <tr><td>Port:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung baut eine TCP-Verbindung zu einem Server auf
+  und dient demit zur Programmierung eines TCP-Clients.
+  Im ersten Argument wird der Rechnername oder die IP-Adresse
+  in textueller Form &uuml;bergeben.
+  Kann die IP-Adresse nicht ausgewertet werden,
+  wird der im <a href="../../kcnet.htm">KCNet</a>
+  eingetragene DNS-Server angefragt.
+  Das zweite Argument gibt die Portnummer an,
+  zu der die Verbindung aufgebaut werden soll.
+  Nach Abarbeitung der Anweisung erkennt man anhand der Fehlervariable
+  <a href="functions.htm#err">ERR</a>, ob die Verbindung aufgebaut wurde.
+  Steht dort der Wert Null drin, war der Verbindungsaufbau erfolgreich,
+  anderenfalls nicht.
+ <br/><br/>
+  Das Beispiel zeigt ein kleines Programm,
+  dass die Startseite eines Web-Servers herunterl&auml;dt
+  und den HTML-Text auf dem Bildschirm ausgibt:
+ <br/><br/>
+  <tt>
+   DO<br/>
+   &nbsp; INPUT "Web-Server: ";H$<br/>
+   LOOP WHILE H$=""<br/>
+   CONNECT H$,80 AS #1<br/>
+   IF ERR THEN<br/>
+   &nbsp; PRINT ERR$<br/>
+   ELSE<br/>
+   &nbsp; PRINT #1,"GET / HTTP/1.1"<br/>
+   &nbsp; PRINT #1,"Host: ";H$<br/>
+   &nbsp; PRINT #1<br/>
+   &nbsp; FLUSH #1<br/>
+   &nbsp; DO<br/>
+   &nbsp; &nbsp; LINE INPUT #1,A$<br/>
+   &nbsp; &nbsp; IF ERR THEN EXIT<br/>
+   &nbsp; &nbsp; PRINT A$<br/>
+   &nbsp; LOOP<br/>
+   &nbsp; PRINT<br/>
+   &nbsp; IF ERR&lt;&gt;E_EOF THEN PRINT ERR$<br/>
+   &nbsp; CLOSE #1<br/>
+   ENDIF
+  </tt>
  <br/><br/>
 
  <h3><a name="cursor">CURSOR</a></h3>
@@ -477,6 +648,69 @@
    210 DATA "Jul",31,"Aug",31,"Sep",30,"Okt",31,"Nov",31,"Dez",30
  <br/><br/>
 
+ <h3><a name="datagram">DATAGRAM</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>DATAGRAM</tt> &lt;Port&gt; <tt>AS #</tt> &lt;Kanal&gt;
+    </td>
+   </tr>
+   <tr><td>Port:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung bereitet eine verbindungslose Netzwerkkommunikation vor.
+  Dazu wird ein <a href="../../kcnet.htm">KCNet</a>-Socket im UDP-Mode
+  ge&ouml;ffnet.
+  Dieser ist sofort empfangsbereit.
+  Mit der <a href="functions.htm#available">AVAILABLE</a>-Funktion
+  kann gep&uuml;ft werden, ob Daten empfangen wurden.
+  Wenn ja, l&auml;sst sich der Absender mit den Funktionen
+  <a href="functions.htm#remoteaddr$">REMOTEADDR$</a> und
+  <a href="functions.htm#remoteport">REMOTEPORT</a> ermitteln.
+ <br/><br/>
+  In der entgegengesetzten Richtung schreibt man zuerst die zu sendenden
+  Daten in den Ein-/Ausgabekanal und schickt sie dann mit der
+  <a href="instructions.htm#send">SEND</a>-Anweisung ab.
+ <br/><br/>
+  Das Beispiel zeigt einen einfachen Echo-Server:
+ <br/><br/>
+  <tt>
+   INPUT "Port: ";P<br/>
+   PRINT "Lausche am Port";P;"..."<br/>
+   DATAGRAM P AS #1<br/>
+   IF ERR THEN<br/>
+   &nbsp; PRINT ERR$<br/>
+   ELSE<br/>
+   &nbsp; DO<br/>
+   &nbsp; &nbsp; B=ASC(INPUT$(1,1))<br/>
+   &nbsp; &nbsp; IF ERR THEN EXIT<br/>
+   &nbsp; &nbsp; PRINT CHR$(B);<br/>
+   &nbsp; &nbsp; PRINT #1,CHR$(B);<br/>
+   &nbsp; &nbsp; IF AVAILABLE(1)=0 THEN SEND #1,REMOTEADDR$(1),REMOTEPORT<br/>
+   &nbsp; LOOP<br/>
+   &nbsp; IF ERR THEN<br/>
+   &nbsp; &nbsp; PRINT ERR$<br/>
+   &nbsp; ENDIF<br/>
+   &nbsp; CLOSE #1<br/>
+   ENDIF
+  </tt>
+ <br/><br/>
+  <b>Achtung!</b> Portnummern bis 1024 sind privilegierte Ports.
+  Wenn Sie das Programm im Emulator laufen lassen und
+  es m&ouml;chte an so einem Port lauschen,
+  m&uuml;ssen Sie &uuml;ber entsprechende Berechtigungen verf&uuml;gen.
+  Benutzerkonten f&uuml;r gew&ouml;hnliche Anwender verf&uuml;gen
+  i.d.R. nicht &uuml;ber diese Berechtigungen.
+  In dem Fall zeigt JKCEMU eine entsprechende Fehlermeldung an.
+  Auf einem realen Zielsystem gibt es dieses Berechtigungsproblem
+  dagegen nicht.
+ <br/><br/>
+
  <h3><a name="declare">DECLARE</a></h3>
   <table border="1">
    <tr valign="top">
@@ -484,7 +718,7 @@
     <td nowrap="nowrap">
      <tt>DECLARE FUNCTION</tt> &lt;Funktionsname&gt;<br/>
      <tt>DECLARE FUNCTION</tt> &lt;Funktionsname&gt;
-	<tt>(</tt> &lt;Argument&gt; [ <tt>,</tt> ... ] <tt>)</tt><br/>
+	<tt>(</tt> &lt;Argumentname&gt; [ <tt>,</tt> ... ] <tt>)</tt><br/>
      <tt>DECLARE SUB</tt> &lt;Prozedurname&gt;<br/>
      <tt>DECLARE SUB</tt> &lt;Prozedurname&gt;
 	<tt>(</tt> &lt;Argumentname&gt; [ <tt>,</tt> ... ] <tt>)</tt>
@@ -497,7 +731,7 @@
   (Anweisungen <a href="instructions.htm#function">FUNCTION</a>
   und <a href="instructions.htm#sub">SUB</a>) aufgerufen werden kann.
   Lesen Sie bitte auch die Erl&auml;uterungen zu den
-  <a href="usersubs.htm">Benutzerdefinierten Funktionen und Prozeduren</a>.
+  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>.
  <br/><br/>
 
  <h3>
@@ -525,20 +759,17 @@
   neu festgelegt werden.
  <br/><br/>
   <tt>
-   DEF USR 0=&H4000;<br/>
+   DEF USR 0 = &H4000;<br/>
    PRINT USR 0 (123)
   </tt>
  <br/><br/>
-  Die einzelnen Teile k&ouml;nnen auch zusammengeschrieben werden.
-  Damit ergeben sich folgende m&ouml;gliche Schreibweisen:
+  Die einzelnen Teile k&ouml;nnen auch teilweise oder komplett
+  zusammengeschrieben werden, z.B.:
  <br/><br/>
   <tt>
-   DEF USR 0 = &H4000;<br/>
    DEF USR0 = &H4000;<br/>
    DEFUSR 0 = &H4000;<br/>
-   DEFUSR0 = &H4000;<br/>
-   PRINT USR0(123)<br/>
-   PRINT USR 0(123)
+   DEFUSR0 = &H4000;
   </tt>
  <br/><br/>
 
@@ -632,7 +863,9 @@
     <td>Syntax:</td>
     <td nowrap="nowrap">
      <tt>DRAW</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>DRAW TO</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
      <tt>DRAW (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
+     <tt>DRAW TO (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
      <tt>DRAW STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
     </td>
    </tr>
@@ -755,6 +988,37 @@
    LOOP<br/>
    PRINT "Schleife zu Ende"
   </tt>
+ <br/><br/>
+
+ <h3><a name="flush">FLUSH</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap"><tt>FLUSH #</tt> &lt;Kanal&gt;</td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Ein Ausgabekanal kann die zu schreibenden Daten puffern.
+  Das ist z.B. aus Gr&uuml;nden der Performance sinnvoll.
+  Die FLUSH-Anweisung sorgt daf&uuml;r, dass die gepufferten Daten
+  physisch geschrieben und somit der Ausgabepuffer geleert wird.
+  Der Ausgabepuffer wird automatisch auch beim Schlie&szlig;en
+  des Kanals geleert
+  (siehe <a href="instructions.htm#close">CLOSE</a>-Anweisung),
+  d.h., der explizite Aufruf von FLUSH vor einem CLOSE ist nicht notwendig.
+ <br/><br/>
+  Ob bei einem Ausgabekanal eine Pufferung stattfindet oder nicht,
+  h&auml;ngt vom konkreten Ausgabeger&auml;t bzw. dessen Treiber ab.
+  Wenn die Daten nicht gepuffert werden,
+  hat die FLUSH-Anweisung nichts zu tun und somit auch keine Wirkung.
+ <br/><br/>
+  Die FLUSH-Anweisung setzt die Fehlervariablen
+  <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a>.
  <br/><br/>
 
  <h3><a name="for">FOR</a></h3>
@@ -1137,20 +1401,34 @@
     <td>Syntax:</td>
     <td nowrap="nowrap">
      <tt>LINE INPUT</tt> [ &lt;String-Literal&gt; <tt>;</tt> ]
-	&lt;String-Variable&gt;
+	&lt;String-Variable&gt;<br/>
+     <tt>LINE INPUT #</tt> &lt;Kanal&gt; <tt>,</tt>
+	&lt;String-Variable&gt;<br/>
     </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
    </tr>
   </table>
  <br/>
-  Die LINE&nbsp;INPUT-Anweisung dient zur Eingabe eines Textes.
+  Die LINE&nbsp;INPUT-Anweisung dient zur Eingabe bzw. zum Lesen
+  einer Textzeile.
+  In der Variante ohne Kanalnummer wird der Text &uuml;ber die Tastatur
+  eingegeben.
   Im Gegensatz zur INPUT-Anweisung werden f&uuml;hrende Leerzeichen
   nicht abgeschnitten, d.h., die eingegebene Textzeile wird
   unver&auml;ndert in der angegebenen String-Variable gespeichert.
- <br/><br/>
   Optional kann ein String-Literal angegeben werden,
   welches als Prompt ausgegeben wird.
-  Fehlt dieses String-Literal, erscheint in Gegensatz zur
+  Fehlt dieses String-Literal, erscheint im Gegensatz zur
   INPUT-Anweisung kein Fragezeichen.
+ <br/><br/>
+  In der Variante mit Kanalnummer wird eine Textzeile aus dem angegebenen
+  Eingabekanal gelesen.
+  Als Zeilenende wird sowohl das DOS/Windows-Format
+  (Zeilenendebytes&nbsp;0Dh/0Ah) als auch das Unix/Linux-Format
+  (Zeilenendebyte&nbsp;0Ah) erkannt.
  <br/><br/>
 
  <h3><a name="local">LOCAL</a></h3>
@@ -1265,13 +1543,49 @@
   </tt>
  <br/><br/>
 
+ <h3><a name="lprint">LPRINT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>LPRINT</tt><br/>
+     <tt>LPRINT</tt> &lt;Abschnitt&gt;<br/>
+     <tt>LPRINT</tt> &lt;Abschnitt&gt; &lt;Trennzeichen&gt;<br/>
+     <tt>LPRINT</tt> &lt;Abschnitt&gt; &lt;Trennzeichen&gt;
+	&lt;weitere Abschnitte&gt;<br/>
+     <tt>LPRINT</tt> &lt;Abschnitt&gt; &lt;Trennzeichen&gt;
+	&lt;weitere Abschnitte&gt; &lt;Trennzeichen&gt;<br/>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Abschnitt:</td>
+    <td>String-Ausdruck oder numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Trennzeichen:</td>
+    <td>Komma oder Semikolon</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung LPRINT t&auml;tigt Ausgaben auf dem Drucker.
+  Die Argumente sind identisch zur
+  <a href="instructions.htm#print">PRINT</a>-Anweisung in der Version
+  ohne Kanalnummer.
+ <br/><br/>
+  <b>Achtung!</b> Die LPRINT-Anweisung wird nicht f&uuml;r alle
+  Zielsysteme unterst&uuml;tzt (siehe Hinweise zu den
+  <a href="targets.htm">Zielsystemen</a>).
+ <br/><br/>
+
  <h3><a name="move">MOVE</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
     <td nowrap="nowrap">
      <tt>MOVE</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>MOVE TO</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
      <tt>MOVE (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
+     <tt>MOVE TO (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
      <tt>MOVE STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
     </td>
    </tr>
@@ -1447,6 +1761,115 @@
   </tt>
  <br/><br/>
 
+ <h3><a name="open">OPEN</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>OPEN</tt> &lt;Ger&auml;te-/Dateiname&gt; <tt>AS #</tt> Kanal
+     <br/>
+     <tt>OPEN</tt> &lt;Ger&auml;te-/Dateiname&gt;
+	<tt>FOR</tt> &lt;Betriebsart&gt; <tt>AS #</tt> Kanalnummer
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>Ger&auml;te-/Dateiname:</td>
+    <td>einfacher String-Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Betriebsart:</td>
+    <td><tt>INPUT</tt>, <tt>OUTPUT</tt> oder <tt>APPEND</tt></td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung &ouml;ffnet einen Ein- oder Ausgabekanal zu dem angegebenen
+  Ger&auml;t bzw. zu der angegebenen Datei.
+  Die Betriebsarten haben folgende Bedeutung:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Betriebsart</th>
+    <th>Bedeutung</th>
+   </tr>
+   <tr>
+    <td valign="top">INPUT</td>
+    <td valign="top">Eingabekanal</td>
+   </tr>
+   <tr>
+    <td valign="top">OUTPUT</td>
+    <td valign="top">
+     Ausgabekanal,<br/>
+     Wurde eine Datei angegeben, so wird sie neu angelegt.
+     Eine evtl. vorhandene Datei wird dabei gel&ouml;scht.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">APPEND</td>
+    <td valign="top">
+     Ausgabekanal,<br/>
+     Wurde eine Datei angegeben,
+     so werden die Daten an die Datei angeh&auml;ngt.
+     Der Inhalt einer evtl. vorhandenen Datei wird nicht gel&ouml;scht.
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Wenn keine Betriebsart angegeben wird, gilt die Standard-Betriebsart,
+  die Sie aus folgender Tabelle entnehmen k&ouml;nnen:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Ger&auml;t</th>
+    <th>Bedeutung</th>
+    <th>Unterst&uuml;tzte Betriebsarten</th>
+    <th>Standard-Betriebsart</th>
+   </tr>
+   <tr>
+    <td valign="top"><tt>CRT:</tt></td>
+    <td valign="top">Ausgabe auf dem Bildschirm</td>
+    <td valign="top">OUTPUT</td>
+    <td valign="top">OUTPUT</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>LPT:</tt></td>
+    <td valign="top">Ausgabe auf dem Drucker</td>
+    <td valign="top">OUTPUT</td>
+    <td valign="top">OUTPUT</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>V:</tt></td>
+    <td valign="top">USB-Speicher an einem VDIP-Modul</td>
+    <td valign="top">INPUT, OUTPUT, APPEND</td>
+    <td valign="top">INPUT</td>
+   </tr>
+  </table>
+ <br/>
+  Bei einem Eingabekanal k&ouml;nnen die Anweisungen
+  <a href="instructions.htm#input">INPUT</a> und
+  <a href="instructions.htm#line_input">LINE&nbsp;INPUT</a>
+  sowie die Funktionen
+  <a href="functions.htm#eof">EOF</a> und
+  <a href="functions.htm#input">INPUT$</a>,
+  verwendet werden.
+  F&uuml;r einen Ausgabekanal stehen die Anweisungen
+  <a href="instructions.htm#flush">FLUSH</a> und
+  <a href="instructions.htm#print">PRINT</a> zur Verf&uuml;gung.
+  Wenn die Arbeit mit dem Kanal beendet ist, muss dieser mit
+  <a href="instructions.htm#close">CLOSE</a>
+  wieder geschlossen werden.
+  Danach kann dieser Kanal mit einem anderen Ger&auml;t oder
+  einer anderen Datei erneut ge&ouml;ffnet werden.
+  Insgesamt stehen zwei Kan&auml;le zur Verf&uuml;gung (1 und 2).
+ <br/><br/>
+  Die OPEN-Anweisung setzt die
+  Fehlervariablen&nbsp;<a href="functions.htm#err">ERR</a>
+  und <a href="functions.htm#err$">ERR$</a>.
+ <br/><br/>
+
  <h3><a name="out">OUT</a></h3>
   <table border="1">
    <tr valign="top">
@@ -1540,7 +1963,7 @@
    <tr><th>Stift</th><th>Bedeutung</th></tr>
    <tr>
     <td valign="top">0</td>
-    <td nowrap="nowrap">
+    <td>
      Stift angehoben,<br/>
      Bei diesem Stift passiert nichts.
      Es wird weder etwas gezeichnet noch etwas gel&ouml;scht.
@@ -1548,7 +1971,7 @@
    </tr>
    <tr>
     <td valign="top">1</td>
-    <td nowrap="nowrap">
+    <td>
      Zeichnen,<br/>
      Die zu zeichnenden Pixel werden auf die Vordergrundfarbe gesetzt.
      Bereits auf dem Bildschirm befindliche Texte und Grafiken
@@ -1559,14 +1982,14 @@
    </tr>
    <tr>
     <td valign="top">2</td>
-    <td nowrap="nowrap">
+    <td>
      L&ouml;schen,<br/>
      Die zu zeichnenden Pixel werden auf die Hintergrundfarbe gesetzt.
     </td>
    </tr>
    <tr>
     <td valign="top">3</td>
-    <td nowrap="nowrap">
+    <td>
      XOR-Modus,<br/>
      Bei jedem zu zeichnenden Pixel wird gepr&uuml;ft,
      ob es bereits gesetzt ist.
@@ -1588,7 +2011,9 @@
     <td>Syntax:</td>
     <td nowrap="nowrap">
      <tt>PLOT</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>PLOT TO</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
      <tt>PLOT (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
+     <tt>PLOT TO (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
      <tt>PLOT STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
     </td>
    </tr>
@@ -1699,7 +2124,20 @@
 	&lt;weitere Abschnitte&gt;<br/>
      <tt>PRINT</tt> &lt;Abschnitt&gt; &lt;Trennzeichen&gt;
 	&lt;weitere Abschnitte&gt; &lt;Trennzeichen&gt;<br/>
+     <tt>PRINT #</tt> &lt;Kanal&gt;<br/>
+     <tt>PRINT #</tt> &lt;Kanal&gt; <tt>,</tt> &lt;Abschnitt&gt;<br/>
+     <tt>PRINT #</tt> &lt;Kanal&gt; <tt>,</tt> &lt;Abschnitt&gt;
+	&lt;Trennzeichen&gt;<br/>
+     <tt>PRINT #</tt> &lt;Kanal&gt; <tt>,</tt> &lt;Abschnitt&gt;
+	&lt;Trennzeichen&gt; &lt;weitere Abschnitte&gt;<br/>
+     <tt>PRINT #</tt> &lt;Kanal&gt; <tt>,</tt> &lt;Abschnitt&gt;
+	&lt;Trennzeichen&gt; &lt;weitere Abschnitte&gt;
+	&lt;Trennzeichen&gt;<br/>
     </td>
+   </tr>
+   <tr valign="top">
+    <td>Kanal:</td>
+    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
    </tr>
    <tr valign="top">
     <td>Abschnitt:</td>
@@ -1711,10 +2149,22 @@
    </tr>
   </table>
  <br/>
+  Die PRINT-Anweisung gibt Zahlen, Text und/oder einen Zeilenumbruch
+  auf dem Bildschirm oder einem Ausgabekanal aus.
+  Die Ausgabe erfolgt dann auf dem Ausgabekanal,
+  wenn hinter einem Doppelkreuz die Nummer des Ausgabekanals
+  angegeben wurde.
+  In dem Fall werden auch die Fehlervariablen
+  <a href="functions.htm#err">ERR</a> und
+  <a href="functions.htm#err$">ERR$</a> gesetzt.
+  Ohne Kanalnummer erfolgt die Ausgabe auf dem Bildschirm.
+ <br/><br/>
   Die PRINT-Anweisung kann mehrere Abschnitte enthalten,
   die durch Kommas oder Semikolons getrennt sind.
   Ein Abschnitt dient entweder zur Ausgabe einer Zeichenkette
   oder einer Dezimalzahl.
+  Mit der Funktion <a href="functions.htm#chr">CHR$</a>
+  k&ouml;nnen auch beliebige Bytes, auch Null-Bytes, ausgegeben werden.
  <br/><br/>
   Ist ein Abschnitt zur Ausgabe einer Dezimalzahl vom vorherigen Abschnitt
   mit einem Komma getrennt, wird die Zahl in einem 14&nbsp;Zeichen breiten

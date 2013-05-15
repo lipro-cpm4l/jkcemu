@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,7 @@ package jkcemu.emusys.ac1_llc2;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.*;
-import z80emu.Z80MemView;
+import z80emu.*;
 
 
 public abstract class AbstractSCCHSys extends EmuSys
@@ -47,13 +47,38 @@ public abstract class AbstractSCCHSys extends EmuSys
 	"TROFF" };
 
 
+  protected Z80PIO           pio1;
+  protected volatile boolean joystickEnabled;
+  protected volatile boolean joystickSelected;
+  protected int              joystickValue;
+  protected int              keyboardValue;
+
+
   protected AbstractSCCHSys( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
   }
 
 
+  protected void setKeyboardValue( int value )
+  {
+    this.keyboardValue = value;
+    synchronized( this.pio1 ) {
+      if( !(this.joystickEnabled && this.joystickSelected) ) {
+	this.pio1.putInValuePortA( this.keyboardValue, 0xFF );
+      }
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public int getSupportedJoystickCount()
+  {
+    return this.joystickEnabled ? 1 : 0;
+  }
+
 
   @Override
   public void openBasicProgram()
@@ -240,6 +265,15 @@ public abstract class AbstractSCCHSys extends EmuSys
 	break;
     }
     return rv;
+  }
+
+
+  @Override
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  {
+    this.joystickSelected = false;
+    this.joystickValue    = 0;
+    this.keyboardValue    = 0;
   }
 
 

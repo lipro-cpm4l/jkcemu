@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -211,7 +211,6 @@ public class AC1
   private BasicType         lastBasicType;
   private RAMFloppy         ramFloppy;
   private Z80CTC            ctc;
-  private Z80PIO            pio1;
   private Z80PIO            pio2;
   private GIDE              gide;
   private FDC8272           fdc;
@@ -224,12 +223,11 @@ public class AC1
   private boolean           mode2010;
   private boolean           modeSCCH;
   private boolean           fontSwitchable;
-  private boolean           inverseSwitchable;
-  private boolean           screenInverseMode;
+  private boolean           inverseBySW;
+  private boolean           inverseByKey;
   private boolean           pio1B3State;
   private boolean           keyboardUsed;
   private volatile boolean  graphicKeyState;
-  private volatile boolean  joystickSelected;
   private volatile boolean  pasteFast;
   private boolean           lowerDRAMEnabled;
   private boolean           osRomEnabled;
@@ -244,8 +242,6 @@ public class AC1
   private int               scchRomdiskBegAddr;
   private int               scchRomdiskBankAddr;
   private int               regF0;
-  private int               joystickValue;
-  private int               keyboardValue;
   private int               pio2Rom2010Offs;
   private int               romBank2010Offs;
   private int               romBank2010Len;
@@ -260,12 +256,11 @@ public class AC1
   public AC1( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
-    this.pasteFast         = false;
-    this.fontSwitchable    = false;
-    this.inverseSwitchable = false;
-    this.mode64x16         = false;
-    this.mode2010          = false;
-    this.modeSCCH          = false;
+    this.pasteFast      = false;
+    this.fontSwitchable = false;
+    this.mode64x16      = false;
+    this.mode2010       = false;
+    this.modeSCCH       = false;
     this.osVersion = EmuUtil.getProperty( props, "jkcemu.ac1.os.version" );
     if( this.osVersion.equals( "3.1_64x16" ) ) {
       this.mode64x16 = true;
@@ -278,8 +273,8 @@ public class AC1
       this.fontSwitchable = true;
     }
     else if( this.osVersion.equals( "2010" ) ) {
-      this.mode2010          = true;
-      this.inverseSwitchable = true;
+      this.mode2010       = true;
+      this.fontSwitchable = true;
     }
     this.osBytes             = null;
     this.osFile              = null;
@@ -301,25 +296,27 @@ public class AC1
     this.regF0               = 0;
     this.lastBasicType       = null;
 
-    this.ramModule3 = null;
+    if( emulatesColors( props ) ) {
+      this.mode64x16 = false;
+      this.ramColor  = new byte[ 0x0800 ];
+      this.colors    = new Color[ 16 ];
+      createColors( props );
+    } else {
+      this.ramColor = null;
+      this.colors   = null;
+    }
     if( this.mode64x16 ) {
       this.ramStatic = new byte[ 0x0400 ];
       this.ramVideo  = new byte[ 0x0400 ];
     } else {
       this.ramStatic = new byte[ 0x0800 ];
       this.ramVideo  = new byte[ 0x0800 ];
-      if( this.modeSCCH ) {
-	// 1 MByte
-	this.ramModule3 = this.emuThread.getExtendedRAM( 0x100000 );
-      }
     }
-    if( emulatesColors( props ) ) {
-      this.ramColor = new byte[ this.ramVideo.length ];
-      this.colors   = new Color[ 16 ];
-      createColors( props );
-    } else {
-      this.ramColor = null;
-      this.colors   = null;
+
+    this.ramModule3 = null;
+    if( this.modeSCCH ) {
+      // 1 MByte
+      this.ramModule3 = this.emuThread.getExtendedRAM( 0x100000 );
     }
 
     this.ramFloppy = RAMFloppy.prepare(
@@ -347,6 +344,8 @@ public class AC1
     if( emulatesUSB( props ) ) {
       this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
     }
+
+    this.joystickEnabled = emulatesJoystick( props );
 
     this.gide = GIDE.getGIDE( this.screenFrm, props, "jkcemu.ac1." );
 
@@ -479,13 +478,13 @@ public class AC1
   {
     int rv = BLACK;
     if( this.colors != null ) {
-      if( this.screenInverseMode ) {
+      if( this.inverseBySW != this.inverseByKey ) {
 	rv = this.colors.length - 1;
       } else {
 	rv = 0;
       }
     } else {
-      if( this.screenInverseMode ) {
+      if( this.inverseBySW != this.inverseByKey ) {
 	rv = WHITE;
       }
     }
@@ -663,6 +662,9 @@ public class AC1
       rv = false;
     }
     if( rv && (emulatesColors( props ) != (this.ramColor != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesJoystick( props ) != this.joystickEnabled) ) {
       rv = false;
     }
     if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
@@ -1025,13 +1027,6 @@ public class AC1
 
 
   @Override
-  public int getSupportedJoystickCount()
-  {
-    return 1;
-  }
-
-
-  @Override
   public boolean getSwapKeyCharCase()
   {
     return true;
@@ -1062,7 +1057,7 @@ public class AC1
     int     ch = 0;
     switch( keyCode ) {
       case KeyEvent.VK_F1:
-	this.screenInverseMode = !this.screenInverseMode;
+	this.inverseByKey = !this.inverseByKey;
 	this.screenFrm.setScreenDirty( true );
 	rv = true;
 	break;
@@ -1226,7 +1221,7 @@ public class AC1
 	bType = BasicType.SCCH;
 	text  = SourceUtil.getKCBasicStyleProgram(
 					this.emuThread,
-					0x60B7,
+					0x60F7,
 					scchTokens );
 	break;
 
@@ -1305,8 +1300,9 @@ public class AC1
 		if( n > 0 ) {
 		  m <<= n;
 		}
-		boolean pixel = ((this.fontBytes[ fIdx ] & m) != 0);
-		if( inverse != this.screenInverseMode ) {
+		boolean pixel   = ((this.fontBytes[ fIdx ] & m) != 0);
+		boolean invMode = (this.inverseBySW != this.inverseByKey);
+		if( inverse != invMode ) {
 		  pixel = !pixel;
 		}
 		int curColorIdx = (pixel ? WHITE : BLACK);
@@ -1382,7 +1378,9 @@ public class AC1
 
 	case 4:
 	  synchronized( this.pio1 ) {
-	    if( !this.keyboardUsed && !this.joystickSelected ) {
+	    if( !this.keyboardUsed
+		&& !(this.joystickEnabled && this.joystickSelected) )
+	    {
 	      this.pio1.putInValuePortA( 0, 0xFF );
 	      this.keyboardUsed = true;
 	    }
@@ -1484,6 +1482,7 @@ public class AC1
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
 	loadROMs( props );
@@ -1533,32 +1532,29 @@ public class AC1
 	}
       }
     }
-    this.screenInverseMode = false;
-    this.pio1B3State       = false;
-    this.fdcWaitEnabled    = false;
-    this.tcEnabled         = true;
-    this.keyboardUsed      = false;
-    this.joystickSelected  = false;
-    this.graphicKeyState   = false;
-    this.lowerDRAMEnabled  = false;
-    this.osRomEnabled      = true;
-    this.scchPrgXEnabled   = false;
-    this.scchBasicEnabled  = false;
-    this.rf32KActive       = false;
-    this.rf32NegA15        = false;
-    this.rfReadEnabled     = false;
-    this.rfWriteEnabled    = false;
-    this.rfAddr16to19      = 0;
-    this.regF0             = 0;
-    this.joystickValue     = 0;
-    this.keyboardValue     = 0;
-    this.pio2Rom2010Offs   = -1;
-    this.romBank2010Offs   = -1;
-    this.fontOffs          = 0;
-    this.v24BitOut         = true;	// V24: H-Pegel
-    this.v24BitNum         = 0;
-    this.v24ShiftBuf       = 0;
-    this.v24TStateCounter  = 0;
+    this.inverseBySW      = false;
+    this.pio1B3State      = false;
+    this.fdcWaitEnabled   = false;
+    this.tcEnabled        = true;
+    this.keyboardUsed     = false;
+    this.graphicKeyState  = false;
+    this.lowerDRAMEnabled = false;
+    this.osRomEnabled     = true;
+    this.scchPrgXEnabled  = false;
+    this.scchBasicEnabled = false;
+    this.rf32KActive      = false;
+    this.rf32NegA15       = false;
+    this.rfReadEnabled    = false;
+    this.rfWriteEnabled   = false;
+    this.rfAddr16to19     = 0;
+    this.regF0            = 0;
+    this.pio2Rom2010Offs  = -1;
+    this.romBank2010Offs  = -1;
+    this.fontOffs         = 0;
+    this.v24BitOut        = true;	// V24: H-Pegel
+    this.v24BitNum        = 0;
+    this.v24ShiftBuf      = 0;
+    this.v24TStateCounter = 0;
     if( (this.osBytes == monSCCH80)
 	|| (this.osBytes == monSCCH1088)
 	|| (this.osBytes == mon2010c) )
@@ -1626,8 +1622,8 @@ public class AC1
 	{
 	  bType = BasicType.ADDR_60F7;
 	}
-	begAddr = 0x60F7;
-	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, begAddr );
+	begAddr = 0x6000;
+	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x60F7 );
 	hsType  = 'B';
 	break;
 
@@ -1673,29 +1669,27 @@ public class AC1
   @Override
   public void setJoystickAction( int joyNum, int actionMask )
   {
-    if( this.modeSCCH || this.mode2010 ) {
-      if( joyNum == 0 ) {
-	int value = 0;
-	if( (actionMask & JoystickThread.UP_MASK) != 0 ) {
-	  value |= 0x01;
-	}
-	if( (actionMask & JoystickThread.DOWN_MASK) != 0 ) {
-	  value |= 0x02;
-	}
-	if( (actionMask & JoystickThread.LEFT_MASK) != 0 ) {
-	  value |= 0x04;
-	}
-	if( (actionMask & JoystickThread.RIGHT_MASK) != 0 ) {
-	  value |= 0x08;
-	}
-	if( (actionMask & JoystickThread.BUTTONS_MASK) != 0 ) {
-	  value |= 0x10;
-	}
-	this.joystickValue = value;
-	synchronized( this.pio1 ) {
-	  if( this.joystickSelected ) {
-	    this.pio1.putInValuePortA( this.joystickValue, 0xFF );
-	  }
+    if( this.joystickEnabled && (joyNum == 0) ) {
+      int value = 0;
+      if( (actionMask & JoystickThread.UP_MASK) != 0 ) {
+	value |= 0x01;
+      }
+      if( (actionMask & JoystickThread.DOWN_MASK) != 0 ) {
+	value |= 0x02;
+      }
+      if( (actionMask & JoystickThread.LEFT_MASK) != 0 ) {
+	value |= 0x04;
+      }
+      if( (actionMask & JoystickThread.RIGHT_MASK) != 0 ) {
+	value |= 0x08;
+      }
+      if( (actionMask & JoystickThread.BUTTONS_MASK) != 0 ) {
+	value |= 0x10;
+      }
+      this.joystickValue = value;
+      synchronized( this.pio1 ) {
+	if( this.joystickSelected ) {
+	  this.pio1.putInValuePortA( this.joystickValue, 0xFF );
 	}
       }
     }
@@ -1813,7 +1807,7 @@ public class AC1
 	    keyTyped( ch );
 	    long millis = (ch == '\r' ?
 				getDelayMillisAfterPasteEnter()
-                                : getDelayMillisAfterPasteChar());
+				: getDelayMillisAfterPasteChar());
 	    if( millis > 0 ) {
 	      try {
 		Thread.sleep( millis );
@@ -1845,13 +1839,6 @@ public class AC1
 
   @Override
   public boolean supportsCopyToClipboard()
-  {
-    return true;
-  }
-
-
-  @Override
-  public boolean supportsOpenBasic()
   {
     return true;
   }
@@ -1941,7 +1928,7 @@ public class AC1
 	    this.emuThread.writeAudioPhase(
 			(v & (this.emuThread.isSoundOutEnabled() ?
 						0x01 : 0x40 )) != 0 );
-	    if( this.modeSCCH || this.mode2010 ) {
+	    if( this.joystickEnabled ) {
 	      boolean joySelected = ((v & 0x02) == 0);
 	      if( joySelected != this.joystickSelected ) {
 		this.joystickSelected = joySelected;
@@ -1952,26 +1939,27 @@ public class AC1
 				0xFF );
 	      }
 	    }
-	    if( this.fontSwitchable || this.inverseSwitchable ) {
+	    if( (this.colors != null) || this.fontSwitchable ) {
 	      boolean state = ((v & 0x08) != 0);
+	      /*
+	       * Die Farbgrafikkarte lauscht selbst am Bus, d.h.,
+	       * es wird das Signal vor der PIO gelesen.
+	       */
+	      if( this.colors != null ) {
+		state = ((value & 0x08) != 0);
+	      }
 	      if( state != this.pio1B3State ) {
-		this.pio1B3State = state;
-		if( this.fontSwitchable ) {
-		  int offs = 0;
-		  if( this.fontBytes != null ) {
-		    if( state && (this.fontBytes.length > 0x0800) ) {
-		      offs = 0x0800;
-		    }
-		  }
-		  if( offs != this.fontOffs ) {
-		    this.fontOffs = offs;
-		    this.screenFrm.setScreenDirty( true );
+		int offs = 0;
+		if( this.fontBytes != null ) {
+		  if( state && (this.fontBytes.length > 0x0800) ) {
+		    offs = 0x0800;
 		  }
 		}
-		if( this.inverseSwitchable ) {
-		  this.screenInverseMode = !this.screenInverseMode;
+		if( offs != this.fontOffs ) {
+		  this.fontOffs = offs;
 		  this.screenFrm.setScreenDirty( true );
 		}
+		this.pio1B3State = state;
 	      }
 	    }
 	  }
@@ -2163,7 +2151,7 @@ public class AC1
 	  break;
 
 	case 0xF0:
-	  if( this.ramColor != null ) {
+	  if( this.colors != null ) {
 	    Z80CPU cpu = this.emuThread.getZ80CPU();
 	    if( (value & 0x01) != 0 ) {
 	      if( ((this.regF0 & 0x01) == 0)
@@ -2178,7 +2166,11 @@ public class AC1
 		cpu.setMaxSpeedKHz( 2000 );
 	      }
 	    }
-	    this.regF0 = value & 0xFF;
+	    if( (value & 0x02) != (this.regF0 & 0x02) ) {
+	      this.inverseBySW = ((value & 0x02) != 0);
+	      this.screenFrm.setScreenDirty( true );
+	    }
+	    this.regF0 = value;
 	  }
 	  break;
 
@@ -2241,6 +2233,15 @@ public class AC1
   }
 
 
+  private static boolean emulatesJoystick( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+			props,
+			"jkcemu.ac1.joystick.enabled",
+			false );
+  }
+
+
   private static boolean emulatesFloppyDisk( Properties props )
   {
     return EmuUtil.getBooleanProperty(
@@ -2288,46 +2289,48 @@ public class AC1
   private void loadFont( Properties props )
   {
     this.fontBytes = readFontByProperty(
-				props,
-				"jkcemu.ac1.font.file",
-				this.fontSwitchable ? 0x1000 : 0x0800 );
+	props,
+	"jkcemu.ac1.font.file",
+	((this.colors != null) || this.fontSwitchable) ? 0x1000 : 0x0800 );
+
     if( this.fontBytes == null ) {
-      if( this.mode2010 ) {
-	if( font2010 == null ) {
-	  font2010 = readResource( "/rom/ac1/font2010.bin" );
-	}
-	this.fontBytes = font2010;
-      } else if( this.modeSCCH ) {
-	if(fontSCCH == null ) {
-	  fontSCCH = readResource( "/rom/ac1/scchfont.bin" );
-	}
-	this.fontBytes = fontSCCH;
-	if( (fontSCCH != null) && this.fontSwitchable ) {
-	  if( fontCCD == null ) {
-	    fontCCD = readResource( "/rom/ac1/ccdfont.bin" );
+      if( (this.colors != null) || this.fontSwitchable) {
+	byte[] primaryFont = null;
+	if( this.mode2010 ) {
+	  if( font2010 == null ) {
+	    font2010 = readResource( "/rom/ac1/font2010.bin" );
 	  }
-	  if( fontCCD != null ) {
-	    /*
-	     * Der SCCH-Zeichensatz soll aktiv sein,
-	     * wenn auf PIO1 B3 eine 1 ausgegeben wird.
-	     * Demzufolge muss der SCCH-Zeichensatz in den hinteren
-	     * 2 KByte liegen
-	     */
-	    byte[] a = new byte[ 0x1000 ];
-	    Arrays.fill( a, (byte) 0 );
-	    System.arraycopy(
+	  primaryFont = font2010;
+	} else {
+	  if( fontSCCH == null ) {
+	    fontSCCH = readResource( "/rom/ac1/scchfont.bin" );
+	  }
+	  primaryFont = fontSCCH;
+	}
+	if( fontCCD == null ) {
+	  fontCCD = readResource( "/rom/ac1/ccdfont.bin" );
+	}
+	if( (primaryFont != null) && (fontCCD != null) ) {
+	  byte[] a = new byte[ 0x1000 ];
+	  Arrays.fill( a, (byte) 0 );
+	  System.arraycopy(
+			primaryFont,
+			0,
+			a,
+			0,
+			Math.min( primaryFont.length, 0x0800 ) );
+	  System.arraycopy(
 			fontCCD,
 			0,
 			a,
-			0,
-			Math.min( fontCCD.length, 0x0800 ) );
-	    System.arraycopy(
-			fontSCCH,
-			0,
-			a,
 			0x0800,
-			Math.min( fontSCCH.length, 0x0800 ) );
-	    this.fontBytes = a;
+			Math.min( fontCCD.length, 0x0800 ) );
+	  this.fontBytes = a;
+	} else {
+	  if( primaryFont != null ) {
+	    this.fontBytes = primaryFont;
+	  } else {
+	    this.fontBytes = fontCCD;
 	  }
 	}
       } else {
@@ -2336,6 +2339,16 @@ public class AC1
 	    fontU402 = readResource( "/rom/ac1/u402bm513x4.bin" );
 	  }
 	  this.fontBytes = fontU402;
+	} else if( this.modeSCCH ) {
+	  if( fontSCCH == null ) {
+	    fontSCCH = readResource( "/rom/ac1/scchfont.bin" );
+	  }
+	  this.fontBytes = fontSCCH;
+	} else if( this.mode2010 ) {
+	  if( font2010 == null ) {
+	    font2010 = readResource( "/rom/ac1/font2010.bin" );
+	  }
+	  this.fontBytes = font2010;
 	} else {
 	  if( fontCCD == null ) {
 	    fontCCD = readResource( "/rom/ac1/ccdfont.bin" );
@@ -2472,16 +2485,5 @@ public class AC1
 
     // Zeichensatz
     loadFont( props );
-  }
-
-
-  private void setKeyboardValue( int value )
-  {
-    this.keyboardValue = value;
-    synchronized( this.pio1 ) {
-      if( !this.joystickSelected ) {
-	this.pio1.putInValuePortA( this.keyboardValue, 0xFF );
-      }
-    }
   }
 }

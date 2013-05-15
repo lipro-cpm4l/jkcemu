@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -101,6 +101,7 @@ public class Z1013 extends EmuSys implements
   private static byte[] fontAlt        = null;
 
   private Z80PIO              pio;
+  private GIDE                gide;
   private FDC8272             fdc;
   private RTC7242X            rtc;
   private GraphicCCJ          graphCCJ;
@@ -243,6 +244,8 @@ public class Z1013 extends EmuSys implements
     } else {
       this.vdip = null;
     }
+
+    this.gide = GIDE.getGIDE( this.screenFrm, props, "jkcemu.z1013." );
 
     java.util.List<Z80InterruptSource> iSources
 				= new ArrayList<Z80InterruptSource>();
@@ -503,6 +506,9 @@ public class Z1013 extends EmuSys implements
     } else {
       rv = false;
     }
+    if( rv ) {
+      rv = GIDE.complies( this.gide, props, "jkcemu.z1013." );
+    }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
       rv = false;
     }
@@ -577,6 +583,9 @@ public class Z1013 extends EmuSys implements
   @Override
   public void die()
   {
+    if( this.gide != null ) {
+      this.gide.die();
+    }
     if( this.ramFloppy1 != null ) {
       this.ramFloppy1.deinstall();
     }
@@ -1191,6 +1200,12 @@ public class Z1013 extends EmuSys implements
 	rv = this.rtc.read( port );
       }
     }
+    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
+      int value = this.gide.read( port );
+      if( value >= 0 ) {
+	rv = value;
+      }
+    }
     else if( ((port & 0xF8) == 0x98) && (this.ramFloppy1 != null) ) {
       rv = this.ramFloppy1.readByte( port & 0x07 );
     }
@@ -1392,6 +1407,9 @@ public class Z1013 extends EmuSys implements
       this.pio.reset( false );
     }
     this.keyboard.reset();
+    if( this.gide != null ) {
+      this.gide.reset();
+    }
     if( this.fdc != null ) {
       this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
     }
@@ -1746,6 +1764,9 @@ public class Z1013 extends EmuSys implements
       if( this.rtc != null ) {
 	this.rtc.write( port, value );
       }
+    }
+    else if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
+      this.gide.write( port, value );
     }
     else if( ((port & 0xF8) == 0x98) && (this.ramFloppy1 != null) ) {
       this.ramFloppy1.writeByte( port & 0x07, value );

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -137,7 +137,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
       yMargin = 0;
     }
     int rv = yMargin + this.gdc.getCharTopLine();
-    if( this.fixedScreenSize ) {
+    if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
       rv *= 2;
     }
     return rv;
@@ -166,7 +166,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 
   public int getScreenHeight()
   {
-    return this.fixedScreenSize ?
+    return (this.fixedScreenSize || this.screenFrm.isFullScreenMode()) ?
 		(2 * DEFAULT_SCREEN_HEIGHT) : DEFAULT_SCREEN_HEIGHT;
   }
 
@@ -174,7 +174,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   public int getScreenWidth()
   {
     int rv = DEFAULT_SCREEN_WIDTH;
-    if( this.fixedScreenSize ) {
+    if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
       rv = 2 * DEFAULT_SCREEN_WIDTH;
     } else {
       if( this.screenWidth > DEFAULT_SCREEN_WIDTH ) {
@@ -202,7 +202,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
       int yMargin = (DEFAULT_SCREEN_HEIGHT - this.gdc.getDisplayLines()) / 2;
       if( yMargin > 0 ) {
 	yOffs += yMargin;
-	if( this.fixedScreenSize ) {
+	if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
 	  yOffs += yMargin;
 	}
       }
@@ -356,7 +356,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 	  img.setRGB( x++, y, border );
 	}
       }
-      if( this.fixedScreenSize ) {
+      if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
 	g.drawImage(
 		img,
 		xOffs,
@@ -601,7 +601,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
       newWidth /= 2;
     }
     this.screenWidth = newWidth;
-    if( newWidth != oldWidth ) {
+    if( (newWidth != oldWidth) && !this.fixedScreenSize ) {
       this.screenFrm.fireScreenSizeChanged();
     }
   }

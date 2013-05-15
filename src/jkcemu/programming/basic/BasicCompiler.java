@@ -13,6 +13,7 @@ import java.io.*;
 import java.lang.*;
 import java.text.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import jkcemu.base.*;
 import jkcemu.programming.*;
 
@@ -32,40 +33,50 @@ public class BasicCompiler
 
   // sortierte Liste der reservierten Schluesselwoeter
   private static final String[] sortedReservedWords = {
-	"ABS", "ADD", "AND", "APPEND", "AS", "ASC", "ASM", "AT",
+	"ABS", "ACCEPT", "ADD", "AND", "APPEND", "AS", "ASC", "ASM",
+	"AT", "AVAILABLE",
 	"BIN$", "BLACK", "BLINKING", "BLUE", "BORDER", "BSS",
-	"CALL", "CHR$", "CIRCLE", "CLOSE", "CLS",
+	"CALL", "CASE", "CHR$", "CIRCLE", "CLOSE", "CLS",
 	"CODE", "COLOR", "CURSOR", "CYAN",
-	"DATA", "DECLARE", "DEEK", "DEF", "DEFUSR",
+	"DATA", "DATAGRAM", "DECLARE", "DEEK", "DEF", "DEFUSR",
 	"DEFUSR0", "DEFUSR1", "DEFUSR2", "DEFUSR3", "DEFUSR4",
 	"DEFUSR5", "DEFUSR6", "DEFUSR7", "DEFUSR8", "DEFUSR9",
-	"DIM", "DO", "DOKE", "DRAW", "DRAWR",
+	"DIM", "DNSSERVER", "DNSSERVER$", "DO", "DOKE", "DRAW", "DRAWR",
 	"ELSE", "ELSEIF", "END", "ENDIF", "EOF", "ERR", "ERR$", "EXIT",
-	"FALSE", "FOR", "FUNCTION",
-	"GOSUB", "GOTO", "GREEN",
-	"HEX$", "H_CHAR", "H_PIXEL",
-	"IF", "IN", "INCHAR$", "INCLUDE", "INK", "INKEY$",
-	"INP", "INPUT", "INSTR",
+	"E_CHANNEL_ALREADY_OPEN", "E_CHANNEL_CLOSED", "E_CONNECT_FAILED",
+	"E_DEVICE_LOCKED", "E_DEVICE_NOT_CONFIGURED", "E_DEVICE_NOT_FOUND",
+	"E_DISK_FULL", "E_DNS_ERROR", "E_DNS_NOT_CONFIGURED",
+	"E_EOF", "E_ERROR", "E_FILE_NOT_FOUND", "E_INVALID",
+	"E_IO_ERROR", "E_IO_MODE",
+	"E_MTU_EXCEEDED", "E_NO_DISK", "E_OK", "E_OVERFLOW",
+	"E_READY_ONLY", "E_SOCKET_STATUS", "E_TIMEOUT", "E_UNKNOWN_HOST",
+	"FALSE", "FLUSH", "FOR", "FUNCTION",
+	"GATEWAY", "GATEWAY$", "GOSUB", "GOTO", "GREEN",
+	"HEX$", "HOSTBYNAME$", "H_CHAR", "H_PIXEL",
+	"IF", "IN", "INCLUDE", "INK", "INKEY$",
+	"INP", "INPUT", "INPUT$", "INSTR",
 	"JOYST",
 	"LABEL", "LASTSCREEN", "LEFT$", "LEN", "LET", "LINE",
-	"LOCAL", "LOCATE", "LOOP", "LOWER$", "LTRIM$",
-	"MAGENTA", "MAX", "MEMSTR$", "MID$", "MIN", "MIRROR$",
+	"LOCAL", "LOCALADDR", "LOCALADDR$", "LOCALPORT",
+	"LOCATE", "LOOP", "LOWER$",
+	"LPRINT", "LTRIM$",
+	"MACADDR$", "MAGENTA", "MAX", "MEMSTR$", "MID$", "MIN", "MIRROR$",
 	"MOD", "MOVE", "MOVER",
-	"NEXT", "NOT",
+	"NETMASK", "NETMASK$", "NEXT", "NOT",
 	"ON", "OPEN", "OR", "OUT", "OUTPUT",
 	"PAPER", "PASSWORD", "PAUSE", "PEEK", "PEN",
 	"PLOT", "PLOTR", "POINT", "POKE",
 	"PRESET", "PRINT", "PSET", "PTEST",
-	"READ", "RED", "REM", "RESTORE", "RETURN", "RIGHT$",
-	"RND", "RTRIM$",
-	"SCREEN", "SGN", "SHL", "SHR", "SPACE$",
+	"READ", "RED", "REM", "REMOTEADDR$", "REMOTEPORT",
+	"RESTORE", "RETURN", "RIGHT$", "RND", "RTRIM$",
+	"SCREEN", "SELECT", "SEND", "SET", "SGN", "SHL", "SHR", "SPACE$",
 	"SQR", "STEP", "STOP", "STR$", "STRING$", "SUB",
-	"TARGET_ADDR", "TARGET_ID$", "TEXT", "THEN", "TO", "TOP",
+	"TARGETADDR", "TARGETID$", "TEXT", "THEN", "TO", "TOP",
 	"TRIM$", "TRUE",
 	"UNTIL", "UPPER$", "USING", "USR",
 	"USR0", "USR1", "USR2", "USR3", "USR4",
 	"USR5", "USR6", "USR7", "USR8", "USR9",
-	"VAL",
+	"VAL", "VDIP",
 	"WAIT", "WEND", "WHILE", "WHITE", "WRITE", "W_CHAR", "W_PIXEL",
 	"XOR", "XPOS",
 	"YELLOW", "YPOS" };
@@ -159,8 +170,8 @@ public class BasicCompiler
     try {
       if( this.options.getShowAssemblerText() ) {
 	this.asmOut.append( ";\n"
-		+ ";Dieser Quelltext wurde vom JKCEMU-BASIC-Compiler"
-		+ " erzeugt.\n"
+		+ ";Dieser Quelltext wurde vom"
+		+ " JKCEMU-BASIC-Compiler erzeugt.\n"
 		+ ";http://www.jens-mueller.org/jkcemu/\n"
 		+ ";\n"
 		+ "\n" );
@@ -183,12 +194,9 @@ public class BasicCompiler
       this.asmOut.append( "MSTART:\n" );
       parseSourceText();
       if( this.execEnabled ) {
-	BasicLibrary.appendCodeTo( this.asmOut, this.target, this );
+	BasicLibrary.appendCodeTo( this );
 	BasicLibrary.appendInitTo(
-				this.asmOut,
-				this.target,
-				this.options,
-				this.libItems,
+				this,
 				this.name2GlobalVar,
 				this.usrLabels );
 	this.asmOut.append( "\tJP\tMSTART\n" );
@@ -202,18 +210,12 @@ public class BasicCompiler
 	    this.asmOut.append( "\tDB\t00H\n" );
 	  }
 	}
-	BasicLibrary.appendData(
-			this.asmOut,
-			this.target,
-			this.options ,
-			this.libItems,
+	BasicLibrary.appendDataTo(
+			this,
 			this.str2Label,
 			this.userData );
-	BasicLibrary.appendBSS(
-			this.asmOut,
-			this.target,
-			this.options,
-			this.libItems,
+	BasicLibrary.appendBssTo(
+			this,
 			this.name2GlobalVar,
 			this.usrLabels,
 			this.userBSS );
@@ -238,9 +240,42 @@ public class BasicCompiler
   }
 
 
+  public AsmCodeBuf getCodeBuf()
+  {
+    return this.asmOut;
+  }
+
+
+  public int getIOChannelSize()
+  {
+    int rv = BasicLibrary.IOCTB_DRIVER_OFFS;
+    if( usesLibItem( BasicLibrary.LibItem.KCNET_BASE ) ) {
+      rv = Math.max( rv, KCNetLibrary.IOCTB_CHANNEL_SIZE );
+    }
+    return rv;
+  }
+
+
   public Set<BasicLibrary.LibItem> getLibItems()
   {
     return this.libItems;
+  }
+
+
+  public String getStringLiteralLabel( String text )
+  {
+    String label = this.str2Label.get( text );
+    if( label == null ) {
+      label = nextLabel();
+      this.str2Label.put( text, label );
+    }
+    return label;
+  }
+
+
+  public AbstractTarget getTarget()
+  {
+    return this.target;
   }
 
 
@@ -801,7 +836,7 @@ public class BasicCompiler
     String  lastInst    = this.asmOut.substring( lastLinePos );
     int     tabPos      = lastInst.indexOf( (char) '\t' );
     if( tabPos > 0 ) {
-      lastInst = lastInst.substring( lastLinePos );
+      lastInst = lastInst.substring( tabPos );
     }
     if( lastInst.startsWith( "\tJP" ) || lastInst.startsWith( "\tJR" ) ) {
       if( lastInst.indexOf( (char) ',' ) < 0 ) {
@@ -1045,7 +1080,7 @@ public class BasicCompiler
 	done = true;
 	if( name.equals( "ASM" ) ) {
 	  checkCreateStackFrame();
-	  parseASM( iter );
+	  parseASM( iter, false );
 	} else if( name.equals( "DECLARE" ) ) {
 	  parseDECLARE( iter );
 	} else if( name.equals( "REM" ) ) {
@@ -1065,20 +1100,28 @@ public class BasicCompiler
 	   */
 	  checkMainPrgScope();
 	  checkCreateStackFrame();
-	  if( name.equals( "BORDER" ) ) {
+	  if( name.equals( "ACCEPT" ) ) {
+	    parseACCEPT( iter );
+	  } else if( name.equals( "BORDER" ) ) {
 	    parseBORDER( iter );
 	  } else if( name.equals( "CALL" ) ) {
 	    parseCALL( iter );
 	  } else if( name.equals( "CIRCLE" ) ) {
 	    parseCIRCLE( iter );
+	  } else if( name.equals( "CLOSE" ) ) {
+	    parseCLOSE( iter );
 	  } else if( name.equals( "CLS" ) ) {
 	    parseCLS();
 	  } else if( name.equals( "COLOR" ) ) {
 	    parseCOLOR( iter );
+	  } else if( name.equals( "CONNECT" ) ) {
+	    parseCONNECT( iter );
 	  } else if( name.equals( "CURSOR" ) ) {
 	    parseCURSOR( iter );
 	  } else if( name.equals( "DATA" ) ) {
 	    parseDATA( iter );
+	  } else if( name.equals( "DATAGRAM" ) ) {
+	    parseDATAGRAM( iter );
 	  } else if( name.equals( "DEF" ) ) {
 	    parseDEF( iter );
 	  } else if( name.equals( "DEFUSR" ) ) {
@@ -1123,6 +1166,8 @@ public class BasicCompiler
 	    parseENDIF( iter );
 	  } else if( name.equals( "EXIT" ) ) {
 	    parseEXIT( iter );
+	  } else if( name.equals( "FLUSH" ) ) {
+	    parseFLUSH( iter );
 	  } else if( name.equals( "FOR" ) ) {
 	    parseFOR( iter );
 	  } else if( name.equals( "GOSUB" ) ) {
@@ -1145,6 +1190,8 @@ public class BasicCompiler
 	    parseLOCATE( iter );
 	  } else if( name.equals( "LOOP" ) ) {
 	    parseLOOP( iter );
+	  } else if( name.equals( "LPRINT" ) ) {
+	    parseLPRINT( iter );
 	  } else if( name.equals( "MOVE" ) ) {
 	    parseMOVE( iter );
 	  } else if( name.equals( "MOVER" ) ) {
@@ -1153,6 +1200,8 @@ public class BasicCompiler
 	    parseNEXT( iter );
 	  } else if( name.equals( "ON" ) ) {
 	    parseON( iter );
+	  } else if( name.equals( "OPEN" ) ) {
+	    parseOPEN( iter );
 	  } else if( name.equals( "OUT" ) ) {
 	    parseOUT( iter );
 	  } else if( name.equals( "PAPER" ) ) {
@@ -1185,6 +1234,10 @@ public class BasicCompiler
 	    parseRETURN();
 	  } else if( name.equals( "SCREEN" ) ) {
 	    parseSCREEN( iter );
+	  } else if( name.equals( "SEND" ) ) {
+	    parseSEND( iter );
+	  } else if( name.equals( "SET" ) ) {
+	    parseSET( iter );
 	  } else if( name.equals( "WAIT" ) ) {
 	    parseWAIT( iter );
 	  } else if( name.equals( "WEND" ) ) {
@@ -1216,12 +1269,17 @@ public class BasicCompiler
   }
 
 
-  private void parseASM( CharacterIterator iter ) throws PrgException
+  private void parseASM(
+		CharacterIterator iter,
+		boolean           isFunc ) throws PrgException
   {
+    if( isFunc ) {
+      parseToken( iter, '(' );
+    }
     do {
       boolean data = false;
       boolean bss  = false;
-      if( !checkKeyword( iter, "CODE" ) ) {
+      if( !isFunc && !checkKeyword( iter, "CODE" ) ) {
 	if( checkKeyword( iter, "DATA" ) ) {
 	  data = true;
 	} else if( checkKeyword( iter, "BSS" ) ) {
@@ -1249,6 +1307,23 @@ public class BasicCompiler
 	this.asmOut.newLine();
       }
     } while( checkToken( iter, ',' ) );
+    if( isFunc ) {
+      parseToken( iter, ')' );
+    }
+  }
+
+
+  private void parseACCEPT( CharacterIterator iter ) throws PrgException
+  {
+    checkKCNetSupported();
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(M_PORT),HL\n" );
+    parseKeywordAS( iter );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, true, null );
+    this.asmOut.append( "\tCALL\tACCEPT\n" );
+    addLibItem( BasicLibrary.LibItem.M_PORT );
+    addLibItem( BasicLibrary.LibItem.ACCEPT );
   }
 
 
@@ -1306,6 +1381,15 @@ public class BasicCompiler
   }
 
 
+  private void parseCLOSE( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tIOCLOSE\n" );
+    addLibItem( BasicLibrary.LibItem.IOCLOSE );
+  }
+
+
   private void parseCLS()
   {
     if( this.target.supportsXCLS() ) {
@@ -1357,6 +1441,24 @@ public class BasicCompiler
     if( checkToken( iter, ',' ) ) {
       parseBORDER( iter );
     }
+  }
+
+
+  private void parseCONNECT( CharacterIterator iter ) throws PrgException
+  {
+    checkKCNetSupported();
+    parseStringPrimExpr( iter );
+    this.asmOut.append( "\tLD\t(M_HOST),HL\n" );
+    parseToken( iter, ',' );
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(M_PORT),HL\n" );
+    parseKeywordAS( iter );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, true, null );
+    this.asmOut.append( "\tCALL\tCONNECT\n" );
+    addLibItem( BasicLibrary.LibItem.M_HOST );
+    addLibItem( BasicLibrary.LibItem.M_PORT );
+    addLibItem( BasicLibrary.LibItem.CONNECT );
   }
 
 
@@ -1421,6 +1523,20 @@ public class BasicCompiler
       }
     } while( checkToken( iter, ',' ) );
     addLibItem( BasicLibrary.LibItem.DATA );
+  }
+
+
+  private void parseDATAGRAM( CharacterIterator iter ) throws PrgException
+  {
+    checkKCNetSupported();
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(M_PORT),HL\n" );
+    parseKeywordAS( iter );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, true, null );
+    this.asmOut.append( "\tCALL\tDATAGRAM\n" );
+    addLibItem( BasicLibrary.LibItem.M_PORT );
+    addLibItem( BasicLibrary.LibItem.DATAGRAM );
   }
 
 
@@ -1582,9 +1698,10 @@ public class BasicCompiler
       parseDRAWR( iter );
     } else {
       checkGraphicsSupported();
+      checkKeyword( iter, "TO" );
       parsePointToMem( iter, "M_LNEX", "M_LNEY" );
       this.asmOut.append( "\tCALL\tDRAW\n" );
-      addLibItem( BasicLibrary.LibItem.DRLINE );
+      addLibItem( BasicLibrary.LibItem.DRAW );
     }
   }
 
@@ -1613,7 +1730,9 @@ public class BasicCompiler
       }
       String elseLabel = ifEntry.getElseLabel();
       if( elseLabel != null ) {
-	if( this.options.getPreferRelativeJumps() ) {
+	if( !ifEntry.isMultiLine()
+	    && this.options.getPreferRelativeJumps() )
+	{
 	  this.asmOut.append( "\tJR\t" );
 	} else {
 	  this.asmOut.append( "\tJP\t" );
@@ -1656,7 +1775,7 @@ public class BasicCompiler
     if( elseLabel == null ) {
       throw new PrgException( "ELSEIF hinter ELSE nicht zul\u00E4ssig" );
     }
-    if( this.options.getPreferRelativeJumps() ) {
+    if( !ifEntry.isMultiLine() && this.options.getPreferRelativeJumps() ) {
       this.asmOut.append( "\tJR\t" );
     } else {
       this.asmOut.append( "\tJP\t" );
@@ -1737,7 +1856,7 @@ public class BasicCompiler
 	  for( int i = 0; i < nArgs; i++ ) {
 	    if( callableEntry.getArgType( i ) == DataType.STRING ) {
 	      this.asmOut.append_LD_DE_IndirectIY(
-					callableEntry.getArgIYOffs( i ) );
+				callableEntry.getArgIYOffs( i, nArgs ) );
 	      this.asmOut.append( "\tCALL\tMFREE\n" );
 	      addLibItem( BasicLibrary.LibItem.MFREE );
 	    }
@@ -1827,6 +1946,15 @@ public class BasicCompiler
     this.asmOut.append( "\tJP\t" );
     this.asmOut.append( loopEntry.getExitLabel() );
     this.asmOut.newLine();
+  }
+
+
+  private void parseFLUSH( CharacterIterator iter ) throws PrgException
+  {
+    parseToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tIOFLUSH\n" );
+    addLibItem( BasicLibrary.LibItem.IOFLUSH );
   }
 
 
@@ -2140,7 +2268,11 @@ public class BasicCompiler
     if( checkKeyword( iter, "INPUT" ) ) {
 
       // Eingabe einer ganzen Zeile
-      parseInputLine( iter, false );
+      if( checkToken( iter, '#' ) ) {
+	parseInputLineIO( iter );
+      } else {
+	parseInputLine( iter, false );
+      }
 
     } else {
 
@@ -2258,12 +2390,28 @@ public class BasicCompiler
   }
 
 
+  private void parseLPRINT( CharacterIterator iter ) throws PrgException
+  {
+    if( !this.target.supportsXLPTCH() ) {
+      throw new PrgException(
+		"Druckerausgaben f\u00FCr das Zielsystem"
+					+ " nicht unterst\u00FCtzt" );
+    }
+    this.asmOut.append( "\tLD\tHL,XLPTCH\n"
+		+ "\tLD\t(M_IO_COUT),HL\n" );
+    addLibItem( BasicLibrary.LibItem.XLPTCH );
+    addLibItem( BasicLibrary.LibItem.M_IO_COUT );
+    parsePrint( iter, false );
+  }
+
+
   private void parseMOVE( CharacterIterator iter ) throws PrgException
   {
     if( checkKeyword( iter, "STEP" ) ) {
       parseMOVER( iter );
     } else {
       checkGraphicsSupported();
+      checkKeyword( iter, "TO" );
       parsePointToMem( iter, "M_XPOS", "M_YPOS" );
       addLibItem( BasicLibrary.LibItem.M_XYPO );
     }
@@ -2418,6 +2566,71 @@ public class BasicCompiler
   }
 
 
+  private void parseON( CharacterIterator iter ) throws PrgException
+  {
+    parseExpr( iter );
+    if( checkKeyword( iter, "GOSUB" ) ) {
+      this.asmOut.append( "\tCALL\tONGOAD\n" );
+      parseLineExprList( iter );
+      String label = nextLabel();
+      this.asmOut.append( "\tJR\tZ," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+		+ "\tLD\tDE," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+		+ "\tPUSH\tDE\n" );
+      if( this.options.getCheckStack() ) {
+        this.asmOut.append_LD_A_n( MAGIC_GOSUB );
+        this.asmOut.append( "\tPUSH\tAF\n" );
+      }
+      this.asmOut.append( "\tJP\t(HL)\n" );
+      this.asmOut.append( label );
+      this.asmOut.append( ":\n" );
+      addLibItem( BasicLibrary.LibItem.ONGOAD );
+    } else if( checkKeyword( iter, "GOTO" ) ) {
+      this.asmOut.append( "\tCALL\tONGOAD\n" );
+      parseLineExprList( iter );
+      String label = nextLabel();
+      this.asmOut.append( "\tJR\tZ," );
+      this.asmOut.append( label );
+      this.asmOut.append( "\n"
+		+ "\tJP\t(HL)\n" );
+      this.asmOut.append( label );
+      this.asmOut.append( ":\n" );
+      addLibItem( BasicLibrary.LibItem.ONGOAD );
+    } else {
+      throw new PrgException( "GOSUB oder GOTO erwartet" );
+    }
+  }
+
+
+  private void parseOPEN( CharacterIterator iter ) throws PrgException
+  {
+    int ioMode = 0;
+    parseStringPrimExpr( iter );
+    this.asmOut.append( "\tLD\t(M_IONM),HL\n" );
+    if( checkKeyword( iter, "FOR" ) ) {
+      if( checkKeyword( iter, "INPUT" ) ) {
+	ioMode = BasicLibrary.IOMODE_INPUT;
+      } else if( checkKeyword( iter, "OUTPUT" ) ) {
+	ioMode = BasicLibrary.IOMODE_OUTPUT;
+      } else if( checkKeyword( iter, "APPEND" ) ) {
+	ioMode = BasicLibrary.IOMODE_APPEND;
+      } else {
+	throw new PrgException( "INPUT, OUTPUT oder APPEND erwartet" );
+      }
+    }
+    parseKeywordAS( iter );
+    this.asmOut.append_LD_A_n( ioMode );
+    this.asmOut.append( "\tLD\t(M_IOAC),A\n" );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tIOOPEN\n" );
+    addLibItem( BasicLibrary.LibItem.IOOPEN );
+  }
+
+
   private void parseOUT( CharacterIterator iter ) throws PrgException
   {
     boolean enclosed = checkToken( iter, '(' );
@@ -2469,45 +2682,6 @@ public class BasicCompiler
 	}
       }
       this.asmOut.append( "\tOUT\t(C),L\n" );
-    }
-  }
-
-
-  private void parseON( CharacterIterator iter ) throws PrgException
-  {
-    parseExpr( iter );
-    if( checkKeyword( iter, "GOSUB" ) ) {
-      this.asmOut.append( "\tCALL\tONGOAD\n" );
-      parseLineExprList( iter );
-      String label = nextLabel();
-      this.asmOut.append( "\tJR\tZ," );
-      this.asmOut.append( label );
-      this.asmOut.append( "\n"
-		+ "\tLD\tDE," );
-      this.asmOut.append( label );
-      this.asmOut.append( "\n"
-		+ "\tPUSH\tDE\n" );
-      if( this.options.getCheckStack() ) {
-        this.asmOut.append_LD_A_n( MAGIC_GOSUB );
-        this.asmOut.append( "\tPUSH\tAF\n" );
-      }
-      this.asmOut.append( "\tJP\t(HL)\n" );
-      this.asmOut.append( label );
-      this.asmOut.append( ":\n" );
-      addLibItem( BasicLibrary.LibItem.ONGOAD );
-    } else if( checkKeyword( iter, "GOTO" ) ) {
-      this.asmOut.append( "\tCALL\tONGOAD\n" );
-      parseLineExprList( iter );
-      String label = nextLabel();
-      this.asmOut.append( "\tJR\tZ," );
-      this.asmOut.append( label );
-      this.asmOut.append( "\n"
-		+ "\tJP\t(HL)\n" );
-      this.asmOut.append( label );
-      this.asmOut.append( ":\n" );
-      addLibItem( BasicLibrary.LibItem.ONGOAD );
-    } else {
-      throw new PrgException( "GOSUB oder GOTO erwartet" );
     }
   }
 
@@ -2630,6 +2804,7 @@ public class BasicCompiler
       parsePLOTR( iter );
     } else {
       checkGraphicsSupported();
+      checkKeyword( iter, "TO" );
       parsePointTo_DE_HL( iter );
       this.asmOut.append( "\tLD\t(M_XPOS),DE\n"
 		+ "\tLD\t(M_YPOS),HL\n"
@@ -2659,81 +2834,29 @@ public class BasicCompiler
 
   private void parsePRINT( CharacterIterator iter ) throws PrgException
   {
-    boolean newLine   = true;
-    boolean space     = false;
-    boolean formatted = false;
-    char    ch        = skipSpaces( iter );
-    while( !isEndOfInstr( iter ) ) {
-      this.tmpStrBufUsed = false;
-      newLine            = true;
-      space              = false;
-      boolean hasSeg     = false;
-
-      // String-Segment pruefen
-      boolean mandatory = false;
-      for(;;) {
-	String text = checkStringLiteral( iter );
-	if( text != null ) {
-	  // String-Literal evtl. bereits vorhanden?
-	  String label = this.str2Label.get( text );
-	  if( label != null ) {
-	    this.asmOut.append( "\tLD\tHL," );
-	    this.asmOut.append( label );
-	    this.asmOut.append( "\n"
-		  + "\tCALL\tXOUTS\n" );
-	    addLibItem( BasicLibrary.LibItem.XOUTS );
-	  } else {
-	    this.asmOut.append( "\tCALL\tXOUTST\n" );
-	    this.asmOut.appendStringLiteral( text );
-	    addLibItem( BasicLibrary.LibItem.XOUTST );
-	  }
-	  hasSeg = true;
-	} else if( checkParseStringPrimVarExpr( iter ) ) {
-	  this.asmOut.append( "\tCALL\tXOUTS\n" );
-	  addLibItem( BasicLibrary.LibItem.XOUTS );
-	  hasSeg = true;
-	} else {
-	  if( mandatory ) {
-	    throwStringExprExpected();
-	  }
-	}
-	if( skipSpaces( iter ) != '+' ) {
-	  break;
-	}
-	iter.next();
-	mandatory = true;
+    if( checkToken( iter, '#' ) ) {
+      parseIOChannelNumToWriteRoutineInHL( iter );
+      this.asmOut.append( "\tCALL\tIO_SET_COUT\n" );
+      addLibItem( BasicLibrary.LibItem.IO_SET_COUT );
+      if( this.options.getPreferRelativeJumps() ) {
+	this.asmOut.append( "\tJR\tC," );
+      } else {
+	this.asmOut.append( "\tJP\tC," );
       }
-      if( !hasSeg ) {
-
-	// kann nur noch numerisches Segment sein
-	parseExpr( iter );
-	if( formatted ) {
-	  this.asmOut.append( "\tCALL\tP_INTF\n" );
-	  addLibItem( BasicLibrary.LibItem.P_INTF );
-	} else {
-	  this.asmOut.append( "\tCALL\tP_INT\n" );
-	  addLibItem( BasicLibrary.LibItem.P_INT );
-	}
-	space = true;
+      String endOfInstLabel = nextLabel();
+      this.asmOut.append( endOfInstLabel );
+      this.asmOut.newLine();
+      if( isEndOfInstr( iter ) ) {
+	this.asmOut.append( "\tCALL\tPS_NL\n" );
+	addLibItem( BasicLibrary.LibItem.PS_NL );
+      } else {
+	parseToken( iter, ',' );
+	parsePrint( iter, false );
       }
-
-      // weiteres Segment?
-      ch        = skipSpaces( iter );
-      formatted = (ch == ',');
-      if( (ch != ';') && (ch != ',') ) {
-	break;
-      }
-      if( space ) {
-	this.asmOut.append( "\tCALL\tOUTSP\n" );
-	addLibItem( BasicLibrary.LibItem.OUTSP );
-      }
-      newLine = false;
-      iter.next();
-      ch = skipSpaces( iter );
-    }
-    if( newLine ) {
-      this.asmOut.append( "\tCALL\tXOUTNL\n" );
-      addLibItem( BasicLibrary.LibItem.XOUTNL );
+      this.asmOut.append( endOfInstLabel );
+      this.asmOut.append( ":\n" );
+    } else {
+      parsePrint( iter, true );
     }
   }
 
@@ -2823,6 +2946,56 @@ public class BasicCompiler
     parseExpr( iter );
     this.asmOut.append( "\tCALL\tSCREEN\n" );
     addLibItem( BasicLibrary.LibItem.SCREEN );
+  }
+
+
+  private void parseSEND( CharacterIterator iter ) throws PrgException
+  {
+    checkKCNetSupported();
+    parseToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, true, null );
+    this.asmOut.append( "\tLD\t(KCNET_M_SOCKET),A\n"
+			+ "\tLD\t(M_IOCA),HL\n" );
+    parseToken( iter, ',' );
+    parseStringPrimExpr( iter );
+    this.asmOut.append( "\tLD\t(M_HOST),HL\n" );
+    parseToken( iter, ',' );
+    parseExpr( iter );
+    this.asmOut.append( "\tLD\t(M_PORT),HL\n" );
+    this.asmOut.append( "\tCALL\tSEND\n" );
+    addLibItem( BasicLibrary.LibItem.KCNET_BASE );
+    addLibItem( BasicLibrary.LibItem.M_HOST );
+    addLibItem( BasicLibrary.LibItem.M_PORT );
+    addLibItem( BasicLibrary.LibItem.SEND );
+  }
+
+
+  private void parseSET( CharacterIterator iter ) throws PrgException
+  {
+    if( checkKeyword( iter, "DNSSERVER" ) ) {
+      checkKCNetSupported();
+      parseStringPrimExpr( iter );
+      this.asmOut.append( "\tCALL\tKCNET_SET_DNSSERVER\n" );
+      addLibItem( BasicLibrary.LibItem.KCNET_SET_DNSSERVER );
+    } else if( checkKeyword( iter, "GATEWAY" ) ) {
+      checkKCNetSupported();
+      parseStringPrimExpr( iter );
+      this.asmOut.append( "\tCALL\tKCNET_SET_GATEWAY\n" );
+      addLibItem( BasicLibrary.LibItem.KCNET_SET_GATEWAY );
+    } else if( checkKeyword( iter, "LOCALADDR" ) ) {
+      checkKCNetSupported();
+      parseStringPrimExpr( iter );
+      this.asmOut.append( "\tCALL\tKCNET_SET_LOCALADDR\n" );
+      addLibItem( BasicLibrary.LibItem.KCNET_SET_LOCALADDR );
+    } else if( checkKeyword( iter, "NETMASK" ) ) {
+      checkKCNetSupported();
+      parseStringPrimExpr( iter );
+      this.asmOut.append( "\tCALL\tKCNET_SET_NETMASK\n" );
+      addLibItem( BasicLibrary.LibItem.KCNET_SET_NETMASK );
+    } else {
+      throw new PrgException(
+		"DNSSERVER, GATEWAY, LOCALADDR oder NETMASK erwartet" );
+    }
   }
 
 
@@ -3007,31 +3180,14 @@ public class BasicCompiler
   }
 
 
-  private void parseBLACK( CharacterIterator iter ) throws PrgException
+  private void parseAVAILABLE( CharacterIterator iter ) throws PrgException
   {
-    checkParseDummyArg( iter );
-    this.target.appendColorBlack( this.asmOut );
-  }
-
-
-  private void parseBLINKING( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendColorBlinking( this.asmOut );
-  }
-
-
-  private void parseBLUE( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendColorBlue( this.asmOut );
-  }
-
-
-  private void parseCYAN( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendColorCyan( this.asmOut );
+    parseToken( iter, '(' );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tIOAVAILABLE\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.IOAVAILABLE );
   }
 
 
@@ -3053,39 +3209,14 @@ public class BasicCompiler
   }
 
 
-  private void parseERR( CharacterIterator iter ) throws PrgException
+  private void parseEOF( CharacterIterator iter ) throws PrgException
   {
-    checkParseDummyArg( iter );
-    this.asmOut.append( "\tLD\tHL,(M_ERR)\n" );
-    addLibItem( BasicLibrary.LibItem.M_ERR );
-  }
-
-
-  private void parseFALSE( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.asmOut.append( "\tLD\tHL,0000H\n" );
-  }
-
-
-  private void parseGREEN( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendColorGreen( this.asmOut );
-  }
-
-
-  private void parseH_CHAR( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendHChar( this.asmOut );
-  }
-
-
-  private void parseH_PIXEL( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendHPixel( this.asmOut );
+    parseToken( iter, '(' );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tIOEOF\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.IOEOF );
   }
 
 
@@ -3149,13 +3280,6 @@ public class BasicCompiler
   }
 
 
-  private void parseLASTSCREEN( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendLastScreenNum( this.asmOut );
-  }
-
-
   private void parseLEN( CharacterIterator iter ) throws PrgException
   {
     parseToken( iter, '(' );
@@ -3168,6 +3292,18 @@ public class BasicCompiler
       addLibItem( BasicLibrary.LibItem.F_LEN );
     }
     parseToken( iter, ')' );
+  }
+
+
+  private void parseLOCALPORT( CharacterIterator iter ) throws PrgException
+  {
+    checkKCNetSupported();
+    parseToken( iter, '(' );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tF_LOCALPORT\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.F_LOCALPORT );
   }
 
 
@@ -3190,13 +3326,6 @@ public class BasicCompiler
     }
     parseToken( iter, ')' );
     addLibItem( BasicLibrary.LibItem.CPHLDE );
-  }
-
-
-  private void parseMAGENTA( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendColorMagenta( this.asmOut );
   }
 
 
@@ -3230,10 +3359,15 @@ public class BasicCompiler
   }
 
 
-  private void parseRED( CharacterIterator iter ) throws PrgException
+  private void parseREMOTEPORT( CharacterIterator iter ) throws PrgException
   {
-    checkParseDummyArg( iter );
-    this.target.appendColorRed( this.asmOut );
+    checkKCNetSupported();
+    parseToken( iter, '(' );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tF_REMOTEPORT\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.F_REMOTEPORT );
   }
 
 
@@ -3279,28 +3413,6 @@ public class BasicCompiler
       this.asmOut.append( "\tCALL\tF_SQR\n" );
       addLibItem( BasicLibrary.LibItem.F_SQR );
     }
-  }
-
-
-  private void parseTARGET_ADDR( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.asmOut.append_LD_HL_nn( this.options.getBegAddr() );
-  }
-
-
-  private void parseTOP( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.asmOut.append( "\tLD\tHL,M_TOP\n" );
-    addLibItem( BasicLibrary.LibItem.M_TOP );
-  }
-
-
-  private void parseTRUE( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.asmOut.append( "\tLD\tHL,0FFFFH\n" );
   }
 
 
@@ -3383,50 +3495,6 @@ public class BasicCompiler
   }
 
 
-  private void parseWHITE( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendColorWhite( this.asmOut );
-  }
-
-
-  private void parseW_CHAR( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendWChar( this.asmOut );
-  }
-
-
-  private void parseW_PIXEL( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendWPixel( this.asmOut );
-  }
-
-
-  private void parseXPOS( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.asmOut.append( "\tLD\tHL,(M_XPOS)\n" );
-    addLibItem( BasicLibrary.LibItem.M_XYPO );
-  }
-
-
-  private void parseYELLOW( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.target.appendColorYellow( this.asmOut );
-  }
-
-
-  private void parseYPOS( CharacterIterator iter ) throws PrgException
-  {
-    checkParseDummyArg( iter );
-    this.asmOut.append( "\tLD\tHL,(M_YPOS)\n" );
-    addLibItem( BasicLibrary.LibItem.M_XYPO );
-  }
-
-
   private void parseStrBIN( CharacterIterator iter ) throws PrgException
   {
     lockTmpStrBuf();
@@ -3479,6 +3547,33 @@ public class BasicCompiler
   }
 
 
+  private void parseStrDNSSERVER( CharacterIterator iter )
+						throws PrgException
+  {
+    checkKCNetSupported();
+    lockTmpStrBuf();
+    this.asmOut.append( "\tCALL\tKCNET_S_DNSSERVER\n" );
+    addLibItem( BasicLibrary.LibItem.KCNET_S_DNSSERVER );
+  }
+
+
+  private void parseStrERR( CharacterIterator iter )  throws PrgException
+  {
+    this.asmOut.append( "\tLD\tHL,(M_ERT)\n" );
+    addLibItem( BasicLibrary.LibItem.M_ERT );
+  }
+
+
+  private void parseStrGATEWAY( CharacterIterator iter )
+						throws PrgException
+  {
+    checkKCNetSupported();
+    lockTmpStrBuf();
+    this.asmOut.append( "\tCALL\tKCNET_S_GATEWAY\n" );
+    addLibItem( BasicLibrary.LibItem.KCNET_S_GATEWAY );
+  }
+
+
   private void parseStrHEX( CharacterIterator iter ) throws PrgException
   {
     lockTmpStrBuf();
@@ -3508,19 +3603,71 @@ public class BasicCompiler
   }
 
 
-  private void parseStrINCHAR( CharacterIterator iter )  throws PrgException
+  private void parseStrHOSTBYNAME( CharacterIterator iter )
+						throws PrgException
   {
-    checkParseDummyArg( iter );
-    this.asmOut.append( "\tCALL\tS_INCH\n" );
-    addLibItem( BasicLibrary.LibItem.S_INCH );
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    parseStringPrimExpr( iter );
+    parseToken( iter, ')' );
+    this.asmOut.append( "\tCALL\tS_HOSTBYNAME\n" );
+    addLibItem( BasicLibrary.LibItem.S_HOSTBYNAME );
   }
 
 
   private void parseStrINKEY( CharacterIterator iter )  throws PrgException
   {
-    checkParseDummyArg( iter );
     this.asmOut.append( "\tCALL\tS_INKY\n" );
     addLibItem( BasicLibrary.LibItem.S_INKY );
+  }
+
+
+  private void parseStrINPUT( CharacterIterator iter )  throws PrgException
+  {
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    int pos = this.asmOut.length();
+    parseExpr( iter );
+    if( checkToken( iter, ',' ) ) {
+      String        oldCntCode        = this.asmOut.cut( pos );
+      String        newCntCode        = convertCodeToValueInBC( oldCntCode );
+      AtomicBoolean isConstChannelNum = new AtomicBoolean();
+      checkToken( iter, '#' );
+      parseIOChannelNumToPtrFldAddrInHL( iter, false, isConstChannelNum );
+      if( newCntCode != null ) {
+	this.asmOut.append( newCntCode );
+      } else {
+	String channelCode = this.asmOut.cut( pos );
+	if( isConstChannelNum.get() ) {
+	  this.asmOut.append( oldCntCode );
+	  this.asmOut.append( "\tLD\tB,H\n"
+			  + "\tLD\tC,L\n" );
+	  this.asmOut.append( channelCode );
+	} else {
+	  this.asmOut.append( oldCntCode );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	  this.asmOut.append( channelCode );
+	  this.asmOut.append( "\tPOP\tBC\n" );
+	}
+      }
+      this.asmOut.append( "\tCALL\tIOINX\n" );
+      addLibItem( BasicLibrary.LibItem.IOINX );
+    } else {
+      Integer cnt = removeLastCodeIfConstExpr( pos );
+      if( cnt != null ) {
+	if( cnt.intValue() == 1 ) {
+	  this.asmOut.append( "\tCALL\tS_INCH\n" );
+	  addLibItem( BasicLibrary.LibItem.S_INCH );
+	} else {
+	  this.asmOut.append( "\tCALL\tS_INP\n" );
+	  addLibItem( BasicLibrary.LibItem.S_INP );
+	}
+      } else {
+	this.asmOut.append( "\tCALL\tS_INP\n" );
+	addLibItem( BasicLibrary.LibItem.S_INP );
+      }
+    }
+    parseToken( iter, ')' );
   }
 
 
@@ -3549,6 +3696,16 @@ public class BasicCompiler
   }
 
 
+  private void parseStrLOCALADDR( CharacterIterator iter )
+						throws PrgException
+  {
+    checkKCNetSupported();
+    lockTmpStrBuf();
+    this.asmOut.append( "\tCALL\tKCNET_S_LOCALADDR\n" );
+    addLibItem( BasicLibrary.LibItem.KCNET_S_LOCALADDR );
+  }
+
+
   private void parseStrLOWER( CharacterIterator iter ) throws PrgException
   {
     lockTmpStrBuf();
@@ -3564,9 +3721,18 @@ public class BasicCompiler
   {
     parseToken( iter, '(' );
     parseStringPrimExpr( iter );
-    this.asmOut.append( "\tCALL\tS_LTRM\n" );
+    this.asmOut.append( "\tCALL\tS_LTRIM\n" );
     parseToken( iter, ')' );
-    addLibItem( BasicLibrary.LibItem.S_LTRM );
+    addLibItem( BasicLibrary.LibItem.S_LTRIM );
+  }
+
+
+  private void parseStrMACADDR( CharacterIterator iter ) throws PrgException
+  {
+    checkKCNetSupported();
+    lockTmpStrBuf();
+    this.asmOut.append( "\tCALL\tKCNET_S_MACADDR\n" );
+    addLibItem( BasicLibrary.LibItem.KCNET_S_MACADDR );
   }
 
 
@@ -3582,8 +3748,8 @@ public class BasicCompiler
     String text = checkStringLiteral( iter );
     if( text != null ) {
       if( text.isEmpty() ) {
-	this.asmOut.append_LD_HL_xx( "M_EMPT" );
-	addLibItem( BasicLibrary.LibItem.M_EMPT );
+	this.asmOut.append_LD_HL_xx( "D_EMPT" );
+	addLibItem( BasicLibrary.LibItem.D_EMPT );
       } else {
 	this.asmOut.appendStringLiteral(
 		(new StringBuilder( text ).reverse()).toString(),
@@ -3657,6 +3823,30 @@ public class BasicCompiler
   }
 
 
+  private void parseStrNETMASK( CharacterIterator iter )
+						throws PrgException
+  {
+    checkKCNetSupported();
+    lockTmpStrBuf();
+    this.asmOut.append( "\tCALL\tKCNET_S_NETMASK\n" );
+    addLibItem( BasicLibrary.LibItem.KCNET_S_NETMASK );
+  }
+
+
+  private void parseStrREMOTEADDR( CharacterIterator iter )
+						throws PrgException
+  {
+    checkKCNetSupported();
+    lockTmpStrBuf();
+    parseToken( iter, '(' );
+    checkToken( iter, '#' );
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tS_REMOTEADDR\n" );
+    parseToken( iter, ')' );
+    addLibItem( BasicLibrary.LibItem.S_REMOTEADDR );
+  }
+
+
   private void parseStrRIGHT( CharacterIterator iter ) throws PrgException
   {
     parseToken( iter, '(' );
@@ -3675,9 +3865,9 @@ public class BasicCompiler
 			+ "\tLD\tC,L\n"
 			+ "\tPOP\tHL\n" );
     }
-    this.asmOut.append( "\tCALL\tS_RGHT\n" );
+    this.asmOut.append( "\tCALL\tS_RIGHT\n" );
     parseToken( iter, ')' );
-    addLibItem( BasicLibrary.LibItem.S_RGHT );
+    addLibItem( BasicLibrary.LibItem.S_RIGHT );
   }
 
 
@@ -3686,9 +3876,9 @@ public class BasicCompiler
     lockTmpStrBuf();
     parseToken( iter, '(' );
     parseStringPrimExpr( iter );
-    this.asmOut.append( "\tCALL\tS_RTRM\n" );
+    this.asmOut.append( "\tCALL\tS_RTRIM\n" );
     parseToken( iter, ')' );
-    addLibItem( BasicLibrary.LibItem.S_RTRM );
+    addLibItem( BasicLibrary.LibItem.S_RTRIM );
   }
 
 
@@ -3781,9 +3971,8 @@ public class BasicCompiler
   }
 
 
-  private void parseStrTARGET_ID( CharacterIterator iter ) throws PrgException
+  private void parseStrTARGETID( CharacterIterator iter ) throws PrgException
   {
-    checkParseDummyArg( iter );
     this.asmOut.append( "\tLD\tHL,XTARID\n" );
     addLibItem( BasicLibrary.LibItem.XTARID );
   }
@@ -3842,24 +4031,40 @@ public class BasicCompiler
 	  parseStrBIN( iter );
 	} else if( name.equals( "CHR$" ) ) {
 	  parseStrCHR( iter );
+	} else if( name.equals( "DNSSERVER$" ) ) {
+	  parseStrDNSSERVER( iter );
+	} else if( name.equals( "ERR$" ) ) {
+	  parseStrERR( iter );
+	} else if( name.equals( "GATEWAY$" ) ) {
+	  parseStrGATEWAY( iter );
 	} else if( name.equals( "HEX$" ) ) {
 	  parseStrHEX( iter );
-	} else if( name.equals( "INCHAR$" ) ) {
-	  parseStrINCHAR( iter );
+	} else if( name.equals( "HOSTBYNAME$" ) ) {
+	  parseStrHOSTBYNAME( iter );
 	} else if( name.equals( "INKEY$" ) ) {
 	  parseStrINKEY( iter );
+	} else if( name.equals( "INPUT$" ) ) {
+	  parseStrINPUT( iter );
 	} else if( name.equals( "LEFT$" ) ) {
 	  parseStrLEFT( iter );
+	} else if( name.equals( "LOCALADDR$" ) ) {
+	  parseStrLOCALADDR( iter );
 	} else if( name.equals( "LOWER$" ) ) {
 	  parseStrLOWER( iter );
 	} else if( name.equals( "LTRIM$" ) ) {
 	  parseStrLTRIM( iter );
+	} else if( name.equals( "MACADDR$" ) ) {
+	  parseStrMACADDR( iter );
 	} else if( name.equals( "MEMSTR$" ) ) {
 	  parseStrMEMSTR( iter );
 	} else if( name.equals( "MID$" ) ) {
 	  parseStrMID( iter );
 	} else if( name.equals( "MIRROR$" ) ) {
 	  parseStrMIRROR( iter );
+	} else if( name.equals( "NETMASK$" ) ) {
+	  parseStrNETMASK( iter );
+	} else if( name.equals( "REMOTEADDR$" ) ) {
+	  parseStrREMOTEADDR( iter );
 	} else if( name.equals( "RIGHT$" ) ) {
 	  parseStrRIGHT( iter );
 	} else if( name.equals( "RTRIM$" ) ) {
@@ -3870,8 +4075,8 @@ public class BasicCompiler
 	  parseStrSTR( iter );
 	} else if( name.equals( "STRING$" ) ) {
 	  parseStrSTRING( iter );
-	} else if( name.equals( "TARGET_ID$" ) ) {
-	  parseStrTARGET_ID( iter );
+	} else if( name.equals( "TARGETID$" ) ) {
+	  parseStrTARGETID( iter );
 	} else if( name.equals( "TRIM$" ) ) {
 	  parseStrTRIM( iter );
 	} else if( name.equals( "UPPER$" ) ) {
@@ -4468,119 +4673,110 @@ public class BasicCompiler
     } else {
       String name = checkIdentifier( iter );
       if( name != null ) {
-	if( name.equals( "ABS" ) ) {
-	  parseABS( iter );
-	} else if( name.equals( "ASC" ) ) {
-	  parseASC( iter );
-	} else if( name.equals( "BLACK" ) ) {
-	  parseBLACK( iter );
-	} else if( name.equals( "BLINKING" ) ) {
-	  parseBLINKING( iter );
-	} else if( name.equals( "BLUE" ) ) {
-	  parseBLUE( iter );
-	} else if( name.equals( "CYAN" ) ) {
-	  parseCYAN( iter );
-	} else if( name.equals( "DEEK" ) ) {
-	  parseDEEK( iter );
-	} else if( name.equals( "ERR" ) ) {
-	  parseERR( iter );
-	} else if( name.equals( "FALSE" ) ) {
-	  parseFALSE( iter );
-	} else if( name.equals( "GREEN" ) ) {
-	  parseGREEN( iter );
-	} else if( name.equals( "H_CHAR" ) ) {
-	  parseH_CHAR( iter );
-	} else if( name.equals( "H_PIXEL" ) ) {
-	  parseH_PIXEL( iter );
-	} else if( name.equals( "IN" ) || name.equals( "INP" ) ) {
-	  parseIN( iter );
-	} else if( name.equals( "INSTR" ) ) {
-	  parseINSTR( iter );
-	} else if( name.equals( "JOYST" ) ) {
-	  parseJOYST( iter );
-	} else if( name.equals( "LASTSCREEN" ) ) {
-	  parseLASTSCREEN( iter );
-	} else if( name.equals( "LEN" ) ) {
-	  parseLEN( iter );
-	} else if( name.equals( "MAGENTA" ) ) {
-	  parseMAGENTA( iter );
-	} else if( name.equals( "MAX" ) ) {
-	  parseMAX( iter );
-	} else if( name.equals( "MIN" ) ) {
-	  parseMIN( iter );
-	} else if( name.equals( "PEEK" ) ) {
-	  parsePEEK( iter );
-	} else if( name.equals( "POINT" ) || name.equals( "PTEST" ) ) {
-	  parsePTEST( iter );
-	} else if( name.equals( "RED" ) ) {
-	  parseRED( iter );
-	} else if( name.equals( "RND" ) ) {
-	  parseRND( iter );
-	} else if( name.equals( "SGN" ) ) {
-	  parseSGN( iter );
-	} else if( name.equals( "SQR" ) ) {
-	  parseSQR( iter );
-	} else if( name.equals( "TARGET_ADDR" ) ) {
-	  parseTARGET_ADDR( iter );
-	} else if( name.equals( "TOP" ) ) {
-	  parseTOP( iter );
-	} else if( name.equals( "TRUE" ) ) {
-	  parseTRUE( iter );
-	} else if( name.equals( "USR" ) ) {
-	  parseUSR( iter );
-	} else if( name.equals( "USR0" ) ) {
-	  parseUSR( iter, 0 );
-	} else if( name.equals( "USR1" ) ) {
-	  parseUSR( iter, 1 );
-	} else if( name.equals( "USR2" ) ) {
-	  parseUSR( iter, 2 );
-	} else if( name.equals( "USR3" ) ) {
-	  parseUSR( iter, 3 );
-	} else if( name.equals( "USR4" ) ) {
-	  parseUSR( iter, 4 );
-	} else if( name.equals( "USR5" ) ) {
-	  parseUSR( iter, 5 );
-	} else if( name.equals( "USR6" ) ) {
-	  parseUSR( iter, 6 );
-	} else if( name.equals( "USR7" ) ) {
-	  parseUSR( iter, 7 );
-	} else if( name.equals( "USR8" ) ) {
-	  parseUSR( iter, 8 );
-	} else if( name.equals( "USR9" ) ) {
-	  parseUSR( iter, 9 );
-	} else if( name.equals( "VAL" ) ) {
-	  parseVAL( iter );
-	} else if( name.equals( "WHITE" ) ) {
-	  parseWHITE( iter );
-	} else if( name.equals( "W_CHAR" ) ) {
-	  parseW_CHAR( iter );
-	} else if( name.equals( "W_PIXEL" ) ) {
-	  parseW_PIXEL( iter );
-	} else if( name.equals( "XPOS" ) ) {
-	  parseXPOS( iter );
-	} else if( name.equals( "YELLOW" ) ) {
-	  parseYELLOW( iter );
-	} else if( name.equals( "YPOS" ) ) {
-	  parseYPOS( iter );
-	} else {
-	  CallableEntry entry = this.name2Callable.get( name );
-	  if( entry != null ) {
-	    if( entry instanceof FunctionEntry ) {
-	      if( ((FunctionEntry) entry).getReturnType()
-						!= DataType.INTEGER )
-	      {
+	// auf Konstante pruefen
+	if( !checkAppend_LD_HL_Constant( name ) ) {
+	  // auf Systemvariable pruefen
+	  if( name.equals( "ERR" ) ) {
+	    this.asmOut.append( "\tLD\tHL,(M_ERN)\n" );
+	    addLibItem( BasicLibrary.LibItem.M_ERN );
+	  } else if( name.equals( "H_CHAR" ) ) {
+	    this.target.appendHChar( this.asmOut );
+	  } else if( name.equals( "H_PIXEL" ) ) {
+	    this.target.appendHPixel( this.asmOut );
+	  } else if( name.equals( "W_CHAR" ) ) {
+	    this.target.appendWChar( this.asmOut );
+	  } else if( name.equals( "W_PIXEL" ) ) {
+	    this.target.appendWPixel( this.asmOut );
+	  } else if( name.equals( "XPOS" ) ) {
+	    this.asmOut.append( "\tLD\tHL,(M_XPOS)\n" );
+	    addLibItem( BasicLibrary.LibItem.M_XYPO );
+	  } else if( name.equals( "YPOS" ) ) {
+	    this.asmOut.append( "\tLD\tHL,(M_YPOS)\n" );
+	    addLibItem( BasicLibrary.LibItem.M_XYPO );
+	  // auf Systemfunktion pruefen
+	  } else if( name.equals( "ABS" ) ) {
+	    parseABS( iter );
+	  } else if( name.equals( "ASC" ) ) {
+	    parseASC( iter );
+	  } else if( name.equals( "ASM" ) ) {
+	    parseASM( iter, true );
+	  } else if( name.equals( "AVAILABLE" ) ) {
+	    parseAVAILABLE( iter );
+	  } else if( name.equals( "DEEK" ) ) {
+	    parseDEEK( iter );
+	  } else if( name.equals( "EOF" ) ) {
+	    parseEOF( iter );
+	  } else if( name.equals( "IN" ) || name.equals( "INP" ) ) {
+	    parseIN( iter );
+	  } else if( name.equals( "INSTR" ) ) {
+	    parseINSTR( iter );
+	  } else if( name.equals( "JOYST" ) ) {
+	    parseJOYST( iter );
+	  } else if( name.equals( "LEN" ) ) {
+	    parseLEN( iter );
+	  } else if( name.equals( "LOCALPORT" ) ) {
+	    parseLOCALPORT( iter );
+	  } else if( name.equals( "MAX" ) ) {
+	    parseMAX( iter );
+	  } else if( name.equals( "MIN" ) ) {
+	    parseMIN( iter );
+	  } else if( name.equals( "PEEK" ) ) {
+	    parsePEEK( iter );
+	  } else if( name.equals( "POINT" ) || name.equals( "PTEST" ) ) {
+	    parsePTEST( iter );
+	  } else if( name.equals( "REMOTEPORT" ) ) {
+	    parseREMOTEPORT( iter );
+	  } else if( name.equals( "RND" ) ) {
+	    parseRND( iter );
+	  } else if( name.equals( "SGN" ) ) {
+	    parseSGN( iter );
+	  } else if( name.equals( "SQR" ) ) {
+	    parseSQR( iter );
+	  } else if( name.equals( "USR" ) ) {
+	    parseUSR( iter );
+	  } else if( name.equals( "USR0" ) ) {
+	    parseUSR( iter, 0 );
+	  } else if( name.equals( "USR1" ) ) {
+	    parseUSR( iter, 1 );
+	  } else if( name.equals( "USR2" ) ) {
+	    parseUSR( iter, 2 );
+	  } else if( name.equals( "USR3" ) ) {
+	    parseUSR( iter, 3 );
+	  } else if( name.equals( "USR4" ) ) {
+	    parseUSR( iter, 4 );
+	  } else if( name.equals( "USR5" ) ) {
+	    parseUSR( iter, 5 );
+	  } else if( name.equals( "USR6" ) ) {
+	    parseUSR( iter, 6 );
+	  } else if( name.equals( "USR7" ) ) {
+	    parseUSR( iter, 7 );
+	  } else if( name.equals( "USR8" ) ) {
+	    parseUSR( iter, 8 );
+	  } else if( name.equals( "USR9" ) ) {
+	    parseUSR( iter, 9 );
+	  } else if( name.equals( "VAL" ) ) {
+	    parseVAL( iter );
+	  } else {
+	    // auf benutzerdefinierte Funktion pruefen
+	    CallableEntry entry = this.name2Callable.get( name );
+	    if( entry != null ) {
+	      if( entry instanceof FunctionEntry ) {
+		if( ((FunctionEntry) entry).getReturnType()
+						  != DataType.INTEGER )
+		{
+		  throwIntExprExpected();
+		}
+		parseCallableCall( iter, entry );
+	      } else {
+		throw new PrgException(
+			"Aufruf einer Prozedur an der Stelle nicht erlaubt" );
+	      }
+	    } else {
+	      if( name.endsWith( "$" ) ) {
 		throwIntExprExpected();
 	      }
-	      parseCallableCall( iter, entry );
-	    } else {
-	      throw new PrgException(
-		"Aufruf einer Prozedur an der Stelle nicht erlaubt" );
+	      parseVariableExpr( iter, name, DataType.INTEGER );
 	    }
-	  } else {
-	    if( name.endsWith( "$" ) ) {
-	      throwIntExprExpected();
-	    }
-	    parseVariableExpr( iter, name, DataType.INTEGER );
 	  }
 	}
       } else {
@@ -4907,6 +5103,100 @@ public class BasicCompiler
   }
 
 
+  private boolean checkAppend_LD_HL_Constant( String name )
+  {
+    boolean rv = false;
+    if( name != null ) {
+      rv = true;
+      if( name.equals( "TOP" ) ) {
+	this.asmOut.append( "\tLD\tHL,M_TOP\n" );
+	addLibItem( BasicLibrary.LibItem.M_TOP );
+      } else {
+	int value = 0;
+	if( name.equals( "BLACK" ) ) {
+	  value = this.target.getColorBlack();
+	} else if( name.equals( "BLINKING" ) ) {
+	  value = this.target.getColorBlinking();
+	} else if( name.equals( "BLUE" ) ) {
+	  value = this.target.getColorBlue();
+	} else if( name.equals( "CYAN" ) ) {
+	  value = this.target.getColorCyan();
+	} else if( name.equals( "E_CHANNEL_ALREADY_OPEN" ) ) {
+	  value = BasicLibrary.E_CHANNEL_ALREADY_OPEN;
+	} else if( name.equals( "E_CHANNEL_CLOSED" ) ) {
+	  value = BasicLibrary.E_CHANNEL_CLOSED;
+	} else if( name.equals( "E_CONNECT_FAILED" ) ) {
+	  value = BasicLibrary.E_CONNECT_FAILED;
+	} else if( name.equals( "E_DEVICE_LOCKED" ) ) {
+	  value = BasicLibrary.E_DEVICE_LOCKED;
+	} else if( name.equals( "E_DEVICE_NOT_CONFIGURED" ) ) {
+	  value = BasicLibrary.E_DEVICE_NOT_CONFIGURED;
+	} else if( name.equals( "E_DEVICE_NOT_FOUND" ) ) {
+	  value = BasicLibrary.E_DEVICE_NOT_FOUND;
+	} else if( name.equals( "E_DNS_ERROR" ) ) {
+	  value = BasicLibrary.E_DNS_ERROR;
+	} else if( name.equals( "E_DNS_NOT_CONFIGURED" ) ) {
+	  value = BasicLibrary.E_DNS_NOT_CONFIGURED;
+	} else if( name.equals( "E_DISK_FULL" ) ) {
+	  value = BasicLibrary.E_DISK_FULL;
+	} else if( name.equals( "E_EOF" ) ) {
+	  value = BasicLibrary.E_EOF;
+	} else if( name.equals( "E_ERROR" ) ) {
+	  value = BasicLibrary.E_ERROR;
+	} else if( name.equals( "E_FILE_NOT_FOUND" ) ) {
+	  value = BasicLibrary.E_FILE_NOT_FOUND;
+	} else if( name.equals( "E_INVALID" ) ) {
+	  value = BasicLibrary.E_INVALID;
+	} else if( name.equals( "E_IO_ERROR" ) ) {
+	  value = BasicLibrary.E_IO_ERROR;
+	} else if( name.equals( "E_IO_MODE" ) ) {
+	  value = BasicLibrary.E_IO_MODE;
+	} else if( name.equals( "E_MTU_EXCEEDED" ) ) {
+	  value = BasicLibrary.E_MTU_EXCEEDED;
+	} else if( name.equals( "E_NO_DISK" ) ) {
+	  value = BasicLibrary.E_NO_DISK;
+	} else if( name.equals( "E_OK" ) ) {
+	  value = BasicLibrary.E_OK;
+	} else if( name.equals( "E_OVERFLOW" ) ) {
+	  value = BasicLibrary.E_OVERFLOW;
+	} else if( name.equals( "E_READ_ONLY" ) ) {
+	  value = BasicLibrary.E_READ_ONLY;
+	} else if( name.equals( "E_SOCKET_STATUS" ) ) {
+	  value = BasicLibrary.E_SOCKET_STATUS;
+	} else if( name.equals( "E_TIMEOUT" ) ) {
+	  value = BasicLibrary.E_TIMEOUT;
+	} else if( name.equals( "E_UNKNOWN_HOST" ) ) {
+	  value = BasicLibrary.E_UNKNOWN_HOST;
+	} else if( name.equals( "FALSE" ) ) {
+	  value = 0;
+	} else if( name.equals( "GREEN" ) ) {
+	  value = this.target.getColorGreen();
+	} else if( name.equals( "LASTSCREEN" ) ) {
+	  value = this.target.getLastScreenNum();
+	} else if( name.equals( "MAGENTA" ) ) {
+	  value = this.target.getColorMagenta();
+	} else if( name.equals( "RED" ) ) {
+	  value = this.target.getColorRed();
+	} else if( name.equals( "TARGETADDR" ) ) {
+	  value = this.options.getBegAddr();
+	} else if( name.equals( "TRUE" ) ) {
+	  value = 0xFFFF;
+	} else if( name.equals( "WHITE" ) ) {
+	  value = this.target.getColorWhite();
+	} else if( name.equals( "YELLOW" ) ) {
+	  value = this.target.getColorYellow();
+	} else {
+	  rv = false;
+	}
+	if( rv ) {
+	  this.asmOut.append_LD_HL_nn( value );
+	}
+      }
+    }
+    return rv;
+  }
+
+
   private void checkCreateStackFrame()
   {
     CallableEntry entry = getCallableEntry();
@@ -4931,8 +5221,8 @@ public class BasicCompiler
 	for( int i = 0; i < nVars; i++ ) {
 	  if( entry.getVarType( i ) == DataType.STRING ) {
 	    if( !hlLoaded ) {
-	      this.asmOut.append_LD_HL_xx( "M_EMPT" );
-	      addLibItem( BasicLibrary.LibItem.M_EMPT );
+	      this.asmOut.append_LD_HL_xx( "D_EMPT" );
+	      addLibItem( BasicLibrary.LibItem.D_EMPT );
 	      hlLoaded = true;
 	    }
 	    this.asmOut.append_LD_IndirectIY_HL( entry.getVarIYOffs( i ) );
@@ -4988,6 +5278,15 @@ public class BasicCompiler
   }
 
 
+  private void checkKCNetSupported() throws PrgException
+  {
+    if( this.target.getKCNetBaseIOAddr() < 0 ) {
+      throw new PrgException( "Netzwerkanweisungen f\u00FCr"
+			+ " das Zielsystem nicht unterst\u00FCtzt" );
+    }
+  }
+
+
   private void checkMainPrgScope() throws PrgException
   {
     if( !this.mainPrg ) {
@@ -4996,16 +5295,6 @@ public class BasicCompiler
 	throw new PrgException( "Anweisung nur im Hauptprogramm"
 		+ " oder in einer Funktion/Prozedur zul\u00E4ssig" );
       }
-    }
-  }
-
-
-  private void checkParseDummyArg( CharacterIterator iter )
-							throws PrgException
-  {
-    if( checkToken( iter, '(' ) ) {
-      readNumber( iter );
-      parseToken( iter,')' );
     }
   }
 
@@ -5138,17 +5427,6 @@ public class BasicCompiler
       }
     }
     return rv;
-  }
-
-
-  private String getStringLiteralLabel( String text )
-  {
-    String label = this.str2Label.get( text );
-    if( label == null ) {
-      label = nextLabel();
-      this.str2Label.put( text, label );
-    }
-    return label;
   }
 
 
@@ -5314,7 +5592,7 @@ public class BasicCompiler
 		/*
 		 * Die Variablennamen koennen sich zwischen Deklaration
 		 * und Implementierung unterscheiden.
-		 * Entscheident sind die bei der Implementierung.
+		 * Entscheidend sind die bei der Implementierung.
 		 */
 		entry.setArg( idx, argName );
 	      }
@@ -5472,6 +5750,103 @@ public class BasicCompiler
   }
 
 
+  /*
+   * Die Methode parst eine Kanalnummer.
+   * Die Anfangsadresse des Kanalzeigerfeldes steht dann in HL.
+   * Das Doppelkreuz ist zu dem Zeitpunkt bereits geparst.
+   */
+  private void parseIOChannelNumToPtrFldAddrInHL(
+			CharacterIterator iter,
+			boolean           socketNumInA,
+			AtomicBoolean     constOut ) throws PrgException
+  {
+    Integer channel = readNumber( iter );
+    if( channel != null ) {
+      switch( channel.intValue() ) {
+	case 1:
+	  this.asmOut.append( "\tLD\tHL,IOCTB1\n" );
+	  addLibItem( BasicLibrary.LibItem.IOCTB1 );
+	  break;
+	case 2:
+	  this.asmOut.append( "\tLD\tHL,IOCTB2\n" );
+	  addLibItem( BasicLibrary.LibItem.IOCTB2 );
+	  break;
+	default:
+	  throwIOChannelNumOutOfRange();
+      }
+      if( socketNumInA ) {
+	this.asmOut.append_LD_A_n( channel.intValue() - 1 );
+      }
+      if( constOut != null ) {
+	constOut.set( true );
+      }
+    } else {
+      parseExpr( iter );
+      if( socketNumInA ) {
+	this.asmOut.append( "\tPUSH\tHL\n" );
+      }
+      this.asmOut.append( "\tCALL\tIOCADR\n" );
+      addLibItem( BasicLibrary.LibItem.IOCADR );
+      addLibItem( BasicLibrary.LibItem.IOCTB1 );
+      addLibItem( BasicLibrary.LibItem.IOCTB2 );
+      if( socketNumInA ) {
+	this.asmOut.append( "\tPUSH\tBC\n"
+			+ "\tLD\tA,C\n" );
+      }
+      if( constOut != null ) {
+	constOut.set( false );
+      }
+    }
+  }
+
+
+  /*
+   * Die Methode parst eine Kanalnummer.
+   * Das Doppelkreuz ist zu dem Zeitpunkt bereits geparst.
+   * Als Ergebnis steht die Adresse der IO-WRITE-Routine in HL.
+   */
+  private void parseIOChannelNumToWriteRoutineInHL(
+				CharacterIterator iter ) throws PrgException
+  {
+    Integer channel = readNumber( iter );
+    if( channel != null ) {
+      switch( channel.intValue() ) {
+	case 1:
+	  this.asmOut.append( "\tLD\tHL,IOCTB1\n"
+			+ "\tLD\t(M_IOCA),HL\n"
+			+ "\tLD\tHL,(IOCTB1+" );
+	  this.asmOut.appendHex2( BasicLibrary.IOCTB_WRITE_OFFS );
+	  this.asmOut.append( ")\n" );
+	  addLibItem( BasicLibrary.LibItem.IOCTB1 );
+	  break;
+	case 2:
+	  this.asmOut.append( "\tLD\tHL,IOCTB2\n"
+			+ "\tLD\t(M_IOCA),HL\n"
+			+ "\tLD\tHL,(IOCTB2+" );
+	  this.asmOut.appendHex2( BasicLibrary.IOCTB_WRITE_OFFS );
+	  this.asmOut.append( ")\n" );
+	  addLibItem( BasicLibrary.LibItem.IOCTB2 );
+	  break;
+	default:
+	  throwIOChannelNumOutOfRange();
+      }
+    } else {
+      parseExpr( iter );
+      this.asmOut.append( "\tCALL\tIOCADR\n"
+			+ "\tLD\t(M_IOCA),HL\n" );
+      this.asmOut.append_LD_DE_nn( BasicLibrary.IOCTB_WRITE_OFFS );
+      this.asmOut.append( "\tADD\tHL,DE\n"
+			+ "\tLD\tA,(HL)\n"
+			+ "\tINC\tHL\n"
+			+ "\tLD\tH,(HL)\n"
+			+ "\tLD\tL,A\n" );
+      addLibItem( BasicLibrary.LibItem.IOCADR );
+      addLibItem( BasicLibrary.LibItem.IOCTB1 );
+      addLibItem( BasicLibrary.LibItem.IOCTB2 );
+    }
+  }
+
+
   private String parseDestLineExpr( CharacterIterator iter )
 						throws PrgException
   {
@@ -5516,7 +5891,7 @@ public class BasicCompiler
     }
     if( varInfo == null ) {
       if( text != null ) {
-	throw new PrgException( "String-Variable erwartet" );
+	throwStringVarExpected();
       }
       throwStringLitOrVarExpected();
     }
@@ -5527,6 +5902,44 @@ public class BasicCompiler
     } else {
       this.asmOut.append( "\tCALL\tINRSV\n" );
       addLibItem( BasicLibrary.LibItem.INRSV );
+    }
+  }
+
+
+  private void parseInputLineIO( CharacterIterator iter ) throws PrgException
+  {
+    parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+    this.asmOut.append( "\tCALL\tIOINL\n" );
+    parseToken( iter, ',' );
+    int           pos     = this.asmOut.length();
+    SimpleVarInfo varInfo = checkVariable( iter );
+    if( varInfo == null ) {
+      throwStringVarExpected();
+    }
+    if( varInfo.getDataType() != DataType.STRING ) {
+      throwStringVarExpected();
+    }
+    varInfo.ensureAddrInHL( this.asmOut );
+    String oldVarCode = this.asmOut.cut( pos );
+    String newVarCode = convertCodeToValueInDE( oldVarCode );
+    if( newVarCode != null ) {
+      this.asmOut.append( newVarCode );
+    } else {
+      this.asmOut.append( "\tPUSH\tHL\n" );
+      this.asmOut.append( oldVarCode );
+      this.asmOut.append( "\tEX\tDE,HL\n"
+			+ "\tPOP\tHL\n" );
+    }
+    this.asmOut.append( "\tCALL\tASGSM\n" );
+    addLibItem( BasicLibrary.LibItem.IOINL );
+    addLibItem( BasicLibrary.LibItem.ASGSM );
+  }
+
+
+  private void parseKeywordAS( CharacterIterator iter ) throws PrgException
+  {
+    if( !checkKeyword( iter, "AS" ) ) {
+      throw new PrgException( "AS erwartet" );
     }
   }
 
@@ -5559,6 +5972,158 @@ public class BasicCompiler
     this.asmOut.append( "),HL\n" );
     if( enclosed ) {
       parseToken( iter, ')' );
+    }
+  }
+
+
+  private void parsePrint(
+			CharacterIterator iter,
+			boolean           toScreen ) throws PrgException
+  {
+    boolean newLine   = true;
+    boolean space     = false;
+    boolean formatted = false;
+    char    ch        = skipSpaces( iter );
+    while( !isEndOfInstr( iter ) ) {
+      this.tmpStrBufUsed = false;
+      newLine            = true;
+      space              = false;
+      boolean hasSeg     = false;
+
+      // String-Segment pruefen
+      boolean mandatory = false;
+      for(;;) {
+        /*
+	 * CHR$ pruefen
+         * Im Gegensatz zur gewoehnlichen String-Behandlung,
+         * bei der CHR$(0) eine leere Zeichenkette liefert,
+         * wird bei PRINT jedes mit CHR$(...) angegebene Byte ausgegeben,
+         * auch wenn es sich um ein Null-Byte handelt.
+         */
+	boolean done   = false;
+	int     srcPos = iter.getIndex();
+	if( checkKeyword( iter, "CHR$" ) ) {
+	  if( checkToken( iter, '(' ) ) {
+	    int dstPos = this.asmOut.length();
+	    parseExpr( iter );
+	    Integer value = removeLastCodeIfConstExpr( dstPos );
+	    if( value != null ) {
+	      this.asmOut.append_LD_A_n( value.intValue() );
+	    } else {
+	      this.asmOut.append( "\tLD\tA,L\n" );
+	    }
+	    if( toScreen ) {
+	      this.asmOut.append( "\tCALL\tXOUTCH\n" );
+	      addLibItem( BasicLibrary.LibItem.XOUTCH );
+	    } else {
+	      this.asmOut.append( "\tCALL\tIO_COUT\n" );
+	      addLibItem( BasicLibrary.LibItem.IO_COUT );
+	    }
+	    parseToken( iter, ')' );
+	    hasSeg = true;
+	    done   = true;
+	  }
+	}
+	if( !done ) {
+	  iter.setIndex( srcPos );
+	  String text = checkStringLiteral( iter );
+	  if( text != null ) {
+	    // String-Literal evtl. bereits vorhanden?
+	    String label = this.str2Label.get( text );
+	    if( label != null ) {
+	      this.asmOut.append( "\tLD\tHL," );
+	      this.asmOut.append( label );
+	      this.asmOut.newLine();
+	      if( toScreen ) {
+		this.asmOut.append( "\tCALL\tXOUTS\n" );
+		addLibItem( BasicLibrary.LibItem.XOUTS );
+	      } else {
+		this.asmOut.append( "\tCALL\tPS_S\n" );
+		addLibItem( BasicLibrary.LibItem.PS_S );
+	      }
+	    } else {
+	      if( toScreen ) {
+		this.asmOut.append( "\tCALL\tXOUTST\n" );
+		addLibItem( BasicLibrary.LibItem.XOUTST );
+	      } else {
+		this.asmOut.append( "\tCALL\tPS_ST\n" );
+		addLibItem( BasicLibrary.LibItem.PS_ST );
+	      }
+	      this.asmOut.appendStringLiteral( text );
+	    }
+	    hasSeg = true;
+	  } else if( checkParseStringPrimVarExpr( iter ) ) {
+	    if( toScreen ) {
+	      this.asmOut.append( "\tCALL\tXOUTS\n" );
+	      addLibItem( BasicLibrary.LibItem.XOUTS );
+	    } else {
+	      this.asmOut.append( "\tCALL\tPS_S\n" );
+	      addLibItem( BasicLibrary.LibItem.PS_S );
+	    }
+	    hasSeg = true;
+	  } else {
+	    if( mandatory ) {
+	      throwStringExprExpected();
+	    }
+	  }
+	}
+	if( skipSpaces( iter ) != '+' ) {
+	  break;
+	}
+	iter.next();
+	mandatory = true;
+      }
+      if( !hasSeg ) {
+
+	// kann nur noch numerisches Segment sein
+	parseExpr( iter );
+	if( formatted ) {
+	  if( toScreen ) {
+	    this.asmOut.append( "\tCALL\tP_IF\n" );
+	    addLibItem( BasicLibrary.LibItem.P_IF );
+	  } else {
+	    this.asmOut.append( "\tCALL\tPS_IF\n" );
+	    addLibItem( BasicLibrary.LibItem.PS_IF );
+	  }
+	} else {
+	  if( toScreen ) {
+	    this.asmOut.append( "\tCALL\tP_I\n" );
+	    addLibItem( BasicLibrary.LibItem.P_I );
+	  } else {
+	    this.asmOut.append( "\tCALL\tPS_I\n" );
+	    addLibItem( BasicLibrary.LibItem.PS_I );
+	  }
+	}
+	space = true;
+      }
+
+      // weiteres Segment?
+      ch        = skipSpaces( iter );
+      formatted = (ch == ',');
+      if( (ch != ';') && (ch != ',') ) {
+	break;
+      }
+      if( space ) {
+	if( toScreen ) {
+	  this.asmOut.append( "\tCALL\tOUTSP\n" );
+	  addLibItem( BasicLibrary.LibItem.OUTSP );
+	} else {
+	  this.asmOut.append( "\tCALL\tPS_SP\n" );
+	  addLibItem( BasicLibrary.LibItem.PS_SP );
+	}
+      }
+      newLine = false;
+      iter.next();
+      ch = skipSpaces( iter );
+    }
+    if( newLine ) {
+      if( toScreen ) {
+	this.asmOut.append( "\tCALL\tXOUTNL\n" );
+	addLibItem( BasicLibrary.LibItem.XOUTNL );
+      } else {
+	this.asmOut.append( "\tCALL\tPS_NL\n" );
+	addLibItem( BasicLibrary.LibItem.PS_NL );
+      }
     }
   }
 
@@ -5806,6 +6371,13 @@ public class BasicCompiler
   }
 
 
+  private static void throwIOChannelNumOutOfRange() throws PrgException
+  {
+    throw new PrgException(
+		"Kanalnummer au\u00DFerhalb des g\u00FCltigen Bereichs" );
+  }
+
+
   private static void throwStringExprExpected() throws PrgException
   {
     throw new PrgException( "String-Ausdruck erwartet" );
@@ -5815,6 +6387,12 @@ public class BasicCompiler
   private static void throwStringLitOrVarExpected() throws PrgException
   {
     throw new PrgException( "String-Literal oder String-Variable erwartet" );
+  }
+
+
+  private static void throwStringVarExpected() throws PrgException
+  {
+    throw new PrgException( "String-Variable erwartet" );
   }
 
 

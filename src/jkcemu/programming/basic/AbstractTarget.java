@@ -26,74 +26,29 @@ public abstract class AbstractTarget
   }
 
 
-  /*
-   * Farbcodes in HL
-   */
-  public void appendColorBlack( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0000H\n" );
-  }
-
-
-  public void appendColorBlinking( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0000H\n" );
-  }
-
-
-  public void appendColorBlue( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  public void appendColorCyan( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  public void appendColorGreen( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  public void appendColorMagenta( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  public void appendColorRed( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  public void appendColorWhite( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  public void appendColorYellow( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  public void appendData( AsmCodeBuf buf )
+  public void appendDataTo( AsmCodeBuf buf )
   {
     // leer
   }
 
 
-  public void appendBSS( AsmCodeBuf buf )
+  public void appendBssTo( AsmCodeBuf buf )
   {
     if( this.usesX_MPEN ) {
       buf.append( "X_MPEN:\tDS\t1\n" );
     }
+  }
+
+
+  public void appendEnableKCNet( AsmCodeBuf buf )
+  {
+    // leer
+  }
+
+
+  public void appendEnableVdip( AsmCodeBuf buf )
+  {
+    // leer
   }
 
 
@@ -139,7 +94,7 @@ public abstract class AbstractTarget
   }
 
 
-  public void appendInit( AsmCodeBuf buf )
+  public void appendInitTo( AsmCodeBuf buf )
   {
     if( this.usesX_MPEN ) {
       buf.append( "\tLD\tA,01H\n"
@@ -171,12 +126,6 @@ public abstract class AbstractTarget
 			String        appName )
   {
     // leer
-  }
-
-
-  public void appendLastScreenNum( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0000H\n" );
   }
 
 
@@ -291,6 +240,15 @@ public abstract class AbstractTarget
   public void appendXLOCATE( AsmCodeBuf buf )
   {
     // leer
+  }
+
+
+  /*
+   * Ausgabe eines Zeichens auf dem Drucker
+   */
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tRET\n" );
   }
 
 
@@ -413,6 +371,90 @@ public abstract class AbstractTarget
   public abstract int getDefaultBegAddr();
 
 
+  public int getColorBlack()
+  {
+    return 0;
+  }
+
+
+  public int getColorBlinking()
+  {
+    return 0;
+  }
+
+
+  public int getColorBlue()
+  {
+    return 1;
+  }
+
+
+  public int getColorCyan()
+  {
+    return 1;
+  }
+
+
+  public int getColorGreen()
+  {
+    return 1;
+  }
+
+
+  public int getColorMagenta()
+  {
+    return 1;
+  }
+
+
+  public int getColorRed()
+  {
+    return 1;
+  }
+
+
+  public int getColorWhite()
+  {
+    return 1;
+  }
+
+
+  public int getColorYellow()
+  {
+    return 1;
+  }
+
+
+  public int getLastScreenNum()
+  {
+    return 0;
+  }
+
+
+  public int getKCNetBaseIOAddr()
+  {
+    return -1;
+  }
+
+
+  public int[] getVdipBaseIOAddresses()
+  {
+    return null;
+  }
+
+
+  public boolean needsEnableKCNet()
+  {
+    return false;
+  }
+
+
+  public boolean needsEnableVdip()
+  {
+    return false;
+  }
+
+
   public boolean needsXOUTST()
   {
     return this.usesXOUTST;
@@ -488,4 +530,11 @@ public abstract class AbstractTarget
   {
     return false;
   }
+
+
+  public boolean supportsXLPTCH()
+  {
+    return false;
+  }
 }
+

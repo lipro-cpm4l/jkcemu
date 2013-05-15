@@ -26,6 +26,7 @@ public class BasicOptions extends PrgOptions
   public static final int DEFAULT_HEAP_SIZE  = 1024;
   public static final int DEFAULT_STACK_SIZE = 128;
 
+  public static final String DEFAULT_APP_NAME = "MYAPP";
 
   private String         appName;
   private String         langCode;
@@ -46,7 +47,7 @@ public class BasicOptions extends PrgOptions
 
   public BasicOptions()
   {
-    this.appName             = "MYAPP";
+    this.appName             = DEFAULT_APP_NAME;
     this.langCode            = null;
     this.targetText          = null;
     this.target              = null;

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -454,7 +454,7 @@ public class FileSaver
       int len = fileDesc.length();
       while( (src < len) && (n > 0) ) {
         char ch = fileDesc.charAt( src++ );
-        if( (ch >= '\u0020') && (ch <= 0xFF) ) {
+        if( ch <= 0xFF ) {
           out.write( ch );
           --n;
         }

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -33,9 +33,9 @@ public class W5100
   private static final int ADDR_PTIMER = 0x0028;
 
 
-  private class SocketData
+  public class SocketData
   {
-    // Socket-Kommands
+    // Socket-Kommandos
     private static final int CMD_NONE      = 0x00;
     private static final int CMD_OPEN      = 0x01;
     private static final int CMD_LISTEN    = 0x02;
@@ -181,6 +181,11 @@ public class W5100
       this.socket          = null;
       this.serverSocket    = null;
       this.datagramSocket  = null;
+      this.rxReadReg       = 0;
+      this.rxWriteReg      = 0;
+      this.txReadReg       = 0;
+      this.txWriteReg      = 0;
+      this.rxFilled        = false;
       this.nonIPv4MsgShown = false;
       setSR( SOCK_CLOSED );
     }
@@ -258,14 +263,16 @@ public class W5100
     private void doSocketConnect()
     {
       if( getSR() == SOCK_INIT ) {
-	Socket socket = null;
+	Socket        socket        = null;
+	SocketAddress socketAddr    = null;
+	int           timeoutMillis = 0;
 	try {
-	  socket = createSocket();
-	  socket.connect(
-		new InetSocketAddress(
+	  socketAddr = new InetSocketAddress(
 			createInetAddrByMem( this.baseAddr + Sn_DIPR ),
-			getMemWord( this.baseAddr + Sn_DPORT ) ),
-		getTimeoutMillis() );
+			getMemWord( this.baseAddr + Sn_DPORT ) );
+	  timeoutMillis = getTimeoutMillis();
+	  socket        = createSocket();
+	  socket.connect( socketAddr, timeoutMillis );
 	  int bufSize = getTxBufSize( this.socketNum );
 	  if( bufSize > 0 ) {
 	    this.sendStream = new BufferedOutputStream(
@@ -286,9 +293,18 @@ public class W5100
 	}
 	catch( Exception ex ) {
 	  if( getDebugLevel() > 0 ) {
+	    String s = null;
+	    if( socketAddr != null ) {
+	      s = socketAddr.toString();
+	    }
+	    System.out.printf(
+			"connect: %s, timeout=%dms\n",
+			socketAddr,
+			timeoutMillis );
 	    ex.printStackTrace( System.out );
 	  }
 	  EmuUtil.doClose( socket );
+	  closeSocket();
 	  setSnIRBits( INT_TIMEOUT_MASK );
 	}
       }
@@ -313,7 +329,7 @@ public class W5100
 		serverSocket.getLocalPort() );
 	    }
 	  }
-	  Socket socket = serverSocket.accept();
+	  Socket socket   = serverSocket.accept();
 	  this.sendStream = socket.getOutputStream();
 	  this.recvStream = socket.getInputStream();
 	  this.socket     = socket;
@@ -332,12 +348,16 @@ public class W5100
 	  fireRunRecvThread();
 	}
 	catch( Exception ex ) {
+	  /*
+	   * Beim realen W5100-Chip kann ein LISTEN nicht fehlschlagen.
+	   * Aus diesem Grund wird hier keine Fehler signalisiert,
+	   * sondern weiterhin der Zustand SOCK_LISTEN vorgegaukelt.
+	   */
 	  if( getCR() == CMD_LISTEN ) {
 	    checkPermissionDenied( ex );
 	    if( getDebugLevel() > 0 ) {
 	      ex.printStackTrace( System.out );
 	    }
-	    setSnIRBits( INT_TIMEOUT_MASK );
 	  }
 	  EmuUtil.doClose( socket );
 	}
@@ -399,7 +419,7 @@ public class W5100
 	}
       } else {
 	if( this.threadsEnabled ) {
-	  this.cmdThread = new Thread(
+	  Thread t = new Thread(
 		new Runnable()
 		{
 		  @Override
@@ -411,7 +431,16 @@ public class W5100
 	        String.format(
 			"JKCEMU KCNET socket %d send",
 			this.socketNum ) );
-	  this.cmdThread.start();
+	  t.start();
+	  Thread.State threadState = t.getState();
+	  while( threadState == Thread.State.NEW ) {
+	    try {
+	      Thread.sleep( 10 );
+	    }
+	    catch( InterruptedException ex ) {}
+	    threadState = t.getState();
+	  }
+	  this.cmdThread = t;
 	}
       }
     }
@@ -520,10 +549,10 @@ public class W5100
 	      if( wr == rr ) {
 		fsr = bufSize;
 	      } else {
-		if( wr < rr ) {
-		  wr += bufSize;
+		if( rr < wr ) {
+		  rr += bufSize;
 		}
-		fsr = (wr - rr) & mask;
+		fsr = (rr - wr) & mask;
 	      }
 	    }
 	    setMemWord( addr, fsr );
@@ -776,6 +805,7 @@ public class W5100
 		  this.sendStream = null;
 		  this.socket     = null;
 		}
+		setSR( SOCK_CLOSED );
 		fireRunCmdThread();
 	      }
 	    }
@@ -1065,7 +1095,7 @@ public class W5100
 		 * und gleichzeitig Echo Reply deaktiviert ist,
 		 * soll nichts empfangen werden.
 		 * Dazu wird das Senden einfach unterbunden,
-		 * aber trotzdem als erfolgreiche zurueckgemeldet.
+		 * aber trotzdem als erfolgreich zurueckgemeldet.
 		 */
 		packageData = new byte[ packageSize ];
 		for( int i = 0; i < packageData.length; i++ ) {
@@ -1104,26 +1134,28 @@ public class W5100
 
     private void sendTCP()
     {
-      boolean      done = false;
-      OutputStream out  = this.sendStream;
-      if( out != null ) {
-	int bufSize = 0;
-	int bufAddr = 0;
-	int rr      = 0;
-	int wr      = 0;
-	synchronized( this ) {
-	  bufSize = getTxBufSize( this.socketNum );
-	  bufAddr = getTxBufAddr( this.socketNum );
-	  rr      = this.txReadReg;
-	  wr      = this.txWriteReg;
-	}
-	if( bufSize > 0 ) {
-	  int mask = bufSize - 1;
-	  rr &= mask;
-	  wr &= mask;
-	  try {
+      try {
+	boolean      done = false;
+	OutputStream out  = this.sendStream;
+	if( out != null ) {
+	  int bufSize = 0;
+	  int bufAddr = 0;
+	  int rr      = 0;
+	  int wr      = 0;
+	  synchronized( this ) {
+	    bufSize = getTxBufSize( this.socketNum );
+	    bufAddr = getTxBufAddr( this.socketNum );
+	    rr      = this.txReadReg;
+	    wr      = this.txWriteReg;
+	  }
+	  if( bufSize > 0 ) {
+	    int nWritten = 0;
+	    int mask     = bufSize - 1;
+	    rr &= mask;
+	    wr &= mask;
 	    do {
 	      out.write( getMemByte( bufAddr + rr ) );
+	      nWritten++;
 	      rr = (rr + 1) & mask;
 	    } while( rr != wr );
 	    out.flush();
@@ -1132,19 +1164,38 @@ public class W5100
 	    this.txReadReg = wr;
 	    setSnIRBits( INT_SEND_OK_MASK );
 	    done = true;
-	  }
-	  catch( IOException ex ) {
-	    if( getDebugLevel() > 0 ) {
-	      ex.printStackTrace( System.out );
+
+	    // Debug-Meldung
+	    if( (nWritten > 0) && (getDebugLevel() > 1) ) {
+	      System.out.printf(
+			"W5100 Socket %d: %d bytes sent\n",
+			this.socketNum,
+			nWritten );
 	    }
 	  }
 	}
-      }
-      if( !done ) {
-	synchronized( this ) {
-	  this.txReadReg = this.txWriteReg;
-	  setSnIRBits( INT_TIMEOUT_MASK );
+	if( !done ) {
+	  synchronized( this ) {
+	    this.txReadReg = this.txWriteReg;
+	    setSnIRBits( INT_TIMEOUT_MASK );
+	  }
 	}
+      }
+      catch( IOException ex ) {
+	if( getDebugLevel() > 0 ) {
+	  ex.printStackTrace( System.out );
+	}
+	setCR( CMD_NONE );
+	setSR( SOCK_CLOSE_WAIT );
+	Socket socket = this.socket;
+	if( socket != null ) {
+	  EmuUtil.doClose( socket );
+	  this.recvStream = null;
+	  this.sendStream = null;
+	  this.socket     = null;
+	}
+	setSR( SOCK_CLOSED );
+	fireRunCmdThread();
       }
     }
 
@@ -1202,17 +1253,28 @@ public class W5100
 		sendBuf[ i ] = (byte) getMemByte(
 					bufAddr + ((rr + i) & mask) );
 	      }
-	      DatagramPacket packet = new DatagramPacket(
-				sendBuf,
-				len,
-				dstInetAddr,
-				getMemWord( this.baseAddr + Sn_DPORT ) );
+	      int            dstPort = getMemWord( this.baseAddr + Sn_DPORT );
+	      DatagramPacket packet  = new DatagramPacket(
+							sendBuf,
+							len,
+							dstInetAddr,
+							dstPort );
 	      dSocket.send( packet );
 
 	      // Daten als gesendet markieren
 	      this.txReadReg = wr;
 	      setSnIRBits( INT_SEND_OK_MASK );
 	      done = true;
+
+	      // Debug-Meldung
+	      if( (len > 0) && (getDebugLevel() > 1) ) {
+		System.out.printf(
+			"W5100 Socket %d: %d bytes sent to %s:%d\n",
+			this.socketNum,
+			len,
+			dstInetAddr.toString(),
+			dstPort );
+	      }
 	    }
 	  }
 	  catch( IOException ex ) {
@@ -1940,6 +2002,37 @@ public class W5100
   }
 
 
+  private int getBufSize( int socketNum, int addr )
+  {
+    int rv = 0;
+    int t  = 0;
+    int m  = getMemByte( addr );
+    do {
+      switch( m & 0x03 ) {
+	case 0:
+	  rv = 0x0400;
+	  break;
+	case 1:
+	  rv = 0x0800;
+	  break;
+	case 2:
+	  rv = 0x1000;
+	  break;
+	case 3:
+	  rv = 0x2000;
+	  break;
+      }
+      t += rv;
+      m >>= 2;
+      --socketNum;
+    } while( socketNum >= 0 );
+    if( t > 0x2000 ) {
+      rv = 0;
+    }
+    return rv;
+  }
+
+
   private int getDebugLevel()
   {
     return this.debugLevel;
@@ -2007,33 +2100,7 @@ public class W5100
 
   private int getRxBufSize( int socketNum )
   {
-    int rv = 0;
-    int a  = 0x6000;
-    int m  = getMemByte( ADDR_RMSR );
-    while( socketNum > 0 ) {
-      switch( m & 0x03 ) {
-	case 0:
-	  rv = 0x0400;
-	  break;
-	case 1:
-	  rv = 0x0800;
-	  break;
-	case 2:
-	  rv = 0x1000;
-	  break;
-	case 3:
-	  rv = 0x2000;
-	  break;
-      }
-      a += rv;
-      m >>= 2;
-      --socketNum;
-    }
-    if( (a + rv) > 0x8000 ) {
-      // Puffer liegt ausserhalb des Speichers -> 0 zurueckliefern
-      rv = 0;
-    }
-    return rv;
+    return getBufSize( socketNum, ADDR_RMSR );
   }
 
 
@@ -2065,33 +2132,7 @@ public class W5100
 
   private int getTxBufSize( int socketNum )
   {
-    int rv = 0;
-    int a  = 0x4000;
-    int m  = getMemByte( ADDR_TMSR );
-    while( socketNum > 0 ) {
-      switch( m & 0x03 ) {
-	case 0:
-	  rv = 0x0400;
-	  break;
-	case 1:
-	  rv = 0x0800;
-	  break;
-	case 2:
-	  rv = 0x1000;
-	  break;
-	case 3:
-	  rv = 0x2000;
-	  break;
-      }
-      a += rv;
-      m >>= 2;
-      --socketNum;
-    }
-    if( (a + rv) > 0x8000 ) {
-      // Puffer liegt ausserhalb des Speichers -> 0 zurueckliefern
-      rv = 0;
-    }
-    return rv;
+    return getBufSize( socketNum, ADDR_TMSR );
   }
 
 

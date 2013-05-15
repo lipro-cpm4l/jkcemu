@@ -17,6 +17,7 @@
      <li><a href="ac1.htm#font_switch">1.10. Zeichensatzumschaltung</a></li>
      <li><a href="ac1.htm#printer">1.11. V24-Schnittstelle mit Drucker</a></li>
      <li><a href="ac1.htm#rom2010">1.12. AC1-2010 ROM-B&auml;nke</a></li>
+     <li><a href="ac1.htm#joystick">1.13. Joystick</a></li>
     </ul>
    </li>
    <li><a href="ac1.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -105,7 +106,7 @@
      <li><a href="ac1.htm#scch_inverse">SCCH-Inversschaltung</a></li>
      <li>
       <a href="ac1.htm#font_switch">Zeichensatzumschaltung</a>
-      (nur bei Monitorprogramm&nbsp;10/88)
+      (nur bei Monitorprogramm&nbsp;10/88 und Farbgrafik)
      </li>
      <li><a href="ac1.htm#graphic_key">Grafiktaste (F2)</a></li>
      <li>
@@ -113,7 +114,6 @@
       nach AC1-Info&nbsp;11/1988
      </li>
      <li><a href="ac1.htm#printer">V24-Schnittstelle mit Drucker</a></li>
-     <li>1&nbsp;<a href="joystick.htm">Joystick</a></li>
     </ul>
    </li>
    <li>
@@ -137,7 +137,6 @@
      </li>
      <li><a href="ac1.htm#graphic_key">Grafiktaste (F2)</a></li>
      <li><a href="ac1.htm#printer">V24-Schnittstelle mit Drucker</a></li>
-     <li>1&nbsp;<a href="joystick.htm">Joystick</a></li>
     </ul>
    </li>
    <li>
@@ -167,6 +166,7 @@
       <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
       an der E/A-Basisadressen FCh
      </li>
+     <li>1&nbsp;<a href="ac1.htm#joystick">Joystick</a></li>
     </ul>
    </li>
   </ul>
@@ -210,7 +210,9 @@
 
  <h3><a name="color">1.3. Farbgrafik</a></h3>
   Optional wird die von Heiko Poppe und Ralph H&auml;nsel entwickelte
-  Farbgrafikkarte emuliert, die auch eine Taktfrequenzumschaltung bietet.
+  Farbgrafikkarte emuliert, die auch eine Taktfrequenz- und
+  <a href="ac1.htm#font_switch">Zeichensatzumschaltung</a>
+  sowie einen Inversmodus bietet.
   Der Farbspeicher liegt parallel zum Zeichenspeicher und
   enth&auml;lt pro Zeichen eine Vorder- und eine Hintergrundfarbe.
   Das Ein- und Ausblenden des Farbspeichers erfolgt &uuml;ber
@@ -223,7 +225,12 @@
     <th></th><th>Bedeutung bei Wert 0</th><th>Bedeutung bei Wert 1</th>
    </tr>
    <tr>
-    <td>Bit 0:</td><td>2&nbsp;MHz</td><td>4&nbsp;MHz</td>
+    <td>Bit&nbsp;0:</td><td>2&nbsp;MHz</td><td>4&nbsp;MHz</td>
+   </tr>
+   <tr>
+    <td>Bit&nbsp;1:</td>
+    <td>normale Bildschirmausgabe</td>
+    <td>invertierte Bildschirmausgabe</td>
    </tr>
    <tr>
     <td>Bit 2:</td>
@@ -390,14 +397,14 @@
 
  <h3><a name="font_switch">1.10. Zeichensatzumschaltung</a></h3>
   Die Zeichensatzumschaltung wird nur beim Monitorprogramm&nbsp;10/88
-  emuliert.
-  &Uuml;ber die System-PIO kann zwischen dem Zeichensatz des AC1-ACC
-  (PIO&nbsp;B3=0) und dem SCCH-Zeichensatz (PIO&nbsp;B3=1)
-  umgeschaltet werden.
+  und bei der <a href="ac1.htm#color">Farbgrafik</a> emuliert.
+  &Uuml;ber die System-PIO kann zwischen dem SCCH-Zeichensatz bzw.
+  dem Zeichensatz des AC1-2010 (PIO&nbsp;B3=0) und dem Zeichensatz
+  des AC1-ACC (PIO&nbsp;B3=1) umgeschaltet werden.
   Die Umschaltung funktioniert auch, wenn Sie in den
   <a href="settings.htm">Einstellungen</a> eine alternative
   Zeichensatzdatei angegeben haben.
-  Wenn diese Datei gr&ouml;&szlig;er als 2&nbsp;KByte ist,
+  Ist diese Datei gr&ouml;&szlig;er als 2&nbsp;KByte,
   wird zwichen den unteren und den oberen 2&nbsp;KByte umgeschaltet.
  <br/><br/>
 
@@ -545,6 +552,18 @@
   Ein Programm zur Verwaltung dieser weiteren ROM-B&auml;nke
   kann mit dem Kommando&nbsp;7 (Einblenden der ROM-Bank&nbsp;2
   der PIO2-Karte) gestartet werden.
+ <br/><br/>
+
+ <h3><a name="joystick">1.13. Joystick</a></h3>
+  Wenn in den AC1-Einstellungen das
+  <a href="joystick.htm">Joystick</a>-H&auml;kchen gesetzt ist,
+  wird ein Joystick entsprechend der SCCH-Schaltung emuliert.
+  Bei dieser Schaltung wird &uuml;ber die System-PIO, Port B, Bit 1
+  zwischen Tastatur und Joystick umgeschaltet.
+  Wenn ein AC1-Programm die System-PIO umprogrammiert und dabei
+  die Joystick-Schaltung nicht ber&uuml;cksichtigt,
+  sind u.U. keine Tastatureingabe mehr m&ouml;glich.
+  In dem Fall m&uuml;ssen Sie die Joystick-Emulation ausschalten.
  <br/><br/>
 
 

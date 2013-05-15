@@ -2591,7 +2591,7 @@ public class DebugFrm extends BasicFrm implements
 	  setDebugRunning();
 	}
       } else {
-	setDebuggerDisabled( "Debugger nicht aktiv" );
+	setDebugRunning();
       }
     } else {
       setDebuggerDisabled( "Prozessorsystem nicht aktiv" );

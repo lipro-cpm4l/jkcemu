@@ -40,6 +40,10 @@
    <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
    <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
+   <li>
+    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
+   </li>
    <li>TARGET_ID$ liefert "CP/M"</li>
   </ul>
  <br/>
@@ -51,6 +55,10 @@
     Dieser muss dazu auf die Standardadresse C000h eingestellt sein.
    </li>
    <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
+   <li>
+    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
+   </li>
    <li>TARGET_ID$ liefert "HUEBLER"</li>
   </ul>
  <br/>
@@ -69,10 +77,22 @@
    <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>Die LOCATE-Anweisung steht nicht zur Verf&uuml;gung.</li>
    <li>
-    Das in JKCEMU integrierte Monitorprogramm des KramerMC erkennt
+    Das in JKCEMU integrierte Monitorprogramm des Kramer-MC erkennt
     bei der INKEY-Funktion nur die Tastenkombination <em>CTRL-C</em>.
    </li>
+   <li>
+    Druckerausgaben werden &uuml;ber den LIST-Kanal
+    (Einsprungsadresse&nbsp;00ECh) get&auml;tigt.
+    Das in JKCEMU enthaltene Monitorprogramm des Kramer-MC
+    ist standardm&auml;&szlig;ig jedoch so eingestellt,
+    dass der LIST-Kanal und damit die Druckerausgaben
+    auf dem Bildschirm erscheinen.
+   </li>
    <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
+   <li>
+    Die Netzwerkanweisungen und -funktionen stehen nicht zur Verf&uuml;gung.
+   </li>
+   <li>Es wird kein VDIP-Modul unterst&uuml;tzt.</li>
    <li>
     Sie d&uuml;rfen die Compiler-Option <em>System-Stack verwenden</em>
     nicht einschalten, da beim Starten eines Maschinencodeprogramms
@@ -87,6 +107,13 @@
 
  <h3><a name="llc2">LLC2 mit HIRES-Grafik</a></h3>
   <ul>
+   <li>
+    Es wird ein einstelliger Applikationsname unterst&uuml;tzt,
+    d.h., wenn im Namensfeld nur ein Zeichen steht,
+    wird ein entsprechender Kommandorahmen erzeugt,
+    und das compilierte Programm kann &uuml;ber dieses Zeichen
+    aufgerufen werden.
+   </li>
    <li>
     <tt>SCREEN&nbsp;0</tt> ist ein reiner Textbildschirm,
     in dem die Grafikbefehle nicht verwendet werden k&ouml;nnen.
@@ -108,6 +135,10 @@
     Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
+   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
+   <li>
+    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
+   </li>
    <li>TARGET_ID$ liefert "LLC2_HIRES"</li>
   </ul>
  <br/>
@@ -126,6 +157,10 @@
     zus&auml;tzlich auch der Farbspeicher beschrieben.
     Kommen dagegen keine Anweisungen zum Setzen der Farbe vor,
     wird Programmcode erzeugt, der nicht auf den Farbspeicher zugreift.
+   </li>
+   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
+   <li>
+    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;DCh unterst&uuml;tzt.
    </li>
    <li>TARGET_ID$ liefert "Z9001"</li>
   </ul>
@@ -146,8 +181,8 @@
     mit der <a href="instructions.htm#label">LABEL</a>-Anweisung).
    </li>
    <li>
-    Bez&uuml;glich Farbunterst&uuml;tzung gilt das gleiche wie
-    beim Zielsystem <em>KC85/1, KC87, Z9001</em>.
+    Bez&uuml;glich Farbunterst&uuml;tzung, KCNet und VDIP gilt das gleiche
+    wie beim Zielsystem <em>KC85/1, KC87, Z9001</em>.
    </li>
    <li>TARGET_ID$ liefert "Z9001_KRT"</li>
   </ul>
@@ -156,7 +191,28 @@
  <h3><a name="kc85">KC85/2...5, HC900</a></h3>
   <ul>
    <li>
+    Tastaturein- und Bildschirmausgaben erfolgen &uuml;ber den
+    jeweiligen Standardkanal,
+    d.h., die Ein- und Ausgabe kann im CAOS umgeleitet werden.
+    Das gilt jedoch nicht f&uuml;r die INKEY$-Funktion.
+    Diese greift auch dann auf die Tastatur zu,
+    wenn die Tastatureingabe umgeleitet wurde.
+   </li>
+   <li>
+    Ausgaben auf dem Drucker werden auf dem User-Kanal&nbsp;2 get&auml;tigt.
+   </li>
+   <li>
     Die LOCATE-Anweisung bezieht sich auf das im CAOS eingestellte Fenster.
+   </li>
+   <li>
+    Beim HC900 und beim KC85/2 ist standardm&auml;&szlig;ig
+    das aktuelle Fenster kleiner eingestellt als maximal m&ouml;glich.
+    Die CLS-Anweisung l&ouml;scht in dem Fall nicht den ganzen Bildschirm.
+    Da das unsch&ouml;n aussieht, pr&uuml;ft der Compiler,
+    ob im Programm CLS-Anweisungen vorkommen.
+    Wenn ja, wird bei Programmstart die Gr&ouml;&szlig;e
+    des aktuell im CAOS eingestellten Fensters gepr&uuml;ft
+    und dieses gegebenfalls maximiert.
    </li>
    <li>
     Die CURSOR-Anweisung hat keine Wirkung.
@@ -174,14 +230,10 @@
     Dieser wird dadurch nicht beeintr&auml;chtigt.
    </li>
    <li>
-    Beim HC900 und beim KC85/2 ist standardm&auml;&szlig;ig
-    das aktuelle Fenster kleiner eingestellt als maximal m&ouml;glich.
-    Die CLS-Anweisung l&ouml;scht in dem Fall nicht den ganzen Bildschirm.
-    Da das unsch&ouml;n aussieht, pr&uuml;ft der Compiler,
-    ob im Programm CLS-Anweisungen vorkommen.
-    Wenn ja, wird bei Programmstart die Gr&ouml;&szlig;e
-    des aktuell im CAOS eingestellten Fensters gepr&uuml;ft
-    und dieses gegebenfalls maximiert.
+    KCNet und VDIP werden &uuml;ber das Modul&nbsp;M052 unterst&uuml;tzt.
+    Das compilierte Programm aktiviert dazu das Modul selbstst&auml;ndig,
+    d.h., es kann, muss aber nicht vor dem Programmstart schon aktiv sein.
+    Allerdings muss KCNet beim Programmstart konfiguriert sein.
    </li>
    <li>TARGET_ID$ liefert "KC85"</li>
   </ul>
@@ -191,10 +243,19 @@
   Ist dieses Zielsystem ausgew&auml;hlt, wird Programmcode f&uuml;r
   einen AC1 bzw. LLC2 mit einem SCCH-Monitorprogramm erzeugt.
   Der Programmcode ist auch auf einem AC1 mit dem Monitorprogramm&nbsp;3.1
-  lauff&auml;hig, wenn auf die LOCATE-Anweisung und die JOYST-Funktion
-  verzichtet wird.
+  lauff&auml;hig, wenn auf Druckerausgaben, die LOCATE-Anweisung und
+  die JOYST-Funktion verzichtet wird.
  <br/>
   <ul>
+   <li>
+    Es wird ein einstelliger Applikationsname unterst&uuml;tzt,
+    d.h., wenn im Namensfeld nur ein Zeichen steht,
+    wird ein entsprechender Kommandorahmen erzeugt,
+    und das compilierte Programm kann &uuml;ber dieses Zeichen
+    aufgerufen werden.
+   </li>
+   <li>
+    Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
    <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
    <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>
@@ -206,6 +267,10 @@
    <li>
     Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf,
+   </li>
+   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
+   <li>
+    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
    </li>
    <li>TARGET_ID$ liefert "SCCH"</li>
   </ul>
@@ -225,10 +290,23 @@
     falls der Sprungverteiler nicht initialisiert sein sollte.
    </li>
    <li>
+    Druckerausgaben erfolgen &uuml;ber den Sprungverteiler,
+    aber nur, wenn auf Adresse&nbsp;FFE8h
+    (Routine zur Ausgabe des Zeichens im Register&nbsp;A)
+    ein absoluter Sprung steht (Byte&nbsp;C3h).
+   </li>
+   <li>
     Die Option <em>CTRL-C bricht Programm immer ab</em> verlangsamt
     das Programm erheblich. Der Grund liegt in der langsamen INKEY-Routine
     des Z1013-Monitorprogramms, die f&uuml;r den Test auf Abbruch
     regelm&auml;&szlig;ig aufgerufen wird.
+   </li>
+   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
+   <li>
+    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;DCh und FCh
+    unterst&uuml;tzt, d.h., es wird zuerst versucht,
+    das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
+    Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh an der Reihe.
    </li>
    <li>TARGET_ID$ liefert "Z1013"</li>
   </ul>

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.*;
 import java.lang.*;
+import java.net.*;
 import java.util.*;
 import java.util.zip.*;
 import javax.sound.sampled.*;
@@ -80,6 +81,7 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuFileRefresh;
   private JMenuItem            mnuFileClose;
   private JMenuItem            mnuEditPathCopy;
+  private JMenuItem            mnuEditURLCopy;
   private JMenuItem            mnuEditFileCopy;
   private JMenuItem            mnuEditFilePaste;
   private JCheckBoxMenuItem    mnuHiddenFiles;
@@ -119,6 +121,7 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuPopupRAMFloppy2Load;
   private JMenuItem            mnuPopupChecksum;
   private JMenuItem            mnuPopupPathCopy;
+  private JMenuItem            mnuPopupURLCopy;
   private JMenuItem            mnuPopupFileCopy;
   private JMenuItem            mnuPopupFilePaste;
   private JMenuItem            mnuPopupCreateDir;
@@ -571,6 +574,12 @@ public class FileBrowserFrm extends BasicFrm
 	    rv = true;
 	    doEditPathCopy();
 	  }
+	  else if( (src == this.mnuEditURLCopy)
+		   || (src == this.mnuPopupURLCopy) )
+	  {
+	    rv = true;
+	    doEditURLCopy();
+	  }
 	  else if( (src == this.mnuEditFileCopy)
 		   || (src == this.mnuPopupFileCopy) )
 	  {
@@ -796,6 +805,38 @@ public class FileBrowserFrm extends BasicFrm
 	      StringSelection ss = new StringSelection( fileName );
 	      this.clipboard.setContents( ss, ss );
 	    }
+	  }
+	}
+      }
+    }
+    catch( IllegalStateException ex ) {}
+  }
+
+
+  private void doEditURLCopy()
+  {
+    try {
+      FileNode fileNode = getSelectedFileNode();
+      if( fileNode != null ) {
+	File file = fileNode.getFile();
+	if( file != null ) {
+	  try {
+	    URI uri = file.toURI();
+	    if( uri != null ) {
+	      URL url = uri.toURL();
+	      if( url != null ) {
+		String urlText = uri.toString();
+		if( urlText != null ) {
+		  if( !urlText.isEmpty() ) {
+		    StringSelection ss = new StringSelection( urlText );
+		    this.clipboard.setContents( ss, ss );
+		  }
+		}
+	      }
+	    }
+	  }
+	  catch( MalformedURLException ex ) {
+	    BasicDlg.showErrorDlg( this, ex );
 	  }
 	}
       }
@@ -1856,6 +1897,11 @@ public class FileBrowserFrm extends BasicFrm
 		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
     mnuEdit.add( this.mnuEditPathCopy );
 
+    this.mnuEditURLCopy = createJMenuItem(
+		"Datei-/Verzeichnisname als URL kopieren" );
+    mnuEdit.add( this.mnuEditURLCopy );
+    mnuEdit.addSeparator();
+
     this.mnuEditFileCopy = createJMenuItem( "Kopieren" );
     mnuEdit.add( this.mnuEditFileCopy );
 
@@ -2047,6 +2093,10 @@ public class FileBrowserFrm extends BasicFrm
     this.mnuPopupPathCopy = createJMenuItem(
 		"Vollst\u00E4ndiger Datei-/Verzeichnisname kopieren" );
     mnuPopup.add( this.mnuPopupPathCopy );
+
+    this.mnuPopupURLCopy = createJMenuItem(
+		"Datei-/Verzeichnisname als URL kopieren" );
+    mnuPopup.add( this.mnuPopupURLCopy );
 
     this.mnuPopupFileCopy = createJMenuItem( "Kopieren" );
     mnuPopup.add( this.mnuPopupFileCopy );
@@ -2878,6 +2928,9 @@ public class FileBrowserFrm extends BasicFrm
 
     this.mnuEditPathCopy.setEnabled( stateOneDir || stateOneFile );
     this.mnuPopupPathCopy.setEnabled( stateOneDir || stateOneFile );
+
+    this.mnuEditURLCopy.setEnabled( stateOneDir || stateOneFile );
+    this.mnuPopupURLCopy.setEnabled( stateOneDir || stateOneFile );
 
     this.mnuEditFileCopy.setEnabled( stateEntries );
     this.mnuPopupFileCopy.setEnabled( stateEntries );

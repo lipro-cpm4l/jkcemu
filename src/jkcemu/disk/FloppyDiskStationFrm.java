@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -86,7 +86,7 @@ public class FloppyDiskStationFrm
     /*
      * Da bei Diskettenzugriffen i.d.R. mehrere Sektoren
      * unmittelbar hintereinander gelesen bzw. geschrieben werden,
-     * wurden im bei Fehlern beim Zugriff auf das darunter liegende
+     * wuerden bei Fehlern beim Zugriff auf das darunter liegende
      * Medium auch mehrere Fehlermeldungen erscheinen,
      * was recht unschoen ist.
      * Stattdessen soll pro Serie von Diskettenzugriffen,

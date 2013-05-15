@@ -1,0 +1,265 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Konstanten</h2>
+  Konstanten enthalten einen numerischen Wert,
+  der sich w&auml;hrend der Programmlaufs nicht ver&auml;ndern kann.
+  Es ist aber m&ouml;glich, dass der Wert einer Konstante
+  von einem zum anderen Zielsystem unterschiedlich ist
+  (z.B. bei den Farben) oder auch von einem zum n&auml;chsten
+  Compiler-Lauf (z.B. bei den Adressen).
+ <br/><br/>
+  <ul>
+   <li><a href="constants.htm#boolean">1. Boolsche Werte</a></li>
+   <li><a href="constants.htm#color">2. Farben</a></li>
+   <li><a href="constants.htm#error">3. Fehlercodes</a></li>
+   <li><a href="constants.htm#system">4. Systemkonstanten</a></li>
+  </ul>
+ <br/>
+
+ <h3><a name="boolean">1. Boolsche Werte</a></h3>
+  <table border="1">
+   <tr><th>Konstante</th><th>Wert</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">FALSE</td>
+    <td valign="top">0</td>
+    <td valign="top">
+     Wert f&uuml;r &quot;falsch&quot; (kein Bit gesetzt)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TRUE</td>
+    <td valign="top">-1</td>
+    <td valign="top">
+     Wert f&uuml;r &quot;wahr&quot; (alle Bits gesetzt)
+    </td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="color">2. Farben</a></h3>
+  Die Konstanten f&uuml;r die Farben sind f&uuml;r die Anwendung
+  bei den Anweisungen
+  <a href="instructions.htm#border">BORDER</a>,
+  <a href="instructions.htm#color">COLOR</a>,
+  <a href="instructions.htm#ink">INK</a> und
+  <a href="instructions.htm#paper">PAPER</a> gedacht.
+  Damit muss man zumindest f&uuml;r die acht Hauptfarben
+  nicht die konkreten Farbnummern des Zielsystems kennen und
+  kann somit plattform&uuml;bergreifende BASIC-Programme schreiben.
+ <br/><br/>
+  <table border="1">
+   <tr><th>Konstante</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">BLACK</td>
+    <td valign="top">Code f&uuml;r die Farbe schwarz</td>
+   </tr>
+   <tr>
+    <td valign="top">BLINKING</td>
+    <td valign="top">
+     Code f&uuml;r Blinken,<br/>
+     BLINKING wird nur in Verbindung mit einer Vordergrundfarbe
+     eingesetzt, z.B.:<br/><br/>
+     <tt>
+      &nbsp;INK RED+BLINKING: &nbsp;PRINT "Ich blinke rot";<br/>
+      &nbsp;INK WHITE: &nbsp;PRINT "weiss ohne blinken";
+     </tt>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">BLUE</td>
+    <td valign="top">Code f&uuml;r die Farbe blau</td>
+   </tr>
+   <tr>
+    <td valign="top">CYAN</td>
+    <td valign="top">Code f&uuml;r die Farbe t&uuml;rkis</td>
+   </tr>
+   <tr>
+    <td valign="top">GREEN</td>
+    <td valign="top">Code f&uuml;r die Farbe gr&uuml;n</td>
+   </tr>
+   <tr>
+    <td valign="top">MAGENTA</td>
+    <td valign="top">Code f&uuml;r die Farbe magenta</td>
+   </tr>
+   <tr>
+    <td valign="top">RED</td>
+    <td valign="top">Code f&uuml;r die Farbe rot</td>
+   </tr>
+   <tr>
+    <td valign="top">WHITE</td>
+    <td valign="top">Code f&uuml;r die Farbe wei&szlig;</td>
+   </tr>
+   <tr>
+    <td valign="top">YELLOW</td>
+    <td valign="top">Code f&uuml;r die Farbe gelb</td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="error">3. Fehlercodes</a></h3>
+  Die Fehlercodekonstanten dienen zur Auswertung der Systemvariable
+  <a href="functions.htm#err">ERR</a>.
+ <br/><br/>
+  <table border="1">
+   <tr><th>Konstante</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">E_CHANNEL_ALREADY_OPEN</td>
+    <td valign="top">
+     Es wurde versucht, einen Ein-/Ausgabekanal zu &ouml;ffnen,
+     der bereits offen ist.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_CHANNEL_CLOSED</td>
+    <td valign="top">
+     Es wurde eine Anweisung oder eine Funktion zur Ein-/Ausgabe
+     an einem Kanal aufgerufen, der nicht offen ist.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_DEVICE_LOCKED</td>
+    <td valign="top">
+     Das Ein-/Ausgabeger&auml;t ist bereits in Benutzung und
+     kann nicht gleichzeitig mehrfach benutzt werden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_DEVICE_NOT_CONFIGURED</td>
+    <td valign="top">
+     Das Ein-/Ausgabeger&auml;t wurde zwar gefunden,
+     ist aber nicht konfiguriert.
+     Damit ist z.B. beim <a href="../../kcnet.htm">KCNet</a> gemeint,
+     dass die IP-Adresse und Subnet-Maske nicht gesetzt sind.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_DEVICE_NOT_FOUND</td>
+    <td valign="top">
+     Das angegebene Ein-/Ausgabeger&auml;t wurde nicht gefunden.
+     Entweder ist das Ger&auml;t nicht vorhanden oder nicht betriebsbereit
+     oder f&uuml;r das Zielsystem wird das Ger&auml;t nicht unterst&uuml;tzt
+     oder der Ger&auml;tename wurde falsch geschrieben.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_DISK_FULL</td>
+    <td valign="top">
+     Die Datei konnte nicht zum Schreiben ge&ouml;ffnet oder
+     die Ausgabeoperation nicht ausgef&uuml;hrt werden,
+     weil das Speichermedium voll ist.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_EOF</td>
+    <td valign="top">
+     Es wurde versucht, &uuml;ber das Dateiende hinaus zu lesen.
+     Bei einer Netzwerkverbindung bedeutet dieser Fehlercode,
+     dass die Verbindung von der Gegenstelle beendet wurde.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_ERROR</td>
+    <td valign="top">
+     Es ist ein allgemeiner bzw. nicht n&auml;her spezifizierter Fehler
+     aufgetreten.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_FILE_NOT_FOUND</td>
+    <td valign="top">
+     Die angegebene Datei wurde nicht gefunden.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_INVALID</td>
+    <td valign="top">
+     Die Operation ist nicht erlaubt oder ein Parameter
+     enth&auml;lt einen ung&uuml;ltigen Wert.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_IO_ERROR</td>
+    <td valign="top">Die Ein-/Ausgabeoperation ist fehlgeschlagen.</td>
+   </tr>
+   <tr>
+    <td valign="top">E_IO_MODE</td>
+    <td valign="top">
+     Die Operation ist mit der Betriebsart nicht m&ouml;glich,
+     mit der der Kanal ge&ouml;ffnet wurde.
+     Der Fehler tritt z.B. auf, wenn versucht wird,
+     von einem Ausgabekanal zu lesen oder
+     in einen Eingabekanal zu schreiben.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_NO_DISK</td>
+    <td valign="top">
+     Das Speichermedium ist nicht vorhanden,
+     z.B. Diskette nicht eingelegt oder USB-Speicher nicht angeschlossen.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_OK</td>
+    <td valign="top">
+     Die betreffende Anweisung oder Funktion wurde erfolgreich
+     ausgef&uuml;hrt, d.h., es ist kein Fehler aufgetreten.
+     E_OK hat den numerischen Wert&nbsp;0.
+     Dadurch kann auf einen Fehler auch ohne Vergleichsoperator
+     getestet werden:
+     <br/><br/>
+     <tt>IF ERR THEN PRINT "Fehler"</tt>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_OVERFLOW</td>
+    <td valign="top">
+     Es ist ein numerischer &Uuml;berlauf aufgetreten.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_READ_ONLY</td>
+    <td valign="top">
+     Es wurde versucht, eine schreibgesch&uuml;tzte Datei oder
+     eine Datei auf einem schreibgesch&uuml;tzten Speichermedium
+     zum Schreiben zu &ouml;ffnen.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">E_SOCKET_STATUS</td>
+    <td valign="top">
+     Der KCNet-Socket befindet sich im falschen Zustand.
+    </td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="system">4. Systemkonstanten</a></h3>
+  <table border="1">
+   <tr><th>Konstante</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top">LASTSCREEN</td>
+    <td valign="top">H&ouml;chstm&ouml;gliche Bildschirmnummer,
+     die mit der <a href="instructions.htm#screen">SCREEN</a>-Anweisung
+     eingestellt werden kann
+   </tr>
+   <tr>
+    <td valign="top">TARGET_ADDR</td>
+    <td valign="top">
+     Anfangsadresse des compilierten BASIC-Programms,
+     so wie sie in den Einstellungen angegeben wurde
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TOP</td>
+    <td valign="top">
+     Adresse des ersten freien Bytes hinter dem vom compiliertem
+     BASIC-Programm belegten bzw. benutzten Speicher
+    </td>
+   </tr>
+  </table>
+ <br/>
+</body>
+</html>
+
