@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
+import jkcemu.disk.GIDESettingsFld;
 
 
 public class Z1013SettingsFld extends AbstractSettingsFld
@@ -56,6 +57,7 @@ public class Z1013SettingsFld extends AbstractSettingsFld
   private JPanel                 tabMon;
   private JPanel                 tabUserPort;
   private RAMFloppiesSettingsFld tabRF;
+  private GIDESettingsFld        tabGIDE;
   private JPanel                 tabModROM;
   private JPanel                 tabExt;
   private JPanel                 tabEtc;
@@ -329,6 +331,11 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     this.btnModMegaROM.addActionListener( this );
 
 
+    // GIDE
+    this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
+    this.tabbedPane.addTab( "GIDE", this.tabGIDE );
+
+
     // Tab Erweiterungen
     this.tabExt = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
@@ -473,7 +480,9 @@ public class Z1013SettingsFld extends AbstractSettingsFld
   @Override
   public void applyInput(
 		Properties props,
-		boolean    selected ) throws UserInputException
+		boolean    selected ) throws
+					UserCancelException,
+					UserInputException
   {
     Component tab  = null;
     String    text = null;
@@ -543,6 +552,10 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 		stateMega );
       this.fldMegaROM.applyInput( props, selected );
 
+      // Tab-GIDE
+      tab = this.tabGIDE;
+      this.tabGIDE.applyInput( props, selected );
+
       // Tab Erweiterungen
       tab = this.tabExt;
       EmuUtil.setProperty(
@@ -587,6 +600,29 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 		this.btnPasteFast.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
+
+      // ggf. Warnung ausgeben
+      if( this.btnMonA2.isSelected()
+	  && this.btnModBasic.isSelected()
+	  && (this.fldAltBasic.getFile() == null) )
+      {
+	if( !BasicDlg.showYesNoWarningDlg(
+		this,
+		"Das im ROM-Modul enthaltene KC-BASIC l\u00E4uft nicht"
+			+ " mit dem Monitorprogramm A.2 zusammen.\n"
+			+ "Sie sollten deshalb entweder ein anderes"
+			+ " Monitorprogramm ausw\u00E4hlen"
+			+ " oder f\u00FCr das ROM-Modul\n"
+			+ "einen alternativen, an das Monitorprogramm"
+			+ " angepassten Inhalt einbinden.\n"
+			+ "\n"
+			+ "M\u00F6chten Sie trotzdem die Einstellungen"
+			+ " \u00FCbernehmen?",
+		"Konflikt" ) )
+	{
+	  throw new UserCancelException();
+	}
+      }
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -600,6 +636,8 @@ public class Z1013SettingsFld extends AbstractSettingsFld
   @Override
   protected boolean doAction( EventObject e )
   {
+    this.settingsFrm.setWaitCursor( true );
+
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
@@ -633,7 +671,18 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 	fireDataChanged();
       }
     }
+    if( !rv ) {
+      rv = this.tabGIDE.doAction( e );
+    }
+    this.settingsFrm.setWaitCursor( false );
     return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    this.tabGIDE.lookAndFeelChanged();
   }
 
 
@@ -684,6 +733,7 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     }
 
     this.tabRF.updFields( props );
+    this.tabGIDE.updFields( props );
 
     this.btnModBasic.setSelected(
 	EmuUtil.getBooleanProperty(

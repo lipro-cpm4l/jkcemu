@@ -34,9 +34,9 @@ public class LLC2HIRESTarget extends SCCHTarget
 
 
   @Override
-  public void appendBSS( AsmCodeBuf buf )
+  public void appendBssTo( AsmCodeBuf buf )
   {
-    super.appendBSS( buf );
+    super.appendBssTo( buf );
     buf.append( "X_MSCR:\tDS\t1\n" );
   }
 
@@ -93,19 +93,12 @@ public class LLC2HIRESTarget extends SCCHTarget
 
 
   @Override
-  public void appendInit( AsmCodeBuf buf )
+  public void appendInitTo( AsmCodeBuf buf )
   {
-    super.appendInit( buf );
+    super.appendInitTo( buf );
     buf.append( "\tXOR\tA\n"
 		+ "\tLD\t(X_MSCR),A\n"
 		+ "\tOUT\t(0EEH),A\n" );
-  }
-
-
-  @Override
-  public void appendLastScreenNum( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
   }
 
 
@@ -299,6 +292,13 @@ public class LLC2HIRESTarget extends SCCHTarget
   public int get100msLoopCount()
   {
     return 85;
+  }
+
+
+  @Override
+  public int getLastScreenNum()
+  {
+    return 1;
   }
 
 

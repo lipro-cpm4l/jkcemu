@@ -21,17 +21,37 @@ public class BasicLibrary
 {
   public static enum LibItem {
 			INIV, INSV, INRSV, INLNB, INLNR, INPWV,
-			P_INT, P_INTF,
-			CIRCLE, DATA, DREADI, DREADS,
+			P_I, P_IF,
+			PS_I, PS_IF, PS_S, PS_ST, PS_SP, PS_NL,
+			ACCEPT, CIRCLE, CONNECT,
+			DATA, DATAGRAM, DREADI, DREADS,
 			DRAW, DRAWR, DRBOX, DRBOXF, H_BOX, DRHLIN, DRLINE,
 			DRLBL, DRLBLT, MOVER, LOCATE,
 			PAUSE, PEN, ONGOAD, PLOTR, SCREEN,
-			F_ISTR, F_JOY, F_LEN, F_RND, F_SGN, F_SQR,
+			IOCLOSE, IOOPEN, IOEOF, IOAVAILABLE,
+			IOINL, IOINX, IORDB, IOFLUSH, IO_SET_COUT,
+			IO_CRT_HANDLER, IO_LPT_HANDLER,
+			IO_SIMPLE_OUT_HANDLER, IO_VDIP_HANDLER,
+			IO_COUT, IOCADR, IOCTB1, IOCTB2,
+			CHECK_OPEN_NET_CHANNEL,
+			KCNET_S_MACADDR, KCNET_S_DNSSERVER, KCNET_S_GATEWAY,
+			KCNET_S_LOCALADDR, KCNET_S_NETMASK,
+			KCNET_S_GET_IPADDR, KCNET_S_IPADDR,
+			KCNET_SET_DNSSERVER, KCNET_SET_GATEWAY,
+			KCNET_SET_LOCALADDR, KCNET_SET_NETMASK,
+			KCNET_SET_BASE, KCNET_BASE_HW,
+			KCNET_HOSTBYNAME, KCNET_PARSE_IPADDR,
+			KCNET_TCP, KCNET_UDP, KCNET_SOCK, KCNET_BASE,
+			VDIP_M_IOADDR,
+			F_ISTR, F_JOY, F_LEN, F_LOCALPORT, F_REMOTEPORT,
+			F_RND, F_SGN, F_SQR,
 			F_VAL, F_VLB, F_VLH, F_VLI,
-			S_BIN, S_CHR, S_HEX, S_HEXN, S_HXHL, S_INCH, S_INKY,
-			S_LEFT, S_LWR, S_LTRM,
-			S_MID, S_MIDN, S_MIRR, S_RGHT, S_RTRM,
-			S_STC, S_STS, S_STR, S_TRIM, S_UPR,
+			S_BIN, S_CHR, S_HEX, S_HEXN, S_HXHL, S_HXA,
+			S_HOSTBYNAME, S_INP, S_INCH, S_INKY,
+			S_LEFT, S_LWR, S_LTRIM,
+			S_MID, S_MIDN, S_MIRR, S_NETMASK, S_REMOTEADDR,
+			S_RIGHT, S_RTRIM,
+			S_STC, S_STS, S_STR, S_TRIM, S_UPR, SEND,
 			ARYADR, CKIDX,
 			O_AND, O_NOT, O_OR, O_XOR,
 			O_LT, O_LE, O_GT, O_GE, O_EQ, O_NE,
@@ -41,27 +61,62 @@ public class BasicLibrary
 			ASGSM, ASGSL, ASGSV,
 			MFIND, MALLOC, MMGC, MRGC, MFREE, HEAP, ABS_NEG_HL,
 			CPHLDE, CKSTK, JP_HL, SMACP, SVDUP, STCMP, STNCP,
+			C_UPR, D_EMPT,
 			E_DATA, E_IDX, E_PARM, E_NOV, E_NXWF, E_REWG, E_USR,
 			E_TYPE, E_EXIT, OUTSP, FNT5P7,
-			M_ERR, M_FRET, M_INKB, M_EMPT, M_STMP, M_TOP, M_XYPO,
+			M_ERN, M_ERT, M_FRET, M_INKB, M_IO_COUT,
+			M_HOST, M_PORT,
+			M_STMP, M_TOP, M_XYPO,
 			XCKBRK, XINCH, XINKEY, XBREAK,
 			XBORDER, XCLS, XCOLOR, XCURS, XHLINE, XINK, XPAPER,
-			XOUTST, XOUTS, XOUTNL, XOUTCH, XLOCATE,
+			XOUTST, XOUTS, XOUTNL, XOUTCH, XLOCATE, XLPTCH,
 			XPAUSE, XPEN, XPSET, XPRES, XPTEST,
 			XSCRS, XTARID, XJOY };
 
-  private static final int E_SYNTAX   = -2;
-  private static final int E_OVERFLOW = -3;
+  public static final int E_OK                    = 0;
+  public static final int E_ERROR                 = -1;
+  public static final int E_INVALID               = -2;
+  public static final int E_OVERFLOW              = -3;
+  public static final int E_CHANNEL_ALREADY_OPEN  = -11;
+  public static final int E_CHANNEL_CLOSED        = -12;
+  public static final int E_DEVICE_NOT_FOUND      = -21;
+  public static final int E_DEVICE_NOT_CONFIGURED = -22;
+  public static final int E_DEVICE_LOCKED         = -23;
+  public static final int E_NO_DISK               = -24;
+  public static final int E_FILE_NOT_FOUND        = -25;
+  public static final int E_IO_MODE               = -26;
+  public static final int E_IO_ERROR              = -27;
+  public static final int E_EOF                   = -28;
+  public static final int E_READ_ONLY             = -29;
+  public static final int E_DISK_FULL             = -30;
+  public static final int E_MTU_EXCEEDED          = -31;
+  public static final int E_DNS_NOT_CONFIGURED    = -32;
+  public static final int E_DNS_ERROR             = -33;
+  public static final int E_UNKNOWN_HOST          = -34;
+  public static final int E_CONNECT_FAILED        = -35;
+  public static final int E_SOCKET_STATUS         = -36;
+  public static final int E_TIMEOUT               = -37;
+
+  public static final int IOCTB_EOF_OFFS       = 2;
+  public static final int IOCTB_AVAILABLE_OFFS = 4;
+  public static final int IOCTB_READ_OFFS      = 6;
+  public static final int IOCTB_WRITE_OFFS     = 8;
+  public static final int IOCTB_FLUSH_OFFS     = 10;
+  public static final int IOCTB_BBUF_OFFS      = 12;
+  public static final int IOCTB_DRIVER_OFFS    = 14;
+
+  public static final int IOMODE_INPUT  = 1;
+  public static final int IOMODE_OUTPUT = 2;
+  public static final int IOMODE_APPEND = 4;
 
 
-  public static void appendCodeTo(
-			AsmCodeBuf     buf,
-			AbstractTarget target,
-			BasicCompiler  compiler )
+  public static void appendCodeTo( BasicCompiler compiler )
   {
-    Set<LibItem> libItems  = compiler.getLibItems();
-    BasicOptions options   = compiler.getBasicOptions();
-    int          stackSize = options.getStackSize();
+    AsmCodeBuf     buf       = compiler.getCodeBuf();
+    Set<LibItem>   libItems  = compiler.getLibItems();
+    BasicOptions   options   = compiler.getBasicOptions();
+    AbstractTarget target    = compiler.getTarget();
+    int            stackSize = options.getStackSize();
     if( options.getShowAssemblerText() ) {
       buf.append( "\n;Bibliotheksfunktionen\n" );
     }
@@ -79,16 +134,19 @@ public class BasicLibrary
 		+ "\tCALL\tF_VLI\n"
 		+ "\tEX\tDE,HL\n"
 		+ "\tPOP\tHL\n"
-		+ "\tLD\tA,(M_ERR)\n"
-		+ "\tOR\tA\n"
+		+ "\tLD\tBC,(M_ERN)\n"
+		+ "\tLD\tA,B\n"
+		+ "\tOR\tC\n"
 		+ "\tJR\tNZ,INIV1\n"
 		+ "\tLD\t(HL),E\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\t(HL),D\n"
 		+ "\tRET\n"
-		+ "INIV1:\tCP\t" );
-      buf.appendHex2( E_OVERFLOW );
-      buf.append( "\tJR\tNZ,INIV2\n"
+		+ "INIV1:" );
+      buf.append_LD_HL_nn( E_OVERFLOW );
+      buf.append( "\tOR\tA\n"
+		+ "\tSBC\tHL,BC\n"
+		+ "\tJR\tNZ,INIV2\n"
 		+ "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'Tut mir leid!\'\n" );
@@ -111,7 +169,7 @@ public class BasicLibrary
       libItems.add( LibItem.F_VLI );
       libItems.add( LibItem.XOUTST );
       libItems.add( LibItem.XOUTNL );
-      libItems.add( LibItem.M_ERR );
+      libItems.add( LibItem.M_ERN );
     }
     if( libItems.contains( LibItem.INSV ) ) {
       /*
@@ -131,7 +189,7 @@ public class BasicLibrary
 		+ "\tLD\tA,(HL)\n"
 		+ "\tOR\tA\n"
 		+ "\tJR\tNZ,INSV1\n"
-		+ "\tLD\tDE,M_EMPT\n"
+		+ "\tLD\tDE,D_EMPT\n"
 		+ "\tJR\tINSV3\n"
 		+ "INSV1:\tPUSH\tHL\n"
 		+ "\tCALL\tMFIND\n"
@@ -157,7 +215,7 @@ public class BasicLibrary
       libItems.add( LibItem.MFIND );
       libItems.add( LibItem.MALLOC );
       libItems.add( LibItem.MFREE );
-      libItems.add( LibItem.M_EMPT );
+      libItems.add( LibItem.D_EMPT );
     }
     if( libItems.contains( LibItem.INRSV ) ) {
       /*
@@ -371,44 +429,377 @@ public class BasicLibrary
       libItems.add( LibItem.XOUTNL );
       libItems.add( LibItem.XOUTCH );
     }
-    if( libItems.contains( LibItem.P_INT ) ) {
+    if( libItems.contains( LibItem.P_I ) ) {
       /*
        * Unformatierte Ausgabe einer Integer-Zahl auf dem Bildschirm
        *
        * Parameter:
        *   HL: auszugebende Zahl
        */
-      buf.append( "P_INT:\tCALL\tS_STR\n"
+      buf.append( "P_I:\tCALL\tS_STR\n"
 		+ "\tJP\tXOUTS\n" );
       libItems.add( LibItem.S_STR );
       libItems.add( LibItem.XOUTS );
     }
-    if( libItems.contains( LibItem.P_INTF ) ) {
+    if( libItems.contains( LibItem.P_IF ) ) {
       /*
        * Formatierte Ausgabe einer Integer-Zahl auf dem Bildschirm
        *
        * Parameter:
        *   HL: auszugebende Zahl
        */
-      buf.append( "P_INTF:\tCALL\tS_STR\n"
+      buf.append( "P_IF:\tCALL\tS_STR\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tCALL\tF_LEN\n"
 		+ "\tLD\tA,0EH\n"
 		+ "\tSUB\tL\n"
-		+ "\tJR\tC,P_ITF2\n"
-		+ "\tJR\tZ,P_ITF2\n"
-		+ "P_ITF1:\tPUSH\tAF\n"
+		+ "\tJR\tC,P_IF2\n"
+		+ "\tJR\tZ,P_IF2\n"
+		+ "P_IF1:\tPUSH\tAF\n"
 		+ "\tLD\tA,20H\n"
 		+ "\tCALL\tXOUTCH\n"
 		+ "\tPOP\tAF\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tNZ,P_ITF1\n"
-		+ "P_ITF2:\tPOP\tHL\n"
+		+ "\tJR\tNZ,P_IF1\n"
+		+ "P_IF2:\tPOP\tHL\n"
 		+ "\tJP\tXOUTS\n" );
       libItems.add( LibItem.S_STR );
       libItems.add( LibItem.F_LEN );
       libItems.add( LibItem.XOUTCH );
       libItems.add( LibItem.XOUTS );
+    }
+    if( libItems.contains( LibItem.PS_I ) ) {
+      /*
+       * Unformatierte Ausgabe einer Integer-Zahl auf einem Ausgabekanal
+       *
+       * Parameter:
+       *   HL: auszugebende Zahl
+       */
+      buf.append( "PS_I:\tCALL\tS_STR\n"
+		+ "\tJP\tPS_S\n" );
+      libItems.add( LibItem.S_STR );
+      libItems.add( LibItem.PS_S );
+    }
+    if( libItems.contains( LibItem.PS_IF ) ) {
+      /*
+       * Formatierte Ausgabe einer Integer-Zahl auf einem Ausgabekanal
+       *
+       * Parameter:
+       *   HL: auszugebende Zahl
+       */
+      buf.append( "PS_IF:\tCALL\tS_STR\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tF_LEN\n"
+		+ "\tLD\tA,0EH\n"
+		+ "\tSUB\tL\n"
+		+ "\tJR\tC,PS_IF2\n"
+		+ "\tJR\tZ,PS_IF2\n"
+		+ "PS_IF1:\tPUSH\tAF\n"
+		+ "\tLD\tA,20H\n"
+		+ "\tCALL\tIO_COUT\n"
+		+ "\tPOP\tAF\n"
+		+ "\tDEC\tA\n"
+		+ "\tJR\tNZ,PS_IF1\n"
+		+ "PS_IF2:\tPOP\tHL\n"
+		+ "\tJP\tPS_S\n" );
+      libItems.add( LibItem.S_STR );
+      libItems.add( LibItem.F_LEN );
+      libItems.add( LibItem.PS_S );
+      libItems.add( LibItem.IO_COUT );
+    }
+    if( libItems.contains( LibItem.PS_ST ) ) {
+      buf.append( "PS_ST:\tEX\t(SP),HL\n"
+		+ "\tCALL\tPS_S\n"
+		+ "\tEX\t(SP),HL\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.PS_S );
+    }
+    if( libItems.contains( LibItem.PS_S ) ) {
+      buf.append( "PS_S:\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tIO_COUT\n"
+		+ "\tPOP\tHL\n"
+		+ "\tJR\tPS_S\n" );
+      libItems.add( LibItem.IO_COUT );
+    }
+    if( libItems.contains( LibItem.PS_SP ) ) {
+      buf.append( "PS_SP:\tLD\tA,20H\n"
+		+ "\tJR\tIO_COUT\n" );
+      libItems.add( LibItem.IO_COUT );
+    }
+    if( libItems.contains( LibItem.PS_NL ) ) {
+      buf.append( "PS_NL:\tLD\tA,0DH\n"
+		+ "\tCALL\tIO_COUT\n"
+		+ "\tLD\tA,0AH\n" );
+      libItems.add( LibItem.IO_COUT );
+      // direkt weiter mit IO_COUT!
+    }
+    if( libItems.contains( LibItem.IO_COUT ) ) {
+      buf.append( "IO_COUT:\n"
+		+ "\tLD\tHL,(M_IO_COUT)\n"
+		+ "\tJP\t(HL)\n" );
+      libItems.add( LibItem.M_IO_COUT );
+    }
+    if( libItems.contains( LibItem.IO_SET_COUT ) ) {
+      /*
+       * Die Methode setzt die Adresse der Ausgaberoutine.
+       * Die Fehlervariablen werden initialisiert bzw. gesetzt.
+       *
+       * Parameter:
+       *   HL: Adresse der Ausgaberoutine
+       * Rueckgabewert:
+       *   CY=0: OK
+       *   CY=1: Adresse ist Null
+       */
+      buf.append( "IO_SET_COUT:\n"
+		+ "\tLD\t(M_IO_COUT),HL\n" );
+      appendResetErrorUseBC( compiler );
+      buf.append( "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tRET\tNZ\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "\tSCF\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.M_IO_COUT );
+    }
+    if( libItems.contains( LibItem.ACCEPT ) ) {
+      /*
+       * Socket in TCP-Server-Mode schalten
+       *
+       * Parameter:
+       *   (M_PORT): Portnummer
+       *   A:        Socketnummer (entspricht Kanalnummer-1)
+       *   HL:       Anfangsadresse des Kanalzeigerfeldes
+       */
+      buf.append( "ACCEPT:\tLD\t(M_IOCA),HL\n"
+		+ "\tLD\t(KCNET_M_SOCKET),A\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tZ,ACCEPT1\n" );
+      appendSetErrorChannelAlreadyOpen( compiler );
+      buf.append( "\tRET\n"
+		+ "ACCEPT1:\n"
+		+ "\tDEC\tHL\n" );
+      buf.append_LD_DE_nn( KCNetLibrary.IOCTB_SOCKET_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
+		+ "\tLD\t(HL),A\n" );
+      appendResetErrorUseHL( compiler );
+      buf.append( "\tCALL\tKCNET_INIT\n"
+		+ "\tRET\tC\n"
+		+ "ACCEPT2:\n"
+		+ "\tLD\tE,01H\n"			// TCP
+		+ "\tLD\tHL,(M_PORT)\n"
+		+ "\tCALL\tKCNET_SOCK_OPEN\n"
+		+ "\tLD\tBC,0201H\n"			// Sn_CR=LISTEN
+		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
+		+ "\tCALL\tKCNET_SOCK_GET_STATUS\n"
+		+ "\tCP\t14H\n"				// SOCK_LISTEN?
+		+ "\tJR\tNZ,ACCEPT2\n"
+      // Kanalzeigerfeld fuellen
+		+ "\tCALL\tKCNET_SET_IOPTRS_TCP\n"
+      // auf Verbindung warten
+		+ "ACCEPT3:\n" );
+      if( options.canBreakAlways() ) {
+	buf.append( "\tCALL\tXCKBRK\n" );
+	libItems.add( LibItem.XCKBRK );
+      }
+      buf.append( "\tCALL\tKCNET_SOCK_GET_STATUS\n"
+		+ "\tCP\t14H\n"				// SOCK_LISTEN?
+		+ "\tJR\tZ,ACCEPT3\n"
+		+ "\tCP\t01H\n"				// SOCK_ARP?
+		+ "\tJR\tZ,ACCEPT3\n"
+		+ "\tCP\t15H\n"				// SOCK_SYNSENT?
+		+ "\tJR\tZ,ACCEPT3\n"
+		+ "\tCP\t16H\n"				// SOCK_SYNRECV?
+		+ "\tJR\tZ,ACCEPT3\n"
+		+ "\tCP\t17H\n"				// SOCK_ESTABLISHED?
+		+ "\tJR\tNZ,ACCEPT2\n"
+		+ "\tCALL\tKCNET_IOCTB_INIT_TXRX\n"
+		+ "\tJP\tKCNET_IOCTB_FILL_REMOTE\n" );
+      libItems.add( LibItem.KCNET_TCP );
+      libItems.add( LibItem.KCNET_BASE );
+    }
+    if( libItems.contains( LibItem.CONNECT ) ) {
+      /*
+       * TCP-Verbindung aufbauen
+       *
+       * Parameter:
+       *   (M_HOST): Hostname oder IP-Adresse (textuell)
+       *   (M_PORT): Portnummer
+       *   A:        Socketnummer (entspricht Kanalnummer-1)
+       *   HL:       Anfangsadresse des Kanalzeigerfeldes
+       */
+      buf.append( "CONNECT:\n"
+		+ "\tLD\t(M_IOCA),HL\n"
+		+ "\tLD\t(KCNET_M_SOCKET),A\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tZ,CONNECT1\n" );
+      appendSetErrorChannelAlreadyOpen( compiler );
+      buf.append( "\tRET\n"
+		+ "CONNECT1:\n"
+		+ "\tDEC\tHL\n" );
+      buf.append_LD_DE_nn( KCNetLibrary.IOCTB_SOCKET_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
+		+ "\tLD\t(HL),A\n" );
+      appendResetErrorUseHL( compiler );
+      buf.append( "\tCALL\tKCNET_INIT\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tHL,(M_HOST)\n"
+		+ "\tCALL\tKCNET_HOSTBYNAME\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tE,01H\n"			// TCP
+		+ "\tCALL\tKCNET_SOCK_GET_PORT_AND_OPEN\n"
+		+ "\tLD\tHL,KCNET_M_IPADDR\n"
+		+ "\tLD\tBC,040CH\n"		// 4 Durchlaeufe, Sn_DIPR
+		+ "CONNECT2:\n"
+		+ "\tPUSH\tBC\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tB,(HL)\n"
+		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tBC\n"
+		+ "\tINC\tHL\n"
+		+ "\tINC\tC\n"
+		+ "\tDJNZ\tCONNECT2\n"
+		+ "\tLD\tBC,(M_PORT)\n"
+		+ "\tLD\tL,10H\n"			// Sn_DPORT
+		+ "\tCALL\tKCNET_SOCK_SET_WORD\n"
+		+ "\tLD\tBC,0401H\n"			// Sn_CR=CONNECT
+		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
+		+ "CONNECT3:\n"
+		+ "\tLD\tL,03H\n"			// Sn_SR
+		+ "\tCALL\tKCNET_SOCK_GET_BYTE\n"
+		+ "\tCP\t17H\n"				// SOCK_ESTABLISHED
+		+ "\tJP\tZ,CONNECT5\n"
+		+ "\tOR\tA\n" );			// SOCK_CLOSED?
+      if( options.canBreakAlways() ) {
+	buf.append( "\tJR\tZ,CONNECT4\n"
+		+ "\tCALL\tXCKBRK\n"
+		+ "\tJR\tCONNECT3\n"
+		+ "CONNECT4:\n" );
+	libItems.add( LibItem.XCKBRK );
+      } else {
+	buf.append( "\tJR\tNZ,CONNECT3\n" );
+      }
+      appendSetError(
+		compiler,
+		E_CONNECT_FAILED,
+		"Verbindungsaufbau fehlgeschlagen",
+		"Connect failed" );
+      buf.append( "\tSCF\n"
+		+ "\tRET\n"
+		+ "CONNECT5:\n"
+		+ "\tCALL\tKCNET_SET_IOPTRS_TCP\n"
+		+ "\tCALL\tKCNET_IOCTB_INIT_TXRX\n"
+		+ "\tJP\tKCNET_IOCTB_FILL_REMOTE\n" );
+      libItems.add( LibItem.KCNET_HOSTBYNAME );
+      libItems.add( LibItem.KCNET_TCP );
+      libItems.add( LibItem.KCNET_BASE );
+    }
+    if( libItems.contains( LibItem.DATAGRAM ) ) {
+      /*
+       * Socket in UDP-Mode oeffnen
+       *
+       * Parameter:
+       *   (M_PORT): Portnummer
+       *   A:        Socketnummer (entspricht Kanalnummer-1)
+       *   HL:       Anfangsadresse des Kanalzeigerfeldes
+       */
+      buf.append( "DATAGRAM:\n"
+		+ "\tLD\t(M_IOCA),HL\n"
+		+ "\tLD\t(KCNET_M_SOCKET),A\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tZ,DATAGRAM1\n" );
+      appendSetErrorChannelAlreadyOpen( compiler );
+      buf.append( "\tRET\n"
+		+ "DATAGRAM1:\n"
+		+ "\tDEC\tHL\n" );
+      buf.append_LD_DE_nn( KCNetLibrary.IOCTB_SOCKET_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
+		+ "\tLD\t(HL),A\n" );
+      appendResetErrorUseHL( compiler );
+      buf.append( "\tCALL\tKCNET_INIT\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tE,02H\n"		// UDP
+		+ "\tLD\tHL,(M_PORT)\n"
+		+ "\tCALL\tKCNET_SOCK_OPEN\n"
+      // Kanalzeigerfeld fuellen
+		+ "\tLD\tBC,000AH\n"		// ohne FLUSH-Routine
+		+ "\tLD\tDE,(M_IOCA)\n"
+		+ "\tLD\tHL,KCNET_DATA_IOPTRS\n"
+		+ "\tLDIR\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\tB,04H\n"		// FLUSH- und Zeichenpuffer
+		+ "DATAGRAM2:\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tINC\tDE\n"
+		+ "\tDJNZ\tDATAGRAM2\n"
+		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
+		+ "\tLD\t(DE),A\n"		// IOCTB_SOCKET_OFFS
+		+ "\tINC\tDE\n"
+		+ "\tLD\tA,\'U\'\n"
+		+ "\tLD\t(DE),A\n"		// IOCTB_PROTO_OFFS
+		+ "\tINC\tDE\n"
+		+ "\tLD\tB," );
+      buf.appendHex2( KCNetLibrary.IOCTB_CHANNEL_SIZE
+				- KCNetLibrary.IOCTB_RX_CNT_OFFS );
+      buf.append( "\n"
+		+ "\tXOR\tA\n"
+		+ "DATAGRAM3:\n"
+		+ "\tINC\tDE\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tDJNZ\tDATAGRAM3\n"
+		+ "\tJP\tKCNET_IOCTB_INIT_TXRX\n" );
+      libItems.add( LibItem.KCNET_UDP );
+      libItems.add( LibItem.KCNET_BASE );
+    }
+    if( libItems.contains( LibItem.SEND ) ) {
+      /*
+       * Senden eines UDP-Pakets
+       *
+       * Parameter:
+       *   (KCNET_M_SOCKET): Socketnummer
+       *   (M_IOCA):         Anfangsadresse Kanalzeigerfeld
+       *   (M_HOST):         Hostname oder IP-Adresse (textuell)
+       *   (M_PORT):         Portnummer
+       */
+      buf.append( "SEND:\tLD\tHL,(M_IOCA)\n"
+		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
+		+ "\tRET\tC\n"
+		+ "\tCP\t\'U\'\n"
+		+ "\tJR\tZ,SEND1\n" );
+      appendSetErrorIOMode( compiler );
+      buf.append( "\tRET\n"
+		+ "SEND1:\tLD\tBC,040CH\n"	// 4 Durchlaeufe und Sn_DIPR
+		+ "\tLD\tHL,KCNET_M_IPADDR\n"
+		+ "SEND2:\tPUSH\tBC\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tB,(HL)\n"
+		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tBC\n"
+		+ "\tINC\tC\n"
+		+ "\tINC\tHL\n"
+		+ "\tDJNZ\tSEND2\n"
+		+ "\tLD\tL,C\n"			// L nun Sn_DPORT
+		+ "\tLD\tBC,(M_PORT)\n"
+		+ "\tCALL\tKCNET_SOCK_SET_WORD\n"
+		+ "\tJP\tKCNET_FLUSH1\n" );
+      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
+      libItems.add( LibItem.KCNET_HOSTBYNAME );
+      libItems.add( LibItem.KCNET_UDP );
+      libItems.add( LibItem.KCNET_BASE );
     }
     if( libItems.contains( LibItem.CIRCLE ) ) {
       /*
@@ -1318,37 +1709,57 @@ public class BasicLibrary
       libItems.add( LibItem.S_HXHL );
       libItems.add( LibItem.M_STMP );
     }
-    if( libItems.contains( LibItem.S_HXHL ) ) {
+    if( libItems.contains( LibItem.S_HOSTBYNAME ) ) {
       /*
-       * Umwandlung eines numerischen Wertes in eine Zeichenkette
-       * mit einer Hexadezimalzahl.
-       * Es wird kein terminierendes Null-Byte geschrieben!
+       * Ermittlung der IP-Adresse eines Rechners
        *
        * Parameter:
-       *   S_HXHL: HL: numerischer Wert (Ausgabe 4-stellig)
-       *   S_HXA:  A:  numerischer Wert (Ausgabe 2-stellig)
-       *   S_HXAL: A:  numerischer Wert (Ausgabe 1-stellig)
+       *   HL: Zeiger auf den Rechnernamen
        * Rueckgabewert:
-       *   DE: Zeiger auf das erste Zeichen hinter der Zeichenkette
+       *   HL: Zeiger auf die Zeichenkette mit der IP-Adresse
        */
-      buf.append( "S_HXHL:\tLD\tA,H\n"
-		+ "\tCALL\tS_HXA\n"
-		+ "\tLD\tA,L\n"
-		+ "S_HXA:\tPUSH\tAF\n"
-		+ "\tRRCA\n"
-		+ "\tRRCA\n"
-		+ "\tRRCA\n"
-		+ "\tRRCA\n"
-		+ "\tCALL\tS_HXAL\n"
-		+ "\tPOP\tAF\n"
-		+ "S_HXAL:\tAND\t0FH\n"
-		+ "\tADD\tA,90H\n"
-		+ "\tDAA\n"
-		+ "\tADC\tA,40H\n"
-		+ "\tDAA\n"
+      buf.append( "S_HOSTBYNAME:\n" );
+      appendResetErrorUseBC( compiler );
+      buf.append( "\tCALL\tKCNET_HOSTBYNAME\n"
+		+ "\tLD\tHL,KCNET_M_IPADDR\n"
+		+ "\tJP\tNC,KCNET_S_IPADDR\n"
+		+ "\tLD\tHL,D_EMPT\n"
+		+ "\tRET\n" );
+      libItems.add( BasicLibrary.LibItem.KCNET_HOSTBYNAME );
+      libItems.add( BasicLibrary.LibItem.KCNET_S_IPADDR );
+      libItems.add( BasicLibrary.LibItem.D_EMPT );
+    }
+    if( libItems.contains( LibItem.S_INP ) ) {
+      /*
+       * Lesen einer bestimmten Anzahl von Zeichen von der Tastatur
+       *
+       * Parameter:
+       *   HL: Anzahl Zeichen
+       * Rueckgabewert:
+       *   HL: Zeiger auf die Zeichenkette
+       */
+      buf.append( "S_INP:\tLD\tA,H\n"
+		+ "\tOR\tA\n"
+		+ "\tJP\tNZ,E_PARM\n"
+		+ "\tLD\tDE,M_STMP\n"
+		+ "\tOR\tL\n"
+		+ "\tJR\tZ,S_INP2\n"
+		+ "\tLD\tB,L\n"
+		+ "S_INP1:\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tXINCH\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
 		+ "\tLD\t(DE),A\n"
 		+ "\tINC\tDE\n"
+		+ "\tDJNZ\tS_INP1\n"
+		+ "S_INP2:\tXOR\tA\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tLD\tHL,M_STMP\n"
 		+ "\tRET\n" );
+      libItems.add( LibItem.E_PARM );
+      libItems.add( LibItem.XINCH );
+      libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.S_INCH ) ) {
       /*
@@ -1462,12 +1873,12 @@ public class BasicLibrary
        * Rueckgabewert:
        *   HL: Zeiger auf die neue Zeichenkette
        */
-      buf.append( "S_TRIM:\tCALL\tS_LTRM\n" );
+      buf.append( "S_TRIM:\tCALL\tS_LTRIM\n" );
       // weiter mit S_RTRM
-      libItems.add( LibItem.S_LTRM );
-      libItems.add( LibItem.S_RTRM );
+      libItems.add( LibItem.S_LTRIM );
+      libItems.add( LibItem.S_RTRIM );
     }
-    if( libItems.contains( LibItem.S_RTRM ) ) {
+    if( libItems.contains( LibItem.S_RTRIM ) ) {
       /*
        * Weisse Leerzeichen am Ende einer Zeichenkette abschneiden
        * S_RTRM muss inmittelbar auf S_TRIM folgen!
@@ -1477,7 +1888,8 @@ public class BasicLibrary
        * Rueckgabewert:
        *   HL: Zeiger auf die neue Zeichenkette
        */
-      buf.append( "S_RTRM:\tEXX\n"
+      buf.append( "S_RTRIM:\n"
+		+ "\tEXX\n"
 		+ "\tLD\tHL,M_STMP\n"
 		+ "\tLD\tD,H\n"
 		+ "\tLD\tE,L\n"
@@ -1485,29 +1897,53 @@ public class BasicLibrary
 		+ "\tLD\tBC," );
       buf.appendHex4( BasicCompiler.MAX_STR_LEN );
       buf.append( "\n"
-		+ "S_RTR1:\tEXX\n"
+		+ "S_RTRIM1:\n"
+		+ "\tEXX\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tINC\tHL\n"
 		+ "\tEXX\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,S_RTR3\n"
+		+ "\tJR\tZ,S_RTRIM3\n"
 		+ "\tCP\t21H\n"
-		+ "\tJR\tC,S_RTR2\n"
+		+ "\tJR\tC,S_RTRIM2\n"
 		+ "\tLD\tD,H\n"
 		+ "\tLD\tE,L\n"
-		+ "S_RTR2:\tLD\t(HL),A\n"
+		+ "S_RTRIM2:\n"
+		+ "\tLD\t(HL),A\n"
 		+ "\tINC\tHL\n"
 		+ "\tDEC\tBC\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
-		+ "\tJR\tNZ,S_RTR1\n"
-		+ "S_RTR3:\tINC\tDE\n"
+		+ "\tJR\tNZ,S_RTRIM1\n"
+		+ "S_RTRIM3:\n"
+		+ "\tINC\tDE\n"
 		+ "\tLD\t(DE),A\n"
 		+ "\tLD\tHL,M_STMP\n"
 		+ "\tRET\n" );
       libItems.add( LibItem.M_STMP );
     }
-    if( libItems.contains( LibItem.S_LTRM ) ) {
+    if( libItems.contains( LibItem.F_LOCALPORT ) ) {
+      /*
+       * Ermitteln der lokalen Portnummer
+       *
+       * Parameter:
+       *   DE: Anfangsadresse Kanalzeigerfeld
+       * Rueckgabe:
+       *   HL: Portnummer
+       */
+      buf.append( "F_LOCALPORT:\n"
+		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tRET\tC\n"
+		+ "\tCALL\tKCNET_INIT\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tL,04H\n"			// Sn_PORT
+		+ "\tJP\tKCNET_SOCK_GET_WORD\n" );
+      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
+      libItems.add( LibItem.KCNET_SOCK );
+    }
+    if( libItems.contains( LibItem.S_LTRIM ) ) {
       /*
        * Weisse Leerzeichen am Anfang einer Zeichenkette abschneiden
        *
@@ -1516,11 +1952,15 @@ public class BasicLibrary
        * Rueckgabewert:
        *   HL: Zeiger auf die neue Zeichenkette
        */
-      buf.append( "S_LTRM:\tDEC\tHL\n"
-		+ "S_LTR1:\tINC\tHL\n"
+      buf.append( "S_LTRIM:\n"
+		+ "\tDEC\tHL\n"
+		+ "S_LTRIM1:\n"
+		+ "\tINC\tHL\n"
 		+ "\tLD\tA,(HL)\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
 		+ "\tCP\t21H\n"
-		+ "\tJR\tC,S_LTR1\n"
+		+ "\tJR\tC,S_LTRIM1\n"
 		+ "\tRET\n" );
     }
     if( libItems.contains( LibItem.S_MIDN ) ) {
@@ -1612,7 +2052,27 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.M_STMP );
     }
-    if( libItems.contains( LibItem.S_RGHT ) ) {
+    if( libItems.contains( LibItem.S_REMOTEADDR ) ) {
+      /*
+       * Ermitteln der IP-Adresse der Gegenstelle
+       *
+       * Parameter:
+       *   HL: Anfangsadresse Kanalzeigerfeld
+       * Rueckgabe:
+       *   HL: Zeiger auf die Zeichenkette mit der IP-Adresse
+       */
+      buf.append( "S_REMOTEADDR:\n"
+		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
+		+ "\tLD\tHL,D_EMPT\n"
+		+ "\tRET\tC\n" );
+      buf.append_LD_HL_nn( KCNetLibrary.IOCTB_REMOTE_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tJP\tKCNET_S_IPADDR\n" );
+      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
+      libItems.add( LibItem.KCNET_S_IPADDR );
+      libItems.add( LibItem.D_EMPT );
+    }
+    if( libItems.contains( LibItem.S_RIGHT ) ) {
       /*
        * Ende (rechter Teil) einer Zeichenkette zurueckliefern
        *
@@ -1622,7 +2082,8 @@ public class BasicLibrary
        * Rueckgabewert:
        *   HL: Zeiger auf die Zeichenkette
        */
-      buf.append( "S_RGHT:\tLD\tA,B\n"
+      buf.append( "S_RIGHT:\n"
+		+ "\tLD\tA,B\n"
 		+ "\tOR\tA\n"
 		+ "\tJP\tNZ,E_PARM\n"
 		+ "\tPUSH\tHL\n"
@@ -1633,11 +2094,12 @@ public class BasicLibrary
 		+ "\tPOP\tHL\n"
 		+ "\tRET\tC\n"
 		+ "\tRET\tZ\n"
-		+ "S_RGH1:\tINC\tHL\n"
+		+ "S_RIGHT1:\n"
+		+ "\tINC\tHL\n"
 		+ "\tDEC\tDE\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tE\n"
-		+ "\tJR\tNZ,S_RGH1\n"
+		+ "\tJR\tNZ,S_RIGHT1\n"
 		+ "\tRET\n" );
       libItems.add( LibItem.F_LEN );
       libItems.add( LibItem.E_PARM );
@@ -1657,7 +2119,7 @@ public class BasicLibrary
 		+ "\tJP\tM,E_PARM\n"
 		+ "\tOR\tC\n"
 		+ "\tJR\tNZ,S_STC1\n"
-		+ "\tLD\tHL,M_EMPT\n"
+		+ "\tLD\tHL,D_EMPT\n"
 		+ "\tRET\n"
 		+ "S_STC1:\tLD\tE,L\n"
 		+ "\tLD\tHL," );
@@ -1681,7 +2143,7 @@ public class BasicLibrary
 		+ "\tPOP\tHL\n"
 		+ "\tRET\n" );
       libItems.add( LibItem.E_PARM );
-      libItems.add( LibItem.M_EMPT );
+      libItems.add( LibItem.D_EMPT );
       libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.S_STS ) ) {
@@ -1699,7 +2161,7 @@ public class BasicLibrary
 		+ "\tJP\tM,E_PARM\n"
 		+ "\tOR\tC\n"
 		+ "\tJR\tNZ,S_STS1\n"
-		+ "\tLD\tHL,M_EMPT\n"
+		+ "\tLD\tHL,D_EMPT\n"
 		+ "\tRET\n"
 		+ "S_STS1:\tPUSH\tBC\n"
 		+ "\tPUSH\tHL\n"
@@ -1727,7 +2189,7 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.STNCP );
       libItems.add( LibItem.E_PARM );
-      libItems.add( LibItem.M_EMPT );
+      libItems.add( LibItem.D_EMPT );
       libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.S_UPR ) ) {
@@ -1746,21 +2208,18 @@ public class BasicLibrary
 		+ "S_UPR1:\tINC\tDE\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tINC\tHL\n"
-		+ "\tCP\t61H\n"
-		+ "\tJR\tC,S_UPR2\n"
-		+ "\tCP\t7BH\n"
-		+ "\tJR\tNC,S_UPR2\n"
-		+ "\tSUB\t20H\n"
-		+ "S_UPR2:\tLD\t(DE),A\n"
+		+ "\tCALL\tC_UPR\n"
+		+ "\tLD\t(DE),A\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,S_UPR3\n"
+		+ "\tJR\tZ,S_UPR2\n"
 		+ "\tDEC\tBC\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tJR\tNZ,S_UPR1\n"
 		+ "\tLD\t(DE),A\n"
-		+ "S_UPR3:\tLD\tHL,M_STMP\n"
+		+ "S_UPR2:\tLD\tHL,M_STMP\n"
 		+ "\tRET\n" );
+      libItems.add( LibItem.C_UPR );
       libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.F_JOY ) ) {
@@ -1832,6 +2291,28 @@ public class BasicLibrary
 		+ "\tJR\tNZ,F_LEN1\n"
 		+ "\tEX\tDE,HL\n"
 		+ "\tRET\n" );
+    }
+    if( libItems.contains( LibItem.F_REMOTEPORT ) ) {
+      /*
+       * Ermitteln der Portnummer der Gegenstelle
+       *
+       * Parameter:
+       *   HL: Anfangsadresse Kanalzeigerfeld
+       * Rueckgabe:
+       *   HL: Portnummer der Gegenstelle oder 0 im Fehlerfall
+       */
+      buf.append( "F_REMOTEPORT:\n"
+		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tRET\tC\n" );
+      buf.append_LD_HL_nn( KCNetLibrary.IOCTB_REMOTE_OFFS + 4 );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tH,(HL)\n"
+		+ "\tLD\tL,A\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
     }
     if( libItems.contains( LibItem.F_RND ) ) {
       /*
@@ -1932,15 +2413,13 @@ public class BasicLibrary
     if( libItems.contains( LibItem.F_VAL ) ) {
       /*
        * Lesen einer Zahl aus einer Zeichenkette
+       * Fehlervariablen werden gesetzt.
        *
        * Parameter:
        *   HL: Zeiger auf die Zeichenkette
        *   DE: Zahlenbasis (2, 10 oder 16)
        * Rueckgabe:
-       *   HL:      gelesene Zahl
-       *   (M_ERR): 0: OK
-       *            -1: ungueltige Zeichen
-       *            -2: numerischer Ueberlauf
+       *   HL: gelesene Zahl oder 0 bei Fehler
        */
       buf.append( "F_VAL:\tLD\tA,D\n"
 		+ "\tOR\tA\n"
@@ -1961,21 +2440,16 @@ public class BasicLibrary
     if( libItems.contains( LibItem.F_VLB ) ) {
       /*
        * Lesen einer Binaerzahl aus einer Zeichenkette
+       * Fehlervariablen werden gesetzt.
        *
        * Parameter:
        *   HL: Zeiger auf die Zeichenkette
        * Rueckgabe:
-       *   HL:      gelesene Zahl
-       *   (M_ERR): 0: OK
-       *            -1: ungueltige Zeichen
-       *            -2: numerischer Ueberlauf
+       *   HL: gelesene Zahl oder 0 bei Fehler
        */
       buf.append( "F_VLB:\tLD\tD,H\n"
 		+ "\tLD\tE,L\n" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append( "\tLD\tHL,0000H\n"
-		+ "\tLD\t(M_ERR),HL\n" );
-      }
+      BasicLibrary.appendResetErrorUseHL( compiler );
       buf.append( "\tDEC\tDE\n"
 		+ "F_VLB1:\tINC\tDE\n"
 		+ "\tLD\tA,(DE)\n"
@@ -2008,10 +2482,7 @@ public class BasicLibrary
 		+ "\tJR\tNC,F_VLB7\n"
 		+ "\tBIT\t7,H\n"
 		+ "\tJR\tZ,F_VLB6\n" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append_LD_HL_nn( E_OVERFLOW );
-	buf.append( "\tJR\tF_VLB8\n" );
-      }
+      BasicLibrary.appendSetErrorNumericOverflow( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n"
 		+ "F_VLB6:\tINC\tC\n"
@@ -2020,10 +2491,7 @@ public class BasicLibrary
 		+ "\tLD\tL,A\n"
 		+ "\tJR\tF_VLB2\n"
 		+ "F_VLB7:" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append_LD_HL_nn( E_SYNTAX );
-	buf.append( "F_VLB8:\tLD\t(M_ERR),HL\n" );
-      }
+      BasicLibrary.appendSetErrorInvalidChars( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
     }
@@ -2034,17 +2502,11 @@ public class BasicLibrary
        * Parameter:
        *   HL: Zeiger auf die Zeichenkette
        * Rueckgabe:
-       *   HL:      gelesene Zahl
-       *   (M_ERR): 0: OK
-       *            -1: ungueltige Zeichen
-       *            -2: numerischer Ueberlauf
+       *   HL: gelesene Zahl oder 0 bei Fehler
        */
       buf.append( "F_VLH:\tLD\tD,H\n"
 		+ "\tLD\tE,L\n" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append( "\tLD\tHL,0000H\n"
-		+ "\tLD\t(M_ERR),HL\n" );
-      }
+      BasicLibrary.appendResetErrorUseHL( compiler );
       buf.append( "\tDEC\tDE\n"
 		+ "F_VLH1:\tINC\tDE\n"
 		+ "\tLD\tA,(DE)\n"
@@ -2087,10 +2549,7 @@ public class BasicLibrary
 		+ "\tLD\tA,H\n"
 		+ "\tAND\t0F0H\n"
 		+ "\tJR\tZ,F_VLH7\n" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append_LD_HL_nn( E_OVERFLOW );
-	buf.append( "\tJR\tF_VLH9\n" );
-      }
+      BasicLibrary.appendSetErrorNumericOverflow( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n"
 		+ "F_VLH7:\tINC\tC\n"
@@ -2103,10 +2562,7 @@ public class BasicLibrary
 		+ "\tLD\tL,A\n"
 		+ "\tJR\tF_VLH2\n"
 		+ "F_VLH8:" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append_LD_HL_nn( E_SYNTAX );
-	buf.append( "F_VLH9:\tLD\t(M_ERR),HL\n" );
-      }
+      BasicLibrary.appendSetErrorInvalidChars( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
     }
@@ -2117,17 +2573,11 @@ public class BasicLibrary
        * Parameter:
        *   HL: Zeiger auf die Zeichenkette
        * Rueckgabe:
-       *   HL:      gelesene Zahl
-       *   (M_ERR): 0: OK
-       *            -1: ungueltige Zeichen
-       *            -2: numerischer Ueberlauf
+       *   HL: gelesene Zahl oder 0 bei Fehler
        */
       buf.append( "F_VLI:\tLD\tB,H\n"
 		+ "\tLD\tC,L\n" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append( "\tLD\tHL,0000H\n"
-		+ "\tLD\t(M_ERR),HL\n" );
-      }
+      BasicLibrary.appendResetErrorUseHL( compiler );
       buf.append( "\tDEC\tBC\n" 
 		+ "F_VLI1:\tINC\tBC\n"
 		+ "\tLD\tA,(BC)\n"
@@ -2174,10 +2624,7 @@ public class BasicLibrary
 		+ "\tADC\tA,H\n"
 		+ "\tLD\tH,A\n"
 		+ "\tJP\tP,F_VLI3\n" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append_LD_HL_nn( E_OVERFLOW );
-	buf.append( "\tLD\t(M_ERR),HL\n" );
-      }
+      BasicLibrary.appendSetErrorNumericOverflow( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n"
 		+ "F_VLI4:\tLD\tA,(BC)\n"
@@ -2187,10 +2634,7 @@ public class BasicLibrary
 		+ "\tCP\t20H\n"
 		+ "\tJR\tZ,F_VLI4\n"
 		+ "F_VLI5:" );
-      if( libItems.contains( LibItem.M_ERR ) ) {
-	buf.append_LD_HL_nn( E_SYNTAX );
-	buf.append( "\tLD\t(M_ERR),HL\n" );
-      }
+      BasicLibrary.appendSetErrorInvalidChars( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
     }
@@ -2198,7 +2642,7 @@ public class BasicLibrary
       /*
        * Adresse eines Elements eines Arrays berechnen
        *
-       * Paramter:
+       * Parameter:
        *   HL: Index
        *   DE: Basisadresse der Variablen
        *   BC: Array-Groesse + 1
@@ -2220,7 +2664,7 @@ public class BasicLibrary
       /*
        * Index einer Feldvariablen pruefen
        *
-       * Paramter:
+       * Parameter:
        *   HL: Index
        *   BC: Groesse der Dimension + 1
        * Rueckgabewert:
@@ -2847,6 +3291,585 @@ public class BasicLibrary
       libItems.add( LibItem.XSCRS );
       libItems.add( LibItem.E_PARM );
     }
+    if( libItems.contains( LibItem.IOEOF ) ) {
+      /*
+       * Pruefen, ob das Ende des Eingabekanals erreicht wurde.
+       *
+       * Parameter:
+       *   HL: Adresse des Kanalzeigerfeldes
+       */
+      buf.append( "IOEOF:\n"
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tNZ,IOEOF1\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "\tJR\tIOEOF2\n"
+		+ "IOEOF1:" );
+      appendResetErrorUseBC( compiler );
+      for( int i = 1; i < IOCTB_EOF_OFFS; i++ ) {
+	buf.append( "\tINC\tHL\n" );
+      }
+      buf.append( "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tH,(HL)\n"
+		+ "\tLD\tL,A\n"
+		+ "\tOR\tH\n"
+		+ "\tJR\tNZ,IOEOF3\n" );
+      appendSetErrorIOMode( compiler );
+      buf.append( "IOEOF2:\tLD\tHL,0FFFFH\n"
+		+ "\tRET\n"
+		+ "IOEOF3:\tJP\t(HL)\n" );
+    }
+    if( libItems.contains( LibItem.IOAVAILABLE ) ) {
+      /*
+       * Anzahl der verfuegbaren Bytes ermitteln
+       *
+       * Parameter:
+       *   HL: Adresse des Kanalzeigerfeldes
+       */
+      buf.append( "IOAVAILABLE:\n"
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tNZ,IOAVAILABLE1\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "\tJR\tIOAVAILABLE2\n"
+		+ "IOAVAILABLE1:\n" );
+      appendResetErrorUseBC( compiler );
+      for( int i = 1; i < IOCTB_AVAILABLE_OFFS; i++ ) {
+	buf.append( "\tINC\tHL\n" );
+      }
+      buf.append( "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tH,(HL)\n"
+		+ "\tLD\tL,A\n"
+		+ "\tOR\tH\n"
+		+ "\tJR\tNZ,IOAVAILABLE3\n" );
+      appendSetErrorIOMode( compiler );
+      buf.append( "IOAVAILABLE2:\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tRET\n"
+		+ "IOAVAILABLE3:\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tJP_HL\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tPOP\tBC\n" );
+      buf.append_LD_HL_nn( IOCTB_BBUF_OFFS );
+      buf.append( "\tADD\tHL,BC\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tINC\tHL\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.JP_HL );
+    }
+    if( libItems.contains( LibItem.IOINL ) ) {
+      /*
+       * Lesen einer Zeile aus einem Eingabekanal
+       *
+       * Parameter:
+       *   HL: Adresse des Kanalzeigerfeldes
+       * Rueckgabewert:
+       *   HL: Zeiger auf die gelesene Zeichenkette
+       */
+      buf.append( "IOINL:\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tNZ,IOINL1\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "\tLD\tHL,D_EMPT\n"
+		+ "\tRET\n"
+		+ "IOINL1:\tDEC\tHL\n" );
+      appendResetErrorUseBC( compiler );
+      buf.append( "\tLD\tB," );
+      buf.appendHex2( BasicCompiler.MAX_STR_LEN );
+      buf.append( "\n"
+		+ "\tLD\tDE,M_STMP\n"
+		+ "IOINL2:\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tIORDB\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
+		+ "\tCP\t0AH\n"
+		+ "\tJR\tZ,IOINL3\n"
+		+ "\tCP\t0DH\n"
+		+ "\tJR\tZ,IOINL4\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tINC\tDE\n"
+		+ "\tDJNZ\tIOINL2\n"
+		+ "IOINL3:\tXOR\tA\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tLD\tHL,M_STMP\n"
+		+ "\tRET\n"
+		+ "IOINL4:\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tIORDB\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
+		+ "\tCP\t0AH\n"
+		+ "\tJR\tZ,IOINL3\n" );
+      buf.append_LD_BC_nn( IOCTB_BBUF_OFFS + 1 );
+      buf.append( "\tADD\tHL,BC\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tA,0FFH\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tJR\tIOINL3\n" );
+      libItems.add( LibItem.IORDB );
+      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.M_STMP );
+    }
+    if( libItems.contains( LibItem.IOINX ) ) {
+      /*
+       * Lesen von Bytes aus einem Eingabekanal
+       *
+       * Parameter:
+       *   BC: Anzahl der zu lesenden Bytes
+       *   HL: Adresse des Kanalzeigerfeldes
+       * Rueckgabewert:
+       *   HL: Zeiger auf die gelesene Zeichenkette
+       */
+      buf.append( "IOINX:\tLD\tA,B\n"
+		+ "\tOR\tA\n"
+		+ "\tJP\tNZ,E_PARM\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tNZ,IOINX1\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "\tLD\tHL,D_EMPT\n"
+		+ "\tRET\n"
+		+ "IOINX1:\tDEC\tHL\n" );
+      appendResetErrorUseDE( compiler );
+      buf.append( "\tLD\tDE,M_STMP\n"
+		+ "IOINX2:\tLD\tA,B\n"
+		+ "\tOR\tC\n"
+		+ "\tJR\tZ,IOINX3\n"
+		+ "\tDEC\tBC\n"
+		+ "\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tIORDB\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tINC\tDE\n"
+		+ "\tJR\tIOINX2\n"
+		+ "IOINX3:\tLD\t(DE),A\n"
+		+ "\tLD\tHL,M_STMP\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.IORDB );
+      libItems.add( LibItem.E_PARM );
+      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.M_STMP );
+    }
+    if( libItems.contains( LibItem.IORDB ) ) {
+      /*
+       * Lesen eines Bytes aus einem Eingabekanal
+       * Der Kanal muss offen sein!
+       * Im Fehlerfall werden die Fehlervariablen gesetzt.
+       *
+       * Parameter:
+       *   HL: Adresse des Kanalzeigerfeldes
+       * Rueckgabewert:
+       *   A:  gelesenes Zeichen bzw. 00h ab EOF
+       */
+      buf.append( "IORDB:\tEX\tDE,HL\n" );
+      buf.append_LD_HL_nn( IOCTB_BBUF_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,IORDB1\n"
+		+ "\tLD\t(HL),00H\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tRET\n"
+		+ "IORDB1:" );
+      buf.append_LD_HL_nn( IOCTB_READ_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tH,(HL)\n"
+		+ "\tLD\tL,A\n"
+		+ "\tOR\tH\n"
+		+ "\tJR\tNZ,IORDB2\n" );
+      appendSetErrorIOMode( compiler );
+      buf.append( "\tRET\n"
+		+ "IORDB2:\tJP\t(HL)\n" );
+    }
+    if( libItems.contains( LibItem.IOFLUSH ) ) {
+      /*
+       * Gepufferte Daten schreiben
+       *
+       * Parameter:
+       *   HL: Adresse des Kanalzeigerfeldes
+       */
+      buf.append( "IOFLUSH:\n"
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tNZ,IOFLUSH1\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "\tRET\n"
+		+ "IOFLUSH1:\n" );
+      appendResetErrorUseBC( compiler );
+      buf.append_LD_BC_nn( IOCTB_FLUSH_OFFS - 1 );
+      buf.append( "\tADD\tHL,BC\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tH,(HL)\n"
+		+ "\tLD\tL,A\n"
+		+ "\tOR\tH\n"
+		+ "\tJR\tZ,IOFLUSH2\n"
+		+ "\tJP\t(HL)\n"
+		+ "IOFLUSH2:\n" );
+      buf.append_LD_HL_nn( IOCTB_WRITE_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tRET\tNZ\n" );
+      appendSetErrorIOMode( compiler );
+      buf.append( "\tRET\n" );
+    }
+    if( libItems.contains( LibItem.IOCLOSE ) ) {
+      /*
+       * Schliessen eines IO-Kanals
+       *
+       * Parameter:
+       *   HL: Adresse des Kanalzeigerfeldes
+       */
+      buf.append( "IOCLOSE:\n" );
+      appendResetErrorUseBC( compiler );
+      buf.append( "\tLD\tE,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tD,(HL)\n"
+		+ "\tDEC\tHL\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tJR\tZ,IOCLOSE1\n"
+		+ "\tCALL\tJP_HL\n"
+		+ "\tJR\tIOCLOSE2\n"
+		+ "IOCLOSE1:\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "IOCLOSE2:\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\tB," );
+      buf.appendHex2( compiler.getIOChannelSize() );
+      buf.append( "\n"
+		+ "IOCLOSE3:\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tINC\tDE\n"
+		+ "\tDJNZ\tIOCLOSE3\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.JP_HL );
+    }
+    if( libItems.contains( LibItem.IOOPEN ) ) {
+      /*
+       * Oeffnen eines IO-Kanals
+       *
+       * Parameter:
+       *   (M_IONM): Zeiger auf Geraete-/Dateiname
+       *   (M_IOAC): Zugriffsmode
+       *   HL:       Anfangsadresse des Kanalzeigerfeldes
+       */
+      buf.append( "IOOPEN:\n"
+		+ "\tLD\t(M_IOCA),HL\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tZ,IOOPEN1\n" );
+      appendSetErrorChannelAlreadyOpen( compiler );
+      buf.append( "\tRET\n"
+		+ "IOOPEN1:\n" );
+      appendResetErrorUseHL( compiler );
+      buf.append( "\tLD\tHL,IOHNTB\n"
+		+ "IOOPEN2:\n"
+		+ "\tLD\tE,(HL)\n"		// Handler-Adresse holen
+		+ "\tINC\tHL\n"
+		+ "\tLD\tD,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"
+		+ "\tJR\tZ,IOOPEN3\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tCALL\tJP_HL\n"		// Handler aufrufen
+		+ "\tPOP\tHL\n"
+		+ "\tJR\tC,IOOPEN2\n" );	// naechster Handler
+      if( libItems.contains( LibItem.M_ERN )
+	  || libItems.contains( LibItem.M_ERT ) )
+      {
+	/*
+	 * Der Handler hat sich fuer den Geraete- bzw. Dateinamen
+	 * verantwortlich gefuehlt.
+	 * Pruefen, ob der Kanal geoeffnet wurde.
+	 */
+	buf.append( "\tLD\tHL,(M_IOCA)\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tRET\tNZ\n" );	// Kanal offen -> OK
+	if( libItems.contains( LibItem.M_ERN ) ) {
+	  buf.append( "\tLD\tHL,(M_ERN)\n"
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tRET\tNZ\n" );	// Fehler eingetragen -> OK
+	} else if( libItems.contains( LibItem.M_ERT ) ) {
+	  buf.append( "\tLD\tHL,(M_ERT)\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tNZ\n" );	// Fehler eingetragen -> OK
+	}
+	appendSetError( compiler );	// Fehler eintragen
+      }
+      buf.append( "\tRET\n"
+		+ "IOOPEN3:\n" );
+      // Keine passenden Handler gefunden
+      appendSetErrorDeviceNotFound( compiler );
+      buf.append( "\tRET\n" );
+      libItems.add( LibItem.IO_CRT_HANDLER );
+      if( target.supportsXLPTCH() ) {
+	libItems.add( LibItem.IO_LPT_HANDLER );
+      }
+      int[] ioAddrs = target.getVdipBaseIOAddresses();
+      if( ioAddrs != null ) {
+	if( ioAddrs.length > 0 ) {
+	  libItems.add( LibItem.IO_VDIP_HANDLER );
+	}
+      }
+      libItems.add( LibItem.JP_HL );
+    }
+    if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
+      VdipLibrary.appendCodeTo( compiler );
+    }
+    if( libItems.contains( LibItem.IO_CRT_HANDLER ) ) {
+      buf.append( "IO_CRT_HANDLER:\n"
+		+ "\tLD\tHL,D_IOCRT\n"
+		+ "\tLD\tDE,XOUTCH\n"
+		+ "\tJR\tIO_SIMPLE_OUT_HANDLER\n" );
+      libItems.add( LibItem.IO_SIMPLE_OUT_HANDLER );
+      libItems.add( LibItem.XOUTCH );
+    }
+    if( libItems.contains( LibItem.IO_LPT_HANDLER ) ) {
+      buf.append( "IO_LPT_HANDLER:\n"
+		+ "\tLD\tHL,D_IOLPT\n"
+		+ "\tLD\tDE,XLPTCH\n"
+		+ "\tJR\tIO_SIMPLE_OUT_HANDLER\n" );
+      libItems.add( LibItem.IO_SIMPLE_OUT_HANDLER );
+      libItems.add( LibItem.XLPTCH );
+    }
+    if( libItems.contains( LibItem.IO_SIMPLE_OUT_HANDLER ) ) {
+      /*
+       * Handler fuer einfachen Ausgabekanal
+       *
+       * Parameter:
+       *   DE:       Adresse der Ausgaberoutine
+       *   HL:       Geraetename, auf den der Handler reagiert
+       *   (M_IONM): Zeiger auf Geraetename (wird mit dem in HL verglichen)
+       *   (M_IOCA): Anfangsadresse des Kanalzeigerfeldes
+       *   (M_IOAC): Zugriffsmode (muss 0 oder 2 sein)
+       * Rueckgabewert:
+       *   CY=1:     Handler ist nicht zustaendig
+       *   CY=0:     Handler ist zustaendig
+       *               -> keine weiteren Handler testen
+       */
+      buf.append( "IO_SIMPLE_OUT_HANDLER:\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tDE,(M_IONM)\n"
+		+ "IO_SIMPLE_OUT_H1:\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tCALL\tC_UPR\n"
+		+ "\tCP\t(HL)\n"
+		+ "\tJR\tNZ,IO_SIMPLE_OUT_H5\n"
+		+ "\tINC\tDE\n"
+		+ "\tINC\tHL\n"
+		+ "\tCP\t3AH\n"
+		+ "\tJR\tNZ,IO_SIMPLE_OUT_H1\n"
+		+ "\tLD\tA,(M_IOAC)\n"		// Betriebsart pruefen
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,IO_SIMPLE_OUT_H2\n"
+		+ "\tCP\t" );
+      buf.appendHex2( IOMODE_OUTPUT );
+      buf.append( "\n"
+		+ "\tJR\tZ,IO_SIMPLE_OUT_H2\n" );
+      appendSetErrorIOMode( compiler );		// Betriebsart nicht moeglich
+      buf.append( "\tPOP\tDE\n"
+		+ "\tOR\tA\n"			// C=0
+		+ "\tRET\n"
+		+ "IO_SIMPLE_OUT_H2:\n"
+		+ "\tLD\tHL,(M_IOCA)\n"
+		+ "\tLD\tDE,IO_SIMPLE_CLOSE\n"
+		+ "\tLD\t(HL),E\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\t(HL),D\n"
+		+ "\tINC\tHL\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\tB," );
+      buf.appendHex2( IOCTB_WRITE_OFFS - 2 );
+      buf.append( "\n"
+		+ "IO_SIMPLE_OUT_H3:\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tINC\tHL\n"
+		+ "\tDJNZ\tIO_SIMPLE_OUT_H3\n"
+		+ "\tPOP\tDE\n"			// Routine fuer Zeichenausgabe
+		+ "\tLD\t(HL),E\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\t(HL),D\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tB," );
+      buf.appendHex2( compiler.getIOChannelSize() - IOCTB_WRITE_OFFS - 2 );
+      buf.append( "\n"
+		+ "IO_SIMPLE_OUT_H4:\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tINC\tHL\n"
+		+ "\tDJNZ\tIO_SIMPLE_OUT_H4\n"
+		+ "\tRET\n"
+		+ "IO_SIMPLE_OUT_H5:\n"
+		+ "\tPOP\tDE\n"
+		+ "\tSCF\n"
+		+ "IO_SIMPLE_CLOSE:\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.C_UPR );
+    }
+    if( libItems.contains( LibItem.IOCADR ) ) {
+      /*
+       * Ermittlung der Kanalanfangsadresse in der IOPTAB
+       * anhand der Kanalnummer
+       *
+       * Parameter:
+       *   HL: Kanalnummer (>=1)
+       * Rueckgabe:
+       *   HL: Kanalanfangsadresse
+       */
+      buf.append( "IOCADR:\tLD\tA,H\n"
+		+ "\tOR\tA\n"
+		+ "\tJP\tNZ,E_PARM\n"
+		+ "\tOR\tL\n"
+		+ "\tJP\tZ,E_PARM\n"
+		+ "\tDEC\tA\n"
+		+ "\tCP\t04H\n"
+		+ "\tJP\tNC,E_PARM\n"
+      // Multiplikation mit 12 (IOCTB_CHANNEL_SIZE)
+		+ "\tADD\tA,A\n"			// x2
+		+ "\tLD\tB,A\n"	
+		+ "\tADD\tA,A\n"			// x4
+		+ "\tADD\tA,B\n"			// +2 -> x6
+		+ "\tADD\tA,A\n"			// x12
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tDE,IOCTB1\n"
+		+ "\tADD\tHL,DE\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.E_PARM );
+      libItems.add( LibItem.IOCTB1 );
+      libItems.add( LibItem.IOCTB2 );
+    }
+    if( libItems.contains( LibItem.CHECK_OPEN_NET_CHANNEL ) ) {
+      /*
+       * Pruefen, ob der Kanal mit KCNet (TCP oder UDP) geoeffnet ist
+       * Die Fehlervariablen werden gesetzt.
+       *
+       * Parameter:
+       *   HL: Anfangsadresse Kanalzeigerfeld
+       * Rueckgabe:
+       *   CY=0: OK, A: Protokoll, DE: Anfangsadresse Kanalzeigerfeld
+       *   CY=1: nicht als KCNet-Kanal geoeffnet
+       */
+      buf.append( "CHECK_OPEN_NET_CHANNEL:\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\t(HL)\n"
+		+ "\tJR\tNZ,CHECK_OPEN_NET_CHANNEL1\n" );
+      appendSetErrorChannelClosed( compiler );
+      buf.append( "\tJR\tCHECK_OPEN_NET_CHANNEL2\n"
+		+ "CHECK_OPEN_NET_CHANNEL1:\n"
+		+ "\tDEC\tHL\n"
+		+ "\tEX\tDE,HL\n" );
+      buf.append_LD_HL_nn( KCNetLibrary.IOCTB_PROTO_OFFS );
+      buf.append( "\tADD\tHL,DE\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tCP\t\'T\'\n"
+		+ "\tJR\tZ,CHECK_OPEN_NET_CHANNEL3\n"
+		+ "\tCP\t\'U\'\n"
+		+ "\tJR\tZ,CHECK_OPEN_NET_CHANNEL3\n" );
+      appendSetErrorIOMode( compiler );
+      buf.append( "CHECK_OPEN_NET_CHANNEL2:\n"
+		+ "\tSCF\n"
+		+ "\tRET\n"
+		+ "CHECK_OPEN_NET_CHANNEL3:\n" );
+      appendResetErrorUseHL( compiler );
+      buf.append( "\tOR\tA\n"				// CY=0
+		+ "\tRET\n" );
+    }
+    KCNetLibrary.appendCodeTo( compiler );
+    if( libItems.contains( LibItem.S_HXHL ) ) {
+      /*
+       * Umwandlung eines numerischen Wertes in eine Zeichenkette
+       * mit einer Hexadezimalzahl.
+       * Es wird kein terminierendes Null-Byte geschrieben!
+       *
+       * Parameter:
+       *   HL: numerischer Wert (Ausgabe 4-stellig)
+       * Rueckgabewert:
+       *   DE: Zeiger auf das erste Zeichen hinter der Zeichenkette
+       */
+      buf.append( "S_HXHL:\tLD\tA,H\n"
+		+ "\tCALL\tS_HXA\n"
+		+ "\tLD\tA,L\n" );
+		// direkt weiter mit S_HXA
+      libItems.add( LibItem.S_HXA );
+    }
+    if( libItems.contains( LibItem.S_HXA ) ) {
+      /*
+       * Umwandlung eines numerischen Wertes in eine Zeichenkette
+       * mit einer Hexadezimalzahl.
+       * Es wird kein terminierendes Null-Byte geschrieben!
+       *
+       * Parameter:
+       *   S_HXA:  A: numerischer Wert (Ausgabe 2-stellig)
+       *   S_HXAL: A: numerischer Wert (Ausgabe 1-stellig)
+       * Rueckgabewert:
+       *   DE: Zeiger auf das erste Zeichen hinter der Zeichenkette
+       */
+      buf.append( "S_HXA:\tPUSH\tAF\n"
+		+ "\tRRCA\n"
+		+ "\tRRCA\n"
+		+ "\tRRCA\n"
+		+ "\tRRCA\n"
+		+ "\tCALL\tS_HXAL\n"
+		+ "\tPOP\tAF\n"
+		+ "S_HXAL:\tAND\t0FH\n"
+		+ "\tADD\tA,90H\n"
+		+ "\tDAA\n"
+		+ "\tADC\tA,40H\n"
+		+ "\tDAA\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tINC\tDE\n"
+		+ "\tRET\n" );
+    }
+    if( libItems.contains( LibItem.C_UPR ) ) {
+      // Zeichen in A gross wandeln
+      buf.append( "C_UPR:\tCP\t61H\n"
+		+ "\tRET\tC\n"
+		+ "\tCP\t7BH\n"
+		+ "\tRET\tNC\n"
+		+ "\tSUB\t20H\n"
+		+ "\tRET\n" );
+    }
     if( libItems.contains( LibItem.E_DATA ) ) {
       buf.append( "E_DATA:" );
       target.appendSwitchToTextScreen( buf );
@@ -3033,7 +4056,7 @@ public class BasicLibrary
       buf.append( "SMACP:\tLD\tA,(HL)\n"
 		+ "\tOR\tA\n"
 		+ "\tJR\tNZ,SMACP1\n"
-		+ "\tLD\tDE,M_EMPT\n"
+		+ "\tLD\tDE,D_EMPT\n"
 		+ "\tRET\n"
 		+ "SMACP1:\tPUSH\tHL\n"
 		+ "\tCALL\tMFIND\n"
@@ -3049,7 +4072,7 @@ public class BasicLibrary
       libItems.add( LibItem.MFIND );
       libItems.add( LibItem.MALLOC );
       libItems.add( LibItem.STNCP );
-      libItems.add( LibItem.M_EMPT );
+      libItems.add( LibItem.D_EMPT );
     }
     if( libItems.contains( LibItem.SVDUP ) ) {
       /*
@@ -3611,8 +4634,30 @@ public class BasicLibrary
 		+ "\tLD\t(M_READ),HL\n"
 		+ "\tRET\n" );
     }
-    buf.append( "XEXIT:\tLD\tSP,(M_STCK)\n" );
+    buf.append( "XEXIT:" );
+    if( libItems.contains( LibItem.IOCTB1 ) ) {
+      buf.append( "\tLD\tHL,IOCTB1\n"
+		+ "\tCALL\tCKCLOS\n" );
+    }
+    if( libItems.contains( LibItem.IOCTB2 ) ) {
+      buf.append( "\tLD\tHL,IOCTB2\n"
+		+ "\tCALL\tCKCLOS\n" );
+    }
+    buf.append( "\tLD\tSP,(M_STCK)\n" );
     target.appendExit( buf );
+    if( libItems.contains( LibItem.IOCTB1 )
+	|| libItems.contains( LibItem.IOCTB2 ) )
+    {
+      buf.append( "CKCLOS:\tLD\tE,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tD,(HL)\n"
+		+ "\tDEC\tHL\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\tA,L\n"
+		+ "\tOR\tH\n"
+		+ "\tRET\tZ\n"
+		+ "\tJP\t(HL)\n" );
+    }
     target.appendInput(
 		buf,
 		libItems.contains( LibItem.XCKBRK ),
@@ -3622,15 +4667,8 @@ public class BasicLibrary
     if( libItems.contains( LibItem.XBREAK )
 	|| options.canBreakOnInput() )
     {
-      // Abbruchausschrift und Programm beenden
-      buf.append( "XBREAK:\tCALL\tXOUTST\n" );
-      if( compiler.isLangCode( "DE" ) ) {
-	buf.append( "\tDB\t\'Abbruch\'\n" );
-      } else {
-	buf.append( "\tDB\t\'Break\'\n" );
-      }
-      buf.append( "\tDB\t00H\n"
-		+ "\tCALL\tXOUTNL\n"
+      // Zeilenumbruch und Programm beenden
+      buf.append( "XBREAK:\tCALL\tXOUTNL\n"
 		+ "\tJP\tXEXIT\n" );
       libItems.add( LibItem.XOUTST );
       libItems.add( LibItem.XOUTNL );
@@ -3729,20 +4767,37 @@ public class BasicLibrary
     if( libItems.contains( LibItem.XOUTCH ) ) {
       target.appendXOUTCH( buf );
     }
+    if( libItems.contains( LibItem.XLPTCH ) ) {
+      target.appendXLPTCH( buf );
+    }
     target.appendEtc( buf );
   }
 
 
-  public static void appendData(
-			AsmCodeBuf         buf,
-			AbstractTarget     target,
-			BasicOptions       options,
-			Set<LibItem>       libItems,
+  public static void appendDataTo(
+			BasicCompiler      compiler,
 			Map<String,String> strLitLabelMap,
 			StringBuilder      userData )
   {
+    AsmCodeBuf                buf      = compiler.getCodeBuf();
+    Set<BasicLibrary.LibItem> libItems = compiler.getLibItems();
+    BasicOptions              options  = compiler.getBasicOptions();
+    AbstractTarget            target   = compiler.getTarget();
     if( options.getShowAssemblerText() ) {
-      buf.append( "\n;String-Literale\n" );
+      buf.append( "\n;Datenbereich\n" );
+    }
+    if( libItems.contains( LibItem.IOOPEN ) ) {
+      buf.append( "IOHNTB:\n" );
+      if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
+	buf.append( "\tDW\tIO_VDIP_HANDLER\n" );
+      }
+      if( libItems.contains( LibItem.IO_CRT_HANDLER ) ) {
+	buf.append( "\tDW\tIO_CRT_HANDLER\n" );
+      }
+      if( libItems.contains( LibItem.IO_LPT_HANDLER ) ) {
+	buf.append( "\tDW\tIO_LPT_HANDLER\n" );
+      }
+      buf.append( "\tDW\t0000H\n" );
     }
     Set<Map.Entry<String,String>> entries = strLitLabelMap.entrySet();
     if( entries != null ) {
@@ -3763,8 +4818,20 @@ public class BasicLibrary
     if( libItems.contains( LibItem.XTARID ) ) {
       target.appendXTARID( buf );
     }
-    if( libItems.contains( LibItem.M_EMPT ) ) {
-      buf.append( "M_EMPT:\tDB\t00H\n" );
+    if( libItems.contains( LibItem.IO_CRT_HANDLER ) ) {
+      buf.append( "D_IOCRT:\n"
+			+ "\tDB\t\'CRT:\'\n" );
+    }
+    if( libItems.contains( LibItem.IO_LPT_HANDLER ) ) {
+      buf.append( "D_IOLPT:\n"
+			+ "\tDB\t\'LPT:\'\n" );
+    }
+    if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
+      VdipLibrary.appendDataTo( compiler );
+    }
+    KCNetLibrary.appendDataTo( compiler );
+    if( libItems.contains( LibItem.D_EMPT ) ) {
+      buf.append( "D_EMPT:\tDB\t00H\n" );
     }
     if( libItems.contains( LibItem.FNT5P7 ) ) {
       if( options.getShowAssemblerText() ) {
@@ -3866,7 +4933,7 @@ public class BasicLibrary
 		+ "\tDB\t05H,10H,20H,10H,08H,10H\n"		// ~
 		+ "\n" );
     }
-    target.appendData( buf );
+    target.appendDataTo( buf );
     if( userData != null ) {
       if( options.getShowAssemblerText() ) {
 	buf.append( "\n;User DATA\n" );
@@ -3876,15 +4943,16 @@ public class BasicLibrary
   }
 
 
-  public static void appendBSS(
-			AsmCodeBuf          buf,
-			AbstractTarget      target,
-			BasicOptions        options,
-			Set<LibItem>        libItems,
+  public static void appendBssTo(
+			BasicCompiler       compiler,
 			Map<String,VarDecl> varDecls,
 			Set<String>         usrLabels,
 			StringBuilder       userBSS )
   {
+    AsmCodeBuf                buf      = compiler.getCodeBuf();
+    Set<BasicLibrary.LibItem> libItems = compiler.getLibItems();
+    BasicOptions              options  = compiler.getBasicOptions();
+    AbstractTarget            target   = compiler.getTarget();
     if( options.getShowAssemblerText() ) {
       buf.append( "\n;Speicherzellen\n" );
     }
@@ -3903,6 +4971,62 @@ public class BasicLibrary
        * Speicherzelle fuer den Zufallsgenerator
        */
       buf.append( "M_RND:\tDS\t2\n" );
+    }
+    KCNetLibrary.appendBssTo( compiler );
+    if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
+      VdipLibrary.appendBssTo( compiler );
+    }
+    if( libItems.contains( LibItem.KCNET_BASE )
+	|| libItems.contains( LibItem.IOOPEN )
+	|| libItems.contains( LibItem.IOCTB1 )
+	|| libItems.contains( LibItem.IOCTB2 ) )
+    {
+      buf.append( "M_IONM:\tDS\t02H\n"
+		+ "M_IOCA:\tDS\t02H\n"
+		+ "M_IOAC:\tDS\t01H\n" );
+    }
+    if( libItems.contains( LibItem.IOCTB1 ) ) {
+      /*
+       * Zeigerfeld fuer Kanal 1:
+       *   +0:  CLOSE-Routine
+       *          In:   DE: Anfangsadresse Kanalzeigerfeld
+       *          Info:
+       *            Das Vorhandensein der CLOSE-Routine bestimmt,
+       *            ob der Kanal offen oder geschlossen ist, d.h.,
+       *            beim Oeffnen eines Kanals muss eine CLOSE-Routine
+       *            eingetragen werden.
+       *            Die CLOSE-Routine braucht das Zeigerfeld nicht aufraeumen.
+       *            Das macht die allgemeine CLOSE-Anweisung.
+       *   +2:  EOF-Routine
+       *          In:  DE:    Anfangsadresse Kanalzeigerfeld
+       *          Out: HL=-1: EOF erreicht
+       *   +4:  AVAILABLE-Routine
+       *          In:  DE: Anfangsadresse Kanalzeigerfeld
+       *          Out: HL: Anzahl der verfuegbaren Bytes
+       *   +6:  READ-Routine
+       *          In:  DE: Anfangsadresse Kanalzeigerfeld
+       *          Out: A:  gelesenes Zeichen bzw. 00h ab EOF
+       *   +8:  WRITE-Routine
+       *          In:  (M_IOCA): Anfangsadresse Kanalzeigerfeld
+       *               A:        zu schreibendes Byte
+       *   +10: FLUSH-Routine
+       *          In:  DE: Anfangsadresse Kanalzeigerfeld
+       *   +12: Status Zeichenpuffer
+       *   +13: Zeichenpuffer
+       *   +14: Treiber-spezifisches Feld
+       */
+      buf.append( "IOCTB1:\tDS\t" );
+      buf.appendHex2( compiler.getIOChannelSize() );
+      buf.newLine();
+    }
+    if( libItems.contains( LibItem.IOCTB2 ) ) {
+      /*
+       * Zeigerfeld fuer Kanal 2,
+       * muss unmittelbar hinter Kanal 1 folgen
+       */
+      buf.append( "IOCTB2:\tDS\t" );
+      buf.appendHex2( compiler.getIOChannelSize() );
+      buf.newLine();
     }
     if( libItems.contains( LibItem.M_XYPO ) ) {
       buf.append( "M_XPOS:\tDS\t2\n"
@@ -3941,6 +5065,16 @@ public class BasicLibrary
     if( libItems.contains( LibItem.M_INKB ) ) {
       buf.append( "M_INKB:\tDS\t2\n" );
     }
+    if( libItems.contains( LibItem.M_IO_COUT ) ) {
+      buf.append( "M_IO_COUT:\n"
+		+ "\tDS\t2\n" );
+    }
+    if( libItems.contains( LibItem.M_HOST ) ) {
+      buf.append( "M_HOST:\tDS\t2\n" );
+    }
+    if( libItems.contains( LibItem.M_PORT ) ) {
+      buf.append( "M_PORT:\tDS\t2\n" );
+    }
     if( libItems.contains( LibItem.M_STMP ) ) {
       // temporaerer String-Puffer
       buf.append( "M_STMP:\tDS\t" );
@@ -3951,13 +5085,17 @@ public class BasicLibrary
       // Puffer fuer S_STR
       buf.append( "M_STR:\tDS\t08H\n" );
     }
-    if( libItems.contains( LibItem.M_ERR ) ) {
-      // Fehlervariable
-      buf.append( "M_ERR:\tDS\t2\n" );
+    if( libItems.contains( LibItem.M_ERN ) ) {
+      // Fehlernummer
+      buf.append( "M_ERN:\tDS\t2\n" );
+    }
+    if( libItems.contains( LibItem.M_ERT ) ) {
+      // Fehlertext
+      buf.append( "M_ERT:\tDS\t2\n" );
     }
     // Stack Pointer bei Programmstart
     buf.append( "M_STCK:\tDS\t2\n" );
-    target.appendBSS( buf );
+    target.appendBssTo( buf );
     if( options.getShowAssemblerText() && !usrLabels.isEmpty() ) {
       buf.append( "\n;USR-Funktionen\n" );
     }
@@ -4043,13 +5181,13 @@ public class BasicLibrary
 
 
   public static void appendInitTo(
-			AsmCodeBuf          buf,
-			AbstractTarget      target,
-			BasicOptions        options,
-			Set<LibItem>        libItems,
+			BasicCompiler       compiler,
 			Map<String,VarDecl> varDecls,
 			Set<String>         usrLabels )
   {
+    AsmCodeBuf   buf      = compiler.getCodeBuf();
+    Set<LibItem> libItems = compiler.getLibItems();
+    BasicOptions options  = compiler.getBasicOptions();
     if( options.getShowAssemblerText() ) {
       buf.append( "\n;Initialisierungen\n" );
     }
@@ -4070,16 +5208,53 @@ public class BasicLibrary
     if( libItems.contains( LibItem.DATA ) ) {
       buf.append( "\tCALL\tDINIT\n" );
     }
+    KCNetLibrary.appendInitTo( compiler );
+    if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
+      VdipLibrary.appendInitTo( compiler );
+    }
+    /*
+     * Zeigerfelder der einzelnen Kanaele initialisieren
+     */
+    int    nChannels         = 0;
+    String firstChannelLabel = null;
+    if( libItems.contains( LibItem.IOCTB2 ) ) {
+      firstChannelLabel = "IOCTB2";
+      nChannels++;
+    }
+    if( libItems.contains( LibItem.IOCTB1 ) ) {
+      firstChannelLabel = "IOCTB1";
+      nChannels++;
+    }
+    if( (nChannels > 0) && (firstChannelLabel != null) ) {
+      buf.append( "\tLD\tHL," );
+      buf.append( firstChannelLabel );
+      buf.append( "\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\tB," );
+      buf.appendHex2( nChannels * compiler.getIOChannelSize() );
+      buf.append( "\n"
+		+ "IOINIL:\tLD\t(HL),A\n"
+		+ "\tINC\tHL\n"
+		+ "\tDJNZ\tIOINIL\n" );
+    }
+    /*
+     * weitere Initialisierungen
+     */
     if( libItems.contains( LibItem.M_XYPO ) ) {
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tLD\t(M_XPOS),HL\n"
 		+ "\tLD\t(M_YPOS),HL\n" );
     }
-    if( libItems.contains( LibItem.M_ERR ) ) {
+    if( libItems.contains( LibItem.M_ERN ) ) {
       if( !libItems.contains( LibItem.M_XYPO ) ) {
 	buf.append( "\tLD\tHL,0000H\n" );
       }
-      buf.append( "\tLD\t(M_ERR),HL\n" );
+      buf.append( "\tLD\t(M_ERN),HL\n" );
+    }
+    if( libItems.contains( LibItem.M_ERT ) ) {
+      buf.append( "\tLD\tHL,D_EMPT\n"
+		+ "\tLD\t(M_ERT),HL\n" );
+      libItems.add( LibItem.D_EMPT );
     }
     Collection<String> varNames = varDecls.keySet();
     if( varNames != null ) {
@@ -4098,7 +5273,7 @@ public class BasicLibrary
 	      if( a[ i ].endsWith( "$" ) ) {
 		VarDecl var = varDecls.get( a[ i ] );
 		if( var != null ) {
-	 	  nStrVars++;
+		  nStrVars += (var.getSize() / 2);
 		  if( firstStrVarLabel == null ) {
 		    firstStrVarLabel = var.getLabel();
 		  }
@@ -4116,7 +5291,7 @@ public class BasicLibrary
 		    buf.appendHex2( nStrVars );
 		  }
 		  buf.append( "\n"
-			+ "\tLD\tDE,M_EMPT\n"
+			+ "\tLD\tDE,D_EMPT\n"
 			+ "\tLD\tHL," );
 		  buf.append( firstStrVarLabel );
 		  buf.append( "\n"
@@ -4132,10 +5307,10 @@ public class BasicLibrary
 		  } else {
 		    buf.append( "\tDJNZ\tMINIST\n" );
 		  }
-		  libItems.add( LibItem.M_EMPT );
+		  libItems.add( LibItem.D_EMPT );
 		}
 	      } else {
-		buf.append( "\tLD\tHL,M_EMPT\n" );
+		buf.append( "\tLD\tHL,D_EMPT\n" );
 		for( int i = 0; i< a.length; i++ ) {
 		  if( a[ i ].endsWith( "$" ) ) {
 		    VarDecl var = varDecls.get( a[ i ] );
@@ -4146,7 +5321,7 @@ public class BasicLibrary
 		    }
 		  }
 		}
-		libItems.add( LibItem.M_EMPT );
+		libItems.add( LibItem.D_EMPT );
 	      }
 	    }
 	  }
@@ -4168,7 +5343,205 @@ public class BasicLibrary
 		+ "\tINC\tHL\n"
 		+ "\tLD\t(HL),A\n" );
     }
-    target.appendInit( buf );
+    compiler.getTarget().appendInitTo( buf );
+  }
+
+
+  public static void appendResetErrorUseBC( BasicCompiler compiler )
+  {
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERN ) ) {
+      compiler.getCodeBuf().append( "\tLD\tBC,0000H\n"
+				+ "\tLD\t(M_ERN),BC\n" );
+    }
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERT ) ) {
+      compiler.getCodeBuf().append( "\tLD\tBC,D_EMPT\n"
+				+ "\tLD\t(M_ERT),BC\n" );
+      compiler.getLibItems().add( BasicLibrary.LibItem.D_EMPT );
+    }
+  }
+
+
+  public static void appendResetErrorUseDE( BasicCompiler compiler )
+  {
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERN ) ) {
+      compiler.getCodeBuf().append( "\tLD\tDE,0000H\n"
+				+ "\tLD\t(M_ERN),DE\n" );
+    }
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERT ) ) {
+      compiler.getCodeBuf().append( "\tLD\tDE,D_EMPT\n"
+				+ "\tLD\t(M_ERT),DE\n" );
+      compiler.getLibItems().add( BasicLibrary.LibItem.D_EMPT );
+    }
+  }
+
+
+  public static void appendResetErrorUseHL( BasicCompiler compiler )
+  {
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERN ) ) {
+      compiler.getCodeBuf().append( "\tLD\tHL,0000H\n"
+				+ "\tLD\t(M_ERN),HL\n" );
+    }
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERT ) ) {
+      compiler.getCodeBuf().append( "\tLD\tHL,D_EMPT\n"
+				+ "\tLD\t(M_ERT),HL\n" );
+      compiler.getLibItems().add( BasicLibrary.LibItem.D_EMPT );
+    }
+  }
+
+
+  public static void appendSetError(
+			BasicCompiler compiler,
+			int           errCode,
+			String        errTextDE,
+			String        errTextEN )
+  {
+    AsmCodeBuf buf = compiler.getCodeBuf();
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERN ) ) {
+      buf.append_LD_HL_nn( errCode );
+      buf.append( "\tLD\t(M_ERN),HL\n" );
+    }
+    if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERT ) ) {
+      buf.append_LD_HL_xx(
+	compiler.getStringLiteralLabel(
+		compiler.isLangCode( "DE" ) ? errTextDE : errTextEN ) );
+      buf.append( "\tLD\t(M_ERT),HL\n" );
+    }
+  }
+
+
+  public static void appendSetError( BasicCompiler compiler )
+  {
+    appendSetError( compiler, E_ERROR, "Fehler", "Error" );
+  }
+
+
+  public static void appendSetErrorChannelAlreadyOpen( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_CHANNEL_CLOSED,
+		"Kanal bereits geoeffnet",
+		"Channel already open" );
+  }
+
+
+  public static void appendSetErrorChannelClosed( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_CHANNEL_CLOSED,
+		"Kanal geschlossen",
+		"Channel closed" );
+  }
+
+
+  public static void appendSetErrorDiskFull( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_DISK_FULL,
+		"Speichermedium voll",
+		"Disk full" );
+  }
+
+
+  public static void appendSetErrorDeviceLocked( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_DEVICE_LOCKED,
+		"Geraet bereits in Benutzung",
+		"Device locked" );
+  }
+
+
+  public static void appendSetErrorDeviceNotFound( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_DEVICE_NOT_FOUND,
+		"Geraet nicht gefunden",
+		"Device not found" );
+  }
+
+
+  public static void appendSetErrorEOF( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_EOF,
+		"Dateiende erreicht",
+		"End of file reached" );
+  }
+
+
+  public static void appendSetErrorFileNotFound( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_FILE_NOT_FOUND,
+		"Datei nicht gefunden",
+		"File not found" );
+  }
+
+
+  public static void appendSetErrorFileReadOnly( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_READ_ONLY,
+		"Datei schreibgeschuetzt",
+		"File write protected" );
+  }
+
+
+  public static void appendSetErrorIOError( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_IO_ERROR,
+		"Ein-/Ausgabefehler",
+		"IO error" );
+  }
+
+
+  public static void appendSetErrorInvalidChars( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_INVALID,
+		"Ungueltige Zeichen",
+		"Invalid characters" );
+  }
+
+
+  public static void appendSetErrorIOMode( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_IO_MODE,
+		"Ungueltige Betriebsart",
+		"Invalid IO mode" );
+  }
+
+
+  public static void appendSetErrorNoDisk( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_NO_DISK,
+		"Kein Speichermedium vorhanden",
+		"No disk" );
+  }
+
+
+  public static void appendSetErrorNumericOverflow( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_OVERFLOW,
+		"Numerischer Ueberlauf",
+		"Numeric overflow" );
   }
 }
 

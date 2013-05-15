@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -512,11 +512,11 @@ public class HueblerEvertMC extends AbstractHueblerMC
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ramStatic, props );
       fillRandom( this.ramVideo );
     }
-    this.keyChar = 0;
   }
 
 
@@ -558,13 +558,6 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
   @Override
   public boolean supportsCopyToClipboard()
-  {
-    return true;
-  }
-
-
-  @Override
-  public boolean supportsPasteFromClipboard()
   {
     return true;
   }

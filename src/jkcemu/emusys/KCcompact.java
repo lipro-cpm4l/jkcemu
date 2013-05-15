@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -422,6 +422,16 @@ public class KCcompact extends EmuSys implements
 
 	/* --- Methoden fuer Z80InterruptSource --- */
 
+  /*
+   * Die Hardware des KCcompact reagiert nicht auf RETI-Befehle,
+   * weshalb diese speziellen Interrupt-Return-Befehle
+   * auch nicht vewendet werden.
+   * Damit wird aber auch "interruptFinished()" nie aufgerufen.
+   * Aus diesem Grund muss der Interrupt-Zustand mit der
+   * Interrupt-Annahme bereits zurueckgesetzt werden, was bedeutet,
+   * dass "isInterruptAccepted()" nie true zurueckliefern kann.
+   */
+
   @Override
   public void appendStatusHTMLTo( StringBuilder buf )
   {
@@ -457,15 +467,6 @@ public class KCcompact extends EmuSys implements
   @Override
   public boolean isInterruptAccepted()
   {
-    /*
-     * Die Hardware des KCcompact reagiert nicht auf RETI-Befehle,
-     * weshalb diese speziellen Interrupt-Return-Befehle
-     * auch nicht verendet werden.
-     * Damit wird aber auch "interruptFinished()" nie aufgerufen.
-     * Aus diesem Grund muss der Interrupt-Zustand mit der
-     * Interrupt-Annahme bereits zurueckgesetzt werden, was bedeutet,
-     * dass "isInterruptAccepted()" nie true zurueckliefern kann.
-     */
     return false;
   }
 
@@ -643,7 +644,7 @@ public class KCcompact extends EmuSys implements
   public int getColorIndex( int x, int y )
   {
     int rv = this.borderColorIdx;
-    if( this.fixedScreenSize ) {
+    if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
       if( this.screenMode < 2 ) {
 	x /= 2;
       }
@@ -782,14 +783,16 @@ public class KCcompact extends EmuSys implements
   @Override
   public int getScreenHeight()
   {
-    return this.fixedScreenSize ? 400 : 200;
+    return (this.fixedScreenSize || this.screenFrm.isFullScreenMode()) ?
+								400 : 200;
   }
 
 
   @Override
   public int getScreenWidth()
   {
-    return this.fixedScreenSize ? 640 : this.screenWidth;
+    return (this.fixedScreenSize || this.screenFrm.isFullScreenMode()) ?
+						640 : this.screenWidth;
   }
 
 

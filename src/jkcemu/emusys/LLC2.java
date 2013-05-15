@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -51,8 +51,8 @@ public class LLC2
   private static byte[] gsbasic   = null;
 
   private Z80CTC            ctc;
-  private Z80PIO            pio1;
   private Z80PIO            pio2;
+  private GIDE              gide;
   private FDC8272           fdc;
   private RAMFloppy         ramFloppy1;
   private RAMFloppy         ramFloppy2;
@@ -78,7 +78,6 @@ public class LLC2
   private boolean           audioOutPhase;
   private boolean           keyboardUsed;
   private volatile boolean  graphicKeyState;
-  private volatile boolean  joystickSelected;
   private boolean           hiRes;
   private boolean           rf32KActive;
   private boolean           rf32NegA15;
@@ -88,8 +87,6 @@ public class LLC2
   private int               fontOffset;
   private int               videoPixelAddr;
   private int               videoTextAddr;
-  private int               joystickValue;
-  private int               keyboardValue;
   private boolean           v24BitOut;
   private int               v24BitNum;
   private int               v24ShiftBuf;
@@ -155,6 +152,10 @@ public class LLC2
     if( emulatesUSB( props ) ) {
       this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
     }
+
+    this.gide = GIDE.getGIDE( this.screenFrm, props, "jkcemu.llc2." );
+
+    this.joystickEnabled = emulatesJoystick( props );
 
     java.util.List<Z80InterruptSource> iSources
 				= new ArrayList<Z80InterruptSource>();
@@ -310,7 +311,13 @@ public class LLC2
 			props,
 			"jkcemu.llc2.ramfloppy.2." );
     }
+    if( rv ) {
+      rv = GIDE.complies( this.gide, props, "jkcemu.llc2." );
+    }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
+      rv = false;
+    }
+    if( rv && (emulatesJoystick( props ) != this.joystickEnabled) ) {
       rv = false;
     }
     if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
@@ -333,6 +340,9 @@ public class LLC2
   @Override
   public void die()
   {
+    if( this.gide != null ) {
+      this.gide.die();
+    }
     if( this.ramFloppy1 != null ) {
       this.ramFloppy1.deinstall();
     }
@@ -580,13 +590,6 @@ public class LLC2
 
 
   @Override
-  public int getSupportedJoystickCount()
-  {
-    return 1;
-  }
-
-
-  @Override
   public boolean getSwapKeyCharCase()
   {
     return true;
@@ -795,7 +798,12 @@ public class LLC2
   public int readIOByte( int port )
   {
     int rv = 0xFF;
-    if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
+    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
+      int value = this.gide.read( port );
+      if( value >= 0 ) {
+	rv = value;
+      }
+    } else if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
       rv = this.ramFloppy1.readByte( port & 0x07 );
     } else if( ((port & 0xF8) == 0xB0) && (this.ramFloppy2 != null) ) {
       rv = this.ramFloppy2.readByte( port & 0x07 );
@@ -885,7 +893,9 @@ public class LLC2
 
 	case 0xE8:
 	  synchronized( this.pio1 ) {
-	    if( !this.keyboardUsed && !this.joystickSelected ) {
+	    if( !this.keyboardUsed
+		&& !(this.joystickEnabled && this.joystickSelected) )
+	    {
 	      this.pio1.putInValuePortA( 0, 0xFF );
 	      this.keyboardUsed = true;
 	    }
@@ -939,6 +949,7 @@ public class LLC2
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
 	loadROMs( props );
@@ -954,6 +965,9 @@ public class LLC2
       this.ctc.reset( false );
       this.pio1.reset( false );
       this.pio2.reset( false );
+    }
+    if( this.gide != null ) {
+      this.gide.reset();
     }
     if( this.fdc != null ) {
       this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
@@ -1010,7 +1024,7 @@ public class LLC2
     if( endAddr >= 0x60F7 ) {
       (new SaveDlg(
 		this.screenFrm,
-		0x60F7,
+		0x6000,
 		endAddr,
 		'B',
 		false,          // kein KC-BASIC
@@ -1036,7 +1050,7 @@ public class LLC2
   @Override
   public void setJoystickAction( int joyNum, int actionMask )
   {
-    if( joyNum == 0 ) {
+    if( this.joystickEnabled && (joyNum == 0) ) {
       int value = 0x1F;
       if( (actionMask & JoystickThread.UP_MASK) != 0 ) {
 	value &= ~0x01;
@@ -1191,7 +1205,9 @@ public class LLC2
   @Override
   public void writeIOByte( int port, int value )
   {
-    if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
+    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
+      this.gide.write( port, value );
+    } else if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
       this.ramFloppy1.writeByte( port & 0x07, value );
     } else if( ((port & 0xF8) == 0xB0) && (this.ramFloppy2 != null) ) {
       this.ramFloppy2.writeByte( port & 0x07, value );
@@ -1295,18 +1311,26 @@ public class LLC2
 		this.emuThread.writeAudioPhase( b );
 	      }
 	    }
-	    b = ((v & 0x20) != 0);
-	    if( b != this.bit7InverseMode ) {
-	      this.bit7InverseMode = b;
-	      dirty            = true;
+	    if( this.fontBytes != llc2Font ) {
+	      if( this.fontBytes.length > 0x0800 ) {
+		b = ((v & 0x08) != 0);
+		this.fontOffset = (b ? 0x0800 : 0);
+	      }
 	    }
-	    b = ((v & 0x10) == 0);
-	    if( b != this.joystickSelected ) {
-	      this.joystickSelected = b;
-	      this.pio1.putInValuePortA(
-			b ?  this.joystickValue : this.keyboardValue,
+	    if( this.joystickEnabled ) {
+	      b = ((v & 0x10) == 0);
+	      if( b != this.joystickSelected ) {
+		this.joystickSelected = b;
+		this.pio1.putInValuePortA(
+			b ? this.joystickValue : this.keyboardValue,
 			0xFF );
+	      }
 	    }
+	    b = ((v & 0x20) != 0);
+            if( b != this.bit7InverseMode ) {
+              this.bit7InverseMode = b;
+              dirty                = true;
+            }
 	    b = ((v & 0x40) != 0);
 	    if( b != this.loudspeakerEnabled ) {
 	      this.loudspeakerEnabled = b;
@@ -1415,6 +1439,15 @@ public class LLC2
   }
 
 
+  private static boolean emulatesJoystick( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+			props,
+			"jkcemu.llc2.joystick.enabled",
+			false );
+  }
+
+
   private boolean emulatesKCNet( Properties props )
   {
     return EmuUtil.getBooleanProperty(
@@ -1437,7 +1470,7 @@ public class LLC2
   {
     this.fontBytes = readFontByProperty(
 				props,
-				"jkcemu.llc2.font.file", 0x0800 );
+				"jkcemu.llc2.font.file", 0x1000 );
     if( this.fontBytes == null ) {
       if( llc2Font == null ) {
 	llc2Font = readResource( "/rom/llc2/llc2font.bin" );
@@ -1483,16 +1516,5 @@ public class LLC2
 
     // Zeichensatz
     loadFont( props );
-  }
-
-
-  private void setKeyboardValue( int value )
-  {
-    this.keyboardValue = value;
-    synchronized( this.pio1 ) {
-      if( !this.joystickSelected ) {
-	this.pio1.putInValuePortA( this.keyboardValue, 0xFF );
-      }
-    }
   }
 }

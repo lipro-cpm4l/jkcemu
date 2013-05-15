@@ -89,12 +89,20 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 			AsmCodeBuf    buf,
 			String        appName )
   {
+    boolean done = false;
     if( appName != null ) {
       if( !appName.isEmpty() ) {
 	buf.append( "\tDB\t0EDH,0FFH\n" );
 	buf.appendStringLiteral( appName );
 	buf.append( "\tJP\tMINIT\n" );
+	done = true;
       }
+    }
+    if( !done ) {
+      compiler.putWarning(
+		"Programm kann auf dem Zielsystem nicht aufgerufen werden,"
+				+ " da der Programmname leer ist." );
+      buf.append( "\tENT\n" );
     }
   }
 
@@ -152,6 +160,14 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 
 
   @Override
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tLD\tC,A\n"
+		+ "\tJP\t0F00FH\n" );
+  }
+
+
+  @Override
   public void appendXOUTCH( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
@@ -159,6 +175,16 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 		+ "\tJP\t0F009H\n" );
       this.xoutchAppended = true;
     }
+  }
+
+
+  @Override
+  public void appendXOUTNL( AsmCodeBuf buf )
+  {
+    buf.append( "XOUTNL:\tLD\tC,0DH\n"
+		+ "\tCALL\t0F009H\n"
+		+ "\tLD\tC,0AH\n"
+		+ "\tJP\t0F009H\n" );
   }
 
 
@@ -280,6 +306,20 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 
 
   @Override
+  public int getKCNetBaseIOAddr()
+  {
+    return 0xC0;
+  }
+
+
+  @Override
+  public int[] getVdipBaseIOAddresses()
+  {
+    return new int[] { 0xFC };
+  }
+
+
+  @Override
   public void reset()
   {
     super.reset();
@@ -310,6 +350,13 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 
   @Override
   public boolean supportsXLOCAT()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXLPTCH()
   {
     return true;
   }

@@ -364,16 +364,32 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	    // Datenbereich
 	    int relSectorIdx = absSectorIdx - this.sysSectors;
 	    if( relSectorIdx >= 0 ) {
-	      String entryName = findEntryNameByDataBlock(
-					relSectorIdx / this.sectorsPerBlock );
+	      int    blockNum  = relSectorIdx / this.sectorsPerBlock;
+	      String entryName = findEntryNameByDataBlock( blockNum );
 	      if( entryName != null ) {
-		File file = this.fileMap.get( entryName );
-		if( file != null ) {
-		  raf = new RandomAccessFile( file, "rw" );
-		  raf.seek( absSectorIdx * getSectorSize() );
-		  raf.write( dataBuf, 0, Math.min( dataLen, sectorSize ) );
-		  raf.close();
-		  raf = null;
+		java.util.List<Integer> blockNums = getBlockNumsByEntryName(
+								entryName,
+								null );
+		if( blockNums != null ) {
+		  File file      = null;
+		  int  blockOffs = 0;
+		  for( Integer tmpBlockNum : blockNums ) {
+		    if( tmpBlockNum.equals( blockNum ) ) {
+		      file = this.fileMap.get( entryName );
+		      break;
+		    }
+		    blockOffs++;
+		  }
+		  if( file != null ) {
+		    int sectOffs = relSectorIdx
+				- (blockNum * this.sectorsPerBlock);
+		    raf = new RandomAccessFile( file, "rw" );
+		    raf.seek( ((blockOffs * this.sectorsPerBlock)
+					+ sectOffs) * getSectorSize() );
+		    raf.write( dataBuf, 0, Math.min( dataLen, sectorSize ) );
+		    raf.close();
+		    raf = null;
+		  }
 		}
 	      }
 	    }

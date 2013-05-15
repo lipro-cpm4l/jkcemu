@@ -78,9 +78,9 @@ public abstract class CallableEntry extends StructureEntry
   }
 
 
-  public int getArgIYOffs( int idx )
+  public int getArgIYOffs( int idx, int nArgs )
   {
-    return 4 + ((this.args.size() - idx - 1) * 2);
+    return 4 + ((nArgs - idx - 1) * 2);
   }
 
 
@@ -227,7 +227,9 @@ public abstract class CallableEntry extends StructureEntry
   {
     if( (idx >= 0) && (idx < this.args.size()) ) {
       this.name2iyOffs.remove( this.args.get( idx ) );
-      this.name2iyOffs.put( argName, new Integer( getArgIYOffs( idx ) ) );
+      this.name2iyOffs.put(
+		argName,
+		new Integer( getArgIYOffs( idx, this.args.size() ) ) );
       this.args.set( idx, argName );
     }
   }
@@ -237,11 +239,14 @@ public abstract class CallableEntry extends StructureEntry
   {
     this.args.clear();
     if( args != null ) {
-      for( String arg : args ) {
-	this.name2iyOffs.put(
+      int nArgs = args.size();
+      if( nArgs > 0 ) {
+	for( String arg : args ) {
+	  this.name2iyOffs.put(
 		arg,
-		new Integer( getArgIYOffs( this.args.size() ) ) );
-	this.args.add( arg );
+		new Integer( getArgIYOffs( this.args.size(), nArgs ) ) );
+	  this.args.add( arg );
+	}
       }
     }
   }

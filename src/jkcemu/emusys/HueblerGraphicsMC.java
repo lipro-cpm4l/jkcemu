@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,14 +10,19 @@ package jkcemu.emusys;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.Properties;
+import java.util.*;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.huebler.AbstractHueblerMC;
+import jkcemu.etc.VDIP;
+import jkcemu.net.KCNet;
 import z80emu.*;
 
 
-public class HueblerGraphicsMC extends AbstractHueblerMC
+public class HueblerGraphicsMC
+			extends AbstractHueblerMC
+			implements Z80TStatesListener
+
 {
   private static final String[] basicTokens = {
 	"END",      "FOR",       "NEXT",     "DATA",		// 0x80
@@ -69,6 +74,8 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   private boolean romEnabled;
   private boolean basic;
   private int     videoBaseAddr;
+  private KCNet   kcNet;
+  private VDIP    vdip;
 
 
   public HueblerGraphicsMC( EmuThread emuThread, Properties props )
@@ -83,6 +90,41 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     }
     this.videoBaseAddr = 0;
     createIOSystem();
+
+    this.kcNet = null;
+    if( emulatesKCNet( props ) ) {
+      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+    }
+    this.vdip = null;
+    if( emulatesUSB( props ) ) {
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+    }
+    if( (this.kcNet != null) || (this.vdip != null) ) {
+      java.util.List<Z80InterruptSource> iSources
+				= new ArrayList<Z80InterruptSource>();
+      iSources.add( this.ctc );
+      iSources.add( this.pio );
+      if( this.kcNet != null ) {
+	iSources.add( this.kcNet );
+      }
+      if( this.vdip != null ) {
+	iSources.add( this.vdip );
+      }
+      Z80CPU cpu = emuThread.getZ80CPU();
+      try {
+	cpu.setInterruptSources(
+		iSources.toArray(
+			new Z80InterruptSource[ iSources.size() ] ) );
+      }
+      catch( ArrayStoreException ex ) {}
+      if( this.kcNet != null ) {
+	this.kcNet.z80MaxSpeedChanged( cpu );
+	cpu.addMaxSpeedListener( this.kcNet );
+      }
+      if( this.vdip != null ) {
+	this.vdip.applySettings( props );
+      }
+    }
     checkAddPCListener( props );
   }
 
@@ -182,6 +224,17 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   }
 
 
+	/* --- Z80TStatesListener --- */
+
+  @Override
+  public synchronized void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -198,12 +251,30 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     boolean rv = EmuUtil.getProperty(
 			props,
 			"jkcemu.system" ).equals( "HueblerGraphicsMC" );
-    if( rv ) {
-      if( hasBasic( props ) != this.basic ) {
-	rv = false;
-      }
+    if( rv && hasBasic( props ) != this.basic ) {
+      rv = false;
+    }
+    if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
+      rv = false;
     }
     return rv;
+  }
+
+
+  @Override
+  public void die()
+  {
+    super.die();
+    if( this.kcNet != null ) {
+      this.emuThread.getZ80CPU().removeMaxSpeedListener( this.kcNet );
+      this.kcNet.die();
+    }
+    if( this.vdip != null ) {
+      this.vdip.die();
+    }
   }
 
 
@@ -295,6 +366,13 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 
 
   @Override
+  protected VDIP getVDIP()
+  {
+    return this.vdip;
+  }
+
+
+  @Override
   public boolean keyPressed(
 			int     keyCode,
 			boolean ctrlDown,
@@ -359,6 +437,35 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     }
   }
 
+  @Override
+  public int readIOByte( int port )
+  {
+    int rv = 0;
+    switch( port & 0xFF ) {
+      case 0xC0:
+      case 0xC1:
+      case 0xC2:
+      case 0xC3:
+	if( this.kcNet != null ) {
+	  rv = this.kcNet.read( port );
+	}
+	break;
+
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  rv = this.vdip.read( port );
+	}
+	break;
+
+      default:
+	rv = super.readIOByte( port );
+    }
+    return rv;
+  }
+
 
   @Override
   public int reassembleSysCall(
@@ -386,8 +493,8 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     this.romEnabled = true;
-    this.keyChar    = 0;
   }
 
 
@@ -437,13 +544,6 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 
 
   @Override
-  public boolean supportsPasteFromClipboard()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsSaveBasic()
   {
     return true;
@@ -487,6 +587,24 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
         this.screenFrm.setScreenDirty( true );
         break;
 
+      case 0xC0:
+      case 0xC1:
+      case 0xC2:
+      case 0xC3:
+	if( this.kcNet != null ) {
+	  this.kcNet.write( port, value );
+	}
+	break;
+
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  this.vdip.write( port, value );
+	}
+	break;
+
       default:
 	super.writeIOByte( port, value );
     }
@@ -505,5 +623,22 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   {
     return EmuUtil.getBooleanProperty( props, "jkcemu.hgmc.basic", true );
   }
-}
 
+
+  private boolean emulatesKCNet( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.hgmc.kcnet.enabled",
+				false );
+  }
+
+
+  private boolean emulatesUSB( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				"jkcemu.hgmc.vdip.enabled",
+				false );
+  }
+}

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -782,7 +782,10 @@ public class Z9001 extends EmuSys implements
   {
     int rv = -1;
     if( !this.graphMode ) {
-      rv = (this.fixedScreenSize ? 16 : 8);
+      rv = 8;
+      if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
+	rv *= 2;
+      }
     }
     return rv;
   }
@@ -801,7 +804,7 @@ public class Z9001 extends EmuSys implements
     int rv = -1;
     if( !this.graphMode ) {
       rv = (this.mode20Rows ? 9 : 8);
-      if( this.fixedScreenSize ) {
+      if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
 	rv *= 2;
       }
     }
@@ -815,7 +818,9 @@ public class Z9001 extends EmuSys implements
     int rv = -1;
     if( !this.graphMode ) {
       rv = 8;
-      if( this.fixedScreenSize && !this.c80Active ) {
+      if( (this.fixedScreenSize || this.screenFrm.isFullScreenMode())
+	  && !this.c80Active )
+      {
 	rv = 16;
       }
     }
@@ -851,7 +856,7 @@ public class Z9001 extends EmuSys implements
   public int getColorIndex( int x, int y )
   {
     int rv = 0;
-    if( this.fixedScreenSize ) {
+    if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
       y /= 2;
     }
     if( this.graphMode
@@ -859,7 +864,7 @@ public class Z9001 extends EmuSys implements
 	&& (this.ramPixel != null) )
     {
       boolean done = false;
-      if( this.fixedScreenSize ) {
+      if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
 	x /= 2;
       }
       x -= 32;		// Grafikausgabe ueber Alpha-Ausgabe zentrieren
@@ -890,7 +895,7 @@ public class Z9001 extends EmuSys implements
 	}
 	col /= 2;
       } else {
-	if( this.fixedScreenSize ) {
+	if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
 	  x   /= 2;
 	  col /= 2;
 	}
@@ -1113,7 +1118,11 @@ public class Z9001 extends EmuSys implements
   @Override
   public int getScreenHeight()
   {
-    return this.fixedScreenSize ? 384 : 192;
+    int rv = 192;
+    if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
+      rv *= 2;
+    }
+    return rv;
   }
 
 
@@ -1121,8 +1130,10 @@ public class Z9001 extends EmuSys implements
   public int getScreenWidth()
   {
     int rv = 320;
-    if( this.fixedScreenSize || (this.c80Active && !this.graphMode) ) {
-      rv = 640;
+    if( this.fixedScreenSize || this.screenFrm.isFullScreenMode()
+	|| (this.c80Active && !this.graphMode) )
+    {
+      rv *= 2;
     }
     return rv;
   }

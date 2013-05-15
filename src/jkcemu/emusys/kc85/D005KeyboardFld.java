@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,10 +19,6 @@
  *  Bit 16-23: Tastencode bei Control
  *  Bit 24:    0: 1-Byte-Tastencode senden
  *             1: Bei CTRL im PC-Mode zwei-Byte-Tastencode senden
- *
- * Die Tastatur kennt zwei Betriebsmodi: CAOS und MicroDOS (PC-Mode)
- * Im PC-Mode sind einige Tasten anders belegt.
- * Ausserdem gibt es auch Zwei-Byte-Tastencodes.
  */
 
 package jkcemu.emusys.kc85;

@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.lang.*;
 import java.util.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.emusys.Z9001;
 import jkcemu.programming.*;
 import jkcemu.text.*;
 import jkcemu.tools.ReassFrm;
@@ -47,7 +48,14 @@ public class AsmThread extends PrgThread
   public boolean execute() throws IOException
   {
     appendToLog( "Assembliere...\n" );
-    boolean status = this.assembler.assemble();
+    boolean forZ9001 = false;
+    if( this.emuThread != null ) {
+      EmuSys emuSys = this.emuThread.getEmuSys();
+      if( emuSys != null ) {
+	forZ9001 = (emuSys instanceof Z9001 );
+      }
+    }
+    boolean status = this.assembler.assemble( null, forZ9001 );
     if( status ) {
       if( this.options.getFormatSource() ) {
 	String srcOut = this.assembler.getFormattedSourceText();

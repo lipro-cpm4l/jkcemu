@@ -73,6 +73,14 @@ public class KramerMCTarget extends AbstractTarget
 
 
   @Override
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tLD\tC,A\n"
+		+ "\tJP\t00ECH\n" );
+  }
+
+
+  @Override
   public void appendXOUTCH( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
@@ -80,6 +88,16 @@ public class KramerMCTarget extends AbstractTarget
 		+ "\tJP\t00E6H\n" );
       this.xoutchAppended = true;
     }
+  }
+
+
+  @Override
+  public void appendXOUTNL( AsmCodeBuf buf )
+  {
+    buf.append( "XOUTNL:\tLD\tC,0DH\n"
+		+ "\tCALL\t00E6H\n"
+		+ "\tLD\tC,0AH\n"
+		+ "\tJP\t00E6H\n" );
   }
 
 
@@ -112,6 +130,13 @@ public class KramerMCTarget extends AbstractTarget
   public int getDefaultBegAddr()
   {
     return 0x1000;
+  }
+
+
+  @Override
+  public boolean supportsXLPTCH()
+  {
+    return true;
   }
 
 

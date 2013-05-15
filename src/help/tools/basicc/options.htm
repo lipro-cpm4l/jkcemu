@@ -128,6 +128,15 @@
     Bei dieser Option wird der erzeugte Programmcode in eine Datei
     geschrieben, deren Namen Sie angeben m&uuml;ssen.
     Das Format der Datei h&auml;ngt von der angegebenen Dateiendung ab.
+    <br/><br/>
+    <b>Achtung!</b> Bei KCC-, KCM- und TAP-Dateien gibt es abh&auml;ngig
+    vom Zielsystem Unterschiede im Dateiformat .
+    Wenn ein Zielsystem f&uuml;r KC85/1, KC87 oder Z9001 ausgew&auml;hlt
+    ist, wird im Dateikopf der Dateityp <em>COM</em> eingetragen
+    sowie bei TAP-Dateien mit der Blocknummer&nbsp;0 begonnen.
+    Bei allen anderen Zielsystemen wird kein Dateityp eingetragen.
+    Au&szlig;erdem beginnen dann TAP-Dateien entsprechend den HC900-
+    und KC85/2..5-Konventionen mit der Blocknummer&nbsp;1.
    </li>
   </ul>
  <br/><br/>

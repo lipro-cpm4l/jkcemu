@@ -202,7 +202,8 @@ public class CmdLineBasicCompiler
 	if( sysName == null ) {
 	  throw new IOException( "Option \'t\' nicht angegeben" );
 	}
-	AbstractTarget target = null;
+	AbstractTarget target   = null;
+	boolean        forZ9001 = false;
 	if( sysName != null ) {
 	  if( sysName.equalsIgnoreCase( "SCCH" ) ) {
 	    target = new SCCHTarget();
@@ -220,10 +221,12 @@ public class CmdLineBasicCompiler
 	    target = new KramerMCTarget();
 	  }
 	  else if( sysName.equalsIgnoreCase( "Z9001" ) ) {
-	    target = new Z9001Target();
+	    target   = new Z9001Target();
+	    forZ9001 = true;
 	  }
 	  else if( sysName.equalsIgnoreCase( "Z9001_KRT" ) ) {
-	    target = new Z9001KRTTarget();
+	    target   = new Z9001KRTTarget();
+	    forZ9001 = true;
 	  }
 	  else if( sysName.equalsIgnoreCase( "LLC2_HIRES" ) ) {
 	    target = new LLC2HIRESTarget();
@@ -345,7 +348,13 @@ public class CmdLineBasicCompiler
 	options.setShowAssemblerText( asmFlag );
 
 	// Compiler starten
-	status = compile( srcFile, outFileName, options, asmFlag );
+	status = compile(
+			srcFile,
+			outFileName,
+			target.supportsAppName() ? appName : null,
+			forZ9001,
+			options,
+			asmFlag );
       }
     }
     catch( IOException ex ) {
@@ -371,6 +380,8 @@ public class CmdLineBasicCompiler
   private static boolean compile(
 				File         srcFile,
 				String       outFileName,
+				String       appName,
+				boolean      forZ9001,
 				BasicOptions options,
 				boolean      suppressAssembler )
   {
@@ -449,7 +460,7 @@ public class CmdLineBasicCompiler
 						options,
 						logger,
 						false );
-	  status = assembler.assemble();
+	  status = assembler.assemble( appName, forZ9001 );
 	  if( assembler.getRelJumpsTooLong() ) {
 	    EmuUtil.printlnErr( "Compilieren Sie bitte mit einer"
 			+ " niedrigeren Optimierungsstufe (max. \'-O3\')." );

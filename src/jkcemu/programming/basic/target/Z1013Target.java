@@ -192,10 +192,24 @@ public class Z1013Target extends AbstractTarget
 
 
   @Override
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tLD\tB,A\n"
+		+ "\tLD\tA,(0FFE8H)\n"
+		+ "\tCP\t0C3H\n"
+		+ "\tRET\tNZ\n"
+		+ "\tLD\tA,B\n"
+		+ "\tJP\t0FFE8H\n" );
+  }
+
+
+  @Override
   public void appendXOUTCH( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
-      buf.append( "XOUTCH:\tRST\t20H\n"
+      buf.append( "XOUTCH:\tCP\t0AH\n"
+		+ "\tRET\tZ\n"
+		+ "\tRST\t20H\n"
 		+ "\tDB\t00H\n"
 		+ "\tRET\n" );
       this.xoutchAppended = true;
@@ -209,15 +223,10 @@ public class Z1013Target extends AbstractTarget
   @Override
   public void appendXOUTNL( AsmCodeBuf buf )
   {
-    buf.append( "XOUTNL:\tLD\tA,0DH\n" );
-    if( this.xoutchAppended ) {
-      buf.append( "\tJP\tXOUTCH\n" );
-    } else {
-      buf.append( "XOUTCH:\tRST\t20H\n"
+    buf.append( "XOUTNL:\tLD\tA,0DH\n"
+		+ "\tRST\t20H\n"
 		+ "\tDB\t00H\n"
 		+ "\tRET\n" );
-      this.xoutchAppended = true;
-    }
   }
 
 
@@ -276,12 +285,13 @@ public class Z1013Target extends AbstractTarget
       }
       buf.append( "XPSET2:\tLD\tA,B\n"		// Pixel setzen
 		+ "\tOR\tC\n"
-		+ "XPSET3:\tLD\tB,0\n"
+		+ "XPSET3:\tEX\tDE,HL\n"
+		+ "\tLD\tB,0\n"
 		+ "\tLD\tC,A\n"
-		+ "\tLD\tIY,X_PST4\n"
-		+ "\tADD\tIY,BC\n"
-		+ "\tLD\tA,(IY+0)\n"
-		+ "\tLD\t(HL),A\n"
+		+ "\tLD\tHL,X_PST4\n"
+		+ "\tADD\tHL,BC\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tLD\t(DE),A\n"
 		+ "\tRET\n" );
       appendPixUtil( buf );
       this.xpsetAppended = true;
@@ -349,6 +359,20 @@ public class Z1013Target extends AbstractTarget
 
 
   @Override
+  public int getKCNetBaseIOAddr()
+  {
+    return 0xC0;
+  }
+
+
+  @Override
+  public int[] getVdipBaseIOAddresses()
+  {
+    return new int[] { 0xDC, 0xFC };
+  }
+
+
+  @Override
   public void reset()
   {
     super.reset();
@@ -380,6 +404,13 @@ public class Z1013Target extends AbstractTarget
 
   @Override
   public boolean supportsXLOCAT()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXLPTCH()
   {
     return true;
   }

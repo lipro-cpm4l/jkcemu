@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,8 +10,10 @@ package jkcemu.emusys.huebler;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
+import java.text.*;
 import java.util.Properties;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -23,6 +25,8 @@ public abstract class AbstractHueblerMC
   protected int     keyChar;
   protected Z80CTC  ctc;
   protected Z80PIO  pio;
+
+  private int pasteStateNum;
 
 
   public AbstractHueblerMC( EmuThread emuThread, Properties props )
@@ -137,8 +141,39 @@ public abstract class AbstractHueblerMC
   @Override
   public int readIOByte( int port )
   {
+    port &= 0xFF;
+
     int rv = 0;
-    switch( port & 0xFF ) {
+    if( (port >= 0x08) && (port <= 0x0B) ) {
+      // Einfuegen aus der Zwischenablage
+      if( this.pasteStateNum > 0 ) {
+	if( this.pasteStateNum == 4 ) {
+	  this.keyChar = 0;
+	}
+	--this.pasteStateNum;
+      } else {
+	CharacterIterator iter = this.pasteIter;
+	if( iter != null ) {
+	  char ch = iter.current();
+	  iter.next();
+	  if( ch == CharacterIterator.DONE ) {
+	    cancelPastingText();
+	  } else {
+	    ch = TextUtil.toISO646DE( ch );
+	    if( ch == '\n' ) {
+	      ch = '\r';
+	    }
+	    if( (ch == '\r')
+		|| ((ch >= '\u0000') && (ch < '\u007F')) )
+	    {
+	      this.keyChar = ch;
+	      this.pasteStateNum = 8;
+	    }
+	  }
+	}
+      }
+    }
+    switch( port ) {
       case 0x08:
       case 0x0A:
 	rv = this.keyChar;
@@ -175,6 +210,38 @@ public abstract class AbstractHueblerMC
 	break;
     }
     return rv;
+  }
+
+
+  @Override
+  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  {
+    this.keyChar       = 0;
+    this.pasteStateNum = 0;
+  }
+
+
+  @Override
+  public synchronized void startPastingText( String text )
+  {
+    boolean done = false;
+    if( text != null ) {
+      if( !text.isEmpty() ) {
+	cancelPastingText();
+	this.pasteIter = new StringCharacterIterator( text );
+	done = true;
+      }
+    }
+    if( !done ) {
+      this.screenFrm.firePastingTextFinished();
+    }
+  }
+
+
+  @Override
+  public boolean supportsPasteFromClipboard()
+  {
+    return true;
   }
 
 

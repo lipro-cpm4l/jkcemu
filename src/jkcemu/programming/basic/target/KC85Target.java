@@ -21,6 +21,7 @@ public class KC85Target extends AbstractTarget
   private boolean usesColors;
   private boolean usesJoystick;
   private boolean usesOSVersion;
+  private boolean usesM052;
   private boolean xpresAppended;
   private boolean xpsetAppended;
 
@@ -31,89 +32,92 @@ public class KC85Target extends AbstractTarget
   }
 
 
-  /*
-   * Farbcodes in HL
-   */
   @Override
-  public void appendColorBlack( AsmCodeBuf buf )
+  public void appendDataTo( AsmCodeBuf buf )
   {
-    buf.append( "\tLD\tHL,0000H\n" );
-  }
-
-
-  @Override
-  public void appendColorBlinking( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0010H\n" );
-  }
-
-
-  @Override
-  public void appendColorBlue( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  @Override
-  public void appendColorCyan( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0005H\n" );
-  }
-
-
-  @Override
-  public void appendColorGreen( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0004H\n" );
-  }
-
-
-  @Override
-  public void appendColorMagenta( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0003H\n" );
-  }
-
-
-  @Override
-  public void appendColorRed( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0002H\n" );
-  }
-
-
-  @Override
-  public void appendColorWhite( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0007H\n" );
-  }
-
-
-  @Override
-  public void appendColorYellow( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0006H\n" );
-  }
-
-
-  @Override
-  public void appendData( AsmCodeBuf buf )
-  {
+    super.appendDataTo( buf );
     buf.append( "X_CAOS:\tDB\t'CAOS '\n"
 		+ "\tDB\t00H\n" );
   }
 
 
   @Override
-  public void appendBSS( AsmCodeBuf buf )
+  public void appendBssTo( AsmCodeBuf buf )
   {
-    super.appendBSS( buf );
+    super.appendBssTo( buf );
     if( this.usesColors ) {
-      buf.append( "X_MINK:\tDS\t1\n" );
+      buf.append( "X_M_INK:\n"
+		+ "\tDS\t1\n" );
     }
     if( this.usesOSVersion ) {
-      buf.append( "X_MOSV:\tDS\t1\n" );
+      buf.append( "X_M_OS:\tDS\t1\n" );
+    }
+    if( this.usesM052 ) {
+      buf.append( "X_M_M052SLOT:\n"
+		+ "\tDS\t1\n"
+		+ "X_M_M052STAT:\n"
+		+ "\tDS\t1\n"
+		+ "X_M_M052USED:\n"
+		+ "\tDS\t1\n" );
+    }
+  }
+
+
+  @Override
+  public void appendEnableKCNet( AsmCodeBuf buf )
+  {
+    buf.append( "\tCALL\tX_M052\n" );
+    this.usesM052 = true;
+  }
+
+
+  @Override
+  public void appendEnableVdip( AsmCodeBuf buf )
+  {
+    buf.append( "\tCALL\tX_M052\n" );
+    this.usesM052 = true;
+  }
+
+
+  @Override
+  public void appendEtc( AsmCodeBuf buf )
+  {
+    super.appendEtc( buf );
+    if( this.usesM052 ) {
+      /*
+       * Aktivieren des Moduls M052
+       * Rueckgabewert:
+       *   CY=0: M052 aktiv
+       *   CY=1: M052 nicht gefunden
+       */
+      buf.append( "X_M052:\tLD\tA,(X_M_M052USED)\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tNZ\n"
+		+ "\tLD\tBC,0880H\n"
+		+ "X_M052_1:\n"
+		+ "\tIN\tA,(C)\n"
+		+ "\tCP\t0FDH\n"
+		+ "\tJR\tZ,X_M052_2\n"
+		+ "\tINC\tB\n"
+		+ "\tJR\tNZ,X_M052_1\n"
+		+ "\tSCF\n"
+		+ "\tRET\n"			// M052 nicht gefunden, CY=1
+		+ "X_M052_2:\n"
+		+ "\tLD\tA,B\n"
+		+ "\tLD\t(X_M_M052SLOT),A\n"
+		+ "\tLD\tH,0B8H\n"
+		+ "\tLD\tL,B\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tLD\t(X_M_M052STAT),A\n"
+		+ "\tOR\t04H\n"
+		+ "\tLD\tD,A\n"
+		+ "\tLD\tA,02H\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tDB\t26H\n"
+		+ "\tLD\tA,0FFH\n"
+		+ "\tLD\t(X_M_M052USED),A\n"
+		+ "\tOR\tA\n"			// CY=0
+		+ "\tRET\n" );
     }
   }
 
@@ -121,7 +125,20 @@ public class KC85Target extends AbstractTarget
   @Override
   public void appendExit( AsmCodeBuf buf )
   {
-    buf.append( "\tRET\n" );
+    if( this.usesM052 ) {
+      buf.append( "\tLD\tA,(X_M_M052USED)\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tLD\tA,(X_M_M052STAT)\n"
+		+ "\tLD\tD,A\n"
+		+ "\tLD\tA,(X_M_M052SLOT)\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tA,02H\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tDB\t26H\n" );
+    }
+    buf.append( "X_EXIT1:\n"
+		+ "\tRET\n" );
   }
 
 
@@ -140,9 +157,9 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendInit( AsmCodeBuf buf )
+  public void appendInitTo( AsmCodeBuf buf )
   {
-    super.appendInit( buf );
+    super.appendInitTo( buf );
     if( this.usesJoystick ) {
       /*
        * Joystick-PIO im Modul M008/M021 programmieren,
@@ -160,7 +177,7 @@ public class KC85Target extends AbstractTarget
        * wenn es eine Ziffer ist.
        */
       buf.append( "\tXOR\tA\n"
-		+ "\tLD\t(X_MOSV),A\n"
+		+ "\tLD\t(X_M_OS),A\n"
 		+ "\tLD\tBC,0EFFFH\n"
 		+ "X_IOS1:\tINC\tBC\n"
 		+ "\tLD\tA,B\n"
@@ -182,13 +199,13 @@ public class KC85Target extends AbstractTarget
 		+ "\tJR\tC,X_IOS4\n"
 		+ "\tCP\t0A0H\n"
 		+ "\tJR\tNC,X_IOS4\n"
-		+ "\tLD\t(X_MOSV),A\n"
+		+ "\tLD\t(X_M_OS),A\n"
 		+ "X_IOS4:\n" );
     }
     if( this.usesColors ) {
       buf.append( "\tLD\tA,(0B7A3H)\n"
 		+ "\tAND\t0F8H\n"
-		+ "\tLD\t(X_MINK),A\n" );
+		+ "\tLD\t(X_M_INK),A\n" );
     }
     if( this.needsFullWindow ) {
       // Fenstergroesse pruefen und ggf. auf Maximalewerte setzen
@@ -230,6 +247,12 @@ public class KC85Target extends AbstractTarget
 		+ "\tCALL\t0F003H\n"
 		+ "\tDB\t00H\n"
 		+ "X_IWN2:\n" );
+    }
+    if( this.usesM052 ) {
+      buf.append( "\tXOR\tA\n"
+		+ "\tLD\t(X_M_M052SLOT),A\n"
+		+ "\tLD\t(X_M_M052STAT),A\n"
+		+ "\tLD\t(X_M_M052USED),A\n" );
     }
   }
 
@@ -292,8 +315,8 @@ public class KC85Target extends AbstractTarget
     }
     if( !done ) {
       compiler.putWarning(
-		"Programm kann im Betriebssystem nicht aufgerufen"
-			+ " werden, da der Programmname leer ist." );
+		"Programm kann auf dem Zielsystem nicht aufgerufen werden,"
+				+ " da der Programmname leer ist." );
     }
     buf.append( "\tENT\n" );
   }
@@ -339,7 +362,7 @@ public class KC85Target extends AbstractTarget
 		+ "\tSLA\tA\n"
 		+ "\tSLA\tA\n"
 		+ "\tSLA\tA\n"
-		+ "\tLD\t(X_MINK),A\n"
+		+ "\tLD\t(X_M_INK),A\n"
 		+ "\tLD\tA,E\n"
 		+ "\tAND\t07H\n"
 		+ "\tLD\tE,A\n"
@@ -377,7 +400,7 @@ public class KC85Target extends AbstractTarget
 		+ "\tRET\tNZ\n"
 		+ "\tBIT\t7,H\n"		// Y pruefen
 		+ "\tRET\tNZ\n"
-		+ "\tLD\tA,(X_MOSV)\n"
+		+ "\tLD\tA,(X_M_OS)\n"
 		+ "\tCP\t04H\n"
 		+ "\tJR\tC,XHLIN2\n"
 		+ "\tLD\t(0B782H),DE\n"
@@ -399,10 +422,10 @@ public class KC85Target extends AbstractTarget
 		+ "\tCP\t03H\n"
 		+ "\tJR\tZ,XHLIN1\n"
 		+ "\tDEC\tB\n"
-		+ "XHLIN1:\tLD\tA,(X_MINK)\n"
+		+ "XHLIN1:\tLD\tA,(X_M_INK)\n"
 		+ "\tOR\tB\n" );
     } else {
-      buf.append( "\tLD\tA,(X_MINK)\n" );
+      buf.append( "\tLD\tA,(X_M_INK)\n" );
     }
     buf.append( "\tLD\t(0B7D6H),A\n"
 		+ "\tCALL\t0F003H\n"
@@ -440,7 +463,7 @@ public class KC85Target extends AbstractTarget
 		+ "\tSLA\tA\n"
 		+ "\tSLA\tA\n"
 		+ "\tSLA\tA\n"
-		+ "\tLD\t(X_MINK),A\n"
+		+ "\tLD\t(X_M_INK),A\n"
 		+ "\tLD\tA,01H\n"
 		+ "\tLD\t(0B781H),A\n"
 		+ "\tCALL\t0F003H\n"
@@ -516,6 +539,15 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tCALL\t0F003H\n"
+		+ "\tDB\t02H\n"
+		+ "\tRET\n" );
+  }
+
+
+  @Override
   public void appendXOUTCH( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
@@ -533,7 +565,7 @@ public class KC85Target extends AbstractTarget
     buf.append( "XPAPER:\tLD\tA,L\n"
 		+ "\tAND\t07H\n"
 		+ "\tLD\tE,A\n"
-		+ "\tLD\tA,(X_MINK)\n"
+		+ "\tLD\tA,(X_M_INK)\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
@@ -594,7 +626,7 @@ public class KC85Target extends AbstractTarget
 		+ "\tDEC\tA\n"
 		+ "\tJR\tZ,XPRES1\n"
 		+ "\tINC\tB\n"
-		+ "\tLD\tA,(X_MOSV)\n"
+		+ "\tLD\tA,(X_M_OS)\n"
 		+ "\tCP\t04H\n"
 		+ "\tJR\tC,XPSET3\n"
 		+ "XPSET1:" );
@@ -603,7 +635,7 @@ public class KC85Target extends AbstractTarget
       buf.append( "\tLD\tA,L\n"
 		+ "\tLD\t(0B7D5H),A\n"
 		+ "\tLD\t(0B7D3H),DE\n"
-		+ "\tLD\tA,(X_MINK)\n" );
+		+ "\tLD\tA,(X_M_INK)\n" );
       if( this.usesX_MPEN ) {
 	buf.append( "\tOR\tB\n"
 		+ "XPSET2:" );
@@ -616,7 +648,7 @@ public class KC85Target extends AbstractTarget
 	buf.append( "XPSET3:\tCALL\tXPRES1\n"
 		+ "\tRET\tC\n"
 		+ "\tRET\tNZ\n"
-		+ "\tLD\tA,(X_MINK)\n"
+		+ "\tLD\tA,(X_M_INK)\n"
 		+ "\tJR\tXPSET2\n" );
 	appendXPRES( buf, compiler );
       }
@@ -700,6 +732,97 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
+  public int getColorBlack()
+  {
+    return 0;
+  }
+
+
+  @Override
+  public int getColorBlinking()
+  {
+    return 0x10;
+  }
+
+
+  @Override
+  public int getColorBlue()
+  {
+    return 0x01;
+  }
+
+
+  @Override
+  public int getColorCyan()
+  {
+    return 0x05;
+  }
+
+
+  @Override
+  public int getColorGreen()
+  {
+    return 0x04;
+  }
+
+
+  @Override
+  public int getColorMagenta()
+  {
+    return 0x03;
+  }
+
+
+  @Override
+  public int getColorRed()
+  {
+    return 0x02;
+  }
+
+
+  @Override
+  public int getColorWhite()
+  {
+    return 0x07;
+  }
+
+
+  @Override
+  public int getColorYellow()
+  {
+    return 0x06;
+  }
+
+
+  @Override
+  public int getKCNetBaseIOAddr()
+  {
+    return 0x28;
+  }
+
+
+  @Override
+  public int[] getVdipBaseIOAddresses()
+  {
+    return new int[] { 0x2C };
+  }
+
+
+  @Override
+  public boolean needsEnableKCNet()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean needsEnableVdip()
+  {
+    return true;
+  }
+
+
+  @Override
   public void reset()
   {
     super.reset();
@@ -707,6 +830,7 @@ public class KC85Target extends AbstractTarget
     this.usesColors      = false;
     this.usesJoystick    = false;
     this.usesOSVersion   = false;
+    this.usesM052        = false;
     this.xpresAppended   = false;
     this.xpsetAppended   = false;
   }
@@ -756,6 +880,13 @@ public class KC85Target extends AbstractTarget
 
   @Override
   public boolean supportsXLOCAT()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXLPTCH()
   {
     return true;
   }

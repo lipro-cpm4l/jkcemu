@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,6 +21,7 @@ import jkcemu.Main;
 import jkcemu.emusys.a5105.A5105SettingsFld;
 import jkcemu.emusys.ac1_llc2.*;
 import jkcemu.emusys.etc.*;
+import jkcemu.emusys.huebler.HueblerGraphicsMCSettingsFld;
 import jkcemu.emusys.kc85.KC85SettingsFld;
 import jkcemu.emusys.kccompact.KCcompactSettingsFld;
 import jkcemu.emusys.lc80.LC80SettingsFld;
@@ -41,106 +42,105 @@ public class SettingsFrm extends BasicFrm
 
   private static SettingsFrm instance = null;
 
-  private ScreenFrm                   screenFrm;
-  private EmuThread                   emuThread;
-  private File                        profileFile;
-  private Map<String,AbstractButton>  lafClass2Button;
-  private SpinnerNumberModel          spinnerModelMargin;
-  private KCNetSettingsFld            tabKCNet;
-  private JPanel                      tabConfirm;
-  private JPanel                      tabEtc;
-  private JPanel                      tabLAF;
-  private JPanel                      tabScreen;
-  private JPanel                      tabSpeed;
-  private JPanel                      tabSys;
-  private JPanel                      panelSysOpt;
-  private JCheckBox                   btnConfirmNMI;
-  private JCheckBox                   btnConfirmReset;
-  private JCheckBox                   btnConfirmPowerOn;
-  private JCheckBox                   btnConfirmQuit;
-  private JCheckBox                   btnClearRFsOnPowerOn;
-  private JCheckBox                   btnReloadROMsOnPowerOn;
-  private JComboBox                   comboScreenRefresh;
-  private CardLayout                  cardLayoutSysOpt;
-  private String                      curSysOptCard;
-  private JRadioButton                btnSysA5105;
-  private JRadioButton                btnSysAC1;
-  private JRadioButton                btnSysBCS3;
-  private JRadioButton                btnSysC80;
-  private JRadioButton                btnSysHC900;
-  private JRadioButton                btnSysHEMC;
-  private JRadioButton                btnSysHGMC;
-  private JRadioButton                btnSysKC85_1;
-  private JRadioButton                btnSysKC85_2;
-  private JRadioButton                btnSysKC85_3;
-  private JRadioButton                btnSysKC85_4;
-  private JRadioButton                btnSysKC85_5;
-  private JRadioButton                btnSysKC87;
-  private JRadioButton                btnSysKCcompact;
-  private JRadioButton                btnSysKramerMC;
-  private JRadioButton                btnSysLC80;
-  private JRadioButton                btnSysLLC1;
-  private JRadioButton                btnSysLLC2;
-  private JRadioButton                btnSysPCM;
-  private JRadioButton                btnSysPoly880;
-  private JRadioButton                btnSysSC2;
-  private JRadioButton                btnSysSLC1;
-  private JRadioButton                btnSysVCS80;
-  private JRadioButton                btnSysZ1013;
-  private JRadioButton                btnSysZ9001;
-  private JRadioButton                btnBCS3se24_27;
-  private JRadioButton                btnBCS3se31_29;
-  private JRadioButton                btnBCS3se31_40;
-  private JRadioButton                btnBCS3sp33_29;
-  private JRadioButton                btnBCS3Ram1k;
-  private JRadioButton                btnBCS3Ram17k;
-  private JCheckBox                   btnHGMCBasic;
-  private JCheckBox                   btnHGMCCatchPrintCalls;
-  private JCheckBox                   btnHEMCCatchPrintCalls;
-  private JCheckBox                   btnKramerMCCatchPrintCalls;
-  private JRadioButton                btnLC80_U505;
-  private JRadioButton                btnLC80_2716;
-  private JRadioButton                btnLC80_2;
-  private JRadioButton                btnLC80e;
-  private A5105SettingsFld            a5105SettingsFld;
-  private AC1SettingsFld              ac1SettingsFld;
-  private LLC2SettingsFld             llc2SettingsFld;
-  private KC85SettingsFld             hc900SettingsFld;
-  private Z9001SettingsFld            kc85_1_SettingsFld;
-  private KC85SettingsFld             kc85_2_SettingsFld;
-  private KC85SettingsFld             kc85_3_SettingsFld;
-  private KC85SettingsFld             kc85_4_SettingsFld;
-  private KC85SettingsFld             kc85_5_SettingsFld;
-  private KCcompactSettingsFld        kcCompactSettingsFld;
-  private LC80SettingsFld             lc80SettingsFld;
-  private PCMSettingsFld              pcmSettingsFld;
-  private Poly880SettingsFld          poly880SettingsFld;
-  private Z1013SettingsFld            z1013SettingsFld;
-  private Z9001SettingsFld            kc87SettingsFld;
-  private Z9001SettingsFld            z9001SettingsFld;
-  private JRadioButton                btnSpeedDefault;
-  private JRadioButton                btnSpeedValue;
-  private JRadioButton                btnSRAMInit00;
-  private JRadioButton                btnSRAMInitRandom;
-  private JRadioButton                btnFileDlgEmu;
-  private JRadioButton                btnFileDlgNative;
-  private JCheckBox                   btnDirectCopyPaste;
-  private JLabel                      labelSpeedUnit;
-  private JTextField                  fldSpeed;
-  private Document                    docSpeed;
-  private NumberFormat                fmtSpeed;
-  private JTextField                  fldConfigDir;
-  private JButton                     btnDeleteConfigDir;
-  private JSlider                     sliderBrightness;
-  private JSpinner                    spinnerMargin;
-  private ButtonGroup                 grpLAF;
-  private UIManager.LookAndFeelInfo[] lafs;
-  private JButton                     btnApply;
-  private JButton                     btnLoad;
-  private JButton                     btnSave;
-  private JButton                     btnHelp;
-  private JButton                     btnClose;
-  private JTabbedPane                 tabbedPane;
+  private ScreenFrm                    screenFrm;
+  private EmuThread                    emuThread;
+  private File                         profileFile;
+  private Map<String,AbstractButton>   lafClass2Button;
+  private SpinnerNumberModel           spinnerModelMargin;
+  private KCNetSettingsFld             tabKCNet;
+  private JPanel                       tabConfirm;
+  private JPanel                       tabEtc;
+  private JPanel                       tabLAF;
+  private JPanel                       tabScreen;
+  private JPanel                       tabSpeed;
+  private JPanel                       tabSys;
+  private JPanel                       panelSysOpt;
+  private JCheckBox                    btnConfirmNMI;
+  private JCheckBox                    btnConfirmReset;
+  private JCheckBox                    btnConfirmPowerOn;
+  private JCheckBox                    btnConfirmQuit;
+  private JCheckBox                    btnClearRFsOnPowerOn;
+  private JCheckBox                    btnReloadROMsOnPowerOn;
+  private JComboBox                    comboScreenRefresh;
+  private CardLayout                   cardLayoutSysOpt;
+  private String                       curSysOptCard;
+  private JRadioButton                 btnSysA5105;
+  private JRadioButton                 btnSysAC1;
+  private JRadioButton                 btnSysBCS3;
+  private JRadioButton                 btnSysC80;
+  private JRadioButton                 btnSysHC900;
+  private JRadioButton                 btnSysHEMC;
+  private JRadioButton                 btnSysHGMC;
+  private JRadioButton                 btnSysKC85_1;
+  private JRadioButton                 btnSysKC85_2;
+  private JRadioButton                 btnSysKC85_3;
+  private JRadioButton                 btnSysKC85_4;
+  private JRadioButton                 btnSysKC85_5;
+  private JRadioButton                 btnSysKC87;
+  private JRadioButton                 btnSysKCcompact;
+  private JRadioButton                 btnSysKramerMC;
+  private JRadioButton                 btnSysLC80;
+  private JRadioButton                 btnSysLLC1;
+  private JRadioButton                 btnSysLLC2;
+  private JRadioButton                 btnSysPCM;
+  private JRadioButton                 btnSysPoly880;
+  private JRadioButton                 btnSysSC2;
+  private JRadioButton                 btnSysSLC1;
+  private JRadioButton                 btnSysVCS80;
+  private JRadioButton                 btnSysZ1013;
+  private JRadioButton                 btnSysZ9001;
+  private JRadioButton                 btnBCS3se24_27;
+  private JRadioButton                 btnBCS3se31_29;
+  private JRadioButton                 btnBCS3se31_40;
+  private JRadioButton                 btnBCS3sp33_29;
+  private JRadioButton                 btnBCS3Ram1k;
+  private JRadioButton                 btnBCS3Ram17k;
+  private JCheckBox                    btnHEMCCatchPrintCalls;
+  private JCheckBox                    btnKramerMCCatchPrintCalls;
+  private JRadioButton                 btnLC80_U505;
+  private JRadioButton                 btnLC80_2716;
+  private JRadioButton                 btnLC80_2;
+  private JRadioButton                 btnLC80e;
+  private A5105SettingsFld             a5105SettingsFld;
+  private AC1SettingsFld               ac1SettingsFld;
+  private LLC2SettingsFld              llc2SettingsFld;
+  private HueblerGraphicsMCSettingsFld hgmcSettingsFld;
+  private KC85SettingsFld              hc900SettingsFld;
+  private Z9001SettingsFld             kc85_1_SettingsFld;
+  private KC85SettingsFld              kc85_2_SettingsFld;
+  private KC85SettingsFld              kc85_3_SettingsFld;
+  private KC85SettingsFld              kc85_4_SettingsFld;
+  private KC85SettingsFld              kc85_5_SettingsFld;
+  private KCcompactSettingsFld         kcCompactSettingsFld;
+  private LC80SettingsFld              lc80SettingsFld;
+  private PCMSettingsFld               pcmSettingsFld;
+  private Poly880SettingsFld           poly880SettingsFld;
+  private Z1013SettingsFld             z1013SettingsFld;
+  private Z9001SettingsFld             kc87SettingsFld;
+  private Z9001SettingsFld             z9001SettingsFld;
+  private JRadioButton                 btnSpeedDefault;
+  private JRadioButton                 btnSpeedValue;
+  private JRadioButton                 btnSRAMInit00;
+  private JRadioButton                 btnSRAMInitRandom;
+  private JRadioButton                 btnFileDlgEmu;
+  private JRadioButton                 btnFileDlgNative;
+  private JCheckBox                    btnDirectCopyPaste;
+  private JLabel                       labelSpeedUnit;
+  private JTextField                   fldSpeed;
+  private Document                     docSpeed;
+  private NumberFormat                 fmtSpeed;
+  private JTextField                   fldConfigDir;
+  private JButton                      btnDeleteConfigDir;
+  private JSlider                      sliderBrightness;
+  private JSpinner                     spinnerMargin;
+  private ButtonGroup                  grpLAF;
+  private UIManager.LookAndFeelInfo[]  lafs;
+  private JButton                      btnApply;
+  private JButton                      btnLoad;
+  private JButton                      btnSave;
+  private JButton                      btnHelp;
+  private JButton                      btnClose;
+  private JTabbedPane                  tabbedPane;
 
 
   public static void open( ScreenFrm screenFrm )
@@ -308,6 +308,7 @@ public class SettingsFrm extends BasicFrm
     this.ac1SettingsFld.lookAndFeelChanged();
     this.llc2SettingsFld.lookAndFeelChanged();
     this.hc900SettingsFld.lookAndFeelChanged();
+    this.hgmcSettingsFld.lookAndFeelChanged();
     this.kc85_1_SettingsFld.lookAndFeelChanged();
     this.kc85_2_SettingsFld.lookAndFeelChanged();
     this.kc85_3_SettingsFld.lookAndFeelChanged();
@@ -393,6 +394,7 @@ public class SettingsFrm extends BasicFrm
 	this.btnSave.setEnabled( true );
       }
     }
+    catch( UserCancelException ex ) {}
     catch( UserInputException ex ) {
       if( tab != null ) {
 	this.tabbedPane.setSelectedComponent( tab );
@@ -935,32 +937,10 @@ public class SettingsFrm extends BasicFrm
 
 
     // Optionen fuer Huebler-Grafik-MC
-    JPanel panelHGMC = new JPanel( new GridBagLayout() );
-    this.panelSysOpt.add( panelHGMC, "HGMC" );
-
-    GridBagConstraints gbcHGMC = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
-
-    this.btnHGMCBasic = new JCheckBox(
-				"BASIC-Interpreter im ROM enthalten",
-				true );
-    this.btnHGMCBasic.addActionListener( this );
-    panelHGMC.add( this.btnHGMCBasic, gbcHGMC );
-
-    this.btnHGMCCatchPrintCalls = new JCheckBox(
-		"Betriebssystemaufrufe f\u00FCr Druckerausgaben abfangen",
-		true );
-    this.btnHGMCCatchPrintCalls.addActionListener( this );
-    gbcHGMC.insets.top    = 0;
-    gbcHGMC.insets.bottom = 5;
-    gbcHGMC.gridy++;
-    panelHGMC.add( this.btnHGMCCatchPrintCalls, gbcHGMC );
+    this.hgmcSettingsFld = new HueblerGraphicsMCSettingsFld(
+							this,
+							"jkcemu.hgmc." );
+    this.panelSysOpt.add( this.hgmcSettingsFld, "HGMC" );
 
 
     // Optionen fuer KC85/1..5
@@ -1608,7 +1588,9 @@ public class SettingsFrm extends BasicFrm
   }
 
 
-  private void applySys( Properties props ) throws UserInputException
+  private void applySys( Properties props ) throws
+					UserCancelException,
+					UserInputException
   {
     // System
     String valueSys = "";
@@ -1724,12 +1706,9 @@ public class SettingsFrm extends BasicFrm
 		Boolean.toString( this.btnHEMCCatchPrintCalls.isSelected() ) );
 
     // Optionen fuer Huebler-Grafik-MC
-    props.setProperty(
-		"jkcemu.hgmc.basic",
-		Boolean.toString( this.btnHGMCBasic.isSelected() ) );
-    props.setProperty(
-		"jkcemu.hgmc.catch_print_calls",
-		Boolean.toString( this.btnHGMCCatchPrintCalls.isSelected() ) );
+    this.hgmcSettingsFld.applyInput(
+				props,
+				valueSys.equals( "HueblerGraphicsMC" ) );
 
     // Optionen fuer KC85/1..5
     this.kc85_1_SettingsFld.applyInput( props, valueSys.equals( "KC85/1" ) );
@@ -1997,16 +1976,7 @@ public class SettingsFrm extends BasicFrm
 				true ) );
 
     // Optionen fuer Huebler-Grafik-MC
-    this.btnHGMCBasic.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.hgmc.basic",
-				true ) );
-    this.btnHGMCCatchPrintCalls.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.hgmc.catch_print_calls",
-				true ) );
+    this.hgmcSettingsFld.updFields( props );
 
     // Optionen fuer Kramer-MC
     this.btnKramerMCCatchPrintCalls.setSelected(

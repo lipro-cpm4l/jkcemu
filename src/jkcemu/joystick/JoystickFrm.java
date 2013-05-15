@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -163,7 +163,7 @@ public class JoystickFrm extends BasicFrm
   private JoystickFrm( EmuThread emuThread )
   {
     this.emuThread = emuThread;
-    setTitle( "JKCEMU Spielhebel" );
+    setTitle( "JKCEMU Joysticks" );
     Main.updIcon( this );
 
 
@@ -209,7 +209,7 @@ public class JoystickFrm extends BasicFrm
 				this.labelStatus0,
 				this.joyFld0,
 				this.btnConnect0,
-				"Spielhebel 1" );
+				"Joystick 1" );
     add( this.panel0, gbc );
 
     this.labelStatus1 = new JLabel( textNotConnected );
@@ -220,7 +220,7 @@ public class JoystickFrm extends BasicFrm
 				this.labelStatus1,
 				this.joyFld1,
 				this.btnConnect1,
-				"Spielhebel 2" );
+				"Joystick 2" );
     gbc.gridx++;
     add( this.panel1, gbc );
 

@@ -36,6 +36,24 @@
   mit dem Men&uuml;punkt <em>Assemblieren mit...</em>
   aufrufen und ver&auml;ndern.
  <br/><br/>
+  In den Assembler-Optionen k&ouml;nnen Sie u.a. auch eine Datei angeben,
+  in der der erzeugte Programmcode geschrieben wird.
+  Das Format der Datei ergibt sich dabei aus der Dateiendung.
+ <br/><br/>
+  <b>Achtung!</b> Bei KCC-, KCM- und TAP-Dateien gibt es Unterschiede
+  zwischen KC85/1, KC87 und Z9001 auf der einen sowie HC900 und KC85/2..5
+  auf der anderen Seite.
+  Damit der Assembler das richtige Dateiformat erzeugt,
+  orientiert er sich am gerade emulierten System.
+  Emuliert JKCEMU gerade einen KC85/1, KC87 oder Z9001,
+  wird in den Dateikopf der Dateityp <em>COM</em> eingetragen
+  und bei TAP-Dateien mit der Blocknummer&nbsp;0 begonnen.
+  In allen anderen F&auml;llen wird kein Dateityp eingetragen.
+  Au&szlig;erdem beginnen dann TAP-Dateien entsprechend den HC900-
+  und KC85/2..5-Konventionen mit der Blocknummer&nbsp;1.
+  
+  
+ <br/><br/>
   Wenn Sie mehrere Assembler-Quelltexte im Texteditor ge&ouml;ffnet haben,
   werden die Assembler-Optionen f&uuml;r jeden Quelltext separat verwaltet.
  <br/><br/>
