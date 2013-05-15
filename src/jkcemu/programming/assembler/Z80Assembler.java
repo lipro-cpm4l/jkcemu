@@ -83,7 +83,9 @@ public class Z80Assembler
   }
 
 
-  public boolean assemble() throws IOException
+  public boolean assemble(
+			String  appName,
+			boolean forZ9001 ) throws IOException
   {
     this.errCnt      = 0;
     this.passNum     = 1;
@@ -106,7 +108,7 @@ public class Z80Assembler
 	    printLabels();
 	  }
 	  if( this.options.getCodeToFile() ) {
-	    writeCodeToFile();
+	    writeCodeToFile( appName, forZ9001 );
 	  }
 	}
       }
@@ -2465,7 +2467,7 @@ public class Z80Assembler
   }
 
 
-  private boolean writeCodeToFile()
+  private boolean writeCodeToFile( String appName, boolean forZ9001 )
   {
     boolean status = false;
     byte[] codeBytes = this.codeOut;
@@ -2487,9 +2489,11 @@ public class Z80Assembler
 	String fileName = file.getName();
 	if( fileName != null ) {
 	  String upperName = fileName.toUpperCase();
-	  int    pos       = fileName.lastIndexOf( '.' );
-	  if( pos > 0 ) {
-	    fileDesc = upperName.substring( 0, pos );
+	  if( fileDesc.isEmpty() ) {
+	    int pos = fileName.lastIndexOf( '.' );
+	    if( pos > 0 ) {
+	      fileDesc = upperName.substring( 0, pos );
+	    }
 	  }
 	  if( upperName.endsWith( ".HEX" ) ) {
 	    fileFmt = FileSaver.INTELHEX;
@@ -2498,9 +2502,50 @@ public class Z80Assembler
 	  {
 	    fileFmt = FileSaver.KCC;
 	  } else if( upperName.endsWith( ".TAP" ) ) {
-	    fileFmt = FileSaver.KCTAP_0;
+	    fileFmt = (forZ9001 ? FileSaver.KCTAP_0 : FileSaver.KCTAP_1);
 	  } else if( upperName.endsWith( ".Z80" ) ) {
 	    fileFmt = FileSaver.HEADERSAVE;
+	  }
+	  if( fileFmt.equals( FileSaver.KCC )
+	      || fileFmt.equals( FileSaver.KCTAP_0 )
+	      || fileFmt.equals( FileSaver.KCTAP_1 ) )
+	  {
+	    /*
+	     * Wenn ein Programmname bekannt ist,
+	     * wird dieser als Dateiname in den Dateikopf eingetragen,
+	     * damit beim Laden der Datei mittels der Kassettenfunktionen
+	     * der dann sichtbare Dateiname gleich dem Programmnamen ist.
+	     * Dies vermeidet nicht nur Verwirrung,
+	     * sondern ist z.B. beim Z9001 auch zwingend notwendig.
+	     */
+	    if( appName != null ) {
+	      if( !appName.isEmpty() ) {
+		fileDesc = appName;
+	      }
+	    }
+	    if( forZ9001 ) {
+	      /*
+	       * Beim Z9001 muss ein ausfuehrbares Programm
+	       * im KC-Systemformat den Dateityp COM haben.
+	       */
+	      if( !fileDesc.isEmpty() ) {
+		StringBuilder descBuf = new StringBuilder( 11 );
+		if( fileDesc.length() > 8 ) {
+		  descBuf.append( fileDesc.substring( 0, 8 ) );
+		} else {
+		  descBuf.append( fileDesc );
+		}
+		while( descBuf.length() < 8 ) {
+		  /*
+		   * Die evtl. Luecke zwischen Programmname und Dateityp muss
+		   * mit Null-Bytes statt mit Leereichen aufgefuellt werden.
+		   */
+		  descBuf.append( (char) '\u0000' );
+		}
+		descBuf.append( "COM" );
+		fileDesc = descBuf.toString();
+	      }
+	    }
 	  }
 	}
 	try {

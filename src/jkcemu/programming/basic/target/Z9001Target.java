@@ -29,72 +29,6 @@ public class Z9001Target extends AbstractTarget
   }
 
 
-  /*
-   * Farbcodes in HL
-   */
-  @Override
-  public void appendColorBlack( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0000H\n" );
-  }
-
-
-  @Override
-  public void appendColorBlinking( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0008H\n" );
-  }
-
-
-  @Override
-  public void appendColorBlue( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0004H\n" );
-  }
-
-
-  @Override
-  public void appendColorCyan( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0006H\n" );
-  }
-
-
-  @Override
-  public void appendColorGreen( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0002H\n" );
-  }
-
-
-  @Override
-  public void appendColorMagenta( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0005H\n" );
-  }
-
-
-  @Override
-  public void appendColorRed( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
-  }
-
-
-  @Override
-  public void appendColorWhite( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0007H\n" );
-  }
-
-
-  @Override
-  public void appendColorYellow( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0003H\n" );
-  }
-
-
   @Override
   public void appendExit( AsmCodeBuf buf )
   {
@@ -178,10 +112,11 @@ public class Z9001Target extends AbstractTarget
       appName = appName.substring( 0, 8 );
     }
     buf.appendStringLiteral( appName );
+    buf.append( "\tDB\t00H\n" );
     if( appName.trim().isEmpty() ) {
       compiler.putWarning(
-		"Programm kann im Betriebssystem nicht aufgerufen"
-			+ " werden, da der Programmname leer ist." );
+		"Programm kann auf dem Zielsystem nicht aufgerufen werden,"
+				+ " da der Programmname leer ist." );
     }
   }
 
@@ -318,6 +253,15 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tLD\tC,5\n"
+		+ "\tLD\tE,A\n"
+		+ "\tJP\t0005H\n" );
+  }
+
+
+  @Override
   public void appendXOUTCH( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
@@ -326,6 +270,18 @@ public class Z9001Target extends AbstractTarget
 		+ "\tJP\t0005H\n" );
       this.xoutchAppended = true;
     }
+  }
+
+
+  @Override
+  public void appendXOUTNL( AsmCodeBuf buf )
+  {
+    buf.append( "XOUTNL:\tLD\tC,02H\n"
+		+ "\tLD\tE,0DH\n"
+		+ "\tCALL\t0005H\n"
+		+ "\tLD\tC,02H\n"
+		+ "\tLD\tE,0AH\n"
+		+ "\tJP\t0005H\n" );
   }
 
 
@@ -399,14 +355,15 @@ public class Z9001Target extends AbstractTarget
       }
       buf.append( "XPSET2:\tLD\tA,B\n"		// Pixel setzen
 		+ "\tOR\tC\n"
-		+ "XPSET3:\tLD\tB,0\n"
+		+ "XPSET3:\tEX\tDE,HL\n"
+		+ "\tLD\tB,0\n"
 		+ "\tLD\tC,A\n"
-		+ "\tLD\tIY,X_PST4\n"
-		+ "\tADD\tIY,BC\n"
-		+ "\tLD\tA,(IY+0)\n"
-		+ "\tLD\t(HL),A\n" );
+		+ "\tLD\tHL,X_PST4\n"
+		+ "\tADD\tHL,BC\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tLD\t(DE),A\n" );
       if( this.usesColors ) {
-	buf.append( "\tLD\tDE,0FC00H\n"
+	buf.append( "\tLD\tHL,0FC00H\n"
 		+ "\tADD\tHL,DE\n"
 		+ "\tLD\tA,(0027H)\n"
 		+ "\tLD\t(HL),A\n" );
@@ -477,6 +434,83 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
+  public int getColorBlack()
+  {
+    return 0;
+  }
+
+
+  @Override
+  public int getColorBlinking()
+  {
+    return 0x08;
+  }
+
+
+  @Override
+  public int getColorBlue()
+  {
+    return 0x04;
+  }
+
+
+  @Override
+  public int getColorCyan()
+  {
+    return 0x06;
+  }
+
+
+  @Override
+  public int getColorGreen()
+  {
+    return 0x02;
+  }
+
+
+  @Override
+  public int getColorMagenta()
+  {
+    return 0x05;
+  }
+
+
+  @Override
+  public int getColorRed()
+  {
+    return 0x01;
+  }
+
+
+  @Override
+  public int getColorWhite()
+  {
+    return 0x07;
+  }
+
+
+  @Override
+  public int getColorYellow()
+  {
+    return 0x03;
+  }
+
+
+  @Override
+  public int getKCNetBaseIOAddr()
+  {
+    return 0xC0;
+  }
+
+
+  @Override
+  public int[] getVdipBaseIOAddresses()
+  {
+    return new int[] { 0xDC };
+  }
+
+
+  @Override
   public void reset()
   {
     super.reset();
@@ -531,6 +565,13 @@ public class Z9001Target extends AbstractTarget
 
   @Override
   public boolean supportsXLOCAT()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXLPTCH()
   {
     return true;
   }

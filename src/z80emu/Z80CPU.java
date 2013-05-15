@@ -288,9 +288,6 @@ public class Z80CPU
   }
 
 
-  /*
-   * Es kann nur ein TStatesListener gesetzt werden.
-   */
   public synchronized void addTStatesListener( Z80TStatesListener listener )
   {
     Z80TStatesListener[] listeners = this.tStatesListeners;

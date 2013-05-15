@@ -509,7 +509,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       this.btnWarnUnusedItems.setSelected(
 				basicOptions.getWarnUnusedItems() );
     } else {
-      this.fldAppName.setText( "MYAPP" );
+      this.fldAppName.setText( BasicOptions.DEFAULT_APP_NAME );
       this.docHeapSize.setValue( BasicOptions.DEFAULT_HEAP_SIZE );
       this.btnBreakAlways.setSelected( true );
       this.btnCheckBounds.setSelected( true );

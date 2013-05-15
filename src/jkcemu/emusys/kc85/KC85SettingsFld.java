@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,7 +18,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
 import jkcemu.base.*;
-import jkcemu.disk.HardDiskSettingsFld;
+import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.KC85;
 
 
@@ -124,7 +124,7 @@ public class KC85SettingsFld
   private FileNameFld          fldD004RomFile;
   private JButton              btnD004RomFileSelect;
   private JButton              btnD004RomFileRemove;
-  private HardDiskSettingsFld  tabGIDE;
+  private GIDESettingsFld      tabGIDE;
   private FileNameFld[]        altRomTextFlds;
   private JButton[]            altRomSelectBtns;
   private JButton[]            altRomRemoveBtns;
@@ -349,7 +349,7 @@ public class KC85SettingsFld
 
 
     // Tab GIDE
-    this.tabGIDE = new HardDiskSettingsFld( settingsFrm, propPrefix );
+    this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
     this.tabbedPane.addTab( "GIDE", this.tabGIDE );
 
 

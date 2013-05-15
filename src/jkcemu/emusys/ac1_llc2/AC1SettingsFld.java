@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,7 @@ import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
-import jkcemu.disk.HardDiskSettingsFld;
+import jkcemu.disk.GIDESettingsFld;
 
 
 public class AC1SettingsFld extends AbstractSettingsFld
@@ -27,6 +27,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
   private JRadioButton           btnMon2010;
   private JCheckBox              btnColor;
   private JCheckBox              btnFloppyDisk;
+  private JCheckBox              btnJoystick;
   private JCheckBox              btnKCNet;
   private JCheckBox              btnVDIP;
   private JCheckBox              btnPasteFast;
@@ -37,7 +38,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
   private JPanel                 tab2010;
   private JPanel                 tabModel;
   private RAMFloppySettingsFld   tabRF;
-  private HardDiskSettingsFld    tabGIDE;
+  private GIDESettingsFld        tabGIDE;
   private SCCHModule1SettingsFld tabSCCH;
   private JPanel                 tabExt;
   private JPanel                 tabEtc;
@@ -152,9 +153,8 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
 
     // GIDE
-    this.tabGIDE = new HardDiskSettingsFld( settingsFrm, propPrefix );
+    this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
     this.tabbedPane.addTab( "GIDE", this.tabGIDE );
-    updGIDEFieldsEnabled();
 
 
     // Erweiterungen
@@ -171,8 +171,8 @@ public class AC1SettingsFld extends AbstractSettingsFld
 					0, 0 );
 
     this.btnColor = new JCheckBox(
-			"Farbgrafik mit Taktfrequenzumschaltung",
-			false );
+		"Farbgrafik mit Taktfrequenz- und Zeichensatzumschaltung",
+		false );
     this.tabExt.add( this.btnColor, gbcExt );
 
     this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Modul", false );
@@ -187,9 +187,13 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.btnVDIP = new JCheckBox(
 			"USB-Anschluss (Vinculum VDIP Modul)",
 			false );
-    gbcExt.insets.bottom = 5;
     gbcExt.gridy++;
     this.tabExt.add( this.btnVDIP, gbcExt );
+
+    this.btnJoystick     = new JCheckBox( "Joystick", false );
+    gbcExt.insets.bottom = 5;
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnJoystick, gbcExt );
 
 
     // Sonstiges
@@ -240,6 +244,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.btnFloppyDisk.addActionListener( this );
     this.btnKCNet.addActionListener( this );
     this.btnVDIP.addActionListener( this );
+    this.btnJoystick.addActionListener( this );
     this.btnPasteFast.addActionListener( this );
   }
 
@@ -300,6 +305,10 @@ public class AC1SettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + "vdip.enabled",
 		this.btnVDIP.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "joystick.enabled",
+		this.btnJoystick.isSelected() );
 
       tab = this.tabEtc;
       EmuUtil.setProperty(
@@ -335,7 +344,6 @@ public class AC1SettingsFld extends AbstractSettingsFld
 	rv = true;
 	upd2010FieldsEnabled();
 	updSCCHFieldsEnabled();
-	updGIDEFieldsEnabled();
 	fireDataChanged();
       } else if( src instanceof AbstractButton ) {
 	rv = true;
@@ -354,6 +362,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
   public void lookAndFeelChanged()
   {
     this.tabSCCH.lookAndFeelChanged();
+    this.tabRF.lookAndFeelChanged();
     this.tabGIDE.lookAndFeelChanged();
   }
 
@@ -403,10 +412,16 @@ public class AC1SettingsFld extends AbstractSettingsFld
 			this.propPrefix + "vdip.enabled",
 			false ) );
 
+    this.btnJoystick.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "joystick.enabled",
+			false ) );
+
     this.btnPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "ac1.paste.fast",
+			this.propPrefix + "paste.fast",
 			false ) );
 
     this.fldAltOS.updFields( props );
@@ -414,7 +429,6 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     updSCCHFieldsEnabled();
     upd2010FieldsEnabled();
-    updGIDEFieldsEnabled();
   }
 
 
@@ -425,15 +439,6 @@ public class AC1SettingsFld extends AbstractSettingsFld
     boolean state = this.btnMon2010.isSelected();
     this.fldAltPio2Rom2010.setEnabled( state );
     this.fldRomBank2010.setEnabled( state );
-  }
-
-
-  private void updGIDEFieldsEnabled()
-  {
-    this.tabGIDE.setEnabled( this.btnMon31_64x32.isSelected()
-				|| this.btnMonSCCH80.isSelected()
-				|| this.btnMonSCCH1088.isSelected()
-				|| this.btnMon2010.isSelected() );
   }
 
 

@@ -131,9 +131,13 @@ public class AsmCodeBuf
   public void append_LD_A_n( int value )
   {
     if( this.enabled ) {
-      this.buf.append( "\tLD\tA," );
-      appendHex2Internal( value );
-      buf.append( (char) '\n');
+      if( value == 0 ) {
+	this.buf.append( "\tXOR\tA\n" );
+      } else {
+	this.buf.append( "\tLD\tA," );
+	appendHex2Internal( value );
+	buf.append( (char) '\n');
+      }
     }
   }
 

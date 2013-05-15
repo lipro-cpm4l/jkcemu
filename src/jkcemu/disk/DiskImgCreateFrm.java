@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -455,8 +455,10 @@ public class DiskImgCreateFrm
 		}
 	      }
 	    }
-	    if( diskSize < (dstFilePos + (calcFileAreaKBytes( blockSize )
-						* 1024)) )
+	    if( (dstDirPos < 0)
+		|| (dstDirPos >= dstFilePos)
+		|| ((dstFilePos + (calcFileAreaKBytes( blockSize ) * 1024))
+								> diskSize) )
 	    {
 	      throw new IOException(
 			"Das ausgew\u00E4hlten Diskettenformat bietet nicht"
@@ -471,20 +473,11 @@ public class DiskImgCreateFrm
 			0,
 			Math.min( dstDirPos, diskBuf.length ),
 			(byte) 0 );
+	      if( sysFile != null ) {
+		readFile( sysFile, diskBuf, 0 );
+	      }
 	    }
-	    if( dirSize > 0 ) {
-	      Arrays.fill(
-			diskBuf,
-			dstDirPos,
-			Math.min( dstFilePos, diskBuf.length ),
-			(byte) 0xE5 );
-	    }
-	    if( dstFilePos < diskBuf.length ) {
-	      Arrays.fill( diskBuf, dstFilePos, diskBuf.length, (byte) 0x1A );
-	    }
-	    if( sysFile != null ) {
-	      readFile( sysFile, diskBuf, 0 );
-	    }
+	    Arrays.fill( diskBuf, dstDirPos, diskBuf.length, (byte) 0xE5 );
 	    boolean blockNum16Bit = false;
 	    int     extendSize    = 16 * blockSize;
 	    if( getIntValue( this.comboBlockNumSize ) == 16 ) {
@@ -507,6 +500,14 @@ public class DiskImgCreateFrm
 		    nBlocks = nBytes / blockSize;
 		    if( (nBlocks * blockSize) < nBytes ) {
 		      nBlocks++;
+		    }
+		    // Rest der Datei bis zum Blockende mit 0x1A auffuellen
+		    int idxFrom = dstFilePos + nBytes;
+		    int idxTo   = Math.min(
+					dstFilePos + (nBlocks * blockSize),
+					diskBuf.length );
+		    if( (idxFrom >= 0) && (idxFrom < idxTo) ) {
+		      Arrays.fill( diskBuf, idxFrom, idxTo, (byte) 0x1A );
 		    }
 		  }
 		  dstFilePos += (nBlocks *  blockSize);

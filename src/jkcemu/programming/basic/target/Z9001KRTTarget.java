@@ -30,9 +30,9 @@ public class Z9001KRTTarget extends Z9001Target
 
 
   @Override
-  public void appendBSS( AsmCodeBuf buf )
+  public void appendBssTo( AsmCodeBuf buf )
   {
-    super.appendBSS( buf );
+    super.appendBssTo( buf );
     buf.append( "X_MSCR:\tDS\t1\n" );
   }
 
@@ -120,19 +120,12 @@ public class Z9001KRTTarget extends Z9001Target
 
 
   @Override
-  public void appendInit( AsmCodeBuf buf )
+  public void appendInitTo( AsmCodeBuf buf )
   {
-    super.appendInit( buf );
+    super.appendInitTo( buf );
     buf.append( "\tXOR\tA\n"
 		+ "\tLD\t(X_MSCR),A\n"
 		+ "\tOUT\t(0B8H),A\n" );
-  }
-
-
-  @Override
-  public void appendLastScreenNum( AsmCodeBuf buf )
-  {
-    buf.append( "\tLD\tHL,0001H\n" );
   }
 
 
@@ -378,6 +371,13 @@ public class Z9001KRTTarget extends Z9001Target
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public int getLastScreenNum()
+  {
+    return 1;
   }
 
 

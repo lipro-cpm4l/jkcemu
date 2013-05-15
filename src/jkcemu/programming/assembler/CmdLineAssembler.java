@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -199,7 +199,7 @@ public class CmdLineAssembler
 			srcFile.getName(),
 			options,
 			PrgLogger.createStandardLogger(),
-			false )).assemble();
+			false )).assemble( null, false );
     }
     catch( IOException ex ) {
       String msg = ex.getMessage();

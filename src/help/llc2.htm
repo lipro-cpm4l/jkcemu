@@ -3,6 +3,12 @@
  <h1>Hinweise zur Emulation des LLC2</h1>
   Der LLC2 ist ein von Dr. Gerd Maudrich 1985 entwickelter
   Eigenbau-Computer.
+  Der Studio Computer Club Halle (SCCH) hat sich dann
+  der Weiterentwicklung des LLC2 angenommen und ein Monitorprogramm
+  sowie einige Erweiterungsmodule entwickelt, die auch f&uuml;r den
+  <a href="ac1.htm">AC1</a> verf&uuml;gbar sind.
+  Dadurch besteht in gewissen Grenzen eine Softwarekompatibilit&auml;t
+  zwischen AC1 und LLC2.
  <br/>
   <ul>
    <li>
@@ -12,13 +18,13 @@
      <li><a href="llc2.htm#scch_mod1">1.2. SCCH-Modul&nbsp;1</a></li>
      <li><a href="llc2.htm#scch_mod3">1.3. SCCH-Modul&nbsp;3</a></li>
      <li><a href="llc2.htm#scch_inverse">1.4. SCCH-Inversschaltung</a></li>
-     <li>
-      <a href="llc2.htm#pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
-     </li>
+     <a href="llc2.htm#pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
      <li><a href="llc2.htm#inverse_key">1.6. Inverstaste (F1)</a></li>
      <li><a href="llc2.htm#graphic_key">1.7. Grafiktaste (F2)</a></li>
-     <li><a href="llc2.htm#fdc">1.8. Floppy-Disk-Modul</a></li>
-     <li><a href="llc2.htm#printer">1.9. V24-Schnittstelle mit Drucker</a></li>
+     <li><a href="llc2.htm#font_switch">1.8. Zeichensatzumschaltung</a></li>
+     <li><a href="llc2.htm#fdc">1.9. Floppy-Disk-Modul</a></li>
+     <li><a href="llc2.htm#printer">1.10. V24-Schnittstelle mit Drucker</a></li>
+     <li><a href="llc2.htm#joystick">1.11. Joystick</a></li>
     </ul>
    </li>
    <li><a href="llc2.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -57,7 +63,6 @@
    <li>
     <a href="llc2.htm#printer">V24-Schnittstelle mit Drucker</a>
    </li>
-   <li>1&nbsp;<a href="joystick.htm">Joystick</a></li>
    <li>Vollgrafikerweiterung HIRES</li>
    <li>
     Optional:
@@ -76,6 +81,7 @@
        <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
        an der E/A-Basisadressen FCh
       </li>
+     <li><a href="llc2.htm#joystick">Joystick</a></li>
      </ul>
     </li>
   </ul>
@@ -158,9 +164,15 @@
   <a name="pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
  </h3>
   Bei dieser Schaltung wird der Inversmodus mit Bit&nbsp;5 am Tor&nbsp;B
-  der System-PIO (IO-Adresse&nbsp;E9h) aktiviert.
+  der System-PIO (E/A-Adresse&nbsp;E9h) aktiviert.
   Im Inversmodus werden dann alle Zeichen invertiert ausgegeben,
-  bei denen Bit 7 gesetzt ist.
+  bei denen Bit&nbsp;7 gesetzt ist.
+ <br/><br/>
+  <b>Achtung!</b> Das in JKCEMU enthaltene LLC2-Monitorprogramm
+  schaltet bei Tastatureingaben den Inversmodus aus.
+  M&ouml;chte man also in eigenen Programmen diesen Inversmodus verwenden,
+  muss man den diesbez&uuml;glich st&ouml;renden Einfluss
+  des Monitorprogramms entsprechend ber&uuml;cksichtigen bzw. umgehen.
  <br/><br/>
 
  <h3><a name="inverse_key">1.6. Inverstaste (F1)</a></h3>
@@ -178,7 +190,17 @@
   unterst&uuml;tzt die Grafiktaste.
  <br/><br/>
 
- <h3><a name="fdc">1.8. Floppy-Disk-Modul</a></h3>
+ <h3><a name="font_switch">1.8. Zeichensatzumschaltung</a></h3>
+  Die Zeichensatzumschaltung &uuml;ber PIO&nbsp;B3 wird in Verbindung
+  mit einer extern eingebundenen 4&nbsp;KByte gro&szlig;en Zeichensatzdatei
+  emuliert.
+  Bei Ausgabe einer 1 auf dem PIO-Port&nbsp;B3 sind die oberen 2&nbsp;KByte
+  der Zeichensatzdatei aktiv, sonst die unteren 2&nbsp;KByte.
+  Ist keine externe Zeichensatzdatei eingebunden oder diese ist
+  nur 2&nbsp;KByte gro&szlig;, wird keine Zeichensatzumschaltung emuliert.
+ <br/><br/>
+
+ <h3><a name="fdc">1.9. Floppy-Disk-Modul</a></h3>
   Das Floppy-Disk-Modul wird an folgenden E/A-Adressen
   <a href="floppydisk.htm">emuliert</a>:
  <br/>
@@ -231,7 +253,7 @@
   </table>
  <br/><br/>
 
- <h3><a name="printer">1.9. V24-Schnittstelle mit Drucker</a> </h3>
+ <h3><a name="printer">1.10. V24-Schnittstelle mit Drucker</a> </h3>
   Es wird die zus&auml;tzliche PIO (E/A-Adressen E4h-E7h)
   mit der dar&uuml;ber realisierten V24-Schnittstelle
   und einem daran angeschlossenen Drucker emuliert.
@@ -245,6 +267,18 @@
   im Monitorprogramm mit <em>Ctrl-X</em> die Bildschirmausgabe
   zus&auml;tzlich auf den Drucker leiten.
   Mit <em>Ctrl-Y</em> schalten Sie das wieder aus.
+ <br/><br/>
+
+ <h3><a name="joystick">1.11. Joystick</a></h3>
+  Wenn in den LLC2-Einstellungen das
+  <a href="joystick.htm">Joystick</a>-H&auml;kchen gesetzt ist,
+  wird ein Joystick entsprechend der SCCH-Schaltung emuliert.
+  Bei dieser Schaltung wird &uuml;ber die System-PIO, Port B, Bit 4
+  zwischen Tastatur und Joystick umgeschaltet.
+  Wenn ein LLC2-Programm die System-PIO umprogrammiert und dabei
+  die Joystick-Schaltung nicht ber&uuml;cksichtigt,
+  sind u.U. keine Tastatureingabe mehr m&ouml;glich.
+  In dem Fall m&uuml;ssen Sie die Joystick-Emulation ausschalten.
  <br/><br/>
 
 

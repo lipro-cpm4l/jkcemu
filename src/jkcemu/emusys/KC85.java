@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -1805,29 +1805,27 @@ public class KC85 extends EmuSys implements
     if( resetLevel == EmuThread.ResetLevel.COLD_RESET) {
       coldReset = true;
     }
-    if( coldReset ) {
-      this.basicSegAddr     = 0x3000;
-      this.basicC000Enabled = false;
-      this.caosC000Enabled  = false;
-      this.caosE000Enabled  = true;
-      this.hiColorRes       = false;
-      this.irmEnabled       = true;
-      this.ram0Enabled      = true;
-      this.ram0Writeable    = true;
-      this.ram4Enabled      = (this.kcTypeNum > 3);
-      this.ram4Writeable    = this.ram4Enabled;
-      this.ram8Enabled      = false;
-      this.ram8SegNum       = 2;
-      this.ram8Writeable    = false;
-      this.ramColorEnabled  = false;
-      this.screen1Enabled   = false;
-      this.screen1Visible   = false;
-    }
+    this.basicSegAddr         = 0x3000;
+    this.basicC000Enabled     = false;
+    this.caosC000Enabled      = false;
+    this.caosE000Enabled      = true;
     this.kout                 = null;
     this.blinkEnabled         = false;
     this.blinkState           = false;
     this.biState              = false;
     this.h4State              = false;
+    this.hiColorRes           = false;
+    this.irmEnabled           = true;
+    this.ram0Enabled          = true;
+    this.ram0Writeable        = true;
+    this.ram4Enabled          = (this.kcTypeNum > 3);
+    this.ram4Writeable        = this.ram4Enabled;
+    this.ram8Enabled          = false;
+    this.ram8SegNum           = 2;
+    this.ram8Writeable        = false;
+    this.ramColorEnabled      = false;
+    this.screen1Enabled       = false;
+    this.screen1Visible       = false;
     this.screenDirty          = true;
     this.screenRefreshEnabled = false;
     this.audioOutPhaseL       = false;

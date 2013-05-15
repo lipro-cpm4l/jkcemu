@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -84,14 +84,35 @@ public class CPMTarget extends AbstractTarget
 
 
   @Override
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tLD\tC,5\n"
+		+ "\tLD\tE,A\n"
+		+ "\tJP\t0005H\n" );
+  }
+
+
+  @Override
   public void appendXOUTCH( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
-      buf.append( "XOUTCH:\tLD\tC,2\n"
+      buf.append( "XOUTCH:\tLD\tC,02H\n"
 		+ "\tLD\tE,A\n"
 		+ "\tJP\t0005H\n" );
       this.xoutchAppended = true;
     }
+  }
+
+
+  @Override
+  public void appendXOUTNL( AsmCodeBuf buf )
+  {
+    buf.append( "XOUTNL:\tLD\tC,02H\n"
+		+ "\tLD\tE,0DH\n"
+		+ "\tCALL\t0005H\n"
+		+ "\tLD\tC,02H\n"
+		+ "\tLD\tE,0AH\n"
+		+ "\tJP\t0005H\n" );
   }
 
 
@@ -128,7 +149,28 @@ public class CPMTarget extends AbstractTarget
 
 
   @Override
+  public int getKCNetBaseIOAddr()
+  {
+    return 0xC0;
+  }
+
+
+  @Override
+  public int[] getVdipBaseIOAddresses()
+  {
+    return new int[] { 0xFC };
+  }
+
+
+  @Override
   public boolean supportsXLOCAT()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXLPTCH()
   {
     return true;
   }

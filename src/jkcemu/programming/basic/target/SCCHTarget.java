@@ -74,6 +74,41 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
+  public void appendProlog(
+			BasicCompiler compiler,
+			AsmCodeBuf    buf,
+			String        appName )
+  {
+    if( appName != null ) {
+      int len = appName.length();
+      if( len > 0 ) {
+	boolean done = false;
+	if( len == 1 ) {
+	  char ch = appName.charAt( 0 );
+	  if( ((ch >= '0') && (ch <= '9'))
+	      || ((ch >= 'A') && (ch <= 'Z'))
+	      || ((ch >= 'a') && (ch <= 'z')) )
+	  {
+	    buf.append( "\tJR\tXSTART\n"
+			+ "\tDB\t00H,09H,\'" );
+	    buf.append( ch );
+	    buf.append( "\',0DH\n"
+			+ "XSTART:" );
+	    done = true;
+	  }
+	}
+	if( !done && !appName.equals( BasicOptions.DEFAULT_APP_NAME ) ) {
+	  compiler.putWarning( "Warnung: Applikationsname ignoriert"
+		+ " (nur ein Buchstabe oder eine Ziffer erlaubt)\n"
+		+ "Aufruf des Programms auf dem Zielsystem nur \u00FCber"
+		+ " die Startadresse m\u00F6glich" );
+	}
+      }
+    }
+  }
+
+
+  @Override
   public void appendWChar( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0040H\n" );
@@ -166,10 +201,29 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
+  public void appendXLPTCH( AsmCodeBuf buf )
+  {
+    buf.append( "XLPTCH:\tLD\tB,A\n"
+		+ "\tLD\tA,(1821H)\n"
+		+ "\tPUSH\tAF\n"
+		+ "\tAND\t0FH\n"
+		+ "\tOR\t20H\n"
+		+ "\tLD\t(1821H),A\n"
+		+ "\tLD\tA,B\n"
+		+ "\tRST\t10H\n"
+		+ "\tPOP\tAF\n"
+		+ "\tLD\t(1821H),A\n"
+		+ "\tRET\n" );
+  }
+
+
+  @Override
   public void appendXOUTCH( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
-      buf.append( "XOUTCH:\tJP\t0010H\n" );
+      buf.append( "XOUTCH:\tCP\t0AH\n"
+			+ "\tRET\tZ\n"
+			+ "\tJP\t0010H\n" );
       this.xoutchAppended = true;
     }
   }
@@ -181,13 +235,8 @@ public class SCCHTarget extends AbstractTarget
   @Override
   public void appendXOUTNL( AsmCodeBuf buf )
   {
-    buf.append( "XOUTNL:\tLD\tA,0DH\n" );
-    if( this.xoutchAppended ) {
-      buf.append( "\tJP\tXOUTCH\n" );
-    } else {
-      buf.append( "XOUTCH:\tJP\t0010H\n" );
-      this.xoutchAppended = true;
-    }
+    buf.append( "XOUTNL:\tLD\tA,0DH\n"
+			+ "\tJP\t0010H\n" );
   }
 
 
@@ -233,6 +282,27 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
+  public int getKCNetBaseIOAddr()
+  {
+    return 0xC0;
+  }
+
+
+  @Override
+  public int[] getVdipBaseIOAddresses()
+  {
+    return new int[] { 0xFC };
+  }
+
+
+  @Override
+  public boolean supportsAppName()
+  {
+    return true;
+  }
+
+
+  @Override
   public boolean supportsXJOY()
   {
     return true;
@@ -241,6 +311,13 @@ public class SCCHTarget extends AbstractTarget
 
   @Override
   public boolean supportsXLOCAT()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXLPTCH()
   {
     return true;
   }

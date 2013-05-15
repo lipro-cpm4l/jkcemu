@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -64,7 +64,7 @@ public class SourceUtil
       nextLineAddr = memory.getMemWord( curLineAddr );
     }
     if( curLineAddr > begAddr ) {
-      endAddr = curLineAddr + 1;
+      endAddr = curLineAddr + 2;
     }
     return endAddr;
   }
