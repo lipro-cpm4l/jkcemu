@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.Z9001;
 
 
-public class Z9001KeyboardFld extends AbstractKeyboardFld
+public class Z9001KeyboardFld extends AbstractKeyboardFld<Z9001>
 {
   private static final int FS_SMALL   = 9;
   private static final int FS_KEY     = 12;
@@ -47,38 +47,34 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
   private static final int X_KEY13    = X_KEY12 + KEY_COL_W;
 
 
-  private ScreenFrm screenFrm;
-  private Z9001     z9001;
-  private Image     imgLeft;
-  private Image     imgRight;
-  private Image     imgUp;
-  private Image     imgDown;
-  private Image     imgFirst;
-  private Image     imgLast;
-  private Color     colorKeyLight;
-  private Color     colorKeyDark;
-  private Color     colorKeySelected;
-  private Color     colorLEDGreenOn;
-  private Color     colorLEDGreenOff;
-  private Font      fontSmall;
-  private Font      fontKey;
-  private Font      fontSpecialKey;
-  private KeyData   resetKey;
-  private int[]     kbMatrix;
-  private int       curIdx;
+  private Image   imgLeft;
+  private Image   imgRight;
+  private Image   imgUp;
+  private Image   imgDown;
+  private Image   imgFirst;
+  private Image   imgLast;
+  private Color   colorKeyLight;
+  private Color   colorKeyDark;
+  private Color   colorKeySelected;
+  private Color   colorLEDGreenOn;
+  private Color   colorLEDGreenOff;
+  private Font    fontSmall;
+  private Font    fontKey;
+  private Font    fontSpecialKey;
+  private KeyData resetKey;
+  private int[]   kbMatrix;
+  private int     curIdx;
 
 
-  public Z9001KeyboardFld( ScreenFrm screenFrm, Z9001 z9001 )
+  public Z9001KeyboardFld( Z9001 z9001 )
   {
-    super( 65 );
-    this.screenFrm = screenFrm;
-    this.z9001     = z9001;
-    this.imgLeft   = getImage( "/images/keyboard/z9001/left.png" );
-    this.imgRight  = getImage( "/images/keyboard/z9001/right.png" );
-    this.imgUp     = getImage( "/images/keyboard/z9001/up.png" );
-    this.imgDown   = getImage( "/images/keyboard/z9001/down.png" );
-    this.imgFirst  = getImage( "/images/keyboard/z9001/first.png" );
-    this.imgLast   = getImage( "/images/keyboard/z9001/last.png" );
+    super( z9001, 65, true );
+    this.imgLeft  = getImage( "/images/keyboard/z9001/left.png" );
+    this.imgRight = getImage( "/images/keyboard/z9001/right.png" );
+    this.imgUp    = getImage( "/images/keyboard/z9001/up.png" );
+    this.imgDown  = getImage( "/images/keyboard/z9001/down.png" );
+    this.imgFirst = getImage( "/images/keyboard/z9001/first.png" );
+    this.imgLast  = getImage( "/images/keyboard/z9001/last.png" );
 
     this.colorKeyLight    = new Color( 180, 180, 180 );
     this.colorKeyDark     = new Color( 20, 20, 20 );
@@ -93,7 +89,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 
     int y = Y_KEY0;
 							// CONTR
-    addKey( X_KEY0, y, KEY_W, KEY_H, this.colorKeyLight, 2, 0x80, true );
+    addKey( X_KEY0, y, KEY_W, KEY_H, this.colorKeyLight, 2, 0x80, true, null );
     addDarkKey( X_KEY1, y, 1, 0x01 );			// 1
     addDarkKey( X_KEY2, y, 2, 0x01 );			// 2
     addDarkKey( X_KEY3, y, 3, 0x01 );			// 3
@@ -105,7 +101,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
     addDarkKey( X_KEY9, y, 1, 0x02 );			// 9
     addDarkKey( X_KEY10, y, 0, 0x01 );			// 0
     addDarkKey( X_KEY11, y, 0, 0x04 );			// @
-    addLightKey( X_KEY12, y, 4, 0x20 );			// PAUSE
+    addLightKey( X_KEY12, y, 4, 0x20, "F4" );		// PAUSE
     this.resetKey = new KeyData(                                              
 				X_KEY13,                                        
 				y,                                              
@@ -118,11 +114,12 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 				null,                                           
 				-1,                                             
 				0,                                              
-				false );
+				false,
+				null );
     this.keys[ this.curIdx++ ] = this.resetKey;		// RESET
 
     y += KEY_ROW_H;
-    addLightKey( X_KEY0, y, 1, 0x80 );			// COLOR
+    addLightKey( X_KEY0, y, 1, 0x80, "F7" );		// COLOR
     addDarkKey( X_KEY1, y, 1, 0x10 );			// Q
     addDarkKey( X_KEY2, y, 7, 0x10 );			// W
     addDarkKey( X_KEY3, y, 5, 0x04 );			// E
@@ -134,11 +131,11 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
     addDarkKey( X_KEY9, y, 7, 0x08 );			// O
     addDarkKey( X_KEY10, y, 0, 0x10 );			// P
     addDarkKey( X_KEY11, y, 6, 0x20 );			// ^
-    addLightKey( X_KEY12, y, 5, 0x20 );			// INS
-    addLightKey( X_KEY13, y, 4, 0x80 );			// LIST
+    addLightKey( X_KEY12, y, 5, 0x20, "Einfg" );	// INS
+    addLightKey( X_KEY13, y, 4, 0x80, "F1" );		// LIST
 
     y += KEY_ROW_H;
-    addLightKey( X_KEY0, y, 3, 0x80 );			// GRAPHIC
+    addLightKey( X_KEY0, y, 3, 0x80, "F8" );		// GRAPHIC
     addDarkKey( X_KEY1, y, 1, 0x04 );			// A
     addDarkKey( X_KEY2, y, 3, 0x10 );			// S
     addDarkKey( X_KEY3, y, 4, 0x04 );			// D
@@ -150,8 +147,8 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
     addDarkKey( X_KEY9, y, 4, 0x08 );			// L
     addDarkKey( X_KEY10, y, 2, 0x02 );			// :
     addDarkKey( X_KEY11, y, 7, 0x02 );			// ?
-    addLightKey( X_KEY12, y, 4, 0x40 );			// ESC
-    addLongLightKey( X_KEY13, y, 5, 0x80 );		// RUN
+    addLightKey( X_KEY12, y, 4, 0x40, "Esc" );		// ESC
+    addLongLightKey( X_KEY13, y, 5, 0x80, "F2" );	// RUN
 
     y += KEY_ROW_H;
     addDarkKey( X_KEY1, y, 1, 0x20 );			// Y
@@ -165,8 +162,8 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
     addDarkKey( X_KEY9, y, 6, 0x02 );			// .
     addDarkKey( X_KEY10, y, 3, 0x02 );			// ;
     addDarkKey( X_KEY11, y, 5, 0x02 );			// =
-    addLightKey( X_KEY12, y, 3, 0x20 );			// Zeilenanfang
-    addLongLightKey( X_KEY13, y, 6, 0x40 );		// STOP
+    addLightKey( X_KEY12, y, 3, 0x20, "Strg + \u2190" ); // Zeilenanfang
+    addLongLightKey( X_KEY13, y, 6, 0x40, "F3" );	// STOP
 
     y += KEY_ROW_H;
     KeyData shiftKey1 = addKey(
@@ -177,13 +174,14 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 				this.colorKeyLight,
 				0,
 				0x80,
-				true );			// SHIFT 1
-    addLightKey( X_KEY2, y, 0, 0x40 );			// LEFT
-    addLightKey( X_KEY3, y, 1, 0x40 );			// RIGHT
-    addLongLightKey( X_KEY4, y, 7, 0x40 );		// SPACE 1
-    addLongLightKey( X_KEY6, y, 7, 0x40 );		// SPACE 2
-    addLightKey( X_KEY8, y, 3, 0x40 );			// UP
-    addLightKey( X_KEY9, y, 2, 0x40 );			// DOWN
+				true,
+				null );				// SHIFT 1
+    addLightKey( X_KEY2, y, 0, 0x40 );				// LEFT
+    addLightKey( X_KEY3, y, 1, 0x40 );				// RIGHT
+    addLongLightKey( X_KEY4, y, 7, 0x40, "Leerzeichen" );	// SPACE 1
+    addLongLightKey( X_KEY6, y, 7, 0x40, "Leerzeichen" );	// SPACE 2
+    addLightKey( X_KEY8, y, 3, 0x40 );				// UP
+    addLightKey( X_KEY9, y, 2, 0x40 );				// DOWN
 
     KeyData shiftKey2 = addKey(
 				X_KEY10,
@@ -193,9 +191,10 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 				this.colorKeyLight,
 				0,
 				0x80,
-				true );			// SHIFT 2
+				true,
+				null );			// SHIFT 2
     addLightKey( X_KEY12, y, 6, 0x80 );			// SHIFT LOCK
-    addLongLightKey( X_KEY13, y, 5, 0x40 );		// ENTER
+    addLongLightKey( X_KEY13, y, 5, 0x40, "Enter" );	// ENTER
 
     int h = Y_KEY0 + (4 * KEY_ROW_H) + KEY_H + 2 + MARGIN_WIN;
     if( this.imgDown != null ) {
@@ -228,7 +227,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.z9001.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -237,11 +236,9 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	this.screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
-	e.consume();
-      } else {
-	super.mousePressed( e );
+	fireWarmResetAfterDelay();
       }
+      super.mousePressed( e );
     }
   }
 
@@ -415,7 +412,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 			+ FS_SKEY;
     drawCenter( g, X_KEY0, y, KEY_W, "GRAPHIC" );
 
-    g.setColor( this.z9001.getGraphicLED() ?
+    g.setColor( this.emuSys.getGraphicLED() ?
 			this.colorLEDGreenOn : this.colorLEDGreenOff );
     x = X_KEY0 + ((KEY_W - LED_W) / 2);
     y = Y_KEY0 + (3 * KEY_ROW_H) - ((LED_W - KEY_H) / 2);
@@ -436,7 +433,7 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof Z9001 ) {
-      this.z9001 = (Z9001) emuSys;
+      this.emuSys = (Z9001) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != Z9001" );
     }
@@ -453,7 +450,8 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 			Color   color,
 			int     col,
 			int     value,
-			boolean shift )
+			boolean shift,
+			String  toolTipText )
   {
     KeyData keyData = new KeyData(
 				x,
@@ -467,7 +465,8 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 				null,
 				col,
 				value,
-				shift );
+				shift,
+				toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     return keyData;
   }
@@ -475,19 +474,53 @@ public class Z9001KeyboardFld extends AbstractKeyboardFld
 
   private void addDarkKey( int x, int y, int col, int value )
   {
-    addKey( x, y, KEY_W, KEY_H, this.colorKeyDark, col, value, false );
+    addKey( x, y, KEY_W, KEY_H, this.colorKeyDark, col, value, false, null );
   }
 
 
   private void addLightKey( int x, int y, int col, int value )
   {
-    addKey( x, y, KEY_W, KEY_H, this.colorKeyLight, col, value, false );
+    addKey( x, y, KEY_W, KEY_H, this.colorKeyLight, col, value, false, null );
   }
 
 
-  private void addLongLightKey( int x, int y, int col, int value )
+  private void addLightKey(
+		int    x,
+		int    y,
+		int    col,
+		int    value,
+		String toolTipText )
   {
-    addKey( x, y, LKEY_W, KEY_H, this.colorKeyLight, col, value, false );
+    addKey(
+	x,
+	y,
+	KEY_W,
+	KEY_H,
+	this.colorKeyLight,
+	col,
+	value,
+	false,
+	toolTipText );
+  }
+
+
+  private void addLongLightKey(
+			int    x,
+			int    y,
+			int    col,
+			int    value,
+			String toolTipText )
+  {
+    addKey(
+	x,
+	y,
+	LKEY_W,
+	KEY_H,
+	this.colorKeyLight,
+	col,
+	value,
+	false,
+	toolTipText );
   }
 
 

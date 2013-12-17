@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,11 +12,11 @@ import java.awt.*;
 import java.awt.event.*;
 import java.lang.*;
 import java.util.*;
-import javax.swing.JComponent;
+import javax.swing.*;
 import jkcemu.Main;
 
 
-public abstract class AbstractKeyboardFld
+public abstract class AbstractKeyboardFld<T extends EmuSys>
 				extends JComponent
 				implements MouseListener
 {
@@ -35,6 +35,7 @@ public abstract class AbstractKeyboardFld
     public int     value;
     public boolean shift;
     public boolean locked;
+    public String  toolTipText;
 
     public KeyData(
 		int     x,
@@ -48,39 +49,53 @@ public abstract class AbstractKeyboardFld
 		Image   image,
 		int     col,
 		int     value,
-		boolean shift )
+		boolean shift,
+		String  toolTipText )
     {
-      this.x     = x;
-      this.y     = y;
-      this.w     = w;
-      this.h     = h;
-      this.text1 = text1;
-      this.text2 = text2;
-      this.text3 = text3;
-      this.color = color;
-      this.image = image;
-      this.col   = col;
-      this.value = value;
-      this.shift = shift;
+      this.x           = x;
+      this.y           = y;
+      this.w           = w;
+      this.h           = h;
+      this.text1       = text1;
+      this.text2       = text2;
+      this.text3       = text3;
+      this.color       = color;
+      this.image       = image;
+      this.col         = col;
+      this.value       = value;
+      this.shift       = shift;
+      this.toolTipText = toolTipText;
     }
   };
 
+  protected T                       emuSys;
   protected KeyData[]               keys;
   protected java.util.List<KeyData> selectedKeys;
 
-  private KeyData[] shiftKeys;
-  private boolean   holdShift;
-  private boolean   lastShiftPressed;
+  private KeyData[]       shiftKeys;
+  private boolean         holdShift;
+  private boolean         lastShiftPressed;
+  private java.util.Timer nmiTimer;
+  private java.util.Timer resetTimer;
 
 
-  protected AbstractKeyboardFld( int numKeys )
+  protected AbstractKeyboardFld(
+			T       emuSys,
+			int     numKeys,
+			boolean enableToolTips )
   {
+    this.emuSys           = emuSys;
     this.keys             = new KeyData[ numKeys ];
     this.selectedKeys     = new ArrayList<KeyData>();
     this.shiftKeys        = null;
     this.holdShift        = true;
     this.lastShiftPressed = false;
+    this.nmiTimer         = null;
+    this.resetTimer       = null;
     addMouseListener( this );
+    if( enableToolTips ) {
+      ToolTipManager.sharedInstance().registerComponent( this );
+    }
   }
 
 
@@ -166,6 +181,49 @@ public abstract class AbstractKeyboardFld
   }
 
 
+  protected synchronized void fireNMIAfterDelay()
+  {
+    if( this.nmiTimer == null ) {
+      this.nmiTimer = new java.util.Timer();
+    }
+    final ScreenFrm screenFrm = this.emuSys.getScreenFrm();
+    if( screenFrm != null ) {
+      this.nmiTimer.schedule(
+		new TimerTask()
+		{
+		  public void run()
+		  {
+		    EmuThread emuThread = screenFrm.getEmuThread();
+		    if( emuThread != null ) {
+		      emuThread.getZ80CPU().fireNMI();
+		    }
+		  }
+		},
+		200L );
+    }
+  }
+
+
+  protected synchronized void fireWarmResetAfterDelay()
+  {
+    if( this.resetTimer == null ) {
+      this.resetTimer = new java.util.Timer();
+    }
+    final ScreenFrm screenFrm = this.emuSys.getScreenFrm();
+    if( screenFrm != null ) {
+      this.resetTimer.schedule(
+		new TimerTask()
+		{
+		  public void run()
+		  {
+		    screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
+		  }
+		},
+		200L );
+    }
+  }
+
+
   public boolean getHoldShift()
   {
     return this.holdShift;
@@ -181,6 +239,30 @@ public abstract class AbstractKeyboardFld
   protected Image getImage( String resource )
   {
     return Main.getImage( Main.getScreenFrm(), resource );
+  }
+
+
+  public boolean getSelectionChangeOnShiftOnly()
+  {
+    return false;
+  }
+
+
+  @Override
+  public String getToolTipText( MouseEvent e )
+  {
+    String rv = null;
+    int    x  = e.getX();
+    int    y  = e.getY();
+    for( KeyData k : this.keys ) {
+      if( (x >= k.x) && (x < (k.x + k.w))
+	  && (y >= k.y) && (y < (k.y + k.h)) )
+      {
+	rv = k.toolTipText;
+	break;
+      }
+    }
+    return rv;
   }
 
 
@@ -319,19 +401,19 @@ public abstract class AbstractKeyboardFld
   public void mousePressed( MouseEvent e )
   {
     if( (this.keys != null) && (e.getComponent() == this) ) {
-      for( KeyData key : this.keys ) {
-	if( hits( key, e ) ) {
-	  Boolean locked   = null;
-	  int     mouseBtn = e.getButton();
-	  if( e.isControlDown()
-	      || (mouseBtn == MouseEvent.BUTTON2)
-	      || (mouseBtn == MouseEvent.BUTTON3) )
-	  {
-	    locked = Boolean.TRUE;
-	  } else if( mouseBtn == MouseEvent.BUTTON1 ) {
-	    locked = Boolean.FALSE;
-	  }
-	  if( locked != null ) {
+      Boolean locked   = null;
+      int     mouseBtn = e.getButton();
+      if( e.isControlDown()
+	  || (mouseBtn == MouseEvent.BUTTON2)
+	  || (mouseBtn == MouseEvent.BUTTON3) )
+      {
+	locked = Boolean.TRUE;
+      } else if( mouseBtn == MouseEvent.BUTTON1 ) {
+	locked = Boolean.FALSE;
+      }
+      if( locked != null ) {
+	for( KeyData key : this.keys ) {
+	  if( hits( key, e ) ) {
 	    synchronized( this.selectedKeys ) {
 	      if( this.selectedKeys.contains( key ) ) {
 		this.selectedKeys.remove( key );
@@ -348,8 +430,8 @@ public abstract class AbstractKeyboardFld
 	    keySelectionChanged();
 	    repaint();
 	  }
-	  e.consume();
 	}
+	e.consume();
       }
     }
   }
@@ -380,4 +462,3 @@ public abstract class AbstractKeyboardFld
     }
   }
 }
-

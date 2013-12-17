@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -132,20 +132,34 @@ public class AudioFrm
 
   public void openFile( File file, byte[] fileBytes, int offs )
   {
-    if( checkSpeed() ) {
-      boolean tap = false;
-      if( fileBytes != null ) {
-	tap = FileInfo.isTAPHeaderAt(
+    boolean hasSrc = false;
+    boolean tap    = false;
+    if( fileBytes != null ) {
+      tap = FileInfo.isTAPHeaderAt(
 				fileBytes,
 				fileBytes.length - offs,
 				offs );
-      } else if( file != null ) {
+      hasSrc = true;
+    } else if( file != null ) {
+      if( file.isFile() ) {
 	String fName = file.getName();
 	if( fName != null ) {
 	  tap = fName.toLowerCase().endsWith( ".tap" );
 	}
+	hasSrc = true;
       }
-      enableAudioInFile( this.usedKHz, file, fileBytes, offs, tap );
+    }
+    if( hasSrc ) {
+      stopAudio();
+      if( checkSpeed() ) {
+	if( tap ) {
+	  this.btnTAPFileIn.setSelected( true );
+	} else {
+	  this.btnSoundFileIn.setSelected( true );
+	}
+	updOptFields( tap );
+	enableAudioInFile( this.usedKHz, file, fileBytes, offs, tap );
+      }
     }
   }
 
@@ -216,21 +230,8 @@ public class AudioFrm
       File file = EmuUtil.fileDrop( this, e );
       if( file != null ) {
 	if( file.isFile() ) {
-	  String fName = file.getName();
-	  if( fName != null ) {
-	    stopAudio();
-	    if( checkSpeed() ) {
-	      boolean tap = fName.toLowerCase().endsWith( ".tap" );
-	      if( tap ) {
-		this.btnTAPFileIn.setSelected( true );
-	      } else {
-		this.btnSoundFileIn.setSelected( true );
-	      }
-	      updOptFields( tap );
-	      enableAudioInFile( this.usedKHz, file, null, 0, tap );
-	    }
-	    done = true;
-	  }
+	  openFile( file, null, 0 );
+	  done = true;
 	}
       }
     }

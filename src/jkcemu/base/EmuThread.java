@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -135,6 +135,8 @@ public class EmuThread extends Thread implements
 	emuSys = new VCS80( this, props );
       } else if( sysName.startsWith( "Z1013" ) ) {
 	emuSys = new Z1013( this, props );
+      } else if( sysName.startsWith( "ZXSpectrum" ) ) {
+	emuSys = new ZXSpectrum( this, props );
       } else {
 	emuSys = new A5105( this, props );
       }
@@ -237,6 +239,12 @@ public class EmuThread extends Thread implements
   }
 
 
+  public AudioIn getAudioIn()
+  {
+    return this.audioIn;
+  }
+
+
   public static int getDefaultSpeedKHz( Properties props )
   {
     int    rv      = A5105.getDefaultSpeedKHz();
@@ -303,6 +311,9 @@ public class EmuThread extends Thread implements
       }
       else if( sysName.startsWith( "Z1013" ) ) {
 	rv = Z1013.getDefaultSpeedKHz( props );
+      }
+      else if( sysName.startsWith( "ZXSpectrum" ) ) {
+	rv = ZXSpectrum.getDefaultSpeedKHz();
       }
     }
     return rv;

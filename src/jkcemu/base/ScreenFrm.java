@@ -793,6 +793,29 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
+  public void fireUpdScreenTextActionsEnabled()
+  {
+    boolean state  = false;
+    EmuSys  emuSys = getEmuSys();
+    if( emuSys != null ) {
+      state = emuSys.canExtractScreenText();
+    }
+    if( !state ) {
+      clearScreenSelection();
+    }
+    final boolean state2 = state;
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    setScreenTextActionsEnabled( state2 );
+		  }
+		} );
+  }
+
+
   public EmuThread getEmuThread()
   {
     return this.emuThread;
@@ -837,6 +860,7 @@ public class ScreenFrm extends BasicFrm implements
     } else {
       if( this.emuThread != null ) {
 	this.primDebugFrm = new DebugFrm(
+				this.emuThread,
 				this.emuThread.getZ80CPU(),
 				this.emuThread );
 	this.primDebugFrm.setVisible( true );
@@ -863,12 +887,32 @@ public class ScreenFrm extends BasicFrm implements
   public DebugFrm openSecondDebugger()
   {
     DebugFrm debugFrm = null;
-    EmuSys   emuSys   = getEmuSys();
-    if( emuSys != null ) {
-      debugFrm = openSecondDebugger(
-			emuSys.getSecondZ80CPU(),
-			emuSys.getSecondZ80Memory(),
-			emuSys.getSecondSystemName() );
+    if( this.emuThread != null ) {
+      EmuSys emuSys = this.emuThread.getEmuSys();
+      if( emuSys != null ) {
+	Z80CPU    secondCPU = emuSys.getSecondZ80CPU();
+	Z80Memory secondMem = emuSys.getSecondZ80Memory();
+	if( (secondCPU != null) && (secondMem != null) ) {
+	  if( this.secondDebugFrm != null ) {
+	    EmuUtil.frameToFront( this.secondDebugFrm );
+	  } else {
+	    this.secondDebugFrm = new DebugFrm(
+					this.emuThread, 
+					secondCPU,
+					secondMem );
+	    String secondSysName = emuSys.getSecondSystemName();
+	    if( secondSysName != null ) {
+	      this.secondDebugFrm.setTitle(
+			"JKCEMU Debugger: " + secondSysName );
+	    } else {
+	      this.secondDebugFrm.setTitle(
+			"JKCEMU Debugger: Sekund\u00E4rsystem" );
+	    }
+	    this.secondDebugFrm.setVisible( true );
+	  }
+	  debugFrm = this.secondDebugFrm;
+	}
+      }
     }
     return debugFrm;
   }
@@ -1003,17 +1047,6 @@ public class ScreenFrm extends BasicFrm implements
   {
     if( this.emuThread != null )
       this.emuThread.start();
-  }
-
-
-  public void updScreenTextActionsEnabled()
-  {
-    boolean state  = false;
-    EmuSys  emuSys = getEmuSys();
-    if( emuSys != null ) {
-      state = emuSys.canExtractScreenText();
-    }
-    setScreenTextActionsEnabled( state );
   }
 
 
@@ -1867,7 +1900,7 @@ public class ScreenFrm extends BasicFrm implements
 
   private void doFileScreenImageSave()
   {
-    if( ImgUtil.saveImage(
+    if( ImgSaver.saveImageAs(
 			this,
 			this.screenFld.createBufferedImage(),
 			null ) != null )
@@ -2203,7 +2236,7 @@ public class ScreenFrm extends BasicFrm implements
 								file );
 	    if( disk != null ) {
 	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
-		DiskUtil.unpackDisk( this, file, disk );
+		DiskUtil.unpackDisk( this, file, disk, true );
 	      }
 	      done = true;
 	    }
@@ -2654,35 +2687,6 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  private DebugFrm openSecondDebugger(
-				Z80CPU    secondCPU,
-				Z80Memory secondMem,
-				String    secondName )
-  {
-    DebugFrm debugFrm = null;
-    if( (secondCPU != null)
-	&& (secondMem != null)
-	&& (secondName != null) )
-    {
-      if( this.secondDebugFrm != null ) {
-	EmuUtil.frameToFront( this.secondDebugFrm );
-      } else {
-	this.secondDebugFrm = new DebugFrm( secondCPU, secondMem );
-	if( secondName != null ) {
-	  this.secondDebugFrm.setTitle(
-			"JKCEMU Debugger: " + secondName );
-	} else {
-	  this.secondDebugFrm.setTitle(
-			"JKCEMU Debugger: Sekund\u00E4rsystem" );
-	}
-	this.secondDebugFrm.setVisible( true );
-      }
-      debugFrm = this.secondDebugFrm;
-    }
-    return debugFrm;
-  }
-
-
   private ReassFrm openSecondReassembler(
 				Z80Memory secondMem,
 				String    secondName )
@@ -2779,6 +2783,7 @@ public class ScreenFrm extends BasicFrm implements
   private void setFullScreenMode( boolean state )
   {
     if( state != this.fullScreenMode ) {
+      clearScreenSelection();
       setVisible( false );
       dispose();
       this.fullScreenMode = state;

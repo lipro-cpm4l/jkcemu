@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,7 +19,7 @@ public class KC85PlainRAMModule extends AbstractKC85Module
   private int     typeByte;
   private int     begAddr;
   private boolean cmos;
-  private boolean readwrite;
+  private boolean readWrite;
   private byte[]  ram;
 
 
@@ -35,7 +35,7 @@ public class KC85PlainRAMModule extends AbstractKC85Module
     this.moduleName = moduleName;
     this.cmos       = cmos;
     this.begAddr    = 0;
-    this.readwrite  = false;
+    this.readWrite  = false;
     this.ram        = new byte[ ramSize ];
   }
 
@@ -50,9 +50,23 @@ public class KC85PlainRAMModule extends AbstractKC85Module
 
 
   @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
+
+  @Override
   public String getModuleName()
   {
     return this.moduleName;
+  }
+
+
+  @Override
+  public Boolean getReadWrite()
+  {
+    return new Boolean( this.readWrite );
   }
 
 
@@ -81,7 +95,7 @@ public class KC85PlainRAMModule extends AbstractKC85Module
   public void setStatus( int value )
   {
     super.setStatus( value );
-    this.readwrite = ((value & 0x02) != 0);
+    this.readWrite = ((value & 0x02) != 0);
     this.begAddr   = (value << 8) & 0xC000;
   }
 
@@ -94,7 +108,7 @@ public class KC85PlainRAMModule extends AbstractKC85Module
 	&& (addr >= this.begAddr)
 	&& (addr < (this.begAddr + this.ram.length)) )
     {
-      if( this.readwrite ) {
+      if( this.readWrite ) {
 	this.ram[ addr - this.begAddr ] = (byte) value;
 	rv = 2;
       } else {
@@ -104,4 +118,3 @@ public class KC85PlainRAMModule extends AbstractKC85Module
     return rv;
   }
 }
-

@@ -16,6 +16,7 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
+import jkcemu.audio.*;
 import jkcemu.emusys.*;
 
 
@@ -29,6 +30,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 					FileInfo.KCBASIC_HEAD_PRG,
 					FileInfo.KCBASIC_PRG,
 					FileInfo.RBASIC,
+					FileInfo.RMC,
 					FileInfo.HEADERSAVE,
 					FileInfo.INTELHEX,
 					FileInfo.BIN };
@@ -37,6 +39,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
   private static final String errMsgEmptyFile =
 	"Die Datei enth\u00E4lt keine Daten,\n"
 			+ "die geladen werden k\u00F6nnten.";
+
+  private static boolean suppressAudioMsg = false;
 
   private Frame        owner;
   private ScreenFrm    screenFrm;
@@ -78,133 +82,165 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 			boolean   startEnabled,
 			boolean   startSelected )
   {
-    EmuThread emuThread = screenFrm.getEmuThread();
-    EmuSys    emuSys    = screenFrm.getEmuSys();
-    byte[]    fileBuf   = readFile( owner, file );
-    if( (emuThread != null) && (emuSys != null) && (fileBuf != null) ) {
+    if( AudioUtil.isAudioFile( file ) ) {
+      if( suppressAudioMsg ) {
+	AudioFrm.open( screenFrm ).openFile( file, null, 0 );
+      } else {
+	String msg = "Die Datei kann nur \u00FCber eine Audio-Funktion"
+		+ " geladen werden.\n"
+		+ "Dazu m\u00FCssen Sie im emulierten System"
+		+ " das Laden von Kassette\n"
+		+ "und im Audio-Fenster das Abspielden der Datei starten.\n";
 
-      /*
-       * pruefen, ob das gerade emulierte System eine Ladeadresse vorgibt,
-       * Wenn ja, dann Dialog mit der eingetragenen Ladeadresse anzeigen
-       */
-      Integer begAddr = null;
-      if( emuSys != null ) {
-	begAddr = emuSys.getLoadAddr();
+	JCheckBox cb = new JCheckBox(
+			"Diese Meldung zuk\u00FCnftig nicht mehr anzeigen",
+			false );
+
+	if( JOptionPane.showConfirmDialog(
+				screenFrm,
+				new Object[] { msg, cb },
+				"Sound-Datei",
+				JOptionPane.OK_CANCEL_OPTION,
+				JOptionPane.INFORMATION_MESSAGE )
+			== JOptionPane.OK_OPTION )
+	{
+	  suppressAudioMsg = cb.isSelected();
+	  AudioFrm.open( screenFrm ).openFile( file, null, 0 );
+	}
       }
+    } else {
+      EmuThread emuThread = screenFrm.getEmuThread();
+      EmuSys    emuSys    = screenFrm.getEmuSys();
+      byte[]    fileBuf   = readFile( owner, file );
+      if( (emuThread != null) && (emuSys != null) && (fileBuf != null) ) {
 
-      // ggf. muss Dialog mit den Ladeoptionen angezeigt werden
-      boolean  done     = false;
-      String   fileFmt  = null;
-      FileInfo fileInfo = FileInfo.analyzeFile( fileBuf, file );
-      if( fileInfo != null ) {
-	fileFmt = fileInfo.getFileFormat();
-	if( (begAddr == null) && !interactive && (fileFmt != null) ) {
-	  LoadData loadData = null;
-	  try {
-	    loadData = fileInfo.createLoadData( fileBuf, fileFmt );
-	  }
-	  catch( IOException ex ) {}
-	  if( loadData != null ) {
-	    int originBegAddr = loadData.getBegAddr();
-	    if( originBegAddr >= 0 ) {
-	      boolean isAC1      = (emuSys instanceof AC1);
-	      boolean isLLC2     = (emuSys instanceof LLC2);
-	      boolean isHGMC     = (emuSys instanceof HueblerGraphicsMC);
-	      boolean isKC85     = (emuSys instanceof KC85);
-	      boolean isKramerMC = (emuSys instanceof KramerMC);
-	      boolean isZ1013    = (emuSys instanceof Z1013);
-	      boolean isZ9001    = (emuSys instanceof Z9001);
+	/*
+	 * pruefen, ob das gerade emulierte System eine Ladeadresse vorgibt,
+	 * Wenn ja, dann Dialog mit der eingetragenen Ladeadresse anzeigen
+	 */
+	Integer begAddr = null;
+	if( emuSys != null ) {
+	  begAddr = emuSys.getLoadAddr();
+	}
 
-	      if( !startSelected ) {
-		loadData.setStartAddr( -1 );
-	      }
-	      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-		if( fileInfo.getFileType() != 'C' ) {
+	// ggf. muss Dialog mit den Ladeoptionen angezeigt werden
+	boolean  done     = false;
+	String   fileFmt  = null;
+	FileInfo fileInfo = FileInfo.analyzeFile( fileBuf, file );
+	if( fileInfo != null ) {
+	  fileFmt = fileInfo.getFileFormat();
+	  if( (begAddr == null) && !interactive && (fileFmt != null) ) {
+	    LoadData loadData = null;
+	    try {
+	      loadData = fileInfo.createLoadData( fileBuf, fileFmt );
+	    }
+	    catch( IOException ex ) {}
+	    if( loadData != null ) {
+	      int originBegAddr = loadData.getBegAddr();
+	      if( originBegAddr >= 0 ) {
+		boolean isA5105    = (emuSys instanceof A5105);
+		boolean isAC1      = (emuSys instanceof AC1);
+		boolean isLLC2     = (emuSys instanceof LLC2);
+		boolean isHGMC     = (emuSys instanceof HueblerGraphicsMC);
+		boolean isKC85     = (emuSys instanceof KC85);
+		boolean isKramerMC = (emuSys instanceof KramerMC);
+		boolean isZ1013    = (emuSys instanceof Z1013);
+		boolean isZ9001    = (emuSys instanceof Z9001);
+
+		if( !startSelected ) {
 		  loadData.setStartAddr( -1 );
 		}
-	      }
+		if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+		  if( fileInfo.getFileType() != 'C' ) {
+		    loadData.setStartAddr( -1 );
+		  }
+		}
 
-	      /*
-	       * Warnung, wenn Dateityp unueblich beim
-	       * gerade emulierten System ist
-	       */
-	      if( loadData.getStartAddr() >= 0 ) {
-		if( ((isAC1 || isHGMC || isKramerMC || isLLC2 || isZ1013)
+		/*
+		 * Warnung, wenn Dateityp unueblich beim
+		 * gerade emulierten System ist
+		 */
+		if( loadData.getStartAddr() >= 0 ) {
+		  if( (isA5105 && !fileFmt.equals( FileInfo.RMC))
+		      || ((isAC1 || isHGMC || isKramerMC || isLLC2 || isZ1013)
 				&& !fileFmt.equals( FileInfo.HEADERSAVE ))
-		    || (isKC85 && !fileFmt.equals( FileInfo.KCC )
-				&& !fileFmt.equals( FileInfo.KCTAP_KC85 )
-				&& !fileFmt.equals( FileInfo.KCTAP_SYS ))
-		    || (isZ9001 && !fileFmt.equals( FileInfo.KCC )
-				&& !fileFmt.equals( FileInfo.KCTAP_Z9001 )
-				&& !fileFmt.equals( FileInfo.KCTAP_SYS )) )
-		{
-		  String[] options = {
+		      || (isKC85 &&
+				!(fileFmt.equals( FileInfo.KCC )
+				  || fileFmt.equals( FileInfo.KCTAP_KC85 )
+				  || fileFmt.equals( FileInfo.KCTAP_SYS )))
+		      || (isZ9001 &&
+				!(fileFmt.equals( FileInfo.KCC )
+				  || fileFmt.equals( FileInfo.KCTAP_Z9001 )
+				  || fileFmt.equals( FileInfo.KCTAP_SYS ))) )
+		  {
+		    String[] options = {
 				"Laden und Starten",
 				"Nur Laden",
 				"Abbrechen" };
-		  JOptionPane pane = new JOptionPane(
+		    JOptionPane pane = new JOptionPane(
 			"Der Dateityp enth\u00E4lt \u00FCblicherweise"
 				+ " keine Programme f\u00FCr das gerade"
 				+ " emulierte System.\n"
 				+ "M\u00F6chten Sie trotzdem das in der Datei"
 				+ " enthaltene Programm laden und starten?",
 			JOptionPane.WARNING_MESSAGE );
-		  pane.setOptions( options );
-		  pane.createDialog( owner, "Warnung" ).setVisible( true );
+		    pane.setOptions( options );
+		    pane.createDialog( owner, "Warnung" ).setVisible( true );
 
-		  done         = true;
-		  Object value = pane.getValue();
-		  if( value != null ) {
-		    if( value.equals( options[ 0 ] ) ) {
-		      done = false;
-		    }
-		    else if( value.equals( options[ 1 ] ) ) {
-		      loadData.setStartAddr( -1 );
-		      done = false;
-		    }
-		  }
-		}
-	      }
-	      if( !done ) {
-
-		// Datei in Arbeitsspeicher laden und ggf. starten
-		if( confirmLoadDataInfo( owner, loadData ) ) {
-		  emuThread.loadIntoMemory( loadData );
-		  Main.setLastFile( file, "software" );
-
-		  // ggf. Dateikopf in Arbeitsspeicher kopieren
-		  if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-		    if( isZ1013
-			&& EmuUtil.parseBoolean(
-			    Main.getProperty( "jkcemu.loadsave.header.keep" ),
-			    false )
-			&& (loadData.getOffset() == 32) )
-		    {
-		      for( int i = 0; i < 32; i++ ) {
-			emuThread.setMemByte(
-					Z1013.MEM_HEAD + i,
-					loadData.getAbsoluteByte( i ) );
+		    done         = true;
+		    Object value = pane.getValue();
+		    if( value != null ) {
+		      if( value.equals( options[ 0 ] ) ) {
+			done = false;
+		      }
+		      else if( value.equals( options[ 1 ] ) ) {
+			loadData.setStartAddr( -1 );
+			done = false;
 		      }
 		    }
 		  }
+		}
+		if( !done ) {
 
-		  // ggf. Meldung anzeigen und Multi-TAP-Handling
-		  showLoadMsg( screenFrm, loadData );
-		  checkMultiTAPHandling(
+		  // Datei in Arbeitsspeicher laden und ggf. starten
+		  if( confirmLoadDataInfo( owner, loadData ) ) {
+		    emuThread.loadIntoMemory( loadData );
+		    Main.setLastFile( file, "software" );
+
+		    // ggf. Dateikopf in Arbeitsspeicher kopieren
+		    if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+		      if( isZ1013
+			  && EmuUtil.parseBoolean(
+				Main.getProperty(
+					"jkcemu.loadsave.header.keep" ),
+				false )
+			  && (loadData.getOffset() == 32) )
+		      {
+			for( int i = 0; i < 32; i++ ) {
+			  emuThread.setMemByte(
+					Z1013.MEM_HEAD + i,
+					loadData.getAbsoluteByte( i ) );
+			}
+		      }
+		    }
+
+		    // ggf. Meldung anzeigen und Multi-TAP-Handling
+		    showLoadMsg( screenFrm, loadData );
+		    checkMultiTAPHandling(
 				owner,
 				screenFrm,
 				file,
 				fileBuf,
 				fileInfo.getNextTAPOffset() );
+		  }
+		  done = true;
 		}
-		done = true;
 	      }
 	    }
 	  }
 	}
-      }
-      if( !done ) {
-	LoadDlg dlg = new LoadDlg(
+	if( !done ) {
+	  LoadDlg dlg = new LoadDlg(
 				owner,
 				screenFrm,
 				file,
@@ -212,7 +248,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 				fileFmt != null ? fileFmt : FileInfo.BIN,
 				begAddr,
 				startEnabled );
-	dlg.setVisible( true );
+	  dlg.setVisible( true );
+	}
       }
     }
   }
@@ -836,6 +873,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     boolean isKCBASIC_HEAD_ASC  = false;
     boolean isKCBASIC_PRG       = false;
     boolean isRBASIC            = false;
+    boolean isRMC               = false;
     boolean isINTELHEX          = false;
     boolean loadable            = false;
     int     begAddr             = -1;
@@ -856,6 +894,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
       isKCBASIC_HEAD_PRG = fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG );
       isKCBASIC_PRG      = fileFmt.equals( FileInfo.KCBASIC_PRG );
       isRBASIC           = fileFmt.equals( FileInfo.RBASIC );
+      isRMC              = fileFmt.equals( FileInfo.RMC );
       isINTELHEX         = fileFmt.equals( FileInfo.INTELHEX );
       loadable           = !fileFmt.equals( textSelectFmt );
 
@@ -871,7 +910,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     boolean stateBegAddr = (isHS || isKCB || isKCC
 				|| isKCTAP_SYS || isKCTAP_BASIC_PRG
 				|| isKCBASIC_HEAD_PRG || isKCBASIC_PRG
-				|| isRBASIC || isINTELHEX);
+				|| isRBASIC || isRMC || isINTELHEX);
     this.labelInfoBegAddr.setEnabled( stateBegAddr );
     if( stateBegAddr && (begAddr >= 0) ) {
       this.fldInfoBegAddr.setText( String.format( "%04X", begAddr ) );
@@ -881,7 +920,8 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 
     boolean stateEndAddr = (isHS || isKCB || isKCC
 				|| isKCTAP_SYS || isKCTAP_BASIC_PRG
-				|| isKCBASIC_HEAD_PRG || isKCBASIC_PRG);
+				|| isKCBASIC_HEAD_PRG || isKCBASIC_PRG
+				|| isRMC);
     this.labelInfoEndAddr.setEnabled( stateEndAddr );
     if( stateEndAddr && (endAddr >= 0) ) {
       this.fldInfoEndAddr.setText( String.format( "%04X", endAddr ) );
@@ -889,7 +929,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
       this.fldInfoEndAddr.setText( "" );
     }
 
-    boolean stateStartAddr = (isHS || isKCC || isKCTAP_SYS);
+    boolean stateStartAddr = (isHS || isKCC || isKCTAP_SYS || isRMC);
     this.labelInfoStartAddr.setEnabled( stateStartAddr );
     if( stateStartAddr && (startAddr >= 0) ) {
       this.fldInfoStartAddr.setText( String.format( "%04X", startAddr ) );

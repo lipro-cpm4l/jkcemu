@@ -309,7 +309,12 @@ public class Z80Assembler
 	String instruction = asmLine.getInstruction();
 	if( instruction != null ) {
 	  if( instruction.length() > 0 ) {
-	    if( instruction.equals( "ADD" ) ) {
+	    if( instruction.equals( "Z80" )
+		|| instruction.equals( ".Z80" ) )
+	    {
+	      // leer
+	    }
+	    else if( instruction.equals( "ADD" ) ) {
 	      parseADD( asmLine );
 	    }
 	    else if( instruction.equals( "ADC" ) ) {

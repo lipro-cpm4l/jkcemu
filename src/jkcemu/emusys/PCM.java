@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -156,6 +156,34 @@ public class PCM extends EmuSys implements
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    buf.append( "<h1>PC/M Speicherkonfiguration</h1>\n"
+	+ "<table border=\"1\">\n"
+	+ "<tr><td>F800h-FFFFh:</td><td>BWS</td></tr>\n"
+	+ "<tr><td>C000h-F7FFh:</td><td>RAM Bank " );
+    if( this.upperBank0Enabled ) {
+      buf.append( "0" );
+    } else {
+      buf.append( this.ramBank );
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>2000h-BFFFh:</td><td>RAM Bank " );
+    buf.append( this.ramBank );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>0000h-1FFFh:</td><td>" );
+    if( this.romEnabled ) {
+      buf.append( "ROM" );
+    } else {
+      buf.append( "RAM Bank " );
+      buf.append( this.ramBank );
+    }
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -275,74 +303,18 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  public int getCharColCount()
+  public CharRaster getCurScreenCharRaster()
   {
-    return this.mode80x24 ? 80 : 64;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return this.mode80x24 ? 10 : 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return this.mode80x24 ? 24 : 32;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    return this.mode80x24 ? 10 : 8;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return this.mode80x24 ? 6 : 7;
-  }
-
-
-  @Override
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
-  {
-    return true;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return this.fdc != null ? 2048 : -1;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return this.fdc != null ? 2 : -1;
+    return this.mode80x24 ?
+		new CharRaster( 80, 24, 10, 10, 6, 0 )
+		: new CharRaster( 64, 32, 8, 8, 7, 0 );
   }
 
 
   @Override
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
-    return this.fdc != null ?
-		FloppyDiskFormat.getFormat( 2, 80, 16, 256 )
-		: null;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return this.fdc != null ? 2 : -1;
+    return FloppyDiskFormat.FMT_624K;
   }
 
 
@@ -409,7 +381,7 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch = -1;
     if( this.mode80x24 ) {

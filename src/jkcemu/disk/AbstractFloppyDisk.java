@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,15 +17,14 @@ import jkcemu.base.*;
 
 public abstract class AbstractFloppyDisk
 {
-  private Frame                  owner;
-  private volatile int           sides;
-  private volatile int           cyls;
-  private volatile int           sectorsPerCyl;
-  private volatile int           sectorSize;
-  private volatile String        fmtText;
-  private String                 mediaText;
-  private String                 warningText;
-  private Map<String,SectorData> sectorCache;
+  private Frame           owner;
+  private volatile int    sides;
+  private volatile int    cyls;
+  private volatile int    sectorsPerCyl;
+  private volatile int    sectorSize;
+  private volatile String fmtText;
+  private String          mediaText;
+  private String          warningText;
 
 
   protected AbstractFloppyDisk(
@@ -35,15 +34,14 @@ public abstract class AbstractFloppyDisk
 			int    sectorsPerCyl,
 			int    sectorSize )
   {
-    this.owner          = owner;
-    this.sides          = sides;
-    this.cyls           = cyls;
-    this.sectorsPerCyl  = sectorsPerCyl;
-    this.sectorSize     = sectorSize;
-    this.fmtText        = null;
-    this.mediaText      = null;
-    this.warningText    = null;
-    this.sectorCache    = null;
+    this.owner         = owner;
+    this.sides         = sides;
+    this.cyls          = cyls;
+    this.sectorsPerCyl = sectorsPerCyl;
+    this.sectorSize    = sectorSize;
+    this.fmtText       = null;
+    this.mediaText     = null;
+    this.warningText   = null;
   }
 
 
@@ -180,15 +178,19 @@ public abstract class AbstractFloppyDisk
 	  && (this.sectorsPerCyl > 0)
 	  && (this.sectorSize > 0) )
       {
-	int sysCyls = getSystemCylinders();
-	if( (sysCyls > 0) && (sysCyls < this.cyls) ) {
-	  buf.append( this.sides * (this.cyls - sysCyls)
+	int kBytes  = this.sides * this.cyls * this.sectorsPerCyl
+						* this.sectorSize / 1024;
+	int sysTracks = getSysTracks();
+	if( (sysTracks > 0) && (sysTracks < this.cyls) ) {
+	  buf.append( this.sides * (this.cyls - sysTracks)
 			* this.sectorsPerCyl * this.sectorSize / 1024 );
 	  buf.append( (char) '/' );
+	  buf.append( kBytes );
+	  buf.append( " KByte, " );
+	} else {
+	  buf.append( kBytes );
+	  buf.append( " KByte brutto, " );
 	}
-	buf.append( this.sides * this.cyls * this.sectorsPerCyl
-					* this.sectorSize / 1024 );
-	buf.append( " KByte, " );
 	buf.append( this.cyls );
 	buf.append( " Spuren a " );
 	buf.append( this.sectorsPerCyl );
@@ -301,17 +303,6 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  protected synchronized SectorData getSectorFromCache(
-						int physCyl,
-						int physHead,
-						int sectorIdx )
-  {
-    return this.sectorCache != null ?
-      this.sectorCache.get( createSectorKey( physCyl, physHead, sectorIdx ) )
-      : null;
-  }
-
-
   /*
    * Die Methode liefert die Anzahl der Sektoren
    * auf einer gegebenen Spur und einer gegebenen Seite.
@@ -339,7 +330,7 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  protected int getSystemCylinders()
+  protected int getSysTracks()
   {
     return 0;
   }
@@ -363,26 +354,6 @@ public abstract class AbstractFloppyDisk
   public boolean isReadOnly()
   {
     return true;
-  }
-
-
-  protected synchronized void putSectorToCache(
-					SectorData sector,
-					int        physCyl,
-					int        physHead,
-					int        sectorIdx )
-  {
-    if( sector != null ) {
-      if( this.sectorCache == null ) {
-	this.sectorCache = new Hashtable<String,SectorData>();
-      }
-      SectorData oldSector = this.sectorCache.put(
-		createSectorKey( physCyl, physHead, sectorIdx ),
-		sector );
-      if( (oldSector != null) && (oldSector != sector) ) {
-	oldSector.setDisk( null );
-      }
-    }
   }
 
 
@@ -415,21 +386,6 @@ public abstract class AbstractFloppyDisk
       throwUnexpectedEOF();
     }
     return b;
-  }
-
-
-  protected synchronized void removeSectorFromCache(
-					int physCyl,
-					int physHead,
-					int sectorIdx )
-  {
-    if( this.sectorCache != null ) {
-      SectorData oldSector = this.sectorCache.remove(
-			createSectorKey( physCyl, physHead, sectorIdx ) );
-      if( oldSector != null ) {
-	oldSector.setDisk( null );
-      }
-    }
   }
 
 

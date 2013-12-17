@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.C80;
 
 
-public class C80KeyboardFld extends AbstractKeyboardFld
+public class C80KeyboardFld extends AbstractKeyboardFld<C80>
 {
   private static final int MARGIN    = 10;
   private static final int FONT_SIZE = 16;
@@ -26,66 +26,62 @@ public class C80KeyboardFld extends AbstractKeyboardFld
   private static final int KEY_W     = 50;
   private static final int KEY_H     = 30;
 
-  private ScreenFrm screenFrm;
-  private C80       c80;
-  private Font      fontBtn;
-  private KeyData   resetKey;
-  private KeyData   nmiKey;
-  private int[]     kbMatrix;
-  private int       curIdx;
-  private int       curX;
-  private int       curY;
+  private Font    fontBtn;
+  private KeyData resetKey;
+  private KeyData nmiKey;
+  private int[]   kbMatrix;
+  private int     curIdx;
+  private int     curX;
+  private int     curY;
 
 
-  public C80KeyboardFld( ScreenFrm screenFrm, C80 c80 )
+  public C80KeyboardFld( C80 c80 )
   {
-    super( 24 );
-    this.screenFrm = screenFrm;
-    this.c80       = c80;
-    this.fontBtn   = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
-    this.kbMatrix  = new int[ 8 ];
-    this.curIdx    = 0;
-    this.curX      = MARGIN;
-    this.curY      = MARGIN;
+    super( c80, 24, true );
+    this.fontBtn  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
+    this.kbMatrix = new int[ 8 ];
+    this.curIdx   = 0;
+    this.curX     = MARGIN;
+    this.curY     = MARGIN;
     addKey( "D", 2, 0x01 );
     addKey( "E", 2, 0x02 );
     addKey( "F", 2, 0x04 );
-    this.resetKey = addKey( "RES", -1, -1 );
+    this.resetKey = addKey( "RES", -1, -1, "Esc" );
 
     this.curX = MARGIN;
     this.curY += KEY_ROW_H;
     addKey( "A", 3, 0x01 );
     addKey( "B", 3, 0x02 );
     addKey( "C", 3, 0x04 );
-    this.nmiKey = addKey( "BRK", -1, -1 );
+    this.nmiKey = addKey( "BRK", -1, -1, "N" );
 
     this.curX = MARGIN;
     this.curY += KEY_ROW_H;
     addKey( "7",  4, 0x01 );
     addKey( "8",  4, 0x02 );
     addKey( "9",  4, 0x04 );
-    addKey( "GO", 1, 0x01 );
+    addKey( "GO", 1, 0x01, "G" );
 
     this.curX = MARGIN;
     this.curY += KEY_ROW_H;
     addKey( "4",   5, 0x01 );
     addKey( "5",   5, 0x02 );
     addKey( "6",   5, 0x04 );
-    addKey( "REG", 0, 0x01 );
+    addKey( "REG", 0, 0x01, "R" );
 
     this.curX = MARGIN;
     this.curY += KEY_ROW_H;
     addKey( "1", 6, 0x01 );
     addKey( "2", 6, 0x02 );
     addKey( "3", 6, 0x04 );
-    addKey( "-", 1, 0x02 );
+    addKey( "-", 1, 0x02, "-" );
 
     this.curX = MARGIN;
     this.curY += KEY_ROW_H;
-    addKey( "FCN", 7, 0x01 );
+    addKey( "FCN", 7, 0x01, "F1" );
     addKey( "0",   7, 0x02 );
-    addKey( "MEM", 7, 0x04 );
-    addKey( "+",   0, 0x02 );
+    addKey( "MEM", 7, 0x04, "M" );
+    addKey( "+",   0, 0x02, "+ oder Enter" );
 
     int h = this.curY + KEY_ROW_H + MARGIN;
     setPreferredSize(
@@ -115,7 +111,7 @@ public class C80KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.c80.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -124,17 +120,11 @@ public class C80KeyboardFld extends AbstractKeyboardFld
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	this.screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
-	e.consume();
+	fireWarmResetAfterDelay();
       } else if( hits( this.nmiKey, e ) ) {
-	EmuThread emuThread = this.screenFrm.getEmuThread();
-	if( emuThread != null ) {
-	  emuThread.getZ80CPU().fireNMI();
-	}
-	e.consume();
-      } else {
-	super.mousePressed( e );
+	fireNMIAfterDelay();
       }
+      super.mousePressed( e );
     }
   }
 
@@ -172,7 +162,7 @@ public class C80KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof C80 ) {
-      this.c80 = (C80) emuSys;
+      this.emuSys = (C80) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != C80" );
     }
@@ -181,7 +171,7 @@ public class C80KeyboardFld extends AbstractKeyboardFld
 
 	/* --- private Methoden --- */
 
-  private KeyData addKey( String text, int col, int value )
+  private KeyData addKey( String text, int col, int value, String toolTipText )
   {
     KeyData keyData = new KeyData(
 				this.curX,
@@ -195,9 +185,16 @@ public class C80KeyboardFld extends AbstractKeyboardFld
 				null,
 				col,
 				value,
-				false );
+				false,
+				toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += KEY_COL_W;
     return keyData;
+  }
+
+
+  private KeyData addKey( String text, int col, int value )
+  {
+    return addKey( text, col, value, null );
   }
 }

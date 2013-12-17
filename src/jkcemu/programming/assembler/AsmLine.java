@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -88,7 +88,7 @@ public class AsmLine
 	    }
 	  } else {
 	    if( (ch != CharacterIterator.DONE)
-		&& !PrgUtil.isWhitespace( ch ) )
+		&& (ch != '.') && !PrgUtil.isWhitespace( ch ) )
 	    {
 	      throwInvalidCharInLabel( ch );
 	    }

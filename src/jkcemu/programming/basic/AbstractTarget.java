@@ -425,6 +425,12 @@ public abstract class AbstractTarget
   }
 
 
+  public int getGraphicScreenNum()
+  {
+    return -1;
+  }
+
+
   public int getLastScreenNum()
   {
     return 0;

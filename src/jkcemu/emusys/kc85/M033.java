@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,15 +16,15 @@ public class M033 extends AbstractKC85Module
 {
   private static byte[] rom = null;
 
-  private int baseAddr;
+  private int begAddr;
   private int segMask;
 
 
   public M033( int slot, EmuThread emuThread )
   {
     super( slot );
-    this.baseAddr = 0;
-    this.segMask  = 0;
+    this.begAddr = 0;
+    this.segMask = 0;
     if( rom == null ) {
       rom = EmuUtil.readResource(
 				emuThread.getScreenFrm(),
@@ -36,9 +36,23 @@ public class M033 extends AbstractKC85Module
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
+
+  @Override
   public String getModuleName()
   {
     return "M033";
+  }
+
+
+  @Override
+  public int getSegmentNum()
+  {
+    return (this.segMask >> 13) & 0x0001;
   }
 
 
@@ -54,10 +68,10 @@ public class M033 extends AbstractKC85Module
   {
     int rv = -1;
     if( this.enabled
-	&& (addr >= this.baseAddr) && (addr < (this.baseAddr + 0x2000))
+	&& (addr >= this.begAddr) && (addr < (this.begAddr + 0x2000))
 	&& (rom != null) )
     {
-      int idx = (addr - this.baseAddr) | this.segMask;
+      int idx = (addr - this.begAddr) | this.segMask;
       if( idx < rom.length ) {
 	rv = (int) rom[ idx ] & 0xFF;
       }
@@ -70,8 +84,8 @@ public class M033 extends AbstractKC85Module
   public void setStatus( int value )
   {
     super.setStatus( value );
-    this.baseAddr = (value << 8) & 0xC000;
-    this.segMask  = (value & 0x10) != 0 ? 0x2000 : 0;
+    this.begAddr = (value << 8) & 0xC000;
+    this.segMask = (value & 0x10) != 0 ? 0x2000 : 0;
   }
 }
 

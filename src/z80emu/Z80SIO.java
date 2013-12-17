@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -110,7 +110,7 @@ public class Z80SIO implements Z80InterruptSource
 	/* --- Methoden fuer Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
 // TODO
     buf.append( "Keine Details verf&uuml;gbar\n" );

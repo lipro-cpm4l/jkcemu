@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -110,6 +110,10 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
     boolean rv = true;
     reset();
     switch( keyCode ) {
+      case KeyEvent.VK_F1:
+	this.keyboardMatrix[ 6 ] = 0x01;
+	break;
+
       case KeyEvent.VK_ENTER:
 	this.keyboardMatrix[ 6 ] = 0x02;
 	break;

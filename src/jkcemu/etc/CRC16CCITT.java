@@ -1,12 +1,12 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Berechnung von CRC16-CCITT mit Polynom x16 + x12 + x5 + 1 
  */
 
-package jkcemu.base;
+package jkcemu.etc;
 
 import java.lang.*;
 import java.util.zip.Checksum;

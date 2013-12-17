@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,6 +12,7 @@ package jkcemu.audio;
 
 import java.io.*;
 import java.lang.*;
+import java.util.zip.GZIPInputStream;
 import javax.sound.sampled.*;
 import jkcemu.base.EmuUtil;
 import jkcemu.emusys.kc85.KCAudioDataStream;
@@ -20,19 +21,20 @@ import z80emu.Z80CPU;
 
 public class AudioInFile extends AudioIn
 {
-  private AudioFrm         audioFrm;
-  private File             file;
-  private byte[]           fileBytes;
-  private int              offs;
-  private boolean          tapFile;
-  private AudioInputStream in;
-  private byte[]           frameBuf;
-  private long             frameCount;
-  private long             framePos;
-  private int              progressStepSize;
-  private int              progressStepCnt;
-  private int              speedKHz;
-  private volatile boolean pause;
+  private AudioFrm            audioFrm;
+  private File                file;
+  private byte[]              fileBytes;
+  private int                 offs;
+  private boolean             tapFile;
+  private AudioInputStream    audioIn;
+  private BufferedInputStream rawIn;
+  private byte[]              frameBuf;
+  private long                frameCount;
+  private long                framePos;
+  private int                 progressStepSize;
+  private int                 progressStepCnt;
+  private int                 speedKHz;
+  private volatile boolean    pause;
 
 
   public AudioInFile(
@@ -49,7 +51,8 @@ public class AudioInFile extends AudioIn
     this.fileBytes        = fileBytes;
     this.offs             = offs;
     this.tapFile          = tapFile;
-    this.in               = null;
+    this.audioIn          = null;
+    this.rawIn            = null;
     this.frameBuf         = null;
     this.frameCount       = 0L;
     this.framePos         = 0L;
@@ -103,7 +106,7 @@ public class AudioInFile extends AudioIn
   public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
     AudioFormat fmt = null;
-    if( (this.in == null) && (speedKHz > 0) ) {
+    if( (this.audioIn == null) && (speedKHz > 0) ) {
       this.pause    = true;
       this.framePos = 0;
       try {
@@ -139,15 +142,16 @@ public class AudioInFile extends AudioIn
 	      this.framePos = 0;
 	    }
 	  }
-	  this.in = new AudioInputStream(
+	  this.audioIn = new AudioInputStream(
 				ads,
 				ads.getAudioFormat(),
 				ads.getFrameLength() );
 	} else {
-	  this.in         = AudioSystem.getAudioInputStream( this.file );
-	  this.frameCount = this.in.getFrameLength();
+	  this.rawIn   = EmuUtil.openBufferedOptionalGZipFile( this.file );
+	  this.audioIn = AudioSystem.getAudioInputStream( this.rawIn );
+	  this.frameCount = this.audioIn.getFrameLength();
 	}
-	fmt = this.in.getFormat();
+	fmt = this.audioIn.getFormat();
 	if( this.frameCount > 0 ) {
 	  this.progressStepSize = (int) this.frameCount / 100;
 	  this.progressStepCnt  = this.progressStepSize;
@@ -169,8 +173,9 @@ public class AudioInFile extends AudioIn
 	    this.errorText = msg;
 	  }
 	}
+	closeStreams();
       }
-      if( (this.in != null) && (fmt != null) ) {
+      if( (this.audioIn != null) && (fmt != null) ) {
 	this.frameBuf        = new byte[ fmt.getFrameSize() ];
 	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
 						/ fmt.getFrameRate());
@@ -187,8 +192,7 @@ public class AudioInFile extends AudioIn
   public void stopAudio()
   {
     closeMonitorLine();
-    EmuUtil.doClose( this.in );
-    this.in              = null;
+    closeStreams();
     this.frameBuf        = null;
     this.progressEnabled = false;
   }
@@ -204,7 +208,7 @@ public class AudioInFile extends AudioIn
   @Override
   protected byte[] readFrame()
   {
-    AudioInputStream in  = this.in;
+    AudioInputStream in  = this.audioIn;
     byte[]           buf = this.frameBuf;
     if( (in != null) && (buf != null) ) {
       try {
@@ -222,8 +226,7 @@ public class AudioInFile extends AudioIn
 	  }
 	} else {
 	  buf = null;
-	  EmuUtil.doClose( this.in );
-	  this.in = null;
+	  closeStreams();
 	  this.audioFrm.fireFinished();
 	}
       }
@@ -232,6 +235,17 @@ public class AudioInFile extends AudioIn
       }
     }
     return buf;
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void closeStreams()
+  {
+    EmuUtil.doClose( this.audioIn );
+    EmuUtil.doClose( this.rawIn );
+    this.audioIn         = null;
+    this.rawIn           = null;
   }
 }
 

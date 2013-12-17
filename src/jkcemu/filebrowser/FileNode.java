@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,19 +11,18 @@ package jkcemu.filebrowser;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
-import javax.imageio.ImageIO;
 import javax.sound.sampled.*;
 import javax.swing.tree.*;
 import jkcemu.Main;
+import jkcemu.audio.AudioUtil;
 import jkcemu.base.*;
 import jkcemu.disk.*;
+import jkcemu.image.ImgLoader;
 import jkcemu.text.TextUtil;
 
 
 public class FileNode extends FileTreeNode
 {
-  private static String[] imageFileExtensions = null;
-
   private int                hsFileType;
   private boolean            fileChecked;
   private boolean            audioFile;
@@ -391,90 +390,86 @@ public class FileNode extends FileTreeNode
 	  boolean done = false;
 
 	  // Sound-Datei pruefen
-	  try {
-	    if( AudioSystem.getAudioFileFormat( this.file ) != null ) {
-	      this.audioFile = true;
-	      done           = true;
-	    }
+	  if( AudioUtil.isAudioFile( this.file ) ) {
+	    this.audioFile = true;
+	    done           = true;
 	  }
-	  catch( UnsupportedAudioFileException ex1 ) {}
-	  catch( IOException ex2 ) {}
 
-	  // Dateiextension pruefen
-	  if( !this.audioFile ) {
-	    String fName = this.file.getName();
-	    if( fName != null ) {
-	      fName = fName.toLowerCase();
-	      if( TextUtil.endsWith(
+	  // Bilddatei pruefen
+	  if( ImgLoader.accepts( this.file ) ) {
+	    this.imageFile = true;
+	    done           = true;
+	  }
+
+	  /*
+	   * Dateiextension pruefen,
+	   * auch bei Audio und Bilddatei (z.B. wegen *.img und *.gz)
+	   */
+	  String fName = this.file.getName();
+	  if( fName != null ) {
+	    fName = fName.toLowerCase();
+	    if( TextUtil.endsWith(
 				fName,
 				EmuUtil.archiveFileExtensions ) )
-	      {
-		this.archiveFile = true;
-		done             = true;
-	      }
-	      else if( TextUtil.endsWith( fName, DiskUtil.anaDiskFileExt )
-		       || TextUtil.endsWith( fName, DiskUtil.copyQMFileExt )
-		       || TextUtil.endsWith( fName, DiskUtil.dskFileExt )
-		       || TextUtil.endsWith( fName, DiskUtil.imageDiskFileExt )
-		       || TextUtil.endsWith( fName, DiskUtil.teleDiskFileExt ) )
-	      {
-		this.nonPlainDiskFile = true;
-		done                  = true;
-	      }
-	      else if( TextUtil.endsWith( fName, DiskUtil.plainDiskFileExt ) ) {
-		this.plainDiskFile = true;
-		done               = true;
-	      }
-	      else if( TextUtil.endsWith(
+	    {
+	      this.archiveFile = true;
+	      done             = true;
+	    }
+	    else if( TextUtil.endsWith( fName, DiskUtil.anaDiskFileExt )
+		     || TextUtil.endsWith( fName, DiskUtil.copyQMFileExt )
+		     || TextUtil.endsWith( fName, DiskUtil.dskFileExt )
+		     || TextUtil.endsWith( fName, DiskUtil.imageDiskFileExt )
+		     || TextUtil.endsWith( fName, DiskUtil.teleDiskFileExt ) )
+	    {
+	      this.nonPlainDiskFile = true;
+	      done                  = true;
+	    }
+	    else if( TextUtil.endsWith( fName, DiskUtil.plainDiskFileExt ) ) {
+	      this.plainDiskFile = true;
+	      done               = true;
+	    }
+	    else if( TextUtil.endsWith(
 				fName,
 				DiskUtil.gzAnaDiskFileExt )
-		       || TextUtil.endsWith(
+		     || TextUtil.endsWith(
 				fName,
 				DiskUtil.gzCopyQMFileExt )
-		       || TextUtil.endsWith(
+		     || TextUtil.endsWith(
 				fName,
 				DiskUtil.gzDskFileExt )
-		       || TextUtil.endsWith(
+		     || TextUtil.endsWith(
 				fName,
 				DiskUtil.gzImageDiskFileExt )
-		       || TextUtil.endsWith(
+		     || TextUtil.endsWith(
 				fName,
 				DiskUtil.gzTeleDiskFileExt ) )
-	      {
-		this.nonPlainDiskFile = true;
-		this.compressedFile   = true;
-		done                  = true;
-	      }
-	      else if( TextUtil.endsWith(
+	    {
+	      this.nonPlainDiskFile = true;
+	      this.compressedFile   = true;
+	      done                  = true;
+	    }
+	    else if( TextUtil.endsWith(
 				fName,
 				DiskUtil.gzPlainDiskFileExt ) )
-	      {
-		this.plainDiskFile  = true;
-		this.compressedFile = true;
-		done                = true;
-	      }
-	      else if( TextUtil.endsWith(
+	    {
+	      this.plainDiskFile  = true;
+	      this.compressedFile = true;
+	      done                = true;
+	    }
+	    else if( TextUtil.endsWith(
 				fName,
 				EmuUtil.textFileExtensions ) )
-	      {
-		this.textFile = true;
-		done          = true;
-	      }
-	      else if( TextUtil.endsWith(
-				fName,
-				getImageFileExtensions() ) )
-	      {
-		this.imageFile = true;
-		done           = true;
-	      }
-	      else if( fName.endsWith( ".bin" ) ) {
+	    {
+	      this.textFile = true;
+	      done          = true;
+	    }
+	    else if( fName.endsWith( ".bin" ) ) {
 		this.binFile = true;
 		done         = true;
-	      }
-	      else if( fName.endsWith( ".gz" ) ) {
-		this.compressedFile = true;
-		done                = true;
-	      }
+	    }
+	    else if( fName.endsWith( ".gz" ) ) {
+	      this.compressedFile = true;
+	      done                = true;
 	    }
 	  }
 
@@ -552,30 +547,13 @@ public class FileNode extends FileTreeNode
 	      }
 	    }
 	    catch( Exception ex ) {}
+	    finally {
+	      EmuUtil.doClose( in );
+	    }
 	  }
 	}
       }
       this.fileChecked = true;
     }
   }
-
-
-  private static String[] getImageFileExtensions()
-  {
-    if( imageFileExtensions == null ) {
-      imageFileExtensions = ImageIO.getReaderFormatNames();
-      if( imageFileExtensions != null ) {
-	for( int i = 0; i < imageFileExtensions.length; i++ ) {
-	  String ext = imageFileExtensions[ i ];
-	  if( ext.startsWith( "." ) ) {
-	    imageFileExtensions[ i ] = ext.toLowerCase();
-	  } else {
-	    imageFileExtensions[ i ] = "." + ext.toLowerCase();
-	  }
-	}
-      }
-    }
-    return imageFileExtensions;
-  }
 }
-

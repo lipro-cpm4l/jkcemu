@@ -133,15 +133,16 @@
   auch als logische Operatoren zum Verkn&uuml;pfen von
   Vergleichen verwendet werden.
   Anhand des folgenden Beispiels soll das verdeutlicht werden:
- <br/><br/>
+ <br/>
   <tt>
-   10 A$="ABC"<br/>
-   20 B$="XYZ"<br/>
-   30 C=1<br/>
-   40 D=2<br/>
-   50 PRINT (A$&lt;B$) AND (C&lt;D)
+   &#10;<br/>
+   10 A$="ABC"&#10;<br/>
+   20 B$="XYZ"&#10;<br/>
+   30 C=1&#10;<br/>
+   40 D=2&#10;<br/>
+   50 PRINT (A$&lt;B$) AND (C&lt;D)&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   In Zeile&nbsp;50 wird eine&nbsp;-1 ausgeben.
   Und das kommt folgenderma&szlig;en:
   Die Teilausdr&uuml;cke <tt>A$&lt;B$</tt> und
@@ -156,32 +157,34 @@
   Addition bzw. Subtraktion ohne &Uuml;berlaufpr&uuml;fung aus.
   Das ist z.B. sinnvoll bei der Berechnung von Speicheradressen.
   Folgendes Beispiel soll das verdeutlichen:
- <br/><br/>
+ <br/>
   <tt>
-   10 A=&H7F00<br/>
-   20 N=0<br/>
-   30 FOR I=0 TO 999<br/>
-   40 IF PEEK(A+I)=0 THEN N=N+1<br/>
-   50 NEXT<br>
-   60 PRINT N
+   &#10;<br/>
+   10 A=&H7F00&#10;<br/>
+   20 N=0&#10;<br/>
+   30 FOR I=0 TO 999&#10;<br/>
+   40 IF PEEK(A+I)=0 THEN N=N+1&#10;<br/>
+   50 NEXT&#10;<br>
+   60 PRINT N&#10;<br>
   </tt>
- <br/><br/>
+ <br/>
   Ab der Adresse 7F00h sollen in den folgenden 1000 Bytes die Anzahl
   der Null-Bytes gez&auml;hlt werden.
   Bei der Adresse 8000h bricht das Programm mit einem numerischen
   &Uuml;berlauf ab, da der gr&ouml;&szlig;tm&ouml;gliche
   vorzeichenbehaftete Wert von&nbsp;32767 (7FFFh) &uuml;berschritten wurde.
   Mit dem ADD-Operator bricht das Programmm nicht ab:
- <br/><br/>
+ <br/>
   <tt>
-   10 A=&H7F00<br/>
-   20 N=0<br/>
-   30 FOR I=0 TO 999<br/>
-   40 IF PEEK(A ADD I)=0 THEN N=N+1<br/>
-   50 NEXT<br>
-   60 PRINT N
+   &#10;<br/>
+   10 A=&H7F00&#10;<br/>
+   20 N=0&#10;<br/>
+   30 FOR I=0 TO 999&#10;<br/>
+   40 IF PEEK(A ADD I)=0 THEN N=N+1&#10;<br/>
+   50 NEXT&#10;<br>
+   60 PRINT N&#10;<br>
   </tt>
- <br/><br/>
+ <br/>
 
  <h3>1.6. Vorrangregeln</h3>
   Die verschiedenen Operatoren haben eine unterschiedliche Bindungskraft.
@@ -425,4 +428,3 @@
  <br/>
 </body>
 </html>
-

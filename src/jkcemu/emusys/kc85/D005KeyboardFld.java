@@ -110,51 +110,51 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
     this.curIdx       = 0;
     this.curX         = MARGIN;
     this.curY         = MARGIN;
-    this.f1Key        = addKey( "F1", "F7", null, 124, 125, 124 );
+    this.f1Key        = addKey( "F1", "F7", null, 124, 125, 124, "F1" );
     this.curX += (KEY_SIZE / 2);
     this.xRow1Left = this.curX;
-    addKey( "/", "\'", "\u00AC", 106, 53, 23 );
+    addKey( "/", "\'", "\u00AC", 106, 53, 23, null );
     this.digit1Key = addKey( "1", "!", 116, 117 );
     this.digit2Key = addKey( "2", "\"", 4, 5 );
     addKey( "3", "#", 20, 21 );
     addKey( "4", "$", 100, 101 );
     addKey( "5", "%", 36, 37 );
     addKey( "6", "&", 84, 85 );
-    addKey( "7", "^", "@", 52, 22, 43 );
-    addKey( "8", "(", "|", 68, 69, 103 );
+    addKey( "7", "^", "@", 52, 22, 43, null );
+    addKey( "8", "(", "|", 68, 69, 103, null );
     addKey( "9", ")", 58, 59 );
     addKey( "0", "=", 42, 11 );
-    this.szKey = addKey( "\u00DF", "?", "F4", 108, 107, -1 );
-    addKey( "HOME", 8, 9 );
-    addKey( "INS", null, null, 56, 57, 118 );
+    this.szKey = addKey( "\u00DF", "?", "F4", 108, 107, -1, "F4" );
+    addKey( "HOME", null, null, 8, 9, -1, "Pos1" );
+    addKey( "INS", null, null, 56, 57, 118, "Einfg" );
     this.xRow1Right = this.curX - 1;
     this.curX += (KEY_SIZE * 3 / 4);
     int xCrsMiddle = this.curX + (LARGE_KEY_SIZE / 2);
-    this.deleteKey = addLargeKey( "DEL", 40, 41 );
+    this.deleteKey = addLargeKey( "DEL", 40, 41, "Entf" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "F2", "F8", 12, 13 );
+    addKey( "F2", "F8", null, 12, 13, -1, "F2" );
     this.curX += KEY_SIZE;
     addKey( "<", ">", 75, 91 );
     addControlSensitiveKey( "Q", 112, 113 );
     addControlSensitiveKey( "W", 0, 1 );
     addControlSensitiveKey( "E", 16, 17 );
-    addControlSensitiveKey( "R", null, 96, 97, 87 );	// CTRL: RUN
+    addControlSensitiveKey( "R", null, 96, 97, 87, null );	// CTRL: RUN
     addControlSensitiveKey( "T", 32, 33 );
     addControlSensitiveKey( "Z", 80, 81 );
     addControlSensitiveKey( "U", 48, 49 );
     addControlSensitiveKey( "I", 64, 65 );
     addControlSensitiveKey( "O", 54, 55 );
     addControlSensitiveKey( "P", 38, 39 );
-    this.ueKey = addKey( "\u00DC", null, "F3", 28, 29, -1 );
+    this.ueKey = addKey( "\u00DC", null, "F3", 28, 29, -1, "F3" );
     addKey( "+", "*", 104, 27 );
     this.curX = xCrsMiddle - (KEY_SIZE / 2);
     addKey( this.imgUp, 120, 121 );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "F3", "F9", 28, 29 );
+    addKey( "F3", "F9", null, 28, 29, -1, "F3" );
     this.curX += KEY_SIZE;
     this.capsLockKey = new KeyData(
 				this.curX,
@@ -168,7 +168,8 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 				null,
 				-1,
 				114,
-				false );
+				false,
+				null );
     this.keys[ this.curIdx++ ] = this.capsLockKey;
     this.curX += MEDIUM_KEY_SIZE;
     addControlSensitiveKey( "A", 2, 3 );
@@ -179,10 +180,10 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
     addControlSensitiveKey( "H", 50, 51 );
     addControlSensitiveKey( "J", 66, 67 );
     addControlSensitiveKey( "K", 72, 73 );
-    addControlSensitiveKey( "L", null, 88, 89, 86 );	// CTRL: LIST
-    this.oeKey = addKey( "\u00D6", null, "F2", 12, 13, -1 );
-    this.aeKey = addKey( "\u00C4", null, "F1", 124, 125, -1 );
-    addControlSensitiveKey( "CLR", 24, 25 );
+    addControlSensitiveKey( "L", null, 88, 89, 86, null );	// CTRL: LIST
+    this.oeKey = addKey( "\u00D6", null, "F2", 12, 13, -1, "F2" );
+    this.aeKey = addKey( "\u00C4", null, "F1", 124, 125, -1, "F1" );
+    addControlSensitiveKey( "CLR", null, 24, 25, -1, "F9" );
     this.xRow3Right = this.curX - 1;
     this.curX = xCrsMiddle - KEY_SIZE;
     addKey( this.imgLeft, 6, 7 );
@@ -192,9 +193,9 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    this.f4Key = addKey( "F4", "F10", 108, 109 );
+    this.f4Key = addKey( "F4", "F10", null, 108, 109, -1, "F4" );
     this.curX += (KEY_SIZE / 2);
-    addKey( "F6", "F12", 92, 93 );
+    addKey( "F6", "F12", null, 92, 93, -1, "F6" );
     this.shiftKey1 = new KeyData(
 				this.curX,
 				this.curY,
@@ -207,7 +208,8 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 				null,
 				-1,
 				-1,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = this.shiftKey1;
     this.curX += MEDIUM_KEY_SIZE;
     addControlSensitiveKey( "Y", 14, 15 );
@@ -232,14 +234,15 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 				null,
 				-1,
 				-1,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = this.shiftKey2;
     this.curX = xCrsMiddle - (KEY_SIZE / 2);
     addKey( this.imgDown, 118, 119 );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    this.f5Key = addKey( "F5", "F11", 44, 45 );
+    this.f5Key = addKey( "F5", "F11", null, 44, 45, -1, "F5" );
     this.curX += ((KEY_SIZE / 2) + (2 * KEY_SIZE) - MEDIUM_KEY_SIZE);
     this.controlKey = new KeyData(
 				this.curX,
@@ -253,10 +256,11 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 				null,
 				-1,
 				-1,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = this.controlKey;
     this.curX += KEY_SIZE;
-    this.escapeKey = addKey( "ESC", 77, 77 );
+    this.escapeKey = addKey( "ESC", null, 77, 77 );
     this.spaceKey  = new KeyData(
 			this.curX,
 			this.curY,
@@ -271,13 +275,14 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 			0x00FF0000
 				| ((71 << 8) & 0x0000FF00)
 				| (70 & 0x000000FF),
-			false );
+			false,
+			null );
     this.keys[ this.curIdx++ ] = this.spaceKey;
     this.curX += (8 * KEY_SIZE);
-    addControlSensitiveKey( "BRK", 60, 61 );
-    addControlSensitiveKey( "STOP", 76, 77 );
+    addControlSensitiveKey( "BRK", null, 60, 61, -1, "F7" );
+    addControlSensitiveKey( "STOP", null, 76, 77, -1, "F8" );
     this.curX = xCrsMiddle - (LARGE_KEY_SIZE / 2);
-    addLargeKey( "RETURN", 126, 127 );
+    addLargeKey( "RETURN", 126, 127, "Enter" );
 
     int h = this.curY + KEY_SIZE + MARGIN;
     setPreferredSize( new Dimension( w, h ) );
@@ -408,7 +413,7 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 	keyNum = -1;
       }
     }
-    this.kc85.setKeyNumPressed( keyNum );
+    ((KC85) this.emuSys ).setKeyNumPressed( keyNum );
   }
 
 
@@ -544,7 +549,7 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
   public void setEmuSys( EmuSys emuSys ) throws IllegalArgumentException
   {
     if( accepts( emuSys ) ) {
-      this.kc85 = (KC85) emuSys;
+      this.emuSys = (KC85) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != KC85/4..5" );
     }
@@ -595,34 +600,11 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
    */
   private void addControlSensitiveKey(
 			String textNormal,
-			int    keyNumNormal,
-			int    keyNumShift )
-  {
-    addControlSensitiveKey( textNormal, null, keyNumNormal, keyNumShift, -1 );
-  }
-
-
-  private void addControlSensitiveKey(
-			String textNormal,
-			String textShift,
-			int    keyNumNormal,
-			int    keyNumShift )
-  {
-    addControlSensitiveKey(
-			textNormal,
-			textShift,
-			keyNumNormal,
-			keyNumShift,
-			-1 );
-  }
-
-
-  private void addControlSensitiveKey(
-			String textNormal,
 			String textShift,
 			int    keyNumNormal,
 			int    keyNumShift,
-			int    keyNumControl )
+			int    keyNumControl,
+			String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 			this.curX,
@@ -639,8 +621,24 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 				| ((keyNumControl << 16) & 0x00FF0000)
 				| ((keyNumShift << 8) & 0x0000FF00)
 				| (keyNumNormal & 0x000000FF),
-			false );
+			false,
+			toolTipText );
     this.curX += KEY_SIZE;
+  }
+
+
+  private void addControlSensitiveKey(
+			String textNormal,
+			int    keyNumNormal,
+			int    keyNumShift )
+  {
+    addControlSensitiveKey(
+			textNormal,
+			null,
+			keyNumNormal,
+			keyNumShift,
+			-1,
+			null );
   }
 
 
@@ -663,7 +661,8 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 			0x00FF0000
 				| ((keyNumShift << 8) & 0x0000FF00)
 				| (keyNumNormal & 0x000000FF),
-			false );
+			false,
+			null );
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += KEY_SIZE;
     return keyData;
@@ -676,7 +675,8 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 		String textControl,
 		int    keyNumNormal,
 		int    keyNumShift,
-		int    keyNumControl )
+		int    keyNumControl,
+		String toolTipText )
   {
     KeyData keyData = new KeyData(
 			this.curX,
@@ -692,7 +692,8 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 			((keyNumControl << 16) & 0xFF0000)
 				| ((keyNumShift << 8) & 0x00FF00)
 				| (keyNumNormal & 0x0000FF),
-			false );
+			false,
+			toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += KEY_SIZE;
     return keyData;
@@ -711,29 +712,16 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 		null,
 		keyNumNormal,
 		keyNumShift,
-		0xFF );
-  }
-
-
-  private KeyData addKey(
-		String textNormal,
-		int    keyNumNormal,
-		int    keyNumShift )
-  {
-    return addKey(
-		textNormal,
-		null,
-		null,
-		keyNumNormal,
-		keyNumShift,
-		0xFF );
+		0xFF,
+		null );
   }
 
 
   private KeyData addLargeKey(
 			String textNormal,
 			int    keyNumNormal,
-			int    keyNumShift )
+			int    keyNumShift,
+			String toolTipText )
   {
     KeyData keyData = new KeyData(
 			this.curX,
@@ -749,7 +737,8 @@ public class D005KeyboardFld extends AbstractKC85KeyboardFld
 			0x00FF0000
 				| ((keyNumShift << 8) & 0x0000FF00)
 				| (keyNumNormal & 0x000000FF),
-			false );
+			false,
+			toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += LARGE_KEY_SIZE;
     return keyData;

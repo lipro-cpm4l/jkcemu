@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -50,7 +50,7 @@ public class KCBasicFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException
+  public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".sss" );
     OutputStream out = null;
@@ -73,5 +73,6 @@ public class KCBasicFileTarget extends AbstractConvertTarget
     finally {
       EmuUtil.doClose( out );
     }
+    return null;
   }
 }

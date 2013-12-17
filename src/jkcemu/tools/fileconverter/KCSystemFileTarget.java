@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,9 +15,10 @@ import jkcemu.base.*;
 
 public class KCSystemFileTarget extends AbstractConvertTarget
 {
-  private byte[] dataBytes;
-  private int    offs;
-  private int    len;
+  private byte[]  dataBytes;
+  private int     offs;
+  private int     len;
+  private boolean z9001;
 
 
   public KCSystemFileTarget(
@@ -57,7 +58,7 @@ public class KCSystemFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException, UserInputException
+  public String save( File file ) throws IOException, UserInputException
   {
     checkFileExtension( file, ".kcc" );
     int          begAddr   = this.fileConvertFrm.getBegAddr( true );
@@ -67,11 +68,11 @@ public class KCSystemFileTarget extends AbstractConvertTarget
     try {
       out = new FileOutputStream( file );
       FileSaver.writeKCHeader(
-			out,
-			begAddr,
-			begAddr + this.len,
-			startAddr >= 0 ? new Integer( startAddr ) : null,
-			fileDesc );
+		out,
+		begAddr,
+		(begAddr + this.len - 1) & 0xFFFF,
+		startAddr >= 0 ? new Integer( startAddr ) : null,
+		fileDesc );
       int n = Math.min( this.dataBytes.length - this.offs, this.len );
       out.write( this.dataBytes, this.offs, n );
       n = n % 0x80;
@@ -86,6 +87,7 @@ public class KCSystemFileTarget extends AbstractConvertTarget
     finally {
       EmuUtil.doClose( out );
     }
+    return null;
   }
 
 

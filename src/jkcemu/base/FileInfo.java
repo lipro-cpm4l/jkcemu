@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -33,6 +33,7 @@ public class FileInfo
 				"KC-BASIC-ASCII-Listing mit Kopfdaten";
   public static final String KCBASIC_PRG = "KC-BASIC-Programmdatei";
   public static final String RBASIC      = "RBASIC-Programmdatei";
+  public static final String RMC         = "RBASIC-Maschinencodedatei";
   public static final String INTELHEX = "Intel-HEX-Datei";
   public static final String BIN = "BIN-Datei (Speicherabbild ohne Kopfdaten)";
 
@@ -149,6 +150,9 @@ public class FileInfo
 	    }
 	    begAddr = getBegAddr( header, fileFmt );
 	    endAddr = getEndAddr( header, fileFmt );
+	    if( endAddr == 0 ) {
+	      endAddr = 0xFFFF;
+	    }
 	    if( (begAddr >= 0) && (begAddr <= endAddr) ) {
 	      int nBlks = (endAddr - begAddr + 127) / 128;
 	      nextOffs  = 16 + (129 * (nBlks + 1));
@@ -238,17 +242,20 @@ public class FileInfo
 	    fileFmt = KCB;
 	  }
 	}
-	if( (fileFmt == null)
-	    && (upperFileName.endsWith( ".KCC" )
-			|| upperFileName.endsWith( ".JTC" ))
-	    && (fileLen > 127) && (headerLen > 16) )
-	{
-	  int b16 = header[ 16 ] & 0xFF;
-	  if( (b16 >= 2) && (b16 <= 4)
-	      && (EmuUtil.getWord( header, 17 )
-				<= EmuUtil.getWord( header, 19 )) )
+	if( fileFmt == null ) {
+	  if( (upperFileName.endsWith( ".KCC" )
+		|| upperFileName.endsWith( ".JTC" ))
+	      && (fileLen > 127) && (headerLen > 16) )
 	  {
-	    fileFmt = KCC;
+	    int b16 = header[ 16 ] & 0xFF;
+	    if( (b16 >= 2) && (b16 <= 4) ) {
+	      fileFmt = KCC;
+	      begAddr = getBegAddr( header, fileFmt );
+	      endAddr = getEndAddr( header, fileFmt );
+	      if( endAddr == 0 ) {
+		endAddr = 0xFFFF;
+	      }
+	    }
 	  }
 	}
 	if( (fileFmt == null) && upperFileName.endsWith( ".SSS" )
@@ -259,8 +266,19 @@ public class FileInfo
 	if( (fileFmt == null) && upperFileName.endsWith( ".BAS" )
 	    && (fileLen >= 9) && (headerLen >= 9) )
 	{
-	  if( (header[ 2 ] & 0xFF) == 0x80 ) {
+	  if( ((header[ 0 ] & 0xFF) == 0xFF)
+	      && (header[ 2 ] & 0xFF) == 0x80 )
+	  {
 	    fileFmt = RBASIC;
+	  }
+	}
+	if( (fileFmt == null) && upperFileName.endsWith( ".RMC" )
+	    && (fileLen >= 8) && (headerLen >= 7) )
+	{
+	  if( (header[ 0 ] & 0xFF) == 0xFE ) {
+	    fileFmt = RMC;
+	    begAddr = getBegAddr( header, fileFmt );
+	    endAddr = getEndAddr( header, fileFmt );
 	  }
 	}
 	if( (fileFmt == null) && upperFileName.endsWith( ".BIN" )
@@ -405,7 +423,7 @@ public class FileInfo
 	} else if( fileFmt.equals( KCC ) ) {
 	  if( fileBuf.length >= 128 ) {
 	    begAddr = EmuUtil.getWord( fileBuf, 17 );
-	    len = ((EmuUtil.getWord( fileBuf, 19 ) - begAddr) & 0xFFFF) + 1;
+	    len = ((EmuUtil.getWord( fileBuf, 19 ) - begAddr) & 0xFFFF);
 	  }
 	  rv = new LoadData( fileBuf, 128, len, begAddr, -1, fileFmt );
 	  if( fileBuf[ 16 ] >= 3 ) {
@@ -441,6 +459,15 @@ public class FileInfo
 			fileFmt );
 	} else if( fileFmt.equals( RBASIC ) ) {
 	  rv = new LoadData( fileBuf, 1, fileBuf.length, 0x8001, -1, fileFmt );
+	} else if( fileFmt.equals( RMC ) ) {
+	  begAddr = EmuUtil.getWord( fileBuf, 1 );
+	  rv = new LoadData(
+		fileBuf,
+		7,
+		((EmuUtil.getWord( fileBuf, 3 ) - begAddr) & 0xFFFF) + 1,
+		begAddr,
+		(EmuUtil.getWord( fileBuf, 5 ) - begAddr) & 0xFFFF,
+		fileFmt );
 	}
       }
     }
@@ -517,6 +544,9 @@ public class FileInfo
       else if( fileFmt.equals( RBASIC ) ) {
 	rv = 0x8001;
       }
+      else if( fileFmt.equals( RMC ) && (header.length > 2) ) {
+	rv = EmuUtil.getWord( header, 1 );
+      }
       else if( fileFmt.equals( INTELHEX ) && (header.length > 6) ) {
 	char c3 = (char) (header[ 3 ] & 0xFF);
 	char c4 = (char) (header[ 4 ] & 0xFF);
@@ -553,22 +583,28 @@ public class FileInfo
 	rv = EmuUtil.getWord( header, 2 );
       }
       else if( fileFmt.equals( KCB ) && (header.length > 20) ) {
-	int fileEndAddr = EmuUtil.getWord( header, 19 );
+	int fileEndAddr = (EmuUtil.getWord( header, 19 ) - 1) & 0xFFFF;
 	if( (EmuUtil.getWord( header, 17 ) <= 0x0401)
 	    && (fileEndAddr >= 0x0409) )
 	{
-	  rv = fileEndAddr;
+	  rv = fileEndAddr > 0 ? fileEndAddr : 0xFFFF;
 	}
       }
       else if( fileFmt.equals( KCC ) && (header.length > 20) ) {
-	rv = EmuUtil.getWord( header, 19 );
+	rv = (EmuUtil.getWord( header, 19 ) - 1) & 0xFFFF;
+	if( rv == 0 ) {
+	  rv = 0xFFFF;
+	}
       }
       else if( (fileFmt.equals( KCTAP_SYS )
 			|| fileFmt.equals( KCTAP_Z9001 )
 			|| fileFmt.equals( KCTAP_KC85 ))
 	       && (header.length > 37) )
       {
-	rv = EmuUtil.getWord( header, 36 );
+	rv = (EmuUtil.getWord( header, 36 ) - 1) & 0xFFFF;
+	if( rv == 0 ) {
+	  rv = 0xFFFF;
+	}
       }
       else if( fileFmt.equals( KCTAP_BASIC_PRG ) && (header.length > 31) ) {
 	rv = EmuUtil.getWord( header, 28 ) + ((header[ 31 ] & 0xFF) << 8);
@@ -578,6 +614,9 @@ public class FileInfo
       }
       else if( fileFmt.equals( KCBASIC_PRG ) && (header.length > 3) ) {
 	rv = EmuUtil.getWord( header, 0 ) + ((header[ 3 ] & 0xFF) << 8);
+      }
+      else if( fileFmt.equals( RMC ) && (header.length > 4) ) {
+	rv = EmuUtil.getWord( header, 3 );
       }
     }
     return rv;
@@ -715,6 +754,9 @@ public class FileInfo
 	if( rv == 0 ) {
 	  rv = -1;
 	}
+      }
+      else if( fileFmt.equals( RMC ) && fileFmt.equals( "RMC" ) ) {
+	rv = EmuUtil.getWord( header, 5 );
       }
     }
     return rv;
@@ -973,7 +1015,7 @@ public class FileInfo
 	&& (fileBuf.length > 39) )
     {
       begAddr   = EmuUtil.getWord( fileBuf, 34 );
-      len       = ((EmuUtil.getWord( fileBuf, 36 ) - begAddr) & 0xFFFF) + 1;
+      len       = (EmuUtil.getWord( fileBuf, 36 ) - begAddr) & 0xFFFF;
       startAddr = EmuUtil.getWord( fileBuf, 38 );
       if( startAddr == 0 ) {
 	startAddr = -1;

@@ -3,7 +3,7 @@
  *
  * Kleincomputer-Emulator
  *
- * Dialog zum Abrunden von Ecken eines Bildes
+ * Dialog zum Abrunden der Ecken eines Bildes
  */
 
 package jkcemu.image;

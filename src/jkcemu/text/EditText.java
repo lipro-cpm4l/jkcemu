@@ -1026,9 +1026,26 @@ public class EditText implements
 
 	  Properties props = new Properties();
 	  props.setProperty( "jkcemu.properties.type", "project" );
+
+	  // Pfad relativ zur Projektdatei
+	  String filename   = this.file.getPath();
+	  File   prjDirFile = prjFile.getParentFile();
+	  if( prjDirFile != null ) {
+	    String prjDir = prjDirFile.getPath();
+	    if( !prjDir.endsWith( File.separator ) ) {
+	      prjDir += File.separator;
+	    }
+	    int prjDirLen = prjDir.length();
+	    if( filename.startsWith( prjDir )
+		&& (filename.length() > prjDirLen) )
+	    {
+	      filename = filename.substring( prjDirLen );
+	    }
+	  }
 	  props.setProperty(
 			"jkcemu.programming.source.file.name",
-			this.file.getPath() );
+			filename );
+
 	  if( this.prgOptions == null ) {
 	    this.prgOptions = new BasicOptions();
 	  }

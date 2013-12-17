@@ -36,8 +36,10 @@ public class KC85Target extends AbstractTarget
   public void appendDataTo( AsmCodeBuf buf )
   {
     super.appendDataTo( buf );
-    buf.append( "X_CAOS:\tDB\t'CAOS '\n"
+    if( this.usesOSVersion ) {
+      buf.append( "X_CAOS:\tDB\t'CAOS '\n"
 		+ "\tDB\t00H\n" );
+    }
   }
 
 
@@ -681,6 +683,7 @@ public class KC85Target extends AbstractTarget
     buf.append( "XPTEST:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
 		+ "\tJR\tNZ,XPTST1\n"
+		+ "\tLD\tA,L\n"
 		+ "\tLD\t(0B7D5H),A\n"
 		+ "\tLD\t(0B7D3H),DE\n"
 		+ "\tCALL\t0F003H\n"
@@ -721,13 +724,6 @@ public class KC85Target extends AbstractTarget
   public int get100msLoopCount()
   {
     return 50;
-  }
-
-
-  @Override
-  public int getDefaultBegAddr()
-  {
-    return 0x0300;
   }
 
 
@@ -791,6 +787,20 @@ public class KC85Target extends AbstractTarget
   public int getColorYellow()
   {
     return 0x06;
+  }
+
+
+  @Override
+  public int getDefaultBegAddr()
+  {
+    return 0x0300;
+  }
+
+
+  @Override
+  public int getGraphicScreenNum()
+  {
+    return 0;
   }
 
 

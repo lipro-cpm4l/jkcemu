@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,13 +16,12 @@ import jkcemu.base.*;
 import jkcemu.emusys.LLC1;
 
 
-public class LLC1KeyboardFld extends AbstractKeyboardFld
+public class LLC1KeyboardFld extends AbstractKeyboardFld<LLC1>
 {
   private static final int MARGIN    = 10;
   private static final int FONT_SIZE = 18;
   private static final int KEY_SIZE  = 50;
 
-  private LLC1  llc1;
   private Font  fontBtn;
   private int[] kbMatrix;
   private int   curIdx;
@@ -32,8 +31,7 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
 
   public LLC1KeyboardFld( LLC1 llc1 )
   {
-    super( 22 );
-    this.llc1     = llc1;
+    super( llc1, 22, true );
     this.fontBtn  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
     this.kbMatrix = new int[ 4 ];
     this.curIdx   = 0;
@@ -51,8 +49,8 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
     addKey( "A", 2, 0x04 );
     addKey( "B", 3, 0x04 );
     this.curX += (KEY_SIZE / 2);
-    addKey( "EIN", 1, 0x82 );
-    addKey( "REG", 0, 0x82 );
+    addKey( "EIN", 1, 0x82, "M" );
+    addKey( "REG", 0, 0x82, "R" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
@@ -61,8 +59,8 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
     addKey( "6", 2, 0x02 );
     addKey( "7", 3, 0x02 );
     this.curX += (KEY_SIZE / 2);
-    addKey( "HP", 2, 0x84 );
-    addKey( "ES", 0, 0x84 );
+    addKey( "HP", 2, 0x84, "H" );
+    addKey( "ES", 0, 0x84, "S" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
@@ -71,8 +69,8 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
     addKey( "2", 2, 0x01 );
     addKey( "3", 3, 0x01 );
     this.curX += (KEY_SIZE / 2);
-    addKey( "DL", 1, 0x84 );
-    addKey( "ST", 2, 0x82 );
+    addKey( "DL", 1, 0x84, "G oder J" );
+    addKey( "ST", 2, 0x82, "X oder Enter" );
 
     int h = this.curY + KEY_SIZE + MARGIN;
     setPreferredSize(
@@ -109,7 +107,7 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.llc1.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -146,7 +144,7 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof LLC1 ) {
-      this.llc1 = (LLC1) emuSys;
+      this.emuSys = (LLC1) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != LLC1" );
     }
@@ -182,7 +180,7 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
 
 	/* --- private Methoden --- */
 
-  private void addKey( String text, int col, int value )
+  private void addKey( String text, int col, int value, String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -196,7 +194,14 @@ public class LLC1KeyboardFld extends AbstractKeyboardFld
 					null,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_SIZE;
+  }
+
+
+  private void addKey( String text, int col, int value )
+  {
+    addKey( text, col, value, null );
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,7 @@ import jkcemu.base.EmuThread;
 public class M011 extends AbstractKC85Module
 {
   private int     negMask;	// 1-Bits muessen in der Adresse negiert werden
-  private boolean readwrite;
+  private boolean readWrite;
   private byte[]  ram;
 
 
@@ -24,12 +24,33 @@ public class M011 extends AbstractKC85Module
   {
     super( slot );
     this.negMask   = 0;
-    this.readwrite = false;
+    this.readWrite = false;
     this.ram       = new byte[ 0x10000 ];
   }
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void appendEtcInfoHTMLTo( StringBuilder buf )
+  {
+    buf.append( "Blockreihung: " );
+    switch( this.negMask ) {
+      case 0x0000:
+	buf.append( "1 2 3 4" );
+	break;
+      case 0x4000:
+	buf.append( "2 1 4 3" );
+	break;
+      case 0x8000:
+	buf.append( "3 4 1 2" );
+	break;
+      case 0xC000:
+	buf.append( "4 3 2 1" );
+	break;
+    }
+  }
+
 
   @Override
   public void clearRAM()
@@ -42,6 +63,13 @@ public class M011 extends AbstractKC85Module
   public String getModuleName()
   {
     return "M011";
+  }
+
+
+  @Override
+  public Boolean getReadWrite()
+  {
+    return new Boolean( this.readWrite );
   }
 
 
@@ -71,7 +99,7 @@ public class M011 extends AbstractKC85Module
   {
     super.setStatus( value );
     this.negMask   = (value << 8) & 0xC000;
-    this.readwrite = ((value & 0x02) != 0);
+    this.readWrite = ((value & 0x02) != 0);
   }
 
 
@@ -82,7 +110,7 @@ public class M011 extends AbstractKC85Module
     if( this.enabled ) {
       int idx = addr ^ this.negMask;
       if( (idx >= 0) && (idx < this.ram.length) ) {
-	if( this.readwrite ) {
+	if( this.readWrite ) {
 	  this.ram[ idx ] = (byte) value;
 	  rv = 2;
 	} else {

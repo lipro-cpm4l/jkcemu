@@ -18,6 +18,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/emusys/poly880/*.class \
   jkcemu/emusys/z1013/*.class \
   jkcemu/emusys/z9001/*.class \
+  jkcemu/emusys/zxspectrum/*.class \
   jkcemu/etc/*.class \
   jkcemu/filebrowser/*.class \
   jkcemu/image/*.class \
@@ -55,6 +56,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   rom/z1013/*.bin \
   rom/z9001/*.bin \
   rom/z9001/*.gz \
+  rom/zxspectrum/*.bin \
   images/chess/*.png \
   images/debug/*.png \
   images/disk/*.png \
@@ -69,6 +71,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   images/keyboard/sc2/*.png \
   images/keyboard/z1013/*.png \
   images/keyboard/z9001/*.png \
+  images/keyboard/zxspectrum/*.png \
   images/nav/*.png \
   disks/harddisks.csv \
   disks/a5105/*.gz \

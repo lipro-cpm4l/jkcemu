@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,7 @@ import jkcemu.base.*;
 public class M028 extends AbstractKC85Module
 {
   private int    typeByte;
-  private int    baseAddr;
+  private int    begAddr;
   private String fileName;
   private byte[] rom;
 
@@ -31,13 +31,20 @@ public class M028 extends AbstractKC85Module
   {
     super( slot );
     this.typeByte = typeByte;
-    this.baseAddr = 0;
+    this.begAddr  = 0;
     this.fileName = fileName;
     reload( owner );
   }
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
 
   @Override
   public String getFileName()
@@ -65,11 +72,11 @@ public class M028 extends AbstractKC85Module
   {
     int rv = -1;
     if( this.enabled
-	&& (addr >= this.baseAddr)
-	&& (addr < (this.baseAddr + 0x4000))
+	&& (addr >= this.begAddr)
+	&& (addr < (this.begAddr + 0x4000))
 	&& (this.rom != null) )
     {
-      int idx = addr - this.baseAddr;
+      int idx = addr - this.begAddr;
       if( idx < this.rom.length ) {
 	rv = (int) this.rom[ idx ] & 0xFF;
       }
@@ -93,6 +100,6 @@ public class M028 extends AbstractKC85Module
   public void setStatus( int value )
   {
     super.setStatus( value );
-    this.baseAddr = (value << 8) & 0xC000;
+    this.begAddr = (value << 8) & 0xC000;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,8 +13,10 @@ import java.awt.event.*;
 import java.awt.print.*;
 import java.lang.*;
 import java.util.*;
+import java.util.regex.*;
 import javax.swing.*;
 import javax.swing.event.*;
+import javax.swing.text.*;
 import jkcemu.Main;
 import jkcemu.print.*;
 
@@ -26,10 +28,14 @@ public class HTMLViewFrm extends BasicFrm implements
   protected JEditorPane editorPane;
   protected JScrollPane scrollPane;
 
+  private int       findPos             = 0;
+  private Pattern   findPattern         = null;
   private JMenuItem mnuFilePrintOptions = null;
   private JMenuItem mnuFilePrint        = null;
   private JMenuItem mnuFileClose        = null;
   private JMenuItem mnuEditCopy         = null;
+  private JMenuItem mnuEditFind         = null;
+  private JMenuItem mnuEditFindNext     = null;
   private JMenuItem mnuEditSelectAll    = null;
   private JMenuItem mnuHelpContent      = null;
 
@@ -80,6 +86,18 @@ public class HTMLViewFrm extends BasicFrm implements
     mnuEdit.add( this.mnuEditCopy );
     mnuEdit.addSeparator();
 
+    this.mnuEditFind = createJMenuItem(
+		"Suchen...",
+		KeyStroke.getKeyStroke( KeyEvent.VK_F, Event.CTRL_MASK ) );
+    mnuEdit.add( this.mnuEditFind );
+
+    this.mnuEditFindNext = createJMenuItem(
+		"Weitersuchen",
+		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
+    this.mnuEditFindNext.setEnabled( false );
+    mnuEdit.add( this.mnuEditFindNext );
+    mnuEdit.addSeparator();
+
     this.mnuEditSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
     mnuEdit.add( this.mnuEditSelectAll );
 
@@ -112,9 +130,104 @@ public class HTMLViewFrm extends BasicFrm implements
   }
 
 
+  protected void doFind()
+  {
+    String text = this.editorPane.getSelectedText();
+    if( text != null ) {
+      if( text.isEmpty() ) {
+	text = null;
+      }
+    }
+    if( text == null ) {
+      if( this.findPattern != null ) {
+	text = this.findPattern.toString();
+      }
+    }
+    final String[] options = { "Suchen", "Abbrechen" };
+    JOptionPane pane = new JOptionPane(
+				"Suche nach:",
+				JOptionPane.PLAIN_MESSAGE );
+    pane.setOptions( options );
+    pane.setInitialValue( options[ 0 ] );
+    pane.setWantsInput( true );
+    if( text != null ) {
+      pane.setInitialSelectionValue( text );
+    }
+    pane.createDialog( this, "Suchen" ).setVisible( true );
+    if( pane.getValue() == options[ 0 ] ) {
+      Object o = pane.getInputValue();
+      if( o != null ) {
+	String s = o.toString();
+	if( s != null ) {
+	  if( !s.isEmpty() ) {
+	    try {
+	      this.findPattern = Pattern.compile(
+			s,
+			Pattern.LITERAL
+				| Pattern.CASE_INSENSITIVE
+				| Pattern.UNICODE_CASE );
+	      this.findPos = 0;
+	      this.mnuEditFindNext.setEnabled( true );
+	      doFindNext();
+	    }
+	    catch( PatternSyntaxException ex ) {}
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doFindNext()
+  {
+    if( this.findPattern != null ) {
+      String   text = null;
+      Document doc  = this.editorPane.getDocument();
+      if( doc != null ) {
+	try {
+	  text = doc.getText( 0, doc.getLength() );
+	}
+	catch( BadLocationException ex ) {}
+      }
+      if( text == null ) {
+	text = "";
+      }
+      if( this.findPos > text.length() ) {
+	this.findPos = 0;
+      }
+      Matcher matcher = this.findPattern.matcher( text );
+      boolean found   = findNext( matcher );
+      if( !found && (this.findPos > 0) ) {
+	this.findPos = 0;
+	found = findNext( matcher );
+      }
+      if( !found ) {
+	BasicDlg.showInfoDlg( this, "Text nicht gefunden" );
+      }
+    } else {
+      doFind();
+    }
+  }
+
+
   protected void doPrint()
   {
     PrintUtil.doPrint( this, this, getTitle() );
+  }
+
+
+  protected void doSelectAll()
+  {
+    final JEditorPane editorPane = this.editorPane;
+    editorPane.requestFocus();
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    editorPane.selectAll();
+		  }
+		} );
   }
 
 
@@ -227,13 +340,52 @@ public class HTMLViewFrm extends BasicFrm implements
 	rv = true;
 	this.editorPane.copy();
       }
+      else if( src == this.mnuEditFind ) {
+	rv = true;
+	doFind();
+      }
+      else if( src == this.mnuEditFindNext ) {
+	rv = true;
+	doFindNext();
+      }
       else if( src == this.mnuEditSelectAll ) {
 	rv = true;
-	this.editorPane.selectAll();
+	doSelectAll();
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
 	HelpFrm.open( this.mnuHelpContent.getActionCommand() );
+      }
+    }
+    return rv;
+  }
+
+
+	/* --- private Methoden --- */
+
+  private boolean findNext( Matcher matcher )
+  {
+    boolean rv = false;
+    if( matcher.find( this.findPos ) ) {
+      final int a = matcher.start();
+      final int b = matcher.end();
+      if( (a >= 0) && (a < b) ) {
+	final JEditorPane editorPane = this.editorPane;
+        editorPane.requestFocus();
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    try {
+		      editorPane.setCaretPosition( a );
+		      editorPane.moveCaretPosition( b );
+		    }
+		    catch( IllegalArgumentException ex ) {}
+		  }
+		} );
+	this.findPos = a + 1;
+	rv           = true;
       }
     }
     return rv;

@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,39 +16,35 @@ import jkcemu.base.*;
 import jkcemu.emusys.SC2;
 
 
-public class SC2KeyboardFld extends AbstractKeyboardFld
+public class SC2KeyboardFld extends AbstractKeyboardFld<SC2>
 {
   private static final int MARGIN   = 5;
   private static final int LED_SIZE = 12;
   private static final int KEY_SIZE = 60;
   private static final int KEY_Y0   = 50;
 
-  private ScreenFrm screenFrm;
-  private SC2       sc2;
-  private Color     colorBg;
-  private Color     colorLEDon;
-  private Color     colorLEDoff;
-  private Color     colorTextDark;
-  private Color     colorTextLight;
-  private Font      fontTitle;
-  private Font      fontLabel;
-  private Font      fontKey;
-  private Image     imgLedFld;
-  private Image     imgKeyDark;
-  private Image     imgKeyLight;
-  private Image     imgKeySelected;
-  private KeyData   resetKey;
-  private int[]     kbMatrix;
-  private int       curIdx;
-  private int       curX;
-  private int       curY;
+  private Color   colorBg;
+  private Color   colorLEDon;
+  private Color   colorLEDoff;
+  private Color   colorTextDark;
+  private Color   colorTextLight;
+  private Font    fontTitle;
+  private Font    fontLabel;
+  private Font    fontKey;
+  private Image   imgLedFld;
+  private Image   imgKeyDark;
+  private Image   imgKeyLight;
+  private Image   imgKeySelected;
+  private KeyData resetKey;
+  private int[]   kbMatrix;
+  private int     curIdx;
+  private int     curX;
+  private int     curY;
 
 
-  public SC2KeyboardFld( ScreenFrm screenFrm, SC2 sc2 )
+  public SC2KeyboardFld( SC2 sc2 )
   {
-    super( 15 );
-    this.screenFrm      = screenFrm;
-    this.sc2            = sc2;
+    super( sc2, 15, true );
     this.kbMatrix       = new int[ 4 ];
     this.colorBg        = new Color( 20, 20, 20 );
     this.colorLEDon     = Color.red;
@@ -66,27 +62,27 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
     this.curIdx   = 0;
     this.curX     = MARGIN + (KEY_SIZE / 2);
     this.curY     = KEY_Y0;
-    this.resetKey = addKey( this.imgKeyDark, "R", null, -1, -1 );
-    addKey( this.imgKeyDark, "K", null, 3, 0x10 );
-    addKey( this.imgKeyDark, "W", null, 3, 0x20 );
+    this.resetKey = addKey( this.imgKeyDark, "R", null, -1, -1, "Esc" );
+    addKey( this.imgKeyDark, "K", null, 3, 0x10, "K oder +" );
+    addKey( this.imgKeyDark, "W", null, 3, 0x20, "W" );
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( this.imgKeyDark, "P", null, 3, 0x80 );
-    addKey( this.imgKeyDark, "T", null, 0, 0x20 );
-    addKey( this.imgKeyDark, "L", null, 0, 0x40 );
-    addKey( this.imgKeyDark, "Q", null, 0, 0x80 );
+    addKey( this.imgKeyDark, "P", null, 3, 0x80, "P" );
+    addKey( this.imgKeyDark, "T", null, 0, 0x20, "T" );
+    addKey( this.imgKeyDark, "L", null, 0, 0x40, "L oder Backspace" );
+    addKey( this.imgKeyDark, "Q", null, 0, 0x80, "Q oder Enter" );
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( this.imgKeyLight, "A", "1", 1, 0x10 );
-    addKey( this.imgKeyLight, "B", "2", 1, 0x20 );
-    addKey( this.imgKeyLight, "C", "3", 1, 0x40 );
-    addKey( this.imgKeyLight, "D", "4", 1, 0x80 );
+    addKey( this.imgKeyLight, "A", "1", 1, 0x10, "A oder 1" );
+    addKey( this.imgKeyLight, "B", "2", 1, 0x20, "B oder 2" );
+    addKey( this.imgKeyLight, "C", "3", 1, 0x40, "C oder 3" );
+    addKey( this.imgKeyLight, "D", "4", 1, 0x80, "D oder 4" );
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( this.imgKeyLight, "E", "5", 2, 0x10 );
-    addKey( this.imgKeyLight, "F", "6", 2, 0x20 );
-    addKey( this.imgKeyLight, "G", "7", 2, 0x40 );
-    addKey( this.imgKeyLight, "H", "8", 2, 0x80 );
+    addKey( this.imgKeyLight, "E", "5", 2, 0x10, "E oder 5" );
+    addKey( this.imgKeyLight, "F", "6", 2, 0x20, "F oder 6" );
+    addKey( this.imgKeyLight, "G", "7", 2, 0x40, "G oder 7" );
+    addKey( this.imgKeyLight, "H", "8", 2, 0x80, "E oder 8" );
     setPreferredSize(
 		new Dimension(
 			(2 * MARGIN) + (4 * KEY_SIZE),
@@ -114,7 +110,7 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.sc2.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -123,11 +119,9 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	this.screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
-	e.consume();
-      } else {
-	super.mousePressed( e );
+	fireWarmResetAfterDelay();
       }
+      super.mousePressed( e );
     }
   }
 
@@ -174,16 +168,16 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
       g.drawString( text, getWidth() - MARGIN - fm.stringWidth( text ), y );
     }
 
-    g.setColor(
-	this.sc2.getLEDChessValue() ? this.colorLEDon : this.colorLEDoff );
+    g.setColor( this.emuSys.getLEDChessValue() ?
+				this.colorLEDon : this.colorLEDoff );
     g.fillOval(
 	MARGIN + (((KEY_SIZE / 2) - LED_SIZE) / 2),
 	KEY_Y0 + ((KEY_SIZE - LED_SIZE) / 2),
 	LED_SIZE,
 	LED_SIZE );
 
-    g.setColor(
-	this.sc2.getLEDMateValue() ? this.colorLEDon : this.colorLEDoff );
+    g.setColor( this.emuSys.getLEDMateValue() ?
+				this.colorLEDon : this.colorLEDoff );
     g.fillOval(
 	getWidth() - MARGIN - (KEY_SIZE / 2)
 			+ (((KEY_SIZE / 2) - LED_SIZE) / 2),
@@ -238,7 +232,7 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof SC2 ) {
-      this.sc2 = (SC2) emuSys;
+      this.emuSys = (SC2) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != SC2" );
     }
@@ -252,7 +246,8 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
 			String upperText,
 			String lowerText,
 			int    col,
-			int    value )
+			int    value,
+			String toolTipText )
   {
     KeyData keyData = new KeyData(
 				this.curX,
@@ -266,7 +261,8 @@ public class SC2KeyboardFld extends AbstractKeyboardFld
 				image,
 				col,
 				value,
-				false );
+				false,
+				toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += KEY_SIZE;
     return keyData;

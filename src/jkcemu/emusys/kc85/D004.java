@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -105,6 +105,21 @@ public class D004 extends AbstractKC85Module
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void appendEtcInfoHTMLTo( StringBuilder buf )
+  {
+    buf.append( "Transfer-RAM " );
+    buf.append( this.connected ? "verbunden" : "getrennt" );
+  }
+
+
+  @Override
+  public int getBegAddr()
+  {
+    return this.romAddr;
+  }
+
 
   @Override
   public void clearRAM()

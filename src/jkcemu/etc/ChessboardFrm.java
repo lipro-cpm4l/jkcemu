@@ -1,12 +1,12 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Anzeige eines Schachbretts
  */
 
-package jkcemu.base;
+package jkcemu.etc;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -15,6 +15,7 @@ import java.lang.*;
 import java.util.EventObject;
 import javax.swing.*;
 import jkcemu.Main;
+import jkcemu.base.*;
 import jkcemu.image.ImgSelection;
 
 

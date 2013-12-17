@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -252,6 +252,17 @@ public class DiskUnpacker extends AbstractThreadDlg
       ScreenFrm screenFrm = Main.getScreenFrm();
       if( screenFrm != null ) {
 	screenFrm.fireDirectoryChanged( this.outDir.getParentFile() );
+      }
+      final Window owner = getOwner();
+      if( owner != null ) {
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  public void run()
+		  {
+		    BasicDlg.showInfoDlg( owner, "Fertig!", "Entpacken" );
+		  }
+		} );
       }
     }
     this.disk.doClose();

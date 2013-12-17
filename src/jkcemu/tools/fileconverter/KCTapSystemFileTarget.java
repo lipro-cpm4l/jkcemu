@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -64,10 +64,10 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException, UserInputException
+  public String save( File file ) throws IOException, UserInputException
   {
     checkFileExtension( file, ".tap" );
-    int          blkNum    = (z9001 ? 0 : 1);
+    int          blkNum    = (this.z9001 ? 0 : 1);
     int          begAddr   = this.fileConvertFrm.getBegAddr( true );
     int          startAddr = this.fileConvertFrm.getStartAddr( false );
     String       fileDesc  = this.fileConvertFrm.getFileDesc( true );
@@ -84,11 +84,13 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
       // Kopfblock
       out.write( blkNum++ );
       FileSaver.writeKCHeader(
-			out,
-			begAddr,
-			begAddr + this.len,
-			startAddr >= 0 ? new Integer( startAddr ) : null,
-			fileDesc );
+		out,
+		begAddr,
+		this.z9001 ?
+			begAddr
+			: ((begAddr + this.len - 1) & 0xFFFF),
+		startAddr >= 0 ? new Integer( startAddr ) : null,
+		fileDesc );
 
       // Datenbloecke
       int offs    = this.offs;
@@ -113,6 +115,7 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
     finally {
       EmuUtil.doClose( out );
     }
+    return null;
   }
 
 

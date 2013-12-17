@@ -34,6 +34,11 @@
   legen Sie mit der Dateiendung das konkrete Format fest.
   Welche Sound-Dateiformate m&ouml;glich sind,
   h&auml;ngt von der Java-Plattform ab, auf der JKCEMU l&auml;uft.
+  Sound-Dateien k&ouml;nnen beim Konvertieren auch gleich mit GZIP
+  komprimiert werden.
+  Dazu muss an den Namen der Ausgabedatei hinter der Endung
+  des Sound-Dateiformats noch die Endung <em>.gz</em> angeh&auml;ngt werden
+  (z.B. <em>ausgabedatei.wav.gz</em>).
   Des Weiteren k&ouml;nnen Sie die erzeugte Sound-Datei gleich
   abspielen bzw. wiedergeben, ohne dass sie gespeichert werden muss.
   So ist z.B. die &Uuml;bertragung per Audiokabel an einen
@@ -57,7 +62,9 @@
     </td>
     <td valign="top">
      <ul>
-      <li>Einfache Diskettenabbilddatei (*.img; *.image; *.raw)</li>
+      <li>
+       Einfache Diskettenabbilddatei (*.img; *.image; *.raw)
+      </li>
       <li>AnaDisk-Datei (*.dump)</li>
       <li>CPC-Disk-Datei (*.dsk)</li>
       <li>ImageDisk-Datei (*.imd)</li>
@@ -94,15 +101,37 @@
     <td valign="top">
      <ul>
       <li>KC-BASIC-Datei (*.sss)</li>
-      <li>KC-System-Datei mit KC-BASIC-Programm(*.kcb)</li>
+      <li>
+       KC-System-Datei mit KC-BASIC-Programm (*.kcb)
+      </li>
       <li>KC-TAP-BASIC-Datei (*.tap)</li>
       <li>Sound-Datei im KC-BASIC-Format</li>
      </ul>
     </td>
    </tr>
    <tr>
-    <td valign="top">Sound-Datei (*.aif; *.au; *.wav)</td>
-    <td valign="top">Sound-Datei (*.aif; *.au; *.wav)</td>
+    <td valign="top">
+     Sound-Datei<br/>
+     (*.aif; *.au; *.wav)
+    </td>
+    <td valign="top">
+     <ul>
+      <li>Sound-Datei (*.aif; *.au; *.wav)</li>
+      <li>Komprimierte Sound-Datei (*.aif.gz; *.au.gz; *.wav.gz)</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Komprimierte Sound-Datei<br/>
+     (*.aif.gz; *.au.gz; *.wav.gz)
+    </td>
+    <td valign="top">
+     <ul>
+      <li>Sound-Datei (*.aif; *.au; *.wav)</li>
+      <li>Komprimierte Sound-Datei (*.aif.gz; *.au.gz; *.wav.gz)</li>
+     </ul>
+    </td>
    </tr>
   </table>
  <br/><br/>

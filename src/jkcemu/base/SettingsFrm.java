@@ -89,6 +89,7 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                 btnSysVCS80;
   private JRadioButton                 btnSysZ1013;
   private JRadioButton                 btnSysZ9001;
+  private JRadioButton                 btnSysZXSpectrum;
   private JRadioButton                 btnBCS3se24_27;
   private JRadioButton                 btnBCS3se31_29;
   private JRadioButton                 btnBCS3se31_40;
@@ -270,7 +271,8 @@ public class SettingsFrm extends BasicFrm
 		   || (src == this.btnSysSLC1)
 		   || (src == this.btnSysVCS80)
 		   || (src == this.btnSysZ1013)
-		   || (src == this.btnSysZ9001) )
+		   || (src == this.btnSysZ9001)
+		   || (src == this.btnSysZXSpectrum) )
 	  {
 	    rv = true;
 	    updSysOptCard();
@@ -797,6 +799,13 @@ public class SettingsFrm extends BasicFrm
     grpSys.add( this.btnSysZ9001 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysZ9001, gbcSys );
+
+    this.btnSysZXSpectrum = new JRadioButton( "ZX Spectrum", false );
+    this.btnSysZXSpectrum.addActionListener( this );
+    grpSys.add( this.btnSysZXSpectrum );
+    gbcSys.insets.bottom = 5;
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysZXSpectrum, gbcSys );
 
 
     // Optionen
@@ -1669,6 +1678,9 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysZ9001.isSelected() ) {
       valueSys = "Z9001";
     }
+    else if( this.btnSysZXSpectrum.isSelected() ) {
+      valueSys = "ZXSpectrum";
+    }
     props.setProperty( "jkcemu.system", valueSys );
 
     // Optionen fuer A5105
@@ -1928,6 +1940,9 @@ public class SettingsFrm extends BasicFrm
     }
     else if( sysName.startsWith( "Z9001" ) ) {
       this.btnSysZ9001.setSelected( true );
+    }
+    else if( sysName.startsWith( "ZXSpectrum" ) ) {
+      this.btnSysZXSpectrum.setSelected( true );
     } else {
       this.btnSysA5105.setSelected( true );
     }

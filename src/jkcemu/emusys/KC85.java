@@ -262,6 +262,7 @@ public class KC85 extends EmuSys implements
   private Color[]                 colors;
   private AbstractKC85Module[]    modules;
   private String                  sysName;
+  private KC85CharRecognizer      charRecognizer;
   private AbstractKC85KeyboardFld keyboardFld;
   private Z80PIO                  pio;
   private Z80CTC                  ctc;
@@ -315,8 +316,8 @@ public class KC85 extends EmuSys implements
     this.ramPixel1 = new byte[ 0x4000 ];
 
     Z80CPU cpu       = emuThread.getZ80CPU();
-    this.ctc         = new Z80CTC( "CTC (IO-Adressen 8C-8F)" );
-    this.pio         = new Z80PIO( "PIO (IO-Adressen 88-8B)" );
+    this.ctc         = new Z80CTC( "CTC (IO-Adressen 8Ch-8Fh)" );
+    this.pio         = new Z80PIO( "PIO (IO-Adressen 88h-8Bh)" );
     this.joyModule   = null;
     this.d004        = null;
     this.d004RomProp = "";
@@ -408,6 +409,7 @@ public class KC85 extends EmuSys implements
     this.screenBufSaved = null;
     this.rgbValues      = new int[ basicRGBValues.length ];
     this.colors         = new Color[ basicRGBValues.length ];
+    this.charRecognizer = new KC85CharRecognizer();
     applySettings( props );
     z80MaxSpeedChanged( cpu );
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
@@ -665,6 +667,163 @@ public class KC85 extends EmuSys implements
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    if( cpu == this.emuThread.getZ80CPU() ) {
+
+      // Status Grundgeraet
+      buf.append( "<h1>" );
+      buf.append( this.sysName );
+      buf.append( " Status</h1>\n"
+		+ "<table border=\"1\">\n" );
+      if( this.kcTypeNum >= 4 ) {
+	buf.append( "<tr><td>CAOS ROM C:</td><td>" );
+	buf.append( this.caosC000Enabled ? "ein" : "aus" );
+	buf.append( "</td></tr>\n" );
+      }
+      buf.append( "<tr><td>CAOS ROM" );
+      if( this.kcTypeNum >= 4 ) {
+	buf.append( " E" );
+      }
+      buf.append( ":</td><td>" );
+      buf.append( this.caosE000Enabled ? "ein" : "aus" );
+      buf.append( "</td></tr>\n" );
+      if( this.kcTypeNum >= 3 ) {
+	buf.append( "<tr><td>BASIC" );
+	if( this.kcTypeNum > 4 ) {
+	  buf.append( "/USER" );
+	}
+	buf.append( "-ROM:</td><td>" );
+	if( this.basicC000Enabled ) {
+	  if( (this.kcTypeNum >= 4) && this.caosC000Enabled ) {
+	    buf.append( "von CAOS C &uuml;berdeckt" );
+	  } else {
+	    if( this.kcTypeNum > 4 ) {
+	      buf.append( "Bank " );
+	      buf.append( (this.basicSegAddr >> 12) & 0x03 );
+	      buf.append( (char) '\u0020' );
+	    }
+	    buf.append( "ein" );
+	  }
+	} else {
+	  buf.append( "aus" );
+	}
+	buf.append( "</td></tr>\n" );
+      }
+      buf.append( "<tr><td>RAM 0:</td><td>" );
+      if( this.ram0Enabled ) {
+	buf.append( "ein" );
+	if( !this.ram0Writeable ) {
+	  buf.append( "(schreibgesch&uuml;tzt)" );
+	}
+      } else {
+	buf.append( "aus" );
+      }
+      buf.append( "</td></tr>\n" );
+      if( this.kcTypeNum >= 4 ) {
+	buf.append( "<tr><td>RAM 4:</td><td>" );
+	if( this.ram4Enabled ) {
+	  buf.append( "ein" );
+	  if( !this.ram4Writeable ) {
+	    buf.append( "(schreibgesch&uuml;tzt)" );
+	  }
+	} else {
+	  buf.append( "aus" );
+	}
+	buf.append( "</td></tr>\n"
+		+ "<tr><td>RAM 8:</td><td>" );
+	if( this.ram8Enabled ) {
+	  if( this.kcTypeNum > 4 ) {
+	    buf.append( "Bank " );
+	    buf.append( this.ram8SegNum );
+	    buf.append( (char) '\u0020' );
+	  }
+	  buf.append( "ein" );
+	  if( !this.ram8Writeable ) {
+	    buf.append( "(schreibgesch&uuml;tzt)" );
+	  }
+	  if( this.irmEnabled ) {
+	    buf.append( ", aber vom IRM &uuml;berdeckt" );
+	  }
+	} else {
+	  buf.append( "aus" );
+	}
+	buf.append( "</td></tr>\n" );
+      }
+      buf.append( "<tr><td>IRM:</td><td>" );
+      if( this.irmEnabled ) {
+	if( this.kcTypeNum >= 4 ) {
+	  buf.append( "Bank " );
+	  buf.append( this.screen1Enabled ? "1" : "0" );
+	  buf.append( (char) '\u0020' );
+	}
+	buf.append( "ein" );
+      } else {
+	buf.append( "aus" );
+      }
+      buf.append( "</td></tr>\n" );
+      if( this.kcTypeNum >= 4 ) {
+	buf.append( "<tr><td>Bildausgabe:</td><td>IRM-Bank " );
+	buf.append( this.screen1Visible ? "1" : "0" );
+	buf.append( "</td></tr>\n"
+		+ "<tr><td>HIRES-Farbmodus:</td><td>" );
+	buf.append( this.hiColorRes ? "ein" : "aus" );
+	buf.append( "</td></tr>\n" );
+      }
+      buf.append( "</table>\n" );
+
+      // Status der Module
+      AbstractKC85Module[] modules  = this.modules;
+      if( modules != null ) {
+	if( modules.length > 0 ) {
+	  buf.append( "<h2>Module</h2>\n"
+		+ "<table border=\"1\">\n"
+		+ "<tr><th>Schacht</th><th>Modul</th><th>Strukturbyte</th>"
+		+ "<th>Status</th><th>Adresse</th><th>Segment</th>"
+		+ "<th>Sonstiges</th></tr>\n" );
+	  for( AbstractKC85Module module : modules ) {
+	    buf.append( "<tr><td>" );
+	    buf.append( String.format( "%02Xh", module.getSlot() ) );
+	    buf.append( "</td><td>" );
+	    buf.append( module.getModuleName() );
+	    buf.append( "</td><td>" );
+	    String s = module.getTypeByteText();
+	    if( s != null ) {
+	      buf.append( s );
+	    }
+	    buf.append( "</td><td>" );
+	    if( module.isEnabled() ) {
+	      Boolean readWrite = module.getReadWrite();
+	      if( readWrite != null ) {
+		buf.append( readWrite.booleanValue() ? "RW" : "RO" );
+	      } else {
+		buf.append( "ein" );
+	      }
+	    } else {
+	      buf.append( "aus" );
+	    }
+	    buf.append( "</td><td>" );
+	    int begAddr = module.getBegAddr();
+	    if( begAddr >= 0 ) {
+	      buf.append( String.format( "%04Xh", begAddr ) );
+	    }
+	    buf.append( "</td><td>" );
+	    int segNum = module.getSegmentNum();
+	    if( segNum >= 0 ) {
+	      buf.append( segNum );
+	    }
+	    buf.append( "</td><td>" );
+	    module.appendEtcInfoHTMLTo( buf );
+	    buf.append( "</td></tr>\n" );
+	  }
+	  buf.append( "</table>\n" );
+	}
+      }
+    }
+  }
+
 
   @Override
   public void applySettings( Properties props )
@@ -1023,74 +1182,17 @@ public class KC85 extends EmuSys implements
 
 
   @Override
-  public int getCharColCount()
+  public CharRaster getCurScreenCharRaster()
   {
-    return 40;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return 32;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
-  {
-    return true;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return this.d004 != null ? 2048 : -1;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return this.d004 != null ? 2 : -1;
+    copyPixelsToCharRecognizer();
+    return this.charRecognizer.recognizeCharRaster();
   }
 
 
   @Override
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
-    return this.d004 != null ?
-		FloppyDiskFormat.getFormat( 2, 80, 5, 1024 )
-		: null;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return this.d004 != null ? 2 : -1;
+    return FloppyDiskFormat.FMT_780K;
   }
 
 
@@ -1125,7 +1227,7 @@ public class KC85 extends EmuSys implements
   @Override
   public int getMemByte( int addr, boolean m1 )
   {
-    return getMemByteInternal( addr, this.irmEnabled );
+    return getMemByteInternal( addr, this.irmEnabled, m1, false );
   }
 
 
@@ -1137,76 +1239,10 @@ public class KC85 extends EmuSys implements
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int col, int row )
   {
-    int ch  = -1;
-    int idx = 0x3200 + (chY * 40) + chX;
-    if( (idx >= 0) && (idx < this.ramPixel0.length) ) {
-      int b = (int) this.ramPixel0[ idx ] & 0xFF;
-      switch( b ) {
-	case 0:
-	  ch = 0x20;
-	  break;
-
-	case 0x5B:			// volles Rechteck -> herausfiltern
-	  ch = -1;
-	  break;
-
-	case 0x5C:
-	  ch = '|';
-	  break;
-
-	case 0x5D:
-	  ch = '\u00AC';		// Negationszeichen
-	  break;
-
-	case 0x60:
-	  if( this.kcTypeNum > 2 ) {
-	    ch = '\u00A9';		// Copyright-Symbol
-	  } else {
-	    ch = '@';
-	  }
-	  break;
-
-	case 0x7B:
-	  if( this.kcTypeNum > 2 ) {
-	    ch = '\u00E4';		// ae-Umlaut
-	  } else {
-	    ch = '|' ;
-	  }
-	  break;
-
-	case 0x7C:
-	  if( this.kcTypeNum > 2 ) {
-	    ch = '\u00F6';		// oe-Umlaut
-	  } else {
-	    ch = '\u00AC';		// Negationszeichen
-	  }
-	  break;
-
-	case 0x7D:
-	  if( this.kcTypeNum > 2 ) {
-	    ch = '\u00FC';		// ue-Umlaut
-	  } else {
-	    ch = -1;
-	  }
-	  break;
-
-	case 0x7E:
-	  if( this.kcTypeNum > 2 ) {
-	    ch = '\u00DF';		// sz-Umlaut
-	  } else {
-	    ch = -1;
-	  }
-	  break;
-
-	default:
-	  if( (b >= 0x20) && (b < 0x7F) ) {
-	    ch = b;
-	  }
-      }
-    }
-    return ch;
+    copyPixelsToCharRecognizer();
+    return this.charRecognizer.getChar( chRaster, row, col );
   }
 
 
@@ -1550,6 +1586,13 @@ public class KC85 extends EmuSys implements
 
 
   @Override
+  public int readMemByte( int addr, boolean m1 )
+  {
+    return getMemByteInternal( addr, this.irmEnabled, m1, true );
+  }
+
+
+  @Override
   public int reassembleSysCall(
 			Z80MemView    memory,
 			int           addr,
@@ -1738,8 +1781,10 @@ public class KC85 extends EmuSys implements
 	}
 	if( s1 != null ) {
 	  int a = memory.getMemWord( addr + 1 );
-	  int p = ((getMemByteInternal( SUTAB + 1, true ) << 8) & 0xFF00)
-			| (getMemByteInternal( SUTAB, true ) & 0x00FF);
+	  int p = ((getMemByteInternal( SUTAB + 1, true, false, false ) << 8)
+								& 0xFF00)
+			| (getMemByteInternal( SUTAB, true, false, false )
+								& 0x00FF);
 	  int idx = 0;
 	  while( idx < sysCallNames.length ) {
 	    if( a == memory.getMemWord( p ) ) {
@@ -2090,6 +2135,47 @@ public class KC85 extends EmuSys implements
   }
 
 
+  private void copyPixelsToCharRecognizer()
+  {
+    if( this.kcTypeNum > 3 ) {
+      byte[] ramPixel = this.screen1Visible ? this.ramPixel1 : this.ramPixel0;
+      for( int col = 0; col < 40; col++ ) {
+	for( int y = 0; y < 256; y++ ) {
+	  this.charRecognizer.setPixelByte(
+					col,
+					y,
+					ramPixel[ (col << 8) | y ] );
+	}
+      }
+    } else {
+      for( int col = 0; col < 32; col++ ) {
+	for( int y = 0; y < 256; y++ ) {
+	  this.charRecognizer.setPixelByte(
+			col,
+			y,
+			this.ramPixel0[ ((y << 5) & 0x1E00)
+					| ((y << 7) & 0x0180)
+					| ((y << 3) & 0x0060)
+					| (col & 0x001F) ] );
+	}
+      }
+      for( int col = 32; col < 40; col++ ) {
+	for( int y = 0; y < 256; y++ ) {
+	  this.charRecognizer.setPixelByte(
+			col,
+			y,
+			this.ramPixel0[ 0x2000
+					| ((y << 3) & 0x0600)
+					| ((y << 7) & 0x0180)
+					| ((y << 3) & 0x0060)
+					| ((y >> 1) & 0x0018)
+					| (col & 0x0007) ] );
+	}
+      }
+    }
+  }
+
+
   private void createColors( Properties props )
   {
     float brightness = getBrightness( props );
@@ -2352,7 +2438,11 @@ public class KC85 extends EmuSys implements
   }
 
 
-  private int getMemByteInternal( int addr, boolean irmEnabled )
+  private int getMemByteInternal(
+			int     addr,
+			boolean irmEnabled,
+			boolean m1,
+			boolean enabledWaitStates )
   {
     addr &= 0xFFFF;
 
@@ -2408,9 +2498,11 @@ public class KC85 extends EmuSys implements
       }
     } else if( (addr >= 0xC000) && (addr < 0xE000) ) {
       int idx = addr - 0xC000;
-      if( this.caosC000Enabled && (this.caosC000 != null) ) {
-	if( idx < this.caosC000.length ) {
-	  rv = (int) this.caosC000[ idx ] & 0xFF;
+      if( (this.kcTypeNum >= 4) && this.caosC000Enabled ) {
+	if( this.caosC000 != null ) {
+	  if( idx < this.caosC000.length ) {
+	    rv = (int) this.caosC000[ idx ] & 0xFF;
+	  }
 	}
       } else if( this.basicC000Enabled && (this.basicC000 != null) ) {
 	if( (this.kcTypeNum > 4) && (this.basicC000.length > 0x2000) ) {
@@ -2441,6 +2533,12 @@ public class KC85 extends EmuSys implements
     }
     if( (rv < 0) && (this.modules != null) ) {
       for( int i = 0; i < this.modules.length; i++ ) {
+	if( m1 && enabledWaitStates
+	    && (this.modules[ i ].getSlot() >= 0x10) )
+	{
+	  // Wait-State bei M1-Zugriff auf Module in einem D002
+	  this.emuThread.getZ80CPU().addWaitStates( 1 );
+	}
 	int v = this.modules[ i ].readMemByte( addr );
 	if( v >= 0 ) {
 	  rv = v;

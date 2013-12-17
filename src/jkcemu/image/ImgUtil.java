@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,29 +10,74 @@ package jkcemu.image;
 
 import java.awt.*;
 import java.awt.image.*;
-import java.io.*;
 import java.lang.*;
-import java.util.*;
-import javax.imageio.ImageIO;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.emusys.a5105.VIS;
 
 
 public class ImgUtil
 {
   public static final int ROUND_PIXELS_MAX = 9;
 
+  private static IndexColorModel cmA5105 = null;
+  private static IndexColorModel cmBW    = null;
 
-  public static FileNameExtensionFilter createFileFilter( String[] suffixes )
+
+  public static BufferedImage createBufferedImage(
+					Component owner,
+					Image     image )
   {
-    FileNameExtensionFilter rv = null;
+    BufferedImage retImg = null;
+    if( image != null ) {
+      ensureImageLoaded( owner, image );
+      int w = image.getWidth( owner );
+      int h = image.getHeight( owner );
+      if( (w > 0) && (h > 0) ) {
+	retImg = new BufferedImage( w, h, BufferedImage.TYPE_4BYTE_ABGR );
+	Graphics g = retImg.createGraphics();
+	if( g != null ) {
+	  g.drawImage( image, 0, 0, owner );
+	  g.dispose();
+	} else {
+	  retImg = null;
+	}
+      }
+    }
+    return retImg;
+  }
+
+
+  public static FileNameExtensionFilter createFileFilter(
+						String[] suffixes1,
+						String... suffixes2 )
+  {
+    FileNameExtensionFilter rv       = null;
+    String[]                suffixes = null;
+    if( (suffixes1 != null) && (suffixes2 != null) ) {
+      if( (suffixes1.length > 0) && (suffixes2.length > 0) ) {
+	suffixes = new String[ suffixes1.length + suffixes2.length ];
+	int pos = 0;
+	for( int i = 0; i < suffixes1.length; i++ ) {
+	  suffixes[ pos++ ] = suffixes1[ i ];
+	}
+	for( int i = 0; i < suffixes2.length; i++ ) {
+	  suffixes[ pos++ ] = suffixes2[ i ];
+	}
+      }
+    }
+    if( (suffixes == null) && (suffixes1 != null) ) {
+      if( suffixes1.length > 0 ) {
+	suffixes = suffixes1;
+      }
+    }
+    if( suffixes == null ) {
+      suffixes = suffixes2;
+    }
     if( suffixes != null ) {
-      if( suffixes.length > 0 ) {
-	rv = new FileNameExtensionFilter(
+      rv = new FileNameExtensionFilter(
 				"Unterst\u00FCtzte Bilddateien",
 				suffixes );
-      }
     }
     return rv;
   }
@@ -62,6 +107,66 @@ public class ImgUtil
 	catch( InterruptedException ex ) {}
       }
     }
+  }
+
+
+  public static void fillBlack( BufferedImage img )
+  {
+    Graphics g = img.createGraphics();
+    g.setColor( Color.black );
+    g.fillRect( 0, 0, img.getWidth(), img.getHeight() );
+    g.dispose();
+  }
+
+
+  public synchronized static IndexColorModel getColorModelA5105()
+  {
+    if( cmA5105 == null ) {
+      cmA5105 = VIS.createColorModel( 1F );
+    }
+    return cmA5105;
+  }
+
+
+  public synchronized static IndexColorModel getColorModelBW()
+  {
+    if( cmBW == null ) {
+      cmBW = new IndexColorModel(
+			1,
+			2,
+			new byte[] { 0, (byte) 0xFF },
+			new byte[] { 0, (byte) 0xFF },
+			new byte[] { 0, (byte) 0xFF } );
+    }
+    return cmBW;
+  }
+
+
+  public static int getNearestIndex( IndexColorModel cm, int rgb )
+  {
+    int    idx    = -1;
+    long   diff   = 0;
+    int    r      = (rgb >> 16) & 0xFF;
+    int    g      = (rgb >> 8) & 0xFF;
+    int    b      = rgb & 0xFF;
+    int    size   = cm.getMapSize();
+    byte[] reds   = new byte[ size ];
+    byte[] greens = new byte[ size ];
+    byte[] blues  = new byte[ size ];
+    cm.getReds( reds );
+    cm.getGreens( greens );
+    cm.getBlues( blues );
+    for( int i = 0; i < size; i++ ) {
+      long diffR = Math.abs( ((int) reds[ i ] & 0xFF) - r );
+      long diffG = Math.abs( ((int) greens[ i ] & 0xFF) - g );
+      long diffB = Math.abs( ((int) blues[ i ] & 0xFF) - b );
+      long d     = (diffR * diffR) + (diffG * diffG) + (diffB * diffB);
+      if( (idx < 0) || (d < diff) ) {
+	idx  = i;
+	diff = d;
+      }
+    }
+    return idx >= 0 ? idx : 0;
   }
 
 
@@ -148,151 +253,10 @@ public class ImgUtil
   }
 
 
-  public static File saveImage(
-			Frame         owner,
-			BufferedImage image,
-			File          preSelection )
+	/* --- Konstruktor --- */
+
+  private ImgUtil()
   {
-    File rv   = null;
-    File file = EmuUtil.showFileSaveDlg(
-			owner,
-			"Bilddatei speichern",
-			preSelection != null ?
-				preSelection
-				: Main.getLastPathFile( "image" ),
-			createFileFilter( ImageIO.getWriterFileSuffixes() ) );
-    if( file != null ) {
-      String fileName = file.getPath();
-      if( fileName != null ) {
-	try {
-	  boolean formatOK      = false;
-	  String  lowerFileName = fileName.toLowerCase();
-
-	  // Grafikformat ermitteln
-	  String   usedFmt = null;
-	  String[] formats = ImageIO.getWriterFormatNames();
-	  if( formats != null ) {
-	    for( int i = 0; (usedFmt == null) && (i < formats.length); i++ ) {
-	      String s = formats[ i ];
-	      if( s != null ) {
-		if( lowerFileName.endsWith( "." + s.toLowerCase() ) )
-		  usedFmt = s;
-	      }
-	    }
-	  }
-
-	  /*
-	   * Eigentliche wuerde sich die Funktion
-	   * ImageIO.write( RenderedImage, String, File )
-	   * gut eignen, doch wenn die Datei nicht angelegt werden kann,
-	   * wird in der Funktion ein StackTrace geschrieben und
-	   * anschliessend eine IllegalArgumentException
-	   * statt einer IOException geworfen.
-	   */
-	  if( usedFmt != null ) {
-	    OutputStream out = null;
-	    try {
-	      out      = new FileOutputStream( file );
-	      formatOK = ImageIO.write( image, usedFmt, out );
-	      out.close();
-	      out = null;
-	      Main.setLastFile( file, "image" );
-	    }
-	    finally {
-	      if( out != null ) {
-		try {
-		  out.close();
-		}
-		catch( IOException ex ) {}
-	      }
-	    }
-	  }
-
-	  // erfolgreich gespeichert oder Format war falsch
-	  if( formatOK ) {
-	    Main.setLastFile( file, "image" );
-	    rv = file;
-	  } else {
-	    java.util.List<String> fmtList = new ArrayList<String>();
-
-	    // Grafikformate hinzufuegen
-	    if( formats != null ) {
-	      for( int i = 0; i < formats.length; i++ ) {
-		String s = formats[ i ];
-		if( s != null ) {
-		  s = s.toLowerCase();
-		  if( !fmtList.contains( s ) )
-		    fmtList.add( s );
-		}
-	      }
-	    }
-
-	    // Fehlermeldung anzeigen
-	    try {
-	      Collections.sort( fmtList );
-	    }
-	    catch( ClassCastException ex ) {}
-	    if( fmtList.isEmpty() ) {
-	      BasicDlg.showErrorDlg(
-			owner,
-			"Die Funktion wird auf dieser Plattform\n"
-				+ "nicht unterst\u00FCtzt." );
-	    } else {
-	      StringBuilder buf = new StringBuilder( 128 );
-
-	      buf.append( "Das durch die Dateiendung angegebene Format\n"
-			+ "wird nicht unterst\u00FCtzt.\n"
-			+ "Folgende Dateiendungen sind m\u00F6glich:\n" );
-
-	      int col = 0;
-	      for( String s : fmtList ) {
-		if( col > 0 ) {
-		  buf.append( ", " );
-		} else {
-		  buf.append( (char) '\n' );
-		}
-		buf.append( s );
-		col++;
-		if( col >= 10 )
-		  col = 0;
-	      }
-	      BasicDlg.showErrorDlg( owner, buf.toString() );
-	    }
-	  }
-	}
-	catch( Exception ex ) {
-	  BasicDlg.showErrorDlg(
-		owner,
-		fileName + ":\nSpeichern der Datei fehlgeschlagen\n\n"
-			+ ex.getMessage() );
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  public static BufferedImage createBufferedImage(
-					Component owner,
-					Image     image )
-  {
-    BufferedImage retImg = null;
-    if( image != null ) {
-      ensureImageLoaded( owner, image );
-      int w = image.getWidth( owner );
-      int h = image.getHeight( owner );
-      if( (w > 0) && (h > 0) ) {
-	retImg = new BufferedImage( w, h, BufferedImage.TYPE_4BYTE_ABGR );
-	Graphics g = retImg.createGraphics();
-	if( g != null ) {
-	  g.drawImage( image, 0, 0, owner );
-	  g.dispose();
-	} else {
-	  retImg = null;
-	}
-      }
-    }
-    return retImg;
+    // nicht instanziierbar
   }
 }
-

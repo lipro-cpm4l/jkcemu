@@ -96,14 +96,14 @@
    <li><a href="functions.htm#bin$"><tt>BIN$</tt></a></li>
    <li><a href="functions.htm#chr$"><tt>CHR$</tt></a></li>
    <li><a href="functions.htm#hex$"><tt>HEX$</tt></a></li>
-   <li><a href="functions.htm#host_by_name$"><tt>HOST_BY_NAME$</tt></a></li>
+   <li><a href="functions.htm#hostbyname$"><tt>HOSTBYNAME$</tt></a></li>
    <li><a href="functions.htm#input$"><tt>INPUT$</tt></a></li>
    <li><a href="functions.htm#left$"><tt>LEFT$</tt></a></li>
-   <li><a href="functions.htm#local_addr$"><tt>LOCAL_ADDR$</tt></a></li>
+   <li><a href="functions.htm#localaddr$"><tt>LOCALADDR$</tt></a></li>
    <li><a href="functions.htm#lower$"><tt>LOWER$</tt></a></li>
    <li><a href="functions.htm#mid$"><tt>MID$</tt></a></li>
    <li><a href="functions.htm#mirror$"><tt>MIRROR$</tt></a></li>
-   <li><a href="functions.htm#remote_addr$"><tt>REMOTE_ADDR$</tt></a></li>
+   <li><a href="functions.htm#remoteaddr$"><tt>REMOTEADDR$</tt></a></li>
    <li><a href="functions.htm#rtrim$"><tt>RTRIM$</tt></a></li>
    <li><a href="functions.htm#space$"><tt>SPACE$</tt></a></li>
    <li><a href="functions.htm#string$"><tt>STRING$</tt></a></li>
@@ -125,14 +125,14 @@
    <tr>
     <td valign="top">
      <tt>
-      A$="Das ist ein Beispiel."<br/>
+      A$="Das ist ein Beispiel."&#10;<br/>
       B$=TRIM$(MID$(A$,4,5))
      <tt>
     </td>
     <td valign="top">
      <tt>
-      A$="Das ist ein Beispiel."<br/>
-      M$=MID$(A$,4,5)<br/>
+      A$="Das ist ein Beispiel."&#10;<br/>
+      M$=MID$(A$,4,5)&#10;<br/>
       B$=TRIM$(M$)
      <tt>
     </td>
@@ -150,14 +150,15 @@
  <br/><br/>
   Komplexe String-Ausdr&uuml;cke sind nur bei Ausgaben und bei
   der Zuweisung einer Variable erlaubt, z.B.:
- <br/><br/>
+ <br/>
   <tt>
-   A$="Hallo"<br/>
-   B$="Welt"<br/>
-   C$=A$+SPACE$(1)+B$<br/>
-   LABEL "--"+C$+"--"
+   &#10;<br/>
+   A$="Hallo"&#10;<br/>
+   B$="Welt"&#10;<br/>
+   C$=A$+SPACE$(1)+B$&#10;<br/>
+   LABEL "--"+C$+"--"&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   Als Argumente bei Funktionsaufrufen sind nur einfache
   String-Ausdr&uuml;cke erlaubt.
   Gegebenfalls muss auch hier eine Variable zur Zwischenspeicherung
@@ -187,7 +188,7 @@
    <tr>
     <td align="left" valign="top" nowrap="nowrap">
      <tt>
-      E$=INKEY$<br/>
+      E$=INKEY$&#10;<br/>
       IF E$="A" THEN ...
      </tt>
     </td>

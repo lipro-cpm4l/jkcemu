@@ -48,6 +48,7 @@ public class DebugFrm extends BasicFrm implements
   private static final String TEXT_STEP_TO_RET
 			= "Bis RETURN ausf\u00FChren";
 
+  private EmuThread             emuThread;
   private Z80CPU                cpu;
   private Z80Memory             memory;
   private AbstractBreakpointDlg bpDlg;
@@ -145,11 +146,16 @@ public class DebugFrm extends BasicFrm implements
   private JScrollPane[]         bpScrollPanes;
   private JList                 listIntSrc;
   private JEditorPane           fldIntSrc;
+  private JEditorPane           fldEtc;
   private javax.swing.Timer     timerForClear;
 
 
-  public DebugFrm( Z80CPU cpu, Z80Memory memory )
+  public DebugFrm(
+		EmuThread emuThread,
+		Z80CPU    cpu,
+		Z80Memory memory )
   {
+    this.emuThread          = emuThread;
     this.cpu                = cpu;
     this.memory             = memory;
     this.lastSelectedIntSrc = null;
@@ -802,7 +808,7 @@ public class DebugFrm extends BasicFrm implements
 
     JPanel panelBreakPC = new JPanel( new BorderLayout( 0, 0 ) );
     panelBreakPC.setBorder(
-		BorderFactory.createTitledBorder( "P-Adresse" ) );
+		BorderFactory.createTitledBorder( "Programmadresse" ) );
     panelBreak.add( panelBreakPC, gbcBreak );
     createBreakpointFields( panelBreakPC, BP_PC_IDX );
 
@@ -860,6 +866,18 @@ public class DebugFrm extends BasicFrm implements
     this.fldIntSrc = new JEditorPane();
     this.fldIntSrc.setEditable( false );
     panelIntSrc.add( new JScrollPane( this.fldIntSrc ), BorderLayout.CENTER );
+
+    // Tab Sonstiges
+    this.fldEtc = new JEditorPane()
+		{
+		  @Override
+		  public Dimension getPreferredScrollableViewportSize()
+		  {
+		    return new Dimension( 1, 1 );
+		  }
+		};
+    this.fldEtc.setEditable( false );
+    this.tabbedPane.addTab( "Sonstiges", new JScrollPane( this.fldEtc ) );
 
 
     // Statuszeile
@@ -1023,6 +1041,7 @@ public class DebugFrm extends BasicFrm implements
   public boolean applySettings( Properties props, boolean resizable )
   {
     updIntSrcFields();
+    updEtcField();
     return super.applySettings( props, resizable );
   }
 
@@ -1869,6 +1888,9 @@ public class DebugFrm extends BasicFrm implements
     this.fldIntSrc.setContentType( "text/plain" );
     this.fldIntSrc.setText( "" );
     this.fldIntSrc.setEnabled( false );
+    this.fldEtc.setContentType( "text/plain" );
+    this.fldEtc.setText( "" );
+    this.fldEtc.setEnabled( false );
   }
 
 
@@ -2420,6 +2442,9 @@ public class DebugFrm extends BasicFrm implements
       }
     }
 
+    this.fldEtc.setEnabled( true );
+    updEtcField();
+
     setDebuggerEditable( true );
     String text = "Programmausf\u00FChrung angehalten";
     if( iSource != null ) {
@@ -2596,6 +2621,30 @@ public class DebugFrm extends BasicFrm implements
     } else {
       setDebuggerDisabled( "Prozessorsystem nicht aktiv" );
     }
+  }
+
+
+  private void updEtcField()
+  {
+    StringBuilder buf = new StringBuilder( 2048 );
+    buf.append( "<html>\n" );
+    int len = buf.length();
+    if( this.emuThread != null ) {
+      EmuSys emuSys = this.emuThread.getEmuSys();
+      if( emuSys != null ) {
+	emuSys.appendStatusHTMLTo( buf, this.cpu );
+      }
+    }
+    if( buf.length() == len ) {
+      buf.append( "Keine sonstigen Daten verf&uuml;gbar" );
+    }
+    buf.append( "</html>\n" );
+    this.fldEtc.setContentType( "text/html" );
+    this.fldEtc.setText( buf.toString() );
+    try {
+      this.fldEtc.setCaretPosition( 0 );
+    }
+    catch( IllegalArgumentException ex ) {}
   }
 
 
@@ -2950,7 +2999,7 @@ public class DebugFrm extends BasicFrm implements
 	      buf.append( "<html>\n<h1>" );
 	      EmuUtil.appendHTML( buf, this.lastSelectedIntSrc.toString() );
 	      buf.append( "</h1>\n" );
-	      this.lastSelectedIntSrc.appendStatusHTMLTo( buf );
+	      this.lastSelectedIntSrc.appendInterruptStatusHTMLTo( buf );
 	      buf.append( "</html>\n" );
 	      this.fldIntSrc.setContentType( "text/html" );
 	      this.fldIntSrc.setText( buf.toString() );

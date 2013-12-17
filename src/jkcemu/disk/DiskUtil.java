@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -247,24 +247,29 @@ public class DiskUtil
   public static void unpackDisk(
 			Window             owner,
 			File               diskFile,
-			AbstractFloppyDisk disk )
+			AbstractFloppyDisk disk,
+			boolean            forceAskLogicalFmt )
   {
     // sinnvolle Vorbelegung ermitteln
     java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
-    int preSysTracks = 0;
-    int preSysBlocks = readDirBlocks( dirBlocks, null, null, null, disk );
-    if( preSysBlocks > 0 ) {
+    int sysTracks = 0;
+    int sysBlocks = readDirBlocks( dirBlocks, null, null, null, disk );
+    if( sysBlocks > 0 ) {
       int blocksPerTrack = (disk.getSides()
 				* disk.getSectorsPerCylinder()
 				* disk.getSectorSize()) / DEFAULT_BLOCK_SIZE;
       if( blocksPerTrack > 0 ) {
-	preSysTracks = preSysBlocks / blocksPerTrack;
+	sysTracks = sysBlocks / blocksPerTrack;
       }
     }
+    int     blockSize     = DEFAULT_BLOCK_SIZE;
     boolean blockNum16Bit = check16BitBlockNums(
 					dirBlocks,
 					disk.getDiskSize() );
-    FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
+
+    FloppyDiskFormatDlg dlg = null;
+    if( forceAskLogicalFmt ) {
+      dlg = new FloppyDiskFormatDlg(
 			owner,
 			null,
 			FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
@@ -272,13 +277,23 @@ public class DiskUtil
 			FloppyDiskFormatDlg.Flag.BLOCK_NUM_SIZE,
 			FloppyDiskFormatDlg.Flag.APPLY_READONLY,
 			FloppyDiskFormatDlg.Flag.FORCE_LOWERCASE );
-    dlg.setSystemTracks( preSysTracks );
-    dlg.setBlockSize( DEFAULT_BLOCK_SIZE );
-    dlg.setBlockNum16Bit( blockNum16Bit );
+      dlg.setSysTracks( sysTracks );
+      dlg.setBlockSize( blockSize );
+      dlg.setBlockNum16Bit( blockNum16Bit );
+    } else {
+      dlg = new FloppyDiskFormatDlg(
+			owner,
+			null,
+			FloppyDiskFormatDlg.Flag.APPLY_READONLY,
+			FloppyDiskFormatDlg.Flag.FORCE_LOWERCASE );
+    }
     dlg.setVisible( true );
     if( dlg.wasApproved() ) {
-      int sysTracks = dlg.getSystemTracks();
-      int blockSize = dlg.getBlockSize();
+      if( forceAskLogicalFmt ) {
+	sysTracks     = dlg.getSysTracks();
+	blockSize     = dlg.getBlockSize();
+	blockNum16Bit = dlg.getBlockNum16Bit();
+      }
       if( (sysTracks >= 0) && (blockSize > 0) ) {
 	String fileFmtText = disk.getFileFormatText();
 	if( fileFmtText == null ) {
@@ -297,7 +312,7 @@ public class DiskUtil
 			outDir,
 			sysTracks,
 			blockSize,
-			dlg.getBlockNum16Bit(),
+			blockNum16Bit,
 			dlg.getApplyReadOnly(),
 			dlg.getForceLowerCase() );
 	}
@@ -753,13 +768,13 @@ public class DiskUtil
 			FloppyDiskFormatDlg.Flag.BLOCK_NUM_SIZE,
 			FloppyDiskFormatDlg.Flag.APPLY_READONLY,
 			FloppyDiskFormatDlg.Flag.FORCE_LOWERCASE );
-    dlg.setSystemTracks( preSysTracks );
+    dlg.setSysTracks( preSysTracks );
     dlg.setBlockSize( DEFAULT_BLOCK_SIZE );
     dlg.setBlockNum16Bit( blockNum16Bit );
     dlg.setVisible( true );
     fmt = dlg.getFormat();
     if( fmt != null ) {
-      int sysTracks = dlg.getSystemTracks();
+      int sysTracks = dlg.getSysTracks();
       int blockSize = dlg.getBlockSize();
       if( (sysTracks >= 0) && (blockSize > 0) ) {
 	File outDir = EmuUtil.askForOutputDir(

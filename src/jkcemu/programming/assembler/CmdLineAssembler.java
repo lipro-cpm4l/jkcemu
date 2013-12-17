@@ -27,6 +27,8 @@ public class CmdLineAssembler
 	"  -h            diese Hilfe anzeigen",
 	"  -l            Markentabelle ausgeben",
 	"  -o <Datei>    Ausgabedatei festlegen",
+	"  -9            Ausgabedatei f\u00FCr Z9001, KC85/1 und KC87"
+							+ " erzeugen",
 	"  -C            Gro\u00DF-/Kleinschreibung bei Marken beachten",
 	"  -U            undokumentierte Befehle erlauben",
 	"  -R            nur Robotron-Syntax erlauben",
@@ -43,6 +45,7 @@ public class CmdLineAssembler
     boolean zilogFlag    = false;
     boolean undocFlag    = false;
     boolean listFlag     = false;
+    boolean forZ9001     = false;
     String  outFileName  = null;
     String  srcFileName  = null;
     try {
@@ -93,6 +96,9 @@ public class CmdLineAssembler
 		    }
 		    pos = len;		// Schleife verlassen
 		    break;
+		  case '9':
+		    forZ9001 = true;
+		    break;
 		  default:
 		    throw new IOException(
 			String.format( "Unbekannte Option \'%c\'", ch ) );
@@ -139,7 +145,7 @@ public class CmdLineAssembler
 	options.setPrintLabels( listFlag );
 
 	// Assembler starten
-	status = assemble( srcFile, outFileName, options );
+	status = assemble( srcFile, outFileName, forZ9001, options );
       }
     }
     catch( IOException ex ) {
@@ -165,6 +171,7 @@ public class CmdLineAssembler
   private static boolean assemble(
 				File       srcFile,
 				String     outFileName,
+				boolean    forZ9001,
 				PrgOptions options )
   {
     boolean status = false;
@@ -199,7 +206,7 @@ public class CmdLineAssembler
 			srcFile.getName(),
 			options,
 			PrgLogger.createStandardLogger(),
-			false )).assemble( null, false );
+			false )).assemble( null, forZ9001 );
     }
     catch( IOException ex ) {
       String msg = ex.getMessage();

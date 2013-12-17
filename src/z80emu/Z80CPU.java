@@ -1460,7 +1460,7 @@ public class Z80CPU
 	break;
       case 0x0A:				// LD A,(BC)
 	this.regA = readMemByte( getRegBC() );
-	this.instTStates += 11;
+	this.instTStates += 7;
 	break;
       case 0x0B:				// DEC BC
 	setRegBC( getRegBC() - 1 );
@@ -1674,7 +1674,7 @@ public class Z80CPU
 	} else {				// LD H,n
 	  this.regH = nextByte();
 	}
-	this.instTStates += 4;
+	this.instTStates += 7;
 	break;
       case 0x27:				// DAA
 	doInstDAA();
@@ -1749,7 +1749,7 @@ public class Z80CPU
 	} else {				// LD L,n
 	  this.regL = nextByte();
 	}
-	this.instTStates += 4;
+	this.instTStates += 7;
 	break;
       case 0x2F:				// CPL
 	this.regA     = (~this.regA) & 0xFF;
@@ -1793,12 +1793,12 @@ public class Z80CPU
 	break;
       case 0x34:
 	if( preCode == 0xDD ) {			// INC (IX+d)
-	  int m = computeRelAddr( this.regIX, nextByteM1() );
+	  int m = computeRelAddr( this.regIX, nextByte() );
 	  writeMemByte( m, doInstINC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
 	}
 	else if( preCode == 0xFD ) {		// INC (IY+d)
-	  int m = computeRelAddr( this.regIY, nextByteM1() );
+	  int m = computeRelAddr( this.regIY, nextByte() );
 	  writeMemByte( m, doInstINC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
 	} else {				// INC (HL)
@@ -1809,14 +1809,14 @@ public class Z80CPU
 	break;
       case 0x35:
 	if( preCode == 0xDD ) {			// DEC (IX+d)
-	  int m = computeRelAddr( this.regIX, nextByteM1() );
+	  int m = computeRelAddr( this.regIX, nextByte() );
 	  writeMemByte( m, doInstDEC8( readMemByte( m ) ) );
-	  this.instTStates += 19;
+	  this.instTStates += 19;		// insgesamt 23
 	}
 	else if( preCode == 0xFD ) {		// DEC (IY+d)
-	  int m = computeRelAddr( this.regIY, nextByteM1() );
+	  int m = computeRelAddr( this.regIY, nextByte() );
 	  writeMemByte( m, doInstDEC8( readMemByte( m ) ) );
-	  this.instTStates += 19;
+	  this.instTStates += 19;		// insgesamt 23
 	} else {				// DEC (HL)
 	  int regHL = getRegHL();
 	  writeMemByte( regHL, doInstDEC8( readMemByte( regHL ) ) );
@@ -1825,14 +1825,14 @@ public class Z80CPU
 	break;
       case 0x36:
 	if( preCode == 0xDD ) {			// LD (IX+d),n
-	  int m = computeRelAddr( this.regIX, nextByteM1() );
+	  int m = computeRelAddr( this.regIX, nextByte() );
 	  writeMemByte( m, nextByte() );
-	  this.instTStates += 15;
+	  this.instTStates += 15;		// insgesamt 19
 	}
 	else if( preCode == 0xFD ) {		// LD (IY+d),n
-	  int m = computeRelAddr( this.regIY, nextByteM1() );
+	  int m = computeRelAddr( this.regIY, nextByte() );
 	  writeMemByte( m, nextByte() );
-	  this.instTStates += 15;
+	  this.instTStates += 15;		// insgesamt 19
 	} else {				// LD (HL),n
 	  writeMemByte( getRegHL(), nextByte() );
 	  this.instTStates += 10;
@@ -1919,7 +1919,7 @@ public class Z80CPU
 	writeMemByte(
 		computeRelAddr(
 			preCode == 0xDD ? this.regIX : this.regIY,
-			nextByteM1() ),
+			nextByte() ),
 		getSrcValue( -1, opCode ) );
 	this.instTStates += 15;			// insgesamt 19
       }
@@ -1929,7 +1929,7 @@ public class Z80CPU
 	// LD ...,(IXY+d)
 	int value = readMemByte( computeRelAddr(
 			preCode == 0xDD ? this.regIX : this.regIY,
-			nextByteM1() ) );
+			nextByte() ) );
 	switch( opCode & 0x38 ) {		// Bits 3-5: Ziel
 	  case 0x00:
 	    this.regB = value;
@@ -2272,8 +2272,9 @@ public class Z80CPU
       case 0xDA:				// JP C,nn
 	{
 	  int nn = nextWord();
-	  if( this.flagCarry )
+	  if( this.flagCarry ) {
 	    this.regPC = nn;
+	  }
 	  this.instTStates += 10;
 	}
 	break;
@@ -3049,7 +3050,7 @@ public class Z80CPU
   {
     switch( opCode ) {
       case 0x40:				// IN B,(C)
-	this.regB = doInstIN( this.regC );
+	this.regB = doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x41:				// OUT (C),B
@@ -3083,7 +3084,7 @@ public class Z80CPU
 	this.instTStates += 9;
 	break;
       case 0x48:				// IN C,(C)
-	this.regC = doInstIN( this.regC );
+	this.regC = doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x49:				// OUT (C),C
@@ -3135,7 +3136,7 @@ public class Z80CPU
   {
     switch( opCode ) {
       case 0x50:				// IN D,(C)
-	this.regD = doInstIN( this.regC );
+	this.regD = doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x51:				// OUT (C),D
@@ -3176,7 +3177,7 @@ public class Z80CPU
 	this.instTStates += 9;
 	break;
       case 0x58:				// IN E,(C)
-	this.regE = doInstIN( this.regC );
+	this.regE = doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x59:				// OUT (C),E
@@ -3226,7 +3227,7 @@ public class Z80CPU
   {
     switch( opCode ) {
       case 0x60:				// IN H,(C)
-	this.regH = doInstIN( this.regC );
+	this.regH = doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x61:				// OUT (C),H
@@ -3273,7 +3274,7 @@ public class Z80CPU
 	}
 	break;
       case 0x68:				// IN L,(C)
-	this.regL = doInstIN( this.regC );
+	this.regL = doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x69:				// OUT (C),L
@@ -3329,7 +3330,7 @@ public class Z80CPU
   {
     switch( opCode ) {
       case 0x70:				// *IN F,(C)
-	doInstIN( this.regC );
+	doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x71:				// *OUT (C),0
@@ -3359,7 +3360,7 @@ public class Z80CPU
 	this.instTStates += 8;
 	break;
       case 0x78:				// IN A,(C)
-	this.regA = doInstIN( this.regC );
+	this.regA = doInstIN();
 	this.instTStates += 12;
 	break;
       case 0x79:				// OUT (C),A
@@ -3511,9 +3512,9 @@ public class Z80CPU
 
   private int execIXY_CB( int regIXY )
   {
-    int addr   = computeRelAddr( regIXY, nextByteM1() );
+    int addr   = computeRelAddr( regIXY, nextByte() );
     int value  = readMemByte( addr );
-    int opCode = nextByteM1();
+    int opCode = nextByte();
     if( opCode < 0x80 ) {
       if( opCode < 0x40 ) {
         switch( opCode & 0x38 ) {
@@ -3546,13 +3547,13 @@ public class Z80CPU
         }
         writeMemByte( addr, value );
 	execIXY_setUndoc( opCode, value );
-	this.instTStates += 19;
+	this.instTStates += 19;				// insgesamt 23
 
       } else {
 
 	// 0x40-0x7F: BIT n,(IXY+d)
 	doInstBIT( opCode, value );
-	this.instTStates += 16;
+	this.instTStates += 16;				// insgesamt 20
       }
 
     } else {
@@ -3566,7 +3567,7 @@ public class Z80CPU
       }
       writeMemByte( addr, value );
       execIXY_setUndoc( opCode, value );
-      this.instTStates += 19;
+      this.instTStates += 19;				// insgesamt 23
     }
     return regIXY;
   }
@@ -4120,7 +4121,7 @@ public class Z80CPU
   }
 
 
-  private int doInstIN( int port )
+  private int doInstIN()
   {
     int value = 0xFF;
     if( this.ioSys != null ) {
@@ -4203,9 +4204,9 @@ public class Z80CPU
 	{
 	  int addr = 0;
 	  if( preCode == 0xDD ) {
-	    addr = computeRelAddr( this.regIX, nextByteM1() );
+	    addr = computeRelAddr( this.regIX, nextByte() );
 	  } else if( preCode == 0xFD ) {
-	    addr = computeRelAddr( this.regIY, nextByteM1() );
+	    addr = computeRelAddr( this.regIY, nextByte() );
 	  } else {
 	    addr = getRegHL();
 	  }

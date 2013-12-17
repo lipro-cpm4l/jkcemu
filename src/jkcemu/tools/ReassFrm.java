@@ -781,6 +781,9 @@ public class ReassFrm extends BasicFrm implements CaretListener
 	  if( instr != null ) {
 	    String s = instr.getName();
 	    if( s != null ) {
+	      if( s.startsWith( "*" ) ) {
+		s = s.substring( 1 );
+	      }
 	      appendSpaces( buf, bol + COL_SRC_MNEMONIC );
 	      buf.append( s );
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -51,10 +51,18 @@ public class AudioFileTarget extends AbstractConvertTarget
   public AudioInputStream getAudioInputStream() throws IOException
   {
     AudioInputStream ais = null;
+    InputStream      ris = null;
     try {
-      ais = AudioSystem.getAudioInputStream( this.file );
+      if( EmuUtil.isGZipFile( this.file ) ) {
+	ris = EmuUtil.openBufferedOptionalGZipFile( this.file );
+	ais = AudioSystem.getAudioInputStream(
+				new BufferedInputStream( ris ) );
+      } else {
+	ais = AudioSystem.getAudioInputStream( this.file );
+      }
     }
     catch( UnsupportedAudioFileException ex ) {
+      EmuUtil.doClose( ris );
       throw new IOException( ex.getMessage() );
     }
     return ais;
@@ -72,9 +80,7 @@ public class AudioFileTarget extends AbstractConvertTarget
 	    text += this.extensionText;
 	  }
 	  this.fileFilters = new javax.swing.filechooser.FileFilter[] {
-		new javax.swing.filechooser.FileNameExtensionFilter(
-							text,
-							this.extensions ) };
+		new FileFilterWithGZ( text, this.extensions ) };
 	}
       }
     }
@@ -98,7 +104,7 @@ public class AudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException
+  public String save( File file ) throws IOException
   {
     if( file != null ) {
       AudioFileFormat.Type aft = AudioUtil.getAudioFileType(
@@ -107,10 +113,11 @@ public class AudioFileTarget extends AbstractConvertTarget
       if( aft != null ) {
 	AudioInputStream ais = getAudioInputStream();
 	if( ais != null ) {
-	  AudioSystem.write( ais, aft, file );
+	  AudioUtil.write( ais, aft, file );
 	}
       }
     }
+    return null;
   }
 }
 

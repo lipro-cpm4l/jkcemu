@@ -110,46 +110,47 @@
   Funktion mit lokalen Variablen.
   Als weitere Besonderheit wird bei den DATA- und RESTORE-Anweisungen
   eine Marke verwendet.
- <br/><br/>
+ <br/>
   <tt>
-   'Eingabe einer Zahl und Ausgabe als roemische Zahl<br/>
-   'Hauptprogramm<br/>
-   <br/>
-   DECLARE FUNCTION roemische_zahl$(z)<br/>
-   <br/>
-   DO<br/>
-   &nbsp; INPUT "Zahl: ";Z<br/>
-   &nbsp; IF Z&gt;0 THEN<br/>
-   &nbsp; &nbsp; PRINT "Roemische Zahl: ";roemische_zahl$(Z)<br/>
-   &nbsp; ELSEIF Z=0 THEN<br/>
-   &nbsp; &nbsp; PRINT "Ende"<br/>
-   &nbsp; &nbsp; EXIT<br/>
-   &nbsp; ELSE<br/>
-   &nbsp; &nbsp; PRINT "Keine negative Zahl!"<br/>
-   &nbsp; ENDIF<br/>
-   LOOP<br/>
-   END<br/>
-   <br/>
-   'Zuordnung Dezimalzahl zu roemischer Zahl<br/>
-   roem_map:<br/>
-   &nbsp; DATA 1000,"M",900,"CM",500,"D",400,"CD"<br/>
-   &nbsp; DATA 100,"C",90,"XC",50,"L",40,"XL"<br/>
-   &nbsp; DATA 10,"X",9,"IX",5,"V",4,"IV",1,"I"<br/>
-   <br/>
-   'Implementierung der benutzerdefinierten Funktion<br/>
-   FUNCTION roemische_zahl$(z)<br/>
-   &nbsp; LOCAL n,t$,rv$<br/>
-   &nbsp; rv$=""<br/>
-   &nbsp; RESTORE roem_map<br/>
-   &nbsp; WHILE z&gt;0<br/>
-   &nbsp; &nbsp; READ n,t$<br/>
-   &nbsp; &nbsp; WHILE z&gt;=n<br/>
-   &nbsp; &nbsp; &nbsp; z=z-n<br/>
-   &nbsp; &nbsp; &nbsp; rv$=rv$+t$<br/>
-   &nbsp; &nbsp; WEND<br/>
-   &nbsp; WEND<br/>
-   &nbsp; roemische_zahl$=rv$:'Rueckgabewert zuweisen<br/>
-   END FUNCTION
+   &#10;<br/>
+   'Eingabe einer Zahl und Ausgabe als roemische Zahl&#10;<br/>
+   'Hauptprogramm&#10;<br/>
+   &#10;<br/>
+   DECLARE FUNCTION roemische_zahl$(z)&#10;<br/>
+   &#10;<br/>
+   DO&#10;<br/>
+   &nbsp; INPUT "Zahl: ";Z&#10;<br/>
+   &nbsp; IF Z&gt;0 THEN&#10;<br/>
+   &nbsp; &nbsp; PRINT "Roemische Zahl: ";roemische_zahl$(Z)&#10;<br/>
+   &nbsp; ELSEIF Z=0 THEN&#10;<br/>
+   &nbsp; &nbsp; PRINT "Ende"&#10;<br/>
+   &nbsp; &nbsp; EXIT&#10;<br/>
+   &nbsp; ELSE&#10;<br/>
+   &nbsp; &nbsp; PRINT "Keine negative Zahl!"&#10;<br/>
+   &nbsp; ENDIF&#10;<br/>
+   LOOP&#10;<br/>
+   END&#10;<br/>
+   &#10;<br/>
+   'Zuordnung Dezimalzahl zu roemischer Zahl&#10;<br/>
+   roem_map:&#10;<br/>
+   &nbsp; DATA 1000,"M",900,"CM",500,"D",400,"CD"&#10;<br/>
+   &nbsp; DATA 100,"C",90,"XC",50,"L",40,"XL"&#10;<br/>
+   &nbsp; DATA 10,"X",9,"IX",5,"V",4,"IV",1,"I"&#10;<br/>
+   &#10;<br/>
+   'Implementierung der benutzerdefinierten Funktion&#10;<br/>
+   FUNCTION roemische_zahl$(z)&#10;<br/>
+   &nbsp; LOCAL n,t$,rv$&#10;<br/>
+   &nbsp; rv$=""&#10;<br/>
+   &nbsp; RESTORE roem_map&#10;<br/>
+   &nbsp; WHILE z&gt;0&#10;&#10;<br/>
+   &nbsp; &nbsp; READ n,t$&#10;<br/>
+   &nbsp; &nbsp; WHILE z&gt;=n&#10;<br/>
+   &nbsp; &nbsp; &nbsp; z=z-n&#10;<br/>
+   &nbsp; &nbsp; &nbsp; rv$=rv$+t$&#10;<br/>
+   &nbsp; &nbsp; WEND&#10;<br/>
+   &nbsp; WEND&#10;<br/>
+   &nbsp; roemische_zahl$=rv$:'Rueckgabewert zuweisen&#10;<br/>
+   END FUNCTION&#10;<br/>
   </tt>
  <br/>
 </body>

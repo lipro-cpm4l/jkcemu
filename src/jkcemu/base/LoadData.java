@@ -1,10 +1,10 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Daten, die in den Arbeitsspeicher geladen
- * und dort gestartet werden sollen
+ * und dort ggf. gestartet werden koennen
  */
 
 package jkcemu.base;

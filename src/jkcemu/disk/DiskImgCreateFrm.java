@@ -33,60 +33,35 @@ public class DiskImgCreateFrm
 {
   private static DiskImgCreateFrm instance = null;
 
-  private Clipboard         clipboard;
-  private File              lastOutFile;
-  private boolean           dataChanged;
-  private JMenuItem         mnuClose;
-  private JMenuItem         mnuFileAdd;
-  private JMenuItem         mnuFileRemove;
-  private JMenuItem         mnuSort;
-  private JMenuItem         mnuSave;
-  private JMenuItem         mnuChangeUser;
-  private JMenuItem         mnuPaste;
-  private JMenuItem         mnuHelpContent;
-  private JButton           btnFileAdd;
-  private JButton           btnFileRemove;
-  private JButton           btnSave;
-  private JButton           btnFileUp;
-  private JButton           btnFileDown;
-  private JButton           btnSysFileSelect;
-  private JButton           btnSysFileRemove;
-  private JTabbedPane       tabbedPane;
-  private FileTableModel    tableModel;
-  private JTable            table;
-  private JScrollPane       scrollPane;
-  private JRadioButton      btnFmt800K;
-  private JRadioButton      btnFmt780K;
-  private JRadioButton      btnFmt720K;
-  private JRadioButton      btnFmt624K;
-  private JRadioButton      btnFmtCPL;
-  private JRadioButton      btnFmtEtc;
-  private JLabel            labelSides;
-  private JLabel            labelCyls;
-  private JLabel            labelSysCyls;
-  private JLabel            labelSectPerCyl;
-  private JLabel            labelSectorSize;
-  private JLabel            labelSectorSizeUnit;
-  private JLabel            labelBlockSize;
-  private JLabel            labelBlockSizeUnit;
-  private JLabel            labelBlockNumSize;
-  private JLabel            labelBlockNumSizeUnit;
-  private JLabel            labelDirBlocks;
-  private JLabel            labelDirEntriesInfo;
-  private JLabel            labelSysFile;
-  private JComboBox         comboSides;
-  private JComboBox         comboCyls;
-  private JSpinner          spinnerSysCyls;
-  private JComboBox         comboSectPerCyl;
-  private JComboBox         comboSectorSize;
-  private JComboBox         comboBlockSize;
-  private JComboBox         comboBlockNumSize;
-  private JSpinner          spinnerDirBlocks;
-  private FileNameFld       fldSysFileName;
-  private JLabel            labelStatus;
-  private DropTarget        dropTargetFile1;
-  private DropTarget        dropTargetFile2;
-  private DropTarget        dropTargetSysFile;
+  private Clipboard                 clipboard;
+  private File                      lastOutFile;
+  private boolean                   dataChanged;
+  private JMenuItem                 mnuClose;
+  private JMenuItem                 mnuFileAdd;
+  private JMenuItem                 mnuFileRemove;
+  private JMenuItem                 mnuSort;
+  private JMenuItem                 mnuSave;
+  private JMenuItem                 mnuChangeUser;
+  private JMenuItem                 mnuPaste;
+  private JMenuItem                 mnuHelpContent;
+  private JButton                   btnFileAdd;
+  private JButton                   btnFileRemove;
+  private JButton                   btnSave;
+  private JButton                   btnFileUp;
+  private JButton                   btnFileDown;
+  private JButton                   btnSysFileSelect;
+  private JButton                   btnSysFileRemove;
+  private JTabbedPane               tabbedPane;
+  private FileTableModel            tableModel;
+  private JTable                    table;
+  private JScrollPane               scrollPane;
+  private FloppyDiskFormatSelectFld fmtSelectFld;
+  private JLabel                    labelSysFile;
+  private FileNameFld               fldSysFileName;
+  private JLabel                    labelStatus;
+  private DropTarget                dropTargetFile1;
+  private DropTarget                dropTargetFile2;
+  private DropTarget                dropTargetSysFile;
 
 
   public static void open()
@@ -115,12 +90,9 @@ public class DiskImgCreateFrm
 	  updActionButtons();
 	  updStatusText();
 	}
-	else if( src == this.spinnerSysCyls ) {
+	else if( src == this.fmtSelectFld ) {
 	  updSysFileFieldsEnabled();
 	  updStatusText();
-	}
-	else if( src == this.spinnerDirBlocks ) {
-	  updDirEntriesInfo();
 	}
       }
     }
@@ -251,28 +223,6 @@ public class DiskImgCreateFrm
       else if( src == this.mnuHelpContent ) {
 	rv = true;
 	HelpFrm.open( "/help/disk/creatediskimg.htm" );
-      }
-      else if( (src == this.btnFmt800K)
-	       || (src == this.btnFmt780K)
-	       || (src == this.btnFmt720K)
-	       || (src == this.btnFmt624K)
-	       || (src == this.btnFmtCPL)
-	       || (src == this.btnFmtEtc) )
-      {
-	rv = true;
-	updFmtDetailsFields();
-      }
-      else if( (src == this.comboSides)
-	       || (src == this.comboCyls)
-	       || (src == this.comboSectPerCyl)
-	       || (src == this.comboSectorSize) )
-      {
-	rv = true;
-	updStatusText();
-      }
-      else if( src == this.comboBlockSize ) {
-	rv = true;
-	updDirEntriesInfo();
       }
     }
     return rv;
@@ -432,15 +382,15 @@ public class DiskImgCreateFrm
 	if( plainDisk || anaDisk || cpcDisk || imageDisk ) {
 	  OutputStream out = null;
 	  try {
-	    int  sides       = getIntValue( this.comboSides );
-	    int  cyls        = getIntValue( this.comboCyls );
-	    int  sysCyls     = getIntValue( this.spinnerSysCyls );
-	    int  sectPerCyl  = getIntValue( this.comboSectPerCyl );
-	    int  sectorSize  = getIntValue( this.comboSectorSize );
-	    int  blockSize   = getIntValue( this.comboBlockSize ) * 1024;
-	    int  dirBlocks   = getIntValue( this.spinnerDirBlocks );
+	    int  sides       = this.fmtSelectFld.getSides();
+	    int  cyls        = this.fmtSelectFld.getCylinders();
+	    int  sysTracks   = this.fmtSelectFld.getSysTracks();
+	    int  sectPerCyl  = this.fmtSelectFld.getSectorsPerCylinder();
+	    int  sectorSize  = this.fmtSelectFld.getSectorSize();
+	    int  blockSize   = this.fmtSelectFld.getBlockSize();
+	    int  dirBlocks   = this.fmtSelectFld.getDirBlocks();
 	    int  diskSize    = sides * cyls * sectPerCyl * sectorSize;
-	    int  dstDirPos   = sysCyls * sides * sectPerCyl * sectorSize;
+	    int  dstDirPos   = sysTracks * sides * sectPerCyl * sectorSize;
 	    int  dirSize     = dirBlocks * blockSize;
 	    int  begFileArea = dstDirPos + dirSize;
 	    int  dstFilePos  = begFileArea;
@@ -480,7 +430,7 @@ public class DiskImgCreateFrm
 	    Arrays.fill( diskBuf, dstDirPos, diskBuf.length, (byte) 0xE5 );
 	    boolean blockNum16Bit = false;
 	    int     extendSize    = 16 * blockSize;
-	    if( getIntValue( this.comboBlockNumSize ) == 16 ) {
+	    if( this.fmtSelectFld.isBlockNum16Bit() ) {
 	      blockNum16Bit = true;
 	      extendSize    = 8 * blockSize;
 	    }
@@ -937,148 +887,8 @@ public class DiskImgCreateFrm
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    ButtonGroup grpFmt = new ButtonGroup();
-
-    this.btnFmt800K = new JRadioButton(
-			"800K (A5105, KC85/1, KC87, Z9001)",
-			false );
-    grpFmt.add( this.btnFmt800K );
-    panelFmt.add( this.btnFmt800K, gbcFmt );
-
-    this.btnFmt780K = new JRadioButton(
-			"780K (A5105, AC1 mit ZDOS, HC900, KC85/2..5, Z1013)",
-			false );
-    grpFmt.add( this.btnFmt780K );
-    gbcFmt.insets.top = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmt780K, gbcFmt );
-
-    this.btnFmt720K = new JRadioButton(
-			"720K (A5105, KC85/1, KC87, Z9001)",
-			false );
-    grpFmt.add( this.btnFmt720K );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmt720K, gbcFmt );
-
-    this.btnFmt624K = new JRadioButton( "624K (PC/M)", false );
-    grpFmt.add( this.btnFmt624K );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmt624K, gbcFmt );
-
-    this.btnFmtCPL = new JRadioButton( "LLC2 mit CP/L", false );
-    grpFmt.add( this.btnFmtCPL );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmtCPL, gbcFmt );
-
-    this.btnFmtEtc = new JRadioButton( "Sonstiges Format:", true );
-    grpFmt.add( this.btnFmtEtc );
-    gbcFmt.gridy++;
-    panelFmt.add( this.btnFmtEtc, gbcFmt );
-
-    this.labelSides = new JLabel( "Seiten:" );
-    gbcFmt.insets.left = 50;
-    gbcFmt.gridwidth   = 1;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelSides, gbcFmt );
-
-    this.comboSides    = createJComboBox( 1, 2 );
-    gbcFmt.insets.left = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboSides, gbcFmt );
-
-    this.labelCyls     = new JLabel( "Spuren:" );
-    gbcFmt.insets.left = 50;
-    gbcFmt.gridx       = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelCyls, gbcFmt );
-
-    this.comboCyls     = createJComboBox( 40, 80 );
-    gbcFmt.insets.left = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboCyls, gbcFmt );
-
-    this.labelSysCyls  = new JLabel( "davon Systemspuren:" );
-    gbcFmt.gridx += 2;
-    panelFmt.add( this.labelSysCyls, gbcFmt );
-
-    this.spinnerSysCyls = new JSpinner( new SpinnerNumberModel( 0, 0, 9, 1 ) );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.spinnerSysCyls, gbcFmt );
-
-    this.labelSectPerCyl = new JLabel( "Sektoren pro Spur:" );
-    gbcFmt.insets.left   = 50;
-    gbcFmt.gridx         = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelSectPerCyl, gbcFmt );
-
-    this.comboSectPerCyl = createJComboBox( 5, 8, 9, 15, 16, 18, 36 );
-    gbcFmt.insets.left   = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboSectPerCyl, gbcFmt );
-
-    this.labelSectorSize = new JLabel( "Sektorgr\u00F6\u00DFe:" );
-    gbcFmt.insets.left   = 50;
-    gbcFmt.gridx         = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelSectorSize, gbcFmt );
-
-    this.comboSectorSize = createJComboBox( 256, 512, 1024 );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboSectorSize, gbcFmt );
-
-    this.labelSectorSizeUnit = new JLabel( "Byte" );
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelSectorSizeUnit, gbcFmt );
-
-    this.labelBlockSize = new JLabel( "Blockgr\u00F6\u00DFe:" );
-    gbcFmt.insets.left  = 50;
-    gbcFmt.gridx        = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelBlockSize, gbcFmt );
-
-    this.comboBlockSize = createJComboBox( 1, 2, 4, 8, 16 );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboBlockSize, gbcFmt );
-
-    this.labelBlockSizeUnit = new JLabel( "KByte" );
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelBlockSizeUnit, gbcFmt );
-
-    this.labelBlockNumSize = new JLabel( "Blocknummern:" );
-    gbcFmt.anchor = GridBagConstraints.EAST;
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelBlockNumSize, gbcFmt );
-
-    this.comboBlockNumSize = createJComboBox( 8, 16 );
-    gbcFmt.anchor        = GridBagConstraints.WEST;
-    gbcFmt.insets.left   = 5;
-    gbcFmt.insets.bottom = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.comboBlockNumSize, gbcFmt );
-
-    this.labelBlockNumSizeUnit = new JLabel( "Bit" );
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelBlockNumSizeUnit, gbcFmt );
-
-    this.labelDirBlocks = new JLabel( "Directory:" );
-    gbcFmt.insets.left  = 50;
-    gbcFmt.gridx        = 0;
-    gbcFmt.gridy++;
-    panelFmt.add( this.labelDirBlocks, gbcFmt );
-
-    this.spinnerDirBlocks = new JSpinner(
-			new SpinnerNumberModel( 2, 1, 9, 1 ) );
-    gbcFmt.insets.left  = 5;
-    gbcFmt.gridx++;
-    panelFmt.add( this.spinnerDirBlocks, gbcFmt );
-
-    this.labelDirEntriesInfo = new JLabel( "Bl\u00F6cke" );
-    gbcFmt.gridwidth         = GridBagConstraints.REMAINDER;
-    gbcFmt.gridx++;
-    panelFmt.add( this.labelDirEntriesInfo, gbcFmt );
+    this.fmtSelectFld = new FloppyDiskFormatSelectFld();
+    panelFmt.add( this.fmtSelectFld, gbcFmt );
 
     this.labelSysFile  = new JLabel( "Datei f\u00FCr Systemspuren:" );
     gbcFmt.insets.top  = 5;
@@ -1112,9 +922,6 @@ public class DiskImgCreateFrm
     gbcFmt.gridx++;
     panelFmt.add( this.btnSysFileRemove, gbcFmt );
 
-    updFmtDetailsFields();
-    updDirEntriesInfo();
-
 
     // Statuszeile
     this.labelStatus = new JLabel();
@@ -1136,19 +943,7 @@ public class DiskImgCreateFrm
 
     // Listener
     this.tabbedPane.addChangeListener( this );
-    this.btnFmt800K.addActionListener( this );
-    this.btnFmt780K.addActionListener( this );
-    this.btnFmt720K.addActionListener( this );
-    this.btnFmt624K.addActionListener( this );
-    this.btnFmtCPL.addActionListener( this );
-    this.btnFmtEtc.addActionListener( this );
-    this.comboSides.addActionListener( this );
-    this.comboCyls.addActionListener( this );
-    this.spinnerSysCyls.addChangeListener( this );
-    this.comboSectPerCyl.addActionListener( this );
-    this.comboSectorSize.addActionListener( this );
-    this.comboBlockSize.addActionListener( this );
-    this.spinnerDirBlocks.addChangeListener( this );
+    this.fmtSelectFld.addChangeListener( this );
     if( this.clipboard != null ) {
       this.clipboard.addFlavorListener( this );
     }
@@ -1598,96 +1393,6 @@ public class DiskImgCreateFrm
   }
 
 
-  private void updDirEntriesInfo()
-  {
-    if( this.labelDirEntriesInfo != null ) {
-      this.labelDirEntriesInfo.setText(
-		String.format(
-			"Bl\u00F6cke (%d Eintr\u00E4ge)",
-			getIntValue( this.comboBlockSize ) * 1024
-				* getIntValue( this.spinnerDirBlocks )
-				/ 32 ) );
-    }
-  }
-
-
-  private void updFmtDetailsFields()
-  {
-    boolean state = false;
-    if( this.btnFmt800K.isSelected() ) {
-      setValue( this.comboSides, 2 );
-      setValue( this.comboCyls, 80 );
-      setValue( this.spinnerSysCyls, 0 );
-      setValue( this.comboSectPerCyl, 5 );
-      setValue( this.comboSectorSize, 1024 );
-      setValue( this.comboBlockSize, 2 );
-      setValue( this.comboBlockNumSize, 16 );
-      setValue( this.spinnerDirBlocks, 3 );
-    } else if( this.btnFmt780K.isSelected() ) {
-      setValue( this.comboSides, 2 );
-      setValue( this.comboCyls, 80 );
-      setValue( this.spinnerSysCyls, 2 );
-      setValue( this.comboSectPerCyl, 5 );
-      setValue( this.comboSectorSize, 1024 );
-      setValue( this.comboBlockSize, 2 );
-      setValue( this.comboBlockNumSize, 16 );
-      setValue( this.spinnerDirBlocks, 2 );
-    } else if( this.btnFmt720K.isSelected() ) {
-      setValue( this.comboSides, 2 );
-      setValue( this.comboCyls, 80 );
-      setValue( this.spinnerSysCyls, 0 );
-      setValue( this.comboSectPerCyl, 9 );
-      setValue( this.comboSectorSize, 512 );
-      setValue( this.comboBlockSize, 2 );
-      setValue( this.comboBlockNumSize, 16 );
-      setValue( this.spinnerDirBlocks, 3 );
-    } else if( this.btnFmt624K.isSelected() ) {
-      setValue( this.comboSides, 2 );
-      setValue( this.comboCyls, 80 );
-      setValue( this.spinnerSysCyls, 2 );
-      setValue( this.comboSectPerCyl, 16 );
-      setValue( this.comboSectorSize, 256 );
-      setValue( this.comboBlockSize, 2 );
-      setValue( this.comboBlockNumSize, 16 );
-      setValue( this.spinnerDirBlocks, 2 );
-    } else if( this.btnFmtCPL.isSelected() ) {
-      setValue( this.comboSides, 1 );
-      setValue( this.comboCyls, 80 );
-      setValue( this.spinnerSysCyls, 0 );
-      setValue( this.comboSectPerCyl, 5 );
-      setValue( this.comboSectorSize, 1024 );
-      setValue( this.comboBlockSize, 2 );
-      setValue( this.comboBlockNumSize, 8 );
-      setValue( this.spinnerDirBlocks, 1 );
-    } else if( this.btnFmtEtc.isSelected() ) {
-      state = true;
-    }
-    this.labelSides.setEnabled( state );
-    this.comboSides.setEnabled( state );
-    this.labelCyls.setEnabled( state );
-    this.comboCyls.setEnabled( state );
-    this.labelSysCyls.setEnabled( state );
-    this.spinnerSysCyls.setEnabled( state );
-    this.labelSectPerCyl.setEnabled( state );
-    this.comboSectPerCyl.setEnabled( state );
-    this.labelSectorSize.setEnabled( state );
-    this.comboSectorSize.setEnabled( state );
-    this.labelSectorSizeUnit.setEnabled( state );
-    this.labelBlockSize.setEnabled( state );
-    this.comboBlockSize.setEnabled( state );
-    this.labelBlockSizeUnit.setEnabled( state );
-    this.labelBlockNumSize.setEnabled( state );
-    this.comboBlockNumSize.setEnabled( state );
-    this.labelBlockNumSize.setEnabled( state );
-    this.labelBlockNumSizeUnit.setEnabled( state );
-    this.labelDirBlocks.setEnabled( state );
-    this.labelDirEntriesInfo.setEnabled( state );
-    this.spinnerDirBlocks.setEnabled( state );
-    this.labelDirEntriesInfo.setEnabled( state );
-    updSysFileFieldsEnabled();
-  }
-
-
   private void updPasteButton()
   {
     boolean state = false;
@@ -1736,16 +1441,16 @@ public class DiskImgCreateFrm
       buf.append( " KByte hinzugef\u00FCgt" );
       text = buf.toString();
     } else if( idx == 1 ) {
-      int sides      = getIntValue( this.comboSides );
-      int cyls       = getIntValue( this.comboCyls );
-      int sysCyls    = getIntValue( this.spinnerSysCyls );
-      int sectPerCyl = getIntValue( this.comboSectPerCyl );
-      int sectorSize = getIntValue( this.comboSectorSize );
+      int sides      = this.fmtSelectFld.getSides();
+      int cyls       = this.fmtSelectFld.getCylinders();
+      int sysTracks  = this.fmtSelectFld.getSysTracks();
+      int sectPerCyl = this.fmtSelectFld.getSectorsPerCylinder();
+      int sectorSize = this.fmtSelectFld.getSectorSize();
       int kbytes     = sides * cyls * sectPerCyl * sectorSize / 1024;
-      if( sysCyls > 0 ) {
+      if( sysTracks > 0 ) {
 	text = String.format(
 			"%d/%dK Diskettenformat eingestellt",
-			sides * (cyls - sysCyls) * sectPerCyl * sectorSize
+			sides * (cyls - sysTracks) * sectPerCyl * sectorSize
 								/ 1024,
 			kbytes );
 
@@ -1759,7 +1464,7 @@ public class DiskImgCreateFrm
 
   private void updSysFileFieldsEnabled()
   {
-    boolean state = (getIntValue( this.spinnerSysCyls ) > 0);
+    boolean state = (this.fmtSelectFld.getSysTracks() > 0);
     this.labelSysFile.setEnabled( state );
     this.fldSysFileName.setEnabled( state );
     this.btnSysFileSelect.setEnabled( state );

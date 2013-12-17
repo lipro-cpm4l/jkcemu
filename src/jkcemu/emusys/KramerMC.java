@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -263,37 +263,9 @@ public class KramerMC extends EmuSys implements
 
 
   @Override
-  public int getCharColCount()
+  public CharRaster getCurScreenCharRaster()
   {
-    return 64;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return 16;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return 6;
+    return new CharRaster( 64, 16, 8, 8, 6, 0 );
   }
 
 
@@ -381,7 +353,7 @@ public class KramerMC extends EmuSys implements
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
     int idx = (chY * 64) + chX;

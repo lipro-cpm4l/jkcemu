@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,9 +17,9 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
 {
   private String  moduleName;
   private int     typeByte;
-  private int     baseAddr;
+  private int     begAddr;
   private int     segMask;
-  private boolean readwrite;
+  private boolean readWrite;
   private byte[]  ram;
 
 
@@ -32,9 +32,9 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
     super( slot );
     this.typeByte   = typeByte;
     this.moduleName = moduleName;
-    this.baseAddr   = 0;
+    this.begAddr    = 0;
     this.segMask    = 0;
-    this.readwrite  = false;
+    this.readWrite  = false;
     this.ram        = new byte[ ramSize ];
   }
 
@@ -49,9 +49,30 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
 
 
   @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
+
+  @Override
   public String getModuleName()
   {
     return this.moduleName;
+  }
+
+
+  @Override
+  public Boolean getReadWrite()
+  {
+    return this.readWrite;
+  }
+
+
+  @Override
+  public int getSegmentNum()
+  {
+    return (this.segMask >> 14) & 0x1F;
   }
 
 
@@ -67,10 +88,10 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
   {
     int rv = -1;
     if( this.enabled
-	&& (addr >= this.baseAddr)
-	&& (addr < (this.baseAddr + 0x4000)) )
+	&& (addr >= this.begAddr)
+	&& (addr < (this.begAddr + 0x4000)) )
     {
-      int idx = (addr - this.baseAddr) | this.segMask;
+      int idx = (addr - this.begAddr) | this.segMask;
       if( (idx >= 0) && (idx < this.ram.length) ) {
 	rv = (int) this.ram[ idx ] & 0xFF;
       }
@@ -83,9 +104,9 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
   public void setStatus( int value )
   {
     super.setStatus( value );
-    this.baseAddr  = (value & 0x80) != 0 ? 0x8000 : 0x4000;
+    this.begAddr   = (value & 0x80) != 0 ? 0x8000 : 0x4000;
     this.segMask   = (value << 12) & (this.ram.length - 1) & 0x7C000;
-    this.readwrite = ((value & 0x02) != 0);
+    this.readWrite = ((value & 0x02) != 0);
   }
 
 
@@ -94,12 +115,12 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
   {
     int rv = 0;
     if( this.enabled
-	&& (addr >= this.baseAddr)
-	&& (addr < (this.baseAddr + 0x4000)) )
+	&& (addr >= this.begAddr)
+	&& (addr < (this.begAddr + 0x4000)) )
     {
-      int idx = (addr - this.baseAddr) | this.segMask;
+      int idx = (addr - this.begAddr) | this.segMask;
       if( (idx >= 0) && (idx < this.ram.length) ) {
-	if( this.readwrite ) {
+	if( this.readWrite ) {
 	  this.ram[ idx ] = (byte) value;
 	  rv = 2;
 	} else {
