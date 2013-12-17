@@ -11,6 +11,7 @@ package jkcemu.emusys;
 import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
+import java.util.zip.CRC32;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.huebler.AbstractHueblerMC;
@@ -68,8 +69,9 @@ public class HueblerGraphicsMC
 			"POO",   "LO",    "CSTS", "IOBYTE",
 			"IOSET", "MEMSI", "MAIN" };
 
-  private static byte[] monBytes      = null;
-  private static byte[] monBasicBytes = null;
+  private static byte[]              monBytes         = null;
+  private static byte[]              monBasicBytes    = null;
+  private static Map<Long,Character> pixelCRC32ToChar = null;
 
   private boolean romEnabled;
   private boolean basic;
@@ -85,19 +87,19 @@ public class HueblerGraphicsMC
       monBasicBytes = readResource( "/rom/huebler/mon30p_hbasic33p.bin" );
       this.basic    = true;
     } else {
-      monBytes      = readResource( "/rom/huebler/mon30.bin" );
-      this.basic    = false;
+      ensureMonBytesLoaded();
+      this.basic = false;
     }
     this.videoBaseAddr = 0;
     createIOSystem();
 
     this.kcNet = null;
     if( emulatesKCNet( props ) ) {
-      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0h-C3h)" );
     }
     this.vdip = null;
     if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen FCh-FFh)" );
     }
     if( (this.kcNet != null) || (this.vdip != null) ) {
       java.util.List<Z80InterruptSource> iSources
@@ -238,6 +240,25 @@ public class HueblerGraphicsMC
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    buf.append( "<h1>H&uuml;bler-Grafik-MC Status</h1>\n"
+	+ "<table border=\"1\">\n"
+	+ "<tr><td>ROM:</td><td>" );
+    buf.append( this.romEnabled ? "ein" : "aus" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>Bildwiederholspeicher:</td><td>" );
+    buf.append(
+	String.format(
+		"%04Xh-%04Xh",
+		this.videoBaseAddr,
+		this.videoBaseAddr + 0x1FFF ) );
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -261,6 +282,13 @@ public class HueblerGraphicsMC
       rv = false;
     }
     return rv;
+  }
+
+
+  @Override
+  public boolean canExtractScreenText()
+  {
+    return true;
   }
 
 
@@ -300,6 +328,13 @@ public class HueblerGraphicsMC
 
 
   @Override
+  public CharRaster getCurScreenCharRaster()
+  {
+    return new CharRaster( 32, 25, 10, 8, 8, 0 );
+  }
+
+
+  @Override
   public String getHelpPage()
   {
     return "/help/hgmc.htm";
@@ -334,6 +369,36 @@ public class HueblerGraphicsMC
   public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
     return 0;
+  }
+
+
+  @Override
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
+  {
+    int rv = -1;
+    if( (chX >= 0) && (chX < 32) && (chY >= 0) && (chY < 32) ) {
+      Map<Long,Character> crc32ToChar = getPixelCRC32ToCharMap();
+      if( crc32ToChar != null ) {
+	CRC32 crc1 = new CRC32();
+	CRC32 crc2 = new CRC32();
+	int   addr = this.videoBaseAddr + (chY * 32 * 10) + chX;
+	for( int i = 0; i < 8; i++ ) {
+	  int b = getMemByte( addr, false );
+	  crc1.update( b );
+	  crc2.update( ~b & 0xFF );
+	  addr += 32;
+	}
+	Character ch = crc32ToChar.get( new Long( crc1.getValue() ) );
+	if( ch == null ) {
+	  // Zeichen invers?
+	  ch = crc32ToChar.get( new Long( crc2.getValue() ) );
+	}
+	if( ch != null ) {
+	  rv = ch.charValue();
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -537,6 +602,13 @@ public class HueblerGraphicsMC
 
 
   @Override
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  @Override
   public boolean supportsOpenBasic()
   {
     return true;
@@ -641,4 +713,35 @@ public class HueblerGraphicsMC
 				"jkcemu.hgmc.vdip.enabled",
 				false );
   }
+
+
+  private void ensureMonBytesLoaded()
+  {
+    if( monBytes == null )
+      monBytes = readResource( "/rom/huebler/mon30.bin" );
+  }
+
+
+  private Map<Long,Character> getPixelCRC32ToCharMap()
+  {
+    if( pixelCRC32ToChar == null ) {
+      ensureMonBytesLoaded();
+      if( monBytes != null ) {
+        if( monBytes.length >= 0x0E0D ) {
+          Map<Long,Character> map  = new HashMap<Long,Character>();
+          CRC32               crc  = new CRC32();
+          int                 addr = 0x0B0D;
+          for( int c = 0x20; c <= 0x7E; c++ ) {
+            crc.reset();
+            crc.update( monBytes, addr, 8 );
+            map.put( new Long( crc.getValue() ), new Character( (char) c ) );
+            addr += 8;
+          }
+          pixelCRC32ToChar = map;
+        }
+      }
+    }
+    return pixelCRC32ToChar;
+  }
 }
+

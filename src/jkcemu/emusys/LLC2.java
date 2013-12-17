@@ -68,7 +68,6 @@ public class LLC2
   private String            romdiskFile;
   private boolean           romEnabled;
   private boolean           romdiskEnabled;
-  private boolean           romdiskA15;
   private boolean           prgXEnabled;
   private boolean           basicEnabled;
   private boolean           bit7InverseMode;
@@ -150,7 +149,7 @@ public class LLC2
 
     this.vdip = null;
     if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen DC-DF, FC-FF)" );
     }
 
     this.gide = GIDE.getGIDE( this.screenFrm, props, "jkcemu.llc2." );
@@ -262,6 +261,47 @@ public class LLC2
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    buf.append( "<h1>LLC2 Status</h1>\n"
+	+ "<table border=\"1\">\n"
+	+ "<tr><td>Monitor-ROM:</td><td>" );
+    buf.append( this.romEnabled ? "ein" : "aus" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>ROM-Disk:</td><td>" );
+    buf.append( this.romdiskEnabled ? "ein" : "aus" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>ROM-Disk Bank:</td><td>" );
+    buf.append( (this.romdiskBankAddr >> 14) & 0x0F );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>Programmpaket X ROM:</td><td>" );
+    buf.append( this.prgXEnabled ? "ein" : "aus" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>BASIC-ROM:</td><td>" );
+    buf.append( this.basicEnabled ? "ein" : "aus" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>Grafikmodus:</td><td>" );
+    buf.append( this.hiRes ? "HIRES-Vollgrafik" : "Text" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>Bildwiederholspeicher:</td><td>" );
+    if( this.hiRes ) {
+      buf.append( String.format(
+			"%04Xh-%04Xh",
+			this.videoPixelAddr,
+			this.videoPixelAddr + 0x3FFF ) );
+    } else {
+      buf.append(
+		String.format(
+			"%04Xh-%04Xh",
+			this.videoTextAddr,
+			this.videoTextAddr + 0x07FF ) );
+    }
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -333,7 +373,7 @@ public class LLC2
   @Override
   public boolean canExtractScreenText()
   {
-    return true;
+    return !this.hiRes;
   }
 
 
@@ -384,72 +424,16 @@ public class LLC2
 
 
   @Override
-  public int getCharColCount()
+  public CharRaster getCurScreenCharRaster()
   {
-    return 64;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return 32;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
-  {
-    return false;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return 2048;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return 1;
+    return this.hiRes ? null : new CharRaster( 64, 32, 8, 8, 8, 0 );
   }
 
 
   @Override
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
-    return FloppyDiskFormat.getFormat( 1, 80, 5, 1024 );
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return 0;
+    return FloppyDiskFormat.FMT_400K;
   }
 
 
@@ -552,16 +536,18 @@ public class LLC2
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
-    int addr = this.videoTextAddr + (chY * 64) + chX;
-    if( (addr >= this.videoTextAddr)
-	&& (addr < (this.videoTextAddr + 0x0800)) )
-    {
-      int b = this.emuThread.getRAMByte( addr );
-      if( (b >= 0x20) && (b < 0x7F) ) {
-	ch = b;
+    if( !this.hiRes ) {
+      int addr = this.videoTextAddr + (chY * 64) + chX;
+      if( (addr >= this.videoTextAddr)
+	  && (addr < (this.videoTextAddr + 0x0800)) )
+      {
+	int b = this.emuThread.getRAMByte( addr );
+	if( b < scchCharToUnicode.length ) {
+	  ch = scchCharToUnicode[ b ];
+	}
       }
     }
     return ch;
@@ -732,6 +718,9 @@ public class LLC2
 	      m >>= n;
 	    }
 	    pixel = ((b & m) != 0);
+	    if( this.screenInverseMode ) {
+	      pixel = !pixel;
+	    }
 	  } else if( fontBytes != null ) {
 	    int ch = this.emuThread.getRAMByte(
 				this.videoTextAddr + (row * 64) + col );
@@ -866,6 +855,19 @@ public class LLC2
 	  }
 	  break;
 
+	case 0xDC:
+	case 0xDD:
+	case 0xDE:
+	case 0xDF:
+	case 0xFC:
+	case 0xFD:
+	case 0xFE:
+	case 0xFF:
+	  if( this.vdip != null ) {
+	    rv = this.vdip.read( port );
+	  }
+	  break;
+
 	case 0xE0:
 	case 0xE1:
 	case 0xE2:
@@ -931,15 +933,6 @@ public class LLC2
 	case 0xFB:
 	  rv = this.ctc.read( port & 0x03 );
 	  break;
-
-	case 0xFC:
-	case 0xFD:
-	case 0xFE:
-	case 0xFF:
-	  if( this.vdip != null ) {
-	    rv = this.vdip.read( port );
-	  }
-	  break;
       }
     }
     return rv;
@@ -983,7 +976,6 @@ public class LLC2
     this.curFDDrive         = null;
     this.romEnabled         = true;
     this.romdiskEnabled     = false;
-    this.romdiskA15         = false;
     this.prgXEnabled        = false;
     this.basicEnabled       = false;
     this.bit7InverseMode    = false;
@@ -1014,6 +1006,7 @@ public class LLC2
     } else {
       this.v24TStatesPerBit = V24_TSTATES_PER_BIT_EXTERN;
     }
+    this.screenFrm.fireUpdScreenTextActionsEnabled();
   }
 
 
@@ -1259,6 +1252,15 @@ public class LLC2
 	  }
 	  break;
 
+	case 0xDC:
+	case 0xDD:
+	case 0xDE:
+	case 0xDF:
+	  if( this.vdip != null ) {
+	    this.vdip.write( port, value );
+	  }
+	  break;
+
 	case 0xE0:
 	case 0xE1:
 	case 0xE2:
@@ -1355,7 +1357,6 @@ public class LLC2
 	  this.basicEnabled   = ((value & 0x02) != 0);
 	  this.romdiskEnabled = ((value & 0x08) != 0);
 	  if( this.romdiskEnabled ) {
-	    int bank = (value & 0x01) | ((value >> 3) & 0x0E);
 	    this.romdiskBankAddr = (((value & 0x01) | ((value >> 3) & 0x0E))
 								 << 14);
 	    this.prgXEnabled = false;
@@ -1401,6 +1402,7 @@ public class LLC2
 	    if( hiRes != this.hiRes ) {
 	      this.hiRes = hiRes;
 	      dirty      = true;
+	      this.screenFrm.fireUpdScreenTextActionsEnabled();
 	    }
 	  }
 	  break;
@@ -1410,15 +1412,6 @@ public class LLC2
 	case 0xFA:
 	case 0xFB:
 	  this.ctc.write( port & 0x03, value );
-	  break;
-
-	case 0xFC:
-	case 0xFD:
-	case 0xFE:
-	case 0xFF:
-	  if( this.vdip != null ) {
-	    this.vdip.write( port, value );
-	  }
 	  break;
       }
       if( dirty ) {

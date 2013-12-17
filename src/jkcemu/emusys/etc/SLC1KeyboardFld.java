@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.SLC1;
 
 
-public class SLC1KeyboardFld extends AbstractKeyboardFld
+public class SLC1KeyboardFld extends AbstractKeyboardFld<SLC1>
 {
   private static final int MARGIN         = 10;
   private static final int FONT_SIZE_MAIN = 18;
@@ -25,45 +25,41 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld
   private static final int KEY_DIST       = 70;
   private static final int KEY_SIZE       = 60;
 
-  private ScreenFrm screenFrm;
-  private SLC1      slc1;
-  private Font      fontMain;
-  private Font      fontSub;
-  private int[]     kbMatrix;
-  private int       curIdx;
-  private int       curX;
-  private int       curY;
+  private Font  fontMain;
+  private Font  fontSub;
+  private int[] kbMatrix;
+  private int   curIdx;
+  private int   curX;
+  private int   curY;
 
 
-  public SLC1KeyboardFld( ScreenFrm screenFrm, SLC1 slc1 )
+  public SLC1KeyboardFld( SLC1 slc1 )
   {
-    super( 12 );
-    this.screenFrm = screenFrm;
-    this.slc1      = slc1;
-    this.fontMain  = new Font( "SansSerif", Font.BOLD, FONT_SIZE_MAIN );
-    this.fontSub   = new Font( "SansSerif", Font.PLAIN, FONT_SIZE_SUB );
-    this.kbMatrix  = new int[ 3 ];
-    this.curIdx    = 0;
-    this.curX      = MARGIN;
-    this.curY      = MARGIN;
-    addKey( "C#Seq",     null, "#BG", 2, 0x10 );
-    addKey( "A#\u00B11", null, "#SS", 2, 0x20 );
-    addKey( "St#Fu",     null, "#DP", 2, 0x40 );
-    addKey( "Z#Adr",     null, "#BP", 2, 0x80 );
+    super( slc1, 12, true );
+    this.fontMain = new Font( "SansSerif", Font.BOLD, FONT_SIZE_MAIN );
+    this.fontSub  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE_SUB );
+    this.kbMatrix = new int[ 3 ];
+    this.curIdx   = 0;
+    this.curX     = MARGIN;
+    this.curY     = MARGIN;
+    addKey( "C#Seq",     null, "#BG", 2, 0x10, "Esc#S" );
+    addKey( "A#\u00B11", null, "#SS", 2, 0x20, "F1#+ oder -" );
+    addKey( "St#Fu",     null, "#DP", 2, 0x40, "S#F2" );
+    addKey( "Z#Adr",     null, "#BP", 2, 0x80, "Z#F1" );
 
     this.curX = MARGIN;
     this.curY += KEY_DIST;
-    addKey( "H#7", "8#F", "-#GO",            1, 0x80 );
-    addKey( "G#6", "7#E", "-#BL",            1, 0x40 );
-    addKey( "F#5", "6#D", "K\u00F6nig#DEL", 1, 0x20 );
-    addKey( "E#4", "5#C", "Dame#INS",       1, 0x10 );
+    addKey( "H#7", "8#F", "-#GO",           1, 0x80, "H oder 8#7 oder F" );
+    addKey( "G#6", "7#E", "-#BL",           1, 0x40, "G oder 7#6 oder E" );
+    addKey( "F#5", "6#D", "K\u00F6nig#DEL", 1, 0x20, "F oder 6#5 oder D" );
+    addKey( "E#4", "5#C", "Dame#INS",       1, 0x10, "E oder 5#4 oder C" );
 
     this.curX = MARGIN;
     this.curY += KEY_DIST;
-    addKey( "D#3", "4#B", "Turm#",        0, 0x10 );
-    addKey( "C#2", "3#A", "L\u00E4ufer#", 0, 0x20 );
-    addKey( "B#1", "2#9", "Springer#",    0, 0x40 );
-    addKey( "A#0", "1#8", "Bauer#",       0, 0x80 );
+    addKey( "D#3", "4#B", "Turm#",        0, 0x10, "D oder 4#3 oder B" );
+    addKey( "C#2", "3#A", "L\u00E4ufer#", 0, 0x20, "C oder 3#2 oder A" );
+    addKey( "B#1", "2#9", "Springer#",    0, 0x40, "B oder 2#1 oder 9" );
+    addKey( "A#0", "1#8", "Bauer#",       0, 0x80, "A oder 1#0 oder 8" );
 
     setPreferredSize(
 	new Dimension(
@@ -82,6 +78,22 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld
 
 
   @Override
+  public String getToolTipText( MouseEvent e )
+  {
+    String rv = super.getToolTipText( e );
+    if( rv != null ) {
+      rv = getText( rv, this.emuSys.isChessMode() );
+      if( rv != null ) {
+	if( rv.isEmpty() ) {
+	  rv = null;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
   protected void keySelectionChanged()
   {
     Arrays.fill( this.kbMatrix, 0 );
@@ -92,14 +104,14 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.slc1.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
   @Override
   protected void paintComponent( Graphics g )
   {
-    boolean chessMode = this.slc1.isChessMode();
+    boolean chessMode = this.emuSys.isChessMode();
     g.setPaintMode();
     g.setColor( Color.lightGray );
     g.fillRect( 0, 0, getWidth(), getHeight() );
@@ -145,7 +157,7 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof SLC1 ) {
-      this.slc1 = (SLC1) emuSys;
+      this.emuSys = (SLC1) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != SLC1" );
     }
@@ -159,7 +171,8 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld
 			String text2,
 			String text3,
 			int    col,
-			int    value )
+			int    value,
+			String toolTipText )
   {
     KeyData keyData = new KeyData(
 				this.curX,
@@ -173,7 +186,8 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld
 				null,
 				col,
 				value,
-				false );
+				false,
+				toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += KEY_DIST;
     return keyData;

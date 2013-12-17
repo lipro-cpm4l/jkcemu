@@ -23,6 +23,16 @@ public class HueblerEvertMC extends AbstractHueblerMC
 			"POE",   "LOE",   "CSTS", "CRI",
 			"CPOE",  "MEMSI", "MAIN", "EXT" };
 
+  private static final int[] charToUnicode = {
+		'\u25C0', '\u2016',       -1,      '=',
+		'\u00F1', '\u03B1', '\u03B2', '\u03B4',
+		'\u2302', '\u03B7', '\u03B8', '\u03BB',
+		'\u03BC',       -1, '\u03C3', '\u03A3',
+		      -1, '\u03C6', '\u03A9', '\u00C5',
+		'\u00E5', '\u00C4', '\u00E4', '\u00D6',
+		'\u00F6', '\u00DC', '\u00FC', '\u2192',
+		'\u221A', '\u00B2', '\u00A3', '\u00A5' };
+
   private static byte[] hemcFontBytes = null;
   private static byte[] monBytes      = null;
 
@@ -50,7 +60,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
     }
     this.ramVideo  = new byte[ 0x0800 ];
     this.ramStatic = new byte[ 0x0400 ];
-    this.pio2      = new Z80PIO( "PIO (IO-Adressen 10-13)" );
+    this.pio2      = new Z80PIO( "PIO (IO-Adressen 10h-13h)" );
     createIOSystem();
     this.emuThread.getZ80CPU().setInterruptSources(
 					this.ctc,
@@ -136,44 +146,16 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
   @Override
-  public int getCharColCount()
-  {
-    return 64;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return 24;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    return 10;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return 6;
-  }
-
-
-  @Override
   protected boolean getConvertKeyCharToISO646DE()
   {
     return false;
+  }
+
+
+  @Override
+  public CharRaster getCurScreenCharRaster()
+  {
+    return new CharRaster( 64, 24, 10, 8, 6, 0 );
   }
 
 
@@ -223,7 +205,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
     int idx = (chY * 64) + chX;
@@ -231,96 +213,12 @@ public class HueblerEvertMC extends AbstractHueblerMC
       if( this.fontBytes == hemcFontBytes ) {
 	// integrierter Zeichensatz
 	int b = (int) this.ramVideo[ idx ] & 0x7F;	// B7=1: invertiert
-	switch( b ) {
-	  case 3:			// Gleichheitszeichen
-	    ch = '=';
-	    break;
-
-	  case 5:			// kleines Alpha
-	    ch = '\u03B1';
-	    break;
-
-	  case 6:			// kleines Beta
-	    ch = '\u03B2';
-	    break;
-
-	  case 7:			// kleines Delta
-	    ch = '\u03B4';
-	    break;
-
-	  case 9:
-	    ch = '\u03B7';
-	    break;
-
-	  case 0x0A:
-	    ch = '\u03B8';
-	    break;
-
-	  case 0x0B:
-	    ch = '\u03BB';
-	    break;
-
-	  case 0x0C:		// kleines Mikro
-	    ch = '\u03BC';
-	    break;
-
-	  case 0x0E:
-	    ch = '\u03C3';
-	    break;
-
-	  case 0x0F:		// Summenzeichen
-	    ch = '\u03A3';
-	    break;
-
-	  case 0x11:
-	    ch = '\u03C6';
-	    break;
-
-	  case 0x12:		// Omikron
-	    ch = '\u03A9';
-	    break;
-
-	  case 0x15:		// Ae-Umlaut
-	    ch = '\u00C4';
-	    break;
-
-	  case 0x16:		// ee-Umlaut
-	    ch = '\u00E4';
-	    break;
-
-	  case 0x17:		// Oe-Umlaut
-	    ch = '\u00D6';
-	    break;
-
-	  case 0x18:		// oe-Umlaut
-	    ch = '\u00F6';
-	    break;
-
-	  case 0x19:		// Ue-Umlaut
-	    ch = '\u00DC';
-	    break;
-
-	  case 0x1A:		// ue-Umlaut
-	    ch = '\u00FC';
-	    break;
-
-	  case 0x1D:		// hochgestellte 2
-	    ch = '\u00B2';
-	    break;
-
-	  case 0x1E:		// Pfund-Zeichen
-	    ch = '\u00A3';
-	    break;
-
-	  case 0x1F:		// Y mit Querstrich
-	    ch = '\u00A5';
-	    break;
-
-	  default:
-	    if( (b >= 0x20) && (b < 0x7F) ) {
-	      ch = b;
-	    }
-	    break;
+	if( (b >= 0) && (b < charToUnicode.length) ) {
+	  ch = charToUnicode[ b ];
+	} else if( (b >= 0x20) && (b < 0x7F) ) {
+	  ch = b;
+	} else if( b == 0x7F ) {
+	  ch = '\u2592';
 	}
       } else {
 	int b = (int) this.ramVideo[ idx ] & 0xFF;

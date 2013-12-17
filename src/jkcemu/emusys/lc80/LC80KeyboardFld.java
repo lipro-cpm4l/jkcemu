@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.LC80;
 
 
-public class LC80KeyboardFld extends AbstractKeyboardFld
+public class LC80KeyboardFld extends AbstractKeyboardFld<LC80>
 {
   private static final int KEY_W     = 35;
   private static final int KEY_COL_W = 48;
@@ -34,24 +34,20 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
   private static final int KEY_Y3    = KEY_Y2 + KEY_ROW_H;
   private static final int KEY_Y4    = KEY_Y3 + KEY_ROW_H;
 
-  private ScreenFrm screenFrm;
-  private LC80      lc80;
-  private Image     imgBgLC80;
-  private Image     imgBgSC80;
-  private KeyData   nmiKey;
-  private KeyData   resetKey;
-  private Color     colorKeySelected;
-  private Color     colorKeyBorder;
-  private Color     colorKeyLight;
-  private int[]     kbMatrix;
-  private int       curIdx;
+  private Image   imgBgLC80;
+  private Image   imgBgSC80;
+  private KeyData nmiKey;
+  private KeyData resetKey;
+  private Color   colorKeySelected;
+  private Color   colorKeyBorder;
+  private Color   colorKeyLight;
+  private int[]   kbMatrix;
+  private int     curIdx;
 
 
-  public LC80KeyboardFld( ScreenFrm screenFrm, LC80 lc80 )
+  public LC80KeyboardFld( LC80 lc80 )
   {
-    super( 25 );
-    this.screenFrm = screenFrm;
-    this.lc80      = lc80;
+    super( lc80, 25, true );
     this.imgBgLC80 = getImage( "/images/keyboard/lc80/bg_lc80.png" );
     this.imgBgSC80 = getImage( "/images/keyboard/lc80/bg_sc80.png" );
     this.kbMatrix  = new int[ 6 ];
@@ -64,31 +60,33 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
     Color light           = this.colorKeyLight;
 
     this.curIdx   = 0;
-    this.resetKey = addKey( KEY_X0, KEY_Y0, red, -1, -1 );	// RES
-    this.nmiKey   = addKey( KEY_X0, KEY_Y1, red, -1, -1 );	// NMI
-    addKey( KEY_X0, KEY_Y2, dark, 0, 0x40 );			// ST
-    addKey( KEY_X0, KEY_Y3, dark, 0, 0x20 );			// LD
-    addKey( KEY_X0, KEY_Y4, dark, 0, 0x80 );			// EX
-    addKey( KEY_X1, KEY_Y0, dark, 5, 0x80 );			// ADR
-    addKey( KEY_X1, KEY_Y1, light, 4, 0x80 );			// C
-    addKey( KEY_X1, KEY_Y2, light, 3, 0x80 );			// 8
-    addKey( KEY_X1, KEY_Y3, light, 2, 0x80 );			// 4
-    addKey( KEY_X1, KEY_Y4, light, 1, 0x80 );			// 0
-    addKey( KEY_X2, KEY_Y0, dark, 5, 0x40 );			// DAT
-    addKey( KEY_X2, KEY_Y1, light, 4, 0x40 );			// D
-    addKey( KEY_X2, KEY_Y2, light, 3, 0x40 );			// 9
-    addKey( KEY_X2, KEY_Y3, light, 2, 0x40 );			// 5
-    addKey( KEY_X2, KEY_Y4, light, 1, 0x40 );			// 1
-    addKey( KEY_X3, KEY_Y0, dark, 2, 0x20 );			// +
-    addKey( KEY_X3, KEY_Y1, light, 3, 0x20 );			// E
-    addKey( KEY_X3, KEY_Y2, light, 4, 0x20 );			// A
-    addKey( KEY_X3, KEY_Y3, light, 5, 0x20 );			// 6
-    addKey( KEY_X3, KEY_Y4, light, 1, 0x20 );			// 2
-    addKey( KEY_X4, KEY_Y0, dark, 5, 0x10 );			// -
-    addKey( KEY_X4, KEY_Y1, light, 4, 0x10 );			// F
-    addKey( KEY_X4, KEY_Y2, light, 3, 0x10 );			// B
-    addKey( KEY_X4, KEY_Y3, light, 2, 0x10 );			// 7
-    addKey( KEY_X4, KEY_Y4, light, 1, 0x10 );			// 3
+    this.resetKey = addKey( KEY_X0, KEY_Y0, red, -1, -1, "Esc" );	// RES
+    this.nmiKey   = addKey( KEY_X0, KEY_Y1, red, -1, -1, "N" );		// NMI
+    // ST bzw. Contr.
+    addKey( KEY_X0, KEY_Y2, dark, 0, 0x40, "S oder F4#F4" );
+    // LD bzw. RUN
+    addKey( KEY_X0, KEY_Y3, dark, 0, 0x20, "L oder F3#R oder F3" );
+    addKey( KEY_X0, KEY_Y4, dark, 0, 0x80, "X oder Enter" );		// EX
+    addKey( KEY_X1, KEY_Y0, dark, 5, 0x80, "F1" );	// ADR bzw. New Game
+    addKey( KEY_X1, KEY_Y1, light, 4, 0x80, "C#L" );	// C bzw. Lauefer
+    addKey( KEY_X1, KEY_Y2, light, 3, 0x80, "8#H oder 8" );	// 8 bzw. H
+    addKey( KEY_X1, KEY_Y3, light, 2, 0x80, "4#D oder 4" );	// 4 bzw. D
+    addKey( KEY_X1, KEY_Y4, light, 1, 0x80, "0" );		// 0 bzw. SP
+    addKey( KEY_X2, KEY_Y0, dark, 5, 0x40, "F2" );	// DAT bzw. Self Play
+    addKey( KEY_X2, KEY_Y1, light, 4, 0x40, "D#T" );		// D bzw. Turm
+    addKey( KEY_X2, KEY_Y2, light, 3, 0x40, "9" );		// 9
+    addKey( KEY_X2, KEY_Y3, light, 2, 0x40, "5#E oder 5" );	// 5 bzw. E
+    addKey( KEY_X2, KEY_Y4, light, 1, 0x40, "1#A oder 1" );	// 1 bzw. A
+    addKey( KEY_X3, KEY_Y0, dark, 2, 0x20, "+#O oder +" );	// + bzw. Board
+    addKey( KEY_X3, KEY_Y1, light, 3, 0x20, "E#M" );		// E bzw. Dame
+    addKey( KEY_X3, KEY_Y2, light, 4, 0x20, "A#U" );		// A bzw. Bauer
+    addKey( KEY_X3, KEY_Y3, light, 5, 0x20, "6#F oder 6" );	// 6 bzw. F
+    addKey( KEY_X3, KEY_Y4, light, 1, 0x20, "2#B oder 2" );	// 2 bzw.B
+    addKey( KEY_X4, KEY_Y0, dark, 5, 0x10, "-#W oder -" );	// - bzw. Color
+    addKey( KEY_X4, KEY_Y1, light, 4, 0x10, "F#K" );	// F bzw. Koenig
+    addKey( KEY_X4, KEY_Y2, light, 3, 0x10, "B#S" );	// B bzw. Springer
+    addKey( KEY_X4, KEY_Y3, light, 2, 0x10, "7#G oder 7" );	// 7 bzw. G
+    addKey( KEY_X4, KEY_Y4, light, 1, 0x10, "3#C oder 3" );	// 3 bzw. C
     setPreferredSize( new Dimension( 300, 574 ) );
   }
 
@@ -103,6 +101,32 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
 
 
   @Override
+  public String getToolTipText( MouseEvent e )
+  {
+    String rv = super.getToolTipText( e );
+    if( rv != null ) {
+      int pos = rv.indexOf( '#' );
+      if( pos >= 0 ) {
+	if( this.emuSys.isChessMode() ) {
+	  if( (pos + 1) < rv.length() ) {
+	    rv = rv.substring( pos + 1 );
+	  } else {
+	    rv = null;
+	  }
+	} else {
+	  if( pos > 0 ) {
+	    rv = rv.substring( 0, pos );
+	  } else {
+	    rv = null;
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
   protected void keySelectionChanged()
   {
     Arrays.fill( this.kbMatrix, 0 );
@@ -113,7 +137,7 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.lc80.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -122,16 +146,11 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	this.screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
-	e.consume();
+	fireWarmResetAfterDelay();
       } else if( hits( this.nmiKey, e ) ) {
-	EmuThread emuThread = this.screenFrm.getEmuThread();
-	if( emuThread != null ) {
-	  emuThread.getZ80CPU().fireNMI();
-	}
-      } else {
-	super.mousePressed( e );
+	fireNMIAfterDelay();
       }
+      super.mousePressed( e );
     }
   }
 
@@ -139,7 +158,7 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
   @Override
   protected void paintComponent( Graphics g )
   {
-    if( this.lc80.isChessMode() ) {
+    if( this.emuSys.isChessMode() ) {
       if( this.imgBgSC80 != null ) {
 	g.drawImage( this.imgBgSC80, 0, 0, this );
       }
@@ -164,7 +183,7 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof LC80 ) {
-      this.lc80 = (LC80) emuSys;
+      this.emuSys = (LC80) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != LC80" );
     }
@@ -173,7 +192,13 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
 
 	/* --- private Methoden --- */
 
-  private KeyData addKey( int x, int y, Color color, int col, int value )
+  private KeyData addKey(
+			int    x,
+			int    y,
+			Color  color,
+			int    col,
+			int    value,
+			String toolTipText )
   {
     KeyData keyData = new KeyData(
 				x,
@@ -187,7 +212,8 @@ public class LC80KeyboardFld extends AbstractKeyboardFld
 				null,
 				col,
 				value,
-				false );
+				false,
+				toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     return keyData;
   }

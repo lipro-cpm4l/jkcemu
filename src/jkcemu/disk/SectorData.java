@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -109,6 +109,29 @@ public class SectorData extends SectorID
   public boolean checkError()
   {
     return this.err;
+  }
+
+
+  public boolean equalsData( byte[] dataBuf, int pos, int dataLen )
+  {
+    boolean rv = false;
+    if( dataLen == this.dataLen ) {
+      rv = true;
+      for( int i = 0; i < dataLen; i++ ) {
+	int b = 0;
+	if( dataBuf != null ) {
+	  int idx = pos + i;
+	  if( (idx >= 0) && (idx < dataBuf.length) ) {
+	    b = (int) dataBuf[ idx ] & 0xFF;
+	  }
+	}
+	if( b != getDataByte( i ) ) {
+	  rv = false;
+	  break;
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -266,6 +289,12 @@ public class SectorData extends SectorID
       this.dataLen = 0;
       this.shared  = false;
     }
+  }
+
+
+  public void setDeleted( boolean deleted )
+  {
+    this.deleted = deleted;
   }
 
 

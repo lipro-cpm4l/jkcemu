@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -147,7 +147,9 @@ public class KeyboardFrm extends BasicFrm
   public void keyPressed( KeyEvent e )
   {
     boolean done = false;
-    if( e.getKeyCode() == KeyEvent.VK_SHIFT ) {
+    if( (e.getKeyCode() == KeyEvent.VK_SHIFT)
+	&& this.keyboardFld.getSelectionChangeOnShiftOnly() )
+    {
       done = this.keyboardFld.changeShiftSelectionTo( true );
     }
     if( done ) {
@@ -162,7 +164,9 @@ public class KeyboardFrm extends BasicFrm
   public void keyReleased( KeyEvent e )
   {
     boolean done = false;
-    if( e.getKeyCode() == KeyEvent.VK_SHIFT ) {
+    if( (e.getKeyCode() == KeyEvent.VK_SHIFT)
+	&& this.keyboardFld.getSelectionChangeOnShiftOnly() )
+    {
       done = this.keyboardFld.changeShiftSelectionTo( false );
     }
     if( done ) {

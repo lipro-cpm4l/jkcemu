@@ -16,7 +16,6 @@ import java.awt.image.*;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.base.*;
@@ -361,8 +360,7 @@ public class ImageFrm extends AbstractImageFrm implements
 			this,
 			"Bilddatei \u00F6ffnen",
 			Main.getLastPathFile( "image" ),
-			ImgUtil.createFileFilter(
-					ImageIO.getReaderFileSuffixes() ) );
+			ImgLoader.createFileFilter() );
     if( file != null ) {
       if( showImageFile( file ) ) {
 	Main.setLastFile( file, "image" );
@@ -616,33 +614,20 @@ public class ImageFrm extends AbstractImageFrm implements
   {
     boolean rv = false;
     if( file != null ) {
-      Image       image  = null;
-      String      errMsg = null;
-      InputStream in     = null;
+      Image  image  = null;
+      String errMsg = null;
       try {
-	in    = new FileInputStream( file );
-	image = ImageIO.read( in );
+	image = ImgLoader.load( file );
 	if( image != null ) {
 	  showImageInternal( image, file.getPath() );
 	  this.file = file;
-	  rv = true;
+	  rv =      true;
 	} else {
 	  errMsg = "Dateiformat nicht unterst\u00FCtzt";
 	}
       }
       catch( Exception ex ) {
 	errMsg = ex.getMessage();
-      }
-      catch( OutOfMemoryError ex ) {
-	errMsg = "Es steht nicht gen\u00FCgend Speicher zur Verf\u00FCgung.";
-      }
-      finally {
-	if( in != null ) {
-	  try {
-	    in.close();
-	  }
-	  catch( IOException ex ) {}
-	}
       }
       if( image == null ) {
 	StringBuilder buf = new StringBuilder( 64 );

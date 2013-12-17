@@ -51,7 +51,7 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "X_SSZC:\tLD\tA,(X_MSCR)\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
-		+ "\tLD\tHL,0000H\n"
+		+ "\tLD\tL,00H\n"
 		+ "\tRET\n" );
     }
     if( this.needsScreenSizePixel ) {
@@ -59,9 +59,9 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "\tJR\tX_SSZP\n"
 		+ "X_WPIX:\tLD\tHL,0200H\n"
 		+ "X_SSZP:\tLD\tA,(X_MSCR)\n"
-		+ "\tCP\t01H\n"
+		+ "\tDEC\tA\n"
 		+ "\tRET\tZ\n"
-		+ "\tLD\tHL,0000H\n"
+		+ "\tLD\tHL,00H\n"
 		+ "\tRET\n" );
     }
   }
@@ -106,7 +106,8 @@ public class LLC2HIRESTarget extends SCCHTarget
   public void appendSwitchToTextScreen( AsmCodeBuf buf )
   {
     buf.append( "\tXOR\tA\n"
-		+ "\tOUT\t(0EEH),A\n" );
+		+ "\tOUT\t(0EEH),A\n"
+		+ "\tLD\t(X_MSCR),A\n" );
   }
 
 
@@ -257,7 +258,7 @@ public class LLC2HIRESTarget extends SCCHTarget
 		+ "\tLD\tA,L\n"
 		+ "\tOR\tA\n"
 		+ "\tJR\tZ,XSCRS3\n"
-		+ "\tCP\t01H\n"
+		+ "\tDEC\tA\n"
 		+ "\tJR\tZ,XSCRS2\n"
 		+ "XSCRS1:\tSCF\n"
 		+ "\tRET\n"
@@ -292,6 +293,13 @@ public class LLC2HIRESTarget extends SCCHTarget
   public int get100msLoopCount()
   {
     return 85;
+  }
+
+
+  @Override
+  public int getGraphicScreenNum()
+  {
+    return 1;
   }
 
 

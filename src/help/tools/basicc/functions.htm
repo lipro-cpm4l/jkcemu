@@ -3,14 +3,91 @@
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
  <h2>Funktionen und Systemvariablen</h2>
+  <ul>
+   <li>
+    <a href="functions.htm#ret_type">1. Datentyp des R&uuml;ckgabewertes</a>
+   </li>
+   <li><a href="functions.htm#func_args">2. Argumente</a></li>
+   <li><a href="functions.htm#sys_vars">3. Systemvariablen</a></li>
+   <li><a href="functions.htm#func_list">4. Liste der Funktionen</a></li>
+   <li>
+    <a href="functions.htm#func_descr">5. Beschreibung der Funktionen</a>
+   </li>
+  </ul>
+ <br/>
+  Der Compiler kennt folgende BASIC-Funktionen:
+ <br/>
+  &nbsp;<a href="functions.htm#abs"><tt>ABS</tt></a>
+  &nbsp;<a href="functions.htm#asc"><tt>ASC</tt></a>
+  &nbsp;<a href="functions.htm#asm"><tt>ASM</tt></a>
+  &nbsp;<a href="functions.htm#available"><tt>AVAILABLE</tt></a>
+  &nbsp;<a href="functions.htm#bin$"><tt>BIN$</tt></a>
+  &nbsp;<a href="functions.htm#chr$"><tt>CHR$</tt></a>
+  &nbsp;<a href="functions.htm#deek"><tt>DEEK</tt></a>
+  &nbsp;<a href="functions.htm#dnsserver$"><tt>DNSSERVER$</tt></a>
+  &nbsp;<a href="functions.htm#eof"><tt>EOF</tt></a>
+  &nbsp;<a href="functions.htm#err"><tt>ERR</tt></a>
+  &nbsp;<a href="functions.htm#err$"><tt>ERR$</tt></a>
+  &nbsp;<a href="functions.htm#gateway$"><tt>GATEWAY$</tt></a>
+  &nbsp;<a href="functions.htm#hex$"><tt>HEX$</tt></a>
+  &nbsp;<a href="functions.htm#hibyte"><tt>HIBYTE</tt></a>
+  &nbsp;<a href="functions.htm#hostbyname$"><tt>HOSTBYNAME$</tt></a>
+  &nbsp;<a href="functions.htm#h_char"><tt>H_CHAR</tt></a>
+  &nbsp;<a href="functions.htm#h_pixel"><tt>H_PIXEL</tt></a>
+  &nbsp;<a href="functions.htm#in"><tt>IN</tt></a>
+  &nbsp;<a href="functions.htm#inkey$"><tt>INKEY$</tt></a>
+  &nbsp;<a href="functions.htm#in"><tt>INP</tt></a>
+  &nbsp;<a href="functions.htm#input$"><tt>INPUT$</tt></a>
+  &nbsp;<a href="functions.htm#instr"><tt>INSTR</tt></a>
+  &nbsp;<a href="functions.htm#joyst"><tt>JOYST</tt></a>
+  &nbsp;<a href="functions.htm#lcase$"><tt>LCASE$</tt></a>
+  &nbsp;<a href="functions.htm#left$"><tt>LEFT$</tt></a>
+  &nbsp;<a href="functions.htm#len"><tt>LEN</tt></a>
+  &nbsp;<a href="functions.htm#lobyte"><tt>LOBYTE</tt></a>
+  &nbsp;<a href="functions.htm#localaddr$"><tt>LOCALADDR$</tt></a>
+  &nbsp;<a href="functions.htm#localport"><tt>LOCALPORT</tt></a>
+  &nbsp;<a href="functions.htm#lower$"><tt>LOWER$</tt></a>
+  &nbsp;<a href="functions.htm#ltrim$"><tt>LTRIM$</tt></a>
+  &nbsp;<a href="functions.htm#macaddr$"><tt>MACADDR$</tt></a>
+  &nbsp;<a href="functions.htm#max"><tt>MAX</tt></a>
+  &nbsp;<a href="functions.htm#memstr$"><tt>MEMSTR$</tt></a>
+  &nbsp;<a href="functions.htm#mid$"><tt>MID$</tt></a>
+  &nbsp;<a href="functions.htm#min"><tt>MIN</tt></a>
+  &nbsp;<a href="functions.htm#mirror$"><tt>MIRROR$</tt></a>
+  &nbsp;<a href="functions.htm#netmask$"><tt>NETMASK$</tt></a>
+  &nbsp;<a href="functions.htm#peek"><tt>PEEK</tt></a>
+  &nbsp;<a href="functions.htm#point"><tt>POINT</tt></a>
+  &nbsp;<a href="functions.htm#ptest"><tt>PTEST</tt></a>
+  &nbsp;<a href="functions.htm#remoteaddr$"><tt>REMOTEADDR$</tt></a>
+  &nbsp;<a href="functions.htm#remoteport"><tt>REMOTEPORT</tt></a>
+  &nbsp;<a href="functions.htm#right$"><tt>RIGHT$</tt></a>
+  &nbsp;<a href="functions.htm#rnd"><tt>RND</tt></a>
+  &nbsp;<a href="functions.htm#rtrim$"><tt>RTRIM$</tt></a>
+  &nbsp;<a href="functions.htm#sgn"><tt>SGN</tt></a>
+  &nbsp;<a href="functions.htm#space$"><tt>SPACE$</tt></a>
+  &nbsp;<a href="functions.htm#sqr"><tt>SQR</tt></a>
+  &nbsp;<a href="functions.htm#str$"><tt>STR$</tt></a>
+  &nbsp;<a href="functions.htm#string$"><tt>STRING$</tt></a>
+  &nbsp;<a href="functions.htm#targetid$"><tt>TARGETID$</tt></a>
+  &nbsp;<a href="functions.htm#trim$"><tt>TRIM$</tt></a>
+  &nbsp;<a href="functions.htm#ucase$"><tt>UCASE$</tt></a>
+  &nbsp;<a href="functions.htm#ucase$"><tt>UPPER$</tt></a>
+  &nbsp;<a href="functions.htm#usr"><tt>USR</tt></a>
+  &nbsp;<a href="functions.htm#val"><tt>VAL</tt></a>
+  &nbsp;<a href="functions.htm#w_char"><tt>W_CHAR</tt></a>
+  &nbsp;<a href="functions.htm#w_pixel"><tt>W_PIXEL</tt></a>
+  &nbsp;<a href="functions.htm#xpos"><tt>XPOS</tt></a>
+  &nbsp;<a href="functions.htm#yellow"><tt>YELLOW</tt></a>
+  &nbsp;<a href="functions.htm#ypos"><tt>YPOS</tt></a>
+ <br/><br/>
 
- <h3>1. Datentyp des R&uuml;ckgabewertes</h3>
+ <h3><a name="ret_type">1. Datentyp des R&uuml;ckgabewertes</a></h3>
   Funktionen, die mit einem $-Zeichen enden,
   liefern eine Zeichenkette zur&uuml;ck.
   Alle anderen Funktionen haben einen numerischen R&uuml;ckgabewert.
  <br/><br/>
 
- <h3>2. Argumente</h3>
+ <h3><a name="func_args">2. Argumente</a></h3>
   Die Argumente bzw. Parameter werden in Klammern hinter
   dem Funktionsnamen geschrieben.
   Bei String-Funktionen ohne Argumente
@@ -18,7 +95,7 @@
   entfallen diese Klammern.
  <br/><br/>
 
- <h3>3. Systemvariablen</h3>
+ <h3><a name="sys_vars">3. Systemvariablen</a></h3>
   Systemvariablen sind wie Funktionen ohne Argumente.
   Sie k&ouml;nnen gelesen, nicht aber direkt beschrieben werden.
   Systemvariablen werden vom System gesetzt.
@@ -32,7 +109,7 @@
   aufgef&uuml;hrt und beschrieben.
  <br/><br/>
 
- <h3>4. Beschreibung der einzelnen Funktionen</h3>
+ <h3><a name="func_list">4. Liste der Funktionen</a></h3>
   <table border="1">
    <tr><th>Funktion</th><th>Bedeutung</th></tr>
    <tr valign="top">
@@ -88,6 +165,10 @@
     <td>numerischen Wert in eine Hexadezimalzahl umwandeln</td>
    </tr>
    <tr valign="top">
+    <td><a href="functions.htm#hibyte"><tt>HIBYTE</tt></a></td>
+    <td>H&ouml;herwertiges Byte ermitteln</td>
+   </tr>
+   <tr valign="top">
     <td><a href="functions.htm#hostbyname$"><tt>HOSTBYNAME$</tt></a></td>
     <td>IP-Adresse anhand des Hostnamens ermitteln</td>
    </tr>
@@ -129,12 +210,20 @@
     <td>Joystick abfragen</td>
    </tr>
    <tr valign="top">
+    <td><a href="functions.htm#lcase$"><tt>LCASE$</tt></a></td>
+    <td>Zeichenkette in Kleinbuchstaben wandeln</td>
+   </tr>
+   <tr valign="top">
     <td><a href="functions.htm#left$"><tt>LEFT$</tt></a></td>
     <td>Anfang einer Zeichenkette extrahieren</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#len"><tt>LEN</tt></a></td>
     <td>L&auml;nge einer Zeichenkette ermitteln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#lobyte"><tt>LOBYTE</tt></a></td>
+    <td>Niederwertiges Byte ermitteln</td>
    </tr>
    <tr valign="top">
     <td><a href="functions.htm#localaddr$"><tt>LOCALADDR$</tt></a></td>
@@ -241,7 +330,11 @@
     <td>wei&szlig;e Leerzeichen abschneiden</td>
    </tr>
    <tr valign="top">
-    <td><a href="functions.htm#upper$"><tt>UPPER$</tt></a></td>
+    <td><a href="functions.htm#ucase$"><tt>UCASE$</tt></a></td>
+    <td>Zeichenkette in Gro&szlig;buchstaben wandeln</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="functions.htm#ucase$"><tt>UPPER$</tt></a></td>
     <td>Zeichenkette in Gro&szlig;buchstaben wandeln</td>
    </tr>
    <tr valign="top">
@@ -277,7 +370,7 @@
   </table>
  <br/><br/>
 
- <h3>Erl&auml;uterungen zu den Funktionen</h3>
+ <h3><a name="func_descr">5. Beschreibung Funktionen</a></h3>
   In spitzen Klammern eingeschlossene Elemente dienen als Platzhalter
   und sind entsprechend zu ersetzten.
  <br/><br/>
@@ -332,34 +425,36 @@
   Das Beispiel zeigt eine m&ouml;gliche Anwendung der ASM-Funktion
   in Verbindung mit <a href="functions.htm#usr">USR</a>,
   um auf diese Art und Weise einen Parameter an die Assembler-Routine
-  zu &uuml;bergeben und einen numerischen Wert zur&uuml;ckgaben zu lassen:
- <br/><br/>
+  zu &uuml;bergeben und einen numerischen Wert zur&uuml;ckgeben zu lassen:
+ <br/>
   <tt>
-   DEF USR0 = ASM(" LD HL,meine_negation")<br/>
-   PRINT USR0(123)<br/>
-   END<br/>
-   <br/>
-   ASM "meine_negation:"<br/>
-   ASM " LD HL,0000H"<br/>
-   ASM " OR A"<br/>
-   ASM " SBC HL,DE"<br/>
-   ASM " RET"
+   &#10;<br/>
+   DEF USR0 = ASM(" LD HL,meine_negation")&#10;<br/>
+   PRINT USR0(123)&#10;<br/>
+   END&#10;<br/>
+   &#10;<br/>
+   ASM "meine_negation:"&#10;<br/>
+   ASM " LD HL,0000H"&#10;<br/>
+   ASM " OR A"&#10;<br/>
+   ASM " SBC HL,DE"&#10;<br/>
+   ASM " RET"&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   Im zweiten Beispiel liefert die Assembler-Routine die Zeichenkette
   <em>ABC</em> zur&uuml;ck:
- <br/><br/>
+ <br/>
   <tt>
-   PRINT MEMSTR$( ASM$(" CALL meine_routine") )<br/>
-   END<br/>
-   <br/>
-   ASM CODE "meine_routine:"<br/>
-   ASM CODE " LD HL,mein_string"<br/>
-   ASM CODE " RET"<br/>
-   ASM DATA "mein_string: DB 'ABC',0"
+   &#10;<br/>
+   PRINT MEMSTR$( ASM(" CALL meine_routine") )&#10;<br/>
+   END&#10;<br/>
+   &#10;<br/>
+   ASM CODE "meine_routine:"&#10;<br/>
+   ASM CODE " LD HL,mein_string"&#10;<br/>
+   ASM CODE " RET"&#10;<br/>
+   ASM DATA "mein_string: DB 'ABC',0"&#10;<br/>
   </tt>
- <br/><br/>
-  <b>Achtung!</b> Diese ASM-Funktion greift direkt
+ <br/>
+  <b>Achtung!</b> Die ASM-Funktion greift direkt
   in die Programmcodeerzeugung ein und ist deshalb nur
   f&uuml;r Experten gedacht, die genau wissen, was sie tun!
  <br/><br/>
@@ -496,24 +591,25 @@
   In Verbindung mit der Systemvariable&nbsp;ERR
   kann die Fehlerbehandlung recht einfach und f&uuml;r den Anwender
   trotzdem komfortabel gestaltet werden, z.B.:
- <br/><br/>
+ <br/>
   <tt>
-   ...:'Funktion oder Anweisung, die die Fehlervariablen setzt<br/>
-   IF ERR THEN<br/>
-   &nbsp; PRINT ERR$<br/>
-   ELSE<br/>
-   ...:'kein Fehler aufgetreten<br/>
-   ENDIF
+   &#10;<br/>
+   ...:'Funktion oder Anweisung, die die Fehlervariablen setzt&#10;<br/>
+   IF ERR THEN&#10;<br/>
+   &nbsp; PRINT ERR$&#10;<br/>
+   ELSE&#10;<br/>
+   ...:'kein Fehler aufgetreten&#10;<br/>
+   ENDIF&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   <b>Achtung!</b> Wenn Sie die Systemvariable&nbsp;ERR$ verwenden,
   wird das compilierte Programm entsprechend gr&ouml;&szlig;er,
   da alle Fehlermeldungen, die auftreten k&ouml;nnen,
   auch in das Programm hineincompiliert werden m&uuml;ssen.
   Wenn Sie ein m&ouml;glichst kleines Programm anstreben
   und auf die detaillierten Fehlertexte verzichten k&ouml;nnen,
-  sollten Sie nur die Fehlercodevariable&nbsp;ERR verwenden,
-  und nicht ERR$.
+  sollten Sie nur die Fehlercodevariable&nbsp;ERR auswerten
+  und ERR$ nicht verwenden.
  <br/><br/>
 
  <h3><a name="gateway$">GATEWAY$</a></h3>
@@ -543,6 +639,24 @@
   dann richtet sich die Anzahl der Stellen,
   d.h. die L&auml;nge der erzeugten Zeichenkette,
   nach der Gr&ouml;&szlig;e des &uuml;bergebenen Wertes.
+ <br/><br/>
+
+ <h3><a name="hibyte">HIBYTE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td><tt>HIBYTE</tt> <tt>(</tt> &lt;Wert&gt; <tt>)</tt></td>
+   </tr>
+   <tr><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die Funktion liefert vom &uuml;bergebenen Wert nur
+  den Wert des h&ouml;herwertigen Bytes zur&uuml;ck,
+  d.h., der R&uuml;ckgabewert liegt immer im Bereich 0 bis 255.
+ <br/><br/>
+  Die Funktion HIBYTE hat die gleiche Wirkung wie
+  <tt>(&lt;Wert&gt;&nbsp;SHR&nbsp;8)&nbsp;AND&nbsp;&amp;H00FF</tt>,
+  erzeugt aber k&uuml;rzeren und schnelleren Programmcode.
  <br/><br/>
 
  <h3><a name="hostbyname$">HOSTBYNAME$</a></h3>
@@ -587,7 +701,7 @@
   Diese Systemvariable enth&auml;lt die H&ouml;he
   des vollgrafikf&auml;higen Bildschirms in Pixel.
   Steht keine Vollgrafik zur Verf&uuml;gung,
-  liefert die H_PIXEL&nbsp;0 zur&uuml;ck.
+  wird der Wert&nbsp;0 zur&uuml;ckgegeben.
   In dem Fall k&ouml;nnen die Grafikbefehle nicht verwendet werden.
  <br/><br/>
 
@@ -611,9 +725,11 @@
    <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
   </table>
  <br/>
-  Die Funktionen IN und INP haben die gleiche Wirkung.
-  Sie lesen ein Byte von dem durch die Adresse
+  Die Funktionen IN und INP lesen ein Byte von dem durch die Adresse
   angegebenen Eingabetor und liefern den Wert des Bytes zur&uuml;ck.
+ <br/><br/>
+  Beide Funktionen sind identisch. Aus Gr&uuml;nden der Kompatibilit&auml;t
+  zu diversen BASIC-Dialekten werden beide Funktionsnamen unterst&uuml;tzt.
  <br/><br/>
 
  <h3><a name="input$">INPUT$</a></h3>
@@ -666,22 +782,23 @@
   Damit ist auch generell das Lesen von Bin&auml;rdateien m&ouml;glich.
   Das Beispiel zeigt, wie eine Datei Byte f&uuml;r Byte
   in die Variable&nbsp;<em>B</em> eingelesen wird:
- <br/><br/>
+ <br/>
   <tt>
-   OPEN "Datei" FOR INPUT AS #1<br>
-   IF ERR THEN<br/>
-   &nbsp; PRINT ERR$<br/>
-   ELSE<br/>
-   &nbsp; WHILE NOT EOF(#1)<br/>
-   &nbsp; &nbsp; B=ASC(INPUT$(1,#1))<br/>
-   &nbsp; &nbsp; IF ERR THEN EXIT<br/>
-   &nbsp; &nbsp; ...:'mit dem gelesenen Byte etwas tun<br/>
-   &nbsp; WEND<br/>
-   &nbsp; IF ERR THEN PRINT ERR$<br/>
-   &nbsp; CLOSE #1<br/>
-   ENDIF
+   &#10;<br/>
+   OPEN "Datei" FOR INPUT AS #1&#10;<br>
+   IF ERR THEN&#10;<br/>
+   &nbsp; PRINT ERR$&#10;<br/>
+   ELSE&#10;<br/>
+   &nbsp; WHILE NOT EOF(#1)&#10;<br/>
+   &nbsp; &nbsp; B=ASC(INPUT$(1,#1))&#10;<br/>
+   &nbsp; &nbsp; IF ERR THEN EXIT&#10;<br/>
+   &nbsp; &nbsp; ...:'mit dem gelesenen Byte etwas tun&#10;<br/>
+   &nbsp; WEND&#10;<br/>
+   &nbsp; IF ERR THEN PRINT ERR$&#10;<br/>
+   &nbsp; CLOSE #1&#10;<br/>
+   ENDIF&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
 
  <h3><a name="instr">INSTR</a></h3>
   <table border="1">
@@ -689,8 +806,15 @@
     <td>Syntax:</td>
     <td>
      <tt>INSTR</tt> <tt>(</tt> &lt;durchsuchte Zeichenkette&gt;
+	<tt>,</tt> &lt;gesuchte Zeichenkette&gt; <tt>)</tt><br/>
+     <tt>INSTR</tt> <tt>(</tt> &lt;Position&gt;
+	<tt>,</tt> &lt;durchsuchte Zeichenkette&gt;
 	<tt>,</tt> &lt;gesuchte Zeichenkette&gt; <tt>)</tt>
     </td>
+   </tr>
+   <tr>
+    <td>Position:</td>
+    <td>numerischer Ausdruck</td>
    </tr>
    <tr>
     <td>durchsuchte Zeichenkette:</td>
@@ -702,27 +826,32 @@
    </tr>
   </table>
  <br/>
-  Die Funktionen sucht im ersten Argument die Zeichenkette,
-  die im zweiten Argument &uuml;bergeben wurde
-  und gibt die Position der Fundstelle zur&uuml;ck.
+  Die Funktionen sucht in der ersten &uuml;bergebenen Zeichenkette
+  die zweite &uuml;bergebene Zeichenkette und gibt die Position
+  der Fundstelle zur&uuml;ck.
   Ist die zweite Zeichenkette in der ersten nicht enthalten,
   wird 0 zur&uuml;ckgegeben.
+  Wenn eine Position angegeben wurde, wird ab dieser Position gesucht.
  <br/><br/>
-  Beispiel:
+  Beispiele:
  <br/><br/>
   <tt>PRINT INSTR("ABCD","C")</tt>
  <br/><br/>
   liefert&nbsp;3.
  <br/><br/>
+  <tt>PRINT INSTR(3,"KASKADE","K")</tt>
+ <br/><br/>
+  liefert&nbsp;4.
+ <br/><br/>
   <b>Achtung!</b> Bei dieser Funktion gibt es zwischen den einzelnen
   BASIC-Dialekten Unterschiede in der Argumentreihenfolge.
-  Bei den meisten der international &uuml;blichen BASIC-Dialekte wird
-  im ersten Argument die durchsuchte und im zweiten Argument
-  die gesuchte Zeichenkette erwartet.
+  Bei den meisten der international &uuml;blichen BASIC-Dialekte
+  ist die erste Zeichenkette die durchsuchte
+  und die zweite die gesuchte Zeichenkette.
   Aus diesem Grund ist das auch in JKCEMU so realisiert.
   Beim KC-BASIC ist das dagegen genau anders herum.
   Wenn Sie also KC-BASIC-Programme compilieren bzw. portieren m&ouml;chten,
-  m&uuml;ssen Sie die beiden Argumente vertauschen.
+  m&uuml;ssen Sie die beiden Zeichenketten vertauschen.
  <br/><br/>
 
  <h3><a name="joyst">JOYST</a></h3>
@@ -781,20 +910,42 @@
   links unten und gleichzeitig der Aktionsknopf&nbsp;1
   gedr&uuml;ckt ist ((1=links) + (4=unten) + (16=Aktionsknopf) = 21).
   Mit dem AND-Operator lassen sich die Einzelaktionen extrahieren:
- <br/><br/>
+ <br/>
   <tt>
-   A=JOYST(0)<br/>
-   IF A AND 1 THEN PRINT "links"<br/>
-   IF A AND 2 THEN PRINT "rechts"<br/>
-   IF A AND 4 THEN PRINT "ab"<br/>
-   IF A AND 8 THEN PRINT "auf"<br/>
-   IF A AND 16 THEN PRINT "Feuer 1"<br/>
-   IF A AND 32 THEN PRINT "Feuer 2"<br/>
-   IF A AND 48 THEN PRINT "Feuer 1 oder 2"
+   &#10;<br/>
+   A=JOYST(0)&#10;<br/>
+   IF A AND 1 THEN PRINT "links"&#10;<br/>
+   IF A AND 2 THEN PRINT "rechts"&#10;<br/>
+   IF A AND 4 THEN PRINT "ab"&#10;<br/>
+   IF A AND 8 THEN PRINT "auf"&#10;<br/>
+   IF A AND 16 THEN PRINT "Feuer 1"&#10;<br/>
+   IF A AND 32 THEN PRINT "Feuer 2"&#10;<br/>
+   IF A AND 48 THEN PRINT "Feuer 1 oder 2"&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   Auf Systemen, die keine Joystick-Unterst&uuml;tzung bieten,
   liefert die JOYST-Funktion immer&nbsp;0.
+ <br/><br/>
+
+ <h3><a name="lcase$">LCASE$</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td>
+     <tt>LCASE$</tt> <tt>(</tt> &lt;Zeichenkette&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr><td>Zeichenkette:</td><td>einfacher String-Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die Funktion LCASE$ wandelt in der &uuml;bergebenen Zeichenkette
+  die gro&szlig;en Buchstaben entsprechend dem ASCII-Zeichensatz
+  in kleine um und liefert die umgewandelte Zeichenkette zur&uuml;ck.
+  Eventuell vorhandene deutsche Umlaute bleiben unver&auml;ndert.
+ <br/><br/>
+  LCASE$ ist identisch zur Funktion LOWER$.
+  Aus Gr&uuml;nden der Kompatibilit&auml;t zu diversen BASIC-Dialekten
+  werden beide Funktionsnamen unterst&uuml;tzt.
  <br/><br/>
 
  <h3><a name="left$">LEFT$</a></h3>
@@ -834,6 +985,24 @@
   erzeugen, aber mit der Funktion
   <a href="functions.htm#memstr">MEMSTR$</a> sind &uuml;berlange
   Zeichenketten prinzipiell m&ouml;glich.
+ <br/><br/>
+
+ <h3><a name="lobyte">LOBYTE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td><tt>LOBYTE</tt> <tt>(</tt> &lt;Wert&gt; <tt>)</tt></td>
+   </tr>
+   <tr><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+  </table>
+ <br/>
+  Die Funktion liefert vom &uuml;bergebenen Wert nur
+  den Wert des niederwertigen Bytes zur&uuml;ck,
+  d.h., der R&uuml;ckgabewert liegt immer im Bereich 0 bis 255.
+ <br/><br/>
+  Die Funktion LOBYTE hat die gleiche Wirkung wie
+  <tt>&lt;Wert&gt;&nbsp;AND&nbsp;&amp;H00FF</tt>,
+  erzeugt aber k&uuml;rzeren und schnelleren Programmcode.
  <br/><br/>
 
  <h3><a name="localaddr$">LOCALADDR$</a></h3>
@@ -883,6 +1052,10 @@
   die gro&szlig;en Buchstaben entsprechend dem ASCII-Zeichensatz in kleine um
   und liefert die umgewandelte Zeichenkette zur&uuml;ck.
   Eventuell vorhandene deutsche Umlaute bleiben unver&auml;ndert.
+ <br/><br/>
+  LOWER$ ist identisch zur Funktion LCASE$.
+  Aus Gr&uuml;nden der Kompatibilit&auml;t zu diversen BASIC-Dialekten
+  werden beide Funktionsnamen unterst&uuml;tzt.
  <br/><br/>
 
  <h3><a name="ltrim$">LTRIM$</a></h3>
@@ -942,17 +1115,18 @@
   Ein Null-Byte markiert das Ende der Zeichenkette.
   Folgendes Beispiel erzeugt im Arbeitsspeicher eine Zeichenkette
   mit dem Alphabet, auf die dann mit MEMSTR$ zugegriffen wird:
- <br/><br/>
+ <br/>
   <tt>
-   A=TOP<br/>
-   FOR I=65 TO 90<br/>
-   &nbsp;POKE A,I<br/>
-   &nbsp;A=A+1<br/>
-   NEXT I<br/>
-   POKE A,0<br/>
-   PRINT MEMSTR$(TOP)
+   &#10;<br/>
+   A=TOP&#10;<br/>
+   FOR I=65 TO 90&#10;<br/>
+   &nbsp;POKE A,I&#10;<br/>
+   &nbsp;A=A+1&#10;<br/>
+   NEXT I&#10;<br/>
+   POKE A,0&#10;<br/>
+   PRINT MEMSTR$(TOP)&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
 
  <h3><a name="mid$">MID$</a></h3>
   <table border="1">
@@ -1169,8 +1343,12 @@
    </tr>
   </table>
  <br/>
-  Die Funktion liefert einen zuf&auml;lligen Wert zwischen Null
-  und dem angegebenen Maximalwert.
+  Die Funktion liefert einen zuf&auml;lligen Wert zwischen&nbsp;0 (inklusive)
+  und dem angegebenen Maximalwert (exklusive).
+ <br/><br/>
+  Beispiel W&uuml;rfel (Ergebnis 1 bis 6):
+ <br/><br/>
+  <tt>PRINT "Wuerfelergebnis:";RND(6)+1
  <br/><br/>
 
  <h3><a name="rtrim$">RTRIM$</a></h3>
@@ -1274,13 +1452,14 @@
   und dabei trotzdem auf ganz spezifische Eigenheiten des Zielsystems
   angepasst werden.
   Folgendes Beispiel demonstriert die Anwendung:
- <br/><br/>
+ <br/>
   <tt>
-   IF TARGETID$="KC85" THEN PRINT "Farbe"<br/>
-   IF INSTR(TARGETID$,"Z9001")&gt;0 THEN PRINT "Farbe optional"<br/>
-   IF TARGETID$="Z1013" THEN PRINT "schwarz/weiss"
+   &#10;<br/>
+   IF TARGETID$="KC85" THEN PRINT "Farbe"&#10;<br/>
+   IF INSTR(TARGETID$,"Z9001")&gt;0 THEN PRINT "Farbe optional"&#10;<br/>
+   IF TARGETID$="Z1013" THEN PRINT "schwarz/weiss"&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   Welche Zeichenkette die einzelnen Zielsysteme liefern,
   finden Sie in den Hinweisen zu den <a href="targets.htm">Zielsystemen</a>.
  <br/><br/>
@@ -1318,21 +1497,25 @@
   wei&szlig;en Leerzeichen abgeschnitten.
  <br/><br/>
 
- <h3><a name="upper$">UPPER$</a></h3>
+ <h3><a name="ucase$">UCASE$<br/>UPPER$</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
     <td>
+     <tt>UCASE$</tt> <tt>(</tt> &lt;Zeichenkette&gt; <tt>)</tt><br/>
      <tt>UPPER$</tt> <tt>(</tt> &lt;Zeichenkette&gt; <tt>)</tt>
     </td>
    </tr>
    <tr><td>Zeichenkette:</td><td>einfacher String-Ausdruck</td></tr>
   </table>
  <br/>
-  Die Funktion UPPER$ wandelt in der &uuml;bergebenen Zeichenkette
-  die kleinen Buchstaben entsprechend dem ASCII-Zeichensatz in gro&szlig;e um
-  und liefert die umgewandelte Zeichenkette zur&uuml;ck.
+  Die Funktionen UCASE$ und UPPER$ wandeln in der &uuml;bergebenen
+  Zeichenkette die kleinen Buchstaben entsprechend dem ASCII-Zeichensatz
+  in gro&szlig;e um und liefert die umgewandelte Zeichenkette zur&uuml;ck.
   Eventuell vorhandene deutsche Umlaute bleiben unver&auml;ndert.
+ <br/><br/>
+  Beide Funktionen sind identisch. Aus Gr&uuml;nden der Kompatibilit&auml;t
+  zu diversen BASIC-Dialekten werden beide Funktionsnamen unterst&uuml;tzt.
  <br/><br/>
 
  <h3><a name="usr">USR</a></h3>
@@ -1360,14 +1543,15 @@
  <br/><br/>
   Das Schl&uuml;sselwort <tt>USR</tt> und die Funktionsnummer k&ouml;nnen
   sowohl zusammen als auch getrennt geschrieben werden, z.B.:
- <br/><br/>
+ <br/>
   <tt>
-   PRINT USR 0 (123)<br/>
-   PRINT USR0 (123)<br/>
-   PRINT USR 0(123)<br/>
-   PRINT USR0(123)
+   &#10;<br/>
+   PRINT USR 0 (123)&#10;<br/>
+   PRINT USR0 (123)&#10;<br/>
+   PRINT USR 0(123)&#10;<br/>
+   PRINT USR0(123)&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   Im Gegensatz zur <a href="instructions.htm#call">CALL</a>-Anweisung
   kann man bei USR dem Maschinencodeunterprogramm einen Wert &uuml;bergeben
   und einen zur&uuml;ckgeben lassen.
@@ -1429,19 +1613,20 @@
  <br/>
   Das Beispiel zeigt die VAL-Funktion in Verbindung mit der
   Fehlervariable&nbsp;ERR:
- <br/><br/>
+ <br/>
   <tt>
-   DO<br/>
-   &nbsp; INPUT "Eingabe:";E$<br>
-   &nbsp; V=VAL(E$,2)<br/>
-   &nbsp; IF ERR=E_OK THEN PRINT "Binaerzahl, Dezimalwert=";V<br/>
-   &nbsp; V=VAL(E$,10)<br/>
-   &nbsp; IF ERR=E_OK THEN PRINT "Dezimalzahl, Dezimalwert=";V<br/>
-   &nbsp; V=VAL(E$,16)<br/>
-   &nbsp; IF ERR=E_OK THEN PRINT "Hexadezimalzahl, Dezimalwert=";V<br/>
-   LOOP
+   &#10;<br/>
+   DO&#10;<br/>
+   &nbsp; INPUT "Eingabe:";E$&#10;<br>
+   &nbsp; V=VAL(E$,2)&#10;<br/>
+   &nbsp; IF ERR=E_OK THEN PRINT "Binaerzahl, Dezimalwert=";V&#10;<br/>
+   &nbsp; V=VAL(E$,10)&#10;<br/>
+   &nbsp; IF ERR=E_OK THEN PRINT "Dezimalzahl, Dezimalwert=";V&#10;<br/>
+   &nbsp; V=VAL(E$,16)&#10;<br/>
+   &nbsp; IF ERR=E_OK THEN PRINT "Hexadezimalzahl, Dezimalwert=";V&#10;<br/>
+   LOOP&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
 
  <h3><a name="w_char">W_CHAR</a></h3>
   Die Systemvariable enth&auml;lt die Breite des Bildschirms
@@ -1449,7 +1634,7 @@
   es wird die Anzahl der sichtbaren Textspalten zur&uuml;ckgeliefert.
   Wenn dieser Wert nicht eindeutig feststeht bzw. bei dem Zielsystem
   unterschiedliche Werte m&ouml;glich sind (z.B. bei CP/M),
-  wird -1 zur&uuml;ckgeliefert.
+  enth&auml;lt die Variable den Wert&nbsp;-1.
  <br/><br/>
   Eine&nbsp;0 wird zur&uuml;ckgegeben, wenn mit der
   <a href="instructions.htm#screen">SCREEN</a>-Anweisung
@@ -1461,7 +1646,7 @@
   Die Systemvariable enth&auml;lt die Breite des vollgrafikf&auml;higen
   Bildschirms in Pixel.
   Steht keine Vollgrafik zur Verf&uuml;gung,
-  liefert die Funktion&nbsp;0 zur&uuml;ck.
+  wird der Wert&nbsp;0 zur&uuml;ckgegeben.
   In dem Fall k&ouml;nnen die Grafikbefehle nicht verwendet werden.
  <br/><br/>
 

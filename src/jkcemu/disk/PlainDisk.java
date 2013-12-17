@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -101,23 +101,28 @@ public class PlainDisk extends AbstractFloppyDisk
   }
 
 
-  public static void export(
+  public static String export(
 			AbstractFloppyDisk disk,
 			File               file ) throws IOException
   {
-    OutputStream out = null;
+    StringBuilder msgBuf = null;
+    OutputStream  out    = null;
     try {
       out = new FileOutputStream( file );
 
-      int sides         = disk.getSides();
-      int cyls          = disk.getCylinders();
-      int sectorsPerCyl = disk.getSectorsPerCylinder();
-      int sectorSize    = disk.getSectorSize();
+      boolean hasDeleted    = false;
+      int     sides         = disk.getSides();
+      int     cyls          = disk.getCylinders();
+      int     sectorsPerCyl = disk.getSectorsPerCylinder();
+      int     sectorSize    = disk.getSectorSize();
       for( int cyl = 0; cyl < cyls; cyl++ ) {
 	for( int head = 0; head < sides; head++ ) {
 	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
 	  if( cylSectors != sectorsPerCyl ) {
-	    throw new IOException(
+	    if( msgBuf == null ) {
+	      msgBuf = new StringBuilder( 1024 );
+	    }
+	    msgBuf.append(
 		String.format(
 			"Seite %d, Spur %d: %d anstelle von %d Sektoren"
 				+ " vorhanden",
@@ -126,7 +131,7 @@ public class PlainDisk extends AbstractFloppyDisk
 			cylSectors,
 			sectorsPerCyl ) );
 	  }
-	  for( int i = 0; i < cylSectors; i++ ) {
+	  for( int i = 0; i < sectorsPerCyl; i++ ) {
 	    SectorData sector = disk.getSectorByID(
 						cyl,
 						head,
@@ -143,16 +148,17 @@ public class PlainDisk extends AbstractFloppyDisk
 			i + 1  ) );
 	    }
 	    if( sector.isDeleted() ) {
-	      throw new IOException(
-		String.format(
-			"Seite %d, Spur %d: Sektor %d ist als gel\u00F6scht"
-				+ " markiert\n"
-				+ "Gel\u00F6schte Sektoren werden"
-				+ " in einfachen Abbilddateien nicht"
-				+ " unterst\u00FCtzt.",
-			head + 1,
-			cyl,
-			sector.getSectorNum() ) );
+	      hasDeleted = true;
+	      if( msgBuf == null ) {
+		msgBuf = new StringBuilder( 1024 );
+	      }
+	      msgBuf.append(
+			String.format(
+				"Seite %d, Spur %d: Sektor %d ist als"
+					+ " gel\u00F6scht markiert\n",
+				head + 1,
+				cyl,
+				sector.getSectorNum() ) );
 	    }
 	    if( sector.getDataLength() > sectorSize ) {
 	      throw new IOException(
@@ -172,10 +178,17 @@ public class PlainDisk extends AbstractFloppyDisk
       }
       out.close();
       out = null;
+
+      if( hasDeleted && (msgBuf != null) ) {
+	msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+		+ " in einfachen Abbilddateien nicht unterst\u00FCtzt\n"
+		+ "und sind deshalb als normale Sektoren enthalten.\n" );
+      }
     }
     finally {
       EmuUtil.doClose( out );
     }
+    return msgBuf != null ? msgBuf.toString() : null;
   }
 
 
@@ -306,7 +319,6 @@ public class PlainDisk extends AbstractFloppyDisk
 		setSectorSize( dataBuf.length );
 		this.sectorSizeCode = sectorIDs[ 0 ].getSizeCode();
 	      }
-	      removeSectorFromCache( physCyl, physHead, sectorIdx );
 	    } else {
 	      rv = false;
 	      break;
@@ -338,14 +350,13 @@ public class PlainDisk extends AbstractFloppyDisk
 					int physHead,
 					int sectorIdx )
   {
-    SectorData rv = getSectorFromCache( physCyl, physHead, sectorIdx );
-    if( rv == null ) {
-      int  sectorSize = getSectorSize();
-      long filePos    = calcFilePos( physCyl, physHead, sectorIdx );
-      if( (sectorSize > 0) && (filePos >= 0) ) {
-	if( this.diskBytes != null ) {
-	  if( filePos <= Integer.MAX_VALUE ) {
-	    rv = new SectorData(
+    SectorData rv         = null;
+    int        sectorSize = getSectorSize();
+    long       filePos    = calcFilePos( physCyl, physHead, sectorIdx );
+    if( (sectorSize > 0) && (filePos >= 0) ) {
+      if( this.diskBytes != null ) {
+	if( filePos <= Integer.MAX_VALUE ) {
+	  rv = new SectorData(
 			sectorIdx,
 			physCyl,
 			physHead,
@@ -356,37 +367,37 @@ public class PlainDisk extends AbstractFloppyDisk
 			this.diskBytes,
 			(int) filePos,
 			sectorSize );
-	  }
 	}
-	else if( (this.rad != null) || (this.raf != null) ) {
-	  try {
-	    byte[] buf = new byte[ sectorSize ];
-	    int    len = -1;
-	    if( this.rad != null ) {
-	      this.rad.seek( filePos );
-	      len = this.rad.read( buf, 0, buf.length );
-	    } else {
-	      this.raf.seek( filePos );
-	      len = this.raf.read( buf );
-	    }
-	    if( len > 0 ) {
-	      // falls nicht vollstaendig gelesen wurde
-	      while( len < buf.length ) {
-		int n = -1;
-		if( this.rad != null ) {
-		  n = this.rad.read( buf, len, buf.length - len );
-		} else {
-		  n = this.raf.read( buf, len, buf.length - len );
-		}
-		if( n > 0 ) {
-		  len += n;
-		} else {
-		  break;
-		}
+      }
+      else if( (this.rad != null) || (this.raf != null) ) {
+	try {
+	  byte[] buf = new byte[ sectorSize ];
+	  int    len = -1;
+	  if( this.rad != null ) {
+	    this.rad.seek( filePos );
+	    len = this.rad.read( buf, 0, buf.length );
+	  } else {
+	    this.raf.seek( filePos );
+	    len = this.raf.read( buf );
+	  }
+	  if( len > 0 ) {
+	    // falls nicht vollstaendig gelesen wurde
+	    while( len < buf.length ) {
+	      int n = -1;
+	      if( this.rad != null ) {
+		n = this.rad.read( buf, len, buf.length - len );
+	      } else {
+		n = this.raf.read( buf, len, buf.length - len );
+	      }
+	      if( n > 0 ) {
+		len += n;
+	      } else {
+		break;
 	      }
 	    }
-	    if( len > 0 ) {
-	      rv = new SectorData(
+	  }
+	  if( len > 0 ) {
+	    rv = new SectorData(
 				sectorIdx,
 				physCyl,
 				physHead,
@@ -397,11 +408,11 @@ public class PlainDisk extends AbstractFloppyDisk
 				buf,
 				0,
 				len );
-	    }
 	  }
-	  catch( IOException ex ) {
-	    fireShowReadError( physCyl, physHead, sectorIdx + 1, ex );
-	    rv = new SectorData(
+	}
+	catch( IOException ex ) {
+	  fireShowReadError( physCyl, physHead, sectorIdx + 1, ex );
+	  rv = new SectorData(
 			sectorIdx,
 			physCyl,
 			physHead,
@@ -412,14 +423,12 @@ public class PlainDisk extends AbstractFloppyDisk
 			null,
 			0,
 			0 );
-	  }
 	}
-	if( rv != null ) {
-	  rv.setDisk( this );
-	  rv.setFilePos( filePos );
-	  rv.setFilePortionLen( sectorSize );
-	  putSectorToCache( rv, physCyl, physHead, sectorIdx );
-	}
+      }
+      if( rv != null ) {
+	rv.setDisk( this );
+	rv.setFilePos( filePos );
+	rv.setFilePortionLen( sectorSize );
       }
     }
     return rv;
@@ -498,8 +507,6 @@ public class PlainDisk extends AbstractFloppyDisk
 	      this.raf.seek( filePos );
 	      this.raf.write( dataBuf, 0, dataLen );
 	    }
-	    sector.setData( deleted, dataBuf, dataLen );
-	    putSectorToCache( sector, physCyl, physHead, sectorIdx );
 	    rv = true;
 	  }
 	  catch( IOException ex ) {

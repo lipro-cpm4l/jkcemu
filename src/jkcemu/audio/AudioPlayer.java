@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -54,6 +54,7 @@ public class AudioPlayer implements Runnable
   @Override
   public void run()
   {
+    BufferedInputStream        inRaw = null;
     BufferedInputStream        inBuf = null;
     ProgressMonitorInputStream inPM  = null;
     SourceDataLine             line  = null;
@@ -65,7 +66,9 @@ public class AudioPlayer implements Runnable
 				this.ads.getAudioFormat(),
 				this.ads.getFrameLength() );
 	} else if( this.file != null ) {
-	  this.ais   = AudioSystem.getAudioInputStream( this.file );
+	  inRaw      = EmuUtil.openBufferedOptionalGZipFile( this.file );
+	  this.ais   = AudioSystem.getAudioInputStream(
+					new BufferedInputStream( inRaw ) );
 	  this.title = "Wiedergabe von " + this.file.getName() + "...";
 	}
       }
@@ -115,6 +118,7 @@ public class AudioPlayer implements Runnable
     EmuUtil.doClose( inPM );
     EmuUtil.doClose( this.ais );
     EmuUtil.doClose( inBuf );
+    EmuUtil.doClose( inRaw );
     if( line != null ) {
       try {
 	line.stop();

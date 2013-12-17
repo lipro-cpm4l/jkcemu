@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -186,9 +186,9 @@ public class KCNet implements
 	/* --- Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    this.pio.appendStatusHTMLTo( buf );
+    this.pio.appendInterruptStatusHTMLTo( buf );
   }
 
 

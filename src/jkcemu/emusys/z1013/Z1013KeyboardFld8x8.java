@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.Z1013;
 
 
-public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
+public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld<Z1013>
 {
   private static final int MARGIN            = 20;
   private static final int TEXT_FONT_SIZE    = 11;
@@ -27,7 +27,6 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
   private static final int SPACE_KEY_SIZE    = 320;
   private static final int DOUBLE_KEY_HEIGHT = 80;
 
-  private Z1013 z1013;
   private Image imgLeft;
   private Image imgRight;
   private Image imgUp;
@@ -43,8 +42,7 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 
   public Z1013KeyboardFld8x8( Z1013 z1013 )
   {
-    super( 59 );
-    this.z1013      = z1013;
+    super( z1013, 59, true );
     this.imgLeft    = getImage( "/images/keyboard/left.png" );
     this.imgRight   = getImage( "/images/keyboard/right.png" );
     this.imgUp      = getImage( "/images/keyboard/up.png" );
@@ -57,19 +55,19 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
     this.curX       = MARGIN;
     this.curY       = MARGIN;
     addKey( "\\", "|", 5, 0x40 );
-    addKey( "1", "!", 0, 0x01 );
+    addKey( "1", "!",  0, 0x01 );
     addKey( "2", "\"", 0, 0x10 );
-    addKey( "3", "#", 1, 0x01 );
-    addKey( "4", "$", 1, 0x10 );
-    addKey( "5", "%", 2, 0x01 );
-    addKey( "6", "&", 2, 0x10 );
+    addKey( "3", "#",  1, 0x01 );
+    addKey( "4", "$",  1, 0x10 );
+    addKey( "5", "%",  2, 0x01 );
+    addKey( "6", "&",  2, 0x10 );
     addKey( "7", "\'", 3, 0x01 );
-    addKey( "8", "(", 3, 0x10 );
-    addKey( "9", ")", 4, 0x01 );
-    addKey( "0", "", 4, 0x10 );
-    addKey( "-", "=", 5, 0x01 );
-    addKey( "^", "~", 5, 0x08 );
-    addKey( "Graph\nE/A", 6, 0x01 );
+    addKey( "8", "(",  3, 0x10 );
+    addKey( "9", ")",  4, 0x01 );
+    addKey( "0", "",   4, 0x10 );
+    addKey( "-", "=",  5, 0x01 );
+    addKey( "^", "~",  5, 0x08 );
+    addKey( "Graph\nE/A", null, 6, 0x01, "F1" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
@@ -86,7 +84,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 				null,
 				6,
 				0x20,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = controlKey;
     this.curX += LARGE_KEY_SIZE;
     addKey( "Q", 0, 0x02 );
@@ -116,7 +115,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 					null,
 					7,
 					0x80,
-					false );
+					false,
+					null );
     this.curX += LARGE_KEY_SIZE;
     addKey( "A", 0, 0x04 );
     addKey( "S", 0, 0x40 );
@@ -142,7 +142,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 					null,
 					6,
 					0x02,
-					false );
+					false,
+					"Enter" );
     int w = this.curX + KEY_SIZE + MARGIN;
 
     this.curX = MARGIN;
@@ -160,7 +161,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 				null,
 				7,
 				0x40,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = shiftKey1;
     this.curX += MEDIUM_KEY_SIZE;
     addKey( "_", 5, 0x80 );
@@ -187,7 +189,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 				null,
 				7,
 				0x40,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = shiftKey2;
 
     this.curX = MARGIN + KEY_SIZE + (KEY_SIZE / 2);
@@ -206,7 +209,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 				null,
 				6,
 				0x10,
-				false );
+				false,
+				null );
     this.curX += (8 * KEY_SIZE);
     addKey( this.imgRight, 6, 0x08 );
     addKey( this.imgDown, 6, 0x80 );
@@ -276,7 +280,7 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
   @Override
   protected void keySelectionChanged()
   {
-    Z1013Keyboard  kb = this.z1013.getZ1013Keyboard();
+    Z1013Keyboard  kb = this.emuSys.getZ1013Keyboard();
     KeyboardMatrix km = kb.getKeyboardMatrix();
     if( km instanceof KeyboardMatrix8x8 ) {
       Arrays.fill( this.kbMatrix, 0 );
@@ -358,7 +362,7 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( accepts( emuSys ) ) {
-      this.z1013 = (Z1013) emuSys;
+      this.emuSys = (Z1013) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != Z1013/8x8" );
     }
@@ -367,10 +371,7 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 
 	/* --- private Methoden --- */
 
-  private void addKey(
-		Image image,
-		int   col,
-		int   value )
+  private void addKey( Image image, int col, int value )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -384,7 +385,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 					image,
 					col,
 					value,
-					false );
+					false,
+					null );
     this.curX += KEY_SIZE;
   }
 
@@ -393,7 +395,8 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 		String textNormal,
 		String textShift,
 		int    col,
-		int    value )
+		int    value,
+		String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -407,8 +410,19 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 					null,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_SIZE;
+  }
+
+
+  private void addKey(
+		String textNormal,
+		String textShift,
+		int    col,
+		int    value )
+  {
+    addKey( textNormal, textShift, col, value, null );
   }
 
 
@@ -417,7 +431,7 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld
 		int    col,
 		int    value )
   {
-    addKey( textNormal, null, col, value );
+    addKey( textNormal, null, col, value, null );
   }
 }
 

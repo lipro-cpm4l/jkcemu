@@ -157,6 +157,138 @@ public class AC1
 	"CONV",     "TRANS",  "BLIST",  "BEDIT",
 	"BSAVE",    "BLOAD",  "DELETE", "DIR" };
 
+  private static final int[] ccdCharToUnicode = {
+		'\u0020', '\u2598', '\u259D', '\u2580',		// 00h
+		'\u2596', '\u258C', '\u259E', '\u259B',
+		'\u2597', '\u259A', '\u2590', '\u259C',
+		'\u2584', '\u2599', '\u259F', '\u2588',
+		      -1,      -1,       -1,        -1,		// 10h
+		'\u00B2', '\u00B3', '\u00A7', '\u00C4',
+		'\u00D6', '\u00DC', '\u00E4', '\u00F6',
+		'\u00FC', '\u00DF', '\u00B5', '\u03A9',
+		'\u0020',      '!',     '\"',      '#',		// 20h
+		     '$',      '%',      '&',     '\'',
+		     '(',      ')',      '*',      '+',
+		     ',',      '-',      '.',      '/',
+		     '0',      '1',      '2',      '3',		// 30h
+		     '4',      '5',      '6',      '7',
+		     '8',      '9',      ':',      ';',
+		     '<',      '=',      '>',      '?',
+		     '@',      'A',      'B',      'C',		// 40h
+		     'D',      'E',      'F',      'G',
+		     'H',      'I',      'J',      'K',
+		     'L',      'M',      'N',      'O',
+		     'P',      'Q',      'R',      'S',		// 50h
+		     'T',      'U',      'V',      'W',
+		     'X',      'Y',      'Z',      '[',
+		    '\\',      ']',      '^',      '_',
+		     '`',      'a',      'b',      'c',		// 60h
+		     'd',      'e',      'f',      'g',
+		     'h',      'i',      'j',      'k',
+		     'l',      'm',      'n',      'o',
+		     'p',      'q',      'r',      's',		// 70h
+		     't',      'u',      'v',      'w',
+		     'x',      'y',      'z',      '{',
+		     '|',      '}',      '~', '\u2592',
+		'\u0020', '\u2598', '\u259D', '\u2580',		// 80h
+		'\u2596', '\u258C', '\u259E', '\u259B',
+		'\u2597', '\u259A', '\u2590', '\u259C',
+		'\u2584', '\u2599', '\u259F', '\u2588',
+		'\u2571', '\u2572',       -1,       -1,		// 90h
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,
+ 		      -1,       -1, '\u2573', '\u2594',
+		'\u0020', '\u2503', '\u253B', '\u2523',		// A0h
+		'\u2533', '\u252B', '\u254B', '\u2517',
+		'\u250F', '\u2513', '\u251B',       -1,
+		     -1,        -1,       -1, '\u2501',
+		'\u2191', '\u2193', '\u2190', '\u2192',		// B0h
+		'\u25E2', '\u25E4', '\u25E3', '\u25E5',
+		'\u25A1',       -1, '\u25CF',       -1,
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,		// C0h
+		      -1,       -1,       -1,       -1,
+		      -1, '\u2666', '\u2663', '\u2665',
+		'\u2660',       -1,       -1,       -1,
+		'\u2500', '\u2502', '\u2534', '\u251C',		// D0h
+		'\u252C', '\u2524', '\u253C', '\u2514',
+		'\u250C', '\u2510', '\u2518', '\u2592',
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,		// E0h
+		      -1,       -1, '\u2689',       -1,
+		      -1,       -1,       -1,       -1,
+		'\u25CB',       -1,       -1, '\u0020',
+		      -1,       -1, '\u258F', '\u258E',		// F0h
+		'\u258D', '\u258C', '\u258B', '\u258A',
+		'\u2588', '\u2587', '\u2586', '\u2585',
+		'\u2584', '\u2583', '\u2582', '\u2581' };
+
+  private static final int[] ac1_2010CharToUnicode = {
+		'\u0020', '\u2598', '\u259D', '\u2580',		// 00h
+		'\u2596', '\u258C', '\u259E', '\u259B',
+		'\u2597', '\u259A', '\u2590', '\u259C',
+		'\u2584', '\u2599', '\u259F', '\u2588',
+		      -1,       -1,       -1,       -1,		// 10h
+		'\u00B2', '\u00B3', '\u2689',       -1,
+		      -1,       -1,      '[',      ']',
+		     '{',      '}', '\u00B5', '\u03A9',
+		'\u0020',      '!',     '\"',      '#',		// 20h
+		     '$',      '%',      '&',     '\'',
+		     '(',      ')',      '*',      '+',
+		     ',',      '-',      '.',      '/',
+		     '0',      '1',      '2',      '3',		// 30h
+		     '4',      '5',      '6',      '7',
+		     '8',      '9',      ':',      ';',
+		     '<',      '=',      '>',      '?',
+		'\u00A7',      'A',      'B',      'C',		// 40h
+		     'D',      'E',      'F',      'G',
+		     'H',      'I',      'J',      'K',
+		     'L',      'M',      'N',      'O',
+		     'P',      'Q',      'R',      'S',		// 50h
+		     'T',      'U',      'V',      'W',
+		     'X',      'Y',      'Z', '\u00C4',
+		'\u00D6', '\u00DC',      '^',      '_',
+		     '@',      'a',      'b',      'c',		// 60h
+		     'd',      'e',      'f',      'g',
+		     'h',      'i',      'j',      'k',
+		     'l',      'm',      'n',      'o',
+		     'p',      'q',      'r',      's',		// 70h
+		     't',      'u',      'v',      'w',
+		     'x',      'y',      'z', '\u00E4',
+		'\u00F6', '\u00FC', '\u00DF',       -1,
+		      -1,       -1,       -1,       -1,		// 80h
+		      -1,       -1,       -1,       -1,
+		      -1,       -1, '\u25CB', '\u25D8',
+		'\u25EF',       -1, '\u25E4', '\u25E3',
+		'\u2571', '\u2572',       -1,       -1,		// 90h
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,
+		'\u2501', '\u2503', '\u253B', '\u2523',		// A0h
+		'\u2533', '\u252B', '\u254B', '\u2517',
+		'\u250F', '\u2513', '\u251B',       -1,
+		      -1,       -1,       -1, '\u2573',
+		'\u2598', '\u259D', '\u2597', '\u2596',		// B0h
+		'\u258C', '\u2590', '\u2580', '\u2584',
+		'\u259A', '\u259E', '\u259F', '\u2599',
+		'\u259B', '\u259C', '\u25E2', '\u25E5',
+		      -1,       -1,       -1,       -1,		// C0h
+		'\u265F',       -1,       -1, '\u2592',
+		      -1, '\u2666', '\u2663', '\u2665',
+		'\u2660',       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,		// D0h
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,		// E0h
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,
+		      -1,       -1,       -1,       -1,		// F0h
+		      -1,       -1,       -1,       -1,
+		'\u2581', '\u2582', '\u2583', '\u2584',
+		'\u2585', '\u2586', '\u2587', '\u2588' };
+
   private static final int[] romBank2010SegLengths = {
 				0x2000,		// F0
 				0x2000,		// F1
@@ -184,7 +316,7 @@ public class AC1
   private static byte[] gsbasic     = null;
   private static byte[] pio2Rom2010 = null;
   private static byte[] font2010    = null;
-  private static byte[] fontCCD     = null;
+  private static byte[] fontACC     = null;
   private static byte[] fontSCCH    = null;
   private static byte[] fontU402    = null;
 
@@ -225,6 +357,7 @@ public class AC1
   private boolean           fontSwitchable;
   private boolean           inverseBySW;
   private boolean           inverseByKey;
+  private boolean           extFont;
   private boolean           pio1B3State;
   private boolean           keyboardUsed;
   private volatile boolean  graphicKeyState;
@@ -273,8 +406,7 @@ public class AC1
       this.fontSwitchable = true;
     }
     else if( this.osVersion.equals( "2010" ) ) {
-      this.mode2010       = true;
-      this.fontSwitchable = true;
+      this.mode2010 = true;
     }
     this.osBytes             = null;
     this.osFile              = null;
@@ -297,9 +429,10 @@ public class AC1
     this.lastBasicType       = null;
 
     if( emulatesColors( props ) ) {
-      this.mode64x16 = false;
-      this.ramColor  = new byte[ 0x0800 ];
-      this.colors    = new Color[ 16 ];
+      this.fontSwitchable = true;
+      this.mode64x16      = false;
+      this.ramColor       = new byte[ 0x0800 ];
+      this.colors         = new Color[ 16 ];
       createColors( props );
     } else {
       this.ramColor = null;
@@ -584,6 +717,64 @@ public class AC1
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    if( !this.mode64x16 ) {
+      buf.append( "<h1>AC1 Status</h1>\n"
+		+ "<table border=\"1\">\n"
+		+ "<tr><td>Monitor ROM:</td><td>" );
+      buf.append( !this.lowerDRAMEnabled && this.osRomEnabled ?
+						"ein" : "aus" );
+      buf.append( "</td></tr>\n"
+		+ "<tr><td>SRAM / BWS</td><td>" );
+      buf.append( this.lowerDRAMEnabled ? "aus" : "ein" );
+      buf.append( "</td></tr>\n" );
+      if( this.modeSCCH ) {
+	buf.append( "<tr><td>ROM-Disk:</td><td>" );
+	buf.append( this.scchRomdiskEnabled ? "ein" : "aus" );
+	buf.append( "</td></tr>\n"
+		+ "<tr><td>ROM-Disk Bank:</td><td>" );
+	if( this.scchRomdiskBegAddr == 0x8000 ) {
+	  buf.append( this.scchRomdiskBankAddr >> 15 );
+	} else {
+	  buf.append( this.scchRomdiskBankAddr >> 14 );
+	}
+	buf.append( "</td></tr>\n"
+		+ "<tr><td>Programmpaket X ROM:</td><td>" );
+	buf.append( this.scchPrgXEnabled ? "ein" : "aus" );
+	buf.append( "</td></tr>\n"
+		+ "<tr><td>SCCH-BASIC ROM:</td><td>" );
+	buf.append( this.scchBasicEnabled ? "ein" : "aus" );
+	buf.append( "</td></tr>\n" );
+      }
+      if( this.mode2010 ) {
+	buf.append( "<tr><td>PIO2 ROM:</td><td>" );
+	if( this.pio2Rom2010Offs >= 0 ) {
+	  buf.append( "ein (2000h-27FFh)</td></tr>\n"
+		+ "<tr><td>PIO2 ROM Segment-Offset:</td><td>" );
+	  buf.append( String.format( "%Xh", this.pio2Rom2010Offs ) );
+	} else {
+	  buf.append( "aus" );
+	}
+	buf.append( "</td></tr>\n"
+		+ "<tr><td>ROM-Bank:</td><td>" );
+	if( (this.romBank2010Len > 0) && (this.romBank2010Offs >= 0) ) {
+	  buf.append( "ein (A000h-" );
+	  buf.append(
+		String.format( "%04Xh)", 0xA000 + this.romBank2010Len ) );
+	  buf.append( "</td></tr>"
+		+ "<tr><td>ROM-Bank Segment-Offset:</td><td>" );
+	  buf.append( String.format( "%Xh", this.romBank2010Offs ) );
+	} else {
+	  buf.append( "aus" );
+	}
+	buf.append( "</td></tr>\n" );
+      }
+    }
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -760,37 +951,11 @@ public class AC1
 
 
   @Override
-  public int getCharColCount()
+  public CharRaster getCurScreenCharRaster()
   {
-    return 64;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return this.mode64x16 ? 16 : 32;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    return this.mode64x16 ? 16 : 8;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return 6;
+    return this.mode64x16 ?
+		new CharRaster( 64, 16, 16, 8, 6, 0 )
+		: new CharRaster( 64, 32, 8, 8, 6, 0 );
   }
 
 
@@ -954,50 +1119,35 @@ public class AC1
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
     int idx = (this.mode64x16 ? 0x03FF : 0x07FF) - (chY * 64) - chX;
     if( (idx >= 0) && (idx < this.ramVideo.length) ) {
-      int b = (int) this.ramVideo[ idx ];
-      if( (b >= 0x20) && (b < 0x7F) ) {
-	ch = b;
-	if( this.fontBytes == fontCCD ) {
-
-	  // Umlaute im Zeichensatz des Computerclubs Dessau
-	  switch( b ) {
-	    case 0x16:		// Paragraf-Zeichen
-	      ch = '\u00A7';
-	      break;
-
-	    case 0x17:		// Ae-Umlaut
-	      ch = '\u00C4';
-	      break;
-
-	    case 0x18:		// Oe-Umlaut
-	      ch = '\u00D6';
-	      break;
-
-	    case 0x19:		// Ue-Umlaut
-	      ch = '\u00DC';
-	      break;
-
-	    case 0x1A:		// ae-Umlaut
-	      ch = '\u00E4';
-	      break;
-
-	    case 0x1B:		// oe-Umlaut
-	      ch = '\u00F6';
-	      break;
-
-	    case 0x1C:		// ue-Umlaut
-	      ch = '\u00FC';
-	      break;
-
-	    case 0x1D:		// sz
-	      ch = '\u00DF';
-	      break;
+      int b = (int) this.ramVideo[ idx ] & 0xFF;
+      if( this.mode64x16 && !this.fontSwitchable ) {
+	// Zeichensatz U402
+	b &= 0x3F;
+	if( (b & 0x20) == 0 ) {
+	  ch = b | 0x40;
+	} else {
+	  ch = b;
+	}
+      } else {
+	int[] fontMap = ccdCharToUnicode;
+	if( this.fontSwitchable ) {
+	  if( this.fontOffs > 0 ) {
+	    fontMap = scchCharToUnicode;
 	  }
+	} else {
+	  if( this.modeSCCH ) {
+	    fontMap = scchCharToUnicode;
+	  } else if( this.mode2010 ) {
+	    fontMap = ac1_2010CharToUnicode;
+	  }
+	}
+	if( b < fontMap.length ) {
+	  ch = fontMap[ b ];
 	}
       }
     }
@@ -1775,10 +1925,7 @@ public class AC1
   @Override
   public boolean shouldAskConvertScreenChar()
   {
-    return (this.fontBytes != fontU402)
-		&& (this.fontBytes != fontCCD)
-		&& (this.fontBytes != fontSCCH)
-		&& (this.fontBytes != font2010);
+    return this.extFont;
   }
 
 
@@ -1939,13 +2086,13 @@ public class AC1
 				0xFF );
 	      }
 	    }
-	    if( (this.colors != null) || this.fontSwitchable ) {
+	    if( this.fontSwitchable ) {
 	      boolean state = ((v & 0x08) != 0);
-	      /*
-	       * Die Farbgrafikkarte lauscht selbst am Bus, d.h.,
-	       * es wird das Signal vor der PIO gelesen.
-	       */
 	      if( this.colors != null ) {
+		/*
+		 * Die Farbgrafikkarte lauscht selbst am Bus, d.h.,
+		 * es wird das Signal vor der PIO gelesen.
+		 */
 		state = ((value & 0x08) != 0);
 	      }
 	      if( state != this.pio1B3State ) {
@@ -1960,6 +2107,15 @@ public class AC1
 		  this.screenFrm.setScreenDirty( true );
 		}
 		this.pio1B3State = state;
+	      }
+	    } else {
+	      if( this.mode2010 ) {
+		boolean state = ((v & 0x08) != 0);
+		if( state != this.pio1B3State ) {
+		  this.inverseBySW = state;
+		  this.pio1B3State = state;
+		  this.screenFrm.setScreenDirty( true );
+		}
 	      }
 	    }
 	  }
@@ -2288,13 +2444,15 @@ public class AC1
 
   private void loadFont( Properties props )
   {
+    this.extFont   = true;
     this.fontBytes = readFontByProperty(
 	props,
 	"jkcemu.ac1.font.file",
-	((this.colors != null) || this.fontSwitchable) ? 0x1000 : 0x0800 );
+	this.fontSwitchable ? 0x1000 : 0x0800 );
 
     if( this.fontBytes == null ) {
-      if( (this.colors != null) || this.fontSwitchable) {
+      this.extFont = false;
+      if( this.fontSwitchable) {
 	byte[] primaryFont = null;
 	if( this.mode2010 ) {
 	  if( font2010 == null ) {
@@ -2307,30 +2465,36 @@ public class AC1
 	  }
 	  primaryFont = fontSCCH;
 	}
-	if( fontCCD == null ) {
-	  fontCCD = readResource( "/rom/ac1/ccdfont.bin" );
+	if( fontACC == null ) {
+	  fontACC = readResource( "/rom/ac1/accfont.bin" );
 	}
-	if( (primaryFont != null) && (fontCCD != null) ) {
+	if( (primaryFont != null) && (fontACC != null) ) {
+	  /*
+	   * Der SCCH-Zeichensatz soll aktiv sein,
+	   * wenn auf PIO1 B3 eine 1 ausgegeben wird.
+	   * Demzufolge muss der SCCH-Zeichensatz in den hinteren
+	   * 2 KByte liegen
+	   */
 	  byte[] a = new byte[ 0x1000 ];
 	  Arrays.fill( a, (byte) 0 );
+	  System.arraycopy(
+			fontACC,
+			0,
+			a,
+			0,
+			Math.min( fontACC.length, 0x0800 ) );
 	  System.arraycopy(
 			primaryFont,
 			0,
 			a,
-			0,
-			Math.min( primaryFont.length, 0x0800 ) );
-	  System.arraycopy(
-			fontCCD,
-			0,
-			a,
 			0x0800,
-			Math.min( fontCCD.length, 0x0800 ) );
+			Math.min( primaryFont.length, 0x0800 ) );
 	  this.fontBytes = a;
 	} else {
 	  if( primaryFont != null ) {
 	    this.fontBytes = primaryFont;
 	  } else {
-	    this.fontBytes = fontCCD;
+	    this.fontBytes = fontACC;
 	  }
 	}
       } else {
@@ -2350,10 +2514,10 @@ public class AC1
 	  }
 	  this.fontBytes = font2010;
 	} else {
-	  if( fontCCD == null ) {
-	    fontCCD = readResource( "/rom/ac1/ccdfont.bin" );
+	  if( fontACC == null ) {
+	    fontACC = readResource( "/rom/ac1/accfont.bin" );
 	  }
-	  this.fontBytes = fontCCD;
+	  this.fontBytes = fontACC;
 	}
       }
     }

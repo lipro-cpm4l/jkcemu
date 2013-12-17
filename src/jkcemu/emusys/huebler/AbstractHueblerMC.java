@@ -56,8 +56,8 @@ public abstract class AbstractHueblerMC
   protected void createIOSystem()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
-    this.ctc   = new Z80CTC( "CTC (IO-Adressen 14-17)" );
-    this.pio   = new Z80PIO( "PIO (IO-Adressen 0C-0F)" );
+    this.ctc   = new Z80CTC( "CTC (IO-Adressen 14h-17h)" );
+    this.pio   = new Z80PIO( "PIO (IO-Adressen 0Ch-0Fh)" );
     cpu.setInterruptSources( this.ctc, this.pio );
     cpu.addTStatesListener( this.ctc );
   }

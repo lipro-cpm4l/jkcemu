@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -63,10 +63,13 @@ public class KCAudioFileTarget extends AbstractConvertTarget
       int len = Math.min( this.len, this.dataBytes.length - this.offs );
       if( len > 0 ) {
 	if( (target == Target.Z9001) || (target == Target.KC85) ) {
-	  int    begAddr   = this.fileConvertFrm.getBegAddr( true );
-	  int    endAddr   = begAddr + len;
-	  int    startAddr = this.fileConvertFrm.getBegAddr( false );
-	  String fileDesc  = this.fileConvertFrm.getFileDesc( true );
+	  int begAddr = this.fileConvertFrm.getBegAddr( true );
+	  int endAddr = begAddr + len;
+	  if( target == Target.Z9001 ) {
+	    --endAddr;
+	  }
+	  int    startAddr= this.fileConvertFrm.getBegAddr( false );
+	  String fileDesc = this.fileConvertFrm.getFileDesc( true );
 
 	  byte[] m = new byte[ 128 + len ];
 	  Arrays.fill( m, (byte) 0 );
@@ -165,9 +168,10 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException, UserInputException
+  public String save( File file ) throws IOException, UserInputException
   {
     saveAudioFile( file, getAudioInputStream() );
+    return null;
   }
 
 

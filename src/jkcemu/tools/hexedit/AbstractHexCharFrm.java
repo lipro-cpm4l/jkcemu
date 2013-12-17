@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,6 +17,7 @@ import java.util.EventObject;
 import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.etc.CksCalculator;
 
 
 public abstract class AbstractHexCharFrm

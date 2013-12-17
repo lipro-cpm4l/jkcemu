@@ -96,6 +96,41 @@ public class Z9001 extends EmuSys implements
 		{ 'p', 'q', 'r', 's', 't', 'u', 'v', 'w' },
 		{ 'x', 'y', 'z', 0,   0,   0  , 0, 0   } };
 
+  // Mapping der Zeichen ab Code 128
+  private static final int[] char128ToUnicode = {
+		      -1,       -1,       -1,       -1,		// 128
+		      -1,       -1,       -1,       -1,		// 132
+		      -1,       -1, '\u25CA',       -1,		// 136
+		'\u25EF',       -1, '\u25E4', '\u25E3',		// 140
+		'\u2571', '\u2572',       -1,       -1,		// 144
+		      -1,       -1,       -1,       -1,		// 148
+		      -1,       -1,       -1,       -1,		// 152
+		      -1,       -1,       -1,       -1,		// 156
+		'\u2501', '\u2503', '\u253B', '\u2523',		// 160
+		'\u2533', '\u252B', '\u254B', '\u2517',		// 164
+		'\u250F', '\u2513', '\u251B',       -1,		// 168
+		      -1,       -1,       -1, '\u2573',		// 172
+		'\u2598', '\u259D', '\u2597', '\u2596',		// 176
+		'\u258C', '\u2590', '\u2580', '\u2584',		// 180
+		'\u259A', '\u259E', '\u259F', '\u2599',		// 184
+		'\u259B', '\u259C', '\u25E2', '\u25E5',		// 188
+		      -1,       -1,       -1,       -1,		// 192
+		'\u265F',       -1,       -1, '\u2592',		// 196
+		      -1, '\u2666', '\u2663', '\u2665',		// 200
+		'\u2660',       -1,       -1, '\u25CF',		// 204
+		      -1,       -1,       -1,       -1,		// 208
+		      -1,       -1,       -1,       -1,		// 212
+		      -1,       -1,       -1,       -1,		// 216
+		      -1,       -1,       -1,       -1,		// 220
+		      -1,       -1,       -1,       -1,		// 224
+		      -1,       -1,       -1,       -1,		// 228
+		      -1,       -1,       -1,       -1,		// 232
+		      -1,       -1,       -1,       -1,		// 236
+		      -1,       -1,       -1,       -1,		// 240
+		      -1,       -1,       -1,       -1,		// 244
+		'\u2581', '\u2582', '\u2583', '\u2584',		// 248
+		'\u2585', '\u2586', '\u2587', '\u2588' };	// 248
+
   private static final int GRAPHIC_NONE     = 0;
   private static final int GRAPHIC_ROBOTRON = 1;
   private static final int GRAPHIC_KRT      = 2;
@@ -404,6 +439,25 @@ public class Z9001 extends EmuSys implements
   }
 
 
+  public static int toUnicode( int ch )
+  {
+    int rv = -1;
+    if( ch >= 0 ) {
+      if( (ch < 0x20) || (ch == 0x7F) ) {
+	rv = '\u2588';
+      } else if( (ch >= 0x20) && (ch < 0x7F) ) {
+	rv = ch;
+      } else {
+	int idx = ch - 0x80;
+	if( (idx >= 0) && (idx < char128ToUnicode.length) ) {
+	  rv = char128ToUnicode[ idx ];
+	}
+      }
+    }
+    return rv;
+  }
+
+
   public void updKeyboardMatrix( int[] kbMatrix )
   {
     synchronized( this.kbMatrix ) {
@@ -564,6 +618,102 @@ public class Z9001 extends EmuSys implements
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    buf.append( "<h1>" );
+    buf.append( this.sysName );
+    buf.append( " Speicherkonfiguration</h1>\n"
+        + "<table border=\"1\">\n"
+	+ "<tr><td>F000h-FFFFh:</td><td>Betriebssystem-ROM</td></tr>\n"
+	+ "<tr><td>EC00h-EFFFh:</td><td>" );
+    if( (this.ramPixel != null)
+	&& (this.graphType == GRAPHIC_KRT)
+	&& this.graphMode )
+    {
+      buf.append( "KRT-Pixel-RAM, Segment " );
+      buf.append( this.graphBank );
+    } else {
+      buf.append( "Text-BWS" );
+      if( this.c80Enabled ) {
+	buf.append( " Segment " );
+	buf.append( this.c80MemSwap ? "1" : "0" );
+      }
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>E800h-EC00h:</td><td>" );
+    if( this.ramFontEnabled && (this.ramFont != null) ) {
+      buf.append( "Zeichengenerator-RAM" );
+    } else if( this.ramColor != null ) {
+      buf.append( "Farbattribut-RAM" );
+      if( this.c80Enabled ) {
+	buf.append( " Segment " );
+	buf.append( this.c80MemSwap ? "1" : "0" );
+      }
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>C000h-E7FFh:</td><td>" );
+    if( this.ram64k && this.ramC000Enabled ) {
+      buf.append( "RAM" );
+    } else if( this.romModuleEnabled && (this.romBoot != null) ) {
+      buf.append( "Boot-ROM" );
+    } else if( this.romModuleEnabled && (this.romMega != null) ) {
+      buf.append( "Mega-ROM Segment " );
+      buf.append( this.megaROMSeg );
+    } else if( this.rom10kC000 != null ) {
+      buf.append( "ROM-Modul" );
+    } else if( this.kc87 && (this.romBasic != null) ) {
+      buf.append( "BASIC-ROM" );
+    }
+    buf.append( "</td></tr>\n" );
+    if( (this.rom16k8000 != null) || (this.rom32k4000 != null) ) {
+      buf.append( "<tr><td>8000h-BFFFh:</td><td>ROM-Modul</td></tr>\n" );
+    } else if( this.ram16k8000 || this.ram64k ) {
+      buf.append( "<tr><td>8000h-BFFFh:</td><td>RAM</td></tr>\n" );
+    } else if( this.printerModule && (printerModBytes != null) ) {
+      buf.append( "<tr><td>B800h-BFFFh:</td>"
+		+ "<td>Druckermodul-ROM</td></tr>\n"
+		+ "<tr><td>8000h-B7FFh:</td><td></td></tr>\n" );
+    } else {
+      buf.append( "<tr><td>8000h-BFFFh:</td><td></td></tr>\n" );
+    }
+    buf.append( "<tr><td>4000h-7FFFh:</td><td>" );
+    if( (this.rom16k4000 != null) || (this.rom32k4000 != null) ) {
+      buf.append( "ROM-Modul" );
+    } else if( this.ram64k ) {
+      buf.append( "RAM Segment " );
+      buf.append(
+	this.ram4000ExtEnabled && (this.ramExt != null) ? "1" : "0" );
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>0000h-3FFFh:</td><td>RAM</td></tr>\n"
+	+ "</table>\n"
+	+ "<br/><br/>\n"
+	+ "<h1>" );
+    buf.append( this.sysName );
+    buf.append( " Status</h1>\n"
+	+ "<table border=\"1\">\n"
+	+ "<tr><td>Bildausgabe:</td><td>" );
+    if( this.graphMode ) {
+      if( this.graphType == GRAPHIC_ROBOTRON ) {
+	buf.append( "ROBOTRON-Vollgrafikerweiterung" );
+      } else if( this.graphType == GRAPHIC_KRT ) {
+	buf.append( "KRT-Grafik" );
+      }
+    } else {
+      buf.append( "Textmodus, " );
+      if( this.c80Enabled ) {
+	buf.append( this.c80Active ? "8" : "4" );
+	buf.append( "0x2" );
+	buf.append( this.mode20Rows ? "0" : "4" );
+      } else {
+	buf.append( this.mode20Rows ? "20" : "24" );
+	buf.append( " Zeilen" );
+      }
+    }
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -719,7 +869,7 @@ public class Z9001 extends EmuSys implements
   @Override
   public AbstractKeyboardFld createKeyboardFld()
   {
-    this.keyboardFld = new Z9001KeyboardFld( this.screenFrm, this );
+    this.keyboardFld = new Z9001KeyboardFld( this );
     return this.keyboardFld;
   }
 
@@ -767,64 +917,6 @@ public class Z9001 extends EmuSys implements
   public int getBorderColorIndex()
   {
     return this.borderColorIdx;
-  }
-
-
-  @Override
-  public int getCharColCount()
-  {
-    return this.graphMode ? -1 : (this.c80Active ? 80 : 40);
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    int rv = -1;
-    if( !this.graphMode ) {
-      rv = 8;
-      if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
-	rv *= 2;
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return this.graphMode ? -1 : (this.mode20Rows ? 20 : 24);
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    int rv = -1;
-    if( !this.graphMode ) {
-      rv = (this.mode20Rows ? 9 : 8);
-      if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
-	rv *= 2;
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    int rv = -1;
-    if( !this.graphMode ) {
-      rv = 8;
-      if( (this.fixedScreenSize || this.screenFrm.isFullScreenMode())
-	  && !this.c80Active )
-      {
-	rv = 16;
-      }
-    }
-    return rv;
   }
 
 
@@ -981,39 +1073,37 @@ public class Z9001 extends EmuSys implements
 
 
   @Override
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  public CharRaster getCurScreenCharRaster()
   {
-    return true;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return this.fdc != null ? 2048 : -1;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return this.fdc != null ? 3 : -1;
+    CharRaster rv = null;
+    if( !this.graphMode ) {
+      int colCount   = (this.c80Active ? 80 : 40);
+      int rowCount   = (this.mode20Rows ? 20 : 24);
+      int rowHeight  = (this.mode20Rows ? 9 : 8);
+      int charHeight = 8;
+      int charWidth  = 8;
+      if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
+	charHeight *= 2;
+	rowHeight *= 2;
+	if( !this.c80Active ) {
+	  charWidth *= 2;
+	}
+      }
+      rv = new CharRaster(
+			colCount,
+			rowCount,
+			rowHeight,
+			charHeight,
+			charWidth, 0 );
+    }
+    return rv;
   }
 
 
   @Override
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
-    return this.fdc != null ?
-		FloppyDiskFormat.getFormat( 2, 80, 5, 1024 )
-		: null;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return this.fdc != null ? 0 : -1;
+    return FloppyDiskFormat.FMT_800K;
   }
 
 
@@ -1067,7 +1157,7 @@ public class Z9001 extends EmuSys implements
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
     if( !this.graphMode ) {
@@ -1106,8 +1196,12 @@ public class Z9001 extends EmuSys implements
 	      break;
 	  }
 	}
-	if( (ch < 0) && (b >= 0x20) && (b < 0x7F) ) {
-	  ch = b;
+	if( ch < 0 ) {
+	  if( (b >= 0x20) && (b < 0x7F) ) {
+	    ch = b;
+	  } else {
+	    ch = toUnicode( b );
+	  }
 	}
       }
     }
@@ -1735,6 +1829,7 @@ public class Z9001 extends EmuSys implements
     setGraphicLED( false );
     upd80CharsMode( false );
     updScreenConfig( 0 );
+    this.screenFrm.fireUpdScreenTextActionsEnabled();
   }
 
 
@@ -2008,7 +2103,7 @@ public class Z9001 extends EmuSys implements
        * In der Emulation muss deshalb eine Prioritisierung
        * vorgenommen werden:
        * Wenn das Floppy-Disk-Modul emuliert wird,
-       * werden diese beiden Ports auch fuer das Floppy-Disk-Modul verwendet.
+       * werden diese beiden Ports fuer das Floppy-Disk-Modul verwendet.
        */
       case 0xA0:	// Zusatzregister des Robotron Floppy Disk Moduls
       case 0xA1:
@@ -2042,7 +2137,7 @@ public class Z9001 extends EmuSys implements
        * In der Emulation muss deshalb eine Prioritisierung
        * vorgenommen werden:
        * Wenn das Drucker-Modul emuliert wird,
-       * werden diese beiden Ports auch fuer das Drucker-Modul verwendet.
+       * werden diese beiden Ports fuer das Drucker-Modul verwendet.
        */
       case 0xA8:				// A2=0
       case 0xA9:
@@ -2091,16 +2186,21 @@ public class Z9001 extends EmuSys implements
 
       case 0xB8:
 	if( this.ramPixel != null ) {
+	  boolean graphMode = this.graphMode;
 	  if( this.graphType == GRAPHIC_ROBOTRON ) {
 	    this.graphBgColor = value & 0x07;
 	    this.graphFgColor = (value >> 4) & 0x07;
 	    this.graphBorder  = ((value & 0x80) != 0);
-	    this.graphMode    = ((value & 0x08) != 0);
+	    graphMode         = ((value & 0x08) != 0);
 	    this.screenFrm.setScreenDirty( true );
 	  } else if( this.graphType == GRAPHIC_KRT ) {
 	    this.graphBank = value & 0x07;
-	    this.graphMode = ((value & 0x08) != 0);
+	    graphMode      = ((value & 0x08) != 0);
 	    this.screenFrm.setScreenDirty( true );
+	  }
+	  if( graphMode != this.graphMode ) {
+	    this.graphMode = graphMode;
+	    this.screenFrm.fireUpdScreenTextActionsEnabled();
 	  }
 	}
 	break;

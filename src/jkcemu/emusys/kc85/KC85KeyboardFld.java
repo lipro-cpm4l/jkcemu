@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,19 +16,18 @@ import jkcemu.emusys.KC85;
 
 public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 {
-  private static final int FS_KEY      = 14;
-  private static final int FS_NOSHIFT  = 12;
-  private static final int FS_SHIFT    = 10;
-  private static final int MARGIN_WIN  = 15;
-  private static final int MARGIN_FRM  = 8;
-  private static final int KEY_COL_W   = 50;
-  private static final int KEY_ROW_H   = 50;
-  private static final int KEY_PAD_X   = 15;
-  private static final int KEY_PAD_Y   = 35;
-  private static final int KEY_PAD_W   = 620;
-  private static final int KEY_PAD_H   = 255;
-  private static final int X_CRS_MID   = 695;
-  private static final int Y_KEY_SPACE = 305;
+  private static final int FS_KEY     = 14;
+  private static final int FS_NOSHIFT = 12;
+  private static final int FS_SHIFT   = 10;
+  private static final int MARGIN_X   = 15;
+  private static final int MARGIN_Y   = 20;
+  private static final int KEY_COL_W  = 50;
+  private static final int KEY_ROW_H  = 50;
+  private static final int KEY_PAD_X  = MARGIN_X + 1;
+  private static final int KEY_PAD_Y  = MARGIN_Y + 1;
+  private static final int KEY_PAD_W  = 620;
+  private static final int KEY_PAD_H  = 272;
+  private static final int X_CRS_MID  = 695;
 
   private Image   imgBG;
   private Image   imgKeySmall;
@@ -83,19 +82,19 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     int dist  = (KEY_PAD_W - ((KEY_COL_W * 11) + this.wKey)) / 3;
     int xKey0 = KEY_PAD_X + (2 * dist);
     this.curX = xKey0;
-    this.curY = 35 + ((KEY_PAD_H - 35) / 10) - (this.hKey / 2);
-    addKey( "F1", 124 );
-    addKey( "F2", 12 );
-    addKey( "F3", 28 );
-    addKey( "F4", 108 );
-    addKey( "F5", 44 );
-    addKey( "F6", 92 );
-    addKey( "BRK", 60 );
-    addKey( "STOP", 76 );
-    addKey( "INS", 56 );
-    addKey( "DEL", 40 );
-    addKey( "CLR", 24 );
-    addKey( "HOME", 8 );
+    this.curY = KEY_PAD_Y + 16 + ((KEY_PAD_H - 35) / 10) - (this.hKey / 2);
+    addKey( "F1", 124, "F1" );
+    addKey( "F2", 12, "F2" );
+    addKey( "F3", 28, "F3" );
+    addKey( "F4", 108, "F4" );
+    addKey( "F5", 44, "F5" );
+    addKey( "F6", 92, "F6" );
+    addKey( "BRK", 60, "F7" );
+    addKey( "STOP", 76, "F8" );
+    addKey( "INS", 56, "Einfg" );
+    addKey( "DEL", 40, "Entf" );
+    addKey( "CLR", 24, "F9" );
+    addKey( "HOME", 8, "Pos1" );
 
     this.curX = xKey0;
     this.curY += KEY_ROW_H;
@@ -113,7 +112,15 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     addKey( "-", "=", 10 );
     this.curX += KEY_COL_W;
     int xUp = X_CRS_MID - (this.wKey / 2);
-    addKey( xUp, this.curY, this.wKey, null, null, this.imgUp, 120 );
+    addKey(
+	xUp,
+	this.curY,
+	this.wKey,
+	null,
+	null,
+	this.imgUp,
+	120,
+	null );
 
     this.curX = xKey0 + ((KEY_COL_W + this.wKey) / 2) - (this.wKey / 2);
     this.curY += KEY_ROW_H;
@@ -131,13 +138,38 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     this.curX += KEY_COL_W;
 
     this.curX = xUp - (KEY_COL_W / 2);
-    addKey( this.curX, this.curY, this.wKey, null, null, this.imgLeft, 6 );
-    addKey( this.curX, this.curY, this.wKey, null, null, this.imgRight, 122 );
+    addKey(
+	this.curX,
+	this.curY,
+	this.wKey,
+	null,
+	null,
+	this.imgLeft,
+	6,
+	null );
+    int wPref = this.curX + this.wKey + MARGIN_X;
+    addKey(
+	this.curX,
+	this.curY,
+	this.wKey,
+	null,
+	null,
+	this.imgRight,
+	122,
+	null );
 
     int xKey3 = KEY_PAD_X + dist;
     this.curX = xKey3;
     this.curY += KEY_ROW_H;
-    addKey( this.curX, this.curY, this.wKey, null, null, this.imgShLock, 114 );
+    addKey(
+	this.curX,
+	this.curY,
+	this.wKey,
+	null,
+	null,
+	this.imgShLock,
+	114,
+	null );
     addKey( "A", 2 );
     addKey( "S", 18 );
     addKey( "D", 98 );
@@ -150,7 +182,15 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     addKey( "+", 104 );
     addKey( "_", 102 );
     this.curX = xUp;
-    addKey( this.curX, this.curY, this.wKey, null, null, this.imgDown, 118 );
+    addKey(
+	this.curX,
+	this.curY,
+	this.wKey,
+	null,
+	null,
+	this.imgDown,
+	118,
+	null );
 
     int xKey4 = xKey3 + ((KEY_COL_W + this.wKey) / 2) - (this.wKey / 2);
     this.curX = xKey4;
@@ -167,7 +207,8 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 				this.imgShift,
 				0,
 				-1,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = this.shiftKey;
     this.curX += KEY_COL_W;
 
@@ -182,7 +223,15 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     addKey( ".", ">", 90 );
     addKey( "/", "?", 106 );
     this.curX = xUp;
-    addKey( this.curX, this.curY, this.wKey, null, null, this.imgEnter, 126 );
+    addKey(
+	this.curX,
+	this.curY,
+	this.wKey,
+	null,
+	null,
+	this.imgEnter,
+	126,
+	"Enter" );
 
     int wSpaceKey = 0;
     int hSpaceKey = 0;
@@ -192,7 +241,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     }
     this.spaceKey = new KeyData(
 		xKey4 + ((((KEY_COL_W * 10) + this.wKey) - wSpaceKey) / 2),
-		(2 * (KEY_PAD_Y + KEY_PAD_H)) - (this.curY + this.hKey),
+		KEY_PAD_Y + KEY_PAD_H + hSpaceKey,
 		wSpaceKey,
 		hSpaceKey,
 		null,
@@ -202,10 +251,14 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 		null,
 		0,
 		70,
-		false );
+		false,
+		null );
     this.keys[ this.curIdx++ ] = this.spaceKey;
 
-    setPreferredSize( new Dimension( 750, 358 ) );
+    setPreferredSize(
+		new Dimension(
+			wPref,
+			KEY_PAD_Y + KEY_PAD_H + (2 * hSpaceKey) + MARGIN_Y) );
     setShiftKeys( this.shiftKey );
   }
 
@@ -238,7 +291,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     if( shift && (keyNum >= 0) ) {
       keyNum++;
     }
-    this.kc85.setKeyNumPressed( keyNum );
+    ((KC85) this.emuSys ).setKeyNumPressed( keyNum );
   }
 
 
@@ -248,7 +301,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     g.setColor( this.colorBG );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     if( this.imgBG != null ) {
-      g.drawImage( this.imgBG, 0, 0, this );
+      g.drawImage( this.imgBG, MARGIN_X, MARGIN_Y, this );
     }
     for( KeyData key : this.keys ) {
       drawKey( g, key, isKeySelected( key ) );
@@ -267,7 +320,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
   public void setEmuSys( EmuSys emuSys ) throws IllegalArgumentException
   {
     if( emuSys instanceof KC85 ) {
-      this.kc85 = (KC85) emuSys;
+      this.emuSys = (KC85) emuSys;
       prepareLayout();
       repaint();
     } else {
@@ -312,7 +365,8 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 		String  textNormal,
 		String  textShift,
 		Image   image,
-		int     value )
+		int     value,
+		String  toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					x,
@@ -326,7 +380,8 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 					image,
 					0,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_COL_W;
   }
 
@@ -340,7 +395,22 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 	textNormal,
 	null,
 	null,
-	value );
+	value,
+	null );
+  }
+
+
+  private void addKey( String textNormal, int value, String toolTipText )
+  {
+    addKey(
+	this.curX,
+	this.curY,
+	this.wKey,
+	textNormal,
+	null,
+	null,
+	value,
+	toolTipText );
   }
 
 
@@ -353,7 +423,8 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 	textNormal,
 	textShift,
 	null,
-	value );
+	value,
+	null );
   }
 
 
@@ -449,12 +520,12 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
 
   private void prepareLayout()
   {
-    if( this.kc85.getKCTypeNum() >= 4 ) {
+    if( ((KC85) this.emuSys ).getKCTypeNum() >= 4 ) {
       this.imgBG       = getImage( "bg_gray.png" );
       this.imgKeySpace = getImage( "key_space_gray.png" );
       this.colorBG     = new Color( 230, 230, 220 );
     } else {
-      if( this.kc85.getTitle().startsWith( "HC" ) ) {
+      if( this.emuSys.getTitle().startsWith( "HC" ) ) {
 	this.imgBG = getImage( "bg_hc900.png" );
       } else {
 	this.imgBG = getImage( "bg_dark.png" );

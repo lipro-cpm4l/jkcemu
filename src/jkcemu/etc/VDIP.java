@@ -418,9 +418,9 @@ public class VDIP implements
 	/* --- Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    this.pio.appendStatusHTMLTo( buf );
+    this.pio.appendInterruptStatusHTMLTo( buf );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -107,7 +107,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	/* --- Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
     boolean showISR = false;
     buf.append( "<table border=\"1\">\n"
@@ -298,6 +298,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     private boolean extMode;
     private boolean slope;
     private boolean waitForTrigger;
+    private boolean ignoreNextInternalPulses;
     private boolean interruptEnabled;
     private boolean interruptAccepted;
     private boolean interruptRequested;
@@ -352,25 +353,30 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
     private void reset()
     {
-      this.ignoreInternalPulses = 0;
-      this.counterInit          = 0x100;
-      this.counter              = this.counterInit;
-      this.preCounter           = 0;
-      this.pre256               = false;
-      this.extMode              = false;
-      this.slope                = false;
-      this.waitForTrigger       = false;
-      this.interruptEnabled     = false;
-      this.interruptAccepted    = false;
-      this.interruptRequested   = false;
-      this.nextIsCounterValue   = false;
-      this.running              = false;
-      this.lastInSlope          = null;
+      this.ignoreInternalPulses     = 0;
+      this.counterInit              = 0x100;
+      this.counter                  = this.counterInit;
+      this.preCounter               = 0;
+      this.pre256                   = false;
+      this.extMode                  = false;
+      this.slope                    = false;
+      this.waitForTrigger           = false;
+      this.ignoreNextInternalPulses = false;
+      this.interruptEnabled         = false;
+      this.interruptAccepted        = false;
+      this.interruptRequested       = false;
+      this.nextIsCounterValue       = false;
+      this.running                  = false;
+      this.lastInSlope              = null;
     }
 
 
     private void systemUpdate( int pulses )
     {
+      if( this.ignoreNextInternalPulses ) {
+	this.ignoreInternalPulses += pulses;
+	this.ignoreNextInternalPulses = false;
+      }
       if( pulses > this.ignoreInternalPulses ) {
 	pulses -= this.ignoreInternalPulses;
 	this.ignoreInternalPulses = 0;
@@ -395,16 +401,17 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	   * mit dem der CTC-Kanal programmiert wird,
 	   * duerfen nicht zum Herunterzaehlen des Kanals
 	   * verwendet werden.
-	   * Aus diesem Grund werden einige Taktzyklen ignoriert.
-	   * Durch praktische Tests wurden folgende Werte ermittelt:
-	   *
-	   * gueltige Werte:
-	   *   LLC2: 15-18
+	   * Aus diesem Grund werden die naechsten Taktzyklen,
+	   * d.h., die des Ausgabebefahls, ignoriert,
+	   * Da die CTC erst einen Taktzyklus nach der Programmierung
+	   * mit dem Zaehlen beginnt,
+	   * wird zusaetzlich noch ein Taktzyklus ignoriert.
 	   */
-	  this.ignoreInternalPulses = 16;
-	  this.preCounter           = 0;
-	  this.counter              = this.counterInit;
-	  this.running              = true;
+	  this.ignoreNextInternalPulses = true;
+	  this.ignoreInternalPulses     = 1;
+	  this.preCounter               = 0;
+	  this.counter                  = this.counterInit;
+	  this.running                  = true;
 	}
       } else {
 	this.interruptAccepted  = false;

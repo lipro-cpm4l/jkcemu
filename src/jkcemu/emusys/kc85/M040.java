@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,8 +17,8 @@ import jkcemu.base.*;
 public class M040 extends AbstractKC85Module
 {
   private int    typeByte;
-  private int    baseAddr;
-  private int    baseAddrMask;
+  private int    begAddr;
+  private int    begAddrMask;
   private int    romLen;
   private byte[] rom;
   private String fileName;
@@ -34,19 +34,34 @@ public class M040 extends AbstractKC85Module
     super( slot );
     this.typeByte = typeByte;
     this.fileName = fileName;
-    this.baseAddr = 0;
+    this.begAddr  = 0;
     if( typeByte == 0xF8 ) {
-      this.baseAddrMask = 0xC000;
-      this.romLen       = 0x4000;
+      this.begAddrMask = 0xC000;
+      this.romLen      = 0x4000;
     } else {
-      this.baseAddrMask = 0xE000;
-      this.romLen       = 0x2000;
+      this.begAddrMask = 0xE000;
+      this.romLen      = 0x2000;
     }
     reload( owner );
   }
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  public void appendEtcInfoHTMLTo( StringBuilder buf )
+  {
+    buf.append( "ROM-Gr\u00F6\u00DFe: " );
+    buf.append( this.romLen / 1024 );
+    buf.append( " KByte" );
+  }
+
+
+  @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
 
   @Override
   public String getFileName()
@@ -74,11 +89,11 @@ public class M040 extends AbstractKC85Module
   {
     int rv = -1;
     if( this.enabled
-	&& (addr >= this.baseAddr)
-	&& (addr < (this.baseAddr + this.romLen))
+	&& (addr >= this.begAddr)
+	&& (addr < (this.begAddr + this.romLen))
 	&& (this.rom != null) )
     {
-      int idx = addr - this.baseAddr;
+      int idx = addr - this.begAddr;
       if( idx < this.rom.length ) {
 	rv = (int) this.rom[ idx ] & 0xFF;
       }
@@ -97,11 +112,11 @@ public class M040 extends AbstractKC85Module
 			"M040 ROM-Datei" );
     if( (this.typeByte == 0x01) && (this.rom != null) ) {
       if( this.rom.length > 0x2000 ) {
-	this.baseAddrMask = 0xC000;
-	this.romLen       = 0x4000;
+	this.begAddrMask = 0xC000;
+	this.romLen      = 0x4000;
       } else {
-	this.baseAddrMask = 0xE000;
-	this.romLen       = 0x2000;
+	this.begAddrMask = 0xE000;
+	this.romLen      = 0x2000;
       }
     }
   }
@@ -111,7 +126,6 @@ public class M040 extends AbstractKC85Module
   public void setStatus( int value )
   {
     super.setStatus( value );
-    this.baseAddr = (value << 8) & this.baseAddrMask;
+    this.begAddr = (value << 8) & this.begAddrMask;
   }
 }
-

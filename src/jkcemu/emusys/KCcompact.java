@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
+import java.util.zip.CRC32;
 import javax.sound.sampled.AudioFormat;
 import jkcemu.audio.AudioOut;
 import jkcemu.base.*;
@@ -85,9 +86,43 @@ public class KCcompact extends EmuSys implements
 	{ -1, -1, -1, 17, -1,  1, -1, 26 },
 	{ -1, -1, -1, -1, -1, -1, -1, -1 } };
 
-  private static byte[] romOS    = null;
-  private static byte[] romBASIC = null;
-  private static byte[] romFDC   = null;
+  // Mapping der Zeichen ab Code 128
+  private static final int[] char128ToUnicode = {
+		    -1, 0x2598, 0x259D, 0x2580,		// 128
+		0x2596, 0x258C, 0x259E, 0x259B,		// 132
+		0x2597, 0x259A, 0x2590, 0x259C,		// 136
+		0x2584, 0x2599, 0x259F, 0x2588,		// 140
+		    -1,     -1,     -1,     -1,		// 144
+		    -1,     -1,     -1,     -1,		// 148
+		    -1,     -1,     -1,     -1,		// 152
+		    -1,     -1,     -1,     -1,		// 156
+		0x005E, 0x00B4,     -1, 0x00A3,		// 160
+		0x00A9, 0x00B6, 0x00A7, 0x0060,		// 164
+		0x00BC, 0x00BD, 0x00BE,     -1,		// 168
+		0x00F7, 0x00AC, 0x00BF, 0x00A1,		// 172
+		0x03B1, 0x03B2, 0x03B3, 0x03B4,		// 176
+		0x03B5, 0x03B8, 0x03BB, 0x03BC,		// 180
+		0x03C0, 0x03C3, 0x03C6, 0x03A6,		// 184
+		0x03C7, 0x03C9, 0x03A3, 0x03A9,		// 188
+		    -1,     -1,     -1,     -1,		// 192
+		    -1,     -1,     -1,     -1,		// 196
+		    -1,     -1, 0x25C7,     -1,		// 200
+		    -1,     -1,     -1,     -1,		// 204
+		    -1,     -1,     -1,     -1,		// 208
+		0x25E4, 0x25E5, 0x25E2, 0x25E3,		// 212
+		    -1,     -1,     -1,     -1,		// 216
+		    -1,     -1,     -1,     -1,		// 220
+		    -1,     -1,     -1, 0x2666,		// 224
+		0x2665, 0x2660,     -1,     -1,		// 228
+		    -1,     -1, 0x2642, 0x2640,		// 232
+		0x2669, 0x266A, 0x2600,     -1,		// 236
+		    -1,     -1,     -1,     -1,		// 240
+		    -1,     -1, 0x25B6, 0x25C0 };	// 244
+
+  private static byte[]              romOS            = null;
+  private static byte[]              romBASIC         = null;
+  private static byte[]              romFDC           = null;
+  private static Map<Long,Character> pixelCRC32ToChar = null;
 
   private Color[]              colors;
   private int[]                regColors;
@@ -433,12 +468,9 @@ public class KCcompact extends EmuSys implements
    */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
     buf.append( "<table border=\"1\">\n"
-	+ "<tr><td>Im vertiklaen Synchronimpuls:</td><td>" );
-    buf.append( this.crtc.isVSync() ? "ja" : "nein" );
-    buf.append( "</td></tr>\n"
 	+ "<tr><td>Interrupt angemeldet:</td><td>" );
     buf.append( this.interruptRequested ? "ja" : "nein" );
     buf.append( "</td></tr>\n"
@@ -545,6 +577,27 @@ public class KCcompact extends EmuSys implements
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    buf.append( "<h1>KC compact Status</h1>\n"
+	+ "<table border=\"1\">\n"
+	+ "<tr><td>Betriebssystem-ROM:</td><td>" );
+    buf.append( this.osROMEnabled ? "ein" : "aus" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>BASIC-ROM:</td><td>" );
+    buf.append( this.basicROMEnabled ? "ein" : "aus" );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>ROM Select Port:</td><td>" );
+    buf.append( this.romSelect );
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>Im vertikalen Synchronimpuls:</td><td>" );
+    buf.append( this.crtc.isVSync() ? "ja" : "nein" );
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -592,6 +645,13 @@ public class KCcompact extends EmuSys implements
 				"jkcemu.kccompact.fdc.rom.file" ) );
     }
     return rv;
+  }
+
+
+  @Override
+  public boolean canExtractScreenText()
+  {
+    return true;
   }
 
 
@@ -673,39 +733,32 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  public CharRaster getCurScreenCharRaster()
   {
-    return true;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return this.fdc != null ? 2048 : -1;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return this.fdc != null ? 3 : -1;
-  }
-
-
-  @Override
-  public FloppyDiskFormat getDefaultFloppyDiskFormat()
-  {
-    return this.fdc != null ?
-                FloppyDiskFormat.getFormat( 2, 80, 9, 512 )
-                : null;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return this.fdc != null ? 2 : -1;
+    CharRaster rv       = null;
+    int        colCount = 0;
+    switch( this.screenMode ) {
+      case 0:
+	colCount = 20;
+	break;
+      case 1:
+	colCount = 40;
+	break;
+      case 2:
+	colCount = 80;
+	break;
+    }
+    if( colCount > 0 ) {
+      int charHeight = getScreenHeight() / 25;
+      rv = new CharRaster(
+			colCount,
+			25,
+			charHeight,
+			charHeight,
+			getScreenWidth() / colCount,
+			0 );
+    }
+    return rv;
   }
 
 
@@ -777,6 +830,47 @@ public class KCcompact extends EmuSys implements
   public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
   {
     return 0x0000;
+  }
+
+
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
+  {
+    int rv = -1;
+    if( (chX >= 0) && (chX < chRaster.getColCount())
+	&& (chY >= 0) && (chY < chRaster.getRowCount()) )
+    {
+      Map<Long,Character> crc32ToChar = getPixelCRC32ToCharMap();
+      if( crc32ToChar != null ) {
+	CRC32 crc1 = new CRC32();
+	CRC32 crc2 = new CRC32();
+	int   wCh  = chRaster.getCharWidth();
+	int   hCh  = chRaster.getCharHeight();
+	int   sx   = wCh / 8;
+	int   sy   = hCh / 8;
+	int   x    = chX * wCh;
+	int   y    = chY * hCh;
+	for( int i = 0; i < hCh; i += sy ) {
+	  int b = 0;
+	  for( int k = 0; k < wCh; k += sx ) {
+	    b <<= 1;
+	    if( getColorIndex( x + k, y + i ) == this.regColors[ 0 ] ) {
+	      b |= 0x01;
+	    }
+	  }
+	  crc1.update( ~b & 0xFF );
+	  crc2.update( b );
+	}
+	Character ch = crc32ToChar.get( new Long( crc1.getValue() ) );
+	if( ch == null ) {
+	  // Zeichen invers?
+	  ch = crc32ToChar.get( new Long( crc2.getValue() ) );
+	}
+	if( ch != null ) {
+	  rv = ch.charValue();
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -1060,6 +1154,13 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
+  public boolean supportsCopyToClipboard()
+  {
+    return true;
+  }
+
+
+  @Override
   public boolean supportsKeyboardFld()
   {
     return true;
@@ -1138,14 +1239,14 @@ public class KCcompact extends EmuSys implements
 	    if( (this.regColorNum & 0x10) != 0 ) {
 	      this.borderColorIdx = this.colorPalette2Idx[ value & 0x1F ];
 	    } else {
-	     this.regColors[ this.regColorNum & 0x0F ]
+	      this.regColors[ this.regColorNum & 0x0F ]
 				= this.colorPalette2Idx[ value & 0x1F ];
 	    }
 	  } else {
 	    if( (this.regColorNum & 0x10) != 0 ) {
 	      this.borderColorIdx = 0;
 	    } else {
-	     this.regColors[ this.regColorNum & 0x0F ] = 0;
+	      this.regColors[ this.regColorNum & 0x0F ] = 0;
 	    }
 	  }
 	  this.screenDirty = true;
@@ -1187,6 +1288,17 @@ public class KCcompact extends EmuSys implements
 
 
 	/* --- private Methoden --- */
+
+  private void addPixelCRC32ToMap(
+			Map<Long,Character> map,
+			int                 code,
+			char                unicode )
+  {
+    CRC32 crc = new CRC32();
+    crc.update( romOS, 0x3800 + (code * 8), 8 );
+    map.put( new Long( crc.getValue() ), new Character( unicode ) );
+  }
+
 
   private void createColors( Properties props )
   {
@@ -1257,6 +1369,29 @@ public class KCcompact extends EmuSys implements
       rv |= 0x20;
     }
     return rv;
+  }
+
+
+  private Map<Long,Character> getPixelCRC32ToCharMap()
+  {
+    if( pixelCRC32ToChar == null ) {
+      if( romOS != null ) {
+        if( romOS.length >= 0x4000 ) {
+          Map<Long,Character> map = new HashMap<Long,Character>();
+          for( int c = 0x20; c <= 0x7E; c++ ) {
+	    addPixelCRC32ToMap( map, c, (char) c );
+	  }
+	  for( int i = 0; i < char128ToUnicode.length; i++ ) {
+	    int unicode = char128ToUnicode[ i ];
+	    if( unicode >= 0 ) {
+	      addPixelCRC32ToMap( map, i + 128, (char) unicode );
+	    }
+	  }
+          pixelCRC32ToChar = map;
+        }
+      }
+    }
+    return pixelCRC32ToChar;
   }
 
 

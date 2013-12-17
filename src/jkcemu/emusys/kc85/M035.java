@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,7 @@ import jkcemu.base.EmuThread;
 public class M035 extends AbstractKC85Module
 {
   private int     segMask;
-  private boolean readwrite;
+  private boolean readWrite;
   private byte[]  ram;
 
 
@@ -24,7 +24,7 @@ public class M035 extends AbstractKC85Module
   {
     super( slot );
     this.segMask   = 0;
-    this.readwrite = false;
+    this.readWrite = false;
     this.ram       = new byte[ 0x100000 ];
   }
 
@@ -39,9 +39,30 @@ public class M035 extends AbstractKC85Module
 
 
   @Override
+  public int getBegAddr()
+  {
+    return 0x8000;
+  }
+
+
+  @Override
   public String getModuleName()
   {
     return "M035";
+  }
+
+
+  @Override
+  public Boolean getReadWrite()
+  {
+    return new Boolean( this.readWrite );
+  }
+
+
+  @Override
+  public int getSegmentNum()
+  {
+    return (this.segMask >> 14) & 0x3F;
   }
 
 
@@ -71,7 +92,7 @@ public class M035 extends AbstractKC85Module
   {
     super.setStatus( value );
     this.segMask   = (value << 12) & 0xFC000;
-    this.readwrite = ((value & 0x02) != 0);
+    this.readWrite = ((value & 0x02) != 0);
   }
 
 
@@ -82,7 +103,7 @@ public class M035 extends AbstractKC85Module
     if( this.enabled && (addr >= 0x8000) && (addr < 0xC000) ) {
       int idx = (addr - 0x8000) | this.segMask;
       if( (idx >= 0) && (idx < this.ram.length) ) {
-	if( this.readwrite ) {
+	if( this.readWrite ) {
 	  this.ram[ idx ] = (byte) value;
 	  rv = 2;
 	} else {
@@ -93,4 +114,3 @@ public class M035 extends AbstractKC85Module
     return rv;
   }
 }
-

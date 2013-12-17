@@ -55,6 +55,7 @@ public class SaveDlg extends BasicDlg implements
   private JRadioButton    btnFileFmtTAP;
   private JRadioButton    btnFileFmtSSS;
   private JRadioButton    btnFileFmtRBAS;
+  private JRadioButton    btnFileFmtRMC;
   private JRadioButton    btnFileFmtHS;
   private JRadioButton    btnFileFmtHEX;
   private JRadioButton    btnBegBlkNum0;
@@ -228,6 +229,14 @@ public class SaveDlg extends BasicDlg implements
     grpFileFmt.add( this.btnFileFmtRBAS );
     gbcFileFmt.gridy++;
     panelFileFmt.add( this.btnFileFmtRBAS, gbcFileFmt );
+
+    this.btnFileFmtRMC = new JRadioButton(
+			"RBASIC-Maschinencodedatei (*.rmc)",
+			false );
+    this.btnFileFmtRMC.addActionListener( this );
+    grpFileFmt.add( this.btnFileFmtRMC );
+    gbcFileFmt.gridy++;
+    panelFileFmt.add( this.btnFileFmtRMC, gbcFileFmt );
 
     this.btnFileFmtHS = new JRadioButton( "Headersave-Datei (*.z80)", false );
     this.btnFileFmtHS.addActionListener( this );
@@ -404,16 +413,20 @@ public class SaveDlg extends BasicDlg implements
 
 
     // Vorbelegungen
+    boolean a5105  = false;
     boolean kc85   = false;
     boolean z1013  = false;
     boolean z9001  = false;
     EmuSys  emuSys = this.screenFrm.getEmuThread().getEmuSys();
     if( emuSys != null ) {
+      a5105 = (emuSys instanceof A5105);
       kc85  = (emuSys instanceof KC85);
       z1013 = (emuSys instanceof Z1013);
       z9001 = (emuSys instanceof Z9001);
     }
-    if( z1013 ) {
+    if( a5105 && !rbasic ) {
+      this.btnFileFmtRMC.setSelected( true );
+    } else if( z1013 ) {
       this.btnFileFmtHS.setSelected( true );
       this.btnKeepHeader.setSelected(
 		EmuUtil.parseBoolean(
@@ -527,6 +540,7 @@ public class SaveDlg extends BasicDlg implements
 	  || (src == this.btnFileFmtTAP)
 	  || (src == this.btnFileFmtSSS)
 	  || (src == this.btnFileFmtRBAS)
+	  || (src == this.btnFileFmtRMC)
 	  || (src == this.btnFileFmtHS)
 	  || (src == this.btnFileFmtHEX) )
       {
@@ -573,6 +587,7 @@ public class SaveDlg extends BasicDlg implements
       boolean isTAP  = this.btnFileFmtTAP.isSelected();
       boolean isSSS  = this.btnFileFmtTAP.isSelected();
       boolean isRBAS = this.btnFileFmtRBAS.isSelected();
+      boolean isRMC  = this.btnFileFmtRMC.isSelected();
       boolean isHS   = this.btnFileFmtHS.isSelected();
       boolean isHEX  = this.btnFileFmtHEX.isSelected();
 
@@ -597,6 +612,10 @@ public class SaveDlg extends BasicDlg implements
       else if( isRBAS ) {
 	title      = "RBASIC-Programmdatei speichern";
 	fileFilter = EmuUtil.getRBasicFileFilter();
+      }
+      else if( isRMC ) {
+	title      = "RBASIC-Maschinencodedatei speichern";
+	fileFilter = EmuUtil.getRMCFileFilter();
       }
       else if( isHS ) {
 	title      = "Headersave-Datei speichern";
@@ -714,6 +733,9 @@ public class SaveDlg extends BasicDlg implements
     else if( this.btnFileFmtRBAS.isSelected() ) {
       rv = FileSaver.RBASIC;
     }
+    else if( this.btnFileFmtRMC.isSelected() ) {
+      rv = FileSaver.RMC;
+    }
     else if( this.btnFileFmtHS.isSelected() ) {
       rv = FileSaver.HEADERSAVE;
     }
@@ -730,6 +752,7 @@ public class SaveDlg extends BasicDlg implements
     boolean stateTAP  = this.btnFileFmtTAP.isSelected();
     boolean stateSSS  = this.btnFileFmtSSS.isSelected();
     boolean stateRBAS = this.btnFileFmtRBAS.isSelected();
+    boolean stateRMC  = this.btnFileFmtRMC.isSelected();
     boolean stateHS   = this.btnFileFmtHS.isSelected();
     boolean stateHEX  = this.btnFileFmtHEX.isSelected();
 
@@ -737,14 +760,14 @@ public class SaveDlg extends BasicDlg implements
     this.btnBegBlkNum1.setEnabled( stateTAP && !this.kcbasic );
 
     boolean stateBegAddr = (stateKCC || (stateTAP && !this.kcbasic)
-				|| stateHS || stateHEX);
+				|| stateHS || stateRMC || stateHEX);
     this.labelHeadBegAddr.setEnabled( stateBegAddr );
     this.fldHeadBegAddr.setEnabled( stateBegAddr );
 
-    boolean stateEndAddr = (stateKCC || (stateTAP && !this.kcbasic)
-				|| stateHS);
-    this.labelHeadStartAddr.setEnabled( stateEndAddr );
-    this.fldHeadStartAddr.setEnabled( stateEndAddr );
+    boolean stateStartAddr = (stateKCC || (stateTAP && !this.kcbasic)
+				|| stateHS || stateRMC);
+    this.labelHeadStartAddr.setEnabled( stateStartAddr );
+    this.fldHeadStartAddr.setEnabled( stateStartAddr );
 
     this.labelHeadFileType.setEnabled( stateHS );
     this.comboHeadFileType.setEnabled( stateHS );

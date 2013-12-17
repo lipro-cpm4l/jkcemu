@@ -33,7 +33,8 @@ public class BasicOptions extends PrgOptions
   private String         targetText;
   private AbstractTarget target;
   private EmuSys         emuSys;
-  private int            begAddr;
+  private int            codeBegAddr;
+  private int            bssBegAddr;
   private int            heapSize;
   private int            stackSize;
   private boolean        checkStack;
@@ -52,7 +53,8 @@ public class BasicOptions extends PrgOptions
     this.targetText          = null;
     this.target              = null;
     this.emuSys              = null;
-    this.begAddr             = -1;
+    this.codeBegAddr         = -1;
+    this.bssBegAddr          = -1;
     this.heapSize            = DEFAULT_HEAP_SIZE;
     this.stackSize           = DEFAULT_STACK_SIZE;
     this.checkStack          = true;
@@ -101,9 +103,13 @@ public class BasicOptions extends PrgOptions
       String targetText = props.getProperty(
 			"jkcemu.programming.basic.target" );
 
-      Integer begAddr = getInteger(
+      Integer codeBegAddr = getInteger(
 			props,
-			"jkcemu.programming.basic.address.begin" );
+			"jkcemu.programming.basic.address.begin.code" );
+
+      Integer bssBegAddr = getInteger(
+			props,
+			"jkcemu.programming.basic.address.begin.bss" );
 
       Integer heapSize = getInteger(
 			props,
@@ -143,7 +149,8 @@ public class BasicOptions extends PrgOptions
       if( (appName != null)
 	  || (langCode != null)
 	  || (targetText != null)
-	  || (begAddr != null)
+	  || (codeBegAddr != null)
+	  || (bssBegAddr != null)
 	  || (heapSize != null)
 	  || (stackSize != null)
 	  || (checkStack != null)
@@ -165,8 +172,11 @@ public class BasicOptions extends PrgOptions
 	if( targetText != null ) {
 	  options.targetText = targetText;
 	}
-	if( begAddr != null ) {
-	  options.begAddr = begAddr.intValue();
+	if( codeBegAddr != null ) {
+	  options.codeBegAddr = codeBegAddr.intValue();
+	}
+	if( bssBegAddr != null ) {
+	  options.bssBegAddr = bssBegAddr.intValue();
 	}
 	if( heapSize != null ) {
 	  options.heapSize = heapSize.intValue();
@@ -207,15 +217,15 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public int getBegAddr()
-  {
-    return this.begAddr;
-  }
-
-
   public BreakOption getBreakOption()
   {
     return this.breakOption;
+  }
+
+
+  public int getBssBegAddr()
+  {
+    return this.bssBegAddr;
   }
 
 
@@ -228,6 +238,12 @@ public class BasicOptions extends PrgOptions
   public boolean getCheckStack()
   {
     return this.checkStack;
+  }
+
+
+  public int getCodeBegAddr()
+  {
+    return this.codeBegAddr;
   }
 
 
@@ -297,12 +313,6 @@ public class BasicOptions extends PrgOptions
   }
 
 
-  public void setBegAddr( int value )
-  {
-    this.begAddr = value;
-  }
-
-
   public void setBreakOption( BreakOption value )
   {
     this.breakOption = value;
@@ -318,6 +328,18 @@ public class BasicOptions extends PrgOptions
   public void setCheckStack( boolean state )
   {
     this.checkStack = state;
+  }
+
+
+  public void setBssBegAddr( int value )
+  {
+    this.bssBegAddr = value;
+  }
+
+
+  public void setCodeBegAddr( int value )
+  {
+    this.codeBegAddr = value;
   }
 
 
@@ -388,7 +410,8 @@ public class BasicOptions extends PrgOptions
 	if( TextUtil.equals( options.appName, this.appName )
 	    && TextUtil.equals( options.langCode, this.langCode )
 	    && TextUtil.equals( options.targetText, this.targetText )
-	    && (options.begAddr             == this.begAddr)
+	    && (options.codeBegAddr         == this.codeBegAddr)
+	    && (options.bssBegAddr          == this.bssBegAddr)
 	    && (options.heapSize            == this.heapSize)
 	    && (options.stackSize           == this.stackSize)
 	    && (options.checkStack          == this.checkStack)
@@ -425,8 +448,12 @@ public class BasicOptions extends PrgOptions
 		this.targetText != null ? this.targetText : "" );
 
       props.setProperty(
-		"jkcemu.programming.basic.address.begin",
-                Integer.toString( this.begAddr ) );
+		"jkcemu.programming.basic.address.begin.code",
+                Integer.toString( this.codeBegAddr ) );
+
+      props.setProperty(
+		"jkcemu.programming.basic.address.begin.bss",
+                Integer.toString( this.bssBegAddr ) );
 
       props.setProperty(
 		"jkcemu.programming.basic.heap.size",

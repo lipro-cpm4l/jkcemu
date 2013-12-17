@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -113,8 +113,16 @@ public abstract class AbstractConvertTarget
 
 
   public abstract File getSuggestedOutFile( File srcFile );
-  public abstract void save( File file )
-			throws IOException, UserInputException;
+
+
+  /*
+   * Die Methode speichert die konvertierten Daten.
+   * Moeglicherweise konnte die Konvertierung nicht 1:1 durchgefuehrt werden.
+   * Derartige Informationen werden als Log-Text zurueckgeliefert.
+   * Dieser Text kann auch null sein.
+   */
+  public abstract String save( File file )
+				throws IOException, UserInputException;
 
 
   protected File replaceExtension( File srcFile, String ext )
@@ -159,7 +167,7 @@ public abstract class AbstractConvertTarget
 						this.fileConvertFrm,
 						file );
 	if( afType != null ) {
-	  AudioSystem.write( ais, afType, file );
+	  AudioUtil.write( ais, afType, file );
 	}
       }
     }

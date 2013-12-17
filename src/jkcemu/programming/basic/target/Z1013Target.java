@@ -293,7 +293,7 @@ public class Z1013Target extends AbstractTarget
 		+ "\tLD\tA,(HL)\n"
 		+ "\tLD\t(DE),A\n"
 		+ "\tRET\n" );
-      appendPixUtil( buf );
+      appendPixUtil( buf, compiler );
       this.xpsetAppended = true;
     }
   }
@@ -313,8 +313,10 @@ public class Z1013Target extends AbstractTarget
   public void appendXPTEST( AsmCodeBuf buf, BasicCompiler compiler )
   {
     buf.append( "XPTEST:\tCALL\tX_PCK\n"
+		+ "\tJR\tNC,X_PTST1\n"
 		+ "\tLD\tHL,0FFFFH\n"
-		+ "\tRET\tC\n"
+		+ "\tRET\n"
+		+ "X_PTST1:\n"
 		+ "\tCALL\tX_PST\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
@@ -322,7 +324,7 @@ public class Z1013Target extends AbstractTarget
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
 		+ "\tRET\n" );
-    appendPixUtil( buf );
+    appendPixUtil( buf, compiler );
   }
 
 
@@ -334,6 +336,32 @@ public class Z1013Target extends AbstractTarget
   {
     buf.append( "XTARID:\tDB\t\'Z1013\'\n"
 		+ "\tDB\t00H\n" );
+  }
+
+
+  /*
+   * Der Programmcode der Routine X_PCK liegt in einer separaten Methode,
+   * damit er in abgeleiteten Klassen ueberschrieben werden kann.
+   */
+  protected void appendX_PCK( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    /*
+     * Pruefen der Parameter
+     *   DE: X-Koordinate (0...63)
+     *   HL: Y-Koordinate (0...63)
+     * Rueckgabe:
+     *   CY=1: Pixel ausserhalb des gueltigen Bereichs
+     */
+      buf.append( "X_PCK:\tLD\tA,D\n"
+		+ "\tOR\tH\n"
+		+ "\tJR\tZ,X_PCK1\n"
+		+ "\tSCF\n"
+		+ "\tRET\n"
+		+ "X_PCK1:\tLD\tA,3FH\n"
+		+ "\tCP\tE\n"
+		+ "\tRET\tC\n"
+		+ "\tCP\tL\n"
+		+ "\tRET\n" );
   }
 
 
@@ -355,6 +383,13 @@ public class Z1013Target extends AbstractTarget
   public int getDefaultBegAddr()
   {
     return 0x0100;
+  }
+
+
+  @Override
+  public int getGraphicScreenNum()
+  {
+    return 0;
   }
 
 
@@ -425,44 +460,28 @@ public class Z1013Target extends AbstractTarget
 
 	/* --- private Methoden --- */
 
-  private void appendPixUtil( AsmCodeBuf buf )
+  private void appendPixUtil( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.pixUtilAppended ) {
-      buf.append(
-	    /*
-	     * Pruefen der Parameter
-	     *   DE: X-Koordinate (0...63)
-	     *   HL: Y-Koordinate (0...63)
-	     * Rueckgabe:
-	     *   CY=1: Pixel ausserhalb des gueltigen Bereichs
-	     */
-		"X_PCK:\tLD\tA,D\n"
-		+ "\tOR\tH\n"
-		+ "\tJR\tZ,X_PCK1\n"
-		+ "\tSCF\n"
-		+ "\tRET\n"
-		+ "X_PCK1:\tLD\tA,3FH\n"
-		+ "\tCP\tE\n"
-		+ "\tRET\tC\n"
-		+ "\tCP\tL\n"
-		+ "\tRET\n"
-	    /*
-	     * Ermitteln von Informationen zu einem Pixel
-	     * Parameter:
-	     *   DE: X-Koordinate (0...63)
-	     *   HL: Y-Koordinate (0...63)
-	     * Rueckgabe:
-	     *   B:  Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
-	     *       Bitanordnung innerhalb einer Zeichenposition:
-	     *         +---+
-	     *         |2 3|
-	     *         |0 1|
-	     *         +---+
-	     *   C:  Bitmuster mit einem gesetzten Bit,
-             *       dass das Pixel in der Speicherzelle beschreibt
-	     *   HL: Speicherzelle, in der sich das Pixel befindet
-	     */
-		+ "X_PST:\tLD\tA,1\n"
+      appendX_PCK( buf, compiler );
+
+      /*
+       * Ermitteln von Informationen zu einem Pixel
+       * Parameter:
+       *   DE: X-Koordinate (0...63)
+       *   HL: Y-Koordinate (0...63)
+       * Rueckgabe:
+       *   B:  Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
+       *       Bitanordnung innerhalb einer Zeichenposition:
+       *         +---+
+       *         |2 3|
+       *         |0 1|
+       *         +---+
+       *   C:  Bitmuster mit einem gesetzten Bit,
+       *       dass das Pixel in der Speicherzelle beschreibt
+       *   HL: Speicherzelle, in der sich das Pixel befindet
+       */
+      buf.append( "X_PST:\tLD\tA,01H\n"
 		+ "\tSRL\tL\n"
 		+ "\tJR\tNC,X_PST1\n"
 		+ "\tSLA\tA\n"

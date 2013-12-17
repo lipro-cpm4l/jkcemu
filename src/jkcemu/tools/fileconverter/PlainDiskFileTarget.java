@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -47,10 +47,10 @@ public class PlainDiskFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException
+  public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".img", ".image", ".raw" );
-    PlainDisk.export( this.disk, file );
+    return PlainDisk.export( this.disk, file );
   }
 }
 

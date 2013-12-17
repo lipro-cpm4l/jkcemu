@@ -75,39 +75,35 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   }
 
 
+  public static IndexColorModel createColorModel( float brightness )
+  {
+    byte[] r  = new byte[ 16 ];
+    byte[] g  = new byte[ 16 ];
+    byte[] b  = new byte[ 16 ];
+    int    v3 = Math.round( 255 * brightness );
+    int    v2 = Math.round( 180 * brightness );
+    int    v1 = Math.round( 80 * brightness );
+    for( int i = 0; i < 16; i++ ) {
+      if( (i & 0x08) != 0 ) {
+	r[ i ] = (byte) ((i & 0x04) != 0 ? v3 : v1);
+	g[ i ] = (byte) ((i & 0x02) != 0 ? v3 : v1);
+	b[ i ] = (byte) ((i & 0x01) != 0 ? v3 : v1);
+      } else {
+	r[ i ] = (byte) ((i & 0x04) != 0 ? v2 : 0);
+	g[ i ] = (byte) ((i & 0x02) != 0 ? v2 : 0);
+	b[ i ] = (byte) ((i & 0x01) != 0 ? v2 : 0);
+      }
+    }
+    return new IndexColorModel( 4, 16, r, g, b );
+  }
+
+
   public void createColors( float brightness )
   {
     synchronized( this.colors ) {
-      byte[] ar = new byte[ this.colors.length ];
-      byte[] ag = new byte[ this.colors.length ];
-      byte[] ab = new byte[ this.colors.length ];
-      int    v3 = Math.round( 255 * brightness );
-      int    v2 = Math.round( 180 * brightness );
-      int    v1 = Math.round( 70 * brightness );
-      for( int i = 0; i < this.colors.length; i++ ) {
-	int r = 0;
-	int g = 0;
-	int b = 0;
-	if( (i & 0x08) != 0 ) {
-	  r = ((i & 0x04) != 0 ? v3 : v1);
-	  g = ((i & 0x02) != 0 ? v3 : v1);
-	  b = ((i & 0x01) != 0 ? v3 : v1);
-	} else {
-	  r = ((i & 0x04) != 0 ? v2 : 0);
-	  g = ((i & 0x02) != 0 ? v2 : 0);
-	  b = ((i & 0x01) != 0 ? v2 : 0);
-	}
-	this.colors[ i ]    = new Color( r, g, b );
-	this.colorRGBs[ i ] = 0xFF000000
-				| ((r << 16) & 0x00FF0000)
-				| ((g << 8) & 0x0000FF00)
-				| (b & 0x000000FF);
-	ar[ i ] = (byte) r;
-	ab[ i ] = (byte) b;
-	ag[ i ] = (byte) g;
-      }
-      this.colorModel  = new IndexColorModel( 4, ar.length, ar, ag, ab );
       this.screenImage = null;
+      this.colorModel  = createColorModel( brightness );
+      this.colorModel.getRGBs( this.colorRGBs );
     }
   }
 
@@ -201,10 +197,10 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
       int cLine   = 0;
       int yMargin = (DEFAULT_SCREEN_HEIGHT - this.gdc.getDisplayLines()) / 2;
       if( yMargin > 0 ) {
-	yOffs += yMargin;
 	if( this.fixedScreenSize || this.screenFrm.isFullScreenMode() ) {
-	  yOffs += yMargin;
+	  yMargin *= 2;
 	}
+	yOffs += (yMargin * screenScale);
       }
       for( int y = 0; y < height; y++ ) {
 	int x   = 0;
@@ -516,7 +512,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
     }
     if( configChanged ) {
       this.screenFrm.clearScreenSelection();
-      this.screenFrm.updScreenTextActionsEnabled();
+      this.screenFrm.fireUpdScreenTextActionsEnabled();
     }
     this.screenFrm.setScreenDirty( true );
   }
@@ -528,7 +524,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
   public void screenConfigChanged( GDC82720 gdc )
   {
     this.screenFrm.clearScreenSelection();
-    this.screenFrm.updScreenTextActionsEnabled();
+    this.screenFrm.fireUpdScreenTextActionsEnabled();
   }
 
 

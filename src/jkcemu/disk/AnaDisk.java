@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,16 +28,18 @@ public class AnaDisk extends AbstractFloppyDisk
   private Map<Integer,java.util.List<SectorData>> side1;
 
 
-  public static void export(
+  public static String export(
 			AbstractFloppyDisk disk,
 			File               file ) throws IOException
   {
-    OutputStream out = null;
+    StringBuilder msgBuf = null;
+    OutputStream  out    = null;
     try {
       out = new FileOutputStream( file );
 
-      int sides = disk.getSides();
-      int cyls  = disk.getCylinders();
+      boolean hasDeleted = false;
+      int     sides      = disk.getSides();
+      int     cyls       = disk.getCylinders();
       for( int cyl = 0; cyl < cyls; cyl++ ) {
 	for( int head = 0; head < sides; head++ ) {
 	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
@@ -45,16 +47,17 @@ public class AnaDisk extends AbstractFloppyDisk
 	    SectorData sector = disk.getSectorByIndex( cyl, head, i );
 	    if( sector != null ) {
 	      if( sector.isDeleted() ) {
-	        throw new IOException(
-		    String.format(
-			"Seite %d, Spur %d: Sektor %d ist als gel\u00F6scht"
-				+ " markiert\n"
-				+ "Gel\u00F6schte Sektoren werden"
-				+ " in AnaDisk-Dateien nicht"
-				+ " unterst\u00FCtzt.",
-			head + 1,
-			cyl,
-			sector.getSectorNum() ) );
+		hasDeleted = true;
+		if( msgBuf == null ) {
+		  msgBuf = new StringBuilder( 1024 );
+		}
+		msgBuf.append(
+			String.format(
+				"Seite %d, Spur %d: Sektor %d ist als"
+					+ " gel\u00F6scht markiert\n",
+				head + 1,
+				cyl,
+				sector.getSectorNum() ) );
 	      }
 	      out.write( cyl );
 	      out.write( head );
@@ -77,10 +80,16 @@ public class AnaDisk extends AbstractFloppyDisk
       }
       out.close();
       out = null;
+      if( hasDeleted && (msgBuf != null) ) {
+	msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+		+ " in AnaDisk-Dateien nicht unterst\u00FCtzt\n"
+		+ "und sind deshalb als normale Sektoren enthalten.\n" );
+      }
     }
     finally {
       EmuUtil.doClose( out );
     }
+    return msgBuf != null ? msgBuf.toString() : null;
   }
 
 
@@ -446,16 +455,16 @@ public class AnaDisk extends AbstractFloppyDisk
       if( physCyl >= cyls ) {
 	cyls = physCyl + 1;
       }
-      int len = 128;
+      int sectLen = 128;
       if( sectSizeCode > 0 ) {
-	len <<= sectSizeCode;
+	sectLen <<= sectSizeCode;
       }
       if( sectorSize == 0 ) {
-	sectorSize = len;
+	sectorSize = sectLen;
       }
       byte[] sectBuf = null;
       if( nRemain > 0 ) {
-	sectBuf = new byte[ len ];
+	sectBuf = new byte[ sectLen ];
 	int pos = 0;
 	while( nRemain > 0 ) {
 	  int b = in.read();
@@ -492,21 +501,38 @@ public class AnaDisk extends AbstractFloppyDisk
 	  }
 	  map.put( keyObj, sectors );
 	}
-	SectorData sector = new SectorData(
-					sectors.size(),
-					sectCyl,
-					sectHead,
-					sectNum,
-					sectSizeCode,
-					false,
-					false,
-					sectBuf,
-					0,
-					sectBuf != null ? sectBuf.length : 0 );
-	sector.setFilePos( sectorFilePos );
-	sector.setFilePortionLen( (int) (filePos - sectorFilePos) );
-	sectors.add( sector );
-	sectorsPerCyl = Math.max( sectorsPerCyl, sectors.size() );
+	// doppelte Sektoren herausfiltern
+	boolean found = false;
+	for( SectorData tmpSector : sectors ) {
+	  if( tmpSector.equalsSectorID(
+				sectCyl,
+				sectHead,
+				sectNum,
+				sectSizeCode ) )
+	  {
+	    if( tmpSector.equalsData( sectBuf, 0, sectLen ) ) {
+	      found = true;
+	      break;
+	    }
+	  }
+	}
+	if( !found ) {
+	  SectorData sector = new SectorData(
+				sectors.size(),
+				sectCyl,
+				sectHead,
+				sectNum,
+				sectSizeCode,
+				false,
+				false,
+				sectBuf,
+				0,
+				sectBuf != null ? sectBuf.length : 0 );
+	  sector.setFilePos( sectorFilePos );
+	  sector.setFilePortionLen( (int) (filePos - sectorFilePos) );
+	  sectors.add( sector );
+	  sectorsPerCyl = Math.max( sectorsPerCyl, sectors.size() );
+	}
       }
     }
     if( (side0 != null) || (side1 != null) ) {

@@ -31,7 +31,8 @@ public class CmdLineBasicCompiler
 	"  -g              bei Abbruch aufgrund eines Fehlers"
 						+ " Zeilennummer ausgeben",
 	"  -o <Datei>      Ausgabedatei festlegen",
-	"  -t <System>     Zielsystem festlegen (cpm, huebler, kc85, kramer,",
+	"  -t <System>     Zielsystem festlegen (ac1, cpm, huebler, kc85,"
+						+ " kramer,",
 	"                  llc2_hires, scch, z1013, z9001, z9001_krt)",
 	"  -A <Adresse>    Anfangsadresse festlegen (hexadezimal)",
 	"  -L <Sprache>    Sprache der Laufzeitausschriften festlegen"
@@ -46,21 +47,21 @@ public class CmdLineBasicCompiler
 	"  -W <...>        Warnungen ein-/ausschalten",
 	"",
 	"Option zum Festlegen der Abbruchm\u00F6glichkeit:",
-	"  -B0:            CTRL-C bricht Programm nicht ab",
-	"  -B1:            CTRL-C bricht Programm nur bei Eingaben ab",
-	"  -B2:            CTRL-C bricht Programm immer ab"
+	"  -B0             CTRL-C bricht Programm nicht ab",
+	"  -B1             CTRL-C bricht Programm nur bei Eingaben ab",
+	"  -B2             CTRL-C bricht Programm immer ab"
 						+ " (Standard, langsam!)",
 	"",
 	"Option zur Programmcodeoptimierung (-O entspricht -O2):",
-	"  -O1:            Stack-Pr\u00FCfungen ausschalten",
-	"  -O2:            zus\u00E4tzlich Feldpr\u00FCfungen ausschalten",
-	"  -O3:            zus\u00E4tzlich relative Spr\u00FCnge bevorzugen",
+	"  -O1             Stack-Pr\u00FCfungen ausschalten",
+	"  -O2             zus\u00E4tzlich Feldpr\u00FCfungen ausschalten",
+	"  -O3             zus\u00E4tzlich relative Spr\u00FCnge bevorzugen",
 	"",
 	"Option fuer Warnungen:",
-	"  -W all:         alle Warnungen einschalten (Standard)",
-	"  -W none:        alle Warnungen ausschalten",
-	"  -W nonascii:    Bei Nicht-ASCII-Zeichen warnen",
-	"  -W unused:      Bei nicht verwendeten Funktionen, Prozeduren und",
+	"  -W all          alle Warnungen einschalten (Standard)",
+	"  -W none         alle Warnungen ausschalten",
+	"  -W nonascii     Bei Nicht-ASCII-Zeichen warnen",
+	"  -W unused       Bei nicht verwendeten Funktionen, Prozeduren und",
 	"                  Variablen warnen",
 	"" };
 
@@ -205,7 +206,10 @@ public class CmdLineBasicCompiler
 	AbstractTarget target   = null;
 	boolean        forZ9001 = false;
 	if( sysName != null ) {
-	  if( sysName.equalsIgnoreCase( "SCCH" ) ) {
+	  if( sysName.equalsIgnoreCase( "AC1" ) ) {
+	    target = new AC1Target();
+	  }
+	  else if( sysName.equalsIgnoreCase( "SCCH" ) ) {
 	    target = new SCCHTarget();
 	  }
 	  else if( sysName.equalsIgnoreCase( "CPM" ) ) {
@@ -263,9 +267,9 @@ public class CmdLineBasicCompiler
 	// Anfangsadresse
 	int begAddr = getHex4Arg( optToArg, "A" );
 	if( begAddr >= 0 ) {
-	  options.setBegAddr( begAddr );
+	  options.setCodeBegAddr( begAddr );
 	} else {
-	  options.setBegAddr( target.getDefaultBegAddr() );
+	  options.setCodeBegAddr( target.getDefaultBegAddr() );
 	}
 
 	// Heap-Groesse
@@ -404,7 +408,7 @@ public class CmdLineBasicCompiler
 	  fName += ".s";
 	} else {
 	  if( (options.getTarget() instanceof CPMTarget)
-	      && (options.getBegAddr() == 0x0100) )
+	      && (options.getCodeBegAddr() == 0x0100) )
 	  {
 	    fName += "*.com";
 	  } else {

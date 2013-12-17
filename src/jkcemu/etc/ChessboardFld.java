@@ -1,12 +1,12 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Komponente fuer ein Schachbrett
  */
 
-package jkcemu.base;
+package jkcemu.etc;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -14,6 +14,7 @@ import java.lang.*;
 import java.net.URL;
 import java.util.*;
 import javax.swing.JComponent;
+import jkcemu.base.*;
 
 
 public class ChessboardFld extends JComponent

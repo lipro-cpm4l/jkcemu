@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -57,7 +57,7 @@ public class KCTapBasicFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException, UserInputException
+  public String save( File file ) throws IOException, UserInputException
   {
     checkFileExtension( file, ".tap" );
     String       fileDesc = this.fileConvertFrm.getFileDesc( true );
@@ -137,5 +137,6 @@ public class KCTapBasicFileTarget extends AbstractConvertTarget
     finally {
       EmuUtil.doClose( out );
     }
+    return null;
   }
 }

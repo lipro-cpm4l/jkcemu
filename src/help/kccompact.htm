@@ -12,6 +12,7 @@
        <li>
 	<a href="kccompact.htm#fdcrom">1.2.1. ROM in der Floppy-Disk-Station</a>
        </li>
+       <li><a href="kccompact.htm#diskfmt">1.2.2 Diskettenformate</a></li>
       </ul>
      </li>
      <li><a href="kccompact.htm#sound">1.3. Sound-Generator</a></li>
@@ -79,7 +80,7 @@
  <h3><a name="fdc">1.2. Floppy-Disk-Station</a></h3>
   Die optional als Beistellger&auml;t zum KC&nbsp;compact erh&auml;tlich
   gewesene Floppy-Disk-Station wird emuliert, wenn Sie das in den
-  <a href="settings.htm">Einstellungen</a> so angegeben haben.
+  <a href="settings.htm">Einstellungen</a> so angeben.
   Mit der Floppy-Disk-Station stehen zwei Diskettenlaufwerke und
   zus&auml;tzlich 64&nbsp;KByte RAM sowie 32&nbsp;KByte ROM
   zur Verf&uuml;gung.
@@ -93,6 +94,7 @@
     Es kann softwarem&auml;&szlig;ig kein Terminal Count ausgel&ouml;st
     werden. Beim Lesen und Schreiben von Sektoren wird deshalb am Ende
     immer ein End-Of-Cylinder-Fehler gemeldet.
+    <br/><br/>
    </li>
    <li>
     Die Laufwerksauswahl erfolgt intern nur &uuml;ber die Leitung DS0.
@@ -101,29 +103,134 @@
     Wirkung wie 0 und 1.
    </li>
   </ul>
- <br/><br/>
+ <br/>
 
  <h3><a name="fdcrom">1.2.1 ROM in der Floppy-Disk-Station</a></h3>
   In der Floppy-Disk-Station gibt es einen 32&nbsp;KByte gro&szlig;en ROM.
-  Die unteren 16&nbsp;KByte enthalten das BASDOS und sind als ROM&nbsp;7
-  (Ausgabe einer 7 auf dem ROM-Select-Port) ab der Adresse C000h einblendbar.
-  &Uuml;ber die oberen 16&nbsp;KByte schweigt sich die Dokumentation
-  des KC&nbsp;compact v&ouml;llig aus.
+  Die unteren 16&nbsp;KByte enthalten das BASDOS.
+  Das ist ein um ein zus&auml;tzliches Diskettenformat erweiteres AMSDOS
+  der CPC-Computer.
+  Dieser ROM-Bereich ist als ROM&nbsp;7 (Ausgabe einer 7
+  auf dem ROM-Select-Port) ab der Adresse C000h einblendbar.
+  &Uuml;ber die oberen 16&nbsp;KByte des 32&nbsp;KByte gro&szlig;en ROMs
+  schweigt sich die Dokumentation des KC&nbsp;compact v&ouml;llig aus.
   Es ist aber m&ouml;glich, diesen ROM-Bereich durch Ausgabe einer 6
   auf dem ROM-Select-Port einzublenden.
-  Bei den CPC-Computern gibt es so einen ROM&nbsp;6 dagegen nicht.
+  Bei den CPC-Computern gibt es so einen ROM&nbsp;6 nicht.
  <br/><br/>
   JKCEMU emuliert zwar die vollen 32&nbsp;KByte ROM,
   allerdings ist nur in den unteren 16&nbsp;KByte ein sinnvoller Inhalt
   enthalten (BASDOS).
   Sie k&ouml;nnen aber auch den ROM&nbsp;6 mit einem Inhalt versehen,
-  indem Sie in den Einstellungen eine externe 32&nbsp;KByte gro&szlig;
+  indem Sie in den Einstellungen eine externe 32&nbsp;KByte gro&szlig;e
   ROM-Datei einbinden.
   Die unteren 16&nbsp;KByte dieser ROM-Datei werden als ROM&nbsp;7
   und die oberen als ROM&nbsp;6 behandelt.
   Ist die externe ROM-Datei nur 16&nbsp;KByte gro&szlig;,
   wird nur ROM&nbsp;7 mit einem anderen Inhalt belegt.
  <br/><br/>
+
+ <h3><a name="diskfmt">1.2.2 Diskettenformate</a></h3>
+  Beim KC&nbsp;compact gibt es in Bezug auf die Diskettennutzung
+  zwei Betriebsarten mit unterschiedlichen Diskettenformaten.
+  Die erste Betriebsart nennt sich BASDOS.
+  Dabei handelt es sich um die Diskettenunterst&uuml;tzung f&uuml;r das
+  im KC&nbsp;compact enthaltene BASIC, d.h.,
+  damit lassen sich z.B. BASIC-Programme auf Diskette speichern
+  und von dort wieder laden.
+  In dieser Betriebsart werden folgende Diskettenformate unterst&uuml;tzt:
+ <br/>
+  <ul>
+   <li>
+    <u>BASDOS-Standardformat:</u><br/>
+    720/711&nbsp;KByte:
+    80&nbsp;Spuren, zweiseitig, eine Systemspur, 9&nbsp;Sektoren,
+    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;0,
+    4&nbsp;KByte&nbsp;Blockgr&ouml;&szlig;e
+    <br/><br/>
+   </li>
+   <li>
+    <u>AMSDOS-Format ohne Systemspur:</u><br/>
+    180&nbsp;KByte:
+    40&nbsp;Spuren; einseitig, keine Systemspur, 9&nbsp;Sektoren,
+    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;C0H,
+    4&nbsp;KByte&nbsp;Blockgr&ouml;&szlig;e
+    <br/><br/>
+   </li>
+   <li>
+    <u>AMSDOS-Format mit Systemspuren:</u><br/>
+    180/171&nbsp;KByte:
+    40&nbsp;Spuren; einseitig, 2&nbsp;Systemspuren, 9&nbsp;Sektoren,
+    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;40H,
+    4&nbsp;KByte&nbsp;Blockgr&ouml;&szlig;e
+   </li>
+  </ul>
+ <br/>
+  Die Betriebsart BASDOS wird automatisch eingenommen,
+  wenn der KC&nbsp;compact mit angeschlossener Diskettenstation
+  eingeschaltet oder zur&uuml;ckgesetzt (RESET) wird.
+ <br/><br/>
+  Die zweite Betriebsart ist das CP/M-kompatible MicroDOS.
+  In diese Betriebsart gelangt man mit dem Kommando <em>|cpm</em>.
+  Dazu muss vorher die MicroDOS-Systemdiskette eingelegt worden sein.
+ <br/><br/>
+  MicroDOS unterst&uuml;tzt zwei Diskettenformate:
+ <br/>
+  <ul>
+   <li>
+    <u>MicroDOS-Standardformat:</u><br/>
+    800/780&nbsp;KByte:
+    80&nbsp;Spuren, zweiseitig, 2&nbsp;Systemspuren, 5&nbsp;Sektoren,
+    1024&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;0,
+    2&nbsp;KByte&nbsp;Blockgr&ouml;&szlig;e
+    <br/><br/>
+   </li>
+   <li>
+    <u>BASDOS-Standardformat:</u><br/>
+    720/711&nbsp;KByte:
+    80&nbsp;Spuren, zweiseitig, eine Systemspur, 9&nbsp;Sektoren,
+    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;0,
+    4&nbsp;KByte&nbsp;Blockgr&ouml;&szlig;e<br/>
+   </li>
+  </ul>
+ <br/>
+  Die im JKCEMU enthaltene MicroDOS-Systemdiskette ist so konfiguriert,
+  dass das erste physische Diskettenlaufwerk sowohl als
+  Laufwerk&nbsp;<em>B:</em> als auch als Laufwerk <em>C:</em>
+  angesprochen werden kann, je nachdem,
+  welches Format die eingelegte Diskette hat.
+  Laufwerk&nbsp;<em>B:</em> ist f&uuml;r das MicroDOS-Standardformat
+  konfiguriert und Laufwerk&nbsp;<em>C:</em> f&uuml;r das
+  BASDOS-Standardformat.
+ <br/><br/>
+  Mit dem auf der MicroDOS-Systemdiskette enthaltenden Programm
+  <em>FORMATCC.COM</em> lassen sich Disketten f&uuml;r MicroDOS
+  und BASDOS formatieren.
+  M&ouml;chte man im Emulator eine Diskettenabbilddatei f&uuml;r BASDOS
+  erstellen,
+  um z.B. darin KC&nbsp;compact BASIC-Programme speichern zu k&ouml;nnen,
+  geht man folgenderma&szlig;en vor:
+ <br/>
+  <ol>
+   <li>Emulation des KC&nbsp;compact mit Floppy-Disk-Station einstellen</li>
+   <li>Fenster <em>Diskettenstation</em> &ouml;ffnen</li>
+   <li>darin die <em>KC&nbsp;compact MicroDOS Systemdiskette</em> einlegen</li>
+   <li>mit <em>|cpm</em> MicroDOS starten</li>
+   <li><em>formatcc</em> starten</li>
+   <li>
+    im Fenster <em>Diskettenstation</em> eine neue Diskettenabbilddatei
+    anlegen (z.B. Men&uuml;punkt <em>Neue CPC-Disk-Datei anlegen...</em>)
+   </li>
+   <li>
+    im Emulatorfenster im Formatierungsprogramm Laufwerk&nbsp;B
+    und Format Nummer&nbsp;2 (9*512*80*2) ausw&auml;hlen
+    und das Formatieren starten
+   </li>
+   <li>
+    nach dem das Formatieren fertig ist, im Emulator RESET ausl&ouml;sen
+   </li>
+  </ol>
+ <br/>
 
  <h3><a name="sound">1.3. Sound-Generator</a></h3>
   Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
@@ -154,25 +261,8 @@
  <h2><a name="etc">3. Sonstiges</a></h2>
 
  <h3><a name="screen">3.1. Bildschirmausgabe</a></h3>
-  Der KC&nbsp;compact ist ein vollgrafikf&auml;higer Computer,
-  der ohne Textspeicher f&uuml;r die Bildschirmausgabe arbeitet.
-  Die auszugebenden Textzeichen werden in die entsprechenden Pixeldaten
-  umgewandelt und anschlie&szlig;end in den Pixelspeicher kopiert.
-  Die ASCII-Codes der ausgegebenen Zeichen merkt sich der
-  KC&nbsp;compact nicht in seinem Speicher.
-  Dadurch hat der Emulator auch keine M&ouml;glichkeit,
-  die auf dem Bildschirm ausgegebenen Textzeichen mit ihren ASCII-Codes
-  aus dem Speicher auszulesen.
-  Das aber ben&ouml;tigen einige Emulatorfunktionen,
-  die dadurch nicht zur Verf&uuml;gung stehen.
-  Konkret kann in der Bildschirmausgabe kein Text markiert und kopiert
-  werden.
-  Au&szlig;erdem kann auch ein Schnappschuss der Bildschirmausgabe
-  nicht als Text kopiert, gespeichert oder im Texteditor angezeigt werden.
- <br/><br/>
-  Eine andere Besonderheit der Bildschirmausgabe ist,
-  dass deren Aktualisierung immer synchron zur Emulation
-  der Bildschirmsteuerung erfolgt.
+  Die Aktualisierung der Bildschirmausgabe erfolgt immer
+  synchron zur Emulation der Bildschirmsteuerung.
   Dies ist f&uuml;r die korrekte Darstellungn von schnellen
   Bewegungsabl&auml;ufen (z.B. bei Spielprogrammen) notwendig.
   Der in den Einstellungen festgelegte Aktualisierungszyklus

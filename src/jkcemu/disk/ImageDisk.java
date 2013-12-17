@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -107,7 +107,7 @@ public class ImageDisk extends AbstractFloppyDisk
 
       // Spuren
       for( int cyl = 0; cyl < cyls; cyl++ ) {
-	for( int head = 0; !errorOrDeleted && (head < sides); head++ ) {
+	for( int head = 0; head < sides; head++ ) {
 	  int nSec = disk.getSectorsPerCylinder();
 	  if( nSec > 0 ) {
 	    SectorData[] sectors  = new SectorData[ nSec ];

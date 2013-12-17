@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,13 +16,12 @@ import jkcemu.base.*;
 import jkcemu.emusys.VCS80;
 
 
-public class VCS80KeyboardFld extends AbstractKeyboardFld
+public class VCS80KeyboardFld extends AbstractKeyboardFld<VCS80>
 {
   private static final int MARGIN    = 10;
   private static final int FONT_SIZE = 18;
   private static final int KEY_SIZE  = 40;
 
-  private VCS80 vcs80;
   private Font  fontBtn;
   private int[] kbMatrix;
   private int   curIdx;
@@ -32,50 +31,49 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld
 
   public VCS80KeyboardFld( VCS80 vcs80 )
   {
-    super( 24 );
-    this.vcs80    = vcs80;
+    super( vcs80, 24, true );
     this.fontBtn  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
     this.kbMatrix = new int[ 8 ];
     this.curIdx   = 0;
     this.curX     = MARGIN;
     this.curY     = MARGIN;
-    addKey( "C", 3, 0x20 );
-    addKey( "D", 2, 0x20 );
-    addKey( "E", 1, 0x20 );
-    addKey( "F", 0, 0x20 );
+    addKey( "C", 3, 0x20, null );
+    addKey( "D", 2, 0x20, null );
+    addKey( "E", 1, 0x20, null );
+    addKey( "F", 0, 0x20, null );
     this.curX += (KEY_SIZE / 2);
-    addKey( "PE", 0, 0x40 );
-    addKey( "ST", 1, 0x40 );
+    addKey( "PE", 0, 0x40, "P" );
+    addKey( "ST", 1, 0x40, "S" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "8", 7, 0x20 );
-    addKey( "9", 6, 0x20 );
-    addKey( "A", 5, 0x20 );
-    addKey( "B", 4, 0x20 );
+    addKey( "8", 7, 0x20, null );
+    addKey( "9", 6, 0x20, null );
+    addKey( "A", 5, 0x20, null );
+    addKey( "B", 4, 0x20, null );
     this.curX += (KEY_SIZE / 2);
-    addKey( "TR", 2, 0x40 );
-    addKey( "GO", 3, 0x40 );
+    addKey( "TR", 2, 0x40, "T" );
+    addKey( "GO", 3, 0x40, "G" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "4", 3, 0x10 );
-    addKey( "5", 2, 0x10 );
-    addKey( "6", 1, 0x10 );
-    addKey( "7", 0, 0x10 );
+    addKey( "4", 3, 0x10, null );
+    addKey( "5", 2, 0x10, null );
+    addKey( "6", 1, 0x10, null );
+    addKey( "7", 0, 0x10, null );
     this.curX += (KEY_SIZE / 2);
-    addKey( "RE", 4, 0x40 );
-    addKey( "MA", 5, 0x40 );
+    addKey( "RE", 4, 0x40, "R" );
+    addKey( "MA", 5, 0x40, "M" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "0", 7, 0x10 );
-    addKey( "1", 6, 0x10 );
-    addKey( "2", 5, 0x10 );
-    addKey( "3", 4, 0x10 );
+    addKey( "0", 7, 0x10, null );
+    addKey( "1", 6, 0x10, null );
+    addKey( "2", 5, 0x10, null );
+    addKey( "3", 4, 0x10, null );
     this.curX += (KEY_SIZE / 2);
-    addKey( "A-", 6, 0x40 );
-    addKey( "A+", 7, 0x40 );
+    addKey( "A-", 6, 0x40, "-" );
+    addKey( "A+", 7, 0x40, "+" );
 
     int h = this.curY + KEY_SIZE + MARGIN;
     setPreferredSize(
@@ -105,7 +103,7 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.vcs80.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -142,7 +140,7 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof VCS80 ) {
-      this.vcs80 = (VCS80) emuSys;
+      this.emuSys = (VCS80) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != VCS80" );
     }
@@ -151,7 +149,7 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld
 
 	/* --- private Methoden --- */
 
-  private void addKey( String text, int col, int value )
+  private void addKey( String text, int col, int value, String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -165,7 +163,8 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld
 					null,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_SIZE;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,15 +13,12 @@ import jkcemu.base.*;
 import jkcemu.emusys.KC85;
 
 
-public abstract class AbstractKC85KeyboardFld extends AbstractKeyboardFld
+public abstract class AbstractKC85KeyboardFld
+				extends AbstractKeyboardFld<KC85>
 {
-  protected KC85 kc85;
-
-
   public AbstractKC85KeyboardFld( KC85 kc85, int numKeys )
   {
-    super( numKeys );
-    this.kc85 = kc85;
+    super( kc85, numKeys, true );
   }
 
 
@@ -33,4 +30,3 @@ public abstract class AbstractKC85KeyboardFld extends AbstractKeyboardFld
 
   public abstract void updKeySelection( int keyNum );
 }
-

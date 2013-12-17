@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.Z1013;
 
 
-public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
+public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld<Z1013>
 {
   private static final String[] keyImgResources = {
 			"/images/keyboard/z1013/key_at.png",
@@ -53,7 +53,6 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
 
   private static final int MARGIN = 5;
 
-  private Z1013 z1013;
   private int   keyWidth;
   private int   keyHeight;
   private int[] kbMatrix;
@@ -61,8 +60,7 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
 
   public Z1013KeyboardFld8x4( Z1013 z1013 )
   {
-    super( 32 );
-    this.z1013     = z1013;
+    super( z1013, 32, true );
     this.keyWidth  = 0;
     this.keyHeight = 0;
     this.kbMatrix  = new int[ 8 ];
@@ -88,6 +86,12 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
 	    this.keyHeight = Math.max( 0, img.getHeight( this ) );
 	  }
 	}
+	boolean shift       = false;
+	String  toolTipText = null;
+	if( (m == 0x08) && (col < 4) ) {
+	  shift = true;
+	  toolTipText = String.format( "F%d", col + 1 );
+	}
 	this.keys[ i ] = new KeyData(
 				x,
 				y,
@@ -100,7 +104,8 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
 				img,
 				col,
 				m,
-				(m == 0x08) && (col < 4) );
+				shift,
+				toolTipText );
 	x += (this.keyWidth + MARGIN);
       }
     }
@@ -139,7 +144,7 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
   @Override
   protected void keySelectionChanged()
   {
-    Z1013Keyboard  kb = this.z1013.getZ1013Keyboard();
+    Z1013Keyboard  kb = this.emuSys.getZ1013Keyboard();
     KeyboardMatrix km = kb.getKeyboardMatrix();
     if( km instanceof KeyboardMatrix8x4 ) {
       Arrays.fill( this.kbMatrix, 0 );
@@ -181,7 +186,7 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( accepts( emuSys ) ) {
-      this.z1013 = (Z1013) emuSys;
+      this.emuSys = (Z1013) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != Z1013/8x4" );
     }

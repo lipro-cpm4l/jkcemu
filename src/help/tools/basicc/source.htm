@@ -55,20 +55,20 @@
    <tr>
     <td valign="top">
      <tt>
-      10 I=0<br/>
-      20 I=I+1<br/>
-      30 PRINT I<br/>
-      40 IF I&lt;100 THEN GOTO 20<br/>
+      10 I=0&#10;<br/>
+      20 I=I+1&#10;<br/>
+      30 PRINT I&#10;<br/>
+      40 IF I&lt;100 THEN GOTO 20&#10;<br/>
       50 END
      </tt>
     </td>
     <td valign="top">
      <tt>
-      I=0<br/>
-      schleife:<br/>
-      I=I+1<br/>
-      PRINT I<br/>
-      IF I&lt;100 THEN GOTO schleife<br/>
+      I=0&#10;<br/>
+      schleife:&#10;<br/>
+      I=I+1&#10;<br/>
+      PRINT I&#10;<br/>
+      IF I&lt;100 THEN GOTO schleife&#10;<br/>
       END
      </tt>
     </td>
@@ -97,14 +97,15 @@
   Referenziert wird auf die Marke ohne dem Doppelpunkt.
   Das Beispiel demonstriert die Verwendung einer Marke
   mit dem Namen <em>datenanfang</em>.
- <br/><br/>
+ <br/>
   <tt>
-   RESTORE datenanfang<br/>
-   ...<br/>
-   datenanfang:<br/>
-   &nbsp; DATA 1,2,3
+   &#10;<br/>
+   RESTORE datenanfang&#10;<br/>
+   ...&#10;<br/>
+   datenanfang:&#10;<br/>
+   &nbsp; DATA 1,2,3&#10;<br/>
   </tt>
- <br/><br/>
+ <br/>
   <b>Achtung!</b> Hinter dem abschlie&szlig;enden Dopppelpunkt der Marke
   darf nichts mehr in der Zeile stehen, damit der Compiler
   eine Marke syntaktisch von einer Anweisung unterscheiden kann.
@@ -140,14 +141,15 @@
   auch wenn im Kommentar ein Doppelpunkt vorkommt.
  <br/><br/>
   Beispiele f&uuml;r Kommentare:
- <br/><br/>
+ <br/>
   <tt>
-   REM Kommentar<br/>
-   !Kommentar<br/>
-   'Kommentar<br/>
-   A=100:REM Kommentar<br/>
-   B=200:!Kommentar<br/>
-   C=300:'Kommentar: auch noch Kommentar
+   &#10;<br/>
+   REM Kommentar&#10;<br/>
+   !Kommentar&#10;<br/>
+   'Kommentar&#10;<br/>
+   A=100:REM Kommentar&#10;<br/>
+   B=200:!Kommentar&#10;<br/>
+   C=300:'Kommentar: auch noch Kommentar&#10;<br/>
   </tt>
  <br/>
 </body>

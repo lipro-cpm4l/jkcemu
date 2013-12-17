@@ -143,9 +143,12 @@ public class Z9001Target extends AbstractTarget
 		+ "\tPUSH\tHL\n"
 		+ "\tCALL\tXOUTCH\n"
 		+ "\tPOP\tHL\n"
-		+ "\tLD\tA,L\n"
-		+ "\tJR\tXOUTCH\n" );
-    appendXOUTCH( buf );
+		+ "\tLD\tA,L\n" );
+    if( this.xoutchAppended ) {
+      buf.append( "\tJR\tXOUTCH\n" );
+    } else {
+      appendXOUTCH( buf );
+    }
     this.usesColors = true;
   }
 
@@ -388,8 +391,10 @@ public class Z9001Target extends AbstractTarget
   public void appendXPTEST( AsmCodeBuf buf, BasicCompiler compiler )
   {
     buf.append( "XPTEST:\tCALL\tX_PCK\n"
+		+ "\tJR\tNC,X_PTST1\n"
 		+ "\tLD\tHL,0FFFFH\n"
-		+ "\tRET\tC\n"
+		+ "\tRET\n"
+		+ "X_PTST1:\n"
 		+ "\tCALL\tX_PST\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
@@ -423,13 +428,6 @@ public class Z9001Target extends AbstractTarget
   public int get100msLoopCount()
   {
     return 69;
-  }
-
-
-  @Override
-  public int getDefaultBegAddr()
-  {
-    return 0x0300;
   }
 
 
@@ -493,6 +491,20 @@ public class Z9001Target extends AbstractTarget
   public int getColorYellow()
   {
     return 0x03;
+  }
+
+
+  @Override
+  public int getDefaultBegAddr()
+  {
+    return 0x0300;
+  }
+
+
+  @Override
+  public int getGraphicScreenNum()
+  {
+    return 0;
   }
 
 
@@ -624,7 +636,7 @@ public class Z9001Target extends AbstractTarget
              *       dass das Pixel in der Speicherzelle beschreibt
 	     *   HL: Speicherzelle, in der sich das Pixel befindet
 	     */
-		+ "X_PST:\tLD\tA,1\n"
+		+ "X_PST:\tLD\tA,01H\n"
 		+ "\tSRL\tL\n"
 		+ "\tJR\tNC,X_PST1\n"
 		+ "\tSLA\tA\n"

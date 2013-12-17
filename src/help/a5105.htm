@@ -25,13 +25,21 @@
    <li>
     <a href="a5105.htm#etc">4. Sonstiges</a>
     <ul>
-     <li><a href="a5105.htm#basic">4.1. BASIC-Programme speichern und laden</a></li>
-     <li><a href="a5105.htm#font">4.2. Zeichensatz</a></li>
      <li>
-      <a href="a5105.htm#screensize">4.3. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis der Bildschirmausgabe</a>
+      <a href="a5105.htm#basic_open">4.1. BASIC-Programme im Texteditor &ouml;ffnen</a>
      </li>
      <li>
-      <a href="a5105.htm#paste">4.4. Einf&uuml;gen von Text aus der Zwischenablage</a>
+      <a href="a5105.htm#basic_save">4.2. BASIC-Programme speichern und laden</a>
+     </li>
+     <li><a href="a5105.htm#font">4.3. Zeichensatz</a></li>
+     <li>
+      <a href="a5105.htm#screensize">4.4. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis der Bildschirmausgabe</a>
+     </li>
+     <li>
+      <a href="a5105.htm#paste">4.5. Einf&uuml;gen von Text aus der Zwischenablage</a>
+     </li>
+     <li>
+      <a href="a5105.htm#images">4.6. A5105-Bilddateien</a>
      </li>
     </ul>
    </li>
@@ -51,11 +59,11 @@
      <li>Zwei <a href="ramfloppy.htm">RAM-Floppies</a></li>
      <li>
       <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
-      an der E/A-Basisadressen C0h
+      an der E/A-Basisadresse&nbsp;C0h
      </li>
      <li>
       <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
-      an der E/A-Basisadressen FCh
+      an der E/A-Basisadresse&nbsp;FCh
      </li>
     </ul>
    </li>
@@ -74,18 +82,12 @@
    <tr><td>PF3</td><td>F3</td></tr>
    <tr><td>PF4</td><td>F4</td></tr>
    <tr><td>PF5</td><td>F5</td></tr>
-   <tr><td>HOME</td><td>F6</td></tr>
-   <tr><td>GRAPH</td><td>F7</td></tr>
-   <tr><td>ALT</td><td>F8</td></tr>
-   <tr><td>STOP</td><td>F9</td></tr>
+   <tr><td>HOME</td><td>F6 oder Pos1</td></tr>
+   <tr><td>STOP</td><td>F7</td></tr>
+   <tr><td>INS&nbsp;MODE</td><td>Einfg</td></tr>
+   <tr><td>DEL</td><td>Entf</td></tr>
   </table>
  <br/>
-  <b>Achtung!</b> Die ALT-Taste l&ouml;st in Verbindung mit anderen Tasten
-  bestimmte JKCEMU-Funktionen aus.
-  Aus diesem Grund kann die ALT-Taste auf der Tastatur des Emulatorrechners
-  nicht zur Emulation der ALT-Taste des A5105 verwendet werden.
-  Daf&uuml;r dient die Taste F8.
- <br/><br/>
 
  <h3><a name="sound">1.2. Sound-Generator</a></h3>
   Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
@@ -211,7 +213,23 @@
 
  <h2><a name="etc">4. Sonstiges</a></h2>
 
- <h3><a name="basic">4.1. BASIC-Programme speichern und laden</a></h3>
+ <h3><a name="basic_open">4.1. BASIC-Programme im Texteditor &ouml;ffnen</a></h3>
+  Der Men&uuml;punkt <em>Datei</em> &rarr;
+  <em>BASIC-Programm im Texteditor &ouml;ffnen...</em>
+  ist in der A5105-Emulation nicht aktiv,
+  da das Bin&auml;rformat der RBASIC-Programme nicht dokumentiert
+  und deshalb auch nicht vollst&auml;ndig bekannt ist.
+  Sie k&ouml;nnen aber trotzdem ein im Arbeitsspeicher befindliches
+  BASIC-Programm im Texteditor &ouml;ffnen,
+  indem Sie dieses mit dem Kommando <tt>LLIST</tt>
+  &quot;ausdrucken&quot; und anschlie&szlig;end
+  das Druckergebnis im Texteditor &ouml;ffnen.
+  Das Druckergebnis erreichen Sie &uuml;ber den Men&uuml;punkt
+  <em>Extra</em> &rarr; <em>Druckauftr&auml;ge</em>
+  (siehe <a href="print.htm">Drucken</a>).
+ <br/><br/>
+
+ <h3><a name="basic_save">4.2. BASIC-Programme speichern und laden</a></h3>
   JKCEMU bietet eine spezielle Unterst&uuml;tzung
   f&uuml;r das Speichern und Laden von BASIC-Programmen
   unter dem Betriebssystem RBASIC.
@@ -236,7 +254,7 @@
   und von dort wieder laden.
  <br/><br/>
 
- <h3><a name="font">4.2. Zeichensatz</a></h3>
+ <h3><a name="font">4.3. Zeichensatz</a></h3>
   Der A5105 enth&auml;lt einen programmierbaren Zeichengenerator,
   der standardm&auml;&szlig;ig mit dem alten DOS-Zeichensatz
   (Codepage&nbsp;437) gef&uuml;llt ist.
@@ -249,7 +267,7 @@
   wie der Zeichengenerator tats&auml;chlich programmiert ist.
  <br/><br/>
 
- <h3><a name="screensize">4.3. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis der Bildschirmausgabe</a></h3>
+ <h3><a name="screensize">4.4. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis der Bildschirmausgabe</a></h3>
   Der A5105 bietet verschiedene Bildschirmaufl&ouml;sungen.
   Wenn zwischen diesen umgeschaltet wird
   (z.B. mit dem BASIC-Befehl <tt>screen&nbsp;1</tt> in den 80-Zeichenmodus),
@@ -264,7 +282,7 @@
  <br/><br/>
 
  <h3>
-  <a name="paste">4.4. Einf&uuml;gen von Text aus der Zwischenablage</a>
+  <a name="paste">4.5. Einf&uuml;gen von Text aus der Zwischenablage</a>
  </h3>
   Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt gew&ouml;hnlich
   in der Form, dass f&uuml;r jedes einzuf&uuml;gende Zeichen
@@ -283,5 +301,45 @@
   &uuml;ber die CONIN-Systemfunktion abfragen,
   funktioniert das Einf&uuml;gen von Text nicht,
   und Sie m&uuml;ssen die Option ausschalten.
+ <br/><br/>
+
+ <h3><a name="images">4.6. A5105-Bilddateien</a></h3>
+  Der <a href="tools/imageviewer.htm">JKCEMU Bildbetrachter</a>
+  unterst&uuml;tzt sowohl lesend als auch schreibend A5105-Bilddateien,
+  die dem RBASIC-Grafikmodus <em>SCREEN&nbsp;5</em>
+  (320x200&nbsp;Pixel, 16&nbsp;Farben) entsprechen.
+  Zur Anzeige im JKCEMU Bildbetrachter m&uuml;ssen die Dateien
+  die Endung <em>*.scr</em> haben.
+  Umgekehrt k&ouml;nnen mit dem Bildbetrachter solche Bilddateien
+  erzeugt werden,
+  indem man sie einfach mit der Endung <em>*.scr</em> speichert.
+  Das Laden und Anzeigen solcher Dateien auf dem A5105
+  ist mit folgendem kleinen RBASIC-Programm m&ouml;glich:
+ <br/>
+  <tt>
+   &#10;<br/>
+   10 SCREEN 0:CLS&#10;<br/>
+   20 FILES "*.scr"&#10;<br/>
+   30 PRINT:INPUT "Bilddatei:";F$&#10;<br/>
+   40 IF INSTR(F$,".")=0 THEN F$=F$+".SCR"&#10;<br/>
+   50 SCREEN 5,0:CLS&#10;<br/>
+   60 BLOAD F$,S:PAUSE 300&#10;<br/>
+   70 GOTO 10&#10;<br/>
+  </tt>
+ <br/>
+  Das Programm zeigt die Liste der vorhandenen Bilddateien an
+  und fragt nach dem Namen der zu ladenden Datei.
+  Der Dateiname kann dabei auch ohne die Endung <em>.SCR</em>
+  eingegeben werden.
+ <br/><br/>
+  Eine erweiterte Version dieses Programms ist auf der
+  im Emulator enthaltenen <em>BIC A5105 RBASIC Systemdiskette</em>
+  vorhanden.
+  Wenn Sie diese Diskette im Fenster <em>JKCEMU Diskettenstation</em>
+  eingelegt haben und sich im RBASIC befinden,
+  k&ouml;nnen Sie das Programm starten mit:
+ <br/><br/>
+  <tt>run &quot;viewscr.bas&quot;</tt>
+ <br/><br/>
 </body>
 </html>

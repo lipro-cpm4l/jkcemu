@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,13 +16,13 @@ public class M006 extends AbstractKC85Module
 {
   private static byte[] rom = null;
 
-  private int baseAddr;
+  private int begAddr;
 
 
   public M006( int slot, EmuThread emuThread )
   {
     super( slot );
-    this.baseAddr = 0;
+    this.begAddr = 0;
     if( rom == null ) {
       rom = EmuUtil.readResource(
 				emuThread.getScreenFrm(),
@@ -32,6 +32,13 @@ public class M006 extends AbstractKC85Module
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
 
   @Override
   public String getModuleName()
@@ -52,11 +59,11 @@ public class M006 extends AbstractKC85Module
   {
     int rv = -1;
     if( this.enabled
-	&& (addr >= this.baseAddr)
-	&& (addr < (this.baseAddr + 0x4000))
+	&& (addr >= this.begAddr)
+	&& (addr < (this.begAddr + 0x4000))
 	&& (rom != null) )
     {
-      int idx = addr - this.baseAddr;
+      int idx = addr - this.begAddr;
       if( idx < rom.length ) {
 	rv = (int) rom[ idx ] & 0xFF;
       }
@@ -69,7 +76,7 @@ public class M006 extends AbstractKC85Module
   public void setStatus( int value )
   {
     super.setStatus( value );
-    this.baseAddr = (value << 8) & 0xC000;
+    this.begAddr = (value << 8) & 0xC000;
   }
 }
 

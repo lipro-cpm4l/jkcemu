@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -90,6 +90,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    // leer
+  }
+
+
   public void applySettings( Properties props )
   {
     createColors( props );
@@ -175,6 +181,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public int getBorderColorIndexByLine( int line )
+  {
+    return getBorderColorIndex();
+  }
+
+
   /*
    * Die Helligkeit wird logarithmisch gewertet,
    * damit man auch im unteren und mittleren Einstellbereich
@@ -226,80 +238,21 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
-  public int getCharColCount()
-  {
-    return -1;
-  }
-
-
-  public int getCharHeight()
-  {
-    return -1;
-  }
-
-
-  public int getCharRowCount()
-  {
-    return -1;
-  }
-
-
-  public int getCharRowHeight()
-  {
-    return -1;
-  }
-
-
-  public int getCharTopLine()
-  {
-    return 0;
-  }
-
-
-  public int getCharWidth()
-  {
-    return -1;
-  }
-
-
   protected boolean getConvertKeyCharToISO646DE()
   {
     return true;
   }
 
 
-  /*
-   * Die Methoden "getDefaultFloppyDisk..." geben das Standardformat
-   * fuer Disketten an,
-   * sofern ueberhaupt ein Format als Standard bezeichnet werden kann.
-   */
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  public CharRaster getCurScreenCharRaster()
   {
-    return false;
-  }
-
-
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return -1;
-  }
-
-
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return -1;
+    return null;
   }
 
 
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
     return null;
-  }
-
-
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return -1;
   }
 
 
@@ -369,7 +322,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     return -1;
   }
@@ -377,16 +330,29 @@ public abstract class EmuSys implements ImageObserver, Runnable
 
   public String getScreenText()
   {
-    return getScreenText( 0, 0, getCharColCount() - 1, getCharRowCount() - 1 );
+    CharRaster chRaster = getCurScreenCharRaster();
+    return chRaster != null ?
+		getScreenText(
+			chRaster,
+			0,
+			0,
+			chRaster.getColCount() - 1,
+			chRaster.getRowCount() - 1 )
+		: null;
   }
 
 
-  public String getScreenText( int chX1, int chY1, int chX2, int chY2 )
+  public String getScreenText(
+			CharRaster chRaster,
+			int        chX1,
+			int        chY1,
+			int        chX2,
+			int        chY2 )
   {
     String rv = null;
     if( (chX1 >= 0) && (chY1 >= 0) ) {
-      int nCols = getCharColCount();
-      int nRows = getCharRowCount();
+      int nCols = chRaster.getColCount();
+      int nRows = chRaster.getRowCount();
       if( (nCols > 0) && (nRows > 0) ) {
 	if( chY2 >= nRows ) {
 	  chY2 = nRows - 1;
@@ -396,7 +362,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
 	while( (chY1 < chY2)
 	       || ((chY1 == chY2) && (chX1 <= chX2)) )
 	{
-	  int b = getScreenChar( chX1, chY1 );
+	  int b = getScreenChar( chRaster, chX1, chY1 );
 	  if( (b == 0) || b == 0x20 ) {
 	    if( chY1 < chY2 ) {
 	      nSpaces++;
@@ -515,6 +481,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public boolean hasKCBasicInROM()
   {
     return false;
+  }
+
+
+  public ScreenFrm getScreenFrm()
+  {
+    return this.screenFrm;
   }
 
 
@@ -1070,6 +1042,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public boolean supportsBorderColorByLine()
+  {
+    return false;
+  }
+
+
   public boolean supportsChessboard()
   {
     return false;
@@ -1133,6 +1111,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public boolean supportsUSB()
   {
     return (getVDIP() != null);
+  }
+
+
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    // leer
   }
 
 

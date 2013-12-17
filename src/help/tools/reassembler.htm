@@ -5,12 +5,25 @@
     k&ouml;nnen Sie die im Arbeitsspeicher des Emulators
     liegenden Bytes in die Assemblersyntax &uuml;bersetzen.
   <br/><br/>
+   <ul>
+    <li>
+     <a href="reassembler.htm#reass">1. Speicherbereich reassemblieren</a>
+    </li>
+    <li>
+     <a href="reassembler.htm#asm">2. Assembler-Quelltext erzeugen</a>
+    </li>
+   </ul>
+  </br>
+
+  <h2><a name="reass">1. Speicherbereich reassemblieren</a></h2>
     Nach dem Starten des Reassemblers ist die Eingabe der Anfangs-
     und Endadresse des zu reassemblierenden Speicherbereichs erforderlich.
     Anschlie&szlig;end w&auml;hlen Sie den Men&uuml;punkt
     <em>Datei</em> &rarr; <em>Reassemblieren</em> an,
     und das Reassembler-Listing wird in dem Fenster angezeigt.
     Dieses k&ouml;nnen Sie nun speichern oder drucken.
+    Undokumentierte Prozessorbefehle sind mit einem Stern
+    am Anfang der Mnemonik gekennzeichnet.
   <br/><br/>
     Es ist auch m&ouml;glich,
     das eigentliche Reassemblieren durch Dr&uuml;cken
@@ -36,6 +49,25 @@
     Speicherbereich immer als Maschinenbefehle des Mikroprozessors
     interpretiert, unabh&auml;ngig davon, ob diese auch tats&auml;chlich
     ausf&uuml;hrbaren Programmcode darstellen.
+  <br/><br/>
+
+  <h2><a name="asm">2. Assembler-Quelltext erzeugen</a></h2>
+   Der Reassembler ist in der Lage,
+   aus dem Reassembler-Listing einen Assembler-Quelltext zu erzeugen,
+   den Sie dann in einem Assembler weiter bearbeiten k&ouml;nnen.
+   Die Funktionen zum Erzeugen des Quelltextes finden Sie im
+   Men&uuml; <em>Datei</em>
+   (&rarr; <em>Als Quelltext kopieren</em>
+   bzw. &rarr; <em>Als Quelltext speichern...</em>).
+  <br/><br/>
+    <b>Achtung!</b> Undokumentierte Prozessorbefehle,
+    die im Reassembler-Listing mit einem Stern gekennzeichnet sind,
+    enthalten im erzeugten Assembler-Listing keinen Stern mehr,
+    damit der Assembler keinen Syntax-Fehler meldet.
+    Wenn der undokumentierte Befehl nur eine andere Byte-Folge
+    eines dokumentierten Befehls ist,
+    wird damit automatisch der undokumentierte Befehl
+    in einen dokumentierten umgewandelt.
 </body>
 </html>
 

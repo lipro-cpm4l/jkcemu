@@ -41,9 +41,11 @@ public class BasicLibrary
 			KCNET_SET_LOCALADDR, KCNET_SET_NETMASK,
 			KCNET_SET_BASE, KCNET_BASE_HW,
 			KCNET_HOSTBYNAME, KCNET_PARSE_IPADDR,
-			KCNET_TCP, KCNET_UDP, KCNET_SOCK, KCNET_BASE,
+			KCNET_TCP, KCNET_UDP, KCNET_FLUSH1,
+			KCNET_SOCK, KCNET_BASE,
 			VDIP_M_IOADDR,
-			F_ISTR, F_JOY, F_LEN, F_LOCALPORT, F_REMOTEPORT,
+			F_INSTR, F_INSTRN, F_JOY, F_LEN,
+			F_LOCALPORT, F_REMOTEPORT,
 			F_RND, F_SGN, F_SQR,
 			F_VAL, F_VLB, F_VLH, F_VLI,
 			S_BIN, S_CHR, S_HEX, S_HEXN, S_HXHL, S_HXA,
@@ -327,12 +329,14 @@ public class BasicLibrary
 		+ "\tDEC\tHL\n"
 		+ "\tDEC\tB\n"
 		+ "\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tLD\tA,D\n"
 		+ "\tCALL\tXOUTCH\n"
 		+ "\tLD\tA,20H\n"
 		+ "\tCALL\tXOUTCH\n"
 		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
 		+ "\tPOP\tBC\n"
 		+ "\tJR\tINLNR2\n"
 		+ "INLNR6:\tLD\tA,B\n"
@@ -799,6 +803,7 @@ public class BasicLibrary
       libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
       libItems.add( LibItem.KCNET_HOSTBYNAME );
       libItems.add( LibItem.KCNET_UDP );
+      libItems.add( LibItem.KCNET_FLUSH1 );
       libItems.add( LibItem.KCNET_BASE );
     }
     if( libItems.contains( LibItem.CIRCLE ) ) {
@@ -1525,7 +1530,7 @@ public class BasicLibrary
        * Parameter bei CKSTKN:
        *   DE: benoetigte Stack-Tiefe
        */
-      buf.append( "CKSTK:\tLD\tDE,0000\n"
+      buf.append( "CKSTK:\tLD\tDE,0000H\n"
 		+ "CKSTKN:" );
       if( stackSize <= 0 ) {
 	buf.append( "\tRET\n" );
@@ -2222,6 +2227,92 @@ public class BasicLibrary
       libItems.add( LibItem.C_UPR );
       libItems.add( LibItem.M_STMP );
     }
+    if( libItems.contains( LibItem.F_INSTRN ) ) {
+      /*
+       * Laenge einer Zeichenkette ermitteln
+       *
+       * Parameter:
+       *   BC: Anfangsposition in der durchsuchten Zeichenkette
+       *   DE: Zeiger auf die gesuchte Zeichenkette
+       *   HL: Zeiger auf die zu durchsuchende Zeichenkette
+       * Rueckgabe:
+       *   HL: Position, in der die erste Zeichenktte
+       *       in der zweiten gefunden wurde bzw. 0,
+       *       wenn nicht gefunden wurde
+       */
+      buf.append( "F_INSTRN:\n"
+		+ "\tLD\tA,B\n"
+		+ "\tOR\tA\n"
+		+ "\tJP\tM,E_PARM\n"
+		+ "\tOR\tC\n"
+		+ "\tJP\tZ,E_PARM\n"
+		+ "\tPUSH\tBC\n"
+		+ "F_INSTRN1:\n"
+		+ "\tDEC\tBC\n"
+		+ "\tLD\tA,B\n"
+		+ "\tOR\tC\n"
+		+ "\tJR\tNZ,F_INSTRN2\n"
+		+ "\tPOP\tBC\n"
+		+ "\tDEC\tBC\n"
+		+ "\tJR\tF_INSTR1\n"
+		+ "F_INSTRN2:\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,F_INSTR5\n"
+		+ "\tINC\tHL\n"
+		+ "\tJR\tF_INSTRN1\n" );
+      libItems.add( LibItem.F_INSTR );
+      libItems.add( LibItem.E_PARM );
+    }
+    if( libItems.contains( LibItem.F_INSTR ) ) {
+      /*
+       * Laenge einer Zeichenkette ermitteln
+       *
+       * Parameter:
+       *   DE: Zeiger auf die gesuchte Zeichenkette
+       *   HL: Zeiger auf die zu durchsuchende Zeichenkette
+       * Rueckgabe:
+       *   HL: Position, in der die erste Zeichenktte
+       *       in der zweiten gefunden wurde bzw. 0,
+       *       wenn nicht gefunden wurde
+       */
+      buf.append( "F_INSTR:\n"
+		+ "\tLD\tBC,0000H\n"
+		+ "F_INSTR1:\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,F_INSTR5\n"
+		+ "\tDEC\tHL\n"
+		+ "F_INSTR2:\n"
+		+ "\tINC\tHL\n"
+		+ "\tINC\tBC\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tPUSH\tDE\n"
+		+ "F_INSTR3:\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tINC\tDE\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,F_INSTR4\n"		// gefunden
+		+ "\tCP\t(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tJR\tZ,F_INSTR3\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tHL\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tNZ,F_INSTR2\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tRET\n"
+		+ "F_INSTR4:\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tHL\n"
+		+ "\tLD\tH,B\n"
+		+ "\tLD\tL,C\n"
+		+ "\tRET\n"
+		+ "F_INSTR5:\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tRET\n" );
+    }
     if( libItems.contains( LibItem.F_JOY ) ) {
       buf.append( "F_JOY:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
@@ -2234,44 +2325,6 @@ public class BasicLibrary
 		+ "\tRET\n" );
       }
       libItems.add( LibItem.E_PARM );
-    }
-    if( libItems.contains( LibItem.F_ISTR ) ) {
-      /*
-       * Laenge einer Zeichenkette ermitteln
-       *
-       * Parameter:
-       *   DE: Zeiger auf die gesuchte Zeichenkette
-       *   HL: Zeiger auf die zu durchsuchende Zeichenkette
-       * Rueckgabe:
-       *   HL: Position, in der die erste Zeichenktte
-       *       in der zweiten gefunden wurde bzw. 0,
-       *       wenn nicht gefunden wurde
-       */
-      buf.append( "F_ISTR:\tLD\tBC,0000H\n"
-		+ "\tDEC\tHL\n"
-		+ "F_IST1:\tINC\tHL\n"
-		+ "\tINC\tBC\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tPUSH\tDE\n"
-		+ "F_IST2:\tLD\tA,(DE)\n"
-		+ "\tINC\tDE\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,F_IST3\n"		// gefunden
-		+ "\tCP\t(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tJR\tZ,F_IST2\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,F_IST1\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\n"
-		+ "F_IST3:\tPOP\tDE\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\tH,B\n"
-		+ "\tLD\tL,C\n"
-		+ "\tRET\n" );
     }
     if( libItems.contains( LibItem.F_LEN ) ) {
       /*
@@ -2318,34 +2371,54 @@ public class BasicLibrary
       /*
        * Ermitteln einer Zufallszahl
        *
+       * Die RND-Funktion verknuepft mehrere Algorithmen miteinander,
+       * um die jeweilgen Nachteile gegenseitig zu kompensieren:
+       *   1. Lesen der Programmcodebytes zwischen MSTART und MINIT
+       *   2. XOR-Verknuepfung mit dem Refresh-Register
+       *   3. XOR-Verknuepfung mit dem aktuellen Wert eines
+       *      rueckgekoppelten Schieberegister-Pseudozufallsgenerators,
+       *      der bei jedem Zurueckstellen von Algorithmus 1
+       *      um eins weitergestellt wird.
+       *
        * Parameter:
        *   HL: maximaler Wert (groesser 0)
        * Rueckgabe:
-       *   HL: Zufallszahl zwischen 1 und maximaler Wert
+       *   HL: Zufallszahl zwischen 0 und dem maximalen Wert (exklusive)
        */
       buf.append( "F_RND:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
 		+ "\tJP\tM,E_PARM\n"
 		+ "\tOR\tL\n"
-		+ "\tJR\tZ,F_RND1\n"
+		+ "\tJP\tZ,E_PARM\n"
 		+ "\tPUSH\tHL\n"
-		+ "\tLD\tHL,M_RND\n"
-		+ "\tLD\tA,R\n"
-		+ "\tRLD\n"
-		+ "\tINC\tHL\n"
-		+ "\tRLD\n"
-		+ "\tPOP\tDE\n"
-		+ "F_RND1:\tLD\tHL,(M_RND)\n"
-		+ "\tLD\tA,D\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,F_RND2\n"
-		+ "\tLD\tA,H\n"
-		+ "\tAND\t03H\n"		// damit die Schleife
-		+ "\tLD\tH,A\n"			// nicht zu lange laeuft
-		+ "F_RND2:\tSBC\tHL,DE\n"
+		+ "\tLD\tDE,(M_RNDA)\n"		// aktuelle Leseadresse
+		+ "\tLD\tHL,MINIT\n"		// MINIT erreicht?
+		+ "\tSBC\tHL,DE\n"
 		+ "\tJR\tNC,F_RND2\n"
-		+ "\tADD\tHL,DE\n"
-		+ "\tRET\n" );
+		+ "\tLD\tDE,MSTART\n"		// aus MSTART zurueckstellen
+		+ "\tLD\tA,(M_RNDX)\n"		// und rueckgekoppelten
+		+ "\tLD\tB,A\n"			// Schieberegister-
+		+ "\tAND\t8EH\n"		// Pseudozufallsgenerator
+		+ "\tJP\tPE,F_RND1\n"		// (M_RNDX) weiterstellen
+		+ "\tCCF\n"
+		+ "F_RND1:\tRL\tB\n"
+		+ "\tLD\tA,B\n"
+		+ "\tLD\t(M_RNDX),A\n"
+		+ "F_RND2:\tEX\tDE,HL\n"	// 2 Programmcodebytes lesen
+		+ "\tLD\tA,(M_RNDX)\n"
+		+ "\tXOR\t(HL)\n"
+		+ "\tLD\tE,A\n"
+		+ "\tINC\tHL\n"			// und Adresse inkrementieren
+		+ "\tLD\t(M_RNDA),HL\n"
+		+ "\tLD\tA,R\n"
+		+ "\tXOR\t(HL)\n"
+		+ "\tJP\tP,F_RND3\n"
+		+ "\tCPL\n"
+		+ "F_RND3:\tLD\tH,A\n"
+		+ "\tLD\tL,E\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJP\tO_DIV2\n" );
+      libItems.add( LibItem.O_DIV );
       libItems.add( LibItem.E_PARM );
     }
     if( libItems.contains( LibItem.F_SGN ) ) {
@@ -2575,18 +2648,19 @@ public class BasicLibrary
        * Rueckgabe:
        *   HL: gelesene Zahl oder 0 bei Fehler
        */
-      buf.append( "F_VLI:\tLD\tB,H\n"
-		+ "\tLD\tC,L\n" );
-      BasicLibrary.appendResetErrorUseHL( compiler );
-      buf.append( "\tDEC\tBC\n" 
-		+ "F_VLI1:\tINC\tBC\n"
+      buf.append( "F_VLI:" );
+      BasicLibrary.appendResetErrorUseBC( compiler );
+      buf.append( "F_VLI1:\tLD\tB,H\n"
+		+ "\tLD\tC,L\n"
+		+ "\tDEC\tBC\n" 
+		+ "F_VLI2:\tINC\tBC\n"
 		+ "\tLD\tA,(BC)\n"
 		+ "\tCP\t20H\n"
-		+ "\tJR\tZ,F_VLI1\n"
+		+ "\tJR\tZ,F_VLI2\n"
 		+ "\tCP\t2DH\n"
-		+ "\tJR\tNZ,F_VLI2\n"
+		+ "\tJR\tNZ,F_VLI3\n"
 		+ "\tINC\tBC\n"
-		+ "\tCALL\tF_VLI2\n"
+		+ "\tCALL\tF_VLI3\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tDE,0000H\n"
 		+ "\tEX\tDE,HL\n"
@@ -2594,24 +2668,24 @@ public class BasicLibrary
 		+ "\tSBC\tHL,DE\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\n"
-		+ "F_VLI2:\tLD\tA,(BC)\n"
+		+ "F_VLI3:\tLD\tA,(BC)\n"
 		+ "\tINC\tBC\n"
 		+ "\tSUB\t30H\n"
-		+ "\tJR\tC,F_VLI5\n"
+		+ "\tJR\tC,F_VLI6\n"
 		+ "\tCP\t0AH\n"
-		+ "\tJR\tNC,F_VLI5\n"
+		+ "\tJR\tNC,F_VLI6\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,00H\n"
-		+ "F_VLI3:\tLD\tA,(BC)\n"
+		+ "F_VLI4:\tLD\tA,(BC)\n"
 		+ "\tINC\tBC\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tCP\t20H\n"
-		+ "\tJR\tZ,F_VLI4\n"
+		+ "\tJR\tZ,F_VLI5\n"
 		+ "\tSUB\t30H\n"
-		+ "\tJR\tC,F_VLI5\n"
+		+ "\tJR\tC,F_VLI6\n"
 		+ "\tCP\t0AH\n"
-		+ "\tJR\tNC,F_VLI5\n"
+		+ "\tJR\tNC,F_VLI6\n"
 		+ "\tLD\tD,H\n"
 		+ "\tLD\tE,L\n"
 		+ "\tADD\tHL,HL\n"
@@ -2623,17 +2697,17 @@ public class BasicLibrary
 		+ "\tLD\tA,0\n"
 		+ "\tADC\tA,H\n"
 		+ "\tLD\tH,A\n"
-		+ "\tJP\tP,F_VLI3\n" );
+		+ "\tJP\tP,F_VLI4\n" );
       BasicLibrary.appendSetErrorNumericOverflow( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n"
-		+ "F_VLI4:\tLD\tA,(BC)\n"
+		+ "F_VLI5:\tLD\tA,(BC)\n"
 		+ "\tINC\tBC\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tCP\t20H\n"
-		+ "\tJR\tZ,F_VLI4\n"
-		+ "F_VLI5:" );
+		+ "\tJR\tZ,F_VLI5\n"
+		+ "F_VLI6:" );
       BasicLibrary.appendSetErrorInvalidChars( compiler );
       buf.append( "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
@@ -3375,6 +3449,7 @@ public class BasicLibrary
        *
        * Parameter:
        *   HL: Adresse des Kanalzeigerfeldes
+       *   C:  Trennzeichen oder 0
        * Rueckgabewert:
        *   HL: Zeiger auf die gelesene Zeichenkette
        */
@@ -3386,7 +3461,7 @@ public class BasicLibrary
       buf.append( "\tLD\tHL,D_EMPT\n"
 		+ "\tRET\n"
 		+ "IOINL1:\tDEC\tHL\n" );
-      appendResetErrorUseBC( compiler );
+      appendResetErrorUseDE( compiler );
       buf.append( "\tLD\tB," );
       buf.appendHex2( BasicCompiler.MAX_STR_LEN );
       buf.append( "\n"
@@ -3398,6 +3473,10 @@ public class BasicLibrary
 		+ "\tPOP\tHL\n"
 		+ "\tPOP\tDE\n"
 		+ "\tPOP\tBC\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,IOINL3\n"
+		+ "\tCP\tC\n"
+		+ "\tJR\tZ,IOINL3\n"
 		+ "\tCP\t0AH\n"
 		+ "\tJR\tZ,IOINL3\n"
 		+ "\tCP\t0DH\n"
@@ -3562,7 +3641,9 @@ public class BasicLibrary
 		+ "\tLD\tA,H\n"
 		+ "\tOR\tL\n"
 		+ "\tJR\tZ,IOCLOSE1\n"
+		+ "\tPUSH\tDE\n"
 		+ "\tCALL\tJP_HL\n"
+		+ "\tPOP\tDE\n"
 		+ "\tJR\tIOCLOSE2\n"
 		+ "IOCLOSE1:\n" );
       appendSetErrorChannelClosed( compiler );
@@ -4200,7 +4281,7 @@ public class BasicLibrary
        *   | 1 Byte:  Verwaltung                                   | \
        *   |            Bit 0...6:  Referenzzaehler, 0: Block frei |  \
        *   |            Bit 7:      Rueckgabewert einer Funktion,  |   \
-       *   |                        muss am Ende der Abweisung     |    \
+       *   |                        muss am Ende der Anweisung     |    \
        *   |                        einmal freigegeben werden      |     Kopf
        *   +-------------------------------------------------------+    /
        *   | 2 Bytes: Groesse des nutzbaren Speicherbereichs       |   /
@@ -4555,7 +4636,7 @@ public class BasicLibrary
 		+ "\tXOR\t80H\n"
 		+ "\tOR\tL\n"
 		+ "\tJR\tNZ,S_STR1\n"
-		+ "\tLD\tHL,S_STR9\n"
+		+ "\tLD\tHL,S_STR5\n"
 		+ "\tRET\n"
 		+ "S_STR1:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
@@ -4606,7 +4687,7 @@ public class BasicLibrary
 		+ "\tINC\tHL\n"
 		+ "\tEXX\n"
 		+ "\tRET\n"
-		+ "S_STR9:\tDB\t'-32768'\n"
+		+ "S_STR5:\tDB\t'-32768'\n"
 		+ "\tDB\t00H\n" );
     }
     if( libItems.contains( LibItem.JP_HL ) ) {
@@ -4970,7 +5051,8 @@ public class BasicLibrary
       /*
        * Speicherzelle fuer den Zufallsgenerator
        */
-      buf.append( "M_RND:\tDS\t2\n" );
+      buf.append( "M_RNDA:\tDS\t2\n"
+		+ "M_RNDX:\tDS\t1\n" );
     }
     KCNetLibrary.appendBssTo( compiler );
     if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
@@ -5202,8 +5284,10 @@ public class BasicLibrary
 		+ "\tLD\t(M_BALN),HL\n" );
     }
     if( libItems.contains( LibItem.F_RND ) ) {
-      buf.append( "\tLD\tA,R\n"
-		+ "\tLD\t(M_RND),A\n" );
+      buf.append( "\tLD\tHL,MSTART\n"
+		+ "\tLD\t(M_RNDA),HL\n"
+		+ "\tLD\tA,46H\n"
+		+ "\tLD\t(M_RNDX),A\n" );
     }
     if( libItems.contains( LibItem.DATA ) ) {
       buf.append( "\tCALL\tDINIT\n" );

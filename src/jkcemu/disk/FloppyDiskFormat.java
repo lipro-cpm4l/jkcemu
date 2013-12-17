@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,49 @@ import java.lang.*;
 
 public class FloppyDiskFormat
 {
+  public static final FloppyDiskFormat FMT_400K
+			= new FloppyDiskFormat(
+				1, 80, 5, 1024,
+				0, 2, 2048, true, false,
+				"400K (LLC2 CP/L)" );
+
+  public static final FloppyDiskFormat FMT_624K
+			= new FloppyDiskFormat(
+				2, 80, 16, 256,
+				2, 2, 2048, true, false,
+				"624K (PC/M)" );
+
+  public static final FloppyDiskFormat FMT_711K_BASDOS
+			= new FloppyDiskFormat(
+				2, 80, 9, 512,
+				1, 1, 4096, true, false,
+				"711K (KC compact BASDOS)" );
+
+  public static final FloppyDiskFormat FMT_720K
+			= new FloppyDiskFormat(
+				2, 80, 9, 512,
+				0, 2, 2048, true, false,
+				"720K (A5105 RBASIC/SCPX)" );
+
+  public static final FloppyDiskFormat FMT_780K
+			= new FloppyDiskFormat(
+				2, 80, 5, 1024,
+				2, 2, 2048, true, false,
+				"780K (A5105 RBASIC/SCPX, CAOS,"
+					+ " MicroDOS, Z1013 CP/M)" );
+
+  public static final FloppyDiskFormat FMT_780K_DATESTAMPER
+			= new FloppyDiskFormat(
+				2, 80, 5, 1024,
+				2, 2, 2048, true, true,
+				"780K mit DateStamper (ZDOS/ML-DOS)" );
+
+  public static final FloppyDiskFormat FMT_800K
+			= new FloppyDiskFormat(
+				2, 80, 5, 1024,
+				0, 3, 2048, true, false,
+				"800K (Z9001 CP/A)" );
+
   private static final FloppyDiskFormat[] formats = {
 			new FloppyDiskFormat( 2, 80,  9,  512 ),
 			new FloppyDiskFormat( 2, 80,  5, 1024 ),
@@ -33,50 +76,101 @@ public class FloppyDiskFormat
 
   private static Integer maxDiskSize = null;
 
-  private int    sides;
-  private int    cyls;
-  private int    sectorsPerCyl;
-  private int    sectorSize;
-  private int    diskSize;
-  private String infoText;
+  private int     sides;
+  private int     cyls;
+  private int     sectorsPerCyl;
+  private int     sectorSize;
+  private int     diskSize;
+  private int     sysTracks;
+  private int     dirBlocks;
+  private int     blockSize;
+  private boolean blockNum16Bit;
+  private boolean dateStamper;
+  private String  infoText;
 
 
   public FloppyDiskFormat(
-		int sides,
-		int cyls,
-		int sectorsPerCyl,
-		int sectorSize )
+		int     sides,
+		int     cyls,
+		int     sectorsPerCyl,
+		int     sectorSize,
+		int     sysTracks,
+                int     dirBlocks,
+                int     blockSize,
+                boolean blockNum16Bit,
+		boolean dateStamper,
+		String  infoText )
   {
     this.sides         = sides;
     this.cyls          = cyls;
     this.sectorsPerCyl = sectorsPerCyl;
     this.sectorSize    = sectorSize;
     this.diskSize      = sides * cyls * sectorsPerCyl * sectorSize;
-
-    StringBuilder buf = new StringBuilder( 128 );
-    buf.append( diskSize / 1024 );
-    buf.append( " KByte, " );
-    buf.append( cyls );
-    buf.append( " Spuren a " );
-    buf.append( sectorsPerCyl );
-    buf.append( " * " );
-    buf.append( sectorSize );
-    buf.append( " Bytes" );
-    switch( sides ) {
-      case 1:
-	buf.append( ", einseitig" );
-	break;
-      case 2:
-	buf.append( ", doppelseitig" );
-	break;
+    this.sysTracks     = sysTracks;
+    this.dirBlocks     = dirBlocks;
+    this.blockSize     = blockSize;
+    this.blockNum16Bit = blockNum16Bit;
+    this.dateStamper   = dateStamper;
+    if( infoText != null ) {
+      this.infoText = infoText;
+    } else {
+      StringBuilder buf = new StringBuilder( 128 );
+      buf.append( diskSize / 1024 );
+      buf.append( " KByte, " );
+      buf.append( cyls );
+      buf.append( " Spuren a " );
+      buf.append( sectorsPerCyl );
+      buf.append( " * " );
+      buf.append( sectorSize );
+      buf.append( " Bytes" );
+      switch( sides ) {
+	case 1:
+	  buf.append( ", einseitig" );
+	  break;
+	case 2:
+	  buf.append( ", doppelseitig" );
+	  break;
+      }
+      this.infoText = buf.toString();
     }
-    this.infoText = buf.toString();
+  }
+
+
+  public FloppyDiskFormat(
+			int sides,
+			int cyls,
+			int sectorsPerCyl,
+			int sectorSize )
+  {
+    this(
+	sides,
+	cyls,
+	sectorsPerCyl,
+	sectorSize,
+	-1,
+	-1,
+	-1,
+	true,
+	false,
+	null );
+  }
+
+
+  public int getBlockSize()
+  {
+    return this.blockSize;
   }
 
 
   public int getCylinders()
   {
     return this.cyls;
+  }
+
+
+  public int getDirBlocks()
+  {
+    return this.dirBlocks;
   }
 
 
@@ -166,7 +260,51 @@ public class FloppyDiskFormat
   }
 
 
+  public int getSysTracks()
+  {
+    return this.sysTracks;
+  }
+
+
+  public boolean isBlockNum16Bit()
+  {
+    return this.blockNum16Bit;
+  }
+
+
+  public boolean supportsDateStamper()
+  {
+    return this.dateStamper;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean equals( Object o )
+  {
+    boolean rv = false;
+    if( o != null ) {
+      if( o instanceof FloppyDiskFormat ) {
+	FloppyDiskFormat fmt = (FloppyDiskFormat) o;
+	if( (fmt.sides == this.sides)
+	    && (fmt.cyls == this.cyls)
+	    && (fmt.sectorsPerCyl == this.sectorsPerCyl)
+	    && (fmt.sectorSize == this.sectorSize)
+	    && (fmt.diskSize == this.diskSize)
+	    && (fmt.sysTracks == this.sysTracks)
+	    && (fmt.dirBlocks == this.dirBlocks)
+	    && (fmt.blockSize == this.blockSize)
+	    && (fmt.blockNum16Bit == this.blockNum16Bit)
+	    && (fmt.dateStamper == this.dateStamper) )
+	{
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
 
   @Override
   public String toString()
@@ -174,4 +312,3 @@ public class FloppyDiskFormat
     return this.infoText;
   }
 }
-

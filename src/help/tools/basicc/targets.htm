@@ -13,10 +13,17 @@
   sind somit auf allen Computern lauff&auml;hig,
   die dem angegebenen Zielsystem entsprechen.
  <br/><br/>
-  Folgende Zielsystem werden unterst&uuml;tzt:
+  Das Zielsystem muss in den <a href="options.htm">Compiler-Optionen</a>
+  ausgew&auml;hlt bzw.angegeben werden.
+  Damit wei&szlig; der Compiler, was f&uuml;r Programmcode
+  erzeugt werden soll.
+  Folgende Zielsysteme werden unterst&uuml;tzt:
   <ul>
-   <li><a href="targets.htm#cpm">CP/M-kpmpatibel</a></li>
-   <li><a href="targets.htm#hgmc">H&uuml;bler-Grafik-MC</a></li>
+   <li>
+    <a href="targets.htm#ac1">AC1-2010, AC1-SCCH mit optionaler Farbgrafikkarte</a>
+   </li>
+   <li><a href="targets.htm#cpm">CP/M-kompatibel</a></li>
+   <li><a href="targets.htm#huebler">H&uuml;bler-Grafik-MC</a></li>
    <li><a href="targets.htm#kramer">Kramer-MC</a></li>
    <li><a href="targets.htm#llc2">LLC2 mit HIRES-Grafik</a></li>
    <li><a href="targets.htm#z9001">KC85/1, KC87, Z9001</a></li>
@@ -26,14 +33,123 @@
    <li><a href="targets.htm#kc85">KC85/2...5, HC900</a></li>
    <li><a href="targets.htm#scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a></li>
    <li><a href="targets.htm#z1013">Z1013</a></li>
+   <li><a href="targets.htm#z1013_64x16">Z1013 mit Peters-Platine</a></li>
   </ul>
  <br/>
+  Am Ende der Seite finden Sie ein
+  <a href="targets.htm#summary">tabellarische Zusammenfassung</a>
+  der Zielsysteme.
+ <br/><br/>
   Nicht alle BASIC-Funktionalit&auml;ten lassen sich auf allen Zielsystemen
   umsetzen. Insbesondere bei den Grafik- und Cursor-Funktionalit&auml;ten
   gibt es Einschr&auml;nkungen.
   Aus diesem Grund finden Sie hier Hinweise zu den konkreten Umsetzungen
   und damit verbunden auch zu den gegebenen Einschr&auml;nkungen.
  <br/><br/>
+
+ <h3><a name="ac1">AC1-2010, AC1-SCCH mit optionaler Farbgrafikkarte</a></h3>
+  Bei diesem Zielsystem wird Programmcode mit Farbunterst&uuml;tzung
+  f&uuml;r einen AC1-2010 und AC1-SCCH erzeugt.
+  Mit Farbunterst&uuml;tzung ist gemeint, dass bei allen Ausgaben
+  auf dem Bildschirm neben dem Bildwiederholspeicher auch der Farbspeicher
+  beschrieben wird.
+  Das compilierte Programm ist aber auch auf einem AC1 ohne Farbgrafikkarte
+  problemlos lauff&auml;hig.
+ <br/><br/>
+  Die AC1-Monitorprogramme unterst&uuml;tzen standardm&auml;&szlig;ig
+  keine Farben.
+  Aus diesem Grund muss das das compilierte Programm selbst tun.
+  Dazu pr&uuml;ft der Compiler, ob im BASIC-Programm Anweisungen
+  zum Setzen der Farbe vorkommen.
+  Wenn ja, werden Textausgaben auf dem Bildschirm nicht &uuml;ber
+  die entsprechende Systemfunktion get&auml;tigt,
+  sondern &uuml;ber eine im compilierten Programm enthaltene
+  eigene Bildschirmansteuerung, die dann eben auch den Farbspeicher bedient.
+  Diese eigene Bildschirmansteuerung unterst&uuml;tzt nicht
+  alle Steuercodes der Systemroutine, sondern nur die wichtigsten:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Steuercode</th><th>Bedeutung</th></tr>
+   <tr><td>08h</td><td nowrap="nowrap">Cursor links</td></tr>
+   <tr><td>09h</td><td nowrap="nowrap">Cursor rechts</td></tr>
+   <tr><td>0Ah</td><td nowrap="nowrap">Cursor runter</td></tr>
+   <tr><td>0Bh</td><td nowrap="nowrap">Cursor hoch</td></tr>
+   <tr><td>0Ch</td><td nowrap="nowrap">Bildschirm l&ouml;schen</td></tr>
+   <tr>
+    <td>0Dh</td>
+    <td nowrap="nowrap">Cursor an den Anfang der n&auml;chsten Zeile</td>
+   </tr>
+  </table>
+ <br/>
+  Andere Steuercodes, insbesondere die von der Systemroutine
+  her bekannten Escape-Sequenzen, werden nicht unterst&uuml;tzt.
+ <br/><br/>
+  Die eigene Bildschirmansteuerung benutzt zur Cursor-Positionierung
+  die gleichen Systemzellen wie die SCCH-Monitorprogramme,
+  n&auml;mlich 1800h/1801h f&uuml;r die Cursor-Adresse
+  und 1846h f&uuml;r das Zeichen unter dem Cursor.
+  Damit ist sichergestellt, dass bei Programmstart und -ende der Cursor
+  nicht springt.
+ <br/><br/>
+  Wenn im BASIC-Programm keine Anweisungen zum Setzen der Farbe vorkommen,
+  enth&auml;lt das compilierte Programm auch keine Funktionen
+  zum Beschreiben des Farbspeichers.
+  In dem Fall beschreiben die Grafikfunktionen
+  (simulierte Vollgrafik, siehe weiter unten) nur den Bildwiederholspeicher,
+  und f&uuml;r Textausgaben wird die Systemfunktion des Monitorprogramms
+  benutzt.
+ <br/><br/>
+  Im <tt>SCREEN&nbsp;0</tt> wird eine Vollgrafik mit 128x64 Pixel simuliert,
+  die mit den Grafikfunktionen angesprochen werden kann.
+  Voraussetzung daf&uuml;r ist, dass im Zeichengenerator
+  im Bereich 00h bis 0Fh die entsprechenden Grafikzeichen vorhanden sind.
+  Das ist beim ACC-, SCCH- und AC1-2010-Zeichensatz der Fall.
+ <br/><br/>
+  Bei der simulierten Vollgrafik wird jede Zeichenposition auf dem Bildschirm
+  in vier Grafikpixel aufgeteilt.
+  Da ein Zeichen 8x6&nbsp;Bildschimpixel hat,
+  ist ein simuliertes Grafikpixel 4x3&nbsp;Bildschirmpixel
+  gro&szlig;, d.h., ein Grafikpixel ist nicht quadratisch.
+  Dadurch sehen auf dem Bildschirm gemalte Kreise wie Ellipsen
+  und Quadrate wie Rechtecke aus.
+ <br/><br/>
+  Der erzeugte Programmcode ist auch auf einem AC1
+  mit Monitorprogramm&nbsp;3.1 lauff&auml;hig,
+  wenn ein 2&nbsp;KByte gro&szlig;en Bildwiederholspeicher vorhanden ist
+  (64x32&nbsp;Zeichen) und auf Druckerausgaben sowie die JOYST-Funktion
+  verzichtet wird.
+ <br/><br/>
+  Eigenschaften des Zielsystems im Detail:
+ <br/>
+  <ul>
+   <li>
+    Es wird ein einstelliger Applikationsname unterst&uuml;tzt,
+    d.h., wenn im Namensfeld nur ein Zeichen steht,
+    wird ein entsprechender Kommandorahmen erzeugt,
+    und das compilierte Programm kann &uuml;ber dieses Zeichen
+    aufgerufen werden.
+   </li>
+   <li>
+    Es wird im <tt>SCREEN&nbsp;0</tt> eine Vollgrafik
+    mit 128x64&nbsp;Pixel simuliert,
+    die mit den Grafikbefehlen angesprochen werden kann.
+   </li>
+   <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
+   <li>
+    Die PAUSE-Anweisung ist auf die Standard-Taktfrequenz des AC1
+    (2&nbsp;MHz) abgestimmt.
+   </li>
+   <li>
+    Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
+    die Systemfunktion auf Adresse&nbsp;0EB4h auf.
+   </li>
+   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
+   <li>
+    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
+   </li>
+   <li><tt>TARGETID$</tt> liefert "AC1".</li>
+  </ul>
+ <br/>
 
  <h3><a name="cpm">CP/M-kompatibel</a></h3>
   <ul>
@@ -44,11 +160,11 @@
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
    </li>
-   <li>TARGET_ID$ liefert "CP/M"</li>
+   <li><tt>TARGETID$</tt> liefert "CP/M".</li>
   </ul>
  <br/>
 
- <h3><a name="hgmc">H&uuml;bler-Grafik-MC</a></h3>
+ <h3><a name="huebler">H&uuml;bler-Grafik-MC</a></h3>
   <ul>
    <li>
     Die Grafikanweisungen greifen direkt auf den Bildwiederholspeicher zu.
@@ -59,7 +175,7 @@
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
    </li>
-   <li>TARGET_ID$ liefert "HUEBLER"</li>
+   <li><tt>TARGETID$</tt> liefert "HUEBLER".</li>
   </ul>
  <br/>
   <b>Achtung!</b> F&uuml;r den H&uuml;bler-Grafik-MC compilierte Programme
@@ -101,7 +217,7 @@
     hineinlaufen w&uuml;rde.
     Compilieren Sie immer mit der Option <em>Eigener Stack-Bereich</em>.
    </li>
-   <li>TARGET_ID$ liefert "KRAMER"</li>
+   <li><tt>TARGETID$</tt> liefert "KRAMER".</li>
   </ul>
  <br/>
 
@@ -137,9 +253,12 @@
    </li>
    <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
-    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
+    Ein VDIP-Modul wird an den E/A-Basisadressen&nbsp;DCh und FCh
+    unterst&uuml;tzt, d.h., es wird zuerst versucht,
+    das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
+    Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh an der Reihe.
    </li>
-   <li>TARGET_ID$ liefert "LLC2_HIRES"</li>
+   <li><tt>TARGETID$</tt> liefert "LLC2_HIRES".</li>
   </ul>
  <br/>
 
@@ -162,7 +281,7 @@
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;DCh unterst&uuml;tzt.
    </li>
-   <li>TARGET_ID$ liefert "Z9001"</li>
+   <li><tt>TARGETID$</tt> liefert "Z9001".</li>
   </ul>
  <br/>
 
@@ -184,7 +303,7 @@
     Bez&uuml;glich Farbunterst&uuml;tzung, KCNet und VDIP gilt das gleiche
     wie beim Zielsystem <em>KC85/1, KC87, Z9001</em>.
    </li>
-   <li>TARGET_ID$ liefert "Z9001_KRT"</li>
+   <li><tt>TARGETID$</tt> liefert "Z9001_KRT".</li>
   </ul>
  <br/>
 
@@ -235,7 +354,7 @@
     d.h., es kann, muss aber nicht vor dem Programmstart schon aktiv sein.
     Allerdings muss KCNet beim Programmstart konfiguriert sein.
    </li>
-   <li>TARGET_ID$ liefert "KC85"</li>
+   <li><tt>TARGETID$</tt> liefert "KC85".</li>
   </ul>
  <br/>
 
@@ -254,8 +373,6 @@
     und das compilierte Programm kann &uuml;ber dieses Zeichen
     aufgerufen werden.
    </li>
-   <li>
-    Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
    <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
    <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>
@@ -266,20 +383,23 @@
    </li>
    <li>
     Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
-    die Systemfunktion auf Adresse&nbsp;0EB4h auf,
+    die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
    <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
-    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
+    Ein VDIP-Modul wird an den E/A-Basisadressen&nbsp;DCh und FCh
+    unterst&uuml;tzt, d.h., es wird zuerst versucht,
+    das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
+    Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh an der Reihe.
    </li>
-   <li>TARGET_ID$ liefert "SCCH"</li>
+   <li><tt>TARGETID$</tt> liefert "SCCH".</li>
   </ul>
  <br/>
 
  <h3><a name="z1013">Z1013</a></h3>
   <ul>
    <li>
-    Es wird im SCREEN&nbsp;0 eine Vollgrafik mit 64x64&nbsp;Pixel
+    Es wird im <tt>SCREEN&nbsp;0</tt> eine Vollgrafik mit 64x64&nbsp;Pixel
     simuliert, die mit den Grafikbefehlen angesprochen werden kann.
    </li>
    <li>
@@ -308,8 +428,143 @@
     das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
     Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh an der Reihe.
    </li>
-   <li>TARGET_ID$ liefert "Z1013"</li>
+   <li><tt>TARGETID$</tt> liefert "Z1013".</li>
   </ul>
+ <br/>
+
+ <h3><a name="z1013_64x16">Z1013 mit Peters-Platine</a></h3>
+  Dieses Zielsystem ist eine Erweiterung vom Zielsystem <em>Z1013</em>.
+  Der einzige Unterschied besteht darin,
+  dass es zus&auml;tzlich den <tt>SCREEN&nbsp;1</tt> gibt,
+  im dem der 64x16-Zeichen-Modus der Peters-Platine zur Verf&uuml;gung steht.
+  Da die Z1013-Monitorprogramme dieses Bildschirmformat
+  nicht unterst&uuml;tzen,
+  erfolgt im <tt>SCREEN&nbsp;1</tt> die Bildschirmausgabe &uuml;ber
+  eine eigene, im compilierten Programm enthaltene Bildschirmansteuerung.
+  Diese unterst&uuml;tzt die gleichen Steuercodes und verwendet auch
+  die gleichen Systemzellen wie die originale Routine im Monitorprogramm.
+ <br/><br/>
+  Eigenschaften des Zielsystems im Detail:
+ <br/>
+  <ul>
+   <li>
+    <tt>SCREEN&nbsp;1</tt> ist ein reiner Textbildschirm mit 64x16 Zeichen.
+   </li>
+   <li><tt>TARGETID$</tt> liefert "Z1013_64X16".</li>
+   <li>Alles andere gilt entsprechend dem Zielsystem <em>Z1013</em>.</li>
+  </ul>
+ <br/>
+
+ <h3><a name="summary">Zusammenfassung</a></h3>
+  Die Tabelle zeigt anhand der mit
+  <a href="functions.htm#targetid$"><tt>TARGETID$</tt></a>
+  gelieferten Kennung alle Zielsysteme und fasst die wesentlichsten
+  Eigenschaften zusammen:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Zielsystem (TARGETID$)</th>
+    <th>Programm ist auff&auml;hig auf</th>
+    <th>Text</th>
+    <th>Grafik</th>
+    <th>Farbe</th>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#ac1">AC1</a></t>
+    <td valign="top">
+     AC1-2010, AC1-SCCH,<br/>
+     mit Einschr&auml;nkungen auch AC1-ACC
+    </td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x32 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 128x64 Pixel</td>
+    <td valign="top">ja&nbsp;&sup1;)</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#cpm">CP/M</a></t>
+    <td valign="top">
+     CP/M-kompatible Systeme mit den von Robotron
+     verwendeten Bildschirmsteuerzeichen
+     (CP/A, CP/L, HR-DOS, HR-CP/M, MicroDOS, ML-DOS)
+    </td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0</td>
+    <td valign="top">-</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#huebler">HUEBLER</a></t>
+    <td valign="top">
+     H&uuml;bler-Grafik-MC,<br/>
+     mit Einschr&auml;nkungen auch H&uuml;bler/Evert-MC
+    </td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 32x32 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 256x256 Pixel</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#kramer">KRAMER</a></t>
+    <td valign="top">Kramer-MC</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x16 Zeichen</td>
+    <td valign="top">-</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#llc2">LLC2_HIRES</a></t>
+    <td valign="top">LLC2 mit HiRes-Grafik</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x32 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;1: 512x256 Pixel</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#kc85">KC85</a></t>
+    <td valign="top">HC900, KC85/2..5</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 40x32 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 320x256 Pixel</td>
+    <td valign="top">ja</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#scch">SCCH</a></t>
+    <td valign="top">
+     AC1-2010, AC1-SCCH, LLC2<br/>
+     mit Einschr&auml;nkungen auch Ur-AC1 und AC1-ACC
+    </td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x32 Zeichen</td>
+    <td valign="top">-</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#z1013">Z1013</a></t>
+    <td valign="top">Z1013</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 32x32 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x64 Pixel</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#z1013_64x16">Z1013_64X16</a></t>
+    <td valign="top">Z1013 mit Peters-Platine</td>
+    <td valign="top" nowrap="nowrap">
+     SCREEN&nbsp;0: 32x32 Zeichen<br/>
+     SCREEN&nbsp;1: 64x16 Zeichen
+    </td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x64 Pixel</td>
+    <td valign="top">nein</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#z9001">Z9001</a></t>
+    <td valign="top">KC85/1, KC87, Z9001</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 40x24 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 80x48 Pixel</td>
+    <td valign="top">ja&nbsp;&sup1)</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#z9001krt">Z9001_KRT</a></t>
+    <td valign="top">KC85/1, KC87, Z9001 mit KRT-Grafik</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 40x24 Zeichen</td>
+    <td valign="top" nowrap="nowrap">SCREEN&nbsp;1: 320x192 Pixel</td>
+    <td valign="top">ja&nbsp;&sup1)</td>
+   </tr>
+  </table>
+ <br/>
+  &sup1;) lauff&auml;hig auch auf einem Rechner ohne Farbgrafikkarte
  <br/>
 </body>
 </html>

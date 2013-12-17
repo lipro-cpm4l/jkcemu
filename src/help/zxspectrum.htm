@@ -1,0 +1,144 @@
+<html>
+<body>
+ <h1>Hinweise zur Emulation des ZX&nbsp;Spectrum</h1>
+  F&uuml;r den Sinclair ZX&nbsp;Spectrum gab es in der DDR mehrere
+  Nachbauprojekte, z.B. KUB64, Spectral, ZX-HFO und ZX-Jena.
+  Insbesondere der von der Erfurter Firma H&uuml;bner Elektronik
+  entwickelte Spectral erreichte eine gr&ouml;&szlig;ere Verbreitung,
+  u.a. weil er vollst&auml;ndig zu einem ZX&nbsp;Spectrum&nbsp;48K
+  kompatibel ist und auch zu einem ZX&nbsp;Spectrum&nbsp;128K
+  erweitert werden konnte.
+ <br/><br/>
+
+ <h2>1. Emulierte Hardware</h2>
+  Emuliert wird ein ZX Spectrum mit 48&nbsp;KByte RAM,
+  Lautsprecher- und Kassettenrecorderanschluss
+  sowie dem Kempston Joystick Interface.
+ <br/><br/>
+
+ <h2>1.1. Tastatur</h2>
+  Beim ZX&nbsp;Spectrum sind die Tasten mehrfach benutzt.
+  Dem entsprechend gibt es auch in der Emulation mehrere Eingabemodi:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Zeichen/Text auf der originalen Tastatur</th>
+    <th>Zu dr&uuml;ckende Taste(n) auf der Tastaur des Emulatorrechners</th>
+   </tr>
+   <tr>
+    <td valign="top">Gro&szlig;es wei&szlig;es Zeichen auf der Taste</td>
+    <td valign="top">Gleich bezeichnete Buchstabentaste</td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Kleiner wei&szlig;er Text auf der Taste (BASIC-Kommando)
+    </td>
+    <td valign="top">
+     Gleich bezeichnete Buchstabentaste (nur beim K-Cursor relevant)
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">Roter Text auf der Taste</td>
+    <td valign="top">
+     Wenn das Zeichen auf der Emulatortastatur vorhanden ist,
+     dann dieses eingeben,<br/>
+     sonst <em>Strg</em> + gleich bezeichnete Buchstabentaste</td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Wei&szlig;er Text &uuml;ber der Taste (nur erste Tastenreihe)
+    </td>
+    <td valign="top">
+     <em>F1</em> bis <em>F4</em>, <em>F9</em>, <em>Entf (Del)</em>
+     oder Cursor-Tasten
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Gr&uuml;ner Text &uuml;ber der Taste (ab zweiter Tastenreihe)
+    </td>
+    <td valign="top">
+     Zuerst <em>Strg / CTRL</em> + <em>Shift</em>,
+     danach nur die gleich bezeichnete Buchstabentaste
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">Roter Text unter der Taste</td>
+    <td valign="top">
+     Zuerst <em>Strg / CTRL</em> + <em>Shift</em>,
+     danach <em>Strg</em> + gleich bezeichnete Buchstabentaste
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Beim gleichzeitigen Dr&uuml;cken von <em>Strg</em> bzw. <em>CTRL</em>
+  und <em>Shift</em> wird das gleichzeitige Dr&uuml;cken von
+  <em>CAPS&nbsp;SHIFT</em> und <em>SYMBOL&nbsp;SHIFT</em> emuliert,
+  woraufhin &uuml;blicherweise der E-Cursor erscheint.
+ <br/><br/>
+  Die beiden Tasten <em>CAPS&nbsp;SHIFT</em> und <em>SYMBOL&nbsp;SHIFT</em>
+  k&ouml;nnen auch einzeln mit den Funktionstasten <em>F5</em>
+  und <em>F6</em> bet&auml;tigt werden.
+ <br/><br/>
+  Zus&auml;tzlich zu den o.a. Eingabemodi k&ouml;nnen einige
+  Symbole/Funktionen auch einfacher eingegeben werden:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Text/Symbol auf der originalen Tastatur</th>
+    <th>Zu dr&uuml;ckende Taste(n) auf der Tastaur des Emulatorrechners</th>
+   </tr>
+   <tr>
+    <td valign="top">&larr;</td>
+    <td valign="top">Cursor&nbsp;links</td>
+   </tr>
+   <tr>
+    <td valign="top">&darr;</td>
+    <td valign="top">Cursor&nbsp;runter</td>
+   </tr>
+   <tr>
+    <td valign="top">&uarr;</td>
+    <td valign="top">Cursor&nbsp;rauf</td>
+   </tr>
+   <tr>
+    <td valign="top">&rarr;</td>
+    <td valign="top">Cursor&nbsp;rechts</td>
+   </tr>
+   <tr><td valign="top">EDIT</td><td valign="top"><em>F1</em></td></tr>
+   <tr>
+    <td valign="top">CAPS&nbsp;LOCK</td>
+    <td valign="top"><em>F2</em></td>
+   </tr>
+   <tr>
+    <td valign="top">TRUE&nbsp;VIDEO</td>
+    <td valign="top"><em>F3</em></td>
+   </tr>
+   <tr>
+    <td valign="top">INV.&nbsp;VIDEO</td>
+    <td valign="top"><em>F4</em></td>
+   </tr>
+   <tr>
+    <td valign="top">CAPS&nbsp;SHIFT</td>
+    <td valign="top">
+     <em>F5</em> (wenn CAPS&nbsp;SHIFT als einzelne Taste
+     gedr&uuml;ckt werden soll),<br/>
+     sonst <em>Shift</em> + ...
+     </td>
+   </tr>
+   <tr>
+    <td valign="top">SYMBOL&nbsp;SHIFT</td>
+    <td valign="top">
+     <em>F6</em> (wenn SYMBOL&nbsp;SHIFT als einzelne Taste
+     gedr&uuml;ckt werden soll),<br/>
+     sonst <em>Strg / CTRL</em> + ...
+    </td>
+   </tr>
+   <tr><td valign="top">GRAPHICS</td><td valign="top"><em>F9</em></td></tr>
+   <tr>
+    <td valign="top">DELETE</td>
+    <td valign="top"><em>Entf / Del</em></td>
+   </tr>
+  </table>
+</body>
+</html>
+

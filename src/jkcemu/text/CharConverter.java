@@ -1,12 +1,12 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Umwandler fuer Zeichensaetze
  */
 
-package jkcemu.base;
+package jkcemu.text;
 
 import java.lang.*;
 import jkcemu.Main;

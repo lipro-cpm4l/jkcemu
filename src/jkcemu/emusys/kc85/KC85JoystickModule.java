@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -83,10 +83,10 @@ public abstract class KC85JoystickModule
 	/* --- Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
     buf.append( "<h2>PIO (IO-Adressen 90-93)</h2>\n" );
-    this.pio.appendStatusHTMLTo( buf );
+    this.pio.appendInterruptStatusHTMLTo( buf );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,7 +18,7 @@ public class KC85ROM8KModule extends AbstractKC85Module
   private static Map<String,byte[]> map = new HashMap<String,byte[]>();
 
   private String moduleName;
-  private int    baseAddr;
+  private int    begAddr;
   private byte[] rom;
 
 
@@ -29,7 +29,7 @@ public class KC85ROM8KModule extends AbstractKC85Module
 		byte[]    rom )
   {
     super( slot );
-    this.baseAddr   = 0;
+    this.begAddr    = 0;
     this.moduleName = moduleName;
     this.rom        = rom;
   }
@@ -42,8 +42,9 @@ public class KC85ROM8KModule extends AbstractKC85Module
 		String    resource )
   {
     super( slot );
-    this.baseAddr = 0;
-    this.rom      = map.get( resource );
+    this.begAddr    = 0;
+    this.moduleName = moduleName;
+    this.rom        = map.get( resource );
     if( this.rom == null ) {
       this.rom = EmuUtil.readResource( emuThread.getScreenFrm(), resource );
       map.put( resource, this.rom );
@@ -58,6 +59,13 @@ public class KC85ROM8KModule extends AbstractKC85Module
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
 
   @Override
   public String getModuleName()
@@ -78,11 +86,11 @@ public class KC85ROM8KModule extends AbstractKC85Module
   {
     int rv = -1;
     if( this.enabled
-	&& (addr >= this.baseAddr)
-	&& (addr < (this.baseAddr + 0x2000))
+	&& (addr >= this.begAddr)
+	&& (addr < (this.begAddr + 0x2000))
 	&& (this.rom != null) )
     {
-      int idx = addr - this.baseAddr;
+      int idx = addr - this.begAddr;
       if( idx < this.rom.length ) {
 	rv = (int) this.rom[ idx ] & 0xFF;
       }
@@ -95,7 +103,6 @@ public class KC85ROM8KModule extends AbstractKC85Module
   public void setStatus( int value )
   {
     super.setStatus( value );
-    this.baseAddr = (value << 8) & 0xE000;
+    this.begAddr = (value << 8) & 0xE000;
   }
 }
-
