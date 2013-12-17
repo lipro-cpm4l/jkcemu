@@ -1340,9 +1340,12 @@ public class KCNetLibrary
 		+ "\tCALL\tKCNET_SOCK_CHECK_STATUS\n"
 		+ "\tRET\tC\n"
 		+ "\tCP\t17H\n"			// SOCK_ESTABLISHED
-		+ "\tRET\tNZ\n"
+		+ "\tRET\tNZ\n" );
+	libItems.add( BasicLibrary.LibItem.KCNET_FLUSH1 );
+      }
+      if( libItems.contains( BasicLibrary.LibItem.KCNET_FLUSH1 ) ) {
 	// Pruefen, ob ueberhaupt Bytes zu senden sind
-		+ "KCNET_FLUSH1:\n"
+	buf.append( "KCNET_FLUSH1:\n"
 		+ "\tLD\tL,24H\n"		// Sn_TX_WR
 		+ "\tCALL\tKCNET_SOCK_GET_WORD\n"
 		+ "\tPUSH\tHL\n" );

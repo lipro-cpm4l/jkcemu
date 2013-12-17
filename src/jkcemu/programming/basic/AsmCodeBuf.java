@@ -272,6 +272,12 @@ public class AsmCodeBuf
   }
 
 
+  public void delete( int begPos, int endPos )
+  {
+    this.buf.delete( begPos, endPos );
+  }
+
+
   public int getLastLinePos()
   {
     int rv  = 0;

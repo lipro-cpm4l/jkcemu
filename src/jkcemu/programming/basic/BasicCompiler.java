@@ -51,13 +51,13 @@ public class BasicCompiler
 	"E_MTU_EXCEEDED", "E_NO_DISK", "E_OK", "E_OVERFLOW",
 	"E_READY_ONLY", "E_SOCKET_STATUS", "E_TIMEOUT", "E_UNKNOWN_HOST",
 	"FALSE", "FLUSH", "FOR", "FUNCTION",
-	"GATEWAY", "GATEWAY$", "GOSUB", "GOTO", "GREEN",
-	"HEX$", "HOSTBYNAME$", "H_CHAR", "H_PIXEL",
+	"GATEWAY", "GATEWAY$", "GOSUB", "GOTO", "GRAPHICSCREEN", "GREEN",
+	"HEX$", "HIBYTE", "HOSTBYNAME$", "H_CHAR", "H_PIXEL",
 	"IF", "IN", "INCLUDE", "INK", "INKEY$",
 	"INP", "INPUT", "INPUT$", "INSTR",
 	"JOYST",
-	"LABEL", "LASTSCREEN", "LEFT$", "LEN", "LET", "LINE",
-	"LOCAL", "LOCALADDR", "LOCALADDR$", "LOCALPORT",
+	"LABEL", "LASTSCREEN", "LCASE$", "LEFT$", "LEN", "LET", "LINE",
+	"LOBYTE", "LOCAL", "LOCALADDR", "LOCALADDR$", "LOCALPORT",
 	"LOCATE", "LOOP", "LOWER$",
 	"LPRINT", "LTRIM$",
 	"MACADDR$", "MAGENTA", "MAX", "MEMSTR$", "MID$", "MIN", "MIRROR$",
@@ -73,7 +73,7 @@ public class BasicCompiler
 	"SQR", "STEP", "STOP", "STR$", "STRING$", "SUB",
 	"TARGETADDR", "TARGETID$", "TEXT", "THEN", "TO", "TOP",
 	"TRIM$", "TRUE",
-	"UNTIL", "UPPER$", "USING", "USR",
+	"UCASE$", "UNTIL", "UPPER$", "USING", "USR",
 	"USR0", "USR1", "USR2", "USR3", "USR4",
 	"USR5", "USR6", "USR7", "USR8", "USR9",
 	"VAL", "VDIP",
@@ -177,7 +177,7 @@ public class BasicCompiler
 		+ "\n" );
       }
       this.asmOut.append( "\tORG\t" );
-      this.asmOut.appendHex4( this.options.getBegAddr() );
+      this.asmOut.appendHex4( this.options.getCodeBegAddr() );
       this.asmOut.newLine();
       this.target.appendProlog(
 			this,
@@ -950,10 +950,12 @@ public class BasicCompiler
 	 * Zeilennummer ggf. im Programm vermerken,
 	 * aber nur, wenn dieser Code auch durchlaufen wuerde
 	 */
+	int begLineDebugDestPos = -1;
 	if( !this.suppressExit ) {
 	  if( this.options.getPrintLineNumOnAbort()
 	      && (this.curSourceLineNum < MAX_VALUE) )
 	  {
+	    begLineDebugDestPos = this.asmOut.length();
 	    this.asmOut.append_LD_HL_nn( this.curSourceLineNum );
 	    this.asmOut.append( "\tLD\t(M_SRLN),HL\n" );
 	    if( (this.curBasicLineNum >= 0)
@@ -967,7 +969,7 @@ public class BasicCompiler
 
 	// Anweisungen
 	int destInstPos = this.asmOut.length();
-	parseInstructions( iter );
+	parseInstructions( iter, begLineDebugDestPos );
 	if( this.gcRequired ) {
 	  this.gcRequired = false;
 	  this.asmOut.append( "\tCALL\tMRGC\n" );
@@ -1037,12 +1039,14 @@ public class BasicCompiler
   }
 
 
-  private void parseInstructions( CharacterIterator iter ) throws PrgException
+  private void parseInstructions(
+		CharacterIterator iter,
+		int               begLineDebugDestPos ) throws PrgException
   {
     if( skipSpaces( iter ) != CharacterIterator.DONE ) {
       for(;;) {
 	this.separatorChecked = false;
-	parseInstruction( iter );
+	parseInstruction( iter, begLineDebugDestPos );
 	char ch = skipSpaces( iter );
 	if( ch == CharacterIterator.DONE ) {
 	  break;
@@ -1053,12 +1057,15 @@ public class BasicCompiler
 	  }
 	  iter.next();
 	}
+	begLineDebugDestPos = -1;
       }
     }
   }
 
 
-  private void parseInstruction( CharacterIterator iter ) throws PrgException
+  private void parseInstruction(
+		CharacterIterator iter,
+		int               begLineDebugDestPos ) throws PrgException
   {
     this.tmpStrBufUsed = false;
 
@@ -1080,6 +1087,12 @@ public class BasicCompiler
 	done = true;
 	if( name.equals( "ASM" ) ) {
 	  checkCreateStackFrame();
+	  if( (begLineDebugDestPos >= 0)
+	      && (begLineDebugDestPos < this.asmOut.length()) )
+	  {
+	    this.asmOut.setLength( begLineDebugDestPos );
+	    begLineDebugDestPos = -1;
+	  }
 	  parseASM( iter, false );
 	} else if( name.equals( "DECLARE" ) ) {
 	  parseDECLARE( iter );
@@ -2154,59 +2167,125 @@ public class BasicCompiler
 
   private void parseINPUT( CharacterIterator iter ) throws PrgException
   {
-    do {
-      String retryLabel = nextLabel();
-      this.asmOut.append( retryLabel );
-      this.asmOut.append( ":\n" );
-
-      // Prompt
-      String text = checkStringLiteral( iter );
-      if( text != null ) {
-	// String-Literal evtl. bereits vorhanden?
-	String label = this.str2Label.get( text );
-	if( label != null ) {
-	  this.asmOut.append( "\tLD\tHL," );
-	  this.asmOut.append( label );
-	  this.asmOut.append( "\n"
-		+ "\tCALL\tXOUTS\n" );
-	  addLibItem( BasicLibrary.LibItem.XOUTS );
-	} else {
-	  this.asmOut.append( "\tCALL\tXOUTST\n" );
-	  this.asmOut.appendStringLiteral( text );
-	  addLibItem( BasicLibrary.LibItem.XOUTST );
-	}
-	checkToken( iter, ';' );
-      } else {
-	this.asmOut.append_LD_A_n( '?' );
-	this.asmOut.append( "\tCALL\tXOUTCH\n" );
-	addLibItem( BasicLibrary.LibItem.XOUTCH );
-      }
-
-      // Variable
-      SimpleVarInfo varInfo = checkVariable( iter );
-      if( varInfo == null ) {
-	if( text != null ) {
+    if( checkToken( iter, '#' ) ) {
+      parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
+      int begPos_M_IOCA = this.asmOut.length();
+      this.asmOut.append( "\tLD\t(M_IOCA),HL\n" );
+      int endPos_M_IOCA = this.asmOut.length();
+      parseToken( iter, ',' );
+      boolean firstIntVar = true;
+      boolean multiVars   = false;
+      for(;;) {
+	this.asmOut.append( "\tLD\tC,2CH\n"		// Komma als Trennzeichen
+			+ "\tCALL\tIOINL\n" );
+	addLibItem( BasicLibrary.LibItem.IOINL );
+	int           pos     = this.asmOut.length();
+	SimpleVarInfo varInfo = checkVariable( iter );
+	if( varInfo == null ) {
 	  throwVarExpected();
 	}
-	throwStringLitOrVarExpected();
-      }
-      if( varInfo.getDataType() == DataType.INTEGER ) {
 	varInfo.ensureAddrInHL( this.asmOut );
-	this.asmOut.append( "\tCALL\tINIV\n" );
-	if( this.options.getPreferRelativeJumps() ) {
-	  this.asmOut.append( "\tJR\tC," );
-	} else {
-	  this.asmOut.append( "\tJP\tC," );
+	String oldVarCode = this.asmOut.cut( pos );
+	if( varInfo.getDataType() == DataType.INTEGER ) {
+	  if( firstIntVar ) {
+	    this.asmOut.append( "\tCALL\tF_VLI\n" );
+	    firstIntVar = false;
+	  } else {
+	    this.asmOut.append( "\tCALL\tF_VLI1\n" );
+	  }
+	  if( isSingleInst_LD_HL_xx( oldVarCode ) ) {
+	    this.asmOut.append( "\tEX\tDE,HL\n" );
+	    this.asmOut.append( oldVarCode );
+	  } else {
+	    this.asmOut.append( "\tCALL\tF_VLI\n"
+				+ "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldVarCode );
+	    this.asmOut.append( "\tPOP\tDE\n" );
+	  }
+	  this.asmOut.append( "\tLD\t(HL),E\n"
+				+ "\tINC\tHL\n"
+				+ "\tLD\t(HL),D\n" );
+	  addLibItem( BasicLibrary.LibItem.F_VLI );
+	} else if( varInfo.getDataType() == DataType.STRING ) {
+	  String newVarCode = convertCodeToValueInDE( oldVarCode );
+	  if( newVarCode != null ) {
+	    this.asmOut.append( newVarCode );
+	  } else {
+	    this.asmOut.append( "\tPUSH\tHL\n" );
+	    this.asmOut.append( oldVarCode );
+	    this.asmOut.append( "\tEX\tDE,HL\n"
+				+ "\tPOP\tHL\n" );
+	  }
+	  this.asmOut.append( "\tCALL\tASGSM\n" );
+	  addLibItem( BasicLibrary.LibItem.ASGSM );
 	}
-	this.asmOut.append( retryLabel );
-	this.asmOut.newLine();
-	addLibItem( BasicLibrary.LibItem.INIV );
-      } else if( varInfo.getDataType() == DataType.STRING ) {
-	varInfo.ensureAddrInHL( this.asmOut );
-	this.asmOut.append( "\tCALL\tINSV\n" );
-	addLibItem( BasicLibrary.LibItem.INSV );
+	if( !checkToken( iter, ',' ) ) {
+	  break;
+	}
+	this.asmOut.append( "\tLD\tHL,(M_IOCA)\n" );
+	multiVars = true;
       }
-    } while( checkToken( iter, ';' ) );
+      if( !multiVars ) {
+	this.asmOut.delete( begPos_M_IOCA, endPos_M_IOCA );
+      }
+
+    } else {
+
+      // Eingabe von Tastatur
+      do {
+	String retryLabel = nextLabel();
+	this.asmOut.append( retryLabel );
+	this.asmOut.append( ":\n" );
+
+	// Prompt
+	String text = checkStringLiteral( iter );
+	if( text != null ) {
+	  // String-Literal evtl. bereits vorhanden?
+	  String label = this.str2Label.get( text );
+	  if( label != null ) {
+	    this.asmOut.append( "\tLD\tHL," );
+	    this.asmOut.append( label );
+	    this.asmOut.append( "\n"
+			+ "\tCALL\tXOUTS\n" );
+	    addLibItem( BasicLibrary.LibItem.XOUTS );
+	  } else {
+	    this.asmOut.append( "\tCALL\tXOUTST\n" );
+	    this.asmOut.appendStringLiteral( text );
+	    addLibItem( BasicLibrary.LibItem.XOUTST );
+	  }
+	  checkToken( iter, ';' );
+	} else {
+	  this.asmOut.append_LD_A_n( '?' );
+	  this.asmOut.append( "\tCALL\tXOUTCH\n" );
+	  addLibItem( BasicLibrary.LibItem.XOUTCH );
+	}
+
+	// Variable
+	SimpleVarInfo varInfo = checkVariable( iter );
+	if( varInfo == null ) {
+	  if( text != null ) {
+	    throwVarExpected();
+	  }
+	  throwStringLitOrVarExpected();
+	}
+	if( varInfo.getDataType() == DataType.INTEGER ) {
+	  varInfo.ensureAddrInHL( this.asmOut );
+	  this.asmOut.append( "\tCALL\tINIV\n" );
+	  if( this.options.getPreferRelativeJumps() ) {
+	    this.asmOut.append( "\tJR\tC," );
+	  } else {
+	    this.asmOut.append( "\tJP\tC," );
+	  }
+	  this.asmOut.append( retryLabel );
+	  this.asmOut.newLine();
+	  addLibItem( BasicLibrary.LibItem.INIV );
+	} else if( varInfo.getDataType() == DataType.STRING ) {
+	  varInfo.ensureAddrInHL( this.asmOut );
+	  this.asmOut.append( "\tCALL\tINSV\n" );
+	  addLibItem( BasicLibrary.LibItem.INSV );
+	}
+      } while( checkToken( iter, ';' ) );
+    }
   }
 
 
@@ -3220,6 +3299,14 @@ public class BasicCompiler
   }
 
 
+  private void parseHIBYTE( CharacterIterator iter ) throws PrgException
+  {
+    parseEnclosedExpr( iter );
+    this.asmOut.append( "\tLD\tL,H\n"
+		+ "\tLD\tH,00H\n" );
+  }
+
+
   private void parseIN( CharacterIterator iter ) throws PrgException
   {
     parseToken( iter, '(' );
@@ -3236,10 +3323,35 @@ public class BasicCompiler
 
   private void parseINSTR( CharacterIterator iter ) throws PrgException
   {
+    boolean hasStartPos   = false;
+    Integer startPosValue = null;
+    String  startPosText  = null;
     parseToken( iter, '(' );
     String text = checkStringLiteral( iter );
     if( text == null ) {
-      parseStringPrimExpr( iter );
+      hasStartPos = !checkParseStringPrimExpr( iter );
+    }
+    if( hasStartPos ) {
+      int pos = this.asmOut.length();
+      parseExpr( iter );
+      startPosValue = removeLastCodeIfConstExpr( pos );
+      if( startPosValue != null ) {
+	if( startPosValue.intValue() <= 0 ) {
+	  throwIndexOutOfRange();
+	}
+      } else {
+	String oldCode = this.asmOut.cut( pos );
+	startPosText   = convertCodeToValueInBC( oldCode );
+	if( startPosText == null ) {
+	  this.asmOut.append( oldCode );
+	  this.asmOut.append( "\tPUSH\tHL\n" );
+	}
+      }
+      parseToken( iter, ',' );
+      text = checkStringLiteral( iter );
+      if( text == null ) {
+	parseStringPrimExpr( iter );
+      }
     }
     parseToken( iter, ',' );
     String pattern = checkStringLiteral( iter );
@@ -3266,9 +3378,21 @@ public class BasicCompiler
 	this.asmOut.append( "\tPOP\tHL\n" );
       }
     }
-    this.asmOut.append( "\tCALL\tF_ISTR\n" );
+    if( hasStartPos ) {
+      if( startPosValue != null ) {
+	this.asmOut.append_LD_BC_nn( startPosValue.intValue() );
+      } else if( startPosText != null ) {
+	this.asmOut.append( startPosText );
+      } else {
+	this.asmOut.append( "\tPOP\tBC\n" );
+      }
+      this.asmOut.append( "\tCALL\tF_INSTRN\n" );
+      addLibItem( BasicLibrary.LibItem.F_INSTRN );
+    } else {
+      this.asmOut.append( "\tCALL\tF_INSTR\n" );
+      addLibItem( BasicLibrary.LibItem.F_INSTR );
+    }
     parseToken( iter, ')' );
-    addLibItem( BasicLibrary.LibItem.F_ISTR );
   }
 
 
@@ -3292,6 +3416,13 @@ public class BasicCompiler
       addLibItem( BasicLibrary.LibItem.F_LEN );
     }
     parseToken( iter, ')' );
+  }
+
+
+  private void parseLOBYTE( CharacterIterator iter ) throws PrgException
+  {
+    parseEnclosedExpr( iter );
+    this.asmOut.append( "\tLD\tH,00H\n" );
   }
 
 
@@ -4049,7 +4180,7 @@ public class BasicCompiler
 	  parseStrLEFT( iter );
 	} else if( name.equals( "LOCALADDR$" ) ) {
 	  parseStrLOCALADDR( iter );
-	} else if( name.equals( "LOWER$" ) ) {
+	} else if( name.equals( "LOWER$" ) || name.equals( "LCASE$" ) ) {
 	  parseStrLOWER( iter );
 	} else if( name.equals( "LTRIM$" ) ) {
 	  parseStrLTRIM( iter );
@@ -4079,7 +4210,7 @@ public class BasicCompiler
 	  parseStrTARGETID( iter );
 	} else if( name.equals( "TRIM$" ) ) {
 	  parseStrTRIM( iter );
-	} else if( name.equals( "UPPER$" ) ) {
+	} else if( name.equals( "UPPER$" ) || name.equals( "UCASE$" ) ) {
 	  parseStrUPPER( iter );
 	} else {
 	  CallableEntry entry = this.name2Callable.get( name );
@@ -4706,6 +4837,8 @@ public class BasicCompiler
 	    parseDEEK( iter );
 	  } else if( name.equals( "EOF" ) ) {
 	    parseEOF( iter );
+	  } else if( name.equals( "HIBYTE" ) ) {
+	    parseHIBYTE( iter );
 	  } else if( name.equals( "IN" ) || name.equals( "INP" ) ) {
 	    parseIN( iter );
 	  } else if( name.equals( "INSTR" ) ) {
@@ -4714,6 +4847,8 @@ public class BasicCompiler
 	    parseJOYST( iter );
 	  } else if( name.equals( "LEN" ) ) {
 	    parseLEN( iter );
+	  } else if( name.equals( "LOBYTE" ) ) {
+	    parseLOBYTE( iter );
 	  } else if( name.equals( "LOCALPORT" ) ) {
 	    parseLOCALPORT( iter );
 	  } else if( name.equals( "MAX" ) ) {
@@ -5169,6 +5304,8 @@ public class BasicCompiler
 	  value = BasicLibrary.E_UNKNOWN_HOST;
 	} else if( name.equals( "FALSE" ) ) {
 	  value = 0;
+	} else if( name.equals( "GRAPHICSCREEN" ) ) {
+	  value = this.target.getGraphicScreenNum();
 	} else if( name.equals( "GREEN" ) ) {
 	  value = this.target.getColorGreen();
 	} else if( name.equals( "LASTSCREEN" ) ) {
@@ -5178,7 +5315,7 @@ public class BasicCompiler
 	} else if( name.equals( "RED" ) ) {
 	  value = this.target.getColorRed();
 	} else if( name.equals( "TARGETADDR" ) ) {
-	  value = this.options.getBegAddr();
+	  value = this.options.getCodeBegAddr();
 	} else if( name.equals( "TRUE" ) ) {
 	  value = 0xFFFF;
 	} else if( name.equals( "WHITE" ) ) {
@@ -5909,8 +6046,9 @@ public class BasicCompiler
   private void parseInputLineIO( CharacterIterator iter ) throws PrgException
   {
     parseIOChannelNumToPtrFldAddrInHL( iter, false, null );
-    this.asmOut.append( "\tCALL\tIOINL\n" );
     parseToken( iter, ',' );
+    this.asmOut.append( "\tLD\tC,00H\n"
+			+ "\tCALL\tIOINL\n" );
     int           pos     = this.asmOut.length();
     SimpleVarInfo varInfo = checkVariable( iter );
     if( varInfo == null ) {
@@ -6208,6 +6346,33 @@ public class BasicCompiler
   private void putWarningOutOfRange()
   {
     putWarning( "Wert au\u00DFerhalb des Wertebereiches" );
+  }
+
+
+  /*
+   * Die Methode prueft, ob der uebergebene Text
+   * eine einzelne "LD_HL,..."-Anweisung ist.
+   */
+  private boolean isSingleInst_LD_HL_xx( String instText )
+  {
+    boolean rv = false;
+    if( instText != null ) {
+      int tabPos = instText.indexOf( '\t' );
+      if( tabPos > 0 ) {
+	instText = instText.substring( tabPos );
+      }
+      if( instText.startsWith( "\tLD\tHL," ) ) {
+	int pos = instText.indexOf( '\n' );
+	if( pos >= 0 ) {
+	  if( pos == (instText.length() - 1) ) {
+	    rv = true;
+	  }
+	} else {
+	  rv = true;
+	}
+      }
+    }
+    return rv;
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,7 @@ import jkcemu.emusys.A5105;
 import jkcemu.image.ImgUtil;
 
 
-public class A5105KeyboardFld extends AbstractKeyboardFld
+public class A5105KeyboardFld extends AbstractKeyboardFld<A5105>
 {
   private static final int TEXT_FONT_SIZE   = 9;
   private static final int LETTER_FONT_SIZE = 14;
@@ -29,7 +29,6 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
   private static final int SPACE_KEY_SIZE   = KEY_SIZE * 8;
   private static final int MARGIN           = 20;
 
-  private A5105 a5105;
   private Image imgKey40x40;
   private Image imgKey50x40;
   private Image imgKey60x40;
@@ -58,8 +57,7 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 
   public A5105KeyboardFld( A5105 a5105 )
   {
-    super( 69 );
-    this.a5105        = a5105;
+    super( a5105, 69, true );
     this.imgKey40x40  = getImage( "/images/keyboard/key40x40.png" );
     this.imgKey50x40  = getImage( "/images/keyboard/key50x40.png" );
     this.imgKey60x40  = getImage( "/images/keyboard/key60x40.png" );
@@ -83,10 +81,10 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
     this.curIdx     = 0;
     this.curX       = MARGIN;
     this.curY       = MARGIN;
-    addKey( "PF 1", 7, 0x02 );
+    addKey( "PF 1", null, 7, 0x02, "F1" );
     this.curX += (KEY_SIZE / 2);
     this.xRow1Left = this.curX;
-    addKey( this.imgHome, 8, 0x02 );
+    addKey( this.imgHome, 8, 0x02, "F6 oder Pos1" );
     addKey( "1", "!", 0, 0x02 );
     addKey( "2", "\"", 0, 0x04 );
     addKey( "3", "\\", 0, 0x08 );
@@ -103,11 +101,11 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
     this.xRow1Right = this.curX - 1;
     this.curX += (KEY_SIZE * 3 / 4);
     int xCrsMiddle = this.curX + (LARGE_KEY_SIZE / 2);
-    addLargeKey( "STOP", 7, 0x10 );
+    addLargeKey( "STOP", 7, 0x10, "F7" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "PF 2", 7, 0x01 );
+    addKey( "PF 2", null, 7, 0x01, "F2" );
     this.curX += KEY_SIZE;
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -121,7 +119,8 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 					null,
 					6,
 					0x04,
-					true );
+					true,
+					null );
     this.curX += KEY_SIZE;
     addKey( "Q", 4, 0x40 );
     addKey( "W", 5, 0x10 );
@@ -140,7 +139,7 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "PF 3", 6, 0x80 );
+    addKey( "PF 3", null, 6, 0x80, "F3" );
     this.curX += KEY_SIZE;
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -154,7 +153,8 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 					null,
 					6,
 					0x08,
-					false );
+					false,
+					null );
     this.curX += MEDIUM_KEY_SIZE;
     addKey( "A", 2, 0x40 );
     addKey( "S", 5, 0x01 );
@@ -177,7 +177,7 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "PF 4", 6, 0x40 );
+    addKey( "PF 4", null, 6, 0x40, "F4" );
     this.curX += (KEY_SIZE / 2);
     addKey( "ESC", 6, 0x02 );
 
@@ -193,7 +193,8 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 			this.imgShift,
 			6,
 			0x01,
-			true );
+			true,
+			null );
     this.keys[ this.curIdx++ ] = shiftKey1;
     this.curX += MEDIUM_KEY_SIZE;
     addKey( "Y", 5, 0x40 );
@@ -219,16 +220,31 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 			this.imgShift,
 			6,
 			0x01,
-			true );
+			true,
+			null );
     this.keys[ this.curIdx++ ] = shiftKey2;
     this.curX = xCrsMiddle - (KEY_SIZE / 2);
     addKey( this.imgDown, 8, 0x40 );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "PF 5", 6, 0x20 );
+    addKey( "PF 5", null, 6, 0x20, "F5" );
     this.curX += ((KEY_SIZE / 2) + (2 * KEY_SIZE) - MEDIUM_KEY_SIZE);
-    addKey( "GRAPH", 7, 0x04 );
+    this.keys[ this.curIdx++ ] = new KeyData(
+					this.curX,
+					this.curY,
+					KEY_SIZE,
+					KEY_SIZE,
+					"GRAPH",
+					null,
+					null,
+					null,
+					null,
+					7,
+					0x04,
+					true,
+					null );
+    this.curX += KEY_SIZE;
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
 					this.curY,
@@ -241,26 +257,28 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 					null,
 					6,
 					0x10,
-					true );
+					true,
+					null );
     this.curX += KEY_SIZE;
     this.keys[ this.curIdx++ ] = new KeyData(
-				this.curX,
-				this.curY,
-				8 * KEY_SIZE,
-				KEY_SIZE,
-				null,
-				null,
-				null,
-				null,
-				null,
-				8,
-				0x01,
-				false );
+					this.curX,
+					this.curY,
+					8 * KEY_SIZE,
+					KEY_SIZE,
+					null,
+					null,
+					null,
+					null,
+					null,
+					8,
+					0x01,
+					false,
+					null );
     this.curX += (8 * KEY_SIZE);
-    addKey( "INS\nMODE", 8, 0x04 );
-    addKey( "DEL", 8, 0x08 );
+    addKey( "INS\nMODE", null, 8, 0x04, "Einfg" );
+    addKey( "DEL", null, 8, 0x08, "Entf" );
     this.curX = xCrsMiddle - (LARGE_KEY_SIZE / 2);
-    addLargeKey( "ENTER", 7, 0x80 );
+    addLargeKey( "ENTER", 7, 0x80, null );
 
     int h = this.curY + KEY_SIZE + MARGIN;
     setPreferredSize( new Dimension( w, h ) );
@@ -278,6 +296,13 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 
 
   @Override
+  public boolean getSelectionChangeOnShiftOnly()
+  {
+    return true;
+  }
+
+
+  @Override
   protected void keySelectionChanged()
   {
     Arrays.fill( this.kbMatrix, 0 );
@@ -288,7 +313,7 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.a5105.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -383,11 +408,11 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 	MARGIN + (3 * KEY_SIZE ) );
     int x = this.xRow1Left + (KEY_HALF_SIZE - LED_SIZE) / 2;
     int y = MARGIN + KEY_SIZE + ((KEY_SIZE - LED_SIZE) / 2);
-    g.setColor( this.a5105.getTapeLED() ?
+    g.setColor( this.emuSys.getTapeLED() ?
 				this.colorLEDGreenOn
 				: this.colorLEDGreenOff );
     g.fillOval( x, y, LED_SIZE, LED_SIZE );
-    g.setColor( this.a5105.getCapsLockLED() ?
+    g.setColor( this.emuSys.getCapsLockLED() ?
 				this.colorLEDYellowOn
 				: this.colorLEDYellowOff );
     g.fillOval( x, y + KEY_SIZE, LED_SIZE, LED_SIZE );
@@ -408,7 +433,7 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof A5105 ) {
-      this.a5105 = (A5105) emuSys;
+      this.emuSys = (A5105) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != A5105" );
     }
@@ -418,9 +443,10 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 	/* --- private Methoden --- */
 
   private void addKey(
-		Image image,
-		int   col,
-		int   value )
+		Image  image,
+		int    col,
+		int    value,
+		String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -434,8 +460,15 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 					image,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_SIZE;
+  }
+
+
+  private void addKey( Image image, int col, int value )
+  {
+    addKey( image, col, value, null );
   }
 
 
@@ -443,7 +476,8 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 		String textNormal,
 		String textShift,
 		int    col,
-		int    value )
+		int    value,
+		String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -457,8 +491,19 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 					null,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_SIZE;
+  }
+
+
+  private void addKey(
+		String textNormal,
+		String textShift,
+		int    col,
+		int    value )
+  {
+    addKey( textNormal, textShift, col, value, null );
   }
 
 
@@ -467,14 +512,15 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 		int    col,
 		int    value )
   {
-    addKey( textNormal, null, col, value );
+    addKey( textNormal, null, col, value, null );
   }
 
 
   private void addLargeKey(
 		String textNormal,
 		int    col,
-		int    value )
+		int    value,
+		String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -488,7 +534,8 @@ public class A5105KeyboardFld extends AbstractKeyboardFld
 					null,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += LARGE_KEY_SIZE;
   }
 

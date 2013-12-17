@@ -26,16 +26,22 @@
  <br/><br/>
   Folgende Formate werden unterst&uuml;tzt:
  <br/>
-  <ol>
-   <li><a href="fileformats.htm#headersave">Headersave-Format</a></li>
-   <li><a href="fileformats.htm#kcb">KCB-Format</a></li>
-   <li><a href="fileformats.htm#kcc">KCC-Format</a></li>
-   <li><a href="fileformats.htm#kcbasic">KC-BASIC-Programmdatei</a></li>
-   <li><a href="fileformats.htm#tap">KC-TAP-Format</a></li>
-   <li><a href="fileformats.htm#rbasic">RBASIC-Programmdatei</a></li>
-   <li><a href="fileformats.htm#hex">Intel-HEX-Format</a></li>
-   <li><a href="fileformats.htm#bin">Speicherabbilddatei</a></li>
-  </ol>
+  <ul>
+   <li><a href="fileformats.htm#headersave">1. Headersave-Format</a></li>
+   <li><a href="fileformats.htm#kcb">2. KCB-Format</a></li>
+   <li>
+    <a href="fileformats.htm#kcc">3. KCC-Format</a>
+    <ul>
+     <li><a href="fileformats.htm#kcm">3.1. KCM-Format</a></li>
+     <li><a href="fileformats.htm#jtc">3.2. JTC-Format</a></li>
+    </ul>
+   </li>
+   <li><a href="fileformats.htm#kcbasic">4. KC-BASIC-Programmdatei</a></li>
+   <li><a href="fileformats.htm#tap">5. KC-TAP-Format</a></li>
+   <li><a href="fileformats.htm#rbasic">6. RBASIC-Programmdatei</a></li>
+   <li><a href="fileformats.htm#hex">7. Intel-HEX-Format</a></li>
+   <li><a href="fileformats.htm#bin">8. Speicherabbilddatei</a></li>
+  </ul>
  <br/><br/>
 
 
@@ -336,7 +342,13 @@
   laden will oder umgekehrt.
  <br/><br/>
 
- <h3><a name="jtc">3.1. JTC-Format</a></h3>
+ <h3><a name="kcm">3.1. KCM-Format</a></h3>
+  Das KCM-Format ist identisch zum KCC-Format.
+  Der Unterschied in der Dateiendung soll anzeigen,
+  dass die Datei zwar Maschinencode, aber kein ausf&uuml;hrbares Programm enth&auml;t.
+ <br/><br/>
+
+ <h3><a name="jtc">3.2. JTC-Format</a></h3>
   Der Jugend+Technik-Computer verwendet in der Ausbaustufe mit dem
   erweiterten Betriebssystem <em>EMR-ES 1988</em>
   das Kassettenaufzeichnungsformat der KC-Computer.
@@ -393,7 +405,7 @@
   Das KC-TAP-Format beginnt mit einer 16 Byte gro&szlig;en Kennung,
   an den sich 129 Byte gro&szlig;e Bl&ouml;cke anschlie&szlig;en.
   Jeder Block beginnt mit einer Blocknummer gefolgt von 128 Nutzbytes.
-  Der erste Block ist gew&ouml;hlich der Kopfblock und gibt Auskunft
+  Der erste Block ist gew&ouml;hnlich der Kopfblock und gibt Auskunft
   &uuml;ber die Art und die L&auml;nge der Datei.
  <br/><br/>
   Die Datei hat folgenden Aufbau:

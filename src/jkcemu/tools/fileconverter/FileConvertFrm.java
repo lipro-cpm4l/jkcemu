@@ -208,23 +208,25 @@ public class FileConvertFrm extends BasicFrm implements
 	boolean       done    = false;
 
 	// Sound-Datei pruefen
-	AudioInputStream ais = null;
+	AudioInputStream    aIn = null;
+	BufferedInputStream bIn = null;
 	try {
-	  ais = AudioSystem.getAudioInputStream( file );
-	  if( ais != null ) {
+	  bIn = EmuUtil.openBufferedOptionalGZipFile( file );
+	  aIn = AudioSystem.getAudioInputStream( bIn );
+	  if( aIn != null ) {
 	    infoBuf.append( "Sound-Datei" );
-	    AudioFormat auFmt = ais.getFormat();
-	    if( auFmt != null ) {
+	    AudioFormat aFmt = aIn.getFormat();
+	    if( aFmt != null ) {
 	      infoBuf.append( ", " );
-	      AudioUtil.appendAudioFormatText( infoBuf, auFmt );
+	      AudioUtil.appendAudioFormatText( infoBuf, aFmt );
 	    }
 
 	    /*
 	     * Dateitypen ermitteln, in die konverttiert werden kann,
-	     * den eigenen Typ dabeo ausblenden
+	     * den eigenen Typ dabei ausblenden
 	     */
 	    String[] extensions = AudioUtil.getAudioOutFileExtensions(
-							      ais,
+							      aIn,
 							      fExt );
 	    if( extensions != null ) {
 	      StringBuilder buf = new StringBuilder( 256 );
@@ -242,7 +244,8 @@ public class FileConvertFrm extends BasicFrm implements
 	catch( UnsupportedAudioFileException ex1 ) {}
 	catch( IOException ex2 ) {}
 	finally {
-	  EmuUtil.doClose( ais );
+	  EmuUtil.doClose( aIn );
+	  EmuUtil.doClose( bIn );
 	}
 
 	// Dateiextension pruefen
@@ -725,6 +728,7 @@ public class FileConvertFrm extends BasicFrm implements
 			this,
 			"Quelldatei ausw\u00E4hlen",
 			file,
+			AudioUtil.getAudioInFileFilter(),
 			EmuUtil.getBinaryFileFilter(),
 			EmuUtil.getHeadersaveFileFilter(),
 			EmuUtil.getHexFileFilter(),
@@ -766,8 +770,13 @@ public class FileConvertFrm extends BasicFrm implements
 				target.getFileFilters() );
       if( file != null ) {
 	try {
-	  target.save( file );
+	  String logText = target.save( file );
 	  Main.setLastFile( file, "fileconverter.out" );
+	  if( logText != null ) {
+	    if( !logText.isEmpty() ) {
+	      LogDlg.showDlg( this, logText, "Hinweise" );
+	    }
+	  }
 	}
 	catch( IOException ex ) {
 	  BasicDlg.showErrorDlg( this, ex );

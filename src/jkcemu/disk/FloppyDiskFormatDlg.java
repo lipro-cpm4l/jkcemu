@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,6 +21,7 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 {
   public static enum Flag {
 			READONLY,
+			FULL_FORMAT,
 			PHYS_FORMAT,
 			SYSTEM_TRACKS,
 			BLOCK_SIZE,
@@ -33,21 +34,22 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
   private static boolean lastApplyReadOnly  = false;
   private static boolean lastForceLowerCase = true;
 
-  private boolean          approved;
-  private FloppyDiskFormat selectedFmt;
-  private JComboBox        comboFmt;
-  private JCheckBox        btnReadOnly;
-  private JCheckBox        btnApplyReadOnly;
-  private JCheckBox        btnAutoRefresh;
-  private JCheckBox        btnForceLowerCase;
-  private JSpinner         spinnerSysTracks;
-  private JComboBox        comboBlockSize;
-  private JRadioButton     btnBlockNum8Bit;
-  private JRadioButton     btnBlockNum16Bit;
-  private JSpinner         spinnerDirBlocks;
-  private JLabel           labelDirSizeUnit;
-  private JButton          btnOK;
-  private JButton          btnCancel;
+  private boolean                   approved;
+  private FloppyDiskFormat          selectedFmt;
+  private FloppyDiskFormatSelectFld fmtSelectFld;
+  private JComboBox                 comboFmt;
+  private JCheckBox                 btnReadOnly;
+  private JCheckBox                 btnApplyReadOnly;
+  private JCheckBox                 btnAutoRefresh;
+  private JCheckBox                 btnForceLowerCase;
+  private JSpinner                  spinnerSysTracks;
+  private JComboBox                 comboBlockSize;
+  private JRadioButton              btnBlockNum8Bit;
+  private JRadioButton              btnBlockNum16Bit;
+  private JSpinner                  spinnerDirBlocks;
+  private JLabel                    labelDirSizeUnit;
+  private JButton                   btnOK;
+  private JButton                   btnCancel;
 
 
   public FloppyDiskFormatDlg(
@@ -72,6 +74,16 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 					GridBagConstraints.NONE,
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
+
+    // vollstaendiges Format
+    if( containsFlag( flags, Flag.FULL_FORMAT ) ) {
+      this.fmtSelectFld = new FloppyDiskFormatSelectFld();
+      this.fmtSelectFld.setFormat( preSelFmt );
+      add( this.fmtSelectFld, gbc );
+      gbc.gridy++;
+    } else {
+      this.fmtSelectFld = null;
+    }
 
     // Formatauswahl
     if( containsFlag( flags, Flag.PHYS_FORMAT ) ) {
@@ -328,16 +340,22 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
   public boolean getBlockNum16Bit()
   {
-    return this.btnBlockNum16Bit != null ?
-				this.btnBlockNum16Bit.isSelected()
-				: true;
+    boolean rv = true;
+    if( this.fmtSelectFld != null ) {
+      rv = this.fmtSelectFld.isBlockNum16Bit();
+    } else if( this.btnBlockNum16Bit != null ) {
+      rv = this.btnBlockNum16Bit.isSelected();
+    }
+    return rv;
   }
 
 
   public int getBlockSize()
   {
     int rv = 2048;
-    if( this.comboBlockSize != null ) {
+    if( this.fmtSelectFld != null ) {
+      rv = this.fmtSelectFld.getBlockSize();
+    } else if( this.comboBlockSize != null ) {
       Object o = this.comboBlockSize.getSelectedItem();
       if( o != null ) {
 	if( o instanceof Integer ) {
@@ -351,7 +369,13 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
   public int getDirBlocks()
   {
-    return getIntValue( this.spinnerDirBlocks );
+    int rv = 2;
+    if( this.fmtSelectFld != null ) {
+      rv = this.fmtSelectFld.getDirBlocks();
+    } else if( this.spinnerDirBlocks != null ) {
+      rv = getIntValue( this.spinnerDirBlocks );
+    }
+    return rv;
   }
 
 
@@ -375,9 +399,15 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
   }
 
 
-  public int getSystemTracks()
+  public int getSysTracks()
   {
-    return getIntValue( this.spinnerSysTracks );
+    int rv = 2;
+    if( this.fmtSelectFld != null ) {
+      rv = this.fmtSelectFld.getSysTracks();
+    } else if( this.spinnerSysTracks != null ) {
+      rv = getIntValue( this.spinnerSysTracks );
+    }
+    return rv;
   }
 
 
@@ -390,6 +420,9 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
   public void setBlockSize( int value )
   {
+    if( this.fmtSelectFld != null ) {
+      this.fmtSelectFld.setBlockSize( value );
+    }
     if( this.comboBlockSize != null ) {
       this.comboBlockSize.setSelectedItem( new Integer( value / 1024 ) );
       updDirSizeUnitLabel();
@@ -399,6 +432,9 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
   public void setBlockNum16Bit( boolean state )
   {
+    if( this.fmtSelectFld != null ) {
+      this.fmtSelectFld.setBlockNum16Bit( state );
+    }
     if( state ) {
       if( this.btnBlockNum16Bit != null ) {
 	this.btnBlockNum16Bit.setSelected( true );
@@ -413,6 +449,9 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
   public void setDirBlocks( int value )
   {
+    if( this.fmtSelectFld != null ) {
+      this.fmtSelectFld.setDirBlocks( value );
+    }
     if( this.spinnerDirBlocks != null ) {
       try {
 	this.spinnerDirBlocks.setValue( new Integer( value ) );
@@ -430,8 +469,11 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
   }
 
 
-  public void setSystemTracks( int value )
+  public void setSysTracks( int value )
   {
+    if( this.fmtSelectFld != null ) {
+      this.fmtSelectFld.setSysTracks( value );
+    }
     if( this.spinnerSysTracks != null ) {
       try {
 	this.spinnerSysTracks.setValue( new Integer( value ) );
@@ -468,7 +510,10 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
       if( src != null ) {
 	if( src == this.btnOK ) {
 	  rv = true;
-	  if( this.comboFmt != null ) {
+	  if( this.fmtSelectFld != null ) {
+	    this.selectedFmt = this.fmtSelectFld.getFormat();
+	    this.approved    = true;
+	  } else if( this.comboFmt != null ) {
 	    Object value = this.comboFmt.getSelectedItem();
 	    if( value != null ) {
 	      if( value instanceof FloppyDiskFormat ) {
@@ -593,4 +638,3 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
     }
   }
 }
-

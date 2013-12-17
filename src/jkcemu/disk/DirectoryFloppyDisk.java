@@ -70,7 +70,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   private int                   dirBlocks;
   private int                   dirSectors;
   private int                   maxDirEntries;
-  private int                   sysCyls;
+  private int                   sysTracks;
   private int                   sysSectors;
   private int                   blockSize;
   private boolean               blockNum16Bit;
@@ -87,10 +87,10 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 			int     cyls,
 			int     sectorsPerCyl,
 			int     sectorSize,
-			int     sysCyls,
+			int     sysTracks,
+			int     dirBlocks,
 			int     blockSize,
 			boolean blockNum16Bit,
-			int     dirBlocks,
 			File    dirFile,
 			boolean autoRefresh,
 			boolean readOnly,
@@ -99,8 +99,8 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     super( owner, sides, cyls, sectorsPerCyl, sectorSize );
     this.dirFile         = dirFile;
     this.sysFile         = new File( this.dirFile, SYS_FILE_NAME );
-    this.sysCyls         = sysCyls;
-    this.sysSectors      = sysCyls * sides * sectorsPerCyl;
+    this.sysTracks       = sysTracks;
+    this.sysSectors      = sysTracks * sides * sectorsPerCyl;
     this.blockSize       = blockSize;
     this.blockNum16Bit   = blockNum16Bit;
     this.sectorsPerBlock = blockSize / sectorSize;
@@ -159,13 +159,13 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
       rebuildDisk();
     } else {
       /*
-       * Wenn eine Aktualisierung angefordert wurde
-       * oder AutoRefresh aktiviert, wird beim naechsten lesenden Zugriff
+       * Wenn eine Aktualisierung angefordert wurde oder AutoRefresh
+       * aktiviert ist, wird beim naechsten lesenden Zugriff
        * auf den ersten Sektor der Diskette oder des Directories
        * die virtuelle Diskette neu erzeugt, bei AutoRefresh aber nur,
        * wenn die letzte Aktualisierung mehr als 10 Sekunden zurueckliegt.
        */
-      if( ((physCyl == 0) || (physCyl == this.sysCyls))
+      if( ((physCyl == 0) || (physCyl == this.sysTracks))
 	  && (physHead == 0)
 	  && (sectorIdx == 0) )
       {
@@ -193,7 +193,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
       if( (absSectIdx >= 0) && (absSectIdx < this.sectors.length) ) {
 	rv = this.sectors[ absSectIdx ];
 	if( rv == null ) {
-	  if( physCyl < this.sysCyls ) {
+	  if( physCyl < this.sysTracks ) {
 	    if( this.sysFile.exists() ) {
 
 	      // Systemspuren
@@ -268,9 +268,9 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 
 
   @Override
-  protected int getSystemCylinders()
+  protected int getSysTracks()
   {
-    return this.sysCyls;
+    return this.sysTracks;
   }
 
 
@@ -289,7 +289,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
       props.setProperty( prefix + "directory", this.dirFile.getPath() );
       props.setProperty(
 		prefix + "system_tracks",
-		Integer.toString( this.sysCyls ) );
+		Integer.toString( this.sysTracks ) );
       props.setProperty(
 		prefix + "block_size",
 		Integer.toString( this.blockSize ) );
@@ -673,7 +673,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     }
     Arrays.fill( this.dirBytes, (byte) 0xE5 );
     Arrays.fill( this.sectors, null );
-    this.sysSectors = getSides() * this.sysCyls * getSectorsPerCylinder();
+    this.sysSectors = getSides() * this.sysTracks * getSectorsPerCylinder();
     this.fileMap.clear();
     if( this.errorMap != null ) {
       this.errorMap.clear();

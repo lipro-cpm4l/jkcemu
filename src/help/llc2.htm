@@ -35,6 +35,7 @@
      <li>
       <a href="llc2.htm#basic_save">3.2. Speichern von BASIC-Programmen</a>
      </li>
+     <li><a href="llc2.htm#images">3.2. HIRES-Bilddateien</a></li>
     </ul>
    </li>
   </ul>
@@ -70,16 +71,16 @@
      <li>
       Zwei <a href="ramfloppy.htm">RAM-Floppies</a>
       nach Zeitschrift <em>Mikroprozessortechnik</em>
-      Heft&nbsp;3/1988 an den IO-Basisadressen&nbsp;D0h und&nbsp;B0h
+      Heft&nbsp;3/1988 an den E/A-Basisadressen&nbsp;D0h und&nbsp;B0h
      </li>
      <li><a href="llc2.htm#fdc">Floppy-Disk-Modul</a></li>
      <li>
        <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
-       an der E/A-Basisadressen C0h
+       an der E/A-Basisadresse&nbsp;C0h
       </li>
       <li>
        <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
-       an der E/A-Basisadressen FCh
+       an den E/A-Basisadressen&nbsp;DCh und FCh
       </li>
      <li><a href="llc2.htm#joystick">Joystick</a></li>
      </ul>
@@ -134,8 +135,8 @@
  <h3><a name="scch_mod3">1.3. SCCH-Modul&nbsp;3</a></h3>
   Das SCCH-Modul&nbsp;3 stellt je nach Best&uuml;ckung
   64, 128, 256, 320 oder 512 KByte zus&auml;tzlichen RAM zur Verf&uuml;gung,
-  der &uuml;ber IO-Befehle in den Arbeitsspeicher eingeblendet werden kann.
-  Konkret wird &uuml;ber die Bits 0 bis 3 des IO-Ports&nbsp;EDh
+  der &uuml;ber E/A-Befehle in den Arbeitsspeicher eingeblendet werden kann.
+  Konkret wird &uuml;ber die Bits&nbsp;0 bis 3 des IO-Ports&nbsp;EDh
   einer von 16 m&ouml;glichen 64 KByte gr&ouml;&szlig;en Bl&ouml;cken
   ausgew&auml;hlt, der dann entsprehend der Bits 4 bis 7 des gleichen
   IO-Ports nur lesend, nur schreibend oder lesend und schreibend
@@ -284,8 +285,8 @@
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   <ul>
-   <li>SCCH-Monitor Version 9.1</li>
-   <li>Grafik/Sound-BASIC Version 3.2</li>
+   <li>SCCH-Monitor Version&nbsp;9.1</li>
+   <li>Grafik/Sound-BASIC Version&nbsp;3.2</li>
   </ul>
  <br/>
 
@@ -293,10 +294,10 @@
  <h2><a name="basic">3. BASIC</a></h2>
 
  <h3><a name="gsbasic">3.1. Grafik/Sound-BASIC</a></h3>
-  Der Grafik/Sound-BASIC-Interpreter Version 3.2 liegt
+  Der Grafik/Sound-BASIC-Interpreter Version&nbsp;3.2 liegt
   in einem Hintergrund-ROM im Adressbereich 4000h-5FFFh.
   Standardm&auml;&szlig;ig befindet sich in diesem Adressbereich RAM.
-  &Uuml;ber das Bit 1 des IO-Ports ECh kann der ROM in den Vordergrund
+  &Uuml;ber das Bit 1 des IO-Ports&nbsp;ECh kann der ROM in den Vordergrund
   geholt und somit der BASIC-Interpreter in dem Adressbereich sichtbar
   gemacht werden.
  <br/><br/>
@@ -321,5 +322,66 @@
   BASIC-Interpreters richtig angepasst.
   In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
   aber im Interpreter nicht richtig nutzen.
+ <br/><br/>
+
+ <h3><a name="images">3.3. HIRES-Bilddateien</a></h3>
+  Der <a href="tools/imageviewer.htm">JKCEMU Bildbetrachter</a>
+  unterst&uuml;tzt sowohl lesend als auch schreibend LLC2-HIRES-Bilddateien.
+  Diese Dateien enthalten unver&auml;ndert und ohne zus&auml;tzliche
+  Informationen den Inhalt des HIRES-Pixelpeichers.
+  Zur Anzeige im JKCEMU Bildbetrachter m&uuml;ssen die Dateien die Endung
+  <em>*.pix</em> haben und exakt 16384&nbsp;Bytes gro&szlig; sein.
+  Umgekehrt k&ouml;nnen mit dem Bildbetrachter HIRES-Bilddateien
+  f&uuml;r den LLC2 erzeugt werden,
+  indem man sie einfach mit der Endung <em>*.pix</em> speichert.
+  Zum Laden und Anzeigen dieser Dateien auf dem LLC2 ist
+  ein entsprechendes Programm notwendig.
+  Ein solches Programm ist im JKCEMU nicht enthalten.
+  Sie k&ouml;nnen aber mit dem integrierten
+  <a href="tools/basicc.htm">BASIC-Compiler</a>
+  leicht so ein Programm selbst erstellen.
+  Als Beispiel sei ein Programm gezeigt,
+  dass HIRES-Bilder von einem USB-Speicher l&auml;dt.
+  Dazu muss nat&uuml;rlich ein USB-Modul (VDIP) angeschlossen
+  bzw. im JKCEMU die USB-Emulation aktiviert sein.
+  Das Programm fragt nach dem Namen der zu ladenden Datei.
+  Der Dateiname kann dabei auch ohne die Endung <em>.PIX</em>
+  eingegeben werden.
+ <br/>
+  <tt>
+   &#10;<br/>
+   cls&#10;<br/>
+   print "LLC2-HIRES-Bilder von USB-Speicher laden"&#10;<br/>
+   print&#10;<br/>
+   do&#10;<br/>
+   &nbsp; input "Dateiname (nur Enter -&gt; Ende): ";f$&#10;<br/>
+   &nbsp; f$=trim$(f$)&#10;<br/>
+   &nbsp; if len(f$)=0 then end&#10;<br/>
+   &nbsp; if instr(f$,".")=0 then f$=f$+".PIX"&#10;<br/>
+   &nbsp; open f$ for input as #1&#10;<br/>
+   &nbsp; if err then&#10;<br/>
+   &nbsp; &nbsp; print f$;": ";err$&#10;<br/>
+   &nbsp; else&#10;<br/>
+   &nbsp; &nbsp; screen 1&#10;<br/>
+   &nbsp; &nbsp; a=&amp;h8000&#10;<br/>
+   &nbsp; &nbsp; for i=1 to 16384&#10;<br/>
+   &nbsp; &nbsp; &nbsp; b=asc(input$(1,1))&#10;<br/>
+   &nbsp; &nbsp; &nbsp; if err then exit&#10;<br/>
+   &nbsp; &nbsp; &nbsp; poke a,b&#10;<br/>
+   &nbsp; &nbsp; &nbsp; a=a+1&#10;<br/>
+   &nbsp; &nbsp; next&#10;<br/>
+   &nbsp; &nbsp; if not err then e=asc(input$(1))&#10;<br/>
+   &nbsp; &nbsp; screen 0&#10;<br/>
+   &nbsp; &nbsp; if err then print err$&#10;<br/>
+   &nbsp; &nbsp; close #1&#10;<br/>
+   &nbsp; endif&#10;<br/>
+   loop
+  </tt>
+ <br/><br/>
+  <b>Wichtig!</b> Sie m&uuml;ssen beim Compilieren das Zielsystem
+  <em>LLC2 mit HIRES-Grafik</em> ausw&auml;hlen!
+ <br/>
+  Au&szlig;erdem sollten die Laufzeiteigenschaften in den Compiler-Optionen
+  auf <em>Compilieren f&uuml;r Produktiveinsatz</em> gesetzt werden.
 </body>
 </html>

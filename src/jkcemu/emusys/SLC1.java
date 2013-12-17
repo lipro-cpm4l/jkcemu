@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -165,7 +165,7 @@ public class SLC1 extends EmuSys implements
   @Override
   public AbstractKeyboardFld createKeyboardFld()
   {
-    this.keyboardFld = new SLC1KeyboardFld( this.screenFrm, this );
+    this.keyboardFld = new SLC1KeyboardFld( this );
     return this.keyboardFld;
   }
 

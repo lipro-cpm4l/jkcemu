@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,6 +21,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.etc.*;
 
 
 public class FileChecksumFrm extends BasicFrm

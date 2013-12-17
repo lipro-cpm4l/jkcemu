@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -55,7 +55,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
    */
   public static void open( final String page )
   {
-    SwingUtilities.invokeLater(
+    EventQueue.invokeLater(
 		new Runnable()
 		{
 		  @Override
@@ -73,7 +73,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
   public void hyperlinkUpdate( HyperlinkEvent e )
   {
     if( e.getEventType() == HyperlinkEvent.EventType.ACTIVATED )
-      setUrl( e.getURL(), null );
+      setUrl( true, e.getURL(), null );
   }
 
 
@@ -95,7 +95,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
       }
       else if( (src == this.mnuNavHome) || (src == this.btnHome) ) {
 	rv = true;
-	setUrl( null, null );
+	setUrl( true, null, null );
       }
       else if( src == this.timer ) {
 	rv = true;
@@ -202,7 +202,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
       try {
 	this.urlStack.pop();	// aktuelle Seite vom Stack entfernen
 	URLStackEntry entry = this.urlStack.pop();
-	setUrl( entry.url, entry.viewPos );
+	setUrl( false, entry.url, entry.viewPos );
       }
       catch( EmptyStackException ex ) {}
     }
@@ -242,11 +242,14 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 
   private void setPage( String page )
   {
-    setUrl( page != null ? getClass().getResource( page ) : null, null );
+    setUrl(
+	true,
+	page != null ? getClass().getResource( page ) : null,
+	null );
   }
 
 
-  private void setUrl( URL url, Double viewPos )
+  private void setUrl( boolean saveCurViewPos, URL url, Double viewPos )
   {
     if( url == null ) {
       this.urlStack.clear();
@@ -262,14 +265,15 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
       URLStackEntry topEntry       = null;
       if( this.urlStack.size() > 0 ) {
 	topEntry = this.urlStack.peek();
-	if( topEntry.url.equals( url ) )
+	if( topEntry.url.equals( url ) ) {
 	  alreadyVisible = true;
+	}
       }
       if( !alreadyVisible ) {
 	try {
 
-	  // aktuelle Position ermitteln und im letzten Stack-Eintrag merken
-	  if( topEntry != null ) {
+	  // aktuelle Position ermitteln und merken
+	  if( saveCurViewPos && (topEntry != null) ) {
 	    topEntry.viewPos = null;
 	    int h = this.editorPane.getHeight();
 	    if( h > 0 ) {
@@ -278,8 +282,9 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 		Point pt = vp.getViewPosition();
 		if( pt != null ) {
 		  double d = (double) pt.y / (double) h;
-		  if( (d > 0.0) && (d <= 1.0) )
+		  if( (d > 0.0) && (d <= 1.0) ) {
 		    topEntry.viewPos = new Double( d );
+		  }
 		}
 	      }
 	    }
@@ -316,4 +321,3 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
     }
   }
 }
-

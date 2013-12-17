@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.event.*;
 import java.util.EventObject;
 import javax.swing.*;
 import jkcemu.base.*;
+import jkcemu.etc.CksCalculator;
 
 
 public class ReplyCksAlgorithmDlg extends BasicDlg

@@ -86,7 +86,7 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tJR\tX_SSZP\n"
 		+ "X_WPIX:\tLD\tHL,0140H\n"
 		+ "X_SSZP:\tLD\tA,(X_MSCR)\n"
-		+ "\tCP\t01H\n"
+		+ "\tDEC\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
@@ -325,7 +325,7 @@ public class Z9001KRTTarget extends Z9001Target
 		+ "\tINC\tHL\n"
 		+ "\tRET\n"
 		+ "XPTST1:\tLD\tHL,0FFFFH\n"
-                + "\tRET\t" );
+                + "\tRET\n" );
     appendPixUtil( buf, compiler );
   }
 
@@ -371,6 +371,13 @@ public class Z9001KRTTarget extends Z9001Target
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public int getGraphicScreenNum()
+  {
+    return 1;
   }
 
 

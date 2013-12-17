@@ -291,7 +291,7 @@ public class SCCHTarget extends AbstractTarget
   @Override
   public int[] getVdipBaseIOAddresses()
   {
-    return new int[] { 0xFC };
+    return new int[] { 0xDC, 0xFC };
   }
 
 

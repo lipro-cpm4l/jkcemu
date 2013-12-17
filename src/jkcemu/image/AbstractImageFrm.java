@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,10 +13,9 @@ import java.awt.datatransfer.*;
 import java.awt.dnd.*;
 import java.awt.event.*;
 import java.awt.image.*;
-import java.io.*;
+import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.imageio.ImageIO;
+import java.util.EventObject;
 import javax.swing.*;
 import jkcemu.Main;
 import jkcemu.base.*;
@@ -28,9 +27,10 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
   protected File        file;
   protected Image       image;
   protected ImgFld      imgFld;
-  private JComboBox   comboScale;
   protected JScrollPane scrollPane;
-  private boolean     scaleEnabled;
+
+  private JComboBox comboScale;
+  private boolean   scaleEnabled;
 
 
   protected AbstractImageFrm()
@@ -146,7 +146,10 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
 	}
       }
       if( imgToSave != null ) {
-	File file = ImgUtil.saveImage( this, imgToSave, this.file );
+	File file = ImgSaver.saveImageAs(
+			this,
+			imgToSave,
+			this.file != null ? this.file.getName() : null );
 	if( file != null ) {
 	  this.file = file;
 	}

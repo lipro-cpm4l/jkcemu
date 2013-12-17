@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,21 +19,22 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 {
   public static final int DEFAULT_MARGIN = 20;
 
-  private ScreenFrm screenFrm;
-  private Color     markXORColor;
-  private EmuSys    emuSys;
-  private Point     dragStart;
-  private Point     dragEnd;
-  private boolean   textSelected;
-  private int       selectionCharX1;
-  private int       selectionCharX2;
-  private int       selectionCharY1;
-  private int       selectionCharY2;
-  private int       lastColorIdx;
-  private int       screenScale;
-  private int       margin;
-  private int       xOffs;
-  private int       yOffs;
+  private ScreenFrm  screenFrm;
+  private Color      markXORColor;
+  private EmuSys     emuSys;
+  private CharRaster charRaster;
+  private Point      dragStart;
+  private Point      dragEnd;
+  private boolean    textSelected;
+  private int        selectionCharX1;
+  private int        selectionCharX2;
+  private int        selectionCharY1;
+  private int        selectionCharY2;
+  private int        lastColorIdx;
+  private int        screenScale;
+  private int        margin;
+  private int        xOffs;
+  private int        yOffs;
 
 
   public ScreenFld( ScreenFrm screenFrm )
@@ -124,8 +125,9 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   public String getSelectedText()
   {
     String screenText = null;
-    if( this.emuSys != null ) {
+    if( (this.emuSys != null) && (this.charRaster != null) ) {
       screenText = this.emuSys.getScreenText(
+					this.charRaster,
 					this.selectionCharX1,
 					this.selectionCharY1,
 					this.selectionCharX2,
@@ -134,7 +136,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
     return (this.selectionCharX1 >= 0)
 		&& (this.selectionCharY1 >= 0)
 		&& (this.selectionCharX2 >= 0)
-		&& (this.selectionCharY2 >= 0) ?  screenText : null;
+		&& (this.selectionCharY2 >= 0) ? screenText : null;
   }
 
 
@@ -189,18 +191,19 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   public void mouseDragged( MouseEvent e )
   {
     if( (e.getComponent() == this) && (this.emuSys != null) ) {
-      if( this.emuSys.canExtractScreenText()
-	  && (this.emuSys.getCharColCount() > 0)
-	  && (this.emuSys.getCharRowCount() > 0)
-	  && (this.emuSys.getCharRowHeight() > 0)
-	  && (this.emuSys.getCharHeight() > 0)
-	  && (this.emuSys.getCharWidth() > 0) )
-      {
-	if( this.dragStart == null ) {
+      if( this.dragStart == null ) {
+	this.charRaster = this.emuSys.getCurScreenCharRaster();
+	if( this.charRaster != null ) {
 	  this.dragStart = new Point( e.getX(), e.getY() );
 	  this.dragEnd   = null;
-	} else {
+	  this.screenFrm.setScreenDirty( true );
+	}
+      } else {
+	if( this.charRaster != null ) {
 	  this.dragEnd = new Point( e.getX(), e.getY() );
+	} else {
+	  this.dragEnd   = null;
+	  this.dragStart = null;
 	}
 	this.screenFrm.setScreenDirty( true );
       }
@@ -246,11 +249,6 @@ public class ScreenFld extends JComponent implements MouseMotionListener
     boolean textSelected = false;
     if( (w > 0) && (h > 0) && (this.emuSys != null) ) {
 
-      // Hintergrund
-      int bgColorIdx = this.emuSys.getBorderColorIndex();
-      g.setColor( this.emuSys.getColor( bgColorIdx ) );
-      g.fillRect( 0, 0, w, h );
-
       // Vordergrund zentrieren
       int wBase = this.emuSys.getScreenWidth();
       int hBase = this.emuSys.getScreenHeight();
@@ -264,6 +262,38 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	this.yOffs = 0;
       }
 
+      // Hintergrund zeichnen
+      int bgColorIdx = this.emuSys.getBorderColorIndex();
+      if( this.emuSys.supportsBorderColorByLine() ) {
+	int scale = this.screenScale;
+	if( scale > 1 ) {
+	  int line = (-yOffs / scale);
+	  for( int y = 0; y < h; y += this.screenScale ) {
+	    bgColorIdx = this.emuSys.getBorderColorIndexByLine( line++ );
+	    g.setColor( this.emuSys.getColor( bgColorIdx ) );
+	    g.fillRect( 0, y, w, y + scale );
+	  }
+	} else {
+	  int line = -this.yOffs;
+	  for( int y = 0; y < h; y++ ) {
+	    bgColorIdx = this.emuSys.getBorderColorIndexByLine( line++ );
+	    g.setColor( this.emuSys.getColor( bgColorIdx ) );
+	    g.drawLine( 0, y, w, y );
+	  }
+	}
+	/*
+	 * Da es keine einheitliche Hintergrundfarbe gibt,
+	 * darf sie beim Zeichnen des Vordergrundes
+	 * nicht beruecksichtigt werden und
+	 * wird hier deshalb auf einen ungueltigen Wert gesetzt.
+	 */
+	bgColorIdx = -1;
+      } else {
+	g.setColor( this.emuSys.getColor( bgColorIdx ) );
+	g.fillRect( 0, 0, w, h );
+      }
+
+      // Vordergrund zeichnen
       if( !this.emuSys.paintScreen(
 				g,
 				this.xOffs,
@@ -319,15 +349,16 @@ public class ScreenFld extends JComponent implements MouseMotionListener
       // Markierter Text
       if( withMarking
 	  && (this.screenScale > 0)
+	  && (this.charRaster != null)
 	  && (this.dragStart != null)
 	  && (this.dragEnd != null) )
       {
-	int topLine = this.emuSys.getCharTopLine();
-	int nCols   = this.emuSys.getCharColCount();
-	int nRows   = this.emuSys.getCharRowCount();
-	int hRow    = this.emuSys.getCharRowHeight();
-	int hChar   = this.emuSys.getCharHeight();
-	int wChar   = this.emuSys.getCharWidth();
+	int topLine = this.charRaster.getTopLine();
+	int nCols   = this.charRaster.getColCount();
+	int nRows   = this.charRaster.getRowCount();
+	int hRow    = this.charRaster.getRowHeight();
+	int hChar   = this.charRaster.getCharHeight();
+	int wChar   = this.charRaster.getCharWidth();
 	if( (nCols > 0) && (nRows > 0)
 	    && (hRow > 0) && (hChar > 0) && (wChar > 0) )
 	{
@@ -335,7 +366,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	  int y1    = this.dragStart.y;
 	  int x2    = this.dragEnd.x;
 	  int y2    = this.dragEnd.y;
-	  int yOffs = this.yOffs + topLine;
+	  int yOffs = this.yOffs + (topLine * this.screenScale);
 
 	  // Zeichenpositionen berechnen
 	  this.selectionCharX1 = Math.max(

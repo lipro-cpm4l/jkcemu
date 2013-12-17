@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -153,7 +153,7 @@ public class C80 extends EmuSys implements
   @Override
   public AbstractKeyboardFld createKeyboardFld()
   {
-    this.keyboardFld = new C80KeyboardFld( this.screenFrm, this );
+    this.keyboardFld = new C80KeyboardFld( this );
     return this.keyboardFld;
   }
 

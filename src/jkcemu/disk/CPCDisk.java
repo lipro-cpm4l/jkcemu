@@ -116,10 +116,7 @@ public class CPCDisk extends AbstractFloppyDisk
       // Disk Information Block
       int trackSize = 0x0100 + (sectorsPerCyl * sectorSize);
       EmuUtil.writeASCII( out, FILE_HEADER_STD );
-      EmuUtil.writeASCII( out, "JKCEMU" );
-      for( int i = 0; i < 8; i++ ) {
-	out.write( 0 );
-      }
+      EmuUtil.writeFixLengthASCII( out, "JKCEMU", 14, 0 );
       out.write( cyls );
       out.write( sides );
       out.write( trackSize & 0xFF );
@@ -141,10 +138,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	  }
 
 	  // Track Information Block
-	  EmuUtil.writeASCII( out, TRACK_HEADER );
-	  for( int i = 0; i < 4; i++ ) {
-	    out.write( 0 );
-	  }
+	  EmuUtil.writeFixLengthASCII( out, TRACK_HEADER, 16, 0 );
 	  out.write( cyl );
 	  out.write( head );
 	  out.write( 0 );

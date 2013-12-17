@@ -45,10 +45,10 @@ public class AnaDiskFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException
+  public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".dump" );
-    AnaDisk.export( this.disk, file );
+    return AnaDisk.export( this.disk, file );
   }
 }
 

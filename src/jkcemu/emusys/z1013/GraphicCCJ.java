@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -44,33 +44,17 @@ public class GraphicCCJ implements GDC82720.GDCListener, GDC82720.VRAM
   }
 
 
-  public int getCharColCount()
+  public CharRaster getCharRaster()
   {
-    return this.gdc.getCharColCount();
-  }
-
-
-  public int getCharRowCount()
-  {
-    return this.gdc.getCharRowCount();
-  }
-
-
-  public int getCharRowHeight()
-  {
-    return this.gdc.getCharRowHeight();
-  }
-
-
-  public int getCharTopLine()
-  {
-    return getYMargin() + this.gdc.getCharTopLine();
-  }
-
-
-  public int getCharWidth()
-  {
-    return CHAR_WIDTH;
+    return this.gdc.canExtractScreenText() ?
+		new CharRaster(
+			this.gdc.getCharColCount(),
+			this.gdc.getCharRowCount(),
+			this.gdc.getCharRowHeight(),
+			this.gdc.getCharRowHeight(),
+			CHAR_WIDTH,
+			getYMargin() + this.gdc.getCharTopLine() )
+		: null;
   }
 
 
@@ -186,7 +170,7 @@ public class GraphicCCJ implements GDC82720.GDCListener, GDC82720.VRAM
   public void screenConfigChanged( GDC82720 gdc )
   {
     this.screenFrm.clearScreenSelection();
-    this.screenFrm.updScreenTextActionsEnabled();
+    this.screenFrm.fireUpdScreenTextActionsEnabled();
   }
 
 

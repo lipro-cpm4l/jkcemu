@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@ package jkcemu.emusys.kc85;
 
 import java.awt.Component;
 import java.lang.*;
+import jkcemu.base.EmuUtil;
 import jkcemu.text.TextUtil;
 
 
@@ -26,6 +27,18 @@ public abstract class AbstractKC85Module
     this.slot         = slot;
     this.enabled      = false;
     this.typeByteText = null;
+  }
+
+
+  public void appendEtcInfoHTMLTo( StringBuilder buf )
+  {
+    String fileName = getFileName();
+    if( fileName != null ) {
+      if( !fileName.isEmpty() ) {
+	buf.append( "Datei: " );
+	EmuUtil.appendHTML( buf, fileName );
+      }
+    }
   }
 
 
@@ -71,7 +84,25 @@ public abstract class AbstractKC85Module
   }
 
 
+  public int getBegAddr()
+  {
+    return -1;
+  }
+
+
   public String getFileName()
+  {
+    return null;
+  }
+
+
+  public int getSegmentNum()
+  {
+    return -1;
+  }
+
+
+  public Boolean getReadWrite()
   {
     return null;
   }
@@ -90,7 +121,7 @@ public abstract class AbstractKC85Module
   public String getTypeByteText()
   {
     if( this.typeByteText == null ) {
-      this.typeByteText = String.format( "%02X", getTypeByte() );
+      this.typeByteText = String.format( "%02Xh", getTypeByte() );
     }
     return this.typeByteText;
   }

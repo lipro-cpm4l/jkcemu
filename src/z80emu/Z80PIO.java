@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -233,7 +233,7 @@ public class Z80PIO implements Z80InterruptSource
 	/* --- Methoden fuer Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
     Port[] ports = { this.portA, this.portB };
     buf.append( "<table border=\"1\">\n"

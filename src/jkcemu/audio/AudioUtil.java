@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,12 +9,13 @@
 package jkcemu.audio;
 
 import java.awt.Component;
-import java.io.File;
+import java.io.*;
 import java.lang.*;
 import java.util.*;
+import java.util.zip.GZIPOutputStream;
 import javax.sound.sampled.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.*;
 
 
 public class AudioUtil
@@ -101,43 +102,52 @@ public class AudioUtil
 						Component owner,
 						File      file )
   {
+    AudioFileFormat.Type   rv     = null;
     AudioFileFormat.Type[] fTypes = AudioSystem.getAudioFileTypes();
     String                 fName  = file.getName();
     if( (fTypes != null) && (fName != null) ) {
-      fName = fName.toUpperCase();
+      fName = fName.toLowerCase();
       for( AudioFileFormat.Type fType : fTypes ) {
 	String ext = fType.getExtension();
 	if( ext != null ) {
-	  ext = ext.toUpperCase();
+	  ext = ext.toLowerCase();
 	  if( !ext.startsWith( "." ) ) {
 	    ext = "." + ext;
 	  }
-	  if( fName.endsWith( ext ) )
-	    return fType;
-	}
-      }
-    }
-
-    StringBuilder buf = new StringBuilder( 64 );
-    buf.append( "Das Dateiformat wird nicht unterst\u00FCtzt." );
-    if( fTypes != null ) {
-      if( fTypes.length > 0 ) {
-	buf.append( "\nM\u00F6gliche Dateiendungen sind:\n" );
-	String delim = null;
-	for( AudioFileFormat.Type fType : fTypes ) {
-	  String ext = fType.getExtension();
-	  if( ext != null ) {
-	    if( delim != null ) {
-	      buf.append( delim );
-	    }
-	    buf.append( ext );
-	    delim = ", ";
+	  if( fName.endsWith( ext ) ) {
+	    rv = fType;
+	    break;
+	  }
+	  ext += ".gz";
+	  if( fName.endsWith( ext ) ) {
+	    rv = fType;
+	    break;
 	  }
 	}
       }
     }
-    BasicDlg.showErrorDlg( owner, buf.toString() );
-    return null;
+    if( rv == null ) {
+      StringBuilder buf = new StringBuilder( 64 );
+      buf.append( "Das Dateiformat wird nicht unterst\u00FCtzt." );
+      if( fTypes != null ) {
+	if( fTypes.length > 0 ) {
+	  buf.append( "\nM\u00F6gliche Dateiendungen sind:\n" );
+	  String delim = null;
+	  for( AudioFileFormat.Type fType : fTypes ) {
+	    String ext = fType.getExtension();
+	    if( ext != null ) {
+	      if( delim != null ) {
+		buf.append( delim );
+	      }
+	      buf.append( ext );
+	      delim = ", ";
+	    }
+	  }
+	}
+      }
+      BasicDlg.showErrorDlg( owner, buf.toString() );
+    }
+    return rv;
   }
 
 
@@ -169,7 +179,7 @@ public class AudioUtil
       StringBuilder buf = new StringBuilder( 256 );
       buf.append( "Sound-Dateien" );
       appendAudioFileExtensionText( buf, 3, ext );
-      audioInFileFilter = new FileNameExtensionFilter( buf.toString(), ext );
+      audioInFileFilter = new FileFilterWithGZ( buf.toString(), ext );
     }
     return audioInFileFilter;
   }
@@ -228,6 +238,62 @@ public class AudioUtil
       audioOutFileFilter = new FileNameExtensionFilter( buf.toString(), ext );
     }
     return audioOutFileFilter;
+  }
+
+
+  public static boolean isAudioFile( File file )
+  {
+    boolean rv = false;
+    if( file != null ) {
+      AudioInputStream    aIn = null;
+      BufferedInputStream bIn = null;
+      try {
+	bIn = EmuUtil.openBufferedOptionalGZipFile( file );
+	aIn = AudioSystem.getAudioInputStream( bIn );
+	if( aIn != null ) {
+	  rv = true;
+	}
+      }
+      catch( UnsupportedAudioFileException ex1 ) {}
+      catch( IOException ex2 ) {}
+      finally {
+	EmuUtil.doClose( aIn );
+	EmuUtil.doClose( bIn );
+      }
+    }
+    return rv;
+  }
+
+
+  /*
+   * Die Methode schreibt eine Audio-Datei.
+   * Wenn der Dateiname auf ".gz" endet,
+   * wird die Datei zuseatzlich gezippt.
+   */
+  public static void write(
+			AudioInputStream     in,
+			AudioFileFormat.Type fileType,
+			File                 file )
+		throws IllegalArgumentException, IOException
+  {
+    if( EmuUtil.isGZipFile( file ) ) {
+      OutputStream     out  = null;
+      GZIPOutputStream gzip = null;
+      try {
+	out  = new FileOutputStream( file );
+	gzip = new GZIPOutputStream( out );
+	AudioSystem.write( in, fileType, gzip );
+	gzip.finish();
+	gzip.close();
+	gzip = null;
+      }
+      finally {
+	EmuUtil.doClose( gzip );
+	EmuUtil.doClose( out );
+      }
+    } else {
+      AudioSystem.write( in, fileType, file );
+    }
   }
 }
 

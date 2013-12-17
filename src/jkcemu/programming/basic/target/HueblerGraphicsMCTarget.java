@@ -261,8 +261,10 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   public void appendXPTEST( AsmCodeBuf buf, BasicCompiler compiler )
   {
     buf.append( "XPTEST:\tCALL\tX_PCK\n"
+		+ "\tJR\tNC,X_PTST1\n"
 		+ "\tLD\tHL,0FFFFH\n"
-		+ "\tRET\tC\n"
+		+ "\tRET\n"
+		+ "X_PTST1:\n"
 		+ "\tCALL\tX_PST\n"
 		+ "\tAND\t(HL)\n"
 		+ "\tLD\tHL,0000H\n"
@@ -302,6 +304,13 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   public int getDefaultBegAddr()
   {
     return 0x0100;
+  }
+
+
+  @Override
+  public int getGraphicScreenNum()
+  {
+    return 0;
   }
 
 

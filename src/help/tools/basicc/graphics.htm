@@ -28,8 +28,9 @@
   Liefern diese Funktionen den Wert&nbsp;0,
   steht im aktuellen Bildschirmmodus keine Grafik zur Verf&uuml;gung.
  <br/><br/>
-  Mit diesen beiden Funktionen sowie mit der Funktion LASTSCREEN
-  kann in gewissem Umfang der Quelltext portabel gestaltet werden.
+  Mit diesen beiden Funktionen sowie mit den Konstanten
+  GRAPHICSCREEN und LASTSCREEN kann in gewissem Umfang der Quelltext
+  portabel gestaltet werden.
   Darunter versteht man die M&ouml;glichkeit,
   das BASIC-Programm so zu schreiben, dass es sich ohne &Auml;nderung
   f&uuml;r verschiedene Zielsysteme &uuml;bersetzen l&auml;sst
@@ -40,7 +41,7 @@
   zur&uuml;ckgelieferten Werte setzen.
   Einen Grafikmodus kann man portabel so einstellen:
  <br/><br/>
-  <tt>&nbsp;SCREEN&nbsp;LASTSCREEN</tt>
+  <tt>&nbsp;SCREEN&nbsp;GRAPHICSCREEN</tt>
  <br/><br/>
   Voraussetzung ist nat&uuml;rlich,
   dass das Zielsystem &uuml;berhaupt Grafik unterst&uuml;tzt.
@@ -71,50 +72,52 @@
   Das Programm ist portabel gehalten, d.h.,
   es ist ohne &Auml;nderung auf allen Zielsystemen lauff&auml;hig,
   die Grafik unterst&uuml;tzten.
- <br/><br/>
+ <br/>
   <table border="0">
    <tr>
     <td valign="top">
      <tt>
-      DECLARE SUB boxed_text(x,y,t$)<br/>
-      <br/>
-      CURSOR 0<br/>
-      SCREEN LASTSCREEN<br/>
-      CLS<br/>
-      x=W_PIXEL/5<br/>
-      y=H_PIXEL/5<br/>
-      boxed_text(x,y,"Hallo")<br/>
-      PAUSE 50<br/>
-      CLS<br/>
-      SCREEN 0<br/>
-      END<br/>
-      <br/>
-      SUB boxed_text(x,y,t$)<br/>
-      &nbsp; MOVE x+3,y+2<br/>
-      &nbsp; LABEL t$<br/>
-      &nbsp; LINE (x,y)-(XPOS,y+12),B<br/>
-      END SUB
+      &#10;<br/>
+      DECLARE SUB boxed_text(x,y,t$)&#10;<br/>
+      &#10;<br/>
+      CURSOR 0&#10;<br/>
+      SCREEN GRAPHICSCREEN&#10;<br/>
+      CLS&#10;<br/>
+      x=W_PIXEL/5&#10;<br/>
+      y=H_PIXEL/5&#10;<br/>
+      boxed_text(x,y,"Hallo")&#10;<br/>
+      PAUSE 50&#10;<br/>
+      CLS&#10;<br/>
+      SCREEN 0&#10;<br/>
+      END&#10;<br/>
+      &#10;<br/>
+      SUB boxed_text(x,y,t$)&#10;<br/>
+      &nbsp; MOVE x+3,y+2&#10;<br/>
+      &nbsp; LABEL t$&#10;<br/>
+      &nbsp; LINE (x,y)-(XPOS,y+12),B&#10;<br/>
+      END SUB&#10;<br/>
      </tt>
     </td>
     <td valign="top">
      <tt>
-      :'Prozedur deklarieren<br/>
-      <br/>
-      :'Cursor ausschalten<br/>
-      :'Grafikmodus einschalten<br/>
-      :'Grafikbildschirm loeschen<br/>
-      :'X-Koordinate<br/>
-      :'Y-Koordinate<br/>
-      :'eingerahmten Text ausgeben<br/>
-      :'5 Sekunden warten<br/>
-      :'Bildschirm loeschen<br/>
-      :'Textbildschirm einschalten<br/>
-      :'Programmende<br/>
-      <br/>
-      :'Prozedur implementieren<br/>
-      :'linke untere Ecke des Textes<br/>
-      :'Text ausgeben<br/>
-      :'Rahmen zeichnen<br/>
+      &#10;<br/>
+      :'Prozedur deklarieren&#10;<br/>
+      &#10;<br/>
+      :'Cursor ausschalten&#10;<br/>
+      :'Grafikmodus einschalten&#10;<br/>
+      :'Grafikbildschirm loeschen&#10;<br/>
+      :'X-Koordinate&#10;<br/>
+      :'Y-Koordinate&#10;<br/>
+      :'eingerahmten Text ausgeben&#10;<br/>
+      :'5 Sekunden warten&#10;<br/>
+      :'Bildschirm loeschen&#10;<br/>
+      :'Textbildschirm einschalten&#10;<br/>
+      :'Programmende&#10;<br/>
+      &#10;<br/>
+      :'Prozedur implementieren&#10;<br/>
+      :'linke untere Ecke des Textes&#10;<br/>
+      :'Text ausgeben&#10;<br/>
+      :'Rahmen zeichnen&#10;<br/>
      </tt>
     </td>
    </tr>
@@ -122,4 +125,3 @@
  <br/>
 </body>
 </html>
-

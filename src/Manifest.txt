@@ -1,2 +1,4 @@
 Main-Class: jkcemu.Main
+X-WWW: http://www.jens-mueller.org/jkcemu
+X-Author: Jens Mueller
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,7 +31,7 @@ public class M052 extends AbstractKC85Module
   private KCNet     kcNet;
   private VDIP      vdip;
   private boolean   ioEnabled;
-  private int       baseAddr;
+  private int       begAddr;
   private int       romOffs;
   private byte[]    rom;
 
@@ -46,7 +46,7 @@ public class M052 extends AbstractKC85Module
     this.vdip      = new VDIP( "USB-PIO" );
     this.ioEnabled = false;
     this.romOffs   = 0;
-    this.baseAddr  = 0;
+    this.begAddr   = 0;
     this.rom       = null;
     reload( owner );
     if( this.rom == null ) {
@@ -67,13 +67,13 @@ public class M052 extends AbstractKC85Module
 	/* --- Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
     buf.append( "<h2>Netzwerk-PIO (IO-Adressen 28-2B)</h2>\n" );
-    this.kcNet.appendStatusHTMLTo( buf );
+    this.kcNet.appendInterruptStatusHTMLTo( buf );
 
     buf.append( "<h2>USB-PIO (IO-Adressen 2C-2F)</h2>\n" );
-    this.vdip.appendStatusHTMLTo( buf );
+    this.vdip.appendInterruptStatusHTMLTo( buf );
   }
 
 
@@ -159,6 +159,13 @@ public class M052 extends AbstractKC85Module
 
 
   @Override
+  public int getBegAddr()
+  {
+    return this.begAddr;
+  }
+
+
+  @Override
   public String getFileName()
   {
     return this.fileName;
@@ -169,6 +176,13 @@ public class M052 extends AbstractKC85Module
   public String getModuleName()
   {
     return "M052";
+  }
+
+
+  @Override
+  public int getSegmentNum()
+  {
+    return (this.romOffs >> 13) & 0x03;
   }
 
 
@@ -209,11 +223,11 @@ public class M052 extends AbstractKC85Module
   {
     int rv = -1;
     if( this.enabled
-	&& (addr >= this.baseAddr)
-	&& (addr < (this.baseAddr + 0x2000))
+	&& (addr >= this.begAddr)
+	&& (addr < (this.begAddr + 0x2000))
 	&& (this.rom != null) )
     {
-      int idx = addr - this.baseAddr + this.romOffs;
+      int idx = addr - this.begAddr + this.romOffs;
       if( idx < this.rom.length ) {
 	rv = (int) this.rom[ idx ] & 0xFF;
       }
@@ -242,7 +256,7 @@ public class M052 extends AbstractKC85Module
   {
     super.setStatus( value );
     this.ioEnabled = ((value & 0x04) != 0);
-    this.baseAddr  = (value << 8) & 0xC000;
+    this.begAddr   = (value << 8) & 0xC000;
     this.romOffs   = (value << 10) & 0x6000;
   }
 

@@ -84,6 +84,9 @@ James A. Woods, Joe Orost, David Rowley:
 4.2.  Urheberschaften an den ROM- und Disketteninhalten
 
 - Akademie der Wissenschaften der DDR, Berlin (CP/A)
+- Amstrad plc (KC compact, ZX Spectrum)
+  Amstrad have kindly given their permission for the redistribution
+  of their copyrighted material but retain that copyright.
 - International Research Institute for Management Sciences (IRIMS), Moskau
   (MicroDOS)
 - Universitaet Rostock (MicroDOS)
@@ -167,7 +170,8 @@ Besonders bedanken moechte ich mich bei:
 - Prof. Dr. Albrecht Mugler fuer die freundliche Genehmigung zur Integration
   der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
 - Dr. Dieter Scheuschner fuer die Bereitstellung des ROM-Inhalts des SLC1
-  und fuer die freundliche Genehmigung, diesen in JKCEMU integrieren zu duerfen
+  und fuer die freundliche Genehmigung,
+  diesen in JKCEMU integrieren zu duerfen
 - Dr. Gerd Maudrich fuer die freundliche Genehmigung zur Integration
   des LLC1-ROM-Images (Monitorprogramm und Tiny-BASIC-Interpreter) in JKCEMU
 - Dr. Hans-Juergen Gatsche fuer die freundliche Genehmigung,
@@ -179,6 +183,8 @@ Besonders bedanken moechte ich mich bei:
   (Monitorprogramm, FDC-Programm und ROM-Bank-Verwaltung)
   in JKCEMU sowie fuer seine Hilfe bei der AC1-Emulation
 - Claus-Peter Fischer fuer die Bereitstellung eines ROM-Images zum PC/M
+- Cliff Lawson (Amstrad plc) fuer die allgemeine Erlaubnis zur Integration
+  der unter dem Urheberrecht von Amstrad stehenden ROMs in Emulatoren.
 - Eckhard Schiller fuer die freundliche Genehmigung zur Integration
   des VCS80- und der BCS3-ROM-Images in JKCEMU
 - Enrico Graemer fuer die Bereitstellung von Material zum KC compact
@@ -189,6 +195,7 @@ Besonders bedanken moechte ich mich bei:
 - Heiko Poppe fuer seine Hilfe bei der AC1- und USB-Emulation
 - Herbert Mathes fuer die freundliche Genehmigung zur Integration
   der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
+- Holger Bretfeld fuer die leihweise Bereitstellung eines KC85/5 mit D004
 - Jan Kuhnert fuer das intensive Testen des Emulators
 - Johann Spannenkrebs fuer seine Homepage http://www.ac1-info.de
   sowie fuer seine Hilfe bei der AC1- und Poly880-Emulation
@@ -211,6 +218,7 @@ Besonders bedanken moechte ich mich bei:
   sowie fuer die Hilfe bei der KC85/2..5- und Netzwerk-Emulation
 - Ralph Haensel fuer seine umfangreiche Hilfe
   bei der AC1-, Disketten-, Festplatten- und USB-Emulation
+- Rene Nitzsche fuer die leihweise Bereitstellung eines KC85/5
 - Rolf Weidlich fuer die Unterstuetzung bei der AC1- und LLC1-Emulation
 - Siegfried Schenk fuer die Bereitstellung von Informationen
   und Software zum LLC2 und zu den SCCH-Modulen

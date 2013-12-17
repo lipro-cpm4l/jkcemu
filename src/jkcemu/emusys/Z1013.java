@@ -66,6 +66,21 @@ public class Z1013 extends EmuSys implements
 			"OTHLS", "OUTDP", "OUTSP", "TRANS",
 			"INSTR", "KILL",  "HEXUM", "ALPHA" };
 
+  /*
+   * Mapping der Zeichen ab Code 14 (Schachfiguren)
+   *
+   * Da die Z1013-Schachfiguren aus zwei uebereinander
+   * stehenden Zeichen bestehen,
+   * im Unicode aber es nur jeweils ein Zeichen dafuer gibt,
+   * wird das obere Zeichen in das Unicode-Zeichen gemappt
+   * und das untere in ein Leerzeichen.
+   */
+  private static final int[] char14ToUnicode = {
+		'\u265F', '\u265C', '\u265E', '\u0020', '\u265D',
+		'\u0020', '\u265B', '\u265A', '\u0020',
+		'\u2659', '\u2656', '\u2658', '\u0020', '\u2657',
+		'\u0020', '\u2655', '\u2654', '\u0020' };
+
   private static final FloppyDiskInfo cpm64x16FloppyDisk =
 		new FloppyDiskInfo(
 			"/disks/z1013/z1013cpm64x16.dump.gz",
@@ -449,6 +464,73 @@ public class Z1013 extends EmuSys implements
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    buf.append( "<h1>Z1013 Status</h1>\n"
+	+ "<table border=\"1\">\n"
+	+ "<tr><td>Monitor-ROM" );
+    byte[] rom = this.osBytes;
+    if( rom != null ) {
+      if( rom.length > 0 ) {
+	buf.append( String.format(
+			" (F000h-F%03X)",
+			Math.min( rom.length, 0x1000 ) - 1 ) );
+      }
+    }
+    buf.append( ":</td><td>" );
+    buf.append( this.romDisabled ? "aus" : "ein" );
+    buf.append( "</td></tr>\n" );
+    if( this.romMega != null ) {
+      buf.append( "<tr><td>Mega-ROM (C000h-E7FFh):</td><td>Bank " );
+      buf.append( this.romMegaSeg );
+      buf.append( "</td></tr>\n" );
+    }
+    if( this.ramPixel != null ) {
+      buf.append( "<tr><td>KRT-Grafik:</td><td>" );
+      if( this.modeGraph ) {
+	int bank = this.ramPixelBank;
+	if( (bank >= 0) && (bank < this.ramPixel.length) ) {
+	  buf.append( "Bank " );
+	  buf.append( bank );
+	  buf.append( " ein" );
+	}
+      } else {
+	buf.append( "aus (Standard-BWS ein)" );
+      }
+      buf.append( "</td></tr>\n" );
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>Bildausgabe:</td><td>" );
+    boolean done = false;
+    if( (this.ramPixel != null) || (this.graphCCJ != null) ) {
+      if( this.graphCCJActive ) {
+	buf.append( "Grafikkarte CC Jena" );
+	done = true;
+      } else {
+	if( this.modeGraph ) {
+	  buf.append( "KRT-Grafik" );
+	  if( this.mode64x16 ) {
+	    buf.append( " (64x16 Modus aktiv)" );
+	  }
+	  done = true;
+	} else {
+	  buf.append( "Standard-BWS, " );
+	}
+      }
+    }
+    if( !done ) {
+      buf.append( this.mode64x16 ? "64x16" : "32x32" );
+      buf.append( " Zeichen" );
+      if( this.altFontEnabled ) {
+	buf.append( ", alternativer Zeichensatz" );
+      }
+    }
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -697,111 +779,26 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
-  public int getCharColCount()
+  public CharRaster getCurScreenCharRaster()
   {
-    int rv = 32;
+    CharRaster rv = null;
     if( (this.graphCCJ != null) && this.graphCCJActive ) {
-      rv = this.graphCCJ.getCharColCount();
+      rv = this.graphCCJ.getCharRaster();
     } else {
       if( this.mode64x16 ) {
-	rv = 64;
+	rv = new CharRaster( 64, 16, 16, 8, 8, 0 );
+      } else {
+	rv = new CharRaster( 32, 32, 8, 8, 8, 0 );
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return ((this.graphCCJ != null) && this.graphCCJActive) ?
-					this.graphCCJ.getCharRowHeight()
-					: 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    int rv = 32;
-    if( (this.graphCCJ != null) && this.graphCCJActive ) {
-      rv = this.graphCCJ.getCharRowCount();
-    } else {
-      if( this.mode64x16 ) {
-	rv = 16;
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    int rv = 8;
-    if( (this.graphCCJ != null) && this.graphCCJActive ) {
-      rv = this.graphCCJ.getCharRowHeight();
-    } else {
-      if( this.mode64x16 ) {
-	rv = 16;
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public int getCharTopLine()
-  {
-    return (this.graphCCJ != null) && this.graphCCJActive ?
-					this.graphCCJ.getCharTopLine()
-					: 0;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return ((this.graphCCJ != null) && this.graphCCJActive) ?
-					this.graphCCJ.getCharWidth()
-					: 8;
-  }
-
-
-  @Override
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
-  {
-    return true;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return this.fdc != null ? 2048 : -1;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return this.fdc != null ? 2 : -1;
   }
 
 
   @Override
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
-    return this.fdc != null ?
-		FloppyDiskFormat.getFormat( 2, 80, 5, 1024 )
-		: null;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return this.fdc != null ? 2 : -1;
+    return FloppyDiskFormat.FMT_780K;
   }
 
 
@@ -920,7 +917,7 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
     if( (this.graphCCJ != null) && this.graphCCJActive ) {
@@ -931,9 +928,23 @@ public class Z1013 extends EmuSys implements
 	int b = (int) this.ramVideo[ idx ] & 0xFF;
 	if( (b >= 0x20) && (b < 0x7F) ) {
 	  ch = b;
-	}
-	else if( (ch >= 0xA0) && (ch < 0xFF) && this.altFontEnabled ) {
-	  ch = b & 0x7F; 	// 0xA0 bis 0xFE: invertierte Zeichen
+	} else {
+	  if( this.altFontEnabled ) {
+	    if( (b >= 0xA0) && (b < 0xFF) ) {
+	      ch = b & 0x7F; 	// 0xA0 bis 0xFE: invertierte Zeichen
+	    }
+	  } else {
+	    if( (b >= 0x0E) && (b < 0x20) ) {
+	      // Schachfiguren
+	      idx = b - 0x0E;
+	      if( (idx >= 0) && (idx < char14ToUnicode.length) ) {
+		ch = char14ToUnicode[ idx ];
+	      }
+	    } else {
+	      // sonstige Grafikzeichen wie beim Z9001
+	      ch = Z9001.toUnicode( b );
+	    }
+	  }
 	}
       }
     }
@@ -1913,9 +1924,14 @@ public class Z1013 extends EmuSys implements
      * In dem Fall wird deshalb wieder zurueckgeschaltet.
      */
     if( (addr >= 0xEC00) && (addr < 0xF000) && this.graphCCJActive ) {
-      if( addr == 0xEC00 ) {
+      if( (addr == 0xEC00)
+	  || ((addr > 0xEC00) && (addr < 0xEFFF)
+	      && (addr == (this.lastWrittenAddr + 1))) )
+      {
 	this.lastWrittenAddr = addr;
-      } else if( addr == (this.lastWrittenAddr + 1) ) {
+      } else if( (addr == 0xEFFF)
+		 && (addr == (this.lastWrittenAddr + 1)) )
+      {
 	this.graphCCJActive = false;
 	this.screenFrm.fireScreenSizeChanged();
       } else {

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,6 @@ import java.lang.*;
 import java.text.*;
 import java.util.*;
 import java.util.zip.*;
-import javax.imageio.ImageIO;
 import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
@@ -25,7 +24,7 @@ import javax.swing.table.*;
 import jkcemu.audio.AudioUtil;
 import jkcemu.base.*;
 import jkcemu.disk.*;
-import jkcemu.image.ImgUtil;
+import jkcemu.image.*;
 
 
 public class FilePreviewFld extends JPanel
@@ -425,14 +424,43 @@ public class FilePreviewFld extends JPanel
 			Map<FileInfoFld.Item,Object> infoItems,
 			File                         file )
   {
-    AudioInputStream in = null;
+    boolean gzip = EmuUtil.isGZipFile( file );
+    
+    // AudioFileFormat ermitteln (nur bei keinen gz-Dateien)
+    BufferedInputStream bIn  = null;
+    AudioInputStream    aIn  = null;
+    AudioFileFormat     fFmt = null;
     try {
-      AudioFormat     aFmt = null;
-      AudioFileFormat fFmt = AudioSystem.getAudioFileFormat( file );
-      in                   = AudioSystem.getAudioInputStream( file );
-      if( in != null ) {
-	aFmt = in.getFormat();
+      if( gzip ) {
+	bIn  = EmuUtil.openBufferedOptionalGZipFile( file );
+	fFmt = AudioSystem.getAudioFileFormat( bIn );
+      } else {
+	fFmt = AudioSystem.getAudioFileFormat( file );
+      }
+    }
+    catch( UnsupportedAudioFileException ex1 ) {}
+    catch( IOException ex2 ) {}
+    finally {
+      EmuUtil.doClose( aIn );
+      EmuUtil.doClose( bIn );
+      aIn = null;
+      bIn = null;
+    }
+
+    // AudioFormat ermitteln
+    try {
+      if( gzip ) {
+	bIn = EmuUtil.openBufferedOptionalGZipFile( file );
+	aIn = AudioSystem.getAudioInputStream( bIn );
+      } else {
+	aIn = AudioSystem.getAudioInputStream( file );
+      }
+      if( aIn != null ) {
+	AudioFormat aFmt = aIn.getFormat();
 	if( aFmt != null ) {
+	  infoItems.put(
+		FileInfoFld.Item.TYPE,
+		gzip ? "Komprimierte Sound-Datei" : "Sound-Datei" );
 	  String fmtText = AudioUtil.getAudioFormatText( aFmt );
 	  if( fmtText != null ) {
 	    if( !fmtText.isEmpty() ) {
@@ -440,7 +468,6 @@ public class FilePreviewFld extends JPanel
 	    }
 	  }
 	  if( fFmt != null ) {
-	    infoItems.put( FileInfoFld.Item.TYPE, "Sound-Datei" );
 	    Object author = fFmt.getProperty( "author" );
 	    if( author != null ) {
 	      infoItems.put( FileInfoFld.Item.AUTHOR, author );
@@ -463,16 +490,15 @@ public class FilePreviewFld extends JPanel
 						/ aFmt.getFrameRate() ) );
 	  }
 	}
-	in.close();
       }
     }
     catch( UnsupportedAudioFileException ex1 ) {}
     catch( IOException ex2 ) {}
-    if( in != null ) {
-      try {
-	in.close();
-      }
-      catch( IOException ex ) {}
+    finally {
+      EmuUtil.doClose( aIn );
+      EmuUtil.doClose( bIn );
+      aIn = null;
+      bIn = null;
     }
   }
 
@@ -505,12 +531,7 @@ public class FilePreviewFld extends JPanel
 	catch( NoSuchElementException ex ) {}
 	catch( IOException ex ) {}
 	finally {
-	  if( in != null ) {
-	    try {
-	      in.close();
-	    }
-	    catch( IOException ex ) {}
-	  }
+	  EmuUtil.doClose( in );
 	}
 	rv = true;
       }
@@ -541,12 +562,7 @@ public class FilePreviewFld extends JPanel
 	}
 	catch( IOException ex ) {}
 	finally {
-	  if( in != null ) {
-	    try {
-	      in.close();
-	    }
-	    catch( IOException ex ) {}
-	  }
+	  EmuUtil.doClose( in );
 	}
 	rv = true;
       }
@@ -637,7 +653,7 @@ public class FilePreviewFld extends JPanel
 	if( image != null ) {
 	  ImgUtil.ensureImageLoaded( this, image );
 	} else {
-	  image = ImageIO.read( file );
+	  image = ImgLoader.load( file );
 	}
 	if( image != null ) {
 	  infoItems.put( FileInfoFld.Item.TYPE, "Bilddatei" );
@@ -747,12 +763,7 @@ public class FilePreviewFld extends JPanel
     }
     catch( Exception ex ) {}
     finally {
-      if( in != null ) {
-	try {
-	  in.close();
-	}
-	catch( IOException ex ) {}
-      }
+      EmuUtil.doClose( in );
     }
     return rv;
   }

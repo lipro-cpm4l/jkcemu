@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -65,7 +65,7 @@ public class D004ProcSys implements
     this.gide     = GIDE.getGIDE( this.screenFrm, props, propPrefix );
     this.fdc      = new FDC8272( this, 4 );
     this.cpu      = new Z80CPU( this, this );
-    this.ctc      = new Z80CTC( "CTC (FC-FF)" );
+    this.ctc      = new Z80CTC( "CTC (FCh-FFh)" );
     this.ctc.addCTCListener( this );
     this.cpu.setMaxSpeedKHz( 4000 );
     this.cpu.setInterruptSources( this.ctc );

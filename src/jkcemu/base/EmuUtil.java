@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,7 +18,7 @@ import java.nio.channels.*;
 import java.text.*;
 import java.util.*;
 import java.util.regex.*;
-import java.util.zip.GZIPInputStream;
+import java.util.zip.*;
 import javax.swing.*;
 import javax.swing.filechooser.*;
 import javax.swing.table.*;
@@ -578,6 +578,17 @@ public class EmuUtil
     if( socket != null ) {
       try {
 	socket.close();
+      }
+      catch( IOException ex ) {}
+    }
+  }
+
+
+  public static void doClose( ZipFile zip )
+  {
+    if( zip != null ) {
+      try {
+	zip.close();
       }
       catch( IOException ex ) {}
     }
@@ -1298,6 +1309,12 @@ public class EmuUtil
   }
 
 
+  public static javax.swing.filechooser.FileFilter getRMCFileFilter()
+  {
+    return getFileFilter( "RBASIC-Maschinencodedateien (*.rmc)", "rmc" );
+  }
+
+
   public static javax.swing.filechooser.FileFilter getROMFileFilter()
   {
     return getFileFilter( "ROM-Dateien (*.bin; *.rom)", "rom", "bin" );
@@ -1452,6 +1469,32 @@ public class EmuUtil
       }
     }
     return fl;
+  }
+
+
+  /*
+   * Die Methode oeffnet eine Datei und gibt einen BufferedInputStream zurueck.
+   * Wenn derDateiname auf ".gz" endet,
+   * wird die Datei entsprechend entpackt.
+   */
+  public static BufferedInputStream openBufferedOptionalGZipFile( File file )
+							throws IOException
+  {
+    InputStream in = null;
+    if( isGZipFile( file ) ) {
+      in = new FileInputStream( file );
+      try {
+	in = new GZIPInputStream( in );
+      }
+      catch( IOException ex ) {
+	doClose( in );
+	in = null;
+      }
+    }
+    if( in == null ) {
+      in = new FileInputStream( file );
+    }
+    return new BufferedInputStream( in );
   }
 
 
@@ -1996,6 +2039,25 @@ public class EmuUtil
       int len = text.length();
       for( int i = 0; i < len; i++ ) {
 	out.write( text.charAt( i ) & 0x7F );
+      }
+    }
+  }
+
+
+  public static void writeFixLengthASCII(
+			OutputStream out,
+			String       text,
+			int          len,
+			int          filler ) throws IOException
+  {
+    if( text != null ) {
+      int srcLen = text.length();
+      for( int i = 0; i < len; i++ ) {
+	int b = filler;
+	if( i < srcLen ) {
+	  b = text.charAt( i ) & 0x7F;
+	}
+	out.write( b );
       }
     }
   }

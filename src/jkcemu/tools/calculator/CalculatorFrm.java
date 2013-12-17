@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -45,8 +45,6 @@ public class CalculatorFrm extends BasicFrm implements
   private JMenuItem      mnuHelpContent;
   private Document       docInput;
   private JTextField     fldInput;
-  private JRadioButton   btnUpdOnEnter;
-  private JRadioButton   btnUpdImmediately;
   private JEditorPane    fldOutput;
 
 
@@ -133,28 +131,6 @@ public class CalculatorFrm extends BasicFrm implements
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean applySettings( Properties props, boolean resizable )
-  {
-    boolean rv = false;
-    if( props != null ) {
-      rv = super.applySettings( props, resizable );
-      if( this.docInput != null ) {
-	boolean updImmediately = EmuUtil.parseBooleanProperty(
-				props,
-				"jkcemu.calculator.computes_immediately",
-				true );
-	if( updImmediately ) {
-	  this.btnUpdImmediately.setSelected( true );
-	} else {
-	  this.btnUpdOnEnter.setSelected( true );
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -204,18 +180,6 @@ public class CalculatorFrm extends BasicFrm implements
       this.fldInput.setText( "" );
     }
     return rv;
-  }
-
-
-  @Override
-  public void putSettingsTo( Properties props )
-  {
-    if( props != null ) {
-      super.putSettingsTo( props );
-      props.setProperty(
-		"jkcemu.calculator.computes_immediately",
-		String.valueOf( isUpdImmediately() ) );
-    }
   }
 
 
@@ -397,42 +361,6 @@ public class CalculatorFrm extends BasicFrm implements
     panelInput.add( new JLabel( "0x... oder ...H" ), gbcInput );
 
 
-    // Bereich Optionen
-    this.btnUpdOnEnter   = null;
-    this.btnUpdImmediately = null;
-    if( this.docInput != null ) {
-      JPanel panelOptions = new JPanel( new GridBagLayout() );
-      gbc.gridy++;
-      add( panelOptions, gbc );
-
-      panelOptions.setBorder( BorderFactory.createTitledBorder( "Optionen" ) );
-
-      GridBagConstraints gbcOptions = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
-
-      ButtonGroup grpUpdMode = new ButtonGroup();
-
-      this.btnUpdOnEnter = new JRadioButton( "Nach ENTER berechnen", true );
-      grpUpdMode.add( this.btnUpdOnEnter );
-      panelOptions.add( this.btnUpdOnEnter, gbcOptions );
-
-      this.btnUpdImmediately = new JRadioButton(
-				"Nach jedem Tastendruck berechnen",
-				false );
-      grpUpdMode.add( this.btnUpdImmediately );
-      gbcOptions.insets.top    = 0;
-      gbcOptions.insets.bottom = 5;
-      gbcOptions.gridy++;
-      panelOptions.add( this.btnUpdImmediately, gbcOptions );
-    }
-
-
     // Bereich Ausgabe
     JPanel panelOutput = new JPanel( new BorderLayout() );
     gbc.fill    = GridBagConstraints.BOTH;
@@ -477,12 +405,8 @@ public class CalculatorFrm extends BasicFrm implements
 
   private void docChanged( DocumentEvent e )
   {
-    if( (this.docInput != null)
-	&& (e.getDocument() == this.docInput)
-	&& isUpdImmediately() )
-    {
+    if( (this.docInput != null) && (e.getDocument() == this.docInput) )
       updOutput();
-    }
   }
 
 
@@ -567,7 +491,8 @@ public class CalculatorFrm extends BasicFrm implements
 		+ "<table border=1>\n"
 		+ "<tr><th nowrap></th><th nowrap>Hex</th>"
 		+ "<th nowrap>Dezimal</th><th nowrap>Oktal</th>"
-		+ "<th nowrap>Bin&auml;r</th><th nowrap>ASCII</th></tr>\n" );
+		+ "<th nowrap>Bin&auml;r</th>"
+		+ "<th nowrap>Unicode-Zeichen</th></tr>\n" );
       }
       buf.append( "<tr><td nowrap>" );
       appendText( buf, title );
@@ -596,8 +521,12 @@ public class CalculatorFrm extends BasicFrm implements
       }
       buf.append( "</td><td nowrap>" );
       if( isLong ) {
-	if( (lValue > '\u0020') && (lValue <= '\u007E') ) {
-	  appendText( buf, Character.toString( (char) lValue ) );
+	if( (lValue >= 0) && (lValue < Integer.MAX_VALUE) ) {
+	  if( (lValue > '\u0020') && (lValue <= '\u007E') ) {
+	    appendText( buf, Character.toString( (char) lValue ) );
+	  } else if( Character.isDefined( (int) lValue ) ) {
+	    buf.append( String.format( "&#%d;", lValue ) );
+	  }
 	}
       }
       buf.append( "</td></tr>\n" );
@@ -676,14 +605,6 @@ public class CalculatorFrm extends BasicFrm implements
 	}
       }
     }
-  }
-
-
-  private boolean isUpdImmediately()
-  {
-    return this.btnUpdImmediately != null ?
-			this.btnUpdImmediately.isSelected()
-			: false;
   }
 
 

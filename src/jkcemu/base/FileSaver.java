@@ -24,6 +24,7 @@ public class FileSaver
   public static final String KCTAP_1    = "KCTAP_1";
   public static final String KCBASIC    = "KCBASIC";
   public static final String RBASIC     = "RBASIC";
+  public static final String RMC        = "RMC";
   public static final String INTELHEX   = "INTELHEX";
   public static final String BIN        = "BIN";
 
@@ -67,6 +68,9 @@ public class FileSaver
       }
       else if( format.equals( RBASIC ) ) {
 	rv = "RBASIC-Programmdatei";
+      }
+      else if( format.equals( RBASIC ) ) {
+	rv = "RBASIC-Maschinencodedatei";
       }
       else if( format.equals( INTELHEX ) ) {
 	rv = "Intel-HEX-Datei";
@@ -119,6 +123,7 @@ public class FileSaver
       boolean isTAP_1 = false;
       boolean isSSS   = false;
       boolean isRBAS  = false;
+      boolean isRMC   = false;
       boolean isHEX   = false;
       boolean isBIN   = false;
       if( format != null ) {
@@ -134,6 +139,8 @@ public class FileSaver
 	  isSSS = true;
 	} else if( format.equals( RBASIC ) ) {
 	  isRBAS = true;
+	} else if( format.equals( RMC ) ) {
+	  isRMC = true;
 	} else if( format.equals( INTELHEX ) ) {
 	  isHEX = true;
 	} else {
@@ -399,6 +406,20 @@ public class FileSaver
 	    for( int i = n; i < 0x80; i++ ) {
 	      out.write( 0 );
 	    }
+	  }
+
+	} else if( isRMC ) {
+	  out.write( 0xFE );
+	  out.write( begAddr & 0xFF );
+	  out.write( begAddr >> 8 );
+	  out.write( endAddr & 0xFF );
+	  out.write( endAddr >> 8 );
+	  if( headStartAddr != null ) {
+	    out.write( headStartAddr.intValue() & 0xFF );
+	    out.write( headStartAddr.intValue() >> 8 );
+	  } else {
+	    out.write( 0 );
+	    out.write( 0 );
 	  }
 
 	} else if( isHEX ) {

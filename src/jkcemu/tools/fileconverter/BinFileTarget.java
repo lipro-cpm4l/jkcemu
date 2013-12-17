@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -105,7 +105,7 @@ public class BinFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException
+  public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".bin", ".rom" );
     OutputStream out = null;
@@ -121,5 +121,6 @@ public class BinFileTarget extends AbstractConvertTarget
     finally {
       EmuUtil.doClose( out );
     }
+    return null;
   }
 }

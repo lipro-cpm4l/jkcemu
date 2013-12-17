@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -141,160 +141,209 @@ public class TeleDisk extends AbstractFloppyDisk
 	if( (nSec == 0xFF) || (nSec == -1) || (track == -1) || (head == -1) ) {
 	  break;
 	}
-	if( (head < 0) || (head > 1) ) {
-	  throwUnsupportedTeleDiskFmt(
-		  String.format( "Seite %d nicht unterst\u00FCtzt", head ) );
-	}
-	if( track >= cyls ) {
-	  cyls = track + 1;
-	}
-	if( sectorsPerCyl == 0 ) {
-	  sectorsPerCyl = nSec;
-	}
-
-	// Sektoren lesen
-	for( int i = 0; i < nSec; i++ ) {
-	  int    secTrack    = readByte( in );
-	  int    secHead     = readByte( in );
-	  int    secNum      = readByte( in );
-	  int    secSizeCode = readByte( in );
-	  int    secCtrl     = readByte( in );
-	  in.read();				// CRC
-
-	  byte[] secBuf = null;
-	  if( (secSizeCode >= 0) && (secSizeCode <= 6) ) {
-	    int secSize = 128;
-	    if( secSizeCode > 0 ) {
-	      secSize <<= secSizeCode;
-	    }
-	    secBuf = new byte[ secSize ];
-	    Arrays.fill( secBuf, (byte) 0 );
-	    if( secSize > diskSectorSize ) {
-	      diskSectorSize = secSize;
-	    }
-	  } else {
-	    throwUnsupportedTeleDiskFmt(
-		String.format(
-			"Code=%02X f\u00Fcr Sektorgr\u00F6\u00DFe"
-				+ " nicht unterst\u00FCtzt",
-			secSizeCode ) );
+	if( nSec > 0 ) {
+	  head &= 0x01;
+	  if( track >= cyls ) {
+	    cyls = track + 1;
+	  }
+	  if( sectorsPerCyl == 0 ) {
+	    sectorsPerCyl = nSec;
 	  }
 
-	  boolean crcError = ((secCtrl & 0x02) != 0);
-	  boolean deleted  = ((secCtrl & 0x04) != 0);
-	  if( ((secCtrl & 0x30) == 0) && (secBuf != null) ) {
-	    int len = readWord( in );
-	    if( len > 0 ) {
-	      int secEncoding = readByte( in );
-	      --len;
+	  // Sektoren lesen
+	  for( int i = 0; i < nSec; i++ ) {
+	    int    secTrack    = readByte( in );
+	    int    secHead     = readByte( in );
+	    int    secNum      = readByte( in );
+	    int    secSizeCode = readByte( in );
+	    int    secCtrl     = readByte( in );
+	    in.read();				// CRC
 
-	      int pos = 0;
-	      switch( secEncoding ) {
-		case 0:
-		  while( (len > 0) && (pos < secBuf.length) ) {
-		    secBuf[ pos++ ] = (byte) readByte( in );
-		    --len;
-		  }
-		  break;
+	    byte[] secBuf = null;
+	    if( (secSizeCode >= 0) && (secSizeCode <= 6) ) {
+	      int secSize = 128;
+	      if( secSizeCode > 0 ) {
+		secSize <<= secSizeCode;
+	      }
+	      secBuf = new byte[ secSize ];
+	      Arrays.fill( secBuf, (byte) 0 );
+	      if( secSize > diskSectorSize ) {
+		diskSectorSize = secSize;
+	      }
+	    } else {
+	      throwUnsupportedTeleDiskFmt(
+		String.format(
+			"Code=%02X f\u00FCr Sektorgr\u00F6\u00DFe"
+				+ " nicht unterst\u00FCtzt",
+			secSizeCode ) );
+	    }
 
-		case 1:
-		  if( len >= 4 ) {
-		    int n  = readWord( in );
-		    int b0 = readByte( in );
-		    int b1 = readByte( in );
-		    len -= 4;
-		    while( (n > 0) && (pos < secBuf.length) ) {
-		      secBuf[ pos++ ] = (byte) b0;
-		      secBuf[ pos++ ] = (byte) b1;
-		      --n;
+	    boolean crcError = ((secCtrl & 0x02) != 0);
+	    boolean deleted  = ((secCtrl & 0x04) != 0);
+
+	    if( ((secCtrl & 0x30) == 0) && (secBuf != null) ) {
+	      int len = readWord( in );
+	      if( len > 0 ) {
+		int secEncoding = readByte( in );
+		--len;
+
+		int pos = 0;
+		switch( secEncoding ) {
+		  case 0:
+		    while( (len > 0) && (pos < secBuf.length) ) {
+		      secBuf[ pos++ ] = (byte) readByte( in );
+		      --len;
 		    }
-		  }
-		  break;
+		    break;
 
-		case 2:
-		  while( len >= 2 ) {
-		    int t = readByte( in );
-		    int n = readByte( in );
-		    len -= 2;
-		    switch( t ) {
-		      case 0:
-			while( (len > 0) && (n > 0)
-			       && (pos < secBuf.length) )
-			{
-			  secBuf[ pos++ ] = (byte) readByte( in );
-			  --n;
-			  --len;
-			}
-			if( n > 0 ) {
-			  throwLengthMismatch();
-			}
-			break;
+		  case 1:
+		    if( len >= 4 ) {
+		      int n  = readWord( in );
+		      int b0 = readByte( in );
+		      int b1 = readByte( in );
+		      len -= 4;
+		      while( (n > 0) && (pos < secBuf.length) ) {
+			secBuf[ pos++ ] = (byte) b0;
+			secBuf[ pos++ ] = (byte) b1;
+			--n;
+		      }
+		    }
+		    break;
 
-		      case 1:
-			if( len >= 2 ) {
-			  int b0 = readByte( in );
-			  int b1 = readByte( in );
-			  len -= 2;
-			  while( (n > 0) && (pos < secBuf.length) ) {
-			    secBuf[ pos++ ] = (byte) b0;
-			    secBuf[ pos++ ] = (byte) b1;
+		  case 2:
+		    while( len >= 2 ) {
+		      int t = readByte( in );
+		      int n = readByte( in );
+		      len -= 2;
+		      switch( t ) {
+			case 0:
+			  while( (len > 0) && (n > 0)
+				 && (pos < secBuf.length) )
+			  {
+			    secBuf[ pos++ ] = (byte) readByte( in );
 			    --n;
+			    --len;
 			  }
-			}
-			break;
+			  if( n > 0 ) {
+			    throwLengthMismatch();
+			  }
+			  break;
 
-		      default:
-			throwUnsupportedTeleDiskFmt(
+			case 1:
+			  if( len >= 2 ) {
+			    int b0 = readByte( in );
+			    int b1 = readByte( in );
+			    len -= 2;
+			    while( (n > 0) && (pos < secBuf.length) ) {
+			      secBuf[ pos++ ] = (byte) b0;
+			      secBuf[ pos++ ] = (byte) b1;
+			      --n;
+			    }
+			  }
+			  break;
+
+			default:
+			  throwUnsupportedTeleDiskFmt(
 				String.format(
 					"Sektorunterkodierung %02X"
 						+ " nicht unterst\u00FCtzt",
 					t ) );
+		      }
 		    }
-		  }
-		  break;
+		    break;
 
-		default:
-		  throwUnsupportedTeleDiskFmt(
+		  default:
+		    throwUnsupportedTeleDiskFmt(
 			String.format(
 				"Sektorkodierung %02Xh nicht unterst\u00FCtzt",
 				secEncoding ) );
+		}
+		if( len > 0 ) {
+		  throwLengthMismatch();
+		}
 	      }
-	      if( len > 0 ) {
-		throwLengthMismatch();
+	    }
+	    Map<Integer,java.util.List<SectorData>> map = null;
+	    if( head == 0 ) {
+	      if( side0 == null ) {
+		side0 = new HashMap<Integer,java.util.List<SectorData>>();
+	      }
+	      map = side0;
+	    } else if( head == 1 ) {
+	      if( side1 == null ) {
+		side1 = new HashMap<Integer,java.util.List<SectorData>>();
+	      }
+	      map = side1;
+	    }
+	    if( map != null ) {
+	      Integer keyObj                     = new Integer( track );
+	      java.util.List<SectorData> sectors = map.get( keyObj );
+	      if( sectors == null ) {
+		sectors = new ArrayList<SectorData>( nSec > 0 ? nSec : 1 );
+		map.put( keyObj, sectors );
+	      }
+	      // doppelte Sektoren herausfiltern
+	      boolean found  = false;
+	      int     secLen = (secBuf != null ? secBuf.length : 0);
+	      for( SectorData sector : sectors ) {
+		if( sector.equalsSectorID(
+					secTrack,
+					secHead,
+					secNum,
+					secSizeCode ) )
+		{
+		  if( sector.equalsData( secBuf, 0, secLen ) ) {
+		    /*
+		     * Daten sind gleich -> sofern moeglich,
+		     * den Sektor als fehlerfrei und nicht geloescht behalten
+		     */
+		    if( !crcError ) {
+		      sector.setError( false );
+		    }
+		    if( !deleted ) {
+		      sector.setDeleted( false );
+		    }
+		    found = true;
+		    break;
+		  }
+		  // Daten sind unterschiedlich
+		  if( sector.checkError() ) {
+		    /*
+		     * den fehlerhaften durch den fehlerfreien Sektor
+		     * ersetzen
+		     */
+		    if( !crcError ) {
+		      sector.setData( deleted, secBuf, secLen );
+		    }
+		    found = true;
+		    break;
+		  }
+		  /*
+		   * den geloeschten durch den nicht geloeschten Sektor
+		   * ersetzen sofern er fehlerfrei ist
+		   */
+		  if( sector.isDeleted() && !deleted && !crcError ) {
+		    sector.setData( deleted, secBuf, secLen );
+		    found = true;
+		    break;
+		  }
+		}
+	      }
+	      if( !found ) {
+		sectors.add(
+			new SectorData(
+				sectors.size(),
+				secTrack,
+				secHead,
+				secNum,
+				secSizeCode,
+				crcError,
+				deleted,
+				secBuf,
+				0,
+				secLen ) );
 	      }
 	    }
-	  }
-	  Map<Integer,java.util.List<SectorData>> map = null;
-	  if( head == 0 ) {
-	    if( side0 == null ) {
-	      side0 = new HashMap<Integer,java.util.List<SectorData>>();
-	    }
-	    map = side0;
-	  } else if( head == 1 ) {
-	    if( side1 == null ) {
-	      side1 = new HashMap<Integer,java.util.List<SectorData>>();
-	    }
-	    map = side1;
-	  }
-	  if( map != null ) {
-	    Integer keyObj                     = new Integer( track );
-	    java.util.List<SectorData> sectors = map.get( keyObj );
-	    if( sectors == null ) {
-	      sectors = new ArrayList<SectorData>( nSec > 0 ? nSec : 1 );
-	      map.put( keyObj, sectors );
-	    }
-	    sectors.add(
-		new SectorData(
-			sectors.size(),
-			secTrack,
-			secHead,
-			secNum,
-			secSizeCode,
-			crcError,
-			deleted,
-			secBuf,
-			0,
-			secBuf != null ? secBuf.length : 0 ) );
 	  }
 	}
       }

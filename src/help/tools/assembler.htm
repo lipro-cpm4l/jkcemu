@@ -10,16 +10,57 @@
   (siehe <a href="assembler.htm#cmdline">Kommandozeile</a>).
  <br/><br/>
   Die Beschreibung des Assemblers unterteilt sich in folgende Rubriken:
-  <ol>
-   <li><a href="assembler.htm#options">Assembler-Optionen</a></li>
+  <ul>
+   <li><a href="assembler.htm#options">1. Assembler-Optionen</a></li>
    <li>
-    <a href="assembler.htm#msg"> Assembler-Ausgaben und Fehlermeldungen</a>
+    <a href="assembler.htm#msg">2. Assembler-Ausgaben und Fehlermeldungen</a>
    </li>
-   <li><a href="assembler.htm#general_syntax">Allgemeine Syntax</a></li>
+   <li><a href="assembler.htm#general_syntax">3. Allgemeine Syntax</a></li>
    <li>
-    <a href="assembler.htm#special_syntax">Mnemonik und Syntax: Zilog oder Robotron?</a>
+    &nbsp; &nbsp; <a href="assembler.htm#case">3.1. Gro&szlig;- und Kleinschreibung</a>
    </li>
-   <li><a href="assembler.htm#undoc">Undokumentierte Befehle</a></li>
+   <li>
+    &nbsp; &nbsp; <a href=assembler.htm#line_syntax">3.2. Aufbau einer Assembler-Quelltextzeile</a>
+   </li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#expr">3.3. Numerische Ausdr&uuml;cke</a>
+   </li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#num_literal">3.4. Zahlenliteral</a>
+   </li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#char_literal">3.5. Zeichenliteral</a>
+   </li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#string_literal">3.6. Zeichenkettenliteral</a>
+   </li>
+   <li>
+    &nbsp; &nbsp;
+    <a href="assembler.htm#byte_exract">
+     3.7. Zugriff auf h&ouml;her- oder niederwertiges Byte in einem Ausdruck</a>
+   </li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#pseudo_inst">3.8. Pseudobefehle</a>
+   </li>
+   <li>
+    <a href="assembler.htm#special_syntax">4. Mnemonik und Syntax: Zilog oder Robotron?</a>
+   </li>
+   <li><a href="assembler.htm#undoc">5. Undokumentierte Befehle</a></li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#ixy8">5.1. Zugriff auf die einzelnen Bytes der Index-Register</a>
+   </li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#inf">5.2. Eingabebefehl: Nur Flag-Register setzen</a>
+   </li>
+   <li>
+    &nbsp; &nbsp; <a href="assembler.htm#sll">5.3. Logischer Linksschiebebefehl</a>
+   </li>
+   <li>
+    &nbsp; &nbsp;
+    <a href="assembler.htm#undoc_single_bit">
+     5.4. Rotations-, Schiebe- und Einzelbitbefehle mit Indexregistern,
+          die auch auf ein anderes Register wirken</a>
+   </li>
    <li><a href="assembler.htm#cmdline">Kommandozeile</a></li>
   </ol>
  <br/><br/>
@@ -40,7 +81,10 @@
   in der der erzeugte Programmcode geschrieben wird.
   Das Format der Datei ergibt sich dabei aus der Dateiendung.
  <br/><br/>
-  <b>Achtung!</b> Bei KCC-, KCM- und TAP-Dateien gibt es Unterschiede
+  <b>Achtung!</b>
+  Bei <a href="../fileformats.htm#kcc">KCC</a>-,
+  <a href="../fileformats.htm#kcm">KCM</a>- und
+  <a href="../fileformats.htm#tap">TAP</a>-Dateien gibt es Unterschiede
   zwischen KC85/1, KC87 und Z9001 auf der einen sowie HC900 und KC85/2..5
   auf der anderen Seite.
   Damit der Assembler das richtige Dateiformat erzeugt,
@@ -73,7 +117,7 @@
 
  <h2><a name="general_syntax">3. Allgemeine Syntax</a></h2>
 
- <h3>3.1. Gro&szlig;- und Kleinschreibung</h3>
+ <h3><a name="case">3.1. Gro&szlig;- und Kleinschreibung</a></h3>
   Der Assembler unterscheidet au&szlig;er bei Zeichen- und
   Zeichenkettenliteralen nicht zwischen Gro&szlig;- und Kleinschreibung,
   d.h., die Mnemonik der Befehle und die Register k&ouml;nnen
@@ -82,7 +126,7 @@
   ob zwischen Gro&szlig;- und Kleinschreibung unterschieden werden soll.
  <br/><br/>
 
- <h3>3.2. Aufbau einer Assembler-Quelltextzeile</h3>
+ <h3><a name="line_syntax">3.2. Aufbau einer Assembler-Quelltextzeile</a></h3>
   Die allgemeine Syntax einer Quelltextzeile lautet:
 
   <p>
@@ -98,7 +142,7 @@
   muss vor der Mnemonik mindestens ein Leerzeichen oder ein Tabulator stehen.
  <br/><br/>
 
- <h3>3.3. Numerische Ausdr&uuml;cke</h3>
+ <h3><a name="expr">3.3. Numerische Ausdr&uuml;cke</a></h3>
   Bei numerischen Ausdr&uuml;cken unterst&uuml;tzt der Assembler
   die Vorzeichen <tt>+</tt> und <tt>-</tt> sowie die arithmetischen
   Operationen Addition und Subtraktion, die ebenfalls durch
@@ -109,7 +153,7 @@
   eines untergeordneten Ausdrucks.
  <br/><br/>
 
- <h3>3.4. Zahlenliteral</h3>
+ <h3><a name="num_literal">3.4. Zahlenliteral</a></h3>
   Zahlenliterale beginnen mit einer Ziffer und k&ouml;nnen mit
   einem Buchstaben enden, der die Basis der Zahl angibt.
   Folgende Buchstaben sind dabei m&ouml;glich:
@@ -139,14 +183,14 @@
   </table>
  <br/><br/>
 
- <h3>3.5. Zeichenliteral</h3>
+ <h3><a name="char_literal">3.5. Zeichenliteral</a></h3>
   Ein Zeichenliteral ist ein in einfachen Hochkommas
   eingeschlossenes Zeichen, z.B. <tt>'A'</tt>.
   Ein Zeichenliteral kann innerhalb eines numerischen Ausdrucks
   verwendet werden.
  <br/><br/>
 
- <h3>3.6. Zeichenkettenliteral</h3>
+ <h3><a name="string_literal">3.6. Zeichenkettenliteral</a></h3>
   Ein Zeichenkettenliteral umfasst ein oder mehrere in einfachen
   oder doppelten Hochkommas eingeschlossene Zeichen.
   Zeichenkettenliterale k&ouml;nnen nur bei den Pseudobefehlen
@@ -154,7 +198,9 @@
  <br/><br/>
 
  <h3>
-  3.7. Zugriff auf h&ouml;her- oder niederwertiges Byte in einem Ausdruck
+  <a name="byte_exract">
+    3.7. Zugriff auf h&ouml;her- oder niederwertiges Byte in einem Ausdruck
+  </a>
  </h3>
   <table border="1">
    <tr><th>Zugriff auf</th><th>Syntax</th></tr>
@@ -175,7 +221,7 @@
   </table>
  <br/><br/>
 
- <h3>3.8. Pseudobefehle</h3>
+ <h3><a name="pseudo_inst">3.8. Pseudobefehle</a></h3>
   Der Assembler versteht folgende Pseudobefehle:
   <table border="1">
    <tr>
@@ -288,10 +334,22 @@
      mit Null-Bytes aufgef&uuml;llt.
     </td>
    </tr>
+   <tr>
+    <td valign=top><tt>Z80</tt></td>
+    <td valign=top>0</td>
+    <td valign=top></td>
+    <td valign=top>
+     Angabe des Prozessortyps,<br/>
+     Dieser Pseudobefehl ist aus Kompatibilit&auml;tsgr&uuml;nden
+     vorhanden und hat keine Wirkung,
+     da der Assembler sowieso nur einen Prozessortyp unterst&uuml;tzt.
+    </td>
+   </tr>
   </table>
  <br/>
   Alle Pseudobefehle k&ouml;nnen auch mit einem vorangestellten Punkt
   geschrieben werden, z.B. <tt>.ORG</tt>, <tt>.DB</tt> und so weiter.
+  In dem Fall darf der Pseudobefehl auch am Zeilenanfang stehen.
  <br/><br/>
 
 
@@ -498,7 +556,9 @@
   und werden nachfolgend beschrieben.
  <br/><br/>
 
- <h3>5.1. Zugriff auf die einzelnen Bytes der Index-Register</h3>
+ <h3>
+  <a name="ixy8">5.1. Zugriff auf die einzelnen Bytes der Index-Register</a>
+ </h3>
   Viele 8-Bit-Register-Befehle k&ouml;nnen auch auf das niederwertige
   beziehungsweise h&ouml;herwertige Byte der beiden Indexregister
   angewendet werden.
@@ -577,7 +637,7 @@
   <tt>HX</tt>, <tt>LX</tt>, <tt>HY</tt> und <tt>LY</tt> m&ouml;glich.
  <br/><br/>
 
- <h3>5.2. Eingabebefehl: Nur Flag-Register setzen</h3>
+ <h3><a name="inf">5.2. Eingabebefehl: Nur Flag-Register setzen</a></h3>
   Der Befehl liest ein Byte vom Eingabetor, dessen Adresse im Register C
   steht und setzt das Flag-Register entsprechend.
   Der eingelesene Wert selbst wird nicht behalten.
@@ -591,7 +651,7 @@
   offizieller Befehl verstanden.
  <br/><br/>
 
- <h3>5.3. Logischer Linksschiebebefehl</h3>
+ <h3><a name="sll">5.3. Logischer Linksschiebebefehl</a></h3>
   Der Befehl schiebt das Argument um ein Bit nach links,
   wobei das Bit 0 danach auf 1 gesetzt ist.
   <table border="1">
@@ -614,8 +674,10 @@
  <br/><br/>
 
  <h3>
-  5.4. Rotations-, Schiebe- und Einzelbitbefehle mit Indexregistern,
+  <a name="undoc_single_bit">
+   5.4. Rotations-, Schiebe- und Einzelbitbefehle mit Indexregistern,
        die auch auf ein anderes Register wirken
+  </a>
  </h3>
   Die offiziell dokumentierten Rotations-, Schiebe- und Einzelbitbefehle,
   die auf ein Byte im Arbeitsspeicher angewendet werden,
@@ -687,12 +749,26 @@
     <td valign="top" nowrap="nowrap">-o&nbsp;&lt;Ausgabedatei&gt;</td>
     <td>
      Der erzeugte Programmcode wird in die angegebene Datei geschrieben.
-     Das Format der Ausgabedatei h&auml;ngt von der Endung ab
-     (*.bin; *.hex; *.kcc; *.tap; *.z80).
+     Das Format der Ausgabedatei h&auml;ngt von der Endung
+     (*.bin; *.hex; *.kcc; *.kcm; *.tap; *.z80) und von der Angabe
+     der Option <em>-9</em> ab.
      <br/>
-     Fehlt die Option, hat die Ausgabedatei mit Ausnahme der Endung
-     den gleichen Namen wie die Quelltextdatei.
+     Fehlt die Option <em>-o</em>, hat die Ausgabedatei mit Ausnahme
+     der Endung den gleichen Namen wie die Quelltextdatei.
      Die Endung lautet: <em>*.bin</em>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">-9</td>
+    <td>
+     Wurde mit der Option <em>-o</em> eine
+     <a href="../fileformats.htm#kcc">KCC</a>-,
+     <a href="../fileformats.htm#kcm">KCM</a>- oder
+     <a href="../fileformats.htm#tap">TAP</a>-Datei
+     angegeben, wird diese im Format f&uuml;r einen Z9001,
+     KC85/1 und KC87 erzeugt (Dateityp <em>COM</em> eingetragen und
+     bei TAP-Dateien hat der erste Block die Nummer&nbsp;0).
+     Fehlt die Option <em>-9</em>, werden KCC-, KCM- und TAP-Dateien
+     im Format f&uuml;r HC900 und KC85/2..5 erzeugt.
    </tr>
    <tr>
     <td valign="top">-C</td>

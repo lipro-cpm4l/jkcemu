@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -117,10 +117,12 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   private byte[]  romF000;
   private byte[]  ram;
   private int     ramEndAddr;
+  private int     osVersion;
   private int     screenOffset;
   private int     screenBaseHeight;
   private int     screenCharCols;
   private int     screenCharRows;
+  private int     screenRowHeight;
   private int     screenRowOffset;
   private int[]   kbMatrix;
   private boolean audioOutPhase;
@@ -141,6 +143,8 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
     String version = EmuUtil.getProperty( props, "jkcemu.bcs3.os.version" );
     if( version.equals( "3.1" ) ) {
+      this.osVersion       = 31;
+      this.screenRowHeight = 8;
       if( this.fontBytes == null ) {
 	if( fontBytesSE31 == null ) {
 	  fontBytesSE31 = readResource( "/rom/bcs3/se31font.bin" );
@@ -174,6 +178,8 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	this.romF000 = mcEdtitorSE31;
       }
     } else if( version.equals( "3.3" ) ) {
+      this.osVersion       = 33;
+      this.screenRowHeight = 8;
       if( this.fontBytes == null ) {
 	if( fontBytesSP33 == null ) {
 	  fontBytesSP33 = readResource( "/rom/bcs3/sp33font.bin" );
@@ -192,6 +198,8 @@ public class BCS3 extends EmuSys implements Z80CTCListener
       this.screenCharCols   = 29;
       this.screenRowOffset  = 30;
     } else {
+      this.osVersion       = 24;
+      this.screenRowHeight = 16;
       if( this.fontBytes == null ) {
 	if( fontBytesSE24 == null ) {
 	  fontBytesSE24 = readResource( "/rom/bcs3/se24font.bin" );
@@ -443,37 +451,32 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   public int getColorIndex( int x, int y )
   {
     int rv = WHITE;
-    if( this.fontBytes != null ) {
+    if( (this.fontBytes != null) && (this.screenRowHeight > 0) ) {
       int fIdx = -1;
-      if( this.rom0000 == osBytesSE24 ) {
-	int rPix = y % 16;
-	if( rPix < 8 ) {
-	  int row = y / 16;
-	  int col = x / 8;
-	  if( (row < this.screenCharRows) && (col < this.screenCharCols) ) {
-	    int mIdx = this.screenOffset
-				+ (row * this.screenRowOffset)
-				+ col;
-	    if( (mIdx >= 0) && (mIdx < this.ram.length) ) {
-	      int ch = (int) (this.ram[ mIdx ] & 0xFF);
-	      if( rPix == 7 ) {
-		fIdx = (ch * 8);
-	      } else {
-		fIdx = (ch * 8) + rPix + 1;
-	      }
-	    }
-	  }
-	}
-      } else {
-	int row = y / 8;
+      int rPix = y % this.screenRowHeight;
+      if( rPix < 8 ) {
+	int row = y / this.screenRowHeight;
 	int col = x / 8;
 	if( (row < this.screenCharRows) && (col < this.screenCharCols) ) {
-	  int mIdx = this.screenOffset
-				+ (row * this.screenRowOffset)
-				+ col;
-	  if( (mIdx >= 0) && (mIdx < this.ram.length) ) {
-	    int rPix = y % 8;
-	    int ch   = (int) (this.ram[ mIdx ] & 0xFF);
+	  /*
+	   * Ab dem ersten Byte mit gesetztem Bit 7 werden
+	   * bis zum Zeilenende keine Zeichen mehr ausgegeben.
+	   */
+	  int ch   = -1;
+	  int mIdx = this.screenOffset + (row * this.screenRowOffset);
+	  while( mIdx < this.ram.length ) {
+	    ch = (int) (this.ram[ mIdx ] & 0xFF);
+	    if( (ch & 0x80) != 0 ) {
+	      ch = '\u0020';
+	      break;
+	    }
+	    if( col == 0 ) {
+	      break;
+	    }
+	    --col;
+	    mIdx++;
+	  }
+	  if( ch >= 0 ) {
 	    if( rPix == 7 ) {
 	      fIdx = (ch * 8);
 	    } else {
@@ -498,37 +501,15 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public int getCharColCount()
+  public CharRaster getCurScreenCharRaster()
   {
-    return this.screenCharCols;
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    return 8;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return this.screenCharRows;
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    return this.rom0000 == osBytesSE24 ? 16 : 8;
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return 8;
+    return new CharRaster(
+			this.screenCharCols,
+			this.screenCharRows,
+			this.rom0000 == osBytesSE24 ? 16 : 8,
+			8,
+			8,
+			0 );
   }
 
 
@@ -643,14 +624,113 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
-    int idx = this.screenOffset + (chY * this.screenRowOffset) + chX;
-    if( (idx >= 0) && (idx < this.ram.length) ) {
-      int b = (int) this.ram[ idx ] & 0xFF;
-      if( (b >= 0x20) && (b < 0x7F) ) {
-	ch = b;
+    int idx = this.screenOffset + (chY * this.screenRowOffset);
+    if( idx >= 0 ) {
+      /*
+       * Ab dem ersten Byte mit gesetztem Bit 7 werden
+       * bis zum Zeilenende keine Zeichen mehr ausgegeben.
+       */
+      int b = -1;
+      while( idx < this.ram.length ) {
+	b = (int) this.ram[ idx ] & 0xFF;
+	if( (b & 0x80) != 0 ) {
+	  ch = '\u0020';
+	  break;
+	}
+	if( chX == 0 ) {
+	  break;
+	}
+	idx++;
+	--chX;
+      }
+      if( (b >= 0) && (b < 0x10) ) {
+	if( this.osVersion < 24 ) {
+	  ch = '\u0020';
+	}
+      } else if( (b >= 10) && (b < 0x20) ) {
+	if( this.osVersion < 32 ) {
+	  ch = '\u0020';
+	} else {
+	  switch( b ) {
+	    case 0x14:
+	      ch = '\u2665';
+	      break;
+	    case 0x15:
+	      ch = '\u2660';
+	      break;
+	    case 0x16:
+	      ch = '\u2666';
+	      break;
+	    case 0x17:
+	      ch = '\u2663';
+	      break;
+	    case 0x18:
+	      ch = '\u25CF';
+	      break;
+	    case 0x19:
+	      ch = '\u25E2';
+	      break;
+	    case 0x1A:
+	      ch = '\u25E5';
+	      break;
+	    case 0x1B:
+	      ch = '\u25E4';
+	      break;
+	    case 0x1C:
+	      ch = '\u25E3';
+	      break;
+	    case 0x1D:
+	      ch = '\u25A1';
+	      break;
+	    case 0x1E:
+	      ch = '\u0020';
+	      break;
+	    case 0x1F:
+	      ch = '\u03A9';
+	      break;
+	  }
+	}
+      } else if( (b >= 0x20) && (b <= 0x7F) ) {
+	switch( b ) {
+	  case 0x5D:
+	    if( this.osVersion >= 32 ) {
+	      ch = ']';
+	    }
+	    break;
+	  case 0x5F:			// invertiertes Groesserzeichen
+	    break;
+	  case 0x60:
+	    if( this.osVersion < 32 ) {
+	      ch = '\u0020';
+	    } else {
+	      ch = b;
+	    }
+	    break;
+	  case 0x7B:
+	    ch = '\u00E4';			// ae
+	    break;
+	  case 0x7C:
+	    ch = '\u00F6';			// ae
+	    break;
+	  case 0x7D:
+	    ch = '\u00FC';			// ae
+	    break;
+	  case 0x7E:
+	    ch = '|';
+	    break;
+	  case 0x7F:
+	    if( this.osVersion < 32 ) {
+	      ch = '\u25A0';			// ausgefuelltes Feld
+	    } else {
+	      ch = '\u00B7';			// Punkt in der Mitte
+	    }
+	    break;
+	  default:
+	    ch = b;
+	}
       }
     }
     return ch;

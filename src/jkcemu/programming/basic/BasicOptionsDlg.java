@@ -22,20 +22,25 @@ import jkcemu.programming.basic.target.*;
 
 public class BasicOptionsDlg extends AbstractOptionsDlg
 {
-  private static final String textBegAddr  = "Anfangsadresse:";
+  private static final String textCodeBegAddr =
+			"Anfangsadresse Programmcode:";
+  private static final String textBssBegAddr =
+			"Anfangsadresse Speicherzelle:";
   private static final String textHeapSize =
 			"Gr\u00F6\u00DFe des Zeichenkettenspeichers:";
 
   private static final AbstractTarget[] targets = {
 				new CPMTarget(),
 				new SCCHTarget(),
+				new AC1Target(),
 				new LLC2HIRESTarget(),
 				new HueblerGraphicsMCTarget(),
 				new Z9001Target(),
 				new Z9001KRTTarget(),
 				new KC85Target(),
 				new KramerMCTarget(),
-				new Z1013Target() };
+				new Z1013Target(),
+				new Z1013PetersTarget() };
 
   private EmuSys          emuSys;
   private JTabbedPane     tabbedPane;
@@ -58,16 +63,20 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   private JCheckBox       btnWarnNonAsciiChars;
   private JCheckBox       btnWarnUnusedItems;
   private JTextField      fldAppName;
-  private JTextField      fldBegAddr;
+  private JTextField      fldCodeBegAddr;
+  private JTextField      fldBssBegAddr;
   private JTextField      fldHeapSize;
   private JTextField      fldStackSize;
   private JLabel          labelAppName;
-  private JLabel          labelBegAddr;
-  private JLabel          labelBegAddrUnit;
+  private JLabel          labelCodeBegAddr;
+  private JLabel          labelCodeBegAddrUnit;
+  private JLabel          labelBssBegAddr;
+  private JLabel          labelBssBegAddrUnit;
   private JLabel          labelStackSize;
   private JLabel          labelStackUnit;
   private LimitedDocument docAppName;
-  private HexDocument     docBegAddr;
+  private HexDocument     docCodeBegAddr;
+  private HexDocument     docBssBegAddr;
   private IntegerDocument docHeapSize;
   private IntegerDocument docStackSize;
 
@@ -90,8 +99,8 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
 
     // vorausgewaehltes Zielsystem festlegen
-    String  targetText   = null;
-    boolean resetBegAddr = false;
+    String  targetText    = null;
+    boolean resetBegAddrs = false;
     if( basicOptions != null ) {
       targetText = basicOptions.getTargetText();
       if( targetText != null ) {
@@ -102,8 +111,8 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 	EmuSys lastEmuSys = basicOptions.getEmuSys();
 	if( (this.emuSys != null) && (lastEmuSys != null) ) {
 	  if( this.emuSys != lastEmuSys ) {
-	    targetText   = null;
-	    resetBegAddr = true;
+	    targetText    = null;
+	    resetBegAddrs = true;
 	  }
 	}
       }
@@ -144,8 +153,8 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     this.labelAppName = new JLabel( "Name des Programms:" );
     panelGeneral.add( this.labelAppName, gbcGeneral );
     gbcGeneral.gridy++;
-    this.labelBegAddr = new JLabel( textBegAddr );
-    panelGeneral.add( this.labelBegAddr, gbcGeneral );
+    this.labelCodeBegAddr = new JLabel( textCodeBegAddr );
+    panelGeneral.add( this.labelCodeBegAddr, gbcGeneral );
     gbcGeneral.gridy++;
     panelGeneral.add(
 		new JLabel( "Gr\u00F6\u00DFe Zeichenkettenspeicher:" ),
@@ -202,17 +211,17 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
     gbcGeneral.gridy++;
     panelGeneral.add( this.fldAppName, gbcGeneral );
 
-    this.docBegAddr = new HexDocument( 4, textBegAddr );
-    this.fldBegAddr = new JTextField( this.docBegAddr, "", 0 );
-    this.fldBegAddr.addActionListener( this );
+    this.docCodeBegAddr = new HexDocument( 4, textCodeBegAddr );
+    this.fldCodeBegAddr = new JTextField( this.docCodeBegAddr, "", 0 );
+    this.fldCodeBegAddr.addActionListener( this );
     gbcGeneral.gridwidth = 1;
     gbcGeneral.gridy++;
-    panelGeneral.add( this.fldBegAddr, gbcGeneral );
+    panelGeneral.add( this.fldCodeBegAddr, gbcGeneral );
 
-    this.labelBegAddrUnit = new JLabel( "hex" );
+    this.labelCodeBegAddrUnit = new JLabel( "hex" );
     gbcGeneral.fill       = GridBagConstraints.NONE;
     gbcGeneral.gridx++;
-    panelGeneral.add( this.labelBegAddrUnit, gbcGeneral );
+    panelGeneral.add( this.labelCodeBegAddrUnit, gbcGeneral );
 
     JTextField fldHeapSize = new JTextField();
     fldHeapSize.addActionListener( this );
@@ -482,8 +491,11 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       langCode  = basicOptions.getLangCode();
       stackSize = basicOptions.getStackSize();
       this.fldAppName.setText( basicOptions.getAppName() );
-      if( !updBegAddr( basicOptions.getBegAddr() ) ) {
-	resetBegAddr = true;
+      if( !updBegAddrs(
+		basicOptions.getCodeBegAddr(),
+		basicOptions.getBssBegAddr() ) )
+      {
+	resetBegAddrs = true;
       }
       this.docHeapSize.setValue( basicOptions.getHeapSize() );
       switch( basicOptions.getBreakOption() ) {
@@ -519,7 +531,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       this.btnShowAsm.setSelected( false );
       this.btnWarnNonAsciiChars.setSelected( true );
       this.btnWarnUnusedItems.setSelected( true );
-      resetBegAddr = true;
+      resetBegAddrs = true;
     }
     if( langCode != null ) {
       if( langCode.equalsIgnoreCase( "DE" ) ) {
@@ -553,8 +565,8 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       this.btnStackSystem.setSelected( true );
     }
     this.docAppName.setSwapCase( true );
-    if( resetBegAddr ) {
-      updBegAddrFromSelectedTarget();
+    if( resetBegAddrs ) {
+      updBegAddrsFromSelectedTarget();
     }
     updCodeDestFields( options, forceCodeToEmu );
     updAppNameFieldsEnabled();
@@ -585,15 +597,15 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 			"Sie m\u00FCssen ein Zielsystem ausw\u00E4hlen!" );
       }
 
-      labelText      = textBegAddr;
-      int begAddr    = this.docBegAddr.intValue();
-      int actualAddr = begAddr;
+      labelText       = textCodeBegAddr;
+      int codeBegAddr = this.docCodeBegAddr.intValue();
+      int actualAddr  = codeBegAddr;
 
-      labelText      = textHeapSize;
-      int heapSize   = this.docHeapSize.intValue();
+      labelText       = textHeapSize;
+      int heapSize    = this.docHeapSize.intValue();
 
-      labelText      = "Stack-Gr\u00F6\u00DFe:";
-      int stackSize  = 0;
+      labelText       = "Stack-Gr\u00F6\u00DFe:";
+      int stackSize   = 0;
       if( this.btnStackSeparate.isSelected() ) {
 	stackSize = this.docStackSize.intValue();
       }
@@ -610,7 +622,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       BasicOptions options = new BasicOptions();
       options.setTarget( target );
       options.setAppName( this.fldAppName.getText() );
-      options.setBegAddr( begAddr );
+      options.setCodeBegAddr( codeBegAddr );
       options.setHeapSize( heapSize );
       options.setStackSize( stackSize );
       options.setLangCode( this.btnLangDE.isSelected() ? "DE" : "EN" );
@@ -656,7 +668,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       if( src == this.comboTarget ) {
 	rv = true;
 	updAppNameFieldsEnabled();
-	updBegAddrFromSelectedTarget();
+	updBegAddrsFromSelectedTarget();
 	updCodeToEmuFields();
       }
       else if( (src == this.btnStackSystem)
@@ -749,29 +761,29 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
   }
 
 
-  private boolean updBegAddr( int addr )
+  private boolean updBegAddrs( int codeBegAddr, int bssBegAddr )
   {
     boolean rv = false;
-    if( addr >= 0 ) {
-      this.docBegAddr.setValue( addr, 4 );
+    if( codeBegAddr >= 0 ) {
+      this.docCodeBegAddr.setValue( codeBegAddr, 4 );
       rv = true;
     } else {
-      this.fldBegAddr.setText( "" );
+      this.fldCodeBegAddr.setText( "" );
     }
     return rv;
   }
 
 
-  private void updBegAddrFromSelectedTarget()
+  private void updBegAddrsFromSelectedTarget()
   {
-    int     addr = -1;
-    Object  obj  = this.comboTarget.getSelectedItem();
+    int     codeBegAddr = -1;
+    Object  obj         = this.comboTarget.getSelectedItem();
     if( obj != null ) {
       if( obj instanceof AbstractTarget ) {
-	addr = ((AbstractTarget) obj).getDefaultBegAddr();
+	codeBegAddr = ((AbstractTarget) obj).getDefaultBegAddr();
       }
     }
-    updBegAddr( addr );
+    updBegAddrs( codeBegAddr, -1 );
   }
 
 

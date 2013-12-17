@@ -86,7 +86,6 @@ public class FileBrowserFrm extends BasicFrm
   private JMenuItem            mnuEditFilePaste;
   private JCheckBoxMenuItem    mnuHiddenFiles;
   private JCheckBoxMenuItem    mnuSortCaseSensitive;
-  private JCheckBoxMenuItem    mnuLoadOnDoubleClick;
   private JRadioButtonMenuItem mnuNoPreview;
   private JRadioButtonMenuItem mnuPreviewMaxFileSize100K;
   private JRadioButtonMenuItem mnuPreviewMaxFileSize1M;
@@ -298,11 +297,6 @@ public class FileBrowserFrm extends BasicFrm
 		EmuUtil.parseBooleanProperty(
 				props,
 				"jkcemu.filebrowser.sort_case_sensitive",
-				false ) );
-      this.mnuLoadOnDoubleClick.setSelected(
-		EmuUtil.parseBooleanProperty(
-				props,
-				"jkcemu.filebrowser.load_on_double_click",
 				false ) );
       String previewMaxFileSize = null;
       if( props != null ) {
@@ -643,9 +637,6 @@ public class FileBrowserFrm extends BasicFrm
       props.setProperty(
 		"jkcemu.filebrowser.sort_case_sensitive",
 		String.valueOf( this.mnuSortCaseSensitive.isSelected() ) );
-      props.setProperty(
-		"jkcemu.filebrowser.load_on_double_click",
-		String.valueOf( this.mnuLoadOnDoubleClick.isSelected() ) );
 
       String previewMaxFileSize = "unlimited";
       if( this.mnuNoPreview.isSelected() ) {
@@ -683,6 +674,7 @@ public class FileBrowserFrm extends BasicFrm
 	  if( (c == this.tree) || (c instanceof JTable) ) {
 	    try {
 	      doFileAction( c );
+	      done = true;
 	    }
 	    catch( IOException ex ) {
 	      BasicDlg.showErrorDlg( this, ex );
@@ -701,20 +693,22 @@ public class FileBrowserFrm extends BasicFrm
   @Override
   public void mousePressed( MouseEvent e )
   {
-    if( checkPopup( e ) )
+    if( checkPopup( e ) ) {
       e.consume();
-    else
+    } else {
       super.mousePressed( e );
+    }
   }
 
 
   @Override
   public void mouseReleased( MouseEvent e )
   {
-    if( checkPopup( e ) )
+    if( checkPopup( e ) ) {
       e.consume();
-    else
+    } else {
       super.mouseReleased( e );
+    }
   }
 
 
@@ -724,7 +718,7 @@ public class FileBrowserFrm extends BasicFrm
   {
     try {
       if( this.clipboard != null ) {
-      Collection<File> files = getSelectedFiles();
+	Collection<File> files = getSelectedFiles();
 	if( files != null ) {
 	  if( !files.isEmpty() ) {
 	    FileListSelection fls = new FileListSelection( files );
@@ -914,7 +908,7 @@ public class FileBrowserFrm extends BasicFrm
 			this,		// owner
 			this.screenFrm,
 			file,
-			!this.mnuLoadOnDoubleClick.isSelected(),
+			true,		// interactive
 			true,		// startEnabled
 			fileNode.isStartableFile() );
 		}
@@ -1076,7 +1070,7 @@ public class FileBrowserFrm extends BasicFrm
 								file );
 	    if( disk != null ) {
 	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
-		DiskUtil.unpackDisk( this, file, disk );
+		DiskUtil.unpackDisk( this, file, disk, true );
 	      }
 	    }
 	  }
@@ -1924,12 +1918,6 @@ public class FileBrowserFrm extends BasicFrm
 			true );
     this.mnuSortCaseSensitive.addActionListener( this );
     mnuSettings.add( this.mnuSortCaseSensitive );
-
-    this.mnuLoadOnDoubleClick = new JCheckBoxMenuItem(
-		"Doppelklick f\u00FChrt Laden/Starten ohne Nachfrage aus",
-		false );
-    this.mnuLoadOnDoubleClick.addActionListener( this );
-    mnuSettings.add( this.mnuLoadOnDoubleClick );
     mnuSettings.addSeparator();
 
     JMenu mnuSettingsPreview = new JMenu(
@@ -2545,18 +2533,25 @@ public class FileBrowserFrm extends BasicFrm
   private boolean pasteFile( File dstDir, File srcFile )
   {
     boolean done = false;
-    if( srcFile.isFile() ) {
-      String orgName = srcFile.getName();
-      if( orgName != null ) {
-	if( !orgName.isEmpty() ) {
-	  String  fileName = orgName;
-	  File    dstFile  = null;
-	  while( fileName != null ) {
-	    dstFile = new File( dstDir, fileName );
-	    if( dstFile.exists() ) {
-	      dstFile = null;
+    /*
+     * Unter Linux wurde in bestimmten Faellen der Effekt beobachtet,
+     * dass die in die Zwischenablage kopierte Dateiliste
+     * ein zusaetzliches File-Objekt mit einem leeren Pfad enthielt.
+     * Aus diesem Grund wird hier geprueft, ob im Pfad etwas steht.
+     */
+    if( !srcFile.getPath().isEmpty() ) {
+      if( srcFile.isFile() ) {
+	String orgName = srcFile.getName();
+	if( orgName != null ) {
+	  if( !orgName.isEmpty() ) {
+	    String fileName = orgName;
+	    File   dstFile  = null;
+	    while( fileName != null ) {
+	      dstFile = new File( dstDir, fileName );
+	      if( dstFile.exists() ) {
+		dstFile = null;
 
-	      String text = JOptionPane.showInputDialog(
+		String text = JOptionPane.showInputDialog(
 			this,
 			"Einf\u00FCgen von " + orgName + ":\n"
 				+ "Es existiert bereits eine Datei oder"
@@ -2566,40 +2561,41 @@ public class FileBrowserFrm extends BasicFrm
 				+ "Name der Datei:",
 			"Einf\u00FCgen einer Datei",
 			JOptionPane.WARNING_MESSAGE );
-	      if( text != null ) {
-		if( text.isEmpty() ) {
-		  fileName = orgName;
+		if( text != null ) {
+		  if( text.isEmpty() ) {
+		    fileName = orgName;
+		  } else {
+		    fileName = text;
+		  }
 		} else {
-		  fileName = text;
+		  fileName = null;
 		}
 	      } else {
-		fileName = null;
+		break;
 	      }
-	    } else {
-	      break;
 	    }
-	  }
-	  if( dstFile != null ) {
-	    try {
-	      done = EmuUtil.copyFile( srcFile, dstFile );
-	    }
-	    catch( Exception ex ) {
-	      BasicDlg.showErrorDlg( this, ex );
+	    if( dstFile != null ) {
+	      try {
+		done = EmuUtil.copyFile( srcFile, dstFile );
+	      }
+	      catch( Exception ex ) {
+		BasicDlg.showErrorDlg( this, ex );
+	      }
 	    }
 	  }
 	}
-      }
-    } else {
-      if( srcFile.isDirectory() ) {
-	BasicDlg.showErrorDlg(
+      } else {
+	if( srcFile.isDirectory() ) {
+	  BasicDlg.showErrorDlg(
 		this,
 		"Das Einf\u00FCgen von Verzeichnissen\n"
 			+ "wird nicht unterst\u00FCtzt." );
-      } else {
-	BasicDlg.showErrorDlg(
+	} else {
+	  BasicDlg.showErrorDlg(
 		this,
 		"Nicht regul\u00E4re Dateien k\u00F6nnen nicht\n"
 			+ "eingef\u00FCgt werden." );
+	}
       }
     }
     return done;

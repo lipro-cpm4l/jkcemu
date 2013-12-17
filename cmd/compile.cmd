@@ -17,6 +17,7 @@ del %SRC_DIR%\jkcemu\emusys\lc80\*.class
 del %SRC_DIR%\jkcemu\emusys\poly880\*.class
 del %SRC_DIR%\jkcemu\emusys\z1013\*.class
 del %SRC_DIR%\jkcemu\emusys\z9001\*.class
+del %SRC_DIR%\jkcemu\emusys\zxspectrum\*.class
 del %SRC_DIR%\jkcemu\etc\*.class
 del %SRC_DIR%\jkcemu\filebrowser\*.class
 del %SRC_DIR%\jkcemu\image\*.class

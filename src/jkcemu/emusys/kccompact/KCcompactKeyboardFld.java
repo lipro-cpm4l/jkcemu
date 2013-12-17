@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.KCcompact;
 
 
-public class KCcompactKeyboardFld extends AbstractKeyboardFld
+public class KCcompactKeyboardFld extends AbstractKeyboardFld<KCcompact>
 {
   private static final int TEXT_FONT_SIZE   = 10;
   private static final int LETTER_FONT_SIZE = 14;
@@ -28,32 +28,30 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
   private static final int SPACE_KEY_SIZE   = KEY_SIZE * 8;
   private static final int MARGIN           = 20;
 
-  private KCcompact kccompact;
-  private Image     imgKey40x40;
-  private Image     imgKey50x40;
-  private Image     imgKey60x40;
-  private Image     imgKey320x40;
-  private Image     imgLeft;
-  private Image     imgRight;
-  private Image     imgUp;
-  private Image     imgDown;
-  private Image     imgPoint;
-  private Font      fontText;
-  private Font      fontLetter;
-  private Font      fontDigit;
-  private int[]     kbMatrix;
-  private int       curIdx;
-  private int       curX;
-  private int       curY;
-  private int       xRow1Left;
-  private int       xRow1Right;
-  private int       xRow3Right;
+  private Image imgKey40x40;
+  private Image imgKey50x40;
+  private Image imgKey60x40;
+  private Image imgKey320x40;
+  private Image imgLeft;
+  private Image imgRight;
+  private Image imgUp;
+  private Image imgDown;
+  private Image imgPoint;
+  private Font  fontText;
+  private Font  fontLetter;
+  private Font  fontDigit;
+  private int[] kbMatrix;
+  private int   curIdx;
+  private int   curX;
+  private int   curY;
+  private int   xRow1Left;
+  private int   xRow1Right;
+  private int   xRow3Right;
 
 
   public KCcompactKeyboardFld( KCcompact kccompact )
   {
-    super( 69 );
-    this.kccompact    = kccompact;
+    super( kccompact, 69, true );
     this.imgKey40x40  = getImage( "/images/keyboard/key40x40.png" );
     this.imgKey50x40  = getImage( "/images/keyboard/key50x40.png" );
     this.imgKey60x40  = getImage( "/images/keyboard/key60x40.png" );
@@ -70,10 +68,10 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
     this.curIdx       = 0;
     this.curX         = MARGIN;
     this.curY         = MARGIN;
-    addKey( "F0", 1, 0x80 );
+    addKey( "F0", null, 1, 0x80, "F5" );
     this.curX += (KEY_SIZE / 2);
     this.xRow1Left = this.curX;
-    addKey( "ESC", 8, 0x04 );
+    addKey( "ESC", null, 8, 0x04, "Esc" );
     addKey( "1", "!", 8, 0x01 );
     addKey( "2", "\"", 8, 0x02 );
     addKey( "3", "#", 7, 0x02 );
@@ -86,17 +84,17 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
     addKey( "0", "_", 4, 0x01 );
     addKey( "-", "=", 3, 0x02 );
     addKey( "^", "\u00A3", 9, 0x01 );		// Pfund
-    addKey( "CLR", 2, 0x01 );
+    addKey( "CLR", null, 2, 0x01, "Entf" );
     this.xRow1Right = this.curX - 1;
     this.curX += (KEY_SIZE * 3 / 4);
     int xCrsMiddle = this.curX + (LARGE_KEY_SIZE / 2);
-    addLargeKey( "DEL", 9, 0x80 );
+    addLargeKey( "DEL", 9, 0x80, "Backspace" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "F1", 1, 0x20 );
+    addKey( "F1", null, 1, 0x20, "F1" );
     this.curX += KEY_SIZE;
-    addKey( "TAB", 8, 0x10 );
+    addKey( "TAB", null, 8, 0x10, "Tabulator" );
     addKey( "Q", 8, 0x08 );
     addKey( "W", 7, 0x08 );
     addKey( "E", 7, 0x04 );
@@ -110,11 +108,11 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
     addKey( "@", "|", 3, 0x04 );
     addKey( "[", "{", 2, 0x02 );
     this.curX = xCrsMiddle - (KEY_SIZE / 2);
-    addKey( this.imgUp, 0, 0x01 );
+    addKey( this.imgUp, 0, 0x01, null );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "F2", 1, 0x40 );
+    addKey( "F2", null, 1, 0x40, "F2" );
     this.curX += KEY_SIZE;
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -128,7 +126,8 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 					null,
 					8,
 					0x40,
-					false );
+					false,
+					null );
     this.curX += MEDIUM_KEY_SIZE;
     addKey( "A", 8, 0x20 );
     addKey( "S", 7, 0x10 );
@@ -144,16 +143,16 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
     addKey( "]", "}", 2, 0x08 );
     this.xRow3Right = this.curX - 1;
     this.curX = xCrsMiddle - KEY_SIZE;
-    addKey( this.imgLeft, 1, 0x01 );
-    addKey( this.imgRight, 0, 0x02 );
+    addKey( this.imgLeft, 1, 0x01, null );
+    addKey( this.imgRight, 0, 0x02, null );
 
     int w = this.curX + MARGIN;
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "F3", 0, 0x20 );
+    addKey( "F3", null, 0, 0x20, "F3" );
     this.curX += (KEY_SIZE / 2);
-    addKey( this.imgPoint, 0, 0x08 );
+    addKey( this.imgPoint, 0, 0x08, "F7" );
 
     KeyData shiftKey1 = new KeyData(
 				this.curX,
@@ -167,7 +166,8 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 				null,
 				2,
 				0x20,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = shiftKey1;
     this.curX += MEDIUM_KEY_SIZE;
     addKey( "Z", 8, 0x80 );
@@ -193,16 +193,17 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 				null,
 				2,
 				0x20,
-				true );
+				true,
+				null );
     this.keys[ this.curIdx++ ] = shiftKey2;
     this.curX = xCrsMiddle - (KEY_SIZE / 2);
-    addKey( this.imgDown, 0, 0x04 );
+    addKey( this.imgDown, 0, 0x04, null );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
-    addKey( "F4", 2, 0x10 );
+    addKey( "F4", null, 2, 0x10, "F4" );
     this.curX += ((KEY_SIZE / 2) + (2 * KEY_SIZE) - MEDIUM_KEY_SIZE);
-    addKey( "ENTER", 0, 0x40 );
+    addKey( "ENTER", null, 0, 0x40, "F6" );
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
 					this.curY,
@@ -215,7 +216,8 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 					null,
 					2,
 					0x80,
-					true );
+					true,
+					null );
     this.curX += KEY_SIZE;
     this.keys[ this.curIdx++ ] = new KeyData(
 				this.curX,
@@ -229,12 +231,13 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 				null,
 				5,
 				0x80,
-				false );
+				false,
+				null );
     this.curX += (8 * KEY_SIZE);
-    addKey( "COPY", 1, 0x02 );
+    addKey( "COPY", null, 1, 0x02, "F8" );
     addKey( "\\", "\u0060", 2, 0x40 );
     this.curX = xCrsMiddle - (LARGE_KEY_SIZE / 2);
-    addLargeKey( "RETURN", 2, 0x04 );
+    addLargeKey( "RETURN", 2, 0x04, "Enter" );
 
     int h = this.curY + KEY_SIZE + MARGIN;
     setPreferredSize( new Dimension( w, h ) );
@@ -262,7 +265,7 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.kccompact.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -372,7 +375,7 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof KCcompact ) {
-      this.kccompact = (KCcompact) emuSys;
+      this.emuSys = (KCcompact) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != KCcompact" );
     }
@@ -382,9 +385,10 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 	/* --- private Methoden --- */
 
   private void addKey(
-		Image image,
-		int   col,
-		int   value )
+		Image  image,
+		int    col,
+		int    value,
+		String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -398,7 +402,8 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 					image,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_SIZE;
   }
 
@@ -407,7 +412,8 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 		String text1,
 		String text2,
 		int    col,
-		int    value )
+		int    value,
+		String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -421,15 +427,19 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 					null,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += KEY_SIZE;
   }
 
 
-  private void addKey(
-		String text1,
-		int    col,
-		int    value )
+  private void addKey( String text1, String text2, int col, int value )
+  {
+    addKey( text1, text2, col, value, null );
+  }
+
+
+  private void addKey( String text1, int col, int value )
   {
     addKey( text1, null, col, value );
   }
@@ -438,7 +448,8 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
   private void addLargeKey(
 		String text1,
 		int    col,
-		int    value )
+		int    value,
+		String toolTipText )
   {
     this.keys[ this.curIdx++ ] = new KeyData(
 					this.curX,
@@ -452,7 +463,8 @@ public class KCcompactKeyboardFld extends AbstractKeyboardFld
 					null,
 					col,
 					value,
-					false );
+					false,
+					toolTipText );
     this.curX += LARGE_KEY_SIZE;
   }
 }

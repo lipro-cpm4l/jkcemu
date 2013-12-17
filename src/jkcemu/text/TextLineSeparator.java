@@ -1,12 +1,12 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Daten einer Zeilenendekennung
  */
 
-package jkcemu.base;
+package jkcemu.text;
 
 import java.lang.*;
 

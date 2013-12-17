@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -46,6 +46,7 @@ public class Poly880 extends EmuSys implements
   private long               curDisplayTStates;
   private long               displayCheckTStates;
   private boolean            nmiEnabled;
+  private boolean            nmiTrigger;
   private boolean            ram8000;
   private boolean            extRomsNegated;
   private Z80CTC             ctc;
@@ -132,7 +133,7 @@ public class Poly880 extends EmuSys implements
     // NMI-Ausloesung durch CTC
     if( (ctc == this.ctc) && (timerNum == 0) && this.nmiEnabled ) {
       this.nmiEnabled = false;
-      this.emuThread.getZ80CPU().fireNMI();
+      this.nmiTrigger = true;	// nach dem naechsten Befehl NMI ausloesen
     }
   }
 
@@ -223,7 +224,7 @@ public class Poly880 extends EmuSys implements
   @Override
   public AbstractKeyboardFld createKeyboardFld()
   {
-    this.keyboardFld = new Poly880KeyboardFld( this.screenFrm, this );
+    this.keyboardFld = new Poly880KeyboardFld( this );
     return this.keyboardFld;
   }
 
@@ -510,6 +511,18 @@ public class Poly880 extends EmuSys implements
 
 
   @Override
+  public int readMemByte( int addr, boolean m1 )
+  {
+    int b = getMemByte( addr, m1 );
+    if( m1 && this.nmiTrigger ) {
+      this.nmiTrigger = false;
+      this.emuThread.getZ80CPU().fireNMI();
+    }
+    return b;
+  }
+
+
+  @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
@@ -527,6 +540,7 @@ public class Poly880 extends EmuSys implements
     }
     this.colMask    = 0;
     this.nmiEnabled = true;
+    this.nmiTrigger = false;
   }
 
 

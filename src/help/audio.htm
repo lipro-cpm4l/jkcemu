@@ -76,7 +76,7 @@
   deshalb nicht immer gew&auml;hrleistet werden,
   so dass kurze Unterbrechungen in der Tonausgabe auftreten k&ouml;nnen.
  <br/><br/>
-  <b>Achtung!</b> Manche der emulierte Computer besitzen
+  <b>Achtung!</b> Manche der emulierten Computer besitzen
   zwei Audio-Ausg&auml;nge, einen f&uuml;r den Kassettenrecorder
   zum Speichern von Daten und einen f&uuml;r den Lautsprecher
   bzw. Sound-Generator.
@@ -97,7 +97,7 @@
   Die Ausf&uuml;hrungsgeschwindigkeit des Emulators richtet sich
   nach den Anforderungen des Audio-Systems und kann somit variieren.
  <br/><br/>
-  <b>Achtung!</b> Manche der emulierte Computer besitzen
+  <b>Achtung!</b> Manche der emulierten Computer besitzen
   zwei Audio-Ausg&auml;nge, einen f&uuml;r den Kassettenrecorder
   zum Speichern von Daten und einen f&uuml;r den Lautsprecher
   bzw. Sound-Generator.
@@ -140,12 +140,24 @@
   Aus diesem Grund kann diese Funktion auch nicht &uuml;ber
   einen l&auml;ngeren Zeitraum aktiviert bleiben.
  <br/><br/>
+  Die mit der Audio-Funktion <em>Sound-Datei speichern</em> erzeugte Dateien
+  enthalten nur Rechteckschwingungen, d.h. nur zwei Pegelzust&auml;nde.
+  Aus diesem Grund lassen sich diese Dateien auch gut komprimieren.
+  JKCEMU bietet die M&ouml;glichkeit, beim Speichern von Sound-Dateien
+  diese gleich mit GZIP komprimieren zu lassen.
+  Wenn Sie das nutzen m&ouml;chten, dann h&auml;ngen Sie an den Dateinamen
+  hinter der Endung f&uuml;r das Sound-Dateiformat einfach nur
+  die Endung <em>.gz</em> an, also z.B.: <em>ausgabe.wav.gz</em>
+ <br/><br/>
 
  <h3><a name="file_in">2.5. Sound-Datei lesen</a></h3>
   Diese Funktion emuliert den Anschluss f&uuml;r
   das Magnettonbandger&auml;t,
   indem die Audio-Daten von einer Sound-Datei gelesen werden.
   Ein Fortschrittsbalken visualisiert den Einleseprozess.
+  Es k&ouml;nnen auch mit GZIP komplrimierte Sound-Dateien gelesen werden,
+  wenn sie die Dateiendung <em>.gz</em> haben,
+  also z.B.: <em>datei.wav.gz</em>
  <br/><br/>
   Einige der emulierten Computer fragen den Kassettenrecorderanschluss
   im Polling-Verfahren ab.
@@ -158,9 +170,13 @@
   und dem Ausw&auml;hlen der Sound-Datei m&uuml;ssen Sie noch
   auf <em>Abspielen</em> dr&uuml;cken,
   um das eigentliche Einlesen zu starten.
-  Sie k&ouml;nnen das Einlesen auch jederzeit mit <em>Pause</em>
-  anhalten und mit erneutem Dr&uuml;cken auf <em>Abspielen</em>
-  wieder fortsetzen.
+  Sie k&ouml;nnen auch jederzeit mit <em>Pause</em> anhalten und
+  mit erneutem Dr&uuml;cken auf <em>Abspielen</em> wieder fortsetzen.
+  Au&szlig;erdem l&auml;sst sich das Einlesen mit der Taste <em>Turbo</em>
+  beschleunigen.
+  Dabei wird bis zum Erreichen des Dateiendes die Geschwindigkeitssteuerung
+  ausgeschaltet,
+  so dass der Emulator mit maximaler Geschwindigkeit l&auml;uft.
  <br/><br/>
 
  <h3><a name="tap_in">2.6. KC-TAP-Datei lesen</a></h3>
@@ -236,13 +252,6 @@
 
  <h3><a name="etc">4.2. Sonstiges</a></h3>
   <ul>
-   <li>
-    Sie k&ouml;nnen die Audio-Funktionen nur dann aktivieren,
-    wenn im Bereich <a href="settings.htm">Einstellungen</a>
-    die Geschwindigkeit des Emulators auf einen festen Wert gesetzt ist.
-    Dieser Wert dient als Zeitbasis f&uuml;r die Berechnung
-    der Audio-Daten.
-   </li>
    <li>
     Wenn bereits eine andere Applikation das Audio-System verwendet,
     kann mitunter kein weiterer Audio-Kanal ge&ouml;ffnet werden.

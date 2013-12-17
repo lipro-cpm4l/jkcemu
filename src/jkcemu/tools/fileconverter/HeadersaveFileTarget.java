@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -99,7 +99,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException, UserInputException
+  public String save( File file ) throws IOException, UserInputException
   {
     checkFileExtension( file, ".z80" );
     int          begAddr   = this.fileConvertFrm.getBegAddr( true );
@@ -158,6 +158,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
     finally {
       EmuUtil.doClose( out );
     }
+    return null;
   }
 
 

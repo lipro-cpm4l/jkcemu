@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,8 +26,9 @@ import jkcemu.base.*;
 import jkcemu.disk.*;
 import jkcemu.emusys.a5105.*;
 import jkcemu.etc.*;
-import jkcemu.net.KCNet;
 import jkcemu.joystick.JoystickThread;
+import jkcemu.net.KCNet;
+import jkcemu.text.CharConverter;
 import z80emu.*;
 
 
@@ -200,17 +201,17 @@ public class A5105 extends EmuSys implements
 				this );
     this.psg.start();
 
-    this.ctc80 = new Z80CTC( "CTC (IO-Adressen 80-83)" );
-    this.pio90 = new Z80PIO( "PIO (IO-Adressen 90-93)" );
+    this.ctc80 = new Z80CTC( "CTC (IO-Adressen 80h-83h)" );
+    this.pio90 = new Z80PIO( "PIO (IO-Adressen 90h-93h)" );
 
     this.kcNet = null;
     if( emulatesKCNet( props ) ) {
-      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0h-C3h)" );
     }
 
     this.vdip = null;
     if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+      this.vdip = new VDIP( "USB-PIO (IO-Adressen FCh-FFh)" );
     }
 
     java.util.List<Z80InterruptSource> iSources
@@ -409,6 +410,80 @@ public class A5105 extends EmuSys implements
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendStatusHTMLTo( StringBuilder buf, Z80CPU cpu )
+  {
+    buf.append( "<h1>A5105 Speicherkonfiguration</h1>\n"
+	+ "<table border=\"2\">\n"
+	+ "<tr><th>Adressbereich</th><th>Eingeblendeter Speicher</th></tr>\n"
+	+ "<tr><td>C000h - FFFFh</td><td>" );
+    switch( this.memConfig & 0xC0 ) {
+      case 0x00:
+	buf.append( "ROM im Grundger&auml;t (bis 9FFFh)" );
+	break;
+      case 0x40:
+	buf.append( "Modul in der Datenspeichereinheit (nicht emuliert)" );
+	break;
+      case 0x80:
+	buf.append( "RAM" );
+	break;
+      case 0xC0:
+	buf.append( "Modul im Grundger&auml;t (nicht emuliert)" );
+	break;
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>8000h - BFFFh</td><td>" );
+    switch( this.memConfig & 0x30 ) {
+      case 0x00:
+	buf.append( "ROM im Grundger&auml;t (bis 9FFFh)" );
+	break;
+      case 0x10:
+	buf.append( "Modul in der Datenspeichereinheit (nicht emuliert)" );
+	break;
+      case 0x20:
+	buf.append( "RAM" );
+	break;
+      case 0x30:
+	buf.append( "Modul im Grundger&auml;t (nicht emuliert)" );
+	break;
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>4000h - 7FFFh</td><td>" );
+    switch( this.memConfig & 0x0C ) {
+      case 0x00:
+	buf.append( "ROM im Grundger&auml;t" );
+	break;
+      case 0x04:
+	buf.append( "ROM in der Datenspeichereinheit" );
+	break;
+      case 0x08:
+	buf.append( "RAM" );
+	break;
+      case 0x0C:
+	buf.append( "Modul im Grundger&auml;t (nicht emuliert)" );
+	break;
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr><td>0000h - 3FFFh</td><td>" );
+    switch( this.memConfig & 0x03 ) {
+      case 0x00:
+	buf.append( "ROM im Grundger&auml;t" );
+	break;
+      case 0x01:
+	buf.append( "Modul in der Datenspeichereinheit (nicht emuliert)" );
+	break;
+      case 0x02:
+	buf.append( "RAM" );
+	break;
+      case 0x03:
+	buf.append( "Modul im Grundger&auml;t (nicht emuliert)" );
+	break;
+    }
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  @Override
   public void applySettings( Properties props )
   {
     super.applySettings( props );
@@ -531,56 +606,6 @@ public class A5105 extends EmuSys implements
 
 
   @Override
-  public int getCharColCount()
-  {
-    return this.vis.getCharColCount();
-  }
-
-
-  @Override
-  public int getCharHeight()
-  {
-    int rv = Math.min( this.gdc.getCharRowHeight(), 8 );
-    if( this.vis.isFixedScreenSize() ) {
-      rv *= 2;
-    }
-    return rv;
-  }
-
-
-  @Override
-  public int getCharRowCount()
-  {
-    return this.vis.getCharRowCount();
-  }
-
-
-  @Override
-  public int getCharRowHeight()
-  {
-    int rv = this.gdc.getCharRowHeight();
-    if( this.vis.isFixedScreenSize() ) {
-      rv *= 2;
-    }
-    return rv;
-  }
-
-
-  @Override
-  public int getCharTopLine()
-  {
-    return this.vis.getCharTopLine();
-  }
-
-
-  @Override
-  public int getCharWidth()
-  {
-    return this.vis.getCharWidth();
-  }
-
-
-  @Override
   public Color getColor( int idx )
   {
     return this.vis.getColor( idx );
@@ -602,39 +627,32 @@ public class A5105 extends EmuSys implements
 
 
   @Override
-  public boolean getDefaultFloppyDiskBlockNum16Bit()
+  public CharRaster getCurScreenCharRaster()
   {
-    return true;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskBlockSize()
-  {
-    return this.fdc != null ? 2048 : -1;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskDirBlocks()
-  {
-    return this.fdc != null ? 2 : -1;
+    CharRaster rv = null;
+    if( canExtractScreenText() ) {
+      int charHeight = Math.min( this.gdc.getCharRowHeight(), 8 );
+      int rowHeight  = this.gdc.getCharRowHeight();
+      if( this.vis.isFixedScreenSize() || this.screenFrm.isFullScreenMode() ) {
+	charHeight *= 2;
+	rowHeight *= 2;
+      }
+      rv = new CharRaster(
+			this.vis.getCharColCount(),
+			this.vis.getCharRowCount(),
+			rowHeight,
+			charHeight,
+			this.vis.getCharWidth(),
+			this.vis.getCharTopLine() );
+    }
+    return rv;
   }
 
 
   @Override
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
-    return this.fdc != null ?
-                FloppyDiskFormat.getFormat( 2, 80, 5, 1024 )
-                : null;
-  }
-
-
-  @Override
-  public int getDefaultFloppyDiskSystemTracks()
-  {
-    return this.fdc != null ? 2 : -1;
+    return FloppyDiskFormat.FMT_780K;
   }
 
 
@@ -722,7 +740,7 @@ public class A5105 extends EmuSys implements
 
 
   @Override
-  protected int getScreenChar( int chX, int chY )
+  protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     if( cp437 == null ) {
       cp437 = new CharConverter( CharConverter.Encoding.CP437 );
@@ -851,13 +869,7 @@ public class A5105 extends EmuSys implements
 	  this.keyboardMatrix[ 8 ] |= 0x02;
 	  rv = true;
 	  break;
-	case KeyEvent.VK_F7:			// Graph, rv=false!
-	  this.keyboardMatrix[ 7 ] |= 0x04;
-	  break;
-	case KeyEvent.VK_F8:			// Alt, rv=false!
-	  this.keyboardMatrix[ 6 ] |= 0x10;
-	  break;
-	case KeyEvent.VK_F9:			// STOP
+	case KeyEvent.VK_F7:			// STOP
 	  this.keyboardMatrix[ 7 ] |= 0x10;
 	  rv = true;
 	  break;

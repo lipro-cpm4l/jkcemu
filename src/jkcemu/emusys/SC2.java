@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -203,7 +203,7 @@ public class SC2 extends EmuSys implements
   @Override
   public AbstractKeyboardFld createKeyboardFld()
   {
-    this.keyboardFld = new SC2KeyboardFld( this.screenFrm, this );
+    this.keyboardFld = new SC2KeyboardFld( this );
     return this.keyboardFld;
   }
 

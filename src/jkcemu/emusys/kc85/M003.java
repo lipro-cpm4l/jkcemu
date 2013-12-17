@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2011 Jens Mueller
+ * (c) 2009-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -41,13 +41,13 @@ public class M003 extends AbstractKC85Module implements
 	/* --- Z80InterruptSource --- */
 
   @Override
-  public void appendStatusHTMLTo( StringBuilder buf )
+  public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
     buf.append( "<h2>CTC (IO-Adressen 0C-0F)</h2>\n" );
-    this.ctc.appendStatusHTMLTo( buf );
+    this.ctc.appendInterruptStatusHTMLTo( buf );
     buf.append( "<br/><br/>\n"
 		+ "<h2>SIO (IO-Adressen 08-0B)</h2>\n" );
-    this.sio.appendStatusHTMLTo( buf );
+    this.sio.appendInterruptStatusHTMLTo( buf );
   }
 
 

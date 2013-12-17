@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -127,7 +127,7 @@ public class KCBasicSystemFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void save( File file ) throws IOException, UserInputException
+  public String save( File file ) throws IOException, UserInputException
   {
     checkFileExtension( file, ".kcb" );
     int          endAddr   = 0x0401 + this.len;
@@ -161,6 +161,7 @@ public class KCBasicSystemFileTarget extends AbstractConvertTarget
     finally {
       EmuUtil.doClose( out );
     }
+    return null;
   }
 }
 

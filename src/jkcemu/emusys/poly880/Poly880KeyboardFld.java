@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,7 @@ import jkcemu.base.*;
 import jkcemu.emusys.Poly880;
 
 
-public class Poly880KeyboardFld extends AbstractKeyboardFld
+public class Poly880KeyboardFld extends AbstractKeyboardFld<Poly880>
 {
   private static final int MARGIN   = 10;
   private static final int KEY_SIZE = 60;
@@ -28,33 +28,29 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 		"Aus diesem Grund haben die Tasten",
 		"M/CYCL und CYCL keine Wirkung." };
 
-  private ScreenFrm screenFrm;
-  private Poly880   poly880;
-  private Color     colorBg;
-  private Font      fontFct;
-  private Font      fontHex;
-  private Font      fontReg;
-  private Font      fontInfo;
-  private Image     imgKeyRed;
-  private Image     imgKeyGreen;
-  private Image     imgKeyOrange;
-  private Image     imgKeyWhite;
-  private Image     imgKeySelected;
-  private KeyData   resetKey;
-  private KeyData   cyclKey;
-  private KeyData   mCyclKey;
-  private KeyData   monKey;
-  private int[]     kbMatrix;
-  private int       curIdx;
-  private int       curX;
-  private int       curY;
+  private Color   colorBg;
+  private Font    fontFct;
+  private Font    fontHex;
+  private Font    fontReg;
+  private Font    fontInfo;
+  private Image   imgKeyRed;
+  private Image   imgKeyGreen;
+  private Image   imgKeyOrange;
+  private Image   imgKeyWhite;
+  private Image   imgKeySelected;
+  private KeyData resetKey;
+  private KeyData cyclKey;
+  private KeyData mCyclKey;
+  private KeyData monKey;
+  private int[]   kbMatrix;
+  private int     curIdx;
+  private int     curX;
+  private int     curY;
 
 
-  public Poly880KeyboardFld( ScreenFrm screenFrm, Poly880 poly880 )
+  public Poly880KeyboardFld( Poly880 poly880 )
   {
-    super( 27 );
-    this.screenFrm    = screenFrm;
-    this.poly880      = poly880;
+    super( poly880, 27, true );
     this.kbMatrix     = new int[ 8 ];
     this.colorBg      = new Color( 20, 20, 20 );
     this.fontInfo     = new Font( "SansSerif", Font.PLAIN, 18 );
@@ -76,10 +72,10 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
     addHexKey( "E", null, 7, 0x80 );
     addHexKey( "F", null, 6, 0x80 );
     this.curX += (KEY_SIZE / 2);
-    addWhiteKey( "GO", 0, 0x10 );
-    addWhiteKey( "MEM", 7, 0x10 );
+    addWhiteKey( "GO", 0, 0x10, "G" );
+    addWhiteKey( "MEM", 7, 0x10, "M" );
     this.curX += (KEY_SIZE / 2);
-    this.resetKey = addKey( this.imgKeyRed, "RES", null, null, -1, -1 );
+    this.resetKey = addKey( this.imgKeyRed, "RES", null, null, -1, -1, "Esc" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
@@ -88,8 +84,8 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
     addHexKey( "A", "IY", 7, 0x20 );
     addHexKey( "B", "SP", 6, 0x20 );
     this.curX += (KEY_SIZE / 2);
-    addWhiteKey( "STEP", 6, 0x10 );
-    addWhiteKey( "REG", 4, 0x10 );
+    addWhiteKey( "STEP", 6, 0x10, "S" );
+    addWhiteKey( "REG", 4, 0x10, "R" );
     this.curX += (KEY_SIZE / 2);
     this.monKey = addKey(
 			this.imgKeyOrange,
@@ -97,7 +93,8 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 			null,
 			null,
 			-1,
-			-1 );
+			-1,
+			"F2" );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
@@ -106,8 +103,8 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
     addHexKey( "6", "DE\'", 1, 0x80 );
     addHexKey( "7", "HL\'", 2, 0x80 );
     this.curX += (KEY_SIZE / 2);
-    addWhiteKey( "FCT", 5, 0x10 );
-    addWhiteKey( "BACK", 3, 0x10 );
+    addWhiteKey( "FCT", 5, 0x10, "F1" );
+    addWhiteKey( "BACK", 3, 0x10, "- oder Backspace" );
     this.curX += (KEY_SIZE / 2);
     this.mCyclKey = addKey(
 			this.imgKeyGreen,
@@ -115,7 +112,8 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 			null,
 			null,
 			-1,
-			-1 );
+			-1,
+			null );
 
     this.curX = MARGIN;
     this.curY += KEY_SIZE;
@@ -124,7 +122,7 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
     addHexKey( "2", "DE/ME", 1, 0x20 );
     addHexKey( "3", "HL/FL", 2, 0x20 );
     this.curX += KEY_SIZE;
-    addKey( this.imgKeyRed, "EXEC", null, null, 2, 0x10 );
+    addKey( this.imgKeyRed, "EXEC", null, null, 2, 0x10, "X oder Enter" );
     this.curX += KEY_SIZE;
     this.cyclKey = addKey(
 			this.imgKeyGreen,
@@ -132,7 +130,8 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 			null,
 			null,
 			-1,
-			-1 );
+			-1,
+			null );
 
     setPreferredSize(
 		new Dimension(
@@ -168,7 +167,7 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 	}
       }
     }
-    this.poly880.updKeyboardMatrix( this.kbMatrix );
+    this.emuSys.updKeyboardMatrix( this.kbMatrix );
   }
 
 
@@ -177,14 +176,11 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	this.screenFrm.fireReset( EmuThread.ResetLevel.WARM_RESET );
-	e.consume();
+	fireWarmResetAfterDelay();
       } else if( hits( this.monKey, e ) ) {
-	this.poly880.fireMonKey();
-	e.consume();
-      } else {
-	super.mousePressed( e );
+	this.emuSys.fireMonKey();
       }
+      super.mousePressed( e );
     }
   }
 
@@ -290,7 +286,7 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
   public void setEmuSys( EmuSys emuSys )
   {
     if( emuSys instanceof Poly880 ) {
-      this.poly880 = (Poly880) emuSys;
+      this.emuSys = (Poly880) emuSys;
     } else {
       throw new IllegalArgumentException( "EmuSys != Poly880" );
     }
@@ -305,7 +301,8 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 			String textHex,
 			String textReg,
 			int    col,
-			int    value )
+			int    value,
+			String toolTipText )
   {
     KeyData keyData = new KeyData(
 				this.curX,
@@ -319,29 +316,33 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld
 				image,
 				col,
 				value,
-				false );
+				false,
+				toolTipText );
     this.keys[ this.curIdx++ ] = keyData;
     this.curX += KEY_SIZE;
     return keyData;
   }
 
 
-  private void addHexKey(
-			String textHex,
-			String textReg,
-			int    col,
-			int    value )
+  private void addHexKey( String textHex, String textReg, int col, int value )
   {
-    addKey( this.imgKeyOrange, null, textHex, textReg, col, value );
+    addKey( this.imgKeyOrange, null, textHex, textReg, col, value, null );
   }
 
 
   private void addWhiteKey(
 			String text,
 			int    col,
-			int    value )
+			int    value,
+			String toolTipText )
   {
-    addKey( this.imgKeyWhite, text, null, null, col, value );
+    addKey( this.imgKeyWhite, text, null, null, col, value, toolTipText );
+  }
+
+
+  private void addWhiteKey( String text, int col, int value )
+  {
+    addKey( this.imgKeyWhite, text, null, null, col, value, null );
   }
 }
 

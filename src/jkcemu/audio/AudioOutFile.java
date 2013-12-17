@@ -99,11 +99,8 @@ public class AudioOutFile extends AudioOut
       // Puffer leeren
       try {
 	queue.appendPauseFrames( this.sampleRate / 10 );
-	AudioSystem.write(
-		new AudioInputStream(
-			queue,
-			this.audioFmt,
-			queue.length() ),
+	AudioUtil.write(
+		new AudioInputStream( queue, this.audioFmt, queue.length() ),
 		this.fileType,
 		this.file );
       }

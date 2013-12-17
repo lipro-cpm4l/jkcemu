@@ -30,7 +30,7 @@ import jkcemu.tools.hexedit.HexEditFrm;
 
 public class Main
 {
-  public static final String VERSION = "JKCEMU Version 0.9.2";
+  public static final String VERSION = "JKCEMU Version 0.9.3";
 
   public static PrintWriter consoleWriter = null;
 
