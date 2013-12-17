@@ -13,11 +13,11 @@ specific network and USB adapters.
 
 **Emulated computers**:
 
-A5105 (BIC, ALBA PC 1505), AC1, BCS3, C-80, HC900,
+A5105 (BIC, ALBA PC 1505), AC1 and AC1-2010, BCS3, C-80, HC900,
 Huebler/Evert-MC, Huebler-Grafik-MC, KC85/1, KC85/2, KC85/3,
 KC85/4, KC85/5, KC87, KC compact, Kramer-MC, LC-80, LLC1, LLC2,
 PC/M (Mugler/Mathes-PC), Poly-Computer 880, Schachcomputer SC2,
-Schach- und Lerncomputer SLC1, VCS80, Z1013, Z9001
+Schach- und Lerncomputer SLC1, VCS80, Z1013, Z9001, ZX-Spectrum
 
 **Integrated Tools**:
 
