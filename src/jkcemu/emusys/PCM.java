@@ -899,7 +899,7 @@ public class PCM extends EmuSys implements
 	if( this.fdc != null ) {
 	  if( this.fdDrives != null ) {
 	    FloppyDiskDrive fdd  = null;
-	    int             v    = (value - 1) & 0x03;
+	    int             v    = ((value & 0x0f) >> 1) | ((value & 0x01) << 3);
 	    int             mask = 0x01;
 	    for( int i = 0; i < this.fdDrives.length; i++ ) {
 	      if( (v & mask) != 0 ) {
