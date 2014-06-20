@@ -62,14 +62,14 @@ public class PCM extends EmuSys implements
 			"PC/M v3.30 Boot-Diskette (64x16 Zeichen)",
 			2, 2048, true );
 
-  private static FloppyDiskInfo disk80x24 = new FloppyDiskInfo(
+  private static FloppyDiskInfo disk80x24v330 = new FloppyDiskInfo(
 			"/disks/pcm/pcmsys330_80x24.dump.gz",
-			"PC/M Boot-Diskette (80x24 Zeichen)",
+			"PC/M v3.30 Boot-Diskette (80x24 Zeichen)",
 			2, 2048, true );
 
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 							disk64x16v330,
-							disk80x24 };
+							disk80x24v330 };
 
   private static byte[] bdos              = null;
   private static byte[] romRF64x16        = null;
@@ -653,7 +653,7 @@ public class PCM extends EmuSys implements
     FloppyDiskInfo[] rv = null;
     if( this.fdc != null ) {
       if( this.mode80x24 ) {
-	rv = new FloppyDiskInfo[] { disk80x24 };
+	rv = new FloppyDiskInfo[] { disk80x24v330 };
       } else {
 	rv = new FloppyDiskInfo[] { disk64x16v330 };
       }
