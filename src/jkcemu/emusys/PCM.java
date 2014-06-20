@@ -24,8 +24,8 @@ public class PCM extends EmuSys implements
 {
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 		new FloppyDiskInfo(
-			"/disks/pcm/pcmsys.dump.gz",
-			"PC/M Boot-Diskette" ) };
+			"/disks/pcm/pcmsys330_64x16.dump.gz",
+			"PC/M v3.30 Boot-Diskette (64x16 Zeichen)" ) };
 
   private static byte[] bdos              = null;
   private static byte[] romRF64x16        = null;
