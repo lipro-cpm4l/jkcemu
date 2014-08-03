@@ -791,7 +791,7 @@ public class PCM extends EmuSys implements
 	}
       } else {
 	if( romRF64x16 == null ) {
-	  romRF64x16 = readResource( "/rom/pcm/pcmsys210_64x16.bin" );
+	  romRF64x16 = readResource( "/rom/pcm/pcmsys211_64x16.bin" );
 	}
 	this.romBytes = romRF64x16;
       }
