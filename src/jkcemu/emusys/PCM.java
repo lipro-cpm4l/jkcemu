@@ -33,6 +33,9 @@ public class PCM extends EmuSys implements
 			"/disks/pcm/pcmsys330_80x24.dump.gz",
 			"PC/M v3.30 Boot-Diskette (80x24 Zeichen)" ),
 		new FloppyDiskInfo(
+			"/disks/pcm/pcmsys331_80x24.dump.gz",
+			"PC/M v3.31 Boot-Diskette (80x24 Zeichen)" ),
+		new FloppyDiskInfo(
 			"/disks/pcm/pcmsys_src.dump.gz",
 			"PC/M Systemquellen (Boot-Diskette f\u00FCr 80x24)" ) };
 
