@@ -1,5 +1,6 @@
 /*
  * (c) 2011-2021 Jens Mueller
+ * (c) 2014-2022 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -202,7 +203,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 			: PCM.VALUE_GRAPHIC_64X32 );
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + PCM.PROP_AUTO_LOAD_BDOS,
+		this.propPrefix + PCM.PROP_BDOS_PREFIX + PCM.PROP_AUTOLOAD,
 		this.cbAutoLoadBDOS.isSelected() );
     this.fldAltROM.applyInput( props, selected );
     this.fldAltFont.applyInput( props, selected );
@@ -274,7 +275,8 @@ public class PCMSettingsFld extends AbstractSettingsFld
     this.cbAutoLoadBDOS.setSelected(
 		EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + PCM.PROP_AUTO_LOAD_BDOS,
+				this.propPrefix + PCM.PROP_BDOS_PREFIX
+						+ PCM.PROP_AUTOLOAD,
 				true ) );
     this.fldAltROM.updFields( props );
     this.fldAltFont.updFields( props );

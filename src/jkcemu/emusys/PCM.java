@@ -1,5 +1,6 @@
 /*
  * (c) 2008-2021 Jens Mueller
+ * (c) 2014-2022 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -48,7 +49,8 @@ public class PCM extends EmuSys implements
   public static final String SYSTEXT     = "PC/M";
   public static final String PROP_PREFIX = "jkcemu.pcm.";
 
-  public static final String PROP_AUTO_LOAD_BDOS = "auto_load_bdos";
+  public static final String PROP_BDOS_PREFIX    = "bdos.";
+  public static final String PROP_AUTOLOAD       = "autoload";
   public static final String PROP_GRAPHIC        = "graphic";
   public static final String VALUE_GRAPHIC_80X24 = "80x24";
   public static final String VALUE_GRAPHIC_64X32 = "64x32";
@@ -913,7 +915,7 @@ public class PCM extends EmuSys implements
     }
     if( EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + PROP_AUTO_LOAD_BDOS,
+			this.propPrefix + PROP_BDOS_PREFIX + PROP_AUTOLOAD,
 			true ) )
     {
       if( bdos == null ) {
