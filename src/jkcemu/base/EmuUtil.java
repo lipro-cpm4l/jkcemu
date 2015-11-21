@@ -1,5 +1,6 @@
 /*
  * (c) 2008-2017 Jens Mueller
+ * (c) 2014-2017 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -1432,6 +1433,12 @@ public class EmuUtil
   public static FileFilter getRMCFileFilter()
   {
     return getFileFilter( "RBASIC-Maschinencodedateien (*.rmc)", "rmc" );
+  }
+
+
+  public static FileFilter getRAMFileFilter()
+  {
+    return getFileFilter( "RAM-Dateien (*.bin; *.ram)", "ram", "bin" );
   }
 
 
