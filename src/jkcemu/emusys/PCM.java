@@ -1,5 +1,6 @@
 /*
  * (c) 2008-2013 Jens Mueller
+ * (c) 2014-2015 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -46,6 +47,8 @@ public class PCM extends EmuSys implements
   private static byte[] pcmFontBytes64x16 = null;
   private static byte[] pcmFontBytes80x24 = null;
 
+  private byte[]            bdosBytes;
+  private String            bdosFile;
   private byte[]            fontBytes;
   private byte[]            romBytes;
   private String            romFile;
@@ -70,6 +73,8 @@ public class PCM extends EmuSys implements
   public PCM( EmuThread emuThread, Properties props )
   {
     super( emuThread, props );
+    this.bdosBytes     = null;
+    this.bdosFile      = null;
     this.fontBytes     = null;
     this.romBytes      = null;
     this.romFile       = null;
@@ -209,6 +214,11 @@ public class PCM extends EmuSys implements
     boolean rv = EmuUtil.getProperty(
 			props,
 			"jkcemu.system" ).equals( "PC/M" );
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.bdosFile,
+		EmuUtil.getProperty( props,  "jkcemu.pcm.bdos.file" ) );
+    }
     if( rv ) {
       rv = TextUtil.equals(
 		this.romFile,
@@ -707,15 +717,7 @@ public class PCM extends EmuSys implements
 			"jkcemu.pcm.bdos.autoload",
 			true ) )
     {
-      if( bdos == null ) {
-	bdos = readResource( "/rom/pcm/bdos.bin" );
-      }
-      if( bdos != null ) {
-	int addr = 0xD000;
-	for( int i = 0; (addr < 0x10000) && (i < bdos.length); i++ ) {
-	  this.emuThread.setRAMByte( addr++, bdos[ i ] );
-	}
-      }
+      loadBDOS( props );
     }
     if( this.fdc != null ) {
       this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
@@ -949,6 +951,29 @@ public class PCM extends EmuSys implements
 			props,
 			"jkcemu.pcm.floppydisk.enabled",
 			true );
+  }
+
+
+  private void loadBDOS( Properties props )
+  {
+    this.bdosFile  = EmuUtil.getProperty( props, "jkcemu.pcm.bdos.file" );
+    this.bdosBytes = readFile(
+			this.bdosFile,
+			0xE00,
+			"RAM-Datei f\u00FCr BDOS" );
+    if( this.bdosBytes == null ) {
+      if( bdos == null ) {
+	bdos = readResource( "/rom/pcm/bdos.bin" );
+      }
+      this.bdosBytes = bdos;
+    }
+    if( this.bdosBytes != null ) {
+      int addr = 0xD000;
+      for( int i = 0; (addr < 0x10000) &&
+		      (i < this.bdosBytes.length); i++ ) {
+	this.emuThread.setRAMByte( addr++, this.bdosBytes[ i ] );
+      }
+    }
   }
 
 

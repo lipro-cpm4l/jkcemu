@@ -1,5 +1,6 @@
 /*
  * (c) 2011 Jens Mueller
+ * (c) 2014-2015 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -22,6 +23,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
   private JRadioButton       btnRF64x16;
   private JRadioButton       btnFDC64x16;
   private JRadioButton       btnFDC80x24;
+  private RAMFileSettingsFld fldAltBDOS;
   private ROMFileSettingsFld fldAltROM;
   private ROMFileSettingsFld fldAltFont;
 
@@ -83,6 +85,13 @@ public class PCMSettingsFld extends AbstractSettingsFld
     gbc.gridy++;
     add( new JSeparator(), gbc );
 
+    this.fldAltBDOS = new RAMFileSettingsFld(
+		settingsFrm,
+		propPrefix + "bdos.",
+		"Alternative RAM-Datei f\u00FCr BDOS:" );
+    gbc.gridy++;
+    add( this.fldAltBDOS, gbc );
+
     this.fldAltROM = new ROMFileSettingsFld(
 		settingsFrm,
 		propPrefix + "rom.",
@@ -120,6 +129,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + "bdos.autoload",
 		this.btnAutoLoadBDOS.isSelected() );
+    this.fldAltBDOS.applyInput( props, selected );
     this.fldAltROM.applyInput( props, selected );
     this.fldAltFont.applyInput( props, selected );
   }
@@ -169,6 +179,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 				props,
 				this.propPrefix + "bdos.autoload",
 				true ) );
+    this.fldAltBDOS.updFields( props );
     this.fldAltROM.updFields( props );
     this.fldAltFont.updFields( props );
     updAutoLoadBDOSFieldEnabled();
@@ -180,6 +191,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
   private void updAutoLoadBDOSFieldEnabled()
   {
     this.btnAutoLoadBDOS.setEnabled( this.btnRF64x16.isSelected() );
+    this.fldAltBDOS.setEnabled( this.btnRF64x16.isSelected() );
   }
 }
 
