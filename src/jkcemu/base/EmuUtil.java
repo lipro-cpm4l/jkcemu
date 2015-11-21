@@ -1,5 +1,6 @@
 /*
  * (c) 2008-2020 Jens Mueller
+ * (c) 2014-2022 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -114,8 +115,12 @@ public class EmuUtil
   public static final String TEXT_ADD_FILE    = "Datei hinzuf\u00FCgen";
   public static final String TEXT_SELECT_DIR  = "Verzeichnis ausw\u00E4hlen";
   public static final String TEXT_SELECT_FILE = "Datei ausw\u00E4hlen";
+  public static final String TEXT_SELECT_RAM_FILE
+					= "RAM-Datei ausw\u00E4hlen";
   public static final String TEXT_SELECT_ROM_FILE
 					= "ROM-Datei ausw\u00E4hlen";
+  public static final String TEXT_REMOVE_RAM_FILE
+					= "RAM-Datei entfernen";
   public static final String TEXT_REMOVE_ROM_FILE
 					= "ROM-Datei entfernen";
 

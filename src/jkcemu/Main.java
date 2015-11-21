@@ -1,5 +1,6 @@
 /*
  * (c) 2008-2022 Jens Mueller
+ * (c) 2014-2022 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -86,6 +87,7 @@ public class Main
   public static final String FILE_GROUP_PROJECT     = "project";
   public static final String FILE_GROUP_RF          = "ramfloppy";
   public static final String FILE_GROUP_ROM         = "rom";
+  public static final String FILE_GROUP_RAM         = "ram";
   public static final String FILE_GROUP_SCREEN      = "screen";
   public static final String FILE_GROUP_SECTOR      = "sector";
   public static final String FILE_GROUP_SOFTWARE    = "software";
