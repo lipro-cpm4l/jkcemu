@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/lipro/jkcemu.svg?branch=master)](https://travis-ci.org/lipro/jkcemu)
+[![Build Status](https://travis-ci.org/lipro/jkcemu.svg?branch=devel)](https://travis-ci.org/lipro/jkcemu)
 
 JKCEMU - Java KC Emulator
 =========================
