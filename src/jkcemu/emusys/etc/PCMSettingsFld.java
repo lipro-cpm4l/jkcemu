@@ -27,6 +27,7 @@ import jkcemu.base.EmuUtil;
 import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.PCM;
+import jkcemu.file.RAMFileSettingsFld;
 import jkcemu.file.ROMFileSettingsFld;
 import jkcemu.settings.AbstractSettingsFld;
 import jkcemu.settings.AutoInputSettingsFld;
@@ -47,6 +48,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
   private JPanel               tabExt;
   private JCheckBox            cbK1520Sound;
   private JCheckBox            cbVDIP;
+  private RAMFileSettingsFld   fldAltBDOS;
   private ROMFileSettingsFld   fldAltROM;
   private ROMFileSettingsFld   fldAltFont;
 
@@ -110,6 +112,15 @@ public class PCMSettingsFld extends AbstractSettingsFld
     gbcModel.insets.bottom = 10;
     gbcModel.gridy++;
     this.tabModel.add( GUIFactory.createSeparator(), gbcModel );
+
+    this.fldAltBDOS = new RAMFileSettingsFld(
+		settingsFrm,
+		propPrefix + PCM.PROP_BDOS_PREFIX,
+		"Alternative RAM-Datei f\u00FCr BDOS:" );
+    gbcModel.insets.top    = 5;
+    gbcModel.insets.bottom = 5;
+    gbcModel.gridy++;
+    this.tabModel.add( this.fldAltBDOS, gbcModel );
 
     this.fldAltROM = new ROMFileSettingsFld(
 		settingsFrm,
@@ -205,6 +216,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + PCM.PROP_BDOS_PREFIX + PCM.PROP_AUTOLOAD,
 		this.cbAutoLoadBDOS.isSelected() );
+    this.fldAltBDOS.applyInput( props, selected );
     this.fldAltROM.applyInput( props, selected );
     this.fldAltFont.applyInput( props, selected );
 
@@ -278,6 +290,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 				this.propPrefix + PCM.PROP_BDOS_PREFIX
 						+ PCM.PROP_AUTOLOAD,
 				true ) );
+    this.fldAltBDOS.updFields( props );
     this.fldAltROM.updFields( props );
     this.fldAltFont.updFields( props );
     updAutoLoadBDOSFieldEnabled();
@@ -303,5 +316,6 @@ public class PCMSettingsFld extends AbstractSettingsFld
   private void updAutoLoadBDOSFieldEnabled()
   {
     this.cbAutoLoadBDOS.setEnabled( this.rbRF64x16.isSelected() );
+    this.fldAltBDOS.setEnabled( this.rbRF64x16.isSelected() );
   }
 }
