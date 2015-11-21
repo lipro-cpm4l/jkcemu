@@ -118,7 +118,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 		fdc80x24 ? "80x24" : "64x16" );
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "auto_load_bdos",
+		this.propPrefix + "bdos.autoload",
 		this.btnAutoLoadBDOS.isSelected() );
     this.fldAltROM.applyInput( props, selected );
     this.fldAltFont.applyInput( props, selected );
@@ -167,7 +167,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
     this.btnAutoLoadBDOS.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "auto_load_bdos",
+				this.propPrefix + "bdos.autoload",
 				true ) );
     this.fldAltROM.updFields( props );
     this.fldAltFont.updFields( props );

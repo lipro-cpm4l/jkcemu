@@ -704,7 +704,7 @@ public class PCM extends EmuSys implements
     }
     if( EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.pcm.auto_load_bdos",
+			"jkcemu.pcm.bdos.autoload",
 			true ) )
     {
       if( bdos == null ) {
