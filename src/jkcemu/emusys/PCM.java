@@ -24,8 +24,20 @@ public class PCM extends EmuSys implements
 {
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 		new FloppyDiskInfo(
-			"/disks/pcm/pcmsys.dump.gz",
-			"PC/M Boot-Diskette" ) };
+			"/disks/pcm/pcmsys330_64x16.dump.gz",
+			"PC/M v3.30 Boot-Diskette (64x16 Zeichen)" ),
+		new FloppyDiskInfo(
+			"/disks/pcm/pcmsys331_64x16.dump.gz",
+			"PC/M v3.31 Boot-Diskette (64x16 Zeichen)" ),
+		new FloppyDiskInfo(
+			"/disks/pcm/pcmsys330_80x24.dump.gz",
+			"PC/M v3.30 Boot-Diskette (80x24 Zeichen)" ),
+		new FloppyDiskInfo(
+			"/disks/pcm/pcmsys331_80x24.dump.gz",
+			"PC/M v3.31 Boot-Diskette (80x24 Zeichen)" ),
+		new FloppyDiskInfo(
+			"/disks/pcm/pcmsys_src.dump.gz",
+			"PC/M Systemquellen (Boot-Diskette f\u00FCr 80x24)" ) };
 
   private static byte[] bdos              = null;
   private static byte[] romRF64x16        = null;
@@ -899,7 +911,7 @@ public class PCM extends EmuSys implements
 	if( this.fdc != null ) {
 	  if( this.fdDrives != null ) {
 	    FloppyDiskDrive fdd  = null;
-	    int             v    = (value - 1) & 0x03;
+	    int             v    = ((value & 0x0f) >> 1) | ((value & 0x01) << 3);
 	    int             mask = 0x01;
 	    for( int i = 0; i < this.fdDrives.length; i++ ) {
 	      if( (v & mask) != 0 ) {
@@ -984,7 +996,7 @@ public class PCM extends EmuSys implements
 	}
       } else {
 	if( romRF64x16 == null ) {
-	  romRF64x16 = readResource( "/rom/pcm/pcmsys210_64x16.bin" );
+	  romRF64x16 = readResource( "/rom/pcm/pcmsys211_64x16.bin" );
 	}
 	this.romBytes = romRF64x16;
       }
