@@ -1,5 +1,6 @@
 /*
  * (c) 2008-2017 Jens Mueller
+ * (c) 2014-2017 Stephan Linz
  *
  * Kleincomputer-Emulator
  *
@@ -565,6 +566,17 @@ public abstract class EmuSys
   protected byte[] readResource( String resource )
   {
     return EmuUtil.readResource( this.screenFrm, resource );
+  }
+
+
+  protected byte[] readRAMFile( String fileName, int maxLen, String objName )
+  {
+    return EmuUtil.readFile(
+			this.emuThread.getScreenFrm(),
+			fileName,
+			true,
+			maxLen,
+			objName );
   }
 
 
