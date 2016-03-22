@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,11 +9,11 @@
 package jkcemu.filebrowser;
 
 import java.awt.*;
-import java.awt.dnd.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.lang.*;
+import java.nio.file.*;
 import java.text.*;
 import java.util.*;
 import java.util.zip.*;
@@ -21,6 +21,7 @@ import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.*;
+import jkcemu.Main;
 import jkcemu.audio.AudioUtil;
 import jkcemu.base.*;
 import jkcemu.disk.*;
@@ -29,7 +30,6 @@ import jkcemu.image.*;
 
 public class FilePreviewFld extends JPanel
 				implements
-					DragGestureListener,
 					MouseListener,
 					Runnable
 {
@@ -82,7 +82,7 @@ public class FilePreviewFld extends JPanel
 					getForeground(),
 					1 ) );
     this.textArea.setEditable( false );
-    this.textArea.setFont( new Font( "Monospaced", Font.PLAIN, 9 ) );
+    this.textArea.setFont( new Font( Font.MONOSPACED, Font.PLAIN, 9 ) );
     this.textArea.setPreferredSize( new Dimension( 1, 1 ) );
     this.detailsFld.add( this.textArea, "text" );
 
@@ -116,12 +116,6 @@ public class FilePreviewFld extends JPanel
     if( this.fileTableHeader != null ) {
       this.fileTableHeader.addMouseListener( this );
     }
-
-    DragSource dragSource = DragSource.getDefaultDragSource();
-    dragSource.createDefaultDragGestureRecognizer(
-			this.fileTable,
-			DnDConstants.ACTION_COPY,
-			this );
   }
 
 
@@ -146,34 +140,6 @@ public class FilePreviewFld extends JPanel
       catch( IllegalMonitorStateException ex ) {}
     }
     this.fileTableModel.setSortCaseSensitive( sortCaseSensitive );
-  }
-
-
-	/* --- DragGestureListener --- */
-
-  @Override
-  public void dragGestureRecognized( DragGestureEvent e )
-  {
-    int[] rowNums = this.fileTable.getSelectedRows();
-    if( rowNums != null ) {
-      if( rowNums.length > 0 ) {
-	Collection<File> files = new ArrayList<File>();
-	for( int i = 0; i < rowNums.length; i++ ) {
-	  FileEntry entry = this.fileTableModel.getRow( rowNums[ i ] );
-	  if( entry != null ) {
-	    File file = entry.getFile();
-            if( file != null )
-              files.add( file );
-          }
-        }
-	if( !files.isEmpty() ) {
-	  try {
-	    e.startDrag( null, new FileListSelection( files ) );
-	  }
-	  catch( InvalidDnDOperationException ex ) {}
-	}
-      }
-    }
   }
 
 
@@ -258,9 +224,8 @@ public class FilePreviewFld extends JPanel
 	  String cardName = null;
 
 	  // Datei auswerten
-	  Map<FileInfoFld.Item,Object> infoItems
-				= new HashMap<FileInfoFld.Item,Object>();
-	  String[] addonLines	= null;
+	  Map<FileInfoFld.Item,Object> infoItems  = new HashMap<>();
+	  String[]                     addonLines = null;
 
 	  if( fileNode != null ) {
 	    File file = fileNode.getFile();
@@ -277,14 +242,23 @@ public class FilePreviewFld extends JPanel
 		  infoItems.put( FileInfoFld.Item.NAME, fName );
 		}
 	      }
-	      if( !fileNode.isLeaf() ) {
+	      if( fileNode.getAllowsChildren() ) {
 		addDirectoryInfo(
 			infoItems,
 			fileNode.children(),
 			sortCaseSensitive );
 		cardName = "file.table";
 	      }
-	      else if( file.isFile() ) {
+	      Path path = fileNode.getPath();
+	      if( path != null ) {
+		if( Files.isSymbolicLink( path ) ) {
+		  Path destPath = Files.readSymbolicLink( path );
+		  if( destPath != null ) {
+		    infoItems.put( FileInfoFld.Item.LINKED_TO, destPath );
+		  }
+		}
+	      }
+	      if( file.isFile() ) {
 		String fExt = null;
 		if( fName != null ) {
 		  int pos = fName.lastIndexOf( '.' );
@@ -301,16 +275,17 @@ public class FilePreviewFld extends JPanel
 			FileInfoFld.Item.SIZE,
 			new Long( file.length() ) );
 
-		if( fileNode.isAudioFile() ) {
+		FileCheckResult checkResult = fileNode.getCheckResult();
+		if( checkResult.isAudioFile() ) {
 		  addAudioInfo( infoItems, file );
-		} else if( fileNode.isImageFile() ) {
+		} else if( checkResult.isImageFile() ) {
 		  if( addImageInfo( infoItems, file, maxFileSize ) ) {
 		    cardName = "image";
 		  }
-		} else if( fileNode.isPlainDiskFile() ) {
+		} else if( checkResult.isPlainDiskFile() ) {
 		  if( addPlainDiskInfo(
 				infoItems,
-				fileNode.isCompressedFile() ?
+				checkResult.isCompressedFile() ?
 					"Komprimierte einfache Abbilddatei"
 					: "Einfache Abbilddatei",
 				file,
@@ -319,16 +294,17 @@ public class FilePreviewFld extends JPanel
 		  {
 		    cardName = "file.table";
 		  }
-		} else if( fileNode.isNonPlainDiskFile() ) {
+		} else if( checkResult.isNonPlainDiskFile() ) {
 		  if( checkFileSize( file.length(), maxFileSize ) ) {
 		    try {
 		      AbstractFloppyDisk disk = DiskUtil.readNonPlainDiskFile(
 								this.owner,
-								file );
+								file,
+								true );
 		      if( disk != null ) {
 			addDiskInfo(
 				infoItems,
-				fileNode.isCompressedFile(),
+				checkResult.isCompressedFile(),
 				disk,
 				sortCaseSensitive );
 			cardName = "file.table";
@@ -336,11 +312,11 @@ public class FilePreviewFld extends JPanel
 		    }
 		    catch( IOException ex ) {}
 		  }
-		} else if( fileNode.isTextFile() ) {
+		} else if( checkResult.isTextFile() ) {
 		  if( addTextInfo( infoItems, file, maxFileSize ) ) {
 		    cardName = "text";
 		  }
-		} else if( fileNode.isArchiveFile() ) {
+		} else if( checkResult.isArchiveFile() ) {
 		  if( addArchiveInfo(
 				infoItems,
 				file,
@@ -350,7 +326,7 @@ public class FilePreviewFld extends JPanel
 		    cardName = "file.table";
 		  }
 		} else {
-		  FileInfo fileInfo = fileNode.getFileInfo();
+		  FileInfo fileInfo = checkResult.getFileInfo();
 		  if( fileInfo != null ) {
 		    infoItems.put(
 			  FileInfoFld.Item.TYPE,
@@ -402,8 +378,11 @@ public class FilePreviewFld extends JPanel
   {
     super.addNotify();
     if( this.thread == null ) {
-      Thread thread = new Thread( this, "JKCEMU File Browser Details Viewer" );
-      this.thread   = thread;
+      Thread thread = new Thread(
+				Main.getThreadGroup(),
+				this,
+				"JKCEMU File Browser Details Viewer" );
+      this.thread = thread;
       thread.setDaemon( true );
       thread.start();
     }
@@ -414,6 +393,14 @@ public class FilePreviewFld extends JPanel
   public void removeNotify()
   {
     super.removeNotify();
+    if( this.thread != null ) {
+      synchronized( this.lockMonitor ) {
+	try {
+	  this.lockMonitor.notifyAll();
+	}
+	catch( IllegalMonitorStateException ex ) {}
+      }
+    }
     this.thread = null;
   }
 

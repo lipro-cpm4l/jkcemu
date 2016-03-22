@@ -134,7 +134,7 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     addKey( "I", 64 );
     addKey( "O", 54 );
     addKey( "P", 38 );
-    addKey( "^", 22 );
+    addKey( "^", "\u00AC", 22 );
     this.curX += KEY_COL_W;
 
     this.curX = xUp - (KEY_COL_W / 2);
@@ -179,8 +179,8 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     addKey( "J", 66 );
     addKey( "K", 72 );
     addKey( "L", 88 );
-    addKey( "+", 104 );
-    addKey( "_", 102 );
+    addKey( "+", ";", 104 );
+    addKey( "_", "|", 102 );
     this.curX = xUp;
     addKey(
 	this.curX,

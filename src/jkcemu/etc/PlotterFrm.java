@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -121,7 +121,7 @@ public class PlotterFrm extends AbstractImageFrm
     this.mnuConfirmNewPage.setSelected(
 		EmuUtil.parseBooleanProperty(
 			props,
-			getSettingsPrefix() + ".confirm_new_page",
+			getSettingsPrefix() + "confirm_new_page",
 			true ) );
     return super.applySettings( props, resizable );
   }
@@ -208,7 +208,7 @@ public class PlotterFrm extends AbstractImageFrm
 	else if( src == this.mnuConfirmNewPage ) {
 	  rv = true;
 	  Main.setProperty(
-		getSettingsPrefix() + ".confirm_new_page",
+		getSettingsPrefix() + "confirm_new_page",
 		Boolean.toString( this.mnuConfirmNewPage.isSelected() ) );
 	}
       }

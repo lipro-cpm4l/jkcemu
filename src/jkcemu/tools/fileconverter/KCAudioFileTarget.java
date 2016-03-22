@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,6 +12,7 @@ import java.io.*;
 import java.lang.*;
 import java.util.Arrays;
 import javax.sound.sampled.AudioInputStream;
+import javax.swing.JComboBox;
 import jkcemu.audio.AudioUtil;
 import jkcemu.base.*;
 import jkcemu.emusys.kc85.KCAudioDataStream;
@@ -62,14 +63,48 @@ public class KCAudioFileTarget extends AbstractConvertTarget
     if( (this.fileBytes == null) && (this.target != null) ) {
       int len = Math.min( this.len, this.dataBytes.length - this.offs );
       if( len > 0 ) {
-	if( (target == Target.Z9001) || (target == Target.KC85) ) {
-	  int begAddr = this.fileConvertFrm.getBegAddr( true );
-	  int endAddr = begAddr + len;
-	  if( target == Target.Z9001 ) {
-	    --endAddr;
+	if( this.target == Target.Z9001 ) {
+	  int    begAddr = this.fileConvertFrm.getBegAddr( true );
+	  int    endAddr = begAddr + len - 1;
+	  int    startAddr = this.fileConvertFrm.getStartAddr( false );
+	  String fileDesc  = this.fileConvertFrm.getFileDesc( true );
+	  String fileType  = this.fileConvertFrm.getFileType();
+
+	  byte[] m = new byte[ 128 + len ];
+	  Arrays.fill( m, (byte) 0 );
+	  int p = 0;
+	  if( fileDesc != null ) {
+	    int l = fileDesc.length();
+	    while( (p < 8) && (p < l) ) {
+	      m[ p ] = (byte) fileDesc.charAt( p);
+	      p++;
+	    }
 	  }
-	  int    startAddr= this.fileConvertFrm.getBegAddr( false );
-	  String fileDesc = this.fileConvertFrm.getFileDesc( true );
+	  p = 8;
+	  if( fileType != null ) {
+	    int l = fileType.length();
+	    for( int i = 0; (i < l) && (p < 11); i++ ) {
+	      m[ p++ ] = (byte) fileDesc.charAt( i);
+	    }
+	  }
+	  p += 5;
+	  m[ p++ ] = (byte) (startAddr >= 0 ? 3 : 2);
+	  m[ p++ ] = (byte) begAddr;
+	  m[ p++ ] = (byte) (begAddr >> 8);
+	  m[ p++ ] = (byte) endAddr;
+	  m[ p++ ] = (byte) (endAddr >> 8);
+	  if( startAddr >= 0 ) {
+	    m[ p++ ] = (byte) startAddr;
+	    m[ p++ ] = (byte) (startAddr >> 8);
+	  }
+	  System.arraycopy( this.dataBytes, this.offs, m, 128, len );
+	  this.fileBytes = m;
+	  this.blkNum    = 0;
+	} else if( this.target == Target.KC85 ) {
+	  int    begAddr = this.fileConvertFrm.getBegAddr( true );
+	  int    endAddr = begAddr + len;
+	  int    startAddr = this.fileConvertFrm.getStartAddr( false );
+	  String fileDesc  = this.fileConvertFrm.getFileDesc( true );
 
 	  byte[] m = new byte[ 128 + len ];
 	  Arrays.fill( m, (byte) 0 );
@@ -96,8 +131,8 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 	  }
 	  System.arraycopy( this.dataBytes, this.offs, m, 128, len );
 	  this.fileBytes = m;
-	  this.blkNum    = (target == Target.Z9001 ? 0 : 1);
-	} else if( target == Target.KCBASIC_PRG ) {
+	  this.blkNum    = 1;
+	} else if( this.target == Target.KCBASIC_PRG ) {
 	  String s = this.fileConvertFrm.getFileDesc( true );
 	  byte[] m = new byte[ 13 + len ];
 	  m[ 0 ] = (byte) 0xD3;
@@ -147,9 +182,16 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
-    return this.target == Target.KCBASIC_PRG ? 8 : 11;
+    return this.target == Target.KC85 ? 11 : 8;
+  }
+
+
+  @Override
+  public int getMaxFileTypeLength()
+  {
+    return this.target == Target.Z9001 ? 3 : 0;
   }
 
 
@@ -172,6 +214,26 @@ public class KCAudioFileTarget extends AbstractConvertTarget
   {
     saveAudioFile( file, getAudioInputStream() );
     return null;
+  }
+
+
+  @Override
+  public void setFileTypesTo( JComboBox<String> combo )
+  {
+    if( this.target == Target.Z9001 ) {
+      combo.removeAllItems();
+      combo.addItem( "" );
+      combo.addItem( "COM" );
+      try {
+	if( this.fileConvertFrm.getStartAddr( false ) >= 0 ) {
+	  combo.setSelectedItem( "COM" );
+	}
+      }
+      catch( UserInputException ex ) {}
+      combo.setEnabled( true );
+    } else {
+      super.setFileTypesTo( combo );
+    }
   }
 
 

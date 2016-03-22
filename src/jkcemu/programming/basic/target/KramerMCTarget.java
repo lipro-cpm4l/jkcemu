@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,6 +16,8 @@ import jkcemu.programming.basic.*;
 
 public class KramerMCTarget extends AbstractTarget
 {
+  public static final String BASIC_TARGET_NAME = "TARGET_KRAMER";
+
   public KramerMCTarget()
   {
     // leer
@@ -23,21 +25,21 @@ public class KramerMCTarget extends AbstractTarget
 
 
   @Override
-  public void appendExit( AsmCodeBuf buf )
+  public void appendExitTo( AsmCodeBuf buf )
   {
     buf.append( "\tJP\t0000H\n" );
   }
 
 
   @Override
-  public void appendHChar( AsmCodeBuf buf )
+  public void appendHCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0010H\n" );
   }
 
 
   @Override
-  public void appendInput(
+  public void appendInputTo(
 			AsmCodeBuf buf,
 			boolean    xckbrk,
 			boolean    xinkey,
@@ -66,14 +68,14 @@ public class KramerMCTarget extends AbstractTarget
 
 
   @Override
-  public void appendWChar( AsmCodeBuf buf )
+  public void appendWCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0040H\n" );
   }
 
 
   @Override
-  public void appendXLPTCH( AsmCodeBuf buf )
+  public void appendXLPtchTo( AsmCodeBuf buf )
   {
     buf.append( "XLPTCH:\tLD\tC,A\n"
 		+ "\tJP\t00ECH\n" );
@@ -81,7 +83,7 @@ public class KramerMCTarget extends AbstractTarget
 
 
   @Override
-  public void appendXOUTCH( AsmCodeBuf buf )
+  public void appendXOutchTo( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
       buf.append( "XOUTCH:\tLD\tC,A\n"
@@ -92,30 +94,12 @@ public class KramerMCTarget extends AbstractTarget
 
 
   @Override
-  public void appendXOUTNL( AsmCodeBuf buf )
+  public void appendXOutnlTo( AsmCodeBuf buf )
   {
     buf.append( "XOUTNL:\tLD\tC,0DH\n"
 		+ "\tCALL\t00E6H\n"
 		+ "\tLD\tC,0AH\n"
 		+ "\tJP\t00E6H\n" );
-  }
-
-
-  /*
-   * Target-ID-String
-   */
-  @Override
-  public void appendXTARID( AsmCodeBuf buf )
-  {
-    buf.append( "XTARID:\tDB\t\'KRAMER\'\n"
-		+ "\tDB\t00H\n" );
-  }
-
-
-  @Override
-  public boolean createsCodeFor( EmuSys emuSys )
-  {
-    return emuSys != null ? (emuSys instanceof KramerMC) : false;
   }
 
 
@@ -127,9 +111,49 @@ public class KramerMCTarget extends AbstractTarget
 
 
   @Override
+  public String[] getBasicTargetNames()
+  {
+    return new String[] { BASIC_TARGET_NAME };
+  }
+
+
+  @Override
+  public int getCompatibilityLevel( EmuSys emuSys )
+  {
+    int rv = 0;
+    if( emuSys != null ) {
+      if( emuSys instanceof KramerMC ) {
+	rv = 3;
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
   public int getDefaultBegAddr()
   {
     return 0x1000;
+  }
+
+
+  @Override
+  public String getHostName()
+  {
+    return "Kramer-MC";
+  }
+
+
+  @Override
+  public String getStartCmd( EmuSys emuSys, String appName, int begAddr )
+  {
+    String rv = null;
+    if( (emuSys != null) && (begAddr >= 0) ) {
+      if( emuSys instanceof KramerMC ) {
+	rv = String.format( "G%04X", begAddr );
+      }
+    }
+    return rv;
   }
 
 

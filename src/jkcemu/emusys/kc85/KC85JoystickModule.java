@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -85,7 +85,7 @@ public abstract class KC85JoystickModule
   @Override
   public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    buf.append( "<h2>PIO (IO-Adressen 90-93)</h2>\n" );
+    buf.append( "<h2>PIO (E/A-Adressen 90-93)</h2>\n" );
     this.pio.appendInterruptStatusHTMLTo( buf );
   }
 
@@ -137,18 +137,18 @@ public abstract class KC85JoystickModule
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = -1;
     port &= 0xFF;
     if( (port >= 0x90) && (port < 0x98) ) {
       switch( port & 0xFF ) {
 	case 0x90:
-	  rv = this.pio.readPortA();
+	  rv = this.pio.readDataA();
 	  break;
 
 	case 0x91:
-	  rv = this.pio.readPortB();
+	  rv = this.pio.readDataB();
 	  break;
 
 	case 0x92:
@@ -182,18 +182,18 @@ public abstract class KC85JoystickModule
 
 
   @Override
-  public boolean writeIOByte( int port, int value )
+  public boolean writeIOByte( int port, int value, int tStates )
   {
     boolean rv = false;
     port &= 0xFF;
     if( (port >= 0x90) && (port < 0x98) ) {
       switch( port & 0xFF ) {
 	case 0x90:
-	  this.pio.writePortA( value );
+	  this.pio.writeDataA( value );
 	  break;
 
 	case 0x91:
-	  this.pio.writePortB( value );
+	  this.pio.writeDataB( value );
 	  break;
 
 	case 0x92:

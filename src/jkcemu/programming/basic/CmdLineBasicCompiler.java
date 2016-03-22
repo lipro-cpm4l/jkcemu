@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.programming.basic;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
+import java.util.regex.PatternSyntaxException;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.programming.*;
@@ -28,13 +29,20 @@ public class CmdLineBasicCompiler
 	"",
 	"Optionen:",
 	"  -h              diese Hilfe anzeigen",
+	"  -f <Datei>      Kommandozeile aus Datei lesen",
 	"  -g              bei Abbruch aufgrund eines Fehlers"
 						+ " Zeilennummer ausgeben",
 	"  -o <Datei>      Ausgabedatei festlegen",
 	"  -t <System>     Zielsystem festlegen (ac1, cpm, huebler, kc85,"
-						+ " kramer,",
-	"                  llc2_hires, scch, z1013, z9001, z9001_krt)",
-	"  -A <Adresse>    Anfangsadresse festlegen (hexadezimal)",
+						+ " kc85_4,",
+	"                  kramer, llc2_hires, scch, z1013, z1013_64x16,",
+	"                  z9001, z9001_krt)",
+	"  -A <AAdr>       Anfangsadresse festlegen (hexadezimal)",
+	"  -A <AAdr:BAdr>  Anfangsadressen f\u00FCr Programmcode (AAdr) und",
+	"                  BSS-Bereich (BAdr) festlegen (hexadezimal)",
+	"  -D <Treiber>    einzubindende Treiber festlegen"
+						+ " (z.B.: -D \"CRT,LPT\")",
+	"                  vorhandene Treiber: CRT, LPT, FILE, VDIP",
 	"  -L <Sprache>    Sprache der Laufzeitausschriften festlegen"
 						+ " (de, en)",
 	"  -M <Zahl>       Stack-Gr\u00F6\u00DFe festlegen"
@@ -74,89 +82,116 @@ public class CmdLineBasicCompiler
     boolean                  debugFlag      = false;
     int                      optimizerLevel = 0;
     String                   srcFileName    = null;
-    Map<String,String>       optToArg       = new HashMap<String,String>();
+    Map<String,String>       optToArg       = new HashMap<>();
     BasicOptions.BreakOption breakOption    = BasicOptions.BreakOption.ALWAYS;
+
+    CmdLineArgIterator backIter = null;
+    CmdLineArgIterator iter     = CmdLineArgIterator.createFromStringArray(
+								args,
+								argIdx );
     try {
-      while( argIdx < args.length ) {
-	String arg = args[ argIdx++ ];
-	if( arg != null ) {
-	  int len = arg.length();
-	  if( len > 0 ) {
-	    if( arg.charAt( 0 ) == '-' ) {
-	      if( len < 2 ) {
-		throwWrongCmdLine();
-	      }
-	      int pos = 1;
-	      while( pos < len ) {
-		char ch = arg.charAt( pos++ );
-		switch( ch ) {
-		  case 'h':
-		  case 'H':
-		    helpFlag = true;
-		    break;
-		  case 'g':
-		    debugFlag = true;
-		    break;
-		  case 'S':
-		    asmFlag = true;
-		    break;
-		  case 'B':
-		    if( pos < len ) {
-		      switch( arg.charAt( pos++ ) ) {
-			case '0':
-			  breakOption = BasicOptions.BreakOption.NEVER;
-			  break;
-			case '1':
-			  breakOption = BasicOptions.BreakOption.INPUT;
-			  break;
-			case '2':
-			  breakOption = BasicOptions.BreakOption.ALWAYS;
-			  break;
-			default:
-			  throw new IOException(
-				String.format(
-				    "Option \'B%c\' nicht unterst\u00FCtzt",
-				    ch ) );
-		      }
-		    } else {
+      String arg = iter.next();
+      while( arg != null ) {
+	int len = arg.length();
+	if( len > 0 ) {
+	  if( arg.charAt( 0 ) == '-' ) {
+	    if( len < 2 ) {
+	      throwWrongCmdLine();
+	    }
+	    int pos = 1;
+	    while( pos < len ) {
+	      char ch = arg.charAt( pos++ );
+	      switch( ch ) {
+		case 'f':
+		  {
+		    if( backIter != null ) {
 		      throw new IOException(
-				"Option \'B\' hat falsches Format" );
+			"Option -f in der Datei nicht erlaubt" );
 		    }
-		    break;
-		  case 'O':
+		    String fileName = null;
 		    if( pos < len ) {
-		      char ch1 = arg.charAt( pos++ );
-		      if( (ch1 < '0') || (ch1 > '4') ) {
-			throw new IOException(
-				String.format(
-					"Option O%c nicht unterst\u00FCtzt",
-					ch1 ) );
-		      }
-		      optimizerLevel = ch1 - '0';
+		      fileName = arg.substring( pos );
+		      pos      = len;		// Schleife verlassen
 		    } else {
-		      optimizerLevel = 2;
+		      fileName = iter.next();
 		    }
-		    break;
-		  case 'o':
-		  case 't':
-		  case 'A':
-		  case 'L':
-		  case 'M':
-		  case 'N':
-		  case 'T':
-		  case 'W':
+		    if( fileName == null ) {
+		      throwWrongCmdLine();
+		    }
+		    try {
+		      backIter = iter;
+		      iter     = CmdLineArgIterator.createFromReader(
+					new FileReader( fileName ) );
+		    }
+		    catch( IOException ex ) {
+		      iter     = backIter;
+		      backIter = null;
+		    }
+		  }
+		  break;
+		case 'h':
+		case 'H':
+		  helpFlag = true;
+		  break;
+		case 'g':
+		  debugFlag = true;
+		  break;
+		case 'S':
+		  asmFlag = true;
+		  break;
+		case 'B':
+		  if( pos < len ) {
+		    switch( arg.charAt( pos++ ) ) {
+		      case '0':
+			breakOption = BasicOptions.BreakOption.NEVER;
+			break;
+		      case '1':
+			breakOption = BasicOptions.BreakOption.INPUT;
+			break;
+		      case '2':
+			breakOption = BasicOptions.BreakOption.ALWAYS;
+			break;
+		      default:
+			throw new IOException(
+			    String.format(
+				  "Option \'B%c\' nicht unterst\u00FCtzt",
+				  ch ) );
+		    }
+		  } else {
+		    throw new IOException(
+				"Option \'B\' hat falsches Format" );
+		  }
+		  break;
+		case 'O':
+		  if( pos < len ) {
+		    char ch1 = arg.charAt( pos++ );
+		    if( (ch1 < '0') || (ch1 > '4') ) {
+		      throw new IOException(
+			String.format(
+				"Option O%c nicht unterst\u00FCtzt",
+				ch1 ) );
+		    }
+		    optimizerLevel = ch1 - '0';
+		  } else {
+		    optimizerLevel = 2;
+		  }
+		  break;
+		case 'o':
+		case 't':
+		case 'A':
+		case 'D':
+		case 'L':
+		case 'M':
+		case 'N':
+		case 'T':
+		case 'W':
+		  {
 		    String optArg = null;
 		    if( pos < len ) {
 		      optArg = arg.substring( pos );
+		      pos    = len;		// Schleife verlassen
 		    } else {
-		      while( (optArg == null) && (argIdx < args.length) ) {
-			String s = args[ argIdx++ ];
-			if( s != null ) {
-			  if( !s.isEmpty() ) {
-			    optArg = s;
-			  }
-			}
-		      }
+		      optArg = iter.next();
 		    }
 		    if( optArg == null ) {
 		      throwWrongCmdLine();
@@ -166,24 +201,31 @@ public class CmdLineBasicCompiler
 		      throwWrongCmdLine();
 		    }
 		    optToArg.put( optKey, optArg );
-		    break;
-		  default:
-		    throw new IOException(
+		  }
+		  break;
+		default:
+		  throw new IOException(
 			String.format( "Unbekannte Option \'%c\'", ch ) );
-		}
 	      }
-	    } else {
-	      if( srcFileName != null ) {
-		throwWrongCmdLine();
-	      }
-	      srcFileName = arg;
 	    }
+	  } else {
+	    if( srcFileName != null ) {
+	      throwWrongCmdLine();
+	    }
+	    srcFileName = arg;
 	  }
+	}
+	arg = iter.next();
+	if( (arg == null) && (backIter != null) ) {
+	  EmuUtil.doClose( iter );
+	  iter     = backIter;
+	  backIter = null;
+	  arg      = iter.next();
 	}
       }
       if( helpFlag ) {
 	EmuUtil.printlnOut();
-	EmuUtil.printlnOut( Main.VERSION + " BASIC-Compiler" );
+	EmuUtil.printlnOut( Main.APPINFO + " BASIC-Compiler" );
 	for( String s : usageLines ) {
 	  EmuUtil.printlnOut( s );
 	}
@@ -218,6 +260,9 @@ public class CmdLineBasicCompiler
 	  else if( sysName.equalsIgnoreCase( "KC85" ) ) {
 	    target = new KC85Target();
 	  }
+	  else if( sysName.equalsIgnoreCase( "KC85_4" ) ) {
+	    target = new KC854Target();
+	  }
 	  else if( sysName.equalsIgnoreCase( "HUEBLER" ) ) {
 	    target = new HueblerGraphicsMCTarget();
 	  }
@@ -237,6 +282,9 @@ public class CmdLineBasicCompiler
 	  }
 	  else if( sysName.equalsIgnoreCase( "Z1013" ) ) {
 	    target = new Z1013Target();
+	  }
+	  else if( sysName.equalsIgnoreCase( "Z1013_64X16" ) ) {
+	    target = new Z1013PetersTarget();
 	  }
 	}
 	if( target == null ) {
@@ -265,11 +313,66 @@ public class CmdLineBasicCompiler
 	}
 
 	// Anfangsadresse
-	int begAddr = getHex4Arg( optToArg, "A" );
-	if( begAddr >= 0 ) {
-	  options.setCodeBegAddr( begAddr );
+	int    codeBegAddr = -1;
+	int    bssBegAddr  = -1;
+	String opt         = "A";
+	String addrText    = optToArg.get( opt );
+	if( addrText != null ) {
+	  int delimPos = addrText.indexOf( ':' );
+	  if( delimPos >= 0 ) {
+	    codeBegAddr = getHex4( addrText.substring( 0, delimPos ), opt );
+	    bssBegAddr  = getHex4( addrText.substring( delimPos + 1 ), opt );
+	  } else {
+	    codeBegAddr = getHex4( addrText, opt );
+	  }
+	}
+	if( codeBegAddr >= 0 ) {
+	  options.setCodeBegAddr( codeBegAddr );
 	} else {
 	  options.setCodeBegAddr( target.getDefaultBegAddr() );
+	}
+	if( bssBegAddr >= 0 ) {
+	  options.setBssBegAddr( bssBegAddr );
+	}
+
+	// einzubindende Treiber
+	String driverNames = optToArg.get( "D" );
+	if( driverNames != null ) {
+	  boolean crtDrv  = false;
+	  boolean lptDrv  = false;
+	  boolean fileDrv = false;
+	  boolean vdipDrv = false;
+	  int     argLen  = driverNames.length();
+	  if( argLen > 1 ) {
+	    if( driverNames.startsWith( "\"" )
+		&& driverNames.endsWith( "\"" ) )
+	    {
+	      driverNames = driverNames.substring( 1, argLen - 1 );
+	    }
+	  }
+	  try {
+	    String[] drivers = driverNames.split( "," );
+	    if( drivers != null ) {
+	      for( String driver : drivers ) {
+		if( driver.equalsIgnoreCase( "CRT" ) ) {
+		  crtDrv = true;
+		} else if( driver.equalsIgnoreCase( "LPT" ) ) {
+		  lptDrv = true;
+		} else if( driver.equalsIgnoreCase( "FILE" ) ) {
+		  fileDrv = true;
+		} else if( driver.equalsIgnoreCase( "VDIP" ) ) {
+		  vdipDrv = true;
+		} else {
+		  throw new IOException( driver + ": Unbekannter Treiber" );
+		}
+	      }
+	    }
+	  }
+	  catch( PatternSyntaxException ex ) {}
+	  options.setOpenCrtEnabled( crtDrv );
+	  options.setOpenLptEnabled( lptDrv );
+	  options.setOpenFileEnabled( fileDrv );
+	  options.setOpenVdipEnabled( vdipDrv );
 	}
 
 	// Heap-Groesse
@@ -278,7 +381,7 @@ public class CmdLineBasicCompiler
 	  if( heapSize < BasicOptions.MIN_HEAP_SIZE ) {
 	    throw new IOException( "Option \'T\': Wert zu klein" );
 	  }
-	  if( heapSize > BasicCompiler.MAX_VALUE ) {
+	  if( heapSize > BasicCompiler.MAX_INT_VALUE ) {
 	    throw new IOException( "Option \'T\': Wert zu gro\u00DF" );
 	  }
 	  options.setHeapSize( heapSize );
@@ -295,7 +398,7 @@ public class CmdLineBasicCompiler
 	    throw new IOException( "Option \'T\': Wert entweder 0 oder >= "
 			+ Integer.toString( BasicOptions.MIN_STACK_SIZE ) );
 	  }
-	  if( heapSize > BasicCompiler.MAX_VALUE ) {
+	  if( heapSize > BasicCompiler.MAX_INT_VALUE ) {
 	    throw new IOException( "Option \'T\': Wert zu gro\u00DF" );
 	  }
 	  options.setStackSize( stackSize );
@@ -305,7 +408,7 @@ public class CmdLineBasicCompiler
 
 	// Programmname
 	String appName = optToArg.get( "N" );
-	if( appName == null ) {
+	if( (appName == null) && (target.getMaxAppNameLen() >= 6) ) {
 	  String fName = srcFile.getName();
 	  if( fName != null ) {
 	    int pos = fName.indexOf( '.' );
@@ -355,7 +458,7 @@ public class CmdLineBasicCompiler
 	status = compile(
 			srcFile,
 			outFileName,
-			target.supportsAppName() ? appName : null,
+			appName,
 			forZ9001,
 			options,
 			asmFlag );
@@ -363,7 +466,7 @@ public class CmdLineBasicCompiler
     }
     catch( IOException ex ) {
       EmuUtil.printlnErr();
-      EmuUtil.printlnErr( Main.VERSION + " BASIC-Compiler:" );
+      EmuUtil.printlnErr( Main.APPINFO + " BASIC-Compiler:" );
       String msg = ex.getMessage();
       if( msg != null ) {
 	if( !msg.isEmpty() ) {
@@ -374,6 +477,9 @@ public class CmdLineBasicCompiler
 	EmuUtil.printlnErr( s );
       }
       status = false;
+    }
+    finally {
+      EmuUtil.doClose( iter );
     }
     return status;
   }
@@ -410,7 +516,7 @@ public class CmdLineBasicCompiler
 	  if( (options.getTarget() instanceof CPMTarget)
 	      && (options.getCodeBegAddr() == 0x0100) )
 	  {
-	    fName += "*.com";
+	    fName += ".com";
 	  } else {
 	    fName += ".bin";
 	  }
@@ -432,7 +538,8 @@ public class CmdLineBasicCompiler
       }
       PrgLogger     logger   = PrgLogger.createStandardLogger();
       BasicCompiler compiler = new BasicCompiler(
-					EmuUtil.readTextFile( srcFile ),
+					null,
+					srcFile,
 					options,
 					logger );
       String asmText = compiler.compile();
@@ -461,6 +568,7 @@ public class CmdLineBasicCompiler
 	  Z80Assembler assembler = new Z80Assembler(
 						asmText,
 						"Assembler-Quelltext",
+						null,
 						options,
 						logger,
 						false );
@@ -485,12 +593,9 @@ public class CmdLineBasicCompiler
   }
 
 
-  private static int getHex4Arg(
-			Map<String,String> optToArg,
-			String             opt ) throws IOException
+  private static int getHex4( String arg, String opt ) throws IOException
   {
-    int    rv  = -1;
-    String arg = optToArg.get( opt );
+    int rv = -1;
     if( arg != null ) {
       try {
 	int len = arg.length();
@@ -515,6 +620,14 @@ public class CmdLineBasicCompiler
       }
     }
     return rv;
+  }
+
+
+  private static int getHex4Arg(
+			Map<String,String> optToArg,
+			String             opt ) throws IOException
+  {
+    return getHex4( optToArg.get( opt ), opt );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -42,7 +42,7 @@ public class VCS80 extends EmuSys implements
 
   public VCS80( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.vcs80." );
     if( mon == null ) {
       mon = readResource( "/rom/vcs80/vcs80mon.bin" );
     }
@@ -350,7 +350,7 @@ public class VCS80 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
 
@@ -364,11 +364,11 @@ public class VCS80 extends EmuSys implements
 	break;
 
       case 6:
-	rv = this.pio.readPortB();
+	rv = this.pio.readDataB();
 	break;
 
       case 7:
-	rv = this.pio.readPortA();
+	rv = this.pio.readDataA();
 	break;
     }
     return rv;
@@ -415,7 +415,7 @@ public class VCS80 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     switch( port & 0x07 ) {	// A3 bis A7 ignorieren
       case 4:
@@ -427,11 +427,11 @@ public class VCS80 extends EmuSys implements
 	break;
 
       case 6:
-	this.pio.writePortB( value );
+	this.pio.writeDataB( value );
 	break;
 
       case 7:
-	this.pio.writePortA( value );
+	this.pio.writeDataA( value );
 	break;
     }
   }

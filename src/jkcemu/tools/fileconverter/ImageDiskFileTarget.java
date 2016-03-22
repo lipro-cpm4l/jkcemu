@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,6 +31,13 @@ public class ImageDiskFileTarget extends AbstractConvertTarget
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public int getMaxRemarkLength()
+  {
+    return -1;		// unbegrenzt
+  }
+
+
+  @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
     return EmuUtil.getImageDiskFileFilter();
@@ -48,8 +55,7 @@ public class ImageDiskFileTarget extends AbstractConvertTarget
   public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".imd" );
-    ImageDisk.export( this.disk, file, null );
+    ImageDisk.export( this.disk, file, this.fileConvertFrm.getRemark() );
     return null;
   }
 }
-

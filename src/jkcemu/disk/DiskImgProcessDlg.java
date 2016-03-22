@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -46,8 +46,8 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     if( drvFileName != null ) {
       File imgFile = EmuUtil.showFileSaveDlg(
 				owner,
-				"Einfache Diskettenabbilddatei speichern",
-				Main.getLastPathFile( "disk" ),
+				"Einfache Abbilddatei speichern",
+				Main.getLastDirFile( "disk" ),
 				EmuUtil.getPlainDiskFileFilter(),
 				EmuUtil.getISOFileFilter() );
       if( imgFile != null ) {
@@ -77,48 +77,51 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
   {
     File imgFile = EmuUtil.showFileOpenDlg(
 				owner,
-				"Einfach Diskettenabbilddatei \u00F6ffnen",
-				Main.getLastPathFile( "disk" ),
+				"Einfache Abbilddatei \u00F6ffnen",
+				Main.getLastDirFile( "disk" ),
 				EmuUtil.getPlainDiskFileFilter() );
     if( imgFile != null ) {
-      boolean state    = false;
-      String  fileName = imgFile.getName();
-      if( fileName != null ) {
-	String lowerFileName = fileName.toLowerCase();
-	state = (TextUtil.endsWith(
+      if( imgFile.exists() && (imgFile.length() == 0) ) {
+	BasicDlg.showErrorDlg( owner, "Die Datei ist leer." );
+      } else {
+	boolean state    = false;
+	String  fileName = imgFile.getName();
+	if( fileName != null ) {
+	  String lowerFileName = fileName.toLowerCase();
+	  state = (TextUtil.endsWith(
 				lowerFileName,
 				DiskUtil.plainDiskFileExt )
 			|| TextUtil.endsWith(
 				lowerFileName,
 				DiskUtil.gzPlainDiskFileExt ));
-      }
-      if( !state ) {
-	state = BasicDlg.showYesNoWarningDlg(
+	}
+	if( !state ) {
+	  state = BasicDlg.showYesNoWarningDlg(
 			owner,
 			"JKCEMU kann nur einfache Abbilddateien"
-				+ " auf Diskette schreiben.\n"
+				+ " auf einen Datentr\u00E4ger schreiben.\n"
 				+ "Laut Dateiendung scheint die Datei jedoch"
 				+ " keine einfache Abbilddatei zu sein.\n"
 				+ "M\u00F6chten Sie trotzdem fortsetzen?",
 			"Dateityp" );
-      }
-      if( state ) {
-	String drvFileName = DriveSelectDlg.selectDriveFileName( owner );
-	if( drvFileName != null ) {
-	  String drvName = getDriveName( drvFileName );
-	  if( JOptionPane.showConfirmDialog(
-		owner,
-		String.format(
-			"Die Abbilddatei wird nun auf das Laufwerk %s"
-				+ " geschrieben.\n"
+	}
+	if( state ) {
+	  String drvFileName = DriveSelectDlg.selectDriveFileName( owner );
+	  if( drvFileName != null ) {
+	    String drvName = getDriveName( drvFileName );
+	    if( JOptionPane.showConfirmDialog(
+		  owner,
+		  String.format(
+			"Die Abbilddatei wird nun auf den Datentr\u00E4ger"
+				+ " im Laufwerk %s geschrieben.\n"
 				+ "Dabei werden alle bisherigen Daten"
 				+ " auf dem Datentr\u00E4ger gel\u00F6scht!",
 			drvName ),
-		"Achtung",
-		JOptionPane.OK_CANCEL_OPTION,
-		JOptionPane.WARNING_MESSAGE ) == JOptionPane.OK_OPTION )
-	  {
-	    (new DiskImgProcessDlg(
+		  "Achtung",
+		  JOptionPane.OK_CANCEL_OPTION,
+		  JOptionPane.WARNING_MESSAGE ) == JOptionPane.OK_OPTION )
+	    {
+	      (new DiskImgProcessDlg(
 			owner,
 			String.format(
 				"Schreibe Abbilddatei auf %s...",
@@ -126,6 +129,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 			Direction.FILE_TO_DISK,
 			drvFileName,
 			imgFile )).setVisible( true );
+	    }
 	  }
 	}
       }
@@ -146,10 +150,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	  OutputStream out = null;
 	  try {
 	    in  = DeviceIO.openDeviceForSequentialRead( this.drvFileName );
-	    out = new FileOutputStream( this.imgFile );
-	    if( EmuUtil.isGZipFile( this.imgFile ) ) {
-	      out = new GZIPOutputStream( out );
-	    }
+	    out = EmuUtil.createOptionalGZipOutputStream( this.imgFile );
 	    Main.setLastDriveFileName( this.drvFileName );
 	    Main.setLastFile( this.imgFile, "disk" );
 
@@ -185,9 +186,18 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	  InputStream  in  = null;
 	  OutputStream out = null;
 	  try {
-	    in  = new FileInputStream( this.imgFile );
+	    long len = this.imgFile.length();
+	    in       = new FileInputStream( this.imgFile );
 	    if( EmuUtil.isGZipFile( this.imgFile ) ) {
 	      in = new GZIPInputStream( in );
+	    }
+	    if( (len > (2880 * 1024)) && ((len % 512L) >= 0x100) ) {
+	      // kompatible Festplattenabbilddatei -> Dateikopf ueberspringen
+	      for( int i = 0; i < 0x100; i++ ) {
+		if( in.read() < 0 ) {
+		  break;
+		}
+	      }
 	    }
 	    out = DeviceIO.openDeviceForSequentialWrite( this.drvFileName );
 	    Main.setLastDriveFileName( this.drvFileName );
@@ -303,7 +313,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     add( this.labelStatus, gbc );
 
     this.labelRunning = new JLabel();
-    this.labelRunning.setFont( new Font( "Monospaced", Font.BOLD, 12 ) );
+    this.labelRunning.setFont( new Font( Font.MONOSPACED, Font.BOLD, 12 ) );
     gbc.gridy++;
     add( this.labelRunning, gbc );
 
@@ -329,6 +339,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     this.timer.start();
  
     this.thread = new Thread(
+			Main.getThreadGroup(),
 			this,
 			direction == Direction.FILE_TO_DISK ?
 				"JKCEMU disk image writer"

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,14 +25,16 @@ public abstract class AbstractFloppyDisk
   private volatile String fmtText;
   private String          mediaText;
   private String          warningText;
+  private int[]           sectorIdxMap;
 
 
   protected AbstractFloppyDisk(
-			Frame  owner,
-			int    sides,
-			int    cyls,
-			int    sectorsPerCyl,
-			int    sectorSize )
+			Frame owner,
+			int   sides,
+			int   cyls,
+			int   sectorsPerCyl,
+			int   sectorSize,
+			int   interleave )
   {
     this.owner         = owner;
     this.sides         = sides;
@@ -42,6 +44,34 @@ public abstract class AbstractFloppyDisk
     this.fmtText       = null;
     this.mediaText     = null;
     this.warningText   = null;
+    this.sectorIdxMap  = null;
+    if( (interleave > 1)
+	&& (interleave < sectorsPerCyl)
+	&& (sectorsPerCyl > 2) )
+    {
+      this.sectorIdxMap = new int[ sectorsPerCyl ];
+      Arrays.fill( this.sectorIdxMap, -1 );
+      int srcIdx = 0;
+      int dstIdx = 0;
+      while( srcIdx < sectorsPerCyl ) {
+	while( this.sectorIdxMap[ dstIdx ] >= 0 ) {
+	  dstIdx = (dstIdx + 1) % sectorsPerCyl;
+	}
+	this.sectorIdxMap[ dstIdx ] = srcIdx++;
+	dstIdx = (dstIdx + interleave) % sectorsPerCyl;
+      }
+    }
+  }
+
+
+  protected AbstractFloppyDisk(
+			Frame owner,
+			int   sides,
+			int   cyls,
+			int   sectorsPerCyl,
+			int   sectorSize )
+  {
+    this( owner, sides, cyls, sectorsPerCyl, sectorSize, 0 );
   }
 
 
@@ -379,13 +409,14 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  protected static int readByte( InputStream in ) throws IOException
+  protected int sectorIndexToInterleave( int sectorIdx )
   {
-    int b = in.read();
-    if( b < 0 ) {
-      throwUnexpectedEOF();
+    if( this.sectorIdxMap != null ) {
+      if( (sectorIdx >= 0) && (sectorIdx < this.sectorIdxMap.length) ) {
+	sectorIdx = this.sectorIdxMap[ sectorIdx ];
+      }
     }
-    return b;
+    return sectorIdx;
   }
 
 

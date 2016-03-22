@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -42,8 +42,9 @@ public class HexEditFrm
   private JMenuItem mnuPrintOptions;
   private JMenuItem mnuPrint;
   private JMenuItem mnuClose;
-  private JMenuItem mnuTextCopy;
-  private JMenuItem mnuBytesCopy;
+  private JMenuItem mnuBytesCopyHex;
+  private JMenuItem mnuBytesCopyAscii;
+  private JMenuItem mnuBytesCopyDump;
   private JMenuItem mnuBytesInvert;
   private JMenuItem mnuBytesSave;
   private JMenuItem mnuBytesAppend;
@@ -117,14 +118,14 @@ public class HexEditFrm
   @Override
   public void dragExit( DropTargetEvent e )
   {
-    // empty
+    // leer
   }
 
 
   @Override
   public void dragOver( DropTargetDragEvent e )
   {
-    // empty
+    // leer
   }
 
 
@@ -132,16 +133,16 @@ public class HexEditFrm
   public void drop( DropTargetDropEvent e )
   {
     File file = EmuUtil.fileDrop( this, e );
-    if( file != null )
+    if( file != null ) {
       openFile( file );
+    }
   }
 
 
   @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
+    // leer
   }
 
 
@@ -179,9 +180,15 @@ public class HexEditFrm
       } else if( src == this.mnuBytesAppend ) {
 	rv = true;
 	doBytesAppend();
-      } else if( src == this.mnuBytesCopy ) {
+      } else if( src == this.mnuBytesCopyHex ) {
 	rv = true;
-	doBytesCopy();
+	this.hexCharFld.copySelectedBytesAsHex();
+      } else if( src == this.mnuBytesCopyAscii ) {
+	rv = true;
+	this.hexCharFld.copySelectedBytesAsAscii();
+      } else if( src == this.mnuBytesCopyDump ) {
+	rv = true;
+	this.hexCharFld.copySelectedBytesAsDump();
       } else if( src == this.mnuBytesInvert ) {
 	rv = true;
 	doBytesInvert();
@@ -206,9 +213,6 @@ public class HexEditFrm
       } else if( src == this.mnuSavePos ) {
 	rv = true;
 	doSavePos();
-      } else if( src == this.mnuTextCopy ) {
-	rv = true;
-	this.hexCharFld.copySelectedText();
       } else if( src == this.mnuGotoSavedPos ) {
 	rv = true;
 	doGotoSavedPos( false );
@@ -253,12 +257,12 @@ public class HexEditFrm
 
 
   @Override
-  public byte getDataByte( int idx )
+  public int getDataByte( int idx )
   {
-    byte rv = (byte) 0;
+    int rv = 0;
     if( this.fileBytes != null ) {
       if( (idx >= 0) && (idx < this.fileBytes.length) ) {
-	rv = this.fileBytes[ idx ];
+	rv = (int) this.fileBytes[ idx ] & 0xFF;
       }
     }
     return rv;
@@ -292,8 +296,9 @@ public class HexEditFrm
   @Override
   protected void setSelectedByteActionsEnabled( boolean state )
   {
-    this.mnuTextCopy.setEnabled( state );
-    this.mnuBytesCopy.setEnabled( state );
+    this.mnuBytesCopyHex.setEnabled( state );
+    this.mnuBytesCopyAscii.setEnabled( state );
+    this.mnuBytesCopyDump.setEnabled( state );
     this.mnuBytesInvert.setEnabled( state );
     this.mnuBytesSave.setEnabled( state );
     this.mnuBytesInsert.setEnabled( state );
@@ -520,17 +525,10 @@ public class HexEditFrm
     if( m1 >= 0 ) {
       int len = Math.min( m2, this.fileBytes.length ) - m1 + 1;
       if( len > 0 ) {
-	File presetDir = null;
-	if( this.file != null ) {
-	  presetDir = this.file.getParentFile();
-	}
-	if( presetDir == null ) {
-	  presetDir = Main.getLastPathFile( "software" );
-	}
 	File file = EmuUtil.showFileSaveDlg(
 					this,
 					"Datei speichern",
-					presetDir );
+					Main.getLastDirFile( "hexedit" ) );
 	if( file != null ) {
 	  try {
 	    OutputStream out = null;
@@ -543,7 +541,7 @@ public class HexEditFrm
 	    finally {
 	      EmuUtil.doClose( out );
 	    }
-	    Main.setLastFile( file, "software" );
+	    Main.setLastFile( file, "hexedit" );
 	  }
 	  catch( Exception ex ) {
 	    BasicDlg.showErrorDlg( this, ex );
@@ -559,7 +557,7 @@ public class HexEditFrm
     File file = EmuUtil.showFileOpenDlg(
 				this,
 				"Datei anh\u00E4ngen",
-				Main.getLastPathFile( "software" ) );
+				Main.getLastDirFile( "hexedit" ) );
     if( file != null ) {
       try {
 	int  oldLen  = this.fileLen;
@@ -569,7 +567,7 @@ public class HexEditFrm
 	{
 	  throwFileTooBig();
 	}
-	byte[] a = EmuUtil.readFile( file, Integer.MAX_VALUE );
+	byte[] a = EmuUtil.readFile( file, false, Integer.MAX_VALUE );
 	if( a != null ) {
 	  if( a.length > 0 ) {
 	    try {
@@ -581,7 +579,7 @@ public class HexEditFrm
 	    setDataChanged( true );
 	    updView();
 	    setSelection( oldLen, this.fileLen - 1 );
-	    Main.setLastFile( file, "software" );
+	    Main.setLastFile( file, "hexedit" );
 	  }
 	}
       }
@@ -599,7 +597,7 @@ public class HexEditFrm
       File file = EmuUtil.showFileOpenDlg(
 				this,
 				"Datei einf\u00FCgen",
-				Main.getLastPathFile( "software" ) );
+				Main.getLastDirFile( "hexedit" ) );
       if( file != null ) {
 	try {
 	  long fileLen = file.length();
@@ -608,7 +606,7 @@ public class HexEditFrm
 	  {
 	    throwFileTooBig();
 	  }
-	  byte[] a = EmuUtil.readFile( file, Integer.MAX_VALUE );
+	  byte[] a = EmuUtil.readFile( file, false, Integer.MAX_VALUE );
 	  if( a != null ) {
 	    if( a.length > 0 ) {
 	      try {
@@ -620,7 +618,7 @@ public class HexEditFrm
 	      setDataChanged( true );
 	      updView();
 	      setSelection( caretPos, caretPos + a.length - 1 );
-	      Main.setLastFile( file, "software" );
+	      Main.setLastFile( file, "hexedit" );
 	    }
 	  }
 	}
@@ -647,7 +645,7 @@ public class HexEditFrm
       File file = EmuUtil.showFileOpenDlg(
 				this,
 				"Datei \u00F6ffnen",
-				Main.getLastPathFile( "software" ) );
+				Main.getLastDirFile( "hexedit" ) );
       if( file != null )
 	openFileInternal( file );
     }
@@ -662,7 +660,7 @@ public class HexEditFrm
       file = EmuUtil.showFileSaveDlg(
 		this,
 		"Datei speichern",
-		file != null ? file : Main.getLastPathFile( "software" ) );
+		file != null ? file : Main.getLastDirFile( "hexedit" ) );
     }
     if( file != null ) {
       try {
@@ -686,7 +684,7 @@ public class HexEditFrm
 	finally {
 	  EmuUtil.doClose( out );
 	}
-	Main.setLastFile( file, "software" );
+	Main.setLastFile( file, "hexedit" );
       }
       catch( Exception ex ) {
 	BasicDlg.showErrorDlg( this, ex );
@@ -768,13 +766,20 @@ public class HexEditFrm
     mnuEdit.setMnemonic( KeyEvent.VK_B );
     mnuBar.add( mnuEdit );
 
-    this.mnuBytesCopy = createJMenuItem( "Ausgew\u00E4hlte Bytes kopieren" );
-    this.mnuBytesCopy.setEnabled( false );
-    mnuEdit.add( this.mnuBytesCopy );
+    this.mnuBytesCopyHex = createJMenuItem(
+		"Ausgw\u00E4hlte Bytes als Hexadezimalzahlen kopieren" );
+    this.mnuBytesCopyHex.setEnabled( false );
+    mnuEdit.add( this.mnuBytesCopyHex );
 
-    this.mnuTextCopy = createJMenuItem( "Ausgew\u00E4hlten Text kopieren" );
-    this.mnuTextCopy.setEnabled( false );
-    mnuEdit.add( this.mnuTextCopy );
+    this.mnuBytesCopyAscii = createJMenuItem(
+		"Ausgw\u00E4hlte Bytes als ASCII-Text kopieren" );
+    this.mnuBytesCopyAscii.setEnabled( false );
+    mnuEdit.add( this.mnuBytesCopyAscii );
+
+    this.mnuBytesCopyDump = createJMenuItem(
+		"Ausgw\u00E4hlte Bytes als Hex-ASCII-Dump kopieren" );
+    this.mnuBytesCopyDump.setEnabled( false );
+    mnuEdit.add( this.mnuBytesCopyDump );
     mnuEdit.addSeparator();
 
     this.mnuBytesInsert = createJMenuItem(
@@ -904,6 +909,8 @@ public class HexEditFrm
     gbc.weighty = 1.0;
     gbc.gridy++;
     add( createHexCharFld(), gbc );
+    this.hexCharFld.setPreferredSize(
+	new Dimension( this.hexCharFld.getDefaultPreferredWidth(), 300 ) );
 
     // Anzeige der Cursor-Position
     gbc.fill    = GridBagConstraints.HORIZONTAL;
@@ -926,6 +933,7 @@ public class HexEditFrm
       setScreenCentered();
     }
     setResizable( true );
+    this.hexCharFld.setPreferredSize( null );
   }
 
 
@@ -1016,7 +1024,6 @@ public class HexEditFrm
     updTitle();
     updView();
     setCaretPosition( -1, false );
-    this.hexCharFld.setYOffset( 0 );
   }
 
 
@@ -1077,8 +1084,7 @@ public class HexEditFrm
 	}
 	updView();
 	setCaretPosition( -1, false );
-	this.hexCharFld.setYOffset( 0 );
-	Main.setLastFile( file, "software" );
+	Main.setLastFile( file, "hexedit" );
       }
       finally {
 	EmuUtil.doClose( in );
@@ -1122,4 +1128,3 @@ public class HexEditFrm
     setTitle( buf.toString() );
   }
 }
-

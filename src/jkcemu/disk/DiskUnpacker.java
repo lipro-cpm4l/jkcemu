@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ import java.lang.*;
 import java.util.*;
 import jkcemu.Main;
 import jkcemu.base.*;
+import jkcemu.filebrowser.FileBrowserFrm;
 
 
 public class DiskUnpacker extends AbstractThreadDlg
@@ -32,6 +33,7 @@ public class DiskUnpacker extends AbstractThreadDlg
   private boolean            applyReadOnly;
   private boolean            forceLowerCase;
   private boolean            fileErr;
+  private boolean            blockNumErr;
 
 
   public static void unpackDisk(
@@ -143,12 +145,12 @@ public class DiskUnpacker extends AbstractThreadDlg
       }
 
       // Directory-Bloecke lesen
-      java.util.List<byte[]> dirBlocks = new ArrayList<byte[]>();
+      java.util.List<byte[]> dirBlocks = new ArrayList<>();
       int                    blkIdx    = 0;
       for(;;) {
 	byte[] blkBuf = readLogicalBlock( blkIdx++ );
 	if( blkBuf != null ) {
-	  if( DiskUtil.isFilledDirBlock( blkBuf ) ) {
+	  if( DiskUtil.isFilledDir( blkBuf ) ) {
 	    dirBlocks.add( blkBuf );
 	    continue;
 	  }
@@ -157,10 +159,14 @@ public class DiskUnpacker extends AbstractThreadDlg
       }
 
       // Directory durchgehen
+      byte[] timeBytes = null;
       if( dirBlocks.isEmpty() ) {
 	appendToLog( this.diskDesc + " ist leer.\n" );
 	disableAutoClose();
       } else {
+	boolean              firstEntry = true;
+	int                  dirBlkOffs = 0;
+	FileTimesViewFactory ftvFactory = new NIOFileTimesViewFactory();
 	this.outDir.mkdirs();
 	for( byte[] dirBlockBuf : dirBlocks ) {
 	  if( dirBlockBuf != null ) {
@@ -168,8 +174,8 @@ public class DiskUnpacker extends AbstractThreadDlg
 	    while( (entryPos + 31) < dirBlockBuf.length ) {
 	      /*
 	       * Gueltige Extent-0-Eintraege suchen,
-	       * Das 1. Bye wird dabei mit ausgeblendetem Bit 4 (Passwort-Bit)
-	       * auswertet.
+	       * Das 1. Bye wird dabei mit ausgeblendetem Bit 4
+	       * (Passwort-Bit) auswertet.
 	       */
 	      int b0 = (int) dirBlockBuf[ entryPos ] & 0xEF;
 	      if( (b0 >= 0) && (b0 <= 0x1F)
@@ -199,7 +205,16 @@ public class DiskUnpacker extends AbstractThreadDlg
 		  File         file = new File( outDir, fileName );
 		  OutputStream out  = null;
 		  try {
-		    out = new FileOutputStream( file );
+		    if( firstEntry
+			&& fileName.equalsIgnoreCase(
+					DateStamper.FILENAME ) )
+		    {
+		      int blocks = (int) dirBlockBuf[ entryPos + 15 ] & 0xFF;
+		      out = new ByteArrayOutputStream(
+					blocks > 0 ? (blocks * 128) : 32 );
+		    } else {
+		      out = new FileOutputStream( file );
+		    }
 
 		    int extentNum = 0;
 		    writeEntryContentTo(
@@ -219,6 +234,14 @@ public class DiskUnpacker extends AbstractThreadDlg
 					entryPos,
 					extentNum ) );
 		    out.close();
+		    if( out instanceof ByteArrayOutputStream ) {
+		      timeBytes = ((ByteArrayOutputStream) out).toByteArray();
+		      if( timeBytes != null ) {
+			out = new FileOutputStream( file );
+			out.write( timeBytes );
+			out.close();
+		      }
+		    }
 		    out = null;
 		  }
 		  catch( IOException ex ) {
@@ -229,6 +252,21 @@ public class DiskUnpacker extends AbstractThreadDlg
 		  finally {
 		    EmuUtil.doClose( out );
 		  }
+
+		  // Zeitstempel setzen
+		  if( timeBytes != null ) {
+		    int p = (dirBlkOffs + entryPos) / 2;
+		    if( (p + 15) < timeBytes.length ) {
+		      FileTimesView ftv = ftvFactory.getFileTimesView( file );
+		      if( ftv != null ) {
+			ftv.setTimesInMillis(
+				DateStamper.getMillis( timeBytes, p ),
+				DateStamper.getMillis( timeBytes, p + 5 ),
+				DateStamper.getMillis( timeBytes, p + 10 ) );
+		      }
+		    }
+		  }
+		  // Bei Fehler Datei umbenennen
 		  if( this.fileErr ) {
 		    String fName2 = fileName + ".error";
 		    if( file.renameTo( new File( this.outDir, fName2 ) ) ) {
@@ -244,23 +282,51 @@ public class DiskUnpacker extends AbstractThreadDlg
 		  }
 		}
 	      }
+	      firstEntry = false;
 	      entryPos += 32;
 	    }
 	  }
+	  dirBlkOffs += this.blockSize;
 	}
       }
-      ScreenFrm screenFrm = Main.getScreenFrm();
-      if( screenFrm != null ) {
-	screenFrm.fireDirectoryChanged( this.outDir.getParentFile() );
-      }
+      FileBrowserFrm.fireFileChanged( this.outDir.getParentFile() );
+
+      // Fertig-Meldung
       final Window owner = getOwner();
       if( owner != null ) {
+	final boolean error = (this.errorCount > 0);
+
+	StringBuilder buf = new StringBuilder();
+	if( error ) {
+	  buf.append( "Beim Entpacken traten Fehler auf!" );
+	  if( this.blockNumErr ) {
+	    buf.append( "\n\nWahrscheinlich ist die Blockgr\u00F6\u00DFe"
+		+ " zu gro\u00DF oder das Blocknummernformat (8/16 Bit)"
+		+ " falsch eingestellt.\n"
+		+ "Wenn dem so ist, sind auch die ohne Fehlermeldung"
+		+ " entpackten Dateien korrupt!" );
+	  }
+	} else {
+	  buf.append( "Fertig!" );
+	}
+	if( timeBytes != null ) {
+	  buf.append( "\n\nDateStamper erkannt:\n"
+			+ "Die Zeitstempel der entpackten Dateien"
+			+ " wurden auf die in der Datei\n"
+			+ DateStamper.FILENAME
+			+ " enthaltenen Werte gesetzt." );
+	}
+	final String msg = buf.toString();
 	EventQueue.invokeLater(
 		new Runnable()
 		{
 		  public void run()
 		  {
-		    BasicDlg.showInfoDlg( owner, "Fertig!", "Entpacken" );
+		    if( error ) {
+		      BasicDlg.showWarningDlg( owner, msg );
+		    } else {
+		      BasicDlg.showInfoDlg( owner, msg, "Entpacken" );
+		    }
 		  }
 		} );
       }
@@ -297,6 +363,7 @@ public class DiskUnpacker extends AbstractThreadDlg
     this.applyReadOnly     = applyReadOnly;
     this.forceLowerCase    = forceLowerCase;
     this.fileErr           = false;
+    this.blockNumErr       = false;
   }
 
 
@@ -395,10 +462,12 @@ public class DiskUnpacker extends AbstractThreadDlg
     int nBytes  = ((int) dirBlockBuf[ entryPos + 15 ] & 0xFF) * 128;
     int nBlocks = (nBytes + this.blockSize - 1) / this.blockSize;
     if( nBlocks > this.maxBlocksPerEntry ) {
+      this.blockNumErr = true;
       appendErrorToLog(
 	String.format(
 		"Ung\u00FCltiger Gr\u00F6\u00DFeneintrag in Extent %d",
-		extentNum ) );
+		extentNum,
+		this.blockNum16Bit ? 16 : 8 ) );
       incErrorCount();
       this.fileErr = true;
       nBlocks      = this.maxBlocksPerEntry;
@@ -413,9 +482,10 @@ public class DiskUnpacker extends AbstractThreadDlg
 	blockIdx = (int) dirBlockBuf[ pos++ ] & 0xFF;
       }
       if( blockIdx == 0 ) {
+	this.blockNumErr = true;
 	throw new IOException(
 		String.format(
-			"Ung\u00FCltiger Blocknummer 0 in Extent %d",
+			"Ung\u00FCltige Blocknummer 0 in Extent %d",
 			extentNum ) );
       }
       for( int k = 0; k < this.sectPerBlock; k++ ) {
@@ -449,6 +519,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 	  }
 	  nBytes -= sector.writeTo( out, nBytes );
 	} else {
+	  this.blockNumErr = true;
 	  throw new IOException(
 		String.format(
 			"Sektor [H=%d,C=%d,R=%d] im Block %02Xh"

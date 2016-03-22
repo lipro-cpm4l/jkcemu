@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,7 @@ package jkcemu.audio;
 
 import java.lang.*;
 import javax.sound.sampled.*;
+import jkcemu.Main;
 
 
 public class DataLineCloser extends Thread
@@ -45,21 +46,22 @@ public class DataLineCloser extends Thread
   {
     if( this.dataLine != null ) {
       try {
+	if( this.dataLine.isActive()
+	    && (this.dataLine instanceof SourceDataLine) )
+	{
+	  this.dataLine.drain();
+	}
+	this.dataLine.stop();
 	this.dataLine.flush();
       }
       catch( Exception ex ) {}
-
-      try {
-	this.dataLine.stop();
+      finally {
+	try {
+	  this.dataLine.close();
+	}
+	catch( Exception ex ) {}
+	this.dataLine = null;
       }
-      catch( Exception ex ) {}
-
-      try {
-        this.dataLine.close();
-      }
-      catch( Exception ex ) {}
-
-      this.dataLine = null;
     }
   }
 
@@ -68,8 +70,7 @@ public class DataLineCloser extends Thread
 
   private DataLineCloser( DataLine dataLine )
   {
-    super( "JKCEMU data line closer" );
+    super( Main.getThreadGroup(), "JKCEMU data line closer" );
     this.dataLine = dataLine;
   }
 }
-

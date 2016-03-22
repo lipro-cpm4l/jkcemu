@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,20 +18,49 @@ import jkcemu.base.EmuUtil;
 
 public class FloppyDiskInfo implements Comparable<FloppyDiskInfo>
 {
-  private String resource;
-  private String infoText;
+  private String  resource;
+  private String  infoText;
+  private int     sysTracks;
+  private int     blockSize;
+  private boolean blockNum16Bit;
 
 
-  public FloppyDiskInfo( String resource, String infoText )
+  public FloppyDiskInfo(
+		String  resource,
+		String  infoText,
+		int     sysTracks,
+		int     blockSize,
+		boolean blockNum16Bit )
   {
-    this.resource = resource;
-    this.infoText = infoText;
+    this.resource      = resource;
+    this.infoText      = infoText;
+    this.sysTracks     = sysTracks;
+    this.blockSize     = blockSize;
+    this.blockNum16Bit = blockNum16Bit;
+  }
+
+
+  public boolean getBlockNum16Bit()
+  {
+    return this.blockNum16Bit;
+  }
+
+
+  public int getBlockSize()
+  {
+    return this.blockSize;
   }
 
 
   public String getResource()
   {
     return this.resource;
+  }
+
+
+  public int getSysTracks()
+  {
+    return this.sysTracks;
   }
 
 

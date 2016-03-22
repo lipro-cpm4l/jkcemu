@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -74,7 +74,7 @@ public class AC1AudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
     return this.basic ? 6 : 16;
   }

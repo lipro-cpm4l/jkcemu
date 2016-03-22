@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -37,7 +37,7 @@ public class LC80SettingsFld extends AbstractSettingsFld
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
-    // Bereich Modell
+    // Tab Modell
     this.tabModel = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Modell", this.tabModel );
 
@@ -86,7 +86,7 @@ public class LC80SettingsFld extends AbstractSettingsFld
     this.tabModel.add( this.btnLC80e, gbcModel );
 
 
-    // Bereich ROM
+    // Tab ROM
     this.tabRom = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "ROM", this.tabRom );
 
@@ -169,6 +169,14 @@ public class LC80SettingsFld extends AbstractSettingsFld
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    this.fldAltOS.lookAndFeelChanged();
+    this.fldAltC000.lookAndFeelChanged();
   }
 
 

@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Haltepunkt auf eine Programmadresse
+ * Halte-/Log-Punkt auf eine Programmadresse
  */
 
 package jkcemu.tools.debugger;
@@ -14,21 +14,66 @@ import z80emu.*;
 
 public class PCBreakpoint extends AbstractBreakpoint
 {
-  private int    addr;
-  private String reg;
-  private int    mask;
-  private String cond;
-  private int    value;
+  private int     addr;
+  private String  reg;
+  private int     mask;
+  private String  cond;
+  private int     value;
+  private boolean imported;
 
 
   public PCBreakpoint(
-		int    addr,
-		String reg,
-		int    mask,
-		String cond,
-		int    value )
+		DebugFrm debugFrm,
+		int      addr,
+		String   reg,
+		int      mask,
+		String   cond,
+		int      value,
+		boolean  imported )
   {
-    this.addr  = addr & 0xFFFF;
+    super( debugFrm );
+    this.addr     = addr & 0xFFFF;
+    this.imported = imported;
+    setConditionValues( reg, mask, cond, value );
+  }
+
+
+  public int getAddress()
+  {
+    return this.addr;
+  }
+
+
+  public String getCondition()
+  {
+    return this.cond;
+  }
+
+
+  public int getMask()
+  {
+    return this.mask;
+  }
+
+
+  public String getRegister()
+  {
+    return this.reg;
+  }
+
+
+  public int getValue()
+  {
+    return this.value;
+  }
+
+
+  public void setConditionValues(
+			String   reg,
+			int      mask,
+			String   cond,
+			int      value )
+  {
     this.reg   = reg;
     this.mask  = mask & 0xFFFF;
     this.cond  = cond;
@@ -64,40 +109,16 @@ public class PCBreakpoint extends AbstractBreakpoint
   }
 
 
-  public int getAddress()
+  public boolean wasImported()
   {
-    return this.addr;
+    return this.imported;
   }
 
 
-  public String getCondition()
-  {
-    return this.cond;
-  }
-
-
-  public int getMask()
-  {
-    return this.mask;
-  }
-
-
-  public String getRegister()
-  {
-    return this.reg;
-  }
-
-
-  public int getValue()
-  {
-    return this.value;
-  }
-
-
-	/* --- Z80Breakpoint --- */
+	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean matches( Z80CPU cpu, Z80InterruptSource iSource )
+  protected boolean matchesImpl( Z80CPU cpu, Z80InterruptSource iSource )
   {
     boolean rv = (cpu.getRegPC() == this.addr);
     if( rv && (this.reg != null) && (this.cond != null) ) {
@@ -154,4 +175,3 @@ public class PCBreakpoint extends AbstractBreakpoint
     return rv;
   }
 }
-

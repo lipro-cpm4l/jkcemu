@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@ package jkcemu.filebrowser;
 
 import java.io.*;
 import java.lang.*;
+import java.nio.file.*;
 import java.util.*;
 import javax.sound.sampled.*;
 import javax.swing.tree.*;
@@ -22,54 +23,19 @@ import jkcemu.text.TextUtil;
 
 
 public class FileNode extends FileTreeNode
+			implements FileActionMngr.FileObject
 {
-  private int                hsFileType;
-  private boolean            fileChecked;
-  private boolean            audioFile;
-  private boolean            archiveFile;
-  private boolean            binFile;
-  private boolean            compressedFile;
-  private boolean            headersaveFile;
-  private boolean            imageFile;
-  private boolean            kcBasicHeadFile;
-  private boolean            kcBasicFile;
-  private boolean            kcSysFile;
-  private boolean            nonPlainDiskFile;
-  private boolean            plainDiskFile;
-  private boolean            textFile;
-  private boolean            kc85TapFile;
-  private boolean            z9001TapFile;
-  private boolean            startableFile;
-  private FileInfo           fileInfo;
-  private Map<File,FileNode> fileToChild;
+  private FileCheckResult fileCheckResult;
 
 
-  public FileNode( TreeNode parent, File file, boolean fileSystemRoot )
+  public FileNode( TreeNode parent, Path path, boolean fileSystemRoot )
   {
-    super( parent, file, fileSystemRoot );
-    this.hsFileType       = -1;
-    this.fileChecked      = false;
-    this.audioFile        = false;
-    this.archiveFile      = false;
-    this.binFile          = false;
-    this.compressedFile   = false;
-    this.headersaveFile   = false;
-    this.imageFile        = false;
-    this.kcBasicHeadFile  = false;
-    this.kcBasicFile      = false;
-    this.kcSysFile        = false;
-    this.nonPlainDiskFile = false;
-    this.plainDiskFile    = false;
-    this.textFile         = false;
-    this.kc85TapFile      = false;
-    this.z9001TapFile     = false;
-    this.startableFile    = false;
-    this.fileInfo         = null;
-    this.fileToChild      = null;
+    super( parent, path, fileSystemRoot );
+    this.fileCheckResult = null;
   }
 
 
-  protected boolean fileNameEndsWith( String suffix )
+  public boolean fileNameEndsWith( String suffix )
   {
     boolean rv = false;
     if( (this.file != null) && (suffix != null) ) {
@@ -82,478 +48,166 @@ public class FileNode extends FileTreeNode
   }
 
 
-  public FileInfo getFileInfo()
+  @Override
+  public FileCheckResult getCheckResult()
   {
-    ensureFileChecked();
-    return this.fileInfo;
-  }
-
-
-  public int getHeadersaveFileType()
-  {
-    ensureFileChecked();
-    return this.hsFileType;
-  }
-
-
-  public boolean isAudioFile()
-  {
-    ensureFileChecked();
-    return this.audioFile;
-  }
-
-
-  public boolean isArchiveFile()
-  {
-    ensureFileChecked();
-    return this.archiveFile;
-  }
-
-
-  public boolean isBinFile()
-  {
-    ensureFileChecked();
-    return this.binFile;
-  }
-
-
-  public boolean isCompressedFile()
-  {
-    ensureFileChecked();
-    return this.compressedFile;
-  }
-
-
-  public boolean isHeadersaveFile()
-  {
-    ensureFileChecked();
-    return this.headersaveFile;
-  }
-
-
-  public boolean isImageFile()
-  {
-    ensureFileChecked();
-    return this.imageFile;
-  }
-
-
-  public boolean isKC85TapFile()
-  {
-    ensureFileChecked();
-    return this.kc85TapFile;
-  }
-
-
-  public boolean isKCBasicHeadFile()
-  {
-    ensureFileChecked();
-    return this.kcBasicHeadFile;
-  }
-
-
-  public boolean isKCBasicFile()
-  {
-    ensureFileChecked();
-    return this.kcBasicFile;
-  }
-
-
-  public boolean isKCSysFile()
-  {
-    ensureFileChecked();
-    return this.kcSysFile;
-  }
-
-
-  public boolean isNonPlainDiskFile()
-  {
-    ensureFileChecked();
-    return this.nonPlainDiskFile;
-  }
-
-
-  public boolean isPlainDiskFile()
-  {
-    ensureFileChecked();
-    return this.plainDiskFile;
-  }
-
-
-  public boolean isStartableFile()
-  {
-    ensureFileChecked();
-    return this.startableFile;
-  }
-
-
-  public boolean isTextFile()
-  {
-    ensureFileChecked();
-    return this.textFile;
-  }
-
-
-  public boolean isZ9001TapFile()
-  {
-    ensureFileChecked();
-    return this.z9001TapFile;
-  }
-
-
-  public void setFile( File file )
-  {
-    super.setFile( file );
-    this.fileChecked = false;
+    if( this.fileCheckResult == null ) {
+      try {
+	this.fileCheckResult = FileCheckResult.checkFile(
+						this.path.toFile() );
+      }
+      catch( UnsupportedOperationException ex ) {}
+    }
+    return this.fileCheckResult;
   }
 
 
   public void refresh(
-		DefaultTreeModel model,
-		boolean          forceLoadChildren,
-		boolean          hiddenFiles,
-		FileComparator   fileComparator )
+		final DefaultTreeModel model,
+		boolean                hiddenFiles,
+		FileTreeNodeComparator comparator )
   {
-    this.fileChecked = false;
-    if( forceLoadChildren || this.childrenLoaded ) {
-      java.util.List<FileTreeNode> oldChildren = this.vChildren;
-      this.vChildren                           = null;
+    Iterable<Path> entries = null;
+    try {
+      removeAllChildren();
 
       boolean fileSystemRoots = false;
-      File[]  entries         = null;
       if( this.file != null ) {
-	if( this.file.isDirectory() ) {
-	  entries = this.file.listFiles();
+	try {
+	  Path path = this.file.toPath();
+	  if( Files.isDirectory( path, LinkOption.NOFOLLOW_LINKS )
+	      && !Files.isSymbolicLink( path ) )
+	  {
+	    entries = Files.newDirectoryStream( path );
+	  }
 	}
+	catch( InvalidPathException ex ) {}
+	catch( IOException ex ) {}
       } else {
 	fileSystemRoots = true;
-	entries         = File.listRoots();
-      }
-
-      boolean changed      = false;
-      int     nChildren    = 0;
-      int     nOldChildren = 0;
-      if( oldChildren != null ) {
-	nOldChildren = oldChildren.size();
+	entries         = FileSystems.getDefault().getRootDirectories();
       }
       if( entries != null ) {
-	if( entries.length > 0 ) {
-	  fileComparator.setForFileSystemRoots( fileSystemRoots );
+	for( Path entry : entries ) {
 	  try {
-	    Arrays.sort( entries, fileComparator );
-	  }
-	  catch( ClassCastException ex ) {}
-
-	  // Eintraege lesen und mit alten Eintraegen vergleichen
-	  Map<File,FileNode> fileToChild = new HashMap<File,FileNode>();
-	  this.vChildren = new Vector<FileTreeNode>( entries.length );
-	  for( int i = 0; i < entries.length; i++ ) {
 	    boolean ignore    = false;
-	    File    entry     = entries[ i ];
-	    String  entryName = entry.getName();
+	    String  entryName = null;
+	    if( fileSystemRoots ) {
+	      entryName = entry.toString();
+	    } else {
+	      Path namePath = entry.getFileName();
+	      if( namePath != null ) {
+		entryName = namePath.toString();
+	      }
+	    }
 	    if( entryName != null ) {
 	      if( entryName.equals( "." ) || entryName.equals( ".." ) ) {
 		ignore = true;
 	      }
-	    }
-	    if( !ignore
-		&& (this.fileSystemRoot || hiddenFiles || !entry.isHidden()) )
-	    {
-	      boolean  equals = false;
-	      FileNode child  = null;
-	      if( this.fileToChild != null ) {
-		child = this.fileToChild.get( entry );
-	      }
-	      if( child == null ) {
-		child = new FileNode( this, entry, fileSystemRoots );
-	      }
-	      this.vChildren.add( child );
-	      fileToChild.put( entry, child );
-	      if( (oldChildren != null) && (nChildren < nOldChildren) ) {
-		if( oldChildren.get( nChildren ) == child ) {
-		  equals = true;
-		}
-	      }
-	      if( !equals ) {
-		changed = true;
-	      }
-	      nChildren++;
-	    }
-	  }
-	  this.fileToChild = fileToChild;
-	  this.fileChecked = false;
-
-	  // untergeordnete Verzeichnisse aktualisieren
-	  if( this.vChildren != null ) {
-	    DefaultTreeModel tmpModel = null;
-	    if( !changed ) {
-	      tmpModel = model;
-	    }
-	    for( FileTreeNode child : this.vChildren ) {
-	      if( child instanceof FileNode ) {
-		((FileNode) child).refresh(
-					tmpModel,
-					false,
-					hiddenFiles,
-					fileComparator );
+	      if( !ignore && (hiddenFiles || !Files.isHidden( entry )) ) {
+		FileNode fn = new FileNode( this, entry, fileSystemRoots );
+		fn.updNode();
+		add( fn );
 	      }
 	    }
 	  }
+	  catch( IOException ex ) {}
 	}
+
+	// Sortieren
+	comparator.setForFileSystemRoots( fileSystemRoots );
+	sort( comparator );
       }
 
       // Aenderungen melden
-      if( nChildren != nOldChildren ) {
-	changed = true;
-      }
-      if( changed && (model != null) ) {
+      if( model != null ) {
 	model.nodeStructureChanged( this );
 	model.reload( this );
       }
       this.childrenLoaded = true;
     }
+    finally {
+      if( entries != null ) {
+	if( entries instanceof Closeable ) {
+	  EmuUtil.doClose( (Closeable) entries );
+	}
+      }
+      this.fileCheckResult = null;
+    }
   }
 
 
-  public void refreshNodeFor(
-		File             file,
-		DefaultTreeModel model,
-		boolean          forceLoadChildren,
-		boolean          hiddenFiles,
-		FileComparator   fileComparator )
+  public FileNode refreshNodeFor(
+			Path                   path,
+			DefaultTreeModel       model,
+			boolean                forceLoadChildren,
+			boolean                hiddenFiles,
+			FileTreeNodeComparator comparator )
   {
-    if( (file != null) && this.childrenLoaded && (this.vChildren != null) ) {
+    FileNode node = null;
+    if( path != null ) {
       try {
-	boolean done     = false;
-	boolean isParent = false;
-	String  path     = file.getCanonicalPath();
-	if( this.file != null ) {
-	  String tmpPath = this.file.getCanonicalPath();
-	  if( path.equals( tmpPath ) ) {
-	    refresh( model, forceLoadChildren, hiddenFiles, fileComparator );
-	    done = true;
+	node = refreshNodeFor(
+			path.toAbsolutePath().normalize(),
+			model,
+			hiddenFiles,
+			comparator );
+      }
+      catch( Exception ex ) {}
+    }
+    return node;
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void setPath( Path path )
+  {
+    this.path = path;
+    this.file = null;
+  }
+
+
+	/* --- private Mathoden --- */
+
+  private FileNode refreshNodeFor(
+			Path                   absolutePath,
+			DefaultTreeModel       model,
+			boolean                hiddenFiles,
+			FileTreeNodeComparator comparator )
+  {
+    FileNode rv = null;
+    if( absolutePath != null ) {
+      try {
+	boolean recursive = true;
+	if( this.path != null ) {
+	  Path myAbsPath = this.path.toAbsolutePath();
+	  if( myAbsPath.equals( absolutePath ) ) {
+	    refresh( model, hiddenFiles, comparator );
+	    recursive = false;
+	    rv      = this;
+	  } else if( myAbsPath.startsWith( absolutePath ) ) {
+	    rv = this;
 	  }
-	  if( !done ) {
-	    if( !tmpPath.endsWith( File.separator ) ) {
-	      tmpPath += File.separator;
-	    }
-	    if( path.startsWith( tmpPath ) ) {
-	      isParent = true;
-	    }
-	  }
-	} else {
-	  isParent = true;
 	}
-	if( isParent ) {
+	if( recursive && (this.vChildren != null) ) {
 	  for( FileTreeNode child : this.vChildren ) {
 	    if( child instanceof FileNode ) {
-	      ((FileNode) child).refreshNodeFor(
-					file,
-					model,
-					forceLoadChildren,
-					hiddenFiles,
-					fileComparator );
-	    }
-	  }
-	}
-      }
-      catch( IOException ex ) {}
-    }
-  }
-
-
-	/* --- private Methoden --- */
-
-  private synchronized void ensureFileChecked()
-  {
-    if( !this.fileSystemRoot && (this.file != null) ) {
-      if( !this.fileChecked ) {
-	if( this.file.isFile() && this.file.canRead() ) {
-	  this.hsFileType       = -1;
-	  this.audioFile        = false;
-	  this.archiveFile      = false;
-	  this.binFile          = false;
-	  this.compressedFile   = false;
-	  this.headersaveFile   = false;
-	  this.imageFile        = false;
-	  this.kcBasicHeadFile  = false;
-	  this.kcBasicFile      = false;
-	  this.kcSysFile        = false;
-	  this.kc85TapFile      = false;
-	  this.z9001TapFile     = false;
-	  this.nonPlainDiskFile = false;
-	  this.plainDiskFile    = false;
-	  this.textFile         = false;
-	  this.startableFile    = false;
-	  this.fileInfo         = null;
-
-	  boolean done = false;
-
-	  // Sound-Datei pruefen
-	  if( AudioUtil.isAudioFile( this.file ) ) {
-	    this.audioFile = true;
-	    done           = true;
-	  }
-
-	  // Bilddatei pruefen
-	  if( ImgLoader.accepts( this.file ) ) {
-	    this.imageFile = true;
-	    done           = true;
-	  }
-
-	  /*
-	   * Dateiextension pruefen,
-	   * auch bei Audio und Bilddatei (z.B. wegen *.img und *.gz)
-	   */
-	  String fName = this.file.getName();
-	  if( fName != null ) {
-	    fName = fName.toLowerCase();
-	    if( TextUtil.endsWith(
-				fName,
-				EmuUtil.archiveFileExtensions ) )
-	    {
-	      this.archiveFile = true;
-	      done             = true;
-	    }
-	    else if( TextUtil.endsWith( fName, DiskUtil.anaDiskFileExt )
-		     || TextUtil.endsWith( fName, DiskUtil.copyQMFileExt )
-		     || TextUtil.endsWith( fName, DiskUtil.dskFileExt )
-		     || TextUtil.endsWith( fName, DiskUtil.imageDiskFileExt )
-		     || TextUtil.endsWith( fName, DiskUtil.teleDiskFileExt ) )
-	    {
-	      this.nonPlainDiskFile = true;
-	      done                  = true;
-	    }
-	    else if( TextUtil.endsWith( fName, DiskUtil.plainDiskFileExt ) ) {
-	      this.plainDiskFile = true;
-	      done               = true;
-	    }
-	    else if( TextUtil.endsWith(
-				fName,
-				DiskUtil.gzAnaDiskFileExt )
-		     || TextUtil.endsWith(
-				fName,
-				DiskUtil.gzCopyQMFileExt )
-		     || TextUtil.endsWith(
-				fName,
-				DiskUtil.gzDskFileExt )
-		     || TextUtil.endsWith(
-				fName,
-				DiskUtil.gzImageDiskFileExt )
-		     || TextUtil.endsWith(
-				fName,
-				DiskUtil.gzTeleDiskFileExt ) )
-	    {
-	      this.nonPlainDiskFile = true;
-	      this.compressedFile   = true;
-	      done                  = true;
-	    }
-	    else if( TextUtil.endsWith(
-				fName,
-				DiskUtil.gzPlainDiskFileExt ) )
-	    {
-	      this.plainDiskFile  = true;
-	      this.compressedFile = true;
-	      done                = true;
-	    }
-	    else if( TextUtil.endsWith(
-				fName,
-				EmuUtil.textFileExtensions ) )
-	    {
-	      this.textFile = true;
-	      done          = true;
-	    }
-	    else if( fName.endsWith( ".bin" ) ) {
-		this.binFile = true;
-		done         = true;
-	    }
-	    else if( fName.endsWith( ".gz" ) ) {
-	      this.compressedFile = true;
-	      done                = true;
-	    }
-	  }
-
-	  // Kopfdaten ermitteln
-	  if( !done ) {
-	    InputStream in = null;
-	    try {
-	      in = new FileInputStream( this.file );
-
-	      byte[] header    = new byte[ 40 ];
-	      int    headerLen = EmuUtil.read( in, header );
-	      if( headerLen >= 3 ) {
-		if( AbstractFloppyDisk.isDiskFileHeader( header ) ) {
-		  this.nonPlainDiskFile = true;
-		} else {
-		  this.fileInfo = FileInfo.analyzeFile(
-						header,
-						headerLen,
-						this.file );
-		  if( this.fileInfo != null ) {
-		    if( this.fileInfo.equalsFileFormat(
-					FileInfo.KCBASIC_HEAD_PRG )
-			|| this.fileInfo.equalsFileFormat(
-					FileInfo.KCBASIC_HEAD_DATA )
-			|| this.fileInfo.equalsFileFormat(
-					FileInfo.KCBASIC_HEAD_ASC ) )
-		    {
-		      this.kcBasicHeadFile = true;
-		    }
-		    else if( this.fileInfo.equalsFileFormat(
-					FileInfo.KCBASIC_PRG ) )
-		    {
-		      this.kcBasicFile = true;
-		    }
-		    else if( this.fileInfo.equalsFileFormat( FileInfo.KCB )
-			     || this.fileInfo.equalsFileFormat(
-							FileInfo.KCC ) )
-		    {
-		      this.kcSysFile = true;
-		    }
-		    else if( this.fileInfo.equalsFileFormat(
-						FileInfo.KCTAP_KC85 )
-			     || this.fileInfo.equalsFileFormat(
-						FileInfo.KCTAP_BASIC_PRG )
-			     || this.fileInfo.equalsFileFormat(
-						FileInfo.KCTAP_BASIC_DATA )
-			     || this.fileInfo.equalsFileFormat(
-						FileInfo.KCTAP_BASIC_ASC ) )
-		    {
-		      this.kc85TapFile = true;
-		    }
-		    else if( this.fileInfo.equalsFileFormat(
-						FileInfo.KCTAP_Z9001 ) )
-		    {
-		      this.z9001TapFile = true;
-		    }
-		    int    begAddr   = this.fileInfo.getBegAddr();
-		    int    endAddr   = this.fileInfo.getEndAddr();
-		    int    startAddr = this.fileInfo.getStartAddr();
-		    if( (startAddr >= 0)
-			&& (startAddr >= begAddr)
-			&& (startAddr <= endAddr) )
-		    {
-		      this.startableFile = true;
-		    }
-		    String fileFmt = this.fileInfo.getFileFormat();
-		    if( fileFmt != null ) {
-		      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-			this.headersaveFile = true;
-			this.hsFileType     = this.fileInfo.getFileType();
-		      }
-		    }
-		  }
-		}
+	      FileNode tmpNode = ((FileNode) child).refreshNodeFor(
+							absolutePath,
+							model,
+							hiddenFiles,
+							comparator );
+	      if( tmpNode != null ) {
+		rv = tmpNode;
 	      }
 	    }
-	    catch( Exception ex ) {}
-	    finally {
-	      EmuUtil.doClose( in );
-	    }
 	  }
 	}
       }
-      this.fileChecked = true;
+      catch( Exception ex ) {}
     }
+    return rv;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -260,7 +260,16 @@ public class USBInterfaceFrm
 
   private void doDirSelect()
   {
-    File dirFile = DirSelectDlg.selectDirectory( this );
+    File lastDir = this.dirFld.getFile();
+    if( lastDir == null ) {
+      lastDir = Main.getLastDirFile( "usb" );
+    }
+    if( lastDir != null ) {
+      if( !lastDir.isDirectory() ) {
+	lastDir = lastDir.getParentFile();
+      }
+    }
+    File dirFile = DirSelectDlg.selectDirectory( this, lastDir );
     if( dirFile != null ) {
       setDirFile( dirFile );
     }
@@ -279,6 +288,7 @@ public class USBInterfaceFrm
 	  Main.setProperty(
 			"jkcemu.usb.memstick.directory",
 			dirFile.getPath() );
+	  Main.setLastFile( dirFile, "usb" );
 	  setReadOnly( this.btnReadOnly.isSelected() );
 	  setForceLowerCase( this.btnForceLowerCase.isSelected() );
 	}
@@ -287,6 +297,7 @@ public class USBInterfaceFrm
 	emuSys.setUSBMemStickDirectory( null );
 	this.btnDirRemove.setEnabled( false );
 	Main.setProperty( "jkcemu.usb.memstick.directory", "" );
+	Main.setLastFile( dirFile, "usb" );
       }
     }
   }

@@ -1,0 +1,114 @@
+<html>
+<body>
+ <h1>Interleave</h1>
+  Interleave (zu deutsch <em>Verzahnung</em>) gibt die physische
+  Anordnung der Sektoren auf einer Spur an
+  und dient zur Reduzierung der Zugriffszeit.
+  Wenn die Sektoren aufsteigend angeordnet sind, passiert beim
+  sequenziellen Lesen von mehreren Sektoren folgendes:
+  Wenn der erste Sektor gelesen wurde,
+  muss der Floppy Disk Controller zum Lesen des zweiten Sektors
+  neu programmiert werden.
+  Vielleicht muss auch noch etwas mit den gelesenen Daten getan werden.
+  W&auml;hrend dieser Zeit wird der zweite Sektor am Lesekopf vorbei sein,
+  so dass nun fast eine ganze Diskettenumdrehung gewartet werden muss,
+  bis der Sektor wieder gelesen werden kann.
+  Wenn nun aber zwischen zwei nacheinander zu lesende Sektoren
+  noch andere Sektoren plaziert w&auml;ren,
+  erg&auml;be das eine Zeit,
+  in der der Floppy Disk Controller umprogrammiert werden kann.
+  In der Folge w&uuml;rde der n&auml;chste Sektor noch in der gleichen
+  Diskettenumdrehung gelesen werden k&ouml;nnen.
+  Und genau das wird mit Interleave erreicht.
+ <br/><br/>  
+  Interleave gibt an, nach wieviel physischen Sektoren der Sektor
+  mit der n&auml;chst h&ouml;heren logischen Sektornummer kommt.
+  Bei einem Interleave von 1:1 sind die Sektoren aufsteigend angeordnet,
+  d.h., sie sind nicht miteinander verzahnt.
+  Es liegt also kein Interleave vor.
+  Bei 2:1 liegt jeweils ein Sektor dazwischen, bei 3:1 sind es zwei usw.
+  Die Tabelle zeigt die physische Sektoranordnung bei 5 und 9 Sektoren
+  pro Spur:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Interleave</th>
+    <th>Sektoranordnung bei 5 Sektoren pro Spur</th>
+    <th>Sektoranordnung bei 9 Sektoren pro Spur</th>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">1:1</td>
+    <td align="left" valign="top" nowrap="nowrap">1 2 3 4 5</td>
+    <td align="left" valign="top" nowrap="nowrap">1 2 3 4 5 6 7 8 9</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">2:1</td>
+    <td align="left" valign="top" nowrap="nowrap">1 4 2 5 3</td>
+    <td align="left" valign="top" nowrap="nowrap">1 6 2 7 3 8 4 9 5</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">3:1</td>
+    <td align="left" valign="top" nowrap="nowrap">1 3 5 2 4</td>
+    <td align="left" valign="top" nowrap="nowrap">
+     1 4 7 2 5 8 3 6 9 &sup1;
+   </td>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">4:1</td>
+    <td align="left" valign="top" nowrap="nowrap">1 5 4 3 2</td>
+    <td align="left" valign="top" nowrap="nowrap">1 8 6 4 2 9 7 5 3</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">5:1</td>
+    <td align="left" valign="top" nowrap="nowrap">nicht relevant</td>
+    <td align="left" valign="top" nowrap="nowrap">1 3 5 7 9 2 4 6 8</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">6:1</td>
+    <td align="left" valign="top" nowrap="nowrap">nicht relevant</td>
+    <td align="left" valign="top" nowrap="nowrap">
+     1 4 7 3 6 9 2 5 8 &sup1;
+    </td>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">7:1</td>
+    <td align="left" valign="top" nowrap="nowrap">nicht relevant</td>
+    <td align="left" valign="top" nowrap="nowrap">1 5 9 4 8 3 7 2 6</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top" nowrap="nowrap">8:1</td>
+    <td align="left" valign="top" nowrap="nowrap">nicht relevant</td>
+    <td align="left" valign="top" nowrap="nowrap">1 9 8 7 6 5 4 3 2</td>
+   </tr>
+  </table>
+ <br/>
+  &sup1;) In diesen F&auml;llen ist ein exakt gleicher physischer Abstand
+  zwischen zwei logisch zusammenh&auml;ngenden Sektoren nicht
+  vollst&auml;ndig m&ouml;glich.
+ <br/><br/>
+  Das Interleave-Verh&auml;ltnis gibt implizit auch an,
+  wieviel Diskettenumdrehungen zum sequenziellen Lesen aller Sektoren
+  einer Spur notwendig sind.
+  Bei einem Interleave von 1:1 reicht theoretisch eine Diskettenumdrehung aus,
+  bei 2:1 sind zwei und bei 3:1 drei Diskettenumdrehungen notwendig.
+  Je kleiner das Interleave, desto k&uuml;rzer ist die Zugriffszeit.
+  Wenn aber das Interleave zu klein gew&auml;hlt wird,
+  hat es gar keine Wirkung, denn dann muss pro Sektor jeweils eine ganze
+  Diskettenumdrehung gewartet werden.
+  Je gr&ouml;&szlig;er das Interleave, desto geringer ist zwar die Wirkung,
+  aber desto sicherer ist, das es &uuml;berhaupt eine Wirkung hat.
+  Das optimale Interleave-Verh&auml;ltnis h&auml;ngt
+  von verschiedenen Faktoren ab wie z.B. der Geschwindigkeit des Rechners
+  und der konkreten Implementierung der Lese- und Schreib-Routinen.
+  Aus diesem Grund erzeugen die jeweiligen Formatierprogramme
+  auch bei sonst gleichen Diskettenformaten unterschiedliche
+  Interleave-Verh&auml;ltnisse.
+ <br/><br/>
+  Im JKCEMU k&ouml;nnen Sie ein Interleave beim manuellen
+  <a href="creatediskimg.htm">Erstellen einer Diskettenabbilddatei</a>
+  angeben.
+  Die physische Sektoranordnung sehen Sie im
+  <a href="diskimgviewer.htm">Diskettenabbilddatei-Inspektor</a>.
+  Eine Auswirkung auf die Zugriffszeiten hat es aber im Emulator nicht.
+</body>
+</html>

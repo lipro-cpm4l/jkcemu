@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,16 +15,21 @@ import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
 import jkcemu.disk.GIDESettingsFld;
+import jkcemu.emusys.AC1;
 
 
 public class AC1SettingsFld extends AbstractSettingsFld
 {
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 500;
+
   private JTabbedPane            tabbedPane;
   private JRadioButton           btnMon31_64x16;
   private JRadioButton           btnMon31_64x32;
   private JRadioButton           btnMonSCCH80;
   private JRadioButton           btnMonSCCH1088;
   private JRadioButton           btnMon2010;
+  private JRadioButton           btnCTCAllSerial;
+  private JRadioButton           btnCTCM1ToClk2;
   private JCheckBox              btnColor;
   private JCheckBox              btnFloppyDisk;
   private JCheckBox              btnJoystick;
@@ -41,7 +46,10 @@ public class AC1SettingsFld extends AbstractSettingsFld
   private GIDESettingsFld        tabGIDE;
   private SCCHModule1SettingsFld tabSCCH;
   private JPanel                 tabExt;
+  private JPanel                 tabCtc;
   private JPanel                 tabEtc;
+  private AutoLoadSettingsFld    tabAutoLoad;
+  private AutoInputSettingsFld   tabAutoInput;
 
 
   public AC1SettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -53,7 +61,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
-    // Modell
+    // Tab Modell
     this.tabModel = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Modell", this.tabModel );
 
@@ -106,7 +114,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.tabModel.add( this.btnMon2010, gbcModel );
 
 
-    // SCCH-Modul 1
+    // Tab SCCH-Modul 1
     this.tabSCCH = new SCCHModule1SettingsFld(
 					settingsFrm,
 					propPrefix + "scch.");
@@ -114,7 +122,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
     updSCCHFieldsEnabled();
 
 
-    // AC1-2010
+    // Tab AC1-2010
     this.tab2010 = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "AC1-2010", this.tab2010 );
 
@@ -143,21 +151,21 @@ public class AC1SettingsFld extends AbstractSettingsFld
     upd2010FieldsEnabled();
 
 
-    // Bereich RAM-Floppy
+    // Tab RAM-Floppy
     this.tabRF = new RAMFloppySettingsFld(
 		settingsFrm,
 		propPrefix + "ramfloppy.",
-		"RAM-Floppy nach MP 3/88 (256 KByte) an IO-Adressen E0h-E7h",
+		"RAM-Floppy nach MP 3/88 (256 KByte) an E/A-Adressen E0h-E7h",
 		RAMFloppy.RFType.MP_3_1988 );
     this.tabbedPane.addTab( "RAM-Floppy", this.tabRF );
 
 
-    // GIDE
+    // Tab GIDE
     this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
     this.tabbedPane.addTab( "GIDE", this.tabGIDE );
 
 
-    // Erweiterungen
+    // Tab Erweiterungen
     this.tabExt = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
 
@@ -196,26 +204,61 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.tabExt.add( this.btnJoystick, gbcExt );
 
 
-    // Sonstiges
+    // Tab CTC
+    this.tabCtc = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "CTC", this.tabCtc );
+
+    GridBagConstraints gbcCtc = new GridBagConstraints(
+					0, 0,
+					1, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.REMAINDER,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
+
+    this.tabCtc.add( new JLabel( "Kopplung der CTC-Kan\u00E4le:" ), gbcCtc );
+
+    ButtonGroup grpCTC = new ButtonGroup();
+
+    this.btnCTCAllSerial = new JRadioButton(
+		"Alle Kan\u00E4le in Reihe gekoppelt",
+		true );
+    grpCTC.add( this.btnCTCAllSerial );
+    gbcCtc.insets.left   = 50;
+    gbcCtc.insets.bottom = 0;
+    gbcCtc.gridy++;
+    this.tabCtc.add( this.btnCTCAllSerial, gbcCtc );
+
+    this.btnCTCM1ToClk2 = new JRadioButton(
+		"/M1 an Kanal 2, die anderen Kan\u00E4le in Reihe gekoppelt",
+		false );
+    grpCTC.add( this.btnCTCM1ToClk2 );
+    gbcCtc.insets.top    = 0;
+    gbcCtc.insets.bottom = 5;
+    gbcCtc.gridy++;
+    this.tabCtc.add( this.btnCTCM1ToClk2, gbcCtc );
+
+
+    // Tab Sonstiges
     this.tabEtc = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
 					0, 0,
 					GridBagConstraints.REMAINDER, 1,
-					0.0, 0.0,
+					1.0, 0.0,
 					GridBagConstraints.WEST,
-					GridBagConstraints.NONE,
+					GridBagConstraints.HORIZONTAL,
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
     this.btnPasteFast = new JCheckBox(
-		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs",
-		true );
+		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs" );
     this.tabEtc.add( this.btnPasteFast, gbcEtc );
 
-    gbcEtc.fill    = GridBagConstraints.HORIZONTAL;
-    gbcEtc.weightx = 1.0;
+    gbcEtc.insets.top    = 10;
+    gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
     this.tabEtc.add( new JSeparator(), gbcEtc );
 
@@ -223,6 +266,8 @@ public class AC1SettingsFld extends AbstractSettingsFld
 		settingsFrm,
 		propPrefix + "os.",
 		"Alternatives Monitorprogramm (0000h-0FFFh):" );
+    gbcEtc.insets.top    = 5;
+    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltOS, gbcEtc );
 
@@ -232,6 +277,24 @@ public class AC1SettingsFld extends AbstractSettingsFld
 				"Alternativer Zeichensatz:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltFont, gbcEtc );
+
+
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+					settingsFrm,
+					propPrefix,
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
+					true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+					settingsFrm,
+					propPrefix,
+					AC1.getDefaultSwapKeyCharCase(),
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
     // Listener
@@ -245,6 +308,8 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.btnKCNet.addActionListener( this );
     this.btnVDIP.addActionListener( this );
     this.btnJoystick.addActionListener( this );
+    this.btnCTCAllSerial.addActionListener( this );
+    this.btnCTCM1ToClk2.addActionListener( this );
     this.btnPasteFast.addActionListener( this );
   }
 
@@ -260,6 +325,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
     try {
       tab = this.tabModel;
 
+      // Tab Modell
       String os = "3.1_64x32";
       if( this.btnMon31_64x16.isSelected() ) {
 	os = "3.1_64x16";
@@ -275,19 +341,24 @@ public class AC1SettingsFld extends AbstractSettingsFld
       }
       props.setProperty( this.propPrefix + "os.version", os );
 
+      // Tab RAM-Floppy
       tab = this.tabRF;
       this.tabRF.applyInput( props, selected );
 
+      // Tab GIDE
       tab = this.tabGIDE;
       this.tabGIDE.applyInput( props, selected );
 
+      // Tab SCCH-Modul 1
       tab = this.tabSCCH;
       this.tabSCCH.applyInput( props, selected );
 
+      // AC1-2010
       tab = this.tab2010;
       this.fldAltPio2Rom2010.applyInput( props, selected );
       this.fldRomBank2010.applyInput( props, selected );
 
+      // Erweiterungen
       tab = this.tabExt;
       EmuUtil.setProperty(
 		props,
@@ -310,13 +381,26 @@ public class AC1SettingsFld extends AbstractSettingsFld
 		this.propPrefix + "joystick.enabled",
 		this.btnJoystick.isSelected() );
 
+      // Tab Sonstiges
       tab = this.tabEtc;
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "ctc.m1_to_clk2",
+		this.btnCTCM1ToClk2.isSelected() );
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + "paste.fast",
 		this.btnPasteFast.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
+
+      // Tab AutoLoad
+      tab = this.tabAutoLoad;
+      this.tabAutoLoad.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -345,13 +429,20 @@ public class AC1SettingsFld extends AbstractSettingsFld
 	upd2010FieldsEnabled();
 	updSCCHFieldsEnabled();
 	fireDataChanged();
-      } else if( src instanceof AbstractButton ) {
+      }
+      if( !rv ) {
+	rv = this.tabGIDE.doAction( e );
+      }
+      if( !rv ) {
+	rv = this.tabAutoLoad.doAction( e );
+      }
+      if( !rv ) {
+	rv = this.tabAutoInput.doAction( e );
+      }
+      if( !rv && (src instanceof AbstractButton) ) {
 	rv = true;
 	fireDataChanged();
       }
-    }
-    if( !rv ) {
-      rv = this.tabGIDE.doAction( e );
     }
     this.settingsFrm.setWaitCursor( false );
     return rv;
@@ -361,9 +452,15 @@ public class AC1SettingsFld extends AbstractSettingsFld
   @Override
   public void lookAndFeelChanged()
   {
+    this.fldAltOS.lookAndFeelChanged();
+    this.fldAltFont.lookAndFeelChanged();
+    this.fldAltPio2Rom2010.lookAndFeelChanged();
+    this.fldRomBank2010.lookAndFeelChanged();
     this.tabSCCH.lookAndFeelChanged();
     this.tabRF.lookAndFeelChanged();
     this.tabGIDE.lookAndFeelChanged();
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
   }
 
 
@@ -383,8 +480,10 @@ public class AC1SettingsFld extends AbstractSettingsFld
       this.btnMonSCCH1088.setSelected( true );
     }
     this.tabRF.updFields( props );
-    this.tabGIDE.updFields( props );
     this.tabSCCH.updFields( props );
+    this.tabGIDE.updFields( props );
+    this.tabAutoLoad.updFields( props );
+    this.tabAutoInput.updFields( props );
     this.fldAltPio2Rom2010.updFields( props );
     this.fldRomBank2010.updFields( props );
 
@@ -417,6 +516,16 @@ public class AC1SettingsFld extends AbstractSettingsFld
 			props,
 			this.propPrefix + "joystick.enabled",
 			false ) );
+
+    if( EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "ctc.m1_to_clk2",
+			false ) )
+    {
+      this.btnCTCM1ToClk2.setSelected( true );
+    } else {
+      this.btnCTCAllSerial.setSelected( true );
+    }
 
     this.btnPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(

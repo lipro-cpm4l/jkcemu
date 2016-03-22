@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -38,7 +38,7 @@ public class ChessboardFld extends JComponent
     this.colorBlackSquare = new Color( 200, 150, 0 );
     this.swapped          = false;
     if( imgMap == null ) {
-      imgMap = new HashMap<EmuSys.Chessman,Image>();
+      imgMap = new HashMap<>();
       Toolkit tk = getToolkit();
       if( tk != null ) {
 	addImage( imgMap, tk, EmuSys.Chessman.WHITE_PAWN,   "pawn_w.png" );

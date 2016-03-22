@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -191,7 +191,7 @@ public class Z80SIO implements Z80InterruptSource
 				Z80SIOChannelListener listener )
   {
     if( channel.listeners == null ) {
-      channel.listeners = new ArrayList<Z80SIOChannelListener>();
+      channel.listeners = new ArrayList<>();
     }
     channel.listeners.add( listener );
   }

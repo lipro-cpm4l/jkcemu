@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -24,7 +24,7 @@ public class KC85ModuleTableModel extends javax.swing.table.AbstractTableModel
 
   public KC85ModuleTableModel()
   {
-    this.rows = new ArrayList<String[]>();
+    this.rows = new ArrayList<>();
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,7 +19,6 @@ import z80emu.*;
 public class D004ProcSys implements
 				FDC8272.DriveSelector,
 				Runnable,
-				Z80CTCListener,
 				Z80IOSystem,
 				Z80Memory,
 				Z80TStatesListener
@@ -66,7 +65,9 @@ public class D004ProcSys implements
     this.fdc      = new FDC8272( this, 4 );
     this.cpu      = new Z80CPU( this, this );
     this.ctc      = new Z80CTC( "CTC (FCh-FFh)" );
-    this.ctc.addCTCListener( this );
+    this.ctc.setTimerConnection( 0, 1 );
+    this.ctc.setTimerConnection( 1, 2 );
+    this.ctc.setTimerConnection( 2, 3 );
     this.cpu.setMaxSpeedKHz( 4000 );
     this.cpu.setInterruptSources( this.ctc );
     this.cpu.addMaxSpeedListener( this.fdc );
@@ -105,7 +106,6 @@ public class D004ProcSys implements
     }
     this.cpu.removeTStatesListener( this );
     this.cpu.removeMaxSpeedListener( this.fdc );
-    this.ctc.removeCTCListener( this );
     this.fdc.die();
   }
 
@@ -228,23 +228,10 @@ public class D004ProcSys implements
   }
 
 
-	/* --- Z80CTCListener --- */
-
-  @Override
-  public void z80CTCUpdate( Z80CTC ctc, int timerNum )
-  {
-    if( ctc == this.ctc ) {
-      if( (timerNum >= 0) && (timerNum <= 2) ) {
-	ctc.externalUpdate( timerNum + 1, 1 );
-      }
-    }
-  }
-
-
 	/* --- Z80IOSystem --- */
 
   @Override
-  public int  readIOByte( int port )
+  public int  readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( ((port & 0xF0) == 0) && (this.gide != null) ) {
@@ -297,7 +284,7 @@ public class D004ProcSys implements
 	case 0xFD:
 	case 0xFE:
 	case 0xFF:
-	  rv = this.ctc.read( port & 0x03 );
+	  rv = this.ctc.read( port & 0x03, tStates );
 	  break;
       }
     }
@@ -306,7 +293,7 @@ public class D004ProcSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     if( ((port & 0xF0) == 0) && (this.gide != null) ) {
       this.gide.write( port, value );
@@ -346,7 +333,7 @@ public class D004ProcSys implements
 	case 0xFD:
 	case 0xFE:
 	case 0xFF:
-	  this.ctc.write( port & 0x03, value );
+	  this.ctc.write( port & 0x03, value, tStates );
 	  break;
       }
     }

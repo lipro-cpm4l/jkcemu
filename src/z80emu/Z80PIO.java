@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -83,6 +83,20 @@ public class Z80PIO implements Z80InterruptSource
 	removePIOPortListener( listener, this.portB );
 	break;
     }
+  }
+
+
+  /*
+   * Diese Methoden bieten Zugriff auf den Interruptvektor
+   */
+  public synchronized int getInterruptVectorPortA()
+  {
+    return this.portA.interruptVector;
+  }
+
+  public synchronized int getInterruptVectorPortB()
+  {
+    return this.portB.interruptVector;
   }
 
 
@@ -182,18 +196,6 @@ public class Z80PIO implements Z80InterruptSource
    * Methoden, die im CPU-Emulations-Thread
    * aufgerufen werden koennen (CPU-Seite).
    */
-  public synchronized int readPortA()
-  {
-    return readPort( this.portA );
-  }
-
-
-  public synchronized int readPortB()
-  {
-    return readPort( this.portB );
-  }
-
-
   public synchronized int readControlA()
   {
     return readControl( this.portA );
@@ -206,15 +208,15 @@ public class Z80PIO implements Z80InterruptSource
   }
 
 
-  public synchronized void writePortA( int value )
+  public synchronized int readDataA()
   {
-    writePort( this.portA, value );
+    return readData( this.portA );
   }
 
 
-  public synchronized void writePortB( int value )
+  public synchronized int readDataB()
   {
-    writePort( this.portB, value );
+    return readData( this.portB );
   }
 
 
@@ -227,6 +229,18 @@ public class Z80PIO implements Z80InterruptSource
   public synchronized void writeControlB( int value )
   {
     writeControl( this.portB, value );
+  }
+
+
+  public synchronized void writeDataA( int value )
+  {
+    writeData( this.portA, value );
+  }
+
+
+  public synchronized void writeDataB( int value )
+  {
+    writeData( this.portB, value );
   }
 
 
@@ -467,7 +481,7 @@ public class Z80PIO implements Z80InterruptSource
 				Z80PIO.Port        port )
   {
     if( port.listeners == null ) {
-      port.listeners = new ArrayList<Z80PIOPortListener>();
+      port.listeners = new ArrayList<>();
     }
     port.listeners.add( listener );
   }
@@ -477,8 +491,9 @@ public class Z80PIO implements Z80InterruptSource
 				Z80PIOPortListener listener,
 				Z80PIO.Port        port )
   {
-    if( port.listeners != null )
+    if( port.listeners != null ) {
       port.listeners.remove( listener );
+    }
   }
 
 
@@ -491,8 +506,9 @@ public class Z80PIO implements Z80InterruptSource
 
   private void tryInterrupt( Z80PIO.Port port )
   {
-    if( port.interruptEnabled )
+    if( port.interruptEnabled ) {
       port.interruptRequested = true;
+    }
   }
 
 
@@ -594,7 +610,27 @@ public class Z80PIO implements Z80InterruptSource
   }
 
 
-  private int readPort( Z80PIO.Port port )
+  private int readControl( Z80PIO.Port port )
+  {
+    int rv = 0x3F;		// BYTE_OUT
+    switch( port.mode ) {
+      case BYTE_IN:
+	rv = 0x7F;
+	break;
+
+      case BYTE_INOUT:
+	rv = 0xBF;
+	break;
+
+      case BIT_INOUT:
+	rv = 0xFF;
+	break;
+    }
+    return rv;
+  }
+
+
+  private int readData( Z80PIO.Port port )
   {
     int value = 0xFF;
     switch( port.mode ) {
@@ -625,49 +661,6 @@ public class Z80PIO implements Z80InterruptSource
       informListeners( port, Status.READY_FOR_INPUT );
     }
     return value;
-  }
-
-
-  private int readControl( Z80PIO.Port port )
-  {
-    int rv = 0x3F;		// BYTE_OUT
-    switch( port.mode ) {
-      case BYTE_IN:
-	rv = 0x7F;
-	break;
-
-      case BYTE_INOUT:
-	rv = 0xBF;
-	break;
-
-      case BIT_INOUT:
-	rv = 0xFF;
-	break;
-    }
-    return rv;
-  }
-
-
-  private void writePort( Z80PIO.Port port, int value )
-  {
-    int oldValue = port.outValue;
-    port.outValue = value;
-    if( ((port.portInfo == PortInfo.A)
-	 && ((port.mode == Mode.BYTE_OUT) || (port.mode == Mode.BYTE_INOUT)))
-	|| ((port.portInfo == PortInfo.B)
-	    && (port.mode == Mode.BYTE_OUT)
-	    && (this.portA.mode != Mode.BYTE_INOUT)) )
-    {
-      port.ready = true;
-    }
-    if( (port.mode == Mode.BYTE_OUT) || (port.mode == Mode.BYTE_INOUT) ) {
-      informListeners( port, Status.OUTPUT_AVAILABLE );
-    }
-    else if( port.mode == Mode.BIT_INOUT ) {
-      if( oldValue != value ) {
-	informListeners( port, Status.OUTPUT_CHANGED );
-      }
-    }
   }
 
 
@@ -743,6 +736,29 @@ public class Z80PIO implements Z80InterruptSource
 	  port.interruptCondRealized = false;
 	  setInterruptEnabled( port, (value & 0x80) != 0 );
 	}
+    }
+  }
+
+
+  private void writeData( Z80PIO.Port port, int value )
+  {
+    int oldValue = port.outValue;
+    port.outValue = value;
+    if( ((port.portInfo == PortInfo.A)
+	 && ((port.mode == Mode.BYTE_OUT) || (port.mode == Mode.BYTE_INOUT)))
+	|| ((port.portInfo == PortInfo.B)
+	    && (port.mode == Mode.BYTE_OUT)
+	    && (this.portA.mode != Mode.BYTE_INOUT)) )
+    {
+      port.ready = true;
+    }
+    if( (port.mode == Mode.BYTE_OUT) || (port.mode == Mode.BYTE_INOUT) ) {
+      informListeners( port, Status.OUTPUT_AVAILABLE );
+    }
+    else if( port.mode == Mode.BIT_INOUT ) {
+      if( oldValue != value ) {
+	informListeners( port, Status.OUTPUT_CHANGED );
+      }
     }
   }
 

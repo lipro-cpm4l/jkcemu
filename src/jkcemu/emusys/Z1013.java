@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -84,12 +84,14 @@ public class Z1013 extends EmuSys implements
   private static final FloppyDiskInfo cpm64x16FloppyDisk =
 		new FloppyDiskInfo(
 			"/disks/z1013/z1013cpm64x16.dump.gz",
-			"Z1013 CP/M Boot-Diskette (64x16 Zeichen)" );
+			"Z1013 CP/M Boot-Diskette (64x16 Zeichen)",
+			2, 2048, true );
 
   private static final FloppyDiskInfo cpm80x25FloppyDisk =
 		new FloppyDiskInfo(
 			"/disks/z1013/z1013cpm80x25.dump.gz",
-			"Z1013 CP/M Boot-Diskette (80x25 Zeichen)" );
+			"Z1013 CP/M Boot-Diskette (80x25 Zeichen)",
+			2, 2048, true );
 
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 						cpm64x16FloppyDisk,
@@ -140,6 +142,7 @@ public class Z1013 extends EmuSys implements
   private String              romBasicFile;
   private String              romMegaFile;
   private String              monCode;
+  private boolean             audioInPhase;
   private boolean             romDisabled;
   private boolean             altFontEnabled;
   private boolean             graphCCJActive;
@@ -163,7 +166,7 @@ public class Z1013 extends EmuSys implements
 
   public Z1013( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.z1013." );
     this.stdFontBytes      = null;
     this.altFontBytes      = null;
     this.osBytes           = null;
@@ -207,20 +210,20 @@ public class Z1013 extends EmuSys implements
 				this.emuThread.getRAMFloppy1(),
 				"Z1013",
 				RAMFloppy.RFType.MP_3_1988,
-				"RAM-Floppy an IO-Adressen 98h-9Fh",
+				"RAM-Floppy an E/A-Adressen 98h-9Fh",
 				props,
-				"jkcemu.z1013.ramfloppy.1." );
+				this.propPrefix + "ramfloppy.1." );
 
     this.ramFloppy2 = RAMFloppy.prepare(
 				this.emuThread.getRAMFloppy2(),
 				"Z1013",
 				RAMFloppy.RFType.MP_3_1988,
-				"RAM-Floppy an IO-Adressen 58h-5Fh",
+				"RAM-Floppy an E/A-Adressen 58h-5Fh",
 				props,
-				"jkcemu.z1013.ramfloppy.2." );
+				this.propPrefix + "ramfloppy.2." );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
-    this.pio   = new Z80PIO( "PIO (IO-Adressen 00-03)" );
+    this.pio   = new Z80PIO( "PIO (E/A-Adressen 00-03)" );
     cpu.addAddressListener( this );
     checkAddPCListener( props );
 
@@ -243,27 +246,28 @@ public class Z1013 extends EmuSys implements
 		this.screenFrm,
 		EmuUtil.getProperty(
 			props,
-			"jkcemu.z1013.graph_ccj.font.file" ) );
+			this.propPrefix + "graph_ccj.font.file" ) );
     } else {
       this.graphCCJ = null;
     }
 
     if( emulatesKCNet( props ) ) {
-      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+      this.kcNet = new KCNet( "Netzwerk-PIO (E/A-Adressen C0-C3)" );
     } else {
       this.kcNet = null;
     }
 
     if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+      this.vdip = new VDIP(
+			this.emuThread.getFileTimesViewFactory(),
+			"USB-PIO (E/A-Adressen FC-FF)" );
     } else {
       this.vdip = null;
     }
 
-    this.gide = GIDE.getGIDE( this.screenFrm, props, "jkcemu.z1013." );
+    this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
 
-    java.util.List<Z80InterruptSource> iSources
-				= new ArrayList<Z80InterruptSource>();
+    java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
     iSources.add( this.pio );
     if( this.kcNet != null ) {
       iSources.add( this.kcNet );
@@ -308,7 +312,13 @@ public class Z1013 extends EmuSys implements
   }
 
 
-  public static String getTinyBasicProgram( Z80MemView memory )
+  public static boolean getDefaultSwapKeyCharCase()
+  {
+    return true;
+  }
+
+
+  public static String getTinyBasicProgram( EmuMemView memory )
   {
     return SourceUtil.getTinyBasicProgram(
 				memory,
@@ -438,6 +448,11 @@ public class Z1013 extends EmuSys implements
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
+    boolean phase = this.emuThread.readAudioPhase();
+    if( phase != this.audioInPhase ) {
+      this.audioInPhase = phase;
+      this.pio.putInValuePortB( this.audioInPhase ? 0x40 : 0, 0x40 );
+    }
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
     }
@@ -552,12 +567,12 @@ public class Z1013 extends EmuSys implements
     if( rv ) {
       rv = TextUtil.equals(
 		this.osFile,
-		EmuUtil.getProperty( props,  "jkcemu.z1013.os.file" ) );
+		EmuUtil.getProperty( props, this.propPrefix + "os.file" ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.monCode,
-		EmuUtil.getProperty( props,  "jkcemu.z1013.monitor" ) );
+		EmuUtil.getProperty( props, this.propPrefix + "monitor" ) );
     }
     if( rv && (getRAMEndAddr( props ) != this.ramEndAddr) ) {
       rv = false;
@@ -568,7 +583,7 @@ public class Z1013 extends EmuSys implements
 		this.romBasicFile,
 		EmuUtil.getProperty(
 			props,
-			"jkcemu.z1013.rom_basic.file" ) ) )
+			this.propPrefix + "rom_basic.file" ) ) )
       {
 	rv = false;
       }
@@ -581,7 +596,7 @@ public class Z1013 extends EmuSys implements
 		this.romMegaFile,
 		EmuUtil.getProperty(
 			props,
-			"jkcemu.z1013.rom_mega.file" ) ) )
+			this.propPrefix + "rom_mega.file" ) ) )
       {
 	rv = false;
       }
@@ -589,7 +604,7 @@ public class Z1013 extends EmuSys implements
       rv = false;
     }
     if( rv ) {
-      rv = GIDE.complies( this.gide, props, "jkcemu.z1013." );
+      rv = GIDE.complies( this.gide, props, this.propPrefix );
     }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
       rv = false;
@@ -615,7 +630,7 @@ public class Z1013 extends EmuSys implements
 			"Z1013",
 			RAMFloppy.RFType.MP_3_1988,
 			props,
-			"jkcemu.z1013.ramfloppy.1." );
+			this.propPrefix + "ramfloppy.1." );
     }
     if( rv ) {
       rv = RAMFloppy.complies(
@@ -623,7 +638,7 @@ public class Z1013 extends EmuSys implements
 			"Z1013",
 			RAMFloppy.RFType.MP_3_1988,
 			props,
-			"jkcemu.z1013.ramfloppy.2." );
+			this.propPrefix + "ramfloppy.2." );
     }
     return rv;
   }
@@ -1029,7 +1044,7 @@ public class Z1013 extends EmuSys implements
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return true;
+    return getDefaultSwapKeyCharCase();
   }
 
 
@@ -1126,7 +1141,7 @@ public class Z1013 extends EmuSys implements
 
       case 1:
         bType = BasicType.KC_RAM;
-	text  = SourceUtil.getKCBasicStyleProgram(
+	text  = SourceUtil.getBasicProgram(
 					this.emuThread,
 					0x2C01,
 					basicTokens );
@@ -1134,7 +1149,7 @@ public class Z1013 extends EmuSys implements
 
       case 2:
         bType = BasicType.KC_ROM;
-	text  = SourceUtil.getKCBasicStyleProgram(
+	text  = SourceUtil.getBasicProgram(
 					this.emuThread,
 					0x0401,
 					basicTokens );
@@ -1180,7 +1195,7 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0x0F;			// wird von unbelegten Ports gelesen
 
@@ -1206,15 +1221,17 @@ public class Z1013 extends EmuSys implements
     else if( (port == 0x19) && (this.graphCCJ != null) ) {
       rv = this.graphCCJ.readData();
     }
-    else if( (port & 0xF0) == 0x70 ) {
-      if( this.rtc != null ) {
-	rv = this.rtc.read( port );
-      }
-    }
-    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
+    if( (this.gide != null)
+	&& (((port & 0xF0) == 0x40) || ((port & 0xF0) == 0x80)) )
+    {
       int value = this.gide.read( port );
       if( value >= 0 ) {
 	rv = value;
+      }
+    }
+    else if( (port & 0xF0) == 0x70 ) {
+      if( this.rtc != null ) {
+	rv = this.rtc.read( port );
       }
     }
     else if( ((port & 0xF8) == 0x98) && (this.ramFloppy1 != null) ) {
@@ -1269,7 +1286,7 @@ public class Z1013 extends EmuSys implements
 	case 0:				// IOSEL0 -> PIO
 	  switch( port & 0x03 ) {
 	    case 0:
-	      rv = this.pio.readPortA();
+	      rv = this.pio.readDataA();
 	      break;
 
 	    case 1:
@@ -1277,9 +1294,7 @@ public class Z1013 extends EmuSys implements
 	      break;
 
 	    case 2:
-	      this.pio.putInValuePortB(
-			this.emuThread.readAudioPhase() ? 0x40 : 0, 0x40 );
-	      rv = this.pio.readPortB();
+	      rv = this.pio.readDataB();
 	      break;
 
 	    case 3:
@@ -1384,6 +1399,7 @@ public class Z1013 extends EmuSys implements
     this.joy1ActionMask    = 0;
     this.romMegaSeg        = 0;
     this.lastWrittenAddr   = -1;
+    this.audioInPhase      = this.emuThread.readAudioPhase();
     this.romDisabled       = false;
     this.altFontEnabled    = false;
     this.modeGraph         = false;
@@ -1442,16 +1458,17 @@ public class Z1013 extends EmuSys implements
   @Override
   public void saveBasicProgram()
   {
-    boolean   cancelled = false;
-    boolean   kcbasic   = false;
-    int       begAddr   = -1;
-    int       endAddr   = -1;
-    int       hsType    = -1;
-    BasicType bType     = null;
-    int       preIdx    = -1;
+    boolean           cancelled      = false;
+    int               begAddr        = -1;
+    int               endAddr        = -1;
+    BasicType         z1013BasicType = null;
+    SaveDlg.BasicType dstBasicType   = SaveDlg.BasicType.NO_BASIC;
+    String            title          = "KC-BASIC-Programm speichern";
+    int               preIdx         = -1;
     if( this.lastBasicType != null ) {
       switch( this.lastBasicType ) {
 	case Z1013_TINY:
+	  title  = "Tiny-BASIC-Programm speichern";
 	  preIdx = 0;
 	  break;
 
@@ -1479,29 +1496,27 @@ public class Z1013 extends EmuSys implements
 	if( (endAddr > 0x1152)
 	  && (this.emuThread.getMemByte( endAddr - 1, false ) == 0x0D) )
 	{
-	  this.lastBasicType = BasicType.Z1013_TINY;
-	  begAddr            = 0x1000;
-	  hsType             = 'b';
+	  z1013BasicType = BasicType.Z1013_TINY;
+	  dstBasicType   = SaveDlg.BasicType.TINYBASIC;
+	  begAddr        = 0x1000;
 	}
 	break;
 
       case 1:
-	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x2C01 );
+	endAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x2C01 );
 	if( endAddr > 0x2C01 ) {
-	  this.lastBasicType = BasicType.KC_RAM;
-	  begAddr            = 0x2BC0;
-	  hsType             = 'B';
-	  kcbasic            = true;
+	  z1013BasicType = BasicType.KC_RAM;
+	  dstBasicType   = SaveDlg.BasicType.KCBASIC;
+	  begAddr        = 0x2C01;
 	}
 	break;
 
       case 2:
-	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x0401 );
+	endAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x0401 );
 	if( endAddr > 0x0401 ) {
-	  this.lastBasicType = BasicType.KC_ROM;
-	  begAddr            = 0x03C0;
-	  hsType             = 'B';
-	  kcbasic            = true;
+	  z1013BasicType = BasicType.KC_ROM;
+	  dstBasicType   = SaveDlg.BasicType.KCBASIC;
+	  begAddr        = 0x0401;
 	}
 	break;
 
@@ -1510,14 +1525,14 @@ public class Z1013 extends EmuSys implements
     }
     if( !cancelled ) {
       if( (begAddr > 0) && (endAddr > begAddr) ) {
+	this.lastBasicType = z1013BasicType;
 	(new SaveDlg(
 		this.screenFrm,
 		begAddr,
 		endAddr,
-		hsType,
-		kcbasic,
-		false,		// kein RBASIC
-		"BASIC-Programm speichern" )).setVisible( true );
+		title,
+		dstBasicType,
+		null )).setVisible( true );
       } else {
 	showNoBasic();
       }
@@ -1712,10 +1727,10 @@ public class Z1013 extends EmuSys implements
 
   @Override
   public void updSysCells(
-			int    begAddr,
-			int    len,
-			Object fileFmt,
-			int    fileType )
+			int        begAddr,
+			int        len,
+			FileFormat fileFmt,
+			int        fileType )
   {
     SourceUtil.updKCBasicSysCells(
 			this.emuThread,
@@ -1727,7 +1742,7 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     port &= 0xFF;
     if( port == 4 ) {
@@ -1771,13 +1786,15 @@ public class Z1013 extends EmuSys implements
 	this.screenFrm.fireScreenSizeChanged();
       }
     }
+    if( (this.gide != null)
+	&& (((port & 0xF0) == 0x40) || ((port & 0xF0) == 0x80)) )
+    {
+      this.gide.write( port, value );
+    }
     else if( (port & 0xF0) == 0x70 ) {
       if( this.rtc != null ) {
 	this.rtc.write( port, value );
       }
-    }
-    else if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
-      this.gide.write( port, value );
     }
     else if( ((port & 0xF8) == 0x98) && (this.ramFloppy1 != null) ) {
       this.ramFloppy1.writeByte( port & 0x07, value );
@@ -1831,7 +1848,7 @@ public class Z1013 extends EmuSys implements
 	case 0:				// IOSEL0 -> PIO
 	  switch( port & 0x03 ) {
 	    case 0:
-	      this.pio.writePortA( value );
+	      this.pio.writeDataA( value );
 	      if( this.userPort == UserPort.JOY_PRACTIC_1_1988 ) {
 		putJoyPractic0188ValuesToPort();
 	      }
@@ -1865,7 +1882,7 @@ public class Z1013 extends EmuSys implements
 	      break;
 
 	    case 2:
-	      this.pio.writePortB( value );
+	      this.pio.writeDataB( value );
 	      this.keyboard.putRowValuesToPIO();
 	      this.emuThread.writeAudioPhase(
 			(this.pio.fetchOutValuePortB( false ) & 0x80) != 0 );
@@ -1945,7 +1962,7 @@ public class Z1013 extends EmuSys implements
 
   private void applyUserPortSettings( Properties props )
   {
-    String text = EmuUtil.getProperty( props, "jkcemu.z1013.userport" );
+    String text = EmuUtil.getProperty( props, this.propPrefix + "userport" );
     if( text.equals( "joystick:jute0687" ) ) {
       this.userPort = UserPort.JOY_JUTE_6_1987;
     } else if( text.equals( "joystick:practic0487" ) ) {
@@ -1967,11 +1984,13 @@ public class Z1013 extends EmuSys implements
   {
     this.pasteFast = EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.paste.fast",
+				this.propPrefix + "paste.fast",
 				true );
-    java.util.List<Integer> addrs = new ArrayList<Integer>();
+    java.util.List<Integer> addrs = new ArrayList<>();
     if( this.pasteFast ) {
-      String monText = EmuUtil.getProperty( props, "jkcemu.z1013.monitor" );
+      String monText = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "monitor" );
       if( monText.equals( "A.2" ) ) {
 	addrs.add( new Integer( 0xF119 ) );
       } else if( monText.equals( "JM_1992" ) ) {
@@ -1981,8 +2000,8 @@ public class Z1013 extends EmuSys implements
       }
     }
     this.catchPrintCalls = EmuUtil.getBooleanProperty(
-					props,
-					"jkcemu.z1013.catch_print_calls",
+				props,
+				this.propPrefix + "catch_print_calls",
 					true );
     if( this.catchPrintCalls ) {
       addrs.add( new Integer( 0xFFCA ) );
@@ -1994,7 +2013,7 @@ public class Z1013 extends EmuSys implements
     }
     this.catchJoyCalls = EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.catch_joystick_calls",
+				this.propPrefix + "catch_joystick_calls",
 				true );
     if( this.catchJoyCalls ) {
       addrs.add( new Integer( 0xFFBB ) );
@@ -2035,25 +2054,25 @@ public class Z1013 extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.floppydisk.enabled",
+				this.propPrefix + "floppydisk.enabled",
 				false );
   }
 
 
-  private static boolean emulatesGraphCCJ( Properties props )
+  private boolean emulatesGraphCCJ( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.graph_ccj.enabled",
+				this.propPrefix + "graph_ccj.enabled",
 				false );
   }
 
 
-  private static boolean emulatesGraphic( Properties props )
+  private boolean emulatesGraphic( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.graphic.enabled",
+				this.propPrefix + "graphic.enabled",
 				false );
   }
 
@@ -2062,7 +2081,7 @@ public class Z1013 extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.kcnet.enabled",
+				this.propPrefix + "kcnet.enabled",
 				false );
   }
 
@@ -2071,7 +2090,7 @@ public class Z1013 extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.rom_basic.enabled",
+				this.propPrefix + "rom_basic.enabled",
 				false );
   }
 
@@ -2080,16 +2099,16 @@ public class Z1013 extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.rom_mega.enabled",
+				this.propPrefix + "rom_mega.enabled",
 				false );
   }
 
 
-  private static boolean emulatesRTC( Properties props )
+  private boolean emulatesRTC( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.rtc.enabled",
+				this.propPrefix + "rtc.enabled",
 				false );
   }
 
@@ -2098,7 +2117,7 @@ public class Z1013 extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.z1013.vdip.enabled",
+				this.propPrefix + "vdip.enabled",
 				false );
   }
 
@@ -2123,7 +2142,7 @@ public class Z1013 extends EmuSys implements
   {
     this.stdFontBytes = readFontByProperty(
 					props,
-					"jkcemu.z1013.font.file",
+					this.propPrefix + "font.file",
 					0x1000 );
     if( this.stdFontBytes != null ) {
       if( this.stdFontBytes.length >= 0x1000 ) {
@@ -2148,16 +2167,16 @@ public class Z1013 extends EmuSys implements
       this.graphCCJ.loadFont(
 		EmuUtil.getProperty(
 				props,
-				"jkcemu.z1013.graph_ccj.font.file" ) );
+				this.propPrefix + "graph_ccj.font.file" ) );
     }
   }
 
 
   private void loadROMs( Properties props )
   {
-    this.monCode = EmuUtil.getProperty( props, "jkcemu.z1013.monitor" );
-    this.osFile  = EmuUtil.getProperty( props, "jkcemu.z1013.os.file" );
-    this.osBytes = readFile( this.osFile, 0x1000, "Monitorprogramm" );
+    this.monCode = EmuUtil.getProperty( props, this.propPrefix + "monitor" );
+    this.osFile  = EmuUtil.getProperty( props, this.propPrefix + "os.file" );
+    this.osBytes = readROMFile( this.osFile, 0x1000, "Monitorprogramm" );
     if( this.osBytes == null ) {
       if( this.monCode.equals( "A.2" ) ) {
 	if( monA2 == null ) {
@@ -2198,9 +2217,12 @@ public class Z1013 extends EmuSys implements
     }
     if( emulatesModuleBasic( props ) ) {
       this.romBasicFile = EmuUtil.getProperty(
-					props,
-					"jkcemu.z1013.rom_basic.file" );
-      this.romBasic = readFile( this.romBasicFile, 0x2C00, "KC-BASIC-Modul" );
+				props,
+				this.propPrefix + "rom_basic.file" );
+      this.romBasic = readROMFile(
+				this.romBasicFile,
+				0x2C00,
+				"KC-BASIC-Modul" );
       if( this.romBasic == null ) {
 	if( modBasic == null ) {
 	  modBasic = readResource( "/rom/z1013/kcbasic.bin" );
@@ -2209,9 +2231,12 @@ public class Z1013 extends EmuSys implements
       }
     } else if( emulatesModuleMegaROM( props ) ) {
       this.romMegaFile = EmuUtil.getProperty(
-					props,
-					"jkcemu.z1013.rom_mega.file" );
-      this.romMega = readFile( this.romMegaFile, 0x280000, "Mega-ROM-Modul" );
+				props,
+				this.propPrefix + "rom_mega.file" );
+      this.romMega = readROMFile(
+				this.romMegaFile,
+				0x280000,
+				"Mega-ROM-Modul" );
     }
     loadFont( props );
   }

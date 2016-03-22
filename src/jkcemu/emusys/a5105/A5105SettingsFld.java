@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,13 +13,18 @@ import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
+import jkcemu.emusys.A5105;
 
 
 public class A5105SettingsFld extends AbstractSettingsFld
 {
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 3000;
+
   private JTabbedPane            tabbedPane;
   private JPanel                 tabEtc;
   private RAMFloppiesSettingsFld tabRF;
+  private AutoLoadSettingsFld    tabAutoLoad;
+  private AutoInputSettingsFld   tabAutoInput;
   private JCheckBox              btnFloppyDisk;
   private JCheckBox              btnKCNet;
   private JCheckBox              btnVDIP;
@@ -36,18 +41,18 @@ public class A5105SettingsFld extends AbstractSettingsFld
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
-    // Bereich RAM-Floppies
+    // Tab RAM-Floppies
     this.tabRF = new RAMFloppiesSettingsFld(
 			settingsFrm,
 			propPrefix,
-			"RAM-Floppy an IO-Adressen 20h/21h",
+			"RAM-Floppy an E/A-Adressen 20h/21h",
 			RAMFloppy.RFType.ADW,
-			"RAM-Floppy an IO-Adressen 24h/25h",
+			"RAM-Floppy an E/A-Adressen 24h/25h",
 			RAMFloppy.RFType.ADW );
     this.tabbedPane.addTab( "RAM-Floppies", this.tabRF );
 
 
-    // Bereich Sonstiges
+    // Tab Sonstiges
     this.tabEtc = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
@@ -88,6 +93,25 @@ public class A5105SettingsFld extends AbstractSettingsFld
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnFixedScreenSize, gbcEtc );
 
+
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+					settingsFrm,
+					propPrefix,
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
+					true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+					settingsFrm,
+					propPrefix,
+					A5105.getDefaultSwapKeyCharCase(),
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
+
+
     // Listener
     this.btnFloppyDisk.addActionListener( this );
     this.btnKCNet.addActionListener( this );
@@ -105,11 +129,11 @@ public class A5105SettingsFld extends AbstractSettingsFld
     Component tab = null;
     try {
 
-      // RAM-Floppies
+      // Tab RAM-Floppies
       tab = this.tabRF;
       this.tabRF.applyInput( props, selected );
 
-      // Sonstiges
+      // Tab Sonstiges
       EmuUtil.setProperty(
 		props,
 		this.propPrefix + "floppydisk.enabled",
@@ -130,6 +154,14 @@ public class A5105SettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + "fixed_screen_size",
 		this.btnFixedScreenSize.isSelected() );
+
+      // Tab AutoLoad
+      tab = this.tabAutoLoad;
+      this.tabAutoLoad.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -146,7 +178,11 @@ public class A5105SettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( src instanceof AbstractButton ) {
+      rv = this.tabAutoLoad.doAction( e );
+      if( !rv ) {
+	rv = this.tabAutoInput.doAction( e );
+      }
+      if( !rv && (src instanceof AbstractButton) ) {
 	rv = true;
 	fireDataChanged();
       }
@@ -156,14 +192,27 @@ public class A5105SettingsFld extends AbstractSettingsFld
 
 
   @Override
+  public void lookAndFeelChanged()
+  {
+    this.tabRF.lookAndFeelChanged();
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
+  }
+
+
+  @Override
   public void updFields( Properties props )
   {
     this.tabRF.updFields( props );
+    this.tabAutoLoad.updFields( props );
+    this.tabAutoInput.updFields( props );
+
     this.btnFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + "floppydisk.enabled",
 			true ) );
+
     this.btnKCNet.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
@@ -175,11 +224,13 @@ public class A5105SettingsFld extends AbstractSettingsFld
 			props,
 			this.propPrefix + "vdip.enabled",
 			false ) );
+
     this.btnPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + "paste.fast",
 			true ) );
+
     this.btnFixedScreenSize.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,

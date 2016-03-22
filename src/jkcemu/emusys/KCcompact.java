@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -38,7 +38,8 @@ public class KCcompact extends EmuSys implements
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 		new FloppyDiskInfo(
 			"/disks/kccompact/kccmicrodos.dump.gz",
-			"KC compact MicroDOS Systemdiskette" ) };
+			"KC compact MicroDOS Systemdiskette",
+			2, 2048, true ) };
 
   /*
    * Diese Tabelle mappt die unteren 4 Bits des Farbpalettenwertes
@@ -129,15 +130,18 @@ public class KCcompact extends EmuSys implements
   private int                  regColorNum;
   private int                  borderColorIdx;
   private int                  romSelect;
+  private String               osFile;
+  private String               basicFile;
   private String               fdcROMFile;
   private byte[]               fdcROMBytes;
+  private byte[]               osBytes;
+  private byte[]               basicBytes;
   private byte[]               screenBuf;
   private byte[]               ramExt;
   private int[]                ram16KOffs;
   private int[]                keyboardMatrix;
   private int                  keyboardIdx;
   private int                  keyboardValue;
-  private int                  psgRegNum;
   private int                  psgValue;
   private int                  lineIrqCounter;
   private int                  joy0ActionMask;
@@ -151,6 +155,7 @@ public class KCcompact extends EmuSys implements
   private boolean              centronicsStrobe;
   private boolean              basicROMEnabled;
   private boolean              osROMEnabled;
+  private boolean              soundStereo;
   private AudioOut             psgAudioOut;
   private PSG8910              psg;
   private PPI8255              ppi;
@@ -162,16 +167,25 @@ public class KCcompact extends EmuSys implements
 
   public KCcompact( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
-    if( romOS == null ) {
-      romOS = readResource( "/rom/kccompact/kccos.bin" );
-    }
-    if( romBASIC == null ) {
-      romBASIC = readResource( "/rom/kccompact/kccbasic.bin" );
-    }
+    super( emuThread, props, "jkcemu.kccompact." );
     this.colors = new Color[ 27 ];
     createColors( props );
 
+    /*
+     * Auch bei einer extern eingebundenen Betriebssystem-ROM-Datei
+     * muss der integrierte ROM-Inhalt geladen werden,
+     * da daraus die Pixeldaten fuer die Zeichenerkennung gelesen werden.
+     */
+    if( romOS == null ) {
+      romOS = readResource( "/rom/kccompact/kccos.bin" );
+    }
+
+    this.osBytes         = null;
+    this.osFile          = null;
+    this.basicBytes      = null;
+    this.basicFile       = null;
+    this.fdcROMBytes     = null;
+    this.fdcROMFile      = null;
     this.keyboardFld     = null;
     this.fixedScreenSize = isFixedScreenSize( props );
     this.screenMode      = 0;
@@ -184,7 +198,7 @@ public class KCcompact extends EmuSys implements
     this.ram16KOffs  = new int[ 4 ];
     this.crtc        = new CRTC6845( 1000, this );
     this.ppi         = new PPI8255( this );
-    this.psg         = new PSG8910( 1000000, AudioOut.MAX_VALUE, this );
+    this.psg         = new PSG8910( 1000000, AudioOut.MAX_USED_VALUE, this );
     this.psgAudioOut = null;
 
     if( emulatesFloppyDisk( props ) ) {
@@ -204,6 +218,7 @@ public class KCcompact extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
+    applySoundStereo( props );
     z80MaxSpeedChanged( cpu );
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
@@ -440,7 +455,11 @@ public class KCcompact extends EmuSys implements
   {
     AudioOut audioOut = this.psgAudioOut;
     if( audioOut != null ) {
-      audioOut.writeSamples( 1, (byte) ((a + b + c) / 6) );
+      audioOut.writeSamples(
+			1,
+			(a + b + c) / 6,
+			(a / 2) + (b / 4),
+			(c / 2) + (b / 4) );
     }
   }
 
@@ -519,8 +538,6 @@ public class KCcompact extends EmuSys implements
       Arrays.fill( this.ramExt, (byte) 0 );
     }
     Arrays.fill( this.keyboardMatrix, 0 );
-    this.psgRegNum            = -1;
-    this.psgRegNum            = 0xFF;
     this.regColorNum          = 0;
     this.borderColorIdx       = 0;
     this.keyboardIdx          = 0;
@@ -601,6 +618,7 @@ public class KCcompact extends EmuSys implements
   public void applySettings( Properties props )
   {
     super.applySettings( props );
+    applySoundStereo( props );
 
     boolean state = isFixedScreenSize( props );
     if( state != this.fixedScreenSize ) {
@@ -634,6 +652,20 @@ public class KCcompact extends EmuSys implements
     boolean rv = EmuUtil.getProperty(
 			props,
 			"jkcemu.system" ).equals( "KCcompact" );
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.osFile,
+		EmuUtil.getProperty(
+				props, 
+				this.propPrefix + "os.file" ) );
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.basicFile,
+		EmuUtil.getProperty(
+				props, 
+				this.propPrefix + "basic.file" ) );
+    }
     if( rv && ((this.fdc != null) != emulatesFloppyDisk( props )) ) {
       rv = false;
     }
@@ -642,7 +674,7 @@ public class KCcompact extends EmuSys implements
 		this.fdcROMFile,
 		EmuUtil.getProperty(
 				props, 
-				"jkcemu.kccompact.fdc.rom.file" ) );
+				this.propPrefix + "fdc.rom.file" ) );
     }
     return rv;
   }
@@ -776,9 +808,9 @@ public class KCcompact extends EmuSys implements
 
     int rv = 0xFF;
     if( (addr < 0x4000) && this.osROMEnabled ) {
-      if( romOS != null ) {
-	if( addr < romOS.length ) {
-	  rv = (int) romOS[ addr ] & 0xFF;
+      if( this.osBytes != null ) {
+	if( addr < this.osBytes.length ) {
+	  rv = (int) this.osBytes[ addr ] & 0xFF;
 	}
       }
     } else if( (addr >= 0xC000) && this.basicROMEnabled ) {
@@ -801,7 +833,7 @@ public class KCcompact extends EmuSys implements
 	}
       }
       if( !done ) {
-	rom = romBASIC;
+	rom = this.basicBytes;
 	if( rom != null ) {
 	  int idx = addr - 0xC000;
 	  if( (idx >= 0) && (idx < rom.length) ) {
@@ -1061,7 +1093,7 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (this.fdc != null)
@@ -1182,6 +1214,13 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
+  public boolean supportsStereoSound()
+  {
+    return this.soundStereo;
+  }
+
+
+  @Override
   public String toString()
   {
     return "Zentrale Zustandssteuerung";
@@ -1189,7 +1228,7 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     value &= 0xFF;
     if( (this.fdc != null)
@@ -1300,6 +1339,22 @@ public class KCcompact extends EmuSys implements
   }
 
 
+  private void applySoundStereo( Properties props )
+  {
+    boolean state = EmuUtil.getBooleanProperty(
+				props,
+				this.propPrefix + "sound.stereo",
+				false );
+    if( state != this.soundStereo ) {
+      this.soundStereo  = state;
+      AudioOut audioOut = this.psgAudioOut;
+      if( audioOut != null ) {
+	audioOut.fireReopenLine();
+      }
+    }
+  }
+
+
   private void createColors( Properties props )
   {
     float brightness = getBrightness( props );
@@ -1338,11 +1393,11 @@ public class KCcompact extends EmuSys implements
   }
 
 
-  private static boolean emulatesFloppyDisk( Properties props )
+  private boolean emulatesFloppyDisk( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.kccompact.floppydisk.enabled",
+			this.propPrefix + "floppydisk.enabled",
 			false );
   }
 
@@ -1377,7 +1432,7 @@ public class KCcompact extends EmuSys implements
     if( pixelCRC32ToChar == null ) {
       if( romOS != null ) {
         if( romOS.length >= 0x4000 ) {
-          Map<Long,Character> map = new HashMap<Long,Character>();
+          Map<Long,Character> map = new HashMap<>();
           for( int c = 0x20; c <= 0x7E; c++ ) {
 	    addPixelCRC32ToMap( map, c, (char) c );
 	  }
@@ -1395,22 +1450,44 @@ public class KCcompact extends EmuSys implements
   }
 
 
-  private static boolean isFixedScreenSize( Properties props )
+  private boolean isFixedScreenSize( Properties props )
   {
     return EmuUtil.parseBooleanProperty(
 			props,
-			"jkcemu.kccompact.fixed_screen_size",
+			this.propPrefix + "fixed_screen_size",
 			false );
   }
 
 
   private void loadROMs( Properties props )
   {
+    // OS-ROM
+    this.osFile  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "os.file" );
+    this.osBytes = readROMFile( this.osFile, 0x4000, "Betriebssystem-ROM" );
+    if( this.osBytes == null ) {
+      this.osBytes = romOS;
+    }
+
+    // BASIC-ROM
+    this.basicFile  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "basic.file" );
+    this.basicBytes = readROMFile( this.basicFile, 0x4000, "BASIC-ROM" );
+    if( this.basicBytes == null ) {
+      if( romBASIC == null ) {
+	romBASIC = readResource( "/rom/kccompact/kccbasic.bin" );
+      }
+      this.basicBytes = romBASIC;
+    }
+
+    // FDC-ROM
     if( this.fdc != null ) {
       this.fdcROMFile = EmuUtil.getProperty(
 				props,
-				"jkcemu.kccompact.fdc.rom.file" );
-      this.fdcROMBytes = readFile( this.fdcROMFile, 0x8000, "FDC-ROM" );
+				this.propPrefix + "fdc.rom.file" );
+      this.fdcROMBytes = readROMFile( this.fdcROMFile, 0x8000, "FDC-ROM" );
       if( this.fdcROMBytes == null ) {
 	if( romFDC == null ) {
 	  romFDC = readResource( "/rom/kccompact/basdos.bin" );

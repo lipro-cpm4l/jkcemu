@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,43 +14,44 @@ import java.io.*;
 import java.lang.*;
 import java.util.zip.GZIPInputStream;
 import javax.sound.sampled.*;
-import jkcemu.base.EmuUtil;
+import jkcemu.base.*;
 import jkcemu.emusys.kc85.KCAudioDataStream;
+import jkcemu.emusys.zxspectrum.ZXSpectrumAudioDataStream;
+import jkcemu.text.TextUtil;
 import z80emu.Z80CPU;
 
 
 public class AudioInFile extends AudioIn
 {
-  private AudioFrm            audioFrm;
-  private File                file;
-  private byte[]              fileBytes;
-  private int                 offs;
-  private boolean             tapFile;
-  private AudioInputStream    audioIn;
-  private BufferedInputStream rawIn;
-  private byte[]              frameBuf;
-  private long                frameCount;
-  private long                framePos;
-  private int                 progressStepSize;
-  private int                 progressStepCnt;
-  private int                 speedKHz;
-  private volatile boolean    pause;
+  private static final int MAX_MEM_FILE_SIZE = 0x100000;
+
+  private File             file;
+  private byte[]           fileBytes;
+  private int              offs;
+  private boolean          tapeFile;
+  private AudioInputStream audioIn;
+  private InputStream      rawIn;
+  private byte[]           frameBuf;
+  private long             frameCount;
+  private long             framePos;
+  private int              progressStepSize;
+  private int              progressStepCnt;
+  private int              speedKHz;
+  private volatile boolean pause;
 
 
   public AudioInFile(
-		Z80CPU   z80cpu,
 		AudioFrm audioFrm,
+		Z80CPU   z80cpu,
 		File     file,
 		byte[]   fileBytes,
-		int      offs,
-		boolean  tapFile )
+		int      offs )
   {
-    super( z80cpu );
-    this.audioFrm         = audioFrm;
+    super( audioFrm, z80cpu );
     this.file             = file;
     this.fileBytes        = fileBytes;
     this.offs             = offs;
-    this.tapFile          = tapFile;
+    this.tapeFile         = false;
     this.audioIn          = null;
     this.rawIn            = null;
     this.frameBuf         = null;
@@ -81,74 +82,93 @@ public class AudioInFile extends AudioIn
   }
 
 
-  public boolean isTAPFile()
-  {
-    return this.tapFile;
-  }
-
-
   public void setPause( boolean state )
   {
     this.pause = state;
   }
 
 
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean isPause()
-  {
-    return this.pause;
-  }
-
-
-  @Override
-  public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
+  public AudioFormat startAudio( int speedKHz )
   {
     AudioFormat fmt = null;
     if( (this.audioIn == null) && (speedKHz > 0) ) {
       this.pause    = true;
       this.framePos = 0;
       try {
-	if( this.tapFile ) {
-	  if( this.fileBytes == null ) {
-	    this.fileBytes = EmuUtil.readFile( this.file, 0x100000 );
+	this.tapeFile = false;
+	if( (this.fileBytes == null) && (file != null) ) {
+	  if( file.isFile() ) {
+	    String fName = file.getName();
+	    if( fName != null ) {
+	      fName = fName.toLowerCase();
+	      if( TextUtil.endsWith( fName, AudioUtil.tapeFileExtensions ) ) {
+		this.fileBytes = EmuUtil.readFile(
+						this.file,
+						false,
+						MAX_MEM_FILE_SIZE );
+	      }
+	    }
 	  }
-	  if( this.fileBytes == null ) {
-	    throw new IOException();
-	  }
+	}
+	if( this.fileBytes != null ) {
 	  /*
 	   * Wird in der Mitte einer Multi-TAP-Datei begonnen,
 	   * soll auch die Fortschrittsanzeige in der Mitte beginnen.
 	   * Aus diesem Grund wird in dem Fall sowohl die Gesamtlaenge
 	   * als auch die Restlaenge der Multi-TAP-Datei ermittelt.
 	   */
-	  KCAudioDataStream ads = new KCAudioDataStream(
-						true,
-						0,
-						this.fileBytes,
-						0,
-						this.fileBytes.length - offs );
-	  this.frameCount = ads.getFrameLength();
-	  if( this.offs > 0 ) {
+	  EmuSysAudioDataStream ads = null;
+	  if( FileInfo.isKCTapHeaderAt(
+				this.fileBytes,
+				this.fileBytes.length - this.offs,
+				this.offs ) )
+	  {
 	    ads = new KCAudioDataStream(
 				true,
 				0,
 				this.fileBytes,
+				0,
+				this.fileBytes.length - this.offs );
+	    this.frameCount = ads.getFrameLength();
+	    this.framePos   = 0;
+	    if( this.offs > 0 ) {
+	      ads = new KCAudioDataStream(
+				true,
+				0,
+				this.fileBytes,
 				this.offs,
-				this.fileBytes.length - offs );
-	    this.framePos = this.frameCount - ads.getFrameLength();
+				this.fileBytes.length - this.offs );
+	      this.framePos = this.frameCount - ads.getFrameLength();
+	    }
+	  } else {
+	    ads = new ZXSpectrumAudioDataStream(
+				this.fileBytes,
+				this.offs,
+				this.fileBytes.length - this.offs );
+	    this.frameCount = ads.getFrameLength();
+	    this.framePos   = 0;
+	    if( this.offs > 0 ) {
+	      ads = new ZXSpectrumAudioDataStream(
+				this.fileBytes,
+				this.offs,
+				this.fileBytes.length - this.offs );
+	      this.framePos = this.frameCount - ads.getFrameLength();
+	    }
+	  }
+	  if( ads != null ) {
 	    if( this.framePos < 0 ) {
 	      this.framePos = 0;
 	    }
-	  }
-	  this.audioIn = new AudioInputStream(
+	    this.audioIn = new AudioInputStream(
 				ads,
 				ads.getAudioFormat(),
 				ads.getFrameLength() );
-	} else {
-	  this.rawIn   = EmuUtil.openBufferedOptionalGZipFile( this.file );
-	  this.audioIn = AudioSystem.getAudioInputStream( this.rawIn );
+	    this.tapeFile = true;
+	  }
+	}
+	if( this.audioIn == null ) {
+	  this.rawIn      = EmuUtil.openBufferedOptionalGZipFile( this.file );
+	  this.audioIn    = AudioSystem.getAudioInputStream( this.rawIn );
 	  this.frameCount = this.audioIn.getFrameLength();
 	}
 	fmt = this.audioIn.getFormat();
@@ -185,6 +205,30 @@ public class AudioInFile extends AudioIn
     }
     setAudioFormat( fmt );
     return this.audioFmt;
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean isPause()
+  {
+    return this.pause;
+  }
+
+
+  @Override
+  public boolean isTapeFile()
+  {
+    return this.tapeFile;
+  }
+
+
+  @Override
+  public void reset()
+  {
+    stopAudio();
+    this.audioFrm.fireFinished();
   }
 
 
@@ -248,4 +292,3 @@ public class AudioInFile extends AudioIn
     this.rawIn           = null;
   }
 }
-

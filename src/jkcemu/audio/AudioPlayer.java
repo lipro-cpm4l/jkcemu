@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.io.*;
 import java.lang.*;
 import javax.sound.sampled.*;
 import javax.swing.*;
+import jkcemu.Main;
 import jkcemu.base.*;
 
 
@@ -161,6 +162,7 @@ public class AudioPlayer implements Runnable
 	&& (title != null) )
     {
       (new Thread(
+		Main.getThreadGroup(),
 		new AudioPlayer( owner, ais, ads, file, title ),
 		"JKCEMU audio player" )).start();
     }

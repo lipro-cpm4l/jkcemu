@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,12 +18,12 @@ import jkcemu.base.*;
 
 public class PrintOptionsDlg extends BasicDlg
 {
-  private boolean   applied;
-  private JComboBox comboFontSize;
-  private JCheckBox btnFileName;
-  private JCheckBox btnPageNum;
-  private JButton   btnOK;
-  private JButton   btnCancel;
+  private boolean           applied;
+  private JComboBox<String> comboFontSize;
+  private JCheckBox         btnFileName;
+  private JCheckBox         btnPageNum;
+  private JButton           btnOK;
+  private JButton           btnCancel;
 
 
   public static boolean showPrintOptionsDlg(
@@ -113,7 +113,7 @@ public class PrintOptionsDlg extends BasicDlg
     this.comboFontSize = null;
     if( askFontSize ) {
       panelOpt.add( new JLabel( "Schriftgr\u00F6\u00DFe:" ), gbcOpt );
-      this.comboFontSize = new JComboBox();
+      this.comboFontSize = new JComboBox<>();
       this.comboFontSize.setEditable( false );
       this.comboFontSize.addItem( "6" );
       this.comboFontSize.addItem( "7" );

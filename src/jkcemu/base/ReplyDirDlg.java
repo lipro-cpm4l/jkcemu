@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -162,9 +162,18 @@ public class ReplyDirDlg extends BasicDlg
 
   private void doSelect()
   {
-    File file = DirSelectDlg.selectDirectory( this );
-    if( file != null )
+    File   lastDir = null;
+    String text    = this.textFld.getText();
+    if( text != null ) {
+      text = text.trim();
+      if( !text.isEmpty() ) {
+	lastDir = new File( text );
+      }
+    }
+    File file = DirSelectDlg.selectDirectory( this, lastDir );
+    if( file != null ) {
       this.textFld.setText( file.getPath() );
+    }
   }
 }
 

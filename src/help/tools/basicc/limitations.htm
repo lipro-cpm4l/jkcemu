@@ -17,8 +17,7 @@
   keine Einschr&auml;nkung gegen&uuml;ber dem Interpreter.
   Jedoch rufen manche BASIC-Programme mit CALL oder USR
   Maschinenunterprogramme des BASIC-Interpreters auf.
-  Andere Programme dagegen enthalten in REM-Zeilen Maschinencode,
-  der aufgerufen wird.
+  Andere Programme enthalten in REM-Zeilen Maschinencode, der aufgerufen wird.
   Untergrogramme des BASIC-Interpreters beziehungsweise in REM-Zeilen
   versteckter Maschinencode sind im erzeugten Maschinencodeprogramm
   nicht (mehr) vorhanden und k&ouml;nnen somit auch nicht aufgerufen werden.
@@ -33,7 +32,7 @@
  <br/><br/>
 
  <h3>2. GOTO und GOSUB</h3>
-  WIrd hinter GOTO oder GOSUB eine Zeilennummer angegeben,
+  Wird hinter GOTO oder GOSUB eine Zeilennummer angegeben,
   muss es eine konstante Zahl (Literal) sein.
   Ein variabler Ausdruck, wie bei manchen Interpretern m&ouml;glich,
   ist nicht erlaubt.
@@ -46,25 +45,18 @@
   Der Compiler k&ouml;nnte zwar in das erzeugte Maschinencodeprogramm
   auch eine Zuordnung von Zeilennummern zu Maschinencodeadressen einbauen
   und so auch variable Sprungziele erm&ouml;glichen,
-  jedoch w&uuml;rde dadurch das Programm ziemlich aufgebl&auml;ht werden.
+  jedoch w&uuml;rde dann das Programm ziemlich aufgebl&auml;ht werden.
   Da das aber nicht das Ziel des BASIC-Compilers ist,
   werden variable Sprungziele eben nicht unterst&uuml;tzt.
+  Mit gewissen Einschr&auml;nkungen lassen sich jedoch solche Anforderungen
+  mit den Anweisungen <a href="instructions.htm#on_goto">ON...GOTO</a>
+  und <a href="instructions.htm#on_gosub">ON...GOSUB</a> realisieren.
  <br/><br/>
-  Die hinter GOTO und GOSUB stehende Zeilennummer oder Marke
-  muss auch existieren.
+  Des Weiteren m&uuml;ssen die hinter GOTO und GOSUB stehenden
+  Zeilennummern bzw. Marken auch existieren.
   Manche BASIC-Interpreter springen bei einer nicht existierenden
   Zeilennummer zur n&auml;chst h&ouml;heren existierenden Zeile.
   Der JKCEMU-BASIC-Compiler unterst&uuml;tzt soetwas jedoch nicht.
- <br/><br/>
-
- <h3>3. INPUT</h3>
-  Bei der Eingabe von numerischen Werten bieten manche BASIC-Interpreter
-  die M&ouml;glichkeit, komplexe numerische Ausdr&uuml;cke
-  einschlie&szlig;lich Funktionsaufrufen anzugeben,
-  so wie sie auch im BASIC-Quelltext erlaubt sind.
-  Das erzeugte Maschinencodeprogramm enth&auml;lt jedoch diese
-  typische Interpreter-Funktionalit&auml;t nicht.
-  Aus diesem Grund k&ouml;nnen nur ganze Dezimalzahlen eingegeben werden.
  <br/>
 </body>
 </html>

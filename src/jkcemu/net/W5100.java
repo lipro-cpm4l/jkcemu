@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,6 +19,12 @@ import jkcemu.base.EmuUtil;
 
 public class W5100
 {
+  // Masken fuer Eigenschaft jkcemu.debug.net
+  private static final int DEBUG_MASK_MSG    = 0x10;
+  private static final int DEBUG_MASK_STATUS = 0x20;
+  private static final int DEBUG_MASK_READ   = 0x40;
+  private static final int DEBUG_MASK_WRITE  = 0x80;
+
   // Adressen der Register
   private static final int ADDR_MR     = 0x0000;
   private static final int ADDR_GWR    = 0x0001;
@@ -47,7 +53,7 @@ public class W5100
     private static final int CMD_SEND_KEEP = 0x22;
     private static final int CMD_RECV      = 0x40;
 
-    // Socket-Stati
+    // Socket-Status
     private static final byte SOCK_CLOSED      = (byte) 0x00;
     private static final byte SOCK_INIT        = (byte) 0x13;
     private static final byte SOCK_LISTEN      = (byte) 0x14;
@@ -84,27 +90,27 @@ public class W5100
     private static final int INT_SEND_OK_MASK = 0x10;
 
 
-    private int              socketNum;
-    private int              baseAddr;
-    private int              lastStatus;
-    private int              rxReadReg;
-    private int              rxWriteReg;
-    private int              txReadReg;
-    private int              txWriteReg;
-    private boolean          rxFilled;
-    private boolean          nonIPv4MsgShown;
-    private boolean          recvEnabled;
-    private volatile boolean threadsEnabled;
-    private volatile boolean cmdThreadNoWait;
-    private byte[]           recvBuf;
-    private byte[]           sendBuf;
-    private Thread           cmdThread;
-    private Thread           recvThread;
-    private DatagramSocket   datagramSocket;
-    private ServerSocket     serverSocket;
-    private Socket           socket;
-    private InputStream      recvStream;
-    private OutputStream     sendStream;
+    private int               socketNum;
+    private int               baseAddr;
+    private int               lastStatus;
+    private int               rxReadReg;
+    private int               rxWriteReg;
+    private int               txReadReg;
+    private int               txWriteReg;
+    private boolean           rxFilled;
+    private boolean           nonIPv4MsgShown;
+    private boolean           recvEnabled;
+    private volatile boolean  threadsEnabled;
+    private volatile boolean  cmdThreadNoWait;
+    private byte[]            recvBuf;
+    private byte[]            sendBuf;
+    private Thread            cmdThread;
+    private Thread            recvThread;
+    private EmuDatagramSocket datagramSocket;
+    private ServerSocket      serverSocket;
+    private Socket            socket;
+    private InputStream       recvStream;
+    private OutputStream      sendStream;
 
 
     private SocketData( int socketNum, int baseAddr )
@@ -166,9 +172,9 @@ public class W5100
     }
 
 
-    private void closeSocket()
+    private synchronized void closeSocket()
     {
-      DatagramSocket datagramSocket = this.datagramSocket;
+      EmuDatagramSocket datagramSocket = this.datagramSocket;
       if( datagramSocket != null ) {
         datagramSocket.close();
       }
@@ -191,12 +197,12 @@ public class W5100
     }
 
 
-    private DatagramSocket createDatagramSocket( boolean forceCreation )
+    private EmuDatagramSocket createDatagramSocket( boolean forceCreation )
 							throws IOException
     {
-      DatagramSocket ds   = null;
-      boolean        mc   = ((getMemByte( this.baseAddr ) & 0x80) != 0);
-      int            port = getMemWord(
+      EmuDatagramSocket ds   = null;
+      boolean           mc   = ((getMemByte( this.baseAddr ) & 0x80) != 0);
+      int               port = getMemWord(
 				this.baseAddr + (mc ? Sn_DPORT : Sn_PORT) );
       /*
        * Wenn eine Portnummer bekannt ist, dann schauen,
@@ -218,32 +224,30 @@ public class W5100
 	  ds.close();
 	  ds = null;
 	}
-	MulticastSocket mcs = null;
 	if( port != 0 ) {
-	  mcs = new MulticastSocket( port );
+	  ds = EmuDatagramSocket.createMulticastSocket( port );
 	} else {
 	  if( forceCreation ) {
-	    mcs = new MulticastSocket();
+	    ds = EmuDatagramSocket.createMulticastSocket();
 	  }
 	}
-	if( mcs != null ) {
+	if( ds != null ) {
 	  try {
-	    mcs.setTimeToLive( getMemByte( this.baseAddr + Sn_TTL ) );
+	    ds.setTimeToLive( getMemByte( this.baseAddr + Sn_TTL ) );
 	  }
 	  catch( IllegalArgumentException ex ) {}
 	  InetAddress iAddr = createInetAddrByMem( this.baseAddr + Sn_DIPR );
 	  if( iAddr != null ) {
-	    mcs.joinGroup( iAddr );
+	    ds.joinGroup( iAddr );
 	  }
-	  ds = mcs;
 	}
       } else {
 	if( ds == null ) {
 	  if( port != 0 ) {
-	    ds = new DatagramSocket( port );
+	    ds = EmuDatagramSocket.createDatagramSocket( port );
 	  } else {
 	    if( forceCreation ) {
-	      ds = new DatagramSocket();
+	      ds = EmuDatagramSocket.createDatagramSocket();
 	    }
 	  }
 	}
@@ -263,36 +267,52 @@ public class W5100
     private void doSocketConnect()
     {
       if( getSR() == SOCK_INIT ) {
-	Socket        socket        = null;
-	SocketAddress socketAddr    = null;
+	boolean       done          = false;
 	int           timeoutMillis = 0;
-	try {
-	  socketAddr = new InetSocketAddress(
+	SocketAddress socketAddr    = null;
+	Exception     socketEx      = null;
+	if( !isIpAddrConflict( this.baseAddr + Sn_DIPR ) ) {
+	  Socket socket = null;
+	  try {
+	    socketAddr = new InetSocketAddress(
 			createInetAddrByMem( this.baseAddr + Sn_DIPR ),
 			getMemWord( this.baseAddr + Sn_DPORT ) );
-	  timeoutMillis = getTimeoutMillis();
-	  socket        = createSocket();
-	  socket.connect( socketAddr, timeoutMillis );
-	  int bufSize = getTxBufSize( this.socketNum );
-	  if( bufSize > 0 ) {
-	    this.sendStream = new BufferedOutputStream(
+	    timeoutMillis = getTimeoutMillis();
+	    socket        = createSocket();
+	    socket.connect( socketAddr, timeoutMillis );
+	    int bufSize = getTxBufSize( this.socketNum );
+	    if( bufSize > 0 ) {
+	      this.sendStream = new BufferedOutputStream(
 					socket.getOutputStream(),
 					bufSize );
-	  } else {
-	    this.sendStream = new BufferedOutputStream(
+	    } else {
+	      this.sendStream = new BufferedOutputStream(
 					socket.getOutputStream() );
+	    }
+	    this.recvStream = socket.getInputStream();
+	    this.socket     = socket;
+	    synchronized( this ) {
+	      setSR( SOCK_ESTABLISHED );
+	      setSnIRBits( INT_CON_MASK );
+	      this.recvEnabled = true;
+	    }
+	    fireRunRecvThread();
+	    done = true;
+
+	    // Debug-Meldung
+	    if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
+	      System.out.printf(
+			"W5100 Socket %d: connected to %s\n",
+			this.socketNum,
+			socketAddr.toString() );
+	    }
 	  }
-	  this.recvStream = socket.getInputStream();
-	  this.socket     = socket;
-	  synchronized( this ) {
-	    setSR( SOCK_ESTABLISHED );
-	    setSnIRBits( INT_CON_MASK );
-	    this.recvEnabled = true;
+	  catch( Exception ex ) {
+	    socketEx = ex;
 	  }
-	  fireRunRecvThread();
 	}
-	catch( Exception ex ) {
-	  if( getDebugLevel() > 0 ) {
+	if( !done ) {
+	  if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 	    String s = null;
 	    if( socketAddr != null ) {
 	      s = socketAddr.toString();
@@ -301,7 +321,9 @@ public class W5100
 			"connect: %s, timeout=%dms\n",
 			socketAddr,
 			timeoutMillis );
-	    ex.printStackTrace( System.out );
+	    if( socketEx != null ) {
+	      socketEx.printStackTrace( System.out );
+	    }
 	  }
 	  EmuUtil.doClose( socket );
 	  closeSocket();
@@ -322,7 +344,9 @@ public class W5100
 				getMemWord( this.baseAddr + Sn_PORT ),
 				1 );
 	    this.serverSocket = serverSocket;
-	    if( (serverSocket != null) && (getDebugLevel() > 1) ) {
+	    if( (serverSocket != null)
+		&& ((getDebugMask() & DEBUG_MASK_MSG) != 0) )
+	    {
 	      System.out.printf(
 		"W5100 Socket %d: tcp server socket bound at port %d\n",
 		this.socketNum,
@@ -333,7 +357,7 @@ public class W5100
 	  this.sendStream = socket.getOutputStream();
 	  this.recvStream = socket.getInputStream();
 	  this.socket     = socket;
-	  if( !setMemIPAddr(
+	  if( !setMemIpAddr(
 			this.baseAddr + Sn_DIPR,
 			socket.getInetAddress() ) )
 	  {
@@ -350,12 +374,12 @@ public class W5100
 	catch( Exception ex ) {
 	  /*
 	   * Beim realen W5100-Chip kann ein LISTEN nicht fehlschlagen.
-	   * Aus diesem Grund wird hier keine Fehler signalisiert,
+	   * Aus diesem Grund wird hier kein Fehler signalisiert,
 	   * sondern weiterhin der Zustand SOCK_LISTEN vorgegaukelt.
 	   */
 	  if( getCR() == CMD_LISTEN ) {
 	    checkPermissionDenied( ex );
-	    if( getDebugLevel() > 0 ) {
+	    if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 	      ex.printStackTrace( System.out );
 	    }
 	  }
@@ -420,6 +444,7 @@ public class W5100
       } else {
 	if( this.threadsEnabled ) {
 	  Thread t = new Thread(
+		Main.getThreadGroup(),
 		new Runnable()
 		{
 		  @Override
@@ -451,6 +476,7 @@ public class W5100
       if( this.recvThread == null ) {
 	if( this.threadsEnabled ) {
 	  this.recvThread = new Thread(
+		Main.getThreadGroup(),
 		new Runnable()
 		{
 		  @Override
@@ -517,12 +543,12 @@ public class W5100
 
     private void logDatagramSocketBound()
     {
-      DatagramSocket ds = this.datagramSocket;
+      EmuDatagramSocket ds = this.datagramSocket;
       if( ds != null ) {
 	System.out.printf(
 		"W5100 Socket %d: %s socket bound at port %d\n",
 		this.socketNum,
-		ds instanceof MulticastSocket ? "multicast" : "datagram",
+		ds.isMulticastSocket() ? "multicast" : "datagram",
 		ds.getLocalPort() );
       }
     }
@@ -603,7 +629,7 @@ public class W5100
 	  break;
       }
       int rv = 0;
-      if( (getDebugLevel() == 2)
+      if( ((getDebugMask() & DEBUG_MASK_STATUS) != 0)
 	  && (addr == (this.baseAddr + Sn_SR)) )
       {
         synchronized( getLoggingLockObj() ) {
@@ -688,7 +714,7 @@ public class W5100
 	      if( (pkg.length >= 4) && ((pkg.length + 6) <  nFree) ) {
 
 		// W5100 IPRAW Header fuellen
-		setMemIPAddr(
+		setMemIpAddr(
 			bufAddr + (wr & mask),
 			usedPing.getInetAddress() );
 		wr += 4;
@@ -724,7 +750,7 @@ public class W5100
 	}
 	if( !received ) {
 	  try {
-	    Thread.sleep( 30 );
+	    Thread.sleep( 10 );
 	  }
 	  catch( InterruptedException ex ) {}
 	}
@@ -782,7 +808,9 @@ public class W5100
 		  this.rxWriteReg  = wr;
 		  setSnIRBits( INT_RECV_MASK );
 		}
-		if( (nRead > 0) && (getDebugLevel() > 1) ) {
+		if( (nRead > 0)
+		    && ((getDebugMask() & DEBUG_MASK_MSG) != 0) )
+		{
 		  System.out.printf(
 			"W5100 Socket %d: %d bytes received\n",
 			this.socketNum,
@@ -790,7 +818,7 @@ public class W5100
 		}
 	      }
 	      if( b < 0 ) {
-		if( getDebugLevel() > 1 ) {
+		if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 		  System.out.printf(
 			"W5100 Socket %d: tcp connection closed"
 				+ " by remote host\n",
@@ -821,7 +849,8 @@ public class W5100
 
     private void receiveUDP()
     {
-      DatagramSocket dSocket = this.datagramSocket;
+      boolean           received = false;
+      EmuDatagramSocket dSocket  = this.datagramSocket;
       if( dSocket != null ) {
 	int bufAddr = 0;
 	int bufSize = 0;
@@ -852,64 +881,70 @@ public class W5100
 	      DatagramPacket packet  = new DatagramPacket(
 							recvBuf,
 							nFree - 8 );
-	      dSocket.receive( packet );
-	      int len = packet.getLength();
-	      if( (len > 0) && (len <= (nFree - 8)) && (len < bufSize) ) {
-		if( getDebugLevel() > 1 ) {
-		  System.out.printf(
-			"W5100 Socket %d: %d bytes received\n",
-			this.socketNum,
-			len );
-		}
+	      if( dSocket.receive( getW5100(), packet ) ) {
+		int len = packet.getLength();
+		if( len > 0 ) {
+		  String msgAddon = "";
+		  if( (len <= bufSize) && (len <= (nFree - 8)) ) {
 
-		// W5100 UP Header fuellen
-		if( !setMemIPAddr(
+		    // W5100 UP Header fuellen
+		    if( !setMemIpAddr(
 				bufAddr + (wr & mask),
 				packet.getAddress() ) )
-		{
-		  checkShowNonIPv4Msg( packet.getAddress() );
-		}
-		wr += 4;
-		setMemWord( bufAddr + (wr & mask), packet.getPort() );
-		wr += 2;
-		setMemWord( bufAddr + (wr & mask), len );
-		wr += 2;
-
-		// Daten kopieren
-		byte[] data = packet.getData();
-		if( data != null ) {
-		  int pos = packet.getOffset();
-		  for( int i = 0; i < len; i++ ) {
-		    int b = 0;
-		    if( (pos >= 0) && (pos < data.length) ) {
-		      b = data[ pos ] & 0xFF;
+		    {
+		      checkShowNonIPv4Msg( packet.getAddress() );
 		    }
-		    setMemByte( bufAddr + (wr & mask), b );
-		    pos++;
-		    wr++;
-		  }
-		}
+		    wr += 4;
+		    setMemWord( bufAddr + (wr & mask), packet.getPort() );
+		    wr += 2;
+		    setMemWord( bufAddr + (wr & mask), len );
+		    wr += 2;
 
-		// Empfang signalisieren
-		synchronized( this ) {
-		  this.recvEnabled = false;
-		  this.rxFilled    = true;
-		  this.rxWriteReg  = wr & mask;
-		  setSnIRBits( INT_RECV_MASK );
-		}
-	      } else {
-		if( getDebugLevel() > 1 ) {
-		  System.out.printf(
-			"W5100 Socket %d: %d bytes received"
-				+ " but ignored because packet length\n",
+		    // Daten kopieren
+		    byte[] data = packet.getData();
+		    if( data != null ) {
+		      int pos = packet.getOffset();
+		      for( int i = 0; i < len; i++ ) {
+			int b = 0;
+			if( (pos >= 0) && (pos < data.length) ) {
+			  b = data[ pos ] & 0xFF;
+			}
+			setMemByte( bufAddr + (wr & mask), b );
+			pos++;
+			wr++;
+		      }
+		    }
+
+		    // Empfang signalisieren
+		    synchronized( this ) {
+		      this.recvEnabled = false;
+		      this.rxFilled    = true;
+		      this.rxWriteReg  = wr & mask;
+		      setSnIRBits( INT_RECV_MASK );
+		    }
+		    received = true;
+		  } else {
+		    msgAddon = " but ignored due limited buffer size";
+		  }
+		  if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
+		    System.out.printf(
+			"W5100 Socket %d: %d bytes received%s\n",
 			this.socketNum,
-			len );
+			len,
+			msgAddon );
+		  }
 		}
 	      }
 	    }
 	    catch( Exception ex ) {}
 	  }
 	}
+      }
+      if( !received ) {
+	try {
+	  Thread.sleep( 10 );
+	}
+	catch( InterruptedException ex ) {}
       }
     }
 
@@ -924,13 +959,13 @@ public class W5100
 	      if( this.datagramSocket == null ) {
 		try {
 		  this.datagramSocket = createDatagramSocket( false );
-		  if( getDebugLevel() > 1 ) {
+		  if( (getDebugMask() & DEBUG_MASK_STATUS) != 0 ) {
 		    logDatagramSocketBound();
 		  }
 		}
 		catch( IOException ex ) {
 		  checkPermissionDenied( ex );
-		  if( getDebugLevel() > 0 ) {
+		  if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 		    ex.printStackTrace( System.out );
 		  }
 		  closeSocket();
@@ -1038,7 +1073,7 @@ public class W5100
 	if( thread != null ) {
 	  synchronized( thread ) {
 	    try {
-	      thread.wait( 100 );
+	      thread.wait( 30 );
 	    }
 	    catch( IllegalMonitorStateException ex ) {}
 	    catch( InterruptedException ex ) {}
@@ -1166,7 +1201,9 @@ public class W5100
 	    done = true;
 
 	    // Debug-Meldung
-	    if( (nWritten > 0) && (getDebugLevel() > 1) ) {
+	    if( (nWritten > 0)
+		&& ((getDebugMask() & DEBUG_MASK_MSG) != 0) )
+	    {
 	      System.out.printf(
 			"W5100 Socket %d: %d bytes sent\n",
 			this.socketNum,
@@ -1182,7 +1219,7 @@ public class W5100
 	}
       }
       catch( IOException ex ) {
-	if( getDebugLevel() > 0 ) {
+	if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 	  ex.printStackTrace( System.out );
 	}
 	setCR( CMD_NONE );
@@ -1229,25 +1266,17 @@ public class W5100
 					this.baseAddr + Sn_DIPR );
 	if( (len > 0) && (srcInetAddr != null) && (dstInetAddr != null) ) {
 	  try {
-	    DatagramSocket dSocket = this.datagramSocket;
+	    EmuDatagramSocket dSocket = this.datagramSocket;
 	    if( dSocket == null ) {
 	      dSocket             = createDatagramSocket( true );
 	      this.datagramSocket = dSocket;
-	      if( getDebugLevel() > 1 ) {
+	      if( (getDebugMask() & DEBUG_MASK_STATUS) != 0 ) {
 		logDatagramSocketBound();
 	      }
 	      this.recvEnabled = true;
 	      fireRunRecvThread();
 	    }
-	    /*
-	     * Das Senden an die eigene Adresse fuehrt zu einem Timeout,
-	     * wenn der entsprechende Port nicht empfangsbereit ist.
-	     * Netzwerkkonfigurationsprogramme nutzen diesen Effekt
-	     * zur Erkennung eines IP-Adress-Konflikts aus.
-	     */
-	    if( !dstInetAddr.equals( srcInetAddr )
-		|| !isPortReserved( getMemWord( this.baseAddr + Sn_DPORT ) ) )
-	    {
+	    if( !isIpAddrConflict( this.baseAddr + Sn_DIPR ) ) {
 	      byte[] sendBuf = getSendBuf( bufSize );
 	      for( int i = 0; i < len; i++ ) {
 		sendBuf[ i ] = (byte) getMemByte(
@@ -1259,7 +1288,7 @@ public class W5100
 							len,
 							dstInetAddr,
 							dstPort );
-	      dSocket.send( packet );
+	      dSocket.send( getW5100(), packet );
 
 	      // Daten als gesendet markieren
 	      this.txReadReg = wr;
@@ -1267,7 +1296,9 @@ public class W5100
 	      done = true;
 
 	      // Debug-Meldung
-	      if( (len > 0) && (getDebugLevel() > 1) ) {
+	      if( (len > 0)
+		  && ((getDebugMask() & DEBUG_MASK_MSG) != 0) )
+	      {
 		System.out.printf(
 			"W5100 Socket %d: %d bytes sent to %s:%d\n",
 			this.socketNum,
@@ -1279,7 +1310,7 @@ public class W5100
 	  }
 	  catch( IOException ex ) {
 	    checkPermissionDenied( ex );
-	    if( getDebugLevel() > 0 ) {
+	    if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 	      ex.printStackTrace( System.out );
 	    }
 	  }
@@ -1348,7 +1379,7 @@ public class W5100
 
     private void setSR( int value )
     {
-      if( getDebugLevel() > 0 ) {
+      if( (getDebugMask() & DEBUG_MASK_STATUS) != 0 ) {
         synchronized( getLoggingLockObj() ) {
 	  int addr     = this.baseAddr + Sn_SR;
 	  int oldValue = getMemByte( addr );
@@ -1409,7 +1440,7 @@ public class W5100
 
     private void writeCommand( int addr, int value )
     {
-      if( getDebugLevel() > 0 ) {
+      if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 	String text = null;
 	switch( value ) {
 	  case 0x01:
@@ -1620,20 +1651,24 @@ public class W5100
   };
 
 
-  private byte[]                         mem;
-  private Object                         loggingLockObj;
-  private SocketData[]                   sockets;
-  private java.util.List<Ping>           pings;
-  private java.util.List<DatagramSocket> reservedDatagramSockets;
-  private ServerSocketFactory            serverSocketFactory;
-  private SocketFactory                  socketFactory;
-  private boolean                        threadsEnabled;
-  private int                            debugLevel;
+  private byte[]                            localIpAddr;
+  private byte[]                            mem;
+  private Object                            loggingLockObj;
+  private SocketData[]                      sockets;
+  private java.util.List<Ping>              pings;
+  private java.util.List<EmuDatagramSocket> reservedDatagramSockets;
+  private ServerSocketFactory               serverSocketFactory;
+  private SocketFactory                     socketFactory;
+  private DhcpServer                        dhcpServer;
+  private NetConfig                         netConfig;
+  private boolean                           threadsEnabled;
+  private int                               debugMask;
 
 
   public W5100()
   {
-    this.mem = new byte[ 0x8000 ];
+    this.localIpAddr = null;
+    this.mem         = new byte[ 0x8000 ];
     Arrays.fill( this.mem, (byte) 0 );
 
     this.sockets = new SocketData[ 4 ];
@@ -1644,15 +1679,17 @@ public class W5100
     this.loggingLockObj          = new Object();
     this.serverSocketFactory     = ServerSocketFactory.getDefault();
     this.socketFactory           = SocketFactory.getDefault();
-    this.reservedDatagramSockets = new ArrayList<DatagramSocket>();
-    this.pings                   = new ArrayList<Ping>();
+    this.dhcpServer              = new DhcpServer( this );
+    this.reservedDatagramSockets = new ArrayList<>();
+    this.pings                   = new ArrayList<>();
+    this.netConfig               = null;
     this.threadsEnabled          = true;
-    this.debugLevel              = 0;
+    this.debugMask               = 0;
 
     String text = System.getProperty( "jkcemu.debug.net" );
     if( text != null ) {
       try {
-	this.debugLevel = Integer.parseInt( text );
+	this.debugMask = Integer.parseInt( text );
       }
       catch( NumberFormatException ex ) {}
     }
@@ -1676,10 +1713,22 @@ public class W5100
   }
 
 
+  public DhcpServer getDhcpServer()
+  {
+    return this.dhcpServer;
+  }
+
+
+  public synchronized NetConfig getNetConfig()
+  {
+    return this.netConfig;
+  }
+
+
   public int readMemByte( int addr )
   {
     int rv = 0;
-    if( this.debugLevel > 2 ) {
+    if( (getDebugMask() & DEBUG_MASK_READ) != 0 ) {
       synchronized( getLoggingLockObj() ) {
 	rv = readMemByteInternal( addr );
 	System.out.printf(
@@ -1699,7 +1748,7 @@ public class W5100
     int port = -1;
     synchronized( this.reservedDatagramSockets ) {
       try {
-	DatagramSocket ds = new DatagramSocket();
+	EmuDatagramSocket ds = EmuDatagramSocket.createDatagramSocket();
 	port = ds.getLocalPort();
 	this.reservedDatagramSockets.add( ds );
       }
@@ -1725,124 +1774,55 @@ public class W5100
     if( powerOn ) {
       Arrays.fill( this.mem, (byte) 0 );
 
-      /*
-       * Netzwerk-Konfiguration lesen
-       *
-       * Es wird ein Netzwerk-Interface mit IPv4-
-       * und Hardware-Adresse gesucht.
-       * Ist das nicht moeglich,
-       * wird nur nach einem Interface mit IPv4-Adresse gesucht.
-       * Ist auch das nicht moeglich,
-       * wird die Standard-IPv4-Loopback-Adresse genommen,
-       * sofern das Netzwerk ueberhaupt aktiv ist.
-       */
-      byte[] hwAddr      = null;
-      byte[] otherHWAddr = null;
-      byte[] ipAddr      = null;
-      short  nwPrefixLen = 0;
-      try {
-	Enumeration<NetworkInterface> nwInterfaces
-			= NetworkInterface.getNetworkInterfaces() ;
-	while( nwInterfaces.hasMoreElements() && (hwAddr == null) ) {
-	  NetworkInterface nwIf = nwInterfaces.nextElement();
-	  if( !nwIf.isVirtual() ) {
-	    boolean isUp = nwIf.isUp();
-	    if( isUp ) {
-	      java.util.List<InterfaceAddress> ifAddrs
-					= nwIf.getInterfaceAddresses();
-	      if( ifAddrs != null ) {
-		for( InterfaceAddress ifAddr : ifAddrs ) {
-		  InetAddress inetAddr = ifAddr.getAddress();
-		  if( inetAddr != null ) {
-		    byte[] tmpIPAddr = inetAddr.getAddress();
-		    if( tmpIPAddr != null ) {
-		      if( tmpIPAddr.length == 4 ) {
-			ipAddr      = tmpIPAddr;
-			nwPrefixLen = ifAddr.getNetworkPrefixLength();
-			byte[] tmpHWAddr = nwIf.getHardwareAddress();
-			if( tmpHWAddr != null ) {
-			  if( tmpHWAddr.length == 6 ) {
-			    hwAddr = tmpHWAddr;
-			    break;
-			  }
-			}
-		      }
-		    }
-		  }
-		}
-	      }
+      synchronized( this ) {
+	this.netConfig = NetConfig.readNetConfig();
+      }
+      if( netConfig != null ) {
+	byte[] hwAddr = netConfig.getHardwareAddr();
+	if( hwAddr != null ) {
+	  if( hwAddr.length == 6 ) {
+	    int addr = ADDR_SHAR;
+	    for( byte b : hwAddr ) {
+	      this.mem[ addr++ ] = b;
 	    }
-	    if( (hwAddr == null) && (isUp || (otherHWAddr == null)) ) {
-	      /*
-	       * vorsorglich die MAC-Adresse merken,
-	       * falls sich die passende nicht finden laesst.
-	       * Die MAC-Adresse einer aktiven Schnittstelle wird dabei
-	       * der MAC-Adresse einer passiven vorgezogen.
-	       */
-	      byte[] tmpHWAddr = nwIf.getHardwareAddress();
-	      if( tmpHWAddr != null ) {
-		if( tmpHWAddr.length == 6 ) {
-		  otherHWAddr = tmpHWAddr;
-		}
-	      }
+	  }
+	}
+	byte[] gatewayIpAddr = netConfig.getManualIpAddr();
+	if( gatewayIpAddr != null ) {
+	  if( gatewayIpAddr.length == 4 ) {
+	    int addr = ADDR_GWR;
+	    for( byte b : gatewayIpAddr ) {
+	      this.mem[ addr++ ] = b;
+	    }
+	  }
+	}
+	this.localIpAddr = netConfig.getIpAddr();
+	byte[] ipAddr    = this.localIpAddr;
+	if( ipAddr == null ) {
+	  ipAddr = new byte[] { (byte) 127, (byte) 0, (byte) 0, (byte) 1 };
+	}
+	byte[] subnetMask = netConfig.getSubnetMask();
+	if( !KCNet.getAutoConfig() ) {
+	  ipAddr     = netConfig.getManualIpAddr();
+	  subnetMask = netConfig.getManualSubnetMask();
+	}
+	if( ipAddr != null ) {
+	  if( ipAddr.length == 4 ) {
+	    int addr = ADDR_SIPR;
+	    for( byte b : ipAddr ) {
+	      this.mem[ addr++ ] = b;
+	    }
+	  }
+	}
+	if( subnetMask != null ) {
+	  if( subnetMask.length == 4 ) {
+	    int addr = ADDR_SUBR;
+	    for( byte b : subnetMask ) {
+	      this.mem[ addr++ ] = b;
 	    }
 	  }
 	}
       }
-      catch( IOException ex ) {
-	if( this.debugLevel > 0 ) {
-	  ex.printStackTrace( System.out );
-	}
-      }
-      if( hwAddr == null ) {
-	hwAddr = otherHWAddr;
-      }
-      if( hwAddr != null ) {
-	if( hwAddr.length == 6 ) {
-	  int addr = ADDR_SHAR;
-	  for( byte b : hwAddr ) {
-	    this.mem[ addr++ ] = b;
-	  }
-	}
-      }
-      if( (ipAddr != null)
-	  && Main.getBooleanProperty( "jkcemu.kcnet.auto_config", true ) )
-      {
-	if( ipAddr.length == 4 ) {
-	  int addr = ADDR_SIPR;
-	  for( byte b : ipAddr ) {
-	    this.mem[ addr++ ] = b;
-	  }
-	  /*
-	   * In gemischten IPv4- und IPv6-Umgebungen kann es vorkommen,
-	   * dass die IPv6-Netzwerkmaske gefunden wurde.
-	   * Aus diesem Grund wird hier geprueft,
-	   * ob die Netzwerkmaske einer von IPv4 ueblichen entspricht.
-	   * Wenn nein, wird einfach 255.255.255.0 gesetzt.
-	   * Das ist moeglich, da in der Emulation die Netzwerkmaske
-	   * nicht verwendet wird.
-	   * Sie muss nur vorhanden sein, damit die Netzwerkprogramme
-	   * ein konfiguriertes Netzwerk erkennen.
-	   */
-	  if( (nwPrefixLen >= 16) && (nwPrefixLen < 32) ) {
-	    long m = 0xFFFFFFFF00000000L >>> nwPrefixLen;
-	    addr   = ADDR_SUBR + 3;
-	    for( int i = 0; i < 4; i++ ) {
-	      this.mem[ addr ] = (byte) (m & 0xFF);
-	      --addr;
-	      m >>= 8;
-	    }
-	  } else {
-	    this.mem[ ADDR_SUBR ]     = (byte) 255;
-	    this.mem[ ADDR_SUBR + 1 ] = (byte) 255;
-	    this.mem[ ADDR_SUBR + 2 ] = (byte) 255;
-	    this.mem[ ADDR_SUBR + 3 ] = (byte) 0;
-	  }
-	}
-      }
-      trySetMemIPAddrByProp( ADDR_GWR, "jkcemu.kcnet.gateway" );
-      trySetMemIPAddrByProp( ADDR_SUBR, "jkcemu.kcnet.subnet_mask" );
-      trySetMemIPAddrByProp( ADDR_SIPR, "jkcemu.kcnet.ip_address" );
     } else {
       Arrays.fill( this.mem, 0x0013, this.mem.length, (byte) 0 );
     }
@@ -1866,14 +1846,14 @@ public class W5100
   {
     addr  &= 0xFFFF;
     value &= 0xFF;
-    if( this.debugLevel > 2 ) {
+    if( (getDebugMask() & DEBUG_MASK_WRITE) != 0 ) {
       System.out.printf(
 		"W5100: write: addr=%04X value=%02X\n",
 		addr,
 		value );
     }
     if( (addr == ADDR_MR) && ((value & 0x80) != 0) ) {
-      reset( false );
+      reset( true );
     }
     if( (addr >= 0) && (addr < this.mem.length) ) {
       if( addr == 0x0000 ) {
@@ -1946,7 +1926,7 @@ public class W5100
 	inetAddr = InetAddress.getByAddress( ipAddr );
       }
       catch( Exception ex ) {
-	if( this.debugLevel > 0 ) {
+	if( (getDebugMask() & DEBUG_MASK_MSG) != 0 ) {
 	  ex.printStackTrace( System.out );
 	}
       }
@@ -1983,14 +1963,14 @@ public class W5100
   }
 
 
-  private DatagramSocket fetchReservedDatagramSocket( int port )
+  private EmuDatagramSocket fetchReservedDatagramSocket( int port )
   {
-    DatagramSocket ds = null;
+    EmuDatagramSocket ds = null;
     synchronized( this.reservedDatagramSockets ) {
       int len = this.reservedDatagramSockets.size();
       int idx = 0;
       while( idx < len ) {
-	DatagramSocket tmpDS = this.reservedDatagramSockets.get( idx );
+	EmuDatagramSocket tmpDS = this.reservedDatagramSockets.get( idx );
 	if( tmpDS.getLocalPort() == port ) {
 	  ds = tmpDS;
 	  break;
@@ -2033,9 +2013,9 @@ public class W5100
   }
 
 
-  private int getDebugLevel()
+  private int getDebugMask()
   {
-    return this.debugLevel;
+    return this.debugMask;
   }
 
 
@@ -2136,16 +2116,35 @@ public class W5100
   }
 
 
-  private boolean isPortReserved( int port )
+  /*
+   * Die Methode dient zur Ermittlung der Referenz auf W5100
+   * innerhalb von eingeschlossenen Klassen.
+   */
+  private W5100 getW5100()
   {
+    return this;
+  }
+
+
+  private synchronized boolean isIpAddrConflict( int dstAddrIdx )
+  {
+    /*
+     * Netzwerkkonfigurationsprogramme pruefen auf einen IP-Adresskonflikt,
+     * indem sie vor dem Setzen der IP-Adresse ein Datenpaket
+     * an genau diese schicken.
+     * Wenn im lokalen Netz keine Netzwerkkarte diese IP-Adresse hat,
+     * erfolgt keine ARP-Antwort und es tritt ein Timeout auf.
+     */
     boolean rv = false;
-    synchronized( this.reservedDatagramSockets ) {
-      for( DatagramSocket ds : this.reservedDatagramSockets ) {
-	if( ds.getLocalPort() == port ) {
-	  rv = true;
-	  break;
-	}
-      }
+    if( this.localIpAddr != null ) {
+      rv = (!EmuUtil.equalsRegion(
+			this.localIpAddr, 0,
+			this.mem, ADDR_SIPR,
+			4 )
+	    && EmuUtil.equalsRegion(
+			this.localIpAddr, 0,
+			this.mem, dstAddrIdx,
+			4 ));
     }
     return rv;
   }
@@ -2168,7 +2167,7 @@ public class W5100
   private void releaseReservedDatagramSockets()
   {
     synchronized( this.reservedDatagramSockets ) {
-      for( DatagramSocket ds : this.reservedDatagramSockets ) {
+      for( EmuDatagramSocket ds : this.reservedDatagramSockets ) {
 	ds.close();
       }
       this.reservedDatagramSockets.clear();
@@ -2183,7 +2182,7 @@ public class W5100
   }
 
 
-  private boolean setMemIPAddr( int addr, InetAddress inetAddr )
+  private boolean setMemIpAddr( int addr, InetAddress inetAddr )
   {
     boolean done = false;
     if( inetAddr != null ) {
@@ -2219,19 +2218,6 @@ public class W5100
       this.mem[ addr++ ] = (byte) (value >> 8);
       if( addr < this.mem.length ) {
 	this.mem[ addr ] = (byte) value;
-      }
-    }
-  }
-
-
-  private void trySetMemIPAddrByProp( int addr, String propName )
-  {
-    byte[] ipAddr = NetUtil.getIPAddr( Main.getProperty( propName ) );
-    if( ipAddr != null ) {
-      if( ipAddr.length == 4 ) {
-	for( int i = 0; i < ipAddr.length; i++ ) {
-	  this.mem[ addr + i ] = ipAddr[ i ];
-	}
       }
     }
   }

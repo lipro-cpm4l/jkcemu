@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -107,7 +107,7 @@ public class IntegerDocument extends PlainDocument
     catch( NumberFormatException ex ) {
       this.textComp.requestFocus();
       throw new NumberFormatException(
-	"Ung\u00FCltiges Format!\nBitte geben Sie eine ganze Zahl ein." );
+	"Ung\u00FCltiges Format!\nBitte geben Sie eine Zahl ein." );
     }
     if( this.minValue != null ) {
       if( value < this.minValue.intValue() ) {

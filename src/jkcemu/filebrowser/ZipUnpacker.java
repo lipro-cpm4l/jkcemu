@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -49,7 +49,7 @@ public class ZipUnpacker extends AbstractThreadDlg
 	  int  len     = entryName.length();
 	  int  pos     = 0;
 	  while( pos < len ) {
-	    String elem     = null;
+	    String elem   = null;
 	    int    delim1 = entryName.indexOf( '/', pos );
 	    int    delim2 = entryName.indexOf( '\\', pos );
 	    if( (delim1 < 0) || ((delim2 >= 0) && (delim2 < delim1)) ) {
@@ -162,7 +162,7 @@ public class ZipUnpacker extends AbstractThreadDlg
 	EmuUtil.doClose( in );
       }
     }
-    fireDirectoryChanged(
+    FileBrowserFrm.fireFileChanged(
 		dirExists ? this.outDir : this.outDir.getParentFile() );
   }
 

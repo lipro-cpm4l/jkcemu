@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -39,20 +39,19 @@ public class C80 extends EmuSys implements
   private long           curDisplayTStates;
   private long           displayCheckTStates;
   private boolean        displayReset;
-  private boolean        audioOutPhase;
+  private boolean        audioInPhase;
   private Z80PIO         pio1;
   private Z80PIO         pio2;
 
 
   public C80( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.c80." );
     if( mon == null ) {
       mon = readResource( "/rom/c80/c80mon.bin" );
     }
     this.ram = new byte[ 0x0400 ];
 
-    this.audioOutPhase       = false;
     this.a4TStates           = 0;
     this.curDisplayTStates   = 0;
     this.displayCheckTStates = 0;
@@ -110,6 +109,11 @@ public class C80 extends EmuSys implements
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
+    boolean phase = this.emuThread.readAudioPhase();
+    if( phase != this.audioInPhase ) {
+      this.audioInPhase = phase;
+      this.pio1.putInValuePortA( this.audioInPhase ? 0x80 : 0, 0x80 );
+    }
     if( this.a4TStates > 0 ) {
       this.a4TStates -= tStates;
       if( this.a4TStates <= 0 ) {
@@ -344,19 +348,17 @@ public class C80 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (port & 0x40) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  this.pio1.putInValuePortA(
-		this.emuThread.readAudioPhase() ? 0x80 : 0, 0x80 );
-	  rv &= this.pio1.readPortA();
+	  rv &= this.pio1.readDataA();
 	  break;
 
 	case 1:
-	  rv &= this.pio1.readPortB();
+	  rv &= this.pio1.readDataB();
 	  break;
 
 	case 2:
@@ -371,11 +373,11 @@ public class C80 extends EmuSys implements
     if( (port & 0x80) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  rv &= this.pio2.readPortA();
+	  rv &= this.pio2.readDataA();
 	  break;
 
 	case 1:
-	  rv &= this.pio2.readPortB();
+	  rv &= this.pio2.readDataB();
 	  break;
 
 	case 2:
@@ -406,6 +408,7 @@ public class C80 extends EmuSys implements
     }
     this.pio1.putInValuePortA( 0xFF, false );
     this.displayReset = false;
+    this.audioInPhase = this.emuThread.readAudioPhase();
   }
 
 
@@ -441,7 +444,7 @@ public class C80 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     boolean dirty = false;
     boolean ready = false;
@@ -449,7 +452,7 @@ public class C80 extends EmuSys implements
     if( (port & 0x40) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  this.pio1.writePortA( value );
+	  this.pio1.writeDataA( value );
 	  v = this.pio1.fetchOutValuePortA( false );
 	  if( (v & 0x20) == 0 ) {
 	    this.displayReset = true;
@@ -458,7 +461,7 @@ public class C80 extends EmuSys implements
 	  break;
 
 	case 1:
-	  this.pio1.writePortB( value );
+	  this.pio1.writeDataB( value );
 	  ready           = this.pio1.isReadyPortB();
 	  this.pio1BValue = this.pio1.fetchOutValuePortB( ready );
 	  v               = 0xFF;
@@ -519,11 +522,11 @@ public class C80 extends EmuSys implements
     if( (port & 0x80) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  this.pio2.writePortA( value );
+	  this.pio2.writeDataA( value );
 	  break;
 
 	case 1:
-	  this.pio2.writePortB( value );
+	  this.pio2.writeDataB( value );
 	  break;
 
 	case 2:

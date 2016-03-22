@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,6 @@ import java.lang.*;
 public interface Label extends Comparable<Label>
 {
   public String getLabelName();
-  public int    getLabelValue();
+  public int    getVarSize();
+  public int    intValue();
 }
-

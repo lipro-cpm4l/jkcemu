@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,18 +10,22 @@ package jkcemu.filebrowser;
 
 import java.io.*;
 import java.lang.*;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.*;
 
 
 public class TarEntry
 {
-  private String  entryName;
-  private String  typeText;
-  private boolean typeFile;
-  private boolean typeDir;
-  private int     entryMode;
-  private long    entrySize;
-  private long    entryTime;
-  private String  errMsg;
+  public enum EntryType { DIRECTORY, SYMBOLIC_LINK, REGULAR_FILE, OTHER };
+
+  private String                   entryName;
+  private EntryType                entryType;
+  private String                   typeText;
+  private String                   linkTarget;
+  private Set<PosixFilePermission> permissions;
+  private long                     entrySize;
+  private long                     entryTime;
+  private String                   errMsg;
 
 
   public String getErrorMsg()
@@ -30,15 +34,21 @@ public class TarEntry
   }
 
 
-  public int getMode()
+  public String getLinkTarget()
   {
-    return this.entryMode;
+    return this.linkTarget;
   }
 
 
   public String getName()
   {
     return this.entryName;
+  }
+
+
+  public Set<PosixFilePermission> getPosixFilePermissions()
+  {
+    return this.permissions;
   }
 
 
@@ -62,46 +72,86 @@ public class TarEntry
 
   public boolean isDirectory()
   {
-    return this.typeDir;
+    return this.entryType.equals( EntryType.DIRECTORY );
   }
 
 
-  public boolean isFile()
+  public boolean isRegularFile()
   {
-    return this.typeFile;
+    return this.entryType.equals( EntryType.REGULAR_FILE );
+  }
+
+
+  public boolean isSymbolicLink()
+  {
+    return this.entryType.equals( EntryType.SYMBOLIC_LINK );
   }
 
 
   public static TarEntry readEntryHeader( InputStream in ) throws IOException
   {
-    /*
-     * Kopfblock lesen
-     * Dabei Bloecke ueberlesen, die nur aus Null-Bytes bestehen
-     */
-    byte[]  headerBuf = new byte[ 512 ];
-    int     pos       = 0;
-    boolean empty     = true;
-    while( empty ) {
-      pos = 0;
-      while( pos < headerBuf.length ) {
-	int b = in.read();
-	if( b == -1 ) {
-	  if( pos > 0 ) {
-	    throw new IOException( "Unerwartetes Ende der TAR-Datei" );
-	  } else {
-	    return null;
+    String  entryName = null;
+    byte[]  headerBuf = new byte[ 0x200 ];
+    boolean paxHeader = false;
+    do {
+
+      // Block lesen
+      if( !readFilledBlock( in, headerBuf ) ) {
+	return null;
+      }
+
+      // Pax-Header pruefen
+      int typeByte = (int) headerBuf[ 156 ] & 0xFF;
+      if( typeByte == 'g' ) {
+	// globaler Pax-Header -> Rest des Pax-Headers einfach ueberlesen
+	paxHeader = true;
+	in.skip( 0x200L );
+      } else if( typeByte == 'x' ) {
+	/*
+	 * lokaler Pax-Header -> Rest des Pax-Headers lesen und versuchen,
+	 * daraus den Namen (Pfad) zu ermitteln
+         */
+	paxHeader = true;
+	if( !readFilledBlock( in, headerBuf ) ) {
+	  return null;
+	}
+	try {
+	  int pos = 0;
+	  while( pos < headerBuf.length ) {
+	    int endPos = pos;
+	    while( endPos < headerBuf.length ) {
+	      byte b = headerBuf[ endPos ];
+	      if( (b == (byte) 0)
+		  || (b == (byte) 0x0A) || (b == (byte) 0x0D) )
+	      {
+		break;
+	      }
+	      endPos++;
+	    }
+	    if( endPos > pos ) {
+	      String text = new String(
+				headerBuf,
+				pos,
+				endPos - pos,
+				"ISO-8859-1" );
+	      int idx = text.indexOf( " path=" );
+	      if( (idx >= 0) && ((idx + 6) < text.length()) ) {
+		entryName = text.substring( idx + 6 );
+		break;
+	      }
+	    }
+	    pos = endPos + 1;
 	  }
 	}
-	if( b != 0 ) {
-	  empty = false;
-	}
-	headerBuf[ pos++ ] = (byte) b;
+	catch( Exception ex ) {}
+      } else {
+	paxHeader = false;
       }
-    }
+    } while( paxHeader );
 
     // Pruefsumme ermitteln und vergleichen
     int chkSumOrg = parseOctalNumber( headerBuf, 148, 156 );
-    pos = 148;
+    int pos       = 148;
     while( pos < 156 ) {
       headerBuf[ pos++ ] = (byte) 0x20;
     }
@@ -119,69 +169,63 @@ public class TarEntry
     }
 
     // Werte lesen
-    String  errMsg    = null;
-    String  entryName = null;
-    String  linkName  = null;
-    String  typeText  = null;
-    boolean typeDir   = false;
-    boolean typeFile  = false;
-
-    StringBuilder buf = new StringBuilder( 100 );
-    pos = 0;
-    while( pos < 100 ) {
-      char ch = (char) ((int) headerBuf[ pos++ ] & 0xFF);
-      if( ch == 0 ) {
-	break;
+    String errMsg = null;
+    if( entryName == null ) {
+      StringBuilder buf = new StringBuilder( 100 );
+      pos = 0;
+      while( pos < 100 ) {
+	int b = (int) headerBuf[ pos++ ] & 0xFF;
+	if( b == 0 ) {
+	  break;
+	}
+	if( b >= '\u0020' ) {
+	  buf.append( (char) b );
+	} else {
+	  errMsg = "Ung\u00FCltiges Zeichen im Namen des Eintrags";
+	}
       }
-      if( ch >= '\u0020' ) {
-	buf.append( ch );
-      } else {
-	errMsg = "Ung\u00FCltiges Zeichen im Namen des Eintrags";
-      }
-    }
-    if( buf.length() > 0 ) {
       entryName = buf.toString();
-    } else {
-      if( errMsg == null )
-	errMsg = "Name des Eintrags fehlt";
     }
-    int  entryMode = parseOctalNumber( headerBuf, 100, 108 );
-    long entrySize = parseOctalNumber( headerBuf, 124, 136 );
-    long entryTime = parseOctalNumber( headerBuf, 136, 148 ) * 1000L;
-    int  entryType = (int) headerBuf[ 156 ] & 0xFF;
-    switch( entryType ) {
+    if( entryName.isEmpty() && (errMsg == null) ) {
+      errMsg = "Name des Eintrags fehlt";
+    }
+    String    linkTarget = null;
+    String    typeText   = null;
+    EntryType entryType  = EntryType.OTHER;
+    int       entryMode  = parseOctalNumber( headerBuf, 100, 108 );
+    long      entrySize  = parseOctalNumber( headerBuf, 124, 136 );
+    long      entryTime  = parseOctalNumber( headerBuf, 136, 148 ) * 1000L;
+    int       typeByte   = (int) headerBuf[ 156 ] & 0xFF;
+    switch(   typeByte ) {
       case 0:
       case '0':
-      case '7':
-	typeText = "Datei";
-	typeFile = true;
+	entryType = EntryType.REGULAR_FILE;
+	typeText  = "Datei";
 	break;
 
       case '1':
       case '2':
-	buf = new StringBuilder( 128 );
-	if( entryType == '2' ) {
-	  buf.append( "Sym. Link" );
-	} else {
-	  buf.append( "Link" );
-	}
-	int len = buf.length();
-	buf.append( ": " );
-	boolean hasLinkName = false;
-	pos                 = 157;
-	while( pos < 257 ) {
-	  char ch = (char) ((int) headerBuf[ pos++ ] & 0xFF);
-	  if( ch > 0 ) {
-	    buf.append( ch );
-	    hasLinkName = true;
+	{
+	  StringBuilder buf = new StringBuilder( 128 );
+	  pos                 = 157;
+	  while( pos < 257 ) {
+	    char ch = (char) ((int) headerBuf[ pos++ ] & 0xFF);
+	    if( ch > 0 ) {
+	      buf.append( ch );
+	    } else {
+	      break;
+	    }
+	  }
+	  if( buf.length() > 0 ) {
+	    linkTarget = buf.toString();
+	  }
+	  if( typeByte == '2' ) {
+	    entryType = EntryType.SYMBOLIC_LINK;
+	    typeText  = "Sym. Link: " + buf.toString();
 	  } else {
-	    break;
+	    typeText  = "Link: " + buf.toString();
 	  }
 	}
-	if( !hasLinkName ) {
-	  buf.setLength( len );
-	}
-	typeText = buf.toString();
 	break;
 
       case '3':
@@ -190,8 +234,8 @@ public class TarEntry
 	break;
 
       case '5':
-	typeText = "Verzeichnis";
-	typeDir  = true;
+	entryType = EntryType.DIRECTORY;
+	typeText  = "Verzeichnis";
 	break;
 
       case '6':
@@ -199,18 +243,46 @@ public class TarEntry
 	break;
 
       default:
-	if( entryType > 0x20 ) {
-	  typeText = "Typ: " + Character.toString( (char) entryType );
+	if( typeByte > 0x20 ) {
+	  typeText = "Typ: " + Character.toString( (char) typeByte );
 	} else {
-	  typeText = "Typ: " + Integer.toString( entryType );
+	  typeText = "Typ: " + Integer.toString( typeByte );
 	}
+    }
+    Set<PosixFilePermission> permissions = new HashSet<>();
+    if( (entryMode & 0x001) != 0 ) {
+      permissions.add( PosixFilePermission.OTHERS_EXECUTE );
+    }
+    if( (entryMode & 0x002) != 0 ) {
+      permissions.add( PosixFilePermission.OTHERS_WRITE );
+    }
+    if( (entryMode & 0x004) != 0 ) {
+      permissions.add( PosixFilePermission.OTHERS_READ );
+    }
+    if( (entryMode & 0x008) != 0 ) {
+      permissions.add( PosixFilePermission.GROUP_EXECUTE );
+    }
+    if( (entryMode & 0x010) != 0 ) {
+      permissions.add( PosixFilePermission.GROUP_WRITE );
+    }
+    if( (entryMode & 0x020) != 0 ) {
+      permissions.add( PosixFilePermission.GROUP_READ );
+    }
+    if( (entryMode & 0x040) != 0 ) {
+      permissions.add( PosixFilePermission.OWNER_EXECUTE );
+    }
+    if( (entryMode & 0x080) != 0 ) {
+      permissions.add( PosixFilePermission.OWNER_WRITE );
+    }
+    if( (entryMode & 0x100) != 0 ) {
+      permissions.add( PosixFilePermission.OWNER_READ );
     }
     return new TarEntry(
 			entryName,
+			entryType,
 			typeText,
-			typeFile,
-			typeDir,
-			entryMode,
+			linkTarget,
+			permissions,
 			entrySize,
 			entryTime,
 			errMsg );
@@ -220,23 +292,23 @@ public class TarEntry
 	/* --- private Konstruktoren und Methoden --- */
 
   private TarEntry(
-		String  entryName,
-		String  typeText,
-		boolean typeFile,
-		boolean typeDir,
-		int     entryMode,
-		long    entrySize,
-		long    entryTime,
-		String  errMsg )
+		String                   entryName,
+		EntryType                entryType,
+		String                   typeText,
+		String                   linkTarget,
+		Set<PosixFilePermission> permissions,
+		long                     entrySize,
+		long                     entryTime,
+		String                   errMsg )
   {
-    this.entryName = entryName;
-    this.typeText  = typeText;
-    this.typeFile  = typeFile;
-    this.typeDir   = typeDir;
-    this.entryMode = entryMode;
-    this.entrySize = entrySize;
-    this.entryTime = entryTime;
-    this.errMsg    = errMsg;
+    this.entryName   = entryName;
+    this.entryType   = entryType;
+    this.typeText    = typeText;
+    this.linkTarget  = linkTarget;
+    this.permissions = permissions;
+    this.entrySize   = entrySize;
+    this.entryTime   = entryTime;
+    this.errMsg      = errMsg;
   }
 
 
@@ -252,6 +324,36 @@ public class TarEntry
       ch    = buf[ pos++ ];
     }
     return value;
+  }
+
+
+  /*
+   * Die Methode liest einen Block (512 Bytes).
+   * Bloecke, die nur Null-Bytes enthalten, werden dabei ueberlesen.
+   */
+  private static boolean readFilledBlock(
+				InputStream in,
+				byte[]      buf ) throws IOException
+  {
+    int     pos   = 0;
+    boolean empty = true;
+    while( empty ) {
+      pos = 0;
+      while( pos < buf.length ) {
+	int b = in.read();
+	if( b < 0 ) {
+	  if( empty ) {
+	    return false;
+	  }
+	  throw new IOException( "Unerwartetes Ende der TAR-Datei" );
+	}
+	if( b != 0 ) {
+	  empty = false;
+	}
+	buf[ pos++ ] = (byte) b;
+      }
+    }
+    return true;
   }
 }
 

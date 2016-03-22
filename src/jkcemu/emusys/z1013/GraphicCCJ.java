@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -119,6 +119,7 @@ public class GraphicCCJ implements GDC82720.GDCListener, GDC82720.VRAM
 	fontBytes = EmuUtil.readFile(
 				this.screenFrm,
 				fontFileName,
+				true,
 				0x2000,
 				"Zeichensatzdatei" );
       }

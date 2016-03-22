@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -104,7 +104,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 	doOpenText();
       }
       else if( (src == this.mnuFileOpenHex)
-	       || (src == this.mnuPopupOpenText) )
+	       || (src == this.mnuPopupOpenHex) )
       {
 	rv = true;
 	doOpenHex();
@@ -253,7 +253,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 	File file = EmuUtil.showFileSaveDlg(
 				this,
 				"Druckauftrag speichern",
-				Main.getLastPathFile( "print" ),
+				Main.getLastDirFile( "print" ),
 				EmuUtil.getTextFileFilter() );
 	if( file != null ) {
 	  data.saveToFile( file );
@@ -385,7 +385,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
     this.mnuPopupOpenText = createJMenuItem( "Im Texteditor \u00F6ffnen..." );
     mnuPopup.add( this.mnuPopupOpenText );
 
-    this.mnuPopupOpenHex = createJMenuItem( "Im Texteditor \u00F6ffnen..." );
+    this.mnuPopupOpenHex = createJMenuItem( "Im Hex-Editor \u00F6ffnen..." );
     mnuPopup.add( this.mnuPopupOpenHex );
 
     this.mnuPopupSave = createJMenuItem( "Speichern unter..." );

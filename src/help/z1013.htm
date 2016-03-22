@@ -15,7 +15,7 @@
      <li>
       <a href="z1013.htm#usb">1.8. USB-Anschluss (Vinculum VDIP Modul)</a>
      </li>
-     <li><a href="z1013.htm#rtc">1.9. Echtzeituhrmodul mit RTC-72421</a></li>
+     <li><a href="z1013.htm#rtc">1.9. Echtzeituhrmodul</a></li>
     </ul>
    </li>
    <li><a href="z1013.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -23,7 +23,10 @@
    <li>
     <a href="z1013.htm#etc">4. Sonstiges</a>
     <ul>
-     <li><a href="z1013.htm#paste">4.1. Einf&uuml;gen von Text</a></li>
+     <li>
+      <a href="z1013.htm#basic_io">4.1. BASIC-Programme speichern, laden und &ouml;ffnen</a>
+     </li>
+     <li><a href="z1013.htm#paste">4.2. Einf&uuml;gen von Text</a></li>
     </ul>
    </li>
   </ul>
@@ -68,17 +71,21 @@
        <li>
 	Zwei&nbsp;<a href="ramfloppy.htm">RAM-Floppies</a>
 	nach <em>Mikroprozessortechnik</em>
-	Heft&nbsp;3/1988 an den IO-Basis-Adressen&nbsp;98h und 58h
+	Heft&nbsp;3/1988 an den E/A-Basis-Adressen&nbsp;98h und 58h
        </li>
        <li><a href="z1013.htm#fdc">Floppy-Disk-Modul</a></li>
        <li>
+	<a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
+	an der E/A-Basisadresse&nbsp;40h und 80h
+       </li>
+       <li>
 	<a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
-	an der E/A-Basisadressen C0h
+	an der E/A-Basisadressen&nbsp;C0h
        </li>
        <li>
 	<a href="z1013.htm#usb">USB-Anschluss</a> (Vinculum VDIP Modul)
        </li>
-       <li><a href="z1013.htm#rtc">Echtzeituhrmodul mit RTC-72421</a></li>
+       <li><a href="z1013.htm#rtc">Echtzeituhrmodul</a></li>
        <li>Grafikkarte des CC&nbsp;Jena (80x25 Zeichen)</li>
        <li>
 	Vollgrafikerweiterung nach <em>Kleinstrechnertips</em>
@@ -138,11 +145,11 @@
  <br/><br/>
 
  <h3><a name="peters">1.3. Peters-Platine</a></h3>
-  Die Peters-Platine erm&ouml;glicht &uuml;ber IO-Port&nbsp;4
+  Die Peters-Platine erm&ouml;glicht &uuml;ber E/A-Port&nbsp;4
   die Abschaltung des ROMs sowie die Umschaltung des Zeichensatzes,
   der Taktfrequenz und der Bildschirmorganisation.
  <br/><br/>
-  Bedeutung der Bits von IO-Port&nbsp;4:
+  Bedeutung der Bits von E/A-Port&nbsp;4:
  <br/>
   <table border="1">
    <tr>
@@ -211,7 +218,7 @@
   Eine softwarem&auml;&szlig;ige Abschaltung des Moduls wie beim
   Z9001, KC85/1 und KC87 ist mit der Z1013-Variante nicht m&ouml;glich.
  <br/><br/>
-  In JKCEMU ist kein Inhalt f&uuml;r das Mega-ROM-Modul enthalten.
+  Im JKCEMU ist kein Inhalt f&uuml;r das Mega-ROM-Modul enthalten.
   Sie m&uuml;ssen deshalb in den Einstellungen eine entsprechende
   ROM-Datei ausw&auml;hlen.
  <br/><br/>
@@ -301,9 +308,10 @@
   da es sonst einen Konflikt mit der E/A-Adresse FFh geben w&uuml;rde.
  <br/><br/>
 
- <h3><a name="rtc">1.9. Echtzeituhrmodul mit RTC-72421</a></h3>
-  Die Echtzeituhr wird an den IO-Adressen 70h bis 7Fh emuliert.
-  Die Zeit kann nur gelesen, nicht aber gesetzt werden.
+ <h3><a name="rtc">1.9. Echtzeituhrmodul</a></h3>
+  Es wird eine Echtzeituhr RTC-62421 bzw. RTC-72421 an den
+  E/A-Adressen&nbsp;70h bis 7Fh emuliert.
+  Die Uhr kann nur gelesen, nicht aber gestellt werden.
  <br/><br/>
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
@@ -346,22 +354,109 @@
 
 
  <h2><a name="disks">3. Enthaltene Diskettenabbilder</a></h2>
+  JKCEMU enth&auml;lt f&uuml;r die Z1013-Emulation
+  folgende Diskettenabbilder:
   <ul>
-   <li>CP/M-Boot-Diskette f&uuml;r 64x16&nbsp;Zeichen</li>
    <li>
-    CP/M-Boot-Diskette f&uuml;r 80x25&nbsp;Zeichen
-    (erfordert zus&auml;tzlich die Emulation der Echtzeituhr
-    und der Grafikkarte des CC&nbsp;Jena)
+    CP/M-Boot-Diskette f&uuml;r 64x16&nbsp;Zeichen<br/><br/>
+    Zum Booten von der Diskette m&uuml;ssen Sie folgende Konfiguration
+    einstellen:
+    <ul>
+     <li>Z1013.16</li>
+     <li>Boot Lader 4 / Tastatur K7659</li>
+     <li>RAM-Floppy an E/A-Basisadresse 98h</li>
+     <li>Floppy-Disk-Modul</li>
+     <li>7-Bit-Centronics am Anwendertor</li>
+    </ul>
+   </li>
+   <li>
+    CP/M-Boot-Diskette f&uuml;r 80x25&nbsp;Zeichen<br/><br/>
+    Zum Booten von der Diskette m&uuml;ssen Sie folgende Konfiguration
+    einstellen:
+    <ul>
+     <li>Z1013.16</li>
+     <li>Boot Lader 4 / Tastatur K7659</li>
+     <li>RAM-Floppy an E/A-Basisadresse 98h</li>
+     <li>Floppy-Disk-Modul</li>
+     <li>7-Bit-Centronics am Anwendertor</li>
+     <li>Grafikkarte des CC&nbsp;Jena (80x25 Zeichen)</li>
+     <li>Echtzeituhrmodul</li>
+    </ul>
    </li>
   </ul>
+ <br/>
+  Die Laufwerkszuordnung bei beiden Diskettenabbildern ist:
+ <br/><br/>
+  <table border="1">
+   <tr><td valign="top">A:</td><td>RAM-Floppy</td></tr>
+   <tr>
+    <td valign="top">B:</td>
+    <td>erstes Diskettenlaufwerk, 820-KByte-Format</td>
+   </tr>
+   <tr>
+    <td valign="top">C:</td>
+    <td>erstes Diskettenlaufwerk, 624-KByte-Format</td>
+   </tr>
+   <tr>
+    <td valign="top">D:</td>
+    <td>
+     erstes Diskettenlaufwerk, 780-KByte-Format
+     <br/>
+     <b>Achtung!</b> Dieses Format haben die Diskettenabbilder selbst,
+     d.h., sie sind unter dem Laufwerk <em>D:</em> ansprechbar.
+   </td>
+   </tr>
+   <tr>
+    <td valign="top">E:</td>
+    <td>erstes Diskettenlaufwerk, 800-KByte-Format</td>
+   </tr>
+  </table>
+ <br/>
   Auf der CP/M-Boot-Diskette f&uuml;r 80x25&nbsp;Zeichen
-  sind auch in User-Ebene&nbsp;15 die Quelltexte f&uuml;r das BIOS
+  sind in User-Ebene&nbsp;15 auch die Quelltexte f&uuml;r das BIOS
   enthalten.
+  Anleitungen dazu finden Sie als Textdateien in User-Ebene&nbsp;0.
+  Diese Dateien k&ouml;nnen mit dem CP/M-Kommando <em>TYPE</em>
+  gelesen werden.
  <br/><br/>
 
  <h2><a name="etc">4. Sonstiges</a></h2>
 
- <h3><a name="paste">4.1. Einf&uuml;gen von Text</a></h3>
+ <h3>
+  <a name="basic_io">4.1. BASIC-Programme speichern, laden und &ouml;ffnen</a>
+ </h3>
+  JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
+  <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>
+  sowie f&uuml;r das &Ouml;ffnen von im Arbeitsspeicher befindlichen
+  BASIC-Programmen im Texteditor.
+  Die entsprechenden Funktionen finden Sie im Men&uuml; <em>Datei</em>.
+ <br/><br/>
+  Folgende BASIC-Interpreter werden unterst&uuml;tzt:
+ <br/>
+  <ul>
+   <li>Z1013-BASIC Version&nbsp;3.1 (Tiny-BASIC)</li>
+   <li>HC-BASIC im RAM (KC-BASIC)</li>
+   <li>HC-BASIC im ROM (KC-BASIC)</li>
+  </ul>
+ <br/>
+  Beim Speichern von BASIC-Programmen erscheint ein Fenster zur Auswahl
+  des Dateiformats.
+  Speichern Sie bitte Tiny-BASIC-Programme als
+  <a href="fileformats.htm#headersave">Headersave-Datei (*.z80)</a>
+  mit dem Dateityp&nbsp;<em>b</em> und KC-BASIC-Programme entweder als
+  <a href="fileformats.htm#kcbasic">KC-BASIC-Programmdatei (*.sss)</a>
+  oder als
+  <a href="fileformats.htm#headersave">Headersave-Datei (*.z80)</a>
+  mit dem Dateityp&nbsp;<em>B</em>.
+ <br/><br/>
+  Wenn Sie ein BASIC-Programm in einem anderen Dateiformat speichern,
+  erkennt JKCEMU sp&auml;ter beim Laden der Datei nicht mehr,
+  dass es sich um ein BASIC-Programm handelt und passt die
+  Systemzellen des BASIC-Interpreters nicht an.
+  Das geladene Programm l&auml;sst sich dann nicht nutzen.
+ <br/><br/>
+
+ <h3><a name="paste">4.2. Einf&uuml;gen von Text</a></h3>
   Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt gew&ouml;hnlich
   in der Form, dass f&uuml;r jedes einzuf&uuml;gende Zeichen
   das Dr&uuml;cken der entsprechenden Taste bzw. Tastenkombination

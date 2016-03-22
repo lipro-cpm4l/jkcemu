@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2013 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -12,7 +12,7 @@ package z80emu;
 public interface Z80Breakpoint
 {
   /*
-   * Die Methode wird vor Ausfuehrung eines jeden Befehls ausgerufen.
+   * Die Methode wird vor Ausfuehrung eines jeden Befehls aufgerufen.
    * Liefert Sie true zurueck, haelt die Programmausfuehrung an
    * (Haltepunkt erreicht).
    *

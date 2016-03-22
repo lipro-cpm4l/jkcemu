@@ -14,7 +14,7 @@
 
  <h3>Struktur des BASIC-Programms</h3>
   Benutzerdefinierte Funktionen und Prozeduren werden nach
-  dem Haupprogramm implementiert, d.h.,
+  dem Hauptprogramm implementiert, d.h.,
   die erste <a href="instructions.htm#function">FUNCTION</a>-
   bzw. <a href="instructions.htm#sub">SUB</a>-Anweisung
   beendet das Hauptprogramm.
@@ -119,37 +119,37 @@
    DECLARE FUNCTION roemische_zahl$(z)&#10;<br/>
    &#10;<br/>
    DO&#10;<br/>
-   &nbsp; INPUT "Zahl: ";Z&#10;<br/>
-   &nbsp; IF Z&gt;0 THEN&#10;<br/>
-   &nbsp; &nbsp; PRINT "Roemische Zahl: ";roemische_zahl$(Z)&#10;<br/>
-   &nbsp; ELSEIF Z=0 THEN&#10;<br/>
-   &nbsp; &nbsp; PRINT "Ende"&#10;<br/>
-   &nbsp; &nbsp; EXIT&#10;<br/>
-   &nbsp; ELSE&#10;<br/>
-   &nbsp; &nbsp; PRINT "Keine negative Zahl!"&#10;<br/>
-   &nbsp; ENDIF&#10;<br/>
+   &nbsp;&nbsp;INPUT "Zahl: ";Z&#10;<br/>
+   &nbsp;&nbsp;IF Z&gt;0 THEN&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "Roemische Zahl: ";roemische_zahl$(Z)&#10;<br/>
+   &nbsp;&nbsp;ELSEIF Z=0 THEN&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "Ende"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;EXIT&#10;<br/>
+   &nbsp;&nbsp;ELSE&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "Keine negative Zahl!"&#10;<br/>
+   &nbsp;&nbsp;ENDIF&#10;<br/>
    LOOP&#10;<br/>
    END&#10;<br/>
    &#10;<br/>
    'Zuordnung Dezimalzahl zu roemischer Zahl&#10;<br/>
    roem_map:&#10;<br/>
-   &nbsp; DATA 1000,"M",900,"CM",500,"D",400,"CD"&#10;<br/>
-   &nbsp; DATA 100,"C",90,"XC",50,"L",40,"XL"&#10;<br/>
-   &nbsp; DATA 10,"X",9,"IX",5,"V",4,"IV",1,"I"&#10;<br/>
+   &nbsp;&nbsp;DATA 1000,"M",900,"CM",500,"D",400,"CD"&#10;<br/>
+   &nbsp;&nbsp;DATA 100,"C",90,"XC",50,"L",40,"XL"&#10;<br/>
+   &nbsp;&nbsp;DATA 10,"X",9,"IX",5,"V",4,"IV",1,"I"&#10;<br/>
    &#10;<br/>
    'Implementierung der benutzerdefinierten Funktion&#10;<br/>
    FUNCTION roemische_zahl$(z)&#10;<br/>
-   &nbsp; LOCAL n,t$,rv$&#10;<br/>
-   &nbsp; rv$=""&#10;<br/>
-   &nbsp; RESTORE roem_map&#10;<br/>
-   &nbsp; WHILE z&gt;0&#10;&#10;<br/>
-   &nbsp; &nbsp; READ n,t$&#10;<br/>
-   &nbsp; &nbsp; WHILE z&gt;=n&#10;<br/>
-   &nbsp; &nbsp; &nbsp; z=z-n&#10;<br/>
-   &nbsp; &nbsp; &nbsp; rv$=rv$+t$&#10;<br/>
-   &nbsp; &nbsp; WEND&#10;<br/>
-   &nbsp; WEND&#10;<br/>
-   &nbsp; roemische_zahl$=rv$:'Rueckgabewert zuweisen&#10;<br/>
+   &nbsp;&nbsp;LOCAL n,t$,rv$&#10;<br/>
+   &nbsp;&nbsp;rv$=""&#10;<br/>
+   &nbsp;&nbsp;RESTORE roem_map&#10;<br/>
+   &nbsp;&nbsp;WHILE z&gt;0&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;READ n,t$&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;WHILE z&gt;=n&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;z=z-n&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rv$=rv$+t$&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;WEND&#10;<br/>
+   &nbsp;&nbsp;WEND&#10;<br/>
+   &nbsp;&nbsp;roemische_zahl$=rv$:'Rueckgabewert zuweisen&#10;<br/>
    END FUNCTION&#10;<br/>
   </tt>
  <br/>

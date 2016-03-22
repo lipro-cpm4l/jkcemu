@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Haltepunkt auf eine Ausgabeadresse oder
+ * Halte-/Log-Punkt auf eine Ausgabeadresse oder
  * auf einen Bereich von Ausgabeadressen
  */
 
@@ -24,13 +24,15 @@ public class OutputBreakpoint extends AbstractBreakpoint
 
 
   public OutputBreakpoint(
-		boolean is8Bit,
-		int     begPort,
-		int     endPort,
-		String  cond,
-		int     mask,
-		int     value )
+		DebugFrm debugFrm,
+		boolean  is8Bit,
+		int      begPort,
+		int      endPort,
+		String   cond,
+		int      mask,
+		int      value )
   {
+    super( debugFrm );
     this.is8Bit  = is8Bit;
     this.begPort = begPort & 0xFFFF;
     this.endPort = (endPort >= 0 ? (endPort & 0xFFFF) : -1);
@@ -108,10 +110,10 @@ public class OutputBreakpoint extends AbstractBreakpoint
   }
 
 
-	/* --- Z80Breakpoint --- */
+	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean matches( Z80CPU cpu, Z80InterruptSource iSource )
+  protected boolean matchesImpl( Z80CPU cpu, Z80InterruptSource iSource )
   {
     boolean rv    = false;
     int     pc    = cpu.getRegPC();

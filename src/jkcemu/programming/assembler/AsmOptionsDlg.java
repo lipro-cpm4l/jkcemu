@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,8 +26,9 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   private JCheckBox    btnAllowUndocInst;
   private JCheckBox    btnLabelsCaseSensitive;
   private JCheckBox    btnPrintLabels;
-  private JCheckBox    btnLabelsToDebugger;
   private JCheckBox    btnLabelsToReass;
+  private JCheckBox    btnLabelsToDebugger;
+  private JCheckBox    btnSuppressLabelRecreateInDebugger;
   private JCheckBox    btnFormatSource;
   private JCheckBox    btnWarnNonAsciiChars;
 
@@ -100,11 +101,9 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 
     this.btnLabelsCaseSensitive = new JCheckBox(
 			"Gro\u00DF-/Kleinschreibung bei Marken beachten" );
-    this.btnLabelsCaseSensitive.addActionListener( this );
     panelLabel.add( this.btnLabelsCaseSensitive );
 
     this.btnPrintLabels = new JCheckBox( "Markentabelle ausgeben" );
-    this.btnPrintLabels.addActionListener( this );
     panelLabel.add( this.btnPrintLabels );
 
 
@@ -142,15 +141,21 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
     panelEtc.add( this.btnFormatSource, gbcEtc );
 
     this.btnLabelsToDebugger = new JCheckBox(
-		"Im Debugger Haltepunkte auf Marken anlegen"
-			+ " (nur bei Programmcode in Emulator laden)" );
+			"Im Debugger Halte-/Log-Punkte bzw. Variablen"
+				+ " auf Marken anlegen" );
     this.btnLabelsToDebugger.setEnabled( false );
     gbcEtc.gridy++;
     panelEtc.add( this.btnLabelsToDebugger, gbcEtc );
 
+    this.btnSuppressLabelRecreateInDebugger = new JCheckBox(
+			"Im Debugger manuell entfernte Halte-/Log-Punkte"
+				+ " bzw. Variablen nicht wieder anlegen" );
+    this.btnSuppressLabelRecreateInDebugger.setEnabled( false );
+    gbcEtc.gridy++;
+    panelEtc.add( this.btnSuppressLabelRecreateInDebugger, gbcEtc );
+
     this.btnLabelsToReass = new JCheckBox(
-		"Marken im Reassembler verwenden"
-			+ " (nur bei Programmcode in Emulator laden)" );
+				"Marken im Reassembler verwenden" );
     this.btnLabelsToReass.setEnabled( false );
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
@@ -185,6 +190,8 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
       this.btnWarnNonAsciiChars.setSelected( options.getWarnNonAsciiChars() );
       this.btnFormatSource.setSelected( options.getFormatSource() );
       this.btnLabelsToDebugger.setSelected( options.getLabelsToDebugger() );
+      this.btnSuppressLabelRecreateInDebugger.setSelected(
+				options.getSuppressLabelRecreateInDebugger() );
       this.btnLabelsToReass.setSelected( options.getLabelsToReassembler() );
       updCodeDestFields( options, false );
     } else {
@@ -195,9 +202,15 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
       this.btnWarnNonAsciiChars.setSelected( true );
       this.btnFormatSource.setSelected( false );
       this.btnLabelsToDebugger.setSelected( false );
+      this.btnSuppressLabelRecreateInDebugger.setSelected( false );
       this.btnLabelsToReass.setSelected( false );
       updCodeDestFields( options, true );
     }
+    updSuppressLabelRecreateInDebuggerEnabled();
+
+
+    // Listener
+    this.btnLabelsToDebugger.addActionListener( this );
 
 
     // Fenstergroesse und -position
@@ -214,6 +227,19 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   {
     this.btnLabelsToDebugger.setEnabled( state );
     this.btnLabelsToReass.setEnabled( state );
+    updSuppressLabelRecreateInDebuggerEnabled();
+  }
+
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = super.doAction( e );
+    if( !rv && (e.getSource() == this.btnLabelsToDebugger) ) {
+      updSuppressLabelRecreateInDebuggerEnabled();
+      rv = true;
+    }
+    return rv;
   }
 
 
@@ -231,18 +257,20 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
       this.appliedOptions = new PrgOptions();
       this.appliedOptions.setAsmSyntax( syntax );
       this.appliedOptions.setAllowUndocInst(
-				this.btnAllowUndocInst.isSelected() );
+			this.btnAllowUndocInst.isSelected() );
       this.appliedOptions.setLabelsCaseSensitive(
-				this.btnLabelsCaseSensitive.isSelected() );
+			this.btnLabelsCaseSensitive.isSelected() );
       this.appliedOptions.setPrintLabels( this.btnPrintLabels.isSelected() );
       this.appliedOptions.setLabelsToDebugger(
-				this.btnLabelsToDebugger.isSelected() );
+			this.btnLabelsToDebugger.isSelected() );
+      this.appliedOptions.setSuppressLabelRecreateInDebugger(
+			this.btnSuppressLabelRecreateInDebugger.isSelected() );
       this.appliedOptions.setLabelsToReassembler(
-				this.btnLabelsToReass.isSelected() );
+			this.btnLabelsToReass.isSelected() );
       this.appliedOptions.setFormatSource(
-				this.btnFormatSource.isSelected() );
+			this.btnFormatSource.isSelected() );
       this.appliedOptions.setWarnNonAsciiChars(
-				this.btnWarnNonAsciiChars.isSelected() );
+			this.btnWarnNonAsciiChars.isSelected() );
       try {
 	applyCodeDestOptionsTo( this.appliedOptions );
 	doClose();
@@ -254,6 +282,16 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
     catch( NumberFormatException ex ) {
       showErrorDlg( this, ex.getMessage() );
     }
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void updSuppressLabelRecreateInDebuggerEnabled()
+  {
+    this.btnSuppressLabelRecreateInDebugger.setEnabled(
+		this.btnLabelsToDebugger.isEnabled()
+			&& this.btnLabelsToDebugger.isSelected() );
   }
 }
 

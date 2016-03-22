@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -113,7 +113,7 @@ public class KCBasicSystemFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
     return 11;
   }
@@ -140,7 +140,9 @@ public class KCBasicSystemFileTarget extends AbstractConvertTarget
 			0x0300,
 			endAddr - 1,
 			null,
-			fileDesc );
+			false,
+			fileDesc,
+			null );
       out.write( mem0300 );
       for( int i = 0; i < 3; i++ ) {
 	out.write( endAddr & 0xFF );

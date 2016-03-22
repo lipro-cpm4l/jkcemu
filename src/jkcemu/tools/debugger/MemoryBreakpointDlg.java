@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Dialog zum Anlegen eines Haltepunktes auf eine Speicherzelle
+ * Dialog zum Anlegen eines Halte-/Log-Punktes auf eine Speicherzelle
  * bzw. einen Speicherbereich
  */
 
@@ -19,25 +19,27 @@ import jkcemu.base.*;
 
 public class MemoryBreakpointDlg extends AbstractBreakpointDlg
 {
-  private HexDocument docBegAddr;
-  private HexDocument docEndAddr;
-  private HexDocument docMask;
-  private HexDocument docValue;
-  private JCheckBox   btnOnRead;
-  private JCheckBox   btnOnWrite;
-  private JCheckBox   btnCheckValue;
-  private JLabel      labelValue1;
-  private JLabel      labelValue2;
-  private JComboBox   comboCond;
-  private JTextField  fldBegAddr;
-  private JTextField  fldEndAddr;
-  private JTextField  fldMask;
-  private JTextField  fldValue;
+  private HexDocument       docBegAddr;
+  private HexDocument       docEndAddr;
+  private HexDocument       docMask;
+  private HexDocument       docValue;
+  private JCheckBox         btnOnRead;
+  private JCheckBox         btnOnWrite;
+  private JCheckBox         btnCheckValue;
+  private JLabel            labelValue1;
+  private JLabel            labelValue2;
+  private JComboBox<String> comboCond;
+  private JTextField        fldBegAddr;
+  private JTextField        fldEndAddr;
+  private JTextField        fldMask;
+  private JTextField        fldValue;
 
 
-  public MemoryBreakpointDlg( Window owner, AbstractBreakpoint breakpoint )
+  public MemoryBreakpointDlg(
+			DebugFrm           debugFrm,
+			AbstractBreakpoint breakpoint )
   {
-    super( owner, "Speicherbereich", breakpoint );
+    super( debugFrm, "Speicherbereich", breakpoint );
 
 
     // Fensterinhalt
@@ -87,7 +89,7 @@ public class MemoryBreakpointDlg extends AbstractBreakpointDlg
     gbc.gridwidth     = 1;
     gbc.gridx         = 0;
     gbc.gridy++;
-    add( new JLabel( "Anhalten beim:" ), gbc );
+    add( new JLabel( "Anhalten/Loggen beim:" ), gbc );
 
     this.btnOnRead = new JCheckBox( "Lesen", true );
     gbc.anchor     = GridBagConstraints.WEST;
@@ -132,7 +134,7 @@ public class MemoryBreakpointDlg extends AbstractBreakpointDlg
 						new Insets( 0, 0, 0, 0 ),
 						0, 0 );
 
-    this.labelValue1 = new JLabel( "Nur anhalten wenn Wert UND" );
+    this.labelValue1 = new JLabel( "Nur anhalten/loggen wenn Wert UND" );
     panelValue.add( this.labelValue1, gbcValue );
 
     this.docMask = new HexDocument( 2 );
@@ -144,7 +146,7 @@ public class MemoryBreakpointDlg extends AbstractBreakpointDlg
     gbcValue.gridx++;
     panelValue.add( this.fldMask, gbcValue );
 
-    this.comboCond = new JComboBox( conditions );
+    this.comboCond = new JComboBox<>( conditions );
     this.comboCond.setEditable( false );
     gbcValue.fill    = GridBagConstraints.NONE;
     gbcValue.weightx = 0.0;
@@ -307,6 +309,7 @@ public class MemoryBreakpointDlg extends AbstractBreakpointDlg
       }
       if( status ) {
 	approveBreakpoint( new MemoryBreakpoint(
+					this.debugFrm,
 					begAddr,
 					endAddr,
 					this.btnOnRead.isSelected(),

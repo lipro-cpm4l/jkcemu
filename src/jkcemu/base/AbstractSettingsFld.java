@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -105,15 +105,15 @@ public abstract class AbstractSettingsFld
 			File                                  oldFile,
 			javax.swing.filechooser.FileFilter... fileFilters )
   {
-    File  rv = null;
-    Frame frm = EmuUtil.getAncestorFrame( this );
-    if( frm != null ) {
+    File   rv     = null;
+    Window window = EmuUtil.getWindow( this );
+    if( window != null ) {
       File file = EmuUtil.showFileOpenDlg(
-			frm,
+			window,
 			title,
 			oldFile != null ?
 				oldFile
-				: Main.getLastPathFile( category ),
+				: Main.getLastDirFile( category ),
 			fileFilters );
       if( file != null ) {
 	String msg = null;

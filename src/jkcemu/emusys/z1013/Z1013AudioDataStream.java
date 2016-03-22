@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -57,7 +57,7 @@ public class Z1013AudioDataStream extends EmuSysAudioDataStream
     while( sourceByteAvailable() ) {
 
       // Vorton, 1. Halbschwingung, ab dem 2. Block vergroessert (kurze Pause)
-      addSamples( blkIdx > 0 ? 40 : 12 );
+      addPhaseChangeSamples( blkIdx > 0 ? 40 : 12 );
 
       // Vorton, restliche Halbschwingungen
       int nHalf = 27;				// (14 * 2) - 1
@@ -65,12 +65,12 @@ public class Z1013AudioDataStream extends EmuSysAudioDataStream
 	nHalf= 3999;				// (2000 * 2) - 1
       }
       for( int i = 0; i < nHalf; i++ ) {	// weitere Halbschwingungen
-	addSamples( 12 );
+	addPhaseChangeSamples( 12 );
       }
 
       // Trennschwingung
-      addSamples( 6 );
-      addSamples( 6 );
+      addPhaseChangeSamples( 6 );
+      addPhaseChangeSamples( 6 );
 
       // Blocknummer
       int w = 0;
@@ -102,7 +102,7 @@ public class Z1013AudioDataStream extends EmuSysAudioDataStream
 
     // abschliessender Phasenwechsel
     if( getFrameLength() > 0 ) {
-      addSamples( 40 );
+      addPhaseChangeSamples( 40 );
     }
   }
 
@@ -119,10 +119,10 @@ public class Z1013AudioDataStream extends EmuSysAudioDataStream
   {
     for( int i = 0; i < 16; i++ ) {
       if( (value & 0x01) != 0 ) {
-	addSamples( 6 );
+	addPhaseChangeSamples( 6 );
       } else {
-	addSamples( 3 );
-	addSamples( 3 );
+	addPhaseChangeSamples( 3 );
+	addPhaseChangeSamples( 3 );
       }
       value >>= 1;
     }

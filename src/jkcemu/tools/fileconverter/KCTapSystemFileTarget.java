@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@ package jkcemu.tools.fileconverter;
 
 import java.io.*;
 import java.lang.*;
+import javax.swing.JComboBox;
 import jkcemu.base.*;
 
 
@@ -45,14 +46,21 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getTapFileFilter();
+    return EmuUtil.getKCTapFileFilter();
   }
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
-    return 11;
+    return this.z9001 ? 8 : 11;
+  }
+
+
+  @Override
+  public int getMaxFileTypeLength()
+  {
+    return this.z9001 ? 3 : 0;
   }
 
 
@@ -71,6 +79,7 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
     int          begAddr   = this.fileConvertFrm.getBegAddr( true );
     int          startAddr = this.fileConvertFrm.getStartAddr( false );
     String       fileDesc  = this.fileConvertFrm.getFileDesc( true );
+    String       fileType  = this.fileConvertFrm.getFileType();
     OutputStream out       = null;
     try {
       out = new FileOutputStream( file );
@@ -86,11 +95,11 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
       FileSaver.writeKCHeader(
 		out,
 		begAddr,
-		this.z9001 ?
-			begAddr
-			: ((begAddr + this.len - 1) & 0xFFFF),
+		(begAddr + this.len - 1) & 0xFFFF,
 		startAddr >= 0 ? new Integer( startAddr ) : null,
-		fileDesc );
+		this.z9001,
+		fileDesc,
+		fileType );
 
       // Datenbloecke
       int offs    = this.offs;
@@ -116,6 +125,26 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
       EmuUtil.doClose( out );
     }
     return null;
+  }
+
+
+  @Override
+  public void setFileTypesTo( JComboBox<String> combo )
+  {
+    if( this.z9001 ) {
+      combo.removeAllItems();
+      combo.addItem( "" );
+      combo.addItem( "COM" );
+      try {
+	if( this.fileConvertFrm.getStartAddr( false ) >= 0 ) {
+          combo.setSelectedItem( "COM" );
+	}
+      }
+      catch( UserInputException ex ) {}
+      combo.setEnabled( true );
+    } else {
+      super.setFileTypesTo( combo );
+    }
   }
 
 

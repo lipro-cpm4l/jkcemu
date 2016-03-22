@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,6 +22,14 @@ public class BasicFrm extends JFrame implements
 					KeyListener,
 					WindowListener
 {
+  public static final String PROP_WINDOW_X         = "window.x";
+  public static final String PROP_WINDOW_Y         = "window.y";
+  public static final String PROP_WINDOW_WIDTH     = "window.width";
+  public static final String PROP_WINDOW_HEIGHT    = "window.height";
+  public static final String PROP_WINDOW_ICONIFIED = "window.iconified";
+  public static final String PROP_WINDOW_MAXIMIZED = "window.maximized";
+
+
   protected BasicFrm()
   {
     setDefaultCloseOperation( DO_NOTHING_ON_CLOSE );
@@ -45,9 +53,53 @@ public class BasicFrm extends JFrame implements
    */
   public boolean applySettings( Properties props, boolean resizable )
   {
-    return ((props != null) && !isVisible()) ?
-			EmuUtil.applyWindowSettings( props, this, resizable )
-			: false;
+    boolean rv = false;
+    if( (props != null) && !isVisible() ) {
+      String prefix = getSettingsPrefix();
+
+      int x = EmuUtil.parseInt(
+		props.getProperty( prefix + PROP_WINDOW_X ),
+		-1,
+		-1 );
+      int y = EmuUtil.parseInt(
+		props.getProperty( prefix + PROP_WINDOW_Y ),
+		-1,
+		-1 );
+      if( (x >= 0) && (y >= 0) ) {
+	if( resizable ) {
+	  int w = EmuUtil.parseInt(
+			props.getProperty( prefix + PROP_WINDOW_WIDTH ),
+			-1,
+			-1 );
+	  int h = EmuUtil.parseInt(
+			props.getProperty( prefix + PROP_WINDOW_HEIGHT ),
+			-1,
+			-1 );
+	  setBounds( x, y, w, h );
+	  rv = true;
+	} else {
+	  setLocation( x, y );
+	  rv = true;
+	}
+      }
+      int frmState = 0;
+      if( EmuUtil.getBooleanProperty(
+			props,
+			prefix + "window.iconified",
+			false ) )
+      {
+	frmState |= Frame.ICONIFIED;
+      }
+      if( EmuUtil.getBooleanProperty(
+			props,
+			prefix + "window.maximized",
+			false ) )
+      {
+	frmState |= Frame.MAXIMIZED_BOTH;
+      }
+      setExtendedState( frmState != 0 ? frmState : Frame.NORMAL );
+    }
+    return rv;
   }
 
 
@@ -169,9 +221,24 @@ public class BasicFrm extends JFrame implements
   }
 
 
+  public void fireShowErrorMsg( final String msg )
+  {
+    final Component owner = this;
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    BasicDlg.showErrorDlg( owner, msg );
+		  }
+		} );
+  }
+
+
   public String getSettingsPrefix()
   {
-    return getClass().getName();
+    return getClass().getName() + ".";
   }
 
 
@@ -200,10 +267,10 @@ public class BasicFrm extends JFrame implements
       Point location = getLocation();
       if( location != null ) {
 	props.setProperty(
-			prefix + ".window.x",
+			prefix + PROP_WINDOW_X,
 			String.valueOf( location.x ) );
 	props.setProperty(
-			prefix + ".window.y",
+			prefix + PROP_WINDOW_Y,
 			String.valueOf( location.y ) );
       }
 
@@ -212,14 +279,24 @@ public class BasicFrm extends JFrame implements
 	if( size != null ) {
 	  if( (size.width > 0) && (size.height > 0) ) {
 	    props.setProperty(
-			prefix + ".window.width",
+			prefix + PROP_WINDOW_WIDTH,
 			String.valueOf( size.width ) );
 	    props.setProperty(
-			prefix + ".window.height",
+			prefix + PROP_WINDOW_HEIGHT,
 			String.valueOf( size.height ) );
 	  }
 	}
       }
+
+      int frameState = getExtendedState();
+      EmuUtil.setProperty(
+		props,
+		prefix + PROP_WINDOW_ICONIFIED,
+		(frameState & Frame.ICONIFIED) == Frame.ICONIFIED );
+      EmuUtil.setProperty(
+		props,
+		prefix + PROP_WINDOW_MAXIMIZED,
+		(frameState & Frame.MAXIMIZED_BOTH) == Frame.MAXIMIZED_BOTH );
     }
   }
 

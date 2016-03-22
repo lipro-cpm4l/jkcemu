@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,6 +23,7 @@ package jkcemu.net;
 import java.io.*;
 import java.lang.*;
 import java.net.*;
+import jkcemu.Main;
 import jkcemu.base.EmuUtil;
 
 
@@ -80,6 +81,7 @@ public class Ping
   {
     if( this.thread2 == null ) {
       this.thread1 = new Thread(
+			Main.getThreadGroup(),
 			new Runnable()
 			{
 			  @Override
@@ -87,9 +89,11 @@ public class Ping
 			  {
 			    runThread1();
 			  }
-			} );
+			},
+			"JKCEMU ping 1" );
       this.thread1.start();
       this.thread2 = new Thread(
+			Main.getThreadGroup(),
 			new Runnable()
 			{
 			  @Override
@@ -97,7 +101,8 @@ public class Ping
 			  {
 			    runThread2();
 			  }
-			} );
+			},
+			"JKCEMU ping 2" );
       this.thread2.start();
     }
   }

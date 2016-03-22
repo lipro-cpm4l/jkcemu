@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -29,8 +29,8 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
   protected ImgFld      imgFld;
   protected JScrollPane scrollPane;
 
-  private JComboBox comboScale;
-  private boolean   scaleEnabled;
+  private JComboBox<String> comboScale;
+  private boolean           scaleEnabled;
 
 
   protected AbstractImageFrm()
@@ -70,12 +70,12 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
   }
 
 
-  protected JComboBox createScaleComboBox(
+  protected JComboBox<String> createScaleComboBox(
 					int    defaultScale,
 					int... scaleFactors )
   {
     String defaultItem = null;
-    this.comboScale    = new JComboBox();
+    this.comboScale    = new JComboBox<>();
     this.comboScale.setEditable( true );
     for( int f : scaleFactors ) {
       String s = String.format( "%d %%", f );

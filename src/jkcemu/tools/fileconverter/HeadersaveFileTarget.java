@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,13 +16,6 @@ import jkcemu.base.*;
 
 public class HeadersaveFileTarget extends AbstractConvertTarget
 {
-  private static String[] fileTypeItems = {
-				"C - Programm, selbststartend",
-				"M - Programm, nicht selbststartend",
-				"B - BASIC-Programm",
-				"b - Tiny-BASIC-Programm",
-				"E - EPROM-Inhalt" };
-
   private byte[] dataBytes;
   private int    offs;
   private int    len;
@@ -42,34 +35,24 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
 
 
   public static void setFileTypesTo(
-				JComboBox      combo,
-				FileConvertFrm fileConvertFrm )
+				JComboBox<String> combo,
+				FileConvertFrm    fileConvertFrm )
   {
     combo.removeAllItems();
-    for( int i = 0; i < fileTypeItems.length; i++ ) {
-      combo.addItem( fileTypeItems[ i ] );
-    }
+    EmuUtil.addHeadersaveFileTypeItemsTo( combo );
     combo.setEnabled( true );
-    int fileType = fileConvertFrm.getOrgFileType();
+    int fileType = fileConvertFrm.getOrgFileTypeChar();
     if( (fileType > 0x20) && (fileType < 0x7F) ) {
-      boolean found = false;
-      for( String item : fileTypeItems ) {
-	if( item.charAt( 0 ) == fileType ) {
-	  combo.setSelectedItem( item );
-	  found = true;
-	  break;
-	}
-      }
-      if( !found ) {
+      if( !EmuUtil.setSelectedHeadersaveFileTypeItem( combo, fileType ) ) {
 	combo.setSelectedItem( Character.toString( (char) fileType ) );
       }
     } else {
       if( fileConvertFrm.getOrgIsBasicPrg() ) {
-	combo.setSelectedItem( fileTypeItems[ 2 ] );
-      } else if( fileConvertFrm.getOrgStartAddr() > 0 ) {
-	combo.setSelectedItem( fileTypeItems[ 0 ] );
+	EmuUtil.setSelectedHeadersaveFileTypeItem( combo, 'B' );
+      } else if( fileConvertFrm.getOrgStartAddr() >= 0 ) {
+	EmuUtil.setSelectedHeadersaveFileTypeItem( combo, 'C' );
       } else {
-	combo.setSelectedItem( fileTypeItems[ 1 ] );
+	EmuUtil.setSelectedHeadersaveFileTypeItem( combo, 'M' );
       }
     }
   }
@@ -85,7 +68,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
     return 16;
   }
@@ -105,7 +88,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
     int          begAddr   = this.fileConvertFrm.getBegAddr( true );
     int          endAddr   = begAddr + this.len - 1;
     int          startAddr = this.fileConvertFrm.getStartAddr( false );
-    int          fileType  = this.fileConvertFrm.getFileType( true );
+    int          fileType  = this.fileConvertFrm.getFileTypeChar( true );
     String       fileDesc  = this.fileConvertFrm.getFileDesc( true );
     OutputStream out       = null;
     try {
@@ -133,9 +116,9 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
       out.write( 0xD3 );
       int n = 16;
       if( fileDesc != null ) {
-	int p = 0;
-	int l = fileDesc.length();
-	while( (n > 0) && (p < l) ) {
+	int p   = 0;
+	int len = fileDesc.length();
+	while( (n > 0) && (p < len) ) {
 	  out.write( fileDesc.charAt( p++ ) & 0xFF );
 	  --n;
 	}
@@ -163,7 +146,7 @@ public class HeadersaveFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void setFileTypesTo( JComboBox combo )
+  public void setFileTypesTo( JComboBox<String> combo )
   {
     setFileTypesTo( combo, this.fileConvertFrm );
   }

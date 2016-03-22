@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -85,9 +85,39 @@ public abstract class AbstractConvertTarget
   }
 
 
-  public int getMaxFileDescLen()
+  /*
+   * Maximale Laenge des Dateibezeichnung:
+   *  < 0: unbegrenzt
+   *    0: Dateibezeichnung nicht unterstuetzt
+   *  > 0: max. Laenge der Dateibezeichnung
+   */
+  public int getMaxFileDescLength()
   {
-    return 0;		// Dateibeschreibung nicht unterstuetzt
+    return 0;		// Dateiname nicht unterstuetzt
+  }
+
+
+  /*
+   * Maximale Laenge des Dateityps:
+   *  < 0: unbegrenzt
+   *    0: Dateityp nicht unterstuetzt
+   *  > 0: max. Dateityplaenge
+   */
+  public int getMaxFileTypeLength()
+  {
+    return 0;		// Dateityp nicht unterstuetzt
+  }
+
+
+  /*
+   * Maximale Laenge des Kommentars:
+   *  < 0: unbegrenzt
+   *    0: Kommentar nicht unterstuetzt
+   *  > 0: max. kommentarlaenge
+   */
+  public int getMaxRemarkLength()
+  {
+    return 0;		// Kommentar nicht unterstuetzt
   }
 
 
@@ -177,10 +207,10 @@ public abstract class AbstractConvertTarget
   }
 
 
-  public void setFileTypesTo( JComboBox combo )
+  public void setFileTypesTo( JComboBox<String> combo )
   {
-    combo.setEnabled( false );
     combo.removeAllItems();
+    combo.setEnabled( false );
   }
 
 

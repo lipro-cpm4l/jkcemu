@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -79,7 +79,7 @@ public class ROMFileSettingsFld extends AbstractSettingsFld
   public synchronized void addChangeListener( ChangeListener listener )
   {
     if( this.changeListeners == null ) {
-      this.changeListeners = new ArrayList<ChangeListener>();
+      this.changeListeners = new ArrayList<>();
     }
     this.changeListeners.add( listener );
   }
@@ -100,19 +100,7 @@ public class ROMFileSettingsFld extends AbstractSettingsFld
 
   public void setFile( File file )
   {
-    boolean differs = true;
-    File    oldFile = this.fileNameFld.getFile();
-    if( (file != null) && (oldFile != null) ) {
-      if( file.getPath().equals( oldFile.getPath() ) ) {
-	differs = false;
-      }
-    } else {
-      if( (file == null) && (oldFile == null) ) {
-	differs = false;
-      }
-    }
-    if( differs ) {
-      this.fileNameFld.setFile( file );
+    if( this.fileNameFld.setFile( file ) ) {
       this.btnRemove.setEnabled( (file != null) && this.label.isEnabled() );
       if( file != null ) {
 	Main.setLastFile( file, "rom" );

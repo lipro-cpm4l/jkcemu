@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,6 +16,7 @@ import java.lang.*;
 import java.text.*;
 import java.util.*;
 import javax.swing.JOptionPane;
+import jkcemu.Main;
 import jkcemu.audio.AudioOut;
 import jkcemu.base.ScreenFrm;
 import jkcemu.disk.*;
@@ -45,6 +46,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
 
   protected EmuThread         emuThread;
   protected ScreenFrm         screenFrm;
+  protected String            propPrefix;
   protected Color             colorWhite;
   protected Color             colorRedLight;
   protected Color             colorRedDark;
@@ -67,12 +69,16 @@ public abstract class EmuSys implements ImageObserver, Runnable
   private static int[] tmp7SegYPoints = new int[ base7SegHYPoints.length ];
 
 
-  public EmuSys( EmuThread emuThread, Properties props )
+  public EmuSys(
+		EmuThread  emuThread,
+		Properties props,
+		String     propPrefix )
   {
     this.emuThread   = emuThread;
     this.screenFrm   = emuThread.getScreenFrm();
     this.pasteThread = null;
     this.pasteIter   = null;
+    this.propPrefix  = propPrefix;
     createColors( props );
   }
 
@@ -122,6 +128,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
       this.pasteIter = null;
       this.screenFrm.firePastingTextFinished();
     }
+    keyReleased();
   }
 
 
@@ -172,6 +179,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public int getAppStartStackInitValue()
   {
     return -1;
+  }
+
+
+  public int getBasicMemByte( int addr )
+  {
+    return getMemByte( addr, false );
   }
 
 
@@ -319,6 +332,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public Plotter getPlotter()
   {
     return null;
+  }
+
+
+  public String getPropPrefix()
+  {
+    return this.propPrefix;
   }
 
 
@@ -511,6 +530,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public boolean isPastingText()
+  {
+    return this.pasteThread != null;
+  }
+
+
   protected boolean isReloadExtROMsOnPowerOnEnabled( Properties props )
   {
     return EmuUtil.getBooleanProperty(
@@ -569,9 +594,23 @@ public abstract class EmuSys implements ImageObserver, Runnable
    * als die gerade aktuelle Bank geladen werden,
    * muss die Methode ueberschrieben werden.
    */
-  public void loadMemByte( int addr, int value )
+  public void loadIntoMem(
+			int        begAddr,
+			byte[]     data,
+			int        idx,
+			int        len,
+			FileFormat fileFmt,
+			int        fileType )
   {
-    setMemByte( addr & 0xFFFF, value );
+    if( data != null ) {
+      int n   = len;
+      int dst = begAddr;
+      while( (idx < data.length) && (dst < 0x10000) && (n > 0) ) {
+	setMemByte( dst++, data[ idx++ ] );
+	--n;
+      }
+      updSysCells( begAddr, len, fileFmt, fileType );
+    }
   }
 
 
@@ -621,7 +660,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
    * die Moeglichkeit,
    * selbst die Bildschirmausgabe grafisch darzustellen.
    * Wenn nicht (Rueckgabewert false) werden die Methoden getColorCount()
-   * und getColorIndex( x, y ) ausgerufen.
+   * und getColorIndex( x, y ) aufgerufen.
    */
   public boolean paintScreen( Graphics g, int x, int y, int screenScale )
   {
@@ -659,50 +698,23 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
-  protected byte[] readFile( String fileName, int maxLen, String objName )
-  {
-    return EmuUtil.readFile(
-			this.emuThread.getScreenFrm(),
-			fileName,
-			maxLen,
-			objName );
-  }
-
-
-  protected byte[] readFileByProperty(
-				Properties props,
-				String     propName,
-				int        maxLen,
-				String     objName )
-  {
-    return props != null ?
-		readFile(
-			props.getProperty( propName ),
-			maxLen,
-			objName )
-		: null;
-  }
-
-
   protected byte[] readFontByProperty(
 				Properties props,
 				String     propName,
 				int        maxLen )
   {
-    return readFileByProperty( props, propName, maxLen, "Zeichensatzdatei" );
+    return props != null ?
+		EmuUtil.readFile(
+			this.emuThread.getScreenFrm(),
+			props.getProperty( propName ),
+			true,
+			maxLen,
+			"Zeichensatzdatei" )
+		: null;
   }
 
 
-  protected byte[] readROMByProperty(
-				Properties props,
-				String     propName,
-				int        maxLen )
-  {
-    return readFileByProperty( props, propName, maxLen, "ROM-Datei" );
-  }
-
-
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     return 0xFF;
   }
@@ -717,6 +729,17 @@ public abstract class EmuSys implements ImageObserver, Runnable
   protected byte[] readResource( String resource )
   {
     return EmuUtil.readResource( this.screenFrm, resource );
+  }
+
+
+  protected byte[] readROMFile( String fileName, int maxLen, String objName )
+  {
+    return EmuUtil.readFile(
+			this.emuThread.getScreenFrm(),
+			fileName,
+			true,
+			maxLen,
+			objName );
   }
 
 
@@ -945,6 +968,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public boolean setBasicMemByte( int addr, int value )
+  {
+    return setMemByte( addr, value );
+  }
+
+
   public void setFloppyDiskDrive( int idx, FloppyDiskDrive drive )
   {
     // leer
@@ -1025,7 +1054,10 @@ public abstract class EmuSys implements ImageObserver, Runnable
       if( !text.isEmpty() ) {
 	cancelPastingText();
 	this.pasteIter   = new StringCharacterIterator( text );
-	this.pasteThread = new Thread( this );
+	this.pasteThread = new Thread(
+				Main.getThreadGroup(),
+				this,
+				"JKCEMU text paste" );
 	this.pasteThread.start();
 	done = true;
       }
@@ -1108,6 +1140,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public boolean supportsStereoSound()
+  {
+    return false;
+  }
+
+
   public boolean supportsUSB()
   {
     return (getVDIP() != null);
@@ -1120,17 +1158,23 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
-  public void updSysCells(
-		int    begAddr,
-		int    len,
-		Object fileFmt,
-		int    fileType )
+  public void updDebugScreen()
   {
     // leer
   }
 
 
-  public void writeIOByte( int port, int value )
+  public void updSysCells(
+		int        begAddr,
+		int        len,
+		FileFormat fileFmt,
+		int        fileType )
+  {
+    // leer
+  }
+
+
+  public void writeIOByte( int port, int value, int tStates )
   {
     // leer
   }

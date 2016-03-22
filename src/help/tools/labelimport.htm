@@ -1,11 +1,16 @@
 <html>
 <body>
- <h1>Importieren von Marken und Haltepunkten</h1>
+ <h1>Importieren von Marken</h1>
   <a href="debugger.htm">Debugger</a> und
   <a href="reassembler.htm">Reassembler</a> bieten die M&ouml;glichkeit,
   eine Markentabelle (z.B. von einem Assembler) zu importieren.
-  Im Debugger wird dabei f&uuml;r jede Marke ein Haltepunkt angelegt,
-  so dass dies auch einem Import von Haltepunkten gleichkommt.
+  Im Debugger wird dabei f&uuml;r jede Marke ein Halte-/Log-Punkt angelegt,
+  so dass dies auch einem Import von Halte-/Log-Punkten gleichkommt.
+  Da man aber &uuml;blicherweise nicht an jeder Marke anhalten m&ouml;chte,
+  sind die importierten Halte-/Log-Punkte standardm&auml;&szlig;ig
+  erstmal deaktiviert, d.h., das Anhalten und das Loggen ist ausgeschaltet.
+  Bei Bedarf m&uuml;ssen Sie die einzelnen Halte-/Log-Punkte
+  manuell aktivieren.
  <br/><br/>
   Die Markentabelle muss keinem strengen Format entsprechen:
   Pro Zeile werden die ersten beiden Ziffern-/Buchstabengruppen ausgewertet.
@@ -70,7 +75,7 @@
  <br/><br/>
   Enth&auml;lt eine Zeile nur eine vierstellige hexadezimale Zahl
   ohne eine Marke, wird Sie in den Debugger trotzdem importiert
-  und dort ein Haltepunkt angelegt.
+  und dort ein Halte-/Log-Punkt angelegt.
   Der Reassembler dagegen kann mit einer einzelnen Adresse nichts
   anfangen und ignoriert so eine Zeile.
  <br/><br/>

@@ -1,0 +1,219 @@
+<html>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Ein-/Ausgabeger&auml;te</h2>
+  <ul>
+   <li><a href="devices.htm#crt">1. Bildschirm&nbsp;(CRT:)</a></li>
+   <li><a href="devices.htm#lpt">2. Drucker&nbsp;(LPT:)</a></li>
+   <li>
+    <a href="devices.htm#file">3. Dateisystem&nbsp;(A:&nbsp;bis&nbsp;P:)</a>
+   </li>
+   <li>
+    <a href="devices.htm#vdip">4. USB-Speicher an VDIP-Modul&nbsp;(V:)</a>
+   </li>
+ </ul>
+ <br/>
+  Ein- und Ausgaben von Text und Daten erfolgen &uuml;ber Ger&auml;te.
+  Am h&auml;ufigsten verwendet werden Tastatur und Bildschirm.
+  Diese beiden Ger&auml;te k&ouml;nnen mit verschiedenen Anweisungen
+  und Funktionen bedient werden,
+  z.B. <a href="instructions.htm#input">INPUT</a>,
+  <a href="functions.htm#inkey$">INKEY$</a> und
+  <a href="instructions.htm#print">PRINT</a>.
+  Bei einigen Zielsystemen wird auch ein Drucker unterst&uuml;tzt,
+  auf dem Sie mit der Anweisung <a href="instructions.htm#lprint">LPRINT</a>
+  Ausgaben t&auml;tigen k&ouml;nnen.
+  Neben diesen speziellen Anweisungen ist es aber auch m&ouml;glich,
+  Bildschirm und Drucker &uuml;ber einen Ausgabekanal anzusprechen.
+  Mit allen anderen Ger&auml;ten l&auml;sst sich sogar nur &uuml;ber
+  Ein-/Ausgabekan&auml;le kommunizieren, die mit der Anweisung
+  <a href="instructions.htm#open">OPEN</a> ge&ouml;ffnet werden.
+ <br/><br/>
+  Zur&uuml;ck zur Anweisung OPEN:
+  Wenn damit ein Ein-/Ausgabekanal ge&ouml;ffnet werden soll,
+  ist der Name des Ger&auml;tes und/oder der Name einer Datei anzugeben.
+  Der Ger&auml;tename kann sowohl gro&szlig; als auch klein geschrieben
+  werden.
+  Manche Ger&auml;te unterst&uuml;tzen keine Dateinamen,
+  d.h., bei diesen wird nur der Ger&auml;tename angegeben und
+  das Ger&auml;t als solches ge&ouml;ffnet.
+  Andere Ger&auml;te bieten Zugriff auf Dateien.
+  Hier muss hinter dem Ger&auml;tenamen, d.h. nach dem Doppelpunkt,
+  ein Dateiname folgen.
+  Abh&auml;ngig vom konkreten Ger&auml;t kann der Dateiname auch
+  einen Pfad enthalten.
+ <br/><br/>
+  Wenn kein Ger&auml;t angegeben wird, d.h.,
+  wenn der angegebene Text keinen Doppelpunkt enth&auml;lt,
+  werden die unterst&uuml;tzten Ger&auml;te,
+  oder genauer gesagt die zugeh&ouml;rigen Treiber,
+  der Reihe nach durchgegangen und versucht,
+  damit die Datei zu &ouml;ffnen.
+  Standardm&auml;&szlig; enth&auml;lt das kompilierte Programm alle
+  sinnvollen Treiber.
+  Wenn Sie jedoch wissen, dass z.B. ein bestimmter Treiber
+  nicht ben&ouml;tigt wird, k&ouml;nnen Sie diesen
+  in den <a href="options.htm">Compiler-Optionen</a> ausschalten.
+ <br/><br/>
+  Es ist prinzipiell auch m&ouml;glich,
+  Ger&auml;te unter Umgehung der Ein-/Ausgabekan&auml;le und
+  je nach Hardware direkt mit <a href="functions.htm#peek">PEEK</a>-
+  und <a href="instructions.htm#poke">POKE</a>- bzw. mit
+  <a href="functions.htm#in">IN</a>- und
+  <a href="instructions.htm#out">OUT</a>-Befehlen anzusprechen.
+  Doch das ist nur f&uuml;r spezielle Anwendungen sinnvoll
+  und erfordert auch spezielles Wissen.
+  Aus diesem Grund wird darauf nicht weiter eingegangen.
+ <br/><br/>
+  Es folgt eine Beschreibung der vom JKCEMU-BASIC-Compiler
+  unterst&uuml;tzten Ger&auml;te:
+ <br/><br/>
+
+ <h3><a name="crt">1. Bildschirm&nbsp;(CRT:)</a></h3>
+  Ein Ausgabekanal auf das Ger&auml;t <em>CRT:</em> dient zur Ausgabe
+  von Text auf dem Bildschirm.
+  Grafische Ausgaben sind damit nicht m&ouml;glich.
+  Der Sinn, einen Ausgabekanal auf den Bildschirm zu &ouml;ffnen,
+  liegt darin, Programme schreiben zu k&ouml;nnen,
+  die die gleichen Ausgaben entweder parallel oder umschaltbar
+  auf mehreren Ger&auml;ten erm&ouml;glichen.
+  Man braucht dann die Logik zur Erzeugung der Ausgaben nur einmal
+  zu implementieren und gibt nur in den OPEN-Anweisung an,
+  auf welchem Ger&auml;t die Ausgabe erfolgen soll.
+ <br/><br/>
+
+ <h3><a name="lpt">2. Drucker&nbsp;(LPT:)</a></h3>
+  &Auml;hnlich wie beim Bildschirm ist es mit dem Ger&auml;t
+  <em>LPT:</em> m&ouml;glich,
+  einen Ausgabekanal auf den Drucker zu &ouml;ffnen.
+  Dies ist allerdings nur m&ouml;glich,
+  wenn das Zielsystem einen Drucker unterst&uuml;tzt.
+ <br/><br/>
+
+ <h3>
+  <a name="file">3. Dateisystem&nbsp;(A:&nbsp;bis&nbsp;P:)</a>
+ </h3>
+  Das Zielsystem <a href="targets.htm#cpm">CP/M-kompatibel</a>
+  bietet als einziges Zugriff auf ein Dateisystem.
+  Dazu gibt man bei der <a href="instructions.htm#open">OPEN</a>-Anweisung
+  das Laufwerk (<em>A:</em> bis <em>P:</em>) gefolgt von dem
+  Namen der zu &ouml;ffnenden Datei an.
+  Das Laufwerk repr&auml;sentiert das Ger&auml;t und kann weggelassen werden.
+  In dem Fall wird die Datei auf dem aktuellen Laufwerk ge&ouml;ffnet.
+ <br/><br/>
+  Zwischen dem Laufwerksbuchstaben und dem Doppelpunkt kann ein
+  Benutzerbereich angegeben werden.
+  Das ist eine numerische Zahl zwischen&nbsp;0 und 15.
+  Die Datei wird dann in dem angegeben Benutzerbereich angelegt,
+  anderenfalls im aktuellen Benutzerbereich
+  (siehe CP/M-Kommando&nbsp;<em>USER</em>).
+ <br/><br/>
+  Beispiel ohne Angabe eines Benutzerbereichs:
+ <br/><br/>
+  &nbsp;&nbsp;<tt>OPEN "A:DATEI.TXT" FOR INPUT AS #1</tt>
+ <br/><br/>
+  Beispiel mit Angabe eines Benutzerbereichs:
+ <br/><br/>
+  &nbsp;&nbsp;<tt>OPEN "A12:DATEI.TXT" FOR INPUT AS #1</tt>
+ <br/><br/>
+  Dateien in einem CP/M-kompatiblen System werden immer in Bl&ouml;cken
+  zu 128&nbsp;Byte gespeichert,
+  d.h., die Dateil&auml;nge ist auch nur in 128-Byte-Schritten m&ouml;glich.
+  Um aber trotzdem Dateioperationen mit einer Byte-exakte Dateil&auml;nge
+  zu erm&ouml;glichen,
+  wird das Byte&nbsp;1Ah als Dateiendezeichen verwendet.
+  Dieses Byte wird deshalb automatisch beim Schlie&szlig;en
+  einer zum Schreiben ge&ouml;ffneten Datei angeh&auml;ngt.
+  Umgekehrt kann eine Datei nur bis zum Byte&nbsp;1Ah gelesen werden.
+  Ein Null-Byte wird ebenfalls als Dateiende gewertet.
+ <br/><br/>
+  Das Dateiendezeichen wirkt sich auch auf die Betriebsart&nbsp;APPEND
+  (Anh&auml;ngen) aus.
+  Die Datei wird ge&ouml;ffnet und bis zum ersten Auftreten eines
+  00h- oder 1Ah-Bytes gelesen.
+  An genau dieser Position beginnt dann das Schreiben.
+ <br/><br/>
+  Die Verwendung der Bytes&nbsp;00h und 1Ah als Dateiendezeichen hat aber
+  den Nachteil, das man diese Bytes nicht lesen kann und somit
+  Einschr&auml;nkungen beim Zugriff auf Bin&auml;rdateien hat.
+  Ben&ouml;tigen Sie vollen Zugriff auf Bin&auml;rdateien,
+  m&uuml;ssen Sie diese im Bin&auml;rmodus &ouml;ffnen
+  (siehe Schl&uuml;selwort&nbsp;BINARY in der Anweisung
+  <a href="instructions.htm#open">OPEN</a>).
+  Der Bin&auml;rmodus verwendet keine Dateiendezeichen,
+  d.h. es wird weder ein solches Zeichen automatisch angeh&auml;gt
+  noch beim Lesen eines speziellen Zeichens ein Dateiende erkennt.
+ <br/><br/>
+
+ <h3>
+  <a name="vdip">4. USB-Speicher an VDIP-Modul&nbsp;(V:)</a>
+ </h3>
+  Das Ger&auml;t steht f&uuml;r einen FAT-formatierten USB-Speicher,
+  der an Port&nbsp;2 eines VDIP-Moduls angeschlossen ist.
+  Der Ger&auml;tename <em>V:</em> hat absichtlich die gleiche Form
+  wie die aus der CP/M- und DOS-Welt bekannten Laufwerksbuchstaben,
+  da es wie die dortigen Laufwerke zur Speicherung von Dateien dient
+  und somit auch wie ein Laufwerk betrachtet werden kann.
+ <br/><br/>
+  Der Dateiname kann, muss aber nicht, mit einem Pfad beginnen.
+  Dieser Pfad ist sowohl absolut (Trennzeichen am Anfang)
+  oder relativ (kein Trennzeichen am Anfang) m&ouml;glich.
+  Als Trennzeichen sind sowohl der Backslash (\) als auch
+  der Slash (/) m&ouml;glich.
+  Die Tabelle zeigt einige Beispiele:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <td nowrap="nowrap"><tt>V:abc.txt</tt></td>
+    <td>
+     Dateiname ohne Pfad,<br/>
+     Die Datei wird im aktuellen Verzeichnis gesucht.
+    </td>
+   </tr>
+   <tr>
+    <td nowrap="nowrap"><tt>V:\abc.txt</tt></td>
+    <td>
+     Dateiname mit absoluter Pfadangabe auf das Wurzelverzeichnis
+    </td>
+   </tr>
+   <tr>
+    <td nowrap="nowrap"><tt>V:/xxx/abc.txt</tt></td>
+    <td>Dateiname mit absoluter Pfadangabe</td>
+   </tr>
+   <tr>
+    <td nowrap="nowrap"><tt>V:xxx/abc.txt</tt></td>
+    <td>
+     Dateiname mit relativer Pfadangabe,<br/>
+     Die Datei wird vom aktuellen Verzeichnis ausgehend
+     im Unterverzeichnis <em>xxx</em> gesucht.
+    </td>
+   </tr>
+  </table>
+ <br/>
+  <b>Achtung!</b> Systembedingt wird beim &Ouml;ffnen einer Datei
+  mit Pfadangabe zuerst in das Verzeichnis gewechselt und
+  danach die Datei ge&ouml;ffnet.
+  Nach Schlie&szlig;en der Datei,
+  aber auch wenn die Datei nicht ge&ouml;ffnet werden konnte,
+  bleibt dieses Verzeichnis weiterhin als aktuelles Verzeichnis
+  im VDIP-Modul gesetzt, d.h., wenn danach eine andere Datei
+  ohne Pfad oder mit relativer Pfadangabe ge&ouml;ffnet werden soll,
+  wird sie wahrscheinlich nicht gefunden,
+  da nun in einem anderen bzw. von einem anderen Verzeichnis aus
+  gesucht wird.
+ <br/><br/>
+  <b>Hinweis!</b>
+  Da Dateien auf dem USB-Speicher eine Byte-exakte L&auml;nge haben,
+  ist die Verwendung von speziellen Dateiendezeichen wie beim weiter
+  oben beschriebenen CP/M-kompatiblen Dateisysten nicht n&ouml;tig.
+  Aus diesem Grund gibt es auch keine Unterscheidung zwischen einem
+  Text- und einem Bin&auml;rmodus, d.h.,
+  das Schl&uuml;sselwort&nbsp;<em>BINARY</em> in der Anweisung
+  <a href="instructions.htm#open">OPEN</a> hat keine Wirkung.
+  Die Datei wird immer in einer Art Bin&auml;rmodus ge&ouml;ffnet.
+  Trotzdem sollten Sie aus Gr&uuml;nden der Portabilit&auml;t
+  das Schl&uuml;sselwort <em>BINARY</em> mit angeben,
+  wenn es sich um Bin&auml;rdateien handelt.
+</body>
+</html>

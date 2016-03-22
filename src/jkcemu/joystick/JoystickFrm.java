@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -154,6 +154,24 @@ public class JoystickFrm extends BasicFrm
       e.consume();
     } else {
       super.mousePressed( e );
+    }
+  }
+
+
+  @Override
+  public void windowActivated( WindowEvent e )
+  {
+    if( e.getWindow() == this ) {
+      Main.setWindowActivated( Main.WINDOW_MASK_JOYSTICK );
+    }
+  }
+
+
+  @Override
+  public void windowDeactivated( WindowEvent e )
+  {
+    if( e.getWindow() == this ) {
+      Main.setWindowDeactivated( Main.WINDOW_MASK_JOYSTICK );
     }
   }
 

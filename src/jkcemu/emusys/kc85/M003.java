@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -43,10 +43,10 @@ public class M003 extends AbstractKC85Module implements
   @Override
   public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    buf.append( "<h2>CTC (IO-Adressen 0C-0F)</h2>\n" );
+    buf.append( "<h2>CTC (E/A-Adressen 0C-0F)</h2>\n" );
     this.ctc.appendInterruptStatusHTMLTo( buf );
     buf.append( "<br/><br/>\n"
-		+ "<h2>SIO (IO-Adressen 08-0B)</h2>\n" );
+		+ "<h2>SIO (E/A-Adressen 08-0B)</h2>\n" );
     this.sio.appendInterruptStatusHTMLTo( buf );
   }
 
@@ -138,7 +138,7 @@ public class M003 extends AbstractKC85Module implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = -1;
     if( this.enabled ) {
@@ -163,7 +163,7 @@ public class M003 extends AbstractKC85Module implements
 	case 0x0D:
 	case 0x0E:
 	case 0x0F:
-	  rv = this.ctc.read( port & 0x03 );
+	  rv = this.ctc.read( port & 0x03, tStates );
 	  break;
       }
     }
@@ -186,7 +186,7 @@ public class M003 extends AbstractKC85Module implements
 
 
   @Override
-  public boolean writeIOByte( int port, int value )
+  public boolean writeIOByte( int port, int value, int tStates )
   {
     boolean rv = false;
     if( this.enabled ) {
@@ -215,7 +215,7 @@ public class M003 extends AbstractKC85Module implements
 	case 0x0D:
 	case 0x0E:
 	case 0x0F:
-	  this.ctc.write( port & 0x03, value );
+	  this.ctc.write( port & 0x03, value, tStates );
 	  rv = true;
 	  break;
       }

@@ -1,15 +1,15 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Basisklasse fuer einen Haltepunkt
+ * Basisklasse fuer einen Halte-/Log-Punkt
  */
 
 package jkcemu.tools.debugger;
 
 import java.lang.*;
-import z80emu.Z80Breakpoint;
+import z80emu.*;
 
 
 public abstract class AbstractBreakpoint
@@ -17,16 +17,18 @@ public abstract class AbstractBreakpoint
 				Comparable<AbstractBreakpoint>,
 				Z80Breakpoint
 {
-  private static final String DEFAULT_TEXT = "<unbekannt>";
+  private DebugFrm debugFrm;
+  private String   text;
+  private boolean  stopEnabled;
+  private boolean  logEnabled;
 
-  private String  text;
-  private boolean enabled;
 
-
-  protected AbstractBreakpoint()
+  protected AbstractBreakpoint( DebugFrm debugFrm )
   {
-    this.text    = DEFAULT_TEXT;
-    this.enabled = true;
+    this.debugFrm    = debugFrm;
+    this.text        = "";
+    this.stopEnabled = false;
+    this.logEnabled  = false;
   }
 
 
@@ -58,21 +60,55 @@ public abstract class AbstractBreakpoint
   }
 
 
-  public boolean isEnabled()
+  public boolean isLogEnabled()
   {
-    return this.enabled;
+    return this.logEnabled;
+  }
+
+
+  public boolean isStopEnabled()
+  {
+    return this.stopEnabled;
+  }
+
+
+  public boolean matches( Z80CPU cpu, Z80InterruptSource iSource )
+  {
+    boolean rv = false;
+    if( this.logEnabled || this.stopEnabled ) {
+      if( matchesImpl( cpu, iSource ) ) {
+	if( this.logEnabled ) {
+	  this.debugFrm.appendLogEntry( iSource );
+	}
+	if( this.stopEnabled ) {
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  protected abstract boolean matchesImpl(
+				Z80CPU             cpu,
+				Z80InterruptSource iSource );
+
+
+  public void setLogEnabled( boolean state )
+  {
+    this.logEnabled = state;
+  }
+
+
+  public void setStopEnabled( boolean state )
+  {
+    this.stopEnabled = state;
   }
 
 
   protected void setText( String text )
   {
-    this.text = (text != null ? text : DEFAULT_TEXT);
-  }
-
-
-  public void setEnabled( boolean state )
-  {
-    this.enabled = state;
+    this.text = (text != null ? text : "");
   }
 
 
@@ -103,7 +139,6 @@ public abstract class AbstractBreakpoint
   @Override
   public String toString()
   {
-    return this.enabled ? this.text : String.format( "( %s )", this.text );
+    return this.text;
   }
 }
-

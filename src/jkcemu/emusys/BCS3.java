@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,6 +12,7 @@ import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.*;
 import jkcemu.base.*;
+import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
@@ -98,6 +99,8 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	"NEW",     null,     "RANDOMIZE", null,
 	"READ",    null,     "DATA",      null };
 
+  private static final String PROP_PREFIX = "jkcemu.bcs3.";
+
   private static int[] endInstBytesSE24 = { 0x0F, 0x27, 0xDE, 0x1E };
   private static int[] endInstBytesSE31 = { 0x0F, 0x27, 0xCE, 0x1E };
   private static int[] endInstBytesSP33 = { 0x00, 0x27, 0xCA, 0x1E };
@@ -112,8 +115,9 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   private static byte[] mcEdtitorSE31  = null;
 
   private Z80CTC  ctc;
+  private String  osFile;
+  private byte[]  osBytes;
   private byte[]  fontBytes;
-  private byte[]  rom0000;
   private byte[]  romF000;
   private byte[]  ram;
   private int     ramEndAddr;
@@ -130,18 +134,18 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
   public BCS3( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
-    this.romF000 = null;
-    this.rom0000 = readROMByProperty(
-    			props,
-			"jkcemu.bcs3.os.file",
-			0x1000 );
-    this.fontBytes = readFontByProperty(
-			props,
-			"jkcemu.bcs3.font.file",
-			0x0800 );
+    super( emuThread, props, PROP_PREFIX );
+    this.osFile    = null;
+    this.osBytes   = null;
+    this.fontBytes = null;
+    this.romF000   = null;
+    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
+      loadROMs( props );
+    }
 
-    String version = EmuUtil.getProperty( props, "jkcemu.bcs3.os.version" );
+    String version = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "os.version" );
     if( version.equals( "3.1" ) ) {
       this.osVersion       = 31;
       this.screenRowHeight = 8;
@@ -157,25 +161,27 @@ public class BCS3 extends EmuSys implements Z80CTCListener
       if( is40CharsPerLineMode( props ) ) {
 	this.screenCharCols  = 40;
 	this.screenRowOffset = 41;
-	if( this.rom0000 == null ) {
+	if( this.osBytes == null ) {
 	  if( osBytesSE31_40 == null ) {
 	    osBytesSE31_40 = readResource( "/rom/bcs3/se31_40.bin" );
 	  }
-	  this.rom0000 = osBytesSE31_40;
+	  this.osBytes = osBytesSE31_40;
 	}
       } else {
 	this.screenCharCols  = 29;
 	this.screenRowOffset = 30;
-	if( this.rom0000 == null ) {
+	if( this.osBytes == null ) {
 	  if( osBytesSE31_29 == null ) {
 	    osBytesSE31_29 = readResource( "/rom/bcs3/se31_29.bin" );
 	  }
-	  this.rom0000 = osBytesSE31_29;
+	  this.osBytes = osBytesSE31_29;
 	}
-	if( mcEdtitorSE31 == null ) {
-	  mcEdtitorSE31 = readResource( "/rom/bcs3/se31mceditor.bin" );
+	if( this.romF000 == null ) {
+	  if( mcEdtitorSE31 == null ) {
+	    mcEdtitorSE31 = readResource( "/rom/bcs3/se31mceditor.bin" );
+	  }
+	  this.romF000 = mcEdtitorSE31;
 	}
-	this.romF000 = mcEdtitorSE31;
       }
     } else if( version.equals( "3.3" ) ) {
       this.osVersion       = 33;
@@ -186,11 +192,11 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	}
 	this.fontBytes = fontBytesSP33;
       }
-      if( this.rom0000 == null ) {
+      if( this.osBytes == null ) {
 	if( osBytesSP33_29 == null ) {
 	  osBytesSP33_29 = readResource( "/rom/bcs3/sp33_29.bin" );
 	}
-	this.rom0000 = osBytesSP33_29;
+	this.osBytes = osBytesSP33_29;
       }
       this.screenOffset     = 0x00B4;
       this.screenBaseHeight = 232;
@@ -206,11 +212,11 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	}
 	this.fontBytes = fontBytesSE24;
       }
-      if( this.rom0000 == null ) {
+      if( this.osBytes == null ) {
 	if( osBytesSE24 == null ) {
 	  osBytesSE24 = readResource( "/rom/bcs3/se24.bin" );
 	}
-	this.rom0000 = osBytesSE24;
+	this.osBytes = osBytesSE24;
       }
       this.screenOffset     = 0x0050;
       this.screenBaseHeight = 184;
@@ -349,8 +355,14 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   {
     return (EmuUtil.getProperty(
 			props,
-			"jkcemu.bcs3.os.version" ).equals( "3.1" )
+			PROP_PREFIX + "os.version" ).equals( "3.1" )
 		&& is40CharsPerLineMode( props )) ? 3500 : 2500;
+  }
+
+
+  public static boolean getDefaultSwapKeyCharCase()
+  {
+    return false;
   }
 
 
@@ -385,23 +397,30 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 			props,
 			"jkcemu.system" ).equals( "BCS3" );
     if( rv ) {
-      String version = EmuUtil.getProperty( props, "jkcemu.bcs3.os.version" );
+      rv = TextUtil.equals(
+		this.osFile,
+		EmuUtil.getProperty( props,  "jkcemu.z1013.os.file" ) );
+    }
+    if( rv ) {
+      String version = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "os.version" );
       if( version.equals( "3.1" ) ) {
 	if( is40CharsPerLineMode( props ) ) {
-	  if( this.rom0000 != osBytesSE31_40 ) {
+	  if( this.osBytes != osBytesSE31_40 ) {
 	    rv = false;
 	  }
 	} else {
-	  if( this.rom0000 != osBytesSE31_29 ) {
+	  if( this.osBytes != osBytesSE31_29 ) {
 	    rv = false;
 	  }
 	}
       } else if( version.equals( "3.3" ) ) {
-	if( this.rom0000 != osBytesSP33_29 ) {
+	if( this.osBytes != osBytesSP33_29 ) {
 	  rv = false;
 	}
       } else {
-	if( this.rom0000 != osBytesSE24 ) {
+	if( this.osBytes != osBytesSE24 ) {
 	  rv = false;
 	}
       }
@@ -436,7 +455,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   @Override
   public int getAppStartStackInitValue()
   {
-    return this.rom0000 == this.osBytesSE24 ? 0x3C50 : 0x3C80;
+    return this.osBytes == this.osBytesSE24 ? 0x3C50 : 0x3C80;
   }
 
 
@@ -506,7 +525,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     return new CharRaster(
 			this.screenCharCols,
 			this.screenCharRows,
-			this.rom0000 == osBytesSE24 ? 16 : 8,
+			this.osBytes == osBytesSE24 ? 16 : 8,
 			8,
 			8,
 			0 );
@@ -545,12 +564,12 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   public Integer getLoadAddr()
   {
     Integer rv = null;
-    if( this.rom0000 == osBytesSE24 ) {
+    if( this.osBytes == osBytesSE24 ) {
       rv = new Integer( 0x3DA1 );
     }
-    else if( (this.rom0000 == osBytesSE31_29)
-	     || (this.rom0000 == osBytesSE31_40)
-	     || (this.rom0000 == osBytesSP33_29) )
+    else if( (this.osBytes == osBytesSE31_29)
+	     || (this.osBytes == osBytesSE31_40)
+	     || (this.osBytes == osBytesSP33_29) )
     {
       rv = new Integer( getMemWord( 0x3C00 ) );
     }
@@ -604,9 +623,9 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	  rv = (int) (this.ram[ idx ] & 0xFF);
 	}
       }
-      else if( this.rom0000 != null ) {
-	if( addr < this.rom0000.length ) {
-	  rv = (int) this.rom0000[ addr ] & 0xFF;
+      else if( this.osBytes != null ) {
+	if( addr < this.osBytes.length ) {
+	  rv = (int) this.osBytes[ addr ] & 0xFF;
 	}
       }
     }
@@ -754,7 +773,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return false;
+    return getDefaultSwapKeyCharCase();
   }
 
 
@@ -860,19 +879,19 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     String[] tokens     = null;
     int      addr       = -1;
     int      endLineNum = -1;
-    if( this.rom0000 == osBytesSE24 ) {
+    if( this.osBytes == osBytesSE24 ) {
       addr       = 0x3DA1;
       endLineNum = 9999;
       tokens     = se24Tokens;
     }
-    else if( (this.rom0000 == osBytesSE31_29)
-	     || (this.rom0000 == osBytesSE31_40) )
+    else if( (this.osBytes == osBytesSE31_29)
+	     || (this.osBytes == osBytesSE31_40) )
     {
       addr       = getMemWord( 0x3C00 );
       endLineNum = 9999;
       tokens     = se31Tokens;
     }
-    else if( this.rom0000 == osBytesSP33_29 ) {
+    else if( this.osBytes == osBytesSP33_29 ) {
       addr       = getMemWord( 0x3C00 );
       endLineNum = 9984;
       tokens     = sp33Tokens;
@@ -953,11 +972,11 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (port & 0x04) == 0 ) {		// A2=0
-      rv = this.ctc.read( port & 0x03 );
+      rv = this.ctc.read( port & 0x03, tStates );
     }
     return rv;
   }
@@ -967,11 +986,16 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
+	&& isReloadExtROMsOnPowerOnEnabled( props ) )
+    {
+      loadROMs( props );
+    }
+    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
 	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
     {
-      if( (this.rom0000 == osBytesSE31_29)
-	  || (this.rom0000 == osBytesSE31_40)
-	  || (this.rom0000 == osBytesSP33_29) )
+      if( (this.osBytes == osBytesSE31_29)
+	  || (this.osBytes == osBytesSE31_40)
+	  || (this.osBytes == osBytesSP33_29) )
       {
 	this.screenCharRows = 3;
       }
@@ -989,17 +1013,17 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   {
     int begAddr    = -1;
     int endLineNum = -1;
-    if( this.rom0000 == osBytesSE24 ) {
+    if( this.osBytes == osBytesSE24 ) {
       begAddr    = 0x3DA1;
       endLineNum = 9999;
     }
-    else if( (this.rom0000 == osBytesSE31_29)
-	     || (this.rom0000 == osBytesSE31_40) )
+    else if( (this.osBytes == osBytesSE31_29)
+	     || (this.osBytes == osBytesSE31_40) )
     {
       begAddr    = getMemWord( 0x3C00 );
       endLineNum = 9999;
     }
-    else if( this.rom0000 == osBytesSP33_29 ) {
+    else if( this.osBytes == osBytesSP33_29 ) {
       begAddr    = getMemWord( 0x3C00 );
       endLineNum = 9984;
     }
@@ -1028,10 +1052,9 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 		this.screenFrm,
 		begAddr,
 		endAddr - 1,
-		'B',
-		false,          // kein KC-BASIC
-		false,		// kein RBASIC
-		"BASIC-Programm speichern" )).setVisible( true );
+		"BASIC-Programm speichern",
+		SaveDlg.BasicType.OTHER_BASIC,
+		EmuUtil.getBinaryFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -1053,9 +1076,9 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	int idx = addr - 0x1C00;
 	if( (idx >= 0) && (idx < this.ram.length) ) {
 	  this.ram[ idx ] = (byte) value;
-	  if( ((this.rom0000 == osBytesSE31_29)
-	       || (this.rom0000 == osBytesSE31_40)
-	       || (this.rom0000 == osBytesSP33_29))
+	  if( ((this.osBytes == osBytesSE31_29)
+	       || (this.osBytes == osBytesSE31_40)
+	       || (this.osBytes == osBytesSP33_29))
 	      && (addr == 0x1C06) )
 	  {
 	    int nRows = (int) (this.ram[ 6 ] & 0xFF);
@@ -1128,24 +1151,24 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
   @Override
   public void updSysCells(
-                        int    begAddr,
-                        int    len,
-                        Object fileFmt,
-                        int    fileType )
+                        int        begAddr,
+                        int        len,
+                        FileFormat fileFmt,
+                        int        fileType )
   {
     int   prgBegAddr   = -1;
     int[] endInstBytes = null;
-    if( this.rom0000 == osBytesSE24 ) {
+    if( this.osBytes == osBytesSE24 ) {
       prgBegAddr   = 0x3DA1;
       endInstBytes = endInstBytesSE24;
     }
-    else if( (this.rom0000 == osBytesSE31_29)
-	     || (this.rom0000 == osBytesSE31_40) )
+    else if( (this.osBytes == osBytesSE31_29)
+	     || (this.osBytes == osBytesSE31_40) )
     {
       prgBegAddr   = getMemWord( 0x3C00 );
       endInstBytes = endInstBytesSE31;
     }
-    else if( this.rom0000 == osBytesSP33_29 ) {
+    else if( this.osBytes == osBytesSP33_29 ) {
       prgBegAddr   = getMemWord( 0x3C00 );
       endInstBytes = endInstBytesSP33;
     }
@@ -1155,14 +1178,15 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     {
       boolean state = false;
       if( fileFmt != null ) {
-	if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+	if( fileFmt.equals( FileFormat.HEADERSAVE ) ) {
 	  if( fileType == 'B' ) {
 	    state = true;
 	  }
 	}
-	else if( fileFmt.equals( FileInfo.KCC )
-		 || fileFmt.equals( FileInfo.INTELHEX )
-		 || fileFmt.equals( FileInfo.BIN ) )
+	else if( fileFmt.equals( FileFormat.BASIC_PRG )
+		 || fileFmt.equals( FileFormat.KCC )
+		 || fileFmt.equals( FileFormat.INTELHEX )
+		 || fileFmt.equals( FileFormat.BIN ) )
 	{
 	  state = true;
 	}
@@ -1183,7 +1207,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	  }
 	  if( b == endInstBytes.length ) {
 	    int prgLen = addr - begAddr + endInstBytes.length;
-	    if( this.rom0000 == osBytesSE24 ) {
+	    if( this.osBytes == osBytesSE24 ) {
 	      this.emuThread.setMemWord( 0x3C06, prgLen );
 	    } else {
 	      this.emuThread.setMemWord( 0x3C02, prgLen );
@@ -1197,10 +1221,10 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     if( (port & 0x04) == 0 )		// A2=0 
-      this.ctc.write( port & 0x03, value );
+      this.ctc.write( port & 0x03, value, tStates );
   }
 
 
@@ -1224,15 +1248,16 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   {
     return EmuUtil.getProperty(
 		props,
-		"jkcemu.bcs3.ram.kbyte" ).equals( "17" ) ? 0x7FFF : 0x3FFF;
+		PROP_PREFIX + "ram.kbyte" ).equals( "17" ) ?
+							0x7FFF : 0x3FFF;
   }
 
 
   private static boolean is40CharsPerLineMode( Properties props )
   {
     return EmuUtil.getProperty(
-			props,
-			"jkcemu.bcs3.chars_per_line" ).equals( "40" );
+		props,
+		PROP_PREFIX + "chars_per_line" ).equals( "40" );
   }
 
 
@@ -1242,5 +1267,17 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 		|| ((ch >= 'a') && (ch <= 'z'))
 		|| ((ch >= '0') && (ch <= '9'));
   }
-}
 
+
+  private void loadROMs( Properties props )
+  {
+    this.osFile    = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "os.file" );
+    this.osBytes   = readROMFile( this.osFile, 0x1000, "Betriebssystem" );
+    this.fontBytes = readFontByProperty(
+				props,
+				this.propPrefix + "font.file",
+				0x0800 );
+  }
+}

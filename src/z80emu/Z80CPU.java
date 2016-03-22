@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -23,6 +23,7 @@ public class Z80CPU
 			RUN,
 			PAUSE,
 			DEBUG_RUN,
+			DEBUG_WALK,
 			DEBUG_STOP,
 			DEBUG_STEP_OVER,
 			DEBUG_STEP_INTO,
@@ -87,6 +88,7 @@ public class Z80CPU
   private boolean                           haltState;
   private Integer                           haltPC;
   private int                               instBegPC;
+  private int                               preCode;
   private int                               regPC;
   private int                               regSP;
   private int                               regA;
@@ -124,6 +126,8 @@ public class Z80CPU
   private volatile boolean                  active;
   private volatile boolean                  pause;
   private volatile boolean                  debugEnabled;
+  private int                               stepOverBreakAddr;
+  private int                               walkBreakAddr;
   private AtomicInteger                     waitStates;
   private Object                            waitMonitor;
 
@@ -137,9 +141,9 @@ public class Z80CPU
     this.addrListener          = null;
     this.tStatesListeners      = null;
     this.interruptSources      = null;
-    this.haltStateListeners    = new ArrayList<Z80HaltStateListener>();
-    this.maxSpeedListeners     = new ArrayList<Z80MaxSpeedListener>();
-    this.statusListeners       = new ArrayList<Z80StatusListener>();
+    this.haltStateListeners    = new ArrayList<>();
+    this.maxSpeedListeners     = new ArrayList<>();
+    this.statusListeners       = new ArrayList<>();
     this.instTStatesMngr       = null;
     this.breakpoints           = null;
     this.debugTracer           = null;
@@ -293,7 +297,7 @@ public class Z80CPU
     Z80TStatesListener[] listeners = this.tStatesListeners;
     if( listeners != null ) {
       Collection<Z80TStatesListener> c
-		= new ArrayList<Z80TStatesListener>( listeners.length + 1 );
+			= new ArrayList<>( listeners.length + 1 );
       for( int i = 0; i < listeners.length; i++ ) {
 	c.add( listeners[ i ] );
       }
@@ -315,8 +319,7 @@ public class Z80CPU
   {
     Z80TStatesListener[] listeners = this.tStatesListeners;
     if( listeners != null ) {
-      Collection<Z80TStatesListener> c
-		= new ArrayList<Z80TStatesListener>( listeners.length );
+      Collection<Z80TStatesListener> c = new ArrayList<>( listeners.length );
       for( int i = 0; i < listeners.length; i++ ) {
 	if( listeners[ i ] != listener ) {
 	  c.add( listeners[ i ] );
@@ -441,11 +444,14 @@ public class Z80CPU
     this.regR_bit7         = false;
     this.lastInstWasEIorDI = false;
     this.debugCallLevel    = 0;
+    this.stepOverBreakAddr = -1;
+    this.walkBreakAddr     = -1;
     this.pause             = false;
     this.waitMode          = false;
     this.action            = this.debugEnabled ? Action.DEBUG_RUN : Action.RUN;
     this.haltPC            = null;
     this.instBegPC         = 0;
+    this.preCode           = -1;
     this.regPC             = 0;
     setHaltState( false );
     if( powerOn ) {
@@ -582,6 +588,88 @@ public class Z80CPU
   }
 
 
+  public void writeDebugStatusEntry( PrintWriter writer )
+  {
+    if( writer != null ) {
+
+      // Register ausgeben
+      writer.print( "AF=" );
+      writer.printf( "%04X", getRegAF() );
+      writer.print( " [" );
+      writer.print( this.flagSign	? "S" : "." );
+      writer.print( this.flagZero	? "Z" : "." );
+      writer.write( this.flag5	? "1" : "." );
+      writer.write( this.flagHalf	? "H" : "." );
+      writer.print( this.flag3	? "1" : "." );
+      writer.print( this.flagPV	? "P" : "." );
+      writer.print( this.flagN	? "N" : "." );
+      writer.print( this.flagCarry	? "C" : "." );
+      writer.print( "] BC=" );
+      writer.printf( "%04X", getRegBC() );
+      writer.print( " DE=" );
+      writer.printf( "%04X", getRegDE() );
+      writer.print( " HL=" );
+      writer.printf( "%04X", getRegHL() );
+      writer.print( " IX=" );
+      writer.printf( "%04X", this.regIX );
+      writer.print( " IY=" );
+      writer.printf( "%04X", this.regIY );
+      writer.print( " SP=" );
+      writer.printf( "%04X", this.regSP );
+
+      // Adresse ausgeben
+      int addr = this.regPC;
+      writer.print( "   PC=" );
+      writer.printf( "%04X", addr );
+      writer.print( "  " );
+
+      // Befehl reassemblieren
+      Z80ReassInstr instr = Z80Reassembler.reassInstruction(
+							this.memory,
+							addr );
+      if( instr != null ) {
+	// Befehlscode ausgeben
+	int w = 12;
+	int n = instr.getLength();
+	for( int i = 0; i < n; i++ ) {
+	  writer.printf( "%02X ", instr.getByte( i ) );
+	  addr++;
+	  w -= 3;
+	}
+	while( w > 0 ) {
+	  writer.print( (char) '\u0020' );
+	  --w;
+	}
+
+	// Assembler-Befehlsname ausgeben
+	String s = instr.getName();
+	if( s != null ) {
+	  writer.print( s );
+
+	  // Argument ausgeben
+	  w = 8 - s.length();
+	  s = instr.getArg1();
+	  if( s != null ) {
+	    while( w > 0 ) {
+	      writer.print( (char) '\u0020' );
+	      --w;
+	    }
+	    writer.print( s );
+
+	    s = instr.getArg2();
+	    if( s != null ) {
+	      writer.print( (char) ',' );
+	      writer.print( s );
+	    }
+	  }
+	}
+      } else {
+	writer.printf( "%02X", this.memory.getMemByte( addr, true ) );
+      }
+    }
+  }
+
+
 	/* --- Zustandssteuerung --- */
 
   public void addStatusListener( Z80StatusListener listener )
@@ -606,6 +694,7 @@ public class Z80CPU
     this.action         = action;
     this.debugCallLevel = 0;
     this.debugEnabled   = ((this.action == Action.DEBUG_RUN)
+				|| (this.action == Action.DEBUG_WALK)
 				|| (this.action == Action.DEBUG_STOP)
 				|| (this.action == Action.DEBUG_STEP_OVER)
 				|| (this.action == Action.DEBUG_STEP_INTO)
@@ -634,9 +723,9 @@ public class Z80CPU
   }
 
 
-  public void setDebugTracer( PrintWriter debugTracer )
+  public void setDebugTracer( PrintWriter tracer )
   {
-    this.debugTracer = debugTracer;
+    this.debugTracer = tracer;
   }
 
 
@@ -1083,140 +1172,143 @@ public class Z80CPU
 
     try {
       while( this.active ) {
+	if( this.preCode < 0 ) {
+	  this.instBegPC = this.regPC;
 
-	// WAIT-Mode
-	if( this.waitMode ) {
-	  Z80TStatesListener[] tStatesListeners = this.tStatesListeners;
-	  if( tStatesListeners != null ) {
-	    while( this.active && this.waitMode ) {
-	      this.processedTStates++;
-	      this.speedTStates++;
-	      for( int i = 0; i < tStatesListeners.length; i++ ) {
-		tStatesListeners[ i ].z80TStatesProcessed( this, 1 );
+	  // WAIT-Mode
+	  if( this.waitMode ) {
+	    Z80TStatesListener[] tStatesListeners = this.tStatesListeners;
+	    if( tStatesListeners != null ) {
+	      while( this.active && this.waitMode ) {
+		this.processedTStates++;
+		this.speedTStates++;
+		for( int i = 0; i < tStatesListeners.length; i++ ) {
+		  tStatesListeners[ i ].z80TStatesProcessed( this, 1 );
+		}
 	      }
 	    }
 	  }
-	}
-
-	// Zaehler fuer die Taktzyklen darf nicht ueberlaufen
-	if( this.processedTStates >= tStatesWrap ) {
-	  this.processedTStates -= tStatesWrap;
-	}
-
-	/*
-	 * Geschwindigkeitsverwaltung
-	 */
-	if( this.speedTStates >= tStatesWrap ) {
 
 	  // Zaehler fuer die Taktzyklen darf nicht ueberlaufen
-	  this.speedUnlimitedTill = 0L;
-	  this.speedNanosBeg      = System.nanoTime();
-	  this.speedNanosEnd      = -1L;
-	  this.speedTStates -= tStatesWrap;
-
-	} else {
+	  if( this.processedTStates >= tStatesWrap ) {
+	    this.processedTStates -= tStatesWrap;
+	  }
 
 	  /*
-	   * Geschwindigkeit begrenzen
-	   * Die Geschwindigkeitsbremse nicht nach jedem Befehl aktivieren,
-	   * da sonst zuviel Rechenzeit fuer die Bremse selbst
-	   * benoetigt wird.
+	   * Geschwindigkeitsverwaltung
 	   */
-	  checkSpeedBrake();
-	}
-	this.instTStates = 0;
+	  if( this.speedTStates >= tStatesWrap ) {
 
+	    // Zaehler fuer die Taktzyklen darf nicht ueberlaufen
+	    this.speedUnlimitedTill = 0L;
+	    this.speedNanosBeg      = System.nanoTime();
+	    this.speedNanosEnd      = -1L;
+	    this.speedTStates -= tStatesWrap;
 
-	/*
-	 * Interrupt-Verwaltung
-	 *
-	 * Unmittelbar nach einem EI- und DI-Befehl darf kein
-	 * maskierbarer Interrupt auftreten.
-	 */
-	boolean            nmiAccepted     = false;
-	Z80InterruptSource interruptSource = null;
-	Z80Breakpoint      breakpoint      = null;
-	if( this.nmiFired ) {
-	  this.nmiFired = false;
-	  this.iff2     = this.iff1;
-	  this.iff1     = false;
-	  incRegR();
-	  doPush( this.regPC );
-	  this.haltPC = null;
-	  this.regPC  = 0x0066;
-	  this.instTStates += 11;
-	  nmiAccepted = true;
-	} else {
-	  if( this.lastInstWasEIorDI ) {
-	    this.lastInstWasEIorDI = false;
 	  } else {
-	    if( this.iff1 ) {
-	      Z80InterruptSource[] iSources = this.interruptSources;
-	      if( iSources != null ) {
-		for( int i = 0; i < iSources.length; i++ ) {
-		  Z80InterruptSource iSource = iSources[ i ];
-		  if( iSource.isInterruptAccepted() ) {
-		    break;
-		  }
-		  if( iSource.isInterruptRequested() ) {
-		    this.haltPC = null;
-		    this.iff1   = false;
-		    this.iff2   = false;
-		    int iVector = iSource.interruptAccept() & 0xFF;
-		    incRegR();
 
-		    switch( this.interruptMode ) {
-		      case 1:
-			doPush( this.regPC );
-			this.regPC = 0x0038;
-			this.instTStates += 13;
-			break;
+	    /*
+	     * Geschwindigkeit begrenzen
+	     * Die Geschwindigkeitsbremse nicht nach jedem Befehl aktivieren,
+	     * da sonst zuviel Rechenzeit fuer die Bremse selbst
+	     * benoetigt wird.
+	     */
+	    checkSpeedBrake();
+	  }
+	  this.instTStates = 0;
 
-		      case 2:
-			{
-			  int m = (this.interruptReg << 8) | iVector;
-			  doPush( this.regPC );
-			  this.regPC = readMemWord( m );
-			  this.instTStates += 19;
-			}
-			break;
 
-		      default:			// IM 0
-			this.instBegPC = this.regPC;
-			execInst( -1, iVector );
-			this.instTStates += 2;	// insgesamt 13 bei RST-Befehl
+	  /*
+	   * Interrupt-Verwaltung
+	   *
+	   * Unmittelbar nach einem EI- und DI-Befehl darf kein
+	   * maskierbarer Interrupt auftreten.
+	   */
+	  boolean            nmiAccepted     = false;
+	  Z80InterruptSource interruptSource = null;
+	  Z80Breakpoint      breakpoint      = null;
+	  if( this.nmiFired ) {
+	    this.nmiFired = false;
+	    this.iff2     = this.iff1;
+	    this.iff1     = false;
+	    incRegR();
+	    doPush( this.regPC );
+	    this.haltPC = null;
+	    this.regPC  = 0x0066;
+	    this.instTStates += 11;
+	    nmiAccepted = true;
+	  } else {
+	    if( this.lastInstWasEIorDI ) {
+	      this.lastInstWasEIorDI = false;
+	    } else {
+	      if( this.iff1 ) {
+		Z80InterruptSource[] iSources = this.interruptSources;
+		if( iSources != null ) {
+		  for( int i = 0; i < iSources.length; i++ ) {
+		    Z80InterruptSource iSource = iSources[ i ];
+		    if( iSource.isInterruptAccepted() ) {
+		      break;
 		    }
-		    interruptSource = iSource;
+		    if( iSource.isInterruptRequested() ) {
+		      this.haltPC = null;
+		      this.iff1   = false;
+		      this.iff2   = false;
+		      int iVector = iSource.interruptAccept() & 0xFF;
+		      incRegR();
+
+		      switch( this.interruptMode ) {
+			case 1:
+			  doPush( this.regPC );
+			  this.regPC = 0x0038;
+			  this.instTStates += 13;
+			  break;
+
+			case 2:
+			  {
+			    int m = (this.interruptReg << 8) | iVector;
+			    doPush( this.regPC );
+			    this.regPC = readMemWord( m );
+			    this.instTStates += 19;
+			  }
+			  break;
+
+			default:			// IM 0
+			  this.instBegPC = this.regPC;
+			  this.preCode   = -1;
+			  execInst( iVector );
+			  // insgesamt 13 bei RST-Befehl
+			  this.instTStates += 2;
+		      }
+		      interruptSource = iSource;
+		    }
 		  }
 		}
 	      }
 	    }
 	  }
-	}
-	if( !nmiAccepted
-	    && (interruptSource == null)
-	    && (this.haltPC != null) )
-	{
-	  this.regPC  = this.haltPC.intValue();
-	  this.haltPC = null;
-	} else {
-	  setHaltState( false );
-	}
-
-
-	/*
-	 * Debugger- und Pausesteuerung
-	 */
-	if( (this.action == Action.PAUSE) || this.debugEnabled ) {
-	  if( this.debugEnabled && (this.debugTracer != null) ) {
-	    doDebugTrace( nmiAccepted, interruptSource );
+	  if( !nmiAccepted
+	      && (interruptSource == null)
+	      && (this.haltPC != null) )
+	  {
+	    this.regPC  = this.haltPC.intValue();
+	    this.haltPC = null;
+	  } else {
+	    setHaltState( false );
 	  }
 
+
 	  /*
-	   * Pruefen, ob der Debugger anhalten soll
+	   * Debugger- und Pausesteuerung
 	   */
-	  boolean pause = false;
-	  if( (breakpoint == null) && (interruptSource != null) ) {
+	  if( (this.action == Action.PAUSE) || this.debugEnabled ) {
+	    if( this.debugEnabled && (this.debugTracer != null) ) {
+	      doDebugTrace( nmiAccepted, interruptSource );
+	    }
+
+	    /*
+	     * Pruefen, ob der Debugger anhalten soll
+	     */
+	    boolean         pause       = false;
 	    Z80Breakpoint[] breakpoints = this.breakpoints;
 	    if( breakpoints != null ) {
 	      for( int i = 0; i < breakpoints.length; i++ ) {
@@ -1226,58 +1318,51 @@ public class Z80CPU
 		}
 	      }
 	    }
-	  }
-	  if( breakpoint == null ) {
-	    if( (this.action == Action.PAUSE)
+	    if( (breakpoint == null)
+		&& ((this.action == Action.PAUSE)
 			|| (this.action == Action.DEBUG_STOP)
 			|| (this.action == Action.DEBUG_STEP_INTO)
 			|| ((this.action == Action.DEBUG_STEP_OVER)
-				&& (this.debugCallLevel <= 0)
-				&& (this.instBegPC != this.regPC))
+				&& ((this.regPC == this.stepOverBreakAddr)
+				    || (this.stepOverBreakAddr < 0)))
+			|| ((this.action == Action.DEBUG_WALK)
+				&& ((this.regPC == this.walkBreakAddr)
+				    || (this.walkBreakAddr < 0)))
 			|| ((this.action == Action.DEBUG_STEP_TO_RET)
 				&& (this.debugCallLevel <= 0)
-				&& debugMatchesRETX()) )
+				&& debugMatchesRETX())) )
 	    {
 	      pause = true;
-	    } else {
-	      Z80Breakpoint[] breakpoints = this.breakpoints;
-	      if( breakpoints != null ) {
-		for( int i = 0; i < breakpoints.length; i++ ) {
-		  if( breakpoints[ i ].matches( this, null ) ) {
-		    breakpoint = breakpoints[ i ];
-		    break;
-		  }
-		}
-	      }
+	    }
+	    if( pause || (breakpoint != null) ) {
+	      this.pause             = true;
+	      this.stepOverBreakAddr = -1;
+	      this.walkBreakAddr     = -1;
+	      updStatusListeners( breakpoint, interruptSource );
+	      waitFor();
+	      this.pause = false;
+	      updStatusListeners( null, null );
+
+	      if( !this.active )
+		break;
 	    }
 	  }
-	  if( pause || (breakpoint != null) ) {
-	    this.pause = true;
-	    updStatusListeners( breakpoint, interruptSource );
-	    waitFor();
-	    this.pause = false;
-	    updStatusListeners( null, null );
 
-	    if( !this.active )
-	      break;
-	  }
-	}
-
-	// ggf. in PCListener springen
-	PCListenerItem pcListener = this.pcListener;
-	if( pcListener != null ) {
-	  for( int i = 0; i < pcListener.pc.length; i++ ) {
-	    if( pcListener.pc[ i ] == this.regPC ) {
-	      pcListener.listener.z80PCChanged( this, this.regPC );
+	  // ggf. in PCListener springen
+	  PCListenerItem pcListener = this.pcListener;
+	  if( pcListener != null ) {
+	    for( int i = 0; i < pcListener.pc.length; i++ ) {
+	      if( pcListener.pc[ i ] == this.regPC ) {
+		pcListener.listener.z80PCChanged( this, this.regPC );
+	      }
 	    }
 	  }
 	}
 
 	// BefehlsOpCode lesen und PC weitersetzen
-	this.instBegPC = this.regPC;
-	opCode         = readMemByteM1( this.regPC );
-	this.regPC     = (this.regPC + 1) & 0xFFFF;
-	execInst( -1, opCode );
+	opCode     = readMemByteM1( this.regPC );
+	this.regPC = (this.regPC + 1) & 0xFFFF;
+	execInst( opCode );
 
 	Z80InstrTStatesMngr tStatesMngr = this.instTStatesMngr;
 	if( tStatesMngr != null ) {
@@ -1343,45 +1428,51 @@ public class Z80CPU
   }
 
 
-  public void execInst( int preCode, int opCode )
+  public void execInst( int opCode )
   {
     incRegR();
-    if( opCode < 0x80 ) {
-      if( opCode < 0x40 ) {
-	if( opCode < 0x20 ) {
-	  if( opCode < 0x10 ) {
-	    exec00to0F( preCode, opCode );
-	  } else {
-	    exec10to1F( preCode, opCode );
-	  }
-	} else {
-	  if( opCode < 0x30 ) {
-	    exec20to2F( preCode, opCode );
-	  } else {
-	    exec30to3F( preCode, opCode );
-	  }
-	}
-      } else {
-	exec40to7F( preCode, opCode );
-      }
+    if( (opCode == 0xDD) || (opCode == 0xFD) ) {
+      this.preCode = opCode;
+      this.instTStates += 4;
     } else {
-      if( opCode < 0xC0 ) {
-	exec80toBF( preCode, opCode );
-      } else {
-	if( opCode < 0xE0 ) {
-	  if( opCode < 0xD0 ) {
-	    execC0toCF( preCode, opCode );
+      if( opCode < 0x80 ) {
+	if( opCode < 0x40 ) {
+	  if( opCode < 0x20 ) {
+	    if( opCode < 0x10 ) {
+	      exec00to0F( opCode );
+	    } else {
+	      exec10to1F( opCode );
+	    }
 	  } else {
-	    execD0toDF( opCode );
+	    if( opCode < 0x30 ) {
+	      exec20to2F( opCode );
+	    } else {
+	      exec30to3F( opCode );
+	    }
 	  }
 	} else {
-	  if( opCode < 0xF0 ) {
-	    execE0toEF( preCode, opCode );
+	  exec40to7F( opCode );
+	}
+      } else {
+	if( opCode < 0xC0 ) {
+	  exec80toBF( opCode );
+	} else {
+	  if( opCode < 0xE0 ) {
+	    if( opCode < 0xD0 ) {
+	      execC0toCF( opCode );
+	    } else {
+	      execD0toDF( opCode );
+	    }
 	  } else {
-	    execF0toFF( preCode, opCode );
+	    if( opCode < 0xF0 ) {
+	      execE0toEF( opCode );
+	    } else {
+	      execF0toFF( opCode );
+	    }
 	  }
 	}
       }
+      this.preCode = -1;
     }
   }
 
@@ -1393,7 +1484,7 @@ public class Z80CPU
    * werden die Taktzyklen um 4 weniger hochgezaehlt,
    * da bereits bei den Vorbytes selbst die 4 Taktzyklen gezaehlt werden.
    */
-  private void exec00to0F( int preCode, int opCode )
+  private void exec00to0F( int opCode )
   {
     switch( opCode ) {
       case 0x00:				// NOP
@@ -1449,9 +1540,9 @@ public class Z80CPU
 	}
 	break;
       case 0x09:
-	if( preCode == 0xDD ) {			// ADD IX,BC
+	if( this.preCode == 0xDD ) {		// ADD IX,BC
 	  this.regIX = doInstADD16( this.regIX, getRegBC() );
-	} else if( preCode == 0xFD ) {		// ADD IY,BC
+	} else if( this.preCode == 0xFD ) {	// ADD IY,BC
 	  this.regIY = doInstADD16( this.regIY, getRegBC() );
 	} else {				// ADD HL,BC
 	  setRegHL( doInstADD16( getRegHL(), getRegBC() ) );
@@ -1498,12 +1589,16 @@ public class Z80CPU
   }
 
 
-  private void exec10to1F( int preCode, int opCode )
+  private void exec10to1F( int opCode )
   {
     switch( opCode ) {
       case 0x10:				// DJNZ n
 	{
 	  int d = nextByte();
+	  if( d == 0xFE ) {			// leere Schleife
+	    setStepOverBreakAddr();
+	    setWalkBreakAddr();
+	  }
 	  this.regB = (this.regB - 1) & 0xFF;
 	  if( this.regB != 0 ) {
 	    doJmpRel( d );
@@ -1555,9 +1650,9 @@ public class Z80CPU
 	this.instTStates += 12;
 	break;
       case 0x19:
-	if( preCode == 0xDD ) {			// ADD IX,DE
+	if( this.preCode == 0xDD ) {		// ADD IX,DE
 	  this.regIX = doInstADD16( this.regIX, getRegDE() );
-	} else if( preCode == 0xFD ) {		// ADD IY,DE
+	} else if( this.preCode == 0xFD ) {	// ADD IY,DE
 	  this.regIY = doInstADD16( this.regIY, getRegDE() );
 	} else {				// ADD HL,DE
 	  setRegHL( doInstADD16( getRegHL(), getRegDE() ) );
@@ -1602,7 +1697,7 @@ public class Z80CPU
   }
 
 
-  private void exec20to2F( int preCode, int opCode )
+  private void exec20to2F( int opCode )
   {
     switch( opCode ) {
       case 0x20:				// JR NZ,n
@@ -1617,9 +1712,9 @@ public class Z80CPU
 	}
 	break;
       case 0x21:
-	if( preCode == 0xDD ) {			// LD IX,nn
+	if( this.preCode == 0xDD ) {		// LD IX,nn
 	  this.regIX = nextWord();
-	} else if( preCode == 0xFD ) {		// LD IY,nn
+	} else if( this.preCode == 0xFD ) {	// LD IY,nn
 	  this.regIY = nextWord();
 	} else {				// LD HL,nn
 	  setRegHL( nextWord() );
@@ -1627,9 +1722,9 @@ public class Z80CPU
 	this.instTStates += 10;
 	break;
       case 0x22:
-	if( preCode == 0xDD ) {			// LD (nn),IX
+	if( this.preCode == 0xDD ) {		// LD (nn),IX
 	  writeMemWord( nextWord(), this.regIX );
-	} else if( preCode == 0xFD ) {		// LD (nn),IY
+	} else if( this.preCode == 0xFD ) {	// LD (nn),IY
 	  writeMemWord( nextWord(), this.regIY );
 	} else {				// LD (nn),HL
 	  writeMemWord( nextWord(), getRegHL() );
@@ -1637,9 +1732,9 @@ public class Z80CPU
 	this.instTStates += 16;
 	break;
       case 0x23:
-	if( preCode == 0xDD ) {			// INC IX
+	if( this.preCode == 0xDD ) {		// INC IX
 	  this.regIX = (this.regIX + 1) & 0xFFFF;
-	} else if( preCode == 0xFD ) {		// INC IY
+	} else if( this.preCode == 0xFD ) {	// INC IY
 	  this.regIY = (this.regIY + 1) & 0xFFFF;
 	} else {				// INC HL
 	  setRegHL( getRegHL() + 1 );
@@ -1647,9 +1742,9 @@ public class Z80CPU
 	this.instTStates += 6;
 	break;
       case 0x24:
-	if( preCode == 0xDD ) {			// *INC IXH
+	if( this.preCode == 0xDD ) {		// *INC IXH
 	  setRegIXH( doInstINC8( getRegIXH() ) );
-	} else if( preCode == 0xFD ) {		// *INC IYH
+	} else if( this.preCode == 0xFD ) {	// *INC IYH
 	  setRegIYH( doInstINC8( getRegIYH() ) );
 	} else {				// INC H
 	  this.regH = doInstINC8( this.regH );
@@ -1657,9 +1752,9 @@ public class Z80CPU
 	this.instTStates += 4;
 	break;
       case 0x25:
-	if( preCode == 0xDD ) {			// *DEC IXH
+	if( this.preCode == 0xDD ) {		// *DEC IXH
 	  setRegIXH( doInstDEC8( getRegIXH() ) );
-	} else if( preCode == 0xFD ) {		// *DEC IYH
+	} else if( this.preCode == 0xFD ) {	// *DEC IYH
 	  setRegIYH( doInstDEC8( getRegIYH() ) );
 	} else {				// DEC H
 	  this.regH = doInstDEC8( this.regH );
@@ -1667,9 +1762,9 @@ public class Z80CPU
 	this.instTStates += 4;
 	break;
       case 0x26:
-	if( preCode == 0xDD ) {			// *LD IXH,n
+	if( this.preCode == 0xDD ) {		// *LD IXH,n
 	  setRegIXH( nextByte() );
-	} else if( preCode == 0xFD ) {		// *LD IYH,n
+	} else if( this.preCode == 0xFD ) {	// *LD IYH,n
 	  setRegIYH( nextByte() );
 	} else {				// LD H,n
 	  this.regH = nextByte();
@@ -1692,9 +1787,9 @@ public class Z80CPU
 	}
 	break;
       case 0x29:
-	if( preCode == 0xDD ) {			// ADD IX,IX
+	if( this.preCode == 0xDD ) {		// ADD IX,IX
 	  this.regIX = doInstADD16( this.regIX, this.regIX );
-	} else if( preCode == 0xFD ) {		// ADD IY,IY
+	} else if( this.preCode == 0xFD ) {	// ADD IY,IY
 	  this.regIY = doInstADD16( this.regIY, this.regIY );
 	} else {				// ADD HL,HL
 	  setRegHL( doInstADD16( getRegHL(), getRegHL() ) );
@@ -1702,9 +1797,9 @@ public class Z80CPU
 	this.instTStates += 11;
 	break;
       case 0x2A:
-	if( preCode == 0xDD ) {			// LD IX,(nn)
+	if( this.preCode == 0xDD ) {		// LD IX,(nn)
 	  this.regIX = readMemWord( nextWord() );
-	} else if( preCode == 0xFD ) {		// LD IY,(nn)
+	} else if( this.preCode == 0xFD ) {	// LD IY,(nn)
 	  this.regIY = readMemWord( nextWord() );
 	} else {				// LD HL,(nn)
 	  setRegHL( readMemWord( nextWord() ) );
@@ -1712,9 +1807,9 @@ public class Z80CPU
 	this.instTStates += 16;
 	break;
       case 0x2B:
-	if( preCode == 0xDD ) {			// DEC IX
+	if( this.preCode == 0xDD ) {		// DEC IX
 	  this.regIX = (this.regIX - 1) & 0xFFFF;
-	} else if( preCode == 0xFD ) {		// DEC IY
+	} else if( this.preCode == 0xFD ) {	// DEC IY
 	  this.regIY = (this.regIY - 1) & 0xFFFF;
 	} else {				// DEC HL
 	  setRegHL( getRegHL() - 1 );
@@ -1722,9 +1817,9 @@ public class Z80CPU
 	this.instTStates += 6;
 	break;
       case 0x2C:
-	if( preCode == 0xDD ) {			// *INC IXL
+	if( this.preCode == 0xDD ) {		// *INC IXL
 	  setRegIXL( doInstINC8( getRegIXL() ) );
-	} else if( preCode == 0xFD ) {		// *INC IYL
+	} else if( this.preCode == 0xFD ) {	// *INC IYL
 	  setRegIYL( doInstINC8( getRegIYL() ) );
 	} else {				// INC L
 	  this.regL = doInstINC8( this.regL );
@@ -1732,9 +1827,9 @@ public class Z80CPU
 	this.instTStates += 4;
 	break;
       case 0x2D:
-	if( preCode == 0xDD ) {			// *DEC IXL
+	if( this.preCode == 0xDD ) {		// *DEC IXL
 	  setRegIXL( doInstDEC8( getRegIXL() ) );
-	} else if( preCode == 0xFD ) {		// *DEC IYL
+	} else if( this.preCode == 0xFD ) {	// *DEC IYL
 	  setRegIYL( doInstDEC8( getRegIYL() ) );
 	} else {				// DEC L
 	  this.regL = doInstDEC8( this.regL );
@@ -1742,9 +1837,9 @@ public class Z80CPU
 	this.instTStates += 4;
 	break;
       case 0x2E:
-	if( preCode == 0xDD ) {			// *LD IXL,n
+	if( this.preCode == 0xDD ) {		// *LD IXL,n
 	  setRegIXL( nextByte() );
-	} else if( preCode == 0xFD ) {		// *LD IYL,n
+	} else if( this.preCode == 0xFD ) {	// *LD IYL,n
 	  setRegIYL( nextByte() );
 	} else {				// LD L,n
 	  this.regL = nextByte();
@@ -1765,7 +1860,7 @@ public class Z80CPU
   }
 
 
-  private void exec30to3F( int preCode, int opCode )
+  private void exec30to3F( int opCode )
   {
     switch( opCode ) {
       case 0x30:				// JR NC,n
@@ -1792,12 +1887,12 @@ public class Z80CPU
 	this.instTStates += 6;
 	break;
       case 0x34:
-	if( preCode == 0xDD ) {			// INC (IX+d)
+	if( this.preCode == 0xDD ) {		// INC (IX+d)
 	  int m = computeRelAddr( this.regIX, nextByte() );
 	  writeMemByte( m, doInstINC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
 	}
-	else if( preCode == 0xFD ) {		// INC (IY+d)
+	else if( this.preCode == 0xFD ) {	// INC (IY+d)
 	  int m = computeRelAddr( this.regIY, nextByte() );
 	  writeMemByte( m, doInstINC8( readMemByte( m ) ) );
 	  this.instTStates += 19;
@@ -1808,12 +1903,12 @@ public class Z80CPU
 	}
 	break;
       case 0x35:
-	if( preCode == 0xDD ) {			// DEC (IX+d)
+	if( this.preCode == 0xDD ) {		// DEC (IX+d)
 	  int m = computeRelAddr( this.regIX, nextByte() );
 	  writeMemByte( m, doInstDEC8( readMemByte( m ) ) );
 	  this.instTStates += 19;		// insgesamt 23
 	}
-	else if( preCode == 0xFD ) {		// DEC (IY+d)
+	else if( this.preCode == 0xFD ) {	// DEC (IY+d)
 	  int m = computeRelAddr( this.regIY, nextByte() );
 	  writeMemByte( m, doInstDEC8( readMemByte( m ) ) );
 	  this.instTStates += 19;		// insgesamt 23
@@ -1824,12 +1919,12 @@ public class Z80CPU
 	}
 	break;
       case 0x36:
-	if( preCode == 0xDD ) {			// LD (IX+d),n
+	if( this.preCode == 0xDD ) {		// LD (IX+d),n
 	  int m = computeRelAddr( this.regIX, nextByte() );
 	  writeMemByte( m, nextByte() );
 	  this.instTStates += 15;		// insgesamt 19
 	}
-	else if( preCode == 0xFD ) {		// LD (IY+d),n
+	else if( this.preCode == 0xFD ) {	// LD (IY+d),n
 	  int m = computeRelAddr( this.regIY, nextByte() );
 	  writeMemByte( m, nextByte() );
 	  this.instTStates += 15;		// insgesamt 19
@@ -1858,9 +1953,9 @@ public class Z80CPU
 	}
 	break;
       case 0x39:
-	if( preCode == 0xDD ) {			// ADD IX,SP
+	if( this.preCode == 0xDD ) {		// ADD IX,SP
 	  this.regIX = doInstADD16( this.regIX, this.regSP );
-	} else if( preCode == 0xFD ) {		// ADD IY,SP
+	} else if( this.preCode == 0xFD ) {	// ADD IY,SP
 	  this.regIY = doInstADD16( this.regIY, this.regSP );
 	} else {				// ADD HL,SP
 	  setRegHL( doInstADD16( getRegHL(), this.regSP ) );
@@ -1901,7 +1996,7 @@ public class Z80CPU
   }
 
 
-  private void exec40to7F( int preCode, int opCode )
+  private void exec40to7F( int opCode )
   {
     if( opCode == 0x76 ) {			// HALT
 
@@ -1912,23 +2007,23 @@ public class Z80CPU
 
     } else {					// 8-Bit-Ladebefehle
 
-      if( ((preCode == 0xDD) || (preCode == 0xFD))
+      if( ((this.preCode == 0xDD) || (this.preCode == 0xFD))
 	  && (opCode >= 0x70) && (opCode <= 0x77) )
       {
 	// LD (IXY+d),...
 	writeMemByte(
 		computeRelAddr(
-			preCode == 0xDD ? this.regIX : this.regIY,
+			this.preCode == 0xDD ? this.regIX : this.regIY,
 			nextByte() ),
 		getSrcValue( -1, opCode ) );
 	this.instTStates += 15;			// insgesamt 19
       }
-      else if( ((preCode == 0xDD) || (preCode == 0xFD))
+      else if( ((this.preCode == 0xDD) || (this.preCode == 0xFD))
 	       && ((opCode & 0x07) == 6) )
       {
 	// LD ...,(IXY+d)
 	int value = readMemByte( computeRelAddr(
-			preCode == 0xDD ? this.regIX : this.regIY,
+			this.preCode == 0xDD ? this.regIX : this.regIY,
 			nextByte() ) );
 	switch( opCode & 0x38 ) {		// Bits 3-5: Ziel
 	  case 0x00:
@@ -1959,7 +2054,7 @@ public class Z80CPU
 
       } else {
 
-	int value = getSrcValue( preCode, opCode );
+	int value = getSrcValue( this.preCode, opCode );
 	switch( opCode & 0x38 ) {		// Bits 3-5: Ziel
 	  case 0x00:
 	    this.regB = value;
@@ -1974,18 +2069,18 @@ public class Z80CPU
 	    this.regE = value;
 	    break;
 	  case 0x20:
-	    if( preCode == 0xDD ) {
+	    if( this.preCode == 0xDD ) {
 	      this.regIX = (value << 8) | (this.regIX & 0xFF);
-	    } else if( preCode == 0xFD ) {
+	    } else if( this.preCode == 0xFD ) {
 	      this.regIY = (value << 8) | (this.regIY & 0xFF);
 	    } else {
 	      this.regH = value;
 	    }
 	    break;
 	  case 0x28:
-	    if( preCode == 0xDD ) {
+	    if( this.preCode == 0xDD ) {
 	      this.regIX = (this.regIX & 0xFF00) | value;
-	    } else if( preCode == 0xFD ) {
+	    } else if( this.preCode == 0xFD ) {
 	      this.regIY = (this.regIY & 0xFF00) | value;
 	    } else {
 	      this.regL = value;
@@ -2009,9 +2104,9 @@ public class Z80CPU
   }
 
 
-  private void exec80toBF( int preCode, int opCode )
+  private void exec80toBF( int opCode )
   {
-    int value = getSrcValue( preCode, opCode );
+    int value = getSrcValue( this.preCode, opCode );
     switch( opCode & 0x38 ) {		// Bits 3-5: Operation
       case 0x00:
 	doInstADD8( value, 0 );
@@ -2041,7 +2136,7 @@ public class Z80CPU
 	throwIllegalState( opCode );
     }
     if( (opCode & 0x07) == 6 ) {
-      if( (preCode == 0xDD) || (preCode == 0xFD) ) {
+      if( (this.preCode == 0xDD) || (this.preCode == 0xFD) ) {
 	this.instTStates += 15;			// insgesamt 19: ....(IXY+d)
       } else {
 	this.instTStates += 7;			// (HL)
@@ -2052,7 +2147,7 @@ public class Z80CPU
   }
 
 
-  private void execC0toCF( int preCode, int opCode )
+  private void execC0toCF( int opCode )
   {
     switch( opCode ) {
       case 0xC0:				// RET NZ
@@ -2086,6 +2181,7 @@ public class Z80CPU
       case 0xC4:				// CALL NZ,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( !this.flagZero ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2107,6 +2203,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xC7:				// RST 00
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0000;
 	this.instTStates += 11;
@@ -2133,9 +2230,9 @@ public class Z80CPU
 	}
 	break;
       case 0xCB:				// Befehle mit Vorbyte CB
-	if( preCode == 0xDD ) {
+	if( this.preCode == 0xDD ) {
 	  this.regIX = execIXY_CB( this.regIX );
-	} else if( preCode == 0xFD ) {
+	} else if( this.preCode == 0xFD ) {
 	  this.regIY = execIXY_CB( this.regIY );
 	} else {
 	  incRegR();
@@ -2145,6 +2242,7 @@ public class Z80CPU
       case 0xCC:				// CALL Z,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( this.flagZero ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2157,6 +2255,7 @@ public class Z80CPU
       case 0xCD:				// CALL nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  doPush( this.regPC );
 	  this.regPC = nn;
 	  this.instTStates += 17;
@@ -2167,6 +2266,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xCF:				// RST 08
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0008;
 	this.instTStates += 11;
@@ -2206,13 +2306,17 @@ public class Z80CPU
 	break;
       case 0xD3:				// OUT (n),A
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regA << 8) | nextByte(), this.regA );
+	  this.ioSys.writeIOByte(
+			(this.regA << 8) | nextByte(),
+			this.regA,
+			11 );
 	}
 	this.instTStates += 11;
 	break;
       case 0xD4:				// CALL NC,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( !this.flagCarry ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2234,6 +2338,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xD7:				// RST 10
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0010;
 	this.instTStates += 11;
@@ -2282,15 +2387,16 @@ public class Z80CPU
 	{
 	  int v = 0xFF;
 	  if( this.ioSys != null ) {
-	    v = this.ioSys.readIOByte( (this.regA << 8) | nextByte() ) & 0xFF;
+	    v = this.ioSys.readIOByte( (this.regA << 8) | nextByte(), 11 );
 	  }
-	  this.regA        = v;
+	  this.regA        = v & 0xFF;
 	  this.instTStates += 11;
 	}
 	break;
       case 0xDC:				// CALL C,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( this.flagCarry ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2300,15 +2406,13 @@ public class Z80CPU
 	  }
 	}
 	break;
-      case 0xDD:				// IX-Befehle
-	this.instTStates += 4;
-	execInst( opCode, nextByteM1() );
-	break;
+      // 0xDD wird bereits in execInst(opCode) ausgewertet
       case 0xDE:				// SBC n
 	doInstSUB8( nextByte(), this.flagCarry ? 1 : 0 );
 	this.instTStates += 7;
 	break;
       case 0xDF:				// RST 18
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0018;
 	this.instTStates += 11;
@@ -2319,7 +2423,7 @@ public class Z80CPU
   }
 
 
-  private void execE0toEF( int preCode, int opCode )
+  private void execE0toEF( int opCode )
   {
     switch( opCode ) {
       case 0xE0:				// RET PO
@@ -2331,9 +2435,9 @@ public class Z80CPU
 	}
 	break;
       case 0xE1:
-	if( preCode == 0xDD ) {			// POP IX
+	if( this.preCode == 0xDD ) {		// POP IX
 	  this.regIX = doPop();
-	} else if( preCode == 0xFD ) {		// POP IY
+	} else if( this.preCode == 0xFD ) {	// POP IY
 	  this.regIY = doPop();
 	} else {				// POP HL
 	  setRegHL( doPop() );
@@ -2351,17 +2455,25 @@ public class Z80CPU
 	break;
       case 0xE3:
 	{
-	  int m = readMemWord( this.regSP );
-	  if( preCode == 0xDD ) {		// EX (SP),IX
-	    writeMemWord( this.regSP, this.regIX );
-	    this.regIX = m;
+	  int tmpSP = readMemWord( this.regSP );
+	  int tmpHL = -1;
+	  if( this.preCode == 0xDD ) {		// EX (SP),IX
+	    tmpHL      = this.regIX;
+	    this.regIX = tmpSP;
 	  }
-	  else if( preCode == 0xFD ) {		// EX (SP),IY
-	    writeMemWord( this.regSP, this.regIY );
-	    this.regIY = m;
+	  else if( this.preCode == 0xFD ) {	// EX (SP),IY
+	    tmpHL      = this.regIY;
+	    this.regIY = tmpSP;
 	  } else {				// EX (SP),HL
-	    writeMemWord( this.regSP, getRegHL() );
-	    setRegHL( m );
+	    tmpHL = getRegHL();
+	    setRegHL( tmpSP );
+	  }
+	  writeMemWord( this.regSP, tmpHL );
+	  if( this.debugEnabled
+	      && (this.action == Action.DEBUG_STEP_OVER)
+	      && (this.stepOverBreakAddr == tmpSP) )
+	  {
+	    this.stepOverBreakAddr = tmpHL;
 	  }
 	  this.instTStates += 19;
 	}
@@ -2369,6 +2481,7 @@ public class Z80CPU
       case 0xE4:				// CALL PO,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( !this.flagPV ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2379,9 +2492,9 @@ public class Z80CPU
 	}
 	break;
       case 0xE5:
-	if( preCode == 0xDD ) {			// PUSH IX
+	if( this.preCode == 0xDD ) {		// PUSH IX
 	  doPush( this.regIX );
-	} else if( preCode == 0xFD ) {		// PUSH IY
+	} else if( this.preCode == 0xFD ) {	// PUSH IY
 	  doPush( this.regIY );
 	} else {				// PUSH HL
 	  doPush( getRegHL() );
@@ -2393,6 +2506,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xE7:				// RST 20
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0020;
 	this.instTStates += 11;
@@ -2406,9 +2520,9 @@ public class Z80CPU
 	}
 	break;
       case 0xE9:
-	if( preCode == 0xDD ) {			// JP (IX)
+	if( this.preCode == 0xDD ) {		// JP (IX)
 	  this.regPC = this.regIX;
-	} else if( preCode == 0xFD ) {		// JP (IY)
+	} else if( this.preCode == 0xFD ) {	// JP (IY)
 	  this.regPC = this.regIY;
 	} else {				// JP (HL)
 	  this.regPC = getRegHL();
@@ -2435,6 +2549,7 @@ public class Z80CPU
       case 0xEC:				// CALL PE,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( this.flagPV ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2453,6 +2568,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xEF:				// RST 28
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0028;
 	this.instTStates += 11;
@@ -2463,7 +2579,7 @@ public class Z80CPU
   }
 
 
-  private void execF0toFF( int preCode, int opCode )
+  private void execF0toFF( int opCode )
   {
     switch( opCode ) {
       case 0xF0:				// RET P
@@ -2499,6 +2615,7 @@ public class Z80CPU
       case 0xF4:				// CALL P,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( !this.flagSign ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2520,6 +2637,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xF7:				// RST 30
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0030;
 	this.instTStates += 11;
@@ -2533,9 +2651,9 @@ public class Z80CPU
 	}
 	break;
       case 0xF9:
-	if( preCode == 0xDD ) {			// LD SP,IX
+	if( this.preCode == 0xDD ) {		// LD SP,IX
 	  this.regSP = this.regIX;
-	} else if( preCode == 0xFD ) {		// LD SP,IY
+	} else if( this.preCode == 0xFD ) {	// LD SP,IY
 	  this.regSP = this.regIY;
 	} else {				// LD SP,HL
 	  this.regSP = getRegHL();
@@ -2560,6 +2678,7 @@ public class Z80CPU
       case 0xFC:				// CALL M,nn
 	{
 	  int nn = nextWord();
+	  setStepOverBreakAddr();
 	  if( this.flagSign ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2569,15 +2688,13 @@ public class Z80CPU
 	  }
 	}
 	break;
-      case 0xFD:				// IY-Befehle
-	this.instTStates += 4;
-	execInst( opCode, nextByteM1() );
-	break;
+      // 0xFD wird bereits in execInst(opCode) ausgewertet
       case 0xFE:				// CP n
 	doInstCP( nextByte() );
 	this.instTStates += 7;
 	break;
       case 0xFF:				// RST 38
+	setStepOverBreakAddr();
 	doPush( this.regPC );
 	this.regPC = 0x0038;
 	this.instTStates += 11;
@@ -3055,7 +3172,10 @@ public class Z80CPU
 	break;
       case 0x41:				// OUT (C),B
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, this.regB );
+	  this.ioSys.writeIOByte(
+			(this.regB << 8) | this.regC,
+			this.regB,
+			12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3089,7 +3209,10 @@ public class Z80CPU
 	break;
       case 0x49:				// OUT (C),C
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, this.regC );
+	  this.ioSys.writeIOByte(
+			(this.regB << 8) | this.regC,
+			this.regC,
+			12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3141,7 +3264,10 @@ public class Z80CPU
 	break;
       case 0x51:				// OUT (C),D
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, this.regD );
+	  this.ioSys.writeIOByte(
+			(this.regB << 8) | this.regC,
+			this.regD,
+			12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3182,7 +3308,10 @@ public class Z80CPU
 	break;
       case 0x59:				// OUT (C),E
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, this.regE );
+	  this.ioSys.writeIOByte(
+			(this.regB << 8) | this.regC,
+			this.regE,
+			12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3232,7 +3361,10 @@ public class Z80CPU
 	break;
       case 0x61:				// OUT (C),H
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, this.regH );
+	  this.ioSys.writeIOByte(
+			(this.regB << 8) | this.regC,
+			this.regH,
+			12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3279,7 +3411,10 @@ public class Z80CPU
 	break;
       case 0x69:				// OUT (C),L
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, this.regL );
+	  this.ioSys.writeIOByte(
+			(this.regB << 8) | this.regC,
+			this.regL,
+			12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3335,7 +3470,7 @@ public class Z80CPU
 	break;
       case 0x71:				// *OUT (C),0
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, 0 );
+	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, 0, 12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3365,7 +3500,10 @@ public class Z80CPU
 	break;
       case 0x79:				// OUT (C),A
 	if( this.ioSys != null ) {
-	  this.ioSys.writeIOByte( (this.regB << 8) | this.regC, this.regA );
+	  this.ioSys.writeIOByte(
+			(this.regB << 8) | this.regC,
+			this.regA,
+			12 );
 	}
 	this.instTStates += 12;
 	break;
@@ -3407,11 +3545,11 @@ public class Z80CPU
 	this.instTStates += 16;
 	break;
       case 0xA2:				// INI
-	doInstBlockIN( 1 );
+	doInstBlockIN( 1, false );
 	this.instTStates += 16;
 	break;
       case 0xA3:				// OUTI
-	doInstBlockOUT( 1 );
+	doInstBlockOUT( 1, false );
 	this.instTStates += 16;
 	break;
       case 0xA8:				// LDD
@@ -3423,14 +3561,16 @@ public class Z80CPU
 	this.instTStates += 16;
 	break;
       case 0xAA:				// IND
-	doInstBlockIN( -1 );
+	doInstBlockIN( -1, false );
 	this.instTStates += 16;
 	break;
       case 0xAB:				// OUTD
-	doInstBlockOUT( -1 );
+	doInstBlockOUT( -1, false );
 	this.instTStates += 16;
 	break;
       case 0xB0:				// LDIR
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
 	doInstBlockLD( 1 );
 	if( !this.flagPV ) {
 	  this.instTStates += 16;
@@ -3440,6 +3580,8 @@ public class Z80CPU
 	}
 	break;
       case 0xB1:				// CPIR
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
 	doInstBlockCP( 1 );
 	if( this.flagZero || !this.flagPV ) {
 	  this.instTStates += 16;
@@ -3449,7 +3591,9 @@ public class Z80CPU
 	}
 	break;
       case 0xB2:				// INIR
-	doInstBlockIN( 1 );
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
+	doInstBlockIN( 1, true );
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
@@ -3458,7 +3602,9 @@ public class Z80CPU
 	}
 	break;
       case 0xB3:				// OTIR
-	doInstBlockOUT( 1 );
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
+	doInstBlockOUT( 1, true );
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
@@ -3467,6 +3613,8 @@ public class Z80CPU
 	}
 	break;
       case 0xB8:				// LDDR
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
 	doInstBlockLD( -1 );
 	if( !this.flagPV ) {
 	  this.instTStates += 16;
@@ -3476,6 +3624,8 @@ public class Z80CPU
 	}
 	break;
       case 0xB9:				// CPDR
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
 	doInstBlockCP( -1 );
 	if( this.flagZero || !this.flagPV ) {
 	  this.instTStates += 16;
@@ -3485,7 +3635,9 @@ public class Z80CPU
 	}
 	break;
       case 0xBA:				// INDR
-	doInstBlockIN( -1 );
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
+	doInstBlockIN( -1, true );
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
@@ -3494,7 +3646,9 @@ public class Z80CPU
 	}
 	break;
       case 0xBB:				// OTDR
-	doInstBlockOUT( -1 );
+	setStepOverBreakAddr();
+	setWalkBreakAddr();
+	doInstBlockOUT( -1, true );
 	if( this.flagZero ) {
 	  this.instTStates += 16;
 	} else {
@@ -4077,16 +4231,19 @@ public class Z80CPU
    * Bei den repetierenden IN-Befehlen wird das B-Register
    * nach dem IO-Zyklus geaendert, ganz im Gegensatz zu den OUT-Befehlen.
    */
-  private void doInstBlockIN( int addValue )
+  private void doInstBlockIN( int addValue, boolean forRepeat )
   {
     int regHL = getRegHL();
     int value = 0xFF;
+    int newB  = (this.regB - 1) & 0xFF;
     if( this.ioSys != null ) {
-      value = this.ioSys.readIOByte( (this.regB << 8) | this.regC ) & 0xFF;
+      value = this.ioSys.readIOByte(
+			(this.regB << 8) | this.regC,
+			forRepeat && (newB == 1) ? 21 : 16 ) & 0xFF;
     }
     writeMemByte( regHL, value );
     setRegHL( regHL + addValue );
-    this.regB     = (this.regB - 1) & 0xFF;
+    this.regB     = newB;
     this.flagSign = ((this.regB & BIT7) != 0);
     this.flagZero = (this.regB == 0);
     this.flagN    = true;
@@ -4102,7 +4259,7 @@ public class Z80CPU
    * Bei den repetierenden OUT-Befehlen wird das B-Register
    * vor dem IO-Zyklus geaendert, ganz im Gegensatz zu den IN-Befehlen.
    */
-  private void doInstBlockOUT( int addValue )
+  private void doInstBlockOUT( int addValue, boolean forRepeat )
   {
     this.regB     = (this.regB - 1) & 0xFF;
     this.flagSign = ((this.regB & BIT7) != 0);
@@ -4115,7 +4272,8 @@ public class Z80CPU
     if( this.ioSys != null ) {
       this.ioSys.writeIOByte(
 		(this.regB << 8) | this.regC,
-		readMemByte( regHL ) );
+		readMemByte( regHL ),
+		forRepeat && (this.regB == 0) ? 21 : 16 );
     }
     setRegHL( regHL + addValue );
   }
@@ -4125,7 +4283,7 @@ public class Z80CPU
   {
     int value = 0xFF;
     if( this.ioSys != null ) {
-      value = this.ioSys.readIOByte( (this.regB << 8) | this.regC ) & 0xFF;
+      value = this.ioSys.readIOByte( (this.regB << 8) | this.regC, 12 ) & 0xFF;
     }
     this.flagSign = ((value & BIT7) != 0);
     this.flagZero = (value == 0);
@@ -4173,33 +4331,41 @@ public class Z80CPU
 
   private int getSrcValue( int preCode, int opCode )
   {
+    int rv = -1;
     switch( opCode & 0x07 ) {
       case 7:
-	return this.regA;
+	rv = this.regA;
+	break;
       case 0:
-	return this.regB;
+	rv = this.regB;
+	break;
       case 1:
-	return this.regC;
+	rv = this.regC;
+	break;
       case 2:
-	return this.regD;
+	rv = this.regD;
+	break;
       case 3:
-	return this.regE;
+	rv = this.regE;
+	break;
       case 4:
 	if( preCode == 0xDD ) {
-	  return (this.regIX >> 8) & 0xFF;
+	  rv = (this.regIX >> 8) & 0xFF;
+	} else if( preCode == 0xFD ) {
+	  rv = (this.regIY >> 8) & 0xFF;
+	} else {
+	  rv = this.regH;
 	}
-	if( preCode == 0xFD ) {
-	  return (this.regIY >> 8) & 0xFF;
-	}
-	return this.regH;
+	break;
       case 5:
 	if( preCode == 0xDD ) {
-	  return this.regIX & 0xFF;
+	  rv = this.regIX & 0xFF;
+	} else if( preCode == 0xFD ) {
+	  rv = this.regIY & 0xFF;
+	} else {
+	  rv = this.regL;
 	}
-	if( preCode == 0xFD ) {
-	  return this.regIY & 0xFF;
-	}
-	return this.regL;
+	break;
       case 6:
 	{
 	  int addr = 0;
@@ -4210,11 +4376,13 @@ public class Z80CPU
 	  } else {
 	    addr = getRegHL();
 	  }
-	  return readMemByte( addr );
+	  rv = readMemByte( addr );
 	}
+	break;
+      default:
+	throwIllegalState( opCode );
     }
-    throwIllegalState( opCode );
-    return -1;
+    return rv;
   }
 
 
@@ -4290,91 +4458,17 @@ public class Z80CPU
 
   private void doDebugTrace( boolean nmi, Z80InterruptSource iSource )
   {
-    PrintWriter debugTracer = this.debugTracer;
-    if( debugTracer != null ) {
+    PrintWriter tracer = this.debugTracer;
+    if( tracer != null ) {
       if( nmi ) {
-	debugTracer.println( "--- NMI ---" );
+	tracer.println( "--- NMI ---" );
       } else if( iSource != null ) {
-	debugTracer.print( "--- Interrupt: " );
-	debugTracer.print( iSource );
-	debugTracer.println( " ---" );
+	tracer.print( "--- Interrupt: " );
+	tracer.print( iSource );
+	tracer.println( " ---" );
       }
-
-      // Register ausgeben
-      debugTracer.print( "AF:" );
-      debugTracer.printf( "%04X", getRegAF() );
-      debugTracer.print( " [" );
-      debugTracer.print( this.flagSign	? "S" : "." );
-      debugTracer.print( this.flagZero	? "Z" : "." );
-      debugTracer.print( this.flag5	? "1" : "." );
-      debugTracer.print( this.flagHalf	? "H" : "." );
-      debugTracer.print( this.flag3	? "1" : "." );
-      debugTracer.print( this.flagPV	? "P" : "." );
-      debugTracer.print( this.flagN	? "N" : "." );
-      debugTracer.print( this.flagCarry	? "C" : "." );
-      debugTracer.print( "] BC:" );
-      debugTracer.printf( "%04X", getRegBC() );
-      debugTracer.print( " DE:" );
-      debugTracer.printf( "%04X", getRegDE() );
-      debugTracer.print( " HL:" );
-      debugTracer.printf( "%04X", getRegHL() );
-      debugTracer.print( " IX:" );
-      debugTracer.printf( "%04X", this.regIX );
-      debugTracer.print( " IY:" );
-      debugTracer.printf( "%04X", this.regIY );
-      debugTracer.print( " SP:" );
-      debugTracer.printf( "%04X", this.regSP );
-      debugTracer.print( "  " );
-
-      // Adresse ausgeben
-      int addr = this.regPC;
-      debugTracer.printf( "%04X", addr );
-      debugTracer.print( "  " );
-
-      // Befehl reassemblieren
-      Z80ReassInstr instr = Z80Reassembler.reassInstruction(
-							this.memory,
-							addr );
-      if( instr != null ) {
-	// Befehlscode ausgeben
-	int w = 12;
-	int n = instr.getLength();
-	for( int i = 0; i < n; i++ ) {
-	  debugTracer.printf( "%02X ", instr.getByte( i ) );
-	  addr++;
-	  w -= 3;
-	}
-	while( w > 0 ) {
-	  debugTracer.print( (char) '\u0020' );
-	  --w;
-	}
-
-	// Assembler-Befehlsname ausgeben
-	String s = instr.getName();
-	if( s != null ) {
-	  debugTracer.print( s );
-
-	  // Argument ausgeben
-	  w = 8 - s.length();
-	  s = instr.getArg1();
-	  if( s != null ) {
-	    while( w > 0 ) {
-	      debugTracer.print( (char) '\u0020' );
-	      --w;
-	    }
-	    debugTracer.print( s );
-
-	    s = instr.getArg2();
-	    if( s != null ) {
-	      debugTracer.print( (char) ',' );
-	      debugTracer.print( s );
-	    }
-	  }
-	}
-      } else {
-	debugTracer.printf( "%02X", this.memory.getMemByte( addr, true ) );
-      }
-      debugTracer.println();
+      writeDebugStatusEntry( tracer );
+      tracer.println();
     }
   }
 
@@ -4437,6 +4531,28 @@ public class Z80CPU
 	  listener.z80HaltStateChanged( this, state );
 	}
       }
+    }
+  }
+
+
+  private void setStepOverBreakAddr()
+  {
+    if( this.debugEnabled
+	&& (this.action == Action.DEBUG_STEP_OVER)
+	&& (this.stepOverBreakAddr < 0) )
+    {
+      this.stepOverBreakAddr = this.regPC;
+    }
+  }
+
+
+  private void setWalkBreakAddr()
+  {
+    if( this.debugEnabled
+	&& (this.action == Action.DEBUG_WALK)
+	&& (this.walkBreakAddr < 0) )
+    {
+      this.walkBreakAddr = this.regPC;
     }
   }
 

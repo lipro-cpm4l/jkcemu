@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,11 +25,26 @@ import z80emu.*;
 
 
 public class DebugFrm extends BasicFrm implements
+						ChangeListener,
 						ComponentListener,
 						FocusListener,
 						ListSelectionListener,
 						Z80StatusListener
 {
+  /*
+   * Da generic Arrays in Java nicht moeglich sind,
+   * wird fuer JList<AbstractBreakpoint> eine eigene Klasse angelegt,
+   * mit der dann auch Arrays ohne Compiler-Warnung moeglich sind.
+   */
+  public class BreakpointList extends JList<AbstractBreakpoint>
+  {
+    public BreakpointList( BreakpointListModel model )
+    {
+      super( model );
+    }
+  }
+
+
   private static final int BP_PC_IDX        = 0;
   private static final int BP_MEMORY_IDX    = 1;
   private static final int BP_INPUT_IDX     = 2;
@@ -37,117 +52,220 @@ public class DebugFrm extends BasicFrm implements
   private static final int BP_INTERRUPT_IDX = 4;
   private static final int BP_GROUP_CNT     = 5;
 
+  private static final int TAB_IDX_CPU = 0;
+  private static final int TAB_IDX_LOG = 1;
+  private static final int TAB_IDX_VAR = 2;
+
   private static final String TEXT_STOP
 			= "Programmausf\u00FChrung anhalten";
   private static final String TEXT_RUN
-			= "Programmausf\u00FChrung bis Haltepunkt fortsetzen";
+			= "Programm bis Haltepunkt ausf\u00FChren";
+  private static final String TEXT_WALK
+			= "Programm bis Haltepunkt langsam ausf\u00FChren";
   private static final String TEXT_STEP_OVER
 			= "Einzelschritt \u00FCber Aufruf hinweg";
   private static final String TEXT_STEP_INTO
 			= "Einzelschritt in Aufruf hinein";
   private static final String TEXT_STEP_TO_RET
-			= "Bis RETURN ausf\u00FChren";
+			= "Bis RET ausf\u00FChren";
 
-  private EmuThread             emuThread;
-  private Z80CPU                cpu;
-  private Z80Memory             memory;
-  private AbstractBreakpointDlg bpDlg;
-  private BreakpointListModel[] bpModels;
-  private Z80InterruptSource[]  interruptSources;
-  private Z80InterruptSource    lastSelectedIntSrc;
-  private File                  lastBreakpointFile;
-  private File                  lastTraceFile;
-  private PrintWriter           traceWriter;
-  private int                   popupBreakGroupIdx;
-  private JMenuItem             mnuFileClose;
-  private JMenuItem             mnuFileBreakImportClp;
-  private JMenuItem             mnuFileBreakImportFile;
-  private JMenuItem             mnuFileBreakRemoveImported;
-  private JMenuItem             mnuFileOpenTrace;
-  private JMenuItem             mnuDebugRun;
-  private JMenuItem             mnuDebugStop;
-  private JMenuItem             mnuDebugStepOver;
-  private JMenuItem             mnuDebugStepInto;
-  private JMenuItem             mnuDebugStepToRET;
-  private JMenuItem             mnuDebugBreakInterruptAdd;
-  private JMenuItem             mnuDebugBreakInputAdd;
-  private JMenuItem             mnuDebugBreakOutputAdd;
-  private JMenuItem             mnuDebugBreakMemoryAdd;
-  private JMenuItem             mnuDebugBreakPCAdd;
-  private JMenuItem             mnuDebugBreakRemove;
-  private JMenuItem             mnuDebugBreakRemoveAll;
-  private JMenuItem             mnuDebugBreakEnable;
-  private JMenuItem             mnuDebugBreakDisable;
-  private JMenuItem             mnuDebugBreakEnableAll;
-  private JMenuItem             mnuDebugBreakDisableAll;
-  private JCheckBoxMenuItem     mnuDebugTracer;
-  private JMenuItem             mnuHelpContent;
-  private JPopupMenu            mnuPopup;
-  private JMenuItem             mnuPopupBreakAdd;
-  private JMenuItem             mnuPopupBreakRemove;
-  private JMenuItem             mnuPopupBreakRemoveAll;
-  private JMenuItem             mnuPopupBreakEnable;
-  private JMenuItem             mnuPopupBreakDisable;
-  private JMenuItem             mnuPopupBreakEnableAll;
-  private JMenuItem             mnuPopupBreakDisableAll;
-  private JTabbedPane           tabbedPane;
-  private JButton               btnRun;
-  private JButton               btnStop;
-  private JButton               btnStepOver;
-  private JButton               btnStepInto;
-  private JButton               btnStepToRET;
-  private AbstractButton        btnFlagSign;
-  private AbstractButton        btnFlagZero;
-  private AbstractButton        btnFlagHalf;
-  private AbstractButton        btnFlagPV;
-  private AbstractButton        btnFlagN;
-  private AbstractButton        btnFlagCarry;
-  private AbstractButton        btnIFF1;
-  private AbstractButton        btnIFF2;
-  private JSpinner              spinnerIntMode;
-  private JTextField            fldRegAF;
-  private JTextField            fldRegAsciiA;
-  private JTextField            fldRegBC;
-  private JTextField            fldRegAsciiB;
-  private JTextField            fldRegAsciiC;
-  private JTextField            fldRegDE;
-  private JTextField            fldRegAsciiD;
-  private JTextField            fldRegAsciiE;
-  private JTextField            fldRegHL;
-  private JTextField            fldRegAsciiH;
-  private JTextField            fldRegAsciiL;
-  private JTextField            fldRegIX;
-  private JTextField            fldRegAsciiIXH;
-  private JTextField            fldRegAsciiIXL;
-  private JTextField            fldRegIY;
-  private JTextField            fldRegAsciiIYH;
-  private JTextField            fldRegAsciiIYL;
-  private JTextField            fldRegPC;
-  private JTextField            fldRegSP;
-  private JTextField            fldRegAF2;
-  private JTextField            fldRegBC2;
-  private JTextField            fldRegDE2;
-  private JTextField            fldRegHL2;
-  private JTextField            fldRegI;
-  private JTextField            fldMemBC;
-  private JTextField            fldMemDE;
-  private JTextField            fldMemHL;
-  private JTextField            fldMemIX;
-  private JTextField            fldMemIY;
-  private JTextField            fldMemSP;
-  private JTextArea             fldMemPC;
-  private JScrollPane           spMemPC;
-  private JTextField            fldTStates;
-  private JButton               btnResetTStates;
-  private JLabel                labelIntMode;
-  private JLabel                labelRegI;
-  private JLabel                labelStatus;
-  private JList[]               bpLists;
-  private JScrollPane[]         bpScrollPanes;
-  private JList                 listIntSrc;
-  private JEditorPane           fldIntSrc;
-  private JEditorPane           fldEtc;
-  private javax.swing.Timer     timerForClear;
+  private static final String TEXT_BP_REMOVE
+			= "Markierte Halte-/Log-Punkte entfernen";
+  private static final String TEXT_BP_REMOVE_ALL
+			= "Alle Halte-/Log-Punkte entfernen";
+
+  private static final String TEXT_BP_ENABLE_STOP
+		= "In markierten Halte-/Log-Punkten Anhalten aktivieren";
+  private static final String TEXT_BP_DISABLE_STOP
+		= "In markierten Halte-/Log-Punkten Anhalten deaktivieren";
+
+  private static final String TEXT_BP_ENABLE_STOP_ALL
+		= "In allen Halte-/Log-Punkten Anhalten aktivieren";
+  private static final String TEXT_BP_DISABLE_STOP_ALL
+		= "In allen Halte-/Log-Punkten Anhalten deaktivieren";
+
+  private static final String TEXT_BP_ENABLE_LOG
+		= "In markierten Halte-/Log-Punkten Loggen aktivieren";
+  private static final String TEXT_BP_DISABLE_LOG
+		= "In markierten Halte-/Log-Punkten Loggen deaktivieren";
+
+  private static final String TEXT_BP_ENABLE_LOG_ALL
+		= "In allen Halte-/Log-Punkten Loggen aktivieren";
+  private static final String TEXT_BP_DISABLE_LOG_ALL
+		= "In allen Halte-/Log-Punkten Loggen deaktivieren";
+
+  private static final String TEXT_VAR_ADD
+			= "Variable hinzuf\u00FCgen...";
+  private static final String TEXT_VAR_EDIT
+			= "Variable bearbeiten...";
+  private static final String TEXT_VAR_REMOVE
+			= "Selektierte Variablen entfernen";
+  private static final String TEXT_VAR_REMOVE_ALL
+			= "Alle Variablen entfernen";
+
+  private static final String TEXT_LOG_COPY
+			= "Selektierte Log-Meldungen kopieren";
+  private static final String TEXT_LOG_SELECT_ALL
+			= "Alle Log-Meldungen ausw\u00E4hlen";
+  private static final String TEXT_LOG_REMOVE
+			= "Selektierte Log-Meldungen entfernen";
+  private static final String TEXT_LOG_REMOVE_ALL
+			= "Alle Log-Meldungen entfernen";
+
+  private static final int DEFAULT_MAX_LOG_CNT = 500;
+
+  private EmuThread                 emuThread;
+  private Z80CPU                    cpu;
+  private Z80Memory                 memory;
+  private LabelImportOptions        labelImportOptions;
+  private Set<Integer>              removedImportedBreakAddrs;
+  private Set<String>               removedImportedBreakNames;
+  private Set<String>               removedImportedVarNames;
+  private int                       maxLogCnt;
+  private int                       memPCClickAddr;
+  private int                       walkMillis;
+  private javax.swing.Timer         walkTimer;
+  private AbstractBreakpointDlg     bpDlg;
+  private BreakpointListModel[]     bpModels;
+  private DefaultListModel<String>  listModelLog;
+  private VarTableModel             tableModelVar;
+  private Z80InterruptSource[]      interruptSources;
+  private Z80InterruptSource        lastSelectedIntSrc;
+  private File                      lastBreakpointFile;
+  private File                      lastTraceFile;
+  private PrintWriter               traceWriter;
+  private int                       popupBreakGroupIdx;
+  private JMenuItem                 mnuFileClose;
+  private JMenuItem                 mnuFileBreakImport;
+  private JMenuItem                 mnuFileBreakImportAgain;
+  private JMenuItem                 mnuFileBreakRemoveImported;
+  private JMenuItem                 mnuFileOpenTrace;
+  private JMenuItem                 mnuDebugRun;
+  private JMenuItem                 mnuDebugWalk100;
+  private JMenuItem                 mnuDebugWalk300;
+  private JMenuItem                 mnuDebugWalk500;
+  private JMenuItem                 mnuDebugStop;
+  private JMenuItem                 mnuDebugStepOver;
+  private JMenuItem                 mnuDebugStepInto;
+  private JMenuItem                 mnuDebugStepToRET;
+  private JMenuItem                 mnuDebugBreakInterruptAdd;
+  private JMenuItem                 mnuDebugBreakInputAdd;
+  private JMenuItem                 mnuDebugBreakOutputAdd;
+  private JMenuItem                 mnuDebugBreakMemoryAdd;
+  private JMenuItem                 mnuDebugBreakPCAdd;
+  private JMenuItem                 mnuDebugBreakEdit;
+  private JMenuItem                 mnuDebugBreakEnableStop;
+  private JMenuItem                 mnuDebugBreakDisableStop;
+  private JMenuItem                 mnuDebugBreakEnableStopAll;
+  private JMenuItem                 mnuDebugBreakDisableStopAll;
+  private JMenuItem                 mnuDebugBreakEnableLog;
+  private JMenuItem                 mnuDebugBreakDisableLog;
+  private JMenuItem                 mnuDebugBreakEnableLogAll;
+  private JMenuItem                 mnuDebugBreakDisableLogAll;
+  private JMenuItem                 mnuDebugBreakRemove;
+  private JMenuItem                 mnuDebugBreakRemoveAll;
+  private JCheckBoxMenuItem         mnuDebugTracer;
+  private JMenuItem                 mnuVarAdd;
+  private JMenuItem                 mnuVarEdit;
+  private JMenuItem                 mnuVarRemove;
+  private JMenuItem                 mnuVarRemoveAll;
+  private JMenuItem                 mnuLogCopy;
+  private JMenuItem                 mnuLogSelectAll;
+  private JMenuItem                 mnuLogRemove;
+  private JMenuItem                 mnuLogRemoveAll;
+  private JMenuItem                 mnuLogMaxLogCnt;
+  private JMenuItem                 mnuHelpContent;
+  private JPopupMenu                popupBreak;
+  private JMenuItem                 popupBreakAdd;
+  private JMenuItem                 popupBreakRemove;
+  private JMenuItem                 popupBreakRemoveAll;
+  private JMenuItem                 popupBreakEnableStop;
+  private JMenuItem                 popupBreakDisableStop;
+  private JMenuItem                 popupBreakEnableStopAll;
+  private JMenuItem                 popupBreakDisableStopAll;
+  private JMenuItem                 popupBreakEnableLog;
+  private JMenuItem                 popupBreakDisableLog;
+  private JMenuItem                 popupBreakEnableLogAll;
+  private JMenuItem                 popupBreakDisableLogAll;
+  private JPopupMenu                popupLog;
+  private JMenuItem                 popupLogCopy;
+  private JMenuItem                 popupLogSelectAll;
+  private JMenuItem                 popupLogRemove;
+  private JMenuItem                 popupLogRemoveAll;
+  private JPopupMenu                popupVar;
+  private JMenuItem                 popupVarAdd;
+  private JMenuItem                 popupVarEdit;
+  private JMenuItem                 popupVarRemove;
+  private JMenuItem                 popupVarRemoveAll;
+  private JPopupMenu                popupWalk;
+  private JMenuItem                 popupWalk100;
+  private JMenuItem                 popupWalk300;
+  private JMenuItem                 popupWalk500;
+  private JPopupMenu                popupMemPC;
+  private JMenuItem                 popupMemPCCopy;
+  private JMenuItem                 popupMemPCBreak;
+  private JTabbedPane               tabbedPane;
+  private JButton                   btnRun;
+  private JButton                   btnWalk;
+  private JButton                   btnStop;
+  private JButton                   btnStepOver;
+  private JButton                   btnStepInto;
+  private JButton                   btnStepToRET;
+  private AbstractButton            btnFlagSign;
+  private AbstractButton            btnFlagZero;
+  private AbstractButton            btnFlagHalf;
+  private AbstractButton            btnFlagPV;
+  private AbstractButton            btnFlagN;
+  private AbstractButton            btnFlagCarry;
+  private AbstractButton            btnIFF1;
+  private AbstractButton            btnIFF2;
+  private JSpinner                  spinnerIntMode;
+  private JTextField                fldRegAF;
+  private JTextField                fldRegAsciiA;
+  private JTextField                fldRegBC;
+  private JTextField                fldRegAsciiB;
+  private JTextField                fldRegAsciiC;
+  private JTextField                fldRegDE;
+  private JTextField                fldRegAsciiD;
+  private JTextField                fldRegAsciiE;
+  private JTextField                fldRegHL;
+  private JTextField                fldRegAsciiH;
+  private JTextField                fldRegAsciiL;
+  private JTextField                fldRegIX;
+  private JTextField                fldRegAsciiIXH;
+  private JTextField                fldRegAsciiIXL;
+  private JTextField                fldRegIY;
+  private JTextField                fldRegAsciiIYH;
+  private JTextField                fldRegAsciiIYL;
+  private JTextField                fldRegPC;
+  private JTextField                fldRegSP;
+  private JTextField                fldRegAF2;
+  private JTextField                fldRegBC2;
+  private JTextField                fldRegDE2;
+  private JTextField                fldRegHL2;
+  private JTextField                fldRegI;
+  private JTextField                fldMemBC;
+  private JTextField                fldMemDE;
+  private JTextField                fldMemHL;
+  private JTextField                fldMemIX;
+  private JTextField                fldMemIY;
+  private JTextField                fldMemSP;
+  private JTextArea                 fldMemPC;
+  private JScrollPane               spMemPC;
+  private JTextField                fldTStates;
+  private JButton                   btnResetTStates;
+  private JLabel                    labelIntMode;
+  private JLabel                    labelRegI;
+  private JLabel                    labelStatus;
+  private BreakpointList[]          bpLists;
+  private JScrollPane[]             bpScrollPanes;
+  private JList<Z80InterruptSource> listIntSrc;
+  private JEditorPane               fldIntSrc;
+  private JList<String>             listLog;
+  private JTable                    tableVar;
+  private ListSelectionModel        selectionModelVar;
+  private JEditorPane               fldEtc;
+  private javax.swing.Timer         timerForClear;
 
 
   public DebugFrm(
@@ -155,19 +273,28 @@ public class DebugFrm extends BasicFrm implements
 		Z80CPU    cpu,
 		Z80Memory memory )
   {
-    this.emuThread          = emuThread;
-    this.cpu                = cpu;
-    this.memory             = memory;
-    this.lastSelectedIntSrc = null;
-    this.lastBreakpointFile = null;
-    this.lastTraceFile      = null;
-    this.traceWriter        = null;
-    this.bpDlg              = null;
-    this.bpModels           = new BreakpointListModel[ BP_GROUP_CNT ];
-    this.bpLists            = new JList[ BP_GROUP_CNT ];
-    this.bpScrollPanes      = new JScrollPane[ BP_GROUP_CNT ];
-    this.popupBreakGroupIdx = -1;
-    this.interruptSources   = cpu.getInterruptSources();
+    this.emuThread                 = emuThread;
+    this.cpu                       = cpu;
+    this.memory                    = memory;
+    this.labelImportOptions        = null;
+    this.removedImportedBreakAddrs = new TreeSet<>();
+    this.removedImportedBreakNames = new TreeSet<>();
+    this.removedImportedVarNames   = new TreeSet<>();
+    this.maxLogCnt                 = DEFAULT_MAX_LOG_CNT;
+    this.memPCClickAddr            = -1;
+    this.walkMillis                = 0;
+    this.walkTimer                 = new javax.swing.Timer( 300, this );
+    this.walkTimer.setRepeats( false );
+    this.lastSelectedIntSrc        = null;
+    this.lastBreakpointFile        = null;
+    this.lastTraceFile             = null;
+    this.traceWriter               = null;
+    this.bpDlg                     = null;
+    this.bpModels                  = new BreakpointListModel[ BP_GROUP_CNT ];
+    this.bpLists                   = new BreakpointList[ BP_GROUP_CNT ];
+    this.bpScrollPanes             = new JScrollPane[ BP_GROUP_CNT ];
+    this.popupBreakGroupIdx        = -1;
+    this.interruptSources          = cpu.getInterruptSources();
     if( this.interruptSources != null ) {
       if( this.interruptSources.length == 0 ) {
 	this.interruptSources = null;
@@ -181,17 +308,20 @@ public class DebugFrm extends BasicFrm implements
     JMenu mnuFile = new JMenu( "Datei" );
     mnuFile.setMnemonic( KeyEvent.VK_D );
 
-    this.mnuFileBreakImportFile = createJMenuItem(
-			"Haltepunkte aus Datei importieren..." );
-    mnuFile.add( this.mnuFileBreakImportFile );
+    this.mnuFileBreakImport = createJMenuItem(
+		"Halte-/Log-Punkte importieren..." );
+    mnuFile.add( this.mnuFileBreakImport );
 
-    this.mnuFileBreakImportClp = createJMenuItem(
-			"Haltepunkte aus Zwischenablage importieren" );
-    mnuFile.add( this.mnuFileBreakImportClp );
+    this.mnuFileBreakImportAgain = createJMenuItem(
+			"Halte-/Log-Punkte erneut importieren",
+			KeyEvent.VK_F3,
+			0 );
+    this.mnuFileBreakImportAgain.setEnabled( false );
+    mnuFile.add( this.mnuFileBreakImportAgain );
     mnuFile.addSeparator();
 
     this.mnuFileBreakRemoveImported = createJMenuItem(
-			"Importierte Haltepunkte entfernen" );
+				"Importierte Halte-/Log-Punkte entfernen" );
     this.mnuFileBreakRemoveImported.setEnabled( false );
     mnuFile.add( this.mnuFileBreakRemoveImported );
     mnuFile.addSeparator();
@@ -209,6 +339,18 @@ public class DebugFrm extends BasicFrm implements
 
     this.mnuDebugRun = createJMenuItem( TEXT_RUN, KeyEvent.VK_F5, 0 );
     mnuDebug.add( this.mnuDebugRun );
+
+    JMenu mnuDebugWalk = new JMenu( TEXT_WALK );
+    mnuDebug.add( mnuDebugWalk );
+
+    this.mnuDebugWalk500 = createJMenuItem( "sehr langsam" );
+    mnuDebugWalk.add( this.mnuDebugWalk500 );
+
+    this.mnuDebugWalk300 = createJMenuItem( "langsam" );
+    mnuDebugWalk.add( this.mnuDebugWalk300 );
+
+    this.mnuDebugWalk100 = createJMenuItem( "etwas schneller" );
+    mnuDebugWalk.add( this.mnuDebugWalk100 );
 
     this.mnuDebugStepOver = createJMenuItem(
 					TEXT_STEP_OVER,
@@ -230,59 +372,119 @@ public class DebugFrm extends BasicFrm implements
     mnuDebug.addSeparator();
 
     this.mnuDebugBreakPCAdd = createJMenuItem(
-			"Haltepunkt auf Programmadresse hinzuf\u00FCgen...",
-			KeyEvent.VK_A, InputEvent.CTRL_MASK );
+		"Halte-/Log-Punkt auf Programmadresse hinzuf\u00FCgen...",
+		KeyEvent.VK_A, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakPCAdd );
 
     this.mnuDebugBreakMemoryAdd = createJMenuItem(
-			"Haltepunkt auf Speicherbereich hinzuf\u00FCgen...",
-			KeyEvent.VK_M, InputEvent.CTRL_MASK );
+		"Halte-/Log-Punkt auf Speicherbereich hinzuf\u00FCgen...",
+		KeyEvent.VK_M, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakMemoryAdd );
 
     this.mnuDebugBreakInputAdd = createJMenuItem(
-			"Haltepunkt auf Eingabetor hinzuf\u00FCgen...",
-			KeyEvent.VK_I, InputEvent.CTRL_MASK );
+		"Halte-/Log-Punkt auf Eingabetor hinzuf\u00FCgen...",
+		KeyEvent.VK_I, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakInputAdd );
 
     this.mnuDebugBreakOutputAdd = createJMenuItem(
-			"Haltepunkt auf Ausgabetor hinzuf\u00FCgen...",
-			KeyEvent.VK_O, InputEvent.CTRL_MASK );
+		"Halte-/Log-Punkt auf Ausgabetor hinzuf\u00FCgen...",
+		KeyEvent.VK_O, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakOutputAdd );
 
     this.mnuDebugBreakInterruptAdd = createJMenuItem(
-			"Haltepunkt auf Interrupt-Quelle hinzuf\u00FCgen...",
-			KeyEvent.VK_Q, InputEvent.CTRL_MASK );
+		"Halte-/Log-Punkt auf Interrupt-Quelle hinzuf\u00FCgen...",
+		KeyEvent.VK_Q, InputEvent.CTRL_MASK );
     mnuDebug.add( this.mnuDebugBreakInterruptAdd );
 
-    this.mnuDebugBreakRemove = createJMenuItem(
-			"Haltepunkte entfernen",
-			KeyEvent.VK_DELETE, 0 );
+    this.mnuDebugBreakEdit = createJMenuItem(
+		"Halte-/Log-Punkt bearbeiten",
+		KeyEvent.VK_E, InputEvent.CTRL_MASK );
+    mnuDebug.add( this.mnuDebugBreakEdit );
+    mnuDebug.addSeparator();
+
+    this.mnuDebugBreakRemove = createJMenuItem( TEXT_BP_REMOVE );
     mnuDebug.add( this.mnuDebugBreakRemove );
 
-    this.mnuDebugBreakRemoveAll = createJMenuItem(
-			"Alle Haltepunkte entfernen" );
+    this.mnuDebugBreakRemoveAll = createJMenuItem( TEXT_BP_REMOVE_ALL );
     mnuDebug.add( this.mnuDebugBreakRemoveAll );
     mnuDebug.addSeparator();
 
-    this.mnuDebugBreakEnable = createJMenuItem( "Haltepunkte aktivieren" );
-    mnuDebug.add( this.mnuDebugBreakEnable );
+    this.mnuDebugBreakEnableStop = createJMenuItem( TEXT_BP_ENABLE_STOP );
+    mnuDebug.add( this.mnuDebugBreakEnableStop );
 
-    this.mnuDebugBreakDisable = createJMenuItem( "Haltepunkte deaktivieren" );
-    mnuDebug.add( this.mnuDebugBreakDisable );
+    this.mnuDebugBreakDisableStop = createJMenuItem( TEXT_BP_DISABLE_STOP );
+    mnuDebug.add( this.mnuDebugBreakDisableStop );
+    mnuDebug.addSeparator();
 
-    this.mnuDebugBreakEnableAll = createJMenuItem(
-				"Alle Haltepunkte aktivieren" );
-    mnuDebug.add( this.mnuDebugBreakEnableAll );
+    this.mnuDebugBreakEnableStopAll = createJMenuItem(
+						TEXT_BP_ENABLE_STOP_ALL );
+    mnuDebug.add( this.mnuDebugBreakEnableStopAll );
 
-    this.mnuDebugBreakDisableAll = createJMenuItem(
-				"Alle Haltepunkte deaktivieren" );
-    mnuDebug.add( this.mnuDebugBreakDisableAll );
+    this.mnuDebugBreakDisableStopAll = createJMenuItem(
+						TEXT_BP_DISABLE_STOP_ALL );
+    mnuDebug.add( this.mnuDebugBreakDisableStopAll );
+    mnuDebug.addSeparator();
+
+    this.mnuDebugBreakEnableLog = createJMenuItem( TEXT_BP_ENABLE_LOG );
+    mnuDebug.add( this.mnuDebugBreakEnableLog );
+
+    this.mnuDebugBreakDisableLog = createJMenuItem( TEXT_BP_DISABLE_LOG );
+    mnuDebug.add( this.mnuDebugBreakDisableLog );
+    mnuDebug.addSeparator();
+
+    this.mnuDebugBreakEnableLogAll = createJMenuItem(
+						TEXT_BP_ENABLE_LOG_ALL );
+    mnuDebug.add( this.mnuDebugBreakEnableLogAll );
+
+    this.mnuDebugBreakDisableLogAll = createJMenuItem(
+						TEXT_BP_DISABLE_LOG_ALL );
+    mnuDebug.add( this.mnuDebugBreakDisableLogAll );
     mnuDebug.addSeparator();
 
     this.mnuDebugTracer = new JCheckBoxMenuItem( "Befehle aufzeichnen" );
     this.mnuDebugTracer.setSelected( false );
     this.mnuDebugTracer.addActionListener( this );
     mnuDebug.add( this.mnuDebugTracer );
+
+
+    // Menu Log-Meldungen
+    JMenu mnuLog = new JMenu( "Log-Meldungen" );
+    mnuLog.setMnemonic( KeyEvent.VK_L );
+
+    this.mnuLogCopy = createJMenuItem( TEXT_LOG_COPY );
+    mnuLog.add( this.mnuLogCopy );
+
+    this.mnuLogSelectAll = createJMenuItem( TEXT_LOG_SELECT_ALL );
+    mnuLog.add( this.mnuLogSelectAll );
+    mnuLog.addSeparator();
+
+    this.mnuLogRemove = createJMenuItem( TEXT_LOG_REMOVE );
+    mnuLog.add( this.mnuLogRemove );
+
+    this.mnuLogRemoveAll = createJMenuItem( TEXT_LOG_REMOVE_ALL );
+    mnuLog.add( this.mnuLogRemoveAll );
+    mnuLog.addSeparator();
+
+    this.mnuLogMaxLogCnt = createJMenuItem( "Max. Anzahl Log-Meldungen..." );
+    mnuLog.add( this.mnuLogMaxLogCnt );
+
+
+    // Menu Variablen
+    JMenu mnuVar = new JMenu( "Variablen" );
+    mnuVar.setMnemonic( KeyEvent.VK_V );
+
+    this.mnuVarAdd = createJMenuItem( TEXT_VAR_ADD );
+    mnuVar.add( this.mnuVarAdd );
+
+    this.mnuVarEdit = createJMenuItem( TEXT_VAR_EDIT );
+    mnuVar.add( this.mnuVarEdit );
+    mnuVar.addSeparator();
+
+    this.mnuVarRemove = createJMenuItem( TEXT_VAR_REMOVE );
+    mnuVar.add( this.mnuVarRemove );
+
+    this.mnuVarRemoveAll = createJMenuItem( TEXT_VAR_REMOVE_ALL );
+    mnuVar.add( this.mnuVarRemoveAll );
 
 
     // Menu Hilfe
@@ -296,37 +498,114 @@ public class DebugFrm extends BasicFrm implements
     JMenuBar mnuBar = new JMenuBar();
     mnuBar.add( mnuFile );
     mnuBar.add( mnuDebug );
+    mnuBar.add( mnuLog );
+    mnuBar.add( mnuVar );
     mnuBar.add( mnuHelp );
     setJMenuBar( mnuBar );
 
 
-    // Popup-Menu
-    this.mnuPopup = new JPopupMenu();
+    // Popup-Menu fuer Halte-/Log-Punkt
+    this.popupBreak = new JPopupMenu();
 
-    this.mnuPopupBreakAdd = createJMenuItem( "Haltepunkt hinzuf\u00FCgen..." );
-    this.mnuPopup.add( this.mnuPopupBreakAdd );
+    this.popupBreakAdd = createJMenuItem(
+				"Halte-/Log-Punkt hinzuf\u00FCgen..." );
+    this.popupBreak.add( this.popupBreakAdd );
 
-    this.mnuPopupBreakRemove = createJMenuItem( "Haltepunkte entfernen" );
-    this.mnuPopup.add( this.mnuPopupBreakRemove );
+    this.popupBreakRemove = createJMenuItem( TEXT_BP_REMOVE );
+    this.popupBreak.add( this.popupBreakRemove );
 
-    this.mnuPopupBreakRemoveAll = createJMenuItem(
-				"Alle Haltepunkte entfernen" );
-    this.mnuPopup.add( this.mnuPopupBreakRemoveAll );
-    mnuPopup.addSeparator();
+    this.popupBreakRemoveAll = createJMenuItem( TEXT_BP_REMOVE_ALL );
+    this.popupBreak.add( this.popupBreakRemoveAll );
+    this.popupBreak.addSeparator();
 
-    this.mnuPopupBreakEnable = createJMenuItem( "Haltepunkte aktivieren" );
-    mnuPopup.add( this.mnuPopupBreakEnable );
+    this.popupBreakEnableStop = createJMenuItem( TEXT_BP_ENABLE_STOP );
+    this.popupBreak.add( this.popupBreakEnableStop );
 
-    this.mnuPopupBreakDisable = createJMenuItem( "Haltepunkte deaktivieren" );
-    mnuPopup.add( this.mnuPopupBreakDisable );
+    this.popupBreakDisableStop = createJMenuItem( TEXT_BP_DISABLE_STOP );
+    this.popupBreak.add( this.popupBreakDisableStop );
+    this.popupBreak.addSeparator();
 
-    this.mnuPopupBreakEnableAll = createJMenuItem(
-				"Alle Haltepunkte aktivieren" );
-    mnuPopup.add( this.mnuPopupBreakEnableAll );
+    this.popupBreakEnableStopAll = createJMenuItem( TEXT_BP_ENABLE_STOP_ALL );
+    this.popupBreak.add( this.popupBreakEnableStopAll );
 
-    this.mnuPopupBreakDisableAll = createJMenuItem(
-				"Alle Haltepunkte deaktivieren" );
-    mnuPopup.add( this.mnuPopupBreakDisableAll );
+    this.popupBreakDisableStopAll = createJMenuItem(
+						TEXT_BP_DISABLE_STOP_ALL );
+    this.popupBreak.add( this.popupBreakDisableStopAll );
+    this.popupBreak.addSeparator();
+
+    this.popupBreakEnableLog = createJMenuItem( TEXT_BP_ENABLE_LOG );
+    this.popupBreak.add( this.popupBreakEnableLog );
+
+    this.popupBreakDisableLog = createJMenuItem( TEXT_BP_DISABLE_LOG );
+    this.popupBreak.add( this.popupBreakDisableLog );
+    this.popupBreak.addSeparator();
+
+    this.popupBreakEnableLogAll = createJMenuItem( TEXT_BP_ENABLE_LOG_ALL );
+    this.popupBreak.add( this.popupBreakEnableLogAll );
+
+    this.popupBreakDisableLogAll = createJMenuItem(
+						TEXT_BP_DISABLE_LOG_ALL );
+    this.popupBreak.add( this.popupBreakDisableLogAll );
+
+
+    // Popup-Menu fuer Log-Meldungen
+    this.popupLog = new JPopupMenu();
+
+    this.popupLogCopy = createJMenuItem( TEXT_LOG_COPY );
+    this.popupLog.add( this.popupLogCopy );
+
+    this.popupLogSelectAll = createJMenuItem( TEXT_LOG_SELECT_ALL );
+    this.popupLog.add( this.popupLogSelectAll );
+    this.popupLog.addSeparator();
+
+    this.popupLogRemove = createJMenuItem( TEXT_LOG_REMOVE );
+    this.popupLog.add( this.popupLogRemove );
+
+    this.popupLogRemoveAll = createJMenuItem( TEXT_LOG_REMOVE_ALL );
+    this.popupLog.add( this.popupLogRemoveAll );
+
+
+    // Popup-Menu fuer Variablen
+    this.popupVar = new JPopupMenu();
+
+    this.popupVarAdd = createJMenuItem( TEXT_VAR_ADD );
+    this.popupVar.add( this.popupVarAdd );
+
+    this.popupVarEdit = createJMenuItem( TEXT_VAR_EDIT );
+    this.popupVar.add( this.popupVarEdit );
+    this.popupVar.addSeparator();
+
+    this.popupVarRemove = createJMenuItem( TEXT_VAR_REMOVE );
+    this.popupVar.add( this.popupVarRemove );
+
+    this.popupVarRemoveAll = createJMenuItem( TEXT_VAR_REMOVE_ALL );
+    this.popupVar.add( this.popupVarRemoveAll );
+
+
+    // Popup-Menu fuer langsames ausfuehren
+    this.popupWalk = new JPopupMenu();
+
+    this.popupWalk500 = createJMenuItem(
+				"Programm sehr langsam ausf\u00FChren" );
+    this.popupWalk.add( this.popupWalk500 );
+
+    this.popupWalk300 = createJMenuItem( "Programm langsam ausf\u00FChren" );
+    this.popupWalk.add( this.popupWalk300 );
+
+    this.popupWalk100 = createJMenuItem(
+				"Programm etwas schneller ausf\u00FChren" );
+    this.popupWalk.add( this.popupWalk100 );
+
+
+    // Popup-Menu in der Reassembler-Anzeige des PC-Bereichs
+    this.popupMemPC = new JPopupMenu();
+
+    this.popupMemPCCopy = createJMenuItem( "Kopieren" );
+    this.popupMemPC.add( this.popupMemPCCopy );
+    this.popupMemPC.addSeparator();
+
+    this.popupMemPCBreak = createJMenuItem( "Halte-/Log-Punkt anlegen" );
+    this.popupMemPC.add( this.popupMemPCBreak );
 
 
     // Fensterinhalt
@@ -347,19 +626,22 @@ public class DebugFrm extends BasicFrm implements
     this.btnRun = createImageButton( "/images/debug/run.png", TEXT_RUN );
     toolBar.add( this.btnRun );
 
+    this.btnWalk = createImageButton( "/images/debug/walk.png", TEXT_WALK );
+    toolBar.add( this.btnWalk );
+
     this.btnStepOver = createImageButton(
-			"/images/debug/step_over.png",
-			TEXT_STEP_OVER );
+				"/images/debug/step_over.png",
+				TEXT_STEP_OVER );
     toolBar.add( this.btnStepOver );
 
     this.btnStepInto = createImageButton(
-			"/images/debug/step_into.png",
-			TEXT_STEP_INTO );
+				"/images/debug/step_into.png",
+				TEXT_STEP_INTO );
     toolBar.add( this.btnStepInto );
 
     this.btnStepToRET = createImageButton(
-			"/images/debug/step_up.png",
-			TEXT_STEP_TO_RET );
+				"/images/debug/step_up.png",
+				TEXT_STEP_TO_RET );
     toolBar.add( this.btnStepToRET );
 
 
@@ -768,6 +1050,7 @@ public class DebugFrm extends BasicFrm implements
     // Programmcode-Anzeige
     this.fldMemPC = new JTextArea( 5, 38 );
     this.fldMemPC.setEditable( false );
+    this.fldMemPC.addMouseListener( this );
     this.spMemPC     = new JScrollPane( this.fldMemPC );
     gbcReg.anchor    = GridBagConstraints.WEST;
     gbcReg.fill      = GridBagConstraints.BOTH;
@@ -780,16 +1063,16 @@ public class DebugFrm extends BasicFrm implements
 
     Font font = this.fldMemPC.getFont();
     if( font != null ) {
-      font = new Font( "Monospaced", font.getStyle(), font.getSize() );
+      font = new Font( Font.MONOSPACED, font.getStyle(), font.getSize() );
     } else {
-      font = new Font( "Monospaced", Font.PLAIN, 12 );
+      font = new Font( Font.MONOSPACED, Font.PLAIN, 12 );
     }
     this.fldMemPC.setFont( font );
 
-    // Haltepunkte
+    // Halte-/Log-Punkte
     JPanel panelBreak = new JPanel( new GridBagLayout() );
     panelBreak.setBorder(
-		BorderFactory.createTitledBorder( "Haltepunkte auf..." ) );
+	BorderFactory.createTitledBorder( "Halte-/Log-Punkte auf..." ) );
     gbcCPU.fill       = GridBagConstraints.BOTH;
     gbcCPU.weightx    = 1.0;
     gbcCPU.gridheight = 2;
@@ -847,11 +1130,53 @@ public class DebugFrm extends BasicFrm implements
     panelBreak.add( panelBreakInt, gbcBreak );
     createBreakpointFields( panelBreakInt, BP_INTERRUPT_IDX );
 
+
+    // Tab Log-Meldungen
+    this.listModelLog = new DefaultListModel<>();
+    this.listLog      = new JList<>( this.listModelLog );
+    this.listLog.setDragEnabled( false );
+    this.listLog.setLayoutOrientation( JList.VERTICAL );
+    this.listLog.setSelectionMode(
+			ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
+    this.listLog.addListSelectionListener( this );
+    this.listLog.addKeyListener( this );
+    this.listLog.addMouseListener( this );
+
+    JScrollPane spLog = new JScrollPane( this.listLog );
+    spLog.addMouseListener( this );
+
+    this.tabbedPane.addTab( "Log-Meldungen", spLog );
+
+
+    // Tab Variablen
+    this.tableModelVar = new VarTableModel();
+    this.tableVar      = new JTable( this.tableModelVar );
+    this.tableVar.setAutoCreateRowSorter( true );
+    this.tableVar.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
+    this.tableVar.setColumnSelectionAllowed( false );
+    this.tableVar.setRowSelectionAllowed( true );
+    this.tableVar.setDragEnabled( false );
+    this.tableVar.setFillsViewportHeight( true );
+    this.tableVar.setPreferredScrollableViewportSize( new Dimension( 1, 1 ) );
+    this.tableVar.setShowGrid( false );
+    this.tableVar.setSelectionMode(
+		ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
+    this.selectionModelVar = this.tableVar.getSelectionModel();
+    if( this.selectionModelVar != null ) {
+      this.selectionModelVar.addListSelectionListener( this );
+      updVarActionsEnabled();
+    }
+    EmuUtil.setTableColWidths( this.tableVar, 120, 90, 90, 200, 200 );
+    this.tableVar.addKeyListener( this );
+    this.tableVar.addMouseListener( this );
+    this.tabbedPane.addTab( "Variablen", new JScrollPane( this.tableVar ) );
+
+
     // Tab Interrupt-Quellen
     JPanel panelIntSrc = new JPanel( new BorderLayout( 5, 5 ) );
     this.tabbedPane.addTab( "Interrupt-Quellen", panelIntSrc );
 
-    this.listIntSrc = new JList();
+    this.listIntSrc = new JList<>();
     this.listIntSrc.setDragEnabled( false );
     this.listIntSrc.setLayoutOrientation( JList.VERTICAL );
     this.listIntSrc.setSelectionMode(
@@ -866,6 +1191,7 @@ public class DebugFrm extends BasicFrm implements
     this.fldIntSrc = new JEditorPane();
     this.fldIntSrc.setEditable( false );
     panelIntSrc.add( new JScrollPane( this.fldIntSrc ), BorderLayout.CENTER );
+
 
     // Tab Sonstiges
     this.fldEtc = new JEditorPane()
@@ -888,6 +1214,10 @@ public class DebugFrm extends BasicFrm implements
     panelStatus.add( this.labelStatus );
 
 
+    // Listener
+    this.tabbedPane.addChangeListener( this );
+
+
     // sonstiges
     this.timerForClear = new javax.swing.Timer( 300, this );
     if( !applySettings( Main.getProperties(), true ) ) {
@@ -903,7 +1233,58 @@ public class DebugFrm extends BasicFrm implements
       updBreakpointList( i, null );
     }
     updBreakpointActionsEnabled();
+    updLogActionsEnabled();
     addComponentListener( this );
+  }
+
+
+  public void appendLogEntry( Z80InterruptSource iSource )
+  {
+    if( iSource != null ) {
+      fireAppendLogEntry( "--- Interrupt: " + iSource.toString() + " ---" );
+    }
+    StringWriter stringWriter = new StringWriter( 128 );
+    PrintWriter  printWriter  = new PrintWriter( stringWriter );
+    printWriter.write( "T:" );
+    printWriter.write( String.valueOf( this.cpu.getProcessedTStates() ) );
+    printWriter.write( "   " );
+    this.cpu.writeDebugStatusEntry( printWriter );
+    printWriter.close();
+    fireAppendLogEntry( stringWriter.toString() );
+  }
+
+
+  public void doDebugBreakPCAdd( int presetAddr )
+  {
+    if( this.bpDlg == null ) {
+      this.bpDlg = new PCBreakpointDlg( this, null, presetAddr );
+      this.bpDlg.setVisible( true );
+      AbstractBreakpoint bp = this.bpDlg.getApprovedBreakpoint();
+      if( bp != null ) {
+	addBreakpoint( BP_PC_IDX, bp );
+      }
+      this.bpDlg = null;
+    }
+  }
+
+
+  public VarData getVarByName( String name )
+  {
+    VarData rv    = null;
+    int     nVars = this.tableModelVar.getRowCount();
+    for( int i = 0; i < nVars; i++ ) {
+      VarData tmpVar = this.tableModelVar.getRow( i );
+      if( tmpVar != null ) {
+	String s = tmpVar.getName();
+	if( s != null ) {
+	  if( s.equalsIgnoreCase( name ) ) {
+	    rv = tmpVar;
+	    break;
+	  }
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -919,9 +1300,96 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  public void setLabels( jkcemu.tools.Label[] labels )
+  public boolean importLabels(
+			Component          owner,
+			LabelImportOptions options )
   {
-    importLabels( labels, true );
+    boolean state      = false;
+    Reader  reader     = null;
+    String  sourceText = null;
+    try {
+      switch( options.getLabelSource() ) {
+	case CLIPBOARD:
+	  String text = EmuUtil.getClipboardText( this );
+	  if( text != null ) {
+	    reader     = new StringReader( text );
+	    sourceText = " der Zwischenablage";
+	  }
+	  break;
+	case FILE:
+	  File file = options.getFile();
+	  if( file == null ) {
+	    throw new IOException( "Datei nicht angegeben" );
+	  }
+	  reader     = new FileReader( file );
+	  sourceText = " der Datei";
+	  break;
+      }
+      if( reader != null ) {
+	try {
+	  state = importLabels(
+			ToolsUtil.readLabels( reader ),
+			options.getSuppressRecreateRemovedLabels(),
+			options.getRemoveObsoleteLabels(),
+			options.getCaseSensitive() );
+	}
+	finally {
+	  EmuUtil.doClose( reader );
+	}
+      }
+      if( state ) {
+	this.labelImportOptions = options;
+	this.mnuFileBreakImportAgain.setEnabled( true );
+      } else {
+	if( reader != null ) {
+	  BasicDlg.showErrorDlg(
+		this,
+		"Der Inhalt" + sourceText + " konnte nicht als Liste\n"
+		  + "mit Halte-/Log-Punkten interpretiert werden." );
+	}
+      }
+    }
+    catch( IOException ex ) {
+      BasicDlg.showErrorDlg( this, ex );
+    }
+    return state;
+  }
+
+
+  public void selectVar( VarData var )
+  {
+    if( var != null ) {
+      int modelRow = this.tableModelVar.indexOf( var );
+      if( modelRow >= 0 ) {
+	int viewRow = this.tableVar.convertRowIndexToView( modelRow );
+	if( viewRow >= 0 ) {
+	  final JTable table = this.tableVar;
+	  EmuUtil.fireSelectRow( table, viewRow );
+	}
+      }
+    }
+  }
+
+
+  public void setLabels(
+		jkcemu.tools.Label[] labels,
+		boolean              suppressRecreate,
+		boolean              caseSensitive )
+  {
+    importLabels( labels, suppressRecreate, true, caseSensitive );
+  }
+
+
+	/* --- Methoden fuer ChangeListener --- */
+
+  @Override
+  public void stateChanged( ChangeEvent e )
+  {
+    if( e.getSource() == this.tabbedPane ) {
+      updBreakpointActionsEnabled();
+      updLogActionsEnabled();
+      updVarActionsEnabled();
+    }
   }
 
 
@@ -983,8 +1451,12 @@ public class DebugFrm extends BasicFrm implements
     Object src = e.getSource();
     if( src == this.listIntSrc ) {
       updIntSrcInfoField();
+    } else if( src == this.listLog ) {
+      updLogActionsEnabled();
+    } else if( src == this.selectionModelVar ) {
+      updVarActionsEnabled();
     } else {
-      JList list = null;
+      BreakpointList list = null;
       for( int i = 0; i < BP_GROUP_CNT; i++ ) {
 	if( (src == this.bpLists[ i ])
 	    || (src == this.bpScrollPanes[ i ]) )
@@ -1040,6 +1512,10 @@ public class DebugFrm extends BasicFrm implements
   @Override
   public boolean applySettings( Properties props, boolean resizable )
   {
+    if( props != null ) {
+      setMaxLogCnt( props.getProperty(
+			getSettingsPrefix() + "max_log_count" ) );
+    }
     updIntSrcFields();
     updEtcField();
     return super.applySettings( props, resizable );
@@ -1065,13 +1541,13 @@ public class DebugFrm extends BasicFrm implements
 
       // Aktion auswerten
       Object src = e.getSource();
-      if( src == this.mnuFileBreakImportFile ) {
+      if( src == this.mnuFileBreakImport ) {
 	rv = true;
-	doBreakpointImportFile();
+	doBreakpointImport( true );
       }
-      else if( src == this.mnuFileBreakImportClp ) {
+      else if( src == this.mnuFileBreakImport ) {
 	rv = true;
-	doBreakpointImportClp();
+	doBreakpointImport( false );
       }
       else if( src == this.mnuFileBreakRemoveImported ) {
 	rv = true;
@@ -1086,6 +1562,29 @@ public class DebugFrm extends BasicFrm implements
       {
 	rv = true;
 	doDebugRun();
+      }
+      else if( src == this.btnWalk )
+      {
+	rv = true;
+	this.popupWalk.show( this.btnWalk, 0, this.btnWalk.getHeight() );
+      }
+      else if( (src == this.mnuDebugWalk100)
+	       || (src == this.popupWalk100) )
+      {
+	rv = true;
+	doDebugWalk( 100 );
+      }
+      else if( (src == this.mnuDebugWalk300)
+	       || (src == this.popupWalk300) )
+      {
+	rv = true;
+	doDebugWalk( 300 );
+      }
+      else if( (src == this.mnuDebugWalk500)
+	       || (src == this.popupWalk500) )
+      {
+	rv = true;
+	doDebugWalk( 500 );
       }
       else if( (src == this.mnuDebugStop)
 	       || (src == this.btnStop) )
@@ -1129,7 +1628,11 @@ public class DebugFrm extends BasicFrm implements
       }
       else if( src == this.mnuDebugBreakPCAdd ) {
 	rv = true;
-	doDebugBreakPCAdd();
+	doDebugBreakPCAdd( -1 );
+      }
+      else if( src == this.mnuDebugBreakEdit ) {
+	rv = true;
+	doDebugBreakEdit();
       }
       else if( src == this.mnuDebugBreakRemove ) {
 	rv = true;
@@ -1139,57 +1642,141 @@ public class DebugFrm extends BasicFrm implements
 	rv = true;
 	doDebugBreakRemoveAll();
       }
-      else if( src == this.mnuDebugBreakEnable ) {
+      else if( src == this.mnuDebugBreakEnableStop ) {
 	rv = true;
-	doDebugBreakSetEnabled( true );
+	doDebugBreakSetStopEnabled( true );
       }
-      else if( src == this.mnuDebugBreakDisable ) {
+      else if( src == this.mnuDebugBreakDisableStop ) {
 	rv = true;
-	doDebugBreakSetEnabled( false );
+	doDebugBreakSetStopEnabled( false );
       }
-      else if( src == this.mnuDebugBreakEnableAll ) {
+      else if( src == this.mnuDebugBreakEnableStopAll ) {
 	rv = true;
-	doDebugBreakSetAllEnabled( true );
+	doDebugBreakSetAllStopEnabled( true );
       }
-      else if( src == this.mnuDebugBreakDisableAll ) {
+      else if( src == this.mnuDebugBreakDisableStopAll ) {
 	rv = true;
-	doDebugBreakSetAllEnabled( false );
+	doDebugBreakSetAllStopEnabled( false );
+      }
+      else if( src == this.mnuDebugBreakEnableLog ) {
+	rv = true;
+	doDebugBreakSetLogEnabled( true );
+      }
+      else if( src == this.mnuDebugBreakDisableLog ) {
+	rv = true;
+	doDebugBreakSetLogEnabled( false );
+      }
+      else if( src == this.mnuDebugBreakEnableLogAll ) {
+	rv = true;
+	doDebugBreakSetAllLogEnabled( true );
+      }
+      else if( src == this.mnuDebugBreakDisableLogAll ) {
+	rv = true;
+	doDebugBreakSetAllLogEnabled( false );
       }
       else if( src == this.mnuDebugTracer ) {
 	rv = true;
 	doDebugTracer();
       }
+      else if( (src == this.mnuVarAdd)
+	       || (src == this.popupVarAdd) )
+      {
+	rv = true;
+	doVarAdd();
+      }
+      else if( (src == this.mnuVarEdit)
+	       || (src == this.popupVarEdit)
+	       || (src == this.tableVar) )
+      {
+	rv = true;
+	doVarEdit();
+      }
+      else if( (src == this.mnuVarRemove)
+	       || (src == this.popupVarRemove) )
+      {
+	rv = true;
+	doVarRemove();
+      }
+      else if( (src == this.mnuVarRemoveAll)
+	       || (src == this.popupVarRemoveAll) )
+      {
+	rv = true;
+	doVarRemoveAll();
+      }
+      else if( (src == this.mnuLogCopy)
+	       || (src == this.popupLogCopy) )
+      {
+	rv = true;
+	doLogCopy();
+      }
+      else if( (src == this.mnuLogSelectAll)
+	       || (src == this.popupLogSelectAll) ) {
+	rv = true;
+	doLogSelectAll();
+      }
+      else if( (src == this.mnuLogRemove)
+	       || (src == this.popupLogRemove) )
+      {
+	rv = true;
+	doLogRemove();
+      }
+      else if( (src == this.mnuLogRemoveAll)
+	       || (src == this.popupLogRemoveAll) )
+      {
+	rv = true;
+	doLogRemoveAll();
+      }
+      else if( src == this.mnuLogMaxLogCnt ) {
+	rv = true;
+	doLogMaxLogCnt();
+      }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
 	HelpFrm.open( "/help/tools/debugger.htm" );
       }
-      else if( src == this.mnuPopupBreakAdd ) {
+      else if( src == this.popupBreakAdd ) {
 	rv = true;
 	doDebugBreakAdd( this.popupBreakGroupIdx );
       }
-      else if( src == this.mnuPopupBreakRemove ) {
+      else if( src == this.popupBreakRemove ) {
 	rv = true;
 	doDebugBreakRemove( this.popupBreakGroupIdx );
       }
-      else if( src == this.mnuPopupBreakRemoveAll ) {
+      else if( src == this.popupBreakRemoveAll ) {
 	rv = true;
 	doDebugBreakRemoveAll( this.popupBreakGroupIdx );
       }
-      else if( src == this.mnuPopupBreakEnable ) {
+      else if( src == this.popupBreakEnableStop ) {
 	rv = true;
-	doDebugBreakSetEnabled( this.popupBreakGroupIdx, true );
+	doDebugBreakSetStopEnabled( this.popupBreakGroupIdx, true );
       }
-      else if( src == this.mnuPopupBreakDisable ) {
+      else if( src == this.popupBreakDisableStop ) {
 	rv = true;
-	doDebugBreakSetEnabled( this.popupBreakGroupIdx, false );
+	doDebugBreakSetStopEnabled( this.popupBreakGroupIdx, false );
       }
-      else if( src == this.mnuPopupBreakEnableAll ) {
+      else if( src == this.popupBreakEnableStopAll ) {
 	rv = true;
-	doDebugBreakSetAllEnabled( this.popupBreakGroupIdx, true );
+	doDebugBreakSetAllStopEnabled( this.popupBreakGroupIdx, true );
       }
-      else if( src == this.mnuPopupBreakDisableAll ) {
+      else if( src == this.popupBreakDisableStopAll ) {
 	rv = true;
-	doDebugBreakSetAllEnabled( this.popupBreakGroupIdx, false );
+	doDebugBreakSetAllStopEnabled( this.popupBreakGroupIdx, false );
+      }
+      else if( src == this.popupBreakEnableLog ) {
+	rv = true;
+	doDebugBreakSetLogEnabled( this.popupBreakGroupIdx, true );
+      }
+      else if( src == this.popupBreakDisableLog ) {
+	rv = true;
+	doDebugBreakSetLogEnabled( this.popupBreakGroupIdx, false );
+      }
+      else if( src == this.popupBreakEnableLogAll ) {
+	rv = true;
+	doDebugBreakSetAllLogEnabled( this.popupBreakGroupIdx, true );
+      }
+      else if( src == this.popupBreakDisableLogAll ) {
+	rv = true;
+	doDebugBreakSetAllLogEnabled( this.popupBreakGroupIdx, false );
       }
       else if( src == this.btnFlagSign ) {
 	rv = true;
@@ -1250,9 +1837,23 @@ public class DebugFrm extends BasicFrm implements
 	this.cpu.resetSpeed();
 	updFieldsTStates();
       }
+      else if( src == this.popupMemPCCopy ) {
+	rv = true;
+	this.fldMemPC.copy();
+      }
+      else if( src == this.popupMemPCBreak ) {
+	rv = true;
+	if( this.memPCClickAddr >= 0 ) {
+	  doDebugBreakPCAdd( this.memPCClickAddr );
+	}
+      }
       else if( src == this.timerForClear ) {
 	rv = true;
 	clear();
+      }
+      else if( src == this.walkTimer ) {
+	rv = true;
+	doWalkTimer();
       }
       else if( (src == this.spinnerIntMode)
 	       || (src == this.fldRegAF)
@@ -1272,7 +1873,7 @@ public class DebugFrm extends BasicFrm implements
 	rv = true;
 	fieldValueChanged( src );
       }
-      else if( src instanceof JList ) {
+      else if( src instanceof BreakpointList ) {
 	if( src == this.bpLists[ BP_PC_IDX ] ) {
 	  rv = true;
 	  editBreakpoint( BP_PC_IDX );
@@ -1305,10 +1906,50 @@ public class DebugFrm extends BasicFrm implements
 
 
   @Override
+  public void keyPressed( KeyEvent e )
+  {
+    boolean done = false;
+    if( e.getKeyCode() == KeyEvent.VK_DELETE ) {
+      switch( this.tabbedPane.getSelectedIndex() ) {
+	case TAB_IDX_CPU:
+	  doDebugBreakRemove();
+	  done = true;
+	  break;
+	case TAB_IDX_LOG:
+	  doLogRemove();
+	  done = true;
+	  break;
+	case TAB_IDX_VAR:
+	  doVarRemove();
+	  done = true;
+	  break;
+      }
+    }
+    if( done ) {
+      e.consume();
+    } else {
+      super.keyPressed( e );
+    }
+  }
+
+
+  @Override
   public void lookAndFeelChanged()
   {
-    if( this.mnuPopup != null )
-      SwingUtilities.updateComponentTreeUI( this.mnuPopup );
+    if( this.popupBreak != null )
+      SwingUtilities.updateComponentTreeUI( this.popupBreak );
+  }
+
+
+  @Override
+  public void putSettingsTo( Properties props )
+  {
+    super.putSettingsTo( props );
+    if( props != null ) {
+      props.setProperty(
+			getSettingsPrefix() + "max_log_count",
+			String.valueOf( this.maxLogCnt ) );
+    }
   }
 
 
@@ -1330,81 +1971,119 @@ public class DebugFrm extends BasicFrm implements
     if( e != null ) {
       Component c = e.getComponent();
       if( c != null ) {
-	int idx = -1;
-	for( int i = 0; i < BP_GROUP_CNT; i++ ) {
-	  if( (c == this.bpLists[ i ])
-	      || (c == this.bpScrollPanes[ i ]) )
-	  {
-	    idx = i;
-	    break;
-	  }
-	}
-	if( (idx >= 0) && (idx < BP_GROUP_CNT) ) {
-	  BreakpointListModel model       = this.bpModels[ idx ];
-	  boolean             hasEnabled  = false;
-	  boolean             hasDisabled = false;
-	  if( model != null ) {
-	    for( AbstractBreakpoint bp : model ) {
-	      if( bp.isEnabled() ) {
-		hasEnabled = true;
-	      } else {
-		hasDisabled = true;
-	      }
-	      if( hasEnabled && hasDisabled ) {
+	if( c == this.fldMemPC ) {
+	  this.memPCClickAddr = ToolsUtil.getReassAddr(
+						this.fldMemPC,
+						e.getPoint() );
+	  this.popupMemPCCopy.setEnabled(
+		this.fldMemPC.getSelectionStart()
+			!= this.fldMemPC.getSelectionEnd() );
+	  this.popupMemPCBreak.setEnabled( this.memPCClickAddr >= 0 );
+	  this.popupMemPC.show( c, e.getX(), e.getY() );
+	  rv = true;
+	} else {
+	  int tabIdx = this.tabbedPane.getSelectedIndex();
+	  if( tabIdx == TAB_IDX_CPU ) {
+	    int idx = -1;
+	    for( int i = 0; i < BP_GROUP_CNT; i++ ) {
+	      if( (c == this.bpLists[ i ])
+		  || (c == this.bpScrollPanes[ i ]) )
+	      {
+		idx = i;
 		break;
 	      }
 	    }
-	    this.mnuPopupBreakRemoveAll.setEnabled( !model.isEmpty() );
-	  } else {
-	    this.mnuPopupBreakRemoveAll.setEnabled( false );
-	  }
-	  this.mnuPopupBreakEnableAll.setEnabled( hasDisabled );
-	  this.mnuPopupBreakDisableAll.setEnabled( hasEnabled );
-
-	  int nEnabled  = 0;
-	  int nDisabled = 0;
-	  if( model != null ) {
-	    int[] rows  = this.bpLists[ idx ].getSelectedIndices();
-	    if( rows != null ) {
-	      for( int i = 0; i < rows.length; i++ ) {
-		int row = rows[ i ];
-		if( (row >= 0) && (row < model.size()) ) {
-		  if( model.get( row ).isEnabled() ) {
-		    nEnabled++;
+	    if( (idx >= 0) && (idx < BP_GROUP_CNT) ) {
+	      BreakpointListModel model           = this.bpModels[ idx ];
+	      boolean             anyStopEnabled  = false;
+	      boolean             anyStopDisabled = false;
+	      boolean             anyLogEnabled   = false;
+	      boolean             anyLogDisabled  = false;
+	      if( model != null ) {
+		for( AbstractBreakpoint bp : model ) {
+		  if( bp.isStopEnabled() ) {
+		    anyStopEnabled = true;
 		  } else {
-		    nDisabled++;
+		    anyStopDisabled = true;
+		  }
+		  if( bp.isLogEnabled() ) {
+		    anyLogEnabled = true;
+		  } else {
+		    anyLogDisabled = true;
+		  }
+		  if( anyStopEnabled && anyStopDisabled
+		      && anyLogEnabled && anyLogDisabled )
+		  {
+		    break;
 		  }
 		}
-		if( (nEnabled > 1) && (nDisabled > 1) ) {
-		  break;
+		this.popupBreakRemoveAll.setEnabled( !model.isEmpty() );
+	      } else {
+		this.popupBreakRemoveAll.setEnabled( false );
+	      }
+	      this.popupBreakEnableStopAll.setEnabled( anyStopDisabled );
+	      this.popupBreakDisableStopAll.setEnabled( anyStopEnabled );
+	      this.popupBreakEnableLogAll.setEnabled( anyLogDisabled );
+	      this.popupBreakDisableLogAll.setEnabled( anyLogEnabled );
+
+	      boolean selected        = false;
+	      boolean selStopEnabled  = false;
+	      boolean selStopDisabled = false;
+	      boolean selLogEnabled   = false;
+	      boolean selLogDisabled  = false;
+	      if( model != null ) {
+		int[] rows  = this.bpLists[ idx ].getSelectedIndices();
+		if( rows != null ) {
+		  for( int i = 0; i < rows.length; i++ ) {
+		    int row = rows[ i ];
+		    if( (row >= 0) && (row < model.size()) ) {
+		      selected = true;
+		      if( model.get( row ).isStopEnabled() ) {
+			selStopEnabled = true;
+		      } else {
+			selStopDisabled = true;
+		      }
+		      if( model.get( row ).isLogEnabled() ) {
+			selLogEnabled = true;
+		      } else {
+			selLogDisabled = true;
+		      }
+		    }
+		    if( selStopEnabled && selStopDisabled
+			&& selLogEnabled && selLogDisabled )
+		    {
+		      break;
+		    }
+		  }
 		}
 	      }
+	      this.popupBreakRemove.setEnabled( selected );
+	      this.popupBreakEnableStop.setEnabled( selStopDisabled );
+	      this.popupBreakDisableStop.setEnabled( selStopEnabled );
+	      this.popupBreakEnableLog.setEnabled( selLogDisabled );
+	      this.popupBreakDisableLog.setEnabled( selLogEnabled );
+	      this.popupBreakGroupIdx = idx;
+	      this.popupBreak.show( c, e.getX(), e.getY() );
+	      rv = true;
 	    }
+	  } else if( tabIdx == TAB_IDX_VAR ) {
+	    boolean hasEntries = !this.tableModelVar.isEmpty();
+	    int     nSelected  = this.tableVar.getSelectedRowCount();
+	    this.popupVarEdit.setEnabled( nSelected == 1 );
+	    this.popupVarRemove.setEnabled( nSelected > 0 );
+	    this.popupVarRemoveAll.setEnabled( hasEntries );
+	    this.popupVar.show( c, e.getX(), e.getY() );
+	    rv = true;
+	  } else if( tabIdx == TAB_IDX_LOG ) {
+	    boolean hasEntries = !this.listModelLog.isEmpty();
+	    boolean selected   = (this.listLog.getSelectedIndex() >= 0);
+	    this.popupLogCopy.setEnabled( selected );
+	    this.popupLogSelectAll.setEnabled( hasEntries );
+	    this.popupLogRemove.setEnabled( selected );
+	    this.popupLogRemoveAll.setEnabled( hasEntries );
+	    this.popupLog.show( c, e.getX(), e.getY() );
+	    rv = true;
 	  }
-	  if( (nEnabled + nDisabled) ==  1) {
-	    this.mnuPopupBreakRemove.setText( "Haltepunkt entfernen" );
-	    this.mnuPopupBreakRemove.setEnabled( true );
-	  } else {
-	    this.mnuPopupBreakRemove.setText( "Haltepunkte entfernen" );
-	    this.mnuPopupBreakRemove.setEnabled( (nEnabled + nDisabled) > 0 );
-	  }
-	  if( nDisabled == 1) {
-	    this.mnuPopupBreakEnable.setText( "Haltepunkt aktivieren" );
-	    this.mnuPopupBreakEnable.setEnabled( true );
-	  } else {
-	    this.mnuPopupBreakEnable.setText( "Haltepunkte aktivieren" );
-	    this.mnuPopupBreakEnable.setEnabled( nDisabled > 0 );
-	  }
-	  if( nEnabled == 1) {
-	    this.mnuPopupBreakDisable.setText( "Haltepunkt deaktivieren" );
-	    this.mnuPopupBreakDisable.setEnabled( true );
-	  } else {
-	    this.mnuPopupBreakDisable.setText( "Haltepunkte deaktivieren" );
-	    this.mnuPopupBreakDisable.setEnabled( nEnabled > 0 );
-	  }
-	  this.popupBreakGroupIdx = idx;
-	  this.mnuPopup.show( c, e.getX(), e.getY() );
-	  rv = true;
 	}
       }
     }
@@ -1414,64 +2093,14 @@ public class DebugFrm extends BasicFrm implements
 
 	/* --- Aktionen --- */
 
-  private void doBreakpointImportClp()
+  private void doBreakpointImport( boolean interactive )
   {
-    boolean state = false;
-    String  text  = EmuUtil.getClipboardText( this );
-    if( text != null ) {
-      Reader  reader = null;
-      try {
-	reader = new StringReader( text );
-	state  = importLabels( ToolsUtil.readLabels( reader ), false );
-      }
-      catch( IOException ex ) {}
-      finally {
-	EmuUtil.doClose( reader );
-      }
-    }
-    if( !state ) {
-      BasicDlg.showErrorDlg(
-		this,
-		"Der Inhalt der Zwischenablage konnte nicht als\n"
-			+ "Liste mit Haltepunkten interpretiert werden." );
-    }
-  }
-
-
-  private void doBreakpointImportFile()
-  {
-    File file = this.lastBreakpointFile;
-    if( file == null ) {
-      file = Main.getLastPathFile( "breakpoint" );
-    }
-    file = EmuUtil.showFileOpenDlg(
-			this,
-			"Haltepunkte importieren",
-			file,
-			EmuUtil.getTextFileFilter() );
-    if( file != null ) {
-      try {
-	boolean state  = false;
-	Reader  reader = null;
-	try {
-	  reader = new FileReader( file );
-	  state  = importLabels( ToolsUtil.readLabels( reader ), true );
-	}
-	finally {
-	  EmuUtil.doClose( reader );
-	}
-	if( state ) {
-	  this.lastBreakpointFile = file;
-	  Main.setLastFile( file, "breakpoint" );
-	} else {
-	  BasicDlg.showErrorDlg(
-		this,
-		"Der Inhalt der Datei konnte nicht als Liste\n"
-			+ "mit Haltepunkten interpretiert werden." );
-	}
-      }
-      catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+    LabelImportOptions options = null;
+    if( interactive ) {
+      LabelImportDlg.showDlg( this, this.labelImportOptions );
+    } else {
+      if( this.labelImportOptions != null ) {
+	importLabels( this, this.labelImportOptions );
       }
     }
   }
@@ -1500,12 +2129,25 @@ public class DebugFrm extends BasicFrm implements
 
   private void doDebugRun()
   {
+    this.walkMillis = 0;
     this.cpu.fireAction( Z80CPU.Action.DEBUG_RUN );
+  }
+
+
+  private void doDebugWalk( int millis )
+  {
+    this.walkMillis = millis;
+    this.labelStatus.setText( "Programm wird langsam ausgef\u00FChrt..." );
+    this.cpu.fireAction( Z80CPU.Action.DEBUG_WALK );
   }
 
 
   private void doDebugStop()
   {
+    if( this.walkMillis > 0 ) {
+      this.walkMillis = 0;
+      fireUpdDebugger( null, null );
+    }
     this.labelStatus.setText( "Programmausf\u00FChrung wird angehalten..." );
     this.cpu.fireAction( Z80CPU.Action.DEBUG_STOP );
   }
@@ -1513,18 +2155,21 @@ public class DebugFrm extends BasicFrm implements
 
   private void doDebugStepOver()
   {
+    this.walkMillis = 0;
     this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_OVER );
   }
 
 
   private void doDebugStepInto()
   {
+    this.walkMillis = 0;
     this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_INTO );
   }
 
 
   private void doDebugStepToRET()
   {
+    this.walkMillis = 0;
     this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_TO_RET );
   }
 
@@ -1533,7 +2178,7 @@ public class DebugFrm extends BasicFrm implements
   {
     switch( bpGroupIdx ) {
       case BP_PC_IDX:
-	doDebugBreakPCAdd();
+	doDebugBreakPCAdd( -1 );
 	break;
       case BP_MEMORY_IDX:
 	doDebugBreakMemoryAdd();
@@ -1547,6 +2192,33 @@ public class DebugFrm extends BasicFrm implements
       case BP_INTERRUPT_IDX:
 	doDebugBreakInterruptAdd();
 	break;
+    }
+  }
+
+
+  private void doDebugBreakEdit()
+  {
+    int grpIdx = -1;
+    if( this.tabbedPane.getSelectedIndex() == TAB_IDX_CPU ) {
+      for( int i = 0; i < BP_GROUP_CNT; i++ ) {
+	if( this.bpModels[ i ] != null ) {
+	  int[] rows = this.bpLists[ i ].getSelectedIndices();
+	  if( rows != null ) {
+	    if( rows.length > 0 ) {
+	      if( grpIdx < 0 ) {
+		grpIdx = i;
+	      } else {
+		// Breakpoints in mehrere Gruppen ausgewaehlt -> Abbruch
+		grpIdx = -1;
+		break;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    if( grpIdx >= 0 ) {
+      editBreakpoint( grpIdx );
     }
   }
 
@@ -1616,20 +2288,6 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private void doDebugBreakPCAdd()
-  {
-    if( this.bpDlg == null ) {
-      this.bpDlg = new PCBreakpointDlg( this, null );
-      this.bpDlg.setVisible( true );
-      AbstractBreakpoint bp = this.bpDlg.getApprovedBreakpoint();
-      if( bp != null ) {
-	addBreakpoint( BP_PC_IDX, bp );
-      }
-      this.bpDlg = null;
-    }
-  }
-
-
   private void doDebugBreakRemove()
   {
     for( int i = 0; i < BP_GROUP_CNT; i++ )
@@ -1645,10 +2303,10 @@ public class DebugFrm extends BasicFrm implements
 	int[] rows = this.bpLists[ bpGroupIdx ].getSelectedIndices();
 	if( rows != null ) {
 	  if( rows.length > 0 ) {
-	    Arrays.sort( rows );
 	    for( int i = rows.length - 1; i >= 0; --i ) {
 	      int row = rows[ i ];
 	      if( (row >= 0) && (row < model.size()) ) {
+		registerRemove( model.getElementAt( row ) );
 		model.remove( row );
 	      }
 	    }
@@ -1665,10 +2323,10 @@ public class DebugFrm extends BasicFrm implements
   {
     if( BasicDlg.showYesNoDlg(
 		this,
-		"M\u00F6chten Sie alle Haltepunkte entfernen?" ) )
+		"M\u00F6chten Sie alle Halte-/Log-Punkte entfernen?" ) )
     {
       for( int i = 0; i < this.bpModels.length; i++ ) {
-	this.bpModels[ i ].clear();
+	removeAllBreakpointsFromModel( this.bpModels[ i ] );
 	updBreakpointList( i, null );
       }
       updBreakpointActionsEnabled();
@@ -1681,10 +2339,10 @@ public class DebugFrm extends BasicFrm implements
     if( (bpGroupIdx >= 0) && (bpGroupIdx < BP_GROUP_CNT) ) {
       if( BasicDlg.showYesNoDlg(
 		this,
-		"M\u00F6chten Sie alle Haltepunkte"
+		"M\u00F6chten Sie alle Halte-/Log-Punkte"
 			+ " dieser Gruppe entfernen?" ) )
       {
-	this.bpModels[ bpGroupIdx ].clear();
+	removeAllBreakpointsFromModel( this.bpModels[ bpGroupIdx ] );
 	updBreakpointList( bpGroupIdx, null );
 	updBreakpointActionsEnabled();
       }
@@ -1692,14 +2350,14 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private void doDebugBreakSetEnabled( boolean state )
+  private void doDebugBreakSetStopEnabled( boolean state )
   {
     for( int i = 0; i < BP_GROUP_CNT; i++ )
-      doDebugBreakSetEnabled( i, state );
+      doDebugBreakSetStopEnabled( i, state );
   }
 
 
-  private void doDebugBreakSetEnabled( int bpGroupIdx, boolean state )
+  private void doDebugBreakSetStopEnabled( int bpGroupIdx, boolean state )
   {
     if( (bpGroupIdx >= 0) && (bpGroupIdx < BP_GROUP_CNT) ) {
       if( this.bpModels[ bpGroupIdx ] != null ) {
@@ -1710,7 +2368,7 @@ public class DebugFrm extends BasicFrm implements
 	      int row = rows[ i ];
 	      if( (row >= 0) && (row < this.bpModels[ bpGroupIdx ].size()) ) {
 		AbstractBreakpoint bp = this.bpModels[ bpGroupIdx].get( row );
-		bp.setEnabled( state );
+		bp.setStopEnabled( state );
 	      }
 	    }
 	    updBreakpointList( bpGroupIdx, null );
@@ -1723,19 +2381,71 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
-  private void doDebugBreakSetAllEnabled( boolean state )
+  private void doDebugBreakSetAllStopEnabled( boolean state )
   {
     for( int i = 0; i < BP_GROUP_CNT; i++ )
-      doDebugBreakSetAllEnabled( i, state );
+      doDebugBreakSetAllStopEnabled( i, state );
   }
 
 
-  private void doDebugBreakSetAllEnabled( int bpGroupIdx, boolean state )
+  private void doDebugBreakSetAllStopEnabled( int bpGroupIdx, boolean state )
   {
     if( (bpGroupIdx >= 0) && (bpGroupIdx < BP_GROUP_CNT) ) {
       if( this.bpModels[ bpGroupIdx ] != null ) {
 	for( int i = 0; i < this.bpModels[ bpGroupIdx ].size(); i++ ) {
-	  this.bpModels[ bpGroupIdx ].get( i ).setEnabled( state );
+	  this.bpModels[ bpGroupIdx ].get( i ).setStopEnabled( state );
+	}
+	updBreakpointList( bpGroupIdx, null );
+	updBreakpointActionsEnabled();
+      }
+    }
+  }
+
+
+  private void doDebugBreakSetLogEnabled( boolean state )
+  {
+    for( int i = 0; i < BP_GROUP_CNT; i++ )
+      doDebugBreakSetLogEnabled( i, state );
+  }
+
+
+  private void doDebugBreakSetLogEnabled( int bpGroupIdx, boolean state )
+  {
+    if( (bpGroupIdx >= 0) && (bpGroupIdx < BP_GROUP_CNT) ) {
+      if( this.bpModels[ bpGroupIdx ] != null ) {
+	int[] rows = this.bpLists[ bpGroupIdx ].getSelectedIndices();
+	if( rows != null ) {
+	  if( rows.length > 0 ) {
+	    for( int i = 0; i < rows.length; i++ ) {
+	      int row = rows[ i ];
+	      if( (row >= 0) && (row < this.bpModels[ bpGroupIdx ].size()) ) {
+		AbstractBreakpoint bp = this.bpModels[ bpGroupIdx].get( row );
+		bp.setLogEnabled( state );
+	      }
+	    }
+	    updBreakpointList( bpGroupIdx, null );
+	    updBreakpointActionsEnabled();
+	    EmuUtil.fireSelectRows( this.bpLists[ bpGroupIdx ], rows );
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doDebugBreakSetAllLogEnabled( boolean state )
+  {
+    for( int i = 0; i < BP_GROUP_CNT; i++ )
+      doDebugBreakSetAllLogEnabled( i, state );
+  }
+
+
+  private void doDebugBreakSetAllLogEnabled( int bpGroupIdx, boolean state )
+  {
+    if( (bpGroupIdx >= 0) && (bpGroupIdx < BP_GROUP_CNT) ) {
+      if( this.bpModels[ bpGroupIdx ] != null ) {
+	for( int i = 0; i < this.bpModels[ bpGroupIdx ].size(); i++ ) {
+	  this.bpModels[ bpGroupIdx ].get( i ).setLogEnabled( state );
 	}
 	updBreakpointList( bpGroupIdx, null );
 	updBreakpointActionsEnabled();
@@ -1779,7 +2489,7 @@ public class DebugFrm extends BasicFrm implements
 	file = EmuUtil.showFileSaveDlg(
 			this,
 			"Befehlsaufzeichnung speichern",
-			Main.getLastPathFile( "debug" ),
+			Main.getLastDirFile( "debug" ),
 			EmuUtil.getTextFileFilter() );
 	append = false;
       }
@@ -1812,6 +2522,187 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
+  private void doLogCopy()
+  {
+    if( this.tabbedPane.getSelectedIndex() == TAB_IDX_LOG ) {
+      int[] rows = this.listLog.getSelectedIndices();
+      if( rows != null ) {
+	if( rows.length > 0 ) {
+	  StringBuilder buf = new StringBuilder( rows.length * 128 );
+	  for( int row : rows ) {
+	    String text = this.listModelLog.getElementAt( row );
+	    if( text != null ) {
+	      if( buf.length() > 0 ) {
+		buf.append( (char) '\n' );
+	      }
+	      buf.append( text );
+	    }
+	  }
+	  EmuUtil.copyToClipboard( this, buf.toString() );
+	}
+      }
+    }
+  }
+
+
+  private void doLogMaxLogCnt()
+  {
+    ReplyIntDlg dlg = new ReplyIntDlg(
+				this,
+				"Max. Anzahl Log-Meldungen:",
+				new Integer( this.maxLogCnt ),
+				new Integer( 1 ),
+				new Integer( 10000 ) );
+    dlg.setVisible( true );
+    setMaxLogCnt( dlg.getReply() );
+  }
+
+
+  private void doLogRemove()
+  {
+    int[] rows = this.listLog.getSelectedIndices();
+    if( rows != null ) {
+      if( rows.length > 0 ) {
+	for( int i = rows.length - 1; i >= 0; --i ) {
+	  this.listModelLog.remove( rows[ i ] );
+	}
+	updLogActionsEnabled();
+      }
+    }
+  }
+
+
+  private void doLogRemoveAll()
+  {
+    if( !this.listModelLog.isEmpty() ) {
+      if( BasicDlg.showYesNoDlg(
+		this,
+		"M\u00F6chten Sie alle Log-Meldungen entfernen?" ) )
+      {
+	this.listModelLog.clear();
+	updLogActionsEnabled();
+      }
+    }
+  }
+
+
+  private void doLogSelectAll()
+  {
+    int n = this.listModelLog.getSize();
+    if( n > 0 ) {
+      this.listLog.setSelectionInterval( 0, n -1 );
+    }
+  }
+
+
+  private void doVarAdd()
+  {
+    VarData varData = VarDataDlg.showNewVarDlg( this );
+    if( varData != null ) {
+      final int row = this.tableModelVar.addRow( varData );
+      if( row >= 0 ) {
+	String varName = varData.getName();
+	if( varName != null ) {
+	  this.removedImportedVarNames.remove( varName );
+	}
+	if( this.tableModelVar.getValuesEnabled() ) {
+	  varData.update( this.memory );
+	  this.tableModelVar.fireTableRowsUpdated( row, row );
+	}
+	int viewRow = this.tableVar.convertRowIndexToView( row );
+	if( viewRow >= 0 ) {
+	  EmuUtil.fireSelectRow( this.tableVar, viewRow );
+	}
+      }
+    }
+  }
+
+
+  private void doVarEdit()
+  {
+    int[] rows = this.tableVar.getSelectedRows();
+    if( rows != null ) {
+      if( rows.length == 1 ) {
+	int modelRow = this.tableVar.convertRowIndexToModel( rows[ 0 ] );
+	if( modelRow >= 0 ) {
+	  VarData oldVar = this.tableModelVar.getRow( modelRow );
+	  if( oldVar != null ) {
+	    final VarData newVar = VarDataDlg.showEditVarDlg( this, oldVar );
+	    if( newVar != null ) {
+	      this.tableModelVar.setRow( modelRow, newVar );
+	      String varName = newVar.getName();
+	      if( varName != null ) {
+		this.removedImportedVarNames.remove( varName );
+	      }
+	      if( this.tableModelVar.getValuesEnabled() ) {
+		newVar.update( this.memory );
+		this.tableModelVar.fireTableRowsUpdated( modelRow, modelRow );
+		EventQueue.invokeLater(
+				new Runnable()
+				{
+				  @Override
+				  public void run()
+				  {
+				    selectVar( newVar );
+				  }
+				} );
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doVarRemove()
+  {
+    int[] rows = this.tableVar.getSelectedRows();
+    if( rows != null ) {
+      if( rows.length > 0 ) {
+	for( int i = 0; i < rows.length; i++ ) {
+	  if( rows[ i ] >= 0 ) {
+	    rows[ i ] = this.tableVar.convertRowIndexToModel( rows[ i ] );
+	  }
+	}
+	Arrays.sort( rows );
+	for( int i = rows.length - 1; i >= 0; --i ) {
+	  int row = rows[ i ];
+	  registerRemove( this.tableModelVar.getRow( row ) );
+	  this.tableModelVar.remove( row );
+	}
+      }
+    }
+  }
+
+
+  private void doVarRemoveAll()
+  {
+    if( !this.tableModelVar.isEmpty() ) {
+      if( BasicDlg.showYesNoDlg(
+		this,
+		"M\u00F6chten Sie alle Variablen entfernen?" ) )
+      {
+	int nVars = this.tableModelVar.getRowCount();
+	for( int i = 0; i < nVars; i++ ) {
+	  registerRemove( this.tableModelVar.getRow( i ) );
+	}
+	this.tableModelVar.clear();
+	updVarActionsEnabled();
+      }
+    }
+  }
+
+
+  private void doWalkTimer()
+  {
+    this.walkTimer.stop();
+    if( this.walkMillis > 0 ) {
+      this.cpu.fireAction( Z80CPU.Action.DEBUG_STEP_INTO );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void addBreakpoint( int bpGroupIdx, AbstractBreakpoint bpToAdd )
@@ -1835,6 +2726,20 @@ public class DebugFrm extends BasicFrm implements
       }
     }
     catch( ClassCastException ex ) {}
+  }
+
+
+  private void appendLogEntryInternal( String text )
+  {
+    int nToRemove = this.listModelLog.getSize() - this.maxLogCnt + 1;
+    if( nToRemove > 0 ) {
+      try {
+	this.listModelLog.removeRange( 0, nToRemove - 1 );
+      }
+      catch( ArrayIndexOutOfBoundsException ex ) {}
+    }
+    this.listModelLog.addElement( text );
+    updLogActionsEnabled();
   }
 
 
@@ -1918,37 +2823,22 @@ public class DebugFrm extends BasicFrm implements
 				Container container,
 				int       bpGroupIdx )
   {
-    BreakpointListModel model      = new BreakpointListModel();
+    BreakpointListModel model   = new BreakpointListModel();
     this.bpModels[ bpGroupIdx ] = model;
 
-    JList list = new JList( model );
+    BreakpointList list = new BreakpointList( model );
     list.setVisibleRowCount( 4 );
-    list.setPrototypeCellValue( "12345678901234" );
+    list.setPrototypeCellValue(
+		new PCBreakpoint(
+			this,
+			0xFFFF,
+			"HL",
+			0xFFFF,
+			"=",
+			0xFFFF,
+			false ) );
     list.setSelectionMode( ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
-    list.setCellRenderer(
-	new DefaultListCellRenderer()
-	{
-	  @Override
-	  public Component getListCellRendererComponent(
-					JList   list,
-					Object  value,
-					int     idx,
-					boolean selected,
-					boolean hasFocus )
-	  {
-	    String s = null;
-	    if( value != null ) {
-	      s = value.toString();
-	    }
-	    setToolTipText( s );
-	    return super.getListCellRendererComponent(
-						list,
-						value,
-						idx,
-						selected,
-						hasFocus );
-	  }
-	} );
+    list.setCellRenderer( new BreakpointCellRenderer( this ) );
     this.bpLists[ bpGroupIdx ] = list;
 
     JScrollPane sp = new JScrollPane( list );
@@ -1983,7 +2873,7 @@ public class DebugFrm extends BasicFrm implements
 
   private void editBreakpoint( int bpGroupIdx )
   {
-    JList               list  = this.bpLists[ bpGroupIdx ];
+    BreakpointList      list  = this.bpLists[ bpGroupIdx ];
     BreakpointListModel model = this.bpModels[ bpGroupIdx ];
     if( (list != null) && (model != null) ) {
       int[] rows = list.getSelectedIndices();
@@ -1995,7 +2885,7 @@ public class DebugFrm extends BasicFrm implements
 	    if( (oldBP != null) && (this.bpDlg == null) ) {
 	      switch( bpGroupIdx ) {
 		case BP_PC_IDX:
-		  this.bpDlg = new PCBreakpointDlg( this, oldBP );
+		  this.bpDlg = new PCBreakpointDlg( this, oldBP, -1 );
 		  break;
 		case BP_MEMORY_IDX:
 		  this.bpDlg = new MemoryBreakpointDlg( this, oldBP );
@@ -2145,6 +3035,24 @@ public class DebugFrm extends BasicFrm implements
   }
 
 
+  private void fireAppendLogEntry( final String text )
+  {
+    if( text != null ) {
+      if( !text.isEmpty() ) {
+	EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    appendLogEntryInternal( text );
+			  }
+			} );
+      }
+    }
+  }
+
+
   private void fireUpdDebugger(
 			final Z80Breakpoint      breakpoint,
 			final Z80InterruptSource iSource )
@@ -2217,34 +3125,41 @@ public class DebugFrm extends BasicFrm implements
 
   private boolean importLabels(
 			jkcemu.tools.Label[] labels,
-			boolean              removeObsolete )
+			boolean              suppressRecreate,
+			boolean              removeObsolete,
+			boolean              caseSensitive )
   {
-    boolean                      rv       = false;
-    Map<String,LabelBreakpoint>  labelMap = null;
-    Map<Integer,LabelBreakpoint> addrMap  = null;
-    BreakpointListModel          model    = this.bpModels[ BP_PC_IDX ];
-    int len = model.size();
-    if( len > 0 ) {
-      for( int i = len - 1 ; i >= 0; --i ) {
+    boolean rv = false;
+
+    // alte importierte Haltepunkte merken
+    Map<String,LabelBreakpoint>  labelNameMap = null;
+    Map<Integer,LabelBreakpoint> labelAddrMap = null;
+    BreakpointListModel          model        = this.bpModels[ BP_PC_IDX ];
+    int nBPs = model.size();
+    if( nBPs > 0 ) {
+      for( int i = nBPs - 1 ; i >= 0; --i ) {
 	AbstractBreakpoint bp = model.get( i );
 	if( bp != null ) {
 	  if( bp instanceof LabelBreakpoint ) {
-	    boolean done = false;
-	    String  labelText = ((LabelBreakpoint) bp).getLabelText();
-	    if( labelText != null ) {
-	      if( !labelText.isEmpty() ) {
-		if( labelMap == null ) {
-		  labelMap = new HashMap<String,LabelBreakpoint>( len );
+	    boolean done      = false;
+	    String  labelName = ((LabelBreakpoint) bp).getLabelName();
+	    if( labelName != null ) {
+	      if( !labelName.isEmpty() ) {
+		if( !caseSensitive ) {
+		  labelName = labelName.toUpperCase();
 		}
-		labelMap.put( labelText, (LabelBreakpoint) bp );
+		if( labelNameMap == null ) {
+		  labelNameMap = new HashMap<>( nBPs );
+		}
+		labelNameMap.put( labelName, (LabelBreakpoint) bp );
 		done = true;
 	      }
 	    }
 	    if( !done ) {
-	      if( addrMap == null ) {
-		addrMap = new HashMap<Integer,LabelBreakpoint>();
+	      if( labelAddrMap == null ) {
+		labelAddrMap = new HashMap<>( nBPs );
 	      }
-	      addrMap.put(
+	      labelAddrMap.put(
 			((LabelBreakpoint) bp).getAddress(),
 			(LabelBreakpoint) bp );
 	    }
@@ -2253,68 +3168,145 @@ public class DebugFrm extends BasicFrm implements
 	}
       }
     }
-    if( labels != null ) {
-      for( jkcemu.tools.Label label : labels ) {
-	boolean enabled = false;
-	boolean done    = false;
-	if( labelMap != null ) {
-	  String labelName = label.getLabelName();
-	  if( labelName != null ) {
-	    if( !labelName.isEmpty() ) {
-	      LabelBreakpoint oldBP = labelMap.get( labelName );
-	      if( oldBP != null ) {
-		enabled = oldBP.isEnabled();
-		labelMap.remove( labelName );
-		done = true;
+
+    // alte importierte Variablen merken
+    Map<String,Integer> varRowMap = null;
+    int nVars = this.tableModelVar.getRowCount();
+    if( nVars > 0 ) {
+      varRowMap = new HashMap<>( nVars );
+      for( int i = 0; i < nVars; i++ ) {
+	VarData varData = this.tableModelVar.getRow( i );
+	if( varData != null ) {
+	  if( varData.wasImported() ) {
+	    String varName = varData.getName();
+	    if( varName != null ) {
+	      if( !caseSensitive ) {
+		varName = varName.toUpperCase();
 	      }
+	      varRowMap.put( varName, new Integer( i ) );
 	    }
 	  }
 	}
-	if( !done && (addrMap != null) ) {
-	  Integer         addr  = new Integer( label.getLabelValue() );
-	  LabelBreakpoint oldBP = addrMap.get( addr );
-	  if( oldBP != null ) {
-	    enabled = oldBP.isEnabled();
-	    addrMap.remove( addr );
+      }
+    }
+
+    // Marken durch neue ersetzen
+    if( labels != null ) {
+      for( jkcemu.tools.Label label : labels ) {
+	String labelName = label.getLabelName();
+	int    varSize   = label.getVarSize();
+	if( varSize > 0 ) {
+	  if( labelName != null ) {
+	    if( !caseSensitive ) {
+	      labelName = labelName.toUpperCase();
+	    }
+	    if( !suppressRecreate
+		|| !this.removedImportedVarNames.contains( labelName ) )
+	    {
+	      Integer row = null;
+	      if( varRowMap != null ) {
+		row = varRowMap.get( labelName );
+	      }
+	      if( row != null ) {
+		VarData varData = this.tableModelVar.getRow( row.intValue() );
+		if( varData != null ) {
+		  this.tableModelVar.setRow(
+		      row.intValue(),
+		      VarData.createWithDefaultType(
+					labelName,
+					label.intValue(),
+					varSize,
+					true ) );
+		} else {
+		  row = null;
+		}
+		varRowMap.remove( labelName );
+	      }
+	      if( row == null ) {
+		this.tableModelVar.addRow(
+			VarData.createWithDefaultType(
+					labelName,
+					label.intValue(),
+					varSize,
+					true ) );
+	      }
+	      this.removedImportedVarNames.remove( labelName );
+	      rv = true;
+	    }
+	  }
+	} else {
+	  if( labelName != null ) {
+	    if( !caseSensitive ) {
+	      labelName = labelName.toUpperCase();
+	    }
+	    if( !suppressRecreate
+		|| !this.removedImportedBreakNames.contains( labelName ) )
+	    {
+	      LabelBreakpoint oldBP = null;
+	      if( labelNameMap != null ) {
+		oldBP = labelNameMap.remove( labelName );
+	      }
+	      model.add( new LabelBreakpoint(
+					this,
+					labelName,
+					label.intValue(),
+					oldBP,
+					true ) );
+	      this.removedImportedBreakNames.remove( labelName );
+	      rv = true;
+	    }
+	  } else {
+	    Integer addr = new Integer( label.intValue() );
+	    if( !suppressRecreate
+		|| !this.removedImportedBreakAddrs.contains( addr ) )
+	    {
+	      LabelBreakpoint oldBP = null;
+	      if( labelAddrMap != null ) {
+		oldBP = labelAddrMap.remove( addr );
+	      }
+	      model.add( new LabelBreakpoint(
+					this,
+					null,
+					label.intValue(),
+					oldBP,
+					true ) );
+	      this.removedImportedBreakAddrs.remove( addr );
+	      rv = true;
+	    }
 	  }
 	}
-	LabelBreakpoint bp = new LabelBreakpoint(
-					label.getLabelName(),
-					label.getLabelValue() );
-	bp.setEnabled( enabled );
-	model.add( bp );
-	rv = true;
       }
     }
     if( rv ) {
-      if( !removeObsolete ) {
-	int nOld = 0;
-	if( labelMap != null ) {
-	  nOld = labelMap.size();
+      if( removeObsolete ) {
+	if( varRowMap != null ) {
+	  Collection<Integer> c = varRowMap.values();
+	  if( c != null ) {
+	    int n = c.size();
+	    if( n > 0 ) {
+	      try {
+		Integer[] a = c.toArray( new Integer[ n ] );
+		if( a != null ) {
+		  Arrays.sort( a );
+		  for( int i = a.length - 1; i >= 0; --i ) {
+		    this.tableModelVar.remove( a[ i ] );
+		  }
+		}
+	      }
+	      catch( ArrayStoreException ex ) {}
+	      catch( ClassCastException ex ) {}
+	    }
+	  }
 	}
-	if( addrMap != null ) {
-	  nOld += addrMap.size();
-	}
-	if( nOld > 0 ) {
-	  this.bpLists[ BP_PC_IDX ].setModel( model );
-	  removeObsolete = BasicDlg.showYesNoDlg(
-		this,
-		"Es wurden nicht alle bereits vorher importierten"
-			+ " Haltepunkte ersetzt.\n"
-			+ "Sollen die jetzt nicht mehr mit"
-			+ " dabei gewesenen Haltepunkte\n"
-			+ "entfernt werden?" );
-	}
-      }
-      if( !removeObsolete ) {
-	if( labelMap != null ) {
-	  Collection<LabelBreakpoint> c = labelMap.values();
+      } else {
+	if( labelNameMap != null ) {
+	  Collection<LabelBreakpoint> c = labelNameMap.values();
 	  if( c != null ) {
 	    model.addAll( c );
 	  }
 	}
-	if( addrMap != null ) {
-	  Collection<LabelBreakpoint> c = addrMap.values();
+	if( labelAddrMap != null ) {
+	  Collection<LabelBreakpoint> c = labelAddrMap.values();
 	  if( c != null ) {
 	    model.addAll( c );
 	  }
@@ -2324,13 +3316,66 @@ public class DebugFrm extends BasicFrm implements
 	Collections.sort( model );
       }
       catch( ClassCastException ex ) {}
+      this.bpLists[ BP_PC_IDX ].setListData( new AbstractBreakpoint[ 0 ] );
       this.bpLists[ BP_PC_IDX ].setModel( model );
       updBreakpointList( BP_PC_IDX, null );
+      this.tableModelVar.update( this.memory );
       if( this.cpu.isPause() ) {
 	updFieldsPC();
       }
     }
     return rv;
+  }
+
+
+  private void registerRemove( AbstractBreakpoint bp )
+  {
+    if( bp != null ) {
+      if( bp instanceof PCBreakpoint ) {
+	PCBreakpoint pcbp = (PCBreakpoint) bp;
+	if( pcbp.wasImported() ) {
+	  String labelName = null;
+	  if( pcbp instanceof LabelBreakpoint ) {
+	    labelName = ((LabelBreakpoint) pcbp).getLabelName();
+	    if( labelName != null ) {
+	      if( labelName.isEmpty() ) {
+		labelName = null;
+	      }
+	    }
+	  }
+	  if( labelName != null ) {
+	    this.removedImportedBreakNames.add( labelName );
+	  } else {
+	    this.removedImportedBreakAddrs.add( pcbp.getAddress() );
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void registerRemove( VarData varData )
+  {
+    if( varData != null ) {
+      String varName = varData.getName();
+      if( varName != null ) {
+	if( !varName.isEmpty() ) {
+	  this.removedImportedVarNames.add( varName );
+	}
+      }
+    }
+  }
+
+
+  private void removeAllBreakpointsFromModel( BreakpointListModel model )
+  {
+    if( model != null ) {
+      int n = model.getSize();
+      for( int k = 0; k < n; k++ ) {
+	registerRemove( model.getElementAt( k ) );
+      }
+      model.clear();
+    }
   }
 
 
@@ -2368,16 +3413,24 @@ public class DebugFrm extends BasicFrm implements
     clear();
     setDebuggerEditable( false );
     this.mnuDebugRun.setEnabled( false );
+    this.mnuDebugWalk100.setEnabled( false );
+    this.mnuDebugWalk300.setEnabled( false );
+    this.mnuDebugWalk500.setEnabled( false );
     this.mnuDebugStop.setEnabled( false );
     this.mnuDebugStepOver.setEnabled( false );
     this.mnuDebugStepInto.setEnabled( false );
     this.mnuDebugStepToRET.setEnabled( false );
     this.btnRun.setEnabled( false );
+    this.btnWalk.setEnabled( false );
+    this.popupWalk100.setEnabled( false );
+    this.popupWalk300.setEnabled( false );
+    this.popupWalk500.setEnabled( false );
     this.btnStop.setEnabled( false );
     this.btnStepOver.setEnabled( false );
     this.btnStepInto.setEnabled( false );
     this.btnStepToRET.setEnabled( false );
     this.btnResetTStates.setEnabled( false );
+    this.tableModelVar.setValuesEnabled( false );
     this.labelStatus.setText( statusText );
   }
 
@@ -2387,22 +3440,38 @@ public class DebugFrm extends BasicFrm implements
     setDebuggerEditable( false );
     this.timerForClear.start();
     this.mnuDebugRun.setEnabled( false );
+    this.mnuDebugWalk100.setEnabled( true );
+    this.mnuDebugWalk300.setEnabled( true );
+    this.mnuDebugWalk500.setEnabled( true );
     this.mnuDebugStop.setEnabled( true );
     this.mnuDebugStepOver.setEnabled( false );
     this.mnuDebugStepInto.setEnabled( false );
     this.mnuDebugStepToRET.setEnabled( false );
     this.btnRun.setEnabled( false );
+    this.btnWalk.setEnabled( true );
+    this.popupWalk100.setEnabled( true );
+    this.popupWalk300.setEnabled( true );
+    this.popupWalk500.setEnabled( true );
     this.btnStop.setEnabled( true );
     this.btnStepOver.setEnabled( false );
     this.btnStepInto.setEnabled( false );
     this.btnStepToRET.setEnabled( false );
     this.btnResetTStates.setEnabled( false );
+    this.tableModelVar.setValuesEnabled( false );
     this.labelStatus.setText( "Programm wird gerade ausgef\u00FChrt..." );
   }
 
 
-  private void setDebugStopped( Z80InterruptSource iSource )
+  private void setDebugStopped(
+			Z80Breakpoint      breakpoint,
+			Z80InterruptSource iSource )
   {
+    if( (breakpoint != null) || (iSource != null) ) {
+      this.walkMillis = 0;
+    }
+    boolean walking = (this.walkMillis > 0);
+    boolean stopped = !walking;
+
     updFieldsFlag();
     updFieldsInterrupt();
     updFieldsAF();
@@ -2420,16 +3489,23 @@ public class DebugFrm extends BasicFrm implements
     updFieldsTStates();
 
     this.mnuDebugRun.setEnabled( true );
-    this.mnuDebugStop.setEnabled( false );
-    this.mnuDebugStepOver.setEnabled( true );
-    this.mnuDebugStepInto.setEnabled( true );
-    this.mnuDebugStepToRET.setEnabled( true );
+    this.mnuDebugWalk100.setEnabled( true );
+    this.mnuDebugWalk300.setEnabled( true );
+    this.mnuDebugWalk500.setEnabled( true );
+    this.mnuDebugStop.setEnabled( walking );
+    this.mnuDebugStepOver.setEnabled( stopped );
+    this.mnuDebugStepInto.setEnabled( stopped );
+    this.mnuDebugStepToRET.setEnabled( stopped );
 
     this.btnRun.setEnabled( true );
-    this.btnStop.setEnabled( false );
-    this.btnStepOver.setEnabled( true );
-    this.btnStepInto.setEnabled( true );
-    this.btnStepToRET.setEnabled( true );
+    this.btnWalk.setEnabled( true );
+    this.popupWalk100.setEnabled( true );
+    this.popupWalk300.setEnabled( true );
+    this.popupWalk500.setEnabled( true );
+    this.btnStop.setEnabled( walking );
+    this.btnStepOver.setEnabled( stopped );
+    this.btnStepInto.setEnabled( stopped );
+    this.btnStepToRET.setEnabled( stopped );
     this.btnResetTStates.setEnabled( true );
 
     this.listIntSrc.setEnabled( true );
@@ -2442,89 +3518,144 @@ public class DebugFrm extends BasicFrm implements
       }
     }
 
+    this.tableModelVar.update( this.memory );
+    this.tableModelVar.setValuesEnabled( true );
+
     this.fldEtc.setEnabled( true );
     updEtcField();
 
-    setDebuggerEditable( true );
-    String text = "Programmausf\u00FChrung angehalten";
-    if( iSource != null ) {
-      StringBuilder buf = new StringBuilder( 128 );
-      buf.append( text );
-      buf.append( ", Interrupt von " );
-      buf.append( iSource.toString() );
-      buf.append( " angenommen" );
-      text = buf.toString();
+    if( this.walkMillis > 0 ) {
+      this.walkTimer.setInitialDelay( this.walkMillis );
+      this.walkTimer.restart();
+    } else {
+      setDebuggerEditable( true );
+      String text = "Programmausf\u00FChrung angehalten";
+      if( iSource != null ) {
+	StringBuilder buf = new StringBuilder( 128 );
+	buf.append( text );
+	buf.append( ", Interrupt von " );
+	buf.append( iSource.toString() );
+	buf.append( " angenommen" );
+	text = buf.toString();
+      }
+      this.labelStatus.setText( text );
     }
-    this.labelStatus.setText( text );
+  }
+
+
+  private boolean setMaxLogCnt( Object value )
+  {
+    boolean rv = false;
+    if( value != null ) {
+      try {
+	int maxLogCnt = -1;
+	if( value instanceof Number ) {
+	  maxLogCnt = ((Number) value).intValue();
+	} else {
+	  String s = value.toString();
+	  if( s != null ) {
+	    maxLogCnt = Integer.parseInt( s );
+	  }
+	}
+	if( maxLogCnt > 0 ) {
+	  this.maxLogCnt = maxLogCnt;
+	  rv             = true;
+	  int nToRemove  = this.listModelLog.getSize() - maxLogCnt;
+	  if( nToRemove > 0 ) {
+	    try {
+	      this.listModelLog.removeRange( 0, nToRemove - 1 );
+	    }
+	    catch( ArrayIndexOutOfBoundsException ex ) {}
+	  }
+	}
+      }
+      catch( NumberFormatException ex ) {}
+    }
+    return rv;
   }
 
 
   private void updBreakpointActionsEnabled()
   {
-    boolean hasEnabled   = false;
-    boolean hasDisabled  = false;
-    int     nSelEnabled  = 0;
-    int     nSelDisabled = 0;
-    for( int i = 0; i < BP_GROUP_CNT; i++ ) {
-      if( this.bpModels[ i ] != null ) {
-	BreakpointListModel model = this.bpModels[ i ];
-	for( AbstractBreakpoint bp : model ) {
-	  if( bp.isEnabled() ) {
-	    hasEnabled = true;
-	  } else {
-	    hasDisabled = true;
-	  }
-	  if( hasEnabled && hasDisabled ) {
-	    break;
-	  }
-	}
-	int[] rows = this.bpLists[ i ].getSelectedIndices();
-	if( rows != null ) {
-	  for( int k = 0; k < rows.length; k++ ) {
-	    int row = rows[ k ];
-	    if( (row >= 0) && (row < model.size()) ) {
-	      if( model.get( row ).isEnabled() ) {
-		nSelEnabled++;
-	      } else {
-		nSelDisabled++;
-	      }
+    boolean hasEntries      = false;
+    boolean anyStopEnabled  = false;
+    boolean anyStopDisabled = false;
+    boolean anyLogEnabled   = false;
+    boolean anyLogDisabled  = false;
+    boolean selStopEnabled  = false;
+    boolean selStopDisabled = false;
+    boolean selLogEnabled   = false;
+    boolean selLogDisabled  = false;
+    int     nSelected       = 0;
+    if( this.tabbedPane.getSelectedIndex() == TAB_IDX_CPU ) {
+      for( int i = 0; i < BP_GROUP_CNT; i++ ) {
+	if( this.bpModels[ i ] != null ) {
+	  BreakpointListModel model = this.bpModels[ i ];
+	  for( AbstractBreakpoint bp : model ) {
+	    hasEntries = true;
+	    if( bp.isStopEnabled() ) {
+	      anyStopEnabled = true;
+	    } else {
+	      anyStopDisabled = true;
 	    }
-	    if( (nSelEnabled > 1) && (nSelDisabled > 1) ) {
+	    if( bp.isLogEnabled() ) {
+	      anyLogEnabled = true;
+	    } else {
+	      anyLogDisabled = true;
+	    }
+	    if( anyStopEnabled && anyStopDisabled
+		&& anyLogEnabled && anyLogDisabled )
+	    {
 	      break;
 	    }
 	  }
+	  int[] rows = this.bpLists[ i ].getSelectedIndices();
+	  if( rows != null ) {
+	    for( int k = 0; k < rows.length; k++ ) {
+	      int row = rows[ k ];
+	      if( (row >= 0) && (row < model.size()) ) {
+		nSelected++;
+		if( model.get( row ).isStopEnabled() ) {
+		  selStopEnabled = true;
+		} else {
+		  selStopDisabled = true;
+		}
+		if( model.get( row ).isLogEnabled() ) {
+		  selLogEnabled = true;
+		} else {
+		  selLogDisabled = true;
+		}
+	      }
+	      if( (nSelected > 1)
+		  && selStopEnabled && selStopDisabled
+		  && selLogEnabled && selLogDisabled )
+	      {
+		break;
+	      }
+	    }
+	  }
+	}
+	if( (nSelected > 1)
+	    && selStopEnabled && selStopDisabled
+	    && selLogEnabled && selLogDisabled
+	    && anyStopEnabled && anyStopDisabled
+	    && anyLogEnabled && anyLogDisabled )
+	{
+	  break;
 	}
       }
-      if( hasEnabled && hasDisabled
-	  && (nSelEnabled > 1) && (nSelDisabled > 1) )
-      {
-	break;
-      }
     }
-    if( (nSelEnabled + nSelDisabled) == 1 ) {
-      this.mnuDebugBreakRemove.setText( "Haltepunkt entfernen" );
-      this.mnuDebugBreakRemove.setEnabled( true );
-    } else {
-      this.mnuDebugBreakRemove.setText( "Haltepunkte entfernen" );
-      this.mnuDebugBreakRemove.setEnabled( (nSelEnabled + nSelDisabled) > 0 );
-    }
-    if( nSelDisabled == 1 ) {
-      this.mnuDebugBreakEnable.setText( "Haltepunkt aktivieren" );
-      this.mnuDebugBreakEnable.setEnabled( true );
-    } else {
-      this.mnuDebugBreakEnable.setText( "Haltepunkte aktivieren" );
-      this.mnuDebugBreakEnable.setEnabled( nSelDisabled > 0 );
-    }
-    if( nSelEnabled == 1 ) {
-      this.mnuDebugBreakDisable.setText( "Haltepunkt deaktivieren" );
-      this.mnuDebugBreakDisable.setEnabled( true );
-    } else {
-      this.mnuDebugBreakDisable.setText( "Haltepunkte deaktivieren" );
-      this.mnuDebugBreakDisable.setEnabled( nSelEnabled > 0 );
-    }
-    this.mnuDebugBreakEnableAll.setEnabled( hasDisabled );
-    this.mnuDebugBreakDisableAll.setEnabled( hasEnabled );
-    this.mnuDebugBreakRemoveAll.setEnabled( hasEnabled || hasDisabled );
+    this.mnuDebugBreakEnableStop.setEnabled( selStopDisabled );
+    this.mnuDebugBreakDisableStop.setEnabled( selStopEnabled );
+    this.mnuDebugBreakEnableStopAll.setEnabled( anyStopDisabled );
+    this.mnuDebugBreakDisableStopAll.setEnabled( anyStopEnabled );
+    this.mnuDebugBreakEnableLog.setEnabled( selLogDisabled );
+    this.mnuDebugBreakDisableLog.setEnabled( selLogEnabled );
+    this.mnuDebugBreakEnableLogAll.setEnabled( anyLogDisabled );
+    this.mnuDebugBreakDisableLogAll.setEnabled( anyLogEnabled );
+    this.mnuDebugBreakEdit.setEnabled( nSelected == 1 );
+    this.mnuDebugBreakRemove.setEnabled( nSelected > 0 );
+    this.mnuDebugBreakRemoveAll.setEnabled( hasEntries );
   }
 
 
@@ -2538,6 +3669,7 @@ public class DebugFrm extends BasicFrm implements
 	  && (this.bpLists[ bpGroupIdx ] != null) )
       {
 	this.bpLists[ bpGroupIdx ].setModel( this.bpModels[ bpGroupIdx ] );
+	this.bpLists[ bpGroupIdx ].repaint();
 	if( bpToSelect != null ) {
 	  EmuUtil.fireSelectRow( this.bpLists[ bpGroupIdx ], bpToSelect );
 	}
@@ -2548,10 +3680,10 @@ public class DebugFrm extends BasicFrm implements
 	    int n = model.size();
 	    if( n > 0 ) {
 	      for( AbstractBreakpoint bp : model ) {
-		if( bp.isEnabled() ) {
+		if( bp.isLogEnabled() || bp.isStopEnabled() ) {
 		  if( bp instanceof Z80Breakpoint ) {
 		    if( list == null ) {
-		      list = new ArrayList<Z80Breakpoint>();
+		      list = new ArrayList<>();
 		    }
 		    list.add( (Z80Breakpoint) bp );
 		  }
@@ -2580,7 +3712,7 @@ public class DebugFrm extends BasicFrm implements
   {
     if( isShowing() ) {
       updDebuggerInternal( breakpoint, iSource );
-      if( this.cpu.isPause() ) {
+      if( this.cpu.isPause() && (this.walkMillis == 0) ) {
 	setState( Frame.NORMAL );
 	toFront();
       }
@@ -2598,7 +3730,7 @@ public class DebugFrm extends BasicFrm implements
     if( this.cpu.isActive() ) {
       if( this.cpu.isDebugEnabled() ) {
 	if( this.cpu.isPause() ) {
-	  setDebugStopped( iSource );
+	  setDebugStopped( breakpoint, iSource );
 	  if( breakpoint != null ) {
 	    for( int i = 0; i < this.bpModels.length; i++ ) {
 	      if( this.bpModels[ i ] != null ) {
@@ -2643,15 +3775,6 @@ public class DebugFrm extends BasicFrm implements
     this.fldEtc.setText( buf.toString() );
     try {
       this.fldEtc.setCaretPosition( 0 );
-    }
-    catch( IllegalArgumentException ex ) {}
-  }
-
-
-  private void updFieldIntMode()
-  {
-    try {
-      this.spinnerIntMode.setValue( this.cpu.getInterruptMode() );
     }
     catch( IllegalArgumentException ex ) {}
   }
@@ -2808,7 +3931,7 @@ public class DebugFrm extends BasicFrm implements
 	for( AbstractBreakpoint breakpoint : bpModel ) {
 	  if( breakpoint instanceof LabelBreakpoint ) {
 	    if( ((LabelBreakpoint) breakpoint).getAddress() == addr ) {
-	      String s = ((LabelBreakpoint) breakpoint).getLabelText();
+	      String s = ((LabelBreakpoint) breakpoint).getLabelName();
 	      if( s != null ) {
 		if( s.isEmpty() ) {
 		  s = null;
@@ -3018,5 +4141,36 @@ public class DebugFrm extends BasicFrm implements
     }
     catch( IllegalArgumentException ex ) {}
   }
-}
 
+
+  private void updFieldIntMode()
+  {
+    try {
+      this.spinnerIntMode.setValue( this.cpu.getInterruptMode() );
+    }
+    catch( IllegalArgumentException ex ) {}
+  }
+
+
+  private void updLogActionsEnabled()
+  {
+    boolean isTab      = (this.tabbedPane.getSelectedIndex() == TAB_IDX_LOG);
+    boolean hasEntries = !this.listModelLog.isEmpty();
+    boolean selected   = (this.listLog.getSelectedIndex() >= 0);
+    this.mnuLogCopy.setEnabled( isTab && selected );
+    this.mnuLogSelectAll.setEnabled( isTab && hasEntries );
+    this.mnuLogRemove.setEnabled( isTab && selected );
+    this.mnuLogRemoveAll.setEnabled( isTab && hasEntries );
+  }
+
+
+  private void updVarActionsEnabled()
+  {
+    boolean isTab      = (this.tabbedPane.getSelectedIndex() == TAB_IDX_VAR);
+    boolean hasEntries = !this.tableModelVar.isEmpty();
+    boolean selected   = (this.tableVar.getSelectedRow() >= 0);
+    this.mnuVarEdit.setEnabled( isTab && selected );
+    this.mnuVarRemove.setEnabled( isTab && selected );
+    this.mnuVarRemoveAll.setEnabled( isTab && hasEntries );
+  }
+}

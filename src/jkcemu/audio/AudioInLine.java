@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,9 +26,9 @@ public class AudioInLine extends AudioIn
   private int                     maxPauseTStates;
 
 
-  public AudioInLine( Z80CPU z80cpu )
+  public AudioInLine( AudioFrm audioFrm, Z80CPU z80cpu )
   {
-    super( z80cpu );
+    super( audioFrm, z80cpu );
     this.dataLine        = null;
     this.frameBuf        = null;
     this.audioDataBuf    = null;
@@ -38,10 +38,51 @@ public class AudioInLine extends AudioIn
   }
 
 
-  public Control[] getDataControls()
+  public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
   {
-    Line line = this.dataLine;
-    return line != null ? line.getControls() : null;
+    if( (this.dataLine == null) && (speedKHz > 0) ) {
+
+      // Audio-Eingabekanal oeffnen
+      TargetDataLine line = null;
+      if( sampleRate > 0 ) {
+	line = openTargetDataLine( mixer, sampleRate );
+      } else {
+	for( int i = 0;
+	     (line == null) && (i < this.sampleRates.length);
+	     i++ )
+	{
+	  line = openTargetDataLine( mixer, this.sampleRates[ i ] );
+	}
+      }
+
+      if( line != null ) {
+	this.errorText = null;
+
+	AudioFormat fmt      = line.getFormat();
+	this.dataLine        = line;
+	this.maxPauseTStates = speedKHz * 1000;	// 1 Sekunde
+	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
+						/ fmt.getFrameRate());
+
+	// Buffer fuer ein Frame anlegen
+	this.frameBuf = new byte[ fmt.getFrameSize() ];
+
+	// Buffer fuer Leseoperationen anlegen
+	int r = Math.round( fmt.getFrameRate() );
+	int n = this.dataLine.getBufferSize() / 32;
+	if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
+	  n = r / 2;
+	}
+	if( n < 1 ) {
+	  n = 1;
+	}
+	this.audioDataBuf = new byte[ n * this.frameBuf.length ];
+	this.audioDataLen = 0;
+	this.audioDataPos = this.audioDataLen;
+	setAudioFormat( fmt );
+      }
+    }
+    return this.audioFmt;
   }
 
 
@@ -51,22 +92,22 @@ public class AudioInLine extends AudioIn
    * Mit dieser Methode erfaehrt die Klasse die Anzahl
    * der seit dem letzten Aufruf vergangenen Taktzyklen.
    *
-   * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
-   * Audio-Daten ignoriert.
+   * Rueckgabewert:
+   *   true:  Audio-Daten verwenden
+   *   false: Audio-Daten verwerfen
    */
   @Override
-  protected void currentDiffTStates( long diffTStates )
+  protected boolean currentDiffTStates( long diffTStates )
   {
+    boolean rv = false;
     if( diffTStates > this.maxPauseTStates ) {
+      /*
+       * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
+       * Audio-Daten ignoriert und die Mittelwertregelung initialisiert.
+       */
       this.minValue = 0;
       this.maxValue = 0;
-      DataLine line = this.dataLine;
-      if( line != null ) {
-	line.flush();
-      }
-
     } else {
-
       /*
        * Wenn Daten gelesen werden, darf das Soundsystem
        * auf keinen Fall auf die CPU-Emulation warten.
@@ -75,7 +116,9 @@ public class AudioInLine extends AudioIn
        * bis mindestens zum naechsten Soundsystemaufruf, abgeschaltet.
        */
       this.z80cpu.setSpeedUnlimitedFor( diffTStates * 8 );
+      rv = true;
     }
+    return rv;
   }
 
 
@@ -105,53 +148,6 @@ public class AudioInLine extends AudioIn
       }
     }
     return frameBuf;
-  }
-
-
-  @Override
-  public AudioFormat startAudio( Mixer mixer, int speedKHz, int sampleRate )
-  {
-    if( (this.dataLine == null) && (speedKHz > 0) ) {
-
-      // Audio-Eingabekanal oeffnen
-      TargetDataLine line = null;
-      if( sampleRate > 0 ) {
-	line = openTargetDataLine( mixer, sampleRate );
-      } else {
-	for( int i = 0;
-	     (line == null) && (i < this.sampleRates.length);
-	     i++ )
-	{
-	  line = openTargetDataLine( mixer, this.sampleRates[ i ] );
-	}
-      }
-
-      if( line != null ) {
-	AudioFormat fmt      = line.getFormat();
-	this.dataLine        = line;
-	this.maxPauseTStates = speedKHz * 1000;	// 1 Sekunde
-	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
-						/ fmt.getFrameRate());
-
-	// Buffer fuer ein Frame anlegen
-	this.frameBuf = new byte[ fmt.getFrameSize() ];
-
-	// Buffer fuer Leseoperationen anlegen
-	int r = Math.round( fmt.getFrameRate() );
-	int n = this.dataLine.getBufferSize() / 32;
-	if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
-	  n = r / 2;
-	}
-	if( n < 1 ) {
-	  n = 1;
-	}
-	this.audioDataBuf = new byte[ n * this.frameBuf.length ];
-	this.audioDataLen = 0;
-	this.audioDataPos = this.audioDataLen;
-	setAudioFormat( fmt );
-      }
-    }
-    return this.audioFmt;
   }
 
 
@@ -224,12 +220,16 @@ public class AudioInLine extends AudioIn
       }
       if( line != null ) {
 	line.open( fmt );
+	line.flush();
 	line.start();
       }
     }
     catch( Exception ex ) {
       DataLineCloser.closeDataLine( line );
       line = null;
+      if( ex instanceof LineUnavailableException ) {
+	this.errorText = AudioUtil.ERROR_TEXT_LINE_UNAVAILABLE;
+      }
     }
     return line;
   }

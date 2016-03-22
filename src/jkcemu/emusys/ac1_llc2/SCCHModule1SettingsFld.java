@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,7 +23,10 @@ public class SCCHModule1SettingsFld
 {
   private ROMFileSettingsFld fldPrgX;
   private ROMFileSettingsFld fldRomDisk;
-  private ROMFileSettingsFld fldBasic;
+  private ROMFileSettingsFld fldBasicRom;
+  private JLabel             labelBasicRomAddr;
+  private JRadioButton       btnBasicRom2000;
+  private JRadioButton       btnBasicRom4000;
   private JLabel             labelRomDiskAddr;
   private JRadioButton       btnRomDisk8000;
   private JRadioButton       btnRomDiskC000;
@@ -53,21 +56,17 @@ public class SCCHModule1SettingsFld
 
     // ROM-Disk
     this.fldRomDisk = new ROMFileSettingsFld(
-				settingsFrm,
-				propPrefix + "romdisk.",
-				"ROM-Datei f\u00FCr ROM-Disk:" );
+		settingsFrm,
+		propPrefix + "romdisk.",
+		"ROM-Datei f\u00FCr ROM-Disk"
+			+ " (8000h-FFFFh bzw. C000h-FFFFh):" );
     gbc.insets.bottom = 0;
     gbc.gridy++;
     add( this.fldRomDisk, gbc );
 
     JPanel panelRomDiskAddr = new JPanel(
 				new FlowLayout( FlowLayout.LEFT, 5, 0 ) );
-    gbc.anchor        = GridBagConstraints.WEST;
-    gbc.insets.top    = 0;
-    gbc.insets.left   = 45;
-    gbc.insets.bottom = 5;
-    gbc.gridwidth     = GridBagConstraints.REMAINDER;
-    gbc.gridx         = 0;
+    gbc.insets.top = 0;
     gbc.gridy++;
     add( panelRomDiskAddr, gbc );
 
@@ -83,21 +82,43 @@ public class SCCHModule1SettingsFld
     this.btnRomDiskC000 = new JRadioButton( "C000h", true );
     grpRomDiskAddr.add( this.btnRomDiskC000 );
     panelRomDiskAddr.add( this.btnRomDiskC000 );
-    updROMDiskAddrFieldsEnabled();
+    updRomDiskAddrFieldsEnabled();
 
     // Trennlinie
-    gbc.insets.top  = 5;
-    gbc.insets.left = 5;
+    gbc.insets.top    = 10;
+    gbc.insets.bottom = 10;
     gbc.gridy++;
     add( new JSeparator(), gbc );
 
     // BASIC-ROM
-    this.fldBasic = new ROMFileSettingsFld(
-				settingsFrm,
-				propPrefix + "basic.",
-				"Alternativer BASIC-ROM (4000h-5FFFh):" );
+    this.fldBasicRom = new ROMFileSettingsFld(
+		settingsFrm,
+		propPrefix + "basic.",
+		"Alternativer BASIC-ROM (2000h-5FFFh bzw. 4000h-5FFFh):" );
+    gbc.insets.top    = 5;
+    gbc.insets.bottom = 0;
     gbc.gridy++;
-    add( this.fldBasic, gbc );
+    add( this.fldBasicRom, gbc );
+
+    JPanel panelBasicRomAddr = new JPanel(
+				new FlowLayout( FlowLayout.LEFT, 5, 0 ) );
+    gbc.insets.top = 0;
+    gbc.gridy++;
+    add( panelBasicRomAddr, gbc );
+
+    this.labelBasicRomAddr = new JLabel( "BASIC-ROM einblenden ab Adresse:" );
+    panelBasicRomAddr.add( this.labelBasicRomAddr );
+    ButtonGroup grpBasicRomAddr = new ButtonGroup();
+
+    this.btnBasicRom2000 = new JRadioButton( "2000h", false );
+    grpBasicRomAddr.add( this.btnBasicRom2000 );
+    panelBasicRomAddr.add( this.btnBasicRom2000 );
+
+    this.btnBasicRom4000 = new JRadioButton( "4000h", true );
+    grpBasicRomAddr.add( this.btnBasicRom4000 );
+    panelBasicRomAddr.add( this.btnBasicRom4000 );
+    updBasicRomAddrFieldsEnabled();
+
 
     // Sonstiges
     setEnabled( true );
@@ -107,6 +128,9 @@ public class SCCHModule1SettingsFld
     this.fldRomDisk.addChangeListener( this );
     this.btnRomDisk8000.addActionListener( this );
     this.btnRomDiskC000.addActionListener( this );
+    this.fldBasicRom.addChangeListener( this );
+    this.btnBasicRom2000.addActionListener( this );
+    this.btnBasicRom4000.addActionListener( this );
   }
 
 
@@ -115,8 +139,12 @@ public class SCCHModule1SettingsFld
   @Override
   public void stateChanged( ChangeEvent e )
   {
-    if( e.getSource() == this.fldRomDisk )
-      updROMDiskAddrFieldsEnabled();
+    Object src = e.getSource();
+    if( src == this.fldRomDisk ) {
+      updRomDiskAddrFieldsEnabled();
+    } else if( src == this.fldBasicRom ) {
+      updBasicRomAddrFieldsEnabled();
+    }
   }
 
 
@@ -129,7 +157,11 @@ public class SCCHModule1SettingsFld
   {
     this.fldPrgX.applyInput( props, selected );
     this.fldRomDisk.applyInput( props, selected );
-    this.fldBasic.applyInput( props, selected );
+    this.fldBasicRom.applyInput( props, selected );
+    EmuUtil.setProperty(
+		props,
+		this.propPrefix + "basicrom.address.begin",
+		this.btnBasicRom2000.isSelected() ? "2000" : "4000" );
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + "romdisk.address.begin",
@@ -158,8 +190,9 @@ public class SCCHModule1SettingsFld
     super.setEnabled( state );
     this.fldPrgX.setEnabled( state );
     this.fldRomDisk.setEnabled( state );
-    this.fldBasic.setEnabled( state );
-    updROMDiskAddrFieldsEnabled();
+    this.fldBasicRom.setEnabled( state );
+    updBasicRomAddrFieldsEnabled();
+    updRomDiskAddrFieldsEnabled();
   }
 
 
@@ -168,9 +201,19 @@ public class SCCHModule1SettingsFld
   {
     this.fldPrgX.updFields( props );
     this.fldRomDisk.updFields( props );
-    this.fldBasic.updFields( props );
+    this.fldBasicRom.updFields( props );
 
     String text = EmuUtil.getProperty(
+			props,
+			this.propPrefix + "basicrom.address.begin" );
+    if( text.startsWith( "2000" ) ) {
+      this.btnBasicRom2000.setSelected( true );
+    } else {
+      this.btnBasicRom4000.setSelected( true );
+    }
+    updBasicRomAddrFieldsEnabled();
+
+    text = EmuUtil.getProperty(
 			props,
 			this.propPrefix + "romdisk.address.begin" );
     if( text.startsWith( "8000" ) ) {
@@ -178,11 +221,23 @@ public class SCCHModule1SettingsFld
     } else {
       this.btnRomDiskC000.setSelected( true );
     }
-    updROMDiskAddrFieldsEnabled();
+    updRomDiskAddrFieldsEnabled();
   }
 
 
-  private void updROMDiskAddrFieldsEnabled()
+  private void updBasicRomAddrFieldsEnabled()
+  {
+    boolean state = this.fldBasicRom.isEnabled();
+    if( state && (this.fldBasicRom.getFile() == null) ) {
+      state = false;
+    }
+    this.labelBasicRomAddr.setEnabled( state );
+    this.btnBasicRom2000.setEnabled( state );
+    this.btnBasicRom4000.setEnabled( state );
+  }
+
+
+  private void updRomDiskAddrFieldsEnabled()
   {
     boolean state = this.fldRomDisk.isEnabled();
     if( state && (this.fldRomDisk.getFile() == null) ) {

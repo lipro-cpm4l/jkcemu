@@ -14,8 +14,10 @@
       <a href="audio.htm#data_in">2.3. Daten vom Audio-Eingang lesen</a>
      </li>
      <li><a href="audio.htm#file_out">2.4. Sound-Datei speichern</a></li>
-     <li><a href="audio.htm#file_in">2.5. Sound-Datei lesen</a></li>
-     <li><a href="audio.htm#tap_in">2.6. KC-TAP-Datei lesen</a></li>
+     <li><a href="audio.htm#file_in">2.5. Sound-/Tape-Datei lesen</a></li>
+     <li>
+      <a href="audio.htm#lastfile_in">2.6. Letzte Sound-/Tape-Datei (noch einmal) lesen</a>
+     </li>
     </ul>
    </li>
    <li>
@@ -69,13 +71,6 @@
   m&ouml;chten, die ein Programm zum Zwecke der Unterhaltung ausgibt
   (z.B. akustische Untermalung bei Spielprogrammen).
  <br/><br/>
-  Bei dieser Funktion wird die Ausf&uuml;hrungsgeschwindigkeit des Emulators
-  konstant gehalten, um einen gleichm&auml;&szlig;igen Programmablauf
-  zu gew&auml;hrleisten.
-  Eine ununterbrochene Versorgung des Audio-Systems mit Daten kann
-  deshalb nicht immer gew&auml;hrleistet werden,
-  so dass kurze Unterbrechungen in der Tonausgabe auftreten k&ouml;nnen.
- <br/><br/>
   <b>Achtung!</b> Manche der emulierten Computer besitzen
   zwei Audio-Ausg&auml;nge, einen f&uuml;r den Kassettenrecorder
   zum Speichern von Daten und einen f&uuml;r den Lautsprecher
@@ -91,11 +86,6 @@
   mit Kassettenrecorderanschluss &uuml;bertragen m&ouml;chten.
   Tipps &amp; Tricks dazu finden Sie unter
   <a href="tips/savetotape.htm">Dateien auf Magnettonband speichern</a>.
- <br/><br/>
-  JKCEMU versucht sicherzustellen, dass das Audio-System
-  ununterbrochen mit Daten versorgt wird.
-  Die Ausf&uuml;hrungsgeschwindigkeit des Emulators richtet sich
-  nach den Anforderungen des Audio-Systems und kann somit variieren.
  <br/><br/>
   <b>Achtung!</b> Manche der emulierten Computer besitzen
   zwei Audio-Ausg&auml;nge, einen f&uuml;r den Kassettenrecorder
@@ -121,41 +111,42 @@
   nicht zur Verf&uuml;gung.
  <br/><br/>
 
- <h3><a name="file_out">2.4. Sound-Datei speichern</a></h3>
+ <h3><a name="file_out">2.4. Sound- oder Tape-Datei speichern</a></h3>
   Bei dieser Funktion werden die Daten, die am emulierten Anschluss
   f&uuml;r das Magnettonbandger&auml;t ausgegeben werden,
-  in eine Sound-Datei geschrieben.
-  Die Sound-Datei beginnt mit dem ersten Phasenwechsel
+  in eine Sound- oder Tape-Datei geschrieben.
+  Die Datei beginnt mit dem ersten Phasenwechsel
   nach Aktivierung der Funktion und endet beim letzten Phasenwechsel
   vor Deaktivierung, d.h,
   die Datei enth&auml;lt weder an ihrem Anfang noch
   an ihrem Ende eine Pause.
  <br/><br/>
   Die Funktion deaktiviert sich automatisch,
-  wenn etwa eine Sekunde lang kein Phasenwechsel
-  und damit kein Ton mehr ausgegeben wurde.
+  wenn in den ausgegebenen T&ouml;nen eine Pause gr&ouml;&szlig;er
+  als drei Sekunden auftritt.
  <br/><br/>
-  Die eigentliche Sound-Datei wird erst beim Deaktivieren
-  erzeugt, d.h., bis dahin merkt sich JKCEMU die Audio-Daten im Speicher.
-  Aus diesem Grund kann diese Funktion auch nicht &uuml;ber
+  Die eigentliche Datei wird erst beim Deaktivieren erzeugt,
+  d.h., bis dahin merkt sich JKCEMU die Audio-Daten im Speicher.
+  Aus diesem Grund kann diese Funktion nicht &uuml;ber
   einen l&auml;ngeren Zeitraum aktiviert bleiben.
  <br/><br/>
-  Die mit der Audio-Funktion <em>Sound-Datei speichern</em> erzeugte Dateien
-  enthalten nur Rechteckschwingungen, d.h. nur zwei Pegelzust&auml;nde.
+  Die mit der Audio-Funktion <em>Sound- oder Tape-Datei speichern</em>
+  erzeugte Dateien enthalten nur Rechteckschwingungen,
+  d.h. nur zwei Pegelzust&auml;nde.
   Aus diesem Grund lassen sich diese Dateien auch gut komprimieren.
   JKCEMU bietet die M&ouml;glichkeit, beim Speichern von Sound-Dateien
   diese gleich mit GZIP komprimieren zu lassen.
   Wenn Sie das nutzen m&ouml;chten, dann h&auml;ngen Sie an den Dateinamen
-  hinter der Endung f&uuml;r das Sound-Dateiformat einfach nur
-  die Endung <em>.gz</em> an, also z.B.: <em>ausgabe.wav.gz</em>
+  hinter der Endung einfach nur die Endung <em>.gz</em> an,
+  also z.B.: <em>ausgabe.wav.gz</em>
  <br/><br/>
 
- <h3><a name="file_in">2.5. Sound-Datei lesen</a></h3>
+ <h3><a name="file_in">2.5. Sound- oder Tape-Datei lesen</a></h3>
   Diese Funktion emuliert den Anschluss f&uuml;r
   das Magnettonbandger&auml;t,
-  indem die Audio-Daten von einer Sound-Datei gelesen werden.
+  indem die Audio-Daten von einer Sound- oder Tape-Datei gelesen werden.
   Ein Fortschrittsbalken visualisiert den Einleseprozess.
-  Es k&ouml;nnen auch mit GZIP komplrimierte Sound-Dateien gelesen werden,
+  Es k&ouml;nnen auch mit GZIP komprimierte Sound-Dateien gelesen werden,
   wenn sie die Dateiendung <em>.gz</em> haben,
   also z.B.: <em>datei.wav.gz</em>
  <br/><br/>
@@ -167,7 +158,7 @@
   Ist das gerade nicht der Fall, bleibt der Fortschrittsbalken stehen.
  <br/><br/>
   <b>Achtung!</b> Nach dem Aktivieren dieser Audio-Funktion
-  und dem Ausw&auml;hlen der Sound-Datei m&uuml;ssen Sie noch
+  und dem Ausw&auml;hlen der Datei m&uuml;ssen Sie noch
   auf <em>Abspielen</em> dr&uuml;cken,
   um das eigentliche Einlesen zu starten.
   Sie k&ouml;nnen auch jederzeit mit <em>Pause</em> anhalten und
@@ -178,14 +169,19 @@
   ausgeschaltet,
   so dass der Emulator mit maximaler Geschwindigkeit l&auml;uft.
  <br/><br/>
-
- <h3><a name="tap_in">2.6. KC-TAP-Datei lesen</a></h3>
-  Diese Funktion ist &auml;hnlich wie <em>Sound-Datei lesen</em>,
-  nur mit dem Unterschied, dass die Eingangsdatei keine Sound-
-  sondern eine <a href="fileformats.htm#tap">KC-TAP-Datei</a> ist.
+  <b>Hinweis!</b> Sie k&ouml;nnen die Audio-Funktion
+  <em>Sound- oder Tape-Datei lesen</em> auch aktivieren,
+  indem Sie per Drag&amp;Drop eine passende Datei in das
+  Audio/Kassette-Fenster ziehen und &uuml;ber dem Feld <em>Datei</em>
+  im unteren Fensterbereich loslassen.
  <br/><br/>
-  W&auml;hrend des Einlesens werden die Audio-Daten erzeugt
-  und dem emulierten Kassettenrecorderanschluss zugef&uuml;hrt.
+
+ <h3>
+  <a name="lastfile_in">2.6. Letzte Sound-/Tape-Datei (noch einmal) lesen</a>
+ </h3>
+  Diese Audio-Funktion entspricht der vorherigen nur mit dem Unterschied,
+  dass kein Dateiauswahldialog erscheint, sondern die zuletzt gelesene
+  oder gespeicherte Sound- bzw. Tape-Datei wieder eingelesen wird.
  <br/><br/>
 
 
@@ -240,14 +236,8 @@
  <h2><a name="note">4. Hinweise</a></h2>
 
  <h3><a name="volume">4.1. Lautst&auml;rke</a></h3>
-  Das JKCEMU-Audio-Fenster enth&auml;lt einen Schieberegler
-  f&uuml;r die Lautst&auml;rke.
-  Dieser ist jedoch nur aktiv,
-  wenn das Audio-System und die installierten Java-Version
-  die Regelung der Lautst&auml;rke f&uuml;r den ge&ouml;ffneten
-  Audio-Kanal auch unterst&uuml;tzten.
-  Ist das nicht der Fall, m&uuml;ssen Sie auf die entsprechende
-  Bedienungssoftware des Betriebssystems zur&uuml;ckgreifen.
+  Die Lautst&auml;rke regeln Sie mit der entsprechenden
+  Bedienungssoftware des Betriebssystems auf Ihrem Computers.
  <br/><br/>
 
  <h3><a name="etc">4.2. Sonstiges</a></h3>

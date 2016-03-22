@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -118,7 +118,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
     setTitle( "JKCEMU Hilfe" );
     Main.updIcon( this );
     this.timer    = new javax.swing.Timer( 500, this );
-    this.urlStack = new Stack<URLStackEntry>();
+    this.urlStack = new Stack<>();
     this.urlHome  = getClass().getResource( "/help/home.htm" );
 
 
@@ -311,7 +311,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 	  this.mnuNavHome.setEnabled( stateHome );
 	  this.btnHome.setEnabled( stateHome );
 	}
-	catch( IOException ex ) {
+	catch( Exception ex ) {
 	  BasicDlg.showErrorDlg(
 		this,
 		"Die Hilfeseite kann nicht angezeigt werden.\n\n"

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,52 +10,65 @@ package jkcemu.base;
 
 import java.io.File;
 import java.lang.*;
+import java.nio.file.*;
 import java.util.*;
 import javax.swing.tree.TreeNode;
 
 
 public class FileTreeNode implements TreeNode
 {
+  protected Path                 path;
   protected File                 file;
   protected boolean              fileSystemRoot;
   protected boolean              childrenLoaded;
   protected Vector<FileTreeNode> vChildren;
 
   private TreeNode parent;
+  private boolean  allowsChildren;
   private boolean  leaf;
   private String   nodeName;
 
 
-  public FileTreeNode( TreeNode parent, File file, boolean fileSystemRoot )
+  public FileTreeNode( TreeNode parent, Path path, boolean fileSystemRoot )
   {
-    this.parent           = parent;
-    this.file             = file;
-    this.fileSystemRoot   = fileSystemRoot;
-    this.leaf             = !fileSystemRoot;
-    this.childrenLoaded   = false;
-    this.vChildren        = null;
-    if( this.leaf && (this.file != null) ) {
-      if( this.file.isDirectory() ) {
-	this.leaf = false;
-      }
-    }
-    updNodeText();
+    this.parent         = parent;
+    this.path           = path;
+    this.file           = null;
+    this.fileSystemRoot = fileSystemRoot;
+    this.allowsChildren = fileSystemRoot;
+    this.leaf           = !fileSystemRoot;
+    this.childrenLoaded = false;
+    this.vChildren      = null;
+    updNode();
   }
 
 
   public void add( FileTreeNode fileNode )
   {
     if( this.vChildren == null ) {
-      this.vChildren = new Vector<FileTreeNode>();
+      this.vChildren = new Vector<>();
     }
     this.vChildren.add( fileNode );
-    this.leaf = false;
+    this.allowsChildren = true;
+    this.leaf           = false;
   }
 
 
-  public File getFile()
+  public synchronized File getFile()
   {
+    if( (this.file == null) && (this.path != null) ) {
+      try {
+	this.file = this.path.toFile();
+      }
+      catch( UnsupportedOperationException ex ) {}
+    }
     return this.file;
+  }
+
+
+  public Path getPath()
+  {
+    return this.path;
   }
 
 
@@ -73,7 +86,8 @@ public class FileTreeNode implements TreeNode
 
   public void removeAllChildren()
   {
-    this.vChildren.clear();
+    if( this.vChildren != null )
+      this.vChildren.clear();
   }
 
 
@@ -81,7 +95,10 @@ public class FileTreeNode implements TreeNode
   {
     if( this.parent != null ) {
       if( this.parent instanceof FileTreeNode ) {
-	((FileTreeNode) this.parent).vChildren.remove( this );
+	FileTreeNode node = (FileTreeNode) this.parent;
+	if( node.vChildren != null ) {
+	  node.vChildren.remove( this );
+	}
       }
     }
   }
@@ -95,18 +112,76 @@ public class FileTreeNode implements TreeNode
 
   public void setFile( File file )
   {
+    this.path = null;
     this.file = file;
-    updNodeText();
+    if( file != null ) {
+      try {
+	this.path = file.toPath();
+      }
+      catch( InvalidPathException ex ) {}
+    }
+    updNode();
   }
 
 
-  protected void updNodeText()
+  public void sort( FileTreeNodeComparator comparator )
   {
-    this.nodeName = null;
-    if( this.file != null ) {
-      this.nodeName = (this.fileSystemRoot ?
-				this.file.getPath()
-				: this.file.getName());
+    if( (this.vChildren != null) && (comparator != null) ) {
+      try {
+	Collections.sort( this.vChildren, comparator );
+      }
+      catch( ClassCastException ex ) {}
+    }
+  }
+
+
+  protected void updNode()
+  {
+    if( this.path != null ) {
+      if( this.fileSystemRoot ) {
+	this.nodeName = this.path.toString();
+      } else {
+	Path p = null;
+	int  n = this.path.getNameCount();
+	if(  n > 0 ) {
+	  p = this.path.getName( n - 1 );
+	}
+	if( p == null ) {
+	  p = this.path;
+	}
+	this.nodeName = p.toString();
+	if( Files.isDirectory( this.path ) ) {
+	  this.allowsChildren = true;
+	  this.leaf           = false;
+	} else {
+	  this.allowsChildren = false;
+	  this.leaf           = true;
+	}
+	try {
+	  if( Files.isSymbolicLink( path ) ) {
+	    StringBuilder buf = new StringBuilder( 256 );
+	    if( this.nodeName != null ) {
+	      buf.append( this.nodeName );
+	    }
+	    buf.append( " \u2192" );
+	    Path targetPath = Files.readSymbolicLink( path );
+	    if( targetPath != null ) {
+	      String s = targetPath.toString();
+	      if( s != null ) {
+		if( !s.isEmpty() ) {
+		  buf.append( (char) '\u0020' );
+		  buf.append( s );
+		}
+	      }
+	    }
+	    this.allowsChildren = false;
+	    this.nodeName       = buf.toString();
+	  }
+	}
+	catch( Exception ex ) {
+	  this.allowsChildren = false;
+	}
+      }
     }
     if( this.nodeName == null ) {
       this.nodeName = "?";
@@ -120,7 +195,7 @@ public class FileTreeNode implements TreeNode
   public Enumeration children()
   {
     if( this.vChildren == null ) {
-      this.vChildren = new Vector<FileTreeNode>();
+      this.vChildren = new Vector<>();
     }
     return this.vChildren.elements();
   }
@@ -129,7 +204,7 @@ public class FileTreeNode implements TreeNode
   @Override
   public boolean getAllowsChildren()
   {
-    return !this.leaf;
+    return this.allowsChildren;
   }
 
 

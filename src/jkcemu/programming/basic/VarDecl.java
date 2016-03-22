@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,12 +10,11 @@ package jkcemu.programming.basic;
 
 import java.lang.*;
 import java.util.Map;
+import jkcemu.programming.PrgSource;
 
 
-public class VarDecl
+public class VarDecl extends BasicSourcePos
 {
-  private int     sourceLineNum;
-  private long    basicLineNum;
   private String  varName;
   private int     dim1;
   private int     dim2;
@@ -27,20 +26,19 @@ public class VarDecl
 
 
   public VarDecl(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String varName,
-		int    dim1,
-		int    dim2 )
+		PrgSource source,
+		long      basicLineNum,
+		String    varName,
+		int       dim1,
+		int       dim2 )
   {
-    this.sourceLineNum = sourceLineNum;
-    this.basicLineNum  = basicLineNum;
-    this.varName       = varName;
-    this.dim1          = dim1;
-    this.dim2          = dim2;
-    this.nDims         = 0;
-    this.size          = 2;
-    this.used          = false;
+    super( source, basicLineNum );
+    this.varName = varName;
+    this.dim1    = dim1;
+    this.dim2    = dim2;
+    this.nDims   = 0;
+    this.size    = 2;
+    this.used    = false;
     if( dim1 > 0 ) {
       this.nDims++;
       this.size *= (dim1 + 1);
@@ -64,27 +62,21 @@ public class VarDecl
 
 
   public VarDecl(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String varName,
-		int    dim1 )
+		PrgSource source,
+		long      basicLineNum,
+		String    varName,
+		int       dim1 )
   {
-    this( sourceLineNum, basicLineNum, varName, dim1, 0 );
+    this( source, basicLineNum, varName, dim1, 0 );
   }
 
 
   public VarDecl(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String varName )
+		PrgSource source,
+		long      basicLineNum,
+		String    varName )
   {
-    this( sourceLineNum, basicLineNum, varName, 0, 0 );
-  }
-
-
-  public long getBasicLineNum()
-  {
-    return this.basicLineNum;
+    this( source, basicLineNum, varName, 0, 0 );
   }
 
 
@@ -115,12 +107,6 @@ public class VarDecl
   public int getSize()
   {
     return this.size;
-  }
-
-
-  public int getSourceLineNum()
-  {
-    return this.sourceLineNum;
   }
 
 

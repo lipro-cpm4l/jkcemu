@@ -4,19 +4,54 @@
   F&uuml;r den Sinclair ZX&nbsp;Spectrum gab es in der DDR mehrere
   Nachbauprojekte, z.B. KUB64, Spectral, ZX-HFO und ZX-Jena.
   Insbesondere der von der Erfurter Firma H&uuml;bner Elektronik
-  entwickelte Spectral erreichte eine gr&ouml;&szlig;ere Verbreitung,
+  vertriebene Spectral erreichte eine gr&ouml;&szlig;ere Verbreitung,
   u.a. weil er vollst&auml;ndig zu einem ZX&nbsp;Spectrum&nbsp;48K
   kompatibel ist und auch zu einem ZX&nbsp;Spectrum&nbsp;128K
   erweitert werden konnte.
- <br/><br/>
+ <br/>
+  <ul>
+   <li>
+    <a href="zxspectrum.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="zxspectrum.htm#keyboard">1.1. Tastatur</a></li>
+    </ul>
+    <a href="zxspectrum.htm#etc">2. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="zxspectrum.htm#audio">2.1. Sound-/Kassettenausgabe</a>
+     </li>
+     <li>
+      <a href="zxspectrum.htm#save_sound">2.2. Sound-Datei speichern</a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
 
- <h2>1. Emulierte Hardware</h2>
-  Emuliert wird ein ZX Spectrum mit 48&nbsp;KByte RAM,
-  Lautsprecher- und Kassettenrecorderanschluss
-  sowie dem Kempston Joystick Interface.
- <br/><br/>
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  Je nach Einstellung werden emuliert:
+  <ul>
+   <li>
+    ZX&nbsp;Spectrum&nbsp;48K:
+    <ul>
+     <li>48&nbsp;KByte RAM</li>
+     <li>Lautsprecher- und Kassettenrecorderanschluss</li>
+     <li>Kempston Joystick Interface</li>
+    </ul>
+   </li>
+   <li>
+    ZX&nbsp;Spectrum+&nbsp;128K:
+    <ul>
+     <li>128&nbsp;KByte RAM</li>
+     <li>Lautsprecher- und Kassettenrecorderanschluss</li>
+     <li>Sound-Generator AY-3-8912</li>
+     <li>Kempston Joystick Interface</li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
 
- <h2>1.1. Tastatur</h2>
+ <h3><a name="keyboard">1.1. Tastatur</a></h3>
   Beim ZX&nbsp;Spectrum sind die Tasten mehrfach benutzt.
   Dem entsprechend gibt es auch in der Emulation mehrere Eingabemodi:
  <br/><br/>
@@ -139,6 +174,66 @@
     <td valign="top"><em>Entf / Del</em></td>
    </tr>
   </table>
+ <br/><br/>
+
+ <h2><a name="etc">2. Sonstiges</a></h2>
+
+ <h3><a name="audio">2.1. Sound-/Kassettenausgabe</a></h3>
+  Zum H&ouml;ren, Ausgeben oder Aufzeichnen der Ton- bzw. Kassettenausgabe
+  m&uuml;ssen Sie eine <a href="audio.htm">Audio</a>-Funktion aktivieren.
+  Die Funktion <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a>
+  unterscheidet sich dabei bei den beiden emulierten Spectrum-Modellen.
+  Beim ZX&nbsp;Spectrum&nbsp;48K h&ouml;ren Sie nur die T&ouml;ne,
+  die &uuml;ber das Bit&nbsp;<em>EAR</em> (Bit&nbsp;4)
+  des Ausgabetors&nbsp;FEh ausgegeben werden.
+  Beim ZX&nbsp;Spectrum+&nbsp;128K h&ouml;ren Sie dagegen
+  die Ausgaben des Sound-Generators AY-3-8912.
+ <br/><br/>
+  Die Funktionen
+  <a href="audio.htm#data_out">Daten am Audio-Ausgang ausgeben</a>
+  und <a href="audio.htm#file_out">Sound-Datei speichern</a>
+  sind bei beiden emulierten Spectrum-Modellen gleich.
+  Es werden sowohl die mit dem Bit&nbsp;<em>MIC</em>
+  (Bit&nbsp;3, gew&ouml;hnlich benutzt zum Speichern auf Kassette)
+  als auch die mit dem Bit&nbsp;<em>EAR</em>
+  (Bit&nbsp;4, gew&ouml;hnlich benutzt f&uuml;r Tonausgaben)
+  erzeugten Signale ausgegeben bzw. gespeichert.
+  Wenn Sie also einen ZX&nbsp;Spectrum+&nbsp;128K emulieren lassen
+  und darin Programme ausf&uuml;hren,
+  die zur Tonausgabe den Port&nbsp;FEh nutzen
+  (z.B. Programme f&uuml;r den ZX&nbsp;Spectrum&nbsp;48K),
+  m&uuml;ssen Sie zum H&ouml;ren dieser T&ouml;ne die Audio-Funktion
+  <a href="audio.htm#data_out">Daten am Audio-Ausgang ausgeben</a>
+  aktivieren.
+ <br/><br/>
+
+ <h3><a name="save_sound">2.2. Sound-Datei speichern</a></h3>
+  Beim Speichern eines BASIC-Programms in eine Sound-Datei
+  wird folgende Vorgehensweise empfohlen:
+  <ol>
+   <li>
+    Kommando zum Speichern auf Kassette eingeben und
+    <em>Enter</em> dr&uuml;cken,<br/>
+    Es erscheint die Meldung, dass man den Kassettenrecorder starten
+    und anschlie&szlig;end eine Taste dr&uuml;cken soll.
+   </li>
+   <li>
+    Audio-Funktion <a href="audio.htm#file_out">Sound-Datei speichern</a>
+    aktivieren
+   </li>
+   <li>
+    Fenster mit dem emulierten ZX&nbsp;Spectrum wieder aktiviern
+    und eine Taste dr&uuml;cken.
+   </li>
+   <li>
+    Nachdem der emulierte ZX&nbsp;Spectrum mit dem Speichern fertig ist,
+    die Audio-Funktion deaktivieren
+   </li>
+  </ol>
+ <br/>
+  Bei einer anderen Vorgehensweise kann es bei langsamer Bedienung vorkommen,
+  dass der Emulator das Ende der Datenausgabe erkennt,
+  bevor Sie das Kommando zum Speichern eingegeben haben
+  und dadurch die Audio-Funktion automatisch beendet wird.
 </body>
 </html>
-

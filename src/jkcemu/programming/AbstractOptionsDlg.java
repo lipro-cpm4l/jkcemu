@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -24,13 +24,6 @@ public abstract class AbstractOptionsDlg extends BasicDlg
   protected PrgOptions appliedOptions;
   protected EmuThread  emuThread;
 
-  private static String[] fileFmtItems = {
-				FileSaver.KCC,
-				FileSaver.KCTAP_0,
-				FileSaver.KCTAP_1,
-				FileSaver.HEADERSAVE,
-				FileSaver.INTELHEX,
-				FileSaver.BIN };
 
   private Frame owner;
 
@@ -282,7 +275,7 @@ public abstract class AbstractOptionsDlg extends BasicDlg
 				"Programmcode speichern",
 				this.fldFileName.getFile(),
 				EmuUtil.getKCSystemFileFilter(),
-				EmuUtil.getTapFileFilter(),
+				EmuUtil.getKCTapFileFilter(),
 				EmuUtil.getHeadersaveFileFilter(),
 				EmuUtil.getHexFileFilter(),
 				EmuUtil.getBinaryFileFilter(),

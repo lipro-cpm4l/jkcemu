@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,13 +10,16 @@ package jkcemu.base;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.datatransfer.*;
+import java.awt.dnd.*;
 import java.io.File;
 import java.lang.*;
+import java.nio.file.*;
 import java.util.*;
 import java.util.regex.*;
 import javax.swing.*;
 import javax.swing.event.*;
-import javax.swing.filechooser.FileSystemView;
+import javax.swing.filechooser.*;
 import javax.swing.text.Document;
 import javax.swing.table.*;
 import jkcemu.Main;
@@ -25,10 +28,14 @@ import jkcemu.Main;
 public class FileSelectDlg
 			extends BasicDlg
 			implements
+				AbstractFileWorker.PathListener,
 				DocumentListener,
+				DropTargetListener,
 				FocusListener,
 				ListSelectionListener
 {
+  public enum Mode { SAVE, LOAD, MULTIPLE_LOAD };
+
   public static class DirItem
   {
     private File dirFile;
@@ -54,7 +61,7 @@ public class FileSelectDlg
 
   private static final String defaultStatusText = "Bereit";
 
-  private boolean                              forSave;
+  private Mode                                 mode;
   private boolean                              startSelected;
   private boolean                              loadWithOptionsSelected;
   private boolean                              loadable;
@@ -62,20 +69,27 @@ public class FileSelectDlg
   private javax.swing.filechooser.FileFilter[] fileFilters;
   private File                                 curDir;
   private File                                 selectedFile;
+  private java.util.List<File>                 selectedFiles;
   private FileSystemView                       fsv;
-  private JList                                list;
+  private JList<File>                          list;
   private JScrollPane                          scrollPane;
   private JTextField                           fldFileName;
-  private JComboBox                            comboFileType;
-  private JComboBox                            comboDir;
+  private JComboBox<String>                    comboFileType;
+  private JComboBox<DirItem>                   comboDir;
   private JButton                              btnCreateDir;
-  private JButton                              btnDirUp;
+  private JButton                              btnGoUp;
   private JButton                              btnApprove;
   private JButton                              btnStart;
   private JButton                              btnLoadWithOptions;
   private JButton                              btnCancel;
   private JLabel                               labelStatus;
-  private DefaultComboBoxModel                 modelDir;
+  private JPopupMenu                           mnuPopup;
+  private JMenuItem                            mnuCreateDir;
+  private JMenuItem                            mnuDelete;
+  private JMenuItem                            mnuGoUp;
+  private JMenuItem                            mnuRefresh;
+  private JMenuItem                            mnuRename;
+  private DefaultComboBoxModel<DirItem>        modelDir;
   private Document                             docFileName;
   private java.util.List<DirItem>              baseDirItems;
   private Cursor                               defaultCursor;
@@ -85,7 +99,7 @@ public class FileSelectDlg
 
   public FileSelectDlg(
 		Window                                owner,
-		boolean                               forSave,
+		Mode                                  mode,
 		boolean                               startEnabled,
 		boolean                               loadWithOptionsEnabled,
 		String                                title,
@@ -93,7 +107,7 @@ public class FileSelectDlg
 		javax.swing.filechooser.FileFilter... fileFilters )
   {
     super( owner, title );
-    this.forSave                 = forSave;
+    this.mode                    = mode;
     this.startSelected           = false;
     this.loadWithOptionsSelected = false;
     this.loadable                = false;
@@ -101,8 +115,9 @@ public class FileSelectDlg
     this.fileFilters             = fileFilters;
     this.curDir                  = null;
     this.selectedFile            = null;
+    this.selectedFiles           = null;
     this.fsv                     = FileSystemView.getFileSystemView();
-    this.baseDirItems            = new ArrayList<DirItem>();
+    this.baseDirItems            = new ArrayList<>();
 
     File   defaultDir = null;
     File[] roots      = null;
@@ -194,8 +209,8 @@ public class FileSelectDlg
 
     // Verzeichnisauswahl
     add( new JLabel( "Suchen in:" ), gbc );
-    this.modelDir   = new DefaultComboBoxModel();
-    this.comboDir   = new JComboBox( this.modelDir );
+    this.modelDir = new DefaultComboBoxModel<>();
+    this.comboDir = new JComboBox<>( this.modelDir );
     this.comboDir.setEditable( false );
     this.comboDir.setRenderer( new FileSelectRenderer( this.fsv ) );
     this.comboDir.addActionListener( this );
@@ -215,22 +230,25 @@ public class FileSelectDlg
     gbc.gridx++;
     add( toolBar, gbc );
 
-    this.btnDirUp = createImageButton(
+    this.btnGoUp = createImageButton(
 			"/images/file/folder_up.png",
 			"Eine Ebene h\u00F6her" );
-    toolBar.add( this.btnDirUp, gbc );
+    toolBar.add( this.btnGoUp, gbc );
 
     this.btnCreateDir = createImageButton(
 			"/images/file/createdir.png",
-			"Neuen Ordner erstellen" );
+			"Neues Verzeichnis erstellen" );
     toolBar.add( this.btnCreateDir, gbc );
 
 
     // Liste
-    this.list = new JList();
+    this.list = new JList<>();
     this.list.setDragEnabled( false );
     this.list.setLayoutOrientation( JList.VERTICAL_WRAP );
-    this.list.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
+    this.list.setSelectionMode(
+	this.mode.equals( Mode.MULTIPLE_LOAD ) ?
+		ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
+		:ListSelectionModel.SINGLE_SELECTION );
     this.list.setVisibleRowCount( 0 );
     this.list.setCellRenderer( new FileSelectRenderer( this.fsv ) );
     this.list.addKeyListener( this );
@@ -277,7 +295,7 @@ public class FileSelectDlg
     gbc.gridy++;
     add( new JLabel( "Dateityp:" ), gbc );
 
-    this.comboFileType = new JComboBox();
+    this.comboFileType = new JComboBox<>();
     this.comboFileType.setEditable( false );
     this.comboFileType.addItem( "Alle Dateien" );
 
@@ -348,7 +366,7 @@ public class FileSelectDlg
     add( panelBtn, gbc );
 
     this.approveBtnText = "\u00D6ffnen";
-    if( forSave ) {
+    if( isForSave() ) {
       this.approveBtnText = "Speichern";
     } else {
       if( loadWithOptionsEnabled ) {
@@ -382,6 +400,34 @@ public class FileSelectDlg
     panelBtn.add( this.btnCancel );
 
 
+    // Popup-Menu
+    this.mnuPopup = new JPopupMenu();
+
+    this.mnuGoUp = new JMenuItem( "Eine Ebene h\u00F6her" );
+    this.mnuGoUp.addActionListener( this );
+    this.mnuPopup.add( this.mnuGoUp );
+
+    this.mnuCreateDir = new JMenuItem( "Verzeichnis erstellen..." );
+    this.mnuCreateDir.addActionListener( this );
+    this.mnuPopup.add( this.mnuCreateDir );
+    this.mnuPopup.addSeparator();
+
+    this.mnuRename = new JMenuItem( "Umbenennen..." );
+    this.mnuRename.setEnabled( false );
+    this.mnuRename.addActionListener( this );
+    this.mnuPopup.add( this.mnuRename );
+
+    this.mnuDelete = new JMenuItem( "L\u00F6schen" );
+    this.mnuDelete.setEnabled( false );
+    this.mnuDelete.addActionListener( this );
+    this.mnuPopup.add( this.mnuDelete );
+    this.mnuPopup.addSeparator();
+
+    this.mnuRefresh = new JMenuItem( "Aktualisieren" );
+    this.mnuRefresh.addActionListener( this );
+    this.mnuPopup.add( this.mnuRefresh );
+
+
     // Cursors
     this.defaultCursor = this.list.getCursor();
     if( this.defaultCursor == null ) {
@@ -393,7 +439,7 @@ public class FileSelectDlg
     // Vorbelegung
     if( preSelection != null ) {
       if( preSelection.isDirectory() ) {
-	setCurDir( preSelection );
+	setCurDir( preSelection, null );
       } else {
 	File parentDir = null;
 	if( this.fsv != null ) {
@@ -402,14 +448,16 @@ public class FileSelectDlg
 	if( parentDir == null ) {
 	  parentDir = preSelection.getParentFile();
 	}
-	setCurDir( parentDir != null ? parentDir : defaultDir );
+	setCurDir( parentDir != null ? parentDir : defaultDir, null );
 	this.fldFileName.setText( preSelection.getName() );
-	if( !selectFile( preSelection ) ) {
-	  fileSelected( preSelection );
+	java.util.List<File> preSelections
+		= Collections.singletonList( preSelection );
+	if( selectFiles( preSelections ) == 0 ) {
+	  filesSelected( preSelections );
 	}
       }
     } else {
-      setCurDir( defaultDir );
+      setCurDir( defaultDir, null );
     }
     this.docFileName = this.fldFileName.getDocument();
     if( this.docFileName != null ) {
@@ -422,6 +470,10 @@ public class FileSelectDlg
       }
     }
     updApproveBtn( false );
+
+
+    // Drop aktivieren
+    (new DropTarget( this.fldFileName, this )).setActive( true );
 
 
     // Fenstergroesse und -position
@@ -437,6 +489,12 @@ public class FileSelectDlg
   }
 
 
+  public java.util.List<File> getSelectedFiles()
+  {
+    return this.selectedFiles;
+  }
+
+
   public boolean isLoadWithOptionsSelected()
   {
     return this.loadWithOptionsSelected;
@@ -446,6 +504,22 @@ public class FileSelectDlg
   public boolean isStartSelected()
   {
     return this.startSelected;
+  }
+
+
+	/* --- AbstractFileWorker.PathListener --- */
+
+  @Override
+  public void pathsPasted( Set<Path> paths )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void pathsRemoved( Set<Path> paths )
+  {
+    updList( null );
   }
 
 
@@ -469,6 +543,47 @@ public class FileSelectDlg
   public void removeUpdate( DocumentEvent e )
   {
     docChanged( e );
+  }
+
+
+	/* --- DropTargetListener --- */
+
+  @Override
+  public void dragEnter( DropTargetDragEvent e )
+  {
+    if( !EmuUtil.isFileDrop( e ) )
+      e.rejectDrag();
+  }
+
+
+  @Override
+  public void dragExit( DropTargetEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void dragOver( DropTargetDragEvent e )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void drop( DropTargetDropEvent e )
+  {
+    File file = EmuUtil.fileDrop( this, e );
+    if( file != null ) {
+      this.fldFileName.setText( file.getPath() );
+    }
+  }
+
+
+  @Override
+  public void dropActionChanged( DropTargetDragEvent e )
+  {
+    // leer
   }
 
 
@@ -508,29 +623,40 @@ public class FileSelectDlg
       this.loadable  = false;
       this.startable = false;
 
-      String  statusText  = null;
-      boolean dirSelected = false;
-      File    file        = getSelectedListFile();
-      if( file != null ) {
+      boolean              dirSelected = false;
+      String               fileName    = null;
+      java.util.List<File> files       = this.list.getSelectedValuesList();
+      for( File file : files ) {
 	if( file.isDirectory() ) {
 	  dirSelected = true;
-	} else {
-	  String fileName = file.getName();
-	  if( fileName != null ) {
-	    if( !fileName.isEmpty() ) {
-	      if( this.docFileName != null ) {
-		this.docFileName.removeDocumentListener( this );
-		this.fldFileName.setText( fileName );
-		this.docFileName.addDocumentListener( this );
-	      } else {
-		this.fldFileName.setText( fileName );
-	      }
-	    }
+	  break;
+	}
+	String s = file.getName();
+	if( s != null ) {
+	  if( s.isEmpty() ) {
+	    s = null;
 	  }
-	  statusText = fileSelected( file );
+	}
+	if( fileName != null ) {
+	  fileName = "";
+	} else {
+	  fileName = s;
 	}
       }
+      if( !dirSelected && (fileName != null) ) {
+	if( this.docFileName != null ) {
+	  this.docFileName.removeDocumentListener( this );
+	  this.fldFileName.setText( fileName );
+	  this.docFileName.addDocumentListener( this );
+	} else {
+	  this.fldFileName.setText( fileName );
+	}
+      }
+      this.mnuDelete.setEnabled( !files.isEmpty() );
+      this.mnuRename.setEnabled( files.size() == 1 );
       updApproveBtn( dirSelected );
+
+      String statusText = filesSelected( files );
       this.labelStatus.setText(
 		statusText != null ? statusText : defaultStatusText );
     }
@@ -550,34 +676,34 @@ public class FileSelectDlg
 	    || (src == this.comboFileType) )
 	{
 	  rv = true;
-	  if( !this.forSave ) {
+	  if( !isForSave() ) {
 	    this.fldFileName.setText( "" );
 	  }
-	  updList();
+	  updList( null );
 	}
 	else if( src == this.list ) {
 	  rv = true;
 	  doListAction( this.list.getSelectedIndex() );
 	}
-	else if( src == this.btnDirUp ) {
+	else if( (src == this.btnGoUp) || (src == this.mnuGoUp) ) {
 	  rv = true;
-	  doDirUp();
+	  doGoUp();
 	}
-	else if( src == this.btnCreateDir ) {
+	else if( (src == this.btnCreateDir) || (src == this.mnuCreateDir) ) {
 	  rv = true;
 	  doCreateDir();
 	}
 	else if( src == this.btnApprove ) {
 	  rv = true;
-	  doApproveFile( false, false );
+	  doApprove( false, false );
 	}
 	else if( src == this.btnStart ) {
 	  rv = true;
-	  doApproveFile( true, false );
+	  doApprove( true, false );
 	}
 	else if( src == this.btnLoadWithOptions ) {
 	  rv = true;
-	  doApproveFile( false, true );
+	  doApprove( false, true );
 	}
 	else if( src == this.fldFileName ) {
 	  rv = true;
@@ -587,9 +713,33 @@ public class FileSelectDlg
 	  rv = true;
 	  doClose();
 	}
+	else if( src == this.mnuDelete ) {
+	  rv = true;
+	  doDelete();
+	}
+	else if( src == this.mnuRefresh ) {
+	  rv = true;
+	  doRefresh();
+	}
+	else if( src == this.mnuRename ) {
+	  rv = true;
+	  doRename();
+	}
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void keyPressed( KeyEvent e )
+  {
+    if( e != null ) {
+      if( e.getKeyCode() == KeyEvent.VK_ENTER ) {
+	doApprove( false, false );
+	e.consume();
+      }
+    }
   }
 
 
@@ -615,6 +765,19 @@ public class FileSelectDlg
 
 
   @Override
+  protected boolean showPopup( MouseEvent e )
+  {
+    boolean   rv = false;
+    Component c  = e.getComponent();
+    if( c != null ) {
+      this.mnuPopup.show( c, e.getX(), e.getY() );
+      rv = true;
+    }
+    return rv;
+  }
+
+
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -624,30 +787,29 @@ public class FileSelectDlg
 
 	/* --- Aktionen --- */
 
-  private void doApproveFile(
+  private void doApprove(
 			boolean startSelected,
 			boolean loadWithOptionsSelected )
   {
-    File file = getSelectedListFile();
-    if( file == null ) {
-      if( this.curDir != null ) {
-	String fileName = this.fldFileName.getText();
-	if( fileName != null ) {
-	  fileName = fileName.trim();
-	  if( !fileName.isEmpty() ) {
-	    file = new File( fileName );
-	    if( !file.isAbsolute() ) {
-	      if( this.fsv != null ) {
-		file = this.fsv.getChild( this.curDir, fileName );
-	      } else {
-		file = new File( this.curDir, fileName );
-	      }
+    java.util.List<File> files = this.list.getSelectedValuesList();
+    if( (files.isEmpty()) && (this.curDir != null) ) {
+      String fileName = this.fldFileName.getText();
+      if( fileName != null ) {
+	fileName = fileName.trim();
+	if( !fileName.isEmpty() ) {
+	  File file = new File( fileName );
+	  if( !file.isAbsolute() ) {
+	    if( this.fsv != null ) {
+	      file = this.fsv.getChild( this.curDir, fileName );
+	    } else {
+	      file = new File( this.curDir, fileName );
 	    }
 	  }
+	  files = Collections.singletonList( file );
 	}
       }
     }
-    approveFile( file, startSelected, loadWithOptionsSelected );
+    approveFiles( files, startSelected, loadWithOptionsSelected );
   }
 
 
@@ -656,22 +818,46 @@ public class FileSelectDlg
     if( this.curDir != null ) {
       File dirFile = EmuUtil.createDir( this, this.curDir );
       if( dirFile != null ) {
-	setCurDir( dirFile );
+	setCurDir( dirFile, null );
       }
     }
   }
 
 
-  private void doDirUp()
+  private void doDelete()
   {
-    if( this.curDir != null ) {
-      if( this.fsv != null ) {
-	setCurDir( this.fsv.getParentDirectory( this.curDir ) );
-      } else {
-	setCurDir( this.curDir.getParentFile() );
+    int idx = this.list.getSelectedIndex();
+    if( idx >= 0 ) {
+      java.util.List<File> files  = this.list.getSelectedValuesList();
+      int                  nFiles = files.size();
+      if( nFiles > 0 ) {
+	File file = null;
+	try {
+	  java.util.List<Path> paths = new ArrayList<>( nFiles );
+	  for( File f : files ) {
+	    file = f;
+	    paths.add( f.toPath() );
+	  }
+	  FileRemover.startRemove( this, paths, this, null );
+	}
+	catch( InvalidPathException ex ) {
+	  String msg = null;
+	  if( file != null ) {
+	    msg = file.getPath();
+	  }
+	  if( msg != null ) {
+	    if( msg.isEmpty() ) {
+	      msg = null;
+	    }
+	  }
+	  if( msg != null ) {
+	    msg += "\nkonnte nicht gel\u00F6scht werden.";
+	  } else {
+	    msg = "L\u00F6schen fehlgeschlagen";
+	  }
+	  showErrorDlg( this, msg );
+	}
       }
-    } else {
-      setCurDir( null );
     }
   }
 
@@ -695,14 +881,28 @@ public class FileSelectDlg
 		  file = new File( this.curDir, fName );
 		}
 	      }
-	      approveFile( file, false, true );
+	      approveFiles( Collections.singletonList( file ), false, true );
 	      done = true;
 	    }
 	  }
 	}
       }
     }
-    updList();
+    updList( null );
+  }
+
+
+  private void doGoUp()
+  {
+    File upDir = null;
+    if( this.curDir != null ) {
+      if( this.fsv != null ) {
+	upDir = this.fsv.getParentDirectory( this.curDir );
+      } else {
+	upDir = this.curDir.getParentFile();
+      }
+    }
+    setCurDir( upDir, this.curDir );
   }
 
 
@@ -715,12 +915,31 @@ public class FileSelectDlg
 	  Object o = model.getElementAt( idx );
 	  if( o != null ) {
 	    if( o instanceof File ) {
-	      File file = (File) o;
-	      if( file != null )
-		approveFile( file, false, true );
+	      approveFiles(
+			Collections.singletonList( (File) o ),
+			false,
+			true );
 	    }
 	  }
 	}
+      }
+    }
+  }
+
+
+  private void doRefresh()
+  {
+    updList( this.list.getSelectedValuesList() );
+  }
+
+
+  private void doRename()
+  {
+    java.util.List<File> files = this.list.getSelectedValuesList();
+    if( files.size() == 1 ) {
+      File file = EmuUtil.renameFile( this, files.get( 0 ) );
+      if( file != null ) {
+	updList( Collections.singletonList( file ) );
       }
     }
   }
@@ -741,7 +960,7 @@ public class FileSelectDlg
 	    break;
 	  }
 	  if( srcList == null ) {
-	    srcList = new ArrayList<File>();
+	    srcList = new ArrayList<>();
 	  }
 	  srcList.add( file );
 	  if( this.fsv != null ) {
@@ -776,32 +995,100 @@ public class FileSelectDlg
   }
 
 
-  private void approveFile(
-			File    file,
-			boolean startSelected,
-			boolean loadWithOptionsSelected )
+  private void approveFiles(
+			java.util.List<File> files,
+			boolean              startSelected,
+			boolean              loadWithOptionsSelected )
   {
-    if( file != null ) {
-      if( file.isDirectory() ) {
-	setCurDir( file );
-      } else {
-	if( this.forSave && file.exists() ) {
-	  if( !BasicDlg.showYesNoWarningDlg(
+    if( files != null ) {
+      boolean done = false;
+      for( File file : files ) {
+	if( file.isDirectory() ) {
+	  setCurDir( file, null );
+	  done = true;
+	  break;
+	}
+      }
+      if( !done && !files.isEmpty() ) {
+	File file = files.get( 0 );
+
+	// spezielle Behandlung beim Speichern
+	if( isForSave() && (files.size() == 1) ) {
+
+	  // Dateiname aufbereiten
+	  String fName = file.getName();
+	  if( fName != null ) {
+	    if( fName.startsWith( "\"" ) && fName.endsWith( "\"" ) ) {
+	      /*
+	       * Dateiname in doppelten Anfuehrungsstriche
+	       * unveraendert uebernehmen
+	       */
+	      if( fName.length() > 2 ) {
+		fName = fName.substring( 1, fName.length() - 1 );
+	      } else {
+		fName = "";
+	      }
+	      file = replaceName( file, fName );
+	    } else {
+	      /*
+	       * Dateiendung automatisch anhaengen,
+	       * wenn laut Dateifilter nur eine Endung angegeben ist
+	       */
+	      if( this.fileFilters != null ) {
+		if( this.fileFilters.length == 1 ) {
+		  javax.swing.filechooser.FileFilter ff = fileFilters[ 0 ];
+		  if( ff != null ) {
+		    if( ff instanceof FileNameExtensionFilter ) {
+		      String[] extensions = ((FileNameExtensionFilter) ff)
+							.getExtensions();
+		      if( extensions != null ) {
+			if( extensions.length == 1 ) {
+			  String ext = extensions[ 0 ];
+			  if( ext != null ) {
+			    if( !fName.toUpperCase().endsWith(
+						ext.toUpperCase() ) )
+			    {
+			      file = replaceName(
+						file,
+						String.format(
+							"%s.%s",
+							fName,
+							ext ) );
+			    }
+			  }
+			}
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+
+	  // bei Vorhandensein der Datei warnen
+	  if( file.exists() ) {
+	    if( !BasicDlg.showYesNoWarningDlg(
 			this,
-			"Die Datei \'"
-				+ file.getName()
+			"Die Datei \'" + file.getName()
 				+ "\' existiert bereits.\n"
 				+ "M\u00F6chten Sie die Datei"
 				+ " \u00FCberschreiben?",
 			"Best\u00E4tigung" ) )
-	  {
-	    file = null;
+	    {
+	      file  = null;
+	      files = null;
+	    }
 	  }
 	}
 	if( file != null ) {
 	  this.selectedFile            = file;
+	  this.selectedFiles           = files;
 	  this.startSelected           = startSelected;
-	  this.loadWithOptionsSelected = loadWithOptionsSelected;
+	  if( this.mode.equals( Mode.LOAD ) ) {
+	    this.loadWithOptionsSelected = loadWithOptionsSelected;
+	  } else {
+	    this.loadWithOptionsSelected = false;
+	  }
 	  doClose();
 	}
       }
@@ -861,34 +1148,41 @@ public class FileSelectDlg
   }
 
 
-  private String fileSelected( File file )
+  private String filesSelected( java.util.List<File> files )
   {
     String statusText = null;
-    if( file != null ) {
-      if( file.isFile() && file.canRead() ) {
-	FileInfo fileInfo = FileInfo.analyzeFile( file );
-	if( fileInfo != null ) {
-	  if( !fileInfo.isKCBasicProgramFormat()
-	      && (fileInfo.getBegAddr() >= 0) )
-	  {
-	    this.loadable = true;
-	    if( fileInfo.getStartAddr() >= 0 ) {
-	      this.startable = true;
+    File  file        = null;
+    if( files != null ) {
+      if( files.size() == 1 ) {
+	file = files.get( 0 );
+	if( file.isFile() && file.canRead() ) {
+	  FileInfo fileInfo = FileInfo.analyzeFile( file );
+	  if( fileInfo != null ) {
+	    if( !fileInfo.isKCBasicProgramFormat()
+		&& (fileInfo.getBegAddr() >= 0) )
+	    {
+	      this.loadable = true;
+	      if( fileInfo.getStartAddr() >= 0 ) {
+		this.startable = true;
+	      }
 	    }
+	    statusText = fileInfo.getInfoText();
 	  }
-	  statusText = fileInfo.getInfoText();
 	}
       }
     }
     if( this.btnApprove != null ) {
-      this.btnApprove.setEnabled( (!this.forSave && this.loadable)
-					|| (this.btnLoadWithOptions == null) );
+      this.btnApprove.setEnabled(
+		(this.mode.equals( Mode.LOAD ) && this.loadable)
+		|| (this.btnLoadWithOptions == null) );
     }
     if( this.btnStart != null ) {
-      this.btnStart.setEnabled( !this.forSave && this.startable );
+      this.btnStart.setEnabled(
+		this.mode.equals( Mode.LOAD ) && this.startable );
     }
     if( this.btnLoadWithOptions != null ) {
-      this.btnLoadWithOptions.setEnabled( !this.forSave && (file != null) );
+      this.btnLoadWithOptions.setEnabled(
+		this.mode.equals( Mode.LOAD ) && (file != null) );
     }
     if( statusText != null ) {
       if( statusText.isEmpty() ) {
@@ -899,17 +1193,20 @@ public class FileSelectDlg
   }
 
 
-  private void fireSetListData( final File dirFile, final File[] files )
+  private void fireSetListData(
+			final File                 dirFile,
+			final File[]               files,
+			final java.util.List<File> filesToSelect )
   {
     EventQueue.invokeLater(
-			new Runnable()
-			{
-			  @Override
-			  public void run()
-			  {
-			    setListData( dirFile, files );
-			  }
-			} );
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    setListData( dirFile, files, filesToSelect );
+		  }
+		} );
   }
 
 
@@ -930,33 +1227,51 @@ public class FileSelectDlg
   }
 
 
-  private File getSelectedListFile()
+  private boolean isForSave()
   {
-    File   file  = null;
-    Object value = this.list.getSelectedValue();
-    if( value != null ) {
-      if( value instanceof File )
-	file = (File) value;
+    return this.mode.equals( Mode.SAVE );
+  }
+
+
+  private static File replaceName( File file, String fName )
+  {
+    if( file != null ) {
+      File parent = file.getParentFile();
+      if( parent != null ) {
+	file = new File( parent, fName );
+      } else {
+	file = new File( fName );
+      }
     }
     return file;
   }
 
 
-  private boolean selectFile( File file )
+  private int selectFiles( Collection<File> filesToSelect )
   {
-    boolean rv = false;
-    if( file != null ) {
-      ListModel model = this.list.getModel();
-      if( model != null ) {
-	int n = model.getSize();
-	for( int i = 0; i < n; i++ ) {
-	  Object o = model.getElementAt( i );
-	  if( o != null ) {
-	    if( o instanceof File ) {
-	      if( EmuUtil.equals( (File) o, file ) ) {
-		this.list.setSelectedIndex( i );
-		rv = true;
-		break;
+    int rv = 0;
+    this.list.clearSelection();
+    if( filesToSelect != null ) {
+      if( !filesToSelect.isEmpty() ) {
+	ListModel<File> model = this.list.getModel();
+	if( model != null ) {
+	  Set<String> pathsToSelect = new TreeSet<>();
+	  for( File file : filesToSelect ) {
+	    String path = file.getPath();
+	    if( path != null ) {
+	      if( pathsToSelect == null ) {
+		pathsToSelect = new TreeSet<>();
+	      }
+	      pathsToSelect.add( path );
+	    }
+	  }
+	  int n = model.getSize();
+	  for( int i = 0; i < n; i++ ) {
+	    String path = model.getElementAt( i ).getPath();
+	    if( path != null ) {
+	      if( pathsToSelect.contains( path ) ) {
+		this.list.addSelectionInterval( i, i );
+		rv++;
 	      }
 	    }
 	  }
@@ -967,14 +1282,14 @@ public class FileSelectDlg
   }
 
 
-  private void setCurDir( File dirFile )
+  private void setCurDir( File dirFile, File fileToSelect )
   {
-    if( !this.forSave ) {
+    if( !isForSave() ) {
       this.fldFileName.setText( "" );
     }
     this.comboDir.removeActionListener( this );
     DirItem defaultDirItem        = null;
-    java.util.List<DirItem> items = new ArrayList<DirItem>();
+    java.util.List<DirItem> items = new ArrayList<>();
     items.addAll( this.baseDirItems );
     if( dirFile != null ) {
       defaultDirItem = addDirItem( items, dirFile );
@@ -986,12 +1301,17 @@ public class FileSelectDlg
     if( defaultDirItem != null ) {
       this.comboDir.setSelectedItem( defaultDirItem );
     }
-    updList();
+    updList( fileToSelect != null ?
+			Collections.singletonList( fileToSelect )
+			: null );
     this.comboDir.addActionListener( this );
   }
 
 
-  private void setListData( File dirFile, File[] files )
+  private void setListData(
+			File                       dirFile,
+			File[]                     files,
+			final java.util.List<File> filesToSelect )
   {
     if( (this.curDir != null) && (dirFile != null) && (files != null) ) {
       if( this.curDir.equals( dirFile ) ) {
@@ -1019,8 +1339,9 @@ public class FileSelectDlg
 	    }
 	  }
 	}
-	java.util.List<File> entries = new ArrayList<File>(
+	java.util.List<File> entries = new ArrayList<>(
 					files.length > 1 ? files.length : 1 );
+
 	for( int i = 0; i < files.length; i++ ) {
 	  File file = files[ i ];
 	  if( file.isDirectory() && !file.isHidden() ) {
@@ -1056,7 +1377,21 @@ public class FileSelectDlg
 	    }
 	  }
 	}
-	this.list.setListData( entries.toArray() );
+	this.list.setListData(
+			entries.toArray( new File[ entries.size() ] ) );
+	if( filesToSelect != null ) {
+	  if( !filesToSelect.isEmpty() ) {
+	    EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    selectFiles( filesToSelect );
+			  }
+			} );
+	  }
+	}
       }
     }
     if( this.defaultCursor != null ) {
@@ -1082,24 +1417,26 @@ public class FileSelectDlg
 	stateApprove = true;
       } else {
 	this.btnApprove.setText( this.approveBtnText );
-	boolean hasFileName = false;
-	if( this.docFileName != null ) {
-	  String fileName = this.fldFileName.getText();
-	  if( fileName != null ) {
-	    fileName = fileName.trim();
-	    if( !fileName.isEmpty() ) {
-	      hasFileName = true;
+	boolean stateSelection = (this.list.getSelectedIndex() > 0);
+	if( !stateSelection ) {
+	  if( this.docFileName != null ) {
+	    String fileName = this.fldFileName.getText();
+	    if( fileName != null ) {
+	      fileName = fileName.trim();
+	      if( !fileName.isEmpty() ) {
+		stateSelection = true;
+	      }
 	    }
+	  } else {
+	    stateSelection = true;
 	  }
-	} else {
-	  hasFileName = true;
 	}
 	if( this.btnLoadWithOptions != null ) {
 	  stateApprove         = this.loadable;
 	  stateStart           = this.startable;
-	  stateLoadWithOptions = hasFileName;
+	  stateLoadWithOptions = stateSelection;
 	} else {
-	  stateApprove = hasFileName;
+	  stateApprove = stateSelection;
 	}
       }
       this.btnApprove.setEnabled( stateApprove );
@@ -1113,7 +1450,7 @@ public class FileSelectDlg
   }
 
 
-  private void updList()
+  private void updList( final java.util.List<File> filesToSelect )
   {
     this.curDir    = null;
     Object dirItem = this.comboDir.getSelectedItem();
@@ -1122,18 +1459,23 @@ public class FileSelectDlg
 	this.curDir = ((DirItem) dirItem).getDirectory();
       }
     }
-    this.list.setListData( new Object[ 0 ] );
+    this.list.setListData( new File[ 0 ] );
     if( this.curDir != null ) {
       this.btnCreateDir.setEnabled( true );
+      this.mnuCreateDir.setEnabled( true );
+      boolean state = false;
       if( this.fsv != null ) {
-	this.btnDirUp.setEnabled(
-		this.fsv.getParentDirectory( this.curDir ) != null );
+	state = (this.fsv.getParentDirectory( this.curDir ) != null);
       } else {
-	this.btnDirUp.setEnabled( this.curDir.getParentFile() != null );
+	state = (this.curDir.getParentFile() != null);
       }
+      this.btnGoUp.setEnabled( state );
+      this.mnuGoUp.setEnabled( state );
     } else {
       this.btnCreateDir.setEnabled( false );
-      this.btnDirUp.setEnabled( false );
+      this.mnuCreateDir.setEnabled( false );
+      this.btnGoUp.setEnabled( false );
+      this.mnuGoUp.setEnabled( false );
     }
     final FileSystemView fsv     = this.fsv;
     final File           dirFile = this.curDir;
@@ -1147,27 +1489,28 @@ public class FileSelectDlg
 	}
       }
       this.labelStatus.setText( "Lese Verzeichnis..." );
-      Thread t = new Thread( "JKCEMU directory reader of file select dialog" )
-			{
-			  @Override
-			  public void run()
-			  {
-			    File[] files = null;
-			    try {
-			      if( fsv != null ) {
-				files = fsv.getFiles( dirFile, true );
-			      } else {
-				files = dirFile.listFiles();
-			      }
-			    }
-			    catch( Exception ex ) {}
-			    finally {
-			      fireSetListData( dirFile, files );
-			    }
-			  }
-			};
+      Thread t = new Thread(
+			Main.getThreadGroup(),
+			"JKCEMU directory reader of file select dialog" )
+		{
+		  @Override
+		  public void run()
+		  {
+		    File[] files = null;
+		    try {
+		      if( fsv != null ) {
+			files = fsv.getFiles( dirFile, true );
+		      } else {
+			files = dirFile.listFiles();
+		      }
+		    }
+		    catch( Exception ex ) {}
+		    finally {
+		      fireSetListData( dirFile, files, filesToSelect  );
+		    }
+		  }
+		};
       t.start();
     }
   }
 }
-

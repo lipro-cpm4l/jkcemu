@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,6 +17,7 @@ import z80emu.*;
 public abstract class AudioIO
 {
   protected Z80CPU      z80cpu;
+  protected AudioFrm    audioFrm;
   protected AudioFormat audioFmt;
   protected boolean     firstCall;
   protected boolean     progressEnabled;
@@ -30,8 +31,9 @@ public abstract class AudioIO
   private volatile int            monitorPos;
 
 
-  protected AudioIO( Z80CPU z80cpu )
+  protected AudioIO( AudioFrm audioFrm, Z80CPU z80cpu )
   {
+    this.audioFrm        = audioFrm;
     this.z80cpu          = z80cpu;
     this.firstCall       = true;
     this.progressEnabled = false;
@@ -46,14 +48,16 @@ public abstract class AudioIO
 
 
   /*
-   * Die Methode wird aufgerufen, um die Anzahl der Taktzyklen
-   * seit dem letzten Aufruf mitzuteilen.
-   * Abgeleitete Klassen koennen diese Methode ueberschreiben,
-   * um z.B. auf eine zu lange Pause zu reagieren.
+   * Mit dieser Methode erfaehrt die Klasse die Anzahl
+   * der seit dem letzten Aufruf vergangenen Taktzyklen.
+   *
+   * Rueckgabewert:
+   *   true:  Audio-Daten verwenden
+   *   false: Audio-Daten verwerfen
    */
-  protected void currentDiffTStates( long diffTStates )
+  protected boolean currentDiffTStates( long diffTStates )
   {
-    // empty
+    return true;
   }
 
 
@@ -63,22 +67,11 @@ public abstract class AudioIO
   }
 
 
-  public Control[] getDataControls()
+  public String getAndClearErrorText()
   {
-    return null;
-  }
-
-
-  public String getErrorText()
-  {
-    return this.errorText;
-  }
-
-
-  public Control[] getMonitorControls()
-  {
-    Line line = this.monitorLine;
-    return line != null ? line.getControls() : null;
+    String text    = this.errorText;
+    this.errorText = null;
+    return text;
   }
 
 
@@ -144,10 +137,11 @@ public abstract class AudioIO
   }
 
 
-  public abstract AudioFormat startAudio(
-					Mixer mixer,
-					int   speedKHz,
-					int   sampleRate );
+  public void reset()
+  {
+    // leer
+  }
+
 
   public abstract void stopAudio();
 

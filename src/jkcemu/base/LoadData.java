@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,29 +11,29 @@ package jkcemu.base;
 
 import java.io.*;
 import java.lang.*;
-import z80emu.Z80MemView;
+import jkcemu.base.EmuMemView;
 
 
-public class LoadData implements Z80MemView
+public class LoadData implements EmuMemView
 {
-  private byte[]   data;
-  private int      offset;
-  private int      len;
-  private int      begAddr;
-  private int      startAddr;
-  private int      fileType;
-  private Object   fileFmt;
-  private String   infoMsg;
-  private FileInfo fileInfo;
+  private byte[]     data;
+  private int        offset;
+  private int        len;
+  private int        begAddr;
+  private int        startAddr;
+  private int        fileType;
+  private FileFormat fileFmt;
+  private String     infoMsg;
+  private FileInfo   fileInfo;
 
 
   public LoadData(
-		byte[] data,
-		int    offset,
-		int    len,
-		int    begAddr,
-		int    startAddr,
-		Object fileFmt )
+		byte[]     data,
+		int        offset,
+		int        len,
+		int        begAddr,
+		int        startAddr,
+		FileFormat fileFmt )
   {
     this.data      = data;
     this.offset    = offset;
@@ -114,15 +114,10 @@ public class LoadData implements Z80MemView
     if( (emuThread != null) && (this.data != null) ) {
       EmuSys emuSys = emuThread.getEmuSys();
       if( emuSys != null ) {
-	int src = this.offset;
-	int dst = this.begAddr;
-	int len = this.len;
-	while( (src < this.data.length) && (dst < 0x10000) && (len > 0) ) {
-	  emuSys.loadMemByte( dst++, this.data[ src++ ] );
-	  --len;
-	}
-	emuSys.updSysCells(
+	emuSys.loadIntoMem(
 			this.begAddr,
+			this.data,
+			this.offset,
 			this.len,
 			this.fileFmt,
 			this.fileType );
@@ -203,6 +198,15 @@ public class LoadData implements Z80MemView
   }
 
 
+	/* --- EmuMemView --- */
+
+  @Override
+  public int getBasicMemByte( int addr )
+  {
+    return getAbsoluteByte( this.offset + addr - this.begAddr );
+  }
+
+
 	/* --- Z80MemView --- */
 
   @Override
@@ -218,4 +222,3 @@ public class LoadData implements Z80MemView
     return (getMemByte( addr + 1, false ) << 8) | getMemByte( addr, false );
   }
 }
-

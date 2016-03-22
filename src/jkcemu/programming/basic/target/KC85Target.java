@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,29 +17,38 @@ import jkcemu.programming.basic.*;
 
 public class KC85Target extends AbstractTarget
 {
-  private boolean needsFullWindow;
-  private boolean usesColors;
+  public static final String BASIC_TARGET_NAME = "TARGET_KC85";
+
+  protected boolean needsFullWindow;
+  protected boolean pixUtilAppended;
+  protected boolean xpsetAppended;
+
+  private boolean usesXCOLOR;
+  private boolean usesXINK;
+  private boolean usesXPAPER;
   private boolean usesJoystick;
-  private boolean usesOSVersion;
   private boolean usesM052;
   private boolean xpresAppended;
-  private boolean xpsetAppended;
 
 
   public KC85Target()
   {
-    reset();
-  }
-
-
-  @Override
-  public void appendDataTo( AsmCodeBuf buf )
-  {
-    super.appendDataTo( buf );
-    if( this.usesOSVersion ) {
-      buf.append( "X_CAOS:\tDB\t'CAOS '\n"
-		+ "\tDB\t00H\n" );
-    }
+    setNamedValue( "GRAPHICSCREEN", 0 );
+    setNamedValue( "BLACK", 0 );
+    setNamedValue( "BLINKING", 0x10 );
+    setNamedValue( "BLUE", 0x01 );
+    setNamedValue( "CYAN", 0x05 );
+    setNamedValue( "GREEN", 0x04 );
+    setNamedValue( "MAGENTA", 0x03 );
+    setNamedValue( "RED", 0x02 );
+    setNamedValue( "WHITE", 0x07 );
+    setNamedValue( "YELLOW", 0x06 );
+    setNamedValue( "JOYST_LEFT", 0x04 );
+    setNamedValue( "JOYST_RIGHT", 0x08 );
+    setNamedValue( "JOYST_DOWN", 0x02 );
+    setNamedValue( "JOYST_UP", 0x01 );
+    setNamedValue( "JOYST_BUTTON1", 0x20 );
+    setNamedValue( "JOYST_BUTTON2", 0x10 );
   }
 
 
@@ -47,26 +56,16 @@ public class KC85Target extends AbstractTarget
   public void appendBssTo( AsmCodeBuf buf )
   {
     super.appendBssTo( buf );
-    if( this.usesColors ) {
-      buf.append( "X_M_INK:\n"
-		+ "\tDS\t1\n" );
-    }
-    if( this.usesOSVersion ) {
-      buf.append( "X_M_OS:\tDS\t1\n" );
-    }
     if( this.usesM052 ) {
-      buf.append( "X_M_M052SLOT:\n"
-		+ "\tDS\t1\n"
-		+ "X_M_M052STAT:\n"
-		+ "\tDS\t1\n"
-		+ "X_M_M052USED:\n"
-		+ "\tDS\t1\n" );
+      buf.append( "X_M_M052SLOT:\tDS\t1\n"
+		+ "X_M_M052STAT:\tDS\t1\n"
+		+ "X_M_M052USED:\tDS\t1\n" );
     }
   }
 
 
   @Override
-  public void appendEnableKCNet( AsmCodeBuf buf )
+  public void appendEnableVdipTo( AsmCodeBuf buf )
   {
     buf.append( "\tCALL\tX_M052\n" );
     this.usesM052 = true;
@@ -74,17 +73,36 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendEnableVdip( AsmCodeBuf buf )
+  public void appendEtcPreXOutTo( AsmCodeBuf buf )
   {
-    buf.append( "\tCALL\tX_M052\n" );
-    this.usesM052 = true;
-  }
-
-
-  @Override
-  public void appendEtc( AsmCodeBuf buf )
-  {
-    super.appendEtc( buf );
+    if( this.usesXINK ) {
+      buf.append( "XINK:\tLD\tA,01H\n" );
+      if( this.usesXCOLOR || this.usesXPAPER ) {
+	buf.append( "\tJR\tXCOLO1\n" );
+      } else {
+	buf.append( "\tLD\t(0B781H),A\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tDB\t0FH\n"
+		+ "\tRET\n" );
+      }
+    }
+    if( this.usesXPAPER ) {
+      buf.append( "XPAPER:\tLD\tE,L\n"
+		+ "\tLD\tA,(0B7A3H)\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tLD\tL,A\n" );
+      this.usesXCOLOR = true;
+      // unmittelbar weiter mit XCOLOR!
+    }
+    if( this.usesXCOLOR ) {
+      buf.append( "XCOLOR:\tLD\tA,02H\n"
+		+ "XCOLO1:\tLD\t(0B781H),A\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tDB\t0FH\n"
+		+ "\tRET\n" );
+    }
     if( this.usesM052 ) {
       /*
        * Aktivieren des Moduls M052
@@ -125,34 +143,40 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendExit( AsmCodeBuf buf )
+  public void appendPreExitTo( AsmCodeBuf buf )
   {
     if( this.usesM052 ) {
       buf.append( "\tLD\tA,(X_M_M052USED)\n"
 		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
+		+ "\tJR\tZ,X_EXIT1\n"
 		+ "\tLD\tA,(X_M_M052STAT)\n"
 		+ "\tLD\tD,A\n"
 		+ "\tLD\tA,(X_M_M052SLOT)\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tA,02H\n"
 		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t26H\n" );
+		+ "\tDB\t26H\n"
+		+ "X_EXIT1:\n" );
     }
-    buf.append( "X_EXIT1:\n"
-		+ "\tRET\n" );
   }
 
 
   @Override
-  public void appendHChar( AsmCodeBuf buf )
+  public void appendExitTo( AsmCodeBuf buf )
+  {
+    buf.append( "\tRET\n" );
+  }
+
+
+  @Override
+  public void appendHCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0020H\n" );
   }
 
 
   @Override
-  public void appendHPixel( AsmCodeBuf buf )
+  public void appendHPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0100H\n" );
   }
@@ -172,42 +196,11 @@ public class KC85Target extends AbstractTarget
 		+ "\tLD\tA,7FH\n"
 		+ "\tOUT\t(92H),A\n" );
     }
-    if( this.usesOSVersion ) {
-      /*
-       * Zeichenkette "CAOS " ab F000h suchen und das naechste
-       * ACSII-Zeichen als Hauptversion interpretieren,
-       * wenn es eine Ziffer ist.
-       */
+    if( this.usesM052 ) {
       buf.append( "\tXOR\tA\n"
-		+ "\tLD\t(X_M_OS),A\n"
-		+ "\tLD\tBC,0EFFFH\n"
-		+ "X_IOS1:\tINC\tBC\n"
-		+ "\tLD\tA,B\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,X_IOS4\n"		// nicht gefunden
-		+ "\tLD\tH,B\n"
-		+ "\tLD\tL,C\n"
-		+ "\tLD\tDE,X_CAOS\n"
-		+ "X_IOS2:\tLD\tA,(DE)\n"
-		+ "\tINC\tDE\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,X_IOS3\n"		// gefunden
-		+ "\tCP\t(HL)\n"
-		+ "\tJR\tNZ,X_IOS1\n"
-		+ "\tINC\tHL\n"
-		+ "\tJR\tX_IOS2\n"
-		+ "X_IOS3:\tLD\tA,(HL)\n"
-		+ "\tSUB\t30H\n"
-		+ "\tJR\tC,X_IOS4\n"
-		+ "\tCP\t0A0H\n"
-		+ "\tJR\tNC,X_IOS4\n"
-		+ "\tLD\t(X_M_OS),A\n"
-		+ "X_IOS4:\n" );
-    }
-    if( this.usesColors ) {
-      buf.append( "\tLD\tA,(0B7A3H)\n"
-		+ "\tAND\t0F8H\n"
-		+ "\tLD\t(X_M_INK),A\n" );
+		+ "\tLD\t(X_M_M052SLOT),A\n"
+		+ "\tLD\t(X_M_M052STAT),A\n"
+		+ "\tLD\t(X_M_M052USED),A\n" );
     }
     if( this.needsFullWindow ) {
       // Fenstergroesse pruefen und ggf. auf Maximalewerte setzen
@@ -250,17 +243,11 @@ public class KC85Target extends AbstractTarget
 		+ "\tDB\t00H\n"
 		+ "X_IWN2:\n" );
     }
-    if( this.usesM052 ) {
-      buf.append( "\tXOR\tA\n"
-		+ "\tLD\t(X_M_M052SLOT),A\n"
-		+ "\tLD\t(X_M_M052STAT),A\n"
-		+ "\tLD\t(X_M_M052USED),A\n" );
-    }
   }
 
 
   @Override
-  public void appendInput(
+  public void appendInputTo(
 			AsmCodeBuf buf,
 			boolean    xckbrk,
 			boolean    xinkey,
@@ -302,9 +289,9 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendProlog(
-			BasicCompiler compiler,
+  public void appendPrologTo(
 			AsmCodeBuf    buf,
+			BasicCompiler compiler,
 			String        appName )
   {
     boolean done = false;
@@ -325,21 +312,21 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendWChar( AsmCodeBuf buf )
+  public void appendWCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0028H\n" );
   }
 
 
   @Override
-  public void appendWPixel( AsmCodeBuf buf )
+  public void appendWPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0140H\n" );
   }
 
 
   @Override
-  public void appendXCLS( AsmCodeBuf buf )
+  public void appendXClsTo( AsmCodeBuf buf )
   {
     buf.append( "XCLS:\tLD\tA,0CH\n"
 		+ "\tCALL\t0F003H\n"
@@ -356,122 +343,62 @@ public class KC85Target extends AbstractTarget
    *   DE: Hintergrundfarbe
    */
   @Override
-  public void appendXCOLOR( AsmCodeBuf buf )
+  public void appendXColorTo( AsmCodeBuf buf )
   {
-    buf.append( "XCOLOR:\tLD\tA,L\n"
-		+ "\tAND\t1FH\n"
-		+ "\tLD\tL,A\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tLD\t(X_M_INK),A\n"
-		+ "\tLD\tA,E\n"
-		+ "\tAND\t07H\n"
-		+ "\tLD\tE,A\n"
-		+ "\tLD\tA,02H\n"
-		+ "\tLD\t(0B781H),A\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t0FH\n"
-		+ "\tRET\n" );
-    this.usesColors = true;
+    this.usesXCOLOR = true;
   }
 
 
   /*
-   * Zeichnen einer horizontaler Linie,
-   *   Bei CAOS 4 oder hoeher wird die LINE-Funktion von CAOS verwendet,
-   *   da diese etwas schneller als die JKCEMU-Routine ist.
-   *   Die LINE-Funktion im CAOS 3 ist dagegen wesentlich langsamer
-   *   und wird deshalb nicht verwendet.
+   * Zeichnen einer horizontalen Linie
    * Parameter:
    *   BC: Laenge - 1
-   *   DE: linke X-Koordinate
+   *   DE: linke X-Koordinate, nicht kleiner 0
    *   HL: Y-Koordinate
    */
-  @Override
-  public void appendXHLINE( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXHLineTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XHLINE:" );
-    if( this.usesX_MPEN ) {
-      buf.append( "\tLD\tA,(X_MPEN)\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tEX\tAF,AF\'\n" );
-    }
-    buf.append( "\tBIT\t7,B\n"			// Laenge pruefen
+    buf.append( "XHLINE:\tBIT\t7,B\n"
 		+ "\tRET\tNZ\n"
-		+ "\tBIT\t7,H\n"		// Y pruefen
-		+ "\tRET\tNZ\n"
-		+ "\tLD\tA,(X_M_OS)\n"
-		+ "\tCP\t04H\n"
-		+ "\tJR\tC,XHLIN2\n"
-		+ "\tLD\t(0B782H),DE\n"
-		+ "\tLD\t(0B784H),HL\n"
-		+ "\tLD\t(0B788H),HL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tADD\tHL,BC\n"
-		+ "\tLD\t(0B786H),HL\n"
-		+ "\tEXX\n"
 		+ "\tPUSH\tBC\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n" );
-    if( this.usesX_MPEN ) {
-      buf.append( "\tLD\tB,02H\n"
-		+ "\tEX\tAF,AF\'\n"
-		+ "\tCP\t02H\n"
-		+ "\tJR\tZ,XHLIN1\n"
-		+ "\tDEC\tB\n"
-		+ "\tCP\t03H\n"
-		+ "\tJR\tZ,XHLIN1\n"
-		+ "\tDEC\tB\n"
-		+ "XHLIN1:\tLD\tA,(X_M_INK)\n"
-		+ "\tOR\tB\n" );
-    } else {
-      buf.append( "\tLD\tA,(X_M_INK)\n" );
-    }
-    buf.append( "\tLD\t(0B7D6H),A\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t3EH\n"
-		+ "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tBC\n"
-		+ "\tEXX\n"
-		+ "\tRET\n"
-		+ "XHLIN2:\tPUSH\tBC\n"
-		+ "\tPUSH\tDE\n"
 		+ "\tPUSH\tHL\n"
-		+ "\tCALL\tXPSET\n"
+		+ "\tCALL\tX_PST\n"
+		+ "\tEXX\n"
 		+ "\tPOP\tHL\n"
 		+ "\tPOP\tDE\n"
 		+ "\tPOP\tBC\n"
-		+ "\tLD\tA,B\n"
-		+ "\tOR\tC\n"
-		+ "\tRET\tZ\n"
-		+ "\tDEC\tBC\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tH,00H\n"
+		+ "XHLINE1:\n"
+		+ "\tOR\tH\n"
+		+ "\tLD\tH,A\n"
+		+ "\tSRL\tA\n"
+		+ "\tJR\tC,XHLINE2\n"
 		+ "\tINC\tDE\n"
-		+ "\tJR\tXHLIN2\n" );
-    appendXPSET( buf, compiler );
-    this.needsFullWindow = true;
-    this.usesOSVersion   = true;
+		+ "\tDEC\tBC\n"
+		+ "\tBIT\t7,B\n"
+		+ "\tJR\tZ,XHLINE1\n"
+		+ "\tLD\tA,H\n"
+		+ "\tEXX\n"
+		+ "\tJR\tXPSET_A\n"
+		+ "XHLINE2:\n"
+		+ "\tLD\tA,H\n"
+		+ "\tEXX\n"
+		+ "\tCALL\tXPSET_A\n"
+		+ "\tEXX\n"
+		+ "\tINC\tDE\n"
+		+ "\tDEC\tBC\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tJR\tXHLINE\n" );
+    appendXPSetTo( buf, compiler );
   }
 
 
   @Override
-  public void appendXINK( AsmCodeBuf buf )
+  public void appendXInkTo( AsmCodeBuf buf )
   {
-    buf.append( "XINK:\tLD\tA,L\n"
-		+ "\tAND\t1FH\n"
-		+ "\tLD\tL,A\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tLD\t(X_M_INK),A\n"
-		+ "\tLD\tA,01H\n"
-		+ "\tLD\t(0B781H),A\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t0FH\n"
-		+ "\tRET\n" );
-    this.usesColors = true;
+    this.usesXINK = true;
   }
 
 
@@ -481,45 +408,15 @@ public class KC85Target extends AbstractTarget
    *   HL: Nummer des Joysticks (0: erster Joystick)
    * Rueckgabewert:
    *   HL: Joystickstatus
-   *         Bit 0: links
-   *         Bit 1: rechts
-   *         Bit 2: runter
-   *         Bit 3: hoch
-   *         Bit 4: Aktionsknopf
    */
-  public void appendXJOY( AsmCodeBuf buf )
+  public void appendXJoyTo( AsmCodeBuf buf )
   {
     buf.append( "XJOY:\tLD\tA,H\n"
 		+ "\tOR\tL\n"
 		+ "\tJR\tNZ,XJOY1\n"
 		+ "\tIN\tA,(90H)\n"
 		+ "\tCPL\n"
-		+ "\tLD\tB,A\n"
-		+ "\tSRL\tA\n"
-		+ "\tSRL\tA\n"
-		+ "\tAND\t03H\n"	// links und rechts maskieren
-		+ "\tLD\tC,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tSLA\tA\n"
-		+ "\tAND\t04H\n"	// runter maskieren
-		+ "\tOR\tC\n"
-		+ "\tLD\tC,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tAND\t08H\n"	// hoch maskieren
-		+ "\tOR\tC\n"
-		+ "\tLD\tC,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tSRL\tA\n"
-		+ "\tAND\t10H\n"	// Aktionsknopf 1 maskieren
-		+ "\tOR\tC\n"
-		+ "\tLD\tC,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tSLA\tA\n"
-		+ "\tAND\t20H\n"	// Aktionsknopf 2 maskieren
-		+ "\tOR\tC\n"
+		+ "\tAND\t3FH\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
@@ -530,7 +427,7 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendXLOCATE( AsmCodeBuf buf )
+  public void appendXLocateTo( AsmCodeBuf buf )
   {
     buf.append( "XLOCATE:\n"
 		+ "\tLD\tH,E\n"
@@ -541,7 +438,7 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendXLPTCH( AsmCodeBuf buf )
+  public void appendXLPtchTo( AsmCodeBuf buf )
   {
     buf.append( "XLPTCH:\tCALL\t0F003H\n"
 		+ "\tDB\t02H\n"
@@ -550,7 +447,7 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public void appendXOUTCH( AsmCodeBuf buf )
+  public void appendXOutchTo( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
       buf.append( "XOUTCH:\tCALL\t0F003H\n"
@@ -561,23 +458,186 @@ public class KC85Target extends AbstractTarget
   }
 
 
+  /*
+   * XPAINT_LEFT:
+   *   Fuellen einer Linie ab dem uebergebenen Punkt nach links,
+   *   Der Startpunkt selbst wird nicht geprueft
+   *   Parameter:
+   *     PAINT_M_X:    X-Koordinate Startpunkt
+   *     PAINT_M_Y:    Y-Koordinate Startpunkt
+   *   Rueckgabe:
+   *     (PAINT_M_X1): X-Endkoordinate der gefuellten Linie,
+   *                   kleiner oder gleich X-Startpunkt
+   *
+   * XPAINT_RIGHT:
+   *   Fuellen einer Linie ab dem uebergebenen Punkt nach rechts
+   *   Parameter:
+   *     PAINT_M_X:    X-Koordinate Startpunkt
+   *     PAINT_M_Y:    Y-Koordinate Startpunkt
+   *   Rueckgabe:
+   *     CY=1:         Pixel im Startpunkt bereits gesetzt (gefuellt)
+   *                   oder ausserhalb des sichtbaren Bereichs
+   *     (PAINT_M_X2): X-Endkoordinate der gefuellten Linie, nur bei CY=0
+   */
   @Override
-  public void appendXPAPER( AsmCodeBuf buf )
+  public void appendXPaintTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPAPER:\tLD\tA,L\n"
-		+ "\tAND\t07H\n"
-		+ "\tLD\tE,A\n"
-		+ "\tLD\tA,(X_M_INK)\n"
-		+ "\tSRL\tA\n"
-		+ "\tSRL\tA\n"
-		+ "\tSRL\tA\n"
-		+ "\tLD\tL,A\n"
-		+ "\tLD\tA,02H\n"
-		+ "\tLD\t(0B781H),A\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t0FH\n"
+    buf.append( "XPAINT_LEFT:\n"
+		+ "\tLD\tDE,(PAINT_M_X)\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"
+		+ "\tJR\tZ,XPAINT_LEFT5\n"
+		+ "\tDEC\tDE\n"
+		+ "XPAINT_LEFT1:\n"
+		+ "\tLD\tHL,(PAINT_M_Y)\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tX_PST\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tEXX\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tC,XPAINT_LEFT4\n"
+		+ "\tLD\tC,A\n"
+		+ "\tLD\tB,(HL)\n"
+		+ "\tLD\tA,B\n"
+		+ "XPAINT_LEFT2:\n"
+		+ "\tAND\tC\n"
+		+ "\tJR\tNZ,XPAINT_LEFT3\n"
+		+ "\tLD\tA,B\n"
+		+ "\tOR\tC\n"
+		+ "\tLD\tB,A\n"
+		+ "\tDEC\tDE\n"
+		+ "\tSLA\tC\n"
+		+ "\tJR\tNC,XPAINT_LEFT2\n"
+		+ "\tLD\t(HL),B\n"
+		+ "\tEXX\n"
+		+ "\tCALL\tXPSET_WR_COLOR\n"
+		+ "\tEXX\n"
+		+ "\tJR\tXPAINT_LEFT1\n"
+		+ "XPAINT_LEFT3:\n"
+                + "\tLD\t(HL),B\n"
+		+ "\tEXX\n"
+		+ "\tCALL\tXPSET_WR_COLOR\n"
+		+ "\tEXX\n"
+		+ "XPAINT_LEFT4:\n"
+		+ "\tINC\tDE\n"
+		+ "XPAINT_LEFT5:\n"
+		+ "\tLD\t(PAINT_M_X1),DE\n"
+		+ "\tRET\n"
+		+ "XPAINT_RIGHT:\n"
+		+ "\tLD\tDE,(PAINT_M_X)\n"
+		+ "\tLD\tHL,(PAINT_M_Y)\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tX_PST\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tEXX\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tC,A\n"
+		+ "\tLD\tB,(HL)\n"
+		+ "\tAND\tB\n"
+		+ "\tSCF\n"
+		+ "\tRET\tNZ\n"
+		+ "\tJR\tXPAINT_RIGHT2\n"
+		+ "XPAINT_RIGHT1:\n"
+		+ "\tAND\tC\n"
+		+ "\tJR\tNZ,XPAINT_RIGHT3\n"
+		+ "XPAINT_RIGHT2:\n"
+		+ "\tLD\tA,B\n"
+		+ "\tOR\tC\n"
+		+ "\tLD\tB,A\n"
+		+ "\tINC\tDE\n"
+		+ "\tSRL\tC\n"
+		+ "\tJR\tNC,XPAINT_RIGHT1\n"
+		+ "\tLD\t(HL),B\n"
+		+ "\tEXX\n"
+		+ "\tCALL\tXPSET_WR_COLOR\n"
+		+ "\tEXX\n"
+		+ "\tLD\tHL,(PAINT_M_Y)\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tX_PST\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tEXX\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tC,XPAINT_RIGHT4\n"
+		+ "\tLD\tC,A\n"
+		+ "\tLD\tB,(HL)\n"
+		+ "\tAND\tB\n"
+		+ "\tJR\tNZ,XPAINT_RIGHT4\n"
+		+ "\tJR\tXPAINT_RIGHT2\n"
+		+ "XPAINT_RIGHT3:\n"
+		+ "\tLD\t(HL),B\n"
+		+ "\tEXX\n"
+		+ "\tCALL\tXPSET_WR_COLOR\n"
+		+ "\tEXX\n"
+		+ "XPAINT_RIGHT4:\n"
+		+ "\tDEC\tDE\n"
+		+ "\tLD\t(PAINT_M_X2),DE\n"
+		+ "\tOR\tA\n"			// CY=0
 		+ "\tRET\n" );
-    this.usesColors = true;
+    appendXPSetTo( buf, compiler );
+  }
+
+
+  @Override
+  public void appendXPaperTo( AsmCodeBuf buf )
+  {
+    this.usesXPAPER = true;
+  }
+
+
+  /*
+   * Farbe eines Pixels ermitteln
+   * Parameter:
+   *   DE: X-Koordinate (0...255)
+   *   HL: Y-Koordinate (0...255)
+   * Rueckgabe:
+   *   HL >= 0: Farbcode des Pixels
+   *   HL=-1:   Pixel exisitiert nicht
+   */
+  @Override
+  public void appendXPointTo( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    buf.append( "XPOINT:\tCALL\tX_PST\n"
+		+ "\tJR\tC,XPOINT5\n"
+		+ "\tLD\tB,A\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"
+		+ "\tJR\tNZ,XPOINT1\n"
+    // Farbbyte lesen bei KC85/4..5
+		+ "\tDB\t0DDH,0CBH,01H,0CFH\t;SET 1,(IX+01H),A\n"
+		+ "\tOUT\t(84H),A\n"
+		+ "\tLD\tC,(HL)\n"
+		+ "\tDB\t0DDH,0CBH,01H,8FH\t;RES 1,(IX+01H),A\n"
+		+ "\tOUT\t(84H),A\n"
+		+ "\tJR\tXPOINT2\n"
+    // Farbbyte lesen bei KC85/2..3
+		+ "XPOINT1:\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tLD\tC,A\n"
+    // Pixel auswerten
+		+ "XPOINT2:\n"
+		+ "\tLD\tA,B\n"
+		+ "\tAND\t(HL)\n"
+		+ "\tLD\tA,C\n"
+		+ "\tJR\tZ,XPOINT3\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tAND\t1FH\n"
+		+ "\tJR\tXPOINT4\n"
+		+ "XPOINT3:\n"
+		+ "\tAND\t07H\n"
+		+ "XPOINT4:\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n"
+		+ "XPOINT5:\n"
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tRET\n" );
+    appendPixUtilTo( buf );
   }
 
 
@@ -588,74 +648,83 @@ public class KC85Target extends AbstractTarget
    *   HL: Y-Koordinate
    */
   @Override
-  public void appendXPRES( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    if( !this.xpresAppended ) {
-      buf.append( "XPRES:\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tNZ\n"
-		+ "XPRES1:\tLD\tA,L\n"
-		+ "\tLD\t(0B7D5H),A\n"
-		+ "\tLD\t(0B7D3H),DE\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t2FH\n"
-		+ "\tRET\n" );
-      this.needsFullWindow = true;
-      this.xpresAppended   = true;
-    }
+    buf.append( "XPRES:\tCALL\tX_PST\n"
+		+ "\tRET\tC\n"
+		+ "\tCPL\n"
+		+ "\tAND\t(HL)\n"
+		+ "\tJR\tXPSET_WR_A\n" );
+    appendXPSetTo( buf, compiler );
+    appendPixUtilTo( buf );
   }
 
 
   /*
-   * Setzen eines Pixels
+   * Setzen eines Pixels unter Beruecksichtigung des eingestellten Stiftes
    * Parameter:
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    */
   @Override
-  public void appendXPSET( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tNZ\n" );
-      if( this.usesX_MPEN ) {
-	buf.append( "\tLD\tB,00H\n"
-		+ "\tLD\tA,(X_MPEN)\n"
-		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPSET1\n"
-		+ "\tRET\tM\n"
-		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XPRES1\n"
-		+ "\tINC\tB\n"
-		+ "\tLD\tA,(X_M_OS)\n"
-		+ "\tCP\t04H\n"
-		+ "\tJR\tC,XPSET3\n"
-		+ "XPSET1:" );
-	this.usesOSVersion = true;
-      }
-      buf.append( "\tLD\tA,L\n"
-		+ "\tLD\t(0B7D5H),A\n"
-		+ "\tLD\t(0B7D3H),DE\n"
-		+ "\tLD\tA,(X_M_INK)\n" );
-      if( this.usesX_MPEN ) {
-	buf.append( "\tOR\tB\n"
-		+ "XPSET2:" );
-      }
-      buf.append( "\tLD\t(0B7D6H),A\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t30H\n"
-		+ "\tRET\n" );
-      if( this.usesX_MPEN ) {
-	buf.append( "XPSET3:\tCALL\tXPRES1\n"
+      buf.append( "XPSET:\tCALL\tX_PST\n"
 		+ "\tRET\tC\n"
+		+ "XPSET_A:\n" );
+      if( this.usesX_M_PEN ) {
+	buf.append( "\tLD\tB,A\n"
+		+ "\tLD\tA,(X_M_PEN)\n"
+		+ "\tDEC\tA\n"
+		+ "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
+		+ "\tDEC\tA\n"
+		+ "\tJR\tZ,XPSET1\n"		// Stift 2 (Loeschen)
+		+ "\tDEC\tA\n"
 		+ "\tRET\tNZ\n"
-		+ "\tLD\tA,(X_M_INK)\n"
-		+ "\tJR\tXPSET2\n" );
-	appendXPRES( buf, compiler );
+		+ "\tLD\tA,(HL)\n"		// Stift 3 (XOR-Mode)
+		+ "\tXOR\tB\n"
+		+ "\tJR\tXPSET_WR_A\n"
+		+ "XPSET1:\tLD\tA,B\n"		// Pixel loeschen
+		+ "\tCPL\n"
+		+ "\tAND\t(HL)\n"
+		+ "\tJR\tXPSET_WR_A\n"
+		+ "XPSET2:\tLD\tA,B\n" );	// Pixel setzen
       }
+      buf.append( "XPSET_OR_A:\n"
+		+ "\tOR\t(HL)\n"
+		+ "XPSET_WR_A:\n"
+		+ "\tLD\t(HL),A\n"
+      // Farbbyte schreiben
+		+ "XPSET_WR_COLOR:\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"
+		+ "\tJR\tNZ,XPSET3\n"
+      /*
+       * bei KC85/4..5 Farbebene einschalten, Farbe setzen
+       * und wieder Pixelebene einschalten
+       */
+		+ "\tDB\t0DDH,0CBH,01H,0CFH\t;SET 1,(IX+01H),A\n"
+		+ "\tOUT\t(84H),A\n"
+		+ "\tLD\tA,(0B7A3H)\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tDB\t0DDH,0CBH,01H,8FH\t;RES 1,(IX+01H),A\n"
+		+ "\tOUT\t(84H),A\n"
+		+ "\tRET\n"
+      /*
+       * KC85/2..3: Zur Sicherheit pruefen,
+       * ob DE eine Adresse im Farbspeicher enthaelt
+       */
+		+ "XPSET3:\tLD\tA,D\n"
+		+ "\tCP\t0A8H\n"
+		+ "\tRET\tC\n"
+		+ "\tCP\t0B2H\n"
+		+ "\tRET\tNC\n"
+		+ "\tLD\tA,(0B7A3H)\n"
+		+ "\tLD\t(DE),A\n"
+		+ "\tRET\n" );
+      appendPixUtilTo( buf );
       this.needsFullWindow = true;
-      this.usesColors      = true;
       this.xpsetAppended   = true;
     }
   }
@@ -667,56 +736,24 @@ public class KC85Target extends AbstractTarget
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    * Rueckgabe:
-   *   HL=0: Pixel nicht gesetzt
-   *   HL=1: Pixel gesetzt
+   *   HL=0:  Pixel nicht gesetzt
+   *   HL=1:  Pixel gesetzt
+   *   HL=-1: Pixel exisistiert nicht
    */
   @Override
-  public void appendXPTEST( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPTestTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    /*
-     * Da es keine Systemfunktion zum Testen eines Pixels gibt,
-     * aber die benoetigte Information mit der Funktion zum Loeschen
-     * eines Pixels gewonnen werden kann,
-     * wird das Pixel geloescht und, sofern es gesetzt war,
-     * wieder mit der gleichen Vordergrundfarbe neu gesetzt.
-     */
-    buf.append( "XPTEST:\tLD\tA,H\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XPTST1\n"
-		+ "\tLD\tA,L\n"
-		+ "\tLD\t(0B7D5H),A\n"
-		+ "\tLD\t(0B7D3H),DE\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t2FH\n"
-		+ "\tJR\tC,XPTST1\n"
+    buf.append( "XPTEST:\tCALL\tX_PST\n"
+		+ "\tJR\tC,X_PTEST1\n"
+		+ "\tAND\t(HL)\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
-		+ "\tAND\t0F8H\n"
-		+ "\tLD\t(0B7D6H),A\n"
-		+ "\tCALL\t0F003H\n"
-		+ "\tDB\t30H\n"
-		+ "\tLD\tHL,0001H\n"
+		+ "\tINC\tHL\n"
 		+ "\tRET\n"
-		+ "XPTST1:\tLD\tHL,0FFFFH\n"
+		+ "X_PTEST1:\n"
+		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
-  }
-
-
-  /*
-   * Target-ID-String
-   */
-  @Override
-  public void appendXTARID( AsmCodeBuf buf )
-  {
-    buf.append( "XTARID:\tDB\t\'KC85\'\n"
-		+ "\tDB\t00H\n" );
-  }
-
-
-  @Override
-  public boolean createsCodeFor( EmuSys emuSys )
-  {
-    return emuSys != null ? (emuSys instanceof KC85) : false;
+    appendPixUtilTo( buf );
   }
 
 
@@ -728,65 +765,22 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public int getColorBlack()
+  public String[] getBasicTargetNames()
   {
-    return 0;
+    return new String[] { BASIC_TARGET_NAME };
   }
 
 
   @Override
-  public int getColorBlinking()
+  public int getCompatibilityLevel( EmuSys emuSys )
   {
-    return 0x10;
-  }
-
-
-  @Override
-  public int getColorBlue()
-  {
-    return 0x01;
-  }
-
-
-  @Override
-  public int getColorCyan()
-  {
-    return 0x05;
-  }
-
-
-  @Override
-  public int getColorGreen()
-  {
-    return 0x04;
-  }
-
-
-  @Override
-  public int getColorMagenta()
-  {
-    return 0x03;
-  }
-
-
-  @Override
-  public int getColorRed()
-  {
-    return 0x02;
-  }
-
-
-  @Override
-  public int getColorWhite()
-  {
-    return 0x07;
-  }
-
-
-  @Override
-  public int getColorYellow()
-  {
-    return 0x06;
+    int rv = 0;
+    if( emuSys != null ) {
+      if( emuSys instanceof KC85 ) {
+	rv = 3;
+      }
+    }
+    return rv;
   }
 
 
@@ -798,16 +792,29 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public int getGraphicScreenNum()
+  public String getHostName()
   {
-    return 0;
+    return "KC85";
   }
 
 
   @Override
-  public int getKCNetBaseIOAddr()
+  public int getMaxAppNameLen()
   {
-    return 0x28;
+    return 38;
+  }
+
+
+  @Override
+  public String getStartCmd( EmuSys emuSys, String appName, int begAdAdr )
+  {
+    String rv = null;
+    if( emuSys != null ) {
+      if( emuSys instanceof KC85 ) {
+	rv = appName;
+      }
+    }
+    return appName;
   }
 
 
@@ -815,13 +822,6 @@ public class KC85Target extends AbstractTarget
   public int[] getVdipBaseIOAddresses()
   {
     return new int[] { 0x2C };
-  }
-
-
-  @Override
-  public boolean needsEnableKCNet()
-  {
-    return true;
   }
 
 
@@ -837,19 +837,13 @@ public class KC85Target extends AbstractTarget
   {
     super.reset();
     this.needsFullWindow = false;
-    this.usesColors      = false;
     this.usesJoystick    = false;
-    this.usesOSVersion   = false;
     this.usesM052        = false;
-    this.xpresAppended   = false;
+    this.usesXCOLOR      = false;
+    this.usesXINK        = false;
+    this.usesXPAPER      = false;
+    this.pixUtilAppended = false;
     this.xpsetAppended   = false;
-  }
-
-
-  @Override
-  public boolean supportsAppName()
-  {
-    return true;
   }
 
 
@@ -903,8 +897,83 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
+  public boolean supportsXPAINT_LEFT_RIGHT()
+  {
+    return true;
+  }
+
+
+  @Override
   public String toString()
   {
     return "KC85/2..5, HC900";
+  }
+
+
+	/* --- Hilfsfunktionen --- */
+
+  protected void appendPixUtilTo( AsmCodeBuf buf )
+  {
+    if( !this.pixUtilAppended ) {
+      buf.append(
+	/*
+	 * Pruefen der Parameter, ermitteln von Informationen zu einem Pixel
+	 * und bei KC85/4..5 einschalten der Pixelebene
+	 *
+	 * Parameter:
+	 *   DE: X-Koordinate (0...319)
+	 *   HL: Y-Koordinate (0...255)
+	 * Rueckgabe:
+	 *   CY=1: Pixel ausserhalb des gueltigen Bereichs
+	 *   A:    Bitmuster mit einem gesetzten Bit,
+	 *         dass das Pixel in der Speicherzelle beschreibt
+	 *   C:    84h (nur bei DE=0)
+	 *   DE:   Adresse im Farbspeicher (KC85/2..3) oder 0 (KC85/4..5)
+	 *   HL:   Adresse im Pixelspeicher
+	 */
+		"X_PST:\tLD\tA,H\n"
+		+ "\tOR\tA\n"
+		+ "\tSCF\n"
+		+ "\tRET\tNZ\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,X_PST1\n"
+		+ "\tCP\t02H\n"
+		+ "\tCCF\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,3FH\n"
+		+ "\tCP\tE\n"
+		+ "\tRET\tC\n"
+		+ "X_PST1:\tLD\tA,L\n"
+		+ "\tCPL\n"
+		+ "\tLD\tH,A\n"
+		+ "\tLD\tA,E\n"
+		+ "\tAND\t07H\n"
+		+ "\tLD\tB,A\n"
+		+ "\tLD\tC,80H\n"
+		+ "\tJR\tZ,X_PST3\n"
+		+ "X_PST2:\tSRL\tC\n"
+		+ "\tDJNZ\tX_PST2\n"
+		+ "X_PST3:\tPUSH\tBC\n"
+		+ "\tSRL\tD\n"
+		+ "\tRR\tE\n"
+		+ "\tSRL\tE\n"
+		+ "\tSRL\tE\n"
+		+ "\tLD\tL,E\n"
+		+ "\tLD\tDE,0000H\n"
+		+ "\tCALL\t0F003H\n"
+		+ "\tDB\t34H\n"
+		+ "\tPOP\tBC\n"
+      // bei KC85/4..5 Pixelebene einschalten
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"			// CY=0
+		+ "\tLD\tA,C\n"
+		+ "\tRET\tNZ\n"			// KC85/2..3
+		+ "\tDB\t0DDH,0CBH,01H,88H\t;RES 1,(IX+01H),B\n"
+		+ "\tLD\tC,84H\n"
+		+ "\tOUT\t(C),B\n"
+		+ "\tRET\n" );
+      this.pixUtilAppended = true;
+    }
   }
 }

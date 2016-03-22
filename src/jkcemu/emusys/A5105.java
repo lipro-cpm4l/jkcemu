@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -41,7 +41,7 @@ public class A5105 extends EmuSys implements
 {
   /*
    * Das SCPX bringt einen Fehler, wenn die Diskette schreibgeschuetzt ist.
-   * Das ist somit der Fall, wenn die in JKCEMU integrierte
+   * Das ist somit der Fall, wenn die im JKCEMU integrierte
    * SCPX-Systemdiskette eingelegt wird.
    * Um diese Unschoenheit zu umgehen, sollte die SCPX-Systemdiskette
    * exportiert und die so entstandene Abbilddatei ohne Schreibschutz
@@ -52,26 +52,29 @@ public class A5105 extends EmuSys implements
   private static FloppyDiskInfo rbasicPrgDisk =
 		new FloppyDiskInfo(
 			"/disks/a5105/a5105rbasicprg.dump.gz",
-                        "BIC A5105 RBASIC Programmdiskette" );
+                        "BIC A5105 RBASIC Programmdiskette",
+			2, 2048, true );
 
   private static FloppyDiskInfo rbasicSysDisk =
 		new FloppyDiskInfo(
 			"/disks/a5105/a5105rbasicsys.dump.gz",
-                        "BIC A5105 RBASIC Systemdiskette" );
+                        "BIC A5105 RBASIC Systemdiskette",
+			2, 2048, true );
 
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 		rbasicPrgDisk,
 		rbasicSysDisk,
 		new FloppyDiskInfo(
 			"/disks/a5105/a5105scpxsys.dump.gz",
-                        "BIC A5105 SCPX Systemdiskette" ) };
+                        "BIC A5105 SCPX Systemdiskette",
+			2, 2048, true ) };
 
   private static final FloppyDiskInfo[] suitableFloppyDisks = {
 							rbasicPrgDisk,
 							rbasicSysDisk };
 
   private static final int BIOS_ADDR_CONIN     = 0xFD09;
-  private static final int V24_TSTATES_PER_BIT = 347;
+  private static final int V24_TSTATES_PER_BIT = 430;
 
   private static CharConverter cp437    = null;
   private static byte[]        romK1505 = null;
@@ -113,6 +116,7 @@ public class A5105 extends EmuSys implements
 	{ 11, 12, 13, 14, 15, 16, 17, 18 },
 	{ 19, 20, 21, 22, 23, 24, 25, 26 } };
 
+  private Z80CTC            ctc50;
   private Z80CTC            ctc80;
   private Z80PIO            pio90;
   private GDC82720          gdc;
@@ -130,6 +134,7 @@ public class A5105 extends EmuSys implements
   private boolean           joy1Selected;
   private int               joy0ActionMask;
   private int               joy1ActionMask;
+  private boolean           audioInPhase;
   private boolean           capsLockLED;
   private boolean           tapeLED;
   private boolean           v24BitOut;
@@ -148,7 +153,7 @@ public class A5105 extends EmuSys implements
 
   public A5105( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.a5105." );
     if( romK1505 == null ) {
       romK1505 = readResource( "/rom/a5105/k1505_0000.bin" );
     }
@@ -182,42 +187,49 @@ public class A5105 extends EmuSys implements
 				this.emuThread.getRAMFloppy1(),
 				"A5105",
 				RAMFloppy.RFType.ADW,
-				"RAM-Floppy an IO-Adressen 20h/21h",
+				"RAM-Floppy an E/A-Adressen 20h/21h",
 				props,
-				"jkcemu.a5105.ramfloppy.1." );
+				this.propPrefix + "ramfloppy.1." );
 
     this.ramFloppy2 = RAMFloppy.prepare(
 				this.emuThread.getRAMFloppy2(),
 				"A5105",
 				RAMFloppy.RFType.ADW,
-				"RAM-Floppy an IO-Adressen 24h/25h",
+				"RAM-Floppy an E/A-Adressen 24h/25h",
 				props,
-				"jkcemu.a5105.ramfloppy.2." );
+				this.propPrefix + "ramfloppy.2." );
 
     this.psgAudioOut = null;
     this.psg         = new PSG8910(
 				getDefaultSpeedKHz() * 1000 / 2,
-				AudioOut.MAX_VALUE,
+				AudioOut.MAX_USED_VALUE,
 				this );
     this.psg.start();
 
-    this.ctc80 = new Z80CTC( "CTC (IO-Adressen 80h-83h)" );
-    this.pio90 = new Z80PIO( "PIO (IO-Adressen 90h-93h)" );
+    if( this.fdc != null ) {
+      this.ctc50 = new Z80CTC( "CTC (E/A-Adressen 50h-53h)" );
+    }
+    this.ctc80 = new Z80CTC( "CTC (E/A-Adressen 80h-83h)" );
+    this.pio90 = new Z80PIO( "PIO (E/A-Adressen 90h-93h)" );
 
     this.kcNet = null;
     if( emulatesKCNet( props ) ) {
-      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0h-C3h)" );
+      this.kcNet = new KCNet( "Netzwerk-PIO (E/A-Adressen C0h-C3h)" );
     }
 
     this.vdip = null;
     if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP( "USB-PIO (IO-Adressen FCh-FFh)" );
+      this.vdip = new VDIP(
+			this.emuThread.getFileTimesViewFactory(),
+			"USB-PIO (E/A-Adressen FCh-FFh)" );
     }
 
-    java.util.List<Z80InterruptSource> iSources
-                                = new ArrayList<Z80InterruptSource>();
+    java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
     iSources.add( this.ctc80 );
     iSources.add( this.pio90 );
+    if( this.ctc50 != null ) {
+      iSources.add( this.ctc50 );
+    }
     if( this.kcNet != null ) {
       iSources.add( this.kcNet );
     }
@@ -262,6 +274,12 @@ public class A5105 extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 3750;
+  }
+
+
+  public static boolean getDefaultSwapKeyCharCase()
+  {
+    return false;
   }
 
 
@@ -325,7 +343,8 @@ public class A5105 extends EmuSys implements
   {
     AudioOut audioOut = this.psgAudioOut;
     if( audioOut != null ) {
-      audioOut.writeSamples( 1, (byte) ((a + b + c) / 6) );
+      int value = (a + b + c) / 6;
+      audioOut.writeSamples( 1, value, value, value );
     }
   }
 
@@ -373,7 +392,15 @@ public class A5105 extends EmuSys implements
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
+    boolean phase = this.emuThread.readAudioPhase();
+    if( phase != this.audioInPhase ) {
+      this.audioInPhase = phase;
+      this.pio90.putInValuePortB( this.audioInPhase ? 0x80 : 0, 0x80 );
+    }
     this.ctc80.z80TStatesProcessed( cpu, tStates );
+    if( this.ctc50 != null ) {
+      this.ctc50.z80TStatesProcessed( cpu, tStates );
+    }
     this.gdc.z80TStatesProcessed( cpu, tStates );
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
@@ -527,7 +554,7 @@ public class A5105 extends EmuSys implements
 			"A5105",
 			RAMFloppy.RFType.ADW,
 			props,
-			"jkcemu.a5105.ramfloppy.1." );
+			this.propPrefix + "ramfloppy.1." );
     }
     if( rv ) {
       rv = RAMFloppy.complies(
@@ -535,7 +562,7 @@ public class A5105 extends EmuSys implements
 			"A5105",
 			RAMFloppy.RFType.ADW,
 			props,
-			"jkcemu.a5105.ramfloppy.2." );
+			this.propPrefix + "ramfloppy.2." );
     }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
       rv = false;
@@ -652,7 +679,7 @@ public class A5105 extends EmuSys implements
   @Override
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
-    return FloppyDiskFormat.FMT_780K;
+    return FloppyDiskFormat.FMT_780K_I2;
   }
 
 
@@ -996,6 +1023,33 @@ public class A5105 extends EmuSys implements
   }
 
 
+  /*
+   * In der SCP-Betriebsart wird zyklisch der ROM eingeblendet.
+   * Dadurch funktioniert das Laden in den RAM nicht sicher.
+   * Aus diesem Grund ist die Methoden ueberschrieben,
+   * um ein sicheres Laden in den RAM zu gewaehrleisten.
+   */
+  @Override
+  public void loadIntoMem(
+			int        begAddr,
+			byte[]     data,
+			int        idx,
+			int        len,
+			FileFormat fileFmt,
+			int        fileType )
+  {
+    if( data != null ) {
+      int n   = len;
+      int dst = begAddr;
+      while( (idx < data.length) && (dst < 0x10000) && (n > 0) ) {
+	this.emuThread.setRAMByte( dst++, data[ idx++ ] );
+	--n;
+      }
+      updSysCells( begAddr, len, fileFmt, fileType );
+    }
+  }
+
+
   @Override
   public boolean paintScreen( Graphics g, int x, int y, int screenScale )
   {
@@ -1005,7 +1059,7 @@ public class A5105 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     switch( port & 0xFF ) {
@@ -1018,6 +1072,20 @@ public class A5105 extends EmuSys implements
       case 0x24:
 	if( this.ramFloppy2 != null ) {
 	  rv = this.ramFloppy2.readByte( port );
+	}
+	break;
+
+
+      case 0x2C:
+      case 0x2D:
+      case 0x2E:
+      case 0x2F:
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  rv = this.vdip.read( port );
 	}
 	break;
 
@@ -1039,15 +1107,24 @@ public class A5105 extends EmuSys implements
 	}
 	break;
 
+      case 0x50:
+      case 0x51:
+      case 0x52:
+      case 0x53:
+	if( this.ctc50 != null ) {
+	  rv = this.ctc50.read( port & 0x03, tStates );
+	}
+	break;
+
       case 0x80:
       case 0x81:
       case 0x82:
       case 0x83:
-	rv = this.ctc80.read( port & 0x03 );
+	rv = this.ctc80.read( port & 0x03, tStates );
 	break;
 
       case 0x90:
-	rv = this.pio90.readPortA();
+	rv = this.pio90.readDataA();
 	break;
 
       case 0x91:
@@ -1055,9 +1132,8 @@ public class A5105 extends EmuSys implements
 	 * Bit 4: V24-Status (auf 0 setzen)
 	 * Bit 7: Kassettenrecordereingang
 	 */
-	this.pio90.putInValuePortB(
-			this.emuThread.readAudioPhase() ? 0x80 : 0, 0x90 );
-	rv = this.pio90.readPortB();
+	this.pio90.putInValuePortB( 0, 0x10 );
+	rv = this.pio90.readDataB();
 	break;
 
       case 0x92:
@@ -1148,17 +1224,18 @@ public class A5105 extends EmuSys implements
 	  rv = this.kcNet.read( port );
 	}
 	break;
-
-      case 0xFC:
-      case 0xFD:
-      case 0xFE:
-      case 0xFF:
-	if( this.vdip != null ) {
-	  rv = this.vdip.read( port );
-	}
-	break;
     }
     return rv;
+  }
+
+
+  @Override
+  public int readMemByte( int addr, boolean m1 )
+  {
+    if( m1 ) {
+      this.emuThread.getZ80CPU().addWaitStates( 1 );
+    }
+    return getMemByte( addr, m1 );
   }
 
 
@@ -1186,6 +1263,7 @@ public class A5105 extends EmuSys implements
 	}
       }
     }
+    this.audioInPhase       = this.emuThread.readAudioPhase();
     this.fdcReset           = false;
     this.joyEnabled         = false;
     this.joy1Selected       = false;
@@ -1206,16 +1284,15 @@ public class A5105 extends EmuSys implements
   @Override
   public void saveBasicProgram()
   {
-    int endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x8001 );
+    int endAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x8001 );
     if( endAddr >= 0x8001 ) {
       (new SaveDlg(
 		this.screenFrm,
 		0x8001,
 		endAddr,
-		-1,
-		false,		// kein KC-BASIC
-		true,		// RBASIC
-		"RBASIC-Programm speichern" )).setVisible( true );
+		"RBASIC-Programm speichern",
+		SaveDlg.BasicType.RBASIC,
+		EmuUtil.getBasicFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -1289,11 +1366,11 @@ public class A5105 extends EmuSys implements
 	     */
 	    keyTyped( ch );
 	    this.pasteIter = iter;
-	    done           = false;
+	    done           = true;
 	  }
 	} else {
 	  super.startPastingText( text );
-	  done = false;
+	  done = true;
 	}
       }
     }
@@ -1361,14 +1438,22 @@ public class A5105 extends EmuSys implements
 
   @Override
   public void updSysCells(
-                        int    begAddr,
-                        int    len,
-                        Object fileFmt,
-                        int    fileType )
+                        int        begAddr,
+                        int        len,
+                        FileFormat fileFmt,
+                        int        fileType )
   {
     if( (begAddr == 0x8001) && (fileFmt != null) ) {
-      if( fileFmt.equals( FileInfo.RBASIC ) ) {
-	int endAddr = SourceUtil.getKCBasicStyleEndAddr(
+      if( ((fileFmt.equals( FileFormat.RBASIC_PRG )
+			|| fileFmt.equals( FileFormat.BASIC_PRG ))
+		&& (begAddr == 0x8001)
+		&& (len > 7))
+	  || (fileFmt.equals( FileFormat.HEADERSAVE )
+		&& (fileType == 'B')
+		&& (begAddr <= 0x8001)
+		&& ((begAddr + len) > 0x8008)) )
+      {
+	int endAddr = SourceUtil.getBasicEndAddr(
 						this.emuThread,
 						0x8001 );
 	if( endAddr > 0x8001 ) {
@@ -1386,7 +1471,7 @@ public class A5105 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     switch( port & 0xFF ) {
       case 0x20:
@@ -1400,6 +1485,19 @@ public class A5105 extends EmuSys implements
       case 0x25:
 	if( this.ramFloppy2 != null ) {
 	  this.ramFloppy2.writeByte( port, value );
+	}
+	break;
+
+      case 0x2C:
+      case 0x2D:
+      case 0x2E:
+      case 0x2F:
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  this.vdip.write( port, value );
 	}
 	break;
 
@@ -1436,20 +1534,29 @@ public class A5105 extends EmuSys implements
 	}
 	break;
 
+      case 0x50:
+      case 0x51:
+      case 0x52:
+      case 0x53:
+	if( this.ctc50 != null ) {
+	  this.ctc50.write( port & 0x03, value, tStates );
+	}
+	break;
+
       case 0x80:
       case 0x81:
       case 0x82:
       case 0x83:
-	this.ctc80.write( port & 0x03, value );
+	this.ctc80.write( port & 0x03, value, tStates );
 	break;
 
       case 0x90:
-	this.pio90.writePortA( value );
+	this.pio90.writeDataA( value );
 	break;
 
       case 0x91:
 	synchronized( this ) {
-	  this.pio90.writePortB( value );
+	  this.pio90.writeDataB( value );
 	  int v = this.pio90.fetchOutValuePortB( false );
 	  /*
 	   * Bit 1: V24 TxD,
@@ -1543,15 +1650,6 @@ public class A5105 extends EmuSys implements
 	  this.kcNet.write( port, value );
 	}
 	break;
-
-      case 0xFC:
-      case 0xFD:
-      case 0xFE:
-      case 0xFF:
-	if( this.vdip != null ) {
-	  this.vdip.write( port, value );
-	}
-	break;
     }
   }
 
@@ -1564,7 +1662,7 @@ public class A5105 extends EmuSys implements
     if( cpu != null ) {
       boolean pasteFast = EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.a5105.paste.fast",
+				this.propPrefix + "paste.fast",
 				true );
       if( pasteFast != this.pasteFast ) {
 	this.pasteFast = pasteFast;
@@ -1587,11 +1685,11 @@ public class A5105 extends EmuSys implements
   }
 
 
-  private static boolean emulatesFloppyDisk( Properties props )
+  private boolean emulatesFloppyDisk( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.a5105.floppydisk.enabled",
+			this.propPrefix + "floppydisk.enabled",
 			true );
   }
 
@@ -1599,26 +1697,26 @@ public class A5105 extends EmuSys implements
   private boolean emulatesKCNet( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.a5105.kcnet.enabled",
-				false );
+			props,
+			this.propPrefix + "kcnet.enabled",
+			false );
   }
 
 
   private boolean emulatesUSB( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.a5105.vdip.enabled",
-				false );
+			props,
+			this.propPrefix + "vdip.enabled",
+			false );
   }
 
 
-  private static boolean isFixedScreenSize( Properties props )
+  private boolean isFixedScreenSize( Properties props )
   {
     return EmuUtil.parseBooleanProperty(
 			props,
-			"jkcemu.a5105.fixed_screen_size",
+			this.propPrefix + "fixed_screen_size",
 			false );
   }
 

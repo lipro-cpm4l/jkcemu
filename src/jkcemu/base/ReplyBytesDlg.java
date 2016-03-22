@@ -1,12 +1,12 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Dialog fuer Eingabe von Bytes
  */
 
-package jkcemu.tools.hexedit;
+package jkcemu.base;
 
 import java.awt.*;
 import java.awt.event.*;

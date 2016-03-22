@@ -14,17 +14,19 @@
    <li>
     <a href="llc2.htm#hardware">1. Emulierte Hardware</a>
     <ul>
-     <li><a href="llc2.htm#memory">1.1. Speicher</a></li>
-     <li><a href="llc2.htm#scch_mod1">1.2. SCCH-Modul&nbsp;1</a></li>
-     <li><a href="llc2.htm#scch_mod3">1.3. SCCH-Modul&nbsp;3</a></li>
-     <li><a href="llc2.htm#scch_inverse">1.4. SCCH-Inversschaltung</a></li>
-     <a href="llc2.htm#pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
-     <li><a href="llc2.htm#inverse_key">1.6. Inverstaste (F1)</a></li>
-     <li><a href="llc2.htm#graphic_key">1.7. Grafiktaste (F2)</a></li>
-     <li><a href="llc2.htm#font_switch">1.8. Zeichensatzumschaltung</a></li>
-     <li><a href="llc2.htm#fdc">1.9. Floppy-Disk-Modul</a></li>
-     <li><a href="llc2.htm#printer">1.10. V24-Schnittstelle mit Drucker</a></li>
-     <li><a href="llc2.htm#joystick">1.11. Joystick</a></li>
+     <li><a href="llc2.htm#keyboard">1.1. Tastatur</a></li>
+     <li><a href="llc2.htm#memory">1.2. Speicher</a></li>
+     <li><a href="llc2.htm#scch_mod1">1.3. SCCH-Modul&nbsp;1</a></li>
+     <li><a href="llc2.htm#scch_mod3">1.4. SCCH-Modul&nbsp;3</a></li>
+     <li><a href="llc2.htm#scch_inverse">1.5. SCCH-Inversschaltung</a></li>
+     <a href="llc2.htm#pio_inverse">1.6. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+     <li><a href="llc2.htm#inverse_key">1.7. Inverstaste (F1)</a></li>
+     <li><a href="llc2.htm#graphic_key">1.8. Grafiktaste (F2)</a></li>
+     <li><a href="llc2.htm#font_switch">1.9. Zeichensatzumschaltung</a></li>
+     <li><a href="llc2.htm#splitscreen">1.10. Split Screen</a></li>
+     <li><a href="llc2.htm#fdc">1.11. Floppy-Disk-Modul</a></li>
+     <li><a href="llc2.htm#printer">1.12. V24-Schnittstelle mit Drucker</a></li>
+     <li><a href="llc2.htm#joystick">1.13. Joystick</a></li>
     </ul>
    </li>
    <li><a href="llc2.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -33,9 +35,17 @@
     <ul>
      <li><a href="llc2.htm#gsbasic">3.1. Grafik/Sound-BASIC</a></li>
      <li>
-      <a href="llc2.htm#basic_save">3.2. Speichern von BASIC-Programmen</a>
+      <a href="llc2.htm#basic_io">3.2. BASIC-Programme speichern und laden</a>
      </li>
      <li><a href="llc2.htm#images">3.2. HIRES-Bilddateien</a></li>
+    </ul>
+   </li>
+   <li>
+    <a href="llc2.htm#etc">4. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="llc2.htm#paste">4.1. Einf&uuml;gen von Text aus der Zwischenablage</a>
+     </li>
     </ul>
    </li>
   </ul>
@@ -64,7 +74,10 @@
    <li>
     <a href="llc2.htm#printer">V24-Schnittstelle mit Drucker</a>
    </li>
-   <li>Vollgrafikerweiterung HIRES</li>
+   <li>
+    Vollgrafikerweiterung HIRES mit
+    <a href="llc2.htm#splitscreen">Split&nbsp;Screen</a>
+   </li>
    <li>
     Optional:
     <ul>
@@ -74,6 +87,10 @@
       Heft&nbsp;3/1988 an den E/A-Basisadressen&nbsp;D0h und&nbsp;B0h
      </li>
      <li><a href="llc2.htm#fdc">Floppy-Disk-Modul</a></li>
+     <li>
+      <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
+      an der E/A-Basisadresse&nbsp;80h
+     </li>
      <li>
        <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
        an der E/A-Basisadresse&nbsp;C0h
@@ -88,7 +105,34 @@
   </ul>
  <br/>
 
- <h3><a name="memory">1.1. Speicher</a></h3>
+ <h3><a name="keyboard">1.1. Tastatur</a></h3>
+  Neben den gew&ouml;hnlichen Tasten f&uuml;r Buchstaben, Ziffern und
+  Sonderzeichen werden folgende Steuertasten unterst&uuml;tzt:
+ <br/>
+  <table border="1">
+   <tr><th>Taste</th><th>Erzeugter Tastencode / Bedeutung</th></tr>
+   <tr><td>Home / Pos1</td><td>1</td></tr>
+   <tr><td>Cursor&nbsp;links</td><td>8</td></tr>
+   <tr><td>Cursor&nbsp;rechts</td><td>9</td></tr>
+   <tr><td>Cursor&nbsp;runter</td><td>0Ah</td></tr>
+   <tr><td>Cursor&nbsp;hoch</td><td>0Bh</td></tr>
+   <tr><td>Enter / Return</td><td>0Dh</td></tr>
+   <tr><td>Backspace</td><td>7Fh</td></tr>
+   <tr><td>Delete / Entf</td><td>4</td></tr>
+   <tr><td>Insert / Einfg</td><td>5</td></tr>
+   <tr><td>Bild auf</td><td>11h</td></tr>
+   <tr><td>Bild ab</td><td>15h</td></tr>
+   <tr><td>End / Ende</td><td>1Ah</td></tr>
+   <tr>
+    <td>F1</td><td><a href="llc2.htm#inverse_key">Inverstaste</a></td>
+   </tr>
+   <tr>
+    <td>F2</td><td><a href="llc2.htm#graphic_key">Grafiktaste</a></td>
+   </tr>
+  </table>
+ <br/><br/>
+
+ <h3><a name="memory">1.2. Speicher</a></h3>
   Die unteren 48 KByte RAM sind nach dem Einschalten bzw.
   nach einem RESET nicht sichtbar.
   Erst mit einem Ein-/Ausgabebefehl auf die Adresse E0h
@@ -97,7 +141,7 @@
   vom ROM in den RAM um.
  <br/><br/>
 
- <h3><a name="scch_mod1">1.2. SCCH-Modul&nbsp;1</a></h3>
+ <h3><a name="scch_mod1">1.3. SCCH-Modul&nbsp;1</a></h3>
   Das SCCH-Modul&nbsp;1 stellt zus&auml;tzlichen ROM zur Verf&uuml;gung,
   und zwar:
   <ul>
@@ -132,7 +176,7 @@
   durch Einbinden von ROM-Dateien festlegen.
  <br/><br/>
 
- <h3><a name="scch_mod3">1.3. SCCH-Modul&nbsp;3</a></h3>
+ <h3><a name="scch_mod3">1.4. SCCH-Modul&nbsp;3</a></h3>
   Das SCCH-Modul&nbsp;3 stellt je nach Best&uuml;ckung
   64, 128, 256, 320 oder 512 KByte zus&auml;tzlichen RAM zur Verf&uuml;gung,
   der &uuml;ber E/A-Befehle in den Arbeitsspeicher eingeblendet werden kann.
@@ -148,12 +192,12 @@
   emuliert JKCEMU die max. m&ouml;glichen 1 MByte.
   Das hat den Vorteil, dass Software,
   die diesen zus&auml;tzlichen RAM verwendet,
-  nicht speziell f&uuml;r den Einsatz in JKCEMU konfiguriert werden muss,
+  nicht speziell f&uuml;r den Einsatz im JKCEMU konfiguriert werden muss,
   denn auf jeder Adresse, wo die jeweilige Software RAM voraussetzt,
-  wird sie in JKCEMU auch RAM vorfinden.
+  wird sie im JKCEMU auch RAM vorfinden.
  <br/><br/>
 
- <h3><a name="scch_inverse">1.4. SCCH-Inversschaltung</a></h3>
+ <h3><a name="scch_inverse">1.5. SCCH-Inversschaltung</a></h3>
   Die SCCH-Inversschaltung erkennt die im Bildwiederholspeicher
   stehenden Bytes mit den Werten 10h und 11h.
   Bei 11h wird die Inversdarstellung ein- und bei 10h wieder ausgeschaltet.
@@ -162,46 +206,97 @@
  <br/><br/>
 
  <h3>
-  <a name="pio_inverse">1.5. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+  <a name="pio_inverse">1.6. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
  </h3>
   Bei dieser Schaltung wird der Inversmodus mit Bit&nbsp;5 am Tor&nbsp;B
   der System-PIO (E/A-Adresse&nbsp;E9h) aktiviert.
   Im Inversmodus werden dann alle Zeichen invertiert ausgegeben,
   bei denen Bit&nbsp;7 gesetzt ist.
  <br/><br/>
-  <b>Achtung!</b> Das in JKCEMU enthaltene LLC2-Monitorprogramm
+  <b>Achtung!</b> Das im JKCEMU enthaltene LLC2-Monitorprogramm
   schaltet bei Tastatureingaben den Inversmodus aus.
   M&ouml;chte man also in eigenen Programmen diesen Inversmodus verwenden,
   muss man den diesbez&uuml;glich st&ouml;renden Einfluss
   des Monitorprogramms entsprechend ber&uuml;cksichtigen bzw. umgehen.
  <br/><br/>
 
- <h3><a name="inverse_key">1.6. Inverstaste (F1)</a></h3>
+ <h3><a name="inverse_key">1.7. Inverstaste (F1)</a></h3>
   Die SCCH-Inversschaltung enth&auml;lt im Original auch einen Schalter,
   mit dem der gesamte Bildschirm invertiert werden kann.
   JKCEMU emulierte diesen Schalter mit der Taste&nbsp;F1.
  <br/><br/>
 
- <h3><a name="graphic_key">1.7. Grafiktaste (F2)</a></h3>
+ <h3><a name="graphic_key">1.8. Grafiktaste (F2)</a></h3>
   Mit der Grafiktaste&nbsp;(F2) ist die Eingabe von Grafikzeichen
   &uuml;ber die Tastatur m&ouml;glich.
   Dies muss allerdings vom jeweiligen Anwendungsprogramm auch so
   unterst&uuml;tzt werden.
-  Das in JKCEMU enthaltene <em>Grafik/Sound-BASIC</em>
+  Das im JKCEMU enthaltene <em>Grafik/Sound-BASIC</em>
   unterst&uuml;tzt die Grafiktaste.
  <br/><br/>
 
- <h3><a name="font_switch">1.8. Zeichensatzumschaltung</a></h3>
+ <h3><a name="font_switch">1.9. Zeichensatzumschaltung</a></h3>
   Die Zeichensatzumschaltung &uuml;ber PIO&nbsp;B3 wird in Verbindung
-  mit einer extern eingebundenen 4&nbsp;KByte gro&szlig;en Zeichensatzdatei
-  emuliert.
-  Bei Ausgabe einer 1 auf dem PIO-Port&nbsp;B3 sind die oberen 2&nbsp;KByte
-  der Zeichensatzdatei aktiv, sonst die unteren 2&nbsp;KByte.
-  Ist keine externe Zeichensatzdatei eingebunden oder diese ist
-  nur 2&nbsp;KByte gro&szlig;, wird keine Zeichensatzumschaltung emuliert.
+  mit einer extern eingebundenen Zeichensatzdatei emuliert.
+  Diese Zeichensatzdatei muss dazu zwei Zeichens&auml;tze enthalten,
+  d.h., sie muss gr&ouml;&szlig;er als 2&nbsp;KByte sein.
+  Die Umschaltung auf den zweiten Zeichensatz erfolgt durch Ausgabe
+  einer 1 auf den PIO-Port&nbsp;B3.
+ <br/><br/>
+  Anhand der Gr&ouml;&szlig;e der extern eingebundenen Zeichensatzdatei
+  erkennt der Emulator, um was f&uuml;r eine Datei es sich handelt:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <th>Gr&ouml;&szlig;e Zeichensatzdatei</th>
+    <th>Bedeutung</th>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">2&nbsp;KByte<br/>(1 bis 2048 Bytes)</td>
+    <td valign="top">
+     Die Datei enth&auml;lt nur einen Zeichensatz,
+     d.h., es ist keine Umschaltung m&ouml;glich.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top"nowrap="nowrap">
+     4&nbsp;KByte<br/>(2049 bis 4096 Bytes)
+    </td>
+    <td valign="top">
+     Die Datei enth&auml;lt hintereinander zwei Zeichens&auml;tze.
+     Der zweite beginnt ab Offset 0800h.
+    </th>
+   </tr>
+   <tr>
+    <td valign="top"nowrap="nowrap">
+     8&nbsp;KByte<br/>(mehr als 4096 Bytes)
+    </td>
+    <td valign="top">
+     Die Datei ist eine Doppel-HIRES-Zeichensatzdatei,
+     d.h., neben den beiden Zeichens&auml;tzen ist auch
+     die HIRES-Bitmap enthalten.
+     Die Zeichens&auml;tze liegen in der Datei in den Bereichen
+     0000h-07FFh sowie 1000h-17FFh.
+     Die anderen beiden Bereiche enthalten jeweils die HIRES-Bitmap,
+     die allerdings von JKCEMU nicht ausgewertet wird.
+    </td>
+   </tr>
+  </table>
  <br/><br/>
 
- <h3><a name="fdc">1.9. Floppy-Disk-Modul</a></h3>
+ <h3><a name="splitscreen">1.10. Split Screen</a></h3>
+  Mit Split Screen ist gemeint, dass w&auml;hrend eines jeden Bildaufbaus
+  (also 50&nbsp;mal pro Sekunde) zwischen Text- und HIRES-Modus
+  umgeschaltet wird, so dass die Bildschirmausgabe
+  in einen Text- und einen HIRES-Teil gesplittet ist.
+  Dazu muss der Eingang des CTC-Kanals&nbsp;2 mit dem Bildsynchronimpuls
+  verbunden sein und die CTC so programmiert werden,
+  dass sie in der entsprechenden Pixelzeile einen Interrupt ausl&ouml;st.
+  JKCEMU emuliert diese Verbindung vom Bildsynchronimpuls zur CTC,
+  so dass auch Programme laufen, die den Split-Screen-Modus verwenden.
+ <br/><br/>
+
+ <h3><a name="fdc">1.11. Floppy-Disk-Modul</a></h3>
   Das Floppy-Disk-Modul wird an folgenden E/A-Adressen
   <a href="floppydisk.htm">emuliert</a>:
  <br/>
@@ -254,7 +349,7 @@
   </table>
  <br/><br/>
 
- <h3><a name="printer">1.10. V24-Schnittstelle mit Drucker</a> </h3>
+ <h3><a name="printer">1.12. V24-Schnittstelle mit Drucker</a> </h3>
   Es wird die zus&auml;tzliche PIO (E/A-Adressen E4h-E7h)
   mit der dar&uuml;ber realisierten V24-Schnittstelle
   und einem daran angeschlossenen Drucker emuliert.
@@ -270,7 +365,7 @@
   Mit <em>Ctrl-Y</em> schalten Sie das wieder aus.
  <br/><br/>
 
- <h3><a name="joystick">1.11. Joystick</a></h3>
+ <h3><a name="joystick">1.13. Joystick</a></h3>
   Wenn in den LLC2-Einstellungen das
   <a href="joystick.htm">Joystick</a>-H&auml;kchen gesetzt ist,
   wird ein Joystick entsprechend der SCCH-Schaltung emuliert.
@@ -308,20 +403,22 @@
   <em>r</em> aus.
  <br/><br/>
 
- <h3><a name="basic_save">3.2. Speichern von BASIC-Programmen</a></h3>
-  JKCEMU bietet spezielle Unterst&uuml;tzung f&uuml;r das Speichern
-  und Laden von BASIC-Programmen.
+ <h3><a name="basic_io">3.2. BASIC-Programme speichern und laden</a></h3>
+  JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
+  <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>.
   Zum Speichern nutzen Sie bitte die Funktion
   <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
-  und speichern das Programm als
-  <a href="fileformats.htm#headersave">Headersave</a>-Datei
-  mit dem Dateityp <tt>B</tt>.
+  und speichern das jeweilge Programm als
+  <a href="fileformats.htm#basic">BASIC-/RBASIC-Programmdatei (*.bas)</a>.
+  Alternativ ist auch das Speichern als
+  <a href="fileformats.htm#headersave">Headersave-Datei (*.z80)</a>
+  mit dem Dateityp&nbsp;<em>B</em> m&ouml;glich.
  <br/><br/>
-  Nur wenn Sie das BASIC-Programm so speichern,
-  werden beim Laden des Programms die Systemzellen des
-  BASIC-Interpreters richtig angepasst.
-  In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
-  aber im Interpreter nicht richtig nutzen.
+  Wenn Sie ein BASIC-Programm in einem anderen Dateiformat speichern,
+  erkennt JKCEMU sp&auml;ter beim Laden der Datei nicht mehr,
+  dass es sich um ein BASIC-Programm handelt und passt die
+  Systemzellen des BASIC-Interpreters nicht an.
+  Das geladene Programm l&auml;sst sich dann nicht nutzen.
  <br/><br/>
 
  <h3><a name="images">3.3. HIRES-Bilddateien</a></h3>
@@ -383,5 +480,32 @@
  <br/>
   Au&szlig;erdem sollten die Laufzeiteigenschaften in den Compiler-Optionen
   auf <em>Compilieren f&uuml;r Produktiveinsatz</em> gesetzt werden.
+ <br/><br/>
+
+ <h2><a name="etc">4. Sonstiges</a></h2>
+
+ <h3>
+  <a name="paste">4.1. Einf&uuml;gen von Text aus der Zwischenablage</a>
+ </h3>
+  Das Einf&uuml;gen von Text aus der Zwichenablage erfolgt gew&ouml;hnlich
+  in der Form, dass f&uuml;r jedes einzuf&uuml;gende Zeichen
+  das Dr&uuml;cken der entsprechenden Taste bzw. Tastenkombination
+  simuliert wird. Dieses Prinzip ist recht langsam.
+  F&uuml;r den LLC2 gibt es in den
+  <a href="settings.htm">Einstellungen</a> die Option
+  <em>Einf&uuml;gen von Text durch Abfangen des Systemaufrufs</em>.
+  Bei dieser Option lauscht der Emulator auf der Adresse 1802h,
+  dem Einsprung zur Systemfunktion zum Lesen eines Zeichens
+  von der Tastatur.
+  Wenn diese Systemfunktion aufgerufen wird, pr&uuml;ft JKCEMU,
+  ob ein Zeichen eingef&uuml;gt werden soll.
+  Wenn ja, schreibt er das n&auml;chste einzuf&uuml;gende Zeichen
+  in das entsprechende Prozessorregister und simuliert einen RETURN-Befehl.
+  Sollten das Betriebssystem oder das Anwendungsprogramm die Tastatur nicht
+  &uuml;ber diesen Einsprungpunkt abfragen,
+  funktioniert das Einf&uuml;gen von Text nicht,
+  und Sie m&uuml;ssen die Option ausschalten.
+  Ebenfalls ausschalten m&uuml;ssen Sie die Option bei Verwendung
+  eines anderen (z.B. CP/M-kompatiblen) Betriebssystems.
 </body>
 </html>

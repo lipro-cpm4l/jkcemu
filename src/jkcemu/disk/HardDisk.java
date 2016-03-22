@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,6 +16,7 @@ public class HardDisk
 {
   private String diskModel;
   private File   file;
+  private int    offset;
   private int    cylinders;
   private int    heads;
   private int    sectorsPerTrack;
@@ -26,10 +27,12 @@ public class HardDisk
 		int    cylinders,
 		int    heads,
 		int    sectorsPerTrack,
-		String fileName )
+		String fileName,
+		int    offset )
   {
     this.diskModel       = diskModel;
     this.file            = new File( fileName );
+    this.offset          = offset;
     this.cylinders       = cylinders;
     this.heads           = heads;
     this.sectorsPerTrack = sectorsPerTrack;
@@ -60,6 +63,12 @@ public class HardDisk
   }
 
 
+  public int getOffset()
+  {
+    return this.offset;
+  }
+
+
   public int getSectorsPerTrack()
   {
     return this.sectorsPerTrack;
@@ -71,6 +80,7 @@ public class HardDisk
     boolean rv = false;
     if( disk != null ) {
       if( disk.file.equals( this.file )
+	  && (disk.offset == this.offset)
 	  && (disk.cylinders == this.cylinders)
 	  && (disk.heads == this.heads)
 	  && (disk.sectorsPerTrack == this.sectorsPerTrack) )
@@ -81,4 +91,3 @@ public class HardDisk
     return rv;
   }
 }
-

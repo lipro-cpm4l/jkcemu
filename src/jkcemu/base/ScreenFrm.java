@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,7 +21,7 @@ import java.util.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import jkcemu.Main;
-import jkcemu.audio.AudioFrm;
+import jkcemu.audio.*;
 import jkcemu.disk.*;
 import jkcemu.etc.*;
 import jkcemu.joystick.JoystickFrm;
@@ -117,6 +117,7 @@ public class ScreenFrm extends BasicFrm implements
   private EmuThread            emuThread;
   private Clipboard            clipboard;
   private KeyboardFrm          keyboardFrm;
+  private MsgFrm               msgFrm;
   private DebugFrm             primDebugFrm;
   private MemEditFrm           primMemEditFrm;
   private ReassFrm             primReassFrm;
@@ -133,6 +134,7 @@ public class ScreenFrm extends BasicFrm implements
     // Initialisierungen
     this.emuThread           = null;
     this.keyboardFrm         = null;
+    this.msgFrm              = null;
     this.primDebugFrm        = null;
     this.primMemEditFrm      = null;
     this.primReassFrm        = null;
@@ -184,13 +186,19 @@ public class ScreenFrm extends BasicFrm implements
 					InputEvent.ALT_MASK ) ) );
     mnuFile.addSeparator();
     this.mnuBasicOpen = createJMenuItem(
-			"BASIC-Programm im Texteditor \u00F6ffnen...",
-			"file.basic.open" );
+	"BASIC-Programm im Texteditor \u00F6ffnen...",
+	"file.basic.open",
+	KeyStroke.getKeyStroke(
+			KeyEvent.VK_T,
+			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) );
     mnuFile.add( this.mnuBasicOpen );
 
     this.mnuBasicSave = createJMenuItem(
-			"BASIC-Programm speichern...",
-			"file.basic.save" );
+	"BASIC-Programm speichern...",
+	"file.basic.save",
+	KeyStroke.getKeyStroke(
+			KeyEvent.VK_S,
+			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) );
     mnuFile.add( this.mnuBasicSave );
     mnuFile.addSeparator();
 
@@ -236,13 +244,17 @@ public class ScreenFrm extends BasicFrm implements
     mnuFile.addSeparator();
 
     mnuFile.add( createJMenuItem(
-			"Datei-Browser...",
-			"file.browser" ) );
-    mnuFile.add( createJMenuItem(
 			"Texteditor/Programmierung...",
 			"file.texteditor",
 			KeyStroke.getKeyStroke(
-					KeyEvent.VK_T,
+				KeyEvent.VK_T,
+				InputEvent.ALT_MASK ) ) );
+    mnuFile.add( createJMenuItem( "Datei-Browser...", "file.browser" ) );
+    mnuFile.add( createJMenuItem(
+			"Dateien suchen...",
+			"file.find",
+			KeyStroke.getKeyStroke(
+					KeyEvent.VK_F,
 					InputEvent.ALT_MASK ) ) );
     mnuFile.addSeparator();
     mnuFile.add( createJMenuItem( "Beenden", "file.quit" ) );
@@ -409,10 +421,6 @@ public class ScreenFrm extends BasicFrm implements
 		KeyStroke.getKeyStroke(
 			KeyEvent.VK_M,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) ) );
-    mnuExtraTools.add( createJMenuItem( "Rechner...", "extra.calculator" ) );
-    mnuExtraTools.add( createJMenuItem(
-				"Hex-Dateivergleicher...",
-				"extra.hexdiff" ) );
     mnuExtraTools.add( createJMenuItem(
 		"Hex-Editor...",
 		"extra.hexeditor",
@@ -420,27 +428,36 @@ public class ScreenFrm extends BasicFrm implements
 			KeyEvent.VK_H,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) ) );
     mnuExtraTools.add( createJMenuItem(
+				"Hex-Dateivergleicher...",
+				"extra.hexdiff" ) );
+    mnuExtraTools.add( createJMenuItem(
 				"Dateikonverter...",
 				"extra.fileconverter" ) );
     mnuExtraTools.add( createJMenuItem(
 				"Bildbetrachter...", "extra.imageviewer" ) );
+    mnuExtraTools.add( createJMenuItem(
+				"Audio-Recorder...", "extra.audiorecorder" ) );
+    mnuExtraTools.add( createJMenuItem( "Rechner...", "extra.calculator" ) );
+    mnuExtraTools.add( createJMenuItem(
+			"Diskettenabbilddatei-Inspektor...",
+			"extra.diskviewer" ) );
     mnuExtraTools.addSeparator();
     mnuExtraTools.add( createJMenuItem(
 			"CP/M-Diskettenabbilddatei manuell erstellen...",
 			"extra.diskimage.create_manually" ) );
     mnuExtraTools.add( createJMenuItem(
-				"CP/M-Diskettenabbilddatei entpacken...",
-				"extra.diskimage.unpack" ) );
+			"CP/M-Diskettenabbilddatei entpacken...",
+			"extra.diskimage.unpack" ) );
     mnuExtraTools.add( createJMenuItem(
-				"CP/M-Diskette entpacken...",
-				"extra.disk.unpack" ) );
+			"CP/M-Diskette entpacken...",
+			"extra.disk.unpack" ) );
     mnuExtraTools.addSeparator();
     mnuExtraTools.add( createJMenuItem(
-				"Abbilddatei von Diskette erstellen...",
-				"extra.diskimage.create_from_disk" ) );
+			"Abbilddatei von Datentr\u00E4ger erstellen...",
+			"extra.diskimage.create_from_disk" ) );
     mnuExtraTools.add( createJMenuItem(
-				"Abbilddatei auf Diskette schreiben...",
-				"extra.diskimage.write_to_disk" ) );
+			"Abbilddatei auf Datentr\u00E4ger schreiben...",
+			"extra.diskimage.write_to_disk" ) );
     mnuExtra.add( mnuExtraTools );
     mnuExtra.addSeparator();
 
@@ -732,16 +749,17 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  public void fireDirectoryChanged( File dirFile )
+  public void fireAppendMsg( final String msg )
   {
-    Frame[] frms = Frame.getFrames();
-    if( frms != null ) {
-      for( Frame f : frms ) {
-	if( f instanceof FileBrowserFrm ) {
-	  ((FileBrowserFrm) f).fireDirectoryChanged( dirFile );
-	}
-      }
-    }
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    appendMsg( msg );
+		  }
+		} );
   }
 
 
@@ -793,24 +811,41 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
+  public void fireShowStatusText( final String text )
+  {
+    if( text != null ) {
+      if( !text.isEmpty() ) {
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    showStatusText( text );
+		  }
+		} );
+      }
+    }
+  }
+
+
   public void fireUpdScreenTextActionsEnabled()
   {
-    boolean state  = false;
-    EmuSys  emuSys = getEmuSys();
-    if( emuSys != null ) {
-      state = emuSys.canExtractScreenText();
-    }
-    if( !state ) {
-      clearScreenSelection();
-    }
-    final boolean state2 = state;
+    final EmuSys emuSys = getEmuSys();
     EventQueue.invokeLater(
 		new Runnable()
 		{
 		  @Override
 		  public void run()
 		  {
-		    setScreenTextActionsEnabled( state2 );
+		    boolean state = false;
+		    if( emuSys != null ) {
+		      state = emuSys.canExtractScreenText();
+		    }
+		    if( !state ) {
+		      clearScreenSelection();
+		    }
+		    setScreenTextActionsEnabled( state );
 		  }
 		} );
   }
@@ -824,10 +859,11 @@ public class ScreenFrm extends BasicFrm implements
 
   public static int getDefaultScreenRefreshMillis()
   {
-    int rv = 100;
-    if( Main.availableProcessors() > 1 ) {
+    int rv     = 100;
+    int nProcs = Runtime.getRuntime().availableProcessors();
+    if( nProcs > 1 ) {
       rv = 50;
-      if( Main.availableProcessors() >= 4 ) {
+      if( nProcs >= 4 ) {
 	rv = 20;
       }
     }
@@ -1165,6 +1201,24 @@ public class ScreenFrm extends BasicFrm implements
     if( (this.emuThread != null) && !e.isAltDown()
 	&& (e.getKeyCode() != KeyEvent.VK_F10) )
     {
+      /*
+       * CTRL-M liefert auf verschiedenen Betriebssystemen
+       * unterschiedliche ASCII-Codes (10 bzw. 13).
+       * Aus diesem Grund wird hier CTRL-M fest auf 13 gemappt,
+       * so wie es auch die von JKCEMU emulierten Computer im Original tun.
+       */
+      if( (e.getKeyCode() == KeyEvent.VK_M)
+	  && !e.isAltDown()
+	  && !e.isAltGraphDown()
+	  && e.isControlDown()
+	  && !e.isMetaDown()
+	  && !e.isShiftDown() )
+      {
+	this.emuThread.keyTyped( '\r' );
+	this.ignoreKeyChar = true;
+	e.consume();
+      } else
+
       if( this.emuThread.keyPressed( e ) ) {
 	this.ignoreKeyChar = true;
 	e.consume();
@@ -1237,15 +1291,28 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
+	/* --- ueberschriebene Methoden fuer WindowListener --- */
+
   @Override
-  public void windowDeactivated( WindowEvent e )
+  public void windowActivated( WindowEvent e )
   {
-    if( (e.getWindow() == this) && (this.emuThread != null) )
-      this.emuThread.keyReleased();
+    if( e.getWindow() == this ) {
+      Main.setWindowActivated( Main.WINDOW_MASK_SCREEN );
+    }
   }
 
 
-	/* --- ueberschriebene Methoden fuer WindowListener --- */
+  @Override
+  public void windowDeactivated( WindowEvent e )
+  {
+    if( e.getWindow() == this ) {
+      Main.setWindowDeactivated( Main.WINDOW_MASK_SCREEN );
+      if( this.emuThread != null ) {
+	this.emuThread.keyReleased();
+      }
+    }
+  }
+
 
   @Override
   public void windowOpened( WindowEvent e )
@@ -1508,6 +1575,10 @@ public class ScreenFrm extends BasicFrm implements
 	    rv = true;
 	    doFileScreenTextCopy();
 	  }
+	  else if( actionCmd.equals( "file.find" ) ) {
+	    rv = true;
+	    FindFilesFrm.open( this );
+	  }
 	  else if( actionCmd.equals( "file.browser" ) ) {
 	    rv = true;
 	    FileBrowserFrm.open( this );
@@ -1588,6 +1659,10 @@ public class ScreenFrm extends BasicFrm implements
 	    rv = true;
 	    ImageFrm.open();
 	  }
+	  else if( actionCmd.equals( "extra.audiorecorder" ) ) {
+	    rv = true;
+	    AudioRecorderFrm.open();
+	  }
 	  else if( actionCmd.equals( "extra.debugger" ) ) {
 	    rv = true;
 	    doExtraDebugger();
@@ -1635,6 +1710,10 @@ public class ScreenFrm extends BasicFrm implements
 	  else if( actionCmd.equals( "extra.diskimage.write_to_disk" ) ) {
 	    rv = true;
 	    DiskImgProcessDlg.writeDiskImageToDrive( this );
+	  }
+	  else if( actionCmd.equals( "extra.diskviewer" ) ) {
+	    rv = true;
+	    DiskImgViewFrm.open();
 	  }
 	  else if( actionCmd.equals( "extra.settings" ) ) {
 	    rv = true;
@@ -1740,9 +1819,10 @@ public class ScreenFrm extends BasicFrm implements
 	}
       }
 
-      // Emulator-Thread beenden
+      // Threads beenden
       if( this.emuThread != null ) {
 	this.emuThread.stopEmulator();
+	Main.getThreadGroup().interrupt();
 
 	// max. eine halbe Sekunde auf Thread-Beendigung warten
 	try {
@@ -1771,16 +1851,16 @@ public class ScreenFrm extends BasicFrm implements
       {
 	String prefix = getSettingsPrefix();
 	props.setProperty(
-			prefix + ".window.x",
+			prefix + BasicFrm.PROP_WINDOW_X,
 			String.valueOf( this.windowLocation.x ) );
 	props.setProperty(
-			prefix + ".window.y",
+			prefix + BasicFrm.PROP_WINDOW_Y,
 			String.valueOf( this.windowLocation.y ) );
 	props.setProperty(
-			prefix + ".window.width",
+			prefix + BasicFrm.PROP_WINDOW_WIDTH,
 			String.valueOf( this.windowSize.width ) );
 	props.setProperty(
-			prefix + ".window.height",
+			prefix + BasicFrm.PROP_WINDOW_HEIGHT,
 			String.valueOf( this.windowSize.height ) );
       }
       props.setProperty(
@@ -1826,34 +1906,36 @@ public class ScreenFrm extends BasicFrm implements
 
   private void doFileLoad( boolean startEnabled )
   {
-    File    file            = null;
     boolean startSelected   = false;
     boolean loadWithOptions = true;
-    if( EmuUtil.isNativeFileDialogSelected() ) {
-      file = EmuUtil.showNativeFileDlg(
-					this,
-					false,
-					"Datei in Arbeitsspeicher laden",
-					Main.getLastPathFile( "software" ) );
-    } else {
+    File    file            = null;
+    File    preSelection    = EmuUtil.getDirectory(
+				Main.getLastDirFile( "software" ) );
+    if( EmuUtil.isJKCEMUFileDialogSelected() ) {
       FileSelectDlg dlg = new FileSelectDlg(
 			this,
-			false,	// forSave
+			FileSelectDlg.Mode.LOAD,
 			startEnabled,
-			true,	// loadWithOptionsEnabled
+			true,		// loadWithOptionsEnabled
 			"Datei in Arbeitsspeicher laden",
-			Main.getLastPathFile( "software" ),
+			preSelection,
 			EmuUtil.getBinaryFileFilter(),
+			EmuUtil.getAC1Basic6FileFilter(),
+			EmuUtil.getBasicFileFilter(),
 			EmuUtil.getKCSystemFileFilter(),
 			EmuUtil.getKCBasicFileFilter(),
-			EmuUtil.getRBasicFileFilter(),
-			EmuUtil.getTapFileFilter(),
+			EmuUtil.getTapeFileFilter(),
 			EmuUtil.getHeadersaveFileFilter(),
 			EmuUtil.getHexFileFilter() );
       dlg.setVisible( true );
       file            = dlg.getSelectedFile();
       loadWithOptions = dlg.isLoadWithOptionsSelected();
       startSelected   = dlg.isStartSelected();
+    } else {
+      file = EmuUtil.showFileOpenDlg(
+				this,
+				"Datei in Arbeitsspeicher laden",
+				preSelection );
     }
     if( file != null ) {
       LoadDlg.loadFile(
@@ -1869,15 +1951,13 @@ public class ScreenFrm extends BasicFrm implements
 
   private void doFileSave()
   {
-    SaveDlg dlg = new SaveDlg(
-			this,
-			-1,		// Anfangsadresse
-			-1,		// Endadresse
-			-1,		// Dateityp
-			false,		// KC-BASIC
-			false,		// RBASIC
-			"Programm/Adressbereich speichern" );
-    dlg.setVisible( true );
+    (new SaveDlg(
+		this,
+		-1,		// Anfangsadresse
+		-1,		// Endadresse
+		"Programm/Adressbereich speichern",
+		SaveDlg.BasicType.NO_BASIC,
+		null )).setVisible( true );
   }
 
 
@@ -1936,7 +2016,7 @@ public class ScreenFrm extends BasicFrm implements
 	File file = EmuUtil.showFileSaveDlg(
 				this,
 				"Textdatei speichern",
-				Main.getLastPathFile( "screen" ),
+				Main.getLastDirFile( "screen" ),
 				EmuUtil.getTextFileFilter() );
 	if( file != null ) {
 	  String fileName = file.getPath();
@@ -2210,7 +2290,7 @@ public class ScreenFrm extends BasicFrm implements
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"CP/M-Diskettenabbilddatei entpacken",
-			Main.getLastPathFile( "disk" ),
+			Main.getLastDirFile( "disk" ),
 			EmuUtil.getPlainDiskFileFilter(),
 			EmuUtil.getAnaDiskFileFilter(),
 			EmuUtil.getCopyQMFileFilter(),
@@ -2233,7 +2313,8 @@ public class ScreenFrm extends BasicFrm implements
 	  } else {
 	    AbstractFloppyDisk disk = DiskUtil.readNonPlainDiskFile(
 								this,
-								file );
+								file,
+								true );
 	    if( disk != null ) {
 	      if( DiskUtil.checkAndConfirmWarning( this, disk ) ) {
 		DiskUtil.unpackDisk( this, file, disk, true );
@@ -2499,6 +2580,20 @@ public class ScreenFrm extends BasicFrm implements
 
 	/* --- private Methoden --- */
 
+  private void appendMsg( String msg )
+  {
+    if( this.msgFrm != null ) {
+      this.msgFrm.setVisible( true );
+      this.msgFrm.setState( Frame.NORMAL );
+    } else {
+      this.msgFrm = new MsgFrm( this );
+      this.msgFrm.setVisible( true );
+    }
+    this.msgFrm.toFront();
+    this.msgFrm.appendMsg( msg );
+  }
+
+
   private int askAccessToSysNum( String sysName )
   {
     int rv = -1;
@@ -2724,6 +2819,13 @@ public class ScreenFrm extends BasicFrm implements
     EmuSys emuSys = getEmuSys();
     if( (emuSys != null) && (text != null) ) {
       if( !text.isEmpty() ) {
+	// ggf. Zeichen mappen
+	if( text.indexOf( '\r' ) >= 0 ) {
+	  text = text.replace( '\r', '\n' );
+	}
+	if( text.indexOf( '\u00A0' ) >= 0 ) {
+	  text = text.replace( '\u00A0', '\u0020' );
+	}
 	this.mnuEditPasteCancel.setEnabled( true );
 	updPasteBtns();
 	emuSys.startPastingText( text );
@@ -2745,6 +2847,12 @@ public class ScreenFrm extends BasicFrm implements
 	    } else {
 	      msg = "Pause";
 	    }
+	    EmuSys  emuSys = getEmuSys();
+	    if( emuSys != null ) {
+	      emuSys.updDebugScreen();
+	    }
+	    this.screenDirty = true;
+	    this.screenFld.repaint();
 	  } else {
 	    String mhzText = createMHzText( z80cpu );
 	    if( mhzText != null ) {

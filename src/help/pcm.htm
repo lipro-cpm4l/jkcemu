@@ -10,9 +10,10 @@
    <li>
     <a href="pcm.htm#hardware">1. Emulierte Hardware</a>
     <ul>
-     <li><a href="pcm.htm#ram">1.1. RAM-B&auml;nke</a></li>
-     <li><a href="pcm.htm#fdc">1.2. Floppy-Disk-Modul</a></li>
-     <li><a href="pcm.htm#nmi">1.3. NMI-Generator</a></li>
+     <li><a href="pcm.htm#rom">1.1. ROM</a></li>
+     <li><a href="pcm.htm#ram">1.2. RAM-B&auml;nke</a></li>
+     <li><a href="pcm.htm#fdc">1.3. Floppy-Disk-Modul</a></li>
+     <li><a href="pcm.htm#nmi">1.4. NMI-Generator</a></li>
     </ul>
    </li>
    <li>
@@ -36,7 +37,10 @@
 
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
   <ul>
-   <li>8&nbsp;KByte ROM</li>
+   <li>
+    <a href="pcm.htm#rom">8&nbsp;KByte ROM</a>,
+    optional auf bis zu 32&nbsp;KByte erweiterbar
+   </li>
    <li>3&nbsp;RAM-B&auml;nke mit je&nbsp;62&nbsp;KByte</li>
    <li>
     Bildschirmsteuerung mit den Aufl&ouml;sungen:
@@ -60,7 +64,16 @@
   </ul>
  <br/>
 
- <h3><a name="ram">1.1. RAM-B&auml;nke</a></h3>
+ <h3><a name="rom">1.1. ROM</a></h3>
+  Der originale PC/M hat einen 8&nbsp;KByte gro&szlig;en ROM,
+  der das Grundbetriebssystem enth&auml;lt.
+  Im Emulator kann dieser ROM in 8&nbsp;KByte Schritten
+  auf bis zu 32&nbsp;KByte vergr&ouml;&szlig;ert werden,
+  indem Sie in den PC/M-Einstellungen eine entsprechend gro&szlig;e
+  externe ROM-Datei angeben.
+ <br/><br/>
+
+ <h3><a name="ram">1.2. RAM-B&auml;nke</a></h3>
   Die RAM-B&auml;nke&nbsp;1 und 2 des emulierten PC/M
   liegen im JKCEMU hintereinander in der RAM-Floppy&nbsp;1.
   Das ist sinnvoll, da das im ROM enthaltene BIOS
@@ -69,7 +82,7 @@
   geladen und gespeichert werden.
  <br/><br/>
 
- <h3><a name="fdc">1.2. Floppy-Disk-Modul</a></h3>
+ <h3><a name="fdc">1.3. Floppy-Disk-Modul</a></h3>
   Das Floppy-Disk-Modul wird <a href="floppydisk.htm">emuliert</a>,
   wenn Sie in den Einstellungen eine der beiden PC/M-Ausbaustufen
   mit Floppy-Disk-System aktiviert haben.
@@ -81,6 +94,7 @@
   Damit also von dem ersten Laufwerk der im Fenster
   <em>JKCEMU Diskettenstation</em> angezeigten Laufwerke gebootet
   werden kann, werden die Laufwerksnummern folgenderma&szlig;en gemappt:
+ <br/><br/>
   <table border="1">
    <tr><th>Interne Laufwerksnummer</th><th>Sichtbares Laufwerk</th></tr>
    <tr><td>0</td><td>4</td></tr>
@@ -90,7 +104,7 @@
   </table>
  <br/><br/>
 
- <h3><a name="nmi">1.3. NMI-Generator</a></h3>
+ <h3><a name="nmi">1.4. NMI-Generator</a></h3>
   Der NMI-Generator erm&ouml;glicht einen Schrittbetrieb und wird
   von dem im Grundbetriebssystem des RAM-Floppy-Systems
   enthaltenen Debuggers benutzt
@@ -200,7 +214,7 @@
      angegeben werden.
      Bei Lesefehlern k&ouml;nnen Sie einfach zur&uuml;ckspulen
      und das Lesen der fehlerhaften Stelle noch einmal versuchen.
-     Beachten Sie bitte, dass in JKCEMU muss zum Laden von Kassette
+     Beachten Sie bitte, dass zum Laden von Kassette im JKCEMU
      eine entsprechende <a href="audio.htm">Audio-Funktion</a>
      aktiviert werden muss.
      Das Laden k&ouml;nnen Sie mit <em>CTRL-C</em> abbrechen.
@@ -334,7 +348,7 @@
     <td valign="top"><tt>USER n</tt></td>
     <td valign="top">
      Festlegen eines Nutzerbereichs (n = 0..15),<br/>
-     Das ist bei einer RAM-Floppy aber nur wenig sinnvoll.</td>
+     Das ist bei einer RAM-Floppy aber nur begrenzt sinnvoll.</td>
    </tr>
   </table>
  <br/><br/>
@@ -344,18 +358,30 @@
   dann k&ouml;nnen Sie im Grundbetriebssystem mit dem Kommando
   <em>C</em> von Diskette booten.
   Dazu muss eine passende Diskette,
-  z.B. die in JKCEMU mitgelieferte PC/M-Bootdiskette,
+  z.B. die im JKCEMU f&uuml;r die entsprechende Bildschirmaufl&ouml;sung
+  mitgelieferte PC/M-Bootdiskette,
   im Fenster <em>JKCEMU Diskettenstation</em>
   in Laufwerk&nbsp;1 eingelegt worden sein.
  <br/><br/>
 
 
  <h2><a name="disks">3. Enthaltene Diskettenabbilder</a></h2>
+  JKCEMU enth&auml;lt f&uuml;r die PC/M-Emulation
+  folgende Diskettenabbilder:
   <ul>
-   <li>PC/M-Boot-Diskette f&uuml;r 64x16 und 80x24 Zeichen</li>
+   <li>PC/M-Boot-Diskette f&uuml;r 64x16 Zeichen</li>
+   <li>PC/M-Boot-Diskette f&uuml;r 80x24 Zeichen</li>
   </ul>
-  Die PC/M-Boot-Diskette dient nur zum Booten und enth&auml;lt au&szlig;er
-  einer README-Datei keine CP/M-Kommandos oder Programme.
+  Die PC/M-Boot-Disketten dienen nur zum Booten und enthalten au&szlig;er
+  einer README-Datei keine weiteren Dateien oder Programme.
+  Die Laufwerkszuordnung bei beiden Diskettenabbildern ist:
+ <br/><br/>
+  <table border="1">
+   <tr><td>A:</td><td>RAM-Floppy</td></tr>
+   <tr><td>B:</td><td>erstes Diskettenlaufwerk, 624-KByte-Format</td></tr>
+   <tr><td>C:</td><td>zweites Diskettenlaufwerk, 624-KByte-Format</td></tr>
+   <tr><td>D:</td><td>drittes Diskettenlaufwerk, 624-KByte-Format</td></tr>
+  </table>
  <br/><br/>
 
 
@@ -363,7 +389,7 @@
 
  <h3><a name="font">4.1. Zeichensatzdateien</a></h3>
   Sie k&ouml;nnen in den Einstellungen eine externe Zeichensatzdatei
-  angeben, die dann anstelle der in JKCEMU integrierten verwendet wird.
+  angeben, die dann anstelle der im JKCEMU integrierten verwendet wird.
   Es ist allerdings zu beachten, dass das Format dieser Datei zwischen
   den Bildschirmaufl&ouml;sungen 64x16 Zeichen und 80x24 Zeichen
   unterschiedlich ist.

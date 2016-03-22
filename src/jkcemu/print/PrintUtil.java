@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -101,7 +101,7 @@ public class PrintUtil
     String s = "- " + String.valueOf( pageNum ) + " -";
     int    w = g.getFontMetrics().stringWidth( s );
     g.setColor( Color.black );
-    g.setFont( new Font( "Monospaced", Font.PLAIN, fontSize ) );
+    g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
     g.drawString(
 	s,
 	(int) (pf.getImageableX() + (pf.getImageableWidth() / 2))

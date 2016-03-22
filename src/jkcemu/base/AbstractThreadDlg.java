@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,10 +21,10 @@ import jkcemu.Main;
 public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
 {
   protected boolean canceled;
+  protected int     errorCount;
 
   private Thread       thread;
   private boolean      autoClose;
-  private int          errorCount;
   private JTextArea    fldLog;
   private JProgressBar progressBar;
   private JButton      btnClose;
@@ -38,8 +38,8 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
     super( owner, Dialog.ModalityType.MODELESS );
     this.autoClose  = true;
     this.canceled   = false;
-    this.thread     = new Thread( this, threadName );
     this.errorCount = 0;
+    this.thread     = new Thread( Main.getThreadGroup(), this, threadName );
 
 
     // Fensterinhalt
@@ -124,6 +124,14 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
     }
     buf.append( (char) '\n' );
     appendToLog( buf.toString() );
+    this.autoClose = false;
+  }
+
+
+  protected void appendIgnoredToLog()
+  {
+    appendToLog( " Ignoriert\n" );
+    this.autoClose = false;
   }
 
 
@@ -148,14 +156,6 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
   protected void disableAutoClose()
   {
     this.autoClose = false;
-  }
-
-
-  protected void fireDirectoryChanged( File dirFile )
-  {
-    ScreenFrm screenFrm = Main.getScreenFrm();
-    if( screenFrm != null )
-      screenFrm.fireDirectoryChanged( dirFile );
   }
 
 
@@ -237,4 +237,3 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
     }
   }
 }
-

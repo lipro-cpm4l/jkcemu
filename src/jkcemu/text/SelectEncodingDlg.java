@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,13 +17,13 @@ import jkcemu.base.*;
 
 public class SelectEncodingDlg extends BasicDlg
 {
-  private boolean       applied;
-  private CharConverter charConverter;
-  private String        encodingName;
-  private String        encodingDisplayText;
-  private JComboBox     comboEncoding;
-  private JButton       btnOK;
-  private JButton       btnCancel;
+  private boolean           applied;
+  private CharConverter     charConverter;
+  private String            encodingName;
+  private String            encodingDisplayText;
+  private JComboBox<Object> comboEncoding;
+  private JButton           btnOK;
+  private JButton           btnCancel;
 
 
   public SelectEncodingDlg( Frame parent )
@@ -58,7 +58,7 @@ public class SelectEncodingDlg extends BasicDlg
 	gbc );
 
     // Auswahlfeld
-    this.comboEncoding = new JComboBox();
+    this.comboEncoding = new JComboBox<>();
     this.comboEncoding.addItem( "Systemzeichensatz" );
     this.comboEncoding.addItem(
                 new CharConverter( CharConverter.Encoding.ASCII_7BIT ) );

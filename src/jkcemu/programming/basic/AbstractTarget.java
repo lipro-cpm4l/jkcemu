@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,20 +9,83 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
-import java.util.Set;
+import java.util.*;
 import jkcemu.base.EmuSys;
+import jkcemu.programming.basic.target.*;
 
 
 public abstract class AbstractTarget
 {
   protected boolean xoutchAppended;
-  protected boolean usesXOUTST;
-  protected boolean usesX_MPEN;
+  protected boolean usesX_M_PEN;
+
+  private static final String[] targetDefinedConstants = {
+	"BLINKING", "BLUE", "CYAN", "GREEN", "MAGENTA",
+	"RED", "WHITE", "YELLOW",
+	"GRAPHICSCREEN", "LASTSCREEN",
+	"JOYST_BUTTON1", "JOYST_BUTTON2",
+	"JOYST_LEFT", "JOYST_RIGHT", "JOYST_UP", "JOYST_DOWN",
+	AC1Target.BASIC_TARGET_NAME,
+	CPMTarget.BASIC_TARGET_NAME,
+	HueblerGraphicsMCTarget.BASIC_TARGET_NAME,
+	KC85Target.BASIC_TARGET_NAME,
+	KC854Target.BASIC_TARGET_NAME,
+	KramerMCTarget.BASIC_TARGET_NAME,
+	LLC2HIRESTarget.BASIC_TARGET_NAME,
+	SCCHTarget.BASIC_TARGET_NAME,
+	Z1013Target.BASIC_TARGET_NAME,
+	Z1013PetersTarget.BASIC_TARGET_NAME,
+	Z9001Target.BASIC_TARGET_NAME,
+	Z9001KRTTarget.BASIC_TARGET_NAME };
+
+  private Map<String,Integer> namedValues;
 
 
   protected AbstractTarget()
   {
+    this.namedValues = new HashMap<>();
+    setNamedValue( CPMTarget.BASIC_TARGET_NAME, 100 );
+    setNamedValue( HueblerGraphicsMCTarget.BASIC_TARGET_NAME, 300 );
+    setNamedValue( KC85Target.BASIC_TARGET_NAME, 400 );
+    setNamedValue( KC854Target.BASIC_TARGET_NAME, 410 );
+    setNamedValue( KramerMCTarget.BASIC_TARGET_NAME, 600 );
+    setNamedValue( SCCHTarget.BASIC_TARGET_NAME, 700 );
+    setNamedValue( AC1Target.BASIC_TARGET_NAME, 710 );
+    setNamedValue( LLC2HIRESTarget.BASIC_TARGET_NAME, 720 );
+    setNamedValue( Z1013Target.BASIC_TARGET_NAME, 800 );
+    setNamedValue( Z1013PetersTarget.BASIC_TARGET_NAME, 810 );
+    setNamedValue( Z9001Target.BASIC_TARGET_NAME, 900 );
+    setNamedValue( Z9001KRTTarget.BASIC_TARGET_NAME, 910 );
+    setNamedValue( "GRAPHICSCREEN", -1 );
+    for( String name : new String[] {
+				"LASTSCREEN", "BLACK",
+				"JOYST_LEFT", "JOYST_RIGHT",
+				"JOYST_UP", "JOYST_DOWN",
+				"JOYST_BUTTON1", "JOYST_BUTTON2" } )
+    {
+      setNamedValue( name, 0 );
+    }
+    for( String name : new String[] {
+				"BLINKING", "BLUE", "CYAN", "GREEN",
+				"MAGENTA", "RED", "WHITE", "YELLOW" } )
+    {
+      setNamedValue( name, 1 );
+    }
     reset();
+  }
+
+
+  protected static String[] add( String[] a, String s )
+  {
+    String[] rv = null;
+    if( a != null ) {
+      rv      = new String[ a.length + 1 ];
+      rv[ 0 ] = s;
+      System.arraycopy( a, 0, rv, 1, a.length );
+    } else {
+      rv = new String[] { s };
+    }
+    return rv;
   }
 
 
@@ -34,38 +97,44 @@ public abstract class AbstractTarget
 
   public void appendBssTo( AsmCodeBuf buf )
   {
-    if( this.usesX_MPEN ) {
-      buf.append( "X_MPEN:\tDS\t1\n" );
+    if( this.usesX_M_PEN ) {
+      buf.append( "X_M_PEN:\tDS\t1\n" );
     }
   }
 
 
-  public void appendEnableKCNet( AsmCodeBuf buf )
+  public void appendEnableVdipTo( AsmCodeBuf buf )
   {
     // leer
   }
 
 
-  public void appendEnableVdip( AsmCodeBuf buf )
+  public void appendEtcPreXOutTo( AsmCodeBuf buf )
   {
     // leer
   }
 
 
-  public void appendEtc( AsmCodeBuf buf )
+  public void appendEtcPastXOutTo( AsmCodeBuf buf )
   {
     // leer
   }
 
 
-  public abstract void appendExit( AsmCodeBuf buf );
+  public abstract void appendExitTo( AsmCodeBuf buf );
 
 
-  protected void appendExitNoGraphicsScreen(
+  public void appendPreExitTo( AsmCodeBuf buf )
+  {
+    // leer
+  }
+
+
+  protected void appendExitNoGraphicsScreenTo(
 				AsmCodeBuf    buf,
 				BasicCompiler compiler )
   {
-    appendSwitchToTextScreen( buf );
+    appendSwitchToTextScreenTo( buf );
     buf.append( "\tCALL\tXOUTST\n" );
     if( compiler.isLangCode( "DE" ) ) {
       buf.append( "\tDB\t\'Kein Grafik-SCREEN\'\n" );
@@ -73,22 +142,32 @@ public abstract class AbstractTarget
       buf.append( "\tDB\t\'No graphics screen\'\n" );
     }
     buf.append( "\tDB\t00H\n" );
-    if( compiler.usesLibItem( BasicLibrary.LibItem.E_EXIT ) ) {
+    if( compiler.getBasicOptions().getPrintLineNumOnAbort()
+	&& compiler.usesLibItem( BasicLibrary.LibItem.E_EXIT ) )
+    {
       buf.append( "\tJP\tE_EXIT\n" );
     } else {
-      buf.append( "\tJP\tXEXIT\n" );
+      buf.append( "\tCALL\tXOUTNL\n"
+		+ "\tJP\tXEXIT\n" );
+      compiler.getLibItems().add( BasicLibrary.LibItem.XOUTNL );
     }
-    this.usesXOUTST = true;
+    compiler.getLibItems().add( BasicLibrary.LibItem.XOUTST );
   }
 
 
-  public void appendHChar( AsmCodeBuf buf )
+  public void appendFileHandler( BasicCompiler compiler )
+  {
+    // leer
+  }
+
+
+  public void appendHCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0FFFFH\n" );	// -1: Anzahl Zeilen unbekannt
   }
 
 
-  public void appendHPixel( AsmCodeBuf buf )
+  public void appendHPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0000H\n" );	// 0: keine Grafik
   }
@@ -96,52 +175,60 @@ public abstract class AbstractTarget
 
   public void appendInitTo( AsmCodeBuf buf )
   {
-    if( this.usesX_MPEN ) {
+    if( this.usesX_M_PEN ) {
       buf.append( "\tLD\tA,01H\n"
-		+ "\tLD\t(X_MPEN),A\n" );
+		+ "\tLD\t(X_M_PEN),A\n" );
     }
   }
 
 
-  public abstract void appendInput(
+  /*
+   * Die Methode fuegt die Routinen zur Abfrage der Tastatur hinzu.
+   *
+   * Parameter:
+   *   xckbrk: Routine XCKBRK (Test auf CTRL-C) muss hinzugefuegt werden.
+   *           kein Rueckgabewert
+   *   XINKEY: Routine XINKEY (Tastaturabfrage ohne warten)
+   *           muss hinzugefuegt werden.
+   *           Rueckgabewert: Tastencode in A, 0: keine Taste gedrueckt
+   *   XINCH : Routine XINCH (Tastaturabfrage mit warten)
+   *           muss hinzugefuegt werden.
+   *           Rueckgabewert: Tastencode in A
+   *
+   * Allgemein gilt:
+   * Wenn die Parameter xckbrk oder canBreakOnInput gesetzt sind,
+   * muss beim Druecken von CTRL-C das Programm abgebrochen werden.
+   */
+  public abstract void appendInputTo(
 				AsmCodeBuf buf,
 				boolean    xckbrk,
 				boolean    xinkey,
-				boolean    xinchar,
+				boolean    xinch,
 				boolean    canBreakOnInput );
 
 
-  public void appendMenuItem(
-			BasicCompiler compiler,
+  public void appendPrologTo(
 			AsmCodeBuf    buf,
+			BasicCompiler compiler,
 			String        appName )
   {
     // leer
   }
 
 
-  public void appendProlog(
-			BasicCompiler compiler,
-			AsmCodeBuf    buf,
-			String        appName )
+  public void appendSwitchToTextScreenTo( AsmCodeBuf buf )
   {
     // leer
   }
 
 
-  public void appendSwitchToTextScreen( AsmCodeBuf buf )
-  {
-    // leer
-  }
-
-
-  public void appendWChar( AsmCodeBuf buf )
+  public void appendWCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0FFFFH\n" );	// -1: Anzahl Spalten unbekannt
   }
 
 
-  public void appendWPixel( AsmCodeBuf buf )
+  public void appendWPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0000H\n" );	// 0: keine Grafik
   }
@@ -152,13 +239,13 @@ public abstract class AbstractTarget
    * Parameter:
    *   HL: Farbe
    */
-  public void appendXBORDER( AsmCodeBuf buf )
+  public void appendXBorderTo( AsmCodeBuf buf )
   {
     // leer
   }
 
 
-  public void appendXCLS( AsmCodeBuf buf )
+  public void appendXClsTo( AsmCodeBuf buf )
   {
     // leer
   }
@@ -170,7 +257,7 @@ public abstract class AbstractTarget
    *   HL: Vordergrundfarbe
    *   DE: Hintergrundfarbe
    */
-  public void appendXCOLOR( AsmCodeBuf buf )
+  public void appendXColorTo( AsmCodeBuf buf )
   {
     // leer
   }
@@ -182,20 +269,20 @@ public abstract class AbstractTarget
    *   HL: 0:   Cursor ausschalten
    *       <>0: Cursor einschalten
    */
-  public void appendXCURS( AsmCodeBuf buf )
+  public void appendXCursTo( AsmCodeBuf buf )
   {
     // leer
   }
 
 
   /*
-   * Zeichnen einer horizontaler Linie
+   * Zeichnen einer horizontalen Linie
    * Parameter:
    *   BC: Laenge - 1
-   *   DE: linke X-Koordinate
+   *   DE: linke X-Koordinate, nicht kleiner 0
    *   HL: Y-Koordinate
    */
-  public void appendXHLINE( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXHLineTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     // leer
   }
@@ -206,7 +293,7 @@ public abstract class AbstractTarget
    * Parameter:
    *   HL: Farbe
    */
-  public void appendXINK( AsmCodeBuf buf )
+  public void appendXInkTo( AsmCodeBuf buf )
   {
     // leer
   }
@@ -218,14 +305,8 @@ public abstract class AbstractTarget
    *   HL: Nummer des Joysticks (0: erster Joystick)
    * Rueckgabewert:
    *   HL: Joystickstatus
-   *         Bit 0: links
-   *         Bit 1: rechts
-   *         Bit 2: runter
-   *         Bit 3: hoch
-   *         Bit 4: erster Aktionsknopf
-   *         Bit 5: zweiter Aktionsknopf
    */
-  public void appendXJOY( AsmCodeBuf buf )
+  public void appendXJoyTo( AsmCodeBuf buf )
   {
     // leer
   }
@@ -237,7 +318,7 @@ public abstract class AbstractTarget
    *   DE: Zeile, >= 0
    *   HL: Spalte, >= 0
    */
-  public void appendXLOCATE( AsmCodeBuf buf )
+  public void appendXLocateTo( AsmCodeBuf buf )
   {
     // leer
   }
@@ -246,22 +327,22 @@ public abstract class AbstractTarget
   /*
    * Ausgabe eines Zeichens auf dem Drucker
    */
-  public void appendXLPTCH( AsmCodeBuf buf )
+  public void appendXLPtchTo( AsmCodeBuf buf )
   {
     buf.append( "XLPTCH:\tRET\n" );
   }
 
 
   /*
-   * Ausgabe eines Zeichens auf dem Bildschirm
+   * Ausgabe des Zeichens in A auf dem Bildschirm
    */
-  public abstract void appendXOUTCH( AsmCodeBuf buf );
+  public abstract void appendXOutchTo( AsmCodeBuf buf );
 
 
   /*
    * Ausgabe eines Zeilenumbruchs
    */
-  public void appendXOUTNL( AsmCodeBuf buf )
+  public void appendXOutnlTo( AsmCodeBuf buf )
   {
     buf.append( "XOUTNL:\tLD\tA,0DH\n"
 		+ "\tCALL\tXOUTCH\n"
@@ -269,7 +350,7 @@ public abstract class AbstractTarget
     if( this.xoutchAppended ) {
       buf.append( "\tJP\tXOUTCH\n" );
     } else {
-      appendXOUTCH( buf );
+      appendXOutchTo( buf );
     }
   }
 
@@ -279,7 +360,7 @@ public abstract class AbstractTarget
    * Parameter:
    *   HL: Farbe
    */
-  public void appendXPAPER( AsmCodeBuf buf )
+  public void appendXPaperTo( AsmCodeBuf buf )
   {
     // leer
   }
@@ -290,11 +371,68 @@ public abstract class AbstractTarget
    * Parameter:
    *   A: Stift (0: Ignorieren, 1: Normal, 2: Loeschen, 3: XOR-Mode)
    */
-  public void appendXPEN( AsmCodeBuf buf )
+  public void appendXPenTo( AsmCodeBuf buf )
   {
-    buf.append( "XPEN:\tLD\t(X_MPEN),A\n"
+    buf.append( "XPEN:\tLD\t(X_M_PEN),A\n"
 		+ "\tRET\n" );
-    this.usesX_MPEN = true;
+    this.usesX_M_PEN = true;
+  }
+
+
+  /*
+   * Wenn die Methode supportsXPAINT_LEFT_RIGHT() true liefert,
+   * muss diese Methode hier die Routinen XPAINT_LEFT und XPAINT_RIGHT
+   * implementieren, anderenfalls XPAINT,
+   * sofern das Zielsystem Grafik unterstuetzt.
+   *
+   * XPAINT:
+   *   Setzen eines Pixels ohne Beruecksichtigung des eingestellten Stiftes
+   *   bei gleichzeitigem Test, ob dieser schon gesetzt ist
+   *   Parameter:
+   *     DE: X-Koordinate
+   *     HL: Y-Koordinate
+   *   Rueckgabe:
+   *     CY=1: Pixel bereits gesetzt oder ausserhalb des sichtbaren Bereichs
+   *
+   * XPAINT_LEFT:
+   *   Fuellen einer Linie ab dem uebergebenen Punkt nach links,
+   *   Der Startpunkt selbst wird nicht geprueft
+   *   Parameter:
+   *     PAINT_M_X:    X-Koordinate Startpunkt
+   *     PAINT_M_Y:    Y-Koordinate Startpunkt
+   *   Rueckgabe:
+   *     (PAINT_M_X1): X-Endkoordinate der gefuellten Linie,
+   *                   kleiner oder gleich X-Startpunkt
+   *
+   * XPAINT_RIGHT:
+   *   Fuellen einer Linie ab dem uebergebenen Punkt nach rechts
+   *   Parameter:
+   *     PAINT_M_X:    X-Koordinate Startpunkt
+   *     PAINT_M_Y:    Y-Koordinate Startpunkt
+   *   Rueckgabe:
+   *     CY=1:         Pixel im Startpunkt bereits gesetzt (gefuellt)
+   *                   oder ausserhalb des sichtbaren Bereichs
+   *     (PAINT_M_X2): X-Endkoordinate der gefuellten Linie, nur bei CY=0
+   */
+  public void appendXPaintTo( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    // leer
+  }
+
+
+  /*
+   * Farbe eines Pixels ermitteln
+   * Parameter:
+   *   DE: X-Koordinate (0...255)
+   *   HL: Y-Koordinate (0...255)
+   * Rueckgabe:
+   *   HL >= 0: Farbcode des Pixels
+   *   HL=-1:   Pixel exisitiert nicht
+   */
+  public void appendXPointTo( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    buf.append( "XPOINT:\tLD\tHL,0FFFFH\n"
+		+ "\tRET\n" );
   }
 
 
@@ -304,19 +442,19 @@ public abstract class AbstractTarget
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    */
-  public void appendXPRES( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     // leer
   }
 
 
   /*
-   * Setzen eines Pixels
+   * Setzen eines Pixels unter Beruecksichtigung des eingestellten Stiftes
    * Parameter:
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    */
-  public void appendXPSET( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     // leer
   }
@@ -332,7 +470,7 @@ public abstract class AbstractTarget
    *   HL=1:  Pixel gesetzt
    *   HL=-1: Pixel exisitiert nicht
    */
-  public void appendXPTEST( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPTestTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     buf.append( "XPTEST:\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
@@ -345,9 +483,10 @@ public abstract class AbstractTarget
    * Rueckgabe:
    *   CY=1: Screen-Nummer nicht unterstuetzt
    */
-  public void appendXSCRS( AsmCodeBuf buf )
+  public void appendXScreenTo( AsmCodeBuf buf )
   {
-    buf.append( "XSCRS:\tLD\tA,H\n"
+    buf.append( "XSCREEN:\n"
+		+ "\tLD\tA,H\n"
 		+ "\tOR\tL\n"			// CY=0
 		+ "\tRET\tZ\n"
 		+ "\tSCF\n"
@@ -355,91 +494,75 @@ public abstract class AbstractTarget
   }
 
 
+  public abstract int      get100msLoopCount();
+  public abstract String[] getBasicTargetNames();
+  public abstract int      getDefaultBegAddr();
+
+
   /*
-   * Target-ID-String
+   * Die Methode besagt, inwieweit der von dem Zielsystem erzeugte
+   * Programmcode auf dem uebergebenen emulierten System lauffaehig ist:
+   *   0: nicht lauffaehig
+   *   1: nur Basisfunktionen lauffaehig
+   *   2: bis auf ein paar spezielle Funktionen weitgehend lauffaehig
+   *   3: voll lauffaehig
    */
-  public abstract void appendXTARID( AsmCodeBuf buf );
-
-
-  public boolean createsCodeFor( EmuSys emuSys )
-  {
-    return false;
-  }
-
-
-  public abstract int get100msLoopCount();
-  public abstract int getDefaultBegAddr();
-
-
-  public int getColorBlack()
+  public int getCompatibilityLevel( EmuSys emuSys )
   {
     return 0;
   }
 
 
-  public int getColorBlinking()
+  public String getFileHandlerLabel()
+  {
+    return null;
+  }
+
+
+  public int getFileIOChannelSize()
   {
     return 0;
   }
 
 
-  public int getColorBlue()
+  public String getHostName()
   {
-    return 1;
+    return null;
   }
 
 
-  public int getColorCyan()
-  {
-    return 1;
-  }
-
-
-  public int getColorGreen()
-  {
-    return 1;
-  }
-
-
-  public int getColorMagenta()
-  {
-    return 1;
-  }
-
-
-  public int getColorRed()
-  {
-    return 1;
-  }
-
-
-  public int getColorWhite()
-  {
-    return 1;
-  }
-
-
-  public int getColorYellow()
-  {
-    return 1;
-  }
-
-
-  public int getGraphicScreenNum()
-  {
-    return -1;
-  }
-
-
-  public int getLastScreenNum()
+  public int getMaxAppNameLen()
   {
     return 0;
   }
 
 
-  public int getKCNetBaseIOAddr()
+  public int getNamedValue( String name )
   {
-    return -1;
+    Integer value = this.namedValues.get( name );
+    return value != null ? value.intValue() : 0;
+  }
+
+
+  public String getStartCmd( EmuSys emuSys, String appName, int begAddr )
+  {
+    return null;
+  }
+
+
+  public int[] getTargetIDs()
+  {
+    int[]    rv          = null;
+    String[] targetNames = getBasicTargetNames();
+    if( targetNames != null ) {
+      rv = new int[ targetNames.length ];
+      for( int i = 0; i < targetNames.length; i++ ) {
+	rv[ i ] = getNamedValue( targetNames[ i ] );
+      }
+    } else {
+      rv = new int[ 0 ];
+    }
+    return rv;
   }
 
 
@@ -449,9 +572,16 @@ public abstract class AbstractTarget
   }
 
 
-  public boolean needsEnableKCNet()
+  public static boolean isReservedWord( String name )
   {
-    return false;
+    boolean rv = false;
+    for( String s : targetDefinedConstants ) {
+      if( s.equalsIgnoreCase( name ) ) {
+	rv = true;
+	break;
+      }
+    }
+    return rv;
   }
 
 
@@ -461,9 +591,9 @@ public abstract class AbstractTarget
   }
 
 
-  public boolean needsXOUTST()
+  public void preAppendLibraryCode( BasicCompiler compiler )
   {
-    return this.usesXOUTST;
+    // leer
   }
 
 
@@ -474,12 +604,17 @@ public abstract class AbstractTarget
   public void reset()
   {
     this.xoutchAppended = false;
-    this.usesXOUTST     = false;
-    this.usesX_MPEN     = false;
+    this.usesX_M_PEN    = false;
   }
 
 
-  public boolean supportsAppName()
+  protected void setNamedValue( String name, int value )
+  {
+    this.namedValues.put( name, value );
+  }
+
+
+  public boolean startsWithFileDevice( String fileName )
   {
     return false;
   }
@@ -538,9 +673,14 @@ public abstract class AbstractTarget
   }
 
 
+  public boolean supportsXPAINT_LEFT_RIGHT()
+  {
+    return false;
+  }
+
+
   public boolean supportsXLPTCH()
   {
     return false;
   }
 }
-
