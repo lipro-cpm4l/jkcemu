@@ -30,7 +30,7 @@ Checksum and Hash Value Calculation
 
 ### Requirements
 
-You will need the Java Development Kit (JDK) Version 6 or later
+You will need the Java Development Kit (JDK) Version 7 or later
 and [ANT](https://ant.apache.org/). You can also easily use the
 [OpenJDK](https://openjdk.java.net/).
 
