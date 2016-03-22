@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -73,6 +73,7 @@ public class GIDE implements Runnable
   private volatile int     curCmd;
   private volatile int     curDiskIdx;
   private HardDisk         curDisk;
+  private int[]            offsets;
   private int[]            cylinders;
   private int[]            heads;
   private int[]            sectorsPerTrack;
@@ -121,14 +122,12 @@ public class GIDE implements Runnable
 			Properties props,
 			String     propPrefix )
   {
-    GIDE       gide  = null;
-    HardDisk[] disks = getHardDisks( props, propPrefix );
-    if( disks != null ) {
-      if( disks.length > 0 ) {
-	gide = new GIDE( owner, propPrefix, disks );
-      }
-    }
-    return gide;
+    return emulatesGIDE( props, propPrefix ) ?
+			new GIDE(
+				owner,
+				propPrefix,
+				getHardDisks( props, propPrefix ) )
+			: null;
   }
 
 
@@ -141,117 +140,115 @@ public class GIDE implements Runnable
   public synchronized int read( int port )
   {
     int rv = -1;
-    if( this.disks != null ) {
-      switch( port & 0x0F ) {
+    switch( port & 0x0F ) {
 
-	// Real Time Clock
-	case 0x05:
-	  rv = this.rtc.read( port >> 8 );
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf(
+      // Real Time Clock
+      case 0x05:
+	rv = this.rtc.read( port >> 8 );
+	if( this.debugLevel > 0 ) {
+	  System.out.printf(
 			"GIDE: read rtc reg %d: %02X\n",
 			(port >> 8) & 0xFF,
 			rv );
-	  }
-	  break;
+	}
+	break;
 
-	/*
-	 * Alternatives Status-Register
-	 * Im Gegensatz zum regulaeren Status-Register fuehrt
-	 * ein Lesezugriff nicht zu einer Interrupt-Bestaetigung.
-	 */
-	case 0x06:
-	  rv = this.statusReg;
-	  if( this.debugLevel > 2 ) {
-	    System.out.printf( "GIDE: read alternate status: %02X\n", rv );
-	  }
-	  break;
+      /*
+       * Alternatives Status-Register
+       * Im Gegensatz zum regulaeren Status-Register fuehrt
+       * ein Lesezugriff nicht zu einer Interrupt-Bestaetigung.
+       */
+      case 0x06:
+	rv = this.statusReg;
+	if( this.debugLevel > 2 ) {
+	  System.out.printf( "GIDE: read alternate status: %02X\n", rv );
+	}
+	break;
 
-	/*
-	 * Drive Address Register:
-	 *   Laufwerks- und Kopfnummer werden widergespiegelt.
-	 */
-	case 0x07:
-	  rv = this.sdhReg & 0x1F;
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: read drive+head: %02X\n", rv );
-	  }
-	  break;
+      /*
+       * Drive Address Register:
+       *   Laufwerks- und Kopfnummer werden widergespiegelt.
+       */
+      case 0x07:
+	rv = this.sdhReg & 0x1F;
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: read drive+head: %02X\n", rv );
+	}
+	break;
 
-	// Datenregister
-	case 0x08:
-	  this.interruptRequest = false;
-	  rv                    = readDataReg();
-	  if( this.debugLevel > 1 ) {
-	    System.out.printf( "GIDE: read data: %02X\n", rv );
-	  }
-	  break;
+      // Datenregister
+      case 0x08:
+	this.interruptRequest = false;
+	rv                    = readDataReg();
+	if( this.debugLevel > 1 ) {
+	  System.out.printf( "GIDE: read data: %02X\n", rv );
+	}
+	break;
 
-	// Fehlerregister
-	case 0x09:
-	  rv = this.errorReg;
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: read error: %02X\n", rv );
-	  }
-	  break;
+      // Fehlerregister
+      case 0x09:
+	rv = this.errorReg;
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: read error: %02X\n", rv );
+	}
+	break;
 
-	// Sektoranzahl
-	case 0x0A:
-	  rv = this.sectorCnt;
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: read sector count: %02X\n", rv );
-	  }
-	  break;
+      // Sektoranzahl
+      case 0x0A:
+	rv = this.sectorCnt;
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: read sector count: %02X\n", rv );
+	}
+	break;
 
-	// Sektornummer
-	case 0x0B:
-	  rv = this.sectorNum;
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: read sector number: %02X\n", rv );
-	  }
-	  break;
+      // Sektornummer
+      case 0x0B:
+	rv = this.sectorNum;
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: read sector number: %02X\n", rv );
+	}
+	break;
 
-	// Zylindernummer (L-Byte)
-	case 0x0C:
-	  rv = this.cylNum & 0xFF;
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: cyl number (low byte): %02X\n", rv );
-	  }
-	  break;
+      // Zylindernummer (L-Byte)
+      case 0x0C:
+	rv = this.cylNum & 0xFF;
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: cyl number (low byte): %02X\n", rv );
+	}
+	break;
 
-	// Zylindernummer (H-Byte)
-	case 0x0D:
-	  rv = (this.cylNum >> 8) & 0xFF;
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: cyl number (high byte): %02X\n", rv );
-	  }
-	  break;
+      // Zylindernummer (H-Byte)
+      case 0x0D:
+	rv = (this.cylNum >> 8) & 0xFF;
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: cyl number (high byte): %02X\n", rv );
+	}
+	break;
 
-	/*
-	 * SDH-Register:
-	 *    Bit 0-3: Kopfnummer
-	 *    Bit 4:   Laufwerksauswahl (0: Master, 1: Slave)
-	 *    Bit 5-6: Sektorgroesse,
-	 *             muss immer auf 01 gesetzt sein (512 Bytes)
-	 *    Bit 8:   keine CRC-Daten an Sektor anhaengen,
-	 *             muss immer gesetzt sein
-	 */
-	case 0x0E:
-	  rv = this.sdhReg;
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: read sdh: %02X\n", rv );
-	  }
-	  break;
+      /*
+       * SDH-Register:
+       *    Bit 0-3: Kopfnummer
+       *    Bit 4:   Laufwerksauswahl (0: Master, 1: Slave)
+       *    Bit 5-6: Sektorgroesse,
+       *             muss immer auf 01 gesetzt sein (512 Bytes)
+       *    Bit 8:   keine CRC-Daten an Sektor anhaengen,
+       *             muss immer gesetzt sein
+       */
+      case 0x0E:
+	rv = this.sdhReg;
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: read sdh: %02X\n", rv );
+	}
+	break;
 
-	// Statusregister
-	case 0x0F:
-	  rv                    = this.statusReg;
-	  this.interruptRequest = false;
-	  if( this.debugLevel > 2 ) {
-	    System.out.printf( "GIDE: read status: %02X\n", rv );
-	  }
-	  break;
-      }
+      // Statusregister
+      case 0x0F:
+	rv                    = this.statusReg;
+	this.interruptRequest = false;
+	if( this.debugLevel > 2 ) {
+	  System.out.printf( "GIDE: read status: %02X\n", rv );
+	}
+	break;
     }
     return rv;
   }
@@ -268,7 +265,8 @@ public class GIDE implements Runnable
     this.ioTaskThread.interrupt();
     if( this.disks != null ) {
       boolean sizeOK = false;
-      if( (this.cylinders != null)
+      if( (this.offsets != null)
+	  && (this.cylinders != null)
 	  && (this.heads != null)
 	  && (this.sectorsPerTrack != null)
 	  && (this.totalSectors != null) )
@@ -282,6 +280,7 @@ public class GIDE implements Runnable
 	}
       }
       if( !sizeOK ) {
+	this.offsets         = new int[ this.disks.length ];
 	this.cylinders       = new int[ this.disks.length ];
 	this.heads           = new int[ this.disks.length ];
 	this.sectorsPerTrack = new int[ this.disks.length ];
@@ -289,6 +288,7 @@ public class GIDE implements Runnable
       }
       int maxSectsPerTrack = 0;
       for( int i = 0; i < this.disks.length; i++ ) {
+	this.offsets[ i ]         = disks[ i ].getOffset();
 	this.cylinders[ i ]       = disks[ i ].getCylinders();
 	this.heads[ i ]           = disks[ i ].getHeads();
 	this.sectorsPerTrack[ i ] = disks[ i ].getSectorsPerTrack();
@@ -319,99 +319,97 @@ public class GIDE implements Runnable
   public synchronized void write( int port, int value )
   {
     value &= 0xFF;
-    if( this.disks != null ) {
-      switch( port & 0x0F ) {
+    switch( port & 0x0F ) {
 
-	// Real Time Clock
-	case 0x05:
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf(
+      // Real Time Clock
+      case 0x05:
+	if( this.debugLevel > 0 ) {
+	  System.out.printf(
 			"GIDE: write rtc reg %d: %02X\n",
 			(port >> 8) & 0xFF,
 			value );
-	  }
-	  this.rtc.write( port >> 8, value );
-	  break;
+	}
+	this.rtc.write( port >> 8, value );
+	break;
 
-	// Digital Output
-	case 0x06:
-	  {
+      // Digital Output
+      case 0x06:
+	{
+	  if( this.debugLevel > 0 ) {
+	    System.out.printf( "GIDE: write digital output: %02X\n", value );
+	  }
+	  boolean b = ((value & 0x04) != 0);
+	  if( b && !this.resetFlag ) {
 	    if( this.debugLevel > 0 ) {
-	      System.out.printf( "GIDE: write digital output: %02X\n", value );
+	      System.out.println( "GIDE: soft reset" );
 	    }
-	    boolean b = ((value & 0x04) != 0);
-	    if( b && !this.resetFlag ) {
-	      if( this.debugLevel > 0 ) {
-		System.out.println( "GIDE: soft reset" );
-	      }
-	      softReset();
-	    }
-	    this.resetFlag = b;
+	    softReset();
 	  }
-	  this.interruptEnabled = ((value & 0x02) != 0);
-	  fireInterrupt();
-	  break;
+	  this.resetFlag = b;
+	}
+	this.interruptEnabled = ((value & 0x02) != 0);
+	fireInterrupt();
+	break;
 
-	// Datenregister
-	case 0x08:
-	  if( this.debugLevel > 1 ) {
-	    System.out.printf( "GIDE: write data: %02X\n", value );
-	  }
-	  writeDataReg( value );
-	  break;
+      // Datenregister
+      case 0x08:
+	if( this.debugLevel > 1 ) {
+	  System.out.printf( "GIDE: write data: %02X\n", value );
+	}
+	writeDataReg( value );
+	break;
 
-	// Sektoranzahl
-	case 0x0A:
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: write sector count: %02X\n", value );
-	  }
-	  this.sectorCnt = value;
-	  break;
+      // Sektoranzahl
+      case 0x0A:
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: write sector count: %02X\n", value );
+	}
+	this.sectorCnt = value;
+	break;
 
-	// Sektornummer
-	case 0x0B:
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: write sector number: %02X\n", value );
-	  }
-	  this.sectorNum = value;
-	  break;
+      // Sektornummer
+      case 0x0B:
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: write sector number: %02X\n", value );
+	}
+	this.sectorNum = value;
+	break;
 
-	// Zylindernummer (L-Byte)
-	case 0x0C:
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf(
+      // Zylindernummer (L-Byte)
+      case 0x0C:
+	if( this.debugLevel > 0 ) {
+	  System.out.printf(
 			"GIDE: write cyl number (low byte): %02X\n",
 			value );
-	  }
-	  this.cylNum = (this.cylNum & 0xFF00) | value;
-	  break;
+	}
+	this.cylNum = (this.cylNum & 0xFF00) | value;
+	break;
 
-	// Zylindernummer (H-Byte)
-	case 0x0D:
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf(
+      // Zylindernummer (H-Byte)
+      case 0x0D:
+	if( this.debugLevel > 0 ) {
+	  System.out.printf(
 			"GIDE: write cyl number (high byte): %02X\n",
 			value );
-	  }
-	  this.cylNum = ((value << 8) & 0xFF00) | (this.cylNum & 0x00FF);
-	  break;
+	}
+	this.cylNum = ((value << 8) & 0xFF00) | (this.cylNum & 0x00FF);
+	break;
 
-	// SDH
-	case 0x0E:
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: write sdh: %02X\n", value );
-	  }
-	  this.sdhReg = value;
-	  break;
+      // SDH
+      case 0x0E:
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: write sdh: %02X\n", value );
+	}
+	this.sdhReg = value;
+	break;
 
-	// Kommando
-	case 0x0F:
-	  if( this.debugLevel > 0 ) {
-	    System.out.printf( "GIDE: write command: %02X\n", value );
-	  }
-	  execCmd( value );
-	  break;
-      }
+      // Kommando
+      case 0x0F:
+	if( this.debugLevel > 0 ) {
+	  System.out.printf( "GIDE: write command: %02X\n", value );
+	}
+	execCmd( value );
+	break;
     }
   }
 
@@ -460,7 +458,9 @@ public class GIDE implements Runnable
     this.owner           = owner;
     this.propPrefix      = propPrefix;
     this.disks           = disks;
+    this.debugLevel      = 0;
     this.rtc             = new RTC7242X();
+    this.offsets         = null;
     this.cylinders       = null;
     this.heads           = null;
     this.sectorsPerTrack = null;
@@ -468,8 +468,10 @@ public class GIDE implements Runnable
     this.ioBuf           = null;
     this.ioTaskEnabled   = true;
     this.ioTaskNoWait    = false;
-    this.ioTaskThread    = new Thread( this, "JKCEMU GIDE" );
-    this.debugLevel      = 0;
+    this.ioTaskThread    = new Thread(
+				Main.getThreadGroup(),
+				this,
+				"JKCEMU GIDE" );
 
     String text = System.getProperty( "jkcemu.debug.gide" );
     if( text != null ) {
@@ -506,13 +508,14 @@ public class GIDE implements Runnable
 					+ (headNum * spt)
 					+ (this.sectorNum - 1);
 	if( (nSec >= 0) && (nSec <= this.totalSectors[ this.curDiskIdx ]) ) {
-	  rv = 0x0100 + (nSec * SECTOR_SIZE);
+	  rv = this.offsets[ this.curDiskIdx ] + (nSec * SECTOR_SIZE);
 	}
       }
       if( (rv < 0) && (this.debugLevel > 3) ) {
 	System.out.printf(
-		"GIDE calc file pos error: cyl=%d head=%d sector=%d"
+		"GIDE calc file pos error: offs=%d cyl=%d head=%d sector=%d"
 			+ " cyls=%d heads=%d sectors_per_track=%d\n",
+		this.offsets[ this.curDiskIdx ],
 		this.cylNum,
 		headNum,
 		this.sectorNum,
@@ -588,14 +591,19 @@ public class GIDE implements Runnable
 				String     propPrefix )
   {
     boolean rv = true;
-    for( int i = 0; i < propKeys.length; i++ ) {
-      if( EmuUtil.getProperty(
+    String  s  = EmuUtil.getProperty( props, propPrefix + "enabled" );
+    if( s.isEmpty() ) {
+      for( int i = 0; i < propKeys.length; i++ ) {
+	if( EmuUtil.getProperty(
 		props,
 		propPrefix + "harddisk.1." + propKeys[ i ] ).isEmpty() )
-      {
-	rv = false;
-	break;
+	{
+	  rv = false;
+	  break;
+	}
       }
+    } else {
+      rv = Boolean.parseBoolean( s );
     }
     return rv;
   }
@@ -739,7 +747,7 @@ public class GIDE implements Runnable
       setIOBufWord( 8, this.curDisk.getSectorsPerTrack() * SECTOR_SIZE );
       setIOBufWord( 10, SECTOR_SIZE );
       setIOBufWord( 12, this.curDisk.getSectorsPerTrack() );
-      setIOBufASCII( 20, Main.VERSION, 20 );
+      setIOBufASCII( 20, Main.APPINFO, 20 );
       setIOBufWord( 42, 1 );		// 1 Sektor Puffer
       setIOBufASCII( 46, "JKCEMU", 8 );
 
@@ -1065,8 +1073,15 @@ public class GIDE implements Runnable
 					props,
 					prefix + "sectors_per_track",
 					0 );
+	  int  offset = EmuUtil.getIntProperty( props, prefix + "offset", 0 );
+	  File file   = new File( fileName );
+	  if( file.exists() ) {
+	    if( (file.length() % 512L) >= 0x100 ) {
+	      offset = 0x100;
+	    }
+	  }
 	  if( (c > 0) && (h > 0) && (n > 0) ) {
-	    disk = new HardDisk( diskModel, c, h, n, fileName );
+	    disk = new HardDisk( diskModel, c, h, n, fileName, offset );
 	  }
 	}
 	if( disk != null ) {
@@ -1309,9 +1324,10 @@ public class GIDE implements Runnable
 	    {
 	      long sectOffs = (this.cylNum * heads * spt) + (headNum * spt);
 	      startIOTask(
-		      this.curDisk.getFile(),
-		      0x0100 + (sectOffs * ((long) SECTOR_SIZE)),
-		      spt * SECTOR_SIZE );
+			this.curDisk.getFile(),
+			this.offsets[ this.curDiskIdx ]
+				+ (sectOffs * ((long) SECTOR_SIZE)),
+			spt * SECTOR_SIZE );
 	      cmdFinished = false;
 	    }
 	  }

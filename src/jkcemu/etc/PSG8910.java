@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2013 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,6 +18,7 @@ package jkcemu.etc;
 
 import java.lang.*;
 import java.util.Random;
+import jkcemu.Main;
 
 
 public class PSG8910 extends Thread
@@ -71,7 +72,7 @@ public class PSG8910 extends Thread
 
   public PSG8910( int clockHz, int maxOutValue, Callback callback )
   {
-    super( "JKCEMU PSG" );
+    super( Main.getThreadGroup(), "JKCEMU PSG" );
     this.clockHz       = clockHz;
     this.callback      = callback;
     this.sampleRate    = 0;
@@ -82,13 +83,12 @@ public class PSG8910 extends Thread
 
     /*
      * Berechnung der Lautstaerkewerte,
-     * Laut Datenblatt YM2149 (kompatibel zu AY-3-8910)
-     * betraegt die Abstufung 0.841 pro Stufe.
+     * Laut Datenblatt AY-3-891X betraegt die Abstufung 0.707 pro Stufe.
      */
     float normValue = 1.0F;
     for( int i = this.volumeValues.length - 1; i > 0; --i ) {
       this.volumeValues[ i ] = Math.round( normValue * (float) maxOutValue );
-      normValue *= 0.841;
+      normValue *= 0.707;
     }
     this.volumeValues[ 0 ] = 0;
     reset();

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -199,7 +199,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
 			"RAM-Floppy laden",
 			file != null ?
 				file
-				: Main.getLastPathFile( "ramfloppy" ) );
+				: Main.getLastDirFile( "ramfloppy" ) );
       if( file != null ) {
 	try {
 	  this.ramFloppy.load( file );
@@ -225,7 +225,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
 			"RAM-Floppy speichern",
 			file != null ?
 				file
-				: Main.getLastPathFile( "ramfloppy" ) );
+				: Main.getLastDirFile( "ramfloppy" ) );
       if( file != null ) {
 	try {
 	  this.ramFloppy.save( file );

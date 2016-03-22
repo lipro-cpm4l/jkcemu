@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,11 +11,12 @@ package jkcemu.programming.assembler;
 import java.lang.*;
 
 
-public class AsmLabel implements /*Comparable<AsmLabel>,*/ jkcemu.tools.Label
+public class AsmLabel implements jkcemu.tools.Label
 {
   private String labelName;
+  private Object labelValue;
   private String hex16String;
-  private int    labelValue;
+  private int    varSize;
 
 
   public AsmLabel( String labelName, int labelValue )
@@ -23,21 +24,42 @@ public class AsmLabel implements /*Comparable<AsmLabel>,*/ jkcemu.tools.Label
     this.labelName   = labelName;
     this.labelValue  = labelValue;
     this.hex16String = null;
+    this.varSize     = -1;
   }
 
 
-  public void setLabelValue( int value )
+  public Object getLabelValue()
+  {
+    return this.labelValue;
+  }
+
+
+  public static boolean isIdentifierPart( char ch )
+  {
+    return (ch == '_') || (ch == '@') || (ch == '?')
+		|| ((ch >= 'A') && (ch <= 'Z'))
+		|| ((ch >= 'a') && (ch <= 'z'))
+		|| ((ch >= '0') && (ch <= '9'));
+  }
+
+
+  public static boolean isIdentifierStart( char ch )
+  {
+    return (ch == '_') || (ch == '@')
+		|| ((ch >= 'A') && (ch <= 'Z'))
+		|| ((ch >= 'a') && (ch <= 'z'));
+  }
+
+
+  public void setLabelValue( Object value )
   {
     this.labelValue = value;
   }
 
 
-  public String toHex16String()
+  public void setVarSize( int varSize )
   {
-    if( this.hex16String == null ) {
-      this.hex16String = String.format( "%04X", this.labelValue );
-    }
-    return this.hex16String;
+    this.varSize = varSize;
   }
 
 
@@ -51,9 +73,22 @@ public class AsmLabel implements /*Comparable<AsmLabel>,*/ jkcemu.tools.Label
 
 
   @Override
-  public int getLabelValue()
+  public int getVarSize()
   {
-    return this.labelValue;
+    return this.varSize;
+  }
+
+
+  @Override
+  public int intValue()
+  {
+    int rv = 0;
+    if( this.labelValue != null ) {
+      if( this.labelValue instanceof Number ) {
+	rv = ((Number) this.labelValue).intValue();
+      }
+    }
+    return rv;
   }
 
 
@@ -62,6 +97,6 @@ public class AsmLabel implements /*Comparable<AsmLabel>,*/ jkcemu.tools.Label
   @Override
   public int compareTo( jkcemu.tools.Label label )
   {
-    return label != null ? (this.labelValue - label.getLabelValue()) : -1;
+    return label != null ? (intValue() - label.intValue()) : -1;
   }
 }

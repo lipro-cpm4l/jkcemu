@@ -1,9 +1,9 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Emulation der CRTC Controllers 6845 (Typ 0)
+ * Emulation des CRTC Controllers 6845 (Typ 0)
  */
 
 package jkcemu.etc;

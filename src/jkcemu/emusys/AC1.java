@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.lang.*;
-import java.text.*;
 import java.util.*;
 import javax.swing.JOptionPane;
 import jkcemu.base.*;
@@ -29,7 +28,6 @@ public class AC1
 		extends AbstractSCCHSys
 		implements
 			FDC8272.DriveSelector,
-			Z80PCListener,
 			Z80TStatesListener
 {
   /*
@@ -40,7 +38,7 @@ public class AC1
    * Tatsaechlich werden aber in der Standardeinstellung pro Bit
    * 4 Ausgabe-Befehle auf dem Port getaetigt, die zusammen
    * 248 Takte benoetigen, was etwa 8065 Bit/s entspricht.
-   * Damit im Emulator die Ausgabe auf den emulierten Drucker ueber diese
+   * Damit im Emulator die Ausgabe auf dem emulierten Drucker ueber diese
    * serielle Schnittstelle funktioniert,
    * wird somit der Drucker ebenfalls mit dieser Bitrate emuliert.
    * Ist allerdings eine externe ROM-Datei als Monitorprogramm eingebunden,
@@ -49,15 +47,14 @@ public class AC1
   private static int V24_TSTATES_PER_BIT_INTERN = 248;
   private static int V24_TSTATES_PER_BIT_EXTERN = 208;
 
-  // Einprung zum Lesen eines Zeichens von der Tastatur
-  private static int ADDR_INCH = 0x1802;
-
   private enum BasicType {
 			AC1_MINI,
 			AC1_8K,
 			AC1_12K,
+			AC1_BASIC6,
 			SCCH,
-			BACOBAS,
+			BACOBAS2,
+			BACOBAS3,
 			ADDR_60F7 };
 
   /*
@@ -125,11 +122,11 @@ public class AC1
 	"DELETE",   "SWITCH",    "SCREEN" };
 
   /*
-   * Diese Tabelle mappt die Tokens des BASOBAS-Interpreters
+   * Diese Tabelle mappt die Tokens des BACOBAS2-Interpreters
    * in ihre entsprechenden Texte.
    * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
    */
-  private static final String[] bacobasTokens = {
+  private static final String[] bacobas2Tokens = {
 	"END",      "FOR",    "NEXT",   "DATA",		// 0x80
 	"INPUT",    "DIM",    "READ",   "LET",
 	"GOTO",     "RUN",    "IF",     "RESTORE",
@@ -156,6 +153,88 @@ public class AC1
 	"BROFF",    "LPRINT", "LLIST",  "BACO",
 	"CONV",     "TRANS",  "BLIST",  "BEDIT",
 	"BSAVE",    "BLOAD",  "DELETE", "DIR" };
+
+  /*
+   * Diese Tabelle mappt die Tokens des BACOBAS3-Interpreters
+   * in ihre entsprechenden Texte.
+   * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
+   */
+  private static final String[] bacobas3Tokens = {
+	"END",      "FOR",    "NEXT",     "DATA",       // 0x80
+	"INPUT",    "DIM",    "READ",     "LET",
+	"GOTO",     "RUN",    "IF",       "RESTORE",
+	"GOSUB",    "RETURN", "REM",      "STOP",
+	"OUT",      "ON",     "NULL",     "WAIT",       // 0x90
+	"DEF",      "POKE",   "DOKE",     "AUTO",
+	"LINES",    "CLS",    "WIDTH",    "BYE",
+	"KEY",      "CALL",   "PRINT",    "CONT",
+	"LIST",     "CLEAR",  "LOAD",     "SAVE",      // 0xA0
+	"NEW",      "TAB(",   "TO",       "FN",
+	"SPC(",     "THEN",   "NOT",      "STEP",
+	"+",        "-",      "*",        "/",
+	"^",        "AND",    "OR",       ">",          // 0xB0
+	"=",        "<",      "SGN",      "INT",
+	"ABS",      "USR",    "FRE",      "INP",
+	"POS",      "SQR",    "RND",      "LN",
+	"EXP",      "COS",    "SIN",      "TAN",        // 0xC0
+	"ATN",      "PEEK",   "DEEK",     "POINT",
+	"LEN",      "STR$",   "VAL",      "ASC",
+	"CHR$",     "LEFT$",  "RIGHT$",   "MID$",
+	"SET",      "RESET",  "RENUMBER", "LOCATE",     // 0xD0
+	"SOUND",    "INKEY",  "MODE",     "TRON",
+	"TROFF",    "HELP",   "EDIT",     "BRON",
+	"BROFF",    "LPRINT", "LLIST",    "BACO",
+	"CONV",     "TRANS",  "ALIST",    "AEDIT",	// 0xE0
+	"ASAVE",    "ALOAD",  "DIR",      "CD",
+	"BEEP",     "DRAW" };
+
+  /*
+   * Diese beiden Tabellen mappen die Tokens des AC1-BASIC6-Interpreters
+   * von Rolf Weidlich in ihre entsprechenden Texte.
+   * Der Index fuer die Tabelle ergibt sich aus "Wert des Tokens - 0x80".
+   * Beim Token FFh folgt dahinter ein weiteres Token,
+   * welches ueber die zweite Tabelle gemappt werden muss.
+   */
+  private static final String[] basic6Tokens = {
+	"END",      "FOR",       "NEXT",     "DATA",	// 0x80
+	"COLOR",    "BLOAD",     "INPUT",    "DIM",
+	"READ",     "LET",       "GOTO",     "FNEND",
+	"IF",       "RESTORE",   "GOSUB",    "RETURN",
+	"REM",      "STOP",      "OUT",      "ON",	// 0x90
+	"KEY",      "WAIT",      "DEF",      "POKE",
+	"PRINT",    "CLEAR",     "FNRETURN", "SAVE",
+	"!",        "ELSE",      "LPRINT",   "TRACE",
+	"BSAVE",    "RANDOMIZE", "LINES",    "LWIDTH",	// 0xA0
+	"LNULL",    "WIDTH",     "LVAR",     "WINDOW",
+	"\'",       "PRECISION", "CALL",     "ERASE",
+	"SWAP",     "LINE",      "RUN",      "LOAD",
+	"NEW",      "AUTO",      "COPY",     "DIR",	// 0xB0
+	"MODE",     "SOUND",     "LIST",     "LLIST",
+	"RENUMBER", "DELETE",    "EDIT",     "DEG",
+	"RAD",      "WHILE",     "WEND",     "REPEAT",
+	"UNTIL",    "ERROR",     "RESUME",   "PAUSE",	// 0xC0
+	"DOKE",     "CLS",       "CURSOR",   "DRAW",
+	"CIRCLE",   "SET",       "RESET",    "CD",
+	"BYE",      "CONT",      "USING",    "PI",
+	"TAB(",     "TO",        "FN",       "SPC(",	// 0xD0
+	"THEN",     "NOT",       "STEP",     "+",
+	"-",        "*",         "/",        "DIV",
+	"MOD",      "^",         "AND",      "OR",
+	"XOR",      ">",         "=",        "<" };	// 0xE0
+
+  private static final String[] basic6TokensFF = {
+	"SGN",    "INT",    "FIX",     "ABS",		// 0x80
+	"USR",    "FRE",    "INP",     "POS",
+	"LPOS",   "GETCL",  "SQR",     "RND",
+	"LOG",    "EXP",    "COS",     "SIN",
+	"TAN",    "ATN",    "PEEK",    "FRAC",		// 0x90
+	"LGT",    "SQU",    "BIN$",    "HEX$",
+	"LEN",    "STR$",   "VAL",     "ASC",
+	"SPACE$", "CHR$",   "LEFT$",   "RIGHT$",
+	"MID$",   "INKEY$", "STRING$", "ERR",		// 0xA0
+	"ERL",    "POINT",  "INSTR",   "TIME$",
+	"JOY",    "DEEK",   "VARPTR" };
+
 
   private static final int[] ccdCharToUnicode = {
 		'\u0020', '\u2598', '\u259D', '\u2580',		// 00h
@@ -313,7 +392,6 @@ public class AC1
   private static byte[] monSCCH1088 = null;
   private static byte[] mon2010c    = null;
   private static byte[] minibasic   = null;
-  private static byte[] gsbasic     = null;
   private static byte[] pio2Rom2010 = null;
   private static byte[] font2010    = null;
   private static byte[] fontACC     = null;
@@ -324,22 +402,15 @@ public class AC1
   private byte[]            ramColor;
   private byte[]            ramVideo;
   private byte[]            ramStatic;
-  private byte[]            ramModule3;
   private byte[]            fontBytes;
   private byte[]            osBytes;
   private byte[]            pio2Rom2010Bytes;
   private byte[]            romBank2010Bytes;
-  private byte[]            scchBasicBytes;
-  private byte[]            scchPrgXBytes;
-  private byte[]            scchRomdiskBytes;
   private String            fontFile;
   private String            osFile;
   private String            osVersion;
   private String            pio2Rom2010File;
   private String            romBank2010File;
-  private String            scchBasicFile;
-  private String            scchPrgXFile;
-  private String            scchRomdiskFile;
   private BasicType         lastBasicType;
   private RAMFloppy         ramFloppy;
   private Z80CTC            ctc;
@@ -349,6 +420,7 @@ public class AC1
   private FloppyDiskDrive[] fdDrives;
   private KCNet             kcNet;
   private VDIP              vdip;
+  private boolean           audioInPhase;
   private boolean           fdcWaitEnabled;
   private boolean           tcEnabled;
   private boolean           mode64x16;
@@ -358,43 +430,34 @@ public class AC1
   private boolean           inverseBySW;
   private boolean           inverseByKey;
   private boolean           extFont;
+  private boolean           lastMemReadM1;
+  private boolean           ctcM1ToClk2;
+  private boolean           ctcWritten;
   private boolean           pio1B3State;
   private boolean           keyboardUsed;
   private volatile boolean  graphicKeyState;
-  private volatile boolean  pasteFast;
   private boolean           lowerDRAMEnabled;
   private boolean           osRomEnabled;
-  private boolean           scchRomdiskEnabled;
-  private boolean           scchPrgXEnabled;
-  private boolean           scchBasicEnabled;
-  private boolean           rf32KActive;
-  private boolean           rf32NegA15;
-  private boolean           rfReadEnabled;
-  private boolean           rfWriteEnabled;
-  private int               rfAddr16to19;
-  private int               scchRomdiskBegAddr;
-  private int               scchRomdiskBankAddr;
   private int               regF0;
   private int               pio2Rom2010Offs;
   private int               romBank2010Offs;
   private int               romBank2010Len;
   private int               fontOffs;
-  private boolean           v24BitOut;
-  private int               v24BitNum;
-  private int               v24ShiftBuf;
-  private int               v24TStateCounter;
-  private int               v24TStatesPerBit;
+  private int               m1Cnt;
 
 
   public AC1( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
-    this.pasteFast      = false;
+    super( emuThread, props, "jkcemu.ac1." );
     this.fontSwitchable = false;
     this.mode64x16      = false;
     this.mode2010       = false;
     this.modeSCCH       = false;
-    this.osVersion = EmuUtil.getProperty( props, "jkcemu.ac1.os.version" );
+    this.pasteFast      = false;
+    this.ctcM1ToClk2    = emulatesCTCM1ToClk2( props );
+    this.osVersion      = EmuUtil.getProperty(
+					props,
+					this.propPrefix + "os.version" );
     if( this.osVersion.equals( "3.1_64x16" ) ) {
       this.mode64x16 = true;
     }
@@ -414,14 +477,6 @@ public class AC1
     this.pio2Rom2010File     = null;
     this.romBank2010Bytes    = null;
     this.romBank2010File     = null;
-    this.scchBasicBytes      = null;
-    this.scchBasicFile       = null;
-    this.scchPrgXBytes       = null;
-    this.scchPrgXFile        = null;
-    this.scchRomdiskBytes    = null;
-    this.scchRomdiskFile     = null;
-    this.scchRomdiskBegAddr  = getScchRomdiskBegAddr( props );
-    this.scchRomdiskBankAddr = 0;
     this.pio2Rom2010Offs     = -1;
     this.romBank2010Offs     = -1;
     this.romBank2010Len      = 0;
@@ -446,7 +501,6 @@ public class AC1
       this.ramVideo  = new byte[ 0x0800 ];
     }
 
-    this.ramModule3 = null;
     if( this.modeSCCH ) {
       // 1 MByte
       this.ramModule3 = this.emuThread.getExtendedRAM( 0x100000 );
@@ -456,9 +510,9 @@ public class AC1
 				this.emuThread.getRAMFloppy1(),
 				"AC1",
 				RAMFloppy.RFType.MP_3_1988,
-				"RAM-Floppy IO-Adressen E0h-E7h",
+				"RAM-Floppy E/A-Adressen E0h-E7h",
 				props,
-				"jkcemu.ac1.ramfloppy." );
+				this.propPrefix + "ramfloppy." );
 
     this.fdDrives  = null;
     this.fdc       = null;
@@ -470,27 +524,26 @@ public class AC1
 
     this.kcNet = null;
     if( emulatesKCNet( props ) ) {
-      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0-C3)" );
+      this.kcNet = new KCNet( "Netzwerk-PIO (E/A-Adressen C0-C3)" );
     }
 
     this.vdip = null;
     if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP( "USB-PIO (IO-Adressen FC-FF)" );
+      this.vdip = new VDIP(
+			this.emuThread.getFileTimesViewFactory(),
+			"USB-PIO (E/A-Adressen FC-FF)" );
     }
 
-    this.joystickEnabled = emulatesJoystick( props );
+    this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
 
-    this.gide = GIDE.getGIDE( this.screenFrm, props, "jkcemu.ac1." );
+    java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
 
-    java.util.List<Z80InterruptSource> iSources
-				= new ArrayList<Z80InterruptSource>();
-
-    this.ctc   = new Z80CTC( "CTC (IO-Adressen 00-03)" );
-    this.pio1  = new Z80PIO( "PIO (IO-Adressen 04-07)" );
+    this.ctc   = new Z80CTC( "CTC (E/A-Adressen 00-03)" );
+    this.pio1  = new Z80PIO( "PIO (E/A-Adressen 04-07)" );
     iSources.add( this.ctc );
     iSources.add( this.pio1 );
     if( this.modeSCCH || this.mode2010 ) {
-      this.pio2 = new Z80PIO( "V24-PIO (IO-Adressen 08-0B)" );
+      this.pio2 = new Z80PIO( "V24-PIO (E/A-Adressen 08-0B)" );
       iSources.add( this.pio2 );
     }
     if( this.kcNet != null ) {
@@ -507,7 +560,9 @@ public class AC1
     catch( ArrayStoreException ex ) {}
 
     this.ctc.setTimerConnection( 0, 1 );
-    this.ctc.setTimerConnection( 1, 2 );
+    if( !this.ctcM1ToClk2 ) {
+      this.ctc.setTimerConnection( 1, 2 );
+    }
     this.ctc.setTimerConnection( 2, 3 );
     cpu.addTStatesListener( this );
     if( this.fdc != null ) {
@@ -535,46 +590,74 @@ public class AC1
     String rv   = null;
     int    addr = loadData.getBegAddr();
     if( addr == 0x60F7 ) {
-      String ac1_8k = SourceUtil.getKCBasicStyleProgram(
+
+      /*
+       * BASIC-Programmtext entsprechend der Tokens
+       * der verschiedenen Interpreter erzeugen
+       */
+      java.util.List<String> options = new ArrayList<>( 4 );
+      java.util.List<String> texts   = new ArrayList<>( 4 );
+
+      String ac1_8k = SourceUtil.getBasicProgram(
+					loadData,
+					addr,
+					ac1_8kTokens );
+      if( ac1_8k != null ) {
+	options.add( "AC1-8K-BASIC" );
+	texts.add( ac1_8k );
+      }
+
+      String scch = SourceUtil.getBasicProgram(
+					loadData,
+					addr,
+					scchTokens );
+      if( scch != null ) {
+	options.add( "SCCH-BASIC" );
+	texts.add( scch );
+      }
+
+      String bacobas2 = SourceUtil.getBasicProgram(
+					loadData,
+					addr,
+					bacobas2Tokens );
+      if( bacobas2 != null ) {
+	options.add( "BACOBAS 2" );
+	texts.add( bacobas2 );
+      }
+
+      String bacobas3 = SourceUtil.getBasicProgram(
 						loadData,
 						addr,
-						ac1_8kTokens );
+						bacobas3Tokens );
+      if( bacobas3 != null ) {
+	options.add( "BACOBAS 3" );
+	texts.add( bacobas3 );
+      }
 
-      String scch = SourceUtil.getKCBasicStyleProgram(
-						loadData,
-						addr,
-						scchTokens );
-
-      String bacobas = SourceUtil.getKCBasicStyleProgram(
-						loadData,
-						addr,
-						bacobasTokens );
-
-      if( (ac1_8k != null) && (scch != null) && (bacobas != null) ) {
-	if( ac1_8k.equals( scch ) && scch.equals( bacobas ) ) {
-	  rv = ac1_8k;
-	} else {
-	  java.util.List<String> options = new ArrayList<String>( 4 );
-	  java.util.List<String> texts   = new ArrayList<String>( 3 );
-	  if( ac1_8k != null ) {
-	    options.add( "8K-AC1-BASIC" );
-	    texts.add( ac1_8k );
+      // BASIC-Programmtexte vergleichen und zusammenfassen
+      int n    = Math.min( options.size(), texts.size() );
+      int idx1 = 0;
+      while( idx1 < (n - 1) ) {
+	int idx2 = 1;
+	while( (idx2 < n) && (idx2 < n) ) {
+	  if( texts.get( idx1 ).equals( texts.get( idx2 ) ) ) {
+	    options.set(
+		idx1,
+		options.get( idx1 ) + ", " + options.get( idx2 ) );
+	    options.remove( idx2 );
+	    texts.remove( idx2 );
+	    continue;
 	  }
-	  if( scch != null ) {
-	    options.add( "SCCH-BASIC" );
-	    texts.add( scch );
-	  }
-	  if( bacobas != null ) {
-	    options.add( "BACOBAS" );
-	    texts.add( bacobas );
-	  }
-	  int n = options.size();
-	  if( n == 1 ) {
-	    rv = texts.get( 0 );
-	  }
-	  else if( n > 1 ) {
-	    try {
-	      int v = OptionDlg.showOptionDlg(
+	  idx2++;
+	}
+	idx1++;
+      }
+      n = Math.min( options.size(), texts.size() );
+      if( n == 1 ) {
+	rv = texts.get( 0 );
+      } else if( n > 1 ) {
+	try {
+	  int v = OptionDlg.showOptionDlg(
 			owner,
 			"Das BASIC-Programm enth\u00E4lt Tokens,"
 				+ " die von den einzelnen Interpretern\n"
@@ -586,22 +669,27 @@ public class AC1
 			"BASIC-Interpreter",
 			-1,
 			options.toArray( new String[ n ] ) );
-	      if( (v >= 0) && (v < texts.size()) ) {
-		rv = texts.get( v );
-	      }
-	      if( rv == null ) {
-		throw new UserCancelException();
-	      }
-	    }
-	    catch( ArrayStoreException ex ) {
-	      EmuUtil.exitSysError( owner, null, ex );
-	    }
+	  if( (v >= 0) && (v < texts.size()) ) {
+	    rv = texts.get( v );
 	  }
+	  if( rv == null ) {
+	    throw new UserCancelException();
+	  }
+	}
+	catch( ArrayStoreException ex ) {
+	  EmuUtil.exitSysError( owner, null, ex );
 	}
       }
     }
+    else if( addr == 0x6300 ) {
+      rv = SourceUtil.getBasicProgram(
+				loadData,
+				addr,
+				basic6Tokens,
+				basic6TokensFF );
+    }
     else if( addr == 0x6FB7 ) {
-      rv = SourceUtil.getKCBasicStyleProgram( loadData, addr, ac1_12kTokens );
+      rv = SourceUtil.getBasicProgram( loadData, addr, ac1_12kTokens );
     }
     return rv;
   }
@@ -631,12 +719,108 @@ public class AC1
   }
 
 
-  public static String getTinyBasicProgram( Z80MemView memory )
+  public static boolean getDefaultSwapKeyCharCase()
+  {
+    return true;
+  }
+
+
+  public static String getTinyBasicProgram( EmuMemView memory )
   {
     return SourceUtil.getTinyBasicProgram(
 				memory,
 				0x1950,
 				memory.getMemWord( 0x18E9 ) );
+  }
+
+
+  protected void loadROMs( Properties props )
+  {
+    if( this.modeSCCH ) {
+      super.loadROMs( props, "/rom/ac1/gsbasic.bin" );
+    } else {
+      this.scchBasicRomFile  = null;
+      this.scchBasicRomBytes = null;
+      this.scchPrgXRomFile   = null;
+      this.scchPrgXRomBytes  = null;
+      this.scchRomdiskFile   = null;
+      this.scchRomdiskBytes  = null;
+    }
+
+    // OS-ROM
+    this.osFile  = EmuUtil.getProperty( props, this.propPrefix + "os.file" );
+    this.osBytes = readROMFile( this.osFile, 0x1000, "Monitorprogramm" );
+    if( this.osBytes == null ) {
+      if( this.modeSCCH ) {
+	if( this.osVersion.startsWith( "SCCH8.0" ) ) {
+	  if( monSCCH80 == null ) {
+	    monSCCH80 = readResource( "/rom/ac1/scchmon_80g.bin" );
+	  }
+	  this.osBytes = monSCCH80;
+	} else {
+	  if( monSCCH1088 == null ) {
+	    monSCCH1088 = readResource( "/rom/ac1/scchmon_1088g.bin" );
+	  }
+	  this.osBytes = monSCCH1088;
+	}
+      } else if( this.mode2010 ) {
+	if( mon2010c == null ) {
+	  mon2010c = readResource( "/rom/ac1/mon2010c.bin" );
+	}
+	this.osBytes = mon2010c;
+      } else {
+	if( this.mode64x16 ) {
+	  if( mon31_64x16 == null ) {
+	    mon31_64x16 = readResource( "/rom/ac1/mon_31_64x16.bin" );
+	  }
+	  this.osBytes = mon31_64x16;
+	} else {
+	  if( mon31_64x32 == null ) {
+	    mon31_64x32 = readResource( "/rom/ac1/mon_31_64x32.bin" );
+	  }
+	  this.osBytes = mon31_64x32;
+	}
+      }
+    }
+
+    // Mini-BASIC
+    if( !this.modeSCCH ) {
+      if( minibasic == null ) {
+	minibasic = readResource( "/rom/ac1/minibasic.bin" );
+      }
+    }
+
+    // AC1-2010 ROM-Baenke
+    if( this.mode2010 ) {
+      this.pio2Rom2010File  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "2010.pio2rom.file" );
+      this.pio2Rom2010Bytes = readROMFile(
+				this.pio2Rom2010File,
+				0x2000,
+				"AC1-2010 PIO2 ROM" );
+      if( this.pio2Rom2010Bytes == null ) {
+	if( pio2Rom2010 == null ) {
+	  pio2Rom2010 = readResource( "/rom/ac1/pio2rom2010.bin" );
+	}
+	this.pio2Rom2010Bytes = pio2Rom2010;
+      }
+      this.romBank2010File  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "2010.rombank.file" );
+      this.romBank2010Bytes = readROMFile(
+				this.romBank2010File,
+				0x20000,
+				"AC1-2010 ROM-Bank" );
+    } else {
+      this.pio2Rom2010File  = null;
+      this.pio2Rom2010Bytes = null;
+      this.romBank2010File  = null;
+      this.romBank2010Bytes = null;
+    }
+
+    // Zeichensatz
+    loadFont( props );
   }
 
 
@@ -655,38 +839,16 @@ public class AC1
   }
 
 
-	/* --- Z80PCListener --- */
-
-  @Override
-  public synchronized void z80PCChanged( Z80CPU cpu, int pc )
-  {
-    if( this.pasteFast && (pc == ADDR_INCH) ) {
-      CharacterIterator iter = this.pasteIter;
-      if( iter != null ) {
-	char ch = iter.next();
-	while( ch != CharacterIterator.DONE ) {
-	  if( (ch > 0) && (ch < 0x7F) ) {
-	    cpu.setRegA( ch == '\n' ? '\r' : ch );
-	    cpu.setRegPC( cpu.doPop() );
-	    break;
-	  }
-	  ch = iter.next();
-	}
-	if( ch == CharacterIterator.DONE ) {
-	  keyReleased();
-	  cancelPastingText();
-	}
-      }
-    }
-  }
-
-
 	/* --- Z80TStatesListener --- */
 
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
-    this.ctc.z80TStatesProcessed( cpu, tStates );
+    boolean phase = this.emuThread.readAudioPhase();
+    if( phase != this.audioInPhase ) {
+      this.audioInPhase = phase;
+      this.pio1.putInValuePortB( this.audioInPhase ? 0x80 : 0, 0x80 );
+    }
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
     }
@@ -710,6 +872,39 @@ public class AC1
 	  }
 	}
       }
+    }
+    if( this.ctcM1ToClk2 && !this.ctcWritten ) {
+      /*
+       * Die CTC muss taktzyklengenau mit dem /M1-Signal getriggert werden,
+       * da sie erst einen Taktzyklus nach dem programmierenden
+       * Ausgabebefehl gestartet wird und somit die fallende Flanke
+       * des ersten /M1-Signals noch nicht wirksam ist.
+       * Um die CTC-Emulation nicht zu stoeren,
+       * duerfen die Taktzyklen eines Ausgabebefehls auf die CTC
+       * nicht zerlegt werden.
+       * Deshalb wird dieser Zweig nicht bei "ctcWritten" durchlaufen.
+       */
+      while( (tStates > 0) && (this.m1Cnt > 0) ) {
+	this.ctc.externalUpdate( 2, false );	// fallende Flanke
+	int t = Math.min( tStates, 3 );
+	if( t > 0 ) {
+	  this.ctc.z80TStatesProcessed( cpu, t );
+	  tStates -= t;
+	}
+	this.ctc.externalUpdate( 2, true );	// steigende Flanke
+	if( tStates > 0 ) {
+	  this.ctc.z80TStatesProcessed( cpu, 1 );
+	  --tStates;
+	}
+	--this.m1Cnt;
+      }
+      if( tStates > 0 ) {
+	this.ctc.z80TStatesProcessed( cpu, tStates );
+      }
+      this.m1Cnt = 0;
+    } else {
+      this.ctc.z80TStatesProcessed( cpu, tStates );
+      this.ctcWritten = false;
     }
   }
 
@@ -741,10 +936,10 @@ public class AC1
 	}
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>Programmpaket X ROM:</td><td>" );
-	buf.append( this.scchPrgXEnabled ? "ein" : "aus" );
+	buf.append( this.scchPrgXRomEnabled ? "ein" : "aus" );
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>SCCH-BASIC ROM:</td><td>" );
-	buf.append( this.scchBasicEnabled ? "ein" : "aus" );
+	buf.append( this.scchBasicRomEnabled ? "ein" : "aus" );
 	buf.append( "</td></tr>\n" );
       }
       if( this.mode2010 ) {
@@ -790,36 +985,28 @@ public class AC1
   @Override
   public boolean canApplySettings( Properties props )
   {
-    boolean rv = EmuUtil.getProperty( props, "jkcemu.system" ).equals( "AC1" );
+    boolean rv = EmuUtil.getProperty(
+			props,
+			"jkcemu.system" ).equals( "AC1" );
     if( rv ) {
       rv = TextUtil.equals(
 		this.osVersion,
-		EmuUtil.getProperty( props, "jkcemu.ac1.os.version" ) );
+		EmuUtil.getProperty(
+				props,
+				this.propPrefix + "os.version" ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.osFile,
-		EmuUtil.getProperty( props, "jkcemu.ac1.os.file" ) );
+		EmuUtil.getProperty( props, this.propPrefix + "os.file" ) );
     }
-    if( this.modeSCCH ) {
-      if( rv ) {
-	rv = TextUtil.equals(
-		this.scchBasicFile,
-		EmuUtil.getProperty( props, "jkcemu.ac1.scch.basic.file" ) );
-      }
-      if( rv ) {
-	rv = TextUtil.equals(
-		this.scchPrgXFile,
-		EmuUtil.getProperty(
-				props,
-				"jkcemu.ac1.scch.program_x.file" ) );
-      }
-      if( rv ) {
-	rv = TextUtil.equals(
-		this.scchRomdiskFile,
-		EmuUtil.getProperty(
-				props,
-				"jkcemu.ac1.scch.romdisk.file" ) );
+    if( rv ) {
+      if( this.modeSCCH ) {
+	rv = super.canApplySettings( props );
+      } else {
+	if( rv && (emulatesJoystick( props ) != this.joystickEnabled) ) {
+	  rv = false;
+	}
       }
     }
     if( this.mode2010 ) {
@@ -828,14 +1015,14 @@ public class AC1
 		this.pio2Rom2010File,
 		EmuUtil.getProperty(
 				props,
-				"jkcemu.ac1.2010.pio2rom.file" ) );
+				this.propPrefix + "2010.pio2rom.file" ) );
       }
       if( rv ) {
 	rv = TextUtil.equals(
 		this.romBank2010File,
 		EmuUtil.getProperty(
 				props,
-				"jkcemu.ac1.2010.rombank.file" ) );
+				this.propPrefix + "2010.rombank.file" ) );
       }
     }
     if( rv ) {
@@ -844,10 +1031,10 @@ public class AC1
 			"AC1",
 			RAMFloppy.RFType.MP_3_1988,
 			props,
-			"jkcemu.ac1.ramfloppy." );
+			this.propPrefix + "ramfloppy." );
     }
     if( rv ) {
-      rv = GIDE.complies( this.gide, props, "jkcemu.ac1." );
+      rv = GIDE.complies( this.gide, props, this.propPrefix );
     }
     if( rv && (emulatesFloppyDisk( props ) != (this.fdc != null)) ) {
       rv = false;
@@ -855,7 +1042,7 @@ public class AC1
     if( rv && (emulatesColors( props ) != (this.ramColor != null)) ) {
       rv = false;
     }
-    if( rv && (emulatesJoystick( props ) != this.joystickEnabled) ) {
+    if( rv && (emulatesCTCM1ToClk2( props ) != this.ctcM1ToClk2) ) {
       rv = false;
     }
     if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
@@ -995,59 +1182,14 @@ public class AC1
     int     rv   = 0xFF;
     boolean done = false;
     if( this.modeSCCH ) {
-      if( !m1 && this.rfReadEnabled && (this.ramModule3 != null) ) {
-	int idx = this.rfAddr16to19 | addr;
-	if( (idx >= 0) && (idx < this.ramModule3.length) ) {
-	  rv = (int) this.ramModule3[ idx ] & 0xFF;
-	}
-	done = true;
-      }
-      if( !done && this.rf32KActive && (this.ramModule3 != null)
-	  && (addr >= 0x4000) && (addr < 0xC000) )
-      {
-	int idx = this.rfAddr16to19 | addr;
-	if( this.rf32NegA15 ) {
-	  idx ^= 0x8000;
-	}
-	if( (idx >= 0) && (idx < this.ramModule3.length) ) {
-	  rv = (int) this.ramModule3[ idx ] & 0xFF;
-	}
-	done = true;
-      }
-      if( !done && this.scchBasicEnabled
-	  && (addr >= 0x4000) && (addr < 0x6000) )
-      {
-	if( this.scchBasicBytes != null ) {
-	  int idx = addr - 0x4000;
-	  if( idx < this.scchBasicBytes.length ) {
-	    rv = (int) this.scchBasicBytes[ idx ] & 0xFF;
-	  }
-	}
-	done = true;
-      }
-      if( !done && this.scchRomdiskEnabled
-	  && (addr >= this.scchRomdiskBegAddr) )
-      {
-	if( this.scchRomdiskBytes != null ) {
-	  int idx = this.scchRomdiskBankAddr
-				| (addr - this.scchRomdiskBegAddr);
-	  if( idx < this.scchRomdiskBytes.length ) {
-	    rv = (int) this.scchRomdiskBytes[ idx ] & 0xFF;
-	  }
-	}
-	done = true;
-      }
-      if( !done && this.scchPrgXEnabled && (addr >= 0xE000) ) {
-	if( this.scchPrgXBytes != null ) {
-	  int idx = addr - 0xE000;
-	  if( idx < this.scchPrgXBytes.length ) {
-	    rv = (int) this.scchPrgXBytes[ idx ] & 0xFF;
-	  }
-	}
+      rv = getScchMemByte( addr, m1 );
+      if( rv < 0 ) {
+	rv = 0xFF;
+      } else {
 	done = true;
       }
     }
-    if( this.mode2010 ) {
+    if( !done && this.mode2010 ) {
       if( (addr >= 0x2000) && (addr < 0x2800)
 	  && (this.pio2Rom2010Offs >= 0) )
       {
@@ -1179,7 +1321,7 @@ public class AC1
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return true;
+    return getDefaultSwapKeyCharCase();
   }
 
 
@@ -1219,30 +1361,6 @@ public class AC1
 	rv = true;
 	break;
 
-      case KeyEvent.VK_LEFT:
-	ch = 8;
-	break;
-
-      case KeyEvent.VK_RIGHT:
-	ch = 9;
-	break;
-
-      case KeyEvent.VK_DOWN:
-	ch = 0x0A;
-	break;
-
-      case KeyEvent.VK_UP:
-	ch = 0x0B;
-	break;
-
-      case KeyEvent.VK_ENTER:
-	ch = 0x0D;
-	break;
-
-      case KeyEvent.VK_SPACE:
-	ch = 0x20;
-	break;
-
       case KeyEvent.VK_BACK_SPACE:
 	ch = ((this.modeSCCH || this.mode2010) ? 0x7F : 8);
 	break;
@@ -1251,46 +1369,10 @@ public class AC1
 	ch = ((this.modeSCCH || this.mode2010) ? 4 : 0x7F);
 	break;
 
-      case KeyEvent.VK_INSERT:
-	ch = 5;
-	break;
-
-      case KeyEvent.VK_PAGE_UP:
-	ch = 0x11;
-	break;
-
-      case KeyEvent.VK_PAGE_DOWN:
-	ch = 0x15;
-	break;
-
-      case KeyEvent.VK_HOME:
-	ch = 1;
-	break;
-
-      case KeyEvent.VK_END:
-	ch = 0x1A;
-	break;
+      default:
+	rv = super.keyPressed( keyCode, ctrlDown, shiftDown );
     }
     if( ch > 0 ) {
-      setKeyboardValue( ch | 0x80 );
-      rv = true;
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void keyReleased()
-  {
-    setKeyboardValue( 0 );
-  }
-
-
-  @Override
-  public boolean keyTyped( char ch )
-  {
-    boolean rv = false;
-    if( (ch > 0) && (ch < 0x7F) ) {
       setKeyboardValue( ch | 0x80 );
       rv = true;
     }
@@ -1319,17 +1401,25 @@ public class AC1
 	  preIdx = 2;
 	  break;
 
-	case SCCH:
+	case AC1_BASIC6:
 	  preIdx = 3;
 	  break;
 
-	case BACOBAS:
+	case SCCH:
 	  preIdx = 4;
+	  break;
+
+	case BACOBAS2:
+	  preIdx = 5;
+	  break;
+
+	case BACOBAS3:
+	  preIdx = 6;
 	  break;
       }
     }
     if( (preIdx < 0) && (this.modeSCCH || this.mode2010) ) {
-      preIdx = 3;
+      preIdx = 4;
     }
     switch( OptionDlg.showOptionDlg(
 		this.screenFrm,
@@ -1341,10 +1431,12 @@ public class AC1
 		"BASIC-Interpreter",
 		preIdx,
 		"Mini-BASIC",
-		"8K-AC1-BASIC",
-		"12K-AC1-BASIC",
+		"AC1-8K-BASIC",
+		"AC1-12K-BASIC",
+		"AC1-BASIC6",
 		"SCCH-BASIC",
-		"BACOBAS" ) )
+		"BACOBAS 2",
+		"BACOBAS 3" ) )
     {
       case 0:
 	bType = BasicType.AC1_MINI;
@@ -1353,7 +1445,7 @@ public class AC1
 
       case 1:
 	bType = BasicType.AC1_8K;
-	text  = SourceUtil.getKCBasicStyleProgram(
+	text  = SourceUtil.getBasicProgram(
 					this.emuThread,
 					0x60F7,
 					ac1_8kTokens );
@@ -1361,26 +1453,43 @@ public class AC1
 
       case 2:
 	bType = BasicType.AC1_12K;
-	text  = SourceUtil.getKCBasicStyleProgram(
+	text  = SourceUtil.getBasicProgram(
 					this.emuThread,
 					0x6FB7,
 					ac1_12kTokens );
 	break;
 
       case 3:
+	bType = BasicType.AC1_BASIC6;
+	text  = SourceUtil.getBasicProgram(
+					this.emuThread,
+					0x6300,
+					basic6Tokens,
+					basic6TokensFF );
+	break;
+
+      case 4:
 	bType = BasicType.SCCH;
-	text  = SourceUtil.getKCBasicStyleProgram(
+	text  = SourceUtil.getBasicProgram(
 					this.emuThread,
 					0x60F7,
 					scchTokens );
 	break;
 
-      case 4:
-	bType = BasicType.BACOBAS;
-	text  = SourceUtil.getKCBasicStyleProgram(
+      case 5:
+	bType = BasicType.BACOBAS2;
+	text  = SourceUtil.getBasicProgram(
 					this.emuThread,
 					0x60F7,
-					bacobasTokens );
+					bacobas2Tokens );
+	break;
+
+      case 6:
+	bType = BasicType.BACOBAS3;
+	text  = SourceUtil.getBasicProgram(
+					this.emuThread,
+					0x60F7,
+					bacobas3Tokens );
 	break;
 
       default:
@@ -1504,7 +1613,7 @@ public class AC1
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
@@ -1523,7 +1632,7 @@ public class AC1
 	case 1:
 	case 2:
 	case 3:
-	  rv = this.ctc.read( port & 0x03 );
+	  rv = this.ctc.read( port & 0x03, tStates );
 	  break;
 
 	case 4:
@@ -1535,21 +1644,12 @@ public class AC1
 	      this.keyboardUsed = true;
 	    }
 	  }
-	  rv = this.pio1.readPortA();
+	  rv = this.pio1.readDataA();
 	  break;
 
 	case 5:
-	  {
-	    int v = 0x04;		// PIO B2: Grafiktaste, L-aktiv
-	    if( this.graphicKeyState ) {
-	      v = 0;
-	    }
-	    if( this.emuThread.readAudioPhase() ) {
-	      v |= 0x80;
-	    }
-	    this.pio1.putInValuePortB( v, 0x84 );
-	    rv = this.pio1.readPortB();
-	  }
+	  this.pio1.putInValuePortB( this.graphicKeyState ? 0 : 0x04, 0x04 );
+	  rv = this.pio1.readDataB();
 	  break;
 
 	case 6:
@@ -1564,13 +1664,13 @@ public class AC1
 	  if( this.pio2 != null ) {
 	    // V24: CTS=L (empfangsbereit)
 	    this.pio2.putInValuePortA( 0, 0x04 );
-	    rv = this.pio2.readPortA();
+	    rv = this.pio2.readDataA();
 	  }
 	  break;
 
 	case 9:
 	  if( this.pio2 != null ) {
-	    rv = this.pio2.readPortB();
+	    rv = this.pio2.readDataB();
 	  }
 	  break;
 
@@ -1615,6 +1715,10 @@ public class AC1
 	  }
 	  break;
 
+	case 0xDC:
+	case 0xDD:
+	case 0xDE:
+	case 0xDF:
 	case 0xFC:
 	case 0xFD:
 	case 0xFE:
@@ -1626,6 +1730,22 @@ public class AC1
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public int readMemByte( int addr, boolean m1 )
+  {
+    if( this.ctcM1ToClk2 ) {
+      if( m1 ) {
+	if( !this.lastMemReadM1 ) {
+	  this.m1Cnt = 0;
+	}
+	this.m1Cnt++;
+      }
+      this.lastMemReadM1 = m1;
+    }
+    return getMemByte( addr, m1 );
   }
 
 
@@ -1682,6 +1802,7 @@ public class AC1
 	}
       }
     }
+    this.audioInPhase     = this.emuThread.readAudioPhase();
     this.inverseBySW      = false;
     this.pio1B3State      = false;
     this.fdcWaitEnabled   = false;
@@ -1690,21 +1811,13 @@ public class AC1
     this.graphicKeyState  = false;
     this.lowerDRAMEnabled = false;
     this.osRomEnabled     = true;
-    this.scchPrgXEnabled  = false;
-    this.scchBasicEnabled = false;
-    this.rf32KActive      = false;
-    this.rf32NegA15       = false;
-    this.rfReadEnabled    = false;
-    this.rfWriteEnabled   = false;
-    this.rfAddr16to19     = 0;
     this.regF0            = 0;
     this.pio2Rom2010Offs  = -1;
     this.romBank2010Offs  = -1;
     this.fontOffs         = 0;
-    this.v24BitOut        = true;	// V24: H-Pegel
-    this.v24BitNum        = 0;
-    this.v24ShiftBuf      = 0;
-    this.v24TStateCounter = 0;
+    this.m1Cnt            = 0;
+    this.lastMemReadM1    = false;
+    this.ctcWritten       = false;
     if( (this.osBytes == monSCCH80)
 	|| (this.osBytes == monSCCH1088)
 	|| (this.osBytes == mon2010c) )
@@ -1720,21 +1833,22 @@ public class AC1
   @Override
   public void saveBasicProgram()
   {
-    boolean   cancelled = false;
-    int       begAddr   = -1;
-    int       endAddr   = -1;
-    int       hsType    = -1;
-    BasicType bType     = null;
-    int       preIdx    = -1;
+    boolean           cancelled    = false;
+    int               begAddr      = -1;
+    int               endAddr      = -1;
+    BasicType         ac1BasicType = null;
+    SaveDlg.BasicType dstBasicType = SaveDlg.BasicType.NO_BASIC;
+    String            title        = "BASIC-Programm speichern";
+    int               preIdx       = -1;
     if( this.lastBasicType != null ) {
       switch( this.lastBasicType ) {
 	case AC1_MINI:
+	  title  = "Mini-BASIC-Programm speichern";
 	  preIdx = 0;
 	  break;
 
 	case AC1_8K:
 	case SCCH:
-	case BACOBAS:
 	case ADDR_60F7:
 	  preIdx = 1;
 	  break;
@@ -1742,11 +1856,22 @@ public class AC1
 	case AC1_12K:
 	  preIdx = 2;
 	  break;
+
+	case AC1_BASIC6:
+	  preIdx = 3;
+	  break;
+
+	case BACOBAS2:
+	case BACOBAS3:
+	  preIdx = 4;
+	  break;
       }
     }
     if( (preIdx < 0) && this.modeSCCH ) {
       preIdx = 1;
     }
+    String                             fileInfo   = null;
+    javax.swing.filechooser.FileFilter fileFilter = null;
     switch( OptionDlg.showOptionDlg(
 		this.screenFrm,
 		"W\u00E4hlen Sie bitte den BASIC-Interpreter aus,\n"
@@ -1754,34 +1879,57 @@ public class AC1
 		"BASIC-Interpreter",
 		preIdx,
 		"Mini-BASIC",
-		"8K-AC1-BASIC, SCCH-BASIC oder BACOBAS",
-		"12K-AC1-BASIC" ) )
+		"AC1-8K-BASIC oder SCCH-BASIC",
+		"AC1-12K-BASIC",
+		"AC1-BASIC6",
+		"BACOBAS" ) )
     {
       case 0:
-	bType   = BasicType.AC1_MINI;
-	begAddr = 0x18C0;
-	endAddr = this.emuThread.getMemWord( 0x18E9 );
-	hsType  = 'b';
+	ac1BasicType = BasicType.AC1_MINI;
+	dstBasicType = SaveDlg.BasicType.TINYBASIC;
+	begAddr      = 0x18C0;
+	endAddr      = this.emuThread.getMemWord( 0x18E9 );
 	break;
 
       case 1:
-	bType = this.lastBasicType;
-	if( (bType != BasicType.AC1_8K)
-	    && (bType != BasicType.SCCH)
-	    && (bType != BasicType.BACOBAS) )
+	ac1BasicType = this.lastBasicType;
+	if( (ac1BasicType != BasicType.AC1_8K)
+	    && (ac1BasicType != BasicType.SCCH) )
 	{
-	  bType = BasicType.ADDR_60F7;
+	  ac1BasicType = BasicType.ADDR_60F7;
 	}
-	begAddr = 0x6000;
-	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x60F7 );
-	hsType  = 'B';
+	dstBasicType = SaveDlg.BasicType.MS_DERIVED_BASIC;
+	begAddr      = 0x60F7;
+	endAddr      = SourceUtil.getBasicEndAddr( this.emuThread, begAddr );
+	fileInfo     = "BASIC-Programmdatei (*.bas)";
+	fileFilter   = EmuUtil.getBasicFileFilter();
 	break;
 
       case 2:
-	bType   = BasicType.AC1_12K;
-	begAddr = 0x6FB7;
-	endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, begAddr );
-	hsType  = 'B';
+	ac1BasicType = BasicType.AC1_12K;
+	dstBasicType = SaveDlg.BasicType.MS_DERIVED_BASIC;
+	begAddr      = 0x6FB7;
+	endAddr      = SourceUtil.getBasicEndAddr( this.emuThread, begAddr );
+	fileInfo     = "BASIC-Programmdatei (*.bas)";
+	fileFilter   = EmuUtil.getBasicFileFilter();
+	break;
+
+      case 3:
+	ac1BasicType = BasicType.AC1_BASIC6;
+	dstBasicType = SaveDlg.BasicType.MS_DERIVED_BASIC;
+	begAddr      = 0x6300;
+	endAddr      = SourceUtil.getBasicEndAddr( this.emuThread, begAddr );
+	fileInfo     = "AC1-BASIC6-Programmdatei (*.abc)";
+	fileFilter   = EmuUtil.getAC1Basic6FileFilter();
+	break;
+
+      case 4:
+	ac1BasicType = BasicType.BACOBAS3;
+	dstBasicType = SaveDlg.BasicType.MS_DERIVED_BASIC;
+	begAddr      = 0x60F7;
+	endAddr      = SourceUtil.getBasicEndAddr( this.emuThread, begAddr );
+	fileInfo     = "BASIC-Programmdatei (*.bas)";
+	fileFilter   = EmuUtil.getBasicFileFilter();
 	break;
 
       default:
@@ -1789,15 +1937,14 @@ public class AC1
     }
     if( !cancelled ) {
       if( (begAddr > 0) && (endAddr > begAddr) ) {
-	this.lastBasicType = bType;
+	this.lastBasicType = ac1BasicType;
 	(new SaveDlg(
 		this.screenFrm,
 		begAddr,
 		endAddr,
-		hsType,
-		false,          // kein KC-BASIC
-		false,		// kein RBASIC
-		"BASIC-Programm speichern" )).setVisible( true );
+		"BASIC-Programm speichern",
+		dstBasicType,
+		fileFilter )).setVisible( true );
       } else {
 	showNoBasic();
       }
@@ -1854,27 +2001,9 @@ public class AC1
     boolean rv   = false;
     boolean done = false;
     if( this.modeSCCH ) {
-      if( this.rfWriteEnabled && (this.ramModule3 != null) ) {
-	int idx = this.rfAddr16to19 | addr;
-	if( (idx >= 0) && (idx < this.ramModule3.length) ) {
-	  this.ramModule3[ idx ] = (byte) value;
-	  rv = true;
-	}
-	done = true;
-      }
-      if( !done && this.rf32KActive && (this.ramModule3 != null)
-	  && (addr >= 0x4000) && (addr < 0xC000) )
-      {
-	int idx = this.rfAddr16to19 | addr;
-	if( this.rf32NegA15 ) {
-	  idx ^= 0x8000;
-	}
-	if( (idx >= 0) && (idx < this.ramModule3.length) ) {
-	  this.ramModule3[ idx ] = (byte) value;
-	  rv = true;
-	}
-	done = true;
-      }
+      int status = setScchMemByte( addr, value );
+      done       = (status >= 0);
+      rv         = (status > 0);
       if( !done && (addr < 0x1000) ) {
 	// Durchschreiben auf den DRAM
 	this.emuThread.setRAMByte( addr, value );
@@ -1930,54 +2059,6 @@ public class AC1
 
 
   @Override
-  public synchronized void startPastingText( String text )
-  {
-    boolean done = false;
-    if( text != null ) {
-      if( !text.isEmpty() ) {
-	if( this.pasteFast ) {
-	  cancelPastingText();
-	  CharacterIterator iter = new StringCharacterIterator( text );
-	  char              ch   = iter.first();
-	  if( ch != CharacterIterator.DONE ) {
-	    if( ch == '\n' ) {
-	      ch = '\r';
-	    }
-	    /*
-	     * Da sich die Programmausfuehrung i.d.R. bereits
-	     * in der betreffenden Systemfunktion befindet,
-	     * muss das erste Zeichen direkt an der Tastatur
-	     * angelegt werden,
-	     * damit der Systemaufruf beendet wird und somit
-	     * der naechste Aufruf dann abgefangen werden kann.
-	     */
-	    keyTyped( ch );
-	    long millis = (ch == '\r' ?
-				getDelayMillisAfterPasteEnter()
-				: getDelayMillisAfterPasteChar());
-	    if( millis > 0 ) {
-	      try {
-		Thread.sleep( millis );
-	      }
-	      catch( InterruptedException ex ) {}
-	      keyReleased();
-	    }
-	    this.pasteIter = iter;
-	    done           = false;
-	  }
-	} else {
-	  super.startPastingText( text );
-	  done = false;
-	}
-      }
-    }
-    if( !done ) {
-      this.screenFrm.firePastingTextFinished();
-    }
-  }
-
-
-  @Override
   public boolean supportsAudio()
   {
     return true;
@@ -1986,13 +2067,6 @@ public class AC1
 
   @Override
   public boolean supportsCopyToClipboard()
-  {
-    return true;
-  }
-
-
-  @Override
-  public boolean supportsPasteFromClipboard()
   {
     return true;
   }
@@ -2021,21 +2095,52 @@ public class AC1
 
   @Override
   public void updSysCells(
-			int    begAddr,
-			int    len,
-			Object fileFmt,
-			int    fileType )
+			int        begAddr,
+			int        len,
+			FileFormat fileFmt,
+			int        fileType )
   {
     if( fileFmt != null ) {
-      if( fileFmt.equals( FileInfo.HEADERSAVE ) && (fileType == 'B') ) {
-	if( begAddr == 0x60F7 ) {
-	  int topAddr = begAddr + len;
+      if( (fileFmt.equals( FileFormat.BASIC_PRG )
+			&& (begAddr == 0x60F7)
+			&& (len > 7))
+	  || (fileFmt.equals( FileFormat.HEADERSAVE )
+			&& (fileType == 'B')
+			&& (begAddr <= 0x60F7)
+			&& ((begAddr + len) > 0x60FE)) )
+      {
+	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x60F7 );
+	if( topAddr > 0x60F7 ) {
 	  this.emuThread.setMemWord( 0x60D2, topAddr );
 	  this.emuThread.setMemWord( 0x60D4, topAddr );
 	  this.emuThread.setMemWord( 0x60D6, topAddr );
 	}
-	else if( begAddr == 0x6FB7 ) {
-	  int topAddr = begAddr + len;
+      }
+      if( (fileFmt.equals( FileFormat.BASIC_PRG )
+			&& (begAddr == 0x6300)
+			&& (len > 7))
+	  || (fileFmt.equals( FileFormat.HEADERSAVE )
+			&& (fileType == 'B')
+			&& (begAddr <= 0x6300)
+			&& ((begAddr + len) > 0x6307)) )
+      {
+	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x6300 );
+	if( topAddr > 0x6300 ) {
+	  this.emuThread.setMemWord( 0x60A8, topAddr );
+	  this.emuThread.setMemWord( 0x60AA, topAddr );
+	  this.emuThread.setMemWord( 0x60AC, topAddr );
+	}
+      }
+      else if( (fileFmt.equals( FileFormat.BASIC_PRG )
+			&& (begAddr == 0x6FB7)
+			&& (len > 7))
+	  || (fileFmt.equals( FileFormat.HEADERSAVE )
+			&& (fileType == 'B')
+			&& (begAddr > 0x60F7) && (begAddr <= 0x6FB7)
+			&& ((begAddr + len) > 0x6FBE)) )
+      {
+	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x6FB7 );
+	if( topAddr > 0x6FB7 ) {
 	  this.emuThread.setMemWord( 0x415E, topAddr );
 	  this.emuThread.setMemWord( 0x4160, topAddr );
 	  this.emuThread.setMemWord( 0x4162, topAddr );
@@ -2046,7 +2151,7 @@ public class AC1
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     value &= 0xFF;
     if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
@@ -2061,15 +2166,16 @@ public class AC1
 	case 1:
 	case 2:
 	case 3:
-	  this.ctc.write( port & 0x03, value );
+	  this.ctc.write( port & 0x03, value, tStates );
+	  this.ctcWritten = true;
 	  break;
 
 	case 4:
-	  this.pio1.writePortA( value );
+	  this.pio1.writeDataA( value );
 	  break;
 
 	case 5:
-	  this.pio1.writePortB( value );
+	  this.pio1.writeDataB( value );
 	  synchronized( this.pio1 ) {
 	    int v = this.pio1.fetchOutValuePortB( false );
 	    this.emuThread.writeAudioPhase(
@@ -2131,7 +2237,7 @@ public class AC1
 
 	case 8:
 	  if( this.pio2 != null ) {
-	    this.pio2.writePortA( value );
+	    this.pio2.writeDataA( value );
 	    synchronized( this ) {
 	      boolean state = ((this.pio2.fetchOutValuePortA( false )
 							  & 0x02) != 0);
@@ -2146,13 +2252,13 @@ public class AC1
 	      }
 	      this.v24BitOut = state;
 	    }
-	    this.pio2.writePortA( value );
+	    this.pio2.writeDataA( value );
 	  }
 	  break;
 
 	case 9:
 	  if( this.pio2 != null ) {
-	    this.pio2.writePortB( value );
+	    this.pio2.writeDataB( value );
 	  }
 	  break;
 
@@ -2208,9 +2314,9 @@ public class AC1
 
 	case 0x14:
 	  if( this.modeSCCH ) {
-	    this.scchBasicEnabled   = ((value & 0x02) != 0);
-	    this.lowerDRAMEnabled   = ((value & 0x04) != 0);
-	    this.scchRomdiskEnabled = ((value & 0x08) != 0);
+	    this.scchBasicRomEnabled = ((value & 0x02) != 0);
+	    this.lowerDRAMEnabled    = ((value & 0x04) != 0);
+	    this.scchRomdiskEnabled  = ((value & 0x08) != 0);
 	    if( this.scchRomdiskEnabled ) {
 	      int bank = (value & 0x01) | ((value >> 3) & 0x0E);
 	      if( this.scchRomdiskBegAddr == 0x8000 ) {
@@ -2218,9 +2324,9 @@ public class AC1
 	      } else {
 		this.scchRomdiskBankAddr = (bank << 14);
 	      }
-	      this.scchPrgXEnabled = false;
+	      this.scchPrgXRomEnabled = false;
 	    } else {
-	      this.scchPrgXEnabled = ((value & 0x01) != 0);
+	      this.scchPrgXRomEnabled = ((value & 0x01) != 0);
 	    }
 	  }
 	  break;
@@ -2268,11 +2374,11 @@ public class AC1
 	  if( this.fdc != null ) {
 	    if( this.fdcWaitEnabled ) {
 	      // max. 20 Mikrosekunden warten
-	      Z80CPU cpu     = this.emuThread.getZ80CPU();
-	      int    tStates = cpu.getMaxSpeedKHz() / 50;
-	      while( !this.fdc.isInterruptRequest() && (tStates > 0) ) {
+	      Z80CPU cpu        = this.emuThread.getZ80CPU();
+	      int    waitStates = cpu.getMaxSpeedKHz() / 50;
+	      while( !this.fdc.isInterruptRequest() && (waitStates > 0) ) {
 		z80TStatesProcessed( cpu, 4 );
-		tStates -= 4;
+		waitStates -= 4;
 	      }
 	    }
 	  }
@@ -2330,6 +2436,10 @@ public class AC1
 	  }
 	  break;
 
+	case 0xDC:
+	case 0xDD:
+	case 0xDE:
+	case 0xDF:
 	case 0xFC:
 	case 0xFD:
 	case 0xFE:
@@ -2344,26 +2454,6 @@ public class AC1
 
 
 	/* --- private Methoden --- */
-
-  private synchronized void checkAddPCListener( Properties props )
-  {
-    Z80CPU cpu = this.emuThread.getZ80CPU();
-    if( cpu != null ) {
-      boolean pasteFast = EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.ac1.paste.fast",
-				true );
-      if( pasteFast != this.pasteFast ) {
-	this.pasteFast = pasteFast;
-	if( pasteFast ) {
-	  cpu.addPCListener( this, ADDR_INCH );
-	} else {
-	  cpu.removePCListener( this );
-	}
-      }
-    }
-  }
-
 
   private void createColors( Properties props )
   {
@@ -2380,65 +2470,21 @@ public class AC1
   }
 
 
-  private static boolean emulatesColors( Properties props )
+  private boolean emulatesColors( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.ac1.color",
+			this.propPrefix + "color",
 			false );
   }
 
 
-  private static boolean emulatesJoystick( Properties props )
+  private boolean emulatesCTCM1ToClk2( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.ac1.joystick.enabled",
+			this.propPrefix + "ctc.m1_to_clk2",
 			false );
-  }
-
-
-  private static boolean emulatesFloppyDisk( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			"jkcemu.ac1.floppydisk.enabled",
-			false );
-  }
-
-
-  private boolean emulatesKCNet( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.ac1.kcnet.enabled",
-				false );
-  }
-
-
-  private boolean emulatesUSB( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.ac1.vdip.enabled",
-				false );
-  }
-
-
-  private static int getScchRomdiskBegAddr( Properties props )
-  {
-    int rv = 0xC000;
-    if( props != null ) {
-      String text = EmuUtil.getProperty(
-			props,
-			"jkcemu.ac1.scch.romdisk.address.begin" );
-      if( text != null ) {
-	if( text.trim().equals( "8000" ) ) {
-	  rv = 0x8000;
-	}
-      }
-    }
-    return rv;
   }
 
 
@@ -2446,9 +2492,9 @@ public class AC1
   {
     this.extFont   = true;
     this.fontBytes = readFontByProperty(
-	props,
-	"jkcemu.ac1.font.file",
-	this.fontSwitchable ? 0x1000 : 0x0800 );
+			props,
+			this.propPrefix + "font.file",
+			this.fontSwitchable ? 0x1000 : 0x0800 );
 
     if( this.fontBytes == null ) {
       this.extFont = false;
@@ -2521,133 +2567,5 @@ public class AC1
 	}
       }
     }
-  }
-
-
-  private void loadROMs( Properties props )
-  {
-    // OS-ROM
-    this.osFile  = EmuUtil.getProperty( props, "jkcemu.ac1.os.file" );
-    this.osBytes = readFile( this.osFile, 0x1000, "Monitorprogramm" );
-    if( this.osBytes == null ) {
-      if( this.modeSCCH ) {
-	if( this.osVersion.startsWith( "SCCH8.0" ) ) {
-	  if( monSCCH80 == null ) {
-	    monSCCH80 = readResource( "/rom/ac1/scchmon_80g.bin" );
-	  }
-	  this.osBytes = monSCCH80;
-	} else {
-	  if( monSCCH1088 == null ) {
-	    monSCCH1088 = readResource( "/rom/ac1/scchmon_1088g.bin" );
-	  }
-	  this.osBytes = monSCCH1088;
-	}
-      } else if( this.mode2010 ) {
-	if( mon2010c == null ) {
-	  mon2010c = readResource( "/rom/ac1/mon2010c.bin" );
-	}
-	this.osBytes = mon2010c;
-      } else {
-	if( this.mode64x16 ) {
-	  if( mon31_64x16 == null ) {
-	    mon31_64x16 = readResource( "/rom/ac1/mon_31_64x16.bin" );
-	  }
-	  this.osBytes = mon31_64x16;
-	} else {
-	  if( mon31_64x32 == null ) {
-	    mon31_64x32 = readResource( "/rom/ac1/mon_31_64x32.bin" );
-	  }
-	  this.osBytes = mon31_64x32;
-	}
-      }
-    }
-
-    // Mini-BASIC
-    if( !this.modeSCCH ) {
-      if( minibasic == null ) {
-	minibasic = readResource( "/rom/ac1/minibasic.bin" );
-      }
-    }
-
-    // SCCH BASIC-ROM
-    if( this.modeSCCH ) {
-      this.scchBasicFile = EmuUtil.getProperty(
-					props,
-					"jkcemu.ac1.scch.basic.file" );
-      this.scchBasicBytes = readFile(
-				this.scchBasicFile,
-				0x2000,
-				"BASIC" );
-      if( this.scchBasicBytes == null ) {
-	if( gsbasic == null ) {
-	  gsbasic = readResource( "/rom/ac1/gsbasic.bin" );
-	}
-	this.scchBasicBytes = gsbasic;
-      }
-    } else {
-      this.scchBasicFile  = null;
-      this.scchBasicBytes = null;
-    }
-
-    // SCCH Programmpaket X
-    if( this.modeSCCH ) {
-      this.scchPrgXFile  = EmuUtil.getProperty(
-				props,
-				"jkcemu.ac1.scch.program_x.file" );
-      this.scchPrgXBytes = readFile(
-				this.scchPrgXFile,
-				0x2000,
-				"Programmpaket X" );
-    } else {
-      this.scchPrgXFile  = null;
-      this.scchPrgXBytes = null;
-    }
-
-    // SCCH ROM-Disk
-    if( this.modeSCCH ) {
-      this.scchRomdiskFile  = EmuUtil.getProperty(
-				props,
-				"jkcemu.ac1.scch.romdisk.file" );
-      this.scchRomdiskBytes = readFile(
-				this.scchRomdiskFile,
-				0x40000,
-				"SCCH-Modul 1 ROM-Disk" );
-    } else {
-      this.scchRomdiskFile  = null;
-      this.scchRomdiskBytes = null;
-    }
-
-
-    // AC1-2010 ROM-Baenke
-    if( this.mode2010 ) {
-      this.pio2Rom2010File  = EmuUtil.getProperty(
-				props,
-				"jkcemu.ac1.2010.pio2rom.file" );
-      this.pio2Rom2010Bytes = readFile(
-				this.pio2Rom2010File,
-				0x2000,
-				"AC1-2010 PIO2 ROM" );
-      if( this.pio2Rom2010Bytes == null ) {
-	if( pio2Rom2010 == null ) {
-	  pio2Rom2010 = readResource( "/rom/ac1/pio2rom2010.bin" );
-	}
-	this.pio2Rom2010Bytes = pio2Rom2010;
-      }
-      this.romBank2010File  = EmuUtil.getProperty(
-				props,
-				"jkcemu.ac1.2010.rombank.file" );
-      this.romBank2010Bytes = readFile(
-				this.romBank2010File,
-				0x20000,
-				"AC1-2010 ROM-Bank" );
-    } else {
-      this.pio2Rom2010File  = null;
-      this.pio2Rom2010Bytes = null;
-      this.romBank2010File  = null;
-      this.romBank2010Bytes = null;
-    }
-
-    // Zeichensatz
-    loadFont( props );
   }
 }

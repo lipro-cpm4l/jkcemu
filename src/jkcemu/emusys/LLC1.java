@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -50,7 +50,7 @@ public class LLC1 extends EmuSys implements
 
   public LLC1( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.llc1." );
     if( rom0000 == null ) {
       rom0000 = readResource( "/rom/llc1/llc1mon.bin" );
     }
@@ -82,7 +82,7 @@ public class LLC1 extends EmuSys implements
   }
 
 
-  public static String getBasicProgram( Z80MemView memory )
+  public static String getBasicProgram( EmuMemView memory )
   {
     return SourceUtil.getTinyBasicProgram(
 				memory,
@@ -893,11 +893,11 @@ public class LLC1 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (port & 0x04) == 0 ) {
-      rv &= this.ctc.read( port & 0x03 );
+      rv &= this.ctc.read( port & 0x03, tStates );
     }
     else if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
@@ -905,11 +905,11 @@ public class LLC1 extends EmuSys implements
 	  synchronized( this.keyboardMatrix ) {
 	    this.pio1.putInValuePortA( getHexKeyMatrixValue(), 0x8F );
 	  }
-	  rv &= this.pio1.readPortA();
+	  rv &= this.pio1.readDataA();
 	  break;
 
 	case 1:
-	  rv &= this.pio1.readPortB();
+	  rv &= this.pio1.readDataB();
 	  break;
 
 	case 2:
@@ -924,7 +924,7 @@ public class LLC1 extends EmuSys implements
     else if( (port & 0x10) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  rv &= this.pio2.readPortA();
+	  rv &= this.pio2.readDataA();
 	  break;
 
 	case 1:
@@ -933,7 +933,7 @@ public class LLC1 extends EmuSys implements
 			this.keyStartTStateCounter > 0 ? 0xFF : this.keyChar,
 			false );
 	  }
-	  rv &= this.pio2.readPortB();
+	  rv &= this.pio2.readDataB();
 	  this.keyAlphaTStateCounter = this.keyAlphaTStates;
 	  break;
 
@@ -993,10 +993,9 @@ public class LLC1 extends EmuSys implements
 		this.screenFrm,
 		0x1400,
 		endAddr,
-		'b',
-		false,          // kein KC-BASIC
-		false,		// kein RBASIC
-		"LLC1-BASIC-Programm speichern" )).setVisible( true );
+		"LLC1-BASIC-Programm speichern",
+		SaveDlg.BasicType.TINYBASIC,
+		null )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -1075,20 +1074,20 @@ public class LLC1 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     if( (port & 0x04) == 0 ) {
-      this.ctc.write( port & 0x03, value );
+      this.ctc.write( port & 0x03, value, tStates );
     }
     else if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  this.pio1.writePortA( value );
+	  this.pio1.writeDataA( value );
 	  break;
 
 	case 1:
 	  boolean oldReady = this.pio1.isReadyPortB();
-	  this.pio1.writePortB( value );
+	  this.pio1.writeDataB( value );
 	  if( !oldReady && this.pio1.isReadyPortB() ) {
 	    this.digitIdx = (this.digitIdx + 1) & 0x07;
 	  }
@@ -1124,11 +1123,11 @@ public class LLC1 extends EmuSys implements
     else if( (port & 0x10) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  this.pio2.writePortA( value );
+	  this.pio2.writeDataA( value );
 	  break;
 
 	case 1:
-	  this.pio2.writePortB( value );
+	  this.pio2.writeDataB( value );
 	  break;
 
 	case 2:

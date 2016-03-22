@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,10 +19,14 @@ import javax.swing.event.*;
 public class FloppyDiskFormatSelectFld extends JPanel
 {
   private java.util.List<ChangeListener> changeListeners;
-  private JRadioButton                   btnFmt800K;
+  private JRadioButton                   btnFmt800Ki4;
   private JRadioButton                   btnFmt780K;
+  private JRadioButton                   btnFmt780Ki2;
+  private JRadioButton                   btnFmt780Ki3;
+  private JRadioButton                   btnFmt780Ki3ds;
+  private JRadioButton                   btnFmt780Ki4;
   private JRadioButton                   btnFmt720K;
-  private JRadioButton                   btnFmt711K;
+  private JRadioButton                   btnFmt711Ki5;
   private JRadioButton                   btnFmt624K;
   private JRadioButton                   btnFmt400K;
   private JRadioButton                   btnFmtEtc;
@@ -30,6 +34,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
   private JLabel                         labelCyls;
   private JLabel                         labelSysTracks;
   private JLabel                         labelSectPerCyl;
+  private JLabel                         labelInterleave;
   private JLabel                         labelSectorSize;
   private JLabel                         labelSectorSizeUnit;
   private JLabel                         labelBlockSize;
@@ -38,17 +43,20 @@ public class FloppyDiskFormatSelectFld extends JPanel
   private JLabel                         labelBlockNumSizeUnit;
   private JLabel                         labelDirBlocks;
   private JLabel                         labelDirEntriesInfo;
-  private JComboBox                      comboSides;
-  private JComboBox                      comboCyls;
+  private JComboBox<Integer>             comboSides;
+  private JComboBox<Integer>             comboCyls;
   private JSpinner                       spinnerSysTracks;
-  private JComboBox                      comboSectPerCyl;
-  private JComboBox                      comboSectorSize;
-  private JComboBox                      comboBlockSizeKB;
-  private JComboBox                      comboBlockNumSize;
+  private JSpinner                       spinnerInterleave;
+  private SpinnerNumberModel             modelInterleave;
+  private JComboBox<Integer>             comboSectPerCyl;
+  private JComboBox<Integer>             comboSectorSize;
+  private JComboBox<Integer>             comboBlockSizeKB;
+  private JComboBox<Integer>             comboBlockNumSize;
   private JSpinner                       spinnerDirBlocks;
+  private JCheckBox                      btnDateStamper;
 
 
-  public FloppyDiskFormatSelectFld()
+  public FloppyDiskFormatSelectFld( boolean askForInterleave )
   {
     this.changeListeners = null;
     setLayout( new GridBagLayout() );
@@ -64,11 +72,11 @@ public class FloppyDiskFormatSelectFld extends JPanel
 
     ButtonGroup grpFmt = new ButtonGroup();
 
-    this.btnFmt800K = new JRadioButton(
-			FloppyDiskFormat.FMT_800K.toString(),
+    this.btnFmt800Ki4 = new JRadioButton(
+			FloppyDiskFormat.FMT_800K_I4.toString(),
 			false );
-    grpFmt.add( this.btnFmt800K );
-    add( this.btnFmt800K, gbc );
+    grpFmt.add( this.btnFmt800Ki4 );
+    add( this.btnFmt800Ki4, gbc );
 
     this.btnFmt780K = new JRadioButton(
 			FloppyDiskFormat.FMT_780K.toString(),
@@ -77,6 +85,27 @@ public class FloppyDiskFormatSelectFld extends JPanel
     gbc.gridy++;
     add( this.btnFmt780K, gbc );
 
+    this.btnFmt780Ki2 = new JRadioButton(
+			FloppyDiskFormat.FMT_780K_I2.toString(),
+			false );
+    grpFmt.add( this.btnFmt780Ki2 );
+    gbc.gridy++;
+    add( this.btnFmt780Ki2, gbc );
+
+    this.btnFmt780Ki3 = new JRadioButton(
+			FloppyDiskFormat.FMT_780K_I3.toString(),
+			false );
+    grpFmt.add( this.btnFmt780Ki3 );
+    gbc.gridy++;
+    add( this.btnFmt780Ki3, gbc );
+
+    this.btnFmt780Ki3ds = new JRadioButton(
+			FloppyDiskFormat.FMT_780K_I3_DATESTAMPER.toString(),
+			false );
+    grpFmt.add( this.btnFmt780Ki3ds );
+    gbc.gridy++;
+    add( this.btnFmt780Ki3ds, gbc );
+
     this.btnFmt720K = new JRadioButton(
 			FloppyDiskFormat.FMT_720K.toString(),
 			false );
@@ -84,12 +113,12 @@ public class FloppyDiskFormatSelectFld extends JPanel
     gbc.gridy++;
     add( this.btnFmt720K, gbc );
 
-    this.btnFmt711K = new JRadioButton(
-			FloppyDiskFormat.FMT_711K_BASDOS.toString(),
+    this.btnFmt711Ki5 = new JRadioButton(
+			FloppyDiskFormat.FMT_711K_I5_BASDOS.toString(),
 			false );
-    grpFmt.add( this.btnFmt711K );
+    grpFmt.add( this.btnFmt711Ki5 );
     gbc.gridy++;
-    add( this.btnFmt711K, gbc );
+    add( this.btnFmt711Ki5, gbc );
 
     this.btnFmt624K = new JRadioButton(
 			FloppyDiskFormat.FMT_624K.toString(),
@@ -134,11 +163,13 @@ public class FloppyDiskFormatSelectFld extends JPanel
     add( this.comboCyls, gbc );
 
     this.labelSysTracks = new JLabel( "davon Systemspuren:" );
+    gbc.anchor          = GridBagConstraints.EAST;
     gbc.gridx += 2;
     add( this.labelSysTracks, gbc );
 
     this.spinnerSysTracks = new JSpinner(
-			new SpinnerNumberModel( 0, 0, 9, 1 ) );
+				new SpinnerNumberModel( 0, 0, 9, 1 ) );
+    gbc.anchor            = GridBagConstraints.WEST;
     gbc.insets.left       = 5;
     gbc.gridx++;
     add( this.spinnerSysTracks, gbc );
@@ -153,6 +184,23 @@ public class FloppyDiskFormatSelectFld extends JPanel
     gbc.insets.left      = 5;
     gbc.gridx++;
     add( this.comboSectPerCyl, gbc );
+
+    this.labelInterleave   = null;
+    this.modelInterleave   = null;
+    this.spinnerInterleave = null;
+    if( askForInterleave ) {
+      this.labelInterleave = new JLabel(
+			"Interleave (1 = kein Interleave):" );
+      gbc.anchor = GridBagConstraints.EAST;
+      gbc.gridx += 2;
+      add( this.labelInterleave, gbc );
+
+      this.modelInterleave   = new SpinnerNumberModel( 1, 1, 1, 1 );
+      this.spinnerInterleave = new JSpinner( this.modelInterleave );
+      gbc.anchor = GridBagConstraints.WEST;
+      gbc.gridx++;
+      add( this.spinnerInterleave, gbc );
+    }
 
     this.labelSectorSize = new JLabel( "Sektorgr\u00F6\u00DFe:" );
     gbc.insets.left      = 50;
@@ -176,7 +224,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
     add( this.labelBlockSize, gbc );
 
     this.comboBlockSizeKB = createJComboBox( 1, 2, 4, 8, 16 );
-    gbc.insets.left     = 5;
+    gbc.insets.left       = 5;
     gbc.gridx++;
     add( this.comboBlockSizeKB, gbc );
 
@@ -192,7 +240,6 @@ public class FloppyDiskFormatSelectFld extends JPanel
     this.comboBlockNumSize = createJComboBox( 8, 16 );
     gbc.anchor             = GridBagConstraints.WEST;
     gbc.insets.left        = 5;
-    gbc.insets.bottom      = 5;
     gbc.gridx++;
     add( this.comboBlockNumSize, gbc );
 
@@ -217,6 +264,15 @@ public class FloppyDiskFormatSelectFld extends JPanel
     gbc.gridx++;
     add( this.labelDirEntriesInfo, gbc );
 
+    this.btnDateStamper = new JCheckBox(
+		"Dateien mit Zeitstempel versehen (DateStamper)" );
+    gbc.insets.left   = 5;
+    gbc.insets.bottom = 5;
+    gbc.gridx = 1;
+    gbc.gridy++;
+    add( this.btnDateStamper, gbc );
+
+
     // Listener
     ActionListener fmtListener = new ActionListener()
 			{
@@ -226,16 +282,20 @@ public class FloppyDiskFormatSelectFld extends JPanel
 			    fireFormatChanged();
 			  }
 			};
-    this.btnFmt800K.addActionListener( fmtListener );
+    this.btnFmt800Ki4.addActionListener( fmtListener );
     this.btnFmt780K.addActionListener( fmtListener );
+    this.btnFmt780Ki2.addActionListener( fmtListener );
+    this.btnFmt780Ki3.addActionListener( fmtListener );
+    this.btnFmt780Ki3ds.addActionListener( fmtListener );
     this.btnFmt720K.addActionListener( fmtListener );
-    this.btnFmt711K.addActionListener( fmtListener );
+    this.btnFmt711Ki5.addActionListener( fmtListener );
     this.btnFmt624K.addActionListener( fmtListener );
     this.btnFmt400K.addActionListener( fmtListener );
     this.btnFmtEtc.addActionListener( fmtListener );
 
     ActionListener fmtChangeListener = new ActionListener()
 			{
+			  @Override
 			  public void actionPerformed( ActionEvent e )
 			  {
 			    fireFormatChanged();
@@ -243,14 +303,25 @@ public class FloppyDiskFormatSelectFld extends JPanel
 			};
     this.comboSides.addActionListener( fmtChangeListener );
     this.comboCyls.addActionListener( fmtChangeListener );
-    this.comboSectPerCyl.addActionListener( fmtChangeListener );
     this.comboSectorSize.addActionListener( fmtChangeListener );
     this.comboBlockSizeKB.addActionListener(
 			new ActionListener()
 			{
+			  @Override
 			  public void actionPerformed( ActionEvent e )
 			  {
 			    updDirEntriesInfo();
+			    fireFormatChanged();
+			  }
+			} );
+    this.comboSectPerCyl.addActionListener(
+			new ActionListener()
+			{
+			  @Override
+			  public void actionPerformed( ActionEvent e )
+			  {
+			    updDirEntriesInfo();
+			    updMaxInterleave();
 			    fireFormatChanged();
 			  }
 			} );
@@ -258,6 +329,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
     this.spinnerDirBlocks.addChangeListener(
 			new ChangeListener()
 			{
+			  @Override
 			  public void stateChanged( ChangeEvent e )
 			  {
 			    updDirEntriesInfo();
@@ -268,6 +340,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
     this.spinnerSysTracks.addChangeListener(
 			new ChangeListener()
 			{
+			  @Override
 			  public void stateChanged( ChangeEvent e )
 			  {
 			    fireFormatChanged();
@@ -279,13 +352,14 @@ public class FloppyDiskFormatSelectFld extends JPanel
     setFmtDetailsFields( FloppyDiskFormat.FMT_780K );
     updFmtDetailsFields();
     updDirEntriesInfo();
+    updMaxInterleave();
   }
 
 
   public synchronized void addChangeListener( ChangeListener listener )
   {
     if( this.changeListeners == null ) {
-      this.changeListeners = new ArrayList<ChangeListener>();
+      this.changeListeners = new ArrayList<>();
     }
     this.changeListeners.add( listener );
   }
@@ -323,14 +397,20 @@ public class FloppyDiskFormatSelectFld extends JPanel
   public FloppyDiskFormat getFormat()
   {
     FloppyDiskFormat rv = null;
-    if( this.btnFmt800K.isSelected() ) {
-      rv = FloppyDiskFormat.FMT_800K;
+    if( this.btnFmt800Ki4.isSelected() ) {
+      rv = FloppyDiskFormat.FMT_800K_I4;
     } else if( this.btnFmt780K.isSelected() ) {
       rv = FloppyDiskFormat.FMT_780K;
+    } else if( this.btnFmt780Ki2.isSelected() ) {
+      rv = FloppyDiskFormat.FMT_780K_I2;
+    } else if( this.btnFmt780Ki3.isSelected() ) {
+      rv = FloppyDiskFormat.FMT_780K_I3;
+    } else if( this.btnFmt780Ki3ds.isSelected() ) {
+      rv = FloppyDiskFormat.FMT_780K_I3_DATESTAMPER;
     } else if( this.btnFmt720K.isSelected() ) {
       rv = FloppyDiskFormat.FMT_720K;
-    } else if( this.btnFmt711K.isSelected() ) {
-      rv = FloppyDiskFormat.FMT_711K_BASDOS;
+    } else if( this.btnFmt711Ki5.isSelected() ) {
+      rv = FloppyDiskFormat.FMT_711K_I5_BASDOS;
     } else if( this.btnFmt624K.isSelected() ) {
       rv = FloppyDiskFormat.FMT_624K;
     } else if( this.btnFmt400K.isSelected() ) {
@@ -341,14 +421,21 @@ public class FloppyDiskFormatSelectFld extends JPanel
 			getCylinders(),
 			getSectorsPerCylinder(),
 			getSectorSize(),
+			getInterleave(),
 			getSysTracks(),
 			getDirBlocks(),
 			getBlockSize(),
 			isBlockNum16Bit(),
-			false,
+			isDateStamperEnabled(),
 			null );
     }
     return rv;
+  }
+
+
+  public int getInterleave()
+  {
+    return getIntValue( this.spinnerInterleave );
   }
 
 
@@ -382,6 +469,12 @@ public class FloppyDiskFormatSelectFld extends JPanel
   }
 
 
+  public boolean isDateStamperEnabled()
+  {
+    return this.btnDateStamper.isSelected();
+  }
+
+
   public void setBlockSize( int value )
   {
     if( getBlockSize() != value ) {
@@ -402,6 +495,12 @@ public class FloppyDiskFormatSelectFld extends JPanel
   }
 
 
+  public void setDateStamperEnabled( boolean state )
+  {
+    this.btnDateStamper.setSelected( state );
+  }
+
+
   public void setDirBlocks( int value )
   {
     if( getDirBlocks() != value ) {
@@ -415,14 +514,20 @@ public class FloppyDiskFormatSelectFld extends JPanel
   public void setFormat( FloppyDiskFormat fmt )
   {
     if( fmt != null ) {
-      if( fmt.equals( FloppyDiskFormat.FMT_800K ) ) {
-	this.btnFmt800K.setSelected( true );
+      if( fmt.equals( FloppyDiskFormat.FMT_800K_I4 ) ) {
+	this.btnFmt800Ki4.setSelected( true );
       } else if( fmt.equals( FloppyDiskFormat.FMT_780K ) ) {
 	this.btnFmt780K.setSelected( true );
+      } else if( fmt.equals( FloppyDiskFormat.FMT_780K_I2 ) ) {
+	this.btnFmt780Ki2.setSelected( true );
+      } else if( fmt.equals( FloppyDiskFormat.FMT_780K_I3 ) ) {
+	this.btnFmt780Ki3.setSelected( true );
+      } else if( fmt.equals( FloppyDiskFormat.FMT_780K_I3_DATESTAMPER ) ) {
+	this.btnFmt780Ki3ds.setSelected( true );
       } else if( fmt.equals( FloppyDiskFormat.FMT_720K ) ) {
 	this.btnFmt720K.setSelected( true );
-      } else if( fmt.equals( FloppyDiskFormat.FMT_711K_BASDOS ) ) {
-	this.btnFmt711K.setSelected( true );
+      } else if( fmt.equals( FloppyDiskFormat.FMT_711K_I5_BASDOS ) ) {
+	this.btnFmt711Ki5.setSelected( true );
       } else if( fmt.equals( FloppyDiskFormat.FMT_624K ) ) {
 	this.btnFmt624K.setSelected( true );
       } else if( fmt.equals( FloppyDiskFormat.FMT_400K ) ) {
@@ -448,9 +553,9 @@ public class FloppyDiskFormatSelectFld extends JPanel
 
 	/* --- private Methoden --- */
 
-  private static JComboBox createJComboBox( int... items )
+  private static JComboBox<Integer> createJComboBox( int... items )
   {
-    JComboBox combo = new JComboBox();
+    JComboBox<Integer> combo = new JComboBox<>();
     combo.setEditable( false );
     if( items != null ) {
       for( int i = 0; i < items.length; i++ ) {
@@ -508,6 +613,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
     setValue( this.comboCyls, fmt.getCylinders() );
     setValue( this.comboSectPerCyl, fmt.getSectorsPerCylinder() );
     setValue( this.comboSectorSize, fmt.getSectorSize() );
+    setValue( this.spinnerInterleave, fmt.getInterleave() );
     int sysTracks = fmt.getSysTracks();
     int dirBlocks = fmt.getDirBlocks();
     int blockSize = fmt.getBlockSize();
@@ -517,6 +623,8 @@ public class FloppyDiskFormatSelectFld extends JPanel
       setValue( this.comboBlockSizeKB, blockSize / 1024 );
       setValue( this.comboBlockNumSize, fmt.isBlockNum16Bit() ? 16 : 8 );
     }
+    setDateStamperEnabled( fmt.isDateStamperEnabled() );
+    updMaxInterleave();
   }
 
 
@@ -554,14 +662,20 @@ public class FloppyDiskFormatSelectFld extends JPanel
   private void updFmtDetailsFields()
   {
     FloppyDiskFormat fmt = null;
-    if( this.btnFmt800K.isSelected() ) {
-      fmt = FloppyDiskFormat.FMT_800K;
+    if( this.btnFmt800Ki4.isSelected() ) {
+      fmt = FloppyDiskFormat.FMT_800K_I4;
     } else if( this.btnFmt780K.isSelected() ) {
       fmt = FloppyDiskFormat.FMT_780K;
+    } else if( this.btnFmt780Ki2.isSelected() ) {
+      fmt = FloppyDiskFormat.FMT_780K_I2;
+    } else if( this.btnFmt780Ki3.isSelected() ) {
+      fmt = FloppyDiskFormat.FMT_780K_I3;
+    } else if( this.btnFmt780Ki3ds.isSelected() ) {
+      fmt = FloppyDiskFormat.FMT_780K_I3_DATESTAMPER;
     } else if( this.btnFmt720K.isSelected() ) {
       fmt = FloppyDiskFormat.FMT_720K;
-    } else if( this.btnFmt711K.isSelected() ) {
-      fmt = FloppyDiskFormat.FMT_711K_BASDOS;
+    } else if( this.btnFmt711Ki5.isSelected() ) {
+      fmt = FloppyDiskFormat.FMT_711K_I5_BASDOS;
     } else if( this.btnFmt624K.isSelected() ) {
       fmt = FloppyDiskFormat.FMT_624K;
     } else if( this.btnFmt400K.isSelected() ) {
@@ -585,6 +699,12 @@ public class FloppyDiskFormatSelectFld extends JPanel
     this.spinnerSysTracks.setEnabled( state );
     this.labelSectPerCyl.setEnabled( state );
     this.comboSectPerCyl.setEnabled( state );
+    if( this.labelInterleave != null ) {
+      this.labelInterleave.setEnabled( state );
+    }
+    if( this.spinnerInterleave != null ) {
+      this.spinnerInterleave.setEnabled( state );
+    }
     this.labelSectorSize.setEnabled( state );
     this.comboSectorSize.setEnabled( state );
     this.labelSectorSizeUnit.setEnabled( state );
@@ -599,5 +719,22 @@ public class FloppyDiskFormatSelectFld extends JPanel
     this.labelDirEntriesInfo.setEnabled( state );
     this.spinnerDirBlocks.setEnabled( state );
     this.labelDirEntriesInfo.setEnabled( state );
+    this.btnDateStamper.setEnabled( state );
+  }
+
+
+  private void updMaxInterleave()
+  {
+    if( this.modelInterleave != null ) {
+      int maxInterleave = getIntValue( this.comboSectPerCyl ) - 1;
+      if( maxInterleave < 1 ) {
+	maxInterleave = 1;
+      }
+      int curInterleave = getIntValue( this.spinnerInterleave );
+      if( curInterleave > maxInterleave ) {
+	this.modelInterleave.setValue( 1 );
+      }
+      this.modelInterleave.setMaximum( maxInterleave );
+    }
   }
 }

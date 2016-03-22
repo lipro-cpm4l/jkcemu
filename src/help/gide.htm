@@ -11,11 +11,8 @@
  <br/><br/>
   Zur Emulation einer Festplatte m&uuml;ssen Sie in den
   <a href="settings.htm">Einstellungen</a> im Bereich f&uuml;r
-  das jeweilige System im Reiter <em>GIDE</em> das Festplattenmodell
-  und eine Abbilddatei ausw&auml;hlen.
-  Wenn Sie keine Festplatte emulieren lassen,
-  wird auch das GIDE als Ganzes nicht emuliert.
- <br/><br/>
+  das jeweilige System im Reiter <em>GIDE</em> die GIDE-Emulation aktivieren
+  sowie das Festplattenmodell und eine Abbilddatei ausw&auml;hlen.
   Zur Auswahl des Festplattenmodells unterst&uuml;tzt Sie JKCEMU mit
   einem Festplattenverzeichnis,
   das bereits einige passende Modelle enth&auml;lt.
@@ -32,5 +29,38 @@
  <br/><br/>
   Das GIDE enth&auml;lt auch eine Echtzeituhr.
   Im Emulator kann die Zeit nur gelesen, nicht aber gesetzt werden.
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie das GIDE-Modul aktiviert,
+  aber keine zu emulierende Festplatte eingerichtet haben,
+  wird das Modul trotzdem emuliert.
+  In dem Fall ist aber nur die auf dem GIDE-Modul enthaltene
+  Echtzeituhr praktisch nutzbar.
+ <br/><br/>
+
+ <h2>
+  <a name="fileformats">Dateiformate f&uuml;r Festplattenabbilddateien</a>
+ </h2>
+  F&uuml;r die Emulation von Festplatten unterst&uuml;tzt JKCEMU
+  zwei Arten von Abbilddateien:
+  <ol>
+   <li>Einfache Abbilddateien</li>
+   <li>
+    Einfache Abbilddateien mit einem 256&nbsp;Byte gro&szlig;en Kopfblock
+   </li>
+  </ol>
+ <br/>
+  Das erste Format ist identisch zu den
+  <a href="disk/diskimgformats.htm#plain">einfachen Abbilddateien bei der Diskettenemulation</a>.
+  Abbilddateien mit diesem Format kann JKCEMU von einem Datentr&auml;ger
+  erzeugen (siehe <a href="disk/creatediskimg.htm">hier</a>).
+ <br/><br/>
+  Das zweite Format wird aus Gr&uuml;nden der Kompatibilit&auml;t
+  zu anderen Emulatoren unterst&uuml;tzt.
+  Der 256&nbsp;Byte gro&szlig;e Kopfblock wird von JKCEMU nicht ausgewertet
+  und auch nicht beschrieben.
+ <br/><br/>
+  Abbilddateien in beiden Formaten lassen sich mit JKCEMU auch wieder
+  auf einen Datentr&auml;ger schreiben
+  (siehe <a href="disk/writediskimg.htm">hier</a>).
 </body>
 </html>

@@ -30,7 +30,8 @@
    <li>
     <a href="targets.htm#z9001krt">KC85/1, KC87, Z9001 mit KRT-Grafik</a>
    </li>
-   <li><a href="targets.htm#kc85">KC85/2...5, HC900</a></li>
+   <li><a href="targets.htm#kc85">KC85/2..5, HC900</a></li>
+   <li><a href="targets.htm#kc85_4">KC85/4..5 mit Unterst&uuml;tzung beider Bildspeicher</a></li>
    <li><a href="targets.htm#scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a></li>
    <li><a href="targets.htm#z1013">Z1013</a></li>
    <li><a href="targets.htm#z1013_64x16">Z1013 mit Peters-Platine</a></li>
@@ -54,7 +55,10 @@
   auf dem Bildschirm neben dem Bildwiederholspeicher auch der Farbspeicher
   beschrieben wird.
   Das compilierte Programm ist aber auch auf einem AC1 ohne Farbgrafikkarte
-  problemlos lauff&auml;hig.
+  lauff&auml;hig.
+  Einzig die <a href="functions.htm#point">POINT</a>-Funktion
+  zum Ermitteln der Farbe eines Pixels w&uuml;rde in dem Fall
+  falsche Werte liefern.
  <br/><br/>
   Die AC1-Monitorprogramme unterst&uuml;tzen standardm&auml;&szlig;ig
   keine Farben.
@@ -143,11 +147,24 @@
     Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
-   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
-    Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
+    Ein VDIP-Modul wird an den E/A-Basisadressen&nbsp;DCh, FCh
+    und 08h (PIO2) unterst&uuml;tzt, d.h., es wird zuerst versucht,
+    das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
+    Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh und danach 08h
+    an der Reihe.
    </li>
-   <li><tt>TARGETID$</tt> liefert "AC1".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_AC1</a>
+   </li>
+   <li>
+    Das Zielsystem ist vom Zielsystem
+    <a href="targets.htm#scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a>
+    abgeleitet, d.h.,
+    die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+    liefert auch bei <a href="constants.htm#target">TARGET_SCCH</a> TRUE.
+   </li>
   </ul>
  <br/>
 
@@ -156,11 +173,13 @@
    <li>Die Grafikbefehle stehen nicht zur Verf&uuml;gung.</li>
    <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
-   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
    </li>
-   <li><tt>TARGETID$</tt> liefert "CP/M".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_CPM</a>
+   </li>
   </ul>
  <br/>
 
@@ -171,11 +190,13 @@
     Dieser muss dazu auf die Standardadresse C000h eingestellt sein.
    </li>
    <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
-   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;FCh unterst&uuml;tzt.
    </li>
-   <li><tt>TARGETID$</tt> liefert "HUEBLER".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_HUEBLER</a>
+   </li>
   </ul>
  <br/>
   <b>Achtung!</b> F&uuml;r den H&uuml;bler-Grafik-MC compilierte Programme
@@ -193,21 +214,18 @@
    <li>Die CURSOR-Anweisung hat keine Wirkung.</li>
    <li>Die LOCATE-Anweisung steht nicht zur Verf&uuml;gung.</li>
    <li>
-    Das in JKCEMU integrierte Monitorprogramm des Kramer-MC erkennt
+    Das im JKCEMU integrierte Monitorprogramm des Kramer-MC erkennt
     bei der INKEY-Funktion nur die Tastenkombination <em>CTRL-C</em>.
    </li>
    <li>
     Druckerausgaben werden &uuml;ber den LIST-Kanal
     (Einsprungsadresse&nbsp;00ECh) get&auml;tigt.
-    Das in JKCEMU enthaltene Monitorprogramm des Kramer-MC
+    Das im JKCEMU enthaltene Monitorprogramm des Kramer-MC
     ist standardm&auml;&szlig;ig jedoch so eingestellt,
     dass der LIST-Kanal und damit die Druckerausgaben
     auf dem Bildschirm erscheinen.
    </li>
    <li>Die JOYST-Funktion liefert immer&nbsp;0.</li>
-   <li>
-    Die Netzwerkanweisungen und -funktionen stehen nicht zur Verf&uuml;gung.
-   </li>
    <li>Es wird kein VDIP-Modul unterst&uuml;tzt.</li>
    <li>
     Sie d&uuml;rfen die Compiler-Option <em>System-Stack verwenden</em>
@@ -217,7 +235,10 @@
     hineinlaufen w&uuml;rde.
     Compilieren Sie immer mit der Option <em>Eigener Stack-Bereich</em>.
    </li>
-   <li><tt>TARGETID$</tt> liefert "KRAMER".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_KRAMER</a>
+   </li>
   </ul>
  <br/>
 
@@ -251,14 +272,24 @@
     Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
-   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
-    Ein VDIP-Modul wird an den E/A-Basisadressen&nbsp;DCh und FCh
-    unterst&uuml;tzt, d.h., es wird zuerst versucht,
+    Ein VDIP-Modul wird an den E/A-Basisadressen&nbsp;DCh, FCh
+    und E4h (PIO2) unterst&uuml;tzt, d.h., es wird zuerst versucht,
     das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
-    Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh an der Reihe.
+    Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh und danach E4h
+    an der Reihe.
    </li>
-   <li><tt>TARGETID$</tt> liefert "LLC2_HIRES".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_LLC2</a>
+   </li>
+   <li>
+    Das Zielsystem ist vom Zielsystem
+    <a href="targets.htm#scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a>
+    abgeleitet, d.h.,
+    die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+    liefert auch bei <a href="constants.htm#target">TARGET_SCCH</a> TRUE.
+   </li>
   </ul>
  <br/>
 
@@ -277,11 +308,13 @@
     Kommen dagegen keine Anweisungen zum Setzen der Farbe vor,
     wird Programmcode erzeugt, der nicht auf den Farbspeicher zugreift.
    </li>
-   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;DCh unterst&uuml;tzt.
    </li>
-   <li><tt>TARGETID$</tt> liefert "Z9001".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_Z9001</a>
+   </li>
   </ul>
  <br/>
 
@@ -300,14 +333,28 @@
     mit der <a href="instructions.htm#label">LABEL</a>-Anweisung).
    </li>
    <li>
-    Bez&uuml;glich Farbunterst&uuml;tzung, KCNet und VDIP gilt das gleiche
+    Bez&uuml;glich Farbunterst&uuml;tzung und VDIP gilt das gleiche
     wie beim Zielsystem <em>KC85/1, KC87, Z9001</em>.
    </li>
-   <li><tt>TARGETID$</tt> liefert "Z9001_KRT".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_Z9001_KRT</a>
+   </li>
+   <li>
+    Das Zielsystem ist vom Zielsystem
+    <a href="targets.htm#z9001">KC85/1, KC87, Z9001</a> abgeleitet, d.h.,
+    die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+    liefert auch bei <a href="constants.htm#target">TARGET_Z9001</a> TRUE.
+   </li>
   </ul>
  <br/>
 
- <h3><a name="kc85">KC85/2...5, HC900</a></h3>
+ <h3><a name="kc85">KC85/2..5, HC900</a></h3>
+  Dieses Zielsystem erzeugt Programmcode, der auf allen
+  M&uuml;hlh&auml;user&nbsp;KCs lauff&auml;hig ist,
+  also vom HC900 bis zum KC85/5.
+ <br/><br/>
+  Eigenschaften des Zielsystems im Detail:
   <ul>
    <li>
     Tastaturein- und Bildschirmausgaben erfolgen &uuml;ber den
@@ -335,8 +382,8 @@
    </li>
    <li>
     Die CURSOR-Anweisung hat keine Wirkung.
-    CAOS schaltet den Cursor automatisch aus,
-    wenn nicht auf eine Eingabe gewartet wird.
+    CAOS schaltet den Cursor automatisch ein und aus,
+    je nachdem, ob gerade auf eine Eingabe gewartet wird oder nicht.
    </li>
    <li>
     Die JOYST-Funktion fragt direkt das Joystick-Modul (M008 bzw. M021) ab,
@@ -349,12 +396,64 @@
     Dieser wird dadurch nicht beeintr&auml;chtigt.
    </li>
    <li>
-    KCNet und VDIP werden &uuml;ber das Modul&nbsp;M052 unterst&uuml;tzt.
+    VDIP wird &uuml;ber das Modul&nbsp;M052 unterst&uuml;tzt.
     Das compilierte Programm aktiviert dazu das Modul selbstst&auml;ndig,
     d.h., es kann, muss aber nicht vor dem Programmstart schon aktiv sein.
-    Allerdings muss KCNet beim Programmstart konfiguriert sein.
    </li>
-   <li><tt>TARGETID$</tt> liefert "KC85".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_KC85</a>
+   </li>
+  </ul>
+ <br/>
+
+ <h3>
+  <a name="kc85_4">KC85/4..5 mit Unterst&uuml;tzung beider Bildspeicher</a>
+ </h3>
+  Dieses Zielsystem ist speziell auf die Hardware des KC85/4 und KC85/5
+  zugeschnitten und erm&ouml;glicht somit beide Bildspeicher zu nutzen.
+  Au&szlig;erdem wurden die Grafikroutinen auf die spezielle Hardware
+  optimiert, so dass diese noch etwas schneller sind als beim
+  weiter oben beschriebenen allgemeinen KC85/2..5-Zielsystem.
+ <br/><br/>
+  Das Zielsystem <em>KC85/4..5</em> stellt die beiden
+  <a href="instructions.htm#screen">SCREEN</a>s&nbsp;0 und 1 bereit,
+  die die beiden Bildspeicher (IRM-B&auml;nke)&nbsp;0 und 1
+  repr&auml;sentieren.
+  F&uuml;r jeden Bildspeicher, d.h. f&uuml;r jeden SCREEN,
+  wird der Cursor separat verwaltet.
+  Man kann deshalb durch Umschalten des SCREENs auf beiden Bildspeichern
+  Text ausgeben, ohne das das eine Auswirkung auf den jeweils anderen
+  Bildspeicher hat.
+ <br/><br/>
+  Eigenschaften des Zielsystems im Detail:
+  <ul>
+   <li>
+    <tt>SCREEN&nbsp;0</tt> erm&ouml;glicht die Ausgabe von Text und Grafik
+    unter Nutzung der IRM-Bank&nbsp;0.
+   </li>
+   <li>
+    <tt>SCREEN&nbsp;1</tt> erm&ouml;glicht die Ausgabe von Text und Grafik
+    unter Nutzung der IRM-Bank&nbsp;1.
+   </li>
+   <li>
+    F&uuml;r jeden SCREEN wird ein eigenes CAOS-Fenster verwendet,
+    so dass jeder SCREEN auch eine eigene Cursor-Verwaltung hat.
+   </li>
+   <li>
+    alles weitere wie beim Zielsystem
+    <a href="targets.htm#kc85">KC85/2..5, HC900</a>
+   </li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_KC85_4</a>
+   </li>
+   <li>
+    Das Zielsystem ist vom Zielsystem
+    <a href="targets.htm#kc85">KC85/2..5, HC900</a> abgeleitet, d.h.,
+    die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+    liefert auch bei <a href="constants.htm#target">TARGET_KC84</a> TRUE.
+   </li>
   </ul>
  <br/>
 
@@ -385,14 +484,16 @@
     Die JOYST-Funktion unterst&uuml;tzt einen Joystick und ruft dazu
     die Systemfunktion auf Adresse&nbsp;0EB4h auf.
    </li>
-   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
     Ein VDIP-Modul wird an den E/A-Basisadressen&nbsp;DCh und FCh
     unterst&uuml;tzt, d.h., es wird zuerst versucht,
     das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
     Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh an der Reihe.
    </li>
-   <li><tt>TARGETID$</tt> liefert "SCCH".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_SCCH</a>
+   </li>
   </ul>
  <br/>
 
@@ -421,14 +522,16 @@
     des Z1013-Monitorprogramms, die f&uuml;r den Test auf Abbruch
     regelm&auml;&szlig;ig aufgerufen wird.
    </li>
-   <li>KCNet wird an der E/A-Basisadresse&nbsp;C0h unterst&uuml;tzt.</li>
    <li>
     Ein VDIP-Modul wird an der E/A-Basisadresse&nbsp;DCh und FCh
     unterst&uuml;tzt, d.h., es wird zuerst versucht,
     das VDIP-Modul an der Basisadresse&nbsp;DCh zu initialisieren.
     Wenn das nicht gelingt, ist die Basisadresse&nbsp;FCh an der Reihe.
    </li>
-   <li><tt>TARGETID$</tt> liefert "Z1013".</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_Z1013</a>
+   </li>
   </ul>
  <br/>
 
@@ -450,27 +553,35 @@
    <li>
     <tt>SCREEN&nbsp;1</tt> ist ein reiner Textbildschirm mit 64x16 Zeichen.
    </li>
-   <li><tt>TARGETID$</tt> liefert "Z1013_64X16".</li>
    <li>Alles andere gilt entsprechend dem Zielsystem <em>Z1013</em>.</li>
+   <li>
+    Konstante f&uuml;r das Zielsystem ist:
+    <a href="constants.htm#target">TARGET_Z1013_64X16</a>
+   </li>
+   <li>
+    Das Zielsystem ist vom Zielsystem
+    <a href="targets.htm#z1013">Z1013</a> abgeleitet, d.h.,
+    die Funktion <a href="functions.htm#is_target">IS_TARGET</a>
+    liefert auch bei <a href="constants.htm#target">TARGET_Z1013</a> TRUE.
+   </li>
   </ul>
  <br/>
 
  <h3><a name="summary">Zusammenfassung</a></h3>
-  Die Tabelle zeigt anhand der mit
-  <a href="functions.htm#targetid$"><tt>TARGETID$</tt></a>
-  gelieferten Kennung alle Zielsysteme und fasst die wesentlichsten
-  Eigenschaften zusammen:
+  Die Tabelle zeigt anhand der zugeh&ouml;rigen
+  <a href="constants.htm#target">Konstante</a>
+  alle Zielsysteme und fasst die wesentlichsten Eigenschaften zusammen:
  <br/><br/>
   <table border="1">
    <tr>
-    <th>Zielsystem (TARGETID$)</th>
-    <th>Programm ist auff&auml;hig auf</th>
+    <th>Zielsystem (Konstante)</th>
+    <th>Programm ist lauff&auml;hig auf</th>
     <th>Text</th>
     <th>Grafik</th>
     <th>Farbe</th>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#ac1">AC1</a></t>
+    <td valign="top"><a href="targets.htm#ac1">TARGET_AC1</a></t>
     <td valign="top">
      AC1-2010, AC1-SCCH,<br/>
      mit Einschr&auml;nkungen auch AC1-ACC
@@ -480,7 +591,7 @@
     <td valign="top">ja&nbsp;&sup1;)</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#cpm">CP/M</a></t>
+    <td valign="top"><a href="targets.htm#cpm">TARGET_CPM</a></t>
     <td valign="top">
      CP/M-kompatible Systeme mit den von Robotron
      verwendeten Bildschirmsteuerzeichen
@@ -491,7 +602,7 @@
     <td valign="top">nein</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#huebler">HUEBLER</a></t>
+    <td valign="top"><a href="targets.htm#huebler">TARGET_HUEBLER</a></t>
     <td valign="top">
      H&uuml;bler-Grafik-MC,<br/>
      mit Einschr&auml;nkungen auch H&uuml;bler/Evert-MC
@@ -501,28 +612,41 @@
     <td valign="top">nein</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#kramer">KRAMER</a></t>
+    <td valign="top"><a href="targets.htm#kramer">TARGET_KRAMER</a></t>
     <td valign="top">Kramer-MC</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x16 Zeichen</td>
     <td valign="top">-</td>
     <td valign="top">nein</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#llc2">LLC2_HIRES</a></t>
+    <td valign="top"><a href="targets.htm#llc2">TARGET_LLC2</a></t>
     <td valign="top">LLC2 mit HiRes-Grafik</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x32 Zeichen</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;1: 512x256 Pixel</td>
     <td valign="top">nein</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#kc85">KC85</a></t>
-    <td valign="top">HC900, KC85/2..5</td>
+    <td valign="top"><a href="targets.htm#kc85">TARGET_KC85</a></t>
+    <td valign="top">KC85/2..5, HC900</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 40x32 Zeichen</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 320x256 Pixel</td>
     <td valign="top">ja</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#scch">SCCH</a></t>
+    <td valign="top"><a href="targets.htm#kc85_4">TARGET_KC85_4</a></t>
+    <td valign="top">KC85/4, KC85/5</td>
+    <td valign="top" nowrap="nowrap">
+     SCREEN&nbsp;0: 40x32 Zeichen<br/>
+     SCREEN&nbsp;1: 40x32 Zeichen
+    </td>
+    <td valign="top" nowrap="nowrap">
+     SCREEN&nbsp;0: 320x256 Pixel<br/>
+     SCREEN&nbsp;1: 320x256 Pixel
+    </td>
+    <td valign="top">ja</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="targets.htm#scch">TARGET_SCCH</a></t>
     <td valign="top">
      AC1-2010, AC1-SCCH, LLC2<br/>
      mit Einschr&auml;nkungen auch Ur-AC1 und AC1-ACC
@@ -532,14 +656,16 @@
     <td valign="top">nein</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#z1013">Z1013</a></t>
+    <td valign="top"><a href="targets.htm#z1013">TARGET_Z1013</a></t>
     <td valign="top">Z1013</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 32x32 Zeichen</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 64x64 Pixel</td>
     <td valign="top">nein</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#z1013_64x16">Z1013_64X16</a></t>
+    <td valign="top">
+     <a href="targets.htm#z1013_64x16">TARGET_Z1013_64X16</a>
+    </t>
     <td valign="top">Z1013 mit Peters-Platine</td>
     <td valign="top" nowrap="nowrap">
      SCREEN&nbsp;0: 32x32 Zeichen<br/>
@@ -549,14 +675,14 @@
     <td valign="top">nein</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#z9001">Z9001</a></t>
+    <td valign="top"><a href="targets.htm#z9001">TARGET_Z9001</a></t>
     <td valign="top">KC85/1, KC87, Z9001</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 40x24 Zeichen</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 80x48 Pixel</td>
     <td valign="top">ja&nbsp;&sup1)</td>
    </tr>
    <tr>
-    <td valign="top"><a href="targets.htm#z9001krt">Z9001_KRT</a></t>
+    <td valign="top"><a href="targets.htm#z9001krt">TARGET_Z9001_KRT</a></t>
     <td valign="top">KC85/1, KC87, Z9001 mit KRT-Grafik</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;0: 40x24 Zeichen</td>
     <td valign="top" nowrap="nowrap">SCREEN&nbsp;1: 320x192 Pixel</td>
@@ -564,7 +690,8 @@
    </tr>
   </table>
  <br/>
-  &sup1;) lauff&auml;hig auch auf einem Rechner ohne Farbgrafikkarte
+  &sup1;) Ein f&uuml;r dieses Zielsystem compiliertes Programm
+  ist auch auf einem Rechner ohne Farbgrafikkarte lauff&auml;hig.
  <br/>
 </body>
 </html>

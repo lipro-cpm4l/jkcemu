@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,6 +28,7 @@ import jkcemu.emusys.lc80.LC80SettingsFld;
 import jkcemu.emusys.poly880.Poly880SettingsFld;
 import jkcemu.emusys.z1013.Z1013SettingsFld;
 import jkcemu.emusys.z9001.Z9001SettingsFld;
+import jkcemu.emusys.zxspectrum.ZXSpectrumSettingsFld;
 import jkcemu.net.KCNetSettingsFld;
 
 
@@ -61,7 +62,7 @@ public class SettingsFrm extends BasicFrm
   private JCheckBox                    btnConfirmQuit;
   private JCheckBox                    btnClearRFsOnPowerOn;
   private JCheckBox                    btnReloadROMsOnPowerOn;
-  private JComboBox                    comboScreenRefresh;
+  private JComboBox<String>            comboScreenRefresh;
   private CardLayout                   cardLayoutSysOpt;
   private String                       curSysOptCard;
   private JRadioButton                 btnSysA5105;
@@ -82,6 +83,7 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                 btnSysLC80;
   private JRadioButton                 btnSysLLC1;
   private JRadioButton                 btnSysLLC2;
+  private JRadioButton                 btnSysNANOS;
   private JRadioButton                 btnSysPCM;
   private JRadioButton                 btnSysPoly880;
   private JRadioButton                 btnSysSC2;
@@ -90,12 +92,6 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                 btnSysZ1013;
   private JRadioButton                 btnSysZ9001;
   private JRadioButton                 btnSysZXSpectrum;
-  private JRadioButton                 btnBCS3se24_27;
-  private JRadioButton                 btnBCS3se31_29;
-  private JRadioButton                 btnBCS3se31_40;
-  private JRadioButton                 btnBCS3sp33_29;
-  private JRadioButton                 btnBCS3Ram1k;
-  private JRadioButton                 btnBCS3Ram17k;
   private JCheckBox                    btnHEMCCatchPrintCalls;
   private JCheckBox                    btnKramerMCCatchPrintCalls;
   private JRadioButton                 btnLC80_U505;
@@ -105,6 +101,7 @@ public class SettingsFrm extends BasicFrm
   private A5105SettingsFld             a5105SettingsFld;
   private AC1SettingsFld               ac1SettingsFld;
   private LLC2SettingsFld              llc2SettingsFld;
+  private BCS3SettingsFld              bcs3SettingsFld;
   private HueblerGraphicsMCSettingsFld hgmcSettingsFld;
   private KC85SettingsFld              hc900SettingsFld;
   private Z9001SettingsFld             kc85_1_SettingsFld;
@@ -114,11 +111,13 @@ public class SettingsFrm extends BasicFrm
   private KC85SettingsFld              kc85_5_SettingsFld;
   private KCcompactSettingsFld         kcCompactSettingsFld;
   private LC80SettingsFld              lc80SettingsFld;
+  private NANOSSettingsFld             nanosSettingsFld;
   private PCMSettingsFld               pcmSettingsFld;
   private Poly880SettingsFld           poly880SettingsFld;
   private Z1013SettingsFld             z1013SettingsFld;
   private Z9001SettingsFld             kc87SettingsFld;
   private Z9001SettingsFld             z9001SettingsFld;
+  private ZXSpectrumSettingsFld        zxSpectrumSettingsFld;
   private JRadioButton                 btnSpeedDefault;
   private JRadioButton                 btnSpeedValue;
   private JRadioButton                 btnSRAMInit00;
@@ -265,6 +264,7 @@ public class SettingsFrm extends BasicFrm
 		   || (src == this.btnSysLC80)
 		   || (src == this.btnSysLLC1)
 		   || (src == this.btnSysLLC2)
+		   || (src == this.btnSysNANOS)
 		   || (src == this.btnSysPCM)
 		   || (src == this.btnSysPoly880)
 		   || (src == this.btnSysSC2)
@@ -319,6 +319,7 @@ public class SettingsFrm extends BasicFrm
     this.z1013SettingsFld.lookAndFeelChanged();
     this.kc87SettingsFld.lookAndFeelChanged();
     this.z9001SettingsFld.lookAndFeelChanged();
+    this.zxSpectrumSettingsFld.lookAndFeelChanged();
   }
 
 
@@ -603,7 +604,7 @@ public class SettingsFrm extends BasicFrm
     Main.updIcon( this );
     this.screenFrm       = screenFrm;
     this.emuThread       = screenFrm.getEmuThread();
-    this.lafClass2Button = new Hashtable<String,AbstractButton>();
+    this.lafClass2Button = new HashMap<>();
     this.profileFile     = Main.getProfileFile();
     this.fmtSpeed        = NumberFormat.getNumberInstance();
     if( this.fmtSpeed instanceof DecimalFormat ) {
@@ -720,29 +721,29 @@ public class SettingsFrm extends BasicFrm
     this.btnSysKC87 = new JRadioButton( "KC87", false );
     this.btnSysKC87.addActionListener( this );
     grpSys.add( this.btnSysKC87 );
-    gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC87, gbcSys );
 
     this.btnSysKCcompact = new JRadioButton( "KC compact", false );
     this.btnSysKCcompact.addActionListener( this );
     grpSys.add( this.btnSysKCcompact );
-    gbcSys.insets.top    = 5;
-    gbcSys.insets.bottom = 0;
-    gbcSys.gridy         = 0;
-    gbcSys.gridx++;
+    gbcSys.insets.bottom = 5;
+    gbcSys.gridy++;
     panelSys.add( this.btnSysKCcompact, gbcSys );
 
     this.btnSysKramerMC = new JRadioButton( "Kramer-MC", false );
     this.btnSysKramerMC.addActionListener( this );
     grpSys.add( this.btnSysKramerMC );
-    gbcSys.insets.top = 0;
-    gbcSys.gridy++;
+    gbcSys.insets.top    = 5;
+    gbcSys.insets.bottom = 0;
+    gbcSys.gridy         = 0;
+    gbcSys.gridx++;
     panelSys.add( this.btnSysKramerMC, gbcSys );
 
     this.btnSysLC80 = new JRadioButton( "LC-80", false );
     this.btnSysLC80.addActionListener( this );
     grpSys.add( this.btnSysLC80 );
+    gbcSys.insets.top = 0;
     gbcSys.gridy++;
     panelSys.add( this.btnSysLC80, gbcSys );
 
@@ -757,6 +758,12 @@ public class SettingsFrm extends BasicFrm
     grpSys.add( this.btnSysLLC2 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysLLC2, gbcSys );
+
+    this.btnSysNANOS = new JRadioButton( "NANOS", false );
+    this.btnSysNANOS.addActionListener( this );
+    grpSys.add( this.btnSysNANOS );
+    gbcSys.gridy++;
+    panelSys.add( this.btnSysNANOS, gbcSys );
 
     this.btnSysPCM = new JRadioButton( "PC/M", false );
     this.btnSysPCM.addActionListener( this );
@@ -803,7 +810,6 @@ public class SettingsFrm extends BasicFrm
     this.btnSysZXSpectrum = new JRadioButton( "ZX Spectrum", false );
     this.btnSysZXSpectrum.addActionListener( this );
     grpSys.add( this.btnSysZXSpectrum );
-    gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysZXSpectrum, gbcSys );
 
@@ -853,71 +859,8 @@ public class SettingsFrm extends BasicFrm
 
 
     // Optionen fuer BCS3
-    JPanel panelBCS3 = new JPanel( new GridBagLayout() );
-    this.panelSysOpt.add( panelBCS3, "BCS3" );
-
-    GridBagConstraints gbcBCS3 = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.NORTHWEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
-
-    ButtonGroup grpBCS3os = new ButtonGroup();
-
-    this.btnBCS3se24_27 = new JRadioButton(
-		"2 KByte BASIC-SE 2.4, 2,5 MHz, 27 Zeichen pro Zeile",
-		true );
-    this.btnBCS3se24_27.addActionListener( this );
-    grpBCS3os.add( this.btnBCS3se24_27 );
-    panelBCS3.add( this.btnBCS3se24_27, gbcBCS3 );
-
-    this.btnBCS3se31_29 = new JRadioButton(
-		"4 KByte BASIC-SE 3.1, 2,5 MHz, 29 Zeichen pro Zeile",
-		false );
-    this.btnBCS3se31_29.addActionListener( this );
-    grpBCS3os.add( this.btnBCS3se31_29 );
-    gbcBCS3.insets.top = 0;
-    gbcBCS3.gridy++;
-    panelBCS3.add( this.btnBCS3se31_29, gbcBCS3 );
-
-    this.btnBCS3se31_40 = new JRadioButton(
-		"4 KByte BASIC-SE 3.1, 3,5 MHz, 40 Zeichen pro Zeile",
-		false );
-    this.btnBCS3se31_40.addActionListener( this );
-    grpBCS3os.add( this.btnBCS3se31_40 );
-    gbcBCS3.insets.top = 0;
-    gbcBCS3.gridy++;
-    panelBCS3.add( this.btnBCS3se31_40, gbcBCS3 );
-
-    this.btnBCS3sp33_29 = new JRadioButton(
-		"4 KByte S/P-BASIC V3.3, 2,5 MHz, 29 Zeichen pro Zeile",
-		false );
-    this.btnBCS3sp33_29.addActionListener( this );
-    grpBCS3os.add( this.btnBCS3sp33_29 );
-    gbcBCS3.gridy++;
-    panelBCS3.add( this.btnBCS3sp33_29, gbcBCS3 );
-
-    ButtonGroup grpBCS3ram = new ButtonGroup();
-
-    this.btnBCS3Ram1k = new JRadioButton( "1 KByte RAM", true );
-    this.btnBCS3Ram1k.addActionListener( this );
-    grpBCS3ram.add( this.btnBCS3Ram1k );
-    gbcBCS3.insets.top = 10;
-    gbcBCS3.gridy++;
-    panelBCS3.add( this.btnBCS3Ram1k, gbcBCS3 );
-
-    this.btnBCS3Ram17k = new JRadioButton(
-				"17 KByte RAM (16 KByte RAM-Erweiterung)",
-				false );
-    this.btnBCS3Ram17k.addActionListener( this );
-    grpBCS3ram.add( this.btnBCS3Ram17k );
-    gbcBCS3.insets.top    = 0;
-    gbcBCS3.insets.bottom = 5;
-    gbcBCS3.gridy++;
-    panelBCS3.add( this.btnBCS3Ram17k, gbcBCS3 );
+    this.bcs3SettingsFld = new BCS3SettingsFld( this, "jkcemu.bcs3." );
+    this.panelSysOpt.add( this.bcs3SettingsFld, "BCS3" );
 
 
     // Optionen fuer HC900
@@ -1017,6 +960,11 @@ public class SettingsFrm extends BasicFrm
     this.panelSysOpt.add( this.llc2SettingsFld, "LLC2" );
 
 
+    // Optionen fuer NANOS
+    this.nanosSettingsFld = new NANOSSettingsFld( this, "jkcemu.nanos." );
+    this.panelSysOpt.add( this.nanosSettingsFld, "NANOS" );
+
+
     // Optionen fuer PC/M
     this.pcmSettingsFld = new PCMSettingsFld( this, "jkcemu.pcm." );
     this.panelSysOpt.add( this.pcmSettingsFld, "PC/M" );
@@ -1040,6 +988,13 @@ public class SettingsFrm extends BasicFrm
 					"jkcemu.z9001.",
 					false );
     this.panelSysOpt.add( this.z9001SettingsFld, "Z9001" );
+
+
+    // Optionen fuer ZXSpectrum
+    this.zxSpectrumSettingsFld = new ZXSpectrumSettingsFld(
+					this,
+					"jkcemu.zxspectrum." );
+    this.panelSysOpt.add( this.zxSpectrumSettingsFld, "ZXSpectrum" );
 
 
     // Bereich Geschwindigkeit
@@ -1151,7 +1106,7 @@ public class SettingsFrm extends BasicFrm
     gbcScreen.gridy++;
     this.tabScreen.add( new JLabel( "Aktualisierungszyklus:" ), gbcScreen );
 
-    this.comboScreenRefresh = new JComboBox();
+    this.comboScreenRefresh = new JComboBox<>();
     this.comboScreenRefresh.setEditable( false );
     this.comboScreenRefresh.addItem( "10" );
     this.comboScreenRefresh.addItem( "20" );
@@ -1657,6 +1612,9 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysLLC2.isSelected() ) {
       valueSys = "LLC2";
     }
+    else if( this.btnSysNANOS.isSelected() ) {
+      valueSys = "NANOS";
+    }
     else if( this.btnSysPCM.isSelected() ) {
       valueSys = "PC/M";
     }
@@ -1690,24 +1648,7 @@ public class SettingsFrm extends BasicFrm
     this.ac1SettingsFld.applyInput( props, valueSys.equals( "AC1" ) );
 
     // Optionen fuer BCS3
-    if( this.btnBCS3se31_29.isSelected() ) {
-      props.setProperty( "jkcemu.bcs3.os.version", "3.1" );
-      props.setProperty( "jkcemu.bcs3.chars_per_line", "29" );
-    } else if( this.btnBCS3se31_40.isSelected() ) {
-      props.setProperty( "jkcemu.bcs3.os.version", "3.1" );
-      props.setProperty( "jkcemu.bcs3.chars_per_line", "40" );
-    } else if( this.btnBCS3sp33_29.isSelected() ) {
-      props.setProperty( "jkcemu.bcs3.os.version", "3.3" );
-      props.setProperty( "jkcemu.bcs3.chars_per_line", "29" );
-    } else {
-      props.setProperty( "jkcemu.bcs3.os.version", "2.4" );
-      props.setProperty( "jkcemu.bcs3.chars_per_line", "27" );
-    }
-    if( this.btnBCS3Ram17k.isSelected() ) {
-      props.setProperty( "jkcemu.bcs3.ram.kbyte", "17" );
-    } else {
-      props.setProperty( "jkcemu.bcs3.ram.kbyte", "1" );
-    }
+    this.bcs3SettingsFld.applyInput( props, valueSys.equals( "BCS3" ) );
 
     // Optionen fuer HC900
     this.hc900SettingsFld.applyInput( props, valueSys.equals( "HC900" ) );
@@ -1751,6 +1692,9 @@ public class SettingsFrm extends BasicFrm
     // Optionen fuer LLC2
     this.llc2SettingsFld.applyInput( props, valueSys.equals( "LLC2" ) );
 
+    // Optionen fuer NANOS
+    this.nanosSettingsFld.applyInput( props, valueSys.equals( "NANOS" ) );
+
     // Optionen fuer PC/M
     this.pcmSettingsFld.applyInput( props, valueSys.equals( "PC/M" ) );
 
@@ -1764,6 +1708,11 @@ public class SettingsFrm extends BasicFrm
 
     // Optionen fuer Z9001
     this.z9001SettingsFld.applyInput( props, valueSys.equals( "Z9001" ) );
+
+    // Optionen fuer ZXSpectrum
+    this.zxSpectrumSettingsFld.applyInput(
+		props,
+		valueSys.equals( "ZXSpectrum" ) );
   }
 
 
@@ -1920,6 +1869,9 @@ public class SettingsFrm extends BasicFrm
     else if( sysName.startsWith( "LLC2" ) ) {
       this.btnSysLLC2.setSelected( true );
     }
+    else if( sysName.startsWith( "NANOS" ) ) {
+      this.btnSysNANOS.setSelected( true );
+    }
     else if( sysName.startsWith( "PC/M" ) ) {
       this.btnSysPCM.setSelected( true );
     }
@@ -1954,31 +1906,7 @@ public class SettingsFrm extends BasicFrm
     this.ac1SettingsFld.updFields( props );
 
     // Optionen fuer BCS3
-    String bcs3Version = EmuUtil.getProperty(
-				props,
-				"jkcemu.bcs3.os.version" );
-    if( bcs3Version.equals( "3.1" ) ) {
-      if( EmuUtil.getProperty(
-			props,
-			"jkcemu.bcs3.chars_per_line" ).equals( "40" ) )
-      {
-	this.btnBCS3se31_40.setSelected( true );
-      } else {
-	this.btnBCS3se31_29.setSelected( true );
-      }
-    } else if( bcs3Version.equals( "3.3" ) ) {
-      this.btnBCS3sp33_29.setSelected( true );
-    } else {
-      this.btnBCS3se24_27.setSelected( true );
-    }
-    if( EmuUtil.getProperty(
-		props,
-		"jkcemu.bcs3.ram.kbyte" ).equals( "17" ) )
-    {
-      this.btnBCS3Ram17k.setSelected( true );
-    } else {
-      this.btnBCS3Ram1k.setSelected( true );
-    }
+    this.bcs3SettingsFld.updFields( props );
 
     // Optionen fuer HC900
     this.hc900SettingsFld.updFields( props );
@@ -2016,6 +1944,9 @@ public class SettingsFrm extends BasicFrm
     // Optionen fuer LLC2
     this.llc2SettingsFld.updFields( props );
 
+    // Optionen fuer NANOS
+    this.nanosSettingsFld.updFields( props );
+
     // Optionen fuer PC/M
     this.pcmSettingsFld.updFields( props );
 
@@ -2030,6 +1961,9 @@ public class SettingsFrm extends BasicFrm
 
     // Optionen fuer Z9001
     this.z9001SettingsFld.updFields( props );
+
+    // Optionen fuer ZXSpectrum
+    this.zxSpectrumSettingsFld.updFields( props );
 
     // Optionen anpassen
     updSysOptCard();
@@ -2217,6 +2151,9 @@ public class SettingsFrm extends BasicFrm
     else if( this.btnSysLC80.isSelected() ) {
       cardName = "LC80";
     }
+    else if( this.btnSysNANOS.isSelected() ) {
+      cardName = "NANOS";
+    }
     else if( this.btnSysPCM.isSelected() ) {
       cardName = "PC/M";
     }
@@ -2231,6 +2168,9 @@ public class SettingsFrm extends BasicFrm
     }
     else if( this.btnSysZ9001.isSelected() ) {
       cardName = "Z9001";
+    }
+    else if( this.btnSysZXSpectrum.isSelected() ) {
+      cardName = "ZXSpectrum";
     }
     this.cardLayoutSysOpt.show( this.panelSysOpt, cardName );
     this.curSysOptCard = cardName;

@@ -66,8 +66,10 @@
        Einfache Diskettenabbilddatei (*.img; *.image; *.raw)
       </li>
       <li>AnaDisk-Datei (*.dump)</li>
+      <li>CopyQM-Datei (*.cqm)</li>
       <li>CPC-Disk-Datei (*.dsk)</li>
       <li>ImageDisk-Datei (*.imd)</li>
+      <li>TeleDisk-Datei (*.td0)</li>
      </ul>
     </td>
    </tr>
@@ -134,6 +136,15 @@
     </td>
    </tr>
   </table>
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie beim Konvertieren einer Diskettenabbilddatei
+  eine Fehlermeldung erhalten,
+  dass ein bestimmter Sektor nicht gefunden wurde,
+  enth&auml;lt die Quelldatei eine unregelm&auml;&szlig;ige Sektoranordnung,
+  aber das Format der Ausgabedatei unterst&uuml;tzt das nicht.
+  In dem Fall m&uuml;ssen Sie das Ausgabeformat &auml;ndern.
+  Folgende Formate unterst&uuml;tzten eine freie Sektoranordnung:
+  AnaDisk, CPC-Disk, ImageDisk und TeleDisk.
  <br/><br/>
   <b>Achtung!</b> KCB-Dateien und bestimmte Headersave-Dateien enthalten
   KC-BASIC-Programme mit eventuell zus&auml;tzlichen Maschinencode-

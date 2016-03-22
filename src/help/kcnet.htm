@@ -2,12 +2,13 @@
 <body>
  <h1>Netzwerkemulation</h1>
   <ul>
-   <li><a href="kcnet.htm#intro">Allgemeines</a></li>
-   <li><a href="kcnet.htm#cfg">Konfiguration</a></li>
-   <li><a href="kcnet.htm#ipv6">Hinweise zu IPv6</a></li>
+   <li><a href="kcnet.htm#intro">1. Allgemeines</a></li>
+   <li><a href="kcnet.htm#cfg">2. Konfiguration</a></li>
+   <li>&nbsp;&nbsp;<a href="kcnet.htm#dhcp">2.1. DHCP</a></li>
+   <li><a href="kcnet.htm#ipv6">3. Hinweise zu IPv6</a></li>
   </ul>
 
- <h2><a name="intro">Allgemeines</a></h2>
+ <h2><a name="intro">1. Allgemeines</a></h2>
   Ralf K&auml;stner hat eine TCP/IP-f&auml;hige L&ouml;sung
   zum Anschluss der KC85-Computer aus M&uuml;hlhausen
   an ein Ethernet-Netzwerk entwickelt.
@@ -59,10 +60,10 @@
   </ul>
  <br/>
 
- <h2><a name="cfg">Konfiguration</a></h2>
+ <h2><a name="cfg">2. Konfiguration</a></h2>
   KCNet muss nach dem Start des Computers erst konfiguriert werden,
   bevor es verwendet werden kann.
-  Daf&uuml;r gibt es ein spezielles Programm,
+  Daf&uuml;r gibt es spezielle Programme,
   mit dem man die Werte f&uuml;r IP-Adresse, Subnetzmaske, Gateway
   und DNS-Server im Netzwerkmodul eintragen kann.
   In der Emulation werden aber die im KCNet eingestellten Werte
@@ -81,7 +82,7 @@
  <br/><br/>
   JKCEMU bietet die M&ouml;glichkeit, KCNet vorzukonfigurieren,
   d.h., beim Start der Emulation ist das Netzwerk bereits konfiguriert,
-  und sie brauchen das spezielle Konfigurationsprogramm nicht mehr starten.
+  und sie brauchen kein spezielles Konfigurationsprogramm mehr starten.
   Die vier einzelnen Werte f&uuml;r die Netzwerkkonfiguration
   k&ouml;nnen Sie in den <a href="settings.htm">Einstellungen</a>,
   Bereich <em>Netzwerk</em>, festlegen.
@@ -111,7 +112,33 @@
   </ol>
  <br/>
 
- <h2><a name="ipv6">Hinweise zu IPv6</a></h2>
+ <h3><a name="dhcp">2.1. DHCP</a></h3>
+  Wenn Sie auf die M&ouml;glichkeit der Vorkonfiguration verzichten,
+  ist KCNet nach dem Start von JKCEMU erst einmal nicht konfiguriert.
+  Nun k&ouml;nnten Sie,
+  wie &uuml;blicherweise auf einem realen System auch,
+  ein Programm starten, welches KCNet mittels DHCP konfiguriert.
+  Da aber im Fall der Emulation das Netzwerk von dem darunter liegenden
+  Betriebssystem verwaltet wird und der Emulator normalerweise auch
+  in einer Umgebung ohne Systemberechtigungen l&auml;uft,
+  w&uuml;rde dieses DHCP-Konfigurationsprogramm (DHCP-Client)
+  auf einen Fehler laufen.
+  Damit aber trotzdem in der Emulation ein DHCP-Prozess fehlerfrei
+  durchlaufen kann, wird durch JKCEMU ein DHCP-Server simuliert.
+  Der Emulator f&auml;ngt dazu alle DHCP-Anfragen ab und beantwortet sie so,
+  wie es auch ein realer DHCP-Server tun w&uuml;rde.
+ <br/><br/>
+  <b>Achtung!</b> Die vom simulierten DHCP-Server gelieferten Werte
+  f&uuml;r die Server-IP-Adresse sowie f&uuml;r die Lease-, Renew-
+  und Rebind-Zeit der Client-IP-Adresse haben keinen realen Bezug!
+  Diese Werte dienen nur dazu, den in der Emulation laufenden
+  DHCP-Client zufieden zu stellen.
+  Desweiteren sollte beachtet werden, dass kein DHCP-Server simuliert wird,
+  wenn JKCEMU keine IP-Adresse ermitteln kann und in den Einstellungen
+  auch keine angegeben wurde.
+ <br/><br/>
+
+ <h2><a name="ipv6">3. Hinweise zu IPv6</a></h2>
   Die emulierte Netzwerkl&ouml;sung KCNet verwendet ausschlie&szlig;lich
   die alte TCP/IP-Version IPv4 mit den 4&nbsp;Byte langen IP-Adressen,
   die in Form von vier mit einem Punkt getrennten Dezimalzahlen

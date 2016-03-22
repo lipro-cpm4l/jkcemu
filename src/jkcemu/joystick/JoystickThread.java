@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.joystick;
 import java.awt.*;
 import java.io.IOException;
 import java.lang.*;
+import jkcemu.Main;
 import jkcemu.base.*;
 
 
@@ -36,7 +37,9 @@ public class JoystickThread extends Thread
 		int       joyNum,
 		boolean   interactive )
   {
-    super( String.format( "JKCEMU joystick %d listener", joyNum ) );
+    super(
+	Main.getThreadGroup(),
+	String.format( "JKCEMU joystick %d listener", joyNum ) );
     this.emuThread   = emuThread;
     this.joyNum      = joyNum;
     this.interactive = interactive;
@@ -73,28 +76,36 @@ public class JoystickThread extends Thread
 	js = DeviceIO.openJoystick( this.joyNum );
       }
       if( js != null ) {
-	while( this.running && js.waitForEvent() ) {
-	  int   m = 0;
-	  float x = js.getXAxis();
-	  float y = js.getYAxis();
-	  int   b = js.getPressedButtons();
-	  if( x < -0.5F ) {
-	    m |= LEFT_MASK;
-	  } else if( x > 0.5F ) {
-	    m |= RIGHT_MASK;
+	while( this.running ) {
+	  if( Main.isWindowActive() && js.waitForEvent() ) {
+	    int   m = 0;
+	    float x = js.getXAxis();
+	    float y = js.getYAxis();
+	    int   b = js.getPressedButtons();
+	    if( x < -0.5F ) {
+	      m |= LEFT_MASK;
+	    } else if( x > 0.5F ) {
+	      m |= RIGHT_MASK;
+	    }
+	    if( y < -0.5F ) {
+	      m |= UP_MASK;
+	    } else if( y > 0.5F ) {
+	      m |= DOWN_MASK;
+	    }
+	    if( (b & 0x5555) != 0 ) {	// Bit 0, 2, 4, ...
+	      m |= BUTTON1_MASK;
+	    }
+	    if( (b & 0xAAAA) != 0 ) {	// Bit 1, 3, 5, ...
+	      m |= BUTTON2_MASK;
+	    }
+	    this.emuThread.setJoystickAction( this.joyNum, m );
+	  } else {
+	    this.emuThread.setJoystickAction( this.joyNum, 0 );
+	    try {
+	      Thread.sleep( 50 );
+	    }
+	    catch( InterruptedException ex ) {}
 	  }
-	  if( y < -0.5F ) {
-	    m |= UP_MASK;
-	  } else if( y > 0.5F ) {
-	    m |= DOWN_MASK;
-	  }
-	  if( (b & 0x5555) != 0 ) {	// Bit 0, 2, 4, ...
-	    m |= BUTTON1_MASK;
-	  }
-	  if( (b & 0xAAAA) != 0 ) {	// Bit 1, 3, 5, ...
-	    m |= BUTTON2_MASK;
-	  }
-	  this.emuThread.setJoystickAction( this.joyNum, m );
 	}
       } else {
 	if( this.interactive ) {

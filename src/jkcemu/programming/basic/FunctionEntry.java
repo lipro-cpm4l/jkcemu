@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
+import jkcemu.programming.PrgSource;
 
 
 public class FunctionEntry extends CallableEntry
@@ -18,12 +19,12 @@ public class FunctionEntry extends CallableEntry
 
 
   public FunctionEntry(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String name )
+		PrgSource source,
+		long      basicLineNum,
+		String    name )
   {
     super(
-	sourceLineNum,
+	source,
 	basicLineNum,
 	name,
 	name.endsWith( "$" ) ?
@@ -31,7 +32,7 @@ public class FunctionEntry extends CallableEntry
 		: ("UFI_" + name) );
 
     // Pseudovariable fuer Rueckgabewert
-    addVar( sourceLineNum, basicLineNum, name );
+    addVar( source, basicLineNum, name );
     setVarUsed( name );
     this.retVarIYOffs = getVarIYOffs( getVarCount() - 1);
     this.retVarInfo   = new SimpleVarInfo(

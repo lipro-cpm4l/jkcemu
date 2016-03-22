@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,10 +14,14 @@ import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
+import jkcemu.disk.GIDESettingsFld;
+import jkcemu.emusys.Z9001;
 
 
 public class Z9001SettingsFld extends AbstractSettingsFld
 {
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 2000;
+
   private static final String DEFAULT_LABEL_ROM_MODULE =
 				"Inhalt des ROM-Moduls:";
 
@@ -27,7 +31,10 @@ public class Z9001SettingsFld extends AbstractSettingsFld
   private JPanel                               tabGraph;
   private JPanel                               tabMem;
   private JPanel                               tabPrinter;
+  private GIDESettingsFld                      tabGIDE;
   private RAMFloppiesSettingsFld               tabRF;
+  private AutoLoadSettingsFld                  tabAutoLoad;
+  private AutoInputSettingsFld                 tabAutoInput;
   private JRadioButton                         btnMonoGraphNone;
   private JRadioButton                         btnMonoGraphKRT;
   private JRadioButton                         btnColorGraphNone;
@@ -53,6 +60,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
   private JCheckBox                            btnPlotter;
   private JCheckBox                            btnKCNet;
   private JCheckBox                            btnVDIP;
+  private JCheckBox                            btnRTC;
   private JCheckBox                            btnPasteFast;
   private ROMFileSettingsFld                   fldAltOS;
   private ROMFileSettingsFld                   fldAltBASIC;
@@ -66,14 +74,14 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 		boolean     kc87 )
   {
     super( settingsFrm, propPrefix );
-    this.switchOffMap = new HashMap<AbstractButton,AbstractButton[]>();
+    this.switchOffMap = new HashMap<>();
 
     setLayout( new BorderLayout() );
     this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
-    // Bereich Grafik
+    // Tab Grafik
     this.tabGraph = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Grafik", this.tabGraph );
 
@@ -146,7 +154,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.tabGraph.add( this.btnFixedScreenSize, gbcGraph );
 
 
-    // Bereich Speichermodule
+    // Tab Speichermodule
     this.tabMem = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Speichermodule", this.tabMem );
 
@@ -313,18 +321,18 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     updMemFieldsEnabled();
 
 
-    // Bereich RAM-Floppies
+    // Tab RAM-Floppies
     this.tabRF = new RAMFloppiesSettingsFld(
 			settingsFrm,
 			propPrefix,
-			"RAM-Floppy an IO-Adressen 20h/21h",
+			"RAM-Floppy an E/A-Adressen 20h/21h",
 			RAMFloppy.RFType.ADW,
-			"RAM-Floppy an IO-Adressen 24h/25h",
+			"RAM-Floppy an E/A-Adressen 24h/25h",
 			RAMFloppy.RFType.ADW );
     this.tabbedPane.addTab( "RAM-Floppies", this.tabRF );
 
 
-    // Bereich Drucker
+    // Tab Drucker
     this.tabPrinter = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Drucker", this.tabPrinter );
 
@@ -362,7 +370,12 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.tabPrinter.add( this.btnNoPrinter, gbcPrinter );
 
 
-    // Bereich Erweiterungen
+    // Tab GIDE
+    this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
+    this.tabbedPane.addTab( "GIDE", this.tabGIDE );
+
+
+    // Tab Erweiterungen
     this.tabExt = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
 
@@ -390,12 +403,17 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.btnVDIP = new JCheckBox(
 		"USB-Anschluss (Vinculum VDIP Modul)",
 		false );
-    gbcExt.insets.bottom = 5;
     gbcExt.gridy++;
     this.tabExt.add( this.btnVDIP, gbcExt );
 
+    this.btnRTC = new JCheckBox( "Echtzeituhr", false );
+    this.btnRTC.addActionListener( this );
+    gbcExt.insets.bottom = 5;
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnRTC, gbcExt );
 
-    // Bereich Sonstiges
+
+    // Tab Sonstiges
     this.tabEtc = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
@@ -414,9 +432,10 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnPasteFast, gbcEtc );
 
-    gbcEtc.fill       = GridBagConstraints.HORIZONTAL;
-    gbcEtc.weightx    = 1.0;
-    gbcEtc.insets.top = 5;
+    gbcEtc.fill          = GridBagConstraints.HORIZONTAL;
+    gbcEtc.weightx       = 1.0;
+    gbcEtc.insets.top    = 10;
+    gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
     this.tabEtc.add( new JSeparator(), gbcEtc );
 
@@ -424,6 +443,8 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 		settingsFrm,
 		propPrefix + "os.",
 		"Alternatives Betriebssystem (F000h-FFFFh):" );
+    gbcEtc.insets.top    = 5;
+    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltOS, gbcEtc );
 
@@ -444,6 +465,24 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 				 "Alternativer Zeichensatz:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltFont, gbcEtc );
+
+
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+					settingsFrm,
+					propPrefix,
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
+					true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+					settingsFrm,
+					propPrefix,
+					Z9001.getDefaultSwapKeyCharCase(),
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
     // Listener
@@ -485,7 +524,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     Component tab = null;
     try {
 
-      // Grafik
+      // Tab Grafik
       tab = this.tabGraph;
       boolean color = false;
       String  graph = "none";
@@ -515,7 +554,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 		this.propPrefix + "fixed_screen_size",
 		this.btnFixedScreenSize.isSelected() );
 
-      // Speichermodule
+      // Tab Speichermodule
       tab = this.tabMem;
       EmuUtil.setProperty(
 		props,
@@ -574,11 +613,11 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 			this.propPrefix + "rom_mega.enabled",
 			this.btnRomMega.isSelected() );
 
-      // RAM-Floppies
+      // Tab RAM-Floppies
       tab = this.tabRF;
       this.tabRF.applyInput( props, selected );
 
-      // Drucker
+      // Tab Drucker
       tab = this.tabPrinter;
       EmuUtil.setProperty(
 		props,
@@ -589,7 +628,11 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 		this.propPrefix + "printer_module.enabled",
 		this.btnPrinterModule.isSelected() );
 
-      // Erweiterungen
+      // Tab GIDE
+      tab = this.tabGIDE;
+      this.tabGIDE.applyInput( props, selected );
+
+      // Tab Erweiterungen
       tab = this.tabExt;
       EmuUtil.setProperty(
 		props,
@@ -607,8 +650,12 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + "vdip.enabled",
 		this.btnVDIP.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "rtc.enabled",
+		this.btnRTC.isSelected() );
 
-      // Sonstiges
+      // Tab Sonstiges
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
@@ -620,6 +667,14 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 	this.fldAltBASIC.applyInput( props, selected );
       }
       this.fldAltFont.applyInput( props, selected );
+
+      // Tab AutoLoad
+      tab = this.tabAutoLoad;
+      this.tabAutoLoad.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -651,14 +706,38 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 	rv = true;
       }
     }
+    if( !rv ) {
+      rv = this.tabGIDE.doAction( e );
+    }
+    if( !rv ) {
+      rv = this.tabAutoLoad.doAction( e );
+    }
+    if( !rv ) {
+      rv = this.tabAutoInput.doAction( e );
+    }
     return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    this.fldRomModule.lookAndFeelChanged();
+    this.fldAltOS.lookAndFeelChanged();
+    if( this.fldAltBASIC != null ) {
+      this.fldAltBASIC.lookAndFeelChanged();
+    }
+    this.fldAltFont.lookAndFeelChanged();
+    this.tabGIDE.lookAndFeelChanged();
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
   }
 
 
   @Override
   public void updFields( Properties props )
   {
-    // Grafik
+    // Tab Grafik
     boolean color = EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + "color",
@@ -697,7 +776,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 				this.propPrefix + "fixed_screen_size",
 				false ) );
 
-    // Speichermodule
+    // Tab Speichermodule
     this.btnRam16k4000.setSelected(
 		EmuUtil.getBooleanProperty(
 				props,
@@ -746,10 +825,10 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.fldRomModule.updFields( props );
     updMemFieldsEnabled();
 
-    // RAM-Flopies
+    // Tab RAM-Flopies
     this.tabRF.updFields( props );
 
-    // Drucker
+    // Tab Drucker
     if( EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + "printer_module.enabled",
@@ -766,7 +845,10 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       this.btnNoPrinter.setSelected( true );
     }
 
-    // Erweiterungen
+    // Tab GIDE
+    this.tabGIDE.updFields( props );
+
+    // Tab Erweiterungen
     this.btnFloppyDisk.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
@@ -787,8 +869,12 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 				props,
 				this.propPrefix + "vdip.enabled",
 				false ) );
+    this.btnRTC.setSelected(
+	EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "rtc.enabled", false ) );
 
-    // Sonstiges
+    // Tab Sonstiges
     this.btnPasteFast.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
@@ -799,6 +885,12 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       this.fldAltBASIC.updFields( props );
     }
     this.fldAltFont.updFields( props );
+
+    // Tab AutoLoad
+    this.tabAutoLoad.updFields( props );
+
+    // Tab AutoInput
+    this.tabAutoInput.updFields( props );
   }
 
 

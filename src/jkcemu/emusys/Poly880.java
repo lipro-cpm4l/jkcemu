@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -45,6 +45,7 @@ public class Poly880 extends EmuSys implements
   private int                colMask;
   private long               curDisplayTStates;
   private long               displayCheckTStates;
+  private boolean            audioInPhase;
   private boolean            nmiEnabled;
   private boolean            nmiTrigger;
   private boolean            ram8000;
@@ -57,7 +58,7 @@ public class Poly880 extends EmuSys implements
 
   public Poly880( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.poly880." );
     this.rom0Bytes           = null;
     this.rom1Bytes           = null;
     this.rom2Bytes           = null;
@@ -152,6 +153,11 @@ public class Poly880 extends EmuSys implements
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
+    boolean phase = this.emuThread.readAudioPhase();
+    if( phase != this.audioInPhase ) {
+      this.audioInPhase = phase;
+      this.pio1.putInValuePortB( this.audioInPhase ? 0x02 : 0, 0x02 );
+    }
     this.ctc.z80TStatesProcessed( cpu, tStates );
     if( this.displayCheckTStates > 0 ) {
       this.curDisplayTStates += tStates;
@@ -189,22 +195,30 @@ public class Poly880 extends EmuSys implements
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom0File,
-		EmuUtil.getProperty( props, "jkcemu.poly880.rom_0000.file" ) );
+		EmuUtil.getProperty(
+				props,
+				this.propPrefix + "rom_0000.file" ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom1File,
-		EmuUtil.getProperty( props, "jkcemu.poly880.rom_1000.file" ) );
+		EmuUtil.getProperty(
+				props,
+				this.propPrefix + "rom_1000.file" ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom2File,
-		EmuUtil.getProperty( props, "jkcemu.poly880.rom_2000.file" ) );
+		EmuUtil.getProperty(
+				props,
+				this.propPrefix + "rom_2000.file" ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom3File,
-		EmuUtil.getProperty( props, "jkcemu.poly880.rom_3000.file" ) );
+		EmuUtil.getProperty(
+				props,
+				this.propPrefix + "rom_3000.file" ) );
     }
     if( rv
 	&& ((this.rom0File != null) || (this.rom1File != null)
@@ -446,13 +460,13 @@ public class Poly880 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
 
     switch( port & 0x8F ) {	// A4 bis A6 ignorieren
       case 0x80:
-	rv = this.pio1.readPortA();
+	rv = this.pio1.readDataA();
 	break;
 
       case 0x81:
@@ -471,12 +485,8 @@ public class Poly880 extends EmuSys implements
 	      m <<= 1;
 	    }
 	  }
-	  v &= 0xB0;
-	  if( this.emuThread.readAudioPhase() ) {
-	    v |= 0x02;
-	  }
-	  this.pio1.putInValuePortB( v, false );
-	  rv = this.pio1.readPortB();
+	  this.pio1.putInValuePortB( v & 0xB0, 0xFD );
+	  rv = this.pio1.readDataB();
 	}
 	break;
 
@@ -485,7 +495,7 @@ public class Poly880 extends EmuSys implements
 	break;
 
       case 0x84:
-	rv = this.pio2.readPortA();
+	rv = this.pio2.readDataA();
 	break;
 
       case 0x85:
@@ -493,7 +503,7 @@ public class Poly880 extends EmuSys implements
 	break;
 
       case 0x86:
-	rv = this.pio2.readPortB();
+	rv = this.pio2.readDataB();
 	break;
 
       case 0x87:
@@ -504,7 +514,7 @@ public class Poly880 extends EmuSys implements
       case 0x89:
       case 0x8A:
       case 0x8B:
-      rv = this.ctc.read( port & 0x03 );
+      rv = this.ctc.read( port & 0x03, tStates );
     }
     return rv;
   }
@@ -538,9 +548,10 @@ public class Poly880 extends EmuSys implements
     synchronized( this.keyboardMatrix ) {
       Arrays.fill( this.keyboardMatrix, 0 );
     }
-    this.colMask    = 0;
-    this.nmiEnabled = true;
-    this.nmiTrigger = false;
+    this.colMask      = 0;
+    this.audioInPhase = this.emuThread.readAudioPhase();
+    this.nmiEnabled   = true;
+    this.nmiTrigger   = false;
   }
 
 
@@ -584,12 +595,12 @@ public class Poly880 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     int v = 0;
     switch( port & 0x8F ) {	// A4 bis A6 ignorieren
       case 0x80:
-	this.pio1.writePortA( value );
+	this.pio1.writeDataA( value );
 	break;
 
       case 0x81:
@@ -597,7 +608,7 @@ public class Poly880 extends EmuSys implements
 	break;
 
       case 0x82:
-	this.pio1.writePortB( value );
+	this.pio1.writeDataB( value );
 	v = this.pio1.fetchOutValuePortB( false );
 	this.emuThread.writeAudioPhase(
 		(v & (this.emuThread.isSoundOutEnabled() ?
@@ -610,7 +621,7 @@ public class Poly880 extends EmuSys implements
 	break;
 
       case 0x84:
-	this.pio2.writePortA( value );
+	this.pio2.writeDataA( value );
 	break;
 
       case 0x85:
@@ -618,7 +629,7 @@ public class Poly880 extends EmuSys implements
 	break;
 
       case 0x86:
-	this.pio2.writePortB( value );
+	this.pio2.writeDataB( value );
 	break;
 
       case 0x87:
@@ -629,7 +640,7 @@ public class Poly880 extends EmuSys implements
       case 0x89:
       case 0x8A:
       case 0x8B:
-      this.ctc.write( port & 0x03, value );
+      this.ctc.write( port & 0x03, value, tStates );
     }
     if( (port & 0xB0) == 0xB0 ) {
       this.colMask  = value;
@@ -657,20 +668,20 @@ public class Poly880 extends EmuSys implements
 
 	/* --- private Methoden --- */
 
-  private static boolean emulatesNegatedROMs( Properties props )
+  private boolean emulatesNegatedROMs( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.poly880.rom.negated",
+				this.propPrefix + "rom.negated",
 				false );
   }
 
 
-  private static boolean emulatesRAM8000( Properties props )
+  private boolean emulatesRAM8000( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.poly880.ram_8000.enabled",
+				this.propPrefix + "ram_8000.enabled",
 				false );
   }
 
@@ -679,8 +690,8 @@ public class Poly880 extends EmuSys implements
   {
     this.rom0File  = EmuUtil.getProperty(
 				props,
-				"jkcemu.poly880.rom_0000.file" );
-    this.rom0Bytes = readROMFile( this.rom0File, "ROM 0" );
+				this.propPrefix + "rom_0000.file" );
+    this.rom0Bytes = readPoly880ROMFile( this.rom0File, "ROM 0" );
     if( this.rom0Bytes == null ) {
       if( mon0000 == null ) {
 	mon0000 = readResource( "/rom/poly880/poly880_0000.bin" );
@@ -690,8 +701,8 @@ public class Poly880 extends EmuSys implements
 
     this.rom1File = EmuUtil.getProperty(
 				props,
-				"jkcemu.poly880.rom_1000.file" );
-    this.rom1Bytes = readROMFile( this.rom1File, "ROM 1" );
+				this.propPrefix + "rom_1000.file" );
+    this.rom1Bytes = readPoly880ROMFile( this.rom1File, "ROM 1" );
     if( this.rom1Bytes == null ) {
       if( mon1000 == null ) {
 	mon1000 = readResource( "/rom/poly880/poly880_1000.bin" );
@@ -701,19 +712,19 @@ public class Poly880 extends EmuSys implements
 
     this.rom2File  = EmuUtil.getProperty(
 				props,
-				"jkcemu.poly880.rom_2000.file" );
-    this.rom2Bytes = readROMFile( this.rom2File, "ROM 2" );
+				this.propPrefix + "rom_2000.file" );
+    this.rom2Bytes = readPoly880ROMFile( this.rom2File, "ROM 2" );
 
     this.rom3File  = EmuUtil.getProperty(
 				props,
-				"jkcemu.poly880.rom_3000.file" );
-    this.rom3Bytes = readROMFile( this.rom3File, "ROM 3" );
+				this.propPrefix + "rom_3000.file" );
+    this.rom3Bytes = readPoly880ROMFile( this.rom3File, "ROM 3" );
   }
 
 
-  private byte[] readROMFile( String fileName, String objName )
+  private byte[] readPoly880ROMFile( String fileName, String objName )
   {
-    byte[] rom = readFile( fileName, 0x0400, objName );
+    byte[] rom = readROMFile( fileName, 0x0400, objName );
     if( (rom != null) && this.extRomsNegated ) {
       for( int i = 0; i < rom.length; i++ ) {
 	rom[ i ] = (byte) ~rom[ i ];

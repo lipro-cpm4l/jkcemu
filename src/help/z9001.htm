@@ -68,6 +68,7 @@
      <li>
       <a href="z9001.htm#kcnet">1.12. KCNet-kompatible Netzwerkkarte</a>
      </li>
+     <li><a href="z9001.htm#rtc">1.13. Echtzeituhrmodul</a></li>
     </ul>
    </li>
    <li><a href="z9001.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -76,7 +77,7 @@
     <a href="z9001.htm#etc">4. Sonstiges</a>
     <ul>
      <li>
-      <a href="z9001.htm#save_basic">4.1. Speichern eines BASIC-Programms</a>
+      <a href="z9001.htm#save_basic">4.1. BASIC-Programme speichern und laden</a>
      </li>
      <li><a href="z9001.htm#paste_text">4.2. Einf&uuml;gen von Text</a></li>
     </ul>
@@ -148,13 +149,18 @@
       an den E/A-Adressen&nbsp;20h/21h und 24h/25h
      </li>
      <li>
-      <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
-      an der E/A-Basisadressen C0h
+      <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
+      an der E/A-Basisadresse&nbsp;50h
+     </li>
+     <li>
+      <a href="z9001.htm#kcnet">KCNet-kompatible Netzwerkkarte</a>
+      an der E/A-Basisadressen&nbsp;C0h
      </li>
      <li>
       <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
-      an der E/A-Basisadressen DCh
+      an der E/A-Basisadressen&nbsp;DCh
      </li>
+     <li><a href="z9001.htm#rtc">1.13. Echtzeituhrmodul</a></li>
      <li><a href="plotter.htm">Plotter</a> XY4131 / XY4140</li>
     </ul>
    </li>
@@ -243,7 +249,7 @@
   einfache Vollgrafikerweiterung f&uuml;r den Z1013 vorgestellt.
   Volker Pohlers und Ulrich Zander haben diese Schaltung
   mit kleinen Modifikationen
-  (andere IO-Adressen, Pixeldaten nicht invertierend)
+  (andere E/A-Adressen, Pixeldaten nicht invertierend)
   an den Z9001 angepasst und ihr in Anlehnung an
   <em>Kleinstrechnertips</em> den Name
   <em>KRT-Vollgrafikerweiterung</em> gegeben.
@@ -364,7 +370,7 @@
   In dem Fall wird dann zwischen den unteren und den oberen 2&nbsp;KByte
   umgeschaltet.
  <br/><br/>
-  Auf der in JKCEMU enthaltenen <em>Z9001 CP/A Systemdiskette</em>
+  Auf der im JKCEMU enthaltenen <em>Z9001 CP/A Systemdiskette</em>
   befinden sich auch Treiber f&uuml;r den 80-Zeichen-Modus.
   Da diese Treiber die Hardware &uuml;ber die E/A-Adressen
   nach Ulrich Zander ansteuern, beginnen sie mit <em>uz80...</em>.
@@ -407,8 +413,10 @@
  <br/><br/>
   <b>Achtung!</b> Im Emulator ist ein Abbild einer CP/A-Systemdiskette
   enthalten (CP/M-Variante f&uuml;r Z9001 von Dr. Frank Schwarzenberg).
-  Zum Booten dieses CP/M-Systems muss zus&auml;tzlich auch das
-  <a href="z9001.htm#ram64k">64&nbsp;KByte RAM-Modul</a> aktiviert sein.
+  Zum Booten dieses CP/M-Systems m&uuml;ssen zus&auml;tzlich auch das
+  <a href="z9001.htm#ram64k">64&nbsp;KByte RAM-Modul</a> sowie
+  entweder das <a href="z9001.htm#boot">Boot-Modul</a> oder das
+  <a href="z9001.htm#mega">Mega-ROM-Modul</a> aktiviert sein.
  <br/><br/>
 
  <h3><a name="boot">1.7. Boot-Modul</a></h3>
@@ -438,12 +446,12 @@
   Das Mega-ROM-Modul bietet 2,5&nbsp;MByte Speicher,
   aufgeteilt auf 256 einzelne 10&nbsp;KByte Segmente.
   Das jeweils aktive Segment wird im Adressbereich C000h-E7FFh eingeblendet.
-  Die Umschaltung des aktive Segments erfolgt &uuml;ber einen Ausgabebefehl
+  Die Umschaltung des aktiven Segments erfolgt &uuml;ber einen Ausgabebefehl
   auf E/A-Adresse FFh.
   Mit einem Schreibzugriff auf den Adressbereich F800h-FBFFh wird das
   Mega-ROM-Modul ab- und mit einem Schreibzugriff auf FC00h-FFFFh angeschaltet.
  <br/><br/>
-  Der in JKCEMU enthaltene Inhalt f&uuml;r dieses Modul f&uuml;llt
+  Der im JKCEMU enthaltene Inhalt f&uuml;r dieses Modul f&uuml;llt
   den m&ouml;glichen Speicher zwar bei weitem nicht aus,
   enth&auml;lt jedoch trotzdem eine ganze Menge von Programmen,
   u.a. auch eine Verwaltungssoftware.
@@ -513,6 +521,12 @@
   <a href="kcnet.htm">Netzwerkemulation</a>.
  <br/><br/>
 
+ <h3><a name="rtc">1.12. Echtzeituhrmodul</a></h3>
+  Es wird eine Echtzeituhr RTC-62421 bzw. RTC-72421 an den
+  E/A-Adressen&nbsp;60h bis 6Fh emuliert.
+  Die Uhr kann nur gelesen, nicht aber gestellt werden.
+ <br/><br/>
+
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   <table border="1">
@@ -541,15 +555,45 @@
 
 
  <h2><a name="disks">3. Enthaltene Diskettenabbilder</a></h2>
+  JKCEMU enth&auml;lt f&uuml;r die KC85/1-, KC87- und Z9001-Emulation
+  folgendes Diskettenabbild:
   <ul>
    <li>Z9001 CP/A-Systemdiskette</li>
   </ul>
  <br/>
-
+  F&uuml;r die Nutzung des Diskettenabbildes m&uuml;ssen Sie
+  mindestens folgende Konfiguration einstellen:
+  <ul>
+   <li>KC85/1, KC87 oder Z9001</li>
+   <li>64K RAM Modul</li>
+   <li>Boot-ROM- oder Mega-ROM-Modul</li>
+   <li>Floppy-Disk-Modul</li>
+  </ul>
+ <br>
+  Das Boot-ROM-Modul meldet sich beim Start mit der Ausschrift
+  <em>CP/M-System</em> und das Mega-ROM-Modul
+  mit einer eigenen Oberf&auml;che.
+  Egal, welches der beiden Module Sie nutzen,
+  nachdem die CP/A-Systemdiskette eingelegt und der Prompt zu sehen ist,
+  geben Sie zum Starten von CP/A den Befehl <em>BOOT</em> ein.
+ <br/><br/>
+  Die Laufwerkszuordnung ist einfach:
+ <br/>
+  &nbsp;&nbsp;A: erstes Laufwerk<br/>
+  &nbsp;&nbsp;B: zweites Laufwerk
+ <br/><br/>
+  Die Diskette selbst ist somit unter dem Laufwerk&nbsp;<em>A:</em>
+  ansprechbar.
+ <br/><br/>
+  Auf der Diskette befinden sich auch Treiber f&uuml;r zwei RAM-Floppies,
+  40/80-Zeichen-Umschaltung und Systemuhr.
+  Wenn Sie diese Treiber laden m&ouml;chten, muss nat&uuml;rlich
+  die Emulation der entsprechenden Hardware aktiviert sein.
+ <br/><br/>
 
  <h2><a name="etc">4. Sonstiges</a></h2>
 
- <h3><a name="save_basic">4.1. Speichern eines BASIC-Programms</a></h3>
+ <h3><a name="save_basic">4.1. BASIC-Programme speichern und laden</a></h3>
   JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
   <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>.
   Wird ein Z9001 bzw. KC85/1 emuliert,
@@ -574,7 +618,7 @@
   Das ist wesentlich schneller, da dadurch das Dr&uuml;cken der
   entsprechenden Tasten nicht simuliert werden muss.
  <br/><br/>
-  Sollten Sie jedoch ein anderes als das in JKCEMU integrierte
+  Sollten Sie jedoch ein anderes als das im JKCEMU integrierte
   Betriebssystem verwenden,
   wird diese Option m&ouml;glicherweise nicht mehr funktionieren,
   da dort die Tastaturabfrage anders gestaltet sein kann.

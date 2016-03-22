@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,6 +19,7 @@ import javax.swing.text.*;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.print.*;
+import jkcemu.tools.debugger.DebugFrm;
 import z80emu.*;
 
 
@@ -35,6 +36,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
   private Z80Memory                  memory;
   private int                        begAddr;
   private int                        endAddr;
+  private int                        clickAddr;
   private File                       lastFile;
   private File                       lastLabelFile;
   private Map<Integer,Set<String>>   addr2Labels;
@@ -60,6 +62,10 @@ public class ReassFrm extends BasicFrm implements CaretListener
   private JTextField                 fldEndAddr;
   private HexDocument                docBegAddr;
   private HexDocument                docEndAddr;
+  private JPopupMenu                 popup;
+  private JMenuItem                  popupCopy;
+  private JMenuItem                  popupBreak;
+  private JMenuItem                  popupSelectAll;
 
 
   public ReassFrm( Z80Memory memory )
@@ -67,15 +73,31 @@ public class ReassFrm extends BasicFrm implements CaretListener
     this.memory         = memory;
     this.begAddr        = -1;
     this.endAddr        = -1;
+    this.clickAddr      = -1;
     this.lastFile       = null;
     this.lastLabelFile  = null;
     this.addr2Labels    = null;
     this.textFind       = null;
     this.selectionFld   = null;
     this.textArea       = new JTextArea();
-    this.textArea.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+    this.textArea.setFont( new Font( Font.MONOSPACED, Font.PLAIN, 12 ) );
     setTitle( "JKCEMU Reassembler" );
     Main.updIcon( this );
+
+
+    // Popup-Menu
+    this.popup = new JPopupMenu();
+
+    this.popupCopy = createJMenuItem( "Kopieren" );
+    this.popup.add( this.popupCopy );
+    this.popup.addSeparator();
+
+    this.popupBreak = createJMenuItem( "Halte-/Log-Punkt anlegen" );
+    this.popup.add( this.popupBreak );
+    this.popup.addSeparator();
+
+    this.popupSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
+    this.popup.add( this.popupSelectAll );
 
 
     // Menu
@@ -85,7 +107,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 
     // Menu Datei
     JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( 'D' );
+    mnuFile.setMnemonic( KeyEvent.VK_D );
     mnuBar.add( mnuFile );
 
     this.mnuReass = createJMenuItem(
@@ -146,7 +168,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 
     // Menu Bearbeiten
     JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( 'B' );
+    mnuEdit.setMnemonic( KeyEvent.VK_B );
     mnuBar.add( mnuEdit );
 
     this.mnuCopy = createJMenuItem(
@@ -235,6 +257,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
     this.textArea.setEditable( false );
     this.textArea.setMargin( new Insets( 5, 5, 5, 5 ) );
     this.textArea.addCaretListener( this );
+    this.textArea.addMouseListener( this );
     add( new JScrollPane( this.textArea ), BorderLayout.CENTER );
 
 
@@ -263,10 +286,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 		int                  endAddr )
   {
     importLabels( labels, true );
-    if( (this.begAddr < 0)
-	&& (begAddr >= 0) && (begAddr <= endAddr)
-	&& (endAddr < 0x10000) )
-    {
+    if( (begAddr >= 0) && (begAddr <= endAddr) && (endAddr < 0x10000) ) {
       this.docBegAddr.setValue( begAddr, 4 );
       this.docEndAddr.setValue( endAddr, 4 );
       this.begAddr = begAddr;
@@ -285,10 +305,9 @@ public class ReassFrm extends BasicFrm implements CaretListener
     if( src != null ) {
       if( src instanceof JTextComponent ) {
 	this.selectionFld = (JTextComponent) src;
-	int     begPos = this.selectionFld.getSelectionStart();
-	boolean state  = ((begPos >= 0)
-		&& (begPos < this.selectionFld.getSelectionEnd()) );
-	this.mnuCopy.setEnabled( state );
+	this.mnuCopy.setEnabled(
+		this.selectionFld.getSelectionStart()
+			!= this.selectionFld.getSelectionEnd() );
       }
     }
   }
@@ -370,6 +389,18 @@ public class ReassFrm extends BasicFrm implements CaretListener
 	  rv = true;
 	  HelpFrm.open( "/help/tools/reassembler.htm" );
 	}
+	else if( src == this.popupCopy ) {
+	  rv = true;
+	  this.textArea.copy();
+	}
+	else if( src == this.popupBreak ) {
+	  rv = true;
+	  doCreateBreakpoint();
+	}
+	else if( src == this.popupSelectAll ) {
+	  rv = true;
+	  this.textArea.selectAll();
+	}
       }
     }
     catch( IOException ex ) {
@@ -398,40 +429,48 @@ public class ReassFrm extends BasicFrm implements CaretListener
   }
 
 
+  @Override
+  protected boolean showPopup( MouseEvent e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Component c = e.getComponent();
+      if( c != null ) {
+	if( c == this.textArea ) {
+	  this.clickAddr = ToolsUtil.getReassAddr(
+						this.textArea,
+						e.getPoint() );
+	  this.popupCopy.setEnabled(
+		this.textArea.getSelectionStart()
+			!= this.textArea.getSelectionEnd() );
+	  this.popupBreak.setEnabled( this.clickAddr >= 0 );
+	  this.popup.show( c, e.getX(), e.getY() );
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
+
 	/* --- Aktionen --- */
 
-  private void doSourceExport() throws IOException
+  private void doCreateBreakpoint()
   {
-    String text = createSourceText();
-    if( text != null ) {
-      File file = EmuUtil.showFileSaveDlg(
-				this,
-				"Als Quelltext speichern",
-				this.lastFile != null ?
-					this.lastFile
-					: Main.getLastPathFile( "text" ),
-				EmuUtil.getTextFileFilter() );
-      if( file != null ) {
-	BufferedWriter out = null;
-	try {
-	  out = new BufferedWriter( new FileWriter( file ) );
-
-	  int len = text.length();
-	  for( int i = 0; i < len; i++ ) {
-	    char ch = text.charAt( i );
-	    if( ch == '\n' ) {
-	      out.newLine();
-	    } else {
-	      out.write( ch );
-	    }
+    if( this.clickAddr >= 0 ) {
+      ScreenFrm screenFrm = Main.getScreenFrm();
+      if( screenFrm != null ) {
+	DebugFrm  debugFrm  = null;
+	EmuThread emuThread = screenFrm.getEmuThread();
+	if( emuThread != null ) {
+	  if( this.memory == emuThread ) {
+	    debugFrm = screenFrm.openPrimaryDebugger();
+	  } else {
+	    debugFrm = screenFrm.openSecondDebugger();
 	  }
-	  out.close();
-	  out = null;
-	  this.lastFile = file;
-	  Main.setLastFile( file, "text" );
 	}
-	finally {
-	  EmuUtil.doClose( out );
+	if( debugFrm != null ) {
+	  debugFrm.doDebugBreakPCAdd( this.clickAddr );
 	}
       }
     }
@@ -442,8 +481,9 @@ public class ReassFrm extends BasicFrm implements CaretListener
   {
     String selectedText = this.textArea.getSelectedText();
     if( selectedText != null ) {
-      if( selectedText.length() == 0 )
+      if( selectedText.length() == 0 ) {
 	selectedText = null;
+      }
     }
 
     String[]    options = { "Suchen", "Abbrechen" };
@@ -521,7 +561,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
   {
     File file = this.lastLabelFile;
     if( file == null ) {
-      file = Main.getLastPathFile( "label" );
+      file = Main.getLastDirFile( "label" );
     }
     file = EmuUtil.showFileOpenDlg(
 			this,
@@ -608,7 +648,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
 				"Textdatei speichern",
 				this.lastFile != null ?
 					this.lastFile
-					: Main.getLastPathFile( "text" ),
+					: Main.getLastDirFile( "text" ),
 				EmuUtil.getTextFileFilter() );
     if( file != null ) {
       Writer out = null;
@@ -627,6 +667,44 @@ public class ReassFrm extends BasicFrm implements CaretListener
   }
 
 
+  private void doSourceExport() throws IOException
+  {
+    String text = createSourceText();
+    if( text != null ) {
+      File file = EmuUtil.showFileSaveDlg(
+				this,
+				"Als Quelltext speichern",
+				this.lastFile != null ?
+					this.lastFile
+					: Main.getLastDirFile( "text" ),
+				EmuUtil.getTextFileFilter() );
+      if( file != null ) {
+	BufferedWriter out = null;
+	try {
+	  out = new BufferedWriter( new FileWriter( file ) );
+
+	  int len = text.length();
+	  for( int i = 0; i < len; i++ ) {
+	    char ch = text.charAt( i );
+	    if( ch == '\n' ) {
+	      out.newLine();
+	    } else {
+	      out.write( ch );
+	    }
+	  }
+	  out.close();
+	  out = null;
+	  this.lastFile = file;
+	  Main.setLastFile( file, "text" );
+	}
+	finally {
+	  EmuUtil.doClose( out );
+	}
+      }
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private static void addLabel(
@@ -638,7 +716,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
       if( !labelName.isEmpty() ) {
 	Set<String> labelNames = map.get( addr );
 	if( labelNames == null ) {
-	  labelNames = new TreeSet<String>();
+	  labelNames = new TreeSet<>();
 	  map.put( addr, labelNames );
 	}
 	labelNames.add( labelName );
@@ -668,8 +746,8 @@ public class ReassFrm extends BasicFrm implements CaretListener
       EmuSys        emuSys = getEmuSys();
 
       // Pass 1: Adressen ermitteln
-      Set<Integer> instrAddrs = new TreeSet<Integer>();
-      Set<Integer> destAddrs  = new TreeSet<Integer>();
+      Set<Integer> instrAddrs = new TreeSet<>();
+      Set<Integer> destAddrs  = new TreeSet<>();
       int          addr       = this.begAddr;
       while( addr <= this.endAddr ) {
 	instrAddrs.add( addr );
@@ -924,7 +1002,7 @@ public class ReassFrm extends BasicFrm implements CaretListener
     boolean             rv            = false;
     Map<String,Integer> oldLabel2Addr = null;
     if( !removeObsolete && (this.addr2Labels != null) ) {
-      oldLabel2Addr      = new HashMap<String,Integer>();
+      oldLabel2Addr      = new HashMap<>();
       Set<Integer> addrs = this.addr2Labels.keySet();
       if( addrs != null ) {
 	for( Integer addr : addrs ) {
@@ -944,9 +1022,9 @@ public class ReassFrm extends BasicFrm implements CaretListener
 	if( labelName != null ) {
 	  if( !labelName.isEmpty() ) {
 	    if( map == null ) {
-	      map = new HashMap<Integer,Set<String>>();
+	      map = new HashMap<>();
 	    }
-	    addLabel( map, label.getLabelValue(), labelName );
+	    addLabel( map, label.intValue(), labelName );
 	    if( oldLabel2Addr != null ) {
 	      oldLabel2Addr.remove( labelName );
 	    }

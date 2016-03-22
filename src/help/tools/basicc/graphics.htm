@@ -56,8 +56,10 @@
    <li><a href=instructions.htm#draw">DRAW</a></li>
    <li><a href=instructions.htm#drawr">DRAWR</a></li>
    <li><a href=instructions.htm#label">LABEL</a></li>
+   <li><a href=instructions.htm#line">LINE</a></li>
    <li><a href=instructions.htm#move">MOVE</a></li>
    <li><a href=instructions.htm#mover">MOVER</a></li>
+   <li><a href=instructions.htm#paint">PAINT</a></li>
    <li><a href=instructions.htm#pen">PEN</a></li>
    <li><a href=instructions.htm#plot">PLOT</a></li>
    <li><a href=instructions.htm#plotr">PLOTR</a></li>
@@ -67,15 +69,39 @@
   </ul>
  <br/>
 
+ <h3>Farben</h3>
+  Der BASIC-Compiler kennt Anweisungen zum Setzen der Farbe
+  (<a href="instructions.htm#border">BORDER</a>,
+  <a href="instructions.htm#color">COLOR</a>,
+  <a href="instructions.htm#ink">INK</a> ,
+  <a href="instructions.htm#paper">PAPER</a>).
+  Jedoch unterst&uuml;tzt nicht jedes Zielsystem Farben.
+  Auf Zielsystemen, die keine Farbgrafik bieten,
+  haben die Anweisungen zum Setzen einer Farbe keine Wirkung
+  und erzeugen auch keinen Programmcode,
+  d.h., es k&ouml;nnen getrost portable BASIC-Programme
+  mit Farbunterst&uuml;tzung geschrieben und auf einem
+  Schwarz-/Wei&szlig;-Zielsystem compiliert werden,
+  ohne dass dadurch unn&uuml;tzer Programmcode erzeugt wird.
+ <br/><br/>
+  Die Farbnummern unterscheiden sich zwischen den einzelnen Zielsystemen.
+  Um trotzdem portablen Programmcode schreiben zu k&ouml;nnen,
+  gibt es f&uuml;r einige h&auml;ufig verwendete Farben
+  <a href="constants.htm#color">Konstanten</a>,
+  die Sie auch verwenden sollten.
+ <br/><br/>
+
  <h3>Programmbeispiel</h3>
-  Das Beispiel gibt im Grafikmodus einen eingerahmten Text aus.
+  Das Beispiel gibt im Grafikmodus einen eingerahmten Text aus,
+  zeichnet einen Kreis drumherum, f&uuml;llt diesen aus
+  und verwendet den XOR-Modus zum Invertieren eines Bildschirmbereichs.
   Das Programm ist portabel gehalten, d.h.,
   es ist ohne &Auml;nderung auf allen Zielsystemen lauff&auml;hig,
   die Grafik unterst&uuml;tzten.
  <br/>
   <table border="0">
    <tr>
-    <td valign="top">
+    <td valign="top" nowrap=nowrap>
      <tt>
       &#10;<br/>
       DECLARE SUB boxed_text(x,y,t$)&#10;<br/>
@@ -83,34 +109,56 @@
       CURSOR 0&#10;<br/>
       SCREEN GRAPHICSCREEN&#10;<br/>
       CLS&#10;<br/>
-      x=W_PIXEL/5&#10;<br/>
-      y=H_PIXEL/5&#10;<br/>
-      boxed_text(x,y,"Hallo")&#10;<br/>
-      PAUSE 50&#10;<br/>
-      CLS&#10;<br/>
+      &#10;<br/>
+      tx=W_PIXEL/5&#10;<br/>
+      ty=H_PIXEL/3&#10;<br/>
+      boxed_text(tx,ty,"Hallo")&#10;<br/>
+      &#10;<br/>
+      cx=tx+((XPOS-tx)/2)&#10;<br/>
+      cy=ty+6&#10;<br/>
+      cr=((XPOS-tx)/2)+3&#10;<br/>
+      CIRCLE cx,cy,cr&#10;<br/>
+      &#10;<br/>
+      PAINT cx,cy-cr+2&#10;<br/>
+      &#10;<br/>
+      PEN PEN_XOR&#10;<br/>
+      LINE (cx-cr-2,cy-cr-2)-(cx+cr+2,cy+cr+2),BF&#10;<br/>
+      &#10;<br/>
+      IF GRAPHICSCREEN&lt;&gt;0 THEN PAUSE 50&#10;<br/>
       SCREEN 0&#10;<br/>
       END&#10;<br/>
       &#10;<br/>
       SUB boxed_text(x,y,t$)&#10;<br/>
-      &nbsp; MOVE x+3,y+2&#10;<br/>
-      &nbsp; LABEL t$&#10;<br/>
-      &nbsp; LINE (x,y)-(XPOS,y+12),B&#10;<br/>
+      &nbsp;&nbsp;MOVE x+3,y+2&#10;<br/>
+      &nbsp;&nbsp;LABEL t$&#10;<br/>
+      &nbsp;&nbsp;LINE (x,y)-(XPOS,y+12),B&#10;<br/>
       END SUB&#10;<br/>
      </tt>
     </td>
-    <td valign="top">
+    <td valign="top" nowrap=nowrap>
      <tt>
       &#10;<br/>
       :'Prozedur deklarieren&#10;<br/>
       &#10;<br/>
       :'Cursor ausschalten&#10;<br/>
-      :'Grafikmodus einschalten&#10;<br/>
+      :'Grafikmodus (Grafikbildschirm) einschalten&#10;<br/>
       :'Grafikbildschirm loeschen&#10;<br/>
-      :'X-Koordinate&#10;<br/>
-      :'Y-Koordinate&#10;<br/>
+      &#10;<br/>
       :'eingerahmten Text ausgeben&#10;<br/>
-      :'5 Sekunden warten&#10;<br/>
-      :'Bildschirm loeschen&#10;<br/>
+      &#10;<br/>
+      &#10;<br/>
+      &#10;<br/>
+      :'Kreis zeichnen&#10;<br/>
+      &#10;<br/>
+      &#10;<br/>
+      &#10;<br/>
+      &#10;<br/>
+      :'Kreis ausfuellen&#10;<br/>
+      &#10;<br/>
+      :'Bereich mittels XOR-Stift invertieren&#10;<br/>
+      &#10;<br/>
+      &#10;<br/>
+      :'bei separatem Grafikbildschirm warten und dann Bildschirm loeschen&#10;<br/>
       :'Textbildschirm einschalten&#10;<br/>
       :'Programmende&#10;<br/>
       &#10;<br/>

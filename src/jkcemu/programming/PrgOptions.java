@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,6 +28,7 @@ public class PrgOptions
   private File                codeFile;
   private boolean             forceRun;
   private boolean             labelsToDebugger;
+  private boolean             suppressLabelRecreateInDebugger;
   private boolean             labelsToReass;
   private boolean             formatSource;
   private boolean             warnNonAsciiChars;
@@ -35,19 +36,20 @@ public class PrgOptions
 
   public PrgOptions()
   {
-    this.asmSyntax           = Z80Assembler.Syntax.ALL;
-    this.allowUndocInst      = false;
-    this.labelsCaseSensitive = false;
-    this.printLabels         = false;
-    this.codeToEmu           = false;
-    this.codeToSecondSys     = false;
-    this.codeToFile          = false;
-    this.codeFile            = null;
-    this.forceRun            = false;
-    this.labelsToDebugger    = false;
-    this.labelsToReass       = false;
-    this.formatSource        = false;
-    this.warnNonAsciiChars   = true;
+    this.asmSyntax                       = Z80Assembler.Syntax.ALL;
+    this.allowUndocInst                  = false;
+    this.labelsCaseSensitive             = false;
+    this.printLabels                     = false;
+    this.codeToEmu                       = false;
+    this.codeToSecondSys                 = false;
+    this.codeToFile                      = false;
+    this.codeFile                        = null;
+    this.forceRun                        = false;
+    this.labelsToDebugger                = false;
+    this.suppressLabelRecreateInDebugger = false;
+    this.labelsToReass                   = false;
+    this.formatSource                    = false;
+    this.warnNonAsciiChars               = true;
   }
 
 
@@ -162,6 +164,10 @@ public class PrgOptions
       String codeFileName = props.getProperty(
 		"jkcemu.programming.code.file.name" );
 
+      Boolean suppressLabelRecreateInDebugger = getBoolean(
+		props,
+		"jkcemu.programming.suppress_label_recreate_in_debugger" );
+
       Boolean labelsToDebugger = getBoolean(
 		props,
 		"jkcemu.programming.labels_to_debugger" );
@@ -187,6 +193,7 @@ public class PrgOptions
 	  || (codeToFile != null)
 	  || (codeFileName != null)
 	  || (labelsToDebugger != null)
+	  || (suppressLabelRecreateInDebugger != null)
 	  || (labelsToReass != null)
 	  || (formatSource != null)
 	  || (warnNonAsciiChars != null) )
@@ -230,6 +237,10 @@ public class PrgOptions
 	  if( labelsToDebugger != null ) {
 	    options.labelsToDebugger = labelsToDebugger.booleanValue();
 	  }
+	  if( suppressLabelRecreateInDebugger != null ) {
+	    options.suppressLabelRecreateInDebugger
+			= suppressLabelRecreateInDebugger.booleanValue();
+	  }
 	  if( labelsToReass != null ) {
 	    options.labelsToReass = labelsToReass.booleanValue();
 	  }
@@ -243,6 +254,12 @@ public class PrgOptions
       }
     }
     return options;
+  }
+
+
+  public boolean getSuppressLabelRecreateInDebugger()
+  {
+    return this.suppressLabelRecreateInDebugger;
   }
 
 
@@ -305,6 +322,10 @@ public class PrgOptions
       props.setProperty(
 		"jkcemu.programming.labels_to_debugger",
 		Boolean.toString( this.labelsToDebugger ) );
+
+      props.setProperty(
+		"jkcemu.programming.suppress_label_recreate_in_debugger",
+		Boolean.toString( this.suppressLabelRecreateInDebugger ) );
 
       props.setProperty(
 		"jkcemu.programming.labels_to_reassembler",
@@ -388,6 +409,12 @@ public class PrgOptions
   }
 
 
+  public void setSuppressLabelRecreateInDebugger( boolean state )
+  {
+    this.suppressLabelRecreateInDebugger = state;
+  }
+
+
   public void setWarnNonAsciiChars( boolean state )
   {
     this.warnNonAsciiChars = state;
@@ -448,9 +475,11 @@ public class PrgOptions
 	    && (options.codeToFile          == this.codeToFile)
 	    && (options.forceRun            == this.forceRun)
 	    && (options.labelsToDebugger    == this.labelsToDebugger)
+	    && (options.suppressLabelRecreateInDebugger
+				== this.suppressLabelRecreateInDebugger)
 	    && (options.labelsToReass       == this.labelsToReass)
 	    && (options.formatSource        == this.formatSource)
-	    && (options.warnNonAsciiChars      == this.warnNonAsciiChars) )
+	    && (options.warnNonAsciiChars   == this.warnNonAsciiChars) )
 	{
 	  if( (options.codeFile != null) && (this.codeFile != null) ) {
 	    rv = options.codeFile.equals( this.codeFile );

@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,16 +9,17 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
+import jkcemu.programming.PrgSource;
 
 
 public class SubEntry extends CallableEntry
 {
   public SubEntry(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String name )
+		PrgSource source,
+		long      basicLineNum,
+		String    name )
   {
-    super( sourceLineNum, basicLineNum, name, "UP_" + name );
+    super( source, basicLineNum, name, "UP_" + name );
   }
 
 
@@ -30,3 +31,4 @@ public class SubEntry extends CallableEntry
     return "Prozedur " + getName();
   }
 }
+

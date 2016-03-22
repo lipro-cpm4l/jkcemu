@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -29,20 +29,20 @@ public class ReplyFileHeadDlg extends BasicDlg implements DocumentListener
 		FILE_NAME_16,
 		SCCH_FILE_TYPE };
 
-  private boolean     approved;
-  private int         approvedBegAddr;
-  private int         approvedEndAddr;
-  private int         approvedStartAddr;
-  private char        approvedScchFileType;
-  private String      approvedFileName;
-  private HexDocument docBegAddr;
-  private HexDocument docEndAddr;
-  private HexDocument docStartAddr;
-  private Document    docFileName;
-  private JComboBox   comboScchFileType;
-  private JTextField  fldFileName;
-  private JButton     btnApprove;
-  private JButton     btnCancel;
+  private boolean           approved;
+  private int               approvedBegAddr;
+  private int               approvedEndAddr;
+  private int               approvedStartAddr;
+  private char              approvedScchFileType;
+  private String            approvedFileName;
+  private HexDocument       docBegAddr;
+  private HexDocument       docEndAddr;
+  private HexDocument       docStartAddr;
+  private LimitedDocument   docFileName;
+  private JComboBox<String> comboScchFileType;
+  private JTextField        fldFileName;
+  private JButton           btnApprove;
+  private JButton           btnCancel;
 
 
   public ReplyFileHeadDlg(
@@ -125,7 +125,8 @@ public class ReplyFileHeadDlg extends BasicDlg implements DocumentListener
 	    } else {
 	      len = 16;
 	    }
-	    this.docFileName = new LimitedDocument( len, false );
+	    this.docFileName = new LimitedDocument( len );
+	    this.docFileName.setAsciiOnly( true );
 	    this.fldFileName = new JTextField(
 					this.docFileName,
 					presetText,
@@ -134,7 +135,7 @@ public class ReplyFileHeadDlg extends BasicDlg implements DocumentListener
 	    break;
 	  case SCCH_FILE_TYPE:
 	    labelText              = "Dateityp:";
-	    this.comboScchFileType = new JComboBox( new Object[] {
+	    this.comboScchFileType = new JComboBox<>( new String[] {
 							"P Programm",
 							"D Daten",
 							"B BASIC-Programm",

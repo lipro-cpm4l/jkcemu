@@ -1,0 +1,65 @@
+<html>
+<body>
+ <h1>DateStamper</h1>
+  DateStamper ist ein Verfahren zur Speicherung von Zeitstempel
+  f&uuml;r Dateien in CP/M-kompatiblen Dateisystemen.
+  Die einzelnen Zeitstempel liegen in der Datei <em>!!!TIME&amp;.DAT</em>,
+  die physisch die erste Datei auf der Diskette sein muss.
+  Pro Datei k&ouml;nnen minutengenau der Zeitpunkt der Erstellung,
+  der Zeitpunkt des letzten Zugriffs sowie
+  der Zeitpunkt der letzten &Auml;nderung gespeichert werden.
+ <br/><br/>
+
+ <h2>1. DateStamper-Unterst&uuml;tzung im JKCEMU</h2>
+  JKCEMU unterst&uuml;tzt DateStamper optional bei:
+  <ul>
+   <li>
+    <a href="creatediskimg.htm#manually">Abbilddatei manuell erstellen</a>
+   </li>
+   <li>
+    <a href="unpackdisk.htm">CP/M-Disketten und -Abbilddatei entpacken</a>
+   </li>
+   <li>
+    <a href="floppydiskintro.htm#dir">
+     Abbildung einer emulierten Diskette auf ein Verzeichnis
+    </a>
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h2>2. Aufbau der Zeitstempel-Datei</h2>
+  Die Zeitstempeldatei <em>!!!TIME&amp;.DAT</em> enth&auml;lt
+  16&nbsp;Byte gro&szlig;e Datens&auml;tze,
+  wobei jeder Datensatz einem Directory-Eintrag zugeordnet ist.
+  Die Zuordnung erfolgt der Reihenfolge nach, d.h.
+  der erste Datensatz in der Zeitstempeldatei bezieht sich
+  auf den ersten Directory-Eintrag usw.
+  Die Datei <em>!!!TIME&amp;.DAT</em> ist damit exakt halb so gro&szlig;
+  wie das Directory (dieses hat 32&nbsp;Bytes pro Eintrag).
+ <br/><br/>
+  Jeder Datensatz in der Zeitstempeldatei enth&auml;lt die jeweils
+  f&uuml;nf Byte gro&szlig;en Zeitstempel f&uuml;r Zeitpunkt
+  der Erzeugung, Zeitpunkt des letzten Zugriffs und
+  Zeitpunkt der letzten &Auml;nderung sowie ein Pr&uuml;fbyte.
+ <br/><br/>
+  Ein Zeitstempel besteht aus f&uuml;nf BCD-kodierten Bytes:
+  <ol>
+   <li>Jahr (bei 0...77 +2000, bei 78...99 +1900)</li>
+   <li>Monat (1...12)</li>
+   <li>Tag (1...31)</li>
+   <li>Stunde (0...23)</li>
+   <li>Minute (0...59)</li>
+  </ol>
+ <br/>
+  Enth&auml;lt ein Zeitstempel ung&uuml;ltige Werte,
+  z.B. Monat oder Tag gleich Null,
+  bedeutet das einen nicht gesetzten Zeitstempel.
+ <br/><br/>
+  Bez&uuml;glich des Pr&uuml;fbytes bilden jeweils acht Datens&auml;tze
+  eine Gruppe.
+  Die Pr&uuml;fbytes der ersten sieben Datens&auml;tze einer Gruppe
+  ergeben die Zeichenkette <em>!!!TIME</em>.
+  Das Pr&uuml;fbyte des achten Datensatzes ist die Summe
+  aller vorangegangener 127&nbsp;Bytes der Gruppe.
+</body>
+</html>

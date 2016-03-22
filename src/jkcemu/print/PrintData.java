@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -34,8 +34,9 @@ public class PrintData implements Printable
   public synchronized byte[] getBytes()
   {
     if( this.byteArray == null ) {
-      if( this.byteStream != null )
+      if( this.byteStream != null ) {
 	this.byteArray = this.byteStream.toByteArray();
+      }
     }
     return this.byteArray;
   }
@@ -91,8 +92,9 @@ public class PrintData implements Printable
 		int        pageNum ) throws PrinterException
   {
     byte[] dataBytes = getBytes();
-    if( dataBytes == null )
+    if( dataBytes == null ) {
       return pageNum == 0 ? PAGE_EXISTS : NO_SUCH_PAGE;
+    }
 
     PrintDataScanner scanner = new PrintDataScanner( dataBytes );
 
@@ -119,13 +121,14 @@ public class PrintData implements Printable
 	scanner.skipFormFeed();
 	--pagesToSkip;
       }
-      if( (pagesToSkip > 0) || scanner.endReached() )
+      if( (pagesToSkip > 0) || scanner.endReached() ) {
 	return NO_SUCH_PAGE;
+      }
     }
 
     // Seite drucken
     g.setColor( Color.black );
-    g.setFont( new Font( "Monospaced", Font.PLAIN, fontSize ) );
+    g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
 
     int x = (int) pf.getImageableX();
     int y = (int) pf.getImageableY() + fontSize;
@@ -150,4 +153,3 @@ public class PrintData implements Printable
     return PAGE_EXISTS;
   }
 }
-

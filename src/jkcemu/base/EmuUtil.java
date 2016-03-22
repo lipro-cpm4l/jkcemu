@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,12 +15,13 @@ import java.io.*;
 import java.lang.*;
 import java.net.*;
 import java.nio.channels.*;
+import java.nio.file.*;
 import java.text.*;
 import java.util.*;
 import java.util.regex.*;
 import java.util.zip.*;
 import javax.swing.*;
-import javax.swing.filechooser.*;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.*;
 import jkcemu.Main;
 import jkcemu.text.TextUtil;
@@ -28,6 +29,17 @@ import jkcemu.text.TextUtil;
 
 public class EmuUtil
 {
+  public static String[] headersaveFileTypeItems = {
+				"",
+				"A - Assemblerquelltext",
+				"B - BASIC-Programm",
+				"b - Tiny-BASIC-Programm",
+				"C - MC-Programm, selbststartend",
+				"M - MC-Programm",
+				"E - EPROM-Inhalt",
+				"I - Information (Text)",
+				"T - Text" };
+
   public static final String[] archiveFileExtensions  = {
 					".jar", ".tar.gz", ".tar", ".tgz",
 					".zip" };
@@ -44,6 +56,14 @@ public class EmuUtil
 
   private static Map<String,javax.swing.filechooser.FileFilter>
 							fmt2FileFilter = null;
+
+
+  public static void addHeadersaveFileTypeItemsTo( JComboBox<String> combo )
+  {
+    for( String s : headersaveFileTypeItems ) {
+      combo.addItem( s );
+    }
+  }
 
 
   public static void appendHTML( StringBuilder buf, String text )
@@ -129,60 +149,23 @@ public class EmuUtil
     }
     if( buf.length() > 0 ) {
       if( forceSizeInBytes ) {
-	buf.append( " (" );
-	buf.append( getIntegerFormat().format( size ) );
-	buf.append( " Bytes" );
-	buf.append( (char) ')' );
-      }
-    } else {
-      buf.append( getIntegerFormat().format( size ) );
-      buf.append( " Bytes" );
-    }
-  }
-
-
-  public static boolean applyWindowSettings(
-					Properties props,
-					BasicFrm   frm,
-					boolean    resizable )
-  {
-    boolean rv = false;
-    if( (frm != null) && (props != null) ) {
-      String prefix = frm.getSettingsPrefix();
-
-      int x = parseInt(
-			props.getProperty( prefix + ".window.x" ),
-			-1,
-			-1 );
-      int y = parseInt(
-			props.getProperty( prefix + ".window.y" ),
-			-1,
-			-1 );
-      if( (x >= 0) && (y >= 0) ) {
-	if( resizable ) {
-	  int w = parseInt(
-			props.getProperty( prefix + ".window.width" ),
-			-1,
-			-1 );
-	  int h = parseInt(
-			props.getProperty( prefix + ".window.height" ),
-			-1,
-			-1 );
-	  if( frm.isVisible() ) {
-	    frm.setSize( w, h );
-	  } else {
-	    frm.setBounds( x, y, w, h );
-	  }
-	  rv = true;
+	if( size == 1 ) {
+	  buf.append( "1 Byte" );
 	} else {
-	  if( !frm.isVisible() ) {
-	    frm.setLocation( x, y );
-	    rv = true;
-	  }
+	  buf.append( " (" );
+	  buf.append( getIntegerFormat().format( size ) );
+	  buf.append( " Bytes" );
+	  buf.append( (char) ')' );
 	}
       }
+    } else {
+      if( size == 1 ) {
+	buf.append( "1 Byte" );
+      } else {
+	buf.append( getIntegerFormat().format( size ) );
+	buf.append( " Bytes" );
+      }
     }
-    return rv;
   }
 
 
@@ -312,40 +295,6 @@ public class EmuUtil
   }
 
 
-  public static boolean copyFile(
-				File srcFile,
-				File dstFile ) throws IOException
-  {
-    boolean      done    = false;
-    boolean      created = false;
-    long         millis  = srcFile.lastModified();
-    InputStream  in      = null;
-    OutputStream out     = null;
-    try {
-      in      = new BufferedInputStream( new FileInputStream( srcFile ) );
-      out     = new BufferedOutputStream( new FileOutputStream( dstFile ) );
-      created = true;
-
-      int b = in.read();
-      while( b >= 0 ) {
-	out.write( b );
-	b = in.read();
-      }
-      out.close();
-      dstFile.setLastModified( millis );
-      done = true;
-    }
-    finally {
-      EmuUtil.doClose( in );
-      EmuUtil.doClose( out );
-    }
-    if( created && !done ) {
-      dstFile.delete();
-    }
-    return done;
-  }
-
-
   public static void copyToClipboard( Component owner, String text )
   {
     try {
@@ -397,7 +346,7 @@ public class EmuUtil
 
 
   public static JButton createImageButton(
-				Window  window,
+				Window window,
 				String imgName,
 				String text )
   {
@@ -465,89 +414,27 @@ public class EmuUtil
   }
 
 
-  /*
-   * Rueckgabewert:
-   *  true:  Aktion ausgefuehrt
-   *  false: Aktion abgebrochen
-   */
-  public static boolean deleteFiles( Component owner, File[] files )
+  public static OutputStream createOptionalGZipOutputStream( File file )
+							throws IOException
   {
-    boolean rv = false;
-    if( files != null ) {
-      File aFile  = null;
-      File aDir   = null;
-      int  nDirs  = 0;
-      int  nFiles = 0;
-      for( int i = 0; i < files.length; i++ ) {
-	File file = files[ i ];
-	if( file != null ) {
-	  if( file.isDirectory() ) {
-	    aDir = file;
-	    nDirs++;
-	  } else {
-	    aFile = file;
-	    nFiles++;
-	  }
-	}
+    boolean      gzip = isGZipFile( file );
+    OutputStream out  = new FileOutputStream( file );
+    if( gzip ) {
+      try {
+	out = new GZIPOutputStream( out );
       }
-      if( (nDirs > 0) || (nFiles > 0) ) {
-	StringBuilder buf = new StringBuilder( 128 );
-	buf.append( "M\u00F6chten Sie " );
-	if( nDirs > 0 ) {
-	  if( nDirs == 1 ) {
-	    if( aDir != null ) {
-	      buf.append( "das Verzeichnis\n\'" );
-	      buf.append( aDir.getPath() );
-	      buf.append( "\'\n" );
-	    } else {
-	      buf.append( "ein Verzeichnis " );
-	    }
-	  } else {
-	    buf.append( nDirs );
-	    buf.append( " Verzeichnisse " );
-	  }
-	}
-	if( nFiles > 0 ) {
-	  if( nDirs > 0 ) {
-	    buf.append( "und " );
-	  }
-	  if( nFiles == 1 ) {
-	    if( aFile != null ) {
-	      buf.append( "die Datei\n\'" );
-	      buf.append( aFile.getPath() );
-	      buf.append( "\'\n" );
-	    } else {
-	      buf.append( "eine Datei " );
-	    }
-	  } else {
-	    buf.append( nFiles );
-	    buf.append( " Dateien " );
-	  }
-	}
-	buf.append( "l\u00F6schen?" );
-	if( BasicDlg.showYesNoDlg( owner, buf.toString() ) ) {
-	  RunStatus runStatus = new RunStatus();
-	  for(
-	    int k = 0;
-	    (k < files.length) && !runStatus.wasCancelled();
-	    k++ )
-	  {
-	    deleteFile( owner, files[ k ], runStatus );
-	  }
-	  if( runStatus.isQuiet()
-	      && runStatus.wasFailed()
-	      && !runStatus.wasCancelled() )
-	  {
-	    BasicDlg.showErrorDlg(
-			owner,
-			"Es konnten nicht alle Dateien/Verzeichnisse\n"
-				+ " gel\u00F6scht werden." );
-	  }
-	  rv = true;
-	}
+      catch( IOException ex ) {
+	doClose( out );
+	throw ex;
       }
     }
-    return rv;
+    return out;
+  }
+
+
+  public static Set<Path> createPathSet()
+  {
+    return new TreeSet<>( createPathComparator() );
   }
 
 
@@ -556,39 +443,6 @@ public class EmuUtil
     if( stream != null ) {
       try {
 	stream.close();
-      }
-      catch( IOException ex ) {}
-    }
-  }
-
-
-  public static void doClose( ServerSocket serverSocket )
-  {
-    if( serverSocket != null ) {
-      try {
-	serverSocket.close();
-      }
-      catch( IOException ex ) {}
-    }
-  }
-
-
-  public static void doClose( Socket socket )
-  {
-    if( socket != null ) {
-      try {
-	socket.close();
-      }
-      catch( IOException ex ) {}
-    }
-  }
-
-
-  public static void doClose( ZipFile zip )
-  {
-    if( zip != null ) {
-      try {
-	zip.close();
       }
       catch( IOException ex ) {}
     }
@@ -634,6 +488,34 @@ public class EmuUtil
   }
 
 
+  public static boolean equalsRegion(
+				byte[] a1,
+				int    idx1,
+				byte[] a2,
+				int    idx2,
+				int    len )
+  {
+    boolean rv = false;
+    if( (a1 != null) && (a2 != null)
+	&& (idx1 >= 0) && (idx2 >= 0) )
+    {
+      if( ((idx1 + len) <= a1.length)
+	  && ((idx2 + len) <= a2.length) )
+      {
+	rv = true;
+	for( int i = 0; i < len; i++ ) {
+	  if( a1[ idx1++ ] != a2[ idx2++ ] ) {
+	    rv = false;
+	    break;
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+
   public static void exitSysError(
 				Component parent,
 				String    msg,
@@ -655,13 +537,10 @@ public class EmuUtil
     PrintWriter errWriter = null;
     try {
       String fName = "jkcemu_err.log";
-      String fDir  = System.getProperty( "user.home" );
-      if( fDir == null ) {
-	fDir = "";
-      }
-      errFile = (fDir.length() > 0 ?
-				new File( fDir, fName )
-				: new File( fName ) );
+      File   fDir  = getHomeDirFile();
+      errFile = (fDir != null ?
+			new File( fDir, fName )
+			: new File( fName ));
       errWriter = new PrintWriter( new FileWriter( errFile ) );
 
       errWriter.println( "Bitte senden Sie diese Datei an"
@@ -669,7 +548,7 @@ public class EmuUtil
       errWriter.println( "Please send this file to info@jens-mueller.org" );
       errWriter.println();
       errWriter.println( "--- Program ---" );
-      errWriter.write( Main.VERSION );
+      errWriter.write( Main.APPINFO );
       errWriter.println();
 
       if( msg != null ) {
@@ -744,31 +623,13 @@ public class EmuUtil
 	  break;
 	}
 	pos++;
-	boolean hex   = true;
-	long    value = 0;
-	for( int i = 0; i < 4; i++ ) {
-	  char ch = fileName.charAt( pos + i );
-	  if( (ch >= '0') && (ch <= '9') ) {
-	    value = (value << 4) | (ch - '0');
-	  } else if( (ch >= 'A') && (ch <= 'F') ) {
-	    value = (value << 4) | (ch - 'A' + 10);
-	  } else if( (ch >= 'a') && (ch <= 'f') ) {
-	    value = (value << 4) | (ch - 'a' + 10);
-	  } else {
-	    hex = false;
-	    break;
-	  }
-	}
+	long value = getHex4( fileName, pos );
 	if( (pos + 4) < len ) {
-	  char ch = fileName.charAt( pos + 4 );
-	  if( ((ch >= '0') && (ch <= '9'))
-	      || ((ch >= 'A') && (ch <= 'Z'))
-	      || ((ch >= 'a') && (ch <= 'z')) )
-	  {
-	    hex = false;
+	  if( isHexChar( fileName.charAt( pos + 4 ) ) ) {
+	    value = -1;
 	  }
 	}
-	if( hex ) {
+	if( value >= 0 ) {
 	  m = (m << 16) | value;
 	  n++;
 	  pos += 4;
@@ -835,43 +696,24 @@ public class EmuUtil
   {
     File file = null;
     if( isFileDrop( e ) ) {
-      e.acceptDrop( DnDConstants.ACTION_COPY );    // Quelle nicht loeschen
+      e.acceptDrop( DnDConstants.ACTION_COPY );	// Quelle nicht loeschen
       Transferable t = e.getTransferable();
       if( t != null ) {
 	try {
 	  Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
 	  if( o != null ) {
 	    if( o instanceof Collection ) {
-	      Iterator iter = ((Collection) o).iterator();
-	      if( iter != null ) {
-		while( iter.hasNext() ) {
-		  o = iter.next();
-		  if( o != null ) {
-		    File tmpFile = null;
-		    if( o instanceof File ) {
-		      String path = ((File) o).getPath();
-		      if( path != null ) {
-			if( !path.isEmpty() ) {
-			  tmpFile = (File) o;
-			}
-		      }
-		    }
-		    else if( o instanceof String ) {
-		      String s = (String) o;
-		      if( !s.isEmpty() ) {
-			tmpFile = new File( s );
-		      }
-		    }
-		    if( tmpFile != null ) {
-		      if( file == null ) {
-			file = tmpFile;
-		      } else {
-			BasicDlg.showErrorDlg(
+	      for( Object f : (Collection) o ) {
+		if( f != null ) {
+		  if( f instanceof File ) {
+		    if( file == null ) {
+		      file = (File) f;
+		    } else {
+		      BasicDlg.showErrorDlg(
 				owner,
 				"Bitte nur eine Datei hier hineinziehen!" );
-			file = null;
-			break;
-		      }
+		      file = null;
+		      break;
 		    }
 		  }
 		}
@@ -881,7 +723,7 @@ public class EmuUtil
 	}
 	catch( Exception ex ) {}
       }
-      e.dropComplete( true );
+      e.dropComplete( file != null );
     } else {
       e.rejectDrop();
     }
@@ -1031,17 +873,10 @@ public class EmuUtil
   }
 
 
-  public static Frame getAncestorFrame( Component c )
+  public static int getBasicMemWord( EmuMemView memory, int addr )
   {
-    Frame rv = null;
-    while( c != null ) {
-      if( c instanceof Frame ) {
-	rv = (Frame) c;
-	break;
-      }
-      c = c.getParent();
-    }
-    return rv;
+    return (memory.getBasicMemByte( addr + 1 ) << 8)
+			| memory.getBasicMemByte( addr );
   }
 
 
@@ -1162,6 +997,61 @@ public class EmuUtil
   }
 
 
+  /*
+   * Die Methode liest aus einem Text an der angegebenen Stelle eine
+   * vierstellige Hexadezimalzahl.
+   * Die Gross-/Kleinschreibung ist egal.
+   *
+   * Rueckgabewert:
+   *   >= 0: gelesene Hexadezimalzahl
+   *   -1:   keine vierstellige Hexadezimalzahl an der Stelle vorhanden
+   */
+  public static int getHex4( String text, int pos )
+  {
+    int rv = -1;
+    if( text != null ) {
+      if( (pos + 3) < text.length() ) {
+	boolean hex   = true;
+	int     value = 0;
+	for( int i = 0; i < 4; i++ ) {
+	  char ch = text.charAt( pos + i );
+	  if( (ch >= '0') && (ch <= '9') ) {
+	    value = (value << 4) | (ch - '0');
+	  } else if( (ch >= 'A') && (ch <= 'F') ) {
+	    value = (value << 4) | (ch - 'A' + 10);
+	  } else if( (ch >= 'a') && (ch <= 'f') ) {
+	    value = (value << 4) | (ch - 'a' + 10);
+	  } else {
+	    hex = false;
+	    break;
+	  }
+	}
+	if( hex ) {
+	  rv = value;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  public static File getHomeDirFile()
+  {
+    File           rv  = null;
+    FileSystemView fsv = FileSystemView.getFileSystemView();
+    if( fsv != null ) {
+      rv = fsv.getHomeDirectory();
+    }
+    if( rv == null ) {
+      String homeDir = System.getProperty( "user.home" );
+      if( homeDir != null ) {
+	rv = new File( homeDir );
+      }
+    }
+    return rv;
+  }
+
+
   public static NumberFormat getIntegerFormat()
   {
     if( intFmt == null ) {
@@ -1201,15 +1091,39 @@ public class EmuUtil
   }
 
 
+  public static javax.swing.filechooser.FileFilter getAC1Basic6FileFilter()
+  {
+    return getFileFilter( "AC1-BASIC6-Dateien (*.abc)", "abc" );
+  }
+
+
   public static javax.swing.filechooser.FileFilter getAnaDiskFileFilter()
   {
     return getFileFilter( "AnaDisk-Dateien (*.dump)", "dump" );
   }
 
 
+  public static javax.swing.filechooser.FileFilter getBasicFileFilter()
+  {
+    return getFileFilter( "BASIC-/RBASIC-Dateien (*.bas)", "bas" );
+  }
+
+
   public static javax.swing.filechooser.FileFilter getBinaryFileFilter()
   {
     return getFileFilter( "Einfache Speicherabbilddateien (*.bin)", "bin" );
+  }
+
+
+  public static javax.swing.filechooser.FileFilter getCdtFileFilter()
+  {
+    return getFileFilter( "CPC-Tape-Dateien (*.cdt)", "cdt" );
+  }
+
+
+  public static javax.swing.filechooser.FileFilter getCswFileFilter()
+  {
+    return getFileFilter( "CSW-Dateien (*.csw)", "csw" );
   }
 
 
@@ -1279,10 +1193,16 @@ public class EmuUtil
   }
 
 
+  public static javax.swing.filechooser.FileFilter getKCTapFileFilter()
+  {
+    return getFileFilter( "KC-TAP-Dateien (*.tap)", "tap" );
+  }
+
+
   public static javax.swing.filechooser.FileFilter getPlainDiskFileFilter()
   {
     return getFileFilter(
-		"Einfache Diskettenabbilddateien (*.img; *.image, *.raw)",
+		"Einfache Abbilddateien (*.img; *.image, *.raw)",
 		"img", "image", "raw" );
   }
 
@@ -1303,12 +1223,6 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getRBasicFileFilter()
-  {
-    return getFileFilter( "RBASIC-Dateien (*.bas)", "bas" );
-  }
-
-
   public static javax.swing.filechooser.FileFilter getRMCFileFilter()
   {
     return getFileFilter( "RBASIC-Maschinencodedateien (*.rmc)", "rmc" );
@@ -1321,9 +1235,11 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getTapFileFilter()
+  public static javax.swing.filechooser.FileFilter getTapeFileFilter()
   {
-    return getFileFilter( "TAP-Dateien (*.tap)", "tap" );
+    return getFileFilter(
+			"Tape-Dateien (*.cdt; *.csw; *.tap; *.tzx)",
+			"cdt", "csw", "tap", "tzx" );
   }
 
 
@@ -1338,6 +1254,31 @@ public class EmuUtil
     return getFileFilter(
 			"Textdateien (*.asc; *.log; *.txt)",
 			"asc", "log", "txt" );
+  }
+
+
+  public static javax.swing.filechooser.FileFilter getTzxFileFilter()
+  {
+    return getFileFilter( "ZX-Tape-Dateien (*.tzx)", "tzx" );
+  }
+
+
+  public static File getDirectory( File file )
+  {
+    if( file != null ) {
+      FileSystemView fsv = FileSystemView.getFileSystemView();
+      while( file != null ) {
+	if( file.isDirectory() ) {
+	  break;
+	}
+	if( fsv != null ) {
+	  file = fsv.getParentDirectory( file );
+	} else {
+	  file = file.getParentFile();
+	}
+      }
+    }
+    return file;
   }
 
 
@@ -1404,11 +1345,10 @@ public class EmuUtil
   public static boolean isFileDrop( DropTargetDragEvent e )
   {
     boolean rv = false;
-    int action = e.getDropAction();
-    if( (action == DnDConstants.ACTION_COPY)
-	|| (action == DnDConstants.ACTION_MOVE)
-	|| (action == DnDConstants.ACTION_COPY_OR_MOVE)
-	|| (action == DnDConstants.ACTION_LINK) )
+    if( (e.getDropAction()
+	 & (DnDConstants.ACTION_COPY
+			| DnDConstants.ACTION_MOVE
+			| DnDConstants.ACTION_LINK)) != 0 )
     {
       rv = e.isDataFlavorSupported( DataFlavor.javaFileListFlavor );
     }
@@ -1419,11 +1359,10 @@ public class EmuUtil
   public static boolean isFileDrop( DropTargetDropEvent e )
   {
     boolean rv = false;
-    int action = e.getDropAction();
-    if( (action == DnDConstants.ACTION_COPY)
-	|| (action == DnDConstants.ACTION_MOVE)
-	|| (action == DnDConstants.ACTION_COPY_OR_MOVE)
-	|| (action == DnDConstants.ACTION_LINK) )
+    if( (e.getDropAction()
+	 & (DnDConstants.ACTION_COPY
+			| DnDConstants.ACTION_MOVE
+			| DnDConstants.ACTION_LINK)) != 0 )
     {
       rv = e.isDataFlavorSupported( DataFlavor.javaFileListFlavor );
     }
@@ -1439,9 +1378,9 @@ public class EmuUtil
   }
 
 
-  public static boolean isNativeFileDialogSelected()
+  public static boolean isJKCEMUFileDialogSelected()
   {
-    return TextUtil.equalsIgnoreCase(
+    return !TextUtil.equalsIgnoreCase(
 			Main.getProperty( "jkcemu.filedialog" ),
 			"native" );
   }
@@ -1560,6 +1499,7 @@ public class EmuUtil
   {
     if( Main.consoleWriter != null ) {
       Main.consoleWriter.print( text );
+      Main.consoleWriter.flush();
     } else {
       System.out.print( text );
     }
@@ -1570,6 +1510,7 @@ public class EmuUtil
   {
     if( Main.consoleWriter != null ) {
       Main.consoleWriter.println();
+      Main.consoleWriter.flush();
     } else {
       System.err.println();
     }
@@ -1580,6 +1521,7 @@ public class EmuUtil
   {
     if( Main.consoleWriter != null ) {
       Main.consoleWriter.println();
+      Main.consoleWriter.flush();
     } else {
       System.out.println();
     }
@@ -1590,6 +1532,7 @@ public class EmuUtil
   {
     if( Main.consoleWriter != null ) {
       Main.consoleWriter.println( text );
+      Main.consoleWriter.flush();
     } else {
       System.err.println( text );
     }
@@ -1600,6 +1543,7 @@ public class EmuUtil
   {
     if( Main.consoleWriter != null ) {
       Main.consoleWriter.println( text );
+      Main.consoleWriter.flush();
     } else {
       System.out.println( text );
     }
@@ -1634,14 +1578,21 @@ public class EmuUtil
   }
 
 
-  public static byte[] readFile( File file, int maxLen ) throws IOException
+  public static byte[] readFile(
+			File    file,
+			boolean allowUncompress,
+			int     maxLen ) throws IOException
   {
     byte[] rv = null;
     if( file != null ) {
       long        len = file.length();
       InputStream in  = null;
       try {
-	in = new FileInputStream( file );
+	if( allowUncompress && EmuUtil.isGZipFile( file ) ) {
+	  in = new GZIPInputStream( new FileInputStream( file ) );
+	} else {
+	  in = new FileInputStream( file );
+	}
 	if( len < 0 ) {
 	  ByteArrayOutputStream buf = new ByteArrayOutputStream( 0x10000 );
 	  int b = in.read();
@@ -1680,6 +1631,7 @@ public class EmuUtil
   public static byte[] readFile(
 				Component owner,
 				String    fileName,
+				boolean   allowUncompress,
 				int       maxLen,
 				String    objName )
   {
@@ -1687,7 +1639,10 @@ public class EmuUtil
     if( fileName != null ) {
       if( !fileName.isEmpty() ) {
 	try {
-	  rv = EmuUtil.readFile( new File( fileName ), maxLen );
+	  rv = EmuUtil.readFile(
+			new File( fileName ),
+			allowUncompress,
+			maxLen );
 	}
 	catch( IOException ex ) {
 	  String msg = ex.getMessage();
@@ -1701,29 +1656,6 @@ public class EmuUtil
 	  rv = null;
 	}
       }
-    }
-    return rv;
-  }
-
-
-  public static String readTextFile( File file ) throws IOException
-  {
-    String         rv = "";
-    BufferedReader in = null;
-    try {
-      in = new BufferedReader( new FileReader( file ) );
-
-      StringBuilder buf  = new StringBuilder( 0x8000 );
-      String        line = in.readLine();
-      while( line != null ) {
-	buf.append( line );
-	buf.append( (char) '\n' );
-	line = in.readLine();
-      }
-      rv = buf.toString();
-    }
-    finally {
-      doClose( in );
     }
     return rv;
   }
@@ -1772,42 +1704,60 @@ public class EmuUtil
 
   public static File renameFile( Component owner, File file )
   {
-    File rvFile = null;
+    File newFile = null;
     if( file != null ) {
-      boolean isDir    = file.isDirectory();
-      String  fileName = ReplyTextDlg.showReplyTextDlg(
-				owner,
-				isDir ? "Verzeichnisname:" : "Dateiname:",
-				isDir ? "Verzeichnis umbenennen"
-						: "Datei umbenennen",
-				file.getName() );
-      if( fileName != null ) {
-	fileName = fileName.trim();
-	if( fileName.length() > 0 ) {
-	  File replyFile = new File( fileName );
-	  if( replyFile.isAbsolute() || (replyFile.getParent() != null) ) {
-	    BasicDlg.showErrorDlg(
-		owner,
-		"Mit dieser Funktion k\u00F6nnen Dateien und Verzeichnisse\n"
-			+ "nur umbenannt, nicht aber verschoben werden." );
-	  } else {
-	    File parent = file.getParentFile();
-	    if( parent != null )
-	      replyFile = new File( parent, fileName );
-
-	    if( file.renameTo( replyFile ) ) {
-	      rvFile = replyFile;
-	    } else {
-	      BasicDlg.showErrorDlg(
-			owner,
-			(isDir ? "Verzeichnis" : "Datei")
-				+ " konnte nicht umbenannt werden." );
-	    }
+      try {
+	Path newPath = renamePath( owner, file.toPath() );
+	if( newPath != null ) {
+	  try {
+	    newFile = newPath.toFile();
 	  }
+	  catch( InvalidPathException ex ) {}
+	}
+      }
+      catch( UnsupportedOperationException ex ) {
+	BasicDlg.showErrorDlg(
+		owner,
+		"Umbenennen der Datei wird nicht unterst\u00FCtzt." );
+      }
+    }
+    return newFile;
+  }
+
+
+  public static Path renamePath( Component owner, Path path )
+  {
+    Path newPath = null;
+    if( path != null ) {
+      String oldName  = null;
+      Path   namePath = path.getFileName();
+      if( namePath != null ) {
+	oldName = namePath.toString();
+      }
+      String title     = "Datei umbenennen";
+      String msgPrefix = "Die Datei";
+      if( Files.isSymbolicLink( path ) ) {
+	title     = "Symbolischer Link umbenennen";
+	msgPrefix = "Der symbolische Link";
+      } else if( Files.isDirectory( path ) ) {
+	title     = "Verzeichnis umbenennen";
+	msgPrefix = "Das Verzeichnis";
+      }
+      String newName = ReplyTextDlg.showReplyTextDlg(
+				owner,
+				"Neuer Name:",
+				title,
+				oldName != null ? oldName : "" );
+      if( newName != null ) {
+	try {
+	  newPath = Files.move( path, path.resolveSibling( newName ) );
+	}
+	catch( Exception ex ) {
+	  BasicDlg.showErrorDlg( owner, ex );
 	}
       }
     }
-    return rvFile;
+    return newPath;
   }
 
 
@@ -1843,6 +1793,24 @@ public class EmuUtil
   }
 
 
+  public static boolean setSelectedHeadersaveFileTypeItem(
+						JComboBox combo,
+						int       fileType )
+  {
+    boolean rv = false;
+    for( String s : headersaveFileTypeItems ) {
+      if( !s.isEmpty() ) {
+	if( s.charAt( 0 ) == fileType ) {
+	  combo.setSelectedItem( s );
+	  rv = true;
+	  break;
+	}
+      }
+    }
+    return rv;
+  }
+
+
   public static void setTableColWidths( JTable table, int... colWidths )
   {
     if( (table != null) && (colWidths != null) ) {
@@ -1859,90 +1827,18 @@ public class EmuUtil
   }
 
 
-  public static File showNativeFileDlg(
-				Frame   owner,
-				boolean forSave,
-				String  title,
-				File    preSelection )
-  {
-    File       file = null;
-    FileDialog dlg  = new FileDialog(
-				owner,
-				title,
-				forSave ? FileDialog.SAVE : FileDialog.LOAD );
-    dlg.setModalityType( Dialog.ModalityType.DOCUMENT_MODAL );
-    dlg.setResizable( true );
-    if( preSelection != null ) {
-      if( preSelection.isDirectory() ) {
-	dlg.setDirectory( preSelection.getPath() );
-      } else {
-	String dirName = preSelection.getParent();
-	if( dirName != null ) {
-	  dlg.setDirectory( dirName );
-	}
-	if( !preSelection.exists() || preSelection.isFile() ) {
-	  dlg.setFile( preSelection.getName() );
-	}
-      }
-    }
-    BasicDlg.setParentCentered( dlg );
-    dlg.setVisible( true );
-    String fileName = dlg.getFile();
-    if( fileName != null ) {
-      String dirName = dlg.getDirectory();
-      if( dirName != null ) {
-	file = new File( new File( dirName ), fileName );
-      } else {
-        file = new File( fileName );
-      }
-    }
-    return file;
-  }
-
-
   public static File showFileOpenDlg(
-			Frame                                 owner,
+			Window                                owner,
 			String                                title,
 			File                                  preSelection,
 			javax.swing.filechooser.FileFilter... fileFilters )
   {
-    if( isNativeFileDialogSelected() ) {
-      return showNativeFileDlg(
-			owner,
-			false,
-			title,
-			preSelection );
-    }
-    FileSelectDlg dlg = new FileSelectDlg(
-				owner,
-				false,		// fuer Laden
-				false,		// kein Startknopf
-				false,		// kein "Laden mit..."-Knopf
-				title,
-				preSelection,
-				fileFilters );
-    dlg.setVisible( true );
-    return dlg.getSelectedFile();
-  }
-
-
-  public static File showFileSaveDlg(
-			Frame                                 owner,
-			String                                title,
-			File                                  preSelection,
-			javax.swing.filechooser.FileFilter... fileFilters )
-  {
-    File file = null;
-    if( isNativeFileDialogSelected() ) {
-      file = showNativeFileDlg(
-			owner,
-			true,
-			title,
-			preSelection );
-    } else {
+    preSelection       = getDirectory( preSelection );
+    File  file         = null;
+    if( isJKCEMUFileDialogSelected() ) {
       FileSelectDlg dlg = new FileSelectDlg(
 				owner,
-				true,		// fuer Speichern
+				FileSelectDlg.Mode.LOAD,
 				false,		// kein Startknopf
 				false,		// kein "Laden mit..."-Knopf
 				title,
@@ -1950,50 +1846,91 @@ public class EmuUtil
 				fileFilters );
       dlg.setVisible( true );
       file = dlg.getSelectedFile();
-    }
-
-    // Dateiname aufbereiten
-    if( file != null ) {
-      String fName = file.getName();
-      if( fName != null ) {
-	if( fName.startsWith( "\"" ) && fName.endsWith( "\"" ) ) {
-	  if( fName.length() > 2 ) {
-	    fName = fName.substring( 1, fName.length() - 1 );
-	  } else {
-	    fName = "";
-	  }
-	  file = replaceName( file, fName );
-	} else {
-	  // ggf. Dateiendung anhaengen
-	  if( fileFilters != null ) {
-	    if( fileFilters.length == 1 ) {
-	      javax.swing.filechooser.FileFilter ff = fileFilters[ 0 ];
-	      if( ff != null ) {
-		if( ff instanceof FileNameExtensionFilter ) {
-		  String[] extensions = ((FileNameExtensionFilter) ff)
-							.getExtensions();
-		  if( extensions != null ) {
-		    if( extensions.length == 1 ) {
-		      String ext = extensions[ 0 ];
-		      if( ext != null ) {
-			if( !fName.toUpperCase().endsWith(
-						ext.toUpperCase() ) )
-			{
-			  file = replaceName(
-					file,
-					String.format( "%s.%s", fName, ext ) );
-			}
-		      }
-		    }
-		  }
-		}
-	      }
-	    }
-	  }
+    } else {
+      File[] files = showNativeFileDlg(
+				owner,
+				false,
+				false,
+				title,
+				preSelection );
+      if( files != null ) {
+	if( files.length > 0 ) {
+	  file = files[ 0 ];
 	}
       }
     }
     return file;
+  }
+
+
+  public static File showFileSaveDlg(
+			Window                                owner,
+			String                                title,
+			File                                  preSelection,
+			javax.swing.filechooser.FileFilter... fileFilters )
+  {
+    File file = null;
+    if( isJKCEMUFileDialogSelected() ) {
+      FileSelectDlg dlg = new FileSelectDlg(
+				owner,
+				FileSelectDlg.Mode.SAVE,
+				false,		// kein Startknopf
+				false,		// kein "Laden mit..."-Knopf
+				title,
+				preSelection,
+				fileFilters );
+      dlg.setVisible( true );
+      file = dlg.getSelectedFile();
+    } else {
+      File[] files = showNativeFileDlg(
+				owner,
+				true,
+				false,
+				title,
+				preSelection );
+      if( files != null ) {
+	if( files.length > 0 ) {
+	  file = files[ 0 ];
+	}
+      }
+    }
+    return file;
+  }
+
+
+  public static java.util.List<File> showMultiFileOpenDlg(
+			Window                                owner,
+			String                                title,
+			File                                  preSelection,
+			javax.swing.filechooser.FileFilter... fileFilters )
+  {
+    java.util.List<File> files = null;
+    preSelection               = getDirectory( preSelection );
+    if( isJKCEMUFileDialogSelected() ) {
+      FileSelectDlg dlg = new FileSelectDlg(
+				owner,
+				FileSelectDlg.Mode.MULTIPLE_LOAD,
+				false,		// kein Startknopf
+				false,		// kein "Laden mit..."-Knopf
+				title,
+				preSelection,
+				fileFilters );
+      dlg.setVisible( true );
+      files = dlg.getSelectedFiles();
+    } else {
+      File[] tmpFiles = showNativeFileDlg(
+				owner,
+				false,
+				true,
+				title,
+				preSelection );
+      if( tmpFiles != null ) {
+	if( tmpFiles.length > 0 ) {
+	  files = Arrays.asList( tmpFiles );
+	}
+      }
+    }
+    return files;
   }
 
 
@@ -2033,12 +1970,13 @@ public class EmuUtil
 
   public static void writeASCII(
 			OutputStream out,
-			String       text ) throws IOException
+			CharSequence text ) throws IOException
   {
     if( text != null ) {
+      checkASCII( text );
       int len = text.length();
       for( int i = 0; i < len; i++ ) {
-	out.write( text.charAt( i ) & 0x7F );
+	out.write( text.charAt( i ) );
       }
     }
   }
@@ -2046,147 +1984,74 @@ public class EmuUtil
 
   public static void writeFixLengthASCII(
 			OutputStream out,
-			String       text,
+			CharSequence text,
 			int          len,
 			int          filler ) throws IOException
   {
     if( text != null ) {
+      checkASCII( text );
       int srcLen = text.length();
-      for( int i = 0; i < len; i++ ) {
-	int b = filler;
-	if( i < srcLen ) {
-	  b = text.charAt( i ) & 0x7F;
-	}
-	out.write( b );
+      int srcIdx = 0;
+      while( (len > 0) && (srcIdx < srcLen) ) {
+	out.write( text.charAt( srcIdx++ ) );
+	--len;
       }
+    }
+    while( len > 0 ) {
+      out.write( 0 );
+      --len;
     }
   }
 
 
 	/* --- private Methoden --- */
 
-  private static boolean deleteFile(
-				Component owner,
-				File      file,
-				RunStatus runStatus )
+  private static void checkASCII( CharSequence text )
+					throws CharConversionException
   {
-    boolean rv = true;
-    if( file != null ) {
-      if( file.exists() ) {
-	boolean failed = false;
-	boolean isDir  = file.isDirectory();
-	if( isDir ) {
-	  File[] files = file.listFiles();
-	  if( files != null ) {
-	    for(
-		int i = 0;
-		(i < files.length) && !runStatus.wasCancelled();
-		i++ )
-	    {
-	      /*
-	       * Sollte durch einen symbolischen Link eine Ringkettung
-	       * bestehen, wuerde der Stack ueberlaufen.
-	       * Um das zu verhindern, wird versucht, * das Verzeichnis
-	       * respektive dem ggf. verhandenen symbolischen Link
-	       * direkt zu loeschen,
-	       * was bei einem symbolischen Link auch moeglich ist.
-	       * Damit wird eine evtl. vorhandene Ringkettung unterbrochen.
-	       */
-	      if( !files[ i ].delete() ) {
-		// direktes Loeschen fehlgeschlagen -> rekursiv versuchen
-		if( !deleteFile( owner, files[ i ], runStatus ) ) {
-		  failed = true;
-		}
-	      }
-	    }
+    if( text != null ) {
+      int len = text.length();
+      for( int i = 0; i < len; i++ ) {
+	char ch = text.charAt( i );
+	if( (ch < '\u0020') || (ch > '\u007E') ) {
+	  StringBuilder buf = new StringBuilder( 256 );
+	  buf.append( "Nicht-ASCII-Zeichen" );
+	  if( (ch > '\u0020')
+	      && !Character.isSpaceChar( ch )
+	      && !Character.isWhitespace( ch )
+	      && !Character.isISOControl( ch ) )
+	  {
+	    buf.append( " \'" );
+	    buf.append( ch );
+	    buf.append( (char) '\'' );
 	  }
-	}
-	rv = false;
-	if( !failed && !runStatus.wasCancelled() ) {
-	  boolean deleteEnabled = true;
-	  if( !runStatus.getForce() && !file.canWrite() ) {
-	    String[] options = {
-				"\u00DCberspringen",
-				"L\u00F6schen",
-				"Alle l\u00F6schen",
-				"Abbrechen" };
-
-	    StringBuilder buf = new StringBuilder( 512 );
-	    buf.append( "Sie besitzen keine Schreibrechte f\u00FCr " );
-	    if( isDir ) {
-	      buf.append( "die Datei" );
-	    } else {
-	      buf.append( "das Verzeichnis" );
-	    }
-	    buf.append( "\n\'" );
-	    buf.append( file.getPath() );
-	    buf.append( "\'.\nM\u00F6chten Sie trotzem"
-			+ " das L\u00F6schen versuchen?" );
-
-	    JOptionPane pane = new JOptionPane(
-					buf.toString(),
-					JOptionPane.ERROR_MESSAGE );
-	    pane.setOptions( options );
-	    pane.setWantsInput( false );
-	    pane.createDialog( owner, "Fehler" ).setVisible( true );
-	    Object value = pane.getValue();
-	    if( value != null ) {
-	      if( value.equals( options[ 0 ] ) ) {
-		deleteEnabled = false;
-	      }
-	      else if( value.equals( options[ 2 ] ) ) {
-		runStatus.setForce( true );
-	      }
-	      else if( value.equals( options[ 3 ] ) ) {
-		runStatus.setCancelled( true );
-	      }
-	    } else {
-	      runStatus.setCancelled( true );
-	    }
+	  buf.append( " im Text enthalten" );
+	  if( len > 1 ) {
+	    buf.append( "\n\nText:\n" );
+	    buf.append( text );
 	  }
-	  if( deleteEnabled && !runStatus.wasCancelled() ) {
-	    rv = file.delete();
-	    if( !rv ) {
-	      if( runStatus.isQuiet() ) {
-		runStatus.setFailed( true );
-	      } else {
-		String[] options = {
-				"Ignorieren",
-				"Alle ignorieren",
-				"Abbrechen" };
-
-		JOptionPane pane = new JOptionPane();
-		if( isDir ) {
-		  pane.setMessage( "Verzeichnis \'"
-			+ file.getPath()
-			+ "\'\nkonnte nicht gel\u00F6scht werden." );
-		} else {
-		  pane.setMessage( "Datei \'"
-			+ file.getPath()
-			+ "\'\nkonnte nicht gel\u00F6scht werden." );
-		}
-		pane.setMessageType( JOptionPane.ERROR_MESSAGE );
-		pane.setOptions( options );
-		pane.setWantsInput( false );
-		pane.createDialog( owner, "Fehler" ).setVisible( true );
-		Object value = pane.getValue();
-		if( value != null ) {
-		  if( value.equals( options[ 1 ] ) ) {
-		    runStatus.setQuiet( true );
-		  }
-		  else if( value.equals( options[ 2 ] ) ) {
-		    runStatus.setCancelled( true );
-		  }
-		} else {
-		  runStatus.setCancelled( true );
-		}
-	      }
-	    }
-	  }
+	  throw new CharConversionException( buf.toString() );
 	}
       }
     }
-    return rv;
+  }
+
+
+  private static Comparator<Path> createPathComparator()
+  {
+    return new Comparator<Path>()
+	{
+	  @Override
+	  public int compare( Path p1, Path p2 )
+	  {
+	    String s1 = (p1 != null ? p1.toString() : null);
+	    String s2 = (p2 != null ? p2.toString() : null);
+	    if( s1 == null ) {
+	      s1 = "";
+	    }
+	    return s1.compareTo( s2 != null ? s2 : "" );
+	  }
+	};
   }
 
 
@@ -2195,19 +2060,17 @@ public class EmuUtil
 							String... formats )
   {
     javax.swing.filechooser.FileFilter rv = null;
-    if( formats != null ) {
+    if( (formats != null) && (text != null) ) {
       if( formats.length > 0 ) {
 	if( fmt2FileFilter == null ) {
-	  fmt2FileFilter = new Hashtable<
-				String,
-				javax.swing.filechooser.FileFilter>();
+	  fmt2FileFilter = new HashMap<>();
 	}
-	rv = fmt2FileFilter.get( formats[ 0 ] );
+	rv = fmt2FileFilter.get( text );
 	if( rv == null ) {
 	  rv = new javax.swing.filechooser.FileNameExtensionFilter(
 								text,
 								formats );
-	  fmt2FileFilter.put( formats[ 0 ], rv );
+	  fmt2FileFilter.put( text, rv );
 	}
       }
     }
@@ -2215,16 +2078,60 @@ public class EmuUtil
   }
 
 
-  private static File replaceName( File file, String fName )
+  private static File[] showNativeFileDlg(
+					Window  owner,
+					boolean forSave,
+					boolean multiMode,
+					String  title,
+					File    preSelection )
   {
-    if( file != null ) {
-      File parent = file.getParentFile();
-      if( parent != null ) {
-	file = new File( parent, fName );
-      } else {
-	file = new File( fName );
+    File[] files    = null;
+    Dialog ownerDlg = null;
+    Frame  ownerFrm = null;
+    while( owner != null ) {
+      if( owner instanceof Dialog ) {
+	ownerDlg = (Dialog) owner;
+	break;
       }
+      if( owner instanceof Frame ) {
+	ownerFrm = (Frame) owner;
+	break;
+      }
+      owner = owner.getOwner();
     }
-    return file;
+    FileDialog dlg = null;
+    if( ownerDlg != null ) {
+      dlg = new FileDialog(
+			ownerDlg,
+			title,
+			forSave ? FileDialog.SAVE : FileDialog.LOAD );
+    } else if( ownerFrm != null ) {
+      dlg = new FileDialog(
+			ownerFrm,
+			title,
+			forSave ? FileDialog.SAVE : FileDialog.LOAD );
+    }
+    if( dlg != null ) {
+      dlg.setModalityType( Dialog.ModalityType.DOCUMENT_MODAL );
+      dlg.setMultipleMode( !forSave && multiMode );
+      dlg.setResizable( true );
+      if( preSelection != null ) {
+	if( preSelection.isDirectory() ) {
+	  dlg.setDirectory( preSelection.getPath() );
+	} else {
+	  String dirName = preSelection.getParent();
+	  if( dirName != null ) {
+	    dlg.setDirectory( dirName );
+	  }
+	  if( !preSelection.exists() || preSelection.isFile() ) {
+	    dlg.setFile( preSelection.getName() );
+	  }
+	}
+      }
+      BasicDlg.setParentCentered( dlg );
+      dlg.setVisible( true );
+      files = dlg.getFiles();
+    }
+    return files;
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -92,7 +92,7 @@ public class ExtendedFileEntry extends jkcemu.base.FileEntry
   {
     Object rv = null;
     if( this.tarEntry != null ) {
-      if( !this.tarEntry.isFile() ) {
+      if( !this.tarEntry.isRegularFile() ) {
 	rv = this.tarEntry.getTypeText();
       }
     }

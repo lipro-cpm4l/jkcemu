@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -40,7 +40,7 @@ public class SLC1 extends EmuSys implements
 
   public SLC1( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.slc1." );
     if( rom == null ) {
       rom = readResource( "/rom/slc1/slc1_0000.bin" );
     }
@@ -540,7 +540,7 @@ public class SLC1 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     synchronized( this.keyboardMatrix ) {
@@ -608,7 +608,7 @@ public class SLC1 extends EmuSys implements
   }
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     // Tastaturspalten
     int col = value & 0x0F;

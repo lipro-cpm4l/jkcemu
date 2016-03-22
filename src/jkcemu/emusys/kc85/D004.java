@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@ package jkcemu.emusys.kc85;
 
 import java.lang.*;
 import java.util.Properties;
+import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.disk.FloppyDiskDrive;
 import z80emu.*;
@@ -164,7 +165,7 @@ public class D004 extends AbstractKC85Module
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = -1;
     if( this.connected ) {
@@ -189,7 +190,7 @@ public class D004 extends AbstractKC85Module
 
 
   @Override
-  public boolean writeIOByte( int port, int value )
+  public boolean writeIOByte( int port, int value, int tStates )
   {
     boolean rv    = false;
     int     portL = (port & 0xFF);
@@ -242,7 +243,7 @@ public class D004 extends AbstractKC85Module
   private synchronized void enableCPU()
   {
     if( this.thread == null ) {
-      Thread t    = new Thread( this.procSys, "D004" );
+      Thread t = new Thread( Main.getThreadGroup(), this.procSys, "D004" );
       this.thread = t;
       t.start();
     }

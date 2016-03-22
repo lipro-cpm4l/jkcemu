@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,6 +7,9 @@
  */
 
 package jkcemu.programming.basic;
+
+import java.lang.*;
+import java.util.*;
 
 
 public class AsmCodeBuf
@@ -101,7 +104,7 @@ public class AsmCodeBuf
 	    }
 	    this.buf.append( ch );
 	    nCh++;
-	    if( nCh >= 16 ) {
+	    if( nCh >= 40 ) {
 	      this.buf.append( "\'\n" );
 	      nCh = 0;
 	    }
@@ -147,6 +150,16 @@ public class AsmCodeBuf
     if( this.enabled ) {
       this.buf.append( "\tLD\tBC," );
       appendHex4Internal( value );
+      buf.append( (char) '\n');
+    }
+  }
+
+
+  public void append_LD_BC_xx( String xx )
+  {
+    if( this.enabled && (xx != null) ) {
+      buf.append( "\tLD\tBC," );
+      buf.append( xx );
       buf.append( (char) '\n');
     }
   }
@@ -274,7 +287,8 @@ public class AsmCodeBuf
 
   public void delete( int begPos, int endPos )
   {
-    this.buf.delete( begPos, endPos );
+    if( this.enabled )
+      this.buf.delete( begPos, endPos );
   }
 
 
@@ -297,10 +311,60 @@ public class AsmCodeBuf
   }
 
 
+  public java.util.List<String> getLinesAsList( int begPos )
+  {
+    ArrayList<String> lines = new ArrayList<>();
+    synchronized( this.buf ) {
+      int len      = this.buf.length();
+      int initSize = len / 4;
+      lines.ensureCapacity( initSize > 10 ? initSize : 10 );
+      if( begPos < 0 ) {
+	begPos = 0;
+      }
+      while( begPos < len ) {
+	int eol = this.buf.indexOf( "\n", begPos );
+	if( eol < begPos ) {
+	  lines.add( this.buf.substring( begPos ) );
+	  break;
+	}
+	eol++;
+	lines.add( this.buf.substring( begPos, eol ) );
+	begPos = eol;
+      }
+    }
+    return lines;
+  }
+
+
+  public int getNumOccurences( String text )
+  {
+    int n = 0;
+    if( text != null ) {
+      int len    = this.buf.length();
+      int curPos = 0;
+      while( curPos < len ) {
+	int foundPos = this.buf.indexOf( text, curPos );
+	if( foundPos < 0 ) {
+	  break;
+	}
+	n++;
+	curPos = foundPos + 1;
+      }
+    }
+    return n;
+  }
+
+
   public void insert( int pos, CharSequence text)
   {
-    if( (text != null) && this.enabled )
+    if( this.enabled && (text != null) )
       this.buf.insert( pos, text );
+  }
+
+
+  public boolean isEnabled()
+  {
+    return this.enabled;
   }
 
 
@@ -314,6 +378,26 @@ public class AsmCodeBuf
   {
     if( this.enabled )
       this.buf.append( (char) '\n' );
+  }
+
+
+  public void removeAllOccurences( String text )
+  {
+    if( this.enabled && (text != null) ) {
+      int textLen = text.length();
+      if( textLen > 0 ) {
+	int codeLen = this.buf.length();
+	int curPos  = 0;
+	while( curPos < codeLen ) {
+	  int foundPos = this.buf.indexOf( text, curPos );
+	  if( foundPos < 0 ) {
+	    break;
+	  }
+	  this.buf.delete( foundPos, foundPos + textLen );
+	  curPos = foundPos;
+	}
+      }
+    }
   }
 
 
@@ -334,6 +418,19 @@ public class AsmCodeBuf
   {
     if( this.enabled )
       this.buf.setLength( len );
+  }
+
+
+  public void setLines( java.util.List<String> lines )
+  {
+    if( this.enabled ) {
+      this.buf.setLength( 0 );
+      if( lines != null ) {
+	for( String line : lines ) {
+	  this.buf.append( line );
+	}
+      }
+    }
   }
 
 

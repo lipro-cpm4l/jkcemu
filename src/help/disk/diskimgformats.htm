@@ -15,12 +15,20 @@
   Diese Dateien k&ouml;nnen dabei auch
   <a href="diskimgformats.htm#gzip">GZIP-komprimiert</a> sein.
  <br/><br/>
+  Einfache Abbilddateien, AnaDisk-, CPC-Disk und ImageDisk-Dateien
+  k&ouml;nnen von JKCEMU erzeugt werden
+  (siehe <a href="creatediskimg.htm">hier</a>
+  sowie die Tabelle am Ende dieser Seite).
+ <br/><br/>
 
  <h2><a name="plain">1. Einfache Abbilddateien</a></h2>
   Eine einfache Abbilddatei ist eine Aneinanderkettung aller Sektoren
   einer Diskette, jedoch ohne Verwaltungs- und Geometriedaten,
   d.h., eine einfache Abbilddatei enth&auml;lt nur Nutzdaten.
-  Die Abbilddatei einer 720K-Diskette ist somit auch 720 KByte gro&szlig;.
+  Die Abbilddatei einer 720K-Diskette ist somit exakt 720 KByte gro&szlig;.
+  Eine freie Sektoranordnung, <a href="interleave.htm">Interleave</a>
+  oder L&uuml;cken in der Sektornummerierung sind bei dem Dateiformat
+  nicht m&ouml;glich.
  <br/><br/>
   Einfache Abbilddateien sind zwar weit verbreitet,
   jedoch hat das Format keinen einheitlichen Namen.
@@ -37,11 +45,10 @@
   Unter DOS sind die Programme <em>rawread.exe</em>
   und zum Zur&uuml;ckschreiben <em>rawwrite.exe</em> bekannt.
  <br/><br/>
-  JKCEMU kann ebenfalls einfache Abbilddateien von Disketten erstellen.
+  JKCEMU kann ebenfalls einfache Abbilddateien von Disketten
+  und anderen Laufwerken erstellen.
   Die entsprechende Funktion finden Sie im Hauptfenster im Men&uuml;
   <em>Extra</em>.
-  Des Weiteren k&ouml;nnen auch einfache Abbilddateien manuell
-  erstellt werden, siehe <a href="creatediskimg.htm">hier</a>.
  <br/><br/>
   Da einfache Abbilddatei keine Verwaltungs- bzw. Geometriedaten enthalten,
   muss man bei deren Verwendung das Diskettenformat in einem
@@ -102,54 +109,102 @@
  <br/><br/>
    Aus den Kopfdaten vor jedem Sektor lassen sich die Geometriedaten
    und damit das Diskettenformat ermitteln.
+   Da jeder Sektor seine eigenen Kopfdaten hat,
+   ist nicht nur eine freie Sektoranordnung abbildbar,
+   sondern auch unterschiedliche Sektorl&auml;ngen innerhalb einer Spur.
    Gel&ouml;schte Sektoren sind in einer AnaDisk-Datei
    allerdings nicht m&ouml;glich bzw. nicht als solche markierbar.
  <br/><br/>
 
  <h2><a name="copyqm">3. CopyQM-Dateien</a></h2>
   JKCEMU unterst&uuml;tzt das Dateiformat des Diskettenkopierprogramms
-  CopyQM, allerdings nur lesend.
+  CopyQM lesend und schreibend.
+  Die Schreibunterst&uuml;tzung beschr&auml;nkt sich aber
+  auf das manuelle Erstellen einer Abbilddatei sowie auf den Dateikonverter.
+  Im Fenster <em>JKCEMU Diskettenstation</em> kann eine
+  CopyQM-Datei nur lesend ge&ouml;ffnet werden,
+  da der Datenbereich in der Datei als ganzes komprimiert und
+  somit das einzelne Schreiben eines Sektors nicht m&ouml;glich ist.
  <br/><br/>
   Das CopyQM-Format ist propriet&auml;r und nicht offen gelegt.
-  Die in JKCEMU enthaltene CopyQM-Unterst&uuml;tzung basiert
+  Die im JKCEMU enthaltene CopyQM-Unterst&uuml;tzung basiert
   auf den wenigen im Internet frei verf&uuml;gbaren Informationen
   und k&ouml;nnte deshalb auch unvollst&auml;ndig sein.
   Aus diesem Grund kann nicht garantiert werden,
-  dass jede CopyQM-Datei in JKCEMU auch funktionieren wird.
+  dass jede CopyQM-Datei im JKCEMU funktionieren bzw.
+  jede mit JKCEMU erzeugte Datei von CopyQM aktzeptiert wird.
  <br/><br/>
 
  <h2><a name="cpcdisk">4. CPC-Disk-Dateien</a></h2>
   Das bei CPC-Emulatoren gebr&auml;uchliche Format wird von JKCEMU
-  lesen und schreibend unterst&uuml;tzt.
+  lesend und schreibend unterst&uuml;tzt.
+  Es gibt zwei Unterformate (Standard- und erweitertes Format),
+  die auch beide voll unterst&uuml;tzt werden.
+  Beim Erzeugen einer CPC-Disk-Datei w&auml;hlt JKCEMU selbstst&auml;ndig
+  das f&uuml;r den konkreten Fall passende Unterformat aus.
  <br/><br/>
 
  <h2><a name="imagedisk">5. ImageDisk-Dateien</a></h2>
   Das Dateiformat des von Dave Dunfield entwickelten
   Diskettenarchivierungswerkzeugs ImageDisk wird von JKCEMU unterst&uuml;tzt.
   Bei der manuellen Erstellung einer Diskettenabbilddatei und
-  im Dateikonverter kann dieses Dateiformat erzeugt werden.
-  Im Fenster <em>JKCEMU Diskettenstation</em> kann dagegen eine
-  ImageDisk-Datei nur lesend ge&ouml;ffnet werden,
-  da die Sektordaten in dem Dateiformat komprimiert sein k&ouml;nnen.
+  im Dateikonverter kann dieses Dateiformat auch erzeugt werden.
+  Im Fenster <em>JKCEMU Diskettenstation</em> wird dagegen nur eine lesende
+  Unterst&uuml;tzung geboten,
+  da die Sektordaten komprimiert sein k&ouml;nnen und somit
+  ein nahtloses Schreiben eines einzelnen Sektors mitten
+  in der Abbilddatei nicht problemlos m&ouml;glich ist.
+ <br/><br/>
+  Das ImageDisk-Dateiformat ist sehr flexibel und kann gel&ouml;schte
+  Sektoren enthalten sowie die Information speichern,
+  ob ein Sektor mit CRC-Fehler gelesen wurde.
  <br/><br/>
 
  <h2><a name="teledisk">6. TeleDisk-Dateien</a></h2>
-  JKCEMU unterst&uuml;tzt TeleDisk-Dateien, allerdings nur lesend.
+  JKCEMU unterst&uuml;tzt TeleDisk-Dateien schreibend und lesend,
+  allerdings ohne <em>Advanced Compression</em>.
+  Die Schreibunterst&uuml;tzung beschr&auml;nkt sich
+  auf das manuelle Erstellen einer Abbilddatei sowie auf den Dateikonverter.
+  Im Fenster <em>JKCEMU Diskettenstation</em> kann eine
+  TeleDisk-Datei nur lesend ge&ouml;ffnet werden,
+  da wie beim ImageDisk-Format die Sektoren in der Datei komprimiert
+  gespeichert sein k&ouml;nnen
+  und somit ein nahtloses Schreiben eines einzelnen Sektors mitten
+  in der Abbilddatei nicht problemlos m&ouml;glich ist.
+ <br/><br/>
   TeleDisk ist ein Programm zum Erzeugen und Zur&uuml;ckschreiben
   von speziellen Diskettenabbilddateien (TeleDisk-Dateien)
   und war um 1990 sehr popul&auml;r.
   Eine TeleDisk-Datei enth&auml;lt neben den Nutzdaten
-  auch sehr detailierte Verwaltungs- und Geometriedaten.
+  sehr detailierte Verwaltungs- und Geometriedaten.
   Dadurch kann TeleDisk eine nahezu identische Kopie einer Diskette
-  anfertigen, auch wenn das Diskettenformat vom Standard abweicht
-  oder die Diskette gel&ouml;schte Sektoren enth&auml;lt.
+  anfertigen, auch wenn das Diskettenformat vom Standard abweicht.
  <br/><br/>
-  Das TeleDisk-Format ist propriet&auml;r und nicht offen gelegt.
-  Die in JKCEMU enthaltene TeleDisk-Unterst&uuml;tzung basiert
-  auf den wenigen im Internet frei verf&uuml;gbaren Informationen
-  und ist deshalb auch nicht vollst&auml;ndig.
-  So lassen sich z.B. TeleDisk-Dateien mit <em>Advanced Compression</em>
-  nicht verwenden.
+  Das TeleDisk-Dateiformat ist sehr flexibel und kann neben
+  gel&ouml;schten Sektoren auf die Informationen &uuml;ber mit
+  CRC-Fehler gelesene Sektoren enthalten.
+  Des Weiteren kann TeleDisk auch Sektoren speichern,
+  bei denen nur der Datenbereich, nicht aber der Kopfbereich lesbar war.
+  In dem Fall generiert es eine Sektor-ID
+  (d.h., es erfindet eine), und markiert den Sektor entsprechend.
+ <br/><br/>
+  Eine weitere Besonderheit ist,
+  dass TeleDisk Sektoren manchmal mehrfach liest und speichert,
+  d.h., der gleiche Sektor kann mehrfach in der Datei vorhanden sein.
+  Da dies sowie Sektoren mit generierter Sektor-ID im Emulator
+  Probleme bereiten, versucht JKCEMU die von einer TeleDisk-Datei
+  eingelesenen Daten bei Bedarf zu reparieren,
+  d.h. eine generierte Sektor-ID mit der wahrscheinlich richtigen
+  zu ersetzen und mehrfache vorhandene Sektoren zu eliminieren.
+  Findet eine solche Reparatur statt, wird der Anwender dar&uuml;ber
+  informiert.
+  Die Reparatur bezieht sich nur auf die eingelesenen Daten,
+  nicht auf die Datei selbst, d.h. diese wird nicht ver&auml;ndert.
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie eine TeleDisk-Datei im
+  <a href="diskimgviewer.htm">Diskettenabbilddatei-Inspektor</a> &ouml;ffnen,
+  wird diese nicht automatisch repariert,
+  da man ja in dem Fall den Originalzustand sehen m&ouml;chte.
  <br/><br/>
 
 
@@ -215,13 +270,14 @@
   </table>
  <br/>
   <b>Achtung!</b> Mit GZIP komprimierte Diskettenabbilddateien
-  werden in JKCEMU nur lesend unterst&uuml;tzt.
+  werden bei der
+  <a href="floppydiskintro.htm#file">Emulation einer Diskette</a>
+  nur lesend unterst&uuml;tzt.
  <br/><br/>
-
 
  <h2>8. Zusammenfassung</h2>
   Die Tabelle zeigt zusammenfassend die Unterst&uuml;tzung der einzelnen
-  Formate f&uuml;r Diskettenabbilddateien in JKCEMU:
+  Formate f&uuml;r Diskettenabbilddateien im JKCEMU:
   <table border="1">
    <tr>
     <th>Dateiformat</th>
@@ -250,8 +306,8 @@
    <tr>
     <td>CopyQM-Datei (*.cqm; *.qm)</td>
     <td>R</td>
-    <td></td>
-    <td>R</td>
+    <td>W</td>
+    <td>RW</td>
    </tr>
    <tr>
     <td>ImageDisk-Datei (*.imd)</td>
@@ -262,8 +318,8 @@
    <tr>
     <td>TeleDisk-Datei (*.td0)</td>
     <td>R</td>
-    <td></td>
-    <td>R</td>
+    <td>W</td>
+    <td>RW</td>
    </tr>
   </table>
   R:&nbsp;nur&nbsp;lesend,

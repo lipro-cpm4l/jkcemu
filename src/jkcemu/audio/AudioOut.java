@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,22 +19,31 @@ import z80emu.*;
 
 public abstract class AudioOut extends AudioIO
 {
-  public static final int MAX_VALUE = 220;
+  public static final int MAX_OUT_VALUE  = 255;
+  public static final int MAX_USED_VALUE = MAX_OUT_VALUE * 9 / 10;
+
+  protected static final int SIGNED_VALUE_1 = MAX_USED_VALUE / 2;
+  protected static final int SIGNED_VALUE_0 = -SIGNED_VALUE_1;
+
 
   protected EmuThread emuThread;
   protected boolean   enabled;
-  protected int       maxPauseTStates;
 
   private boolean firstPhaseChange;
   private long    lastTStates;
 
 
-  protected AudioOut( Z80CPU z80cpu )
+  protected AudioOut( AudioFrm audioFrm, Z80CPU z80cpu )
   {
-    super( z80cpu );
+    super( audioFrm, z80cpu );
     this.enabled          = false;
     this.firstPhaseChange = false;
-    this.maxPauseTStates  = 0;
+  }
+
+
+  public void fireReopenLine()
+  {
+    this.audioFrm.fireReopenLine();
   }
 
 
@@ -44,14 +53,24 @@ public abstract class AudioOut extends AudioIO
   }
 
 
-  protected abstract void writeSamples( int nSamples, boolean phase );
+  protected void writeSamples( int nSamples, boolean phase )
+  {
+    int value = (phase ? MAX_USED_VALUE : 0);
+    writeSamples( nSamples, value, value, value );
+  }
 
 
   /*
    * Wo ein direkter Zugriff auf den Audio-Kanal notwendig ist,
    * muss die Methode ueberschrieben werden.
+   * Der Wertebereich ist unabhaengig vom konkreten AudioFormat
+   * 0...MAX_OUT_VALUE.
    */
-  public void writeSamples( int nSamples, byte value )
+  public void writeSamples(
+			int nSamples,
+			int monoValue,
+			int leftValue,
+			int rightValue )
   {
     // leer
   }
@@ -83,11 +102,12 @@ public abstract class AudioOut extends AudioIO
 						  this.lastTStates,
 						  tStates );
 	    if( diffTStates > 0 ) {
-	      currentDiffTStates( diffTStates );
 
 	      // Anzahl der zu erzeugenden Samples
 	      int nSamples = (int) (diffTStates / this.tStatesPerFrame);
-	      writeSamples( nSamples, phase );
+	      if( currentDiffTStates( diffTStates ) ) {
+		writeSamples( nSamples, phase );
+	      }
 
 	      /*
 	       * Anzahl der verstrichenen Taktzyklen auf den Wert
@@ -106,8 +126,9 @@ public abstract class AudioOut extends AudioIO
    * Die Methode wird im CPU-Emulations-Thread aufgerufen
    * und schreibt synchron zur verstrichenen CPU-Taktzyklenzahl
    * einen Byte-Wert in den Audiokanal.
+   * Wertebereich: 0...MAX_OUT_VALUE
    */
-  public void writeValue( byte value )
+  public void writeValue( int monoValue, int leftValue, int rightValue )
   {
     if( this.enabled && (this.tStatesPerFrame > 0) ) {
       if( this.firstCall ) {
@@ -122,19 +143,18 @@ public abstract class AudioOut extends AudioIO
 					      this.lastTStates,
 					      tStates );
 	if( diffTStates > 0 ) {
-	  currentDiffTStates( diffTStates );
-	  if( tStates > this.lastTStates ) {
 
-	    // Anzahl der zu erzeugenden Samples
-	    int nSamples  = (int) (diffTStates / this.tStatesPerFrame);
-	    writeSamples( nSamples, value );
-
-	    /*
-	     * Anzahl der verstrichenen Taktzyklen auf den Wert
-	     * des letzten ausgegebenen Samples korrigieren
-	     */
-	    this.lastTStates += (nSamples * this.tStatesPerFrame);
+	  // Anzahl der zu erzeugenden Samples
+	  int nSamples  = (int) (diffTStates / this.tStatesPerFrame);
+	  if( currentDiffTStates( diffTStates ) ) {
+	    writeSamples( nSamples, monoValue, leftValue, rightValue );
 	  }
+
+	  /*
+	   * Anzahl der verstrichenen Taktzyklen auf den Wert
+	   * des letzten ausgegebenen Samples korrigieren
+	   */
+	  this.lastTStates += (nSamples * this.tStatesPerFrame);
 	}
       }
     }

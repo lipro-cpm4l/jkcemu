@@ -28,6 +28,31 @@
     <td>Hilfe zu den BASIC-Compiler-Optionen anzeigen</td>
    </tr>
    <tr>
+    <td valign="top" nowrap="nowrap">-f&nbsp;&lt;Datei&gt;</td>
+    <td>
+     weitere Kommandozeile aus Datei lesen
+     <br/><br/>
+     Die Kommandozeile kann recht lang sein,
+     m&ouml;glicherweise l&auml;nger als von der Eingabeaufforderung
+     oder dem Betriebssystem unterst&uuml;tzt.
+     Aus diesem Grund kann die Kommandozeile aus einer Datei gelesen werden.
+     <br/><br/>
+     Beim Erreichen der Option <em>-f</em> &ouml;ffnet der Compiler
+     die angegebene Datei und liest daraus die weitere Kommandozeile.
+     Wenn das Ende der Datei erreicht wurde,
+     wird der Rest der urspr&uuml;nglichen Kommandozeile weiter verarbeitet.
+     Der Compiler tut also so, als ob der Inhalt der Datei anstelle
+     der Option <em>-f</em> in der Kommandozeile stehen w&uuml;rde.
+     <br/><br/>
+     In der Datei m&uuml;ssen die einzelnen Kommandozeilenargumente
+     nicht in einer Zeile stehen, sondern k&ouml;nnen auf mehrere Zeilen
+     aufgeteilt werden.
+     Wenn ein Kommandozeilenargument Leerzeichen enth&auml;lt,
+     muss dieses in doppelte Hochkommas eingeschlossen werden,
+     damit der Compiler es als ein Argument verarbeitet.
+    <td/>
+   </tr>
+   <tr>
     <td valign="top">-g</td>
     <td>
      bei Abbruch aufgrund eines Fehlers Zeilennummer ausgeben
@@ -57,13 +82,16 @@
      Diese Option muss angegeben werden.
      M&ouml;gliche Schl&uuml;sselw&ouml;rter sind:
      <ul>
+      <li><tt>AC1</tt></li>
       <li><tt>CPM</tt></li>
       <li><tt>HUEBLER</tt></li>
       <li><tt>KC85</tt></li>
+      <li><tt>KC85_4</tt></li>
       <li><tt>KRAMER</tt></li>
       <li><tt>LLC2_HIRES</tt></li>
       <li><tt>SCCH</tt></li>
       <li><tt>Z1013</tt></li>
+      <li><tt>Z1013_64X16</tt></li>
       <li><tt>Z9001</tt></li>
       <li><tt>Z9001_KRT</tt></li>
      </ul>
@@ -72,17 +100,54 @@
     </td>
    </tr>
    <tr>
-    <td valign="top">-A&nbsp;&lt;Adresse&gt;</td>
+    <td valign="top">
+     -A&nbsp;&lt;Anfangsadresse&gt;<br/>
+     -A&nbsp;&lt;Anfangsadresse&gt;:&lt;BSS-Adresse&gt
+    </td>
     <td>
-     Anfangsadresse festlegen (hexadezimal),<br/>
+     Anfangsadresse f&uuml;r den Programmcode und ggf. auch f&uuml;r
+     den BSS-Bereich (Block Storage Segment: Variablen, Speicherzellen, Stack)
+     festlegen (hexadezimal),<br/>
      Fehlt die Option, gilt abh&auml;ngig vom Zielsystem
      folgende Anfangsadresse:
      <ul>
-      <li>0100h bei CPM, HUEBLER und Z1013</li>
-      <li>0300h bei KC85, Z9001 und Z9001_KRT</li>
+      <li>0100h bei CPM, HUEBLER, Z1013 und Z1013_64X16</li>
+      <li>0300h bei KC85, KC85_4, Z9001 und Z9001_KRT</li>
       <li>1000h bei KRAMER</li>
       <li>2000h bei SCCH und LLC2_HIRES</li>
      </ul>
+     Wird die BSS-Adresse nicht angegeben, liegen die Variablen,
+     die Speicherzellen und, sofern ein eigener Stack verwendet wird,
+     der Stack direkt hinter dem Programmcode.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">-D&nbsp;&lt;Treiberliste&gt;</td>
+    <td>
+     Die Option gibt an, welche Treiber in das compilierte Programm
+     eingebunden werden sollen.
+     Dazu werden die Treiber mit Komma getrennt hinter der Option angegeben.
+     Die Treiberliste kann auch in Doppelhochkommas eingeschlossen werden.
+     <br/><br/>
+     Beispiele:<br/>
+     &nbsp;<tt>-D vdip</tt><br/>
+     &nbsp;<tt>-D crt,lpt</tt><br/>
+     &nbsp;<tt>-D "CRT,LPT"</tt><br/>
+     <br/>
+     Folgende Treiber stehen zur Verf&uuml;gung:
+     <em>CRT</em>, <em>LPT</em>, <em>VDIP</em>
+     <br/>
+     Die Gro&szlig;/Kleinschreibung der Treibernamen spielt keine Rolle.
+     <br/><br/>
+     Wird ein Treiber angegeben obwohl das BASIC-Programm gar
+     keine Anweisung oder Funktion enth&auml;lt,
+     die den Treiber verwenden k&ouml;nnte
+     (CRT, LPT, FILE und VDIP werden z.B. nur von
+     <a href="instructions.htm#open">OPEN</a> verwendet),
+     wird der Treiber nicht eingebunden.
+     <br/><br/>
+     Wird die Option <tt>-D</tt> nicht angegeben,
+     werden alle sinnvollen Treiber eingebunden.
     </td>
    </tr>
    <tr>
@@ -189,7 +254,7 @@
       <tr>
        <td valign="top"><tt>UNUSED</tt></td>
        <td>
-        Bei nicht verwendezen Funktionen, Prozeduren und Variablen warnen
+        Bei nicht verwendeten Funktionen, Prozeduren und Variablen warnen
        </td>
       </tr>
       <tr>

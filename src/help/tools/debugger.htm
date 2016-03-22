@@ -11,9 +11,70 @@
   Zum &Auml;ndern des Speicherinhalts gibt es den
   <a href="memeditor.htm">Speichereditor</a>.
  <br/><br/>
+  <ul>
+   <li><a href="debugger.htm#launch">1. Debugger starten</a></li>
+   <li>
+    <a href="debugger.htm#stop">2. Programmausf&uuml;hrung anhalten</a>
+   </li>
+   <li>
+    <a href="debugger.htm#run">3. Programm bis Haltepunkt ausf&uuml;hren</a>
+   </li>
+   <li>
+    <a href="debugger.htm#walk">4. Programm bis Haltepunkt langsam ausf&uuml;hren</a>
+   </li>
+   <li><a href="debugger.htm#breakpoint">5. Halte-/Log-Punkte</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#bp_pc">5.1. Halte-/Log-Punkt auf Programmadresse</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#bp_mem">5.2. Halte-/Log-Punkt auf Speicherbereich</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#bp_in">5.3. Halte-/Log-Punkt auf Eingabetor</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#bp_out">5.4. Halte-/Log-Punkt auf Ausgabetor</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#bp_int">5.5. Halte-/Log-Punkt auf Interrupt-Quelle</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#bp_management">5.6. Verwaltung der Halte-/Log-Punkte</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#bp_import">5.7. Halte-/Log-Punkte importieren</a>
+   </li>
+   <li><a href="debugger.htm#step">6. Schrittbetrieb</a></li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#step_over">6.1. Einzelschritt &uuml;ber Aufruf hinweg</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#step_into">6.2. Einzelschritt in Aufruf hinein</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#run_to_ret">6.3. Bis RET ausf&uuml;hren</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="debugger.htm#change_flags">6.4. Registerinhalte und Flags &auml;ndern</a>
+   </li>
+   <li><a href="debugger.htm#trace">7. Befehle aufzeichnen</a></li>
+   <li><a href="debugger.htm#var">8. Variablen</a></li>
+  </ul>
+ <br/>
 
 
- <h2>1. Debugger starten</h2>
+ <h2><a name="launch">1. Debugger starten</a></h2>
   Sie befinden sich im Hauptfenster und klicken im Men&uuml;
   <em>Extra</em>, Untermen&uuml; <em>Werkzeuge</em>, den Punkt
   <em>Debugger...</em> an.
@@ -21,7 +82,7 @@
  <br/><br/>
 
 
- <h2>2. Programmausf&uuml;hrung anhalten</h2>
+ <h2><a name="stop">2. Programmausf&uuml;hrung anhalten</a></h2>
   Damit Sie die Speicher- und Registerinhalte ansehen k&ouml;nnen,
   muss die Programmausf&uuml;hrung angehalten werden.
   Daf&uuml;r gibt es zwei M&ouml;glichkeiten:
@@ -29,7 +90,7 @@
    <li>
     Sie legen einen oder mehrere Haltepunkte an.
     Wenn w&auml;hrend der Befehlsabarbeitung ein solcher Haltepunkt
-    zutrifft, der zudem auch aktiviert sein muss, wird angehalten.
+    zutrifft, wird angehalten.
    </li>
    <li>
     Sie klicken im Men&uuml; <em>Debuggen</em> auf den Punkt
@@ -40,27 +101,52 @@
   wird der Inhalt des Debugger-Fensters aktualisiert, d.h.,
   Sie sehen im linken Bereich des Fensters die Registerinhalte,
   in der Mitte die ersten Bytes der Speicherbereiche,
-  auf denen die Doppelregister zeigen und
+  auf die die Doppelregister zeigen und
   unten die n&auml;chsten auszuf&uuml;hrenden Befehle.
  <br/><br/>
 
 
- <h2><a name="breakpoint">3. Haltepunkte</a></h2>
-  Es gibt f&uuml;nf verschiedene Arten von Haltepunkten,
-  die bei unterschiedlichen Bedingungen zum Anhalten
-  der Programmausf&uuml;hrung f&uuml;hren.
+ <h2><a name="run">3. Programm bis Haltepunkt ausf&uuml;hren</a></h2>
+  Mit dieser Funktion wird die Programmausf&uuml;hrung in normaler
+  bzw. voller Geschwindigkeit fortgesetzt.
+  Wenn dabei das Programm auf einen Haltepunkt trifft,
+  dessen Bedingung erf&uuml;llt ist, wird angehalten.
  <br/><br/>
 
- <h3>3.1. Haltepunkt auf Programmadresse</h3>
-  Das ist die klassische Form eines Haltepunktes.
-  Es wird angehalten, wenn die Programmausf&uuml;hrung
-  an der angegebenen Adresse (Haltepunktadresse) angelangt ist.
+
+ <h2><a name="walk">4. Programm bis Haltepunkt langsam ausf&uuml;hren</a></h2>
+  Bei dieser Funktion f&uuml;hrt der Debugger das Programm langsam aus.
+  Sie k&ouml;nnen so die Abarbeitung des Programms im Debugger verfolgen.
+  Die Geschwindigkeit der Programmabarbeitung ist in drei Stufen w&auml;hlbar.
+  Wenn das Programm auf einen Haltepunkt trifft,
+  dessen Bedingung erf&uuml;llt ist, wird angehalten.
+ <br/><br/>
+
+
+ <h2><a name="breakpoint">5. Halte-/Log-Punkte</a></h2>
+  Halte-/Log-Punkt verk&ouml;rpern eine Bedingung,
+  bei der die Programmausf&uuml;hrung angehalten (Haltepunkt)
+  und/oder eine Log-Meldung (Log-Punkt) ausgegeben wird.
+  Es gibt f&uuml;nf verschiedene Arten von Halte-/Log-Punkten.
+ <br/><br/>
+  Das Anlegen von Halte-/Log-Punkten erfolgt &uuml;ber das Men&uuml;
+  am Fenster oder &uuml;ber das Kontextmen&uuml; (rechte Maustaste)
+  &uuml;ber dem jeweiligen Halte-/Log-Punktbereich.
+ <br/><br/>
+
+ <h3>
+  <a name="bp_pc">5.1. Halte-/Log-Punkt auf Programmadresse</a>
+ </h3>
+  Das ist die klassische Form eines Halte-/Log-Punktes.
+  Es wird angehalten bzw. eine Log-Meldung ausgegeben,
+  wenn die Programmausf&uuml;hrung an der angegebenen Adresse
+  angelangt ist.
   Zus&auml;tzlich k&ouml;nnen Sie den Wert eines Registers
   pr&uuml;fen lassen.
-  Dann wird nur angehalten, wenn neben der Haltepunktadresse
-  auch die Registerwertpr&uuml;fung erfolgreich war.
+  Dann wird nur angehalten bzw. eine Log-Meldung ausgegeben,
+  wenn neben der Adresse auch die Registerwertpr&uuml;fung erfolgreich war.
   Diese l&auml;uft folgenderma&szlig;en ab:
-  Vor Abarbeitung des Befehls auf der Haltepunktadresse wird der Wert
+  Vor Abarbeitung des Befehls auf der Halte-/Log-Punktadresse wird der Wert
   des ausgew&auml;hlten Registers mit einer von Ihnen anzugebenden Maske
   UND-verkn&uuml;pft und das Ergebnis dann mit einem ebenfalls von Ihnen
   anzugebenden Vergleichswert verglichen.
@@ -68,12 +154,20 @@
   sondern auch auf Ungleichheit sowie auf gr&ouml;&szlig;er als
   und kleiner als.
  <br/><br/>
+  Halte-/Log-Punkte auf Programmadressen k&ouml;nnen Sie neben den
+  oben genanten M&ouml;glichkeiten auch &uuml;ber das Kontextmen&uuml;
+  der Programmcodeanzeige sowie im <a href="reassembler.htm">Reassembler</a>
+  &uuml;ber das Kontextmen&uuml; anlegen.
+  Bei diesen beiden Varianten wird gleich die Adresse entsprechend
+  der Position des Kontextmen&uuml;s vorbelegt.
+ <br/><br/>
 
- <h3>3.2. Haltepunkt auf Speicherbereich</h3>
-  Ein solcher Haltepunkt reagiert auf Zugriffe auf eine Speicherzelle
-  bzw. auf einen Speicherbereich.
+ <h3><a name="bp_mem">5.2. Halte-/Log-Punkt auf Speicherbereich</a></h3>
+  Ein solcher Halte-/Log-Punkt reagiert auf Zugriffe auf eine
+  Speicherzelle bzw. auf einen Speicherbereich.
   Sie k&ouml;nnen angeben, ob nur bei Lese-, nur bei Schreib-
-  oder bei Lese- und Schreibzugriffe angehalten werden soll.
+  oder bei Lese- und Schreibzugriffe angehalten bzw. eine Log-Meldung
+  ausgegeben werden soll.
   Zus&auml;tzlich k&ouml;nnen Sie den Wert der betreffenden Speicherzelle
   (Lesezugriff) bzw. den zu schreibenden Wert (Schreibzugriff)
   &uuml;berpr&uuml;fen lassen.
@@ -85,14 +179,14 @@
   Aufgrund dieser Arbeitsweise werden jedoch die Speicherzugriffe,
   die w&auml;hrend einer Interrupt-Annahme get&auml;tigt werden
   (Lesen der Interrupt-Tabelle im Interrupt-Mode&nbsp;2 und
-  Kellern der R&uuml;ckkehradresse) von keinem Haltepunkt erkannt.
+  Kellern der R&uuml;ckkehradresse) von keinem Halte-/Log-Punkt erkannt.
  <br/><br/>
 
- <h3>3.3. Haltepunkt auf Eingabetor</h3>
-  Bei diesem Haltepunkt geben Sie die Adresse oder den Adressbereich
-  eines Eingabetors an.
-  Es wird dann an einem Eingabebefehl angehalten,
-  der von diesem Eingabetor liest.
+ <h3><a name="bp_in">5.3. Halte-/Log-Punkt auf Eingabetor</a></h3>
+  Bei diesem Halte-/Log-Punkt geben Sie die Adresse oder
+  den Adressbereich eines Eingabetors an.
+  Es wird dann vor einem Eingabebefehl angehalten bzw.
+  eine Log-Meldung ausgegeben, der von diesem Eingabetor liest.
  <br/><br/>
   Die Eingabeadresse kann sowohl mit 8&nbsp;Bit (2&nbsp;hexadezimale Ziffern)
   als auch mit 16&nbsp;Bit (4&nbsp;hexadezimale Ziffern) angegeben werden.
@@ -100,65 +194,70 @@
   gepr&uuml;ft.
  <br/><br/>
 
- <h3>3.4. Haltepunkt auf Ausgabetor</h3>
-  Dieser Haltepunkt ist &auml;hnlich wie einer auf einem Eingabetor,
+ <h3><a name="bp_out">5.4. Halte-/Log-Punkt auf Ausgabetor</a></h3>
+  Dieser Halte-Log-Punkt ist &auml;hnlich wie einer auf einem Eingabetor,
   nur dass er auf Ausgabebefehle reagiert.
   Zus&auml;tzlich k&ouml;nnen Sie den auszugebenden Wert
   &uuml;berpr&uuml;fen lassen.
  <br/><br/>
 
- <h3>3.5. Haltepunkt auf Interrupt-Quelle</h3>
-  Bei dieser Form eines Haltepunktes geben Sie eine im emulierten
+ <h3><a name="bp_int">5.5. Halte-/Log-Punkt auf Interrupt-Quelle</a></h3>
+  Bei dieser Form eines Halte-/Log-Punktes geben Sie eine im emulierten
   System vorhandene Interrupt-Quelle (z.B. PIO oder CTC) an.
   Es wird dann angehalten, sobald die Interrupt-Quelle
   einen Interrupt ausl&ouml;st und dieser vom Mikroprozessor
   auch angenommen wird, d.h.,
-  es wird vor dem ersten Befehl der Interrupt-Service-Routine angehalten.
+  es wird vor dem ersten Befehl der Interrupt-Service-Routine
+  angehalten bzw. eine Log-Meldung ausgegeben.
  <br/><br/>
 
- <h3>3.6. Verwaltung der Haltepunkte</h3>
+ <h3><a name="bp_management">5.6. Verwaltung der Halte-/Log-Punkte</a></h3>
   &Uuml;ber das Men&uuml; <em>Debuggen</em> k&ouml;nnen Sie beliebig
-  viele Haltepunkte anlegen.
+  viele Halte-/Log-Punkte anlegen.
   Mit dem Kontextmen&uuml; &uuml;ber der jeweiligen Haltepunktliste
   ist das auch m&ouml;glich.
  <br/><br/>
-  Um einen Haltepunkt wieder zu entfernen,
+  Um einen Halte-/Log-Punkt wieder zu entfernen,
   m&uuml;ssen Sie diesen im rechten Bereich des Debugger-Fensters
   durch Anklicken markieren.
-  Sie k&ouml;nnen auch mehrere Haltepunkte markieren.
+  Sie k&ouml;nnen auch mehrere Halte-/Log-Punkte markieren.
   Anschlie&szlig;end klicken Sie im Men&uuml; <em>Debuggen</em>
-  auf den Eintrag <em>Haltepunkte entfernen</em>.
+  auf den Eintrag <em>Ausgew&auml;hlte Halte-/Log-Punkte entfernen</em>.
  <br/><br/>
   Optional k&ouml;nnen Sie auch alle Haltepunkte auf einmal entfernen
-  (Men&uuml;eintrag <em>Alle Haltepunkte entfernen</em>).
+  (Men&uuml;eintrag <em>Alle Halte-/Log-Punkte entfernen</em>).
  <br/><br/>
-  Haltepunkte, die Sie tempor&auml;r nicht ben&ouml;tigen,
+  Halte-/Log-Punkte, die Sie tempor&auml;r nicht ben&ouml;tigen,
   m&uuml;ssen nicht unbedingt entfernt werden.
-  Sie k&ouml;nnen diese Haltepunkte auch einfach deaktivieren
-  und sp&auml;ter bei Bedarf wieder aktivieren.
+  Sie k&ouml;nnen diese einfach deaktivieren,
+  indem Sie die beiden Aktionen (Anhalten und Loggen) deaktivieren.
+  Bei Bedarf k&ouml;nnen Sie die gew&uuml;nschte Akion sp&auml;ter
+  wieder aktivieren.
  <br/><br/>
   Der Debugger ist nur solange aktiv, wie das Debugger-Fenster
   sichtbar ist.
-  Wenn Sie Haltepunkte angelegt haben und Sie schlie&szlig;en
-  das Fenster, werden die Haltepunkte zwar nicht gel&ouml;scht,
-  jedoch wird dann dort nicht mehr angehalten.
+  Wenn Sie Halte-/Log-Punkte angelegt haben und Sie schlie&szlig;en
+  das Fenster, werden die Halte-/Log-Punkte zwar nicht gel&ouml;scht,
+  jedoch sind sie nicht mehr aktiv.
  <br/><br/>
 
- <h3>3.7. Haltepunkte importieren</h3>
+ <h3><a name="bp_import">5.7. Halte-/Log-Punkte importieren</a></h3>
   Der Debugger bietet die M&ouml;glichkeit,
-  Haltepunkte aus einer Datei oder aus der Zwischenablage zu
+  Halte-/Log-Punkte aus einer Datei oder aus der Zwischenablage zu
   <a href="labelimport.htm">importieren</a>.
-  Diese Haltepunkte k&ouml;nnen dabei auch einen Namen haben.
+  Diese Halte-/Log-Punkte k&ouml;nnen dabei auch einen Namen haben.
   So ist z.B. der Import der Markentabelle eines Assemblers m&ouml;glich,
   um f&uuml;r jede Marke einen Haltepunkt anzulegen.
  <br/><br/>
   Die Markentabelle des JKCEMU-Assemblers k&ouml;nnen Sie sogar
   automatisch in den Debugger importieren lassen.
-  Schalten Sie dazu die entsprechende
-  <a href="assembler.htm#options">Assembler-Option</a> ein.
+  Schalten Sie dazu die
+  <a href="assembler.htm#options">Assembler-Option</a>
+  <em>Im Debugger Halte-/Log-Punkte bzw. Variablen auf Marken anlegen</em>
+  ein.
  <br/><br/>
 
- <h2>4. Schrittbetrieb</h2>
+ <h2><a name="step">6. Schrittbetrieb</a></h2>
   Mit Schrittbetrieb ist gemeint, dass nach dem Anhalten der
   Programmausf&uuml;hrung einzelne Befehle oder Befehlsgruppen
   abgearbeitet werden und danach automatisch wieder
@@ -182,24 +281,15 @@
   oder Sie &ouml;ffnen wieder den Debugger.
  <br/><br/>
 
- <h3>4.1. Einzelschritt &uuml;ber Aufruf hinweg</h3>
+ <h3><a name="step_over">6.1. Einzelschritt &uuml;ber Aufruf hinweg</a></h3>
   Es wird ein einzelner Maschinenbefehl abgearbeitet.
   Handelt es sich jedoch um den Aufruf eines Unterprogramms,
   so wird das ganze Unterprogramm ausgef&uuml;hrt und
   erst danach wieder angehalten.
-  Das Ende eines Unterprogramms wird dabei anhand des Stack Pointers erkannt.
-  Sobald dieser wieder den gleichen Wert wie vor dem Unterprogrammaufruf
-  hat, wird angehalten.
- <br/><br/>
-  Blockbefehle und leere DJNZ-Schleifen werden ebenfalls &uuml;bersprungen,
-  d.h. sie werden bis zum Ende abgearbeitet.
-  Bei der Funktion <em>Einzelschritt &uuml;ber Aufruf hinweg</em>
-  wird n&auml;mlich die Programmausf&uuml;hrung niemals angehalten,
-  wenn der Befehlszeiger (Program Counter) nach Abarbeitung
-  eines Maschinenbefehls immer noch auf den gleichen Befehl zeigt.
+  Das gleiche gilt f&uuml;r Blockbefehle und leere DJNZ-Schleifen.
  <br/><br/>
 
- <h3>4.2. Einzelschritt in Aufruf hinein</h3>
+ <h3><a name="step_into">6.2. Einzelschritt in Aufruf hinein</a></h3>
   Es wird immer nur ein einzelner Maschinenbefehl abgearbeitet.
   Handelt es sich um den Aufruf eines Unterprogramms,
   so wird nur der CALL-Befehl abgearbeitet und somit vor dem
@@ -209,14 +299,16 @@
   und danach wieder angehalten.
  <br/><br/>
 
- <h3>4.3. Bis RETURN ausf&uuml;hren</h3>
+ <h3><a name="run_to_ret">6.3. Bis RET ausf&uuml;hren</a></h3>
   Es werden die Maschinenbefehle bis zum n&auml;chsten Return-Befehl
   ausgef&uuml;hrt.
   Werden dabei Unterprogramme aufgerufen,
   so werden diese vollst&auml;ndig ausgef&uuml;hrt.
  <br/><br/>
 
- <h3>4.4. Registerinhalte und Flags &auml;ndern</h3>
+ <h3>
+  <a name="change_flags">6.4. Registerinhalte und Flags &auml;ndern</a>
+ </h3>
   Im Schrittbetrieb, d.h. wenn die Programmausf&uuml;hrung angehalten
   wurde, k&ouml;nnen die Inhalte der Register ge&auml;ndert werden.
   Geben Sie dazu den gew&uuml;nschten neuen Wert in das jeweilige Feld
@@ -227,7 +319,7 @@
  <br/><br/>
 
 
- <h2>5. Befehle aufzeichnen</h2>
+ <h2><a name="trace">7. Befehle aufzeichnen</a></h2>
   Eine weitere M&ouml;glichkeit der Verfolgung des Geschehens
   im Emulator ist die Befehlsaufzeichnung.
   Dabei werden vor der Abarbeitung eines jeden Maschinenbefehls
@@ -235,7 +327,7 @@
   anstehende Maschinenbefehl in Form einer Zeile in
   eine Textdatei geschrieben.
   Diese k&ouml;nnen Sie sich dann mit einem Editor ansehen,
-  z.B. mit dem in JKCEMU eingebauten
+  z.B. mit dem im JKCEMU eingebauten
   <a href="texteditor.htm">Texteditor</a>.
  <br/><br/>
   Die Befehlsaufzeichnung schalten Sie &uuml;ber den Schalter
@@ -253,5 +345,45 @@
   ausreichend Platz ist.
   Au&szlig;erdem wird die Programmausf&uuml;hrung in Abh&auml;ngigkeit
   von der Schreibgeschwindigkeit des Speichermediums deutlich gebremst.
+ <br/><br/>
+
+ <h2><a name="var">8. Variablen</a></h2>
+  Ein Programm speichert seine Daten &uuml;blicherweise in Variablen.
+  Da es beim Debuggen sehr hilfreich ist,
+  die aktuellen Variableninhalte zu sehen und ggf. auch zu &auml;ndern,
+  bietet der JKCEMU Debugger daf&uuml;r eine Unterst&uuml;tzung.
+  Allerdings wei&szlig; der Debugger nicht, welche Speicherbereiche
+  f&uuml;r Variablen verwendet werden und welche Datentypen diese haben.
+  Aus diesem Grund m&uuml;ssen die Variablen dem Debugger erst bekannt
+  gemacht werden, d.h., sie m&uuml;ssen im Debugger angelegt werden.
+  F&uuml;r jede Variable geben Sie eine Adresse, einen Datentyp
+  und optional einen Namen an.
+  Wenn Sie das erledigt haben,
+  zeigt der Debugger die aktuellen Variableninhalte an,
+  sobald die Programmausf&uuml;hrung anh&auml;lt.
+ <br/><br/>
+  Neben dem manuellen Anlegen k&ouml;nnen Variablen auch von dem
+  im JKCEMU integrierten <a href="assembler.htm">Assembler</a>
+  importiert werden.
+  Wenn Sie die Assembler-Option <em>Im Debugger Halte-/Log-Punkte
+  bzw. Variablen auf Marken anlegen</em> eingeschaltet haben,
+  wird f&uuml;r jede Marke, die unmittelbar vor einer <em>DS</em>-
+  oder <em>DEFS</em>-Anweisung steht, eine Variable angelegt.
+ <br/><br/>
+  Im technischen Sinne ist eine Variable im JKCEMU Debugger
+  nur eine Deklaration,  die besagt, wie ein ein oder mehrere Bytes
+  gro&szlig;er Bereich im Arbeitsspeicher zu betrachten ist,
+  d.h. ob dort ein numerischer, alphanumerischer oder bin&auml;rer Wert
+  gespeichert wird.
+  Sie k&ouml;nnen beliebig viele Variablen anlegen.
+ <br/><br/>
+  Den Inhalt des Arbeitsspeichers k&ouml;nnen Sie sich auch mit dem
+  <a href="memeditor.htm">Speichereditor</a> anzeigen lassen
+  und auch &auml;ndern.
+  Das Anlegen von Variablen im Debugger hat jedoch den Vorteil,
+  dass die Anzeige beim Anhalten der Programmausf&uuml;hrung
+  automatisch aktualisiert wird und dass Sie nur die Bytes sehen,
+  die Sie interessieren,
+  auch wenn die Bytes im ganzen Arbeitsspeicher verstreut sind.
 </body>
 </html>

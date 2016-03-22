@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Dialog zum Anlegen eines Haltepunktes auf eine Interrupt-Quelle
+ * Dialog zum Anlegen eines Halte-/Log-Punktes auf eine Interrupt-Quelle
  */
 
 package jkcemu.tools.debugger;
@@ -19,15 +19,15 @@ import z80emu.Z80InterruptSource;
 
 public class InterruptBreakpointDlg extends AbstractBreakpointDlg
 {
-  private JComboBox comboIntSource;
+  private JComboBox<Object> comboIntSource;
 
 
   public InterruptBreakpointDlg(
-			Window               owner,
+			DebugFrm             debugFrm,
 			AbstractBreakpoint   breakpoint,
 			Z80InterruptSource[] iSources )
   {
-    super( owner, "Interrupt-Quelle", breakpoint );
+    super( debugFrm, "Interrupt-Quelle", breakpoint );
 
 
     // Fensterinhalt
@@ -39,15 +39,22 @@ public class InterruptBreakpointDlg extends AbstractBreakpointDlg
 						0.0, 0.0,
 						GridBagConstraints.CENTER,
 						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
+						new Insets( 10, 5, 5, 5 ),
 						0, 0 );
 
-    this.comboIntSource = new JComboBox();
+    this.comboIntSource = new JComboBox<>();
     this.comboIntSource.setEditable( false );
     this.comboIntSource.addKeyListener( this );
     setInterruptSources( iSources );
     add( this.comboIntSource, gbc );
 
+    gbc.fill      = GridBagConstraints.HORIZONTAL;
+    gbc.weightx   = 1.0;
+    gbc.gridwidth = GridBagConstraints.REMAINDER;
+    gbc.gridy++;
+    add( new JSeparator(), gbc );
+
+    gbc.insets.bottom = 0;
     gbc.gridy++;
     add( createGeneralButtons(), gbc );
 
@@ -76,10 +83,11 @@ public class InterruptBreakpointDlg extends AbstractBreakpointDlg
       }
     }
     if( iSources != null ) {
-      this.comboIntSource.setModel( new DefaultComboBoxModel( iSources ) );
+      this.comboIntSource.setModel(
+		new DefaultComboBoxModel<>( (Object[]) iSources ) );
     } else {
-      String[] a = { "--- Keine Interrupt-Quelle vorhanden---" };
-      this.comboIntSource.setModel( new DefaultComboBoxModel( a ) );
+      Object[] a = { "--- Keine Interrupt-Quelle vorhanden---" };
+      this.comboIntSource.setModel( new DefaultComboBoxModel<>( a ) );
     }
     pack();
   }
@@ -114,7 +122,9 @@ public class InterruptBreakpointDlg extends AbstractBreakpointDlg
     if( o != null ) {
       if( o instanceof Z80InterruptSource ) {
 	approveBreakpoint(
-		new InterruptBreakpoint( (Z80InterruptSource) o ) );
+		new InterruptBreakpoint(
+				this.debugFrm,
+				(Z80InterruptSource) o ) );
       }
     }
   }

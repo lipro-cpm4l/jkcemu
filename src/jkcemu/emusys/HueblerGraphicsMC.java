@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,9 +20,7 @@ import jkcemu.net.KCNet;
 import z80emu.*;
 
 
-public class HueblerGraphicsMC
-			extends AbstractHueblerMC
-			implements Z80TStatesListener
+public class HueblerGraphicsMC extends AbstractHueblerMC
 
 {
   private static final String[] basicTokens = {
@@ -82,7 +80,7 @@ public class HueblerGraphicsMC
 
   public HueblerGraphicsMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.hgmc." );
     if( hasBasic( props ) ) {
       monBasicBytes = readResource( "/rom/huebler/mon30p_hbasic33p.bin" );
       this.basic    = true;
@@ -95,15 +93,16 @@ public class HueblerGraphicsMC
 
     this.kcNet = null;
     if( emulatesKCNet( props ) ) {
-      this.kcNet = new KCNet( "Netzwerk-PIO (IO-Adressen C0h-C3h)" );
+      this.kcNet = new KCNet( "Netzwerk-PIO (E/A-Adressen C0h-C3h)" );
     }
     this.vdip = null;
     if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP( "USB-PIO (IO-Adressen FCh-FFh)" );
+      this.vdip = new VDIP(
+			this.emuThread.getFileTimesViewFactory(),
+			"USB-PIO (E/A-Adressen FCh-FFh)" );
     }
     if( (this.kcNet != null) || (this.vdip != null) ) {
-      java.util.List<Z80InterruptSource> iSources
-				= new ArrayList<Z80InterruptSource>();
+      java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
       iSources.add( this.ctc );
       iSources.add( this.pio );
       if( this.kcNet != null ) {
@@ -122,6 +121,7 @@ public class HueblerGraphicsMC
       if( this.kcNet != null ) {
 	this.kcNet.z80MaxSpeedChanged( cpu );
 	cpu.addMaxSpeedListener( this.kcNet );
+	cpu.addTStatesListener( this.kcNet );
       }
       if( this.vdip != null ) {
 	this.vdip.applySettings( props );
@@ -226,14 +226,9 @@ public class HueblerGraphicsMC
   }
 
 
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public synchronized void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  public static boolean getDefaultSwapKeyCharCase()
   {
-    if( this.kcNet != null ) {
-      this.kcNet.z80TStatesProcessed( cpu, tStates );
-    }
+    return true;
   }
 
 
@@ -297,7 +292,9 @@ public class HueblerGraphicsMC
   {
     super.die();
     if( this.kcNet != null ) {
-      this.emuThread.getZ80CPU().removeMaxSpeedListener( this.kcNet );
+      Z80CPU cpu = this.emuThread.getZ80CPU();
+      cpu.removeTStatesListener( this.kcNet );
+      cpu.removeMaxSpeedListener( this.kcNet );
       this.kcNet.die();
     }
     if( this.vdip != null ) {
@@ -419,7 +416,7 @@ public class HueblerGraphicsMC
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return true;
+    return getDefaultSwapKeyCharCase();
   }
 
 
@@ -503,7 +500,7 @@ public class HueblerGraphicsMC
   }
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0;
     switch( port & 0xFF ) {
@@ -526,7 +523,7 @@ public class HueblerGraphicsMC
 	break;
 
       default:
-	rv = super.readIOByte( port );
+	rv = super.readIOByte( port, tStates );
     }
     return rv;
   }
@@ -566,16 +563,15 @@ public class HueblerGraphicsMC
   @Override
   public void saveBasicProgram()
   {
-    int endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x3770 );
+    int endAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x3770 );
     if( endAddr >= 0x3770 ) {
       (new SaveDlg(
 		this.screenFrm,
 		0x3770,
 		endAddr,
-		'B',
-		false,          // kein KC-BASIC
-		false,		// kein RBASIC
-		"BASIC-Programm speichern" )).setVisible( true );
+		"BASIC-Programm speichern",
+		SaveDlg.BasicType.MS_DERIVED_BASIC,
+		EmuUtil.getBasicFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -624,15 +620,22 @@ public class HueblerGraphicsMC
 
   @Override
   public void updSysCells(
-			int    begAddr,
-			int    len,
-			Object fileFmt,
-			int    fileType )
+			int        begAddr,
+			int        len,
+			FileFormat fileFmt,
+			int        fileType )
   {
-    if( (begAddr == 0x3770) && (fileFmt != null) ) {
-      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-	if( fileType == 'B' ) {
-	  int topAddr = begAddr + len;
+    if( fileFmt != null ) {
+      if( (fileFmt.equals( FileFormat.BASIC_PRG )
+		&& (begAddr == 0x3770)
+		&& (len > 7))
+	  || (fileFmt.equals( FileFormat.HEADERSAVE )
+		&& (fileType == 'B')
+		&& (begAddr <= 0x3770)
+		&& ((begAddr + len) > 0x3777)) )
+      {
+	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x3770 );
+	if( topAddr > 0x3770 ) {
 	  this.emuThread.setMemWord( 0x0199, topAddr );
 	  this.emuThread.setMemWord( 0x019B, topAddr );
 	  this.emuThread.setMemWord( 0x019D, topAddr );
@@ -643,7 +646,7 @@ public class HueblerGraphicsMC
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     switch( port & 0xFC ) {
       case 0:
@@ -678,7 +681,7 @@ public class HueblerGraphicsMC
 	break;
 
       default:
-	super.writeIOByte( port, value );
+	super.writeIOByte( port, value, tStates );
     }
   }
 
@@ -687,13 +690,16 @@ public class HueblerGraphicsMC
 
   private void checkAddPCListener( Properties props )
   {
-    checkAddPCListener( props, "jkcemu.hgmc.catch_print_calls" );
+    checkAddPCListener( props, this.propPrefix + "catch_print_calls" );
   }
 
 
-  private static boolean hasBasic( Properties props )
+  private boolean hasBasic( Properties props )
   {
-    return EmuUtil.getBooleanProperty( props, "jkcemu.hgmc.basic", true );
+    return EmuUtil.getBooleanProperty(
+				props,
+				this.propPrefix + "basic",
+				true );
   }
 
 
@@ -701,7 +707,7 @@ public class HueblerGraphicsMC
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.hgmc.kcnet.enabled",
+				this.propPrefix + "kcnet.enabled",
 				false );
   }
 
@@ -710,7 +716,7 @@ public class HueblerGraphicsMC
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.hgmc.vdip.enabled",
+				this.propPrefix + "vdip.enabled",
 				false );
   }
 
@@ -728,7 +734,7 @@ public class HueblerGraphicsMC
       ensureMonBytesLoaded();
       if( monBytes != null ) {
         if( monBytes.length >= 0x0E0D ) {
-          Map<Long,Character> map  = new HashMap<Long,Character>();
+          Map<Long,Character> map  = new HashMap<>();
           CRC32               crc  = new CRC32();
           int                 addr = 0x0B0D;
           for( int c = 0x20; c <= 0x7E; c++ ) {

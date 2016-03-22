@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -108,6 +108,7 @@ public class M040 extends AbstractKC85Module
     this.rom = EmuUtil.readFile(
 			owner,
 			this.fileName,
+			true,
 			0x4000,
 			"M040 ROM-Datei" );
     if( (this.typeByte == 0x01) && (this.rom != null) ) {

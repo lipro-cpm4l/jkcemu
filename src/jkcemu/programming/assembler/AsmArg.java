@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,7 @@ package jkcemu.programming.assembler;
 
 import java.lang.*;
 import java.text.*;
-import jkcemu.programming.PrgException;
+import jkcemu.programming.*;
 
 
 public class AsmArg
@@ -23,27 +23,32 @@ public class AsmArg
 
   public AsmArg( String argText )
   {
-    this.argText = argText;
-    if( (this.argText.indexOf( '\u0020' ) >= 0)
-	|| (this.argText.indexOf( '\t' ) >= 0) )
-    {
-      int len = this.argText.length();
-      if( len > 0 ) {
-	StringBuilder buf    = new StringBuilder( len );
-	boolean       quoted = false;
-	for( int i = 0; i < len; i++ ) {
-	  char ch = this.argText.charAt( i );
-	  if( (ch == '\'') || (ch == '\"') ) {
-	    buf.append( ch );
-	    quoted = !quoted;
-	  } else {
-	    if( quoted || ((ch != '\u0020') && (ch != '\t')) )
-	      buf.append( ch );
-	  }
-	}
-	this.argText = buf.toString();
+    // weisse Leerzeichen am Anfang und Ende entfernen
+    int len = argText.length();
+    int pos = 0;
+    while( pos < len ) {
+      if( !PrgUtil.isWhitespace( argText.charAt( pos ) ) ) {
+	break;
       }
+      pos++;
     }
+    if( pos > 0 ) {
+      argText = argText.substring( pos );
+    }
+    len = argText.length();
+    pos = len - 1;
+    while( pos >= 0 ) {
+      if( !PrgUtil.isWhitespace( argText.charAt( pos ) ) ) {
+	break;
+      }
+      --pos;
+    }
+    if( pos < 0 ) {
+      argText = "";
+    } else if( pos < (len - 1) ) {
+      argText = argText.substring( 0, pos + 1 );
+    }
+    this.argText      = argText;
     this.argLen       = this.argText.length();
     this.upperText    = this.argText.toUpperCase();
     this.indirectText = null;
@@ -259,19 +264,6 @@ public class AsmArg
   }
 
 
-  public static boolean isFlagCondition( String text )
-  {
-    return text.equals( "NZ" )
-		|| text.equals( "Z" )
-		|| text.equals( "NC" )
-		|| text.equals( "C" )
-		|| text.equals( "PO" )
-		|| text.equals( "PE" )
-		|| text.equals( "P" )
-		|| text.equals( "M" );
-  }
-
-
   public static boolean isRegister( String text )
   {
     return text.equals( "A" )
@@ -293,6 +285,19 @@ public class AsmArg
 		|| text.equals( "BC\'" )
 		|| text.equals( "DE\'" )
 		|| text.equals( "HL\'" );
+  }
+
+
+  public static boolean isFlagCondition( String text )
+  {
+    return text.equals( "NZ" )
+		|| text.equals( "Z" )
+		|| text.equals( "NC" )
+		|| text.equals( "C" )
+		|| text.equals( "PO" )
+		|| text.equals( "PE" )
+		|| text.equals( "P" )
+		|| text.equals( "M" );
   }
 
 

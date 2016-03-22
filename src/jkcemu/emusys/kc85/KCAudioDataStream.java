@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -36,7 +36,7 @@ public class KCAudioDataStream extends EmuSysAudioDataStream
 			int     len ) throws IOException
   {
     super( 8000F, buf, offs, len );
-    if( tapFmt && !skipString( FileInfo.KCTAP_HEADER ) ) {
+    if( tapFmt && !skipSourceString( FileInfo.KCTAP_HEADER ) ) {
       throw new IOException( "KC-TAP-Header erwartet" );
     }
 
@@ -50,7 +50,7 @@ public class KCAudioDataStream extends EmuSysAudioDataStream
 	 * Beginn einer neuen Teildatei innerhalb einer Multi-TAP-Datei?
 	 * Wenn ja, dann Header uerberspringen und langer Vorton
 	 */
-	if( skipString( FileInfo.KCTAP_HEADER ) ) {
+	if( skipSourceString( FileInfo.KCTAP_HEADER ) ) {
 	  nHalf = 16000;
 	}
       }
@@ -58,28 +58,29 @@ public class KCAudioDataStream extends EmuSysAudioDataStream
 	nHalf = 16000;		// beim 1. Block immer langer Vortan
       }
       for( int i = 0; i < nHalf; i++ ) {
-	addSamples( 4 );
+	addPhaseChangeSamples( 4 );
       }
       firstBlk = false;
 
       // Trennschwingung
-      addSamples( 8 );
-      addSamples( 8 );
+      addPhaseChangeSamples( 8 );
+      addPhaseChangeSamples( 8 );
 
-      // Blocknummer und Datenbytes
-      int cks = 0;
-      int nBytes = 128;
+      // Blocknummer
+      int b = 0;
       if( tapFmt ) {
-	nBytes = 129;
+	b = readSourceByte();
       } else {
-	addByteSamples( getAvailableSourceBytes() > 128 ? blkNum++ : 0xFF );
+	b = (getAvailableSourceBytes() > 128 ? blkNum++ : 0xFF);
       }
-      for( int i = 0; i < 129; i++ ) {
-	int b = readSourceByte();
+      addByteSamples( b );
+
+      // Datenbytes
+      int cks = 0;
+      for( int i = 0; i < 128; i++ ) {
+	b = readSourceByte();
 	addByteSamples( b );
-	if( i > 0 ) {
-	  cks = (cks + b) & 0xFF;
-	}
+	cks = (cks + b) & 0xFF;
       }
 
       // Pruefsumme
@@ -88,7 +89,7 @@ public class KCAudioDataStream extends EmuSysAudioDataStream
 
     // abschliessender Phasenwechsel
     if( getFrameLength() > 0 ) {
-      addSamples( 40 );
+      addPhaseChangeSamples( 40 );
     }
   }
 
@@ -108,15 +109,15 @@ public class KCAudioDataStream extends EmuSysAudioDataStream
   {
     for( int i = 0; i < 8; i++ ) {
       if( (value & 0x01) != 0 ) {
-	addSamples( 4 );
-	addSamples( 4 );
+	addPhaseChangeSamples( 4 );
+	addPhaseChangeSamples( 4 );
       } else {
-	addSamples( 2 );
-	addSamples( 2 );
+	addPhaseChangeSamples( 2 );
+	addPhaseChangeSamples( 2 );
       }
       value >>= 1;
     }
-    addSamples( 8 );
-    addSamples( 8 );
+    addPhaseChangeSamples( 8 );
+    addPhaseChangeSamples( 8 );
   }
 }

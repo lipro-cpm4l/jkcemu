@@ -1,0 +1,32 @@
+<html>
+<body>
+ <h1>Abbilddatei auf Datentr&auml;ger schreiben</h1>
+  JKCEMU kann einfache Abbilddateien auf einen Datentr&auml;ger schreiben,
+  wenn im oder am Emulatorrechner ein entsprechendes Laufwerk
+  vorhanden bzw. eingebaut ist und vom Betriebssystem unterst&uuml;tzt wird.
+  Bei Diskettenlaufwerken ist besonders wichtig,
+  dass das physische Diskettenformat
+  (Anzahl Spuren, Anzahl Sektoren pro Spur, Sektorgr&ouml;&szlig;e)
+  unterst&uuml;tzt wird.
+  Die Funktion zum Schreiben einer Abbilddatei auf einen Datentr&auml;ger
+  finden Sie im Hauptfenster im Men&uuml; <em>Extra</em>.
+ <br/><br/>
+  Wenn die Gr&ouml;&szlig;e der Abbilddatei nicht ann&auml;hernd
+  duch 512 teilbar ist, wird davon ausgegangen,
+  dass es sich um eine einfache Festplattenabbilddatei mit einem
+  256&nbsp;Byte gro&szlig;en Kopfblock handelt
+  (siehe <a href="../gide.htm#fileformats">hier</a>).
+  In dem Fall wird der Kopfblock &uuml;bersprungen und nur die Daten
+  hinter dem Kopfblock auf den Datentr&auml;ger geschrieben.
+  Abbilddateien in anderen Formaten m&uuml;ssen erst in eine
+  einfache Abbilddatei umgewandelt werden
+  (z.B. mit dem <a href="../tools/fileconverter.htm">Dateikonverter</a>),
+  um sie auf einen Datentr&auml;ger schreiben zu k&ouml;nnen.
+ <br/><br/>
+  <b>Achtung!</b> Der Zugriff auf physische Laufwerke h&auml;ngt
+  von verschiedenen Faktoren ab und kann deshalb nicht auf
+  allen Plattformen und Betriebssystemumgebungen garantiert werden.
+  M&ouml;glicherweise steht die Funktion auf Ihrem System
+  nicht zur Verf&uuml;gung.
+</body>
+</html>

@@ -25,7 +25,7 @@
     <a href="ac1.htm#basic">3. BASIC</a>
     <ul>
      <li>
-      <a href="ac1.htm#basic_io">3.1. Laden, Speichern und &Ouml;ffnen von BASIC-Programmen</a>
+      <a href="ac1.htm#basic_io">3.1. BASIC-Programme speichern, laden und &ouml;ffnen</a>
      </li>
      <li><a href="ac1.htm#gsbasic">3.2. Grafik/Sound-BASIC</a></li>
     </ul>
@@ -164,7 +164,7 @@
      </li>
      <li>
       <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
-      an der E/A-Basisadresse&nbsp;FCh
+      an den E/A-Basisadresse&nbsp;DCh und FCh
      </li>
      <li>1&nbsp;<a href="ac1.htm#joystick">Joystick</a></li>
     </ul>
@@ -255,7 +255,7 @@
   Ist die Emulation der Farbgrafik aktiviert,
   muss auch das Monitorprogramm den Farbspeicher initialisieren.
   Anderenfalls sehen Sie nur ein buntes Zufallsbild.
-  Da aber die meisten der in JKCEMU integrierten AC1-Monitorprogramme
+  Da aber die meisten der im JKCEMU integrierten AC1-Monitorprogramme
   keine Farbgrafik kennen und somit auch keinen Farbspeicher initialisieren,
   erledigt das der Emulator bei jedem RESET automatisch,
   allerdings nur f&uuml;r die betreffenden integrierten Monitorprogramme.
@@ -365,9 +365,9 @@
   emuliert JKCEMU die theoretisch m&ouml;glichen 1&nbsp;MByte.
   Das hat den Vorteil, dass Software,
   die diesen zus&auml;tzlichen RAM verwendet,
-  nicht speziell f&uuml;r den Einsatz in JKCEMU konfiguriert werden muss,
+  nicht speziell f&uuml;r den Einsatz im JKCEMU konfiguriert werden muss,
   denn auf jeder Adresse, wo die jeweilige Software RAM voraussetzt,
-  wird sie in JKCEMU auch RAM vorfinden.
+  wird sie im JKCEMU auch RAM vorfinden.
  <br/><br/>
 
  <h3><a name="scch_inverse">1.7. SCCH-Inversschaltung</a></h3>
@@ -391,7 +391,7 @@
   &uuml;ber die Tastatur m&ouml;glich.
   Dies muss allerdings vom jeweiligen Anwendungsprogramm auch so
   unterst&uuml;tzt werden.
-  Das in JKCEMU enthaltene <em>Grafik/Sound-BASIC</em>
+  Das im JKCEMU enthaltene <em>Grafik/Sound-BASIC</em>
   unterst&uuml;tzt die Grafiktaste.
  <br/><br/>
 
@@ -601,32 +601,39 @@
  <h2><a name="basic">3. BASIC</a></h2>
 
  <h3>
-  <a name="basic_io">3.1. Laden, Speichern und &Ouml;ffnen von BASIC-Programmen</a>
+  <a name="basic_io">3.1. BASIC-Programme speichern, laden und &ouml;ffnen</a>
  </h3>
-  JKCEMU bietet spezielle Unterst&uuml;tzung f&uuml;r das Laden
-  und Speichern von BASIC-Programmen sowie f&uuml;r das &Ouml;ffnen
-  von im Arbeitsspeicher befindlichen BASIC-Programmen im Texteditor.
+  JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
+  <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>
+  sowie f&uuml;r das &Ouml;ffnen von im Arbeitsspeicher befindlichen
+  BASIC-Programmen im Texteditor.
   Die entsprechenden Funktionen finden Sie im Men&uuml; <em>Datei</em>.
  <br/><br/>
   Folgende BASIC-Interpreter werden unterst&uuml;tzt:
  <br/>
   <ul>
    <li>Mini-BASIC Version&nbsp;2.1</li>
-   <li>8K-AC1-BASIC Version&nbsp;1.1</li>
-   <li>12K-AC1-BASIC Version&nbsp;2.1 (High Precision Extended Version)</li>
-   <li>BACOBAS Version&nbsp;2.1</li>
+   <li>AC1-8K-BASIC Version&nbsp;1.1</li>
+   <li>AC1-12K-BASIC Version&nbsp;2.1 (High Precision Extended Version)</li>
+   <li>AC1-BASIC6</li>
+   <li>BACOBAS Version&nbsp;2 (nur BASIC, nicht BASICODE)</li>
+   <li>BACOBAS Version&nbsp;3 (nur BASIC, nicht BASICODE)</li>
    <li>SCCH-BASIC Version&nbsp;3.2 (Grafik/Sound-BASIC)</li>
   </ul>
  <br/>
   Beim Speichern von BASIC-Programmen erscheint ein Fenster zur Auswahl
   des Dateiformats.
-  Speichern Sie bitte im Headersave-Format,
-  welches bereits vorausgew&auml;hlt ist.
-  Nur dann ist sichergestellt, dass Sie das BASIC-Programm
-  sp&auml;ter auch wieder problemlos laden k&ouml;nnen.
-  Bei einem anderen Dateiformat werden n&auml;mlich beim Laden
-  die Systemzellen des BASIC-Interpreters nicht angepasst,
-  und Sie k&ouml;nnen das BASIC-Programm im Interpreter nicht richtig nutzen.
+  Speichern Sie bitte Mini-BASIC-Programme als
+  <a href="fileformats.htm#headersave">Headersave-Datei (*.z80)</a>
+  mit dem Dateityp&nbsp;<em>b</em> und die anderen BASIC-Programme als
+  <a href="fileformats.htm#basic">BASIC-/RBASIC-Programmdatei (*.bas)</a>
+  oder alternativ auch im Headersave-Format mit dem Dateityp&nbsp;<em>B</em>.
+ <br/><br/>
+  Wenn Sie ein BASIC-Programm in einem anderen Dateiformat speichern,
+  erkennt JKCEMU sp&auml;ter beim Laden der Datei nicht mehr,
+  dass es sich um ein BASIC-Programm handelt und passt die
+  Systemzellen des BASIC-Interpreters nicht an.
+  Das geladene Programm l&auml;sst sich dann nicht nutzen.
  <br/><br/>
 
  <h3><a name="gsbasic">3.2. Grafik/Sound-BASIC</a></h3>

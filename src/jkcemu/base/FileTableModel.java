@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -29,7 +29,7 @@ public class FileTableModel
 		VALUE,
 		READ_ONLY,
 		SYSTEM_FILE,
-		ARCHIVED };
+		ARCHIVE };
 
   private static DateFormat dateFmt = null;
 
@@ -43,7 +43,7 @@ public class FileTableModel
   public FileTableModel( Column... cols )
   {
     this.cols              = cols;
-    this.rows              = new java.util.ArrayList<FileEntry>();
+    this.rows              = new java.util.ArrayList<>();
     this.sortCol           = Column.NAME;
     this.sortCaseSensitive = false;
     this.sortDesc          = false;
@@ -202,7 +202,7 @@ public class FileTableModel
 
 	case READ_ONLY:
 	case SYSTEM_FILE:
-	case ARCHIVED:
+	case ARCHIVE:
 	  rv = Boolean.class;
 	  break;
       }
@@ -260,8 +260,8 @@ public class FileTableModel
 	  rv = "System-Datei";
 	  break;
 
-	case ARCHIVED:
-	  rv = "Archiviert";
+	case ARCHIVE:
+	  rv = "Archiv";
 	  break;
       }
     }
@@ -284,56 +284,58 @@ public class FileTableModel
 	&& (col >= 0) && (col < this.cols.length) )
     {
       FileEntry entry = this.rows.get( row );
-      switch( this.cols[ col ] ) {
-	case NAME:
-	  rv = entry.getName();
-	  break;
+      if( entry != null ) {
+	switch( this.cols[ col ] ) {
+	  case NAME:
+	    rv = entry.getName();
+	    break;
 
-	case INFO:
-	  rv = entry.getInfo();
-	  break;
+	  case INFO:
+	    rv = entry.getInfo();
+	    break;
 
-	case SIZE:
-	  rv = entry.getSize();
-	  break;
+	  case SIZE:
+	    rv = entry.getSize();
+	    break;
 
-	case LAST_MODIFIED:
-	  {
-	    Long lastModified = entry.getLastModified();
-	    if( lastModified != null ) {
-	      if( dateFmt == null ) {
-		dateFmt = DateFormat.getDateTimeInstance(
+	  case LAST_MODIFIED:
+	    {
+	      Long lastModified = entry.getLastModified();
+	      if( lastModified != null ) {
+		if( dateFmt == null ) {
+		  dateFmt = DateFormat.getDateTimeInstance(
 						DateFormat.MEDIUM,
 						DateFormat.MEDIUM );
+		}
+		rv = dateFmt.format( new java.util.Date( lastModified ) );
 	      }
-	      rv = dateFmt.format( new java.util.Date( lastModified ) );
 	    }
-	  }
-	  break;
+	    break;
 
-	case FILE:
-	  rv = entry.getFile();
-	  break;
+	  case FILE:
+	    rv = entry.getFile();
+	    break;
 
-	case USER_NUM:
-	  rv = entry.getUserNum();
-	  break;
+	  case USER_NUM:
+	    rv = entry.getUserNum();
+	    break;
 
-	case VALUE:
-	  rv = entry.getValue();
-	  break;
+	  case VALUE:
+	    rv = entry.getValue();
+	    break;
 
-	case READ_ONLY:
-	  rv = toBoolean( entry.isReadOnly() );
-	  break;
+	  case READ_ONLY:
+	    rv = toBoolean( entry.isReadOnly() );
+	    break;
 
-	case SYSTEM_FILE:
-	  rv = toBoolean( entry.isSystemFile() );
-	  break;
+	  case SYSTEM_FILE:
+	    rv = toBoolean( entry.isSystemFile() );
+	    break;
 
-	case ARCHIVED:
-	  rv = toBoolean( entry.isArchived() );
-	  break;
+	  case ARCHIVE:
+	    rv = toBoolean( entry.isArchive() );
+	    break;
+	}
       }
     }
     return rv;
@@ -348,7 +350,7 @@ public class FileTableModel
       switch( this.cols[ col ] ) {
 	case READ_ONLY:
 	case SYSTEM_FILE:
-	case ARCHIVED:
+	case ARCHIVE:
 	  rv = true;
 	  break;
       }
@@ -363,26 +365,28 @@ public class FileTableModel
     if( (row >= 0) && (row < this.rows.size())
 	&& (col >= 0) && (col < this.cols.length) )
     {
-      boolean   done  = true;
       FileEntry entry = this.rows.get( row );
-      switch( this.cols[ col ] ) {
-	case READ_ONLY:
-	  entry.setReadOnly( parseBoolean( value ) );
-	  done = true;
-	  break;
+      if( entry != null ) {
+	boolean done = true;
+	switch( this.cols[ col ] ) {
+	  case READ_ONLY:
+	    entry.setReadOnly( parseBoolean( value ) );
+	    done = true;
+	    break;
 
-	case SYSTEM_FILE:
-	  entry.setSystemFile( parseBoolean( value ) );
-	  done = true;
-	  break;
+	  case SYSTEM_FILE:
+	    entry.setSystemFile( parseBoolean( value ) );
+	    done = true;
+	    break;
 
-	case ARCHIVED:
-	  entry.setArchived( parseBoolean( value ) );
-	  done = true;
-	  break;
-      }
-      if( done ) {
-	fireTableRowsUpdated( row, row );
+	  case ARCHIVE:
+	    entry.setArchive( parseBoolean( value ) );
+	    done = true;
+	    break;
+	}
+	if( done ) {
+	  fireTableRowsUpdated( row, row );
+	}
       }
     }
   }

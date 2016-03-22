@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,50 @@
 
 package jkcemu.tools;
 
+import java.awt.Point;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
 import java.util.regex.PatternSyntaxException;
+import javax.swing.JTextArea;
+import javax.swing.text.BadLocationException;
 import jkcemu.base.EmuUtil;
 
 
 public class ToolsUtil
 {
+  public static int getReassAddr( JTextArea textArea, Point point )
+  {
+    int rv = -1;
+    if( point != null ) {
+      try {
+	int pos = textArea.viewToModel( point );
+	if( pos >= 0 ) {
+	  int line = textArea.getLineOfOffset( pos );
+	  if( line >= 0 ) {
+	    pos = textArea.getLineStartOffset( line );
+	    if( pos >= 0 ) {
+	      String text = textArea.getText();
+	      if( text != null ) {
+		if( (pos + 4) < text.length() ) {
+		  if( text.charAt( pos + 4 ) == '\u0020' ) {
+		    int value = EmuUtil.getHex4( text, pos );
+		    if( value >= 0 ) {
+		      rv = value;
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+      catch( BadLocationException ex ) {}
+    }
+    return rv;
+  }
+
+
   public static jkcemu.tools.Label[] readLabels( Reader reader )
 							throws IOException
   {
@@ -50,7 +85,7 @@ public class ToolsUtil
 	    }
 	    if( labelValue >= 0 ) {
 	      if( labels == null ) {
-		labels = new TreeSet<jkcemu.tools.Label>();
+		labels = new TreeSet<>();
 	      }
 	      final String lName  = labelName;
 	      final int    lValue = labelValue;
@@ -58,27 +93,33 @@ public class ToolsUtil
 			new jkcemu.tools.Label()
 			{
 			  @Override
-			  public String getLabelName()
-			  {
-			    return lName;
-			  }
-
-			  @Override
-			  public int getLabelValue()
-			  {
-			    return lValue;
-			  }
-
-			  @Override
 			  public int compareTo( jkcemu.tools.Label label )
 			  {
 			    int rv =  EmuUtil.compare(
 					lName,
 					label.getLabelName() );
 			    if( rv == 0 ) {
-			      rv = lValue - label.getLabelValue();
+			      rv = lValue - label.intValue();
 			    }
 			    return rv;
+			  }
+
+			  @Override
+			  public String getLabelName()
+			  {
+			    return lName;
+			  }
+
+			  @Override
+			  public int getVarSize()
+			  {
+			    return -1;
+			  }
+
+			  @Override
+			  public int intValue()
+			  {
+			    return lValue;
 			  }
 			} );
 	    }

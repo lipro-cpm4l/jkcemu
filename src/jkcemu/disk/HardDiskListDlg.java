@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -306,7 +306,7 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
   {
     EmuUtil.stopCellEditing( this.table );
 
-    Set<String> producers = new TreeSet<String>();
+    Set<String> producers = new TreeSet<>();
 
     int nRows = this.tableModel.getRowCount();
     for( int i = 0; i < nRows; i++ ) {

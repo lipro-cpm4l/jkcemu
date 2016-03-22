@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,10 +15,13 @@ import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
 import jkcemu.disk.GIDESettingsFld;
+import jkcemu.emusys.LLC2;
 
 
 public class LLC2SettingsFld extends AbstractSettingsFld
 {
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 800;
+
   private JTabbedPane            tabbedPane;
   private SCCHModule1SettingsFld tabSCCH;
   private RAMFloppiesSettingsFld tabRF;
@@ -26,10 +29,15 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   private JCheckBox              btnJoystick;
   private JCheckBox              btnKCNet;
   private JCheckBox              btnVDIP;
+  private JCheckBox              btnPasteFast;
+  private JCheckBox              btnRatio43;
   private ROMFileSettingsFld     fldAltOS;
   private ROMFileSettingsFld     fldAltFont;
   private GIDESettingsFld        tabGIDE;
+  private JPanel                 tabExt;
   private JPanel                 tabEtc;
+  private AutoLoadSettingsFld    tabAutoLoad;
+  private AutoInputSettingsFld   tabAutoInput;
 
 
   public LLC2SettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -41,31 +49,34 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
-    // SCCH-Modul 1
-    this.tabSCCH = new SCCHModule1SettingsFld( settingsFrm, propPrefix );
+    // Tab SCCH-Modul 1
+    this.tabSCCH = new SCCHModule1SettingsFld(
+					settingsFrm,
+					propPrefix + "scch." );
     this.tabbedPane.addTab( "SCCH-Modul 1", this.tabSCCH );
 
 
-    // RAM-Floppies
+    // Tab RAM-Floppies
     this.tabRF = new RAMFloppiesSettingsFld(
 		settingsFrm,
 		propPrefix,
-		"RAM-Floppy nach MP 3/88 (256 KByte) an IO-Adressen D0h-D7h",
+		"RAM-Floppy nach MP 3/88 (256 KByte) an E/A-Adressen D0h-D7h",
 		RAMFloppy.RFType.MP_3_1988,
-		"RAM-Floppy nach MP 3/88 (256 KByte) an IO-Adressen B0h-B7h",
+		"RAM-Floppy nach MP 3/88 (256 KByte) an E/A-Adressen B0h-B7h",
 		RAMFloppy.RFType.MP_3_1988 );
     this.tabbedPane.addTab( "RAM-Floppies", this.tabRF );
 
 
-    // GIDE
+    // Tab GIDE
     this.tabGIDE = new GIDESettingsFld( settingsFrm, propPrefix );
     this.tabbedPane.addTab( "GIDE", this.tabGIDE );
 
-    // Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
-    this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
-    GridBagConstraints gbcEtc = new GridBagConstraints(
+    // Tab Erweiterungen
+    this.tabExt = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
+
+    GridBagConstraints gbcExt = new GridBagConstraints(
 					0, 0,
 					GridBagConstraints.REMAINDER, 1,
 					0.0, 0.0,
@@ -75,30 +86,53 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 					0, 0 );
 
     this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Modul", false );
-    gbcEtc.gridy++;
-    this.tabEtc.add( this.btnFloppyDisk, gbcEtc );
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnFloppyDisk, gbcExt );
 
-    this.btnKCNet = new JCheckBox(
-			"KCNet-kompatible Netzwerkkarte",
-			false );
-    gbcEtc.insets.top = 0;
-    gbcEtc.gridy++;
-    this.tabEtc.add( this.btnKCNet, gbcEtc );
+    this.btnKCNet     = new JCheckBox( "KCNet-kompatible Netzwerkkarte" );
+    gbcExt.insets.top = 0;
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnKCNet, gbcExt );
 
-    this.btnVDIP = new JCheckBox(
-			"USB-Anschluss (Vinculum VDIP Modul)",
-			false );
-    gbcEtc.gridy++;
-    this.tabEtc.add( this.btnVDIP, gbcEtc );
+    this.btnVDIP = new JCheckBox( "USB-Anschluss (Vinculum VDIP Modul)" );
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnVDIP, gbcExt );
 
-    this.btnJoystick     = new JCheckBox( "Joystick", false );
+    this.btnJoystick     = new JCheckBox( "Joystick" );
+    gbcExt.insets.bottom = 5;
+    gbcExt.gridy++;
+    this.tabExt.add( this.btnJoystick, gbcExt );
+
+
+    // Tab Sonstiges
+    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
+
+    GridBagConstraints gbcEtc = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
+
+    this.btnRatio43 = new JCheckBox(
+				"Bildschirmausgabe im Format 4:3",
+				false );
+    this.tabEtc.add( this.btnRatio43, gbcEtc );
+
+    this.btnPasteFast = new JCheckBox(
+		"Einf\u00FCgen von Text durch Abfangen des Systemaufrufs" );
+    gbcEtc.insets.top    = 0;
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnJoystick, gbcEtc );
+    this.tabEtc.add( this.btnPasteFast, gbcEtc );
 
-    gbcEtc.fill       = GridBagConstraints.HORIZONTAL;
-    gbcEtc.weightx    = 1.0;
-    gbcEtc.insets.top = 5;
+    gbcEtc.fill          = GridBagConstraints.HORIZONTAL;
+    gbcEtc.weightx       = 1.0;
+    gbcEtc.insets.top    = 10;
+    gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
     this.tabEtc.add( new JSeparator(), gbcEtc );
 
@@ -106,6 +140,8 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 		settingsFrm,
 		propPrefix + "os.",
 		"Alternatives Monitorprogramm (0000h-0FFFh):" );
+    gbcEtc.insets.top    = 5;
+    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltOS, gbcEtc );
 
@@ -117,11 +153,31 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     this.tabEtc.add( this.fldAltFont, gbcEtc );
 
 
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+					settingsFrm,
+					propPrefix,
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
+					true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+					settingsFrm,
+					propPrefix,
+					LLC2.getDefaultSwapKeyCharCase(),
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
+
+
     // Listener
     this.btnFloppyDisk.addActionListener( this );
     this.btnKCNet.addActionListener( this );
     this.btnVDIP.addActionListener( this );
     this.btnJoystick.addActionListener( this );
+    this.btnPasteFast.addActionListener( this );
+    this.btnRatio43.addActionListener( this );
   }
 
 
@@ -134,15 +190,20 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   {
     Component tab = null;
     try {
+
+      // Tab SCCH-Modul 1
       tab = this.tabSCCH;
       this.tabSCCH.applyInput( props, selected );
 
+      // Tab RAM-Floppies
       tab = this.tabRF;
       this.tabRF.applyInput( props, selected );
 
+      // Tab GIDE
       tab = this.tabGIDE;
       this.tabGIDE.applyInput( props, selected );
 
+      // Tab Sonstiges
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
@@ -160,8 +221,24 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + "joystick.enabled",
 		this.btnJoystick.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "paste.fast",
+		this.btnPasteFast.isSelected() );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "screen.ratio",
+		this.btnRatio43.isSelected() ? "4:3" : "unscaled" );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
+
+      // Tab AutoLoad
+      tab = this.tabAutoLoad;
+      this.tabAutoLoad.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -180,13 +257,17 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( src instanceof AbstractButton ) {
+      rv = this.tabGIDE.doAction( e );
+      if( !rv ) {
+	rv = this.tabAutoLoad.doAction( e );
+      }
+      if( !rv ) {
+	rv = this.tabAutoInput.doAction( e );
+      }
+      if( !rv && (src instanceof AbstractButton) ) {
         rv = true;
         fireDataChanged();
       }
-    }
-    if( !rv ) {
-      rv = this.tabGIDE.doAction( e );
     }
     this.settingsFrm.setWaitCursor( false );
     return rv;
@@ -196,9 +277,13 @@ public class LLC2SettingsFld extends AbstractSettingsFld
   @Override
   public void lookAndFeelChanged()
   {
+    this.fldAltOS.lookAndFeelChanged();
+    this.fldAltFont.lookAndFeelChanged();
     this.tabSCCH.lookAndFeelChanged();
     this.tabRF.lookAndFeelChanged();
     this.tabGIDE.lookAndFeelChanged();
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
   }
 
 
@@ -208,6 +293,8 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     this.tabSCCH.updFields( props );
     this.tabRF.updFields( props );
     this.tabGIDE.updFields( props );
+    this.tabAutoLoad.updFields( props );
+    this.tabAutoInput.updFields( props );
 
     this.btnFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
@@ -232,6 +319,17 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 			props,
 			this.propPrefix + "joystick.enabled",
 			false ) );
+
+    this.btnPasteFast.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "paste.fast",
+			false ) );
+
+    this.btnRatio43.setSelected(
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + "screen.ratio" ).startsWith( "4" ) );
 
     this.fldAltOS.updFields( props );
     this.fldAltFont.updFields( props );

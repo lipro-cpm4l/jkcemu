@@ -48,6 +48,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   rom/lc80/*.bin \
   rom/llc1/*.bin \
   rom/llc2/*.bin \
+  rom/nanos/*.bin \
   rom/pcm/*.bin \
   rom/poly880/*.bin \
   rom/sc2/*.bin \
@@ -77,6 +78,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   disks/a5105/*.gz \
   disks/kc85/*.gz \
   disks/kccompact/*.gz \
+  disks/nanos/*.gz \
   disks/pcm/*.gz \
   disks/z1013/*.gz \
   disks/z9001/*.gz \

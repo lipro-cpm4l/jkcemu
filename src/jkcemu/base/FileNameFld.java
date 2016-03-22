@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -47,11 +47,24 @@ public class FileNameFld extends javax.swing.JTextField
   }
 
 
-  public void setFile( File file )
+  public boolean setFile( File file )
   {
-    this.file          = file;
-    this.filePathElems = null;
-    updView();
+    boolean differs = true;
+    if( (file != null) && (this.file != null) ) {
+      if( file.getPath().equals( this.file.getPath() ) ) {
+	differs = false;
+      }
+    } else {
+      if( (file == null) && (this.file == null) ) {
+	differs = false;
+      }
+    }
+    if( differs ) {
+      this.file          = file;
+      this.filePathElems = null;
+      updView();
+    }
+    return differs;
   }
 
 
@@ -102,7 +115,7 @@ public class FileNameFld extends javax.swing.JTextField
       int width = getWidth();
       if( getPrefWidth() > width ) {
 	if( this.filePathElems == null ) {
-	  java.util.List<String> elems = new ArrayList<String>();
+	  java.util.List<String> elems = new ArrayList<>();
 	  File                   file  = this.file;
 	  while( file != null ) {
 	    String lastElem = file.getName();

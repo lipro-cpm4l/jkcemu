@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,27 +31,25 @@ public class AudioDataQueue extends InputStream
   private byte[]  phaseData;
   private int     size;
   private int     pos;
-  private int     len;
-  private int     remainSamples;
+  private int     nSamples;
   private boolean lastPhase;
   private String  errorText;
 
 
   public AudioDataQueue( int initSize )
   {
-    this.phaseData     = new byte[ initSize ];
-    this.size          = 0;
-    this.pos           = 0;
-    this.len           = 0;
-    this.remainSamples = 0;
-    this.lastPhase     = false;
-    this.errorText     = null;
+    this.phaseData = new byte[ initSize ];
+    this.size      = 0;
+    this.pos       = 0;
+    this.nSamples  = 0;
+    this.lastPhase = false;
+    this.errorText = null;
   }
 
 
-  public void appendPauseFrames( int nSamples )
+  public void appendPauseSamples( int nSamples )
   {
-    this.remainSamples += nSamples;
+    this.nSamples += nSamples;
   }
 
 
@@ -63,10 +61,7 @@ public class AudioDataQueue extends InputStream
 
   public int length()
   {
-    if( this.len < this.remainSamples ) {
-      this.len = this.remainSamples;
-    }
-    return this.len;
+    return this.nSamples;
   }
 
 
@@ -88,7 +83,7 @@ public class AudioDataQueue extends InputStream
 	this.phaseData[ 0 ] = (byte) (phase ? 1 : -1);
 	this.size           = 1;
       }
-      this.remainSamples++;
+      this.nSamples++;
     }
   }
 
@@ -109,13 +104,13 @@ public class AudioDataQueue extends InputStream
     while( this.pos < this.size ) {
       if( this.phaseData[ this.pos ] > 0 ) {
 	this.phaseData[ this.pos ]--;
-	rv = AudioOut.MAX_VALUE;
+	rv = AudioOut.SIGNED_VALUE_1;
 	break;
       }
 
       if( this.phaseData[ this.pos ] < 0 ) {
 	this.phaseData[ this.pos ]++;
-	rv = 0;
+	rv = AudioOut.SIGNED_VALUE_0;
 	break;
       }
 
@@ -125,8 +120,8 @@ public class AudioDataQueue extends InputStream
        */
       this.pos++;
     }
-    if( (rv == -1) && (this.remainSamples > 0) ) {
-      --this.remainSamples;
+    if( (rv == -1) && (this.nSamples > 0) ) {
+      --this.nSamples;
       rv = 0;
     }
     return rv;

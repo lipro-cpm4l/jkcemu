@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,40 +18,78 @@ import jkcemu.programming.basic.*;
 
 public class Z9001Target extends AbstractTarget
 {
+  public static final String BASIC_TARGET_NAME = "TARGET_Z9001";
+
   protected boolean usesColors;
   protected boolean pixUtilAppended;
   protected boolean xpsetAppended;
 
+  private boolean usesX_M_INKEY;
+
 
   public Z9001Target()
   {
-    reset();
+    setNamedValue( "GRAPHICSCREEN", 0 );
+    setNamedValue( "BLACK", 0 );
+    setNamedValue( "BLINKING", 0x08 );
+    setNamedValue( "BLUE", 0x04 );
+    setNamedValue( "CYAN", 0x06 );
+    setNamedValue( "GREEN", 0x02 );
+    setNamedValue( "MAGENTA", 0x05 );
+    setNamedValue( "RED", 0x01 );
+    setNamedValue( "WHITE", 0x07 );
+    setNamedValue( "YELLOW", 0x03 );
+    setNamedValue( "JOYST_LEFT", 0x01 );
+    setNamedValue( "JOYST_RIGHT", 0x02 );
+    setNamedValue( "JOYST_DOWN", 0x04 );
+    setNamedValue( "JOYST_UP", 0x08 );
+    setNamedValue( "JOYST_BUTTON1", 0x10 );
+  }
+
+
+  public void appendBssTo( AsmCodeBuf buf )
+  {
+    super.appendBssTo( buf );
+    if( this.usesX_M_INKEY ) {
+      buf.append( "X_M_INKEY:\n"
+		+ "\tDS\t1\n" );
+    }
   }
 
 
   @Override
-  public void appendExit( AsmCodeBuf buf )
+  public void appendExitTo( AsmCodeBuf buf )
   {
     buf.append( "\tJP\t0000H\n" );
   }
 
 
   @Override
-  public void appendHChar( AsmCodeBuf buf )
+  public void appendHCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0018H\n" );
   }
 
 
   @Override
-  public void appendHPixel( AsmCodeBuf buf )
+  public void appendHPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0030H\n" );
   }
 
 
+  public void appendInitTo( AsmCodeBuf buf )
+  {
+    super.appendInitTo( buf );
+    if( this.usesX_M_INKEY ) {
+      buf.append( "\tXOR\tA\n"
+		+ "\tLD\t(X_M_INKEY),A\n" );
+    }
+  }
+
+
   @Override
-  public void appendInput(
+  public void appendInputTo(
 			AsmCodeBuf buf,
 			boolean    xckbrk,
 			boolean    xinkey,
@@ -60,43 +98,85 @@ public class Z9001Target extends AbstractTarget
   {
     if( xckbrk ) {
       buf.append( "XCKBRK:\n" );
-    }
-    if( xckbrk || xinkey) {
-      buf.append( "XINKEY:\tLD\tC,0BH\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tJR\tNC,XINKE2\n"
-		+ "XINKE1:\tXOR\tA\n"
+      if( xinkey ) {
+	buf.append( "\tCALL\tXINKE1\n"
+		+ "\tRET\tZ\n"
+		+ "\tLD\t(X_M_INKEY),A\n"
 		+ "\tRET\n"
-		+ "XINKE2:\tOR\tA\n"
+		+ "XINKEY:\tLD\tA,(X_M_INKEY)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,XINKE1\n"
+		+ "\tPUSH\tAF\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\t(X_M_INKEY),A\n"
+		+ "\tPOP\tAF\n"
+		+ "\tRET\n" );
+	this.usesX_M_INKEY = true;
+      }
+      buf.append( "XINKE1:\tLD\tC,0BH\n"
+		+ "\tCALL\t0005H\n"
+		+ "\tJR\tC,XINKE2\n"
+		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\tC,01H\n"
 		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINKE1\n" );
-      if( canBreakOnInput ) {
-	buf.append( "\tCP\t03H\n"
-		+ "\tJR\tZ,XBREAK\n" );
+		+ "\tJR\tC,XINKE2\n"
+		+ "\tCP\t03H\n"
+		+ "\tJR\tZ,XBREAK\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\n"
+		+ "XINKE2:\tXOR\tA\n"
+		+ "\tRET\n" );
+    } else {
+      if( xinkey ) {
+	buf.append( "XINKEY:\tLD\tC,0BH\n"
+		+ "\tCALL\t0005H\n"
+		+ "\tJR\tC,XINKE1\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tLD\tC,01H\n"
+		+ "\tCALL\t0005H\n" );
+	if( canBreakOnInput ) {
+	  buf.append( "\tJR\tC,XINKE1\n"
+		+ "\tCP\t03H\n"
+		+ "\tJR\tZ,XBREAK\n"
+		+ "\tRET\n" );
+	} else {
+	  buf.append( "\tRET\tNC\n" );
+	}
+	buf.append( "XINKE1:\tXOR\tA\n"
+		+ "\tRET\n" );
       }
-      buf.append( "\tRET\n" );
     }
     if( xinch ) {
-      buf.append( "XINCH:\tLD\tC,1\n"
-		+ "\tCALL\t0005H\n"
-		+ "\tJR\tC,XINCH\n" );
-      if( canBreakOnInput ) {
-	buf.append( "\tCP\t03H\n"
-		+ "\tJR\tZ,XBREAK\n" );
+      buf.append( "XINCH:\n" );
+      if( this.usesX_M_INKEY ) {
+	buf.append( "\tXOR\tA\n"
+		+ "\tLD\t(X_M_INKEY),A\n" );
       }
-      buf.append( "\tRET\n" );
+      buf.append( "XINCH1:\tLD\tC,01H\n"
+		+ "\tCALL\t0005H\n"
+		+ "\tJR\tC,XINCH1\n" );
+      if( xckbrk || canBreakOnInput ) {
+	buf.append( "\tCP\t03H\n"
+		+ "\tRET\tNZ\n"
+		+ "\tJR\tXBREAK\n" );
+      } else {
+	buf.append( "\tRET\n" );
+      }
     }
   }
 
 
   @Override
-  public void appendMenuItem(
-			BasicCompiler compiler,
+  public void appendPrologTo(
 			AsmCodeBuf    buf,
+			BasicCompiler compiler,
 			String        appName )
   {
+    buf.append( "\tJP\t" );
+    buf.append( BasicCompiler.START_LABEL );
+    buf.newLine();
     if( appName == null ) {
       appName = "";
     }
@@ -122,21 +202,21 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendWChar( AsmCodeBuf buf )
+  public void appendWCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0028H\n" );
   }
 
 
   @Override
-  public void appendWPixel( AsmCodeBuf buf )
+  public void appendWPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0050H\n" );
   }
 
 
   @Override
-  public void appendXBORDER( AsmCodeBuf buf )
+  public void appendXBorderTo( AsmCodeBuf buf )
   {
     buf.append( "XBORDER:\n"
 		+ "\tLD\tA,05H\n"		// Code fuer Randfarbe
@@ -147,7 +227,7 @@ public class Z9001Target extends AbstractTarget
     if( this.xoutchAppended ) {
       buf.append( "\tJR\tXOUTCH\n" );
     } else {
-      appendXOUTCH( buf );
+      appendXOutchTo( buf );
     }
     this.usesColors = true;
   }
@@ -160,7 +240,7 @@ public class Z9001Target extends AbstractTarget
    *   DE: Hintergrundfarbe
    */
   @Override
-  public void appendXCOLOR( AsmCodeBuf buf )
+  public void appendXColorTo( AsmCodeBuf buf )
   {
     buf.append( "XCOLOR:\tLD\tA,L\n"
 		+ "\tSLA\tA\n"
@@ -179,7 +259,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendXCURS( AsmCodeBuf buf )
+  public void appendXCursTo( AsmCodeBuf buf )
   {
     buf.append( "XCURS:\tLD\tC,1DH\n"		// DCU (Cursor loeschen)
 		+ "\tLD\tA,H\n"
@@ -191,7 +271,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendXINK( AsmCodeBuf buf )
+  public void appendXInkTo( AsmCodeBuf buf )
   {
     buf.append( "XINK:\tLD\tA,L\n"
                 + "\tSLA\tA\n"
@@ -215,13 +295,8 @@ public class Z9001Target extends AbstractTarget
    *   HL: Nummer des Joysticks (0: erster Joystick)
    * Rueckgabewert:
    *   HL: Joystickstatus
-   *         Bit 0: links
-   *         Bit 1: rechts
-   *         Bit 2: runter
-   *         Bit 3: hoch
-   *         Bit 4: Aktionsknopf
    */
-  public void appendXJOY( AsmCodeBuf buf )
+  public void appendXJoyTo( AsmCodeBuf buf )
   {
     buf.append( "XJOY:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
@@ -243,7 +318,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendXLOCATE( AsmCodeBuf buf )
+  public void appendXLocateTo( AsmCodeBuf buf )
   {
     buf.append( "XLOCATE:\n"
 		+ "\tLD\tC,18\n"
@@ -256,7 +331,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendXLPTCH( AsmCodeBuf buf )
+  public void appendXLPtchTo( AsmCodeBuf buf )
   {
     buf.append( "XLPTCH:\tLD\tC,5\n"
 		+ "\tLD\tE,A\n"
@@ -265,7 +340,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendXOUTCH( AsmCodeBuf buf )
+  public void appendXOutchTo( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
       buf.append( "XOUTCH:\tLD\tC,2\n"
@@ -277,7 +352,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendXOUTNL( AsmCodeBuf buf )
+  public void appendXOutnlTo( AsmCodeBuf buf )
   {
     buf.append( "XOUTNL:\tLD\tC,02H\n"
 		+ "\tLD\tE,0DH\n"
@@ -289,7 +364,7 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public void appendXPAPER( AsmCodeBuf buf )
+  public void appendXPaperTo( AsmCodeBuf buf )
   {
     buf.append( "XPAPER:\tLD\tA,L\n"
                 + "\tAND\t07H\n"
@@ -304,18 +379,81 @@ public class Z9001Target extends AbstractTarget
 
 
   /*
+   * Setzen eines Pixels ohne Beruecksichtigung des eingestellten Stiftes
+   * bei gleichzeitigem Test, ob dieser schon gesetzt ist
+   * Parameter:
+   *   DE: X-Koordinate
+   *   HL: Y-Koordinate
+   * Rueckgabe:
+   *   CY=1: Pixel bereits gesetzt oder ausserhalb des sichtbaren Bereichs
+   */
+  @Override
+  public void appendXPaintTo( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    buf.append( "XPAINT:\tCALL\tX_PST\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,B\n"
+		+ "\tAND\tC\n"
+		+ "\tSCF\n"
+		+ "\tRET\tNZ\n"
+		+ "\tCALL\tXPSET2\n"
+		+ "\tOR\tA\n"		// CY=0
+		+ "\tRET\n" );
+    appendXPSetTo( buf, compiler );
+  }
+
+
+  /*
+   * Farbe eines Pixels ermitteln
+   * Parameter:
+   *   DE: X-Koordinate (0...255)
+   *   HL: Y-Koordinate (0...255)
+   * Rueckgabe:
+   *   HL >= 0: Farbcode des Pixels
+   *   HL=-1:   Pixel exisitiert nicht
+   */
+  public void appendXPointTo( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    buf.append( "XPOINT:\tCALL\tX_PST\n"
+		+ "\tJR\tC,XPOINT2\n"
+    // Farbbyte lesen
+		+ "\tRES\t2,H\n"
+		+ "\tLD\tD,(HL)\n"
+    // Pixel auswerten
+		+ "\tLD\tA,B\n"
+		+ "\tAND\tC\n"
+		+ "\tLD\tA,D\n"
+		+ "\tLD\tE,07H\n"
+		+ "\tJR\tZ,XPOINT1\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tLD\tE,0FH\n"
+		+ "XPOINT1:\n"
+		+ "\tAND\tE\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n"
+		+ "XPOINT2:\n"
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tRET\n" );
+    appendPixUtilTo( buf );
+  }
+
+
+  /*
    * Zuruecksetzen eines Pixels
    * Parameter:
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    */
   @Override
-  public void appendXPRES( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PCK\n"
-		+ "\tRET\tC\n"
-		+ "\tCALL\tX_PST\n" );
-    if( this.usesX_MPEN ) {
+    buf.append( "XPRES:\tCALL\tX_PST\n"
+		+ "\tRET\tC\n" );
+    if( this.usesX_M_PEN ) {
       buf.append( "\tJR\tXPSET1\n" );
     } else {
       buf.append( "\tLD\tA,C\n"
@@ -323,25 +461,24 @@ public class Z9001Target extends AbstractTarget
 		+ "\tAND\tB\n"
 		+ "\tJR\tXPSET3\n" );
     }
-    appendXPSET( buf, compiler );
+    appendXPSetTo( buf, compiler );
   }
 
 
   /*
-   * Setzen eines Pixels
+   * Setzen eines Pixels unter Beruecksichtigung des eingestellten Stiftes
    * Parameter:
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    */
   @Override
-  public void appendXPSET( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PCK\n"
-		+ "\tRET\tC\n"
-		+ "\tCALL\tX_PST\n" );
-      if( this.usesX_MPEN ) {
-        buf.append( "\tLD\tA,(X_MPEN)\n"
+      buf.append( "XPSET:\tCALL\tX_PST\n"
+		+ "\tRET\tC\n" );
+      if( this.usesX_M_PEN ) {
+        buf.append( "\tLD\tA,(X_M_PEN)\n"
 		+ "\tDEC\tA\n"
 		+ "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
 		+ "\tDEC\tA\n"
@@ -361,18 +498,21 @@ public class Z9001Target extends AbstractTarget
 		+ "XPSET3:\tEX\tDE,HL\n"
 		+ "\tLD\tB,0\n"
 		+ "\tLD\tC,A\n"
-		+ "\tLD\tHL,X_PST4\n"
+		+ "\tLD\tHL,XPSET_TAB\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tLD\t(DE),A\n" );
       if( this.usesColors ) {
-	buf.append( "\tLD\tHL,0FC00H\n"
-		+ "\tADD\tHL,DE\n"
+	buf.append( "\tRES\t2,D\n"
 		+ "\tLD\tA,(0027H)\n"
-		+ "\tLD\t(HL),A\n" );
+		+ "\tLD\t(DE),A\n" );
       }
-      buf.append( "\tRET\n" );
-      appendPixUtil( buf );
+      buf.append( "\tRET\n"
+      // Umcodierungstabelle von Bitmuster zu Zeichen
+		+ "XPSET_TAB:\n"
+		+ "\tDB\t20H,0B3H,0B2H,0B7H,0B0H,0B4H,0B8H,0BBH\n"
+		+ "\tDB\t0B1H,0B9H,0B5H,0BAH,0B6H,0BCH,0BDH,0FFH\n" );
+      appendPixUtilTo( buf );
       this.xpsetAppended = true;
     }
   }
@@ -388,39 +528,20 @@ public class Z9001Target extends AbstractTarget
    *   HL=1: Pixel gesetzt
    */
   @Override
-  public void appendXPTEST( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPTestTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPTEST:\tCALL\tX_PCK\n"
-		+ "\tJR\tNC,X_PTST1\n"
-		+ "\tLD\tHL,0FFFFH\n"
-		+ "\tRET\n"
-		+ "X_PTST1:\n"
-		+ "\tCALL\tX_PST\n"
+    buf.append( "XPTEST:\tCALL\tX_PST\n"
+		+ "\tJR\tC,X_PTEST1\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
+		+ "\tRET\n"
+		+ "X_PTEST1:\n"
+		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
-    appendPixUtil( buf );
-  }
-
-
-  /*
-   * Target-ID-String
-   */
-  @Override
-  public void appendXTARID( AsmCodeBuf buf )
-  {
-    buf.append( "XTARID:\tDB\t\'Z9001\'\n"
-		+ "\tDB\t00H\n" );
-  }
-
-
-  @Override
-  public boolean createsCodeFor( EmuSys emuSys )
-  {
-    return emuSys != null ? (emuSys instanceof Z9001) : false;
+    appendPixUtilTo( buf );
   }
 
 
@@ -432,65 +553,22 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public int getColorBlack()
+  public String[] getBasicTargetNames()
   {
-    return 0;
+    return new String[] { BASIC_TARGET_NAME };
   }
 
 
   @Override
-  public int getColorBlinking()
+  public int getCompatibilityLevel( EmuSys emuSys )
   {
-    return 0x08;
-  }
-
-
-  @Override
-  public int getColorBlue()
-  {
-    return 0x04;
-  }
-
-
-  @Override
-  public int getColorCyan()
-  {
-    return 0x06;
-  }
-
-
-  @Override
-  public int getColorGreen()
-  {
-    return 0x02;
-  }
-
-
-  @Override
-  public int getColorMagenta()
-  {
-    return 0x05;
-  }
-
-
-  @Override
-  public int getColorRed()
-  {
-    return 0x01;
-  }
-
-
-  @Override
-  public int getColorWhite()
-  {
-    return 0x07;
-  }
-
-
-  @Override
-  public int getColorYellow()
-  {
-    return 0x03;
+    int rv = 0;
+    if( emuSys != null ) {
+      if( emuSys instanceof Z9001 ) {
+        rv = 3;
+      }
+    }
+    return rv;
   }
 
 
@@ -502,16 +580,32 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public int getGraphicScreenNum()
+  public String getHostName()
   {
-    return 0;
+    return "Z9001";
   }
 
 
   @Override
-  public int getKCNetBaseIOAddr()
+  public int getMaxAppNameLen()
   {
-    return 0xC0;
+    return 8;
+  }
+
+
+  @Override
+  public String getStartCmd( EmuSys emuSys, String appName, int begAdAdr )
+  {
+    String rv = null;
+    if( (emuSys != null) && (appName != null) ) {
+      if( emuSys instanceof Z9001 ) {
+	if( appName.length() > 8 ) {
+	  appName = appName.substring( 0, 8 );
+	}
+	rv = appName;
+      }
+    }
+    return rv;
   }
 
 
@@ -526,16 +620,10 @@ public class Z9001Target extends AbstractTarget
   public void reset()
   {
     super.reset();
+    this.usesX_M_INKEY   = false;
     this.usesColors      = false;
     this.pixUtilAppended = false;
     this.xpsetAppended   = false;
-  }
-
-
-  @Override
-  public boolean supportsAppName()
-  {
-    return true;
   }
 
 
@@ -598,45 +686,39 @@ public class Z9001Target extends AbstractTarget
 
 	/* --- private Methoden --- */
 
-  private void appendPixUtil( AsmCodeBuf buf )
+  private void appendPixUtilTo( AsmCodeBuf buf )
   {
     if( !this.pixUtilAppended ) {
-      buf.append(
-	    /*
-	     * Pruefen der Parameter
-	     *   DE: X-Koordinate (0...79)
-	     *   HL: Y-Koordinate (0...47)
-	     * Rueckgabe:
-	     *   CY=1: Pixel ausserhalb des gueltigen Bereichs
-	     */
-		"X_PCK:\tLD\tA,D\n"
+      /*
+       * Pruefen der Parameter und
+       * ermitteln von Informationen zu einem Pixel
+       *
+       * Parameter:
+       *   DE: X-Koordinate (0...79)
+       *   HL: Y-Koordinate (0...47)
+       *
+       * Rueckgabe:
+       *   CY=1: Pixel ausserhalb des gueltigen Bereichs
+       *   B:    Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
+       *         Bitanordnung innerhalb einer Zeichenposition:
+       *           +---+
+       *           |2 3|
+       *           |0 1|
+       *           +---+
+       *   C:    Bitmuster mit einem gesetzten Bit,
+       *         dass das Pixel in der Speicherzelle beschreibt
+       *   HL:   Speicherzelle, in der sich das Pixel befindet
+       */
+      buf.append( "X_PST:\tLD\tA,D\n"
 		+ "\tOR\tH\n"
-		+ "\tJR\tZ,X_PCK1\n"
-		+ "\tSCF\n"
-		+ "\tRET\n"
-		+ "X_PCK1:\tLD\tA,4FH\n"
+		+ "\tJR\tNZ,X_PST3\n"
+		+ "\tLD\tA,4FH\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,2FH\n"
 		+ "\tCP\tL\n"
-		+ "\tRET\n"
-	    /*
-	     * Ermitteln von Informationen zu einem Pixel
-	     * Parameter:
-	     *   DE: X-Koordinate (0...79)
-	     *   HL: Y-Koordinate (0...47)
-	     * Rueckgabe:
-	     *   B:  Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
-	     *       Bitanordnung innerhalb einer Zeichenposition:
-	     *         +---+
-	     *         |2 3|
-	     *         |0 1|
-	     *         +---+
-	     *   C:  Bitmuster mit einem gesetzten Bit,
-             *       dass das Pixel in der Speicherzelle beschreibt
-	     *   HL: Speicherzelle, in der sich das Pixel befindet
-	     */
-		+ "X_PST:\tLD\tA,01H\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,01H\n"
 		+ "\tSRL\tL\n"
 		+ "\tJR\tNC,X_PST1\n"
 		+ "\tSLA\tA\n"
@@ -664,29 +746,32 @@ public class Z9001Target extends AbstractTarget
 		+ "\tLD\tB,0FH\n"
 		+ "\tCP\t20H\n"
 		+ "\tCP\t0EH\n"
-		+ "\tRET\tC\n"
+		+ "\tCCF\n"
+		+ "\tRET\tNC\n"
 		+ "\tCP\t0FFH\n"	// 0FFh: 4 gesetzte Pixel
 		+ "\tRET\tZ\n"
 		+ "\tLD\tB,0\n"
 		+ "\tSUB\t0B0H\n"	// < 0B0h: 4 nicht gesetzte Pixel
-		+ "\tRET\tC\n"
+		+ "\tCCF\n"
+		+ "\tRET\tNC\n"
 		+ "\tCP\t0EH\n"		// >= 0BEh: 4 nicht gesetzte Pixel
 		+ "\tRET\tNC\n"
 		+ "\tPUSH\tHL\n"
-		+ "\tLD\tHL,X_PST3\n"
+		+ "\tLD\tHL,X_PST_TAB\n"
 		+ "\tLD\tD,0\n"
 		+ "\tLD\tE,A\n"
 		+ "\tADD\tHL,DE\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tPOP\tHL\n"
 		+ "\tLD\tB,A\n"
+		+ "\tOR\tA\n"		// CY=0
 		+ "\tRET\n"
-	    // Umcodierungstabelle von (Zeichen - 0B0H) zu Bitmuster
-		+ "X_PST3:\tDB\t04H,08H,02H,01H,05H,0AH,0CH,03H\n"
-		+ "\tDB\t06H,09H,0BH,07H,0DH,0EH\n"
-	    // Umcodierungstabelle von Bitmuster zu Zeichen
-		+ "X_PST4:\tDB\t20H,0B3H,0B2H,0B7H,0B0H,0B4H,0B8H,0BBH\n"
-		+ "\tDB\t0B1H,0B9H,0B5H,0BAH,0B6H,0BCH,0BDH,0FFH\n" );
+		+ "X_PST3:\tSCF\n"
+		+ "\tRET\n"
+      // Umcodierungstabelle von (Zeichen - 0B0H) zu Bitmuster
+		+ "X_PST_TAB:\n"
+		+ "\tDB\t04H,08H,02H,01H,05H,0AH,0CH,03H\n"
+		+ "\tDB\t06H,09H,0BH,07H,0DH,0EH\n" );
       this.pixUtilAppended = true;
     }
   }

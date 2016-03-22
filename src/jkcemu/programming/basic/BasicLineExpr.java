@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,21 +10,19 @@ package jkcemu.programming.basic;
 
 import java.lang.*;
 import java.text.CharacterIterator;
-import jkcemu.programming.PrgUtil;
+import jkcemu.programming.*;
 
 
-public class BasicLineExpr
+public class BasicLineExpr extends BasicSourcePos
 {
-  private int     sourceLineNum;
-  private long    sourceBasicLineNum;
   private String  exprText;
   private boolean label;
 
 
   public static BasicLineExpr checkBasicLineExpr(
 				CharacterIterator iter,
-				int               sourceLineNum,
-				long              sourceBasicLineNum )
+				PrgSource         source,
+				long              basicLineNum )
   {
     BasicLineExpr rv = null;
     char          ch = iter.current();
@@ -47,11 +45,7 @@ public class BasicLineExpr
 	buf.append( ch );
 	ch = iter.next();
       }
-      rv = new BasicLineExpr(
-			sourceLineNum,
-			sourceBasicLineNum,
-			buf.toString(),
-			label );
+      rv = new BasicLineExpr( source, basicLineNum, buf.toString(), label );
     }
     return rv;
   }
@@ -60,18 +54,6 @@ public class BasicLineExpr
   public String getExprText()
   {
     return this.exprText;
-  }
-
-
-  public long getSourceBasicLineNum()
-  {
-    return this.sourceBasicLineNum;
-  }
-
-
-  public int getSourceLineNum()
-  {
-    return this.sourceLineNum;
   }
 
 
@@ -84,15 +66,14 @@ public class BasicLineExpr
 	/* --- Konstruktor --- */
 
   private BasicLineExpr(
-		int     sourceLineNum,
-		long    sourceBasicLineNum,
-		String  exprText,
-		boolean label )
+		PrgSource source,
+		long      basicLineNum,
+		String    exprText,
+		boolean   label )
   {
-    this.sourceLineNum      = sourceLineNum;
-    this.sourceBasicLineNum = sourceBasicLineNum;
-    this.exprText           = exprText;
-    this.label              = label;
+    super( source, basicLineNum );
+    this.exprText = exprText;
+    this.label    = label;
   }
 }
 

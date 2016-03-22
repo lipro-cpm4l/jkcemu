@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,25 +11,34 @@ package jkcemu.filebrowser;
 import java.awt.*;
 import java.io.*;
 import java.lang.*;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
 import jkcemu.base.*;
 
 
 public class TarPacker extends AbstractThreadDlg
+			implements FileVisitor<Path>
 {
-  private Collection<File> srcFiles;
+  private Collection<Path> srcPaths;
+  private String           curEntryDir;
+  private Path             curRootPath;
+  private Path             outPath;
   private File             outFile;
+  private OutputStream     out;
   private boolean          compression;
+  private boolean          ownerEnabled;
+  private boolean          posixEnabled;
 
 
   public static void packFiles(
 		Window           owner,
-		Collection<File> srcFiles,
+		Collection<Path> srcPaths,
 		File             outFile,
 		boolean          compression )
   {
-    Dialog dlg = new TarPacker( owner, srcFiles, outFile, compression );
+    Dialog dlg = new TarPacker( owner, srcPaths, outFile, compression );
     if( compression ) {
       dlg.setTitle( "TGZ-Datei packen" );
     } else {
@@ -39,33 +48,194 @@ public class TarPacker extends AbstractThreadDlg
   }
 
 
+	/* --- FileVisitor --- */
+
+  @Override
+  public FileVisitResult postVisitDirectory( Path dir, IOException ex )
+  {
+    return this.canceled ? FileVisitResult.TERMINATE
+				: FileVisitResult.CONTINUE;
+  }
+
+
+  @Override
+  public FileVisitResult preVisitDirectory(
+				Path                dir,
+				BasicFileAttributes attrs )
+  {
+    FileVisitResult rv = FileVisitResult.SKIP_SUBTREE;
+    if( (this.out == null) || this.canceled ) {
+      rv = FileVisitResult.TERMINATE;
+    } else {
+      if( (dir != null) && (attrs != null) ) {
+	if( attrs.isDirectory() ) {
+	  this.curEntryDir = getEntryDir( dir );
+	  if( this.curEntryDir != null ) {
+	    if( !this.curEntryDir.isEmpty() ) {
+	      appendToLog( dir.toString() + "\n" );
+	      try {
+		writeTarHeader(
+			dir,
+			this.curEntryDir,
+			'5',			// Typ: Directory
+			null,			// verlinkter Name
+			0,			// Dateilaenge
+			attrs,
+			true );		// executable
+		rv = FileVisitResult.CONTINUE;
+	      }
+	      catch( IOException ex ) {
+		appendErrorToLog( ex );
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
+  {
+    FileVisitResult rv = FileVisitResult.SKIP_SIBLINGS;
+    if( (this.out == null) || this.canceled ) {
+      rv = FileVisitResult.TERMINATE;
+    } else {
+      if( (file != null) && (attrs != null) ) {
+	if( this.curEntryDir == null ) {
+	  this.curEntryDir = getEntryDir( file.getParent() );
+	}
+	if( this.curEntryDir != null ) {
+	  int nameCnt = file.getNameCount();
+	  if( nameCnt > 0 ) {
+	    appendToLog( file.toString() + "\n" );
+	    if( attrs.isRegularFile() ) {
+	      FileProgressInputStream in = null;
+	      try {
+		in       = openInputFile( file.toFile(), 2 );
+		long len = in.length();
+		writeTarHeader(
+			file,
+			this.curEntryDir
+				+ file.getName( nameCnt - 1 ).toString(),
+			'0',			// Typ: Datei
+			null,			// verlinkter Name
+			len,
+			attrs,
+			false );
+		if( len > 0 ) {
+		  long pos = 0;
+		  int  b   = in.read();
+		  while( !this.canceled && (pos < len) && (b != -1) ) {
+		    this.out.write( b );
+		    pos++;
+		    b = in.read();
+		  }
+		  long nBlocks = len / 512;
+		  long fullLen = nBlocks * 512;
+		  if( fullLen < len ) {
+		    fullLen += 512;
+		  }
+		  while( !this.canceled && (pos < fullLen) ) {
+		    this.out.write( 0 );
+		    pos++;
+		  }
+		}
+	      }
+	      catch( IOException ex ) {
+		appendErrorToLog( ex );
+		incErrorCount();
+	      }
+	      catch( UnsupportedOperationException ex ) {
+		appendIgnoredToLog();
+	      }
+	      finally {
+		EmuUtil.doClose( in );
+	      }
+	    } else if( attrs.isSymbolicLink() ) {
+	      try {
+		Path destPath = Files.readSymbolicLink( file );
+		if( destPath != null ) {
+		  writeTarHeader(
+			file,
+			this.curEntryDir
+				+ file.getName( nameCnt - 1 ).toString(),
+			'2',			// Typ: Link
+			destPath.toString(),	// verlinkter Name
+			0,			// Dateilaenge
+			attrs,
+			true );			// executable
+		}
+	      }
+	      catch( Exception ex ) {
+		StringBuilder buf = new StringBuilder( 256 );
+		buf.append( " Lesen des symbolischen Links"
+					+ " nicht m\u00F6glich\n" );
+		String msg = ex.getMessage();
+		if( msg != null ) {
+		  msg = msg.trim();
+		  if( msg.isEmpty() ) {
+		    buf.append( ":\n" );
+		    buf.append( msg );
+		  }
+		}
+		buf.append( (char) '\n' );
+		appendToLog( buf.toString() );
+		disableAutoClose();
+	      }
+	    } else {
+	      appendIgnoredToLog();
+	    }
+	    rv = FileVisitResult.CONTINUE;
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public FileVisitResult visitFileFailed( Path file, IOException ex )
+  {
+    if( file != null ) {
+      appendToLog( file.toString() );
+      appendErrorToLog( ex );
+      incErrorCount();
+    }
+    return this.canceled ? FileVisitResult.TERMINATE
+				: FileVisitResult.CONTINUE;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   protected void doProgress()
   {
-    boolean          failed  = false;
-    InputStream      in      = null;
-    OutputStream     out     = null;
-    GZIPOutputStream gzipOut = null;
+    boolean     failed  = false;
+    InputStream in      = null;
     try {
-      out = new BufferedOutputStream( new FileOutputStream( this.outFile ) );
+      this.out = new BufferedOutputStream(
+				new FileOutputStream( this.outFile ) );
       if( this.compression ) {
-	gzipOut = new GZIPOutputStream( out );
-	out     = gzipOut;
+	this.out = new GZIPOutputStream( this.out );
       }
-      fireDirectoryChanged( this.outFile.getParentFile() );
-      for( File file : this.srcFiles ) {
-	packFile( this.outFile, out, file, "" );
+      FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
+      for( Path path : this.srcPaths ) {
+        this.curRootPath = path.getParent();
+        Files.walkFileTree( path, this );
       }
       for( int i = 0; i < 1024; i++ ) {
-	out.write( 0 );
+	this.out.write( 0 );
       }
-      if( gzipOut != null ) {
-	gzipOut.finish();
+      if( this.out instanceof GZIPOutputStream ) {
+	((GZIPOutputStream) this.out).finish();
       }
-      out.close();
-      out = null;
+      this.out.close();
+      this.out = null;
       appendToLog( "\nFertig\n" );
     }
     catch( InterruptedIOException ex ) {}
@@ -75,23 +245,23 @@ public class TarPacker extends AbstractThreadDlg
       buf.append( this.outFile.getPath() );
       String errMsg = ex.getMessage();
       if( errMsg != null ) {
-	if( errMsg.length() > 0 ) {
+	if( !errMsg.isEmpty() ) {
 	  buf.append( ":\n" );
 	  buf.append( errMsg );
 	}
       }
       buf.append( (char) '\n' );
       appendToLog( buf.toString() );
-      failed = true;
       incErrorCount();
+      failed = true;
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.doClose( this.out );
     }
     if( this.canceled || failed ) {
       this.outFile.delete();
     }
-    fireDirectoryChanged( this.outFile.getParentFile() );
+    FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
   }
 
 
@@ -99,92 +269,50 @@ public class TarPacker extends AbstractThreadDlg
 
   private TarPacker(
 		Window           owner,
-		Collection<File> srcFiles,
+		Collection<Path> srcPaths,
 		File             outFile,
 		boolean          compression )
   {
     super( owner, "JKCEMU tar packer", true );
-    this.srcFiles    = srcFiles;
-    this.outFile     = outFile;
-    this.compression = compression;
+    this.srcPaths     = srcPaths;
+    this.outPath      = outFile.toPath();
+    this.outFile      = outFile;
+    this.out          = null;
+    this.compression  = compression;
+    this.ownerEnabled = true;
+    this.posixEnabled = true;
   }
 
 
-  private void packFile(
-		File         outFile,
-		OutputStream out,
-		File         file,
-		String       path ) throws IOException
+  private String getEntryDir( Path dir )
   {
-    if( this.canceled ) {
-      throw new InterruptedIOException();
-    }
-    if( file != null ) {
-      appendToLog( file.getPath() + "\n" );
-      String entryName = file.getName();
-      if( !file.equals( outFile) && (entryName != null) ) {
-	if( !entryName.isEmpty() ) {
-	  long millis = file.lastModified();
-	  if( file.isDirectory() ) {
-	    String subPath = path + entryName + "/";
-	    writeTarHeader( out, subPath, true, false, 0, millis );
-	    File[] subFiles = file.listFiles();
-	    if( subFiles != null ) {
-	      for( int i = 0; i < subFiles.length; i++ ) {
-		packFile( outFile, out, subFiles[ i ], subPath );
-	      }
-	    } else {
-	      appendErrorToLog(
-			"Fehler: Verzeichnis kann nicht gelesen werden.\n" );
+    String rv = null;
+    if( this.curRootPath != null ) {
+      Path relPath = null;
+      if( dir != null ) {
+	try {
+	  relPath = this.curRootPath.relativize( dir );
+	}
+	catch( IllegalArgumentException ex ) {}
+      }
+      if( relPath == null ) {
+	relPath = this.curRootPath;
+      }
+      if( relPath.getNameCount() > 0 ) {
+	StringBuilder buf = new StringBuilder( 256 );
+	for( Path p : relPath ) {
+	  String s = p.toString();
+	  if( s != null ) {
+	    if( !s.isEmpty() ) {
+	      buf.append( s );
+	      buf.append( "/" );
 	    }
-	  }
-	  else if( file.isFile() ) {
-	    boolean                 exec = file.canExecute();
-	    FileProgressInputStream in   = null;
-	    try {
-	      in       = openInputFile( file, 1 );
-	      long len = in.length();
-	      writeTarHeader(
-			out,
-			path + entryName,
-			false,
-			exec,
-			len,
-			millis );
-	      if( len > 0 ) {
-		long pos = 0;
-		int  b   = in.read();
-		while( !this.canceled && (pos < len) && (b != -1) ) {
-		  out.write( b );
-		  pos++;
-		  b = in.read();
-		}
-		long nBlocks = len / 512;
-		long fullLen = nBlocks * 512;
-		if( fullLen < len ) {
-		  fullLen += 512;
-		}
-		while( !this.canceled && (pos < fullLen) ) {
-		  out.write( 0 );
-		  pos++;
-		}
-	      }
-	    }
-	    catch( IOException ex ) {
-	      appendErrorToLog( ex );
-	      incErrorCount();
-	    }
-	    finally {
-	      EmuUtil.doClose( in );
-	    }
-	  } else {
-	    appendToLog( "  Ignoriert\n" );
 	  }
 	}
-      } else {
-	appendToLog( "  Nicht gefunden\n" );
+	rv = buf.toString();
       }
     }
+    return rv;
   }
 
 
@@ -192,40 +320,120 @@ public class TarPacker extends AbstractThreadDlg
   {
     if( text != null ) {
       int len = text.length();
-      for( int i = 0; i < len; i++ )
+      for( int i = 0; i < len; i++ ) {
 	buf[ pos++ ] = (byte) (text.charAt( i ) & 0xFF );
+      }
     }
   }
 
 
   private void writeTarHeader(
-			OutputStream out,
-			String       entryName,
-			boolean      isDir,
-			boolean      exec,
-			long         fileSize,
-			long         fileTime ) throws IOException
+			Path                path,
+			String              entryName,
+			char                entryType,
+			String              linkedName,
+			long                fileSize,
+			BasicFileAttributes attrs,
+			boolean             defaultExec ) throws IOException
   {
     byte[] headerBuf = new byte[ 512 ];
     Arrays.fill( headerBuf, (byte) 0 );
 
-    // 0-100: Name
-    int pos = 0;
+    /*
+     * Benutzer, Gruppe und Posix-Dateiattribute ermitteln,
+     * sofern moeglich
+     */
+    UserPrincipal            owner       = null;
+    GroupPrincipal           group       = null;
+    Set<PosixFilePermission> permissions = null;
+    PosixFileAttributes      posixAttrs  = null;
+    if( attrs instanceof PosixFileAttributes ) {
+      posixAttrs = (PosixFileAttributes) attrs;
+    } else {
+      if( this.posixEnabled ) {
+	try {
+	  posixAttrs = (PosixFileAttributes) Files.readAttributes(
+						path,
+						PosixFileAttributes.class,
+						LinkOption.NOFOLLOW_LINKS );
+	}
+	catch( UnsupportedOperationException ex ) {
+	  this.posixEnabled = false;
+	}
+	catch( Exception ex ) {}
+      }
+    }
+    if( posixAttrs != null ) {
+      owner       = posixAttrs.owner();
+      group       = posixAttrs.group();
+      permissions = posixAttrs.permissions();
+    }
+    if( owner == null ) {
+      try {
+	owner = Files.getOwner( path, LinkOption.NOFOLLOW_LINKS );
+      }
+      catch( UnsupportedOperationException ex ) {
+	this.ownerEnabled = false;
+      }
+      catch( Exception ex ) {}
+    }
+
+    // 0-99: Name
     int len = entryName.length();
     if( len > 99 ) {
       throw new IOException( "Name des Eintrags zu lang" );
     }
-    while( pos < len ) {
-      char ch = entryName.charAt( pos );
-      if( ch > 0xFF ) {
-	throw new IOException( "Zeichen \'" + ch
-			+ "\' im Namen eines Eintrags nicht erlaubt" );
-      }
-      headerBuf[ pos++ ] = (byte) ch;
+    byte[] nameBytes = null;
+    try {
+      nameBytes = entryName.getBytes( "ISO-8859-1" );
     }
+    catch( Exception ex ) {}
+    if( nameBytes == null ) {
+      nameBytes = entryName.getBytes();
+    }
+    if( nameBytes.length != len ) {
+      throw new IOException( "Name enth\u00E4lt nicht erlaubte Zeichen" );
+    }
+    System.arraycopy( nameBytes, 0, headerBuf, 0, nameBytes.length );
 
     // 100-107: Mode
-    writeASCII( headerBuf, 100, (isDir || exec) ? "0000755" : "0000644" );
+    String permissionsText = "0000644";
+    if( permissions != null ) {
+      int bits = 0;
+      if( permissions.contains( PosixFilePermission.OWNER_READ ) ) {
+	bits |= 0x400;
+      }
+      if( permissions.contains( PosixFilePermission.OWNER_WRITE ) ) {
+	bits |= 0x200;
+      }
+      if( permissions.contains( PosixFilePermission.OWNER_EXECUTE ) ) {
+	bits |= 0x100;
+      }
+      if( permissions.contains( PosixFilePermission.GROUP_READ ) ) {
+	bits |= 0x040;
+      }
+      if( permissions.contains( PosixFilePermission.GROUP_WRITE ) ) {
+	bits |= 0x020;
+      }
+      if( permissions.contains( PosixFilePermission.GROUP_EXECUTE ) ) {
+	bits |= 0x010;
+      }
+      if( permissions.contains( PosixFilePermission.OTHERS_READ ) ) {
+	bits |= 0x004;
+      }
+      if( permissions.contains( PosixFilePermission.OTHERS_WRITE ) ) {
+	bits |= 0x002;
+      }
+      if( permissions.contains( PosixFilePermission.OTHERS_EXECUTE ) ) {
+	bits |= 0x001;
+      }
+      permissionsText = String.format( "%07X", bits );
+    } else {
+      if( attrs.isDirectory() || defaultExec ) {
+	permissionsText = "0000755";
+      }
+    }
+    writeASCII( headerBuf, 100, permissionsText );
 
     // 108-115: Benutzer-ID
     writeASCII( headerBuf, 108, "0000000" );
@@ -234,38 +442,48 @@ public class TarPacker extends AbstractThreadDlg
     writeASCII( headerBuf, 116, "0000000" );
 
     // 124-135: Laenge
+    writeASCII( headerBuf, 124, String.format( "%011o", fileSize ) );
+
+    // 136-147: Aenderungszeitpunkt
+    long     fileMillis = System.currentTimeMillis();
+    FileTime fileTime   = attrs.lastModifiedTime();
+    if( fileTime != null ) {
+      fileMillis = fileTime.toMillis();
+    }
     writeASCII(
 	headerBuf,
-	124,
-	String.format( "%011o", new Long( fileSize ) ) );
-
-    // 136-147: Aenderungszeit
-    if( fileTime < 0 ) {
-      fileTime = System.currentTimeMillis();
-    }
-    if( fileTime >= 0 ) {
-      writeASCII(
-		headerBuf,
-		136,
-		String.format( "%011o", new Long( fileTime / 1000 ) ) );
-    } else {
-      writeASCII( headerBuf, 136, "00000000000" );
-    }
+	136,
+	String.format( "%011o", fileMillis / 1000L ) );
 
     // 148-155: Pruefsumme des Kopfblocks
-    pos = 148;
+    int pos = 148;
     while( pos < 156 ) {
       headerBuf[ pos++ ] = (byte) 0x20;		// wird spaeter ersetzt
     }
 
     // 156: Typ
-    if( isDir ) {
-      headerBuf[ 156 ] = '5';
-    } else {
-      headerBuf[ 156 ] = '0';
-    }
+    headerBuf[ 156 ] = (byte) entryType;
 
-    // 157-256: Linkname (hier unbenutzt)
+    // 157-256: Verlinkter Name
+    if( linkedName != null ) {
+      len = linkedName.length();
+      if( len > 99 ) {
+	throw new IOException( linkedName + ": Verlinkter Name zu lang" );
+      }
+      nameBytes = null;
+      try {
+	nameBytes = linkedName.getBytes( "ISO-8859-1" );
+      }
+      catch( Exception ex ) {}
+      if( nameBytes == null ) {
+	nameBytes = entryName.getBytes();
+      }
+      if( nameBytes.length != len ) {
+	throw new IOException( linkedName
+		+ ": Verlinkter Name enth\u00E4lt nicht erlaubte Zeichen" );
+      }
+      System.arraycopy( nameBytes, 0, headerBuf, 157, nameBytes.length );
+    }
 
     // 257-262: Magic
     writeASCII( headerBuf, 257, "ustar\u0020" );
@@ -273,11 +491,37 @@ public class TarPacker extends AbstractThreadDlg
     // 263-264: Version
     headerBuf[ 263 ] = '\u0020';
 
-    // 265-296: Benutzername
-    writeASCII( headerBuf, 265, "root" );
+    // 265-296: Eigentuemername
+    String ownerName = "root";
+    if( owner != null ) {
+      String s = owner.getName();
+      if( s != null ) {
+	if( !s.isEmpty() ) {
+	  int delimPos = s.lastIndexOf( '\\' );
+	  if( (delimPos >= 0) && ((delimPos + 1) < s.length()) ) {
+	    ownerName = s.substring( delimPos + 1 );
+	  } else {
+	    ownerName = s;
+	  }
+	}
+      }
+    }
+    writeASCII( headerBuf, 265, ownerName );
 
     // 297-328: Gruppenname
-    writeASCII( headerBuf, 297, "root" );
+    String groupName = null;
+    if( group != null ) {
+      String s = group.getName();
+      if( s != null ) {
+	if( !s.isEmpty() ) {
+	  groupName = s;
+	}
+      }
+    }
+    if( groupName == null ) {
+      groupName = (ownerName.equals( "root" ) ? "root" : "users");
+    }
+    writeASCII( headerBuf, 297, groupName );
 
     // 329-512: restliche Felder hier unbenutzt
 
@@ -293,7 +537,7 @@ public class TarPacker extends AbstractThreadDlg
     headerBuf[ 154 ] = (byte) 0;
 
     // Kopfblock schreiben
-    out.write( headerBuf );
+    this.out.write( headerBuf );
   }
 }
 

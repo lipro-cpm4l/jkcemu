@@ -15,7 +15,9 @@
    </li>
    <li><a href="kramermc.htm#software">2. Im ROM enthaltene Software</a></li>
    <li><a href="kramermc.htm#mem">3. Speicheraufteilung</a></li>
-   <li><a href="kramermc.htm#basic">4. BASIC</a></li>
+   <li>
+    <a href="kramermc.htm#basic_io">4. BASIC-Programme speichern und laden</a>
+   </li>
   </ul>
  <br/>
 
@@ -95,19 +97,21 @@
  <br/><br/>
 
 
- <h2><a name="basic">4. BASIC</a></h2>
-  JKCEMU bietet eine spezielle Unterst&uuml;tzung
-  f&uuml;r das Speichern und Laden von BASIC-Programmen.
+ <h2><a name="basic_io">4. BASIC-Programme speichern und laden</a></h2>
+  JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
+  <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>.
   Zum Speichern nutzen Sie bitte die Funktion
   <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
-  und speichern das Programm als
-  <a href="fileformats.htm#headersave">Headersave</a>-Datei
-  mit dem Dateityp <tt>B</tt>.
+  und speichern das jeweilge Programm als
+  <a href="fileformats.htm#basic">BASIC-/RBASIC-Programmdatei (*.bas)</a>.
+  Alternativ ist auch das Speichern als
+  <a href="fileformats.htm#headersave">Headersave-Datei (*.z80)</a>
+  mit dem Dateityp&nbsp;<em>B</em> m&ouml;glich.
  <br/><br/>
-  Nur wenn Sie das BASIC-Programm so speichern,
-  werden beim Laden des Programms die Systemzellen des
-  BASIC-Interpreters richtig angepasst.
-  In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
-  aber im Interpreter nicht richtig nutzen.
+  Wenn Sie ein BASIC-Programm in einem anderen Dateiformat speichern,
+  erkennt JKCEMU sp&auml;ter beim Laden der Datei nicht mehr,
+  dass es sich um ein BASIC-Programm handelt und passt die
+  Systemzellen des BASIC-Interpreters nicht an.
+  Das geladene Programm l&auml;sst sich dann nicht nutzen.
 </body>
 </html>

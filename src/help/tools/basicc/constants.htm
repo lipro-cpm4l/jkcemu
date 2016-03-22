@@ -13,8 +13,11 @@
   <ul>
    <li><a href="constants.htm#boolean">1. Boolsche Werte</a></li>
    <li><a href="constants.htm#color">2. Farben</a></li>
-   <li><a href="constants.htm#error">3. Fehlercodes</a></li>
-   <li><a href="constants.htm#system">4. Systemkonstanten</a></li>
+   <li><a href="constants.htm#pen">3. Grafikstifte</a></li>
+   <li><a href="constants.htm#joyst">4. Joystick</a></li>
+   <li><a href="constants.htm#error">5. Fehlercodes</a></li>
+   <li><a href="constants.htm#target">6. Zielsysteme</a></li>
+   <li><a href="constants.htm#system">7. Systemkonstanten</a></li>
   </ul>
  <br/>
 
@@ -98,7 +101,72 @@
   </table>
  <br/>
 
- <h3><a name="error">3. Fehlercodes</a></h3>
+ <h3><a name="pen">3. Grafikstifte</a></h3>
+  Die Konstanten f&uuml;r die Grafikstifte werden als Parameter f&uuml;r die
+  <a href="instructions.htm#pen">PEN</a>-Anweisung verwendet.
+  und sind auch dort beschrieben.
+ <br/><br/>
+  <table border="1">
+   <tr><th>Konstante</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top"><tt>PEN_NONE</tt></td>
+    <td>Stift angehoben</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>PEN_NORMAL</tt></td>
+    <td>normaler Zeichenmodus</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>PEN_RUBBER</tt></td>
+    <td>L&ouml;schmodus</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>PEN_XOR</tt></td>
+    <td>XOR-Modus</td>
+   </tr>
+  </table>
+ <br/>
+ 
+ <h3><a name="joyst">4. Joystick</a></h3>
+  Die Joystick-Konstanten dienen zur Auswertung des R&uuml;ckgabewertes
+  der <a href="functions.htm#joyst">JOYST</a>-Funktion.
+  Dazu ist der R&uuml;ckgabewert mit der jeweiligen Konstante mit
+  <a href="expressions.htm#operators2"><tt>AND</tt></a> zu verkn&uuml;pfen.
+ <br/><br/>
+  <table border="1">
+   <tr><th>Konstante</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top"><tt>JOYST_LEFT</tt></td>
+    <td>Joystick nach links gedr&uuml;ckt</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>JOYST_RIGHT</tt></td>
+    <td>Joystick nach rechts gedr&uuml;ckt</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>JOYST_UP</tt></td>
+    <td>Joystick nach nach oben gedr&uuml;ckt</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>JOYST_DOWN</tt></td>
+    <td>Joystick nach nach unten gedr&uuml;ckt</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>JOYST_BUTTON1</tt></td>
+    <td>Aktionsknopf&nbsp;1 gedr&uuml;ckt</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>JOYST_BUTTON2</tt></td>
+    <td>Aktionsknopf&nbsp;2 gedr&uuml;ckt</td>
+   </tr>
+   <tr>
+    <td valign="top"><tt>JOYST_BUTTONS</tt></td>
+    <td>Aktionsknopf&nbsp;1 oder 2 gedr&uuml;ckt</td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="error">5. Fehlercodes</a></h3>
   Die Fehlercodekonstanten dienen zur Auswertung der Systemvariable
   <a href="functions.htm#err">ERR</a>.
  <br/><br/>
@@ -155,8 +223,6 @@
     <td valign="top">E_EOF</td>
     <td valign="top">
      Es wurde versucht, &uuml;ber das Dateiende hinaus zu lesen.
-     Bei einer Netzwerkverbindung bedeutet dieser Fehlercode,
-     dass die Verbindung von der Gegenstelle beendet wurde.
     </td>
    </tr>
    <tr>
@@ -219,6 +285,12 @@
     </td>
    </tr>
    <tr>
+    <td valign="top">E_PATH_NOT_FOUND</td>
+    <td valign="top">
+     Der angegebene Pfad wurde nicht gefunden.
+    </td>
+   </tr>
+   <tr>
     <td valign="top">E_READ_ONLY</td>
     <td valign="top">
      Es wurde versucht, eine schreibgesch&uuml;tzte Datei oder
@@ -226,22 +298,96 @@
      zum Schreiben zu &ouml;ffnen.
     </td>
    </tr>
+  </table>
+ <br/>
+
+ <h3><a name="target">6. Konstanten f&uuml;r Zielsysteme</a></h3>
+  <table border="1">
+   <tr><th>Konstante</th><th>Zielsystem</th></tr>
    <tr>
-    <td valign="top">E_SOCKET_STATUS</td>
+    <td valign="top">TARGET_AC1</td>
     <td valign="top">
-     Der KCNet-Socket befindet sich im falschen Zustand.
+     <a href="targets.htm#ac1">AC1-2010, AC1-SCCH mit optionaler Farbgrafikkarte</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_CPM</td>
+    <td valign="top">
+     <a href="targets.htm#cpm">CP/M-kompatibel</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_HUEBLER</td>
+    <td valign="top">
+     <a href="targets.htm#huebler">H&uuml;bler-Grafik-MC</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_KC85</td>
+    <td valign="top">
+     <a href="targets.htm#kc85">KC85/2..5, HC900</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_KC85_4</td>
+    <td valign="top">
+     <a href="targets.htm#kc85_4">KC85/4..5 mit Unterst&uuml;tzung beider Bildspeicher</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_KRAMER</td>
+    <td valign="top">
+     <a href="targets.htm#kramer">Kramer-MC</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_LLC2</td>
+    <td valign="top">
+     <a href="targets.htm#llc2">LLC2 mit HIRES-Grafik</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_SCCH</td>
+    <td valign="top">
+     <a href="targets.htm#scch">SCCH (AC1-2010, AC1-SCCH, LLC2)</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_Z1013</td>
+    <td valign="top">
+     <a href="targets.htm#z1013">Z1013</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_Z1013_64X16</td>
+    <td valign="top">
+     <a href="targets.htm#z1013_64x16">Z1013 mit Peters-Platine</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_Z9001</td>
+    <td valign="top">
+     <a href="targets.htm#z9001">KC85/1, KC87, Z9001</a>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">TARGET_Z9001_KRT</td>
+    <td valign="top">
+     <a href="targets.htm#z9001krt">KC85/1, KC87, Z9001 mit KRT-Grafik</a>
     </td>
    </tr>
   </table>
  <br/>
 
- <h3><a name="system">4. Systemkonstanten</a></h3>
+ <h3><a name="system">7. Systemkonstanten</a></h3>
   <table border="1">
    <tr><th>Konstante</th><th>Bedeutung</th></tr>
    <tr>
     <td valign="top">GRAPHICSCREEN</td>
     <td valign="top">
-     Nummer des grafikf&auml;higen Bildschirms,<br/>
+     Die Konstante ist als Parameter f&uuml;r die
+     <a href="instructions.htm#screen">SCREEN</a>-Anweisung gedacht
+     und enth&auml;lt die Nummer des grafikf&auml;higen Bildschirms.
      Unterst&uuml;tzt das Zielsystem keine Grafik,
      hat die Konstante den Wert&nbsp;-1.
    </tr>
@@ -251,13 +397,6 @@
      H&ouml;chstm&ouml;gliche Bildschirmnummer,
      die mit der <a href="instructions.htm#screen">SCREEN</a>-Anweisung
      eingestellt werden kann
-   </tr>
-   <tr>
-    <td valign="top">TARGETADDR</td>
-    <td valign="top">
-     Anfangsadresse des compilierten BASIC-Programms,
-     so wie sie in den Einstellungen angegeben wurde
-    </td>
    </tr>
    <tr>
     <td valign="top">TOP</td>

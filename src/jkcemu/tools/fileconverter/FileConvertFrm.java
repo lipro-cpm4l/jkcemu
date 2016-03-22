@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,6 +17,7 @@ import java.util.*;
 import javax.sound.sampled.*;
 import javax.swing.*;
 import javax.swing.event.*;
+import javax.swing.text.JTextComponent;
 import jkcemu.Main;
 import jkcemu.audio.*;
 import jkcemu.base.*;
@@ -30,6 +31,7 @@ public class FileConvertFrm extends BasicFrm implements
 {
   private static final int MAX_MEM_FILE_SIZE  = 0x40000;	// 256 KByte
   private static final int MAX_DISK_FILE_SIZE = 0x200000;	// 2 MByte
+  private static final int MAX_TAPE_FILE_SIZE = 0x100000;	// 1 MByte
 
   private static final String LABEL_BEG_ADDR   = "Anfangsadresse:";
   private static final String LABEL_START_ADDR = "Startadresse:";
@@ -37,26 +39,31 @@ public class FileConvertFrm extends BasicFrm implements
   private static FileConvertFrm instance = null;
 
   private String                        orgFileDesc;
-  private int                           orgFileType;
+  private int                           orgFileTypeChar;
   private int                           orgStartAddr;
   private boolean                       orgIsBasicPrg;
+  private String                        orgRemark;
   private FileNameFld                   fldSrcFile;
   private JButton                       btnSrcSelect;
   private JButton                       btnSrcRemove;
   private JTextField                    fldSrcInfo;
   private Vector<AbstractConvertTarget> targets;
-  private JList                         listTarget;
+  private JList<AbstractConvertTarget>  listTarget;
   private JLabel                        labelBegAddr;
   private JLabel                        labelStartAddr;
-  private JLabel                        labelFileType;
   private JLabel                        labelFileDesc;
+  private JLabel                        labelFileType;
+  private JLabel                        labelRemark;
+  private JTextField                    fldFileDesc;
   private JTextField                    fldBegAddr;
   private JTextField                    fldStartAddr;
-  private JTextField                    fldFileDesc;
-  private JComboBox                     comboFileType;
+  private JTextField                    fldRemark;
+  private JComboBox<String>             comboFileType;
   private HexDocument                   docBegAddr;
   private HexDocument                   docStartAddr;
   private LimitedDocument               docFileDesc;
+  private LimitedDocument               docFileType;
+  private LimitedDocument               docRemark;
   private JButton                       btnConvert;
   private JButton                       btnPlay;
   private JButton                       btnHelp;
@@ -86,16 +93,15 @@ public class FileConvertFrm extends BasicFrm implements
   }
 
 
-
   public boolean getOrgIsBasicPrg()
   {
     return this.orgIsBasicPrg;
   }
 
 
-  public int getOrgFileType()
+  public int getOrgFileTypeChar()
   {
-    return this.orgFileType;
+    return this.orgFileTypeChar;
   }
 
 
@@ -125,42 +131,51 @@ public class FileConvertFrm extends BasicFrm implements
   }
 
 
+  public String getFileDesc()
+  {
+    return strip( this.fldFileDesc.getText() );
+  }
+
+
   public String getFileDesc( boolean mandatory ) throws UserInputException
   {
-    String s = this.fldFileDesc.getText();
-    if( s != null ) {
-      s = s.trim();
-      if( s.isEmpty() ) {
-	s = null;
-      }
-    }
+    String s = getFileDesc();
     if( (s == null) && mandatory ) {
-      throw new UserInputException( "Beschreibung nicht angegeben" );
+      throw new UserInputException( "Bezeichnung nicht angegeben" );
     }
     return s;
   }
 
 
-  public int getFileType( boolean mandatory ) throws UserInputException
+  public String getFileType()
+  {
+    Object o = this.comboFileType.getSelectedItem();
+    return o != null ? o.toString() : null;
+  }
+
+
+  public int getFileTypeChar( boolean mandatory ) throws UserInputException
   {
     int    rv = -1;
-    Object o  = this.comboFileType.getSelectedItem();
-    if( o != null ) {
-      String s = o.toString();
-      if( s != null ) {
-	if( !s.isEmpty() ) {
-	  rv = s.charAt( 0 );
-	  if( (rv <= 0x20) || (rv >= 0x7F) ) {
-	    rv = -1;
-	  }
+    String s  = getFileType();
+    if( s != null ) {
+      if( !s.isEmpty() ) {
+	rv = s.charAt( 0 );
+	if( (rv <= 0x20) || (rv >= 0x7F) ) {
+	  rv = -1;
 	}
       }
     }
     if( (rv < 0) && mandatory ) {
-      throw new UserInputException(
-			"Dateityp nicht angegeben oder ung\u00FCltig" );
+      throw new UserInputException( "Typ nicht angegeben oder ung\u00FCltig" );
     }
     return rv;
+  }
+
+
+  public String getRemark()
+  {
+    return strip( this.fldRemark.getText() );
   }
 
 
@@ -173,27 +188,38 @@ public class FileConvertFrm extends BasicFrm implements
 		file.getPath() +  ": Nicht gefunden oder nicht lesbar" );
 	}
 	clearOutFields();
-	this.orgFileDesc   = null;
-	this.orgFileType   = -1;
-	this.orgStartAddr  = -1;
-	this.orgIsBasicPrg = false;
+	this.orgFileDesc     = null;
+	this.orgFileTypeChar = -1;
+	this.orgStartAddr    = -1;
+	this.orgIsBasicPrg   = false;
+	this.orgRemark       = null;
 
-	String             infoMsg       = null;
-	AbstractFloppyDisk disk          = null;
-	int                begAddr       = -1;
-	int                kcbasicOffs   = 0;
-	int                kcbasicLen    = 0;
-	int                dataOffs      = 0;
-	int                dataLen       = 0;
-	byte[]             dataBytes     = null;
-	byte[]             kcbasicBytes  = null;
-	String             fileFmt       = null;
-	boolean            multiTAP      = false;
+	String             infoMsg      = null;
+	AbstractFloppyDisk disk         = null;
+	int                begAddr      = -1;
+	int                kcbasicOffs  = 0;
+	int                kcbasicLen   = 0;
+	int                dataOffs     = 0;
+	int                dataLen      = 0;
+	byte[]             dataBytes    = null;
+	byte[]             kcbasicBytes = null;
+	FileFormat         fileFmt      = null;
+	boolean            multiTAP     = false;
 
 	// Dateiname
 	String fExt  = null;
 	String fName = file.getName();
 	if( fName != null ) {
+	  if( !fName.isEmpty() ) {
+	    String tmpName = fName;
+	    int pos = tmpName.lastIndexOf( '.' );
+	    if( pos >= 0 ) {
+	      tmpName = tmpName.substring( 0, pos );
+	    }
+	    if( !tmpName.isEmpty() ) {
+	      this.orgFileDesc = tmpName;
+	    }
+	  }
 	  fName = fName.toLowerCase();
 	  if( fName != null ) {
 	    int pos = fName.lastIndexOf( '.' );
@@ -222,8 +248,8 @@ public class FileConvertFrm extends BasicFrm implements
 	    }
 
 	    /*
-	     * Dateitypen ermitteln, in die konverttiert werden kann,
-	     * den eigenen Typ dabei ausblenden
+	     * Ausgabeformate ermitteln, in die konverttiert werden kann,
+	     * das eigene Format dabei ausblenden
 	     */
 	    String[] extensions = AudioUtil.getAudioOutFileExtensions(
 							      aIn,
@@ -263,8 +289,11 @@ public class FileConvertFrm extends BasicFrm implements
 		setAddr( this.fldStartAddr, this.orgStartAddr );
 	      }
 	    }
-	    fileFmt          = FileInfo.BIN;
-	    byte[] fileBytes = EmuUtil.readFile( file, MAX_MEM_FILE_SIZE );
+	    fileFmt          = FileFormat.BIN;
+	    byte[] fileBytes = EmuUtil.readFile(
+					file,
+					false,
+					MAX_MEM_FILE_SIZE );
 	    if( fileBytes != null ) {
 	      dataBytes = fileBytes;
 	      dataLen   = fileBytes.length;
@@ -289,7 +318,7 @@ public class FileConvertFrm extends BasicFrm implements
 
 	// Diskettenabbilddatei pruefen
 	if( !done ) {
-	  disk = DiskUtil.readNonPlainDiskFile( this, file );
+	  disk = DiskUtil.readNonPlainDiskFile( this, file, true );
 	  if( disk != null ) {
 	    String fileFmtText = disk.getFileFormatText();
 	    if( fileFmtText == null ) {
@@ -299,7 +328,8 @@ public class FileConvertFrm extends BasicFrm implements
 	    if( fName.endsWith( ".gz" ) ) {
 	      infoBuf.append( " (GZip-komprimiert)" );
 	    }
-	    done = true;
+	    this.orgRemark = strip( disk.getRemark() );
+	    done           = true;
 	  }
 	}
 
@@ -310,18 +340,26 @@ public class FileConvertFrm extends BasicFrm implements
 	    fileFmt = fileInfo.getFileFormat();
 	    if( fileFmt != null ) {
 	      infoBuf.append( fileInfo.getInfoText() );
-	      this.orgFileDesc = fileInfo.getFileDesc();
-	      this.orgFileType = fileInfo.getFileType();
-	      begAddr          = fileInfo.getBegAddr();
-	      if( (fileFmt.equals( FileInfo.HEADERSAVE )
-					&& (this.orgFileType == 'B')
+	      String fileDesc = fileInfo.getFileDesc();
+	      if( fileDesc != null ) {
+		if( !fileDesc.isEmpty() ) {
+		  this.orgFileDesc = fileDesc;
+		}
+	      }
+	      this.orgFileTypeChar = fileInfo.getFileType();
+	      begAddr              = fileInfo.getBegAddr();
+	      if( (fileFmt.equals( FileFormat.HEADERSAVE )
+					&& (this.orgFileTypeChar == 'B')
 					&& (begAddr == 0x0401))
-		  || fileFmt.equals( FileInfo.KCB )
-		  || fileFmt.equals( FileInfo.KCTAP_BASIC_PRG )
-		  || fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG )
-		  || fileFmt.equals( FileInfo.KCBASIC_PRG ) )
+		  || fileFmt.equals( FileFormat.KCB )
+		  || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
+		  || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+		  || fileFmt.equals( FileFormat.KCBASIC_PRG ) )
 	      {
-		byte[] fileBytes = EmuUtil.readFile( file, MAX_MEM_FILE_SIZE );
+		byte[] fileBytes = EmuUtil.readFile(
+						file,
+						false,
+						MAX_MEM_FILE_SIZE );
 		if( fileBytes != null ) {
 		  try {
 		    LoadData loadData = fileInfo.createLoadData( fileBytes );
@@ -338,17 +376,20 @@ public class FileConvertFrm extends BasicFrm implements
 		  catch( IOException ex ) {}
 		}
 	      }
-	      if( fileFmt.equals( FileInfo.KCB ) ) {
-		fileFmt = FileInfo.KCC;
+	      if( fileFmt.equals( FileFormat.KCB ) ) {
+		fileFmt = FileFormat.KCC;
 	      }
-	      if( fileFmt.equals( FileInfo.HEADERSAVE )
-		  || fileFmt.equals( FileInfo.INTELHEX )
-		  || fileFmt.equals( FileInfo.KCC )
-		  || fileFmt.equals( FileInfo.KCTAP_SYS )
-		  || fileFmt.equals( FileInfo.KCTAP_Z9001 )
-		  || fileFmt.equals( FileInfo.KCTAP_KC85 ) )
+	      if( fileFmt.equals( FileFormat.HEADERSAVE )
+		  || fileFmt.equals( FileFormat.INTELHEX )
+		  || fileFmt.equals( FileFormat.KCC )
+		  || fileFmt.equals( FileFormat.KCTAP_SYS )
+		  || fileFmt.equals( FileFormat.KCTAP_Z9001 )
+		  || fileFmt.equals( FileFormat.KCTAP_KC85 ) )
 	      {
-		byte[] fileBytes = EmuUtil.readFile( file, MAX_MEM_FILE_SIZE );
+		byte[] fileBytes = EmuUtil.readFile(
+						file,
+						false,
+						MAX_MEM_FILE_SIZE );
 		if( fileBytes != null ) {
 		  try {
 		    LoadData loadData = fileInfo.createLoadData(
@@ -379,13 +420,6 @@ public class FileConvertFrm extends BasicFrm implements
 	    done = true;
 	  }
 	}
-	if( (this.orgFileDesc == null) && (fName != null) ) {
-	  this.orgFileDesc = fName.toUpperCase();
-	  int pos = this.orgFileDesc.indexOf( '.' );
-	  if( pos > 0 ) {
-	    this.orgFileDesc = this.orgFileDesc.substring( 0, pos );
-	  }
-	}
 	if( !done ) {
 	  int pos = fName.lastIndexOf( "." );
 	  if( (pos >= 0) && ((pos + 1) < fName.length()) ) {
@@ -401,16 +435,22 @@ public class FileConvertFrm extends BasicFrm implements
 	  if( !(disk instanceof AnaDisk) ) {
 	    this.targets.add( new AnaDiskFileTarget( this, disk ) );
 	  }
+	  if( !(disk instanceof CopyQMDisk) ) {
+	    this.targets.add( new CopyQMFileTarget( this, disk ) );
+	  }
 	  if( !(disk instanceof CPCDisk) ) {
 	    this.targets.add( new CPCDiskFileTarget( this, disk ) );
 	  }
 	  if( !(disk instanceof ImageDisk) ) {
 	    this.targets.add( new ImageDiskFileTarget( this, disk ) );
 	  }
+	  if( !(disk instanceof TeleDisk) ) {
+	    this.targets.add( new TeleDiskFileTarget( this, disk ) );
+	  }
 	}
 	if( fileFmt != null ) {
 	  if( kcbasicBytes != null ) {
-	    if( !fileFmt.equals( FileInfo.KCBASIC_PRG ) ) {
+	    if( !fileFmt.equals( FileFormat.KCBASIC_PRG ) ) {
 	      this.targets.add(
 			new KCBasicFileTarget(
 					this,
@@ -418,7 +458,7 @@ public class FileConvertFrm extends BasicFrm implements
 					kcbasicOffs,
 					kcbasicLen ) );
 	    }
-	    if( !fileFmt.equals( FileInfo.KCB ) ) {
+	    if( !fileFmt.equals( FileFormat.KCB ) ) {
 	      this.targets.add(
 			new KCBasicSystemFileTarget(
 					this,
@@ -426,7 +466,7 @@ public class FileConvertFrm extends BasicFrm implements
 					kcbasicOffs,
 					kcbasicLen ) );
 	    }
-	    if( !fileFmt.equals( FileInfo.KCTAP_BASIC_PRG ) ) {
+	    if( !fileFmt.equals( FileFormat.KCTAP_BASIC_PRG ) ) {
 	      this.targets.add(
 			new KCTapBasicFileTarget(
 					this,
@@ -443,7 +483,7 @@ public class FileConvertFrm extends BasicFrm implements
 				KCAudioFileTarget.Target.KCBASIC_PRG ) );
 	  }
 	  if( dataBytes != null ) {
-	    if( !fileFmt.equals( FileInfo.BIN ) ) {
+	    if( !fileFmt.equals( FileFormat.BIN ) ) {
 	      this.targets.add(
 			new BinFileTarget(
 					this,
@@ -454,7 +494,7 @@ public class FileConvertFrm extends BasicFrm implements
 					(begAddr + dataLen - 1) & 0xFFFF,
 					this.orgStartAddr ) );
 	    }
-	    if( !fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+	    if( !fileFmt.equals( FileFormat.HEADERSAVE ) ) {
 	      this.targets.add(
 			new HeadersaveFileTarget(
 					this,
@@ -462,7 +502,7 @@ public class FileConvertFrm extends BasicFrm implements
 					dataOffs,
 					dataLen ) );
 	    }
-	    if( !fileFmt.equals( FileInfo.INTELHEX ) ) {
+	    if( !fileFmt.equals( FileFormat.INTELHEX ) ) {
 	      this.targets.add(
 			new IntelHexFileTarget(
 					this,
@@ -470,7 +510,7 @@ public class FileConvertFrm extends BasicFrm implements
 					dataOffs,
 					dataLen ) );
 	    }
-	    if( !fileFmt.equals( FileInfo.KCC ) ) {
+	    if( !fileFmt.equals( FileFormat.KCC ) ) {
 	      this.targets.add(
 			new KCSystemFileTarget(
 					this,
@@ -478,7 +518,7 @@ public class FileConvertFrm extends BasicFrm implements
 					dataOffs,
 					dataLen ) );
 	    }
-	    if( !fileFmt.equals( FileInfo.KCTAP_Z9001 ) ) {
+	    if( !fileFmt.equals( FileFormat.KCTAP_Z9001 ) ) {
 	      this.targets.add(
 			new KCTapSystemFileTarget(
 					this,
@@ -487,7 +527,7 @@ public class FileConvertFrm extends BasicFrm implements
 					dataLen,
 					true ) );
 	    }
-	    if( !fileFmt.equals( FileInfo.KCTAP_KC85 ) ) {
+	    if( !fileFmt.equals( FileFormat.KCTAP_KC85 ) ) {
 	      this.targets.add(
 			new KCTapSystemFileTarget(
 					this,
@@ -537,6 +577,19 @@ public class FileConvertFrm extends BasicFrm implements
 					dataOffs,
 					dataLen,
 					true ) );
+	  }
+	  if( fileFmt.equals( FileFormat.CDT )
+	      || fileFmt.equals( FileFormat.TZX )
+	      || fileFmt.equals( FileFormat.ZXTAP ) )
+	  {
+	    byte[] fileBytes = EmuUtil.readFile(
+					file,
+					false,
+					MAX_TAPE_FILE_SIZE );
+	    if( fileBytes != null ) {
+	      this.targets.add(
+			new ZXSpectrumAudioFileTarget( this, fileBytes ) );
+	    }
 	  }
 	}
 	if( this.targets.size() > 0 ) {
@@ -651,10 +704,6 @@ public class FileConvertFrm extends BasicFrm implements
 	rv = true;
 	HelpFrm.open( "/help/tools/fileconverter.htm" );
       }
-      else if( src == this.comboFileType ) {
-	rv = true;
-	updStartAddrEnabled();
-      }
     }
     return rv;
   }
@@ -675,6 +724,14 @@ public class FileConvertFrm extends BasicFrm implements
 
 
   @Override
+  public void lookAndFeelChanged()
+  {
+    super.lookAndFeelChanged();
+    setFileTypeDocument();
+  }
+
+
+  @Override
   public void windowOpened( WindowEvent e )
   {
     if( e.getWindow() == this )
@@ -686,7 +743,7 @@ public class FileConvertFrm extends BasicFrm implements
 
   private void doPlay()
   {
-    AbstractConvertTarget target = getSelectedTarget();
+    AbstractConvertTarget target = this.listTarget.getSelectedValue();
     if( target != null ) {
       if( target.canPlay() ) {
 	try {
@@ -722,7 +779,7 @@ public class FileConvertFrm extends BasicFrm implements
       file = file.getParentFile();
     }
     if( file == null ) {
-      file = Main.getLastPathFile( "fileconverter.in" );
+      file = Main.getLastDirFile( "fileconverter.in" );
     }
     file = EmuUtil.showFileOpenDlg(
 			this,
@@ -734,7 +791,7 @@ public class FileConvertFrm extends BasicFrm implements
 			EmuUtil.getHexFileFilter(),
 			EmuUtil.getKCBasicFileFilter(),
 			EmuUtil.getKCSystemFileFilter(),
-			EmuUtil.getTapFileFilter(),
+			EmuUtil.getTapeFileFilter(),
 			EmuUtil.getPlainDiskFileFilter(),
 			EmuUtil.getAnaDiskFileFilter(),
 			EmuUtil.getCopyQMFileFilter(),
@@ -749,11 +806,11 @@ public class FileConvertFrm extends BasicFrm implements
 
   private void doSave()
   {
-    AbstractConvertTarget target = getSelectedTarget();
+    AbstractConvertTarget target = this.listTarget.getSelectedValue();
     if( target != null ) {
       File file = target.getSuggestedOutFile( this.fldSrcFile.getFile() );
       if( file != null ) {
-	File dirFile = Main.getLastPathFile( "fileconverter.out" );
+	File dirFile = Main.getLastDirFile( "fileconverter.out" );
 	if( (dirFile != null) && (file != null) ) {
 	  String fName = file.getName();
 	  if( fName != null ) {
@@ -793,10 +850,11 @@ public class FileConvertFrm extends BasicFrm implements
 
   private FileConvertFrm()
   {
-    this.orgFileDesc   = null;
-    this.orgFileType   = -1;
-    this.orgStartAddr  = -1;
-    this.orgIsBasicPrg = false;
+    this.orgFileDesc     = null;
+    this.orgFileTypeChar = -1;
+    this.orgStartAddr    = -1;
+    this.orgIsBasicPrg   = false;
+    this.orgRemark       = null;
     setTitle( "JKCEMU Dateikonverter" );
     Main.updIcon( this );
 
@@ -888,9 +946,8 @@ public class FileConvertFrm extends BasicFrm implements
 
     panelOut.add( new JLabel( "Dateiformat:" ), gbcOut );
 
-    this.targets = new Vector<AbstractConvertTarget>();
-
-    this.listTarget = new JList();
+    this.targets    = new Vector<>();
+    this.listTarget = new JList<>();
     this.listTarget.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
     this.listTarget.addListSelectionListener( this );
     gbcOut.fill    = GridBagConstraints.BOTH;
@@ -924,45 +981,60 @@ public class FileConvertFrm extends BasicFrm implements
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    this.labelFileType = new JLabel( "Dateityp:" );
+    this.labelFileDesc = new JLabel( "Bezeichnung:" );
+    panelHead.add( this.labelFileDesc, gbcHead );
+
+    this.docFileDesc  = new LimitedDocument();
+    this.fldFileDesc  = new JTextField( this.docFileDesc, "", 0 );
+    gbcHead.fill      = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx   = 1.0;
+    gbcHead.gridwidth = 3;
+    gbcHead.gridx++;
+    panelHead.add( this.fldFileDesc, gbcHead );
+
+    this.labelFileType = new JLabel( "Typ:" );
+    gbcHead.fill       = GridBagConstraints.NONE;
+    gbcHead.weightx    = 0.0;
+    gbcHead.gridwidth  = 1;
+    gbcHead.gridx      = 0;
+    gbcHead.gridy++;
     panelHead.add( this.labelFileType, gbcHead );
 
-    this.comboFileType = new JComboBox();
+    this.comboFileType = new JComboBox<>();
     this.comboFileType.setEditable( true );
-    this.comboFileType.addActionListener( this );
-    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
-    gbcHead.weightx     = 1.0;
-    gbcHead.insets.left = 0;
-    gbcHead.gridwidth   = 3;
+    gbcHead.fill      = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx   = 1.0;
+    gbcHead.gridwidth = 3;
     gbcHead.gridx++;
     panelHead.add( this.comboFileType, gbcHead );
 
-    this.labelBegAddr   = new JLabel( LABEL_BEG_ADDR );
-    gbcHead.fill        = GridBagConstraints.NONE;
-    gbcHead.weightx     = 0.0;
-    gbcHead.insets.left = 5;
-    gbcHead.gridwidth   = 1;
-    gbcHead.gridx       = 0;
-    gbcHead.gridy++;
-    panelHead.add( this.labelBegAddr, gbcHead );
+    this.docFileType = new LimitedDocument();
+    this.docFileType.setAsciiOnly( true );
+    setFileTypeDocument();
 
-    this.docBegAddr     = new HexDocument( 4, LABEL_BEG_ADDR );
-    this.fldBegAddr     = new JTextField( this.docBegAddr, "", 0 );
-    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
-    gbcHead.weightx     = 0.5;
-    gbcHead.insets.left = 0;
-    gbcHead.gridx++;
-    panelHead.add( this.fldBegAddr, gbcHead );
-
-    Font font = this.fldBegAddr.getFont();
+    Font font = this.fldFileDesc.getFont();
     if( font != null ) {
       this.comboFileType.setFont( font );
     }
 
+    this.labelBegAddr = new JLabel( LABEL_BEG_ADDR );
+    gbcHead.fill      = GridBagConstraints.NONE;
+    gbcHead.weightx   = 0.0;
+    gbcHead.gridwidth = 1;
+    gbcHead.gridx     = 0;
+    gbcHead.gridy++;
+    panelHead.add( this.labelBegAddr, gbcHead );
+
+    this.docBegAddr = new HexDocument( 4, LABEL_BEG_ADDR );
+    this.fldBegAddr = new JTextField( this.docBegAddr, "", 0 );
+    gbcHead.fill    = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx = 0.5;
+    gbcHead.gridx++;
+    panelHead.add( this.fldBegAddr, gbcHead );
+
     this.labelStartAddr = new JLabel( LABEL_START_ADDR );
     gbcHead.fill        = GridBagConstraints.NONE;
     gbcHead.weightx     = 0.0;
-    gbcHead.insets.left = 5;
     gbcHead.gridx++;
     panelHead.add( this.labelStartAddr, gbcHead );
 
@@ -974,27 +1046,28 @@ public class FileConvertFrm extends BasicFrm implements
     gbcHead.gridx++;
     panelHead.add( this.fldStartAddr, gbcHead );
 
-    this.labelFileDesc    = new JLabel( "Beschreibung:" );
+    this.labelRemark      = new JLabel( "Kommentar:" );
+    gbcHead.fill          = GridBagConstraints.NONE;
+    gbcHead.weightx       = 0.0;
     gbcHead.insets.left   = 5;
     gbcHead.insets.bottom = 5;
     gbcHead.gridx         = 0;
     gbcHead.gridy++;
-    panelHead.add( this.labelFileDesc, gbcHead );
+    panelHead.add( this.labelRemark, gbcHead );
 
-    this.docFileDesc    = new LimitedDocument( 0, false );
-    this.fldFileDesc    = new JTextField( this.docFileDesc, "", 0 );
-    gbcHead.fill        = GridBagConstraints.HORIZONTAL;
-    gbcHead.weightx     = 1.0;
-    gbcHead.insets.left = 0;
-    gbcHead.gridwidth   = 3;
+    this.docRemark    = new LimitedDocument();
+    this.fldRemark    = new JTextField( this.docRemark, "", 0 );
+    gbcHead.fill      = GridBagConstraints.HORIZONTAL;
+    gbcHead.weightx   = 1.0;
+    gbcHead.gridwidth = 3;
     gbcHead.gridx++;
-    panelHead.add( this.fldFileDesc, gbcHead );
+    panelHead.add( this.fldRemark, gbcHead );
 
     JPanel panelOutFile = new JPanel( new GridBagLayout() );
-    gbcOut.fill      = GridBagConstraints.HORIZONTAL;
-    gbcOut.weightx   = 1.0;
-    gbcOut.gridwidth = GridBagConstraints.REMAINDER;
-    gbcOut.gridx     = 0;
+    gbcOut.fill         = GridBagConstraints.HORIZONTAL;
+    gbcOut.weightx      = 1.0;
+    gbcOut.gridwidth    = GridBagConstraints.REMAINDER;
+    gbcOut.gridx        = 0;
     gbcOut.gridy++;
     panelOut.add( panelOutFile, gbcOut );
 
@@ -1057,20 +1130,23 @@ public class FileConvertFrm extends BasicFrm implements
     this.targets.clear();
     this.listTarget.setListData( this.targets );
 
-    this.labelBegAddr.setEnabled( false );
-    this.labelStartAddr.setEnabled( false );
     this.labelFileDesc.setEnabled( false );
     this.labelFileType.setEnabled( false );
+    this.labelBegAddr.setEnabled( false );
+    this.labelStartAddr.setEnabled( false );
+    this.labelRemark.setEnabled( false );
 
-    this.fldBegAddr.setText( "" );
-    this.fldStartAddr.setText( "" );
     this.fldFileDesc.setText( "" );
     this.comboFileType.setSelectedItem( "" );
+    this.fldBegAddr.setText( "" );
+    this.fldStartAddr.setText( "" );
+    this.fldRemark.setText( "" );
 
-    this.fldBegAddr.setEnabled( false );
-    this.fldStartAddr.setEnabled( false );
     this.fldFileDesc.setEnabled( false );
     this.comboFileType.setEnabled( false );
+    this.fldBegAddr.setEnabled( false );
+    this.fldStartAddr.setEnabled( false );
+    this.fldRemark.setEnabled( false );
 
     this.btnConvert.setEnabled( false );
     this.btnPlay.setEnabled( false );
@@ -1097,7 +1173,7 @@ public class FileConvertFrm extends BasicFrm implements
 						throws IOException
   {
     AbstractFloppyDisk disk = null;
-    byte[] fileBytes = EmuUtil.readFile( file, MAX_DISK_FILE_SIZE );
+    byte[] fileBytes = EmuUtil.readFile( file, false, MAX_DISK_FILE_SIZE );
     if( fileBytes != null ) {
       FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
 			this,
@@ -1117,19 +1193,6 @@ public class FileConvertFrm extends BasicFrm implements
   }
 
 
-  private AbstractConvertTarget getSelectedTarget()
-  {
-    AbstractConvertTarget target = null;
-    Object                value  = this.listTarget.getSelectedValue();
-    if( value != null ) {
-      if( value instanceof AbstractConvertTarget ) {
-	target = (AbstractConvertTarget) value;
-      }
-    }
-    return target;
-  }
-
-
   private void setAddr( JTextField textFld, int addr )
   {
     if( addr >= 0 ) {
@@ -1140,21 +1203,99 @@ public class FileConvertFrm extends BasicFrm implements
   }
 
 
+  private void setFileTypeDocument()
+  {
+    ComboBoxEditor editor = this.comboFileType.getEditor();
+    if( editor != null ) {
+      Component c = editor.getEditorComponent();
+      if( c != null ) {
+	if( c instanceof JTextComponent ) {
+	  ((JTextComponent) c).setDocument( this.docFileType );
+	}
+      }
+    }
+  }
+
+
+  private static String strip( String text )
+  {
+    if( text != null ) {
+      text = text.trim();
+      if( text.isEmpty() ) {
+	text = null;
+      }
+    }
+    return text;
+  }
+
+
   private void targetSelectionChanged()
   {
-    AbstractConvertTarget target = getSelectedTarget();
+    AbstractConvertTarget target = this.listTarget.getSelectedValue();
     if( target != null ) {
       this.labelBegAddr.setEnabled( target.usesBegAddr() );
       this.fldBegAddr.setEnabled( target.usesBegAddr() );
 
-      int maxLen = target.getMaxFileDescLen();
+      int    oldMaxLen = this.docFileDesc.getMaxLength();
+      String fileDesc  = this.fldFileDesc.getText();
+      if( fileDesc == null ) {
+	fileDesc = "";
+      }
+      int oldLen = fileDesc.length();
+      int maxLen = target.getMaxFileDescLength();
       this.docFileDesc.setMaxLength( maxLen );
       this.labelFileDesc.setEnabled( maxLen > 0 );
       this.fldFileDesc.setEnabled( maxLen > 0 );
-      this.fldFileDesc.setText( this.orgFileDesc );
 
+      if( this.orgFileDesc == null ) {
+	this.orgFileDesc = "";
+      }
+      if( oldLen > 0 ) {
+	/*
+	 * Da sich die maximale Laenge geaendert haben kann,
+	 * muss das Feld gesetzt werden.
+	 * Allerdings wir der alte Text (bis zur. max. Laenge) eibehalten,
+	 * wenn es sich vom urspruenglichen Wert unterscheidet
+	 * und somit durch den Anwender geaendert wurde.
+	 */
+	if( ((oldLen < oldMaxLen) && this.orgFileDesc.equals( fileDesc ))
+	    || ((oldLen == oldMaxLen)
+		&& this.orgFileDesc.startsWith( fileDesc )) )
+	{
+	  fileDesc = this.orgFileDesc;
+	}
+      } else {
+	fileDesc = this.orgFileDesc;
+      }
+      this.fldFileDesc.setText( fileDesc );
+
+      maxLen = target.getMaxFileTypeLength();
+      this.docFileType.setMaxLength( maxLen );
       target.setFileTypesTo( this.comboFileType );
       this.labelFileType.setEnabled( this.comboFileType.isEnabled() );
+
+      if( (this.orgFileDesc != null) && (getOrgFileTypeChar() < 0) ) {
+	Object typeItem = this.comboFileType.getSelectedItem();
+	if( typeItem != null ) {
+	  String typeText = typeItem.toString();
+	  if( typeText != null ) {
+	    String upperExt = "." + typeText.toUpperCase();
+	    if( this.orgFileDesc.toUpperCase().endsWith( upperExt ) ) {
+	      int len = this.orgFileDesc.length() - upperExt.length();
+	      if( len > 0 ) {
+		this.fldFileDesc.setText(
+			this.orgFileDesc.substring( 0, len ) );
+	      }
+	    }
+	  }
+	}
+      }
+
+      maxLen = target.getMaxRemarkLength();
+      this.docRemark.setMaxLength( maxLen );
+      this.labelRemark.setEnabled( maxLen > 0 );
+      this.fldRemark.setEnabled( maxLen > 0 );
+      this.fldRemark.setText( this.orgRemark );
 
       this.btnConvert.setEnabled( target != null );
       this.btnPlay.setEnabled( target.canPlay() );
@@ -1173,25 +1314,26 @@ public class FileConvertFrm extends BasicFrm implements
       this.comboFileType.setEnabled( false );
       this.comboFileType.removeAllItems();
 
+      this.labelRemark.setEnabled( false );
+      this.docRemark.setMaxLength( 0 );
+      this.fldRemark.setEnabled( false );
+      this.fldRemark.setText( this.orgRemark );
+
       this.btnConvert.setEnabled( false );
       this.btnPlay.setEnabled( false );
     }
-    updStartAddrEnabled();
-  }
 
-
-  private void updStartAddrEnabled()
-  {
+    // Startadresse
     boolean state = false;
-    try {
-      AbstractConvertTarget target = getSelectedTarget();
-      if( target != null ) {
-	state = target.usesStartAddr( getFileType( false ) );
+    if( target != null ) {
+      try {
+	state = target.usesStartAddr( getFileTypeChar( false ) );
       }
+      catch( UserInputException ex ) {}
     }
-    catch( UserInputException ex ) {}
     this.labelStartAddr.setEnabled( state );
     this.fldStartAddr.setEnabled( state );
     this.fldStartAddr.setEditable( state );
   }
 }
+

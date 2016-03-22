@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Haltepunkt auf eine Speicherzelle oder einen Speicherbereich
+ * Halte-/Log-Punkt auf eine Speicherzelle oder einen Speicherbereich
  */
 
 package jkcemu.tools.debugger;
@@ -79,14 +79,16 @@ public class MemoryBreakpoint extends AbstractBreakpoint
 
 
   public MemoryBreakpoint(
-		int     begAddr,
-		int     endAddr,
-		boolean onRead,
-		boolean onWrite,
-		int     mask,
-		String  cond,
-		int     value )
+		DebugFrm debugFrm,
+		int      begAddr,
+		int      endAddr,
+		boolean  onRead,
+		boolean  onWrite,
+		int      mask,
+		String   cond,
+		int      value )
   {
+    super( debugFrm );
     this.begAddr = begAddr & 0xFFFF;
     this.endAddr = (endAddr >= 0 ? (endAddr & 0xFFFF) : -1);
     this.onRead  = onRead;
@@ -169,10 +171,10 @@ public class MemoryBreakpoint extends AbstractBreakpoint
   }
 
 
-	/* --- Z80Breakpoint --- */
+	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean matches( Z80CPU cpu, Z80InterruptSource iSource )
+  protected boolean matchesImpl( Z80CPU cpu, Z80InterruptSource iSource )
   {
     boolean rv  = false;
     int     pc  = cpu.getRegPC();
@@ -303,7 +305,7 @@ public class MemoryBreakpoint extends AbstractBreakpoint
 
     /*
      * Pruefen, ob schon das Lesen der Befehlscodes
-     * dem Haltepunkt entspricht
+     * dem Halte-/Log-Punkt entspricht
      */
     int opLen = 0;
     if( (op0 == 0xDD) || (op0 == 0xFD) ) {
@@ -333,7 +335,7 @@ public class MemoryBreakpoint extends AbstractBreakpoint
 
       /*
        * Pruefen, ob durch die Ausfuehrung eines Befehls
-       * ein Haltepunkt erreicht wird.
+       * ein Halte-/Log-Punkt erreicht wird.
        */
       int addr1 = -1;
       int addr2 = -1;

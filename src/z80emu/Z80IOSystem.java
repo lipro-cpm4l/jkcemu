@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -13,7 +13,7 @@ import java.lang.*;
 
 public interface Z80IOSystem
 {
-  public int  readIOByte( int port );
-  public void writeIOByte( int port, int value );
+  public int  readIOByte( int port, int tStates );
+  public void writeIOByte( int port, int value, int tStates );
 }
 

@@ -33,7 +33,7 @@
     </ul>
    </li>
   </ul>
- <br/><br/>
+ <br/>
 
 
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
@@ -48,7 +48,7 @@
   des Emulatorrechners.
   Diese Tasten werden trotzdem emuliert.
   Die Tabelle zeigt das Tastenmapping f&uuml;r einige ausgew&auml;hlte Tasten:
- <br/>
+ <br/><br/>
   <table border="1">
    <tr><th>KC-compact-Taste</th><th>Emuliert mittels</th></tr>
    <tr><td>RETURN</td><td>ENTER/RETURN</td></tr>
@@ -153,7 +153,7 @@
     <u>AMSDOS-Format ohne Systemspur:</u><br/>
     180&nbsp;KByte:
     40&nbsp;Spuren; einseitig, keine Systemspur, 9&nbsp;Sektoren,
-    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;C0H,
+    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;C0h,
     4&nbsp;KByte&nbsp;Blockgr&ouml;&szlig;e
     <br/><br/>
    </li>
@@ -161,7 +161,7 @@
     <u>AMSDOS-Format mit Systemspuren:</u><br/>
     180/171&nbsp;KByte:
     40&nbsp;Spuren; einseitig, 2&nbsp;Systemspuren, 9&nbsp;Sektoren,
-    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;40H,
+    512&nbsp;Bytes&nbsp;Sektorgr&ouml;&szlig;e, Sektoroffset&nbsp;40h,
     4&nbsp;KByte&nbsp;Blockgr&ouml;&szlig;e
    </li>
   </ul>
@@ -172,7 +172,8 @@
  <br/><br/>
   Die zweite Betriebsart ist das CP/M-kompatible MicroDOS.
   In diese Betriebsart gelangt man mit dem Kommando <em>|cpm</em>.
-  Dazu muss vorher die MicroDOS-Systemdiskette eingelegt worden sein.
+  Dazu muss vorher die MicroDOS-Systemdiskette im ersten
+  Diskettenlaufwerk eingelegt worden sein.
  <br/><br/>
   MicroDOS unterst&uuml;tzt zwei Diskettenformate:
  <br/>
@@ -195,10 +196,9 @@
   </ul>
  <br/>
   Die im JKCEMU enthaltene MicroDOS-Systemdiskette ist so konfiguriert,
-  dass das erste physische Diskettenlaufwerk sowohl als
-  Laufwerk&nbsp;<em>B:</em> als auch als Laufwerk <em>C:</em>
-  angesprochen werden kann, je nachdem,
-  welches Format die eingelegte Diskette hat.
+  dass das erste Diskettenlaufwerk sowohl als Laufwerk&nbsp;<em>B:</em>
+  als auch als Laufwerk <em>C:</em> angesprochen werden kann,
+  je nachdem, welches Format die eingelegte Diskette hat.
   Laufwerk&nbsp;<em>B:</em> ist f&uuml;r das MicroDOS-Standardformat
   konfiguriert und Laufwerk&nbsp;<em>C:</em> f&uuml;r das
   BASDOS-Standardformat.
@@ -247,14 +247,34 @@
 
 
  <h2><a name="disks">2. Enthaltene Diskettenabbilder</a></h2>
+  JKCEMU enth&auml;lt f&uuml;r die KC-compact-Emulation
+  folgendes Diskettenabbild:
   <ul>
-   <li>MicroDOS-Systemdiskette f&uuml;r den KC&nbsp;compact</li>
+   <li>MicroDOS-Systemdiskette</li>
   </ul>
   Sie starten MicroDOS durch Eingabe des Befehls: <tt>|cpm</tt>
  <br/>
   Dazu muss die Emulation der
   <a href="kccompact.htm#fdc">Floppy-Disk-Station</a> aktiviert und
-  die MicroDOS-Systemdiskette eingelegt sein.
+  die MicroDOS-Systemdiskette in das erste emulierte Diskettenlaufwerk
+  eingelegt sein.
+ <br/><br/>
+  Das MicroDOS auf der Systemdiskette ist mit drei Laufwerken konfiguriert:
+  <ul>
+   <li>A: RAM-Floppy</li>
+   <li>
+    B: Diskettenlaufwerk im MicroDOS-Standardformat
+    (siehe weiter oben <a href="kccompact.htm#diskfmt">Diskettenformate</a>)
+   </li>
+   <li>
+    C: Diskettenlaufwerk im BASDOS-Standardformat
+    (siehe weiter oben <a href="kccompact.htm#diskfmt">Diskettenformate</a>)
+   </li>
+  </ul>
+ <br/>
+  Die Anzeige des Verzeichnisses erfolgt in MicroDOS mit dem Kommando
+  <em>D</em>, und nicht wie bei CP/M-kompatiblen Betriebssystemen
+  sonst &uuml;blich mit <em>DIR</em>.
  <br/><br/>
 
 

@@ -51,9 +51,8 @@ d.h., die Rechte, die Ihnen von der GNU-GPL bzgl. der Benutzung,
 Modifizierung und Weitergabe von JKCEMU eingeraeumt werden,
 gelten nicht fuer die ROM- und Disketteninhalte!
 Jegliche Benutzung dieser ROM- und Disketten-Images ausserhalb
-von JKCEMU oder ausserhalb eines rein privaten,
-nicht kommerziellen Umfeldes muessen Sie im Zweifelsfall
-mit den Urhebern bzw. deren Rechtsnachfolgern klaeren.
+von JKCEMU muessen Sie im Zweifelsfall mit den Urhebern
+bzw. deren Rechtsnachfolgern klaeren.
 
 
 4. Urheberschaften
@@ -77,7 +76,7 @@ John Elliott, Per Ola Ingvarsson:
 Spencer W. Thomas, Jim McKie, Steve Davies, Ken Turkowski,
 James A. Woods, Joe Orost, David Rowley:
   Autoren der Programme compress.c und gifcompress.c,
-  auf denen die Implementierung des in JKCEMU enthaltenen LZW-Encoders basiert
+  auf denen die Implementierung des im JKCEMU enthaltenen LZW-Encoders basiert
   (wird benoetigt fuer das Erzeugen animierter GIF-Dateien (Bildschirmvideos))
 
 
@@ -168,33 +167,35 @@ indem er auf seiner Homepage wichtige Informationen bereithaelt.
 Besonders bedanken moechte ich mich bei:
 
 - Prof. Dr. Albrecht Mugler fuer die freundliche Genehmigung zur Integration
-  der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
+  der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) im JKCEMU
 - Dr. Dieter Scheuschner fuer die Bereitstellung des ROM-Inhalts des SLC1
   und fuer die freundliche Genehmigung,
-  diesen in JKCEMU integrieren zu duerfen
+  diesen im JKCEMU integrieren zu duerfen
 - Dr. Gerd Maudrich fuer die freundliche Genehmigung zur Integration
-  des LLC1-ROM-Images (Monitorprogramm und Tiny-BASIC-Interpreter) in JKCEMU
+  des LLC1-ROM-Images (Monitorprogramm und Tiny-BASIC-Interpreter) im JKCEMU
 - Dr. Hans-Juergen Gatsche fuer die freundliche Genehmigung,
   von ihm entwickelte RBASIC-Programme fuer den A5105
-  in JKCEMU integrieren zu duerfen
+  im JKCEMU integrieren zu duerfen
 - Andre Schenk fuer das ANT-Skript
 - Andreas Suske fuer die freundliche Genehmigung
   zur Integration seiner AC1-2010-Software
   (Monitorprogramm, FDC-Programm und ROM-Bank-Verwaltung)
-  in JKCEMU sowie fuer seine Hilfe bei der AC1-Emulation
+  im JKCEMU sowie fuer seine Hilfe bei der AC1-Emulation
 - Claus-Peter Fischer fuer die Bereitstellung eines ROM-Images zum PC/M
 - Cliff Lawson (Amstrad plc) fuer die allgemeine Erlaubnis zur Integration
   der unter dem Urheberrecht von Amstrad stehenden ROMs in Emulatoren.
 - Eckhard Schiller fuer die freundliche Genehmigung zur Integration
-  des VCS80- und der BCS3-ROM-Images in JKCEMU
+  des VCS80- und der BCS3-ROM-Images im JKCEMU
 - Enrico Graemer fuer die Bereitstellung von Material zum KC compact
 - Frank Pruefer fuer die freundliche Genehmigung zur Integration
-  von S/P-BASIC 3.3 in JKCEMU und fuer die Unterstuetzung
+  von S/P-BASIC 3.3 im JKCEMU und fuer die Unterstuetzung
   bei der BCS3-Emulation
 - Gunar Haenke fuer seine Hilfe bei der AC1- und Diskettenemulation
-- Heiko Poppe fuer seine Hilfe bei der AC1- und USB-Emulation
+- Heiko Poppe fuer die freundliche Genehmigung zur Integration
+  des CP/M File-Commanders im JKCEMU sowie fuer seine Hilfe
+  bei der AC1-, K1520-Farbgrafikkarten- und USB-Emulation
 - Herbert Mathes fuer die freundliche Genehmigung zur Integration
-  der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) in JKCEMU
+  der PC/M-Systemsoftware (BIOS, V-Tape, Debugger, CCP und BDOS) inM JKCEMU
 - Holger Bretfeld fuer die leihweise Bereitstellung eines KC85/5 mit D004
 - Jan Kuhnert fuer das intensive Testen des Emulators
 - Johann Spannenkrebs fuer seine Homepage http://www.ac1-info.de
@@ -202,13 +203,18 @@ Besonders bedanken moechte ich mich bei:
 - John Elliott fuer die freundliche Genehmigung,
   Programmcodeteile aus dem Projekt LIBDSK uebernehmen zu duerfen
   (CRC-Berechnung fuer das CopyQM-Dateiformat)
+- Joerg Felgentreu fuer seine Unterstuetzung bei der A5105-Emulation
 - Juergen Helas fuer das intensive Testen des Assemblers und Reassemblers
+- Klaus Wilfling fuer die freundliche Genehmigung zur Integration
+  des von Ihm um Farbfunktionalitaet erweiterten EPOS
+  sowie fuer die Unterstuetzung bei der NANOS-Emulation
+- Klaus Junge fuer die Unterstuetzung bei der NANOS-Emulation
 - Manfred Kramer fuer die freundliche Genehmigung zur Integration
-  der Systemsoftware des Kramer-MC in JKCEMU
+  der Systemsoftware des Kramer-MC im JKCEMU
 - Mario Leubner fuer die freundliche Genehmigung zur Integration
   der von ihm weiterentwickelten CAOS-, EDAS-, D004- und USB-Software
-  sowie fuer seine aktive Hilfe bei der KC85/2..5,
-  USB- und Festplattenemulation
+  sowie fuer seine seine sehr aktive und umfangreiche Hilfe
+  im KC85/2..5-, USB-, Disketten- und Festplattenumfeld
 - Norbert Richter fuer die Bereitstellung von Informationen
   und Software zum AC1
 - Peter Salomon fuer seine Homepage http://www.robotron-net.de
@@ -219,11 +225,12 @@ Besonders bedanken moechte ich mich bei:
 - Ralph Haensel fuer seine umfangreiche Hilfe
   bei der AC1-, Disketten-, Festplatten- und USB-Emulation
 - Rene Nitzsche fuer die leihweise Bereitstellung eines KC85/5
-- Rolf Weidlich fuer die Unterstuetzung bei der AC1- und LLC1-Emulation
+- Rolf Weidlich fuer die Unterstuetzung bei der AC1-, LLC1- und LLC2-Emulation
 - Siegfried Schenk fuer die Bereitstellung von Informationen
   und Software zum LLC2 und zu den SCCH-Modulen
 - Steffen Gruhn fuer seine Hilfe bei der A5105- und KC-compact-Emulation
-- Stephan Linz fuer seine Homepage http://www.li-pro.net
+- Stephan Linz fuer seine Hilfe bei der PC/M-Emulation
+  sowie fuer seine Homepage http://www.li-pro.net
 - Thomas Scherrer fuer seine Z80-Seite http://www.z80.info
 - Torsten Paul fuer seinen Emulator KCemu (http://kcemu.sourceforge.net)
   und fuer die Bereitstellung von Informationen und ROM-Images

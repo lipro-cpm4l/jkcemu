@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,6 +10,7 @@ package jkcemu.text;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
 import javax.swing.*;
@@ -81,9 +82,9 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
     Font font = this.fldText.getFont();
     if( font != null ) {
       this.fldText.setFont(
-		new Font( "Monospaced", font.getStyle(), font.getSize() ) );
+	new Font( Font.MONOSPACED, font.getStyle(), font.getSize() ) );
     } else {
-      this.fldText.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+      this.fldText.setFont( new Font( Font.MONOSPACED, Font.PLAIN, 12 ) );
     }
 
 
@@ -248,36 +249,59 @@ public class LogFrm extends BasicFrm implements Appendable, CaretListener
    * Diese Methode wird ausgefuehrt,
    * wenn auf die uebergebene Zeile doppelt geklickt wurde.
    */
-  private void processLineAction( String text )
+  private void processLineAction( String line )
   {
     EditText editText = this.correspondingEditText;
-    if( (editText != null) && (text != null) ) {
-      int pos = text.indexOf( "Zeile" );
+    if( (editText != null) && (line != null) ) {
+      int pos = line.indexOf( "Zeile" );
       if( pos >= 0 ) {
-	pos += 5;		// Position hinter dem Wort Zeile
-	int len = text.length();
-	while( pos < len ) {
-	  if( !Character.isWhitespace( text.charAt( pos ) ) ) {
-	    break;
-	  }
-	  pos++;
-	}
-	if( pos < len ) {
-	  char ch = text.charAt( pos++ );
-	  if( (ch >= '0') && (ch <= '9') ) {
-	    int lineNum = ch - '0';
-	    while( pos < len ) {
-	      ch = text.charAt( pos++ );
-	      if( (ch < '0') || (ch > '9') ) {
-		break;
+	/*
+	 * Wenn vor dem Wort 'Zeile' ein Doppelpunkt steht,
+	 * enthaelt die Zeile einen Dateinamen, d.h.,
+	 * der Fehler befindet sich in einer inkludierten Quelltextdatei.
+	 * In dem Fall nur dann zu der entsprechenden Zeile
+	 * im aktuellen Quelltext springen,
+	 * wenn der Dateiname uebereinstimmt.
+	 */
+	boolean fileOK = true;
+	int     dpPos  = line.indexOf( ':' );
+	if( (dpPos >= 0) && (dpPos < pos) ) {
+	  fileOK = false;
+	  if( dpPos > 0 ) {
+	    File file = editText.getFile();
+	    if( file != null ) {
+	      String fileName = file.getName();
+	      if( fileName != null ) {
+		fileOK = fileName.equals( line.substring( 0, dpPos ) );
 	      }
-	      lineNum = (lineNum * 10) + (ch - '0');
 	    }
-	    editText.gotoLine( lineNum );
+	  }
+	}
+	if( fileOK ) {
+	  pos += 5;		// Position hinter dem Wort Zeile
+	  int len = line.length();
+	  while( pos < len ) {
+	    if( !Character.isWhitespace( line.charAt( pos ) ) ) {
+	      break;
+	    }
+	    pos++;
+	  }
+	  if( pos < len ) {
+	    char ch = line.charAt( pos++ );
+	    if( (ch >= '0') && (ch <= '9') ) {
+	      int lineNum = ch - '0';
+	      while( pos < len ) {
+		ch = line.charAt( pos++ );
+		if( (ch < '0') || (ch > '9') ) {
+		  break;
+		}
+		lineNum = (lineNum * 10) + (ch - '0');
+	      }
+	      editText.gotoLine( lineNum );
+	    }
 	  }
 	}
       }
     }
   }
 }
-

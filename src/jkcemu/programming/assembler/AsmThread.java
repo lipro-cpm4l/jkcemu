@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,7 @@
 package jkcemu.programming.assembler;
 
 import java.awt.EventQueue;
-import java.io.IOException;
+import java.io.*;
 import java.lang.*;
 import java.util.*;
 import jkcemu.Main;
@@ -36,9 +36,16 @@ public class AsmThread extends PrgThread
     this.assembler = new Z80Assembler(
 				editText.getText(),
 				null,
+				editText.getFile(),
 				options,
 				PrgLogger.createLogger( logOut ),
 				true );
+  }
+
+
+  public Collection<PrgSource> getPrgSources()
+  {
+    return this.assembler.getPrgSources();
   }
 
 
@@ -66,7 +73,7 @@ public class AsmThread extends PrgThread
       if( this.options.getCodeToEmu() || this.options.getForceRun() ) {
 	byte[] code = this.assembler.getCreatedCode();
 	if( code != null ) {
-	  writeCodeToEmu( this.assembler );
+	  writeCodeToEmu( this.assembler, true );
 	  if( this.options.getLabelsToDebugger() ) {
 	    labelsToDebugger( this.options.getCodeToSecondSystem() );
 	  }
@@ -112,7 +119,10 @@ public class AsmThread extends PrgThread
 	    debugFrm = screenFrm.openPrimaryDebugger();
 	  }
 	  if( debugFrm != null ) {
-	    debugFrm.setLabels( labels );
+	    debugFrm.setLabels(
+			labels,
+			this.options.getSuppressLabelRecreateInDebugger(),
+			this.options.getLabelsCaseSensitive() );
 	  }
 	}
       }
@@ -152,4 +162,3 @@ public class AsmThread extends PrgThread
     }
   }
 }
-

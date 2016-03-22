@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
+import jkcemu.programming.PrgSource;
 
 
 public class DoEntry extends LoopEntry
@@ -17,12 +18,12 @@ public class DoEntry extends LoopEntry
 
 
   public DoEntry(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String loopLabel,
-		String exitLabel )
+		PrgSource source,
+		long      basicLineNum,
+		String    loopLabel,
+		String    exitLabel )
   {
-    super( sourceLineNum, basicLineNum, loopLabel, exitLabel );
+    super( source, basicLineNum, loopLabel, exitLabel );
   }
 
 

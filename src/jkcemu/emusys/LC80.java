@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -42,6 +42,7 @@ public class LC80 extends EmuSys implements
   private volatile int     pio1BValue;
   private long             curDisplayTStates;
   private long             displayCheckTStates;
+  private boolean          audioInPhase;
   private boolean          audioOutLED;
   private volatile boolean audioOutPhase;
   private volatile boolean audioOutState;
@@ -57,7 +58,7 @@ public class LC80 extends EmuSys implements
 
   public LC80( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.lc80." );
     this.chessComputer = false;
     this.romOSFile     = null;
     this.romC000File   = null;
@@ -71,6 +72,7 @@ public class LC80 extends EmuSys implements
       }
     }
 
+    this.audioInPhase        = false;
     this.audioOutLED         = false;
     this.audioOutPhase       = false;
     this.audioOutState       = false;
@@ -179,6 +181,11 @@ public class LC80 extends EmuSys implements
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
+    boolean phase = this.emuThread.readAudioPhase();
+    if( phase != this.audioInPhase ) {
+      this.audioInPhase = phase;
+      this.pio1.putInValuePortB( this.audioInPhase ? 1 : 0, false );
+    }
     this.ctc.z80TStatesProcessed( cpu, tStates );
     if( this.displayCheckTStates > 0 ) {
       this.curDisplayTStates += tStates;
@@ -226,12 +233,14 @@ public class LC80 extends EmuSys implements
     if( rv ) {
       rv = TextUtil.equals(
 		this.romOSFile,
-		EmuUtil.getProperty( props, "jkcemu.lc80.os.file" ) );
+		EmuUtil.getProperty( props, this.propPrefix + "os.file" ) );
     }
     if( rv && this.sysName.equals( "LC80e" ) ) {
       rv = TextUtil.equals(
 		this.romC000File,
-		EmuUtil.getProperty( props, "jkcemu.lc80.rom_c000.file" ) );
+		EmuUtil.getProperty(
+				props,
+				this.propPrefix + "rom_c000.file" ) );
     }
     return rv;
   }
@@ -757,20 +766,17 @@ public class LC80 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  rv &= this.pio1.readPortA();
+	  rv &= this.pio1.readDataA();
 	  break;
 
 	case 1:
-	  this.pio1.putInValuePortB(
-			this.emuThread.readAudioPhase() ? 1 : 0,
-			false );
-	  rv &= this.pio1.readPortB();
+	  rv &= this.pio1.readDataB();
 	  break;
 
 	case 2:
@@ -785,11 +791,11 @@ public class LC80 extends EmuSys implements
     if( (port & 0x04) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  rv &= this.pio2.readPortA();
+	  rv &= this.pio2.readDataA();
 	  break;
 
 	case 1:
-	  rv &= this.pio2.readPortB();
+	  rv &= this.pio2.readDataB();
 	  break;
 
 	case 2:
@@ -802,7 +808,7 @@ public class LC80 extends EmuSys implements
       }
     }
     if( (port & 0x10) == 0 ) {
-      rv &= this.ctc.read( port & 0x03 );
+      rv &= this.ctc.read( port & 0x03, tStates );
     }
     return rv;
   }
@@ -825,6 +831,7 @@ public class LC80 extends EmuSys implements
       Arrays.fill( this.digitValues, 0 );
     }
     setChessMode( false );
+    this.audioInPhase = this.emuThread.readAudioPhase();
   }
 
 
@@ -874,12 +881,12 @@ public class LC80 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  this.pio1.writePortA( value );
+	  this.pio1.writeDataA( value );
 	  this.curDigitValue = toDigitValue(
 				this.pio1.fetchOutValuePortA( false ) );
 	  putKBMatrixRowValueToPort();
@@ -887,7 +894,7 @@ public class LC80 extends EmuSys implements
 	  break;
 
 	case 1:
-	  this.pio1.writePortB( value );
+	  this.pio1.writeDataB( value );
 	  this.pio1BValue    = this.pio1.fetchOutValuePortB( false );
 	  boolean audioPhase = ((this.pio1BValue & 0x02) != 0);
 	  this.emuThread.writeAudioPhase( audioPhase );
@@ -912,11 +919,11 @@ public class LC80 extends EmuSys implements
     if( (port & 0x04) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-	  this.pio2.writePortA( value );
+	  this.pio2.writeDataA( value );
 	  break;
 
 	case 1:
-	  this.pio2.writePortB( value );
+	  this.pio2.writeDataB( value );
 	  break;
 
 	case 2:
@@ -929,7 +936,7 @@ public class LC80 extends EmuSys implements
       }
     }
     if( (port & 0x10) == 0 ) {
-      this.ctc.write( port & 0x03, value );
+      this.ctc.write( port & 0x03, value, tStates );
     }
   }
 
@@ -940,8 +947,8 @@ public class LC80 extends EmuSys implements
   {
     this.romOSFile = EmuUtil.getProperty(
 				props,
-				"jkcemu.lc80.os.file" );
-    this.romOS = readFile( this.romOSFile, 0x2000, "Monitorprogramm" );
+				this.propPrefix + "os.file" );
+    this.romOS = readROMFile( this.romOSFile, 0x2000, "Monitorprogramm" );
     if( this.romOS == null ) {
       if( this.sysName.equals( "LC80_U505" ) ) {
 	if( lc80_u505 == null ) {
@@ -968,8 +975,8 @@ public class LC80 extends EmuSys implements
     if( this.sysName.equals( "LC80e" ) ) {
       this.romC000File = EmuUtil.getProperty(
 				props,
-				"jkcemu.lc80.rom_c000.file" );
-      this.romC000 = readFile(
+				this.propPrefix + "rom_c000.file" );
+      this.romC000 = readROMFile(
 			this.romC000File,
 			0x4000,
 			"ROM C000h / Schachprogramm" );

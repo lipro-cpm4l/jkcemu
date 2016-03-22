@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -943,7 +943,7 @@ public class KC85CharRecognizer
 
   private Map<Long,Character> createCharMap( int[][] font )
   {
-    Map<Long,Character> map = new HashMap<Long,Character>();
+    Map<Long,Character> map = new HashMap<>();
     CRC32               crc = new CRC32();
     for( int i = 0; i < font.length; i++ ) {
       crc.reset();
@@ -1040,7 +1040,7 @@ public class KC85CharRecognizer
 	  /*
 	   * Wenn Zeichen nicht erkannt wurde,
 	   * dann auf anderen Y-Positionen versuchen,
-	   * wenn dies so geweunscht ist.
+	   * wenn dies so gewuenscht ist.
 	   */
 	  if( rv == null ) {
 	    for( int yDiff = -2; yDiff < 3; yDiff++ ) {

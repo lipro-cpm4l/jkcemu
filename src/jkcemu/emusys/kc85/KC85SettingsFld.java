@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,31 +26,42 @@ public class KC85SettingsFld
 			extends AbstractSettingsFld
 			implements ListSelectionListener, MouseListener
 {
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS_2 = 2600;
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS_4 = 1200;
+
   private static final String moduleAddPrefix  = "kc85.module.add.";
 
+  private static final int MOD_IDX_TYPE = 0;
+  private static final int MOD_IDX_NAME = 1;
+  private static final int MOD_IDX_DESC = 2;
+
   private static final String[][] modules = {
-	{ "M003", "V.24 mit angeschlossenem Drucker" },
-	{ "M006", "BASIC" },
-	{ "M008", "Joystick" },
-	{ "M011", "64 KByte RAM" },
-	{ "M012", "TEXOR" },
-	{ "M021", "Joystick / Centronics mit angeschlossenem Drucker" },
-	{ "M022", "16 KByte Expander RAM" },
-	{ "M025", "8 KByte User PROM" },
-	{ "M026", "Forth" },
-	{ "M027", "Development" },
-	{ "M028", "16 KByte User PROM" },
-	{ "M032", "256 KByte Segmented RAM" },
-	{ "M033", "TypeStar" },
-	{ "M034", "512 KByte Segmented RAM" },
-	{ "M035", "1 MByte Segmented RAM" },
-	{ "M035x4", "4 MByte Segmented RAM" },
-	{ "M036", "128 KByte Segmented RAM" },
-	{ "M040", "8/16 KByte User PROM" },
-	{ "M052", "USB/Netzwerk" },
-	{ "M120", "8 KByte CMOS RAM" },
-	{ "M122", "16 KByte CMOS RAM" },
-	{ "M124", "32 KByte CMOS RAM" } };
+	{ "ETC", "M003", "V.24 mit angeschlossenem Drucker" },
+	{ "ROM", "M006", "BASIC" },
+	{ "ETC", "M008", "Joystick" },
+	{ "RAM", "M011", "64 KByte RAM" },
+	{ "ROM", "M012", "TEXOR" },
+	{ "ETC", "M021", "Joystick/Centronics mit angeschlossenem Drucker" },
+	{ "RAM", "M022", "16 KByte Expander RAM" },
+	{ "ROM", "M025", "8 KByte User PROM" },
+	{ "ROM", "M026", "Forth" },
+	{ "ROM", "M027", "Development" },
+	{ "ROM", "M028", "16 KByte User PROM" },
+	{ "RAM", "M032", "256 KByte Segmented RAM" },
+	{ "ROM", "M033", "TypeStar" },
+	{ "RAM", "M034", "512 KByte Segmented RAM" },
+	{ "RAM", "M035", "1 MByte Segmented RAM" },
+	{ "RAM", "M035x4", "4 MByte Segmented RAM" },
+	{ "RAM", "M036", "128 KByte Segmented RAM" },
+	{ "ROM", "M040", "8/16 KByte User PROM" },
+	{ "ROM", "M045", "4x8 KByte User PROM" },
+	{ "ROM", "M046", "8x8 KByte User PROM" },
+	{ "ROM", "M047", "16x8 KByte User PROM" },
+	{ "ROM", "M048", "16x16 KByte User PROM" },
+	{ "ETC", "M052", "USB/Netzwerk" },
+	{ "RAM", "M120", "8 KByte CMOS RAM" },
+	{ "RAM", "M122", "16 KByte CMOS RAM" },
+	{ "RAM", "M124", "32 KByte CMOS RAM" } };
 
   private static final String[] altRomTitles2 = {
 					"CAOS-ROM E000-E7FF",
@@ -74,7 +85,7 @@ public class KC85SettingsFld
 
   private static final String[] altRomTitles4 = {
 					"BASIC-ROM C000-DFFF",
-					"CAOS-ROM C000-CFFF",
+					"CAOS-ROM C000-CFFF (oder C000-DFFF)",
 					"CAOS-ROM E000-FFFF",
 					"M052-ROM (USB/Netzwerk)" };
 
@@ -107,7 +118,10 @@ public class KC85SettingsFld
   private JPanel               tabModule;
   private JPanel               tabD004;
   private JPanel               tabROM;
+  private JPanel               tabSound;
   private JPanel               tabEtc;
+  private AutoLoadSettingsFld  tabAutoLoad;
+  private AutoInputSettingsFld tabAutoInput;
   private JPopupMenu           popupModule;
   private JButton              btnModuleAdd;
   private JButton              btnModuleEdit;
@@ -115,7 +129,7 @@ public class KC85SettingsFld
   private JButton              btnModuleUp;
   private JButton              btnModuleDown;
   private JCheckBox            btnD004Enabled;
-  private JComboBox            comboD004Rom;
+  private JComboBox<String>    comboD004Rom;
   private JLabel               labelD004Rom;
   private JLabel               labelD004Speed;
   private JRadioButton         btnD004Speed4MHz;
@@ -125,12 +139,13 @@ public class KC85SettingsFld
   private JButton              btnD004RomFileSelect;
   private JButton              btnD004RomFileRemove;
   private GIDESettingsFld      tabGIDE;
+  private JRadioButton         btnSoundMono;
+  private JRadioButton         btnSoundStereo;
   private FileNameFld[]        altRomTextFlds;
   private JButton[]            altRomSelectBtns;
   private JButton[]            altRomRemoveBtns;
-  private JCheckBox            btnCtrlKeysDirect;
+  private JCheckBox            btnKeysDirectToBuf;
   private JCheckBox            btnPasteFast;
-  private JCheckBox            btnUmlautsTo2Codes;
   private JCheckBox            btnVideoTiming;
 
 
@@ -238,16 +253,36 @@ public class KC85SettingsFld
     }
 
     this.popupModule = new JPopupMenu();
+
+    JMenu mnuModRAM = new JMenu( "RAM-Module" );
+    this.popupModule.add( mnuModRAM );
+
+    JMenu mnuModROM = new JMenu( "ROM-Module" );
+    this.popupModule.add( mnuModROM );
+
+    JMenu mnuModEtc = new JMenu( "Sonstige Module" );
+    this.popupModule.add( mnuModEtc );
+
     for( int i = 0; i < modules.length; i++ ) {
-      String modName = modules[ i ][ 0 ];
+      String modName = modules[ i ][ MOD_IDX_NAME ];
       if( (kcTypeNum < 3) || !modName.equals( "M006" ) ) {
 	JMenuItem modItem = new JMenuItem( String.format(
-						"%s - %s",
-						modName,
-						modules[ i ][ 1 ] ) );
+					"%s - %s",
+					modName,
+					modules[ i ][ MOD_IDX_DESC ] ) );
 	modItem.setActionCommand( moduleAddPrefix + modName );
 	modItem.addActionListener( this );
-	this.popupModule.add( modItem );
+	switch( modules[ i ][ MOD_IDX_TYPE ] ) {
+	  case "RAM":
+	    mnuModRAM.add( modItem );
+	    break;
+	  case "ROM":
+	    mnuModROM.add( modItem );
+	    break;
+	  case "ETC":
+	    mnuModEtc.add( modItem );
+	    break;
+	}
       }
     }
 
@@ -278,7 +313,7 @@ public class KC85SettingsFld
     gbcDisk.gridy++;
     this.tabD004.add( this.labelD004Rom, gbcDisk );
 
-    this.comboD004Rom = new JComboBox();
+    this.comboD004Rom = new JComboBox<>();
     this.comboD004Rom.setEditable( false );
     this.comboD004Rom.addItem( "Version 2.0" );
     this.comboD004Rom.addItem( "Version 3.3" );
@@ -406,6 +441,45 @@ public class KC85SettingsFld
     }
 
 
+    // Tab Tongeneratoren
+    this.tabSound = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Tongeneratoren", this.tabSound );
+
+    GridBagConstraints gbcSound = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
+
+    this.tabSound.add( new JLabel( "Ausgabe der Tongeneratoren:" ), gbcSound );
+
+    ButtonGroup grpSoundChannels = new ButtonGroup();
+
+    this.btnSoundMono = new JRadioButton(
+				"Mono (beide Tongeneratoren gemischt"
+					+ " mit Lautst\u00E4rkesteuerung)",
+				true );
+    this.btnSoundMono.addActionListener( this );
+    grpSoundChannels.add( this.btnSoundMono );
+    gbcSound.insets.left   = 50;
+    gbcSound.insets.top    = 0;
+    gbcSound.insets.bottom = 0;
+    gbcSound.gridy++;
+    this.tabSound.add( this.btnSoundMono, gbcSound );
+
+    this.btnSoundStereo = new JRadioButton(
+			"Stereo (Tongeneratoren links und rechts getrennt"
+				+ " ohne Lautst\u00E4rkesteuerung)" );
+    this.btnSoundStereo.addActionListener( this );
+    grpSoundChannels.add( this.btnSoundStereo );
+    gbcSound.insets.bottom = 5;
+    gbcSound.gridy++;
+    this.tabSound.add( this.btnSoundStereo, gbcSound );
+
+
     // Tab Sonstiges
     this.tabEtc = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
@@ -419,25 +493,17 @@ public class KC85SettingsFld
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    this.btnUmlautsTo2Codes = new JCheckBox(
-	"Tasten f\u00FCr \u00C4\u00D6\u00DC\u00E4\u00F6\u00FC[]{}\\~"
-		+ " entsprechend MicroDOS-Mode der D005 behandeln",
-	false );
-    this.btnUmlautsTo2Codes.addActionListener( this );
-    this.tabEtc.add( this.btnUmlautsTo2Codes, gbcEtc );
-
-    this.btnCtrlKeysDirect = new JCheckBox(
-			"Ctrl-A...Z, ESC und TAB direkt in den"
-				+ " Tastaturpuffer schreiben",
-			true );
-    this.btnCtrlKeysDirect.addActionListener( this );
-    gbcEtc.insets.top = 0;
-    gbcEtc.gridy++;
-    this.tabEtc.add( this.btnCtrlKeysDirect, gbcEtc );
+    this.btnKeysDirectToBuf = new JCheckBox(
+			"Schnellere Tastatureingaben durch direktes"
+				+ " Schreiben in den Tastaturpuffer",
+			false );
+    this.btnKeysDirectToBuf.addActionListener( this );
+    this.tabEtc.add( this.btnKeysDirectToBuf, gbcEtc );
 
     this.btnPasteFast = new JCheckBox(
 		"Einf\u00FCgen von Text direkt in den Tastaturpuffer",
 		true );
+    gbcEtc.insets.top = 0;
     gbcEtc.gridy++;
     this.btnPasteFast.addActionListener( this );
     this.tabEtc.add( this.btnPasteFast, gbcEtc );
@@ -479,6 +545,28 @@ public class KC85SettingsFld
     this.tabEtc.add( this.btnVideoTiming, gbcEtc );
 
 
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+				settingsFrm,
+				propPrefix,
+				this.kcTypeNum < 4 ?
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS_2
+					: DEFAULT_AUTO_ACTION_WAIT_MILLIS_4,
+				true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+				settingsFrm,
+				propPrefix,
+				KC85.getDefaultSwapKeyCharCase(),
+				this.kcTypeNum < 4 ?
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS_2
+					: DEFAULT_AUTO_ACTION_WAIT_MILLIS_4 );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
+
+
     // Drag&Drop ermoeglichen
     (new DropTarget( this.fldD004RomFile, this )).setActive( true );
     for( int i = 0; i < this.altRomTextFlds.length; i++ ) {
@@ -511,7 +599,11 @@ public class KC85SettingsFld
 	      if( moduleName != null ) {
 		if( moduleName.equals( "M025" )
 		    || moduleName.equals( "M028" )
-		    || moduleName.equals( "M040" ) )
+		    || moduleName.equals( "M040" )
+		    || moduleName.equals( "M045" )
+		    || moduleName.equals( "M046" )
+		    || moduleName.equals( "M047" )
+		    || moduleName.equals( "M048" ) )
 		{
 		  stateEdit = true;
 		}
@@ -666,20 +758,31 @@ public class KC85SettingsFld
 		file != null ? file.getPath() : "" );
       }
 
+      // Tab Tongeneratoren
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + "sound.stereo",
+		this.btnSoundStereo.isSelected() );
+
       // Tab Sonstiges
       tab = this.tabEtc;
       props.setProperty(
-		this.propPrefix + "control_keys.direct",
-		Boolean.toString( this.btnCtrlKeysDirect.isSelected() ) );
+		this.propPrefix + "keys.direct_to_buffer",
+		Boolean.toString( this.btnKeysDirectToBuf.isSelected() ) );
       props.setProperty(
 		this.propPrefix + "paste.fast",
 		Boolean.toString( this.btnPasteFast.isSelected() ) );
       props.setProperty(
-		this.propPrefix + "umlauts_to_2_keycodes",
-		Boolean.toString( this.btnUmlautsTo2Codes.isSelected() ) );
-      props.setProperty(
 		this.propPrefix + "emulate_video_timing",
 		Boolean.toString( this.btnVideoTiming.isSelected() ) );
+
+      // Tab AutoLoad
+      tab = this.tabAutoLoad;
+      this.tabAutoLoad.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -732,6 +835,10 @@ public class KC85SettingsFld
       } else if( src == this.btnD004RomFileRemove ) {
 	rv = true;
 	doD004RomFileRemove();
+      } else if( src == this.btnKeysDirectToBuf ) {
+	rv = true;
+	updPasteFastEnabled();
+	fireDataChanged();
       } else if( e instanceof ActionEvent ) {
 	String cmd = ((ActionEvent) e).getActionCommand();
 	if( cmd != null ) {
@@ -767,13 +874,19 @@ public class KC85SettingsFld
 	  }
 	}
       }
+      if( !rv ) {
+	rv = this.tabGIDE.doAction( e );
+      }
+      if( !rv ) {
+	rv = this.tabAutoLoad.doAction( e );
+      }
+      if( !rv ) {
+	rv = this.tabAutoInput.doAction( e );
+      }
       if( !rv && (src instanceof AbstractButton) ) {
 	rv = true;
 	fireDataChanged();
       }
-    }
-    if( !rv ) {
-      rv = this.tabGIDE.doAction( e );
     }
     this.settingsFrm.setWaitCursor( false );
     return rv;
@@ -831,6 +944,8 @@ public class KC85SettingsFld
   public void lookAndFeelChanged()
   {
     this.tabGIDE.lookAndFeelChanged();
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
     if( this.popupModule != null ) {
       SwingUtilities.updateComponentTreeUI( this.popupModule );
     }
@@ -913,27 +1028,40 @@ public class KC85SettingsFld
       this.altRomRemoveBtns[ i ].setEnabled( file != null );
     }
 
+    // Tab Tongenerator
+    if( EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "sound.stereo",
+			false ) )
+    {
+      this.btnSoundStereo.setSelected( true );
+    } else {
+      this.btnSoundMono.setSelected( true );
+    }
+
     // Tab Sonstiges
-    this.btnCtrlKeysDirect.setSelected(
+    this.btnKeysDirectToBuf.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "control_keys.direct",
+				this.propPrefix + "keys.direct_to_buffer",
 				false ) );
     this.btnPasteFast.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + "paste.fast",
 				true ) );
-    this.btnUmlautsTo2Codes.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "umlauts_to_2_keycodes",
-				false ) );
     this.btnVideoTiming.setSelected(
 			EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + "emulate_video_timing",
 				KC85.getDefaultEmulateVideoTiming() ) );
+    updPasteFastEnabled();
+
+    // Tab AutoLoad
+    this.tabAutoLoad.updFields( props );
+
+    // Tab AutoInput
+    this.tabAutoInput.updFields( props );
   }
 
 
@@ -985,7 +1113,11 @@ public class KC85SettingsFld
 	      if( moduleName != null ) {
 		if( moduleName.equals( "M025" )
 		    || moduleName.equals( "M028" )
-		    || moduleName.equals( "M040" ) )
+		    || moduleName.equals( "M040" )
+		    || moduleName.equals( "M045" )
+		    || moduleName.equals( "M046" )
+		    || moduleName.equals( "M047" )
+		    || moduleName.equals( "M048" ) )
 		{
 		  KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
 				this.settingsFrm,
@@ -1091,7 +1223,7 @@ public class KC85SettingsFld
     if( (moduleName != null) && (nRows < 60) ) {
       if( !moduleName.isEmpty() ) {
 	for( int i = 0; i < modules.length; i++ ) {
-	  String s = modules[ i ][ 0 ];
+	  String s = modules[ i ][ MOD_IDX_NAME ];
 	  if( moduleName.equals( s ) ) {
 	    if( slotText == null ) {
 	      slotText = String.format( "%02X", (nRows + 2) * 4 );
@@ -1123,7 +1255,11 @@ public class KC85SettingsFld
 	String fileName = null;
 	if( moduleName.equals( "M025" )
 	    || moduleName.equals( "M028" )
-	    || moduleName.equals( "M040" ) )
+	    || moduleName.equals( "M040" )
+	    || moduleName.equals( "M045" )
+	    || moduleName.equals( "M046" )
+	    || moduleName.equals( "M047" )
+	    || moduleName.equals( "M048" ) )
 	{
 	  boolean                 ok  = false;
 	  KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
@@ -1190,11 +1326,9 @@ public class KC85SettingsFld
 	}
       }
       if( moduleDesc == null ) {
-	for( String[] cells : modules ) {
-	  if( cells.length > 1 ) {
-	    if( cells[ 0 ].equals( moduleName ) ) {
-	      moduleDesc = cells[ 1 ];
-	    }
+	for( int i = 0; i < modules.length; i++ ) {
+	  if( modules[ i ][ MOD_IDX_NAME ].equals( moduleName ) ) {
+	    moduleDesc = modules[ i ][ MOD_IDX_DESC ];
 	  }
 	}
       }
@@ -1216,7 +1350,7 @@ public class KC85SettingsFld
 				title,
 				oldFile != null ?
 					oldFile
-					: Main.getLastPathFile( "rom" ),
+					: Main.getLastDirFile( "rom" ),
 				EmuUtil.getROMFileFilter() );
     if( file != null ) {
       String msg = null;
@@ -1266,4 +1400,14 @@ public class KC85SettingsFld
     }
     this.btnD004RomFileRemove.setEnabled( state );
   }
+
+
+  private void updPasteFastEnabled()
+  {
+    if( this.btnPasteFast != null ) {
+      this.btnPasteFast.setEnabled(
+		!this.btnKeysDirectToBuf.isSelected() );
+    }
+  }
 }
+

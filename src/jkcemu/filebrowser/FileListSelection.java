@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,7 +21,8 @@ public class FileListSelection implements ClipboardOwner, Transferable
 
   public FileListSelection( Collection<File> files )
   {
-    this.files = new Vector<File>( files.size() );
+    int n = files.size();
+    this.files = new ArrayList<>( n > 0 ? n : 1 );
     this.files.addAll( files );
   }
 

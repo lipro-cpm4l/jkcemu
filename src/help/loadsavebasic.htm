@@ -75,14 +75,8 @@
   Anschlie&szlig;end erscheint der Dialog f&uuml;r das Speichern einer Datei
   (siehe <a href="loadsave.htm#savefile">Datei speichern</a>).
   Die Eingabefelder f&uuml;r den zu speichernden Adressbereich
-  sind bereits ausgef&uuml;llt.
-  Die Anfangsadresse kann nicht ge&auml;ndert werden.
-  Die Endadresse kann zwar ge&auml;ndert werden,
-  allerdings ist das nur dann sinnvoll,
-  wenn in der Datei auch noch ein Teil des hinter dem BASIC-Programm
-  liegenden Adressbereichs mit gespeichert werden soll.
-  Das f&uuml;r das emulierte System passende Dateiformat
-  f&uuml;r BASIC-Programme ist bereits vorausgew&auml;hlt.
+  sind bereits ausgef&uuml;llt und das zum emulierten System passende
+  Dateiformat f&uuml;r BASIC-Programme ist bereits vorausgew&auml;hlt.
  <br/><br/>
   <b>Achtung!</b> Sie k&ouml;nnen zwar das BASIC-Programm prinzipiell
   in jedem von JKCEMU unterst&uuml;tzten Dateiformat speichern,
@@ -92,7 +86,7 @@
   Probleme beim sp&auml;teren Laden geben.
   Die Systemzellen des BASIC-Interpreters werden dann n&auml;mlich
   nicht angepasst, woraufhin sich das BASIC-Programm
-  im Interpreter nicht richtig nutzen l&auml;sst.
+  im Interpreter nicht nutzen l&auml;sst.
   Aus diesem Grund sollten Sie ein BASIC-Programm immer in dem
   von JKCEMU vorausgew&auml;lten Dateiformat speichern.
  <br/><br/>
@@ -110,7 +104,12 @@
     </td>
     <td valign="top">
      <ul>
-      <li><a href="fileformats.htm#rbasic">RBASIC-Datei</a></li>
+      <li><a href="fileformats.htm#rbasic">RBASIC-Programmdatei</a></li>
+      <li>
+       alternativ
+       <a href="fileformats.htm#headersave">Headersave-Datei</a>
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;8001
+      </li>
      </ul>
     </td>
    </tr>
@@ -124,7 +123,7 @@
      <ul>
       <li>
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>b</em> und Anfangsadresse 18C0
+       mit Dateityp <em>b</em> und Anfangsadresse&nbsp;18C0
       </li>
      </ul>
     </td>
@@ -132,17 +131,30 @@
    <tr>
     <td valign="top" nowrap="nowrap">
      <ul>
-      <li><a href="ac1.htm">AC1</a> mit 8K-AC1-BASIC</li>
-      <li><a href="ac1.htm">AC1</a> mit BACOBAS</li>
+      <li><a href="ac1.htm">AC1</a> mit 8K-BASIC</li>
+      <li>
+       <a href="ac1.htm">AC1</a> mit BACOBAS&nbsp;2
+       (nur BASIC, nicht BASICODE)
+      </li>
+      <li>
+       <a href="ac1.htm">AC1</a> mit BACOBAS&nbsp;3
+       (nur BASIC, nicht BASICODE)
+      </li>
       <li><a href="ac1.htm">AC1</a> mit SCCH-BASIC</li>
+      <li>
+       <a href="llc2.htm">LLC2</a> mit LLCBASIC
+       (nur BASIC, nicht BASICODE)
+      </li>
       <li><a href="llc2.htm">LLC2</a> mit SCCH-BASIC</li>
      </ul>
     </td>
     <td valign="top">
      <ul>
+      <li><a href="fileformats.htm#basic">BASIC-Programmdatei</a></li>
       <li>
+       alternativ
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>B</em> und Anfangsadresse 6000
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;60F7
       </li>
      </ul>
     </td>
@@ -150,14 +162,33 @@
    <tr>
     <td valign="top" nowrap="nowrap">
      <ul>
-      <li><a href="ac1.htm">AC1</a> mit 12K-AC1-BASIC</li>
+      <li><a href="ac1.htm">AC1</a> mit BASIC6</li>
      </ul>
     </td>
     <td valign="top">
      <ul>
+      <li><a href="fileformats.htm#basic">BASIC-Programmdatei</a></li>
       <li>
+       alternativ
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>B</em> und Anfangsadresse 6FB7
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;6300
+      </li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+     <ul>
+      <li><a href="ac1.htm">AC1</a> mit 12K-BASIC</li>
+     </ul>
+    </td>
+    <td valign="top">
+     <ul>
+      <li><a href="fileformats.htm#basic">BASIC-Programmdatei</a></li>
+      <li>
+       alternativ
+       <a href="fileformats.htm#headersave">Headersave-Datei</a>
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;6FB7
       </li>
      </ul>
     </td>
@@ -184,9 +215,11 @@
     </td>
     <td valign="top">
      <ul>
+      <li><a href="fileformats.htm#basic">BASIC-Programmdatei</a></li>
       <li>
+       alternativ
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>B</em> und Anfangsadresse 3770
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;3770
       </li>
      </ul>
     </td>
@@ -204,10 +237,16 @@
     <td valign="top">
      <ul>
       <li><a href="fileformats.htm#kcbasic">KC-BASIC-Programmdatei</a></li>
-      <li><a href="fileformats.htm#kcb">KCB-Datei</a></li>
       <li>
+       alternativ
        <a href="fileformats.htm#tap">KC-TAP-Datei</a>
        im KC-BASIC-Format
+      </li>
+      <li>
+       alternativ
+       <a href="fileformats.htm#headersave">Headersave-Datei</a>
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;2BC0 (RAM-BASIC)
+       bzw.&nbsp;03C0 (ROM-BASIC)
       </li>
      </ul>
     </td>
@@ -220,9 +259,11 @@
     </td>
     <td valign="top">
      <ul>
+      <li><a href="fileformats.htm#basic">BASIC-Programmdatei</a></li>
       <li>
+       alternativ
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>B</em> und Anfangsadresse 1001
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;1001
       </li>
      </ul>
     </td>
@@ -237,7 +278,7 @@
      <ul>
       <li>
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>b</em> und Anfangsadresse 1400
+       mit Dateityp <em>b</em> und Anfangsadresse&nbsp;1400
       </li>
      </ul>
     </td>
@@ -251,15 +292,14 @@
     <td valign="top">
      <ul>
       <li><a href="fileformats.htm#kcbasic">KC-BASIC-Programmdatei</a></li>
-      <li><a href="fileformats.htm#kcb">KCB-Datei</a></li>
       <li>
        <a href="fileformats.htm#tap">KC-TAP-Datei</a>
        mit KC-BASIC-Format
       </li>
       <li>
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>B</em> und Anfangsadresse 2BC0 (RAM-BASIC)
-       bzw. 03C0 (ROM-BASIC)
+       mit Dateityp <em>B</em> und Anfangsadresse&nbsp;2BC0 (RAM-BASIC)
+       bzw.&nbsp;03C0 (ROM-BASIC)
       </li>
      </ul>
     </td>
@@ -274,7 +314,7 @@
      <ul>
       <li>
        <a href="fileformats.htm#headersave">Headersave-Datei</a>
-       mit Dateityp <em>b</em> und Anfangsadresse 1000
+       mit Dateityp <em>b</em> und Anfangsadresse&nbsp;1000
       </li>
      </ul>
     </td>

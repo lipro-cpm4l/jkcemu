@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,7 @@ public class FileEntry
   private Object  value;
   private boolean readOnly;
   private boolean sysFile;
-  private boolean archived;
+  private boolean archive;
   private boolean dir;
   private boolean marked;
 
@@ -37,7 +37,7 @@ public class FileEntry
     this.value        = null;
     this.readOnly     = false;
     this.sysFile      = false;
-    this.archived     = false;
+    this.archive      = false;
     this.dir          = false;
     this.marked       = false;
   }
@@ -98,9 +98,9 @@ public class FileEntry
   }
 
 
-  public boolean isArchived()
+  public boolean isArchive()
   {
-    return this.archived;
+    return this.archive;
   }
 
 
@@ -122,9 +122,9 @@ public class FileEntry
   }
 
 
-  public void setArchived( boolean state )
+  public void setArchive( boolean state )
   {
-    this.archived = state;
+    this.archive = state;
   }
 
 

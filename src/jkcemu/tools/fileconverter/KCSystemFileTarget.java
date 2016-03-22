@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,10 +15,9 @@ import jkcemu.base.*;
 
 public class KCSystemFileTarget extends AbstractConvertTarget
 {
-  private byte[]  dataBytes;
-  private int     offs;
-  private int     len;
-  private boolean z9001;
+  private byte[] dataBytes;
+  private int    offs;
+  private int    len;
 
 
   public KCSystemFileTarget(
@@ -44,7 +43,7 @@ public class KCSystemFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
     return 11;
   }
@@ -72,7 +71,9 @@ public class KCSystemFileTarget extends AbstractConvertTarget
 		begAddr,
 		(begAddr + this.len - 1) & 0xFFFF,
 		startAddr >= 0 ? new Integer( startAddr ) : null,
-		fileDesc );
+		false,
+		fileDesc,
+		null );
       int n = Math.min( this.dataBytes.length - this.offs, this.len );
       out.write( this.dataBytes, this.offs, n );
       n = n % 0x80;

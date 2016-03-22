@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -63,7 +63,7 @@ public class Z1013AudioFileTarget extends AbstractConvertTarget
 	if( startAddr < 0 ) {
 	  startAddr = 0;
 	}
-	int fileType = this.fileConvertFrm.getFileType( true );
+	int fileType = this.fileConvertFrm.getFileTypeChar( true );
 	if( fileType < 0 ) {
 	  fileType = 0x20;
 	}
@@ -130,9 +130,16 @@ public class Z1013AudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
     return this.headersave ? 16 : 0;
+  }
+
+
+  @Override
+  public int getMaxFileTypeLength()
+  {
+    return this.headersave ? 1 : 0;
   }
 
 
@@ -152,7 +159,7 @@ public class Z1013AudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public void setFileTypesTo( JComboBox combo )
+  public void setFileTypesTo( JComboBox<String> combo )
   {
     if( this.headersave ) {
       HeadersaveFileTarget.setFileTypesTo( combo, this.fileConvertFrm );

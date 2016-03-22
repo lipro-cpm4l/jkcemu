@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,48 +26,51 @@ import z80emu.*;
 
 public class EmuThread extends Thread implements
 					Z80IOSystem,
-					Z80Memory
+					Z80Memory,
+					EmuMemView
 {
   public enum ResetLevel { NO_RESET, WARM_RESET, COLD_RESET, POWER_ON };
 
-  private ScreenFrm           screenFrm;
-  private Z80CPU              z80cpu;
-  private Object              monitor;
-  private JoystickFrm         joyFrm;
-  private JoystickThread[]    joyThreads;
-  private byte[]              ram;
-  private byte[]              ramExtended;
-  private RAMFloppy           ramFloppy1;
-  private RAMFloppy           ramFloppy2;
-  private PrintMngr           printMngr;
-  private volatile AudioIn    audioIn;
-  private volatile AudioOut   audioOut;
-  private volatile LoadData   loadData;
-  private volatile ResetLevel resetLevel;
-  private volatile boolean    emuRunning;
-  private volatile EmuSys     emuSys;
-  private volatile Boolean    iso646de;
+  private ScreenFrm            screenFrm;
+  private Z80CPU               z80cpu;
+  private Object               monitor;
+  private FileTimesViewFactory fileTimesViewFactory;
+  private JoystickFrm          joyFrm;
+  private JoystickThread[]     joyThreads;
+  private byte[]               ram;
+  private byte[]               ramExtended;
+  private RAMFloppy            ramFloppy1;
+  private RAMFloppy            ramFloppy2;
+  private PrintMngr            printMngr;
+  private volatile AudioIn     audioIn;
+  private volatile AudioOut    audioOut;
+  private volatile LoadData    loadData;
+  private volatile ResetLevel  resetLevel;
+  private volatile boolean     emuRunning;
+  private volatile EmuSys      emuSys;
+  private volatile Boolean     iso646de;
 
 
   public EmuThread( ScreenFrm screenFrm, Properties props )
   {
-    super( "JKCEMU CPU" );
-    this.screenFrm   = screenFrm;
-    this.z80cpu      = new Z80CPU( this, this );
-    this.monitor     = "a monitor object for synchronization";
-    this.joyFrm      = null;
-    this.joyThreads  = new JoystickThread[ 2 ];
-    this.ram         = new byte[ 0x10000 ];
-    this.ramExtended = null;
-    this.ramFloppy1  = new RAMFloppy();
-    this.ramFloppy2  = new RAMFloppy();
-    this.printMngr   = new PrintMngr();
-    this.audioIn     = null;
-    this.audioOut    = null;
-    this.loadData    = null;
-    this.resetLevel  = ResetLevel.POWER_ON;
-    this.emuRunning  = false;
-    this.emuSys      = null;
+    super( Main.getThreadGroup(), "JKCEMU CPU" );
+    this.screenFrm            = screenFrm;
+    this.z80cpu               = new Z80CPU( this, this );
+    this.monitor              = "a monitor object for synchronization";
+    this.fileTimesViewFactory = new NIOFileTimesViewFactory();
+    this.joyFrm               = null;
+    this.joyThreads           = new JoystickThread[ 2 ];
+    this.ram                  = new byte[ 0x10000 ];
+    this.ramExtended          = null;
+    this.ramFloppy1           = new RAMFloppy();
+    this.ramFloppy2           = new RAMFloppy();
+    this.printMngr            = new PrintMngr();
+    this.audioIn              = null;
+    this.audioOut             = null;
+    this.loadData             = null;
+    this.resetLevel           = ResetLevel.POWER_ON;
+    this.emuRunning           = false;
+    this.emuSys               = null;
     Arrays.fill( this.joyThreads, null );
     applySettings( props );
   }
@@ -123,6 +126,8 @@ public class EmuThread extends Thread implements
 	emuSys = new LLC1( this, props );
       } else if( sysName.startsWith( "LLC2" ) ) {
 	emuSys = new LLC2( this, props );
+      } else if( sysName.startsWith( "NANOS" ) ) {
+	emuSys = new NANOS( this, props );
       } else if( sysName.startsWith( "PC/M" ) ) {
 	emuSys = new PCM( this, props );
       } else if( sysName.startsWith( "Poly880" ) ) {
@@ -245,6 +250,12 @@ public class EmuThread extends Thread implements
   }
 
 
+  public AudioOut getAudioOut()
+  {
+    return this.audioOut;
+  }
+
+
   public static int getDefaultSpeedKHz( Properties props )
   {
     int    rv      = A5105.getDefaultSpeedKHz();
@@ -294,6 +305,9 @@ public class EmuThread extends Thread implements
       else if( sysName.startsWith( "LLC2" ) ) {
 	rv = LLC2.getDefaultSpeedKHz();
       }
+      else if( sysName.startsWith( "NANOS" ) ) {
+	rv = NANOS.getDefaultSpeedKHz();
+      }
       else if( sysName.startsWith( "PC/M" ) ) {
 	rv = PCM.getDefaultSpeedKHz();
       }
@@ -313,7 +327,7 @@ public class EmuThread extends Thread implements
 	rv = Z1013.getDefaultSpeedKHz( props );
       }
       else if( sysName.startsWith( "ZXSpectrum" ) ) {
-	rv = ZXSpectrum.getDefaultSpeedKHz();
+	rv = ZXSpectrum.getDefaultSpeedKHz( props );
       }
     }
     return rv;
@@ -323,12 +337,6 @@ public class EmuThread extends Thread implements
   public EmuSys getEmuSys()
   {
     return this.emuSys;
-  }
-
-
-  public Boolean getISO646DE()
-  {
-    return this.iso646de;
   }
 
 
@@ -357,6 +365,18 @@ public class EmuThread extends Thread implements
       }
     }
     return rv;
+  }
+
+
+  public FileTimesViewFactory getFileTimesViewFactory()
+  {
+    return this.fileTimesViewFactory;
+  }
+
+
+  public Boolean getISO646DE()
+  {
+    return this.iso646de;
   }
 
 
@@ -450,11 +470,7 @@ public class EmuThread extends Thread implements
   {
     if( this.emuSys != null ) {
       if( this.emuSys.getSwapKeyCharCase() ) {
-	if( Character.isUpperCase( ch ) ) {
-	  ch = Character.toLowerCase( ch );
-	} else if( Character.isLowerCase( ch ) ) {
-	  ch = Character.toUpperCase( ch );
-	}
+	ch = TextUtil.toReverseCase( ch );
       }
       if( this.emuSys.getConvertKeyCharToISO646DE() ) {
 	this.emuSys.keyTyped( TextUtil.toISO646DE( ch ) );
@@ -489,6 +505,13 @@ public class EmuThread extends Thread implements
     if( emuSys != null ) {
       emuSys.audioOutChanged( audioOut );
     }
+  }
+
+
+  public void setBasicMemWord( int addr, int value )
+  {
+    this.emuSys.setBasicMemByte( addr, value & 0xFF );
+    this.emuSys.setBasicMemByte( addr + 1, (value >> 8) & 0xFF );
   }
 
 
@@ -561,16 +584,9 @@ public class EmuThread extends Thread implements
   public void writeAudioPhase( boolean phase )
   {
     AudioOut audioOut = this.audioOut;
-    if( audioOut != null )
+    if( audioOut != null ) {
       audioOut.writePhase( phase );
-  }
-
-
-  public void writeAudioValue( byte value )
-  {
-    AudioOut audioOut = this.audioOut;
-    if( audioOut != null )
-      audioOut.writeValue( value );
+    }
   }
 
 
@@ -596,11 +612,19 @@ public class EmuThread extends Thread implements
       this.loadData   = null;
       this.z80cpu.fireExit();
     }
+    AudioIn audioIn = this.audioIn;
+    if( audioIn != null ) {
+      audioIn.reset();
+    }
+    AudioOut audioOut = this.audioOut;
+    if( audioOut != null ) {
+      audioOut.reset();
+    }
   }
 
 
   /*
-   * Diese Methode ladet Daten in den Arbeitsspeicher und startet
+   * Diese Methode laedt Daten in den Arbeitsspeicher und startet
    * diese bei Bedarf.
    * Sind die Datenbytes als Programm zu starten, so werden sie
    * in den Emulations-Thread ueberfuehrt und dort geladen und gestartet.
@@ -638,24 +662,33 @@ public class EmuThread extends Thread implements
   }
 
 
+	/* --- EmuMemView --- */
+
+  @Override
+  public int getBasicMemByte( int addr )
+  {
+    return this.emuSys.getBasicMemByte( addr & 0xFFFF );
+  }
+
+
 	/* --- Z80IOSystem --- */
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( this.emuSys != null ) {
-      rv = this.emuSys.readIOByte( port );
+      rv = this.emuSys.readIOByte( port, tStates );
     }
     return rv;
   }
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     if( this.emuSys != null )
-      this.emuSys.writeIOByte( port, value );
+      this.emuSys.writeIOByte( port, value, tStates );
   }
 
 
@@ -742,46 +775,52 @@ public class EmuThread extends Thread implements
 	    this.z80cpu.setRegPC(
 			this.emuSys.getResetStartAddress( this.resetLevel ) );
 	  }
-	}
 
-	// RAM-Floppies und Druckmanager zuruecksetzen
-	this.printMngr.reset();
-	this.ramFloppy1.reset();
-	this.ramFloppy2.reset();
-	if( (this.emuSys != null)
-	    && (this.resetLevel == ResetLevel.POWER_ON)
-	    && Main.getBooleanProperty(
-                        "jkcemu.ramfloppy.clear_on_power_on",
-                        false ) )
-	{
-	  if( this.emuSys.supportsRAMFloppy1()
-	      && (this.ramFloppy1.getUsedSize() > 0) )
+	  // RAM-Floppies und Druckmanager zuruecksetzen
+	  this.printMngr.reset();
+	  this.ramFloppy1.reset();
+	  this.ramFloppy2.reset();
+	  if( (this.emuSys != null)
+	      && (this.resetLevel == ResetLevel.POWER_ON)
+	      && Main.getBooleanProperty(
+			"jkcemu.ramfloppy.clear_on_power_on",
+			false ) )
 	  {
-	    this.ramFloppy1.clear();
+	    if( this.emuSys.supportsRAMFloppy1()
+		&& (this.ramFloppy1.getUsedSize() > 0) )
+	    {
+	      this.ramFloppy1.clear();
+	    }
+	    if( this.emuSys.supportsRAMFloppy2()
+		&& (this.ramFloppy2.getUsedSize() > 0) )
+	    {
+	      this.ramFloppy2.clear();
+	    }
 	  }
-	  if( this.emuSys.supportsRAMFloppy2()
-	      && (this.ramFloppy2.getUsedSize() > 0) )
-	  {
-	    this.ramFloppy2.clear();
-	  }
-	}
 
-	// Fenster informieren
-	final Frame[] frms = Frame.getFrames();
-	if( frms != null ) {
-	  EventQueue.invokeLater(
-		new Runnable()
-		{
-		  @Override
-		  public void run()
-		  {
-		    for( Frame f : frms ) {
-		      if( f instanceof BasicFrm ) {
-			((BasicFrm) f).resetFired();
-		      }
-		    }
-		  }
-		} );
+	  // AutoLoader starten
+	  AutoLoader.start( this, Main.getProperties() );
+
+	  // AutoInputWorker starten
+	  AutoInputWorker.start( this, Main.getProperties() );
+
+	  // Fenster informieren
+	  final Frame[] frms = Frame.getFrames();
+	  if( frms != null ) {
+	    EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    for( Frame f : frms ) {
+			      if( f instanceof BasicFrm ) {
+				((BasicFrm) f).resetFired();
+			      }
+			    }
+			  }
+			} );
+	  }
 	}
 
 	// in die Z80-Emulation verzweigen

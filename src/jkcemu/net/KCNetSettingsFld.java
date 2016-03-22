@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,7 @@ public class KCNetSettingsFld
 			extends AbstractSettingsFld
 			implements DocumentListener
 {
-  private JTextField fldIPAddr;
+  private JTextField fldIpAddr;
   private JTextField fldSubnetMask;
   private JTextField fldGateway;
   private JTextField fldDNSServer;
@@ -68,12 +68,12 @@ public class KCNetSettingsFld
     gbc.gridy++;
     add( this.btnAutoConfig, gbc );
 
-    this.fldIPAddr  = createJTextField();
+    this.fldIpAddr  = createJTextField();
     gbc.insets.left = 5;
     gbc.gridwidth   = 1;
     gbc.gridy       = 1;
     gbc.gridx++;
-    add( this.fldIPAddr, gbc );
+    add( this.fldIpAddr, gbc );
 
     this.fldSubnetMask = createJTextField();
     gbc.gridy++;
@@ -118,16 +118,16 @@ public class KCNetSettingsFld
   {
     props.setProperty(
 		"jkcemu.kcnet.ip_address",
-		parseIPAddrText( this.fldIPAddr, "IP-Adresse" ) );
+		parseIpAddrText( this.fldIpAddr, "IP-Adresse" ) );
     props.setProperty(
 		"jkcemu.kcnet.subnet_mask",
-		parseIPAddrText( this.fldSubnetMask, "Subnetzmaske" ) );
+		parseIpAddrText( this.fldSubnetMask, "Subnetzmaske" ) );
     props.setProperty(
 		"jkcemu.kcnet.gateway",
-		parseIPAddrText( this.fldGateway, "Gateway" ) );
+		parseIpAddrText( this.fldGateway, "Gateway" ) );
     props.setProperty(
 		"jkcemu.kcnet.dns_server",
-		parseIPAddrText( this.fldDNSServer, "DNS-Server" ) );
+		parseIpAddrText( this.fldDNSServer, "DNS-Server" ) );
     EmuUtil.setProperty(
 		props,
 		"jkcemu.kcnet.auto_config",
@@ -150,7 +150,7 @@ public class KCNetSettingsFld
   @Override
   public void updFields( Properties props )
   {
-    this.fldIPAddr.setText(
+    this.fldIpAddr.setText(
 		EmuUtil.getProperty( props, "jkcemu.kcnet.ip_address" ) );
 
     this.fldSubnetMask.setText(
@@ -183,7 +183,7 @@ public class KCNetSettingsFld
   }
 
 
-  private String parseIPAddrText(
+  private String parseIpAddrText(
 			JTextField fld,
 			String     fieldName ) throws UserInputException
   {

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,15 +19,15 @@ import jkcemu.base.*;
 
 public class SaveTextDlg extends BasicDlg
 {
-  private JCheckBox    btnTrailing1A;
-  private JCheckBox    btnTrimLines;
-  private JComboBox    comboEncoding;
-  private JComboBox    comboLineEnd;
-  private JButton      btnSave;
-  private JButton      btnCancel;
-  private File         file;
-  private EditText     editText;
-  private boolean      fileSaved;
+  private JCheckBox         btnTrailing1A;
+  private JCheckBox         btnTrimLines;
+  private JComboBox<Object> comboEncoding;
+  private JComboBox<Object> comboLineEnd;
+  private JButton           btnSave;
+  private JButton           btnCancel;
+  private File              file;
+  private EditText          editText;
+  private boolean           fileSaved;
 
 
   public SaveTextDlg( File file, EditText editText )
@@ -80,7 +80,7 @@ public class SaveTextDlg extends BasicDlg
 
     panelProp.add( new JLabel( "Zeichensatz:" ), gbcProp );
 
-    this.comboEncoding = new JComboBox();
+    this.comboEncoding = new JComboBox<>();
     this.comboEncoding.addItem( "Systemzeichensatz" );
     this.comboEncoding.addItem(
 		new CharConverter( CharConverter.Encoding.ASCII_7BIT ) );
@@ -110,7 +110,7 @@ public class SaveTextDlg extends BasicDlg
     gbcProp.gridy++;
     panelProp.add( new JLabel( "Zeilenende:" ), gbcProp );
 
-    this.comboLineEnd = new JComboBox();
+    this.comboLineEnd = new JComboBox<>();
     this.comboLineEnd.addItem( new TextLineSeparator( "\r\n" ) );
     this.comboLineEnd.addItem( new TextLineSeparator( "\n" ) );
     this.comboLineEnd.addItem( new TextLineSeparator( "\r" ) );
@@ -208,7 +208,7 @@ public class SaveTextDlg extends BasicDlg
 		editText.getTextEditFrm(),
 		"Textdatei speichern",
 		preSelection != null ?
-			 preSelection : Main.getLastPathFile( "text" ),
+			 preSelection : Main.getLastDirFile( "text" ),
 		TextEditFrm.getTextFileFilters() );
       if( file != null ) {
 
@@ -305,8 +305,9 @@ public class SaveTextDlg extends BasicDlg
       String lineEnd    = "\r\n";
       Object lineEndObj = this.comboLineEnd.getSelectedItem();
       if( lineEndObj != null ) {
-	if( lineEndObj instanceof TextLineSeparator )
+	if( lineEndObj instanceof TextLineSeparator ) {
 	  lineEnd = ((TextLineSeparator) lineEndObj).getLineEnd();
+	}
       }
 
       // Datei schreiben

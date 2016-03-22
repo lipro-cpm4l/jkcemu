@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -42,6 +42,7 @@ public class PlainDisk extends AbstractFloppyDisk
 			fmt.getCylinders(),
 			fmt.getSectorsPerCylinder(),
 			fmt.getSectorSize(),
+			0,			// kein Interleave
 			driveFileName,
 			rad,
 			null,
@@ -53,10 +54,11 @@ public class PlainDisk extends AbstractFloppyDisk
 
 
   public static PlainDisk createForByteArray(
-				Frame            owner,
-				String           fileName,
-				byte[]           fileBytes,
-				FloppyDiskFormat fmt ) throws IOException
+			Frame            owner,
+			String           fileName,
+			byte[]           fileBytes,
+			FloppyDiskFormat fmt,
+			int              interleave ) throws IOException
   {
     PlainDisk rv = null;
     if( fileBytes != null ) {
@@ -66,6 +68,7 @@ public class PlainDisk extends AbstractFloppyDisk
 			fmt.getCylinders(),
 			fmt.getSectorsPerCylinder(),
 			fmt.getSectorSize(),
+			interleave,
 			fileName,
 			null,
 			null,
@@ -75,6 +78,16 @@ public class PlainDisk extends AbstractFloppyDisk
 			false );
     }
     return rv;
+  }
+
+
+  public static PlainDisk createForByteArray(
+			Frame            owner,
+			String           fileName,
+			byte[]           fileBytes,
+			FloppyDiskFormat fmt ) throws IOException
+  {
+    return createForByteArray( owner, fileName, fileBytes, fmt, 0 );
   }
 
 
@@ -91,6 +104,7 @@ public class PlainDisk extends AbstractFloppyDisk
 			fmt.getCylinders(),
 			fmt.getSectorsPerCylinder(),
 			fmt.getSectorSize(),
+			0,			// kein Interleave
 			driveFileName,
 			null,
 			raf,
@@ -207,6 +221,7 @@ public class PlainDisk extends AbstractFloppyDisk
 			0,
 			0,
 			0,
+			0,			// kein Interleave
 			file.getPath(),
 			null,
 			raf,
@@ -245,6 +260,7 @@ public class PlainDisk extends AbstractFloppyDisk
 			fmt.getCylinders(),
 			fmt.getSectorsPerCylinder(),
 			fmt.getSectorSize(),
+			0,			// kein Interleave
 			file.getPath(),
 			null,
 			raf,
@@ -350,88 +366,10 @@ public class PlainDisk extends AbstractFloppyDisk
 					int physHead,
 					int sectorIdx )
   {
-    SectorData rv         = null;
-    int        sectorSize = getSectorSize();
-    long       filePos    = calcFilePos( physCyl, physHead, sectorIdx );
-    if( (sectorSize > 0) && (filePos >= 0) ) {
-      if( this.diskBytes != null ) {
-	if( filePos <= Integer.MAX_VALUE ) {
-	  rv = new SectorData(
-			sectorIdx,
-			physCyl,
-			physHead,
-			sectorIdx + 1,
-			this.sectorSizeCode,
-			false,
-			false,
-			this.diskBytes,
-			(int) filePos,
-			sectorSize );
-	}
-      }
-      else if( (this.rad != null) || (this.raf != null) ) {
-	try {
-	  byte[] buf = new byte[ sectorSize ];
-	  int    len = -1;
-	  if( this.rad != null ) {
-	    this.rad.seek( filePos );
-	    len = this.rad.read( buf, 0, buf.length );
-	  } else {
-	    this.raf.seek( filePos );
-	    len = this.raf.read( buf );
-	  }
-	  if( len > 0 ) {
-	    // falls nicht vollstaendig gelesen wurde
-	    while( len < buf.length ) {
-	      int n = -1;
-	      if( this.rad != null ) {
-		n = this.rad.read( buf, len, buf.length - len );
-	      } else {
-		n = this.raf.read( buf, len, buf.length - len );
-	      }
-	      if( n > 0 ) {
-		len += n;
-	      } else {
-		break;
-	      }
-	    }
-	  }
-	  if( len > 0 ) {
-	    rv = new SectorData(
-				sectorIdx,
+    return getSectorByIndexInternal(
 				physCyl,
 				physHead,
-				sectorIdx + 1,
-				this.sectorSizeCode,
-				false,
-				false,
-				buf,
-				0,
-				len );
-	  }
-	}
-	catch( IOException ex ) {
-	  fireShowReadError( physCyl, physHead, sectorIdx + 1, ex );
-	  rv = new SectorData(
-			sectorIdx,
-			physCyl,
-			physHead,
-			sectorIdx + 1,
-			this.sectorSizeCode,
-			true,		// CRC-Fehler
-			false,
-			null,
-			0,
-			0 );
-	}
-      }
-      if( rv != null ) {
-	rv.setDisk( this );
-	rv.setFilePos( filePos );
-	rv.setFilePortionLen( sectorSize );
-      }
-    }
-    return rv;
+				sectorIndexToInterleave( sectorIdx ) );
   }
 
 
@@ -444,7 +382,10 @@ public class PlainDisk extends AbstractFloppyDisk
 				int sectorNum,
 				int sizeCode )
   {
-    SectorData rv = getSectorByIndex( physCyl, physHead, sectorNum - 1 );
+    SectorData rv = getSectorByIndexInternal(
+					physCyl,
+					physHead,
+					sectorNum - 1 );
     if( rv != null ) {
       if( (rv.getCylinder() != cyl)
 	  || (rv.getHead() != head)
@@ -532,6 +473,7 @@ public class PlainDisk extends AbstractFloppyDisk
 		int                         cyls,
 		int                         sectorsPerCyl,
 		int                         sectorSize,
+		int                         interleave,
 		String                      fileName,
 		DeviceIO.RandomAccessDevice rad,
 		RandomAccessFile            raf,
@@ -540,7 +482,7 @@ public class PlainDisk extends AbstractFloppyDisk
 		boolean                     readOnly,
 		boolean                     appendable )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize );
+    super( owner, sides, cyls, sectorsPerCyl, sectorSize, interleave );
     this.fileName       = fileName;
     this.rad            = rad;
     this.raf            = raf;
@@ -595,6 +537,91 @@ public class PlainDisk extends AbstractFloppyDisk
 	    }
 	  }
 	}
+      }
+    }
+    return rv;
+  }
+
+
+  private synchronized SectorData getSectorByIndexInternal(
+							int physCyl,
+							int physHead,
+							int sectorIdx )
+  {
+    SectorData rv         = null;
+    int        sectorSize = getSectorSize();
+    long       filePos    = calcFilePos( physCyl, physHead, sectorIdx );
+    if( (sectorSize > 0) && (filePos >= 0) ) {
+      if( this.diskBytes != null ) {
+	if( filePos <= Integer.MAX_VALUE ) {
+	  rv = new SectorData(
+			sectorIdx,
+			physCyl,
+			physHead,
+			sectorIdx + 1,
+			this.sectorSizeCode,
+			this.diskBytes,
+			(int) filePos,
+			sectorSize );
+	}
+      }
+      else if( (this.rad != null) || (this.raf != null) ) {
+	try {
+	  byte[] buf = new byte[ sectorSize ];
+	  int    len = -1;
+	  if( this.rad != null ) {
+	    this.rad.seek( filePos );
+	    len = this.rad.read( buf, 0, buf.length );
+	  } else {
+	    this.raf.seek( filePos );
+	    len = this.raf.read( buf );
+	  }
+	  if( len > 0 ) {
+	    // falls nicht vollstaendig gelesen wurde
+	    while( len < buf.length ) {
+	      int n = -1;
+	      if( this.rad != null ) {
+		n = this.rad.read( buf, len, buf.length - len );
+	      } else {
+		n = this.raf.read( buf, len, buf.length - len );
+	      }
+	      if( n > 0 ) {
+		len += n;
+	      } else {
+		break;
+	      }
+	    }
+	  }
+	  if( len > 0 ) {
+	    rv = new SectorData(
+				sectorIdx,
+				physCyl,
+				physHead,
+				sectorIdx + 1,
+				this.sectorSizeCode,
+				buf,
+				0,
+				len );
+	  }
+	}
+	catch( IOException ex ) {
+	  fireShowReadError( physCyl, physHead, sectorIdx + 1, ex );
+	  rv = new SectorData(
+			sectorIdx,
+			physCyl,
+			physHead,
+			sectorIdx + 1,
+			this.sectorSizeCode,
+			null,
+			0,
+			0 );
+	  rv.setError( true );
+	}
+      }
+      if( rv != null ) {
+	rv.setDisk( this );
+	rv.setFilePos( filePos );
+	rv.setFilePortionLen( sectorSize );
       }
     }
     return rv;

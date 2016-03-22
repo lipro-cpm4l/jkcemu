@@ -38,9 +38,10 @@
    </li>
    <li><a href="fileformats.htm#kcbasic">4. KC-BASIC-Programmdatei</a></li>
    <li><a href="fileformats.htm#tap">5. KC-TAP-Format</a></li>
-   <li><a href="fileformats.htm#rbasic">6. RBASIC-Programmdatei</a></li>
-   <li><a href="fileformats.htm#hex">7. Intel-HEX-Format</a></li>
-   <li><a href="fileformats.htm#bin">8. Speicherabbilddatei</a></li>
+   <li><a href="fileformats.htm#basic">6. BASIC-Programmdatei</a></li>
+   <li><a href="fileformats.htm#rbasic">7. RBASIC-Programmdatei</a></li>
+   <li><a href="fileformats.htm#hex">8. Intel-HEX-Format</a></li>
+   <li><a href="fileformats.htm#bin">9. Speicherabbilddatei</a></li>
   </ul>
  <br/><br/>
 
@@ -116,15 +117,19 @@
       </tr>
       <tr>
        <td valign="top">B:</td>
-       <td>BASIC-Programm (KC-BASIC)</td>
+       <td>BASIC-Programm</td>
       </tr>
       <tr>
        <td valign="top">b:</td>
-       <td>BASIC-Programm (Mini-/Tiny-BASIC)</td>
+       <td>Mini-/Tiny-BASIC-Programm</td>
       </tr>
       <tr>
        <td valign="top">C:</td>
-       <td>Ausf&uuml;hrbares Maschinencodeprogramm</td>
+       <td>Maschinencodeprogramm, selbststartend</td>
+      </tr>
+      <tr>
+       <td valign="top">M:</td>
+       <td>Maschinencodeprogramm</td>
       </tr>
      </table>
     </td>
@@ -140,10 +145,10 @@
     <td nowrap valign="top">16 Bytes</td>
     <td nowrap valign="top">Dateiname</td>
     <td>
-     Das ist eine 16 Zeichen lange Bezeichnung,
+     Das ist eine maximal 16&nbsp;Zeichen lange Bezeichnung,
      die bei Speicherung auf Magnettonband als Dateiname
      dient.
-     Ist die Bezeichnung k&uuml;rzer als 16 Zeichen,
+     Ist die Bezeichnung k&uuml;rzer als 16&nbsp;Zeichen,
      wird mit Leerzeichen aufgef&uuml;llt.
      <br/>
      Da beim Emulator die Datei im Dateisystem des Computers liegt
@@ -239,15 +244,17 @@
     <td nowrap valign="top">8 Bytes</td>
     <td nowrap valign="top">Dateiname</td>
     <td>
-     Das ist eine maximal 8 Zeichen lange Bezeichnung,
+     Das ist eine maximal 8&nbsp;Zeichen lange Bezeichnung,
      die bei Speicherung auf Magnettonband als Dateiname
      dient.
-     <br/>
-     Da beim Emulator die Datei im Dateisystem des Computers liegt
-     und somit bereits einen Namen hat,
-     hat dieses Feld nur die Bedeutung
-     einer zus&auml;tzlichen Beschreibung.
-     Diese Beschreibung muss nicht mit dem Namen im Dateisystem
+     <br/><br/>
+     <b>Achtung!</b> Ist der Name k&uuml;rzer als 8&nbsp;Zeichen,
+     werden bei KC85/1, KC87 und Z9001 Null-Bytes eingetragen,
+     bei HC900 und KC85/2..5 dagegen Leerzeichen.
+     <br/><br/>
+     Da beim Emulator die Datei im Dateisystem des Computers liegt,
+     hat sie bereits einen Namen.
+     Dieser Name muss nicht mit dem im Dateikopf eingetragenen Namen
      &uuml;bereinstimmen.
     </td>
    </tr>
@@ -256,13 +263,46 @@
     <td nowrap valign="top">3 Bytes</td>
     <td nowrap valign="top">Dateityp</td>
     <td>
-     Das ist eine maximal 3 Zeichen lange Dateinamenerweiterung.
-     Da die Dateinamenerweiterung, die als Dateityp fungiert,
-     sich direkt an den Dateinamen anschlie&szlig;t,
-     werden h&auml;ufig beide Felder zu einer 11-Zeichen langen
-     Dateibezeichnung zusammengefasst.
-     Auch JKCEMU bietet hierf&uuml;r nur ein Feld an
-     und f&uuml;llt ggf. mit Leerzeichen auf.
+     Das ist ein maximal 3&nbsp;Zeichen langer Dateityp.
+     Die wichtigsten Typen sind:
+     <table border="0">
+      <tr>
+       <td valign="top">ASM:</td>
+       <td>Assemblerquelltext</td>
+      </tr>
+      <tr>
+       <td valign="top">COM:</td>
+       <td>Maschinencodeprogramm</td>
+      </tr>
+      <tr>
+       <td valign="top">DUM:</td>
+       <td>Speicherabzug</td>
+      </tr>
+      <tr>
+       <td valign="top">KCB:</td>
+       <td>KC-BASIC-Programm als Maschinencodeprogramm gespeichert</td>
+      </tr>
+      <tr>
+       <td valign="top">KCC:</td>
+       <td>CAOS-Maschinencodeprogramm</td>
+      </tr>
+      <tr>
+       <td valign="top">TXT:</td>
+       <td>Textdatei</td>
+      </tr>
+     </table>
+     <br/>
+     <b>Achtung!</b> Bei HC900 und KC85/2..5 ist dieses Feld
+     zwar als Dateityp definiert (siehe KC85/3 Systemhandbuch, Seite&nbsp;88),
+     jedoch wird beim Speichern und Laden mittels Kassette ein Datetyp
+     nicht ber&uuml;cksichtigt.
+     Stattdessen werden Dateiname und Dateityp zusammen als eine
+     11&nbsp;Zeichen lange Dateibezeichnung verwendet
+     (siehe KC85/3 Systemhandbuch, Seite&nbsp;32),
+     die, sofern sie k&uuml;rzer als 11&nbsp;Zeichen ist,
+     mit Leerzeichen aufgef&uuml;llt wird.
+     Aus diesem Grund benutzt auch JKCEMU bei HC900 und KC85/2..5
+     eine 11&nbsp;Zeichen lange Bezeichnung.
     </td>
    </tr>
    <tr>
@@ -271,8 +311,11 @@
     <td nowrap valign="top">Anzahl nachfolgender Adressen</td>
     <td>
      Dieses Feld gibt die Anzahl der nachfolgenden Adressen an
-     (Anfangs-, End-, Start-/Kaltstart- und Warmstartadresse).
-     Hier steht meistens eine zwei oder drei und selten eine vier.
+     (Anfangs-, End- und ggf. Startadresse).
+     Steht hier eine Zahl gr&ouml;&szlig;er&nbsp;3,
+     enth&auml;lt die Datei trotzdem nur 3&nbsp;Adressen.
+     Allerdings rechnet dann ein HC900 bzw. KC85/2..5 die Startadresse
+     beim Laden der Datei mit einem Adressoffset nicht um.
     </td>
    </tr>
    <tr>
@@ -284,8 +327,13 @@
    <tr>
     <td nowrap valign="top">19</td>
     <td nowrap valign="top">2 Bytes</td>
-    <td nowrap valign="top">Endadresse + 1</td>
-    <td>Endadresse + 1 im emulierten Arbeitsspeicher</td>
+    <td nowrap valign="top">Endadresse</td>
+    <td>
+     Endadresse im emulierten Arbeitsspeicher
+     <br/><br/>
+     <b>Achtung!</b> Bei HC900 und KC85/2..5 wird die Endadresse + 1
+     eingetragen (siehe KC85/3 Systemhandbuch, Seite&nbsp;88).
+    </td>
    </tr>
    <tr>
     <td nowrap valign="top">21</td>
@@ -297,22 +345,7 @@
      <br/>
      Die Startadresse ist nur g&uuml;ltig,
      wenn das Feld <em>Anzahl nachfolgender Adressen</em>
-     den Wert drei oder vier hat.
-    </td>
-   </tr>
-   <tr>
-    <td nowrap valign="top">23</td>
-    <td nowrap valign="top">2 Bytes</td>
-    <td nowrap valign="top">Warmstartadresse</td>
-    <td>
-     Wenn ein Programm zwei Startadressen hat (Kalt- und Warmstart),
-     ist hier die Warmstartadresse zu finden.
-     <br/>
-     Die Warmstartadresse ist nur g&uuml;ltig,
-     wenn das Feld <em>Anzahl nachfolgender Adressen</em>
-     den Wert vier hat.
-     <br/>
-     JKCEMU wertet die Warmstartadresse nicht aus.
+     den Wert drei oder gr&ouml;&szlig;er hat.
     </td>
    </tr>
   </table>
@@ -322,14 +355,16 @@
   Das gilt auch f&uuml;r die Adressangaben im Kopfblock.
  <br/><br/>
   <a name="kcc_endaddr"><b>Achtung!</b></a> Die im Dateikopf
-  eingetragene zweite Adresse ist die Endadresse + 1
-  (siehe KC85/3 Systemhandbuch, Seite 88).
+  eingetragene zweite Adresse ist bei KC85/1, KC87 und Z9001
+  die reale Endadresse und bei HC900 und KC85/2..5 die Endadresse + 1.
+  Da nicht 
   Allerdings scheint das nicht &uuml;berall so implementiert zu sein.
   Um sicherzustellen, dass das letzte Byte nicht verloren geht,
   behandelt JKCEMU das KCC-Format folgenderma&szlig;en:
   <ol>
    <li>
-    Beim Speichern wird die Endadresse + 1 in den Dateikopf eingetragen.
+    Beim Speichern wird die Endadresse entsprechend der o.a. Regel
+    in den Dateikopf eingetragen.
     Der KC-Header entspricht somit der offiziellen Dokumentation.
    </li>
    <li>
@@ -345,41 +380,36 @@
  <h3><a name="kcm">3.1. KCM-Format</a></h3>
   Das KCM-Format ist identisch zum KCC-Format.
   Der Unterschied in der Dateiendung soll anzeigen,
-  dass die Datei zwar Maschinencode, aber kein ausf&uuml;hrbares Programm enth&auml;t.
+  dass die Datei zwar Maschinencode,
+  aber kein ausf&uuml;hrbares Programm enth&auml;t.
  <br/><br/>
 
  <h3><a name="jtc">3.2. JTC-Format</a></h3>
   Der Jugend+Technik-Computer verwendet in der Ausbaustufe mit dem
-  erweiterten Betriebssystem <em>EMR-ES 1988</em>
+  erweiterten Betriebssystem <em>EMR-ES&nbsp;1988</em>
   das Kassettenaufzeichnungsformat der KC-Computer.
   Aus diesem Grund wird beim <em>JTCEMU</em>, dem Ju+Te-Computer-Emulator,
   das KCC-Dateiformat verwendet.
   Um jedoch deutlich zu machen,
   dass eine solche Datei kein KC-Programm sondern ein
   Ju+Te-Computer-Programm enth&auml;lt,
-  wird das Format bei JTCEMU <em>JTC-</em>Format genannt,
-  und die Dateiendung ist <em>*.jtc</em>.
+  wird das Format bei JTCEMU <em>JTC-</em>Format genannt
+  (Dateiendung ist <em>*.jtc</em>).
  <br/><br/>
   <b>Achtung!</b> Entgegen der KC85/3-Dokumentation tr&auml;gt
-  der Ju+Te-Computer die tats&auml;chliche Endadresse in den Dateikopf
-  ein und nicht die Endadresse + 1.
+  der Ju+Te-Computer die tats&auml;chliche Endadresse in den Dateikopf ein.
   Aus diesem Grund tut es auch der Emulator JTCEMU so.
-  Insofern ist das von JTCEMU erzeugte JTC-Format nicht ganz identisch
-  zu dem vom JKCEMU erzeugten KCC-Format.
-  Allerdings geht beim Einlesen von JTC-Dateien in JKCEMU trotzdem
-  kein Byte verloren, da bis einschlie&szlig;lich zu der
-  im Dateikopf eingetragenen Endadresse gelesen wird.
  <br/><br/>
 
 
  <h2><a name="kcbasic">4. KC-BASIC-Programmdatei</a></h2>
   Eine KC-BASIC-Programmdatei hat &uuml;blicherweise die Dateiendung
-  <em>*.sss</em> und enth&auml;lt am Anfang zwei Bytes
+  <em>*.sss</em> und enth&auml;lt am Anfang zwei Bytes,
   die die L&auml;ge des BASIC-Programms angeben.
   Ab dem dritten Byte folgt das eigentliche Programm.
-  Abgeschlossen wird die Datei mit einem Byte mit dem Wert 3.
-  Die Programmdatei ist somit drei Bytes l&auml;nger
-  als die L&auml;ngenangabe in den ersten beiden Bytes.
+  Danach folgt ein Byte mit dem Wert&nbsp;3.
+  Dahinter folgen F&uuml;llbytes,
+  bis die Datel&auml;nge ein Vielfaches von 128&nbsp;Bytes hat.
  <br/><br/>
   Manche KC-BASIC-Programmdateien haben einen 11-Byte gro&szlig;en
   Dateikopf, der mit einer BASIC-Programmdateikennung beginnt
@@ -403,7 +433,7 @@
   denn es enth&auml;lt neben den Nutzbytes auch Blocknummern.
  <br/><br/>
   Das KC-TAP-Format beginnt mit einer 16 Byte gro&szlig;en Kennung,
-  an den sich 129 Byte gro&szlig;e Bl&ouml;cke anschlie&szlig;en.
+  an die sich 129 Byte gro&szlig;e Bl&ouml;cke anschlie&szlig;en.
   Jeder Block beginnt mit einer Blocknummer gefolgt von 128 Nutzbytes.
   Der erste Block ist gew&ouml;hnlich der Kopfblock und gibt Auskunft
   &uuml;ber die Art und die L&auml;nge der Datei.
@@ -467,12 +497,13 @@
   <b>Hinweis:</b> KC-TAP-Dateien k&ouml;nnen auch mit den
   <a href="audio.htm">Audio-Funktionen</a> wie Sound-Dateien
   eingelesen werden.
-  Das ist &uuml;brigens der einzige Weg, KC-TAP-Dateien in JKCEMU zu laden,
-  die ein KC-BASIC-Programm im ASCII-Format oder ein KC-BASIC-Datenfeld
-  enthalten.
+  Das ist &uuml;brigens der einzige Weg,
+  KC-TAP-Dateien in den JKCEMU zu laden, die ein KC-BASIC-Programm
+  im ASCII-Format oder ein KC-BASIC-Datenfeld enthalten.
  <br/><br/>
   <b>Hinweis:</b> Im <a href="tools/filebrowser.htm">Datei-Browser</a>
-  k&ouml;nnen KC-TAP-Dateien in Sound-Dateien exportiert werden.
+  und im <a href="tools/fileconverter.htm">Dateikonverter</a> k&ouml;nnen
+  KC-TAP-Dateien in Sound-Dateien exportiert bzw. konvertiert werden.
  <br/><br/>
 
  <h3><a name="multi_tap">5.1. Multi-TAP-Dateien</a></h3>
@@ -508,7 +539,16 @@
  <br/><br/>
 
 
- <h2><a name="rbasic">6. RBASIC-Programmdatei</a></h2>
+ <h2><a name="basic">6. BASIC-Programmdatei</a></h2>
+  Ein BASIC-Programmdatei enth&auml;lt ein BASIC-Programm,
+  so wie es im Arbeitsspeicher vorliegt.
+  Das erste Byte in der Datei ist das erste Byte des eigentlichen
+  BASIC-Programms.
+  Die Dateiendung ist <em>*.bas</em>
+  (Ausnahme bei AC1-BASIC6: <em>*.abc</em>).
+ <br/><br/>
+
+ <h2><a name="rbasic">7. RBASIC-Programmdatei</a></h2>
   Der A5105 (BIC, ALBA PC) benutzt dieses Dateiformat zur Speicherung
   von BASIC-Programmen auf Diskette.
   Das erste Byte in der Datei hat den Wert 0FFh.
@@ -519,7 +559,7 @@
   Die &uuml;bliche Dateiendung ist <em>*.bas</em>.
  <br/><br/>
 
- <h2><a name="hex">7. Intel-HEX-Format</a></h2>
+ <h2><a name="hex">8. Intel-HEX-Format</a></h2>
   In einer Intel-HEX-Datei werden die bin&auml;ren Daten als hexadezimale
   Zahlen in textueller Form gespeichert,
   d.h., die Intel-HEX-Datei ist eine reine ASCII-Datei.
@@ -594,7 +634,7 @@
  <br/><br/>
 
 
- <h2><a name="bin">8. Speicherabbilddatei</a></h2>
+ <h2><a name="bin">9. Speicherabbilddatei</a></h2>
   Eine Speicherabbilddatei enth&auml;lt ein reines Abbild
   eines Teils des Arbeitsspeichers des Emulators.
   Es sind keine Kopfdaten enthalten, d.h.,

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -34,6 +34,12 @@ public class KCNet implements
   private static final String ID_TEXT = "###     KCNET     ### \r\n"
 					+ " WIZnet TCP/IP-Stack  \r\n"
 					+ "###   by JKCEMU   ### \r\n";
+
+  // Masken fuer Eigenschaft jkcemu.debug.net
+  private static final int DEBUG_MASK_MSG   = 0x01;
+  private static final int DEBUG_MASK_CMD   = 0x02;
+  private static final int DEBUG_MASK_READ  = 0x04;
+  private static final int DEBUG_MASK_WRITE = 0x08;
 
   private enum Command {
 		NONE,
@@ -72,7 +78,7 @@ public class KCNet implements
 
   private String   title;
   private Command  cmd;
-  private int      debugLevel;
+  private int      debugMask;
   private int[]    args;
   private int      argIdx;
   private int      curAddr;
@@ -86,10 +92,8 @@ public class KCNet implements
   private int      resultPos;
   private byte[]   resultBytes;
   private byte[]   doubleByteBuf;
-  private byte[]   emptyIPAddr;
+  private byte[]   emptyIpAddr;
   private byte[][] ipAddrMem;
-  private byte[]   dnsIPAddr;
-  private boolean  dnsChecked;
   private W5100    w5100;
   private Z80PIO   pio;
 
@@ -97,27 +101,25 @@ public class KCNet implements
   public KCNet( String title )
   {
     this.title         = title;
-    this.debugLevel    = 0;
+    this.debugMask     = 0;
     this.portSeqNum    = PORT_NUM_MIN;
     this.args          = new int[ 5 ];
     this.doubleByteBuf = new byte[ 2 ];
-    this.emptyIPAddr   = new byte[ 4 ];
-    Arrays.fill( this.emptyIPAddr, (byte) 0 );
+    this.emptyIpAddr   = new byte[ 4 ];
+    Arrays.fill( this.emptyIpAddr, (byte) 0 );
 
     this.ipAddrMem  = new byte[ 8 ][];
     for( int i = 0; i < this.ipAddrMem.length; i++ ) {
       this.ipAddrMem[ i ] = new byte[ 4 ];
     }
-    this.dnsChecked = false;
-    this.dnsIPAddr  = null;
-    this.w5100      = new W5100();
-    this.pio        = new Z80PIO( title );
+    this.w5100 = new W5100();
+    this.pio   = new Z80PIO( title );
     this.pio.addPIOPortListener( this, Z80PIO.PortInfo.A );
 
     String text = System.getProperty( "jkcemu.debug.net" );
     if( text != null ) {
       try {
-	this.debugLevel = Integer.parseInt( text );
+	this.debugMask = Integer.parseInt( text );
       }
       catch( NumberFormatException ex ) {}
     }
@@ -131,19 +133,25 @@ public class KCNet implements
   }
 
 
+  public static boolean getAutoConfig()
+  {
+    return Main.getBooleanProperty( "jkcemu.kcnet.auto_config", true );
+  }
+
+
   public int read( int port )
   {
     int rv = -1;
     switch( port & 0x03 ) {
       case 0x00:
-	rv = this.pio.readPortA();
-	if( this.debugLevel > 2 ) {
+	rv = this.pio.readDataA();
+	if( (this.debugMask & DEBUG_MASK_READ) != 0 ) {
 	  System.out.printf( "KCNet read: %02X\n", rv );
 	}
 	break;
 
       case 0x01:
-	rv = this.pio.readPortB();
+	rv = this.pio.readDataB();
 	break;
 
       case 0x02:
@@ -162,14 +170,14 @@ public class KCNet implements
   {
     switch( port & 0x03 ) {
       case 0x00:
-	if( this.debugLevel > 2 ) {
+	if( (this.debugMask & DEBUG_MASK_WRITE) != 0 ) {
 	  System.out.printf( "KCNet write: %02X\n", value );
 	}
-	this.pio.writePortA( value );
+	this.pio.writeDataA( value );
 	break;
 
       case 0x01:
-	this.pio.writePortB( value );
+	this.pio.writeDataB( value );
 	break;
 
       case 0x02:
@@ -225,7 +233,7 @@ public class KCNet implements
   @Override
   public void reset( boolean powerOn )
   {
-    if( this.debugLevel > 0 ) {
+    if( (this.debugMask & DEBUG_MASK_MSG) != 0 ) {
       System.out.printf( "KCNet reset: power_on=%b\n", powerOn );
     }
     this.pio.reset( powerOn );
@@ -238,26 +246,22 @@ public class KCNet implements
       for( byte[] ipAddr : this.ipAddrMem ) {
 	Arrays.fill( ipAddr, (byte) 0 );
       }
-      byte[] ipAddr = NetUtil.getIPAddr(
-			Main.getProperty( "jkcemu.kcnet.dns_server" ) );
-      if( (ipAddr == null)
-	  && Main.getBooleanProperty( "jkcemu.kcnet.auto_config", true ) )
-      {
-	if( !this.dnsChecked ) {
-	  this.dnsChecked = true;
-	  this.dnsIPAddr  = NetUtil.getDNSServerIPAddr();
-	  if( this.dnsIPAddr != null ) {
-	    if( this.dnsIPAddr.length != 4 ) {
-	      this.dnsIPAddr = null;
-	    }
-	  }
+      NetConfig netConfig = this.w5100.getNetConfig();
+      if( netConfig != null ) {
+	byte[] dnsServerIpAddr = null;
+	if( KCNet.getAutoConfig() ) {
+	  dnsServerIpAddr = netConfig.getDnsServerIpAddr();
+	} else {
+	  dnsServerIpAddr = netConfig.getManualDnsServerIpAddr();
 	}
-	ipAddr = this.dnsIPAddr;
-      }
-      if( ipAddr != null ) {
-	if( ipAddr.length == 4 ) {
-	  for( int i = 0; i < ipAddr.length; i++ ) {
-	    this.ipAddrMem[ 0 ][ i ] = ipAddr[ i ];
+	if( dnsServerIpAddr != null ) {
+	  if( dnsServerIpAddr.length != 4 ) {
+	    dnsServerIpAddr = null;
+	  }
+	  if( dnsServerIpAddr != null ) {
+	    for( int i = 0; i < dnsServerIpAddr.length; i++ ) {
+	      this.ipAddrMem[ 0 ][ i ] = dnsServerIpAddr[ i ];
+	    }
 	  }
 	}
       }
@@ -289,7 +293,7 @@ public class KCNet implements
       if( this.tStatesToTimeout > 0 ) {
 	this.tStatesToTimeout -= tStates;
 	if( this.tStatesToTimeout <= 0 ) {
-	  if( this.debugLevel > 0 ) {
+	  if( (this.debugMask & DEBUG_MASK_MSG) != 0 ) {
 	    System.out.println( "KCNet timeout" );
 	  }
 	  this.errorCnt = (this.errorCnt + 1) & 0xFFFF;
@@ -355,7 +359,7 @@ public class KCNet implements
 	this.argIdx = 0;
 	if( (value >= 0) && (value < commands.length) ) {
 	  Command cmd = commands[ value ];
-	  if( this.debugLevel > 2 ) {
+	  if( (this.debugMask & DEBUG_MASK_CMD) != 0 ) {
 	    System.out.print( "  " );
 	    System.out.println( cmd );
 	  }
@@ -509,7 +513,7 @@ public class KCNet implements
 	  if( value < this.ipAddrMem.length ) {
 	    setResultBytes( this.ipAddrMem[ value ] );
 	  } else {
-	    setResultBytes( this.emptyIPAddr );
+	    setResultBytes( this.emptyIpAddr );
 	  }
 	} else {
 	  setIdle();

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,16 +9,18 @@
 package jkcemu.emusys.z1013;
 
 import java.awt.*;
-import java.io.File;
 import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
 import jkcemu.disk.GIDESettingsFld;
+import jkcemu.emusys.Z1013;
 
 
 public class Z1013SettingsFld extends AbstractSettingsFld
 {
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 500;
+
   private JTabbedPane            tabbedPane;
   private JRadioButton           btnZ1013_01;
   private JRadioButton           btnZ1013_12;
@@ -61,6 +63,8 @@ public class Z1013SettingsFld extends AbstractSettingsFld
   private JPanel                 tabModROM;
   private JPanel                 tabExt;
   private JPanel                 tabEtc;
+  private AutoLoadSettingsFld    tabAutoLoad;
+  private AutoInputSettingsFld   tabAutoInput;
 
 
   public Z1013SettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -271,9 +275,9 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     this.tabRF = new RAMFloppiesSettingsFld(
 		settingsFrm,
 		propPrefix,
-		"RAM-Floppy nach MP 3/88 (256 KByte) an IO-Adressen 98h-9Fh",
+		"RAM-Floppy nach MP 3/88 (256 KByte) an E/A-Adressen 98h-9Fh",
 		RAMFloppy.RFType.MP_3_1988,
-		"RAM-Floppy nach MP 3/88 (256 KByte) an IO-Adressen 58h-5Fh",
+		"RAM-Floppy nach MP 3/88 (256 KByte) an E/A-Adressen 58h-5Fh",
 		RAMFloppy.RFType.MP_3_1988 );
     this.tabbedPane.addTab( "RAM-Floppies", this.tabRF );
 
@@ -297,7 +301,7 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 
     this.fldAltBasic = new ROMFileSettingsFld(
 		settingsFrm,
-		this.propPrefix + "rom_basic.",
+		propPrefix + "rom_basic.",
 		"Alternativer Inhalt des KC-BASIC-Moduls:" );
     gbcModROM.fill        = GridBagConstraints.HORIZONTAL;
     gbcModROM.weightx     = 1.0;
@@ -317,7 +321,7 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 
     this.fldMegaROM = new ROMFileSettingsFld(
 		settingsFrm,
-		this.propPrefix + "rom_mega.",
+		propPrefix + "rom_mega.",
 		"Inhalt des Mega-ROM-Moduls:" );
     gbcModROM.fill        = GridBagConstraints.HORIZONTAL;
     gbcModROM.weightx     = 1.0;
@@ -341,13 +345,13 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
 
     GridBagConstraints gbcExt = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 0, 5 ),
-						0, 0 );
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
 
     this.btnFloppyDisk = new JCheckBox( "Floppy-Disk-Modul", false );
     this.btnFloppyDisk.addActionListener( this );
@@ -368,7 +372,7 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     gbcExt.gridy++;
     this.tabExt.add( this.btnVDIP, gbcExt );
 
-    this.btnRTC = new JCheckBox( "Echtzeituhr RTC-72421", false );
+    this.btnRTC = new JCheckBox( "Echtzeituhr", false );
     this.btnRTC.addActionListener( this );
     gbcExt.gridy++;
     this.tabExt.add( this.btnRTC, gbcExt );
@@ -388,17 +392,11 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     gbcExt.gridy++;
     this.tabExt.add( this.btnGraphCCJ, gbcExt );
 
-    gbcExt.fill       = GridBagConstraints.HORIZONTAL;
-    gbcExt.weightx    = 1.0;
-    gbcExt.insets.top = 5;
-    gbcExt.gridy++;
-    this.tabExt.add( new JSeparator(), gbcExt );
-
     this.fldAltGCCJFont = new ROMFileSettingsFld(
-		settingsFrm,
-		this.propPrefix + "graph_ccj.font.",
-		"Alternativer Zeichensatz f\u00FCr Grafikkarte"
-			+ " des CC Jena (80x25 Zeichen):" );
+				settingsFrm,
+				this.propPrefix + "graph_ccj.font.",
+				"Alternativer Zeichensatz:" );
+    gbcExt.insets.left = 50;
     gbcExt.gridy++;
     this.tabExt.add( this.fldAltGCCJFont, gbcExt );
     updAltGCCJFontFieldsEnabled();
@@ -439,9 +437,10 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnPasteFast, gbcEtc );
 
-    gbcEtc.fill       = GridBagConstraints.HORIZONTAL;
-    gbcEtc.weightx    = 1.0;
-    gbcEtc.insets.top = 5;
+    gbcEtc.fill          = GridBagConstraints.HORIZONTAL;
+    gbcEtc.weightx       = 1.0;
+    gbcEtc.insets.top    = 10;
+    gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
     this.tabEtc.add( new JSeparator(), gbcEtc );
 
@@ -449,15 +448,35 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 		settingsFrm,
 		propPrefix + "os.",
                 "Alternatives Monitorprogramm (F000h-FFFFh):" );
+    gbcEtc.insets.top    = 5;
+    gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltOS, gbcEtc );
 
     this.fldAltFont = new ROMFileSettingsFld(
-				settingsFrm,
-				propPrefix + "font.",
-				"Alternativer Zeichensatz:" );
+					settingsFrm,
+					propPrefix + "font.",
+					"Alternativer Zeichensatz:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltFont, gbcEtc );
+
+
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+					settingsFrm,
+					propPrefix,
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
+					true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+					settingsFrm,
+					propPrefix,
+					Z1013.getDefaultSwapKeyCharCase(),
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
   }
 
 
@@ -552,7 +571,7 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 		stateMega );
       this.fldMegaROM.applyInput( props, selected );
 
-      // Tab-GIDE
+      // Tab GIDE
       tab = this.tabGIDE;
       this.tabGIDE.applyInput( props, selected );
 
@@ -600,6 +619,14 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 		this.btnPasteFast.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
+
+      // Tab AutoLoad
+      tab = this.tabAutoLoad;
+      this.tabAutoLoad.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
 
       // ggf. Warnung ausgeben
       if( this.btnMonA2.isSelected()
@@ -674,6 +701,12 @@ public class Z1013SettingsFld extends AbstractSettingsFld
     if( !rv ) {
       rv = this.tabGIDE.doAction( e );
     }
+    if( !rv ) {
+      rv = this.tabAutoLoad.doAction( e );
+    }
+    if( !rv ) {
+      rv = this.tabAutoInput.doAction( e );
+    }
     this.settingsFrm.setWaitCursor( false );
     return rv;
   }
@@ -682,7 +715,14 @@ public class Z1013SettingsFld extends AbstractSettingsFld
   @Override
   public void lookAndFeelChanged()
   {
+    this.fldAltOS.lookAndFeelChanged();
+    this.fldAltFont.lookAndFeelChanged();
+    this.fldAltGCCJFont.lookAndFeelChanged();
+    this.fldAltBasic.lookAndFeelChanged();
+    this.fldMegaROM.lookAndFeelChanged();
     this.tabGIDE.lookAndFeelChanged();
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
   }
 
 
@@ -792,6 +832,9 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 			true ) );
     this.fldAltOS.updFields( props );
     this.fldAltFont.updFields( props );
+
+    this.tabAutoLoad.updFields( props );
+    this.tabAutoInput.updFields( props );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,56 +10,54 @@ package jkcemu.programming.basic;
 
 import java.lang.*;
 import java.util.*;
+import jkcemu.programming.PrgSource;
 
 
-public abstract class CallableEntry extends StructureEntry
+public abstract class CallableEntry extends BasicSourcePos
 {
-  private String                 name;
-  private String                 label;
-  private int                    firstCallSourceLineNum;
-  private long                   firstCallBasicLineNum;
-  private java.util.List<String> args;
-  private java.util.List<String> vars;
-  private Map<String,Integer>    var2SourceLineNum;
-  private Map<String,Long>       var2BasicLineNum;
-  private Set<String>            usedVars;
-  private Map<String,Integer>    name2iyOffs;
-  private boolean                implemented;
-  private boolean                stackFrame;
+  private String                     name;
+  private String                     label;
+  private BasicSourcePos             firstCallSourcePos;
+  private java.util.List<String>     args;
+  private java.util.List<String>     vars;
+  private Map<String,BasicSourcePos> var2SourcePos;
+  private Set<String>                usedVars;
+  private Map<String,Integer>        name2iyOffs;
+  private boolean                    implemented;
+  private boolean                    stackFrame;
 
 
   protected CallableEntry(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String name,
-		String label )
+		PrgSource source,
+		long      basicLineNum,
+		String    name,
+		String    label )
   {
-    super( sourceLineNum, basicLineNum );
-    this.name                   = name;
-    this.label                  = label;
-    this.firstCallSourceLineNum = 0;
-    this.firstCallBasicLineNum  = -1;
-    this.args                   = new ArrayList<String>();
-    this.vars                   = new ArrayList<String>();
-    this.var2SourceLineNum      = new HashMap<String,Integer>();
-    this.var2BasicLineNum       = new HashMap<String,Long>();
-    this.usedVars               = new TreeSet<String>();
-    this.name2iyOffs            = new HashMap<String,Integer>();
-    this.implemented            = false;
-    this.stackFrame             = false;
+    super( source, basicLineNum );
+    this.name               = name;
+    this.label              = label;
+    this.firstCallSourcePos = null;
+    this.args               = new ArrayList<>();
+    this.vars               = new ArrayList<>();
+    this.var2SourcePos      = new HashMap<>();
+    this.usedVars           = new TreeSet<>();
+    this.name2iyOffs        = new HashMap<>();
+    this.implemented        = false;
+    this.stackFrame         = false;
   }
 
 
   public void addVar(
-		int    sourceLineNum,
-		long   basicLineNum,
-		String varName )
+		PrgSource source,
+		long      basicLineNum,
+		String    varName )
   {
     this.name2iyOffs.put(
 		varName,
 		new Integer( getVarIYOffs( this.vars.size() ) ) );
-    this.var2SourceLineNum.put( varName, new Integer( sourceLineNum ) );
-    this.var2BasicLineNum.put( varName, new Long( basicLineNum ) );
+    this.var2SourcePos.put(
+		varName,
+		new BasicSourcePos( source, basicLineNum ) );
     this.vars.add( varName );
   }
 
@@ -92,15 +90,9 @@ public abstract class CallableEntry extends StructureEntry
   }
 
 
-  public long getFirstCallBasicLineNum()
+  public BasicSourcePos getFirstCallSourcePos()
   {
-    return this.firstCallBasicLineNum;
-  }
-
-
-  public int getFirstCallSourceLineNum()
-  {
-    return this.firstCallSourceLineNum;
+    return this.firstCallSourcePos;
   }
 
 
@@ -146,16 +138,9 @@ public abstract class CallableEntry extends StructureEntry
   }
 
 
-  public long getVarBasicLineNum( String varName )
+  public BasicSourcePos getVarSourcePos( String varName )
   {
-    long rv = -1;
-    if( varName != null ) {
-      Long lineObj = this.var2BasicLineNum.get( varName );
-      if( lineObj != null ) {
-	rv = lineObj.longValue();
-      }
-    }
-    return rv;
+    return varName != null ? this.var2SourcePos.get( varName ) : null;
   }
 
 
@@ -164,19 +149,6 @@ public abstract class CallableEntry extends StructureEntry
     return (idx >= 0) && (idx < this.vars.size()) ?
 					this.vars.get( idx )
 					: null;
-  }
-
-
-  public int getVarSourceLineNum( String varName )
-  {
-    int rv = -1;
-    if( varName != null ) {
-      Integer lineObj = this.var2SourceLineNum.get( varName );
-      if( lineObj != null ) {
-	rv = lineObj.intValue();
-      }
-    }
-    return rv;
   }
 
 
@@ -196,7 +168,7 @@ public abstract class CallableEntry extends StructureEntry
 
   public boolean isCalled()
   {
-    return (this.firstCallSourceLineNum > 0);
+    return (this.firstCallSourcePos != null);
   }
 
 
@@ -212,14 +184,12 @@ public abstract class CallableEntry extends StructureEntry
   }
 
 
-  public void putCallLineNum(
-			int  sourceLineNum,
-			long basicLineNum )
+  public void putCallPos(
+			PrgSource source,
+			long      basicLineNum )
   {
-    if( this.firstCallSourceLineNum <= 0 ) {
-      this.firstCallSourceLineNum = sourceLineNum;
-      this.firstCallBasicLineNum  = basicLineNum;
-    }
+    if( this.firstCallSourcePos == null )
+      this.firstCallSourcePos = new BasicSourcePos( source, basicLineNum );
   }
 
 

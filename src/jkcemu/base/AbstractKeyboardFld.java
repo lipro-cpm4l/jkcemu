@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -86,7 +86,7 @@ public abstract class AbstractKeyboardFld<T extends EmuSys>
   {
     this.emuSys           = emuSys;
     this.keys             = new KeyData[ numKeys ];
-    this.selectedKeys     = new ArrayList<KeyData>();
+    this.selectedKeys     = new ArrayList<>();
     this.shiftKeys        = null;
     this.holdShift        = true;
     this.lastShiftPressed = false;

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -40,7 +40,7 @@ public class AnimatedGIFWriter implements ImageObserver
 
 
   /*
-   * Farbreduktion von 256 auf 6 Farben:
+   * Farbreduktion von 256 auf 6 Werte pro Primaerfarbe:
    * Der Farbwert (0-255) wird durch 43 dividiert (ergibt 0-5),
    * und anschliessend ueber die Tabelle wieder in den Wertebereich
    * 0-255 gemappt.
@@ -103,7 +103,7 @@ public class AnimatedGIFWriter implements ImageObserver
    * sondern nur zwischengespeichert,
    * da erst beim naechsten Frame die Wartezeit dieses Frames
    * ermittelt werden kann.
-   * Des weiteren wird dieses Frame mit dem vorherigen verglichen.
+   * Des Weiteren wird dieses Frame mit dem vorherigen verglichen.
    * Wenn beide gleich sind, wird von diesem Frame nur die Anzeigezeit
    * auf das vorherige Frame addiert.
    */
@@ -223,7 +223,7 @@ public class AnimatedGIFWriter implements ImageObserver
 	   * Farb- sowie eine Pixelindextabelle aufgebaut.
 	   * Bei der 257. Farbe wird das ganze noch einmal gemacht,
 	   * allerdings mit Farbreduktion auf einen 6:6:6-Wuerfel,
-	   * sodass max. 6^3=216 Farben uebrig bleiben koennen.
+	   * so dass max. 6^3=216 Farben uebrig bleiben koennen.
 	   * Wenn bei einem Frame die Farbreduktion notwendig ist,
 	   * wird davon ausgegangen, dass das auch bei den nachfolgenden
 	   * Frames so sein wird und deshalb aus Gruenden der Performance
@@ -244,7 +244,7 @@ public class AnimatedGIFWriter implements ImageObserver
 		  rgb = image.getRGB( x, y );
 		  if( this.forceColorReduction ) {
 		    /*
-		     * Jeder Farbe wird von 256 auf 6 moegliche Werte
+		     * Jede Primaerfarbe wird von 256 auf 6 moegliche Werte
 		     * reduziert, indem durch 43 geteilt (ergibt 0-5)
 		     * und anschliessend ueber eine Tabelle wieder
 		     * auf den Wertebereich 0-255 gemappt wird.

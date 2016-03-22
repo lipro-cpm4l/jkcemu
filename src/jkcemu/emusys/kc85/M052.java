@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -36,14 +36,18 @@ public class M052 extends AbstractKC85Module
   private byte[]    rom;
 
 
-  public M052( int slot, Component owner, String fileName )
+  public M052(
+	    int                  slot,
+	    Component            owner,
+	    FileTimesViewFactory fileTimesViewFactory,
+	    String               fileName )
   {
     super( slot );
     this.owner     = owner;
     this.fileName  = fileName;
     this.title     = String.format( "M052 im Schacht %02X", slot );
     this.kcNet     = new KCNet( "Netzwerk-PIO" );
-    this.vdip      = new VDIP( "USB-PIO" );
+    this.vdip      = new VDIP( fileTimesViewFactory, "USB-PIO" );
     this.ioEnabled = false;
     this.romOffs   = 0;
     this.begAddr   = 0;
@@ -69,10 +73,10 @@ public class M052 extends AbstractKC85Module
   @Override
   public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    buf.append( "<h2>Netzwerk-PIO (IO-Adressen 28-2B)</h2>\n" );
+    buf.append( "<h2>Netzwerk-PIO (E/A-Adressen 28-2B)</h2>\n" );
     this.kcNet.appendInterruptStatusHTMLTo( buf );
 
-    buf.append( "<h2>USB-PIO (IO-Adressen 2C-2F)</h2>\n" );
+    buf.append( "<h2>USB-PIO (E/A-Adressen 2C-2F)</h2>\n" );
     this.vdip.appendInterruptStatusHTMLTo( buf );
   }
 
@@ -194,7 +198,7 @@ public class M052 extends AbstractKC85Module
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = -1;
     if( this.ioEnabled ) {
@@ -244,6 +248,7 @@ public class M052 extends AbstractKC85Module
 	this.rom = EmuUtil.readFile(
 			owner,
 			this.fileName,
+			true,
 			0x8000,
 			"M052 ROM-Datei" );
       }
@@ -269,7 +274,7 @@ public class M052 extends AbstractKC85Module
 
 
   @Override
-  public boolean writeIOByte( int port, int value )
+  public boolean writeIOByte( int port, int value, int tStates )
   {
     boolean rv = false;
     if( this.ioEnabled ) {

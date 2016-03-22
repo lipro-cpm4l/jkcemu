@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,30 +9,44 @@
 package jkcemu.emusys.etc;
 
 import java.awt.*;
-import java.io.File;
 import java.lang.*;
 import java.util.*;
 import javax.swing.*;
 import jkcemu.base.*;
+import jkcemu.emusys.PCM;
 
 
 public class PCMSettingsFld extends AbstractSettingsFld
 {
-  private JCheckBox          btnAutoLoadBDOS;
-  private JRadioButton       btnRF64x16;
-  private JRadioButton       btnFDC64x16;
-  private JRadioButton       btnFDC80x24;
-  private ROMFileSettingsFld fldAltROM;
-  private ROMFileSettingsFld fldAltFont;
+  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 500;
+
+  private JTabbedPane          tabbedPane;
+  private JPanel               tabModel;
+  private AutoLoadSettingsFld  tabAutoLoad;
+  private AutoInputSettingsFld tabAutoInput;
+  private JCheckBox            btnAutoLoadBDOS;
+  private JRadioButton         btnRF64x16;
+  private JRadioButton         btnFDC64x16;
+  private JRadioButton         btnFDC80x24;
+  private ROMFileSettingsFld   fldAltROM;
+  private ROMFileSettingsFld   fldAltFont;
 
 
   public PCMSettingsFld( SettingsFrm settingsFrm, String propPrefix )
   {
     super( settingsFrm, propPrefix );
 
-    setLayout( new GridBagLayout() );
+    setLayout( new BorderLayout() );
 
-    GridBagConstraints gbc = new GridBagConstraints(
+    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    add( this.tabbedPane, BorderLayout.CENTER );
+
+
+    // Tab Modell
+    this.tabModel = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Modell", this.tabModel );
+
+    GridBagConstraints gbcModel = new GridBagConstraints(
 					0, 0,
 					GridBagConstraints.REMAINDER, 1,
 					0.0, 0.0,
@@ -48,54 +62,75 @@ public class PCMSettingsFld extends AbstractSettingsFld
 				true );
     grpSys.add( this.btnRF64x16 );
     this.btnRF64x16.addActionListener( this );
-    add( this.btnRF64x16, gbc );
+    this.tabModel.add( this.btnRF64x16, gbcModel );
 
     this.btnAutoLoadBDOS = new JCheckBox(
 				"Bei RESET automatisch BDOS laden",
 				true );
     this.btnAutoLoadBDOS.addActionListener( this );
-    gbc.insets.top  = 0;
-    gbc.insets.left = 50;
-    gbc.gridy++;
-    add( this.btnAutoLoadBDOS, gbc );
+    gbcModel.insets.top  = 0;
+    gbcModel.insets.left = 50;
+    gbcModel.gridy++;
+    this.tabModel.add( this.btnAutoLoadBDOS, gbcModel );
 
     this.btnFDC64x16 = new JRadioButton(
 				"Floppy-Disk-System, 64x16 Zeichen",
 				false );
     grpSys.add( this.btnFDC64x16 );
     this.btnFDC64x16.addActionListener( this );
-    gbc.insets.left = 5;
-    gbc.gridy++;
-    add( this.btnFDC64x16, gbc );
+    gbcModel.insets.left = 5;
+    gbcModel.gridy++;
+    this.tabModel.add( this.btnFDC64x16, gbcModel );
 
     this.btnFDC80x24 = new JRadioButton(
 				"Floppy-Disk-System, 80x24 Zeichen",
 				false );
     grpSys.add( this.btnFDC80x24 );
     this.btnFDC80x24.addActionListener( this );
-    gbc.insets.bottom = 5;
-    gbc.gridy++;
-    add( this.btnFDC80x24, gbc );
+    gbcModel.insets.bottom = 5;
+    gbcModel.gridy++;
+    this.tabModel.add( this.btnFDC80x24, gbcModel );
 
-    gbc.fill       = GridBagConstraints.HORIZONTAL;
-    gbc.weightx    = 1.0;
-    gbc.insets.top = 5;
-    gbc.gridy++;
-    add( new JSeparator(), gbc );
+    gbcModel.fill          = GridBagConstraints.HORIZONTAL;
+    gbcModel.weightx       = 1.0;
+    gbcModel.insets.top    = 10;
+    gbcModel.insets.bottom = 10;
+    gbcModel.gridy++;
+    this.tabModel.add( new JSeparator(), gbcModel );
 
     this.fldAltROM = new ROMFileSettingsFld(
 		settingsFrm,
 		propPrefix + "rom.",
 		"Alternativer ROM-Inhalt (Grundbetriebssystem):" );
-    gbc.gridy++;
-    add( this.fldAltROM, gbc );
+    gbcModel.insets.top    = 5;
+    gbcModel.insets.bottom = 5;
+    gbcModel.gridy++;
+    this.tabModel.add( this.fldAltROM, gbcModel );
 
     this.fldAltFont = new ROMFileSettingsFld(
 				settingsFrm,
 				propPrefix + "font.",
 				"Alternativer Zeichensatz:" );
-    gbc.gridy++;
-    add( this.fldAltFont, gbc );
+    gbcModel.gridy++;
+    this.tabModel.add( this.fldAltFont, gbcModel );
+
+
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+					settingsFrm,
+					propPrefix,
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
+					true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+					settingsFrm,
+					propPrefix,
+					PCM.getDefaultSwapKeyCharCase(),
+					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
   }
 
 
@@ -106,22 +141,31 @@ public class PCMSettingsFld extends AbstractSettingsFld
 			Properties props,
 			boolean    selected ) throws UserInputException
   {
+    // Tab Modell
     boolean fdc64x16 = this.btnFDC64x16.isSelected();
     boolean fdc80x24 = this.btnFDC80x24.isSelected();
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "floppydisk.enabled",
+		this.propPrefix + PCM.PROP_FDC_ENABLDED,
 		fdc64x16 || fdc80x24 );
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "graphic",
-		fdc80x24 ? "80x24" : "64x16" );
+		this.propPrefix + PCM.PROP_GRAPHIC_KEY,
+		fdc80x24 ?
+			PCM.PROP_GRAPHIC_VALUE_80X24
+			: PCM.PROP_GRAPHIC_VALUE_64X32 );
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "auto_load_bdos",
+		this.propPrefix + PCM.PROP_AUTO_LOAD_BDOS,
 		this.btnAutoLoadBDOS.isSelected() );
     this.fldAltROM.applyInput( props, selected );
     this.fldAltFont.applyInput( props, selected );
+
+    // Tab AutoLoad
+    this.tabAutoLoad.applyInput( props, selected );
+
+    // Tab AutoInput
+    this.tabAutoInput.applyInput( props, selected );
   }
 
 
@@ -131,14 +175,20 @@ public class PCMSettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( src instanceof JRadioButton ) {
-	updAutoLoadBDOSFieldEnabled();
-	fireDataChanged();
-	rv = true;
+      rv = this.tabAutoLoad.doAction( e );
+      if( !rv ) {
+	rv = this.tabAutoInput.doAction( e );
       }
-      else if( src instanceof AbstractButton ) {
-	fireDataChanged();
-	rv = true;
+      if( !rv ) {
+	if( src instanceof JRadioButton ) {
+	  updAutoLoadBDOSFieldEnabled();
+	  fireDataChanged();
+	  rv = true;
+	}
+	else if( src instanceof AbstractButton ) {
+	  fireDataChanged();
+	  rv = true;
+	}
       }
     }
     return rv;
@@ -146,16 +196,25 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
 
   @Override
+  public void lookAndFeelChanged()
+  {
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
+  }
+
+
+  @Override
   public void updFields( Properties props )
   {
     if( EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + "floppydisk.enabled",
-			false ) )
+		props,
+		this.propPrefix + PCM.PROP_FDC_ENABLDED,
+		false ) )
     {
       if( EmuUtil.getProperty(
-			props,
-			this.propPrefix + "graphic" ).equals( "80x24" ) )
+		props,
+		this.propPrefix + PCM.PROP_GRAPHIC_KEY ).equals(
+					PCM.PROP_GRAPHIC_VALUE_80X24 ) )
       {
 	this.btnFDC80x24.setSelected( true );
       } else {
@@ -165,13 +224,16 @@ public class PCMSettingsFld extends AbstractSettingsFld
       this.btnRF64x16.setSelected( true );
     }
     this.btnAutoLoadBDOS.setSelected(
-			EmuUtil.getBooleanProperty(
+		EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "auto_load_bdos",
+				this.propPrefix + PCM.PROP_AUTO_LOAD_BDOS,
 				true ) );
     this.fldAltROM.updFields( props );
     this.fldAltFont.updFields( props );
     updAutoLoadBDOSFieldEnabled();
+
+    this.tabAutoLoad.updFields( props );
+    this.tabAutoInput.updFields( props );
   }
 
 
@@ -182,4 +244,3 @@ public class PCMSettingsFld extends AbstractSettingsFld
     this.btnAutoLoadBDOS.setEnabled( this.btnRF64x16.isSelected() );
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -94,10 +94,10 @@ public class KramerMC extends EmuSys implements
 
   public KramerMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.kramermmc." );
     this.fontBytes = readFontByProperty(
 				props,
-				"jkcemu.kramermmc.font.file",
+				this.propPrefix + "font.file",
 				0x0800 );
     if( this.fontBytes == null ) {
       if( romFont == null ) {
@@ -121,7 +121,7 @@ public class KramerMC extends EmuSys implements
     this.kbMatrix = new int[ 8 ];
 
     Z80CPU cpu = emuThread.getZ80CPU();
-    this.pio   = new Z80PIO( "PIO (IO-Adressen FC-FF)" );
+    this.pio   = new Z80PIO( "PIO (E/A-Adressen FC-FF)" );
     cpu.setInterruptSources( this.pio );
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
@@ -132,9 +132,9 @@ public class KramerMC extends EmuSys implements
   }
 
 
-  public static String getBasicProgram( Z80MemView memory )
+  public static String getBasicProgram( EmuMemView memory )
   {
-    return SourceUtil.getKCBasicStyleProgram( memory, 0x1001, basicTokens );
+    return SourceUtil.getBasicProgram( memory, 0x1001, basicTokens );
   }
 
 
@@ -491,7 +491,7 @@ public class KramerMC extends EmuSys implements
   @Override
   public void openBasicProgram()
   {
-    String text = SourceUtil.getKCBasicStyleProgram(
+    String text = SourceUtil.getBasicProgram(
 					this.emuThread,
 					0x1001,
 					basicTokens );
@@ -533,17 +533,17 @@ public class KramerMC extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int value = 0xFF;
     switch( port & 0xFF ) {
       case 0xFC:
-	value = this.pio.readPortA();
+	value = this.pio.readDataA();
 	break;
 
       case 0xFD:
 	updKBColValue();
-	value = this.pio.readPortB();
+	value = this.pio.readDataB();
 	break;
 
       case 0xFE:
@@ -608,16 +608,15 @@ public class KramerMC extends EmuSys implements
   @Override
   public void saveBasicProgram()
   {
-    int endAddr = SourceUtil.getKCBasicStyleEndAddr( this.emuThread, 0x1001 );
+    int endAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x1001 );
     if( endAddr >= 0x1001 ) {
       (new SaveDlg(
 		this.screenFrm,
 		0x1001,
 		endAddr,
-		'B',
-		false,          // kein KC-BASIC
-		false,		// kein RBASIC
-		"BASIC-Programm speichern" )).setVisible( true );
+		"BASIC-Programm speichern",
+		SaveDlg.BasicType.MS_DERIVED_BASIC,
+		EmuUtil.getBasicFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -712,15 +711,22 @@ public class KramerMC extends EmuSys implements
 
   @Override
   public void updSysCells(
-			int    begAddr,
-			int    len,
-			Object fileFmt,
-			int    fileType )
+			int        begAddr,
+			int        len,
+			FileFormat fileFmt,
+			int        fileType )
   {
-    if( (begAddr == 0x1001) && (fileFmt != null) ) {
-      if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
-	if( fileType == 'B' ) {
-	  int topAddr = begAddr + len;
+    if( fileFmt != null ) {
+      if( (fileFmt.equals( FileFormat.BASIC_PRG )
+		&& (begAddr == 0x1001)
+		&& (len > 7))
+	  || (fileFmt.equals( FileFormat.HEADERSAVE )
+		&& (fileType == 'B')
+		&& (begAddr <= 0x1001)
+		&& ((begAddr + len) > 0x1007)) )
+      {
+	int topAddr = begAddr + len;
+	if( topAddr > 0x1001 ) {
 	  this.emuThread.setMemWord( 0x0C5E, topAddr );
 	  this.emuThread.setMemWord( 0x0C60, topAddr );
 	  this.emuThread.setMemWord( 0x0C62, topAddr );
@@ -731,16 +737,16 @@ public class KramerMC extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     switch( port & 0xFF ) {
       case 0xFC:
-	this.pio.writePortA( value );
+	this.pio.writeDataA( value );
 	this.kbRow = (this.pio.fetchOutValuePortA( false ) >> 1) & 0x07;
 	break;
 
       case 0xFD:
-	this.pio.writePortB( value );
+	this.pio.writeDataB( value );
 	break;
 
       case 0xFE:

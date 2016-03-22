@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,6 +20,8 @@ public class CharConverter
 			CP437,
 			CP850,
 			LATIN1 };
+
+  public static final char REPLACEMENT_CHAR = '\uFFFD';
 
 
   private static final String cp437ToUnicode =
@@ -85,7 +87,7 @@ public class CharConverter
       case ISO646DE:
 	this.encodingDisplayText =
 		"Deutsche Variante von ISO-646"
-			+ " (Umlauten anstelle von [\\]{|}~)";
+			+ " (Umlaute anstelle von [\\]{|}~)";
 	break;
 
       case CP437:
@@ -129,7 +131,7 @@ public class CharConverter
 
   public char toUnicode( int ch )
   {
-    char rv = '\u0000';
+    char rv = REPLACEMENT_CHAR;
     if( this.encoding == Encoding.ASCII_7BIT ) {
       if( (ch > 0) && (ch < 0x7F) ) {
 	rv = (char) ch;
@@ -166,7 +168,7 @@ public class CharConverter
 	  break;
 
 	default:
-	  rv = '\u0000';
+	  rv = REPLACEMENT_CHAR;
 	  if( (ch > 0) && (ch < 0x7F) ) {
 	    rv = (char) ch;
 	  }
@@ -272,4 +274,3 @@ public class CharConverter
     return this.encodingDisplayText;
   }
 }
-

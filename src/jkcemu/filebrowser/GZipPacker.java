@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,22 +12,23 @@ import java.io.*;
 import java.lang.*;
 import java.util.zip.*;
 import javax.swing.*;
-import jkcemu.base.EmuUtil;
+import jkcemu.Main;
+import jkcemu.base.*;
 
 
 public class GZipPacker extends Thread
 {
-  private FileBrowserFrm fileBrowserFrm;
-  private File           srcFile;
-  private File           outFile;
+  private BasicFrm owner;
+  private File     srcFile;
+  private File     outFile;
 
 
   public static void packFile(
-		FileBrowserFrm fileBrowserFrm,
-		File           srcFile,
-		File           outFile )
+		BasicFrm owner,
+		File     srcFile,
+		File     outFile )
   {
-    (new GZipPacker( fileBrowserFrm, srcFile, outFile )).start();
+    (new GZipPacker( owner, srcFile, outFile )).start();
   }
 
 
@@ -46,7 +47,7 @@ public class GZipPacker extends Thread
       in = new BufferedInputStream( new FileInputStream( this.srcFile ) );
       if( srcLen > 0 ) {
 	ProgressMonitorInputStream pmIn = new ProgressMonitorInputStream(
-			this.fileBrowserFrm,
+			this.owner,
 			"Packen von " + this.srcFile.getName() + "...",
 			in );
 	ProgressMonitor pm = pmIn.getProgressMonitor();
@@ -61,7 +62,7 @@ public class GZipPacker extends Thread
       out = new GZIPOutputStream(
 			new BufferedOutputStream(
 				new FileOutputStream( outFile ) ) );
-      this.fileBrowserFrm.fireDirectoryChanged( this.outFile.getParentFile() );
+      FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
 
       int b = in.read();
       while( b != -1 ) {
@@ -86,9 +87,9 @@ public class GZipPacker extends Thread
       EmuUtil.doClose( in );
       EmuUtil.doClose( out );
     }
-    this.fileBrowserFrm.fireDirectoryChanged( this.outFile.getParentFile() );
+    FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
     if( msg != null ) {
-      this.fileBrowserFrm.showErrorMsg( msg );
+      this.owner.fireShowErrorMsg( msg );
     }
   }
 
@@ -96,14 +97,13 @@ public class GZipPacker extends Thread
 	/* --- private Konstruktoren --- */
 
   private GZipPacker(
-		FileBrowserFrm fileBrowserFrm,
-		File           srcFile,
-		File           outFile )
+		BasicFrm owner,
+		File     srcFile,
+		File     outFile )
   {
-    super( "JKCEMU gzip packer" );
-    this.fileBrowserFrm = fileBrowserFrm;
-    this.srcFile        = srcFile;
-    this.outFile        = outFile;
+    super( Main.getThreadGroup(), "JKCEMU gzip packer" );
+    this.owner   = owner;
+    this.srcFile = srcFile;
+    this.outFile = outFile;
   }
 }
-

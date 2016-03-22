@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,12 +30,12 @@ public class SCCHAudioDataStream extends EmuSysAudioDataStream
 
       // 1000 Schwingungen Vorton
       for( int i = 0; i < 2000; i++ ) {
-	addSamples( 4 );
+	addPhaseChangeSamples( 4 );
       }
 
       // Trennschwingung: 2x 1-Bit
       for( int i = 0; i < 2; i++ ) {
-	addSamples( 2 );
+	addPhaseChangeSamples( 2 );
       }
 
       // Adresse Kopfpuffer
@@ -116,12 +116,12 @@ public class SCCHAudioDataStream extends EmuSysAudioDataStream
 	  pre = false;
 	}
 	for( int i = 0; i < n; i++ ) {
-	  addSamples( 4 );
+	  addPhaseChangeSamples( 4 );
 	}
 
 	// Trennschwingung: 2x 1-Bit
 	for( int i = 0; i < 2; i++ ) {
-	  addSamples( 2 );
+	  addPhaseChangeSamples( 2 );
 	}
 
 	// Blockadresse
@@ -144,7 +144,7 @@ public class SCCHAudioDataStream extends EmuSysAudioDataStream
 
     // abschliessender Phasenwechsel
     if( getFrameLength() > 0 ) {
-      addSamples( 16 );
+      addPhaseChangeSamples( 16 );
     }
   }
 
@@ -155,10 +155,10 @@ public class SCCHAudioDataStream extends EmuSysAudioDataStream
   {
     for( int i = 0; i < 16; i++ ) {
       if( (value & 0x01) != 0 ) {
-	addSamples( 2 );
+	addPhaseChangeSamples( 2 );
       } else {
-	addSamples( 1 );
-	addSamples( 1 );
+	addPhaseChangeSamples( 1 );
+	addPhaseChangeSamples( 1 );
       }
       value >>= 1;
     }

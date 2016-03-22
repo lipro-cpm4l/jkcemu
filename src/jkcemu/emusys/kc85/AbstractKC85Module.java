@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -55,11 +55,15 @@ public abstract class AbstractKC85Module
 
 
   public boolean equalsModule(
+			String slot,
 			String moduleName,
 			String typeByteText,
 			String fileName )
   {
-    boolean rv = TextUtil.equals( getModuleName(), moduleName );
+    boolean rv = String.valueOf( this.slot ).equals( slot );
+    if( rv ) {
+      rv = TextUtil.equals( getModuleName(), moduleName );
+    }
     if( rv ) {
       if( typeByteText != null ) {
 	if( !typeByteText.isEmpty() ) {
@@ -137,7 +141,7 @@ public abstract class AbstractKC85Module
    * Rueckgabewert:
    *  -1: Modul bedient diesen Lesevorgang nicht.
    */
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     return -1;
   }
@@ -175,7 +179,7 @@ public abstract class AbstractKC85Module
    * Rueckgabewert:
    *  false: Modul bedient diesen Schreibvorgang nicht.
    */
-  public boolean writeIOByte( int port, int value )
+  public boolean writeIOByte( int port, int value, int tStates )
   {
     return false;
   }

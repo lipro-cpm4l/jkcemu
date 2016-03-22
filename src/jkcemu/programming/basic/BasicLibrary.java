@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,58 +23,57 @@ public class BasicLibrary
 			INIV, INSV, INRSV, INLNB, INLNR, INPWV,
 			P_I, P_IF,
 			PS_I, PS_IF, PS_S, PS_ST, PS_SP, PS_NL,
-			ACCEPT, CIRCLE, CONNECT,
-			DATA, DATAGRAM, DREADI, DREADS,
-			DRAW, DRAWR, DRBOX, DRBOXF, H_BOX, DRHLIN, DRLINE,
-			DRLBL, DRLBLT, MOVER, LOCATE,
-			PAUSE, PEN, ONGOAD, PLOTR, SCREEN,
-			IOCLOSE, IOOPEN, IOEOF, IOAVAILABLE,
-			IOINL, IOINX, IORDB, IOFLUSH, IO_SET_COUT,
+			CIRCLE,
+			DATA, DREADI, DREADS,
+			DRAW,  DRAWR, DRAW_LINE, DRAWS, DRAWST,
+			DRBOX, DRBOXF, H_BOX, DRAW_HLINE,
+			DRLBL, DRLBLT, MOVER, LOCATE, ONGOAD,
+			PAINT, PAINT_M_HPIX, PAINT_M_WPIX,
+			PAUSE, PAUSE_N, PEN, PLOTR,
+			PRINT_SPC, SCREEN,
+			IO_PRINT_SPC,
+			IOCLOSE, IOOPEN, IOEOF,
+			IOINL, IOINX, IORDB, IO_SET_COUT,
 			IO_CRT_HANDLER, IO_LPT_HANDLER,
-			IO_SIMPLE_OUT_HANDLER, IO_VDIP_HANDLER,
-			IO_COUT, IOCADR, IOCTB1, IOCTB2,
+			IO_SIMPLE_OUT_HANDLER,
+			IO_FILE_HANDLER, IO_VDIP_HANDLER,
+			IO_COUT, IO_M_COUT, IOCADR, IOCTB1, IOCTB2,
 			CHECK_OPEN_NET_CHANNEL,
-			KCNET_S_MACADDR, KCNET_S_DNSSERVER, KCNET_S_GATEWAY,
-			KCNET_S_LOCALADDR, KCNET_S_NETMASK,
-			KCNET_S_GET_IPADDR, KCNET_S_IPADDR,
-			KCNET_SET_DNSSERVER, KCNET_SET_GATEWAY,
-			KCNET_SET_LOCALADDR, KCNET_SET_NETMASK,
-			KCNET_SET_BASE, KCNET_BASE_HW,
-			KCNET_HOSTBYNAME, KCNET_PARSE_IPADDR,
-			KCNET_TCP, KCNET_UDP, KCNET_FLUSH1,
-			KCNET_SOCK, KCNET_BASE,
-			VDIP_M_IOADDR,
-			F_INSTR, F_INSTRN, F_JOY, F_LEN,
-			F_LOCALPORT, F_REMOTEPORT,
+			VDIP_DATA_RDPTRS, VDIP_INIT, VDIP_M_IOADDR,
+			F_INSTR, F_INSTRN, F_IS_TARGET, F_JOY, F_LEN,
 			F_RND, F_SGN, F_SQR,
 			F_VAL, F_VLB, F_VLH, F_VLI,
 			S_BIN, S_CHR, S_HEX, S_HEXN, S_HXHL, S_HXA,
-			S_HOSTBYNAME, S_INP, S_INCH, S_INKY,
+			S_INP, S_INCH, S_INKY,
 			S_LEFT, S_LWR, S_LTRIM,
-			S_MID, S_MIDN, S_MIRR, S_NETMASK, S_REMOTEADDR,
+			S_MID, S_MIDN, S_MIRR, S_NETMASK,
 			S_RIGHT, S_RTRIM,
-			S_STC, S_STS, S_STR, S_TRIM, S_UPR, SEND,
+			S_STC, S_STS, S_STR, S_TRIM, S_UPR,
 			ARYADR, CKIDX,
 			O_AND, O_NOT, O_OR, O_XOR,
 			O_LT, O_LE, O_GT, O_GE, O_EQ, O_NE,
 			O_ADD, O_SUB, O_MUL, O_MOD, O_DIV, O_INC, O_DEC,
 			O_SHL, O_SHR,
 			O_STEQ, O_STNE, O_STGE, O_STGT, O_STLE, O_STLT,
-			ASGSM, ASGSL, ASGSV,
-			MFIND, MALLOC, MMGC, MRGC, MFREE, HEAP, ABS_NEG_HL,
+			ASSIGN_STR_TO_NEW_MEM_VS, ASSIGN_STR_TO_VS,
+			ASSIGN_VS_TO_VS,
+			MFIND, MALLOC, MMGC, MRGC, MFREE,
+			CHECK_DE_WITHIN_HEAP, HEAP, ABS_NEG_HL,
 			CPHLDE, CKSTK, JP_HL, SMACP, SVDUP, STCMP, STNCP,
-			C_UPR, D_EMPT,
+			C_UPR,
+			EMPTY_STRING,
 			E_DATA, E_IDX, E_PARM, E_NOV, E_NXWF, E_REWG, E_USR,
-			E_TYPE, E_EXIT, OUTSP, FNT5P7,
-			M_ERN, M_ERT, M_FRET, M_INKB, M_IO_COUT,
-			M_HOST, M_PORT,
-			M_STMP, M_TOP, M_XYPO,
+			E_TYPE, E_EXIT, OUTSP, FONT_5X7,
+			M_BALN, M_SRNM, M_ERN, M_ERT,
+			M_FRET, M_INKB, M_HOST, M_PORT,
+			M_STMP, M_XYPO, MTOP,
 			XCKBRK, XINCH, XINKEY, XBREAK,
 			XBORDER, XCLS, XCOLOR, XCURS, XHLINE, XINK, XPAPER,
 			XOUTST, XOUTS, XOUTNL, XOUTCH, XLOCATE, XLPTCH,
-			XPAUSE, XPEN, XPSET, XPRES, XPTEST,
-			XSCRS, XTARID, XJOY };
+			XPEN, XPAINT, XPOINT, XPSET, XPRES, XPTEST,
+			XSCREEN, XJOY };
 
+  // Fehlercodes
   public static final int E_OK                    = 0;
   public static final int E_ERROR                 = -1;
   public static final int E_INVALID               = -2;
@@ -84,32 +83,73 @@ public class BasicLibrary
   public static final int E_DEVICE_NOT_FOUND      = -21;
   public static final int E_DEVICE_NOT_CONFIGURED = -22;
   public static final int E_DEVICE_LOCKED         = -23;
-  public static final int E_NO_DISK               = -24;
-  public static final int E_FILE_NOT_FOUND        = -25;
-  public static final int E_IO_MODE               = -26;
-  public static final int E_IO_ERROR              = -27;
-  public static final int E_EOF                   = -28;
-  public static final int E_READ_ONLY             = -29;
-  public static final int E_DISK_FULL             = -30;
-  public static final int E_MTU_EXCEEDED          = -31;
-  public static final int E_DNS_NOT_CONFIGURED    = -32;
-  public static final int E_DNS_ERROR             = -33;
-  public static final int E_UNKNOWN_HOST          = -34;
-  public static final int E_CONNECT_FAILED        = -35;
-  public static final int E_SOCKET_STATUS         = -36;
-  public static final int E_TIMEOUT               = -37;
+  public static final int E_HARDWARE              = -24;
+  public static final int E_NO_DISK               = -25;
+  public static final int E_FILE_NOT_FOUND        = -26;
+  public static final int E_PATH_NOT_FOUND        = -27;
+  public static final int E_IO_MODE               = -28;
+  public static final int E_IO_ERROR              = -29;
+  public static final int E_EOF                   = -30;
+  public static final int E_READ_ONLY             = -31;
+  public static final int E_DIR_FULL              = -32;
+  public static final int E_DISK_FULL             = -33;
+  public static final int E_MEDIA_CHANGED         = -34;
 
-  public static final int IOCTB_EOF_OFFS       = 2;
-  public static final int IOCTB_AVAILABLE_OFFS = 4;
-  public static final int IOCTB_READ_OFFS      = 6;
-  public static final int IOCTB_WRITE_OFFS     = 8;
-  public static final int IOCTB_FLUSH_OFFS     = 10;
-  public static final int IOCTB_BBUF_OFFS      = 12;
-  public static final int IOCTB_DRIVER_OFFS    = 14;
+  /*
+   * Offsets innerhalb des Kanalzeigerfelds
+   *
+   * An erster Stelle (Offset 0) steht der Zeiger zur CLOSE-Routine.
+   * Anhand des Vorhandensein dieses Zeigers wird erkannt,
+   * ob der Kanal offen oder geschlossen ist.
+   */
+  public static final int IOCTB_EOF_OFFS    = 2;
+  public static final int IOCTB_READ_OFFS   = 4;
+  public static final int IOCTB_WRITE_OFFS  = 6;
+  public static final int IOCTB_BBUF_OFFS   = 8;
+  public static final int IOCTB_DRIVER_OFFS = 10;
 
-  public static final int IOMODE_INPUT  = 1;
-  public static final int IOMODE_OUTPUT = 2;
-  public static final int IOMODE_APPEND = 4;
+  /*
+   * Betriebsmodi eines Kanals:
+   *   Bit 0: Default
+   *   Bit 1: Input
+   *   Bit 2: Output
+   *   Bit 3: Append
+   *   Bit 4: Text
+   *   Bit 5: Binaer
+   */
+  public static final int IOMODE_DEFAULT_MASK = 0x01;
+  public static final int IOMODE_INPUT_MASK   = 0x02;
+  public static final int IOMODE_OUTPUT_MASK  = 0x04;
+  public static final int IOMODE_APPEND_MASK  = 0x08;
+  public static final int IOMODE_TXT_MASK     = 0x10;
+  public static final int IOMODE_BIN_MASK     = 0x20;
+
+  public static final int IOMODE_TXT_DEFAULT = IOMODE_TXT_MASK
+						| IOMODE_DEFAULT_MASK;
+
+  public static final int IOMODE_TXT_INPUT = IOMODE_TXT_MASK
+						| IOMODE_INPUT_MASK;
+
+  public static final int IOMODE_TXT_OUTPUT = IOMODE_TXT_MASK
+						| IOMODE_OUTPUT_MASK;
+
+  public static final int IOMODE_TXT_APPEND = IOMODE_TXT_MASK
+						| IOMODE_APPEND_MASK;
+
+  public static final int IOMODE_BIN_DEFAULT = IOMODE_BIN_MASK
+						| IOMODE_DEFAULT_MASK;
+
+  public static final int IOMODE_BIN_INPUT = IOMODE_BIN_MASK
+						| IOMODE_INPUT_MASK;
+
+  public static final int IOMODE_BIN_OUTPUT = IOMODE_BIN_MASK
+						| IOMODE_OUTPUT_MASK;
+
+  public static final int IOMODE_BIN_APPEND = IOMODE_BIN_MASK
+						| IOMODE_APPEND_MASK;
+
+  // sonstige Konstanten
+  public static final String EMPTY_STRING_LABEL = "D_EMPT";
 
 
   public static void appendCodeTo( BasicCompiler compiler )
@@ -190,9 +230,9 @@ public class BasicLibrary
 		+ "\tCALL\tINLNB\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,INSV1\n"
-		+ "\tLD\tDE,D_EMPT\n"
-		+ "\tJR\tINSV3\n"
+		+ "\tJR\tNZ,INSV1\n" );
+      buf.append_LD_DE_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tJR\tINSV3\n"
 		+ "INSV1:\tPUSH\tHL\n"
 		+ "\tCALL\tMFIND\n"
 		+ "\tPOP\tHL\n"
@@ -217,7 +257,7 @@ public class BasicLibrary
       libItems.add( LibItem.MFIND );
       libItems.add( LibItem.MALLOC );
       libItems.add( LibItem.MFREE );
-      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.EMPTY_STRING );
     }
     if( libItems.contains( LibItem.INRSV ) ) {
       /*
@@ -484,6 +524,50 @@ public class BasicLibrary
       libItems.add( LibItem.S_STR );
       libItems.add( LibItem.PS_S );
     }
+    if( libItems.contains( LibItem.PRINT_SPC ) ) {
+      /*
+       * Ausgabe von Leerzeichen auf dem Bildschirm
+       *
+       * Parameter:
+       *   HL: Anzahl Leerzeichen
+       */
+      buf.append( "PRINT_SPC:\n"
+		+ "\tBIT\t7,H\n"
+		+ "\tRET\tNZ\n"
+		+ "PRINT_SPC1:\n"
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tRET\tZ\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tA,20H\n"
+		+ "\tCALL\tXOUTCH\n"
+		+ "\tPOP\tHL\n"
+		+ "\tDEC\tHL\n"
+		+ "\tJR\tPRINT_SPC1\n" );
+      libItems.add( LibItem.XOUTCH );
+    }
+    if( libItems.contains( LibItem.IO_PRINT_SPC ) ) {
+      /*
+       * Ausgabe von Leerzeichen auf dem Ausgabekanal
+       *
+       * Parameter:
+       *   HL: Anzahl Leerzeichen
+       */
+      buf.append( "IO_PRINT_SPC:\n"
+		+ "\tBIT\t7,H\n"
+		+ "\tRET\tNZ\n"
+		+ "IO_PRINT_SPC1:\n"
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tRET\tZ\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tA,20H\n"
+		+ "\tCALL\tIO_COUT\n"
+		+ "\tPOP\tHL\n"
+		+ "\tDEC\tHL\n"
+		+ "\tJR\tIO_PRINT_SPC1\n" );
+      libItems.add( LibItem.IO_COUT );
+    }
     if( libItems.contains( LibItem.PS_IF ) ) {
       /*
        * Formatierte Ausgabe einer Integer-Zahl auf einem Ausgabekanal
@@ -543,9 +627,9 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.IO_COUT ) ) {
       buf.append( "IO_COUT:\n"
-		+ "\tLD\tHL,(M_IO_COUT)\n"
+		+ "\tLD\tHL,(IO_M_COUT)\n"
 		+ "\tJP\t(HL)\n" );
-      libItems.add( LibItem.M_IO_COUT );
+      libItems.add( LibItem.IO_M_COUT );
     }
     if( libItems.contains( LibItem.IO_SET_COUT ) ) {
       /*
@@ -559,7 +643,7 @@ public class BasicLibrary
        *   CY=1: Adresse ist Null
        */
       buf.append( "IO_SET_COUT:\n"
-		+ "\tLD\t(M_IO_COUT),HL\n" );
+		+ "\tLD\t(IO_M_COUT),HL\n" );
       appendResetErrorUseBC( compiler );
       buf.append( "\tLD\tA,H\n"
 		+ "\tOR\tL\n"
@@ -567,267 +651,30 @@ public class BasicLibrary
       appendSetErrorChannelClosed( compiler );
       buf.append( "\tSCF\n"
 		+ "\tRET\n" );
-      libItems.add( LibItem.M_IO_COUT );
-    }
-    if( libItems.contains( LibItem.ACCEPT ) ) {
-      /*
-       * Socket in TCP-Server-Mode schalten
-       *
-       * Parameter:
-       *   (M_PORT): Portnummer
-       *   A:        Socketnummer (entspricht Kanalnummer-1)
-       *   HL:       Anfangsadresse des Kanalzeigerfeldes
-       */
-      buf.append( "ACCEPT:\tLD\t(M_IOCA),HL\n"
-		+ "\tLD\t(KCNET_M_SOCKET),A\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\t(HL)\n"
-		+ "\tJR\tZ,ACCEPT1\n" );
-      appendSetErrorChannelAlreadyOpen( compiler );
-      buf.append( "\tRET\n"
-		+ "ACCEPT1:\n"
-		+ "\tDEC\tHL\n" );
-      buf.append_LD_DE_nn( KCNetLibrary.IOCTB_SOCKET_OFFS );
-      buf.append( "\tADD\tHL,DE\n"
-		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
-		+ "\tLD\t(HL),A\n" );
-      appendResetErrorUseHL( compiler );
-      buf.append( "\tCALL\tKCNET_INIT\n"
-		+ "\tRET\tC\n"
-		+ "ACCEPT2:\n"
-		+ "\tLD\tE,01H\n"			// TCP
-		+ "\tLD\tHL,(M_PORT)\n"
-		+ "\tCALL\tKCNET_SOCK_OPEN\n"
-		+ "\tLD\tBC,0201H\n"			// Sn_CR=LISTEN
-		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
-		+ "\tCALL\tKCNET_SOCK_GET_STATUS\n"
-		+ "\tCP\t14H\n"				// SOCK_LISTEN?
-		+ "\tJR\tNZ,ACCEPT2\n"
-      // Kanalzeigerfeld fuellen
-		+ "\tCALL\tKCNET_SET_IOPTRS_TCP\n"
-      // auf Verbindung warten
-		+ "ACCEPT3:\n" );
-      if( options.canBreakAlways() ) {
-	buf.append( "\tCALL\tXCKBRK\n" );
-	libItems.add( LibItem.XCKBRK );
-      }
-      buf.append( "\tCALL\tKCNET_SOCK_GET_STATUS\n"
-		+ "\tCP\t14H\n"				// SOCK_LISTEN?
-		+ "\tJR\tZ,ACCEPT3\n"
-		+ "\tCP\t01H\n"				// SOCK_ARP?
-		+ "\tJR\tZ,ACCEPT3\n"
-		+ "\tCP\t15H\n"				// SOCK_SYNSENT?
-		+ "\tJR\tZ,ACCEPT3\n"
-		+ "\tCP\t16H\n"				// SOCK_SYNRECV?
-		+ "\tJR\tZ,ACCEPT3\n"
-		+ "\tCP\t17H\n"				// SOCK_ESTABLISHED?
-		+ "\tJR\tNZ,ACCEPT2\n"
-		+ "\tCALL\tKCNET_IOCTB_INIT_TXRX\n"
-		+ "\tJP\tKCNET_IOCTB_FILL_REMOTE\n" );
-      libItems.add( LibItem.KCNET_TCP );
-      libItems.add( LibItem.KCNET_BASE );
-    }
-    if( libItems.contains( LibItem.CONNECT ) ) {
-      /*
-       * TCP-Verbindung aufbauen
-       *
-       * Parameter:
-       *   (M_HOST): Hostname oder IP-Adresse (textuell)
-       *   (M_PORT): Portnummer
-       *   A:        Socketnummer (entspricht Kanalnummer-1)
-       *   HL:       Anfangsadresse des Kanalzeigerfeldes
-       */
-      buf.append( "CONNECT:\n"
-		+ "\tLD\t(M_IOCA),HL\n"
-		+ "\tLD\t(KCNET_M_SOCKET),A\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\t(HL)\n"
-		+ "\tJR\tZ,CONNECT1\n" );
-      appendSetErrorChannelAlreadyOpen( compiler );
-      buf.append( "\tRET\n"
-		+ "CONNECT1:\n"
-		+ "\tDEC\tHL\n" );
-      buf.append_LD_DE_nn( KCNetLibrary.IOCTB_SOCKET_OFFS );
-      buf.append( "\tADD\tHL,DE\n"
-		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
-		+ "\tLD\t(HL),A\n" );
-      appendResetErrorUseHL( compiler );
-      buf.append( "\tCALL\tKCNET_INIT\n"
-		+ "\tRET\tC\n"
-		+ "\tLD\tHL,(M_HOST)\n"
-		+ "\tCALL\tKCNET_HOSTBYNAME\n"
-		+ "\tRET\tC\n"
-		+ "\tLD\tE,01H\n"			// TCP
-		+ "\tCALL\tKCNET_SOCK_GET_PORT_AND_OPEN\n"
-		+ "\tLD\tHL,KCNET_M_IPADDR\n"
-		+ "\tLD\tBC,040CH\n"		// 4 Durchlaeufe, Sn_DIPR
-		+ "CONNECT2:\n"
-		+ "\tPUSH\tBC\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tLD\tB,(HL)\n"
-		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
-		+ "\tPOP\tHL\n"
-		+ "\tPOP\tBC\n"
-		+ "\tINC\tHL\n"
-		+ "\tINC\tC\n"
-		+ "\tDJNZ\tCONNECT2\n"
-		+ "\tLD\tBC,(M_PORT)\n"
-		+ "\tLD\tL,10H\n"			// Sn_DPORT
-		+ "\tCALL\tKCNET_SOCK_SET_WORD\n"
-		+ "\tLD\tBC,0401H\n"			// Sn_CR=CONNECT
-		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
-		+ "CONNECT3:\n"
-		+ "\tLD\tL,03H\n"			// Sn_SR
-		+ "\tCALL\tKCNET_SOCK_GET_BYTE\n"
-		+ "\tCP\t17H\n"				// SOCK_ESTABLISHED
-		+ "\tJP\tZ,CONNECT5\n"
-		+ "\tOR\tA\n" );			// SOCK_CLOSED?
-      if( options.canBreakAlways() ) {
-	buf.append( "\tJR\tZ,CONNECT4\n"
-		+ "\tCALL\tXCKBRK\n"
-		+ "\tJR\tCONNECT3\n"
-		+ "CONNECT4:\n" );
-	libItems.add( LibItem.XCKBRK );
-      } else {
-	buf.append( "\tJR\tNZ,CONNECT3\n" );
-      }
-      appendSetError(
-		compiler,
-		E_CONNECT_FAILED,
-		"Verbindungsaufbau fehlgeschlagen",
-		"Connect failed" );
-      buf.append( "\tSCF\n"
-		+ "\tRET\n"
-		+ "CONNECT5:\n"
-		+ "\tCALL\tKCNET_SET_IOPTRS_TCP\n"
-		+ "\tCALL\tKCNET_IOCTB_INIT_TXRX\n"
-		+ "\tJP\tKCNET_IOCTB_FILL_REMOTE\n" );
-      libItems.add( LibItem.KCNET_HOSTBYNAME );
-      libItems.add( LibItem.KCNET_TCP );
-      libItems.add( LibItem.KCNET_BASE );
-    }
-    if( libItems.contains( LibItem.DATAGRAM ) ) {
-      /*
-       * Socket in UDP-Mode oeffnen
-       *
-       * Parameter:
-       *   (M_PORT): Portnummer
-       *   A:        Socketnummer (entspricht Kanalnummer-1)
-       *   HL:       Anfangsadresse des Kanalzeigerfeldes
-       */
-      buf.append( "DATAGRAM:\n"
-		+ "\tLD\t(M_IOCA),HL\n"
-		+ "\tLD\t(KCNET_M_SOCKET),A\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\t(HL)\n"
-		+ "\tJR\tZ,DATAGRAM1\n" );
-      appendSetErrorChannelAlreadyOpen( compiler );
-      buf.append( "\tRET\n"
-		+ "DATAGRAM1:\n"
-		+ "\tDEC\tHL\n" );
-      buf.append_LD_DE_nn( KCNetLibrary.IOCTB_SOCKET_OFFS );
-      buf.append( "\tADD\tHL,DE\n"
-		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
-		+ "\tLD\t(HL),A\n" );
-      appendResetErrorUseHL( compiler );
-      buf.append( "\tCALL\tKCNET_INIT\n"
-		+ "\tRET\tC\n"
-		+ "\tLD\tE,02H\n"		// UDP
-		+ "\tLD\tHL,(M_PORT)\n"
-		+ "\tCALL\tKCNET_SOCK_OPEN\n"
-      // Kanalzeigerfeld fuellen
-		+ "\tLD\tBC,000AH\n"		// ohne FLUSH-Routine
-		+ "\tLD\tDE,(M_IOCA)\n"
-		+ "\tLD\tHL,KCNET_DATA_IOPTRS\n"
-		+ "\tLDIR\n"
-		+ "\tXOR\tA\n"
-		+ "\tLD\tB,04H\n"		// FLUSH- und Zeichenpuffer
-		+ "DATAGRAM2:\n"
-		+ "\tLD\t(DE),A\n"
-		+ "\tINC\tDE\n"
-		+ "\tDJNZ\tDATAGRAM2\n"
-		+ "\tLD\tA,(KCNET_M_SOCKET)\n"
-		+ "\tLD\t(DE),A\n"		// IOCTB_SOCKET_OFFS
-		+ "\tINC\tDE\n"
-		+ "\tLD\tA,\'U\'\n"
-		+ "\tLD\t(DE),A\n"		// IOCTB_PROTO_OFFS
-		+ "\tINC\tDE\n"
-		+ "\tLD\tB," );
-      buf.appendHex2( KCNetLibrary.IOCTB_CHANNEL_SIZE
-				- KCNetLibrary.IOCTB_RX_CNT_OFFS );
-      buf.append( "\n"
-		+ "\tXOR\tA\n"
-		+ "DATAGRAM3:\n"
-		+ "\tINC\tDE\n"
-		+ "\tLD\t(DE),A\n"
-		+ "\tDJNZ\tDATAGRAM3\n"
-		+ "\tJP\tKCNET_IOCTB_INIT_TXRX\n" );
-      libItems.add( LibItem.KCNET_UDP );
-      libItems.add( LibItem.KCNET_BASE );
-    }
-    if( libItems.contains( LibItem.SEND ) ) {
-      /*
-       * Senden eines UDP-Pakets
-       *
-       * Parameter:
-       *   (KCNET_M_SOCKET): Socketnummer
-       *   (M_IOCA):         Anfangsadresse Kanalzeigerfeld
-       *   (M_HOST):         Hostname oder IP-Adresse (textuell)
-       *   (M_PORT):         Portnummer
-       */
-      buf.append( "SEND:\tLD\tHL,(M_IOCA)\n"
-		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
-		+ "\tRET\tC\n"
-		+ "\tCP\t\'U\'\n"
-		+ "\tJR\tZ,SEND1\n" );
-      appendSetErrorIOMode( compiler );
-      buf.append( "\tRET\n"
-		+ "SEND1:\tLD\tBC,040CH\n"	// 4 Durchlaeufe und Sn_DIPR
-		+ "\tLD\tHL,KCNET_M_IPADDR\n"
-		+ "SEND2:\tPUSH\tBC\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tLD\tB,(HL)\n"
-		+ "\tCALL\tKCNET_SOCK_SET_BYTE\n"
-		+ "\tPOP\tHL\n"
-		+ "\tPOP\tBC\n"
-		+ "\tINC\tC\n"
-		+ "\tINC\tHL\n"
-		+ "\tDJNZ\tSEND2\n"
-		+ "\tLD\tL,C\n"			// L nun Sn_DPORT
-		+ "\tLD\tBC,(M_PORT)\n"
-		+ "\tCALL\tKCNET_SOCK_SET_WORD\n"
-		+ "\tJP\tKCNET_FLUSH1\n" );
-      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
-      libItems.add( LibItem.KCNET_HOSTBYNAME );
-      libItems.add( LibItem.KCNET_UDP );
-      libItems.add( LibItem.KCNET_FLUSH1 );
-      libItems.add( LibItem.KCNET_BASE );
+      libItems.add( LibItem.IO_M_COUT );
     }
     if( libItems.contains( LibItem.CIRCLE ) ) {
       /*
        * Zeichnen eines Kreises
        *
        * Parameter:
-       *   M_CIMX: X-Koordinate Kreismittelpunkt (Xm)
-       *   M_CIMY: Y-Koordinate Kreismittelpunkt (Ym)
-       *   M_CIRA: Radius
+       *   CIRCLE_M_X:   X-Koordinate Kreismittelpunkt (Xm)
+       *   CIRCLE_M_Y:   Y-Koordinate Kreismittelpunkt (Ym)
+       *   CIRCLE_M_R:   Radius
        * Hilfszellen:
-       *   M_CIER: Fehlerglied
-       *   M_CIRX: relative X-Koordinate (Xr)
-       *   M_CIRY: relative Y-Koordinate (Yr)
-       *   M_CXMX: Koordinate Xm - Xr
-       *   M_CXPX: Koordinate Xm + Xr
-       *   M_CXMY: Koordinate Xm - Yr
-       *   M_CXPY: Koordinate Xm + Yr
-       *   M_CYMX: Koordinate Ym - Xr
-       *   M_CYPX: Koordinate Ym + Xr
-       *   M_CYMY: Koordinate Ym - Yr
-       *   M_CYPY: Koordinate Ym + Yr
+       *   CIRCLE_M_ER:  Fehlerglied
+       *   CIRCLE_M_RX:  relative X-Koordinate (Xr)
+       *   CIRCLE_M_RY:  relative Y-Koordinate (Yr)
+       *   CIRCLE_M_XMX: Koordinate Xm - Xr
+       *   CIRCLE_M_XPX: Koordinate Xm + Xr
+       *   CIRCLE_M_XMY: Koordinate Xm - Yr
+       *   CIRCLE_M_XPY: Koordinate Xm + Yr
+       *   CIRCLE_M_YMX: Koordinate Ym - Xr
+       *   CIRCLE_M_YPX: Koordinate Ym + Xr
+       *   CIRCLE_M_YMY: Koordinate Ym - Yr
+       *   CIRCLE_M_YPY: Koordinate Ym + Yr
        */
-      buf.append( "CIRCLE:\tLD\tDE,(M_CIRA)\n"
+      buf.append( "CIRCLE:\tLD\tDE,(CIRCLE_M_R)\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tA\n"
 		+ "\tJP\tM,E_PARM\n"		// bei R<0
@@ -835,89 +682,91 @@ public class BasicLibrary
 		+ "\tRET\tZ\n"			// bei R=0
 		+ "\tLD\tHL,0001\n"		// Fehlerglied: 1-R
 		+ "\tSBC\tHL,DE\n"		// CY ist 0
-		+ "\tLD\t(M_CIER),HL\n"
+		+ "\tLD\t(CIRCLE_M_ER),HL\n"
 		+ "\tLD\tHL,0000H\n"		// (Xr,Yr) = (0,R)
-		+ "\tLD\t(M_CIRX),HL\n"
-		+ "\tLD\t(M_CIRY),DE\n"
-		+ "\tLD\tHL,(M_CIMX)\n"
-		+ "\tLD\t(M_CXMX),HL\n"
-		+ "\tLD\t(M_CXPX),HL\n"
+		+ "\tLD\t(CIRCLE_M_RX),HL\n"
+		+ "\tLD\t(CIRCLE_M_RY),DE\n"
+		+ "\tLD\tHL,(CIRCLE_M_X)\n"
+		+ "\tLD\t(CIRCLE_M_XMX),HL\n"
+		+ "\tLD\t(CIRCLE_M_XPX),HL\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,DE\n"
-		+ "\tLD\t(M_CXMY),HL\n"
+		+ "\tLD\t(CIRCLE_M_XMY),HL\n"
 		+ "\tADD\tHL,DE\n"
 		+ "\tADD\tHL,DE\n"
-		+ "\tLD\t(M_CXPY),HL\n"
-		+ "\tLD\tHL,(M_CIMY)\n"
-		+ "\tLD\t(M_CYMX),HL\n"
-		+ "\tLD\t(M_CYPX),HL\n"
+		+ "\tLD\t(CIRCLE_M_XPY),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_Y)\n"
+		+ "\tLD\t(CIRCLE_M_YMX),HL\n"
+		+ "\tLD\t(CIRCLE_M_YPX),HL\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,DE\n"
-		+ "\tLD\t(M_CYMY),HL\n"
+		+ "\tLD\t(CIRCLE_M_YMY),HL\n"
 		+ "\tADD\tHL,DE\n"
 		+ "\tADD\tHL,DE\n"
-		+ "\tLD\t(M_CYPY),HL\n"
-		+ "CIRC2:\tLD\tHL,(M_CIRY)\n"	// Ende erreicht?
+		+ "\tLD\t(CIRCLE_M_YPY),HL\n"
+		+ "CIRCLE1:\n"
+		+ "\tLD\tHL,(CIRCLE_M_RY)\n"	// Ende erreicht?
 		+ "\tLD\tB,H\n"
 		+ "\tLD\tC,L\n"
-		+ "\tLD\tDE,(M_CIRX)\n"
+		+ "\tLD\tDE,(CIRCLE_M_RX)\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,DE\n"
 		+ "\tRET\tC\n"
 		+ "\tPUSH\tAF\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tCIRC4\n"		// Punkte setzen
+		+ "\tCALL\tCIRCLE3\n"		// Punkte setzen
 		+ "\tPOP\tDE\n"
 		+ "\tPOP\tAF\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tDE\n"			// Xr = Xr + 1
-		+ "\tLD\t(M_CIRX),DE\n"
-		+ "\tLD\tHL,(M_CXMX)\n"		// Xm-Xr anpassen
+		+ "\tLD\t(CIRCLE_M_RX),DE\n"
+		+ "\tLD\tHL,(CIRCLE_M_XMX)\n"	// Xm-Xr anpassen
 		+ "\tDEC\tHL\n"
-		+ "\tLD\t(M_CXMX),HL\n"
-		+ "\tLD\tHL,(M_CXPX)\n"		// Xm+Xr anpassen
+		+ "\tLD\t(CIRCLE_M_XMX),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_XPX)\n"	// Xm+Xr anpassen
 		+ "\tINC\tHL\n"
-		+ "\tLD\t(M_CXPX),HL\n"
-		+ "\tLD\tHL,(M_CYMX)\n"		// Xm-Xr anpassen
+		+ "\tLD\t(CIRCLE_M_XPX),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_YMX)\n"	// Xm-Xr anpassen
 		+ "\tDEC\tHL\n"
-		+ "\tLD\t(M_CYMX),HL\n"
-		+ "\tLD\tHL,(M_CYPX)\n"		// Xm+Xr anpassen
+		+ "\tLD\t(CIRCLE_M_YMX),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_YPX)\n"	// Xm+Xr anpassen
 		+ "\tINC\tHL\n"
-		+ "\tLD\t(M_CYPX),HL\n"
-		+ "\tLD\tHL,(M_CIER)\n"		// F >= 0 -> CIRC3
+		+ "\tLD\t(CIRCLE_M_YPX),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_ER)\n"	// F >= 0 -> CIRCLE2
 		+ "\tBIT\t7,H\n"
-		+ "\tJR\tZ,CIRC3\n"
+		+ "\tJR\tZ,CIRCLE2\n"
 		+ "\tSLA\tE\n"			// F = F + 2*X - 1
 		+ "\tRL\tD\n"
 		+ "\tADD\tHL,DE\n"
 		+ "\tDEC\tHL\n"
-		+ "\tLD\t(M_CIER),HL\n"
-		+ "\tJR\tCIRC2\n"
-		+ "CIRC3:\tLD\tB,H\n"
+		+ "\tLD\t(CIRCLE_M_ER),HL\n"
+		+ "\tJR\tCIRCLE1\n"
+		+ "CIRCLE2:\n"
+		+ "\tLD\tB,H\n"
 		+ "\tLD\tC,L\n"
-		+ "\tLD\tHL,(M_CIRY)\n"		// F = F + 2*(X-Y)
+		+ "\tLD\tHL,(CIRCLE_M_RY)\n"	// F = F + 2*(X-Y)
 		+ "\tEX\tDE,HL\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,DE\n"
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,BC\n"
-		+ "\tLD\t(M_CIER),HL\n"
-		+ "\tLD\tHL,(M_CIRY)\n"		// Yr = Yr - 1
+		+ "\tLD\t(CIRCLE_M_ER),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_RY)\n"	// Yr = Yr - 1
 		+ "\tDEC\tHL\n"
-		+ "\tLD\t(M_CIRY),HL\n"
-		+ "\tLD\tHL,(M_CXMY)\n"		// Xm-Xr anpassen
+		+ "\tLD\t(CIRCLE_M_RY),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_XMY)\n"	// Xm-Xr anpassen
 		+ "\tINC\tHL\n"
-		+ "\tLD\t(M_CXMY),HL\n"
-		+ "\tLD\tHL,(M_CXPY)\n"		// Xm+Xr anpassen
+		+ "\tLD\t(CIRCLE_M_XMY),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_XPY)\n"	// Xm+Xr anpassen
 		+ "\tDEC\tHL\n"
-		+ "\tLD\t(M_CXPY),HL\n"
-		+ "\tLD\tHL,(M_CYMY)\n"		// Xm-Xr anpassen
+		+ "\tLD\t(CIRCLE_M_XPY),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_YMY)\n"	// Xm-Xr anpassen
 		+ "\tINC\tHL\n"
-		+ "\tLD\t(M_CYMY),HL\n"
-		+ "\tLD\tHL,(M_CYPY)\n"		// Xm+Xr anpassen
+		+ "\tLD\t(CIRCLE_M_YMY),HL\n"
+		+ "\tLD\tHL,(CIRCLE_M_YPY)\n"	// Xm+Xr anpassen
 		+ "\tDEC\tHL\n"
-		+ "\tLD\t(M_CYPY),HL\n"
-		+ "\tJP\tCIRC2\n"
+		+ "\tLD\t(CIRCLE_M_YPY),HL\n"
+		+ "\tJP\tCIRCLE1\n"
       /*
        * Setzen eines Punktes in allen 8 Oktanden
        *
@@ -925,44 +774,52 @@ public class BasicLibrary
        * BC:  relative Y-Koordinate
        * Z=1: Xr == Yr
        */
-		+ "CIRC4:\tJR\tZ,CIRC6\n"
+		+ "CIRCLE3:\n"
+		+ "\tJR\tZ,CIRCLE5\n"
 		+ "\tLD\tA,D\n"
 		+ "\tOR\tE\n"
 		+ "\tEXX\n"
-		+ "\tJR\tZ,CIRC5\n"
-		+ "\tLD\tDE,(M_CXMX)\n"
-		+ "\tCALL\tCIRC10\n"
-		+ "CIRC5:\tLD\tDE,(M_CXPX)\n"
-		+ "\tCALL\tCIRC10\n"
+		+ "\tJR\tZ,CIRCLE4\n"
+		+ "\tLD\tDE,(CIRCLE_M_XMX)\n"
+		+ "\tCALL\tCIRCLE9\n"
+		+ "CIRCLE4:\n"
+		+ "\tLD\tDE,(CIRCLE_M_XPX)\n"
+		+ "\tCALL\tCIRCLE9\n"
 		+ "\tEXX\n"
-		+ "CIRC6:\tLD\tA,B\n"
-		+ "\tOR\tC\n"
-		+ "\tEXX\n"
-		+ "\tJR\tZ,CIRC7\n"
-		+ "\tLD\tDE,(M_CXMY)\n"
-		+ "\tCALL\tCIRC8\n"
-		+ "CIRC7:\tLD\tDE,(M_CXPY)\n"
-		+ "CIRC8:\tEXX\n"
-		+ "\tLD\tA,D\n"
-		+ "\tOR\tE\n"
-		+ "\tEXX\n"
-		+ "\tJR\tZ,CIRC9\n"
-		+ "\tLD\tHL,(M_CYMX)\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tXPSET\n"
-		+ "\tPOP\tDE\n"
-		+ "CIRC9:\tLD\tHL,(M_CYPX)\n"
-		+ "\tJP\tXPSET\n"
-		+ "CIRC10:\tEXX\n"
+		+ "CIRCLE5:\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tEXX\n"
-		+ "\tJR\tZ,CIRC11\n"
-		+ "\tLD\tHL,(M_CYMY)\n"
+		+ "\tJR\tZ,CIRCLE6\n"
+		+ "\tLD\tDE,(CIRCLE_M_XMY)\n"
+		+ "\tCALL\tCIRCLE7\n"
+		+ "CIRCLE6:\n"
+		+ "\tLD\tDE,(CIRCLE_M_XPY)\n"
+		+ "CIRCLE7:\n"
+		+ "\tEXX\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"
+		+ "\tEXX\n"
+		+ "\tJR\tZ,CIRCLE8\n"
+		+ "\tLD\tHL,(CIRCLE_M_YMX)\n"
 		+ "\tPUSH\tDE\n"
 		+ "\tCALL\tXPSET\n"
 		+ "\tPOP\tDE\n"
-		+ "CIRC11:\tLD\tHL,(M_CYPY)\n"
+		+ "CIRCLE8:\n"
+		+ "\tLD\tHL,(CIRCLE_M_YPX)\n"
+		+ "\tJP\tXPSET\n"
+		+ "CIRCLE9:\n"
+		+ "\tEXX\n"
+		+ "\tLD\tA,B\n"
+		+ "\tOR\tC\n"
+		+ "\tEXX\n"
+		+ "\tJR\tZ,CIRCLE10\n"
+		+ "\tLD\tHL,(CIRCLE_M_YMY)\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tXPSET\n"
+		+ "\tPOP\tDE\n"
+		+ "CIRCLE10:\n"
+		+ "\tLD\tHL,(CIRCLE_M_YPY)\n"
 		+ "\tJP\tXPSET\n" );
       libItems.add( LibItem.E_PARM );
       libItems.add( LibItem.XPSET );
@@ -1032,26 +889,6 @@ public class BasicLibrary
       libItems.add( LibItem.E_PARM );
       libItems.add( LibItem.XLOCATE );
     }
-    if( libItems.contains( LibItem.MOVER ) ) {
-      /*
-       * Grafikkursor relativ positionieren
-       *
-       * Parameter:
-       *   DE: X-Koordinate relativ
-       *   HL: Y-Koordinate relativ
-       */
-      buf.append( "MOVER:\tPUSH\tHL\n"
-		+ "\tLD\tHL,(M_XPOS)\n"
-		+ "\tCALL\tO_ADD\n"
-		+ "\tLD\t(M_XPOS),HL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tLD\tHL,(M_YPOS)\n"
-		+ "\tCALL\tO_ADD\n"
-		+ "\tLD\t(M_YPOS),HL\n"
-		+ "\tRET\n" );
-      libItems.add( LibItem.O_ADD );
-      libItems.add( LibItem.M_XYPO );
-    }
     if( libItems.contains( LibItem.DRLBLT ) ) {
       buf.append( "DRLBLT:\tEX\t(SP),HL\n"
 		+ "\tCALL\tDRLBL\n"
@@ -1078,7 +915,7 @@ public class BasicLibrary
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tADD\tHL,HL\n"
-		+ "\tLD\tBC,FNT5P7\n"
+		+ "\tLD\tBC,FONT_5X7\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tLD\tDE,(M_XPOS)\n"
 		+ "\tLD\tA,(HL)\n"
@@ -1115,9 +952,257 @@ public class BasicLibrary
 		+ "\tINC\tDE\n"
 		+ "\tINC\tDE\n"
 		+ "\tJR\tDRLBL4\n" );
-      libItems.add( LibItem.FNT5P7 );
+      libItems.add( LibItem.FONT_5X7 );
       libItems.add( LibItem.M_XYPO );
       libItems.add( LibItem.XPSET );
+    }
+    if( libItems.contains( LibItem.DRAWST ) ) {
+      /*
+       * DRAW-Macro ausfuehren,
+       * Der Macro-String folgt direkt hinter dem Aufruf.
+       *
+       * Parameter:
+       *   DE: relative X-Koordinate
+       *   HL: relative Y-Koordinate
+       */
+      buf.append( "DRAWST:\tEX\t(SP),HL\n"
+		+ "\tCALL\tDRAWS\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tEX\t(SP),HL\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.DRAWS );
+    }
+    if( libItems.contains( LibItem.DRAWS ) ) {
+      /*
+       * DRAW-Macro ausfuehren
+       *
+       * Parameter:
+       *   HL: Zeiger auf Macro-String
+       * Rueckgabe:
+       *   DE: 1. Zeichen hinter der Zeichenkette
+       */
+      buf.append( "DRAWS:\tEX\tDE,HL\n"
+		+ "DRAWS1:\tXOR\tA\n"		// Modus zuruecksetzen
+		+ "\tLD\t(M_DRSM),A\n"
+		+ "DRAWS2:\tLD\tA,(DE)\n"
+		+ "\tINC\tDE\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"
+		+ "\tCALL\tC_UPR\n"
+		+ "\tCP\t42H\n"				// B
+		+ "\tJP\tZ,DRAWS_MOVE\n"
+		+ "\tCP\t44H\n"				// D
+		+ "\tJR\tZ,DRAWS_DOWN\n"
+		+ "\tCP\t45H\n"				// E
+		+ "\tJP\tZ,DRAWS_RIGHT_UP\n"
+		+ "\tCP\t46H\n"				// F
+		+ "\tJR\tZ,DRAWS_RIGHT_DOWN\n"
+		+ "\tCP\t47H\n"				// G
+		+ "\tJR\tZ,DRAWS_LEFT_DOWN\n"
+		+ "\tCP\t48H\n"				// H
+		+ "\tJR\tZ,DRAWS_LEFT_UP\n"
+		+ "\tCP\t4CH\n"				// L
+		+ "\tJR\tZ,DRAWS_LEFT\n"
+		+ "\tCP\t4DH\n"				// M
+		+ "\tJP\tZ,DRAWS_TO\n"
+		+ "\tCP\t52H\n"				// R
+		+ "\tJR\tZ,DRAWS_RIGHT\n"
+		+ "\tCP\t55H\n"				// U
+		+ "\tJR\tZ,DRAWS_UP\n"
+		+ "\tJP\tE_PARM\n"
+		+ "DRAWS_DOWN:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tNEGHL\n"
+		+ "\tLD\tDE,0000H\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tDRAWS1\n"
+		+ "DRAWS_LEFT:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tNEGHL\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tDRAWS1\n"
+		+ "DRAWS_LEFT_DOWN:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tNEGHL\n"
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tDRAWS1\n"
+		+ "DRAWS_LEFT_UP:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tCALL\tNEGHL\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tDRAWS1\n"
+		+ "DRAWS_RIGHT:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\tHL,0000H\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJP\tDRAWS1\n"
+		+ "DRAWS_RIGHT_DOWN:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tCALL\tNEGHL\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJP\tDRAWS1\n"
+		+ "DRAWS_RIGHT_UP:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJP\tDRAWS1\n"
+		+ "DRAWS_UP:\n"
+		+ "\tCALL\tDRAWS_NUM\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tDE,0000H\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJP\tDRAWS1\n"
+		+ "DRAWS_TO:\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tCP\t2BH\n"				// +
+		+ "\tJR\tZ,DRAWS_TO_REL\n"
+		+ "\tCP\t2DH\n"				// -
+		+ "\tJR\tZ,DRAWS_TO_REL\n"
+		+ "\tCALL\tDRAWS_PARSE_POINT\n"
+		+ "\tLD\tA,(M_DRSM)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tNZ,DRAWS_TO1\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\t(LINE_M_EX),BC\n"
+		+ "\tLD\t(LINE_M_EY),HL\n"
+		+ "\tCALL\tDRAW\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJP\tDRAWS1\n"
+		+ "DRAWS_TO1:\n"
+		+ "\tLD\t(M_XPOS),BC\n"
+		+ "\tLD\t(M_YPOS),HL\n"
+		+ "\tJP\tDRAWS1\n"
+		+ "DRAWS_TO_REL:\n"
+		+ "\tCALL\tDRAWS_PARSE_POINT\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tD,B\n"
+		+ "\tLD\tE,C\n"
+		+ "\tCALL\tDRAWS_REL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJP\tDRAWS1\n"
+		+ "DRAWS_MOVE:\n"
+		+ "\tLD\tA,01H\n"
+		+ "\tLD\t(M_DRSM),A\n"
+		+ "\tJP\tDRAWS2\n"
+      /*
+       * Parsen einer X/Y-Koordinate
+       *
+       * Parameter:
+       *   DE: Zeiger auf die aktuelle Position im Macro-String
+       * Rueckgabe:
+       *   BC: geparste X-Koordinate
+       *   DE: Zeiger auf das erste Zeichen hinter der Zahl
+       *   HL: geparste Y-Koordinate
+       */
+		+ "DRAWS_PARSE_POINT:\n"
+		+ "\tCALL\tDRAWS_SIGNED_NUM\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tCP\t2CH\n"				// Komma
+		+ "\tJP\tNZ,E_PARM\n"
+		+ "\tINC\tDE\n"
+		+ "\tCALL\tDRAWS_SIGNED_NUM\n"
+		+ "\tPOP\tBC\n"
+		+ "\tRET\n"
+		+ "DRAWS_SIGNED_NUM:\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tCP\t2BH\n"				// +
+		+ "\tJR\tNZ,DRAWS_SIGNED_NUM1\n"
+		+ "\tINC\tDE\n"
+		+ "\tJR\tDRAWS_SIGNED_NUM2\n"
+		+ "DRAWS_SIGNED_NUM1:\n"
+		+ "\tCP\t2DH\n"				// -
+		+ "\tJR\tNZ,DRAWS_SIGNED_NUM2\n"
+		+ "\tINC\tDE\n"
+		+ "\tCALL\tDRAWS_SIGNED_NUM2\n"
+		+ "\tCALL\tNEGHL\n"
+		+ "\tRET\n"
+		+ "DRAWS_SIGNED_NUM2:\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tSUB\t30H\n"
+		+ "\tJP\tC,E_PARM\n"
+		+ "\tCP\t0AH\n"
+		+ "\tJP\tNC,E_PARM\n"
+		+ "\tJR\tDRAWS_NUM1\n"
+      /*
+       * Parsen einer evtl. vorhandenen Zahl,
+       * Ist keine Zahl vorhanden, wird 1 zurueckgeliefert.
+       *
+       * Parameter:
+       *   DE: Zeiger auf die aktuelle Position im Macro-String
+       * Rueckgabe:
+       *   DE: Zeiger auf das erste Zeichen hinter der Zahl
+       *   HL: geparste Zahl oder 1, wenn keine vorhanden ist
+       */
+		+ "DRAWS_NUM:\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tSUB\t30H\n"
+		+ "\tJR\tC,DRAWS_NUM3\n"
+		+ "\tCP\t0AH\n"
+		+ "\tJR\tNC,DRAWS_NUM3\n"
+		+ "DRAWS_NUM1:\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "DRAWS_NUM2:\n"
+		+ "\tINC\tDE\n"
+		+ "\tLD\tA,(DE)\n"
+		+ "\tSUB\t30H\n"
+		+ "\tRET\tC\n"
+		+ "\tCP\t0AH\n"
+		+ "\tRET\tNC\n"
+		+ "\tLD\tB,H\n"
+		+ "\tLD\tC,L\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,BC\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tLD\tC,A\n"
+		+ "\tLD\tB,00H\n"
+		+ "\tADD\tHL,BC\n"
+		+ "\tBIT\t7,H\n"
+		+ "\tJP\tNZ,E_NOV\n"
+		+ "\tJR\tDRAWS_NUM2\n"
+		+ "DRAWS_NUM3:\n"
+		+ "\tLD\tHL,0001H\n"
+		+ "\tRET\n"
+		+ "DRAWS_REL:\n"
+		+ "\tLD\tA,(M_DRSM)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,DRAWR\n"
+		+ "\tJP\tMOVER\n" );
+      libItems.add( LibItem.C_UPR );
+      libItems.add( LibItem.ABS_NEG_HL );
+      libItems.add( LibItem.DRAW );
+      libItems.add( LibItem.DRAWR );
+      libItems.add( LibItem.MOVER );
+      libItems.add( LibItem.E_NOV );
+      libItems.add( LibItem.E_PARM );
     }
     if( libItems.contains( LibItem.DRAWR ) ) {
       /*
@@ -1125,19 +1210,21 @@ public class BasicLibrary
        * Das Pixel auf der aktuellen Position wird nicht gesetzt.
        *
        * Parameter:
-       *   DE: rekative X-Koordinate
-       *   HL: rekative Y-Koordinate
+       *   M_XPOS: X-Koordinate Startpunkt
+       *   M_YPOS: Y-Koordinate Startpunkt
+       *   DE:     relative X-Koordinate Endpunkt
+       *   HL:     relative Y-Koordinate Endpunt
        */
       buf.append( "DRAWR:\tPUSH\tHL\n"
 		+ "\tLD\tHL,(M_XPOS)\n"
-		+ "\tLD\t(M_LNBX),HL\n"
+		+ "\tLD\t(LINE_M_BX),HL\n"
 		+ "\tCALL\tO_ADD\n"
-		+ "\tLD\t(M_LNEX),HL\n"
+		+ "\tLD\t(LINE_M_EX),HL\n"
 		+ "\tPOP\tDE\n"
 		+ "\tLD\tHL,(M_YPOS)\n"
-		+ "\tLD\t(M_LNBY),HL\n"
+		+ "\tLD\t(LINE_M_BY),HL\n"
 		+ "\tCALL\tO_ADD\n"
-		+ "\tLD\t(M_LNEY),HL\n"
+		+ "\tLD\t(LINE_M_EY),HL\n"
 		+ "\tJR\tDRAW1\n" );
       libItems.add( LibItem.M_XYPO );
       libItems.add( LibItem.O_ADD );
@@ -1145,231 +1232,84 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.DRAW ) ) {
       /*
-       * Linie zum Punkt (M_LNXE,M_LNYE) zeichnen,
+       * Linie zum Punkt (LINE_M_EX,LINE_M_EY) zeichnen,
        * Das Pixel auf der aktuellen Position wird nicht gesetzt.
        *
        * Parameter:
-       *   DE: rekative X-Koordinate
-       *   HL: rekative Y-Koordinate
+       *   M_XPOS:    X-Koordinate Startpunkt
+       *   M_YPOS:    Y-Koordinate Startpunkt
+       *   LINE_M_EX: X-Koordinate Endpunkt
+       *   LINE_M_EY: Y-Koordinate Endpunkt
        */
       buf.append( "DRAW:\tLD\tHL,(M_XPOS)\n"
-		+ "\tLD\t(M_LNBX),HL\n"
+		+ "\tLD\t(LINE_M_BX),HL\n"
 		+ "\tLD\tHL,(M_YPOS)\n"
-		+ "\tLD\t(M_LNBY),HL\n"
-		+ "DRAW1:\tCALL\tDRLIN1\n"
-		+ "\tLD\tHL,(M_LNEX)\n"
+		+ "\tLD\t(LINE_M_BY),HL\n"
+		+ "DRAW1:\tCALL\tDRAW_LINE2\n"
+		+ "\tLD\tHL,(LINE_M_EX)\n"
 		+ "\tLD\t(M_XPOS),HL\n"
-		+ "\tLD\tHL,(M_LNEY)\n"
+		+ "\tLD\tHL,(LINE_M_EY)\n"
 		+ "\tLD\t(M_YPOS),HL\n"
 		+ "\tRET\n" );
       libItems.add( LibItem.M_XYPO );
-      libItems.add( LibItem.DRLINE );
+      libItems.add( LibItem.DRAW_LINE );
     }
-    if( libItems.contains( LibItem.DRBOX ) ) {
-      /*
-       * Rechteck zeichnen
-       *
-       * Parameter:
-       *   (M_LNBX): X-Koordinate Anfang
-       *   (M_LNBY): Y-Koordinate Anfang
-       *   (M_LNEX): X-Koordinate Ende
-       *   (M_LNEY): Y-Koordinate Ende
-       * Hilfszellen:
-       *   (M_LNSX): X-Schrittweite
-       *   (M_LNSY): Y-Schrittweite
-       */
-      buf.append( "DRBOX:\tCALL\tH_BOX\n"
-		+ "\tPUSH\tBC\n"	// oberste Line zeichen
-		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n" );
-    if( target.supportsXHLINE() ) {
-      buf.append( "\tCALL\tXHLINE\n" );
-      libItems.add( LibItem.XHLINE );
-    } else {
-      buf.append( "\tCALL\tDRHLIN\n" );
-      libItems.add( LibItem.DRHLIN );
-    }
-    buf.append( "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tBC\n"
-		+ "\tLD\tA,(M_LNEY)\n"
-		+ "\tCP\tL\n"
-		+ "\tJR\tNZ,DRBOX1\n"
-		+ "\tLD\tA,(M_LNEY+1)\n"
-		+ "\tCP\tH\n"
-		+ "\tRET\tZ\n"
-		+ "DRBOX1:\tINC\tHL\n"
-		+ "\tLD\tA,(M_LNEY)\n"
-		+ "\tCP\tL\n"
-		+ "\tJR\tNZ,DRBOX2\n"
-		+ "\tLD\tA,(M_LNEY+1)\n"
-		+ "\tCP\tH\n" );
-    if( target.supportsXHLINE() ) {
-      buf.append( "\tJP\tZ,XHLINE\n" );
-    } else {
-      buf.append( "\tJP\tZ,DRHLIN\n" );
-    }
-    buf.append( "DRBOX2:\tPUSH\tBC\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tCALL\tXPSET\n"
-		+ "\tPOP\tHL\n"
-		+ "\tLD\tDE,(M_LNEX)\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tCALL\tXPSET\n"
-		+ "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tBC\n"
-		+ "\tJR\tDRBOX1\n" );
-      libItems.add( LibItem.H_BOX );
-      libItems.add( LibItem.XPSET );
-    }
-    if( libItems.contains( LibItem.DRBOXF ) ) {
-      /*
-       * ausgefuelltes Rechteck zeichnen
-       *
-       * Parameter:
-       *   (M_LNBX): X-Koordinate Anfang
-       *   (M_LNBY): Y-Koordinate Anfang
-       *   (M_LNEX): X-Koordinate Ende
-       *   (M_LNEY): Y-Koordinate Ende
-       * Hilfszellen:
-       *   (M_LNSX): X-Schrittweite
-       *   (M_LNSY): Y-Schrittweite
-       */
-      buf.append( "DRBOXF:CALL\tH_BOX\n"
-		+ "DRBXF1:\tPUSH\tBC\n"	// oberste Line zeichen
-		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n" );
-      if( target.supportsXHLINE() ) {
-	buf.append( "\tCALL\tXHLINE\n" );
-	libItems.add( LibItem.XHLINE );
-      } else {
-	buf.append( "\tCALL\tDRHLIN\n" );
-	libItems.add( LibItem.DRHLIN );
-      }
-      buf.append( "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tBC\n"
-		+ "\tLD\tA,(M_LNEY)\n"
-		+ "\tCP\tL\n"
-		+ "\tJR\tNZ,DRFBX2\n"
-		+ "\tLD\tA,(M_LNEY+1)\n"
-		+ "\tCP\tH\n"
-		+ "\tRET\tZ\n"
-		+ "DRFBX2:\tINC\tHL\n"
-		+ "\tJR\tDRBXF1\n" );
-      libItems.add( LibItem.H_BOX );
-    }
-    if( libItems.contains( LibItem.H_BOX ) ) {
-      /*
-       * Anpassung der Koordinaten fuer das Zeichen eines Rechtecks
-       *
-       * Parameter:
-       *   (M_LNBX): X-Koordinate Anfang
-       *   (M_LNBY): Y-Koordinate Anfang
-       *   (M_LNEX): X-Koordinate Ende
-       *   (M_LNEY): Y-Koordinate Ende
-       * Rueckgabewerte:
-       *   (M_LNBX): linke X-Koordinate
-       *   (M_LNBY): untere Y-Koordinate
-       *   (M_LNEX): rechte X-Koordinate
-       *   (M_LNEY): ober Y-Koordinate
-       *   DE: linke X-Koordinate
-       *   HL: untere Y-Koordinate
-       *   BC: Breite des Rechtecks - 1
-       */
-      buf.append( "H_BOX:\tLD\tHL,(M_LNEY)\n"
-		+ "\tLD\tDE,(M_LNBY)\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNC,H_BOX1\n"
-		+ "\tADD\tHL,DE\n"		// Y-Koordinaten tauschen
-		+ "\tLD\t(M_LNBY),HL\n"
-		+ "\tLD\t(M_LNEY),DE\n"
-		+ "H_BOX1:\tLD\tHL,(M_LNEX)\n"
-		+ "\tLD\tDE,(M_LNBX)\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tLD\tB,H\n"			// BC = X2 - X1
-		+ "\tLD\tC,L\n"
-		+ "\tJR\tNC,H_BOX2\n"
-		+ "\tADD\tHL,DE\n"		// X-Koordinaten tauschen
-		+ "\tLD\t(M_LNBX),HL\n"
-		+ "\tLD\t(M_LNEX),DE\n"
-		+ "\tEX\tDE,HL\n"		// DE = X1
-		+ "\tLD\tHL,0000H\n"		// BC anpassen
-		+ "\tSBC\tHL,BC\n"
-		+ "\tLD\tB,H\n"
-		+ "\tLD\tC,L\n"
-		+ "H_BOX2:\tLD\tHL,(M_LNBY)\n"
-		+ "\tRET\n" );
-    }
-    if( libItems.contains( LibItem.DRHLIN ) ) {
-      /*
-       * Horizontale Linie zeichnen
-       *
-       * Parameter:
-       *   BC: Laenge - 1
-       *   DE: linke X-Koordinate
-       *   HL: Y-Koordinate
-       */
-      buf.append( "DRHLIN:\tBIT\t7,B\n"		// Laenge pruefen
-		+ "\tRET\tNZ\n"
-		+ "\tBIT\t7,H\n"		// Y pruefen
-		+ "\tRET\tNZ\n"
-		+ "DRHLN1:\tPUSH\tBC\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tCALL\tXPSET\n"
-		+ "\tPOP\tHL\n"
-		+ "\tPOP\tDE\n"
-		+ "\tPOP\tBC\n"
-		+ "\tLD\tA,B\n"
-		+ "\tOR\tC\n"
-		+ "\tRET\tZ\n"
-		+ "\tDEC\tBC\n"
-		+ "\tINC\tDE\n"
-		+ "\tJR\tDRHLN1\n" );
-      libItems.add( LibItem.XPSET );
-    }
-    if( libItems.contains( LibItem.DRLINE ) ) {
+    if( libItems.contains( LibItem.DRAW_LINE ) ) {
       /*
        * Linie zeichnen
        *
        * Parameter:
-       *   (M_LNBX): X-Koordinate Anfang
-       *   (M_LNBY): Y-Koordinate Anfang
-       *   (M_LNEX): X-Koordinate Ende
-       *   (M_LNEY): Y-Koordinate Ende
+       *   (LINE_M_BX): X-Koordinate Anfang
+       *   (LINE_M_BY): Y-Koordinate Anfang
+       *   (LINE_M_EX): X-Koordinate Ende
+       *   (LINE_M_EY): Y-Koordinate Ende
        * Hilfszellen:
-       *   (M_LNSX): X-Schrittweite
-       *   (M_LNSY): Y-Schrittweite
+       *   (LINE_M_SX): X-Schrittweite
+       *   (LINE_M_SY): Y-Schrittweite
        */
-      buf.append( "DRLINE:\tLD\tDE,(M_LNBX)\n"	// Anfangspixel setzen
-		+ "\tLD\tHL,(M_LNBY)\n"
-		+ "\tCALL\tXPSET\n"
-		+ "DRLIN1:\tLD\tBC,0001H\n"	// sx=1
-		+ "\tLD\tHL,(M_LNEX)\n"		// dx=xe-xa
-		+ "\tLD\tDE,(M_LNBX)\n"
+      buf.append( "DRAW_LINE:\n" );
+      if( target.supportsXHLINE() ) {
+	buf.append( "\tLD\tHL,(LINE_M_EY)\n"
+		+ "\tLD\tDE,(LINE_M_BY)\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNC,DRLIN2\n"		// if dx<0 then dx=-dx:sx=-1
+		+ "\tJR\tNZ,DRAW_LINE1\n"
+		+ "\tCALL\tH_BOX\n"
+		+ "\tRET\tC\n"
+		+ "\tJP\tDRAW_HLINE\n"
+		+ "DRAW_LINE1:\n" );
+	libItems.add( LibItem.H_BOX );
+	libItems.add( LibItem.DRAW_HLINE );
+      }
+      buf.append( "\tLD\tDE,(LINE_M_BX)\n"	// Anfangspixel setzen
+		+ "\tLD\tHL,(LINE_M_BY)\n"
+		+ "\tCALL\tXPSET\n"
+		+ "DRAW_LINE2:\n"
+		+ "\tLD\tBC,0001H\n"		// sx=1
+		+ "\tLD\tHL,(LINE_M_EX)\n"	// dx=xe-xa
+		+ "\tLD\tDE,(LINE_M_BX)\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tBIT\t7,H\n"
+		+ "\tJR\tZ,DRAW_LINE3\n"	// if dx<0 then dx=-dx:sx=-1
 		+ "\tCALL\tNEGHL\n"
 		+ "\tLD\tBC,0FFFFH\n"
-		+ "DRLIN2:\tLD\t(M_LNSX),BC\n"
+		+ "DRAW_LINE3:\n"
+		+ "\tLD\t(LINE_M_SX),BC\n"
 		+ "\tPUSH\tHL\n"		// dx
 		+ "\tPUSH\tHL\n"		// dx
 		+ "\tLD\tBC,0001H\n"		// sy=1
-		+ "\tLD\tHL,(M_LNEY)\n"		// dy=ye-ya
-		+ "\tLD\tDE,(M_LNBY)\n"
+		+ "\tLD\tHL,(LINE_M_EY)\n"	// dy=ye-ya
+		+ "\tLD\tDE,(LINE_M_BY)\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNC,DRLIN3\n"		// if dy<0 then dy=-dy:sy=-1
+		+ "\tBIT\t7,H\n"
+		+ "\tJR\tZ,DRAW_LINE4\n"	// if dx<0 then dx=-dx:sx=-1
 		+ "\tCALL\tNEGHL\n"
 		+ "\tLD\tBC,0FFFFH\n"
-		+ "DRLIN3:\tLD\t(M_LNSY),BC\n"
-		+ "\tPUSH\tHL\n"		// dx
+		+ "DRAW_LINE4:\n"
+		+ "\tLD\t(LINE_M_SY),BC\n"
+		+ "\tPUSH\tHL\n"		// dy
 		+ "\tEXX\n"
 		+ "\tPOP\tBC\n"			// BC': dy
 		+ "\tPOP\tDE\n"			// DE': dx
@@ -1377,8 +1317,8 @@ public class BasicLibrary
 		+ "\tEX\tDE,HL\n"		// dy -> DE
 		+ "\tPOP\tHL\n"			// dx
 		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"		// if dx<dy then DRLIN5
-		+ "\tJR\tC,DRLIN6\n"
+		+ "\tSBC\tHL,DE\n"		// if dx<dy then DRAW_LINE6
+		+ "\tJR\tC,DRAW_LINE7\n"
       /*
        * ABS(dx) >= ABS(dy)
        * 2. Registersatz:
@@ -1392,32 +1332,35 @@ public class BasicLibrary
 		+ "\tSRA\tH\n"
 		+ "\tRR\tL\n"
 		+ "\tEXX\n"
-		+ "DRLIN4:\tEXX\n"		// Test auf Y-Schritt
+		+ "\tLD\tDE,(LINE_M_BX)\n"
+		+ "DRAW_LINE5:\n"		// Ende erreicht?
+		+ "\tLD\tHL,(LINE_M_EX)\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tRET\tZ\n"
+		+ "\tEXX\n"			// Test auf Y-Schritt
 		+ "\tOR\tA\n"			// Fehler = Fehler - dy
 		+ "\tSBC\tHL,BC\n"
 		+ "\tEXX\n"
-		+ "\tJR\tNC,DRLIN5\n"		// wenn Fehler < 0
+		+ "\tJR\tNC,DRAW_LINE6\n"	// wenn Fehler < 0
 		+ "\tEXX\n"
 		+ "\tADD\tHL,DE\n"		// Fehler = Fehler + dx
 		+ "\tEXX\n"
-		+ "\tLD\tHL,(M_LNBY)\n"		// Y-Schritt
-		+ "\tLD\tDE,(M_LNSY)\n"
+		+ "\tLD\tHL,(LINE_M_BY)\n"	// Y-Schritt
+		+ "\tLD\tDE,(LINE_M_SY)\n"
 		+ "\tADD\tHL,DE\n"
-		+ "\tLD\t(M_LNBY),HL\n"
-		+ "DRLIN5:\tLD\tHL,(M_LNBX)\n"	// X-Schritt
-		+ "\tLD\tDE,(M_LNSX)\n"
+		+ "\tLD\t(LINE_M_BY),HL\n"
+		+ "DRAW_LINE6:\n"		// X-Schritt
+		+ "\tLD\tHL,(LINE_M_BX)\n"
+		+ "\tLD\tDE,(LINE_M_SX)\n"
 		+ "\tADD\tHL,DE\n"
-		+ "\tLD\t(M_LNBX),HL\n"
+		+ "\tLD\t(LINE_M_BX),HL\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tEX\tDE,HL\n"		// Pixel setzen
-		+ "\tLD\tHL,(M_LNBY)\n"
+		+ "\tLD\tHL,(LINE_M_BY)\n"
 		+ "\tCALL\tXPSET\n"
-		+ "\tPOP\tDE\n"			// Ende erreicht?
-		+ "\tLD\tHL,(M_LNEX)\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNZ,DRLIN4\n"
-		+ "\tRET\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tDRAW_LINE5\n"
       /*
        * ABS(dx) < ABS(dy)
        * 2. Registersatz:
@@ -1425,63 +1368,668 @@ public class BasicLibrary
        *     DE: dx
        *     HL: Fehlerglied
        */
-		+ "DRLIN6:\tEXX\n"
+		+ "DRAW_LINE7:\n"
+		+ "\tEXX\n"
 		+ "\tLD\tH,B\n"			// Fehlerglied mit
 		+ "\tLD\tL,C\n"			// dy/2 initialisieren
 		+ "\tSRA\tH\n"
 		+ "\tRR\tL\n"
 		+ "\tEXX\n"
-		+ "DRLIN7:\tEXX\n"		// Test auf X-Schritt
+		+ "\tLD\tDE,(LINE_M_BY)\n"
+		+ "DRAW_LINE8:\n"		// Ende erreicht?
+		+ "\tLD\tHL,(LINE_M_EY)\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tRET\tZ\n"
+		+ "\tEXX\n"			// Test auf X-Schritt
 		+ "\tOR\tA\n"			// Fehler = Fehler - dx
 		+ "\tSBC\tHL,DE\n"
 		+ "\tEXX\n"
-		+ "\tJR\tNC,DRLIN8\n"		// wenn Fehler < 0
+		+ "\tJR\tNC,DRAW_LINE9\n"	// wenn Fehler < 0
 		+ "\tEXX\n"
 		+ "\tADD\tHL,BC\n"		// Fehler = Fehler + dy
 		+ "\tEXX\n"
-		+ "\tLD\tHL,(M_LNBX)\n"		// X-Schritt
-		+ "\tLD\tDE,(M_LNSX)\n"
+		+ "\tLD\tHL,(LINE_M_BX)\n"	// X-Schritt
+		+ "\tLD\tDE,(LINE_M_SX)\n"
 		+ "\tADD\tHL,DE\n"
-		+ "\tLD\t(M_LNBX),HL\n"
-		+ "DRLIN8:\tLD\tHL,(M_LNBY)\n"	// Y-Schritt
-		+ "\tLD\tDE,(M_LNSY)\n"
+		+ "\tLD\t(LINE_M_BX),HL\n"
+		+ "DRAW_LINE9:\n"		// Y-Schritt
+		+ "\tLD\tHL,(LINE_M_BY)\n"
+		+ "\tLD\tDE,(LINE_M_SY)\n"
 		+ "\tADD\tHL,DE\n"
-		+ "\tLD\t(M_LNBY),HL\n"
+		+ "\tLD\t(LINE_M_BY),HL\n"
 		+ "\tPUSH\tHL\n"
-		+ "\tLD\tDE,(M_LNBX)\n"
+		+ "\tLD\tDE,(LINE_M_BX)\n"
 		+ "\tCALL\tXPSET\n"		// Pixel setzen
-		+ "\tPOP\tDE\n"			// Ende erreicht?
-		+ "\tLD\tHL,(M_LNEY)\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNZ,DRLIN7\n"
-		+ "\tRET\n" );
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tDRAW_LINE8\n" );
       libItems.add( LibItem.ABS_NEG_HL );
       libItems.add( LibItem.M_XYPO );
       libItems.add( LibItem.XPSET );
     }
+    if( libItems.contains( LibItem.DRBOX ) ) {
+      /*
+       * Rechteck zeichnen
+       *
+       * Parameter:
+       *   (LINE_M_BX): X-Koordinate Anfang
+       *   (LINE_M_BY): Y-Koordinate Anfang
+       *   (LINE_M_EX): X-Koordinate Ende
+       *   (LINE_M_EY): Y-Koordinate Ende
+       */
+      buf.append( "DRBOX:\tCALL\tH_BOX\n"
+		+ "\tRET\tC\n"
+		+ "\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tDRAW_HLINE\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
+		+ "\tLD\tA,(LINE_M_EY)\n"
+		+ "\tCP\tL\n"
+		+ "\tJR\tNZ,DRBOX1\n"
+		+ "\tLD\tA,(LINE_M_EY+1)\n"
+		+ "\tCP\tH\n"
+		+ "\tRET\tZ\n"
+		+ "DRBOX1:\tINC\tHL\n"
+		+ "\tLD\tA,(LINE_M_EY)\n"
+		+ "\tCP\tL\n"
+		+ "\tJR\tNZ,DRBOX2\n"
+		+ "\tLD\tA,(LINE_M_EY+1)\n"
+		+ "\tCP\tH\n"
+		+ "\tJP\tZ,DRAW_HLINE\n"
+		+ "DRBOX2:\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tXPSET\n"
+		+ "\tPOP\tHL\n"
+		+ "\tLD\tDE,(LINE_M_EX)\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tXPSET\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
+		+ "\tJR\tDRBOX1\n" );
+      libItems.add( LibItem.H_BOX );
+      libItems.add( LibItem.DRAW_HLINE );
+      libItems.add( LibItem.XPSET );
+    }
+    if( libItems.contains( LibItem.DRBOXF ) ) {
+      /*
+       * ausgefuelltes Rechteck zeichnen
+       *
+       * Parameter:
+       *   (LINE_M_BX): X-Koordinate Anfang
+       *   (LINE_M_BY): Y-Koordinate Anfang
+       *   (LINE_M_EX): X-Koordinate Ende
+       *   (LINE_M_EY): Y-Koordinate Ende
+       */
+      buf.append( "DRBOXF:CALL\tH_BOX\n"
+		+ "\tRET\tC\n"
+		+ "\tCALL\tDRAW_HLINE_CHECK_X\n"
+		+ "DRBXF1:\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n" );
+      if( target.supportsXHLINE() ) {
+	buf.append( "\tCALL\tXHLINE\n" );
+	libItems.add( LibItem.XHLINE );
+      } else {
+	buf.append( "\tCALL\tDRAW_HLINE1\n" );
+      }
+      buf.append( "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
+		+ "\tLD\tA,(LINE_M_EY)\n"
+		+ "\tCP\tL\n"
+		+ "\tJR\tNZ,DRFBX2\n"
+		+ "\tLD\tA,(LINE_M_EY+1)\n"
+		+ "\tCP\tH\n"
+		+ "\tRET\tZ\n"
+		+ "DRFBX2:\tINC\tHL\n"
+		+ "\tJR\tDRBXF1\n" );
+      libItems.add( LibItem.H_BOX );
+      libItems.add( LibItem.DRAW_HLINE );
+    }
+    if( libItems.contains( LibItem.H_BOX ) ) {
+      /*
+       * Anpassung der Koordinaten fuer das Zeichen eines Rechtecks
+       *
+       * Parameter:
+       *   (LINE_M_BX): X-Koordinate Anfang
+       *   (LINE_M_BY): Y-Koordinate Anfang
+       *   (LINE_M_EX): X-Koordinate Ende
+       *   (LINE_M_EY): Y-Koordinate Ende
+       * Rueckgabewerte:
+       *   (LINE_M_BX): linke X-Koordinate
+       *   (LINE_M_BY): untere Y-Koordinate
+       *   (LINE_M_EX): rechte X-Koordinate
+       *   (LINE_M_EY): ober Y-Koordinate
+       *   DE:       linke X-Koordinate
+       *   HL:       untere Y-Koordinate
+       *   BC:       Breite des Rechtecks - 1
+       *   CY=1:     rechte X- oder obere Y-Koordinate kleiner 0,
+       *             d.h., das Rechteck liegt volstaendig ausserhalb
+       *             des sichtbaren Bereichs
+       */
+      buf.append( "H_BOX:\tLD\tHL,(LINE_M_EY)\n"
+		+ "\tLD\tDE,(LINE_M_BY)\n"
+		+ "\tCALL\tCPHLDE\n"
+		+ "\tJR\tNC,H_BOX1\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\t(LINE_M_BY),DE\n"
+		+ "\tLD\t(LINE_M_EY),HL\n"
+		+ "H_BOX1:\tBIT\t7,H\n"
+		+ "\tJR\tNZ,H_BOX3\n"
+		+ "\tLD\tHL,(LINE_M_EX)\n"
+		+ "\tLD\tDE,(LINE_M_BX)\n"
+		+ "\tCALL\tCPHLDE\n"
+		+ "\tJR\tNC,H_BOX2\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\t(LINE_M_BX),DE\n"
+		+ "\tLD\t(LINE_M_EX),HL\n"
+		+ "H_BOX2:\tBIT\t7,H\n"
+		+ "\tJR\tNZ,H_BOX3\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tLD\tB,H\n"			// BC = X2 - X1
+		+ "\tLD\tC,L\n"
+		+ "\tLD\tHL,(LINE_M_BY)\n"
+		+ "\tOR\tA\n"			// CY=0
+		+ "\tRET\n"
+		+ "H_BOX3:\tSCF\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.CPHLDE );
+    }
+    if( libItems.contains( LibItem.DRAW_HLINE ) ) {
+      /*
+       * Horizontale Linie zeichnen
+       *
+       * Parameter:
+       *   BC: Laenge - 1
+       *   DE: linke X-Koordinate
+       *   HL: Y-Koordinate
+       */
+      buf.append( "DRAW_HLINE:\n"
+		+ "\tCALL\tDRAW_HLINE_CHECK_X\n"
+		+ "DRAW_HLINE1:\n"
+		+ "\tBIT\t7,H\n"		// Y pruefen
+		+ "\tRET\tNZ\n"
+		+ "\tBIT\t7,B\n"		// Laenge pruefen
+		+ "\tRET\tNZ\n" );
+      if( target.supportsXHLINE() ) {
+	buf.append( "\tJP\tXHLINE\n" );
+	libItems.add( LibItem.XHLINE );
+      } else {
+	buf.append( "DRAW_HLINE2:\n"
+		+ "\tPUSH\tBC\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tXPSET\n"
+		+ "\tPOP\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tPOP\tBC\n"
+		+ "\tLD\tA,B\n"
+		+ "\tOR\tC\n"
+		+ "\tRET\tZ\n"
+		+ "\tDEC\tBC\n"
+		+ "\tINC\tDE\n"
+		+ "\tJR\tDRAW_HLINE2\n" );
+      }
+      /*
+       * Sicherstellen, dass die X-Koordinate nicht kleiner 0 ist
+       *
+       * Parameter:
+       *   BC: Laenge - 1
+       *   DE: linke X-Koordinate
+       */
+      buf.append( "DRAW_HLINE_CHECK_X:\n"
+		+ "\tBIT\t7,D\n"
+		+ "\tRET\tZ\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tADD\tHL,BC\n"
+		+ "\tLD\tB,H\n"
+		+ "\tLD\tC,L\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\tDE,0000H\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.XPSET );
+    }
+    if( libItems.contains( LibItem.MOVER ) ) {
+      /*
+       * Grafikkursor relativ positionieren
+       *
+       * Parameter:
+       *   DE: X-Koordinate relativ
+       *   HL: Y-Koordinate relativ
+       */
+      buf.append( "MOVER:\tPUSH\tHL\n"
+		+ "\tLD\tHL,(M_XPOS)\n"
+		+ "\tCALL\tO_ADD\n"
+		+ "\tLD\t(M_XPOS),HL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tLD\tHL,(M_YPOS)\n"
+		+ "\tCALL\tO_ADD\n"
+		+ "\tLD\t(M_YPOS),HL\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.O_ADD );
+      libItems.add( LibItem.M_XYPO );
+    }
+    if( libItems.contains( LibItem.PAINT ) ) {
+      /*
+       * Fuellen einer Flaeche
+       *
+       * Der Algorithmus arbeitet mit einer Tabelle,
+       * in der die zu pruefenden Linien einschliesslich
+       * der weiteren Suchrichtung eingetragen werden.
+       * Ausgehend vom Startpunkt wird die erste Linie gefuellt
+       * und im Erfolgsfall der gefundene X-Bereich fuer Y-1 und Y+1
+       * in die Tabelle eingetragen.
+       * Anschliessend wird die Tabelle durchgegangen und pro Eintrag
+       * der eingetragene X-Bereich fuer die Y-Position gefuellt.
+       * Konnte wieder eine Linie gefuellt werden, wird der entsprechende
+       * X-Bereich mit der naechsten Y-Koordinate in Suchrichtung
+       * wieder in die Tabelle eingetragen usw.
+       * Wenn eine gefundene zu fuellende Linie links oder rechts
+       * mehr als einen Pixel ueber die vorherige gefuellte Linie
+       * hinausragt, wird der ueber das eine Pixel hinausragende Bereich
+       * mit umgekehrter Suchrichtung in die Tabelle eingetragen,
+       * um auch um Ecken herum zu fuellen.
+       *
+       * Fuer die Tabelle wird ein Block aus dem Heap genommen.
+       * Dieser Block wird jedoch nicht allokiert,
+       * da er nur waehrend der PAINT-Routine benoetigt wird und
+       * in dieser Zeit keine weiteren speicherallokierenden
+       * Funktionen aufgerufen werden.
+       *
+       * Die Tabelle ist als Stack realisiert.
+       *
+       * Ein Eintrag in der Tabelle hat folgenden Aufbau:
+       *   1. Byte: L-Teil der X-Koordinate des Suchanfangs
+       *   2. Byte: Bit 0-6: H-Teil der X-Koordinate des Suchanfangs
+       *            Bit 7:   Suchrichtung:
+       *                      0: nach oben (Y aufsteigend)
+       *                      1: nach unten (Y absteigend)
+       *   3. Byte: L-Teil der X-Koordinate des Suchendes
+       *   4. Byte: H-Teil der X-Koordinate des Suchendes
+       *   5. Byte: Y-Koordinate (nur 8 Bit)
+       *
+       * Parameter:
+       *   PAINT_M_X:   X-Koordinate des Ausgangspunktes
+       *   PAINT_M_Y:   Y-Koordinate des Ausgangspunktes
+       * Hilfszellen:
+       *   PAINT_M_TAD: Anfangsadresse der Tabelle
+       *   PAINT_M_TSZ: Max. Groesse der Tabelle
+       *   PAINT_M_TIX: Index des ersten freien Eintrags in der Tabelle
+       */
+      buf.append( "PAINT:" );
+      // schneller Zugriff auf Bildschirmbreite
+      int pos = buf.length();
+      target.appendWPixelTo( buf );
+      String inst_LD_HL_wPix = buf.cut( pos );
+      if( !BasicUtil.isSingleInst_LD_HL_xx( inst_LD_HL_wPix ) ) {
+	buf.append( inst_LD_HL_wPix );
+	buf.append( "\tLD\t(PAINT_M_WPIX),HL\n" );
+	inst_LD_HL_wPix = "\tLD\tHL,(PAINT_M_WPIX)\n";
+	libItems.add( LibItem.PAINT_M_WPIX );
+      }
+      // schneller Zugriff auf Bildschirmhoehe
+      pos = buf.length();
+      target.appendHPixelTo( buf );
+      String inst_LD_HL_hPix = buf.cut( pos );
+      if( !BasicUtil.isSingleInst_LD_HL_xx( inst_LD_HL_hPix ) ) {
+	buf.append( inst_LD_HL_hPix );
+	buf.append( "\tLD\t(PAINT_M_HPIX),HL\n" );
+	inst_LD_HL_hPix = "\tLD\tHL,(PAINT_M_HPIX)\n";
+	libItems.add( LibItem.PAINT_M_HPIX );
+      }
+      if( target.supportsXPAINT_LEFT_RIGHT() ) {
+	buf.append( "\tCALL\tXPAINT_RIGHT\n"
+		+ "\tRET\tC\n"
+		+ "\tCALL\tXPAINT_LEFT\n" );
+      } else {
+	buf.append( "\tCALL\tPAINT_RIGHT\n"
+		+ "\tRET\tC\n"
+		+ "\tCALL\tPAINT_LEFT\n" );
+      }
+      // Startpunkt konnte gefuellt werden -> Speicher fuer Tabelle holen
+      buf.append( "\tCALL\tMFIND\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\t(PAINT_M_TAD),HL\n"
+      // Groesse des Blocks ermitteln
+		+ "\tDEC\tHL\n"
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tD,(HL)\n"
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tE,(HL)\n"
+		+ "\tEX\tDE,HL\n"
+      // Anzahl der Eintraege ermitteln
+		+ "\tLD\tDE,0005H\n"
+		+ "\tCALL\tO_DIV\n"
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,PAINT1\n"
+		+ "\tLD\tL,00H\n"
+		+ "\tJP\tM,PAINT1\n"
+		+ "\tDEC\tL\n"
+		+ "PAINT1:\tLD\tA,L\n"
+		+ "\tOR\tA\n"
+		+ "\tJP\tZ,E_OUT_OF_MEM\n"
+		+ "\tLD\t(PAINT_M_TSZ),A\n"
+		+ "\tXOR\tA\n"
+		+ "\tLD\t(PAINT_M_TIX),A\n"
+      // Bereich ueber und unter der gefuellten Linie anhaengen
+		+ "\tCALL\tPAINT_ADD\n"		// A=0 -> nach oben suchen
+		+ "\tLD\tA,80H\n"		// nach unten suchen
+		+ "\tCALL\tPAINT_ADD\n"
+      // Tabelle durchgehen
+		+ "PAINT2:\tLD\tA,(PAINT_M_TIX)\n"
+		+ "\tOR\tA\n"
+		+ "\tRET\tZ\n"			// kein weiterer Eintrag
+      // Eintrag holen
+		+ "\tDEC\tA\n"
+		+ "\tLD\t(PAINT_M_TIX),A\n"
+		+ "\tINC\tA\n"
+		+ "\tCALL\tPAINT_GET_ENTRY_ADDR\n"
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tE,(HL)\n"
+		+ "\tLD\tD,00H\n"
+		+ "\tLD\t(PAINT_M_Y),DE\n"
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tD,(HL)\n"
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tE,(HL)\n"
+		+ "\tLD\t(PAINT_M_SX2),DE\n"
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tLD\t(PAINT_M_SDIR),A\n"	// weitere Suchrichtung
+		+ "\tDEC\tHL\n"
+		+ "\tLD\tL,(HL)\n"
+		+ "\tAND\t7FH\n"
+		+ "\tLD\tH,A\n"
+		+ "\tLD\t(PAINT_M_X),HL\n"
+      /*
+       * Eckpunkte berechnen, ab denen auch in die andere Richtung
+       * gesucht werden muss
+       */
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tJR\tZ,PAINT3\n"
+		+ "\tDEC\tHL\n"
+		+ "PAINT3:\tLD\t(PAINT_M_CX1),HL\n"
+		+ "\tINC\tDE\n" );
+      buf.append( inst_LD_HL_wPix );
+      buf.append( "\tEX\tDE,HL\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tADD\tHL,DE\n"
+		+ "\tJR\tC,PAINT4\n"
+		+ "\tDEC\tHL\n"
+		+ "PAINT4:\tLD\t(PAINT_M_CX2),HL\n" );
+      // am Startpunkt nach links und rechts suchen
+      if( target.supportsXPAINT_LEFT_RIGHT() ) {
+	buf.append( "\tCALL\tXPAINT_RIGHT\n"
+		+ "\tJR\tC,PAINT8\n"		// naechste X-Koordinate
+		+ "\tCALL\tXPAINT_LEFT\n" );
+      } else {
+	buf.append( "\tCALL\tPAINT_RIGHT\n"
+		+ "\tJR\tC,PAINT8\n"		// naechste X-Koordinate
+		+ "\tCALL\tPAINT_LEFT\n" );
+      }
+      buf.append( "\tLD\tA,(PAINT_M_SDIR)\n"
+		+ "\tCALL\tPAINT_ADD\n"
+      // X1 < CX1 ?
+		+ "\tLD\tHL,(PAINT_M_X2)\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tHL,(PAINT_M_X1)\n"
+		+ "\tLD\tDE,(PAINT_M_CX1)\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tJR\tNC,PAINT5\n"
+		+ "\tDEC\tDE\n"
+		+ "\tLD\t(PAINT_M_X2),DE\n"
+		+ "\tLD\tA,(PAINT_M_SDIR)\n"
+		+ "\tXOR\t80H\n"
+		+ "\tCALL\tPAINT_ADD\n"
+      // X2 > CX2 ?
+		+ "PAINT5:\tPOP\tDE\n"		// X2
+		+ "PAINT6:\tLD\tHL,(PAINT_M_CX2)\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tJR\tNC,PAINT7\n"
+		+ "\tADD\tHL,DE\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\t(PAINT_M_X1),HL\n"
+		+ "\tLD\t(PAINT_M_X1),DE\n"
+		+ "\tLD\tA,(PAINT_M_SDIR)\n"
+		+ "\tXOR\t80H\n"
+		+ "\tCALL\tPAINT_ADD\n"
+      // bei X2+2 weitersuchen
+		+ "PAINT7:\tLD\tDE,(PAINT_M_X2)\n"
+		+ "\tINC\tDE\n"
+		+ "\tJR\tPAINT9\n"
+		+ "PAINT8:\tLD\tDE,(PAINT_M_X)\n"
+		+ "PAINT9:\tINC\tDE\n"
+		+ "\tLD\tHL,(PAINT_M_SX2)\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tJP\tC,PAINT2\n"
+		+ "\tLD\t(PAINT_M_X),DE\n" );
+      // von der neuen X-Koordinate aus nur noch nach rechts suchen
+      if( target.supportsXPAINT_LEFT_RIGHT() ) {
+	buf.append(  "\tCALL\tXPAINT_RIGHT\n" );
+      } else {
+	buf.append( "\tCALL\tPAINT_RIGHT\n" );
+      }
+      buf.append( "\tJR\tC,PAINT8\n"
+		+ "\tLD\tHL,(PAINT_M_X)\n"
+		+ "\tLD\t(PAINT_M_X1),HL\n"
+		+ "\tLD\tA,(PAINT_M_SDIR)\n"
+		+ "\tCALL\tPAINT_ADD\n"
+		+ "\tLD\tDE,(PAINT_M_X2)\n"
+		+ "\tJR\tPAINT6\n" );
+      if( !target.supportsXPAINT_LEFT_RIGHT() ) {
+	/*
+	 * Fuellen einer Linie vom Startpunkt aus nach links,
+	 * Der Startpunkt selbst wird nicht geprueft,
+	 * da die Routine hinter einem erfolgreichen PAINT_RIGHT
+	 * aufgerufen wird und somit der Startpunkt schon gefuellt wurde.
+	 * Ebenso erfolgt keine Bereichsruefung der Startkoordinaten.
+	 *
+	 * Parameter:
+	 *   PAINT_M_X:   X-Koordinate Startpunkt
+	 *   PAINT_M_Y:   Y-Koordinate Startpunkt
+	 * Rueckgabewerte:
+	 *   PAINT_M_X1:  linke X-Koordinate der gefuellten Linie
+	 */
+	buf.append( "PAINT_LEFT:\n"
+		+ "\tLD\tDE,(PAINT_M_X)\n"
+		+ "PAINT_LEFT1:\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"
+		+ "\tJR\tZ,PAINT_LEFT2\n"
+		+ "\tDEC\tDE\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tHL,(PAINT_M_Y)\n"
+		+ "\tCALL\tXPAINT\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tNC,PAINT_LEFT1\n"
+		+ "PAINT_LEFT2:\n"
+		+ "\tINC\tDE\n"
+		+ "\tLD\t(PAINT_M_X1),DE\n"
+		+ "\tRET\n"
+	/*
+	 * Fuellen einer Linie vom Startpunkt aus nach rechts,
+	 * Der Startpunkt selbst wird als erstes geprueft und gefuellt.
+	 *
+	 * Parameter:
+	 *   PAINT_M_X:   X-Koordinate Startpunkt
+	 *   PAINT_M_Y:   Y-Koordinate Startpunkt
+	 * Rueckgabewerte:
+	 *   CY=1:        Startpunkt schon gefuellt oder ausserhalb
+	 *                des sichtbaren Bereichs
+	 *   PAINT_M_X1:  linke X-Koordinate der gefuellten Linie
+	 */
+		+ "PAINT_RIGHT:\n"
+		+ "\tLD\tDE,(PAINT_M_X)\n"
+		+ "\tLD\tHL,(PAINT_M_Y)\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tCALL\tXPAINT\n"
+		+ "\tPOP\tDE\n"
+		+ "\tRET\tC\n"
+		+ "PAINT_RIGHT1:\n"
+		+ "\tINC\tDE\n" );
+	buf.append( inst_LD_HL_wPix );
+	buf.append( "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tJR\tZ,PAINT_RIGHT2\n"
+		+ "\tJR\tC,PAINT_RIGHT2\n"
+		+ "\tPUSH\tDE\n"
+		+ "\tLD\tHL,(PAINT_M_Y)\n"
+		+ "\tCALL\tXPAINT\n"
+		+ "\tPOP\tDE\n"
+		+ "\tJR\tNC,PAINT_RIGHT1\n"
+		+ "PAINT_RIGHT2:\n"
+		+ "\tDEC\tDE\n"
+		+ "\tLD\t(PAINT_M_X2),DE\n"
+		+ "\tOR\tA\n"			// CY=0
+		+ "\tRET\n" );
+      }
+      /*
+       * Anhaengen eines horizentalen Suchbereichs an die Tabelle,
+       * Dabei erfolgt auch eine Bereichspruefung auf die Y-Koordinate.
+       *
+       * Parameter:
+       *   A:           Bit 7: Suchrichtung: 0=hochwaerts, 1=runterwaerts
+       *   PAINT_M_X1:  linke X-Koordinate des Suchbereichs
+       *   PAINT_M_X2:  rechte X-Koordinate des Suchbereichs
+       *   PAINT_M_Y:   Ausgangs-Y-Koordinate des Suchbereichs
+       *                hinzugefuegt wird entweder Y-1 oder Y+1
+       *   PAINT_M_TAD: Anfangsadresse der Tabelle
+       *   PAINT_M_TSZ: maximale Groesse (Anzahl Eintraege) der Tabelle
+       *   PAINT_M_TIX: Index in der Tabelle
+       * Rueckgabewerte:
+       *   PAINT_M_TIX: neuer Index in der Tabelle
+       */
+      buf.append( "PAINT_ADD:\n"
+		+ "\tAND\t80H\n"
+		+ "\tLD\tB,A\n"
+		+ "\tLD\tHL,(PAINT_M_Y)\n"
+		+ "\tBIT\t7,B\n"
+		+ "\tJR\tNZ,PAINT_ADD1\n"
+      // Y=Y+1
+		+ "\tINC\tHL\n"
+		+ "\tEX\tDE,HL\n" );
+      buf.append( inst_LD_HL_hPix );
+      buf.append( "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tRET\tZ\n"
+		+ "\tRET\tC\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tJR\tPAINT_ADD2\n"
+      // Y=Y-1
+		+ "PAINT_ADD1:\n"
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tRET\tZ\n"
+		+ "\tDEC\tHL\n"
+      // Tabelleneintrag schreiben
+		+ "PAINT_ADD2:\n"
+		+ "\tLD\tA,(PAINT_M_TSZ)\n"
+		+ "\tLD\tC,A\n"
+		+ "\tLD\tA,(PAINT_M_TIX)\n"
+		+ "\tCP\tC\n"
+		+ "\tJP\tNC,E_OUT_OF_MEM\n"
+		+ "\tLD\tC,A\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tCALL\tPAINT_GET_ENTRY_ADDR\n"
+      // X-Koordinate Suchanfang und weitere Suchrichtung
+		+ "\tLD\tDE,(PAINT_M_X1)\n"
+		+ "\tLD\t(HL),E\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tB\n"
+		+ "\tLD\t(HL),A\n"
+      // X-Koordinate Suchende
+		+ "\tINC\tHL\n"
+		+ "\tLD\tDE,(PAINT_M_X2)\n"
+		+ "\tLD\t(HL),E\n"
+		+ "\tINC\tHL\n"
+		+ "\tLD\t(HL),D\n"
+      // Y-Koordinate
+		+ "\tINC\tHL\n"
+		+ "\tPOP\tDE\n"
+		+ "\tLD\t(HL),E\n"
+      // Schreibindex inkrementieren
+		+ "\tLD\tA,C\n"
+		+ "\tINC\tA\n"
+		+ "\tLD\t(PAINT_M_TIX),A\n"
+		+ "\tRET\n"
+      /*
+       * Adresse eines Eintrags in der Tabelle berechnen
+       *
+       * Parameter:
+       *   PAINT_M_TAD: Anfangsadresse der Tabelle
+       *   A:           Index des Eintrags in der Tabelle
+       */
+		+ "PAINT_GET_ENTRY_ADDR:\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+      // Index in HL mit 5 multiplizieren
+		+ "\tLD\tD,H\n"
+		+ "\tLD\tE,L\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,DE\n"
+      // Anfangsadresse addieren
+		+ "\tLD\tDE,(PAINT_M_TAD)\n"
+		+ "\tADD\tHL,DE\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.MFIND );
+      libItems.add( LibItem.O_DIV );
+      libItems.add( LibItem.XPAINT );
+    }
     if( libItems.contains( LibItem.PAUSE ) ) {
+      /*
+       * Warten auf Druecken der Leertaste
+       */
+      buf.append( "PAUSE:\tCALL\tXINCH\n"
+		+ "\tCP\t20H\n"
+		+ "\tJR\tNZ,PAUSE\n"
+		+ "\tRET\n" );
+      libItems.add( LibItem.XINCH );
+    }
+    if( libItems.contains( LibItem.PAUSE_N ) ) {
       /*
        * Warten
        *
        * Parameter:
        *   HL: Wartezeit in 1/10 Sekunen
        */
-      buf.append( "PAUSE:\tBIT\t7,H\n"
+      buf.append( "PAUSE_N:\n"
+		+ "\tBIT\t7,H\n"
 		+ "\tRET\tNZ\n"
-		+ "PAUSE1:\tLD\tA,H\n"
+		+ "PAUSE_N1:\n"
+		+ "\tLD\tA,H\n"
 		+ "\tOR\tL\n"
 		+ "\tRET\tZ\n"
 		+ "\tDEC\tHL\n"
-		+ "\tPUSH\tHL\n"
-		+ "\tCALL\tXPAUSE\n"
+		+ "\tPUSH\tHL\n" );
+      buf.append_LD_DE_nn( target.get100msLoopCount() );
+      buf.append( "PAUSE_N2:\n"
+		+ "\tLD\tB,0\n"
+		+ "PAUSE_N3:\n"
+		+ "\tDJNZ\tPAUSE_N3\n"
+		+ "\tDEC\tDE\n"
+		+ "\tLD\tA,D\n"
+		+ "\tOR\tE\n"
+		+ "\tJR\tNZ,PAUSE_N2\n"
 		+ "\tCALL\tXINKEY\n"
 		+ "\tPOP\tHL\n"
 		+ "\tCP\t20H\n"
-		+ "\tJR\tNZ,PAUSE1\n"
+		+ "\tJR\tNZ,PAUSE_N1\n"
 		+ "\tRET\n" );
       libItems.add( LibItem.XINKEY );
-      libItems.add( LibItem.XPAUSE );
     }
     if( libItems.contains( LibItem.PEN ) ) {
       /*
@@ -1512,11 +2060,11 @@ public class BasicLibrary
       buf.append( "PLOTR:\tPUSH\tHL\n"
 		+ "\tLD\tHL,(M_XPOS)\n"
 		+ "\tCALL\tO_ADD\n"
-		+ "\tLD\t(M_LNEX),HL\n"
+		+ "\tLD\t(LINE_M_EX),HL\n"
 		+ "\tPOP\tDE\n"
 		+ "\tLD\tHL,(M_YPOS)\n"
 		+ "\tCALL\tO_ADD\n"
-		+ "\tLD\t(M_LNEY),HL\n"
+		+ "\tLD\t(LINE_M_EY),HL\n"
 		+ "\tLD\tDE,(M_XPOS)\n"
 		+ "\tJP\tXPSET\n" );
       libItems.add( LibItem.M_XYPO );
@@ -1535,10 +2083,12 @@ public class BasicLibrary
       if( stackSize <= 0 ) {
 	buf.append( "\tRET\n" );
       } else {
-	buf.append( "\tLD\tHL,M_TOP-" );
+	buf.append( "\tLD\tHL," );
+	buf.append( BasicCompiler.TOP_LABEL );
+	buf.append( (char) '-' );
 	buf.appendHex4( stackSize );
 	buf.append( "+10H" );
-	libItems.add( LibItem.M_TOP );
+	libItems.add( LibItem.MTOP );
 	buf.append( "\n"
 		+ "\tADD\tHL,DE\n"
 		+ "\tOR\tA\n"
@@ -1713,26 +2263,6 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.S_HXHL );
       libItems.add( LibItem.M_STMP );
-    }
-    if( libItems.contains( LibItem.S_HOSTBYNAME ) ) {
-      /*
-       * Ermittlung der IP-Adresse eines Rechners
-       *
-       * Parameter:
-       *   HL: Zeiger auf den Rechnernamen
-       * Rueckgabewert:
-       *   HL: Zeiger auf die Zeichenkette mit der IP-Adresse
-       */
-      buf.append( "S_HOSTBYNAME:\n" );
-      appendResetErrorUseBC( compiler );
-      buf.append( "\tCALL\tKCNET_HOSTBYNAME\n"
-		+ "\tLD\tHL,KCNET_M_IPADDR\n"
-		+ "\tJP\tNC,KCNET_S_IPADDR\n"
-		+ "\tLD\tHL,D_EMPT\n"
-		+ "\tRET\n" );
-      libItems.add( BasicLibrary.LibItem.KCNET_HOSTBYNAME );
-      libItems.add( BasicLibrary.LibItem.KCNET_S_IPADDR );
-      libItems.add( BasicLibrary.LibItem.D_EMPT );
     }
     if( libItems.contains( LibItem.S_INP ) ) {
       /*
@@ -1927,27 +2457,6 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.M_STMP );
     }
-    if( libItems.contains( LibItem.F_LOCALPORT ) ) {
-      /*
-       * Ermitteln der lokalen Portnummer
-       *
-       * Parameter:
-       *   DE: Anfangsadresse Kanalzeigerfeld
-       * Rueckgabe:
-       *   HL: Portnummer
-       */
-      buf.append( "F_LOCALPORT:\n"
-		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\tC\n"
-		+ "\tCALL\tKCNET_INIT\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\tC\n"
-		+ "\tLD\tL,04H\n"			// Sn_PORT
-		+ "\tJP\tKCNET_SOCK_GET_WORD\n" );
-      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
-      libItems.add( LibItem.KCNET_SOCK );
-    }
     if( libItems.contains( LibItem.S_LTRIM ) ) {
       /*
        * Weisse Leerzeichen am Anfang einer Zeichenkette abschneiden
@@ -2057,26 +2566,6 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.M_STMP );
     }
-    if( libItems.contains( LibItem.S_REMOTEADDR ) ) {
-      /*
-       * Ermitteln der IP-Adresse der Gegenstelle
-       *
-       * Parameter:
-       *   HL: Anfangsadresse Kanalzeigerfeld
-       * Rueckgabe:
-       *   HL: Zeiger auf die Zeichenkette mit der IP-Adresse
-       */
-      buf.append( "S_REMOTEADDR:\n"
-		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
-		+ "\tLD\tHL,D_EMPT\n"
-		+ "\tRET\tC\n" );
-      buf.append_LD_HL_nn( KCNetLibrary.IOCTB_REMOTE_OFFS );
-      buf.append( "\tADD\tHL,DE\n"
-		+ "\tJP\tKCNET_S_IPADDR\n" );
-      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
-      libItems.add( LibItem.KCNET_S_IPADDR );
-      libItems.add( LibItem.D_EMPT );
-    }
     if( libItems.contains( LibItem.S_RIGHT ) ) {
       /*
        * Ende (rechter Teil) einer Zeichenkette zurueckliefern
@@ -2123,9 +2612,9 @@ public class BasicLibrary
 		+ "\tOR\tA\n"
 		+ "\tJP\tM,E_PARM\n"
 		+ "\tOR\tC\n"
-		+ "\tJR\tNZ,S_STC1\n"
-		+ "\tLD\tHL,D_EMPT\n"
-		+ "\tRET\n"
+		+ "\tJR\tNZ,S_STC1\n" );
+      buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tRET\n"
 		+ "S_STC1:\tLD\tE,L\n"
 		+ "\tLD\tHL," );
       buf.appendHex4( BasicCompiler.MAX_STR_LEN );
@@ -2148,7 +2637,7 @@ public class BasicLibrary
 		+ "\tPOP\tHL\n"
 		+ "\tRET\n" );
       libItems.add( LibItem.E_PARM );
-      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.EMPTY_STRING );
       libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.S_STS ) ) {
@@ -2165,9 +2654,9 @@ public class BasicLibrary
 		+ "\tOR\tA\n"
 		+ "\tJP\tM,E_PARM\n"
 		+ "\tOR\tC\n"
-		+ "\tJR\tNZ,S_STS1\n"
-		+ "\tLD\tHL,D_EMPT\n"
-		+ "\tRET\n"
+		+ "\tJR\tNZ,S_STS1\n" );
+      buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tRET\n"
 		+ "S_STS1:\tPUSH\tBC\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tEXX\n"
@@ -2194,7 +2683,7 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.STNCP );
       libItems.add( LibItem.E_PARM );
-      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.EMPTY_STRING );
       libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.S_UPR ) ) {
@@ -2251,16 +2740,17 @@ public class BasicLibrary
 		+ "\tDEC\tBC\n"
 		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
-		+ "\tJR\tNZ,F_INSTRN2\n"
+		+ "\tJR\tZ,F_INSTRN2\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tINC\tHL\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tNZ,F_INSTRN1\n"
+		+ "\tPOP\tBC\n"
+		+ "\tJR\tF_INSTR5\n"
+		+ "F_INSTRN2:\n"
 		+ "\tPOP\tBC\n"
 		+ "\tDEC\tBC\n"
-		+ "\tJR\tF_INSTR1\n"
-		+ "F_INSTRN2:\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,F_INSTR5\n"
-		+ "\tINC\tHL\n"
-		+ "\tJR\tF_INSTRN1\n" );
+		+ "\tJR\tF_INSTR1\n" );
       libItems.add( LibItem.F_INSTR );
       libItems.add( LibItem.E_PARM );
     }
@@ -2313,6 +2803,34 @@ public class BasicLibrary
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
     }
+    if( libItems.contains( LibItem.F_IS_TARGET ) ) {
+      /*
+       * Pruefen, ob der Wert in HL dem aktuellen Zielsystem entspricht.
+       * Dabei werden auch uebergeordnete Zielsysteme erkannt.
+       *
+       * Parameter:
+       *   HL: Wert des zu testendes Zielsystems
+       * Rueckgabe:
+       *   HL: 0:     Wert entspricht nicht dem Zielsystem
+       *       FFFFh: Wert entspricht dem Zielsystem
+       */
+      buf.append( "F_IS_TARGET:\n"
+		+ "\tEX\tDE,HL\n" );
+      int[] targetIDs = compiler.getTarget().getTargetIDs();
+      if( targetIDs != null ) {
+	for( int targetID : targetIDs ) {
+	  buf.append_LD_HL_nn( targetID );
+	  buf.append( "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tJR\tZ,F_IS_TARGET1\n" );
+	}
+      }
+      buf.append( "\tLD\tHL,0000H\n"
+		+ "\tRET\n"
+		+ "F_IS_TARGET1:\n"
+		+ "\tDEC\tHL\n"
+		+ "\tRET\n" );
+    }
     if( libItems.contains( LibItem.F_JOY ) ) {
       buf.append( "F_JOY:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
@@ -2345,35 +2863,13 @@ public class BasicLibrary
 		+ "\tEX\tDE,HL\n"
 		+ "\tRET\n" );
     }
-    if( libItems.contains( LibItem.F_REMOTEPORT ) ) {
-      /*
-       * Ermitteln der Portnummer der Gegenstelle
-       *
-       * Parameter:
-       *   HL: Anfangsadresse Kanalzeigerfeld
-       * Rueckgabe:
-       *   HL: Portnummer der Gegenstelle oder 0 im Fehlerfall
-       */
-      buf.append( "F_REMOTEPORT:\n"
-		+ "\tCALL\tCHECK_OPEN_NET_CHANNEL\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\tC\n" );
-      buf.append_LD_HL_nn( KCNetLibrary.IOCTB_REMOTE_OFFS + 4 );
-      buf.append( "\tADD\tHL,DE\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\tH,(HL)\n"
-		+ "\tLD\tL,A\n"
-		+ "\tRET\n" );
-      libItems.add( LibItem.CHECK_OPEN_NET_CHANNEL );
-    }
     if( libItems.contains( LibItem.F_RND ) ) {
       /*
        * Ermitteln einer Zufallszahl
        *
        * Die RND-Funktion verknuepft mehrere Algorithmen miteinander,
        * um die jeweilgen Nachteile gegenseitig zu kompensieren:
-       *   1. Lesen der Programmcodebytes zwischen MSTART und MINIT
+       *   1. Lesen der Programmcodebytes
        *   2. XOR-Verknuepfung mit dem Refresh-Register
        *   3. XOR-Verknuepfung mit dem aktuellen Wert eines
        *      rueckgekoppelten Schieberegister-Pseudozufallsgenerators,
@@ -2392,11 +2888,12 @@ public class BasicLibrary
 		+ "\tJP\tZ,E_PARM\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tLD\tDE,(M_RNDA)\n"		// aktuelle Leseadresse
-		+ "\tLD\tHL,MINIT\n"		// MINIT erreicht?
+		+ "\tLD\tHL,XEXIT\n"		// XEXIT erreicht?
 		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNC,F_RND2\n"
-		+ "\tLD\tDE,MSTART\n"		// aus MSTART zurueckstellen
-		+ "\tLD\tA,(M_RNDX)\n"		// und rueckgekoppelten
+		+ "\tJR\tNC,F_RND2\n" );
+      // auf Anfang zurueckstellen
+      buf.append_LD_DE_xx( BasicCompiler.START_LABEL );
+      buf.append( "\tLD\tA,(M_RNDX)\n"		// und rueckgekoppelten
 		+ "\tLD\tB,A\n"			// Schieberegister-
 		+ "\tAND\t8EH\n"		// Pseudozufallsgenerator
 		+ "\tJP\tPE,F_RND1\n"		// (M_RNDX) weiterstellen
@@ -2648,7 +3145,7 @@ public class BasicLibrary
        * Rueckgabe:
        *   HL: gelesene Zahl oder 0 bei Fehler
        */
-      buf.append( "F_VLI:" );
+      buf.append( "F_VLI:\n" );
       BasicLibrary.appendResetErrorUseBC( compiler );
       buf.append( "F_VLI1:\tLD\tB,H\n"
 		+ "\tLD\tC,L\n"
@@ -2986,10 +3483,10 @@ public class BasicLibrary
        * O_ADD muss direkt hinter O_SUB folgen!
        */
       buf.append( "O_ADD:\tLD\tA,H\n"
-		+ "\tXOR\tD\n"
-		+ "\tLD\tA,D\n"
 		+ "\tADD\tHL,DE\n"
+		+ "\tXOR\tD\n"
 		+ "\tRET\tM\n"
+		+ "\tLD\tA,D\n"
 		+ "\tXOR\tH\n"
 		+ "\tRET\tP\n"
 		+ "\tJP\tE_NOV\n" );
@@ -3095,10 +3592,10 @@ public class BasicLibrary
 		+ "\tLD\tE,A\n"
 		+ "\tRET\n"
 		+ "E_DIV0:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
-	buf.append( "\tDB\t\'Division durch Null\'\n" );
+	buf.append( "\tDB\t\'Division durch 0\'\n" );
       } else {
 	buf.append( "\tDB\t\'Division by zero\'\n" );
       }
@@ -3359,10 +3856,10 @@ public class BasicLibrary
       libItems.add( LibItem.E_TYPE );
     }
     if( libItems.contains( LibItem.SCREEN ) ) {
-      buf.append( "SCREEN:\tCALL\tXSCRS\n"
+      buf.append( "SCREEN:\tCALL\tXSCREEN\n"
 		+ "\tJP\tC,E_PARM\n"
 		+ "\tRET\n" );
-      libItems.add( LibItem.XSCRS );
+      libItems.add( LibItem.XSCREEN );
       libItems.add( LibItem.E_PARM );
     }
     if( libItems.contains( LibItem.IOEOF ) ) {
@@ -3397,52 +3894,6 @@ public class BasicLibrary
 		+ "\tRET\n"
 		+ "IOEOF3:\tJP\t(HL)\n" );
     }
-    if( libItems.contains( LibItem.IOAVAILABLE ) ) {
-      /*
-       * Anzahl der verfuegbaren Bytes ermitteln
-       *
-       * Parameter:
-       *   HL: Adresse des Kanalzeigerfeldes
-       */
-      buf.append( "IOAVAILABLE:\n"
-		+ "\tLD\tD,H\n"
-		+ "\tLD\tE,L\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\t(HL)\n"
-		+ "\tJR\tNZ,IOAVAILABLE1\n" );
-      appendSetErrorChannelClosed( compiler );
-      buf.append( "\tJR\tIOAVAILABLE2\n"
-		+ "IOAVAILABLE1:\n" );
-      appendResetErrorUseBC( compiler );
-      for( int i = 1; i < IOCTB_AVAILABLE_OFFS; i++ ) {
-	buf.append( "\tINC\tHL\n" );
-      }
-      buf.append( "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\tH,(HL)\n"
-		+ "\tLD\tL,A\n"
-		+ "\tOR\tH\n"
-		+ "\tJR\tNZ,IOAVAILABLE3\n" );
-      appendSetErrorIOMode( compiler );
-      buf.append( "IOAVAILABLE2:\n"
-		+ "\tLD\tHL,0000H\n"
-		+ "\tRET\n"
-		+ "IOAVAILABLE3:\n"
-		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tJP_HL\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tPOP\tBC\n" );
-      buf.append_LD_HL_nn( IOCTB_BBUF_OFFS );
-      buf.append( "\tADD\tHL,BC\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tEX\tDE,HL\n"
-		+ "\tOR\tA\n"
-		+ "\tRET\tZ\n"
-		+ "\tINC\tHL\n"
-		+ "\tRET\n" );
-      libItems.add( LibItem.JP_HL );
-    }
     if( libItems.contains( LibItem.IOINL ) ) {
       /*
        * Lesen einer Zeile aus einem Eingabekanal
@@ -3458,8 +3909,8 @@ public class BasicLibrary
 		+ "\tOR\t(HL)\n"
 		+ "\tJR\tNZ,IOINL1\n" );
       appendSetErrorChannelClosed( compiler );
-      buf.append( "\tLD\tHL,D_EMPT\n"
-		+ "\tRET\n"
+      buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tRET\n"
 		+ "IOINL1:\tDEC\tHL\n" );
       appendResetErrorUseDE( compiler );
       buf.append( "\tLD\tB," );
@@ -3505,7 +3956,7 @@ public class BasicLibrary
 		+ "\tLD\t(HL),A\n"
 		+ "\tJR\tIOINL3\n" );
       libItems.add( LibItem.IORDB );
-      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.EMPTY_STRING );
       libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.IOINX ) ) {
@@ -3526,8 +3977,8 @@ public class BasicLibrary
 		+ "\tOR\t(HL)\n"
 		+ "\tJR\tNZ,IOINX1\n" );
       appendSetErrorChannelClosed( compiler );
-      buf.append( "\tLD\tHL,D_EMPT\n"
-		+ "\tRET\n"
+      buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tRET\n"
 		+ "IOINX1:\tDEC\tHL\n" );
       appendResetErrorUseDE( compiler );
       buf.append( "\tLD\tDE,M_STMP\n"
@@ -3550,7 +4001,7 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.IORDB );
       libItems.add( LibItem.E_PARM );
-      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.EMPTY_STRING );
       libItems.add( LibItem.M_STMP );
     }
     if( libItems.contains( LibItem.IORDB ) ) {
@@ -3586,43 +4037,6 @@ public class BasicLibrary
       appendSetErrorIOMode( compiler );
       buf.append( "\tRET\n"
 		+ "IORDB2:\tJP\t(HL)\n" );
-    }
-    if( libItems.contains( LibItem.IOFLUSH ) ) {
-      /*
-       * Gepufferte Daten schreiben
-       *
-       * Parameter:
-       *   HL: Adresse des Kanalzeigerfeldes
-       */
-      buf.append( "IOFLUSH:\n"
-		+ "\tLD\tD,H\n"
-		+ "\tLD\tE,L\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\t(HL)\n"
-		+ "\tJR\tNZ,IOFLUSH1\n" );
-      appendSetErrorChannelClosed( compiler );
-      buf.append( "\tRET\n"
-		+ "IOFLUSH1:\n" );
-      appendResetErrorUseBC( compiler );
-      buf.append_LD_BC_nn( IOCTB_FLUSH_OFFS - 1 );
-      buf.append( "\tADD\tHL,BC\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tLD\tH,(HL)\n"
-		+ "\tLD\tL,A\n"
-		+ "\tOR\tH\n"
-		+ "\tJR\tZ,IOFLUSH2\n"
-		+ "\tJP\t(HL)\n"
-		+ "IOFLUSH2:\n" );
-      buf.append_LD_HL_nn( IOCTB_WRITE_OFFS );
-      buf.append( "\tADD\tHL,DE\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\t(HL)\n"
-		+ "\tRET\tNZ\n" );
-      appendSetErrorIOMode( compiler );
-      buf.append( "\tRET\n" );
     }
     if( libItems.contains( LibItem.IOCLOSE ) ) {
       /*
@@ -3664,12 +4078,12 @@ public class BasicLibrary
        * Oeffnen eines IO-Kanals
        *
        * Parameter:
-       *   (M_IONM): Zeiger auf Geraete-/Dateiname
-       *   (M_IOAC): Zugriffsmode
-       *   HL:       Anfangsadresse des Kanalzeigerfeldes
+       *   (IO_M_NAME):   Zeiger auf Geraete-/Dateiname
+       *   (IO_M_ACCESS): Zugriffsmode
+       *   HL:            Anfangsadresse des Kanalzeigerfeldes
        */
       buf.append( "IOOPEN:\n"
-		+ "\tLD\t(M_IOCA),HL\n"
+		+ "\tLD\t(IO_M_CADDR),HL\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tINC\tHL\n"
 		+ "\tOR\t(HL)\n"
@@ -3678,7 +4092,7 @@ public class BasicLibrary
       buf.append( "\tRET\n"
 		+ "IOOPEN1:\n" );
       appendResetErrorUseHL( compiler );
-      buf.append( "\tLD\tHL,IOHNTB\n"
+      buf.append( "\tLD\tHL,IO_HANDLER_TAB\n"
 		+ "IOOPEN2:\n"
 		+ "\tLD\tE,(HL)\n"		// Handler-Adresse holen
 		+ "\tINC\tHL\n"
@@ -3700,7 +4114,7 @@ public class BasicLibrary
 	 * verantwortlich gefuehlt.
 	 * Pruefen, ob der Kanal geoeffnet wurde.
 	 */
-	buf.append( "\tLD\tHL,(M_IOCA)\n"
+	buf.append( "\tLD\tHL,(IO_M_CADDR)\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tINC\tHL\n"
 		+ "\tOR\t(HL)\n"
@@ -3723,55 +4137,52 @@ public class BasicLibrary
       // Keine passenden Handler gefunden
       appendSetErrorDeviceNotFound( compiler );
       buf.append( "\tRET\n" );
-      libItems.add( LibItem.IO_CRT_HANDLER );
-      if( target.supportsXLPTCH() ) {
-	libItems.add( LibItem.IO_LPT_HANDLER );
-      }
-      int[] ioAddrs = target.getVdipBaseIOAddresses();
-      if( ioAddrs != null ) {
-	if( ioAddrs.length > 0 ) {
-	  libItems.add( LibItem.IO_VDIP_HANDLER );
-	}
-      }
-      libItems.add( LibItem.JP_HL );
-    }
-    if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
-      VdipLibrary.appendCodeTo( compiler );
-    }
-    if( libItems.contains( LibItem.IO_CRT_HANDLER ) ) {
-      buf.append( "IO_CRT_HANDLER:\n"
+      if( compiler.needsDriver( BasicCompiler.IODriver.CRT )
+	  && options.isOpenCrtEnabled() )
+      {
+	buf.append( "IO_CRT_HANDLER:\n"
 		+ "\tLD\tHL,D_IOCRT\n"
 		+ "\tLD\tDE,XOUTCH\n"
 		+ "\tJR\tIO_SIMPLE_OUT_HANDLER\n" );
-      libItems.add( LibItem.IO_SIMPLE_OUT_HANDLER );
-      libItems.add( LibItem.XOUTCH );
-    }
-    if( libItems.contains( LibItem.IO_LPT_HANDLER ) ) {
-      buf.append( "IO_LPT_HANDLER:\n"
+	libItems.add( LibItem.IO_CRT_HANDLER );
+	libItems.add( LibItem.IO_SIMPLE_OUT_HANDLER );
+	libItems.add( LibItem.XOUTCH );
+      }
+      if( compiler.needsDriver( BasicCompiler.IODriver.LPT )
+	  && options.isOpenLptEnabled()
+	  && target.supportsXLPTCH() )
+      {
+	buf.append( "IO_LPT_HANDLER:\n"
 		+ "\tLD\tHL,D_IOLPT\n"
 		+ "\tLD\tDE,XLPTCH\n"
 		+ "\tJR\tIO_SIMPLE_OUT_HANDLER\n" );
-      libItems.add( LibItem.IO_SIMPLE_OUT_HANDLER );
-      libItems.add( LibItem.XLPTCH );
-    }
-    if( libItems.contains( LibItem.IO_SIMPLE_OUT_HANDLER ) ) {
-      /*
-       * Handler fuer einfachen Ausgabekanal
-       *
-       * Parameter:
-       *   DE:       Adresse der Ausgaberoutine
-       *   HL:       Geraetename, auf den der Handler reagiert
-       *   (M_IONM): Zeiger auf Geraetename (wird mit dem in HL verglichen)
-       *   (M_IOCA): Anfangsadresse des Kanalzeigerfeldes
-       *   (M_IOAC): Zugriffsmode (muss 0 oder 2 sein)
-       * Rueckgabewert:
-       *   CY=1:     Handler ist nicht zustaendig
-       *   CY=0:     Handler ist zustaendig
-       *               -> keine weiteren Handler testen
-       */
-      buf.append( "IO_SIMPLE_OUT_HANDLER:\n"
+	libItems.add( LibItem.IO_LPT_HANDLER );
+	libItems.add( LibItem.IO_SIMPLE_OUT_HANDLER );
+	libItems.add( LibItem.XLPTCH );
+      }
+      if( libItems.contains( LibItem.IO_SIMPLE_OUT_HANDLER ) ) {
+	/*
+	 * Handler fuer einfachen Ausgabekanal
+	 *
+	 * Der Code steht direkt hinter
+	 * IO_CRT_HANDLER bzw. IO_LPT_HANDLER,
+	 * damit die relative Sprungdistanz nicht zu gross wird.
+	 *
+	 * Parameter:
+	 *   DE:            Adresse der Ausgaberoutine
+	 *   HL:            Geraetename, auf den der Handler reagiert
+	 *   (IO_M_NAME):   Zeiger auf Geraetename
+	 *                  (wird mit dem in HL verglichen)
+	 *   (IO_M_CADDR):  Anfangsadresse des Kanalzeigerfeldes
+	 *   (IO_M_ACCESS): Zugriffsmode (muss 0 oder 2 sein)
+	 * Rueckgabewert:
+	 *   CY=1:     Handler ist nicht zustaendig
+	 *   CY=0:     Handler ist zustaendig
+	 *               -> keine weiteren Handler testen
+	 */
+	buf.append( "IO_SIMPLE_OUT_HANDLER:\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tLD\tDE,(M_IONM)\n"
+		+ "\tLD\tDE,(IO_M_NAME)\n"
 		+ "IO_SIMPLE_OUT_H1:\n"
 		+ "\tLD\tA,(DE)\n"
 		+ "\tCALL\tC_UPR\n"
@@ -3781,19 +4192,20 @@ public class BasicLibrary
 		+ "\tINC\tHL\n"
 		+ "\tCP\t3AH\n"
 		+ "\tJR\tNZ,IO_SIMPLE_OUT_H1\n"
-		+ "\tLD\tA,(M_IOAC)\n"		// Betriebsart pruefen
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,IO_SIMPLE_OUT_H2\n"
-		+ "\tCP\t" );
-      buf.appendHex2( IOMODE_OUTPUT );
-      buf.append( "\n"
+		+ "\tLD\tA,(IO_M_ACCESS)\n"	// Betriebsart pruefen
+		+ "\tAND\t" );
+	buf.appendHex2( ~(IOMODE_DEFAULT_MASK
+				| IOMODE_OUTPUT_MASK
+				| IOMODE_TXT_MASK
+				| IOMODE_BIN_MASK) );
+	buf.append( "\n"
 		+ "\tJR\tZ,IO_SIMPLE_OUT_H2\n" );
-      appendSetErrorIOMode( compiler );		// Betriebsart nicht moeglich
-      buf.append( "\tPOP\tDE\n"
+	appendSetErrorIOMode( compiler );	// Betriebsart nicht moeglich
+	buf.append( "\tPOP\tDE\n"
 		+ "\tOR\tA\n"			// C=0
 		+ "\tRET\n"
 		+ "IO_SIMPLE_OUT_H2:\n"
-		+ "\tLD\tHL,(M_IOCA)\n"
+		+ "\tLD\tHL,(IO_M_CADDR)\n"
 		+ "\tLD\tDE,IO_SIMPLE_CLOSE\n"
 		+ "\tLD\t(HL),E\n"
 		+ "\tINC\tHL\n"
@@ -3801,8 +4213,8 @@ public class BasicLibrary
 		+ "\tINC\tHL\n"
 		+ "\tXOR\tA\n"
 		+ "\tLD\tB," );
-      buf.appendHex2( IOCTB_WRITE_OFFS - 2 );
-      buf.append( "\n"
+	buf.appendHex2( IOCTB_WRITE_OFFS - 2 );
+	buf.append( "\n"
 		+ "IO_SIMPLE_OUT_H3:\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tINC\tHL\n"
@@ -3813,8 +4225,8 @@ public class BasicLibrary
 		+ "\tLD\t(HL),D\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\tB," );
-      buf.appendHex2( compiler.getIOChannelSize() - IOCTB_WRITE_OFFS - 2 );
-      buf.append( "\n"
+	buf.appendHex2( compiler.getIOChannelSize() - IOCTB_WRITE_OFFS - 2 );
+	buf.append( "\n"
 		+ "IO_SIMPLE_OUT_H4:\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tINC\tHL\n"
@@ -3825,7 +4237,31 @@ public class BasicLibrary
 		+ "\tSCF\n"
 		+ "IO_SIMPLE_CLOSE:\n"
 		+ "\tRET\n" );
-      libItems.add( LibItem.C_UPR );
+	libItems.add( LibItem.C_UPR );
+      }
+      if( compiler.needsDriver( BasicCompiler.IODriver.FILE )
+	  && options.isOpenFileEnabled() )
+      {
+	String fileHandlerLabel = compiler.getTarget().getFileHandlerLabel();
+	if( fileHandlerLabel != null ) {
+	  if( !fileHandlerLabel.isEmpty() ) {
+	    compiler.getTarget().appendFileHandler( compiler );
+	    libItems.add( LibItem.IO_FILE_HANDLER );
+	  }
+	}
+      }
+      if( compiler.needsDriver( BasicCompiler.IODriver.VDIP )
+	  && options.isOpenVdipEnabled() )
+      {
+	int[] ioAddrs = target.getVdipBaseIOAddresses();
+	if( ioAddrs != null ) {
+	  if( ioAddrs.length > 0 ) {
+	    VdipLibrary.appendCodeTo( compiler );
+	    libItems.add( LibItem.IO_VDIP_HANDLER );
+	  }
+	}
+      }
+      libItems.add( LibItem.JP_HL );
     }
     if( libItems.contains( LibItem.IOCADR ) ) {
       /*
@@ -3859,44 +4295,6 @@ public class BasicLibrary
       libItems.add( LibItem.IOCTB1 );
       libItems.add( LibItem.IOCTB2 );
     }
-    if( libItems.contains( LibItem.CHECK_OPEN_NET_CHANNEL ) ) {
-      /*
-       * Pruefen, ob der Kanal mit KCNet (TCP oder UDP) geoeffnet ist
-       * Die Fehlervariablen werden gesetzt.
-       *
-       * Parameter:
-       *   HL: Anfangsadresse Kanalzeigerfeld
-       * Rueckgabe:
-       *   CY=0: OK, A: Protokoll, DE: Anfangsadresse Kanalzeigerfeld
-       *   CY=1: nicht als KCNet-Kanal geoeffnet
-       */
-      buf.append( "CHECK_OPEN_NET_CHANNEL:\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tINC\tHL\n"
-		+ "\tOR\t(HL)\n"
-		+ "\tJR\tNZ,CHECK_OPEN_NET_CHANNEL1\n" );
-      appendSetErrorChannelClosed( compiler );
-      buf.append( "\tJR\tCHECK_OPEN_NET_CHANNEL2\n"
-		+ "CHECK_OPEN_NET_CHANNEL1:\n"
-		+ "\tDEC\tHL\n"
-		+ "\tEX\tDE,HL\n" );
-      buf.append_LD_HL_nn( KCNetLibrary.IOCTB_PROTO_OFFS );
-      buf.append( "\tADD\tHL,DE\n"
-		+ "\tLD\tA,(HL)\n"
-		+ "\tCP\t\'T\'\n"
-		+ "\tJR\tZ,CHECK_OPEN_NET_CHANNEL3\n"
-		+ "\tCP\t\'U\'\n"
-		+ "\tJR\tZ,CHECK_OPEN_NET_CHANNEL3\n" );
-      appendSetErrorIOMode( compiler );
-      buf.append( "CHECK_OPEN_NET_CHANNEL2:\n"
-		+ "\tSCF\n"
-		+ "\tRET\n"
-		+ "CHECK_OPEN_NET_CHANNEL3:\n" );
-      appendResetErrorUseHL( compiler );
-      buf.append( "\tOR\tA\n"				// CY=0
-		+ "\tRET\n" );
-    }
-    KCNetLibrary.appendCodeTo( compiler );
     if( libItems.contains( LibItem.S_HXHL ) ) {
       /*
        * Umwandlung eines numerischen Wertes in eine Zeichenkette
@@ -3953,7 +4351,7 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.E_DATA ) ) {
       buf.append( "E_DATA:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'Keine Daten mehr\'\n" );
@@ -3967,7 +4365,7 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.E_IDX ) ) {
       buf.append( "E_IDX:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'Index ausserhalb des Bereichs\'\n" );
@@ -3981,7 +4379,7 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.E_NOV ) ) {
       buf.append( "E_NOV:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'Numerischer Ueberlauf\'\n" );
@@ -3995,7 +4393,7 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.E_NXWF ) ) {
       buf.append( "E_NXWF:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'NEXT ohne FOR\'\n" );
@@ -4009,12 +4407,12 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.E_PARM ) ) {
       buf.append( "E_PARM:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
-	buf.append( "\tDB\t\'Parameter ausserhalb des Wertebereichs\'\n" );
+	buf.append( "\tDB\t\'Ungueltiger Parameter\'\n" );
       } else {
-	buf.append( "\tDB\t\'Parameter out of range\'\n" );
+	buf.append( "\tDB\t\'Invalid parameter\'\n" );
       }
       buf.append( "\tDB\t00H\n"
 		+ "\tJP\tE_EXIT\n" );
@@ -4023,7 +4421,7 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.E_REWG ) ) {
       buf.append( "E_REWG:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'RETURN ohne GOSUB\'\n" );
@@ -4037,7 +4435,7 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.E_TYPE ) ) {
       buf.append( "E_TYPE:" );
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'Falscher Datentyp\'\n" );
@@ -4049,7 +4447,7 @@ public class BasicLibrary
       libItems.add( LibItem.E_EXIT );
       libItems.add( LibItem.XOUTST );
     }
-    if( libItems.contains( LibItem.ASGSM ) ) {
+    if( libItems.contains( LibItem.ASSIGN_STR_TO_NEW_MEM_VS ) ) {
       /*
        * Eine Zeichenkette einer String-Variable zuweisen,
        * wobei diese in einen neu allokierten Speicherberich kopiert wird
@@ -4058,14 +4456,15 @@ public class BasicLibrary
        *   DE: Zeiger auf die String-Variable
        *   HL: Zeiger auf die Zeichenkette
        */
-      buf.append( "ASGSM:\tPUSH\tDE\n"
+      buf.append( "ASSIGN_STR_TO_NEW_MEM_VS:\n"
+		+ "\tPUSH\tDE\n"
 		+ "\tCALL\tSMACP\n"
 		+ "\tPOP\tDE\n" );
       libItems.add( LibItem.SMACP );
-      libItems.add( LibItem.ASGSL );
-      // direkt weiter mit ASGSL
+      libItems.add( LibItem.ASSIGN_STR_TO_VS );
+      // direkt weiter mit ASSIGN_STR_TO_VS
     }
-    if( libItems.contains( LibItem.ASGSL ) ) {
+    if( libItems.contains( LibItem.ASSIGN_STR_TO_VS ) ) {
       /*
        * Eine Zeichenkette einer String-Variable zuweisen
        *
@@ -4073,7 +4472,8 @@ public class BasicLibrary
        *   DE: Zeiger auf die String-Variable
        *   HL: Zeiger auf die Zeichenkette
        */
-      buf.append( "ASGSL:\tPUSH\tDE\n"
+      buf.append( "ASSIGN_STR_TO_VS:\n"
+		+ "\tPUSH\tDE\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tEX\tDE,HL\n"
 		+ "\tLD\tE,(HL)\n"
@@ -4088,7 +4488,7 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.MFREE );
     }
-    if( libItems.contains( LibItem.ASGSV ) ) {
+    if( libItems.contains( LibItem.ASSIGN_VS_TO_VS ) ) {
       /*
        * Eine String-Variable einer andern zuweisen,
        * Wenn die Zeichenkette der Quellvariablen im Heap liegt,
@@ -4100,13 +4500,15 @@ public class BasicLibrary
        *   DE: Zeiger auf die Zielvariable
        *   HL: Zeiger auf die Quellvariable
        */
-      buf.append( "ASGSV:\tLD\tA,H\n"
+      buf.append( "ASSIGN_VS_TO_VS:\n"
+		+ "\tLD\tA,H\n"
 		+ "\tCP\tD\n"
-		+ "\tJR\tNZ,ASGSV1\n"
+		+ "\tJR\tNZ,ASSIGN_VS_TO_VS1\n"
 		+ "\tLD\tA,L\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\tZ\n"
-		+ "ASGSV1:\tPUSH\tDE\n"
+		+ "ASSIGN_VS_TO_VS1:\n"
+		+ "\tPUSH\tDE\n"
 		+ "\tLD\tE,(HL)\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\tD,(HL)\n"
@@ -4136,9 +4538,9 @@ public class BasicLibrary
        */
       buf.append( "SMACP:\tLD\tA,(HL)\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,SMACP1\n"
-		+ "\tLD\tDE,D_EMPT\n"
-		+ "\tRET\n"
+		+ "\tJR\tNZ,SMACP1\n" );
+      buf.append_LD_DE_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tRET\n"
 		+ "SMACP1:\tPUSH\tHL\n"
 		+ "\tCALL\tMFIND\n"
 		+ "\tPOP\tHL\n"
@@ -4153,7 +4555,7 @@ public class BasicLibrary
       libItems.add( LibItem.MFIND );
       libItems.add( LibItem.MALLOC );
       libItems.add( LibItem.STNCP );
-      libItems.add( LibItem.D_EMPT );
+      libItems.add( LibItem.EMPTY_STRING );
     }
     if( libItems.contains( LibItem.SVDUP ) ) {
       /*
@@ -4169,12 +4571,9 @@ public class BasicLibrary
        * Rueckgabewert:
        *   DE: Zeiger auf evtl. kopierte Zeichenkette
        */
-      buf.append( "SVDUP:\tLD\tHL,HEAPB\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tRET\tNC\n"
-		+ "\tADD\tHL,DE\n"
-		+ "\tJR\tSVDUP2\n"
+      buf.append( "SVDUP:\tCALL\tCHECK_DE_WITHIN_HEAP\n"
+		+ "\tRET\tC\n"
+		+ "\tJR\tSVDUP2\n"		// HL: Heap-Anfang
 		+ "SVDUP1:\tLD\tA,B\n"
 		+ "\tOR\tC\n"
 		+ "\tRET\tZ\n"
@@ -4211,6 +4610,7 @@ public class BasicLibrary
 		+ "\tRET\n" );
       libItems.add( LibItem.MFIND );
       libItems.add( LibItem.MALLOC );
+      libItems.add( LibItem.CHECK_DE_WITHIN_HEAP );
       libItems.add( LibItem.HEAP );
       libItems.add( LibItem.STNCP );
     }
@@ -4313,13 +4713,14 @@ public class BasicLibrary
 		+ "MFIND2:\tEX\tDE,HL\n"	// naechster Block
 		+ "\tLD\tA,H\n"
 		+ "\tOR\tL\n"
-		+ "\tJR\tNZ,MFIND1\n" );
-      target.appendSwitchToTextScreen( buf );
+		+ "\tJR\tNZ,MFIND1\n"
+		+ "E_OUT_OF_MEM:\n" );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
-	buf.append( "\tDB\t\'Zeichenkettenspeicher voll\'\n" );
+	buf.append( "\tDB\t\'Speicher voll\'\n" );
       } else {
-	buf.append( "\tDB\t\'Out of string memory\'\n" );
+	buf.append( "\tDB\t\'Out of memory\'\n" );
       }
       buf.append( "\tDB\t00H\n"
 		+ "\tJP\tE_EXIT\n" );
@@ -4399,12 +4800,9 @@ public class BasicLibrary
        * Parameter:
        *   DE: Zeiger auf den allokierten Speicherbereich
        */
-      buf.append( "MMGC:\tLD\tHL,HEAPB\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tRET\tNC\n"			// Blockadresse < Heap
-		+ "\tPUSH\tIY\n"
-		+ "\tADD\tHL,DE\n"		// HL: Heap-Anfang
+      buf.append( "MMGC:\tCALL\tCHECK_DE_WITHIN_HEAP\n"
+		+ "\tRET\tC\n"
+		+ "\tPUSH\tIY\n"		// HL: Heap-Anfang
 		+ "\tDEC\tDE\n"
 		+ "\tDEC\tDE\n"
 		+ "\tDEC\tDE\n"
@@ -4429,6 +4827,7 @@ public class BasicLibrary
 		+ "\tSET\t7,(HL)\n"		// Block markieren
 		+ "MMGC3:\tPOP\tIY\n"
 		+ "\tRET\n" );
+      libItems.add( LibItem.CHECK_DE_WITHIN_HEAP );
     }
     if( libItems.contains( LibItem.MRGC ) ) {
       /*
@@ -4478,12 +4877,9 @@ public class BasicLibrary
        * Parameter:
        *   DE: Zeiger auf den allokierten Speicherbereich
        */
-      buf.append( "MFREE:\tLD\tHL,HEAPB\n"
-		+ "\tOR\tA\n"
-		+ "\tSBC\tHL,DE\n"
-		+ "\tRET\tNC\n"			// Blockadresse < Heap
-		+ "\tPUSH\tIY\n"
-		+ "\tADD\tHL,DE\n"		// HL: Heap-Anfang
+      buf.append( "MFREE:\tCALL\tCHECK_DE_WITHIN_HEAP\n"
+		+ "\tRET\tC\n"
+		+ "\tPUSH\tIY\n"		// HL: Heap-Anfang
 		+ "\tDEC\tDE\n"
 		+ "\tDEC\tDE\n"
 		+ "\tDEC\tDE\n"
@@ -4559,10 +4955,38 @@ public class BasicLibrary
 		+ "\tLD\t(IY+2),L\n"
 		+ "\tLD\t(IY+3),H\n"
 		+ "\tRET\n" );
+      libItems.add( LibItem.CHECK_DE_WITHIN_HEAP );
       libItems.add( LibItem.HEAP );
     }
+    if( libItems.contains( LibItem.CHECK_DE_WITHIN_HEAP ) ) {
+      /*
+       * Pruefen, ob die in DE enthaltene Adresse im Heap liegt,
+       * DE bleibt erhalten
+       * 
+       * Parameter:
+       *   DE: Zeiger auf den zu pruefenden Speicherbereich
+       *
+       * Rueckgabewert:
+       *
+       *   CY=0: Adresse im Heap, HL: Heap-Anfang
+       *   CY=1: Adresse ausserhalb des Heaps
+       */
+      buf.append( "CHECK_DE_WITHIN_HEAP:\n"
+		+ "\tLD\tHL,HEAPB\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tJR\tZ,CHECK_DE_WITHIN_HEAP1\n"
+		+ "\tCCF\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tHL,HEAPE\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "CHECK_DE_WITHIN_HEAP1:\n"
+		+ "\tLD\tHL,HEAPB\n"
+		+ "\tRET\n" );
+    }
     if( libItems.contains( LibItem.E_USR ) ) {
-      target.appendSwitchToTextScreen( buf );
+      target.appendSwitchToTextScreenTo( buf );
       buf.append( "E_USR:\tCALL\tXOUTST\n" );
       if( compiler.isLangCode( "DE" ) ) {
 	buf.append( "\tDB\t\'USR-Funktion nicht definiert\'\n" );
@@ -4582,35 +5006,57 @@ public class BasicLibrary
       if( options.getPrintLineNumOnAbort() ) {
 	buf.append( "\tLD\tHL,(M_SRLN)\n"
 		+ "\tBIT\t7,H\n"
-		+ "\tJR\tNZ,E_EXI1\n"
+		+ "\tJR\tNZ,E_EXIT2\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tCALL\tXOUTST\n" );
-	if( compiler.isLangCode( "DE" ) ) {
-	  buf.append( "\tDB\t\' in Zeile\'\n" );
+	if( libItems.contains( LibItem.M_SRNM ) ) {
+	  buf.append( "\tDB\t\' in \'\n"
+		+ "\tDB\t00H\n"
+		+ "\tLD\tHL,(M_SRNM)\n"
+		+ "\tLD\tA,H\n"
+		+ "\tOR\tL\n"
+		+ "\tJR\tZ,E_EXIT1\n"
+		+ "\tCALL\tXOUTS\n"
+		+ "\tCALL\tXOUTST\n"
+		+ "\tDB\t\', \'\n"
+		+ "\tDB\t00H\n"
+		+ "E_EXIT1:\n"
+		+ "\tCALL\tXOUTST\n" );
+	  if( compiler.isLangCode( "DE" ) ) {
+	    buf.append( "\tDB\t\'Zeile\'\n" );
+	  } else {
+	    buf.append( "\tDB\t\'line\'\n" );
+	  }
 	} else {
-	  buf.append( "\tDB\t\' in line\'\n" );
+	  if( compiler.isLangCode( "DE" ) ) {
+	    buf.append( "\tDB\t\' in Zeile\'\n" );
+	  } else {
+	    buf.append( "\tDB\t\' in line\'\n" );
+	  }
 	}
 	buf.append( "\tDB\t00H\n"
 		+ "\tPOP\tHL\n"
 		+ "\tCALL\tS_STR\n"
-		+ "\tCALL\tXOUTS\n"
-		+ "\tLD\tHL,(M_BALN)\n"
+		+ "\tCALL\tXOUTS\n" );
+	if( libItems.contains( LibItem.M_BALN ) ) {
+	  buf.append( "\tLD\tHL,(M_BALN)\n"
 		+ "\tBIT\t7,H\n"
-		+ "\tJR\tNZ,E_EXI1\n"
+		+ "\tJR\tNZ,E_EXIT2\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tCALL\tXOUTST\n" );
-	if( compiler.isLangCode( "DE" ) ) {
-	  buf.append( "\tDB\t\' (BASIC-Zeile\'\n" );
-	} else {
-	  buf.append( "\tDB\t\' (BASIC line\'\n" );
-	}
-	buf.append( "\tDB\t00H\n"
+	  if( compiler.isLangCode( "DE" ) ) {
+	    buf.append( "\tDB\t\' (BASIC-Zeile\'\n" );
+	  } else {
+	    buf.append( "\tDB\t\' (BASIC line\'\n" );
+	  }
+	  buf.append( "\tDB\t00H\n"
 		+ "\tPOP\tHL\n"
 		+ "\tCALL\tS_STR\n"
 		+ "\tCALL\tXOUTS\n"
 		+ "\tLD\tA,29H\n"
-		+ "\tCALL\tXOUTCH\n"
-		+ "E_EXI1:" );
+		+ "\tCALL\tXOUTCH\n" );
+	}
+	buf.append( "E_EXIT2:\n" );
 	libItems.add( LibItem.S_STR );
 	libItems.add( LibItem.XOUTCH );
 	libItems.add( LibItem.XOUTS );
@@ -4635,57 +5081,56 @@ public class BasicLibrary
       buf.append( "S_STR:\tLD\tA,H\n"
 		+ "\tXOR\t80H\n"
 		+ "\tOR\tL\n"
-		+ "\tJR\tNZ,S_STR1\n"
-		+ "\tLD\tHL,S_STR5\n"
-		+ "\tRET\n"
-		+ "S_STR1:\tLD\tA,H\n"
-		+ "\tOR\tA\n"
+		+ "\tJR\tZ,S_STR4\n"
 		+ "\tLD\tA,20H\n"
-		+ "\tJP\tP,S_STR2\n"
+		+ "\tBIT\t7,H\n"
+		+ "\tJR\tZ,S_STR1\n"
 		+ "\tEX\tDE,HL\n"
 		+ "\tXOR\tA\n"			// CY=0
 		+ "\tLD\tH,A\n"
 		+ "\tLD\tL,A\n"
 		+ "\tSBC\tHL,DE\n"
-		+ "\tLD\tA,'-'\n"
-		+ "S_STR2:\tEXX\n"
+		+ "\tLD\tA,2DH\n"		// Minuszeichen
+		+ "S_STR1:\tEXX\n"
 		+ "\tLD\tHL,M_STR\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tINC\tHL\n"
 		+ "\tEXX\n"
 		+ "\tLD\tB,00H\n"		// keine Nullen
 		+ "\tLD\tDE,2710H\n"		// 10000
-		+ "\tCALL\tS_STR3\n"
+		+ "\tCALL\tS_STR2\n"
 		+ "\tLD\tDE,03E8H\n"		// 1000
-		+ "\tCALL\tS_STR3\n"
+		+ "\tCALL\tS_STR2\n"
 		+ "\tLD\tDE,0064H\n"		// 100
-		+ "\tCALL\tS_STR3\n"
+		+ "\tCALL\tS_STR2\n"
 		+ "\tLD\tDE,000AH\n"		// 10
-		+ "\tCALL\tS_STR3\n"
+		+ "\tCALL\tS_STR2\n"
 		+ "\tLD\tDE,0001H\n"		// 1
 		+ "\tLD\tB,01H\n"		// Null ausgeben
-		+ "\tCALL\tS_STR3\n"
+		+ "\tCALL\tS_STR2\n"
 		+ "\tXOR\tA\n"
 		+ "\tEXX\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tLD\tHL,M_STR\n"
 		+ "\tRET\n"
-		+ "S_STR3:\tLD\tA,0FFH\n"
+		+ "S_STR2:\tLD\tA,0FFH\n"
 		+ "\tOR\tA\n"			// CY=0
-		+ "S_STR4:\tINC\tA\n"		// CY unveraendert
+		+ "S_STR3:\tINC\tA\n"		// CY unveraendert
 		+ "\tSBC\tHL,DE\n"
-		+ "\tJR\tNC,S_STR4\n"
+		+ "\tJR\tNC,S_STR3\n"
 		+ "\tADD\tHL,DE\n"
 		+ "\tLD\tC,A\n"
 		+ "\tOR\tB\n"
 		+ "\tRET\tZ\n"
-		+ "\tLD\tA,'0'\n"
+		+ "\tLD\tA,30H\n"		// 0
 		+ "\tLD\tB,A\n"
 		+ "\tADD\tA,C\n"
 		+ "\tEXX\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tINC\tHL\n"
 		+ "\tEXX\n"
+		+ "\tRET\n"
+		+ "S_STR4:\tLD\tHL,S_STR5\n"
 		+ "\tRET\n"
 		+ "S_STR5:\tDB\t'-32768'\n"
 		+ "\tDB\t00H\n" );
@@ -4724,8 +5169,9 @@ public class BasicLibrary
       buf.append( "\tLD\tHL,IOCTB2\n"
 		+ "\tCALL\tCKCLOS\n" );
     }
+    target.appendPreExitTo( buf );
     buf.append( "\tLD\tSP,(M_STCK)\n" );
-    target.appendExit( buf );
+    target.appendExitTo( buf );
     if( libItems.contains( LibItem.IOCTB1 )
 	|| libItems.contains( LibItem.IOCTB2 ) )
     {
@@ -4739,7 +5185,7 @@ public class BasicLibrary
 		+ "\tRET\tZ\n"
 		+ "\tJP\t(HL)\n" );
     }
-    target.appendInput(
+    target.appendInputTo(
 		buf,
 		libItems.contains( LibItem.XCKBRK ),
 		libItems.contains( LibItem.XINKEY ),
@@ -4754,62 +5200,57 @@ public class BasicLibrary
       libItems.add( LibItem.XOUTST );
       libItems.add( LibItem.XOUTNL );
     }
+    if( libItems.contains( LibItem.XSCREEN ) ) {
+      target.appendXScreenTo( buf );
+    }
     if( libItems.contains( LibItem.XBORDER ) ) {
-      target.appendXBORDER( buf );
+      target.appendXBorderTo( buf );
     }
     if( libItems.contains( LibItem.XCOLOR ) ) {
-      target.appendXCOLOR( buf );
+      target.appendXColorTo( buf );
     }
     if( libItems.contains( LibItem.XINK ) ) {
-      target.appendXINK( buf );
+      target.appendXInkTo( buf );
     }
     if( libItems.contains( LibItem.XPAPER ) ) {
-      target.appendXPAPER( buf );
+      target.appendXPaperTo( buf );
     }
     if( libItems.contains( LibItem.XCLS ) ) {
-      target.appendXCLS( buf );
+      target.appendXClsTo( buf );
     }
     if( libItems.contains( LibItem.XLOCATE ) ) {
-      target.appendXLOCATE( buf );
+      target.appendXLocateTo( buf );
     }
     if( libItems.contains( LibItem.XCURS ) ) {
-      target.appendXCURS( buf );
-    }
-    if( libItems.contains( LibItem.XPAUSE ) ) {
-      buf.append( "XPAUSE:\tLD\tDE," );
-      buf.appendHex4( target.get100msLoopCount() );
-      buf.append( "\n"
-		+ "XPAUS1:\tLD\tB,0\n"
-		+ "XPAUS2:\tDJNZ\tXPAUS2\n"
-		+ "\tDEC\tDE\n"
-		+ "\tLD\tA,D\n"
-		+ "\tOR\tE\n"
-		+ "\tJR\tNZ,XPAUS1\n"
-		+ "\tRET\n" );
+      target.appendXCursTo( buf );
     }
     // XPEN vor den anderen Grafikroutinen hinzufuegen!
     if( libItems.contains( LibItem.XPEN ) ) {
-      target.appendXPEN( buf );
+      target.appendXPenTo( buf );
     }
     if( libItems.contains( LibItem.XHLINE ) ) {
-      target.appendXHLINE( buf, compiler );
+      target.appendXHLineTo( buf, compiler );
+    }
+    if( libItems.contains( LibItem.XPAINT ) ) {
+      target.appendXPaintTo( buf, compiler );
     }
     if( libItems.contains( LibItem.XPRES ) ) {
-      target.appendXPRES( buf, compiler );
+      target.appendXPResTo( buf, compiler );
     }
     if( libItems.contains( LibItem.XPSET ) ) {
-      target.appendXPSET( buf, compiler );
+      target.appendXPSetTo( buf, compiler );
     }
     if( libItems.contains( LibItem.XPTEST ) ) {
-      target.appendXPTEST( buf, compiler );
+      target.appendXPTestTo( buf, compiler );
     }
-    if( libItems.contains( LibItem.XSCRS ) ) {
-      target.appendXSCRS( buf );
+    if( libItems.contains( LibItem.XPOINT ) ) {
+      target.appendXPointTo( buf, compiler );
     }
     if( libItems.contains( LibItem.XJOY ) ) {
-      target.appendXJOY( buf );
+      target.appendXJoyTo( buf );
     }
-    if( libItems.contains( LibItem.XOUTST ) || target.needsXOUTST() ) {
+    target.appendEtcPreXOutTo( buf );
+    if( libItems.contains( LibItem.XOUTST ) ) {
       /*
        * Ausgabe eines mit einem Null-Byte abgeschlossenen Textes
        * auf dem Bildschirm,
@@ -4842,16 +5283,16 @@ public class BasicLibrary
       libItems.add( LibItem.XOUTCH );
     }
     if( libItems.contains( LibItem.XOUTNL ) ) {
-      target.appendXOUTNL( buf );
+      target.appendXOutnlTo( buf );
       libItems.add( LibItem.XOUTCH );
     }
     if( libItems.contains( LibItem.XOUTCH ) ) {
-      target.appendXOUTCH( buf );
+      target.appendXOutchTo( buf );
     }
     if( libItems.contains( LibItem.XLPTCH ) ) {
-      target.appendXLPTCH( buf );
+      target.appendXLPtchTo( buf );
     }
-    target.appendEtc( buf );
+    target.appendEtcPastXOutTo( buf );
   }
 
 
@@ -4868,7 +5309,17 @@ public class BasicLibrary
       buf.append( "\n;Datenbereich\n" );
     }
     if( libItems.contains( LibItem.IOOPEN ) ) {
-      buf.append( "IOHNTB:\n" );
+      buf.append( "IO_HANDLER_TAB:\n" );
+      if( libItems.contains( LibItem.IO_FILE_HANDLER ) ) {
+	String fileHandlerLabel = compiler.getTarget().getFileHandlerLabel();
+	if( fileHandlerLabel != null ) {
+	  if( !fileHandlerLabel.isEmpty() ) {
+	    buf.append( "\tDW\t" );
+	    buf.append( fileHandlerLabel );
+	    buf.newLine();
+	  }
+	}
+      }
       if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
 	buf.append( "\tDW\tIO_VDIP_HANDLER\n" );
       }
@@ -4896,9 +5347,6 @@ public class BasicLibrary
 	}
       }
     }
-    if( libItems.contains( LibItem.XTARID ) ) {
-      target.appendXTARID( buf );
-    }
     if( libItems.contains( LibItem.IO_CRT_HANDLER ) ) {
       buf.append( "D_IOCRT:\n"
 			+ "\tDB\t\'CRT:\'\n" );
@@ -4910,15 +5358,20 @@ public class BasicLibrary
     if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
       VdipLibrary.appendDataTo( compiler );
     }
-    KCNetLibrary.appendDataTo( compiler );
-    if( libItems.contains( LibItem.D_EMPT ) ) {
-      buf.append( "D_EMPT:\tDB\t00H\n" );
+    if( libItems.contains( LibItem.EMPTY_STRING ) ) {
+      buf.append( EMPTY_STRING_LABEL );
+      buf.append( (char) ':' );
+      if( EMPTY_STRING_LABEL.length() > 6 ) {
+	buf.append( (char) '\n' );
+      }
+      buf.append( "\tDB\t00H\n" );
     }
-    if( libItems.contains( LibItem.FNT5P7 ) ) {
+    if( libItems.contains( LibItem.FONT_5X7 ) ) {
       if( options.getShowAssemblerText() ) {
 	buf.append( "\n;Zeichensatz\n" );
       }
-      buf.append( "FNT5P7:\tDB\t01H,0FAH,00H,00H,00H,00H\n"	// !
+      buf.append( "FONT_5X7:\n"
+		+ "\tDB\t01H,0FAH,00H,00H,00H,00H\n"		// !
 		+ "\tDB\t03H,0E0H,00H,0E0H,00H,00H\n"		// "
 		+ "\tDB\t05H,28H,0FEH,28H,0FEH,28H\n"		// #
 		+ "\tDB\t05H,24H,54H,0FEH,54H,48H\n"		// $
@@ -5025,21 +5478,26 @@ public class BasicLibrary
 
 
   public static void appendBssTo(
+			AsmCodeBuf          buf,
 			BasicCompiler       compiler,
 			Map<String,VarDecl> varDecls,
 			Set<String>         usrLabels,
 			StringBuilder       userBSS )
   {
-    AsmCodeBuf                buf      = compiler.getCodeBuf();
     Set<BasicLibrary.LibItem> libItems = compiler.getLibItems();
     BasicOptions              options  = compiler.getBasicOptions();
     AbstractTarget            target   = compiler.getTarget();
     if( options.getShowAssemblerText() ) {
       buf.append( "\n;Speicherzellen\n" );
     }
+    if( libItems.contains( LibItem.M_SRNM ) ) {
+      buf.append( "M_SRNM:\tDS\t2\n" );
+    }
     if( options.getPrintLineNumOnAbort() ) {
-      buf.append( "M_SRLN:\tDS\t2\n"
-		+ "M_BALN:\tDS\t2\n" );
+      buf.append( "M_SRLN:\tDS\t2\n" );
+    }
+    if( libItems.contains( LibItem.M_BALN ) ) {
+      buf.append( "M_BALN:\tDS\t2\n" );
     }
     if( libItems.contains( LibItem.DATA ) ) {
       /*
@@ -5054,18 +5512,19 @@ public class BasicLibrary
       buf.append( "M_RNDA:\tDS\t2\n"
 		+ "M_RNDX:\tDS\t1\n" );
     }
-    KCNetLibrary.appendBssTo( compiler );
     if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
-      VdipLibrary.appendBssTo( compiler );
+      VdipLibrary.appendBssTo( buf, compiler );
     }
-    if( libItems.contains( LibItem.KCNET_BASE )
-	|| libItems.contains( LibItem.IOOPEN )
+    if( libItems.contains( LibItem.IOOPEN )
 	|| libItems.contains( LibItem.IOCTB1 )
 	|| libItems.contains( LibItem.IOCTB2 ) )
     {
-      buf.append( "M_IONM:\tDS\t02H\n"
-		+ "M_IOCA:\tDS\t02H\n"
-		+ "M_IOAC:\tDS\t01H\n" );
+      buf.append( "IO_M_NAME:\tDS\t2\n"
+		+ "IO_M_CADDR:\tDS\t2\n"
+		+ "IO_M_ACCESS:\tDS\t1\n" );
+    }
+    if( libItems.contains( LibItem.IO_M_COUT ) ) {
+      buf.append( "IO_M_COUT:\tDS\t2\n" );
     }
     if( libItems.contains( LibItem.IOCTB1 ) ) {
       /*
@@ -5082,20 +5541,15 @@ public class BasicLibrary
        *   +2:  EOF-Routine
        *          In:  DE:    Anfangsadresse Kanalzeigerfeld
        *          Out: HL=-1: EOF erreicht
-       *   +4:  AVAILABLE-Routine
-       *          In:  DE: Anfangsadresse Kanalzeigerfeld
-       *          Out: HL: Anzahl der verfuegbaren Bytes
-       *   +6:  READ-Routine
+       *   +4:  READ-Routine
        *          In:  DE: Anfangsadresse Kanalzeigerfeld
        *          Out: A:  gelesenes Zeichen bzw. 00h ab EOF
-       *   +8:  WRITE-Routine
-       *          In:  (M_IOCA): Anfangsadresse Kanalzeigerfeld
-       *               A:        zu schreibendes Byte
-       *   +10: FLUSH-Routine
-       *          In:  DE: Anfangsadresse Kanalzeigerfeld
-       *   +12: Status Zeichenpuffer
-       *   +13: Zeichenpuffer
-       *   +14: Treiber-spezifisches Feld
+       *   +6:  WRITE-Routine
+       *          In:  (IO_M_CADDR): Anfangsadresse Kanalzeigerfeld
+       *               A:            zu schreibendes Byte
+       *   +8:  Status Zeichenpuffer
+       *   +9:  Zeichenpuffer
+       *   +10: Treiber-spezifisches Feld
        */
       buf.append( "IOCTB1:\tDS\t" );
       buf.appendHex2( compiler.getIOChannelSize() );
@@ -5114,42 +5568,60 @@ public class BasicLibrary
       buf.append( "M_XPOS:\tDS\t2\n"
 		+ "M_YPOS:\tDS\t2\n" );
     }
+    if( libItems.contains( LibItem.DRAWS ) ) {
+      buf.append( "M_DRSM:\tDS\t1\n" );
+    }
     if( libItems.contains( LibItem.DRBOX )
 	|| libItems.contains( LibItem.DRBOXF )
-	|| libItems.contains( LibItem.DRLINE ) )
+	|| libItems.contains( LibItem.DRAW_LINE ) )
     {
-      buf.append( "M_LNBX:\tDS\t2\n"
-		+ "M_LNBY:\tDS\t2\n"
-		+ "M_LNEX:\tDS\t2\n"
-		+ "M_LNEY:\tDS\t2\n"
-		+ "M_LNSX:\tDS\t2\n"
-		+ "M_LNSY:\tDS\t2\n" );
+      buf.append( "LINE_M_BX:\tDS\t2\n"
+		+ "LINE_M_BY:\tDS\t2\n"
+		+ "LINE_M_EX:\tDS\t2\n"
+		+ "LINE_M_EY:\tDS\t2\n"
+		+ "LINE_M_SX:\tDS\t2\n"
+		+ "LINE_M_SY:\tDS\t2\n" );
     }
     if( libItems.contains( LibItem.CIRCLE ) ) {
-      buf.append( "M_CIMX:\tDS\t2\n"
-		+ "M_CIMY:\tDS\t2\n"
-		+ "M_CIRA:\tDS\t2\n"
-		+ "M_CIER:\tDS\t2\n"
-		+ "M_CIRX:\tDS\t2\n"
-		+ "M_CIRY:\tDS\t2\n"
-		+ "M_CXMX:\tDS\t2\n"
-		+ "M_CXPX:\tDS\t2\n"
-		+ "M_CXMY:\tDS\t2\n"
-		+ "M_CXPY:\tDS\t2\n"
-		+ "M_CYMX:\tDS\t2\n"
-		+ "M_CYPX:\tDS\t2\n"
-		+ "M_CYMY:\tDS\t2\n"
-		+ "M_CYPY:\tDS\t2\n" );
+      buf.append( "CIRCLE_M_X:\tDS\t2\n"
+		+ "CIRCLE_M_Y:\tDS\t2\n"
+		+ "CIRCLE_M_R:\tDS\t2\n"
+		+ "CIRCLE_M_ER:\tDS\t2\n"
+		+ "CIRCLE_M_RX:\tDS\t2\n"
+		+ "CIRCLE_M_RY:\tDS\t2\n"
+		+ "CIRCLE_M_XMX:\tDS\t2\n"
+		+ "CIRCLE_M_XPX:\tDS\t2\n"
+		+ "CIRCLE_M_XMY:\tDS\t2\n"
+		+ "CIRCLE_M_XPY:\tDS\t2\n"
+		+ "CIRCLE_M_YMX:\tDS\t2\n"
+		+ "CIRCLE_M_YPX:\tDS\t2\n"
+		+ "CIRCLE_M_YMY:\tDS\t2\n"
+		+ "CIRCLE_M_YPY:\tDS\t2\n" );
+    }
+    if( libItems.contains( LibItem.PAINT ) ) {
+      buf.append( "PAINT_M_X:\tDS\t2\n"
+		+ "PAINT_M_Y:\tDS\t2\n"
+		+ "PAINT_M_X1:\tDS\t2\n"
+		+ "PAINT_M_X2:\tDS\t2\n"
+		+ "PAINT_M_SX2:\tDS\t2\n"
+		+ "PAINT_M_SDIR:\tDS\t1\n"
+		+ "PAINT_M_CX1:\tDS\t2\n"
+		+ "PAINT_M_CX2:\tDS\t2\n"
+		+ "PAINT_M_TAD:\tDS\t2\n"
+		+ "PAINT_M_TSZ:\tDS\t1\n"
+		+ "PAINT_M_TIX:\tDS\t1\n" );
+    }
+    if( libItems.contains( LibItem.PAINT_M_HPIX ) ) {
+      buf.append( "PAINT_M_HPIX:\tDS\t2\n" );
+    }
+    if( libItems.contains( LibItem.PAINT_M_WPIX ) ) {
+      buf.append( "PAINT_M_WPIX:\tDS\t2\n" );
     }
     if( libItems.contains( LibItem.M_FRET ) ) {
       buf.append( "M_FRET:\tDS\t2\n" );
     }
     if( libItems.contains( LibItem.M_INKB ) ) {
       buf.append( "M_INKB:\tDS\t2\n" );
-    }
-    if( libItems.contains( LibItem.M_IO_COUT ) ) {
-      buf.append( "M_IO_COUT:\n"
-		+ "\tDS\t2\n" );
     }
     if( libItems.contains( LibItem.M_HOST ) ) {
       buf.append( "M_HOST:\tDS\t2\n" );
@@ -5251,50 +5723,86 @@ public class BasicLibrary
       }
       buf.append( "\tDS\t" );
       buf.appendHex4( stackSize );
-      buf.append( "\n"
-		+ "M_TOP:\n" );
-    } else {
-      if( libItems.contains( LibItem.M_TOP ) ) {
-	buf.append( "M_TOP:\n" );
-      }
+      buf.newLine();
     }
+    buf.append( BasicCompiler.TOP_LABEL );
+    buf.append( ":\n" );
   }
 
 
-
   public static void appendInitTo(
+			AsmCodeBuf          buf,
 			BasicCompiler       compiler,
 			Map<String,VarDecl> varDecls,
-			Set<String>         usrLabels )
+			SortedSet<String>   usrLabels )
   {
-    AsmCodeBuf   buf      = compiler.getCodeBuf();
     Set<LibItem> libItems = compiler.getLibItems();
     BasicOptions options  = compiler.getBasicOptions();
     if( options.getShowAssemblerText() ) {
       buf.append( "\n;Initialisierungen\n" );
     }
-    buf.append( "MINIT:\tLD\t(M_STCK),SP\n" );
+    buf.append( BasicCompiler.START_LABEL );
+    buf.append( ":\tLD\t(M_STCK),SP\n" );
     if( options.getStackSize() > 0 ) {
-      buf.append( "\tLD\tSP,M_TOP\n" );
-      libItems.add( LibItem.M_TOP );
+      buf.append( "\tLD\tSP," );
+      buf.append( BasicCompiler.TOP_LABEL );
+      buf.newLine();
+      libItems.add( LibItem.MTOP );
     }
     if( options.getPrintLineNumOnAbort() ) {
       buf.append( "\tLD\tHL,0FFFFH\n"
-		+ "\tLD\t(M_SRLN),HL\n"
-		+ "\tLD\t(M_BALN),HL\n" );
+		+ "\tLD\t(M_SRLN),HL\n" );
+      if( libItems.contains( LibItem.M_BALN ) ) {
+	buf.append( "\tLD\t(M_BALN),HL\n" );
+      }
+    }
+    if( libItems.contains( LibItem.M_SRNM ) ) {
+      buf.append( "\tLD\tHL,0000H\n"
+		+ "\tLD\t(M_SRNM),HL\n" );
     }
     if( libItems.contains( LibItem.F_RND ) ) {
-      buf.append( "\tLD\tHL,MSTART\n"
-		+ "\tLD\t(M_RNDA),HL\n"
+      buf.append_LD_HL_xx( BasicCompiler.START_LABEL );
+      buf.append( "\tLD\t(M_RNDA),HL\n"
 		+ "\tLD\tA,46H\n"
 		+ "\tLD\t(M_RNDX),A\n" );
     }
     if( libItems.contains( LibItem.DATA ) ) {
       buf.append( "\tCALL\tDINIT\n" );
     }
-    KCNetLibrary.appendInitTo( compiler );
+    if( libItems.contains( LibItem.E_USR ) && (usrLabels != null) ) {
+      int nUsrLabels = usrLabels.size();
+      if( nUsrLabels > 0 ) {
+	if( nUsrLabels > 4 ) {
+	  String firstUsrLabel = usrLabels.first();
+	  String loopLabel     = compiler.nextLabel();
+	  buf.append( "\tLD\tDE,E_USR\n"
+			+ "\tLD\tHL," );
+	  buf.append( firstUsrLabel );
+	  buf.append( "\n"
+			+ "\tLD\tB," );
+	  buf.appendHex2( nUsrLabels );
+	  buf.append( (char) '\n' );
+	  buf.append( loopLabel );
+	  buf.append( ":\n"
+			+ "\tLD\t(HL),E\n"
+			+ "\tINC\tHL\n"
+			+ "\tLD\t(HL),D\n"
+			+ "\tINC\tHL\n"
+			+ "\tDJNZ\t" );
+	  buf.append( loopLabel );
+	  buf.append( (char) '\n' );
+	} else {
+	  buf.append( "\tLD\tHL,E_USR\n" );
+	  for( String label : usrLabels ) {
+	    buf.append( "\tLD\t(" );
+	    buf.append( label );
+	    buf.append( "),HL\n" );
+	  }
+	}
+      }
+    }
     if( libItems.contains( LibItem.IO_VDIP_HANDLER ) ) {
-      VdipLibrary.appendInitTo( compiler );
+      VdipLibrary.appendInitTo( buf );
     }
     /*
      * Zeigerfelder der einzelnen Kanaele initialisieren
@@ -5336,9 +5844,9 @@ public class BasicLibrary
       buf.append( "\tLD\t(M_ERN),HL\n" );
     }
     if( libItems.contains( LibItem.M_ERT ) ) {
-      buf.append( "\tLD\tHL,D_EMPT\n"
-		+ "\tLD\t(M_ERT),HL\n" );
-      libItems.add( LibItem.D_EMPT );
+      buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tLD\t(M_ERT),HL\n" );
+      libItems.add( LibItem.EMPTY_STRING );
     }
     Collection<String> varNames = varDecls.keySet();
     if( varNames != null ) {
@@ -5374,9 +5882,9 @@ public class BasicLibrary
 		    buf.append( "\tLD\tB," );
 		    buf.appendHex2( nStrVars );
 		  }
-		  buf.append( "\n"
-			+ "\tLD\tDE,D_EMPT\n"
-			+ "\tLD\tHL," );
+		  buf.append( (char) '\n' );
+		  buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
+		  buf.append( "\tLD\tHL," );
 		  buf.append( firstStrVarLabel );
 		  buf.append( "\n"
 			+ "MINIST:\tLD\t(HL),E\n"
@@ -5391,10 +5899,10 @@ public class BasicLibrary
 		  } else {
 		    buf.append( "\tDJNZ\tMINIST\n" );
 		  }
-		  libItems.add( LibItem.D_EMPT );
+		  libItems.add( LibItem.EMPTY_STRING );
 		}
 	      } else {
-		buf.append( "\tLD\tHL,D_EMPT\n" );
+		buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
 		for( int i = 0; i< a.length; i++ ) {
 		  if( a[ i ].endsWith( "$" ) ) {
 		    VarDecl var = varDecls.get( a[ i ] );
@@ -5405,7 +5913,7 @@ public class BasicLibrary
 		    }
 		  }
 		}
-		libItems.add( LibItem.D_EMPT );
+		libItems.add( LibItem.EMPTY_STRING );
 	      }
 	    }
 	  }
@@ -5438,9 +5946,10 @@ public class BasicLibrary
 				+ "\tLD\t(M_ERN),BC\n" );
     }
     if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERT ) ) {
-      compiler.getCodeBuf().append( "\tLD\tBC,D_EMPT\n"
-				+ "\tLD\t(M_ERT),BC\n" );
-      compiler.getLibItems().add( BasicLibrary.LibItem.D_EMPT );
+      AsmCodeBuf buf = compiler.getCodeBuf();
+      buf.append_LD_BC_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tLD\t(M_ERT),BC\n" );
+      compiler.getLibItems().add( BasicLibrary.LibItem.EMPTY_STRING );
     }
   }
 
@@ -5452,9 +5961,10 @@ public class BasicLibrary
 				+ "\tLD\t(M_ERN),DE\n" );
     }
     if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERT ) ) {
-      compiler.getCodeBuf().append( "\tLD\tDE,D_EMPT\n"
-				+ "\tLD\t(M_ERT),DE\n" );
-      compiler.getLibItems().add( BasicLibrary.LibItem.D_EMPT );
+      AsmCodeBuf buf = compiler.getCodeBuf();
+      buf.append_LD_DE_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tLD\t(M_ERT),DE\n" );
+      compiler.getLibItems().add( BasicLibrary.LibItem.EMPTY_STRING );
     }
   }
 
@@ -5466,9 +5976,10 @@ public class BasicLibrary
 				+ "\tLD\t(M_ERN),HL\n" );
     }
     if( compiler.usesLibItem( BasicLibrary.LibItem.M_ERT ) ) {
-      compiler.getCodeBuf().append( "\tLD\tHL,D_EMPT\n"
-				+ "\tLD\t(M_ERT),HL\n" );
-      compiler.getLibItems().add( BasicLibrary.LibItem.D_EMPT );
+      AsmCodeBuf buf = compiler.getCodeBuf();
+      buf.append_LD_HL_xx( EMPTY_STRING_LABEL );
+      buf.append( "\tLD\t(M_ERT),HL\n" );
+      compiler.getLibItems().add( BasicLibrary.LibItem.EMPTY_STRING );
     }
   }
 
@@ -5516,6 +6027,16 @@ public class BasicLibrary
 		E_CHANNEL_CLOSED,
 		"Kanal geschlossen",
 		"Channel closed" );
+  }
+
+
+  public static void appendSetErrorDirFull( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		BasicLibrary.E_DIR_FULL,
+		"Directory voll",
+		"Directory full" );
   }
 
 
@@ -5579,6 +6100,16 @@ public class BasicLibrary
   }
 
 
+  public static void appendSetErrorHardware( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_HARDWARE,
+		"Hardware-Fehler",
+		"Hardware error" );
+  }
+
+
   public static void appendSetErrorIOError( BasicCompiler compiler )
   {
     appendSetError(
@@ -5596,6 +6127,16 @@ public class BasicLibrary
 		E_INVALID,
 		"Ungueltige Zeichen",
 		"Invalid characters" );
+  }
+
+
+  public static void appendSetErrorInvalidFileName( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_INVALID,
+		"Ungueltiger Dateiname",
+		"Invalid filename" );
   }
 
 
@@ -5619,6 +6160,16 @@ public class BasicLibrary
   }
 
 
+  public static void appendSetErrorMediaChanged( BasicCompiler compiler )
+  {
+    appendSetError(
+		compiler,
+		E_MEDIA_CHANGED,
+		"Medium gewechselt",
+		"Media changed" );
+  }
+
+
   public static void appendSetErrorNumericOverflow( BasicCompiler compiler )
   {
     appendSetError(
@@ -5628,4 +6179,3 @@ public class BasicLibrary
 		"Numeric overflow" );
   }
 }
-

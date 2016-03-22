@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -67,7 +67,7 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
 			this.offs,
 			this.len,
 			this.fileConvertFrm.getFileDesc( true ),
-			(char) this.fileConvertFrm.getFileType( true ),
+			(char) this.fileConvertFrm.getFileTypeChar( true ),
 			begAddr,
 			endAddr );
       ais = new AudioInputStream(
@@ -87,9 +87,16 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public int getMaxFileDescLen()
+  public int getMaxFileDescLength()
   {
     return 16;
+  }
+
+
+  @Override
+  public int getMaxFileTypeLength()
+  {
+    return 1;
   }
 
 
@@ -108,7 +115,8 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
   }
 
 
-  public void setFileTypesTo( JComboBox combo )
+  @Override
+  public void setFileTypesTo( JComboBox<String> combo )
   {
     combo.removeAllItems();
     for( int i = 0; i < fileTypeItems.length; i++ ) {
@@ -117,7 +125,7 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
     combo.setEnabled( true );
     combo.setEditable( true );
     combo.setSelectedItem(
-	fileTypeItems[ this.fileConvertFrm.getOrgStartAddr() > 0 ? 0 : 3 ] );
+	fileTypeItems[ this.fileConvertFrm.getOrgStartAddr() >= 0 ? 0 : 3 ] );
   }
 
 
