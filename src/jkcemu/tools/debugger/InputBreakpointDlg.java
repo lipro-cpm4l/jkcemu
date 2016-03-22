@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Dialog zum Anlegen eines Haltepunktes auf ein Eingabetor
+ * Dialog zum Anlegen eines Halte-/Log-Punktes auf ein Eingabetor
  */
 
 package jkcemu.tools.debugger;
@@ -24,9 +24,11 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
   private JTextField  fldEndPort;
 
 
-  public InputBreakpointDlg( Window owner, AbstractBreakpoint breakpoint )
+  public InputBreakpointDlg(
+			DebugFrm           debugFrm,
+			AbstractBreakpoint breakpoint )
   {
-    super( owner, "Eingabetor", breakpoint );
+    super( debugFrm, "Eingabetor", breakpoint );
 
 
     // Fensterinhalt
@@ -51,9 +53,10 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
     gbc.gridx++;
     add( this.fldBegPort, gbc );
 
-    gbc.fill    = GridBagConstraints.NONE;
-    gbc.weightx = 0.0;
-    gbc.gridx   = 0;
+    gbc.fill          = GridBagConstraints.NONE;
+    gbc.weightx       = 0.0;
+    gbc.insets.bottom = 5;
+    gbc.gridx         = 0;
     gbc.gridy++;
     add( new JLabel( "Bis Eingabeadresse (optional):" ), gbc );
 
@@ -65,12 +68,18 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
     gbc.gridx++;
     add( this.fldEndPort, gbc );
 
+    gbc.fill       = GridBagConstraints.HORIZONTAL;
+    gbc.weightx    = 1.0;
+    gbc.insets.top = 10;
+    gbc.gridwidth  = GridBagConstraints.REMAINDER;
+    gbc.gridx      = 0;
+    gbc.gridy++;
+    add( new JSeparator(), gbc );
+
     gbc.anchor     = GridBagConstraints.CENTER;
     gbc.fill       = GridBagConstraints.NONE;
     gbc.weightx    = 0.0;
     gbc.insets.top = 5;
-    gbc.gridwidth  = GridBagConstraints.REMAINDER;
-    gbc.gridx      = 0;
     gbc.gridy++;
     add( createGeneralButtons(), gbc );
 
@@ -150,7 +159,12 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
 	  endPort &= 0xFF;
 	}
       }
-      approveBreakpoint( new InputBreakpoint( is8Bit, begPort, endPort ) );
+      approveBreakpoint(
+		new InputBreakpoint(
+				this.debugFrm,
+				is8Bit,
+				begPort,
+				endPort ) );
     }
     catch( NumberFormatException ex ) {
       showInvalidFmt( fldName );
@@ -165,4 +179,3 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
       this.fldBegPort.requestFocus();
   }
 }
-

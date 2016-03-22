@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,12 +20,12 @@ import jkcemu.base.*;
 
 public class LastModifiedDlg extends BasicDlg
 {
-  private FileBrowserFrm       fileBrowserFrm;
   private java.util.List<File> files;
   private int                  numChanged;
   private int                  numUnchanged;
   private boolean              suppressArchiveErrDlg;
-  private DateFormat           dateFmt;
+  private DateFormat           dateFmtStd;
+  private DateFormat           dateFmtShort;
   private JRadioButton         btnCurrentTime;
   private JRadioButton         btnTimeInput;
   private JCheckBox            btnRecursive;
@@ -35,20 +35,75 @@ public class LastModifiedDlg extends BasicDlg
   private JButton              btnCancel;
 
 
-  public LastModifiedDlg(
-		FileBrowserFrm       fileBrowserFrm,
+  /*
+   * Rueckgabewert:
+   *   true:  Zeitstempel wurde geaendert
+   *   false: Zeitstempel nicht geaendert
+   */
+  public static boolean open(
+			Window               owner,
+			java.util.List<File> files )
+  {
+    boolean rv = false;
+    if( files != null ) {
+      if( !files.isEmpty() ) {
+        LastModifiedDlg dlg = new LastModifiedDlg( owner, files );
+        dlg.setVisible( true );
+        if( dlg.numChanged > 0 ) {
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e != null ) {
+      Object src = e.getSource();
+      if( src != null ) {
+	if( (src == this.btnCurrentTime) || (src == this.btnTimeInput) ) {
+	  rv = true;
+	  this.fldTime.setEditable( this.btnTimeInput.isSelected() );
+	}
+	else if( src == this.btnOK ) {
+	  rv = true;
+	  doApply();
+	}
+        else if( src == this.btnCancel ) {
+	  rv = true;
+	  doClose();
+	}
+      }
+    }
+    return rv;
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private LastModifiedDlg(
+		Window               owner,
 		java.util.List<File> files )
   {
-    super( fileBrowserFrm, "\u00C4nderungszeitpunkt" );
-    this.fileBrowserFrm        = fileBrowserFrm;
+    super( owner, "\u00C4nderungszeitpunkt" );
     this.files                 = files;
     this.numChanged            = 0;
     this.numUnchanged          = 0;
     this.suppressArchiveErrDlg = false;
-    this.dateFmt               = DateFormat.getDateTimeInstance(
+    this.dateFmtStd            = DateFormat.getDateTimeInstance(
 						DateFormat.MEDIUM,
 						DateFormat.MEDIUM );
-    this.dateFmt.setLenient( false );
+    this.dateFmtShort         = DateFormat.getDateTimeInstance(
+						DateFormat.MEDIUM,
+						DateFormat.SHORT );
+    this.dateFmtStd.setLenient( false );
+    this.dateFmtShort.setLenient( false );
 
 
     // Layout
@@ -168,40 +223,13 @@ public class LastModifiedDlg extends BasicDlg
     if( date == null ) {
       date = new java.util.Date();
     }
-    this.fldTime.setText( this.dateFmt.format( date ) );
+    this.fldTime.setText( this.dateFmtStd.format( date ) );
 
 
     // Fenstergroesse und -position
     pack();
     setParentCentered();
     setResizable( true );
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src != null ) {
-	if( (src == this.btnCurrentTime) || (src == this.btnTimeInput) ) {
-	  rv = true;
-	  this.fldTime.setEditable( this.btnTimeInput.isSelected() );
-	}
-	else if( src == this.btnOK ) {
-	  rv = true;
-	  doApply();
-	}
-        else if( src == this.btnCancel ) {
-	  rv = true;
-	  doClose();
-	}
-      }
-    }
-    return rv;
   }
 
 
@@ -217,7 +245,14 @@ public class LastModifiedDlg extends BasicDlg
       else if( this.btnTimeInput.isSelected() ) {
 	String text = this.fldTime.getText();
 	if( text != null ) {
-	  java.util.Date date = this.dateFmt.parse( text );
+	  java.util.Date date = null;
+	  try {
+	    date = this.dateFmtStd.parse( text );
+	  }
+	  catch( ParseException ex ) {}
+	  if( date == null ) {
+	    date = this.dateFmtShort.parse( text );
+	  }
 	  if( date != null ) {
 	    time = date.getTime();
 	  }
@@ -391,4 +426,3 @@ public class LastModifiedDlg extends BasicDlg
     }
   }
 }
-

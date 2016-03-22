@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,7 +20,7 @@ import javax.swing.undo.*;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.emusys.*;
-import jkcemu.programming.PrgOptions;
+import jkcemu.programming.*;
 import jkcemu.programming.basic.BasicOptions;
 import jkcemu.print.*;
 import z80emu.Z80MemView;
@@ -33,7 +33,13 @@ public class EditText implements
 {
   public static final String TEXT_WITH_BOM = " mit Byte-Order-Markierung";
 
+  public static final String PROP_PROPERTIES_TYPE
+				= "jkcemu.properties.type";
+  public static final String PROP_PRG_SOURCE_FILE_NAME
+				= "jkcemu.programming.source.file.name";
+
   private boolean       used;
+  private boolean       charsLostOnOpen;
   private boolean       dataChanged;
   private boolean       prjChanged;
   private boolean       saved;
@@ -137,6 +143,12 @@ public class EditText implements
   }
 
 
+  public boolean getCharsLostOnOpen()
+  {
+    return this.charsLostOnOpen;
+  }
+
+
   public String getEncodingDescription()
   {
     return this.encodingDesc;
@@ -202,8 +214,9 @@ public class EditText implements
     int rv = 8;
     if( this.textArea != null ) {
       rv = this.textArea.getTabSize();
-      if( rv < 1 )
+      if( rv < 1 ) {
 	rv = 8;
+      }
     }
     return rv;
   }
@@ -279,11 +292,44 @@ public class EditText implements
   }
 
 
+  public boolean hasRowHeader()
+  {
+    boolean     rv = false;
+    JScrollPane sp = getJScrollPane();
+    if( sp != null ) {
+      JViewport vp = sp.getRowHeader();
+      if( vp != null ) {
+	Component c = vp.getView();
+	if( c != null ) {
+	  rv = true;
+	}
+      }
+    }
+    return rv;
+  }
+
+
   public boolean isSameFile( File file )
   {
     return ((this.file != null) && (file != null)) ?
 				EmuUtil.equals( this.file, file )
 				: false;
+  }
+
+
+  public boolean isSameText( PrgSource src )
+  {
+    boolean rv = false;
+    if( src != null ) {
+      String srcText = src.getText();
+      if( srcText != null ) {
+	rv = (!srcText.isEmpty() && srcText.equals( getText() ));
+      }
+      if( !rv ) {
+	rv = isSameFile( src.getFile() );
+      }
+    }
+    return rv;
   }
 
 
@@ -319,25 +365,36 @@ public class EditText implements
       FileInfo fileInfo  = null;
       String   text      = null;
       String   info      = null;
-      byte[]   fileBytes = EmuUtil.readFile( file, Integer.MAX_VALUE );
+      byte[]   fileBytes = EmuUtil.readFile( file, true, Integer.MAX_VALUE );
       if( fileBytes != null ) {
 	if( (charConverter == null) && (encodingName == null) ) {
 
 	  // Speicherabbilddatei?
-	  fileInfo = FileInfo.analyzeFile( fileBytes, fileBytes.length, file );
+	  fileInfo = FileInfo.analyzeFile(
+					fileBytes,
+					fileBytes.length,
+					file );
 	  if( fileInfo != null ) {
-	    String fileFmt = fileInfo.getFileFormat();
+	    FileFormat fileFmt = fileInfo.getFileFormat();
 	    if( fileFmt != null ) {
 	      try {
-		if( fileFmt.equals( FileInfo.BIN ) ) {
+		LoadData basicLoadData = null;
+		if( fileFmt.equals( FileFormat.BIN ) ) {
 		  info = "BCS3-BASIC-Programm";
 		  text = BCS3.getBasicProgram( fileBytes );
 		}
-		else if( fileFmt.equals( FileInfo.HEADERSAVE ) ) {
+		else if( fileFmt.equals( FileFormat.BASIC_PRG ) ) {
+		  basicLoadData = FileInfo.createLoadData(
+							fileBytes,
+							fileFmt );
+		}
+		else if( fileFmt.equals( FileFormat.HEADERSAVE ) ) {
 		  LoadData loadData = null;
 		  switch( fileInfo.getFileType() ) {
 		    case 'A':
-		      loadData = FileInfo.createLoadData( fileBytes, fileFmt );
+		      loadData = FileInfo.createLoadData(
+							fileBytes,
+							fileFmt );
 		      if( loadData != null ) {
 			info = "EDAS*4-Quelltext";
 			text = SourceUtil.getEDAS4Text(
@@ -347,54 +404,15 @@ public class EditText implements
 		      break;
 
 		    case 'B':
-		      loadData = FileInfo.createLoadData( fileBytes, fileFmt );
-		      if( loadData != null ) {
-			int addr = fileInfo.getBegAddr();
-			switch( addr ) {
-			  case 0x03C0:
-			  case 0x0400:
-			  case 0x0401:
-			    info = "KC-BASIC-Programm";
-			    text = getKCBasicProgram( loadData, 0x0401 );
-			    break;
-
-			  case 0x1001:
-			    info = "KramerMC-BASIC-Programm";
-			    text = KramerMC.getBasicProgram( loadData );
-			    break;
-
-			  case 0x2BC0:
-			  case 0x2C00:
-			  case 0x2C01:
-			    info = "KC-BASIC-Programm";
-			    text = getKCBasicProgram( loadData, 0x2C01 );
-			    break;
-
-			  case 0x60F7:
-			  case 0x6FB7:
-			    /*
-			     * Das SCCH-BASIC fuer den LLC2 ist bzgl.
-			     * des BASIC-Dialekts und
-			     * der Adressen des Quelltextes
-			     * identisch zu der Version fuer den AC1.
-			     * Aus diesem Grund gibt es hier keine
-			     * spezielle Behandlung fuer LLC2-BASIC-Programme.
-			     */
-			    info = "AC1/LLC2-BASIC-Programm";
-			    text = AC1.getBasicProgram(
-						this.textEditFrm,
-						loadData );
-			    break;
-
-			  default:
-			    info = "BCS3-BASIC-Programm";
-			    text = BCS3.getBasicProgram( fileBytes );
-			}
-		      }
+		      basicLoadData = FileInfo.createLoadData(
+							fileBytes,
+							fileFmt );
 		      break;
 
 		    case 'b':
-		      loadData = FileInfo.createLoadData( fileBytes, fileFmt );
+		      loadData = FileInfo.createLoadData(
+							fileBytes,
+							fileFmt );
 		      if( loadData != null ) {
 			switch( loadData.getBegAddr() ) {
 			  case 0x1000:
@@ -447,17 +465,59 @@ public class EditText implements
 		      break;
 		  }
 		}
-		else if( fileFmt.equals( FileInfo.KCB )
-			 || fileFmt.equals( FileInfo.KCTAP_BASIC_PRG )
-			 || fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG )
-			 || fileFmt.equals( FileInfo.KCBASIC_PRG ) )
+		else if( fileFmt.equals( FileFormat.KCB )
+			 || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
+			 || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+			 || fileFmt.equals( FileFormat.KCBASIC_PRG ) )
 		{
 		  LoadData loadData = FileInfo.createLoadData(
 							fileBytes,
 							fileFmt );
 		  if( loadData != null ) {
-		    text = getKCBasicProgram( loadData, fileInfo.getBegAddr() );
+		    text = getKCBasicProgram(
+					loadData,
+					fileInfo.getBegAddr() );
 		    info = "KC-BASIC-Programm";
+		  }
+		}
+		if( basicLoadData != null ) {
+		  int addr = fileInfo.getBegAddr();
+		  switch( addr ) {
+		    case 0x03C0:
+		    case 0x0400:
+		    case 0x0401:
+		      info = "KC-BASIC-Programm";
+		      text = getKCBasicProgram( basicLoadData, 0x0401 );
+		      break;
+
+		    case 0x1001:
+		      info = "KramerMC-BASIC-Programm";
+		      text = KramerMC.getBasicProgram( basicLoadData );
+		      break;
+
+		    case 0x2BC0:
+		    case 0x2C00:
+		    case 0x2C01:
+		      info = "KC-BASIC-Programm";
+		      text = getKCBasicProgram( basicLoadData, 0x2C01 );
+		      break;
+
+		    case 0x60F7:
+		    case 0x6300:
+		    case 0x6FB7:
+		      /*
+		       * Das SCCH-BASIC fuer den LLC2 ist bzgl.
+		       * des BASIC-Dialekts und
+		       * der Adressen des Quelltextes
+		       * identisch zu der Version fuer den AC1.
+		       * Aus diesem Grund gibt es hier keine
+		       * spezielle Behandlung fuer LLC2-BASIC-Programme.
+		       */
+		      info = "AC1/LLC2 BASIC-Programm";
+		      text = AC1.getBasicProgram(
+						this.textEditFrm,
+						basicLoadData );
+		      break;
 		  }
 		}
 	      }
@@ -467,45 +527,21 @@ public class EditText implements
 	    }
 	  }
 	  if( text != null ) {
+	    StringBuilder buf = new StringBuilder( 512 );
 	    if( info != null ) {
-	      info += ":\n";
-	    } else {
-	      info = "";
+	      buf.append( info );
+	      if( !info.endsWith( ":" ) ) {
+		buf.append( (char) ':' );
+	      }
+	      buf.append( (char) '\n' );
 	    }
-	    BasicDlg.showInfoDlg(
-		this.textEditFrm,
-		info + "Die Datei ist keine reine Textdatei und kann\n"
+	    buf.append( "Die Datei ist keine reine Textdatei und kann\n"
 			+ "deshalb auch nicht als solche ge\u00F6ffnet"
 			+ " werden.\n"
 			+ "Der in der Datei enthaltene Text wird aber\n"
 			+ "extrahiert und als neue Textdatei"
 			+ " ge\u00F6ffnet." );
-	  }
-
-	  // WordStar-Datei?
-	  if( (text == null) && (file != null) && (fileBytes.length > 2) ) {
-	    if( fileBytes[ 0 ] == '.' ) {
-	      int b1 = (int) fileBytes[ 1 ] & 0xFF;
-	      if( ((b1 >= '0') && (b1 <= '9'))
-		  || ((b1 >= 'a') && (b1 <= 'z')) )
-	      {
-		if( BasicDlg.showYesNoDlg(
-			this.textEditFrm,
-			"Die Datei scheint eine WordStar-Datei zu sein.\n"
-				+ "Sie k\u00F6nnen die Datei als"
-				+ " WordStar-Datei importieren oder als"
-				+ " Textdatei \u00F6ffnen.\n"
-				+ "Beim Importieren wird nur der Text"
-				+ " ohne Formatierungen als neue Textdatei"
-				+ " ge\u00F6ffnet.\n\n"
-				+ "M\u00F6chten Sie die Datei als"
-				+ " WordStar-Datei importieren?",
-			"WordStar-Datei importieren" ) )
-		{
-		  text = TextUtil.wordStarToPlainText( fileBytes );
-		}
-	      }
-	    }
+	    BasicDlg.showInfoDlg( this.textEditFrm, buf.toString() );
 	  }
 	}
 	if( text != null ) {
@@ -587,10 +623,8 @@ public class EditText implements
 		   && (ch != '\n') && (ch != '\r')
 		   && (ch != '\u001E') )
 	    {
-	      if( ch == 0 ) {
-		if( charConverter != null ) {
-		  charsLost = true;
-		}
+	      if( ch == CharConverter.REPLACEMENT_CHAR ) {
+		charsLost = true;
 	      } else {
 		textBuf.append( (char) ch );
 	      }
@@ -606,7 +640,7 @@ public class EditText implements
 
 	      // kommt noch ein LF?
 	      ch = readChar( reader, inStream, charConverter );
-	      if( (ch == 0) && (charConverter != null) ) {
+	      if( ch == CharConverter.REPLACEMENT_CHAR ) {
 		charsLost = true;
 	      }
 	      else if( ch == '\n' ) {
@@ -638,7 +672,7 @@ public class EditText implements
 	      boolean wasCR = false;
 	      ch = readChar( reader, inStream, charConverter );
 	      while( ch >= 0 ) {
-		if( (ch == 0) && (charConverter != null) ) {
+		if( ch == CharConverter.REPLACEMENT_CHAR ) {
 		  charsLost = true;
 		}
 		else if( ch == '\r' ) {
@@ -692,12 +726,12 @@ public class EditText implements
 	  }
 	}
       }
-      this.used           = true;
-      this.byteOrderMark  = hasBOM;
-      this.trailing1A     = false;
-      this.charConverter  = charConverter;
-      this.encodingName   = encodingName;
-      this.encodingDesc   = encodingDesc;
+      this.used          = true;
+      this.byteOrderMark = hasBOM;
+      this.trailing1A    = false;
+      this.charConverter = charConverter;
+      this.encodingName  = encodingName;
+      this.encodingDesc  = encodingDesc;
       if( text != null ) {
 	int len = text.length();
 	int pos = len - 1;
@@ -734,15 +768,34 @@ public class EditText implements
       this.textEditFrm.updCaretButtons();
       this.textEditFrm.updTitle();
 
+      this.charsLostOnOpen = charsLost;
       if( charsLost ) {
-	BasicDlg.showWarningDlg(
-		this.textEditFrm,
-		"Die Datei enth\u00E4lt Zeichen, die in dem ausgew\u00E4hlten"
-			+ " Zeichensatz nicht existieren.\n"
-			+ "Diese Zeichen fehlen in dem angezeigten Text."
-			+ " Sie sollten deshalb versuchen,\n"
-			+ "die Datei mit einem anderen Zeichensatz"
-			+ " zu \u00F6ffnen." );
+	StringBuilder buf = new StringBuilder( 512 );
+	buf.append( "Die Datei enth\u00E4lt Bytes bzw. Bytefolgen,"
+		+ " die sich nicht\n"
+		+ "als Zeichen im" );
+	if( (charConverter == null) && (encodingName == null) ) {
+	  buf.append( " Systemzeichensatz" );
+	} else {
+	  buf.append( " dem ausgew\u00E4hlten Zeichensatz" );
+	}
+	buf.append( " abbilden lassen.\n"
+		+ "Diese Bytes wurden ignoriert. Sie sollten evtl. versuchen,\n"
+		+ "die Datei mit einem anderen Zeichensatz"
+		+ " zu \u00F6ffnen\n"
+		+ "(siehe Men\u00FCpunkt"
+		+ " \'\u00D6ffnen mit Zeichensatz...\')." );
+	final String    msg   = buf.toString();
+	final Component owner = this.textEditFrm;
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    BasicDlg.showWarningDlg( owner, msg );
+		  }
+		} );
       }
     }
     catch( UnsupportedEncodingException ex ) {
@@ -753,6 +806,15 @@ public class EditText implements
     finally {
       EmuUtil.doClose( reader );
       EmuUtil.doClose( inStream );
+    }
+  }
+
+
+  public void removeRowHeader()
+  {
+    JScrollPane sp = getJScrollPane();
+    if( sp != null ) {
+      sp.setRowHeader( null );
     }
   }
 
@@ -832,9 +894,9 @@ public class EditText implements
       lineEndBytes[ 1 ] = (byte) '\n';
     }
 
-    FileOutputStream outStream = null;
+    OutputStream outStream = null;
     try {
-      outStream  = new FileOutputStream( file );
+      outStream = EmuUtil.createOptionalGZipOutputStream( file );
 
       BufferedWriter outWriter = null;
       if( charConverter == null ) {
@@ -973,9 +1035,11 @@ public class EditText implements
 	BasicDlg.showWarningDlg(
 		owner,
 		"Der Text enth\u00E4lt Zeichen, die in dem gew\u00FCnschten\n"
-			+ "Zeichensatz nicht existieren und somit auch nicht\n"
+			+ "Zeichensatz nicht existieren und somit auch"
+			+ " nicht\n"
 			+ "gespeichert werden k\u00F6nnen, d.h.,\n"
-			+ "diese Zeichen fehlen in der gespeicherten Datei." );
+			+ "diese Zeichen fehlen in der gespeicherten"
+			+ " Datei." );
       }
     }
     catch( UnsupportedEncodingException ex ) {
@@ -1025,7 +1089,7 @@ public class EditText implements
 	  out = new FileOutputStream( prjFile );
 
 	  Properties props = new Properties();
-	  props.setProperty( "jkcemu.properties.type", "project" );
+	  props.setProperty( PROP_PROPERTIES_TYPE, "project" );
 
 	  // Pfad relativ zur Projektdatei
 	  String filename   = this.file.getPath();
@@ -1042,9 +1106,7 @@ public class EditText implements
 	      filename = filename.substring( prjDirLen );
 	    }
 	  }
-	  props.setProperty(
-			"jkcemu.programming.source.file.name",
-			filename );
+	  props.setProperty( PROP_PRG_SOURCE_FILE_NAME, filename );
 
 	  if( this.prgOptions == null ) {
 	    this.prgOptions = new BasicOptions();
@@ -1062,6 +1124,7 @@ public class EditText implements
 	  this.prjFile    = prjFile;
 	  this.prjChanged = true;
 	  setProjectChanged( false );
+	  Main.setLastFile( prjFile, "project" );
 	}
 	catch( IOException ex ) {
 	  BasicDlg.showErrorDlg(
@@ -1070,12 +1133,7 @@ public class EditText implements
 			+ ex.getMessage() );
 	}
 	finally {
-	  if( out != null ) {
-	    try {
-	      out.close();
-	    }
-	    catch( IOException ex ) {}
-	  }
+	  EmuUtil.doClose( out );
 	}
       }
     } else {
@@ -1231,16 +1289,16 @@ public class EditText implements
     setDataChanged();
     this.used = true;
   }
- 
- 
-  @Override 
+
+
+  @Override
   public void insertUpdate( DocumentEvent e )
   {
     setDataChanged();
     this.used = true;
   }
- 
- 
+
+
   @Override 
   public void removeUpdate( DocumentEvent e )
   {
@@ -1250,7 +1308,7 @@ public class EditText implements
 
 
 	/* --- UndoableEditListener --- */
- 
+
   @Override 
   public void undoableEditHappened( UndoableEditEvent e )
   {
@@ -1279,6 +1337,7 @@ public class EditText implements
     this.dropTarget1       = null;
     this.dropTarget2       = null;
     this.used              = false;
+    this.charsLostOnOpen   = false;
     this.dataChanged       = false;
     this.prjChanged        = false;
     this.saved             = true;
@@ -1310,17 +1369,17 @@ public class EditText implements
   {
     String rv = null;
 
-    String kc85Basic =  SourceUtil.getKCBasicStyleProgram(
+    String kc85Basic =  SourceUtil.getBasicProgram(
 						loadData,
 						begAddr,
 						KC85.basicTokens );
 
-    String z9001Basic =  SourceUtil.getKCBasicStyleProgram(
+    String z9001Basic = SourceUtil.getBasicProgram(
 						loadData,
 						begAddr,
 						Z9001.basicTokens );
 
-    String z1013Basic =  SourceUtil.getKCBasicStyleProgram(
+    String z1013Basic = SourceUtil.getBasicProgram(
 						loadData,
 						begAddr,
 						Z1013.basicTokens );
@@ -1341,8 +1400,8 @@ public class EditText implements
 	  || (z1013Basic != null)
 	  || (z9001Basic != null) )
       {
-	java.util.List<String> optionTexts = new ArrayList<String>( 3 );
-	Map<String,String>     basicTexts  = new HashMap<String,String>();
+	java.util.List<String> optionTexts = new ArrayList<>( 3 );
+	Map<String,String>     basicTexts  = new HashMap<>();
 	if( kc85Basic != null ) {
 	  String optionText = "KC85/2...5";
 	  optionTexts.add( optionText );
@@ -1400,6 +1459,21 @@ public class EditText implements
   }
 
 
+  private JScrollPane getJScrollPane()
+  {
+    JScrollPane sp = null;
+    Component   c  = this.tabComponent;
+    while( (sp == null) && (c != null) ) {
+      if( c instanceof JScrollPane ) {
+	sp = (JScrollPane) c;
+	break;
+      }
+      c = c.getParent();
+    }
+    return sp;
+  }
+
+
   private int readChar(
 		Reader        reader,
 		InputStream   inStream,
@@ -1420,9 +1494,10 @@ public class EditText implements
 
   private void setDataUnchanged( final boolean saved )
   {
-    final EditText editText   = this;
-    editText.dataChanged      = false;
-    editText.saved            = saved;
+    final EditText editText  = this;
+    editText.dataChanged     = false;
+    editText.saved           = saved;
+    editText.charsLostOnOpen = false;
     EventQueue.invokeLater(
 	new Runnable()
 	{
@@ -1460,10 +1535,10 @@ public class EditText implements
 			BufferedWriter outWriter,
 			String         lineEnd ) throws IOException
   {
-    if( lineEnd != null )
+    if( lineEnd != null ) {
       outWriter.write( lineEnd );
-    else
+    } else {
       outWriter.newLine();
+    }
   }
 }
-

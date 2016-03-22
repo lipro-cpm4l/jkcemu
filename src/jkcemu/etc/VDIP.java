@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,7 @@ import java.io.*;
 import java.lang.*;
 import java.util.*;
 import jkcemu.Main;
-import jkcemu.base.EmuUtil;
+import jkcemu.base.*;
 import z80emu.*;
 
 
@@ -90,6 +90,7 @@ public class VDIP implements
   // Standard-Zeitstempel entsprechend VDIP Firmware: 2004-12-04 00:00:00
   private static final int DEFAULT_DATETIME_VALUE = 0x31940000;
 
+  private FileTimesViewFactory      fileTimesViewFactory;
   private String                    title;
   private int                       debugLevel;
   private int                       bitMode;
@@ -120,6 +121,7 @@ public class VDIP implements
   private volatile File             rootDir;
   private File                      newRootDir;
   private Object                    lockObj;
+  private Calendar                  calendar;
   private byte[]                    cmdLineBytes;
   private int                       cmdLineLen;
   private int                       cmdArgPos;
@@ -127,41 +129,43 @@ public class VDIP implements
   private Z80PIO                    pio;
 
 
-  public VDIP( String title )
+  public VDIP( FileTimesViewFactory fileTimesViewFactory, String title )
   {
-    this.title             = title;
-    this.debugLevel        = 0;
-    this.binaryMode        = true;
-    this.extendedMode      = true;
-    this.forceCurTimestamp = true;
-    this.forceLowerCase    = false;
-    this.readOnly          = false;
-    this.readState         = false;
-    this.resetState        = false;
-    this.writeState        = false;
-    this.writeEnabled      = false;
-    this.fileWrite         = false;
-    this.file              = null;
-    this.fileMillis        = null;
-    this.raf               = null;
-    this.freeDiskSpace     = null;
-    this.curDir            = null;
-    this.rootDir           = null;
-    this.rootDirChanged    = false;
-    this.lockObj           = new Object();
-    this.cmdLineBytes      = new byte[ 256 ];
-    this.cmdLineLen        = 0;
-    this.cmdArgPos         = 0;
-    this.resultQueue       = new ByteQueue( 1024 );
-    this.pio               = new Z80PIO( title );
-    this.ioOut             = null;
-    this.ioCmd             = IOCmd.NONE;
-    this.ioFile            = null;
-    this.ioFileMillis      = null;
-    this.ioFileName        = null;
-    this.ioCount           = 0;
-    this.ioTaskEnabled     = true;
-    this.ioTaskThread      = new Thread( this, "JKCEMU VDIP" );
+    this.fileTimesViewFactory = fileTimesViewFactory;
+    this.title                = title;
+    this.debugLevel           = 0;
+    this.binaryMode           = true;
+    this.extendedMode         = true;
+    this.forceCurTimestamp    = true;
+    this.forceLowerCase       = false;
+    this.readOnly             = false;
+    this.readState            = false;
+    this.resetState           = false;
+    this.writeState           = false;
+    this.writeEnabled         = false;
+    this.fileWrite            = false;
+    this.file                 = null;
+    this.fileMillis           = null;
+    this.raf                  = null;
+    this.freeDiskSpace        = null;
+    this.curDir               = null;
+    this.rootDir              = null;
+    this.rootDirChanged       = false;
+    this.lockObj              = new Object();
+    this.calendar             = Calendar.getInstance();
+    this.cmdLineBytes         = new byte[ 256 ];
+    this.cmdLineLen           = 0;
+    this.cmdArgPos            = 0;
+    this.resultQueue          = new ByteQueue( 1024 );
+    this.pio                  = new Z80PIO( title );
+    this.ioOut                = null;
+    this.ioCmd                = IOCmd.NONE;
+    this.ioFile               = null;
+    this.ioFileMillis         = null;
+    this.ioFileName           = null;
+    this.ioCount              = 0;
+    this.ioTaskEnabled        = true;
+    this.ioTaskThread         = new Thread( this, "JKCEMU VDIP" );
     this.ioTaskThread.start();
     this.pio.addPIOPortListener( this, Z80PIO.PortInfo.B );
 
@@ -239,14 +243,14 @@ public class VDIP implements
     int rv = -1;
     switch( port & 0x03 ) {
       case 0x00:
-	rv = this.pio.readPortA();
+	rv = this.pio.readDataA();
 	if( this.debugLevel > 1 ) {
 	  System.out.printf( "VDIP: read PIO Port A: %02X\n", rv );
 	}
 	break;
 
       case 0x01:
-	rv = this.pio.readPortB();
+	rv = this.pio.readDataB();
 	if( this.debugLevel > 3 ) {
 	  System.out.printf( "VDIP: read PIO Port B: %02X\n", rv );
 	}
@@ -308,7 +312,7 @@ public class VDIP implements
 	if( this.debugLevel > 1 ) {
 	  System.out.printf( "VDIP: write PIO Port A: %02X\n", value );
 	}
-	this.pio.writePortA( value );
+	this.pio.writeDataA( value );
 	break;
 
       case 0x01:
@@ -316,7 +320,7 @@ public class VDIP implements
 	  if( this.debugLevel > 2 ) {
 	    System.out.printf( "VDIP: write PIO Port B: %02X\n", value );
 	  }
-	  this.pio.writePortB( value );
+	  this.pio.writeDataB( value );
 
 	  int     tmpValue = this.pio.fetchOutValuePortB( false );
 	  boolean rdState  = ((tmpValue & 0x04) == 0);	// L-aktiv
@@ -739,7 +743,7 @@ public class VDIP implements
       } else if( (shortCmd == 0x12) || extCmd.equals( "FS" ) ) {
 	execFreeSpace( false );
       } else if( (shortCmd == 0x13) || extCmd.equals( "FWV" ) ) {
-	putString( "\rMAIN 03.68VDAPF\rRPRG 1.00R\r" );
+	putString( "\rMAIN 03.69VDAPF\rRPRG 1.00R\r" );
 	doCmdFinish( true );
       } else if( (shortCmd == 0x14) || extCmd.equals( "SBD" ) ) {
 	putPrompt();
@@ -1158,6 +1162,11 @@ public class VDIP implements
   }
 
 
+  /*
+   * Kommando DIR:
+   *   Entgegen der Dokumentation kommt bei einer geoeffneten Datei
+   *   kein Fehler.
+   */
   private void execDir() throws VdipException
   {
     String fName = null;
@@ -1170,9 +1179,6 @@ public class VDIP implements
     }
     synchronized( this.lockObj ) {
       checkDisk();
-      if( (this.raf != null) && this.fileWrite ) {
-	throwFileOpen();
-      }
       File file = null;
       if( fName != null ) {
 	file = findFile( fName );
@@ -1243,40 +1249,51 @@ public class VDIP implements
   }
 
 
+  /*
+   * Kommando DIRT:
+   *   Entgegen der Dokumentation kommt bei einer geoeffneten Datei
+   *   kein Fehler.
+   */
   private void execDirT() throws VdipException
   {
     String fName = nextArgFileName( true );
     synchronized( this.lockObj ) {
       putResultByte( '\r' );	// Leerzeile, auch bei Fehlermeldung
       checkDisk();
-      if( (this.raf != null) && this.fileWrite ) {
-	throwFileOpen();
-      }
       File file = findFile( fName );
       if( file == null ) {
 	throwCommandFailed();
       }
-      long millis = file.lastModified();
-      if( millis <= 0 ) {
-	throwCommandFailed();
+      long creationDateTime     = DEFAULT_DATETIME_VALUE;
+      long lastAccessDateTime   = DEFAULT_DATETIME_VALUE;
+      long lastModifiedDateTime = DEFAULT_DATETIME_VALUE;
+      FileTimesView ftv = this.fileTimesViewFactory.getFileTimesView( file );
+      if( ftv != null ) {
+	Long v = ftv.getLastModifiedMillis();
+	if( v != null ) {
+	  lastModifiedDateTime = getDateTimeByMillis( v.longValue() );
+	  /*
+	   * Wenn die anderen beiden Zeitstempel nicht ermittelt
+	   * werden konnten,
+	   * sollen sie den Wert der letzten Aenderung haben.
+	   */
+	  lastAccessDateTime   = lastModifiedDateTime;
+	  lastModifiedDateTime = lastModifiedDateTime;
+	}
+	v = ftv.getCreationMillis();
+	if( v != null ) {
+	  creationDateTime = getDateTimeByMillis( v.longValue() );
+	}
+	v = ftv.getLastAccessMillis();
+	if( v != null ) {
+	  lastAccessDateTime = getDateTimeByMillis( v.longValue() );
+	}
       }
-      long     dateTime = 0;
-      Calendar cal      = Calendar.getInstance();
-      cal.setTimeInMillis( millis );
-      int year = cal.get( Calendar.YEAR ) - 1980;
-      if( year > 0 ) {
-	dateTime |= ((year << 25) & 0xFE000000L);
-      }
-      dateTime |= (((cal.get( Calendar.MONTH ) + 1) << 21) & 0x01E00000L);
-      dateTime |= ((cal.get( Calendar.DAY_OF_MONTH ) << 16) & 0x001F0000L);
-      dateTime |= ((cal.get( Calendar.HOUR_OF_DAY ) << 11) & 0x0000F800L);
-      dateTime |= ((cal.get( Calendar.MINUTE ) << 5) & 0x000007E0L);
-      dateTime |= ((cal.get( Calendar.SECOND ) / 2) & 0x0000001FL);
       putString( fName );
       putResultByte( '\u0020' );
-      putNumber( dateTime, 4 );		// create date time
-      putNumber( dateTime >> 16, 2 );	// access date
-      putNumber( dateTime, 4 );		// modified date time
+      putNumber( creationDateTime, 4 );
+      putNumber( lastAccessDateTime >> 16, 2 );
+      putNumber( lastModifiedDateTime, 4 );
       putResultByte( '\r' );
     }
     doCmdFinish( true );
@@ -2027,6 +2044,26 @@ public class VDIP implements
   }
 
 
+  private long getDateTimeByMillis( long millis )
+  {
+    long v = 0;
+    synchronized( this.calendar ) {
+      this.calendar.clear();
+      this.calendar.setTimeInMillis( millis );
+      int year = this.calendar.get( Calendar.YEAR ) - 1980;
+      if( year > 0 ) {
+	v |= ((year << 25) & 0xFE000000L);
+      }
+      v |= (((this.calendar.get( Calendar.MONTH ) + 1) << 21) & 0x01E00000L);
+      v |= ((this.calendar.get( Calendar.DAY_OF_MONTH ) << 16) & 0x001F0000L);
+      v |= ((this.calendar.get( Calendar.HOUR_OF_DAY ) << 11) & 0x0000F800L);
+      v |= ((this.calendar.get( Calendar.MINUTE ) << 5) & 0x000007E0L);
+      v |= ((this.calendar.get( Calendar.SECOND ) / 2) & 0x0000001FL);
+    }
+    return v;
+  }
+
+
   private int getDebugLevel()
   {
     return this.debugLevel;
@@ -2195,14 +2232,17 @@ public class VDIP implements
   {
     String rv = null;
     if( this.cmdArgPos >= 2 ) {
-      while( this.cmdArgPos < this.cmdLineLen ) {
-	if( this.cmdLineBytes[ this.cmdArgPos ] != (byte) 0x20 ) {
-	  break;
+      // Es ist nur ein Leerzeichen vor dem Dateinamen erlaubt.
+      if( this.cmdArgPos < this.cmdLineLen ) {
+	if( this.cmdLineBytes[ this.cmdArgPos ] == (byte) 0x20 ) {
+	  this.cmdArgPos++;
 	}
-	this.cmdArgPos++;
       }
       if( this.cmdArgPos >= this.cmdLineLen ) {
 	throwBadCommand();
+      }
+      if( this.cmdLineBytes[ this.cmdArgPos ] == (byte) 0x20 ) {
+	throwCommandFailed();
       }
       if( ((this.cmdArgPos + 1) == this.cmdLineLen)
 	  && (this.cmdLineBytes[ this.cmdArgPos ] == '.') )
@@ -2230,7 +2270,8 @@ public class VDIP implements
 	int     extPos  = 0;
 	boolean dot     = false;
 	while( this.cmdArgPos < this.cmdLineLen ) {
-	  char ch = (char) ((int) this.cmdLineBytes[ this.cmdArgPos++ ] & 0xFF);
+	  char ch = (char) ((int) this.cmdLineBytes[ this.cmdArgPos++ ]
+								& 0xFF);
 	  if( ch == '\u0020' ) {
 	    break;
 	  }
@@ -2328,17 +2369,16 @@ public class VDIP implements
       }
       catch( VdipException ex ) {}
       if( !this.forceCurTimestamp ) {
-	Calendar cal = Calendar.getInstance();
-	if( cal != null ) {
-	  cal.clear();
-	  cal.set(
+	synchronized( this.calendar ) {
+	  this.calendar.clear();
+	  this.calendar.set(
 		(int) ((value >> 25) & 0x7F) + 1980,
 		(int) ((value >> 21) & 0x0F) - 1,
 		(int) (value >> 16) & 0x1F,
 		(int) (value >> 11) & 0x1F,
 		(int) (value >> 5) & 0x3F,
 		(int) (value & 0x1F) * 2 );
-	  millis = new Long( cal.getTimeInMillis() );
+	  millis = new Long( this.calendar.getTimeInMillis() );
 	}
       }
     }

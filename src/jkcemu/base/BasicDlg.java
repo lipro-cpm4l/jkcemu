@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -236,6 +236,17 @@ public class BasicDlg extends JDialog implements
 
 
 	/* --- statische Methoden --- */
+
+  public static boolean showConfirmDlg( Component owner, String msg )
+  {
+    EmuUtil.frameToFront( owner );
+    return (JOptionPane.showConfirmDialog(
+		owner,
+		msg,
+		"Best\u00E4tigung",
+		JOptionPane.OK_CANCEL_OPTION ) == JOptionPane.OK_OPTION);
+  }
+
 
   /*
    * Diese Methoden zeigen eine Fehlermeldung an.

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,12 +20,28 @@ import z80emu.*;
 public class PCM extends EmuSys implements
 					FDC8272.DriveSelector,
 					Z80CTCListener,
-					Z80SIOChannelListener
+					Z80SIOChannelListener,
+					Z80TStatesListener
 {
+  public static final String PROP_AUTO_LOAD_BDOS      = "auto_load_bdos";
+  public static final String PROP_FDC_ENABLDED        = "floppydisk.enabled";
+  public static final String PROP_GRAPHIC_KEY         = "graphic";
+  public static final String PROP_GRAPHIC_VALUE_80X24 = "80x24";
+  public static final String PROP_GRAPHIC_VALUE_64X32 = "64x32";
+
+  private static FloppyDiskInfo disk64x16 = new FloppyDiskInfo(
+			"/disks/pcm/pcmsys330_64x16.dump.gz",
+			"PC/M Boot-Diskette (64x16 Zeichen)",
+			2, 2048, true );
+
+  private static FloppyDiskInfo disk80x24 = new FloppyDiskInfo(
+			"/disks/pcm/pcmsys330_80x24.dump.gz",
+			"PC/M Boot-Diskette (80x24 Zeichen)",
+			2, 2048, true );
+
   private static final FloppyDiskInfo[] availableFloppyDisks = {
-		new FloppyDiskInfo(
-			"/disks/pcm/pcmsys.dump.gz",
-			"PC/M Boot-Diskette" ) };
+							disk64x16,
+							disk80x24 };
 
   private static byte[] bdos              = null;
   private static byte[] romRF64x16        = null;
@@ -46,18 +62,21 @@ public class PCM extends EmuSys implements
   private FloppyDiskDrive   curFDDrive;
   private FloppyDiskDrive[] fdDrives;
   private boolean           fdcTC;
+  private boolean           audioInPhase;
   private boolean           audioOutPhase;
   private boolean           keyboardUsed;
   private boolean           mode80x24;
   private boolean           romEnabled;
   private boolean           upperBank0Enabled;
   private int               ramBank;
+  private int               romSize;
   private int               nmiCounter;
 
 
   public PCM( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.pcm." );
+    this.romSize       = 0x2000;
     this.fontBytes     = null;
     this.romBytes      = null;
     this.romFile       = null;
@@ -86,7 +105,7 @@ public class PCM extends EmuSys implements
 		"PC/M RAM-B\u00E4nke 1 und 2",
 		EmuUtil.getProperty(
 			props,
-			"jkcemu.pcm.ramfloppy.file" ) );
+			this.propPrefix + "ramfloppy.file" ) );
     }
 
     Z80CPU cpu = emuThread.getZ80CPU();
@@ -97,8 +116,8 @@ public class PCM extends EmuSys implements
     if( this.fdc != null ) {
       this.fdc.setTStatesPerMilli( cpu.getMaxSpeedKHz() );
       cpu.addMaxSpeedListener( this.fdc );
-      cpu.addTStatesListener( this.fdc );
     }
+    cpu.addTStatesListener( this );
     this.ctc.addCTCListener( this );
     this.sio.addChannelListener( this, 0 );
 
@@ -117,6 +136,12 @@ public class PCM extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 2500;
+  }
+
+
+  public static boolean getDefaultSwapKeyCharCase()
+  {
+    return true;
   }
 
 
@@ -153,6 +178,23 @@ public class PCM extends EmuSys implements
   }
 
 
+	/* --- Z80TStatesListener --- */
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    boolean phase = this.emuThread.readAudioPhase();
+    if( phase != this.audioInPhase ) {
+      this.audioInPhase = phase;
+      this.pio.putInValuePortB( this.audioInPhase ? 0x80 : 0, 0x80 );
+    }
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+    if( this.fdc != null ) {
+      this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -167,19 +209,21 @@ public class PCM extends EmuSys implements
     } else {
       buf.append( this.ramBank );
     }
-    buf.append( "</td></tr>\n"
-	+ "<tr><td>2000h-BFFFh:</td><td>RAM Bank " );
-    buf.append( this.ramBank );
-    buf.append( "</td></tr>\n"
-	+ "<tr><td>0000h-1FFFh:</td><td>" );
-    if( this.romEnabled ) {
-      buf.append( "ROM" );
-    } else {
-      buf.append( "RAM Bank " );
-      buf.append( this.ramBank );
+    int ramBegAddr = (this.romEnabled ? this.romSize : 0x0000);
+    buf.append(
+	String.format(
+		"</td></tr>\n"
+    			+ "<tr><td>%04Xh-BFFFh:</td>"
+			+ "<td>RAM Bank %d</td></tr>\n",
+		ramBegAddr,
+		this.ramBank ) );
+    if( ramBegAddr > 0 ) {
+      buf.append(
+	String.format(
+		"<tr><td>0000h-%04Xh:</td><td>ROM</td></tr>\n",
+		ramBegAddr - 1) );
     }
-    buf.append( "</td></tr>\n"
-	+ "</table>\n" );
+    buf.append( "</table>\n" );
   }
 
 
@@ -200,7 +244,7 @@ public class PCM extends EmuSys implements
     if( rv ) {
       rv = TextUtil.equals(
 		this.romFile,
-		EmuUtil.getProperty( props,  "jkcemu.pcm.rom.file" ) );
+		EmuUtil.getProperty( props, this.propPrefix + "rom.file" ) );
     }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
       rv = false;
@@ -230,8 +274,8 @@ public class PCM extends EmuSys implements
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    cpu.removeTStatesListener( this );
     if( this.fdc != null ) {
-      cpu.removeTStatesListener( this.fdc );
       cpu.removeMaxSpeedListener( this.fdc );
       this.fdc.die();
     }
@@ -352,7 +396,7 @@ public class PCM extends EmuSys implements
     addr &= 0xFFFF;
 
     int rv = 0xFF;
-    if( (addr < 0x2000) && this.romEnabled ) {
+    if( (addr < this.romSize) && this.romEnabled ) {
       if( this.romBytes != null ) {
 	if( addr < this.romBytes.length ) {
 	  rv = (int) this.romBytes[ addr ] & 0xFF;
@@ -480,7 +524,15 @@ public class PCM extends EmuSys implements
   @Override
   public FloppyDiskInfo[] getSuitableFloppyDisks()
   {
-    return this.fdc != null ? availableFloppyDisks : null;
+    FloppyDiskInfo[] rv = null;
+    if( this.fdc != null ) {
+      if( this.mode80x24 ) {
+	rv = new FloppyDiskInfo[] { disk80x24 };
+      } else {
+	rv = new FloppyDiskInfo[] { disk64x16 };
+      }
+    }
+    return rv;
   }
 
 
@@ -494,7 +546,7 @@ public class PCM extends EmuSys implements
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return true;
+    return getDefaultSwapKeyCharCase();
   }
 
 
@@ -596,7 +648,7 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     switch( port & 0xFF ) {
@@ -604,7 +656,7 @@ public class PCM extends EmuSys implements
       case 0x81:
       case 0x82:
       case 0x83:
-	rv = this.ctc.read( port & 0x03 );
+	rv = this.ctc.read( port & 0x03, tStates );
 	break;
 
       case 0x84:
@@ -612,13 +664,11 @@ public class PCM extends EmuSys implements
 	  this.pio.putInValuePortA( 0, 0xFF );
 	  this.keyboardUsed = true;
 	}
-	rv = this.pio.readPortA();
+	rv = this.pio.readDataA();
 	break;
 
       case 0x85:
-	this.pio.putInValuePortB(
-			this.emuThread.readAudioPhase() ? 0x80 : 0, 0x80 );
-	rv = this.pio.readPortB();
+	rv = this.pio.readDataB();
 	break;
 
       case 0x86:
@@ -692,7 +742,7 @@ public class PCM extends EmuSys implements
     }
     if( EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.pcm.auto_load_bdos",
+			this.propPrefix + PROP_AUTO_LOAD_BDOS,
 			true ) )
     {
       if( bdos == null ) {
@@ -725,6 +775,7 @@ public class PCM extends EmuSys implements
 	}
       }
     }
+    this.audioInPhase      = this.emuThread.readAudioPhase();
     this.curFDDrive        = null;
     this.fdcTC             = false;
     this.keyboardUsed      = false;
@@ -751,7 +802,7 @@ public class PCM extends EmuSys implements
   {
     addr &= 0xFFFF;
 
-    boolean rv   = false;
+    boolean rv = false;
     if( addr >= 0xF800 ) {
       int idx = addr - 0xF800;
       if( idx < this.ramVideo.length ) {
@@ -760,7 +811,7 @@ public class PCM extends EmuSys implements
 	rv = true;
       }
     } else {
-      if( (addr >= 0x2000) || !this.romEnabled ) {
+      if( (addr >= this.romSize) || !this.romEnabled ) {
 	if( (this.ramBank == 0)
 	    || ((addr >= 0xC000) && this.upperBank0Enabled) )
 	{
@@ -825,22 +876,22 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     switch( port & 0xFF ) {
       case 0x80:
       case 0x81:
       case 0x82:
       case 0x83:
-	this.ctc.write( port & 0x03, value );
+	this.ctc.write( port & 0x03, value, tStates );
 	break;
 
       case 0x84:
-	this.pio.writePortA( value );
+	this.pio.writeDataA( value );
 	break;
 
       case 0x85:
-	this.pio.writePortB( value );
+	this.pio.writeDataB( value );
 	if( !this.emuThread.isSoundOutEnabled() ) {
 	  this.audioOutPhase = ((this.pio.fetchOutValuePortB( false ) & 0x40)
 									!= 0);
@@ -899,8 +950,8 @@ public class PCM extends EmuSys implements
 	if( this.fdc != null ) {
 	  if( this.fdDrives != null ) {
 	    FloppyDiskDrive fdd  = null;
-	    int             v    = (value - 1) & 0x03;
-	    int             mask = 0x01;
+	    int v    = ((value & 0x0f) >> 1) | ((value & 0x01) << 3);
+	    int mask = 0x01;
 	    for( int i = 0; i < this.fdDrives.length; i++ ) {
 	      if( (v & mask) != 0 ) {
 		fdd = this.fdDrives[ i ];
@@ -923,19 +974,20 @@ public class PCM extends EmuSys implements
 
 	/* --- private Methoden --- */
 
-  private static boolean emulates80x24( Properties props )
+  private boolean emulates80x24( Properties props )
   {
     return EmuUtil.getProperty(
-			props,
-			"jkcemu.pcm.graphic" ).equals( "80x24" );
+		props,
+		this.propPrefix + PROP_GRAPHIC_KEY ).equals(
+					PROP_GRAPHIC_VALUE_80X24 );
   }
 
 
-  private static boolean emulatesFloppyDisk( Properties props )
+  private boolean emulatesFloppyDisk( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.pcm.floppydisk.enabled",
+			this.propPrefix + PROP_FDC_ENABLDED,
 			true );
   }
 
@@ -944,7 +996,7 @@ public class PCM extends EmuSys implements
   {
     this.fontBytes = readFontByProperty(
 				props,
-				"jkcemu.pcm.font.file",
+				this.propPrefix + "font.file",
 				0x0800 );
     if( this.fontBytes == null ) {
       if( this.mode80x24 ) {
@@ -964,12 +1016,23 @@ public class PCM extends EmuSys implements
 
   private void loadROMs( Properties props )
   {
-    this.romFile  = EmuUtil.getProperty( props, "jkcemu.pcm.rom.file" );
-    this.romBytes = readFile(
+    this.romFile  = EmuUtil.getProperty(
+			props,
+			this.propPrefix + "rom.file" );
+    this.romBytes = readROMFile(
 			this.romFile,
-			0x2000,
+			0x8000,
 			"ROM-Inhalt (Grundbetriebssystem)" );
-    if( this.romBytes == null ) {
+    if( this.romBytes != null ) {
+      // ROM-Groesse ermitteln
+      int n8k = (this.romBytes.length + 0x1FFF) / 0x2000;
+      if( n8k < 1 ) {
+	n8k = 1;
+      } else if( n8k > 4 ) {
+	n8k = 4;
+      }
+      this.romSize = n8k * 0x2000;
+    } else {
       if( this.fdc != null ) {
 	if( this.mode80x24 ) {
 	  if( romFDC80x24 == null ) {

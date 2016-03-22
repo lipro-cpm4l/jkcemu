@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,14 +23,14 @@ public class ProfileDlg extends BasicDlg implements
 						DocumentListener,
 						ListSelectionListener
 {
-  private File             selectedProfile;
-  private DefaultListModel listModel;
-  private JList            list;
-  private Document         docProfileName;
-  private JTextField       fldProfileName;
-  private JButton          btnOK;
-  private JButton          btnDelete;
-  private JButton          btnCancel;
+  private File                     selectedProfile;
+  private DefaultListModel<String> listModel;
+  private JList<String>            list;
+  private Document                 docProfileName;
+  private JTextField               fldProfileName;
+  private JButton                  btnOK;
+  private JButton                  btnDelete;
+  private JButton                  btnCancel;
 
 
   public ProfileDlg(
@@ -47,7 +47,7 @@ public class ProfileDlg extends BasicDlg implements
     // Profile laden
     int    preSelectedIdx  = -1;
     String preSelectedName = null;
-    this.listModel         = new DefaultListModel();
+    this.listModel         = new DefaultListModel<>();
     try {
       File configDir = Main.getConfigDir();
       if( configDir != null ) {
@@ -95,7 +95,7 @@ public class ProfileDlg extends BasicDlg implements
 
     add( new JLabel( "Profile:" ), gbc );
 
-    this.list = new JList( this.listModel );
+    this.list = new JList<>( this.listModel );
     this.list.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
     this.list.setVisibleRowCount( 10 );
     this.list.setPrototypeCellValue( "123456789012345678901234567890" );

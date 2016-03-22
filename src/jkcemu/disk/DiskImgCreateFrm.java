@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.awt.event.KeyEvent;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
-import java.util.zip.GZIPOutputStream;
 import javax.swing.*;
 import javax.swing.event.*;
 import jkcemu.Main;
@@ -37,31 +36,35 @@ public class DiskImgCreateFrm
   private File                      lastOutFile;
   private boolean                   dataChanged;
   private JMenuItem                 mnuClose;
+  private JMenuItem                 mnuNew;
   private JMenuItem                 mnuFileAdd;
   private JMenuItem                 mnuFileRemove;
   private JMenuItem                 mnuSort;
   private JMenuItem                 mnuSave;
+  private JMenuItem                 mnuChangeAttrs;
   private JMenuItem                 mnuChangeUser;
   private JMenuItem                 mnuPaste;
+  private JMenuItem                 mnuSelectAll;
   private JMenuItem                 mnuHelpContent;
   private JButton                   btnFileAdd;
   private JButton                   btnFileRemove;
   private JButton                   btnSave;
   private JButton                   btnFileUp;
   private JButton                   btnFileDown;
-  private JButton                   btnSysFileSelect;
-  private JButton                   btnSysFileRemove;
+  private JButton                   btnSysTrackFileSelect;
+  private JButton                   btnSysTrackFileRemove;
   private JTabbedPane               tabbedPane;
   private FileTableModel            tableModel;
   private JTable                    table;
   private JScrollPane               scrollPane;
   private FloppyDiskFormatSelectFld fmtSelectFld;
-  private JLabel                    labelSysFile;
-  private FileNameFld               fldSysFileName;
+  private JLabel                    labelSysTrackFile;
+  private FileNameFld               fldSysTrackFileName;
+  private JTextField                fldRemark;
   private JLabel                    labelStatus;
   private DropTarget                dropTargetFile1;
   private DropTarget                dropTargetFile2;
-  private DropTarget                dropTargetSysFile;
+  private DropTarget                dropTargetSysTrackFile;
 
 
   public static void open()
@@ -83,17 +86,15 @@ public class DiskImgCreateFrm
   @Override
   public void stateChanged( ChangeEvent e )
   {
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src != null ) {
-	if( src == this.tabbedPane ) {
-	  updActionButtons();
-	  updStatusText();
-	}
-	else if( src == this.fmtSelectFld ) {
-	  updSysFileFieldsEnabled();
-	  updStatusText();
-	}
+    Object src = e.getSource();
+    if( src != null ) {
+      if( src == this.tabbedPane ) {
+	updActionButtons();
+	updStatusText();
+      }
+      else if( src == this.fmtSelectFld ) {
+	updSysTrackFileFieldsEnabled();
+	updStatusText();
       }
     }
   }
@@ -132,10 +133,10 @@ public class DiskImgCreateFrm
 	e.acceptDrop( DnDConstants.ACTION_COPY );  // Quelle nicht loeschen
 	pasteFiles( e.getTransferable() );
       }
-    } else if( src == this.dropTargetSysFile ) {
+    } else if( src == this.dropTargetSysTrackFile ) {
       File file = EmuUtil.fileDrop( this, e );
       if( file != null ) {
-	addSysFile( file );
+	addSysTrackFile( file );
       }
     }
   }
@@ -172,58 +173,68 @@ public class DiskImgCreateFrm
   @Override
   protected boolean doAction( EventObject e )
   {
-    boolean rv = false;
     updStatusText();
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.mnuClose ) {
-	rv = true;
-	doClose();
-      }
-      else if( (src == this.mnuFileAdd) || (src == this.btnFileAdd) ) {
-	rv = true;
-	doFileAdd();
-      }
-      else if( (src == this.mnuFileRemove) || (src == this.btnFileRemove) ) {
-	rv = true;
-	doFileRemove();
-      }
-      else if( src == this.mnuSort ) {
-	rv = true;
-	this.tableModel.sortAscending( 0 );
-      }
-      else if( (src == this.mnuSave) || (src == this.btnSave) ) {
-	rv = true;
-	doSave();
-      }
-      else if( src == this.btnFileDown ) {
-	rv = true;
-	doFileDown();
-      }
-      else if( src == this.btnFileUp ) {
-	rv = true;
-	doFileUp();
-      }
-      else if( src == this.btnSysFileSelect ) {
-	rv = true;
-	doSysFileSelect();
-      }
-      else if( src == this.mnuChangeUser ) {
-	rv = true;
-	doChangeUser();
-      }
-      else if( src == this.mnuPaste ) {
-	rv = true;
-	doPaste();
-      }
-      else if( src == this.btnSysFileRemove ) {
-	rv = true;
-	doSysFileRemove();
-      }
-      else if( src == this.mnuHelpContent ) {
-	rv = true;
-	HelpFrm.open( "/help/disk/creatediskimg.htm" );
-      }
+    boolean rv  = false;
+    Object  src = e.getSource();
+    if( src == this.mnuClose ) {
+      rv = true;
+      doClose();
+    }
+    else if( (src == this.mnuFileAdd) || (src == this.btnFileAdd) ) {
+      rv = true;
+      doFileAdd();
+    }
+    else if( (src == this.mnuFileRemove) || (src == this.btnFileRemove) ) {
+      rv = true;
+      doFileRemove();
+    }
+    else if( src == this.mnuNew ) {
+      rv = true;
+      doNew();
+    }
+    else if( src == this.mnuSort ) {
+      rv = true;
+      this.tableModel.sortAscending( 0 );
+    }
+    else if( (src == this.mnuSave) || (src == this.btnSave) ) {
+      rv = true;
+      doSave();
+    }
+    else if( src == this.btnFileDown ) {
+      rv = true;
+      doFileDown();
+    }
+    else if( src == this.btnFileUp ) {
+      rv = true;
+      doFileUp();
+    }
+    else if( src == this.btnSysTrackFileSelect ) {
+      rv = true;
+      doSysTrackFileSelect();
+    }
+    else if( src == this.mnuChangeAttrs ) {
+      rv = true;
+      doChangeAttrs();
+    }
+    else if( src == this.mnuChangeUser ) {
+      rv = true;
+      doChangeUser();
+    }
+    else if( src == this.mnuPaste ) {
+      rv = true;
+      doPaste();
+    }
+    else if( src == this.mnuSelectAll ) {
+      rv = true;
+      doSelectAll();
+    }
+    else if( src == this.btnSysTrackFileRemove ) {
+      rv = true;
+      doSysTrackFileRemove();
+    }
+    else if( src == this.mnuHelpContent ) {
+      rv = true;
+      HelpFrm.open( "/help/disk/creatediskimg.htm" );
     }
     return rv;
   }
@@ -258,6 +269,39 @@ public class DiskImgCreateFrm
 
 
 	/* --- Aktionen --- */
+
+  private void doChangeAttrs()
+  {
+    int[] rowNums = this.table.getSelectedRows();
+    if( rowNums != null ) {
+      if( rowNums.length > 0 ) {
+	ChangeFileAttrsDlg dlg = new ChangeFileAttrsDlg( this );
+	dlg.setVisible( true );
+	Boolean readOnly = dlg.getReadOnlyValue();
+	Boolean sysFile  = dlg.getSystemFileValue();
+	Boolean archive  = dlg.getArchiveValue();
+	if( (readOnly != null) || (sysFile != null) || (archive != null) ) {
+	  for( int i = 0; i< rowNums.length; i++ ) {
+	    int       rowNum = rowNums[ i ];
+	    FileEntry entry  = this.tableModel.getRow( rowNums[ i ] );
+	    if( entry != null ) {
+	      if( readOnly != null ) {
+		entry.setReadOnly( readOnly.booleanValue() );
+	      }
+	      if( sysFile != null ) {
+		entry.setSystemFile( sysFile.booleanValue() );
+	      }
+	      if( archive != null ) {
+		entry.setArchive( archive.booleanValue() );
+	      }
+	      this.tableModel.fireTableRowsUpdated( rowNum, rowNum );
+	    }
+	  }
+	}
+      }
+    }
+  }
+
 
   private void doChangeUser()
   {
@@ -326,6 +370,34 @@ public class DiskImgCreateFrm
   }
 
 
+  public void doNew()
+  {
+    boolean       status = true;
+    StringBuilder buf    = new StringBuilder( 256 );
+    if( this.dataChanged ) {
+      buf.append( "Die letzten \u00C3nderungen wurden nicht gespeichert!" );
+    }
+    if( (this.tableModel.getRowCount() > 0)
+	|| (this.fldSysTrackFileName.getFile() != null) )
+    {
+      if( buf.length() > 0 ) {
+	buf.append( (char) '\n' );
+      }
+      buf.append( "Die hinzugef\u00FCgten Dateien werden entfernt." );
+    }
+    if( buf.length() > 0 ) {
+      status = BasicDlg.showConfirmDlg( this, buf.toString() );
+    }
+    if( status ) {
+      this.tableModel.clear( true );
+      this.fldSysTrackFileName.setFile( null );
+      this.dataChanged = false;
+      this.lastOutFile = null;
+      updTitle();
+    }
+  }
+
+
   private void doPaste()
   {
     if( this.clipboard != null ) {
@@ -333,6 +405,15 @@ public class DiskImgCreateFrm
 	pasteFiles( this.clipboard.getContents( this ) );
       }
       catch( IllegalStateException ex ) {}
+    }
+  }
+
+
+  private void doSelectAll()
+  {
+    int nRows = this.table.getRowCount();
+    if( nRows > 0 ) {
+      this.table.setRowSelectionInterval( 0, nRows - 1 );
     }
   }
 
@@ -347,232 +428,141 @@ public class DiskImgCreateFrm
 			+ "M\u00F6chten Sie eine leere Diskettenabbilddatei"
 			+ " erstellen?" );
     }
+    int     sysTracks    = this.fmtSelectFld.getSysTracks();
+    File    sysTrackFile = this.fldSysTrackFileName.getFile();
+    if( (sysTrackFile != null) && (sysTracks == 0) ) {
+      if( JOptionPane.showConfirmDialog(
+		this,
+		"Sie haben ein Format ohne Systemspuren ausgew\u00E4hlt,\n"
+			+ "aber eine Datei f\u00FCr die Systemspuren"
+			+ " angegeben.\n"
+			+ "Diese Datei wird ignoriert.",
+		"Warnung",
+		JOptionPane.OK_CANCEL_OPTION,
+		JOptionPane.WARNING_MESSAGE ) != JOptionPane.OK_OPTION )
+      {
+	status = false;
+      }
+    }
     if( status ) {
       File file = EmuUtil.showFileSaveDlg(
 				this,
 				"Diskettenabbilddatei speichern",
 				this.lastOutFile != null ?
 					this.lastOutFile
-					: Main.getLastPathFile( "disk" ),
+					: Main.getLastDirFile( "disk" ),
 				EmuUtil.getPlainDiskFileFilter(),
 				EmuUtil.getAnaDiskFileFilter(),
+				EmuUtil.getCopyQMFileFilter(),
 				EmuUtil.getDskFileFilter(),
-				EmuUtil.getImageDiskFileFilter() );
+				EmuUtil.getImageDiskFileFilter(),
+				EmuUtil.getTeleDiskFileFilter() );
       if( file != null ) {
-	boolean plainDisk = false;
-	boolean anaDisk   = false;
-	boolean cpcDisk   = false;
-	boolean imageDisk = false;
-	String  fileName  = file.getName();
+	boolean plainDisk  = false;
+	boolean anaDisk    = false;
+	boolean cpcDisk    = false;
+	boolean copyQMDisk = false;
+	boolean imageDisk  = false;
+	boolean teleDisk   = false;
+	String  fileName   = file.getName();
 	if( fileName != null ) {
 	  String lowerName = fileName.toLowerCase();
+	  if( lowerName.endsWith( ".gz" ) ) {
+	    lowerName = lowerName.substring( 0, lowerName.length() - 3 );
+	  }
 	  plainDisk =  TextUtil.endsWith(
 				lowerName,
 				DiskUtil.plainDiskFileExt );
-	  anaDisk   =  TextUtil.endsWith(
+	  anaDisk    =  TextUtil.endsWith(
 				lowerName,
 				DiskUtil.anaDiskFileExt );
-	  cpcDisk   =  TextUtil.endsWith(
+	  copyQMDisk =  TextUtil.endsWith(
+				lowerName,
+				DiskUtil.copyQMFileExt );
+	  cpcDisk    =  TextUtil.endsWith(
 				lowerName,
 				DiskUtil.dskFileExt );
-	  imageDisk =  TextUtil.endsWith(
+	  imageDisk  =  TextUtil.endsWith(
 				lowerName,
 				DiskUtil.imageDiskFileExt );
+	  teleDisk  =  TextUtil.endsWith(
+				lowerName,
+				DiskUtil.teleDiskFileExt );
 	}
-	if( plainDisk || anaDisk || cpcDisk || imageDisk ) {
-	  OutputStream out = null;
+	if( plainDisk || anaDisk || copyQMDisk || cpcDisk
+		|| imageDisk || teleDisk )
+	{
+	  boolean      cancelled = false;
+	  OutputStream out       = null;
 	  try {
-	    int  sides       = this.fmtSelectFld.getSides();
-	    int  cyls        = this.fmtSelectFld.getCylinders();
-	    int  sysTracks   = this.fmtSelectFld.getSysTracks();
-	    int  sectPerCyl  = this.fmtSelectFld.getSectorsPerCylinder();
-	    int  sectorSize  = this.fmtSelectFld.getSectorSize();
-	    int  blockSize   = this.fmtSelectFld.getBlockSize();
-	    int  dirBlocks   = this.fmtSelectFld.getDirBlocks();
-	    int  diskSize    = sides * cyls * sectPerCyl * sectorSize;
-	    int  dstDirPos   = sysTracks * sides * sectPerCyl * sectorSize;
-	    int  dirSize     = dirBlocks * blockSize;
-	    int  begFileArea = dstDirPos + dirSize;
-	    int  dstFilePos  = begFileArea;
-	    File sysFile     = null;
-	    if( dstDirPos > 0 ) {
-	      sysFile = this.fldSysFileName.getFile();
-	      if( sysFile != null ) {
-		if( sysFile.length() > dstDirPos ) {
-		  throw new IOException(
-			"Die Datei f\u00FCr die Systemspuren"
-				+ " ist zu gro\u00DF!" );
-		}
-	      }
+	    int sides      = this.fmtSelectFld.getSides();
+	    int cyls       = this.fmtSelectFld.getCylinders();
+	    int sectPerCyl = this.fmtSelectFld.getSectorsPerCylinder();
+	    int sectorSize = this.fmtSelectFld.getSectorSize();
+
+	    DiskImgCreator diskImgCreator = new DiskImgCreator(
+				new NIOFileTimesViewFactory(),
+				sides,
+				cyls,
+				sysTracks,
+				sectPerCyl,
+				sectorSize,
+				this.fmtSelectFld.isBlockNum16Bit(),
+				this.fmtSelectFld.getBlockSize(),
+				this.fmtSelectFld.getDirBlocks(),
+				this.fmtSelectFld.isDateStamperEnabled() );
+	    if( (sysTrackFile != null) && (sysTracks > 0) ) {
+	      diskImgCreator.fillSysTracks( sysTrackFile );
 	    }
-	    if( (dstDirPos < 0)
-		|| (dstDirPos >= dstFilePos)
-		|| ((dstFilePos + (calcFileAreaKBytes( blockSize ) * 1024))
-								> diskSize) )
-	    {
-	      throw new IOException(
-			"Das ausgew\u00E4hlten Diskettenformat bietet nicht"
-				+ " gen\u00FCgend Platz\n"
-				+ "f\u00FCr die hinzugef\u00FCgten"
-				+ " Dateien." );
-	    }
-	    byte[] diskBuf = new byte[ diskSize ];
-	    if( dstDirPos > 0 ) {
-	      Arrays.fill(
-			diskBuf,
-			0,
-			Math.min( dstDirPos, diskBuf.length ),
-			(byte) 0 );
-	      if( sysFile != null ) {
-		readFile( sysFile, diskBuf, 0 );
-	      }
-	    }
-	    Arrays.fill( diskBuf, dstDirPos, diskBuf.length, (byte) 0xE5 );
-	    boolean blockNum16Bit = false;
-	    int     extendSize    = 16 * blockSize;
-	    if( this.fmtSelectFld.isBlockNum16Bit() ) {
-	      blockNum16Bit = true;
-	      extendSize    = 8 * blockSize;
-	    }
-	    int blkNum = dirBlocks;
-	    int nRows  = this.tableModel.getRowCount();
+	    int nRows = this.tableModel.getRowCount();
 	    for( int i = 0; i < nRows; i++ ) {
 	      FileEntry entry = this.tableModel.getRow( i );
 	      if( entry != null ) {
-		String entryName = entry.getName();
-		if( entryName != null ) {
-		  int nBlocks = 0;
-		  int nBytes  = readFile(
-					entry.getFile(),
-					diskBuf,
-					dstFilePos );
-		  if( nBytes > 0 ) {
-		    nBlocks = nBytes / blockSize;
-		    if( (nBlocks * blockSize) < nBytes ) {
-		      nBlocks++;
-		    }
-		    // Rest der Datei bis zum Blockende mit 0x1A auffuellen
-		    int idxFrom = dstFilePos + nBytes;
-		    int idxTo   = Math.min(
-					dstFilePos + (nBlocks * blockSize),
-					diskBuf.length );
-		    if( (idxFrom >= 0) && (idxFrom < idxTo) ) {
-		      Arrays.fill( diskBuf, idxFrom, idxTo, (byte) 0x1A );
+		try {
+		    diskImgCreator.addFile(
+				entry.getUserNum(),
+				entry.getName(),
+				entry.getFile(),
+				entry.isReadOnly(),
+				entry.isSystemFile(),
+				entry.isArchive() );
+		}
+		catch( IOException ex ) {
+		  fireSelectRowInterval( i, i );
+		  String msg = ex.getMessage();
+		  if( msg != null ) {
+		    if( msg.isEmpty() ) {
+		      msg = null;
 		    }
 		  }
-		  dstFilePos += (nBlocks *  blockSize);
-
-		  int extendNum = 0;
-		  do {
-		    if( dstDirPos >= begFileArea ) {
-		      throw new IOException( "Directory zu klein" );
-		    }
-
-		    int entryBegPos = dstDirPos;
-
-		    diskBuf[ dstDirPos ] = (byte) 0;
-		    Integer userNum      = entry.getUserNum();
-		    if( userNum != null ) {
-		      if( (userNum.intValue() > 0)
-			  && (userNum.intValue() <= 15) )
-		      {
-			diskBuf[ dstDirPos ] = userNum.byteValue();
-		      }
-		    }
-		    dstDirPos++;
-
-		    int[] sizes = { 8, 3 };
-		    int   len   = entryName.length();
-		    int   pos   = 0;
-		    for( int k = 0; k < sizes.length; k++ ) {
-		      int n = sizes[ k ];
-		      while( (pos < len) && (n > 0) ) {
-			char ch = entryName.charAt( pos++ );
-			if( ch == '.' ) {
-			  break;
-			}
-			diskBuf[ dstDirPos++ ] = (byte) ch;
-			--n;
-		      }
-		      while( (n > 0) ) {
-			diskBuf[ dstDirPos++ ] = (byte) '\u0020';
-			--n;
-		      }
-		      if( pos < len ) {
-			if( entryName.charAt( pos ) == '.' ) {
-			  pos++;
-			}
-		      }
-		    }
-		    diskBuf[ dstDirPos++ ] = (byte) (extendNum & 0x1F);
-		    diskBuf[ dstDirPos++ ] = (byte) 0;
-		    diskBuf[ dstDirPos++ ] = (byte) ((extendNum >> 5) & 0x3F);
-		    extendNum++;
-
-		    if( entry.isReadOnly() ) {
-		      diskBuf[ entryBegPos + 9 ] |= 0x80;
-		    }
-		    if( entry.isSystemFile() ) {
-		      diskBuf[ entryBegPos + 10 ] |= 0x80;
-		    }
-		    if( entry.isArchived() ) {
-		      diskBuf[ entryBegPos + 11 ] |= 0x80;
-		    }
-		    int nTmp = nBytes;
-		    if( nTmp > extendSize ) {
-		      nTmp = extendSize;
-		      nBytes -= extendSize;
-		    }
-		    int entrySizeCode = (nTmp + 127) / 128;
-		    if( (entrySizeCode & 0xFF) != entrySizeCode ) {
-		      String msg = entry.getName() + ": Datei zu gro\u00DF";
-		      if( !blockNum16Bit ) {
-			msg = msg + "\nBei 8-Bit-Blocknummern betr\u00E4gt"
-				+ " die max. Dateigr\u00F6\u00DFe 32640 Byte.";
-		      }
-		      throw new IOException( msg );
-		    }
-		    diskBuf[ dstDirPos++ ] = (byte) entrySizeCode;
-		    if( blockNum16Bit ) {
-		      for( int k = 0; k < 8; k++ ) {
-			if( nBlocks > 0 ) {
-			  if( blkNum > 0xFFFF ) {
-			    throwBlockNumOverflow();
-			  }
-			  diskBuf[ dstDirPos++ ] = (byte) blkNum;
-			  diskBuf[ dstDirPos++ ] = (byte) (blkNum >> 8);
-			  blkNum++;
-			  --nBlocks;
-			} else {
-			  diskBuf[ dstDirPos++ ] = (byte) 0;
-			  diskBuf[ dstDirPos++ ] = (byte) 0;
-			}
-		      }
-		    } else {
-		      for( int k = 0; k < 16; k++ ) {
-			if( nBlocks > 0 ) {
-			  if( blkNum > 0xFF ) {
-			    throwBlockNumOverflow();
-			  }
-			  diskBuf[ dstDirPos++ ] = (byte) blkNum;
-			  blkNum++;
-			  --nBlocks;
-			} else {
-			  diskBuf[ dstDirPos++ ] = (byte) 0;
-			}
-		      }
-		    }
-		  } while( nBlocks > 0 );
+		  if( msg != null ) {
+		    msg = entry.getName() + ":\n" + msg;
+		  } else {
+		    msg = entry.getName()
+				+ " kann nicht hinzugef\u00FCgt werden.";
+		  }
+		  if( JOptionPane.showConfirmDialog(
+			this,
+			msg,
+			"Fehler",
+			JOptionPane.OK_CANCEL_OPTION,
+			JOptionPane.ERROR_MESSAGE ) != JOptionPane.OK_OPTION )
+		  {
+		    cancelled = true;
+		    break;
+		  }
 		}
 	      }
 	    }
-	    if( plainDisk ) {
-	      out = new FileOutputStream( file );
-	      out.write( diskBuf );
-	      out.close();
-	      out = null;
-	    } else {
-	      PlainDisk disk = PlainDisk.createForByteArray(
+	    if( !cancelled ) {
+	      byte[] diskBuf = diskImgCreator.getPlainDiskByteBuffer();
+	      if( plainDisk ) {
+		out = EmuUtil.createOptionalGZipOutputStream( file );
+		out.write( diskBuf );
+		out.close();
+		out = null;
+	      } else {
+		PlainDisk disk = PlainDisk.createForByteArray(
 					this,
 					file.getPath(),
 					diskBuf,
@@ -580,21 +570,28 @@ public class DiskImgCreateFrm
 						sides,
 						cyls,
 						sectPerCyl,
-						sectorSize ) );
-	      if( disk != null ) {
-		if( anaDisk ) {
-		  AnaDisk.export( disk, file );
-		} else if( cpcDisk ) {
-		  CPCDisk.export( disk, file );
-		} else if( imageDisk ) {
-		  ImageDisk.export( disk, file, "Created by JKCEMU" );
+						sectorSize ),
+					this.fmtSelectFld.getInterleave() );
+		if( disk != null ) {
+		  if( anaDisk ) {
+		    AnaDisk.export( disk, file );
+		  } else if( copyQMDisk ) {
+		    CopyQMDisk.export( disk, file, this.fldRemark.getText() );
+		  } else if( cpcDisk ) {
+		    CPCDisk.export( disk, file );
+		  } else if( imageDisk ) {
+		    ImageDisk.export( disk, file, this.fldRemark.getText() );
+		  } else if( teleDisk ) {
+		    TeleDisk.export( disk, file, this.fldRemark.getText() );
+		  }
 		}
 	      }
+	      this.dataChanged = false;
+	      this.lastOutFile = file;
+	      updTitle();
+	      Main.setLastFile( file, "disk" );
+	      this.labelStatus.setText( "Diskettenabbilddatei gespeichert" );
 	    }
-	    this.dataChanged = false;
-	    this.lastOutFile = file;
-	    Main.setLastFile( file, "disk" );
-	    this.labelStatus.setText( "Diskettenabbilddatei gespeichert" );
 	  }
 	  catch( Exception ex ) {
 	    BasicDlg.showErrorDlg( this, ex );
@@ -619,14 +616,19 @@ public class DiskImgCreateFrm
 
   private void doFileAdd()
   {
-    File file = EmuUtil.showFileOpenDlg(
-			this,
-			"Datei hinzuf\u00FCgen",
-			Main.getLastPathFile( "software" ) );
-    if( file != null ) {
-      if( addFile( file ) ) {
-	Main.setLastFile( file, "software" );
+    java.util.List<File> files = EmuUtil.showMultiFileOpenDlg(
+					this,
+					"Dateien hinzuf\u00FCgen",
+					Main.getLastDirFile( "software" ) );
+    if( files != null ) {
+      int firstRowToSelect = this.table.getRowCount();
+      for( File file : files ) {
+	if( addFile( file ) ) {
+	  Main.setLastFile( file, "software" );
+	}
       }
+      updSelectAllEnabled();
+      fireSelectRowInterval( firstRowToSelect, this.table.getRowCount() - 1 );
     }
   }
 
@@ -642,6 +644,7 @@ public class DiskImgCreateFrm
 	  this.mnuSort.setEnabled( this.tableModel.getRowCount() > 1 );
 	  this.dataChanged = true;
 	}
+	updSelectAllEnabled();
 	updStatusText();
       }
     }
@@ -650,21 +653,27 @@ public class DiskImgCreateFrm
 
   private void doFileDown()
   {
-    int[] rowNums = this.table.getSelectedRows();
+    final int[] rowNums = this.table.getSelectedRows();
     if( rowNums != null ) {
-      if( rowNums.length == 1 ) {
-	int row = rowNums[ 0 ];
-	if( (row >= 0) && (row < (this.tableModel.getRowCount() - 1)) ) {
-	  FileEntry e1 = this.tableModel.getRow( row );
-	  FileEntry e2 = this.tableModel.getRow( row + 1 );
-	  if( (e1 != null) && (e2 != null) ) {
-	    this.tableModel.setRow( row, e2 );
-	    this.tableModel.setRow( row + 1, e1 );
-	    this.tableModel.fireTableDataChanged();
-	    fireSelectRow( row + 1 );
-	    this.dataChanged = true;
+      if( rowNums.length > 0) {
+	Arrays.sort( rowNums );
+	if( (rowNums[ rowNums.length - 1 ] + 1)
+		< this.tableModel.getRowCount() )
+	{
+	  for( int i = rowNums.length - 1 ; i >= 0; --i ) {
+	    int       row = rowNums[ i ];
+	    FileEntry e1  = this.tableModel.getRow( row );
+	    FileEntry e2  = this.tableModel.getRow( row + 1 );
+	    if( (e1 != null) && (e2 != null) ) {
+	      this.tableModel.setRow( row, e2 );
+	      this.tableModel.setRow( row + 1, e1 );
+	      this.tableModel.fireTableDataChanged();
+	      this.dataChanged = true;
+	    }
+	    rowNums[ i ]++;
 	  }
 	}
+	fireSelectRows( rowNums );
       }
     }
   }
@@ -672,42 +681,46 @@ public class DiskImgCreateFrm
 
   private void doFileUp()
   {
-    int[] rowNums = this.table.getSelectedRows();
+    final int[] rowNums = this.table.getSelectedRows();
     if( rowNums != null ) {
-      if( rowNums.length == 1 ) {
-	int row = rowNums[ 0 ];
-	if( (row >= 1) && (row < this.tableModel.getRowCount()) ) {
-	  FileEntry e1 = this.tableModel.getRow( row - 1);
-	  FileEntry e2 = this.tableModel.getRow( row );
-	  if( (e1 != null) && (e2 != null) ) {
-	    this.tableModel.setRow( row, e1 );
-	    this.tableModel.setRow( row - 1, e2 );
-	    this.tableModel.fireTableDataChanged();
-	    fireSelectRow( row - 1 );
-	    this.dataChanged = true;
+      if( rowNums.length > 0) {
+	Arrays.sort( rowNums );
+	if( rowNums[ 0 ] > 0 ) {
+	  for( int i = 0; i < rowNums.length; i++ ) {
+	    int       row = rowNums[ i ];
+	    FileEntry e1  = this.tableModel.getRow( row );
+	    FileEntry e2  = this.tableModel.getRow( row - 1 );
+	    if( (e1 != null) && (e2 != null) ) {
+	      this.tableModel.setRow( row, e2 );
+	      this.tableModel.setRow( row - 1, e1 );
+	      this.tableModel.fireTableDataChanged();
+	      this.dataChanged = true;
+	    }
+	    --rowNums[ i ];
 	  }
 	}
+	fireSelectRows( rowNums );
       }
     }
   }
 
 
-  private void doSysFileSelect()
+  private void doSysTrackFileSelect()
   {
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"Datei \u00FCffnen",
-			Main.getLastPathFile( "software" ) );
+			Main.getLastDirFile( "software" ) );
     if( file != null ) {
-      addSysFile( file );
+      addSysTrackFile( file );
     }
   }
 
 
-  private void doSysFileRemove()
+  private void doSysTrackFileRemove()
   {
-    this.fldSysFileName.setFile( null );
-    this.btnSysFileRemove.setEnabled( false );
+    this.fldSysTrackFileName.setFile( null );
+    this.btnSysTrackFileRemove.setEnabled( false );
   }
 
 
@@ -716,9 +729,9 @@ public class DiskImgCreateFrm
   private DiskImgCreateFrm()
   {
     this.clipboard   = null;
-    this.lastOutFile = null;
     this.dataChanged = false;
-    setTitle( "JKCEMU CP/M-Diskettenabbilddatei erstellen" );
+    this.lastOutFile = null;
+    updTitle();
     Main.updIcon( this );
 
     Toolkit tk = getToolkit();
@@ -736,6 +749,10 @@ public class DiskImgCreateFrm
     JMenu mnuFile = new JMenu( "Datei" );
     mnuFile.setMnemonic( KeyEvent.VK_D );
     mnuBar.add( mnuFile );
+
+    this.mnuNew = createJMenuItem( "Neue Diskettenabbilddatei" );
+    mnuFile.add( this.mnuNew );
+    mnuFile.addSeparator();
 
     this.mnuFileAdd = createJMenuItem( "Hinzuf\u00FCgen..." );
     mnuFile.add( this.mnuFileAdd );
@@ -768,8 +785,16 @@ public class DiskImgCreateFrm
     mnuEdit.add( this.mnuPaste );
     mnuEdit.addSeparator();
 
+    this.mnuChangeAttrs = createJMenuItem( "Dateiattribute \u00E4ndern..." );
+    mnuEdit.add( this.mnuChangeAttrs );
+
     this.mnuChangeUser = createJMenuItem( "User-Bereich \u00E4ndern..." );
     mnuEdit.add( this.mnuChangeUser );
+    mnuEdit.addSeparator();
+
+    this.mnuSelectAll = createJMenuItem( "Alles ausw\u00E4hlem" );
+    this.mnuSelectAll.setEnabled( false );
+    mnuEdit.add( this.mnuSelectAll );
 
 
     // Menu Hilfe
@@ -845,7 +870,7 @@ public class DiskImgCreateFrm
 				FileTableModel.Column.USER_NUM,
 				FileTableModel.Column.READ_ONLY,
 				FileTableModel.Column.SYSTEM_FILE,
-				FileTableModel.Column.ARCHIVED );
+				FileTableModel.Column.ARCHIVE );
 
     this.table = new JTable( this.tableModel );
     this.table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
@@ -887,40 +912,89 @@ public class DiskImgCreateFrm
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.fmtSelectFld = new FloppyDiskFormatSelectFld();
+    this.fmtSelectFld = new FloppyDiskFormatSelectFld( true );
     panelFmt.add( this.fmtSelectFld, gbcFmt );
 
-    this.labelSysFile  = new JLabel( "Datei f\u00FCr Systemspuren:" );
-    gbcFmt.insets.top  = 5;
-    gbcFmt.insets.left = 5;
-    gbcFmt.gridwidth   = 1;
-    gbcFmt.gridx       = 0;
+    this.labelSysTrackFile = new JLabel( "Datei f\u00FCr Systemspuren:" );
+    gbcFmt.insets.top    = 5;
+    gbcFmt.insets.left   = 5;
+    gbcFmt.insets.bottom = 5;
+    gbcFmt.gridwidth     = 1;
+    gbcFmt.gridx         = 0;
     gbcFmt.gridy++;
-    panelFmt.add( this.labelSysFile, gbcFmt );
+    panelFmt.add( this.labelSysTrackFile, gbcFmt );
 
-    this.fldSysFileName = new FileNameFld();
-    this.fldSysFileName.setEditable( false );
+    this.fldSysTrackFileName = new FileNameFld();
+    this.fldSysTrackFileName.setEditable( false );
     gbcFmt.fill      = GridBagConstraints.HORIZONTAL;
     gbcFmt.weightx   = 1.0;
     gbcFmt.gridwidth = 5;
     gbcFmt.gridx++;
-    panelFmt.add( this.fldSysFileName, gbcFmt );
+    panelFmt.add( this.fldSysTrackFileName, gbcFmt );
 
-    this.btnSysFileSelect = createImageButton(
+    this.btnSysTrackFileSelect = createImageButton(
 				"/images/file/open.png",
 				"\u00D6ffnen" );
     gbcFmt.fill      = GridBagConstraints.NONE;
     gbcFmt.weightx   = 0.0;
     gbcFmt.gridwidth = 1;
     gbcFmt.gridx += 5;
-    panelFmt.add( this.btnSysFileSelect, gbcFmt );
+    panelFmt.add( this.btnSysTrackFileSelect, gbcFmt );
 
-    this.btnSysFileRemove = createImageButton(
+    this.btnSysTrackFileRemove = createImageButton(
 				"/images/file/delete.png",
 				"\u00D6ffnen" );
-    this.btnSysFileRemove.setEnabled( false );
+    this.btnSysTrackFileRemove.setEnabled( false );
     gbcFmt.gridx++;
-    panelFmt.add( this.btnSysFileRemove, gbcFmt );
+    panelFmt.add( this.btnSysTrackFileRemove, gbcFmt );
+
+
+    // Kommentar
+    JPanel panelRemark = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Kommentar", new JScrollPane( panelRemark ) );
+
+    GridBagConstraints gbcRemark = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
+
+    panelRemark.add(
+	new JLabel( "Kommentar zur Diskettenabbilddatei:" ),
+	gbcRemark );
+
+    this.fldRemark          = new JTextField( "Erzeugt mit JKCEMU" );
+    gbcRemark.fill          = GridBagConstraints.HORIZONTAL;
+    gbcRemark.weightx       = 1.0;
+    gbcRemark.insets.top    = 0;
+    gbcRemark.insets.bottom = 5;
+    gbcRemark.gridy++;
+    panelRemark.add( this.fldRemark, gbcRemark );
+
+    JLabel label = new JLabel( "Achtung!" );
+    Font   font  = label.getFont();
+    if( font != null ) {
+      label.setFont( font.deriveFont( Font.BOLD ) );
+    }
+    gbcRemark.fill          = GridBagConstraints.NONE;
+    gbcRemark.weightx       = 0.0;
+    gbcRemark.insets.top    = 10;
+    gbcRemark.insets.bottom = 0;
+    gbcRemark.gridy++;
+    panelRemark.add( label, gbcRemark );
+
+    gbcRemark.fill          = GridBagConstraints.NONE;
+    gbcRemark.weightx       = 0.0;
+    gbcRemark.insets.top    = 0;
+    gbcRemark.insets.bottom = 5;
+    gbcRemark.gridy++;
+    panelRemark.add(
+	new JLabel( "Ein Kommentar wird nur bei CopyQM-, ImageDisk-"
+			+ " und TeleDisk-Dateien unterst\u00FCtzt." ),
+	gbcRemark );
 
 
     // Statuszeile
@@ -950,13 +1024,15 @@ public class DiskImgCreateFrm
 
 
     // Drop-Ziele
-    this.dropTargetFile1   = new DropTarget( this.table, this );
-    this.dropTargetFile2   = new DropTarget( this.scrollPane, this );
-    this.dropTargetSysFile = new DropTarget( this.fldSysFileName, this );
+    this.dropTargetFile1        = new DropTarget( this.table, this );
+    this.dropTargetFile2        = new DropTarget( this.scrollPane, this );
+    this.dropTargetSysTrackFile = new DropTarget(
+					this.fldSysTrackFileName,
+					this );
 
     this.dropTargetFile1.setActive( true );
     this.dropTargetFile1.setActive( true );
-    this.dropTargetSysFile.setActive( true );
+    this.dropTargetSysTrackFile.setActive( true );
 
 
     // sonstiges
@@ -969,6 +1045,47 @@ public class DiskImgCreateFrm
 	/* --- private Methoden --- */
 
   private boolean addFile( File file )
+  {
+    boolean rv   = false;
+    boolean done = false;
+    if( file.isDirectory() ) {
+      String s = file.getName();
+      if( s != null ) {
+	try {
+	  int userNum = Integer.parseInt( s );
+	  if( (userNum >= 1) && (userNum <= 15) ) {
+	    done = true;
+	    if( BasicDlg.showYesNoDlg(
+			this,
+			"Sollen die Dateien im Verzeichnis " + s 
+				+ "\nin der Benutzerebene " + s
+				+ " hinzugef\u00FCgt werden?" ) )
+	    {
+	      File[] files = file.listFiles();
+	      if( files != null ) {
+		for( File f : files ) {
+		  if( f.isFile() ) {
+		    rv = addFileInternal( userNum, f );
+		    if( !rv ) {
+		      break;
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+	catch( NumberFormatException ex ) {}
+      }
+    }
+    if( !done ) {
+      rv = addFileInternal( 0, file );
+    }
+    return rv;
+  }
+
+
+  private boolean addFileInternal( int  userNum, File file )
   {
     boolean rv   = false;
     long    size = -1L;
@@ -1004,7 +1121,7 @@ public class DiskImgCreateFrm
 	  {
 	    if( BasicDlg.showYesNoDlg(
 			this,
-			"Datei " + DirectoryFloppyDisk.SYS_FILE_NAME + ":\n"
+			DirectoryFloppyDisk.SYS_FILE_NAME + ":\n"
 				+ "JKCEMU verwendet Dateien mit diesem Namen"
 				+ " f\u00FCr den Inhalt der Systemspuren.\n"
 				+ "M\u00F6chten Sie deshalb nun diese Datei"
@@ -1012,8 +1129,8 @@ public class DiskImgCreateFrm
 				+ "anstelle Sie als gew\u00F6hnliche Datei"
 				+ " im Directory einzubinden?" ) )
 	    {
-	      this.fldSysFileName.setFile( file );
-	      this.btnSysFileRemove.setEnabled( true );
+	      this.fldSysTrackFileName.setFile( file );
+	      this.btnSysTrackFileRemove.setEnabled( true );
 	      file = null;
 	      rv   = true;
 	    }
@@ -1109,7 +1226,7 @@ public class DiskImgCreateFrm
 		"Es existiert bereits ein Eintrag mit diesem Namen." );
 	} else {
 	  FileEntry entry = new FileEntry( entryName );
-	  entry.setUserNum( new Integer( 0 ) );
+	  entry.setUserNum( new Integer( userNum ) );
 	  if( size >= 0 ) {
 	    entry.setSize( new Long( size ) );
 	  }
@@ -1120,12 +1237,10 @@ public class DiskImgCreateFrm
 	  entry.setFile( file );
 	  entry.setReadOnly( !file.canWrite() );
 	  entry.setSystemFile( false );
-	  entry.setArchived( false );
+	  entry.setArchive( false );
 	  this.tableModel.addRow( entry, true );
-	  nRows = this.tableModel.getRowCount();
-	  fireSelectRow( nRows - 1 );
 	  updStatusText();
-	  this.mnuSort.setEnabled( nRows > 1 );
+	  this.mnuSort.setEnabled( this.tableModel.getRowCount() > 1 );
 	  this.dataChanged = true;
 	  rv               = true;
 	}
@@ -1135,7 +1250,7 @@ public class DiskImgCreateFrm
   }
 
 
-  private void addSysFile( File file )
+  private void addSysTrackFile( File file )
   {
     String errMsg = null;
     if( !file.exists() ) {
@@ -1147,32 +1262,9 @@ public class DiskImgCreateFrm
     if( errMsg != null ) {
       BasicDlg.showErrorDlg( this, errMsg );
     } else {
-      this.fldSysFileName.setFile( file );
-      this.btnSysFileRemove.setEnabled( true );
+      this.fldSysTrackFileName.setFile( file );
+      this.btnSysTrackFileRemove.setEnabled( true );
     }
-  }
-
-
-  private int calcFileAreaKBytes( int blockSize )
-  {
-    int kbytes = 0;
-    int nRows  = this.tableModel.getRowCount();
-    for( int i = 0; i < nRows; i++ ) {
-      FileEntry entry = this.tableModel.getRow( i );
-      if( entry != null ) {
-	Long size = entry.getSize();
-	if( size != null ) {
-	  if( size.longValue() > 0 ) {
-	    int nBlocks = (int) (size.longValue() / blockSize);
-	    if( ((long) nBlocks * (long) blockSize) < size.longValue() ) {
-	      nBlocks++;
-	    }
-	    kbytes += (nBlocks * blockSize / 1024);
-	  }
-	}
-      }
-    }
-    return kbytes;
   }
 
 
@@ -1211,20 +1303,7 @@ public class DiskImgCreateFrm
   }
 
 
-  private static JComboBox createJComboBox( int... items )
-  {
-    JComboBox combo = new JComboBox();
-    combo.setEditable( false );
-    if( items != null ) {
-      for( int i = 0; i < items.length; i++ ) {
-	combo.addItem( new Integer( items[ i ] ) );
-      }
-    }
-    return combo;
-  }
-
-
-  private void fireSelectRow( final int row )
+  private void fireSelectRows( final int[] rowNums )
   {
     final JTable table = this.table;
     EventQueue.invokeLater(
@@ -1233,41 +1312,38 @@ public class DiskImgCreateFrm
 		  @Override
 		  public void run()
 		  {
-		    if( (row >= 0) && (row < table.getRowCount()) ) {
-		      table.setRowSelectionInterval( row, row );
+		    table.clearSelection();
+		    for( int row : rowNums ) {
+		      table.addRowSelectionInterval( row, row );
 		    }
 		  }
 		} );
   }
 
 
-  private int getIntValue( JComboBox combo )
+  private void fireSelectRowInterval( final int begRow, final int endRow )
   {
-    int rv = 0;
-    if( combo != null ) {
-      Object o = combo.getSelectedItem();
-      if( o != null ) {
-	if( o instanceof Number ) {
-	  rv = ((Number) o).intValue();
-	}
-      }
-    }
-    return rv;
-  }
-
-
-  private int getIntValue( JSpinner spinner )
-  {
-    int rv = 0;
-    if( spinner != null ) {
-      Object o = spinner.getValue();
-      if( o != null ) {
-	if( o instanceof Number ) {
-	  rv = ((Number) o).intValue();
-	}
-      }
-    }
-    return rv;
+    final JTable table = this.table;
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    try {
+		      int nRows = table.getRowCount();
+		      if( (begRow >= 0)
+			  && (begRow < nRows)
+			  && (begRow <= endRow) )
+		      {
+			table.setRowSelectionInterval(
+						begRow,
+						Math.min( endRow, nRows -1 ) );
+		      }
+		    }
+		    catch( IllegalArgumentException ex ) {}
+		  }
+		} );
   }
 
 
@@ -1278,6 +1354,7 @@ public class DiskImgCreateFrm
 	Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
 	if( o != null ) {
 	  if( o instanceof Collection ) {
+	    int firstRowToSelect = this.table.getRowCount();
 	    for( Object item : (Collection) o ) {
 	      if( item != null ) {
 		File file = null;
@@ -1293,94 +1370,51 @@ public class DiskImgCreateFrm
 		}
 	      }
 	    }
+	    fireSelectRowInterval(
+			firstRowToSelect,
+			this.table.getRowCount() - 1 );
 	  }
 	}
       }
     }
     catch( IOException ex ) {}
     catch( UnsupportedFlavorException ex ) {}
-  }
-
-
-  private int readFile( File file, byte[] buf, int pos ) throws IOException
-  {
-    int rv = 0;
-    if( file != null ) {
-      InputStream in = null;
-      try {
-	in = new FileInputStream( file );
-
-	int n = 0;
-	do {
-	  rv  += n;
-	  pos += n;
-
-	  int len = buf.length - pos;
-	  if( len > 0 ) {
-	    n = in.read( buf, pos, len );
-	  } else {
-	    break;
-	  }
-	} while( n > 0 );
-	if( pos >= buf.length ) {
-	  if( in.read() == -1 ) {
-	    throw new IOException(
-		"Die Diskettenabbilddatei bietet nicht gen\u00FCgend Platz!" );
-	  }
-	}
-      }
-      finally {
-	EmuUtil.doClose( in );
-      }
+    finally {
+      updSelectAllEnabled();
     }
-    return rv;
-  }
-
-
-  private static void setValue( JComboBox combo, int value )
-  {
-    if( combo != null )
-      combo.setSelectedItem( new Integer( value ) );
-  }
-
-
-  private static void setValue( JSpinner spinner, int value )
-  {
-    if( spinner != null ) {
-      try {
-	spinner.setValue( new Integer( value ) );
-      }
-      catch( IllegalArgumentException ex ) {}
-    }
-  }
-
-
-  private static void throwBlockNumOverflow() throws IOException
-  {
-    throw new IOException( "Blocknummern&uuml;berlauf:\n"
-	+ "Die Anzahl der m&ouml;glichen Blocknummern reicht nicht aus." );
   }
 
 
   private void updActionButtons()
   {
-    int     rowNum  = -1;
-    int     rowCnt  = 0;
-    int     nSel    = 0;
-    boolean fileTab = (this.tabbedPane.getSelectedIndex() == 0);
+    boolean stateSelected = false;
+    boolean stateDown     = false;
+    boolean stateUp       = false;
+    boolean fileTab       = (this.tabbedPane.getSelectedIndex() == 0);
     if( fileTab ) {
-      nSel = this.table.getSelectedRowCount();
-      if( nSel == 1 ) {
-	rowNum = this.table.getSelectedRow();
-	rowCnt = this.table.getRowCount();
+      int[] rowNums = this.table.getSelectedRows();
+      if( rowNums != null ) {
+	if( rowNums.length > 0 ) {
+	  stateSelected = true;
+	  Arrays.sort( rowNums );
+	  if( (rowNums[ rowNums.length - 1 ] + 1)
+				< this.tableModel.getRowCount() )
+	  {
+	    stateDown = true;
+	  }
+	  if( rowNums[ 0 ] > 0 ) {
+	    stateUp = true;
+	  }
+	}
       }
     }
     this.btnFileAdd.setEnabled( fileTab );
-    this.mnuFileRemove.setEnabled( nSel > 0 );
-    this.btnFileRemove.setEnabled( nSel > 0 );
-    this.btnFileDown.setEnabled( (rowNum >= 0) && (rowNum < (rowCnt - 1)) );
-    this.btnFileUp.setEnabled( (rowNum >= 1) && (rowNum < rowCnt) );
-    this.mnuChangeUser.setEnabled( nSel > 0 );
+    this.mnuFileRemove.setEnabled( stateSelected );
+    this.btnFileRemove.setEnabled( stateSelected );
+    this.btnFileDown.setEnabled( stateDown );
+    this.btnFileUp.setEnabled( stateUp );
+    this.mnuChangeAttrs.setEnabled( stateSelected );
+    this.mnuChangeUser.setEnabled( stateSelected );
   }
 
 
@@ -1388,8 +1422,9 @@ public class DiskImgCreateFrm
   {
     Color     color = this.table.getBackground();
     JViewport vp    = this.scrollPane.getViewport();
-    if( (color != null) && (vp != null) )
+    if( (color != null) && (vp != null) ) {
       vp.setBackground( color );
+    }
   }
 
 
@@ -1404,6 +1439,12 @@ public class DiskImgCreateFrm
       catch( IllegalStateException ex ) {}
     }
     this.mnuPaste.setEnabled( state );
+  }
+
+
+  private void updSelectAllEnabled()
+  {
+    this.mnuSelectAll.setEnabled( this.table.getRowCount() > 0 );
   }
 
 
@@ -1462,14 +1503,30 @@ public class DiskImgCreateFrm
   }
 
 
-  private void updSysFileFieldsEnabled()
+  private void updSysTrackFileFieldsEnabled()
   {
     boolean state = (this.fmtSelectFld.getSysTracks() > 0);
-    this.labelSysFile.setEnabled( state );
-    this.fldSysFileName.setEnabled( state );
-    this.btnSysFileSelect.setEnabled( state );
-    this.btnSysFileRemove.setEnabled(
-		state && (this.fldSysFileName.getFile() != null) );
+    this.labelSysTrackFile.setEnabled( state );
+    this.fldSysTrackFileName.setEnabled( state );
+    this.btnSysTrackFileSelect.setEnabled( state );
+    this.btnSysTrackFileRemove.setEnabled(
+		state && (this.fldSysTrackFileName.getFile() != null) );
+  }
+
+
+  private void updTitle()
+  {
+    String text = "JKCEMU CP/M-Diskettenabbilddatei erstellen";
+    if( this.lastOutFile != null ) {
+      StringBuilder buf = new StringBuilder( 256 );
+      buf.append( text );
+      buf.append( ": " );
+      String fName = this.lastOutFile.getName();
+      if( fName != null ) {
+	buf.append( fName );
+      }
+      text = buf.toString();
+    }
+    setTitle( text );
   }
 }
-

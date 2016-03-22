@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.Component;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
-import java.util.zip.GZIPOutputStream;
 import javax.sound.sampled.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.base.*;
@@ -20,6 +19,13 @@ import jkcemu.base.*;
 
 public class AudioUtil
 {
+  public static final String[] tapeFileExtensions = {
+					".cdt", ".csw", ".tap", ".tzx" };
+
+  public static final String ERROR_TEXT_LINE_UNAVAILABLE =
+	"Der Audio-Kanal kann nicht ge\u00F6ffnet werden,\n"
+		+ "da er bereits durch eine andere Anwendung benutzt wird.";
+
   private static javax.swing.filechooser.FileFilter audioInFileFilter  = null;
   private static javax.swing.filechooser.FileFilter audioOutFileFilter = null;
 
@@ -162,6 +168,10 @@ public class AudioUtil
   public static javax.swing.filechooser.FileFilter getAudioInFileFilter()
   {
     if( audioInFileFilter == null ) {
+      /*
+       * Es wird davon ausgegangen,
+       * dass die Ausgabeformate auch gelesen werden koennen.
+       */
       String[] ext = getAudioOutFileExtensions( null, null );
       if( ext != null ) {
 	if( ext.length == 0 ) {
@@ -169,6 +179,10 @@ public class AudioUtil
 	}
       }
       if( ext == null ) {
+	/*
+         * Sollten keine Ausgabeformate bekannt sein,
+	 * dann die Formate fest vorgeben
+	 */
 	ext = new String[] {
 			AudioFileFormat.Type.WAVE.getExtension(),
 			AudioFileFormat.Type.AU.getExtension(),
@@ -198,7 +212,7 @@ public class AudioUtil
     }
     if( t != null ) {
       if( t.length > 0 ) {
-	java.util.List<String> list = new ArrayList<String>( t.length );
+	java.util.List<String> list = new ArrayList<>( t.length );
 	for( AudioFileFormat.Type tmpT : t ) {
 	  String s = tmpT.getExtension();
 	  if( s != null ) {
@@ -235,7 +249,7 @@ public class AudioUtil
       StringBuilder buf = new StringBuilder( 256 );
       buf.append( "Sound-Dateien" );
       appendAudioFileExtensionText( buf, 3, ext );
-      audioOutFileFilter = new FileNameExtensionFilter( buf.toString(), ext );
+      audioOutFileFilter = new FileFilterWithGZ( buf.toString(), ext );
     }
     return audioOutFileFilter;
   }
@@ -276,23 +290,15 @@ public class AudioUtil
 			File                 file )
 		throws IllegalArgumentException, IOException
   {
-    if( EmuUtil.isGZipFile( file ) ) {
-      OutputStream     out  = null;
-      GZIPOutputStream gzip = null;
-      try {
-	out  = new FileOutputStream( file );
-	gzip = new GZIPOutputStream( out );
-	AudioSystem.write( in, fileType, gzip );
-	gzip.finish();
-	gzip.close();
-	gzip = null;
-      }
-      finally {
-	EmuUtil.doClose( gzip );
-	EmuUtil.doClose( out );
-      }
-    } else {
-      AudioSystem.write( in, fileType, file );
+    OutputStream out = null;
+    try {
+      out = EmuUtil.createOptionalGZipOutputStream( file );
+      AudioSystem.write( in, fileType, out );
+      out.close();
+      out = null;
+    }
+    finally {
+      EmuUtil.doClose( out );
     }
   }
 }

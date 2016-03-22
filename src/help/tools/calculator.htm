@@ -1,7 +1,7 @@
 <html>
 <body>
  <h1>Rechner</h1>
-  In JKCEMU ist ein Rechner integriert, der neben den &uuml;blichen
+  Im JKCEMU ist ein Rechner integriert, der neben den &uuml;blichen
   Taschenrechnerfunktionen auch das Rechnen mit Bin&auml;r-, Oktal-
   und Hexadezimalzahlen sowie die Umrechnung zwischen
   Unicode-Zeichen und seinem numerischen Wert unterst&uuml;tzt.
@@ -21,16 +21,12 @@
   mit bis zu 1000&nbsp;Vor- und 1000&nbsp;Nachkommastellen eingeben kann
   und die vier Grundrechenarten auch mit dieser Genauigkeit
   berechnet werden.
-  Alle anderen Berechnungen erfolgen mit der bei Computern
-  &uuml;blichen Genauigkeit von etwa 15&nbsp;Stellen
-  (64&nbsp;Bit Zahlenformat).
- <br/><br/>
-  Bzgl. der Rechengenauigkeit bei der Division gibt es folgende Ausnahme:
+  Bei der Division gibt es jedoch folgende Ausnahme:
   Hat das Ergbnis einen unendlich langen Nachkommaanteil,
   wird dieser auf ein sinnvolles Ma&szlig; gek&uuml;rzt ausgegeben.
-  Alle anderen Berechnungen erfolgen mit der bei Computern
-  &uuml;blichen Genauigkeit von etwa 15&nbsp;Stellen
-  (64&nbsp;Bit Zahlenformat).
+  Alle &uuml;ber die vier Grundrechenarten hinausgehenden Berechnungen
+  erfolgen mit der bei Computern &uuml;blichen Genauigkeit
+  von etwa 15&nbsp;Stellen (64&nbsp;Bit Zahlenformat).
  <br/><br/>
   Der Rechner kann auch als eigenst&auml;ndiges Programm
   ohne Emulator gestartet werden.
@@ -126,6 +122,11 @@
    <tr>
     <td>RND( <em>x</em> )<br/>RANDOM( <em>x</em> )</td>
     <td>Zufallszahl im Bereich 0 bis x</td>
+   </tr>
+   <tr><td>ROUND( <em>x</em> )</td><td>Runden auf ganze Zahl</td></tr>
+   <tr>
+    <td>SIG( <em>x</em> )<br/>SIGNUM( <em>x</em> )</td>
+    <td>Vorzeichen bestimmen,<br/>R&uuml;ckgabewerte: -1, 0 oder 1</td>
    </tr>
    <tr><td>SIN( <em>x</em> )</td><td>Sinus</td></tr>
    <tr><td>SINH( <em>x</em> )</td><td>Sinus Hyperbolicus</td></tr>

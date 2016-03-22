@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,6 +8,7 @@
 
 package jkcemu.base;
 
+import jkcemu.audio.AudioOut;
 import java.io.*;
 import java.lang.*;
 import javax.sound.sampled.AudioFormat;
@@ -21,16 +22,6 @@ public class EmuSysAudioDataStream extends InputStream
    * Die abgeleitete Klasse bietet Zugriff auf das interne Byte-Array,
    * um daraus die Audio-Daten wieder lesen zu koennen.
    * Dadurch wird eine Duplizierung der Audio-Daten vermieden.
-   *
-   * Sind in diesen Audio-Daten auch neative Werte enthalten,
-   * dann gilt folgende Bedeutung:
-   *   negativer Wert -> negative Phase
-   *   positiver Wert -> positiver Phase
-   *   Betrag des Wertes -> Anzahl Samples
-   * 
-   * Bei ausschliesslich positiven Werten gilt:
-   *   Nach jedem Byte erfolgt ein Phasenwechsel.
-   *   Der Wert des Bytes gibt die Anzahl der Samples ab.
    */
   public static class ByteOutBuf extends ByteArrayOutputStream
   {
@@ -55,10 +46,10 @@ public class EmuSysAudioDataStream extends InputStream
   private byte[]      audioBuf;
   private int         audioLen;
   private int         audioPos;
+  private float       sampleRate;
   private long        frameLen;
   private int         lastCnt;
   private boolean     lastPhase;
-  private boolean     negValues;
 
 
   protected EmuSysAudioDataStream(
@@ -67,35 +58,55 @@ public class EmuSysAudioDataStream extends InputStream
 			int    offs,
 			int    len )
   {
-    this.srcBuf    = buf;
-    this.srcPos    = offs;
-    this.srcEOF    = Math.min( offs + len, buf.length );
-    this.outBuf    = new ByteOutBuf( 0x10000 );
-    this.audioFmt  = new AudioFormat( sampleRate, 8, 1, false, false );
-    this.audioBuf  = null;
-    this.audioLen  = 0;
-    this.audioPos  = 0;
-    this.frameLen  = 0;
-    this.lastCnt   = 0;
-    this.lastPhase = false;
-    this.negValues = false;
+    this.sampleRate = sampleRate;
+    this.srcBuf     = buf;
+    this.srcPos     = offs;
+    this.srcEOF     = Math.min( offs + len, buf.length );
+    this.outBuf     = new ByteOutBuf( 0x10000 );
+    this.audioFmt   = null;
+    this.audioBuf   = null;
+    this.audioLen   = 0;
+    this.audioPos   = 0;
+    this.frameLen   = 0;
+    this.lastCnt    = 0;
+    this.lastPhase  = true;
   }
 
 
-  protected void addSamples( int value )
+  protected void addPhaseChangeSamples( int samples )
   {
-    this.outBuf.write( value );
-    if( value < 0 ) {
-      this.frameLen -= value;
-      this.negValues = true;
-    } else {
-      this.frameLen += value;
+    if( samples > 0 ) {
+      this.lastPhase = !this.lastPhase;
+      addSamples( this.lastPhase ? samples : -samples );
+    }
+  }
+
+
+  protected void addSamples( int samples )
+  {
+    this.lastPhase = (samples > 0);
+    while( samples <= -128 ) {
+      this.outBuf.write( -128 );
+      this.frameLen += 128;
+      samples += 128;
+    }
+    while( samples >= 127 ) {
+      this.outBuf.write( 127 );
+      this.frameLen += 127;
+      samples -= 127;
+    }
+    if( samples != 0 ) {
+      this.outBuf.write( samples );
+      this.frameLen += Math.abs( samples );
     }
   }
 
 
   public AudioFormat getAudioFormat()
   {
+    if( this.audioFmt == null ) {
+      this.audioFmt = new AudioFormat( this.sampleRate, 8, 1, false, false );
+    }
     return this.audioFmt;
   }
 
@@ -134,13 +145,32 @@ public class EmuSysAudioDataStream extends InputStream
   }
 
 
+  protected void setSampleRate( int sampleRate )
+  {
+    this.sampleRate = sampleRate;
+  }
+
+
   protected boolean sourceByteAvailable()
   {
     return (this.srcPos < this.srcEOF);
   }
 
 
-  protected boolean skipString( String text )
+  protected void skipSourceBytes( int len )
+  {
+    int pos = this.srcPos + len;
+    if( pos < 0 ) {
+      this.srcPos = 0;
+    } else if( pos > this.srcEOF ) {
+      this.srcPos = this.srcEOF;
+    } else {
+      this.srcPos = pos;
+    }
+  }
+
+
+  protected boolean skipSourceString( String text )
   {
     boolean rv  = false;
     int     len = text.length();
@@ -197,23 +227,18 @@ public class EmuSysAudioDataStream extends InputStream
       }
       if( this.audioPos < this.audioLen ) {
 	byte value = this.audioBuf[ this.audioPos++ ];
-	if( this.negValues ) {
-	  if( value < 0 ) {
-	    this.lastCnt   = (int) -value;
-	    this.lastPhase = false;
-	  } else {
-	    this.lastCnt   = (int) value;
-	    this.lastPhase = true;
-	  }
+	if( value < 0 ) {
+	  this.lastCnt   = (int) -value;
+	  this.lastPhase = false;
 	} else {
-	  this.lastCnt   = (int) value & 0xFF;
-	  this.lastPhase = !this.lastPhase;
+	  this.lastCnt   = (int) value;
+	  this.lastPhase = true;
 	}
       }
     }
     if( this.lastCnt > 0 ) {
       --this.lastCnt;
-      rv = (this.lastPhase ? 255 : 0);
+      rv = (this.lastPhase ? AudioOut.MAX_USED_VALUE : 0);
     }
     return rv;
   }

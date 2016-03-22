@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -37,7 +37,7 @@ public class Poly880SettingsFld extends AbstractSettingsFld
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
-    // Bereich Erweiterungen
+    // Tab Erweiterungen
     this.tabExt = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
 
@@ -54,27 +54,31 @@ public class Poly880SettingsFld extends AbstractSettingsFld
     this.btnRAM8000.addActionListener( this );
     this.tabExt.add( this.btnRAM8000, gbcExt );
 
-    gbcExt.fill    = GridBagConstraints.HORIZONTAL;
-    gbcExt.weightx = 1.0;
+    gbcExt.fill          = GridBagConstraints.HORIZONTAL;
+    gbcExt.weightx       = 1.0;
+    gbcExt.insets.top    = 10;
+    gbcExt.insets.bottom = 10;
     gbcExt.gridy++;
     this.tabExt.add( new JSeparator(), gbcExt );
 
     this.fldROM2 = new ROMFileSettingsFld(
-		settingsFrm,
-		propPrefix + "rom_2000.",
-		"ROM-Erweiterung 2000h-23FFh:" );
+				settingsFrm,
+				propPrefix + "rom_2000.",
+				"ROM-Erweiterung 2000h-23FFh:" );
+    gbcExt.insets.top    = 5;
+    gbcExt.insets.bottom = 5;
     gbcExt.gridy++;
     this.tabExt.add( this.fldROM2, gbcExt );
 
     this.fldROM3 = new ROMFileSettingsFld(
-		settingsFrm,
-		propPrefix + "rom_3000.",
-		"ROM-Erweiterung 3000h-33FFh:" );
+				settingsFrm,
+				propPrefix + "rom_3000.",
+				"ROM-Erweiterung 3000h-33FFh:" );
     gbcExt.gridy++;
     this.tabExt.add( this.fldROM3, gbcExt );
 
 
-    // Bereich Sonstiges
+    // Tab Sonstiges
     this.tabEtc = new JPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
@@ -147,6 +151,16 @@ public class Poly880SettingsFld extends AbstractSettingsFld
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void lookAndFeelChanged()
+  {
+    this.fldAltROM0.lookAndFeelChanged();
+    this.fldAltROM1.lookAndFeelChanged();
+    this.fldROM2.lookAndFeelChanged();
+    this.fldROM3.lookAndFeelChanged();
   }
 
 

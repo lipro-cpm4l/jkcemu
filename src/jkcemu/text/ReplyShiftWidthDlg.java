@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -142,12 +142,12 @@ public class ReplyShiftWidthDlg extends BasicDlg
 	if( shiftWidth > 0 ) {
 	  this.textEditFrm.setShiftWidth( shiftWidth );
 	  Main.setProperty(
-			"jkcemu.texteditor.shift.width",
+			TextEditFrm.PROP_SHIFT_WIDTH,
 			value.toString() );
 	  boolean useTabs = this.tglUseTabs.isSelected();
 	  this.textEditFrm.setShiftUseTabs( useTabs );
 	  Main.setProperty(
-			"jkcemu.texteditor.shift.use_tabs",
+			TextEditFrm.PROP_SHIFT_USE_TABS,
 			Boolean.toString( useTabs ) );
 	  doClose();
 	}

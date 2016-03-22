@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -39,6 +39,11 @@ public class BasicOptions extends PrgOptions
   private int            stackSize;
   private boolean        checkStack;
   private boolean        checkBounds;
+  private boolean        openCrtEnabled;
+  private boolean        openLptEnabled;
+  private boolean        openFileEnabled;
+  private boolean        openVdipEnabled;
+  private boolean        inclBasicLines;
   private boolean        preferRelJumps;
   private boolean        printLineNumOnAbort;
   private boolean        showAsmText;
@@ -59,6 +64,11 @@ public class BasicOptions extends PrgOptions
     this.stackSize           = DEFAULT_STACK_SIZE;
     this.checkStack          = true;
     this.checkBounds         = true;
+    this.openCrtEnabled      = true;
+    this.openLptEnabled      = true;
+    this.openFileEnabled     = true;
+    this.openVdipEnabled     = true;
+    this.inclBasicLines      = true;
     this.preferRelJumps      = true;
     this.printLineNumOnAbort = true;
     this.showAsmText         = false;
@@ -127,6 +137,22 @@ public class BasicOptions extends PrgOptions
 			props,
 			"jkcemu.programming.basic.bounds.check" );
 
+      Boolean openCrtEnabled = getBoolean(
+			props,
+			"jkcemu.programming.basic.open.crt.enabled" );
+
+      Boolean openLptEnabled = getBoolean(
+			props,
+			"jkcemu.programming.basic.open.lpt.enabled" );
+
+      Boolean openFileEnabled = getBoolean(
+			props,
+			"jkcemu.programming.basic.open.file.enabled" );
+
+      Boolean openVdipEnabled = getBoolean(
+			props,
+			"jkcemu.programming.basic.open.vdip.enabled" );
+
       Boolean preferRelJumps = getBoolean(
 			props,
 			"jkcemu.programming.basic.prefer_relative_jumps" );
@@ -138,6 +164,10 @@ public class BasicOptions extends PrgOptions
       Boolean showAsmText = getBoolean(
 			props,
 			"jkcemu.programming.basic.show_assembler_source" );
+
+      Boolean inclBasicLines = getBoolean(
+			props,
+			"jkcemu.programming.basic.include_basic_lines" );
 
       Boolean warnUnusedItems = getBoolean(
 			props,
@@ -155,9 +185,14 @@ public class BasicOptions extends PrgOptions
 	  || (stackSize != null)
 	  || (checkStack != null)
 	  || (checkBounds != null)
+	  || (openCrtEnabled != null)
+	  || (openLptEnabled != null)
+	  || (openFileEnabled != null)
+	  || (openVdipEnabled != null)
 	  || (preferRelJumps != null)
 	  || (printLineNumOnAbort != null)
 	  || (showAsmText != null)
+	  || (inclBasicLines != null)
 	  || (warnUnusedItems != null)
 	  || (breakOptionText != null) )
       {
@@ -190,6 +225,18 @@ public class BasicOptions extends PrgOptions
 	if( checkBounds != null ) {
 	  options.checkBounds = checkBounds.booleanValue();
 	}
+	if( openCrtEnabled != null ) {
+	  options.openCrtEnabled = openCrtEnabled.booleanValue();
+	}
+	if( openLptEnabled != null ) {
+	  options.openLptEnabled = openLptEnabled.booleanValue();
+	}
+	if( openFileEnabled != null ) {
+	  options.openFileEnabled = openFileEnabled.booleanValue();
+	}
+	if( openVdipEnabled != null ) {
+	  options.openVdipEnabled = openVdipEnabled.booleanValue();
+	}
 	if( preferRelJumps != null ) {
 	  options.preferRelJumps = preferRelJumps.booleanValue();
 	}
@@ -198,6 +245,9 @@ public class BasicOptions extends PrgOptions
 	}
 	if( showAsmText != null ) {
 	  options.showAsmText = showAsmText.booleanValue();
+	}
+	if( inclBasicLines != null ) {
+	  options.inclBasicLines = inclBasicLines.booleanValue();
 	}
 	if( warnUnusedItems != null ) {
 	  options.warnUnusedItems = warnUnusedItems.booleanValue();
@@ -250,6 +300,12 @@ public class BasicOptions extends PrgOptions
   public EmuSys getEmuSys()
   {
     return this.emuSys;
+  }
+
+
+  public boolean getIncludeBasicLines()
+  {
+    return this.inclBasicLines;
   }
 
 
@@ -307,6 +363,30 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public boolean isOpenCrtEnabled()
+  {
+    return this.openCrtEnabled;
+  }
+
+
+  public boolean isOpenFileEnabled()
+  {
+    return this.openFileEnabled;
+  }
+
+
+  public boolean isOpenLptEnabled()
+  {
+    return this.openLptEnabled;
+  }
+
+
+  public boolean isOpenVdipEnabled()
+  {
+    return this.openVdipEnabled;
+  }
+
+
   public void setAppName( String appName )
   {
     this.appName = appName;
@@ -355,9 +435,39 @@ public class BasicOptions extends PrgOptions
   }
 
 
+  public void setIncludeBasicLines( boolean state )
+  {
+    this.inclBasicLines = state;
+  }
+
+
   public void setLangCode( String langCode )
   {
     this.langCode = langCode;
+  }
+
+
+  public void setOpenCrtEnabled( boolean state )
+  {
+    this.openCrtEnabled = state;
+  }
+
+
+  public void setOpenLptEnabled( boolean state )
+  {
+    this.openLptEnabled = state;
+  }
+
+
+  public void setOpenFileEnabled( boolean state )
+  {
+    this.openFileEnabled = state;
+  }
+
+
+  public void setOpenVdipEnabled( boolean state )
+  {
+    this.openVdipEnabled = state;
   }
 
 
@@ -416,6 +526,11 @@ public class BasicOptions extends PrgOptions
 	    && (options.stackSize           == this.stackSize)
 	    && (options.checkStack          == this.checkStack)
 	    && (options.checkBounds         == this.checkBounds)
+	    && (options.openCrtEnabled      == this.openCrtEnabled)
+	    && (options.openLptEnabled      == this.openLptEnabled)
+	    && (options.openFileEnabled     == this.openFileEnabled)
+	    && (options.openVdipEnabled     == this.openVdipEnabled)
+	    && (options.inclBasicLines      == this.inclBasicLines)
 	    && (options.preferRelJumps      == this.preferRelJumps)
 	    && (options.printLineNumOnAbort == this.printLineNumOnAbort)
 	    && (options.showAsmText         == this.showAsmText)
@@ -460,16 +575,32 @@ public class BasicOptions extends PrgOptions
                 Integer.toString( this.heapSize ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.bounds.check",
-                Boolean.toString( this.checkBounds ) );
+		"jkcemu.programming.basic.stack.size",
+                Integer.toString( this.stackSize ) );
 
       props.setProperty(
 		"jkcemu.programming.basic.stack.check",
                 Boolean.toString( this.checkStack ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.stack.size",
-                Integer.toString( this.stackSize ) );
+		"jkcemu.programming.basic.bounds.check",
+                Boolean.toString( this.checkBounds ) );
+
+      props.setProperty(
+		"jkcemu.programming.basic.open.crt.enabled",
+                Boolean.toString( this.openCrtEnabled ) );
+
+      props.setProperty(
+		"jkcemu.programming.basic.open.lpt.enabled",
+                Boolean.toString( this.openLptEnabled ) );
+
+      props.setProperty(
+		"jkcemu.programming.basic.open.file.enabled",
+                Boolean.toString( this.openFileEnabled ) );
+
+      props.setProperty(
+		"jkcemu.programming.basic.open.vdip.enabled",
+                Boolean.toString( this.openVdipEnabled ) );
 
       props.setProperty(
 		"jkcemu.programming.basic.prefer_relative_jumps",
@@ -482,6 +613,10 @@ public class BasicOptions extends PrgOptions
       props.setProperty(
 		"jkcemu.programming.basic.show_assembler_source",
                 Boolean.toString( this.showAsmText ) );
+
+      props.setProperty(
+		"jkcemu.programming.basic.include_basic_lines",
+                Boolean.toString( this.inclBasicLines ) );
 
       props.setProperty(
 		"jkcemu.programming.warn_unused_items",
@@ -502,4 +637,3 @@ public class BasicOptions extends PrgOptions
     }
   }
 }
-

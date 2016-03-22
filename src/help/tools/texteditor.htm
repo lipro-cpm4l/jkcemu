@@ -13,9 +13,6 @@
        <li>
 	<a href="texteditor.htm#emusys">3.1.1. Dateien der emulierten Systeme</a>
        </li>
-       <li>
-	<a href="texteditor.htm#wordstar">3.1.2. WordStar-Dateien</a>
-       </li>
       </ul>
      </li>
      <li>
@@ -34,6 +31,9 @@
      <li>
       <a href="texteditor.htm#conv_umlauts">3.9. Deutsche Umlaute konvertieren</a>
      </li>
+     <li>
+      <a href="texteditor.htm#wordstar">3.10. WordStar-Formatierungen entfernen</a>
+     </li>
     </ul>
    </li>
   </ul>
@@ -41,34 +41,32 @@
 
 
  <h2><a name="intro">1. Vorbemerkungen</a></h2>
-  Die Text- und Dokumentationsdateien der emulierten Computer
-  sind h&auml;ufig in einem Format gespeichert,
-  welches aufgrund eines anderen Zeilenendezeichens
-  mit heute &uuml;blichen Texteditoren nicht angesehen werden kann.
-  Au&szlig;erdem werden deutsche Umlaute h&auml;ufig in einem
-  speziellen Zeichensatz (ISO-646 Variante&nbsp;21) dargestellt,
-  der heute nicht mehr gebr&auml;uchlich ist.
-  Wird ein solcher Text in einem ASCII-Editor angezeigt,
-  so sind anstelle der deutschen Umlaute die Zeichen
-  <tt>[\]{|}~</tt> zu sehen.
-  Des Weiteren muss zum Anzeigen von Assembler-Quelltexten und
-  BASIC-Programmen immer erst der Assembler bzw. der BASIC-Interpreter
-  gestartet werden.
-  Zusammengefasst ist das Betrachten von alten Dateien,
-  die in irgendeiner Form Text enthalten,
-  auf heutigen Computern recht m&uuml;hselig.
+  Ein Texteditor dient nat&uuml;rlich zum Anzeigen und Bearbeiten
+  von Textdateien.
+  Der JKCEMU-Texteditor ist aber insbesondere auf die Belange
+  des Emulators ausgelegt.
+  So bietet er einerseits Zugang zum <a href="assembler.htm">Assembler</a>
+  und zum <a href="basicc.htm">BASIC-Compiler</a>
+  und andereseits kann er mit den &uuml;blichen Zeichens&auml;tzen
+  und teilweise auch mit den Dateiformaten der emulierten Systeme umgehen.
  <br/><br/>
-  Der JKCEMU-Texteditor dient dazu, Textdateien,
-  EDAS*4-Assemblerquelltexte, AC1-BASIC, AC1-Mini-BASIC-,
-  KC-BASIC- und Z1013-Tiny-BASIC-Programme anzuzeigen
-  und in heute &uuml;bliche Textdateien zu konvertieren.
-  Au&szlig;erdem bietet der Texteditor Zugriff auf den
-  <a href="assembler.htm">Assembler</a> und den
-  <a href="basicc.htm">BASIC-Compiler</a>, d.h,
-  die zu &uuml;bersetzenden Quelltexte m&uuml;ssen
-  in dem Texteditor ge&ouml;ffnet oder geschrieben werden.
-  Ein angefangenes Assembler- oder BASIC-Programm k&ouml;nnen Sie auch
-  als <a href="prjfiles.htm">Projekt</a> speichern und wieder &ouml;ffnen.
+  Der Zugang zum Assembler und zum BASIC-Compiler sieht so aus,
+  dass Sie das jeweilige Assembler- bzw. BASIC-Programm im JKCEMU-Texteditor
+  schreiben und anschlie&szlig;end den Assembler bzw. den BASIC-Compiler
+  &uuml;ber das Men&uuml; <em>Programmierung</em> aufrufen.
+  Ein angefangenes Assembler- oder BASIC-Programm k&ouml;nnen Sie
+  als <a href="prjfiles.htm">Projekt</a> speichern und wieder &ouml;ffnen,
+  damit auch die jeweils eingestellten Optionen erhalten bleiben.
+ <br/><br/>
+  M&ouml;chten Sie zur Programmierung einen anderen Texteditor verwenden,
+  k&ouml;nnen Sie den Assembler und den BASIC-Compiler &uuml;ber die
+  Kommandozeile aufrufen (siehe <a href="assembler.htm#cmdline">hier</a>
+  und <a href="basicc/cmdline.htm">hier</a>).
+ <br/><br/>
+  Alte Dateiformate werden in der Form unterst&uuml;tzt,
+  dass beim &Ouml;ffnen von EDAS*4-Assemblerquelltextdateien
+  und diversen BASIC-Programmdateien der jeweilige Quelltext extrahiert
+  und in Form einer neuen Textdatei bereitstellen wird.
  <br/><br/>
 
 
@@ -132,12 +130,33 @@
  <br/>
   <ul>
    <li>
+    BASIC-Programmdatei folgender BASIC-Interpreter:
+    <ul>
+     <li>AC1 8K BASIC</li>
+     <li>AC1 12K BASIC</li>
+     <li>AC1 BASIC6</li>
+     <li>AC1 BACOBAS&nbsp;2 (nur Normalmodus, kein BASICODE)</li>
+     <li>AC1 BACOBAS&nbsp;3 (nur Normalmodus, kein BASICODE)</li>
+     <li>H&uuml;bler/Grafik-MC BASIC</li>
+     <li>Kramer-MC BASIC</li>
+     <li>LLCBASIC (nur Normalmodus, kein BASICODE)</li>
+    </ul>
+   </li>
+   <li>
     Headersave-Datei mit Dateityp &quot;A&quot;,
     wenn die Datei einen EDAS*4-Quelltext enth&auml;lt
    </li>
-   <li>Headersave-Datei mit Dateityp &quot;B&quot; (BASIC-Programm)</li>
    <li>
-    Headersave-Datei mit Dateityp &quot;b&quot; (Mini-/Tiny-BASIC-Programm)
+    Headersave-Datei mit Dateityp &quot;B&quot;
+    (BASIC-Programm von einem der o.g. BASIC-Interpreter)
+   </li>
+   <li>
+    Headersave-Datei mit Dateityp &quot;b&quot; (Mini-/Tiny-BASIC):
+    <ul>
+     <li>AC1 Mini-BASIC&nbsp;V2.1</li>
+     <li>LLC1-BASIC&nbsp;V1.2</li>
+     <li>Z1013 BASIC&nbsp;3.01</li>
+    </ul>
    </li>
    <li>
     Headersave-Datei mit Dateityp &quot;I&quot; oder &quot;T&quot;,
@@ -161,21 +180,6 @@
     aus KCC-/KC-TAP-Datei extrahieren</a>).
    </li>
   </ul>
- <br/><br/>
-
- <h3><a name="wordstar">3.1.2. WordStar-Dateien</a></h3>
-  Erkennt der Texteditor beim &Ouml;ffnen einer Datei
-  WordStar-artige Formatierungen, werden Sie gefragt,
-  ob Sie die Datei als WordStar-Datei importieren oder
-  als Textdatei &ouml;ffnen m&ouml;chten.
-  Beim Importieren wird der in der Datei enthaltene Text extrahiert
-  und ohne Formatierungen als neue Textdatei ge&ouml;ffnet.
-  So haben Sie die M&ouml;glichkeit, WordStar-Dateien vern&uuml;nftig
-  zu lesen, wenn auch ohne Formatierungen.
- <br/><br/>
-  Die andere M&ouml;glichkeit, das &Ouml;ffnen als Textdatei,
-  ist f&uuml;r den Fall gedacht, dass die Datei keine WordStar-Datei ist
-  und nur f&auml;lschlicherweise als solche erkannt wurde.
  <br/><br/>
 
  <h3><a name="open_with">3.2. Datei &ouml;ffnen mit Zeichensatz</a></h3>
@@ -210,7 +214,9 @@
   Nach dem Best&auml;tigen sehen Sie ein neues Fenster,
   in dem Sie die Eigenschaften angeben k&ouml;nnen.
   Damit ist es auch m&ouml;glich, eine Textdatei in einem anderen
-  als den Systemzeichensatz zu speichern.
+  als den Systemzeichensatz zu speichern oder
+  die Zeilenende-Bytes (DOS/Windows- bzw. Unix/Linux-Format)
+  zu &auml;ndern.
  <br/><br/>
 
  <h3><a name="print">3.5. Drucken</a></h3>
@@ -287,5 +293,35 @@
   mit welchem Zeichensatz der Text erstellt wurde
   und &uuml;berlegen Sie bitte sorgf&auml;ltig,
   ob und wie Sie Zeichen umwandeln m&uuml;ssen.
+ <br/><br/>
+
+ <h3><a name="wordstar">3.10. WordStar-Formatierungen entfernen</a></h3>
+  WordStar war zu Zeiten der 8-Bit-Computer eine weit verbreitete
+  Textverarbung.
+  Aus diesem Grund wurden viele Dokumentationen in WordStar erstellt.
+  Damit Sie solche Dateien lesen k&ouml;nnen, bietet der JKCEMU-Texteditor
+  daf&uuml;r eine spezielle Unterst&uuml;tzung an:
+  Wenn Sie nach dem &Ouml;ffnen einer Datei erkennen,
+  dass es sich um eine WordStar-Datei handelt,
+  k&ouml;nnen Sie mit dem Men&uuml;punkt die WordStar-Formatierungen
+  entfernen und so eine einfache Textdatei daraus machen.
+  Eine WordStar-Datei erkennt man meistens daran,
+  dass der letzte Buchstabe eines jeden Wortes durch ein
+  seltsames Zeichen dargestellt wird.
+ <br/><br/>
+  <b>Achtung!</b> Eine WordStar-Datei enth&auml;lt auch Bytes,
+  die abh&auml;ngig vom verwendeten Zeichensatz
+  keine lesbaren oder falsche Textzeichen ergeben.
+  Aus diesem Grund sollte eine WordStar-Datei mit einem Zeichensatz
+  ge&ouml;ffnet werden, der nicht zu solchen Effekten f&uuml;hrt.
+  Wenn Sie also feststellen, dass Sie eine WordStar-Datei
+  ge&ouml;ffnet haben,
+  dann sollten Sie am besten die Datei wieder schlie&szlig;en
+  und anschlie&szlig;end mit dem Men&uuml;punkt
+  <a href="texteditor.htm#open_with">Datei &ouml;ffnen mit Zeichensatz</a>
+  erneut &ouml;ffnen und dabei den Zeichensatz
+  <em>ISO-8859-1&nbsp;(Latin&nbsp;1)</em> ausw&auuml;hlen.
+  Danach k&ouml;nnen Sie dann bedenkenlos die WordStar-Formatierungen
+  entfernen.
 </body>
 </html>

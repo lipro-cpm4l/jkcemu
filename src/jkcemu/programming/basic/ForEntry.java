@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
+import jkcemu.programming.PrgSource;
 
 
 public class ForEntry extends LoopEntry
@@ -19,7 +20,7 @@ public class ForEntry extends LoopEntry
 
 
   public ForEntry(
-		int           sourceLineNum,
+		PrgSource     source,
 		long          basicLineNum,
 		String        loopLabel,
 		String        exitLabel,
@@ -27,7 +28,7 @@ public class ForEntry extends LoopEntry
 		Integer       toValue,
 		Integer       stepValue )
   {
-    super( sourceLineNum, basicLineNum, loopLabel, exitLabel );
+    super( source, basicLineNum, loopLabel, exitLabel );
     this.varInfo   = varInfo;
     this.toValue   = toValue;
     this.stepValue = stepValue;

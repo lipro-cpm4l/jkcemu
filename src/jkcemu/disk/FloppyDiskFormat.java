@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,53 +14,65 @@ import java.lang.*;
 public class FloppyDiskFormat
 {
   public static final FloppyDiskFormat FMT_400K
-			= new FloppyDiskFormat(
-				1, 80, 5, 1024,
-				0, 2, 2048, true, false,
-				"400K (LLC2 CP/L)" );
+	= new FloppyDiskFormat(
+		1, 80, 5, 1024, 1,
+		0, 2, 2048, true, false,
+		"400K (LLC2 CP/L)" );
 
   public static final FloppyDiskFormat FMT_624K
-			= new FloppyDiskFormat(
-				2, 80, 16, 256,
-				2, 2, 2048, true, false,
-				"624K (PC/M)" );
+	= new FloppyDiskFormat(
+		2, 80, 16, 256, 1,
+		2, 2, 2048, true, false,
+		"624K Standard (PC/M)" );
 
-  public static final FloppyDiskFormat FMT_711K_BASDOS
-			= new FloppyDiskFormat(
-				2, 80, 9, 512,
-				1, 1, 4096, true, false,
-				"711K (KC compact BASDOS)" );
+  public static final FloppyDiskFormat FMT_711K_I5_BASDOS
+	= new FloppyDiskFormat(
+		2, 80, 9, 512, 5,
+		1, 1, 4096, true, false,
+		"711K (KC compact BASDOS)" );
 
   public static final FloppyDiskFormat FMT_720K
-			= new FloppyDiskFormat(
-				2, 80, 9, 512,
-				0, 2, 2048, true, false,
-				"720K (A5105 RBASIC/SCPX)" );
+	= new FloppyDiskFormat(
+		2, 80, 9, 512, 1,
+		0, 2, 2048, true, false,
+		"720K Standard (A5105 RBASIC/SCPX)" );
 
   public static final FloppyDiskFormat FMT_780K
-			= new FloppyDiskFormat(
-				2, 80, 5, 1024,
-				2, 2, 2048, true, false,
-				"780K (A5105 RBASIC/SCPX, CAOS,"
-					+ " MicroDOS, Z1013 CP/M)" );
+	= new FloppyDiskFormat(
+		2, 80, 5, 1024, 1,
+		2, 2, 2048, true, false,
+		"780K Standard (CAOS, NANOS, Z1013 CP/M)" );
 
-  public static final FloppyDiskFormat FMT_780K_DATESTAMPER
-			= new FloppyDiskFormat(
-				2, 80, 5, 1024,
-				2, 2, 2048, true, true,
-				"780K mit DateStamper (ZDOS/ML-DOS)" );
+  public static final FloppyDiskFormat FMT_780K_I2
+	= new FloppyDiskFormat(
+		2, 80, 5, 1024, 2,
+		2, 2, 2048, true, false,
+		"780K mit Interleave 2:1 (A5105 RBASIC/SCPX)" );
 
-  public static final FloppyDiskFormat FMT_800K
-			= new FloppyDiskFormat(
-				2, 80, 5, 1024,
-				0, 3, 2048, true, false,
-				"800K (Z9001 CP/A)" );
+  public static final FloppyDiskFormat FMT_780K_I3
+	= new FloppyDiskFormat(
+		2, 80, 5, 1024, 3,
+		2, 2, 2048, true, false,
+		"780K mit Interleave 3:1 (MicroDOS)" );
+
+  public static final FloppyDiskFormat FMT_780K_I3_DATESTAMPER
+	= new FloppyDiskFormat(
+		2, 80, 5, 1024, 3,
+		2, 2, 2048, true, true,
+		"780K mit Interleave 3:1 und DateStamper (ZDOS/ML-DOS)" );
+
+  public static final FloppyDiskFormat FMT_800K_I4
+	= new FloppyDiskFormat(
+		2, 80, 5, 1024, 4,
+		0, 3, 2048, true, false,
+		"800K mit Interleave 4:1 (Z9001 CP/A)" );
 
   private static final FloppyDiskFormat[] formats = {
 			new FloppyDiskFormat( 2, 80,  9,  512 ),
 			new FloppyDiskFormat( 2, 80,  5, 1024 ),
 			new FloppyDiskFormat( 2, 80, 15,  512 ),
 			new FloppyDiskFormat( 2, 80, 18,  512 ),
+			new FloppyDiskFormat( 2, 80, 11, 1024 ),
 			new FloppyDiskFormat( 2, 80, 36,  512 ),
 			new FloppyDiskFormat( 2, 80, 16,  256 ),
 			new FloppyDiskFormat( 1, 80,  5, 1024 ),
@@ -80,6 +92,7 @@ public class FloppyDiskFormat
   private int     cyls;
   private int     sectorsPerCyl;
   private int     sectorSize;
+  private int     interleave;
   private int     diskSize;
   private int     sysTracks;
   private int     dirBlocks;
@@ -94,6 +107,7 @@ public class FloppyDiskFormat
 		int     cyls,
 		int     sectorsPerCyl,
 		int     sectorSize,
+		int     interleave,
 		int     sysTracks,
                 int     dirBlocks,
                 int     blockSize,
@@ -105,6 +119,7 @@ public class FloppyDiskFormat
     this.cyls          = cyls;
     this.sectorsPerCyl = sectorsPerCyl;
     this.sectorSize    = sectorSize;
+    this.interleave    = interleave;
     this.diskSize      = sides * cyls * sectorsPerCyl * sectorSize;
     this.sysTracks     = sysTracks;
     this.dirBlocks     = dirBlocks;
@@ -147,6 +162,7 @@ public class FloppyDiskFormat
 	cyls,
 	sectorsPerCyl,
 	sectorSize,
+	1,
 	-1,
 	-1,
 	-1,
@@ -226,6 +242,12 @@ public class FloppyDiskFormat
   }
 
 
+  public int getInterleave()
+  {
+    return this.interleave;
+  }
+
+
   public static int getMaxDiskSize()
   {
     if( maxDiskSize == null ) {
@@ -272,7 +294,7 @@ public class FloppyDiskFormat
   }
 
 
-  public boolean supportsDateStamper()
+  public boolean isDateStamperEnabled()
   {
     return this.dateStamper;
   }

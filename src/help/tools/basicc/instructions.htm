@@ -14,7 +14,6 @@
  <br/>
   Der Compiler kennt folgende BASIC-Anweisungen:
  <br/>
-  &nbsp;<a href="instructions.htm#accept"><tt>ACCEPT</tt></a>
   &nbsp;<a href="instructions.htm#asm"><tt>ASM</tt></a>
   &nbsp;<a href="instructions.htm#border"><tt>BORDER</tt></a>
   &nbsp;<a href="instructions.htm#call"><tt>CALL</tt></a>
@@ -22,10 +21,8 @@
   &nbsp;<a href="instructions.htm#close"><tt>CLOSE</tt></a>
   &nbsp;<a href="instructions.htm#cls"><tt>CLS</tt></a>
   &nbsp;<a href="instructions.htm#color"><tt>COLOR</tt></a>
-  &nbsp;<a href="instructions.htm#connect"><tt>CONNECT</tt></a>
   &nbsp;<a href="instructions.htm#cursor"><tt>CURSOR</tt></a>
   &nbsp;<a href="instructions.htm#data"><tt>DATA</tt></a>
-  &nbsp;<a href="instructions.htm#datagram"><tt>DATAGRAM</tt></a>
   &nbsp;<a href="instructions.htm#declare"><tt>DECLARE</tt></a>
   &nbsp;<a href="instructions.htm#defusr"><tt>DEF</tt></a>
   &nbsp;<a href="instructions.htm#defusr"><tt>DEFUSR</tt></a>
@@ -39,12 +36,12 @@
   &nbsp;<a href="instructions.htm#end"><tt>END</tt></a>
   &nbsp;<a href="instructions.htm#if"><tt>ENDIF</tt></a>
   &nbsp;<a href="instructions.htm#exit"><tt>EXIT</tt></a>
-  &nbsp;<a href="instructions.htm#flush"><tt>FLUSH</tt></a>
   &nbsp;<a href="instructions.htm#for"><tt>FOR</tt></a>
   &nbsp;<a href="instructions.htm#function"><tt>FUNCTION</tt></a>
   &nbsp;<a href="instructions.htm#gosub"><tt>GOSUB</tt></a>
   &nbsp;<a href="instructions.htm#goto"><tt>GOTO</tt></a>
   &nbsp;<a href="instructions.htm#if"><tt>IF</tt></a>
+  &nbsp;<a href="instructions.htm#include"><tt>INCLUDE</tt></a>
   &nbsp;<a href="instructions.htm#ink"><tt>INK</tt></a>
   &nbsp;<a href="instructions.htm#input"><tt>INPUT</tt></a>
   &nbsp;<a href="instructions.htm#label"><tt>LABEL</tt></a>
@@ -62,6 +59,7 @@
   &nbsp;<a href="instructions.htm#on_goto"><tt>ON...GOTO</tt></a>
   &nbsp;<a href="instructions.htm#open"><tt>OPEN</tt></a>
   &nbsp;<a href="instructions.htm#out"><tt>OUT</tt></a>
+  &nbsp;<a href="instructions.htm#paint"><tt>PAINT</tt></a>
   &nbsp;<a href="instructions.htm#paper"><tt>PAPER</tt></a>
   &nbsp;<a href="instructions.htm#password_input"><tt>PASSWORD&nbsp;INPUT</tt></a>
   &nbsp;<a href="instructions.htm#pause"><tt>PAUSE</tt></a>
@@ -77,8 +75,6 @@
   &nbsp;<a href="instructions.htm#restore"><tt>RESTORE</tt></a>
   &nbsp;<a href="instructions.htm#return"><tt>RETURN</tt></a>
   &nbsp;<a href="instructions.htm#screen"><tt>SCREEN</tt></a>
-  &nbsp;<a href="instructions.htm#send"><tt>SEND</tt></a>
-  &nbsp;<a href="instructions.htm#set"><tt>SET</tt></a>
   &nbsp;<a href="instructions.htm#sub"><tt>SUB</tt></a>
   &nbsp;<a href="instructions.htm#wait"><tt>WAIT</tt></a>
   &nbsp;<a href="instructions.htm#wend"><tt>WEND</tt></a>
@@ -93,10 +89,6 @@
  <h3><a name="instr_list">1. Liste der Anweisungen</a></h3>
   <table border="1">
    <tr><th nowrap>Anweisung</th><th nowrap>Bedeutung</th></tr>
-   <tr valign="top">
-    <td><a href="instructions.htm#accept"><tt>ACCEPT</tt></a></td>
-    <td>Auf eine TCP-Verbindung warten</td>
-   </tr>
    <tr valign="top">
     <td><a href="instructions.htm#asm"><tt>ASM</tt></a></td>
     <td>Assemblerquelltext einf&uuml;gen</td>
@@ -126,10 +118,6 @@
     <td>Farben setzen</td>
    </tr>
    <tr valign="top">
-    <td><a href="instructions.htm#connect"><tt>CONNECT</tt></a></td>
-    <td>TCP-Verbindung aufbauen</td>
-   </tr>
-   <tr valign="top">
     <td><a href="instructions.htm#cursor"><tt>CURSOR</tt></a></td>
     <td>Cursor aus- oder einschalten</td>
    </tr>
@@ -138,12 +126,6 @@
     <td>
      Angabe von numerischen Werten,
      die mit READ gelesen werden k&ouml;nnen
-    </td>
-   </tr>
-   <tr valign="top">
-    <td><a href="instructions.htm#datagram"><tt>DATAGRAM</tt></a></td>
-    <td>
-     Verbindungslose Netzwerkkommunikation beginnen (UDP-Port &ouml;ffnen)
     </td>
    </tr>
    <tr valign="top">
@@ -199,10 +181,6 @@
     <td>Vorzeitiges Verlassen einer Schleife</td>
    </tr>
    <tr valign="top">
-    <td><a href="instructions.htm#flush"><tt>FLUSH</tt></a></td>
-    <td>Puffer  eines Ausgabekanals leeren</td>
-   </tr>
-   <tr valign="top">
     <td><a href="instructions.htm#for"><tt>FOR</tt></a></td>
     <td>Beginn einer FOR-Schleife</td>
    </tr>
@@ -221,6 +199,10 @@
    <tr valign="top">
     <td><a href="instructions.htm#if"><tt>IF</tt></a></td>
     <td>Bedingte Verzweigung</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#include"><tt>INCLUDE</tt></a></td>
+    <td>Einbinden einer weiteren Quelltextdatei</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#ink"><tt>INK</tt></a></td>
@@ -298,6 +280,10 @@
     <td>Ausgabe eines Wertes an einem Ausgabetor (Port)</td>
    </tr>
    <tr valign="top">
+    <td><a href="instructions.htm#paint"><tt>PAINT</tt></a></td>
+    <td>Fl&auml;che f&uuml;llen</td>
+   </tr>
+   <tr valign="top">
     <td><a href="instructions.htm#paper"><tt>PAPER</tt></a></td>
     <td>Hintergrundfarbe setzen</td>
    </tr>
@@ -309,7 +295,7 @@
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#pause"><tt>PAUSE</tt></a></td>
-    <td>Programm f&uuml;r eine vorgegebene Zeit anhalten</td>
+    <td>Programm anhalten</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#pen"><tt>PEN</tt></a></td>
@@ -362,14 +348,6 @@
     <td>Einstellen eines Bildschirm- bzw. Grafikmodus</td>
    </tr>
    <tr valign="top">
-    <td><a href="instructions.htm#send"><tt>SEND</tt></a></td>
-    <td>UDP-Datenpaket senden</td>
-   </tr>
-   <tr valign="top">
-    <td><a href="instructions.htm#set"><tt>SET</tt></a></td>
-    <td>Konfigurieren von KCNet</td>
-   </tr>
-   <tr valign="top">
     <td><a href="instructions.htm#sub"><tt>SUB</tt></a></td>
     <td>Implementierung einer benutzerdefinierten Prozedur</td>
    </tr>
@@ -395,75 +373,6 @@
   und sind entsprechend zu ersetzten.
   In eckigen Klammern eingeschlossene Elemente sind optional
   und k&ouml;nnen weggelassen werden.
- <br/><br/>
-
- <h3><a name="accept">ACCEPT</a></h3>
-  <table border="1">
-   <tr valign="top">
-    <td>Syntax:</td>
-    <td nowrap="nowrap">
-     <tt>ACCEPT</tt> &lt;Port&gt; <tt>AS #</tt> &lt;Kanal&gt;
-    </td>
-   </tr>
-   <tr><td>Port:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top">
-    <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
-   </tr>
-  </table>
- <br/>
-  Die Anweisung dient zur Programmierung eines TCP-Servers.
-  Es wird ein <a href="../../kcnet.htm">KCNet</a>-Socket
-  ge&ouml;ffnet und an dem angegebenen Port gelauscht.
-  Sobald eine Verbindungsanforderung eintrifft, wird diese aktzeptiert.
-  Die Anweisung kehrt zur&uuml;ck,
-  wenn die Netzwerkverbindung steht oder ein Fehler aufgetreten ist
-  (siehe Fehlervariablen&nbsp;<a href="functions.htm#err">ERR</a>
-  und <a href="functions.htm#err$">ERR$</a>).
- <br/><br/>
-  Wenn die Anweisung ohne Fehler zur&uuml;ckkehrt,
-  k&ouml;nnen Daten gesendet und empfangen werden.
-  Zum Senden schreibt man die Daten in den Ein-/Ausgabekanal und ruft
-  anschlie&szlig;end <a href="instructions.htm#flush">FLUSH</a> auf.
-  Den Empfang von Daten kann man mit der Funktion
-  <a href="functions.htm#available">AVAILABLE</a> pr&uuml;fen.
- <br/><br/>
-  Das Beispiel zeigt einen einfachen Echo-Server:
- <br/>
-  <tt>
-   &#10;<br/>
-   INPUT "Port: ";P&#10;<br/>
-   PRINT "Lausche am Port";P;"..."&#10;<br/>
-   ACCEPT P AS #1&#10;<br/>
-   IF ERR THEN&#10;<br/>
-   &nbsp; PRINT ERR$&#10;<br/>
-   ELSE&#10;<br/>
-   &nbsp; PRINT "Verbunden mit ";REMOTEADDR$(1)&#10;<br/>
-   &nbsp; DO&#10;<br/>
-   &nbsp; &nbsp; B=ASC(INPUT$(1,1))&#10;<br/>
-   &nbsp; &nbsp; IF ERR THEN EXIT&#10;<br/>
-   &nbsp; &nbsp; PRINT CHR$(B);&#10;<br/>
-   &nbsp; &nbsp; PRINT #1,CHR$(B);&#10;<br/>
-   &nbsp; &nbsp; IF AVAILABLE(1)=0 THEN FLUSH #1&#10;<br/>
-   &nbsp; LOOP&#10;<br/>
-   &nbsp; IF ERR=E_EOF THEN&#10;<br/>
-   &nbsp; &nbsp; PRINT "Verbindung beendet"&#10;<br/>
-   &nbsp; ELSE&#10;<br/>
-   &nbsp; &nbsp; PRINT ERR$&#10;<br/>
-   &nbsp; ENDIF&#10;<br/>
-   &nbsp; CLOSE #1&#10;<br/>
-   ENDIF&#10;<br/>
-  </tt>
- <br/>
-  <b>Achtung!</b> Portnummern bis 1024 sind privilegierte Ports.
-  Wenn Sie das Programm im Emulator laufen lassen und
-  es m&ouml;chte an so einem Port lauschen,
-  m&uuml;ssen Sie &uuml;ber entsprechende Berechtigungen verf&uuml;gen.
-  Benutzerkonten f&uuml;r gew&ouml;hnliche Anwender verf&uuml;gen
-  i.d.R. nicht &uuml;ber diese Berechtigungen.
-  In dem Fall zeigt JKCEMU eine entsprechende Fehlermeldung an.
-  Auf einem realen Zielsystem gibt es dieses Berechtigungsproblem
-  dagegen nicht.
  <br/><br/>
 
  <h3><a name="asm">ASM</a></h3>
@@ -502,6 +411,18 @@
  <br/><br/>
   Neben der ASM-Anweisung gibt es auch die
   <a href="functions.htm#asm">ASM</a>-Funktion.
+ <br/><br/>
+  <b>Achtung!</b> Der BASIC-Compiler enth&auml;lt einen Global-Optimizer,
+  der den erzeugten Assembler-Code durchgeht und unn&ouml;tige Befehle
+  entfernt.
+  Dabei kann auch der mit ASM-Anweisungen erzeugte Assembler-Code
+  ver&auml;ndert werden.
+  Der Global-Optimizer fasst aber nur solche Assembler-Zeilen an,
+  bei denen die Befehls-Mnemonik durch einen Tabulator vom Zeilenanfang
+  bzw. der Marke getrennt ist.
+  Wenn sie also sichergehen wollen, dass der Optimizer Ihren
+  Assembler-Code nicht ver&auml;ndert,
+  dann verwenden Sie keine Tabulatoren in den ASM-Anweisungen.
  <br/><br/>
   <b>Achtung!</b> Die ASM-Anweisung greift direkt
   in die Programmcodeerzeugung ein und ist deshalb nur
@@ -641,73 +562,6 @@
   <a href="instructions.htm#border">BORDER</a> festgelegt werden.
  <br/><br/>
 
- <h3><a name="connect">CONNECT</a></h3>
-  <table border="1">
-   <tr valign="top">
-    <td>Syntax:</td>
-    <td nowrap="nowrap">
-     <tt>CONNECT</tt> &lt;Host&gt; <tt>,</tt> &lt;Port&gt;
-	<tt>AS #</tt> &lt;Kanal&gt;
-    </td>
-   </tr>
-   <tr><td>Host:</td><td>einfacher String-Ausdruck</td></tr>
-   <tr><td>Port:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top">
-    <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
-   </tr>
-  </table>
- <br/>
-  Die Anweisung baut eine TCP-Verbindung zu einem Server auf
-  und dient damit zur Programmierung eines TCP-Clients.
-  Im ersten Argument wird der Rechnername oder die IP-Adresse
-  in textueller Form &uuml;bergeben.
-  Kann die IP-Adresse nicht ausgewertet werden,
-  wird der im <a href="../../kcnet.htm">KCNet</a>
-  eingetragene DNS-Server angefragt.
-  Das zweite Argument gibt die Portnummer an,
-  zu der die Verbindung aufgebaut werden soll.
-  Nach Abarbeitung der Anweisung erkennt man anhand der Fehlervariable
-  <a href="functions.htm#err">ERR</a>, ob die Verbindung aufgebaut wurde.
-  Steht dort der Wert Null drin (Konstante E_OK),
-  war der Verbindungsaufbau erfolgreich, anderenfalls nicht.
- <br/><br/>
-  Wenn die Anweisung ohne Fehler zur&uuml;ckkehrt,
-  k&ouml;nnen Daten gesendet und empfangen werden.
-  Zum Senden schreibt man die Daten in den Ein-/Ausgabekanal und ruft
-  anschlie&szlig;end <a href="instructions.htm#flush">FLUSH</a> auf.
-  Den Empfang von Daten kann man mit der Funktion
-  <a href="functions.htm#available">AVAILABLE</a> pr&uuml;fen.
- <br/><br/>
-  Das Beispiel zeigt ein kleines Programm,
-  dass die Startseite eines Web-Servers herunterl&auml;dt
-  und den HTML-Text auf dem Bildschirm ausgibt:
- <br/>
-  <tt>
-   &#10;<br/>
-   DO&#10;<br/>
-   &nbsp; INPUT "Web-Server: ";H$&#10;<br/>
-   LOOP WHILE H$=""&#10;<br/>
-   CONNECT H$,80 AS #1&#10;<br/>
-   IF ERR THEN&#10;<br/>
-   &nbsp; PRINT ERR$&#10;<br/>
-   ELSE&#10;<br/>
-   &nbsp; PRINT #1,"GET / HTTP/1.1"&#10;<br/>
-   &nbsp; PRINT #1,"Host: ";H$&#10;<br/>
-   &nbsp; PRINT #1&#10;<br/>
-   &nbsp; FLUSH #1&#10;<br/>
-   &nbsp; DO&#10;<br/>
-   &nbsp; &nbsp; LINE INPUT #1,A$&#10;<br/>
-   &nbsp; &nbsp; IF ERR THEN EXIT&#10;<br/>
-   &nbsp; &nbsp; PRINT A$&#10;<br/>
-   &nbsp; LOOP&#10;<br/>
-   &nbsp; PRINT&#10;<br/>
-   &nbsp; IF ERR&lt;&gt;E_EOF THEN PRINT ERR$&#10;<br/>
-   &nbsp; CLOSE #1&#10;<br/>
-   ENDIF&#10;<br/>
-  </tt>
- <br/>
-
  <h3><a name="cursor">CURSOR</a></h3>
   <table border="1">
    <tr valign="top">
@@ -755,78 +609,15 @@
  <br/>
   <tt>
    &#10;<br/>
-   100 FOR I=1 TO 12&#10;<br/>
-   110 READ M$,N&#10;<br/>
-   120 PRINT M$;":";N;"Tage"&#10;<br/>
-   130 NEXT I&#10;<br/>
-   140 END&#10;<br/>
-   200 DATA "Jan",31,"Feb",28,"Mar",31,"Apr",30,"Mai",31,"Jun",30&#10;<br/>
-   210 DATA "Jul",31,"Aug",31,"Sep",30,"Okt",31,"Nov",31,"Dez",30&#10;<br/>
- <br/>
-
- <h3><a name="datagram">DATAGRAM</a></h3>
-  <table border="1">
-   <tr valign="top">
-    <td>Syntax:</td>
-    <td nowrap="nowrap">
-     <tt>DATAGRAM</tt> &lt;Port&gt; <tt>AS #</tt> &lt;Kanal&gt;
-    </td>
-   </tr>
-   <tr><td>Port:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top">
-    <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
-   </tr>
-  </table>
- <br/>
-  Die Anweisung bereitet eine verbindungslose Netzwerkkommunikation vor.
-  Dazu wird ein <a href="../../kcnet.htm">KCNet</a>-Socket im UDP-Mode
-  ge&ouml;ffnet.
-  Dieser ist sofort empfangsbereit.
-  Mit der <a href="functions.htm#available">AVAILABLE</a>-Funktion
-  kann gep&uuml;ft werden, ob Daten empfangen wurden.
-  Wenn ja, l&auml;sst sich der Absender mit den Funktionen
-  <a href="functions.htm#remoteaddr$">REMOTEADDR$</a> und
-  <a href="functions.htm#remoteport">REMOTEPORT</a> ermitteln.
- <br/><br/>
-  In der entgegengesetzten Richtung schreibt man zuerst die zu sendenden
-  Daten in den Ein-/Ausgabekanal und schickt sie dann mit der
-  <a href="instructions.htm#send">SEND</a>-Anweisung ab.
- <br/><br/>
-  Das Beispiel zeigt einen einfachen Echo-Server:
- <br/>
-  <tt>
+   FOR I=1 TO 12&#10;<br/>
+   &nbsp;&nbsp;READ M$,N&#10;<br/>
+   &nbsp;&nbsp;PRINT M$;":";N;"Tage"&#10;<br/>
+   NEXT I&#10;<br/>
+   END&#10;<br/>
    &#10;<br/>
-   INPUT "Port: ";P&#10;<br/>
-   PRINT "Lausche am Port";P;"..."&#10;<br/>
-   DATAGRAM P AS #1&#10;<br/>
-   IF ERR THEN&#10;<br/>
-   &nbsp; PRINT ERR$&#10;<br/>
-   ELSE&#10;<br/>
-   &nbsp; DO&#10;<br/>
-   &nbsp; &nbsp; B=ASC(INPUT$(1,1))&#10;<br/>
-   &nbsp; &nbsp; IF ERR THEN EXIT&#10;<br/>
-   &nbsp; &nbsp; PRINT CHR$(B);&#10;<br/>
-   &nbsp; &nbsp; PRINT #1,CHR$(B);&#10;<br/>
-   &nbsp; &nbsp; IF AVAILABLE(1)=0 THEN SEND #1,REMOTEADDR$(1),REMOTEPORT(1)&#10;<br/>
-   &nbsp; LOOP&#10;<br/>
-   &nbsp; IF ERR THEN&#10;<br/>
-   &nbsp; &nbsp; PRINT ERR$&#10;<br/>
-   &nbsp; ENDIF&#10;<br/>
-   &nbsp; CLOSE #1&#10;<br/>
-   ENDIF&#10;<br/>
-  </tt>
+   DATA "Jan",31,"Feb",28,"Mar",31,"Apr",30,"Mai",31,"Jun",30&#10;<br/>
+   DATA "Jul",31,"Aug",31,"Sep",30,"Okt",31,"Nov",31,"Dez",30&#10;<br/>
  <br/>
-  <b>Achtung!</b> Portnummern bis 1024 sind privilegierte Ports.
-  Wenn Sie das Programm im Emulator laufen lassen und
-  es m&ouml;chte an so einem Port lauschen,
-  m&uuml;ssen Sie &uuml;ber entsprechende Berechtigungen verf&uuml;gen.
-  Benutzerkonten f&uuml;r gew&ouml;hnliche Anwender verf&uuml;gen
-  i.d.R. nicht &uuml;ber diese Berechtigungen.
-  In dem Fall zeigt JKCEMU eine entsprechende Fehlermeldung an.
-  Auf einem realen Zielsystem gibt es dieses Berechtigungsproblem
-  dagegen nicht.
- <br/><br/>
 
  <h3><a name="declare">DECLARE</a></h3>
   <table border="1">
@@ -989,7 +780,8 @@
      <tt>DRAW TO</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
      <tt>DRAW (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
      <tt>DRAW TO (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
-     <tt>DRAW STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+     <tt>DRAW STEP (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt><br/>
+     <tt>DRAW</tt> &lt;Macro&gt;
     </td>
    </tr>
    <tr valign="top">
@@ -1000,23 +792,229 @@
     <td>Y:</td>
     <td>numerischer Ausdruck</td>
    </tr>
+   <tr valign="top">
+    <td>Macro:</td>
+    <td>einfacher String-Ausdruck</td>
+   </tr>
   </table>
  <br/>
-  Die DRAW-Anweisung zieht eine Linie von der aktuellen Position
-  des Grafik-Cursors zu der angegebenen Position (Endpunkt der Linie).
+  Die DRAW-Anweisung gibt es in drei Varianten.
+  Die erste Variante mit einer Positionsangabe zieht eine Linie
+  von der aktuellen Position des Grafik-Cursors zu der angegebenen
+  absoluten Position (Endpunkt der Linie).
   Der Grafik-Cursor zieht dabei mit, d.h.,
   er steht nach dem Zeichnen auf dem Endpunkt der Linie.
  <br/><br/>
-  Bei der Variante mit dem Schl&uuml;sselwort <em>STEP</em>
-  wird der Endpunkt nicht absolut sondern relativ angegeben,
+  Die zweite Variante mit dem Schl&uuml;sselwort <em>STEP</em>
+  unterscheidet sich von der ersten Variante nur in dem Punkt,
+  dass der Endpunkt der Linie nicht absolut sondern relativ angegeben wird,
   d.h., diese Variante ist identisch zur
-  <a href="instructions.htm#mover">DRAWR</a>-Anweisung.
+  <a href="instructions.htm#drawr">DRAWR</a>-Anweisung.
  <br/><br/>
-  Die DRAW-Anweisung setzt nicht das Pixel im Anfangspunkt,
-  sondern beginnt erst mit dem ersten Pixel hinter dem Anfangspunkt.
+  Die dritte Variante mit einem String-Ausdruck als Argument
+  ist der sogenannte Macro-Modus.
+  Dieser dient zum Zeichnen von komplexen Figuren.
+  Die &uuml;bergebene Zeichenkette enth&auml;lt ein Macro,
+  d.h. eine Folge von Kommandos, die nacheinander abgearbeitet werden.
+  Jedes einzelne Kommando beginnt mit einem Buchstaben
+  (Gro&szlig;-/Kleinschreibung ist dabei egal),
+  dem ein Argument folgen kann.
+  Es gibt acht Kommandos zum Zeichnen einer Linie in eine bestimmte Richtung:
+ <br/><br/>
+  <table border="0">
+   <tr>
+    <td align="left">H</td>
+    <td></td>
+    <td align="center">U</td>
+    <td></td>
+    <td align="right">E</td>
+   </tr>
+   <tr>
+    <td></td>
+    <td align="center">\</td>
+    <td align="center">|</td>
+    <td align="center">/</td>
+    <td></td>
+   </tr>
+   <tr>
+    <td align="left">L</td>
+    <td align="center">-</td>
+    <td align="center">Grafik-Cursor</td>
+    <td align="center">-</td>
+    <td align="right">R</td>
+   </tr>
+   <tr>
+    <td></td>
+    <td align="center">/</td>
+    <td align="center">|</td>
+    <td align="center">\</td>
+    <td></td>
+   </tr>
+   <tr>
+    <td align="left">G</td>
+    <td></td>
+    <td align="center">D</td>
+    <td></td>
+    <td align="right">F</td>
+   </tr>
+  </table>
+ <br/><br/>
+  Direkt hinter dem Buchstaben kann mit einer Zahl
+  die L&auml;nge der zu zeichnenden Linie angegeben werden.
+  Fehlt die Zahl, wird nur ein Pixel gezeichnet.
+ <br/><br/>
+  Weitere Kommandos sind M und B.
+  Bei M wird eine Position angegeben, zu der die Linie gezeichnet wird.
+  Die Positionsangabe folgt direkt hinter dem Buchstaben und
+  besteht aus der X-Koordinate, einem Komma und der Y-Koordinate.
+  Wenn die X-Koordinate mit einem Vorzeichen beginnt (+ oder -),
+  wird die Position als relative Position angesehen,
+  anderenfalls als absolute.
+ <br/><br/>
+  Das letzte vorhandene Kommando&nbsp;B besagt,
+  dass beim n&auml;chsten Kommando nicht gezeichnet,
+  sondern nur der Grafik-Cursor entsprechend verschoben wird.
+ <br/><br/>
+  Die folgende Tabelle fasst die Marco-Kommandos der DRAW-Anweisung zusammen:
+ <br>
+  <table border="1">
+   <tr><th>Macro-Kommado</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">U</td>
+    <td valign="top">
+     Linie einen Pixel nach oben zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">U&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach oben zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">D</td>
+    <td valign="top">
+     Linie einen Pixel nach unten zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">D&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach unten zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">L</td>
+    <td valign="top">
+     Linie einen Pixel nach links zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">L&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach links zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">R</td>
+    <td valign="top">
+     Linie einen Pixel nach rechts zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">R&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach rechts zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">E</td>
+    <td valign="top">
+     Linie einen Pixel nach rechts oben zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">E&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach rechts oben zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">F</td>
+    <td valign="top">
+     Linie einen Pixel nach rechts unten zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">F&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach rechts unten zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">G</td>
+    <td valign="top">
+     Linie einen Pixel nach links unten zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">G&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach links unten zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">H</td>
+    <td valign="top">
+     Linie einen Pixel nach links oben zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">H&lt;Anzahl&gt;</td>
+    <td valign="top">
+     Linie <i>Anzahl</i> Pixel nach links oben zeichnen<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">M&lt;X&gt;,&lt;Y&gt;</td>
+    <td valign="top">
+     Linie zur angegebenen absoluten Position zeichnen
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">
+      M&lt;Vorzeichen&gt;&lt;X&gt;,[&lt;Vorzeichen&gt;]&lt;Y&gt;
+    </td>
+    <td valign="top">
+     Linie zur angegebenen relativen Position zeichnen
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">B</td>
+    <td valign="top">
+     beim n&auml;chsten Macro-Befehl nicht zeichnen,
+     sondern nur den Grafik-Cursor verschieben
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Beispiel: Zeichnen von nebeneinander stehenden H&auml;usern:
+ <br/><br/>
+  <tt>
+   H$="U25E15F15D25L30BR4U18R8D17BM+6,7U10R8D10L8"&#10;<br/>
+   FOR X=0 TO W_PIXEL STEP 40&#10;<br/>
+   &nbsp; MOVE X,0&#10;<br/>
+   &nbsp; DRAW H$&#10;<br/>
+   NEXT X
+  </tt>
+ <br/><br/>
+  <b>Achtung!</b>
+  F&uuml;r alle Varianten der DRAW-Anweisung gilt,
+  dass das Pixel im Anfangspunkt nicht gesetzt wird.
+  Das Zeichnen beginnt erst mit dem ersten Pixel hinter dem Anfangspunkt.
   Dadurch wird sichergestellt, dass beim Zeichnen von Polygonen
-  mit Hilfe mehrerer hintereinander folgender DRAW-Anweisungen
-  kein Pixel doppelt gesetzt wird.
+  mit Hilfe von DRAW-Macros oder mehreren hintereinander folgenden
+  DRAW-Anweisungen kein Pixel doppelt gesetzt wird.
   Das ist besonders wichtig bei der Verwendung des XOR-Stiftes
   (siehe <a href="instructions.htm#pen">PEN</a>-Anweisung).
   Wegen diesem Verhalten gibt es auch die unterschiedlichen
@@ -1072,6 +1070,7 @@
     </td>
    </tr>
   </table>
+ <br/>
   Steht die END-Anweisung innerhalb einer benutzerdefinierten Funktion
   oder Prozedur, wird diese beendet.
   In dem Fall kann hinter END zus&auml;tzlich das Schl&uuml;sselwort
@@ -1106,44 +1105,13 @@
    &#10;<br/>
    I=0&#10;<br/>
    DO&#10;<br/>
-   &nbsp; I=I+1&#10;<br/>
-   &nbsp; PRINT I&#10;<br/>
-   &nbsp; IF I=5 THEN EXIT DO&#10;<br/>
+   &nbsp;&nbsp;I=I+1&#10;<br/>
+   &nbsp;&nbsp;PRINT I&#10;<br/>
+   &nbsp;&nbsp;IF I=5 THEN EXIT DO&#10;<br/>
    LOOP&#10;<br/>
    PRINT "Schleife zu Ende"&#10;<br/>
   </tt>
  <br/>
-
- <h3><a name="flush">FLUSH</a></h3>
-  <table border="1">
-   <tr valign="top">
-    <td>Syntax:</td>
-    <td nowrap="nowrap"><tt>FLUSH #</tt> &lt;Kanal&gt;</td>
-   </tr>
-   <tr valign="top">
-    <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
-   </tr>
-  </table>
- <br/>
-  Ein Ausgabekanal kann die zu schreibenden Daten puffern.
-  Das ist z.B. aus Gr&uuml;nden der Performance sinnvoll.
-  Die FLUSH-Anweisung sorgt daf&uuml;r, dass die gepufferten Daten
-  physisch geschrieben und somit der Ausgabepuffer geleert wird.
-  Der Ausgabepuffer wird automatisch auch beim Schlie&szlig;en
-  des Kanals geleert
-  (siehe <a href="instructions.htm#close">CLOSE</a>-Anweisung),
-  d.h., der explizite Aufruf von FLUSH vor einem CLOSE ist nicht notwendig.
- <br/><br/>
-  Ob bei einem Ausgabekanal eine Pufferung stattfindet oder nicht,
-  h&auml;ngt vom konkreten Ausgabeger&auml;t bzw. dessen Treiber ab.
-  Wenn die Daten nicht gepuffert werden,
-  hat die FLUSH-Anweisung nichts zu tun und somit auch keine Wirkung.
- <br/><br/>
-  Die FLUSH-Anweisung setzt die Fehlervariablen
-  <a href="functions.htm#err">ERR</a> und
-  <a href="functions.htm#err$">ERR$</a>.
- <br/><br/>
 
  <h3><a name="for">FOR</a></h3>
   <table border="1">
@@ -1173,10 +1141,10 @@
   Anderenfalls wird die FOR-Schleife verlassen, d.h.,
   die Programmabarbeitung setzt hinter der NEXT-Anweisung fort.
  <br/><br/>
-  Ist die Schrittweite gr&ouml;&szlig;er Null,
+  Ist die Schrittweite gr&ouml;&szlig;er&nbsp;0,
   gilt der Endwert als erreicht, wenn der Wert der Variable
   gleich oder gr&ouml;&szlig;er dem Endwert ist.
-  Ist dagegen die Schrittweite kleiner Null,
+  Ist dagegen die Schrittweite kleiner&nbsp;0,
   gilt der Endwert als erreicht,
   wenn der Wert der Variable gleich oder kleiner dem Endwert ist.
  <br/><br/>
@@ -1325,8 +1293,8 @@
   bei anderen BASIC-Dialekten &uuml;blichen Syntax nicht zu empfehlen.
  <br/><br/>
   Eine Bedingung ist erf&uuml;llte,
-  wenn der numerische Ausdruck einen Wert ungleich Null liefert
-  (siehe <a href="expressions.htm#operators">Operatoren</a>,
+  wenn der numerische Ausdruck einen Wert ungleich&nbsp;0 liefert
+  (siehe <a href="expressions.htm#operators1">Operatoren</a>,
   insbesondere auch die Vergleichsoperatoren).
  <br/><br/>
   Die IF-Anweisung gibt es in einer einzeiligen und in einer
@@ -1354,13 +1322,13 @@
   <tt>
    &#10;<br/>
    IF A=1 THEN&#10;<br/>
-   &nbsp; PRINT "eins"&#10;<br/>
+   &nbsp;&nbsp;PRINT "eins"&#10;<br/>
    ELSEIF A=2 THEN&#10;<br/>
-   &nbsp; PRINT "zwei"&#10;<br/>
+   &nbsp;&nbsp;PRINT "zwei"&#10;<br/>
    ELSEIF A=3 THEN&#10;<br/>
-   &nbsp; PRINT "drei"&#10;<br/>
+   &nbsp;&nbsp;PRINT "drei"&#10;<br/>
    ELSE&#10;<br/>
-   &nbsp; PRINT "nichts von alldem"&#10;<br/>
+   &nbsp;&nbsp;PRINT "nichts von alledem"&#10;<br/>
    ENDIF&#10;<br/>
   </tt>
  <br/>
@@ -1369,16 +1337,70 @@
   <tt>
    &#10;<br/>
    IF A=0 THEN&#10;<br/>
-   &nbsp; IF B=0 THEN&#10;<br/>
-   &nbsp; &nbsp; PRINT "A und B sind Null."&#10;<br/>
-   &nbsp; ELSEIF B=1 THEN&#10;<br/>
-   &nbsp; &nbsp; PRINT "A=0 und B=1"&#10;<br/>
-   &nbsp; ENDIF&#10;<br/>
+   &nbsp;&nbsp;IF B=0 THEN&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "A und B sind Null."&#10;<br/>
+   &nbsp;&nbsp;ELSEIF B=1 THEN&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "A=0 und B=1"&#10;<br/>
+   &nbsp;&nbsp;ENDIF&#10;<br/>
    ELSE&#10;<br/>
-   &nbsp; PRINT "A ist nicht Null."&#10;<br/>
+   &nbsp;&nbsp;PRINT "A ist nicht Null."&#10;<br/>
    ENDIF&#10;<br/>
   </tt>
  <br/>
+
+ <h3><a name="include">INCLUDE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">INCLUDE&nbsp;"Dateiname"</td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung bindet die angegebene Datei an der aktuellen Position
+  in den Quelltext ein, d.h., diese Datei wird mit compiliert
+  und ist somit Teil des BASIC-Programms.
+  Der Dateiname kann mit oder ohne Pfad angegeben werden.
+  Fehlt der Pfad, wird die eingebundene Datei im gleichen Verzeichnis bzw.,
+  falls der Quelltext im Texteditor eingetippt und noch nicht
+  gespeichert wurde, im aktuellen Verzeichnis gesucht.
+  Wird ein Pfad angegeben,
+  ist dieser sowohl relativ als auch absolut m&ouml;glich.
+  Die Schreibweise des Pfads (Laufwerk, Trennzeichen) ist abh&auml;ngig
+  vom Betriebssystem, auf dem JKCEMU l&auml;uft.
+  Es ist aber auch m&ouml;glich,
+  den Pfad betriebssystemunabh&auml;bgig anzugeben, allerdings nur relativ.
+  Als Trennzeichen ist in dem Fall der Slash&nbsp;(/) zu verwenden.
+ <br/><br/>
+  Beispiele:
+<br/>
+  <table border="1">
+   <tr>
+    <td valign="top">Absolute Pfadangabe bei Windows:</td>
+    <td nowrap="nowrap"><tt>INCLUDE "C:\basic\bibliothek.bas"</tt></td>
+   </tr>
+   <tr>
+    <td valign="top">Absolute Pfadangabe bei Linux/Unix:</td>
+    <td nowrap="nowrap"><tt>INCLUDE "/home/benutzer/basic/bibliothek.bas"</tt></td>
+   </tr>
+   <tr>
+    <td valign="top">Relative Pfadangabe bei Windows:</td>
+    <td nowrap="nowrap"><tt>INCLUDE "..\bibliothek.bas"</tt></td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Relative und betriebssystemunabh&auml;ngige Pfadangabe
+     (Linux/Unix/Windows):
+    </td>
+    <td nowrap="nowrap"><tt>INCLUDE "../bibliothek.bas"</tt></td>
+   </tr>
+  </table>
+ <br/>
+  <b>Achtung!</b> Hinter der INCLUDE-Anweisung darf
+  in der gleichen Zeile keine weitere BASIC-Anweisung mehr folgen.
+  Au&szlig;erdem k&ouml;nnen eingebundene Dateien selbst
+  keine weiteren Dateien mehr einbinden,
+  d.h., in sich geschachtelte INCLUDE-Anweisungen sind nicht erlaubt.
+ <br/><br/>
 
  <h3><a name="ink">INK</a></h3>
   <table border="1">
@@ -1561,7 +1583,7 @@
   <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
  <br/><br/>
 
- <h3><a name="line_input">LINE INPUT</a></h3>
+ <h3><a name="line_input">LINE&nbsp;INPUT</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
@@ -1597,10 +1619,33 @@
   (Zeilenendebyte&nbsp;0Ah) erkannt.
   Die Anweisung liest die Textzeile bis einschlie&szlig;lich dem Zeilenende,
   speichert aber den Text ohne die Zeilenendebytes in der Variable.
-  Wenn die letzte Zeile keine Zeilenendebytes hat,
-  wird der Text bis zum Kanal- bzw. Dateiende gelesen
-  und die Fehlervariablen auf &quot;Dateiende erreicht&quot; gesetzt.
+  Da die Anweisung das Zeilenende sucht,
+  wird gew&ouml;hnlich beim Lesen der letzten Zeile der Fehlerstatus
+  auf &quot;Dateiende erreicht&quot; gesetzt, d.h.,
+  der in der Variable gespeicherte Text ist sowohl bei
+  <tt>ERR=E_OK</tt> als auch bei <tt>ERR=E_EOF</tt> g&uuml;tig.
+  Bei einem anderen Fehlerstatus wird eine leere Zeichenkette
+  in die Variable geschrieben.
  <br/><br/>
+  Beispiel: Lesen einer Textdatei und zeilenweise Ausgabe
+  auf dem Bildschirm:
+ <br/>
+  <tt>
+   &#10;<br/>
+   INPUT "Datei:";F$&#10;<br/>
+   OPEN F$ AS #1&#10;<br/>
+   IF ERR THEN&#10;<br/>
+   &nbsp;&nbsp;PRINT ERR$&#10;<br/>
+   ELSE&#10;<br/>
+   &nbsp;&nbsp;DO&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;LINE INPUT #1,S$&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT S$&#10;<br/>
+   &nbsp;&nbsp;LOOP UNTIL ERR OR EOF(#1)&#10;<br/>
+   &nbsp;&nbsp;IF ERR THEN PRINT ERR$&#10;<br/>
+   &nbsp;&nbsp;CLOSE #1&#10;<br/>
+   ENDIF&#10;<br/>
+  </tt>
+ <br/>
 
  <h3><a name="local">LOCAL</a></h3>
   <table border="1">
@@ -1685,7 +1730,7 @@
   <tt>
    &#10;<br/>
    DO&#10;<br/>
-   &nbsp; PRINT "Endlosschleife"&#10;<br/>
+   &nbsp;&nbsp;PRINT "Endlosschleife"&#10;<br/>
    LOOP&#10;<br/>
   </tt>
  <br/>
@@ -1696,8 +1741,8 @@
    &#10;<br/>
    I=1&#10;<br/>
    DO&#10;<br/>
-   &nbsp; PRINT I&#10;<br/>
-   &nbsp; I=I+1&#10;<br/>
+   &nbsp;&nbsp;PRINT I&#10;<br/>
+   &nbsp;&nbsp;I=I+1&#10;<br/>
    LOOP UNTIL I=10&#10;<br/>
   </tt>
  <br/>
@@ -1711,8 +1756,8 @@
    &#10;<br/>
    I=1&#10;<br/>
    DO&#10;<br/>
-   &nbsp; PRINT I&#10;<br/>
-   &nbsp; I=I+1&#10;<br/>
+   &nbsp;&nbsp;PRINT I&#10;<br/>
+   &nbsp;&nbsp;I=I+1&#10;<br/>
    LOOP WHILE I&lt;10&#10;<br/>
   </tt>
  <br/>
@@ -1875,11 +1920,11 @@
    ON A GOSUB up1,up2,up3&#10;<br/>
    ...&#10;<br/>
    up1:&#10;<br/>
-   &nbsp; PRINT "UP 1":RETURN&#10;<br/>
+   &nbsp;&nbsp;PRINT "UP 1":RETURN&#10;<br/>
    up2:&#10;<br/>
-   &nbsp; PRINT "UP 2":RETURN&#10;<br/>
+   &nbsp;&nbsp;PRINT "UP 2":RETURN&#10;<br/>
    up3:&#10;<br/>
-   &nbsp; PRINT "UP 3":RETURN&#10;<br/>
+   &nbsp;&nbsp;PRINT "UP 3":RETURN&#10;<br/>
   </tt>
  <br/>
 
@@ -1931,11 +1976,11 @@
    ON A GOTO up1,up2,up3&#10;<br/>
    ...&#10;<br/>
    up1:&#10;<br/>
-   &nbsp; PRINT "A war 1":END&#10;<br/>
+   &nbsp;&nbsp;PRINT "A war 1":END&#10;<br/>
    up2:&#10;<br/>
-   &nbsp; PRINT "A war 2":END&#10;<br/>
+   &nbsp;&nbsp;PRINT "A war 2":END&#10;<br/>
    up3:&#10;<br/>
-   &nbsp; PRINT "A war 3":END&#10;<br/>
+   &nbsp;&nbsp;PRINT "A war 3":END&#10;<br/>
   </tt>
  <br/>
 
@@ -1948,6 +1993,9 @@
      <br/>
      <tt>OPEN</tt> &lt;Ger&auml;te-/Dateiname&gt;
 	<tt>FOR</tt> &lt;Betriebsart&gt; <tt>AS #</tt> Kanalnummer
+     <br/>
+     <tt>OPEN</tt> &lt;Ger&auml;te-/Dateiname&gt;
+	<tt>FOR BINARY</tt> &lt;Betriebsart&gt; <tt>AS #</tt> Kanalnummer
     </td>
    </tr>
    <tr valign="top">
@@ -1956,7 +2004,9 @@
    </tr>
    <tr valign="top">
     <td>Betriebsart:</td>
-    <td><tt>INPUT</tt>, <tt>OUTPUT</tt> oder <tt>APPEND</tt></td>
+    <tdi valign="top">
+     <tt>INPUT</tt>, <tt>OUTPUT</tt> oder <tt>APPEND</tt>
+    </td>
    </tr>
    <tr valign="top">
     <td>Kanal:</td>
@@ -2007,25 +2057,44 @@
     <th>Standard-Betriebsart</th>
    </tr>
    <tr>
-    <td valign="top"><tt>CRT:</tt></td>
-    <td valign="top">Ausgabe auf dem Bildschirm</td>
+    <td valign="top"><a href="devices.htm#crt"><tt>CRT:</tt></a></td>
+    <td valign="top">Bildschirm</td>
     <td valign="top">OUTPUT</td>
     <td valign="top">OUTPUT</td>
    </tr>
    <tr>
-    <td valign="top"><tt>LPT:</tt></td>
-    <td valign="top">Ausgabe auf dem Drucker</td>
+    <td valign="top"><a href="devices.htm#lpt"><tt>LPT:</tt></a></td>
+    <td valign="top">Drucker</td>
     <td valign="top">OUTPUT</td>
     <td valign="top">OUTPUT</td>
    </tr>
    <tr>
-    <td valign="top"><tt>V:</tt></td>
-    <td valign="top">USB-Speicher an einem VDIP-Modul</td>
+    <td valign="top" nowrap="nowrap">
+     <a href="devices.htm#file"><tt>A:</tt> bis <tt>P:</tt></a>
+    </td>
+    <td valign="top">Laufwerke im Dateisystem</td>
+    <td valign="top">INPUT, OUTPUT, APPEND</td>
+    <td valign="top">INPUT</td>
+   </tr>
+   <tr>
+    <td valign="top"><a href="devices.htm#vdip"><tt>V:</tt></a></td>
+    <td valign="top">USB-Speicher an VDIP-Modul</td>
     <td valign="top">INPUT, OUTPUT, APPEND</td>
     <td valign="top">INPUT</td>
    </tr>
   </table>
  <br/>
+  Bei Angabe des Schl&uuml;sselworts <em>BINARY</em> vor der Betriebsart
+  wird der Ein-/Ausgabekanal im Bin&auml;rmodus ge&ouml;ffnet,
+  anderenfalls im Textmodus.
+  Einen Unterschied zwischen diesen beiden Modi gibt es nur
+  beim Zugriff auf ein Dateisystem,
+  welches keine Byte-exakten Dateil&auml;ngen bietet
+  (siehe <a href="devices.htm#file">Dateisystem</a>).
+  Aus Gr&uuml;nden der Portabilit&auml;t sollten Sie aber immer
+  das Schl&uuml;sselwort <em>BINARY</em> angeben,
+  wenn es sich um Bin&auml;rdateien handelt.
+ <br/><br/>
   Bei einem Eingabekanal k&ouml;nnen die Anweisungen
   <a href="instructions.htm#input">INPUT</a> und
   <a href="instructions.htm#line_input">LINE&nbsp;INPUT</a>
@@ -2033,19 +2102,45 @@
   <a href="functions.htm#eof">EOF</a> und
   <a href="functions.htm#input$">INPUT$</a>,
   verwendet werden.
-  F&uuml;r einen Ausgabekanal stehen die Anweisungen
-  <a href="instructions.htm#flush">FLUSH</a> und
+  F&uuml;r einen Ausgabekanal steht die Anweisung
   <a href="instructions.htm#print">PRINT</a> zur Verf&uuml;gung.
   Wenn die Arbeit mit dem Kanal beendet ist, muss dieser mit
   <a href="instructions.htm#close">CLOSE</a>
   wieder geschlossen werden.
-  Danach kann dieser Kanal mit einem anderen Ger&auml;t oder
+  Danach kann der Kanal mit einem anderen Ger&auml;t oder
   einer anderen Datei erneut ge&ouml;ffnet werden.
   Insgesamt stehen zwei Kan&auml;le zur Verf&uuml;gung (1 und 2).
  <br/><br/>
   Die OPEN-Anweisung setzt die
   Fehlervariablen&nbsp;<a href="functions.htm#err">ERR</a>
   und <a href="functions.htm#err$">ERR$</a>.
+ <br/><br/>
+  Beispiel: Speichern von Zahlen in der Datei <em>ZAHLEN.TXT</em>
+  im obersten Verzeichnis auf dem USB-Speicher:
+ <br/>
+  <tt>
+   &#10;<br/>
+   OPEN "V:\ZAHLEN.TXT" FOR OUTPUT AS #1&#10;<br/>
+   IF ERR THEN&#10;<br/>
+   &nbsp;&nbsp;PRINT ERR$&#10;<br/>
+   ELSE&#10;<br/>
+   &nbsp;&nbsp;FOR I=1 TO 10&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT #1,I&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;IF ERR THEN PRINT ERR$:EXIT&#10;<br/>
+   &nbsp;&nbsp;NEXT I&#10;<br/>
+   &nbsp;&nbsp;CLOSE #1&#10;<br/>
+   &nbsp;&nbsp;IF ERR THEN PRINT ERR$&#10;<br/>
+   ENDIF&#10;<br/>
+  </tt>
+ <br/>
+  <b>Achtung!</b> Die Datei wurde nur dann sicher gespeichert,
+  wenn sowohl beim Schreiben in die Datei (Anweisung PRINT&nbsp;#)
+  als auch beim Schlie&szlig;en der Datei (Anweisung CLOSE)
+  kein Fehler auftrat.
+ <br/><br/>
+  Beispiele zum Lesen einer Datei finden Sie bei der
+  <a href="instructions.htm#line_input">LINE&nbsp;INPUT</a>-Anweisung
+  und der <a href="functions.htm#input$">INPUT$</a>-Funktion.
  <br/><br/>
 
  <h3><a name="out">OUT</a></h3>
@@ -2066,6 +2161,70 @@
   Der erste Ausdruck legt die Ausgabeadresse fest,
   der zweite Ausdruck bestimmt den auszugebenden Wert,
   wobei nur die unteren 8 Bits relevant sind.
+ <br/><br/>
+  <b>Achtung!</b> Obwohl der Mikroprozessor offiziell nur
+  8&nbsp;Bit gro&szlig;e Ein-/Ausgabeadressen unterst&uuml;tzt,
+  ist die Nutzung von 16-Bit-Adressen m&ouml;glich.
+  Der Compiler &uuml;bersetzt die Anweisung in solch einen Programmcode,
+  der aufgrund des undokumentierten Verhaltens des Mikroprozessors
+  auch eine 16&nbsp;Bit gro&szlig;e Ein-/Ausgabeadresse
+  wirksam werden l&auml;sst.
+ <br/><br/>
+
+ <h3><a name="paint">PAINT</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>PAINT</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt;<br/>
+     <tt>PAINT (</tt> &lt;X&gt; <tt>,</tt> &lt;Y&gt; <tt>)</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td>X:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+   <tr valign="top">
+    <td>Y:</td>
+    <td>numerischer Ausdruck</td>
+   </tr>
+  </table>
+ <br/>
+  Die PAINT-Anweisung f&uuml;llt die Fl&auml;che aus,
+  in der sich der angegebenen Punkt befindet.
+  Die Fl&auml;che ergibt sich aus allen zusammenh&auml;ngenden Pixel,
+  die auf die Hintergrundfarbe gesetzt sind.
+  Durch die Anweisung werden diese Pixel auf die aktuell
+  eingestellte Vordergrundfarbe gesetzt.
+  Wenn das Pixel an der Startposition bereits die Vordergrundfarbe hat
+  oder die Startposition liegt au&szlig;erhalb des Bildschirmbereiches,
+  passiert nichts.
+  Der Grafik-Cursor wird durch die Anweisung nicht beeinflusst.
+ <br/><br/>
+  Beispiel: Zeichnen von zwei unterschiedlich gro&szlig;en Kreisen,
+  deren Zwischenraum gef&uuml;llt wird,
+  so dass ein Kreis mit dicker Au&szlig;enlinie entsteht:
+ <br/><br/>
+  <tt>
+   CLS&#10;<br/>
+   X=W_PIXEL/2&#10;<br/>
+   Y=H_PIXEL/2&#10;<br/>
+   R1=H_PIXEL/4&#10;<br/>
+   R2=H_PIXEL/3&#10;<br/>
+   CIRCLE (X,Y),R1&#10;<br/>
+   CIRCLE (X,Y),R2&#10;<br/>
+   PAINT X-R2+(R2-R1)/2,Y
+  </tt>
+ <br/><br/>
+  Die PAINT-Anweisung ben&ouml;tigt f&uuml;r ihre Ausf&uuml;hrung einen
+  tempor&auml;ren Speicher.
+  Daf&uuml;r wird ein freier Bereich des Zeichenkettenspeichers verwendet.
+  Je h&auml;ufiger die zu f&uuml;llende Fl&auml;che in Teilfl&auml;chen
+  zerlegt werden muss, z.B. beim F&uuml;llen um Ecken herum,
+  desto mehr Speicher wird ben&ouml;igt.
+  Sollte der verwendete Speicherbereich aus dem Zeichenkettenspeicher
+  nicht ausreichen, bricht das Programm mit einer entsprechenden
+  Fehlermeldung ab.
  <br/><br/>
 
  <h3><a name="paper">PAPER</a></h3>
@@ -2109,19 +2268,24 @@
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
-    <td nowrap="nowrap"><tt>PAUSE</tt> &lt;numerischer Ausdruck&gt;</td>
+    <td nowrap="nowrap">
+     <tt>PAUSE</tt><br/>
+     <tt>PAUSE</tt> &lt;numerischer Ausdruck&gt;
+    </td>
    </tr>
   </table>
  <br/>
-  Die Anweisung h&auml;lt das Programm an,
-  bis die angegebene Zeit abgelaufern ist oder
-  die Leertaste gedr&uuml;ckt wurde.
-  Der numerische Ausdruck gibt die Wartezeit in Zehntel&nbsp;Sekunden an,
-  d.h., der Wert&nbsp;30 entspricht einer Wartezeit von 3&nbsp;Sekunden.
+  Die Anweisung h&auml;lt das Programm an.
+  Mit Dr&uuml;cken der Leertaste wird das Programm fortgesetzt.
+  Optional kann eine Wartezeit in Zehntel&nbsp;Sekunden angegeben werden.
+  In dem Fall wird nach dieser Zeit das Programm automatisch fortgesetzt,
+  auch wenn keine Leertaste gedr&uuml;ckt wurde.
  <br/><br/>
-  <b>Achtung!</b> Die Wartezeit entspricht nur in ungef&auml;hr
+  <b>Achtung!</b> Die Wartezeit entspricht nur ungef&auml;hr
   dem angegebenen Wert und h&auml;ngt ma&szlig;geblich
   von der Taktfrequenz ab.
+  Der Wert&nbsp;30 entspricht somit nur in etwa einer Wartezeit
+  von 3&nbsp;Sekunden.
  <br/><br/>
 
  <h3><a name="pen">PEN</a></h3>
@@ -2135,12 +2299,14 @@
   Die Anweisung legt den Stift fest, mit dem gezeichnet wird.
   Ein Stift steht f&uuml;r eine bestimmte Art und Weise,
   wie die Pixel gesetzt werden.
-  Es gibt vier verschiedene Stifte:
+  Es gibt vier verschiedene Stifte.
+  F&uuml;r jeden Stift ist eine Konstante definiert.
  <br/><br/>
   <table border="1">
-   <tr><th>Stift</th><th>Bedeutung</th></tr>
+   <tr><th>Stift</th><th>Konstante</th><th>Bedeutung</th></tr>
    <tr>
     <td valign="top">0</td>
+    <td valign="top"><tt>PEN_NONE</tt></td>
     <td>
      Stift angehoben,<br/>
      Bei diesem Stift passiert nichts.
@@ -2149,6 +2315,7 @@
    </tr>
    <tr>
     <td valign="top">1</td>
+    <td valign="top"><tt>PEN_NORMAL</tt></td>
     <td>
      Zeichnen,<br/>
      Die zu zeichnenden Pixel werden auf die Vordergrundfarbe gesetzt.
@@ -2160,6 +2327,7 @@
    </tr>
    <tr>
     <td valign="top">2</td>
+    <td valign="top"><tt>PEN_RUBBER</tt></td>
     <td>
      L&ouml;schen,<br/>
      Die zu zeichnenden Pixel werden auf die Hintergrundfarbe gesetzt.
@@ -2167,6 +2335,7 @@
    </tr>
    <tr>
     <td valign="top">3</td>
+    <td valign="top"><tt>PEN_XOR</tt></td>
     <td>
      XOR-Modus,<br/>
      Bei jedem zu zeichnenden Pixel wird gepr&uuml;ft,
@@ -2208,7 +2377,7 @@
   Die PLOT-Anweisung positioniert den Grafik-Cursor
   und setzt das dortige Pixel.
   Damit eignet sich z.B. die PLOT-Anweisung in Verbindung mit der
-  <a href="instructions.htm#draw">DRAW</a>-Anweisungen zum Zeichnen
+  <a href="instructions.htm#draw">DRAW</a>-Anweisung zum Zeichnen
   von nicht geschlossenen Polygonen.
  <br/><br/>
   Bei der Variante mit dem Schl&uuml;sselwort <em>STEP</em>
@@ -2340,13 +2509,74 @@
   Die PRINT-Anweisung kann mehrere Abschnitte enthalten,
   die durch Kommas oder Semikolons getrennt sind.
   Ein Abschnitt dient entweder zur Ausgabe einer Zeichenkette
-  oder einer Dezimalzahl.
-  Mit der Funktion <a href="functions.htm#chr">CHR$</a>
-  k&ouml;nnen auch beliebige Bytes, auch Null-Bytes, ausgegeben werden.
+  oder einer numerischen Zahl,
+  je nachdem, ob der Abschnitt einen Zeichenkettenausdruck
+  oder einen numerischen Ausdruck enth&auml;lt.
+ <br/>
+
  <br/><br/>
-  Ist ein Abschnitt zur Ausgabe einer Dezimalzahl vom vorherigen Abschnitt
-  mit einem Komma getrennt, wird die Zahl in einem 14&nbsp;Zeichen breiten
-  Feld rechtsb&uuml;ndig ausgegeben.
+  <u>CHR$-Funktion</u>
+ <br/><br/>
+  Mit der Funktion&nbsp;<a href="functions.htm#chr$">CHR$</a>
+  k&ouml;nnen beliebige Bytes, auch Null-Bytes, ausgegeben werden.
+  &Uuml;bergibt man der Funktion den Wert&nbsp;0,
+  liefert sie normalerweise eine leere Zeichenkette zur&uuml;ck.
+  Das gilt jedoch nicht, wenn die CHR$-Funktion ein eigenst&auml;ndiger
+  Abschnitt in der PRINT-Anweisung ist.
+  In dem Fall wird immer das Byte ausgegeben,
+  dessen Wert der CHR$-Funktion &uuml;bergeben wurde,
+  auch wenn der Wert&nbsp;0 ist.
+  Das Beispiel zeigt das Schreiben einer bin&auml;ren Datei,
+  welche nur aus einem Null-Byte besteht:
+ <br/>
+  <tt>
+   &#10;<br/>
+   OPEN "datei.bin" FOR BINARY OUTPUT AS #1&#10;<br/>
+   IF ERR THEN&#10;<br/>
+   &nbsp;&nbsp;PRINT ERR$&#10;<br/>
+   ELSE&#10;<br/>
+   &nbsp;&nbsp;PRINT #1,CHR$(0);&#10;<br/>
+   &nbsp;&nbsp;CLOSE #1&#10;<br/>
+   ENDIF&#10;<br/>
+  </tt>
+
+ <br/><br/>
+  <u>SPC-Funktion</u>
+ <br/><br/>
+  Die SPC-Funktion dient zur Ausgabe einer bestimmten Anzahl
+  von Leerzeichen. Die Anzahl der Leerzeichen &uuml;bergibt man
+  der Funktion als Argument und ist in Klammern zu schreiben.
+  Das Beispiel zeigt die Ausgabe von 10&nbsp;Leerzeichen
+  zwischen den spitzen Klammern:
+ <br/>
+  <tt>
+   &#10;<br/>
+   PRINT "&gt;";SPC(10);"&lt;"&#10;<br/>
+  </tt>
+ <br/>
+  Das Besondere an der SPC-Funktion ist, dass sie nur innerhalb
+  der PRINT-Anweisung zur Verf&uuml;gung steht.
+  Aus diesem Grund wird sie auch hier und nicht bei den normalen
+  BASIC-Funktionen beschrieben.
+ <br/><br/>
+  Die SPC-Funktion hat die gleiche Wirkung wie die
+  Funktion&nbsp;<a href="functions.htm#space$">SPACE$</>.
+  Allerdings ist die SPC-Funktion insbesondere bei der Ausgabe
+  von vielen Leerzeichen besser geeignet,
+  da bei ihr nicht die interne Zeichenkettenverarbeitung zur Anwendung
+  kommt und somit auch deren Gr&ouml;&szlig;beschr&auml;nkung
+  nicht gilt.
+ <br/>
+
+ <br/><br/>
+  <u>Rechts- und linksb&uuml;ndige Ausgabe</u>
+ <br/><br/>
+  Zeichenketten werden immer linksb&uuml;ndig ausgegeben.
+  Bei numerischen Abschnitten h&auml;ngt die B&uuml;ndigekeit
+  vom voranstehenden Trennzeichen ab.
+  Ist der Abschnitt vom vorherigen Abschnitt durch ein Komma getrennt,
+  wird die Zahl in einem 14&nbsp;Zeichen breiten Feld rechtsb&uuml;ndig
+  ausgegeben.
   Anderenfalls erfolgt die Ausgabe linksb&uuml;ndig.
   Folgende Beispiele demonstrieren das:
  <br><br/>
@@ -2397,6 +2627,10 @@
    PRINT "Anteil: ";STR$(P);"%"&#10;<br/>
   </tt>
  <br/>
+
+ <br/>
+  <u>Zeilenschaltung</u>
+ <br/><br/>
   Die PRINT-Anweisung setzt nach der Ausgabe aller Abschnitte
   standardm&auml;&szlig;ig den Cursor auf den Anfang der n&auml;chsten Zeile.
   Diese Zeilenschaltung kann unterdr&uuml;ckt werden,
@@ -2480,13 +2714,13 @@
    &#10;<br/>
    RESTORE Wochentage&#10;<br/>
    FOR I=1 TO 7&#10;<br/>
-   &nbsp; READ A$&#10;<br/>
-   &nbsp; PRINT A$&#10;<br/>
+   &nbsp;&nbsp;READ A$&#10;<br/>
+   &nbsp;&nbsp;PRINT A$&#10;<br/>
    NEXT I&#10;<br/>
    END&#10;<br/>
    &#10;<br/>
    Wochentage:&#10;<br/>
-   &nbsp; DATA "Mo","Di","Mi","Do","Fr","Sa","So"&#10;<br/>
+   &nbsp;&nbsp;DATA "Mo","Di","Mi","Do","Fr","Sa","So"&#10;<br/>
   </tt>
  <br/>
   Wird keine Zeilennummer bzw. keine Marke angegeben,
@@ -2498,7 +2732,7 @@
   <b>Achtung!</b> Wenn eine Marke angegeben wird, muss es die Marke sein,
   die unmittelbar vor der betreffenden DATA-Anweisung steht.
   Wenn zwischen der angegebenen Marke und der DATA-Anweisung
-  eine weitere Marke oder BASIC-Zeilennummer steht,
+  eine weitere Marke oder eine BASIC-Zeilennummer steht,
   meldet der Compiler einen Fehler.
  <br/><br/>
 
@@ -2550,63 +2784,6 @@
   Ruft man die SCREEN-Anweisung mit der SCREEN-Nummer auf,
   in der man sich gerade befindet, passiert nichts.
  <br/><br/>
-
- <h3><a name="send">SEND</a></h3>
-  <table border="1">
-   <tr valign="top">
-    <td>Syntax:</td>
-    <td nowrap="nowrap">
-     <tt>SEND #</tt> &lt;Kanal&gt; <tt>,</tt> &lt;Host&gt;
-	<tt>,</tt> &lt;Port&gt;
-    </td>
-   </tr>
-   <tr valign="top">
-    <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
-   </tr>
-   <tr><td>Host:</td><td>einfacher String-Ausdruck</td></tr>
-   <tr><td>Port:</td><td>numerischer Ausdruck</td></tr>
-  </table>
- <br/>
-  Die Anweisung sendet die zuvor in den Ein-/Ausgabekanal
-  geschriebenen Daten als UDP-Paket an die mit <em>Host</em>
-  und <em>Port</em> angegebene Netzwerkadresse.
-  Der Ausgabekanal muss dazu mit
-  <a href="instructions.htm#datagram">DATAGRAM</a>
-  ge&ouml;ffnet worden sein.
- <br/><br/>
-  Die SEND-Anweisung setzt die Fehlervariablen
-  <a href="functions.htm#err">ERR</a> und
-  <a href="functions.htm#err$">ERR$</a>.
- <br/><br/>
-
- <h3><a name="set">SET</a></h3>
-  <table border="1">
-   <tr valign="top">
-    <td>Syntax:</td>
-    <td nowrap="nowrap">
-     <tt>SET DNSSERVER</tt> &lt;IP-Adresse&gt;<br/>
-     <tt>SET GATEWAY</tt> &lt;IP-Adresse&gt;<br/>
-     <tt>SET NETMASK</tt> &lt;IP-Adresse&gt;<br/>
-     <tt>SET LOCALADDR</tt> &lt;IP-Adresse&gt;
-    </td>
-   </tr>
-   <tr valign="top">
-    <td valign="top">IP-Adresse:</td>
-    <td valign="top">Zeichenkette mit der IP-Adresse in textueller Form</td>
-   </tr>
-  </table>
- <br/>
-  Die SET-Anweisung dient zum Konfigurieren von KCNet.
-  Das Beispiel zeigt das Setzen des DNS-Servers:
- <br/>
-  <tt>
-   &#10;<br/>
-   INPUT "DNS-Server: ";E$&#10;<br/>
-   SET DNSSERVER E$&#10;<br/>
-   IF ERR THEN PRINT ERR$&#10;<br/>
-  </tt>
- <br/>
 
  <h3><a name="sub">SUB</a></h3>
   <table border="1">
@@ -2688,10 +2865,11 @@
    &#10;<br/>
    I=1&#10;<br/>
    WHILE i&lt;10&#10;<br/>
-   &nbsp; PRINT I&#10;<br/>
-   &nbsp; I=I+1&#10;<br/>
+   &nbsp;&nbsp;PRINT I&#10;<br/>
+   &nbsp;&nbsp;I=I+1&#10;<br/>
    WEND&#10;<br/>
   </tt>
  <br/>
 </body>
 </html>
+

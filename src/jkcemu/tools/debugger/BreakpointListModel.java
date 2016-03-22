@@ -1,9 +1,9 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * ListModel fuer Haltepunkte, welches java.util.List implementiert
+ * ListModel fuer Halte-/Log-Punkte, welches java.util.List implementiert
  */
 
 package jkcemu.tools.debugger;
@@ -16,7 +16,7 @@ import javax.swing.event.ListDataListener;
 
 public class BreakpointListModel
 			extends ArrayList<AbstractBreakpoint>
-			implements ListModel
+			implements ListModel<AbstractBreakpoint>
 {
   private java.util.List<ListDataListener> listeners;
 
@@ -33,14 +33,14 @@ public class BreakpointListModel
   public void addListDataListener( ListDataListener l )
   {
     if( this.listeners == null ) {
-      this.listeners = new ArrayList<ListDataListener>();
+      this.listeners = new ArrayList<>();
     }
     this.listeners.add( l );
   }
 
 
   @Override
-  public Object getElementAt( int idx )
+  public AbstractBreakpoint getElementAt( int idx )
   {
     return get( idx );
   }

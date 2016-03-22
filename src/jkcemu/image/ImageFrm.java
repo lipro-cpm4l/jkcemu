@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -137,6 +137,8 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
+	/* --- MouseMotionListener --- */
+
   @Override
   public void mouseDragged( MouseEvent e )
   {
@@ -203,12 +205,12 @@ public class ImageFrm extends AbstractImageFrm implements
 
       this.mnuAutoResize.setSelected(
 		EmuUtil.parseBoolean(
-			props.getProperty( prefix + ".auto_resize" ),
+			props.getProperty( prefix + "auto_resize" ),
 			false ) );
 
       AbstractButton btn   = this.mnuBgSystem;
       Color          color = SystemColor.window;
-      String         text  = props.getProperty( prefix + ".background" );
+      String         text  = props.getProperty( prefix + "background" );
       if( text != null ) {
 	if( text.trim().toLowerCase().equals( "black" ) ) {
 	  color = Color.black;
@@ -329,7 +331,7 @@ public class ImageFrm extends AbstractImageFrm implements
       String prefix = getSettingsPrefix();
 
       props.setProperty(
-		prefix + ".auto_resize",
+		prefix + "auto_resize",
 		String.valueOf( this.mnuAutoResize.isSelected() ) );
 
       String colorText = "system";
@@ -339,7 +341,7 @@ public class ImageFrm extends AbstractImageFrm implements
       else if( this.mnuBgWhite.isSelected() ) {
 	colorText = "white";
       }
-      props.setProperty( prefix + ".background", colorText );
+      props.setProperty( prefix + "background", colorText );
     }
   }
 
@@ -359,7 +361,7 @@ public class ImageFrm extends AbstractImageFrm implements
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"Bilddatei \u00F6ffnen",
-			Main.getLastPathFile( "image" ),
+			Main.getLastDirFile( "image" ),
 			ImgLoader.createFileFilter() );
     if( file != null ) {
       if( showImageFile( file ) ) {
@@ -584,6 +586,7 @@ public class ImageFrm extends AbstractImageFrm implements
     if( this.clipboard != null ) {
       this.clipboard.addFlavorListener( this );
     }
+    updPasteBtn();
   }
 
 

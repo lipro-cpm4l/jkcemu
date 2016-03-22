@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -27,47 +27,47 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 
   private static VideoCaptureFrm instance = null;
 
-  private ScreenFrm         screenFrm;
-  private volatile boolean  pause;
-  private volatile boolean  focusedWindowOnly;
-  private volatile boolean  waitForReset;
-  private volatile boolean  running;
-  private volatile long     recordedMillis;
-  private int               waitForWindowMillis;
-  private volatile int      frameMillis;
-  private volatile int      captureWidth;
-  private volatile int      captureHeight;
-  private volatile boolean  capturing;
-  private volatile Window   captureWindow;
-  private boolean           fileCheckEnabled;
-  private Robot             robot;
-  private Thread            thread;
-  private VideoPlayFrm      videoPlayFrm;
-  private javax.swing.Timer statusTimer;
-  private JRadioButton      btnCaptureEmuSysScreen;
-  private JRadioButton      btnCaptureScreenFrm;
-  private JRadioButton      btnCaptureOtherWindow;
-  private JLabel            labelWinSelectTime;
-  private JLabel            labelWinSelectUnit;
-  private JSpinner          spinnerWinSelectSec;
-  private JLabel            labelFramesPerSec;
-  private JComboBox         comboFramesPerSec;
-  private JLabel            labelColorReduction;
-  private JRadioButton      btnColorReductionSmooth;
-  private JRadioButton      btnColorReductionHard;
-  private JLabel            labelPlayCnt;
-  private JRadioButton      btnPlayOnce;
-  private JRadioButton      btnPlayInfinite;
-  private JCheckBox         btnStartAfterReset;
-  private JCheckBox         btnFocusedWindowOnly;
-  private FileNameFld       fldFile;
-  private JLabel            labelStatus;
-  private JButton           btnFileSelect;
-  private JButton           btnRecord;
-  private JButton           btnPause;
-  private JButton           btnStop;
-  private JButton           btnPlay;
-  private JButton           btnClose;
+  private ScreenFrm          screenFrm;
+  private volatile boolean   pause;
+  private volatile boolean   focusedWindowOnly;
+  private volatile boolean   waitForReset;
+  private volatile boolean   running;
+  private volatile long      recordedMillis;
+  private int                waitForWindowMillis;
+  private volatile int       frameMillis;
+  private volatile int       captureWidth;
+  private volatile int       captureHeight;
+  private volatile boolean   capturing;
+  private volatile Window    captureWindow;
+  private boolean            fileCheckEnabled;
+  private Robot              robot;
+  private Thread             thread;
+  private VideoPlayFrm       videoPlayFrm;
+  private javax.swing.Timer  statusTimer;
+  private JRadioButton       btnCaptureEmuSysScreen;
+  private JRadioButton       btnCaptureScreenFrm;
+  private JRadioButton       btnCaptureOtherWindow;
+  private JLabel             labelWinSelectTime;
+  private JLabel             labelWinSelectUnit;
+  private JSpinner           spinnerWinSelectSec;
+  private JLabel             labelFramesPerSec;
+  private JComboBox<Integer> comboFramesPerSec;
+  private JLabel             labelColorReduction;
+  private JRadioButton       btnColorReductionSmooth;
+  private JRadioButton       btnColorReductionHard;
+  private JLabel             labelPlayCnt;
+  private JRadioButton       btnPlayOnce;
+  private JRadioButton       btnPlayInfinite;
+  private JCheckBox          btnStartAfterReset;
+  private JCheckBox          btnFocusedWindowOnly;
+  private FileNameFld        fldFile;
+  private JLabel             labelStatus;
+  private JButton            btnFileSelect;
+  private JButton            btnRecord;
+  private JButton            btnPause;
+  private JButton            btnStop;
+  private JButton            btnPlay;
+  private JButton            btnClose;
 
 
   public static void open( ScreenFrm screenFrm )
@@ -408,7 +408,7 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
     panelOpt.add( this.labelFramesPerSec, gbcOpt );
 
     Integer defaultFramesPerSec = new Integer( 10 );
-    this.comboFramesPerSec      = new JComboBox();
+    this.comboFramesPerSec      = new JComboBox<>();
     this.comboFramesPerSec.setEditable( false );
     this.comboFramesPerSec.addItem( new Integer( 5 ) );
     this.comboFramesPerSec.addItem( new Integer( 7 ) );
@@ -821,7 +821,10 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 	      this.btnPause.setEnabled( true );
 	    }
 	    this.running = true;
-	    this.thread  = new Thread( this, "JKCEMU screen video recorder" );
+	    this.thread  = new Thread(
+				Main.getThreadGroup(),
+				this,
+				"JKCEMU screen video recorder" );
 	    this.thread.start();
 	  }
 	  this.statusTimer.start();

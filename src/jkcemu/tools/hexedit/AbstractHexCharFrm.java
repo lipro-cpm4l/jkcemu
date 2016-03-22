@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,6 +15,7 @@ import java.lang.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.EventObject;
 import javax.swing.*;
+import javax.swing.event.*;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.etc.CksCalculator;
@@ -23,10 +24,8 @@ import jkcemu.etc.CksCalculator;
 public abstract class AbstractHexCharFrm
 				extends BasicFrm
 				implements
-					AdjustmentListener,
-					ComponentListener,
-					MouseMotionListener,
-					MouseWheelListener,
+					ByteDataSource,
+					CaretListener,
 					Printable
 {
   protected HexCharFld                hexCharFld;
@@ -37,9 +36,6 @@ public abstract class AbstractHexCharFrm
   private String     lastFindText;
   private int        findPos;
   private byte[]     findBytes;
-  private boolean    asciiSelected;
-  private JScrollBar hScrollBar;
-  private JScrollBar vScrollBar;
   private JTextField fldCaretDec;
   private JTextField fldCaretHex;
   private JTextField fldValue8;
@@ -60,7 +56,6 @@ public abstract class AbstractHexCharFrm
     this.lastFindText     = null;
     this.findPos          = 0;
     this.findBytes        = null;
-    this.asciiSelected    = false;
     Main.updIcon( this );
   }
 
@@ -106,49 +101,12 @@ public abstract class AbstractHexCharFrm
 
   protected Component createHexCharFld()
   {
-    JPanel panel = new JPanel( new GridBagLayout() );
-
-    GridBagConstraints gbc = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						1.0, 1.0,
-						GridBagConstraints.NORTHWEST,
-						GridBagConstraints.BOTH,
-						new Insets( 0, 0, 0, 0 ),
-						0, 0 );
+    JPanel panel = new JPanel( new BorderLayout() );
 
     this.hexCharFld = new HexCharFld( this );
     this.hexCharFld.setBorder( BorderFactory.createEtchedBorder() );
-    this.hexCharFld.addKeyListener( this );
-    panel.add( this.hexCharFld, gbc );
-
-    this.vScrollBar = new JScrollBar( JScrollBar.VERTICAL );
-    this.vScrollBar.setMinimum( 0 );
-    this.vScrollBar.setUnitIncrement( this.hexCharFld.getRowHeight() );
-    this.vScrollBar.addAdjustmentListener( this );
-    this.vScrollBar.addComponentListener( this );
-    gbc.anchor  = GridBagConstraints.WEST;
-    gbc.fill    = GridBagConstraints.VERTICAL;
-    gbc.weightx = 0.0;
-    gbc.gridx++;
-    panel.add( this.vScrollBar, gbc );
-
-    this.hScrollBar = new JScrollBar( JScrollBar.HORIZONTAL );
-    this.hScrollBar.setMinimum( 0 );
-    this.hScrollBar.setUnitIncrement( this.hexCharFld.getCharWidth() );
-    this.hScrollBar.addAdjustmentListener( this );
-    this.hScrollBar.addComponentListener( this );
-    gbc.anchor  = GridBagConstraints.NORTH;
-    gbc.fill    = GridBagConstraints.HORIZONTAL;
-    gbc.weightx = 1.0;
-    gbc.weighty = 0.0;
-    gbc.gridx   = 0;
-    gbc.gridy++;
-    panel.add( this.hScrollBar, gbc );
-
-    this.hexCharFld.addMouseListener( this );
-    this.hexCharFld.addMouseMotionListener( this );
-    this.hexCharFld.addMouseWheelListener( this );
+    this.hexCharFld.addCaretListener( this );
+    panel.add( new JScrollPane( this.hexCharFld ), BorderLayout.CENTER );
 
     return panel;
   }
@@ -230,16 +188,6 @@ public abstract class AbstractHexCharFrm
   }
 
 
-  public int getAddrOffset()
-  {
-    return 0;
-  }
-
-
-  abstract public byte getDataByte( int idx );
-  abstract public int  getDataLength();
-
-
   protected String getFileNameToPrint()
   {
     return null;
@@ -282,19 +230,6 @@ public abstract class AbstractHexCharFrm
   {
     int caretPos = this.hexCharFld.getCaretPosition();
     if( (caretPos >= 0) && (caretPos < getDataLength()) ) {
-      int row = (caretPos + HexCharFld.BYTES_PER_ROW - 1)
-					/ HexCharFld.BYTES_PER_ROW;
-      int hRow   = this.hexCharFld.getRowHeight();
-      int hFld   = this.hexCharFld.getHeight();
-      int yCaret = HexCharFld.MARGIN + (row * hRow);
-      int yOffs  = this.hexCharFld.getYOffset();
-
-      if( yCaret < yOffs + hRow ) {
-	changeVScrollBar( -(yOffs + hRow - yCaret) );
-      }
-      else if( yCaret > yOffs + hFld - hRow ) {
-	changeVScrollBar( yCaret - (yOffs + hFld - hRow ) );
-      }
       int addr = caretPos + getAddrOffset();
       this.fldCaretDec.setText( Integer.toString( addr ) );
       this.fldCaretHex.setText( Integer.toHexString( addr ).toUpperCase() );
@@ -306,147 +241,37 @@ public abstract class AbstractHexCharFrm
   }
 
 
-  protected void updScrollBar( Component c )
-  {
-    if( c == this.hScrollBar ) {
-      updScrollBar(
-		this.hScrollBar,
-		this.hScrollBar.getWidth(),
-		this.hexCharFld.getContentWidth() );
-    }
-    else if( c == this.vScrollBar ) {
-      updScrollBar(
-		this.vScrollBar,
-		this.vScrollBar.getHeight(),
-		this.hexCharFld.getContentHeight() );
-    }
-  }
-
-
   protected void updView()
   {
     this.hexCharFld.refresh();
-    updScrollBar( this.vScrollBar );
-    updScrollBar( this.hScrollBar );
     setContentActionsEnabled( getDataLength() > 0 );
     updValueFields();
   }
 
 
-	/* --- AdjustmentListener --- */
+	/* --- ByteDataSource --- */
 
   @Override
-  public void adjustmentValueChanged( AdjustmentEvent e )
+  public int getAddrOffset()
   {
-    if( e.getSource() == this.vScrollBar ) {
-      int yOffset  = 0;
-      int yOffsMax = this.hexCharFld.getContentHeight()
-				- this.hexCharFld.getHeight();
-      if( yOffsMax > 0 ) {
-	int maxValue = this.vScrollBar.getMaximum()
-				- this.vScrollBar.getVisibleAmount();
-	if( maxValue > 0 ) {
-	  yOffset = (int) Math.round( (double) this.vScrollBar.getValue()
-						/ (double) maxValue
-						* (double) yOffsMax );
-	}
-      }
-      this.hexCharFld.setYOffset( yOffset );
-    }
-    else if( e.getSource() == this.hScrollBar ) {
-      int xOffset  = 0;
-      int xOffsMax = this.hexCharFld.getContentWidth()
-				- this.hexCharFld.getWidth();
-      if( xOffsMax > 0 ) {
-	int maxValue = this.hScrollBar.getMaximum()
-				- this.hScrollBar.getVisibleAmount();
-	if( maxValue > 0 ) {
-	  xOffset = (int) Math.round( (double) this.hScrollBar.getValue()
-						/ (double) maxValue
-						* (double) xOffsMax );
-	}
-      }
-      this.hexCharFld.setXOffset( xOffset );
-    }
-  }
-
-
-	/* --- ComponentListener --- */
-
-  @Override
-  public void componentHidden( ComponentEvent e )
-  {
-    // leer
+    return 0;
   }
 
 
   @Override
-  public void componentMoved( ComponentEvent e )
-  {
-    // leer
-  }
+  abstract public int getDataByte( int idx );
 
 
   @Override
-  public void componentResized( ComponentEvent e )
-  {
-    updScrollBar( e.getComponent() );
-  }
+  abstract public int  getDataLength();
 
 
-  @Override
-  public void componentShown( ComponentEvent e )
-  {
-    updScrollBar( e.getComponent() );
-  }
-
-
-	/* --- MouseMotionListener --- */
+	/* --- CaretListener --- */
 
   @Override
-  public void mouseDragged( MouseEvent e )
+  public void caretUpdate( CaretEvent e )
   {
-    if( (getDataLength() > 0)
-	&& (e.getComponent() == this.hexCharFld) )
-    {
-      int pos = this.hexCharFld.getDataIndexAt( e.getX(), e.getY() );
-      if( pos >= 0 ) {
-	setCaretPosition( pos, true );
-      }
-      e.consume();
-    }
-  }
-
-
-  @Override
-  public void mouseMoved( MouseEvent e )
-  {
-    // leer
-  }
-
-
-	/* --- MouseWheelListener --- */
-
-  @Override
-  public void mouseWheelMoved( MouseWheelEvent e )
-  {
-    if( e.getComponent() == this.hexCharFld ) {
-      int diffValue = 0;
-      switch( e.getScrollType() ) {
-	case MouseWheelEvent.WHEEL_UNIT_SCROLL:
-	  diffValue = this.vScrollBar.getUnitIncrement();
-	  break;
-
-	case MouseWheelEvent.WHEEL_BLOCK_SCROLL:
-	  diffValue = this.vScrollBar.getBlockIncrement();
-	  break;
-      }
-      if( diffValue > 0 ) {
-	diffValue *= e.getWheelRotation();
-      }
-      changeVScrollBar( diffValue );
-      e.consume();
-    }
+    updCaretPosFields();
   }
 
 
@@ -478,7 +303,7 @@ public abstract class AbstractHexCharFrm
     int dataLen = getDataLength();
     int pos     = nRows * HexCharFld.BYTES_PER_ROW * pageNum;
     if( pos < dataLen ) {
-      g.setFont( new Font( "Monospaced", Font.PLAIN, fontSize ) );
+      g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
 
       String        addrFmt = this.hexCharFld.createAddrFmtString();
       StringBuilder buf     = new StringBuilder( addrFmt.length() + 6
@@ -584,142 +409,13 @@ public abstract class AbstractHexCharFrm
 
 
   @Override
-  public void keyPressed( KeyEvent e )
-  {
-    if( e.getSource() == this.hexCharFld ) {
-      int hRow     = 0;
-      int caretPos = this.hexCharFld.getCaretPosition();
-      if( caretPos >= 0 ) {
-	boolean state   = false;
-	int     dataLen = getDataLength();
-	switch( e.getKeyCode() ) {
-	  case KeyEvent.VK_LEFT:
-	    --caretPos;
-	    state = true;
-	    break;
-
-	  case KeyEvent.VK_RIGHT:
-	    caretPos++;
-	    state = true;
-	    break;
-
-	  case KeyEvent.VK_UP:
-	    caretPos -= HexCharFld.BYTES_PER_ROW;
-	    state = true;
-	    break;
-
-	  case KeyEvent.VK_DOWN:
-	    caretPos += HexCharFld.BYTES_PER_ROW;
-	    state = true;
-	    break;
-
-	  case KeyEvent.VK_PAGE_UP:
-	    hRow = this.hexCharFld.getRowHeight();
-	    if( hRow > 0 ) {
-	      caretPos -= ((this.hexCharFld.getHeight() / hRow)
-						* HexCharFld.BYTES_PER_ROW);
-	      while( caretPos < 0 ) {
-		caretPos += HexCharFld.BYTES_PER_ROW;
-	      }
-	    }
-	    state = true;
-	    break;
-
-	  case KeyEvent.VK_PAGE_DOWN:
-	    hRow = this.hexCharFld.getRowHeight();
-	    if( hRow > 0 ) {
-	      caretPos += ((this.hexCharFld.getHeight() / hRow)
-						* HexCharFld.BYTES_PER_ROW);
-	      while( caretPos >= dataLen ) {
-		caretPos += HexCharFld.BYTES_PER_ROW;
-	      }
-	    }
-	    state = true;
-	    break;
-
-	  case KeyEvent.VK_BEGIN:
-	    caretPos = 0;
-	    state    = true;
-	    break;
-
-	  case KeyEvent.VK_END:
-	    caretPos = dataLen - 1;
-	    state    = true;
-	    break;
-	}
-	if( state ) {
-	  e.consume();
-	  if( (caretPos >= 0) && (caretPos < dataLen) ) {
-	    setCaretPosition( caretPos, e.isShiftDown() );
-	  }
-	}
-      }
-    }
-  }
-
-
-  @Override
   public void lookAndFeelChanged()
   {
     this.hexCharFld.repaint();
   }
 
 
-  @Override
-  public void mousePressed( MouseEvent e )
-  {
-    if( e.getComponent() == this.hexCharFld ) {
-      if( getDataLength() > 0 ) {
-	int pos = this.hexCharFld.getDataIndexAt( e.getX(), e.getY() );
-	if( pos >= 0 ) {
-	  setCaretPosition( pos, e.isShiftDown() );
-	}
-      }
-      this.hexCharFld.requestFocus();
-      e.consume();
-    } else {
-      super.mouseClicked( e );
-    }
-  }
-
-
 	/* --- Aktionen --- */
-
-  protected void doBytesCopy()
-  {
-    int dataLen  = getDataLength();
-    int caretPos = this.hexCharFld.getCaretPosition();
-    int markPos  = this.hexCharFld.getMarkPosition();
-    int m1       = -1;
-    int m2       = -1;
-    if( (caretPos >= 0) && (markPos >= 0) ) {
-      m1 = Math.min( caretPos, markPos );
-      m2 = Math.max( caretPos, markPos );
-    } else {
-      m1 = caretPos;
-      m2 = caretPos;
-    }
-    if( m2 >= dataLen ) {
-      m2 = dataLen - 1;
-    }
-    if( m1 >= 0 ) {
-      StringBuilder buf = new StringBuilder( (m2 - m1 + 1) * 3 );
-      boolean       sp  = false;
-      while( m1 <= m2 ) {
-	if( sp ) {
-	  buf.append( '\u0020' );
-	}
-	byte b = getDataByte( m1++ );
-	buf.append( EmuUtil.getHexChar( b >> 4 ) );
-	buf.append( EmuUtil.getHexChar( b ) );
-	sp = true;
-      }
-      if( buf.length() > 0 ) {
-	EmuUtil.copyToClipboard( this, buf.toString() );
-      }
-    }
-  }
-
 
   protected void doChecksum()
   {
@@ -833,7 +529,15 @@ public abstract class AbstractHexCharFrm
 	} else {
 	  if( this.findPos > 0 ) {
 	    this.findPos = 0;
-	    doFindNext();
+	    EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    doFindNext();
+			  }
+			} );
 	  } else {
 	    BasicDlg.showInfoDlg( this, "Byte-Folge nicht gefunden" );
 	  }
@@ -844,24 +548,6 @@ public abstract class AbstractHexCharFrm
 
 
 	/* --- private Methoden --- */
-
-  private void changeVScrollBar( int diffValue )
-  {
-    if( diffValue != 0 ) {
-      int oldValue = this.vScrollBar.getValue();
-      int newValue = oldValue + diffValue;
-      if( newValue < this.vScrollBar.getMinimum() ) {
-	newValue = this.vScrollBar.getMinimum();
-      }
-      else if( newValue > this.vScrollBar.getMaximum() ) {
-	newValue = this.vScrollBar.getMaximum();
-      }
-      if( newValue != oldValue ) {
-	this.vScrollBar.setValue( newValue );
-      }
-    }
-  }
-
 
   private Long getLong( int pos, int len, boolean littleEndian )
   {
@@ -904,22 +590,6 @@ public abstract class AbstractHexCharFrm
     }
     if( !done ) {
       BasicDlg.showErrorDlg( this, "Ung\u00FCltige Eingabe" );
-    }
-  }
-
-
-  private void updScrollBar(
-			JScrollBar scrollBar,
-			int        visibleSize,
-			int        fullSize )
-  {
-    if( (visibleSize > 0) && (fullSize > 0) ) {
-      if( visibleSize > fullSize ) {
-	visibleSize = fullSize;
-      }
-      scrollBar.setMaximum( fullSize );
-      scrollBar.setBlockIncrement( visibleSize );
-      scrollBar.setVisibleAmount( visibleSize );
     }
   }
 
@@ -977,4 +647,3 @@ public abstract class AbstractHexCharFrm
     setSelectedByteActionsEnabled( state8 );
   }
 }
-

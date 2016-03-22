@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -46,18 +46,11 @@ public class AsmLine
 	} else {
 
 	  // Marke parsen
-	  if( (ch == '_')
-	      || ((ch >= 'A') && (ch <= 'Z'))
-	      || ((ch >= 'a') && (ch <= 'z')) )
-	  {
+	  if( AsmLabel.isIdentifierStart( ch ) ) {
 	    StringBuilder buf = new StringBuilder();
 	    buf.append( ch );
 	    ch = iter.next();
-	    while( (ch == '_')
-		   || ((ch >= 'A') && (ch <= 'Z'))
-		   || ((ch >= 'a') && (ch <= 'z'))
-		   || ((ch >= '0') && (ch <= '9')) )
-	    {
+	    while( AsmLabel.isIdentifierPart( ch ) ) {
 	      buf.append( ch );
 	      ch = iter.next();
 	    }
@@ -67,24 +60,37 @@ public class AsmLine
 	    {
 	      throwInvalidCharInLabel( ch );
 	    }
-	    if( ch == ':' ) {
-	      ch = iter.next();
-	    }
-	    label             = buf.toString();
-	    String upperLabel = label.toUpperCase();
-	    if( !labelsCaseSensitive ) {
-	      label = upperLabel;
-	    }
-	    if( AsmArg.isRegister( upperLabel )
-		|| AsmArg.isFlagCondition( upperLabel ) )
+	    // Pruefen auf ein Schluesselwort fuer eine Bedingung
+	    String s = buf.toString().toUpperCase();
+	    if( s.equals( "IF" ) || s.equals( "IFT" )
+		|| s.equals( "IFE" ) || s.equals( "IFF" )
+		|| s.equals( "IF1" ) || s.equals( "IF2" )
+		|| s.equals( "IFDEF" ) || s.equals( "IFNDEF" )
+		|| s.equals( "ELSE" ) || s.equals( "ENDIF" ) )
 	    {
-	      asm.putWarning( "Marke \'" + label + "\': Name reserviert"
-				+ " f\u00FCr Register oder Flagbedingung" );
-	    }
-	    if( AsmArg.isUndocRegister( upperLabel ) ) {
-	      asm.putWarning( "Marke \'" + label + "\': Name reserviert"
-				+ " f\u00FCr Registerbezeichnung"
-				+ " eines undokumentierten Befehls" );
+	      ch = iter.first();
+	    } else {
+	      if( ch == ':' ) {
+		ch = iter.next();
+	      }
+	      label             = buf.toString();
+	      String upperLabel = label.toUpperCase();
+	      if( !labelsCaseSensitive ) {
+		label = upperLabel;
+	      }
+	      if( asm != null ) {
+		boolean reserved = (asm.isReservedWord( upperLabel )
+			    || AsmArg.isRegister( upperLabel )
+			    || AsmArg.isFlagCondition( upperLabel )
+			    || ExprParser.isReservedWord( upperLabel ));
+		if( !reserved && asm.getOptions().getAllowUndocInst() ) {
+		  reserved = AsmArg.isUndocRegister( upperLabel );
+		}
+		if( reserved ) {
+		  asm.putWarning(
+			"Marke \'" + label + "\': Reserviertes Wort" );
+		}
+	      }
 	    }
 	  } else {
 	    if( (ch != CharacterIterator.DONE)
@@ -116,7 +122,7 @@ public class AsmLine
 	  String argText = nextArgText( iter );
 	  while( argText != null ) {
 	    if( args == null ) {
-	      args = new ArrayList<AsmArg>();
+	      args = new ArrayList<>();
 	    }
 	    args.add( new AsmArg( argText ) );
 	    argText = nextArgText( iter );
@@ -167,14 +173,14 @@ public class AsmLine
     int     tabsToComment = 3;
     boolean hasLabel      = false;
     if( this.label != null ) {
-      if( this.label.length() > 0 ) {
+      if( !this.label.isEmpty() ) {
 	buf.append( this.label );
 	buf.append( (char) ':' );
 	hasLabel = true;
       }
     }
     if( instruction != null ) {
-      if( instruction.length() > 0 ) {
+      if( !instruction.isEmpty() ) {
 	buf.append( (char) '\t' );
 	buf.append( instruction );
 	--tabsToComment;
@@ -193,7 +199,7 @@ public class AsmLine
       }
     }
     if( this.comment != null ) {
-      if( this.comment.length() > 0 ) {
+      if( !this.comment.isEmpty() ) {
 	if( hasLabel || (tabsToComment < 3) || !this.commentAtStart ) {
 	  while( tabsToComment > 0 ) {
 	    buf.append( (char) '\t' );
@@ -214,7 +220,7 @@ public class AsmLine
 	StringBuilder buf  = new StringBuilder( 32 );
 	String        text = this.args[ this.argPos ].toString();
 	if( text != null ) {
-	  if( text.length() > 0 ) {
+	  if( !text.isEmpty() ) {
 	    buf.append( text );
 	    buf.append( ": " );
 	  }
@@ -242,8 +248,9 @@ public class AsmLine
   {
     boolean rv = false;
     if( this.args != null ) {
-      if( this.argPos < this.args.length )
+      if( this.argPos < this.args.length ) {
 	rv = true;
+      }
     }
     return rv;
   }
@@ -253,8 +260,9 @@ public class AsmLine
   {
     AsmArg arg = null;
     if( this.args != null ) {
-      if( this.argPos < this.args.length )
+      if( this.argPos < this.args.length ) {
 	arg = this.args[ this.argPos++ ];
+      }
     }
     if( arg == null ) {
       throw new PrgException( "Argument erwartet" );
@@ -322,7 +330,7 @@ public class AsmLine
     }
     String rv = null;
     if( buf != null ) {
-      rv = buf.toString().trim();
+      rv = buf.toString();
       if( rv.isEmpty() ) {
 	rv = null;
       }
@@ -343,4 +351,3 @@ public class AsmLine
     throw new PrgException( buf.toString() );
   }
 }
-

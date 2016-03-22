@@ -1,9 +1,9 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Drucken einer Textes
+ * Drucken eines Textes
  */
 
 package jkcemu.print;
@@ -68,7 +68,7 @@ public class PlainTextPrintable implements Printable
       if( (linesToSkip == 0) && (pos < len) ) {
 
 	// Seite drucken
-	g.setFont( new Font( "Monospaced", Font.PLAIN, fontSize ) );
+	g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
 	g.setColor( Color.black );
 
 	int x = (int) pf.getImageableX();
@@ -103,7 +103,7 @@ public class PlainTextPrintable implements Printable
 	}
 	y = (int) (pf.getImageableY() + pf.getImageableHeight());
 	if( Main.getPrintFileName() && (this.fileName != null) ) {
-	  g.setFont( new Font( "Monospaced", Font.PLAIN, fontSize ) );
+	  g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
 	  g.drawString( this.fileName, x, y );
 	  if( Main.getPrintPageNum() ) {
 	    String s = String.valueOf( pageNum + 1 );

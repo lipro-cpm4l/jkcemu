@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,6 +8,7 @@
 
 package jkcemu.emusys.huebler;
 
+import java.awt.EventQueue;
 import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.text.*;
@@ -26,13 +27,18 @@ public abstract class AbstractHueblerMC
   protected Z80CTC  ctc;
   protected Z80PIO  pio;
 
-  private int pasteStateNum;
+  private int              pasteStateNum;
+  private volatile boolean pasteIgnoreMsgActive;
 
 
-  public AbstractHueblerMC( EmuThread emuThread, Properties props )
+  public AbstractHueblerMC(
+			EmuThread  emuThread,
+			Properties props,
+			String     propPrefix )
   {
-    super( emuThread, props );
-    this.pcListenerAdded = false;
+    super( emuThread, props, propPrefix );
+    this.pcListenerAdded      = false;
+    this.pasteIgnoreMsgActive = false;
   }
 
 
@@ -56,8 +62,8 @@ public abstract class AbstractHueblerMC
   protected void createIOSystem()
   {
     Z80CPU cpu = this.emuThread.getZ80CPU();
-    this.ctc   = new Z80CTC( "CTC (IO-Adressen 14h-17h)" );
-    this.pio   = new Z80PIO( "PIO (IO-Adressen 0Ch-0Fh)" );
+    this.ctc   = new Z80CTC( "CTC (E/A-Adressen 14h-17h)" );
+    this.pio   = new Z80PIO( "PIO (E/A-Adressen 0Ch-0Fh)" );
     cpu.setInterruptSources( this.ctc, this.pio );
     cpu.addTStatesListener( this.ctc );
   }
@@ -139,7 +145,7 @@ public abstract class AbstractHueblerMC
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     port &= 0xFF;
 
@@ -152,22 +158,36 @@ public abstract class AbstractHueblerMC
 	}
 	--this.pasteStateNum;
       } else {
-	CharacterIterator iter = this.pasteIter;
-	if( iter != null ) {
-	  char ch = iter.current();
-	  iter.next();
-	  if( ch == CharacterIterator.DONE ) {
-	    cancelPastingText();
-	  } else {
-	    ch = TextUtil.toISO646DE( ch );
-	    if( ch == '\n' ) {
-	      ch = '\r';
-	    }
-	    if( (ch == '\r')
-		|| ((ch >= '\u0000') && (ch < '\u007F')) )
-	    {
-	      this.keyChar = ch;
-	      this.pasteStateNum = 8;
+	if( !this.pasteIgnoreMsgActive ) {
+	  CharacterIterator iter = this.pasteIter;
+	  if( iter != null ) {
+	    char ch = iter.current();
+	    iter.next();
+	    if( ch == CharacterIterator.DONE ) {
+	      cancelPastingText();
+	    } else {
+	      ch = TextUtil.toISO646DE( ch );
+	      if( ch == '\n' ) {
+		ch = '\r';
+	      }
+	      if( (ch == '\r')
+		  || ((ch >= '\u0000') && (ch < '\u007F')) )
+	      {
+		this.keyChar = ch;
+		this.pasteStateNum = 8;
+	      } else {
+		final char ch1            = ch;
+		this.pasteIgnoreMsgActive = true;
+		EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    showPasteIgnoreMsg( ch1 );
+			  }
+			} );
+	      }
 	    }
 	  }
 	}
@@ -187,7 +207,7 @@ public abstract class AbstractHueblerMC
 	break;
 
       case 0x0C:
-	rv = this.pio.readPortA();
+	rv = this.pio.readDataA();
 	break;
 
       case 0x0D:
@@ -195,7 +215,7 @@ public abstract class AbstractHueblerMC
 	break;
 
       case 0x0E:
-	rv = this.pio.readPortB();
+	rv = this.pio.readDataB();
 	break;
 
       case 0x0F:
@@ -206,7 +226,7 @@ public abstract class AbstractHueblerMC
       case 0x15:
       case 0x16:
       case 0x17:
-	rv = this.ctc.read( port & 0x03 );
+	rv = this.ctc.read( port & 0x03, tStates );
 	break;
     }
     return rv;
@@ -253,11 +273,11 @@ public abstract class AbstractHueblerMC
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     switch( port & 0xFF ) {
       case 0x0C:
-	this.pio.writePortA( value );
+	this.pio.writeDataA( value );
 	break;
 
       case 0x0D:
@@ -265,7 +285,7 @@ public abstract class AbstractHueblerMC
 	break;
 
       case 0x0E:
-	this.pio.writePortB( value );
+	this.pio.writeDataB( value );
 	break;
 
       case 0x0F:
@@ -276,9 +296,28 @@ public abstract class AbstractHueblerMC
       case 0x15:
       case 0x16:
       case 0x17:
-	this.ctc.write( port & 0x03, value );
+	this.ctc.write( port & 0x03, value, tStates );
 	break;
     }
   }
-}
 
+
+	/* --- private Methoden --- */
+
+  private void showPasteIgnoreMsg( char ch )
+  {
+    if( BasicDlg.showOptionDlg(
+		this.emuThread.getScreenFrm(),
+		String.format(
+			"Das Zeichen mit dem Code %02Xh kann nicht"
+				+ " eingef\u00FCgt werden.",
+			(int) ch ),
+		"Einf\u00FCgen",
+		"Weiter",
+		"Abbrechen" ) != 0 )
+    {
+      cancelPastingText();
+    }
+    this.pasteIgnoreMsgActive = false;
+  }
+}

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.disk;
 
 import java.lang.*;
 import java.util.Arrays;
+import jkcemu.Main;
 import jkcemu.base.EmuThread;
 import z80emu.*;
 
@@ -198,7 +199,10 @@ public class FDC8272 implements
     this.ioTaskCmd          = IOTaskCmd.IDLE;
     this.ioTaskEnabled      = true;
     this.ioTaskNoWait       = false;
-    this.ioTaskThread       = new Thread( this, "JKCEMU FDC" );
+    this.ioTaskThread       = new Thread(
+					Main.getThreadGroup(),
+					this,
+					"JKCEMU FDC" );
 
     String text = System.getProperty( "jkcemu.debug.fdc" );
     if( text != null ) {

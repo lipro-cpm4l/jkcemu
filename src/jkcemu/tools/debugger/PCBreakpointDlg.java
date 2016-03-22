@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Dialog zum Anlegen eines Haltepunktes auf eine Adresse
+ * Dialog zum Anlegen eines Halte-/Log-Punktes auf eine Adresse
  */
 
 package jkcemu.tools.debugger;
@@ -26,23 +26,26 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 				"IY", "IYH", "IYL",
 				"SP" };
 
-  private HexDocument docAddr;
-  private HexDocument docMask;
-  private HexDocument docValue;
-  private JLabel      labelReg1;
-  private JLabel      labelReg2;
-  private JLabel      labelReg3;
-  private JComboBox   comboReg;
-  private JComboBox   comboCond;
-  private JCheckBox   btnCheckReg;
-  private JTextField  fldAddr;
-  private JTextField  fldMask;
-  private JTextField  fldValue;
+  private HexDocument       docAddr;
+  private HexDocument       docMask;
+  private HexDocument       docValue;
+  private JLabel            labelReg1;
+  private JLabel            labelReg2;
+  private JLabel            labelReg3;
+  private JComboBox<String> comboReg;
+  private JComboBox<String> comboCond;
+  private JCheckBox         btnCheckReg;
+  private JTextField        fldAddr;
+  private JTextField        fldMask;
+  private JTextField        fldValue;
 
 
-  public PCBreakpointDlg( Window owner, AbstractBreakpoint breakpoint )
+  public PCBreakpointDlg(
+		DebugFrm           debugFrm,
+		AbstractBreakpoint breakpoint,
+		int                presetAddr )
   {
-    super( owner, "Programmadresse", breakpoint );
+    super( debugFrm, "Programmadresse", breakpoint );
 
 
     // Fensterinhalt
@@ -99,10 +102,10 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 						new Insets( 0, 0, 0, 0 ),
 						0, 0 );
 
-    this.labelReg1 = new JLabel( "Nur anhalten wenn Register" );
+    this.labelReg1 = new JLabel( "Nur anhalten/loggen wenn Register" );
     panelReg.add( this.labelReg1, gbcReg );
 
-    this.comboReg = new JComboBox( registers );
+    this.comboReg = new JComboBox<>( registers );
     this.comboReg.setEditable( false );
     gbcReg.insets.left = 5;
     gbcReg.gridx++;
@@ -120,7 +123,7 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
     gbcReg.gridx++;
     panelReg.add( this.fldMask, gbcReg );
 
-    this.comboCond = new JComboBox( conditions );
+    this.comboCond = new JComboBox<>( conditions );
     this.comboCond.setEditable( false );
     gbcReg.fill    = GridBagConstraints.NONE;
     gbcReg.weightx = 0.0;
@@ -176,6 +179,9 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 	  valueState = true;
 	}
       }
+    }
+    if( presetAddr >= 0 ) {
+      this.docAddr.setValue( presetAddr, 4 );
     }
     this.comboReg.setSelectedItem( reg != null ? reg : "A" );
     regChanged();
@@ -271,12 +277,41 @@ public class PCBreakpointDlg extends AbstractBreakpointDlg
 	}
       }
       if( status ) {
-	approveBreakpoint( new PCBreakpoint(
-					addr,
-					reg,
-					mask,
-					cond,
-					value ) );
+	int     oldAddr     = -1;
+	boolean oldImported = false;
+	boolean done        = false;
+	if( this.breakpoint != null ) {
+	  if( this.breakpoint instanceof PCBreakpoint ) {
+	    oldAddr     = ((PCBreakpoint) this.breakpoint).getAddress();
+	    oldImported = ((PCBreakpoint) this.breakpoint).wasImported();
+	  }
+	  if( (this.breakpoint instanceof LabelBreakpoint)
+	      && (!oldImported || (oldImported && (addr == oldAddr))) )
+	  {
+	    approveBreakpoint(
+		new LabelBreakpoint(
+			this.debugFrm,
+			((LabelBreakpoint) this.breakpoint).getLabelName(),
+			addr,
+			reg,
+			mask,
+			cond,
+			value,
+			oldImported ) );
+	    done = true;
+	  }
+	}
+	if( !done ) {
+	  approveBreakpoint(
+		new PCBreakpoint(
+			this.debugFrm,
+			addr,
+			reg,
+			mask,
+			cond,
+			value,
+			oldImported && (addr == oldAddr) ) );
+	}
       }
     }
     catch( NumberFormatException ex ) {

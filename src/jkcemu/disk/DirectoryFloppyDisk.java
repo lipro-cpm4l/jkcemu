@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,7 @@ import java.io.*;
 import java.lang.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import jkcemu.base.EmuUtil;
+import jkcemu.base.*;
 
 
 public class DirectoryFloppyDisk extends AbstractFloppyDisk
@@ -38,8 +38,8 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
       if( s2 == null ) {
 	s2 = "";
       }
-      boolean at1 = s1.startsWith( "\u0000@" );
-      boolean at2 = s2.startsWith( "\u0000@" );
+      boolean at1 = s1.startsWith( "0@" );
+      boolean at2 = s2.startsWith( "0@" );
       if( at1 && !at2 ) {
 	rv = -1;
       } else if( !at1 && at2 ) {
@@ -77,24 +77,31 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   private boolean               autoRefresh;
   private boolean               forceLowerCase;
   private boolean               readOnly;
+  private boolean               dsEnabled;
+  private byte[]                dsBytes;
+  private int                   dsFirstSector;
+  private int                   dsSectors;
+  private FileTimesViewFactory  ftvFactory;
   private String                remark;
   private volatile boolean      refreshFired;
 
 
   public DirectoryFloppyDisk(
-			Frame   owner,
-			int     sides,
-			int     cyls,
-			int     sectorsPerCyl,
-			int     sectorSize,
-			int     sysTracks,
-			int     dirBlocks,
-			int     blockSize,
-			boolean blockNum16Bit,
-			File    dirFile,
-			boolean autoRefresh,
-			boolean readOnly,
-			boolean forceLowerCase )
+			Frame                 owner,
+			int                   sides,
+			int                   cyls,
+			int                   sectorsPerCyl,
+			int                   sectorSize,
+			int                   sysTracks,
+			int                   dirBlocks,
+			int                   blockSize,
+			boolean               blockNum16Bit,
+			boolean               dateStamperEnabled,
+			FileTimesViewFactory  ftvFactory,
+			File                  dirFile,
+			boolean               autoRefresh,
+			boolean               readOnly,
+			boolean               forceLowerCase )
   {
     super( owner, sides, cyls, sectorsPerCyl, sectorSize );
     this.dirFile         = dirFile;
@@ -107,13 +114,18 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     this.dirBlocks       = dirBlocks;
     this.dirSectors      = dirBlocks * this.sectorsPerBlock;
     this.sectorSizeCode  = SectorData.getSizeCode( sectorSize );
-    this.autoRefresh     = readOnly ? autoRefresh : false;
+    this.autoRefresh     = autoRefresh;
     this.readOnly        = readOnly;
     this.forceLowerCase  = forceLowerCase;
     this.lastBuildMillis = -1L;
-    this.fileMap         = new HashMap<String,File>();
+    this.fileMap         = new HashMap<>();
     this.errorMap        = null;;
     this.dirBytes        = null;
+    this.dsEnabled       = dateStamperEnabled;
+    this.dsBytes         = null;
+    this.dsFirstSector   = -1;
+    this.dsSectors       = 0;
+    this.ftvFactory      = ftvFactory;
     this.maxDirEntries   = 0;
     this.sectors         = new SectorData[ sides * cyls * sectorsPerCyl ];
     this.refreshFired    = false;
@@ -132,12 +144,29 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  public File getDirFile()
+  {
+    return this.dirFile;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public String getFileFormatText()
   {
     return null;
+  }
+
+
+  @Override
+  public String getFormatText()
+  {
+    String text = super.getFormatText();
+    if( (text != null) && this.dsEnabled ) {
+      text += ", DateStamper";
+    }
+    return text;
   }
 
 
@@ -163,7 +192,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
        * aktiviert ist, wird beim naechsten lesenden Zugriff
        * auf den ersten Sektor der Diskette oder des Directories
        * die virtuelle Diskette neu erzeugt, bei AutoRefresh aber nur,
-       * wenn die letzte Aktualisierung mehr als 10 Sekunden zurueckliegt.
+       * wenn die letzte Aktualisierung mehr als 5 Sekunden zurueckliegt.
        */
       if( ((physCyl == 0) || (physCyl == this.sysTracks))
 	  && (physHead == 0)
@@ -176,7 +205,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  long curMillis = System.currentTimeMillis();
 	  if( (curMillis != -1L)
 	      && ((this.lastBuildMillis == -1L)
-		  || (this.lastBuildMillis < (curMillis - 10000))) )
+		  || (this.lastBuildMillis < (curMillis - 5000))) )
 	  {
 	    rebuildDisk();
 	  }
@@ -300,6 +329,9 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		prefix + "dir_blocks",
 		Integer.toString( this.dirBlocks ) );
       props.setProperty(
+		prefix + "datestamper",
+		Boolean.toString( this.dsEnabled ) );
+      props.setProperty(
 		prefix + "auto_refresh",
 		Boolean.toString( this.autoRefresh ) );
       props.setProperty(
@@ -359,6 +391,13 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  {
 	    // Directory
 	    writeDirSector( absSectorIdx, dataBuf, dataLen );
+	  }
+	  else if( this.dsEnabled
+		   && (absSectorIdx >= this.dsFirstSector)
+		   && (absSectorIdx < (this.dsFirstSector + this.dsSectors)) )
+	  {
+	    // DateStamper
+	    writeDsSector( absSectorIdx, dataBuf, dataLen );
 	  }
 	  else if( absSectorIdx >= (this.sysSectors + this.dirSectors) ) {
 	    // Datenbereich
@@ -469,7 +508,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     int    b0 = (int) dirBytes[ entryBegPos ] & 0xFF;
     if( (b0 != 0xE5) && ((b0 & 0xF0) == 0) ) {
       char[] buf = new char[ 12 ];
-      buf[ 0 ]   = (char) b0;
+      buf[ 0 ]   = (char) (b0 + '0');
       for( int i = 1; i < 12; i++ ) {
 	buf[ i ] = (char) ((int) dirBytes[ entryBegPos + i ] & 0x7F);
       }
@@ -496,7 +535,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 						== ((extentNum >> 5) & 0x3F)) )
 	  {
 	    boolean found = false;
-	    if( (b0 & 0x0F) == entryName.charAt( 0 ) ) {
+	    if( (b0 & 0x0F) == (entryName.charAt( 0 ) - '0') ) {
 	      found = true;
 	      for( int i = 1; i < 12; i++ ) {
 		if( ((int) this.dirBytes[ pos + i ] & 0x7F)
@@ -575,7 +614,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	    int blockNum = EmuUtil.getWord( this.dirBytes, pos );
 	    if( blockNum > 0 ) {
 	      if( rv == null ) {
-		rv = new ArrayList<Integer>( 32 );
+		rv = new ArrayList<>( 32 );
 	      }
 	      rv.add( new Integer( blockNum ) );
 	    }
@@ -586,7 +625,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	    int blockNum = (int) this.dirBytes[ pos ] & 0xFF;
 	    if( blockNum > 0 ) {
 	      if( rv == null ) {
-		rv = new ArrayList<Integer>( 32 );
+		rv = new ArrayList<>( 32 );
 	      }
 	      rv.add( new Integer( blockNum ) );
 	      if( len == 0 ) {
@@ -605,6 +644,20 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	}
 	extentNum++;
 	entryPos = findEntryBegPosByNameAndExtent( entryName, extentNum );
+      }
+    }
+    return rv;
+  }
+
+
+  private static boolean isInSameMinute( Long minuteMillis, Long exactMillis )
+  {
+    boolean rv = false;
+    if( (minuteMillis != null) && (exactMillis != null) ) {
+      if( (exactMillis >= minuteMillis)
+	  && (exactMillis < (minuteMillis + 60000L)) )
+      {
+	rv = true;
       }
     }
     return rv;
@@ -644,14 +697,14 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   {
     byte[] fileBytes = null;
     try {
-      fileBytes = EmuUtil.readFile( file, getDiskSize() );
+      fileBytes = EmuUtil.readFile( file, false, getDiskSize() );
     }
     catch( IOException ex ) {
       String fileName = file.getPath();
       if( fileName != null ) {
 	if( !fileName.isEmpty() ) {
 	  if( this.errorMap == null ) {
-	    this.errorMap = new HashMap<String,Exception>();
+	    this.errorMap = new HashMap<>();
 	  }
 	  this.errorMap.put( fileName, ex );
 	}
@@ -680,8 +733,18 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     }
     this.lastBuildMillis = System.currentTimeMillis();
     try {
-      Map<String,File> fileMap = null;
-      boolean          dirFull = false;
+
+      // Dateien ermitteln, die in der emulierten Disketten enthalten sind
+      Map<String,File> fileMap     = new HashMap<>();
+      DateStamper      dateStamper = null;
+      boolean          dirFull     = false;
+      if( this.dsEnabled ) {
+	fileMap.put( "0" + DateStamper.ENTRYNAME, null );
+	dateStamper = new DateStamper(
+				this.ftvFactory,
+				this.dirBlocks * this.blockSize / 32,
+				this.dsBytes );
+      }
       for( int userNum = 0; !dirFull && (userNum < 16); userNum++ ) {
 	File dirFile = this.dirFile;
 	if( userNum > 0 ) {
@@ -700,9 +763,13 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		  String fName2 = fName.trim().toUpperCase();
 		  if( fName2 != null ) {
 		    int len = fName2.length();
-		    if( (len > 0) && (len < 13) && (len == fName.length()) ) {
+		    if( (!this.dsEnabled
+				|| !fName.equals( DateStamper.FILENAME ))
+			&&(len > 0) && (len < 13)
+			&& (len == fName.length()) )
+		    {
 		      StringBuilder buf = new StringBuilder( 12 );
-		      buf.append( (char) userNum );
+		      buf.append( (char) (userNum + '0') );
 		      int     nChars = 1;
 		      boolean ignore = false;
 		      boolean point  = false;
@@ -741,9 +808,6 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 			  nChars++;
 			}
 			String entryName = buf.toString();
-			if( fileMap == null ) {
-			  fileMap = new HashMap<String,File>();
-			}
 			if( fileMap.containsKey( entryName ) ) {
 			  /*
 			   * Falls mehrere Dateien existieren und deren
@@ -782,6 +846,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  Arrays.sort( entryNames, entryNameComparator );
 	}
 	catch( ClassCastException ex ) {}
+	int firstDsBlkIdx  = -1;
 	int dirIdx         = 0;
 	int blkIdx         = this.dirBlocks;
 	int nRemainBlocks  = (getDiskSize() / this.blockSize) - blkIdx;
@@ -794,77 +859,114 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	for( int i = 0; i < entryNames.length; i++ ) {
 	  String entryName = entryNames[ i ];
 	  if( entryName != null ) {
-	    File file = fileMap.get( entryName );
-	    if( file != null ) {
-	      long fSize = file.length();
-	      if( fSize >= 0 ) {
-		long nEntries = (fSize + maxEntrySize - 1) / maxEntrySize;
-		if( nEntries < 1 ) {
-		  nEntries = 1;
-		}
-		if( ((dirIdx + (nEntries * 32)) <= this.dirBytes.length)
-		    && (nEntries <= maxFileEntries) )
-		{
-		  long nBlocks = (fSize + this.blockSize - 1) / this.blockSize;
-		  if( nBlocks <= nRemainBlocks ) {
-		    for( int k = 0; k < nEntries; k++ ) {
-		      int roAttrPos = dirIdx + 9;
-		      int len       = entryName.length();
-		      if( len > 0 ) {
-			this.dirBytes[ dirIdx++ ] =
-					(byte) entryName.charAt( 0 );
-		      } else {
-			this.dirBytes[ dirIdx++ ] = (byte) 0;
-		      }
-		      for( int p = 1; p < 12; p++ ) {
-			char ch = '\u0020';
-			if( p < len ) {
-			  ch = entryName.charAt( p );
-			}
-			this.dirBytes[ dirIdx++ ] = (byte) (ch & 0x7F);
-		      }
-		      if( !file.canWrite() ) {
-			this.dirBytes[ roAttrPos ] |= 0x80;
-		      }
-		      this.dirBytes[ dirIdx++ ] = (byte) k;
+	    File    file     = null;
+	    long    fSize    = -1;
+	    boolean writable = false;
+	    if( this.dsEnabled
+		&& entryName.equals( "0" + DateStamper.ENTRYNAME ) )
+	    {
+	      fSize         = maxDirEntries * 16;
+	      writable      = true;
+	      firstDsBlkIdx = blkIdx;
+	    } else {
+	      file = fileMap.get( entryName );
+	      if( file != null ) {
+		fSize    = file.length();
+		writable = file.canWrite();
+	      }
+	    }
+	    if( fSize >= 0 ) {
+	      long nEntries = (fSize + maxEntrySize - 1) / maxEntrySize;
+	      if( nEntries < 1 ) {
+		nEntries = 1;
+	      }
+	      if( ((dirIdx + (nEntries * 32)) <= this.dirBytes.length)
+		  && (nEntries <= maxFileEntries) )
+	      {
+		long nBlocks = (fSize + this.blockSize - 1) / this.blockSize;
+		if( nBlocks <= nRemainBlocks ) {
+		  for( int k = 0; k < nEntries; k++ ) {
+		    int roAttrPos = dirIdx + 9;
+		    int len       = entryName.length();
+		    if( len > 0 ) {
+		      this.dirBytes[ dirIdx++ ] =
+				(byte) (entryName.charAt( 0 ) - '0');
+		    } else {
 		      this.dirBytes[ dirIdx++ ] = (byte) 0;
-		      this.dirBytes[ dirIdx++ ] = (byte) 0;
-		      long nSegs = 0;
-		      if( fSize > 0 ) {
-			nSegs = (Math.min( fSize, maxEntrySize ) + 127) / 128;
+		    }
+		    for( int p = 1; p < 12; p++ ) {
+		      char ch = '\u0020';
+		      if( p < len ) {
+			ch = entryName.charAt( p );
 		      }
-		      this.dirBytes[ dirIdx++ ] = (byte) nSegs;
-		      if( this.blockNum16Bit ) {
-			for( int m = 0; m < 8; m++ ) {
-			  if( nBlocks > 0 ) {
-			    this.dirBytes[ dirIdx++ ] = (byte) blkIdx;
-			    this.dirBytes[ dirIdx++ ] = (byte) (blkIdx >> 8);
-			    blkIdx++;
-			    --nBlocks;
-			    --nRemainBlocks;
-			    fSize -= this.blockSize;
-			  } else {
-			    this.dirBytes[ dirIdx++ ] = (byte) 0;
-			    this.dirBytes[ dirIdx++ ] = (byte) 0;
-			  }
+		      this.dirBytes[ dirIdx++ ] = (byte) (ch & 0x7F);
+		    }
+		    if( !writable ) {
+		      this.dirBytes[ roAttrPos ] |= 0x80;
+		    }
+		    this.dirBytes[ dirIdx++ ] = (byte) k;
+		    this.dirBytes[ dirIdx++ ] = (byte) 0;
+		    this.dirBytes[ dirIdx++ ] = (byte) 0;
+		    long nSegs = 0;
+		    if( fSize > 0 ) {
+		      nSegs = (Math.min( fSize, maxEntrySize ) + 127) / 128;
+		    }
+		    this.dirBytes[ dirIdx++ ] = (byte) nSegs;
+		    if( this.blockNum16Bit ) {
+		      for( int m = 0; m < 8; m++ ) {
+			if( nBlocks > 0 ) {
+			  this.dirBytes[ dirIdx++ ] = (byte) blkIdx;
+			  this.dirBytes[ dirIdx++ ] = (byte) (blkIdx >> 8);
+			  blkIdx++;
+			  --nBlocks;
+			  --nRemainBlocks;
+			  fSize -= this.blockSize;
+			} else {
+			  this.dirBytes[ dirIdx++ ] = (byte) 0;
+			  this.dirBytes[ dirIdx++ ] = (byte) 0;
 			}
-		      } else {
-			for( int m = 0; m < 16; m++ ) {
-			  if( nBlocks > 0 ) {
-			    this.dirBytes[ dirIdx++ ] = (byte) blkIdx++;
-			    --nBlocks;
-			    --nRemainBlocks;
-			    fSize -= this.blockSize;
-			  } else {
-			    this.dirBytes[ dirIdx++ ] = (byte) 0;
-			  }
+		      }
+		    } else {
+		      for( int m = 0; m < 16; m++ ) {
+			if( nBlocks > 0 ) {
+			  this.dirBytes[ dirIdx++ ] = (byte) blkIdx++;
+			  --nBlocks;
+			  --nRemainBlocks;
+			  fSize -= this.blockSize;
+			} else {
+			  this.dirBytes[ dirIdx++ ] = (byte) 0;
 			}
 		      }
 		    }
-		    this.fileMap.put( entryName, file );
+		    if( dateStamper != null ) {
+		      dateStamper.addFileTimes( file );
+		    }
 		  }
 		}
 	      }
+	      this.fileMap.put( entryName, file );
+	    }
+	  }
+	}
+
+	// DateStamper-Sektoren eintragen
+	if( (dateStamper != null) && (firstDsBlkIdx >= 0) ) {
+	  this.dsBytes   = dateStamper.getDateTimeByteBuffer();
+	  int sectorSize = getSectorSize();
+	  if( (this.dsBytes != null) && (sectorSize > 0) ) {
+	    int srcPos     = 0;
+	    int absSectIdx = this.sysSectors
+				+ (firstDsBlkIdx * this.sectorsPerBlock);
+	    this.dsFirstSector = absSectIdx;
+	    this.dsSectors     = dsBytes.length / sectorSize;
+	    while( srcPos < this.dsBytes.length ) {
+	      setSectorData(
+			absSectIdx++,
+			this.dsBytes,
+			srcPos,
+			sectorSize,
+			false );
+	      srcPos += sectorSize;
 	    }
 	  }
 	}
@@ -891,7 +993,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 
 
   private void setSectorData(
-			int     absSectIdx,
+			int    absSectIdx,
 			byte[]  dataBuf,
 			int     dataOffs,
 			int     sectorSize,
@@ -916,11 +1018,10 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 						head,
 						idx + 1,
 						this.sectorSizeCode,
-						err,
-						false,
 						dataBuf,
 						dataOffs,
 						sectorSize );
+	    this.sectors[ absSectIdx ].setError( err );
 	  }
 	}
       }
@@ -962,7 +1063,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  if( entryDiffers ) {
 	    if( entryName != null ) {
 	      if( newEntryNames == null ) {
-		newEntryNames = new TreeSet<String>();
+		newEntryNames = new TreeSet<>();
 	      }
 	      newEntryNames.add( entryName );
 	    }
@@ -978,7 +1079,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	      String oldEntryName = extractEntryName( this.dirBytes, bufPos );
 	      if( oldEntryName != null ) {
 		if( oldEntryNames == null ) {
-		  oldEntryNames = new TreeSet<String>();
+		  oldEntryNames = new TreeSet<>();
 		}
 		oldEntryNames.add( oldEntryName );
 	      }
@@ -1058,6 +1159,114 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   }
 
 
+  private void writeDsSector(
+			int    absSectorIdx,
+			byte[] dataBuf,
+			int    dataLen ) throws IOException
+  {
+    byte[] oldDsBytes     = this.dsBytes;
+    int    dsFirstSectopr = this.dsFirstSector;
+    if( this.dsEnabled && (oldDsBytes != null) && (dsFirstSector >= 0) ) {
+      int sectorSize = getSectorSize();
+      int oldIdx     = (absSectorIdx - dsFirstSector) * sectorSize;
+      if( (sectorSize > 0 ) && (oldIdx >= 0) ) {
+	int newIdx = 0;
+	int dirIdx = oldIdx / 16 * 32;
+	while( ((newIdx + 15) < dataLen)
+	       && ((oldIdx + 15)< oldDsBytes.length) )
+	{
+	  // Zeitstempeleintraege nur bei Extent=0 auswerten
+	  if( (dirIdx + 31) < this.dirBytes.length ) {
+	    if( (((int) this.dirBytes[ dirIdx + 12 ] & 0x1F) == 0)
+		&& (((int) this.dirBytes[ dirIdx + 14 ] & 0x3F) == 0) )
+	    {
+	      Long creationMillis     = null;
+	      Long lastAccessMillis   = null;
+	      Long lastModifiedMillis = null;
+	      for( int i = 0; i < 5; i++ ) {
+		if( dataBuf[ newIdx + i ] != oldDsBytes[ oldIdx + i ] ) {
+		  creationMillis = DateStamper.getMillis( dataBuf, newIdx );
+		  break;
+		}
+	      }
+	      for( int i = 5; i < 10; i++ ) {
+		if( dataBuf[ newIdx + i ] != oldDsBytes[ oldIdx + i ] ) {
+		  lastAccessMillis = DateStamper.getMillis(
+							dataBuf,
+							newIdx + 5 );
+		  break;
+		}
+	      }
+	      for( int i = 10; i < 15; i++ ) {
+		if( dataBuf[ newIdx + i ] != oldDsBytes[ oldIdx + i ] ) {
+		  lastModifiedMillis = DateStamper.getMillis(
+							dataBuf,
+							newIdx + 10 );
+		  break;
+		}
+	      }
+	      if( (creationMillis != null)
+		  || (lastAccessMillis != null)
+		  || (lastModifiedMillis != null) )
+	      {
+		String entryName = extractEntryName( this.dirBytes, dirIdx );
+		if( entryName != null ) {
+		  File file = this.fileMap.get( entryName );
+		  if( file != null ) {
+		    FileTimesView ftv = this.ftvFactory.getFileTimesView(
+								file );
+		    if( ftv != null ) {
+		      /*
+		       * Wenn ein zu setzender Zeitstempel
+		       * der ja nur minutengenau ist,
+		       * in der gleichen Minute liegt wie der bereits
+		       * vorhandene Dateizeitstempel,
+		       * dann soll der Zeitstempel nicht gesetzt werden,
+		       * um die Sekunden nicht zu loeschen.
+		       */
+		      if( isInSameMinute(
+				creationMillis,
+				ftv.getCreationMillis() ) )
+		      {
+			creationMillis = null;
+		      }
+		      if( isInSameMinute(
+				lastAccessMillis,
+				ftv.getLastAccessMillis() ) )
+		      {
+			lastAccessMillis = null;
+		      }
+		      if( isInSameMinute(
+				lastModifiedMillis,
+				ftv.getLastModifiedMillis() ) )
+		      {
+			lastModifiedMillis = null;
+		      }
+		      if( (creationMillis != null)
+			  || (lastAccessMillis != null)
+			  || (lastModifiedMillis != null) )
+		      {
+			ftv.setTimesInMillis(
+					creationMillis,
+					lastAccessMillis,
+					lastModifiedMillis );
+		      }
+		    }
+		  }
+		}
+	      }
+	    }
+	  }
+	  System.arraycopy( dataBuf, newIdx, this.dsBytes, oldIdx, 16 );
+	  newIdx += 16;
+	  oldIdx += 16;
+	  dirIdx += 32;
+	}
+      }
+    }
+  }
+
+
   private void writeFileByEntryName(
 			String entryName,
 			File   file ) throws IOException
@@ -1080,7 +1289,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	   */
 	  for( int i = 1; i < entryNameLen; i++ ) {
 	    /*
-	     * Eine Pruefung auf einen Wert groesser 7Fh ist noetig,
+	     * Eine Pruefung auf einen Wert groesser 7Fh ist nicht noetig,
 	     * da die Eintraege sowieso nur aus 7-Bit-Zeichen bestehen
 	     * und deshalb das 8. Bit bereits ausgeblendet wurde.
 	     */
@@ -1114,7 +1323,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  if( this.forceLowerCase ) {
 	    fileName = fileName.toLowerCase();
 	  }
-	  int userNum = entryName.charAt( 0 );
+	  int userNum = (entryName.charAt( 0 ) - '0');
 	  if( (userNum == 0) && fileName.equals( SYS_FILE_NAME ) ) {
 	    throw new IOException(
 		"Eine Datei mit dem Namen " + SYS_FILE_NAME

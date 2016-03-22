@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,20 +15,33 @@ import javax.swing.text.*;
 public class LimitedDocument extends PlainDocument
 {
   private int     maxLen;
+  private boolean asciiOnly;
   private boolean swapCase;
 
 
   public LimitedDocument( int maxLen )
   {
-    this.maxLen   = maxLen;
-    this.swapCase = false;
+    this.maxLen    = maxLen;
+    this.asciiOnly = false;
+    this.swapCase  = false;
   }
 
 
-  public LimitedDocument( int maxLen, boolean swapCase )
+  public LimitedDocument()
   {
-    this.maxLen   = maxLen;
-    this.swapCase = swapCase;
+    this( 0 );
+  }
+
+
+  public int getMaxLength()
+  {
+    return this.maxLen;
+  }
+
+
+  public void setAsciiOnly( boolean state )
+  {
+    this.asciiOnly = state;
   }
 
 
@@ -50,19 +63,29 @@ public class LimitedDocument extends PlainDocument
   public void insertString( int offs, String str, AttributeSet a )
 						throws BadLocationException
   {
-    if( (str != null) && this.swapCase ) {
+    if( (str != null) && (this.asciiOnly || this.swapCase) ) {
       char[] ary = str.toCharArray();
       if( ary != null ) {
+	int n = 0;
 	for( int i = 0; i < ary.length; i++ ) {
 	  char ch = ary[ i ];
-	  if( Character.isUpperCase( ch ) ) {
-	    ary[ i ] = Character.toLowerCase( ch );
-	  }
-	  else if( Character.isLowerCase( ch ) ) {
-	    ary[ i ] = Character.toUpperCase( ch );
+	  if( !this.asciiOnly || ((ch >= '\u0020') && (ch <= '\u007E')) ) {
+	    if( this.swapCase ) {
+	      if( Character.isUpperCase( ch ) ) {
+		ch = Character.toLowerCase( ch );
+	      }
+	      else if( Character.isLowerCase( ch ) ) {
+		ch = Character.toUpperCase( ch );
+	      }
+	    }
+	    ary[ n++ ] = ch;
 	  }
 	}
-	str = new String( ary );
+	if( n > 0 ) {
+	  str = new String( ary, 0, n );
+	} else {
+	  str = null;
+	}
       }
     }
     if( str != null ) {

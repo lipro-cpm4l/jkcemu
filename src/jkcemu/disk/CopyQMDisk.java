@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,6 +17,7 @@ import java.lang.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.*;
+import jkcemu.text.CharConverter;
 
 
 public class CopyQMDisk extends AbstractFloppyDisk
@@ -87,10 +88,385 @@ public class CopyQMDisk extends AbstractFloppyDisk
 	0xB3667A2EL, 0xC4614AB8L, 0x5D681B02L, 0x2A6F2B94L,
 	0xB40BBE37L, 0xC30C8EA1L, 0x5A05DF1BL, 0x2D02EF8DL };
 
-  private String fileName;
-  private String remark;
-  private byte[] diskBytes;
-  private int    sectorSizeCode;
+  private String         fileName;
+  private String         remark;
+  private java.util.Date diskDate;
+  private byte[]         diskBytes;
+  private int            sectorSizeCode;
+  private int            sectorOffset;
+  private int            skew;
+
+
+  public static String export(
+			AbstractFloppyDisk disk,
+			File               file,
+			String             remark ) throws IOException
+  {
+    StringBuilder msgBuf = null;
+    OutputStream  out    = null;
+    try {
+      boolean hasDeleted     = false;
+      int     diskSize       = disk.getDiskSize();
+      int     sides          = disk.getSides();
+      int     cyls           = disk.getCylinders();
+      int     sectorsPerCyl  = disk.getSectorsPerCylinder();
+      int     sectorSize     = disk.getSectorSize();
+      int     totalSectorCnt = sides * cyls * sectorsPerCyl;
+
+      // kleinste Sektornummer ermitteln
+      int minSectorNum   = -1;
+      for( int cyl = 0; (minSectorNum != 1) && (cyl < cyls); cyl++ ) {
+	for( int head = 0; (minSectorNum != 1) && (head < sides); head++ ) {
+	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
+	  for( int i = 0; i < sectorsPerCyl; i++ ) {
+	    SectorData sector = disk.getSectorByIndex( cyl, head, i );
+	    if( sector != null ) {
+	      int sectorNum = sector.getSectorNum();
+	      if( (minSectorNum < 0) || (sectorNum < minSectorNum) ) {
+		minSectorNum = sectorNum;
+		if( minSectorNum == 1 ) {
+		  break;
+		}
+	      }
+	    }
+	  }
+	}
+      }
+
+      // Interleave ermitteln
+      int interleave     = 1;
+      int firstSectorNum = -1;
+      if( cyls > 0 ) {
+	int cylSectors = disk.getSectorsOfCylinder( 0, 0 );
+	if( cylSectors > 2 ) {
+	  SectorData sector = disk.getSectorByIndex( 0, 0, 0 );
+	  if( sector != null ) {
+	    int nextSectorNum = sector.getSectorNum() + 1;
+	    for( int i = 1; i < cylSectors; i++ ) {
+	      sector = disk.getSectorByIndex( 0, 0, i );
+	      if( sector != null ) {
+		if( sector.getSectorNum() == nextSectorNum ) {
+		  interleave = i;
+		  break;
+		}
+	      }
+	    }
+	  }
+	}
+      }
+
+      // Skew ermitteln
+      int skew = 0;
+      if( (cyls > 1) && (firstSectorNum > 0)  ) {
+	int cylSectors = disk.getSectorsOfCylinder( 1, 0 );
+	if( cylSectors > 1 ) {
+	  for( int i = 0; i < cylSectors; i++ ) {
+	    SectorData sector = disk.getSectorByIndex( 1, 0, i );
+	    if( sector == null ) {
+	      break;
+	    }
+	    if( sector.getSectorNum() == firstSectorNum ) {
+	      skew = i;
+	    }
+	  }
+	}
+      }
+
+      // Datenbereich erzeugen
+      ByteArrayOutputStream dataBuf = new ByteArrayOutputStream( diskSize );
+      for( int cyl = 0; cyl < cyls; cyl++ ) {
+	for( int head = 0; head < sides; head++ ) {
+	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
+	  if( cylSectors != sectorsPerCyl ) {
+	    if( msgBuf == null ) {
+	      msgBuf = new StringBuilder( 1024 );
+	    }
+	    msgBuf.append(
+		String.format(
+			"Seite %d, Spur %d: %d anstelle von %d Sektoren"
+				+ " vorhanden",
+			head + 1,
+			cyl,
+			cylSectors,
+			sectorsPerCyl ) );
+	  }
+	  for( int i = 0; i < sectorsPerCyl; i++ ) {
+	    SectorData sector = disk.getSectorByID(
+						cyl,
+						head,
+						cyl,
+						head,
+						i + minSectorNum,
+						-1 );
+	    if( sector == null ) {
+	      throw new IOException(
+		String.format(
+			"Seite %d, Spur %d: Sektor %d nicht gefunden",
+			head + 1,
+			cyl,
+			i + 1  ) );
+	    }
+	    if( sector.isDeleted() ) {
+	      hasDeleted = true;
+	      if( msgBuf == null ) {
+		msgBuf = new StringBuilder( 1024 );
+	      }
+	      msgBuf.append(
+			String.format(
+				"Seite %d, Spur %d: Sektor %d ist als"
+					+ " gel\u00F6scht markiert\n",
+				head + 1,
+				cyl,
+				sector.getSectorNum() ) );
+	    }
+	    if( sector.getDataLength() > sectorSize ) {
+	      throw new IOException(
+		String.format(
+			"Seite %d, Spur %d: Sektor %d ist zu gro\u00DF.",
+			head + 1,
+			cyl,
+			sector.getSectorNum() ) );
+	    }
+	    int n = sector.writeTo( dataBuf, sectorSize );
+	    while( n < sectorSize ) {
+	      out.write( 0 );
+	      n++;
+	    }
+	  }
+	}
+      }
+      byte[] dataBytes = dataBuf.toByteArray();
+
+      // Kommentar aufbereiten
+      int                   remarkLen = 0;
+      ByteArrayOutputStream remarkBuf = null;
+      if( remark == null ) {
+	remark = disk.getRemark();
+      }
+      if( remark != null ) {
+	int len = remark.length();
+	if( len > 0 ) {
+	  CharConverter cc = new CharConverter(
+					CharConverter.Encoding.CP850 );
+	  remarkBuf = new ByteArrayOutputStream( len );
+	  for( int i = 0; i < len; i++ ) {
+	    char ch = remark.charAt( i );
+	    if( (ch == '\u0000') || (ch == '\u001A') ) {
+	      break;
+	    }
+	    ch = (char) cc.toCharsetByte( ch );
+	    if( (ch > '\u0000') && (remarkBuf.size() < 0x7FFE) ) {
+	      remarkBuf.write( ch );
+	    }
+	  }
+	  remarkLen = remarkBuf.size();
+	}
+      }
+
+      // Kopfbereich erzeugen
+      ByteArrayOutputStream headerBuf  = new ByteArrayOutputStream( 256 );
+      EmuUtil.writeASCII( headerBuf, "CQ" );
+      headerBuf.write( 0x14 );
+      headerBuf.write( sectorSize );
+      headerBuf.write( sectorSize >> 8 );
+
+      // im Blind-Mode 6 Null-Bytes
+      for( int i = 0; i < 6; i++ ) {
+	headerBuf.write( 0 );
+      }
+
+      /*
+       * Das folgende Byte gibt im DOS-Mode die Anzahl der Sektoren
+       * bei kleiner Diskettengroesse an.
+       * Bei von CopyQM im Blind Mode erzeugten Dateien
+       * wurden folgende Werte vorgefunden:
+       *    800K-Format (2x80x5x1024):  5Ah / 90 dez
+       *    640K-Format (2x80x16x256):  70h / 112 dez
+       *    720K-Format (2x80x9x512):   62h / 98 dez
+       *   1440K-Format (2x80x18x512):  74h / 116 dez
+       *   1760K-Format (2x80x11x1024): 66h / 102 dez
+       *
+       * Da die Bedeutung des Bytes im Blind Mode unbekannt ist,
+       * wurde hier eine Formel erfunden,
+       * die die oben genannten Werte erzeugt.
+       */
+      headerBuf.write( cyls + (sides * sectorsPerCyl) );
+
+      // im Blind-Mode 4 Null-Bytes
+      for( int i = 0; i < 4; i++ ) {
+	headerBuf.write( 0 );
+      }
+
+      headerBuf.write( sectorsPerCyl );
+      headerBuf.write( sectorsPerCyl >> 8 );
+      headerBuf.write( sides );
+      headerBuf.write( sides >> 8 );
+
+      // im Blind-Mode 8 Null-Bytes
+      for( int i = 0; i < 8; i++ ) {
+	headerBuf.write( 0 );
+      }
+
+      // Beschreibung Medium
+      EmuUtil.writeASCII( headerBuf, String.valueOf( diskSize / 1024 ) );
+      headerBuf.write( 'K' );
+      if( sides == 1 ) {
+	EmuUtil.writeASCII( headerBuf, " Single-Sided" );
+      } else if( sides == 2 ) {
+	EmuUtil.writeASCII( headerBuf, " Double-Sided" );
+      }
+      for( int i = headerBuf.size(); i < 0x58; i++ ) {
+	headerBuf.write( 0 );
+      }
+
+      // Mode
+      headerBuf.write( 1 );		// Blind Mode
+
+      // 0:=DD, 1=HD, 2=ED
+      headerBuf.write( diskSize / 1024 / 1024 );
+
+      // Anzahl Zylinder
+      headerBuf.write( cyls );		// in der erzeugten Datei
+      headerBuf.write( cyls );		// auf der Quell-Diskette
+
+      // CRC der Daten
+      long dataCRC = computeCRC( dataBytes, dataBytes.length );
+      for( int i = 0; i < 4; i++ ) {
+	headerBuf.write( (int) dataCRC );
+	dataCRC >>= 8;
+      }
+
+      // Volume Label
+      EmuUtil.writeASCII( headerBuf, "** NONE **" );
+      headerBuf.write( 0 );
+
+      // Uhrzeit und Datum
+      Calendar       cal      = new GregorianCalendar();
+      java.util.Date diskDate = disk.getDiskDate();
+      if( diskDate != null ) {
+	cal.clear();
+	cal.setTime( diskDate );
+      }
+      int time = ((cal.get( Calendar.HOUR_OF_DAY ) << 11) & 0xF800)
+			| ((cal.get( Calendar.MINUTE ) << 5) & 0x07E0)
+			| ((cal.get( Calendar.SECOND ) / 2) & 0x001F);
+      int date = (((cal.get( Calendar.YEAR ) - 1980) << 9) & 0xFE00)
+			| (((cal.get( Calendar.MONTH ) + 1) << 5) & 0x01E0)
+			| (cal.get( Calendar.DAY_OF_MONTH ) & 0x001F);
+      headerBuf.write( time );
+      headerBuf.write( time >> 8 );
+      headerBuf.write( date );
+      headerBuf.write( date >> 8 );
+
+      // Kommentarlaenge
+      headerBuf.write( remarkLen );
+      headerBuf.write( remarkLen >> 8 );
+
+      // Sektoroffset
+      headerBuf.write( minSectorNum - 1 );
+
+      // 2 Null-Bytes, Bedeutung unbekannt
+      headerBuf.write( 0 );
+      headerBuf.write( 0 );
+
+      // Interleave
+      headerBuf.write( interleave );
+
+      // Skew
+      headerBuf.write( skew );
+
+      /*
+       * Laufwerkstyp:
+       *   Es kann auf Basis der Parameter nur ein wahrscheinlicher
+       *   Laufwerkstyp ermittelt werden.
+       */
+      int driveType = 1;			// 5.25 Zoll, 360 KByte
+      if( disk.getDiskSize() >= (360 * 1024) ) {
+	driveType = 2;				// 5.25 Zoll, 48 tpi
+      }
+      if( (disk.getCylinders() >= 50)
+	  && (disk.getSectorSize() == 512) )
+      {
+	int n = disk.getSectorsPerCylinder();
+	if( (n >= 8) && (n <= 10) ) {
+	  driveType = 3;			// 3.5 Zoll DD
+	} else if( n >= 17 ) {
+	  driveType = 4;			// 3.5 Zoll HD
+	}
+      }
+      headerBuf.write( driveType );
+
+      // 13 Null-Bytes, Bedeutung unbekannt
+      for( int i = 0; i < 13; i++ ) {
+	headerBuf.write( 0 );
+      }
+
+      // Pruefsumme fuer Kopfbereich
+      byte[] headerBytes = headerBuf.toByteArray();
+      int    headerCks   = 0;
+      for( byte b : headerBytes ) {
+	headerCks += ((int) b & 0xFF);
+      }
+
+      // Datei schreiben
+      out = EmuUtil.createOptionalGZipOutputStream( file );
+      if( headerBytes != null ) {
+	out.write( headerBytes );
+	out.write( -headerCks );
+	if( (remarkBuf != null) && (remarkLen > 0) ) {
+	  remarkBuf.writeTo( out );
+	}
+	if( dataBytes != null ) {
+	  int maxSegLen = sectorSize * sectorsPerCyl;
+	  if( maxSegLen >= 0x8000 ) {
+	    maxSegLen = sectorSize;
+	  }
+	  if( maxSegLen >= 0x8000 ) {
+	    maxSegLen = 0x7FFF;
+	  }
+	  int segBegPos = 0;
+	  while( segBegPos < dataBytes.length ) {
+	    int  p = segBegPos;
+	    byte b = dataBytes[ p++ ];
+	    int  n = 1;
+	    while( (n < maxSegLen) && (p < dataBytes.length) ) {
+	      if( dataBytes[ p ] != b ) {
+		break;
+	      }
+	      n++;
+	      p++;
+	    }
+	    int nEqSectors = n / sectorSize;
+	    if( nEqSectors > 0 ) {
+	      n       = nEqSectors * sectorSize;
+	      int len = -n;
+	      out.write( len );
+	      out.write( len >> 8 );
+	      out.write( b );
+	    } else {
+	      n = Math.min( sectorSize, dataBytes.length - segBegPos );
+	      out.write( n );
+	      out.write( n >> 8 );
+	      out.write( dataBytes, segBegPos, n );
+	    }
+	    segBegPos += n;
+	  }
+	}
+      }
+      out.close();
+      out = null;
+
+      if( hasDeleted && (msgBuf != null) ) {
+	msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+		+ " in CopyQM-Dateien nicht unterst\u00FCtzt\n"
+		+ "und sind deshalb als normale Sektoren enthalten.\n" );
+      }
+    }
+    finally {
+      EmuUtil.doClose( out );
+    }
+    return msgBuf != null ? msgBuf.toString() : null;
+  }
 
 
   public static boolean isCopyQMFileHeader( byte[] header )
@@ -124,33 +500,37 @@ public class CopyQMDisk extends AbstractFloppyDisk
       }
 
       // Kopfblock lesen
-      byte[] head = new byte[ 133 ];
-      if( EmuUtil.read( in, head ) != head.length ) {
+      byte[] header = new byte[ 133 ];
+      if( EmuUtil.read( in, header ) != header.length ) {
 	throwNoCopyQMFile();
       }
-      if( (head[ 0 ] != 'C') || (head[ 1 ] != 'Q') || (head[ 2 ] != 0x14) ) {
+      if( (header[ 0 ] != 'C')
+	  || (header[ 1 ] != 'Q')
+	  || (header[ 2 ] != 0x14) )
+      {
 	throwNoCopyQMFile();
       }
-      int sectorSize     = (head[ 4 ] << 8) | head[ 3 ];
+      int sectorSize     = EmuUtil.getWord( header, 3 );
       int sectorSizeCode = SectorData.getSizeCode( sectorSize );
       if( (sectorSize < 1) || (sectorSizeCode < 0) ) {
 	throwUnsupportedCopyQMFmt(
 		String.format(
-			"%d Byte Sektorgr\u00F6\u00DFe nicht unterst\u00FCtzt",
+			"%d Byte Sektorgr\u00F6\u00DFe"
+				+ " nicht unterst\u00FCtzt",
 			sectorSize ) );
       }
-      int sectorsPerCyl = (head[ 0x11 ] << 8) | head[ 0x10 ];
+      int sectorsPerCyl = EmuUtil.getWord( header, 0x10 );
       if( sectorsPerCyl < 1 ) {
 	throwUnsupportedCopyQMFmt(
 		String.format( "Sektoren pro Spur", sectorsPerCyl ) );
       }
-      int sides = (int) head[ 0x12 ] & 0xFF;
+      int sides = (int) header[ 0x12 ] & 0xFF;
       if( (sides < 1) || (sides > 2) ) {
 	throwUnsupportedCopyQMFmt(
 		String.format( "%d Seiten nicht unterst\u00FCtzt", sides ) );
       }
-      int usedCyls = (int) head[ 0x5A ] & 0xFF;
-      int cyls     = (int) head[ 0x5B ] & 0xFF;
+      int usedCyls = (int) header[ 0x5A ] & 0xFF;
+      int cyls     = (int) header[ 0x5B ] & 0xFF;
       if( cyls < usedCyls ) {
 	cyls = usedCyls;
       }
@@ -158,13 +538,30 @@ public class CopyQMDisk extends AbstractFloppyDisk
 	throwUnsupportedCopyQMFmt(
 		String.format( "%d Spuren nicht unterst\u00FCtzt", sides ) );
       }
-      if( head[ 0x71 ] != 0 ) {
-	throwUnsupportedCopyQMFmt( "Mysteri\u00F6se Sektornummerierung" );
+      int sectorOffset = (int) header[ 0x71 ] & 0xFF;
+
+      // Datum lesen
+      java.util.Date diskDate = null;
+      int            time     = EmuUtil.getWord( header, 0x6B );
+      int            date     = EmuUtil.getWord( header, 0x6d );
+      int            year     = 1980 + ((date >> 9) & 0x7F);
+      int            month    = (date >> 5) & 0x0F;
+      int            day      = date & 0x1F;
+      int            hour     = (time >> 11) & 0x1F;
+      int            minute   = (time >> 5) & 0x3F;
+      int            second   = (time & 0x1F) * 2;
+      if( (month >= 1) && (month <= 12)
+	  && (day >= 1) && (day <= 31)
+	  && (hour < 24) && (minute < 60) && (second < 60) )
+      {
+	diskDate = (new GregorianCalendar(
+				year, month - 1, day,
+				hour, minute, second )).getTime();
       }
 
       // Kommentar lesen
       String remark    = null;
-      int    remarkLen = (head[ 0x70 ] << 8) | head[ 0x6F];
+      int    remarkLen = EmuUtil.getWord( header, 0x6F );
       if( remarkLen < 0 ) {
 	throwUnsupportedCopyQMFmt(
 		String.format(
@@ -172,18 +569,17 @@ public class CopyQMDisk extends AbstractFloppyDisk
 			remarkLen ) );
       }
       if( remarkLen > 0 ) {
+	CharConverter cc  = new CharConverter( CharConverter.Encoding.CP850 );
 	StringBuilder buf = new StringBuilder( remarkLen );
 	while( remarkLen > 0 ) {
 	  int b = in.read();
 	  if( b < 0 ) {
 	    break;
 	  }
-	  if( b < 0x20 ) {
-	    b = 0x20;
-	  } else if( b > 0x7E ) {
-	    b = '?';
+	  b = cc.toUnicode( (char) b );
+	  if( b > 0 ) {
+	    buf.append( (char) b );
 	  }
-	  buf.append( (char) b );
 	  --remarkLen;
 	}
 	remark = buf.toString().trim();
@@ -232,21 +628,21 @@ public class CopyQMDisk extends AbstractFloppyDisk
 			sectorSize,
 			file.getPath(),
 			remark,
+			diskDate,
 			diskBytes,
-			sectorSizeCode );
+			sectorSizeCode,
+			sectorOffset,
+			(int) header[ 0x74 ] & 0xFF,	// Interleave
+			(int) header[ 0x75 ] & 0xFF );	// Skew
 
       // CRC ueber die entpackten Daten berechnen
       long orgCRC = 0L;
       long newCRC = 0L;
       for( int i = 0x5F; i >= 0x5C; --i ) {
-	orgCRC = (orgCRC << 8) | ((int) head[ i ] & 0xFF);
+	orgCRC = (orgCRC << 8) | ((int) header[ i ] & 0xFF);
       }
       if( orgCRC != 0 ) {
-	for( int i = 0; i < dstPos; i++ ) {
-	  int b = (int) diskBytes[ i ] & 0x7F;
-	  newCRC = crcTable[ ((int) ((long) b ^ newCRC)) & 0x3F ]
-							^ (newCRC >> 8);
-	}
+	newCRC = computeCRC( diskBytes, dstPos );
       }
       if( orgCRC != newCRC ) {
 	rv.setWarningText( 
@@ -261,6 +657,13 @@ public class CopyQMDisk extends AbstractFloppyDisk
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public java.util.Date getDiskDate()
+  {
+    return this.diskDate;
+  }
+
 
   @Override
   public String getFileFormatText()
@@ -282,36 +685,27 @@ public class CopyQMDisk extends AbstractFloppyDisk
 				int physHead,
 				int sectorIdx )
   {
-    SectorData rv         = null;
-    int        sectorSize = getSectorSize();
-    if( (physCyl >= 0) && (sectorIdx >= 0) ) {
-      int sides         = getSides();
-      int cyls          = getCylinders();
+    // Sektorindex entsprechend Interleave umrechnen
+    sectorIdx = sectorIndexToInterleave( sectorIdx );
+
+    // Sektorindex entsprechend Skew umrechnen
+    if( this.skew > 0 ) {
       int sectorsPerCyl = getSectorsPerCylinder();
-      if( (physHead < sides)
-	  && (physCyl < cyls)
-          && (sectorIdx < sectorsPerCyl)
-          && (sectorSize > 0) )
-      {
-        int nSkipSectors = sides * sectorsPerCyl * physCyl;
-        if( physHead > 0 ) {
-          nSkipSectors += sectorsPerCyl;
-        }
-        nSkipSectors += sectorIdx;
-	rv = new SectorData(
-			sectorIdx,
-			physCyl,
-			physHead,
-			sectorIdx + 1,
-			this.sectorSizeCode,
-			false,
-			false,
-			this.diskBytes,
-                        nSkipSectors * sectorSize,
-			sectorSize );
+      if( (sectorsPerCyl > 0) && (this.skew < sectorsPerCyl) ) {
+	sectorIdx += (sectorsPerCyl
+			- (this.skew * (physCyl % sectorsPerCyl)));
+	if( sectorIdx < 0 ) {
+	  sectorIdx += ((-sectorIdx / sectorsPerCyl) * sectorsPerCyl);
+	  if( sectorIdx < 0 ) {
+	    sectorIdx += sectorsPerCyl;
+	  }
+	} else if( sectorIdx >= sectorsPerCyl ) {
+	  sectorIdx -= ((sectorIdx / sectorsPerCyl) * sectorsPerCyl);
+	}
       }
     }
-    return rv;
+
+    return getSectorByIndexInternal( physCyl, physHead, sectorIdx );
   }
 
 
@@ -324,7 +718,10 @@ public class CopyQMDisk extends AbstractFloppyDisk
                                 int sectorNum,
                                 int sizeCode )
   {
-    SectorData rv = getSectorByIndex( physCyl, physHead, sectorNum - 1 );
+    SectorData rv = getSectorByIndexInternal(
+				physCyl,
+				physHead,
+				sectorNum - 1 - this.sectorOffset );
     if( rv != null ) {
       if( (rv.getCylinder() != cyl)
 	  || (rv.getHead() != head)
@@ -351,21 +748,82 @@ public class CopyQMDisk extends AbstractFloppyDisk
 	/* --- private Konstruktoren und Methoden --- */
 
   private CopyQMDisk(
-		Frame  owner,
-		int    sides,
-		int    cyls,
-		int    sectorsPerCyl,
-		int    sectorSize,
-		String fileName,
-		String remark,
-		byte[] diskBytes,
-		int    sectorSizeCode )
+		Frame          owner,
+		int            sides,
+		int            cyls,
+		int            sectorsPerCyl,
+		int            sectorSize,
+		String         fileName,
+		String         remark,
+		java.util.Date diskDate,
+		byte[]         diskBytes,
+		int            sectorSizeCode,
+		int            sectorOffset,
+		int            interleave,
+		int            skew )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize );
+    super( owner, sides, cyls, sectorsPerCyl, sectorSize, interleave );
     this.fileName       = fileName;
     this.remark         = remark;
+    this.diskDate       = diskDate;
     this.diskBytes      = diskBytes;
     this.sectorSizeCode = sectorSizeCode;
+    this.sectorOffset   = sectorOffset;
+    this.skew           = skew;
+  }
+
+
+  private static long computeCRC( byte[] dataBytes, int len )
+  {
+    long crc = 0;
+    if( dataBytes != null ) {
+      for( int i = 0; i < len; i++ ) {
+	int b = (int) dataBytes[ i ] & 0x7F;
+	crc   = crcTable[ ((int) ((long) b ^ crc)) & 0x3F ] ^ (crc >> 8);
+      }
+    }
+    return crc;
+  }
+
+
+  /*
+   * Die Methode liefert den Sektor an der angegebenen Position
+   * im internen Datenbereich zurueck.
+   * Interleave wird dabei nicht beruecksichtigt.
+   */
+  private SectorData getSectorByIndexInternal(
+					int physCyl,
+					int physHead,
+					int sectorIdx )
+  {
+    SectorData rv = null;
+    if( (physCyl >= 0) && (physHead >= 0) && (sectorIdx >= 0) ) {
+      int sides         = getSides();
+      int cyls          = getCylinders();
+      int sectorsPerCyl = getSectorsPerCylinder();
+      int sectorSize = getSectorSize();
+      if( (physHead < sides)
+	  && (physCyl < cyls)
+          && (sectorIdx < sectorsPerCyl)
+          && (sectorSize > 0) )
+      {
+        int nSkipSectors = sides * sectorsPerCyl * physCyl;
+        if( physHead > 0 ) {
+          nSkipSectors += sectorsPerCyl;
+        }
+        nSkipSectors += sectorIdx;
+	rv = new SectorData(
+			sectorIdx,
+			physCyl,
+			physHead,
+			sectorIdx + 1 + this.sectorOffset,
+			this.sectorSizeCode,
+			this.diskBytes,
+                        nSkipSectors * sectorSize,
+			sectorSize );
+      }
+    }
+    return rv;
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -198,7 +198,7 @@ public class CksCalculator
     } else if( algorithm.equals( CKS_ADLER32 ) ) {
       this.checksum = new Adler32();
     } else if( algorithm.equals( CKS_CRC16CCITT ) ) {
-      this.checksum = new CRC16CCITT();
+      this.checksum = CRC16.createCRC16CCITT();
     } else if( algorithm.equals( CKS_CRC32 ) ) {
       this.checksum = new CRC32();
     } else {
@@ -223,7 +223,7 @@ public class CksCalculator
   {
     if( this.value == null ) {
       if( this.checksum != null ) {
-	if( this.checksum instanceof CRC16CCITT ) {
+	if( this.checksum instanceof CRC16 ) {
 	  this.value = String.format( "%04X", this.checksum.getValue() );
 	} else {
 	  this.value = String.format( "%08X", this.checksum.getValue() );

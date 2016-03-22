@@ -1,9 +1,9 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Haltepunkte auf eine Interruptquelle
+ * Halte-/Log-Punkte auf eine Interruptquelle
  */
 
 package jkcemu.tools.debugger;
@@ -17,8 +17,9 @@ public class InterruptBreakpoint extends AbstractBreakpoint
   private Z80InterruptSource iSource;
 
 
-  public InterruptBreakpoint( Z80InterruptSource iSource )
+  public InterruptBreakpoint( DebugFrm debugFrm, Z80InterruptSource iSource )
   {
+    super( debugFrm );
     this.iSource = iSource;
     setText( iSource.toString() );
   }
@@ -36,10 +37,10 @@ public class InterruptBreakpoint extends AbstractBreakpoint
   }
 
 
-	/* --- Z80Breakpoint --- */
+	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean matches( Z80CPU cpu, Z80InterruptSource iSource )
+  protected boolean matchesImpl( Z80CPU cpu, Z80InterruptSource iSource )
   {
     return iSource == this.iSource;
   }

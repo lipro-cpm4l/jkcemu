@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Dialog zum Anlegen eines Haltepunktes auf ein Ausgabetor
+ * Dialog zum Anlegen eines Halte-/Log-Punktes auf ein Ausgabetor
  */
 
 package jkcemu.tools.debugger;
@@ -18,23 +18,25 @@ import jkcemu.base.*;
 
 public class OutputBreakpointDlg extends AbstractBreakpointDlg
 {
-  private HexDocument docBegPort;
-  private HexDocument docEndPort;
-  private HexDocument docMask;
-  private HexDocument docValue;
-  private JLabel      labelValue1;
-  private JLabel      labelValue2;
-  private JComboBox   comboCond;
-  private JCheckBox   btnCheckValue;
-  private JTextField  fldBegPort;
-  private JTextField  fldEndPort;
-  private JTextField  fldMask;
-  private JTextField  fldValue;
+  private HexDocument       docBegPort;
+  private HexDocument       docEndPort;
+  private HexDocument       docMask;
+  private HexDocument       docValue;
+  private JLabel            labelValue1;
+  private JLabel            labelValue2;
+  private JComboBox<String> comboCond;
+  private JCheckBox         btnCheckValue;
+  private JTextField        fldBegPort;
+  private JTextField        fldEndPort;
+  private JTextField        fldMask;
+  private JTextField        fldValue;
 
 
-  public OutputBreakpointDlg( Window owner, AbstractBreakpoint breakpoint )
+  public OutputBreakpointDlg(
+			DebugFrm           debugFrm,
+			AbstractBreakpoint breakpoint )
   {
-    super( owner, "Ausgabetor", breakpoint );
+    super( debugFrm, "Ausgabetor", breakpoint );
 
 
     // Fensterinhalt
@@ -105,7 +107,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
                                                 new Insets( 0, 0, 0, 0 ),
                                                 0, 0 );
 
-    this.labelValue1 = new JLabel( "Nur anhalten wenn Wert UND" );
+    this.labelValue1 = new JLabel( "Nur anhalten/loggen wenn Wert UND" );
     panelValue.add( this.labelValue1, gbcValue );
 
     this.docMask = new HexDocument( 2 );
@@ -117,7 +119,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     gbcValue.gridx++;
     panelValue.add( this.fldMask, gbcValue );
 
-    this.comboCond = new JComboBox( conditions );
+    this.comboCond = new JComboBox<>( conditions );
     this.comboCond.setEditable( false );
     gbcValue.fill    = GridBagConstraints.NONE;
     gbcValue.weightx = 0.0;
@@ -278,7 +280,8 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
       }
       if( status ) {
 	approveBreakpoint( new OutputBreakpoint(
-					true,
+					this.debugFrm,
+					is8Bit,
 					begPort,
 					endPort,
 					cond,

@@ -48,7 +48,7 @@
   Diese liefern eine Zeichenkette zur&uuml;ck.
  <br/><br/>
 
- <h3><a name="operators">1.4. Operatoren mit einem Operanden</a></h3>
+ <h3><a name="operators1">1.4. Operatoren mit einem Operanden</a></h3>
   <table border=1>
    <tr><th nowrap>Operator</th><th nowrap>Bedeutung</th></tr>
    <tr>
@@ -69,7 +69,7 @@
   </table>
  <br/><br/>
 
- <h3><a name="operators">1.5. Operatoren mit zwei Operanden</a></h3>
+ <h3><a name="operators2">1.5. Operatoren mit zwei Operanden</a></h3>
   <table border=1>
    <tr><th nowrap>Operator</th><th nowrap>Bedeutung</th></tr>
    <tr><td valign="top"><tt>AND</tt></td><td>bitweises UND</td></tr>
@@ -275,156 +275,126 @@
   Folgende Grammatik beschreibt die Syntax der Ausdr&uuml;cke:
  <br/><br/>
   <i>Ausdruck:</i><br/>
-	&nbsp; <i>Negationsausdruck</i><br/>
-	&nbsp; <i>Ausdruck</i> &nbsp; <tt>AND</tt>
-		&nbsp; <i>Negationsausdruck</i><br/>
-	&nbsp; <i>Ausdruck</i> &nbsp; <tt>OR</tt>
-		&nbsp; <i>Negationsausdruck</i><br/>
-	&nbsp; <i>Ausdruck</i> &nbsp; <tt>XOR</tt>
-		&nbsp; <i>Negationsausdruck</i>
+  &nbsp;&nbsp;<i>Negationsausdruck</i><br/>
+  &nbsp;&nbsp;<i>Ausdruck</i>&nbsp;<tt>AND</tt>&nbsp;<i>Negationsausdruck</i><br/>
+  &nbsp;&nbsp;<i>Ausdruck</i>&nbsp;<tt>OR</tt>&nbsp;<i>Negationsausdruck</i><br/>
+  &nbsp;&nbsp;<i>Ausdruck</i>&nbsp;<tt>XOR</tt>&nbsp;<i>Negationsausdruck</i>
  <br/><br/>
   <i>Negationsausdruck:</i><br/>
-	&nbsp; <i>Vergleichsausdruck</i><br/>
-	&nbsp; <tt>NOT</tt> &nbsp; <i>Vergleichsausdruck</i>
+  &nbsp;&nbsp;<i>Vergleichsausdruck</i><br/>
+  &nbsp;&nbsp;<tt>NOT</tt>&nbsp;<i>Vergleichsausdruck</i>
  <br/><br/>
   <i>Vergleichsausdruck:</i><br/>
-	&nbsp; <i>Verschiebeausdruck</i><br/>
-	&nbsp; <i>Vergleichsausdruck</i>
-		&nbsp; <i>Vergleichsoperator</i>
-		&nbsp; <i>Verschiebeausdruck</i><br/>
-	&nbsp; <i>Einfacher_String-Ausdruck</i>
-		&nbsp; <i>Vergleichsoperator</i>
-		&nbsp; <i>Einfacher_String-Ausdruck</i>
+  &nbsp;&nbsp;<i>Verschiebeausdruck</i><br/>
+  &nbsp;&nbsp;<i>Vergleichsausdruck</i>&nbsp;<i>Vergleichsoperator</i>&nbsp;<i>Verschiebeausdruck</i><br/>
+  &nbsp;&nbsp;<i>Einfacher_String-Ausdruck</i>&nbsp;<i>Vergleichsoperator</i>&nbsp;<i>Einfacher_String-Ausdruck</i>
  <br/><br/>
   <i>Vergleichsoperator:</i><br/>
-	&nbsp; <tt>&lt;</tt><br/>
-	&nbsp; <tt>&lt;=</tt><br/>
-	&nbsp; <tt>=</tt><br/>
-	&nbsp; <tt>=&gt;</tt><br/>
-	&nbsp; <tt>&gt;</tt><br/>
-	&nbsp; <tt>&lt;&gt;</tt>
+  &nbsp;&nbsp;<tt>&lt;</tt><br/>
+  &nbsp;&nbsp;<tt>&lt;=</tt><br/>
+  &nbsp;&nbsp;<tt>=</tt><br/>
+  &nbsp;&nbsp;<tt>=&gt;</tt><br/>
+  &nbsp;&nbsp;<tt>&gt;</tt><br/>
+  &nbsp;&nbsp;<tt>&lt;&gt;</tt>
  <br/><br/>
   <i>Verschiebeausdruck:</i><br/>
-	&nbsp; <i>Additionsausdruck</i><br/>
-	&nbsp; <i>Verschiebeausdruck</i>
-		&nbsp; <i>Verschiebeoperator</i>
-		&nbsp; <i>Additionssausdruck</i>
+  &nbsp;&nbsp;<i>Additionsausdruck</i><br/>
+  &nbsp;&nbsp;<i>Verschiebeausdruck</i>&nbsp;<i>Verschiebeoperator</i>&nbsp;<i>Additionssausdruck</i>
  <br/><br/>
   <i>Verschiebeoperator:</i><br/>
-	&nbsp; <tt>SHL</tt><br/>
-	&nbsp; <tt>SHR</tt>
+  &nbsp;&nbsp;<tt>SHL</tt><br/>
+  &nbsp;&nbsp;<tt>SHR</tt>
  <br/><br/>
   <i>Additionsausdruck:</i><br/>
-	&nbsp; <i>Multiplikationsausdruck</i><br/>
-	&nbsp; <i>Additionsausdruck</i>
-		&nbsp; <i>Additionsoperator</i>
-		&nbsp; <i>Multiplikationsausdruck</i>
+  &nbsp;&nbsp;<i>Multiplikationsausdruck</i><br/>
+  &nbsp;&nbsp;<i>Additionsausdruck</i>&nbsp;<i>Additionsoperator</i>&nbsp;<i>Multiplikationsausdruck</i>
  <br/><br/>
   <i>Additionsoperator:</i><br/>
-	&nbsp; <tt>ADD</tt><br/>
-	&nbsp; <tt>SUB</tt><br/>
-	&nbsp; <tt>+</tt><br/>
-	&nbsp; <tt>-</tt>
+  &nbsp;&nbsp;<tt>ADD</tt><br/>
+  &nbsp;&nbsp;<tt>SUB</tt><br/>
+  &nbsp;&nbsp;<tt>+</tt><br/>
+  &nbsp;&nbsp;<tt>-</tt>
  <br/><br/>
   <i>Multiplikationsausdruck:</i><br/>
-	&nbsp; <i>Un&auml;rer_Ausdruck</i><br/>
-	&nbsp; <i>Multiplikationsausdruck</i>
-		&nbsp; <i>Multiplikationsoperator</i>
-		&nbsp; <i>Un&auml;rer_Ausdruck</i>
+  &nbsp;&nbsp;<i>Un&auml;rer_Ausdruck</i><br/>
+  &nbsp;&nbsp;<i>Multiplikationsausdruck</i>&nbsp;<i>Multiplikationsoperator</i>&nbsp;<i>Un&auml;rer_Ausdruck</i>
  <br/><br/>
   <i>Multiplikationsoperator:</i><br/>
-	&nbsp; <tt>*</tt><br/>
-	&nbsp; <tt>/</tt><br/>
-	&nbsp; <tt>MOD</tt>
+  &nbsp;&nbsp;<tt>*</tt><br/>
+  &nbsp;&nbsp;<tt>/</tt><br/>
+  &nbsp;&nbsp;<tt>MOD</tt>
  <br/><br/>
   <i>Un&auml;rer_Ausdruck:</i><br/>
-	&nbsp; <i>Prim&auml;rausdruck</i><br/>
-	&nbsp; <i>Vorzeichen</i> &nbsp; <i>Prim&auml;rausdruck</i>
+  &nbsp;&nbsp;<i>Prim&auml;rausdruck</i><br/>
+  &nbsp;&nbsp;<i>Vorzeichen</i>&nbsp;<i>Prim&auml;rausdruck</i>
  <br/><br/>
   <i>Vorzeichen:</i><br/>
-	&nbsp; <tt>+</tt><br/>
-	&nbsp; <tt>-</tt>
+  &nbsp;&nbsp;<tt>+</tt><br/>
+  &nbsp;&nbsp;<tt>-</tt>
  <br/><br/>
   <i>Prim&auml;rausdruck:</i><br/>
-	&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i> &nbsp; <tt>)</tt><br/>
-	&nbsp; <i>Zahlenliteral</i><br/>
-	&nbsp; <i>Zeichenliteral</i><br/>
-	&nbsp; <i>Einfache_numerische_Variable</i><br/>
-	&nbsp; <i>Numerische_Feldvariable</i><br/>
-	&nbsp; <i>Numerischer_Funktionsaufruf</i>
+  &nbsp;&nbsp;<tt>(</tt>&nbsp;<i>Ausdruck</i>&nbsp;<tt>)</tt><br/>
+  &nbsp;&nbsp;<i>Zahlenliteral</i><br/>
+  &nbsp;&nbsp;<i>Zeichenliteral</i><br/>
+  &nbsp;&nbsp;<i>Einfache_numerische_Variable</i><br/>
+  &nbsp;&nbsp;<i>Numerische_Feldvariable</i><br/>
+  &nbsp;&nbsp;<i>Numerischer_Funktionsaufruf</i>
  <br/><br/>
   <i>Zahlenliteral:</i><br/>
-	&nbsp; <i>Folge_von_Ziffern_0...9</i><br/>
-	&nbsp; <tt>&amp;B</tt> &nbsp; <i>Folge_von_Ziffern_0_oder_1</i><br/>
-	&nbsp; <tt>&amp;H</tt> &nbsp; <i>Folge_von_Hexadezimalziffern</i>
+  &nbsp;&nbsp;<i>Folge_von_Ziffern_0...9</i><br/>
+  &nbsp;&nbsp;<tt>&amp;B</tt>&nbsp;<i>Folge_von_Ziffern_0_oder_1</i><br/>
+  &nbsp;&nbsp;<tt>&amp;H</tt>&nbsp;<i>Folge_von_Hexadezimalziffern</i>
  <br/><br/>
   <i>Zeichenliteral:</i><br/>
-	&nbsp; <tt>'</tt> &nbsp; <i>8-Bit-Zeichen</i> &nbsp; <tt>'</tt>
+  &nbsp;&nbsp;<tt>'</tt>&nbsp;<i>8-Bit-Zeichen</i>&nbsp;<tt>'</tt>
  <br/><br/>
   <i>Einfache_numerische_Variable:</i><br/>
-	&nbsp; <i>numerischer_Bezeichner</i>
+  &nbsp;&nbsp;<i>numerischer_Bezeichner</i>
  <br/><br/>
   <i>Numerische_Feldvariable:</i><br/>
-	&nbsp; <i>numerischer_Bezeichner</i>
-		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
-		&nbsp; <tt>)</tt><br/>
-	&nbsp; <i>numerischer_Bezeichner</i>
-		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
-		&nbsp; <tt>,</tt> &nbsp; <i>Ausdruck</i>
-		&nbsp; <tt>)</tt>
+  &nbsp;&nbsp;<i>numerischer_Bezeichner</i>&nbsp;<tt>(</tt>&nbsp;<i>Ausdruck</i>&nbsp;<tt>)</tt><br/>
+  &nbsp;&nbsp;<i>numerischer_Bezeichner</i>&nbsp;<tt>(</tt>&nbsp;<i>Ausdruck</i>&nbsp;<tt>,</tt>&nbsp;<i>Ausdruck</i>&nbsp;<tt>)</tt>
  <br/><br/>
   <i>Numerischer_Funktionsaufruf:</i><br/>
-	&nbsp; <i>numerischer_Bezeichner</i><br/>
-	&nbsp; <i>numerischer_Bezeichner</i>
-		&nbsp; <tt>(</tt> &nbsp; <i>Argumentliste</i>
-		&nbsp; <tt>)</tt>
+  &nbsp;&nbsp;<i>numerischer_Bezeichner</i><br/>
+  &nbsp;&nbsp;<i>numerischer_Bezeichner</i>&nbsp;<tt>(</tt>&nbsp;<i>Argumentliste</i>&nbsp;<tt>)</tt>
  <br/><br/>
   <i>numerischer_Bezeichner:</i><br/>
-	&nbsp; <i>Buchstabe_A...Z</i><br/>
-	&nbsp; <i>Buchstabe_A...Z</i>
-		&nbsp; <i>Folge_von_Buchstaben_A...Z_und_Zifferrn_0...9</i>
+  &nbsp;&nbsp;<i>Buchstabe_A...Z</i><br/>
+  &nbsp;&nbsp;<i>Buchstabe_A...Z</i>&nbsp;<i>Folge_von_Buchstaben_A...Z_und_Zifferrn_0...9</i>
  <br/><br/>
   <i>Argumentliste:</i><br/>
-	&nbsp; <i>Argument</i><br/>
-	&nbsp; <i>Argumentliste</i>
-	&nbsp; <tt>,</tt> &nbsp; <i>Argument</i>
+  &nbsp;&nbsp;<i>Argument</i><br/>
+  &nbsp;&nbsp;<i>Argumentliste</i>&nbsp;<tt>,</tt>&nbsp;<i>Argument</i>
  <br/><br/>
   <i>Argument:</i><br/>
-	&nbsp; <i>Ausdruck</i><br/>
-	&nbsp; <i>Einfacher_String-Ausdruck</i>
+  &nbsp;&nbsp;<i>Ausdruck</i><br/>
+  &nbsp;&nbsp;<i>Einfacher_String-Ausdruck</i>
  <br/><br/>
   <i>Einfacher_String-Ausdruck:</i><br/>
-	&nbsp; <i>String-Literal</i><br/>
-	&nbsp; <i>String-Variable</i><br/>
-	&nbsp; <i>String-Feldvariable</i><br/>
-	&nbsp; <i>String-Funktion</i>
+  &nbsp;&nbsp;<i>String-Literal</i><br/>
+  &nbsp;&nbsp;<i>String-Variable</i><br/>
+  &nbsp;&nbsp;<i>String-Feldvariable</i><br/>
+  &nbsp;&nbsp;<i>String-Funktion</i>
  <br/><br/>
   <i>String-Literal:</i><br/>
-	&nbsp; <tt>&quot;</tt>
-	&nbsp; <i>Folge_von_8-Bit-Zeichen</i>
-	&nbsp; <tt>&quot;</tt>
+  &nbsp;&nbsp;<tt>&quot;</tt>&nbsp;<i>Folge_von_8-Bit-Zeichen</i>&nbsp;<tt>&quot;</tt>
  <br/><br/>
   <i>String-Variable:</i><br/>
-	&nbsp; <i>String-Bezeichner</i> &nbsp; <tt>$</tt>
+  &nbsp;&nbsp;<i>String-Bezeichner</i>&nbsp;<tt>$</tt>
  <br/><br/>
   <i>String-Feldvariable:</i><br/>
-	&nbsp; <i>String-Bezeichner</i> &nbsp; <tt>$</tt>
-		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
-		&nbsp; <tt>)</tt><br/>
-	&nbsp; <i>String-Bezeichner</i> &nbsp; <tt>$</tt>
-		&nbsp; <tt>(</tt> &nbsp; <i>Ausdruck</i>
-		&nbsp; <tt>,</tt> &nbsp; <i>Ausdruck</i> &nbsp; <tt>)</tt>
+  &nbsp;&nbsp;<i>String-Bezeichner</i>&nbsp;<tt>$</tt>&nbsp;<tt>(</tt>&nbsp;<i>Ausdruck</i>&nbsp;<tt>)</tt><br/>
+  &nbsp;&nbsp;<i>String-Bezeichner</i>&nbsp;<tt>$</tt>&nbsp;<tt>(</tt>&nbsp;<i>Ausdruck</i>&nbsp;<tt>,</tt>&nbsp;<i>Ausdruck</i>&nbsp;<tt>)</tt>
  <br/><br/>
   <i>String-Funktion:</i><br/>
-	&nbsp; <i>String-Bezeichner</i><br/>
-	&nbsp; <i>String-Bezeichner</i> <tt>(</tt>
-		&nbsp; <i>Argumentliste</i> &nbsp; <tt>)</tt>
+  &nbsp;&nbsp;<i>String-Bezeichner</i><br/>
+  &nbsp;&nbsp;<i>String-Bezeichner</i>&nbsp;<tt>(</tt>&nbsp;<i>Argumentliste</i>&nbsp;<tt>)</tt>
  <br/><br/>
   <i>String-Bezeichner:</i><br/>
-	&nbsp; <i>Buchstabe&nbsp;A...Z</i> &nbsp; <tt>$</tt><br/>
-	&nbsp; <i>Buchstabe&nbsp;A...Z</i>
-		&nbsp; <i>Folge_von_Buchstaben_A...Z_und_Zifferrn_0...9</i>
-		&nbsp; <tt>$</tt>
+  &nbsp;&nbsp;<i>Buchstabe&nbsp;A...Z</i>&nbsp;<tt>$</tt><br/>
+  &nbsp;&nbsp;<i>Buchstabe&nbsp;A...Z</i>&nbsp;<i>Folge_von_Buchstaben_A...Z_und_Zifferrn_0...9</i>&nbsp;<tt>$</tt>
  <br/>
 </body>
 </html>
+

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,54 +10,23 @@ package jkcemu.emusys.kc85;
 
 import java.awt.Component;
 import java.lang.*;
-import jkcemu.base.*;
 
 
-public class M025 extends KC85ROM8KModule
+public class M025 extends AbstractKC85UserPROMModule
 {
-  private int    typeByte;
-  private String fileName;
-
-
-  public M025(
-	    int       slot,
-	    EmuThread emuThread,
-	    int       typeByte,
-	    Component owner,
-	    String    fileName )
+  public M025( int slot, int typeByte, Component owner, String fileName )
   {
-    super( slot, emuThread, "M025", loadFile( owner, fileName ) );
-    this.typeByte = typeByte;
-    this.fileName = fileName;
+    super( slot, typeByte, "M025", 1, 0x2000, owner, fileName );
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  // Steuerbyte: AAAxxxxM
   @Override
-  public String getFileName()
+  public void setStatus( int value )
   {
-    return this.fileName;
-  }
-
-
-  @Override
-  public int getTypeByte()
-  {
-    return this.typeByte;
-  }
-
-
-  @Override
-  public void reload( Component owner )
-  {
-    setROM( loadFile( owner, this.fileName ) );
-  }
-
-
-	/* --- private Methoden --- */
-
-  private static byte[] loadFile( Component owner, String fileName )
-  {
-    return EmuUtil.readFile( owner, fileName, 0x2000, "M025 ROM-Datei" );
+    super.setStatus( value );
+    this.begAddr = (value << 8) & 0xE000;
   }
 }
-

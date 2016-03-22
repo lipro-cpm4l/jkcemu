@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -29,7 +29,7 @@ public class PrintMngr extends AbstractTableModel
   public PrintMngr()
   {
     this.nextEntryNum = 1;
-    this.entries      = new ArrayList<PrintData>();
+    this.entries      = new ArrayList<>();
     this.activeEntry  = null;
   }
 
@@ -166,6 +166,7 @@ public class PrintMngr extends AbstractTableModel
 	  } else {
 	    rv = "abgeschlossen";
 	  }
+	  break;
       }
     }
     return rv;

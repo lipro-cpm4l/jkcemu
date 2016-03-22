@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,6 +19,7 @@ public class FileInfoFld extends Component
 {
   public enum Item {
 		NAME,
+		LINKED_TO,
 		TYPE,
 		FORMAT,
 		DURATION,
@@ -32,22 +33,22 @@ public class FileInfoFld extends Component
   private static final int LABEL_VALUE_DISTANCE = 10;
 
 
-  private int          minRows;
-  private Integer      rowHeight;
-  private String[]     labels;
-  private String[]     values;
-  private String[]     addonRows;
-  private DateFormat   dateFmt;
+  private int        minRows;
+  private Integer    rowHeight;
+  private String[]   labels;
+  private String[]   values;
+  private String[]   addonRows;
+  private DateFormat dateFmt;
 
 
   FileInfoFld( int minRows )
   {
-    this.minRows    = minRows;
-    this.rowHeight  = null;
-    this.labels     = null;
-    this.values     = null;
-    this.addonRows  = null;
-    this.dateFmt    = DateFormat.getDateTimeInstance(
+    this.minRows   = minRows;
+    this.rowHeight = null;
+    this.labels    = null;
+    this.values    = null;
+    this.addonRows = null;
+    this.dateFmt   = DateFormat.getDateTimeInstance(
 						DateFormat.MEDIUM,
 						DateFormat.MEDIUM );
   }
@@ -63,8 +64,8 @@ public class FileInfoFld extends Component
 		Map<Item,Object> items,
 		String[]         addonRows )
   {
-    Collection<String> labels = new ArrayList<String>();
-    Collection<String> values = new ArrayList<String>();
+    Collection<String> labels = new ArrayList<>();
+    Collection<String> values = new ArrayList<>();
 
     Object item = items.get( Item.NAME );
     if( item != null ) {
@@ -72,6 +73,11 @@ public class FileInfoFld extends Component
       if( !s.isEmpty() ) {
 	labels.add( "Name:" );
 	values.add( item.toString() );
+	item = items.get( Item.LINKED_TO );
+	if( item != null ) {
+	  labels.add( "Symbolischer Link auf:" );
+	  values.add( item.toString() );
+	}
 	item = items.get( Item.TYPE );
 	if( item != null ) {
 	  labels.add( "Typ:" );
@@ -144,7 +150,7 @@ public class FileInfoFld extends Component
 					items,
 					Item.LAST_MODIFIED );
 	if( lastModifiedText != null ) {
-	  labels.add( "Ge\u00E4ndert:" );
+	  labels.add( "Zuletzt ge\u00E4ndert:" );
 	  values.add( lastModifiedText );
 	}
       }

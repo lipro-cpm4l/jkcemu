@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -46,7 +46,7 @@ public class SC2 extends EmuSys implements
 
   public SC2( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.sc2." );
     if( rom0000 == null ) {
       rom0000 = readResource( "/rom/sc2/sc2_0000.bin" );
     }
@@ -537,13 +537,13 @@ public class SC2 extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-          rv = this.pio.readPortA();
+          rv = this.pio.readDataA();
           break;
 
         case 1:
@@ -560,7 +560,7 @@ public class SC2 extends EmuSys implements
 	    }
 	    this.pio.putInValuePortB( v, 0xF0 );
 	  }
-          rv = this.pio.readPortB();
+          rv = this.pio.readDataB();
           break;
 
         case 2:
@@ -643,17 +643,17 @@ public class SC2 extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     if( (port & 0x08) == 0 ) {
       switch( port & 0x03 ) {
 	case 0:
-          this.pio.writePortA( value );
+          this.pio.writeDataA( value );
 	  updDisplay();
           break;
 
         case 1:
-          this.pio.writePortB( value );
+          this.pio.writeDataB( value );
 	  updDisplay();
           break;
 

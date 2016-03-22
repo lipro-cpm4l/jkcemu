@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,8 +32,10 @@ public class RAMFloppyFrm extends BasicFrm
 
   public static void close()
   {
-    if( instance != null )
+    if( instance != null ) {
       instance.doClose();
+      instance = null;
+    }
   }
 
 
@@ -77,7 +79,7 @@ public class RAMFloppyFrm extends BasicFrm
       }
     }
     if( different ) {
-      doClose();
+      close();
     }
     return rv;
   }

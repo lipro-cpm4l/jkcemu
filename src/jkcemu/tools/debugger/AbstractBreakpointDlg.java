@@ -1,9 +1,10 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Basisklasse fuer einen Dialog zum Anlegen und Bearbeiten eines Haltepunktes
+ * Basisklasse fuer einen Dialog zum Anlegen und Bearbeiten
+ * eines Halte-/Log-Punktes
  */
 
 package jkcemu.tools.debugger;
@@ -19,24 +20,30 @@ public abstract class AbstractBreakpointDlg extends BasicDlg
 {
   protected static String[] conditions = { "<", "<=", "<>", "=", ">=" , ">" };
 
+  protected DebugFrm           debugFrm;
   protected AbstractBreakpoint breakpoint;
 
+  private static boolean lastStopEnabled = true;
+  private static boolean lastLogEnabled  = false;
+
   private AbstractBreakpoint approvedBreakpoint;
-  private JCheckBox          btnEnabled;
+  private JCheckBox          btnStopEnabled;
+  private JCheckBox          btnLogEnabled;
   private JButton            btnOK;
   private JButton            btnCancel;
 
 
   protected AbstractBreakpointDlg(
-			Window             owner,
+			DebugFrm           debugFrm,
 			String             watchedObj,
 			AbstractBreakpoint breakpoint )
   {
     super(
-	owner,
+	debugFrm,
 	breakpoint != null ?
-		("Haltepunkt auf " + watchedObj + " bearbeiten")
-		: ("Neuer Haltepunkt auf " + watchedObj) );
+		("Halte-/Log-Punkt auf " + watchedObj + " bearbeiten")
+		: ("Neuer Halte-/Log-Punkt auf " + watchedObj) );
+    this.debugFrm           = debugFrm;
     this.breakpoint         = breakpoint;
     this.approvedBreakpoint = null;
   }
@@ -44,9 +51,12 @@ public abstract class AbstractBreakpointDlg extends BasicDlg
 
   protected void approveBreakpoint( AbstractBreakpoint breakpoint )
   {
-    breakpoint.setEnabled( this.btnEnabled.isSelected() );
+    breakpoint.setStopEnabled( this.btnStopEnabled.isSelected() );
+    breakpoint.setLogEnabled( this.btnLogEnabled.isSelected() );
     this.approvedBreakpoint = breakpoint;
     doClose();
+    lastStopEnabled = breakpoint.isStopEnabled();
+    lastLogEnabled  = breakpoint.isLogEnabled();
   }
 
 
@@ -89,15 +99,27 @@ public abstract class AbstractBreakpointDlg extends BasicDlg
 						0, 0,
 						1, 1,
 						0.0, 0.0,
-						GridBagConstraints.CENTER,
+						GridBagConstraints.WEST,
 						GridBagConstraints.NONE,
-						new Insets( 5, 5, 5, 5 ),
+						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    this.btnEnabled = new JCheckBox( "Haltepunkt aktiv", true );
-    panel.add( this.btnEnabled, gbc );
+    this.btnStopEnabled = new JCheckBox(
+		"Programmausf\u00FChrung anhalten (Haltepunkt)",
+		lastStopEnabled );
+    panel.add( this.btnStopEnabled, gbc );
+
+    this.btnLogEnabled = new JCheckBox(
+				"Log-Meldung erzeugen (Log-Punkt)",
+				lastLogEnabled );
+    gbc.insets.top    = 0;
+    gbc.insets.bottom = 10;
+    gbc.gridy++;
+    panel.add( this.btnLogEnabled, gbc );
 
     JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    gbc.anchor      = GridBagConstraints.CENTER;
+    gbc.insets.left = 5;
     gbc.gridy++;
     panel.add( panelBtn, gbc );
 
@@ -110,7 +132,8 @@ public abstract class AbstractBreakpointDlg extends BasicDlg
     panelBtn.add( this.btnCancel );
 
     if( this.breakpoint != null ) {
-      this.btnEnabled.setSelected( this.breakpoint.isEnabled() );
+      this.btnStopEnabled.setSelected( this.breakpoint.isStopEnabled() );
+      this.btnLogEnabled.setSelected( this.breakpoint.isLogEnabled() );
     }
 
     return panel;
@@ -154,4 +177,3 @@ public abstract class AbstractBreakpointDlg extends BasicDlg
     return rv;
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,6 +16,7 @@ import java.text.*;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
+import jkcemu.text.CharConverter;
 
 
 public class ImageDisk extends AbstractFloppyDisk
@@ -42,7 +43,7 @@ public class ImageDisk extends AbstractFloppyDisk
     int     sectorBufSize  = 1024;
     for( int cyl = 0; !errorOrDeleted && (cyl < cyls); cyl++ ) {
       for( int head = 0; !errorOrDeleted && (head < sides); head++ ) {
-	int n = disk.getSectorsPerCylinder();
+	int n = disk.getSectorsOfCylinder( cyl, head );
 	for( int i = 0; i < n; i++ ) {
 	  SectorData sector = disk.getSectorByIndex( cyl, head, i );
 	  if( sector != null ) {
@@ -59,8 +60,8 @@ public class ImageDisk extends AbstractFloppyDisk
     }
 
     // Zeitstempel aufbereiten
+    Calendar       calendar = new GregorianCalendar();
     java.util.Date diskDate = disk.getDiskDate();
-    Calendar       calendar = Calendar.getInstance();
     if( diskDate != null ) {
       calendar.clear();
       calendar.setTime( diskDate );
@@ -75,7 +76,7 @@ public class ImageDisk extends AbstractFloppyDisk
     // Datei oeffnen
     OutputStream out = null;
     try {
-      out = new FileOutputStream( file );
+      out = EmuUtil.createOptionalGZipOutputStream( file );
 
       // Dateikopf
       EmuUtil.writeASCII(
@@ -94,13 +95,17 @@ public class ImageDisk extends AbstractFloppyDisk
 	remark = disk.getRemark();
       }
       if( remark != null ) {
-	int len = remark.length();
+	CharConverter cc  = new CharConverter( CharConverter.Encoding.CP850 );
+	int           len = remark.length();
 	for( int i = 0; i < len; i++ ) {
-	  int ch = remark.charAt( i );
-	  if( (ch == 0x00) || (ch == 0x1A) || (ch >= 0x80) ) {
+	  char ch = remark.charAt( i );
+	  if( (ch == '\u0000') || (ch == '\u001A') ) {
 	    break;
 	  }
-	  out.write( ch );
+	  ch = (char) cc.toCharsetByte( ch );
+	  if( ch > '\u0000' ) {
+	    out.write( ch );
+	  }
 	}
       }
       out.write( 0x1A );
@@ -108,7 +113,7 @@ public class ImageDisk extends AbstractFloppyDisk
       // Spuren
       for( int cyl = 0; cyl < cyls; cyl++ ) {
 	for( int head = 0; head < sides; head++ ) {
-	  int nSec = disk.getSectorsPerCylinder();
+	  int nSec = disk.getSectorsOfCylinder( cyl, head );
 	  if( nSec > 0 ) {
 	    SectorData[] sectors  = new SectorData[ nSec ];
 	    boolean      cylMap   = false;
@@ -264,7 +269,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	throwNoImageDiskFile();
       }
       for( int i = 0; i < 6; i++ ) {
-	readByte( in );
+	readMandatoryByte( in );
       }
 
       // Zeitstempel lesen
@@ -272,7 +277,7 @@ public class ImageDisk extends AbstractFloppyDisk
       char[]         cBuf     = new char[ 19 ];
       int            pos      = 0;
       while( pos < cBuf.length ) {
-	cBuf[ pos++ ] = (char) readByte( in );
+	cBuf[ pos++ ] = (char) readMandatoryByte( in );
       }
       try {
 	diskDate = (new SimpleDateFormat(
@@ -283,14 +288,18 @@ public class ImageDisk extends AbstractFloppyDisk
 
       // Kommentar
       String remark = null;
-      int b = readByte( in );
+      int b = readMandatoryByte( in );
       if( b != 0x1A ) {
+	CharConverter cc  = new CharConverter( CharConverter.Encoding.CP850 );
 	StringBuilder buf = new StringBuilder( 1024 );
 	while( b != 0x1A ) {
-	  buf.append( (char) (b & 0x7F) );
-	  b = readByte( in );
+	  b = cc.toUnicode( (char) b );
+	  if( b > 0 ) {
+	    buf.append( (char) b );
+	  }
+	  b = readMandatoryByte( in );
 	}
-	remark = buf.toString().trim();
+	remark = buf.toString();
       }
       if( b != 0x1A ) {
 	throwNoImageDiskFile();
@@ -302,10 +311,10 @@ public class ImageDisk extends AbstractFloppyDisk
 
       int transferRate = in.read();
       while( transferRate >= 0 ) {
-	int cyl      = readByte( in );
-	int head     = readByte( in );
-	int nSec     = readByte( in );
-	int sizeCode = readByte( in );
+	int cyl      = readMandatoryByte( in );
+	int head     = readMandatoryByte( in );
+	int nSec     = readMandatoryByte( in );
+	int sizeCode = readMandatoryByte( in );
 	if( sizeCode > 6 ) {
 	  throw new IOException(
 		String.format(
@@ -320,7 +329,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	// Sektornummerntabelle
 	int[] sectorNums = new int[ nSec ];
 	for( int i = 0; i < nSec; i++ ) {
-	  sectorNums[ i ] = readByte( in );
+	  sectorNums[ i ] = readMandatoryByte( in );
 	}
 
 	// Sektorzylindertabelle
@@ -328,7 +337,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	if( (head & 0x80) != 0 ) {
 	  sectorCyls = new int[ nSec ];
 	  for( int i = 0; i < nSec; i++ ) {
-	    sectorCyls[ i ] = readByte( in );
+	    sectorCyls[ i ] = readMandatoryByte( in );
 	  }
 	}
 
@@ -337,7 +346,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	if( (head & 0x40) != 0 ) {
 	  sectorHeads = new int[ nSec ];
 	  for( int i = 0; i < nSec; i++ ) {
-	    sectorHeads[ i ] = readByte( in );
+	    sectorHeads[ i ] = readMandatoryByte( in );
 	  }
 	}
 
@@ -349,7 +358,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	  byte[]  secBuf   = null;
 	  int     fillByte = 0;
 	  int     secNum   = sectorNums[ i ];
-	  int     secType  = readByte( in );
+	  int     secType  = readMandatoryByte( in );
 	  switch( secType ) {
 	    case 0:	// keine Daten
 	      break;
@@ -369,7 +378,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	    case 6:	// komprimierte Daten mit Fehler
 	    case 8:	// komprimierte und geloeschte Daten mit Fehler
 	      secBuf  = new byte[ sectorSize ];
-	      fillByte = readByte( in );
+	      fillByte = readMandatoryByte( in );
 	      Arrays.fill( secBuf, (byte) fillByte );
 	      break;
 
@@ -396,12 +405,12 @@ public class ImageDisk extends AbstractFloppyDisk
 	  Map<Integer,java.util.List<SectorData>> map = null;
 	  if( head == 0 ) {
 	    if( side0 == null ) {
-	      side0 = new HashMap<Integer,java.util.List<SectorData>>();
+	      side0 = new HashMap<>();
 	    }
 	    map = side0;
 	  } else if( head == 1 ) {
 	    if( side1 == null ) {
-	      side1 = new HashMap<Integer,java.util.List<SectorData>>();
+	      side1 = new HashMap<>();
 	    }
 	    map = side1;
 	  }
@@ -409,7 +418,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	    Integer keyObj                     = new Integer( cyl );
 	    java.util.List<SectorData> sectors = map.get( keyObj );
 	    if( sectors == null ) {
-	      sectors = new ArrayList<SectorData>( nSec > 0 ? nSec : 1 );
+	      sectors = new ArrayList<>( nSec > 0 ? nSec : 1 );
 	      map.put( keyObj, sectors );
 	    }
 	    int secCyl = cyl;
@@ -424,18 +433,18 @@ public class ImageDisk extends AbstractFloppyDisk
 		secHead = sectorHeads[ i ];
 	      }
 	    }
-	    sectors.add(
-		new SectorData(
-			i,
-			secCyl,
-			secHead,
-			secNum,
-			sizeCode,
-			crcError,
-			deleted,
-			secBuf,
-			0,
-			secBuf != null ? secBuf.length : 0 ) );
+	    SectorData sector = new SectorData(
+					i,
+					secCyl,
+					secHead,
+					secNum,
+					sizeCode,
+					secBuf,
+					0,
+					secBuf != null ? secBuf.length : 0 );
+	    sector.setError( crcError );
+	    sector.setDeleted( deleted );
+	    sectors.add( sector );
 
 	    if( cyl >= cyls ) {
 	      cyls = cyl + 1;
@@ -571,6 +580,16 @@ public class ImageDisk extends AbstractFloppyDisk
       rv = map.get( new Integer( physCyl ) );
     }
     return rv;
+  }
+
+
+  private static int readMandatoryByte( InputStream in ) throws IOException
+  {
+    int b = in.read();
+    if( b < 0 ) {
+      throwUnexpectedEOF();
+    }
+    return b;
   }
 
 

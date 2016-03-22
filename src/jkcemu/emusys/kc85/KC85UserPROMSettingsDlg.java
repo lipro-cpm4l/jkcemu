@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,11 +26,17 @@ public class KC85UserPROMSettingsDlg
 		{ "M025", "F7: 8K User PROM/EPROM", "FB: 8K ROM" },
 		{ "M028", "F8: 16K User PROM/EPROM", "FC: 16K ROM" },
 		{ "M040", "01: Autostart", "F7: 8K User PROM/EPROM",
-					"F8: 16K User PROM/EPROM" } };
+					"F8: 16K User PROM/EPROM" },
+		{ "M045", "70" },
+		{ "M046", "71" },
+		{ "M047", "72" },
+		{ "M048", "73" } };
 
   private Frame          owner;
   private String         approvedFileName;
   private String         approvedTypeByteText;
+  private String         moduleName;
+  private String[]       moduleTableRow;
   private JRadioButton[] typeByteBtns;
   private FileNameFld    fileNameFld;
   private JButton        btnSelect;
@@ -45,7 +51,19 @@ public class KC85UserPROMSettingsDlg
 			String fileName )
   {
     super( owner, moduleName );
-    this.owner = owner;
+    this.owner                = owner;
+    this.approvedFileName     = null;
+    this.approvedTypeByteText = null;
+    this.moduleName           = moduleName;
+    this.moduleTableRow       = null;
+    for( String[] moduleTableRow : this.moduleTable ) {
+      if( moduleTableRow.length > 1 ) {
+	if( moduleTableRow[ 0 ].equals( moduleName ) ) {
+	  this.moduleTableRow = moduleTableRow;
+	}
+      }
+    }
+
 
     // Fensterinhalt
     setLayout( new GridBagLayout() );
@@ -61,40 +79,39 @@ public class KC85UserPROMSettingsDlg
 
     // Strukturbyte
     this.typeByteBtns = null;
-    for( String[] moduleRow : this.moduleTable ) {
-      if( moduleRow.length > 1 ) {
-	if( moduleRow[ 0 ].equals( moduleName ) ) {
-	  add( new JLabel( "Strukturbyte:" ), gbc );
+    if( this.moduleTableRow != null ) {
+      if( this.moduleTableRow.length > 2 ) {
+	add( new JLabel( "Strukturbyte:" ), gbc );
 
-	  ButtonGroup grpTypeByte = new ButtonGroup();
-	  boolean     selected    = false;
+	ButtonGroup grpTypeByte = new ButtonGroup();
+	boolean     selected    = false;
 
-	  gbc.insets.bottom = 0;
-	  this.typeByteBtns = new JRadioButton[ moduleRow.length - 1 ];
-	  for( int i = 0; i < this.typeByteBtns.length; i++ ) {
-	    String       text = moduleRow[ i + 1 ];
-	    JRadioButton btn  = new JRadioButton( text );
-	    grpTypeByte.add( btn );
-	    if( typeByteText != null ) {
-	      if( text.startsWith( typeByteText ) ) {
-		btn.setSelected( true );
-		selected = true;
-	      }
+	gbc.insets.bottom = 0;
+	this.typeByteBtns = new JRadioButton[
+					this.moduleTableRow.length - 1 ];
+	for( int i = 0; i < this.typeByteBtns.length; i++ ) {
+	  String       text = this.moduleTableRow[ i + 1 ];
+	  JRadioButton btn  = new JRadioButton( text );
+	  grpTypeByte.add( btn );
+	  if( typeByteText != null ) {
+	    if( text.startsWith( typeByteText ) ) {
+	      btn.setSelected( true );
+	      selected = true;
 	    }
-	    gbc.insets.left   = 50;
-	    if( i > 0 ) {
-	      gbc.insets.top = 0;
-	    }
-	    if( i == (this.typeByteBtns.length - 1) ) {
-	      gbc.insets.bottom = 5;
-	    }
-	    gbc.gridy++;
-	    add( btn, gbc );
-	    this.typeByteBtns[ i ] = btn;
 	  }
-	  if( !selected ) {
-	    this.typeByteBtns[ 0 ].setSelected( true );
+	  gbc.insets.left = 50;
+	  if( i > 0 ) {
+	    gbc.insets.top = 0;
 	  }
+	  if( i == (this.typeByteBtns.length - 1) ) {
+	    gbc.insets.bottom = 5;
+	  }
+	  gbc.gridy++;
+	  add( btn, gbc );
+	  this.typeByteBtns[ i ] = btn;
+	}
+	if( !selected ) {
+	  this.typeByteBtns[ 0 ].setSelected( true );
 	}
       }
     }
@@ -271,6 +288,12 @@ public class KC85UserPROMSettingsDlg
 	    break;
 	  }
 	}
+      } else {
+	if( this.moduleTableRow != null ) {
+	  if( this.moduleTableRow.length > 1 ) {
+	    this.approvedTypeByteText = this.moduleTableRow[ 1 ];
+	  }
+	}
       }
       this.approvedFileName = file.getPath();
       doClose();
@@ -286,7 +309,7 @@ public class KC85UserPROMSettingsDlg
   {
     File file = this.fileNameFld.getFile();
     if( file == null ) {
-      file = Main.getLastPathFile( "rom" );
+      file = Main.getLastDirFile( "rom" );
     }
     file = EmuUtil.showFileOpenDlg(
 			this.owner,
@@ -300,4 +323,3 @@ public class KC85UserPROMSettingsDlg
     }
   }
 }
-

@@ -1,0 +1,69 @@
+<html>
+<body>
+ <h1>Diskettenabbilddatei-Inspektor</h1>
+  Der Diskettenabbilddatei-Inspektor dient zur Begutachtung
+  von Diskettenabbilddateien.
+  Man kann damit die Anordnung und den Inhalt der einzelnen Sektoren sehen
+  sowie in der Abbilddatei suchen.
+  Des Weiteren wird im Fall einer CP/M-kompatiblen Abbilddatei
+  das logische Diskettenformat angezeigt,
+  wenn es automatisch erkannt werden konnte.
+ <br/><br/>
+  Der haupts&auml;chlie Sinn des Werkzeugs besteht darin,
+  von realen Disketten erstellte Abbilder zu untersuchen,
+  die im Emulator Probleme bereiten.
+  F&uuml;r eine Fehlersuche ist es sehr hilfreich,
+  wenn die Abbilddatei neben den eigentlichen Nutzdaten
+  auch m&ouml;glichst viele zus&auml;tzliche Informationen enth&auml;lt.
+  Das h&auml;ngt wiederum davon ab, mit welchem Werkzeug die Abbilddatei
+  erzeugt und somit welches Dateiformat verwendet wurde.
+  Eine freie Sektoranordnung k&ouml;nnen z.B. nur
+  <a href="diskimgformats.htm#anadisk">AnaDisk-</a>,
+  <a href="diskimgformats.htm#cpcdisk">CPC-Disk-</a>,
+  <a href="diskimgformats.htm#imagedisk">ImageDisk-</a> und
+  <a href="diskimgformats.htm#teledisk">TeleDisk-Dateien</a> speichern.
+  <a href="diskimgformats.htm#copyqm">CopyQM-Dateien</a> enthalten
+  dagegen nur Angaben zu Interleave und Skew,
+  wobei diese Werte h&auml;ufig noch nicht einmal korrekt gesetzt sind.
+  Wenn also in einer CopyQM-Datei die Sektoren aufsteigend angeordnet sind,
+  hei&szlig;t das noch lange nicht, dass das auch auf der ursp&uuml;nglichen
+  Diskette so war.
+ <br/><br/>
+  Unterschiedliche Sektorgr&ouml;&szlig;en innerhalb einer Spur
+  lassen sich nur in
+  <a href="diskimgformats.htm#anadisk">AnaDisk-</a>,
+  <a href="diskimgformats.htm#imagedisk">ImageDisk-</a> und
+  <a href="diskimgformats.htm#teledisk">TeleDisk-Dateien</a> abbilden.
+  Letztere beiden speichern auch, ob beim Lesen eines Sektors ein CRC-Fehler
+  aufgetreten ist und ob der Sektor eine L&ouml;schmarkierung hat.
+  <a href="diskimgformats.htm#teledisk">TeleDisk</a> kann zus&auml;tzlich
+  auch Sektoren speichern, deren Kopfbereich nicht gelesen werden konnte.
+  Diese Sektoren enthalten den Datenbereich sowie eine Informationen,
+  dass die Sektor-ID generiert (d.h. von TeleDisk erfunden) wurde.
+  Alle diese Informationen k&ouml;nnen Sie im
+  Diskettenabbilddatei-Inspektor sehen.
+ <br/><br/>
+  <b>Achtung!</b> Im Feld <em>Zeitstempel</em> wird nicht der im
+  Dateisystem hinterlegte &Auml;nderungszeitpunkt angezeigt,
+  sondern der vom Erstellungsprogramm in der Datei gespeicherte Zeitstempel.
+  Nur <a href="diskimgformats.htm#copyqm">CopyQM-</a>,
+  <a href="diskimgformats.htm#imagedisk">ImageDisk-</a> und
+  <a href="diskimgformats.htm#teledisk">TeleDisk-Dateien</a>
+  k&ouml;nnen einen solchen Zeitstempel haben.
+ <br/><br/>
+
+ <h2>Logisches Diskettenformat</h2>
+  Der Diskettenabbilddatei-Inspektor versucht,
+  das logische CP/M-Diskettenformat
+  (Systemspuren, Directory-Gr&ouml;&szlig;e, Blockgr&ouml;&szlig;e
+  und Blocknummernformat) automatisch zu erkennen.
+  Das ist jedoch nur m&ouml;glich, wenn das Directory ausreichend
+  gef&uuml;llt ist.
+  Dabei ist zu beachten, dass die Bl&ouml;ckgr&ouml;&szlig;e
+  nicht zu 100% sicher erkannt werden kann.
+  Das Blocknummernformat (8 oder 16&nbsp;Bit) ist nur erkennbar,
+  wenn das Diskettenabbild Dateien enth&auml;lt,
+  die mindestens zwei Bl&ouml;cke gro&szlig; sind.
+</body>
+</html>
+

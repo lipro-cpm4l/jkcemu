@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -56,14 +56,24 @@ public class SectorID
     return this.head;
   }
 
+
   public int getSectorNum()
   {
     return this.sectorNum;
   }
 
+
   public int getSizeCode()
   {
     return this.sizeCode;
+  }
+
+
+  protected void setSectorID( int cyl, int head, int sectorNum )
+  {
+    this.cyl       = cyl;
+    this.head      = head;
+    this.sectorNum = sectorNum;
   }
 
 
@@ -72,4 +82,3 @@ public class SectorID
     this.sizeCode = sizeCode;
   }
 }
-

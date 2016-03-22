@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,25 +11,175 @@ package jkcemu.filebrowser;
 import java.awt.*;
 import java.io.*;
 import java.lang.*;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
 import java.util.Collection;
 import java.util.zip.*;
 import jkcemu.base.*;
 
 
 public class ZipPacker extends AbstractThreadDlg
+			implements FileVisitor<Path>
 {
-  private Collection<File> srcFiles;
+  private Collection<Path> srcPaths;
+  private String           curEntryDir;
+  private Path             curRootPath;
+  private Path             outPath;
   private File             outFile;
+  private ZipOutputStream  out;
 
 
   public static void packFiles(
 		Window           owner,
-		Collection<File> srcFiles,
+		Collection<Path> srcPaths,
 		File             outFile )
   {
-    Dialog dlg = new ZipPacker( owner, srcFiles, outFile );
-    dlg.setTitle( "ZIP-Datei packen" );
-    dlg.setVisible( true );
+    try {
+      Dialog dlg = new ZipPacker( owner, srcPaths, outFile );
+      dlg.setTitle( "ZIP-Datei packen" );
+      dlg.setVisible( true );
+    }
+    catch( InvalidPathException ex ) {}
+  }
+
+
+	/* --- FileVisitor --- */
+
+  @Override
+  public FileVisitResult postVisitDirectory( Path dir, IOException ex )
+  {
+    return this.canceled ? FileVisitResult.TERMINATE
+				: FileVisitResult.CONTINUE;
+  }
+
+
+  @Override
+  public FileVisitResult preVisitDirectory(
+				Path                dir,
+				BasicFileAttributes attrs )
+  {
+    FileVisitResult rv = FileVisitResult.SKIP_SUBTREE;
+    if( (this.out == null) || this.canceled ) {
+      rv = FileVisitResult.TERMINATE;
+    } else {
+      if( (dir != null) && (attrs != null) ) {
+	if( attrs.isDirectory() ) {
+	  this.curEntryDir = getEntryDir( dir );
+	  if( this.curEntryDir != null ) {
+	    if( !this.curEntryDir.isEmpty() ) {
+	      appendToLog( dir.toString() + "\n" );
+	      try {
+		ZipEntry entry = new ZipEntry( this.curEntryDir );
+		entry.setMethod( ZipEntry.STORED );
+		entry.setCrc( 0 );
+		entry.setCompressedSize( 0 );
+		entry.setSize( 0 );
+		FileTime lastModified = attrs.lastModifiedTime();
+		if( lastModified != null ) {
+		  entry.setTime( lastModified.toMillis() );
+		}
+		this.out.putNextEntry( entry );
+		this.out.closeEntry();
+		rv = FileVisitResult.CONTINUE;
+	      }
+	      catch( IOException ex ) {
+		appendErrorToLog( ex );
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
+  {
+    FileVisitResult rv = FileVisitResult.SKIP_SIBLINGS;
+    if( (this.out == null) || this.canceled ) {
+      rv = FileVisitResult.TERMINATE;
+    } else {
+      if( (file != null) && (attrs != null) ) {
+	if( this.curEntryDir == null ) {
+	  this.curEntryDir = getEntryDir( file.getParent() );
+	}
+	if( this.curEntryDir != null ) {
+	  int nameCnt = file.getNameCount();
+	  if( nameCnt > 0 ) {
+	    appendToLog( file.toString() + "\n" );
+	    if( attrs.isRegularFile() ) {
+	      FileProgressInputStream in = null;
+	      try {
+		in = openInputFile( file.toFile(), 2 );
+
+		// CRC32-Pruefsumme und Dateigroesse ermitteln
+		CRC32 crc32 = new CRC32();
+		long  fSize = 0;
+		int   b     = in.read();
+		while( !this.canceled && (b != -1) ) {
+		  fSize++;
+		  crc32.update( b );
+		  b = in.read();
+		}
+		in.seek( 0 );
+
+		// ZIP-Eintrag anlegen
+		ZipEntry entry = new ZipEntry( this.curEntryDir
+				+ file.getName( nameCnt - 1 ).toString() );
+		entry.setCrc( crc32.getValue() );
+		entry.setMethod( ZipEntry.DEFLATED );
+		entry.setSize( fSize );
+		FileTime lastModified = attrs.lastModifiedTime();
+		if( lastModified != null ) {
+		  entry.setTime( lastModified.toMillis() );
+		}
+		this.out.putNextEntry( entry );
+
+		// Datei in Eintrag schreiben
+		b = in.read();
+		while( !this.canceled && (b != -1) ) {
+		  this.out.write( b );
+		  b = in.read();
+		}
+		this.out.closeEntry();
+	      }
+	      catch( IOException ex ) {
+		appendErrorToLog( ex );
+		incErrorCount();
+	      }
+	      catch( UnsupportedOperationException ex ) {
+		appendIgnoredToLog();
+	      }
+	      finally {
+		EmuUtil.doClose( in );
+	      }
+	    } else if( attrs.isSymbolicLink() ) {
+	      appendToLog( " Symbolischer Link ignoriert\n" );
+	      disableAutoClose();
+	    } else {
+	      appendIgnoredToLog();
+	    }
+	    rv = FileVisitResult.CONTINUE;
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public FileVisitResult visitFileFailed( Path file, IOException ex )
+  {
+    if( file != null ) {
+      appendToLog( file.toString() );
+      appendErrorToLog( ex );
+      incErrorCount();
+    }
+    return this.canceled ? FileVisitResult.TERMINATE
+				: FileVisitResult.CONTINUE;
   }
 
 
@@ -38,20 +188,20 @@ public class ZipPacker extends AbstractThreadDlg
   @Override
   protected void doProgress()
   {
-    boolean         failed = false;
-    InputStream     in     = null;
-    ZipOutputStream out    = null;
+    boolean     failed = false;
+    InputStream in     = null;
     try {
-      out = new ZipOutputStream(
+      this.out = new ZipOutputStream(
 			new BufferedOutputStream(
 				new FileOutputStream( this.outFile ) ) );
-      fireDirectoryChanged( outFile.getParentFile() );
-      for( File file : this.srcFiles ) {
-	packFile( outFile, out, file, "" );
+      FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
+      for( Path path : this.srcPaths ) {
+	this.curRootPath = path.getParent();
+	Files.walkFileTree( path, this );
       }
-      out.finish();
-      out.close();
-      out = null;
+      this.out.finish();
+      this.out.close();
+      this.out = null;
       appendToLog( "\nFertig\n" );
     }
     catch( InterruptedIOException ex ) {}
@@ -72,114 +222,59 @@ public class ZipPacker extends AbstractThreadDlg
       failed = true;
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.doClose( this.out );
     }
     if( this.canceled || failed ) {
-      outFile.delete();
+      this.outFile.delete();
     }
-    fireDirectoryChanged( outFile.getParentFile() );
+    FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
   }
 
 
-	/* --- private Konstruktoren und Methoden --- */
+	/* --- privater Konstruktor --- */
 
   private ZipPacker(
 		Window           owner,
-		Collection<File> srcFiles,
-		File             outFile )
+		Collection<Path> srcPaths,
+		File             outFile ) throws InvalidPathException
   {
     super( owner, "JKCEMU zip packer", true );
-    this.srcFiles = srcFiles;
+    this.srcPaths = srcPaths;
+    this.outPath  = outFile.toPath();
     this.outFile  = outFile;
+    this.out      = null;
   }
 
 
-  private void packFile(
-		File            outFile,
-		ZipOutputStream out,
-		File            file,
-		String          path ) throws IOException
+  private String getEntryDir( Path dir )
   {
-    if( this.canceled ) {
-      throw new InterruptedIOException();
-    }
-    if( file != null ) {
-      appendToLog( file.getPath() + "\n" );
-      String entryName = file.getName();
-      if( !file.equals( outFile) && (entryName != null) ) {
-	if( entryName.length() > 0 ) {
-	  long millis = file.lastModified();
-	  if( file.isDirectory() ) {
-	    String   subPath = path + entryName + "/";
-	    ZipEntry entry   = new ZipEntry( subPath );
-	    entry.setMethod( ZipEntry.STORED );
-	    entry.setCrc( 0 );
-	    entry.setCompressedSize( 0 );
-	    entry.setSize( 0 );
-	    if( millis > 0 ) {
-	      entry.setTime( millis );
+    String rv = null;
+    if( this.curRootPath != null ) {
+      Path relPath = null;
+      if( dir != null ) {
+	try {
+	  relPath = this.curRootPath.relativize( dir );
+	}
+	catch( IllegalArgumentException ex ) {}
+      }
+      if( relPath == null ) {
+	relPath = this.curRootPath;
+      }
+      if( relPath.getNameCount() > 0 ) {
+	StringBuilder buf = new StringBuilder( 256 );
+	for( Path p : relPath ) {
+	  String s = p.toString();
+	  if( s != null ) {
+	    if( !s.isEmpty() ) {
+	      buf.append( s );
+	      buf.append( "/" );
 	    }
-	    out.putNextEntry( entry );
-	    out.closeEntry();
-	    File[] subFiles = file.listFiles();
-	    if( subFiles != null ) {
-	      for( int i = 0; i < subFiles.length; i++ ) {
-		packFile( outFile, out, subFiles[ i ], subPath );
-	      }
-	    } else {
-	      appendToLog(
-			"Fehler: Verzeichnis kann nicht gelesen werden.\n" );
-	    }
-	  }
-	  else if( file.isFile() ) {
-	    FileProgressInputStream in = null;
-	    try {
-	      in = openInputFile( file, 2 );
-
-	      // CRC32-Pruefsumme und Dateigroesse ermitteln
-	      CRC32 crc32 = new CRC32();
-	      long  fSize = 0;
-	      int   b     = in.read();
-	      while( !this.canceled && (b != -1) ) {
-		fSize++;
-		crc32.update( b );
-		b = in.read();
-	      }
-	      in.seek( 0 );
-
-	      // ZIP-Eintrag anlegen
-	      ZipEntry entry  = new ZipEntry( path + entryName );
-	      entry.setCrc( crc32.getValue() );
-	      entry.setMethod( ZipEntry.DEFLATED );
-	      entry.setSize( fSize );
-	      if( millis > 0 ) {
-		entry.setTime( millis );
-	      }
-	      out.putNextEntry( entry );
-
-	      // Datei in Eintrag schreiben
-	      b = in.read();
-	      while( !this.canceled && (b != -1) ) {
-		out.write( b );
-		b = in.read();
-	      }
-	      out.closeEntry();
-	    }
-	    catch( IOException ex ) {
-	      appendErrorToLog( ex );
-	      incErrorCount();
-	    }
-	    finally {
-	      EmuUtil.doClose( in );
-	    }
-	  } else {
-	    appendToLog( "  Ignoriert\n" );
 	  }
 	}
-      } else {
-	appendToLog( "  Nicht gefunden\n" );
+	rv = buf.toString();
       }
     }
+    return rv;
   }
 }
 

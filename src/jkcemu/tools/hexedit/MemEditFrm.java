@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,8 +30,9 @@ public class MemEditFrm extends AbstractHexCharFrm
   private String      textFind;
   private JMenuItem   mnuRefresh;
   private JMenuItem   mnuClose;
-  private JMenuItem   mnuCopyBytes;
-  private JMenuItem   mnuCopyText;
+  private JMenuItem   mnuBytesCopyHex;
+  private JMenuItem   mnuBytesCopyAscii;
+  private JMenuItem   mnuBytesCopyDump;
   private JMenuItem   mnuPrintOptions;
   private JMenuItem   mnuPrint;
   private JMenuItem   mnuOverwrite;
@@ -94,13 +95,20 @@ public class MemEditFrm extends AbstractHexCharFrm
     mnuEdit.setMnemonic( KeyEvent.VK_B );
     mnuBar.add( mnuEdit );
 
-    this.mnuCopyBytes = createJMenuItem( "Ausgew\u00E4hlte Bytes kopieren" );
-    this.mnuCopyBytes.setEnabled( false );
-    mnuEdit.add( this.mnuCopyBytes );
+    this.mnuBytesCopyHex = createJMenuItem(
+		"Ausgw\u00E4hlte Bytes als Hexadezimalzahlen kopieren" );
+    this.mnuBytesCopyHex.setEnabled( false );
+    mnuEdit.add( this.mnuBytesCopyHex );
 
-    this.mnuCopyText = createJMenuItem( "Ausgew\u00E4hlten Text kopieren" );
-    this.mnuCopyText.setEnabled( false );
-    mnuEdit.add( this.mnuCopyText );
+    this.mnuBytesCopyAscii = createJMenuItem(
+		"Ausgw\u00E4hlte Bytes als ASCII-Text kopieren" );
+    this.mnuBytesCopyAscii.setEnabled( false );
+    mnuEdit.add( this.mnuBytesCopyAscii );
+
+    this.mnuBytesCopyDump = createJMenuItem(
+		"Ausgw\u00E4hlte Bytes als Hex-ASCII-Dump kopieren" );
+    this.mnuBytesCopyDump.setEnabled( false );
+    mnuEdit.add( this.mnuBytesCopyDump );
     mnuEdit.addSeparator();
 
     this.mnuOverwrite = createJMenuItem(
@@ -196,6 +204,8 @@ public class MemEditFrm extends AbstractHexCharFrm
     gbc.gridx     = 0;
     gbc.gridy++;
     add( createHexCharFld(), gbc );
+    this.hexCharFld.setPreferredSize(
+	new Dimension( this.hexCharFld.getDefaultPreferredWidth(), 300 ) );
 
     // Anzeige der Cursor-Position
     gbc.fill    = GridBagConstraints.HORIZONTAL;
@@ -214,6 +224,7 @@ public class MemEditFrm extends AbstractHexCharFrm
       setScreenCentered();
     }
     setResizable( true );
+    this.hexCharFld.setPreferredSize( null );
   }
 
 
@@ -246,12 +257,15 @@ public class MemEditFrm extends AbstractHexCharFrm
       } else if( src == this.mnuClose ) {
 	rv = true;
 	doClose();
-      } else if( src == this.mnuCopyText ) {
+      } else if( src == this.mnuBytesCopyHex ) {
 	rv = true;
-	this.hexCharFld.copySelectedText();
-      } else if( src == this.mnuCopyBytes ) {
+	this.hexCharFld.copySelectedBytesAsHex();
+      } else if( src == this.mnuBytesCopyAscii ) {
 	rv = true;
-	doBytesCopy();
+	this.hexCharFld.copySelectedBytesAsAscii();
+      } else if( src == this.mnuBytesCopyDump ) {
+	rv = true;
+	this.hexCharFld.copySelectedBytesAsDump();
       } else if( src == this.mnuOverwrite ) {
 	rv = true;
 	doBytesOverwrite();
@@ -292,11 +306,11 @@ public class MemEditFrm extends AbstractHexCharFrm
 
 
   @Override
-  public byte getDataByte( int idx )
+  public int getDataByte( int idx )
   {
-    byte rv = (byte) 0;
+    int rv = 0;
     if( (this.begAddr >= 0) && ((this.begAddr + idx) <= this.endAddr) ) {
-      rv = (byte) this.memory.getMemByte( this.begAddr + idx, false );
+      rv = this.memory.getMemByte( this.begAddr + idx, false );
     }
     return rv;
   }
@@ -329,8 +343,9 @@ public class MemEditFrm extends AbstractHexCharFrm
   @Override
   protected void setSelectedByteActionsEnabled( boolean state )
   {
-    this.mnuCopyBytes.setEnabled( state );
-    this.mnuCopyText.setEnabled( state );
+    this.mnuBytesCopyHex.setEnabled( state );
+    this.mnuBytesCopyAscii.setEnabled( state );
+    this.mnuBytesCopyDump.setEnabled( state );
     this.mnuOverwrite.setEnabled( state );
     this.mnuChecksum.setEnabled( state );
     this.mnuSaveAddr.setEnabled( state );
@@ -454,4 +469,3 @@ public class MemEditFrm extends AbstractHexCharFrm
     }
   }
 }
-

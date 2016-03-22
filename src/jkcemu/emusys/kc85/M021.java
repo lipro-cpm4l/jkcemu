@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -62,7 +62,7 @@ public class M021 extends KC85JoystickModule implements Z80TStatesListener
 
 
   @Override
-  public boolean writeIOByte( int port, int value )
+  public boolean writeIOByte( int port, int value, int tStates )
   {
     boolean rv = false;
     port &= 0xFF;
@@ -70,7 +70,7 @@ public class M021 extends KC85JoystickModule implements Z80TStatesListener
       switch( port & 0xFF ) {
 	case 0x90:
 	  {
-	    this.pio.writePortA( value );
+	    this.pio.writeDataA( value );
 	    PrintMngr pm = this.emuThread.getPrintMngr();
 	    if( pm != null ) {
 	      boolean strobe = ((this.pio.fetchOutValuePortA( false )
@@ -94,7 +94,7 @@ public class M021 extends KC85JoystickModule implements Z80TStatesListener
 	  break;
 
 	case 0x91:
-	  this.pio.writePortB( value );
+	  this.pio.writeDataB( value );
 	  break;
 
 	case 0x92:

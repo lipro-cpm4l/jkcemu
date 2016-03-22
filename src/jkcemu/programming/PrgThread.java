@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.programming;
 import java.awt.EventQueue;
 import java.io.IOException;
 import java.lang.*;
+import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.programming.assembler.Z80Assembler;
 import jkcemu.text.*;
@@ -33,7 +34,7 @@ public abstract class PrgThread extends Thread
 		PrgOptions options,
 		Appendable logOut )
   {
-    super( threadName );
+    super( Main.getThreadGroup(), threadName );
     this.emuThread   = emuThread;
     this.editText    = editText;
     this.options     = options;
@@ -83,7 +84,7 @@ public abstract class PrgThread extends Thread
   }
 
 
-  protected void writeCodeToEmu( Z80Assembler assembler )
+  protected void writeCodeToEmu( Z80Assembler assembler, boolean logAddrs )
   {
     boolean forceRun  = this.options.getForceRun();
     byte[]  codeBytes = assembler.getCreatedCode();
@@ -105,16 +106,19 @@ public abstract class PrgThread extends Thread
 	    secondSysName = emuSys.getSecondSystemName();
 	  }
 	}
-	appendToLog( "Lade Programmcode in Arbeitsspeicher (" );
-	if( secondSysName != null ) {
-	  appendToLog( secondSysName );
-	  appendToLog( ", " );
-	}
-	appendToLog(
+	appendToLog( "Lade Programmcode in Arbeitsspeicher" );
+	if( logAddrs || (secondSysName != null) ) {
+	  appendToLog( " (" );
+	  if( secondSysName != null ) {
+	    appendToLog( secondSysName );
+	    appendToLog( ", " );
+	  }
+	  appendToLog(
 		String.format(
 			"Bereich %04X-%04X)",
 			begAddr,
 			begAddr + codeBytes.length -  1) );
+	}
 	if( forceRun && (startAddr >= 0) ) {
 	  appendToLog(
 		String.format(
@@ -196,4 +200,3 @@ public abstract class PrgThread extends Thread
     }
   }
 }
-

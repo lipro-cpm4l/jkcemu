@@ -1,0 +1,94 @@
+<html>
+<body>
+ <h1>Dateien suchen</h1>
+  JKCEMU bietet die M&ouml;glichkeit,
+  in einem Verzeichnis einschlie&szlig;lich deren Unterverzeichnisse
+  Dateien nach bestimmten Kriterien zu suchen.
+ <br/><br/>
+
+ <h2>1. Suchkriterien</h2>
+  Nachfolgend werden die Kriterien beschrieben,
+  nach denen die Dateien gesucht werden k&ouml;nnen.
+  Die Suchkriterien sind UND-verkn&uuml;pft,
+  d.h., es werden nur die Dateien gefunden,
+  die allen angegebenen Suchkriterien entsprechen.
+ <br/><br/>
+
+ <h3>1.1. Dateiname</h3>
+  Den Dateinamen k&ouml;nnen Sie in Form einer Dateinamensmaske vorgeben.
+  In dieser Maske werden die Zeichen * und ? als Platzhalter interpretiert.
+  Dabei steht das Sternchen f&uuml;r beliebig viele Zeichen
+  und das Fragezeichen f&uuml;r exakt ein beliebiges Zeichen.
+  Alle anderen Zeichen m&uuml;ssen &uuml;bereinstimmen,
+  damit die betreffenden Datei gefunden wird.
+ <br/><br/>
+  Sie k&ouml;nnen in dem Eingabefeld auch mehrere Dateinamensmasken angeben,
+  indem Sie diese einfach mit Leerzeichen, Komma oder Semikolon getrennt
+  hintereinander schreiben.
+  Soll in einer Dateinamensmaske ein Leerzeichen, Komma oder Semikolon
+  vorkommen, m&uuml;ssen Sie diese in doppelte Hochkommas schreiben,
+  damit diese Zeichen nicht als Trennzeichen gewertet werden.
+  So suchen Sie z.B. mit <tt>"* *"</tt> nach allen Dateien,
+  die ein Leerzeichen in ihrem Namen enthalten.
+  Dagegen bedeutet <tt>* *</tt> ohne doppelte Hochkommas
+  zweimal hintereinander die Maske f&uuml;r alle Dateinamen.
+ <br/><br/>
+  Die Dateinamensmaske ist ein Pflichfeld,
+  d.h. Sie m&uuml;ssen in dem Feld etwas eingeben.
+  M&ouml;chten Sie den Dateinamen nicht einschr&auml;nken,
+  d.h., es sollen alle Dateinamen gefunden werden,
+  dann geben Sie einfach nur ein Sternchen ein.
+ <br/><br/>
+
+ <h3>1.2. Dateigr&ouml;&szlig;e</h3>
+  Hier k&ouml;nnen Sie die zu suchenden Dateien nach ihrer Gr&ouml;&szlig;e
+  einschr&auml;nken, indem Sie eine minimale und/oder eine maximale
+  Gr&ouml;&szlig;e angeben.
+  Es ist auch m&ouml;glich, nur eins der beiden Felder auszuf&uuml;llen.
+ <br/><br/>
+  Die Gr&ouml;&szlig;e muss in Bytes angegeben werden.
+ <br/><br/>
+
+ <h3>1.3. &Auml;nderungszeitpunkt</h3>
+  Mit den beiden Feldern hinter &quot;Zuletzt ge&auml;ndert am&quot;
+  k&ouml;nnen Sie die Suche nach dem Zeitstempel der letzten &Auml;nderung
+  einschr&auml;nken.
+  Als Zeitangaben sind m&ouml;glich:
+ <br/>
+  <ul>
+   <li>Datum ohne Uhrzeit (TT.MM.JJJJ)</li>
+   <li>Datum mit Uhrzeit ohne Sekundenangabe (TT.MM.JJJJ hh:mm)</li>
+   <li>Datum mit Uhrzeit mit Sekundenangabe (TT.MM.JJJJ hh:mm:ss)</li>
+  </ul>
+ <br/>
+  Der von Ihnen eingegebene Zeitpunkt ist genau genommen eine Zeitspanne,
+  und zwar je nach Art der Eingabe ein Tag, eine Minute oder eine Sekunde.
+  Diese Zeitspanne ist immer &quot;inklusive&quot; zu sehen,
+  sowohl beim Anfangs- als auch beim Endzeitpunkt.
+  Wenn Sie also nur im ersten Feld ein Datum eingeben,
+  werden die Dateien gefunden, die im Laufe des angegebenen Tages
+  ge&auml;ndert wurden.
+ <br/><br/>
+
+ <h3>1.4. Enthaltener Text</h3>
+  M&ouml;chten Sie Dateien suchen, die einen bestimmten Text enthalten,
+  so geben Sie den gesuchten Text in dem Feld hinter
+  &quot;Enthaltener Text&quot; ein.
+  Es werden dann nur die Dateien gefunden, die den Text enthalten.
+  Sollte in einer Datei der enthaltene Text durch Formatierungen
+  oder andere Bytes in sich aufgesplittet bzw. getrennt sein,
+  wird die Datei nicht gefunden.
+ <br/><br/>
+  Enth&auml;lt der Suchtext Nicht-ASCII-Zeichen (z.B. Umlaute),
+  muss der Zeichensatz der zu durchsuchenden Dateien bekannt sein.
+  Dazu testet JKCEMU die Dateien auf eine eventuell vorhandene
+  Byte-Order-Markierung f&uuml;r UTF-8 und UTF-16.
+  Ist eine solche vorhanden, wird der entsprechende Zeichensatz
+  verwendet, anderenfalls der lokale Systemzeichensatz.
+  Das bedeutet aber auch, dass Dateien ohne Byte-Order-Markierung,
+  die mit einem anderen als den lokalen Systemzeichensatz erzeugt wurden,
+  wahrscheinlich nicht gefunden werden,
+  wenn der gesuchte Text Nicht-ASCII-Zeichen enth&auml;lt.
+ <br/>
+</body>
+</html>

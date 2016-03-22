@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -459,6 +459,10 @@ public class CalculatorFrm extends BasicFrm implements
       }
     }
     this.fldOutput.setText( result );
+    try {
+      this.fldOutput.setCaretPosition( 0 );
+    }
+    catch( IllegalArgumentException ex ) {}
   }
 
 

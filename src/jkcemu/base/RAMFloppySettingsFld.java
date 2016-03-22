@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,13 +20,13 @@ import jkcemu.base.*;
 
 public class RAMFloppySettingsFld extends AbstractSettingsFld
 {
-  private JCheckBox   btnRF;
-  private JLabel      labelRF;
-  private JLabel      labelFile;
-  private JComboBox   comboSize;
-  private FileNameFld fileNameFld;
-  private JButton     btnSelect;
-  private JButton     btnRemove;
+  private JCheckBox         btnRF;
+  private JLabel            labelRF;
+  private JLabel            labelFile;
+  private JComboBox<String> comboSize;
+  private FileNameFld       fileNameFld;
+  private JButton           btnSelect;
+  private JButton           btnRemove;
 
 
   public RAMFloppySettingsFld(
@@ -60,7 +60,7 @@ public class RAMFloppySettingsFld extends AbstractSettingsFld
       this.labelRF = new JLabel( labelText + ":" );
       add( this.labelRF, gbc );
 
-      this.comboSize = new JComboBox();
+      this.comboSize = new JComboBox<>();
       this.comboSize.setEditable( false );
       this.comboSize.addItem( "Nicht emulieren" );
       this.comboSize.addItem( "128 KByte" );

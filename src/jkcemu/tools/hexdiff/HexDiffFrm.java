@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,7 +32,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
   private JMenuItem        mnuFileAdd;
   private JMenuItem        mnuFileRemove;
   private JMenuItem        mnuMaxDiffs;
-  private JList            listFiles;
+  private JList<FileData>  listFiles;
   private JButton          btnFileAdd;
   private JButton          btnFileRemove;
 
@@ -52,33 +52,56 @@ public class HexDiffFrm extends HTMLViewFrm implements
   }
 
 
-  public void addFiles( Collection<File> files )
+  public int addFiles( Collection files )
   {
+    int nAdded = 0;
     if( files != null ) {
       File curFile = null;
       try {
 	boolean added = false;
-	for( File file : files ) {
-	  curFile = file;
+	for( Object o : files ) {
+	  if( o instanceof File ) {
+	    if( ((File) o).isFile() ) {
+	      curFile = (File) o;
 
-	  boolean alreadyAdded = false;
-	  for( FileData data : this.files ) {
-	    if( file.equals( data.getFile() ) ) {
-	      alreadyAdded = true;
-	      break;
-	    }
-	  }
-	  if( !alreadyAdded ) {
-	    FileData fileData = new FileData( file );
-	    if( file.length() > 0 ) {
-	      this.files.add( fileData );
-	      added = true;
-	    } else {
-	      BasicDlg.showInfoDlg( this, "Die Datei ist leer." );
+	      boolean alreadyAdded = false;
+	      for( FileData data : this.files ) {
+		if( curFile.equals( data.getFile() ) ) {
+		  alreadyAdded = true;
+		  break;
+		}
+	      }
+	      if( alreadyAdded ) {
+		if( files.size() == 1 ) {
+		  BasicDlg.showInfoDlg(
+			this,
+			"Die Datei wurde bereits hinzugef\u00FCgt." );
+		}
+	      } else {
+		FileData fileData = new FileData( curFile );
+		if( curFile.length() > 0 ) {
+		  this.files.add( fileData );
+		  nAdded++;
+		} else {
+		  String fName = curFile.getName();
+		  if( fName == null ) {
+		    fName = curFile.getPath();
+		  }
+		  if( BasicDlg.showOptionDlg(
+			this,
+			fName + ": Datei ist leer.",
+			"Datei leer",
+			"Weiter",
+			"Abbrechen" ) != 0 )
+		  {
+		    break;
+		  }
+		}
+	      }
 	    }
 	  }
 	}
-	if( added ) {
+	if( nAdded > 0 ) {
 	  this.listFiles.setListData( this.files );
 	  updResult();
 	}
@@ -87,6 +110,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 	BasicDlg.showOpenFileErrorDlg( this, curFile, ex );
       }
     }
+    return nAdded;
   }
 
 
@@ -117,9 +141,26 @@ public class HexDiffFrm extends HTMLViewFrm implements
   @Override
   public void drop( DropTargetDropEvent e )
   {
-    File file = EmuUtil.fileDrop( this, e );
-    if( file != null )
-      addFile( file );
+    if( EmuUtil.isFileDrop( e ) ) {
+      e.acceptDrop( DnDConstants.ACTION_COPY ); // Quelle nicht loeschen
+      int          nAdded = 0;
+      Transferable t      = e.getTransferable();
+      if( t != null ) {
+	try {
+	  Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
+	  if( o != null ) {
+	    if( o instanceof Collection ) {
+	      nAdded = addFiles( (Collection) o );
+	    }
+	  }
+	}
+	catch( IOException ex ) {}
+	catch( UnsupportedFlavorException ex ) {}
+      }
+      e.dropComplete( nAdded > 0 );
+    } else {
+      e.rejectDrop();
+    }
   }
 
 
@@ -193,7 +234,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
   private HexDiffFrm()
   {
     setTitle( "JKCEMU Hex-Dateivergleicher" );
-    this.files     = new Vector<FileData>();
+    this.files     = new Vector<>();
     this.lastDiffs = 0;
 
 
@@ -233,8 +274,9 @@ public class HexDiffFrm extends HTMLViewFrm implements
     // Dateiliste
     add( new JLabel( "Dateien:" ), gbc );
 
-    this.listFiles = new JList();
-    this.listFiles.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
+    this.listFiles = new JList<>();
+    this.listFiles.setSelectionMode(
+		ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
     this.listFiles.setVisibleRowCount( 2 );
     gbc.fill    = GridBagConstraints.BOTH;
     gbc.weightx = 1.0;
@@ -290,49 +332,17 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
 	/* --- private Methoden --- */
 
-  private boolean addFile( File file )
-  {
-    boolean rv           = false;
-    boolean alreadyAdded = false;
-    for( FileData data : this.files ) {
-      if( file.equals( data.getFile() ) ) {
-	alreadyAdded = true;
-	break;
-      }
-    }
-    if( alreadyAdded ) {
-      BasicDlg.showErrorDlg(
-		this,
-		"Die Datei wurde bereits vorher schon hinzugef\u00FCgt." );
-    } else {
-      try {
-	FileData fileData = new FileData( file );
-	if( file.length() > 0 ) {
-	  this.files.add( fileData );
-	  this.listFiles.setListData( this.files );
-	  updResult();
-	  rv = true;
-	} else {
-	  BasicDlg.showInfoDlg( this, "Die Datei ist leer." );
-	}
-      }
-      catch( IOException ex ) {
-	BasicDlg.showOpenFileErrorDlg( this, file, ex );
-      }
-    }
-    return rv;
-  }
-
-
   private void doFileAdd()
   {
-    File file = EmuUtil.showFileOpenDlg(
+    java.util.List<File> files = EmuUtil.showMultiFileOpenDlg(
 				this,
-				"Datei \u00F6ffnen",
-				Main.getLastPathFile( "software" ) );
-    if( file != null ) {
-      if( addFile( file ) ) {
-	Main.setLastFile( file, "software" );
+				"Dateien \u00F6ffnen",
+				Main.getLastDirFile( "hexdiff" ) );
+    if( files != null ) {
+      if( !files.isEmpty() ) {
+	if( addFiles( files ) > 0 ) {
+	  Main.setLastFile( files.get( 0 ), "hexdiff" );
+	}
       }
     }
   }
@@ -340,11 +350,19 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
   private void doFileRemove()
   {
-    int idx = this.listFiles.getSelectedIndex();
-    if( (idx >= 0) && (idx <= this.files.size()) ) {
-      this.files.remove( idx );
-      this.listFiles.setListData( this.files );
-      updResult();
+    int[] indices = this.listFiles.getSelectedIndices();
+    if( indices != null ) {
+      if( indices.length > 0 ) {
+	Arrays.sort( indices );
+	for( int i = indices.length - 1; i >= 0; --i ) {
+	  int idx = indices[ i ];
+	  if( (idx >= 0) && (idx <= this.files.size()) ) {
+	    this.files.remove( idx );
+	    this.listFiles.setListData( this.files );
+	  }
+	}
+	updResult();
+      }
     }
   }
 
@@ -363,8 +381,9 @@ public class HexDiffFrm extends HTMLViewFrm implements
     Integer v = dlg.getReply();
     if( v != null ) {
       Main.setProperty( "jkcemu.hexdiff.differences.max", v.toString() );
-      if( (this.lastDiffs > 0) && (this.lastDiffs >= vOld) )
+      if( (this.lastDiffs > 0) && (this.lastDiffs >= vOld) ) {
 	updResult();
+      }
     }
   }
 

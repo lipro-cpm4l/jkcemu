@@ -33,6 +33,19 @@
    <li>64&nbsp;KByte RAM inklusive Bildwiederholspeicher</li>
    <li>CTC</li>
    <li>PIO</li>
+   <li>
+    optional:
+    <ul>
+     <li>
+      <a href="kcnet.htm">KCNet-kompatible Netzwerkkarte</a>
+      an der E/A-Basisadressen&nbsp;C0h
+     </li>
+     <li>
+      <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
+      an der E/A-Basisadressen&nbsp;FCh
+     </li>
+    </ul>
+   </li>
   </ul>
   Von dem IO-System werden nur die CTC und die PIO emuliert.
   Die SIO und das Kassettenrecorderinterface sowie ggf.
@@ -85,7 +98,7 @@
   Der originale BASIC-Interpreter stellt aber auch ein Kommando
   mit dem Namen <em>BASIC</em> zur Verf&uuml;gung.
   Damit es nun zu keinen Verwechslungen kommt,
-  wurde dieses Kommando in der in JKCEMU enthaltenen BASIC-Version
+  wurde dieses Kommando in der im JKCEMU enthaltenen BASIC-Version
   in <em>WBASIC</em> umbenannt.
   Damit ist mit <em>BASIC</em> ein Kaltstart und mit <em>WBASIC</em>
   ein Warmstart des Interpreters m&ouml;glich.
@@ -95,18 +108,20 @@
  <br/><br/>
 
  <h3><a name="3.2">3.2. BASIC-Programme speichern und laden</a></h3>
-  JKCEMU bietet eine spezielle Unterst&uuml;tzung
-  f&uuml;r das Speichern und Laden von BASIC-Programmen.
+  JKCEMU bietet eine spezielle Unterst&uuml;tzung f&uuml;r das
+  <a href="loadsavebasic.htm">Speichern und Laden von BASIC-Programmen</a>.
   Zum Speichern nutzen Sie bitte die Funktion
   <em>BASIC-Programm speichern...</em> im Men&uuml; <em>Datei</em>
-  und speichern das Programm als
-  <a href="fileformats.htm#headersave">Headersave</a>-Datei
-  mit dem Dateityp <tt>B</tt>.
+  und speichern das jeweilige Programm als
+  <a href="fileformats.htm#basic">BASIC-/RBASIC-Programmdatei (*.bas)</a>.
+  Alternativ ist auch das Speichern als
+  <a href="fileformats.htm#headersave">Headersave-Datei (*.z80)</a>
+  mit dem Dateityp&nbsp;<em>B</em> m&ouml;glich.
  <br/><br/>
-  Nur wenn Sie das BASIC-Programm so speichern,
-  werden beim Laden des Programms die Systemzellen des
-  BASIC-Interpreters richtig angepasst.
-  In jedem anderen Fall k&ouml;nnen Sie zwar das BASIC-Programm laden,
-  aber im Interpreter nicht richtig nutzen.
+  Wenn Sie ein BASIC-Programm in einem anderen Dateiformat speichern,
+  erkennt JKCEMU sp&auml;ter beim Laden der Datei nicht mehr,
+  dass es sich um ein BASIC-Programm handelt und passt die
+  Systemzellen des BASIC-Interpreters nicht an.
+  Das geladene Programm l&auml;sst sich dann nicht nutzen.
 </body>
 </html>

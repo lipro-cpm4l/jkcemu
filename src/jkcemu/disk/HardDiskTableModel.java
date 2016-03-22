@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,7 +32,7 @@ public class HardDiskTableModel extends AbstractTableModel
   public HardDiskTableModel( HardDiskListDlg owner )
   {
     this.owner = owner;
-    this.rows  = new ArrayList<HardDiskInfo>();
+    this.rows  = new ArrayList<>();
   }
 
 

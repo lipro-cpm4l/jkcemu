@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,7 @@ import jkcemu.base.*;
 
 public class KC85ROM8KModule extends AbstractKC85Module
 {
-  private static Map<String,byte[]> map = new HashMap<String,byte[]>();
+  private static Map<String,byte[]> map = new HashMap<>();
 
   private String moduleName;
   private int    begAddr;

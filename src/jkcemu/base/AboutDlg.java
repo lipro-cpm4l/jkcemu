@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.lang.*;
 import java.net.URL;
-import java.util.EventObject;
+import java.util.*;
 import javax.swing.*;
 import jkcemu.Main;
 
@@ -62,7 +62,7 @@ public class AboutDlg extends BasicDlg
       gbcGeneral.gridx++;
     }
 
-    JLabel label = new JLabel( Main.VERSION );
+    JLabel label = new JLabel( Main.APPINFO );
     label.setFont( new Font( "SansSerif", Font.BOLD, 18 ) );
     gbcGeneral.insets.bottom = 0;
     gbcGeneral.gridheight    = 1;
@@ -77,7 +77,7 @@ public class AboutDlg extends BasicDlg
     gbcGeneral.insets.top = 12;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "(c) 2008-2013 Jens M\u00FCller" ),
+	new JLabel( "(c) 2008-2016 Jens M\u00FCller" ),
 	gbcGeneral );
 
     gbcGeneral.gridy++;
@@ -87,7 +87,7 @@ public class AboutDlg extends BasicDlg
 
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "In JKCEMU sind ROM- und Disketteninhalte enthaltenen," ),
+	new JLabel( "Im JKCEMU sind ROM- und Disketteninhalte enthaltenen," ),
 	gbcGeneral );
 
     gbcGeneral.insets.top = 0;
@@ -145,6 +145,70 @@ public class AboutDlg extends BasicDlg
     }
 
 
+    // Tab Java
+    Properties props = System.getProperties();
+    if( props != null ) {
+      int n = props.size();
+      if( n > 0 ) {
+	java.util.List<String> propNames = new ArrayList<String>( n );
+	try {
+	  Enumeration<?> keys = props.propertyNames();
+	  while( keys.hasMoreElements() ) {
+	    Object o = keys.nextElement();
+	    if( o != null ) {
+	      String s = o.toString();
+	      if( s != null ) {
+		propNames.add( s );
+	      }
+	    }
+	  }
+	}
+	catch( NoSuchElementException ex ) {}
+	if( !propNames.isEmpty() ) {
+	  try {
+	    Collections.sort( propNames );
+	  }
+	  catch( ClassCastException ex1 ) {}
+	  catch( IllegalArgumentException ex2 ) {}
+	  try {
+	    StringBuilder buf = new StringBuilder( 2048 );
+	    buf.append( "<html>\n"
+		+ "<h2>Eigenschaften der Java-Laufzeitumgebung</h2>\n"
+		+ "<table border=\"1\">\n"
+		+ "<tr><th align=\"left\">Eigenschaft</th>"
+		+ "<th align=\"left\">Wert</th></tr>\n" );
+	    for( String propName : propNames ) {
+	      buf.append( "<tr><td align=\"left\" nowrap=\"nowrap\">" );
+	      EmuUtil.appendHTML( buf, propName );
+	      buf.append( "</td><td align=\"left\" nowrap=\"nowrap\">" );
+	      String s = props.getProperty( propName );
+	      if( s != null ) {
+		s = s.replace( "\t", "\\t" );
+		s = s.replace( "\r", "\\r" );
+		s = s.replace( "\n", "\\n" );
+		EmuUtil.appendHTML( buf, s );
+	      }
+	      buf.append( "</td></tr>\n" );
+	    }
+	    buf.append( "</table>\n"
+			+ "</html>\n" );
+	    JEditorPane editorPane = createJEditorPane( null );
+	    editorPane.setContentType( "text/html" );
+	    editorPane.setText( buf.toString() );
+	    try {
+	      editorPane.setCaretPosition( 0 );
+	    }
+	    catch( IllegalArgumentException ex ) {}
+	    JPanel panel= new JPanel( new BorderLayout() );
+	    panel.add( new JScrollPane( editorPane ), BorderLayout.CENTER );
+	    tabbedPane.addTab( "Java", panel );
+	  }
+	  catch( IOException ex ) {}
+	}
+      }
+    }
+
+
     // Knopf
     this.btnOK = new JButton( "OK" );
     this.btnOK.addActionListener( this );
@@ -191,7 +255,9 @@ public class AboutDlg extends BasicDlg
     JEditorPane fld = new JEditorPane();
     fld.setMargin( new Insets( 5, 5, 5, 5 ) );
     fld.setEditable( false );
-    fld.setPage( url );
+    if( url != null ) {
+      fld.setPage( url );
+    }
     fld.setPreferredSize( new Dimension( 1, 1 ) );
     return fld;
   }

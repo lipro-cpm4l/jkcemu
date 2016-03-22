@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -35,7 +35,7 @@ public class AnaDisk extends AbstractFloppyDisk
     StringBuilder msgBuf = null;
     OutputStream  out    = null;
     try {
-      out = new FileOutputStream( file );
+      out = EmuUtil.createOptionalGZipOutputStream( file );
 
       boolean hasDeleted = false;
       int     sides      = disk.getSides();
@@ -205,19 +205,19 @@ public class AnaDisk extends AbstractFloppyDisk
 	Map<Integer,java.util.List<SectorData>> map = null;
 	if( (physHead & 0x01) != 0 ) {
 	  if( this.side1 == null ) {
-	    this.side1 = new HashMap<Integer,java.util.List<SectorData>>();
+	    this.side1 = new HashMap<>();
 	  }
 	  map = this.side1;
 	} else {
 	  if( this.side0 == null ) {
-	    this.side0 = new HashMap<Integer,java.util.List<SectorData>>();
+	    this.side0 = new HashMap<>();
 	  }
 	  map = this.side0;
 	}
 	Integer                    cylObj   = new Integer( physCyl );
 	java.util.List<SectorData> cylSects = map.get( cylObj );
 	if( cylSects == null ) {
-	  cylSects = new ArrayList<SectorData>( sectorIDs.length );
+	  cylSects = new ArrayList<>( sectorIDs.length );
 	  map.put( cylObj, cylSects );
 	}
 	if( cylSects.isEmpty() ) {
@@ -241,8 +241,6 @@ public class AnaDisk extends AbstractFloppyDisk
 					sectorID.getHead(),
 					sectorID.getSectorNum(),
 					sectorID.getSizeCode(),
-					false,
-					false,
 					dataBuf,
 					0,
 					dataBuf.length );
@@ -481,12 +479,12 @@ public class AnaDisk extends AbstractFloppyDisk
       Map<Integer,java.util.List<SectorData>> map = null;
       if( physHead == 0 ) {
 	if( side0 == null ) {
-	  side0 = new HashMap<Integer,java.util.List<SectorData>>();
+	  side0 = new HashMap<>();
 	}
 	map = side0;
       } else if( physHead == 1 ) {
 	if( side1 == null ) {
-	  side1 = new HashMap<Integer,java.util.List<SectorData>>();
+	  side1 = new HashMap<>();
 	}
 	map = side1;
       }
@@ -495,9 +493,9 @@ public class AnaDisk extends AbstractFloppyDisk
 	java.util.List<SectorData> sectors = map.get( keyObj );
 	if( sectors == null ) {
 	  if( (physCyl > 0) && (sectorsPerCyl > 0) ) {
-	    sectors = new ArrayList<SectorData>( sectorsPerCyl );
+	    sectors = new ArrayList<>( sectorsPerCyl );
 	  } else {
-	    sectors = new ArrayList<SectorData>();
+	    sectors = new ArrayList<>();
 	  }
 	  map.put( keyObj, sectors );
 	}
@@ -523,8 +521,6 @@ public class AnaDisk extends AbstractFloppyDisk
 				sectHead,
 				sectNum,
 				sectSizeCode,
-				false,
-				false,
 				sectBuf,
 				0,
 				sectBuf != null ? sectBuf.length : 0 );

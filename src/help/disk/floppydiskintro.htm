@@ -1,6 +1,6 @@
 <html>
 <body>
- <h1>Floppy-Disk-Emulation in JKCEMU</h1>
+ <h1>Floppy-Disk-Emulation im JKCEMU</h1>
   JKCEMU emuliert den Floppy Disk Controller U8272,
   der kompatibel zum Intel&nbsp;8272A und zum NEC&nbsp;765A ist.
   Dieser kann bis zu vier Diskettenlaufwerke bedienen,
@@ -28,12 +28,15 @@
   Eine emulierte Diskette kann abgebildet werden durch:
   <ol>
    <li>
-    eine reale Diskette,
+    eine <a href="floppydiskintro.htm#disk">reale Diskette</a>,
     die in einem physischen Diskettenlaufwerk steckt,
     welches am Emulatorrechner angeschlossen ist
    </li>
-   <li>eine <a href="diskimgformats.htm">Diskettenabbilddatei</a></li>
-   <li>ein Verzeichnis im Dateisystem des Emulatorrechner</li>
+   <li>eine <a href="floppydiskintro.htm#file">Diskettenabbilddatei</a></li>
+   <li>
+    ein <a href="floppydiskintro.htm#dir">Verzeichnis</a>
+    im Dateisystem des Emulatorrechner
+   </li>
   </ol>
  <br/>
   Durch Dr&uuml;cken auf den <em>&Ouml;ffnen/Laden</em>-Knopf
@@ -67,6 +70,7 @@
     (und wird i.d.R. auch nicht), d.h., 
     die Dateien auf der Diskette werden Sie im Dateisystem
     des Emulatorrechners nicht sehen k&ouml;nnen.
+    <br/><br/>
    </li>
    <li>
     Wenn Sie im emulierten System die Diskette formatieren,
@@ -77,18 +81,27 @@
     und das Formatierprogramm sollte diesen Fehler auch ausgeben.
    </li>
   </ul>
+ <br/>
+  <b>Achtung!</b> Der Zugriff auf physische Laufwerke h&auml;ngt
+  von verschiedenen Faktoren ab und kann deshalb nicht auf
+  allen Plattformen und Betriebssystemumgebungen garantiert werden.
+  M&ouml;glicherweise steht die Funktion auf Ihrem System
+  nicht zur Verf&uuml;gung.
  <br/><br/>
 
  <h2><a name="file">2. Emulation mit einer Diskettenabbilddatei</a></h2>
-  Eine Diskettenabbilddatei (Disk Image File) ist ein 1:1-Abbild
-  einer Diskette und enth&auml;lt somit auch die Spuren und Sektoren,
+  Eine <a href="diskimgformats.htm">Diskettenabbilddatei</a>
+  (Disk Image File) ist ein 1:1-Abbild einer Diskette und
+  enth&auml;lt somit auch die Spuren und Sektoren,
   wie sie auf einer realen Diskette zu finden sind.
   Es gibt verschiedene <a href="diskimgformats.htm">Dateiformate</a>
   f&uuml;r Abbilddateien, die sich inhaltlich vorallem im Umfang
   der gespeicherten Geometrie- und Verwaltungsdaten unterscheiden.
  <br/><br/>
 
- <h2>3. Abbildung einer emulierten Diskette auf ein Verzeichnis</h2>
+ <h2>
+  <a name="dir">3. Abbildung einer emulierten Diskette auf ein Verzeichnis</a>
+ </h2>
   Bei dieser Form w&auml;hlen Sie ein Verzeichnis im Dateisystem
   des Emulatorrechners aus.
   Die Dateien, die sich in dem Verzeichnis befinden und
@@ -157,8 +170,6 @@
   JKCEMU bietet auch eine automatische Aktualisierung.
   Dazu m&uuml;ssen Sie in dem Dialog zur Auswahl des Diskettenformats
   die Option <em>Automatisch aktualisieren</em> einschalten.
-  Diese Option kann nur zusammen mit dem Schreibschutz eingeschaltet
-  werden.
  <br/><br/>
   <b>Achtung!</b> Manche Programme oder Betriebssysteme kommen
   m&ouml;glicherweise mit der automatischen Aktualisierung
@@ -172,6 +183,34 @@
   in der Eingabeschleife befindet und gerade nicht auf die Diskette zugreift!
   Au&szlig;erdem sollten Sie unbedingt auch das erneute Einlesen
   des Directorys erzwingen (<em>Control-C</em> bzw. <em>Strg-C</em>).
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie das Verzeichnis ohne Schreibschutz
+  und automatischer Aktualisierung &ouml;ffnen m&ouml;chten,
+  sollten Sie <b>unbedingt die Dateien in dem Verzeichnis vorher
+  an anderer Stelle sichern</b>,
+  da das eine potenziell besondere kritische Konstellation ist.
+  Testen Sie bitte das im Emulator laufende Betriebssystem
+  und die Anwendungsprogramme ausgiebig, ob diese mit der automatischen
+  Aktualisierung klarkommen und es nicht zu Datenverlust oder
+  anderweitig zerst&ouml;rten Dateien kommt.
+  Jedesmal, wenn die Dateien in dem Verzeichnis durch Programme
+  au&szlig;erhalb der Emulation ge&auml;ndert werden,
+  sollten Sie im Emulator mit <em>Control-C</em> bzw. <em>Strg-C</em>
+  das erneute Einlesen des Directorys erzwingen.
+ <br/><br/>
+
+ <h3>3.2. DateStamper</h3>
+  Wenn Sie ein Diskettenformat mit
+  <a href="datestamper.htm">DateStamper</a>-Unterst&uuml;tzung
+  ausgew&auml;hlt haben, enth&auml;lt die emulierte Diskette
+  automatisch die Datei <em>!!!TIME&amp;.DAT</em>,
+  in der die Zeitstempel der einzelnen Dateien abgelegt sind.
+  Eine eventuell bereits in dem Verzeichnis vorhandene Zeitstempeldatei
+  wird dabei ignoriert.
+ <br/><br/>
+  Schreibzugriffe auf die Datei <em>!!!TIME&amp;.DAT</em>
+  f&uuml;hren zum Setzen der Zeitstempel der Dateien in dem Verzeichnis,
+  vorausgesetzt, die verwendete Java-Laufzeitumgebung
+  als auch das Dateisystem erm&ouml;glichen das Setzen der Zeitstempel.
 </body>
 </html>
-

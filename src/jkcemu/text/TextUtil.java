@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,15 +16,7 @@ public class TextUtil
   public static String emptyToNull( String text )
   {
     if( text != null ) {
-      boolean empty = true;
-      int     len   = text.length();
-      for( int i = 0; i < len; i++ ) {
-	if( !Character.isWhitespace( text.charAt( i ) ) ) {
-	  empty = false;
-	  break;
-	}
-      }
-      if( empty ) {
+      if( text.trim().isEmpty() ) {
 	text = null;
       }
     }
@@ -67,11 +59,66 @@ public class TextUtil
 
   public static char toISO646DE( char ch )
   {
-    switch( ch ) {
-      case '\u00A7':  // Paragraf-Zeichen
-	ch = '@';
-	break;
+    if( ch == '\u00A7' ) {	// Paragraf-Zeichen
+      ch = '@';
+    } else {
+      ch = umlautToISO646DE( ch );
+    }
+    return ch;
+  }
 
+
+  /*
+   * Umwandlung eines Textes in Kleinbuchstaben,
+   * wobei sichergestellt ist,
+   * dass sich die Anzahl der Zeichen nicht aendert.
+   */
+  public static String toLowerCase( String text )
+  {
+    if( text != null ) {
+      int len = text.length();
+      if( len > 0 ) {
+	char[] buf = new char[ len ];
+	for( int i = 0; i < len; i++ ) {
+	  buf[ i ] = Character.toLowerCase( text.charAt( i ) );
+	}
+	text = new String( buf );
+      }
+    }
+    return text;
+  }
+
+
+  public static char toReverseCase( char ch )
+  {
+    if( Character.isUpperCase( ch ) ) {
+      ch = Character.toLowerCase( ch );
+    } else if( Character.isLowerCase( ch ) ) {
+      ch = Character.toUpperCase( ch );
+    }
+    return ch;
+  }
+
+
+  public static String toReverseCase( String text )
+  {
+    if( text != null ) {
+      int len = text.length();
+      if( len > 0 ) {
+	char[] buf = new char[ len ];
+	for( int i = 0; i < len; i++ ) {
+	  buf[ i ] = toReverseCase( text.charAt( i ) );
+	}
+	text = new String( buf );
+      }
+    }
+    return text;
+  }
+
+
+  public static char umlautToISO646DE( char ch )
+  {
+    switch( ch ) {
       case '\u00C4':  // Ae
 	ch = '[';
 	break;
@@ -109,50 +156,6 @@ public class TextUtil
    * wobei sichergestellt ist,
    * dass sich die Anzahl der Zeichen nicht aendert.
    */
-  public static String toLowerCase( String text )
-  {
-    if( text != null ) {
-      int len = text.length();
-      if( len > 0 ) {
-	char[] buf = new char[ len ];
-	for( int i = 0; i < len; i++ ) {
-	  buf[ i ] = Character.toLowerCase( text.charAt( i ) );
-	}
-	text = new String( buf );
-      }
-    }
-    return text;
-  }
-
-
-  public static String toReverseCase( String text )
-  {
-    if( text != null ) {
-      int len = text.length();
-      if( len > 0 ) {
-	char[] buf = new char[ len ];
-	for( int i = 0; i < len; i++ ) {
-	  char ch = text.charAt( i );
-	  if( Character.isUpperCase( ch ) ) {
-	    buf[ i ] = Character.toLowerCase( ch );
-	  } else if( Character.isLowerCase( ch ) ) {
-	    buf[ i ] = Character.toUpperCase( ch );
-	  } else {
-	    buf[ i ] = ch;
-	  }
-	}
-	text = new String( buf );
-      }
-    }
-    return text;
-  }
-
-
-  /*
-   * Umwandlung eines Textes in Grossbuchstaben,
-   * wobei sichergestellt ist,
-   * dass sich die Anzahl der Zeichen nicht aendert.
-   */
   public static String toUpperCase( String text )
   {
     if( text != null ) {
@@ -163,49 +166,6 @@ public class TextUtil
 	  buf[ i ] = Character.toUpperCase( text.charAt( i ) );
 	}
 	text = new String( buf );
-      }
-    }
-    return text;
-  }
-
-
-  public static String wordStarToPlainText( byte[] fileBytes )
-  {
-    String text = null;
-    if( fileBytes != null ) {
-      if( fileBytes.length > 0 ) {
-	StringBuilder buf = new StringBuilder( fileBytes.length );
-	int           pos = 0;
-	boolean       bol = true;	// Zeilenanfang
-	boolean       ign = false;	// Zeile ignorieren
-	while( pos < fileBytes.length ) {
-	  int b = 0;
-	  if( fileBytes != null ) {
-	    b = (int) fileBytes[ pos ] & 0xFF;
-	  }
-	  else if( text != null ) {
-	    b = text.charAt( pos );
-	  }
-	  if( bol && (b == '.') ) {
-	    ign = true;
-	  }
-	  b &= 0x7F;
-	  if( (b == '\n') || (b == '\t') || (b >= 0x20) ) {
-	    if( !ign ) {
-	      buf.append( (char) b );
-	    }
-	    if( b == '\n' ) {
-	      ign = false;
-	      bol = true;
-	    } else {
-	      bol = false;
-	    }
-	  }
-	  pos++;
-	}
-	text = buf.toString();
-      } else {
-	text = "";
       }
     }
     return text;

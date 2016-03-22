@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,10 +18,10 @@ import jkcemu.etc.CksCalculator;
 
 public class ReplyCksAlgorithmDlg extends BasicDlg
 {
-  private String    approvedAlgorithm;
-  private JComboBox comboAlgorithm;
-  private JButton   btnOK;
-  private JButton   btnCancel;
+  private String            approvedAlgorithm;
+  private JComboBox<String> comboAlgorithm;
+  private JButton           btnOK;
+  private JButton           btnCancel;
 
 
   public static String askCksAlgorithm( Window owner, String preSelection )
@@ -98,7 +98,7 @@ public class ReplyCksAlgorithmDlg extends BasicDlg
     // Eingabebereich
     add( new JLabel( "Algorithmus:" ), gbc );
 
-    this.comboAlgorithm = new JComboBox(
+    this.comboAlgorithm = new JComboBox<>(
 		CksCalculator.getAvailableAlgorithms() );
     this.comboAlgorithm.setEditable( false );
     if( preSelection != null ) {

@@ -1,5 +1,5 @@
 /*
- * (c) 2012 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -42,7 +42,7 @@ public class CPCDisk extends AbstractFloppyDisk
     {
       this.trackPos  = trackPos;
       this.trackSize = trackSize;
-      sectors        = new ArrayList<SectorData>( MAX_SECTORS_PER_TRACK );
+      sectors        = new ArrayList<>( MAX_SECTORS_PER_TRACK );
     }
 
     public void add( SectorData sector )
@@ -88,54 +88,203 @@ public class CPCDisk extends AbstractFloppyDisk
 			AbstractFloppyDisk disk,
 			File               file ) throws IOException
   {
-    OutputStream out = null;
-    try {
-
-      // Format pruefen
-      int cyls = disk.getCylinders();
-      if( (cyls < 0) || (cyls > 255) ) {
-	throw new IOException(
+    // Format pruefen
+    int cyls = disk.getCylinders();
+    if( (cyls < 0) || (cyls > 255) ) {
+      throw new IOException(
 		String.format(
 			"%d Zylinder nicht unterst\u00FCtzt",
 			cyls ) );
-      }
-      int sides         = disk.getSides();
-      int sectorsPerCyl = disk.getSectorsPerCylinder();
-      if( (sectorsPerCyl < 0) || (sectorsPerCyl > 255) ) {
-	throw new IOException(
+    }
+    int sides = disk.getSides();
+    if( (sides < 1) || (sides > 2) ) {
+      throw new IOException(
+		String.format(
+			"%d Seiten nicht unterst\u00FCtzt",
+			sides ) );
+    }
+    int sectorsPerCyl = disk.getSectorsPerCylinder();
+    if( (sectorsPerCyl < 0) || (sectorsPerCyl > 255) ) {
+      throw new IOException(
 		String.format(
 			"%d Sektoren pro Zylinder nicht unterst\u00FCtzt",
 			sectorsPerCyl ) );
-      }
-      int sectorSize     = disk.getSectorSize();
-      int sectorSizeCode = getSectorSizeCode( sectorSize );
+    }
+    int     sectorSize     = disk.getSectorSize();
+    int     sectorSizeCode = getSectorSizeCode( sectorSize );
+    int     initBufSize    = (disk.getDiskSize() * 5 / 4) + 0x4000;
+    boolean needsExtFmt    = false;
 
-      // Datei oeffnen
-      out = new FileOutputStream( file );
-
-      // Disk Information Block
-      int trackSize = 0x0100 + (sectorsPerCyl * sectorSize);
-      EmuUtil.writeASCII( out, FILE_HEADER_STD );
-      EmuUtil.writeFixLengthASCII( out, "JKCEMU", 14, 0 );
-      out.write( cyls );
-      out.write( sides );
-      out.write( trackSize & 0xFF );
-      out.write( trackSize >> 8 );
-      for( int i = 0; i < 204; i++ ) {
-	out.write( 0 );
-      }
-      for( int cyl = 0; cyl < cyls; cyl++ ) {
-	for( int head = 0; head < sides; head++ ) {
-	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
-	  if( (cylSectors < 0) || (cylSectors > MAX_SECTORS_PER_TRACK) ) {
+    // Sektoren lesen
+    SectorData[][] tracks = new SectorData[ cyls * sides ][];
+    Arrays.fill( tracks, null );
+    int trackIdx = 0;
+    for( int cyl = 0; cyl < cyls; cyl++ ) {
+      for( int head = 0; head < sides; head++ ) {
+	int nTrackSectors = disk.getSectorsOfCylinder( cyl, head );
+	if( (nTrackSectors < 0) || (nTrackSectors > MAX_SECTORS_PER_TRACK) ) {
 	    throw new IOException(
 		String.format(
 			"Seite %d, Spur %d: %d Sektoren"
 				+ " nicht unterst\u00FCtzt",
 			head + 1,
 			cyl,
-			cylSectors ) );
+			nTrackSectors ) );
+	}
+	if( nTrackSectors != sectorsPerCyl ) {
+	  needsExtFmt = true;
+	}
+	SectorData[] trackSectors = new SectorData[ nTrackSectors ];
+	for( int i = 0; i < trackSectors.length; i++ ) {
+	  SectorData sector = disk.getSectorByIndex( cyl, head, i );
+	  if( sector == null ) {
+	    throw new IOException(
+		String.format(
+			"Seite %d, Spur %d: Sektor %d nicht gefunden",
+			head + 1,
+			cyl,
+			i + 1  ) );
 	  }
+	  if( sector.isDeleted() ) {
+	    throw new IOException(
+		    String.format(
+			"Seite %d, Spur %d: Sektor %d ist als gel\u00F6scht"
+				+ " markiert.\n"
+				+ "Gel\u00F6schte Sektoren werden"
+				+ " in CPC-Disk-Image-Dateien nicht"
+				+ " unterst\u00FCtzt.",
+			head + 1,
+			cyl,
+			sector.getSectorNum() ) );
+	  }
+	  if( (sector.getSizeCode() != sectorSizeCode)
+	      || (sector.getDataLength() != sectorSize) )
+	  {
+	    needsExtFmt = true;
+	  }
+	  trackSectors[ i ] = sector;
+	}
+	tracks[ trackIdx++ ] = trackSectors;
+      }
+    }
+
+    /*
+     * Datei im Standardformat in temporaeren Puffer schreiben,
+     * wenn bisher noch kein Grund bekannt ist,
+     * dass das erweiterte Format verwendet werden muss
+     */
+    if( !needsExtFmt ) {
+      ByteArrayOutputStream outBuf = new ByteArrayOutputStream( initBufSize );
+      try {
+
+	// Disk Information Block
+	int trackSize = 0x0100 + (sectorsPerCyl * sectorSize);
+	EmuUtil.writeASCII( outBuf, FILE_HEADER_STD );
+	EmuUtil.writeFixLengthASCII( outBuf, "JKCEMU", 14, 0 );
+	outBuf.write( cyls );
+	outBuf.write( sides );
+	outBuf.write( trackSize & 0xFF );
+	outBuf.write( trackSize >> 8 );
+	for( int i = outBuf.size(); i < 0x100; i++ ) {
+	  outBuf.write( 0 );
+	}
+	for( int i = 0; i < tracks.length; i++ ) {
+	  int          cyl          = i / sides;
+	  int          head         = i % sides;
+	  SectorData[] trackSectors = tracks[ i ];
+	  if( trackSectors.length != sectorsPerCyl ) {
+	    needsExtFmt = true;
+	    break;
+	  }
+
+	  // Track Information Block
+	  int trackBegPos = outBuf.size();
+	  EmuUtil.writeFixLengthASCII( outBuf, TRACK_HEADER, 16, 0 );
+	  outBuf.write( cyl );
+	  outBuf.write( head );
+	  outBuf.write( 0 );
+	  outBuf.write( 0 );
+	  outBuf.write( sectorSizeCode );
+	  outBuf.write( trackSectors.length );
+	  outBuf.write( 0x4E );			// GAP 3 Laenge
+	  outBuf.write( 0xE5 );			// Fuellbyte
+	  for( SectorData sector : trackSectors ) {
+	    if( sector.getDataLength() != sectorSize ) {
+	      needsExtFmt = true;
+	      break;
+	    }
+	    outBuf.write( sector.getCylinder() );
+	    outBuf.write( sector.getHead() );
+	    outBuf.write( sector.getSectorNum() );
+	    outBuf.write( sectorSizeCode );
+	    outBuf.write( 0 );			// FDC Statusregister 1
+	    outBuf.write( 0 );			// FDC Statusregister 2
+	    outBuf.write( 0 );
+	    outBuf.write( 0 );
+	  }
+	  for( int k = outBuf.size() - trackBegPos; k < 0x100; k++ ) {
+	    outBuf.write( 0 );
+	  }
+	  for( SectorData sector : trackSectors ) {
+	    int nBytes = 0;
+	    if( sector != null ) {
+	      nBytes = sector.writeTo( outBuf, sectorSize );
+	    }
+	    for( int k = nBytes; k < sectorSize; k++ ) {
+	      outBuf.write( 0 );
+	    }
+	  }
+	}
+      }
+      finally {
+	EmuUtil.doClose( outBuf );
+      }
+      if( !needsExtFmt ) {
+	OutputStream out = null;
+	try {
+	  out = EmuUtil.createOptionalGZipOutputStream( file );
+	  outBuf.writeTo( out );
+	  out.close();
+	  out = null;
+	}
+	finally {
+	  EmuUtil.doClose( out );
+	}
+      }
+    }
+
+    /*
+     * Wenn das Standardformat nicht ausreicht,
+     * dann das erweiterte Format erzeugen
+     */
+    if( needsExtFmt ) {
+      OutputStream out = null;
+      try {
+	out = EmuUtil.createOptionalGZipOutputStream( file );
+
+	// Disk Information Block
+	EmuUtil.writeASCII( out, FILE_HEADER_EXT );
+	EmuUtil.writeFixLengthASCII( out, "JKCEMU", 14, 0 );
+	out.write( cyls );
+	out.write( sides );
+	out.write( 0 );
+	out.write( 0 );
+	for( SectorData[] trackSectors : tracks ) {
+	  int trackSize = 0;
+	  for( SectorData sector : trackSectors ) {
+	    trackSize += sector.getDataLength();
+	  }
+	  out.write( trackSize > 0 ? ((trackSize + 0x1FF) >> 8) : 0 );
+	}
+	for( int i = 0x34 + tracks.length; i < 0x0100; i++ ) {
+	  out.write( 0 );
+	}
+
+	// Tracks
+	for( int i = 0; i < tracks.length; i++ ) {
+	  int          cyl          = i / sides;
+	  int          head         = i % sides;
+	  SectorData[] trackSectors = tracks[ i ];
 
 	  // Track Information Block
 	  EmuUtil.writeFixLengthASCII( out, TRACK_HEADER, 16, 0 );
@@ -144,70 +293,35 @@ public class CPCDisk extends AbstractFloppyDisk
 	  out.write( 0 );
 	  out.write( 0 );
 	  out.write( sectorSizeCode );
-	  out.write( cylSectors );
+	  out.write( trackSectors.length );
 	  out.write( 0x4E );			// GAP 3 Laenge
 	  out.write( 0xE5 );			// Fuellbyte
-	  for( int i = 0; i < cylSectors; i++ ) {
-	    SectorData sector = disk.getSectorByIndex( cyl, head, i );
-	    if( sector == null ) {
-	      throw new IOException(
-		String.format(
-			"Seite %d, Spur %d: Sektor %d nicht gefunden",
-			head + 1,
-			cyl,
-			i + 1  ) );
-	    }
-	    if( sector.isDeleted() ) {
-	      throw new IOException(
-		    String.format(
-			"Seite %d, Spur %d: Sektor %d ist als gel\u00F6scht"
-				+ " markiert\n"
-				+ "Gel\u00F6schte Sektoren werden"
-				+ " in CPC-Disk-Image-Dateien nicht"
-				+ " unterst\u00FCtzt.",
-			head + 1,
-			cyl,
-			sector.getSectorNum() ) );
-	    }
-	    if( sector.getDataLength() > sectorSize ) {
-	      throw new IOException(
-		String.format(
-			"Seite %d, Spur %d: Sektor %d ist zu gro\u00DF.",
-			head + 1,
-			cyl,
-			sector.getSectorNum() ) );
-            }
-	    out.write( cyl );
-	    out.write( head );
+	  for( SectorData sector : trackSectors ) {
+	    out.write( sector.getCylinder() );
+	    out.write( sector.getHead() );
 	    out.write( sector.getSectorNum() );
 	    out.write( sectorSizeCode );
 	    out.write( 0 );			// FDC Statusregister 1
 	    out.write( 0 );			// FDC Statusregister 2
-	    out.write( 0 );
-	    out.write( 0 );
+	    int dataLen = sector.getDataLength();
+	    out.write( dataLen & 0xFF );
+	    out.write( dataLen >> 8 );
 	  }
-	  for( int i = cylSectors; i < MAX_SECTORS_PER_TRACK; i++ ) {
-	    for( int k = 0; k < 8; k++ ) {
+	  for( int k = trackSectors.length; k < MAX_SECTORS_PER_TRACK; k++ ) {
+	    for( int l = 0; l < 8; l++ ) {
 	      out.write( 0 );
 	    }
 	  }
-	  for( int i = 0; i < cylSectors; i++ ) {
-	    int        nBytes  = 0;
-	    SectorData sector  = disk.getSectorByIndex( cyl, head, i );
-	    if( sector != null ) {
-	      nBytes = sector.writeTo( out, sectorSize );
-	    }
-	    for( int k = nBytes; k < sectorSize; k++ ) {
-	      out.write( 0 );
-	    }
+	  for( SectorData sector : trackSectors ) {
+	    sector.writeTo( out, sector.getDataLength() );
 	  }
 	}
+	out.close();
+	out = null;
       }
-      out.close();
-      out = null;
-    }
-    finally {
-      EmuUtil.doClose( out );
+      finally {
+	EmuUtil.doClose( out );
+      }
     }
   }
 
@@ -503,8 +617,6 @@ public class CPCDisk extends AbstractFloppyDisk
 					sectorID.getHead(),
 					sectorID.getSectorNum(),
 					sectorID.getSizeCode(),
-					false,
-					false,
 					dataBuf,
 					0,
 					dataBuf.length );
@@ -838,8 +950,6 @@ public class CPCDisk extends AbstractFloppyDisk
 			idHead,
 			idRecord,
 			idSizeCode,
-			false,
-			false,
 			trackBuf,
 			dataPos,
 			Math.min( sectorSize, trackBuf.length - dataPos ) );

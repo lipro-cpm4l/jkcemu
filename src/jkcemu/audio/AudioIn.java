@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,9 +30,9 @@ public abstract class AudioIn extends AudioIO
   private boolean dataSigned;
 
 
-  protected AudioIn( Z80CPU z80cpu )
+  protected AudioIn( AudioFrm audioFrm, Z80CPU z80cpu )
   {
-    super( z80cpu );
+    super( audioFrm, z80cpu );
     this.minValue          = 0;
     this.maxValue          = 0;
     this.selectedChannel   = 0;
@@ -45,6 +45,12 @@ public abstract class AudioIn extends AudioIO
 
 
   public boolean isPause()
+  {
+    return false;
+  }
+
+
+  public boolean isTapeFile()
   {
     return false;
   }
@@ -69,6 +75,22 @@ public abstract class AudioIn extends AudioIO
       this.dataSigned        = fmt.getEncoding().equals(
 					AudioFormat.Encoding.PCM_SIGNED );
 
+      // Wertebereich der Pegelanzeige,
+      if( this.sampleSizeInBytes == 1 ) {
+	if( this.dataSigned ) {
+	  this.audioFrm.setVolumeLimits( -128, 127 );
+	} else {
+	  this.audioFrm.setVolumeLimits( 0, 255 );
+	}
+      } else {
+	if( this.dataSigned ) {
+	  this.audioFrm.setVolumeLimits( -32768, 32767 );
+	} else {
+	  this.audioFrm.setVolumeLimits( 0, 65535 );
+	}
+      }
+
+      // Vorzeichenbit
       this.sampleSignMask = 0;
       if( this.dataSigned ) {
 	this.sampleSignMask = 1;
@@ -84,7 +106,7 @@ public abstract class AudioIn extends AudioIO
        * zueinander um einen Schritt angenaehert,
        * um so einen dynamischen Mittelwert errechnen zu koennen.
        */
-      this.adjustPeriodLen = (int) fmt.getFrameRate() / 256;
+      this.adjustPeriodLen = (int) fmt.getSampleRate() / 256;
       if( this.adjustPeriodLen < 1 ) {
 	this.adjustPeriodLen = 1;
       }
@@ -113,66 +135,74 @@ public abstract class AudioIn extends AudioIO
       } else {
 
 	long tStates     = z80cpu.getProcessedTStates();
-	long diffTStates = z80cpu.calcTStatesDiff( this.lastTStates, tStates );
+	long diffTStates = z80cpu.calcTStatesDiff(
+					this.lastTStates,
+					tStates );
 
 	if( diffTStates > 0 ) {
-	  currentDiffTStates( diffTStates );
+	  if( currentDiffTStates( diffTStates ) ) {
 
-	  // bis zum naechsten auszuwertenden Samples lesen
-	  int nSamples = (int) (diffTStates / this.tStatesPerFrame);
-	  if( nSamples > 0 ) {
-	    int v = 0;
-	    int i = nSamples;
-	    do {
-	      v = readSample();
+	    // bis zum naechsten auszuwertenden Samples lesen
+	    int nSamples = (int) (diffTStates / this.tStatesPerFrame);
+	    if( nSamples > 0 ) {
+	      int v = 0;
+	      int i = nSamples;
+	      do {
+		v = readSample();
+		if( v >= 0 ) {
+
+		  // dynamische Mittelwertbestimmung
+		  if( this.adjustPeriodCnt > 0 ) {
+		    --this.adjustPeriodCnt;
+		  } else {
+		    this.adjustPeriodCnt = this.adjustPeriodLen;
+		    if( this.minValue < this.maxValue ) {
+		      this.minValue++;
+		    }
+		    if( this.maxValue > this.minValue ) {
+		      --this.maxValue;
+		    }
+		  }
+
+		  // Wenn gelesender Wert negativ ist, Zahl korrigieren
+		  if( this.dataSigned && ((v & this.sampleSignMask) != 0) ) {
+		    v |= ~this.sampleBitMask;
+		  }
+
+		  // Minimum-/Maximum-Werte aktualisieren
+		  if( v < this.minValue ) {
+		    this.minValue = v;
+		  }
+		  else if( v > this.maxValue ) {
+		    this.maxValue = v;
+		  }
+
+		  // Pegelanzeige
+		  this.audioFrm.updVolume( v );
+		}
+	      } while( --i > 0 );
+
 	      if( v != -1 ) {
-
-		// dynamische Mittelwertbestimmung
-		if( this.adjustPeriodCnt > 0 ) {
-		  --this.adjustPeriodCnt;
+		int d = this.maxValue - this.minValue;
+		if( this.lastPhase ) {
+		  if( v < this.minValue + (d / 3) ) {
+		    this.lastPhase = false;
+		  }
 		} else {
-		  this.adjustPeriodCnt = this.adjustPeriodLen;
-		  if( this.minValue < this.maxValue ) {
-		    this.minValue++;
-		  }
-		  if( this.maxValue > this.minValue ) {
-		    --this.maxValue;
+		  if( v > this.maxValue - (d / 3) ) {
+		    this.lastPhase = true;
 		  }
 		}
-
-		// Wenn gelesender Wert negativ ist, Zahl korrigieren
-		if( this.dataSigned && ((v & this.sampleSignMask) != 0) ) {
-		  v |= ~this.sampleBitMask;
-		}
-
-		// Minimum-/Maximum-Werte aktualisieren
-		if( v < this.minValue ) {
-		  this.minValue = v;
-		}
-		else if( v > this.maxValue ) {
-		  this.maxValue = v;
-		}
 	      }
-	    } while( --i > 0 );
 
-	    if( v != -1 ) {
-	      int d = this.maxValue - this.minValue;
-	      if( this.lastPhase ) {
-		if( v < this.minValue + (d / 3) ) {
-		  this.lastPhase = false;
-		}
-	      } else {
-		if( v > this.maxValue - (d / 3) ) {
-		  this.lastPhase = true;
-		}
-	      }
+	      /*
+	       * Anzahl der verstrichenen Taktzyklen auf den Wert
+	       * des letzten gelesenen Samples korrigieren
+	       */
+	      this.lastTStates += nSamples * this.tStatesPerFrame;
 	    }
-
-	    /*
-	     * Anzahl der verstrichenen Taktzyklen auf den Wert
-	     * des letzten gelesenen Samples korrigieren
-	     */
-	    this.lastTStates += nSamples * this.tStatesPerFrame;
+	  } else {
+	    this.lastTStates = this.z80cpu.getProcessedTStates();
 	  }
 	}
       }
@@ -183,6 +213,15 @@ public abstract class AudioIn extends AudioIO
 
 	/* --- private Methoden --- */
 
+  /*
+   * Die Methode liest ein Sample.
+   * Im Rueckgabewert sind nur die betreffenden Bits gesetzt,
+   * die hoeherwertigen Bits sind 0.
+   * Dadurch ist der Rueckgabewert bei einem gueltigen Sample niemals negativ,
+   * auch wenn der eigentlich gelesene Wert negativ ist.
+   *
+   * Rueckgabewert = -1: kein Sample gelesen
+   */
   private int readSample()
   {
     int value = -1;
@@ -208,4 +247,3 @@ public abstract class AudioIn extends AudioIO
     return value;
   }
 }
-

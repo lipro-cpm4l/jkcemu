@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,11 +12,14 @@ package jkcemu.programming.basic.target;
 import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.AC1;
+import jkcemu.emusys.ac1_llc2.AbstractSCCHSys;
 import jkcemu.programming.basic.*;
 
 
 public class AC1Target extends SCCHTarget
 {
+  public static final String BASIC_TARGET_NAME = "TARGET_AC1";
+
   private boolean usesColors;
   private boolean pixUtilAppended;
   private boolean xclsAppended;
@@ -25,7 +28,15 @@ public class AC1Target extends SCCHTarget
 
   public AC1Target()
   {
-    reset();
+    setNamedValue( "GRAPHICSCREEN", 0 );
+    setNamedValue( "BLACK", 0 );
+    setNamedValue( "BLUE", 0x04 );
+    setNamedValue( "CYAN", 0x06 );
+    setNamedValue( "GREEN", 0x02 );
+    setNamedValue( "MAGENTA", 0x05 );
+    setNamedValue( "RED", 0x01 );
+    setNamedValue( "WHITE", 0x07 );
+    setNamedValue( "YELLOW", 0x03 );
   }
 
 
@@ -41,7 +52,7 @@ public class AC1Target extends SCCHTarget
 
 
   @Override
-  public void appendXCLS( AsmCodeBuf buf )
+  public void appendXClsTo( AsmCodeBuf buf )
   {
     if( !this.xclsAppended ) {
       buf.append( "XCLS:" );
@@ -76,7 +87,7 @@ public class AC1Target extends SCCHTarget
 	if( this.xoutchAppended ) {
 	  buf.append( "\tJR\tXOUTCH\n" );
 	} else {
-	  appendXOUTCH( buf );
+	  appendXOutchTo( buf );
 	}
       }
       this.xclsAppended = true;
@@ -85,7 +96,7 @@ public class AC1Target extends SCCHTarget
 
 
   @Override
-  public void appendHPixel( AsmCodeBuf buf )
+  public void appendHPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0040H\n" );
   }
@@ -132,7 +143,7 @@ public class AC1Target extends SCCHTarget
 
 
   @Override
-  public void appendWPixel( AsmCodeBuf buf )
+  public void appendWPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0080H\n" );
   }
@@ -145,7 +156,7 @@ public class AC1Target extends SCCHTarget
    *   DE: Hintergrundfarbe
    */
   @Override
-  public void appendXCOLOR( AsmCodeBuf buf )
+  public void appendXColorTo( AsmCodeBuf buf )
   {
     buf.append( "XCOLOR:\tLD\tA,E\n"
 		+ "\tSLA\tA\n"
@@ -164,7 +175,7 @@ public class AC1Target extends SCCHTarget
 
 
   @Override
-  public void appendXINK( AsmCodeBuf buf )
+  public void appendXInkTo( AsmCodeBuf buf )
   {
     buf.append( "XINK:\tLD\tA,(X_MCOV)\n"
 		+ "\tAND\t0F0H\n"
@@ -185,7 +196,7 @@ public class AC1Target extends SCCHTarget
    *   HL: Spalte, >= 0
    */
   @Override
-  public void appendXLOCATE( AsmCodeBuf buf )
+  public void appendXLocateTo( AsmCodeBuf buf )
   {
     if( this.usesColors ) {
       buf.append( "XLOCATE:\n"
@@ -220,13 +231,13 @@ public class AC1Target extends SCCHTarget
 		+ "\tLD\t(1846H),A\n"
 		+ "\tRET\n" );
     } else {
-      super.appendXLOCATE( buf );
+      super.appendXLocateTo( buf );
     }
   }
 
 
   @Override
-  public void appendXOUTCH( AsmCodeBuf buf )
+  public void appendXOutchTo( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
       if( this.usesColors ) {
@@ -323,10 +334,10 @@ public class AC1Target extends SCCHTarget
 		+ "\tDEC\tHL\n"
 		+ "\tJR\tXOUTC2\n" );
 	if( !this.xclsAppended ) {
-	  appendXCLS( buf );
+	  appendXClsTo( buf );
 	}
       } else {
-	super.appendXOUTCH( buf );
+	super.appendXOutchTo( buf );
       }
       this.xoutchAppended = true;
     }
@@ -334,19 +345,19 @@ public class AC1Target extends SCCHTarget
 
 
   @Override
-  public void appendXOUTNL( AsmCodeBuf buf )
+  public void appendXOutnlTo( AsmCodeBuf buf )
   {
     if( this.usesColors ) {
       buf.append( "XOUTNL:\tLD\tA,0DH\n"
 		+ "\tJP\tXOUTCH\n" );
     } else {
-      super.appendXOUTNL( buf );
+      super.appendXOutnlTo( buf );
     }
   }
 
 
   @Override
-  public void appendXPAPER( AsmCodeBuf buf )
+  public void appendXPaperTo( AsmCodeBuf buf )
   {
     buf.append( "XPAPER:\tLD\tA,L\n"
 		+ "\tSLA\tA\n"
@@ -365,18 +376,83 @@ public class AC1Target extends SCCHTarget
 
 
   /*
+   * Setzen eines Pixels ohne Beruecksichtigung des eingestellten Stiftes
+   * bei gleichzeitigem Test, ob dieser schon gesetzt ist
+   * Parameter:
+   *   DE: X-Koordinate
+   *   HL: Y-Koordinate
+   * Rueckgabe:
+   *   CY=1: Pixel bereits gesetzt oder ausserhalb des sichtbaren Bereichs
+   */
+  @Override
+  public void appendXPaintTo( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    buf.append( "XPAINT:\tCALL\tX_PST\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,B\n"
+		+ "\tAND\tC\n"
+		+ "\tSCF\n"
+		+ "\tRET\tNZ\n"
+		+ "\tCALL\tXPSET2\n"
+		+ "\tOR\tA\n"		// CY=0
+		+ "\tRET\n" );
+    appendXPSetTo( buf, compiler );
+  }
+
+
+  /*
+   * Farbe eines Pixels ermitteln
+   * Parameter:
+   *   DE: X-Koordinate (0...255)
+   *   HL: Y-Koordinate (0...255)
+   * Rueckgabe:
+   *   HL >= 0: Farbcode des Pixels
+   *   HL=-1:   Pixel exisitiert nicht
+   */
+  public void appendXPointTo( AsmCodeBuf buf, BasicCompiler compiler )
+  {
+    buf.append( "XPOINT:\tCALL\tX_PST\n"
+		+ "\tJR\tC,XPOINT2\n"
+    // Farbbyte lesen
+		+ "\tIN\tA,(0F0H)\n"
+		+ "\tOR\t04H\n"
+		+ "\tOUT\t(0F0H),A\n"
+		+ "\tLD\tD,(HL)\n"
+		+ "\tAND\t0FBH\n"
+		+ "\tOUT\t(0F0H),A\n"
+    // Pixel auswerten
+		+ "\tLD\tA,B\n"
+		+ "\tAND\tC\n"
+		+ "\tLD\tA,D\n"
+		+ "\tJR\tNZ,XPOINT1\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "\tSRL\tA\n"
+		+ "XPOINT1:\n"
+		+ "\tAND\t0FH\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n"
+		+ "XPOINT2:\n"
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tRET\n" );
+    appendPixUtilTo( buf );
+  }
+
+
+  /*
    * Zuruecksetzen eines Pixels
    * Parameter:
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    */
   @Override
-  public void appendXPRES( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PCK\n"
-		+ "\tRET\tC\n"
-		+ "\tCALL\tX_PST\n" );
-    if( this.usesX_MPEN ) {
+    buf.append( "XPRES:\tCALL\tX_PST\n"
+		+ "\tRET\tC\n" );
+    if( this.usesX_M_PEN ) {
       buf.append( "\tJR\tXPSET1\n" );
     } else {
       buf.append( "\tLD\tA,C\n"
@@ -384,25 +460,24 @@ public class AC1Target extends SCCHTarget
 		+ "\tAND\tB\n"
 		+ "\tJR\tXPSET3\n" );
     }
-    appendXPSET( buf, compiler );
+    appendXPSetTo( buf, compiler );
   }
 
 
   /*
-   * Setzen eines Pixels
+   * Setzen eines Pixels unter Beruecksichtigung des eingestellten Stiftes
    * Parameter:
    *   DE: X-Koordinate
    *   HL: Y-Koordinate
    */
   @Override
-  public void appendXPSET( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PCK\n"
-		+ "\tRET\tC\n"
-		+ "\tCALL\tX_PST\n" );
-      if( this.usesX_MPEN ) {
-	buf.append( "\tLD\tA,(X_MPEN)\n"
+      buf.append( "XPSET:\tCALL\tX_PST\n"
+		+ "\tRET\tC\n" );
+      if( this.usesX_M_PEN ) {
+	buf.append( "\tLD\tA,(X_M_PEN)\n"
                 + "\tDEC\tA\n"
                 + "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
                 + "\tDEC\tA\n"
@@ -435,7 +510,7 @@ public class AC1Target extends SCCHTarget
 	buf.append( "\tLD\t(HL),A\n" );
       }
       buf.append( "\tRET\n" );
-      appendPixUtil( buf );
+      appendPixUtilTo( buf );
       this.xpsetAppended = true;
     }
   }
@@ -452,43 +527,44 @@ public class AC1Target extends SCCHTarget
    *   HL=-1: Pixel existiert nicht
    */
   @Override
-  public void appendXPTEST( AsmCodeBuf buf, BasicCompiler compiler )
+  public void appendXPTestTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPTEST:\tCALL\tX_PCK\n"
-		+ "\tJR\tNC,X_PTST1\n"
-		+ "\tLD\tHL,0FFFFH\n"
-		+ "\tRET\n"
-		+ "X_PTST1:\n"
-		+ "\tCALL\tX_PST\n"
+    buf.append( "XPTEST:\tCALL\tX_PST\n"
+		+ "\tJR\tC,X_PTEST1\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
+		+ "\tRET\n"
+		+ "X_PTEST1:\n"
+		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
-    appendPixUtil( buf );
-  }
-
-
-  /*
-   * Target-ID-String
-   */
-  @Override
-  public void appendXTARID( AsmCodeBuf buf )
-  {
-    buf.append( "XTARID:\tDB\t\'AC1\'\n"
-		+ "\tDB\t00H\n" );
+    appendPixUtilTo( buf );
   }
 
 
   @Override
-  public boolean createsCodeFor( EmuSys emuSys )
+  public String[] getBasicTargetNames()
   {
-    boolean rv = false;
+    return add( super.getBasicTargetNames(), BASIC_TARGET_NAME );
+  }
+
+
+  @Override
+  public int getCompatibilityLevel( EmuSys emuSys )
+  {
+    int rv = 0;
     if( emuSys != null ) {
       if( emuSys instanceof AC1 ) {
-        rv = (((AC1) emuSys).emulates2010Mode()
-	      || ((AC1) emuSys).emulatesSCCHMode());
+	rv = 2;
+	if( ((AC1) emuSys).emulates2010Mode()
+	    || ((AC1) emuSys).emulatesSCCHMode() )
+	{
+	  rv = 3;
+	}
+      } else if( emuSys instanceof AbstractSCCHSys ) {
+	rv = 1;
       }
     }
     return rv;
@@ -496,65 +572,16 @@ public class AC1Target extends SCCHTarget
 
 
   @Override
-  public int getColorBlack()
+  public String getHostName()
   {
-    return 0;
+    return "AC1";
   }
 
 
   @Override
-  public int getColorBlue()
+  public int[] getVdipBaseIOAddresses()
   {
-    return 0x04;
-  }
-
-
-  @Override
-  public int getColorCyan()
-  {
-    return 0x06;
-  }
-
-
-  @Override
-  public int getColorGreen()
-  {
-    return 0x02;
-  }
-
-
-  @Override
-  public int getColorMagenta()
-  {
-    return 0x05;
-  }
-
-
-  @Override
-  public int getColorRed()
-  {
-    return 0x01;
-  }
-
-
-  @Override
-  public int getColorWhite()
-  {
-    return 0x07;
-  }
-
-
-  @Override
-  public int getColorYellow()
-  {
-    return 0x03;
-  }
-
-
-  @Override
-  public int getGraphicScreenNum()
-  {
-    return 0;
+    return new int[] { 0xDC, 0xFC, 0x08 };
   }
 
 
@@ -606,45 +633,39 @@ public class AC1Target extends SCCHTarget
 
 	/* --- private Methoden --- */
 
-  private void appendPixUtil( AsmCodeBuf buf )
+  private void appendPixUtilTo( AsmCodeBuf buf )
   {
     if( !this.pixUtilAppended ) {
       buf.append(
 	    /*
-	     * Pruefen der Parameter
-	     *   DE: X-Koordinate (0...127)
-	     *   HL: Y-Koordinate (0...63)
-	     * Rueckgabe:
-	     *   CY=1: Pixel ausserhalb des gueltigen Bereichs
-	     */
-		"X_PCK:\tLD\tA,D\n"
-		+ "\tOR\tH\n"
-		+ "\tJR\tZ,X_PCK1\n"
-		+ "\tSCF\n"
-		+ "\tRET\n"
-		+ "X_PCK1:\tLD\tA,7FH\n"
-		+ "\tCP\tE\n"
-		+ "\tRET\tC\n"
-		+ "\tLD\tA,3FH\n"
-		+ "\tCP\tL\n"
-		+ "\tRET\n"
-	    /*
-	     * Ermitteln von Informationen zu einem Pixel
+	     * Pruefen der Parameter und
+	     * ermitteln von Informationen zu einem Pixel
 	     * Parameter:
 	     *   DE: X-Koordinate (0...127)
 	     *   HL: Y-Koordinate (0...63)
 	     * Rueckgabe:
-	     *   B:  Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
-	     *       Bitanordnung innerhalb einer Zeichenposition:
-	     *         +---+
-	     *         |0 1|
-	     *         |2 3|
-	     *         +---+
-	     *   C:  Bitmuster mit einem gesetzten Bit,
-             *       dass das Pixel in der Speicherzelle beschreibt
-	     *   HL: Speicherzelle, in der sich das Pixel befindet
+	     *   CY=1: Pixel ausserhalb des gueltigen Bereichs
+	     *   B:    Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
+	     *         Bitanordnung innerhalb einer Zeichenposition:
+	     *           +---+
+	     *           |0 1|
+	     *           |2 3|
+	     *           +---+
+	     *   C:    Bitmuster mit einem gesetzten Bit,
+             *         dass das Pixel in der Speicherzelle beschreibt
+	     *   HL:   Speicherzelle, in der sich das Pixel befindet
 	     */
-		+ "X_PST:\tLD\tA,01H\n"
+		"X_PST:\tLD\tA,D\n"
+		+ "\tOR\tH\n"
+		+ "\tSCF\n"
+		+ "\tRET\tNZ\n"
+		+ "\tLD\tA,7FH\n"
+		+ "\tCP\tE\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,3FH\n"
+		+ "\tCP\tL\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,01H\n"
 		+ "\tSRL\tL\n"
 		+ "\tJR\tC,X_PST1\n"
 		+ "\tSLA\tA\n"
@@ -668,6 +689,7 @@ public class AC1Target extends SCCHTarget
 		+ "\tCP\t10H\n"
 		+ "\tRET\tNC\n"
 		+ "\tLD\tB,A\n"
+		+ "\tOR\tA\n"			// CY=0
 		+ "\tRET\n" );
       this.pixUtilAppended = true;
     }

@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -33,12 +33,11 @@ public class ImgSaver
 			BufferedImage image,
 			String        filename )
   {
-    File preSelection = null;
+    File preSelection = Main.getLastDirFile( "image" );
     if( filename != null ) {
       if( !filename.isEmpty() ) {
-	File dirFile = Main.getLastPathFile( "image" );
-	if( dirFile != null ) {
-	  preSelection = new File( dirFile, filename );
+	if( preSelection != null ) {
+	  preSelection = new File( preSelection, filename );
 	} else {
 	  preSelection = new File( filename );
 	}
@@ -98,7 +97,7 @@ public class ImgSaver
 
 	    // Fehlermeldung erzeugen
 	    if( !formatOK ) {
-	      Set<String> fmtList = new TreeSet<String>();
+	      Set<String> fmtList = new TreeSet<>();
 
 	      // Grafikformate hinzufuegen
 	      if( formats != null ) {
@@ -260,7 +259,7 @@ public class ImgSaver
       tmpImg.flush();
 
       // temporaeres Bild speichern
-      Map<Integer,Integer> rgb2Idx = new HashMap<Integer,Integer>();
+      Map<Integer,Integer> rgb2Idx = new HashMap<>();
       out.write( 0xFD );		// Kennung Videospeicher
       out.write( 0x00 );		// Anfangsadresse Grafikseite 0
       out.write( 0x40 );

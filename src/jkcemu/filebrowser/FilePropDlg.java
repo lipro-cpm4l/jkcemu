@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,146 +9,317 @@
 package jkcemu.filebrowser;
 
 import java.awt.*;
-import java.io.File;
+import java.io.IOException;
 import java.lang.*;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
 import java.text.*;
-import java.util.EventObject;
+import java.util.*;
 import javax.swing.*;
+import jkcemu.Main;
 import jkcemu.base.*;
 
 
-public class FilePropDlg extends BasicDlg
+public class FilePropDlg
+		extends BasicDlg
+		implements FileVisitor<Path>, Runnable
 {
-  private JButton btnOK;
+  private Path             path;
+  private JButton          btnOK;
+  private JLabel           sizeLabel;
+  private long             dirSize;
+  private volatile boolean threadEnabled;
 
 
-  public FilePropDlg(
-		Frame parent,
-		File  file )
+  public FilePropDlg( Frame parent, Path path ) throws IOException
   {
     super( parent, "Eigenschaften" );
-    boolean isDir  = false;
-    boolean isFile = false;
+    this.path          = path;
+    this.sizeLabel     = null;
+    this.dirSize       = 0;
+    this.threadEnabled = true;
     try {
-      isDir  = file.isDirectory();
-      isFile = file.isFile();
-    }
-    catch( Exception ex ) {}
+
+      // Dateiattribute lesen
+      UserPrincipal       owner     = null;
+      GroupPrincipal      group     = null;
+      String              posixPerm = null;
+      BasicFileAttributes attrs     = null;
+      try {
+	PosixFileAttributeView view = Files.getFileAttributeView(
+						path,
+						PosixFileAttributeView.class,
+						LinkOption.NOFOLLOW_LINKS );
+	if( view != null ) {
+	  PosixFileAttributes pAttrs = view.readAttributes();
+	  if( pAttrs != null ) {
+	    attrs     = pAttrs;
+	    owner     = pAttrs.owner();
+	    group     = pAttrs.group();
+	    posixPerm = PosixFilePermissions.toString( pAttrs.permissions() );
+	  }
+	}
+      }
+      catch( Exception ex ) {}
+      if( attrs == null ) {
+	attrs = Files.readAttributes(
+				path,
+				BasicFileAttributes.class,
+				LinkOption.NOFOLLOW_LINKS );
+      }
+      if( owner == null ) {
+	try {
+	  owner = Files.getOwner( path, LinkOption.NOFOLLOW_LINKS );
+	}
+	catch( Exception ex ) {}
+      }
+
+      // Ausgabeliste aufbereiten
+      int                      sizeLineIdx = -1;
+      java.util.List<String[]> lines       = new ArrayList<>();
+      String                   text        = path.toString();
+      Path                     namePath    = path.getFileName();
+      if( namePath != null ) {
+	String s = namePath.toString();
+	if( s != null ) {
+	  if( !s.isEmpty() ) {
+	    text = s;
+	  }
+	}
+      }
+      if( text != null ) {
+	if( !text.isEmpty() ) {
+	  lines.add( new String[] { "Name:", text } );
+	}
+      }
+      if( attrs.isRegularFile() ) {
+	long size = attrs.size();
+	if( size >= 0 ) {
+	  lines.add( new String[] {
+			"Gr\u00F6\u00DFe:",
+			EmuUtil.formatSize( size, false, true ) } );
+	}
+      }
+      else if( attrs.isDirectory() ) {
+	sizeLineIdx = lines.size();
+	lines.add( new String[] {
+			"Gr\u00F6\u00DFe aller Dateien:",
+			"wird berechnet..." } );
+      }
+      else if( attrs.isSymbolicLink() ) {
+	try {
+	  String s = null;
+	  Path   p = Files.readSymbolicLink( path );
+	  if( p != null ) {
+	    s = p.toString();
+	  }
+	  lines.add( new String[] {
+				"Symbolischer Link auf:",
+				s != null ? s : "" } );
+	}
+	catch( Exception ex ) {}
+      }
+      try {
+	FileTime t = Files.getLastModifiedTime( path );
+	if( t != null ) {
+	  lines.add( new String[] {
+		"Zuletzt ge\u00E4ndert:",
+		DateFormat.getDateTimeInstance(
+			DateFormat.MEDIUM,
+			DateFormat.MEDIUM ).format(
+				new java.util.Date( t.toMillis() ) ) } );
+	}
+      }
+      catch( Exception ex ) {}
+      if( owner != null ) {
+	String s = owner.getName();
+	if( s != null ) {
+	  if( !s.isEmpty() ) {
+	    lines.add( new String[] { "Eigent\u00FCmer:", s } );
+	  }
+	}
+      }
+      if( group != null ) {
+	String s = group.getName();
+	if( s != null ) {
+	  if( !s.isEmpty() ) {
+	    lines.add( new String[] { "Gruppe:", s } );
+	  }
+	}
+      }
+      if( posixPerm != null ) {
+	lines.add( new String[] { "Berechtigungen:", posixPerm } );
+      }
+      try {
+	lines.add( new String[] {
+		"Lesezugriff:",
+		Files.isReadable( path ) ? "ja" : "nein" } );
+      }
+      catch( Exception ex ) {}
+      try {
+	lines.add( new String[] {
+		"Schreibzugriff:",
+		Files.isWritable( path ) ? "ja" : "nein" } );
+      }
+      catch( Exception ex ) {}
+      try {
+	lines.add( new String[] {
+		"Versteckt:",
+		Files.isHidden( path ) ? "ja" : "nein" } );
+      }
+      catch( Exception ex ) {}
 
 
-    // Layout
-    setLayout( new GridBagLayout() );
+      // Layout
+      setLayout( new GridBagLayout() );
 
-    GridBagConstraints gbc = new GridBagConstraints(
+      GridBagConstraints gbc = new GridBagConstraints(
 					0, 0,
 					1, 1,
 					0.0, 0.0,
 					GridBagConstraints.WEST,
 					GridBagConstraints.NONE,
-					new Insets( 5, 5, 0, 5 ),
+					new Insets( 0, 5, 0, 5 ),
 					0, 0 );
 
 
-    // Fensterinhalt
-    String text = file.getName();
-    if( text != null ) {
-      if( text.length() > 0 ) {
-	if( isDir ) {
-	  add( new JLabel( "Verzeichnisname:" ), gbc );
-	}
-	else if( isFile ) {
-	  add( new JLabel( "Dateiname:" ), gbc );
-	} else {
-	  add( new JLabel( "Name:" ), gbc );
-	}
-	text = file.getName();
-	if( text != null ) {
-	  gbc.gridx++;
-	  add( new JLabel( text ), gbc );
-	}
-      }
-    }
-    gbc.insets.top = 0;
-
-    if( isFile ) {
-      try {
-	long n = file.length();
-	if( n >= 0 ) {
+      // Fensterinhalt
+      int nLines = lines.size();
+      for( int i = 0; i < nLines; i++ ) {
+	String[] line = lines.get( i );
+	if( line.length > 1 ) {
 	  gbc.gridx = 0;
-	  gbc.gridy++;
-	  add( new JLabel( "Gr\u00F6\u00DFe:" ), gbc );
+	  add( new JLabel( line[ 0 ] ), gbc );
 	  gbc.gridx++;
-	  add(
-	    new JLabel( NumberFormat.getNumberInstance().format( n )
-								+ " Bytes" ),
-	    gbc );
+	  JLabel label = new JLabel( line[ 1 ] );
+	  add( label, gbc );
+	  gbc.gridy++;
+	  if( i == sizeLineIdx ) {
+	    this.sizeLabel = label;
+	  }
 	}
       }
-      catch( Exception ex ) {}
-    }
 
-    try {
-      long t = file.lastModified();
-      if( t > 0L ) {
-	gbc.gridx = 0;
-	gbc.gridy++;
-	add( new JLabel( "Zuletzt ge\u00E4ndert:" ), gbc );
-	gbc.gridx++;
-	add(
-	    new JLabel( DateFormat.getDateTimeInstance(
-				DateFormat.MEDIUM,
-				DateFormat.MEDIUM ).format(
-					new java.util.Date( t ) ) ),
-	    gbc );
+      // Knopf
+      this.btnOK = new JButton( "OK" );
+      this.btnOK.addActionListener( this );
+
+      gbc.anchor        = GridBagConstraints.CENTER;
+      gbc.insets.top    = 10;
+      gbc.insets.bottom = 10;
+      gbc.gridwidth     = GridBagConstraints.REMAINDER;
+      gbc.gridx         = 0;
+      gbc.gridy++;
+      add( this.btnOK, gbc );
+
+
+      // Fenstergroesse und -position
+      pack();
+      setParentCentered();
+      setResizable( false );
+
+
+      // Verzeichnisgroesse ermitteln
+      if( this.threadEnabled && (this.sizeLabel != null) ) {
+	(new Thread(
+		Main.getThreadGroup(),
+		this,
+		"JKCEMU directory size calculator" )).start();
       }
     }
-    catch( Exception ex ) {}
-
-    gbc.gridx = 0;
-    gbc.gridy++;
-    add( new JLabel( "Lesezugriff:" ), gbc );
-    try {
-      gbc.gridx++;
-      add( new JLabel( file.canRead() ? "ja" : "nein" ), gbc );
+    catch( UnsupportedOperationException ex ) {
+      throw new IOException(
+		"Dateiattribute k\u00E4nnen nicht gelesen werden.\n" );
     }
-    catch( Exception ex ) {}
+  }
 
-    gbc.gridx = 0;
-    gbc.gridy++;
-    add( new JLabel( "Schreibzugriff:" ), gbc );
-    try {
-      gbc.gridx++;
-      add( new JLabel( file.canWrite() ? "ja" : "nein" ), gbc );
+
+	/* --- FileVisistor --- */
+
+  @Override
+  public FileVisitResult postVisitDirectory(
+				Path        dir,
+				IOException ex ) throws IOException
+  {
+    if( ex != null ) {
+      throw ex;
     }
-    catch( Exception ex ) {}
+    return this.threadEnabled ?
+		FileVisitResult.CONTINUE : FileVisitResult.TERMINATE;
+  }
 
-    gbc.insets.bottom = 5;
-    gbc.gridx         = 0;
-    gbc.gridy++;
-    add( new JLabel( "Versteckt:" ), gbc );
-    try {
-      gbc.gridx++;
-      add( new JLabel( file.isHidden() ? "ja" : "nein" ), gbc );
+
+  @Override
+  public FileVisitResult preVisitDirectory(
+				Path                dir,
+				BasicFileAttributes attrs )
+  {
+    return this.threadEnabled ?
+		FileVisitResult.CONTINUE : FileVisitResult.TERMINATE;
+  }
+
+
+  @Override
+  public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
+  {
+    if( attrs.isRegularFile() ) {
+      long size = attrs.size();
+      if( size > 0 ) {
+	this.dirSize += size;
+      }
     }
-    catch( Exception ex ) {}
+    return this.threadEnabled ?
+		FileVisitResult.CONTINUE : FileVisitResult.TERMINATE;
+  }
 
 
-    // Knopf
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
+  @Override
+  public FileVisitResult visitFileFailed(
+				Path        file,
+				IOException ex ) throws IOException
+  {
+    if( (ex != null)
+	&& (Files.isRegularFile( file, LinkOption.NOFOLLOW_LINKS )
+		|| Files.isDirectory( file, LinkOption.NOFOLLOW_LINKS )) )
+    {
+      throw ex;
+    }
+    return this.threadEnabled ?
+		FileVisitResult.CONTINUE : FileVisitResult.TERMINATE;
+  }
 
-    gbc.anchor     = GridBagConstraints.CENTER;
-    gbc.insets.top = 5;
-    gbc.gridwidth  = GridBagConstraints.REMAINDER;
-    gbc.gridx      = 0;
-    gbc.gridy++;
-    add( this.btnOK, gbc );
 
+	/* --- Runnable --- */
 
-    // Fenstergroesse und -position
-    pack();
-    setParentCentered();
-    setResizable( false );
+  @Override
+  public void run()
+  {
+    if( this.threadEnabled && (this.sizeLabel != null) ) {
+      String sizeText = "unbekannt";
+      try {
+	this.dirSize = 0;
+	Files.walkFileTree( this.path, this );
+	if( this.threadEnabled ) {
+	  sizeText = EmuUtil.formatSize( this.dirSize, false, true );
+	}
+      }
+      catch( AccessDeniedException ex ) {
+	sizeText = "wegen fehlender Berechtigung nicht ermittelbar";
+      }
+      catch( Exception ex ) {
+	sizeText = "konnte aufgrund eines Fehlers nicht ermittelt werden";
+      }
+      final String text = sizeText;
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    setSizeText( text );
+		  }
+		} );
+    }
   }
 
 
@@ -169,5 +340,27 @@ public class FilePropDlg extends BasicDlg
     }
     return rv;
   }
-}
 
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.threadEnabled = false;
+    }
+    return rv;
+  }
+
+
+	/* --- private Methoden --- */
+
+  private void setSizeText( String text )
+  {
+    if( this.sizeLabel != null ) {
+      this.sizeLabel.setText( text );
+      pack();
+      setParentCentered();
+    }
+  }
+}

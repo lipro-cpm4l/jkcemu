@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2014 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,15 +21,15 @@ import jkcemu.text.TextUtil;
 
 public class HardDiskDetailsDlg extends BasicDlg
 {
-  private HardDiskInfo approvedData;
-  private JComboBox    comboProducer;
-  private JTextField   fldProducer;
-  private JTextField   fldModel;
-  private JTextField   fldCylinders;
-  private JTextField   fldHeads;
-  private JTextField   fldSectors;
-  private JButton      btnOK;
-  private JButton      btnCancel;
+  private HardDiskInfo      approvedData;
+  private JComboBox<String> comboProducer;
+  private JTextField        fldProducer;
+  private JTextField        fldModel;
+  private JTextField        fldCylinders;
+  private JTextField        fldHeads;
+  private JTextField        fldSectors;
+  private JButton           btnOK;
+  private JButton           btnCancel;
 
 
   public static HardDiskInfo showHardDiskDetailsDlg(
@@ -122,7 +122,7 @@ public class HardDiskDetailsDlg extends BasicDlg
     this.fldProducer   = null;
     if( producers != null ) {
       if( !producers.isEmpty() ) {
-	this.comboProducer = new JComboBox();
+	this.comboProducer = new JComboBox<>();
 	for( String producer : producers ) {
 	  this.comboProducer.addItem( producer );
 	}

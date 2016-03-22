@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,25 +14,27 @@ import java.io.*;
 import java.lang.*;
 import java.util.*;
 import java.util.zip.CRC32;
+import javax.sound.sampled.AudioFormat;
 import jkcemu.Main;
-import jkcemu.audio.AudioIn;
+import jkcemu.audio.*;
 import jkcemu.base.*;
 import jkcemu.emusys.zxspectrum.ZXSpectrumKeyboardFld;
+import jkcemu.etc.PSG8910;
 import jkcemu.joystick.JoystickThread;
 import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
 public class ZXSpectrum extends EmuSys implements
+					PSG8910.Callback,
 					Z80InterruptSource,
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
   private static final int SCREEN_WIDTH            = 256;
   private static final int SCREEN_HEIGHT           = 192;
-  private static final int LINES_PER_SCREEN        = 312;
-  private static final int FIRST_VISIBLE_LINE      = 64;
-  private static final int LAST_VISIBLE_LINE       = 255;
+  private static final int DEFAULT_48K_KHZ         = 3500;
+  private static final int DEFAULT_128K_KHZ        = 3547;
   private static final int MIN_AUDIO_IN_1TO0_DELAY = 180;
   private static final int MAX_AUDIO_IN_1TO0_DELAY = 2000;
 
@@ -99,41 +101,82 @@ public class ZXSpectrum extends EmuSys implements
 			  KeyEvent.VK_B } };			// A15
 
   private static byte[]              os48k            = null;
+  private static byte[]              os128k           = null;
   private static Map<Long,Character> pixelCRC32ToChar = null;
+
+  private static final String PROP_PREFIX = "jkcemu.zxspectrum.";
 
   private Color[]               colors;
   private String                osFile;
   private volatile float        fTStatesPerLine;
   private volatile int          tStatesPerLine;
+  private boolean               mode128k;
+  private boolean               cfgRegProtected;
   private boolean               interruptRequested;
+  private boolean               audioOutPhase;
   private boolean               earPhase;
   private boolean               blinkState;
   private int                   blinkLineCounter;
+  private int                   audioOutBits;
   private int                   audioInLDelayTStateCounter;
   private int                   joyActionMask;
+  private int                   linesPerScreen;
+  private int                   firstScreenLine;
+  private int                   lastScreenLine;
+  private int                   curScreenLine;
   private int                   screenTStateCounter;
   private int                   lineTStateCounter;
-  private int                   curScreenLine;
   private int                   borderColorNum;
+  private int                   romOffs;
+  private int                   ramC000Offs;
+  private volatile int          screenOffs;
+  private int                   psgRegNum;
   private int[]                 kbMatrix;
   private byte[]                osBytes;
   private byte[]                borderColorNums;
   private byte[]                screenColorNums;
+  private byte[]                ram;
+  private AudioOut              audioOut;
+  private PSG8910               psg;
   private ZXSpectrumKeyboardFld keyboardFld;
 
 
   public ZXSpectrum( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, PROP_PREFIX );
     this.colors          = new Color[ 16 ];
-    this.borderColorNums = new byte[ LINES_PER_SCREEN ];
-    this.screenColorNums = new byte[ SCREEN_WIDTH * SCREEN_HEIGHT ];
     this.kbMatrix        = new int[ 8 ];
     this.osFile          = null;
     this.osBytes         = null;
     this.keyboardFld     = null;
+    this.cfgRegProtected = false;
+    this.psgRegNum       = 0;
+    this.romOffs         = 0;
+    this.ramC000Offs     = 0;
+    this.ram             = null;
+    this.audioOut        = null;
+    this.psg             = null;
 
     // emulierte Hardware konfigurieren
+    this.mode128k = emulates128K( props );
+    if( this.mode128k ) {
+      this.screenOffs      = 5 * 0x4000;
+      this.linesPerScreen  = 311;
+      this.firstScreenLine = 63;
+      this.ram             = this.emuThread.getExtendedRAM( 0x20000 );
+      this.psg             = new PSG8910(
+					DEFAULT_128K_KHZ * 500,
+					AudioOut.MAX_USED_VALUE,
+					this );
+    } else {
+      this.screenOffs      = 0x4000;
+      this.linesPerScreen  = 312;
+      this.firstScreenLine = 64;
+    }
+    this.lastScreenLine  = this.firstScreenLine + SCREEN_HEIGHT;
+    this.borderColorNums = new byte[ this.linesPerScreen ];
+    this.screenColorNums = new byte[ SCREEN_WIDTH * SCREEN_HEIGHT ];
+
     Z80CPU cpu = emuThread.getZ80CPU();
     cpu.setInterruptSources( this );
     cpu.addTStatesListener( this );
@@ -144,12 +187,15 @@ public class ZXSpectrum extends EmuSys implements
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
+    if( this.psg != null ) {
+      this.psg.start();
+    }
   }
 
 
-  public static int getDefaultSpeedKHz()
+  public static int getDefaultSpeedKHz( Properties props )
   {
-    return 3500;
+    return emulates128K( props ) ? DEFAULT_128K_KHZ : DEFAULT_48K_KHZ;
   }
 
 
@@ -165,6 +211,35 @@ public class ZXSpectrum extends EmuSys implements
       while( i < this.kbMatrix.length ) {
 	this.kbMatrix[ i ] = 0;
 	i++;
+      }
+    }
+  }
+
+
+	/* --- PSG8910.Callback --- */
+
+  @Override
+  public int psgReadPort( PSG8910 psg, int port )
+  {
+    return 0xFF;
+  }
+
+
+  @Override
+  public void psgWritePort( PSG8910 psg, int port, int value )
+  {
+    // leer
+  }
+
+
+  @Override
+  public void psgWriteSample( PSG8910 psg, int a, int b, int c )
+  {
+    AudioOut audioOut = this.audioOut;
+    if( audioOut != null ) {
+      if( audioOut.isSoundOutEnabled() ) {
+	int value = (a + b + c) / 6;
+	audioOut.writeSamples( 1, value, value, value );
       }
     }
   }
@@ -230,16 +305,26 @@ public class ZXSpectrum extends EmuSys implements
     }
     Arrays.fill( this.borderColorNums, (byte) 0 );
     Arrays.fill( this.screenColorNums, (byte) 0 );
-    this.interruptRequested         = false;
+    this.audioOutPhase              = false;
     this.earPhase                   = true;
+    this.cfgRegProtected            = false;
+    this.interruptRequested         = false;
     this.blinkState                 = false;
     this.blinkLineCounter           = 0;
+    this.audioOutBits               = 0;
     this.audioInLDelayTStateCounter = 0;
     this.joyActionMask              = 0;
     this.screenTStateCounter        = 0;
     this.lineTStateCounter          = 0;
     this.curScreenLine              = 0;
     this.borderColorNum             = 0;
+    this.ramC000Offs                = 0;
+    this.romOffs                    = 0;
+    this.screenOffs                 = (this.mode128k ? 5 : 1) * 0x4000;
+    this.psgRegNum                  = 0;
+    if( this.psg != null ) {
+      this.psg.reset();
+    }
   }
 
 
@@ -248,7 +333,13 @@ public class ZXSpectrum extends EmuSys implements
   @Override
   public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    this.tStatesPerLine  = (int) Math.round( cpu.getMaxSpeedKHz() / 15.625 );
+    if( mode128k ) {
+      // 228 T-States bei normaler Taktfrequenz
+      this.tStatesPerLine = (int) Math.round( cpu.getMaxSpeedKHz() / 15.557 );
+    } else {
+      // 224 T-States bei normaler Taktfrequenz
+      this.tStatesPerLine = (int) Math.round( cpu.getMaxSpeedKHz() / 15.625 );
+    }
     this.fTStatesPerLine = (float) this.tStatesPerLine;
   }
 
@@ -263,7 +354,7 @@ public class ZXSpectrum extends EmuSys implements
       this.lineTStateCounter -= this.tStatesPerLine;
       updScreenLine();
       this.curScreenLine++;
-      if( this.curScreenLine >= LINES_PER_SCREEN ) {
+      if( this.curScreenLine >= this.linesPerScreen ) {
 	this.curScreenLine      = 0;
 	this.interruptRequested = true;
 	this.blinkLineCounter++;
@@ -308,16 +399,32 @@ public class ZXSpectrum extends EmuSys implements
 
 
   @Override
+  public void audioOutChanged( AudioOut audioOut )
+  {
+    if( (audioOut != null) && (this.psg != null) ) {
+      AudioFormat fmt = audioOut.getAudioFormat();
+      if( fmt != null ) {
+	this.psg.setSampleRate( Math.round( fmt.getSampleRate() ) );
+      }
+    }
+    this.audioOut = audioOut;
+  }
+
+
+  @Override
   public boolean canApplySettings( Properties props )
   {
     boolean rv = EmuUtil.getProperty(
 			props,
 			"jkcemu.system" ).equals( "ZXSpectrum" );
+    if( rv && (emulates128K( props ) != this.mode128k) ) {
+      rv = false;
+    }
     if( rv && !TextUtil.equals(
 		this.osFile,
 		EmuUtil.getProperty(
 				props,
-				"jkcemu.zxspectrum.rom.os.file" ) ) )
+				this.propPrefix + "rom.file" ) ) )
     {
       rv = false;
     }
@@ -347,6 +454,9 @@ public class ZXSpectrum extends EmuSys implements
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    if( this.psg != null ) {
+      this.psg.die();
+    }
   }
 
 
@@ -360,7 +470,7 @@ public class ZXSpectrum extends EmuSys implements
   @Override
   public int getBorderColorIndexByLine( int line )
   {
-    line += FIRST_VISIBLE_LINE;
+    line += this.firstScreenLine;
     if( (line < 0) || (line >= this.borderColorNums.length) ) {
       line = Math.abs( line ) % this.borderColorNums.length;
     }
@@ -430,12 +540,25 @@ public class ZXSpectrum extends EmuSys implements
     int rv = 0xFF;
     if( addr < 0x4000 ) {
       if( this.osBytes != null ) {
-	if( addr < this.osBytes.length ) {
-	  rv = (int) this.osBytes[ addr ] & 0xFF;
+	int idx = addr + this.romOffs;
+	if( idx < this.osBytes.length ) {
+	  rv = (int) this.osBytes[ idx ] & 0xFF;
 	}
       }
     } else {
-      rv = this.emuThread.getRAMByte( addr );
+      if( this.ram != null ) {
+	int idx = addr;
+	if( (addr >= 0x4000) && (addr < 0x8000) ) {
+	  idx += (4 * 0x4000);			// - 0x4000 + (5 * 0x4000)
+	} else if( addr >= 0xC000 ) {
+	  idx = addr - 0xC000 + this.ramC000Offs;
+	}
+	if( idx < this.ram.length ) {
+	  rv = (int) (this.ram[ idx ] & 0xFF);
+	}
+      } else {
+	rv = this.emuThread.getRAMByte( addr );
+      }
     }
     return rv;
   }
@@ -664,7 +787,7 @@ public class ZXSpectrum extends EmuSys implements
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
     if( (port & 0x01) == 0 ) {
@@ -700,11 +823,10 @@ public class ZXSpectrum extends EmuSys implements
       if( !running ) {
 	/*
 	 * Wenn am Mic-Eingang kein Pegel anliegt,
-	 * wird das Bit vom Ausgangspegel des Ear-Anschlusses beeinflusst.
-         * Beeinflussung von Ausgabebit 4 (Ear) emulieren
-         *  Ear 1 -> 0: Verzoegerung, abhangig von der Dauer
-	 *              des vorherigen H-Pegels
-	 *  Ear 0 -> 1: keine Verzoegerung
+	 * wird das Bit vom EAR-Ausgangspegel beeinflusst:
+         *   1 -> 0: Verzoegerung, abhangig von der Dauer
+	 *           des vorherigen H-Pegels
+	 *   0 -> 1: keine Verzoegerung
          */
 	if( !this.earPhase && (this.audioInLDelayTStateCounter <= 0) ) {
 	  rv &= ~0x40;
@@ -730,6 +852,17 @@ public class ZXSpectrum extends EmuSys implements
 	  rv |= 0x10;
 	}
       }
+      if( this.mode128k ) {
+	if( (port & 0x8002) == 0x0000 ) {
+	  // 7FFDh (A15=0, A1=0)
+	  writeCfgReg( 0xFF );
+	} else if( (port & 0xC002) == 0xC000 ) {
+	  // FFFDh (A15=1, A14=1, A1=0)
+	  if( this.psg != null ) {
+	    rv = this.psg.getRegister( this.psgRegNum );
+	  }
+	}
+      }
       checkInsertWaitStates( port, 4 );
     }
     return rv;
@@ -747,7 +880,7 @@ public class ZXSpectrum extends EmuSys implements
      * dass bereits ein 1-Byte-Befehlscode verarbeitet wurde
      * und somit 4 Takte zu beruecksichtigen sind.
      * Mit diesen Annahmen wird zwar nicht bei allen Befehlen
-     * die exakte Anzahl der Wait States  emuliert,
+     * die exakte Anzahl der Wait States emuliert,
      * aber bei einem grossen Teil.
      */
     checkInsertWaitStates( addr, m1 ? 0 : 4 );
@@ -781,7 +914,19 @@ public class ZXSpectrum extends EmuSys implements
 
     boolean rv = false;
     if( addr >= 0x4000 ) {
-      this.emuThread.setRAMByte( addr, value );
+      if( this.ram != null ) {
+	int idx = addr;
+	if( (addr >= 0x4000) && (addr < 0x8000) ) {
+	  idx += (4 * 0x4000);			// - 0x4000 + (5 * 0x4000)
+	} else if( addr >= 0xC000 ) {
+	  idx = idx - 0xC000 + this.ramC000Offs;
+	}
+	if( idx < this.ram.length ) {
+	  this.ram[ idx ] = (byte) value;
+	}
+      } else {
+	this.emuThread.setRAMByte( addr, value );
+      }
       rv = true;
     }
     return rv;
@@ -831,7 +976,7 @@ public class ZXSpectrum extends EmuSys implements
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     if( (port & 0x01) == 0 ) {
       /*
@@ -843,13 +988,26 @@ public class ZXSpectrum extends EmuSys implements
        * nicht ganz exakt.
        */
       checkInsertWaitStates( (port & 0x3FFF) | 0x4000, 4 );
-      this.borderColorNum = value & 0x07;
-      boolean earPhase = ((value & 0x10) != 0);
-      if( this.emuThread.isSoundOutEnabled() ) {
-	this.emuThread.writeAudioPhase( earPhase );
-      } else {
-	this.emuThread.writeAudioPhase( (value & 0x08) != 0 );
+      this.borderColorNum   = value & 0x07;
+      int      audioOutBits = (value & 0x18);
+      boolean  earPhase     = ((value & 0x10) != 0);
+      AudioOut audioOut     = this.audioOut;
+      if( audioOut != null ) {
+	if( audioOut.isSoundOutEnabled() ) {
+	  if( this.psg == null ) {
+	    audioOut.writePhase( earPhase );
+	  }
+	} else {
+	  if( audioOutBits != this.audioOutBits ) {
+	    this.audioOutPhase = !this.audioOutPhase;
+	  }
+	  audioOut.writePhase( this.audioOutPhase );
+	}
       }
+      this.audioOutBits = audioOutBits;
+      /*
+       * Emulation der Rueckkopplung vom EAR-Ausgang zum Eingang
+       */
       if( earPhase != this.earPhase ) {
 	if( earPhase ) {
 	  this.audioInLDelayTStateCounter = 0;
@@ -861,6 +1019,20 @@ public class ZXSpectrum extends EmuSys implements
 	this.earPhase = earPhase;
       }
     } else {
+      if( this.mode128k ) {
+	if( (port & 0x8002) == 0x0000 ) {
+	  // 7FFDh (A15=0, A1=0)
+	  writeCfgReg( value );
+	} else if( (port & 0xC002) == 0x8000 ) {
+	  // BFFDh (A15=0, A14=1, A1=0)
+	  if( this.psg != null ) {
+	    this.psg.setRegister( this.psgRegNum, value );
+	  }
+	} else if( (port & 0xC002) == 0xC000 ) {
+	  // FFFDh (A15=1, A14=1, A1=0)
+	  this.psgRegNum = value & 0x0F;
+	}
+      }
       checkInsertWaitStates( port, 4 );
     }
   }
@@ -886,9 +1058,11 @@ public class ZXSpectrum extends EmuSys implements
   private void checkInsertWaitStates( int addr, int diffTStates )
   {
     addr &= 0xFFFF;
-    if( (addr >= 0x4000) && (addr < 0x8000)
-	&& (this.curScreenLine >= FIRST_VISIBLE_LINE)
-	&& (this.curScreenLine <= LAST_VISIBLE_LINE) )
+    if( (((addr >= 0x4000) && (addr < 0x8000))
+	 || (this.mode128k && (addr >= 0xC000)
+	     && ((this.ramC000Offs & 0x4000) != 0)))
+	&& (this.curScreenLine >= this.firstScreenLine)
+	&& (this.curScreenLine <= this.lastScreenLine) )
     {
       int t = Math.round(
 		(float) (this.lineTStateCounter + diffTStates)
@@ -919,13 +1093,21 @@ public class ZXSpectrum extends EmuSys implements
   }
 
 
+  private static boolean emulates128K( Properties props )
+  {
+    return EmuUtil.getProperty(
+			props,
+			PROP_PREFIX + "model" ).equals( "128k" );
+  }
+
+
   private Map<Long,Character> getPixelCRC32ToCharMap()
   {
     if( pixelCRC32ToChar == null ) {
       byte[] os48kBytes = getOS48kBytes();
       if( os48kBytes != null ) {
 	if( os48kBytes.length >= 0x4000 ) {
-	  Map<Long,Character> map  = new HashMap<Long,Character>();
+	  Map<Long,Character> map  = new HashMap<>();
 	  CRC32               crc  = new CRC32();
 	  int                 addr = 0x3D00;
 	  for( int c = 0x20; c <= 0x7F; c++ ) {
@@ -957,12 +1139,24 @@ public class ZXSpectrum extends EmuSys implements
   }
 
 
+  private byte[] getOS128kBytes()
+  {
+    if( os128k == null ) {
+      os128k = readResource( "/rom/zxspectrum/os128k.bin" );
+    }
+    return os128k;
+  }
+
+
   private void loadROMs( Properties props )
   {
-    this.osFile  = EmuUtil.getProperty( props, "jkcemu.zxspectrum.rom.file" );
-    this.osBytes = readFile( this.osFile, 0x4000, "ROM" );
+    this.osFile  = EmuUtil.getProperty( props, this.propPrefix + "rom.file" );
+    this.osBytes = readROMFile(
+			this.osFile,
+			this.mode128k ? 0x8000 : 0x4000,
+			"ROM" );
     if( osBytes == null ) {
-      this.osBytes = getOS48kBytes();
+      this.osBytes = (this.mode128k ? getOS128kBytes() : getOS48kBytes());
     }
   }
 
@@ -996,18 +1190,29 @@ public class ZXSpectrum extends EmuSys implements
   private void updScreenLine()
   {
     int screenLine = this.curScreenLine;
-    int pixelLine  = screenLine - FIRST_VISIBLE_LINE;
+    int pixelLine  = screenLine - this.firstScreenLine;
     if( (pixelLine >= 0) && (pixelLine < SCREEN_HEIGHT) ) {
       int dstPos    = pixelLine * SCREEN_WIDTH;
       int charRow   = pixelLine / 8;
-      int attrAddr  = 0x5800 + (charRow * 32);
-      int pixelAddr = 0x4000
+      int attrAddr  = this.screenOffs + 0x1800 + (charRow * 32);
+      int pixelAddr = this.screenOffs
 			| ((pixelLine << 5) & 0x1800)
 			| ((pixelLine << 2) & 0x00E0)
 			| ((pixelLine << 8) & 0x0700);
       for( int i = 0; i < 32; i++ ) {
-	int     attr   = getMemByte( attrAddr++, false );
-	int     pixels = getMemByte( pixelAddr++, false );
+	int     attr   = 0;
+	int     pixels = 0;
+	if( this.ram != null ) {
+	  if( attrAddr < this.ram.length ) {
+	    attr = (int) this.ram[ attrAddr++ ] & 0xFF;
+	  }
+	  if( pixelAddr < this.ram.length ) {
+	    pixels = (int) this.ram[ pixelAddr++ ] & 0xFF;
+	  }
+	} else {
+	  attr   = getMemByte( attrAddr++, false );
+	  pixels = getMemByte( pixelAddr++, false );
+	}
 	boolean blink  = ((attr & 0x80) != 0);
 	boolean bright = ((attr & 0x40) != 0);
 	for( int k = 0; k < 8; k++ ) {
@@ -1032,6 +1237,17 @@ public class ZXSpectrum extends EmuSys implements
     }
     if( (screenLine >= 0) && (screenLine < this.borderColorNums.length) ) {
       this.borderColorNums[ screenLine ] = (byte) this.borderColorNum;
+    }
+  }
+
+
+  private void writeCfgReg( int value )
+  {
+    if( this.mode128k && !this.cfgRegProtected ) {
+      this.ramC000Offs     = 0x4000 * (value & 0x07);
+      this.screenOffs      = ((value & 0x08) != 0 ? 7 : 5) * 0x4000;
+      this.romOffs         = ((value & 0x10) != 0 ? 0x4000 : 0x0000);
+      this.cfgRegProtected = ((value & 0x20) != 0);
     }
   }
 }

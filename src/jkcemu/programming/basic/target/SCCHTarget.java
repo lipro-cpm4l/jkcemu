@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,28 +20,35 @@ import jkcemu.programming.basic.*;
 
 public class SCCHTarget extends AbstractTarget
 {
+  public static final String BASIC_TARGET_NAME = "TARGET_SCCH";
+
+
   public SCCHTarget()
   {
-    // leer
+    setNamedValue( "JOYST_LEFT", 0x04 );
+    setNamedValue( "JOYST_RIGHT", 0x08 );
+    setNamedValue( "JOYST_DOWN", 0x02 );
+    setNamedValue( "JOYST_UP", 0x01 );
+    setNamedValue( "JOYST_BUTTON1", 0x10 );
   }
 
 
   @Override
-  public void appendExit( AsmCodeBuf buf )
+  public void appendExitTo( AsmCodeBuf buf )
   {
     buf.append( "\tJP\t07FDH\n" );
   }
 
 
   @Override
-  public void appendHChar( AsmCodeBuf buf )
+  public void appendHCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0020H\n" );
   }
 
 
   @Override
-  public void appendInput(
+  public void appendInputTo(
 			AsmCodeBuf buf,
 			boolean    xckbrk,
 			boolean    xinkey,
@@ -74,9 +81,9 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
-  public void appendProlog(
-			BasicCompiler compiler,
+  public void appendPrologTo(
 			AsmCodeBuf    buf,
+			BasicCompiler compiler,
 			String        appName )
   {
     if( appName != null ) {
@@ -89,11 +96,12 @@ public class SCCHTarget extends AbstractTarget
 	      || ((ch >= 'A') && (ch <= 'Z'))
 	      || ((ch >= 'a') && (ch <= 'z')) )
 	  {
-	    buf.append( "\tJR\tXSTART\n"
+	    buf.append( "\tJR\t" );
+	    buf.append( BasicCompiler.START_LABEL );
+	    buf.append( "\n"
 			+ "\tDB\t00H,09H,\'" );
 	    buf.append( ch );
-	    buf.append( "\',0DH\n"
-			+ "XSTART:" );
+	    buf.append( "\',0DH\n" );
 	    done = true;
 	  }
 	}
@@ -109,7 +117,7 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
-  public void appendWChar( AsmCodeBuf buf )
+  public void appendWCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0040H\n" );
   }
@@ -121,38 +129,13 @@ public class SCCHTarget extends AbstractTarget
    *   HL: Nummer des Joysticks (0: erster Joystick)
    * Rueckgabewert:
    *   HL: Joystickstatus
-   *         Bit 0: links
-   *         Bit 1: rechts
-   *         Bit 2: runter
-   *         Bit 3: hoch
-   *         Bit 4: Aktionsknopf
    */
-  public void appendXJOY( AsmCodeBuf buf )
+  public void appendXJoyTo( AsmCodeBuf buf )
   {
     buf.append( "XJOY:\tLD\tA,H\n"
 		+ "\tOR\tL\n"
 		+ "\tJR\tNZ,XJOY1\n"
 		+ "\tCALL\t0EB4H\n"
-		+ "\tLD\tB,A\n"
-		+ "\tSRL\tA\n"
-		+ "\tSRL\tA\n"
-		+ "\tAND\t03H\n"	// links und rechts maskieren
-		+ "\tLD\tC,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tSLA\tA\n"
-		+ "\tAND\t04H\n"	// runter maskieren
-		+ "\tOR\tC\n"
-		+ "\tLD\tC,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tSLA\tA\n"
-		+ "\tAND\t08H\n"	// hoch maskieren
-		+ "\tOR\tC\n"
-		+ "\tLD\tC,A\n"
-		+ "\tLD\tA,B\n"
-		+ "\tAND\t10H\n"	// Aktionsknopf maskieren
-		+ "\tOR\tC\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
@@ -162,7 +145,7 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
-  public void appendXLOCATE( AsmCodeBuf buf )
+  public void appendXLocateTo( AsmCodeBuf buf )
   {
     buf.append( "XLOCATE:\n"
 		+ "\tLD\tA,D\n"
@@ -201,7 +184,7 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
-  public void appendXLPTCH( AsmCodeBuf buf )
+  public void appendXLPtchTo( AsmCodeBuf buf )
   {
     buf.append( "XLPTCH:\tLD\tB,A\n"
 		+ "\tLD\tA,(1821H)\n"
@@ -218,7 +201,7 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
-  public void appendXOUTCH( AsmCodeBuf buf )
+  public void appendXOutchTo( AsmCodeBuf buf )
   {
     if( !this.xoutchAppended ) {
       buf.append( "XOUTCH:\tCP\t0AH\n"
@@ -233,37 +216,10 @@ public class SCCHTarget extends AbstractTarget
    * Ausgabe eines Zeilenumbruchs
    */
   @Override
-  public void appendXOUTNL( AsmCodeBuf buf )
+  public void appendXOutnlTo( AsmCodeBuf buf )
   {
     buf.append( "XOUTNL:\tLD\tA,0DH\n"
 			+ "\tJP\t0010H\n" );
-  }
-
-
-  /*
-   * Target-ID-String
-   */
-  @Override
-  public void appendXTARID( AsmCodeBuf buf )
-  {
-    buf.append( "XTARID:\tDB\t\'SCCH\'\n"
-		+ "\tDB\t00H\n" );
-  }
-
-
-  @Override
-  public boolean createsCodeFor( EmuSys emuSys )
-  {
-    boolean rv = false;
-    if( emuSys != null ) {
-      if( emuSys instanceof AC1 ) {
-	rv = (((AC1) emuSys).emulates2010Mode()
-	      || ((AC1) emuSys).emulatesSCCHMode());
-      } else if( emuSys instanceof LLC2 ) {
-	rv = true;
-      }
-    }
-    return rv;
   }
 
 
@@ -275,6 +231,33 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
+  public String[] getBasicTargetNames()
+  {
+    return new String[] { BASIC_TARGET_NAME };
+  }
+
+
+  @Override
+  public int getCompatibilityLevel( EmuSys emuSys )
+  {
+    int rv = 0;
+    if( emuSys != null ) {
+      if( emuSys instanceof AC1 ) {
+	rv = 2;
+	if( ((AC1) emuSys).emulates2010Mode()
+	    || ((AC1) emuSys).emulatesSCCHMode() )
+	{
+	  rv = 3;
+	}
+      } else if( emuSys instanceof LLC2 ) {
+	rv = 3;
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
   public int getDefaultBegAddr()
   {
     return 0x2000;
@@ -282,9 +265,29 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
-  public int getKCNetBaseIOAddr()
+  public String getHostName()
   {
-    return 0xC0;
+    return "AC1-LLC2";
+  }
+
+
+  @Override
+  public int getMaxAppNameLen()
+  {
+    return 1;
+  }
+
+
+  @Override
+  public String getStartCmd( EmuSys emuSys, String appName, int begAddr )
+  {
+    String rv = null;
+    if( (emuSys != null) && (begAddr >= 0) ) {
+      if( (emuSys instanceof AC1) || (emuSys instanceof LLC2) ) {
+        rv = String.format( "J %04X", begAddr );
+      }
+    }
+    return rv;
   }
 
 
@@ -292,13 +295,6 @@ public class SCCHTarget extends AbstractTarget
   public int[] getVdipBaseIOAddresses()
   {
     return new int[] { 0xDC, 0xFC };
-  }
-
-
-  @Override
-  public boolean supportsAppName()
-  {
-    return true;
   }
 
 

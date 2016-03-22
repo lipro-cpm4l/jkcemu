@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -24,14 +24,14 @@ public class HueblerEvertMC extends AbstractHueblerMC
 			"CPOE",  "MEMSI", "MAIN", "EXT" };
 
   private static final int[] charToUnicode = {
-		'\u25C0', '\u2016',       -1,      '=',
-		'\u00F1', '\u03B1', '\u03B2', '\u03B4',
-		'\u2302', '\u03B7', '\u03B8', '\u03BB',
-		'\u03BC',       -1, '\u03C3', '\u03A3',
-		      -1, '\u03C6', '\u03A9', '\u00C5',
-		'\u00E5', '\u00C4', '\u00E4', '\u00D6',
-		'\u00F6', '\u00DC', '\u00FC', '\u2192',
-		'\u221A', '\u00B2', '\u00A3', '\u00A5' };
+			'\u25C0', '\u2016',       -1,      '=',
+			'\u00F1', '\u03B1', '\u03B2', '\u03B4',
+			'\u2302', '\u03B7', '\u03B8', '\u03BB',
+			'\u03BC',       -1, '\u03C3', '\u03A3',
+			      -1, '\u03C6', '\u03A9', '\u00C5',
+			'\u00E5', '\u00C4', '\u00E4', '\u00D6',
+			'\u00F6', '\u00DC', '\u00FC', '\u2192',
+			'\u221A', '\u00B2', '\u00A3', '\u00A5' };
 
   private static byte[] hemcFontBytes = null;
   private static byte[] monBytes      = null;
@@ -44,10 +44,10 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
   public HueblerEvertMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props );
+    super( emuThread, props, "jkcemu.hemc." );
     this.fontBytes = readFontByProperty(
 				props,
-				"jkcemu.hemc.font.file",
+				this.propPrefix + "font.file",
 				0x0800 );
     if( this.fontBytes == null ) {
       if( hemcFontBytes == null ) {
@@ -60,7 +60,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
     }
     this.ramVideo  = new byte[ 0x0800 ];
     this.ramStatic = new byte[ 0x0400 ];
-    this.pio2      = new Z80PIO( "PIO (IO-Adressen 10h-13h)" );
+    this.pio2      = new Z80PIO( "PIO (E/A-Adressen 10h-13h)" );
     createIOSystem();
     this.emuThread.getZ80CPU().setInterruptSources(
 					this.ctc,
@@ -355,14 +355,14 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
   @Override
-  public int readIOByte( int port )
+  public int readIOByte( int port, int tStates )
   {
     port &= 0x3F;
 
     int rv = 0;
     switch( port ) {
       case 0x10:
-        rv = this.pio2.readPortA();
+        rv = this.pio2.readDataA();
         break;
 
       case 0x11:
@@ -370,7 +370,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
         break;
 
       case 0x12:
-        rv = this.pio2.readPortB();
+        rv = this.pio2.readDataB();
         break;
 
       case 0x13:
@@ -378,7 +378,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
         break;
 
       default:
-	rv = super.readIOByte( port );
+	rv = super.readIOByte( port, tStates );
     }
     return rv;
   }
@@ -462,12 +462,12 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
   @Override
-  public void writeIOByte( int port, int value )
+  public void writeIOByte( int port, int value, int tStates )
   {
     port &= 0x3F;
     switch( port ) {
       case 0x10:
-	this.pio2.writePortA( value );
+	this.pio2.writeDataA( value );
 	break;
 
       case 0x11:
@@ -475,7 +475,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
 	break;
 
       case 0x12:
-	this.pio2.writePortB( value );
+	this.pio2.writeDataB( value );
 	break;
 
       case 0x13:
@@ -483,7 +483,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
 	break;
 
       default:
-	super.writeIOByte( port, value );
+	super.writeIOByte( port, value, tStates );
     }
   }
 
@@ -492,7 +492,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
   private void checkAddPCListener( Properties props )
   {
-    checkAddPCListener( props, "jkcemu.hemc.catch_print_calls" );
+    checkAddPCListener( props, this.propPrefix + "catch_print_calls" );
   }
 }
 

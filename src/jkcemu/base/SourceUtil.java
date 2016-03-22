@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,13 +10,12 @@ package jkcemu.base;
 
 import java.awt.Component;
 import java.lang.*;
-import z80emu.Z80MemView;
 
 
 public class SourceUtil
 {
   public static String getEDAS4Text(
-				Z80MemView memory,
+				EmuMemView memory,
 				int        addr )
   {
     String rv      = null;
@@ -52,45 +51,55 @@ public class SourceUtil
   }
 
 
-  public static int getKCBasicStyleEndAddr( Z80MemView memory, int begAddr )
+  public static int getBasicEndAddr( EmuMemView memory, int begAddr )
   {
     int endAddr      = -1;
     int curLineAddr  = begAddr;
-    int nextLineAddr = memory.getMemWord( curLineAddr );
+    int nextLineAddr = EmuUtil.getBasicMemWord( memory, curLineAddr );
     while( (nextLineAddr > curLineAddr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
+	   && (memory.getBasicMemByte( nextLineAddr - 1 ) == 0) )
     {
       curLineAddr  = nextLineAddr;
-      nextLineAddr = memory.getMemWord( curLineAddr );
+      nextLineAddr = EmuUtil.getBasicMemWord( memory, curLineAddr );
     }
     if( curLineAddr > begAddr ) {
-      endAddr = curLineAddr + 2;
+      endAddr = curLineAddr + 1;
     }
     return endAddr;
   }
 
 
-  public static String getKCBasicStyleProgram(
-				Z80MemView memory,
+  public static String getBasicProgram(
+				EmuMemView memory,
 				int        addr,
 				String[]   tokens )
   {
+    return getBasicProgram( memory, addr, tokens, null );
+  }
+
+
+  public static String getBasicProgram(
+				EmuMemView memory,
+				int        addr,
+				String[]   tokens,
+				String[]   tokensFF )
+  {
     StringBuilder buf = new StringBuilder( 0x4000 );
 
-    int nextLineAddr = memory.getMemWord( addr );
+    int nextLineAddr = EmuUtil.getBasicMemWord( memory, addr );
     while( (nextLineAddr > addr + 5)
-	   && (memory.getMemByte( nextLineAddr - 1, false ) == 0) )
+	   && (memory.getBasicMemByte( nextLineAddr - 1 ) == 0) )
     {
       // Zeilennummer
       addr += 2;
-      buf.append( memory.getMemWord( addr ) );
+      buf.append( EmuUtil.getBasicMemWord( memory, addr ) );
       addr += 2;
 
       // Anzahl Leerzeichen vor der Anweisung ermitteln
       boolean sep = true;
       int     n   = 0;
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr, false );
+	int ch = memory.getBasicMemByte( addr );
 	if( ch == '\u0020' ) {
 	  n++;
 	  addr++;
@@ -107,30 +116,35 @@ public class SourceUtil
 
       // Programmzeile extrahieren
       while( addr < nextLineAddr ) {
-	int ch = memory.getMemByte( addr++, false );
-	if( ch == 0 ) {
+	int b = memory.getBasicMemByte( addr++ );
+	if( b == 0 ) {
 	  break;
 	}
-	if( ch == '\"' ) {
+	if( b == '\"' ) {
 	  if( sep ) {
 	    buf.append( (char) '\u0020' );
 	  }
-	  buf.append( (char) ch );
+	  buf.append( (char) b );
 	  while( addr < nextLineAddr ) {
-	    ch = memory.getMemByte( addr++, false );
-	    if( ch == 0 ) {
+	    b = memory.getBasicMemByte( addr++ );
+	    if( b == 0 ) {
 	      break;
 	    }
-	    buf.append( (char) ch );
-	    if( ch == '\"' ) {
+	    buf.append( (char) b );
+	    if( b == '\"' ) {
 	      break;
 	    }
 	  }
 	} else {
-	  if( ch >= 0x80 ) {
-	    int pos = ch - 0x80;
-	    if( (pos >= 0) && (pos < tokens.length) ) {
-	      String s = tokens[ pos ];
+	  String[] tmpTokens = tokens;
+	  if( b == 0xFF ) {
+	    b         = memory.getBasicMemByte( addr++ );
+	    tmpTokens = tokensFF;
+	  }
+	  if( b >= 0x80 ) {
+	    int pos = b - 0x80;
+	    if( (pos >= 0) && (pos < tmpTokens.length) ) {
+	      String s = tmpTokens[ pos ];
 	      if( s != null ) {
 		int len = s.length();
 		if( len > 0 ) {
@@ -146,17 +160,17 @@ public class SourceUtil
 		    sep = false;
 		  }
 		}
-		ch = 0;
+		b = 0;
 	      }
 	    }
 	  }
-	  if( ch > 0 ) {
+	  if( b > 0 ) {
 	    if( sep
-		&& (isIdentifierChar( ch ) || (ch == '\'') || (ch == '\"')) )
+		&& (isIdentifierChar( b ) || (b == '\'') || (b == '\"')) )
 	    {
 	      buf.append( (char) '\u0020' );
 	    }
-	    buf.append( (char) ch );
+	    buf.append( (char) b );
 	    sep = false;
 	  }
 	}
@@ -165,14 +179,14 @@ public class SourceUtil
 
       // naechste Zeile
       addr         = nextLineAddr;
-      nextLineAddr = memory.getMemWord( addr );
+      nextLineAddr = EmuUtil.getBasicMemWord( memory, addr );
     }
     return buf.length() > 0 ? buf.toString() : null;
   }
 
 
   public static String getTinyBasicProgram(
-				Z80MemView memory,
+				EmuMemView memory,
 				int        begAddr,
 				int        endAddr )
   {
@@ -184,13 +198,13 @@ public class SourceUtil
       // Tiny-BASIC-Programm extrahieren
       int addr = begAddr;
       while( addr < endAddr - 1 ) {
-	buf.append( memory.getMemWord( addr ) );
+	buf.append( EmuUtil.getBasicMemWord( memory, addr ) );
 	addr += 2;
 
 	// Anzahl Leerzeichen vor der Anweisung ermitteln
 	int n = 0;
 	while( addr < endAddr ) {
-	  int ch = memory.getMemByte( addr, false );
+	  int ch = memory.getBasicMemByte( addr );
 	  if( ch == '\u0020' ) {
 	    n++;
 	    addr++;
@@ -205,7 +219,7 @@ public class SourceUtil
 
 	// Zeile ausgeben
 	while( addr < endAddr ) {
-	  int ch = memory.getMemByte( addr++, false );
+	  int ch = memory.getBasicMemByte( addr++ );
 	  if( ch == '\r' ) {
 	    break;
 	  }
@@ -223,26 +237,24 @@ public class SourceUtil
   }
 
 
-  public static void openKCBasicStyleProgram(
+  public static void openKCBasicProgram(
 				ScreenFrm screenFrm,
 				int       begAddr,
 				String[]  tokens )
   {
+    EmuMemView memory = screenFrm.getEmuThread();
     if( begAddr == 0x0401 ) {
-      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x035F );
+      int tmpAddr = EmuUtil.getBasicMemWord( memory, 0x035F );
       if( tmpAddr > 0 ) {
 	begAddr = tmpAddr;
       }
     } else if( begAddr == 0x2C01 ) {
-      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x2B5F );
+      int tmpAddr = EmuUtil.getBasicMemWord( memory, 0x2B5F );
       if( tmpAddr > 0 ) {
 	begAddr = tmpAddr;
       }
     }
-    String text = getKCBasicStyleProgram(
-				screenFrm.getEmuThread(),
-				begAddr,
-				tokens );
+    String text = getBasicProgram( memory, begAddr, tokens );
     if( text != null ) {
       Component owner = screenFrm.openText( text );
       if( (owner != null) && (begAddr != 0x0401) && (begAddr != 0x2C01) ) {
@@ -252,37 +264,37 @@ public class SourceUtil
 			+ "des standardm\u00E4\u00DFigen Adressbereichs." );
       }
     } else {
-      showNoKCBasic( screenFrm );
+      showNoBasic( screenFrm );
     }
   }
 
 
-  public static void saveKCBasicStyleProgram(
+  public static void saveKCBasicProgram(
 				ScreenFrm screenFrm,
 				int       begAddr )
   {
+    EmuMemView memory = screenFrm.getEmuThread();
     if( begAddr == 0x0401 ) {
-      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x035F );
+      int tmpAddr = EmuUtil.getBasicMemWord( memory, 0x035F );
       if( tmpAddr > 0 ) {
 	begAddr = tmpAddr;
       }
     } else if( begAddr == 0x2C01 ) {
-      int tmpAddr = screenFrm.getEmuThread().getMemWord( 0x2B5F );
+      int tmpAddr = EmuUtil.getBasicMemWord( memory, 0x2B5F );
       if( tmpAddr > 0 ) {
 	begAddr = tmpAddr;
       }
     }
-    int endAddr = getKCBasicStyleEndAddr( screenFrm.getEmuThread(), begAddr );
+    int endAddr = getBasicEndAddr( memory, begAddr );
     if( endAddr >= begAddr ) {
       if( (begAddr == 0x0401) || (begAddr == 0x2C01) ) {
 	(new SaveDlg(
 		screenFrm,
-		begAddr - 0x41,
+		begAddr,
 		endAddr,
-		'B',
-		true,		// KC-BASIC
-		false,		// kein RBASIC
-		"KC-BASIC-Programm speichern" )).setVisible( true );
+		"KC-BASIC-Programm speichern",
+		SaveDlg.BasicType.KCBASIC,
+		EmuUtil.getKCBasicFileFilter() )).setVisible( true );
       } else {
 	BasicDlg.showErrorDlg(
 		screenFrm,
@@ -293,7 +305,7 @@ public class SourceUtil
 			+ " gespeichert werden." );
       }
     } else {
-      showNoKCBasic( screenFrm );
+      showNoBasic( screenFrm );
     }
   }
 
@@ -306,26 +318,40 @@ public class SourceUtil
 			int       fileType )
   {
     if( fileFmt != null ) {
-      boolean state = false;
-      if( ((begAddr == 0x2BC0) || (begAddr == 0x2C00) || (begAddr == 0x2C01))
-	  && fileFmt.equals( FileInfo.HEADERSAVE )
-	  && (fileType == 'B') )
+      int basicBegAddr = -1;
+      if( ((fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+			    || fileFmt.equals( FileFormat.KCBASIC_PRG )
+			    || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
+			    || fileFmt.equals( FileFormat.BASIC_PRG ))
+			&& (begAddr == 0x0401)
+			&& (len > 7))
+	  || (fileFmt.equals( FileFormat.HEADERSAVE )
+                        && (fileType == 'B')
+                        && (begAddr <= 0x0401)
+                        && ((begAddr + len) > 0x0407)) )
       {
-	state = true;
+	basicBegAddr = 0x0401;
       }
-      else if( ((begAddr == 0x0401) || (begAddr == 0x2C01))
-	       && (fileFmt.equals( FileInfo.KCB )
-			|| fileFmt.equals( FileInfo.KCBASIC_HEAD_PRG )
-			|| fileFmt.equals( FileInfo.KCBASIC_PRG )
-			|| fileFmt.equals( FileInfo.KCTAP_BASIC_PRG )) )
+      else if( ((fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+			    || fileFmt.equals( FileFormat.KCBASIC_PRG )
+			    || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
+			    || fileFmt.equals( FileFormat.BASIC_PRG ))
+			&& (begAddr == 0x2C01)
+			&& (len > 7))
+	       || (fileFmt.equals( FileFormat.HEADERSAVE )
+			&& (fileType == 'B')
+			&& (begAddr <= 0x2C01)
+			&& ((begAddr + len) > 0x2C07)) )
       {
-	state = true;
+	basicBegAddr = 0x2C01;
       }
-      if( state ) {
-	int topAddr = begAddr + len;
-	emuThread.setMemWord( begAddr - 42, topAddr );
-	emuThread.setMemWord( begAddr - 40, topAddr );
-	emuThread.setMemWord( begAddr - 38, topAddr );
+      if( basicBegAddr >= 0 ) {
+	int topAddr = getBasicEndAddr( emuThread, basicBegAddr );
+	if( topAddr > basicBegAddr ) {
+	  emuThread.setBasicMemWord( begAddr - 42, topAddr );
+	  emuThread.setBasicMemWord( begAddr - 40, topAddr );
+	  emuThread.setBasicMemWord( begAddr - 38, topAddr );
+	}
       }
     }
   }
@@ -341,11 +367,11 @@ public class SourceUtil
   }
 
 
-  private static void showNoKCBasic( Component owner )
+  private static void showNoBasic( Component owner )
   {
     BasicDlg.showErrorDlg(
 	owner,
-	"Es ist kein KC-BASIC-Programm im entsprechenden\n"
+	"Es ist kein BASIC-Programm im entsprechenden\n"
 		+ "Adressbereich des Arbeitsspeichers vorhanden." );
   }
 }

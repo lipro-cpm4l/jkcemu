@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,10 +21,41 @@ public class Z80Assembler
 {
   public static enum Syntax { ALL, ZILOG_ONLY, ROBOTRON_ONLY };
 
-  private String                srcText;
-  private String                srcName;
+  private static String[] sortedReservedWords = {
+	"ADC", "ADD", "AND", "BINCLUDE", "BIT",
+	"CALL", "CCF", "CPD", "CPDR", "CPI", "CPIR", "CPL", "CPU",
+	"DA", "DAA", "DB", "DEC", "DEFA", "DEFB", "DEFH",
+	"DEFM", "DEFS", "DEFW",
+	"DFB", "DFH", "DFS", "DFW", "DI", "DJNZ", "DW",
+	"EI", "ELSE", "END", "ENDIF", "ENT", "EQU", "EX", "EXX",
+	"HALT", "HEX",
+	"IF1", "IF2", "IFDEF", "IFE", "IFF", "IFNDEF", "IM",
+	"IN", "INC", "INCLUDE", "IND", "INDR", "INI", "INIR",
+	"JP", "JR",
+	"LD", "LDD", "LDDR", "LDI", "LDIR",
+	"NEG", "NOP",
+	"OR", "ORG", "OTDR", "OTIR", "OUT", "OUTD", "OUTI",
+	"POP", "PUSH",
+	"RES", "RET", "RETI", "RETN", "RL", "RLA", "RLC", "RLCA", "RLD",
+	"RR", "RRA", "RRC", "RRCA", "RRD", "RST",
+	"SBC", "SCF", "SET", "SLA", "SRA", "SRL", "SUB",
+	"XOR", "Z80" };
+
+  private static String[] sortedReservedRobotronWords = {
+	"CAC", "CAM", "CANC", "CANZ", "CAP", "CAPE", "CAPO", "CAZ", "CMP",
+	"EXAF", "INF", "JMP", "JPC", "JPM", "JPNC", "JPNZ", "JPP",
+	"JPPE", "JPPO", "JPZ", "JRC", "JRNC", "JRNZ", "JRZ",
+	"RC", "RM", "RNC", "RNZ", "RP", "RPE", "RPO", "RZ" };
+
+  private static String BUILT_IN_LABEL = "__JKCEMU__";
+
+  private PrgSource             curSource;
+  private PrgSource             mainSource;
   private PrgOptions            options;
   private PrgLogger             logger;
+  private Stack<AsmStackEntry>  stack;
+  private Map<File,byte[]>      file2Bytes;
+  private Map<File,PrgSource>   file2Source;
   private Map<String,AsmLabel>  labels;
   private AsmLabel[]            sortedLabels;
   private StringBuilder         srcOut;
@@ -33,14 +64,16 @@ public class Z80Assembler
   private boolean               addrOverflow;
   private boolean               endReached;
   private boolean               interactive;
+  private boolean               orgOverlapped;
   private boolean               relJumpsTooLong;
+  private boolean               suppressLineAddr;
   private boolean               status;
   private volatile boolean      execEnabled;
   private Integer               entryAddr;
   private int                   begAddr;
   private int                   endAddr;
   private int                   curAddr;
-  private int                   curLineNum;
+  private int                   instBegAddr;
   private int                   passNum;
   private int                   errCnt;
 
@@ -48,38 +81,81 @@ public class Z80Assembler
   public Z80Assembler(
 		String     srcText,
 		String     srcName,
+		File       srcFile,
 		PrgOptions options,
 		PrgLogger  logger,
 		boolean    interactive )
   {
-    this.srcText         = srcText;
-    this.srcName         = srcName;
-    this.options         = options;
-    this.logger          = logger;
-    this.interactive     = interactive;
-    this.labels          = new Hashtable<String,AsmLabel>();
-    this.sortedLabels    = null;
-    this.srcOut          = null;
-    this.codeBuf         = null;
-    this.codeOut         = null;
-    this.addrOverflow    = false;
-    this.endReached      = false;
-    this.relJumpsTooLong = false;
-    this.status          = true;
-    this.execEnabled     = true;
-    this.entryAddr       = null;
-    this.begAddr         = -1;
-    this.endAddr         = -1;
-    this.curAddr         = 0;
-    this.curLineNum      = 0;
-    this.passNum         = 0;
-    this.errCnt          = 0;
-    if( this.options.getFormatSource() && (this.srcText != null) ) {
+    this.curSource        = null;
+    this.mainSource       = null;
+    this.options          = options;
+    this.logger           = logger;
+    this.interactive      = interactive;
+    this.stack            = new Stack<>();
+    this.file2Bytes       = new HashMap<>();
+    this.file2Source      = new HashMap<>();
+    this.labels           = new HashMap<>();
+    this.sortedLabels     = null;
+    this.srcOut           = null;
+    this.codeBuf          = null;
+    this.codeOut          = null;
+    this.addrOverflow     = false;
+    this.endReached       = false;
+    this.orgOverlapped    = false;
+    this.relJumpsTooLong  = false;
+    this.suppressLineAddr = false;
+    this.status           = true;
+    this.execEnabled      = true;
+    this.entryAddr        = null;
+    this.begAddr          = -1;
+    this.endAddr          = -1;
+    this.curAddr          = 0;
+    this.instBegAddr      = 0;
+    this.passNum          = 0;
+    this.errCnt           = 0;
+    if( this.options.getFormatSource() && (srcText != null) ) {
       this.srcOut = new StringBuilder( Math.max( srcText.length(), 16 ) );
     }
     if( this.options.getCreateCode() ) {
       this.codeBuf = new ByteArrayOutputStream( 0x8000 );
     }
+
+    // vordefinierte Marke
+    this.labels.put( BUILT_IN_LABEL, new AsmLabel( BUILT_IN_LABEL, 1 ) );
+
+    // Quelltext oeffnen
+    if( srcText != null ) {
+      this.mainSource = PrgSource.readText( srcText, srcName, srcFile );
+    } else {
+      if( srcFile != null ) {
+	try {
+	  this.mainSource = PrgSource.readFile( srcFile );
+	}
+	catch( IOException ex ) {
+	  String msg = ex.getMessage();
+	  if( msg != null ) {
+	    if( msg.trim().isEmpty() ) {
+	      msg = null;
+	    }
+	  }
+	  if( msg == null ) {
+	    msg = "Datei kann nicht ge\u00F6ffnet werden";
+	  }
+	  appendToErrLog( srcFile.getPath() + ": " + msg );
+	}
+      }
+    }
+  }
+
+
+  public boolean addLabel( String labelName, int value )
+  {
+    if( !options.getLabelsCaseSensitive() ) {
+      labelName = labelName.toUpperCase();
+    }
+    return (this.labels.put(
+		labelName,
+		new AsmLabel( labelName, value ) ) == null);
   }
 
 
@@ -91,11 +167,17 @@ public class Z80Assembler
     this.passNum     = 1;
     this.execEnabled = true;
     this.endReached  = false;
+    this.curSource   = this.mainSource;
     try {
       parseAsm();
+      computeMissingLabelValues();
       if( this.execEnabled && this.status ) {
+	if( this.mainSource != null ) {
+	  this.mainSource.reset();
+	}
 	this.passNum    = 2;
 	this.endReached = false;
+	this.curSource  = this.mainSource;
 	parseAsm();
 	if( this.codeBuf != null ) {
 	  this.codeBuf.close();
@@ -161,35 +243,122 @@ public class Z80Assembler
   }
 
 
+  public Integer getLabelValue( String labelName )
+  {
+    Integer rv = null;
+    if( labelName != null ) {
+      AsmLabel label = this.labels.get( labelName );
+      if( label != null ) {
+	Object o = label.getLabelValue();
+	if( o != null ) {
+	  if( o instanceof Integer ) {
+	    rv = (Integer) o;
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  public boolean getOrgOverlapped()
+  {
+    return this.orgOverlapped;
+  }
+
+
+  public PrgOptions getOptions()
+  {
+    return this.options;
+  }
+
+
+  public Collection<PrgSource> getPrgSources()
+  {
+    java.util.List<PrgSource> sources
+		= new ArrayList<>( this.file2Source.size() + 1 );
+    if( this.mainSource != null ) {
+      sources.add( this.mainSource );
+    }
+    sources.addAll( this.file2Source.values() );
+    return sources;
+  }
+
+
   public boolean getRelJumpsTooLong()
   {
     return this.relJumpsTooLong;
   }
 
 
+  /*
+   * Sortierte Ausgabe der Markentabelle,
+   * Eingebaute Marken sind nicht enthalten.
+   */
   public AsmLabel[] getSortedLabels()
   {
     AsmLabel[] rv = this.sortedLabels;
     if( rv == null ) {
-      try {
-	Collection<AsmLabel> c = this.labels.values();
-	if( c != null ) {
-	  int n = c.size();
-	  if( n > 0 ) {
-	    rv = c.toArray( new AsmLabel[ n ] );
-	    if( rv != null ) {
-	      Arrays.sort( rv );
+      int nSrc = this.labels.size();
+      if( nSrc > 0 ) {
+	Map<String,AsmLabel> labelMap = this.labels;
+	try {
+	  labelMap = new HashMap<>( nSrc );
+	  labelMap.putAll( this.labels );
+	  labelMap.remove( BUILT_IN_LABEL );
+	}
+	catch( UnsupportedOperationException
+		| ClassCastException
+		| IllegalArgumentException ex )
+	{
+	  labelMap = this.labels;
+	}
+	try {
+	  Collection<AsmLabel> c = labelMap.values();
+	  if( c != null ) {
+	    int nAry = c.size();
+	    if( nAry > 0 ) {
+	      rv = c.toArray( new AsmLabel[ nAry ] );
+	      if( rv != null ) {
+		Arrays.sort( rv );
+	      }
+	    } else {
+	      rv = new AsmLabel[ 0 ];
 	    }
-	  } else {
-	    rv = new AsmLabel[ 0 ];
 	  }
 	}
+	catch( ArrayStoreException ex ) {}
+	catch( ClassCastException ex ) {}
+	finally {
+	  this.sortedLabels = rv;
+	}
       }
-      catch( ArrayStoreException ex ) {}
-      catch( ClassCastException ex ) {}
-      finally {
-	this.sortedLabels = rv;
+    }
+    return rv;
+  }
+
+
+  public boolean isReservedWord( String upperText )
+  {
+    boolean rv = (Arrays.binarySearch(
+				sortedReservedWords,
+				upperText ) >= 0);
+    if( !rv ) {
+      Syntax syntax = this.options.getAsmSyntax();
+      if( (syntax == Syntax.ALL) || (syntax == Syntax.ROBOTRON_ONLY) ) {
+	if( Arrays.binarySearch(
+			sortedReservedRobotronWords,
+			upperText ) >= 0 )
+	{
+	  rv = true;
+	}
       }
+      if( (syntax == Syntax.ALL) || (syntax == Syntax.ZILOG_ONLY) ) {
+	rv |= upperText.equals( "CP" );
+      }
+    }
+    if( this.options.getAllowUndocInst() ) {
+      rv |= upperText.equals( "SLL" );
     }
     return rv;
   }
@@ -207,24 +376,24 @@ public class Z80Assembler
   public void appendLineNumMsgToErrLog( String msg, String msgType )
   {
     StringBuilder buf = new StringBuilder( 128 );
-    if( this.curLineNum > 0 ) {
-      if( this.srcName != null ) {
-	buf.append( this.srcName );
-	buf.append( (char) ':' );
-	buf.append( this.curLineNum );
-	if( msgType != null ) {
-	  buf.append( ": " );
-	  buf.append( msgType );
+    if( this.curSource != null ) {
+      int lineNum = this.curSource.getLineNum();
+      if( lineNum > 0 ) {
+	String srcName = this.curSource.getName();
+	if( srcName != null ) {
+	  if( !srcName.isEmpty() ) {
+	    buf.append( srcName );
+	    buf.append( ": " );
+	  }
 	}
-      } else {
 	if( msgType != null ) {
 	  buf.append( msgType );
 	  buf.append( " in " );
 	}
 	buf.append( "Zeile " );
-	buf.append( this.curLineNum );
+	buf.append( lineNum );
+	buf.append( ": " );
       }
-      buf.append( ": " );
     }
     if( msg != null ) {
       buf.append( msg );
@@ -250,6 +419,15 @@ public class Z80Assembler
   }
 
 
+  private void checkPrint16BitWarning( int value )
+  {
+    if( (value < ~0x7FFF) || (value > 0xFFFF) ) {
+      putWarning( "Numerischer Wert au\u00DFerhalb 16-Bit-Bereich:"
+					+ "Bits gehen verloren" );
+    }
+  }
+
+
   private void checkAddr() throws PrgException
   {
     /*
@@ -265,35 +443,127 @@ public class Z80Assembler
   }
 
 
-  private void parseAsm() throws IOException, TooManyErrorsException
+  private void computeMissingLabelValues()
   {
-    this.begAddr    = -1;
-    this.endAddr    = -1;
-    this.curAddr    = 0;
-    this.curLineNum = 0;
-    if( this.srcText != null ) {
-      BufferedReader reader = new BufferedReader(
-					new StringReader( this.srcText ) );
-      String line = reader.readLine();
-      while( this.execEnabled && !this.endReached && (line != null) ) {
-	this.curLineNum++;
-	parseLine( line );
-	line = reader.readLine();
+    boolean computed = false;
+    boolean failed   = false;
+    do {
+      for( AsmLabel label : this.labels.values() ) {
+	Object o = label.getLabelValue();
+	if( o != null ) {
+	  if( !(o instanceof Integer) ) {
+	    String text = o.toString();
+	    if( text != null ) {
+	      try {
+	 	Integer v = ExprParser.parse(
+				text,
+				this.instBegAddr,
+				this.labels,
+				false,
+				this.options.getLabelsCaseSensitive() );
+		if( v != null ) {
+		  label.setLabelValue( v );
+		  computed = true;
+		} else {
+		  failed = true;
+		}
+	      }
+	      catch( PrgException ex ) {}
+	    }
+	  }
+	}
+      }
+    } while( computed && failed );
+  }
+
+
+  private boolean isAssemblingEnabled()
+  {
+    boolean rv = true;
+    for( AsmStackEntry e : this.stack ) {
+      if( !e.isAssemblingEnabled() ) {
+	rv = false;
+	break;
       }
     }
+    return rv;
+  }
+
+
+  private void parseAsm() throws IOException, TooManyErrorsException
+  {
+    this.begAddr     = -1;
+    this.endAddr     = -1;
+    this.curAddr     = 0;
+    this.instBegAddr = 0;
+    this.stack.clear();
+    while( this.execEnabled
+	   && !this.endReached
+	   && (this.curSource != null) )
+    {
+      String line = this.curSource.readLine();
+      if( line != null ) {
+	parseLine( line );
+      } else {
+	if( this.curSource != this.mainSource ) {
+	  this.curSource = this.mainSource;
+	} else {
+	  this.curSource = null;
+	}
+      }
+    }
+    if( !this.stack.isEmpty() ) {
+      try {
+	int lineNum = this.stack.peek().getLineNum();
+	StringBuilder buf = new StringBuilder( 32 );
+	buf.append( "Bedingung" );
+	if( lineNum > 0 ) {
+	  buf.append( " in Zeile " );
+	  buf.append( lineNum );
+	}
+	buf.append( " nicht geschlossen (ENDIF fehlt)" );
+	appendLineNumMsgToErrLog( buf.toString(), "Fehler" );
+	this.status = false;
+	this.errCnt++;
+      }
+      catch( EmptyStackException ex ) {}
+    }
+  }
+
+
+  private int parseExpr( String text ) throws PrgException
+  {
+    int     rv    = 0;
+    Integer value = ExprParser.parse(
+			text,
+			this.instBegAddr,
+			this.labels,
+			this.passNum == 2,
+			this.options.getLabelsCaseSensitive() );
+    if( value != null ) {
+      rv = value.intValue();
+    } else {
+      if( this.passNum == 2 ) {
+	throw new PrgException( "Wert nicht ermittelbar" );
+      }
+    }
+    return rv;
   }
 
 
   private void parseLine( String line )
 				throws IOException, TooManyErrorsException
   {
+    this.instBegAddr      = this.curAddr;
+    this.suppressLineAddr = false;
+    String labelName      = null;
     try {
       AsmLine asmLine = AsmLine.scanLine(
 				this,
 				line,
 				this.options.getLabelsCaseSensitive() );
       if( asmLine != null ) {
-	String labelName = asmLine.getLabel();
+	labelName = asmLine.getLabel();
 	if( labelName != null ) {
 	  if( this.passNum == 1 ) {
 	    if( this.labels.containsKey( labelName ) ) {
@@ -308,481 +578,531 @@ public class Z80Assembler
 	}
 	String instruction = asmLine.getInstruction();
 	if( instruction != null ) {
-	  if( instruction.length() > 0 ) {
-	    if( instruction.equals( "Z80" )
-		|| instruction.equals( ".Z80" ) )
+	  if( !instruction.isEmpty() ) {
+	    if( instruction.equals( "IF" )
+		|| instruction.equals( "IFT" ) )
 	    {
-	      // leer
+	      parseIF( asmLine, true );
 	    }
-	    else if( instruction.equals( "ADD" ) ) {
-	      parseADD( asmLine );
-	    }
-	    else if( instruction.equals( "ADC" ) ) {
-	      parseADC_SBC( asmLine, 0x88, 0x4A );
-	    }
-	    else if( instruction.equals( "AND" ) ) {
-	      parseBiOp8( asmLine, 0xA0 );
-	    }
-	    else if( instruction.equals( "BIT" ) ) {
-	      parseSingleBit( asmLine, 0x40 );
-	    }
-	    else if( instruction.equals( "CAC" ) ) {
-	      parseInstDirectAddr( asmLine, 0xDC );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CALL" ) ) {
-	      parseCALL( asmLine );
-	    }
-	    else if( instruction.equals( "CAM" ) ) {
-	      parseInstDirectAddr( asmLine, 0xFC );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CANC" ) ) {
-	      parseInstDirectAddr( asmLine, 0xD4 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CANZ" ) ) {
-	      parseInstDirectAddr( asmLine, 0xC4 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CAP" ) ) {
-	      parseInstDirectAddr( asmLine, 0xF4 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CAPE" ) ) {
-	      parseInstDirectAddr( asmLine, 0xEC );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CAPO" ) ) {
-	      parseInstDirectAddr( asmLine, 0xE4 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CAZ" ) ) {
-	      parseInstDirectAddr( asmLine, 0xCC );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CCF" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x3F );
-	    }
-	    else if( instruction.equals( "CMP" ) ) {
-	      parseBiOp8( asmLine, 0xB8 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "CP" ) ) {
-	      parseBiOp8( asmLine, 0xB8 );
-	      zilogMnemonic();
-	    }
-	    else if( instruction.equals( "CPD" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xA9 );
-	    }
-	    else if( instruction.equals( "CPDR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xB9 );
-	    }
-	    else if( instruction.equals( "CPI" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xA1 );
-	    }
-	    else if( instruction.equals( "CPIR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xB1 );
-	    }
-	    else if( instruction.equals( "CPL" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x2F );
-	    }
-	    else if( instruction.equals( "CPU" )
-		     || instruction.equals( ".CPU" ) )
+	    else if( instruction.equals( "IFE" )
+		     || instruction.equals( "IFF" ) )
 	    {
-	      parseCPU( asmLine );
+	      parseIF( asmLine, false );
 	    }
-	    else if( instruction.equals( "DAA" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x27 );
+	    else if( instruction.equals( "IF1" ) ) {
+	      parseIfInPass( asmLine, 1 );
 	    }
-	    else if( instruction.equals( "DEC" ) ) {
-	      parseINC_DEC( asmLine, 0x05, 0x0B );
+	    else if( instruction.equals( "IF2" ) ) {
+	      parseIfInPass( asmLine, 2 );
 	    }
-	    else if( instruction.equals( "DEFB" )
-		     || instruction.equals( ".DEFB" )
-		     || instruction.equals( "DEFM" )
-		     || instruction.equals( ".DEFM" )
-		     || instruction.equals( "DB" )
-		     || instruction.equals( ".DB" ) )
-	    {
-	      parseDEFB( asmLine );
+	    else if( instruction.equals( "IFDEF" ) ) {
+	      parseIFDEF( asmLine );
 	    }
-	    else if( instruction.equals( "DEFH" )
-		     || instruction.equals( ".DEFH" )
-		     || instruction.equals( "HEX" )
-		     || instruction.equals( ".HEX" ) )
-	    {
-	      parseDEFH( asmLine );
+	    else if( instruction.equals( "IFNDEF" ) ) {
+	      parseIFNDEF( asmLine );
 	    }
-	    else if( instruction.equals( "DEFS" )
-		     || instruction.equals( ".DEFS" )
-		     || instruction.equals( "DS" )
-		     || instruction.equals( ".DS" ) )
-	    {
-	      parseDEFS( asmLine );
+	    else if( instruction.equals( "ELSE" ) ) {
+	      parseELSE( asmLine );
 	    }
-	    else if( instruction.equals( "DEFW" )
-		     || instruction.equals( ".DEFW" )
-		     || instruction.equals( "DA" )
-		     || instruction.equals( ".DA" )
-		     || instruction.equals( "DW" )
-		     || instruction.equals( ".DW" ) )
-	    {
-	      parseDEFW( asmLine );
-	    }
-	    else if( instruction.equals( "DI" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xF3 );
-	    }
-	    else if( instruction.equals( "DJNZ" ) ) {
-	      int d = getAddrDiff( asmLine.nextArg() );
-	      asmLine.checkEOL();
-	      putCode( 0x10 );
-	      putCode( d );
-	    }
-	    else if( instruction.equals( "EI" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xFB );
-	    }
-	    else if( instruction.equals( "END" )
-		     || instruction.equals( ".END" ) )
-	    {
-	      parseEND( asmLine );
-	    }
-	    else if( instruction.equals( "ENT" )
-		     || instruction.equals( ".ENT" ) )
-	    {
-	      parseENT( asmLine );
-	    }
-	    else if( instruction.equals( "EQU" )
-		     || instruction.equals( ".EQU" ) )
-	    {
-	      parseEQU( asmLine );
-	    }
-	    else if( instruction.equals( "EX" ) ) {
-	      parseEX( asmLine );
-	    }
-	    else if( instruction.equals( "EXAF" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x08 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "EXX" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xD9 );
-	    }
-	    else if( instruction.equals( "HALT" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x76 );
-	    }
-	    else if( instruction.equals( "IM" ) ) {
-	      parseIM( asmLine );
-	    }
-	    else if( instruction.equals( "IN" ) ) {
-	      parseIN( asmLine );
-	    }
-	    else if( instruction.equals( "INC" ) ) {
-	      parseINC_DEC( asmLine, 0x04, 0x03 );
-	    }
-	    else if( instruction.equals( "INF" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0x70 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "IND" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xAA );
-	    }
-	    else if( instruction.equals( "INDR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xBA );
-	    }
-	    else if( instruction.equals( "INI" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xA2 );
-	    }
-	    else if( instruction.equals( "INIR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xB2 );
-	    }
-	    else if( instruction.equals( "JMP" ) ) {
-	      parseJMP( asmLine );
-	    }
-	    else if( instruction.equals( "JP" ) ) {
-	      parseJP( asmLine );
-	    }
-	    else if( instruction.equals( "JPC" ) ) {
-	      parseInstDirectAddr( asmLine, 0xDA );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JPM" ) ) {
-	      parseInstDirectAddr( asmLine, 0xFA );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JPNC" ) ) {
-	      parseInstDirectAddr( asmLine, 0xD2 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JPNZ" ) ) {
-	      parseInstDirectAddr( asmLine, 0xC2 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JPP" ) ) {
-	      parseInstDirectAddr( asmLine, 0xF2 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JPPE" ) ) {
-	      parseInstDirectAddr( asmLine, 0xEA );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JPPO" ) ) {
-	      parseInstDirectAddr( asmLine, 0xE2 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JPZ" ) ) {
-	      parseInstDirectAddr( asmLine, 0xCA );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JR" ) ) {
-	      parseJR( asmLine );
-	    }
-	    else if( instruction.equals( "JRC" ) ) {
-	      int d = getAddrDiff( asmLine.nextArg() );
-	      asmLine.checkEOL();
-	      putCode( 0x38 );
-	      putCode( d );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JRNC" ) ) {
-	      int d = getAddrDiff( asmLine.nextArg() );
-	      asmLine.checkEOL();
-	      putCode( 0x30 );
-	      putCode( d );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JRNZ" ) ) {
-	      int d = getAddrDiff( asmLine.nextArg() );
-	      asmLine.checkEOL();
-	      putCode( 0x20 );
-	      putCode( d );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "JRZ" ) ) {
-	      int d = getAddrDiff( asmLine.nextArg() );
-	      asmLine.checkEOL();
-	      putCode( 0x28 );
-	      putCode( d );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "LD" ) ) {
-	      parseLD( asmLine );
-	    }
-	    else if( instruction.equals( "LDD" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xA8 );
-	    }
-	    else if( instruction.equals( "LDDR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xB8 );
-	    }
-	    else if( instruction.equals( "LDI" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xA0 );
-	    }
-	    else if( instruction.equals( "LDIR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xB0 );
-	    }
-	    else if( instruction.equals( "NEG" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0x44 );
-	    }
-	    else if( instruction.equals( "NOP" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x00 );
-	    }
-	    else if( instruction.equals( "OR" ) ) {
-	      parseBiOp8( asmLine, 0xB0 );
-	    }
-	    else if( instruction.equals( "ORG" )
-		     || instruction.equals( ".ORG" ) )
-	    {
-	      parseORG( asmLine );
-	    }
-	    else if( instruction.equals( "OTDR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xBB );
-	    }
-	    else if( instruction.equals( "OTIR" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xB3 );
-	    }
-	    else if( instruction.equals( "OUT" ) ) {
-	      parseOUT( asmLine );
-	    }
-	    else if( instruction.equals( "OUTD" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xAB );
-	    }
-	    else if( instruction.equals( "OUTI" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0xA3 );
-	    }
-	    else if( instruction.equals( "POP" ) ) {
-	      parsePUSH_POP( asmLine, 0xC1 );
-	    }
-	    else if( instruction.equals( "PUSH" ) ) {
-	      parsePUSH_POP( asmLine, 0xC5 );
-	    }
-	    else if( instruction.equals( "RC" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xD8 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "RES" ) ) {
-	      parseSingleBit( asmLine, 0x80 );
-	    }
-	    else if( instruction.equals( "RET" ) ) {
-	      parseRET( asmLine );
-	    }
-	    else if( instruction.equals( "RETI" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0x4D );
-	    }
-	    else if( instruction.equals( "RETN" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xED );
-	      putCode( 0x45 );
-	    }
-	    else if( instruction.equals( "RM" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xF8 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "RNC" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xD0 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "RNZ" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xC0 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "RL" ) ) {
-	      parseRotShift( asmLine, 0x10 );
-	    }
-	    else if( instruction.equals( "RLA" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x17 );
-	    }
-	    else if( instruction.equals( "RLC" ) ) {
-	      parseRotShift( asmLine, 0x00 );
-	    }
-	    else if( instruction.equals( "RLCA" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x07 );
-	    }
-	    else if( instruction.equals( "RLD" ) ) {
-	      parseRXD( asmLine, 0x6F );
-	    }
-	    else if( instruction.equals( "RP" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xF0 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "RPE" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xE8 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "RPO" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xE0 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "RR" ) ) {
-	      parseRotShift( asmLine, 0x18 );
-	    }
-	    else if( instruction.equals( "RRA" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x1F );
-	    }
-	    else if( instruction.equals( "RRC" ) ) {
-	      parseRotShift( asmLine, 0x08 );
-	    }
-	    else if( instruction.equals( "RRCA" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x0F );
-	    }
-	    else if( instruction.equals( "RRD" ) ) {
-	      parseRXD( asmLine, 0x67 );
-	    }
-	    else if( instruction.equals( "RST" ) ) {
-	      parseRST( asmLine );
-	    }
-	    else if( instruction.equals( "RZ" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0xC8 );
-	      robotronMnemonic();
-	    }
-	    else if( instruction.equals( "SBC" ) ) {
-	      parseADC_SBC( asmLine, 0x98, 0x42 );
-	    }
-	    else if( instruction.equals( "SCF" ) ) {
-	      asmLine.checkEOL();
-	      putCode( 0x37 );
-	    }
-	    else if( instruction.equals( "SET" ) ) {
-	      parseSingleBit( asmLine, 0xC0 );
-	    }
-	    else if( instruction.equals( "SLA" ) ) {
-	      parseRotShift( asmLine, 0x20 );
-	    }
-	    else if( instruction.equals( "SLL" ) ) {
-	      parseRotShift( asmLine, 0x30 );
-	      undocInst();
-	    }
-	    else if( instruction.equals( "SRA" ) ) {
-	      parseRotShift( asmLine, 0x28 );
-	    }
-	    else if( instruction.equals( "SRL" ) ) {
-	      parseRotShift( asmLine, 0x38 );
-	    }
-	    else if( instruction.equals( "SUB" ) ) {
-	      parseBiOp8( asmLine, 0x90 );
-	    }
-	    else if( instruction.equals( "XOR" ) ) {
-	      parseBiOp8( asmLine, 0xA8 );
+	    else if( instruction.equals( "ENDIF" ) ) {
+	      parseENDIF( asmLine );
 	    } else {
-	      throw new PrgException(
-			"\'" + instruction + "\': Unbekannte Mnemonik" );
+	      if( isAssemblingEnabled() ) {
+		if( instruction.equals( "Z80" )
+		    || instruction.equals( ".Z80" ) )
+		{
+		  // leer
+		}
+		else if( instruction.equals( "ADD" ) ) {
+		  parseADD( asmLine );
+		}
+		else if( instruction.equals( "ADC" ) ) {
+		  parseADC_SBC( asmLine, 0x88, 0x4A );
+		}
+		else if( instruction.equals( "AND" ) ) {
+		  parseBiOp8( asmLine, 0xA0 );
+		}
+		else if( instruction.equals( "BINCLUDE" )
+			 || instruction.equals( ".BINCLUDE" ) )
+		{
+		  parseBINCLUDE( asmLine );
+		}
+		else if( instruction.equals( "BIT" ) ) {
+		  parseSingleBit( asmLine, 0x40 );
+		}
+		else if( instruction.equals( "CAC" ) ) {
+		  parseInstDirectAddr( asmLine, 0xDC );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CALL" ) ) {
+		  parseCALL( asmLine );
+		}
+		else if( instruction.equals( "CAM" ) ) {
+		  parseInstDirectAddr( asmLine, 0xFC );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CANC" ) ) {
+		  parseInstDirectAddr( asmLine, 0xD4 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CANZ" ) ) {
+		  parseInstDirectAddr( asmLine, 0xC4 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CAP" ) ) {
+		  parseInstDirectAddr( asmLine, 0xF4 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CAPE" ) ) {
+		  parseInstDirectAddr( asmLine, 0xEC );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CAPO" ) ) {
+		  parseInstDirectAddr( asmLine, 0xE4 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CAZ" ) ) {
+		  parseInstDirectAddr( asmLine, 0xCC );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CCF" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x3F );
+		}
+		else if( instruction.equals( "CMP" ) ) {
+		  parseBiOp8( asmLine, 0xB8 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "CP" ) ) {
+		  parseBiOp8( asmLine, 0xB8 );
+		  zilogMnemonic();
+		}
+		else if( instruction.equals( "CPD" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xA9 );
+		}
+		else if( instruction.equals( "CPDR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xB9 );
+		}
+		else if( instruction.equals( "CPI" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xA1 );
+		}
+		else if( instruction.equals( "CPIR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xB1 );
+		}
+		else if( instruction.equals( "CPL" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x2F );
+		}
+		else if( instruction.equals( "CPU" )
+			 || instruction.equals( ".CPU" ) )
+		{
+		  parseCPU( asmLine );
+		}
+		else if( instruction.equals( "DAA" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x27 );
+		}
+		else if( instruction.equals( "DEC" ) ) {
+		  parseINC_DEC( asmLine, 0x05, 0x0B );
+		}
+		else if( instruction.equals( "DEFB" )
+			 || instruction.equals( ".DEFB" )
+			 || instruction.equals( "DEFM" )
+			 || instruction.equals( ".DEFM" )
+			 || instruction.equals( "DFB" )
+			 || instruction.equals( ".DFB" )
+			 || instruction.equals( "DB" )
+			 || instruction.equals( ".DB" ) )
+		{
+		  parseDEFB( asmLine );
+		}
+		else if( instruction.equals( "DEFH" )
+			 || instruction.equals( ".DEFH" )
+			 || instruction.equals( "DFH" )
+			 || instruction.equals( ".DFH" )
+			 || instruction.equals( "HEX" )
+			 || instruction.equals( ".HEX" ) )
+		{
+		  parseDEFH( asmLine );
+		}
+		else if( instruction.equals( "DEFS" )
+			 || instruction.equals( ".DEFS" )
+			 || instruction.equals( "DFS" )
+			 || instruction.equals( ".DFS" )
+			 || instruction.equals( "DS" )
+			 || instruction.equals( ".DS" ) )
+		{
+		  parseDEFS( asmLine );
+		}
+		else if( instruction.equals( "DEFW" )
+			 || instruction.equals( ".DEFW" )
+			 || instruction.equals( "DFW" )
+			 || instruction.equals( ".DFW" )
+			 || instruction.equals( "DA" )
+			 || instruction.equals( ".DA" )
+			 || instruction.equals( "DW" )
+			 || instruction.equals( ".DW" ) )
+		{
+		  parseDEFW( asmLine );
+		}
+		else if( instruction.equals( "DI" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xF3 );
+		}
+		else if( instruction.equals( "DJNZ" ) ) {
+		  int d = getAddrDiff( asmLine.nextArg() );
+		  asmLine.checkEOL();
+		  putCode( 0x10 );
+		  putCode( d );
+		}
+		else if( instruction.equals( "EI" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xFB );
+		}
+		else if( instruction.equals( "END" )
+			 || instruction.equals( ".END" ) )
+		{
+		  parseEND( asmLine );
+		}
+		else if( instruction.equals( "ENT" )
+			 || instruction.equals( ".ENT" ) )
+		{
+		  parseENT( asmLine );
+		}
+		else if( instruction.equals( "EQU" )
+			 || instruction.equals( ".EQU" ) )
+		{
+		  parseEQU( asmLine );
+		}
+		else if( instruction.equals( "EX" ) ) {
+		  parseEX( asmLine );
+		}
+		else if( instruction.equals( "EXAF" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x08 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "EXX" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xD9 );
+		}
+		else if( instruction.equals( "HALT" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x76 );
+		}
+		else if( instruction.equals( "IM" ) ) {
+		  parseIM( asmLine );
+		}
+		else if( instruction.equals( "IN" ) ) {
+		  parseIN( asmLine );
+		}
+		else if( instruction.equals( "INC" ) ) {
+		  parseINC_DEC( asmLine, 0x04, 0x03 );
+		}
+		else if( instruction.equals( "INCLUDE" )
+			 || instruction.equals( ".INCLUDE" ) )
+		{
+		  parseINCLUDE( asmLine );
+		}
+		else if( instruction.equals( "INF" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0x70 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "IND" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xAA );
+		}
+		else if( instruction.equals( "INDR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xBA );
+		}
+		else if( instruction.equals( "INI" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xA2 );
+		}
+		else if( instruction.equals( "INIR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xB2 );
+		}
+		else if( instruction.equals( "JMP" ) ) {
+		  parseJMP( asmLine );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JP" ) ) {
+		  parseJP( asmLine );
+		}
+		else if( instruction.equals( "JPC" ) ) {
+		  parseInstDirectAddr( asmLine, 0xDA );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JPM" ) ) {
+		  parseInstDirectAddr( asmLine, 0xFA );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JPNC" ) ) {
+		  parseInstDirectAddr( asmLine, 0xD2 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JPNZ" ) ) {
+		  parseInstDirectAddr( asmLine, 0xC2 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JPP" ) ) {
+		  parseInstDirectAddr( asmLine, 0xF2 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JPPE" ) ) {
+		  parseInstDirectAddr( asmLine, 0xEA );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JPPO" ) ) {
+		  parseInstDirectAddr( asmLine, 0xE2 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JPZ" ) ) {
+		  parseInstDirectAddr( asmLine, 0xCA );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JR" ) ) {
+		  parseJR( asmLine );
+		}
+		else if( instruction.equals( "JRC" ) ) {
+		  int d = getAddrDiff( asmLine.nextArg() );
+		  asmLine.checkEOL();
+		  putCode( 0x38 );
+		  putCode( d );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JRNC" ) ) {
+		  int d = getAddrDiff( asmLine.nextArg() );
+		  asmLine.checkEOL();
+		  putCode( 0x30 );
+		  putCode( d );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JRNZ" ) ) {
+		  int d = getAddrDiff( asmLine.nextArg() );
+		  asmLine.checkEOL();
+		  putCode( 0x20 );
+		  putCode( d );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "JRZ" ) ) {
+		  int d = getAddrDiff( asmLine.nextArg() );
+		  asmLine.checkEOL();
+		  putCode( 0x28 );
+		  putCode( d );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "LD" ) ) {
+		  parseLD( asmLine );
+		}
+		else if( instruction.equals( "LDD" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xA8 );
+		}
+		else if( instruction.equals( "LDDR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xB8 );
+		}
+		else if( instruction.equals( "LDI" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xA0 );
+		}
+		else if( instruction.equals( "LDIR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xB0 );
+		}
+		else if( instruction.equals( "NEG" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0x44 );
+		}
+		else if( instruction.equals( "NOP" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x00 );
+		}
+		else if( instruction.equals( "OR" ) ) {
+		  parseBiOp8( asmLine, 0xB0 );
+		}
+		else if( instruction.equals( "ORG" )
+			 || instruction.equals( ".ORG" ) )
+		{
+		  parseORG( asmLine );
+		}
+		else if( instruction.equals( "OTDR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xBB );
+		}
+		else if( instruction.equals( "OTIR" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xB3 );
+		}
+		else if( instruction.equals( "OUT" ) ) {
+		  parseOUT( asmLine );
+		}
+		else if( instruction.equals( "OUTD" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xAB );
+		}
+		else if( instruction.equals( "OUTI" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0xA3 );
+		}
+		else if( instruction.equals( "POP" ) ) {
+		  parsePUSH_POP( asmLine, 0xC1 );
+		}
+		else if( instruction.equals( "PUSH" ) ) {
+		  parsePUSH_POP( asmLine, 0xC5 );
+		}
+		else if( instruction.equals( "RC" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xD8 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "RES" ) ) {
+		  parseSingleBit( asmLine, 0x80 );
+		}
+		else if( instruction.equals( "RET" ) ) {
+		  parseRET( asmLine );
+		}
+		else if( instruction.equals( "RETI" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0x4D );
+		}
+		else if( instruction.equals( "RETN" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xED );
+		  putCode( 0x45 );
+		}
+		else if( instruction.equals( "RM" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xF8 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "RNC" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xD0 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "RNZ" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xC0 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "RL" ) ) {
+		  parseRotShift( asmLine, 0x10 );
+		}
+		else if( instruction.equals( "RLA" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x17 );
+		}
+		else if( instruction.equals( "RLC" ) ) {
+		  parseRotShift( asmLine, 0x00 );
+		}
+		else if( instruction.equals( "RLCA" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x07 );
+		}
+		else if( instruction.equals( "RLD" ) ) {
+		  parseRXD( asmLine, 0x6F );
+		}
+		else if( instruction.equals( "RP" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xF0 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "RPE" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xE8 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "RPO" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xE0 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "RR" ) ) {
+		  parseRotShift( asmLine, 0x18 );
+		}
+		else if( instruction.equals( "RRA" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x1F );
+		}
+		else if( instruction.equals( "RRC" ) ) {
+		  parseRotShift( asmLine, 0x08 );
+		}
+		else if( instruction.equals( "RRCA" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x0F );
+		}
+		else if( instruction.equals( "RRD" ) ) {
+		  parseRXD( asmLine, 0x67 );
+		}
+		else if( instruction.equals( "RST" ) ) {
+		  parseRST( asmLine );
+		}
+		else if( instruction.equals( "RZ" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0xC8 );
+		  robotronMnemonic();
+		}
+		else if( instruction.equals( "SBC" ) ) {
+		  parseADC_SBC( asmLine, 0x98, 0x42 );
+		}
+		else if( instruction.equals( "SCF" ) ) {
+		  asmLine.checkEOL();
+		  putCode( 0x37 );
+		}
+		else if( instruction.equals( "SET" ) ) {
+		  parseSingleBit( asmLine, 0xC0 );
+		}
+		else if( instruction.equals( "SLA" ) ) {
+		  parseRotShift( asmLine, 0x20 );
+		}
+		else if( instruction.equals( "SLL" ) ) {
+		  parseRotShift( asmLine, 0x30 );
+		  undocInst();
+		}
+		else if( instruction.equals( "SRA" ) ) {
+		  parseRotShift( asmLine, 0x28 );
+		}
+		else if( instruction.equals( "SRL" ) ) {
+		  parseRotShift( asmLine, 0x38 );
+		}
+		else if( instruction.equals( "SUB" ) ) {
+		  parseBiOp8( asmLine, 0x90 );
+		}
+		else if( instruction.equals( "XOR" ) ) {
+		  parseBiOp8( asmLine, 0xA8 );
+		} else {
+		  throw new PrgException(
+			    "\'" + instruction + "\': Unbekannte Mnemonik" );
+		}
+	      }
 	    }
 	  }
 	}
@@ -802,6 +1122,31 @@ public class Z80Assembler
       this.errCnt++;
       if( this.errCnt >= 100 ) {
 	throw new TooManyErrorsException();
+      }
+    }
+    finally {
+      if( this.interactive
+	  && !this.suppressLineAddr
+	  && (this.curSource != null)
+	  && (this.passNum == 2) )
+      {
+	if( this.instBegAddr < this.curAddr ) {
+	  this.curSource.setLineAddr( this.instBegAddr );
+	} else {
+	  if( labelName != null ) {
+	    AsmLabel label = this.labels.get( labelName );
+	    if( label != null ) {
+	      Object value = label.getLabelValue();
+	      if( value != null ) {
+		if( value instanceof Integer ) {
+		  if( ((Integer) value).intValue() == this.instBegAddr ) {
+		    this.curSource.setLineAddr( this.instBegAddr );
+		  }
+		}
+	      }
+	    }
+	  }
+	}
       }
     }
   }
@@ -910,6 +1255,38 @@ public class Z80Assembler
       }
     } else {
       parseBiOp8( a1, baseCode8 );
+    }
+  }
+
+
+  private void parseBINCLUDE( AsmLine asmLine ) throws PrgException
+  {
+    File file = getIncludeFile( asmLine );
+    asmLine.checkEOL();
+    byte[] fileBytes = this.file2Bytes.get( file );
+    try {
+      if( fileBytes == null ) {
+	fileBytes = EmuUtil.readFile( file, false, 0x10000 );
+	this.file2Bytes.put( file, fileBytes );
+      }
+      if( fileBytes == null ) {
+	throw new IOException();
+      }
+      for( byte b : fileBytes ) {
+	putCode( b );
+      }
+    }
+    catch( IOException ex ) {
+      String msg = ex.getMessage();
+      if( msg != null ) {
+	if( msg.trim().isEmpty() ) {
+	  msg = null;
+	}
+      }
+      if( msg == null ) {
+	msg = "Datei kann nicht ge\u00F6ffnet werden.";
+      }
+      throw new PrgException( msg );
     }
   }
 
@@ -1056,7 +1433,19 @@ public class Z80Assembler
   private void parseDEFS( AsmLine asmLine ) throws PrgException
   {
     do {
-      skipCode( nextWordArg( asmLine ) );
+      int nBytes = nextWordArg( asmLine );
+      if( nBytes > 0 ) {
+	String labelName = asmLine.getLabel();
+	if( labelName != null ) {
+	  AsmLabel label = this.labels.get( labelName );
+	  if( label != null ) {
+	    if( label.getVarSize() <= 0 ) {
+	      label.setVarSize( nBytes );
+	    }
+	  }
+	}
+      }
+      skipCode( nBytes );
     } while( asmLine.hasMoreArgs() );
   }
 
@@ -1069,9 +1458,35 @@ public class Z80Assembler
   }
 
 
+  private void parseELSE( AsmLine asmLine ) throws PrgException
+  {
+    if( this.stack.isEmpty() ) {
+      throw new PrgException( "ELSE ohne zugeh\u00F6riges IF..." );
+    }
+    try {
+      this.stack.peek().processELSE();
+    }
+    catch( EmptyStackException ex ) {}
+    asmLine.checkEOL();
+  }
+
+
   private void parseEND( AsmLine asmLine ) throws PrgException
   {
     this.endReached = true;
+    asmLine.checkEOL();
+  }
+
+
+  private void parseENDIF( AsmLine asmLine ) throws PrgException
+  {
+    if( this.stack.isEmpty() ) {
+      throw new PrgException( "ENDIF ohne zugeh\u00F6riges IF..." );
+    }
+    try {
+      this.stack.pop();
+    }
+    catch( EmptyStackException ex ) {}
     asmLine.checkEOL();
   }
 
@@ -1090,6 +1505,8 @@ public class Z80Assembler
 
   private void parseEQU( AsmLine asmLine ) throws PrgException
   {
+    this.suppressLineAddr = true;
+
     String labelName = asmLine.getLabel();
     if( labelName != null ) {
       /*
@@ -1099,7 +1516,14 @@ public class Z80Assembler
        */
       AsmLabel label = this.labels.get( labelName );
       if( label != null ) {
-	label.setLabelValue( nextWordArg( asmLine ) );
+	String  argText = asmLine.nextArg().toString();
+	Integer value   = ExprParser.parse(
+				argText,
+				this.instBegAddr,
+				this.labels,
+				this.passNum == 2,
+				this.options.getLabelsCaseSensitive() );
+	label.setLabelValue( value != null ? value : argText );
       }
       asmLine.checkEOL();
     } else {
@@ -1145,6 +1569,20 @@ public class Z80Assembler
     } else {
       throwNoSuchInstArgs();
     }
+  }
+
+
+  private void parseIFDEF( AsmLine asmLine ) throws PrgException
+  {
+    AsmArg a = asmLine.nextArg();
+    this.stack.push(
+	new AsmStackEntry(
+		this.curSource.getLineNum(),
+		this.labels.containsKey(
+			this.options.getLabelsCaseSensitive() ?
+						a.toString()
+						: a.toUpperString() ) ) );
+    asmLine.checkEOL();
   }
 
 
@@ -1307,11 +1745,42 @@ public class Z80Assembler
   }
 
 
+  private void parseINCLUDE( AsmLine asmLine ) throws PrgException
+  {
+    File file = getIncludeFile( asmLine );
+    if( this.curSource != this.mainSource ) {
+      throw new PrgException(
+		"In sich geschachtelte INCLUDE-Befehle nicht erlaubt" );
+    }
+    asmLine.checkEOL();
+    this.curSource = this.file2Source.get( file );
+    if( this.curSource != null ) {
+      this.curSource.reset();
+    } else {
+      try {
+	this.curSource = PrgSource.readFile( file );
+	this.file2Source.put( file, this.curSource );
+      }
+      catch( IOException ex ) {
+	String msg = ex.getMessage();
+	if( msg != null ) {
+	  if( msg.trim().isEmpty() ) {
+	    msg = null;
+	  }
+	}
+	if( msg == null ) {
+	  msg = "Datei kann nicht ge\u00F6ffnet werden.";
+	}
+	throw new PrgException( msg );
+      }
+    }
+  }
+
+
   private void parseJMP( AsmLine asmLine ) throws PrgException
   {
     AsmArg a = asmLine.nextArg();
     asmLine.checkEOL();
-    robotronMnemonic();
     if( a.isIndirectHL() ) {
       putCode( 0xE9 );
     }
@@ -1808,11 +2277,61 @@ public class Z80Assembler
   }
 
 
+  private void parseIF(
+		AsmLine asmLine,
+		boolean condValue ) throws PrgException
+  {
+    Integer v = ExprParser.parse(
+			asmLine.nextArg().toString(),
+			this.instBegAddr,
+			this.labels,
+			true,
+			this.options.getLabelsCaseSensitive() );
+    if( v == null ) {
+     throw new PrgException( "Wert nicht ermittelbar"
+			+ " (bei IF sind keine Vorw\u00E4rtsreferenzen"
+			+ " auf Marken erlaubt.)" );
+    }
+    this.stack.push(
+	new AsmStackEntry(
+		this.curSource.getLineNum(),
+		condValue == (v.intValue() != 0) ) );
+    asmLine.checkEOL();
+  }
+
+
+  private void parseIFNDEF( AsmLine asmLine ) throws PrgException
+  {
+    AsmArg a = asmLine.nextArg();
+    this.stack.push(
+	new AsmStackEntry(
+		this.curSource.getLineNum(),
+		!this.labels.containsKey(
+			this.options.getLabelsCaseSensitive() ?
+						a.toString()
+						: a.toUpperString() ) ) );
+    asmLine.checkEOL();
+  }
+
+
+  private void parseIfInPass( AsmLine asmLine, int passNum ) throws PrgException
+  {
+    this.stack.push(
+	new AsmStackEntry(
+		this.curSource.getLineNum(),
+		passNum == this.passNum ) );
+    asmLine.checkEOL();
+  }
+
+
   private void parseORG( AsmLine asmLine ) throws PrgException
   {
+    this.suppressLineAddr = true;
+
     int a = nextWordArg( asmLine );
     asmLine.checkEOL();
     if( a < this.curAddr ) {
+      this.orgOverlapped = true;
       throw new PrgException( "Zur\u00FCcksetzen des"
 			+ " Addressz\u00E4hlers nicht erlaubt" );
     }
@@ -1964,30 +2483,12 @@ public class Z80Assembler
 
   private void parseRST( AsmLine asmLine ) throws PrgException
   {
-    boolean isHex = false;
-    String  text  = asmLine.nextArg().toUpperString();
+    int value = parseExpr( asmLine.nextArg().toString() );
     asmLine.checkEOL();
-    if( text.endsWith( "H" ) ) {
-      isHex = true;
-      text  = text.substring( 0, text.length() - 1 );
+    if( (value & ~0x38) != 0 ) {
+      throwNoSuchInstArgs();
     }
-    try {
-      int v = Integer.parseInt( text, 16 );
-      if( (v & ~0x38) != 0 ) {
-	throwNoSuchInstArgs();
-      }
-      putCode( 0xC7 | v );
-      if( isHex ) {
-	zilogSyntax();
-      } else {
-	if( (this.options.getAsmSyntax() == Syntax.ZILOG_ONLY) && (v > 9) ) {
-	  putWarning( "Hexadezimalkonstante endet nicht mit \'H\'" );
-	}
-      }
-    }
-    catch( NumberFormatException ex ) {
-      throw new PrgException( "Hexadezimalkonstante erwartet" );
-    }
+    putCode( 0xC7 | value );
   }
 
 
@@ -2037,7 +2538,8 @@ public class Z80Assembler
   }
 
 
-  private void parseBiOp8Internal( AsmArg a, int baseCode ) throws PrgException
+  private void parseBiOp8Internal( AsmArg a, int baseCode )
+						throws PrgException
   {
     if( a.isRegAtoL() ) {
       putCode( baseCode + a.getReg8Code() );
@@ -2160,15 +2662,7 @@ public class Z80Assembler
       a3 = asmLine.nextArg();
       asmLine.checkEOL();
     }
-    char   ch      = '\u0020';
-    String bitText = a1.toString();
-    if( bitText.length() == 1 ) {
-      ch = bitText.charAt( 0 );
-    }
-    if( (ch < '0') || (ch > '7') ) {
-      throw new PrgException( "\'0\' bis \'7\' als Bitabgabe erwartet" );
-    }
-    int bitCode = (ch - '0') << 3;
+    int bitCode = (parseExpr( a1.toString() ) << 3);
     if( a3 != null ) {
 
       // bei SET und RES sind drei Argumente moeglich
@@ -2239,7 +2733,11 @@ public class Z80Assembler
   {
     int v = 0;
     if( this.passNum == 2 ) {
-      v = getWord( asmArg ) - ((this.curAddr + 2) & 0xFFFF);
+      String s = asmArg.toString();
+      if( s.endsWith( "-#" ) ) {
+	s = s.substring( 0, s.length() - 2 );
+      }
+      v = getWord( s ) - ((this.curAddr + 2) & 0xFFFF);
       if( (v < ~0x7F) || (v > 0x7F) ) {
 	this.relJumpsTooLong = true;
 	throw new PrgException( "Relative Sprungdistanz zu gro\u00DF" );
@@ -2249,17 +2747,41 @@ public class Z80Assembler
   }
 
 
+  private File getIncludeFile( AsmLine asmLine ) throws PrgException
+  {
+    String fileName = null;
+    String text     = asmLine.nextArg().toString();
+    if( text != null ) {
+      int len = text.length();
+      if( len > 0 ) {
+	char ch = text.charAt( 0 );
+	if( (ch == '\'') || (ch == '\"') ) {
+	  if( (len < 2) || (text.charAt( len - 1 ) != ch) ) {
+	    throw new PrgException(
+			  "Dateiname nicht mit " + ch + " abgeschlossen" );
+	  }
+	  if( len > 2 ) {
+	    fileName = text.substring( 1, len - 1 );
+	  }
+	} else {
+	  fileName = text;
+	}
+      }
+    }
+    if( fileName == null ) {
+      throw new PrgException( "Dateiname erwartet" );
+    }
+    return PrgSource.getIncludeFile( this.curSource, fileName );
+  }
+
+
   private int getIndirectIXYDist( AsmArg a ) throws PrgException
   {
     int    v    = 0;
     String text = a.getIndirectIXYDist();
     if( text != null ) {
       if( !text.isEmpty() ) {
-	v = ExprParser.parse(
-			text,
-			this.labels,
-			this.passNum == 2,
-			this.options.getLabelsCaseSensitive() );
+	v = parseExpr( text );
 	if( (v < ~0x7F) || (v > 0xFF) ) {
 	  throw new PrgException( "Distanzangabe zu gro\u00DF" );
 	}
@@ -2281,11 +2803,7 @@ public class Z80Assembler
 
   private int getByte( String text ) throws PrgException
   {
-    int v = ExprParser.parse(
-			text,
-			this.labels,
-			this.passNum == 2,
-			this.options.getLabelsCaseSensitive() );
+    int v = parseExpr( text );
     if( (v < ~0x7F) || (v > 0xFF) ) {
       putWarningOutOf8Bits();
     }
@@ -2301,15 +2819,8 @@ public class Z80Assembler
 
   private int getWord( String text ) throws PrgException
   {
-    int v = ExprParser.parse(
-			text,
-			this.labels,
-			this.passNum == 2,
-			this.options.getLabelsCaseSensitive() );
-    if( (v < ~0x7FFF) || (v > 0xFFFF) ) {
-      putWarning( "Numerischer Wert au\u00DFerhalb 16-Bit-Bereich:"
-					+ "Bits gehen verloren" );
-    }
+    int v = parseExpr( text );
+    checkPrint16BitWarning( v );
     return v;
   }
 
@@ -2450,10 +2961,19 @@ public class Z80Assembler
 	  firstLabel = false;
 	  appendToOutLog( "\nMarkentabelle:\n" );
 	}
+	String vText = "????";
+	Object value = labels[ i ].getLabelValue();
+	if( value != null ) {
+	  if( value instanceof Integer ) {
+	    vText = String.format(
+			"%04X",
+			((Integer) value).intValue() & 0xFFFF );
+	  }
+	}
 	appendToOutLog(
 		String.format(
-			"    %04Xh   %s\n",
-			labels[ i ].getLabelValue(),
+			"    %s   %s\n",
+			vText,
 			labels[ i ].getLabelName() ) );
       }
     }
@@ -2468,7 +2988,7 @@ public class Z80Assembler
   private void putWarningOutOf8Bits()
   {
     putWarning( "Numerischer Wert au\u00DFerhalb 8-Bit-Bereich:"
-					+ "Bits gehen verloren" );
+					+ " Bits gehen verloren" );
   }
 
 
@@ -2489,9 +3009,10 @@ public class Z80Assembler
 	if( sAddr == null ) {
 	  sAddr = new Integer( begAddr );
 	}
-	String fileFmt  = FileSaver.BIN;
-	String fileDesc = "";
-	String fileName = file.getName();
+	FileFormat fileFmt  = FileFormat.BIN;
+	String     fileType = null;
+	String     fileDesc = "";
+	String     fileName = file.getName();
 	if( fileName != null ) {
 	  String upperName = fileName.toUpperCase();
 	  if( fileDesc.isEmpty() ) {
@@ -2501,19 +3022,27 @@ public class Z80Assembler
 	    }
 	  }
 	  if( upperName.endsWith( ".HEX" ) ) {
-	    fileFmt = FileSaver.INTELHEX;
+	    fileFmt = FileFormat.INTELHEX;
 	  } else if( upperName.endsWith( ".KCC" )
 		     || upperName.endsWith( ".KCM" ) )
 	  {
-	    fileFmt = FileSaver.KCC;
+	    fileFmt = FileFormat.KCC;
 	  } else if( upperName.endsWith( ".TAP" ) ) {
-	    fileFmt = (forZ9001 ? FileSaver.KCTAP_0 : FileSaver.KCTAP_1);
+	    if( forZ9001 ) {
+	      fileFmt = FileFormat.KCTAP_Z9001;
+	      if( sAddr != null ) {
+		fileType = "COM";
+	      }
+	    } else {
+	      fileFmt = FileFormat.KCTAP_KC85;
+	    }
 	  } else if( upperName.endsWith( ".Z80" ) ) {
-	    fileFmt = FileSaver.HEADERSAVE;
+	    fileFmt  = FileFormat.HEADERSAVE;
+	    fileType = (sAddr != null ? "C" : "M");
 	  }
-	  if( fileFmt.equals( FileSaver.KCC )
-	      || fileFmt.equals( FileSaver.KCTAP_0 )
-	      || fileFmt.equals( FileSaver.KCTAP_1 ) )
+	  if( fileFmt.equals( FileFormat.KCC )
+	      || fileFmt.equals( FileFormat.KCTAP_KC85 )
+	      || fileFmt.equals( FileFormat.KCTAP_Z9001 ) )
 	  {
 	    /*
 	     * Wenn ein Programmname bekannt ist,
@@ -2526,29 +3055,6 @@ public class Z80Assembler
 	    if( appName != null ) {
 	      if( !appName.isEmpty() ) {
 		fileDesc = appName;
-	      }
-	    }
-	    if( forZ9001 ) {
-	      /*
-	       * Beim Z9001 muss ein ausfuehrbares Programm
-	       * im KC-Systemformat den Dateityp COM haben.
-	       */
-	      if( !fileDesc.isEmpty() ) {
-		StringBuilder descBuf = new StringBuilder( 11 );
-		if( fileDesc.length() > 8 ) {
-		  descBuf.append( fileDesc.substring( 0, 8 ) );
-		} else {
-		  descBuf.append( fileDesc );
-		}
-		while( descBuf.length() < 8 ) {
-		  /*
-		   * Die evtl. Luecke zwischen Programmname und Dateityp muss
-		   * mit Null-Bytes statt mit Leereichen aufgefuellt werden.
-		   */
-		  descBuf.append( (char) '\u0000' );
-		}
-		descBuf.append( "COM" );
-		fileDesc = descBuf.toString();
 	      }
 	    }
 	  }
@@ -2571,11 +3077,10 @@ public class Z80Assembler
 		this.begAddr,
 		begAddr + codeBytes.length - 1,
 		false,
-		false,
 		this.begAddr,
 		sAddr,
-		'C',
 		fileDesc,
+		fileType,
 		null );
 	  status = true;
 	}
@@ -2603,4 +3108,3 @@ public class Z80Assembler
     return status;
   }
 }
-

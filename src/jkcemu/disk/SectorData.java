@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -65,10 +65,11 @@ public class SectorData extends SectorID
   };
 
 
-  private int                dataPos;
+  private int                dataOffs;
   private int                dataLen;
   private byte[]             dataBuf;
   private boolean            shared;
+  private boolean            bogusID;
   private boolean            err;
   private boolean            deleted;
   private long               filePos;
@@ -83,24 +84,23 @@ public class SectorData extends SectorID
 		int     head,
 		int     sectorNum,
 		int     sizeCode,
-		boolean err,
-		boolean deleted,
 		byte[]  dataBuf,
 		int     dataOffs,
 		int     dataLen )
   {
     super( cyl, head, sectorNum, sizeCode );
     this.idxOnCyl       = idxOnCyl;
-    this.err            = err;
-    this.deleted        = deleted;
     this.dataBuf        = dataBuf;
-    this.dataPos        = dataOffs;
+    this.dataOffs       = dataOffs;
     this.dataLen        = dataLen;
     this.shared         = true;
+    this.bogusID        = false;
+    this.err            = false;
+    this.deleted        = false;
     this.filePos        = -1;
     this.filePortionLen = 0;
     this.disk           = null;
-    if( (getSizeCode() < 0) && (this.dataLen > 0) ) {
+    if( (sizeCode < 0) && (this.dataLen > 0) ) {
       setSizeCode( getSizeCode( this.dataLen ) );
     }
   }
@@ -135,24 +135,25 @@ public class SectorData extends SectorID
   }
 
 
-  public int getDataLength()
-  {
-    return this.dataLen;
-  }
-
-
   public synchronized int getDataByte( int idx )
   {
     int rv = -1;
     if( (idx >= 0) && (idx < this.dataLen) ) {
       rv = 0;
       if( this.dataBuf != null ) {
+	idx += this.dataOffs;
 	if( idx < this.dataBuf.length ) {
 	  rv = (int) this.dataBuf[ idx ] & 0xFF;
 	}
       }
     }
     return rv;
+  }
+
+
+  public int getDataLength()
+  {
+    return this.dataLen;
   }
 
 
@@ -202,6 +203,12 @@ public class SectorData extends SectorID
   }
 
 
+  public boolean hasBogusID()
+  {
+    return this.bogusID;
+  }
+
+
   public boolean isDeleted()
   {
     return this.deleted;
@@ -219,7 +226,7 @@ public class SectorData extends SectorID
     int rv = 0;
     if( dstBuf != null ) {
       if( this.dataBuf != null ) {
-	int srcIdx = this.dataPos;
+	int srcIdx = this.dataOffs;
 	int srcLen = this.dataLen;
 	while( (srcIdx < this.dataBuf.length) && (srcLen > 0)
 	       && (dstPos < dstBuf.length) && (dstLen > 0) )
@@ -244,9 +251,15 @@ public class SectorData extends SectorID
   {
     return new Reader(
 		this.dataBuf,
-		this.dataPos,
+		this.dataOffs,
 		this.dataLen,
 		this.deleted );
+  }
+
+
+  public void setBogusID( boolean state )
+  {
+    this.bogusID = state;
   }
 
 
@@ -255,8 +268,8 @@ public class SectorData extends SectorID
 				byte[]  dataBuf,
 				int     dataLen )
   {
-    this.deleted = deleted;
-    this.dataPos = 0;
+    this.deleted  = deleted;
+    this.dataOffs = 0;
     if( dataBuf != null ) {
       int newLen = Math.min( dataBuf.length, dataLen );
       int oldLen = 0;
@@ -292,9 +305,9 @@ public class SectorData extends SectorID
   }
 
 
-  public void setDeleted( boolean deleted )
+  public void setDeleted( boolean state )
   {
-    this.deleted = deleted;
+    this.deleted = state;
   }
 
 
@@ -322,18 +335,24 @@ public class SectorData extends SectorID
   }
 
 
+  public void setSectorID( int cyl, int head, int sectorNum )
+  {
+    super.setSectorID( cyl, head, sectorNum );
+  }
+
+
   public int writeTo(
 		OutputStream out,
 		int          maxDataLen ) throws IOException
   {
     int n = 0;
     if( this.dataBuf != null ) {
-      n = Math.min( this.dataLen, this.dataBuf.length - this.dataPos );
+      n = Math.min( this.dataLen, this.dataBuf.length - this.dataOffs );
       if( n > 0 ) {
 	if( (maxDataLen >= 0) && (maxDataLen < n) ) {
 	  n = maxDataLen;
 	}
-	out.write( this.dataBuf, this.dataPos, n );
+	out.write( this.dataBuf, this.dataOffs, n );
       }
     }
     while( ((maxDataLen < 0) || (n < maxDataLen)) && (n < this.dataLen) ) {
@@ -350,12 +369,12 @@ public class SectorData extends SectorID
   {
     int n = 0;
     if( this.dataBuf != null ) {
-      n = Math.min( this.dataLen, this.dataBuf.length - this.dataPos );
+      n = Math.min( this.dataLen, this.dataBuf.length - this.dataOffs );
       if( n > 0 ) {
 	if( (maxDataLen >= 0) && (maxDataLen < n) ) {
 	  n = maxDataLen;
 	}
-	raf.write( this.dataBuf, this.dataPos, n );
+	raf.write( this.dataBuf, this.dataOffs, n );
       }
     }
     while( ((maxDataLen < 0) || (n < maxDataLen)) && (n < this.dataLen) ) {

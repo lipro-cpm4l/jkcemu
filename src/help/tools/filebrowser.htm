@@ -1,222 +1,295 @@
 <html>
 <body>
-  <h1>Datei-Browser</h1>
-    Der Datei-Browser dient dazu,
-    Programme und Dateien besonders bequem zu laden bzw. zu &ouml;ffnen.
-    W&auml;hrend beim gew&ouml;hnlichen Laden mit einem Dateiauswahldialog
-    viele Mausklicks notwendig sind, kann der Datei-Browser offen bleiben,
-    so dass zu jedem Zeitpunkt eine Datei ausgew&auml;hlt und mit nur wenigen
-    Mausklicks geladen bzw. ge&ouml;ffnet werden kann.
-    Au&szlig;erdem sind je nach Einstellung auch versteckte Dateien sichtbar,
-    was beim JKCEMU-Dateiauswahldialog nicht der Fall ist.
-  <br/><br/>
+ <h1>Datei-Browser</h1>
+  <ul>
+   <li><a href="filebrowser.htm#layout">1. Ansicht</a></li>
+   <li><a href="filebrowser.htm#dragdrop">2. Drag&amp;Drop</a></li>
+   <li>
+    <a href="filebrowser.htm#load_start">3. Dateien laden und starten</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="filebrowser.htm#load_with">3.1. In Emulator laden mit...</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="filebrowser.htm#load">3.2. In Emulator laden</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="filebrowser.htm#start">3.3. Im Emulator starten</a>
+   </li>
+   <li>
+    &nbsp;&nbsp;
+    <a href="filebrowser.htm#doubleclick">3.4. Doppelklick</a>
+   </li>
+   <li>
+    <a href="filebrowser.htm#copy_paste">4. Ausschneiden, Kopieren und Einf&uuml;gen</a>
+   </li>
+   <li>
+    <a href="filebrowser.htm#play_bin">5. Audio-Wiedergabe von Speicherabbilddateien</a>
+   </li>
+   <li><a href="filebrowser.htm#etc">6. Weitere Funktionen</a></li>
+   <li><a href="filebrowser.htm#keyboard">7. Tastaturbedienung</a></li>
+   <li><a href="filebrowser.htm#settings">8. Einstellungen</a></li>
+  </ul>
+ <br/>
+  Der Datei-Browser dient dazu,
+  Programme und Dateien besonders bequem zu laden bzw. zu &ouml;ffnen.
+  W&auml;hrend beim gew&ouml;hnlichen Laden mit einem Dateiauswahldialog
+  viele Mausklicks notwendig sind, kann der Datei-Browser offen bleiben,
+  so dass zu jedem Zeitpunkt eine Datei ausgew&auml;hlt und mit nur wenigen
+  Mausklicks geladen bzw. ge&ouml;ffnet werden kann.
+  Au&szlig;erdem sind je nach Einstellung auch versteckte Dateien sichtbar,
+  was beim JKCEMU-Dateiauswahldialog nicht der Fall ist.
+ <br/><br/>
+  Neben dem bequemen Laden von Dateien in den Emulator bietet
+  der Datei-Browser aber auch vielen Funktionen eines
+  Datei-Managers, wie z.B. Dateien und Verzeichnisse kopieren,
+  verschieben (ausschneiden und einf&uuml;gen), l&ouml;schen usw.
+ <br/><br/>
 
-  <h2>1. Ansicht</h2>
-    Der Datei-Browser zeigt auf der linken Seite das Dateisystem
-    in einer Baumdarstellung an.
-    Die rechte Seite dient zur Anzeige von Details.
-    Zwischen beiden Seiten befindet sich ein Balken,
-    den Sie nach links und rechts verschieben k&ouml;nnen.
-  <br/><br/>
-    Wenn Sie eine Datei anklicken,
-    werden Detailinformationen auf der rechten Seite angezeigt.
-    Bei einer Bilddatei sehen Sie das ganze Bild, vorausgesetzt,
-    das Dateiformat wird unterst&uuml;tzt und die eingestellte
-    maximale Dateigr&ouml;&szlig;e f&uuml;r die Vorschau
-    wurde nicht &uuml;berschritten.
-    Bei einer Archivdatei (TAR und ZIP) sowie bei einem Verzeichnis
-    wird der jeweilige Inhalt angezeigt.
-  <br/><br/>
+ <h2><a name="layout">1. Ansicht</a></h2>
+  Der Datei-Browser zeigt auf der linken Seite das Dateisystem
+  in einer Baumdarstellung an.
+  Die rechte Seite dient zur Anzeige von Details.
+  Zwischen beiden Seiten befindet sich ein Balken,
+  den Sie nach links und rechts verschieben k&ouml;nnen.
+ <br/><br/>
+  Wenn Sie eine Datei anklicken,
+  werden Detailinformationen auf der rechten Seite angezeigt.
+  Bei einer Bilddatei sehen Sie das ganze Bild, vorausgesetzt,
+  das Dateiformat wird unterst&uuml;tzt und die eingestellte
+  maximale Dateigr&ouml;&szlig;e f&uuml;r die Vorschau
+  wurde nicht &uuml;berschritten.
+  Bei einer Archivdatei (TAR und ZIP) sowie bei einem Verzeichnis
+  wird der jeweilige Inhalt angezeigt.
+ <br/><br/>
 
-  <h2>2. Drag&amp;Drop</h2>
-    Der Datei-Browser kann als Quelle einer Drag&amp;Drop-Operation
-    verwendet werden, d.h., Sie k&ouml;nnen eine Datei markieren,
-    mit gedr&uuml;ckter Maustaste in ein anderes Fenster ziehen
-    und dort loslassen.
-    Dann liegt es an dem anderen Fenster, was mit der Datei passiert.
-    Das JKCEMU-Emulator-Fenster wird in einem solchen Fall die Datei laden.
-  <br/><br/>
+ <h2><a name="dragdrop">2. Drag&amp;Drop</a></h2>
+  Der Datei-Browser kann sowohl als Quelle als auch als Ziel
+  einer Drag&amp;Drop-Operation verwendet werden,
+  d.h., Sie k&ouml;nnen eine Datei markieren,
+  mit gedr&uuml;ckter Maustaste in ein anderes Fenster ziehen
+  und dort loslassen.
+  Dann liegt es an dem anderen Fenster, was mit der Datei passiert.
+  Das JKCEMU-Emulator-Fenster wird in einem solchen Fall die Datei laden.
+ <br/><br/>
+  In der anderen Richtung, d.h., wenn Sie eine Datei in die linke Ansicht
+  des Datei-Browsers hineinziehen und dort &uuml;ber einem Verzeichnis
+  loslassen, wird die Datei in das Verzeichnis kopiert bzw. verschoben.
+ <br/><br/>
+  Mit Drag&amp;Drop kann man aber nicht nur eine einzelne Datei
+  &uuml;bertragen, sondern auch mehrere und auch Verzeichnisse.
+  Es kann aber sein, das das Zielfenster nur etwas mit einer Datei
+  anfangen kann.
+  So macht es i.d.R. wenig Sinn, ein Verzeichnis in einen Texteditor
+  hinziehen und dort &ouml;ffnen zu wollen.
+ <br/><br/>
 
-  <h2>3. Dateien laden und starten</h2>
-    Es ist die Hauptaufgabe des Datei-Browsers,
-    Dateien bequem zu laden und ggf. auch zu starten.
-    Im Men&uuml; <em>Datei</em> gibt es daf&uuml;r verschiedene Funktionen,
-    von denen die wichtigsten auch in der Werkzeugleiste im oberen
-    Bereich des Fensters zu finden sind.
-  <br/><br/>
-    <b>Achtung!</b> Wenn der Datei-Browser mit der JKCEMU-Kommandozeilenoption
-    <em>--fb</em> oder <em>--filebrowser</em> ohne Emulator gestartet wurde
-    (siehe <a href="../cmdline.htm">Aufruf und Kommandozeile</a>),
-    kann auch nichts in den Emulator geladen werden.
-    In dem Fall sind die Men&uuml;eintr&auml;ge und Schaltfl&auml;chen
-    zum Laden in den Emulator nicht sichtbar,
-    und ein Doppelklick f&uuml;hrt auch kein Laden durch.
-  <br/><br/>
+ <h2><a name="load_start">3. Dateien laden und starten</a></h2>
+  Es ist die Hauptaufgabe des Datei-Browsers,
+  Dateien bequem zu laden und ggf. auch zu starten.
+  Im Men&uuml; <em>Datei</em> gibt es daf&uuml;r verschiedene Funktionen,
+  von denen die wichtigsten auch in der Werkzeugleiste im oberen
+  Bereich des Fensters zu finden sind.
+ <br/><br/>
+  <b>Achtung!</b> Wenn der Datei-Browser mit der JKCEMU-Kommandozeilenoption
+  <em>--fb</em> oder <em>--filebrowser</em> ohne Emulator gestartet wurde
+  (siehe <a href="../cmdline.htm">Aufruf und Kommandozeile</a>),
+  kann auch nichts in den Emulator geladen werden.
+  In dem Fall sind die Men&uuml;eintr&auml;ge und Schaltfl&auml;chen
+  zum Laden in den Emulator nicht sichtbar,
+  und ein Doppelklick f&uuml;hrt auch kein Laden durch.
+ <br/><br/>
 
-  <h3>3.1. In Emulator laden mit...</h3>
-    Bei dieser Funktion wird vor dem Laden der selektierten Datei immer
-    der Dialog mit den <a href="../loadsave.htm#options">Ladeoptionen</a>
-    angezeigt.
-    Sie k&ouml;nnen damit z.B. die Datei auf eine andere als in der Datei
-    angegebenen Adresse laden.
-  <br/><br/>
+ <h3><a name="load_with">3.1. In Emulator laden mit...</a></h3>
+  Bei dieser Funktion wird vor dem Laden der selektierten Datei immer
+  der Dialog mit den <a href="../loadsave.htm#options">Ladeoptionen</a>
+  angezeigt.
+  Sie k&ouml;nnen damit z.B. die Datei auf eine andere als in der Datei
+  angegebenen Adresse laden.
+ <br/><br/>
 
-  <h3>3.2. In Emulator laden</h3>
-    Bei dieser Funktion wird die selektierte Datei ohne Nachfrage
-    in den Arbeitsspeicher des Emulators geladen.
-    Voraussetzung ist allerdings,
-    dass das Format der Datei auch Ladeadressen kennt.
-    Ist das nicht der Fall, muss zwangsweise eine Ladeadresse angegeben werden.
-    In dem Fall erscheint dann doch der Dialog mit den
-    <a href="../loadsave.htm#options">Ladeoptionen</a>.
-  <br/><br/>
+ <h3><a name="load">3.2. In Emulator laden</a></h3>
+  Bei dieser Funktion wird die selektierte Datei ohne Nachfrage
+  in den Arbeitsspeicher des Emulators geladen.
+  Voraussetzung ist allerdings,
+  dass das Format der Datei auch Ladeadressen kennt.
+  Ist das nicht der Fall, muss zwangsweise eine Ladeadresse angegeben werden.
+  In dem Fall erscheint dann doch der Dialog mit den
+  <a href="../loadsave.htm#options">Ladeoptionen</a>.
+ <br/><br/>
 
-  <h3>3.3. Im Emulator starten</h3>
-    Enth&auml;lt die selektierte Datei ein ausf&uuml;hrbares
-    Maschinencodeprogramm und eine Startadresse,
-    wird die Datei ohne Nachfrage geladen und das Programm gestartet.
-  <br/><br/>
+ <h3><a name="start">3.3. Im Emulator starten</a></h3>
+  Enth&auml;lt die selektierte Datei ein ausf&uuml;hrbares
+  Maschinencodeprogramm und eine Startadresse,
+  wird die Datei ohne Nachfrage geladen und das Programm gestartet.
+ <br/><br/>
 
-  <h3><a name="doubleclick">3.4. Doppelklick</a></h3>
-    Ein Doppelklick auf eine Datei f&uuml;hrt eine f&uuml;r die Datei
-    sinnvolle Aktion aus.
-    Eine Textdatei wird im <a href="texteditor.htm">Texteditor</a>
-    ge&ouml;ffnet, eine unterst&uuml;tzte Bilddatei im
-    <a href="imageviewer.htm">Bildbetrachter</a> angezeigt,
-    eine unterst&uuml;tzte Sound-Datei abgespielt, usw.
-    Gegebenfalls wird auch das Betriebssystem gefragt,
-    ob es die Datei sinnvoll &ouml;ffnen kann.
-    Ist das alles nicht der Fall, wird davon ausgegangen,
-    dass sie in den Arbeitsspeicher des Emulator geladen werden soll.
-    Dazu erscheint der Dialog mit den
-    <a href="../loadsave.htm#options">Ladeoptionen</a>.
-    Da es aber hinderlich sein kann,
-    jedesmal diesen Dialog best&auml;tigen zu m&uuml;ssen,
-    k&ouml;nnen Sie dieses Verhalten im Men&uuml; <em>Einstellungen</em>
-    abschalten. Mit dem Men&uuml;punkt
-    <em>Doppelklick f&uuml;hrt Laden/Starten ohne Nachfrage aus</em>
-    legen Sie fest, dass beim Doppelklick auf eine Datei,
-    deren Format Ladeadressen kennt, keine
-    <a href="../loadsave.htm#options">Ladeoptionen</a> mehr abgefragt werden.
-    Enth&auml;lt die Datei ein ausf&uuml;hrbares Maschinencodeprogramm,
-    d.h. ist eine Startadresse eingetragen,
-    wird das Programm auch sofort gestartet.
-  <br/><br/>
+ <h3><a name="doubleclick">3.4. Doppelklick</a></h3>
+  Ein Doppelklick auf eine Datei f&uuml;hrt eine f&uuml;r die Datei
+  sinnvolle Aktion aus.
+  Eine Textdatei wird im <a href="texteditor.htm">Texteditor</a>
+  ge&ouml;ffnet, eine Bilddatei im
+  <a href="imageviewer.htm">Bildbetrachter</a> angezeigt
+  (wenn das Dateiformat unterst&uuml;tzt wird)
+  und eine Sound-Datei abgespielt
+  (wenn das Dateiformat unterst&uuml;tzt wird).
+  Wenn JKCEMU selbst nicht wei&szlig;, was es mit der Datei machen soll,
+  wird das Betriebssystem gefragt,
+  ob es die Datei sinnvoll &ouml;ffnen kann.
+  Ist das alles nicht der Fall, wird davon ausgegangen,
+  dass die Datei in den Arbeitsspeicher des Emulator geladen werden soll.
+  In dem Fall erscheint der Dialog mit den
+  <a href="../loadsave.htm#options">Ladeoptionen</a>.
+  Da es aber hinderlich sein kann,
+  jedesmal diesen Dialog best&auml;tigen zu m&uuml;ssen,
+  k&ouml;nnen Sie dieses Verhalten im Men&uuml; <em>Einstellungen</em>
+  abschalten. Mit dem Men&uuml;punkt
+  <em>Doppelklick f&uuml;hrt Laden/Starten ohne Nachfrage aus</em>
+  legen Sie fest, dass beim Doppelklick auf eine Datei,
+  deren Format Ladeadressen kennt, keine
+  <a href="../loadsave.htm#options">Ladeoptionen</a> mehr abgefragt werden.
+  Enth&auml;lt die Datei ein ausf&uuml;hrbares Maschinencodeprogramm,
+  d.h. ist eine Startadresse eingetragen,
+  wird das Programm auch sofort gestartet.
+ <br/><br/>
 
-  <h2>4. Weitere Funktionen</h2>
-    Der Datei-Browser bietet neben dem Laden bzw. &Ouml;ffnen
-    von Dateien auch weiterer Funktionen,
-    wie z.B. Verzeichnisse anlegen,
-    Verzeichnisse und Dateien umbenennen und l&ouml;schen,
-    Pr&uuml;f- und Hashwerte berechnen,
-    Packen und Entpacken sowie
-    den &Auml;nderungszeitpunkt auf einen beliebigen Wert setzen.
-    Alle diese Funktionen finden Sie im Men&uuml; <em>Datei</em>.
-  <br/><br/>
+ <h2><a name="copy_paste">4. Ausschneiden, Kopieren und Einf&uuml;gen</a></h2>
+  &Uuml;ber das Men&uuml; <em>Bearbeiten</em> sowie &uuml;ber das
+  Kontextmen&uuml; k&ouml;nnen Sie Dateien und Verzeichnisse
+  ausschneiden, kopieren und wieder einf&uuml;gen.
+  Dazu wird (falls vorhanden) die Zwischenablage des Betriebssystems
+  verwendet, d.h., Sie k&ouml;nnen auf diese Art und Weise
+  auch Dateien zwischen dem Datei-Browser und anderen Fenstern
+  bzw. Programmen hin und her &uuml;bertragen.
+ <br/><br/>
+  <b>Achtung!</b> Die Funktion <em>Ausschneiden</em> funktioniert
+  nur innerhalb des Datei-Browsers.
+  Wenn Sie im Datei-Browser eine Datei ausscheiden und in einem anderen
+  Programm wieder einf&uuml;gen,
+  wird die Datei kopiert, nicht aber verschoben.
+ <br/><br/>
+  Als eine Besonderheit bietet der Datei-Browser auch die M&ouml;glichkeit,
+  nur die vollst&auml;ndigen Namen von Dateien und Verzeichnissen
+  zu kopieren, und zwar sowohl in reiner Textform als auch in Form einer URL.
+ <br/><br/>
 
-  <h3>
-   <a name="play_bin">4.1. Audio-Wiedergabe von Speicherabbilddateien</a>
-  </h3>
-   Eine Besonderheit des JKCEMU-Datei-Browsers ist,
-   dass er Speicherabbilddateien im Kassettenaufzeichnungsformat
-   einiger der emulierten Computer wiedergeben kann.
-   Damit eignet sich JKCEMU als Zuspieler f&uuml;r diese 8-Bit-Computer.
-   Die entsprechenden Funktionen finden Sie im Untermen&uuml;
-   <em>Datei</em> &rarr; <em>Wiedergeben im</em>
-  <br/><br/>
-   Die Tabelle zeigt, welche Dateiformate in welchem
-   Kassettenaufzeichnungsformat wiedergegeben werden k&ouml;nnen:
-   <table border="1">
-    <tr>
-     <th>Format der Speicherabbilddatei</th>
-     <th>Audio-Wiedergabe im Kassettenaufzeichnungsformat</th>
-    </tr>
-    <tr>
-     <td valign="top">Einfache Speicherabbilddateien (*.bin)</td>
-     <td valign="top">
-      <ul>
-       <li>AC1</li>
-       <li>AC1/LLC2 TurboSave</li>
-       <li>Z1013</li>
-      </ul>
-     </td>
-    </tr>
-    <tr>
-     <td valign="top">Headersave-Dateien (*.z80)</td>
-     <td valign="top">
-      <ul>
-       <li>Z1013-Headersave</li>
-      </ul>
-     </td>
-    </tr>
-    <tr>
-     <td valign="top">
-      Headersave-Dateien (*.z80)<br/>
-      mit Typ <em>B</em> und Anfangsadresse 60F7<br/>
-      (Format, in dem JKCEMU AC1- und LLC2-BASIC-Programme speichert)
-     </td>
-     <td valign="top">
-      <ul>
-       <li>AC1-BASIC</li>
-       <li>AC1/LLC2 TurboSave</li>
-       <li>Z1013-Headersave</li>
-      </ul>
-     </td>
-    </tr>
-    <tr>
-     <td valign="top">
-      KC-System-Dateien (*.kcc)<br>
-      KC-System-Dateien mit BASIC-Programm (*.kcb)<br>
-     </td>
-     <td valign="top">
-      <ul>
-       <li>KC-Format</li>
-      </ul>
-     </td>
-    </tr>
-    <tr>
-     <td valign="top">KC-BASIC-Dateien (*.sss)</td>
-     <td valign="top">
-      <ul>
-       <li>KC-Format</li>
-      </ul>
-     </td>
-    </tr>
-    <tr>
-     <td valign="top">KC-TAP-Dateien (*.tap)</td>
-     <td valign="top">
-      <ul>
-       <li>KC-Format</li>
-      </ul>
-     </td>
-    </tr>
-   </table>
-  <br/><br/>
-   Der <a href="fileconverter.htm">Dateikonverter</a> bietet ebensfalls
-   die M&ouml;glichkeit zur Audio-Wiedergabe von Speicherabbilddateien.
-   Aufgrund der dort vorhandenen Konvertierungsfunktionen lassen sich
-   sogar noch mehr Speicherabbilddateiformate in den unterst&uuml;tzten
-   Kassettenaufzeichnungsformaten wiedergeben.
-  <br/><br/>
+ <h3>
+  <a name="play_bin">5. Audio-Wiedergabe von Speicherabbilddateien</a>
+ </h3>
+  Eine Besonderheit des JKCEMU-Datei-Browsers ist,
+  dass er Speicherabbilddateien im Kassettenaufzeichnungsformat
+  einiger der emulierten Computer wiedergeben kann.
+  Damit eignet sich JKCEMU als Zuspieler f&uuml;r diese 8-Bit-Computer.
+  Die entsprechenden Funktionen finden Sie im Untermen&uuml;
+  <em>Datei</em> &rarr; <em>Wiedergeben im</em>
+ <br/><br/>
+  Die Tabelle zeigt, welche Dateiformate in welchem
+  Kassettenaufzeichnungsformat wiedergegeben werden k&ouml;nnen:
+  <table border="1">
+   <tr>
+    <th>Format der Speicherabbilddatei</th>
+    <th>Audio-Wiedergabe im Kassettenaufzeichnungsformat</th>
+   </tr>
+   <tr>
+    <td valign="top">Einfache Speicherabbilddateien (*.bin)</td>
+    <td valign="top">
+     <ul>
+      <li>AC1</li>
+      <li>AC1/LLC2 TurboSave</li>
+      <li>Z1013</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">Headersave-Dateien (*.z80)</td>
+    <td valign="top">
+     <ul>
+      <li>Z1013-Headersave</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Headersave-Dateien (*.z80)<br/>
+     mit Typ <em>B</em> und Anfangsadresse 60F7<br/>
+     (Format, in dem JKCEMU AC1- und LLC2-BASIC-Programme speichert)
+    </td>
+    <td valign="top">
+     <ul>
+      <li>AC1-BASIC</li>
+      <li>AC1/LLC2 TurboSave</li>
+      <li>Z1013-Headersave</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     KC-System-Dateien (*.kcc)<br>
+     KC-System-Dateien mit BASIC-Programm (*.kcb)<br>
+    </td>
+    <td valign="top">
+     <ul>
+      <li>KC-Format</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">KC-BASIC-Dateien (*.sss)</td>
+    <td valign="top">
+     <ul>
+      <li>KC-Format</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">KC-TAP-Dateien (*.tap)</td>
+    <td valign="top">
+     <ul>
+      <li>KC-Format</li>
+     </ul>
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
+  Der <a href="fileconverter.htm">Dateikonverter</a> bietet ebensfalls
+  die M&ouml;glichkeit zur Audio-Wiedergabe von Speicherabbilddateien.
+  Aufgrund der dort vorhandenen Konvertierungsfunktionen lassen sich
+  sogar noch mehr Speicherabbilddateiformate in den unterst&uuml;tzten
+  Kassettenaufzeichnungsformaten wiedergeben.
+ <br/><br/>
 
-  <h2>5. Tastaturbedienung</h2>
-    Der Datei-Browser l&auml;sst sich auch bequem und schnell
-    mit den vier Cursor-Tasten bedienen.
-    Das Auf- und Zuklappen der Verzeichnisse geschieht mit den Tasten
-    <em>Links</em> und <em>Rechts</em>.
-    Die <em>Enter</em>-Taste hat die gleiche Funktion wir ein
-    <a href="filebrowser.htm#doubleclick">Doppelklick</a>.
-  <br/><br/>
+ <h2><a name="etc">6. Weitere Funktionen</a></h2>
+  Der Datei-Browser bietet neben dem Laden bzw. &Ouml;ffnen
+  von Dateien auch weiterer Funktionen,
+  wie z.B. Verzeichnisse anlegen,
+  Verzeichnisse und Dateien umbenennen und l&ouml;schen,
+  Pr&uuml;f- und Hashwerte berechnen,
+  Packen und Entpacken sowie
+  den &Auml;nderungszeitpunkt auf einen beliebigen Wert setzen.
+  Alle diese Funktionen finden Sie im Men&uuml; <em>Datei</em>.
+ <br/><br/>
 
-  <h2>6. Einstellungen</h2>
-    Im Men&uuml; <em>Einstellungen</em> k&ouml;nnen Sie den Datei-Browser
-    an Ihre Bed&uuml;rfnisse anpassen.
-    Diese Einstellungen,
-    die Position des Schiebers zwischen Baumdarstellung und Vorschau
-    sowie die Fenstergr&ouml;&szlig;e und -position
-    k&ouml;nnen Sie auch dauerhaft in einem Profil speichern.
-    Das tun Sie in dem separaten Fenster f&uuml;r
-    <a href="../settings.htm">Einstellungen</a>.
+ <h2><a name="keyboard">7. Tastaturbedienung</a></h2>
+  Der Datei-Browser l&auml;sst sich auch bequem und schnell
+  mit den vier Cursor-Tasten bedienen.
+  Das Auf- und Zuklappen der Verzeichnisse geschieht mit den Tasten
+  <em>Links</em> und <em>Rechts</em>.
+  Die <em>Enter</em>-Taste hat die gleiche Funktion wir ein
+  <a href="filebrowser.htm#doubleclick">Doppelklick</a>.
+ <br/><br/>
+
+ <h2><a name="settings">8. Einstellungen</a></h2>
+  Im Men&uuml; <em>Einstellungen</em> k&ouml;nnen Sie den Datei-Browser
+  an Ihre Bed&uuml;rfnisse anpassen.
+  Diese Einstellungen,
+  die Position des Schiebers zwischen Baumdarstellung und Vorschau
+  sowie die Fenstergr&ouml;&szlig;e und -position
+  k&ouml;nnen Sie auch dauerhaft in einem Profil speichern.
+  Das tun Sie in dem separaten Fenster f&uuml;r
+  <a href="../settings.htm">Einstellungen</a>.
 </body>
 </html>
 

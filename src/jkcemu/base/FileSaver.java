@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,154 +13,46 @@ import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
 import jkcemu.emusys.Z1013;
-import z80emu.*;
+import z80emu.Z80Memory;
 
 
 public class FileSaver
 {
-  public static final String HEADERSAVE = "HEADERSAVE";
-  public static final String KCC        = "KCC";
-  public static final String KCTAP_0    = "KCTAP_0";
-  public static final String KCTAP_1    = "KCTAP_1";
-  public static final String KCBASIC    = "KCBASIC";
-  public static final String RBASIC     = "RBASIC";
-  public static final String RMC        = "RMC";
-  public static final String INTELHEX   = "INTELHEX";
-  public static final String BIN        = "BIN";
-
-
-  public static void checkFileDesc(
-			String  format,
-			boolean kcbasic,
-			String  fileDesc ) throws UserInputException
-  {
-    if( (format != null) && (fileDesc != null) ) {
-      int m = getMaxFileDescLength( format, false );
-      if( m > 0 ) {
-	if( fileDesc.length() > m ) {
-	  throw new UserInputException(
-			"Die Bezeichnung der Datei ist zu lang (max. "
-				+ String.valueOf( m ) + " Zeichen)." );
-	}
-      }
-    }
-  }
-
-
-  public static String getFormatText( String format )
-  {
-    String rv = null;
-    if( format != null ) {
-      if( format.equals( HEADERSAVE ) ) {
-	rv = "Headersave-Datei";
-      }
-      else if( format.equals( KCC ) ) {
-	rv = "KCC-Datei";
-      }
-      else if( format.equals( KCTAP_0 ) ) {
-	rv = "KC-TAP-Datei mit Block 0 (KC85/1, KC87, Z9001)";
-      }
-      else if( format.equals( KCTAP_1 ) ) {
-	rv = "KC-TAP-Datei mit Block 1 (HC900, KC85/2-5, KC-BASIC)";
-      }
-      else if( format.equals( KCBASIC ) ) {
-	rv = "KC-BASIC-Programmdatei";
-      }
-      else if( format.equals( RBASIC ) ) {
-	rv = "RBASIC-Programmdatei";
-      }
-      else if( format.equals( RBASIC ) ) {
-	rv = "RBASIC-Maschinencodedatei";
-      }
-      else if( format.equals( INTELHEX ) ) {
-	rv = "Intel-HEX-Datei";
-      }
-    }
-    return rv != null ? rv : "Bin\u00E4rdatei ohne Kopfdaten";
-  }
-
-
-  public static int getMaxFileDescLength()
-  {
-    return 16;
-  }
-
-
-  public static int getMaxFileDescLength( String format, boolean kcbasic )
-  {
-    int rv = 0;
-    if( format != null ) {
-      if( format.equals( HEADERSAVE ) ) {
-	rv = 16;
-      } else if( format.equals( KCC ) && !kcbasic ) {
-	rv = 11;
-      } else if( format.equals( KCTAP_0 ) || format.equals( KCTAP_1 ) ) {
-	rv = (kcbasic ? 8 : 11);
-      }
-    }
-    return rv;
-  }
-
-
   public static void saveFile(
 			File       file,
-			String     format,
-			Z80MemView memory,
+			FileFormat fmt,
+			EmuMemView memory,
 			int        begAddr,
 			int        endAddr,
-			boolean    kcbasic,
-			boolean    rbasic,
+			boolean    basic,
 			int        headBegAddr,
 			Integer    headStartAddr,
-			int        headFileType,
 			String     headFileDesc,
+			String     headFileType,
 			Z80Memory  memForHeader ) throws IOException
   {
     if( file != null ) {
-      boolean isHS    = false;
-      boolean isKCC   = false;
-      boolean isTAP_0 = false;
-      boolean isTAP_1 = false;
-      boolean isSSS   = false;
-      boolean isRBAS  = false;
-      boolean isRMC   = false;
-      boolean isHEX   = false;
-      boolean isBIN   = false;
-      if( format != null ) {
-	if( format.equals( HEADERSAVE ) ) {
-	  isHS = true;
-	} else if( format.equals( KCC ) ) {
-	  isKCC = true;
-	} else if( format.equals( KCTAP_0 ) ) {
-	  isTAP_0 = true;
-	} else if( format.equals( KCTAP_1 ) ) {
-	  isTAP_1 = true;
-	} else if( format.equals( KCBASIC ) ) {
-	  isSSS = true;
-	} else if( format.equals( RBASIC ) ) {
-	  isRBAS = true;
-	} else if( format.equals( RMC ) ) {
-	  isRMC = true;
-	} else if( format.equals( INTELHEX ) ) {
-	  isHEX = true;
-	} else {
-	  isBIN = true;
-	}
-      } else {
-	isBIN = true;
-      }
       BufferedOutputStream out = null;
       try {
 	int    headEndAddr   = headBegAddr + endAddr - begAddr;
 	byte[] hsHeaderBytes = null;
 
 	out = new BufferedOutputStream( new FileOutputStream( file ) );
-	if( isHS ) {
-	  hsHeaderBytes       = new byte[ 32 ];
-	  hsHeaderBytes[ 0 ]  = (byte) (headBegAddr & 0xFF);
-	  hsHeaderBytes[ 1 ]  = (byte) ((headBegAddr >> 8) & 0xFF);
-	  hsHeaderBytes[ 2 ]  = (byte) (headEndAddr & 0xFF);
-	  hsHeaderBytes[ 3 ]  = (byte) ((headEndAddr >> 8) & 0xFF);
+	if( fmt.equals( FileFormat.HEADERSAVE ) ) {
+	  int typeChar = 0x20;
+	  if( headFileType != null ) {
+	    if( headFileType.isEmpty() ) {
+	      char ch = headFileType.charAt( 0 );
+	      if( (ch >= '\u0020') && (ch < '\u007F') ) {
+		typeChar = ch;
+	      }
+	    }
+	  }
+	  hsHeaderBytes      = new byte[ 32 ];
+	  hsHeaderBytes[ 0 ] = (byte) (headBegAddr & 0xFF);
+	  hsHeaderBytes[ 1 ] = (byte) ((headBegAddr >> 8) & 0xFF);
+	  hsHeaderBytes[ 2 ] = (byte) (headEndAddr & 0xFF);
+	  hsHeaderBytes[ 3 ] = (byte) ((headEndAddr >> 8) & 0xFF);
 	  if( headStartAddr != null ) {
 	    hsHeaderBytes[ 4 ] = (byte) (headStartAddr.intValue() & 0xFF);
 	    hsHeaderBytes[ 5 ] = (byte) ((headStartAddr.intValue() >> 8)
@@ -175,7 +67,7 @@ public class FileSaver
 	  hsHeaderBytes[ 9 ]  = (byte) 'E';
 	  hsHeaderBytes[ 10 ] = (byte) 'M';
 	  hsHeaderBytes[ 11 ] = (byte) 'U';
-	  hsHeaderBytes[ 12 ] = (byte) headFileType;
+	  hsHeaderBytes[ 12 ] = (byte) typeChar;
 	  hsHeaderBytes[ 13 ] = (byte) 0xD3;
 	  hsHeaderBytes[ 14 ] = (byte) 0xD3;
 	  hsHeaderBytes[ 15 ] = (byte) 0xD3;
@@ -204,11 +96,17 @@ public class FileSaver
 	   * nach einem Kaltstart entsprechen.
 	   */
 	  int addr = begAddr;
-	  if( kcbasic ) {
-	    int endOfMem    = memory.getMemWord( begAddr + 0x04 );
-	    int begOfVars   = memory.getMemWord( begAddr + 0x17 );
-	    int begOfFields = memory.getMemWord( begAddr + 0x19 );
-	    int topAddr     = memory.getMemWord( begAddr + 0x1B );
+	  if( (typeChar == 'B')
+	      && ((begAddr == 0x0401) || (begAddr == 0x2C01)) )
+	  {
+	    begAddr -= 0x0041;
+	    int endOfMem = EmuUtil.getBasicMemWord(
+					memory, begAddr + 0x04 );
+	    int begOfVars = EmuUtil.getBasicMemWord(
+					memory, begAddr + 0x17 );
+	    int begOfFields = EmuUtil.getBasicMemWord(
+					memory, begAddr + 0x19 );
+	    int topAddr = EmuUtil.getBasicMemWord( memory, begAddr + 0x1B );
 	    if( (endOfMem < begAddr) || (endOfMem >= 0xFF00)
 		|| (begOfVars < begAddr) || (begOfVars > endOfMem)
 		|| (begOfFields < begAddr) || (begOfFields > endOfMem)
@@ -250,10 +148,14 @@ public class FileSaver
 	      out.write( sysBytes );
 	      addr += sysBytes.length;
 	    }
-	  }
-	  while( addr <= endAddr ) {
-	    out.write( memory.getMemByte( addr, false ) );
-	    addr++;
+	    while( addr <= endAddr ) {
+	      out.write( memory.getBasicMemByte( addr ) );
+	      addr++;
+	    }
+	  } else {
+	    while( addr <= endAddr ) {
+	      out.write( getMemByte( memory, addr++, basic ) );
+	    }
 	  }
 	  int n = (addr - begAddr) % 0x20;
 	  if( n > 0 ) {
@@ -261,25 +163,28 @@ public class FileSaver
 	      out.write( 0 );
 	    }
 	  }
-	  if( isHS && (memForHeader != null) ) {
+	  if( fmt.equals( FileFormat.HEADERSAVE )
+	      && (memForHeader != null) )
+	  {
 	    for( int i = 0; i < hsHeaderBytes.length; i++ ) {
 	      memForHeader.setMemByte(
 				Z1013.MEM_HEAD + i,
 				hsHeaderBytes[ i ] );
 	    }
 	  }
-
-	} else if( isKCC ) {
+	}
+	else if( fmt.equals( FileFormat.KCC ) ) {
 	  writeKCHeader(
 			out,
 			headBegAddr,
 			headEndAddr,
 			headStartAddr,
-			headFileDesc );
+			false,
+			headFileDesc,
+			null );
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
-	    out.write( memory.getMemByte( addr, false ) );
-	    addr++;
+	    out.write( getMemByte( memory, addr++, basic ) );
 	  }
 	  int n = (addr - begAddr) % 0x80;
 	  if( n > 0 ) {
@@ -287,15 +192,20 @@ public class FileSaver
 	      out.write( 0 );
 	    }
 	  }
-
-	} else if( isTAP_0 || isTAP_1 ) {
+	}
+	else if( fmt.equals( FileFormat.KCTAP_KC85 )
+		 || fmt.equals( FileFormat.KCTAP_Z9001 )
+		 || fmt.equals( FileFormat.KCTAP_BASIC_PRG ) )
+	{
 	  String s = FileInfo.KCTAP_HEADER;
 	  int    n = s.length();
 	  for( int i = 0; i < n; i++ ) {
 	    out.write( s.charAt( i ) );
 	  }
-	  int blkNum = isTAP_0 ? 0 : 1;
-	  if( kcbasic ) {
+	  boolean z9001  = fmt.equals( FileFormat.KCTAP_Z9001 );
+	  int     blkNum = (z9001 ? 0 : 1);
+	  if( fmt.equals( FileFormat.KCTAP_BASIC_PRG ) ) {
+	    blkNum = 1;
 	    out.write( blkNum++ );
 	    out.write( 0xD3 );
 	    out.write( 0xD3 );
@@ -318,7 +228,7 @@ public class FileSaver
 	      --n;
 	    }
 
-	    int addr = begAddr + 65;
+	    int addr = begAddr;
 	    int len  = endAddr - addr + 1;
 	    out.write( len & 0xFF );
 	    out.write( (len >> 8) & 0xFF );
@@ -333,7 +243,7 @@ public class FileSaver
 		}
 		n = 128;
 	      }
-	      out.write( memory.getMemByte( addr, false ) );
+	      out.write( memory.getBasicMemByte( addr ) );
 	      addr++;
 	      --n;
 	    }
@@ -355,7 +265,9 @@ public class FileSaver
 			headBegAddr,
 			headEndAddr,
 			headStartAddr,
-			headFileDesc );
+			z9001,
+			headFileDesc,
+			headFileType );
 	    int addr = begAddr;
 	    n        = 0;
 	    while( addr <= endAddr ) {
@@ -363,7 +275,7 @@ public class FileSaver
 		out.write( (addr + 128) > endAddr ? 0xFF : blkNum++ );
 		n = 128;
 	      }
-	      out.write( memory.getMemByte( addr++, false ) );
+	      out.write( getMemByte( memory, addr++, basic ) );
 	      --n;
 	    }
 	    while( n > 0 ) {
@@ -371,15 +283,14 @@ public class FileSaver
 	      --n;
 	    }
 	  }
-
-	} else if( isSSS ) {
-	  int addr = begAddr + 65;
+	} else if( fmt.equals( FileFormat.KCBASIC_PRG ) ) {
+	  int addr = begAddr;
 	  int len  = endAddr - addr + 1;
 	  int n    = 2;
 	  out.write( len & 0xFF );
 	  out.write( (len >> 8) & 0xFF );
 	  while( addr <= endAddr ) {
-	    out.write( memory.getMemByte( addr, false ) );
+	    out.write( memory.getBasicMemByte( addr ) );
 	    n++;
 	    addr++;
 	  }
@@ -390,13 +301,13 @@ public class FileSaver
 	      out.write( 0 );
 	    }
 	  }
-
-	} else if( isRBAS ) {
+	}
+	else if( fmt.equals( FileFormat.RBASIC_PRG ) ) {
 	  out.write( 0xFF );
 	  int n    = 1;
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
-	    out.write( memory.getMemByte( addr, false ) );
+	    out.write( memory.getBasicMemByte( addr ) );
 	    n++;
 	    addr++;
 	  }
@@ -407,8 +318,8 @@ public class FileSaver
 	      out.write( 0 );
 	    }
 	  }
-
-	} else if( isRMC ) {
+	}
+	else if( fmt.equals( FileFormat.RMC ) ) {
 	  out.write( 0xFE );
 	  out.write( begAddr & 0xFF );
 	  out.write( begAddr >> 8 );
@@ -421,8 +332,20 @@ public class FileSaver
 	    out.write( 0 );
 	    out.write( 0 );
 	  }
-
-	} else if( isHEX ) {
+	  int n    = 7;
+	  int addr = begAddr;
+	  while( addr <= endAddr ) {
+	    out.write( getMemByte( memory, addr++, basic ) );
+	    n++;
+	  }
+	  n %= 0x80;
+	  if( n > 0 ) {
+	    for( int i = n; i < 0x80; i++ ) {
+	      out.write( 0 );
+	    }
+	  }
+	}
+	else if( fmt.equals( FileFormat.INTELHEX ) ) {
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
 	    int cnt = writeHexSegment(
@@ -430,6 +353,7 @@ public class FileSaver
 				memory,
 				addr,
 				endAddr,
+				basic,
 				headBegAddr );
 	    addr += cnt;
 	    headBegAddr += cnt;
@@ -445,15 +369,14 @@ public class FileSaver
 
 	} else {
 
-	  // BIN-Datei
+	  // BASIC-Programm- und BIN-Datei
 	  int addr = begAddr;
 	  while( addr <= endAddr ) {
-	    out.write( memory.getMemByte( addr, false ) );
-	    addr++;
+	    out.write( getMemByte( memory, addr++, basic ) );
 	  }
 	}
 	out.close();
-	out   = null;
+	out = null;
       }
       finally {
 	EmuUtil.doClose( out );
@@ -467,35 +390,29 @@ public class FileSaver
 				int          begAddr,
 				int          endAddr,
 				Integer      startAddr,
-				String       fileDesc ) throws IOException
+				boolean      z9001,
+				String       fileDesc,
+				String       fileType ) throws IOException
   {
-    int n   = 11;
-    int src = 0;
-    if( fileDesc != null ) {
-      int len = fileDesc.length();
-      while( (src < len) && (n > 0) ) {
-        char ch = fileDesc.charAt( src++ );
-        if( ch <= 0xFF ) {
-          out.write( ch );
-          --n;
-        }
-      }
-    }
-    while( n > 0 ) {
-      out.write( '\u0020' );
-      --n;
+    if( z9001 ) {
+      EmuUtil.writeFixLengthASCII( out, fileDesc, 8, 0 );
+      EmuUtil.writeFixLengthASCII( out, fileType, 3, 0 );
+    } else {
+      EmuUtil.writeFixLengthASCII( out, fileDesc, 11, 0x20 );
     }
     for( int i = 0; i < 5; i++ ) {
       out.write( 0 );
     }
     out.write( startAddr != null ? 3 : 2 );
-    out.write( begAddr & 0xFF );
+    out.write( begAddr );
     out.write( begAddr >> 8 );
-    endAddr++;
-    out.write( endAddr & 0xFF );
+    if( !z9001 ) {
+      endAddr++;
+    }
+    out.write( endAddr );
     out.write( endAddr >> 8 );
     if( startAddr != null ) {
-      out.write( startAddr.intValue() & 0xFF );
+      out.write( startAddr.intValue() );
       out.write( startAddr.intValue() >> 8 );
     } else {
       out.write( 0 );
@@ -508,6 +425,18 @@ public class FileSaver
 
 
 	/* --- private Methoden --- */
+
+  private static int getMemByte( EmuMemView memory, int addr, boolean basic )
+  {
+    int b = 0;
+    if( basic ) {
+      b = memory.getBasicMemByte( addr );
+    } else {
+      b = memory.getMemByte( addr, false );
+    }
+    return b;
+  }
+
 
   private static void writeHexByte(
 				OutputStream out,
@@ -525,9 +454,10 @@ public class FileSaver
    */
   private static int writeHexSegment(
 				OutputStream out,
-				Z80MemView   memory,
+				EmuMemView   memory,
 				int          addr,
 				int          endAddr,
+				boolean      basic,
 				int          headBegAddr ) throws IOException
   {
     int cnt = 0;
@@ -546,7 +476,7 @@ public class FileSaver
 
       int cks = (cnt & 0xFF) + (hHeadBegAddr & 0xFF) + (headBegAddr & 0xFF);
       for( int i = 0; i < cnt; i++ ) {
-	int b = memory.getMemByte( addr++, false );
+	int b = getMemByte( memory, addr++, basic );
 	writeHexByte( out, b );
 	cks += b;
       }
@@ -557,4 +487,3 @@ public class FileSaver
     return cnt;
   }
 }
-

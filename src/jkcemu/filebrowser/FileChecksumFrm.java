@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -33,25 +33,25 @@ public class FileChecksumFrm extends BasicFrm
 
   private static FileChecksumFrm instance = null;
 
-  private JMenuItem        mnuClose;
-  private JMenuItem        mnuCopyUpper;
-  private JMenuItem        mnuCopyLower;
-  private JMenuItem        mnuCompare;
-  private JMenuItem        mnuHelpContent;
-  private JPopupMenu       mnuPopup;
-  private JMenuItem        mnuPopupCopyUpper;
-  private JMenuItem        mnuPopupCopyLower;
-  private JMenuItem        mnuPopupCompare;
-  private JLabel           labelAlgorithm;
-  private JComboBox        comboAlgorithm;
-  private JButton          btnAction;
-  private JTable           table;
-  private FileTableModel   tableModel;
-  private Thread           thread;
-  private String           algorithm;
-  private CksCalculator    cks;
-  private volatile boolean cancelled;
-  private volatile boolean filesChanged;
+  private JMenuItem         mnuClose;
+  private JMenuItem         mnuCopyUpper;
+  private JMenuItem         mnuCopyLower;
+  private JMenuItem         mnuCompare;
+  private JMenuItem         mnuHelpContent;
+  private JPopupMenu        mnuPopup;
+  private JMenuItem         mnuPopupCopyUpper;
+  private JMenuItem         mnuPopupCopyLower;
+  private JMenuItem         mnuPopupCompare;
+  private JLabel            labelAlgorithm;
+  private JComboBox<String> comboAlgorithm;
+  private JButton           btnAction;
+  private JTable            table;
+  private FileTableModel    tableModel;
+  private Thread            thread;
+  private String            algorithm;
+  private CksCalculator     cks;
+  private volatile boolean  cancelled;
+  private volatile boolean  filesChanged;
 
 
   public static void open()
@@ -377,7 +377,7 @@ public class FileChecksumFrm extends BasicFrm
     this.labelAlgorithm.setEnabled( false );
     add( this.labelAlgorithm, gbc );
 
-    this.comboAlgorithm = new JComboBox(
+    this.comboAlgorithm = new JComboBox<>(
 				CksCalculator.getAvailableAlgorithms() );
     this.comboAlgorithm.setEditable( false );
     this.comboAlgorithm.setEnabled( false );
@@ -560,6 +560,7 @@ public class FileChecksumFrm extends BasicFrm
 	      this.cancelled    = false;
 	      this.filesChanged = false;
 	      this.thread       = new Thread(
+					Main.getThreadGroup(),
 					this,
 					"JKCEMU Checksum Calculator" );
 	      this.thread.start();

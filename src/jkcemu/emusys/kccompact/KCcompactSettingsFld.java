@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2015 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,49 +17,133 @@ import jkcemu.base.*;
 
 public class KCcompactSettingsFld extends AbstractSettingsFld
 {
+  private JTabbedPane        tabbedPane;
   private JCheckBox          btnFDC;
   private JCheckBox          btnFixedScreenSize;
-  private ROMFileSettingsFld fldAltRomFDC;
+  private JRadioButton       btnSoundMono;
+  private JRadioButton       btnSoundStereo;
+  private JPanel             tabFDC;
+  private JPanel             tabSound;
+  private JPanel             tabEtc;
+  private ROMFileSettingsFld fldAltFDC;
+  private ROMFileSettingsFld fldAltOS;
+  private ROMFileSettingsFld fldAltBasic;
 
 
   public KCcompactSettingsFld( SettingsFrm settingsFrm, String propPrefix )
   {
     super( settingsFrm, propPrefix );
+    setLayout( new BorderLayout() );
 
-    setLayout( new GridBagLayout() );
+    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    add( this.tabbedPane, BorderLayout.CENTER );
 
-    GridBagConstraints gbc = new GridBagConstraints(
+
+    // Tab Floppy-Disk-Station
+    this.tabFDC = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Floppy-Disk-Station", this.tabFDC );
+
+    GridBagConstraints gbcFDC = new GridBagConstraints(
 					0, 0,
 					GridBagConstraints.REMAINDER, 1,
-					0.0, 0.0,
+					1.0, 0.0,
 					GridBagConstraints.WEST,
-					GridBagConstraints.NONE,
+					GridBagConstraints.HORIZONTAL,
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
     this.btnFDC = new JCheckBox( "Floppy-Disk-Station emulieren", false );
     this.btnFDC.addActionListener( this );
-    add( this.btnFDC, gbc );
+    this.tabFDC.add( this.btnFDC, gbcFDC );
 
-    this.fldAltRomFDC = new ROMFileSettingsFld(
+    this.fldAltFDC = new ROMFileSettingsFld(
 		settingsFrm,
-		"jkcemu.kccompact.fdc.rom.",
+		this.propPrefix + "fdc.rom.",
 		"Alternativer ROM in der Floppy-Disk-Station:" );
-    gbc.fill    = GridBagConstraints.HORIZONTAL;
-    gbc.weightx = 1.0;
-    gbc.gridy++;
-    add( this.fldAltRomFDC, gbc );
+    gbcFDC.fill        = GridBagConstraints.HORIZONTAL;
+    gbcFDC.weightx     = 1.0;
+    gbcFDC.insets.left = 50;
+    gbcFDC.gridy++;
+    this.tabFDC.add( this.fldAltFDC, gbcFDC );
 
-    gbc.gridy++;
-    add( new JSeparator(), gbc );
+
+    // Tab Sound
+    this.tabSound = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Sound", this.tabSound );
+
+    GridBagConstraints gbcSound = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
+
+    this.tabSound.add(
+		new JLabel( "Tonausgabe des Sound-Generators:" ),
+		gbcSound );
+
+    ButtonGroup grpSoundChannels = new ButtonGroup();
+
+    this.btnSoundMono = new JRadioButton( "Mono (Kan\u00E4le: A+B+C)", true );
+    this.btnSoundMono.addActionListener( this );
+    grpSoundChannels.add( this.btnSoundMono );
+    gbcSound.insets.left   = 50;
+    gbcSound.insets.top    = 0;
+    gbcSound.insets.bottom = 0;
+    gbcSound.gridy++;
+    this.tabSound.add( this.btnSoundMono, gbcSound );
+
+    this.btnSoundStereo = new JRadioButton(
+                "Stereo (Kan\u00E4le: Links=A+B/2, Rechts=C+B/2)" );
+    this.btnSoundStereo.addActionListener( this );
+    grpSoundChannels.add( this.btnSoundStereo );
+    gbcSound.insets.bottom = 5;
+    gbcSound.gridy++;
+    this.tabSound.add( this.btnSoundStereo, gbcSound );
+
+
+    // Tab Sonstiges
+    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
+
+    GridBagConstraints gbcEtc = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
 
     this.btnFixedScreenSize = new JCheckBox(
 		"Gleiche Fenstergr\u00F6\u00DFe in allen Bildschirmmodi" );
     this.btnFixedScreenSize.addActionListener( this );
-    gbc.fill    = GridBagConstraints.NONE;
-    gbc.weightx = 0.0;
-    gbc.gridy++;
-    add( this.btnFixedScreenSize, gbc );
+    this.tabEtc.add( this.btnFixedScreenSize, gbcEtc );
+
+    gbcEtc.fill          = GridBagConstraints.HORIZONTAL;
+    gbcEtc.weightx       = 1.0;
+    gbcEtc.insets.top    = 10;
+    gbcEtc.insets.bottom = 10;
+    gbcEtc.gridy++;
+    this.tabEtc.add( new JSeparator(), gbcEtc );
+
+    this.fldAltOS = new ROMFileSettingsFld(
+				settingsFrm,
+				propPrefix + "os.",
+				"Alternativer Betriebssystem-ROM:" );
+    gbcEtc.insets.top    = 5;
+    gbcEtc.insets.bottom = 5;
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.fldAltOS, gbcEtc );
+
+    this.fldAltBasic = new ROMFileSettingsFld(
+				settingsFrm,
+				propPrefix + "basic.",
+				"Alternativer BASIC-ROM:" );
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.fldAltBasic, gbcEtc );
 
     updFieldsEnabled();
   }
@@ -80,7 +164,13 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 		props,
 		this.propPrefix + "fixed_screen_size",
 		this.btnFixedScreenSize.isSelected() );
-    this.fldAltRomFDC.applyInput( props, selected );
+    EmuUtil.setProperty(
+		props,
+		this.propPrefix + "sound.stereo",
+		this.btnSoundStereo.isSelected() );
+    this.fldAltFDC.applyInput( props, selected );
+    this.fldAltOS.applyInput( props, selected );
+    this.fldAltBasic.applyInput( props, selected );
   }
 
 
@@ -101,6 +191,15 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 
 
   @Override
+  public void lookAndFeelChanged()
+  {
+    this.fldAltOS.lookAndFeelChanged();
+    this.fldAltFDC.lookAndFeelChanged();
+    this.fldAltBasic.lookAndFeelChanged();
+  }
+
+
+  @Override
   public void updFields( Properties props )
   {
     this.btnFDC.setSelected(
@@ -113,7 +212,18 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 			props,
 			this.propPrefix + "fixed_screen_size",
 			false ) );
-    this.fldAltRomFDC.updFields( props );
+    if( EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + "sound.stereo",
+			false ) )
+    {
+      this.btnSoundStereo.setSelected( true );
+    } else {
+      this.btnSoundMono.setSelected( true );
+    }
+    this.fldAltFDC.updFields( props );
+    this.fldAltOS.updFields( props );
+    this.fldAltBasic.updFields( props );
     updFieldsEnabled();
   }
 
@@ -122,6 +232,6 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 
   private void updFieldsEnabled()
   {
-    this.fldAltRomFDC.setEnabled( this.btnFDC.isSelected() );
+    this.fldAltFDC.setEnabled( this.btnFDC.isSelected() );
   }
 }

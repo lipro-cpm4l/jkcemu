@@ -46,6 +46,21 @@
     <br/><br/>
    </li>
    <li>
+    <b>Variablen/Speicherzellen</b><br/>
+    Hiermit legen Sie fest, wo die Variablen, die Speicherzellen und,
+    sofern gew&uuml;nscht, der eigene Stack-Bereich im Adressbereich
+    des Arbeitsspeichers liegen sollen.
+    Dieser Bereich muss RAM sein.
+    Wenn Sie f&uuml;r die Variablen und Speicherzellen keine Adresse angeben,
+    liegen sie direkt hinter dem Programmcode.
+    Das bedeutet aber auch, dass das compilierte Programm
+    nur im RAM lauff&auml;hig ist.
+    M&ouml;chten Sie ROM-f&auml;higen Programmcode erzeugen,
+    m&uuml;ssen Sie eine im RAM liegende Adresse f&uuml;r
+    die Variablen und Speicherzellen angeben.
+    <br/><br/>
+   </li>
+   <li>
     <b>Gr&ouml;&szlig;e Zeichenkettenspeicher</b><br/>
     Im Zeichenkettenspeicher werden die Zeichenketten abgelegt,
     die in String-Variablen gespeichert sind.
@@ -113,7 +128,32 @@
   </ul>
  <br/><br/>
 
- <h3>3. Optionen in der Gruppe <em>Erzeugter Programmcode</em></h3>
+ <h3>3. Optionen in der Gruppe <em>Treiber</em></h3>
+  <ul>
+   <li>
+    <b>Bei Verwendung der OPEN-Anweisung folgende Treiber einbinden: ...</b>
+    <br/>
+    Mit der <a href="instructions.htm#open">OPEN</a>-Anweisung werden
+    Ein-/Ausgabekan&auml;le ge&ouml;ffnet.
+    Dazu m&uuml;ssen bestimmte Treiber im kompilierten Programm
+    enthalten sein.
+    Der Compiler bindet standardm&auml;&szlig;ig alle Treiber ein,
+    die er entsprechend des BASIC-Programms und des Zielsystems
+    als ben&ouml;tigt erachtet.
+    Es kann jedoch sein,
+    dass ein bestimmter Treiber gar nicht ben&ouml;tigt wird,
+    weil z.B. das Programm so geschrieben ist,
+    dass es niemals einen Ein-/Ausgabekanal zu dem betreffenden Ger&auml;t
+    &ouml;ffnen wird.
+    Wenn Sie das wissen, k&ouml;nnen Sie die nicht ben&ouml;tigten Treiber
+    ausschalten und so die Gr&ouml;&szlig;e des kompilierten Programms
+    verringern.
+    <br/><br/>
+   </li>
+  </ul>
+ <br/><br/>
+
+ <h3>4. Optionen in der Gruppe <em>Erzeugter Programmcode</em></h3>
   <ul>
    <li>
     <b>Programmcode in Emulator laden</b><br/>
@@ -141,7 +181,7 @@
   </ul>
  <br/><br/>
 
- <h3>4. Optionen in der Gruppe <em>Sonstiges</em></h3>
+ <h3>5. Optionen in der Gruppe <em>Sonstiges</em></h3>
   <ul>
    <li>
     <b>Bei Nicht-ASCII-Zeichen warnen</b><br/>
@@ -203,4 +243,3 @@
  <br/>
 </body>
 </html>
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2014 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -18,6 +18,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   private String                     title;
   private Collection<Z80CTCListener> listeners;
   private int                        interruptVector;
+  private int                        tStatesToIgnore;
   private Timer[]                    timer;
 
 
@@ -36,7 +37,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   public synchronized void addCTCListener( Z80CTCListener listener )
   {
     if( this.listeners == null ) {
-      this.listeners = new ArrayList<Z80CTCListener>();
+      this.listeners = new ArrayList<>();
     }
     this.listeners.add( listener );
   }
@@ -63,8 +64,12 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-  public synchronized int read( int timerNum )
+  public synchronized int read( int timerNum, int tStates )
   {
+    // zuerst Taktzyklen des IO-Befehls verarbeiten
+    processTStates( tStates );
+    this.tStatesToIgnore += tStates;
+
     return (timerNum >= 0) && (timerNum < this.timer.length) ?
 			this.timer[ timerNum ].read() : 0xFF;
   }
@@ -83,8 +88,12 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
-  public synchronized void write( int timerNum, int value )
+  public synchronized void write( int timerNum, int value, int tStates )
   {
+    // zuerst Taktzyklen des IO-Befehls verarbeiten
+    processTStates( tStates );
+    this.tStatesToIgnore += tStates;
+
     boolean done = false;
     if( (timerNum >= 0) && (timerNum < this.timer.length) ) {
       if( this.timer[ timerNum ].expectsCounterValue() ) {
@@ -258,6 +267,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     for( int i = 0; i < this.timer.length; i++ ) {
       this.timer[ i ].reset();
     }
+    this.tStatesToIgnore = 0;
   }
 
 
@@ -266,9 +276,13 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   @Override
   public synchronized void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
-    if( tStates > 0 ) {
-      for( int i = 0; i < this.timer.length; i++ ) {
-	this.timer[ i ].systemUpdate( tStates );
+    if( tStates < this.tStatesToIgnore ) {
+      this.tStatesToIgnore -= tStates;
+    } else {
+      tStates -= this.tStatesToIgnore;
+      this.tStatesToIgnore = 0;
+      if( tStates > 0 ) {
+	processTStates( tStates );
       }
     }
   }
@@ -290,7 +304,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     private int     timerNum;
     private int     fromTimerNum;
     private Timer   toTimer;
-    private int     ignoreInternalPulses;
+    private int     loadCounterStatus;
     private int     counterInit;
     private int     counter;
     private int     preCounter;
@@ -298,7 +312,6 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     private boolean extMode;
     private boolean slope;
     private boolean waitForTrigger;
-    private boolean ignoreNextInternalPulses;
     private boolean interruptEnabled;
     private boolean interruptAccepted;
     private boolean interruptRequested;
@@ -345,6 +358,51 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     }
 
 
+    private int externalUpdateIntern( int pulses )
+    {
+      int rv = 0;
+      if( pulses > 0 ) {
+	if( this.extMode ) {
+	  rv = updCounter( pulses );
+	} else {
+	  if( this.waitForTrigger
+	      && (this.loadCounterStatus == 0)
+	      && !this.running )
+	  {
+	    this.waitForTrigger = false;
+	    this.running        = true;
+	  }
+	}
+      }
+      return rv;
+    }
+
+
+    private void processTStates( int pulses )
+    {
+      if( (this.loadCounterStatus > 1) && (pulses > 0) ) {
+	--this.loadCounterStatus;
+	--pulses;
+      }
+      if( this.loadCounterStatus > 0 ) {
+	--this.loadCounterStatus;
+	if( this.loadCounterStatus == 0 ) {
+	  this.preCounter = 0;
+	  this.counter    = this.counterInit;
+	  if( !this.running && (this.extMode || !this.waitForTrigger) ) {
+	    this.running = true;
+	  }
+	}
+	if( pulses > 0 ) {
+	  --pulses;
+	}
+      }
+      if( !this.extMode ) {
+	updCounter( updPreCounter( pulses ) );
+      }
+    }
+
+
     private int read()
     {
       return this.counter & 0xFF;
@@ -353,39 +411,20 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
     private void reset()
     {
-      this.ignoreInternalPulses     = 0;
-      this.counterInit              = 0x100;
-      this.counter                  = this.counterInit;
-      this.preCounter               = 0;
-      this.pre256                   = false;
-      this.extMode                  = false;
-      this.slope                    = false;
-      this.waitForTrigger           = false;
-      this.ignoreNextInternalPulses = false;
-      this.interruptEnabled         = false;
-      this.interruptAccepted        = false;
-      this.interruptRequested       = false;
-      this.nextIsCounterValue       = false;
-      this.running                  = false;
-      this.lastInSlope              = null;
-    }
-
-
-    private void systemUpdate( int pulses )
-    {
-      if( this.ignoreNextInternalPulses ) {
-	this.ignoreInternalPulses += pulses;
-	this.ignoreNextInternalPulses = false;
-      }
-      if( pulses > this.ignoreInternalPulses ) {
-	pulses -= this.ignoreInternalPulses;
-	this.ignoreInternalPulses = 0;
-	if( !this.extMode ) {
-	  updCounter( updPreCounter( pulses ) );
-	}
-      } else {
-	this.ignoreInternalPulses -= pulses;
-      }
+      this.counterInit        = 0x100;
+      this.counter            = this.counterInit;
+      this.loadCounterStatus  = 0;
+      this.preCounter         = 0;
+      this.pre256             = false;
+      this.extMode            = false;
+      this.slope              = false;
+      this.waitForTrigger     = false;
+      this.interruptEnabled   = false;
+      this.interruptAccepted  = false;
+      this.interruptRequested = false;
+      this.nextIsCounterValue = false;
+      this.running            = false;
+      this.lastInSlope        = null;
     }
 
 
@@ -395,24 +434,8 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
       if( this.nextIsCounterValue ) {
 	this.counterInit        = (value > 0 ? value : 0x100);
 	this.nextIsCounterValue = false;
-	if( !this.running && (this.extMode || !this.waitForTrigger) ) {
-	  /*
-	   * Die Taktzyklen des Ausgabebefehls,
-	   * mit dem der CTC-Kanal programmiert wird,
-	   * duerfen nicht zum Herunterzaehlen des Kanals
-	   * verwendet werden.
-	   * Aus diesem Grund werden die naechsten Taktzyklen,
-	   * d.h., die des Ausgabebefahls, ignoriert,
-	   * Da die CTC erst einen Taktzyklus nach der Programmierung
-	   * mit dem Zaehlen beginnt,
-	   * wird zusaetzlich noch ein Taktzyklus ignoriert.
-	   */
-	  this.ignoreNextInternalPulses = true;
-	  this.ignoreInternalPulses     = 1;
-	  this.preCounter               = 0;
-	  this.counter                  = this.counterInit;
-	  this.running                  = true;
-	}
+	this.running            = false;
+	this.loadCounterStatus  = 2;
       } else {
 	this.interruptAccepted  = false;
 	this.interruptRequested = false;
@@ -427,25 +450,6 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 	}
 	this.lastInSlope = null;
       }
-    }
-
-
-    private int externalUpdateIntern( int pulses )
-    {
-      int rv = 0;
-      if( pulses > 0 ) {
-	if( this.extMode ) {
-	  rv = updCounter( pulses );
-	} else {
-	  if( this.waitForTrigger && !this.running ) {
-	    this.preCounter     = 0;
-	    this.counter        = this.counterInit;
-	    this.waitForTrigger = false;
-	    this.running        = true;
-	  }
-	}
-      }
-      return rv;
     }
 
 
@@ -503,6 +507,14 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
       for( Z80CTCListener listener : listeners ) {
 	listener.z80CTCUpdate( this, timerNum );
       }
+    }
+  }
+
+
+  private void processTStates( int tStates )
+  {
+    for( int i = 0; i < this.timer.length; i++ ) {
+      this.timer[ i ].processTStates( tStates );
     }
   }
 }

@@ -1,0 +1,234 @@
+<html>
+<body>
+ <h1>Hinweise zur Emulation von NANOS</h1>
+  NANOS ist ein Baugruppensystem, welches von der Ingenieurhochschule
+  f&uuml;r Seefahrt Warnem&uuml;nde/Wustrow entwickelt wurde
+  und sich an den in der DDR f&uuml;r industrielle Anwendungen
+  weit verbreiteten K1520-Bussystem orientiert.
+  NANOS beschreibt somit keinen konkreten Computer,
+  sondern nur einen Satz von Platinen (Baugruppen),
+  aus denen ein Rechner zusammengestellt werden konnte.
+  Auf solch einem Computer konnten verschiedene Betriebssysteme
+  verwendet werden.
+ <br/><br/>
+  JKCEMU emuliert die wichtigesten NANOS-Platinen sowie einige
+  neuzeitliche Entwicklungen.
+ <br/>
+  <ul>
+   <li>
+    <a href="nanos.htm#hardware">1. Emulierte Hardware</a>
+    <ul>
+     <li><a href="nanos.htm#zre">1.1. ZRE-Baugruppe</a></li>
+     <li><a href="nanos.htm#video">1.2. Bildschirmsteuerung</a></li>
+     <li><a href="nanos.htm#ram_256k">1.3. 256 KByte DRAM</a></li>
+     <li><a href="nanos.htm#io">1.4. IO-Baugruppe</a></li>
+     <li><a href="nanos.htm#cassette">1.5. Kassettenschnittstelle</a></li>
+     <li><a href="nanos.htm#fdc">1.6. Floppy Disk Controller</a></li>
+     <li><a href="nanos.htm#gide">1.7. GIDE</a></li>
+     <li><a href="nanos.htm#kcnet">1.8. KCNet</a></li>
+     <li><a href="nanos.htm#vdip">1.9. USB-Anschluss</a></li>
+     <li><a href="nanos.htm#keyboard">1.10. Tastatur</a></li>
+    </ul>
+   </li>
+   <li><a href="nanos.htm#software">2. Im ROM enthaltene Software</a></li>
+   <li><a href="nanos.htm#disks">3. Enthaltene Diskettenabbilder</a></li>
+  </ul>
+ <br/>
+
+ <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+
+ <h3><a name="zre">1.1. ZRE-Baugruppe</a></h3>
+  Es wird die Baugruppe <em>Zentrale Recheneinheit&nbsp;1</em>
+  (ZRE&nbsp;1) emuliert.
+  Diese enth&auml;lt den Mikroprozessor&nbsp;U880,
+  2 bzw. 4&nbsp;KByte ROM (ab Adresse&nbsp;0000h),
+  1&nbsp;KByte RAM (1000h-1400h)
+  und eine PIO an der E/A-Basisadresse&nbsp;00h.
+  Aufgrund unvollst&auml;ndiger Adressdekodierung ist die PIO
+  bis zur E/A-Adresse 7Fh ansprechbar.
+  Durch Ausgabe einer&nbsp;0 auf Bit&nbsp;7 der PIO Port&nbsp;B
+  wird der Speicher auf der ZRE-Baugruppe abgeschaltet.
+ <br/><br/>
+
+ <h3><a name="video">1.2. Bildschirmsteuerung</a></h3>
+  Je nach Einstellung wird emuliert:
+ <br/>
+  <ul>
+   <li>Bildschirmsteuerung <em>Video&nbsp;2</em> mit 64x32 Zeichen</li>
+   <li>Bildschirmsteuerung <em>Video&nbsp;3</em> mit 80x24 Zeichen</li>
+   <li>Bildschirmsteuerung <em>Video&nbsp;3</em> mit 80x25 Zeichen</li>
+   <li>
+    Farbgrafikkarte von Heiko Poppe mit 64x32 und 80x24 Zeichen umschaltbar
+   </li>
+  </ul>
+ <br/>
+  Der Bildwiederholspeicher beginnt bei allen Varianten ab Adresse F800h.
+ <br/><br/>
+  <b>Achtung!</b> Die Bildschirmsteuerung <em>Video&nbsp;3</em> wird
+  in der Konfiguration mit 8-Bit-Zeichen emuliert.
+  Die im Original einstellbare Konfiguration mit Bit&nbsp;7
+  zur Cursor-Steuerung, die dann nur 7-Bit-Zeichen erm&ouml;glicht,
+  wird nicht emuliert.
+ <br/><br/>
+
+ <h3><a name="ram_256k">1.3. 256 KByte DRAM</a></h3>
+  Die Speicherbaugruppe ist in 4&nbsp;B&auml;nke zu je 64&nbsp;KByte RAM
+  unterteilt.
+  Eine Bank wird als Arbeitsspeicher verwendet
+  (Auswahl &uuml;ber Bit&nbsp;4 und 5 der Ausgabeadresse&nbsp;C2h).
+  Die anderen B&auml;nke werden als RAM-Floppy verwendet.
+  Der Zugriff darauf erfolgt &uuml;ber ein 256 Byte gro&szlig;es Fenster
+  im Adressbereich&nbsp;F700h bis F7FFh.
+ <br/><br/>
+
+ <h3><a name="io">1.4. IO-Baugruppe</a></h3>
+  Die emulierte IO-Baugruppe enth&auml;lt:
+ <br/>
+  <ul>
+   <li>2&nbsp;PIOs an den E/A-Basisadressen&nbsp;80h und 88h</li>
+   <li>eine SIO an der E/A-Basisadresse&nbsp;84h</li>
+   <li>eine CTC an der E/A-Basisadresse&nbsp;8Ch</li>
+  </ul>
+ <br/>
+
+ <h3><a name="cassette">1.5. Kassettenschnittstelle</a></h3>
+  Die Kassettenschnittstelle wird folgenderma&szlig;en
+  <a href="audio.htm">emuliert</a>:
+ <br/>
+  <ul>
+   <li>Eingang: ZRE-PIO Port&nbsp;B Bit&nbsp;5</li>
+   <li>Ausgang: ZRE-PIO Port&nbsp;B Bit&nbsp;6</li>
+  </ul>
+ <br/>
+
+ <h3><a name="fdc">1.6. Floppy Disk Controller</a></h3>
+  Der Floppy Disk Controller wird folgenderma&szlig;en
+  <a href="floppydisk.htm">emuliert</a>:
+ <br/>
+  <table border="1">
+   <tr><th>E/A-Adresse</th><th>Bedeutung</th></tr>
+   <tr>
+    <td align="left" valign="top">92h</td>
+    <td align="left" valign="top">
+     Taktfrequenz, Terminal Count und Motorsteuerung:<br/>
+     <ul>
+      <li>Bit&nbsp;0: FDC-Taktfrequenz (0: 8&nbsp;MHz, 1: 4&nbsp;MHz)</li>
+      <li>Bit&nbsp;1: Terminal&nbsp; Count</li>
+      <li>Bit&nbsp;2: Pr&auml;kompensation (im JKCEMU ohne Wirkung)</li>
+      <li>Bit&nbsp;3 bis 6: Motorschaltsignale (im JKCEMU ohne Wirkung)</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">94h</td>
+    <td align="left" valign="top">Hauptstatusregister</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">95h</td>
+    <td align="left" valign="top">Datenregister</td>
+   </tr>
+  </table>
+ <br/>
+
+ <h3><a name="gide">1.7. GIDE</a></h3>
+  <a href="gide.htm">GIDE</a> wird optional
+  an der E/A-Basisadresse&nbsp;D0h emuliert.
+ <br/><br/>
+
+ <h3><a name="kcnet">1.8. KCNet</a></h3>
+  Eine <a href="kcnet.htm">KCNet</a>-Karte wird optional
+  an der ersten PIO der IO-Baugruppe (E/A-Basisadresse&nbsp;80h) emuliert.
+ <br/><br/>
+
+ <h3><a name="vdip">1.9. USB-Anschluss</a></h3>
+  Ein <a href="usb.htm">USB</a>-Anschluss (Vinculum VDIP Modul) wird optional
+  an der zweiten PIO der IO-Baugruppe (E/A-Basisadresse&nbsp;88h) emuliert.
+ <br/><br/>
+
+ <h3><a name="keyboard">1.10. Tastatur</a></h3>
+  Es gibt keine spezielle NANOS-Tastatur und damit auch keine
+  einheitliche Tastaturschnittstelle.
+  Eine Tastatur wurde einfach an eine der zahlreichen Schnittstellen
+  angeschlossen.
+  JKCEMU emuliert die Tastatur in Form von zwei verschiedenen
+  Anschlussvarianten an der PIO Port&nbsp;A auf der ZRE-Baugruppe:
+ <br/>
+  <ul>
+   <li>Handshake mit Ready/Strobe</li>
+   <li>
+    Strobe an Bit&nbsp;7
+    (Bei gedr&uuml;ckter Taste ist Bit&nbsp;7 gesetzt.)
+   </li>
+  </ul>
+ <br/>
+
+
+ <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
+  <ul>
+   <li>Boot-ROM zum Booten von NANOS&nbsp;2.2</li>
+   <li>Boot-ROM zum Booten von EPOS&nbsp;2.0</li>
+  </ul>
+ <br/>
+  In beiden Boot-ROMs ist jeweils ein Urlader enthalten,
+  der nach dem Einschalten bzw. nach Reset versucht,
+  vom ersten Laufwerk zu booten.
+  Aus diesem Grund m&uuml;ssen Sie eine Diskette
+  in das erste emulierte Laufwerk einlegen und danach
+  <em>Einschalten</em> oder <em>RESET</em> ausl&ouml;sen.
+ <br/><br/>
+  <b>Achtung!</b> Zum Booten anderer Betriebssysteme kann es notwendig sein,
+  den Boot-ROM mit einem anderen Inhalt zu f&uuml;llen.
+  Das ist in den <a href="settings.htm">Einstellungen</a>
+  durch Einbinden einer entsprechenden ROM-Datei m&ouml;glich.
+ <br/><br/>
+
+
+ <h2><a name="disks">3. Enthaltene Diskettenabbilder</a></h2>
+  JKCEMU enth&auml;lt f&uuml;r die NANOS-Emulation
+  folgende Diskettenabbilder:
+  <ul>
+   <li>
+    <u>NANOS&nbsp;2.2 Boot-Diskette</u><br/>
+    F&uuml;r die Nutzung des Diskettenabbildes m&uuml;ssen Sie
+    folgende Konfiguration einstellen:
+    <ul>
+     <li>Bildschirmsteuerung Video&nbsp;3 mit 80x25 Zeichen</li>
+     <li>Tastatur an ZRE-PIO Port&nbsp;A mit Read/Strobe-Handshake</li>
+     <li>Boot-ROM f&uuml;r NANOS&nbsp;2.2</li>
+    </ul>
+   </li>
+   <li>
+    <u>EPOS&nbsp;2.0 Boot-Diskette (64x32 Zeichen)</u><br/>
+    F&uuml;r die Nutzung des Diskettenabbildes m&uuml;ssen Sie
+    folgende Konfiguration einstellen:
+    <ul>
+     <li>
+      Grafik:
+      <ul>
+       <li>Bildschirmsteuerung Video&nbsp;2 mit 64x32 Zeichen oder</li>
+       <li>Farbgrafikkarte mit 64x32 und 80x24 Zeichen umschaltbar</li>
+      </ul>
+     </li>
+     <li>Tastatur an ZRE-PIO Port&nbsp;A mit Strobe an Bit&nbsp;7</li>
+     <li>Boot-ROM f&uuml;r EPOS&nbsp;2.0</li>
+    </ul>
+   </li>
+   <li>
+    <u>EPOS&nbsp;2.0 Boot-Diskette (80x24 Zeichen)</u><br/>
+    F&uuml;r die Nutzung des Diskettenabbildes m&uuml;ssen Sie
+    folgende Konfiguration einstellen:
+    <ul>
+     <li>
+      Grafik:
+      <ul>
+       <li>Bildschirmsteuerung Video&nbsp;3 mit 80x24 Zeichen oder</li>
+       <li>Farbgrafikkarte mit 64x32 und 80x24 Zeichen umschaltbar</li>
+      </ul>
+     </li>
+     <li>Tastatur an ZRE-PIO Port&nbsp;A mit Strobe an Bit&nbsp;7</li>
+     <li>Boot-ROM f&uuml;r EPOS&nbsp;2.0</li>
+    </ul>
+   </li>
+  </ul>
+</body>
+</html>
