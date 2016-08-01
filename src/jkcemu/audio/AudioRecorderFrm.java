@@ -109,7 +109,7 @@ public class AudioRecorderFrm
 
 	/*
 	 * Bzgl. signed / unsigned und little endian / big endian
-	 * laesst sich ein Audio-Kanal nicht unbedingt mit allen
+	 * laesst sich ein Audiokanal nicht unbedingt mit allen
 	 * Kombinationen oeffnen.
 	 * Aus diesem Grund werden die Kombinationen durchprobiert.
 	 */
@@ -305,7 +305,7 @@ public class AudioRecorderFrm
     this.begMillis            = -1;
     this.recording            = false;
     this.recEnabled           = false;
-    setTitle( "JKCEMU Audio-Recorder" );
+    setTitle( "JKCEMU Audiorecorder" );
 
 
     // Fensterinhalt

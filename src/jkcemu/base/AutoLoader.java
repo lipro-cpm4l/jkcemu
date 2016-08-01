@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -56,7 +56,7 @@ public class AutoLoader extends Thread
 	      // Dateityp ermitteln
 	      if( AudioUtil.isAudioFile( file ) ) {
 		throw new IOException(
-			"Audio-Datei bei AutoLoad nicht unterst\u00FCtzt" );
+			"Sound-Datei bei AutoLoad nicht unterst\u00FCtzt" );
 	      }
 	      byte[] fileBuf  = EmuUtil.readFile( file, true, 0x10000 );
 	      if( fileBuf == null ) {

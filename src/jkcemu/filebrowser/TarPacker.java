@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,9 +22,7 @@ public class TarPacker extends AbstractThreadDlg
 			implements FileVisitor<Path>
 {
   private Collection<Path> srcPaths;
-  private String           curEntryDir;
   private Path             curRootPath;
-  private Path             outPath;
   private File             outFile;
   private OutputStream     out;
   private boolean          compression;
@@ -69,24 +67,22 @@ public class TarPacker extends AbstractThreadDlg
     } else {
       if( (dir != null) && (attrs != null) ) {
 	if( attrs.isDirectory() ) {
-	  this.curEntryDir = getEntryDir( dir );
-	  if( this.curEntryDir != null ) {
-	    if( !this.curEntryDir.isEmpty() ) {
-	      appendToLog( dir.toString() + "\n" );
-	      try {
-		writeTarHeader(
+	  String entryDir = getEntryDir( dir );
+	  if( !entryDir.isEmpty() ) {
+	    appendToLog( dir.toString() + "\n" );
+	    try {
+	      writeTarHeader(
 			dir,
-			this.curEntryDir,
+			entryDir,
 			'5',			// Typ: Directory
 			null,			// verlinkter Name
 			0,			// Dateilaenge
 			attrs,
 			true );		// executable
-		rv = FileVisitResult.CONTINUE;
-	      }
-	      catch( IOException ex ) {
-		appendErrorToLog( ex );
-	      }
+	      rv = FileVisitResult.CONTINUE;
+	    }
+	    catch( IOException ex ) {
+	      appendErrorToLog( ex );
 	    }
 	  }
 	}
@@ -104,93 +100,92 @@ public class TarPacker extends AbstractThreadDlg
       rv = FileVisitResult.TERMINATE;
     } else {
       if( (file != null) && (attrs != null) ) {
-	if( this.curEntryDir == null ) {
-	  this.curEntryDir = getEntryDir( file.getParent() );
-	}
-	if( this.curEntryDir != null ) {
-	  int nameCnt = file.getNameCount();
-	  if( nameCnt > 0 ) {
-	    appendToLog( file.toString() + "\n" );
-	    if( attrs.isRegularFile() ) {
-	      FileProgressInputStream in = null;
-	      try {
-		in       = openInputFile( file.toFile(), 2 );
-		long len = in.length();
-		writeTarHeader(
+	Path namePath = file.getFileName();
+	if( namePath != null ) {
+	  String fileName = namePath.toString();
+	  if( fileName != null ) {
+	    if( !fileName.isEmpty() ) {
+	      appendToLog( file.toString() + "\n" );
+	      String entryDir = getEntryDir( file.getParent() );
+	      if( attrs.isRegularFile() ) {
+		FileProgressInputStream in = null;
+		try {
+		  in       = openInputFile( file.toFile(), 2 );
+		  long len = in.length();
+		  writeTarHeader(
 			file,
-			this.curEntryDir
-				+ file.getName( nameCnt - 1 ).toString(),
+			entryDir + fileName,
 			'0',			// Typ: Datei
 			null,			// verlinkter Name
 			len,
 			attrs,
 			false );
-		if( len > 0 ) {
-		  long pos = 0;
-		  int  b   = in.read();
-		  while( !this.canceled && (pos < len) && (b != -1) ) {
-		    this.out.write( b );
-		    pos++;
-		    b = in.read();
-		  }
-		  long nBlocks = len / 512;
-		  long fullLen = nBlocks * 512;
-		  if( fullLen < len ) {
-		    fullLen += 512;
-		  }
-		  while( !this.canceled && (pos < fullLen) ) {
-		    this.out.write( 0 );
-		    pos++;
+		  if( len > 0 ) {
+		    long pos = 0;
+		    int  b   = in.read();
+		    while( !this.canceled && (pos < len) && (b != -1) ) {
+		      this.out.write( b );
+		      pos++;
+		      b = in.read();
+		    }
+		    long nBlocks = len / 512;
+		    long fullLen = nBlocks * 512;
+		    if( fullLen < len ) {
+		      fullLen += 512;
+		    }
+		    while( !this.canceled && (pos < fullLen) ) {
+		      this.out.write( 0 );
+		      pos++;
+		    }
 		  }
 		}
-	      }
-	      catch( IOException ex ) {
-		appendErrorToLog( ex );
-		incErrorCount();
-	      }
-	      catch( UnsupportedOperationException ex ) {
-		appendIgnoredToLog();
-	      }
-	      finally {
-		EmuUtil.doClose( in );
-	      }
-	    } else if( attrs.isSymbolicLink() ) {
-	      try {
-		Path destPath = Files.readSymbolicLink( file );
-		if( destPath != null ) {
-		  writeTarHeader(
+		catch( IOException ex ) {
+		  appendErrorToLog( ex );
+		  incErrorCount();
+		}
+		catch( UnsupportedOperationException ex ) {
+		  appendIgnoredToLog();
+		}
+		finally {
+		  EmuUtil.doClose( in );
+		}
+	      } else if( attrs.isSymbolicLink() ) {
+		try {
+		  Path destPath = Files.readSymbolicLink( file );
+		  if( destPath != null ) {
+		    writeTarHeader(
 			file,
-			this.curEntryDir
-				+ file.getName( nameCnt - 1 ).toString(),
+			entryDir + fileName,
 			'2',			// Typ: Link
 			destPath.toString(),	// verlinkter Name
 			0,			// Dateilaenge
 			attrs,
 			true );			// executable
-		}
-	      }
-	      catch( Exception ex ) {
-		StringBuilder buf = new StringBuilder( 256 );
-		buf.append( " Lesen des symbolischen Links"
-					+ " nicht m\u00F6glich\n" );
-		String msg = ex.getMessage();
-		if( msg != null ) {
-		  msg = msg.trim();
-		  if( msg.isEmpty() ) {
-		    buf.append( ":\n" );
-		    buf.append( msg );
 		  }
 		}
-		buf.append( (char) '\n' );
-		appendToLog( buf.toString() );
-		disableAutoClose();
+		catch( Exception ex ) {
+		  StringBuilder buf = new StringBuilder( 256 );
+		  buf.append( " Lesen des symbolischen Links"
+					+ " nicht m\u00F6glich\n" );
+		  String msg = ex.getMessage();
+		  if( msg != null ) {
+		    msg = msg.trim();
+		    if( msg.isEmpty() ) {
+		      buf.append( ":\n" );
+		      buf.append( msg );
+		    }
+		  }
+		  buf.append( (char) '\n' );
+		  appendToLog( buf.toString() );
+		  disableAutoClose();
+		}
+	      } else {
+		appendIgnoredToLog();
 	      }
-	    } else {
-	      appendIgnoredToLog();
 	    }
-	    rv = FileVisitResult.CONTINUE;
 	  }
 	}
+	rv = FileVisitResult.CONTINUE;
       }
     }
     return rv;
@@ -275,7 +270,6 @@ public class TarPacker extends AbstractThreadDlg
   {
     super( owner, "JKCEMU tar packer", true );
     this.srcPaths     = srcPaths;
-    this.outPath      = outFile.toPath();
     this.outFile      = outFile;
     this.out          = null;
     this.compression  = compression;
@@ -286,7 +280,7 @@ public class TarPacker extends AbstractThreadDlg
 
   private String getEntryDir( Path dir )
   {
-    String rv = null;
+    String rv = "";
     if( this.curRootPath != null ) {
       Path relPath = null;
       if( dir != null ) {
@@ -540,4 +534,3 @@ public class TarPacker extends AbstractThreadDlg
     this.out.write( headerBuf );
   }
 }
-

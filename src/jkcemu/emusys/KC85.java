@@ -938,6 +938,8 @@ public class KC85 extends EmuSys implements
 	      if( modName.equals( "M035x4" ) ) {
 		modName = "M035";
 		nItems  = 4;
+	      } else if( modName.equals( "M052" ) ) {
+		fileName = this.m052File;
 	      }
 	      for( int i = 0; i < nItems; i++ ) {
 		String[] modEntry = new String[ 4 ];
@@ -1534,12 +1536,13 @@ public class KC85 extends EmuSys implements
 	}
 	if( ch1 > 0 ) {
 	  pasteCharToKeyBuffer( (char) ch1, false );
+	  rv = true;
 	}
       }
       if( !rv ) {
 	setKeyNumPressed( keyNum );
+	rv = true;
       }
-      rv = true;
     } else {
       if( (ch > 0) && this.keyDirectToBuf ) {
 	pasteCharToKeyBuffer( TextUtil.umlautToISO646DE( ch ), false );
@@ -1999,9 +2002,16 @@ public class KC85 extends EmuSys implements
     this.lineTStateCounter    = 0;
     this.lineCounter          = 0;
     this.lastIX               = -1;
+    this.keyNumStageBuf       = 0;
+    this.keyNumStageNum       = 0;
+    this.keyNumStageMillis    = -1;
+    this.keyNumPressed        = -1;
+    this.keyNumProcessing     = -1;
+    this.keyShiftBitCnt       = 0;
+    this.keyShiftValue        = 0;
+    this.keyTStates           = 0;
     this.ctc.reset( coldReset );
     this.pio.reset( coldReset );
-    resetKeyInput();
     updAudioOut();
   }
 
@@ -2930,42 +2940,38 @@ public class KC85 extends EmuSys implements
   private int getSingleKeyNum()
   {
     int rv = -1;
-    if( this.keyDirectToBuf ) {
-      resetKeyInput();
-    } else {
-      if( this.keyNumStageNum > 0 ) {
-	switch( this.keyNumStageNum ) {
-	  case 1:
-	    if( System.currentTimeMillis() < this.keyNumStageMillis ) {
-	      this.keyNumStageNum++;	// im Wartezustand verbleiben
-	    } else {
-	      this.keyNumStageMillis = -1L;
-	    }
-	    break;
-	  case 2:
-	  case 3:
-	  case 4:
-	  case 5:
-	    rv = this.keyNumStageBuf & 0xFF;		// 2. Tastencode
-	    break;
-	  case 8:
-	    rv = (this.keyNumStageBuf >> 8) & 0xFF;	// 1. Tastencode
-	    break;
-	}
-	--this.keyNumStageNum;
-      } else {
-	int keyNum = this.keyNumPressed;
-	if( keyNum >= 0 ) {
-	  if( (keyNum & 0xFF00) != 0 ) {
-	    // 2-Byte-Tastencode
-	    this.keyNumStageBuf    = keyNum;
-	    this.keyNumStageNum    = 8;
-	    this.keyNumStageMillis = System.currentTimeMillis() + 300L;
-	    rv = (keyNum >> 8) & 0xFF;
+    if( this.keyNumStageNum > 0 ) {
+      switch( this.keyNumStageNum ) {
+	case 1:
+	  if( System.currentTimeMillis() < this.keyNumStageMillis ) {
+	    this.keyNumStageNum++;	// im Wartezustand verbleiben
 	  } else {
-	    // 1-Byte-Tastencode
-	    rv = keyNum & 0xFF;
+	    this.keyNumStageMillis = -1L;
 	  }
+	  break;
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	  rv = this.keyNumStageBuf & 0xFF;		// 2. Tastencode
+	  break;
+	case 8:
+	  rv = (this.keyNumStageBuf >> 8) & 0xFF;	// 1. Tastencode
+	  break;
+      }
+      --this.keyNumStageNum;
+    } else {
+      int keyNum = this.keyNumPressed;
+      if( keyNum >= 0 ) {
+	if( (keyNum & 0xFF00) != 0 ) {
+	  // 2-Byte-Tastencode
+	  this.keyNumStageBuf    = keyNum;
+	  this.keyNumStageNum    = 8;
+	  this.keyNumStageMillis = System.currentTimeMillis() + 300L;
+	  rv = (keyNum >> 8) & 0xFF;
+	} else {
+	  // 1-Byte-Tastencode
+	  rv = keyNum & 0xFF;
 	}
       }
     }
@@ -3195,19 +3201,6 @@ public class KC85 extends EmuSys implements
       rv += n;
     } while( loop );
     return rv;
-  }
-
-
-  private void resetKeyInput()
-  {
-    this.keyNumStageBuf    = 0;
-    this.keyNumStageNum    = 0;
-    this.keyNumStageMillis = -1;
-    this.keyNumPressed     = -1;
-    this.keyNumProcessing  = -1;
-    this.keyShiftBitCnt    = 0;
-    this.keyShiftValue     = 0;
-    this.keyTStates        = 0;
   }
 
 

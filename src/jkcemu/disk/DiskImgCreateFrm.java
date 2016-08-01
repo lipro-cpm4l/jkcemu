@@ -492,8 +492,8 @@ public class DiskImgCreateFrm
 	if( plainDisk || anaDisk || copyQMDisk || cpcDisk
 		|| imageDisk || teleDisk )
 	{
-	  boolean      cancelled = false;
-	  OutputStream out       = null;
+	  boolean      canceled = false;
+	  OutputStream out      = null;
 	  try {
 	    int sides      = this.fmtSelectFld.getSides();
 	    int cyls       = this.fmtSelectFld.getCylinders();
@@ -548,13 +548,13 @@ public class DiskImgCreateFrm
 			JOptionPane.OK_CANCEL_OPTION,
 			JOptionPane.ERROR_MESSAGE ) != JOptionPane.OK_OPTION )
 		  {
-		    cancelled = true;
+		    canceled = true;
 		    break;
 		  }
 		}
 	      }
 	    }
-	    if( !cancelled ) {
+	    if( !canceled ) {
 	      byte[] diskBuf = diskImgCreator.getPlainDiskByteBuffer();
 	      if( plainDisk ) {
 		out = EmuUtil.createOptionalGZipOutputStream( file );

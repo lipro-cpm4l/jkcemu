@@ -1,15 +1,17 @@
 <html>
 <body>
- <h1>Hinweise zur Emulation des LLC2</h1>
+ <h1>LLC2</h1>
   Der LLC2 ist ein von Dr. Gerd Maudrich 1985 entwickelter
   Eigenbau-Computer.
-  Der Studio Computer Club Halle (SCCH) hat sich dann
-  der Weiterentwicklung des LLC2 angenommen und ein Monitorprogramm
-  sowie einige Erweiterungsmodule entwickelt, die auch f&uuml;r den
+  Der Studio Computer Club Halle (SCCH) hat sich der Weiterentwicklung
+  des LLC2 angenommen und ein Monitorprogramm sowie
+  einige Erweiterungsmodule entwickelt, die auch f&uuml;r den
   <a href="ac1.htm">AC1</a> verf&uuml;gbar sind.
   Dadurch besteht in gewissen Grenzen eine Softwarekompatibilit&auml;t
   zwischen AC1 und LLC2.
- <br/>
+ <br/><br/>
+
+ <h2>Hinweise zur Emulation</h2>
   <ul>
    <li>
     <a href="llc2.htm#hardware">1. Emulierte Hardware</a>
@@ -19,7 +21,9 @@
      <li><a href="llc2.htm#scch_mod1">1.3. SCCH-Modul&nbsp;1</a></li>
      <li><a href="llc2.htm#scch_mod3">1.4. SCCH-Modul&nbsp;3</a></li>
      <li><a href="llc2.htm#scch_inverse">1.5. SCCH-Inversschaltung</a></li>
-     <a href="llc2.htm#pio_inverse">1.6. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+     <li>
+      <a href="llc2.htm#pio_inverse">1.6. Inversschaltung &uuml;ber System-PIO&nbsp;B5</a>
+     </li>
      <li><a href="llc2.htm#inverse_key">1.7. Inverstaste (F1)</a></li>
      <li><a href="llc2.htm#graphic_key">1.8. Grafiktaste (F2)</a></li>
      <li><a href="llc2.htm#font_switch">1.9. Zeichensatzumschaltung</a></li>
@@ -259,16 +263,16 @@
     </td>
    </tr>
    <tr>
-    <td valign="top"nowrap="nowrap">
+    <td valign="top" nowrap="nowrap">
      4&nbsp;KByte<br/>(2049 bis 4096 Bytes)
     </td>
     <td valign="top">
      Die Datei enth&auml;lt hintereinander zwei Zeichens&auml;tze.
      Der zweite beginnt ab Offset 0800h.
-    </th>
+    </td>
    </tr>
    <tr>
-    <td valign="top"nowrap="nowrap">
+    <td valign="top" nowrap="nowrap">
      8&nbsp;KByte<br/>(mehr als 4096 Bytes)
     </td>
     <td valign="top">

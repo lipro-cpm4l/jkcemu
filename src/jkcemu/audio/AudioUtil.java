@@ -23,7 +23,7 @@ public class AudioUtil
 					".cdt", ".csw", ".tap", ".tzx" };
 
   public static final String ERROR_TEXT_LINE_UNAVAILABLE =
-	"Der Audio-Kanal kann nicht ge\u00F6ffnet werden,\n"
+	"Der Audiokanal kann nicht ge\u00F6ffnet werden,\n"
 		+ "da er bereits durch eine andere Anwendung benutzt wird.";
 
   private static javax.swing.filechooser.FileFilter audioInFileFilter  = null;
@@ -109,25 +109,32 @@ public class AudioUtil
 						File      file )
   {
     AudioFileFormat.Type   rv     = null;
-    AudioFileFormat.Type[] fTypes = AudioSystem.getAudioFileTypes();
+    AudioFileFormat.Type[] fTypes = null;
     String                 fName  = file.getName();
-    if( (fTypes != null) && (fName != null) ) {
+    if( fName != null ) {
       fName = fName.toLowerCase();
-      for( AudioFileFormat.Type fType : fTypes ) {
-	String ext = fType.getExtension();
-	if( ext != null ) {
-	  ext = ext.toLowerCase();
-	  if( !ext.startsWith( "." ) ) {
-	    ext = "." + ext;
-	  }
-	  if( fName.endsWith( ext ) ) {
-	    rv = fType;
-	    break;
-	  }
-	  ext += ".gz";
-	  if( fName.endsWith( ext ) ) {
-	    rv = fType;
-	    break;
+      if( fName.endsWith( ".csw" ) || fName.endsWith( ".csw.gz" ) ) {
+	rv = new AudioFileFormat.Type( "CSW", "csw" );
+      } else {
+	fTypes = AudioSystem.getAudioFileTypes();
+	if( fTypes != null ) {
+	  for( AudioFileFormat.Type fType : fTypes ) {
+	    String ext = fType.getExtension();
+	    if( ext != null ) {
+	      ext = ext.toLowerCase();
+	      if( !ext.startsWith( "." ) ) {
+		ext = "." + ext;
+	      }
+	      if( fName.endsWith( ext ) ) {
+		rv = fType;
+		break;
+	      }
+	      ext += ".gz";
+	      if( fName.endsWith( ext ) ) {
+		rv = fType;
+		break;
+	      }
+	    }
 	  }
 	}
       }
@@ -137,16 +144,12 @@ public class AudioUtil
       buf.append( "Das Dateiformat wird nicht unterst\u00FCtzt." );
       if( fTypes != null ) {
 	if( fTypes.length > 0 ) {
-	  buf.append( "\nM\u00F6gliche Dateiendungen sind:\n" );
-	  String delim = null;
+	  buf.append( "\nM\u00F6gliche Dateiendungen sind:\ncsw" );
 	  for( AudioFileFormat.Type fType : fTypes ) {
 	    String ext = fType.getExtension();
 	    if( ext != null ) {
-	      if( delim != null ) {
-		buf.append( delim );
-	      }
+	      buf.append( ", " );
 	      buf.append( ext );
-	      delim = ", ";
 	    }
 	  }
 	}
@@ -280,7 +283,7 @@ public class AudioUtil
 
 
   /*
-   * Die Methode schreibt eine Audio-Datei.
+   * Die Methode schreibt eine Audiodatei.
    * Wenn der Dateiname auf ".gz" endet,
    * wird die Datei zuseatzlich gezippt.
    */
@@ -302,4 +305,3 @@ public class AudioUtil
     }
   }
 }
-

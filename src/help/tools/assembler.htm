@@ -91,21 +91,22 @@
  <br/><br/>
   In den Assembler-Optionen k&ouml;nnen Sie u.a. auch eine Datei angeben,
   in der der erzeugte Programmcode geschrieben wird.
-  Das Format der Datei ergibt sich dabei aus der Dateiendung.
+  Das Format der Datei ergibt sich dabei aus der Dateiendung
+  (*.tap ergibt eine <a href="../fileformats.htm#kctap">KC-TAP</a>-Datei).
  <br/><br/>
   <b>Achtung!</b>
   Bei <a href="../fileformats.htm#kcc">KCC</a>-,
   <a href="../fileformats.htm#kcm">KCM</a>- und
-  <a href="../fileformats.htm#tap">TAP</a>-Dateien gibt es Unterschiede
+  <a href="../fileformats.htm#kctap">KC-TAP</a>-Dateien gibt es Unterschiede
   zwischen KC85/1, KC87 und Z9001 auf der einen sowie HC900 und KC85/2..5
   auf der anderen Seite.
   Damit der Assembler das richtige Dateiformat erzeugt,
   orientiert er sich am gerade emulierten System.
   Emuliert JKCEMU gerade einen KC85/1, KC87 oder Z9001,
   wird in den Dateikopf der Dateityp <em>COM</em> eingetragen
-  und bei TAP-Dateien mit der Blocknummer&nbsp;0 begonnen.
+  und bei KC-TAP-Dateien mit der Blocknummer&nbsp;0 begonnen.
   In allen anderen F&auml;llen wird kein Dateityp eingetragen.
-  Au&szlig;erdem beginnen dann TAP-Dateien entsprechend den HC900-
+  Au&szlig;erdem beginnen dann KC-TAP-Dateien entsprechend den HC900-
   und KC85/2..5-Konventionen mit der Blocknummer&nbsp;1.
  <br/><br/>
   Wenn Sie mehrere Assembler-Quelltexte im Texteditor ge&ouml;ffnet haben,
@@ -1153,7 +1154,7 @@
      Wurde mit der Option <em>-o</em> eine
      <a href="../fileformats.htm#kcc">KCC</a>-,
      <a href="../fileformats.htm#kcm">KCM</a>- oder
-     <a href="../fileformats.htm#tap">TAP</a>-Datei
+     <a href="../fileformats.htm#kctap">TAP</a>-Datei
      angegeben, wird diese im Format f&uuml;r einen Z9001,
      KC85/1 und KC87 erzeugt (Dateityp <em>COM</em> eingetragen und
      bei TAP-Dateien hat der erste Block die Nummer&nbsp;0).

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -61,7 +61,7 @@ public abstract class AudioOut extends AudioIO
 
 
   /*
-   * Wo ein direkter Zugriff auf den Audio-Kanal notwendig ist,
+   * Wo ein direkter Zugriff auf den Audiokanal notwendig ist,
    * muss die Methode ueberschrieben werden.
    * Der Wertebereich ist unabhaengig vom konkreten AudioFormat
    * 0...MAX_OUT_VALUE.

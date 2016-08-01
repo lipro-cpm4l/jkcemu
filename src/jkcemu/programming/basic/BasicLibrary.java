@@ -74,26 +74,25 @@ public class BasicLibrary
 			XSCREEN, XJOY };
 
   // Fehlercodes
-  public static final int E_OK                    = 0;
-  public static final int E_ERROR                 = -1;
-  public static final int E_INVALID               = -2;
-  public static final int E_OVERFLOW              = -3;
-  public static final int E_CHANNEL_ALREADY_OPEN  = -11;
-  public static final int E_CHANNEL_CLOSED        = -12;
-  public static final int E_DEVICE_NOT_FOUND      = -21;
-  public static final int E_DEVICE_NOT_CONFIGURED = -22;
-  public static final int E_DEVICE_LOCKED         = -23;
-  public static final int E_HARDWARE              = -24;
-  public static final int E_NO_DISK               = -25;
-  public static final int E_FILE_NOT_FOUND        = -26;
-  public static final int E_PATH_NOT_FOUND        = -27;
-  public static final int E_IO_MODE               = -28;
-  public static final int E_IO_ERROR              = -29;
-  public static final int E_EOF                   = -30;
-  public static final int E_READ_ONLY             = -31;
-  public static final int E_DIR_FULL              = -32;
-  public static final int E_DISK_FULL             = -33;
-  public static final int E_MEDIA_CHANGED         = -34;
+  public static final int E_OK                   = 0;
+  public static final int E_ERROR                = -1;
+  public static final int E_INVALID              = -2;
+  public static final int E_OVERFLOW             = -3;
+  public static final int E_CHANNEL_ALREADY_OPEN = -11;
+  public static final int E_CHANNEL_CLOSED       = -12;
+  public static final int E_DEVICE_NOT_FOUND     = -21;
+  public static final int E_DEVICE_LOCKED        = -22;
+  public static final int E_HARDWARE             = -23;
+  public static final int E_NO_DISK              = -24;
+  public static final int E_FILE_NOT_FOUND       = -25;
+  public static final int E_PATH_NOT_FOUND       = -26;
+  public static final int E_IO_MODE              = -27;
+  public static final int E_IO_ERROR             = -28;
+  public static final int E_EOF                  = -29;
+  public static final int E_READ_ONLY            = -30;
+  public static final int E_DIR_FULL             = -31;
+  public static final int E_DISK_FULL            = -32;
+  public static final int E_MEDIA_CHANGED        = -33;
 
   /*
    * Offsets innerhalb des Kanalzeigerfelds
@@ -1505,12 +1504,12 @@ public class BasicLibrary
        *   (LINE_M_BY): untere Y-Koordinate
        *   (LINE_M_EX): rechte X-Koordinate
        *   (LINE_M_EY): ober Y-Koordinate
-       *   DE:       linke X-Koordinate
-       *   HL:       untere Y-Koordinate
-       *   BC:       Breite des Rechtecks - 1
-       *   CY=1:     rechte X- oder obere Y-Koordinate kleiner 0,
-       *             d.h., das Rechteck liegt volstaendig ausserhalb
-       *             des sichtbaren Bereichs
+       *   DE:          linke X-Koordinate
+       *   HL:          untere Y-Koordinate
+       *   BC:          Breite des Rechtecks - 1
+       *   CY=1:        rechte X- oder obere Y-Koordinate kleiner 0,
+       *                d.h., das Rechteck liegt vollstaendig
+       *                ausserhalb des sichtbaren Bereichs
        */
       buf.append( "H_BOX:\tLD\tHL,(LINE_M_EY)\n"
 		+ "\tLD\tDE,(LINE_M_BY)\n"

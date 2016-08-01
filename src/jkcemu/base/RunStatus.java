@@ -1,5 +1,5 @@
 /*
- * (c) 2008 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,7 @@ import java.lang.*;
 
 public class RunStatus
 {
-  private boolean cancelled;
+  private boolean canceled;
   private boolean failed;
   private boolean force;
   private boolean quiet;
@@ -21,10 +21,10 @@ public class RunStatus
 
   public RunStatus()
   {
-    this.cancelled = false;
-    this.failed    = false;
-    this.force     = false;
-    this.quiet     = false;
+    this.canceled = false;
+    this.failed   = false;
+    this.force    = false;
+    this.quiet    = false;
   }
 
 
@@ -40,9 +40,9 @@ public class RunStatus
   }
 
 
-  public void setCancelled( boolean state )
+  public void setCanceled( boolean state )
   {
-    this.cancelled = state;
+    this.canceled = state;
   }
 
 
@@ -64,9 +64,9 @@ public class RunStatus
   }
 
 
-  public boolean wasCancelled()
+  public boolean wasCanceled()
   {
-    return this.cancelled;
+    return this.canceled;
   }
 
 

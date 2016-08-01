@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,9 +22,7 @@ public class ZipPacker extends AbstractThreadDlg
 			implements FileVisitor<Path>
 {
   private Collection<Path> srcPaths;
-  private String           curEntryDir;
   private Path             curRootPath;
-  private Path             outPath;
   private File             outFile;
   private ZipOutputStream  out;
 
@@ -64,27 +62,25 @@ public class ZipPacker extends AbstractThreadDlg
     } else {
       if( (dir != null) && (attrs != null) ) {
 	if( attrs.isDirectory() ) {
-	  this.curEntryDir = getEntryDir( dir );
-	  if( this.curEntryDir != null ) {
-	    if( !this.curEntryDir.isEmpty() ) {
-	      appendToLog( dir.toString() + "\n" );
-	      try {
-		ZipEntry entry = new ZipEntry( this.curEntryDir );
-		entry.setMethod( ZipEntry.STORED );
-		entry.setCrc( 0 );
-		entry.setCompressedSize( 0 );
-		entry.setSize( 0 );
-		FileTime lastModified = attrs.lastModifiedTime();
-		if( lastModified != null ) {
-		  entry.setTime( lastModified.toMillis() );
-		}
-		this.out.putNextEntry( entry );
-		this.out.closeEntry();
-		rv = FileVisitResult.CONTINUE;
+	  String entryDir = getEntryDir( dir );
+	  if( !entryDir.isEmpty() ) {
+	    appendToLog( dir.toString() + "\n" );
+	    try {
+	      ZipEntry entry = new ZipEntry( entryDir );
+	      entry.setMethod( ZipEntry.STORED );
+	      entry.setCrc( 0 );
+	      entry.setCompressedSize( 0 );
+	      entry.setSize( 0 );
+	      FileTime lastModified = attrs.lastModifiedTime();
+	      if( lastModified != null ) {
+		entry.setTime( lastModified.toMillis() );
 	      }
-	      catch( IOException ex ) {
-		appendErrorToLog( ex );
-	      }
+	      this.out.putNextEntry( entry );
+	      this.out.closeEntry();
+	      rv = FileVisitResult.CONTINUE;
+	    }
+	    catch( IOException ex ) {
+	      appendErrorToLog( ex );
 	    }
 	  }
 	}
@@ -102,68 +98,68 @@ public class ZipPacker extends AbstractThreadDlg
       rv = FileVisitResult.TERMINATE;
     } else {
       if( (file != null) && (attrs != null) ) {
-	if( this.curEntryDir == null ) {
-	  this.curEntryDir = getEntryDir( file.getParent() );
-	}
-	if( this.curEntryDir != null ) {
-	  int nameCnt = file.getNameCount();
-	  if( nameCnt > 0 ) {
-	    appendToLog( file.toString() + "\n" );
-	    if( attrs.isRegularFile() ) {
-	      FileProgressInputStream in = null;
-	      try {
-		in = openInputFile( file.toFile(), 2 );
+	Path namePath = file.getFileName();
+	if( namePath != null ) {
+	  String fileName = namePath.toString();
+	  if( fileName != null ) {
+	    if( !fileName.isEmpty() ) {
+	      appendToLog( file.toString() + "\n" );
+	      String entryDir = getEntryDir( file.getParent() );
+	      if( attrs.isRegularFile() ) {
+		FileProgressInputStream in = null;
+		try {
+		  in = openInputFile( file.toFile(), 2 );
 
-		// CRC32-Pruefsumme und Dateigroesse ermitteln
-		CRC32 crc32 = new CRC32();
-		long  fSize = 0;
-		int   b     = in.read();
-		while( !this.canceled && (b != -1) ) {
-		  fSize++;
-		  crc32.update( b );
+		  // CRC32-Pruefsumme und Dateigroesse ermitteln
+		  CRC32 crc32 = new CRC32();
+		  long  fSize = 0;
+		  int   b     = in.read();
+		  while( !this.canceled && (b != -1) ) {
+		    fSize++;
+		    crc32.update( b );
+		    b = in.read();
+		  }
+		  in.seek( 0 );
+
+		  // ZIP-Eintrag anlegen
+		  ZipEntry entry = new ZipEntry( entryDir + fileName );
+		  entry.setCrc( crc32.getValue() );
+		  entry.setMethod( ZipEntry.DEFLATED );
+		  entry.setSize( fSize );
+		  FileTime lastModified = attrs.lastModifiedTime();
+		  if( lastModified != null ) {
+		    entry.setTime( lastModified.toMillis() );
+		  }
+		  this.out.putNextEntry( entry );
+
+		  // Datei in Eintrag schreiben
 		  b = in.read();
+		  while( !this.canceled && (b != -1) ) {
+		    this.out.write( b );
+		    b = in.read();
+		  }
+		  this.out.closeEntry();
 		}
-		in.seek( 0 );
-
-		// ZIP-Eintrag anlegen
-		ZipEntry entry = new ZipEntry( this.curEntryDir
-				+ file.getName( nameCnt - 1 ).toString() );
-		entry.setCrc( crc32.getValue() );
-		entry.setMethod( ZipEntry.DEFLATED );
-		entry.setSize( fSize );
-		FileTime lastModified = attrs.lastModifiedTime();
-		if( lastModified != null ) {
-		  entry.setTime( lastModified.toMillis() );
+		catch( IOException ex ) {
+		  appendErrorToLog( ex );
+		  incErrorCount();
 		}
-		this.out.putNextEntry( entry );
-
-		// Datei in Eintrag schreiben
-		b = in.read();
-		while( !this.canceled && (b != -1) ) {
-		  this.out.write( b );
-		  b = in.read();
+		catch( UnsupportedOperationException ex ) {
+		  appendIgnoredToLog();
 		}
-		this.out.closeEntry();
-	      }
-	      catch( IOException ex ) {
-		appendErrorToLog( ex );
-		incErrorCount();
-	      }
-	      catch( UnsupportedOperationException ex ) {
+		finally {
+		  EmuUtil.doClose( in );
+		}
+	      } else if( attrs.isSymbolicLink() ) {
+		appendToLog( " Symbolischer Link ignoriert\n" );
+		disableAutoClose();
+	      } else {
 		appendIgnoredToLog();
 	      }
-	      finally {
-		EmuUtil.doClose( in );
-	      }
-	    } else if( attrs.isSymbolicLink() ) {
-	      appendToLog( " Symbolischer Link ignoriert\n" );
-	      disableAutoClose();
-	    } else {
-	      appendIgnoredToLog();
 	    }
-	    rv = FileVisitResult.CONTINUE;
 	  }
 	}
+	rv = FileVisitResult.CONTINUE;
       }
     }
     return rv;
@@ -240,7 +236,6 @@ public class ZipPacker extends AbstractThreadDlg
   {
     super( owner, "JKCEMU zip packer", true );
     this.srcPaths = srcPaths;
-    this.outPath  = outFile.toPath();
     this.outFile  = outFile;
     this.out      = null;
   }
@@ -248,7 +243,7 @@ public class ZipPacker extends AbstractThreadDlg
 
   private String getEntryDir( Path dir )
   {
-    String rv = null;
+    String rv = "";
     if( this.curRootPath != null ) {
       Path relPath = null;
       if( dir != null ) {
@@ -277,4 +272,3 @@ public class ZipPacker extends AbstractThreadDlg
     return rv;
   }
 }
-

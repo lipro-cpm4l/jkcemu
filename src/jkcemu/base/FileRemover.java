@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2015 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -129,7 +129,7 @@ public class FileRemover extends AbstractFileWorker
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    if( !this.cancelled ) {
+    if( !this.canceled ) {
       this.curPath = dir;
       try {
 	Files.delete( dir );
@@ -140,7 +140,7 @@ public class FileRemover extends AbstractFileWorker
 	handleError( dir, ex1 );
       }
     }
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -148,7 +148,7 @@ public class FileRemover extends AbstractFileWorker
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    if( !this.cancelled ) {
+    if( !this.canceled ) {
       this.curPath = file;
       try {
 	Files.delete( file );
@@ -159,7 +159,7 @@ public class FileRemover extends AbstractFileWorker
 	handleError( file, ex1 );
       }
     }
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 

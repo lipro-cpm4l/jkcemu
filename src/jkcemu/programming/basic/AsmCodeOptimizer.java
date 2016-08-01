@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2015 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,6 +21,8 @@ import jkcemu.programming.assembler.AsmLine;
 
 public class AsmCodeOptimizer
 {
+  private static final String CODE_CALL_O_GE   = "\tCALL\tO_GE\n";
+  private static final String CODE_CALL_O_LT   = "\tCALL\tO_LT\n";
   private static final String CODE_CALL_SCREEN = "\tCALL\tSCREEN\n";
   private static final String CODE_SCREEN_0    = "\tLD\tHL,0000H\n"
                                                 + "\tCALL\tSCREEN\n";
@@ -32,6 +34,7 @@ public class AsmCodeOptimizer
     AsmCodeBuf buf = compiler.getCodeBuf();
     if( buf != null ) {
       buf.setEnabled( true );
+
       /*
        * Entfernen der SCREEN-Anweisungen,
        * wenn diese immer "SCREEN 0" sind
@@ -45,6 +48,36 @@ public class AsmCodeOptimizer
       java.util.List<String> lines = buf.getLinesAsList( 0 );
       removeUnusedLineLabels( lines, compiler );
       buf.setLines( lines );
+
+      // Optimieren von "IF X<Y THEN"
+      if( buf.replace(
+		CODE_CALL_O_LT
+			+ "\tLD\tA,H\n"
+			+ "\tOR\tL\n"
+			+ "\tJP\tZ,",
+		"\tCALL\tCPHLDE\n"
+			+ "\tJP\tNC," ) )
+      {
+	if( !buf.contains( CODE_CALL_O_LT ) ) {
+	  compiler.getLibItems().remove( BasicLibrary.LibItem.O_LT );
+	  compiler.getLibItems().add( BasicLibrary.LibItem.CPHLDE );
+	}
+      }
+
+      // Optimieren von "IF X>=Y THEN"
+      if( buf.replace(
+		CODE_CALL_O_GE
+			+ "\tLD\tA,H\n"
+			+ "\tOR\tL\n"
+			+ "\tJP\tZ,",
+		"\tCALL\tCPHLDE\n"
+			+ "\tJP\tC," ) )
+      {
+	if( !buf.contains( CODE_CALL_O_GE ) ) {
+	  compiler.getLibItems().remove( BasicLibrary.LibItem.O_GE );
+	  compiler.getLibItems().add( BasicLibrary.LibItem.CPHLDE );
+	}
+      }
     }
   }
 

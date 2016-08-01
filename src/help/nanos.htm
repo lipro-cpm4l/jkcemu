@@ -1,19 +1,18 @@
 <html>
 <body>
- <h1>Hinweise zur Emulation von NANOS</h1>
+ <h1>NANOS</h1>
   NANOS ist ein Baugruppensystem, welches von der Ingenieurhochschule
   f&uuml;r Seefahrt Warnem&uuml;nde/Wustrow entwickelt wurde
   und sich an den in der DDR f&uuml;r industrielle Anwendungen
-  weit verbreiteten K1520-Bussystem orientiert.
+  weit verbreiteten K1520-Bussystem orientierte.
   NANOS beschreibt somit keinen konkreten Computer,
   sondern nur einen Satz von Platinen (Baugruppen),
   aus denen ein Rechner zusammengestellt werden konnte.
-  Auf solch einem Computer konnten verschiedene Betriebssysteme
-  verwendet werden.
+  F&uuml;r solch einen Computer standen verschiedene Betriebssysteme
+  zur Verf&uuml;gung.
  <br/><br/>
-  JKCEMU emuliert die wichtigesten NANOS-Platinen sowie einige
-  neuzeitliche Entwicklungen.
- <br/>
+
+ <h2>Hinweise zur Emulation</h2>
   <ul>
    <li>
     <a href="nanos.htm#hardware">1. Emulierte Hardware</a>
@@ -36,6 +35,9 @@
  <br/>
 
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  JKCEMU emuliert die wichtigesten NANOS-Platinen sowie einige
+  neuzeitliche Entwicklungen.
+ <br/><br/>
 
  <h3><a name="zre">1.1. ZRE-Baugruppe</a></h3>
   Es wird die Baugruppe <em>Zentrale Recheneinheit&nbsp;1</em>
@@ -166,7 +168,7 @@
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   <ul>
    <li>Boot-ROM zum Booten von NANOS&nbsp;2.2</li>
-   <li>Boot-ROM zum Booten von EPOS&nbsp;2.0</li>
+   <li>Boot-ROM zum Booten von EPOS&nbsp;2.1</li>
   </ul>
  <br/>
   In beiden Boot-ROMs ist jeweils ein Urlader enthalten,
@@ -198,7 +200,7 @@
     </ul>
    </li>
    <li>
-    <u>EPOS&nbsp;2.0 Boot-Diskette (64x32 Zeichen)</u><br/>
+    <u>EPOS&nbsp;2.1 Boot-Diskette (64x32 Zeichen)</u><br/>
     F&uuml;r die Nutzung des Diskettenabbildes m&uuml;ssen Sie
     folgende Konfiguration einstellen:
     <ul>
@@ -210,11 +212,11 @@
       </ul>
      </li>
      <li>Tastatur an ZRE-PIO Port&nbsp;A mit Strobe an Bit&nbsp;7</li>
-     <li>Boot-ROM f&uuml;r EPOS&nbsp;2.0</li>
+     <li>Boot-ROM f&uuml;r EPOS&nbsp;2.1</li>
     </ul>
    </li>
    <li>
-    <u>EPOS&nbsp;2.0 Boot-Diskette (80x24 Zeichen)</u><br/>
+    <u>EPOS&nbsp;2.1 Boot-Diskette (80x24 Zeichen)</u><br/>
     F&uuml;r die Nutzung des Diskettenabbildes m&uuml;ssen Sie
     folgende Konfiguration einstellen:
     <ul>
@@ -226,7 +228,7 @@
       </ul>
      </li>
      <li>Tastatur an ZRE-PIO Port&nbsp;A mit Strobe an Bit&nbsp;7</li>
-     <li>Boot-ROM f&uuml;r EPOS&nbsp;2.0</li>
+     <li>Boot-ROM f&uuml;r EPOS&nbsp;2.1</li>
     </ul>
    </li>
   </ul>

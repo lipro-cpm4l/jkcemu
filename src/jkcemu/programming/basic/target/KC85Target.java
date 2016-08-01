@@ -792,13 +792,6 @@ public class KC85Target extends AbstractTarget
 
 
   @Override
-  public String getHostName()
-  {
-    return "KC85";
-  }
-
-
-  @Override
   public int getMaxAppNameLen()
   {
     return 38;

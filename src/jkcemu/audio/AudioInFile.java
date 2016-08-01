@@ -5,7 +5,7 @@
  *
  * Klasse fuer die Emulation
  * des Anschlusses des Magnettonbandgeraetes (Eingang),
- * indem die Audio-Daten von einer Datei gelesen werden.
+ * indem die Audiodaten von einer Datei gelesen werden.
  */
 
 package jkcemu.audio;
@@ -28,11 +28,11 @@ public class AudioInFile extends AudioIn
   private File             file;
   private byte[]           fileBytes;
   private int              offs;
-  private boolean          tapeFile;
   private AudioInputStream audioIn;
   private InputStream      rawIn;
+  private String           specialFmtText;
   private byte[]           frameBuf;
-  private long             frameCount;
+  private long             frameCnt;
   private long             framePos;
   private int              progressStepSize;
   private int              progressStepCnt;
@@ -51,11 +51,11 @@ public class AudioInFile extends AudioIn
     this.file             = file;
     this.fileBytes        = fileBytes;
     this.offs             = offs;
-    this.tapeFile         = false;
     this.audioIn          = null;
     this.rawIn            = null;
+    this.specialFmtText   = null;
     this.frameBuf         = null;
-    this.frameCount       = 0L;
+    this.frameCnt         = 0L;
     this.framePos         = 0L;
     this.progressStepSize = 0;
     this.progressStepCnt  = 0;
@@ -95,12 +95,14 @@ public class AudioInFile extends AudioIn
       this.pause    = true;
       this.framePos = 0;
       try {
-	this.tapeFile = false;
+	boolean isTAP       = false;
+	this.specialFmtText = null;
 	if( (this.fileBytes == null) && (file != null) ) {
 	  if( file.isFile() ) {
 	    String fName = file.getName();
 	    if( fName != null ) {
 	      fName = fName.toLowerCase();
+	      isTAP = fName.endsWith( ".tap" );
 	      if( TextUtil.endsWith( fName, AudioUtil.tapeFileExtensions ) ) {
 		this.fileBytes = EmuUtil.readFile(
 						this.file,
@@ -112,16 +114,16 @@ public class AudioInFile extends AudioIn
 	}
 	if( this.fileBytes != null ) {
 	  /*
-	   * Wird in der Mitte einer Multi-TAP-Datei begonnen,
+	   * Wird in der Mitte einer Multi-Tape-Datei begonnen,
 	   * soll auch die Fortschrittsanzeige in der Mitte beginnen.
 	   * Aus diesem Grund wird in dem Fall sowohl die Gesamtlaenge
-	   * als auch die Restlaenge der Multi-TAP-Datei ermittelt.
+	   * als auch die Restlaenge der Multi-Tape-Datei ermittelt.
 	   */
 	  EmuSysAudioDataStream ads = null;
-	  if( FileInfo.isKCTapHeaderAt(
+	  if( FileInfo.isKCTapMagicAt(
 				this.fileBytes,
-				this.fileBytes.length - this.offs,
-				this.offs ) )
+				this.offs,
+				this.fileBytes.length - this.offs ) )
 	  {
 	    ads = new KCAudioDataStream(
 				true,
@@ -129,33 +131,71 @@ public class AudioInFile extends AudioIn
 				this.fileBytes,
 				0,
 				this.fileBytes.length - this.offs );
-	    this.frameCount = ads.getFrameLength();
-	    this.framePos   = 0;
+	    this.frameCnt = ads.getFrameLength();
+	    this.framePos = 0;
 	    if( this.offs > 0 ) {
+	      // Resetlaenge ermitteln und Fotschrittsanzeige anpassen
 	      ads = new KCAudioDataStream(
 				true,
 				0,
 				this.fileBytes,
 				this.offs,
 				this.fileBytes.length - this.offs );
-	      this.framePos = this.frameCount - ads.getFrameLength();
+	      this.framePos = this.frameCnt - ads.getFrameLength();
 	    }
-	  } else {
-	    ads = new ZXSpectrumAudioDataStream(
+	    this.specialFmtText = "KC-TAP-Datei";
+	  }
+	  else if( FileInfo.isCswMagicAt(
+				this.fileBytes,
+				this.offs,
+				this.fileBytes.length - this.offs ) )
+	  {
+	    this.audioIn = CSWFile.getAudioInputStream(
+				this.fileBytes,
+				0,
+				this.fileBytes.length - this.offs );
+	    this.frameCnt = this.audioIn.getFrameLength();
+	    this.framePos = 0;
+	    if( this.offs > 0 ) {
+	      // Resetlaenge ermitteln und Fotschrittsanzeige anpassen
+	      this.audioIn = CSWFile.getAudioInputStream(
 				this.fileBytes,
 				this.offs,
 				this.fileBytes.length - this.offs );
-	    this.frameCount = ads.getFrameLength();
-	    this.framePos   = 0;
-	    if( this.offs > 0 ) {
+	      this.framePos = this.frameCnt - ads.getFrameLength();
+	    }
+	    this.specialFmtText = String.format(
+		"CSW-Datei, %d Hz",
+		Math.round( this.audioIn.getFormat().getSampleRate() ) );
+	  } else {
+	    boolean isTZX = FileInfo.isTzxMagicAt(
+				this.fileBytes,
+				this.offs,
+				this.fileBytes.length - this.offs );
+	    if( isTAP || isTZX ) {
+	      // Gesamtlaenge der Datei ermitteln
 	      ads = new ZXSpectrumAudioDataStream(
 				this.fileBytes,
+				0,
+				this.fileBytes.length - this.offs );
+	      this.frameCnt = ads.getFrameLength();
+	      this.framePos = 0;
+	      if( this.offs > 0 ) {
+		// Resetlaenge ermitteln und Fotschrittsanzeige anpassen
+		ads = new ZXSpectrumAudioDataStream(
+				this.fileBytes,
 				this.offs,
 				this.fileBytes.length - this.offs );
-	      this.framePos = this.frameCount - ads.getFrameLength();
+		this.framePos = this.frameCnt - ads.getFrameLength();
+	      }
+	      if( isTZX ) {
+		this.specialFmtText = "CDT/TZX-Datei";
+	      } else {
+		this.specialFmtText = "ZX-TAP-Datei";
+	      }
 	    }
 	  }
-	  if( ads != null ) {
+	  if( (this.audioIn == null) && (ads != null) ) {
 	    if( this.framePos < 0 ) {
 	      this.framePos = 0;
 	    }
@@ -163,23 +203,31 @@ public class AudioInFile extends AudioIn
 				ads,
 				ads.getAudioFormat(),
 				ads.getFrameLength() );
-	    this.tapeFile = true;
 	  }
 	}
 	if( this.audioIn == null ) {
-	  this.rawIn      = EmuUtil.openBufferedOptionalGZipFile( this.file );
-	  this.audioIn    = AudioSystem.getAudioInputStream( this.rawIn );
-	  this.frameCount = this.audioIn.getFrameLength();
+	  if( this.fileBytes != null ) {
+	    this.audioIn = AudioSystem.getAudioInputStream(
+			new ByteArrayInputStream(
+				this.fileBytes,
+				this.offs,
+				this.fileBytes.length - this.offs ) );
+	  } else {
+	    this.rawIn   = EmuUtil.openBufferedOptionalGZipFile( this.file );
+	    this.audioIn = AudioSystem.getAudioInputStream( this.rawIn );
+	  }
+	  this.frameCnt = this.audioIn.getFrameLength();
+	  this.framePos = 0;
 	}
 	fmt = this.audioIn.getFormat();
-	if( this.frameCount > 0 ) {
-	  this.progressStepSize = (int) this.frameCount / 100;
+	if( this.frameCnt > 0 ) {
+	  this.progressStepSize = (int) this.frameCnt / 100;
 	  this.progressStepCnt  = this.progressStepSize;
 	  this.progressEnabled  = true;
 	  this.firstCall        = true;
 	  this.speedKHz         = speedKHz;
 	  this.audioFrm.fireProgressUpdate(
-			(float) this.framePos / (float) this.frameCount );
+			(float) this.framePos / (float) this.frameCnt );
 	}
       }
       catch( UnsupportedAudioFileException ex ) {
@@ -218,9 +266,9 @@ public class AudioInFile extends AudioIn
 
 
   @Override
-  public boolean isTapeFile()
+  public String getSpecialFormatText()
   {
-    return this.tapeFile;
+    return this.specialFmtText;
   }
 
 
@@ -266,7 +314,7 @@ public class AudioInFile extends AudioIn
 	  } else {
 	    this.progressStepCnt = this.progressStepSize;
 	    this.audioFrm.fireProgressUpdate(
-			(float) this.framePos / (float) this.frameCount );
+			(float) this.framePos / (float) this.frameCnt );
 	  }
 	} else {
 	  buf = null;

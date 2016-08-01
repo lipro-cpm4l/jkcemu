@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2015 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -31,7 +31,7 @@ public abstract class AbstractFileWorker
 
   protected volatile Path    curParent;
   protected volatile Path    curPath;
-  protected volatile boolean cancelled;
+  protected volatile boolean canceled;
 
   private Window                         owner;
   private PathListener                   pathListener;
@@ -69,7 +69,7 @@ public abstract class AbstractFileWorker
     this.progressDlg   = null;
     this.progressLabel = null;
     this.progressTimer = null;
-    this.cancelled     = false;
+    this.canceled      = false;
     this.failed        = false;
     this.skipAll       = false;
     this.progressDlg   = null;
@@ -106,7 +106,7 @@ public abstract class AbstractFileWorker
 
   public void cancelWork()
   {
-    this.cancelled = true;
+    this.canceled = true;
     setProgressText( "Vorgang abgebrochen, bitte warten..." );
     Thread thread = this.thread;
     if( thread != null ) {
@@ -233,7 +233,7 @@ public abstract class AbstractFileWorker
 	  this.skipAll = true;
 	  break;
 	default:
-	  this.cancelled = true;
+	  this.canceled = true;
       }
     }
   }
@@ -276,7 +276,7 @@ public abstract class AbstractFileWorker
       }
       catch( IllegalMonitorStateException ex1 ) {}
       catch( InterruptedException ex2 ) {
-	this.cancelled = true;
+	this.canceled = true;
       }
     }
     int    rv    = -1;
@@ -366,7 +366,7 @@ public abstract class AbstractFileWorker
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -376,7 +376,7 @@ public abstract class AbstractFileWorker
 				Path                dir,
 				BasicFileAttributes attrs )
   {
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -384,7 +384,7 @@ public abstract class AbstractFileWorker
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -392,7 +392,7 @@ public abstract class AbstractFileWorker
   @Override
   public FileVisitResult visitFileFailed( Path file, IOException ex )
   {
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -405,7 +405,7 @@ public abstract class AbstractFileWorker
     try {
       if( this.paths != null ) {
 	for( Path path : this.paths ) {
-	  if( this.cancelled ) {
+	  if( this.canceled ) {
 	    break;
 	  }
 	  try {
@@ -451,7 +451,7 @@ public abstract class AbstractFileWorker
 
   private void updProgressDlg()
   {
-    if( this.cancelled ) {
+    if( this.canceled ) {
       if( this.progressTimer != null ) {
 	this.progressTimer.stop();
       }
@@ -482,7 +482,7 @@ public abstract class AbstractFileWorker
       this.progressDlg.dispose();
       this.progressDlg = null;
     }
-    if( this.failed && !this.cancelled ) {
+    if( this.failed && !this.canceled ) {
       BasicDlg.showErrorDlg( owner, getUncompletedWorkMsg() );
     }
   }

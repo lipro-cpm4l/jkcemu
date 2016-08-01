@@ -1,6 +1,6 @@
 <html>
 <body>
- <h1>Hinweise zur Emulation des HC900 und KC85/2...5</h1>
+ <h1>HC900 und KC85/2...5</h1>
   Die Computer HC900, KC85/2, KC85/3 und KC85/4 wurden im
   VEB Mikroelektronik M&uuml;hlhausen hergestellt.
   Beim KC85/2 handelt es sich eigentlich nur um einen umbenannten HC900.
@@ -30,6 +30,8 @@
   und 48&nbsp;KByte ROM sowie einer neuen Betriebssystemversion,
   die diesen zus&auml;tzlichen Speicher verwalten kann.
  <br/><br/>
+
+ <h2>Hinweise zur Emulation</h2>
   <ul>
    <li>
     <a href="kc85.htm#hardware">1. Emulierte Hardware</a>
@@ -197,7 +199,7 @@
   Die originale Tastatursteuerung ist aufgrund der speziellen Hardware
   und der Interrupt-gesteuerten Tastencode-Dekodierung relativ tr&auml;ge.
   JKCEMU emuliert die originale Tastatursteuerung vollst&auml;ndig,
-  weshalb diese auch in der Emulation recht tr&auml;ge wirkt.
+  weshalb diese in der Emulation ebenfalls recht tr&auml;ge wirkt.
   Mit Einschalten der Option
   <em>Schnellere Tastatureingaben durch direktes Schreiben in den
   Tastaturpuffer</em>
@@ -206,9 +208,12 @@
   bzw. MicroDOS-/ML-DOS-Tastaturtabelle eingetragenen Tastencode-Mappings
   direkt in den Tastaturpuffer geschrieben.
   Dadurch wirkt die Tastatur deutlich fl&uuml;ssiger.
-  Sollten jedoch aufgrund spezieller Umst&auml;nde oder durch Verwendung
-  eines anderen Betriebssystems anstelle von CAOS
-  keine Tastatureingaben mehr m&ouml;glich sein,
+ <br/><br/>
+  <b>Achtung!</b> Das Einschalten der Option bedeutet aber auch,
+  dass der Emulator nicht mehr exakt das originale Verhalten nachbildet.
+  Damit kommen m&ouml;glicherweise manche Programme nicht klar.
+  Wenn Sie also ein Programm benutzen,
+  bei dem es Probleme mit den Tastatureingaben gibt,
   m&uuml;ssen Sie die Option ausschalten.
  <br/><br/>
 
@@ -305,7 +310,7 @@
   welches auch der Lautst&auml;rkesteuerung unterliegt (Mono)
   oder die beiden Tongeneratoren links und rechts getrennt
   ohne Lautst&auml;rkesteuerung (Stereo).
-  Bei allen anderen Audio-Funktionen wird das Signal des Tongenerators&nbsp;1
+  Bei allen anderen Audiofunktionen wird das Signal des Tongenerators&nbsp;1
   (linker Kanal) ohne Lautst&auml;rkesteuerung ausgegeben,
   d.h. das Signal, mit dem Dateien auf Kassette gespeichert werden.
  <br/><br/>

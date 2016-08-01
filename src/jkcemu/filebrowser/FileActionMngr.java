@@ -181,7 +181,7 @@ public class FileActionMngr
 	} else if( actionCmd.equals( ACTION_LAST_MODIFIED ) ) {
 	  if( LastModifiedDlg.open(
 				this.owner,
-				getFiles( files, false ) ) )
+				getPaths( files ) ) )
 	  {
 	    rv = FileActionResult.FILES_CHANGED;
 	  }

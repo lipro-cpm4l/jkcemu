@@ -74,7 +74,7 @@ public class A5105 extends EmuSys implements
 							rbasicSysDisk };
 
   private static final int BIOS_ADDR_CONIN     = 0xFD09;
-  private static final int V24_TSTATES_PER_BIT = 430;
+  private static final int V24_TSTATES_PER_BIT = 390;
 
   private static CharConverter cp437    = null;
   private static byte[]        romK1505 = null;

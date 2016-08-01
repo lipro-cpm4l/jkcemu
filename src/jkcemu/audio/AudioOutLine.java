@@ -3,7 +3,7 @@
  *
  * Kleincomputer-Emulator
  *
- * Klasse zur Bedienung des Audio-Ausgangs
+ * Klasse zur Bedienung des Audioausgangs
  * fuer die Emulation des Anschlusses des Magnettonbandgeraetes
  */
 
@@ -49,7 +49,7 @@ public class AudioOutLine extends AudioOut
   {
     if( (this.dataLine == null) && (speedKHz > 0) ) {
 
-      // Audio-Ausgabekanal oeffnen, Mono
+      // Audioausgabekanal oeffnen, Mono
       SourceDataLine line = null;
       if( sampleRate > 0 ) {
 	line = openSourceDataLine( mixer, sampleRate, stereo );
@@ -68,7 +68,7 @@ public class AudioOutLine extends AudioOut
 	this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
 					/ this.audioFmt.getSampleRate() );
 
-	// Audio-Buffer anlegen
+	// Audiopuffer anlegen
 	int r = Math.round( this.audioFmt.getSampleRate() );
 	int n = line.getBufferSize() / 32;
 	if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
@@ -95,8 +95,8 @@ public class AudioOutLine extends AudioOut
    * der seit dem letzten Aufruf vergangenen Taktzyklen.
    *
    * Rueckgabewert:
-   *   true:  Audio-Daten verwenden
-   *   false: Audio-Daten verwerfen
+   *   true:  Audiodaten verwenden
+   *   false: Audiodaten verwerfen
    */
   @Override
   protected boolean currentDiffTStates( long diffTStates )
@@ -139,7 +139,7 @@ public class AudioOutLine extends AudioOut
     SourceDataLine line = this.dataLine;
     if( line != null ) {
 
-      // Puffer schreiben, wenn gerade Audio-Daten ausgegeben werden
+      // Puffer schreiben, wenn gerade Audiodaten ausgegeben werden
       if( line.isActive() ) {
 	byte[] audioBuf = this.audioBuf;
 	if( audioBuf != null ) {

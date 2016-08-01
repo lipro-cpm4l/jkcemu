@@ -124,10 +124,10 @@ James A. Woods, Joe Orost, David Rowley:
 ---------------
 
 1. Installieren Sie die Java Runtime Environment (JRE)
-   der Java Standard Edition (Java SE) Version 6 oder hoeher.
+   der Java Standard Edition (Java SE) Version 7 oder hoeher.
    Ueberpruefen Sie die installierte Java-Version durch den
    Kommandozeilenaufruf: "java -version"
-   Fuer Java 6 muss die Versionsnummer 1.6.x erscheinen.
+   Fuer Java 7 muss die Versionsnummer 1.7.x erscheinen.
 2. Laden Sie die Datei jkcemu.jar von http://www.jens-mueller.org/jkcemu
    herunter. Die Datei darf dabei nicht als ZIP-Datei entpackt werden!
 3. Kopieren Sie die Datei jkcemu.jar in ein beliebiges Verzeichnis
@@ -146,7 +146,7 @@ James A. Woods, Joe Orost, David Rowley:
 
 Moechten Sie den Quelltext compilieren, sind folgende Schritte notwendig:
 1. Stellen Sie sicher, dass das Java Development Kit (JDK)
-   der Java Standard Edition (Java SE) Version 6 oder hoeher installiert ist.
+   der Java Standard Edition (Java SE) Version 7 oder hoeher installiert ist.
 2. Wechseln Sie in das cmd-Verzeichnis des JKCEMU-Quelltextes
 3. Compilieren Sie
    - unter Linux/Unix mit: "./compile"

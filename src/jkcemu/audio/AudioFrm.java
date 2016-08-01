@@ -1,10 +1,10 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Audio-Ausgang
- * Emulation des Anschlusses des Magnettonbandgeraetes
+ * Fenster fuer die Audiofunktionen zur Emulation
+ * des Kassettenrecortderanschlusses bzw. des Tonausgangs
  */
 
 package jkcemu.audio;
@@ -203,7 +203,7 @@ public class AudioFrm
 
   /*
    * Wenn sich die Emulationsgeschwindigkeit aendert,
-   * stimmt die Synchronisation mit dem Audio-System nicht mehr.
+   * stimmt die Synchronisation mit dem Audiosystem nicht mehr.
    */
   @Override
   public void z80MaxSpeedChanged( Z80CPU cpu )
@@ -337,14 +337,14 @@ public class AudioFrm
     this.btnSoundOut.addActionListener( this );
     panelFct.add( this.btnSoundOut, gbcFct );
 
-    this.btnDataOut = new JRadioButton( "Daten am Audio-Ausgang ausgeben" );
+    this.btnDataOut = new JRadioButton( "Daten am Audioausgang ausgeben" );
     grpFct.add( this.btnDataOut );
     this.btnDataOut.addActionListener( this );
     gbcFct.insets.top = 0;
     gbcFct.gridy++;
     panelFct.add( this.btnDataOut, gbcFct );
 
-    this.btnDataIn = new JRadioButton( "Daten vom Audio-Eingang lesen" );
+    this.btnDataIn = new JRadioButton( "Daten vom Audioeingang lesen" );
     grpFct.add( this.btnDataIn );
     this.btnDataIn.addActionListener( this );
     gbcFct.gridy++;
@@ -503,12 +503,12 @@ public class AudioFrm
 						0, 0 );
 
     this.btnEnable = new JButton( "Aktivieren" );
-    this.btnEnable.setToolTipText( "Audio-Funktion aktivieren" );
+    this.btnEnable.setToolTipText( "Audiofunktion aktivieren" );
     this.btnEnable.addActionListener( this );
     panelLeft.add( this.btnEnable, gbcLeft );
 
     this.btnDisable = new JButton( "Deaktivieren" );
-    this.btnDisable.setToolTipText( "Audio-Funktion deaktivieren" );
+    this.btnDisable.setToolTipText( "Audiofunktion deaktivieren" );
     this.btnDisable.addActionListener( this );
     gbcLeft.gridy++;
     panelLeft.add( this.btnDisable, gbcLeft );
@@ -543,7 +543,7 @@ public class AudioFrm
     panelLeft.add( this.btnClose, gbcLeft );
 
 
-    // Pegel-Anzeige
+    // Pegelanzeige
     this.panelVolume = new JPanel( new GridBagLayout() );
     this.panelVolume.setBorder( BorderFactory.createTitledBorder( "Pegel" ) );
     gbcLeft.fill       = GridBagConstraints.BOTH;
@@ -578,7 +578,7 @@ public class AudioFrm
 
     /*
      * Timer, der nach dem Ende einer eingelesenen Datei
-     * die Audio-Funktion deaktiviert
+     * die Audiofunktion deaktiviert
      */
     this.disableTimer = new javax.swing.Timer(
 			10000,
@@ -592,7 +592,7 @@ public class AudioFrm
 
     // Initialzustand
     setVolumeLimits( 0, 255 );
-    setAudioState( false, false );
+    setAudioState( false, null );
 
     // sonstiges
     pack();
@@ -713,7 +713,7 @@ public class AudioFrm
       this.audioIO = audioInLine;
       updChannel();
       this.emuThread.setAudioIn( audioInLine );
-      setAudioState( true, false );
+      setAudioState( true, null );
     } else {
       audioInLine.stopAudio();
       showError( audioInLine.getAndClearErrorText() );
@@ -733,10 +733,13 @@ public class AudioFrm
 				EmuUtil.getTzxFileFilter() );
     if( file != null ) {
       AudioFileFormat.Type fileType   = null;
-      int                  sampleRate = getSelectedSampleRate();
       boolean              csw        = false;
       boolean              tzx        = false;
-      String               fName      = file.getName();
+      int                  sampleRate = getSelectedSampleRate();
+      if( sampleRate == 0 ) {
+	  sampleRate = 44100;
+      }
+      String fName = file.getName();
       if( fName != null ) {
 	fName = fName.toUpperCase();
 	csw   = fName.endsWith( ".CSW" );
@@ -772,7 +775,16 @@ public class AudioFrm
 	  this.lastFile  = file;
 	  this.emuThread.setAudioOut( audioOutFile );
 	  Main.setLastFile( file, "audio" );
-	  setAudioState( true, tzx );
+	  if( csw || tzx ) {
+	    setAudioState(
+			true,
+			String.format(
+				"%s-Datei, %d Hz",
+				csw ? "CSW" : "CDT/TZX",
+				sampleRate ) );
+	  } else {
+	    setAudioState( true, null );
+	  }
 	  updMonitorEnabled();
 	} else {
 	  audioOutFile.stopAudio();
@@ -801,7 +813,7 @@ public class AudioFrm
       if( this.audioFmt != null ) {
 	this.audioIO = audioOutLine;
 	this.emuThread.setAudioOut( audioOutLine );
-	setAudioState( true, false );
+	setAudioState( true, null );
       } else {
 	audioOutLine.stopAudio();
 	showError( audioOutLine.getAndClearErrorText() );
@@ -818,7 +830,7 @@ public class AudioFrm
     if( this.maxSpeedTriggered ) {
       setMaxSpeed( false );
     }
-    setAudioState( false, false );
+    setAudioState( false, null );
   }
 
 
@@ -901,7 +913,7 @@ public class AudioFrm
       this.curFile  = file;
       this.lastFile = file;
       Main.setLastFile( file, "audio" );
-      setAudioState( true, audioInFile.isTapeFile() );
+      setAudioState( true, audioInFile.getSpecialFormatText() );
       updMonitorEnabled();
       this.btnPlay.requestFocus();
       this.blinkTimer.restart();
@@ -932,12 +944,12 @@ public class AudioFrm
   }
 
 
-  private void setAudioState( boolean state, boolean tapeFile )
+  private void setAudioState( boolean state, String specialFormatText )
   {
     if( state && (this.audioFmt != null) ) {
       this.labelFormat.setEnabled( true );
-      if( tapeFile ) {
-	this.fldFormat.setText( "Tape-Datei" );
+      if( specialFormatText != null ) {
+	this.fldFormat.setText( specialFormatText );
       } else {
 	this.fldFormat.setText(
 		AudioUtil.getAudioFormatText( this.audioFmt ) );

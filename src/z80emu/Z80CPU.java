@@ -123,10 +123,12 @@ public class Z80CPU
   private boolean                           flagN;
   private boolean                           flagCarry;
   private boolean                           lastInstWasEIorDI;
+  private boolean                           lastInstWasRET;
   private volatile boolean                  active;
   private volatile boolean                  pause;
   private volatile boolean                  debugEnabled;
   private int                               stepOverBreakAddr;
+  private int                               stepOverSP;
   private int                               walkBreakAddr;
   private AtomicInteger                     waitStates;
   private Object                            waitMonitor;
@@ -443,8 +445,10 @@ public class Z80CPU
     this.regR_bits0to6     = 0;
     this.regR_bit7         = false;
     this.lastInstWasEIorDI = false;
+    this.lastInstWasRET    = false;
     this.debugCallLevel    = 0;
     this.stepOverBreakAddr = -1;
+    this.stepOverSP        = -1;
     this.walkBreakAddr     = -1;
     this.pause             = false;
     this.waitMode          = false;
@@ -1172,6 +1176,7 @@ public class Z80CPU
 
     try {
       while( this.active ) {
+	this.instTStates = 0;
 	if( this.preCode < 0 ) {
 	  this.instBegPC = this.regPC;
 
@@ -1215,7 +1220,6 @@ public class Z80CPU
 	     */
 	    checkSpeedBrake();
 	  }
-	  this.instTStates = 0;
 
 
 	  /*
@@ -1235,8 +1239,9 @@ public class Z80CPU
 	    doPush( this.regPC );
 	    this.haltPC = null;
 	    this.regPC  = 0x0066;
-	    this.instTStates += 11;
 	    nmiAccepted = true;
+	    this.processedTStates += 11;
+	    this.speedTStates     += 11;
 	  } else {
 	    if( this.lastInstWasEIorDI ) {
 	      this.lastInstWasEIorDI = false;
@@ -1279,7 +1284,10 @@ public class Z80CPU
 			  // insgesamt 13 bei RST-Befehl
 			  this.instTStates += 2;
 		      }
-		      interruptSource = iSource;
+		      this.processedTStates += this.instTStates;
+		      this.speedTStates     += this.instTStates;
+		      this.instTStates  = 0;
+		      interruptSource   = iSource;
 		    }
 		  }
 		}
@@ -1323,8 +1331,10 @@ public class Z80CPU
 			|| (this.action == Action.DEBUG_STOP)
 			|| (this.action == Action.DEBUG_STEP_INTO)
 			|| ((this.action == Action.DEBUG_STEP_OVER)
-				&& ((this.regPC == this.stepOverBreakAddr)
-				    || (this.stepOverBreakAddr < 0)))
+			    && (((this.regPC == this.stepOverBreakAddr)
+					|| (this.stepOverBreakAddr < 0))
+			        || (this.lastInstWasRET
+					&& (this.regSP == this.stepOverSP))))
 			|| ((this.action == Action.DEBUG_WALK)
 				&& ((this.regPC == this.walkBreakAddr)
 				    || (this.walkBreakAddr < 0)))
@@ -1337,6 +1347,7 @@ public class Z80CPU
 	    if( pause || (breakpoint != null) ) {
 	      this.pause             = true;
 	      this.stepOverBreakAddr = -1;
+	      this.stepOverSP        = -1;
 	      this.walkBreakAddr     = -1;
 	      updStatusListeners( breakpoint, interruptSource );
 	      waitFor();
@@ -1347,6 +1358,7 @@ public class Z80CPU
 		break;
 	    }
 	  }
+	  this.lastInstWasRET = false;
 
 	  // ggf. in PCListener springen
 	  PCListenerItem pcListener = this.pcListener;
@@ -1371,6 +1383,7 @@ public class Z80CPU
 							this.instBegPC,
 							this.instTStates );
 	}
+
 	this.instTStates      += this.waitStates.getAndSet( 0 );
 	this.processedTStates += this.instTStates;
 	this.speedTStates     += this.instTStates;
@@ -2152,7 +2165,8 @@ public class Z80CPU
     switch( opCode ) {
       case 0xC0:				// RET NZ
 	if( !this.flagZero ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
@@ -2181,7 +2195,7 @@ public class Z80CPU
       case 0xC4:				// CALL NZ,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( !this.flagZero ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2203,21 +2217,23 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xC7:				// RST 00
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0000;
 	this.instTStates += 11;
 	break;
       case 0xC8:				// RET Z
 	if( this.flagZero ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
 	}
 	break;
       case 0xC9:				// RET
-	this.regPC = doPop();
+	this.regPC          = doPop();
+	this.lastInstWasRET = true;
 	this.instTStates += 10;
 	break;
       case 0xCA:				// JP Z,nn
@@ -2242,7 +2258,7 @@ public class Z80CPU
       case 0xCC:				// CALL Z,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( this.flagZero ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2255,7 +2271,7 @@ public class Z80CPU
       case 0xCD:				// CALL nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  doPush( this.regPC );
 	  this.regPC = nn;
 	  this.instTStates += 17;
@@ -2266,7 +2282,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xCF:				// RST 08
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0008;
 	this.instTStates += 11;
@@ -2282,7 +2298,8 @@ public class Z80CPU
     switch( opCode ) {
       case 0xD0:				// RET NC
 	if( !this.flagCarry ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
@@ -2316,7 +2333,7 @@ public class Z80CPU
       case 0xD4:				// CALL NC,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( !this.flagCarry ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2338,14 +2355,15 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xD7:				// RST 10
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0010;
 	this.instTStates += 11;
 	break;
       case 0xD8:				// RET C
 	if( this.flagCarry ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
@@ -2396,7 +2414,7 @@ public class Z80CPU
       case 0xDC:				// CALL C,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( this.flagCarry ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2412,7 +2430,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xDF:				// RST 18
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0018;
 	this.instTStates += 11;
@@ -2428,7 +2446,8 @@ public class Z80CPU
     switch( opCode ) {
       case 0xE0:				// RET PO
 	if( !this.flagPV ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
@@ -2481,7 +2500,7 @@ public class Z80CPU
       case 0xE4:				// CALL PO,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( !this.flagPV ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2506,14 +2525,15 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xE7:				// RST 20
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0020;
 	this.instTStates += 11;
 	break;
       case 0xE8:				// RET PE
 	if( this.flagPV ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
@@ -2549,7 +2569,7 @@ public class Z80CPU
       case 0xEC:				// CALL PE,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( this.flagPV ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2568,7 +2588,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xEF:				// RST 28
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0028;
 	this.instTStates += 11;
@@ -2584,7 +2604,8 @@ public class Z80CPU
     switch( opCode ) {
       case 0xF0:				// RET P
 	if( !this.flagSign ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
@@ -2615,7 +2636,7 @@ public class Z80CPU
       case 0xF4:				// CALL P,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( !this.flagSign ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2637,14 +2658,15 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xF7:				// RST 30
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0030;
 	this.instTStates += 11;
 	break;
       case 0xF8:				// RET M
 	if( this.flagSign ) {
-	  this.regPC = doPop();
+	  this.regPC          = doPop();
+	  this.lastInstWasRET = true;
 	  this.instTStates += 11;
 	} else {
 	  this.instTStates += 5;
@@ -2678,7 +2700,7 @@ public class Z80CPU
       case 0xFC:				// CALL M,nn
 	{
 	  int nn = nextWord();
-	  setStepOverBreakAddr();
+	  setStepOverBreakAddrAndSP();
 	  if( this.flagSign ) {
 	    doPush( this.regPC );
 	    this.regPC = nn;
@@ -2694,7 +2716,7 @@ public class Z80CPU
 	this.instTStates += 7;
 	break;
       case 0xFF:				// RST 38
-	setStepOverBreakAddr();
+	setStepOverBreakAddrAndSP();
 	doPush( this.regPC );
 	this.regPC = 0x0038;
 	this.instTStates += 11;
@@ -4298,8 +4320,9 @@ public class Z80CPU
 
   private void doInstRETN()
   {
-    this.regPC = doPop();
-    this.iff1  = this.iff2;
+    this.regPC          = doPop();
+    this.iff1           = this.iff2;
+    this.lastInstWasRET = true;
   }
 
 
@@ -4542,6 +4565,19 @@ public class Z80CPU
 	&& (this.stepOverBreakAddr < 0) )
     {
       this.stepOverBreakAddr = this.regPC;
+    }
+  }
+
+
+  private void setStepOverBreakAddrAndSP()
+  {
+    if( this.debugEnabled && (this.action == Action.DEBUG_STEP_OVER) ) {
+      if( this.stepOverBreakAddr < 0 ) {
+	this.stepOverBreakAddr = this.regPC;
+      }
+      if( this.stepOverSP < 0 ) {
+	this.stepOverSP = this.regSP;
+      }
     }
   }
 

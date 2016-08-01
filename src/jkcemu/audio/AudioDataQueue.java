@@ -1,12 +1,12 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Speicheroptimierte Queue fuer Audio-Daten
+ * Speicheroptimierte Queue fuer Audiodaten
  *
  * Auf der einen Seite wird die Phasenlage hineingeschrieben.
- * Auf der anderen Seite koennen die daraus gebildeten Audio-Daten
+ * Auf der anderen Seite koennen die daraus gebildeten Audiodaten
  * als InputStream gelesen werden.
  * Mit dem Lesen sollte erst begonnen werden,
  * wenn keine Daten mehr hineingeschrieben werden.
@@ -150,7 +150,7 @@ public class AudioDataQueue extends InputStream
 	status         = false;
 	this.phaseData = null;
 	this.errorText = "Kein Speicher mehr f\u00FCr die Aufzeichnung\n"
-				+ "der Audio-Daten verf\u00FCgbar.";
+				+ "der Audiodaten verf\u00FCgbar.";
 	System.gc();
       }
     }

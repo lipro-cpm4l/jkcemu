@@ -50,9 +50,9 @@ public abstract class AudioIn extends AudioIO
   }
 
 
-  public boolean isTapeFile()
+  public String getSpecialFormatText()
   {
-    return false;
+    return null;
   }
 
 

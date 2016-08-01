@@ -419,13 +419,6 @@ public class Z1013Target extends AbstractTarget
 
 
   @Override
-  public String getHostName()
-  {
-    return "Z1013";
-  }
-
-
-  @Override
   public String getStartCmd( EmuSys emuSys, String appName, int begAddr )
   {
     String rv = null;

@@ -126,15 +126,10 @@ public class TextEditFrm extends BasicFrm implements
 
   public static TextEditFrm open( EmuThread emuThread )
   {
-    if( instance != null ) {
-      if( instance.getExtendedState() == Frame.ICONIFIED ) {
-	instance.setExtendedState( Frame.NORMAL );
-      }
-    } else {
+    if( instance == null ) {
       instance = new TextEditFrm( emuThread );
     }
-    instance.toFront();
-    instance.setVisible( true );
+    EmuUtil.showFrame( instance );
     return instance;
   }
 
@@ -2494,9 +2489,6 @@ public class TextEditFrm extends BasicFrm implements
     }
     if( this.logFrm != null ) {
       this.logFrm.reset( editText, title );
-      this.logFrm.setVisible( true );
-      this.logFrm.setState( Frame.NORMAL );
-      this.logFrm.toFront();
     } else {
       this.logFrm          = new LogFrm( editText, title );
       Rectangle bounds     = getBounds();
@@ -2510,8 +2502,8 @@ public class TextEditFrm extends BasicFrm implements
 	  this.logFrm.setLocation( 0, 0 );
 	}
       }
-      this.logFrm.setVisible( true );
     }
+    EmuUtil.showFrame( this.logFrm );
     return this.logFrm;
   }
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -82,7 +82,7 @@ public class FileMover extends AbstractFileWorker
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    if( !this.cancelled && !this.dirFailed ) {
+    if( !this.canceled && !this.dirFailed ) {
       try {
 	Files.delete( dir );
       }
@@ -100,7 +100,7 @@ public class FileMover extends AbstractFileWorker
 	handleError( dir, new IOException( msg ) );
       }
     }
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -111,7 +111,7 @@ public class FileMover extends AbstractFileWorker
 				BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.CONTINUE;
-    if( !this.cancelled ) {
+    if( !this.canceled ) {
       this.curPath = dir;
       Path dstDir = resolveDst( dir );
       try {
@@ -128,20 +128,20 @@ public class FileMover extends AbstractFileWorker
 	    || !Files.isDirectory( dstDir ) )
 	{
 	  handleError( dir, ex );
-	  if( !this.cancelled ) {
+	  if( !this.canceled ) {
 	    rv = FileVisitResult.SKIP_SUBTREE;
 	  }
 	}
       }
     }
-    return this.cancelled ? FileVisitResult.TERMINATE : rv;
+    return this.canceled ? FileVisitResult.TERMINATE : rv;
   }
 
 
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    if( !this.cancelled ) {
+    if( !this.canceled ) {
       this.curPath = file;
       try {
 	Path dstFile = resolveDst( file );
@@ -156,7 +156,7 @@ public class FileMover extends AbstractFileWorker
 	handleError( file, ex );
       }
     }
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 

@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2014 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Basisklasse fuer die Umwandlung eines Speicherabbilds in Audio-Daten
+ * Basisklasse fuer die Umwandlung eines Speicherabbilds in Audiodaten
  */
 
 package jkcemu.base;
@@ -17,11 +17,11 @@ import javax.sound.sampled.AudioFormat;
 public class EmuSysAudioDataStream extends InputStream
 {
   /*
-   * Die Audio-Daten werden temporaer in eine von ByteArrayOutputStream
+   * Die Audiodaten werden temporaer in eine von ByteArrayOutputStream
    * abgeleitete Klasse geschrieben.
    * Die abgeleitete Klasse bietet Zugriff auf das interne Byte-Array,
-   * um daraus die Audio-Daten wieder lesen zu koennen.
-   * Dadurch wird eine Duplizierung der Audio-Daten vermieden.
+   * um daraus die Audiodaten wieder lesen zu koennen.
+   * Dadurch wird eine Duplizierung der Audiodaten vermieden.
    */
   public static class ByteOutBuf extends ByteArrayOutputStream
   {

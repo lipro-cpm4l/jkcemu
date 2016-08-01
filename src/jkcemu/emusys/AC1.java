@@ -1383,10 +1383,10 @@ public class AC1
   @Override
   public void openBasicProgram()
   {
-    boolean   cancelled = false;
-    BasicType bType     = null;
-    String    text      = null;
-    int       preIdx    = -1;
+    boolean   canceled = false;
+    BasicType bType    = null;
+    String    text     = null;
+    int       preIdx   = -1;
     if( this.lastBasicType != null ) {
       switch( this.lastBasicType ) {
 	case AC1_MINI:
@@ -1493,9 +1493,9 @@ public class AC1
 	break;
 
       default:
-	cancelled = true;
+	canceled = true;
     }
-    if( !cancelled ) {
+    if( !canceled ) {
       if( text != null ) {
 	this.lastBasicType = bType;
 	this.screenFrm.openText( text );
@@ -1833,7 +1833,7 @@ public class AC1
   @Override
   public void saveBasicProgram()
   {
-    boolean           cancelled    = false;
+    boolean           canceled     = false;
     int               begAddr      = -1;
     int               endAddr      = -1;
     BasicType         ac1BasicType = null;
@@ -1933,9 +1933,9 @@ public class AC1
 	break;
 
       default:
-	cancelled = true;
+	canceled = true;
     }
-    if( !cancelled ) {
+    if( !canceled ) {
       if( (begAddr > 0) && (endAddr > begAddr) ) {
 	this.lastBasicType = ac1BasicType;
 	(new SaveDlg(
