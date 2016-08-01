@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -52,8 +52,8 @@ public abstract class AudioIO
    * der seit dem letzten Aufruf vergangenen Taktzyklen.
    *
    * Rueckgabewert:
-   *   true:  Audio-Daten verwenden
-   *   false: Audio-Daten verwerfen
+   *   true:  Audiodaten verwenden
+   *   false: Audiodaten verwerfen
    */
   protected boolean currentDiffTStates( long diffTStates )
   {

@@ -155,7 +155,7 @@ public class NANOSSettingsFld extends AbstractSettingsFld
     this.tabKeyboard.add( this.btnKbPio00Ahs, gbcKeyboard );
 
     this.btnKbPio00Abit7 = new JRadioButton(
-		"ZRE-PIO Port A mit Strobe an Bit 7 (EPOS 2.0)" );
+		"ZRE-PIO Port A mit Strobe an Bit 7 (EPOS 2.1)" );
     grpKeyboard.add( this.btnKbPio00Abit7 );
     gbcKeyboard.gridy++;
     this.tabKeyboard.add( this.btnKbPio00Abit7, gbcKeyboard );
@@ -190,7 +190,7 @@ public class NANOSSettingsFld extends AbstractSettingsFld
     grpRom.add( this.btnRomNanos );
     this.tabRom.add( this.btnRomNanos, gbcRom );
 
-    this.btnRomEpos = new JRadioButton( "Boot-ROM f\u00FCr EPOS 2.0" );
+    this.btnRomEpos = new JRadioButton( "Boot-ROM f\u00FCr EPOS 2.1" );
     grpRom.add( this.btnRomEpos );
     gbcRom.insets.top = 0;
     gbcRom.gridy++;

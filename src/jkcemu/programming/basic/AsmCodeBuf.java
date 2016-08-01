@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -274,6 +274,12 @@ public class AsmCodeBuf
   }
 
 
+  public boolean contains( String text )
+  {
+    return (this.buf.indexOf( text ) >= 0);
+  }
+
+
   public String cut( int pos )
   {
     String rv = "";
@@ -398,6 +404,19 @@ public class AsmCodeBuf
 	}
       }
     }
+  }
+
+
+  public boolean replace( String oldText, String newText )
+  {
+    boolean rv = false;
+    if( this.enabled && contains( oldText ) ) {
+      String s = this.buf.toString().replace( oldText, newText );
+      this.buf.setLength( 0 );
+      this.buf.append( s );
+      rv = true;
+    }
+    return rv;
   }
 
 

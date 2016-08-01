@@ -1,5 +1,5 @@
 /*
- * (c) 2014 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,14 +19,17 @@ import jkcemu.emusys.zxspectrum.ZXSpectrumAudioDataStream;
 public class ZXSpectrumAudioFileTarget extends AbstractConvertTarget
 {
   private byte[] fileBytes;
+  private String text;
 
 
   public ZXSpectrumAudioFileTarget(
 		FileConvertFrm fileConvertFrm,
-		byte[]         fileBytes )
+		byte[]         fileBytes,
+		String         text )
   {
-    super( fileConvertFrm, createInfoText() );
+    super( fileConvertFrm, completeInfoText( text ) );
     this.fileBytes = fileBytes;
+    this.text      = text;
   }
 
 
@@ -82,10 +85,10 @@ public class ZXSpectrumAudioFileTarget extends AbstractConvertTarget
 
 	/* --- private Methoden --- */
 
-  private static String createInfoText()
+  private static String completeInfoText( String text )
   {
     StringBuilder buf = new StringBuilder( 128 );
-    buf.append( "Sound-Datei im ZX Spectrum Format" );
+    buf.append( text != null ? text : "Sound-Datei" );
     AudioUtil.appendAudioFileExtensionText(
 			buf,
 			3,

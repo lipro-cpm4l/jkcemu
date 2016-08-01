@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,6 +12,7 @@ import java.awt.Component;
 import java.io.*;
 import java.lang.*;
 import java.util.*;
+import java.util.concurrent.*;
 import jkcemu.Main;
 import jkcemu.base.*;
 import jkcemu.etc.RTC7242X;
@@ -49,19 +50,38 @@ public class GIDE implements Runnable
 					"sectors_per_track",
 					"file" };
 
+  protected static class IOTask
+  {
+    public Command cmd;
+    public File    file;
+    public long    filePos;
+    public int     byteCnt;
+
+    protected IOTask(
+		Command cmd,
+		File    file,
+		long    filePos,
+		int     byteCnt )
+    {
+      this.cmd     = cmd;
+      this.file    = file;
+      this.filePos = filePos;
+      this.byteCnt = byteCnt;
+    }
+  };
+
+
   private Component        owner;
   private String           propPrefix;
   private HardDisk[]       disks;
   private RTC7242X         rtc;
+  private BlockingQueue<IOTask> ioTaskQueue;
   private volatile Command pendingCmd;
-  private volatile File    ioFile;
-  private volatile long    ioFilePos;
-  private volatile int     ioByteCnt;
   private volatile boolean ioTaskEnabled;
-  private volatile boolean ioTaskNoWait;
   private volatile Thread  ioTaskThread;
   private byte[]           ioBuf;
   private int              ioBufPos;
+  private int              ioByteCnt;
   private int              debugLevel;
   private int              sectorCnt;
   private int              sectorNum;
@@ -81,6 +101,7 @@ public class GIDE implements Runnable
   private boolean          interruptEnabled;
   private volatile boolean interruptRequest;
   private boolean          resetFlag;
+  private boolean          readMissingFileShown;
   private boolean          readErrShown;
   private boolean          writeErrShown;
 
@@ -259,9 +280,8 @@ public class GIDE implements Runnable
     if( this.debugLevel > 0 ) {
       System.out.println( "GIDE: reset" );
     }
-    this.pendingCmd   = Command.NONE;
-    this.resetFlag    = false;
-    this.ioTaskNoWait = false;
+    this.pendingCmd = Command.NONE;
+    this.resetFlag  = false;
     this.ioTaskThread.interrupt();
     if( this.disks != null ) {
       boolean sizeOK = false;
@@ -408,7 +428,15 @@ public class GIDE implements Runnable
 	if( this.debugLevel > 0 ) {
 	  System.out.printf( "GIDE: write command: %02X\n", value );
 	}
-	execCmd( value );
+	if( (this.statusReg & STATUS_BUSY) == 0 ) {
+	  execCmd( value );
+	} else {
+	  if( this.debugLevel > 0 ) {
+	    System.out.printf(
+			"GIDE: command %02X ignored because busy\n",
+			value );
+	  }
+	}
 	break;
     }
   }
@@ -420,33 +448,26 @@ public class GIDE implements Runnable
   public void run()
   {
     while( this.ioTaskEnabled ) {
-      synchronized( this.ioTaskThread ) {
-	if( this.ioTaskNoWait ) {
-	  this.ioTaskNoWait = false;
-	} else {
-	  try {
-	    this.ioTaskThread.wait();
+      try {
+	IOTask task = this.ioTaskQueue.take();
+	if( this.ioTaskEnabled ) {
+	  switch( task.cmd ) {
+	    case READ_SECTORS:
+	      execReadSectorsTask( task );
+	      break;
+
+	    case WRITE_SECTORS:
+	      execWriteSectorsTask( task );
+	      break;
+
+	    case FORMAT_TRACK:
+	      execFormatTrackTask( task );
+	      break;
 	  }
-	  catch( InterruptedException ex ) {}
-	  catch( IllegalMonitorStateException ex ) {}
+	  this.statusReg &= ~STATUS_BUSY;
 	}
       }
-      if( this.ioTaskEnabled ) {
-	switch( this.pendingCmd ) {
-	  case READ_SECTORS:
-	    execReadSectorsTask();
-	    break;
-
-	  case WRITE_SECTORS:
-	    execWriteSectorsTask();
-	    break;
-
-	  case FORMAT_TRACK:
-	    execFormatTrackTask();
-	    break;
-	}
-	this.statusReg &= ~STATUS_BUSY;
-      }
+      catch( InterruptedException ex ) {}
     }
   }
 
@@ -467,7 +488,7 @@ public class GIDE implements Runnable
     this.totalSectors    = null;
     this.ioBuf           = null;
     this.ioTaskEnabled   = true;
-    this.ioTaskNoWait    = false;
+    this.ioTaskQueue     = new ArrayBlockingQueue<>( 1 );
     this.ioTaskThread    = new Thread(
 				Main.getThreadGroup(),
 				this,
@@ -880,17 +901,15 @@ public class GIDE implements Runnable
   }
 
 
-  private void execFormatTrackTask()
+  private void execFormatTrackTask( IOTask task )
   {
-    File file = this.ioFile;
-    long pos  = this.ioFilePos;
-    int  cnt  = this.ioByteCnt;
-    if( (file != null) && (pos >= 0) && (cnt > 0) ) {
+    long cnt = task.byteCnt;
+    if( (task.file != null) && (task.filePos >= 0) && (cnt > 0) ) {
       boolean          err  = false;
       RandomAccessFile raf = null;
       try {
-	raf = new RandomAccessFile( file, "rw" );
-	raf.seek( pos );
+	raf = new RandomAccessFile( task.file, "rw" );
+	raf.seek( task.filePos );
 	while( cnt > 0 ) {
 	  raf.write( 0 );
 	  --cnt;
@@ -917,24 +936,23 @@ public class GIDE implements Runnable
   }
 
 
-  private void execReadSectorsTask()
+  private void execReadSectorsTask( IOTask task )
   {
-    File file = this.ioFile;
-    long pos  = this.ioFilePos;
     if( this.debugLevel > 3 ) {
-      System.out.printf( "GIDE io task: read track, pos=%d", pos );
+      System.out.printf( "GIDE io task: read track, pos=%d", task.filePos );
     }
-    if( (file != null) && (pos >= 0) ) {
-      if( file.exists() ) {
+    int cnt = task.byteCnt;
+    if( (task.file != null) && (task.filePos >= 0) && (cnt > 0) ) {
+      if( task.file.exists() ) {
 	RandomAccessFile raf = null;
 	try {
-	  raf = new RandomAccessFile( file, "r" );
-	  raf.seek( pos );
-	  this.ioByteCnt = (int) raf.read( this.ioBuf, 0, this.ioByteCnt );
+	  raf = new RandomAccessFile( task.file, "r" );
+	  raf.seek( task.filePos );
+	  cnt = (int) raf.read( this.ioBuf, 0, cnt );
 	  if( this.debugLevel > 3 ) {
 	    System.out.printf(
 			"GIDE io task: read sector: %d read\n",
-			this.ioByteCnt );
+			cnt );
 	  }
 	}
 	catch( IOException ex ) {
@@ -956,7 +974,9 @@ public class GIDE implements Runnable
 	  EmuUtil.doClose( raf );
 	}
       } else {
-	EmuUtil.fireShowError(
+	if( !this.readMissingFileShown ) {
+	  this.readMissingFileShown = true;
+	  EmuUtil.fireShowError(
 		this.owner,
 		"Die Festplattenabbilddatei existiert nicht und"
 			+ " kann deshalb auch nicht gelesen werden.\n"
@@ -966,6 +986,7 @@ public class GIDE implements Runnable
 			+ " emulierte Laufwerk wird die Abbilddatei"
 			+ " angelegt.",
 		null );
+	}
       }
       this.ioBufPos = 0;
       this.statusReg |= STATUS_DATA_REQUEST;
@@ -974,19 +995,17 @@ public class GIDE implements Runnable
   }
 
 
-  private void execWriteSectorsTask()
+  private void execWriteSectorsTask( IOTask task )
   {
-    File file = this.ioFile;
-    long pos  = this.ioFilePos;
     if( this.debugLevel > 3 ) {
-      System.out.printf( "GIDE io task: write sector, pos=%d", pos );
+      System.out.printf( "GIDE io task: write sector, pos=%d", task.filePos );
     }
-    if( (file != null) && (pos >= 0) ) {
+    if( (task.file != null) && (task.filePos >= 0) ) {
       boolean          err  = false;
       RandomAccessFile raf = null;
       try {
-	raf = new RandomAccessFile( file, "rw" );
-	raf.seek( pos );
+	raf = new RandomAccessFile( task.file, "rw" );
+	raf.seek( task.filePos );
 	raf.write( this.ioBuf, 0, SECTOR_SIZE );
 	raf.close();
 	raf = null;
@@ -1195,26 +1214,25 @@ public class GIDE implements Runnable
 
   private void softReset()
   {
-    this.pendingCmd       = Command.NONE;
-    this.interruptEnabled = false;
-    this.interruptRequest = false;
-    this.readErrShown     = false;
-    this.writeErrShown    = false;
-    this.ioTaskNoWait     = false;
-    this.ioFile           = null;
-    this.ioFilePos        = -1;
-    this.ioByteCnt        = -1;
-    this.ioBufPos         = 0;
-    this.curCmd           = -1;
-    this.curDiskIdx       = -1;
-    this.curDisk          = null;
-    this.powerMode        = 0x01;	// Bit 0: Idle
-    this.sectorCnt        = 0;
-    this.sectorNum        = 0;
-    this.cylNum           = 0;
-    this.sdhReg           = 0;
-    this.errorReg         = 0;
-    this.statusReg        = 0;
+    this.ioTaskQueue.clear();
+    this.pendingCmd           = Command.NONE;
+    this.interruptEnabled     = false;
+    this.interruptRequest     = false;
+    this.readMissingFileShown = false;
+    this.readErrShown         = false;
+    this.writeErrShown        = false;
+    this.ioBufPos             = 0;
+    this.ioByteCnt            = 0;
+    this.curCmd               = -1;
+    this.curDiskIdx           = -1;
+    this.curDisk              = null;
+    this.powerMode            = 0x01;	// Bit 0: Idle
+    this.sectorCnt            = 0;
+    this.sectorNum            = 0;
+    this.cylNum               = 0;
+    this.sdhReg               = 0;
+    this.errorReg             = 0;
+    this.statusReg            = 0;
     if( this.disks != null ) {
       this.statusReg = STATUS_SEEK_COMPLETE | STATUS_DRIVE_READY;
     }
@@ -1224,17 +1242,20 @@ public class GIDE implements Runnable
   private void startIOTask( File file, long filePos, int byteCnt )
   {
     this.statusReg |= STATUS_BUSY;
-
-    this.ioFile    = file;
-    this.ioFilePos = filePos;
-    this.ioByteCnt = byteCnt;
-
-    synchronized( this.ioTaskThread ) {
-      try {
-	this.ioTaskThread.notify();
-      }
-      catch( IllegalMonitorStateException ex ) {
-	this.ioTaskNoWait = true;
+    try {
+      this.ioByteCnt = byteCnt;
+      this.ioTaskQueue.put(
+		new IOTask(
+			this.pendingCmd,
+			file,
+			filePos,
+			byteCnt ) );
+    }
+    catch( Exception ex ) {
+      this.statusReg |= STATUS_ERROR;
+      this.statusReg &= ~STATUS_BUSY;
+      if( this.debugLevel > 0 ) {
+	ex.printStackTrace( System.out );
       }
     }
   }

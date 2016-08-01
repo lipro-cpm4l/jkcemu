@@ -77,12 +77,7 @@ public abstract class AbstractKC85Module
       }
     }
     if( rv ) {
-      String myFileName = getFileName();
-      if( myFileName != null ) {
-	if( !myFileName.isEmpty() ) {
-	  rv = TextUtil.equals( myFileName, fileName );
-	}
-      }
+      rv = TextUtil.equals( getFileName(), fileName );
     }
     return rv;
   }
@@ -125,7 +120,7 @@ public abstract class AbstractKC85Module
   public String getTypeByteText()
   {
     if( this.typeByteText == null ) {
-      this.typeByteText = String.format( "%02Xh", getTypeByte() );
+      this.typeByteText = String.format( "%02X", getTypeByte() );
     }
     return this.typeByteText;
   }

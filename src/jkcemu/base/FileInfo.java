@@ -15,9 +15,9 @@ import jkcemu.Main;
 
 public class FileInfo
 {
-  public static final String KCTAP_HEADER = "\u00C3KC-TAPE by AF.\u0020";
-  public static final String CSW_HEADER   = "Compressed Square Wave\u001A";
-  public static final String TZX_HEADER   = "ZXTape!\u001A";
+  public static final String CSW_MAGIC   = "Compressed Square Wave\u001A";
+  public static final String KCTAP_MAGIC = "\u00C3KC-TAPE by AF.\u0020";
+  public static final String TZX_MAGIC   = "ZXTape!\u001A";
 
   private byte[]     header;
   private long       fileLen;
@@ -104,7 +104,7 @@ public class FileInfo
 	}
       }
       if( (fileFmt == null) && (fileLen > 144) && (headerLen > 33) ) {
-	if( isKCTapHeaderAt( header, headerLen, 0 ) ) {
+	if( isKCTapMagicAt( header, 0, headerLen ) ) {
 	  int nextOffs = -1;
 	  int b16      = (int) header[ 16 ] & 0xFF;
 	  int b17      = (int) header[ 17 ] & 0xFF;
@@ -151,7 +151,7 @@ public class FileInfo
 	    }
 	  }
 	  if( nextOffs > 0 ) {
-	    if( isKCTapHeaderAt( header, headerLen, nextOffs ) ) {
+	    if( isKCTapMagicAt( header, nextOffs, headerLen - nextOffs ) ) {
 	      nextTAPOffs = nextOffs;
 	    }
 	  }
@@ -178,18 +178,18 @@ public class FileInfo
 	}
       }
       if( (fileFmt == null)
-	  && (fileLen > CSW_HEADER.length())
-	  && (headerLen > CSW_HEADER.length()) )
+	  && (fileLen > CSW_MAGIC.length())
+	  && (headerLen > CSW_MAGIC.length()) )
       {
-	if( isCswHeaderAt( header, headerLen, 0 ) ) {
+	if( isCswMagicAt( header, 0, headerLen ) ) {
 	  fileFmt = FileFormat.CSW;
 	}
       }
       if( (fileFmt == null)
-	  && (fileLen > TZX_HEADER.length())
-	  && (headerLen > TZX_HEADER.length()) )
+	  && (fileLen > TZX_MAGIC.length())
+	  && (headerLen > TZX_MAGIC.length()) )
       {
-	if( isTzxHeaderAt( header, headerLen, 0 ) ) {
+	if( isTzxMagicAt( header, 0, headerLen ) ) {
 	  fileFmt = FileFormat.TZX;
 	  if( upperFileName != null ) {
 	    if( upperFileName.endsWith( ".CDT" ) ) {
@@ -354,7 +354,7 @@ public class FileInfo
 	  }
 	}
 	if( (fileFmt == null) && upperFileName.endsWith( ".TAP" )
-	    && !isKCTapHeaderAt( header, headerLen, 0 ) )
+	    && !isKCTapMagicAt( header, 0, headerLen ) )
 	{
 	  fileFmt = FileFormat.ZXTAP;
 	}
@@ -445,7 +445,7 @@ public class FileInfo
 	throw new IOException(
 		"Die Datei ist eine Tape-Datei und kann nur\n"
 			+ "\u00FCber die emulierte Kassettenschnittstelle\n"
-			+ "(Audio-Funktion) geladen werden." );
+			+ "(Audiofunktion) geladen werden." );
       }
       if( fileFmt.equals( FileFormat.KCTAP_SYS )
 	  || fileFmt.equals( FileFormat.KCTAP_Z9001 )
@@ -933,12 +933,12 @@ public class FileInfo
   }
 
 
-  public static boolean isCswHeaderAt(
+  public static boolean isCswMagicAt(
 				byte[] fileBytes,
-				int    fileLen,
-				int    offs )
+				int    offs,
+				int    len )
   {
-    return isHeaderAt( CSW_HEADER, fileBytes, fileLen, offs );
+    return isMagicAt( CSW_MAGIC, fileBytes, offs, len );
   }
 
 
@@ -961,12 +961,12 @@ public class FileInfo
   }
 
 
-  public static boolean isKCTapHeaderAt(
+  public static boolean isKCTapMagicAt(
 				byte[] fileBytes,
-				int    fileLen,
-				int    offs )
+				int    offs,
+				int    len )
   {
-    return isHeaderAt( KCTAP_HEADER, fileBytes, fileLen, offs );
+    return isMagicAt( KCTAP_MAGIC, fileBytes, offs, len );
   }
 
 
@@ -986,12 +986,12 @@ public class FileInfo
   }
 
 
-  public static boolean isTzxHeaderAt(
+  public static boolean isTzxMagicAt(
 				byte[] fileBytes,
-				int    fileLen,
-				int    offs )
+				int    offs,
+				int    len )
   {
-    return isHeaderAt( TZX_HEADER, fileBytes, fileLen, offs );
+    return isMagicAt( TZX_MAGIC, fileBytes, offs, len );
   }
 
 
@@ -1307,19 +1307,19 @@ public class FileInfo
   }
 
 
-  private static boolean isHeaderAt(
-				String pattern,
+  private static boolean isMagicAt(
+				String magic,
 				byte[] fileBytes,
-				int    fileLen,
-				int    offs )
+				int    offs,
+				int    len )
   {
     boolean rv = false;
-    if( (pattern != null) && (fileBytes != null) ) {
-      int pLen = pattern.length();
-      if( (offs + pLen) < Math.min( fileBytes.length, fileLen ) ) {
+    if( (magic != null) && (fileBytes != null) ) {
+      int mLen = magic.length();
+      if( (mLen <= len) && ((offs + mLen) <= fileBytes.length ) ) {
 	rv = true;
-	for( int i = 0; i < pLen; i++ ) {
-	  if( ((char) fileBytes[ offs + i ] & 0xFF) != pattern.charAt( i ) ) {
+	for( int i = 0; i < mLen; i++ ) {
+	  if( ((char) fileBytes[ offs + i ] & 0xFF) != magic.charAt( i ) ) {
 	    rv = false;
 	    break;
 	  }

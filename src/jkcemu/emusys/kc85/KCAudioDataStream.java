@@ -1,11 +1,11 @@
 /*
- * (c) 2011-2014 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Lesen einer KCB-, KCC- oder KC-TAP-Datei als InputStream von Audio-Daten
+ * Lesen einer KCB-, KCC- oder KC-TAP-Datei als InputStream von Audiodaten
  *
- * Die Klasse wandelt ein Speicherabbild in Audio-Daten
+ * Die Klasse wandelt ein Speicherabbild in Audiodaten
  * entsprechend dem KC85- und Z9001-Kassettenaufzeichnungsformat um.
  * Laut KC85/3- bzw. KC85/4-Systemhandbuch arbeitet die Kassettenaufzeichnung
  * mit den Frequenzen 600, 1200 und 2400 Hz.
@@ -36,8 +36,8 @@ public class KCAudioDataStream extends EmuSysAudioDataStream
 			int     len ) throws IOException
   {
     super( 8000F, buf, offs, len );
-    if( tapFmt && !skipSourceString( FileInfo.KCTAP_HEADER ) ) {
-      throw new IOException( "KC-TAP-Header erwartet" );
+    if( tapFmt && !skipSourceString( FileInfo.KCTAP_MAGIC ) ) {
+      throw new IOException( "KC-TAP-Kopf erwartet" );
     }
 
     boolean firstBlk = true;
@@ -50,7 +50,7 @@ public class KCAudioDataStream extends EmuSysAudioDataStream
 	 * Beginn einer neuen Teildatei innerhalb einer Multi-TAP-Datei?
 	 * Wenn ja, dann Header uerberspringen und langer Vorton
 	 */
-	if( skipSourceString( FileInfo.KCTAP_HEADER ) ) {
+	if( skipSourceString( FileInfo.KCTAP_MAGIC ) ) {
 	  nHalf = 16000;
 	}
       }

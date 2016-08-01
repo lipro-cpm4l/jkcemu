@@ -1,9 +1,9 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Klasse zur Bedienung des Audio-Eingangs
+ * Klasse zur Bedienung des Audioeingangs
  * fuer die Emulation des Anschlusses des Magnettonbandgeraetes
  */
 
@@ -42,7 +42,7 @@ public class AudioInLine extends AudioIn
   {
     if( (this.dataLine == null) && (speedKHz > 0) ) {
 
-      // Audio-Eingabekanal oeffnen
+      // Audioeingabekanal oeffnen
       TargetDataLine line = null;
       if( sampleRate > 0 ) {
 	line = openTargetDataLine( mixer, sampleRate );
@@ -93,8 +93,8 @@ public class AudioInLine extends AudioIn
    * der seit dem letzten Aufruf vergangenen Taktzyklen.
    *
    * Rueckgabewert:
-   *   true:  Audio-Daten verwenden
-   *   false: Audio-Daten verwerfen
+   *   true:  Audiodaten verwenden
+   *   false: Audiodaten verwerfen
    */
   @Override
   protected boolean currentDiffTStates( long diffTStates )
@@ -103,7 +103,7 @@ public class AudioInLine extends AudioIn
     if( diffTStates > this.maxPauseTStates ) {
       /*
        * Sollte die Zeit zu gross sein, werden die im Puffer stehenden
-       * Audio-Daten ignoriert und die Mittelwertregelung initialisiert.
+       * Audiodaten ignoriert und die Mittelwertregelung initialisiert.
        */
       this.minValue = 0;
       this.maxValue = 0;

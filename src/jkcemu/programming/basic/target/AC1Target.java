@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2015 Jens Mueller
+ * (c) 2013-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -260,7 +260,7 @@ public class AC1Target extends SCCHTarget
 		+ "\tJP\tZ,XCLS\n"
 		+ "\tCP\t0DH\n"
 		+ "\tJR\tZ,XOUTC10\n"
-	// Schreiben der Zeichens in D auf die Adresse in HL mit Farbausgabe
+	// Schreiben des Zeichens in D auf die Adresse in HL mit Farbausgabe
 		+ "\tSET\t2,E\n"
 		+ "\tOUT\t(C),E\n"
 		+ "\tLD\tA,(X_MCOV)\n"
@@ -568,13 +568,6 @@ public class AC1Target extends SCCHTarget
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public String getHostName()
-  {
-    return "AC1";
   }
 
 

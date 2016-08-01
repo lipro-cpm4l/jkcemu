@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -134,13 +134,6 @@ public class KramerMCTarget extends AbstractTarget
   public int getDefaultBegAddr()
   {
     return 0x1000;
-  }
-
-
-  @Override
-  public String getHostName()
-  {
-    return "Kramer-MC";
   }
 
 

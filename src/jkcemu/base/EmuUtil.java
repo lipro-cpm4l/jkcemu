@@ -856,16 +856,7 @@ public class EmuUtil
   {
     while( c != null ) {
       if( c instanceof Frame ) {
-	Frame f = (Frame) c;
-	if( f.isVisible() ) {
-	  int frameState = f.getExtendedState();
-	  if( (frameState & Frame.ICONIFIED) != 0 ) {
-	    f.setExtendedState( frameState & ~Frame.ICONIFIED );
-	  }
-	  f.toFront();
-	} else {
-	  f.setVisible( true );
-	}
+	showFrame( (Frame) c );
 	break;
       }
       c = c.getParent();
@@ -1279,6 +1270,20 @@ public class EmuUtil
       }
     }
     return file;
+  }
+
+
+  public static long getInt4( byte[] buf, int pos )
+  {
+    long rv = -1;
+    if( buf != null ) {
+      if( (pos >= 0) && (pos + 3 < buf.length) )
+	rv = ((buf[ pos + 3 ] << 24) & 0xFF000000)
+		| ((buf[ pos + 2 ] << 16) & 0x00FF0000)
+		| ((buf[ pos + 1 ] << 8) & 0x0000FF00)
+		| (buf[ pos ] & 0x000000FF);
+    }
+    return rv;
   }
 
 
@@ -1863,6 +1868,31 @@ public class EmuUtil
   }
 
 
+  public static void showFrame( final Frame frame )
+  {
+    if( frame != null ) {
+      if( frame.isVisible() ) {
+	int frameState = frame.getExtendedState();
+	if( (frameState & Frame.ICONIFIED) != 0 ) {
+	  frame.setExtendedState( frameState & ~Frame.ICONIFIED );
+	}
+      } else {
+	frame.setVisible( true );
+	frame.setExtendedState( Frame.NORMAL );
+      }
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    frame.toFront();
+		  }
+		} );
+    }
+  }
+
+
   public static File showFileSaveDlg(
 			Window                                owner,
 			String                                title,
@@ -2013,7 +2043,9 @@ public class EmuUtil
       int len = text.length();
       for( int i = 0; i < len; i++ ) {
 	char ch = text.charAt( i );
-	if( (ch < '\u0020') || (ch > '\u007E') ) {
+	if( ((ch < '\u0020') || (ch > '\u007E'))
+	    && (ch != '\n') && (ch != '\r') && (ch != '\u001A') )
+	{
 	  StringBuilder buf = new StringBuilder( 256 );
 	  buf.append( "Nicht-ASCII-Zeichen" );
 	  if( (ch > '\u0020')

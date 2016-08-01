@@ -436,7 +436,7 @@ public class ScreenFrm extends BasicFrm implements
     mnuExtraTools.add( createJMenuItem(
 				"Bildbetrachter...", "extra.imageviewer" ) );
     mnuExtraTools.add( createJMenuItem(
-				"Audio-Recorder...", "extra.audiorecorder" ) );
+				"Audiorecorder...", "extra.audiorecorder" ) );
     mnuExtraTools.add( createJMenuItem( "Rechner...", "extra.calculator" ) );
     mnuExtraTools.add( createJMenuItem(
 			"Diskettenabbilddatei-Inspektor...",
@@ -892,14 +892,14 @@ public class ScreenFrm extends BasicFrm implements
   public DebugFrm openPrimaryDebugger()
   {
     if( this.primDebugFrm != null ) {
-      EmuUtil.frameToFront( this.primDebugFrm );
+      EmuUtil.showFrame( this.primDebugFrm );
     } else {
       if( this.emuThread != null ) {
 	this.primDebugFrm = new DebugFrm(
 				this.emuThread,
 				this.emuThread.getZ80CPU(),
 				this.emuThread );
-	this.primDebugFrm.setVisible( true );
+	EmuUtil.showFrame( this.primDebugFrm );
       }
     }
     return this.primDebugFrm;
@@ -909,11 +909,11 @@ public class ScreenFrm extends BasicFrm implements
   public ReassFrm openPrimaryReassembler()
   {
     if( this.primReassFrm != null ) {
-      EmuUtil.frameToFront( this.primReassFrm );
+      EmuUtil.showFrame( this.primReassFrm );
     } else {
       if( this.emuThread != null ) {
 	this.primReassFrm = new ReassFrm( this.emuThread );
-	this.primReassFrm.setVisible( true );
+	EmuUtil.showFrame( this.primReassFrm );
       }
     }
     return this.primReassFrm;
@@ -930,7 +930,7 @@ public class ScreenFrm extends BasicFrm implements
 	Z80Memory secondMem = emuSys.getSecondZ80Memory();
 	if( (secondCPU != null) && (secondMem != null) ) {
 	  if( this.secondDebugFrm != null ) {
-	    EmuUtil.frameToFront( this.secondDebugFrm );
+	    EmuUtil.showFrame( this.secondDebugFrm );
 	  } else {
 	    this.secondDebugFrm = new DebugFrm(
 					this.emuThread, 
@@ -944,7 +944,7 @@ public class ScreenFrm extends BasicFrm implements
 	      this.secondDebugFrm.setTitle(
 			"JKCEMU Debugger: Sekund\u00E4rsystem" );
 	    }
-	    this.secondDebugFrm.setVisible( true );
+	    EmuUtil.showFrame( this.secondDebugFrm );
 	  }
 	  debugFrm = this.secondDebugFrm;
 	}
@@ -2076,7 +2076,7 @@ public class ScreenFrm extends BasicFrm implements
 	FloppyDiskStationFrm frm
 			= FloppyDiskStationFrm.getSharedInstance( this );
 	frm.setDriveCount( n );
-	EmuUtil.frameToFront( frm );
+	EmuUtil.showFrame( frm );
       } else {
 	BasicDlg.showInfoDlg(
 		this,
@@ -2211,7 +2211,7 @@ public class ScreenFrm extends BasicFrm implements
   private void doExtraKeyboard()
   {
     if( this.keyboardFrm != null ) {
-      EmuUtil.frameToFront( this.keyboardFrm );
+      EmuUtil.showFrame( this.keyboardFrm );
     } else {
       EmuSys emuSys = getEmuSys();
       if( emuSys != null ) {
@@ -2226,7 +2226,7 @@ public class ScreenFrm extends BasicFrm implements
 	    catch( UnsupportedOperationException ex ) {}
 	  }
 	  if( this.keyboardFrm != null ) {
-	    this.keyboardFrm.setVisible( true );
+	    EmuUtil.showFrame( this.keyboardFrm );
 	  } else {
 	    BasicDlg.showErrorDlg(
 		this,
@@ -2376,15 +2376,15 @@ public class ScreenFrm extends BasicFrm implements
       }
       if( sysNum == 0 ) {
 	if( this.primMemEditFrm != null ) {
-	  EmuUtil.frameToFront( this.primMemEditFrm );
+	  EmuUtil.showFrame( this.primMemEditFrm );
 	} else {
 	  this.primMemEditFrm = new MemEditFrm( this.emuThread );
-	  this.primMemEditFrm.setVisible( true );
+	  EmuUtil.showFrame( this.primMemEditFrm );
 	}
       }
       else if( sysNum == 1 ) {
 	if( this.secondMemEditFrm != null ) {
-	  EmuUtil.frameToFront( this.secondMemEditFrm );
+	  EmuUtil.showFrame( this.secondMemEditFrm );
 	} else {
 	  this.secondMemEditFrm = new MemEditFrm( secondMem );
 	  if( secondName != null ) {
@@ -2394,7 +2394,7 @@ public class ScreenFrm extends BasicFrm implements
 	    this.secondMemEditFrm.setTitle(
 			"JKCEMU Speichereditor: Sekund\u00E4rsystem" );
 	  }
-	  this.secondMemEditFrm.setVisible( true );
+	  EmuUtil.showFrame( this.secondMemEditFrm );
 	}
       }
     }
@@ -2582,14 +2582,10 @@ public class ScreenFrm extends BasicFrm implements
 
   private void appendMsg( String msg )
   {
-    if( this.msgFrm != null ) {
-      this.msgFrm.setVisible( true );
-      this.msgFrm.setState( Frame.NORMAL );
-    } else {
+    if( this.msgFrm == null ) {
       this.msgFrm = new MsgFrm( this );
-      this.msgFrm.setVisible( true );
     }
-    this.msgFrm.toFront();
+    EmuUtil.showFrame( this.msgFrm );
     this.msgFrm.appendMsg( msg );
   }
 
@@ -2789,7 +2785,7 @@ public class ScreenFrm extends BasicFrm implements
     ReassFrm reassFrm = null;
     if( (secondMem != null) && (secondName != null) ) {
       if( this.secondReassFrm != null ) {
-	EmuUtil.frameToFront( this.secondReassFrm );
+	EmuUtil.showFrame( this.secondReassFrm );
       } else {
 	this.secondReassFrm = new ReassFrm( secondMem );
 	if( secondName != null ) {
@@ -2799,7 +2795,7 @@ public class ScreenFrm extends BasicFrm implements
 	  this.secondReassFrm.setTitle(
 			"JKCEMU Reassembler: Sekund\u00E4rsystem" );
 	}
-	this.secondReassFrm.setVisible( true );
+	EmuUtil.showFrame( this.secondReassFrm );
       }
       reassFrm = this.secondReassFrm;
     }

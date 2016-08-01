@@ -1,9 +1,9 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Lesen einer AC1-Datei als InputStream von Audio-Daten
+ * Lesen einer AC1-Datei als InputStream von Audiodaten
  * im klassischen Kassettenaufzeichnungsformat
  */
 

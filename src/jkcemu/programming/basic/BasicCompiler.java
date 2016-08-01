@@ -50,7 +50,7 @@ public class BasicCompiler
 	"DIM", "DO", "DOKE", "DRAW", "DRAWR",
 	"ELSE", "ELSEIF", "END", "ENDIF", "EOF", "ERR", "ERR$", "EXIT",
 	"E_CHANNEL_ALREADY_OPEN", "E_CHANNEL_CLOSED",
-	"E_DEVICE_LOCKED", "E_DEVICE_NOT_CONFIGURED", "E_DEVICE_NOT_FOUND",
+	"E_DEVICE_LOCKED", "E_DEVICE_NOT_FOUND",
 	"E_DISK_FULL",
 	"E_EOF", "E_ERROR", "E_FILE_NOT_FOUND", "E_INVALID",
 	"E_IO_ERROR", "E_IO_MODE", "E_NO_DISK", "E_OK", "E_OVERFLOW",
@@ -1943,7 +1943,8 @@ public class BasicCompiler
       if( ifEntry == null ) {
 	throw new PrgException( "ELSE ohne IF" );
       }
-      if( ifEntry.isIfCodeCreationDisabled() ) {
+      boolean ifCodeCreationDisabled = ifEntry.isIfCodeCreationDisabled();
+      if( ifCodeCreationDisabled ) {
 	ifEntry.setIfCodeCreationDisabled( false );
 	popCodeCreationDisabled();
       }
@@ -1952,15 +1953,17 @@ public class BasicCompiler
 	if( ifEntry.isElseCodeCreationDisabled() ) {
 	  pushCodeCreationDisabled();
 	} else {
-	  if( !ifEntry.isMultiLine()
-	      && this.options.getPreferRelativeJumps() )
-	  {
-	    this.asmOut.append( "\tJR\t" );
-	  } else {
-	    this.asmOut.append( "\tJP\t" );
+	  if( !ifCodeCreationDisabled ) {
+	    if( !ifEntry.isMultiLine()
+		&& this.options.getPreferRelativeJumps() )
+	    {
+	      this.asmOut.append( "\tJR\t" );
+	    } else {
+	      this.asmOut.append( "\tJP\t" );
+	    }
+	    this.asmOut.append( ifEntry.getEndifLabel() );
+	    this.asmOut.newLine();
 	  }
-	  this.asmOut.append( ifEntry.getEndifLabel() );
-	  this.asmOut.newLine();
 	  this.asmOut.append( elseLabel );
 	  this.asmOut.append( ":\n" );
 	}
@@ -3964,7 +3967,7 @@ public class BasicCompiler
   }
 
 
-  private static void checkVarName( String varName ) throws PrgException
+  private void checkVarName( String varName ) throws PrgException
   {
     if( isReservedWord( varName ) ) {
       throw new PrgException( "Reserviertes Schl\u00FCsselwort"
@@ -3980,10 +3983,10 @@ public class BasicCompiler
   }
 
 
-  private static boolean isReservedWord( String name )
+  private boolean isReservedWord( String name )
   {
     return (Arrays.binarySearch( sortedReservedWords, name ) >= 0)
-		|| AbstractTarget.isReservedWord( name );
+		|| this.target.isReservedWord( name );
   }
 
 

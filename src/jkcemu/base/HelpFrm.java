@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -227,15 +227,10 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 
   private static void openInternal( String page )
   {
-    if( instance != null ) {
-      if( instance.getExtendedState() == Frame.ICONIFIED ) {
-        instance.setExtendedState( Frame.NORMAL );
-      }
-    } else {
+    if( instance == null ) {
       instance = new HelpFrm();
     }
-    instance.toFront();
-    instance.setVisible( true );
+    EmuUtil.showFrame( instance );
     instance.setPage( page );
   }
 

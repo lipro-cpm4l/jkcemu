@@ -265,13 +265,6 @@ public class SCCHTarget extends AbstractTarget
 
 
   @Override
-  public String getHostName()
-  {
-    return "AC1-LLC2";
-  }
-
-
-  @Override
   public int getMaxAppNameLen()
   {
     return 1;

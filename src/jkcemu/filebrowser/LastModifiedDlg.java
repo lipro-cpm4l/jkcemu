@@ -11,19 +11,27 @@ package jkcemu.filebrowser;
 import java.awt.*;
 import java.io.*;
 import java.lang.*;
+import java.nio.file.*;
+import java.nio.file.attribute.*;
 import java.util.*;
 import java.util.zip.*;
 import java.text.*;
 import javax.swing.*;
+import javax.swing.text.Document;
 import jkcemu.base.*;
 
 
 public class LastModifiedDlg extends BasicDlg
+			implements FileVisitor<Path>, Runnable
 {
-  private java.util.List<File> files;
+  private java.util.List<Path> paths;
+  private Thread               thread;
+  private FileTime             time;
   private int                  numChanged;
   private int                  numUnchanged;
-  private boolean              suppressArchiveErrDlg;
+  private boolean              canceled;
+  private boolean              recursive;
+  private boolean              archiveFiles;
   private DateFormat           dateFmtStd;
   private DateFormat           dateFmtShort;
   private JRadioButton         btnCurrentTime;
@@ -31,8 +39,95 @@ public class LastModifiedDlg extends BasicDlg
   private JCheckBox            btnRecursive;
   private JCheckBox            btnWithinArchiveFiles;
   private JTextField           fldTime;
+  private JTextArea            fldLog;
   private JButton              btnOK;
   private JButton              btnCancel;
+
+
+	/* --- FileVisitor --- */
+
+  @Override
+  public FileVisitResult postVisitDirectory( Path dir, IOException ex )
+  {
+    FileVisitResult rv = FileVisitResult.TERMINATE;
+    if( !this.canceled && (this.time != null) ) {
+      if( this.recursive ) {
+	setLastModified( dir );
+      }
+      rv = FileVisitResult.CONTINUE;
+    }
+    return rv;
+  }
+
+
+  @Override
+  public FileVisitResult preVisitDirectory(
+				Path                dir,
+				BasicFileAttributes attrs )
+  {
+    FileVisitResult rv = FileVisitResult.TERMINATE;
+    if( !this.canceled && (this.time != null) ) {
+      if( this.recursive ) {
+	rv = FileVisitResult.CONTINUE;
+      } else {
+	setLastModified( dir );
+	rv = FileVisitResult.SKIP_SUBTREE;
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
+  public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
+  {
+    FileVisitResult rv = FileVisitResult.TERMINATE;
+    if( !this.canceled && (this.time != null) ) {
+      setLastModified( file );
+      rv = FileVisitResult.CONTINUE;
+    }
+    return rv;
+  }
+
+
+  @Override
+  public FileVisitResult visitFileFailed( Path file, IOException ex )
+  {
+    this.numUnchanged++;
+    return this.canceled ?
+		FileVisitResult.TERMINATE
+		: FileVisitResult.CONTINUE;
+  }
+
+
+	/* --- Runnable --- */
+
+  @Override
+  public void run()
+  {
+    String msg = null;
+    try {
+      for( Path path : paths ) {
+	Files.walkFileTree( path, this );
+      }
+    }
+    catch( Exception ex ) {
+      msg = ex.getMessage();
+      this.canceled = true;
+    }
+    finally {
+      final String msg1 = msg;
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    threadTerminated( msg1 );
+		  }
+		} );
+    }
+  }
 
 
   /*
@@ -42,12 +137,12 @@ public class LastModifiedDlg extends BasicDlg
    */
   public static boolean open(
 			Window               owner,
-			java.util.List<File> files )
+			java.util.List<Path> paths )
   {
     boolean rv = false;
-    if( files != null ) {
-      if( !files.isEmpty() ) {
-        LastModifiedDlg dlg = new LastModifiedDlg( owner, files );
+    if( paths != null ) {
+      if( !paths.isEmpty() ) {
+        LastModifiedDlg dlg = new LastModifiedDlg( owner, paths );
         dlg.setVisible( true );
         if( dlg.numChanged > 0 ) {
 	  rv = true;
@@ -73,11 +168,11 @@ public class LastModifiedDlg extends BasicDlg
 	}
 	else if( src == this.btnOK ) {
 	  rv = true;
-	  doApply();
+	  doOK();
 	}
         else if( src == this.btnCancel ) {
 	  rv = true;
-	  doClose();
+	  doCancel();
 	}
       }
     }
@@ -89,17 +184,21 @@ public class LastModifiedDlg extends BasicDlg
 
   private LastModifiedDlg(
 		Window               owner,
-		java.util.List<File> files )
+		java.util.List<Path> paths )
   {
     super( owner, "\u00C4nderungszeitpunkt" );
-    this.files                 = files;
-    this.numChanged            = 0;
-    this.numUnchanged          = 0;
-    this.suppressArchiveErrDlg = false;
-    this.dateFmtStd            = DateFormat.getDateTimeInstance(
+    this.paths        = paths;
+    this.thread       = null;
+    this.time         = null;
+    this.numChanged   = 0;
+    this.numUnchanged = 0;
+    this.canceled     = false;
+    this.recursive    = false;
+    this.archiveFiles = false;
+    this.dateFmtStd   = DateFormat.getDateTimeInstance(
 						DateFormat.MEDIUM,
 						DateFormat.MEDIUM );
-    this.dateFmtShort         = DateFormat.getDateTimeInstance(
+    this.dateFmtShort = DateFormat.getDateTimeInstance(
 						DateFormat.MEDIUM,
 						DateFormat.SHORT );
     this.dateFmtStd.setLenient( false );
@@ -125,14 +224,12 @@ public class LastModifiedDlg extends BasicDlg
     ButtonGroup grpTime = new ButtonGroup();
 
     this.btnCurrentTime = new JRadioButton( "aktuellen Zeitpunkt", true );
-    this.btnCurrentTime.addActionListener( this );
     grpTime.add( this.btnCurrentTime );
     gbc.insets.left = 50;
     gbc.gridy++;
     add( this.btnCurrentTime, gbc );
 
     this.btnTimeInput = new JRadioButton( "Datum/Uhrzeit:", false );
-    this.btnTimeInput.addActionListener( this );
     grpTime.add( this.btnTimeInput );
     gbc.insets.top = 0;
     gbc.gridwidth  = 1;
@@ -141,7 +238,6 @@ public class LastModifiedDlg extends BasicDlg
 
     this.fldTime = new JTextField();
     this.fldTime.setEditable( false );
-    this.fldTime.addActionListener( this );
     gbc.insets.left = 5;
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
@@ -169,16 +265,19 @@ public class LastModifiedDlg extends BasicDlg
 
     boolean hasDirs     = false;
     boolean hasArchives = false;
-    for( File file : this.files ) {
-      if( file.isDirectory() ) {
+    for( Path path : this.paths ) {
+      if( Files.isDirectory( path, LinkOption.NOFOLLOW_LINKS ) ) {
 	hasDirs = true;
       }
-      if( file.isFile() ) {
-	String fName = file.getName();
-	if( fName != null ) {
-	  fName = fName.toLowerCase();
-	  if( fName.endsWith( ".jar" )  || fName.endsWith( ".zip" ) ) {
-	    hasArchives = true;
+      if( Files.isRegularFile( path, LinkOption.NOFOLLOW_LINKS ) ) {
+	Path namePath = path.getFileName();
+	if( namePath != null ) {
+	  String fName = namePath.toString();
+	  if( fName != null ) {
+	    fName = fName.toLowerCase();
+	    if( fName.endsWith( ".jar" ) || fName.endsWith( ".zip" ) ) {
+	      hasArchives = true;
+	    }
 	  }
 	}
       }
@@ -187,38 +286,50 @@ public class LastModifiedDlg extends BasicDlg
       }
     }
     this.btnRecursive.setEnabled( hasDirs );
-    this.btnWithinArchiveFiles.setEnabled( hasArchives );
+    this.btnWithinArchiveFiles.setEnabled( hasDirs || hasArchives );
+
+
+    // Ausgabe
+    this.fldLog = new JTextArea( 4, 0 );
+    this.fldLog.setEditable( false );
+    gbc.anchor        = GridBagConstraints.CENTER;
+    gbc.fill          = GridBagConstraints.BOTH;
+    gbc.insets.top    = 10;
+    gbc.insets.bottom = 10;
+    gbc.weightx       = 1.0;
+    gbc.weighty       = 1.0;
+    gbc.gridwidth     = 2;
+    gbc.gridx         = 0;
+    gbc.gridy++;
+    add( new JScrollPane( this.fldLog ), gbc );
 
 
     // Knoepfe
     JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
 
     this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
     panelBtn.add( this.btnOK );
 
     this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
     panelBtn.add( this.btnCancel );
 
-    gbc.anchor        = GridBagConstraints.CENTER;
-    gbc.fill          = GridBagConstraints.NONE;
-    gbc.insets.top    = 10;
-    gbc.insets.bottom = 10;
-    gbc.weightx       = 0.0;
-    gbc.gridwidth     = 2;
-    gbc.gridx         = 0;
+    gbc.fill    = GridBagConstraints.NONE;
+    gbc.weightx = 0.0;
+    gbc.weighty = 0.0;
     gbc.gridy++;
     add( panelBtn, gbc );
 
 
     // Vorbelegung
     java.util.Date date = null;
-    if( !files.isEmpty() ) {
-      long t = files.get( 0 ).lastModified();
-      if( t > 0L ) {
-	date = new java.util.Date( t );
+    if( !this.paths.isEmpty() ) {
+      try {
+	FileTime t = Files.getLastModifiedTime( this.paths.get( 0 ) );
+	if( t != null ) {
+	  date = new java.util.Date( t.toMillis() );
+	}
       }
+      catch( IOException ex ) {}
     }
     if( date == null ) {
       date = new java.util.Date();
@@ -226,178 +337,237 @@ public class LastModifiedDlg extends BasicDlg
     this.fldTime.setText( this.dateFmtStd.format( date ) );
 
 
+    // Listener
+    this.btnCurrentTime.addActionListener( this );
+    this.btnTimeInput.addActionListener( this );
+    this.fldTime.addActionListener( this );
+    this.btnOK.addActionListener( this );
+    this.btnCancel.addActionListener( this );
+
+
     // Fenstergroesse und -position
     pack();
     setParentCentered();
     setResizable( true );
+    this.fldLog.setRows( 0 );
+  }
+
+
+	/* --- Aktionen --- */
+
+  private void doCancel()
+  {
+    if( this.thread != null ) {
+      this.canceled = true;
+      this.btnOK.setEnabled( true );
+    } else {
+      doClose();
+    }
+  }
+
+
+  private void doOK()
+  {
+    if( this.thread != null ) {
+      if( this.canceled
+	  || this.thread.getState().equals( Thread.State.TERMINATED ) )
+      {
+	doClose();
+      }
+    } else {
+      try {
+	if( this.btnCurrentTime.isSelected() ) {
+	  this.time = FileTime.fromMillis( System.currentTimeMillis() );
+	}
+	else if( this.btnTimeInput.isSelected() ) {
+	  String text = this.fldTime.getText();
+	  if( text != null ) {
+	    java.util.Date date = null;
+	    try {
+	      date = this.dateFmtStd.parse( text );
+	    }
+	    catch( ParseException ex ) {}
+	    if( date == null ) {
+	      date = this.dateFmtShort.parse( text );
+	    }
+	    this.time = FileTime.fromMillis(
+				date != null ?
+					date.getTime()
+					: System.currentTimeMillis() );
+
+	  }
+	}
+	if( this.time != null ) {
+	  this.btnOK.setEnabled( false );
+	  this.numChanged   = 0;
+	  this.numUnchanged = 0;
+	  this.canceled     = false;
+	  this.recursive    = this.btnRecursive.isSelected();
+	  this.archiveFiles = this.btnWithinArchiveFiles.isSelected();
+	  this.thread       = new Thread( this, "JKCEMU set last modified" );
+	  this.thread.start();
+	} else {
+	  showErrorDlg( this, "Sie m\u00FCssen eine Zeit festlegen." );
+	}
+      }
+      catch( ParseException ex ) {
+	showErrorDlg( this, "Datum/Uhrzeit: ung\u00FCltige Eingabe" );
+      }
+    }
   }
 
 
 	/* --- private Methoden --- */
 
-  private void doApply()
+  private void appendToLog( String msg )
   {
-    try {
-      long time = -1L;
-      if( this.btnCurrentTime.isSelected() ) {
-	time = System.currentTimeMillis();
+    if( msg != null ) {
+      if( !msg.isEmpty() ) {
+	Document doc = this.fldLog.getDocument();
+	if( doc != null ) {
+	  if( doc.getLength() > 0 ) {
+	    this.fldLog.append( "\n\n" );
+	  }
+	}
+	this.fldLog.append( msg );
       }
-      else if( this.btnTimeInput.isSelected() ) {
-	String text = this.fldTime.getText();
-	if( text != null ) {
-	  java.util.Date date = null;
-	  try {
-	    date = this.dateFmtStd.parse( text );
-	  }
-	  catch( ParseException ex ) {}
-	  if( date == null ) {
-	    date = this.dateFmtShort.parse( text );
-	  }
-	  if( date != null ) {
-	    time = date.getTime();
-	  }
-	}
-      }
-      if( time <= 0 ) {
-	showErrorDlg( this, "Sie m\u00FCssen eine Zeit festlegen." );
-      } else {
-	this.numChanged            = 0;
-	this.numUnchanged          = 0;
-	this.suppressArchiveErrDlg = false;
-	try {
-	  boolean recursive    = this.btnRecursive.isSelected();
-	  boolean archiveFiles = this.btnWithinArchiveFiles.isSelected();
-	  for( File file : this.files ) {
-	    setLastModified( file, time, recursive, archiveFiles );
-	  }
-	}
-	catch( Exception ex ) {}
-
-	StringBuilder buf = new StringBuilder();
-	buf.append( "\u00C4nderungszeitpunkt von\n" );
-	buf.append( this.numChanged );
-	if( this.numChanged == 1 ) {
-	  buf.append( " Datei/Verzeichnis" );
-	} else {
-	  buf.append( " Dateien/Verzeichnissen" );
-	}
-	buf.append( " ge\u00E4ndert" );
-	if( this.numUnchanged > 0 ) {
-	  buf.append( "\n" );
-	  buf.append( this.numUnchanged );
-	  if( this.numUnchanged == 1 ) {
-	    buf.append( " Datei/Verzeichnis konnte" );
-	  } else {
-	    buf.append( " Dateien/Verzeichnisse konnten" );
-	  }
-	  buf.append( " nicht ge\u00E4ndert werden." );
-	}
-	showInfoDlg( this, buf.toString() );
-	doClose();
-      }
-    }
-    catch( ParseException ex ) {
-      showErrorDlg( this, "Datum/Uhrzeit: ung\u00FCltige Eingabe" );
     }
   }
 
 
-  private void setLastModified(
-			File file,
-			long time,
-			boolean recursive,
-			boolean archiveFiles )
+  private void fireAppendToLog( final String msg )
   {
-    if( archiveFiles ) {
-      String fName = file.getName();
-      if( fName != null ) {
-	fName = fName.toLowerCase();
-	if( fName.endsWith( ".jar" ) || fName.endsWith( ".zip" ) ) {
-	  setLastModifiedInZIP( file, time );
-	}
-      }
-    }
-    try {
-      if( file.setLastModified( time ) ) {
-	this.numChanged++;
-      } else {
-	this.numUnchanged++;
-      }
-    }
-    catch( Exception ex ) {
-      this.numUnchanged++;
-    }
-    if( recursive && file.isDirectory() ) {
-      File[] files = file.listFiles();
-      if( files != null ) {
-	for( int i = 0; i < files.length; i++ ) {
-	  String name = files[ i ].getName();
-	  if( name != null ) {
-	    if( !name.equals( "." ) && !name.equals( ".." ) ) {
-	      setLastModified( files[ i ], time, recursive, archiveFiles );
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    appendToLog( msg );
+		  }
+		} );
+  }
+
+
+  private void setLastModified( Path path )
+  {
+    if( this.time != null ) {
+      if( this.archiveFiles
+	  && Files.isRegularFile( path, LinkOption.NOFOLLOW_LINKS ) )
+      {
+	Path namePath = path.getFileName();
+	if( namePath != null ) {
+	  String fName = namePath.toString();
+	  if( fName != null ) {
+	    fName = fName.toLowerCase();
+	    if( fName.endsWith( ".jar" ) || fName.endsWith( ".zip" ) ) {
+	      setLastModifiedInZIP( path );
 	    }
 	  }
 	}
       }
+      try {
+	Files.setLastModifiedTime( path, this.time );
+	this.numChanged++;
+      }
+      catch( Exception ex ) {
+	this.numUnchanged++;
+      }
     }
   }
 
 
-  private void setLastModifiedInZIP( File file, long time )
+  /*
+   * Die Methode setzt in allen Eintraegen einer ZIP-Datei
+   * den Zeitstempel der letzten Aenderung.
+   * Dazu wird eine neue ZIP-Datei angelegt und alle ZIP-Eintraege
+   * mit dem geaenderten Zeitstempel in die neue Datei hineinkopiert.
+   * Danach wird die neue Datei auf die alte verschoben.
+   */
+  private void setLastModifiedInZIP( Path file )
   {
-    InputStream     in      = null;
-    ZipInputStream  zipIn   = null;
-    ZipOutputStream zipOut  = null;
-    File            fileOut = null;
-    try {
-      if( !file.canWrite() ) {
-	throw new IOException( "Datei ist schreibgesch\u00FCtzt." );
-      }
-      in    = new FileInputStream( file );
-      zipIn = new ZipInputStream( in );
+    if( (file != null) && (this.time != null) ) {
+      InputStream     in     = null;
+      ZipInputStream  zipIn  = null;
+      ZipOutputStream zipOut = null;
+      try {
 
-      // ZIP-Datei konnte geoeffnet werden -> Ausgabedatei anlegen
-      File dirFile = file.getParentFile();
-      if( dirFile == null ) {
-	dirFile = new File( "." );
-      }
-      fileOut = File.createTempFile( "jkcemu_", ".zip", dirFile );
-      zipOut  = new ZipOutputStream( new FileOutputStream( fileOut ) );
+	// Dateiattribute lesen
+	Map<String,Object> attrs = Files.readAttributes(
+						file,
+						"*",
+						LinkOption.NOFOLLOW_LINKS );
 
-      // Datei kopieren und dabei die Zeitstempel anpassen
-      ZipEntry entry = zipIn.getNextEntry();
-      while( entry != null ) {
-	entry.setTime( time );
-	zipOut.putNextEntry( entry );
-	int b = zipIn.read();
-	while( b >= 0 ) {
-	  zipOut.write( b );
-	  b = zipIn.read();
+	Path tmpFile = null;
+	if( !Files.isWritable( file ) ) {
+	  throw new IOException( "Datei ist schreibgesch\u00FCtzt." );
 	}
-	zipOut.closeEntry();
-	zipIn.closeEntry();
-	entry = zipIn.getNextEntry();
+	in    = Files.newInputStream( file, StandardOpenOption.READ );
+	zipIn = new ZipInputStream( in );
+
+	// ZIP-Datei konnte geoeffnet werden -> Ausgabedatei anlegen
+	Path dir = file.getParent();
+	if( dir != null ) {
+	  tmpFile = Files.createTempFile( dir, "jkcemu_", ".zip" );
+	} else {
+	  tmpFile = Files.createTempFile( "jkcemu_", ".zip" );
+	}
+	zipOut = new ZipOutputStream(
+			Files.newOutputStream(
+					tmpFile,
+					StandardOpenOption.CREATE ) );
+
+	// Datei kopieren und dabei die Zeitstempel anpassen
+	ZipEntry entry = zipIn.getNextEntry();
+	while( entry != null ) {
+	  entry.setTime( this.time.toMillis() );
+	  zipOut.putNextEntry( entry );
+	  int b = zipIn.read();
+	  while( b >= 0 ) {
+	    zipOut.write( b );
+	    b = zipIn.read();
+	  }
+	  zipOut.closeEntry();
+	  zipIn.closeEntry();
+	  entry = zipIn.getNextEntry();
+	}
+	zipOut.finish();
+	zipOut.close();
+	zipOut = null;
+
+	zipIn.close();
+	zipIn = null;
+
+	// temporere Datei auf die alte verschieben
+	Files.move( tmpFile, file, StandardCopyOption.REPLACE_EXISTING );
+
+	// Dateiattribute setzen
+	if( attrs != null ) {
+	  boolean failed = false;
+	  for( String s : attrs.keySet() ) {
+	    Object v = attrs.get( s );
+	    if( v != null ) {
+	      try {
+		Files.setAttribute( file, s, v, LinkOption.NOFOLLOW_LINKS );
+	      }
+	      catch( Exception ex ) {
+		failed = true;
+	      }
+	    }
+	  }
+	  if( failed ) {
+	    fireAppendToLog(
+		file.toString() + ":\n"
+			+ "Die urspr\u00FCnglichen Dateiattribute"
+			+ " konnten nicht wieder hergestellt werden." );
+	  }
+	}
       }
-      zipOut.finish();
-      zipOut.close();
-      zipOut = null;
-
-      zipIn.close();
-      zipIn = null;
-
-      // alte Datei loeschen und neue umbenennen
-      file.delete();
-      fileOut.renameTo( file );
-    }
-    catch( Exception ex ) {
-      EmuUtil.doClose( in );
-      EmuUtil.doClose( zipOut );
-      if( !this.suppressArchiveErrDlg ) {
+      catch( Exception ex ) {
 	StringBuilder buf = new StringBuilder( 256 );
-	buf.append( "Die Zeitstempel der in der Archivdatei\n" );
-	buf.append( file.getPath() );
-	buf.append( "\nenthaltenen Dateien"
-		+ " konnten nicht ge\u00E4ndert werden." );
+	buf.append( file.toString() );
+	buf.append( ":\nDie Zeitstempel der in der Archivdatei enthaltenen\n"
+		+ "Dateien konnten nicht ge\u00E4ndert werden." );
 	String exMsg = ex.getMessage();
 	if( exMsg != null ) {
 	  if( !exMsg.isEmpty() ) {
@@ -405,24 +575,44 @@ public class LastModifiedDlg extends BasicDlg
 	    buf.append( exMsg );
 	  }
 	}
-	if( this.files.size() > 1 ) {
-	  JCheckBox cb = new JCheckBox(
-		"Diese Meldung bei weiteren Dateien nicht mehr anzeigen" );
-	  buf.append( "\n\n" );
-	  JOptionPane.showMessageDialog(
-		this,
-		new Object[] { buf, cb },
-		"Fehler",
-		JOptionPane.ERROR_MESSAGE );
-	  this.suppressArchiveErrDlg = cb.isSelected();
-	} else {
-	  JOptionPane.showMessageDialog(
-		this,
-		buf,
-		"Fehler",
-		JOptionPane.ERROR_MESSAGE );
-	}
+	fireAppendToLog( buf.toString() );
+      }
+      finally {
+	EmuUtil.doClose( in );
+	EmuUtil.doClose( zipOut );
       }
     }
+  }
+
+
+  private void threadTerminated( String msg )
+  {
+    StringBuilder buf = new StringBuilder( 256 );
+    if( this.canceled ) {
+      buf.append( "Vorgang abgebrochen\n" );
+    }
+    buf.append( this.numChanged );
+    if( this.numChanged == 1 ) {
+      buf.append( " Datei/Verzeichnis" );
+    } else {
+      buf.append( " Dateien/Verzeichnissen" );
+    }
+    buf.append( " ge\u00E4ndert" );
+    if( this.numUnchanged > 0 ) {
+      buf.append( "\n" );
+      buf.append( this.numUnchanged );
+      if( this.numUnchanged == 1 ) {
+	buf.append( " Datei/Verzeichnis konnte" );
+      } else {
+	buf.append( " Dateien/Verzeichnisse konnten" );
+      }
+      buf.append( " nicht ge\u00E4ndert werden." );
+    }
+    if( !this.canceled ) {
+      buf.append( "\nFertig" );
+    }
+    appendToLog( buf.toString() );
+    this.btnOK.setEnabled( true );
+    this.btnCancel.setEnabled( false );
   }
 }

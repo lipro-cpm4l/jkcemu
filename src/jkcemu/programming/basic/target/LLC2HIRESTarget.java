@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -517,13 +517,6 @@ public class LLC2HIRESTarget extends SCCHTarget
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public String getHostName()
-  {
-    return "LLC2";
   }
 
 

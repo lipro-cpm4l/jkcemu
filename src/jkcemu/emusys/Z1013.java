@@ -1105,10 +1105,10 @@ public class Z1013 extends EmuSys implements
   @Override
   public void openBasicProgram()
   {
-    boolean   cancelled = false;
-    BasicType bType     = null;
-    String    text      = null;
-    int       preIdx    = -1;
+    boolean   canceled = false;
+    BasicType bType    = null;
+    String    text     = null;
+    int       preIdx   = -1;
     if( this.lastBasicType != null ) {
       switch( this.lastBasicType ) {
 	case Z1013_TINY:
@@ -1156,9 +1156,9 @@ public class Z1013 extends EmuSys implements
 	break;
 
       default:
-	cancelled = true;
+	canceled = true;
     }
-    if( !cancelled ) {
+    if( !canceled ) {
       if( text != null ) {
 	this.lastBasicType = bType;
 	this.screenFrm.openText( text );
@@ -1458,7 +1458,7 @@ public class Z1013 extends EmuSys implements
   @Override
   public void saveBasicProgram()
   {
-    boolean           cancelled      = false;
+    boolean           canceled       = false;
     int               begAddr        = -1;
     int               endAddr        = -1;
     BasicType         z1013BasicType = null;
@@ -1521,9 +1521,9 @@ public class Z1013 extends EmuSys implements
 	break;
 
       default:
-	cancelled = true;
+	canceled = true;
     }
-    if( !cancelled ) {
+    if( !canceled ) {
       if( (begAddr > 0) && (endAddr > begAddr) ) {
 	this.lastBasicType = z1013BasicType;
 	(new SaveDlg(

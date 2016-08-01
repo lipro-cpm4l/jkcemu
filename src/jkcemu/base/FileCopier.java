@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2015 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -80,7 +80,7 @@ public class FileCopier extends AbstractFileWorker
 				BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.CONTINUE;
-    if( !this.cancelled ) {
+    if( !this.canceled ) {
       this.curPath = dir;
       Path dstDir  = resolveDst( dir );
       try {
@@ -122,10 +122,10 @@ public class FileCopier extends AbstractFileWorker
 	      this.copyAllDirs = Boolean.FALSE;
 	      break;
 	    default:
-	      this.cancelled = true;
+	      this.canceled = true;
 	  }
 	}
-	if( !this.cancelled && (!exists || forceCopy) ) {
+	if( !this.canceled && (!exists || forceCopy) ) {
 	  Files.copy(
 		dir,
 		dstDir,
@@ -141,20 +141,20 @@ public class FileCopier extends AbstractFileWorker
 	    || !Files.isDirectory( dstDir ) )
 	{
 	  handleError( dir, ex );
-	  if( !this.cancelled ) {
+	  if( !this.canceled ) {
 	    rv = FileVisitResult.SKIP_SUBTREE;
 	  }
 	}
       }
     }
-    return this.cancelled ? FileVisitResult.TERMINATE : rv;
+    return this.canceled ? FileVisitResult.TERMINATE : rv;
   }
 
 
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    if( !this.cancelled ) {
+    if( !this.canceled ) {
       this.curPath = file;
       try {
 	Path    dstFile      = resolveDst( file );
@@ -195,10 +195,10 @@ public class FileCopier extends AbstractFileWorker
 	      this.replaceAllFiles = Boolean.FALSE;
 	      break;
 	    default:
-	      this.cancelled = true;
+	      this.canceled = true;
 	  }
 	}
-	if( !this.cancelled && (!exists || forceReplace) ) {
+	if( !this.canceled && (!exists || forceReplace) ) {
 	  Files.copy(
 		file,
 		dstFile,
@@ -212,7 +212,7 @@ public class FileCopier extends AbstractFileWorker
 	handleError( file, ex );
       }
     }
-    return this.cancelled ?
+    return this.canceled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 

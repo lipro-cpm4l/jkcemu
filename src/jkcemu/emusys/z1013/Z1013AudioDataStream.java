@@ -1,11 +1,11 @@
 /*
- * (c) 2011-2014 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Lesen einer Z1013-Datei als InputStream von Audio-Daten
+ * Lesen einer Z1013-Datei als InputStream von Audiodaten
  *
- * Die Klasse wandelt ein Speicherabbild in Audio-Daten
+ * Die Klasse wandelt ein Speicherabbild in Audiodaten
  * entsprechend dem Z1013-Kassettenaufzeichnungsformat um.
  * Im Original werden die Frequenzen 640, 1280 und 2560 Hz verwendet
  * (leicht gerundet). Diese lassen sich mit etwa 4% Abweichung

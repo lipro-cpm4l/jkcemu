@@ -3911,6 +3911,7 @@ public class DebugFrm extends BasicFrm implements
   {
     javax.swing.text.Document doc     = this.fldMemPC.getDocument();
     BreakpointListModel       bpModel = this.bpModels[ BP_PC_IDX ];
+    StringBuilder             tmpBuf  = new StringBuilder();
 
     int addr = this.cpu.getRegPC();
     this.fldRegPC.setText( String.format( "%04X", addr ) );
@@ -3949,71 +3950,97 @@ public class DebugFrm extends BasicFrm implements
 	}
       }
 
-      Z80ReassInstr instr = Z80Reassembler.reassInstruction(
-						      this.memory,
-						      addr );
-      if( instr != null ) {
-
-	// Adresse ausgeben
-	this.fldMemPC.append( String.format( "%04X  ", addr ) );
-
-	// Befehlscode ausgeben
-	int w = 12;
-	int n = instr.getLength();
-	for( int i = 0; i < n; i++ ) {
-	  this.fldMemPC.append(
-		  String.format( "%02X ", instr.getByte( i ) ) );
-	  addr++;
-	  w -= 3;
-	}
-	while( w > 0 ) {
-	  this.fldMemPC.append( "\u0020" );
-	  --w;
-	}
-
-	// Assembler-Befehlsname ausgeben
-	String s = instr.getName();
-	if( s != null ) {
-	  this.fldMemPC.append( s );
-
-	  // Argument ausgeben
-	  w = 8 - s.length();
-	  s = instr.getArg1();
-	  if( s != null ) {
-	    while( w > 0 ) {
-	      this.fldMemPC.append( "\u0020" );
-	      --w;
-	    }
-	    this.fldMemPC.append( s );
-
-	    s = instr.getArg2();
-	    if( s != null ) {
-	      this.fldMemPC.append( "," );
-	      this.fldMemPC.append( s );
-	    }
+      int len = 0;
+      if( this.emuThread != null ) {
+	EmuSys emuSys = this.emuThread.getEmuSys();
+	if( emuSys != null ) {
+	  if( emuSys != null ) {
+	    tmpBuf.setLength( 0 );
+	    len = emuSys.reassembleSysCall(
+					this.memory,
+					addr,
+					tmpBuf,
+					false,
+					18,
+					26,
+					40 );
 	  }
 	}
-
+      }
+      int txtLen = tmpBuf.length();
+      if( (len > 0) && (txtLen > 0) ) {
+	if( tmpBuf.charAt( txtLen - 1 ) == '\n' ) {
+	  tmpBuf.setLength( txtLen - 1 );
+	}
+	this.fldMemPC.append( tmpBuf.toString() );
+	addr += len;
       } else {
+	Z80ReassInstr instr = Z80Reassembler.reassInstruction(
+						      this.memory,
+						      addr );
+	if( instr != null ) {
 
-	this.fldMemPC.append( String.format(
+	  // Adresse ausgeben
+	  this.fldMemPC.append( String.format( "%04X  ", addr ) );
+
+	  // Befehlscode ausgeben
+	  int w = 12;
+	  int n = instr.getLength();
+	  for( int i = 0; i < n; i++ ) {
+	    this.fldMemPC.append(
+		  String.format( "%02X ", instr.getByte( i ) ) );
+	    addr++;
+	    w -= 3;
+	  }
+	  while( w > 0 ) {
+	    this.fldMemPC.append( "\u0020" );
+	    --w;
+	  }
+
+	  // Assembler-Befehlsname ausgeben
+	  String s = instr.getName();
+	  if( s != null ) {
+	    this.fldMemPC.append( s );
+
+	    // Argument ausgeben
+	    w = 8 - s.length();
+	    s = instr.getArg1();
+	    if( s != null ) {
+	      while( w > 0 ) {
+		this.fldMemPC.append( "\u0020" );
+		--w;
+	      }
+	      this.fldMemPC.append( s );
+
+	      s = instr.getArg2();
+	      if( s != null ) {
+		this.fldMemPC.append( "," );
+		this.fldMemPC.append( s );
+	      }
+	    }
+	  }
+
+	} else {
+
+	  this.fldMemPC.append( String.format(
 				"%02X",
 				this.memory.getMemByte( addr, true ) ) );
-	addr++;
-      }
+	  addr++;
+	}
 
-      if( (label != null) && (doc != null) ) {
-	int lineLen = doc.getLength() - linePos;
-	do {
-	  this.fldMemPC.append( "\u0020" );
-	  lineLen++;
-	} while( lineLen < 40 );
-	this.fldMemPC.append( ";" );
-	if( label.length() > 20 ) {
-	  this.fldMemPC.append( label.substring( 0, 17 ) );
-	  this.fldMemPC.append( "..." );
-	} else {
-	  this.fldMemPC.append( label );
+	if( (label != null) && (doc != null) ) {
+	  int lineLen = doc.getLength() - linePos;
+	  do {
+	    this.fldMemPC.append( "\u0020" );
+	    lineLen++;
+	  } while( lineLen < 40 );
+	  this.fldMemPC.append( ";" );
+	  if( label.length() > 20 ) {
+	    this.fldMemPC.append( label.substring( 0, 17 ) );
+	    this.fldMemPC.append( "..." );
+	  } else {
+	    this.fldMemPC.append( label );
+	  }
 	}
       }
     }

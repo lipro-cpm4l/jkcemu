@@ -1,9 +1,9 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Basisklasse fuer Fenster mit Audio-Funktionen (Pegel-Anzeige)
+ * Basisklasse fuer Fenster mit Audiofunktionen (Pegelanzeige)
  */
 
 package jkcemu.audio;
@@ -70,7 +70,7 @@ public class AbstractAudioFrm extends BasicFrm
       this.comboSampleRate.addItem( new Integer( this.sampleRates[ i ] ) );
     }
 
-    // Pegel-Anzeige
+    // Pegelanzeige
     this.minVolumeLimit = 0;
     this.maxVolumeLimit = 255;
     this.minVolumeValue = this.maxVolumeLimit;

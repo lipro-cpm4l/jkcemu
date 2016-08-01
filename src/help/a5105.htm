@@ -1,6 +1,53 @@
 <html>
 <body>
- <h1>Hinweise zur Emulation des A5105 (BIC, ALBA PC 1505)</h1>
+ <h1>A5105 (BIC, ALBA-PC&nbsp;1505)</h1>
+  Der Bildungscomputer A5105, h&auml;ufig auch kurz nur Bildungscomputer,
+  BIC oder BIC&nbsp;A5105 genannt, wurde von Robotron f&uuml;r
+  das Bildungssystem der DDR entwickelt und im Herbst 1989 eingef&uuml;hrt.
+  Das System bestand standardm&auml;&szlig;ig aus folgenden Komponenten:
+  <ul>
+   <li>
+    Computergrundger&auml;t (CGG) K1505
+    <ul>
+     <li>eigentlicher Computer mit Tastatur in einem Ger&auml;t</li>
+     <li>
+      mit separaten Netzteil auch als BASIC-Heimcomputer nutzbar
+      (Anschl&uuml;sse f&uuml;r Kassettenrecorder und Joysticks vorhanden)
+     </li>
+     <li>
+      Monitoranschluss nur &uuml;ber RGB,<br/>
+      f&uuml;r TV-Anschluss separater HF-Modulator notwendig
+     </li>
+    </ul>
+   </li>
+   <li>
+    Diskettenspeichereinheit (DSE) K5651
+    <ul>
+     <li>Floppy-Disk-Controller (FDC) mit einem Diskettenlaufwerk</li>
+     <li>CP/M-kompatibles Betriebssystem SCPX&nbsp;1505 im ROM</li>
+     <li>Netzwerkanschluss (BICLAN)</li>
+     <li>Netzteil, auch zur Stromversorgung des Computergrundger&auml;tes</li>
+     <li>wird direkt mit dem Computergrundger&auml;t zusammengesteckt</li>
+    </ul>
+   </li>
+   <li>
+    Monitor K7222 (schwarz/gr&uuml;n)
+    <ul>
+     <li>
+      Obwohl der A5105 Farbausgabe bietet, wurde &uuml;blicherweise
+      nur ein Schwarz/Gr&uuml;n-Monitor ausgeliefert.
+     </li>
+    </ul>
+   </li>
+  </ul>
+  <br/>
+   Restbest&auml;nde des A5105 wurden auch als ALBA-PC&nbsp;1505 verkauft.
+   Dieser  bestand aus dem Computergrundger&auml;t K1505,
+   dem Netzteil K0309 und dem HF-Modulator 690034.
+   Optional wurde auch ein FDC-Modul mit Diskettenlaufwerk angeboten.
+  <br/><br/>
+
+ <h2>Hinweise zur Emulation</h2>
   <ul>
    <li>
     <a href="a5105.htm#hardware">1. Emulierte Hardware</a>
@@ -101,9 +148,9 @@
 
  <h3><a name="sound">1.2. Sound-Generator</a></h3>
   Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
-  m&uuml;ssen Sie die Audio-Funktion
+  m&uuml;ssen Sie die Audiofunktion
   <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> aktivieren.
-  Alle anderen Audio-Funktionen beziehen sich auf den emulierten
+  Alle anderen Audiofunktionen beziehen sich auf den emulierten
   Kassettenrecorderanschluss.
  <br/><br/>
   Der Sound-Generator wird immer mit der originalen Taktfrequenz emuliert,
@@ -226,7 +273,7 @@
   der Floppy-Disk-Station aktiviert werden.
  <br/><br/>
 
- <h3><a name="rbas_disks">3.2. Hinweise zu den RBASIC-Disketten</a></h3>
+ <h3><a name="rbas_disks">3.1. Hinweise zu den RBASIC-Disketten</a></h3>
   Die RBASIC-Programme haben die Endung <em>.bas</em>
   und werden gestartet mit:
  <br/><br/>

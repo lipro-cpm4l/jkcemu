@@ -1,11 +1,11 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Klasse fuer die Emulation
  * des Anschlusses des Magnettonbandgeraetes (Ausgang),
- * indem die Audio-Daten in eine Datei geschrieben werden.
+ * indem die Audiodaten in eine Datei geschrieben werden.
  */
 
 package jkcemu.audio;
@@ -13,7 +13,6 @@ package jkcemu.audio;
 import java.io.*;
 import java.lang.*;
 import javax.sound.sampled.*;
-import jkcemu.Main;
 import jkcemu.base.*;
 import z80emu.*;
 
@@ -88,8 +87,8 @@ public class AudioOutFile extends AudioOut
    * der seit dem letzten Aufruf vergangenen Taktzyklen.
    *
    * Rueckgabewert:
-   *   true:  Audio-Daten verwenden
-   *   false: Audio-Daten verwerfen
+   *   true:  Audiodaten verwenden
+   *   false: Audiodaten verwerfen
    */
   @Override
   protected boolean currentDiffTStates( long diffTStates )
@@ -137,7 +136,7 @@ public class AudioOutFile extends AudioOut
 	try {
 	  if( this.fileType != null ) {
 
-	    // Audio-Datei erzeugen
+	    // Audiodatei erzeugen
 	    queue.appendPauseSamples( this.sampleRate / 10 );
 	    AudioUtil.write(
 			new AudioInputStream( queue, this.audioFmt, len ),
@@ -153,63 +152,11 @@ public class AudioOutFile extends AudioOut
 
 		// CSW-Datei erzeugen
 		queue.appendPauseSamples( this.sampleRate / 10 );
-
-		boolean      lastPhase = (queue.read() > 0);
-		OutputStream out       = null;
-		try {
-		  out = new BufferedOutputStream(
-				new FileOutputStream( this.file ) );
-
-		  // CSW-Signatur mit Versionsnummer
-		  EmuUtil.writeASCII( out, FileInfo.CSW_HEADER );
-		  out.write( 2 );
-		  out.write( 0 );
-
-		  // 4 Bytes Abtastrate
-		  out.write( this.sampleRate & 0xFF );
-		  out.write( (this.sampleRate >> 8) & 0xFF );
-		  out.write( (this.sampleRate >> 16) & 0xFF );
-		  out.write( this.sampleRate >> 24 );
-
-		  // 4 Bytes Gesamtanzahl Pulse
-		  out.write( len & 0xFF );
-		  out.write( (len >> 8) & 0xFF );
-		  out.write( (len >> 16) & 0xFF );
-		  out.write( len >> 24 );
-
-		  // Kompression
-		  out.write( 1 );			// RLE
-
-		  // Flags
-		  out.write( lastPhase ? 0x01 : 0 );	// B0: Initial-Phase
-
-		  // Header Extension
-		  out.write( 0 );			// keine Erweiterung
-
-		  // Encoding Application
-		  EmuUtil.writeFixLengthASCII( out, Main.APPNAME, 16, 0 );
-
-		  // CSW-Daten
-		  --len;
-		  int n = 1;
-		  while( len > 0 ) {
-		    boolean phase = (queue.read() > 0);
-		    if( phase == lastPhase ) {
-		      n++;
-		    } else {
-		      writeCswSampleCount( out, n );
-		      n = 1;
-		      lastPhase = phase;
-		    }
-		    --len;
-		  }
-		  writeCswSampleCount( out, n );
-		}
-		finally {
-		  if( out != null ) {
-		    out.close();
-		  }
-		}
+		CSWFile.write(
+			sampleRate,
+			queue,
+			len,
+			this.file );
 		done = true;
 	      }
 	    }
@@ -230,41 +177,35 @@ public class AudioOutFile extends AudioOut
 				new FileOutputStream( this.file ) );
 
 		// TZX-Signatur mit Versionsnummer
-		EmuUtil.writeASCII( out, FileInfo.TZX_HEADER );
+		EmuUtil.writeASCII( out, FileInfo.TZX_MAGIC );
 		out.write( 1 );
 		out.write( 20 );
 
 		// Text Description
-		StringBuilder textBuf = new StringBuilder( 64 );
-		textBuf.append( "File created by JKCEMU" );
-		EmuThread emuThread = this.audioFrm.getEmuThread();
-		if( emuThread != null ) {
-		  EmuSys emuSys = emuThread.getEmuSys();
-		  if( emuSys != null ) {
-		    String s = emuSys.getTitle();
-		    if( s != null ) {
-		      if( !s.isEmpty() ) {
-			textBuf.append( " (" );
-			textBuf.append( s );
-			textBuf.append( " emulation)" );
-		      }
-		    }
-		  }
-		}
-		out.write( 0x32 );			// Block-ID
-		out.write( textBuf.length() + 3 );	// L-Byte Blocklaenge
-		out.write( 0 );			// H-Byte Blocklaenge
-		out.write( 1 );			// Anzahl Textabschnitte
-		out.write( 8 );			// Typ: Herkunft
-		out.write( textBuf.length() );	// Laenge Textabschnitt
-		EmuUtil.writeASCII( out, textBuf );
+		String text = "File created by JKCEMU";
+		out.write( 0x30 );		// Block-ID
+		out.write( text.length() );	// Textlaenge
+		EmuUtil.writeASCII( out, text );
 
 		// Direct Recording Block
-		out.write( 0x15 );			// Block-ID
+		out.write( 0x15 );		// Block-ID
 
-		// Spectrum-T-States pro Sample
-		out.write( this.sampleRate == 22050 ? 158 : 79 );
-		out.write( 0 );
+		/*
+		 * Spectrum-T-States pro Sample,
+		 * Fuer die Abtastfrequenz 22050 Hz wuerde der
+		 * gerundete Wert 159 betragen,
+		 * in der TXZ-Spezifikation steht aber 158.
+		 * Aus diesem Grund wird hier fuer 22050 Hz der Wert 158
+		 * gesetzt und fuer alle anderen Abtastfrequenzen
+		 * der Wert berechnet und anschliessend gerundet.
+		 */
+		int zxTStatesPerSample = 158;	// Wert fuer 22050 Hz
+		if( this.sampleRate != 22050 ) {
+		  zxTStatesPerSample = Math.round(
+				3500000F / (float) this.sampleRate );
+		}
+		out.write( zxTStatesPerSample & 0xFF );
+		out.write( (zxTStatesPerSample >> 8) & 0xFF );
 
 		// anschliessende Pause in ms
 		out.write( 100 );
@@ -308,7 +249,7 @@ public class AudioOutFile extends AudioOut
 	}
       } else {
 	this.errorText = "Die Datei wurde nicht gespeichert,\n"
-			+ "da keine Audio-Daten erzeugt wurden.";
+			+ "da keine Audiodaten erzeugt wurden.";
       }
     }
     this.audioFmt = null;
@@ -341,23 +282,4 @@ public class AudioOutFile extends AudioOut
       }
     }
   }
-
-
-	/* --- private Methoden --- */
-
-  private static void writeCswSampleCount(
-				OutputStream out,
-				int          n ) throws IOException
-  {
-    if( (n & 0xFF) == n ) {
-      out.write( n );
-    } else {
-      out.write( 0 );
-      out.write( n & 0xFF );
-      out.write( (n >> 8) & 0xFF );
-      out.write( (n >> 16) & 0xFF );
-      out.write( n >> 24 );
-    }
-  }
 }
-

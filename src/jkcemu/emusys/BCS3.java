@@ -16,7 +16,9 @@ import jkcemu.text.TextUtil;
 import z80emu.*;
 
 
-public class BCS3 extends EmuSys implements Z80CTCListener
+public class BCS3 extends EmuSys implements
+					Z80CTCListener,
+					Z80TStatesListener
 {
   /*
    * Die beiden Tabellen mappen die BASIC-SE2.4- und BASIC-SE3.1-Tokens
@@ -101,6 +103,10 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
   private static final String PROP_PREFIX = "jkcemu.bcs3.";
 
+  private static int SCREEN_CHARS_PER_ROW_MAX = 42;
+  private static int SCREEN_HIDDEN_LINES      = 60;
+  private static int SCREEN_HEIGHT            = 320;
+
   private static int[] endInstBytesSE24 = { 0x0F, 0x27, 0xDE, 0x1E };
   private static int[] endInstBytesSE31 = { 0x0F, 0x27, 0xCE, 0x1E };
   private static int[] endInstBytesSP33 = { 0x00, 0x27, 0xCA, 0x1E };
@@ -114,22 +120,31 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   private static byte[] osBytesSP33_29 = null;
   private static byte[] mcEdtitorSE31  = null;
 
-  private Z80CTC  ctc;
-  private String  osFile;
-  private byte[]  osBytes;
-  private byte[]  fontBytes;
-  private byte[]  romF000;
-  private byte[]  ram;
-  private int     ramEndAddr;
-  private int     osVersion;
-  private int     screenOffset;
-  private int     screenBaseHeight;
-  private int     screenCharCols;
-  private int     screenCharRows;
-  private int     screenRowHeight;
-  private int     screenRowOffset;
-  private int[]   kbMatrix;
-  private boolean audioOutPhase;
+  private Z80CTC           ctc;
+  private String           osFile;
+  private byte[]           osBytes;
+  private byte[]           fontBytes;
+  private byte[]           screenChars;
+  private byte[]           screenPixelsWriting;
+  private byte[]           screenPixelsVisible;
+  private byte[]           romF000;
+  private byte[]           ram;
+  private int              ramEndAddr;
+  private int              osVersion;
+  private int              screenActiveTStates;
+  private int              screenColCnt;
+  private int              screenColNum;
+  private int              screenRowNum;
+  private int              screenLineNum;
+  private int              screenLineInChar;
+  private int              screenChar0Y;
+  private int              screenChar1Y;
+  private int[]            kbMatrix;
+  private long             lastAudioOutTStates;
+  private boolean          lastAudioOutPhase;
+  private boolean          removeHSyncFromAudio;
+  private volatile boolean screenEnabled;
+  private CharRaster       charRaster;
 
 
   public BCS3( EmuThread emuThread, Properties props )
@@ -147,20 +162,8 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 				props,
 				this.propPrefix + "os.version" );
     if( version.equals( "3.1" ) ) {
-      this.osVersion       = 31;
-      this.screenRowHeight = 8;
-      if( this.fontBytes == null ) {
-	if( fontBytesSE31 == null ) {
-	  fontBytesSE31 = readResource( "/rom/bcs3/se31font.bin" );
-	}
-	this.fontBytes = fontBytesSE31;
-      }
-      this.screenOffset     = 0x0080;
-      this.screenBaseHeight = 232;
-      this.screenCharRows   = 4;	// Anfangswert
+      this.osVersion = 31;
       if( is40CharsPerLineMode( props ) ) {
-	this.screenCharCols  = 40;
-	this.screenRowOffset = 41;
 	if( this.osBytes == null ) {
 	  if( osBytesSE31_40 == null ) {
 	    osBytesSE31_40 = readResource( "/rom/bcs3/se31_40.bin" );
@@ -168,8 +171,6 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	  this.osBytes = osBytesSE31_40;
 	}
       } else {
-	this.screenCharCols  = 29;
-	this.screenRowOffset = 30;
 	if( this.osBytes == null ) {
 	  if( osBytesSE31_29 == null ) {
 	    osBytesSE31_29 = readResource( "/rom/bcs3/se31_29.bin" );
@@ -184,59 +185,62 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	}
       }
     } else if( version.equals( "3.3" ) ) {
-      this.osVersion       = 33;
-      this.screenRowHeight = 8;
-      if( this.fontBytes == null ) {
-	if( fontBytesSP33 == null ) {
-	  fontBytesSP33 = readResource( "/rom/bcs3/sp33font.bin" );
-	}
-	this.fontBytes = fontBytesSP33;
-      }
+      this.osVersion = 33;
       if( this.osBytes == null ) {
 	if( osBytesSP33_29 == null ) {
 	  osBytesSP33_29 = readResource( "/rom/bcs3/sp33_29.bin" );
 	}
 	this.osBytes = osBytesSP33_29;
       }
-      this.screenOffset     = 0x00B4;
-      this.screenBaseHeight = 232;
-      this.screenCharRows   = 4;	// Anfangswert
-      this.screenCharCols   = 29;
-      this.screenRowOffset  = 30;
     } else {
-      this.osVersion       = 24;
-      this.screenRowHeight = 16;
-      if( this.fontBytes == null ) {
-	if( fontBytesSE24 == null ) {
-	  fontBytesSE24 = readResource( "/rom/bcs3/se24font.bin" );
-	}
-	this.fontBytes = fontBytesSE24;
-      }
+      this.osVersion = 24;
       if( this.osBytes == null ) {
 	if( osBytesSE24 == null ) {
 	  osBytesSE24 = readResource( "/rom/bcs3/se24.bin" );
 	}
 	this.osBytes = osBytesSE24;
       }
-      this.screenOffset     = 0x0050;
-      this.screenBaseHeight = 184;
-      this.screenCharCols   = 27;
-      this.screenCharRows   = 12;
-      this.screenRowOffset  = 28;
     }
-    this.ram           = new byte[ 0x0400 ];
-    this.ramEndAddr    = getRAMEndAddr( props );
-    this.kbMatrix      = new int[ 10 ];
-    this.audioOutPhase = false;
+    this.ram                  = new byte[ 0x0400 ];
+    this.ramEndAddr           = getRAMEndAddr( props );
+    this.kbMatrix             = new int[ 10 ];
+    this.screenEnabled        = false;
+    this.screenActiveTStates  = 0;
+    this.screenColCnt         = 0;
+    this.screenColNum         = 0;
+    this.screenRowNum         = -1;
+    this.screenLineNum        = 0;
+    this.screenLineInChar     = 0;
+    this.screenChar0Y         = -1;
+    this.screenChar1Y         = -1;
+    this.lastAudioOutTStates  = 0;
+    this.lastAudioOutPhase    = false;
+    this.removeHSyncFromAudio = getRemoveHSyncFromAudio( props );
+    this.charRaster           = null;
+
+    // Pixelpuffer zur Anzeige
+    this.screenPixelsVisible = new byte[
+	(SCREEN_HEIGHT - SCREEN_HIDDEN_LINES) * SCREEN_CHARS_PER_ROW_MAX ];
+
+    // Pixelpuffer, auf den aktuell geschrieben wird
+    this.screenPixelsWriting = new byte[ this.screenPixelsVisible.length ];
+
+    /*
+     * Die auf dem Bildschirm ausgegebenen Zeichen werden zusaetzlich
+     * in einen Textspeicher geschrieben,
+     * damit sie von dort in die Zwischenablage kopiert werden koennen.
+     * Da ein Zeichen hardwaremaessig fest 8 Pixel hoch ist,
+     * genuegt 1/8 der Groesse des Pixelspeichers.
+     */
+    this.screenChars = new byte[ this.screenPixelsWriting.length / 8 ];
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.ctc   = new Z80CTC( "CTC" );
     cpu.setInterruptSources( this.ctc );
-
     this.ctc.setTimerConnection( 0, 1 );
     this.ctc.setTimerConnection( 1, 2 );
     this.ctc.addCTCListener( this );
-    cpu.addTStatesListener( this.ctc );
+    cpu.addTStatesListener( this );
   }
 
 
@@ -374,21 +378,166 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     if( ctc == this.ctc ) {
       switch( timerNum ) {
 	case 0:
-	  this.audioOutPhase = !this.audioOutPhase;
-	  this.emuThread.writeAudioPhase( this.audioOutPhase );
+	  /*
+	   * Zeilensynchronimpuls und Audioausgabe in einem:
+	   *  - Rest der Zeile im Textpuffer leeren
+	   *  - Spaltenzaehler auf 0 setzen
+	   *  - Pixelzeilenzaehler erhoehen
+	   *  - Phasenwechsel am Audioausgang
+	   *  - CPU aus Wait erwachen
+	   */
+	  if( (this.screenLineNum == 0) && (this.screenRowNum >= 0) ) {
+	    int pos = (this.screenRowNum * SCREEN_CHARS_PER_ROW_MAX)
+						+ this.screenColNum;
+	    while( (pos < this.screenChars.length)
+		   && (this.screenColNum < SCREEN_CHARS_PER_ROW_MAX) )
+	    {
+	      this.screenChars[ pos++ ] = (byte) 0x20;
+	      this.screenColNum++;
+	    }
+	  }
+	  this.screenColNum = 0;
+	  if( this.screenLineNum < SCREEN_HEIGHT ) {
+	    this.screenLineNum++;
+	  }
+	  if( this.screenLineInChar < 7 ) {
+	    this.screenLineInChar++;
+	  } else {
+	    this.screenLineInChar = 0;
+	  }
+	  updAudioPhase( (this.screenLineInChar & 0x01) != 0 );
+	  this.emuThread.getZ80CPU().setWaitMode( false );
 	  break;
 
 	case 1:
-	  this.audioOutPhase = false;
-	  this.emuThread.writeAudioPhase( this.audioOutPhase );
-	  this.emuThread.getZ80CPU().setWaitMode( false );
+	  /*
+	   * Pixelzeilenzaehler innerhalb eines Zeichens zuruecksetzen
+	   * sowie Audioausgang aktualisieren
+	   */
+	  this.screenLineInChar = 0;
+	  updAudioPhase( (this.screenLineInChar & 0x01) != 0 );
+	  break;
+
+	case 2:
+	  /*
+	   * Bildsynchronimpuls und Audioausgabe in einem:
+	   *  - Rest im Textpuffer leeren
+	   *  - Bildschirmraster ermitteln
+	   *  - Pixelzeilenzaehler auf 0 setzen
+	   *  - Spaltenzaehler auf 0 setzen
+	   *  - Pixelpuffer mit dem der Anzeige tauschen
+	   *  - neuen Pixelpuffer leeren
+	   */
+	  if( this.screenRowNum >= 0 ) {
+	    int pos = (this.screenRowNum * SCREEN_CHARS_PER_ROW_MAX)
+						+ this.screenColNum;
+	    if( pos < this.screenChars.length ) {
+	      Arrays.fill(
+			this.screenChars,
+			pos,
+			this.screenChars.length,
+			(byte) 0x20 );
+	    }
+	  } else {
+	    Arrays.fill( this.screenChars, (byte) 0x20 );
+	  }
+
+	  // Char-Raster ermitteln
+	  boolean rasChanged = false;
+	  int     rowCount   = this.screenRowNum + 1;
+	  int     rowHeight  = this.screenChar1Y - this.screenChar0Y;
+	  int     topLine    = this.screenChar0Y - SCREEN_HIDDEN_LINES - 6;
+
+	  // Pixelpuffer tauschen und CharRaster aktualisieren
+	  synchronized( this ) {
+	    byte[] buf               = this.screenPixelsVisible;
+	    this.screenPixelsVisible = this.screenPixelsWriting;
+	    this.screenPixelsWriting = buf;
+	    if( this.charRaster != null ) {
+	      if( (this.charRaster.getColCount() != this.screenColCnt)
+		  || (this.charRaster.getRowCount() != rowCount)
+		  || (this.charRaster.getRowHeight() != rowHeight)
+		  || (this.charRaster.getTopLine() != topLine) )
+	      {
+		rasChanged = true;
+	      }
+	    }
+	    if( rasChanged || (this.charRaster == null) ) {
+	      if( (this.screenColCnt > 0)
+		  && (rowCount > 0)
+		  && (rowHeight > 0) )
+	      {
+		if( this.charRaster == null ) {
+		  rasChanged = true;
+		}
+		this.charRaster = new CharRaster(
+					this.screenColCnt,
+					rowCount,
+					rowHeight,
+					Math.min( rowHeight, 8 ),
+					8,
+					topLine );
+	      }
+	    }
+	  }
+
+	  // naechsten Frame initialisieren
+	  this.screenColCnt  = 0;
+	  this.screenColNum  = 0;
+	  this.screenRowNum  = -1;
+	  this.screenLineNum = 0;
+	  this.screenChar0Y  = -1;
+	  this.screenChar1Y  = -1;
+	  Arrays.fill( this.screenPixelsWriting, (byte) 0 );
+
+	  /*
+	   * Bildschirmausgabe einschalten,
+	   * wenn Bildsynchronimpulse kommen
+	   */
+	  this.screenActiveTStates = 100000;
+	  this.screenEnabled       = true;
+
+	  // Bildschirm und ggf. Copy-Button aktualisieren
+	  this.screenFrm.setScreenDirty( true );
+	  if( rasChanged ) {
+	    this.screenFrm.clearScreenSelection();
+	    this.screenFrm.fireUpdScreenTextActionsEnabled();
+	  }
 	  break;
       }
     }
   }
 
 
+	/* --- Z80TStatesListener --- */
+
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+
+    // Bildschirmausgabe ausschalten, wenn keine Bildsynchronimpulse kommen
+    if( this.screenActiveTStates > 0 ) {
+      this.screenActiveTStates -= tStates;
+      if( this.screenActiveTStates <= 0 ) {
+	if( this.screenEnabled ) {
+	  this.screenEnabled = false;
+	  this.screenFrm.setScreenDirty( true );
+	}
+      }
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void applySettings( Properties props )
+  {
+    super.applySettings( props );
+    loadFont( props );
+    this.removeHSyncFromAudio = getRemoveHSyncFromAudio( props );
+  }
+
 
   @Override
   public boolean canApplySettings( Properties props )
@@ -399,7 +548,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     if( rv ) {
       rv = TextUtil.equals(
 		this.osFile,
-		EmuUtil.getProperty( props,  "jkcemu.z1013.os.file" ) );
+		EmuUtil.getProperty( props, this.propPrefix + "os.file" ) );
     }
     if( rv ) {
       String version = EmuUtil.getProperty(
@@ -435,9 +584,9 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public boolean canExtractScreenText()
+  public synchronized boolean canExtractScreenText()
   {
-    return true;
+    return this.charRaster != null;
   }
 
 
@@ -447,7 +596,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = emuThread.getZ80CPU();
-    cpu.removeTStatesListener( this.ctc );
+    cpu.removeTStatesListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
@@ -462,7 +611,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   @Override
   public int getBorderColorIndex()
   {
-    return WHITE;
+    return this.screenEnabled ? WHITE : BLACK;
   }
 
 
@@ -470,65 +619,32 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   public int getColorIndex( int x, int y )
   {
     int rv = WHITE;
-    if( (this.fontBytes != null) && (this.screenRowHeight > 0) ) {
-      int fIdx = -1;
-      int rPix = y % this.screenRowHeight;
-      if( rPix < 8 ) {
-	int row = y / this.screenRowHeight;
+    if( this.screenEnabled ) {
+      synchronized( this ) {
 	int col = x / 8;
-	if( (row < this.screenCharRows) && (col < this.screenCharCols) ) {
-	  /*
-	   * Ab dem ersten Byte mit gesetztem Bit 7 werden
-	   * bis zum Zeilenende keine Zeichen mehr ausgegeben.
-	   */
-	  int ch   = -1;
-	  int mIdx = this.screenOffset + (row * this.screenRowOffset);
-	  while( mIdx < this.ram.length ) {
-	    ch = (int) (this.ram[ mIdx ] & 0xFF);
-	    if( (ch & 0x80) != 0 ) {
-	      ch = '\u0020';
-	      break;
-	    }
-	    if( col == 0 ) {
-	      break;
-	    }
-	    --col;
-	    mIdx++;
+	int idx = y * (SCREEN_CHARS_PER_ROW_MAX) + col;
+	if( (idx >= 0) && (idx < this.screenPixelsVisible.length) ) {
+	  int m = 0x80;
+	  int n = x % 8;
+	  if( n > 0 ) {
+	    m >>= n;
 	  }
-	  if( ch >= 0 ) {
-	    if( rPix == 7 ) {
-	      fIdx = (ch * 8);
-	    } else {
-	      fIdx = (ch * 8) + rPix + 1;
-	    }
+	  if( (this.screenPixelsVisible[ idx ] & m) != 0 ) {
+	    rv = BLACK;
 	  }
 	}
       }
-      if( (fIdx >= 0) && (fIdx < this.fontBytes.length) ) {
-	int m = 0x80;
-	int n = x % 8;
-	if( n > 0 ) {
-	  m >>= n;
-	}
-	if( (this.fontBytes[ fIdx ] & m) != 0 ) {
-	  rv = BLACK;
-	}
-      }
+    } else {
+      rv = BLACK;
     }
     return rv;
   }
 
 
   @Override
-  public CharRaster getCurScreenCharRaster()
+  public synchronized CharRaster getCurScreenCharRaster()
   {
-    return new CharRaster(
-			this.screenCharCols,
-			this.screenCharRows,
-			this.osBytes == osBytesSE24 ? 16 : 8,
-			8,
-			8,
-			0 );
+    return this.charRaster;
   }
 
 
@@ -604,9 +720,11 @@ public class BCS3 extends EmuSys implements Z80CTCListener
       }
       else if( (addr >= 0x1800) && (addr < 0x1C00)) {
 	/*
-	 * Zugriff auf den Bildwiederholspeicher
-	 * Beim BCS3 wird damit das Zeichen auf dem Bildschirm ausgegeben.
-	 * Ist Bit 7 nicht gesetzt, liest die CPU NOP-Befehle (0x00).
+	 * Zugriff auf den Bildwiederholspeicher mit Auswertung von Bit 7:
+	 * Wenn Bit 7 nicht gesetzt ist, liest die CPU Null-Bytes
+	 * waehrend die Datenbytes auf dem Bildschirm ausgegeben werden.
+	 * Wenn Bit 7 gesetzt ist, liest die CPU die Datenbytes
+	 * und nichts wird auf dem Bildschirm ausgegeben.
 	 */
 	rv      = 0;
 	int idx = addr - 0x1800;
@@ -646,110 +764,95 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     int ch  = -1;
-    int idx = this.screenOffset + (chY * this.screenRowOffset);
-    if( idx >= 0 ) {
-      /*
-       * Ab dem ersten Byte mit gesetztem Bit 7 werden
-       * bis zum Zeilenende keine Zeichen mehr ausgegeben.
-       */
-      int b = -1;
-      while( idx < this.ram.length ) {
-	b = (int) this.ram[ idx ] & 0xFF;
-	if( (b & 0x80) != 0 ) {
-	  ch = '\u0020';
-	  break;
-	}
-	if( chX == 0 ) {
-	  break;
-	}
-	idx++;
-	--chX;
+    int b   = -1;
+    int idx = (chY * SCREEN_CHARS_PER_ROW_MAX) + chX;
+    if( (idx >= 0 ) && (idx < this.screenChars.length) ) {
+      b = (int) this.screenChars[ idx ] & 0xFF;
+    }
+    if( (b >= 0) && (b < 0x10) ) {
+      if( this.osVersion < 24 ) {
+	ch = '\u0020';
       }
-      if( (b >= 0) && (b < 0x10) ) {
-	if( this.osVersion < 24 ) {
-	  ch = '\u0020';
-	}
-      } else if( (b >= 10) && (b < 0x20) ) {
-	if( this.osVersion < 32 ) {
-	  ch = '\u0020';
-	} else {
-	  switch( b ) {
-	    case 0x14:
-	      ch = '\u2665';
-	      break;
-	    case 0x15:
-	      ch = '\u2660';
-	      break;
-	    case 0x16:
-	      ch = '\u2666';
-	      break;
-	    case 0x17:
-	      ch = '\u2663';
-	      break;
-	    case 0x18:
-	      ch = '\u25CF';
-	      break;
-	    case 0x19:
-	      ch = '\u25E2';
-	      break;
-	    case 0x1A:
-	      ch = '\u25E5';
-	      break;
-	    case 0x1B:
-	      ch = '\u25E4';
-	      break;
-	    case 0x1C:
-	      ch = '\u25E3';
-	      break;
-	    case 0x1D:
-	      ch = '\u25A1';
-	      break;
-	    case 0x1E:
-	      ch = '\u0020';
-	      break;
-	    case 0x1F:
-	      ch = '\u03A9';
-	      break;
-	  }
-	}
-      } else if( (b >= 0x20) && (b <= 0x7F) ) {
+    } else if( (b >= 10) && (b < 0x20) ) {
+      if( this.osVersion < 32 ) {
+	ch = '\u0020';
+      } else {
 	switch( b ) {
-	  case 0x5D:
-	    if( this.osVersion >= 32 ) {
-	      ch = ']';
-	    }
+	  case 0x14:
+	    ch = '\u2665';
 	    break;
-	  case 0x5F:			// invertiertes Groesserzeichen
+	  case 0x15:
+	    ch = '\u2660';
 	    break;
-	  case 0x60:
-	    if( this.osVersion < 32 ) {
-	      ch = '\u0020';
-	    } else {
-	      ch = b;
-	    }
+	  case 0x16:
+	    ch = '\u2666';
 	    break;
-	  case 0x7B:
-	    ch = '\u00E4';			// ae
+	  case 0x17:
+	    ch = '\u2663';
 	    break;
-	  case 0x7C:
-	    ch = '\u00F6';			// ae
+	  case 0x18:
+	    ch = '\u25CF';
 	    break;
-	  case 0x7D:
-	    ch = '\u00FC';			// ae
+	  case 0x19:
+	    ch = '\u25E2';
 	    break;
-	  case 0x7E:
-	    ch = '|';
+	  case 0x1A:
+	    ch = '\u25E5';
 	    break;
-	  case 0x7F:
-	    if( this.osVersion < 32 ) {
-	      ch = '\u25A0';			// ausgefuelltes Feld
-	    } else {
-	      ch = '\u00B7';			// Punkt in der Mitte
-	    }
+	  case 0x1B:
+	    ch = '\u25E4';
 	    break;
-	  default:
-	    ch = b;
+	  case 0x1C:
+	    ch = '\u25E3';
+	    break;
+	  case 0x1D:
+	    ch = '\u25A1';
+	    break;
+	  case 0x1E:
+	    ch = '\u0020';
+	    break;
+	  case 0x1F:
+	    ch = '\u03A9';
+	    break;
 	}
+      }
+    } else if( (b >= 0x20) && (b <= 0x7F) ) {
+      switch( b ) {
+	case 0x5D:
+	  if( this.osVersion >= 32 ) {
+	    ch = ']';
+	  }
+	  break;
+	case 0x5F:			// invertiertes Groesserzeichen
+	  break;
+	case 0x60:
+	  if( this.osVersion < 32 ) {
+	    ch = '\u0020';
+	  } else {
+	    ch = b;
+	  }
+	  break;
+	case 0x7B:
+	  ch = '\u00E4';			// ae
+	  break;
+	case 0x7C:
+	  ch = '\u00F6';			// ae
+	  break;
+	case 0x7D:
+	  ch = '\u00FC';			// ae
+	  break;
+	case 0x7E:
+	  ch = '|';
+	  break;
+	case 0x7F:
+	  if( this.osVersion < 32 ) {
+	    ch = '\u25A0';			// ausgefuelltes Feld
+	  } else {
+	    ch = '\u00B7';			// Punkt in der Mitte
+	  }
+	  break;
+	default:
+	  ch = b;
       }
     }
     return ch;
@@ -759,14 +862,14 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   @Override
   public int getScreenHeight()
   {
-    return this.screenBaseHeight;
+    return SCREEN_HEIGHT - SCREEN_HIDDEN_LINES;
   }
 
 
   @Override
   public int getScreenWidth()
   {
-    return this.screenCharCols * 8;
+    return SCREEN_CHARS_PER_ROW_MAX * 8;
   }
 
 
@@ -983,6 +1086,84 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
+  public int readMemByte( int addr, boolean m1 )
+  {
+    int rv = getMemByte( addr, m1 );
+
+    addr &= 0xDFFF;		// A13=0
+    if( (addr >= 0x1400) && (addr < 0x1800)) {
+      this.emuThread.getZ80CPU().setWaitMode( true );
+    }
+    else if( (addr >= 0x1800) && (addr < 0x1C00)) {
+      /*
+       * Zugriff auf den Bildwiederholspeicher mit Auswertung von Bit 7:
+       * Wenn Bit 7 nicht gesetzt ist, liest die CPU Null-Bytes
+       * waehrend die Datenbytes auf dem Bildschirm ausgegeben werden.
+       * Wenn Bit 7 gesetzt ist, liest die CPU die Datenbytes
+       * und nichts wird auf dem Bildschirm ausgegeben.
+       */
+      int idx = addr - 0x1800;
+      if( (idx >= 0) && (idx < this.ram.length) ) {
+	int ch = (int) (this.ram[ idx ] & 0xFF);
+	if( ((ch & 0x80) == 0)
+	    && (this.screenLineNum >= SCREEN_HIDDEN_LINES) )
+	{
+	  if( this.fontBytes != null ) {
+	    int dstPos = ((this.screenLineNum - SCREEN_HIDDEN_LINES)
+					* SCREEN_CHARS_PER_ROW_MAX)
+				+ this.screenColNum;
+	    if( dstPos < this.screenPixelsWriting.length ) {
+	      /*
+	       * Die Pixeldaten in der Zeichensatzdatei sind vertikal
+	       * um eine Pixelzeile verschoben.
+	       */
+	      int srcPos = (ch * 8) + ((this.screenLineInChar - 1) & 0x07);
+	      if( (srcPos >= 0) && (srcPos < this.fontBytes.length) ) {
+		this.screenPixelsWriting[ dstPos ] = this.fontBytes[ srcPos ];
+		if( this.screenLineInChar == 0 ) {
+
+		  // Anzahl Textzeilen aktualisieren
+		  if( this.screenColNum == 0 ) {
+		    this.screenRowNum++;
+		  }
+
+		  // Y-Anfangsposition der ersten beiden Textzeilen ermitteln
+		  if( this.screenChar0Y <= 0 ) {
+		    this.screenChar0Y = this.screenLineNum;
+		  }
+		  else if( (this.screenChar0Y > 0)
+			   && (this.screenLineNum > this.screenChar0Y)
+			   && (this.screenChar1Y <= 0) )
+		  {
+		    this.screenChar1Y = this.screenLineNum;
+		  }
+
+		  // ausgegebenes Zeichen in Textpuffer schreiben
+		  int pos = (this.screenRowNum * SCREEN_CHARS_PER_ROW_MAX)
+					+ this.screenColNum;
+		  if( (pos >= 0) && (pos < this.screenChars.length) ) {
+		    this.screenChars[ pos ] = (byte) ch;
+		  }
+
+		  // ggf. Anzahl der horizontalen Zeichen aktualisieren
+		  if( this.screenColNum >= this.screenColCnt ) {
+		    this.screenColCnt = this.screenColNum + 1;
+		  }
+		}
+	      }
+	    }
+	  }
+	  if( this.screenColNum < SCREEN_CHARS_PER_ROW_MAX ) {
+	    this.screenColNum++;
+	  }
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
@@ -993,18 +1174,25 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
 	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
     {
-      if( (this.osBytes == osBytesSE31_29)
-	  || (this.osBytes == osBytesSE31_40)
-	  || (this.osBytes == osBytesSP33_29) )
-      {
-	this.screenCharRows = 3;
-      }
       initSRAM( this.ram, props );
       this.ctc.reset( true );
     } else {
       this.ctc.reset( false );
     }
+    this.screenEnabled       = false;
+    this.screenActiveTStates = 0;
+    this.screenColCnt        = 0;
+    this.screenColNum        = 0;
+    this.screenRowNum        = -1;
+    this.screenLineNum       = 0;
+    this.screenLineInChar    = 0;
+    this.screenChar0Y        = -1;
+    this.screenChar1Y        = -1;
+    this.lastAudioOutTStates = 0;
+    this.lastAudioOutPhase   = false;
+    this.charRaster          = null;
     Arrays.fill( this.kbMatrix, 0 );
+    Arrays.fill( this.screenChars, (byte) 0x20 );
   }
 
 
@@ -1066,7 +1254,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   {
     addr &= 0xFFFF;
 
-    boolean rv   = false;
+    boolean rv = false;
     if( addr < 0x4000 ) {
       addr &= 0xDFFF;		// A13=0
       if( (addr >= 0x1400) && (addr < 0x1800)) {
@@ -1076,23 +1264,6 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	int idx = addr - 0x1C00;
 	if( (idx >= 0) && (idx < this.ram.length) ) {
 	  this.ram[ idx ] = (byte) value;
-	  if( ((this.osBytes == osBytesSE31_29)
-	       || (this.osBytes == osBytesSE31_40)
-	       || (this.osBytes == osBytesSP33_29))
-	      && (addr == 0x1C06) )
-	  {
-	    int nRows = (int) (this.ram[ 6 ] & 0xFF);
-	    if( nRows != this.screenCharRows ) {
-	      this.screenCharRows = nRows;
-	      this.screenFrm.setScreenDirty( true );
-	    }
-	  }
-	  if( (idx >= this.screenOffset)
-	      && (idx < this.screenOffset
-			+ (this.screenRowOffset * this.screenCharCols)) )
-	  {
-	    this.screenFrm.setScreenDirty( true );
-	  }
 	}
 	rv = true;
       }
@@ -1228,6 +1399,17 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   }
 
 
+  public void writeMemByte( int addr, int value )
+  {
+    setMemByte( addr, value );
+
+    addr &= 0xDFFF;			// A13=0
+    if( (addr >= 0x1400) && (addr < 0x1800)) {
+      this.emuThread.getZ80CPU().setWaitMode( true );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private static boolean equalsRange( byte[] data, int pos, int[] pattern )
@@ -1253,6 +1435,17 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   }
 
 
+
+
+  private static boolean getRemoveHSyncFromAudio( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+				props,
+				PROP_PREFIX + "remove_hsync_from_audio",
+				true );
+  }
+
+
   private static boolean is40CharsPerLineMode( Properties props )
   {
     return EmuUtil.getProperty(
@@ -1269,15 +1462,55 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   }
 
 
-  private void loadROMs( Properties props )
+  private void loadFont( Properties props )
   {
-    this.osFile    = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "os.file" );
-    this.osBytes   = readROMFile( this.osFile, 0x1000, "Betriebssystem" );
     this.fontBytes = readFontByProperty(
 				props,
 				this.propPrefix + "font.file",
-				0x0800 );
+				0x0400 );
+    if( this.fontBytes == null ) {
+      if( this.osVersion == 31 ) {
+	if( fontBytesSE31 == null ) {
+	  fontBytesSE31 = readResource( "/rom/bcs3/se31font.bin" );
+	}
+	this.fontBytes = fontBytesSE31;
+      } else if( this.osVersion == 33 ) {
+	if( fontBytesSP33 == null ) {
+	  fontBytesSP33 = readResource( "/rom/bcs3/sp33font.bin" );
+	}
+	this.fontBytes = fontBytesSP33;
+      } else {
+	if( fontBytesSE24 == null ) {
+	  fontBytesSE24 = readResource( "/rom/bcs3/se24font.bin" );
+	}
+	this.fontBytes = fontBytesSE24;
+      }
+    }
+  }
+
+
+  private void loadROMs( Properties props )
+  {
+    this.osFile  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + "os.file" );
+    this.osBytes = readROMFile( this.osFile, 0x1000, "Betriebssystem" );
+    loadFont( props );
+  }
+
+
+  private void updAudioPhase( boolean phase )
+  {
+    if( this.removeHSyncFromAudio ) {
+      Z80CPU cpu = this.emuThread.getZ80CPU();
+      long t = cpu.getProcessedTStates();
+      long d = cpu.calcTStatesDiff( this.lastAudioOutTStates, t );
+      this.lastAudioOutTStates = t;
+      if( (d > 300) && (d < 40000) ) {
+	this.emuThread.writeAudioPhase( phase );
+      }
+    } else {
+      this.emuThread.writeAudioPhase( phase );
+    }
   }
 }
