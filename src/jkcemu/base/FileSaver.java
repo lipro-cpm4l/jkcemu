@@ -197,7 +197,7 @@ public class FileSaver
 		 || fmt.equals( FileFormat.KCTAP_Z9001 )
 		 || fmt.equals( FileFormat.KCTAP_BASIC_PRG ) )
 	{
-	  String s = FileInfo.KCTAP_HEADER;
+	  String s = FileInfo.KCTAP_MAGIC;
 	  int    n = s.length();
 	  for( int i = 0; i < n; i++ ) {
 	    out.write( s.charAt( i ) );

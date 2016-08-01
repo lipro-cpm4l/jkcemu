@@ -33,7 +33,7 @@ import jkcemu.tools.hexedit.HexEditFrm;
 public class Main
 {
   public static final String APPNAME = "JKCEMU";
-  public static final String VERSION = "0.9.4";
+  public static final String VERSION = "0.9.5";
   public static final String APPINFO = APPNAME + " Version " + VERSION;
 
   public static final int WINDOW_MASK_SCREEN   = 0x01;
@@ -63,7 +63,7 @@ public class Main
 								+ " starten",
 	"  -h oder --help               diese Hilfe anzeigen",
 	"  -v oder --version            Versionsnummer anzeigen",
-	"  --ar oder --audiorecorder    Audio-Recorder starten",
+	"  --ar oder --audiorecorder    Audiorecorder starten",
 	"  --as oder --assembler        Assembler starten",
 	"  --as -h                      Hilfe zum Assembler anzeigen",
 	"  --bc oder --basiccompiler    BASIC-Compiler starten",
@@ -451,7 +451,7 @@ public class Main
       screenFrm.startEmulationThread();
 
       // Fenster anzeigen
-      screenFrm.setVisible( true );
+      EmuUtil.showFrame( screenFrm );
     }
   }
 

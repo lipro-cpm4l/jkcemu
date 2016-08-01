@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -72,15 +72,10 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 
   public static void open( ScreenFrm screenFrm )
   {
-    if( instance != null ) {
-      if( instance.getExtendedState() == Frame.ICONIFIED ) {
-	instance.setExtendedState( Frame.NORMAL );
-      }
-    } else {
+    if( instance == null ) {
       instance = new VideoCaptureFrm( screenFrm );
     }
-    instance.toFront();
-    instance.setVisible( true );
+    EmuUtil.showFrame( instance );
   }
 
 

@@ -19,25 +19,6 @@ public abstract class AbstractTarget
   protected boolean xoutchAppended;
   protected boolean usesX_M_PEN;
 
-  private static final String[] targetDefinedConstants = {
-	"BLINKING", "BLUE", "CYAN", "GREEN", "MAGENTA",
-	"RED", "WHITE", "YELLOW",
-	"GRAPHICSCREEN", "LASTSCREEN",
-	"JOYST_BUTTON1", "JOYST_BUTTON2",
-	"JOYST_LEFT", "JOYST_RIGHT", "JOYST_UP", "JOYST_DOWN",
-	AC1Target.BASIC_TARGET_NAME,
-	CPMTarget.BASIC_TARGET_NAME,
-	HueblerGraphicsMCTarget.BASIC_TARGET_NAME,
-	KC85Target.BASIC_TARGET_NAME,
-	KC854Target.BASIC_TARGET_NAME,
-	KramerMCTarget.BASIC_TARGET_NAME,
-	LLC2HIRESTarget.BASIC_TARGET_NAME,
-	SCCHTarget.BASIC_TARGET_NAME,
-	Z1013Target.BASIC_TARGET_NAME,
-	Z1013PetersTarget.BASIC_TARGET_NAME,
-	Z9001Target.BASIC_TARGET_NAME,
-	Z9001KRTTarget.BASIC_TARGET_NAME };
-
   private Map<String,Integer> namedValues;
 
 
@@ -525,12 +506,6 @@ public abstract class AbstractTarget
   }
 
 
-  public String getHostName()
-  {
-    return null;
-  }
-
-
   public int getMaxAppNameLen()
   {
     return 0;
@@ -572,16 +547,9 @@ public abstract class AbstractTarget
   }
 
 
-  public static boolean isReservedWord( String name )
+  public boolean isReservedWord( String name )
   {
-    boolean rv = false;
-    for( String s : targetDefinedConstants ) {
-      if( s.equalsIgnoreCase( name ) ) {
-	rv = true;
-	break;
-      }
-    }
-    return rv;
+    return this.namedValues.containsKey( name.toUpperCase() );
   }
 
 

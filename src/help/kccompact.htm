@@ -1,6 +1,26 @@
 <html>
 <body>
- <h1>Hinweise zur Emulation des KC&nbsp;compact</h1>
+ <h1>KC&nbsp;compact</h1>
+  Der KC&nbsp;compact ist der letzte in der DDR hergestellte Heimcomputer.
+  Er wurde mit dem Ziel entwickelt, eine weitestgehende Kompatibilit&auml;t
+  mit den CPC-Computerm von Amstrad zu erreichen.
+  Da der KC&nbsp;compact ohne die ULA
+  (einem kundenspezifischen Schaltkreis von Amstrad) auskommen muss,
+  sind einige zentrale Dinge hardwarem&auml;&szlig;ig anders gel&ouml;st
+  als im CPC.
+  Trotzdem ist die Kompatibilit&auml;t sehr hoch, zumindest,
+  wenn man auf den undokumentierten Grafikmodus&nbsp;3 verzichtet.
+ <br/><br/>
+  Der KC&nbsp;compact entspricht von der Soft- und Hardwareausstattung
+  am ehesten einem CPC664 (64&nbsp;KByte RAM, Locomotive Basic&nbsp;1.1),
+  allerdings ohne einem eingebauten Diskettenlaufwerk.
+  Die Floppy-Disk-Erweiterung ist beim KC&nbsp;compact als abgesetztes
+  Ger&auml;t ausgelegt und musste auch separat erworben werden.
+  Au&szlig;erdem wurden statt der CPC-spezifischen 3''-Disketten
+  die in der DDR &uuml;blichen 5,25''-Disketten verwendet.
+ <br/><br/>
+
+ <h2>Hinweise zur Emulation</h2>
   <ul>
    <li>
     <a href="kccompact.htm#hardware">1. Emulierte Hardware</a>
@@ -39,7 +59,7 @@
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
   Emuliert werden Grundger&auml;t, <a href="print.htm">Drucker</a>
   und zwei <a href="joystick.htm">Joysticks</a>
-  sowie optional die <a href="floppydisk.htm">Floppy-Disk-Station</a>.
+  sowie optional die <a href="kccompact.htm#fdc">Floppy-Disk-Station</a>.
  <br/><br/>
 
  <h3><a name="keyboard">1.1. Tastatur</a></h3>
@@ -79,8 +99,8 @@
 
  <h3><a name="fdc">1.2. Floppy-Disk-Station</a></h3>
   Die optional als Beistellger&auml;t zum KC&nbsp;compact erh&auml;tlich
-  gewesene Floppy-Disk-Station wird emuliert, wenn Sie das in den
-  <a href="settings.htm">Einstellungen</a> so angeben.
+  gewesene Floppy-Disk-Station wird <a href="floppydisk.htm">emuliert</a>,
+  wenn Sie das in den <a href="settings.htm">Einstellungen</a> so angeben.
   Mit der Floppy-Disk-Station stehen zwei Diskettenlaufwerke und
   zus&auml;tzlich 64&nbsp;KByte RAM sowie 32&nbsp;KByte ROM
   zur Verf&uuml;gung.
@@ -234,9 +254,9 @@
 
  <h3><a name="sound">1.3. Sound-Generator</a></h3>
   Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
-  m&uuml;ssen Sie die Audio-Funktion
+  m&uuml;ssen Sie die Audiofunktion
   <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> aktivieren.
-  Alle anderen Audio-Funktionen beziehen sich auf den emulierten
+  Alle anderen Audiofunktionen beziehen sich auf den emulierten
   Kassettenrecorderanschluss.
  <br/><br/>
   Der Sound-Generator wird immer mit der originalen Taktfrequenz emuliert,
@@ -263,11 +283,11 @@
   <ul>
    <li>A: RAM-Floppy</li>
    <li>
-    B: Diskettenlaufwerk im MicroDOS-Standardformat
+    B: erstes Diskettenlaufwerk im MicroDOS-Standardformat
     (siehe weiter oben <a href="kccompact.htm#diskfmt">Diskettenformate</a>)
    </li>
    <li>
-    C: Diskettenlaufwerk im BASDOS-Standardformat
+    C: erstes Diskettenlaufwerk im BASDOS-Standardformat
     (siehe weiter oben <a href="kccompact.htm#diskfmt">Diskettenformate</a>)
    </li>
   </ul>

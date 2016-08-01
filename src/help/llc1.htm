@@ -1,8 +1,8 @@
 <html>
 <body>
- <h1>Hinweise zur Emulation des LLC1</h1>
+ <h1>LLC1</h1>
   Der LLC1 ist ein von Dr. Gerd Maudrich 1985 vorgestellter
-  Selbstbau-Lerncomputer, dessen Bauanleitung auch vertrieben wurde.
+  Selbstbau-Lerncomputer, dessen Bauanleitung vertrieben wurde.
  <br/><br/>
   Etwas eigenwillig ist das Konzept dieses Computers.
   Auf der einen Seite besitzt er eine 7-Segment-Anzeige
@@ -15,11 +15,8 @@
   den ebenfalls im ROM enthaltenen BASIC-Interpreter
   aber mit der alphanumerischen Tastatur.
  <br/><br/>
-  JKCEMU emuliert beide Tastaturen und schaltet dabei auch automatisch
-  zwischen beiden um,
-  d.h. Sie als Anwender bedienen beide LLC1-Tastaturen &uuml;ber
-  die eine Tastatur des Emulatorrechners.
- <br/><br/>
+
+ <h2>Hinweise zur Emulation</h2>
   <ul>
    <li>
     <a href="llc1.htm#hardware">1. Emulierte Hardware</a>
@@ -76,16 +73,15 @@
    <li>Alphanumerische Tastatur</li>
   </ul>
  <br/>
-  Die Hexadezimaltastatur l&ouml;st beim Bet&auml;tigen einer Taste
-  einen Interrupt aus.
-  Wenn nun aber nur mit der alphanumerischen Tastatur gearbeitet wird,
-  soll die Hexadezimaltastatur nat&uuml;rlich keine Interrupts
-  ausl&ouml;sen.
-  Dies wird durch eine automatische Umschaltung zwischen den beiden
-  Tastaturen erreicht, die nach folgendem Prinzip arbeitet:
+  Wie in der Liste zu sehen ist, werden beide Tastaturen emuliert.
+  JKCMEU schaltet auch automatisch zwischen beiden um,
+  so dass Sie als Anwender beide LLC1-Tastaturen nur &uuml;ber
+  die eine Tastatur des Emulatorrechners bedienen.
+  Die automatische Umschaltung funktioniert dabei folgenderma&szlig;en:
   Ab dem Zeitpunkt, wenn das Anwendungsprogramm
   das Eingabetor f&uuml;r die alphanumerische Tastatur liest,
-  ist die Hexadezimaltastatur f&uuml;r eine Sekunde lang gesperrt.
+  ist die Hexadezimaltastatur f&uuml;r eine Sekunde lang gesperrt
+  und kann keine Interrupts ausl&ouml;sen.
   Die Hexadezimaltastatur ist somit nur aktiv,
   wenn die im Emulator laufende Software die alphanumerische Tastatur
   gerade nicht verwendet.
@@ -142,9 +138,9 @@
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   <ul>
    <li>Originales Monitorprprogramm</li>
-   <li>LLC1-BASIC V1.2</li>
+   <li>LLC1-BASIC&nbsp;V1.2</li>
   </ul>
- <br/><br/>
+ <br/>
 
  <h3><a name="usage">2.1. Hinweise zur Bedienung des Monitorprogramms</a></h3>
   Durch Dr&uuml;cken einer der Tasten <em>EIN&nbsp;(M)</em>,

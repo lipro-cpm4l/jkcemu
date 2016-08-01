@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -50,7 +50,7 @@ public class FileChecksumFrm extends BasicFrm
   private Thread            thread;
   private String            algorithm;
   private CksCalculator     cks;
-  private volatile boolean  cancelled;
+  private volatile boolean  canceled;
   private volatile boolean  filesChanged;
 
 
@@ -77,7 +77,7 @@ public class FileChecksumFrm extends BasicFrm
 
   public void setFiles( Collection<File> files )
   {
-    this.cancelled = true;
+    this.canceled = true;
     synchronized( this.tableModel ) {
       this.filesChanged = true;
       this.tableModel.clear( false );
@@ -129,7 +129,7 @@ public class FileChecksumFrm extends BasicFrm
       }
     }
     if( (cks != null) && (nRows > 0) ) {
-      for( int i = 0; !this.cancelled && (i < nRows); i++ ) {
+      for( int i = 0; !this.canceled && (i < nRows); i++ ) {
 	FileEntry entry = null;
 	synchronized( this.tableModel ) {
 	  if( i < this.tableModel.getRowCount() ) {
@@ -147,15 +147,15 @@ public class FileChecksumFrm extends BasicFrm
 	    fireTableRowsUpdated( i, i );
 	    if( cks != null ) {
 	      int b = in.read();
-	      while( !this.cancelled && (b != -1) ) {
+	      while( !this.canceled && (b != -1) ) {
 		cks.update( b );
 		b = in.read();
 	      }
-	      if( !this.cancelled ) {
+	      if( !this.canceled ) {
 		entry.setValue( cks.getValue() );
 	      }
 	    }
-	    if( this.cancelled ) {
+	    if( this.canceled ) {
 	      entry.setValue( null );
 	    }
 	    entry.setMarked( false );
@@ -180,7 +180,7 @@ public class FileChecksumFrm extends BasicFrm
 	    fireTableRowsUpdated( i, i );
 	  }
 	} else {
-	  this.cancelled = true;
+	  this.canceled = true;
 	}
 	EventQueue.invokeLater(
 		new Runnable()
@@ -254,7 +254,7 @@ public class FileChecksumFrm extends BasicFrm
   {
     boolean rv = super.doClose();
     if( rv ) {
-      this.cancelled = true;
+      this.canceled = true;
       Thread thread  = this.thread;
       if( thread != null ) {
 	thread.interrupt();
@@ -292,7 +292,7 @@ public class FileChecksumFrm extends BasicFrm
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
-      this.cancelled = true;
+      this.canceled = true;
   }
 
 
@@ -303,7 +303,7 @@ public class FileChecksumFrm extends BasicFrm
     this.thread       = null;
     this.algorithm    = null;
     this.cks          = null;
-    this.cancelled    = false;
+    this.canceled     = false;
     this.filesChanged = false;
 
     setTitle( "JKCEMU Pr\u00FCfsumme-/Hash-Wert berechnen" );
@@ -547,7 +547,7 @@ public class FileChecksumFrm extends BasicFrm
   {
     synchronized( this.tableModel ) {
       if( this.thread != null ) {
-	this.cancelled = true;
+	this.canceled = true;
       } else {
 	Object o = this.comboAlgorithm.getSelectedItem();
 	if( o != null ) {
@@ -557,7 +557,7 @@ public class FileChecksumFrm extends BasicFrm
 	    try {
 	      this.cks          = new CksCalculator( algorithm );
 	      this.algorithm    = algorithm;
-	      this.cancelled    = false;
+	      this.canceled     = false;
 	      this.filesChanged = false;
 	      this.thread       = new Thread(
 					Main.getThreadGroup(),

@@ -47,14 +47,14 @@ public class NANOS extends EmuSys implements
 
   private static FloppyDiskInfo epos20Disk64x32 =
 		new FloppyDiskInfo(
-			"/disks/nanos/epos20_64x32.dump.gz",
-			"EPOS 2.0 Boot-Diskette (64x32 Zeichen)",
+			"/disks/nanos/epos21_64x32.dump.gz",
+			"EPOS 2.1 Boot-Diskette (64x32 Zeichen)",
 			2, 2048, true );
 
   private static FloppyDiskInfo epos20Disk80x24 =
 		new FloppyDiskInfo(
-			"/disks/nanos/epos20_80x24.dump.gz",
-			"EPOS 2.0 Boot-Diskette (80x24 Zeichen)",
+			"/disks/nanos/epos21_80x24.dump.gz",
+			"EPOS 2.1 Boot-Diskette (80x24 Zeichen)",
 			2, 2048, true );
 
   private static FloppyDiskInfo nanos22Disk80x25 =
@@ -957,7 +957,7 @@ public class NANOS extends EmuSys implements
       rv = this.kcNet.read( port );
     } else if( (this.vdip != null) && ((port & 0xFC) == 0x88) ) {
       rv = this.vdip.read( port );
-    } else if( (this.gide != null) && ((port & 0xD0) == 0x80) ) {
+    } else if( (this.gide != null) && ((port & 0xF0) == 0xD0) ) {
       int value = this.gide.read( port );
       if( value >= 0 ) {
 	rv = value;

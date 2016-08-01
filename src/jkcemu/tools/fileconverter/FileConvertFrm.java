@@ -579,6 +579,7 @@ public class FileConvertFrm extends BasicFrm implements
 					true ) );
 	  }
 	  if( fileFmt.equals( FileFormat.CDT )
+	      || fileFmt.equals( FileFormat.CSW )
 	      || fileFmt.equals( FileFormat.TZX )
 	      || fileFmt.equals( FileFormat.ZXTAP ) )
 	  {
@@ -587,8 +588,24 @@ public class FileConvertFrm extends BasicFrm implements
 					false,
 					MAX_TAPE_FILE_SIZE );
 	    if( fileBytes != null ) {
+	      String text = "Sound-Datei";
+	      if( fName != null ) {
+		if( fName.endsWith( ".cdt" )
+				|| fName.endsWith( ".cdt.gz" ) )
+		{
+		  text += " im CPC-Format";
+		}
+		else if( fName.endsWith( ".tzx" )
+				|| fName.endsWith( ".tzx.gz" ) )
+		{
+		  text += " im TZX-Format";
+		}
+	      }
 	      this.targets.add(
-			new ZXSpectrumAudioFileTarget( this, fileBytes ) );
+			new ZXSpectrumAudioFileTarget(
+					this,
+					fileBytes,
+					text ) );
 	    }
 	  }
 	}

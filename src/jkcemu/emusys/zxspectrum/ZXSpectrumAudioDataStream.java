@@ -1,9 +1,9 @@
 /*
- * (c) 2014 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Lesen einer TZX-Datei als InputStream von Audio-Daten
+ * Lesen einer ZX-TAP- oder TZX-Datei als InputStream von Audiodaten
  */
 
 package jkcemu.emusys.zxspectrum;
@@ -15,22 +15,21 @@ import jkcemu.base.*;
 
 public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
 {
-  private final static int SAMPLE_RATE         = 44100;
-  private final static int T_STATES_PER_SAMPLE = 3500000 / SAMPLE_RATE;
+  private final static int   SAMPLE_RATE         = 44100;
+  private final static float T_STATES_PER_SAMPLE =
+				3500000F / (float) SAMPLE_RATE;
 
   private boolean phase;
 
 
   public ZXSpectrumAudioDataStream(
-			byte[]  buf,
-			int     offs,
-			int     len ) throws IOException
+			byte[] buf,
+			int    offs,
+			int    len ) throws IOException
   {
     super( SAMPLE_RATE, buf, offs, len );
     this.phase = false;
-    if( skipSourceString( FileInfo.CSW_HEADER ) ) {
-      processCswFile();
-    } else if( skipSourceString( FileInfo.TZX_HEADER ) ) {
+    if( skipSourceString( FileInfo.TZX_MAGIC ) ) {
       processTzxFile();
     } else {
       processTapFile();
@@ -40,138 +39,29 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
 
 	/* --- private Methoden --- */
 
-  private void addPauseSamplesByMillis( int millis )
+  private void addSamplesByMillis( int millis )
   {
     if( millis > 0 ) {
-      addSamples(
-	-Math.round( (float) millis * (float) SAMPLE_RATE / 1000F ) );
-      this.phase = false;
+      int n = Math.round( (float) millis * (float) SAMPLE_RATE / 1000F );
+      addSamples( this.phase ? n : -n );
     }
   }
 
 
-  private void addPulseByTStates( int tStates )
+  private void addSamplesByTStates( int tStates )
   {
-    int v = Math.round( (float) tStates / (float) T_STATES_PER_SAMPLE );
-    addSamples( this.phase ? v : -v );
+    int n = Math.round( (float) tStates / T_STATES_PER_SAMPLE );
+    addSamples( this.phase ? n : -n );
+  }
+
+
+  private void changePhase()
+  {
     this.phase = !this.phase;
   }
 
 
-  private void processCswData(
-			int     dataLen,	// -1: bis zum Ende
-			int     compression,
-			boolean initialPhase ) throws IOException
-  {
-    boolean firstSample = true;
-    if( compression != 1 ) {
-      throw new IOException(
-		"CSW-Kompressionsmethode "
-			+ String.valueOf( compression )
-			+ " nicht unterst\u00FCtzt" );
-    }
-    while( (dataLen != 0) && sourceByteAvailable() ) {
-      int v = readSourceByte();
-      if( dataLen > 0 ) {
-	--dataLen;
-      }
-      if( v == 0 ) {
-	v = readInt4();
-	if( dataLen > 0 ) {
-	  dataLen -= 4;
-	  if( dataLen < 0 ) {
-	    dataLen = 0;
-	  }
-	}
-      }
-      if( firstSample ) {
-	if( initialPhase ) {
-	  v = -v;
-	}
-	addSamples( v );
-	firstSample = false;
-      } else {
-	addPhaseChangeSamples( v );
-      }
-    }
-  }
-
-
-  private void processCswFile() throws IOException
-  {
-    int majorVersion = readSourceByte();
-    readSourceByte();				// Unterversionsnummer
-    int sampleRate  = 0;
-    int compression = 0;
-    int flags       = 0;
-    if( majorVersion < 2 ) {
-      sampleRate  = readWord();
-      compression = readSourceByte();
-      flags       = readSourceByte();
-      skipSourceBytes( 3 );
-    } else {
-      sampleRate  = readInt4();
-      skipSourceBytes( 4 );			// Gesamtanzahl der Pulse
-      compression = readSourceByte();
-      flags       = readSourceByte();
-      int nExt    = readSourceByte();
-      skipSourceBytes( 16 + nExt );
-    }
-    if( sampleRate < 1 ) {
-      throw new IOException(
-		String.valueOf( compression )
-			+ " Hz: Ung\u00FCltige Abtastrate" );
-    }
-    setSampleRate( sampleRate );
-    processCswData( -1, compression, (flags & 0x01) != 0 );
-  }
-
-
-  private void processTapBlock(
-			int pilotPulseLen,
-			int sync1PulseLen,
-			int sync2PulseLen,
-			int bit0PulseLen,
-			int bit1PulseLen,
-			int pilotPulseCnt0,
-			int pilotPulseCnt1,
-			int nBitsOfLastByte,
-			int pauseMillis,
-			int nBytes )
-  {
-    if( nBytes > 0 ) {
-      int b        = readSourceByte();			// Flag Byte
-      int pulseCnt = (b < 0x80 ? pilotPulseCnt0 : pilotPulseCnt1);
-      for( int i = 0; i < pulseCnt; i++ ) {
-	addPulseByTStates( pilotPulseLen );
-      }
-      if( sync1PulseLen > 0 ) {
-	addPulseByTStates( sync1PulseLen );
-      }
-      if( sync2PulseLen > 0 ) {
-	addPulseByTStates( sync2PulseLen );
-      }
-      for(;;) {
-	--nBytes;
-	int nBits = (nBytes > 0 ? 8 : nBitsOfLastByte);
-	for( int i = 0; i < nBits; i++ ) {
-	  int pulseLen = ((b & 0x80) != 0 ? bit1PulseLen : bit0PulseLen);
-	  addPulseByTStates( pulseLen );
-	  addPulseByTStates( pulseLen );
-	  b <<= 1;
-	}
-	if( nBytes == 0 ) {
-	  break;
-	}
-	b = readSourceByte();
-      }
-      addPulseByTStates( 2 * bit1PulseLen );
-      addPauseSamplesByMillis( pauseMillis );
-    }
-  }
-
-
-  private void processTapBlock(
+  private void processStdTapBlock(
 			int pauseMillis,
 			int blockLen )
   {
@@ -189,11 +79,66 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
   }
 
 
+  private void processTapBlock(
+			int pilotPulseLen,
+			int sync1PulseLen,
+			int sync2PulseLen,
+			int bit0PulseLen,
+			int bit1PulseLen,
+			int pilotPulseCnt0,
+			int pilotPulseCnt1,
+			int nBitsOfLastByte,
+			int pauseMillis,
+			int nBytes )
+  {
+    if( nBytes > 0 ) {
+      int b        = readSourceByte();			// Flag Byte
+      int pulseCnt = ((b & 0x80) != 0 ? pilotPulseCnt1 : pilotPulseCnt0);
+      for( int i = 0; i < pulseCnt; i++ ) {
+	addSamplesByTStates( pilotPulseLen );
+	changePhase();
+      }
+      if( sync1PulseLen > 0 ) {
+	addSamplesByTStates( sync1PulseLen );
+	changePhase();
+      }
+      if( sync2PulseLen > 0 ) {
+	addSamplesByTStates( sync2PulseLen );
+	changePhase();
+      }
+      for(;;) {
+	--nBytes;
+	int nBits = (nBytes > 0 ? 8 : nBitsOfLastByte);
+	for( int i = 0; i < nBits; i++ ) {
+	  int pulseLen = ((b & 0x80) != 0 ? bit1PulseLen : bit0PulseLen);
+	  addSamplesByTStates( pulseLen );
+	  changePhase();
+	  addSamplesByTStates( pulseLen );
+	  changePhase();
+	  b <<= 1;
+	}
+	if( nBytes == 0 ) {
+	  break;
+	}
+	b = readSourceByte();
+      }
+      if( pauseMillis > 0 ) {
+	addSamplesByMillis( 1 );
+	this.phase = false;
+	--pauseMillis;
+	if( pauseMillis > 0 ) {
+	  addSamplesByMillis( pauseMillis );
+	}
+      }
+    }
+  }
+
+
   private void processTapFile()
   {
     int blockLen = readWord();
     while( sourceByteAvailable() ) {
-      processTapBlock( 1000, blockLen );
+      processStdTapBlock( 1000, blockLen );
       blockLen = readWord();
     }
   }
@@ -204,17 +149,7 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
   {
     int pauseMillis = readWord();
     int blockLen    = readWord();
-    processTapBlock(
-		2168,
-		667,
-		735,
-		855,
-		1710,
-		8063,
-		3223,
-		8,
-		pauseMillis,
-		blockLen );
+    processStdTapBlock( pauseMillis, blockLen );
   }
 
 
@@ -250,7 +185,8 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
     int pulseLen = readWord();
     int nPulses  = readWord();
     for( int i = 0; i < nPulses; i++ ) {
-      addPulseByTStates( pulseLen );
+      addSamplesByTStates( pulseLen );
+      changePhase();
     }
   }
 
@@ -260,7 +196,8 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
   {
     int nPulses = readSourceByte();
     for( int i = 0; i < nPulses; i++ ) {
-      addPulseByTStates( readWord() );
+      addSamplesByTStates( readWord() );
+      changePhase();
     }
   }
 
@@ -318,7 +255,8 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
 	int v = Math.round( (float) sourceSamples * tStatesFactor );
 	addSamples( this.phase ? v : -v );
       }
-      addPauseSamplesByMillis( pauseMillis );
+      changePhase();
+      addSamplesByMillis( pauseMillis );
     }
   }
 
@@ -335,8 +273,41 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
 			+ " Hz nicht unterst\u00FCtzt" );
     }
     int compression = readSourceByte();
+    if( compression != 1 ) {
+      StringBuilder buf = new StringBuilder( 128 );
+      buf.append(  "CSW-Kompressionsmethode " );
+      if( compression == 2 ) {
+	buf.append( "Z-RLE" );
+      } else {
+	buf.append( compression );
+      }
+      buf.append( " nicht unterst\u00FCtzt" );
+      throw new IOException( buf.toString() );
+    }
     skipSourceBytes( 4 );			// Gesamtanzahl Pulse
-    processCswData( blockLen - 10, compression, false );
+    boolean firstSample = true;
+    int     dataLen     = blockLen - 10;
+    while( (dataLen != 0) && sourceByteAvailable() ) {
+      int v = readSourceByte();
+      if( dataLen > 0 ) {
+	--dataLen;
+      }
+      if( v == 0 ) {
+	v = readInt4();
+	if( dataLen > 0 ) {
+	  dataLen -= 4;
+	  if( dataLen < 0 ) {
+	    dataLen = 0;
+	  }
+	}
+      }
+      if( firstSample ) {
+	addSamples( v );
+	firstSample = false;
+      } else {
+	addPhaseChangeSamples( v );
+      }
+    }
   }
 
 
@@ -348,12 +319,21 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
       /*
        * In dem Fall soll das Abspielen gestoppt werden,
        * bis der Emulator es wieder startet.
-       * Da das aber bei einer Umwandlung in einen Audio-Datenstrom
-       * nicht moeglich ist, wird eine Pause von 3 Sekunden eingelegt.
+       * Da das aber bei einer Umwandlung in einen Audiodatenstrom
+       * nicht moeglich ist, wird eine Pause von 5 Sekunden eingelegt.
        */
-      millis = 3000;
+      millis = 5000;
     }
-    addPauseSamplesByMillis( millis );
+    this.phase = false;
+    addSamplesByMillis( millis );
+  }
+
+
+  // Set Signal Level
+  private void processTzxBlock2B() throws IOException
+  {
+    skipSourceBytes( 4 );		// Versionsnummer ueberspringen
+    this.phase = (readSourceByte() != 0);
   }
 
 
@@ -362,7 +342,6 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
     skipSourceBytes( 2 );		// Versionsnummer ueberspringen
 
     // Bloecke
-    boolean firstBlk = true;
     while( sourceByteAvailable() ) {
       int blockID = readSourceByte();
       switch( blockID ) {
@@ -402,6 +381,10 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
 	  // kein Blockinhalt
 	  break;
 
+	case 0x2B:			// Set Signal Level
+	  processTzxBlock2B();
+	  break;
+
 	/*
 	 * zu ueberspringende Bloecke,
 	 * deren Blocklaenge mit einem Byte angegeben ist
@@ -419,6 +402,11 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
 	  skipSourceBytes( readWord() );
 	  break;
 
+	case 0x35:			// Custom Info Block
+	  skipSourceBytes( 16 );	// Identification String
+	  skipSourceBytes( readInt4() );
+	  break;
+
 	default:
 	  throw new IOException(
 		String.format(
@@ -428,10 +416,8 @@ public class ZXSpectrumAudioDataStream extends EmuSysAudioDataStream
       }
     }
 
-    // abschliessender Phasenwechsel
-    if( getFrameLength() > 0 ) {
-      addSamples( 40 );
-    }
+    // abschliessende Pause
+    addSamplesByMillis( 200 );
   }
 
 

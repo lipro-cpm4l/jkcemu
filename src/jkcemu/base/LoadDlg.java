@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -104,11 +104,12 @@ public class LoadDlg extends BasicDlg implements DocumentListener
       if( suppressAudioMsg ) {
 	AudioFrm.open( screenFrm ).openFile( file, null, 0 );
       } else {
-	String msg = "Die Datei kann nur \u00FCber eine Audio-Funktion"
+	String msg = "Die Datei kann nur \u00FCber eine Audiofunktion"
 		+ " geladen werden.\n"
 		+ "Dazu m\u00FCssen Sie im emulierten System"
 		+ " das Laden von Kassette\n"
-		+ "und im Audio-Fenster das Abspielden der Datei starten.\n";
+		+ "und im Fenster Audio/Kassette das Abspielden"
+		+ " der Datei starten.\n";
 
 	JCheckBox cb = new JCheckBox(
 			"Diese Meldung zuk\u00FCnftig nicht mehr anzeigen",

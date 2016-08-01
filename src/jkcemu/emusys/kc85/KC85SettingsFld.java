@@ -301,7 +301,8 @@ public class KC85SettingsFld
 					0, 0 );
 
     this.btnD004Enabled = new JCheckBox(
-			"Floppy-Disk-Erweiterung D004 mit GIDE emulieren",
+			"Floppy-Disk-Erweiterung D004 emulieren"
+					+ " (bei Bedarf mit GIDE)",
 			false );
     this.btnD004Enabled.addActionListener( this );
     this.tabD004.add( this.btnD004Enabled, gbcDisk );

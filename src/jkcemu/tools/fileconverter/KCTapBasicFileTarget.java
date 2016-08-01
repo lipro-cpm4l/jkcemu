@@ -65,10 +65,10 @@ public class KCTapBasicFileTarget extends AbstractConvertTarget
     try {
       out = new FileOutputStream( file );
 
-      // KC-TAP-Header
-      int n = FileInfo.KCTAP_HEADER.length();
+      // KC-TAP-Kopf
+      int n = FileInfo.KCTAP_MAGIC.length();
       for( int i = 0; i < n; i++ ) {
-	out.write( FileInfo.KCTAP_HEADER.charAt( i ) );
+	out.write( FileInfo.KCTAP_MAGIC.charAt( i ) );
       }
 
       // Datenbloecke

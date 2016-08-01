@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -186,7 +186,7 @@ public class NetConfig
     }
 
     /*
-     * Ermittlung des Dns-Servers entsprechend der
+     * Ermittlung des DNS-Servers entsprechend der
      * JNDI-Beschreibung von Java 1.5
      *
      * Wenn ein Laptop in verschiedenen Netzwerkumgebungen verwendet wird,
@@ -239,7 +239,7 @@ public class NetConfig
     catch( Exception ex ) {}
 
     /*
-     * Falls der Dns-Server nicht ermittelt werden konnte,
+     * Falls der DNS-Server nicht ermittelt werden konnte,
      * dann auf einem Unix/Linux-System die Datei /etc/resolv.conf auslesen
      */
     if( (dnsServerIpAddr == null) && Main.isUnixLikeOS() ) {

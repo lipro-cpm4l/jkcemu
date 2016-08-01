@@ -1,9 +1,9 @@
 /*
- * (c) 2011-2014 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Lesen einer AC1- oder LLC2-Datei als InputStream von Audio-Daten
+ * Lesen einer AC1- oder LLC2-Datei als InputStream von Audiodaten
  * TurboSave-Format
  */
 

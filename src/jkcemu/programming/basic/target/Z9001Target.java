@@ -580,13 +580,6 @@ public class Z9001Target extends AbstractTarget
 
 
   @Override
-  public String getHostName()
-  {
-    return "Z9001";
-  }
-
-
-  @Override
   public int getMaxAppNameLen()
   {
     return 8;

@@ -413,7 +413,7 @@ public class FilePreviewFld extends JPanel
   {
     boolean gzip = EmuUtil.isGZipFile( file );
     
-    // AudioFileFormat ermitteln (nur bei keinen gz-Dateien)
+    // AudioFileFormat ermitteln
     BufferedInputStream bIn  = null;
     AudioInputStream    aIn  = null;
     AudioFileFormat     fFmt = null;

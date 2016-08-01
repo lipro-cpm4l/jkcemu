@@ -1,38 +1,45 @@
 <html>
 <body>
-  <h1>Hinweise zur Emulation des H&uuml;bler/Evert-MC</h1>
+ <h1>H&uuml;bler/Evert-MC</h1>
+  Bernd H&uuml;bler und Klaus-Peter Evert entwickelten einen Computer,
+  dessen Bauanleitung 1984 in dem Heft <em>electronica&nbsp;227/228</em>
+  ver&ouml;ffentlicht wurde.
+  Da dieser Computer keinen eigenen Namen hat,
+  wird er im JKCEMU <em>H&uuml;bler/Evert-MC</em> genannt.
+ <br/><br/>
 
-  <h2>1. Emulierte Hardware</h2>
-    <ul>
-      <li>3&nbsp;KByte ROM</li>
-      <li>61&nbsp;KByte RAM inklusive Bildwiederholspeicher</li>
-      <li>CTC</li>
-      <li>2&nbsp;PIOs</li>
-    </ul>
-    Von der universellen IO-Karte werden nur die CTC und
-    die beiden PIOs emuliert.
-    Die SIO und das Kassettenrecorderinterface sowie ggf.
-    an den PIOs angeschlossene Hardware werden nicht emuliert.
-  <br/><br/>
+ <h2>Hinweise zur Emulation</h2>
 
-  <h3>1.1. Drucker</h3>
-    Es wird ein Drucker emuliert,
-    indem JKCEMU die Betriebssystemaufrufe f&uuml;r Druckausgaben
-    abf&auml;ngt und die Daten an den aktuellen Druckauftrag anh&auml;ngt.
-    Diese Funktion ist in den <a href="settings.htm">Einstellungen</a>
-    abschaltbar.
-  <br/><br/>
+ <h2>1. Emulierte Hardware</h2>
+  <ul>
+   <li>3&nbsp;KByte ROM</li>
+   <li>61&nbsp;KByte RAM inklusive Bildwiederholspeicher</li>
+   <li>CTC</li>
+   <li>2&nbsp;PIOs</li>
+  </ul>
+  Von der universellen IO-Karte werden nur die CTC und
+  die beiden PIOs emuliert.
+  Die SIO und das Kassettenrecorderinterface sowie ggf.
+  an den PIOs angeschlossene Hardware werden nicht emuliert.
+ <br/><br/>
+
+ <h3>1.1. Drucker</h3>
+  Es wird ein Drucker emuliert,
+  indem JKCEMU die Betriebssystemaufrufe f&uuml;r Druckausgaben
+  abf&auml;ngt und die Daten an den aktuellen Druckauftrag anh&auml;ngt.
+  Diese Funktion ist in den <a href="settings.htm">Einstellungen</a>
+  abschaltbar.
+ <br/><br/>
 
 
-  <h2>2. Im ROM enthaltene Software</h2>
-    <ul>
-      <li>Monitorprogramm Version&nbsp;2.1</li>
-    </ul>
-    Im Monitorprogramm kann man sich mit <em>HELP</em>
-    eine Liste aller Kommandos anzeigen lassen.
-    Die Liste enth&auml;lt sowohl die Kommandos des Monitorprogramm selbst
-    als auch solche,
-    die eventuell an anderen Stellen im Arbeitsspeicher zu finden sind.
+ <h2>2. Im ROM enthaltene Software</h2>
+  <ul>
+   <li>Monitorprogramm Version&nbsp;2.1</li>
+  </ul>
+  Im Monitorprogramm kann man sich mit <em>HELP</em>
+  eine Liste aller Kommandos anzeigen lassen.
+  Die Liste enth&auml;lt sowohl die Kommandos des Monitorprogramm selbst
+  als auch solche,
+  die eventuell an anderen Stellen im Arbeitsspeicher zu finden sind.
 </body>
 </html>
-

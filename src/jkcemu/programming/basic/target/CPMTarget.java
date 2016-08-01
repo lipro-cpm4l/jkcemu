@@ -830,6 +830,7 @@ public class CPMTarget extends AbstractTarget
 
   public void appendInitTo( AsmCodeBuf buf )
   {
+    super.appendInitTo( buf );
     if( this.usesX_M_INKEY ) {
       buf.append( "\tXOR\tA\n"
 		+ "\tLD\t(X_M_INKEY),A\n" );
@@ -1003,13 +1004,6 @@ public class CPMTarget extends AbstractTarget
   public int getFileIOChannelSize()
   {
     return IOCTB_CHANNEL_SIZE;
-  }
-
-
-  @Override
-  public String getHostName()
-  {
-    return "CP-M";
   }
 
 

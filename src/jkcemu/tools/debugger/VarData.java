@@ -412,6 +412,4 @@ public class VarData
     }
     return rv;
   }
-
-
 }

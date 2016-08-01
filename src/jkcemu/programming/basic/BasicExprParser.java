@@ -30,8 +30,6 @@ public class BasicExprParser
 	value = BasicLibrary.E_CHANNEL_CLOSED;
       } else if( name.equals( "E_DEVICE_LOCKED" ) ) {
 	value = BasicLibrary.E_DEVICE_LOCKED;
-      } else if( name.equals( "E_DEVICE_NOT_CONFIGURED" ) ) {
-	value = BasicLibrary.E_DEVICE_NOT_CONFIGURED;
       } else if( name.equals( "E_DEVICE_NOT_FOUND" ) ) {
 	value = BasicLibrary.E_DEVICE_NOT_FOUND;
       } else if( name.equals( "E_DISK_FULL" ) ) {
@@ -73,7 +71,7 @@ public class BasicExprParser
 	value = 3;
       } else if( name.equals( "TRUE" ) ) {
 	value = 0xFFFF;
-      } else if( AbstractTarget.isReservedWord( name ) ) {
+      } else if( compiler.getTarget().isReservedWord( name ) ) {
 	value = compiler.getTarget().getNamedValue( name );
       } else {
 	status = false;
@@ -90,7 +88,7 @@ public class BasicExprParser
    * Diese Methode prueft, ob ein Ausdruck einen konstanten Wert hat.
    * Wenn ja, ist der Ausdruck nach Rueckkehr aus der Methode geparst.
    *
-   * In dieser Methode wird nicht der gesamte Syntaxbaum abgebildet werden.
+   * In dieser Methode wird nicht der gesamte Syntaxbaum abgebildet.
    * Es reicht, nur die Elemente zu pruefen,
    * die sinnvollerweise vorkommen koennen.
    * Das sind:

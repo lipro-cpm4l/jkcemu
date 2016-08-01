@@ -1,6 +1,6 @@
 <html>
 <body>
- <h1>Hinweise zur Emulation des BCS3</h1>
+ <h1>BCS3</h1>
   Der BCS3 ist ein von Eckhard Schiller entwickelter Selbstbaucomputer,
   dessen Bauanleitung 1985 in der Zeitschrift
   <em>Radio Fernsehen Elektronik</em> erschienen ist.
@@ -8,6 +8,8 @@
   welches trotzt minimalem Bauelementeaufwand eine akzeptable
   Rechenleistung bietet.
  <br/><br/>
+
+ <h2>Hinweise zur Emulation</h2>
   <ul>
    <li>
     <a href="bcs3.htm#hardware">1. Emulierte Hardware</a>
@@ -46,23 +48,15 @@
   Diese Routine liest die auszugebenden Zeichen aus dem Arbeitsspeicher
   und steuert die Hardware so an,
   dass daraus das gew&uuml;nschte Bildsignal entsteht.
-  JKCEMU visualisiert jedoch nicht das so entstandene Bildsignal,
-  sondern liest selbst die anzuzeigenden Zeichen aus dem Speicher aus
-  und stellt sie entsprechend dar.
-  F&uuml;r die im JKCEMU enthaltenen Betriebssystemversionen ist bekannt,
-  wo im Speicher die entsprechenden Zeichen stehen.
-  Wenn Sie jedoch durch Einbinden einer externen ROM-Datei
-  im Emulator eine andere Betriebssystemversion benutzen,
-  muss diese den gleichen Adressbereich f&uuml;r den Bildspeicher benutzen.
-  Anderenfalls werden die falschen Zeichen angezeigt.
+  JKCEMU visualisiert das auf diese Art und Weise entstandene Bildsignal.
  <br/><br/>
 
  <h3><a name="tape">1.2. Kassettenrecorderanschluss</a></h3>
   Der Kassettenrecorderanschluss wird ausgangsseitig vom gleichen
-  CTC-Kanal bedient, der auch die Zeilensynchronimpulse f&uuml;r
-  die Bildschirmausgabe liefert.
-  Aus diesem Grund h&ouml;ren Sie ein Pfeifen, wenn Sie eine
-  <a href="audio.htm">Audio-Funktion</a>
+  CTC-Kanal bedient, der auch die Zeilensynchronimpulse (HSync-Impulse)
+  f&uuml;r die Bildschirmausgabe liefert.
+  Aus diesem Grund h&ouml;ren Sie (normalerweise) ein Pfeifen,
+  wenn Sie eine <a href="audio.htm">Audiofunktion</a>
   zur Ausgabe von T&ouml;nen aktivieren.
   Das Pfeifen sind die mit halber Frequenz ausgegebenen
   Zeilensynchronimpulse.
@@ -71,6 +65,14 @@
   Sobald das BASIC-Programm auf dem Kassettenrecorderanschluss
   ausgegeben wurde, wird die Bildausgabe wieder aktiv,
   und Sie h&ouml;ren auch wieder das Pfeifen.
+ <br/><br/>
+  Da die HSync-Impulse st&ouml;ren k&ouml;nnen,
+  vorallem wenn man das BASIC-Programm in eine Sound- bzw. Tape-Datei
+  speichern m&ouml;chte, gibt es in den Einstellungen die Option
+  <em>HSync-Signale aus Audioausgabe entfernen</em>.
+  Ist die Option eingeschaltet, was standardm&auml;&szlig;ig der Fall ist,
+  werden sie HSync-Impulse herausgefiltert
+  und Sie h&ouml;ren nur die eigentliche Tonausgabe.
  <br/><br/>
   <b>Achtung!</b> BASIC-SE&nbsp;2.4 enth&auml;lt keine
   Unterst&uuml;tzung f&uuml;r das Speichern und Laden auf Kassette.
@@ -170,7 +172,7 @@
   <a name="basic_io">3.1. BASIC-Programme speichern und laden</a>
  </h3>
   Speichern Sie die BASIC-Programme mit der entsprechenden Funktion
-  des Emulator (Men&uuml; <em>Datei</em> &rarr;
+  des Emulators (Men&uuml; <em>Datei</em> &rarr;
   <em>BASIC-Programm speichern...</em>).
   Da das BASIC-Programm abh&auml;ngig von der sichtbaren Zeilenzahl
   eventuell auf eine andere Adresse wieder eingeladen werden muss,

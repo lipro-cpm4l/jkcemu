@@ -64,6 +64,7 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
 
   public void appendInitTo( AsmCodeBuf buf )
   {
+    super.appendInitTo( buf );
     if( this.usesX_M_INKEY ) {
       buf.append( "\tXOR\tA\n"
 		+ "\tLD\t(X_M_INKEY),A\n" );
@@ -542,13 +543,6 @@ public class HueblerGraphicsMCTarget extends AbstractTarget
   public int getDefaultBegAddr()
   {
     return 0x0100;
-  }
-
-
-  @Override
-  public String getHostName()
-  {
-    return "Huebler-MC";
   }
 
 
