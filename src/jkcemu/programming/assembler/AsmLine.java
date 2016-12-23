@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,9 +9,11 @@
 package jkcemu.programming.assembler;
 
 import java.lang.*;
-import java.text.*;
-import java.util.*;
-import jkcemu.programming.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.util.ArrayList;
+import jkcemu.programming.PrgException;
+import jkcemu.programming.PrgUtil;
 
 
 public class AsmLine

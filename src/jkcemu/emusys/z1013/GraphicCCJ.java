@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,10 @@
 
 package jkcemu.emusys.z1013;
 
-import java.io.File;
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ScreenFrm;
 import jkcemu.etc.GDC82720;
 
 

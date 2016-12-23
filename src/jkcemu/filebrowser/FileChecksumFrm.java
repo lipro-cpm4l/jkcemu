@@ -8,28 +8,62 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.MouseEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
-import java.security.*;
-import java.util.*;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collection;
+import java.util.EventObject;
 import java.util.regex.PatternSyntaxException;
-import java.util.zip.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.etc.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileEntry;
+import jkcemu.base.FileTableModel;
+import jkcemu.base.HelpFrm;
+import jkcemu.etc.CksCalculator;
 
 
-public class FileChecksumFrm extends BasicFrm
+public class FileChecksumFrm extends BaseFrm
 				implements
 					ListSelectionListener,
 					Runnable
 {
   private static final String BTN_TEXT_CALCULATE = "Berechnen";
+  private static final String HELP_PAGE = "/help/tools/filechecksum.htm";
 
   private static FileChecksumFrm instance = null;
 
@@ -50,7 +84,7 @@ public class FileChecksumFrm extends BasicFrm
   private Thread            thread;
   private String            algorithm;
   private CksCalculator     cks;
-  private volatile boolean  canceled;
+  private volatile boolean  cancelled;
   private volatile boolean  filesChanged;
 
 
@@ -77,7 +111,7 @@ public class FileChecksumFrm extends BasicFrm
 
   public void setFiles( Collection<File> files )
   {
-    this.canceled = true;
+    this.cancelled = true;
     synchronized( this.tableModel ) {
       this.filesChanged = true;
       this.tableModel.clear( false );
@@ -129,7 +163,7 @@ public class FileChecksumFrm extends BasicFrm
       }
     }
     if( (cks != null) && (nRows > 0) ) {
-      for( int i = 0; !this.canceled && (i < nRows); i++ ) {
+      for( int i = 0; !this.cancelled && (i < nRows); i++ ) {
 	FileEntry entry = null;
 	synchronized( this.tableModel ) {
 	  if( i < this.tableModel.getRowCount() ) {
@@ -147,15 +181,15 @@ public class FileChecksumFrm extends BasicFrm
 	    fireTableRowsUpdated( i, i );
 	    if( cks != null ) {
 	      int b = in.read();
-	      while( !this.canceled && (b != -1) ) {
+	      while( !this.cancelled && (b != -1) ) {
 		cks.update( b );
 		b = in.read();
 	      }
-	      if( !this.canceled ) {
+	      if( !this.cancelled ) {
 		entry.setValue( cks.getValue() );
 	      }
 	    }
-	    if( this.canceled ) {
+	    if( this.cancelled ) {
 	      entry.setValue( null );
 	    }
 	    entry.setMarked( false );
@@ -180,7 +214,7 @@ public class FileChecksumFrm extends BasicFrm
 	    fireTableRowsUpdated( i, i );
 	  }
 	} else {
-	  this.canceled = true;
+	  this.cancelled = true;
 	}
 	EventQueue.invokeLater(
 		new Runnable()
@@ -241,7 +275,7 @@ public class FileChecksumFrm extends BasicFrm
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/tools/filechecksum.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
 
     }
@@ -254,7 +288,7 @@ public class FileChecksumFrm extends BasicFrm
   {
     boolean rv = super.doClose();
     if( rv ) {
-      this.canceled = true;
+      this.cancelled = true;
       Thread thread  = this.thread;
       if( thread != null ) {
 	thread.interrupt();
@@ -292,7 +326,7 @@ public class FileChecksumFrm extends BasicFrm
   public void windowClosed( WindowEvent e )
   {
     if( e.getWindow() == this )
-      this.canceled = true;
+      this.cancelled = true;
   }
 
 
@@ -303,7 +337,7 @@ public class FileChecksumFrm extends BasicFrm
     this.thread       = null;
     this.algorithm    = null;
     this.cks          = null;
-    this.canceled     = false;
+    this.cancelled    = false;
     this.filesChanged = false;
 
     setTitle( "JKCEMU Pr\u00FCfsumme-/Hash-Wert berechnen" );
@@ -531,7 +565,7 @@ public class FileChecksumFrm extends BasicFrm
 			JOptionPane.WARNING_MESSAGE );
 	  }
 	} else {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Die Zwischenablage enth\u00E4lt keinen Text.\n"
 			+ "Kopieren Sie bitte den zu pr\u00FCfenden Wert\n"
@@ -547,7 +581,7 @@ public class FileChecksumFrm extends BasicFrm
   {
     synchronized( this.tableModel ) {
       if( this.thread != null ) {
-	this.canceled = true;
+	this.cancelled = true;
       } else {
 	Object o = this.comboAlgorithm.getSelectedItem();
 	if( o != null ) {
@@ -557,7 +591,7 @@ public class FileChecksumFrm extends BasicFrm
 	    try {
 	      this.cks          = new CksCalculator( algorithm );
 	      this.algorithm    = algorithm;
-	      this.canceled     = false;
+	      this.cancelled    = false;
 	      this.filesChanged = false;
 	      this.thread       = new Thread(
 					Main.getThreadGroup(),
@@ -567,7 +601,7 @@ public class FileChecksumFrm extends BasicFrm
 	      updFields();
 	    }
 	    catch( NoSuchAlgorithmException ex ) {
-	      BasicDlg.showErrorDlg(
+	      BaseDlg.showErrorDlg(
 			this,
 			"Der Algorithmus wird nicht unterst&uuml;tzt." );
 	    }

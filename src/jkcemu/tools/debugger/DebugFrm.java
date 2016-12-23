@@ -8,23 +8,94 @@
 
 package jkcemu.tools.debugger;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EventObject;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.ListModel;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.text.JTextComponent;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.ReplyIntDlg;
 import jkcemu.text.TextUtil;
-import jkcemu.tools.*;
-import z80emu.*;
+import jkcemu.tools.ToolsUtil;
+import z80emu.Z80Breakpoint;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80Memory;
+import z80emu.Z80ReassInstr;
+import z80emu.Z80Reassembler;
+import z80emu.Z80StatusListener;
 
 
-public class DebugFrm extends BasicFrm implements
+public class DebugFrm extends BaseFrm implements
 						ChangeListener,
 						ComponentListener,
 						FocusListener,
@@ -44,6 +115,7 @@ public class DebugFrm extends BasicFrm implements
     }
   }
 
+  private static final String HELP_PAGE = "/help/tools/debugger.htm";
 
   private static final int BP_PC_IDX        = 0;
   private static final int BP_MEMORY_IDX    = 1;
@@ -1334,7 +1406,7 @@ public class DebugFrm extends BasicFrm implements
 			options.getCaseSensitive() );
 	}
 	finally {
-	  EmuUtil.doClose( reader );
+	  EmuUtil.closeSilent( reader );
 	}
       }
       if( state ) {
@@ -1342,7 +1414,7 @@ public class DebugFrm extends BasicFrm implements
 	this.mnuFileBreakImportAgain.setEnabled( true );
       } else {
 	if( reader != null ) {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Der Inhalt" + sourceText + " konnte nicht als Liste\n"
 		  + "mit Halte-/Log-Punkten interpretiert werden." );
@@ -1350,7 +1422,7 @@ public class DebugFrm extends BasicFrm implements
       }
     }
     catch( IOException ex ) {
-      BasicDlg.showErrorDlg( this, ex );
+      BaseDlg.showErrorDlg( this, ex );
     }
     return state;
   }
@@ -1732,7 +1804,7 @@ public class DebugFrm extends BasicFrm implements
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/tools/debugger.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
       else if( src == this.popupBreakAdd ) {
 	rv = true;
@@ -2253,7 +2325,7 @@ public class DebugFrm extends BasicFrm implements
 	this.bpDlg = null;
       }
     } else {
-      BasicDlg.showErrorDlg(
+      BaseDlg.showErrorDlg(
 		this,
 		"Das emulierte System hat keine Interrupt-Quellen." );
     }
@@ -2321,7 +2393,7 @@ public class DebugFrm extends BasicFrm implements
 
   private void doDebugBreakRemoveAll()
   {
-    if( BasicDlg.showYesNoDlg(
+    if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie alle Halte-/Log-Punkte entfernen?" ) )
     {
@@ -2337,7 +2409,7 @@ public class DebugFrm extends BasicFrm implements
   private void doDebugBreakRemoveAll( int bpGroupIdx )
   {
     if( (bpGroupIdx >= 0) && (bpGroupIdx < BP_GROUP_CNT) ) {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie alle Halte-/Log-Punkte"
 			+ " dieser Gruppe entfernen?" ) )
@@ -2470,7 +2542,7 @@ public class DebugFrm extends BasicFrm implements
       if( this.lastTraceFile != null ) {
 	String[] options = {"Anh\u00E4ngen", "Neue Datei", "Abbrechen"};
 
-	action = BasicDlg.showOptionDlg(
+	action = BaseDlg.showOptionDlg(
 		this,
 		"Soll die Befehlsaufzeichnung an die alte Datei\n"
 			+ this.lastTraceFile.getPath()
@@ -2489,7 +2561,7 @@ public class DebugFrm extends BasicFrm implements
 	file = EmuUtil.showFileSaveDlg(
 			this,
 			"Befehlsaufzeichnung speichern",
-			Main.getLastDirFile( "debug" ),
+			Main.getLastDirFile( Main.FILE_GROUP_DEBUG ),
 			EmuUtil.getTextFileFilter() );
 	append = false;
       }
@@ -2505,11 +2577,11 @@ public class DebugFrm extends BasicFrm implements
 	  this.cpu.setDebugTracer( this.traceWriter );
 	  this.mnuDebugTracer.setSelected( true );
 	  this.lastTraceFile = file;
-	  Main.setLastFile( file, "debug" );
+	  Main.setLastFile( file, Main.FILE_GROUP_DEBUG );
 	}
 	catch( IOException ex ) {
 	  this.traceWriter = null;
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Die Befehlsaufzeichnungsdatei kann nicht\n"
 			+ "zum Schreiben ge\u00F6ffnet werden.\n\n"
@@ -2550,9 +2622,9 @@ public class DebugFrm extends BasicFrm implements
     ReplyIntDlg dlg = new ReplyIntDlg(
 				this,
 				"Max. Anzahl Log-Meldungen:",
-				new Integer( this.maxLogCnt ),
-				new Integer( 1 ),
-				new Integer( 10000 ) );
+				this.maxLogCnt,
+				1,
+				10000 );
     dlg.setVisible( true );
     setMaxLogCnt( dlg.getReply() );
   }
@@ -2575,7 +2647,7 @@ public class DebugFrm extends BasicFrm implements
   private void doLogRemoveAll()
   {
     if( !this.listModelLog.isEmpty() ) {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie alle Log-Meldungen entfernen?" ) )
       {
@@ -2679,7 +2751,7 @@ public class DebugFrm extends BasicFrm implements
   private void doVarRemoveAll()
   {
     if( !this.tableModelVar.isEmpty() ) {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie alle Variablen entfernen?" ) )
       {
@@ -2810,7 +2882,7 @@ public class DebugFrm extends BasicFrm implements
       boolean isErr = this.traceWriter.checkError();
       this.traceWriter = null;
       if( isErr ) {
-	BasicDlg.showErrorDlg(
+	BaseDlg.showErrorDlg(
 		this,
 		"Die Befehlsaufzeichnungsdatei konnte nicht"
 			+ " gespeichert werden." );
@@ -3183,7 +3255,7 @@ public class DebugFrm extends BasicFrm implements
 	      if( !caseSensitive ) {
 		varName = varName.toUpperCase();
 	      }
-	      varRowMap.put( varName, new Integer( i ) );
+	      varRowMap.put( varName, i );
 	    }
 	  }
 	}
@@ -3256,7 +3328,7 @@ public class DebugFrm extends BasicFrm implements
 	      rv = true;
 	    }
 	  } else {
-	    Integer addr = new Integer( label.intValue() );
+	    Integer addr = label.intValue();
 	    if( !suppressRecreate
 		|| !this.removedImportedBreakAddrs.contains( addr ) )
 	    {

@@ -1165,7 +1165,7 @@ public class Z80CPU
 
 	/* --- Emulation ausfuehren --- */
 
-  public void run() throws Z80ExternalException
+  public void run()
   {
     int opCode = 0;
     resetSpeed();
@@ -2014,7 +2014,7 @@ public class Z80CPU
     if( opCode == 0x76 ) {			// HALT
 
       // NOP-Befehl mit Ruecksetzen des PCs
-      this.haltPC = new Integer( this.instBegPC );
+      this.haltPC = this.instBegPC;
       this.instTStates += 4;
       setHaltState( true );
 

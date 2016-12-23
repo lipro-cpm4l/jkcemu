@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,24 @@
 
 package jkcemu.emusys.poly880;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.Poly880;
 
 
 public class Poly880SettingsFld extends AbstractSettingsFld
@@ -63,7 +76,7 @@ public class Poly880SettingsFld extends AbstractSettingsFld
 
     this.fldROM2 = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "rom_2000.",
+				propPrefix + Poly880.PROP_ROM2000_PREFIX,
 				"ROM-Erweiterung 2000h-23FFh:" );
     gbcExt.insets.top    = 5;
     gbcExt.insets.bottom = 5;
@@ -72,7 +85,7 @@ public class Poly880SettingsFld extends AbstractSettingsFld
 
     this.fldROM3 = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "rom_3000.",
+				propPrefix + Poly880.PROP_ROM3000_PREFIX,
 				"ROM-Erweiterung 3000h-33FFh:" );
     gbcExt.gridy++;
     this.tabExt.add( this.fldROM3, gbcExt );
@@ -93,14 +106,14 @@ public class Poly880SettingsFld extends AbstractSettingsFld
 
     this.fldAltROM0 = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "rom_0000.",
+		propPrefix + Poly880.PROP_ROM0000_PREFIX,
 		"Alternativer ROM-Inhalt 0000h-03FFh:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltROM0, gbcEtc );
 
     this.fldAltROM1 = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "rom_1000.",
+		propPrefix + Poly880.PROP_ROM1000_PREFIX,
 		"Alternativer ROM-Inhalt 1000h-13FFh:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltROM1, gbcEtc );
@@ -124,7 +137,7 @@ public class Poly880SettingsFld extends AbstractSettingsFld
   {
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "ram_8000.enabled",
+		this.propPrefix + Poly880.PROP_RAM8000_ENABLED,
 		this.btnRAM8000.isSelected() );
 
     this.fldAltROM0.applyInput( props, selected );
@@ -133,9 +146,9 @@ public class Poly880SettingsFld extends AbstractSettingsFld
     this.fldROM3.applyInput( props, selected );
 
     EmuUtil.setProperty(
-		props,
-		this.propPrefix + "rom.negated",
-		this.btnInversedROM.isSelected() );
+	props,
+	this.propPrefix + Poly880.PROP_ROM_PREFIX + Poly880.PROP_NEGATED,
+	this.btnInversedROM.isSelected() );
   }
 
 
@@ -168,10 +181,10 @@ public class Poly880SettingsFld extends AbstractSettingsFld
   public void updFields( Properties props )
   {
     this.btnRAM8000.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "ram_8000.enabled",
-				false ) );
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + Poly880.PROP_RAM8000_ENABLED,
+			false ) );
 
     this.fldAltROM0.updFields( props );
     this.fldAltROM1.updFields( props );
@@ -179,10 +192,11 @@ public class Poly880SettingsFld extends AbstractSettingsFld
     this.fldROM3.updFields( props );
 
     this.btnInversedROM.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom.negated",
-				false ) );
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix
+				+ Poly880.PROP_ROM_PREFIX
+				+ Poly880.PROP_NEGATED,
+			false ) );
   }
 }
-

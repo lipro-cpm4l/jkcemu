@@ -10,16 +10,40 @@ package jkcemu.emusys;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileFormat;
+import jkcemu.base.SaveDlg;
+import jkcemu.emusys.bcs3.BCS3KeyboardFld;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80CTCListener;
+import z80emu.Z80InterruptSource;
 
 
-public class BCS3 extends EmuSys implements
-					Z80CTCListener,
-					Z80TStatesListener
+public class BCS3 extends EmuSys implements Z80CTCListener
 {
+  public static final String SYSNAME        = "BCS3";
+  public static final String PROP_PREFIX    = "jkcemu.bcs3.";
+  public static final String PROP_RAM_KBYTE = "ram.kbyte";
+  public static final String PROP_REMOVE_HSYNC_FROM_AUDIO
+					= "remove_hsync_from_audio";
+
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 300;
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = true;
+
+  public static final String VALUE_OS_VERSION_24    = "2.4";
+  public static final String VALUE_OS_VERSION_31_29 = "3.1_29";
+  public static final String VALUE_OS_VERSION_31_40 = "3.1_40";
+  public static final String VALUE_OS_VERSION_33    = "3.3";
+
+
   /*
    * Die beiden Tabellen mappen die BASIC-SE2.4- und BASIC-SE3.1-Tokens
    * in die entsprechenden Texte.
@@ -101,8 +125,6 @@ public class BCS3 extends EmuSys implements
 	"NEW",     null,     "RANDOMIZE", null,
 	"READ",    null,     "DATA",      null };
 
-  private static final String PROP_PREFIX = "jkcemu.bcs3.";
-
   private static int SCREEN_CHARS_PER_ROW_MAX = 42;
   private static int SCREEN_HIDDEN_LINES      = 60;
   private static int SCREEN_HEIGHT            = 320;
@@ -140,11 +162,12 @@ public class BCS3 extends EmuSys implements
   private int              screenChar0Y;
   private int              screenChar1Y;
   private int[]            kbMatrix;
-  private long             lastAudioOutTStates;
-  private boolean          lastAudioOutPhase;
+  private long             lastTapeOutTStates;
+  private boolean          lastTapeOutPhase;
   private boolean          removeHSyncFromAudio;
   private volatile boolean screenEnabled;
   private CharRaster       charRaster;
+  private BCS3KeyboardFld  keyboardFld;
 
 
   public BCS3( EmuThread emuThread, Properties props )
@@ -160,29 +183,28 @@ public class BCS3 extends EmuSys implements
 
     String version = EmuUtil.getProperty(
 				props,
-				this.propPrefix + "os.version" );
-    if( version.equals( "3.1" ) ) {
+				this.propPrefix + PROP_OS_VERSION );
+    if( version.equals( VALUE_OS_VERSION_31_29 ) ) {
       this.osVersion = 31;
-      if( is40CharsPerLineMode( props ) ) {
-	if( this.osBytes == null ) {
-	  if( osBytesSE31_40 == null ) {
-	    osBytesSE31_40 = readResource( "/rom/bcs3/se31_40.bin" );
-	  }
-	  this.osBytes = osBytesSE31_40;
+      if( this.osBytes == null ) {
+	if( osBytesSE31_29 == null ) {
+	  osBytesSE31_29 = readResource( "/rom/bcs3/se31_29.bin" );
 	}
-      } else {
-	if( this.osBytes == null ) {
-	  if( osBytesSE31_29 == null ) {
-	    osBytesSE31_29 = readResource( "/rom/bcs3/se31_29.bin" );
-	  }
-	  this.osBytes = osBytesSE31_29;
+	this.osBytes = osBytesSE31_29;
+      }
+      if( this.romF000 == null ) {
+	if( mcEdtitorSE31 == null ) {
+	  mcEdtitorSE31 = readResource( "/rom/bcs3/se31mceditor.bin" );
 	}
-	if( this.romF000 == null ) {
-	  if( mcEdtitorSE31 == null ) {
-	    mcEdtitorSE31 = readResource( "/rom/bcs3/se31mceditor.bin" );
-	  }
-	  this.romF000 = mcEdtitorSE31;
+	this.romF000 = mcEdtitorSE31;
+      }
+    } else if( version.equals( VALUE_OS_VERSION_31_40 ) ) {
+      this.osVersion = 31;
+      if( this.osBytes == null ) {
+	if( osBytesSE31_40 == null ) {
+	  osBytesSE31_40 = readResource( "/rom/bcs3/se31_40.bin" );
 	}
+	this.osBytes = osBytesSE31_40;
       }
     } else if( version.equals( "3.3" ) ) {
       this.osVersion = 33;
@@ -213,10 +235,11 @@ public class BCS3 extends EmuSys implements
     this.screenLineInChar     = 0;
     this.screenChar0Y         = -1;
     this.screenChar1Y         = -1;
-    this.lastAudioOutTStates  = 0;
-    this.lastAudioOutPhase    = false;
+    this.lastTapeOutTStates   = 0;
+    this.lastTapeOutPhase     = false;
     this.removeHSyncFromAudio = getRemoveHSyncFromAudio( props );
     this.charRaster           = null;
+    this.keyboardFld          = null;
 
     // Pixelpuffer zur Anzeige
     this.screenPixelsVisible = new byte[
@@ -240,6 +263,7 @@ public class BCS3 extends EmuSys implements
     this.ctc.setTimerConnection( 0, 1 );
     this.ctc.setTimerConnection( 1, 2 );
     this.ctc.addCTCListener( this );
+    cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
   }
 
@@ -357,16 +381,10 @@ public class BCS3 extends EmuSys implements
 
   public static int getDefaultSpeedKHz( Properties props )
   {
-    return (EmuUtil.getProperty(
-			props,
-			PROP_PREFIX + "os.version" ).equals( "3.1" )
-		&& is40CharsPerLineMode( props )) ? 3500 : 2500;
-  }
-
-
-  public static boolean getDefaultSwapKeyCharCase()
-  {
-    return false;
+    return EmuUtil.getProperty(
+		props,
+		PROP_PREFIX + PROP_OS_VERSION )
+			.equals( VALUE_OS_VERSION_31_40 ) ? 3500 : 2500;
   }
 
 
@@ -405,7 +423,7 @@ public class BCS3 extends EmuSys implements
 	  } else {
 	    this.screenLineInChar = 0;
 	  }
-	  updAudioPhase( (this.screenLineInChar & 0x01) != 0 );
+	  updTapeOutPhase( (this.screenLineInChar & 0x01) != 0 );
 	  this.emuThread.getZ80CPU().setWaitMode( false );
 	  break;
 
@@ -415,7 +433,7 @@ public class BCS3 extends EmuSys implements
 	   * sowie Audioausgang aktualisieren
 	   */
 	  this.screenLineInChar = 0;
-	  updAudioPhase( (this.screenLineInChar & 0x01) != 0 );
+	  updTapeOutPhase( (this.screenLineInChar & 0x01) != 0 );
 	  break;
 
 	case 2:
@@ -509,25 +527,6 @@ public class BCS3 extends EmuSys implements
   }
 
 
-	/* --- Z80TStatesListener --- */
-
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    this.ctc.z80TStatesProcessed( cpu, tStates );
-
-    // Bildschirmausgabe ausschalten, wenn keine Bildsynchronimpulse kommen
-    if( this.screenActiveTStates > 0 ) {
-      this.screenActiveTStates -= tStates;
-      if( this.screenActiveTStates <= 0 ) {
-	if( this.screenEnabled ) {
-	  this.screenEnabled = false;
-	  this.screenFrm.setScreenDirty( true );
-	}
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -544,27 +543,27 @@ public class BCS3 extends EmuSys implements
   {
     boolean rv = EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( "BCS3" );
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
     if( rv ) {
       rv = TextUtil.equals(
 		this.osFile,
-		EmuUtil.getProperty( props, this.propPrefix + "os.file" ) );
+		EmuUtil.getProperty(
+				props,
+				this.propPrefix + PROP_OS_FILE ) );
     }
     if( rv ) {
       String version = EmuUtil.getProperty(
 				props,
-				this.propPrefix + "os.version" );
-      if( version.equals( "3.1" ) ) {
-	if( is40CharsPerLineMode( props ) ) {
-	  if( this.osBytes != osBytesSE31_40 ) {
-	    rv = false;
-	  }
-	} else {
-	  if( this.osBytes != osBytesSE31_29 ) {
-	    rv = false;
-	  }
+				this.propPrefix + PROP_OS_VERSION );
+      if( version.equals( VALUE_OS_VERSION_31_29 ) ) {
+	if( this.osBytes != osBytesSE31_29 ) {
+	  rv = false;
 	}
-      } else if( version.equals( "3.3" ) ) {
+      } else if( version.equals( VALUE_OS_VERSION_31_40 ) ) {
+	if( this.osBytes != osBytesSE31_40 ) {
+	  rv = false;
+	}
+      } else if( version.equals( VALUE_OS_VERSION_33 ) ) {
 	if( this.osBytes != osBytesSP33_29 ) {
 	  rv = false;
 	}
@@ -591,12 +590,21 @@ public class BCS3 extends EmuSys implements
 
 
   @Override
+  public AbstractKeyboardFld createKeyboardFld()
+  {
+    this.keyboardFld = new BCS3KeyboardFld( this );
+    return this.keyboardFld;
+  }
+
+
+  @Override
   public void die()
   {
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
+    cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
   }
 
@@ -681,13 +689,13 @@ public class BCS3 extends EmuSys implements
   {
     Integer rv = null;
     if( this.osBytes == osBytesSE24 ) {
-      rv = new Integer( 0x3DA1 );
+      rv = 0x3DA1;
     }
     else if( (this.osBytes == osBytesSE31_29)
 	     || (this.osBytes == osBytesSE31_40)
 	     || (this.osBytes == osBytesSP33_29) )
     {
-      rv = new Integer( getMemWord( 0x3C00 ) );
+      rv = getMemWord( 0x3C00 );
     }
     return rv;
   }
@@ -712,7 +720,7 @@ public class BCS3 extends EmuSys implements
 	  }
 	  m <<= 1;
 	}
-	if( this.emuThread.readAudioPhase() ) {
+	if( this.emuThread.readTapeInPhase() ) {
 	  rv |= 0x80;
 	} else {
 	  rv &= 0x7F;
@@ -770,7 +778,7 @@ public class BCS3 extends EmuSys implements
       b = (int) this.screenChars[ idx ] & 0xFF;
     }
     if( (b >= 0) && (b < 0x10) ) {
-      if( this.osVersion < 24 ) {
+      if( this.osVersion < 32 ) {
 	ch = '\u0020';
       }
     } else if( (b >= 10) && (b < 0x20) ) {
@@ -876,14 +884,14 @@ public class BCS3 extends EmuSys implements
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return getDefaultSwapKeyCharCase();
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
   }
 
 
   @Override
   public String getTitle()
   {
-    return "BCS3";
+    return SYSNAME;
   }
 
 
@@ -910,6 +918,9 @@ public class BCS3 extends EmuSys implements
 	this.kbMatrix[ 6 ] = 0x01;
 	rv                 = true;
     }
+    if( rv ) {
+      updKeyboardFld();
+    }
     return rv;
   }
 
@@ -918,6 +929,7 @@ public class BCS3 extends EmuSys implements
   public void keyReleased()
   {
     Arrays.fill( this.kbMatrix, 0 );
+    updKeyboardFld();
   }
 
 
@@ -970,6 +982,9 @@ public class BCS3 extends EmuSys implements
 	this.kbMatrix[ idx ] = value;
       }
       rv = true;
+    }
+    if( rv ) {
+      updKeyboardFld();
     }
     return rv;
   }
@@ -1166,6 +1181,7 @@ public class BCS3 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
 	&& isReloadExtROMsOnPowerOnEnabled( props ) )
     {
@@ -1188,8 +1204,8 @@ public class BCS3 extends EmuSys implements
     this.screenLineInChar    = 0;
     this.screenChar0Y        = -1;
     this.screenChar1Y        = -1;
-    this.lastAudioOutTStates = 0;
-    this.lastAudioOutPhase   = false;
+    this.lastTapeOutTStates  = 0;
+    this.lastTapeOutPhase    = false;
     this.charRaster          = null;
     Arrays.fill( this.kbMatrix, 0 );
     Arrays.fill( this.screenChars, (byte) 0x20 );
@@ -1286,14 +1302,14 @@ public class BCS3 extends EmuSys implements
 
 
   @Override
-  public boolean supportsAudio()
+  public boolean supportsCopyToClipboard()
   {
     return true;
   }
 
 
   @Override
-  public boolean supportsCopyToClipboard()
+  public boolean supportsKeyboardFld()
   {
     return true;
   }
@@ -1317,6 +1333,38 @@ public class BCS3 extends EmuSys implements
   public boolean supportsSaveBasic()
   {
     return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
+  {
+    return true;
+  }
+
+
+  @Override
+  public void updKeyboardMatrix( int[] kbMatrix )
+  {
+    synchronized( this.kbMatrix ) {
+      int n = Math.min( kbMatrix.length, this.kbMatrix.length );
+      int i = 0;
+      while( i < n ) {
+	this.kbMatrix[ i ] = kbMatrix[ i ];
+	i++;
+      }
+      while( i < this.kbMatrix.length ) {
+	this.kbMatrix[ i ] = 0;
+	i++;
+      }
+    }
   }
 
 
@@ -1399,6 +1447,7 @@ public class BCS3 extends EmuSys implements
   }
 
 
+  @Override
   public void writeMemByte( int addr, int value )
   {
     setMemByte( addr, value );
@@ -1406,6 +1455,25 @@ public class BCS3 extends EmuSys implements
     addr &= 0xDFFF;			// A13=0
     if( (addr >= 0x1400) && (addr < 0x1800)) {
       this.emuThread.getZ80CPU().setWaitMode( true );
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+
+    // Bildschirmausgabe ausschalten, wenn keine Bildsynchronimpulse kommen
+    if( this.screenActiveTStates > 0 ) {
+      this.screenActiveTStates -= tStates;
+      if( this.screenActiveTStates <= 0 ) {
+	if( this.screenEnabled ) {
+	  this.screenEnabled = false;
+	  this.screenFrm.setScreenDirty( true );
+	}
+      }
     }
   }
 
@@ -1428,29 +1496,29 @@ public class BCS3 extends EmuSys implements
 
   private static int getRAMEndAddr( Properties props )
   {
-    return EmuUtil.getProperty(
-		props,
-		PROP_PREFIX + "ram.kbyte" ).equals( "17" ) ?
-							0x7FFF : 0x3FFF;
+    int ramEndAddr = 0x3FFF;
+    try {
+      int kByte = Integer.parseInt(
+			EmuUtil.getProperty(
+				props, PROP_PREFIX + PROP_RAM_KBYTE ) );
+      if( kByte > 1 ) {
+	ramEndAddr += ((kByte - 1) * 1024);
+	if( ramEndAddr > 0xEFFF ) {
+	  ramEndAddr = 0xEFFF;
+	}
+      }
+    }
+    catch( NumberFormatException ex ) {}
+    return ramEndAddr;
   }
-
-
 
 
   private static boolean getRemoveHSyncFromAudio( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				PROP_PREFIX + "remove_hsync_from_audio",
-				true );
-  }
-
-
-  private static boolean is40CharsPerLineMode( Properties props )
-  {
-    return EmuUtil.getProperty(
-		props,
-		PROP_PREFIX + "chars_per_line" ).equals( "40" );
+			props,
+			PROP_PREFIX + PROP_REMOVE_HSYNC_FROM_AUDIO,
+			true );
   }
 
 
@@ -1466,7 +1534,7 @@ public class BCS3 extends EmuSys implements
   {
     this.fontBytes = readFontByProperty(
 				props,
-				this.propPrefix + "font.file",
+				this.propPrefix + PROP_FONT_FILE,
 				0x0400 );
     if( this.fontBytes == null ) {
       if( this.osVersion == 31 ) {
@@ -1493,24 +1561,31 @@ public class BCS3 extends EmuSys implements
   {
     this.osFile  = EmuUtil.getProperty(
 				props,
-				this.propPrefix + "os.file" );
+				this.propPrefix + PROP_OS_FILE );
     this.osBytes = readROMFile( this.osFile, 0x1000, "Betriebssystem" );
     loadFont( props );
   }
 
 
-  private void updAudioPhase( boolean phase )
+  private void updTapeOutPhase( boolean phase )
   {
     if( this.removeHSyncFromAudio ) {
       Z80CPU cpu = this.emuThread.getZ80CPU();
       long t = cpu.getProcessedTStates();
-      long d = cpu.calcTStatesDiff( this.lastAudioOutTStates, t );
-      this.lastAudioOutTStates = t;
+      long d = cpu.calcTStatesDiff( this.lastTapeOutTStates, t );
+      this.lastTapeOutTStates = t;
       if( (d > 300) && (d < 40000) ) {
-	this.emuThread.writeAudioPhase( phase );
+	this.tapeOutPhase = phase;
       }
     } else {
-      this.emuThread.writeAudioPhase( phase );
+      this.tapeOutPhase = phase;
     }
+  }
+
+
+  private void updKeyboardFld()
+  {
+    if( this.keyboardFld != null )
+      this.keyboardFld.updKeySelection( this.kbMatrix );
   }
 }

@@ -14,8 +14,10 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
-import java.util.*;
-import jkcemu.programming.*;
+import java.util.Collection;
+import java.util.Set;
+import java.util.TreeSet;
+import jkcemu.programming.PrgException;
 import jkcemu.programming.assembler.AsmLine;
 
 

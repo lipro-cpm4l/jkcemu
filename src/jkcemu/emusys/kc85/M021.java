@@ -11,7 +11,8 @@ package jkcemu.emusys.kc85;
 import java.lang.*;
 import jkcemu.base.EmuThread;
 import jkcemu.print.PrintMngr;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80TStatesListener;
 
 
 public class M021 extends KC85JoystickModule implements Z80TStatesListener
@@ -113,4 +114,3 @@ public class M021 extends KC85JoystickModule implements Z80TStatesListener
     return rv;
   }
 }
-

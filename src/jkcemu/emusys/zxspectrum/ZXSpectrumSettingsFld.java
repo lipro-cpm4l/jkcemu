@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2015 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,22 @@
 
 package jkcemu.emusys.zxspectrum;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.ZXSpectrum;
 
 
 public class ZXSpectrumSettingsFld extends AbstractSettingsFld
@@ -58,7 +69,7 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
 
     this.fldAltROM = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "rom.",
+		propPrefix + ZXSpectrum.PROP_ROM_PREFIX,
 		"Alternativer Betriebssystem-ROM:" );
     gbc.insets.top    = 5;
     gbc.insets.bottom = 5;
@@ -81,7 +92,7 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
   {
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "model",
+		this.propPrefix + ZXSpectrum.PROP_MODEL,
 		this.btn128K.isSelected() ? "128k" : "48k" );
     this.fldAltROM.applyInput( props, selected );
   }
@@ -113,8 +124,9 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
   public void updFields( Properties props )
   {
     if( EmuUtil.getProperty(
-			props,
-			this.propPrefix + "model" ).equals( "128k" ) )
+		props,
+		this.propPrefix + ZXSpectrum.PROP_MODEL ).equals(
+						ZXSpectrum.VALUE_128K ) )
     {
       this.btn128K.setSelected( true );
     } else {

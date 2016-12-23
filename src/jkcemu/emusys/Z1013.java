@@ -9,25 +9,84 @@
 package jkcemu.emusys;
 
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Properties;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.disk.*;
-import jkcemu.emusys.z1013.*;
-import jkcemu.etc.*;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuMemView;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.EmuThread;
+import jkcemu.base.FileFormat;
+import jkcemu.base.OptionDlg;
+import jkcemu.base.RAMFloppy;
+import jkcemu.base.SaveDlg;
+import jkcemu.base.SourceUtil;
+import jkcemu.disk.FDC8272;
+import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.disk.FloppyDiskFormat;
+import jkcemu.disk.FloppyDiskInfo;
+import jkcemu.disk.GIDE;
+import jkcemu.emusys.z1013.GraphicCCJ;
+import jkcemu.emusys.z1013.KeyboardMatrix;
+import jkcemu.emusys.z1013.KeyboardMatrix8x4;
+import jkcemu.emusys.z1013.KeyboardMatrix8x8;
+import jkcemu.emusys.z1013.Z1013Keyboard;
+import jkcemu.emusys.z1013.Z1013KeyboardFld8x4;
+import jkcemu.emusys.z1013.Z1013KeyboardFld8x8;
+import jkcemu.etc.RTC7242X;
+import jkcemu.etc.VDIP;
 import jkcemu.joystick.JoystickThread;
 import jkcemu.net.KCNet;
 import jkcemu.print.PrintMngr;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80AddressListener;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80MemView;
+import z80emu.Z80PCListener;
+import z80emu.Z80PIO;
 
 
 public class Z1013 extends EmuSys implements
 					FDC8272.DriveSelector,
 					Z80AddressListener,
-					Z80PCListener,
-					Z80TStatesListener
+					Z80PCListener
 {
+  public static final String SYSNAME               = "Z1013";
+  public static final String SYSNAME_Z1013_01      = "Z1013.01";
+  public static final String SYSNAME_Z1013_12      = "Z1013.12";
+  public static final String SYSNAME_Z1013_16      = "Z1013.16";
+  public static final String SYSNAME_Z1013_64      = "Z1013.64";
+  public static final String PROP_PREFIX           = "jkcemu.z1013.";
+  public static final String PROP_CATCH_JOY_CALLS  = "catch_joystick_calls";
+  public static final String PROP_GCCJ_FONT_FILE   = "graphic_ccj.font.file";
+  public static final String PROP_GCCJ_ENABLED     = "graphic_ccj.enabled";
+  public static final String PROP_GRAPHIC_ENABLED  = "graphic.enabled";
+  public static final String PROP_MONITOR          = "monitor";
+  public static final String PROP_ROMBASIC_PREFIX  = "rom_basic.";
+  public static final String PROP_ROMMEGA_PREFIX   = "rom_mega.";
+  public static final String PROP_USERPORT         = "userport";
+  public static final String VALUE_MON_202         = "2.02";
+  public static final String VALUE_MON_A2          = "A.2";
+  public static final String VALUE_MON_RB_K7659    = "RB_K7659";
+  public static final String VALUE_MON_RB_S6009    = "RB_S6009";
+  public static final String VALUE_MON_INCOM_K7669 = "INCOM_K7669";
+  public static final String VALUE_MON_JM_1992     = "JM_1992";
+  public static final String VALUE_MON_BL4_K7659   = "BL4_K7659";
+  public static final String VALUE_CEN7_PRAC0289 = "centronics7:practic0289";
+  public static final String VALUE_CEN8_FA1090   = "centronics8:fa1090";
+  public static final String VALUE_JOY_JUTE0687  = "joystick:jute0687";
+  public static final String VALUE_JOY_PRAC0487  = "joystick:practic0487";
+  public static final String VALUE_JOY_PRAC0188  = "joystick:practic0188";
+
+  public static final String PROP_ROMBASIC_ENABLED = PROP_ROMBASIC_PREFIX
+								+ "enabled";
+
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE = true;
+
   public static final int MEM_ARG1 = 0x001B;
   public static final int MEM_HEAD = 0x00E0;
 
@@ -142,7 +201,8 @@ public class Z1013 extends EmuSys implements
   private String              romBasicFile;
   private String              romMegaFile;
   private String              monCode;
-  private boolean             audioInPhase;
+  private String              sysName;
+  private boolean             tapeInPhase;
   private boolean             romDisabled;
   private boolean             altFontEnabled;
   private boolean             graphCCJActive;
@@ -166,7 +226,7 @@ public class Z1013 extends EmuSys implements
 
   public Z1013( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.z1013." );
+    super( emuThread, props, PROP_PREFIX );
     this.stdFontBytes      = null;
     this.altFontBytes      = null;
     this.osBytes           = null;
@@ -197,6 +257,7 @@ public class Z1013 extends EmuSys implements
     if( this.ramEndAddr == 0x03FF ) {
       this.ramStatic = new byte[ 0x0400 ];
     }
+    this.sysName = EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME );
 
     this.ramPixel = null;
     if( emulatesGraphic( props ) ) {
@@ -212,7 +273,7 @@ public class Z1013 extends EmuSys implements
 				RAMFloppy.RFType.MP_3_1988,
 				"RAM-Floppy an E/A-Adressen 98h-9Fh",
 				props,
-				this.propPrefix + "ramfloppy.1." );
+				PROP_PREFIX + PROP_RF1_PREFIX );
 
     this.ramFloppy2 = RAMFloppy.prepare(
 				this.emuThread.getRAMFloppy2(),
@@ -220,19 +281,18 @@ public class Z1013 extends EmuSys implements
 				RAMFloppy.RFType.MP_3_1988,
 				"RAM-Floppy an E/A-Adressen 58h-5Fh",
 				props,
-				this.propPrefix + "ramfloppy.2." );
+				PROP_PREFIX + PROP_RF2_PREFIX );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     this.pio   = new Z80PIO( "PIO (E/A-Adressen 00-03)" );
     cpu.addAddressListener( this );
+    cpu.addMaxSpeedListener( this );
     checkAddPCListener( props );
 
     if( emulatesFloppyDisk( props ) ) {
       this.floppyDiskDrives = new FloppyDiskDrive[ 4 ];
       Arrays.fill( this.floppyDiskDrives, null );
       this.fdc = new FDC8272( this, 4 );
-      this.fdc.setTStatesPerMilli( cpu.getMaxSpeedKHz() );
-      cpu.addMaxSpeedListener( this.fdc );
     } else {
       this.floppyDiskDrives = null;
       this.fdc              = null;
@@ -246,7 +306,7 @@ public class Z1013 extends EmuSys implements
 		this.screenFrm,
 		EmuUtil.getProperty(
 			props,
-			this.propPrefix + "graph_ccj.font.file" ) );
+			this.propPrefix + PROP_GCCJ_FONT_FILE ) );
     } else {
       this.graphCCJ = null;
     }
@@ -271,8 +331,6 @@ public class Z1013 extends EmuSys implements
     iSources.add( this.pio );
     if( this.kcNet != null ) {
       iSources.add( this.kcNet );
-      cpu.addMaxSpeedListener( this.kcNet );
-      this.kcNet.z80MaxSpeedChanged( cpu );
     }
     if( this.vdip != null ) {
       iSources.add( this.vdip );
@@ -290,6 +348,7 @@ public class Z1013 extends EmuSys implements
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
     }
+    z80MaxSpeedChanged( cpu );
     applyUserPortSettings( props );
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
@@ -306,15 +365,9 @@ public class Z1013 extends EmuSys implements
   public static int getDefaultSpeedKHz( Properties props )
   {
     return EmuUtil.getProperty(
-			props,
-			"jkcemu.system" ).startsWith( "Z1013.01" ) ?
+		props,
+		EmuThread.PROP_SYSNAME ).startsWith( SYSNAME_Z1013_01 ) ?
 								1000 : 2000;
-  }
-
-
-  public static boolean getDefaultSwapKeyCharCase()
-  {
-    return true;
   }
 
 
@@ -443,39 +496,6 @@ public class Z1013 extends EmuSys implements
   }
 
 
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    boolean phase = this.emuThread.readAudioPhase();
-    if( phase != this.audioInPhase ) {
-      this.audioInPhase = phase;
-      this.pio.putInValuePortB( this.audioInPhase ? 0x40 : 0, 0x40 );
-    }
-    if( this.fdc != null ) {
-      this.fdc.z80TStatesProcessed( cpu, tStates );
-    }
-    if( this.kcNet != null ) {
-      this.kcNet.z80TStatesProcessed( cpu, tStates );
-    }
-    if( this.centrTStatesToAck > 0 ) {
-      this.centrTStatesToAck -= tStates;
-      if( this.centrTStatesToAck <= 0 ) {
-	switch( this.userPort ) {
-	  case CENTR7_PRACTIC_2_1989:
-	    // BUSY (Port A Bit 7) zuruecksetzen
-	    this.pio.putInValuePortA( 0, 0x80 );
-	    break;
-	  case CENTR8_FA_10_1990:
-	    this.pio.strobePortA();
-	    break;
-	}
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -562,17 +582,21 @@ public class Z1013 extends EmuSys implements
   public boolean canApplySettings( Properties props )
   {
     boolean rv = EmuUtil.getProperty(
-				props,
-				"jkcemu.system" ).startsWith( "Z1013" );
+			props,
+			EmuThread.PROP_SYSNAME ).equals( this.sysName );
     if( rv ) {
       rv = TextUtil.equals(
 		this.osFile,
-		EmuUtil.getProperty( props, this.propPrefix + "os.file" ) );
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_OS_FILE ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.monCode,
-		EmuUtil.getProperty( props, this.propPrefix + "monitor" ) );
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_MONITOR ) );
     }
     if( rv && (getRAMEndAddr( props ) != this.ramEndAddr) ) {
       rv = false;
@@ -583,7 +607,9 @@ public class Z1013 extends EmuSys implements
 		this.romBasicFile,
 		EmuUtil.getProperty(
 			props,
-			this.propPrefix + "rom_basic.file" ) ) )
+			this.propPrefix
+				+ PROP_ROMBASIC_PREFIX
+				+ PROP_FILE ) ) )
       {
 	rv = false;
       }
@@ -596,7 +622,9 @@ public class Z1013 extends EmuSys implements
 		this.romMegaFile,
 		EmuUtil.getProperty(
 			props,
-			this.propPrefix + "rom_mega.file" ) ) )
+			this.propPrefix
+				+ PROP_ROMMEGA_PREFIX
+				+ PROP_FILE ) ) )
       {
 	rv = false;
       }
@@ -630,7 +658,7 @@ public class Z1013 extends EmuSys implements
 			"Z1013",
 			RAMFloppy.RFType.MP_3_1988,
 			props,
-			this.propPrefix + "ramfloppy.1." );
+			PROP_PREFIX + PROP_RF1_PREFIX );
     }
     if( rv ) {
       rv = RAMFloppy.complies(
@@ -638,7 +666,7 @@ public class Z1013 extends EmuSys implements
 			"Z1013",
 			RAMFloppy.RFType.MP_3_1988,
 			props,
-			this.propPrefix + "ramfloppy.2." );
+			PROP_PREFIX + PROP_RF2_PREFIX );
     }
     return rv;
   }
@@ -692,9 +720,9 @@ public class Z1013 extends EmuSys implements
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeAddressListener( this );
+    cpu.removeMaxSpeedListener( this );
     cpu.removeTStatesListener( this );
     if( this.fdc != null ) {
-      cpu.removeMaxSpeedListener( this.fdc );
       this.fdc.die();
     }
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
@@ -702,7 +730,6 @@ public class Z1013 extends EmuSys implements
       cpu.removePCListener( this );
     }
     if( this.kcNet != null ) {
-      cpu.removeMaxSpeedListener( this.kcNet );
       this.kcNet.die();
     }
     if( this.vdip != null ) {
@@ -1044,14 +1071,14 @@ public class Z1013 extends EmuSys implements
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return getDefaultSwapKeyCharCase();
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
   }
 
 
   @Override
   public String getTitle()
   {
-    return "Z1013";
+    return this.sysName;
   }
 
 
@@ -1105,10 +1132,10 @@ public class Z1013 extends EmuSys implements
   @Override
   public void openBasicProgram()
   {
-    boolean   canceled = false;
-    BasicType bType    = null;
-    String    text     = null;
-    int       preIdx   = -1;
+    boolean   cancelled = false;
+    BasicType bType     = null;
+    String    text      = null;
+    int       preIdx    = -1;
     if( this.lastBasicType != null ) {
       switch( this.lastBasicType ) {
 	case Z1013_TINY:
@@ -1156,9 +1183,9 @@ public class Z1013 extends EmuSys implements
 	break;
 
       default:
-	canceled = true;
+	cancelled = true;
     }
-    if( !canceled ) {
+    if( !cancelled ) {
       if( text != null ) {
 	this.lastBasicType = bType;
 	this.screenFrm.openText( text );
@@ -1170,7 +1197,7 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
-  protected boolean pasteChar( char ch )
+  protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
     if( this.pasteFast ) {
@@ -1178,14 +1205,11 @@ public class Z1013 extends EmuSys implements
 	if( ch == '\n' ) {
 	  ch = '\r';
 	}
-	try {
-	  while( this.charToPaste != 0 ) {
-	    Thread.sleep( 10 );
-	  }
-	  this.charToPaste = ch;
-	  rv = true;
+	while( this.charToPaste != 0 ) {
+	  Thread.sleep( 10 );
 	}
-	catch( InterruptedException ex ) {}
+	this.charToPaste = ch;
+	rv = true;
       }
     } else {
       rv = super.pasteChar( ch );
@@ -1392,6 +1416,8 @@ public class Z1013 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
+
     boolean old64x16 = this.mode64x16;
 
     this.centrTStatesToAck = 0;
@@ -1399,7 +1425,7 @@ public class Z1013 extends EmuSys implements
     this.joy1ActionMask    = 0;
     this.romMegaSeg        = 0;
     this.lastWrittenAddr   = -1;
-    this.audioInPhase      = this.emuThread.readAudioPhase();
+    this.tapeInPhase       = this.emuThread.readTapeInPhase();
     this.romDisabled       = false;
     this.altFontEnabled    = false;
     this.modeGraph         = false;
@@ -1458,7 +1484,7 @@ public class Z1013 extends EmuSys implements
   @Override
   public void saveBasicProgram()
   {
-    boolean           canceled       = false;
+    boolean           cancelled      = false;
     int               begAddr        = -1;
     int               endAddr        = -1;
     BasicType         z1013BasicType = null;
@@ -1521,9 +1547,9 @@ public class Z1013 extends EmuSys implements
 	break;
 
       default:
-	canceled = true;
+	cancelled = true;
     }
-    if( !canceled ) {
+    if( !cancelled ) {
       if( (begAddr > 0) && (endAddr > begAddr) ) {
 	this.lastBasicType = z1013BasicType;
 	(new SaveDlg(
@@ -1652,13 +1678,6 @@ public class Z1013 extends EmuSys implements
 
 
   @Override
-  public boolean supportsAudio()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsCopyToClipboard()
   {
     return true;
@@ -1720,6 +1739,20 @@ public class Z1013 extends EmuSys implements
 
   @Override
   public boolean supportsSaveBasic()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
   {
     return true;
   }
@@ -1884,8 +1917,8 @@ public class Z1013 extends EmuSys implements
 	    case 2:
 	      this.pio.writeDataB( value );
 	      this.keyboard.putRowValuesToPIO();
-	      this.emuThread.writeAudioPhase(
-			(this.pio.fetchOutValuePortB( false ) & 0x80) != 0 );
+	      this.tapeOutPhase =
+			((this.pio.fetchOutValuePortB( false ) & 0x80) != 0);
 	      break;
 
 	    case 3:
@@ -1929,6 +1962,7 @@ public class Z1013 extends EmuSys implements
   }
 
 
+  @Override
   public void writeMemByte( int addr, int value )
   {
     addr &= 0xFFFF;
@@ -1958,21 +1992,68 @@ public class Z1013 extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    if( this.fdc != null ) {
+      this.fdc.z80MaxSpeedChanged( cpu );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    boolean phase = this.emuThread.readTapeInPhase();
+    if( phase != this.tapeInPhase ) {
+      this.tapeInPhase = phase;
+      this.pio.putInValuePortB( this.tapeInPhase ? 0x40 : 0, 0x40 );
+    }
+    if( this.fdc != null ) {
+      this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.centrTStatesToAck > 0 ) {
+      this.centrTStatesToAck -= tStates;
+      if( this.centrTStatesToAck <= 0 ) {
+	switch( this.userPort ) {
+	  case CENTR7_PRACTIC_2_1989:
+	    // BUSY (Port A Bit 7) zuruecksetzen
+	    this.pio.putInValuePortA( 0, 0x80 );
+	    break;
+	  case CENTR8_FA_10_1990:
+	    this.pio.strobePortA();
+	    break;
+	}
+      }
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void applyUserPortSettings( Properties props )
   {
-    String text = EmuUtil.getProperty( props, this.propPrefix + "userport" );
-    if( text.equals( "joystick:jute0687" ) ) {
+    String text = EmuUtil.getProperty(
+				props,
+				this.propPrefix + PROP_USERPORT );
+    if( text.equals( VALUE_JOY_JUTE0687 ) ) {
       this.userPort = UserPort.JOY_JUTE_6_1987;
-    } else if( text.equals( "joystick:practic0487" ) ) {
+    } else if( text.equals( VALUE_JOY_PRAC0487 ) ) {
       this.userPort = UserPort.JOY_PRACTIC_4_1987;
-    } else if( text.equals( "joystick:practic0188" ) ) {
+    } else if( text.equals( VALUE_JOY_PRAC0188 ) ) {
       this.userPort = UserPort.JOY_PRACTIC_1_1988;
-    } else if( text.equals( "centronics7:practic0289" ) ) {
+    } else if( text.equals( VALUE_CEN7_PRAC0289 ) ) {
       this.userPort = UserPort.CENTR7_PRACTIC_2_1989;
       this.pio.putInValuePortA( 0, 0x80 );	// Empfamgsbereitschaft
-    } else if( text.equals( "centronics8:fa1090" ) ) {
+    } else if( text.equals( VALUE_CEN8_FA1090 ) ) {
       this.userPort = UserPort.CENTR8_FA_10_1990;
     } else {
       this.userPort = UserPort.NONE;
@@ -1984,39 +2065,39 @@ public class Z1013 extends EmuSys implements
   {
     this.pasteFast = EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "paste.fast",
+				this.propPrefix + PROP_PASTE_FAST,
 				true );
     java.util.List<Integer> addrs = new ArrayList<>();
     if( this.pasteFast ) {
       String monText = EmuUtil.getProperty(
 				props,
-				this.propPrefix + "monitor" );
-      if( monText.equals( "A.2" ) ) {
-	addrs.add( new Integer( 0xF119 ) );
-      } else if( monText.equals( "JM_1992" ) ) {
-	addrs.add( new Integer( 0xF25A ) );
+				this.propPrefix + PROP_MONITOR );
+      if( monText.equals( VALUE_MON_A2 ) ) {
+	addrs.add( 0xF119 );
+      } else if( monText.equals( VALUE_MON_JM_1992 ) ) {
+	addrs.add( 0xF25A );
       } else {
-	addrs.add( new Integer( 0xF130 ) );
+	addrs.add( 0xF130 );
       }
     }
     this.catchPrintCalls = EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "catch_print_calls",
-					true );
+				this.propPrefix + PROP_CATCH_PRINT_CALLS,
+				true );
     if( this.catchPrintCalls ) {
-      addrs.add( new Integer( 0xFFCA ) );
-      addrs.add( new Integer( 0xFFCD ) );
-      addrs.add( new Integer( 0xFFDF ) );
-      addrs.add( new Integer( 0xFFE5 ) );
-      addrs.add( new Integer( 0xFFE8 ) );
-      addrs.add( new Integer( 0xFFEB ) );
+      addrs.add( 0xFFCA );
+      addrs.add( 0xFFCD );
+      addrs.add( 0xFFDF );
+      addrs.add( 0xFFE5 );
+      addrs.add( 0xFFE8 );
+      addrs.add( 0xFFEB );
     }
     this.catchJoyCalls = EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "catch_joystick_calls",
+				this.propPrefix + PROP_CATCH_JOY_CALLS,
 				true );
     if( this.catchJoyCalls ) {
-      addrs.add( new Integer( 0xFFBB ) );
+      addrs.add( 0xFFBB );
     }
     int[] a = null;
     int   n = addrs.size();
@@ -2053,63 +2134,63 @@ public class Z1013 extends EmuSys implements
   private boolean emulatesFloppyDisk( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "floppydisk.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_FDC_ENABLED,
+			false );
   }
 
 
   private boolean emulatesGraphCCJ( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "graph_ccj.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_GCCJ_ENABLED,
+			false );
   }
 
 
   private boolean emulatesGraphic( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "graphic.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_GRAPHIC_ENABLED,
+			false );
   }
 
 
   private boolean emulatesKCNet( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "kcnet.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_KCNET_ENABLED,
+			false );
   }
 
 
   private boolean emulatesModuleBasic( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_basic.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_ROMBASIC_ENABLED,
+			false );
   }
 
 
   private boolean emulatesModuleMegaROM( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_mega.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_ROMMEGA_ENABLED,
+			false );
   }
 
 
   private boolean emulatesRTC( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rtc.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_RTC_ENABLED,
+			false );
   }
 
 
@@ -2117,22 +2198,22 @@ public class Z1013 extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "vdip.enabled",
+				this.propPrefix + PROP_VDIP_ENABLED,
 				false );
   }
 
 
   private static int getRAMEndAddr( Properties props )
   {
-    int    rv      = 0xFFFF;
-    String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( sysName.startsWith( "Z1013.01" )
-	|| sysName.startsWith( "Z1013.16" ) )
-    {
-      rv = 0x3FFF;
-    }
-    else if( sysName.startsWith( "Z1013.12" ) ) {
-      rv = 0x03FF;
+    int rv = 0xFFFF;
+    switch( EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME ) ) {
+      case SYSNAME_Z1013_01:
+      case SYSNAME_Z1013_16:
+	rv = 0x3FFF;
+	break;
+      case SYSNAME_Z1013_12:
+	rv = 0x03FF;
+	break;
     }
     return rv;
   }
@@ -2141,15 +2222,15 @@ public class Z1013 extends EmuSys implements
   private void loadFont( Properties props )
   {
     this.stdFontBytes = readFontByProperty(
-					props,
-					this.propPrefix + "font.file",
-					0x1000 );
+				props,
+				this.propPrefix + PROP_FONT_FILE,
+				0x1000 );
     if( this.stdFontBytes != null ) {
       if( this.stdFontBytes.length >= 0x1000 ) {
 	this.altFontBytes = Arrays.copyOfRange(
-					this.stdFontBytes,
-					0x0800,
-					0x1000 );
+				this.stdFontBytes,
+				0x0800,
+				0x1000 );
       } else {
 	this.altFontBytes = this.stdFontBytes;
       }
@@ -2167,43 +2248,47 @@ public class Z1013 extends EmuSys implements
       this.graphCCJ.loadFont(
 		EmuUtil.getProperty(
 				props,
-				this.propPrefix + "graph_ccj.font.file" ) );
+				this.propPrefix + PROP_GCCJ_FONT_FILE ) );
     }
   }
 
 
   private void loadROMs( Properties props )
   {
-    this.monCode = EmuUtil.getProperty( props, this.propPrefix + "monitor" );
-    this.osFile  = EmuUtil.getProperty( props, this.propPrefix + "os.file" );
+    this.monCode = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_MONITOR );
+    this.osFile  = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_OS_FILE );
     this.osBytes = readROMFile( this.osFile, 0x1000, "Monitorprogramm" );
     if( this.osBytes == null ) {
-      if( this.monCode.equals( "A.2" ) ) {
+      if( this.monCode.equals( VALUE_MON_A2 ) ) {
 	if( monA2 == null ) {
 	  monA2 = readResource( "/rom/z1013/mon_a2.bin" );
 	}
 	this.osBytes = monA2;
-      } else if( this.monCode.equals( "RB_K7659" ) ) {
+      } else if( this.monCode.equals( VALUE_MON_RB_K7659 ) ) {
 	if( monRB_K7659 == null ) {
 	  monRB_K7659 = readResource( "/rom/z1013/mon_rb_k7659.bin" );
 	}
 	this.osBytes = monRB_K7659;
-      } else if( this.monCode.equals( "RB_S6009" ) ) {
+      } else if( this.monCode.equals( VALUE_MON_RB_S6009 ) ) {
 	if( monRB_S6009 == null ) {
 	  monRB_S6009 = readResource( "/rom/z1013/mon_rb_s6009.bin" );
 	}
 	this.osBytes = monRB_S6009;
-      } else if( this.monCode.equals( "INCOM_K7669" ) ) {
+      } else if( this.monCode.equals( VALUE_MON_INCOM_K7669 ) ) {
 	if( monINCOM_K7669 == null ) {
 	  monINCOM_K7669 = readResource( "/rom/z1013/mon_incom_k7669.bin" );
 	}
 	this.osBytes = monINCOM_K7669;
-      } else if( this.monCode.equals( "JM_1992" ) ) {
+      } else if( this.monCode.equals( VALUE_MON_JM_1992 ) ) {
 	if( monJM_1992 == null ) {
 	  monJM_1992 = readResource( "/rom/z1013/mon_jm_1992.bin" );
 	}
 	this.osBytes = monJM_1992;
-      } else if( this.monCode.equals( "BL4_K7659" ) ) {
+      } else if( this.monCode.equals( VALUE_MON_BL4_K7659 ) ) {
 	if( bl4_K7659 == null ) {
 	  bl4_K7659 = readResource( "/rom/z1013/bl4_k7659.bin" );
 	}
@@ -2217,12 +2302,12 @@ public class Z1013 extends EmuSys implements
     }
     if( emulatesModuleBasic( props ) ) {
       this.romBasicFile = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_basic.file" );
+			props,
+			this.propPrefix + PROP_ROMBASIC_PREFIX + PROP_FILE );
       this.romBasic = readROMFile(
-				this.romBasicFile,
-				0x2C00,
-				"KC-BASIC-Modul" );
+			this.romBasicFile,
+			0x2C00,
+			"KC-BASIC-Modul" );
       if( this.romBasic == null ) {
 	if( modBasic == null ) {
 	  modBasic = readResource( "/rom/z1013/kcbasic.bin" );
@@ -2231,12 +2316,12 @@ public class Z1013 extends EmuSys implements
       }
     } else if( emulatesModuleMegaROM( props ) ) {
       this.romMegaFile = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_mega.file" );
+			props,
+			this.propPrefix + PROP_ROMMEGA_PREFIX + PROP_FILE );
       this.romMega = readROMFile(
-				this.romMegaFile,
-				0x280000,
-				"Mega-ROM-Modul" );
+			this.romMegaFile,
+			0x280000,
+			"Mega-ROM-Modul" );
     }
     loadFont( props );
   }
@@ -2368,4 +2453,3 @@ public class Z1013 extends EmuSys implements
     }
   }
 }
-

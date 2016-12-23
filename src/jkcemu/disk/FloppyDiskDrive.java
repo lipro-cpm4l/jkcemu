@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2012 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,6 +14,8 @@ import java.util.Properties;
 
 public class FloppyDiskDrive
 {
+  public static final String PROP_SKIP_ODD_CYLS = "skip_odd_cylinders";
+
   private FloppyDiskStationFrm        owner;
   private volatile AbstractFloppyDisk disk;
   private boolean                     skipOddCyls;
@@ -117,7 +119,7 @@ public class FloppyDiskDrive
     if( (props != null) && (disk != null) ) {
       disk.putSettingsTo( props, prefix );
       props.setProperty(
-		prefix + "skip_odd_cylinders",
+		prefix + PROP_SKIP_ODD_CYLS,
 		Boolean.toString( this.skipOddCyls ) );
     }
   }
@@ -187,7 +189,7 @@ public class FloppyDiskDrive
   {
     AbstractFloppyDisk disk = this.disk;
     if( disk != null ) {
-      disk.doClose();
+      disk.closeSilent();
       this.disk = null;
     }
   }

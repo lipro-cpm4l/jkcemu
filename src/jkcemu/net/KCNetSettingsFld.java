@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,23 @@
 
 package jkcemu.net;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
+import java.util.EventObject;
+import java.util.Properties;
 import java.util.regex.PatternSyntaxException;
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.text.Document;
-import jkcemu.base.*;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 
 
 public class KCNetSettingsFld
@@ -117,20 +126,20 @@ public class KCNetSettingsFld
 		boolean    selected ) throws UserInputException
   {
     props.setProperty(
-		"jkcemu.kcnet.ip_address",
+		KCNet.PROP_PREFIX + KCNet.PROP_IP_ADDR,
 		parseIpAddrText( this.fldIpAddr, "IP-Adresse" ) );
     props.setProperty(
-		"jkcemu.kcnet.subnet_mask",
+		KCNet.PROP_PREFIX + KCNet.PROP_SUBNET_MASK,
 		parseIpAddrText( this.fldSubnetMask, "Subnetzmaske" ) );
     props.setProperty(
-		"jkcemu.kcnet.gateway",
+		KCNet.PROP_PREFIX + KCNet.PROP_GATEWAY,
 		parseIpAddrText( this.fldGateway, "Gateway" ) );
     props.setProperty(
-		"jkcemu.kcnet.dns_server",
+		KCNet.PROP_PREFIX + KCNet.PROP_DNS_SERVER,
 		parseIpAddrText( this.fldDNSServer, "DNS-Server" ) );
     EmuUtil.setProperty(
 		props,
-		"jkcemu.kcnet.auto_config",
+		KCNet.PROP_PREFIX + KCNet.PROP_AUTOCONFIG,
 		this.btnAutoConfig.isSelected() );
   }
 
@@ -151,22 +160,30 @@ public class KCNetSettingsFld
   public void updFields( Properties props )
   {
     this.fldIpAddr.setText(
-		EmuUtil.getProperty( props, "jkcemu.kcnet.ip_address" ) );
+		EmuUtil.getProperty(
+			props,
+			KCNet.PROP_PREFIX + KCNet.PROP_IP_ADDR ) );
 
     this.fldSubnetMask.setText(
-		EmuUtil.getProperty( props, "jkcemu.kcnet.subnet_mask" ) );
+		EmuUtil.getProperty(
+			props,
+			KCNet.PROP_PREFIX + KCNet.PROP_SUBNET_MASK ) );
 
     this.fldGateway.setText(
-		EmuUtil.getProperty( props, "jkcemu.kcnet.gateway" ) );
+		EmuUtil.getProperty(
+			props,
+			KCNet.PROP_PREFIX + KCNet.PROP_GATEWAY ) );
 
     this.fldDNSServer.setText(
-		EmuUtil.getProperty( props, "jkcemu.kcnet.dns_server" ) );
+		EmuUtil.getProperty(
+			props,
+			KCNet.PROP_PREFIX + KCNet.PROP_DNS_SERVER ) );
 
     this.btnAutoConfig.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.kcnet.auto_config",
-				true ) );
+		EmuUtil.getBooleanProperty(
+			props,
+			KCNet.PROP_PREFIX + KCNet.PROP_AUTOCONFIG,
+			KCNet.DEFAULT_AUTOCONFIG ) );
   }
 
 
@@ -223,4 +240,3 @@ public class KCNetSettingsFld
     return rv;
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2015 Jens Mueller
+ * (c) 2013-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,8 @@
 package jkcemu.emusys.kc85;
 
 import java.lang.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.CRC32;
 import jkcemu.base.CharRaster;
 
@@ -950,9 +951,7 @@ public class KC85CharRecognizer
       for( int k = 1; k < font[ i ].length; k++ ) {
 	crc.update( font[ i ][ k ] );
       }
-      map.put(
-	new Long( crc.getValue() ),
-	new Character( (char) font[ i ][ 0 ] ) );
+      map.put( crc.getValue(), Character.valueOf( (char) font[ i ][ 0 ] ) );
     }
     return map;
   }
@@ -975,9 +974,9 @@ public class KC85CharRecognizer
 	  crc1.update( b & 0xFF );
 	  crc2.update( ~b & 0xFF );
 	}
-	rv = map.get( new Long( crc1.getValue() ) );
+	rv = map.get( crc1.getValue() );
 	if( rv == null ) {
-	  rv = map.get( new Long( crc2.getValue() ) );
+	  rv = map.get( crc2.getValue() );
 	}
       }
     }
@@ -1012,9 +1011,9 @@ public class KC85CharRecognizer
 	  crc2.update( ~b & 0x0F );
 	}
 	boolean inv = false;
-	rv          = map.get( new Long( crc1.getValue() ) );
+	rv          = map.get( crc1.getValue() );
 	if( rv == null ) {
-	  rv  = map.get( new Long( crc2.getValue() ) );
+	  rv  = map.get( crc2.getValue() );
 	  inv = true;
 	}
 	if( exactMatch ) {
@@ -1057,9 +1056,9 @@ public class KC85CharRecognizer
 		    crc1.update( b & 0x0F );
 		    crc2.update( ~b & 0x0F );
 		  }
-		  rv = map.get( new Long( crc1.getValue() ) );
+		  rv = map.get( crc1.getValue() );
 		  if( rv == null ) {
-		    rv  = map.get( new Long( crc2.getValue() ) );
+		    rv  = map.get( crc2.getValue() );
 		  }
 		  if( rv != null ) {
 		    break;

@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,14 +9,29 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.Arrays;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
 
 
@@ -45,7 +60,7 @@ public class AutoLoadSettingsFld
 		int         defaultFirstMillisToWait,
 		boolean     checkAddrs )
   {
-    super( settingsFrm, propPrefix + "autoload.");
+    super( settingsFrm, propPrefix + AutoLoader.PROP_AUTOLOAD_PREFIX );
     this.defaultFirstMillisToWait = defaultFirstMillisToWait;
     this.checkAddrs               = checkAddrs;
     setLayout( new GridBagLayout() );
@@ -212,23 +227,23 @@ public class AutoLoadSettingsFld
     for( int i = 0; i < nRows; i++ ) {
       AutoLoadEntry entry = this.tableModel.getRow( i );
       if( entry != null ) {
-	String prefix = this.propPrefix + String.valueOf( i );
+	String prefix = String.format( "%s%d.", this.propPrefix, i );
 	EmuUtil.setProperty(
 			props,
-			prefix + ".wait.millis",
+			prefix + AutoLoadEntry.PROP_WAIT_MILLIS,
 			String.valueOf( entry.getMillisToWait() ) );
 	EmuUtil.setProperty(
 			props,
-			prefix + ".file",
+			prefix + AutoLoadEntry.PROP_FILE,
 			entry.getFileName() );
 	EmuUtil.setProperty(
 			props,
-			prefix + ".address.load",
+			prefix + AutoLoadEntry.PROP_LOAD_ADDR,
 			AutoLoadTableModel.toHex4( entry.getLoadAddr() ) );
       }
     }
     props.setProperty(
-		this.propPrefix + "count",
+		this.propPrefix + AutoLoadEntry.PROP_COUNT,
 		Integer.toString( nRows ) );
 
   }
@@ -302,16 +317,16 @@ public class AutoLoadSettingsFld
   private void doAdd()
   {
     File file = EmuUtil.showFileOpenDlg(
-				this.settingsFrm,
-				"Datei ausw\u00E4hlen",
-				Main.getLastDirFile( "software" ),
-				EmuUtil.getBinaryFileFilter(),
-				EmuUtil.getBasicFileFilter(),
-				EmuUtil.getKCSystemFileFilter(),
-				EmuUtil.getKCBasicFileFilter(),
-				EmuUtil.getTapeFileFilter(),
-				EmuUtil.getHeadersaveFileFilter(),
-				EmuUtil.getHexFileFilter() );
+			this.settingsFrm,
+			"Datei ausw\u00E4hlen",
+			Main.getLastDirFile( Main.FILE_GROUP_SOFTWARE ),
+			EmuUtil.getBinaryFileFilter(),
+			EmuUtil.getBasicFileFilter(),
+			EmuUtil.getKCSystemFileFilter(),
+			EmuUtil.getKCBasicFileFilter(),
+			EmuUtil.getTapeFileFilter(),
+			EmuUtil.getHeadersaveFileFilter(),
+			EmuUtil.getHexFileFilter() );
     if( file != null ) {
       addFile( file );
     }
@@ -401,7 +416,7 @@ public class AutoLoadSettingsFld
       if( viewRow >= 0 ) {
 	EmuUtil.fireSelectRow( this.table, viewRow );
       }
-      Main.setLastFile( file, "software" );
+      Main.setLastFile( file, Main.FILE_GROUP_SOFTWARE );
       fireDataChanged();
     }
     return entry != null;

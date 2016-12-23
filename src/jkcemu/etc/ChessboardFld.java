@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,23 @@
 
 package jkcemu.etc;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.awt.MediaTracker;
+import java.awt.Toolkit;
 import java.lang.*;
 import java.net.URL;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.JComponent;
-import jkcemu.base.*;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
 
 
 public class ChessboardFld extends JComponent
@@ -215,4 +225,3 @@ public class ChessboardFld extends JComponent
     }
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2013 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,16 +8,21 @@
 
 package jkcemu.emusys.a5105;
 
-import java.awt.*;
-import java.awt.image.*;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.awt.image.IndexColorModel;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.base.*;
+import jkcemu.base.EmuThread;
+import jkcemu.base.ScreenFrm;
 import jkcemu.etc.GDC82720;
 
 
 public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 {
+  private static final int COLOR_COUNT = 16;
+
   /*
    * Der A5105 hat ueblicherweise eine Bildschirmaufloesung von 200 Zeilen.
    * Es ist aber moeglich, bis zu 250 Zeilen zu programmieren.
@@ -61,8 +66,8 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
     this.fontBytes   = new byte[ 0x0800 ];
     this.vram        = new short[ 0x10000 ];
     this.colorModel  = null;
-    this.colors      = new Color[ 16 ];
-    this.colorRGBs   = new int[ 16 ];
+    this.colors      = new Color[ COLOR_COUNT ];
+    this.colorRGBs   = new int[ COLOR_COUNT ];
     Arrays.fill( this.colors, Color.black );
     Arrays.fill( this.colorRGBs, 0 );
     reset( EmuThread.ResetLevel.POWER_ON );
@@ -77,13 +82,13 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 
   public static IndexColorModel createColorModel( float brightness )
   {
-    byte[] r  = new byte[ 16 ];
-    byte[] g  = new byte[ 16 ];
-    byte[] b  = new byte[ 16 ];
+    byte[] r  = new byte[ COLOR_COUNT ];
+    byte[] g  = new byte[ COLOR_COUNT ];
+    byte[] b  = new byte[ COLOR_COUNT ];
     int    v3 = Math.round( 255 * brightness );
     int    v2 = Math.round( 180 * brightness );
     int    v1 = Math.round( 80 * brightness );
-    for( int i = 0; i < 16; i++ ) {
+    for( int i = 0; i < COLOR_COUNT; i++ ) {
       if( (i & 0x08) != 0 ) {
 	r[ i ] = (byte) ((i & 0x04) != 0 ? v3 : v1);
 	g[ i ] = (byte) ((i & 0x02) != 0 ? v3 : v1);
@@ -94,7 +99,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 	b[ i ] = (byte) ((i & 0x01) != 0 ? v2 : 0);
       }
     }
-    return new IndexColorModel( 4, 16, r, g, b );
+    return new IndexColorModel( 4, COLOR_COUNT, r, g, b );
   }
 
 
@@ -104,6 +109,9 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
       this.screenImage = null;
       this.colorModel  = createColorModel( brightness );
       this.colorModel.getRGBs( this.colorRGBs );
+      for( int i = 0; i < COLOR_COUNT; i++ ) {
+	this.colors[ i ] = new Color( this.colorRGBs[ i ] );
+      }
     }
   }
 
@@ -262,7 +270,7 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 		int v = getVRAMWord( a & GDC82720.DISPL_ADDR_MASK );
 		int m = 0x0001;
 		int c = 0;
-		for( int i = 0; i < 16; i++ ) {
+		for( int i = 0; i < COLOR_COUNT; i++ ) {
 		  img.setRGB(
 			x++,
 			y,
@@ -572,13 +580,13 @@ public class VIS implements GDC82720.GDCListener, GDC82720.VRAM
 	    img = new BufferedImage(
 				width,
 				height,
-				BufferedImage.TYPE_BYTE_INDEXED,
+				BufferedImage.TYPE_BYTE_BINARY,
 				cm );
 	  } else {
 	    img = new BufferedImage(
 				width,
 				height,
-				BufferedImage.TYPE_BYTE_INDEXED );
+				BufferedImage.TYPE_3BYTE_BGR );
 	  }
 	  this.screenImage = img;
 	}

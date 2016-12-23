@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,6 +11,7 @@ package jkcemu.emusys.z1013;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.Main;
+import jkcemu.emusys.Z1013;
 import z80emu.Z80PIO;
 
 
@@ -39,18 +40,21 @@ public class Z1013Keyboard
   {
     if( props != null ) {
       KeyboardMatrix kbMatrix = null;
-      String         monType  = props.getProperty( "jkcemu.z1013.monitor" );
+      String         monType  = props.getProperty(
+			Z1013.PROP_PREFIX + Z1013.PROP_MONITOR );
       if( monType != null ) {
-	if( monType.equals( "A.2" ) ) {
+	if( monType.equals( Z1013.VALUE_MON_A2 ) ) {
 	  kbMatrix = new KeyboardMatrix8x8();
 	}
-	else if( monType.endsWith( "_K7659" ) ) {
+	else if( monType.equals( Z1013.VALUE_MON_RB_K7659 )
+		 || monType.equals( Z1013.VALUE_MON_BL4_K7659 ) )
+	{
 	  kbMatrix = new KeyboardMatrixK7659();
 	}
-	else if( monType.endsWith( "_K7669" ) ) {
+	else if( monType.equals( Z1013.VALUE_MON_INCOM_K7669 ) ) {
 	  kbMatrix = new KeyboardMatrixK7669();
 	}
-	else if( monType.endsWith( "_S6009" ) ) {
+	else if( monType.equals( Z1013.VALUE_MON_RB_S6009 ) ) {
 	  kbMatrix = new KeyboardMatrixS6009();
 	}
       }
@@ -130,4 +134,3 @@ public class Z1013Keyboard
     putRowValuesToPIO();
   }
 }
-

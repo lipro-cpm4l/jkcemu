@@ -9,9 +9,12 @@
 package jkcemu.tools;
 
 import java.awt.Point;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
+import java.io.Reader;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.PatternSyntaxException;
 import javax.swing.JTextArea;
 import javax.swing.text.BadLocationException;
@@ -129,7 +132,7 @@ public class ToolsUtil
       }
       catch( PatternSyntaxException ex ) {}
       finally {
-	EmuUtil.doClose( bufReader );
+	EmuUtil.closeSilent( bufReader );
       }
     }
     return labels != null ?

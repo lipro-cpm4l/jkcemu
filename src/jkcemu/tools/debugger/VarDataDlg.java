@@ -8,16 +8,31 @@
 
 package jkcemu.tools.debugger;
 
-import java.awt.*;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.WindowEvent;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSpinner;
+import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.table.TableModel;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.HexDocument;
+import jkcemu.base.UserInputException;
 
 
-public class VarDataDlg extends BasicDlg
+public class VarDataDlg extends BaseDlg
 {
   private DebugFrm     debugFrm;
   private VarData      varData;
@@ -437,10 +452,10 @@ public class VarDataDlg extends BasicDlg
       doClose();
     }
     catch( NumberFormatException ex ) {
-      BasicDlg.showErrorDlg( this, "Ung\u00FCltige Variablenadresse" );
+      showErrorDlg( this, "Ung\u00FCltige Variablenadresse" );
     }
     catch( UserInputException ex ) {
-      BasicDlg.showErrorDlg( this, ex );
+      showErrorDlg( this, ex );
     }
   }
 

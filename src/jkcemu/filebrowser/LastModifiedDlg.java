@@ -8,20 +8,46 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.EventQueue;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
-import java.util.*;
-import java.util.zip.*;
-import java.text.*;
-import javax.swing.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.util.EventObject;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+import java.text.DateFormat;
+import java.text.ParseException;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.text.Document;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
-public class LastModifiedDlg extends BasicDlg
+public class LastModifiedDlg extends BaseDlg
 			implements FileVisitor<Path>, Runnable
 {
   private java.util.List<Path> paths;
@@ -29,7 +55,7 @@ public class LastModifiedDlg extends BasicDlg
   private FileTime             time;
   private int                  numChanged;
   private int                  numUnchanged;
-  private boolean              canceled;
+  private boolean              cancelled;
   private boolean              recursive;
   private boolean              archiveFiles;
   private DateFormat           dateFmtStd;
@@ -50,7 +76,7 @@ public class LastModifiedDlg extends BasicDlg
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
     FileVisitResult rv = FileVisitResult.TERMINATE;
-    if( !this.canceled && (this.time != null) ) {
+    if( !this.cancelled && (this.time != null) ) {
       if( this.recursive ) {
 	setLastModified( dir );
       }
@@ -66,7 +92,7 @@ public class LastModifiedDlg extends BasicDlg
 				BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.TERMINATE;
-    if( !this.canceled && (this.time != null) ) {
+    if( !this.cancelled && (this.time != null) ) {
       if( this.recursive ) {
 	rv = FileVisitResult.CONTINUE;
       } else {
@@ -82,7 +108,7 @@ public class LastModifiedDlg extends BasicDlg
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.TERMINATE;
-    if( !this.canceled && (this.time != null) ) {
+    if( !this.cancelled && (this.time != null) ) {
       setLastModified( file );
       rv = FileVisitResult.CONTINUE;
     }
@@ -94,7 +120,7 @@ public class LastModifiedDlg extends BasicDlg
   public FileVisitResult visitFileFailed( Path file, IOException ex )
   {
     this.numUnchanged++;
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE
 		: FileVisitResult.CONTINUE;
   }
@@ -113,7 +139,7 @@ public class LastModifiedDlg extends BasicDlg
     }
     catch( Exception ex ) {
       msg = ex.getMessage();
-      this.canceled = true;
+      this.cancelled = true;
     }
     finally {
       final String msg1 = msg;
@@ -192,7 +218,7 @@ public class LastModifiedDlg extends BasicDlg
     this.time         = null;
     this.numChanged   = 0;
     this.numUnchanged = 0;
-    this.canceled     = false;
+    this.cancelled    = false;
     this.recursive    = false;
     this.archiveFiles = false;
     this.dateFmtStd   = DateFormat.getDateTimeInstance(
@@ -358,7 +384,7 @@ public class LastModifiedDlg extends BasicDlg
   private void doCancel()
   {
     if( this.thread != null ) {
-      this.canceled = true;
+      this.cancelled = true;
       this.btnOK.setEnabled( true );
     } else {
       doClose();
@@ -369,7 +395,7 @@ public class LastModifiedDlg extends BasicDlg
   private void doOK()
   {
     if( this.thread != null ) {
-      if( this.canceled
+      if( this.cancelled
 	  || this.thread.getState().equals( Thread.State.TERMINATED ) )
       {
 	doClose();
@@ -401,7 +427,7 @@ public class LastModifiedDlg extends BasicDlg
 	  this.btnOK.setEnabled( false );
 	  this.numChanged   = 0;
 	  this.numUnchanged = 0;
-	  this.canceled     = false;
+	  this.cancelled    = false;
 	  this.recursive    = this.btnRecursive.isSelected();
 	  this.archiveFiles = this.btnWithinArchiveFiles.isSelected();
 	  this.thread       = new Thread( this, "JKCEMU set last modified" );
@@ -578,8 +604,8 @@ public class LastModifiedDlg extends BasicDlg
 	fireAppendToLog( buf.toString() );
       }
       finally {
-	EmuUtil.doClose( in );
-	EmuUtil.doClose( zipOut );
+	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilent( zipOut );
       }
     }
   }
@@ -588,7 +614,7 @@ public class LastModifiedDlg extends BasicDlg
   private void threadTerminated( String msg )
   {
     StringBuilder buf = new StringBuilder( 256 );
-    if( this.canceled ) {
+    if( this.cancelled ) {
       buf.append( "Vorgang abgebrochen\n" );
     }
     buf.append( this.numChanged );
@@ -608,7 +634,7 @@ public class LastModifiedDlg extends BasicDlg
       }
       buf.append( " nicht ge\u00E4ndert werden." );
     }
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       buf.append( "\nFertig" );
     }
     appendToLog( buf.toString() );

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,25 +8,43 @@
 
 package jkcemu.text;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.WindowEvent;
 import java.lang.*;
+import java.util.ArrayList;
 import java.util.EventObject;
-import javax.swing.*;
-import jkcemu.base.*;
+import javax.swing.ComboBoxEditor;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.ListFocusTraversalPolicy;
 
 
-public class FindTextDlg extends BasicDlg
+public class FindTextDlg extends BaseDlg
 {
   public enum Action { NO_ACTION, FIND_NEXT, REPLACE_ALL };
 
-  private Action     action;
-  private JTextField textFieldFind;
-  private JTextField textFieldReplace;
-  private JCheckBox  tglNoticeCase;
-  private JButton    btnFindNext;
-  private JButton    btnReplaceAll;
-  private JButton    btnCancel;
+  private static java.util.List<String> findHistory = new ArrayList<>();
+
+  private Action            action;
+  private String            findText;
+  private JComboBox<String> comboFind;
+  private JTextField        fldFind;
+  private JTextField        fldReplace;
+  private JCheckBox         tglNoticeCase;
+  private JButton           btnFindNext;
+  private JButton           btnReplaceAll;
+  private JButton           btnCancel;
 
 
   public FindTextDlg(
@@ -38,7 +56,8 @@ public class FindTextDlg extends BasicDlg
     super( parent, "Suchen und Ersetzen" );
 
     // Initialisierungen
-    this.action = Action.NO_ACTION;
+    this.action   = Action.NO_ACTION;
+    this.findText = null;
 
     // Layout
     setLayout( new GridBagLayout() );
@@ -58,27 +77,46 @@ public class FindTextDlg extends BasicDlg
     add( new JLabel( "Ersetzen durch:" ), gbc );
 
     // Eingabefelder
-    this.textFieldFind = new JTextField();
-    this.textFieldFind.setEditable( true );
-    this.textFieldFind.addActionListener( this );
+    this.comboFind = new JComboBox<>();
+    for( String item : findHistory ) {
+      this.comboFind.addItem( item );
+    }
+    this.comboFind.setEditable( true );
     if( textFind != null ) {
-      this.textFieldFind.setText( getFirstLine( textFind ) );
+      this.comboFind.setSelectedItem( getFirstLine( textFind ) );
     }
     gbc.anchor  = GridBagConstraints.WEST;
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
     gbc.gridy   = 0;
     gbc.gridx++;
-    add( this.textFieldFind, gbc );
+    add( this.comboFind, gbc );
 
-    this.textFieldReplace = new JTextField();
-    this.textFieldReplace.setEditable( true );
-    this.textFieldReplace.addActionListener( this );
+    this.fldFind = null;
+    ComboBoxEditor editor = this.comboFind.getEditor();
+    if( editor != null ) {
+      Component c = editor.getEditorComponent();
+      if( c != null ) {
+	if( c instanceof JTextField ) {
+	  this.fldFind = (JTextField) c;
+	  this.fldFind.addActionListener( this );
+	}
+      }
+    }
+
+    this.fldReplace = new JTextField();
+    this.fldReplace.setEditable( true );
+    this.fldReplace.addActionListener( this );
     if( textReplace != null ) {
-      this.textFieldReplace.setText( getFirstLine( textReplace ) );
+      this.fldReplace.setText( getFirstLine( textReplace ) );
     }
     gbc.gridy++;
-    add( this.textFieldReplace, gbc );
+    add( this.fldReplace, gbc );
+
+    Font font = this.fldReplace.getFont();
+    if( font != null ) {
+      this.comboFind.setFont( font );
+    }
 
     // Schaltknopf
     gbc.fill    = GridBagConstraints.NONE;
@@ -117,8 +155,8 @@ public class FindTextDlg extends BasicDlg
     // Tab-Sequenz
     setFocusTraversalPolicy(
 	new ListFocusTraversalPolicy(
-			this.textFieldFind,
-			this.textFieldReplace,
+			this.comboFind,
+			this.fldReplace,
 			this.tglNoticeCase,
 			this.btnFindNext,
 			this.btnReplaceAll,
@@ -137,23 +175,22 @@ public class FindTextDlg extends BasicDlg
   }
 
 
-  public String getTextFind()
+  public String getFindText()
   {
-    String rv = this.textFieldFind.getText();
-    return rv != null ? rv : "";
-  }
-
-
-  public String getTextReplace()
-  {
-    String rv = this.textFieldReplace.getText();
-    return rv != null ? rv : "";
+    return this.findText != null ? this.findText : "";
   }
 
 
   public boolean getIgnoreCase()
   {
     return !this.tglNoticeCase.isSelected();
+  }
+
+
+  public String getReplaceText()
+  {
+    String rv = this.fldReplace.getText();
+    return rv != null ? rv : "";
   }
 
 
@@ -166,17 +203,22 @@ public class FindTextDlg extends BasicDlg
     if( e != null ) {
       Object src = e.getSource();
       if( src != null ) {
-        if( src.equals( this.btnFindNext )   ||
-	    src.equals( this.textFieldFind ) ||
-	    src.equals( this.textFieldReplace ) )
-	{
+        if( (src == this.fldFind) && (this.fldFind != null) ) {
 	  rv          = true;
 	  this.action = Action.FIND_NEXT;
+	  applyFindText( this.fldFind.getText() );
+	  doClose();
+	}
+	if( (src == this.fldReplace) || (src == this.btnFindNext) ) {
+	  rv          = true;
+	  this.action = Action.FIND_NEXT;
+	  applyFindText( this.comboFind.getSelectedItem() );
 	  doClose();
 	}
 	else if( src.equals( this.btnReplaceAll ) ) {
 	  rv          = true;
 	  this.action = Action.REPLACE_ALL;
+	  applyFindText( this.comboFind.getSelectedItem() );
 	  doClose();
 	}
 	else if( src.equals( this.btnCancel ) ) {
@@ -201,14 +243,33 @@ public class FindTextDlg extends BasicDlg
   @Override
   public void windowOpened( WindowEvent e )
   {
-    if( (e.getWindow() == this) && (this.textFieldFind != null) ) {
-      this.textFieldFind.requestFocus();
-      this.textFieldFind.selectAll();
+    if( (e.getWindow() == this) && (this.comboFind != null) ) {
+      this.comboFind.requestFocus();
+      if( this.fldFind != null ) {
+	this.fldFind.selectAll();
+      }
     }
   }
 
 
 	/* --- private Methoden --- */
+
+  private void applyFindText( Object text )
+  {
+    this.findText = (text != null ? text.toString() : null);
+    if( this.findText != null ) {
+      if( !this.findText.isEmpty() ) {
+	findHistory.remove( this.findText );
+	int n = findHistory.size();
+	while( n >= 10 ) {
+	  this.findHistory.remove( n - 1 );
+	  --n;
+	}
+	findHistory.add( 0, this.findText );
+      }
+    }
+  }
+
 
   private String getFirstLine( String text )
   {
@@ -216,4 +277,3 @@ public class FindTextDlg extends BasicDlg
     return eol >= 0 ? text.substring( 0, eol ) : text;
   }
 }
-

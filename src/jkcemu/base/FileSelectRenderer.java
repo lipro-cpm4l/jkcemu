@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,11 @@ package jkcemu.base;
 import java.awt.Component;
 import java.io.File;
 import java.lang.*;
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.Icon;
+import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.filechooser.FileSystemView;
 
 

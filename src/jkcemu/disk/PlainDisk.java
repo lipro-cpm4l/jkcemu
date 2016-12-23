@@ -9,16 +9,23 @@
 package jkcemu.disk;
 
 import java.awt.Frame;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.lang.*;
 import java.nio.channels.FileLock;
-import java.util.*;
+import java.util.Properties;
 import java.util.zip.GZIPInputStream;
-import jkcemu.base.*;
+import jkcemu.base.DeviceIO;
+import jkcemu.base.EmuUtil;
 
 
 public class PlainDisk extends AbstractFloppyDisk
 {
+  public static final String PROP_DRIVE = "drive";
+
   private String                      fileName;
   private FileLock                    fileLock;
   private DeviceIO.RandomAccessDevice rad;
@@ -200,7 +207,7 @@ public class PlainDisk extends AbstractFloppyDisk
       }
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
     return msgBuf != null ? msgBuf.toString() : null;
   }
@@ -232,8 +239,8 @@ public class PlainDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-        EmuUtil.doRelease( fl );
-        EmuUtil.doClose( raf );
+        EmuUtil.releaseSilent( fl );
+        EmuUtil.closeSilent( raf );
       }
     }
     return rv;
@@ -271,8 +278,8 @@ public class PlainDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-        EmuUtil.doRelease( fl );
-        EmuUtil.doClose( raf );
+        EmuUtil.releaseSilent( fl );
+        EmuUtil.closeSilent( raf );
       }
     }
     return rv;
@@ -282,11 +289,11 @@ public class PlainDisk extends AbstractFloppyDisk
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public synchronized void doClose()
+  public synchronized void closeSilent()
   {
-    EmuUtil.doRelease( this.fileLock );
-    EmuUtil.doClose( this.raf );
-    EmuUtil.doClose( this.rad );
+    EmuUtil.releaseSilent( this.fileLock );
+    EmuUtil.closeSilent( this.raf );
+    EmuUtil.closeSilent( this.rad );
   }
 
 
@@ -412,9 +419,9 @@ public class PlainDisk extends AbstractFloppyDisk
     super.putSettingsTo( props, prefix );
     if( (props != null) && (fileName != null) ) {
       if( this.rad != null ) {
-	props.setProperty( prefix + "drive", this.fileName );
+	props.setProperty( prefix + PROP_DRIVE, this.fileName );
       } else {
-	props.setProperty( prefix + "file", this.fileName );
+	props.setProperty( prefix + PROP_FILE, this.fileName );
       }
     }
   }

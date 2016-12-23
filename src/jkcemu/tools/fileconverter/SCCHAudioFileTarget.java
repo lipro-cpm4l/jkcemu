@@ -8,13 +8,14 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import javax.sound.sampled.AudioInputStream;
 import javax.swing.JComboBox;
-import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
-import jkcemu.emusys.ac1_llc2.SCCHAudioDataStream;
+import jkcemu.audio.AudioFile;
+import jkcemu.audio.PCMDataSource;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.ac1_llc2.SCCHAudioCreator;
 
 
 public class SCCHAudioFileTarget extends AbstractConvertTarget
@@ -37,9 +38,9 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
 		int            len )
   {
     super( fileConvertFrm, createInfoText() );
-    this.dataBytes   = dataBytes;
-    this.offs        = offs;
-    this.len         = len;
+    this.dataBytes = dataBytes;
+    this.offs      = offs;
+    this.len       = len;
   }
 
 
@@ -53,36 +54,26 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public AudioInputStream getAudioInputStream() throws
-						IOException,
-						UserInputException
+  public PCMDataSource createPCMDataSource()
+				throws IOException, UserInputException
   {
-    AudioInputStream ais = null;
-    int len = Math.min( this.len, this.dataBytes.length - this.offs );
-    if( len > 0 ) {
-      int begAddr = this.fileConvertFrm.getBegAddr( true );
-      int endAddr = begAddr + len - 1;
-      SCCHAudioDataStream ads =  new SCCHAudioDataStream(
+    int begAddr  = this.fileConvertFrm.getBegAddr( true );
+    int endAddr  = begAddr + len - 1;
+    return new SCCHAudioCreator(
 			this.dataBytes,
 			this.offs,
 			this.len,
 			this.fileConvertFrm.getFileDesc( true ),
 			(char) this.fileConvertFrm.getFileTypeChar( true ),
 			begAddr,
-			endAddr );
-      ais = new AudioInputStream(
-			ads,
-			ads.getAudioFormat(),
-			ads.getFrameLength() );
-    }
-    return ais;
+			endAddr ).newReader();
   }
 
 
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return AudioUtil.getAudioOutFileFilter();
+    return AudioFile.getFileFilter();
   }
 
 
@@ -110,7 +101,7 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
   @Override
   public String save( File file ) throws IOException, UserInputException
   {
-    saveAudioFile( file, getAudioInputStream() );
+    saveAudioFile( file, createPCMDataSource() );
     return null;
   }
 
@@ -140,16 +131,7 @@ public class SCCHAudioFileTarget extends AbstractConvertTarget
 
   private static String createInfoText()
   {
-    String   rv  = "Sound-Datei im AC1/LLC2-TurboSave-Format";
-    String[] ext = AudioUtil.getAudioOutFileExtensions( null, null );
-    if( ext != null ) {
-      if( ext.length > 0 ) {
-	StringBuilder buf = new StringBuilder( 128 );
-	buf.append( rv );
-	AudioUtil.appendAudioFileExtensionText( buf, 3, ext );
-	rv = buf.toString();
-      }
-    }
-    return rv;
+    return "Sound-Datei im AC1/LLC2-TurboSave-Format ("
+		+ AudioFile.getFileExtensionText() + ")";
   }
 }

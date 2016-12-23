@@ -8,12 +8,14 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import javax.sound.sampled.*;
 import javax.swing.JComboBox;
-import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
+import jkcemu.audio.AudioFile;
+import jkcemu.audio.PCMDataSource;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.UserInputException;
 
 
 public abstract class AbstractConvertTarget
@@ -78,10 +80,25 @@ public abstract class AbstractConvertTarget
   }
 
 
-  public AudioInputStream getAudioInputStream()
+  public PCMDataSource createPCMDataSource()
 			throws IOException, UserInputException
   {
     return null;
+  }
+
+
+  public javax.swing.filechooser.FileFilter getFileFilter()
+  {
+    return null;
+  }
+
+
+  public javax.swing.filechooser.FileFilter[] getFileFilters()
+  {
+    javax.swing.filechooser.FileFilter fileFilter = getFileFilter();
+    return fileFilter != null ?
+		new javax.swing.filechooser.FileFilter[] { fileFilter }
+		: null;
   }
 
 
@@ -121,28 +138,31 @@ public abstract class AbstractConvertTarget
   }
 
 
-  public javax.swing.filechooser.FileFilter getFileFilter()
-  {
-    return null;
-  }
-
-
-  public javax.swing.filechooser.FileFilter[] getFileFilters()
-  {
-    javax.swing.filechooser.FileFilter fileFilter = getFileFilter();
-    return fileFilter != null ?
-		new javax.swing.filechooser.FileFilter[] { fileFilter }
-		: null;
-  }
-
-
-  public void setInfoText( String text )
-  {
-    this.infoText = (text != null ? text : "");
-  }
-
-
   public abstract File getSuggestedOutFile( File srcFile );
+
+
+  protected File getSuggestedOutFile(
+				File     srcFile,
+				String[] fileExtensions,
+				String   prefExtension )
+  {
+    File outFile = null;
+    if( (srcFile != null) && (fileExtensions != null) ) {
+      if( fileExtensions.length > 0 ) {
+	String ext = fileExtensions[ 0 ];
+	if( prefExtension != null ) {
+	  for( String tmpExt : fileExtensions ) {
+	    if( tmpExt.equalsIgnoreCase( prefExtension ) ) {
+	      ext = prefExtension;
+	      break;
+	    }
+	  }
+	}
+	outFile = replaceExtension( srcFile, ext );
+      }
+    }
+    return outFile;
+  }
 
 
   /*
@@ -153,6 +173,12 @@ public abstract class AbstractConvertTarget
    */
   public abstract String save( File file )
 				throws IOException, UserInputException;
+
+
+  public void setInfoText( String text )
+  {
+    this.infoText = (text != null ? text : "");
+  }
 
 
   protected File replaceExtension( File srcFile, String ext )
@@ -188,21 +214,16 @@ public abstract class AbstractConvertTarget
 
 
   protected void saveAudioFile(
-			File             file,
-			AudioInputStream ais ) throws IOException
+			File          file,
+			PCMDataSource pcm ) throws IOException
   {
     try {
-      if( (file != null) && (ais != null) ) {
-	AudioFileFormat.Type afType = AudioUtil.getAudioFileType(
-						this.fileConvertFrm,
-						file );
-	if( afType != null ) {
-	  AudioUtil.write( ais, afType, file );
-	}
+      if( (file != null) && (pcm != null) ) {
+	AudioFile.write( pcm, file );
       }
     }
     finally {
-      EmuUtil.doClose( ais );
+      EmuUtil.closeSilent( pcm );
     }
   }
 
@@ -249,25 +270,20 @@ public abstract class AbstractConvertTarget
   private static String getSuggestedAudioFileExtension()
   {
     if( suggestedAudioFileExt == null ) {
-      AudioFileFormat.Type[] supportedTypes = AudioSystem.getAudioFileTypes();
-      if( supportedTypes != null ) {
-	if( supportedTypes.length > 0 ) {
-	  AudioFileFormat.Type[] orderedTypes = {
-				AudioFileFormat.Type.WAVE,
-				AudioFileFormat.Type.SND,
-				AudioFileFormat.Type.AU,
-				AudioFileFormat.Type.AIFF,
-				AudioFileFormat.Type.AIFC };
-	  for( AudioFileFormat.Type t1 : orderedTypes ) {
-	    for( AudioFileFormat.Type t2 : supportedTypes ) {
-	      if( t1.equals( t2 ) ) {
-		String ext = t1.getExtension();
-		if( ext != null ) {
-		  if( !ext.isEmpty() ) {
-		    suggestedAudioFileExt = ext;
-		    break;
-		  }
-		}
+      String[] supportedExts = AudioFile.getSupportedFileExtensions();
+      if( supportedExts != null ) {
+	if( supportedExts.length > 0 ) {
+	  String[] orderedExts = {
+				"wav",
+				"aif",
+				"aifc",
+				"aiff",
+				"au" };
+	  for( String e1 : orderedExts ) {
+	    for( String e2 : supportedExts ) {
+	      if( e1.equalsIgnoreCase( e2 ) ) {
+		suggestedAudioFileExt = e1;
+		break;
 	      }
 	    }
 	    if( suggestedAudioFileExt != null ) {
@@ -275,15 +291,7 @@ public abstract class AbstractConvertTarget
 	    }
 	  }
 	  if( suggestedAudioFileExt == null ) {
-	    for( AudioFileFormat.Type t : supportedTypes ) {
-	      String ext = t.getExtension();
-	      if( ext != null ) {
-		if( !ext.isEmpty() ) {
-		  suggestedAudioFileExt = ext;
-		  break;
-		}
-	      }
-	    }
+	    suggestedAudioFileExt = supportedExts[ 0 ];
 	  }
 	}
       }

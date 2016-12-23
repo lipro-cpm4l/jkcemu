@@ -8,16 +8,33 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.io.IOException;
 import java.lang.*;
 import java.net.URL;
-import java.util.*;
-import javax.swing.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.EventObject;
+import java.util.NoSuchElementException;
+import java.util.Properties;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import jkcemu.Main;
 
 
-public class AboutDlg extends BasicDlg
+public class AboutDlg extends BaseDlg
 {
   private JButton btnOK;
 
@@ -262,4 +279,3 @@ public class AboutDlg extends BasicDlg
     return fld;
   }
 }
-

@@ -9,18 +9,26 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Dialog;
+import java.awt.EventQueue;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import jkcemu.Main;
 
 
-public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
+public abstract class AbstractThreadDlg extends BaseDlg implements Runnable
 {
-  protected boolean canceled;
+  protected boolean cancelled;
   protected int     errorCount;
 
   private Thread       thread;
@@ -37,7 +45,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
   {
     super( owner, Dialog.ModalityType.MODELESS );
     this.autoClose  = true;
-    this.canceled   = false;
+    this.cancelled  = false;
     this.errorCount = 0;
     this.thread     = new Thread( Main.getThreadGroup(), this, threadName );
 
@@ -137,7 +145,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
 
   protected void appendToLog( final String msg )
   {
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       final JTextArea fld = this.fldLog;
       EventQueue.invokeLater(
 		new Runnable()
@@ -206,8 +214,8 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
   {
     boolean matched = false;
     if( e.getSource() == this.btnClose ) {
-      matched       = true;
-      this.canceled = true;
+      matched        = true;
+      this.cancelled = true;
       if( !this.thread.isAlive() ) {
 	doClose();
       }
@@ -221,7 +229,7 @@ public abstract class AbstractThreadDlg extends BasicDlg implements Runnable
   private void progressFinished()
   {
     this.btnClose.setText( "Schlie\u00DFen" );
-    if( !this.canceled && (this.errorCount > 0) ) {
+    if( !this.cancelled && (this.errorCount > 0) ) {
       if( this.progressBar != null ) {
 	this.progressBar.setMinimum( 0 );
 	this.progressBar.setMaximum( 1 );

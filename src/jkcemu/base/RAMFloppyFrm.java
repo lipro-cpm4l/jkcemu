@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2014 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,17 +8,27 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Frame;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.BorderFactory;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
 import jkcemu.Main;
 import jkcemu.text.TextUtil;
 
 
-public class RAMFloppyFrm extends BasicFrm
+public class RAMFloppyFrm extends BaseFrm
 {
+  private static final String ACTION_CLOSE = "close";
+  private static final String ACTION_HELP  = "help";
+  private static final String HELP_PAGE    = "/help/ramfloppy.htm";
+
   private static RAMFloppyFrm instance = null;
 
   private EmuThread    emuThread;
@@ -93,13 +103,13 @@ public class RAMFloppyFrm extends BasicFrm
       if( e instanceof ActionEvent ) {
 	String cmd = ((ActionEvent) e).getActionCommand();
 	if( cmd != null ) {
-	  if( cmd.equals( "close" ) ) {
+	  if( cmd.equals( ACTION_CLOSE ) ) {
 	    rv = true;
 	    doClose();
 	  }
-	  else if( cmd.equals( "help" ) ) {
+	  else if( cmd.equals( ACTION_HELP ) ) {
 	    rv = true;
-	    HelpFrm.open( "/help/ramfloppy.htm" );
+	    HelpFrm.open( HELP_PAGE );
 	  }
 	}
       }
@@ -164,13 +174,13 @@ public class RAMFloppyFrm extends BasicFrm
     // Menu Datei
     JMenu mnuFile = new JMenu( "Datei" );
     mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuFile.add( createJMenuItem( "Schlie\u00DFen", "close" ) );
+    mnuFile.add( createJMenuItem( "Schlie\u00DFen", ACTION_CLOSE ) );
     mnuBar.add( mnuFile );
 
 
     // Menu Hilfe
     JMenu mnuHelp = new JMenu( "?" );
-    mnuHelp.add( createJMenuItem( "Hilfe...", "help" ) );
+    mnuHelp.add( createJMenuItem( "Hilfe...", ACTION_HELP ) );
     mnuBar.add( mnuHelp );
 
 
@@ -256,4 +266,3 @@ public class RAMFloppyFrm extends BasicFrm
     return rv;
   }
 }
-

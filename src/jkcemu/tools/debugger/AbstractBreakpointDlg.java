@@ -9,14 +9,19 @@
 
 package jkcemu.tools.debugger;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
-import jkcemu.base.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import jkcemu.base.BaseDlg;
 
 
-public abstract class AbstractBreakpointDlg extends BasicDlg
+public abstract class AbstractBreakpointDlg extends BaseDlg
 {
   protected static String[] conditions = { "<", "<=", "<>", "=", ">=" , ">" };
 
@@ -65,13 +70,13 @@ public abstract class AbstractBreakpointDlg extends BasicDlg
     boolean rv = true;
     int     m  = (is8Bit ? 0xFF : 0xFFFF);
     if( mask == 0 ) {
-      BasicDlg.showErrorDlg(
+      showErrorDlg(
 		this,
 		"Die Maske 00 blendet den zu testenden Wert"
 			+ " vollst\u00E4ndig aus." );
       rv = false;
     } else if( (~mask & value & m) != 0 ) {
-      rv = BasicDlg.showYesNoWarningDlg(
+      rv = showYesNoWarningDlg(
 		this,
 		String.format(
 			"Es ist i.d.R. nicht sinnvoll, wenn im"
@@ -151,7 +156,7 @@ public abstract class AbstractBreakpointDlg extends BasicDlg
 
   protected void showInvalidFmt( String fldName )
   {
-    BasicDlg.showErrorDlg(
+    showErrorDlg(
 		this,
 		fldName + " hat ung\u00FCltiges Format." );
   }

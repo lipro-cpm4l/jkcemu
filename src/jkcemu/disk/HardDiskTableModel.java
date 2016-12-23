@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,9 +10,11 @@ package jkcemu.disk;
 
 import java.awt.Window;
 import java.lang.*;
-import java.util.*;
+import java.util.Collections;
+import java.util.ArrayList;
 import javax.swing.table.AbstractTableModel;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
 public class HardDiskTableModel extends AbstractTableModel
@@ -189,7 +191,7 @@ public class HardDiskTableModel extends AbstractTableModel
 		}
 	      }
 	      if( msg != null ) {
-		BasicDlg.showErrorDlg( this.owner, msg );
+		BaseDlg.showErrorDlg( this.owner, msg );
 	      }
 	    }
 	  }
@@ -198,4 +200,3 @@ public class HardDiskTableModel extends AbstractTableModel
     }
   }
 }
-

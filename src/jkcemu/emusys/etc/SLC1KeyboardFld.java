@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2013 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,12 +8,16 @@
 
 package jkcemu.emusys.etc;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.awt.event.MouseEvent;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
 import jkcemu.emusys.SLC1;
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,19 @@
 
 package jkcemu.programming.basic;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.EventQueue;
+import java.io.IOException;
 import java.lang.*;
-import jkcemu.base.*;
-import jkcemu.emusys.*;
-import jkcemu.programming.*;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.programming.PrgLogger;
+import jkcemu.programming.PrgThread;
 import jkcemu.programming.assembler.Z80Assembler;
-import jkcemu.programming.basic.target.*;
-import jkcemu.text.*;
+import jkcemu.programming.basic.target.Z9001KRTTarget;
+import jkcemu.programming.basic.target.Z9001Target;
+import jkcemu.text.EditText;
+import jkcemu.text.TextEditFrm;
 
 
 public class BasicCompilerThread extends PrgThread

@@ -77,7 +77,7 @@ public class BasicExprParser
 	status = false;
       }
       if( status ) {
-	rv = new Integer( value );
+	rv = value;
       }
     }
     return rv;
@@ -120,7 +120,7 @@ public class BasicExprParser
 	}
 	value &= 0xFFFF;
       }
-      rv = new Integer( value );
+      rv = value;
     }
     catch( PrgException ex ) {
       rv = null;
@@ -409,7 +409,7 @@ public class BasicExprParser
 	    }
 	    ch = iter.next();
 	  }
-	  rv = new Integer( value );
+	  rv = value;
 	} else {
 	  throw new PrgException( "0 oder 1 erwartet" );
 	}
@@ -434,7 +434,7 @@ public class BasicExprParser
       }
       BasicUtil.parseToken( iter, '\'' );
       check8BitChar( ch );
-      rv = new Integer( ch );
+      rv = Integer.valueOf( ch );
     }
     return rv;
   }

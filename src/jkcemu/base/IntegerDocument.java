@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,9 @@
 package jkcemu.base;
 
 import java.lang.*;
-import javax.swing.text.*;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.JTextComponent;
+import javax.swing.text.PlainDocument;
 
 
 public class IntegerDocument extends PlainDocument
@@ -34,8 +36,8 @@ public class IntegerDocument extends PlainDocument
 		int            maxValue )
   {
     this( textComp );
-    this.minValue = new Integer( minValue );
-    this.maxValue = new Integer( maxValue );
+    this.minValue = minValue;
+    this.maxValue = maxValue;
   }
 
 
@@ -73,7 +75,7 @@ public class IntegerDocument extends PlainDocument
     if( s != null ) {
       s = s.trim();
       if( !s.isEmpty() ) {
-        rv = new Integer( parseInt( s ) );
+        rv = Integer.valueOf( s );
       }
     }
     return rv;
@@ -126,4 +128,3 @@ public class IntegerDocument extends PlainDocument
     return value;
   }
 }
-

@@ -8,18 +8,28 @@
 
 package jkcemu.emusys.huebler;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 import jkcemu.emusys.HueblerGraphicsMC;
 
 
 public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
 {
-  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 500;
-
   private JTabbedPane          tabbedPane;
   private JPanel               tabExt;
   private JPanel               tabEtc;
@@ -99,10 +109,10 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
 
     // Tab AutoLoad
     this.tabAutoLoad = new AutoLoadSettingsFld(
-					settingsFrm,
-					propPrefix,
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
-					true );
+		settingsFrm,
+		propPrefix,
+		HueblerGraphicsMC.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX,
+		true );
     this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
 
 
@@ -110,8 +120,8 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 		settingsFrm,
 		propPrefix,
-		HueblerGraphicsMC.getDefaultSwapKeyCharCase(),
-		DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+		HueblerGraphicsMC.DEFAULT_SWAP_KEY_CHAR_CASE,
+		HueblerGraphicsMC.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
@@ -132,22 +142,22 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
   {
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "basic",
+		this.propPrefix + HueblerGraphicsMC.PROP_BASIC,
 		this.btnBasic.isSelected() );
 
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "catch_print_calls",
+		this.propPrefix + HueblerGraphicsMC.PROP_CATCH_PRINT_CALLS,
 		this.btnCatchPrintCalls.isSelected() );
 
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "kcnet.enabled",
+		this.propPrefix + HueblerGraphicsMC.PROP_KCNET_ENABLED,
 		this.btnKCNet.isSelected() );
 
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "vdip.enabled",
+		this.propPrefix + HueblerGraphicsMC.PROP_VDIP_ENABLED,
 		this.btnVDIP.isSelected() );
 
     this.tabAutoLoad.applyInput( props, selected );
@@ -186,28 +196,28 @@ public class HueblerGraphicsMCSettingsFld extends AbstractSettingsFld
   public void updFields( Properties props )
   {
     this.btnBasic.setSelected(
-		EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + "basic",
-			true ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + HueblerGraphicsMC.PROP_BASIC,
+		true ) );
 
     this.btnCatchPrintCalls.setSelected(
-		EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + "catch_print_calls",
-			true ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + HueblerGraphicsMC.PROP_CATCH_PRINT_CALLS,
+		true ) );
 
     this.btnKCNet.setSelected(
-		EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + "kcnet.enabled",
-			false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + HueblerGraphicsMC.PROP_KCNET_ENABLED,
+		false ) );
 
     this.btnVDIP.setSelected(
-		EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + "vdip.enabled",
-			false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + HueblerGraphicsMC.PROP_VDIP_ENABLED,
+		false ) );
 
     this.tabAutoLoad.updFields( props );
     this.tabAutoInput.updFields( props );

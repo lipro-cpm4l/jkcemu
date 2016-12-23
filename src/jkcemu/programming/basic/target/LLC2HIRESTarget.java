@@ -18,7 +18,9 @@ import java.util.Set;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.LLC2;
 import jkcemu.emusys.ac1_llc2.AbstractSCCHSys;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
+import jkcemu.programming.basic.BasicLibrary;
 
 
 public class LLC2HIRESTarget extends SCCHTarget

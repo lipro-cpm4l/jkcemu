@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,32 @@
 
 package jkcemu.emusys.a5105;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.RAMFloppy;
+import jkcemu.base.RAMFloppiesSettingsFld;
+import jkcemu.base.RAMFloppySettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 import jkcemu.emusys.A5105;
 
 
 public class A5105SettingsFld extends AbstractSettingsFld
 {
-  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 3000;
-
   private JTabbedPane            tabbedPane;
   private JPanel                 tabEtc;
   private RAMFloppiesSettingsFld tabRF;
@@ -96,19 +110,19 @@ public class A5105SettingsFld extends AbstractSettingsFld
 
     // Tab AutoLoad
     this.tabAutoLoad = new AutoLoadSettingsFld(
-					settingsFrm,
-					propPrefix,
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
-					true );
+				settingsFrm,
+				propPrefix,
+				A5105.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX,
+				true );
     this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
 
 
     // Tab AutoInput
     this.tabAutoInput = new AutoInputSettingsFld(
-					settingsFrm,
-					propPrefix,
-					A5105.getDefaultSwapKeyCharCase(),
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+				settingsFrm,
+				propPrefix,
+				A5105.DEFAULT_SWAP_KEY_CHAR_CASE,
+				A5105.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
@@ -136,23 +150,23 @@ public class A5105SettingsFld extends AbstractSettingsFld
       // Tab Sonstiges
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "floppydisk.enabled",
+		this.propPrefix + A5105.PROP_FDC_ENABLED,
 		Boolean.toString( this.btnFloppyDisk.isSelected() ) );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "kcnet.enabled",
+		this.propPrefix + A5105.PROP_KCNET_ENABLED,
 		this.btnKCNet.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "vdip.enabled",
+		this.propPrefix + A5105.PROP_VDIP_ENABLED,
                 this.btnVDIP.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "paste.fast",
+		this.propPrefix + A5105.PROP_PASTE_FAST,
 		Boolean.toString( this.btnPasteFast.isSelected() ) );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "fixed_screen_size",
+		this.propPrefix + A5105.PROP_FIXED_SCREEN_SIZE,
 		this.btnFixedScreenSize.isSelected() );
 
       // Tab AutoLoad
@@ -210,31 +224,31 @@ public class A5105SettingsFld extends AbstractSettingsFld
     this.btnFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "floppydisk.enabled",
+			this.propPrefix + A5105.PROP_FDC_ENABLED,
 			true ) );
 
     this.btnKCNet.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "kcnet.enabled",
+			this.propPrefix + A5105.PROP_KCNET_ENABLED,
 			false ) );
 
     this.btnVDIP.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "vdip.enabled",
+			this.propPrefix + A5105.PROP_VDIP_ENABLED,
 			false ) );
 
     this.btnPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "paste.fast",
+			this.propPrefix + A5105.PROP_PASTE_FAST,
 			true ) );
 
     this.btnFixedScreenSize.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "fixed_screen_size",
+			this.propPrefix + A5105.PROP_FIXED_SCREEN_SIZE,
 			false ) );
   }
 }

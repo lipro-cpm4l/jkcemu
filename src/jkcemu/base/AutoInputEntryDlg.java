@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,16 +8,29 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
-import javax.swing.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.EventObject;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
 import javax.swing.text.BadLocationException;
 
 
-public class AutoInputEntryDlg extends BasicDlg
+public class AutoInputEntryDlg extends BaseDlg
 {
   private static final String LABEL_WAIT_TIME = "Wartezeit vor Eingabe:";
   private static final String CMD_CHAR_PREFIX = "char.";

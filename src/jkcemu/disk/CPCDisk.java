@@ -13,10 +13,22 @@
 package jkcemu.disk;
 
 import java.awt.Frame;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
+import java.io.UnsupportedEncodingException;
 import java.lang.*;
-import java.nio.channels.*;
-import java.util.*;
+import java.nio.channels.FileLock;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
 
@@ -237,7 +249,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	}
       }
       finally {
-	EmuUtil.doClose( outBuf );
+	EmuUtil.closeSilent( outBuf );
       }
       if( !needsExtFmt ) {
 	OutputStream out = null;
@@ -248,7 +260,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	  out = null;
 	}
 	finally {
-	  EmuUtil.doClose( out );
+	  EmuUtil.closeSilent( out );
 	}
       }
     }
@@ -320,7 +332,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	out = null;
       }
       finally {
-	EmuUtil.doClose( out );
+	EmuUtil.closeSilent( out );
       }
     }
   }
@@ -360,8 +372,8 @@ public class CPCDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.doRelease( fl );
-	EmuUtil.doClose( raf );
+	EmuUtil.releaseSilent( fl );
+	EmuUtil.closeSilent( raf );
       }
     }
     return rv;
@@ -380,8 +392,8 @@ public class CPCDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.doRelease( fl );
-	EmuUtil.doClose( raf );
+	EmuUtil.releaseSilent( fl );
+	EmuUtil.closeSilent( raf );
       }
     }
     return rv;
@@ -401,7 +413,7 @@ public class CPCDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
     return rv;
@@ -411,10 +423,10 @@ public class CPCDisk extends AbstractFloppyDisk
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public synchronized void doClose()
+  public synchronized void closeSilent()
   {
-    EmuUtil.doRelease( this.fileLock );
-    EmuUtil.doClose( this.raf );
+    EmuUtil.releaseSilent( this.fileLock );
+    EmuUtil.closeSilent( this.raf );
   }
 
 
@@ -511,7 +523,7 @@ public class CPCDisk extends AbstractFloppyDisk
 		  endCyl++;
 		}
 		for( int i = 0; i < endCyl; i++ ) {
-		  TrackData td = this.side0.get( new Integer( i ) );
+		  TrackData td = this.side0.get( i );
 		  if( td != null ) {
 		    trackPos += td.getTrackSize();
 		  }
@@ -519,7 +531,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	      }
 	      if( (this.side1 != null) && (getSides() > 1) ) {
 		for( int i = 0; i < physCyl; i++ ) {
-		  TrackData td = this.side1.get( new Integer( i ) );
+		  TrackData td = this.side1.get( i );
 		  if( td != null ) {
 		    trackPos += td.getTrackSize();
 		  }
@@ -572,7 +584,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	      map = this.side0;
 	    }
 	    trackData = new TrackData( trackPos, trackSize );
-	    map.put( new Integer( physCyl ), trackData );
+	    map.put( physCyl, trackData );
 	  }
 
 	  // Sektorgroesse
@@ -715,12 +727,12 @@ public class CPCDisk extends AbstractFloppyDisk
   {
     if( (props != null) && (this.fileName != null) ) {
       if( this.resource ) {
-	props.setProperty( prefix + "resource", this.fileName );
+	props.setProperty( prefix + PROP_RESOURCE, this.fileName );
       } else {
-	props.setProperty( prefix + "file", this.fileName );
+	props.setProperty( prefix + PROP_FILE, this.fileName );
       }
       props.setProperty(
-		prefix + "readonly",
+		prefix + PROP_READONLY,
 		Boolean.toString( isReadOnly() ) );
     }
   }
@@ -925,10 +937,10 @@ public class CPCDisk extends AbstractFloppyDisk
 		trackMap = side1;
 	      }
 	      if( (trackMap != null) && (trackBuf != null) ) {
-		trackData = trackMap.get( new Integer( cyl ) );
+		trackData = trackMap.get( cyl );
 	        if( trackData == null ) {
 		  trackData = new TrackData( trackPos, trackBuf.length );
-		  trackMap.put( new Integer( cyl ), trackData );
+		  trackMap.put( cyl, trackData );
 		}
 	      }
 	      int infoPos = 0x18;
@@ -1000,7 +1012,7 @@ public class CPCDisk extends AbstractFloppyDisk
     java.util.List<SectorData> rv = null;
     Map<Integer,TrackData> map = ((physHead & 0x01) != 0 ? side1 : side0);
     if( map != null ) {
-      TrackData trackData = map.get( new Integer( physCyl ) );
+      TrackData trackData = map.get( physCyl );
       if( trackData != null ) {
 	rv = trackData.getSectorList();
       }
@@ -1040,9 +1052,9 @@ public class CPCDisk extends AbstractFloppyDisk
   {
     TrackData trackData = null;
     if( (side == 0) && (this.side0 != null) ) {
-      trackData = this.side0.get( new Integer( cyl ) );
+      trackData = this.side0.get( cyl );
     } else if( (side == 0) && (this.side0 != null) ) {
-      trackData = this.side1.get( new Integer( cyl ) );
+      trackData = this.side1.get( cyl );
     }
     return trackData;
   }

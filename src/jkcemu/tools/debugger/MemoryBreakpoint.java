@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,8 @@
 package jkcemu.tools.debugger;
 
 import java.lang.*;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
 
 
 public class MemoryBreakpoint extends AbstractBreakpoint
@@ -807,4 +808,3 @@ public class MemoryBreakpoint extends AbstractBreakpoint
     return rv;
   }
 }
-

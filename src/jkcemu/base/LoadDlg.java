@@ -8,20 +8,47 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.EventObject;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import jkcemu.Main;
-import jkcemu.audio.*;
-import jkcemu.emusys.*;
+import jkcemu.audio.AudioFrm;
+import jkcemu.audio.AudioUtil;
+import jkcemu.emusys.A5105;
+import jkcemu.emusys.AC1;
+import jkcemu.emusys.HueblerGraphicsMC;
+import jkcemu.emusys.KC85;
+import jkcemu.emusys.KramerMC;
+import jkcemu.emusys.LLC2;
+import jkcemu.emusys.Z1013;
+import jkcemu.emusys.Z9001;
 
 
-public class LoadDlg extends BasicDlg implements DocumentListener
+public class LoadDlg extends BaseDlg implements DocumentListener
 {
+  private static final String HELP_PAGE = "/help/loadsave.htm";
+
   private static final FileFormat[] fileFormats = {
 					FileFormat.KCB,
 					FileFormat.KCC,
@@ -219,7 +246,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 		// Datei in Arbeitsspeicher laden und ggf. starten
 		if( confirmLoadDataInfo( owner, loadData ) ) {
 		  emuThread.loadIntoMemory( loadData );
-		  Main.setLastFile( file, "software" );
+		  Main.setLastFile( file, Main.FILE_GROUP_SOFTWARE );
 
 		  // ggf. Dateikopf in Arbeitsspeicher kopieren
 		  if( fileFmt.equals( FileFormat.HEADERSAVE ) ) {
@@ -316,7 +343,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	}
 	else if( src == this.btnHelp ) {
 	  rv = true;
-	  HelpFrm.open( "/help/loadsave.htm" );
+	  HelpFrm.open( HELP_PAGE );
 	}
 	else if( src == this.btnCancel ) {
 	  rv = true;
@@ -761,7 +788,7 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	    loadData.setStartAddr( -1 );
 	  }
 	  emuThread.loadIntoMemory( loadData );
-	  Main.setLastFile( this.file, "software" );
+	  Main.setLastFile( this.file, Main.FILE_GROUP_SOFTWARE );
 
 	  // ggf. Dateikopf in Arbeitsspeicher kopieren
 	  if( (emuThread.getEmuSys() instanceof Z1013)
@@ -787,7 +814,6 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	  {
 	    FileInfo fileInfo = FileInfo.analyzeFile(
 						this.fileBuf,
-						this.fileBuf.length,
 						this.file );
 	    if( fileInfo != null ) {
 	      if( fileFmt.equals( fileInfo.getFileFormat() ) ) {
@@ -804,10 +830,10 @@ public class LoadDlg extends BasicDlg implements DocumentListener
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	showErrorDlg( this, ex );
       }
       catch( NumberFormatException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	showErrorDlg( this, ex );
       }
     }
   }
@@ -1075,4 +1101,3 @@ public class LoadDlg extends BasicDlg implements DocumentListener
     }
   }
 }
-

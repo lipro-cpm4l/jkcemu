@@ -9,7 +9,9 @@
 package jkcemu.base;
 
 import java.lang.*;
-import javax.swing.text.*;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 
 
 public class LimitedDocument extends PlainDocument
@@ -60,15 +62,17 @@ public class LimitedDocument extends PlainDocument
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public void insertString( int offs, String str, AttributeSet a )
-						throws BadLocationException
+  public void insertString(
+			int          offs,
+			String       s,
+			AttributeSet a ) throws BadLocationException
   {
-    if( (str != null) && (this.asciiOnly || this.swapCase) ) {
-      char[] ary = str.toCharArray();
-      if( ary != null ) {
+    if( (s != null) && (this.asciiOnly || this.swapCase) ) {
+      char[] buf = s.toCharArray();
+      if( buf != null ) {
 	int n = 0;
-	for( int i = 0; i < ary.length; i++ ) {
-	  char ch = ary[ i ];
+	for( int i = 0; i < buf.length; i++ ) {
+	  char ch = buf[ i ];
 	  if( !this.asciiOnly || ((ch >= '\u0020') && (ch <= '\u007E')) ) {
 	    if( this.swapCase ) {
 	      if( Character.isUpperCase( ch ) ) {
@@ -78,27 +82,26 @@ public class LimitedDocument extends PlainDocument
 		ch = Character.toUpperCase( ch );
 	      }
 	    }
-	    ary[ n++ ] = ch;
+	    buf[ n++ ] = ch;
 	  }
 	}
 	if( n > 0 ) {
-	  str = new String( ary, 0, n );
+	  s = new String( buf, 0, n );
 	} else {
-	  str = null;
+	  s = null;
 	}
       }
     }
-    if( str != null ) {
-      int len = str.length();
+    if( s != null ) {
+      int len = s.length();
       if( len > 0 ) {
 	if( (this.maxLen > 0) && (len > this.maxLen - getLength()) ) {
 	  len = this.maxLen - getLength();
 	}
 	if( len > 0 ) {
-	  super.insertString( offs, str.substring( 0, len ), a );
+	  super.insertString( offs, s.substring( 0, len ), a );
 	}
       }
     }
   }
 }
-

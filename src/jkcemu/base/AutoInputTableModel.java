@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,9 +9,10 @@
 package jkcemu.base;
 
 import java.lang.*;
-import java.text.*;
-import java.util.*;
-import javax.swing.table.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Collection;
+import javax.swing.table.AbstractTableModel;
 
 
 public class AutoInputTableModel extends AbstractTableModel

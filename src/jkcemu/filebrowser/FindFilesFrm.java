@@ -8,27 +8,99 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DragGestureEvent;
+import java.awt.dnd.DragGestureListener;
+import java.awt.dnd.DragSource;
+import java.awt.dnd.DragSourceContext;
+import java.awt.dnd.DragSourceDragEvent;
+import java.awt.dnd.DragSourceDropEvent;
+import java.awt.dnd.DragSourceEvent;
+import java.awt.dnd.DragSourceListener;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.dnd.InvalidDnDOperationException;
+import java.awt.event.ActionEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PushbackInputStream;
+import java.io.Reader;
 import java.lang.*;
-import java.nio.charset.Charset;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
-import java.text.*;
-import java.util.*;
+import java.nio.file.Path;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.text.CharacterIterator;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.StringCharacterIterator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.EventObject;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.AbstractFileWorker;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.DirSelectDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileEntry;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.ScreenFrm;
+import jkcemu.base.UserInputException;
 
 
 public class FindFilesFrm
-			extends BasicFrm
+			extends BaseFrm
 			implements
 				AbstractFileWorker.PathListener,
 				DragGestureListener,
@@ -99,6 +171,7 @@ public class FindFilesFrm
   private static final int    MAX_RESULT_ROWS = 2000;
   private static final int    MAX_ROW_LEN     = 1024;
   private static final String COPY_TEXT       = "Zeilen als Text kopieren";
+  private static final String HELP_PAGE       = "/help/tools/findfiles.htm";
 
   private static FindFilesFrm instance      = null;
   private static DateFormat   dateFmtShort  = null;
@@ -161,7 +234,9 @@ public class FindFilesFrm
   public static void open( ScreenFrm screenFrm, Path dirPath )
   {
     open( screenFrm );
-    instance.setDirectory( dirPath );
+    if( dirPath != null ) {
+      instance.setDirectory( dirPath );
+    }
   }
 
 
@@ -580,8 +655,8 @@ public class FindFilesFrm
 	    matchesFile = false;
 	  }
 	  finally {
-	    EmuUtil.doClose( reader );
-	    EmuUtil.doClose( in );
+	    EmuUtil.closeSilent( reader );
+	    EmuUtil.closeSilent( in );
 	  }
 	}
       }
@@ -763,7 +838,7 @@ public class FindFilesFrm
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/tools/findfiles.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
       else if( src == this.list ) {
 	rv         = true;
@@ -817,7 +892,7 @@ public class FindFilesFrm
       }
     }
     catch( IOException ex ) {
-      BasicDlg.showErrorDlg( this, ex );
+      BaseDlg.showErrorDlg( this, ex );
     }
     return rv;
   }
@@ -1212,7 +1287,7 @@ public class FindFilesFrm
     this.fileActionMngr.updActionButtonsEnabled( null );
 
     // letztes Suchverzeichnis einstellen
-    File lastDir = Main.getLastDirFile( "find.dir" );
+    File lastDir = Main.getLastDirFile( Main.FILE_GROUP_FIND );
     if( lastDir != null ) {
       try {
 	setDirectory( lastDir.toPath() );
@@ -1368,15 +1443,15 @@ public class FindFilesFrm
 	updFieldsEnabled();
 	this.btnStartStop.setText( "Suche beenden" );
 	try {
-	  Main.setLastFile( this.dirPath.toFile(), "find.dir" );
+	  Main.setLastFile( this.dirPath.toFile(), Main.FILE_GROUP_FIND );
 	}
 	catch( UnsupportedOperationException ex ) {}
       }
       catch( UserInputException ex ) {
-	BasicDlg.showErrorDlg( this, ex.getMessage(), "Eingabefehler" );
+	BaseDlg.showErrorDlg( this, ex.getMessage(), "Eingabefehler" );
       }
       catch( IOException | PatternSyntaxException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
   }
@@ -1546,7 +1621,7 @@ public class FindFilesFrm
 	    throw new UserInputException(
 			"Dateigr\u00F6\u00DFe kann nicht kleiner Null sein" );
 	  }
-	  rv = new Long( v );
+	  rv = v;
 	}
 	catch( NumberFormatException ex ) {
 	  throw new UserInputException(
@@ -1619,7 +1694,7 @@ public class FindFilesFrm
 	    throw new UserInputException( "Ung\u00FCltiges Datum" );
 	  }
 	  buf.append( dateFmtMedium.format( date ) );
-	  rv = new Long( date.getTime() );
+	  rv = date.getTime();
 
 	  // Uhrzeit parsen
 	  if( timeText != null ) {
@@ -1688,7 +1763,8 @@ public class FindFilesFrm
 		lastField = Calendar.MINUTE;
 		buf.append( String.format( " %02d:%02d", hour, minute ) );
 		if( (s1 >= 0) && (s2 > s1) ) {
-		  second    = Integer.parseInt( timeText.substring( s1, s2 ) );
+		  second    = Integer.parseInt(
+					timeText.substring( s1, s2 ) );
 		  lastField = Calendar.SECOND;
 		  buf.append( String.format( ":%02d", second ) );
 		}
@@ -1766,7 +1842,7 @@ public class FindFilesFrm
 
   private void showError( Exception ex )
   {
-    BasicDlg.showErrorDlg( this, ex );
+    BaseDlg.showErrorDlg( this, ex );
   }
 
 

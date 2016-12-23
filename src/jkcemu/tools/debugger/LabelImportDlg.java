@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,7 @@ import jkcemu.Main;
 import jkcemu.base.*;
 
 
-public class LabelImportDlg extends BasicDlg
+public class LabelImportDlg extends BaseDlg
 {
   private DebugFrm     debugFrm;
   private JRadioButton btnSourceClipboard;
@@ -230,17 +230,17 @@ public class LabelImportDlg extends BasicDlg
   {
     File oldFile = this.fileNameFld.getFile();
     File file    = EmuUtil.showFileOpenDlg(
-			this,
-			"Datei ausw\u00E4hlen",
-			oldFile != null ?
-				oldFile
-				: Main.getLastDirFile( "labels" ) );
+		this,
+		"Datei ausw\u00E4hlen",
+		oldFile != null ?
+			oldFile
+			: Main.getLastDirFile( Main.FILE_GROUP_LABEL ) );
     if( file != null ) {
       String msg = null;
       if( file.exists() ) {
 	if( file.canRead() ) {
 	  this.fileNameFld.setFile( file );
-	  Main.setLastFile( file, "labels" );
+	  Main.setLastFile( file, Main.FILE_GROUP_LABEL );
 	} else {
 	  msg = "Datei nicht lesbar";
 	}
@@ -248,7 +248,7 @@ public class LabelImportDlg extends BasicDlg
 	msg = "Datei nicht gefunden";
       }
       if( msg != null ) {
-	BasicDlg.showErrorDlg( this, msg );
+	showErrorDlg( this, msg );
       }
     }
   }
@@ -259,7 +259,7 @@ public class LabelImportDlg extends BasicDlg
     boolean isFileSource = this.btnSourceFile.isSelected();
     File    file         = this.fileNameFld.getFile();
     if( isFileSource && (file == null) ) {
-      BasicDlg.showErrorDlg(
+      showErrorDlg(
 		this,
 		"Bei einem Import aus einer Datei m\u00FCssen\n"
 			+ "Sie auch eine Datei ausw\u00E4hlen." );

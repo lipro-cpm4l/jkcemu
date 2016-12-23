@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2014 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,12 +8,21 @@
 
 package jkcemu.emusys.kc85;
 
+import java.awt.EventQueue;
 import java.lang.*;
-import java.util.*;
-import javax.swing.SwingUtilities;
-import jkcemu.base.*;
-import jkcemu.disk.*;
-import z80emu.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ErrorMsg;
+import jkcemu.base.ScreenFrm;
+import jkcemu.disk.FDC8272;
+import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.disk.GIDE;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80IOSystem;
+import z80emu.Z80Memory;
+import z80emu.Z80TStatesListener;
 
 
 public class D004ProcSys implements
@@ -218,9 +227,8 @@ public class D004ProcSys implements
 	  }
 	  this.cpu.run();
 	}
-	catch( Z80ExternalException ex ) {}
 	catch( Exception ex ) {
-	  SwingUtilities.invokeLater( new ErrorMsg( this.screenFrm, ex ) );
+	  EventQueue.invokeLater( new ErrorMsg( this.screenFrm, ex ) );
 	}
       }
       powerOn = false;

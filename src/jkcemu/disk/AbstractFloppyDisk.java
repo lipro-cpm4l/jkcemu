@@ -8,15 +8,25 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.BaseDlg;
 
 
 public abstract class AbstractFloppyDisk
 {
+  public static final String PROP_CYLINDERS       = "cylinders";
+  public static final String PROP_FILE            = "file";
+  public static final String PROP_READONLY        = "readonly";
+  public static final String PROP_RESOURCE        = "resource";
+  public static final String PROP_SECTORS_PER_CYL = "sectors_per_cylinder";
+  public static final String PROP_SECTORSIZE      = "sectorsize";
+  public static final String PROP_SIDES           = "sides";
+
   private Frame           owner;
   private volatile int    sides;
   private volatile int    cyls;
@@ -75,7 +85,7 @@ public abstract class AbstractFloppyDisk
   }
 
 
-  public void doClose()
+  public void closeSilent()
   {
     // leer
   }
@@ -93,7 +103,7 @@ public abstract class AbstractFloppyDisk
 		  @Override
 		  public void run()
 		  {
-		    BasicDlg.showErrorDlg( owner, msg, ex );
+		    BaseDlg.showErrorDlg( owner, msg, ex );
 		  }
 		} );
     }
@@ -391,19 +401,19 @@ public abstract class AbstractFloppyDisk
   {
     if( props != null ) {
       props.setProperty(
-		prefix + "readonly",
+		prefix + PROP_READONLY,
 		Boolean.toString( isReadOnly() ) );
       props.setProperty(
-		prefix + "sides",
+		prefix + PROP_SIDES,
 		Integer.toString( getSides() ) );
       props.setProperty(
-		prefix + "cylinders",
+		prefix + PROP_CYLINDERS,
 		Integer.toString( getCylinders() ) );
       props.setProperty(
-		prefix + "sectors_per_cylinder",
+		prefix + PROP_SECTORS_PER_CYL,
 		Integer.toString( getSectorsPerCylinder() ) );
       props.setProperty(
-		prefix + "sectorsize",
+		prefix + PROP_SECTORSIZE,
 		Integer.toString( getSectorSize() ) );
     }
   }

@@ -8,17 +8,18 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import javax.sound.sampled.AudioInputStream;
-import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
-import jkcemu.emusys.ac1_llc2.AC1AudioDataStream;
+import jkcemu.audio.AudioFile;
+import jkcemu.audio.PCMDataSource;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.ac1_llc2.AC1AudioCreator;
 
 
 public class AC1AudioFileTarget extends AbstractConvertTarget
 {
-  private byte[]  dataBytes;
+  private byte[]  buf;
   private int     offs;
   private int     len;
   private boolean basic;
@@ -26,16 +27,16 @@ public class AC1AudioFileTarget extends AbstractConvertTarget
 
   public AC1AudioFileTarget(
 		FileConvertFrm fileConvertFrm,
-		byte[]         dataBytes,
+		byte[]         buf,
 		int            offs,
 		int            len,
 		boolean        basic )
   {
     super( fileConvertFrm, createInfoText( basic ) );
-    this.dataBytes = dataBytes;
-    this.offs      = offs;
-    this.len       = len;
-    this.basic     = basic;
+    this.buf   = buf;
+    this.offs  = offs;
+    this.len   = len;
+    this.basic = basic;
   }
 
 
@@ -49,27 +50,24 @@ public class AC1AudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public AudioInputStream getAudioInputStream() throws UserInputException
+  public PCMDataSource createPCMDataSource()
+				throws IOException, UserInputException
   {
-    AC1AudioDataStream ads = new AC1AudioDataStream(
-			this.basic,
-			this.dataBytes,
-			this.offs,
-			this.len,
-			this.fileConvertFrm.getFileDesc( true ),
-			this.fileConvertFrm.getBegAddr( true ),
-			this.fileConvertFrm.getStartAddr( false ) );
-    return new AudioInputStream(
-			ads,
-			ads.getAudioFormat(),
-			ads.getFrameLength() );
+    return new AC1AudioCreator(
+		this.basic,
+		this.buf,
+		this.offs,
+		this.len,
+		this.fileConvertFrm.getFileDesc( true ),
+		this.fileConvertFrm.getBegAddr( true ),
+		this.fileConvertFrm.getStartAddr( false ) ).newReader();
   }
 
 
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return AudioUtil.getAudioOutFileFilter();
+    return AudioFile.getFileFilter();
   }
 
 
@@ -90,7 +88,7 @@ public class AC1AudioFileTarget extends AbstractConvertTarget
   @Override
   public String save( File file ) throws IOException, UserInputException
   {
-    saveAudioFile( file, getAudioInputStream() );
+    saveAudioFile( file, createPCMDataSource() );
     return null;
   }
 
@@ -118,11 +116,9 @@ public class AC1AudioFileTarget extends AbstractConvertTarget
     if( basic ) {
       buf.append( "BASIC-" );
     }
-    buf.append( "Format" );
-    AudioUtil.appendAudioFileExtensionText(
-			buf,
-			3,
-			AudioUtil.getAudioOutFileExtensions( null, null ) );
+    buf.append( "Format (" );
+    buf.append( AudioFile.getFileExtensionText() );
+    buf.append( (char) ')' );
     return buf.toString();
   }
 }

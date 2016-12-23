@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,12 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.GridBagLayout;
+import java.awt.GridBagConstraints;
+import java.awt.Insets;
 import java.lang.*;
 import java.util.Properties;
 import javax.swing.JSeparator;
-import jkcemu.base.*;
 
 
 public class RAMFloppiesSettingsFld extends AbstractSettingsFld
@@ -44,7 +45,7 @@ public class RAMFloppiesSettingsFld extends AbstractSettingsFld
 
     this.rf1Fld = new RAMFloppySettingsFld(
 				settingsFrm,
-				propPrefix + "ramfloppy.1.",
+				propPrefix + EmuSys.PROP_RF1_PREFIX,
 				labelText1,
 				rfType1 );
     add( this.rf1Fld, gbc );
@@ -57,7 +58,7 @@ public class RAMFloppiesSettingsFld extends AbstractSettingsFld
 
     this.rf2Fld = new RAMFloppySettingsFld(
 				settingsFrm,
-				propPrefix + "ramfloppy.2.",
+				propPrefix + EmuSys.PROP_RF2_PREFIX,
 				labelText2,
 				rfType2 );
     gbc.insets.left   = 0;
@@ -96,4 +97,3 @@ public class RAMFloppiesSettingsFld extends AbstractSettingsFld
     this.rf2Fld.updFields( props );
   }
 }
-

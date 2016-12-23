@@ -460,7 +460,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
     private void writeCounterInit( int value )
     {
       value &= 0xFF;
-      this.counterLoadValue  = new Integer( value > 0 ? value : 0x100 );
+      this.counterLoadValue  = (value > 0 ? value : 0x100);
       this.nextIsCounterInit = false;
     }
 

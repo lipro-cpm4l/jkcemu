@@ -8,12 +8,26 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.SystemColor;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseAdapter;
 import java.lang.*;
 import java.util.ArrayList;
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.JComponent;
+import javax.swing.JTextArea;
+import javax.swing.JViewport;
+import javax.swing.Scrollable;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 
 
 public class HexCharFld extends JComponent implements Scrollable

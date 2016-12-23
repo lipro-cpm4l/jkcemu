@@ -1,73 +1,72 @@
 <html>
 <body>
-  <h1>Tipps &amp; Tricks</h1>
+ <h1>Tipps &amp; Tricks</h1>
 
-  <h2>In einer Sound-Datei enthaltenes Programm laden</h2>
+ <h2>In einer Sound-Datei enthaltenes Programm laden</h2>
 
-  <h3>Problem</h3>
-    Ein auf Magnettonband gespeichertes Programm wurde bereits
-    auf den Computer &uuml;bertragen und liegt nun als Sound-Datei vor.
-    Das in dieser Sound-Datei enthaltene Programm soll nun in den Emulator
-    geladen werden.
-  <br/><br/>
+ <h3>Problem</h3>
+  Ein auf Magnettonband gespeichertes Programm wurde bereits
+  auf den Computer &uuml;bertragen und liegt nun als Sound-Datei vor.
+  Das in dieser Sound-Datei enthaltene Programm soll nun in den Emulator
+  geladen werden.
+ <br/><br/>
 
-  <h3>Vorgehensweise</h3>
-    <ol>
-      <li>
-	Geben Sie im Emulator den Befehl zum Laden der Datei ein,
-	dr&uuml;cken aber noch nicht <em>ENTER</em>.
-      </li>
-      <li>
-	Aktivieren Sie die Audiofunktion
-        <a href="../audio.htm#file_in">Sound-Datei lesen</a>.
-        Dabei werden Sie aufgefordert, die Sound-Datei auszuw&auml;hlen.
-      </li>
-      <li>
-	Je nach emuliertem System, d.h., je nachdem,
-	wie der Kassettenrecorderanschluss abgefragt wird,
-	beginnt mit dem Best&auml;tigen der Dateiauswahl
-	das Lesen der Sound-Datei.
-	Dr&uuml;cken Sie nun <em>ENTER</em>,
-	damit auch das Laden des in der Sound-Datei enthaltenen
-	Programms beginnt.
-      </li>
-      <li>
-	Nachdem die Sound-Datei vollst&auml;ndig verarbeitet wurde,
-	wird die Audiofunktion automatisch deaktiviert.
-      </li>
-    </ol>
-  <br/><br/>
+ <h3>Vorgehensweise</h3>
+  <ol>
+   <li>
+    Geben Sie im Emulator den Befehl zum Laden der Datei ein,
+    dr&uuml;cken aber noch nicht <em>ENTER</em>.
+   </li>
+   <li>
+    Aktivieren Sie die Funktion
+    <a href="../audio.htm#file_in">Audiodaten aus Sound- oder Tape-Datei lesen</a>.
+    Dabei werden Sie aufgefordert, die Sound-Datei auszuw&auml;hlen.
+   </li>
+   <li>
+    Je nach emuliertem System, d.h., je nachdem,
+    wie der Kassettenrecorderanschluss abgefragt wird,
+    beginnt mit dem Best&auml;tigen der Dateiauswahl
+    das Lesen der Sound-Datei.
+    Dr&uuml;cken Sie nun <em>ENTER</em>,
+    damit auch das Laden des in der Sound-Datei enthaltenen
+    Programms beginnt.
+   </li>
+   <li>
+    Nachdem die Sound-Datei vollst&auml;ndig verarbeitet wurde,
+    wird die Audiofunktion automatisch deaktiviert.
+   </li>
+  </ol>
+ <br/><br/>
 
-  <h3>Hinweise bei Lesefehlern</h3>
-    Sollten Lesefehler auftreten, gelten sinngem&auml;&szlig;
-    die gleichen Hinweise wie unter
-    <a href="loadfromtape.htm#errors">Auf Magnettonband gespeicherte
-    Dateien laden</a> angegeben.
-  <br/><br/>
+ <h3>Hinweise bei Lesefehlern</h3>
+  Sollten Lesefehler auftreten, gelten sinngem&auml;&szlig;
+  die gleichen Hinweise wie unter
+  <a href="loadfromtape.htm#errors">Auf Magnettonband gespeicherte
+  Dateien laden</a> angegeben.
+ <br/><br/>
 
-  <h3>Lesen synthetisch erzeugter Sound-Dateien</h3>
-    Wenn Sie eine Sound-Datei einlesen,
-    die mit dem Emulator selbst erzeugt wurde,
-    kann es vorkommen, dass das Laden nicht endet,
-    obwohl die Sound-Datei vollst&auml;ndig verarbeitet wurde.
-    In diesem Fall fehlen einfach nur ein paar abschlie&szlig;ende
-    Phasenwechsel.
-    Aktivieren Sie dazu die Audiofunktion noch einmal
-    mit der gleichen Sound-Datei
-    (Funktion <em>Letzte Sound-Datei (noch einmal) lesen</em>).
-    Nachdem die ersten Phasenwechsel gelesen wurden,
-    endet der Ladevorgang, und Sie k&ouml;nnen die Audiofunktion
-    wieder deaktivieren.
-  <br/><br/>
-    Die Ursache dieses Ph&auml;nomens liegt nicht in einem Fehler
-    des Emulators,
-    sondern in der Art und Weise, wie die Laderoutinen programmiert sind.
-    Diese erwarten n&auml;mlich unter Umst&auml;nden
-    ein paar Phasenwechsel mehr,
-    als die Routine f&uuml;r das Speichern erzeugt.
-    Die fehlenden Phasenwechsel sind bei einem echten Computer kein Problem,
-    da diese allein schon aufgrund des nat&uuml;rlichen Rauschens
-    geliefert werden.
+ <h3>Lesen synthetisch erzeugter Sound-Dateien</h3>
+  Wenn Sie eine Sound-Datei einlesen,
+  die mit dem Emulator selbst erzeugt wurde,
+  kann es vorkommen, dass das Laden nicht endet,
+  obwohl die Sound-Datei vollst&auml;ndig verarbeitet wurde.
+  In diesem Fall fehlen einfach nur ein paar abschlie&szlig;ende
+  Phasenwechsel.
+  Aktivieren Sie dazu die Audiofunktion noch einmal
+  mit der gleichen Sound-Datei
+  (<a href="../audio.htm#lastfile_in">Letzte Sound- oder Tape-Datei noch einmal lesen</a>).
+  Nachdem die ersten Phasenwechsel gelesen wurden,
+  endet der Ladevorgang, und Sie k&ouml;nnen die Audiofunktion
+  wieder deaktivieren.
+ <br/><br/>
+  Die Ursache dieses Ph&auml;nomens liegt nicht in einem Fehler
+  des Emulators,
+  sondern in der Art und Weise, wie die Laderoutinen programmiert sind.
+  Diese erwarten n&auml;mlich unter Umst&auml;nden
+  ein paar Phasenwechsel mehr,
+  als die Routine f&uuml;r das Speichern erzeugt.
+  Die fehlenden Phasenwechsel sind bei einem echten Computer kein Problem,
+  da diese allein schon aufgrund des nat&uuml;rlichen Rauschens
+  geliefert werden.
 </body>
 </html>
-

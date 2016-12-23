@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,10 @@
 package jkcemu.emusys.kc85;
 
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.HashMap;
+import java.util.Map;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 
 
 public class KC85ROM8KModule extends AbstractKC85Module

@@ -8,21 +8,38 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.poly880.Poly880KeyboardFld;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80CTCListener;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
 
 
-public class Poly880 extends EmuSys implements
-					Z80CTCListener,
-					Z80MaxSpeedListener,
-					Z80TStatesListener
+public class Poly880 extends EmuSys implements Z80CTCListener
 {
+  public static final String SYSNAME              = "Poly880";
+  public static final String SYSTEXT              = "Poly-880";
+  public static final String PROP_PREFIX          = "jkcemu.poly880.";
+  public static final String PROP_NEGATED         = "negated";
+  public static final String PROP_RAM8000_ENABLED = "ram_8000.enabled";
+  public static final String PROP_ROM0000_PREFIX  = "rom_0000.";
+  public static final String PROP_ROM1000_PREFIX  = "rom_1000.";
+  public static final String PROP_ROM2000_PREFIX  = "rom_2000.";
+  public static final String PROP_ROM3000_PREFIX  = "rom_3000.";
+
+
   private static final int[] key4 = { 'G', -1,  'X', '-', 'R', -1,  'S', 'M' };
   private static final int[] key5 = { '0', '2', '3', '1', '8', '9', 'B', 'A' };
   private static final int[] key7 = { '4', '6', '7', '5', 'C', 'D', 'F', 'E' };
@@ -45,7 +62,7 @@ public class Poly880 extends EmuSys implements
   private int                colMask;
   private long               curDisplayTStates;
   private long               displayCheckTStates;
-  private boolean            audioInPhase;
+  private boolean            tapeInPhase;
   private boolean            nmiEnabled;
   private boolean            nmiTrigger;
   private boolean            ram8000;
@@ -58,7 +75,7 @@ public class Poly880 extends EmuSys implements
 
   public Poly880( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.poly880." );
+    super( emuThread, props, PROP_PREFIX );
     this.rom0Bytes           = null;
     this.rom1Bytes           = null;
     this.rom2Bytes           = null;
@@ -87,7 +104,6 @@ public class Poly880 extends EmuSys implements
     this.ctc.addCTCListener( this );
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
-
     z80MaxSpeedChanged( cpu );
 
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
@@ -139,86 +155,41 @@ public class Poly880 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    boolean phase = this.emuThread.readAudioPhase();
-    if( phase != this.audioInPhase ) {
-      this.audioInPhase = phase;
-      this.pio1.putInValuePortB( this.audioInPhase ? 0x02 : 0, 0x02 );
-    }
-    this.ctc.z80TStatesProcessed( cpu, tStates );
-    if( this.displayCheckTStates > 0 ) {
-      this.curDisplayTStates += tStates;
-      if( this.curDisplayTStates > this.displayCheckTStates ) {
-	boolean dirty = false;
-	synchronized( this.digitValues ) {
-	  for( int i = 0; i < this.digitValues.length; i++ ) {
-	    if( this.digitStatus[ i ] > 0 ) {
-	      --this.digitStatus[ i ];
-	    } else {
-	      if( this.digitValues[ i ] != 0 ) {
-		this.digitValues[ i ] = 0;
-		dirty = true;
-	      }
-	    }
-	  }
-	}
-	if( dirty ) {
-	  this.screenFrm.setScreenDirty( true );
-	}
-	this.curDisplayTStates = 0;
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public boolean canApplySettings( Properties props )
   {
     boolean rv = EmuUtil.getProperty(
-				props,
-				"jkcemu.system" ).equals( "Poly880" );
+			props,
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom0File,
 		EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_0000.file" ) );
+			props,
+			this.propPrefix + PROP_ROM0000_PREFIX + PROP_FILE ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom1File,
 		EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_1000.file" ) );
+			props,
+			this.propPrefix + PROP_ROM1000_PREFIX + PROP_FILE ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom2File,
 		EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_2000.file" ) );
+			props,
+			this.propPrefix + PROP_ROM2000_PREFIX + PROP_FILE ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.rom3File,
 		EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_3000.file" ) );
+			props,
+			this.propPrefix + PROP_ROM3000_PREFIX + PROP_FILE ) );
     }
     if( rv
 	&& ((this.rom0File != null) || (this.rom1File != null)
@@ -362,7 +333,7 @@ public class Poly880 extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "Poly-Computer 880";
+    return SYSTEXT;
   }
 
 
@@ -535,6 +506,7 @@ public class Poly880 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
 	loadROMs( props );
@@ -548,10 +520,10 @@ public class Poly880 extends EmuSys implements
     synchronized( this.keyboardMatrix ) {
       Arrays.fill( this.keyboardMatrix, 0 );
     }
-    this.colMask      = 0;
-    this.audioInPhase = this.emuThread.readAudioPhase();
-    this.nmiEnabled   = true;
-    this.nmiTrigger   = false;
+    this.colMask     = 0;
+    this.tapeInPhase = this.emuThread.readTapeInPhase();
+    this.nmiEnabled  = true;
+    this.nmiTrigger  = false;
   }
 
 
@@ -581,14 +553,28 @@ public class Poly880 extends EmuSys implements
 
 
   @Override
-  public boolean supportsAudio()
+  public boolean supportsKeyboardFld()
   {
     return true;
   }
 
 
   @Override
-  public boolean supportsKeyboardFld()
+  public boolean supportsSoundOutMono()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
   {
     return true;
   }
@@ -610,10 +596,9 @@ public class Poly880 extends EmuSys implements
       case 0x82:
 	this.pio1.writeDataB( value );
 	v = this.pio1.fetchOutValuePortB( false );
-	this.emuThread.writeAudioPhase(
-		(v & (this.emuThread.isSoundOutEnabled() ?
-						0x01 : 0x04 )) != 0 );
-	this.nmiEnabled = ((v & 0x40) == 0);
+	this.soundOutPhase = ((v & 0x01) != 0);
+	this.tapeOutPhase  = ((v & 0x04) != 0);
+	this.nmiEnabled    = ((v & 0x40) == 0);
 	break;
 
       case 0x83:
@@ -666,13 +651,57 @@ public class Poly880 extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    boolean phase = this.emuThread.readTapeInPhase();
+    if( phase != this.tapeInPhase ) {
+      this.tapeInPhase = phase;
+      this.pio1.putInValuePortB( this.tapeInPhase ? 0x02 : 0, 0x02 );
+    }
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+    if( this.displayCheckTStates > 0 ) {
+      this.curDisplayTStates += tStates;
+      if( this.curDisplayTStates > this.displayCheckTStates ) {
+	boolean dirty = false;
+	synchronized( this.digitValues ) {
+	  for( int i = 0; i < this.digitValues.length; i++ ) {
+	    if( this.digitStatus[ i ] > 0 ) {
+	      --this.digitStatus[ i ];
+	    } else {
+	      if( this.digitValues[ i ] != 0 ) {
+		this.digitValues[ i ] = 0;
+		dirty = true;
+	      }
+	    }
+	  }
+	}
+	if( dirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+	this.curDisplayTStates = 0;
+      }
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private boolean emulatesNegatedROMs( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom.negated",
+		props,
+		this.propPrefix + PROP_ROM_PREFIX + PROP_NEGATED,
 				false );
   }
 
@@ -680,17 +709,17 @@ public class Poly880 extends EmuSys implements
   private boolean emulatesRAM8000( Properties props )
   {
     return EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "ram_8000.enabled",
-				false );
+			props,
+			this.propPrefix + PROP_RAM8000_ENABLED,
+			false );
   }
 
 
   private void loadROMs( Properties props )
   {
     this.rom0File  = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_0000.file" );
+			props,
+			this.propPrefix + PROP_ROM0000_PREFIX + PROP_FILE );
     this.rom0Bytes = readPoly880ROMFile( this.rom0File, "ROM 0" );
     if( this.rom0Bytes == null ) {
       if( mon0000 == null ) {
@@ -700,8 +729,8 @@ public class Poly880 extends EmuSys implements
     }
 
     this.rom1File = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_1000.file" );
+			props,
+			this.propPrefix + PROP_ROM1000_PREFIX + PROP_FILE );
     this.rom1Bytes = readPoly880ROMFile( this.rom1File, "ROM 1" );
     if( this.rom1Bytes == null ) {
       if( mon1000 == null ) {
@@ -711,13 +740,13 @@ public class Poly880 extends EmuSys implements
     }
 
     this.rom2File  = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_2000.file" );
+			props,
+			this.propPrefix + PROP_ROM2000_PREFIX + PROP_FILE );
     this.rom2Bytes = readPoly880ROMFile( this.rom2File, "ROM 2" );
 
     this.rom3File  = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_3000.file" );
+			props,
+			this.propPrefix + PROP_ROM3000_PREFIX + PROP_FILE );
     this.rom3Bytes = readPoly880ROMFile( this.rom3File, "ROM 3" );
   }
 
@@ -806,4 +835,3 @@ public class Poly880 extends EmuSys implements
       this.keyboardFld.updKeySelection( this.keyboardMatrix );
   }
 }
-

@@ -8,17 +8,27 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.text.*;
-import jkcemu.base.*;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.Document;
+import jkcemu.base.BaseDlg;
 
 
-public class ReplyFileHeadDlg extends BasicDlg implements DocumentListener
+public class ReplyFileHeadDlg extends BaseDlg implements DocumentListener
 {
   public enum Option {
 		BEGIN_ADDRESS,

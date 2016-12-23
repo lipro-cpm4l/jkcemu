@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,9 @@
 
 package jkcemu.programming;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Reader;
 import java.lang.*;
 
 

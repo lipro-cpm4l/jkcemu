@@ -8,20 +8,35 @@
 
 package jkcemu.emusys.ac1_llc2;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.RAMFloppiesSettingsFld;
+import jkcemu.base.RAMFloppy;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.LLC2;
 
 
 public class LLC2SettingsFld extends AbstractSettingsFld
 {
-  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 800;
-
   private JTabbedPane            tabbedPane;
   private SCCHModule1SettingsFld tabSCCH;
   private RAMFloppiesSettingsFld tabRF;
@@ -52,7 +67,7 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     // Tab SCCH-Modul 1
     this.tabSCCH = new SCCHModule1SettingsFld(
 					settingsFrm,
-					propPrefix + "scch." );
+					propPrefix + LLC2.PROP_SCCH_PREFIX );
     this.tabbedPane.addTab( "SCCH-Modul 1", this.tabSCCH );
 
 
@@ -138,7 +153,7 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 
     this.fldAltOS = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "os.",
+		propPrefix + LLC2.PROP_OS_PREFIX,
 		"Alternatives Monitorprogramm (0000h-0FFFh):" );
     gbcEtc.insets.top    = 5;
     gbcEtc.insets.bottom = 5;
@@ -147,7 +162,7 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 
     this.fldAltFont = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "font.",
+				propPrefix + LLC2.PROP_FONT_PREFIX,
 				"Alternativer Zeichensatz:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltFont, gbcEtc );
@@ -155,19 +170,19 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 
     // Tab AutoLoad
     this.tabAutoLoad = new AutoLoadSettingsFld(
-					settingsFrm,
-					propPrefix,
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
-					true );
+				settingsFrm,
+				propPrefix,
+				LLC2.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX,
+				true );
     this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
 
 
     // Tab AutoInput
     this.tabAutoInput = new AutoInputSettingsFld(
-					settingsFrm,
-					propPrefix,
-					LLC2.getDefaultSwapKeyCharCase(),
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+				settingsFrm,
+				propPrefix,
+				LLC2.DEFAULT_SWAP_KEY_CHAR_CASE,
+				LLC2.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
@@ -207,28 +222,30 @@ public class LLC2SettingsFld extends AbstractSettingsFld
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "floppydisk.enabled",
+		this.propPrefix + LLC2.PROP_FDC_ENABLED,
 		this.btnFloppyDisk.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "kcnet.enabled",
+		this.propPrefix + LLC2.PROP_KCNET_ENABLED,
 		this.btnKCNet.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "vdip.enabled",
+		this.propPrefix + LLC2.PROP_VDIP_ENABLED,
 		this.btnVDIP.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "joystick.enabled",
+		this.propPrefix + LLC2.PROP_JOYSTICK_ENABLED,
 		this.btnJoystick.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "paste.fast",
+		this.propPrefix + LLC2.PROP_PASTE_FAST,
 		this.btnPasteFast.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "screen.ratio",
-		this.btnRatio43.isSelected() ? "4:3" : "unscaled" );
+		this.propPrefix + LLC2.PROP_SCREEN_RATIO,
+		this.btnRatio43.isSelected() ?
+				LLC2.VALUE_SCREEN_RATIO_43
+				: LLC2.VALUE_SCREEN_RATIO_UNSCALED );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
 
@@ -299,37 +316,38 @@ public class LLC2SettingsFld extends AbstractSettingsFld
     this.btnFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "floppydisk.enabled",
+			this.propPrefix + LLC2.PROP_FDC_ENABLED,
 			false ) );
 
     this.btnKCNet.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "kcnet.enabled",
+			this.propPrefix + LLC2.PROP_KCNET_ENABLED,
 			false ) );
 
     this.btnVDIP.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "vdip.enabled",
+			this.propPrefix + LLC2.PROP_VDIP_ENABLED,
 			false ) );
 
     this.btnJoystick.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "joystick.enabled",
+			this.propPrefix + LLC2.PROP_JOYSTICK_ENABLED,
 			false ) );
 
     this.btnPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "paste.fast",
+			this.propPrefix + LLC2.PROP_PASTE_FAST,
 			false ) );
 
     this.btnRatio43.setSelected(
 		EmuUtil.getProperty(
 			props,
-			this.propPrefix + "screen.ratio" ).startsWith( "4" ) );
+			this.propPrefix + LLC2.PROP_SCREEN_RATIO )
+		.equals( LLC2.VALUE_SCREEN_RATIO_43 ) );
 
     this.fldAltOS.updFields( props );
     this.fldAltFont.updFields( props );

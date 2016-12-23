@@ -11,7 +11,8 @@ package jkcemu.programming.basic.target;
 import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.KramerMC;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AbstractTarget;
+import jkcemu.programming.basic.AsmCodeBuf;
 
 
 public class KramerMCTarget extends AbstractTarget

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,10 +8,16 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.lang.*;
 import java.text.DateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 import jkcemu.base.EmuUtil;
 
 
@@ -23,9 +29,6 @@ public class FileInfoFld extends Component
 		TYPE,
 		FORMAT,
 		DURATION,
-		AUTHOR,
-		TITLE,
-		DATE,
 		COMMENT,
 		SIZE,
 		LAST_MODIFIED };
@@ -115,21 +118,6 @@ public class FileInfoFld extends Component
 	      }
 	    }
 	  }
-	}
-	item = items.get( Item.AUTHOR );
-	if( item != null ) {
-	  labels.add( "Author:" );
-	  values.add( item.toString() );
-	}
-	item = items.get( Item.TITLE );
-	if( item != null ) {
-	  labels.add( "Titel:" );
-	  values.add( item.toString() );
-	}
-	String dateText = getDateTimeText( items, Item.DATE );
-	if( dateText != null ) {
-	  labels.add( "Datum:" );
-	  values.add( dateText );
 	}
 	item = items.get( Item.COMMENT );
 	if( item != null ) {
@@ -257,7 +245,7 @@ public class FileInfoFld extends Component
   private int getRowHeight()
   {
     if( this.rowHeight == null ) {
-      this.rowHeight = new Integer( getFont().getSize() + 1 );
+      this.rowHeight = getFont().getSize() + 1;
     }
     return this.rowHeight.intValue();
   }

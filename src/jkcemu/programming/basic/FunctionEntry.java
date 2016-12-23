@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2014 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -38,7 +38,7 @@ public class FunctionEntry extends CallableEntry
     this.retVarInfo   = new SimpleVarInfo(
 				getReturnType(),
 				null,
-				new Integer( this.retVarIYOffs ) );
+				this.retVarIYOffs );
   }
 
 

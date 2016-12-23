@@ -8,35 +8,73 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Event;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
+import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.EventObject;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.PatternSyntaxException;
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.BorderFactory;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.JViewport;
+import javax.swing.KeyStroke;
+import javax.swing.SwingConstants;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.text.JTextComponent;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.disk.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.ByteDataSource;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.HexCharFld;
+import jkcemu.base.ReplyBytesDlg;
 
 
-public class DiskImgViewFrm extends BasicFrm
+public class DiskImgViewFrm extends BaseFrm
 			implements
 				ByteDataSource,
 				CaretListener,
 				DropTargetListener,
 				HyperlinkListener
 {
-  private static final String MARK_BOGUS_ID = "*";
-  private static final String MARK_NO_DATA  = "no_data";
-  private static final String MARK_DELETED  = "del";
-  private static final String MARK_ERROR    = "err";
+  private static final String HELP_PAGE      = "/help/disk/diskimgviewer.htm";
+  private static final String MARK_BOGUS_ID  = "*";
+  private static final String MARK_NO_DATA   = "no_data";
+  private static final String MARK_DELETED   = "del";
+  private static final String MARK_ERROR     = "err";
+  private static final String PROP_SPLIT_POS = "split.position";
 
 
   private static class DataFoundException extends Exception
@@ -245,7 +283,7 @@ public class DiskImgViewFrm extends BasicFrm
     boolean rv   = super.applySettings( props, resizable );
     int splitPos = EmuUtil.parseIntProperty(
 				props,
-				getSettingsPrefix() + "split.position",
+				getSettingsPrefix() + PROP_SPLIT_POS,
 				-1,
 				-1 );
     if( splitPos >= 0 ) {
@@ -285,7 +323,7 @@ public class DiskImgViewFrm extends BasicFrm
         doFindNext();
       } else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/disk/diskimgviewer.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
     }
     return rv;
@@ -297,7 +335,7 @@ public class DiskImgViewFrm extends BasicFrm
   {
     boolean rv = super.doClose();
     if( rv && (this.disk != null) ) {
-      this.disk.doClose();
+      this.disk.closeSilent();
       this.fldFileName.setText( "" );
       this.fldPhysFormat.setText( "" );
       this.fldRemark.setText( "" );
@@ -320,7 +358,7 @@ public class DiskImgViewFrm extends BasicFrm
     if( props != null ) {
       super.putSettingsTo( props );
       props.setProperty(
-		getSettingsPrefix() + "split.position",
+		getSettingsPrefix() + PROP_SPLIT_POS,
 		String.valueOf( this.splitPane.getDividerLocation() ) );
     }
   }
@@ -615,7 +653,7 @@ public class DiskImgViewFrm extends BasicFrm
     openFile( EmuUtil.showFileOpenDlg(
 			this,
 			"Diskettenabbilddatei \u00F6ffnen",
-			Main.getLastDirFile( "disk" ),
+			Main.getLastDirFile( Main.FILE_GROUP_DISK ),
 			EmuUtil.getPlainDiskFileFilter(),
 			EmuUtil.getAnaDiskFileFilter(),
 			EmuUtil.getCopyQMFileFilter(),
@@ -737,7 +775,7 @@ public class DiskImgViewFrm extends BasicFrm
 	    }
 	  }
 	}
-	BasicDlg.showInfoDlg( this, "Byte-Folge nicht gefunden" );
+	BaseDlg.showInfoDlg( this, "Byte-Folge nicht gefunden" );
       }
     }
   }
@@ -768,10 +806,10 @@ public class DiskImgViewFrm extends BasicFrm
 
 	  // alte Abbilddatei schliessen und neue uebernehmen
 	  if( this.disk != null ) {
-	    this.disk.doClose();
+	    this.disk.closeSilent();
 	  }
 	  this.disk = disk;
-	  Main.setLastFile( file, "disk" );
+	  Main.setLastFile( file, Main.FILE_GROUP_DISK );
 	  setTitle( TITLE + ": " + file.getPath() );
 
 	  // Allgemeine Infos
@@ -1014,7 +1052,7 @@ public class DiskImgViewFrm extends BasicFrm
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
   }

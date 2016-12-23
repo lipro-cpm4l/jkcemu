@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,16 +8,24 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.*;
+import java.awt.Color;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Point;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
+import java.awt.image.IndexColorModel;
 import java.lang.*;
 import javax.swing.JComponent;
 
 
 public class ScreenFld extends JComponent implements MouseMotionListener
 {
-  public static final int DEFAULT_MARGIN = 20;
+  public static final String PROP_BRIGHTNESS    = "jkcemu.brightness";
+  public static final int    DEFAULT_BRIGHTNESS = 80;
+  public static final int    DEFAULT_MARGIN     = 20;
 
   private ScreenFrm  screenFrm;
   private Color      markXORColor;
@@ -95,7 +103,13 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	b[ i ] = (byte) color.getBlue();
       }
       IndexColorModel cm = new IndexColorModel( nBits, nColors, r, g, b );
-      img = new BufferedImage( w, h, BufferedImage.TYPE_BYTE_INDEXED, cm );
+      img = new BufferedImage(
+			w,
+			h,
+			nBits > 4 ?
+				BufferedImage.TYPE_BYTE_INDEXED
+				: BufferedImage.TYPE_BYTE_BINARY,
+			cm );
       Graphics graphics = img.createGraphics();
       paint( graphics, w, h, false );
       graphics.dispose();

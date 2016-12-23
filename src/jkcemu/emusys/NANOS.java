@@ -11,32 +11,58 @@ package jkcemu.emusys;
 import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
-import jkcemu.base.*;
-import jkcemu.disk.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.disk.FDC8272;
+import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.disk.FloppyDiskFormat;
+import jkcemu.disk.FloppyDiskInfo;
+import jkcemu.disk.GIDE;
 import jkcemu.etc.VDIP;
 import jkcemu.net.KCNet;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
+import z80emu.Z80SIO;
+import z80emu.Z80SIOChannelListener;
 
 
 public class NANOS extends EmuSys implements
 					FDC8272.DriveSelector,
 					Z80PIOPortListener,
-					Z80SIOChannelListener,
-					Z80TStatesListener
+					Z80SIOChannelListener
 {
-  public static final String PROP_KEYBOARD_KEY               = "keyboard";
-  public static final String PROP_KEYBOARD_VALUE_PIO00A_HS   = "pio00a_hs";
-  public static final String PROP_KEYBOARD_VALUE_PIO00A_BIT7 = "pio00a_bit7";
-  public static final String PROP_KEYBOARD_SWAP_CASE         = "swap_case";
+  public static final String SYSNAME     = "NANOS";
+  public static final String PROP_PREFIX = "jkcemu.nanos.";
 
-  public static final String PROP_GRAPHIC_KEY         = "graphic";
-  public static final String PROP_GRAPHIC_VALUE_64X32 = "64x32";
-  public static final String PROP_GRAPHIC_VALUE_80X24 = "80x24";
-  public static final String PROP_GRAPHIC_VALUE_80X25 = "80x25";
-  public static final String PROP_GRAPHIC_VALUE_POPPE = "poppe";
+  public static final String PROP_KEYBOARD            = "keyboard";
+  public static final String PROP_FONT_8X6_PREFIX     = "font.8x6.";
+  public static final String PROP_FONT_8X8_PREFIX     = "font.8x8.";
+  public static final String PROP_ROM                 = "rom";
+  public static final String PROP_KEYBOARD_SWAP_CASE  = "swap_case";
+  public static final String PROP_GRAPHIC             = "graphic";
+
+  public static final String VALUE_EPOS                 = "epos";
+  public static final String VALUE_NANOS                = "nanos";
+  public static final String VALUE_GRAPHIC_64X32        = "64x32";
+  public static final String VALUE_GRAPHIC_80X24        = "80x24";
+  public static final String VALUE_GRAPHIC_80X25        = "80x25";
+  public static final String VALUE_GRAPHIC_POPPE        = "poppe";
+  public static final String VALUE_KEYBOARD_PIO00A_HS   = "pio00a_hs";
+  public static final String VALUE_KEYBOARD_PIO00A_BIT7 = "pio00a_bit7";
+
+  public static final int DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 2000;
+
 
   private enum GraphicHW {
 			Video2_64x32,
@@ -86,7 +112,7 @@ public class NANOS extends EmuSys implements
   private FDC8272           fdc;
   private FloppyDiskDrive[] fdDrives;
   private boolean           fdcTC;
-  private boolean           audioInPhase;
+  private boolean           tapeInPhase;
   private boolean           altFontSelected;
   private boolean           colorRamSelected;
   private boolean           mode64x32;
@@ -105,7 +131,7 @@ public class NANOS extends EmuSys implements
 
   public NANOS( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.nanos." );
+    super( emuThread, props, PROP_PREFIX );
     this.graphicHW = getGraphicHW( props );
     if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
       this.ramVideoText  = new byte[ 0x0800 ];
@@ -186,21 +212,18 @@ public class NANOS extends EmuSys implements
 	iSources.toArray( new Z80InterruptSource[ iSources.size() ] ) );
     }
     catch( ArrayStoreException ex ) {}
+    cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     this.pio00.addPIOPortListener( this, Z80PIO.PortInfo.A );
     this.sio84.addChannelListener( this, 0 );
 
-    if( this.kcNet != null ) {
-      this.kcNet.z80MaxSpeedChanged( cpu );
-      cpu.addMaxSpeedListener( this.kcNet );
-    }
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
     }
-
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -216,12 +239,6 @@ public class NANOS extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 2457;
-  }
-
-
-  public static boolean getDefaultSwapKeyCharCase()
-  {
-    return false;
   }
 
 
@@ -266,41 +283,6 @@ public class NANOS extends EmuSys implements
   {
     if( (sio == this.sio84) && (channel == 1) )
       this.emuThread.getPrintMngr().putByte( value );
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    boolean phase = this.emuThread.readAudioPhase();
-    if( phase != this.audioInPhase ) {
-      this.audioInPhase = phase;
-      this.pio00.putInValuePortB( this.audioInPhase ? 0x20 : 0, 0x20 );
-    }
-    this.ctc8C.z80TStatesProcessed( cpu, tStates );
-    this.fdc.z80TStatesProcessed( cpu, tStates );
-    if( this.kcNet != null ) {
-      this.kcNet.z80TStatesProcessed( cpu, tStates );
-    }
-    if( (this.keyboardHW == KeyboardHW.PIO00A_HS)
-	&& (this.pasteTStates > 0) )
-    {
-      this.pasteTStates -= tStates;
-      synchronized( this ) {
-	if( this.pasteTStates <= 0 ) {
-	  if( this.pasteIter != null ) {
-	    char ch = this.pasteIter.next();
-	    if( ch == CharacterIterator.DONE ) {
-	      cancelPastingText();
-	    } else {
-	      putKeyChar( ch );
-	    }
-	  }
-	}
-      }
-    }
   }
 
 
@@ -361,8 +343,8 @@ public class NANOS extends EmuSys implements
     super.applySettings( props );
     if( EmuUtil.getProperty(
 		props,
-		this.propPrefix + PROP_KEYBOARD_KEY ).equals(
-					PROP_KEYBOARD_VALUE_PIO00A_BIT7 ) )
+		this.propPrefix + PROP_KEYBOARD ).equals(
+					VALUE_KEYBOARD_PIO00A_BIT7 ) )
     {
       this.keyboardHW = KeyboardHW.PIO00A_BIT7;
     } else {
@@ -381,11 +363,11 @@ public class NANOS extends EmuSys implements
   {
     boolean rv = EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( "NANOS" );
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
     if( rv ) {
       rv = TextUtil.equals(
 		this.romProp,
-		EmuUtil.getProperty( props, this.propPrefix + "rom" ) );
+		EmuUtil.getProperty( props, this.propPrefix + PROP_ROM ) );
     }
     if( rv && (this.graphicHW != getGraphicHW( props )) ) {
       rv = false;
@@ -406,6 +388,7 @@ public class NANOS extends EmuSys implements
   }
 
 
+  @Override
   public synchronized void cancelPastingText()
   {
     if( this.keyboardHW == KeyboardHW.PIO00A_HS ) {
@@ -417,7 +400,6 @@ public class NANOS extends EmuSys implements
       super.cancelPastingText();
     }
   }
-
 
 
   @Override
@@ -434,10 +416,10 @@ public class NANOS extends EmuSys implements
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    cpu.removeMaxSpeedListener( this );
     cpu.removeTStatesListener( this );
     this.fdc.die();
     if( this.kcNet != null ) {
-      cpu.removeMaxSpeedListener( this.kcNet );
       this.kcNet.die();
     }
     if( this.vdip != null ) {
@@ -610,6 +592,13 @@ public class NANOS extends EmuSys implements
   public FloppyDiskFormat getDefaultFloppyDiskFormat()
   {
     return FloppyDiskFormat.FMT_780K;
+  }
+
+
+  @Override
+  public int getDefaultPromptAfterResetMillisMax()
+  {
+    return DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX;
   }
 
 
@@ -837,7 +826,7 @@ public class NANOS extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "NANOS";
+    return SYSNAME;
   }
 
 
@@ -913,18 +902,15 @@ public class NANOS extends EmuSys implements
   public boolean keyTyped( char ch )
   {
     boolean rv = false;
-    if( (ch > 0) && (ch < 0x7F) ) {
-      if( this.pio00.isReadyPortA() ) {
-	putKeyChar( ch );
-	rv = true;
-      }
+    if( (ch > 0) && (ch < 0x7F) && this.pio00.isReadyPortA() ) {
+      rv = putKeyChar( ch );
     }
     return rv;
   }
 
 
   @Override
-  protected boolean pasteChar( char ch )
+  protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
     if( this.keyboardHW == KeyboardHW.PIO00A_HS ) {
@@ -932,13 +918,10 @@ public class NANOS extends EmuSys implements
 	ch = '\r';
       }
       if( (ch > 0) && (ch < 0x7F) ) {
-	try {
-	  while( !keyTyped( ch ) ) {
-	    Thread.sleep( 100 );
-	  }
-	  rv = true;
+	while( !this.pio00.isReadyPortA() ) {
+	  Thread.sleep( 50 );
 	}
-	catch( InterruptedException ex ) {}
+	rv = putKeyChar( ch );
       }
     } else {
       rv = super.pasteChar( ch );
@@ -1083,6 +1066,7 @@ public class NANOS extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
 	loadROMs( props );
@@ -1132,7 +1116,7 @@ public class NANOS extends EmuSys implements
     this.altFontSelected    = false;
     this.colorRamSelected   = false;
     this.fillPixLines8And9  = false;
-    this.audioInPhase       = this.emuThread.readAudioPhase();
+    this.tapeInPhase        = this.emuThread.readTapeInPhase();
     this.bootMemEnabled     = true;
     this.ram256kEnabled     = false;
     this.ram256kReadable    = false;
@@ -1225,11 +1209,17 @@ public class NANOS extends EmuSys implements
       if( text != null ) {
 	if( !text.isEmpty() ) {
 	  cancelPastingText();
-	  this.pasteIter = new StringCharacterIterator( text );
+	  CharacterIterator iter = new StringCharacterIterator( text );
 	  if( this.pio00.isReadyPortA() ) {
-	    putKeyChar( this.pasteIter.first() );
+	    if( putKeyChar( iter.first() ) ) {
+	      this.pasteIter = iter;
+	      done           = true;
+	    } else {
+	      fireShowCharNotPasted( iter );
+	    }
+	  } else {
+	    done = true;
 	  }
-	  done = true;
 	}
       }
       if( !done ) {
@@ -1238,13 +1228,6 @@ public class NANOS extends EmuSys implements
     } else {
       super.startPastingText( text );
     }
-  }
-
-
-  @Override
-  public boolean supportsAudio()
-  {
-    return true;
   }
 
 
@@ -1264,6 +1247,20 @@ public class NANOS extends EmuSys implements
 
   @Override
   public boolean supportsPasteFromClipboard()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
   {
     return true;
   }
@@ -1291,7 +1288,7 @@ public class NANOS extends EmuSys implements
 	      this.pio00.writeDataB( value );
 	      int outValue = this.pio00.fetchOutValuePortB( false );
 	      this.bootMemEnabled = ((outValue & 0x80) != 0);
-	      this.emuThread.writeAudioPhase( (outValue & 0x40) != 0 );
+	      this.tapeOutPhase   = ((outValue & 0x40) != 0);
 	    }
 	    break;
 	  case 2:
@@ -1426,13 +1423,60 @@ public class NANOS extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    boolean phase = this.emuThread.readTapeInPhase();
+    if( phase != this.tapeInPhase ) {
+      this.tapeInPhase = phase;
+      this.pio00.putInValuePortB( this.tapeInPhase ? 0x20 : 0, 0x20 );
+    }
+    this.ctc8C.z80TStatesProcessed( cpu, tStates );
+    this.fdc.z80TStatesProcessed( cpu, tStates );
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
+    }
+    if( (this.keyboardHW == KeyboardHW.PIO00A_HS)
+	&& (this.pasteTStates > 0) )
+    {
+      this.pasteTStates -= tStates;
+      if( this.pasteTStates <= 0 ) {
+	CharacterIterator iter = this.pasteIter;
+	if( iter != null ) {
+	  char ch = iter.next();
+	  if( ch == CharacterIterator.DONE ) {
+	    cancelPastingText();
+	  } else {
+	    if( !putKeyChar( ch ) ) {
+	      cancelPastingText();
+	      fireShowCharNotPasted( iter );
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private boolean emulatesKCNet( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "kcnet.enabled",
+			this.propPrefix + PROP_KCNET_ENABLED,
 			false );
   }
 
@@ -1441,7 +1485,7 @@ public class NANOS extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "vdip.enabled",
+			this.propPrefix + PROP_VDIP_ENABLED,
 			false );
   }
 
@@ -1451,15 +1495,15 @@ public class NANOS extends EmuSys implements
     GraphicHW rv = GraphicHW.Video3_80x25;
     switch( EmuUtil.getProperty(
 			props,
-			this.propPrefix + PROP_GRAPHIC_KEY ) )
+			this.propPrefix + PROP_GRAPHIC ) )
     {
-      case PROP_GRAPHIC_VALUE_64X32:
+      case VALUE_GRAPHIC_64X32:
 	rv = GraphicHW.Video2_64x32;
 	break;
-      case PROP_GRAPHIC_VALUE_80X24:
+      case VALUE_GRAPHIC_80X24:
 	rv = GraphicHW.Video3_80x24;
 	break;
-      case PROP_GRAPHIC_VALUE_POPPE:
+      case VALUE_GRAPHIC_POPPE:
 	rv = GraphicHW.Poppe_64x32_80x24;
 	break;
     }
@@ -1471,8 +1515,8 @@ public class NANOS extends EmuSys implements
   {
     return EmuUtil.getProperty(
 		props,
-		this.propPrefix + PROP_KEYBOARD_KEY ).equals(
-					PROP_KEYBOARD_VALUE_PIO00A_BIT7 ) ?
+		this.propPrefix + PROP_KEYBOARD ).equals(
+					VALUE_KEYBOARD_PIO00A_BIT7 ) ?
 			KeyboardHW.PIO00A_BIT7 : KeyboardHW.PIO00A_HS;
   }
 
@@ -1489,17 +1533,17 @@ public class NANOS extends EmuSys implements
   private void loadFonts( Properties props )
   {
     this.fontBytes8x8 = readFontByProperty(
-				props,
-				this.propPrefix + "font.8x8.file",
-				0x1000 );
+		props,
+		this.propPrefix + PROP_FONT_8X8_PREFIX + PROP_FILE,
+		0x1000 );
     if( this.fontBytes8x8 == null ) {
       this.fontBytes8x8 = getNanosFontBytes();
     }
     if( this.graphicHW == GraphicHW.Poppe_64x32_80x24 ) {
       this.fontBytes8x6 = readFontByProperty(
-				props,
-				this.propPrefix + "font.8x6.file",
-				0x1000 );
+		props,
+		this.propPrefix + PROP_FONT_8X6_PREFIX + PROP_FILE,
+		0x1000 );
       if( this.fontBytes8x6 == null ) {
 	this.fontBytes8x6 = getNanosFontBytes();
       }
@@ -1511,15 +1555,19 @@ public class NANOS extends EmuSys implements
   {
     this.romProp = EmuUtil.getProperty(
 			props,
-			this.propPrefix + "rom" );
-    String upperProp = this.romProp.toUpperCase();
-    if( (this.romProp.length() > 5) && upperProp.startsWith( "FILE:" ) ) {
+			this.propPrefix + PROP_ROM );
+    String lowerProp = this.romProp.toLowerCase();
+    if( (this.romProp.length() > VALUE_PREFIX_FILE.length())
+	&& lowerProp.startsWith( VALUE_PREFIX_FILE ) )
+    {
       this.romBytes = readROMFile(
 				this.romProp.substring( 5 ),
 				0x1000,
 				"ROM-Inhalt" );
     }
-    if( (this.romBytes == null) && upperProp.startsWith( "EPOS" ) ) {
+    if( (this.romBytes == null)
+	&& lowerProp.equalsIgnoreCase( VALUE_EPOS ) )
+    {
       if( romEpos == null ) {
 	romEpos = readResource( "/rom/nanos/eposrom.bin" );
       }
@@ -1535,8 +1583,9 @@ public class NANOS extends EmuSys implements
   }
 
 
-  private void putKeyChar( char ch )
+  private boolean putKeyChar( char ch )
   {
+    boolean rv = false;
     if( this.fontBytes8x8 == fontNanos ) {
       switch( ch ) {
 	case '\u0278':
@@ -1552,18 +1601,23 @@ public class NANOS extends EmuSys implements
     }
     switch( this.keyboardHW ) {
       case PIO00A_HS:
-	if( ch > '\u0000' ) {
+	if( (ch > 0) && (ch <= 0xFF) ) {
 	  this.pio00.putInValuePortA( TextUtil.toReverseCase( ch ), true );
+	  rv = true;
 	}
 	break;
       case PIO00A_BIT7:
-	if( ch > '\u0000' ) {
-	  this.pio00.putInValuePortA( ch | 0x80, 0xFF );
-	} else {
+	if( ch == 0 ) {
 	  this.pio00.putInValuePortA( 0, 0xFF );
+	  rv = true;
+	}
+	else if( (ch > 0) && (ch <= 0x7F) ) {
+	  this.pio00.putInValuePortA( ch | 0x80, 0xFF );
+	  rv = true;
 	}
 	break;
     }
+    return rv;
   }
 
 

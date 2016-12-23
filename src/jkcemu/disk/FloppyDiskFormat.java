@@ -258,7 +258,7 @@ public class FloppyDiskFormat
 	  m = diskSize;
 	}
       }
-      maxDiskSize = new Integer( m );
+      maxDiskSize = m;
     }
     return maxDiskSize.intValue();
   }

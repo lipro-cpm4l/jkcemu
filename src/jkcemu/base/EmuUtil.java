@@ -8,21 +8,73 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Dialog;
+import java.awt.EventQueue;
+import java.awt.FileDialog;
+import java.awt.Frame;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.Window;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.CharConversionException;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.RandomAccessFile;
 import java.lang.*;
-import java.net.*;
-import java.nio.channels.*;
-import java.nio.file.*;
-import java.text.*;
-import java.util.*;
-import java.util.regex.*;
-import java.util.zip.*;
-import javax.swing.*;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+import javax.swing.DefaultCellEditor;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JList;
+import javax.swing.JSpinner;
+import javax.swing.JTable;
+import javax.swing.LookAndFeel;
+import javax.swing.UIManager;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.filechooser.FileSystemView;
-import javax.swing.table.*;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import jkcemu.Main;
 import jkcemu.text.TextUtil;
 
@@ -49,13 +101,45 @@ public class EmuUtil
 					".c", ".cc", ".cmd", ".cpp", ".csh",
 					".h", ".java", ".log", ".sh", ".txt" };
 
-  private static DecimalFormat decFmtFix1 = null;
-  private static DecimalFormat decFmtMax1 = null;
-  private static NumberFormat  intFmt     = null;
-  private static Random        random     = null;
+  public static final String PROP_FILEDIALOG         = "jkcemu.filedialog";
+  public static final String VALUE_FILEDIALOG_NATIVE = "native";
+  public static final String VALUE_FILEDIALOG_JKCEMU = "jkcemu";
+  public static final String VALUE_FILEDIALOG_SWING  = "swing";
 
-  private static Map<String,javax.swing.filechooser.FileFilter>
-							fmt2FileFilter = null;
+  public static final String VALUE_FALSE = Boolean.FALSE.toString();
+  public static final String VALUE_TRUE  = Boolean.TRUE.toString();
+
+  private static DecimalFormat          decFmtFix1     = null;
+  private static DecimalFormat          decFmtMax1     = null;
+  private static NumberFormat           intFmt         = null;
+  private static Random                 random         = null;
+  private static Map<String,FileFilter> fmt2FileFilter = null;
+
+
+  public static boolean accept( File file, String... suffixes )
+  {
+    boolean rv = false;
+    if( (file != null) && (suffixes != null) ) {
+      String fName = file.getName();
+      if( fName != null ) {
+	fName = fName.toLowerCase();
+	for( String s : suffixes ) {
+	  if( s != null ) {
+	    if( !s.isEmpty() ) {
+	      if( !s.startsWith( "." ) ) {
+		s = "." + s;
+	      }
+	      if( fName.endsWith( s ) ) {
+		rv = true;
+		break;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    return rv;
+  }
 
 
   public static void addHeadersaveFileTypeItemsTo( JComboBox<String> combo )
@@ -208,11 +292,11 @@ public class EmuUtil
 		}
 	      }
 	      buf.append( ".\nM\u00F6chten Sie das Verzeichnis verwenden?" );
-	      if( !BasicDlg.showYesNoDlg( owner, buf.toString() ) ) {
+	      if( !BaseDlg.showYesNoDlg( owner, buf.toString() ) ) {
 		dirFile = null;
 	      }
 	    } else {
-	      BasicDlg.showErrorDlg(
+	      BaseDlg.showErrorDlg(
 		owner,
 		dirFile.getPath() + " existiert bereits\n"
 			+ "und kann nicht als Verzeichnis angelegt werden." );
@@ -249,6 +333,24 @@ public class EmuUtil
       parentFile = srcFile.getParentFile();
     }
     return askForOutputDir( owner, parentFile, presetName, msg, title );
+  }
+
+
+  /*
+   * Beim Schliessen eines GZIPOutputStreams tritt eine
+   * NullPointerException auf,
+   * wenn intern der Deflater bereits geschlossen wurde.
+   * Aus diesem Grund wird hier nicht nur IOException,
+   * sondern allgemein Exception abgefangen.
+   */
+  public static void closeSilent( Closeable stream )
+  {
+    if( stream != null ) {
+      try {
+	stream.close();
+      }
+      catch( Exception ex ) {}
+    }
   }
 
 
@@ -295,6 +397,53 @@ public class EmuUtil
   }
 
 
+  public static File completeFileExtension( File file, FileFilter filter )
+  {
+    if( (file != null) && (filter != null) ) {
+      if( filter instanceof FileNameExtensionFilter ) {
+	String[] exts = ((FileNameExtensionFilter) filter).getExtensions();
+	String  fName = file.getName();
+	if( (exts != null) && (fName != null) ) {
+	  int dotPos = fName.indexOf( '.' );
+	  if( (exts.length == 1)
+	      && ((dotPos < 0) || (dotPos == (fName.length() - 1))) )
+	  {
+	    if( dotPos < 0 ) {
+	      fName += ".";
+	    }
+	    fName += exts[ 0 ];
+	    File parent = file.getParentFile();
+	    if( parent != null ) {
+	      file = new File( parent, fName );
+	    } else {
+	      file = new File( fName );
+	    }
+	  }
+	}
+      }
+    }
+    return file;
+  }
+
+
+  public static boolean confirmFileOverwrite( Component owner, File file )
+  {
+    boolean rv = false;
+    if( file != null ) {
+      if( file.exists() ) {
+	rv = BaseDlg.showYesNoWarningDlg(
+		owner,
+		"Die Datei \'" + file.getName() + "\' existiert bereits.\n"
+			+ "M\u00F6chten Sie die Datei \u00FCberschreiben?",
+		"Best\u00E4tigung" );
+      } else {
+	rv = true;
+      }
+    }
+    return rv;
+  }
+
+
   public static void copyToClipboard( Component owner, String text )
   {
     try {
@@ -334,7 +483,7 @@ public class EmuUtil
 	  if( replyFile.mkdirs() ) {
 	    rvFile = replyFile;
 	  } else {
-	    BasicDlg.showErrorDlg(
+	    BaseDlg.showErrorDlg(
 			owner,
 			"Verzeichnis konnte nicht erstellt werden." );
 	  }
@@ -424,7 +573,7 @@ public class EmuUtil
 	out = new GZIPOutputStream( out );
       }
       catch( IOException ex ) {
-	doClose( out );
+	closeSilent( out );
 	throw ex;
       }
     }
@@ -435,28 +584,6 @@ public class EmuUtil
   public static Set<Path> createPathSet()
   {
     return new TreeSet<>( createPathComparator() );
-  }
-
-
-  public static void doClose( Closeable stream )
-  {
-    if( stream != null ) {
-      try {
-	stream.close();
-      }
-      catch( IOException ex ) {}
-    }
-  }
-
-
-  public static void doRelease( FileLock fileLock )
-  {
-    if( fileLock != null ) {
-      try {
-	fileLock.release();
-      }
-      catch( IOException ex ) {}
-    }
   }
 
 
@@ -517,7 +644,7 @@ public class EmuUtil
 
 
   public static void exitSysError(
-				Component parent,
+				Component owner,
 				String    msg,
 				Exception ex )
   {
@@ -589,9 +716,6 @@ public class EmuUtil
     }
 
     // Fehlerausschrift
-    if( parent == null ) {
-      parent = new Frame();
-    }
     if( errFile != null ) {
       errBuf.append( "\nEin Protokoll des Fehlers wurde"
 				+ " in die Textdatei\n\'" );
@@ -605,7 +729,10 @@ public class EmuUtil
 		+ "kurzen Beschreibung Ihrer letzten Aktionen per E-Mail an:\n"
 		+ "info@jens-mueller.org\n\n"
 		+ "Vielen Dank!" );
-    BasicDlg.showErrorDlg( parent, errBuf.toString(), "Applikationsfehler" );
+    BaseDlg.showErrorDlg(
+		owner != null ? owner : new Frame(),
+		errBuf.toString(),
+		"Applikationsfehler" );
     Main.exitFailure();
   }
 
@@ -709,7 +836,7 @@ public class EmuUtil
 		    if( file == null ) {
 		      file = (File) f;
 		    } else {
-		      BasicDlg.showErrorDlg(
+		      BaseDlg.showErrorDlg(
 				owner,
 				"Bitte nur eine Datei hier hineinziehen!" );
 		      file = null;
@@ -819,7 +946,7 @@ public class EmuUtil
 		  @Override
 		  public void run()
 		  {
-		    BasicDlg.showErrorDlg( owner, msg, ex );
+		    BaseDlg.showErrorDlg( owner, msg, ex );
 		  }
 		} );
   }
@@ -835,9 +962,15 @@ public class EmuUtil
 		  @Override
 		  public void run()
 		  {
-		    BasicDlg.showInfoDlg( owner, msg );
+		    BaseDlg.showInfoDlg( owner, msg );
 		  }
 		} );
+  }
+
+
+  public static String formatInt( int value )
+  {
+    return getIntegerFormat().format( value );
   }
 
 
@@ -880,15 +1013,15 @@ public class EmuUtil
     if( props != null ) {
       String s = props.getProperty( keyword );
       if( s != null ) {
-	s = s.trim().toUpperCase();
+	s = s.trim();
 	if( s.equals( "1" )
-	    || s.equals( "Y" )
-	    || s.equals( "TRUE" )
+	    || s.equalsIgnoreCase( "Y" )
+	    || s.equalsIgnoreCase( VALUE_TRUE )
 	    || Boolean.parseBoolean( s ) )
 	{
 	  rv = true;
 	}
-	if( s.equals( "0" ) || s.equals( "N" ) || s.equals( "FALSE" ) ) {
+	if( s.equals( "0" ) || s.equals( "N" ) || s.equals( VALUE_FALSE ) ) {
 	  rv = false;
 	}
       }
@@ -1043,6 +1176,32 @@ public class EmuUtil
   }
 
 
+  public static float getFloat( JSpinner spinner )
+  {
+    float  rv = 0;
+    Object o  = spinner.getValue();
+    if( o != null ) {
+      if( o instanceof Number ) {
+	rv = ((Number) o).floatValue();
+      }
+    }
+    return rv;
+  }
+
+
+  public static int getInt( JSpinner spinner )
+  {
+    int    rv = 0;
+    Object o  = spinner.getValue();
+    if( o != null ) {
+      if( o instanceof Number ) {
+	rv = ((Number) o).intValue();
+      }
+    }
+    return rv;
+  }
+
+
   public static NumberFormat getIntegerFormat()
   {
     if( intFmt == null ) {
@@ -1082,115 +1241,115 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getAC1Basic6FileFilter()
+  public static FileFilter getAC1Basic6FileFilter()
   {
     return getFileFilter( "AC1-BASIC6-Dateien (*.abc)", "abc" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getAnaDiskFileFilter()
+  public static FileFilter getAnaDiskFileFilter()
   {
     return getFileFilter( "AnaDisk-Dateien (*.dump)", "dump" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getBasicFileFilter()
+  public static FileFilter getBasicFileFilter()
   {
     return getFileFilter( "BASIC-/RBASIC-Dateien (*.bas)", "bas" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getBinaryFileFilter()
+  public static FileFilter getBinaryFileFilter()
   {
     return getFileFilter( "Einfache Speicherabbilddateien (*.bin)", "bin" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getCdtFileFilter()
+  public static FileFilter getCdtFileFilter()
   {
     return getFileFilter( "CPC-Tape-Dateien (*.cdt)", "cdt" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getCswFileFilter()
+  public static FileFilter getCswFileFilter()
   {
     return getFileFilter( "CSW-Dateien (*.csw)", "csw" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getComFileFilter()
+  public static FileFilter getComFileFilter()
   {
     return getFileFilter( "CP/M-Programmdateien (*.com)", "com" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getCopyQMFileFilter()
+  public static FileFilter getCopyQMFileFilter()
   {
     return getFileFilter( "CopyQM-Dateien (*.cqm; *.qm)", "cqm", "qm" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getDskFileFilter()
+  public static FileFilter getDskFileFilter()
   {
     return getFileFilter( "CPC-Disk-Dateien (*.dsk)", "dsk" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getGIFFileFilter()
+  public static FileFilter getGIFFileFilter()
   {
     return getFileFilter( "GIF-Dateien (*.gif)", "gif" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getHeadersaveFileFilter()
+  public static FileFilter getHeadersaveFileFilter()
   {
     return getFileFilter( "Headersave-Dateien (*.z80)", "z80" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getHexFileFilter()
+  public static FileFilter getHexFileFilter()
   {
     return getFileFilter( "HEX-Dateien (*.hex)", "hex" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getImageDiskFileFilter()
+  public static FileFilter getImageDiskFileFilter()
   {
     return getFileFilter( "ImageDisk-Dateien (*.imd)", "imd" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getISOFileFilter()
+  public static FileFilter getISOFileFilter()
   {
     return getFileFilter( "CD-/DVD-Abbilddateien (*.iso)", "iso" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getKCBasicFileFilter()
+  public static FileFilter getKCBasicFileFilter()
   {
     return getFileFilter( "KC-BASIC-Dateien (*.sss)", "sss" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getKCBasicSystemFileFilter()
+  public static FileFilter getKCBasicSystemFileFilter()
   {
     return getFileFilter( "KC-BASIC-Systemdateien (*.kcb)", "kcb" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getKCSystemFileFilter()
+  public static FileFilter getKCSystemFileFilter()
   {
     return getFileFilter( "KC-Systemdateien (*.kcc)", "kcc" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getKCTapFileFilter()
+  public static FileFilter getKCTapFileFilter()
   {
     return getFileFilter( "KC-TAP-Dateien (*.tap)", "tap" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getPlainDiskFileFilter()
+  public static FileFilter getPlainDiskFileFilter()
   {
     return getFileFilter(
 		"Einfache Abbilddateien (*.img; *.image, *.raw)",
@@ -1198,7 +1357,7 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getProjectFileFilter()
+  public static FileFilter getProjectFileFilter()
   {
     return getFileFilter( "Projekdateien (*.prj)", "prj" );
   }
@@ -1214,19 +1373,19 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getRMCFileFilter()
+  public static FileFilter getRMCFileFilter()
   {
     return getFileFilter( "RBASIC-Maschinencodedateien (*.rmc)", "rmc" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getROMFileFilter()
+  public static FileFilter getROMFileFilter()
   {
     return getFileFilter( "ROM-Dateien (*.bin; *.rom)", "rom", "bin" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getTapeFileFilter()
+  public static FileFilter getTapeFileFilter()
   {
     return getFileFilter(
 			"Tape-Dateien (*.cdt; *.csw; *.tap; *.tzx)",
@@ -1234,13 +1393,13 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getTeleDiskFileFilter()
+  public static FileFilter getTeleDiskFileFilter()
   {
     return getFileFilter( "TeleDisk-Dateien (*.td0)", "td0" );
   }
 
 
-  public static javax.swing.filechooser.FileFilter getTextFileFilter()
+  public static FileFilter getTextFileFilter()
   {
     return getFileFilter(
 			"Textdateien (*.asc; *.log; *.txt)",
@@ -1248,7 +1407,7 @@ public class EmuUtil
   }
 
 
-  public static javax.swing.filechooser.FileFilter getTzxFileFilter()
+  public static FileFilter getTzxFileFilter()
   {
     return getFileFilter( "ZX-Tape-Dateien (*.tzx)", "tzx" );
   }
@@ -1273,7 +1432,36 @@ public class EmuUtil
   }
 
 
-  public static long getInt4( byte[] buf, int pos )
+  public static int getInt2BE( byte[] buf, int pos )
+  {
+    int rv = -1;
+    if( buf != null ) {
+      if( (pos >= 0) && (pos + 1 < buf.length) ) {
+	rv = (((int) buf[ pos ] << 8) & 0xFF00)
+		| ((int) buf[ pos + 1 ] & 0x00FF);
+      }
+    }
+    return rv;
+  }
+
+
+  public static long getInt4BE( byte[] buf, int pos )
+  {
+    long rv = -1;
+    if( buf != null ) {
+      if( (pos >= 0) && (pos + 3 < buf.length) ) {
+	rv = 0;
+	for( int i = 0; i < 4; i++ ) {
+	  rv <<= 8;
+	  rv |= ((int) buf[ pos++ ] & 0xFF);
+	}
+      }
+    }
+    return rv;
+  }
+
+
+  public static long getInt4LE( byte[] buf, int pos )
   {
     long rv = -1;
     if( buf != null ) {
@@ -1385,9 +1573,31 @@ public class EmuUtil
 
   public static boolean isJKCEMUFileDialogSelected()
   {
-    return !TextUtil.equalsIgnoreCase(
-			Main.getProperty( "jkcemu.filedialog" ),
-			"native" );
+    String s = Main.getProperty( PROP_FILEDIALOG );
+    return !TextUtil.equalsIgnoreCase( s, VALUE_FILEDIALOG_NATIVE )
+		&& !TextUtil.equalsIgnoreCase( s, VALUE_FILEDIALOG_SWING );
+  }
+
+
+  public static boolean isTextAt(
+				CharSequence text,
+				byte[]       fileBytes,
+				int          offs )
+  {
+    boolean rv = false;
+    if( (text != null) && (fileBytes != null) ) {
+      int textLen = text.length();
+      if( (offs + textLen) <= fileBytes.length ) {
+	rv = true;
+	for( int i = 0; i < textLen; i++ ) {
+	  if( ((char) fileBytes[ offs + i ] & 0xFF) != text.charAt( i ) ) {
+	    rv = false;
+	    break;
+	  }
+	}
+      }
+    }
+    return rv;
   }
 
 
@@ -1431,7 +1641,7 @@ public class EmuUtil
 	in = new GZIPInputStream( in );
       }
       catch( IOException ex ) {
-	doClose( in );
+	closeSilent( in );
 	in = null;
       }
     }
@@ -1558,8 +1768,8 @@ public class EmuUtil
   /*
    * Diese Methode liesst von einem Stream solange Daten,
    * bis das Ziel-Array voll ist oder das Streamende erreicht wurde.
-   * Beim Laden einer im JAR-Archiv befindlichen Datei
-   * oder beim Lesen aus einem GZIP-Stream wird haeufig
+   * Beim Lesen eines Arrays aus einer im JAR-Archiv befindlichen Datei
+   * oder aus einem GZIP-Stream wird haeufig
    * nur ein Teil der Bytes gelesen.
    * -> Solange "read" aufrufen, bis alle Bytes gelesen wurden
    *
@@ -1585,6 +1795,14 @@ public class EmuUtil
 
   public static byte[] readFile(
 			File    file,
+			boolean allowUncompress ) throws IOException
+  {
+    return readFile( file, allowUncompress, -1 );
+  }
+
+
+  public static byte[] readFile(
+			File    file,
 			boolean allowUncompress,
 			int     maxLen ) throws IOException
   {
@@ -1593,7 +1811,7 @@ public class EmuUtil
       long        len = file.length();
       InputStream in  = null;
       try {
-	if( allowUncompress && EmuUtil.isGZipFile( file ) ) {
+	if( allowUncompress && isGZipFile( file ) ) {
 	  in = new GZIPInputStream( new FileInputStream( file ) );
 	} else {
 	  in = new FileInputStream( file );
@@ -1616,9 +1834,7 @@ public class EmuUtil
 	  int n = read( in, rv );
 	  if( n < rv.length ) {
 	    if( n > 0 ) {
-	      byte[] a = new byte[ n ];
-	      System.arraycopy( rv, 0, a, 0, a.length );
-	      rv = a;
+	      rv = Arrays.copyOf( rv, n );
 	    } else {
 	      rv = null;
 	    }
@@ -1626,7 +1842,7 @@ public class EmuUtil
 	}
       }
       finally {
-	doClose( in );
+	closeSilent( in );
       }
     }
     return rv;
@@ -1644,14 +1860,11 @@ public class EmuUtil
     if( fileName != null ) {
       if( !fileName.isEmpty() ) {
 	try {
-	  rv = EmuUtil.readFile(
-			new File( fileName ),
-			allowUncompress,
-			maxLen );
+	  rv = readFile( new File( fileName ), allowUncompress, maxLen );
 	}
 	catch( IOException ex ) {
 	  String msg = ex.getMessage();
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 			owner,
 			String.format(
 				"%s kann nicht geladen werden%s%s",
@@ -1692,8 +1905,8 @@ public class EmuUtil
       ex = ioEx;
     }
     finally {
-      doClose( in );
-      doClose( is );
+      closeSilent( in );
+      closeSilent( is );
     }
     if( !done ) {
       exitSysError(
@@ -1704,6 +1917,17 @@ public class EmuUtil
 		ex );
     }
     return buf.toByteArray();
+  }
+
+
+  public static void releaseSilent( FileLock fileLock )
+  {
+    if( fileLock != null ) {
+      try {
+	fileLock.release();
+      }
+      catch( IOException ex ) {}
+    }
   }
 
 
@@ -1721,7 +1945,7 @@ public class EmuUtil
 	}
       }
       catch( UnsupportedOperationException ex ) {
-	BasicDlg.showErrorDlg(
+	BaseDlg.showErrorDlg(
 		owner,
 		"Umbenennen der Datei wird nicht unterst\u00FCtzt." );
       }
@@ -1758,7 +1982,7 @@ public class EmuUtil
 	  newPath = Files.move( path, path.resolveSibling( newName ) );
 	}
 	catch( Exception ex ) {
-	  BasicDlg.showErrorDlg( owner, ex );
+	  BaseDlg.showErrorDlg( owner, ex );
 	}
       }
     }
@@ -1824,19 +2048,31 @@ public class EmuUtil
 	int n = Math.min( tcm.getColumnCount(), colWidths.length );
 	for( int i = 0; i < n; i++ ) {
 	  TableColumn c = tcm.getColumn( i );
-	  if( c != null )
+	  if( c != null ) {
 	    c.setPreferredWidth( colWidths[ i ] );
+	  }
 	}
       }
     }
   }
 
 
+  public static void setValue( JSpinner spinner, int value )
+  {
+    try {
+      spinner.setValue( value );
+    }
+    catch( IllegalArgumentException ex ) {
+      exitSysError( null, null, ex );
+    }
+  }
+
+
   public static File showFileOpenDlg(
-			Window                                owner,
-			String                                title,
-			File                                  preSelection,
-			javax.swing.filechooser.FileFilter... fileFilters )
+			Window        owner,
+			String        title,
+			File          preSelection,
+			FileFilter... fileFilters )
   {
     preSelection       = getDirectory( preSelection );
     File  file         = null;
@@ -1852,12 +2088,23 @@ public class EmuUtil
       dlg.setVisible( true );
       file = dlg.getSelectedFile();
     } else {
-      File[] files = showNativeFileDlg(
+      File[] files = null;
+      if( isSwingFileDialogSelected() ) {
+	files = showSwingFileDlg(
+				owner,
+				false,
+				false,
+				title,
+				preSelection,
+				fileFilters );
+      } else {
+	files = showNativeFileDlg(
 				owner,
 				false,
 				false,
 				title,
 				preSelection );
+      }
       if( files != null ) {
 	if( files.length > 0 ) {
 	  file = files[ 0 ];
@@ -1894,10 +2141,10 @@ public class EmuUtil
 
 
   public static File showFileSaveDlg(
-			Window                                owner,
-			String                                title,
-			File                                  preSelection,
-			javax.swing.filechooser.FileFilter... fileFilters )
+			Window        owner,
+			String        title,
+			File          preSelection,
+			FileFilter... fileFilters )
   {
     File file = null;
     if( isJKCEMUFileDialogSelected() ) {
@@ -1912,12 +2159,23 @@ public class EmuUtil
       dlg.setVisible( true );
       file = dlg.getSelectedFile();
     } else {
-      File[] files = showNativeFileDlg(
+      File[] files = null;
+      if( isSwingFileDialogSelected() ) {
+	files = showSwingFileDlg(
+				owner,
+				true,
+				false,
+				title,
+				preSelection,
+				fileFilters );
+      } else {
+	files = showNativeFileDlg(
 				owner,
 				true,
 				false,
 				title,
 				preSelection );
+      }
       if( files != null ) {
 	if( files.length > 0 ) {
 	  file = files[ 0 ];
@@ -1929,10 +2187,10 @@ public class EmuUtil
 
 
   public static java.util.List<File> showMultiFileOpenDlg(
-			Window                                owner,
-			String                                title,
-			File                                  preSelection,
-			javax.swing.filechooser.FileFilter... fileFilters )
+			Window        owner,
+			String        title,
+			File          preSelection,
+			FileFilter... fileFilters )
   {
     java.util.List<File> files = null;
     preSelection               = getDirectory( preSelection );
@@ -1948,12 +2206,23 @@ public class EmuUtil
       dlg.setVisible( true );
       files = dlg.getSelectedFiles();
     } else {
-      File[] tmpFiles = showNativeFileDlg(
+      File[] tmpFiles = null;
+      if( isSwingFileDialogSelected() ) {
+	tmpFiles = showSwingFileDlg(
+				owner,
+				false,
+				true,
+				title,
+				preSelection,
+				fileFilters );
+      } else {
+	tmpFiles = showNativeFileDlg(
 				owner,
 				false,
 				true,
 				title,
 				preSelection );
+      }
       if( tmpFiles != null ) {
 	if( tmpFiles.length > 0 ) {
 	  files = Arrays.asList( tmpFiles );
@@ -1998,6 +2267,19 @@ public class EmuUtil
   }
 
 
+  public static void throwMysteriousData() throws IOException
+  {
+    throw new IOException( "Datei enth\u00E4lt mysteri\u00F6se Daten." );
+  }
+
+
+  public static void throwUnsupportedFileFormat() throws IOException
+  {
+    throw new IOException( "Das Dateiformat nicht unterst\u00FCtzt\n"
+			+ "oder die Datei ist besch\u00E4digt." );
+  }
+
+
   public static void writeASCII(
 			OutputStream out,
 			CharSequence text ) throws IOException
@@ -2031,6 +2313,44 @@ public class EmuUtil
       out.write( 0 );
       --len;
     }
+  }
+
+
+  public static void writeInt2BE(
+				OutputStream out,
+				int          v ) throws IOException
+  {
+    out.write( (int) ((v >> 8) & 0xFF) );
+    out.write( (int) (v & 0xFF) );
+  }
+
+
+  public static void writeInt2LE(
+				OutputStream out,
+				int          v ) throws IOException
+  {
+    out.write( (int) (v & 0xFF) );
+    out.write( (int) ((v >> 8) & 0xFF) );
+  }
+
+
+  public static void writeInt4BE(
+				OutputStream out,
+				long         v ) throws IOException
+  {
+    out.write( (int) ((v >> 24) & 0xFF) );
+    out.write( (int) ((v >> 16) & 0xFF) );
+    out.write( (int) ((v >> 8) & 0xFF) );
+    out.write( (int) (v & 0xFF) );
+  }
+
+
+  public static void writeInt4LE(
+				OutputStream out,
+				long         v ) throws IOException
+  {
+    writeInt2LE( out, (int) v );
+    writeInt2LE( out, (int) (v >> 16) );
   }
 
 
@@ -2087,11 +2407,9 @@ public class EmuUtil
   }
 
 
-  private static javax.swing.filechooser.FileFilter getFileFilter(
-							String    text,
-							String... formats )
+  private static FileFilter getFileFilter( String text, String... formats )
   {
-    javax.swing.filechooser.FileFilter rv = null;
+    FileFilter rv = null;
     if( (formats != null) && (text != null) ) {
       if( formats.length > 0 ) {
 	if( fmt2FileFilter == null ) {
@@ -2099,9 +2417,7 @@ public class EmuUtil
 	}
 	rv = fmt2FileFilter.get( text );
 	if( rv == null ) {
-	  rv = new javax.swing.filechooser.FileNameExtensionFilter(
-								text,
-								formats );
+	  rv = new FileNameExtensionFilter( text, formats );
 	  fmt2FileFilter.put( text, rv );
 	}
       }
@@ -2110,12 +2426,20 @@ public class EmuUtil
   }
 
 
+  private static boolean isSwingFileDialogSelected()
+  {
+    return TextUtil.equalsIgnoreCase(
+			Main.getProperty( PROP_FILEDIALOG ),
+			VALUE_FILEDIALOG_SWING );
+  }
+
+
   private static File[] showNativeFileDlg(
-					Window  owner,
-					boolean forSave,
-					boolean multiMode,
-					String  title,
-					File    preSelection )
+				Window  owner,
+				boolean forSave,
+				boolean multiMode,
+				String  title,
+				File    preSelection )
   {
     File[] files    = null;
     Dialog ownerDlg = null;
@@ -2160,10 +2484,105 @@ public class EmuUtil
 	  }
 	}
       }
-      BasicDlg.setParentCentered( dlg );
+      BaseDlg.setParentCentered( dlg );
       dlg.setVisible( true );
       files = dlg.getFiles();
     }
     return files;
+  }
+
+
+  private static File[] showSwingFileDlg(
+				Window        owner,
+				boolean       forSave,
+				boolean       multiMode,
+				String        title,
+				File          preSelection,
+				FileFilter... fileFilters )
+  {
+    File[]       files       = null;
+    JFileChooser fileChooser = new JFileChooser()
+	{
+	  @Override
+	  protected JDialog createDialog( Component parent )
+	  {
+	    JDialog dlg = super.createDialog( parent );
+	    dlg.setModalityType( Dialog.ModalityType.DOCUMENT_MODAL );
+	    return dlg;
+	  }
+	};
+    fileChooser.setAcceptAllFileFilterUsed( true );
+    fileChooser.setControlButtonsAreShown( true );
+    if( preSelection != null ) {
+      File dirFile = null;
+      if( preSelection.isDirectory() ) {
+	dirFile = preSelection;
+      } else {
+	dirFile = preSelection.getParentFile();
+      }
+      if( dirFile != null ) {
+	if( forSave && !preSelection.equals( dirFile ) ) {
+	  fileChooser.setSelectedFile( preSelection );
+	} else {
+	  fileChooser.setCurrentDirectory( dirFile );
+	}
+      }
+    }
+    fileChooser.setDialogTitle( title );
+    /*
+     * Bei Save CUSTOM_DIALOG nehmen,
+     * damit JFileChooser selbst keine Warnung wegen Ueberschreiben
+     * der Datei bringt.
+     * Eine solche Warnung wird weiter unten ausgegeben,
+     * nachdem evtl. eine Dateiendung angehaengt wurde.
+     */
+    fileChooser.setDialogType( forSave ?
+				JFileChooser.CUSTOM_DIALOG
+				: JFileChooser.OPEN_DIALOG );
+    fileChooser.setFileSelectionMode( JFileChooser.FILES_ONLY );
+    fileChooser.setMultiSelectionEnabled( multiMode );
+    if( fileFilters != null ) {
+      for( javax.swing.filechooser.FileFilter fileFilter : fileFilters ) {
+	if( fileFilter != null ) {
+	  fileChooser.addChoosableFileFilter( fileFilter );
+	}
+      }
+      if( fileFilters.length == 1 ) {
+	if( fileFilters[ 0 ] != null ) {
+	  fileChooser.setFileFilter( fileFilters[ 0 ] );
+	}
+      }
+    }
+    if( fileChooser.showDialog(
+		owner,
+		forSave ?
+			"Speichern"
+			: "\u00D6ffnen" ) == JFileChooser.APPROVE_OPTION )
+    {
+      if( multiMode ) {
+	files = fileChooser.getSelectedFiles();
+      } else {
+	File file = completeFileExtension(
+				fileChooser.getSelectedFile(),
+				fileChooser.getFileFilter() );
+	if( file != null ) {
+	  if( forSave ) {
+	    if( !confirmFileOverwrite( owner, file ) ) {
+	      file = null;
+	    }
+	  }
+	}
+	if( file != null ) {
+	  files = new File[] { file };
+	}
+      }
+    }
+    return files;
+  }
+
+
+  private EmuUtil()
+  {
+    // Klasse nicht instanziierbar
   }
 }

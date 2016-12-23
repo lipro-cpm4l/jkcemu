@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,20 +8,40 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
+import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.IOException;
 import java.lang.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
-import java.text.*;
-import java.util.*;
-import javax.swing.*;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileStore;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.LinkOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributeView;
+import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.nio.file.attribute.UserPrincipal;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.EventObject;
+import javax.swing.JButton;
+import javax.swing.JLabel;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
 public class FilePropDlg
-		extends BasicDlg
+		extends BaseDlg
 		implements FileVisitor<Path>, Runnable
 {
   private Path             path;
@@ -183,29 +203,70 @@ public class FilePropDlg
 					0, 0 );
 
 
-      // Fensterinhalt
-      int nLines = lines.size();
-      for( int i = 0; i < nLines; i++ ) {
-	String[] line = lines.get( i );
-	if( line.length > 1 ) {
-	  gbc.gridx = 0;
-	  add( new JLabel( line[ 0 ] ), gbc );
-	  gbc.gridx++;
-	  JLabel label = new JLabel( line[ 1 ] );
-	  add( label, gbc );
-	  gbc.gridy++;
-	  if( i == sizeLineIdx ) {
-	    this.sizeLabel = label;
+      // Info ueber Datei/Verzeichnis
+      addLines( lines, gbc, sizeLineIdx );
+
+      // Info ueber Datentraeger
+      try {
+	FileStore store = Files.getFileStore( path );
+	if( store != null ) {
+	  long storeSize = store.getTotalSpace();
+	  if( storeSize > 0 ) {
+	    lines.clear();
+
+	    JLabel label = new JLabel( "Datentr\u00E4ger" );
+	    Font   font  = label.getFont();
+	    if( font != null ) {
+	      label.setFont(
+		new Font( font.getName(), Font.BOLD, font.getSize() ) );
+	    }
+	    gbc.insets.top = 15;
+	    gbc.gridwidth  = GridBagConstraints.REMAINDER;
+	    gbc.gridx      = 0;
+	    add( label, gbc );
+
+	    gbc.insets.top    = 0;
+	    gbc.insets.bottom = 0;
+	    gbc.gridwidth     = 1;
+	    gbc.gridy++;
+
+	    text = store.name();
+	    if( text != null ) {
+	      if( !text.isEmpty() ) {
+		lines.add( new String[] { "Name:", text } );
+	      }
+	    }
+	    text = store.type();
+	    if( text != null ) {
+	      if( !text.isEmpty() ) {
+		lines.add( new String[] { "Typ:", text } );
+	      }
+	    }
+	    lines.add(
+		new String[] {
+			"Gr\u00F6\u00DFe:",
+			EmuUtil.formatSize( storeSize, false, true )
+		} );
+	    lines.add(
+		new String[] {
+			"Freier Speicher:",
+			EmuUtil.formatSize(
+					store.getUnallocatedSpace(),
+					false,
+					true )
+		} );
+	    addLines( lines, gbc, -1 );
 	  }
 	}
       }
+      catch( Exception ex ) {}
 
       // Knopf
       this.btnOK = new JButton( "OK" );
       this.btnOK.addActionListener( this );
 
       gbc.anchor        = GridBagConstraints.CENTER;
-      gbc.insets.top    = 10;
+      gbc.insets.top    = 15;
       gbc.insets.bottom = 10;
       gbc.gridwidth     = GridBagConstraints.REMAINDER;
       gbc.gridx         = 0;
@@ -354,6 +415,29 @@ public class FilePropDlg
 
 
 	/* --- private Methoden --- */
+
+  private void addLines(
+			java.util.List<String[]> lines,
+			GridBagConstraints       gbc,
+			int                      sizeLineIdx )
+  {
+    int nLines = lines.size();
+    for( int i = 0; i < nLines; i++ ) {
+      String[] line = lines.get( i );
+      if( line.length > 1 ) {
+	gbc.gridx = 0;
+	add( new JLabel( line[ 0 ] ), gbc );
+	gbc.gridx++;
+	JLabel label = new JLabel( line[ 1 ] );
+	add( label, gbc );
+	gbc.gridy++;
+	if( i == sizeLineIdx ) {
+	  this.sizeLabel = label;
+	}
+      }
+    }
+  }
+
 
   private void setSizeText( String text )
   {

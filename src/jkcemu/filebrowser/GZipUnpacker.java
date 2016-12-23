@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,25 +8,34 @@
 
 package jkcemu.filebrowser;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.zip.*;
-import javax.swing.*;
+import java.util.zip.GZIPInputStream;
+import javax.swing.ProgressMonitor;
+import javax.swing.ProgressMonitorInputStream;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
 
 
 public class GZipUnpacker extends Thread
 {
-  private BasicFrm owner;
-  private File     srcFile;
-  private File     outFile;
+  private BaseFrm owner;
+  private File    srcFile;
+  private File    outFile;
 
 
   public static void unpackFile(
-			BasicFrm owner,
-               		File     srcFile,
-                	File     outFile )
+			BaseFrm owner,
+			File    srcFile,
+			File    outFile )
   {
     (new GZipUnpacker( owner, srcFile, outFile )).start();
   }
@@ -71,7 +80,7 @@ public class GZipUnpacker extends Thread
       }
       out.close();
       out = null;
-      if( millis > 0 ) {
+      if( millis != -1 ) {
 	this.outFile.setLastModified( millis );
       }
     }
@@ -83,9 +92,9 @@ public class GZipUnpacker extends Thread
       msg  = ex.getMessage();
     }
     finally {
-      EmuUtil.doClose( gzipIn );
-      EmuUtil.doClose( in );
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( gzipIn );
+      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilent( out );
     }
     FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
     if( msg != null ) {
@@ -97,9 +106,9 @@ public class GZipUnpacker extends Thread
 	/* --- private Konstruktoren --- */
 
   private GZipUnpacker(
-		BasicFrm owner,
-		File     srcFile,
-		File     outFile )
+		BaseFrm owner,
+		File    srcFile,
+		File    outFile )
   {
     super( Main.getThreadGroup(), "JKCEMU gzip unpacker" );
     this.owner   = owner;

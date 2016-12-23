@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,35 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
+import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.text.*;
+import java.util.Arrays;
+import java.util.EventObject;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import jkcemu.Main;
 
 
-public class ProfileDlg extends BasicDlg implements
+public class ProfileDlg extends BaseDlg implements
 						DocumentListener,
 						ListSelectionListener
 {
@@ -331,7 +348,7 @@ public class ProfileDlg extends BasicDlg implements
 	  if( status ) {
 	    this.selectedProfile = getProfile( s );
 	  } else {
-	    BasicDlg.showErrorDlg(
+	    showErrorDlg(
 		this,
 		"Der ausgew\u00E4hlte Name enth\u00E4lt ung\u00FCltige"
 			+ "Zeichen.\n"
@@ -364,7 +381,7 @@ public class ProfileDlg extends BasicDlg implements
   {
     Object o = this.list.getSelectedValue();
     if( o != null ) {
-      if( BasicDlg.showYesNoDlg(
+      if( showYesNoDlg(
 		this,
 		"M\u00F6chten Sie das Profil l\u00F6schen?" ) )
       {
@@ -373,7 +390,7 @@ public class ProfileDlg extends BasicDlg implements
 	  this.listModel.removeElement( o );
 	  this.btnDelete.setEnabled( false );
 	} else {
-	  BasicDlg.showErrorDlg(
+	  showErrorDlg(
 		this,
 		"Das Profil kann nicht gel\u00F6scht werden." );
 	}

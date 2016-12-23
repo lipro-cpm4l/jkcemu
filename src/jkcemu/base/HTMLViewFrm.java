@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,20 +8,38 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.print.*;
+import java.awt.Event;
+import java.awt.EventQueue;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.event.KeyEvent;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
 import java.lang.*;
-import java.util.*;
-import java.util.regex.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.text.*;
+import java.util.EventObject;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import javax.swing.JEditorPane;
+import javax.swing.JOptionPane;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JScrollPane;
+import javax.swing.KeyStroke;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import jkcemu.Main;
-import jkcemu.print.*;
+import jkcemu.print.PrintOptionsDlg;
+import jkcemu.print.PrintUtil;
+import jkcemu.text.TextUtil;
 
 
-public class HTMLViewFrm extends BasicFrm implements
+public class HTMLViewFrm extends BaseFrm implements
 						CaretListener,
 						Printable
 {
@@ -36,6 +54,7 @@ public class HTMLViewFrm extends BasicFrm implements
   private JMenuItem mnuEditCopy         = null;
   private JMenuItem mnuEditFind         = null;
   private JMenuItem mnuEditFindNext     = null;
+  private JMenuItem mnuEditFindPrev     = null;
   private JMenuItem mnuEditSelectAll    = null;
   private JMenuItem mnuHelpContent      = null;
 
@@ -96,6 +115,12 @@ public class HTMLViewFrm extends BasicFrm implements
 		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
     this.mnuEditFindNext.setEnabled( false );
     mnuEdit.add( this.mnuEditFindNext );
+
+    this.mnuEditFindPrev = createJMenuItem(
+		"R\u00FCckw\u00E4rts suchen",
+		KeyStroke.getKeyStroke( KeyEvent.VK_F3, Event.SHIFT_MASK ) );
+    this.mnuEditFindPrev.setEnabled( false );
+    mnuEdit.add( this.mnuEditFindPrev );
     mnuEdit.addSeparator();
 
     this.mnuEditSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
@@ -168,7 +193,8 @@ public class HTMLViewFrm extends BasicFrm implements
 				| Pattern.UNICODE_CASE );
 	      this.findPos = 0;
 	      this.mnuEditFindNext.setEnabled( true );
-	      doFindNext();
+	      this.mnuEditFindPrev.setEnabled( true );
+	      doFindNext( false );
 	    }
 	    catch( PatternSyntaxException ex ) {}
 	  }
@@ -178,7 +204,7 @@ public class HTMLViewFrm extends BasicFrm implements
   }
 
 
-  private void doFindNext()
+  private void doFindNext( boolean backward )
   {
     if( this.findPattern != null ) {
       String   text = null;
@@ -196,13 +222,13 @@ public class HTMLViewFrm extends BasicFrm implements
 	this.findPos = 0;
       }
       Matcher matcher = this.findPattern.matcher( text );
-      boolean found   = findNext( matcher );
+      boolean found   = findNext( matcher, backward );
       if( !found && (this.findPos > 0) ) {
 	this.findPos = 0;
-	found = findNext( matcher );
+	found = findNext( matcher, backward );
       }
       if( !found ) {
-	BasicDlg.showInfoDlg( this, "Text nicht gefunden" );
+	TextUtil.showTextNotFound( this );
       }
     } else {
       doFind();
@@ -346,7 +372,11 @@ public class HTMLViewFrm extends BasicFrm implements
       }
       else if( src == this.mnuEditFindNext ) {
 	rv = true;
-	doFindNext();
+	doFindNext( false );
+      }
+      else if( src == this.mnuEditFindPrev ) {
+	rv = true;
+	doFindNext( true );
       }
       else if( src == this.mnuEditSelectAll ) {
 	rv = true;
@@ -363,10 +393,39 @@ public class HTMLViewFrm extends BasicFrm implements
 
 	/* --- private Methoden --- */
 
-  private boolean findNext( Matcher matcher )
+  private boolean findNext( Matcher matcher, boolean backward )
   {
-    boolean rv = false;
-    if( matcher.find( this.findPos ) ) {
+    boolean rv    = false;
+    boolean found = false;
+    if( backward ) {
+      int curPos   = 0;
+      int foundPos = -1;
+      while( matcher.find( curPos ) ) {
+	int pos = matcher.start();
+	if( pos >= (this.findPos - 1) ) {
+	  break;
+	}
+	foundPos = pos;
+	curPos   = pos + 1;
+      }
+      if( foundPos < 0 ) {
+	curPos = this.findPos;
+	while( matcher.find( curPos ) ) {
+	  int pos = matcher.start();
+	  if( (foundPos >= 0) && (pos < foundPos) ) {
+	    break;
+	  }
+	  foundPos = pos;
+	  curPos   = pos + 1;
+	}
+      }
+      if( foundPos >= 0 ) {
+	found = matcher.find( foundPos );
+      }
+    } else {
+      found = matcher.find( this.findPos );
+    }
+    if( found ) {
       final int a = matcher.start();
       final int b = matcher.end();
       if( (a >= 0) && (a < b) ) {
@@ -391,4 +450,3 @@ public class HTMLViewFrm extends BasicFrm implements
     return rv;
   }
 }
-

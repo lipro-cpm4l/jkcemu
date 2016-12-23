@@ -12,7 +12,13 @@ package jkcemu.base;
 import java.awt.Window;
 import java.io.IOException;
 import java.lang.*;
-import java.nio.file.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.FileVisitResult;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 
@@ -82,7 +88,7 @@ public class FileMover extends AbstractFileWorker
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    if( !this.canceled && !this.dirFailed ) {
+    if( !this.cancelled && !this.dirFailed ) {
       try {
 	Files.delete( dir );
       }
@@ -100,7 +106,7 @@ public class FileMover extends AbstractFileWorker
 	handleError( dir, new IOException( msg ) );
       }
     }
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -111,7 +117,7 @@ public class FileMover extends AbstractFileWorker
 				BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.CONTINUE;
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       this.curPath = dir;
       Path dstDir = resolveDst( dir );
       try {
@@ -128,20 +134,20 @@ public class FileMover extends AbstractFileWorker
 	    || !Files.isDirectory( dstDir ) )
 	{
 	  handleError( dir, ex );
-	  if( !this.canceled ) {
+	  if( !this.cancelled ) {
 	    rv = FileVisitResult.SKIP_SUBTREE;
 	  }
 	}
       }
     }
-    return this.canceled ? FileVisitResult.TERMINATE : rv;
+    return this.cancelled ? FileVisitResult.TERMINATE : rv;
   }
 
 
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       this.curPath = file;
       try {
 	Path dstFile = resolveDst( file );
@@ -156,7 +162,7 @@ public class FileMover extends AbstractFileWorker
 	handleError( file, ex );
       }
     }
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 

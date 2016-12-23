@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2014 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,22 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 
-public class ReplyDirDlg extends BasicDlg
+public class ReplyDirDlg extends BaseDlg
 {
   private String     replyText;
   private JTextField textFld;
@@ -176,4 +183,3 @@ public class ReplyDirDlg extends BasicDlg
     }
   }
 }
-

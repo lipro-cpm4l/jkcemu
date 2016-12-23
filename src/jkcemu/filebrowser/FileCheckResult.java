@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2015 Jens Mueller
+ * (c) 2014-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,17 @@
 
 package jkcemu.filebrowser;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.lang.*;
+import java.util.Arrays;
 import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
-import jkcemu.disk.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileFormat;
+import jkcemu.base.FileInfo;
+import jkcemu.disk.AbstractFloppyDisk;
+import jkcemu.disk.DiskUtil;
 import jkcemu.image.ImgLoader;
 import jkcemu.text.TextUtil;
 
@@ -72,7 +78,7 @@ public class FileCheckResult
 	}
 
 	// Bilddatei pruefen
-	if( ImgLoader.accepts( file ) ) {
+	if( ImgLoader.accept( file ) ) {
 	  imageFile = true;
 	  done      = true;
 	}
@@ -137,7 +143,11 @@ public class FileCheckResult
 				AudioUtil.tapeFileExtensions ) )
 	  {
 	    tapeFile = true;
-	    done     = true;
+	    /*
+	     * Variable "done" hier nicht auf true setzen,
+	     * da Tape-Dateien auch Speicherabbilddateien sein koennen
+	     * und das somit auch geprueft werden muss.
+	     */
 	  }
 	  else if( TextUtil.endsWith(
 				fName,
@@ -165,10 +175,13 @@ public class FileCheckResult
 	    byte[] header    = new byte[ 40 ];
 	    int    headerLen = EmuUtil.read( in, header );
 	    if( headerLen >= 3 ) {
+	      if( headerLen < header.length ) {
+		header = Arrays.copyOf( header, headerLen );
+	      }
 	      if( AbstractFloppyDisk.isDiskFileHeader( header ) ) {
 		nonPlainDiskFile = true;
 	      } else {
-		fileInfo = FileInfo.analyzeFile( header, headerLen, file );
+		fileInfo = FileInfo.analyzeFile( header, file );
 		if( fileInfo != null ) {
 		  if( fileInfo.equalsFileFormat(
 					FileFormat.KCBASIC_HEAD_PRG )
@@ -227,7 +240,7 @@ public class FileCheckResult
 	  }
 	  catch( Exception ex ) {}
 	  finally {
-	    EmuUtil.doClose( in );
+	    EmuUtil.closeSilent( in );
 	  }
 	}
       }
@@ -244,6 +257,7 @@ public class FileCheckResult
 			kcSysFile,
 			nonPlainDiskFile,
 			plainDiskFile,
+			tapeFile,
 			textFile,
 			kc85TapFile,
 			z9001TapFile,
@@ -377,6 +391,7 @@ public class FileCheckResult
 		boolean  kcSysFile,
 		boolean  nonPlainDiskFile,
 		boolean  plainDiskFile,
+		boolean  tapeFile,
 		boolean  textFile,
 		boolean  kc85TapFile,
 		boolean  z9001TapFile,
@@ -395,6 +410,7 @@ public class FileCheckResult
     this.kcSysFile        = kcSysFile;
     this.nonPlainDiskFile = nonPlainDiskFile;
     this.plainDiskFile    = plainDiskFile;
+    this.tapeFile         = tapeFile;
     this.textFile         = textFile;
     this.kc85TapFile      = kc85TapFile;
     this.z9001TapFile     = z9001TapFile;

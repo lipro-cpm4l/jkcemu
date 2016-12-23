@@ -9,9 +9,21 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import jkcemu.base.EmuSys;
-import jkcemu.programming.basic.target.*;
+import jkcemu.programming.basic.target.AC1Target;
+import jkcemu.programming.basic.target.CPMTarget;
+import jkcemu.programming.basic.target.HueblerGraphicsMCTarget;
+import jkcemu.programming.basic.target.KC854Target;
+import jkcemu.programming.basic.target.KC85Target;
+import jkcemu.programming.basic.target.KramerMCTarget;
+import jkcemu.programming.basic.target.LLC2HIRESTarget;
+import jkcemu.programming.basic.target.SCCHTarget;
+import jkcemu.programming.basic.target.Z1013PetersTarget;
+import jkcemu.programming.basic.target.Z1013Target;
+import jkcemu.programming.basic.target.Z9001KRTTarget;
+import jkcemu.programming.basic.target.Z9001Target;
 
 
 public abstract class AbstractTarget

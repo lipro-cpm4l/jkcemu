@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,19 +8,27 @@
 
 package jkcemu.etc;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Frame;
+import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuThread;
+import jkcemu.base.HelpFrm;
 import jkcemu.image.ImgSelection;
 
 
-public class ChessboardFrm extends BasicFrm
+public class ChessboardFrm extends BaseFrm
 {
+  private static final String HELP_PAGE = "/help/chessboard.htm";
+
   private static ChessboardFrm instance = null;
 
   private JMenuItem     mnuClose;
@@ -80,7 +88,7 @@ public class ChessboardFrm extends BasicFrm
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/chessboard.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
     }
     return rv;
@@ -169,4 +177,3 @@ public class ChessboardFrm extends BasicFrm
     catch( IllegalStateException ex ) {}
   }
 }
-

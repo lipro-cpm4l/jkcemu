@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -36,8 +36,8 @@
 
 package jkcemu.image;
 
-import java.io.*;
-import java.lang.*;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
 
 

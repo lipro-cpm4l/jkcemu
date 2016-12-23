@@ -8,21 +8,33 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 import java.util.zip.CRC32;
-import javax.sound.sampled.AudioFormat;
 import jkcemu.audio.AudioOut;
-import jkcemu.base.*;
-import jkcemu.disk.*;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.disk.FDC8272;
+import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.disk.FloppyDiskInfo;
 import jkcemu.emusys.kccompact.KCcompactKeyboardFld;
-import jkcemu.etc.*;
+import jkcemu.etc.CRTC6845;
+import jkcemu.etc.PPI8255;
+import jkcemu.etc.PSG8910;
 import jkcemu.joystick.JoystickThread;
 import jkcemu.print.PrintMngr;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80InstrTStatesMngr;
+import z80emu.Z80InterruptSource;
 
 
 public class KCcompact extends EmuSys implements
@@ -31,10 +43,15 @@ public class KCcompact extends EmuSys implements
 					PPI8255.Callback,
 					PSG8910.Callback,
 					Z80InstrTStatesMngr,
-					Z80InterruptSource,
-					Z80MaxSpeedListener,
-					Z80TStatesListener
+					Z80InterruptSource
 {
+  public static final String SYSNAME             = "KCcompact";
+  public static final String SYSTEXT             = "KC compact";
+  public static final String PROP_PREFIX         = "jkcemu.kccompact.";
+  public static final String PROP_FDC_ROM_PREFIX = "fdc.rom.";
+
+  public static final int DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 1200;
+
   private static final FloppyDiskInfo[] availableFloppyDisks = {
 		new FloppyDiskInfo(
 			"/disks/kccompact/kccmicrodos.dump.gz",
@@ -43,7 +60,7 @@ public class KCcompact extends EmuSys implements
 
   /*
    * Diese Tabelle mappt die unteren 4 Bits des Farbpalettenwertes
-   * auf den Index in der Farbtabelle.
+   * auf den Index in der Farbpalette.
    */
   private static final int[] colorPalette2Idx = {
 				13, 13, 19, 25, 1, 7, 10, 16,
@@ -155,8 +172,6 @@ public class KCcompact extends EmuSys implements
   private boolean              centronicsStrobe;
   private boolean              basicROMEnabled;
   private boolean              osROMEnabled;
-  private boolean              soundStereo;
-  private AudioOut             psgAudioOut;
   private PSG8910              psg;
   private PPI8255              ppi;
   private CRTC6845             crtc;
@@ -167,7 +182,7 @@ public class KCcompact extends EmuSys implements
 
   public KCcompact( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.kccompact." );
+    super( emuThread, props, PROP_PREFIX );
     this.colors = new Color[ 27 ];
     createColors( props );
 
@@ -195,11 +210,13 @@ public class KCcompact extends EmuSys implements
     this.regColors       = new int[ 16 ];
     Arrays.fill( this.regColors, 0 );
 
-    this.ram16KOffs  = new int[ 4 ];
-    this.crtc        = new CRTC6845( 1000, this );
-    this.ppi         = new PPI8255( this );
-    this.psg         = new PSG8910( 1000000, AudioOut.MAX_USED_VALUE, this );
-    this.psgAudioOut = null;
+    this.ram16KOffs = new int[ 4 ];
+    this.crtc       = new CRTC6845( 1000, this );
+    this.ppi        = new PPI8255( this );
+    this.psg        = new PSG8910(
+				1000000,
+				AudioOut.MAX_UNSIGNED_USED_VALUE,
+				this );
 
     if( emulatesFloppyDisk( props ) ) {
       this.ramExt           = this.emuThread.getExtendedRAM( 0x10000 );
@@ -218,7 +235,6 @@ public class KCcompact extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
 
-    applySoundStereo( props );
     z80MaxSpeedChanged( cpu );
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
@@ -391,7 +407,7 @@ public class KCcompact extends EmuSys implements
       if( this.crtc.isVSync() ) {
 	rv |= 0x01;					// VSYNC
       }
-      if( this.emuThread.readAudioPhase() ) {
+      if( this.emuThread.readTapeInPhase() ) {
 	rv |= 0x80;
       }
     }
@@ -407,11 +423,9 @@ public class KCcompact extends EmuSys implements
 			boolean strobe )
   {
     if( port == PPI8255.PORT_C ) {
-      this.keyboardIdx = value & 0x0F;
-      if( this.psgAudioOut == null ) {
-	this.emuThread.writeAudioPhase( (value & 0x20) != 0 );
-      }
-      this.psgValue = this.psg.access(
+      this.keyboardIdx  = value & 0x0F;
+      this.tapeOutPhase = ((value & 0x20) != 0);
+      this.psgValue     = this.psg.access(
 				(value & 0x80) != 0,		// BDIR
 				(value & 0x40) != 0,		// BC1
 				true,				// BC2
@@ -451,16 +465,13 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
-  public void psgWriteSample( PSG8910 psg, int a, int b, int c )
+  public void psgWriteFrame( PSG8910 psg, int a, int b, int c )
   {
-    AudioOut audioOut = this.psgAudioOut;
-    if( audioOut != null ) {
-      audioOut.writeSamples(
+    this.emuThread.writeSoundOutFrames(
 			1,
 			(a + b + c) / 6,
 			(a / 2) + (b / 4),
 			(c / 2) + (b / 4) );
-    }
   }
 
 
@@ -474,7 +485,7 @@ public class KCcompact extends EmuSys implements
   }
 
 
-	/* --- Methoden fuer Z80InterruptSource --- */
+	/* --- Z80InterruptSource --- */
 
   /*
    * Die Hardware des KCcompact reagiert nicht auf RETI-Befehle,
@@ -567,30 +578,6 @@ public class KCcompact extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    this.crtc.z80MaxSpeedChanged( cpu );
-    if( this.fdc != null ) {
-      this.fdc.setTStatesPerMilli( cpu.getMaxSpeedKHz() );
-    }
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    this.crtc.z80TStatesProcessed( cpu, tStates );
-    if( this.fdc != null ) {
-      this.fdc.z80TStatesProcessed( cpu, tStates );
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -618,7 +605,6 @@ public class KCcompact extends EmuSys implements
   public void applySettings( Properties props )
   {
     super.applySettings( props );
-    applySoundStereo( props );
 
     boolean state = isFixedScreenSize( props );
     if( state != this.fixedScreenSize ) {
@@ -630,41 +616,24 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
-  public void audioOutChanged( AudioOut audioOut )
-  {
-    int sampleRate = 0;
-    if( audioOut != null ) {
-      if( audioOut.isSoundOutEnabled() ) {
-	AudioFormat fmt = audioOut.getAudioFormat();
-	if( fmt != null ) {
-	  sampleRate = Math.round( fmt.getSampleRate() );
-	}
-      }
-    }
-    this.psg.setSampleRate( sampleRate );
-    this.psgAudioOut = (sampleRate > 0 ? audioOut : null);
-  }
-
-
-  @Override
   public boolean canApplySettings( Properties props )
   {
     boolean rv = EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( "KCcompact" );
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
     if( rv ) {
       rv = TextUtil.equals(
 		this.osFile,
 		EmuUtil.getProperty(
 				props, 
-				this.propPrefix + "os.file" ) );
+				this.propPrefix + PROP_OS_FILE ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 		this.basicFile,
 		EmuUtil.getProperty(
-				props, 
-				this.propPrefix + "basic.file" ) );
+			props, 
+			this.propPrefix + PROP_BASIC_PREFIX + PROP_FILE ) );
     }
     if( rv && ((this.fdc != null) != emulatesFloppyDisk( props )) ) {
       rv = false;
@@ -673,8 +642,8 @@ public class KCcompact extends EmuSys implements
       rv = TextUtil.equals(
 		this.fdcROMFile,
 		EmuUtil.getProperty(
-				props, 
-				this.propPrefix + "fdc.rom.file" ) );
+			props, 
+			this.propPrefix + PROP_FDC_ROM_PREFIX + PROP_FILE ) );
     }
     return rv;
   }
@@ -892,10 +861,10 @@ public class KCcompact extends EmuSys implements
 	  crc1.update( ~b & 0xFF );
 	  crc2.update( b );
 	}
-	Character ch = crc32ToChar.get( new Long( crc1.getValue() ) );
+	Character ch = crc32ToChar.get( crc1.getValue() );
 	if( ch == null ) {
 	  // Zeichen invers?
-	  ch = crc32ToChar.get( new Long( crc2.getValue() ) );
+	  ch = crc32ToChar.get( crc2.getValue() );
 	}
 	if( ch != null ) {
 	  rv = ch.charValue();
@@ -946,7 +915,7 @@ public class KCcompact extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "KC compact";
+    return SYSTEXT;
   }
 
 
@@ -1120,6 +1089,7 @@ public class KCcompact extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
 	&& isReloadExtROMsOnPowerOnEnabled( props ) )
     {
@@ -1179,9 +1149,9 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
-  public boolean supportsAudio()
+  public void soundOutFrameRateChanged( int frameRate )
   {
-    return true;
+    this.psg.setFrameRate( frameRate );
   }
 
 
@@ -1214,9 +1184,37 @@ public class KCcompact extends EmuSys implements
 
 
   @Override
-  public boolean supportsStereoSound()
+  public boolean supportsSoundOut8Bit()
   {
-    return this.soundStereo;
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsSoundOutMono()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsSoundOutStereo()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
+  {
+    return true;
   }
 
 
@@ -1326,6 +1324,28 @@ public class KCcompact extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    this.crtc.z80MaxSpeedChanged( cpu );
+    if( this.fdc != null ) {
+      this.fdc.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    this.crtc.z80TStatesProcessed( cpu, tStates );
+    if( this.fdc != null ) {
+      this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void addPixelCRC32ToMap(
@@ -1335,23 +1355,7 @@ public class KCcompact extends EmuSys implements
   {
     CRC32 crc = new CRC32();
     crc.update( romOS, 0x3800 + (code * 8), 8 );
-    map.put( new Long( crc.getValue() ), new Character( unicode ) );
-  }
-
-
-  private void applySoundStereo( Properties props )
-  {
-    boolean state = EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "sound.stereo",
-				false );
-    if( state != this.soundStereo ) {
-      this.soundStereo  = state;
-      AudioOut audioOut = this.psgAudioOut;
-      if( audioOut != null ) {
-	audioOut.fireReopenLine();
-      }
-    }
+    map.put( crc.getValue(), Character.valueOf( unicode ) );
   }
 
 
@@ -1397,7 +1401,7 @@ public class KCcompact extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "floppydisk.enabled",
+			this.propPrefix + PROP_FDC_ENABLED,
 			false );
   }
 
@@ -1454,7 +1458,7 @@ public class KCcompact extends EmuSys implements
   {
     return EmuUtil.parseBooleanProperty(
 			props,
-			this.propPrefix + "fixed_screen_size",
+			this.propPrefix + PROP_FIXED_SCREEN_SIZE,
 			false );
   }
 
@@ -1464,7 +1468,7 @@ public class KCcompact extends EmuSys implements
     // OS-ROM
     this.osFile  = EmuUtil.getProperty(
 				props,
-				this.propPrefix + "os.file" );
+				this.propPrefix + PROP_OS_FILE );
     this.osBytes = readROMFile( this.osFile, 0x4000, "Betriebssystem-ROM" );
     if( this.osBytes == null ) {
       this.osBytes = romOS;
@@ -1472,8 +1476,8 @@ public class KCcompact extends EmuSys implements
 
     // BASIC-ROM
     this.basicFile  = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "basic.file" );
+			props,
+			this.propPrefix + PROP_BASIC_PREFIX + PROP_FILE );
     this.basicBytes = readROMFile( this.basicFile, 0x4000, "BASIC-ROM" );
     if( this.basicBytes == null ) {
       if( romBASIC == null ) {
@@ -1485,8 +1489,8 @@ public class KCcompact extends EmuSys implements
     // FDC-ROM
     if( this.fdc != null ) {
       this.fdcROMFile = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "fdc.rom.file" );
+		props,
+		this.propPrefix + PROP_FDC_ROM_PREFIX + PROP_FILE );
       this.fdcROMBytes = readROMFile( this.fdcROMFile, 0x8000, "FDC-ROM" );
       if( this.fdcROMBytes == null ) {
 	if( romFDC == null ) {

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,10 +8,18 @@
 
 package jkcemu.disk;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileTimesView;
+import jkcemu.base.FileTimesViewFactory;
 
 
 public class DiskImgCreator
@@ -144,7 +152,7 @@ public class DiskImgCreator
 		this.ftvFactory.getFileTimesView( file ) );
       }
       finally {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
     return rv;
@@ -169,7 +177,7 @@ public class DiskImgCreator
 	}
       }
       finally {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
   }

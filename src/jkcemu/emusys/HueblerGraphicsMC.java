@@ -10,19 +10,38 @@ package jkcemu.emusys;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 import java.util.zip.CRC32;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileFormat;
+import jkcemu.base.SaveDlg;
+import jkcemu.base.SourceUtil;
 import jkcemu.emusys.huebler.AbstractHueblerMC;
 import jkcemu.etc.VDIP;
 import jkcemu.net.KCNet;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80MemView;
 
 
 public class HueblerGraphicsMC extends AbstractHueblerMC
 
 {
+  public static final String SYSNAME     = "HueblerGraphicsMC";
+  public static final String SYSTEXT     = "H\u00FCbler-Grafik-MC";
+  public static final String PROP_PREFIX = "jkcemu.hgmc.";
+  public static final String PROP_BASIC  = "basic";
+
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 1000;
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = true;
+
+
   private static final String[] basicTokens = {
 	"END",      "FOR",       "NEXT",     "DATA",		// 0x80
 	"PRINT #",  "INPUT #",   "INPUT",    "DIM",
@@ -71,6 +90,8 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   private static byte[]              monBasicBytes    = null;
   private static Map<Long,Character> pixelCRC32ToChar = null;
 
+  private byte[]  romBytes;
+  private String  romFile;
   private boolean romEnabled;
   private boolean basic;
   private int     videoBaseAddr;
@@ -80,14 +101,10 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 
   public HueblerGraphicsMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.hgmc." );
-    if( hasBasic( props ) ) {
-      monBasicBytes = readResource( "/rom/huebler/mon30p_hbasic33p.bin" );
-      this.basic    = true;
-    } else {
-      ensureMonBytesLoaded();
-      this.basic = false;
-    }
+    super( emuThread, props, PROP_PREFIX );
+    this.romBytes      = null;
+    this.romFile       = null;
+    this.romEnabled    = true;
     this.videoBaseAddr = 0;
     createIOSystem();
 
@@ -101,6 +118,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 			this.emuThread.getFileTimesViewFactory(),
 			"USB-PIO (E/A-Adressen FCh-FFh)" );
     }
+    Z80CPU cpu = emuThread.getZ80CPU();
     if( (this.kcNet != null) || (this.vdip != null) ) {
       java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
       iSources.add( this.ctc );
@@ -111,23 +129,23 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
       if( this.vdip != null ) {
 	iSources.add( this.vdip );
       }
-      Z80CPU cpu = emuThread.getZ80CPU();
       try {
 	cpu.setInterruptSources(
 		iSources.toArray(
 			new Z80InterruptSource[ iSources.size() ] ) );
       }
       catch( ArrayStoreException ex ) {}
-      if( this.kcNet != null ) {
-	this.kcNet.z80MaxSpeedChanged( cpu );
-	cpu.addMaxSpeedListener( this.kcNet );
-	cpu.addTStatesListener( this.kcNet );
-      }
       if( this.vdip != null ) {
 	this.vdip.applySettings( props );
       }
     }
+    cpu.addMaxSpeedListener( this );
+    cpu.addTStatesListener( this );
     checkAddPCListener( props );
+    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
+      loadROMs( props );
+    }
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -266,7 +284,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   {
     boolean rv = EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( "HueblerGraphicsMC" );
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
     if( rv && hasBasic( props ) != this.basic ) {
       rv = false;
     }
@@ -291,10 +309,10 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   public void die()
   {
     super.die();
+    Z80CPU cpu = this.emuThread.getZ80CPU();
+    cpu.removeTStatesListener( this );
+    cpu.removeMaxSpeedListener( this );
     if( this.kcNet != null ) {
-      Z80CPU cpu = this.emuThread.getZ80CPU();
-      cpu.removeTStatesListener( this.kcNet );
-      cpu.removeMaxSpeedListener( this.kcNet );
       this.kcNet.die();
     }
     if( this.vdip != null ) {
@@ -345,14 +363,12 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 
     int rv = 0xFF;
     if( this.romEnabled && (addr < 0x8000) ) {
-      if( this.basic ) {
-	if( addr < monBasicBytes.length ) {
-	  rv = (int) monBasicBytes[ addr ] & 0xFF;
-	}
-      } else {
+      if( !this.basic ) {
 	addr &= 0x3FFF;		// unvollstaendige Adressdekodierung
-	if( addr < monBytes.length ) {
-	  rv = (int) monBytes[ addr ] & 0xFF;
+      }
+      if( this.romBytes != null ) {
+	if( addr < this.romBytes.length ) {
+	  rv = (int) this.romBytes[ addr ] & 0xFF;
 	}
       }
     } else {
@@ -385,10 +401,10 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 	  crc2.update( ~b & 0xFF );
 	  addr += 32;
 	}
-	Character ch = crc32ToChar.get( new Long( crc1.getValue() ) );
+	Character ch = crc32ToChar.get( crc1.getValue() );
 	if( ch == null ) {
 	  // Zeichen invers?
-	  ch = crc32ToChar.get( new Long( crc2.getValue() ) );
+	  ch = crc32ToChar.get( crc2.getValue() );
 	}
 	if( ch != null ) {
 	  rv = ch.charValue();
@@ -423,7 +439,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   @Override
   public String getTitle()
   {
-    return "H\u00FCbler-Grafik-MC";
+    return SYSTEXT;
   }
 
 
@@ -556,6 +572,11 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
     super.reset( resetLevel, props );
+    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
+	loadROMs( props );
+      }
+    }
     this.romEnabled = true;
   }
 
@@ -686,11 +707,31 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    if( this.kcNet != null ) {
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void checkAddPCListener( Properties props )
   {
-    checkAddPCListener( props, this.propPrefix + "catch_print_calls" );
+    checkAddPCListener( props, this.propPrefix + PROP_CATCH_PRINT_CALLS );
   }
 
 
@@ -698,7 +739,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "basic",
+				this.propPrefix + PROP_BASIC,
 				true );
   }
 
@@ -707,7 +748,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "kcnet.enabled",
+				this.propPrefix + PROP_KCNET_ENABLED,
 				false );
   }
 
@@ -716,7 +757,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "vdip.enabled",
+				this.propPrefix + PROP_VDIP_ENABLED,
 				false );
   }
 
@@ -740,7 +781,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
           for( int c = 0x20; c <= 0x7E; c++ ) {
             crc.reset();
             crc.update( monBytes, addr, 8 );
-            map.put( new Long( crc.getValue() ), new Character( (char) c ) );
+            map.put( crc.getValue(), Character.valueOf( (char) c ) );
             addr += 8;
           }
           pixelCRC32ToChar = map;
@@ -749,5 +790,24 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     }
     return pixelCRC32ToChar;
   }
-}
 
+
+  private void loadROMs( Properties props )
+  {
+    this.romFile = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM_PREFIX + PROP_FILE );
+    this.romBytes = readROMFile( this.romFile, 0x8000, "ROM-Inhalt" );
+    if( this.romBytes == null ) {
+      if( hasBasic( props ) ) {
+	monBasicBytes = readResource( "/rom/huebler/mon30p_hbasic33p.bin" );
+	this.romBytes = monBasicBytes;
+	this.basic    = true;
+      } else {
+	ensureMonBytesLoaded();
+	this.romBytes = monBytes;
+	this.basic = false;
+      }
+    }
+  }
+}

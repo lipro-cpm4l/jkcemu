@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2014 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,8 @@ package jkcemu.programming.basic;
 
 import java.lang.*;
 import java.text.CharacterIterator;
-import jkcemu.programming.*;
+import jkcemu.programming.PrgSource;
+import jkcemu.programming.PrgUtil;
 
 
 public class BasicLineExpr extends BasicSourcePos
@@ -76,4 +77,3 @@ public class BasicLineExpr extends BasicSourcePos
     this.label    = label;
   }
 }
-

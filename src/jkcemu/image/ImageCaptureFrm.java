@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2012 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,17 +8,39 @@
 
 package jkcemu.image;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.AWTException;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsConfiguration;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Robot;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ScreenFrm;
 
 
-public class ImageCaptureFrm extends BasicFrm
+public class ImageCaptureFrm extends BaseFrm
 {
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
 
@@ -326,7 +348,7 @@ public class ImageCaptureFrm extends BasicFrm
 					new Rectangle( x, y, w, h ) );
 	}
       } else {
-	BasicDlg.showErrorDlg(
+	BaseDlg.showErrorDlg(
 			this,
 			"Aufnehmen des Bildschirmfotos fehlgeschlagen" );
       }
@@ -378,7 +400,7 @@ public class ImageCaptureFrm extends BasicFrm
 	if( captureWindow != null ) {
 	  fireTakePhoto( captureWindow );
 	} else {
-	  BasicDlg.showErrorDlg( this, "Kein JKCEMU-Fenster aktiv" );
+	  BaseDlg.showErrorDlg( this, "Kein JKCEMU-Fenster aktiv" );
 	  text = DEFAULT_STATUS_TEXT;
 	}
 	this.btnTakePhoto.setEnabled( true );

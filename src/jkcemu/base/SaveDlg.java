@@ -8,20 +8,42 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.text.*;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.ComboBoxEditor;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.Document;
+import javax.swing.text.JTextComponent;
 import jkcemu.Main;
-import jkcemu.emusys.*;
+import jkcemu.emusys.A5105;
+import jkcemu.emusys.KC85;
+import jkcemu.emusys.Z1013;
+import jkcemu.emusys.Z9001;
 
 
-public class SaveDlg extends BasicDlg implements DocumentListener
+public class SaveDlg extends BaseDlg implements DocumentListener
 {
+  private static final String HELP_PAGE = "/help/loadsave.htm";
+
   public static enum BasicType {
 				NO_BASIC,
 				TINYBASIC,
@@ -542,7 +564,7 @@ public class SaveDlg extends BasicDlg implements DocumentListener
       }
       else if( src == this.btnHelp ) {
 	rv = true;
-	HelpFrm.open( "/help/loadsave.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
       else if( src == this.btnCancel ) {
 	rv = true;
@@ -692,10 +714,10 @@ public class SaveDlg extends BasicDlg implements DocumentListener
 
 	// Dateiauswahldialog
 	File file = EmuUtil.showFileSaveDlg(
-				this.screenFrm,
-				title,
-				Main.getLastDirFile( "software" ),
-				fileFilter );
+			this.screenFrm,
+			title,
+			Main.getLastDirFile( Main.FILE_GROUP_SOFTWARE ),
+			fileFilter );
 	if( file != null ) {
 	  try {
 	    int     headBegAddr   = begAddr;
@@ -713,8 +735,7 @@ public class SaveDlg extends BasicDlg implements DocumentListener
 	      String s = this.fldHeadStartAddr.getText();
 	      if( s != null ) {
 		if( !s.trim().isEmpty() ) {
-		  headStartAddr = new Integer(
-			this.docHeadStartAddr.intValue() & 0xFFFF );
+		  headStartAddr = (this.docHeadStartAddr.intValue() & 0xFFFF);
 		}
 	      }
 	    }
@@ -736,7 +757,7 @@ public class SaveDlg extends BasicDlg implements DocumentListener
 			headFileType,
 			this.btnKeepHeader.isSelected() ? emuThread : null );
 	    saved = true;
-	    Main.setLastFile( file, "software" );
+	    Main.setLastFile( file, Main.FILE_GROUP_SOFTWARE );
 	    this.screenFrm.showStatusText( "Datei gespeichert" );
 	  }
 	  catch( IOException ex ) {
@@ -909,4 +930,3 @@ public class SaveDlg extends BasicDlg implements DocumentListener
     }
   }
 }
-

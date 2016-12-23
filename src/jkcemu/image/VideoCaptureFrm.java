@@ -8,20 +8,50 @@
 
 package jkcemu.image;
 
-import java.awt.*;
-import java.awt.image.*;
-import java.awt.event.*;
+import java.awt.AWTException;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Robot;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.filechooser.FileSystemView;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileNameFld;
+import jkcemu.base.ScreenFrm;
 
 
-public class VideoCaptureFrm extends BasicFrm implements Runnable
+public class VideoCaptureFrm extends BaseFrm implements Runnable
 {
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
 
@@ -149,7 +179,7 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 	}
       }
       finally {
-	EmuUtil.doClose( out );
+	EmuUtil.closeSilent( out );
       }
       if( (file != null) && delete ) {
 	file.delete();
@@ -402,17 +432,17 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
     this.labelFramesPerSec = new JLabel( "Bilder pro Sekunde:" );
     panelOpt.add( this.labelFramesPerSec, gbcOpt );
 
-    Integer defaultFramesPerSec = new Integer( 10 );
+    Integer defaultFramesPerSec = 10;
     this.comboFramesPerSec      = new JComboBox<>();
     this.comboFramesPerSec.setEditable( false );
-    this.comboFramesPerSec.addItem( new Integer( 5 ) );
-    this.comboFramesPerSec.addItem( new Integer( 7 ) );
+    this.comboFramesPerSec.addItem( 5 );
+    this.comboFramesPerSec.addItem( 7 );
     this.comboFramesPerSec.addItem( defaultFramesPerSec );
-    this.comboFramesPerSec.addItem( new Integer( 15 ) );
-    this.comboFramesPerSec.addItem( new Integer( 20 ) );
-    this.comboFramesPerSec.addItem( new Integer( 25 )  );
-    this.comboFramesPerSec.addItem( new Integer( 30 )  );
-    this.comboFramesPerSec.addItem( new Integer( 50 ) );
+    this.comboFramesPerSec.addItem( 15 );
+    this.comboFramesPerSec.addItem( 20 );
+    this.comboFramesPerSec.addItem( 25 );
+    this.comboFramesPerSec.addItem( 30 );
+    this.comboFramesPerSec.addItem( 50 );
     this.comboFramesPerSec.setSelectedItem( defaultFramesPerSec );
     gbcOpt.fill = GridBagConstraints.HORIZONTAL;
     gbcOpt.gridx++;
@@ -661,7 +691,7 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 	      this.fileCheckEnabled = false;
 	      this.btnRecord.setEnabled( true );
 	    } else {
-	      BasicDlg.showErrorDlg(
+	      BaseDlg.showErrorDlg(
 			this,
 			"Das aufgenommene Bildschirmvideo kann nur in eine\n"
 				+ "animierte GIF-Datei geschrieben werden.\n"
@@ -670,7 +700,7 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 	    }
 	  }
 	} else {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Datei kann nicht angelegt bzw. geschrieben werden" );
 	}
@@ -892,7 +922,7 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
   {
     if( ex != null ) {
       if( ex instanceof IOException ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       } else {
 	EmuUtil.exitSysError(
 			this,
@@ -1010,7 +1040,7 @@ public class VideoCaptureFrm extends BasicFrm implements Runnable
 	    this.thread.start();
 	  } else {
 	    setIdle();
-	    BasicDlg.showErrorDlg( this, "Kein JKCEMU-Fenster aktiv" );
+	    BaseDlg.showErrorDlg( this, "Kein JKCEMU-Fenster aktiv" );
 	    text = DEFAULT_STATUS_TEXT;
 	  }
 	}

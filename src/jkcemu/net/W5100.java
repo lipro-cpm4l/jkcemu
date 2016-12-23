@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,30 @@
 
 package jkcemu.net;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.net.*;
-import java.util.*;
-import javax.net.*;
+import java.net.BindException;
+import java.net.DatagramPacket;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import javax.net.ServerSocketFactory;
+import javax.net.SocketFactory;
 import jkcemu.Main;
 import jkcemu.base.EmuUtil;
 
 
 public class W5100
 {
-  // Masken fuer Eigenschaft jkcemu.debug.net
+  // Masken fuer Eigenschaft KCNet.SYSPROP_DEBUG
   private static final int DEBUG_MASK_MSG    = 0x10;
   private static final int DEBUG_MASK_STATUS = 0x20;
   private static final int DEBUG_MASK_READ   = 0x40;
@@ -178,10 +190,10 @@ public class W5100
       if( datagramSocket != null ) {
         datagramSocket.close();
       }
-      EmuUtil.doClose( this.sendStream );
-      EmuUtil.doClose( this.recvStream );
-      EmuUtil.doClose( this.socket );
-      EmuUtil.doClose( this.serverSocket );
+      EmuUtil.closeSilent( this.sendStream );
+      EmuUtil.closeSilent( this.recvStream );
+      EmuUtil.closeSilent( this.socket );
+      EmuUtil.closeSilent( this.serverSocket );
       this.sendStream      = null;
       this.recvStream      = null;
       this.socket          = null;
@@ -325,7 +337,7 @@ public class W5100
 	      socketEx.printStackTrace( System.out );
 	    }
 	  }
-	  EmuUtil.doClose( socket );
+	  EmuUtil.closeSilent( socket );
 	  closeSocket();
 	  setSnIRBits( INT_TIMEOUT_MASK );
 	}
@@ -383,7 +395,7 @@ public class W5100
 	      ex.printStackTrace( System.out );
 	    }
 	  }
-	  EmuUtil.doClose( socket );
+	  EmuUtil.closeSilent( socket );
 	}
       }
       switch( getCR() ) {
@@ -828,7 +840,7 @@ public class W5100
 		setSR( SOCK_CLOSE_WAIT );
 		Socket socket = this.socket;
 		if( socket != null ) {
-		  EmuUtil.doClose( socket );
+		  EmuUtil.closeSilent( socket );
 		  this.recvStream = null;
 		  this.sendStream = null;
 		  this.socket     = null;
@@ -840,7 +852,7 @@ public class W5100
 	  }
 	}
 	catch( IOException ex ) {
-	  EmuUtil.doClose( this.recvStream );
+	  EmuUtil.closeSilent( this.recvStream );
 	  this.recvStream = null;
 	}
       }
@@ -1226,7 +1238,7 @@ public class W5100
 	setSR( SOCK_CLOSE_WAIT );
 	Socket socket = this.socket;
 	if( socket != null ) {
-	  EmuUtil.doClose( socket );
+	  EmuUtil.closeSilent( socket );
 	  this.recvStream = null;
 	  this.sendStream = null;
 	  this.socket     = null;
@@ -1686,7 +1698,7 @@ public class W5100
     this.threadsEnabled          = true;
     this.debugMask               = 0;
 
-    String text = System.getProperty( "jkcemu.debug.net" );
+    String text = System.getProperty( KCNet.SYSPROP_DEBUG );
     if( text != null ) {
       try {
 	this.debugMask = Integer.parseInt( text );

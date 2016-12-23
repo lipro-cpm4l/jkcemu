@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,13 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.UserInputException;
 
 
 public class IntelHexFileTarget extends AbstractConvertTarget
@@ -84,7 +88,7 @@ public class IntelHexFileTarget extends AbstractConvertTarget
       out = null;
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
     return null;
   }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,38 +8,41 @@
 
 package jkcemu.image;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
-import java.awt.image.*;
+import java.awt.BorderLayout;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JComboBox;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JViewport;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
 
 
-public class AbstractImageFrm extends BasicFrm implements ComponentListener
+public abstract class AbstractImageFrm
+				extends BaseFrm
+				implements ComponentListener
 {
   protected Clipboard   clipboard;
-  protected File        file;
-  protected Image       image;
   protected ImgFld      imgFld;
   protected JScrollPane scrollPane;
 
   private JComboBox<String> comboScale;
-  private boolean           scaleEnabled;
 
 
   protected AbstractImageFrm()
   {
-    this.clipboard    = null;
-    this.file         = null;
-    this.image        = null;
-    this.comboScale   = null;
-    this.scaleEnabled = true;
+    this.clipboard  = null;
+    this.comboScale = null;
     Main.updIcon( this );
 
     Toolkit tk = getToolkit();
@@ -87,85 +90,23 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
     if( defaultItem != null ) {
       this.comboScale.setSelectedItem( defaultItem );
     }
-    this.comboScale.setToolTipText( "Skalierungsfaktor" );
+    this.comboScale.setToolTipText( "Skalierung der Anzeige" );
     this.comboScale.addActionListener( this );
     return this.comboScale;
   }
 
 
-  protected void doSaveAs()
+  protected void doCopy()
   {
-    if( this.image != null ) {
-      BufferedImage   imgToSave = null;
-      ImgFld.Rotation rotation  = this.imgFld.getRotation();
-      if( rotation == ImgFld.Rotation.NONE ) {
-	imgToSave = getBufferedImage();
-      } else {
-	int w       = this.image.getWidth( this );
-	int h       = this.image.getHeight( this );
-	int imgType = BufferedImage.TYPE_CUSTOM;
-	if( this.image instanceof BufferedImage ) {
-	  imgType = ((BufferedImage) this.image).getType();
-	  if( imgType == BufferedImage.TYPE_CUSTOM ) {
-	    ColorModel cm = ((BufferedImage) this.image).getColorModel();
-	    if( cm != null ) {
-	      if( !cm.hasAlpha() ) {
-		imgType = BufferedImage.TYPE_INT_RGB;
-	      }
-	    }
-	  }
+    if( this.clipboard != null ) {
+      Image image = getImage();
+      if( image != null ) {
+	try {
+	  ImgSelection ims = new ImgSelection( image );
+	  this.clipboard.setContents( ims, ims );
 	}
-	if( imgType == BufferedImage.TYPE_CUSTOM ) {
-	  imgType = BufferedImage.TYPE_INT_ARGB;
-	}
-	if( (w > 0) && (h > 0) ) {
-	  int option = JOptionPane.showConfirmDialog(
-				this,
-				"Soll das Bild gedreht gespeichert werden,\n"
-					+ "so wie Sie es gerade sehen?",
-				"Bild gedreht",
-				JOptionPane.YES_NO_CANCEL_OPTION,
-				JOptionPane.QUESTION_MESSAGE );
-	  if( option == JOptionPane.YES_OPTION ) {
-	    if( (rotation == ImgFld.Rotation.LEFT)
-		|| (rotation == ImgFld.Rotation.RIGHT) )
-	    {
-	      imgToSave = new BufferedImage( h, w, imgType );
-	    } else {
-	      imgToSave = new BufferedImage( w, h, imgType );
-	    }
-	    Graphics g = imgToSave.createGraphics();
-	    this.imgFld.drawImage( g, 0, 0, w, h );
-	    g.dispose();
-	  }
-	  else if( option == JOptionPane.NO_OPTION ) {
-	    imgToSave = getBufferedImage();
-	  }
-	} else {
-	  imgToSave = getBufferedImage();
-	}
+	catch( IllegalStateException ex ) {}
       }
-      if( imgToSave != null ) {
-	File file = ImgSaver.saveImageAs(
-			this,
-			imgToSave,
-			this.file != null ? this.file.getName() : null );
-	if( file != null ) {
-	  this.file = file;
-	}
-      }
-    }
-  }
-
-
-  protected void doImgCopy()
-  {
-    if( (this.clipboard != null) && (this.image != null) ) {
-      try {
-	ImgSelection ims = new ImgSelection( this.image );
-	this.clipboard.setContents( ims, ims );
-      }
-      catch( IllegalStateException ex ) {}
     }
   }
 
@@ -222,9 +163,27 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
   }
 
 
-  protected void doScale()
+  protected void doScaleView()
   {
-    if( this.scaleEnabled && (this.comboScale != null)) {
+    double scale = getViewScale();
+    if( scale > 0.0 ) {
+      this.scrollPane.invalidate();
+      this.imgFld.setScale( scale );
+      this.scrollPane.validate();
+      this.scrollPane.repaint();
+      updViewScaleFld();
+      updWindowSize();
+    }
+  }
+
+
+  protected abstract BufferedImage getImage();
+
+
+  protected double getViewScale()
+  {
+    double rv = -1.0;
+    if( this.comboScale != null ) {
       Object o = this.comboScale.getSelectedItem();
       if( o != null ) {
 	String s = o.toString();
@@ -234,39 +193,81 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
 	    s = s.substring( 0, pos );
 	  }
 	  try {
-	    int value = Integer.parseInt( s.trim() );
-	    if( value >= 0 ) {
-	      this.scrollPane.invalidate();
-	      this.imgFld.setScale( (double) value / 100.0 );
-	      this.scrollPane.validate();
-	      this.scrollPane.repaint();
-	      updDisplayScale();
-	      updWindowSize();
+	    int percent = Integer.parseInt( s.trim() );
+	    if( percent > 0 ) {
+	      rv = (double) percent / 100.0;
 	    }
 	  }
 	  catch( NumberFormatException ex ) {}
 	}
       }
     }
+    return rv;
   }
 
 
-  protected void updDisplayScale()
+  protected File saveAs( File presetFile )
   {
-    this.scaleEnabled = false;
+    File          rv    = null;
+    BufferedImage image = getImage();
+    if( image != null ) {
+      ImgFld.Rotation rotation = this.imgFld.getRotation();
+      if( rotation != ImgFld.Rotation.NONE ) {
+	int w       = image.getWidth();
+	int h       = image.getHeight();
+	int imgType = BufferedImage.TYPE_CUSTOM;
+	if( image instanceof BufferedImage ) {
+	  imgType = image.getType();
+	  if( imgType == BufferedImage.TYPE_CUSTOM ) {
+	    ColorModel cm = image.getColorModel();
+	    if( cm != null ) {
+	      if( !cm.hasAlpha() ) {
+		imgType = BufferedImage.TYPE_3BYTE_BGR;
+	      }
+	    }
+	  }
+	}
+	if( imgType == BufferedImage.TYPE_CUSTOM ) {
+	  imgType = BufferedImage.TYPE_INT_ARGB;
+	}
+	if( (w > 0) && (h > 0) ) {
+	  int option = JOptionPane.showConfirmDialog(
+				this,
+				"Soll das Bild gedreht gespeichert werden,\n"
+					+ "so wie Sie es gerade sehen?",
+				"Bild gedreht",
+				JOptionPane.YES_NO_CANCEL_OPTION,
+				JOptionPane.QUESTION_MESSAGE );
+	  if( option == JOptionPane.YES_OPTION ) {
+	    BufferedImage imgToSave = null;
+	    if( (rotation == ImgFld.Rotation.LEFT)
+		|| (rotation == ImgFld.Rotation.RIGHT) )
+	    {
+	      imgToSave = new BufferedImage( h, w, imgType );
+	    } else {
+	      imgToSave = new BufferedImage( w, h, imgType );
+	    }
+	    Graphics g = imgToSave.createGraphics();
+	    this.imgFld.drawImage( g, 0, 0, w, h );
+	    g.dispose();
+	    image = imgToSave;
+	  }
+	}
+      }
+      rv = ImgSaver.saveImageAs( this, image, presetFile );
+    }
+    return rv;
+  }
+
+
+  protected void updViewScaleFld()
+  {
+    this.comboScale.removeActionListener( this );
     this.comboScale.setSelectedItem(
 		String.format(
 			"%d %%",
 			Math.round( this.imgFld.getScale() * 100.0 ) ) );
-    EventQueue.invokeLater(
-		new Runnable()
-		{
-		  @Override
-		  public void run()
-		  {
-		    setScaleEnabled();
-		  }
-		} );
+    this.comboScale.addActionListener( this );
   }
 
 
@@ -318,41 +319,9 @@ public class AbstractImageFrm extends BasicFrm implements ComponentListener
     Object src = e.getSource();
       if( src == this.comboScale ) {
 	rv = true;
-	doScale();
+	doScaleView();
       }
     }
     return rv;
-  }
-
-
-	/* --- private Methoden --- */
-
-  private BufferedImage getBufferedImage()
-  {
-    BufferedImage rv = null;
-    if( this.image != null ) {
-      if( this.image instanceof BufferedImage ) {
-	rv = (BufferedImage) this.image;
-      } else {
-	int w = this.image.getWidth( this );
-        int h = this.image.getHeight( this );
-        if( (w > 0) && (h > 0) ) {
-          rv = new BufferedImage( w, h, BufferedImage.TYPE_INT_ARGB );
-          Graphics g = rv.createGraphics();
-          g.drawImage( this.image, 0, 0, this );
-          g.dispose();
-	  this.image.flush();
-	  this.image = rv;
-        }
-      }
-    }
-    return rv;
-  }
-
-
-  private void setScaleEnabled()
-  {
-    this.scaleEnabled = true;
   }
 }
-

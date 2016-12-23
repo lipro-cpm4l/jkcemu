@@ -168,4 +168,3 @@ public abstract class KeyboardMatrix12x8 extends KeyboardMatrix
     return rv;
   }
 }
-

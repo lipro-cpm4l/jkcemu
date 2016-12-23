@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,17 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.ArrayList;
+import java.util.TimerTask;
+import javax.swing.JComponent;
+import javax.swing.ToolTipManager;
 import jkcemu.Main;
 
 

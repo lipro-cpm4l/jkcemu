@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,8 @@
 package jkcemu.emusys.kc85;
 
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 
 
 public class M006 extends AbstractKC85Module
@@ -79,4 +80,3 @@ public class M006 extends AbstractKC85Module
     this.begAddr = (value << 8) & 0xC000;
   }
 }
-

@@ -8,19 +8,35 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.*;
-import java.util.zip.*;
-import javax.swing.*;
+import java.util.Arrays;
+import java.util.EventObject;
+import java.util.zip.GZIPInputStream;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.DeviceIO;
+import jkcemu.base.EmuUtil;
 import jkcemu.text.TextUtil;
 
 
-public class DiskImgProcessDlg extends BasicDlg implements Runnable
+public class DiskImgProcessDlg extends BaseDlg implements Runnable
 {
   private enum Direction { FILE_TO_DISK, DISK_TO_FILE };
 
@@ -47,7 +63,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
       File imgFile = EmuUtil.showFileSaveDlg(
 				owner,
 				"Einfache Abbilddatei speichern",
-				Main.getLastDirFile( "disk" ),
+				Main.getLastDirFile( Main.FILE_GROUP_DISK ),
 				EmuUtil.getPlainDiskFileFilter(),
 				EmuUtil.getISOFileFilter() );
       if( imgFile != null ) {
@@ -78,11 +94,11 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
     File imgFile = EmuUtil.showFileOpenDlg(
 				owner,
 				"Einfache Abbilddatei \u00F6ffnen",
-				Main.getLastDirFile( "disk" ),
+				Main.getLastDirFile( Main.FILE_GROUP_DISK ),
 				EmuUtil.getPlainDiskFileFilter() );
     if( imgFile != null ) {
       if( imgFile.exists() && (imgFile.length() == 0) ) {
-	BasicDlg.showErrorDlg( owner, "Die Datei ist leer." );
+	showErrorDlg( owner, "Die Datei ist leer." );
       } else {
 	boolean state    = false;
 	String  fileName = imgFile.getName();
@@ -96,7 +112,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 				DiskUtil.gzPlainDiskFileExt ));
 	}
 	if( !state ) {
-	  state = BasicDlg.showYesNoWarningDlg(
+	  state = showYesNoWarningDlg(
 			owner,
 			"JKCEMU kann nur einfache Abbilddateien"
 				+ " auf einen Datentr\u00E4ger schreiben.\n"
@@ -152,7 +168,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    in  = DeviceIO.openDeviceForSequentialRead( this.drvFileName );
 	    out = EmuUtil.createOptionalGZipOutputStream( this.imgFile );
 	    Main.setLastDriveFileName( this.drvFileName );
-	    Main.setLastFile( this.imgFile, "disk" );
+	    Main.setLastFile( this.imgFile, Main.FILE_GROUP_DISK );
 
 	    byte[] buf = new byte[ 2048 ];	// max. Sektorgroesse
 	    int    n   = in.read( buf );
@@ -168,8 +184,8 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    out = null;
 	  }
 	  finally {
-	    EmuUtil.doClose( out );
-	    EmuUtil.doClose( in );
+	    EmuUtil.closeSilent( out );
+	    EmuUtil.closeSilent( in );
 	  }
 	  if( this.thread == null ) {
 	    this.imgFile.delete();
@@ -201,7 +217,7 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    }
 	    out = DeviceIO.openDeviceForSequentialWrite( this.drvFileName );
 	    Main.setLastDriveFileName( this.drvFileName );
-	    Main.setLastFile( this.imgFile, "disk" );
+	    Main.setLastFile( this.imgFile, Main.FILE_GROUP_DISK );
 
 	    byte[] buf = new byte[ 2048 ];	// max. Sektorgroesse
 	    int    n   = in.read( buf );
@@ -217,8 +233,8 @@ public class DiskImgProcessDlg extends BasicDlg implements Runnable
 	    out = null;
 	  }
 	  finally {
-	    EmuUtil.doClose( out );
-	    EmuUtil.doClose( in );
+	    EmuUtil.closeSilent( out );
+	    EmuUtil.closeSilent( in );
 	  }
 	}
 	catch( Exception ex ) {
