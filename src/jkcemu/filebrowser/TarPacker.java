@@ -8,14 +8,34 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Dialog;
+import java.awt.Window;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
-import java.util.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.GroupPrincipal;
+import java.nio.file.attribute.PosixFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.UserPrincipal;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Set;
 import java.util.zip.GZIPOutputStream;
-import jkcemu.base.*;
+import jkcemu.base.AbstractThreadDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileProgressInputStream;
 
 
 public class TarPacker extends AbstractThreadDlg
@@ -31,10 +51,10 @@ public class TarPacker extends AbstractThreadDlg
 
 
   public static void packFiles(
-		Window           owner,
-		Collection<Path> srcPaths,
-		File             outFile,
-		boolean          compression )
+			Window           owner,
+			Collection<Path> srcPaths,
+			File             outFile,
+			boolean          compression )
   {
     Dialog dlg = new TarPacker( owner, srcPaths, outFile, compression );
     if( compression ) {
@@ -51,7 +71,7 @@ public class TarPacker extends AbstractThreadDlg
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    return this.canceled ? FileVisitResult.TERMINATE
+    return this.cancelled ? FileVisitResult.TERMINATE
 				: FileVisitResult.CONTINUE;
   }
 
@@ -62,7 +82,7 @@ public class TarPacker extends AbstractThreadDlg
 				BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.SKIP_SUBTREE;
-    if( (this.out == null) || this.canceled ) {
+    if( (this.out == null) || this.cancelled ) {
       rv = FileVisitResult.TERMINATE;
     } else {
       if( (dir != null) && (attrs != null) ) {
@@ -96,7 +116,7 @@ public class TarPacker extends AbstractThreadDlg
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.SKIP_SIBLINGS;
-    if( (this.out == null) || this.canceled ) {
+    if( (this.out == null) || this.cancelled ) {
       rv = FileVisitResult.TERMINATE;
     } else {
       if( (file != null) && (attrs != null) ) {
@@ -123,7 +143,7 @@ public class TarPacker extends AbstractThreadDlg
 		  if( len > 0 ) {
 		    long pos = 0;
 		    int  b   = in.read();
-		    while( !this.canceled && (pos < len) && (b != -1) ) {
+		    while( !this.cancelled && (pos < len) && (b != -1) ) {
 		      this.out.write( b );
 		      pos++;
 		      b = in.read();
@@ -133,7 +153,7 @@ public class TarPacker extends AbstractThreadDlg
 		    if( fullLen < len ) {
 		      fullLen += 512;
 		    }
-		    while( !this.canceled && (pos < fullLen) ) {
+		    while( !this.cancelled && (pos < fullLen) ) {
 		      this.out.write( 0 );
 		      pos++;
 		    }
@@ -147,7 +167,7 @@ public class TarPacker extends AbstractThreadDlg
 		  appendIgnoredToLog();
 		}
 		finally {
-		  EmuUtil.doClose( in );
+		  EmuUtil.closeSilent( in );
 		}
 	      } else if( attrs.isSymbolicLink() ) {
 		try {
@@ -200,7 +220,7 @@ public class TarPacker extends AbstractThreadDlg
       appendErrorToLog( ex );
       incErrorCount();
     }
-    return this.canceled ? FileVisitResult.TERMINATE
+    return this.cancelled ? FileVisitResult.TERMINATE
 				: FileVisitResult.CONTINUE;
   }
 
@@ -251,9 +271,9 @@ public class TarPacker extends AbstractThreadDlg
       failed = true;
     }
     finally {
-      EmuUtil.doClose( this.out );
+      EmuUtil.closeSilent( this.out );
     }
-    if( this.canceled || failed ) {
+    if( this.cancelled || failed ) {
       this.outFile.delete();
     }
     FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
@@ -527,7 +547,7 @@ public class TarPacker extends AbstractThreadDlg
     writeASCII(
 	headerBuf,
 	148,
-	String.format( "%06o", new Integer( chkSum ) ) );
+	String.format( "%06o", chkSum ) );
     headerBuf[ 154 ] = (byte) 0;
 
     // Kopfblock schreiben

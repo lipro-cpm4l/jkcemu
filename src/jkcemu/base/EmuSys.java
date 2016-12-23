@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,25 +8,68 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.EventQueue;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.image.ImageObserver;
-import java.io.*;
+import java.io.File;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JOptionPane;
 import jkcemu.Main;
-import jkcemu.audio.AudioOut;
 import jkcemu.base.ScreenFrm;
-import jkcemu.disk.*;
-import jkcemu.etc.*;
+import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.disk.FloppyDiskFormat;
+import jkcemu.disk.FloppyDiskInfo;
+import jkcemu.etc.Plotter;
+import jkcemu.etc.VDIP;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80MaxSpeedListener;
+import z80emu.Z80Memory;
+import z80emu.Z80MemView;
+import z80emu.Z80TStatesListener;
 
 
-public abstract class EmuSys implements ImageObserver, Runnable
+public abstract class EmuSys implements
+				ImageObserver,
+				Runnable,
+				Z80MaxSpeedListener,
+				Z80TStatesListener
 {
+  public static final String PROP_COLOR        = "color";
+  public static final String PROP_FDC_ENABLED  = "floppydisk.enabled";
+  public static final String PROP_FILE         = "file";
+  public static final String PROP_FONT_PREFIX  = "font.";
+  public static final String PROP_FONT_FILE    = PROP_FONT_PREFIX + PROP_FILE;
+  public static final String PROP_BASIC_PREFIX = "basic.";
+  public static final String PROP_OS_PREFIX    = "os.";
+  public static final String PROP_OS_FILE      = PROP_OS_PREFIX + PROP_FILE;
+  public static final String PROP_OS_VERSION   = PROP_OS_PREFIX + "version";
+  public static final String PROP_ROM_PREFIX   = "rom.";
+  public static final String PROP_MODEL        = "model";
+  public static final String PROP_CATCH_PRINT_CALLS = "catch_print_calls";
+  public static final String PROP_FIXED_SCREEN_SIZE = "fixed_screen_size";
+  public static final String PROP_KCNET_ENABLED     = "kcnet.enabled";
+  public static final String PROP_ROMMEGA_ENABLED   = "rom_mega.enabled";
+  public static final String PROP_PASTE_FAST        = "paste.fast";
+  public static final String PROP_RF_PREFIX         = "ramfloppy.";
+  public static final String PROP_RF1_PREFIX        = "ramfloppy.1.";
+  public static final String PROP_RF2_PREFIX        = "ramfloppy.2.";
+  public static final String PROP_RTC_ENABLED       = "rtc.enabled";
+  public static final String PROP_VDIP_ENABLED      = "vdip.enabled";
+
+  public static final String VALUE_PREFIX_FILE = "file:";
+
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 500;
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = false;
+
   public enum Chessman {
 		WHITE_PAWN,
 		WHITE_KNIGHT,
@@ -54,6 +97,15 @@ public abstract class EmuSys implements ImageObserver, Runnable
   protected Color             colorGreenDark;
   protected Thread            pasteThread;
   protected CharacterIterator pasteIter;
+  protected volatile boolean  soundOutPhase;
+  protected volatile boolean  tapeOutPhase;
+
+  private int          curSoundOutTStates;
+  private int          curTapeOutTStates;
+  private int          soundOutTStates;
+  private int          tapeOutTStates;
+  private volatile int soundOutFrameRate;
+  private volatile int tapeOutFrameRate;
 
   private static final int CHESSBOARD_SQUARE_WIDTH = 48;
 
@@ -74,11 +126,19 @@ public abstract class EmuSys implements ImageObserver, Runnable
 		Properties props,
 		String     propPrefix )
   {
-    this.emuThread   = emuThread;
-    this.screenFrm   = emuThread.getScreenFrm();
-    this.pasteThread = null;
-    this.pasteIter   = null;
-    this.propPrefix  = propPrefix;
+    this.emuThread          = emuThread;
+    this.screenFrm          = emuThread.getScreenFrm();
+    this.pasteThread        = null;
+    this.pasteIter          = null;
+    this.propPrefix         = propPrefix;
+    this.curSoundOutTStates = 0;
+    this.soundOutTStates    = 0;
+    this.soundOutFrameRate  = 0;
+    this.soundOutPhase      = false;
+    this.curTapeOutTStates  = 0;
+    this.tapeOutTStates     = 0;
+    this.tapeOutFrameRate   = 0;
+    this.tapeOutPhase       = false;
     createColors( props );
   }
 
@@ -108,12 +168,6 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
-  public void audioOutChanged( AudioOut audioOut )
-  {
-    // leer
-  }
-
-
   public synchronized void cancelPastingText()
   {
     Thread thread = this.pasteThread;
@@ -128,7 +182,15 @@ public abstract class EmuSys implements ImageObserver, Runnable
       this.pasteIter = null;
       this.screenFrm.firePastingTextFinished();
     }
-    keyReleased();
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    keyReleased();
+		  }
+		} );
   }
 
 
@@ -149,6 +211,25 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public boolean canExtractScreenText()
   {
     return false;
+  }
+
+
+  /*
+   * Die Methode zeigt einen Dialog mit Meldung an,
+   * dass ein Zeichen nicht eingefuegt werden konnte.
+   * Die Methode kann von jedem Thread heraus aufgerufen werden.
+   */
+  protected void fireShowCharNotPasted( final CharacterIterator iter )
+  {
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    showCharNotPasted( iter );
+		  }
+		} );
   }
 
 
@@ -209,8 +290,8 @@ public abstract class EmuSys implements ImageObserver, Runnable
   {
     int value = EmuUtil.getIntProperty(
 				props,
-				"jkcemu.brightness",
-				SettingsFrm.DEFAULT_BRIGHTNESS );
+				ScreenFld.PROP_BRIGHTNESS,
+				ScreenFld.DEFAULT_BRIGHTNESS );
     float rv = 1F;
     if( (value > 0) && (value < 100) ) {
       rv = 1F - (float) Math.abs(
@@ -269,6 +350,12 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public int getDefaultPromptAfterResetMillisMax()
+  {
+    return DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX;
+  }
+
+
   protected long getDelayMillisAfterPasteChar()
   {
     return 150;
@@ -305,7 +392,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
    */
   public static int getMaxRGBValue( Properties props )
   {
-    int   value      = 255 * SettingsFrm.DEFAULT_BRIGHTNESS / 100;
+    int   value      = 255 * ScreenFld.DEFAULT_BRIGHTNESS / 100;
     float brightness = getBrightness( props );
     if( (brightness >= 0F) && (brightness <= 1F) ) {
       value = Math.round( 255 * brightness );
@@ -450,7 +537,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
 
   public boolean getSwapKeyCharCase()
   {
-    return false;
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
   }
 
 
@@ -514,7 +601,8 @@ public abstract class EmuSys implements ImageObserver, Runnable
     if( a != null ) {
       if( EmuUtil.getProperty(
 		props,
-		"jkcemu.sram.init" ).toLowerCase().startsWith( "r" ) )
+		EmuThread.PROP_SRAM_INIT ).equalsIgnoreCase(
+					EmuThread.VALUE_SRAM_INIT_RANDOM ) )
       {
 	fillRandom( a );
       } else {
@@ -540,8 +628,8 @@ public abstract class EmuSys implements ImageObserver, Runnable
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.external_rom.reload_on_power_on",
-			false );
+			EmuThread.PROP_EXT_ROM_RELOAD_ON_POWER_ON,
+			EmuThread.DEFAULT_EXT_ROM_RELOAD_ON_POWER_ON );
   }
 
 
@@ -668,7 +756,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
-  protected boolean pasteChar( char ch )
+  protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
     switch( ch ) {
@@ -687,10 +775,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
     if( rv ) {
       long millis = getHoldMillisPasteChar();
       if( millis > 0L ) {
-	try {
-	  Thread.sleep( millis );
-	}
-	catch( InterruptedException ex ) {}
+	Thread.sleep( millis );
       }
       keyReleased();
     }
@@ -958,7 +1043,10 @@ public abstract class EmuSys implements ImageObserver, Runnable
 
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
-    // leer
+    this.curSoundOutTStates = 0;
+    this.curTapeOutTStates  = 0;
+    this.soundOutPhase      = false;
+    this.tapeOutPhase       = false;
   }
 
 
@@ -991,7 +1079,7 @@ public abstract class EmuSys implements ImageObserver, Runnable
 
   protected void showNoBasic()
   {
-    BasicDlg.showErrorDlg(
+    BaseDlg.showErrorDlg(
 	this.screenFrm,
 	"Es ist kein BASIC-Programm im entsprechenden\n"
 		+ "Adressbereich des Arbeitsspeichers vorhanden." );
@@ -1047,6 +1135,13 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  public void soundOutFrameRateChanged( int frameRate )
+  {
+    this.soundOutFrameRate = frameRate;
+    updSoundOutTStates();
+  }
+
+
   public synchronized void startPastingText( String text )
   {
     boolean done = false;
@@ -1070,7 +1165,10 @@ public abstract class EmuSys implements ImageObserver, Runnable
 
   public boolean supportsAudio()
   {
-    return false;
+    return (supportsTapeIn()
+		|| supportsTapeOut()
+		|| supportsSoundOutMono()
+		|| supportsSoundOutStereo());
   }
 
 
@@ -1140,7 +1238,31 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
-  public boolean supportsStereoSound()
+  public boolean supportsSoundOut8Bit()
+  {
+    return false;
+  }
+
+
+  public boolean supportsSoundOutMono()
+  {
+    return false;
+  }
+
+
+  public boolean supportsSoundOutStereo()
+  {
+    return false;
+  }
+
+
+  public boolean supportsTapeIn()
+  {
+    return false;
+  }
+
+
+  public boolean supportsTapeOut()
   {
     return false;
   }
@@ -1149,6 +1271,13 @@ public abstract class EmuSys implements ImageObserver, Runnable
   public boolean supportsUSB()
   {
     return (getVDIP() != null);
+  }
+
+
+  public void tapeOutFrameRateChanged( int frameRate )
+  {
+    this.tapeOutFrameRate = frameRate;
+    updTapeOutTStates();
   }
 
 
@@ -1206,61 +1335,90 @@ public abstract class EmuSys implements ImageObserver, Runnable
   @Override
   public void run()
   {
-    long    delay   = 0L;
-    boolean isFirst = true;
-    while( this.pasteThread != null ) {
+    try {
+      long    delay   = 0L;
+      boolean isFirst = true;
+      while( this.pasteThread != null ) {
 
-      // kurze Wartezeit vor dem naechsten Zeichen
-      if( delay > 0L ) {
-	try {
+	// kurze Wartezeit vor dem naechsten Zeichen
+	if( delay > 0L ) {
 	  Thread.sleep( delay );
 	}
-	catch( InterruptedException ex ) {}
-      }
 
-      // naechstes Zeichen holen und uebergeben
-      CharacterIterator iter = this.pasteIter;
-      if( iter != null ) {
-	char ch = '\u0000';
-	if( isFirst ) {
-	  ch      = iter.first();
-	  isFirst = false;
-	} else {
-	  ch = iter.next();
-	}
-	if( ch == CharacterIterator.DONE ) {
-	  cancelPastingText();
-	} else {
-	  if( getConvertKeyCharToISO646DE() ) {
-	    ch = TextUtil.toISO646DE( ch );
-	  }
-	  if( pasteChar( ch ) ) {
-	    if( (ch == '\n') || (ch == '\r') ) {
-	      delay = getDelayMillisAfterPasteEnter();
-	    } else {
-	      delay = getDelayMillisAfterPasteChar();
-	    }
+	// naechstes Zeichen holen und uebergeben
+	CharacterIterator iter = this.pasteIter;
+	if( iter != null ) {
+	  char ch = '\u0000';
+	  if( isFirst ) {
+	    keyReleased();
+	    Thread.sleep( 100 );
+	    ch      = iter.first();
+	    isFirst = false;
 	  } else {
-	    if( this.pasteThread != null ) {
-	      if( JOptionPane.showConfirmDialog(
-			this.screenFrm,
-			String.format(
-				"Das Zeichen mit dem hexadezimalen Code %02X\n"
-					+ "kann nicht eingef\u00FCgt werden.",
-				(int) ch ),
-			"Text einf\u00FCgen",
-			JOptionPane.OK_CANCEL_OPTION,
-			JOptionPane.WARNING_MESSAGE )
-					!= JOptionPane.OK_OPTION )
-	      {
+	    ch = iter.next();
+	  }
+	  if( ch == CharacterIterator.DONE ) {
+	    cancelPastingText();
+	  } else {
+	    if( getConvertKeyCharToISO646DE() ) {
+	      ch = TextUtil.toISO646DE( ch );
+	    }
+	    if( pasteChar( ch ) ) {
+	      if( (ch == '\n') || (ch == '\r') ) {
+		delay = getDelayMillisAfterPasteEnter();
+	      } else {
+		delay = getDelayMillisAfterPasteChar();
+	      }
+	    } else {
+	      if( this.pasteThread != null ) {
 		cancelPastingText();
+		fireShowCharNotPasted( iter );
 	      }
 	    }
 	  }
 	}
       }
     }
-    this.screenFrm.firePastingTextFinished();
+    catch( InterruptedException ex ) {}
+    finally {
+      this.screenFrm.firePastingTextFinished();
+    }
+  }
+
+
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    if( cpu == this.emuThread.getZ80CPU() ) {
+      updSoundOutTStates();
+      updTapeOutTStates();
+    }
+  }
+
+
+	/* --- Z80TStatesListener --- */
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    if( this.soundOutTStates > 0 ) {
+      if( this.curSoundOutTStates > 0 ) {
+	this.curSoundOutTStates -= tStates;
+      } else {
+	this.curSoundOutTStates = this.soundOutTStates;
+	this.emuThread.writeSoundOutPhase( this.soundOutPhase );
+      }
+    }
+    if( this.tapeOutTStates > 0 ) {
+      if( this.curTapeOutTStates > 0 ) {
+	this.curTapeOutTStates -= tStates;
+      } else {
+	this.curTapeOutTStates = this.tapeOutTStates;
+	this.emuThread.writeTapeOutPhase( this.tapeOutPhase );
+      }
+    }
   }
 
 
@@ -1333,11 +1491,76 @@ public abstract class EmuSys implements ImageObserver, Runnable
   }
 
 
+  private void showCharNotPasted( CharacterIterator iter )
+  {
+    String title     = "Text einf\u00FCgen";
+    int    remainLen = iter.getEndIndex() - iter.getIndex() - 1;
+    if( remainLen > 0 ) {
+      if( BaseDlg.showYesNoWarningDlg(
+		this.screenFrm,
+		String.format(
+			"Das Zeichen mit dem hexadezimalen Code %02X\n"
+				+ "kann nicht eingef\u00FCgt werden.\n"
+				+ "M\u00F6chten Sie die restlichen"
+				+ " Zeichen einf\u00FCgen?",
+			(int) iter.current() ),
+		title ) )
+      {
+	StringBuilder buf = new StringBuilder( remainLen );
+	char          ch  = iter.next();
+	while( ch != CharacterIterator.DONE ) {
+	  buf.append( ch );
+	  ch = iter.next();
+	}
+	if( buf.length() > 0 ) {
+	  startPastingText( buf.toString() );
+	}
+      }
+    } else {
+      BaseDlg.showWarningDlg(
+	this.screenFrm,
+	String.format(
+		"Das letzte Zeichen (hexadezimaler Code %02X)\n"
+			+ "kann nicht eingef\u00FCgt werden.",
+		(int) iter.current() ),
+	title );
+    }
+  }
+
+
   private void showFunctionNotSupported()
   {
-    BasicDlg.showErrorDlg(
+    BaseDlg.showErrorDlg(
 	this.screenFrm,
 	"Diese Funktion steht f\u00FCr das gerade emulierte System\n"
 		+ "nicht zur Verf\u00FCgung." );
+  }
+
+
+  private void updSoundOutTStates()
+  {
+    int frameRate = this.soundOutFrameRate;
+    if( (frameRate > 0)
+	&& supportsSoundOutMono()
+	&& !supportsSoundOutStereo()
+	&& !supportsSoundOut8Bit() )
+    {
+      this.soundOutTStates = this.emuThread.getZ80CPU().getMaxSpeedKHz()
+							* 600 / frameRate;
+    } else {
+      this.soundOutTStates = 0;
+    }
+  }
+
+
+  private void updTapeOutTStates()
+  {
+    int frameRate = this.tapeOutFrameRate;
+    if( (frameRate > 0) && supportsTapeOut() ) {
+      this.tapeOutTStates = this.emuThread.getZ80CPU().getMaxSpeedKHz()
+							* 300 / frameRate;
+    } else {
+      this.tapeOutTStates = 0;
+    }
   }
 }

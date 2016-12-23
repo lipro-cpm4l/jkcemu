@@ -8,25 +8,65 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.EventQueue;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Window;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.io.File;
 import java.lang.*;
-import java.nio.file.*;
-import java.util.*;
-import java.util.regex.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.filechooser.*;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EventObject;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.JViewport;
+import javax.swing.ListModel;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.text.Document;
-import javax.swing.table.*;
 import jkcemu.Main;
 
 
 public class FileSelectDlg
-			extends BasicDlg
+			extends BaseDlg
 			implements
 				AbstractFileWorker.PathListener,
 				DocumentListener,
@@ -61,50 +101,50 @@ public class FileSelectDlg
 
   private static final String defaultStatusText = "Bereit";
 
-  private Mode                                 mode;
-  private boolean                              startSelected;
-  private boolean                              loadWithOptionsSelected;
-  private boolean                              loadable;
-  private boolean                              startable;
-  private javax.swing.filechooser.FileFilter[] fileFilters;
-  private File                                 curDir;
-  private File                                 selectedFile;
-  private java.util.List<File>                 selectedFiles;
-  private FileSystemView                       fsv;
-  private JList<File>                          list;
-  private JScrollPane                          scrollPane;
-  private JTextField                           fldFileName;
-  private JComboBox<String>                    comboFileType;
-  private JComboBox<DirItem>                   comboDir;
-  private JButton                              btnCreateDir;
-  private JButton                              btnGoUp;
-  private JButton                              btnApprove;
-  private JButton                              btnStart;
-  private JButton                              btnLoadWithOptions;
-  private JButton                              btnCancel;
-  private JLabel                               labelStatus;
-  private JPopupMenu                           mnuPopup;
-  private JMenuItem                            mnuCreateDir;
-  private JMenuItem                            mnuDelete;
-  private JMenuItem                            mnuGoUp;
-  private JMenuItem                            mnuRefresh;
-  private JMenuItem                            mnuRename;
-  private DefaultComboBoxModel<DirItem>        modelDir;
-  private Document                             docFileName;
-  private java.util.List<DirItem>              baseDirItems;
-  private Cursor                               defaultCursor;
-  private Cursor                               waitCursor;
-  private String                               approveBtnText;
+  private Mode                          mode;
+  private boolean                       startSelected;
+  private boolean                       loadWithOptionsSelected;
+  private boolean                       loadable;
+  private boolean                       startable;
+  private java.util.List<FileFilter>    fileFilters;
+  private File                          curDir;
+  private File                          selectedFile;
+  private java.util.List<File>          selectedFiles;
+  private FileSystemView                fsv;
+  private JList<File>                   list;
+  private JScrollPane                   scrollPane;
+  private JTextField                    fldFileName;
+  private JComboBox<String>             comboFileType;
+  private JComboBox<DirItem>            comboDir;
+  private JButton                       btnCreateDir;
+  private JButton                       btnGoUp;
+  private JButton                       btnApprove;
+  private JButton                       btnStart;
+  private JButton                       btnLoadWithOptions;
+  private JButton                       btnCancel;
+  private JLabel                        labelStatus;
+  private JPopupMenu                    mnuPopup;
+  private JMenuItem                     mnuCreateDir;
+  private JMenuItem                     mnuDelete;
+  private JMenuItem                     mnuGoUp;
+  private JMenuItem                     mnuRefresh;
+  private JMenuItem                     mnuRename;
+  private DefaultComboBoxModel<DirItem> modelDir;
+  private Document                      docFileName;
+  private java.util.List<DirItem>       baseDirItems;
+  private Cursor                        defaultCursor;
+  private Cursor                        waitCursor;
+  private String                        approveBtnText;
 
 
   public FileSelectDlg(
-		Window                                owner,
-		Mode                                  mode,
-		boolean                               startEnabled,
-		boolean                               loadWithOptionsEnabled,
-		String                                title,
-		File                                  preSelection,
-		javax.swing.filechooser.FileFilter... fileFilters )
+		Window        owner,
+		Mode          mode,
+		boolean       startEnabled,
+		boolean       loadWithOptionsEnabled,
+		String        title,
+		File          preSelection,
+		FileFilter... fileFilters )
   {
     super( owner, title );
     this.mode                    = mode;
@@ -112,7 +152,7 @@ public class FileSelectDlg
     this.loadWithOptionsSelected = false;
     this.loadable                = false;
     this.startable               = false;
-    this.fileFilters             = fileFilters;
+    this.fileFilters             = null;
     this.curDir                  = null;
     this.selectedFile            = null;
     this.selectedFiles           = null;
@@ -248,7 +288,7 @@ public class FileSelectDlg
     this.list.setSelectionMode(
 	this.mode.equals( Mode.MULTIPLE_LOAD ) ?
 		ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
-		:ListSelectionModel.SINGLE_SELECTION );
+		: ListSelectionModel.SINGLE_SELECTION );
     this.list.setVisibleRowCount( 0 );
     this.list.setCellRenderer( new FileSelectRenderer( this.fsv ) );
     this.list.addKeyListener( this );
@@ -299,23 +339,20 @@ public class FileSelectDlg
     this.comboFileType.setEditable( false );
     this.comboFileType.addItem( "Alle Dateien" );
 
-    int idx = 0;
     if( fileFilters != null ) {
-      if( fileFilters.length == 1 ) {
-	if( fileFilters[ 0 ] != null ) {
-	  this.comboFileType.addItem( fileFilters[ 0 ].getDescription() );
-	  idx = 1;
-	}
-      } else {
+      if( fileFilters.length > 0 ) {
+	this.fileFilters = new ArrayList<>( fileFilters.length );
 	for( int i = 0; i < fileFilters.length; i++ ) {
 	  if( fileFilters[ i ] != null ) {
 	    this.comboFileType.addItem( fileFilters[ i ].getDescription() );
+	    this.fileFilters.add( fileFilters[ i ] );
 	  }
 	}
       }
     }
     try {
-      this.comboFileType.setSelectedIndex( idx );
+      this.comboFileType.setSelectedIndex(
+			this.comboFileType.getItemCount() == 2 ? 1 : 0 );
     }
     catch( IllegalArgumentException ex ) {}
     this.comboFileType.addActionListener( this );
@@ -1030,54 +1067,17 @@ public class FileSelectDlg
 	      }
 	      file = replaceName( file, fName );
 	    } else {
-	      /*
-	       * Dateiendung automatisch anhaengen,
-	       * wenn laut Dateifilter nur eine Endung angegeben ist
-	       */
-	      if( this.fileFilters != null ) {
-		if( this.fileFilters.length == 1 ) {
-		  javax.swing.filechooser.FileFilter ff = fileFilters[ 0 ];
-		  if( ff != null ) {
-		    if( ff instanceof FileNameExtensionFilter ) {
-		      String[] extensions = ((FileNameExtensionFilter) ff)
-							.getExtensions();
-		      if( extensions != null ) {
-			if( extensions.length == 1 ) {
-			  String ext = extensions[ 0 ];
-			  if( ext != null ) {
-			    if( !fName.toUpperCase().endsWith(
-						ext.toUpperCase() ) )
-			    {
-			      file = replaceName(
-						file,
-						String.format(
-							"%s.%s",
-							fName,
-							ext ) );
-			    }
-			  }
-			}
-		      }
-		    }
-		  }
-		}
-	      }
+	      // Dateiendung ggf. automatisch anhaengen
+	      file = EmuUtil.completeFileExtension(
+					file,
+					getSelectedFileFilter() );
 	    }
 	  }
 
 	  // bei Vorhandensein der Datei warnen
-	  if( file.exists() ) {
-	    if( !BasicDlg.showYesNoWarningDlg(
-			this,
-			"Die Datei \'" + file.getName()
-				+ "\' existiert bereits.\n"
-				+ "M\u00F6chten Sie die Datei"
-				+ " \u00FCberschreiben?",
-			"Best\u00E4tigung" ) )
-	    {
-	      file  = null;
-	      files = null;
-	    }
+	  if( !EmuUtil.confirmFileOverwrite( this, file ) ) {
+	    file  = null;
+	    files = null;
 	  }
 	}
 	if( file != null ) {
@@ -1227,6 +1227,19 @@ public class FileSelectDlg
   }
 
 
+  private FileFilter getSelectedFileFilter()
+  {
+    FileFilter fileFilter = null;
+    if( this.fileFilters != null ) {
+      int idx = this.comboFileType.getSelectedIndex() - 1;
+      if( (idx >= 0) && (idx < this.fileFilters.size()) ) {
+	fileFilter = this.fileFilters.get( idx );
+      }
+    }
+    return fileFilter;
+  }
+
+
   private boolean isForSave()
   {
     return this.mode.equals( Mode.SAVE );
@@ -1315,16 +1328,10 @@ public class FileSelectDlg
   {
     if( (this.curDir != null) && (dirFile != null) && (files != null) ) {
       if( this.curDir.equals( dirFile ) ) {
-	javax.swing.filechooser.FileFilter fileFilter = null;
 	EmuUtil.sortFilesByName( files );
-	if( this.fileFilters != null ) {
-	  int idx = this.comboFileType.getSelectedIndex() - 1;
-	  if( (idx >= 0) && (idx < this.fileFilters.length) ) {
-	    fileFilter = this.fileFilters[ idx ];
-	  }
-	}
-	Pattern pattern = null;
-	String  mask    = this.fldFileName.getText();
+	FileFilter fileFilter = getSelectedFileFilter();
+	Pattern    pattern    = null;
+	String     mask       = this.fldFileName.getText();
 	if( mask != null ) {
 	  if( (mask.indexOf( '*' ) >= 0) || (mask.indexOf( '?' ) >= 0) ) {
 	    pattern = compileFileNameMask( mask );

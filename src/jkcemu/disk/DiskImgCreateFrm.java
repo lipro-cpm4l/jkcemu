@@ -8,28 +8,80 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.FlavorEvent;
+import java.awt.datatransfer.FlavorListener;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.awt.event.KeyEvent;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.Collection;
+import java.util.EventObject;
+import java.util.Arrays;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.JViewport;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileEntry;
+import jkcemu.base.FileNameFld;
+import jkcemu.base.FileTableModel;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.NIOFileTimesViewFactory;
+import jkcemu.base.ReplyTextDlg;
 import jkcemu.text.TextUtil;
 
 
 public class DiskImgCreateFrm
-			extends BasicFrm
+			extends BaseFrm
 			implements
 				ChangeListener,
 				DropTargetListener,
 				FlavorListener,
 				ListSelectionListener
 {
+  private static final String HELP_PAGE = "/help/disk/creatediskimg.htm";
+
   private static DiskImgCreateFrm instance = null;
 
   private Clipboard                 clipboard;
@@ -234,7 +286,7 @@ public class DiskImgCreateFrm
     }
     else if( src == this.mnuHelpContent ) {
       rv = true;
-      HelpFrm.open( "/help/disk/creatediskimg.htm" );
+      HelpFrm.open( HELP_PAGE );
     }
     return rv;
   }
@@ -247,7 +299,7 @@ public class DiskImgCreateFrm
     if( this.dataChanged ) {
       setState( Frame.NORMAL );
       toFront();
-      if( !BasicDlg.showYesNoDlg(
+      if( !BaseDlg.showYesNoDlg(
 		this,
 		"Daten ge\u00E4ndert!\n"
 			+ "Trotzdem schlie\u00DFen?" ) )
@@ -352,7 +404,7 @@ public class DiskImgCreateFrm
 	    if( o instanceof Number ) {
 	      value = ((Number) o).intValue();
 	      if( (value >= 0) && (value <= 15) ) {
-		Integer userNum = new Integer( value );
+		Integer userNum = value;
 		for( int i = 0; i< rowNums.length; i++ ) {
 		  int       rowNum = rowNums[ i ];
 		  FileEntry entry  = this.tableModel.getRow( rowNum );
@@ -386,7 +438,7 @@ public class DiskImgCreateFrm
       buf.append( "Die hinzugef\u00FCgten Dateien werden entfernt." );
     }
     if( buf.length() > 0 ) {
-      status = BasicDlg.showConfirmDlg( this, buf.toString() );
+      status = BaseDlg.showConfirmDlg( this, buf.toString() );
     }
     if( status ) {
       this.tableModel.clear( true );
@@ -422,7 +474,7 @@ public class DiskImgCreateFrm
   {
     boolean status = true;
     if( this.tableModel.getRowCount() == 0 ) {
-      status = BasicDlg.showYesNoDlg(
+      status = BaseDlg.showYesNoDlg(
 		this,
 		"Es wurden keine Dateien hinzugef\u00FCgt.\n"
 			+ "M\u00F6chten Sie eine leere Diskettenabbilddatei"
@@ -446,17 +498,17 @@ public class DiskImgCreateFrm
     }
     if( status ) {
       File file = EmuUtil.showFileSaveDlg(
-				this,
-				"Diskettenabbilddatei speichern",
-				this.lastOutFile != null ?
-					this.lastOutFile
-					: Main.getLastDirFile( "disk" ),
-				EmuUtil.getPlainDiskFileFilter(),
-				EmuUtil.getAnaDiskFileFilter(),
-				EmuUtil.getCopyQMFileFilter(),
-				EmuUtil.getDskFileFilter(),
-				EmuUtil.getImageDiskFileFilter(),
-				EmuUtil.getTeleDiskFileFilter() );
+			this,
+			"Diskettenabbilddatei speichern",
+			this.lastOutFile != null ?
+				this.lastOutFile
+				: Main.getLastDirFile( Main.FILE_GROUP_DISK ),
+			EmuUtil.getPlainDiskFileFilter(),
+			EmuUtil.getAnaDiskFileFilter(),
+			EmuUtil.getCopyQMFileFilter(),
+			EmuUtil.getDskFileFilter(),
+			EmuUtil.getImageDiskFileFilter(),
+			EmuUtil.getTeleDiskFileFilter() );
       if( file != null ) {
 	boolean plainDisk  = false;
 	boolean anaDisk    = false;
@@ -492,8 +544,8 @@ public class DiskImgCreateFrm
 	if( plainDisk || anaDisk || copyQMDisk || cpcDisk
 		|| imageDisk || teleDisk )
 	{
-	  boolean      canceled = false;
-	  OutputStream out      = null;
+	  boolean      cancelled = false;
+	  OutputStream out       = null;
 	  try {
 	    int sides      = this.fmtSelectFld.getSides();
 	    int cyls       = this.fmtSelectFld.getCylinders();
@@ -548,13 +600,13 @@ public class DiskImgCreateFrm
 			JOptionPane.OK_CANCEL_OPTION,
 			JOptionPane.ERROR_MESSAGE ) != JOptionPane.OK_OPTION )
 		  {
-		    canceled = true;
+		    cancelled = true;
 		    break;
 		  }
 		}
 	      }
 	    }
-	    if( !canceled ) {
+	    if( !cancelled ) {
 	      byte[] diskBuf = diskImgCreator.getPlainDiskByteBuffer();
 	      if( plainDisk ) {
 		out = EmuUtil.createOptionalGZipOutputStream( file );
@@ -589,18 +641,18 @@ public class DiskImgCreateFrm
 	      this.dataChanged = false;
 	      this.lastOutFile = file;
 	      updTitle();
-	      Main.setLastFile( file, "disk" );
+	      Main.setLastFile( file, Main.FILE_GROUP_DISK );
 	      this.labelStatus.setText( "Diskettenabbilddatei gespeichert" );
 	    }
 	  }
 	  catch( Exception ex ) {
-	    BasicDlg.showErrorDlg( this, ex );
+	    BaseDlg.showErrorDlg( this, ex );
 	  }
 	  finally {
-	    EmuUtil.doClose( out );
+	    EmuUtil.closeSilent( out );
 	  }
 	} else {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Aus der Dateiendung der ausgew\u00E4hlten Datei\n"
 			+ "kann JKCEMU das Dateiformat nicht erkennen.\n"
@@ -617,14 +669,14 @@ public class DiskImgCreateFrm
   private void doFileAdd()
   {
     java.util.List<File> files = EmuUtil.showMultiFileOpenDlg(
-					this,
-					"Dateien hinzuf\u00FCgen",
-					Main.getLastDirFile( "software" ) );
+			this,
+			"Dateien hinzuf\u00FCgen",
+			Main.getLastDirFile( Main.FILE_GROUP_SOFTWARE ) );
     if( files != null ) {
       int firstRowToSelect = this.table.getRowCount();
       for( File file : files ) {
 	if( addFile( file ) ) {
-	  Main.setLastFile( file, "software" );
+	  Main.setLastFile( file, Main.FILE_GROUP_SOFTWARE );
 	}
       }
       updSelectAllEnabled();
@@ -710,7 +762,7 @@ public class DiskImgCreateFrm
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"Datei \u00FCffnen",
-			Main.getLastDirFile( "software" ) );
+			Main.getLastDirFile( Main.FILE_GROUP_SOFTWARE ) );
     if( file != null ) {
       addSysTrackFile( file );
     }
@@ -1055,7 +1107,7 @@ public class DiskImgCreateFrm
 	  int userNum = Integer.parseInt( s );
 	  if( (userNum >= 1) && (userNum <= 15) ) {
 	    done = true;
-	    if( BasicDlg.showYesNoDlg(
+	    if( BaseDlg.showYesNoDlg(
 			this,
 			"Sollen die Dateien im Verzeichnis " + s 
 				+ "\nin der Benutzerebene " + s
@@ -1101,7 +1153,7 @@ public class DiskImgCreateFrm
 	if( fName == null ) {
 	  fName = file.getPath();
 	}
-	if( !BasicDlg.showYesNoDlg(
+	if( !BaseDlg.showYesNoDlg(
 		this,
 		"Datei " + fName
 			+ ":\nDie Datei ist leer!\n"
@@ -1111,7 +1163,7 @@ public class DiskImgCreateFrm
 	}
       }
       else if( size > (1024 * 16 * 32) ) {
-	BasicDlg.showErrorDlg( this, "Datei ist zu gro\u00DF!" );
+	BaseDlg.showErrorDlg( this, "Datei ist zu gro\u00DF!" );
 	file = null;
       } else {
 	String fileName = file.getName();
@@ -1119,7 +1171,7 @@ public class DiskImgCreateFrm
 	  if( fileName.equalsIgnoreCase(
 			DirectoryFloppyDisk.SYS_FILE_NAME ) )
 	  {
-	    if( BasicDlg.showYesNoDlg(
+	    if( BaseDlg.showYesNoDlg(
 			this,
 			DirectoryFloppyDisk.SYS_FILE_NAME + ":\n"
 				+ "JKCEMU verwendet Dateien mit diesem Namen"
@@ -1138,7 +1190,7 @@ public class DiskImgCreateFrm
 	}
       }
     } else {
-      BasicDlg.showErrorDlg(
+      BaseDlg.showErrorDlg(
 		this,
 		"Es k\u00F6nnen nur regul\u00E4re Dateien"
 			+ " hinzugef\u00FCgt werden." );
@@ -1200,7 +1252,7 @@ public class DiskImgCreateFrm
 	  if( reply != null ) {
 	    entryName = createEntryName( reply );
 	    if( entryName == null ) {
-	      BasicDlg.showErrorDlg(
+	      BaseDlg.showErrorDlg(
 			this,
 			"Der eingegebene Name ist ung\u00FCltig." );
 	    }
@@ -1221,18 +1273,18 @@ public class DiskImgCreateFrm
 	  }
 	}
 	if( exists ) {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Es existiert bereits ein Eintrag mit diesem Namen." );
 	} else {
 	  FileEntry entry = new FileEntry( entryName );
-	  entry.setUserNum( new Integer( userNum ) );
+	  entry.setUserNum( userNum );
 	  if( size >= 0 ) {
-	    entry.setSize( new Long( size ) );
+	    entry.setSize( size );
 	  }
 	  long lastModified = file.lastModified();
 	  if( lastModified != 0 ) {
-	    entry.setLastModified( new Long( lastModified ) );
+	    entry.setLastModified( lastModified );
 	  }
 	  entry.setFile( file );
 	  entry.setReadOnly( !file.canWrite() );
@@ -1260,7 +1312,7 @@ public class DiskImgCreateFrm
       errMsg = "Datei ist keine regul\u00E4re Datei";
     }
     if( errMsg != null ) {
-      BasicDlg.showErrorDlg( this, errMsg );
+      BaseDlg.showErrorDlg( this, errMsg );
     } else {
       this.fldSysTrackFileName.setFile( file );
       this.btnSysTrackFileRemove.setEnabled( true );

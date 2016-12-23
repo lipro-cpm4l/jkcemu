@@ -15,10 +15,10 @@ import java.util.EventObject;
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
 import jkcemu.Main;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.BaseDlg;
 
 
-public class ReplyShiftWidthDlg extends BasicDlg
+public class ReplyShiftWidthDlg extends BaseDlg
 {
   private TextEditFrm textEditFrm;
   private JSpinner    spinnerShiftWidth;

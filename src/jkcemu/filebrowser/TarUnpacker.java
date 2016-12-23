@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,26 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Dialog;
+import java.awt.Window;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
-import jkcemu.base.*;
+import jkcemu.base.AbstractThreadDlg;
+import jkcemu.base.EmuUtil;
 
 
 public class TarUnpacker extends AbstractThreadDlg
@@ -27,10 +39,10 @@ public class TarUnpacker extends AbstractThreadDlg
 
 
   public static void unpackFile(
-		Window  owner,
-		File    srcFile,
-		File    outDir,
-		boolean compression )
+			Window  owner,
+			File    srcFile,
+			File    outDir,
+			boolean compression )
   {
     Dialog dlg = new TarUnpacker( owner, srcFile, outDir, compression );
     if( compression ) {
@@ -56,7 +68,7 @@ public class TarUnpacker extends AbstractThreadDlg
 	in = new GZIPInputStream( in );
       }
       TarEntry entry = TarEntry.readEntryHeader( in );
-      while( !this.canceled && (entry != null) ) {
+      while( !this.cancelled && (entry != null) ) {
 	String entryName = entry.getName();
 	if( entryName != null ) {
 	  appendToLog( entryName + "\n" );
@@ -146,7 +158,7 @@ public class TarUnpacker extends AbstractThreadDlg
 		  if( size > 0 ) {
 		    pos   = 1;
 		    int b = in.read();
-		    while( !this.canceled && (pos < size) && (b != -1) ) {
+		    while( !this.cancelled && (pos < size) && (b != -1) ) {
 		      out.write( b );
 		      b = in.read();
 		      pos++;
@@ -159,7 +171,7 @@ public class TarUnpacker extends AbstractThreadDlg
 		  out = null;
 		}
 		finally {
-		  EmuUtil.doClose( out );
+		  EmuUtil.closeSilent( out );
 		}
 		setAttributes( outFile, null, entry );
 		msg = null;
@@ -205,7 +217,7 @@ public class TarUnpacker extends AbstractThreadDlg
       incErrorCount();
     }
     finally {
-      EmuUtil.doClose( in );
+      EmuUtil.closeSilent( in );
     }
     FileBrowserFrm.fireFileChanged(
 		dirExists ? this.outDir : this.outDir.getParentFile() );
@@ -291,4 +303,3 @@ public class TarUnpacker extends AbstractThreadDlg
     }
   }
 }
-

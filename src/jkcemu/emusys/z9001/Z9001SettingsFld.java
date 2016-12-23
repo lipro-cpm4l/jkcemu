@@ -8,20 +8,39 @@
 
 package jkcemu.emusys.z9001;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.RAMFloppiesSettingsFld;
+import jkcemu.base.RAMFloppy;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.Z9001;
 
 
 public class Z9001SettingsFld extends AbstractSettingsFld
 {
-  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 2000;
-
   private static final String DEFAULT_LABEL_ROM_MODULE =
 				"Inhalt des ROM-Moduls:";
 
@@ -233,7 +252,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
     this.fldRomModule = new ROMFileSettingsFld(
 				settingsFrm,
-				this.propPrefix + "rom_module.",
+				this.propPrefix + Z9001.PROP_ROM_MOD_PREFIX,
 				DEFAULT_LABEL_ROM_MODULE );
     gbcMem.fill       = GridBagConstraints.HORIZONTAL;
     gbcMem.weightx    = 1.0;
@@ -440,9 +459,9 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     this.tabEtc.add( new JSeparator(), gbcEtc );
 
     this.fldAltOS = new ROMFileSettingsFld(
-		settingsFrm,
-		propPrefix + "os.",
-		"Alternatives Betriebssystem (F000h-FFFFh):" );
+			settingsFrm,
+			propPrefix + Z9001.PROP_OS_PREFIX,
+			"Alternatives Betriebssystem (F000h-FFFFh):" );
     gbcEtc.insets.top    = 5;
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
@@ -450,9 +469,9 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
     if( kc87 ) {
       this.fldAltBASIC = new ROMFileSettingsFld(
-		settingsFrm,
-		propPrefix + "basic.",
-		"Alternativer BASIC-ROM (C000h-E7FFh):" );
+			settingsFrm,
+			propPrefix + Z9001.PROP_BASIC_PREFIX,
+			"Alternativer BASIC-ROM (C000h-E7FFh):" );
       gbcEtc.gridy++;
       this.tabEtc.add( this.fldAltBASIC, gbcEtc );
     } else {
@@ -460,28 +479,28 @@ public class Z9001SettingsFld extends AbstractSettingsFld
     }
 
     this.fldAltFont = new ROMFileSettingsFld(
-				settingsFrm,
-				propPrefix + "font.",
-				 "Alternativer Zeichensatz:" );
+			settingsFrm,
+			propPrefix + Z9001.PROP_FONT_PREFIX,
+			"Alternativer Zeichensatz:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltFont, gbcEtc );
 
 
     // Tab AutoLoad
     this.tabAutoLoad = new AutoLoadSettingsFld(
-					settingsFrm,
-					propPrefix,
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
-					true );
+		settingsFrm,
+		propPrefix,
+		Z9001.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX,
+		true );
     this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
 
 
     // Tab AutoInput
     this.tabAutoInput = new AutoInputSettingsFld(
-					settingsFrm,
-					propPrefix,
-					Z9001.getDefaultSwapKeyCharCase(),
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+		settingsFrm,
+		propPrefix,
+		Z9001.DEFAULT_SWAP_KEY_CHAR_CASE,
+		Z9001.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
@@ -539,34 +558,40 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 	color = true;
 	graph = "robotron";
       }
-      EmuUtil.setProperty( props, this.propPrefix + "color", color );
-      EmuUtil.setProperty( props, this.propPrefix + "graphic.type", graph );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "font.programmable",
+		this.propPrefix + Z9001.PROP_COLOR,
+		color );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + Z9001.PROP_GRAPHIC_TYPE,
+		graph );
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + Z9001.PROP_FONT_PROGRAMMABLE,
 		this.btnFontProgrammable.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "80_chars.enabled",
+		this.propPrefix + Z9001.PROP_80CHARS_ENABLED,
 		this.btn80Chars.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "fixed_screen_size",
+		this.propPrefix + Z9001.PROP_FIXED_SCREEN_SIZE,
 		this.btnFixedScreenSize.isSelected() );
 
       // Tab Speichermodule
       tab = this.tabMem;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "ram_16k_4000.enabled",
+		this.propPrefix + Z9001.PROP_RAM16K4000_ENABLED,
 		this.btnRam16k4000.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "ram_16k_8000.enabled",
+		this.propPrefix + Z9001.PROP_RAM16K8000_ENABLED,
 		this.btnRam16k8000.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "ram_64k.enabled",
+		this.propPrefix + Z9001.PROP_RAM64K_ENABLED,
 		this.btnRam64k.isSelected() );
 
       File    file            = this.fldRomModule.getFile();
@@ -585,33 +610,33 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 			"Datei f\u00FCr ROM-Modul nicht ausgew\u00E4hlt" );
       }
       EmuUtil.setProperty(
-			props,
-			this.propPrefix + "rom_module.file",
-			file != null ? file.getPath() : file );
+		props,
+		this.propPrefix + Z9001.PROP_ROM_MOD_PREFIX + Z9001.PROP_FILE,
+		file != null ? file.getPath() : file );
       EmuUtil.setProperty(
-			props,
-			this.propPrefix + "rom_16k_4000.enabled",
-			stateRom16k4000 );
+		props,
+		this.propPrefix + Z9001.PROP_ROM16K4000_ENABLED,
+		stateRom16k4000 );
       EmuUtil.setProperty(
-			props,
-			this.propPrefix + "rom_32k_4000.enabled",
-			stateRom32k4000 );
+		props,
+		this.propPrefix + Z9001.PROP_ROM32K4000_ENABLED,
+		stateRom32k4000 );
       EmuUtil.setProperty(
-			props,
-			this.propPrefix + "rom_16k_8000.enabled",
-			stateRom16k8000 );
+		props,
+		this.propPrefix + Z9001.PROP_ROM16K8000_ENABLED,
+		stateRom16k8000 );
       EmuUtil.setProperty(
-			props,
-			this.propPrefix + "rom_10k_c000.enabled",
-			stateRom10kC000 );
+		props,
+		this.propPrefix + Z9001.PROP_ROM10KC000_ENABLED,
+		stateRom10kC000 );
       EmuUtil.setProperty(
-			props,
-			this.propPrefix + "rom_boot.enabled",
-			this.btnRomBoot.isSelected() );
+		props,
+		this.propPrefix + Z9001.PROP_ROMBOOT_ENABLED,
+		this.btnRomBoot.isSelected() );
       EmuUtil.setProperty(
-			props,
-			this.propPrefix + "rom_mega.enabled",
-			this.btnRomMega.isSelected() );
+		props,
+		this.propPrefix + Z9001.PROP_ROMMEGA_ENABLED,
+		this.btnRomMega.isSelected() );
 
       // Tab RAM-Floppies
       tab = this.tabRF;
@@ -621,11 +646,11 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       tab = this.tabPrinter;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "catch_print_calls",
+		this.propPrefix + Z9001.PROP_CATCH_PRINT_CALLS,
 		this.btnCatchPrintCalls.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "printer_module.enabled",
+		this.propPrefix + Z9001.PROP_PRINTER_MOD_ENABLED,
 		this.btnPrinterModule.isSelected() );
 
       // Tab GIDE
@@ -636,30 +661,30 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       tab = this.tabExt;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "floppydisk.enabled",
+		this.propPrefix + Z9001.PROP_FDC_ENABLED,
 		this.btnFloppyDisk.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "plotter.enabled",
+		this.propPrefix + Z9001.PROP_PLOTTER_ENABLED,
 		this.btnPlotter.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "kcnet.enabled",
+		this.propPrefix + Z9001.PROP_KCNET_ENABLED,
 		this.btnKCNet.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "vdip.enabled",
+		this.propPrefix + Z9001.PROP_VDIP_ENABLED,
 		this.btnVDIP.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "rtc.enabled",
+		this.propPrefix + Z9001.PROP_RTC_ENABLED,
 		this.btnRTC.isSelected() );
 
       // Tab Sonstiges
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "paste.fast",
+		this.propPrefix + Z9001.PROP_PASTE_FAST,
 		this.btnPasteFast.isSelected() );
 
       this.fldAltOS.applyInput( props, selected );
@@ -739,89 +764,89 @@ public class Z9001SettingsFld extends AbstractSettingsFld
   {
     // Tab Grafik
     boolean color = EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "color",
-				true );
+			props,
+			this.propPrefix + Z9001.PROP_COLOR,
+			true );
     String text = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "graphic.type" );
+			props,
+			this.propPrefix + Z9001.PROP_GRAPHIC_TYPE );
     if( color ) {
-      if( text.equals( "krt" ) ) {
+      if( text.equals( Z9001.VALUE_GRAPHIC_KRT ) ) {
 	this.btnColorGraphKRT.setSelected( true );
-      } else if( text.equals( "robotron" ) ) {
+      } else if( text.equals( Z9001.VALUE_GRAPHIC_ROBOTRON ) ) {
 	this.btnColorGraphRobotron.setSelected( true );
       } else {
 	this.btnColorGraphNone.setSelected( true );
       }
     } else {
-      if( text.equals( "krt" ) ) {
+      if( text.equals( Z9001.VALUE_GRAPHIC_KRT ) ) {
 	this.btnMonoGraphKRT.setSelected( true );
       } else {
 	this.btnMonoGraphNone.setSelected( true );
       }
     }
     this.btnFontProgrammable.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "font.programmable",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_FONT_PROGRAMMABLE,
+		false ) );
     this.btn80Chars.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "80_chars.enabled",
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_80CHARS_ENABLED,
 				false ) );
     this.btnFixedScreenSize.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "fixed_screen_size",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_FIXED_SCREEN_SIZE,
+		false ) );
 
     // Tab Speichermodule
     this.btnRam16k4000.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "ram_16k_4000.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_RAM16K4000_ENABLED,
+		false ) );
     this.btnRam16k8000.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "ram_16k_8000.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_RAM16K8000_ENABLED,
+		false ) );
     this.btnRam64k.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "ram_64k.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_RAM64K_ENABLED,
+		false ) );
     this.btnRom16k4000.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_16k_4000.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_ROM16K4000_ENABLED,
+		false ) );
     this.btnRom32k4000.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_32k_4000.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_ROM32K4000_ENABLED,
+		false ) );
     this.btnRom16k8000.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_16k_8000.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_ROM16K8000_ENABLED,
+		false ) );
     this.btnRom10kC000.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_10k_c000.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_ROM10KC000_ENABLED,
+		false ) );
     this.btnRomBoot.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_boot.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_ROMBOOT_ENABLED,
+		false ) );
     this.btnRomMega.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "rom_mega.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_ROMMEGA_ENABLED,
+		false ) );
     this.fldRomModule.updFields( props );
     updMemFieldsEnabled();
 
@@ -830,15 +855,15 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
     // Tab Drucker
     if( EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "printer_module.enabled",
-				false ) )
+		props,
+		this.propPrefix + Z9001.PROP_PRINTER_MOD_ENABLED,
+		false ) )
     {
       this.btnPrinterModule.setSelected( true );
     } else if( EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "catch_print_calls",
-				false ) )
+		props,
+		this.propPrefix + Z9001.PROP_CATCH_PRINT_CALLS,
+		false ) )
     {
       this.btnCatchPrintCalls.setSelected( true );
     } else {
@@ -850,36 +875,37 @@ public class Z9001SettingsFld extends AbstractSettingsFld
 
     // Tab Erweiterungen
     this.btnFloppyDisk.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "floppydisk.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_FDC_ENABLED,
+		false ) );
     this.btnPlotter.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "plotter.enabled",
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_PLOTTER_ENABLED,
 				false ) );
     this.btnKCNet.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "kcnet.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_KCNET_ENABLED,
+		false ) );
     this.btnVDIP.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "vdip.enabled",
-				false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_VDIP_ENABLED,
+		false ) );
     this.btnRTC.setSelected(
 	EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + "rtc.enabled", false ) );
+		props,
+		this.propPrefix + Z9001.PROP_RTC_ENABLED,
+		false ) );
 
     // Tab Sonstiges
     this.btnPasteFast.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "paste.fast",
-				true ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		this.propPrefix + Z9001.PROP_PASTE_FAST,
+		true ) );
     this.fldAltOS.updFields( props );
     if( this.fldAltBASIC != null ) {
       this.fldAltBASIC.updFields( props );

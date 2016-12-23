@@ -71,6 +71,7 @@
       <a href="z9001.htm#kcnet">1.12. KCNet-kompatible Netzwerkkarte</a>
      </li>
      <li><a href="z9001.htm#rtc">1.13. Echtzeituhrmodul</a></li>
+     <li><a href="z9001.htm#audio">1.14. Kassetten- und Tonausgabe</a></li>
     </ul>
    </li>
    <li><a href="z9001.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -523,10 +524,24 @@
   <a href="kcnet.htm">Netzwerkemulation</a>.
  <br/><br/>
 
- <h3><a name="rtc">1.12. Echtzeituhrmodul</a></h3>
+ <h3><a name="rtc">1.13. Echtzeituhrmodul</a></h3>
   Es wird eine Echtzeituhr RTC-62421 bzw. RTC-72421 an den
   E/A-Adressen&nbsp;60h bis 6Fh emuliert.
   Die Uhr kann nur gelesen, nicht aber gestellt werden.
+ <br/><br/>
+
+ <h3><a name="audio">1.14. Kassetten- und Tonausgabe</a></h3>
+  Die am emulierten Kassettenrecorderanschluss (Ausgang CTC-Kanal&nbsp;1)
+  ausgegebenen Tonsignale k&ouml;nnen Sie im Fenster
+  <a href="audio.htm">Audio/Kassette</a> im Reiter
+  <a href="audio.htm#tape_out">Ausgang Kassette</a> h&ouml;rbar machen
+  bzw. aufnehmen und anschlie&szlig;end in eine Datei speichern.
+  Das gleiche Signal ist im Original auch &uuml;ber einem Lautsprecher
+  h&oumL;rbar, jedoch zus&auml;tzlich &uuml;ber die
+  E/A-Adresse&nbsp;88h, Bit&nbsp;7, an- und abschaltbar.
+  F&uuml;r dieses Lautsprechersignal ist der Reiter
+  <a href="audio.htm#sound_out">Ausgang Sound-Generator/Lautsprecher</a>
+  zust&auml;ndig.
  <br/><br/>
 
 

@@ -8,15 +8,18 @@
 
 package jkcemu.base;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
+import java.util.Properties;
 import jkcemu.Main;
 import jkcemu.audio.AudioUtil;
 
 
 public class AutoLoader extends Thread
 {
+  public static final String PROP_AUTOLOAD_PREFIX = "autoload.";
+
   private static final String TEXT_CANNOT_LOAD = "Kann nicht geladen werden";
 
   private EmuThread                     emuThread;
@@ -28,8 +31,8 @@ public class AutoLoader extends Thread
     EmuSys emuSys = emuThread.getEmuSys();
     if( emuSys != null ) {
       java.util.List<AutoLoadEntry> entries = AutoLoadEntry.readEntries(
-				props,
-				emuSys.getPropPrefix() + "autoload." );
+			props,
+			emuSys.getPropPrefix() + PROP_AUTOLOAD_PREFIX );
       if( entries != null ) {
 	if( !entries.isEmpty() ) {
 	  (new AutoLoader( emuThread, entries )).start();
@@ -76,7 +79,7 @@ public class AutoLoader extends Thread
 	      if( loadAddr == null ) {
 		int begAddr = fileInfo.getBegAddr();
 		if( begAddr >= 0 ) {
-		  loadAddr = new Integer( begAddr );
+		  loadAddr = begAddr;
 		}
 	      }
 	      if( loadAddr == null ) {

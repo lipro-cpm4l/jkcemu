@@ -13,21 +13,24 @@ import java.util.Set;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.NANOS;
 import jkcemu.emusys.PCM;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AbstractTarget;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
+import jkcemu.programming.basic.BasicLibrary;
 
 
 public class CPMTarget extends AbstractTarget
 {
   public static final String BASIC_TARGET_NAME = "TARGET_CPM";
 
-  private static final int IOCTB_M_BIN_OFFS   = BasicLibrary.IOCTB_DRIVER_OFFS;
-  private static final int IOCTB_M_ERR_OFFS   = IOCTB_M_BIN_OFFS + 1;
-  private static final int IOCTB_M_POS_OFFS   = IOCTB_M_ERR_OFFS + 1;
-  private static final int IOCTB_FCB_OFFS     = IOCTB_M_POS_OFFS + 1;
-  private static final int IOCTB_FCB_R0_OFFS  = IOCTB_FCB_OFFS + 33;
-  private static final int IOCTB_FNAME_OFFS   = IOCTB_FCB_OFFS + 1;
-  private static final int IOCTB_FTYPE_OFFS   = IOCTB_FNAME_OFFS + 8;
-  private static final int IOCTB_DMA_OFFS     = IOCTB_FCB_OFFS + 36;
+  private static final int IOCTB_M_BIN_OFFS  = BasicLibrary.IOCTB_DRIVER_OFFS;
+  private static final int IOCTB_M_ERR_OFFS  = IOCTB_M_BIN_OFFS + 1;
+  private static final int IOCTB_M_POS_OFFS  = IOCTB_M_ERR_OFFS + 1;
+  private static final int IOCTB_FCB_OFFS    = IOCTB_M_POS_OFFS + 1;
+  private static final int IOCTB_FCB_R0_OFFS = IOCTB_FCB_OFFS + 33;
+  private static final int IOCTB_FNAME_OFFS  = IOCTB_FCB_OFFS + 1;
+  private static final int IOCTB_FTYPE_OFFS  = IOCTB_FNAME_OFFS + 8;
+  private static final int IOCTB_DMA_OFFS    = IOCTB_FCB_OFFS + 36;
   private static final int IOCTB_CHANNEL_SIZE = IOCTB_DMA_OFFS + 128;
 
   private boolean usesFileRead;

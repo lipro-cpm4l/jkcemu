@@ -9,16 +9,21 @@
 package jkcemu.programming.assembler;
 
 import java.awt.EventQueue;
-import java.io.*;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
+import java.util.Collection;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.ScreenFrm;
 import jkcemu.emusys.Z9001;
-import jkcemu.programming.*;
-import jkcemu.text.*;
+import jkcemu.programming.PrgLogger;
+import jkcemu.programming.PrgOptions;
+import jkcemu.programming.PrgSource;
+import jkcemu.programming.PrgThread;
+import jkcemu.text.EditText;
 import jkcemu.tools.ReassFrm;
-import jkcemu.tools.debugger.*;
+import jkcemu.tools.debugger.DebugFrm;
 
 
 public class AsmThread extends PrgThread

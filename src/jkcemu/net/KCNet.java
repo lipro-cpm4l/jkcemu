@@ -11,7 +11,12 @@ package jkcemu.net;
 import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
+import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
+import z80emu.Z80TStatesListener;
 
 
 public class KCNet implements
@@ -20,6 +25,17 @@ public class KCNet implements
 			Z80PIOPortListener,
 			Z80TStatesListener
 {
+  public static final String PROP_PREFIX      = "jkcemu.kcnet.";
+  public static final String PROP_AUTOCONFIG  = "auto_config";
+  public static final String PROP_IP_ADDR     = "ip_address";
+  public static final String PROP_SUBNET_MASK = "subnet_mask";
+  public static final String PROP_GATEWAY     = "gateway";
+  public static final String PROP_DNS_SERVER  = "dns_server";
+  public static final String SYSPROP_DEBUG    = "jkcemu.debug.net";
+
+  public static final boolean DEFAULT_AUTOCONFIG = true;
+
+
   // KCNET Hardware-Version 1.2
   private static final int HW_VERSION = 0x0102;
 
@@ -35,7 +51,7 @@ public class KCNet implements
 					+ " WIZnet TCP/IP-Stack  \r\n"
 					+ "###   by JKCEMU   ### \r\n";
 
-  // Masken fuer Eigenschaft jkcemu.debug.net
+  // Masken fuer Eigenschaft SYSPROP_DEBUG
   private static final int DEBUG_MASK_MSG   = 0x01;
   private static final int DEBUG_MASK_CMD   = 0x02;
   private static final int DEBUG_MASK_READ  = 0x04;
@@ -116,7 +132,7 @@ public class KCNet implements
     this.pio   = new Z80PIO( title );
     this.pio.addPIOPortListener( this, Z80PIO.PortInfo.A );
 
-    String text = System.getProperty( "jkcemu.debug.net" );
+    String text = System.getProperty( SYSPROP_DEBUG );
     if( text != null ) {
       try {
 	this.debugMask = Integer.parseInt( text );
@@ -135,7 +151,9 @@ public class KCNet implements
 
   public static boolean getAutoConfig()
   {
-    return Main.getBooleanProperty( "jkcemu.kcnet.auto_config", true );
+    return Main.getBooleanProperty(
+			PROP_PREFIX + PROP_AUTOCONFIG,
+			DEFAULT_AUTOCONFIG );
   }
 
 

@@ -10,14 +10,20 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.ArrayList;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import jkcemu.Main;
-import jkcemu.base.*;
 
 
 public class ROMFileSettingsFld extends AbstractSettingsFld
@@ -103,7 +109,7 @@ public class ROMFileSettingsFld extends AbstractSettingsFld
     if( this.fileNameFld.setFile( file ) ) {
       this.btnRemove.setEnabled( (file != null) && this.label.isEnabled() );
       if( file != null ) {
-	Main.setLastFile( file, "rom" );
+	Main.setLastFile( file, Main.FILE_GROUP_ROM );
       }
       fireDataChanged();
     }
@@ -138,7 +144,7 @@ public class ROMFileSettingsFld extends AbstractSettingsFld
     File file = this.fileNameFld.getFile();
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "file",
+		this.propPrefix + EmuSys.PROP_FILE,
                 file != null ? file.getPath() : null );
   }
 
@@ -151,7 +157,7 @@ public class ROMFileSettingsFld extends AbstractSettingsFld
     if( src == this.btnSelect ) {
       File file = selectFile(
 			"ROM-Datei ausw\u00E4hlen",
-			"rom",
+			Main.FILE_GROUP_ROM,
 			this.fileNameFld.getFile(),
 			EmuUtil.getROMFileFilter() );
       if( file != null ) {
@@ -201,7 +207,8 @@ public class ROMFileSettingsFld extends AbstractSettingsFld
     this.label.setEnabled( state );
     this.fileNameFld.setEnabled( state );
     this.btnSelect.setEnabled( state );
-    this.btnRemove.setEnabled( state && (this.fileNameFld.getFile() != null) );
+    this.btnRemove.setEnabled(
+			state && (this.fileNameFld.getFile() != null) );
   }
 
 
@@ -209,7 +216,7 @@ public class ROMFileSettingsFld extends AbstractSettingsFld
   public void updFields( Properties props )
   {
     this.fileNameFld.setFileName(
-	EmuUtil.getProperty( props, this.propPrefix + "file" ) );
+	EmuUtil.getProperty( props, this.propPrefix + EmuSys.PROP_FILE ) );
     this.btnRemove.setEnabled(
 	this.label.isEnabled() && (this.fileNameFld.getFile() != null) );
   }

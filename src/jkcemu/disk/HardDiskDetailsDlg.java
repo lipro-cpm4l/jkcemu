@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2014 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,27 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.WindowEvent;
 import java.lang.*;
 import java.text.ParseException;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.Main;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Set;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import jkcemu.base.BaseDlg;
 import jkcemu.text.TextUtil;
 
 
-public class HardDiskDetailsDlg extends BasicDlg
+public class HardDiskDetailsDlg extends BaseDlg
 {
   private HardDiskInfo      approvedData;
   private JComboBox<String> comboProducer;
@@ -219,7 +228,7 @@ public class HardDiskDetailsDlg extends BasicDlg
 		parseInt( sectorText, "Sektoren pro Spur" ) );
 	doClose();
       } else {
-	BasicDlg.showErrorDlg(
+	BaseDlg.showErrorDlg(
 		this,
 		"Mindestens eins der folgende Felder"
 			+ " ist nicht ausgef\u00FCllt:\n"
@@ -230,7 +239,7 @@ public class HardDiskDetailsDlg extends BasicDlg
       }
     }
     catch( Exception ex ) {
-      BasicDlg.showErrorDlg( this, ex );
+      BaseDlg.showErrorDlg( this, ex );
     }
   }
 
@@ -249,4 +258,3 @@ public class HardDiskDetailsDlg extends BasicDlg
     return rv;
   }
 }
-

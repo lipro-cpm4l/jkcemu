@@ -14,8 +14,12 @@ package jkcemu.programming.basic.target;
 
 import java.lang.*;
 import jkcemu.base.EmuSys;
-import jkcemu.emusys.*;
-import jkcemu.programming.basic.*;
+import jkcemu.emusys.AC1;
+import jkcemu.emusys.LLC2;
+import jkcemu.programming.basic.AbstractTarget;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
+import jkcemu.programming.basic.BasicOptions;
 
 
 public class SCCHTarget extends AbstractTarget

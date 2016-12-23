@@ -8,14 +8,26 @@
 
 package jkcemu.programming.basic;
 
-import java.awt.*;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.Stack;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
-import jkcemu.base.*;
-import jkcemu.programming.*;
+import jkcemu.programming.PrgException;
+import jkcemu.programming.PrgLogger;
+import jkcemu.programming.PrgSource;
+import jkcemu.programming.TooManyErrorsException;
 
 
 public class BasicCompiler
@@ -965,7 +977,7 @@ public class BasicCompiler
     }
     Integer rv = BasicUtil.readNumber( iter );
     if( (rv != null) && neg ) {
-      rv = new Integer( -rv.intValue() );
+      rv = -rv.intValue();
     }
     if( rv == null ) {
       iter.setIndex( pos );
@@ -2205,7 +2217,7 @@ public class BasicCompiler
 	this.asmOut.append( "\tPUSH\tHL\n" );
       }
     } else {
-      stepValue = new Integer( 1 );
+      stepValue = 1;
     }
     String loopLabel = nextLabel();
     this.asmOut.append( loopLabel );
@@ -3699,7 +3711,7 @@ public class BasicCompiler
 	}
 	ch = iter.next();
       }
-      rv = new Long( lineNum );
+      rv = lineNum;
     }
     return rv;
   }

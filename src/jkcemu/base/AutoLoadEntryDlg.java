@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,26 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.io.File;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
-import javax.swing.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.EventObject;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 
-public class AutoLoadEntryDlg extends BasicDlg
+public class AutoLoadEntryDlg extends BaseDlg
 {
   private static final String LABEL_LOAD_ADDR  = "Ladeadresse (optional):";
   private static final String LABEL_WAIT_TIME  = "Wartezeit vor dem Laden:";

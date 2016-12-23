@@ -8,20 +8,39 @@
 
 package jkcemu.emusys.etc;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import jkcemu.Main;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileNameFld;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserCancelException;
+import jkcemu.base.UserInputException;
 import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.NANOS;
 
 
 public class NANOSSettingsFld extends AbstractSettingsFld
 {
-  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 2000;
-
   private JTabbedPane          tabbedPane;
   private JPanel               tabGraphic;
   private JRadioButton         btnGraphic64x32;
@@ -110,7 +129,7 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 
     this.fldAltFont8x8 = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "font.8x8.",
+				propPrefix + NANOS.PROP_FONT_8X8_PREFIX,
 				"Alternativer Zeichensatz (8x8):" );
     gbcGraphic.insets.top = 10;
     gbcGraphic.gridy++;
@@ -118,7 +137,7 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 
     this.fldAltFont8x6 = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "font.8x6.",
+		propPrefix + NANOS.PROP_FONT_8X6_PREFIX,
 		"Alternativer 8x6-Zeichensatz"
 			+ " f\u00FCr 64x32-Modus der Farbgrafikkarte:" );
     gbcGraphic.insets.bottom = 5;
@@ -255,10 +274,10 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 
     // Tab AutoInput
     this.tabAutoInput = new AutoInputSettingsFld(
-					settingsFrm,
-					propPrefix,
-					NANOS.getDefaultSwapKeyCharCase(),
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+				settingsFrm,
+				propPrefix,
+				NANOS.DEFAULT_SWAP_KEY_CHAR_CASE,
+				NANOS.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
@@ -298,30 +317,30 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 
       // Tab Grafik
       tab  = this.tabGraphic;
-      text = NANOS.PROP_GRAPHIC_VALUE_80X25;
+      text = NANOS.VALUE_GRAPHIC_80X25;
       if( this.btnGraphic64x32.isSelected() ) {
-	text = NANOS.PROP_GRAPHIC_VALUE_64X32;
+	text = NANOS.VALUE_GRAPHIC_64X32;
       } else if( this.btnGraphic80x24.isSelected() ) {
-	text = NANOS.PROP_GRAPHIC_VALUE_80X24;
+	text = NANOS.VALUE_GRAPHIC_80X24;
       } else if( this.btnGraphicPoppe.isSelected() ) {
-	text = NANOS.PROP_GRAPHIC_VALUE_POPPE;
+	text = NANOS.VALUE_GRAPHIC_POPPE;
       }
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + NANOS.PROP_GRAPHIC_KEY,
+		this.propPrefix + NANOS.PROP_GRAPHIC,
 		text );
       this.fldAltFont8x8.applyInput( props, selected );
       this.fldAltFont8x6.applyInput( props, selected );
 
       // Tab Tastatur
       tab  = this.tabKeyboard;
-      text = NANOS.PROP_KEYBOARD_VALUE_PIO00A_HS;
+      text = NANOS.VALUE_KEYBOARD_PIO00A_HS;
       if( this.btnKbPio00Abit7.isSelected() ) {
-	text = NANOS.PROP_KEYBOARD_VALUE_PIO00A_BIT7;
+	text = NANOS.VALUE_KEYBOARD_PIO00A_BIT7;
       }
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + NANOS.PROP_KEYBOARD_KEY,
+		this.propPrefix + NANOS.PROP_KEYBOARD,
 		text );
       EmuUtil.setProperty(
 		props,
@@ -330,9 +349,9 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 
       // Tab ROM
       tab  = this.tabRom;
-      text = "nanos";
+      text = NANOS.VALUE_NANOS;
       if( this.btnRomEpos.isSelected() ) {
-	text = "epos";
+	text = NANOS.VALUE_EPOS;
       } else if( this.btnRomFile.isSelected() ) {
 	File file = this.fldRomFile.getFile();
 	if( file == null ) {
@@ -344,10 +363,10 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 	  }
 	}
 	if( file != null ) {
-	  text = "file:" + file.getPath();
+	  text = NANOS.VALUE_PREFIX_FILE + file.getPath();
 	}
       }
-      EmuUtil.setProperty( props, this.propPrefix + "rom", text );
+      EmuUtil.setProperty( props, this.propPrefix + NANOS.PROP_ROM, text );
 
       // Tab GIDE
       tab = this.tabGIDE;
@@ -357,11 +376,11 @@ public class NANOSSettingsFld extends AbstractSettingsFld
       tab = this.tabExt;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "kcnet.enabled",
+		this.propPrefix + NANOS.PROP_KCNET_ENABLED,
 		this.btnKCNet.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "vdip.enabled",
+		this.propPrefix + NANOS.PROP_VDIP_ENABLED,
 		this.btnVDIP.isSelected() );
 
       // Tab AutoInput
@@ -410,7 +429,7 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 	else if( src == this.btnRomFileSelect ) {
 	  File file = selectFile(
 				"ROM-Datei ausw\u00E4hlen",
-				"rom",
+				Main.FILE_GROUP_ROM,
 				this.fldRomFile.getFile(),
 				EmuUtil.getROMFileFilter() );
 	  if( file != null ) {
@@ -454,15 +473,15 @@ public class NANOSSettingsFld extends AbstractSettingsFld
   {
     switch( EmuUtil.getProperty(
 		props,
-		this.propPrefix + NANOS.PROP_GRAPHIC_KEY ) )
+		this.propPrefix + NANOS.PROP_GRAPHIC ) )
     {
-      case NANOS.PROP_GRAPHIC_VALUE_64X32:
+      case NANOS.VALUE_GRAPHIC_64X32:
 	this.btnGraphic64x32.setSelected( true );
 	break;
-      case NANOS.PROP_GRAPHIC_VALUE_80X24:
+      case NANOS.VALUE_GRAPHIC_80X24:
 	this.btnGraphic80x24.setSelected( true );
 	break;
-      case NANOS.PROP_GRAPHIC_VALUE_POPPE:
+      case NANOS.VALUE_GRAPHIC_POPPE:
 	this.btnGraphicPoppe.setSelected( true );
 	break;
       default:
@@ -472,8 +491,8 @@ public class NANOSSettingsFld extends AbstractSettingsFld
     this.fldAltFont8x6.updFields( props );
     if( EmuUtil.getProperty(
 		props,
-		this.propPrefix + NANOS.PROP_KEYBOARD_KEY ).equals(
-				NANOS.PROP_KEYBOARD_VALUE_PIO00A_BIT7 ) )
+		this.propPrefix + NANOS.PROP_KEYBOARD ).equals(
+				NANOS.VALUE_KEYBOARD_PIO00A_BIT7 ) )
     {
       this.btnKbPio00Abit7.setSelected( true );
     } else {
@@ -484,12 +503,16 @@ public class NANOSSettingsFld extends AbstractSettingsFld
 			props,
 			this.propPrefix + NANOS.PROP_KEYBOARD_SWAP_CASE,
 			false ) );
-    String valueText = EmuUtil.getProperty( props, this.propPrefix + "rom" );
-    String upperText = valueText.toUpperCase();
-    if( (upperText.length() > 5) && upperText.startsWith( "FILE:" ) ) {
+    String valueText = EmuUtil.getProperty(
+				props,
+				this.propPrefix + NANOS.PROP_ROM );
+    String lowerText = valueText.toLowerCase();
+    if( (lowerText.length() > NANOS.VALUE_PREFIX_FILE.length())
+	 && lowerText.startsWith( NANOS.VALUE_PREFIX_FILE ) )
+    {
       this.btnRomFile.setSelected( true );
       this.fldRomFile.setFileName( valueText.substring( 5 ) );
-    } else if( upperText.startsWith( "EPOS" ) ) {
+    } else if( lowerText.equalsIgnoreCase( NANOS.VALUE_EPOS ) ) {
       this.btnRomEpos.setSelected( true );
     } else {
       this.btnRomNanos.setSelected( true );
@@ -497,12 +520,12 @@ public class NANOSSettingsFld extends AbstractSettingsFld
     this.btnKCNet.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "kcnet.enabled",
+			this.propPrefix + NANOS.PROP_KCNET_ENABLED,
 			false ) );
     this.btnVDIP.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "vdip.enabled",
+			this.propPrefix + NANOS.PROP_VDIP_ENABLED,
 			false ) );
     this.tabGIDE.updFields( props );
     this.tabAutoInput.updFields( props );

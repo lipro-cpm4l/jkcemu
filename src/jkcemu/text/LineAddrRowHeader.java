@@ -8,11 +8,25 @@
 
 package jkcemu.text;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.SystemColor;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.Map;
+import javax.swing.JComponent;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JViewport;
 import javax.swing.text.BadLocationException;
 import jkcemu.Main;
 
@@ -51,6 +65,25 @@ public class LineAddrRowHeader extends JComponent
 	    mouseClickedInternal( e );
 	  }
 	} );
+  }
+
+
+  public int getAddrByLine( int lineNum )
+  {
+    int rv = -1;
+    if( this.lineAddrMap != null ) {
+      Integer addr = this.lineAddrMap.get( lineNum );
+      if( addr != null ) {
+	rv = addr.intValue();
+      }
+    }
+    return rv;
+  }
+
+
+  public JTextArea getJTextArea()
+  {
+    return this.textArea;
   }
 
 

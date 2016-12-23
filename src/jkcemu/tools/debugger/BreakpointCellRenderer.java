@@ -8,9 +8,15 @@
 
 package jkcemu.tools.debugger;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Image;
+import java.awt.Window;
 import java.lang.*;
-import javax.swing.*;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.SwingConstants;
 import jkcemu.Main;
 
 

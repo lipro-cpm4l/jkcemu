@@ -8,38 +8,106 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Component;
+import java.awt.Desktop;
+import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.EventObject;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.ButtonModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.JSpinner;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextField;
+import javax.swing.LookAndFeel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.text.Document;
 import jkcemu.Main;
+import jkcemu.disk.HardDiskListDlg;
+import jkcemu.emusys.A5105;
+import jkcemu.emusys.AC1;
+import jkcemu.emusys.BCS3;
+import jkcemu.emusys.C80;
+import jkcemu.emusys.HueblerEvertMC;
+import jkcemu.emusys.HueblerGraphicsMC;
+import jkcemu.emusys.KC85;
+import jkcemu.emusys.KCcompact;
+import jkcemu.emusys.KramerMC;
+import jkcemu.emusys.LC80;
+import jkcemu.emusys.LLC1;
+import jkcemu.emusys.LLC2;
+import jkcemu.emusys.NANOS;
+import jkcemu.emusys.PCM;
+import jkcemu.emusys.Poly880;
+import jkcemu.emusys.SC2;
+import jkcemu.emusys.SLC1;
+import jkcemu.emusys.VCS80;
+import jkcemu.emusys.Z1013;
+import jkcemu.emusys.Z9001;
+import jkcemu.emusys.ZXSpectrum;
 import jkcemu.emusys.a5105.A5105SettingsFld;
-import jkcemu.emusys.ac1_llc2.*;
-import jkcemu.emusys.etc.*;
+import jkcemu.emusys.ac1_llc2.AC1SettingsFld;
+import jkcemu.emusys.ac1_llc2.LLC2SettingsFld;
+import jkcemu.emusys.bcs3.BCS3SettingsFld;
+import jkcemu.emusys.etc.KramerMCSettingsFld;
+import jkcemu.emusys.etc.NANOSSettingsFld;
+import jkcemu.emusys.etc.PCMSettingsFld;
+import jkcemu.emusys.huebler.HueblerEvertMCSettingsFld;
 import jkcemu.emusys.huebler.HueblerGraphicsMCSettingsFld;
 import jkcemu.emusys.kc85.KC85SettingsFld;
 import jkcemu.emusys.kccompact.KCcompactSettingsFld;
 import jkcemu.emusys.lc80.LC80SettingsFld;
+import jkcemu.emusys.llc1.LLC1SettingsFld;
 import jkcemu.emusys.poly880.Poly880SettingsFld;
 import jkcemu.emusys.z1013.Z1013SettingsFld;
 import jkcemu.emusys.z9001.Z9001SettingsFld;
 import jkcemu.emusys.zxspectrum.ZXSpectrumSettingsFld;
+import jkcemu.net.KCNet;
 import jkcemu.net.KCNetSettingsFld;
 
 
-public class SettingsFrm extends BasicFrm
+public class SettingsFrm extends BaseFrm
 			implements
 				ChangeListener,
 				DocumentListener
 {
-  public static final int DEFAULT_BRIGHTNESS = 80;
-
-  private static final int MAX_MARGIN = 199;
+  private static final int    MAX_MARGIN = 199;
+  private static final String CARD_EMPTY = "empty";
+  private static final String HELP_PAGE  = "/help/settings.htm";
 
   private static SettingsFrm instance = null;
 
@@ -92,16 +160,12 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                 btnSysZ1013;
   private JRadioButton                 btnSysZ9001;
   private JRadioButton                 btnSysZXSpectrum;
-  private JCheckBox                    btnHEMCCatchPrintCalls;
-  private JCheckBox                    btnKramerMCCatchPrintCalls;
-  private JRadioButton                 btnLC80_U505;
-  private JRadioButton                 btnLC80_2716;
-  private JRadioButton                 btnLC80_2;
-  private JRadioButton                 btnLC80e;
   private A5105SettingsFld             a5105SettingsFld;
   private AC1SettingsFld               ac1SettingsFld;
+  private LLC1SettingsFld              llc1SettingsFld;
   private LLC2SettingsFld              llc2SettingsFld;
   private BCS3SettingsFld              bcs3SettingsFld;
+  private HueblerEvertMCSettingsFld    hemcSettingsFld;
   private HueblerGraphicsMCSettingsFld hgmcSettingsFld;
   private KC85SettingsFld              hc900SettingsFld;
   private Z9001SettingsFld             kc85_1_SettingsFld;
@@ -110,6 +174,7 @@ public class SettingsFrm extends BasicFrm
   private KC85SettingsFld              kc85_4_SettingsFld;
   private KC85SettingsFld              kc85_5_SettingsFld;
   private KCcompactSettingsFld         kcCompactSettingsFld;
+  private KramerMCSettingsFld          kramerMCSettingsFld;
   private LC80SettingsFld              lc80SettingsFld;
   private NANOSSettingsFld             nanosSettingsFld;
   private PCMSettingsFld               pcmSettingsFld;
@@ -123,6 +188,7 @@ public class SettingsFrm extends BasicFrm
   private JRadioButton                 btnSRAMInit00;
   private JRadioButton                 btnSRAMInitRandom;
   private JRadioButton                 btnFileDlgEmu;
+  private JRadioButton                 btnFileDlgSwing;
   private JRadioButton                 btnFileDlgNative;
   private JCheckBox                    btnDirectCopyPaste;
   private JLabel                       labelSpeedUnit;
@@ -236,7 +302,7 @@ public class SettingsFrm extends BasicFrm
 	  }
 	  else if( src == this.btnHelp ) {
 	    rv = true;
-	    HelpFrm.open( "/help/settings.htm" );
+	    HelpFrm.open( HELP_PAGE );
 	  }
 	  else if( src == this.btnClose ) {
 	    rv = true;
@@ -296,7 +362,7 @@ public class SettingsFrm extends BasicFrm
       }
     }
     catch( UserInputException ex ) {
-      BasicDlg.showErrorDlg( this, ex );
+      BaseDlg.showErrorDlg( this, ex );
     }
     return rv;
   }
@@ -308,8 +374,10 @@ public class SettingsFrm extends BasicFrm
     this.tabKCNet.lookAndFeelChanged();
     this.a5105SettingsFld.lookAndFeelChanged();
     this.ac1SettingsFld.lookAndFeelChanged();
+    this.llc1SettingsFld.lookAndFeelChanged();
     this.llc2SettingsFld.lookAndFeelChanged();
     this.hc900SettingsFld.lookAndFeelChanged();
+    this.hemcSettingsFld.lookAndFeelChanged();
     this.hgmcSettingsFld.lookAndFeelChanged();
     this.kc85_1_SettingsFld.lookAndFeelChanged();
     this.kc85_2_SettingsFld.lookAndFeelChanged();
@@ -411,7 +479,7 @@ public class SettingsFrm extends BasicFrm
   {
     File configDir = Main.getConfigDir();
     if( configDir != null ) {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie das JKCEMU-Konfigurationsverzeichnis"
 			+ " l\u00F6schen?\n"
@@ -443,11 +511,10 @@ public class SettingsFrm extends BasicFrm
 		if( s != null ) {
 		  if( !s.equals( "." )
 		      && !s.equals( ".." )
-		      && !s.equals( "harddisks.csv" )
-		      && !s.equals( "jkcemu_win32.dll" )
-		      && !s.equals( "jkcemu_win64.dll" )
-		      && !s.endsWith( "lastdirs.xml" )
-		      && !s.endsWith( "wdnsfile.exe" )
+		      && !s.equals( HardDiskListDlg.HARDDISKS_FILE )
+		      && !s.equals( DeviceIO.LIBNAME_WIN32 )
+		      && !s.equals( DeviceIO.LIBNAME_WIN64 )
+		      && !s.endsWith( Main.LASTDIRS_FILE )
 		      && !(s.startsWith( "prf_" ) && s.endsWith( ".xml" )) )
 		  {
 		    state = false;
@@ -457,7 +524,7 @@ public class SettingsFrm extends BasicFrm
 	      }
 	    }
 	    if( !state ) {
-	      state = BasicDlg.showYesNoWarningDlg(
+	      state = BaseDlg.showYesNoWarningDlg(
 			this,
 			"Das JKCEMU-Datenverzeichnis enth\u00E4lt Dateien"
 				+ " und/oder Unterverzeichnisse,\n"
@@ -477,7 +544,7 @@ public class SettingsFrm extends BasicFrm
 	    if( this.btnDeleteConfigDir != null ) {
 	      this.btnDeleteConfigDir.setEnabled( false );
 	    }
-	    if( BasicDlg.showYesNoWarningDlg(
+	    if( BaseDlg.showYesNoWarningDlg(
 		this,
 		"Wenn Sie sichergehen wollen,\n"
 			+ "dass keine alten Einstellungen \u00FCbernommen"
@@ -489,7 +556,7 @@ public class SettingsFrm extends BasicFrm
 	      this.screenFrm.doQuit();
 	    }
 	  } else {
-	    BasicDlg.showErrorDlg(
+	    BaseDlg.showErrorDlg(
 		this,
 		"Das JKCEMU-Konfigurationsverzeichnis konnte nicht"
 			+ " gel\u00F6scht werden.\n"
@@ -555,8 +622,8 @@ public class SettingsFrm extends BasicFrm
 	for( int i = 0; i < frms.length; i++ ) {
 	  Frame f = frms[ i ];
 	  if( f != null ) {
-	    if( f instanceof BasicFrm ) {
-	      ((BasicFrm) f).putSettingsTo( props );
+	    if( f instanceof BaseFrm ) {
+	      ((BaseFrm) f).putSettingsTo( props );
 	    }
 	  }
 	}
@@ -583,14 +650,14 @@ public class SettingsFrm extends BasicFrm
 	Main.setProfile( this.profileFile, props );
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg(
+	BaseDlg.showErrorDlg(
 		this,
 		"Die Einstellungen k\u00F6nnen nicht in die Datei\n\'"
 			+ profileFile.getPath()
 			+ "\'\ngespeichert werden." );
       }
       finally {
-	EmuUtil.doClose( out );
+	EmuUtil.closeSilent( out );
       }
     }
   }
@@ -646,92 +713,92 @@ public class SettingsFrm extends BasicFrm
 
     ButtonGroup grpSys = new ButtonGroup();
 
-    this.btnSysA5105 = new JRadioButton( "A5105 (BIC / ALBA PC)", true );
+    this.btnSysA5105 = new JRadioButton( A5105.SYSTEXT, true );
     this.btnSysA5105.addActionListener( this );
     grpSys.add( this.btnSysA5105 );
     panelSys.add( this.btnSysA5105, gbcSys );
 
-    this.btnSysAC1 = new JRadioButton( "AC1", false );
+    this.btnSysAC1 = new JRadioButton( AC1.SYSNAME, false );
     this.btnSysAC1.addActionListener( this );
     grpSys.add( this.btnSysAC1 );
     gbcSys.insets.top = 0;
     gbcSys.gridy++;
     panelSys.add( this.btnSysAC1, gbcSys );
 
-    this.btnSysBCS3 = new JRadioButton( "BCS3", false );
+    this.btnSysBCS3 = new JRadioButton( BCS3.SYSNAME, false );
     this.btnSysBCS3.addActionListener( this );
     grpSys.add( this.btnSysBCS3 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysBCS3, gbcSys );
 
-    this.btnSysC80 = new JRadioButton( "C-80", false );
+    this.btnSysC80 = new JRadioButton( C80.SYSTEXT, false );
     this.btnSysC80.addActionListener( this );
     grpSys.add( this.btnSysC80 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysC80, gbcSys );
 
-    this.btnSysHC900 = new JRadioButton( "HC900", false );
+    this.btnSysHC900 = new JRadioButton( KC85.SYSTEXT_HC900, false );
     this.btnSysHC900.addActionListener( this );
     grpSys.add( this.btnSysHC900 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysHC900, gbcSys );
 
-    this.btnSysHEMC = new JRadioButton( "H\u00FCbler/Evert-MC", false );
+    this.btnSysHEMC = new JRadioButton( HueblerEvertMC.SYSTEXT, false );
     this.btnSysHEMC.addActionListener( this );
     grpSys.add( this.btnSysHEMC );
     gbcSys.gridy++;
     panelSys.add( this.btnSysHEMC, gbcSys );
 
-    this.btnSysHGMC = new JRadioButton( "H\u00FCbler-Grafik-MC", false );
+    this.btnSysHGMC = new JRadioButton( HueblerGraphicsMC.SYSTEXT, false );
     this.btnSysHGMC.addActionListener( this );
     grpSys.add( this.btnSysHGMC );
     gbcSys.gridy++;
     panelSys.add( this.btnSysHGMC, gbcSys );
 
-    this.btnSysKC85_1 = new JRadioButton( "KC85/1", false );
+    this.btnSysKC85_1 = new JRadioButton( Z9001.SYSTEXT_KC85_1, false );
     this.btnSysKC85_1.addActionListener( this );
     grpSys.add( this.btnSysKC85_1 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC85_1, gbcSys );
 
-    this.btnSysKC85_2 = new JRadioButton( "KC85/2", false );
+    this.btnSysKC85_2 = new JRadioButton( KC85.SYSTEXT_KC85_2, false );
     this.btnSysKC85_2.addActionListener( this );
     grpSys.add( this.btnSysKC85_2 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC85_2, gbcSys );
 
-    this.btnSysKC85_3 = new JRadioButton( "KC85/3", false );
+    this.btnSysKC85_3 = new JRadioButton( KC85.SYSTEXT_KC85_3, false );
     this.btnSysKC85_3.addActionListener( this );
     grpSys.add( this.btnSysKC85_3 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC85_3, gbcSys );
 
-    this.btnSysKC85_4 = new JRadioButton( "KC85/4", false );
+    this.btnSysKC85_4 = new JRadioButton( KC85.SYSTEXT_KC85_4, false );
     this.btnSysKC85_4.addActionListener( this );
     grpSys.add( this.btnSysKC85_4 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC85_4, gbcSys );
 
-    this.btnSysKC85_5 = new JRadioButton( "KC85/5", false );
+    this.btnSysKC85_5 = new JRadioButton( KC85.SYSTEXT_KC85_5, false );
     this.btnSysKC85_5.addActionListener( this );
     grpSys.add( this.btnSysKC85_5 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC85_5, gbcSys );
 
-    this.btnSysKC87 = new JRadioButton( "KC87", false );
+    this.btnSysKC87 = new JRadioButton( Z9001.SYSNAME_KC87, false );
     this.btnSysKC87.addActionListener( this );
     grpSys.add( this.btnSysKC87 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysKC87, gbcSys );
 
-    this.btnSysKCcompact = new JRadioButton( "KC compact", false );
+    this.btnSysKCcompact = new JRadioButton( KCcompact.SYSTEXT, false );
     this.btnSysKCcompact.addActionListener( this );
     grpSys.add( this.btnSysKCcompact );
     gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysKCcompact, gbcSys );
 
-    this.btnSysKramerMC = new JRadioButton( "Kramer-MC", false );
+    this.btnSysKramerMC = new JRadioButton( KramerMC.SYSTEXT, false );
     this.btnSysKramerMC.addActionListener( this );
     grpSys.add( this.btnSysKramerMC );
     gbcSys.insets.top    = 5;
@@ -740,74 +807,74 @@ public class SettingsFrm extends BasicFrm
     gbcSys.gridx++;
     panelSys.add( this.btnSysKramerMC, gbcSys );
 
-    this.btnSysLC80 = new JRadioButton( "LC-80", false );
+    this.btnSysLC80 = new JRadioButton( LC80.SYSTEXT, false );
     this.btnSysLC80.addActionListener( this );
     grpSys.add( this.btnSysLC80 );
     gbcSys.insets.top = 0;
     gbcSys.gridy++;
     panelSys.add( this.btnSysLC80, gbcSys );
 
-    this.btnSysLLC1 = new JRadioButton( "LLC1", false );
+    this.btnSysLLC1 = new JRadioButton( LLC1.SYSNAME, false );
     this.btnSysLLC1.addActionListener( this );
     grpSys.add( this.btnSysLLC1 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysLLC1, gbcSys );
 
-    this.btnSysLLC2 = new JRadioButton( "LLC2", false );
+    this.btnSysLLC2 = new JRadioButton( LLC2.SYSNAME, false );
     this.btnSysLLC2.addActionListener( this );
     grpSys.add( this.btnSysLLC2 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysLLC2, gbcSys );
 
-    this.btnSysNANOS = new JRadioButton( "NANOS", false );
+    this.btnSysNANOS = new JRadioButton( NANOS.SYSNAME, false );
     this.btnSysNANOS.addActionListener( this );
     grpSys.add( this.btnSysNANOS );
     gbcSys.gridy++;
     panelSys.add( this.btnSysNANOS, gbcSys );
 
-    this.btnSysPCM = new JRadioButton( "PC/M", false );
+    this.btnSysPCM = new JRadioButton( PCM.SYSTEXT, false );
     this.btnSysPCM.addActionListener( this );
     grpSys.add( this.btnSysPCM );
     gbcSys.gridy++;
     panelSys.add( this.btnSysPCM, gbcSys );
 
-    this.btnSysPoly880 = new JRadioButton( "Poly-880", false );
+    this.btnSysPoly880 = new JRadioButton( Poly880.SYSTEXT, false );
     this.btnSysPoly880.addActionListener( this );
     grpSys.add( this.btnSysPoly880 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysPoly880, gbcSys );
 
-    this.btnSysSC2 = new JRadioButton( "SC2", false );
+    this.btnSysSC2 = new JRadioButton( SC2.SYSNAME, false );
     this.btnSysSC2.addActionListener( this );
     grpSys.add( this.btnSysSC2 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysSC2, gbcSys );
 
-    this.btnSysSLC1 = new JRadioButton( "SLC1", false );
+    this.btnSysSLC1 = new JRadioButton( SLC1.SYSNAME, false );
     this.btnSysSLC1.addActionListener( this );
     grpSys.add( this.btnSysSLC1 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysSLC1, gbcSys );
 
-    this.btnSysVCS80 = new JRadioButton( "VCS80", false );
+    this.btnSysVCS80 = new JRadioButton( VCS80.SYSNAME, false );
     this.btnSysVCS80.addActionListener( this );
     grpSys.add( this.btnSysVCS80 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysVCS80, gbcSys );
 
-    this.btnSysZ1013 = new JRadioButton( "Z1013", false );
+    this.btnSysZ1013 = new JRadioButton( Z1013.SYSNAME, false );
     this.btnSysZ1013.addActionListener( this );
     grpSys.add( this.btnSysZ1013 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysZ1013, gbcSys );
 
-    this.btnSysZ9001 = new JRadioButton( "Z9001", false );
+    this.btnSysZ9001 = new JRadioButton( Z9001.SYSNAME_Z9001, false );
     this.btnSysZ9001.addActionListener( this );
     grpSys.add( this.btnSysZ9001 );
     gbcSys.gridy++;
     panelSys.add( this.btnSysZ9001, gbcSys );
 
-    this.btnSysZXSpectrum = new JRadioButton( "ZX Spectrum", false );
+    this.btnSysZXSpectrum = new JRadioButton( ZXSpectrum.SYSTEXT, false );
     this.btnSysZXSpectrum.addActionListener( this );
     grpSys.add( this.btnSysZXSpectrum );
     gbcSys.gridy++;
@@ -831,10 +898,10 @@ public class SettingsFrm extends BasicFrm
     tabSys.add( this.panelSysOpt, BorderLayout.CENTER );
 
 
-    JPanel panelNoOpt = new JPanel( new GridBagLayout() );
-    this.panelSysOpt.add( panelNoOpt, "noopt" );
+    JPanel panelEmpty = new JPanel( new GridBagLayout() );
+    this.panelSysOpt.add( panelEmpty, CARD_EMPTY );
 
-    GridBagConstraints gbcNoOpt = new GridBagConstraints(
+    GridBagConstraints gbcEmpty = new GridBagConstraints(
 						0, 0,
 						1, 1,
 						0.0, 0.0,
@@ -843,158 +910,152 @@ public class SettingsFrm extends BasicFrm
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    panelNoOpt.add(
+    panelEmpty.add(
 		new JLabel( "Keine Optionen verf\u00FCgbar" ),
-		gbcNoOpt );
+		gbcEmpty );
 
 
     // Optionen fuer A5105
-    this.a5105SettingsFld = new A5105SettingsFld( this, "jkcemu.a5105." );
-    this.panelSysOpt.add( this.a5105SettingsFld, "A5105" );
+    this.a5105SettingsFld = new A5105SettingsFld( this, A5105.PROP_PREFIX );
+    this.panelSysOpt.add( this.a5105SettingsFld, A5105.SYSNAME );
 
 
     // Optionen fuer AC1
-    this.ac1SettingsFld = new AC1SettingsFld( this, "jkcemu.ac1." );
-    this.panelSysOpt.add( this.ac1SettingsFld, "AC1" );
+    this.ac1SettingsFld = new AC1SettingsFld( this, AC1.PROP_PREFIX );
+    this.panelSysOpt.add( this.ac1SettingsFld, AC1.SYSNAME );
 
 
     // Optionen fuer BCS3
-    this.bcs3SettingsFld = new BCS3SettingsFld( this, "jkcemu.bcs3." );
-    this.panelSysOpt.add( this.bcs3SettingsFld, "BCS3" );
+    this.bcs3SettingsFld = new BCS3SettingsFld( this, BCS3.PROP_PREFIX );
+    this.panelSysOpt.add( this.bcs3SettingsFld, BCS3.SYSNAME );
 
 
     // Optionen fuer HC900
-    this.hc900SettingsFld = new KC85SettingsFld( this, "jkcemu.hc900.", 2 );
-    this.panelSysOpt.add( this.hc900SettingsFld, "HC900" );
+    this.hc900SettingsFld = new KC85SettingsFld(
+					this,
+					KC85.PROP_PREFIX_HC900,
+					2 );
+    this.panelSysOpt.add( this.hc900SettingsFld, KC85.SYSNAME_HC900 );
 
 
     // Optionen fuer Huebler/Evert-MC
-    JPanel panelHEMC = new JPanel( new GridBagLayout() );
-    this.panelSysOpt.add( panelHEMC, "HEMC" );
-
-    GridBagConstraints gbcHEMC = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.CENTER,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 5, 5 ),
-						0, 0 );
-
-    this.btnHEMCCatchPrintCalls = new JCheckBox(
-		"Betriebssystemaufrufe f\u00FCr Druckerausgaben abfangen",
-		true );
-    this.btnHEMCCatchPrintCalls.addActionListener( this );
-    panelHEMC.add( this.btnHEMCCatchPrintCalls, gbcHEMC );
+    this.hemcSettingsFld = new HueblerEvertMCSettingsFld(
+					this,
+					HueblerEvertMC.PROP_PREFIX );
+    this.panelSysOpt.add( this.hemcSettingsFld, HueblerEvertMC.SYSNAME );
 
 
     // Optionen fuer Huebler-Grafik-MC
     this.hgmcSettingsFld = new HueblerGraphicsMCSettingsFld(
-							this,
-							"jkcemu.hgmc." );
-    this.panelSysOpt.add( this.hgmcSettingsFld, "HGMC" );
+					this,
+					HueblerGraphicsMC.PROP_PREFIX );
+    this.panelSysOpt.add( this.hgmcSettingsFld, HueblerGraphicsMC.SYSNAME );
 
 
     // Optionen fuer KC85/1..5
     this.kc85_1_SettingsFld = new Z9001SettingsFld(
 					this,
-					"jkcemu.kc85_1.",
+					Z9001.PROP_PREFIX_KC85_1,
 					false );
-    this.panelSysOpt.add( this.kc85_1_SettingsFld, "KC85/1" );
+    this.panelSysOpt.add( this.kc85_1_SettingsFld, Z9001.SYSNAME_KC85_1 );
 
-    this.kc85_2_SettingsFld = new KC85SettingsFld( this, "jkcemu.kc85_2.", 2 );
-    this.panelSysOpt.add( this.kc85_2_SettingsFld, "KC85/2" );
+    this.kc85_2_SettingsFld = new KC85SettingsFld(
+					this,
+					KC85.PROP_PREFIX_KC85_2,
+					2 );
+    this.panelSysOpt.add( this.kc85_2_SettingsFld, KC85.SYSNAME_KC85_2 );
 
-    this.kc85_3_SettingsFld = new KC85SettingsFld( this, "jkcemu.kc85_3.", 3 );
-    this.panelSysOpt.add( this.kc85_3_SettingsFld, "KC85/3" );
+    this.kc85_3_SettingsFld = new KC85SettingsFld(
+					this,
+					KC85.PROP_PREFIX_KC85_3,
+					3 );
+    this.panelSysOpt.add( this.kc85_3_SettingsFld, KC85.SYSNAME_KC85_3 );
 
-    this.kc85_4_SettingsFld = new KC85SettingsFld( this, "jkcemu.kc85_4.", 4 );
-    this.panelSysOpt.add( this.kc85_4_SettingsFld, "KC85/4" );
+    this.kc85_4_SettingsFld = new KC85SettingsFld(
+					this,
+					KC85.PROP_PREFIX_KC85_4,
+					4 );
+    this.panelSysOpt.add( this.kc85_4_SettingsFld, KC85.SYSNAME_KC85_4 );
 
-    this.kc85_5_SettingsFld = new KC85SettingsFld( this, "jkcemu.kc85_5.", 5 );
-    this.panelSysOpt.add( this.kc85_5_SettingsFld, "KC85/5" );
+    this.kc85_5_SettingsFld = new KC85SettingsFld(
+					this,
+					KC85.PROP_PREFIX_KC85_5,
+					5 );
+    this.panelSysOpt.add( this.kc85_5_SettingsFld, KC85.SYSNAME_KC85_5 );
 
 
     // Optionen fuer KC87
     this.kc87SettingsFld = new Z9001SettingsFld(
 					this,
-					"jkcemu.kc87.",
+					Z9001.PROP_PREFIX_KC87,
 					true );
-    this.panelSysOpt.add( this.kc87SettingsFld, "KC87" );
+    this.panelSysOpt.add( this.kc87SettingsFld, Z9001.SYSNAME_KC87 );
 
 
     // Optionen fuer KC compact
     this.kcCompactSettingsFld = new KCcompactSettingsFld(
 						this,
-						"jkcemu.kccompact." );
-    this.panelSysOpt.add( this.kcCompactSettingsFld, "KCcompact" );
+						KCcompact.PROP_PREFIX );
+    this.panelSysOpt.add( this.kcCompactSettingsFld, KCcompact.SYSNAME );
 
 
     // Optionen fuer Kramer-MC
-    JPanel panelKramerMC = new JPanel( new GridBagLayout() );
-    this.panelSysOpt.add( panelKramerMC, "KramerMC" );
-
-    GridBagConstraints gbcKramerMC = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						0.0, 0.0,
-						GridBagConstraints.CENTER,
-						GridBagConstraints.NONE,
-						new Insets( 5, 5, 5, 5 ),
-						0, 0 );
-
-    this.btnKramerMCCatchPrintCalls = new JCheckBox(
-		"Betriebssystemaufrufe f\u00FCr Druckerausgaben abfangen",
-		false );
-    this.btnKramerMCCatchPrintCalls.addActionListener( this );
-    panelKramerMC.add( this.btnKramerMCCatchPrintCalls, gbcKramerMC );
+    this.kramerMCSettingsFld = new KramerMCSettingsFld(
+						this,
+						KramerMC.PROP_PREFIX );
+    this.panelSysOpt.add( this.kramerMCSettingsFld, KramerMC.SYSNAME );
 
 
     // Optionen fuer LC80
-    this.lc80SettingsFld = new LC80SettingsFld( this, "jkcemu.lc80." );
-    this.panelSysOpt.add( this.lc80SettingsFld, "LC80" );
+    this.lc80SettingsFld = new LC80SettingsFld( this, LC80.PROP_PREFIX );
+    this.panelSysOpt.add( this.lc80SettingsFld, LC80.SYSNAME );
+
+
+    // Optionen fuer LLC1
+    this.llc1SettingsFld = new LLC1SettingsFld( this, LLC1.PROP_PREFIX );
+    this.panelSysOpt.add( this.llc1SettingsFld, LLC1.SYSNAME );
 
 
     // Optionen fuer LLC2
-    this.llc2SettingsFld = new LLC2SettingsFld( this, "jkcemu.llc2." );
-    this.panelSysOpt.add( this.llc2SettingsFld, "LLC2" );
+    this.llc2SettingsFld = new LLC2SettingsFld( this, LLC2.PROP_PREFIX );
+    this.panelSysOpt.add( this.llc2SettingsFld, LLC2.SYSNAME );
 
 
     // Optionen fuer NANOS
-    this.nanosSettingsFld = new NANOSSettingsFld( this, "jkcemu.nanos." );
-    this.panelSysOpt.add( this.nanosSettingsFld, "NANOS" );
+    this.nanosSettingsFld = new NANOSSettingsFld( this, NANOS.PROP_PREFIX );
+    this.panelSysOpt.add( this.nanosSettingsFld, NANOS.SYSNAME );
 
 
     // Optionen fuer PC/M
-    this.pcmSettingsFld = new PCMSettingsFld( this, "jkcemu.pcm." );
-    this.panelSysOpt.add( this.pcmSettingsFld, "PC/M" );
+    this.pcmSettingsFld = new PCMSettingsFld( this, PCM.PROP_PREFIX );
+    this.panelSysOpt.add( this.pcmSettingsFld, PCM.SYSNAME );
 
 
     // Optionen fuer Poly880
     this.poly880SettingsFld = new Poly880SettingsFld(
 					this,
-					"jkcemu.poly880." );
-    this.panelSysOpt.add( this.poly880SettingsFld, "Poly880" );
+					Poly880.PROP_PREFIX );
+    this.panelSysOpt.add( this.poly880SettingsFld, Poly880.SYSNAME );
 
 
     // Optionen fuer Z1013
-    this.z1013SettingsFld = new Z1013SettingsFld( this, "jkcemu.z1013." );
-    this.panelSysOpt.add( this.z1013SettingsFld, "Z1013" );
+    this.z1013SettingsFld = new Z1013SettingsFld( this, Z1013.PROP_PREFIX );
+    this.panelSysOpt.add( this.z1013SettingsFld, Z1013.SYSNAME );
 
 
     // Optionen fuer Z9001
     this.z9001SettingsFld = new Z9001SettingsFld(
 					this,
-					"jkcemu.z9001.",
+					Z9001.PROP_PREFIX_Z9001,
 					false );
-    this.panelSysOpt.add( this.z9001SettingsFld, "Z9001" );
+    this.panelSysOpt.add( this.z9001SettingsFld, Z9001.SYSNAME_Z9001 );
 
 
     // Optionen fuer ZXSpectrum
     this.zxSpectrumSettingsFld = new ZXSpectrumSettingsFld(
 					this,
-					"jkcemu.zxspectrum." );
-    this.panelSysOpt.add( this.zxSpectrumSettingsFld, "ZXSpectrum" );
+					ZXSpectrum.PROP_PREFIX );
+    this.panelSysOpt.add( this.zxSpectrumSettingsFld, ZXSpectrum.SYSNAME );
 
 
     // Bereich Geschwindigkeit
@@ -1067,7 +1128,7 @@ public class SettingsFrm extends BasicFrm
 					SwingConstants.HORIZONTAL,
 					0,
 					100,
-					DEFAULT_BRIGHTNESS );
+					ScreenFld.DEFAULT_BRIGHTNESS );
     this.sliderBrightness.setMajorTickSpacing( 20 );
     this.sliderBrightness.setPaintLabels( true );
     this.sliderBrightness.setPaintTrack( true );
@@ -1244,7 +1305,7 @@ public class SettingsFrm extends BasicFrm
 
 
     // Bereich Netzwerk
-    this.tabKCNet = new KCNetSettingsFld( this, "jkcemu.net." );
+    this.tabKCNet = new KCNetSettingsFld( this, KCNet.PROP_PREFIX );
     this.tabbedPane.addTab( "Netzwerk", this.tabKCNet );
 
 
@@ -1274,6 +1335,14 @@ public class SettingsFrm extends BasicFrm
     gbcEtc.insets.left = 50;
     gbcEtc.gridy++;
     this.tabEtc.add( this.btnFileDlgEmu, gbcEtc );
+
+    this.btnFileDlgSwing = new JRadioButton(
+			"Java/Swing-Dateiauswahldialog verwenden",
+			false );
+    grpFileDlg.add( this.btnFileDlgSwing );
+    this.btnFileDlgSwing.addActionListener( this );
+    gbcEtc.gridy++;
+    this.tabEtc.add( this.btnFileDlgSwing, gbcEtc );
 
     this.btnFileDlgNative = new JRadioButton(
 			"Dateiauswahldialog des Betriebssystems verwenden",
@@ -1420,34 +1489,40 @@ public class SettingsFrm extends BasicFrm
   private void applyConfirm( Properties props )
   {
     props.setProperty(
-		"jkcemu.confirm.nmi",
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_NMI,
 		Boolean.toString( this.btnConfirmNMI.isSelected() ) );
     props.setProperty(
-		"jkcemu.confirm.reset",
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_RESET,
 		Boolean.toString( this.btnConfirmReset.isSelected() ) );
     props.setProperty(
-		"jkcemu.confirm.power_on",
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_POWER_ON,
 		Boolean.toString( this.btnConfirmPowerOn.isSelected() ) );
     props.setProperty(
-		"jkcemu.confirm.quit",
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_QUIT,
 		Boolean.toString( this.btnConfirmQuit.isSelected() ) );
   }
 
 
   private void applyEtc( Properties props )
   {
+    String value = EmuUtil.VALUE_FILEDIALOG_JKCEMU;
+    if( this.btnFileDlgSwing.isSelected() ) {
+      value = EmuUtil.VALUE_FILEDIALOG_SWING;
+    } else if( this.btnFileDlgNative.isSelected() ) {
+      value = EmuUtil.VALUE_FILEDIALOG_NATIVE;
+    }
+    props.setProperty( EmuUtil.PROP_FILEDIALOG, value );
     props.setProperty(
-		"jkcemu.filedialog",
-		this.btnFileDlgNative.isSelected() ? "native" : "jkcemu" );
+		EmuThread.PROP_SRAM_INIT,
+		this.btnSRAMInit00.isSelected() ?
+			EmuThread.VALUE_SRAM_INIT_00
+			: EmuThread.VALUE_SRAM_INIT_RANDOM );
     props.setProperty(
-		"jkcemu.sram.init",
-		this.btnSRAMInit00.isSelected() ? "00" : "random" );
-    props.setProperty(
-		"jkcemu.ramfloppy.clear_on_power_on",
+		EmuThread.PROP_RF_CLEAR_ON_POWER_ON,
 		Boolean.toString(
 			this.btnClearRFsOnPowerOn.isSelected() ) );
     props.setProperty(
-		"jkcemu.external_rom.reload_on_power_on",
+		EmuThread.PROP_EXT_ROM_RELOAD_ON_POWER_ON,
 		Boolean.toString(
 			this.btnReloadROMsOnPowerOn.isSelected() ) );
   }
@@ -1479,7 +1554,7 @@ public class SettingsFrm extends BasicFrm
 				  }
 				} );
 	      props.setProperty(
-			"jkcemu.lookandfeel.classname",
+			Main.PROP_LAF_CLASSNAME,
 			lafClassName );
 	    }
 	    catch( Exception ex ) {
@@ -1496,24 +1571,26 @@ public class SettingsFrm extends BasicFrm
   private void applyScreen( Properties props )
   {
     props.setProperty(
-		"jkcemu.brightness",
+		ScreenFld.PROP_BRIGHTNESS,
 		String.valueOf( this.sliderBrightness.getValue() ) );
 
     Object obj = this.spinnerMargin.getValue();
     props.setProperty(
-		"jkcemu.screen.margin",
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_SCREEN_MARGIN,
 		obj != null ? obj.toString() : "0" );
 
     obj = this.comboScreenRefresh.getSelectedItem();
     if( obj != null ) {
       String text = obj.toString();
       if( text != null ) {
-	props.setProperty( "jkcemu.screen.refresh.ms", text );
+	props.setProperty(
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_SCREEN_MARGIN,
+		text );
       }
     }
 
     props.setProperty(
-		"jkcemu.copy_and_paste.direct",
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_COPY_AND_PASTE_DIRECT,
 		Boolean.toString( this.btnDirectCopyPaste.isSelected() ) );
   }
 
@@ -1534,8 +1611,8 @@ public class SettingsFrm extends BasicFrm
 	      long khzValue = Math.round( mhzValue.doubleValue() * 1000.0 );
 	      if( khzValue > 0 ) {
 		props.setProperty(
-				"jkcemu.maxspeed.khz",
-				String.valueOf( khzValue ) );
+			EmuThread.PROP_MAXSPEED_KHZ,
+			String.valueOf( khzValue ) );
 		done = true;
 	      }
 	    }
@@ -1547,7 +1624,7 @@ public class SettingsFrm extends BasicFrm
 	throw new UserInputException( msg );
       }
     } else {
-      props.setProperty( "jkcemu.maxspeed.khz", "default" );
+      props.setProperty( EmuThread.PROP_MAXSPEED_KHZ, "default" );
     }
   }
 
@@ -1559,160 +1636,188 @@ public class SettingsFrm extends BasicFrm
     // System
     String valueSys = "";
     if( this.btnSysA5105.isSelected() ) {
-      valueSys = "A5105";
+      valueSys = A5105.SYSNAME;
     }
     else if( this.btnSysAC1.isSelected() ) {
-      valueSys = "AC1";
+      valueSys = AC1.SYSNAME;
     }
     else if( this.btnSysBCS3.isSelected() ) {
-      valueSys = "BCS3";
+      valueSys = BCS3.SYSNAME;
     }
     else if( this.btnSysC80.isSelected() ) {
-      valueSys = "C80";
+      valueSys = C80.SYSNAME;
     }
     else if( this.btnSysHC900.isSelected() ) {
-      valueSys = "HC900";
+      valueSys = KC85.SYSNAME_HC900;
     }
     else if( this.btnSysHEMC.isSelected() ) {
-      valueSys = "HueblerEvertMC";
+      valueSys = HueblerEvertMC.SYSNAME;
     }
     else if( this.btnSysHGMC.isSelected() ) {
-      valueSys = "HueblerGraphicsMC";
+      valueSys = HueblerGraphicsMC.SYSNAME;
     }
     else if( this.btnSysKC85_1.isSelected() ) {
-      valueSys = "KC85/1";
+      valueSys = Z9001.SYSNAME_KC85_1;
     }
     else if( this.btnSysKC85_2.isSelected() ) {
-      valueSys = "KC85/2";
+      valueSys = KC85.SYSNAME_KC85_2;
     }
     else if( this.btnSysKC85_3.isSelected() ) {
-      valueSys = "KC85/3";
+      valueSys = KC85.SYSNAME_KC85_3;
     }
     else if( this.btnSysKC85_4.isSelected() ) {
-      valueSys = "KC85/4";
+      valueSys = KC85.SYSNAME_KC85_4;
     }
     else if( this.btnSysKC85_5.isSelected() ) {
-      valueSys = "KC85/5";
+      valueSys = KC85.SYSNAME_KC85_5;
     }
     else if( this.btnSysKC87.isSelected() ) {
-      valueSys = "KC87";
+      valueSys = Z9001.SYSNAME_KC87;
     }
     else if( this.btnSysKCcompact.isSelected() ) {
-      valueSys = "KCcompact";
+      valueSys = KCcompact.SYSNAME;
     }
     else if( this.btnSysKramerMC.isSelected() ) {
-      valueSys = "KramerMC";
+      valueSys = KramerMC.SYSNAME;
     }
     else if( this.btnSysLC80.isSelected() ) {
-      valueSys = this.lc80SettingsFld.getModelText();
+      valueSys = this.lc80SettingsFld.getModelSysName();
     }
     else if( this.btnSysLLC1.isSelected() ) {
-      valueSys = "LLC1";
+      valueSys = LLC1.SYSNAME;
     }
     else if( this.btnSysLLC2.isSelected() ) {
-      valueSys = "LLC2";
+      valueSys = LLC2.SYSNAME;
     }
     else if( this.btnSysNANOS.isSelected() ) {
-      valueSys = "NANOS";
+      valueSys = NANOS.SYSNAME;
     }
     else if( this.btnSysPCM.isSelected() ) {
-      valueSys = "PC/M";
+      valueSys = PCM.SYSNAME;
     }
     else if( this.btnSysPoly880.isSelected() ) {
-      valueSys = "Poly880";
+      valueSys = Poly880.SYSNAME;
     }
     else if( this.btnSysSC2.isSelected() ) {
-      valueSys = "SC2";
+      valueSys = SC2.SYSNAME;
     }
     else if( this.btnSysSLC1.isSelected() ) {
-      valueSys = "SLC1";
+      valueSys = SLC1.SYSNAME;
     }
     else if( this.btnSysVCS80.isSelected() ) {
-      valueSys = "VCS80";
+      valueSys = VCS80.SYSNAME;
     }
     else if( this.btnSysZ1013.isSelected() ) {
-      valueSys = this.z1013SettingsFld.getModelText();
+      valueSys = this.z1013SettingsFld.getModelSysName();
     }
     else if( this.btnSysZ9001.isSelected() ) {
-      valueSys = "Z9001";
+      valueSys = Z9001.SYSNAME_Z9001;
     }
     else if( this.btnSysZXSpectrum.isSelected() ) {
-      valueSys = "ZXSpectrum";
+      valueSys = ZXSpectrum.SYSNAME;
     }
-    props.setProperty( "jkcemu.system", valueSys );
+    props.setProperty( EmuThread.PROP_SYSNAME, valueSys );
 
     // Optionen fuer A5105
-    this.a5105SettingsFld.applyInput( props, valueSys.equals( "A5105" ) );
+    this.a5105SettingsFld.applyInput(
+		props,
+		valueSys.equals( A5105.SYSNAME ) );
 
     // Optionen fuer AC1
-    this.ac1SettingsFld.applyInput( props, valueSys.equals( "AC1" ) );
+    this.ac1SettingsFld.applyInput(
+		props,
+		valueSys.equals( AC1.SYSNAME ) );
 
     // Optionen fuer BCS3
-    this.bcs3SettingsFld.applyInput( props, valueSys.equals( "BCS3" ) );
+    this.bcs3SettingsFld.applyInput(
+		props,
+		valueSys.equals( BCS3.SYSNAME ) );
 
     // Optionen fuer HC900
-    this.hc900SettingsFld.applyInput( props, valueSys.equals( "HC900" ) );
+    this.hc900SettingsFld.applyInput(
+		props,
+		valueSys.equals( KC85.SYSNAME_HC900 ) );
 
     // Optionen fuer Huebler/Evert-MC
-    props.setProperty(
-		"jkcemu.hemc.catch_print_calls",
-		Boolean.toString( this.btnHEMCCatchPrintCalls.isSelected() ) );
+    this.hemcSettingsFld.applyInput(
+		props,
+		valueSys.equals( HueblerEvertMC.SYSNAME ) );
 
     // Optionen fuer Huebler-Grafik-MC
     this.hgmcSettingsFld.applyInput(
-				props,
-				valueSys.equals( "HueblerGraphicsMC" ) );
+		props,
+		valueSys.equals( HueblerGraphicsMC.SYSNAME ) );
 
     // Optionen fuer KC85/1..5
-    this.kc85_1_SettingsFld.applyInput( props, valueSys.equals( "KC85/1" ) );
-    this.kc85_2_SettingsFld.applyInput( props, valueSys.equals( "KC85/2" ) );
-    this.kc85_3_SettingsFld.applyInput( props, valueSys.equals( "KC85/3" ) );
-    this.kc85_4_SettingsFld.applyInput( props, valueSys.equals( "KC85/4" ) );
-    this.kc85_5_SettingsFld.applyInput( props, valueSys.equals( "KC85/5" ) );
+    this.kc85_1_SettingsFld.applyInput(
+		props,
+		valueSys.equals( Z9001.SYSNAME_KC85_1 ) );
+    this.kc85_2_SettingsFld.applyInput(
+		props,
+		valueSys.equals( KC85.SYSNAME_KC85_2 ) );
+    this.kc85_3_SettingsFld.applyInput(
+		props,
+		valueSys.equals( KC85.SYSNAME_KC85_3 ) );
+    this.kc85_4_SettingsFld.applyInput(
+		props,
+		valueSys.equals( KC85.SYSNAME_KC85_4 ) );
+    this.kc85_5_SettingsFld.applyInput(
+		props,
+		valueSys.equals( KC85.SYSNAME_KC85_5 ) );
 
     // Optionen fuer KC87
-    this.kc87SettingsFld.applyInput( props, valueSys.equals( "KC87" ) );
+    this.kc87SettingsFld.applyInput(
+		props,
+		valueSys.equals( Z9001.SYSNAME_KC87 ) );
 
     // Optionen fuer KC compact
     this.kcCompactSettingsFld.applyInput(
-					props,
-					valueSys.equals( "KCcompact" ) );
+		props,
+		valueSys.equals( KCcompact.SYSNAME ) );
 
     // Optionen fuer Kramer-MC
-    props.setProperty(
-		"jkcemu.kramermc.catch_print_calls",
-		Boolean.toString(
-			this.btnKramerMCCatchPrintCalls.isSelected() ) );
+    this.kramerMCSettingsFld.applyInput(
+		props,
+		valueSys.equals( KramerMC.SYSNAME ) );
 
     // Optionen fuer LC80
     this.lc80SettingsFld.applyInput(
 		props,
-		valueSys.startsWith( "LC80" ) );
+		valueSys.startsWith( LC80.SYSNAME_LC80 ) );  // startsWith!!!
+
+    // Optionen fuer LLC1
+    this.llc1SettingsFld.applyInput( props, valueSys.equals( LLC1.SYSNAME ) );
 
     // Optionen fuer LLC2
-    this.llc2SettingsFld.applyInput( props, valueSys.equals( "LLC2" ) );
+    this.llc2SettingsFld.applyInput( props, valueSys.equals( LLC2.SYSNAME ) );
 
     // Optionen fuer NANOS
-    this.nanosSettingsFld.applyInput( props, valueSys.equals( "NANOS" ) );
+    this.nanosSettingsFld.applyInput(
+		props,
+		valueSys.equals( NANOS.SYSNAME ) );
 
     // Optionen fuer PC/M
-    this.pcmSettingsFld.applyInput( props, valueSys.equals( "PC/M" ) );
+    this.pcmSettingsFld.applyInput( props, valueSys.equals( PCM.SYSNAME ) );
 
     // Optionen fuer Poly880
-    this.poly880SettingsFld.applyInput( props, valueSys.equals( "Poly880" ) );
+    this.poly880SettingsFld.applyInput(
+		props,
+		valueSys.equals( Poly880.SYSNAME ) );
 
     // Optionen fuer Z1013
     this.z1013SettingsFld.applyInput(
 		props,
-		valueSys.startsWith( "Z1013" ) );
+		valueSys.startsWith( Z1013.SYSNAME ) );  // startsWith!!!
 
     // Optionen fuer Z9001
-    this.z9001SettingsFld.applyInput( props, valueSys.equals( "Z9001" ) );
+    this.z9001SettingsFld.applyInput(
+		props,
+		valueSys.equals( Z9001.SYSNAME_Z9001 ) );
 
     // Optionen fuer ZXSpectrum
     this.zxSpectrumSettingsFld.applyInput(
 		props,
-		valueSys.equals( "ZXSpectrum" ) );
+		valueSys.equals( ZXSpectrum.SYSNAME ) );
   }
 
 
@@ -1784,8 +1889,8 @@ public class SettingsFrm extends BasicFrm
 	Frame frm = frames[ i ];
 	if( frm != null ) {
 	  SwingUtilities.updateComponentTreeUI( frm );
-	  if( frm instanceof BasicFrm ) {
-	    ((BasicFrm) frm).lookAndFeelChanged();
+	  if( frm instanceof BaseFrm ) {
+	    ((BaseFrm) frm).lookAndFeelChanged();
 	    if( !frm.isResizable() ) {
 	      frm.pack();
 	    }
@@ -1799,8 +1904,9 @@ public class SettingsFrm extends BasicFrm
   private void setDataChanged()
   {
     this.btnApply.setEnabled( true );
-    if( this.btnSave != null )
+    if( this.btnSave != null ) {
       this.btnSave.setEnabled( false );
+    }
   }
 
 
@@ -1817,86 +1923,93 @@ public class SettingsFrm extends BasicFrm
 		String      screenRefreshMillis )
   {
     // System
-    String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( sysName.startsWith( "AC1" ) ) {
-      this.btnSysAC1.setSelected( true );
-    }
-    else if( sysName.startsWith( "BCS3" ) ) {
-      this.btnSysBCS3.setSelected( true );
-    }
-    else if( sysName.startsWith( "C80" ) ) {
-      this.btnSysC80.setSelected( true );
-    }
-    else if( sysName.startsWith( "HC900" ) ) {
-      this.btnSysHC900.setSelected( true );
-    }
-    else if( sysName.startsWith( "HueblerEvertMC" ) ) {
-      this.btnSysHEMC.setSelected( true );
-    }
-    else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
-      this.btnSysHGMC.setSelected( true );
-    }
-    else if( sysName.startsWith( "KC85/1" ) ) {
-      this.btnSysKC85_1.setSelected( true );
-    }
-    else if( sysName.startsWith( "KC85/2" ) ) {
-      this.btnSysKC85_2.setSelected( true );
-    }
-    else if( sysName.startsWith( "KC85/3" ) ) {
-      this.btnSysKC85_3.setSelected( true );
-    }
-    else if( sysName.startsWith( "KC85/4" ) ) {
-      this.btnSysKC85_4.setSelected( true );
-    }
-    else if( sysName.startsWith( "KC85/5" ) ) {
-      this.btnSysKC85_5.setSelected( true );
-    }
-    else if( sysName.startsWith( "KC87" ) ) {
-      this.btnSysKC87.setSelected( true );
-    }
-    else if( sysName.startsWith( "KCcompact" ) ) {
-      this.btnSysKCcompact.setSelected( true );
-    }
-    else if( sysName.startsWith( "KramerMC" ) ) {
-      this.btnSysKramerMC.setSelected( true );
-    }
-    else if( sysName.startsWith( "LC80" ) ) {
-      this.btnSysLC80.setSelected( true );
-    }
-    else if( sysName.startsWith( "LLC1" ) ) {
-      this.btnSysLLC1.setSelected( true );
-    }
-    else if( sysName.startsWith( "LLC2" ) ) {
-      this.btnSysLLC2.setSelected( true );
-    }
-    else if( sysName.startsWith( "NANOS" ) ) {
-      this.btnSysNANOS.setSelected( true );
-    }
-    else if( sysName.startsWith( "PC/M" ) ) {
-      this.btnSysPCM.setSelected( true );
-    }
-    else if( sysName.startsWith( "Poly880" ) ) {
-      this.btnSysPoly880.setSelected( true );
-    }
-    else if( sysName.startsWith( "SC2" ) ) {
-      this.btnSysSC2.setSelected( true );
-    }
-    else if( sysName.startsWith( "SLC1" ) ) {
-      this.btnSysSLC1.setSelected( true );
-    }
-    else if( sysName.startsWith( "VCS80" ) ) {
-      this.btnSysVCS80.setSelected( true );
-    }
-    else if( sysName.startsWith( "Z1013" ) ) {
-      this.btnSysZ1013.setSelected( true );
-    }
-    else if( sysName.startsWith( "Z9001" ) ) {
-      this.btnSysZ9001.setSelected( true );
-    }
-    else if( sysName.startsWith( "ZXSpectrum" ) ) {
-      this.btnSysZXSpectrum.setSelected( true );
-    } else {
-      this.btnSysA5105.setSelected( true );
+    switch( EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME ) ) {
+      case AC1.SYSNAME:
+	this.btnSysAC1.setSelected( true );
+	break;
+      case BCS3.SYSNAME:
+	this.btnSysBCS3.setSelected( true );
+	break;
+      case C80.SYSNAME:
+	this.btnSysC80.setSelected( true );
+	break;
+      case KC85.SYSNAME_HC900:
+	this.btnSysHC900.setSelected( true );
+	break;
+      case HueblerEvertMC.SYSNAME:
+	this.btnSysHEMC.setSelected( true );
+	break;
+      case HueblerGraphicsMC.SYSNAME:
+	this.btnSysHGMC.setSelected( true );
+	break;
+      case Z9001.SYSNAME_KC85_1:
+	this.btnSysKC85_1.setSelected( true );
+	break;
+      case KC85.SYSNAME_KC85_2:
+	this.btnSysKC85_2.setSelected( true );
+	break;
+      case KC85.SYSNAME_KC85_3:
+	this.btnSysKC85_3.setSelected( true );
+	break;
+      case KC85.SYSNAME_KC85_4:
+	this.btnSysKC85_4.setSelected( true );
+	break;
+      case KC85.SYSNAME_KC85_5:
+	this.btnSysKC85_5.setSelected( true );
+	break;
+      case Z9001.SYSNAME_KC87:
+	this.btnSysKC87.setSelected( true );
+	break;
+      case KCcompact.SYSNAME:
+	this.btnSysKCcompact.setSelected( true );
+	break;
+      case KramerMC.SYSNAME:
+	this.btnSysKramerMC.setSelected( true );
+	break;
+      case LC80.SYSNAME_LC80_U505:
+      case LC80.SYSNAME_LC80_2716:
+      case LC80.SYSNAME_LC80_2:
+      case LC80.SYSNAME_LC80_E:
+	this.btnSysLC80.setSelected( true );
+	break;
+      case LLC1.SYSNAME:
+	this.btnSysLLC1.setSelected( true );
+	break;
+      case LLC2.SYSNAME:
+	this.btnSysLLC2.setSelected( true );
+	break;
+      case NANOS.SYSNAME:
+	this.btnSysNANOS.setSelected( true );
+	break;
+      case PCM.SYSNAME:
+	this.btnSysPCM.setSelected( true );
+	break;
+      case Poly880.SYSNAME:
+	this.btnSysPoly880.setSelected( true );
+	break;
+      case SC2.SYSNAME:
+	this.btnSysSC2.setSelected( true );
+	break;
+      case SLC1.SYSNAME:
+	this.btnSysSLC1.setSelected( true );
+	break;
+      case VCS80.SYSNAME:
+	this.btnSysVCS80.setSelected( true );
+	break;
+      case Z1013.SYSNAME_Z1013_01:
+      case Z1013.SYSNAME_Z1013_12:
+      case Z1013.SYSNAME_Z1013_16:
+      case Z1013.SYSNAME_Z1013_64:
+	this.btnSysZ1013.setSelected( true );
+	break;
+      case Z9001.SYSNAME_Z9001:
+	this.btnSysZ9001.setSelected( true );
+	break;
+      case ZXSpectrum.SYSNAME:
+	this.btnSysZXSpectrum.setSelected( true );
+	break;
+      default:
+	this.btnSysA5105.setSelected( true );
     }
 
     // Optionen fuer A5105
@@ -1912,21 +2025,13 @@ public class SettingsFrm extends BasicFrm
     this.hc900SettingsFld.updFields( props );
 
     // Optionen fuer Huebler/Evert-MC
-    this.btnHEMCCatchPrintCalls.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.hemc.catch_print_calls",
-				true ) );
+    this.hemcSettingsFld.updFields( props );
 
     // Optionen fuer Huebler-Grafik-MC
     this.hgmcSettingsFld.updFields( props );
 
     // Optionen fuer Kramer-MC
-    this.btnKramerMCCatchPrintCalls.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.kramermc.catch_print_calls",
-				false ) );
+    this.kramerMCSettingsFld.updFields( props );
 
     // Optionen fuer KC85/1..5
     this.kc85_1_SettingsFld.updFields( props );
@@ -1940,6 +2045,9 @@ public class SettingsFrm extends BasicFrm
 
     // Optionen fuer KC compact
     this.kcCompactSettingsFld.updFields( props );
+
+    // Optionen fuer LLC1
+    this.llc1SettingsFld.updFields( props );
 
     // Optionen fuer LLC2
     this.llc2SettingsFld.updFields( props );
@@ -1973,8 +2081,8 @@ public class SettingsFrm extends BasicFrm
     boolean done = false;
     int     defaultKHz = EmuThread.getDefaultSpeedKHz( props );
     String  speedText  = EmuUtil.getProperty(
-					props,
-					"jkcemu.maxspeed.khz" ).toLowerCase();
+		props,
+		EmuThread.PROP_MAXSPEED_KHZ ).toLowerCase();
     if( !speedText.isEmpty() ) {
       try {
 	int value = Integer.parseInt( speedText );
@@ -1996,21 +2104,25 @@ public class SettingsFrm extends BasicFrm
     // Bildschirmausgabe
     int brightness = EmuUtil.getIntProperty(
 					props,
-					"jkcemu.brightness",
-					DEFAULT_BRIGHTNESS );
+					ScreenFld.PROP_BRIGHTNESS,
+					ScreenFld.DEFAULT_BRIGHTNESS );
     if( (brightness >= 0) && (brightness <= 100) ) {
       this.sliderBrightness.setValue( brightness );
     }
     try {
-      int margin = EmuUtil.getIntProperty( props, "jkcemu.screen.margin", 20 );
+      int margin = EmuUtil.getIntProperty(
+			props,
+			ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_SCREEN_MARGIN,
+			ScreenFld.DEFAULT_MARGIN );
       if( (margin >= 0) && (margin <= MAX_MARGIN) ) {
-	this.spinnerModelMargin.setValue( new Integer( margin ) );
+	this.spinnerModelMargin.setValue( margin );
       }
     }
     catch( IllegalArgumentException ex ) {}
 
     if( screenRefreshMillis == null ) {
-      screenRefreshMillis = props.getProperty( "jkcemu.screen.refresh.ms" );
+      screenRefreshMillis = props.getProperty(
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_SCREEN_REFRESH_MS );
     }
     if( screenRefreshMillis != null ) {
       screenRefreshMillis = screenRefreshMillis.trim();
@@ -2025,24 +2137,33 @@ public class SettingsFrm extends BasicFrm
     this.comboScreenRefresh.setSelectedItem( screenRefreshMillis );
 
     this.btnDirectCopyPaste.setSelected(
-		EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.copy_and_paste.direct",
-				true ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_COPY_AND_PASTE_DIRECT,
+		ScreenFrm.DEFAULT_COPY_AND_PASTE_DIRECT ) );
 
 
     // Bestaetigungen
     this.btnConfirmNMI.setSelected(
-	EmuUtil.getBooleanProperty( props, "jkcemu.confirm.nmi", true ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_NMI,
+		ScreenFrm.DEFAULT_CONFIRM_NMI ) );
     this.btnConfirmReset.setSelected(
-	EmuUtil.getBooleanProperty( props, "jkcemu.confirm.reset", false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_RESET,
+		ScreenFrm.DEFAULT_CONFIRM_RESET ) );
     this.btnConfirmPowerOn.setSelected(
 	EmuUtil.getBooleanProperty(
-			props,
-			"jkcemu.confirm.power_on",
-			false ) );
+		props,
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_POWER_ON,
+		ScreenFrm.DEFAULT_CONFIRM_POWER_ON ) );
     this.btnConfirmQuit.setSelected(
-	EmuUtil.getBooleanProperty( props, "jkcemu.confirm.quit", false ) );
+	EmuUtil.getBooleanProperty(
+		props,
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_CONFIRM_QUIT,
+		ScreenFrm.DEFAULT_CONFIRM_QUIT ) );
 
 
     // Erscheinungsbild
@@ -2051,7 +2172,7 @@ public class SettingsFrm extends BasicFrm
       lafClassName = laf.getClass().getName();
     }
     if( laf == null ) {
-      lafClassName = props.getProperty( "jkcemu.lookandfeel.classname" );
+      lafClassName = props.getProperty( Main.PROP_LAF_CLASSNAME );
     }
     if( lafClassName != null ) {
       AbstractButton btn = this.lafClass2Button.get( lafClassName );
@@ -2066,17 +2187,20 @@ public class SettingsFrm extends BasicFrm
 
 
     // Sonstiges
-    if( EmuUtil.getProperty(
-		props,
-		"jkcemu.filedialog" ).toLowerCase().equals( "native" ) )
-    {
-      this.btnFileDlgNative.setSelected( true );
-    } else {
-      this.btnFileDlgEmu.setSelected( true );
+    switch( EmuUtil.getProperty( props, EmuUtil.PROP_FILEDIALOG ) ) {
+      case EmuUtil.VALUE_FILEDIALOG_NATIVE:
+	this.btnFileDlgNative.setSelected( true );
+	break;
+      case EmuUtil.VALUE_FILEDIALOG_SWING:
+	this.btnFileDlgSwing.setSelected( true );
+	break;
+      default:
+	this.btnFileDlgEmu.setSelected( true );
     }
     if( EmuUtil.getProperty(
 		props,
-		"jkcemu.sram.init" ).toLowerCase().startsWith( "r" ) )
+		EmuThread.PROP_SRAM_INIT ).equalsIgnoreCase(
+					EmuThread.VALUE_SRAM_INIT_RANDOM ) )
     {
       this.btnSRAMInitRandom.setSelected( true );
     } else {
@@ -2084,14 +2208,14 @@ public class SettingsFrm extends BasicFrm
     }
     this.btnClearRFsOnPowerOn.setSelected(
 		EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.ramfloppy.clear_on_power_on",
-				false ) );
+			props,
+			EmuThread.PROP_RF_CLEAR_ON_POWER_ON,
+			EmuThread.DEFAULT_RF_CLEAR_ON_POWER_ON ) );
     this.btnReloadROMsOnPowerOn.setSelected(
 		EmuUtil.getBooleanProperty(
-				props,
-				"jkcemu.external_rom.reload_on_power_on",
-				false ) );
+			props,
+			EmuThread.PROP_EXT_ROM_RELOAD_ON_POWER_ON,
+			EmuThread.DEFAULT_EXT_ROM_RELOAD_ON_POWER_ON ) );
   }
 
 
@@ -2105,75 +2229,77 @@ public class SettingsFrm extends BasicFrm
 
   private void updSysOptCard()
   {
-    String cardName = "noopt";
+    String cardName = CARD_EMPTY;
     if( this.btnSysA5105.isSelected() ) {
-      cardName = "A5105";
+      cardName = A5105.SYSNAME;
     }
     else if( this.btnSysAC1.isSelected() ) {
-      cardName = "AC1";
+      cardName = AC1.SYSNAME;
     }
     else if( this.btnSysBCS3.isSelected() ) {
-      cardName = "BCS3";
+      cardName = BCS3.SYSNAME;
     }
     else if( this.btnSysHC900.isSelected() ) {
-      cardName = "HC900";
+      cardName = KC85.SYSNAME_HC900;
     }
     else if( this.btnSysHEMC.isSelected() ) {
-      cardName = "HEMC";
+      cardName = HueblerEvertMC.SYSNAME;
     }
     else if( this.btnSysHGMC.isSelected() ) {
-      cardName = "HGMC";
+      cardName = HueblerGraphicsMC.SYSNAME;
     }
     else if( this.btnSysKC85_1.isSelected() ) {
-      cardName = "KC85/1";
+      cardName = Z9001.SYSNAME_KC85_1;
     }
     else if( this.btnSysKC85_2.isSelected() ) {
-      cardName = "KC85/2";
+      cardName = KC85.SYSNAME_KC85_2;
     }
     else if( this.btnSysKC85_3.isSelected() ) {
-      cardName = "KC85/3";
+      cardName = KC85.SYSNAME_KC85_3;
     }
     else if( this.btnSysKC85_4.isSelected() ) {
-      cardName = "KC85/4";
+      cardName = KC85.SYSNAME_KC85_4;
     }
     else if( this.btnSysKC85_5.isSelected() ) {
-      cardName = "KC85/5";
+      cardName = KC85.SYSNAME_KC85_5;
     }
     else if( this.btnSysKC87.isSelected() ) {
-      cardName = "KC87";
+      cardName = Z9001.SYSNAME_KC87;
     }
     else if( this.btnSysKCcompact.isSelected() ) {
-      cardName = "KCcompact";
+      cardName = KCcompact.SYSNAME;
     }
     else if( this.btnSysKramerMC.isSelected() ) {
-      cardName = "KramerMC";
+      cardName = KramerMC.SYSNAME;
     }
     else if( this.btnSysLC80.isSelected() ) {
-      cardName = "LC80";
+      cardName = LC80.SYSNAME;
     }
     else if( this.btnSysNANOS.isSelected() ) {
-      cardName = "NANOS";
+      cardName = NANOS.SYSNAME;
     }
     else if( this.btnSysPCM.isSelected() ) {
-      cardName = "PC/M";
+      cardName = PCM.SYSNAME;
     }
     else if( this.btnSysPoly880.isSelected() ) {
-      cardName = "Poly880";
+      cardName = Poly880.SYSNAME;
+    }
+    else if( this.btnSysLLC1.isSelected() ) {
+      cardName = LLC1.SYSNAME;
     }
     else if( this.btnSysLLC2.isSelected() ) {
-      cardName = "LLC2";
+      cardName = LLC2.SYSNAME;
     }
     else if( this.btnSysZ1013.isSelected() ) {
-      cardName = "Z1013";
+      cardName = Z1013.SYSNAME;
     }
     else if( this.btnSysZ9001.isSelected() ) {
-      cardName = "Z9001";
+      cardName = Z9001.SYSNAME_Z9001;
     }
     else if( this.btnSysZXSpectrum.isSelected() ) {
-      cardName = "ZXSpectrum";
+      cardName = ZXSpectrum.SYSNAME;
     }
     this.cardLayoutSysOpt.show( this.panelSysOpt, cardName );
     this.curSysOptCard = cardName;
   }
 }
-

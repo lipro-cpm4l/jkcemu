@@ -8,14 +8,32 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dialog;
+import java.awt.EventQueue;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.io.File;
 import java.lang.*;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.FileVisitor;
+import java.nio.file.FileVisitResult;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
-import javax.swing.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Set;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.WindowConstants;
 import jkcemu.Main;
 
 
@@ -31,7 +49,7 @@ public abstract class AbstractFileWorker
 
   protected volatile Path    curParent;
   protected volatile Path    curPath;
-  protected volatile boolean canceled;
+  protected volatile boolean cancelled;
 
   private Window                         owner;
   private PathListener                   pathListener;
@@ -69,7 +87,7 @@ public abstract class AbstractFileWorker
     this.progressDlg   = null;
     this.progressLabel = null;
     this.progressTimer = null;
-    this.canceled      = false;
+    this.cancelled     = false;
     this.failed        = false;
     this.skipAll       = false;
     this.progressDlg   = null;
@@ -106,7 +124,7 @@ public abstract class AbstractFileWorker
 
   public void cancelWork()
   {
-    this.canceled = true;
+    this.cancelled = true;
     setProgressText( "Vorgang abgebrochen, bitte warten..." );
     Thread thread = this.thread;
     if( thread != null ) {
@@ -233,7 +251,7 @@ public abstract class AbstractFileWorker
 	  this.skipAll = true;
 	  break;
 	default:
-	  this.canceled = true;
+	  this.cancelled = true;
       }
     }
   }
@@ -276,7 +294,7 @@ public abstract class AbstractFileWorker
       }
       catch( IllegalMonitorStateException ex1 ) {}
       catch( InterruptedException ex2 ) {
-	this.canceled = true;
+	this.cancelled = true;
       }
     }
     int    rv    = -1;
@@ -337,7 +355,7 @@ public abstract class AbstractFileWorker
       contentPane.add( cancelBtn );
 
       this.progressDlg.pack();
-      BasicDlg.setParentCentered( this.progressDlg );
+      BaseDlg.setParentCentered( this.progressDlg );
       this.progressDlg.setVisible( true );
 
       this.progressTimer = new javax.swing.Timer(
@@ -366,7 +384,7 @@ public abstract class AbstractFileWorker
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -376,7 +394,7 @@ public abstract class AbstractFileWorker
 				Path                dir,
 				BasicFileAttributes attrs )
   {
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -384,7 +402,7 @@ public abstract class AbstractFileWorker
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -392,7 +410,7 @@ public abstract class AbstractFileWorker
   @Override
   public FileVisitResult visitFileFailed( Path file, IOException ex )
   {
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -405,7 +423,7 @@ public abstract class AbstractFileWorker
     try {
       if( this.paths != null ) {
 	for( Path path : this.paths ) {
-	  if( this.canceled ) {
+	  if( this.cancelled ) {
 	    break;
 	  }
 	  try {
@@ -451,7 +469,7 @@ public abstract class AbstractFileWorker
 
   private void updProgressDlg()
   {
-    if( this.canceled ) {
+    if( this.cancelled ) {
       if( this.progressTimer != null ) {
 	this.progressTimer.stop();
       }
@@ -482,9 +500,8 @@ public abstract class AbstractFileWorker
       this.progressDlg.dispose();
       this.progressDlg = null;
     }
-    if( this.failed && !this.canceled ) {
-      BasicDlg.showErrorDlg( owner, getUncompletedWorkMsg() );
+    if( this.failed && !this.cancelled ) {
+      BaseDlg.showErrorDlg( owner, getUncompletedWorkMsg() );
     }
   }
 }
-

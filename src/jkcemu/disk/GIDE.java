@@ -9,17 +9,32 @@
 package jkcemu.disk;
 
 import java.awt.Component;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.lang.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Arrays;
+import java.util.Properties;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
 import jkcemu.etc.RTC7242X;
 
 
 public class GIDE implements Runnable
 {
+  public static final String PROP_HARDDISK_PREFIX   = "harddisk.";
+  public static final String PROP_CYLINDERS         = "cylinders";
+  public static final String PROP_ENABLED           = "enabled";
+  public static final String PROP_FILE              = "file";
+  public static final String PROP_HEADS             = "heads";
+  public static final String PROP_MODEL             = "model";
+  public static final String PROP_OFFSET            = "offset";
+  public static final String PROP_SECTORS_PER_TRACK = "sectors_per_track";
+
+  private static final String SYSPROP_DEBUG = "jkcemu.debug.gide";
+
   private static final int STATUS_ERROR         = 0x01;
   private static final int STATUS_DATA_REQUEST  = 0x08;
   private static final int STATUS_SEEK_COMPLETE = 0x10;
@@ -44,11 +59,11 @@ public class GIDE implements Runnable
 		WRITE_SECTORS };
 
   private static final String[] propKeys = {
-					"model",
-					"cylinders",
-					"heads",
-					"sectors_per_track",
-					"file" };
+					PROP_MODEL,
+					PROP_CYLINDERS,
+					PROP_HEADS,
+					PROP_SECTORS_PER_TRACK,
+					PROP_FILE };
 
   protected static class IOTask
   {
@@ -71,39 +86,39 @@ public class GIDE implements Runnable
   };
 
 
-  private Component        owner;
-  private String           propPrefix;
-  private HardDisk[]       disks;
-  private RTC7242X         rtc;
+  private Component             owner;
+  private String                propPrefix;
+  private HardDisk[]            disks;
+  private RTC7242X              rtc;
   private BlockingQueue<IOTask> ioTaskQueue;
-  private volatile Command pendingCmd;
-  private volatile boolean ioTaskEnabled;
-  private volatile Thread  ioTaskThread;
-  private byte[]           ioBuf;
-  private int              ioBufPos;
-  private int              ioByteCnt;
-  private int              debugLevel;
-  private int              sectorCnt;
-  private int              sectorNum;
-  private int              cylNum;
-  private int              sdhReg;
-  private volatile int     statusReg;
-  private volatile int     errorReg;
-  private int              powerMode;
-  private volatile int     curCmd;
-  private volatile int     curDiskIdx;
-  private HardDisk         curDisk;
-  private int[]            offsets;
-  private int[]            cylinders;
-  private int[]            heads;
-  private int[]            sectorsPerTrack;
-  private long[]           totalSectors;
-  private boolean          interruptEnabled;
-  private volatile boolean interruptRequest;
-  private boolean          resetFlag;
-  private boolean          readMissingFileShown;
-  private boolean          readErrShown;
-  private boolean          writeErrShown;
+  private volatile Command      pendingCmd;
+  private volatile boolean      ioTaskEnabled;
+  private volatile Thread       ioTaskThread;
+  private byte[]                ioBuf;
+  private int                   ioBufPos;
+  private int                   ioByteCnt;
+  private int                   debugLevel;
+  private int                   sectorCnt;
+  private int                   sectorNum;
+  private int                   cylNum;
+  private int                   sdhReg;
+  private volatile int          statusReg;
+  private volatile int          errorReg;
+  private int                   powerMode;
+  private volatile int          curCmd;
+  private volatile int          curDiskIdx;
+  private HardDisk              curDisk;
+  private int[]                 offsets;
+  private int[]                 cylinders;
+  private int[]                 heads;
+  private int[]                 sectorsPerTrack;
+  private long[]                totalSectors;
+  private boolean               interruptEnabled;
+  private volatile boolean      interruptRequest;
+  private boolean               resetFlag;
+  private boolean               readMissingFileShown;
+  private boolean               readErrShown;
+  private boolean               writeErrShown;
 
 
   public static boolean complies(
@@ -494,7 +509,7 @@ public class GIDE implements Runnable
 				this,
 				"JKCEMU GIDE" );
 
-    String text = System.getProperty( "jkcemu.debug.gide" );
+    String text = System.getProperty( SYSPROP_DEBUG );
     if( text != null ) {
       try {
 	this.debugLevel = Integer.parseInt( text );
@@ -612,12 +627,16 @@ public class GIDE implements Runnable
 				String     propPrefix )
   {
     boolean rv = true;
-    String  s  = EmuUtil.getProperty( props, propPrefix + "enabled" );
+    String  s  = EmuUtil.getProperty( props, propPrefix + PROP_ENABLED );
     if( s.isEmpty() ) {
       for( int i = 0; i < propKeys.length; i++ ) {
 	if( EmuUtil.getProperty(
 		props,
-		propPrefix + "harddisk.1." + propKeys[ i ] ).isEmpty() )
+		String.format(
+			"%s%s1.%s",
+			propPrefix,
+			PROP_HARDDISK_PREFIX,
+			propKeys[ i ] ) ).isEmpty() )
 	{
 	  rv = false;
 	  break;
@@ -925,7 +944,7 @@ public class GIDE implements Runnable
 	}
       }
       finally {
-	EmuUtil.doClose( raf );
+	EmuUtil.closeSilent( raf );
       }
       if( err ) {
 	this.errorReg = ERROR_UNCORRECTABLE_DATA;
@@ -971,7 +990,7 @@ public class GIDE implements Runnable
 	  }
 	}
 	finally {
-	  EmuUtil.doClose( raf );
+	  EmuUtil.closeSilent( raf );
 	}
       } else {
 	if( !this.readMissingFileShown ) {
@@ -1018,7 +1037,7 @@ public class GIDE implements Runnable
 	}
       }
       finally {
-	EmuUtil.doClose( raf );
+	EmuUtil.closeSilent( raf );
       }
       if( err ) {
 	this.errorReg = ERROR_UNCORRECTABLE_DATA;
@@ -1080,19 +1099,23 @@ public class GIDE implements Runnable
       for( int i = 0; i < 2; i++ ) {
 	HardDisk disk   = null;
 	String   prefix = String.format(
-				"%sharddisk.%d.",
+				"%s%s%d.",
 				propPrefix,
+				PROP_HARDDISK_PREFIX,
 				i + 1 );
-	String diskModel = EmuUtil.getProperty( props, prefix + "model" );
-	String fileName  = EmuUtil.getProperty( props, prefix + "file" );
+	String diskModel = EmuUtil.getProperty( props, prefix + PROP_MODEL );
+	String fileName  = EmuUtil.getProperty( props, prefix + PROP_FILE );
 	if( !diskModel.isEmpty() && !fileName.isEmpty() ) {
-	  int c = EmuUtil.getIntProperty( props, prefix + "cylinders", 0 );
-	  int h = EmuUtil.getIntProperty( props, prefix + "heads", 0 );
+	  int c = EmuUtil.getIntProperty( props, prefix + PROP_CYLINDERS, 0 );
+	  int h = EmuUtil.getIntProperty( props, prefix + PROP_HEADS, 0 );
 	  int n = EmuUtil.getIntProperty(
 					props,
-					prefix + "sectors_per_track",
+					prefix + PROP_SECTORS_PER_TRACK,
 					0 );
-	  int  offset = EmuUtil.getIntProperty( props, prefix + "offset", 0 );
+	  int  offset = EmuUtil.getIntProperty(
+					props,
+					prefix + PROP_OFFSET,
+					0 );
 	  File file   = new File( fileName );
 	  if( file.exists() ) {
 	    if( (file.length() % 512L) >= 0x100 ) {

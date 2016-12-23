@@ -8,11 +8,15 @@
 
 package jkcemu.base;
 
-
 import java.awt.Window;
 import java.io.IOException;
 import java.lang.*;
-import java.nio.file.*;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.FileVisitResult;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import javax.swing.JOptionPane;
@@ -80,7 +84,7 @@ public class FileCopier extends AbstractFileWorker
 				BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.CONTINUE;
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       this.curPath = dir;
       Path dstDir  = resolveDst( dir );
       try {
@@ -122,10 +126,10 @@ public class FileCopier extends AbstractFileWorker
 	      this.copyAllDirs = Boolean.FALSE;
 	      break;
 	    default:
-	      this.canceled = true;
+	      this.cancelled = true;
 	  }
 	}
-	if( !this.canceled && (!exists || forceCopy) ) {
+	if( !this.cancelled && (!exists || forceCopy) ) {
 	  Files.copy(
 		dir,
 		dstDir,
@@ -141,20 +145,20 @@ public class FileCopier extends AbstractFileWorker
 	    || !Files.isDirectory( dstDir ) )
 	{
 	  handleError( dir, ex );
-	  if( !this.canceled ) {
+	  if( !this.cancelled ) {
 	    rv = FileVisitResult.SKIP_SUBTREE;
 	  }
 	}
       }
     }
-    return this.canceled ? FileVisitResult.TERMINATE : rv;
+    return this.cancelled ? FileVisitResult.TERMINATE : rv;
   }
 
 
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       this.curPath = file;
       try {
 	Path    dstFile      = resolveDst( file );
@@ -195,10 +199,10 @@ public class FileCopier extends AbstractFileWorker
 	      this.replaceAllFiles = Boolean.FALSE;
 	      break;
 	    default:
-	      this.canceled = true;
+	      this.cancelled = true;
 	  }
 	}
-	if( !this.canceled && (!exists || forceReplace) ) {
+	if( !this.cancelled && (!exists || forceReplace) ) {
 	  Files.copy(
 		file,
 		dstFile,
@@ -212,7 +216,7 @@ public class FileCopier extends AbstractFileWorker
 	handleError( file, ex );
       }
     }
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 

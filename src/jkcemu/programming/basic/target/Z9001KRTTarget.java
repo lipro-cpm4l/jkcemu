@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,9 @@ import java.lang.*;
 import java.util.Set;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.Z9001;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
+import jkcemu.programming.basic.BasicLibrary;
 
 
 public class Z9001KRTTarget extends Z9001Target

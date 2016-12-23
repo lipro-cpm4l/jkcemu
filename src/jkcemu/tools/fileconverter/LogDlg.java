@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,22 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
-import jkcemu.base.*;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
-public class LogDlg extends BasicDlg
+public class LogDlg extends BaseDlg
 {
   private JTextArea textArea;
   private JButton   btnCopy;

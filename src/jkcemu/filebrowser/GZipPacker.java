@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,25 +8,34 @@
 
 package jkcemu.filebrowser;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.lang.*;
-import java.util.zip.*;
-import javax.swing.*;
+import java.util.zip.GZIPOutputStream;
+import javax.swing.ProgressMonitor;
+import javax.swing.ProgressMonitorInputStream;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
 
 
 public class GZipPacker extends Thread
 {
-  private BasicFrm owner;
-  private File     srcFile;
-  private File     outFile;
+  private BaseFrm owner;
+  private File    srcFile;
+  private File    outFile;
 
 
   public static void packFile(
-		BasicFrm owner,
-		File     srcFile,
-		File     outFile )
+			BaseFrm owner,
+			File    srcFile,
+			File    outFile )
   {
     (new GZipPacker( owner, srcFile, outFile )).start();
   }
@@ -41,7 +50,6 @@ public class GZipPacker extends Thread
     long             millis = this.srcFile.lastModified();
     String           msg    = null;
     InputStream      in     = null;
-    GZIPInputStream  gzipIn = null;
     GZIPOutputStream out    = null;
     try {
       in = new BufferedInputStream( new FileInputStream( this.srcFile ) );
@@ -72,7 +80,7 @@ public class GZipPacker extends Thread
       out.finish();
       out.close();
       out = null;
-      if( millis > 0 ) {
+      if( millis != -1 ) {
 	this.outFile.setLastModified( millis );
       }
     }
@@ -84,8 +92,8 @@ public class GZipPacker extends Thread
       msg = ex.getMessage();
     }
     finally {
-      EmuUtil.doClose( in );
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilent( out );
     }
     FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );
     if( msg != null ) {
@@ -97,9 +105,9 @@ public class GZipPacker extends Thread
 	/* --- private Konstruktoren --- */
 
   private GZipPacker(
-		BasicFrm owner,
-		File     srcFile,
-		File     outFile )
+		BaseFrm owner,
+		File    srcFile,
+		File    outFile )
   {
     super( Main.getThreadGroup(), "JKCEMU gzip packer" );
     this.owner   = owner;

@@ -13,7 +13,8 @@ import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.AC1;
 import jkcemu.emusys.ac1_llc2.AbstractSCCHSys;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
 
 
 public class AC1Target extends SCCHTarget

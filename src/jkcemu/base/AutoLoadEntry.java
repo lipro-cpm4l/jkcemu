@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,11 +9,17 @@
 package jkcemu.base;
 
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Properties;
 
 
 public class AutoLoadEntry
 {
+  public static final String PROP_COUNT       = "count";
+  public static final String PROP_FILE        = "file";
+  public static final String PROP_LOAD_ADDR   = "address.load";
+  public static final String PROP_WAIT_MILLIS = "wait.millis";
+
   private int     millisToWait;
   private String  fileName;
   private Integer loadAddr;
@@ -54,12 +60,12 @@ public class AutoLoadEntry
   {
     java.util.List<AutoLoadEntry> rv = null;
     if( (props != null) && (propPrefix != null) ) {
-      int n = EmuUtil.getIntProperty( props, propPrefix + "count", 0 );
+      int n = EmuUtil.getIntProperty( props, propPrefix + PROP_COUNT, 0 );
       if( n > 0 ) {
 	rv = new ArrayList<>();
 	for( int i = 0; i < n; i++ ) {
-	  String prefix   = propPrefix + String.valueOf( i );
-	  String fileName = props.getProperty( prefix + ".file" );
+	  String prefix   = String.format( "%s%d.", propPrefix, i );
+	  String fileName = props.getProperty( prefix + PROP_FILE );
 	  if( fileName != null ) {
 	    fileName = fileName.trim();
 	    if( !fileName.isEmpty() ) {
@@ -67,12 +73,12 @@ public class AutoLoadEntry
 		new AutoLoadEntry(
 			EmuUtil.getIntProperty(
 				props,
-				prefix + ".wait.millis",
+				prefix + PROP_WAIT_MILLIS,
 				0 ),
 			fileName,
 			getAddrProperty(
 				props,
-				prefix + ".address.load" ) ) );
+				prefix + PROP_LOAD_ADDR ) ) );
 	    }
 	  }
 	}
@@ -97,7 +103,7 @@ public class AutoLoadEntry
 	  try {
 	    int value = Integer.parseInt( s, 16 );
 	    if( (value >= 0) && (value <= 0xFFFF) ) {
-	      rv = new Integer( value );
+	      rv = value;
 	    }
 	  }
 	  catch( NumberFormatException ex ) {}

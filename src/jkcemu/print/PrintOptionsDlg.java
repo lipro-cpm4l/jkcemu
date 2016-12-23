@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,25 @@
 
 package jkcemu.print;
 
-import java.awt.*;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
-public class PrintOptionsDlg extends BasicDlg
+public class PrintOptionsDlg extends BaseDlg
 {
   private boolean           applied;
   private JComboBox<String> comboFontSize;
@@ -212,4 +222,3 @@ public class PrintOptionsDlg extends BasicDlg
     doClose();
   }
 }
-

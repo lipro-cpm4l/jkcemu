@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,33 +8,45 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.util.Arrays;
-import javax.sound.sampled.*;
-import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
+import jkcemu.audio.AudioFile;
+import jkcemu.audio.BitSampleBuffer;
+import jkcemu.audio.PCMDataSource;
+import jkcemu.base.EmuUtil;
 
 
 public class AudioFileTarget extends AbstractConvertTarget
 {
   private File                                 file;
-  private String[]                             extensions;
-  private String                               extensionText;
   private javax.swing.filechooser.FileFilter[] fileFilters;
+  private BitSampleBuffer                      samples;
 
 
   public AudioFileTarget(
 		FileConvertFrm fileConvertFrm,
-		File           file,
-		String[]       extensions,
-		String         extensionText )
+		File           file )
   {
-    super( fileConvertFrm, "Sound-Datei " + extensionText );
-    this.file          = file;
-    this.extensions    = extensions;
-    this.extensionText = extensionText;
-    this.fileFilters   = null;
+    super(
+	fileConvertFrm,
+	"Sound-Datei (" + AudioFile.getFileExtensionText() + ")" );
+    this.file        = file;
+    this.fileFilters = null;
+    this.samples     = null;
+  }
+
+
+  public AudioFileTarget(
+		FileConvertFrm  fileConvertFrm,
+		BitSampleBuffer samples )
+  {
+    super(
+	fileConvertFrm,
+	"Sound-Datei (" + AudioFile.getFileExtensionText() + ")" );
+    this.file        = null;
+    this.fileFilters = null;
+    this.samples     = samples;
   }
 
 
@@ -48,41 +60,30 @@ public class AudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public AudioInputStream getAudioInputStream() throws IOException
+  public PCMDataSource createPCMDataSource() throws IOException
   {
-    AudioInputStream ais = null;
-    InputStream      ris = null;
+    PCMDataSource pcm = null;
     try {
-      if( EmuUtil.isGZipFile( this.file ) ) {
-	ris = EmuUtil.openBufferedOptionalGZipFile( this.file );
-	ais = AudioSystem.getAudioInputStream(
-				new BufferedInputStream( ris ) );
-      } else {
-	ais = AudioSystem.getAudioInputStream( this.file );
+      if( this.samples != null ) {
+	pcm = this.samples.newReader();
+      } else if( this.file != null ) {
+	pcm = AudioFile.open( this.file );
       }
     }
-    catch( UnsupportedAudioFileException ex ) {
-      EmuUtil.doClose( ris );
-      throw new IOException( ex.getMessage() );
+    catch( IOException ex ) {
+      EmuUtil.closeSilent( pcm );
+      throw ex;
     }
-    return ais;
+    return pcm;
   }
 
 
   @Override
-  public javax.swing.filechooser.FileFilter[] getFileFilters()
+  public synchronized javax.swing.filechooser.FileFilter[] getFileFilters()
   {
     if( this.fileFilters == null ) {
-      if( this.extensions != null ) {
-	if( this.extensions.length > 0 ) {
-	  String text = "Sound-Dateien ";
-	  if( this.extensionText != null ) {
-	    text += this.extensionText;
-	  }
-	  this.fileFilters = new javax.swing.filechooser.FileFilter[] {
-		new FileFilterWithGZ( text, this.extensions ) };
-	}
-      }
+      this.fileFilters = new javax.swing.filechooser.FileFilter[]
+					{ AudioFile.getFileFilter() };
     }
     return this.fileFilters;
   }
@@ -91,15 +92,10 @@ public class AudioFileTarget extends AbstractConvertTarget
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    File outFile = null;
-    if( (srcFile != null) && (this.extensions != null) ) {
-      if( this.extensions.length > 0 ) {
-	outFile = replaceExtension(
-		srcFile,
-		this.extensions[ this.extensions.length - 1 ] );
-      }
-    }
-    return outFile;
+    return getSuggestedOutFile(
+			srcFile,
+			AudioFile.getFileExtensions(),
+			"wav" );
   }
 
 
@@ -107,17 +103,8 @@ public class AudioFileTarget extends AbstractConvertTarget
   public String save( File file ) throws IOException
   {
     if( file != null ) {
-      AudioFileFormat.Type aft = AudioUtil.getAudioFileType(
-						this.fileConvertFrm,
-						file );
-      if( aft != null ) {
-	AudioInputStream ais = getAudioInputStream();
-	if( ais != null ) {
-	  AudioUtil.write( ais, aft, file );
-	}
-      }
+      AudioFile.write( createPCMDataSource(), file );
     }
     return null;
   }
 }
-

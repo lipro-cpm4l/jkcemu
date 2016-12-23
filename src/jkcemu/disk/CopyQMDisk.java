@@ -12,11 +12,19 @@
 package jkcemu.disk;
 
 import java.awt.Frame;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.Properties;
 import java.util.zip.GZIPInputStream;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
 import jkcemu.text.CharConverter;
 
 
@@ -463,7 +471,7 @@ public class CopyQMDisk extends AbstractFloppyDisk
       }
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
     return msgBuf != null ? msgBuf.toString() : null;
   }
@@ -650,7 +658,7 @@ public class CopyQMDisk extends AbstractFloppyDisk
       }
     }
     finally {
-      EmuUtil.doClose( in );
+      EmuUtil.closeSilent( in );
     }
     return rv;
   }
@@ -739,8 +747,8 @@ public class CopyQMDisk extends AbstractFloppyDisk
   public void putSettingsTo( Properties props, String prefix )
   {
     if( (props != null) && (this.fileName != null) ) {
-      props.setProperty( prefix + "file", this.fileName );
-      props.setProperty( prefix + "readonly", "true" );
+      props.setProperty( prefix + PROP_FILE, this.fileName );
+      props.setProperty( prefix + PROP_READONLY, EmuUtil.VALUE_TRUE );
     }
   }
 

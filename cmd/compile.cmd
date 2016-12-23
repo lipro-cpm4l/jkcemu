@@ -9,11 +9,13 @@ del %SRC_DIR%\jkcemu\disk\*.class
 del %SRC_DIR%\jkcemu\emusys\*.class
 del %SRC_DIR%\jkcemu\emusys\a5105\*.class
 del %SRC_DIR%\jkcemu\emusys\ac1_llc2\*.class
+del %SRC_DIR%\jkcemu\emusys\bcs3\*.class
 del %SRC_DIR%\jkcemu\emusys\etc\*.class
 del %SRC_DIR%\jkcemu\emusys\huebler\*.class
 del %SRC_DIR%\jkcemu\emusys\kc85\*.class
 del %SRC_DIR%\jkcemu\emusys\kccompact\*.class
 del %SRC_DIR%\jkcemu\emusys\lc80\*.class
+del %SRC_DIR%\jkcemu\emusys\llc1\*.class
 del %SRC_DIR%\jkcemu\emusys\poly880\*.class
 del %SRC_DIR%\jkcemu\emusys\z1013\*.class
 del %SRC_DIR%\jkcemu\emusys\z9001\*.class
@@ -38,4 +40,3 @@ del %SRC_DIR%\jkcemu\tools\hexedit\*.class
 del %SRC_DIR%\z80emu\*.class
 
 javac -classpath %SRC_DIR% %1 %2 %3 %SRC_DIR%\jkcemu\Main.java
-

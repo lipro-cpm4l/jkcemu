@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,24 @@
 
 package jkcemu.print;
 
-import java.awt.*;
-import java.awt.print.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 import java.lang.*;
 import java.util.Locale;
-import javax.print.attribute.*;
-import javax.print.attribute.standard.*;
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.PrintRequestAttributeSet;
+import javax.print.attribute.standard.Copies;
+import javax.print.attribute.standard.JobName;
+import javax.print.attribute.standard.MediaSizeName;
+import javax.print.attribute.standard.OrientationRequested;
 import jkcemu.Main;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.BaseDlg;
 
 
 public class PrintUtil
@@ -52,7 +62,7 @@ public class PrintUtil
       }
     }
     catch( PrinterException ex ) {
-      BasicDlg.showErrorDlg( owner, ex.getMessage() );
+      BaseDlg.showErrorDlg( owner, ex.getMessage() );
     }
     return status;
   }
@@ -109,4 +119,3 @@ public class PrintUtil
 	(int) (pf.getImageableY() + pf.getImageableHeight()) );
   }
 }
-

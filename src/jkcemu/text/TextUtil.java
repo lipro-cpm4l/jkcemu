@@ -8,7 +8,9 @@
 
 package jkcemu.text;
 
+import java.awt.Component;
 import java.lang.*;
+import jkcemu.base.BaseDlg;
 
 
 public class TextUtil
@@ -54,6 +56,15 @@ public class TextUtil
       s1 = "";
     }
     return s1.equalsIgnoreCase( s2 != null ? s2 : "" );
+  }
+
+
+  public static void showTextNotFound( Component owner )
+  {
+    BaseDlg.showInfoDlg(
+                owner,
+                "Text nicht gefunden!",
+                "Text suchen" );
   }
 
 

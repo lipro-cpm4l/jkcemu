@@ -8,10 +8,15 @@
 
 package jkcemu.net;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.*;
-import java.net.*;
-import java.util.*;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.regex.PatternSyntaxException;
 import javax.naming.Context;
 import javax.naming.directory.InitialDirContext;
@@ -21,6 +26,9 @@ import jkcemu.base.EmuUtil;
 
 public class NetConfig
 {
+  // Masken fuer Eigenschaft KCNet.SYSPROP_DEBUG
+  private static final int DEBUG_MASK_MSG = 0x100;
+
   private byte[] hwAddr;
   private byte[] ipAddr;
   private byte[] subnetMask;
@@ -81,12 +89,12 @@ public class NetConfig
 
   public static NetConfig readNetConfig()
   {
-    NetConfig netConfig  = null;
-    int       debugLevel = 0;
-    String    text       = System.getProperty( "jkcemu.debug.net" );
+    NetConfig netConfig = null;
+    int       debugMask = 0;
+    String    text      = System.getProperty( KCNet.SYSPROP_DEBUG );
     if( text != null ) {
       try {
-	debugLevel = Integer.parseInt( text );
+	debugMask = Integer.parseInt( text );
       }
       catch( NumberFormatException ex ) {}
     }
@@ -150,7 +158,7 @@ public class NetConfig
       }
     }
     catch( IOException ex ) {
-      if( debugLevel > 0 ) {
+      if( (debugMask & DEBUG_MASK_MSG) != 0 ) {
 	ex.printStackTrace( System.out );
       }
     }
@@ -272,24 +280,27 @@ public class NetConfig
       catch( IOException ex ) {}
       catch( PatternSyntaxException ex ) {}
       finally {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
 
     /*
      * Manuelle Einstellungen lesen und uebernehmen
      */
-    byte[] manualIpAddr = getIpAddrByProp( "jkcemu.kcnet.ip_address" );
+    byte[] manualIpAddr = getIpAddrByProp(
+				KCNet.PROP_PREFIX + KCNet.PROP_IP_ADDR );
     if( manualIpAddr != null ) {
       ipAddr = manualIpAddr;
     }
-    byte[] manualSubnetMask = getIpAddrByProp( "jkcemu.kcnet.subnet_mask" );
+    byte[] manualSubnetMask = getIpAddrByProp(
+				KCNet.PROP_PREFIX + KCNet.PROP_SUBNET_MASK );
     if( manualSubnetMask != null ) {
       subnetMask = manualSubnetMask;
     }
-    byte[] manualGatewayIpAddr = getIpAddrByProp( "jkcemu.kcnet.gateway" );
+    byte[] manualGatewayIpAddr = getIpAddrByProp(
+				KCNet.PROP_PREFIX + KCNet.PROP_GATEWAY );
     byte[] manualDnsServerIpAddr = getIpAddrByProp(
-					"jkcemu.kcnet.dns_server" );
+				KCNet.PROP_PREFIX + KCNet.PROP_DNS_SERVER );
     if( manualDnsServerIpAddr != null ) {
       dnsServerIpAddr = manualDnsServerIpAddr;
     }

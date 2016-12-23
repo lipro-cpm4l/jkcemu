@@ -8,19 +8,29 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.etc.SC2KeyboardFld;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
 
 
-public class SC2 extends EmuSys implements
-					Z80MaxSpeedListener,
-					Z80TStatesListener
+public class SC2 extends EmuSys
 {
+  public static final String SYSNAME     = "SC2";
+  public static final String PROP_PREFIX = "jkcemu.sc2.";
+
   private static byte[] rom0000 = null;
   private static byte[] rom2000 = null;
 
@@ -29,24 +39,18 @@ public class SC2 extends EmuSys implements
   private int[]          digitValues;
   private int[]          keyboardMatrix;
   private SC2KeyboardFld keyboardFld;
-  private int            beepStatus;
   private int            ledChessStatus;
   private int            ledMateStatus;
   private boolean        ledChessValue;
   private boolean        ledMateValue;
-  private boolean        audioOutPhase;
-  private long           curBeepCheckTStates;
-  private long           curBeepFreqTStates;
   private long           curDisplayTStates;
-  private long           displayCheckTStates;
-  private long           beepCheckTStates;
-  private long           beepFreqTStates;
+  private long           displayTStates;
   private Z80PIO         pio;
 
 
   public SC2( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.sc2." );
+    super( emuThread, props, PROP_PREFIX );
     if( rom0000 == null ) {
       rom0000 = readResource( "/rom/sc2/sc2_0000.bin" );
     }
@@ -104,99 +108,14 @@ public class SC2 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    int maxSpeedKHz          = cpu.getMaxSpeedKHz();
-    this.beepCheckTStates    = maxSpeedKHz * 20;
-    this.beepFreqTStates     = maxSpeedKHz / 3;		// Tonhoehe des Beeps
-    this.displayCheckTStates = maxSpeedKHz * 50;
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    if( this.displayCheckTStates > 0 ) {
-      this.curDisplayTStates += tStates;
-      if( this.curDisplayTStates > this.displayCheckTStates ) {
-	boolean displayDirty = false;
-	boolean ledDirty     = false;
-	synchronized( this.digitValues ) {
-	  for( int i = 0; i < this.digitValues.length; i++ ) {
-	    int status = this.digitStatus[ i ];
-	    if( status < 4 ) {
-	      if( status > 0 ) {
-		--this.digitStatus[ i ];
-	      } else {
-		if( this.digitValues[ i ] != 0 ) {
-		  this.digitValues[ i ] = 0;
-		  displayDirty = true;
-		}
-	      }
-	    }
-	  }
-	  if( this.ledChessStatus < 4 ) {
-	    if( this.ledChessStatus > 0 ) {
-	      --this.ledChessStatus;
-	    } else {
-	      if( this.ledChessValue ) {
-		this.ledChessValue = false;
-		ledDirty = true;
-	      }
-	    }
-	  }
-	  if( this.ledMateStatus < 4 ) {
-	    if( this.ledMateStatus > 0 ) {
-	      --this.ledMateStatus;
-	    } else {
-	      if( this.ledMateValue ) {
-		this.ledMateValue = false;
-		ledDirty = true;
-	      }
-	    }
-	  }
-	}
-	if( displayDirty || ledDirty ) {
-	  this.screenFrm.setScreenDirty( true );
-	}
-	if( ledDirty && (this.keyboardFld != null) ) {
-	  this.keyboardFld.repaint();
-	}
-	this.curDisplayTStates = 0;
-      }
-    }
-    if( (this.beepStatus > 0)
-	&& (this.beepCheckTStates > 0)
-	&& (this.beepFreqTStates > 0) )
-    {
-      this.curBeepCheckTStates += tStates;
-      if( this.curBeepCheckTStates > this.beepCheckTStates ) {
-	this.curBeepCheckTStates = 0;
-	--this.beepStatus;
-      }
-      if( this.beepStatus > 0 ) {
-	this.curBeepFreqTStates += tStates;
-	if( this.curBeepFreqTStates > this.beepFreqTStates ) {
-	  this.curBeepFreqTStates = 0;
-	  this.audioOutPhase = !this.audioOutPhase;
-	  this.emuThread.writeAudioPhase( this.audioOutPhase );
-	}
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public boolean canApplySettings( Properties props )
   {
-    return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "SC2" );
+    return EmuUtil.getProperty(
+			props,
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
   }
 
 
@@ -331,9 +250,6 @@ public class SC2 extends EmuSys implements
 	rv = (int) rom2000[ idx ] & 0xFF;
       }
     }
-    else if( addr >= 0x3C00 ) {
-      this.beepStatus = 3;
-    }
     return rv;
   }
 
@@ -355,7 +271,7 @@ public class SC2 extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "SC2";
+    return SYSNAME;
   }
 
 
@@ -577,8 +493,18 @@ public class SC2 extends EmuSys implements
 
 
   @Override
+  public int readMemByte( int addr, boolean m1 )
+  {
+    addr &= 0x3FFF;
+    updSoundOutPhase( addr );
+    return getMemByte( addr, m1);
+  }
+
+
+  @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ram, props );
     }
@@ -586,15 +512,11 @@ public class SC2 extends EmuSys implements
       Arrays.fill( this.digitStatus, 0 );
       Arrays.fill( this.digitValues, 0 );
     }
-    this.audioOutPhase       = false;
-    this.ledChessValue       = false;
-    this.ledMateValue        = false;
-    this.ledChessStatus      = 0;
-    this.ledMateStatus       = 0;
-    this.curDisplayTStates   = 0;
-    this.curBeepFreqTStates  = 0;
-    this.curBeepCheckTStates = 0;
-    this.beepStatus          = 0;
+    this.ledChessValue      = false;
+    this.ledMateValue       = false;
+    this.ledChessStatus     = 0;
+    this.ledMateStatus      = 0;
+    this.curDisplayTStates  = 0;
   }
 
 
@@ -614,17 +536,7 @@ public class SC2 extends EmuSys implements
 	rv = true;
       }
     }
-    else if( addr >= 0x3C00 ) {
-      this.beepStatus = 3;
-    }
     return rv;
-  }
-
-
-  @Override
-  public boolean supportsAudio()
-  {
-    return true;
   }
 
 
@@ -637,6 +549,13 @@ public class SC2 extends EmuSys implements
 
   @Override
   public boolean supportsKeyboardFld()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsSoundOutMono()
   {
     return true;
   }
@@ -664,6 +583,81 @@ public class SC2 extends EmuSys implements
         case 3:
           this.pio.writeControlB( value );
           break;
+      }
+    }
+  }
+
+
+  @Override
+  public void writeMemByte( int addr, int value )
+  {
+    addr &= 0x3FFF;
+    updSoundOutPhase( addr );
+    setMemByte( addr, value );
+  }
+
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    this.displayTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    // Anzeige
+    if( this.displayTStates > 0 ) {
+      this.curDisplayTStates += tStates;
+      if( this.curDisplayTStates > this.displayTStates ) {
+	boolean displayDirty = false;
+	boolean ledDirty     = false;
+	synchronized( this.digitValues ) {
+	  for( int i = 0; i < this.digitValues.length; i++ ) {
+	    int status = this.digitStatus[ i ];
+	    if( status < 4 ) {
+	      if( status > 0 ) {
+		--this.digitStatus[ i ];
+	      } else {
+		if( this.digitValues[ i ] != 0 ) {
+		  this.digitValues[ i ] = 0;
+		  displayDirty = true;
+		}
+	      }
+	    }
+	  }
+	  if( this.ledChessStatus < 4 ) {
+	    if( this.ledChessStatus > 0 ) {
+	      --this.ledChessStatus;
+	    } else {
+	      if( this.ledChessValue ) {
+		this.ledChessValue = false;
+		ledDirty = true;
+	      }
+	    }
+	  }
+	  if( this.ledMateStatus < 4 ) {
+	    if( this.ledMateStatus > 0 ) {
+	      --this.ledMateStatus;
+	    } else {
+	      if( this.ledMateValue ) {
+		this.ledMateValue = false;
+		ledDirty = true;
+	      }
+	    }
+	  }
+	}
+	if( displayDirty || ledDirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+	if( ledDirty && (this.keyboardFld != null) ) {
+	  this.keyboardFld.repaint();
+	}
+	this.curDisplayTStates = 0;
       }
     }
   }
@@ -779,5 +773,10 @@ public class SC2 extends EmuSys implements
     if( this.keyboardFld != null )
       this.keyboardFld.updKeySelection( this.keyboardMatrix );
   }
-}
 
+
+  private void updSoundOutPhase( int addr )
+  {
+    this.soundOutPhase = (addr >= 0x3C00);
+  }
+}

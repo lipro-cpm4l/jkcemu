@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,18 @@
 
 package jkcemu.image;
 
-import java.io.*;
-import java.awt.*;
-import java.awt.image.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.ImageObserver;
+import java.awt.image.IndexColorModel;
+import java.awt.image.Raster;
+import java.lang.*;
 import java.util.Arrays;
 
 
@@ -353,37 +362,34 @@ public class AnimatedGIFWriter implements ImageObserver
 
   private void extractCompatibleImageData( BufferedImage image )
   {
-    ColorModel cm = image.getColorModel();
-    if( cm != null ) {
-      if( cm instanceof IndexColorModel ) {
-	IndexColorModel icm     = (IndexColorModel) cm;
-	int             mapSize = icm.getMapSize();
-	if( (mapSize > 0) && (mapSize <= 255) ) {
-	  Raster raster = image.getRaster();
-	  if( raster != null ) {
-	    DataBuffer dataBuf = raster.getDataBuffer();
-	    if( dataBuf != null ) {
-	      if( dataBuf instanceof DataBufferByte ) {
-		byte[] pixels = ((DataBufferByte) dataBuf).getData();
-		if( pixels != null ) {
-		  if( pixels.length == (this.width * this.height) ) {
-		    this.curTransparencyIdx = mapSize;
-		    this.curPixels          = pixels;
-		    this.curColorDepth      = 8;
-		    this.curColorTabSize    = 3 * 256;
-		    this.curColorTab        = new byte[ 3 * mapSize ];
+    IndexColorModel icm = ImgUtil.getIndexColorModel( image );
+    if( icm != null ) {
+      int mapSize = icm.getMapSize();
+      if( (mapSize > 0) && (mapSize <= 255) ) {
+	Raster raster = image.getRaster();
+	if( raster != null ) {
+	  DataBuffer dataBuf = raster.getDataBuffer();
+	  if( dataBuf != null ) {
+	    if( dataBuf instanceof DataBufferByte ) {
+	      byte[] pixels = ((DataBufferByte) dataBuf).getData();
+	      if( pixels != null ) {
+		if( pixels.length == (this.width * this.height) ) {
+		  this.curTransparencyIdx = mapSize;
+		  this.curPixels          = pixels;
+		  this.curColorDepth      = 8;
+		  this.curColorTabSize    = 3 * 256;
+		  this.curColorTab        = new byte[ 3 * mapSize ];
 
-		    // Farbtabelle fuellen
-		    int src = 0;
-		    int dst = 0;
-		    while( (src < mapSize)
-			   && (dst < this.curColorTab.length) )
-		    {
-		      this.curColorTab[ dst++ ] = (byte) icm.getRed( src );
-		      this.curColorTab[ dst++ ] = (byte) icm.getGreen( src );
-		      this.curColorTab[ dst++ ] = (byte) icm.getBlue( src );
-		      src++;
-		    }
+		  // Farbpalette fuellen
+		  int src = 0;
+		  int dst = 0;
+		  while( (src < mapSize)
+			 && (dst < this.curColorTab.length) )
+		  {
+		    this.curColorTab[ dst++ ] = (byte) icm.getRed( src );
+		    this.curColorTab[ dst++ ] = (byte) icm.getGreen( src );
+		    this.curColorTab[ dst++ ] = (byte) icm.getBlue( src );
+		    src++;
 		  }
 		}
 	      }
@@ -463,11 +469,11 @@ public class AnimatedGIFWriter implements ImageObserver
       writeWord( this.width );
       writeWord( this.height );
       /*
-       * globale Farbtabelle:
+       * globale Farbpalette:
        *   Bit 0-2: Groesse (Bits - 1)
        *   Bit 3:   sortiert (nein)
        *   Bit 4-6: Aufloesung
-       *   Bit 7:   Farbtabelle folgt (ja)
+       *   Bit 7:   Farbpalette folgt (ja)
        */
       this.out.write( 0xF0 | (this.globalColorDepth - 1) );
       this.out.write( 0 );		// Hintergrundfarbe
@@ -511,15 +517,15 @@ public class AnimatedGIFWriter implements ImageObserver
     writeWord( this.width );		// Bildbreite
     writeWord( this.height );		// Bildhoehe
     if( Arrays.equals( frame.colorTab, this.globalColorTab ) ) {
-      this.out.write( 0 );		// keine lokale Farbtabelle
+      this.out.write( 0 );		// keine lokale Farbpalette
     } else {
       /*
-       * lokale Farbtabelle:
+       * lokale Farbpalette:
        *   Bit 0-2: Groesse (Bits - 1)
        *   Bit 3-4: reserviert
        *   Bit 5:   sortiert (nein)
        *   Bit 6:   interlace (nein)
-       *   Bit 7:   Farbtabelle folgt (ja)
+       *   Bit 7:   Farbpalette folgt (ja)
        */
       this.out.write( 0x80 | (frame.colorDepth - 1) );
       writeColorTab( frame.colorTabSize, frame.colorTab );

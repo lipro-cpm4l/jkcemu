@@ -12,7 +12,9 @@ import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.HueblerGraphicsMC;
 import jkcemu.emusys.huebler.AbstractHueblerMC;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AbstractTarget;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
 
 
 public class HueblerGraphicsMCTarget extends AbstractTarget

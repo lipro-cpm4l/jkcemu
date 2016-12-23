@@ -9,7 +9,6 @@
 package jkcemu.text;
 
 import java.lang.*;
-import jkcemu.Main;
 
 
 public class CharConverter

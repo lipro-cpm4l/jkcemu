@@ -1,17 +1,22 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Dateiname fuer Drag&Drop-Operationen
+ * Klasse zur Uebertragung einer Dateiliste
  */
 
 package jkcemu.filebrowser;
 
-import java.awt.datatransfer.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.ClipboardOwner;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 
 public class FileListSelection implements ClipboardOwner, Transferable
@@ -63,4 +68,3 @@ public class FileListSelection implements ClipboardOwner, Transferable
     return flavor.equals( DataFlavor.javaFileListFlavor );
   }
 }
-

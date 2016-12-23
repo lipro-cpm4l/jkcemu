@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,20 +8,27 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.etc.SLC1KeyboardFld;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80PCListener;
 
 
-public class SLC1 extends EmuSys implements
-					Z80MaxSpeedListener,
-					Z80PCListener,
-					Z80TStatesListener
+public class SLC1 extends EmuSys implements Z80PCListener
 {
+  public static final String SYSNAME     = "SLC1";
+  public static final String PROP_PREFIX = "jkcemu.slc1.";
+
   private static byte[] rom = null;
 
   private SLC1KeyboardFld keyboardFld;
@@ -40,7 +47,7 @@ public class SLC1 extends EmuSys implements
 
   public SLC1( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.slc1." );
+    super( emuThread, props, PROP_PREFIX );
     if( rom == null ) {
       rom = readResource( "/rom/slc1/slc1_0000.bin" );
     }
@@ -91,15 +98,6 @@ public class SLC1 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    this.displayTStates = cpu.getMaxSpeedKHz() * 50;
-  }
-
-
 	/* --- Z80PCListener --- */
 
   @Override
@@ -117,48 +115,14 @@ public class SLC1 extends EmuSys implements
   }
 
 
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    if( this.displayTStates > 0 ) {
-      this.curDisplayTStates += tStates;
-      if( this.curDisplayTStates > this.displayTStates ) {
-	boolean dirty = false;
-	synchronized( this.digitStatus ) {
-	  for( int i = 0; i < this.digitStatus.length; i++ ) {
-	    if( this.digitStatus[ i ] > 0 ) {
-	      --this.digitStatus[ i ];
-	    } else {
-	      if( this.digitValues[ i ] != 0 ) {
-		this.digitValues[ i ] = 0;
-		dirty = true;
-	      }
-	    }
-	  }
-	  if( !this.ledValue && (this.ledStatus > 0) ) {
-	    --this.ledStatus;
-	    if( this.ledStatus == 0 ) {
-	      dirty = true;
-	    }
-	  }
-	}
-	if( dirty ) {
-	  this.screenFrm.setScreenDirty( true );
-	}
-	this.curDisplayTStates = 0;
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public boolean canApplySettings( Properties props )
   {
-    return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "SLC1" );
+    return EmuUtil.getProperty(
+			props,
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
   }
 
 
@@ -309,7 +273,7 @@ public class SLC1 extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "SLC1";
+    return SYSNAME;
   }
 
 
@@ -557,6 +521,7 @@ public class SLC1 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ram, props );
     }
@@ -607,6 +572,14 @@ public class SLC1 extends EmuSys implements
     return true;
   }
 
+
+  @Override
+  public boolean supportsSoundOutMono()
+  {
+    return true;
+  }
+
+
   @Override
   public void writeIOByte( int port, int value, int tStates )
   {
@@ -615,6 +588,9 @@ public class SLC1 extends EmuSys implements
     synchronized( this.keyboardMatrix ) {
       this.curKeyCol = col - 3;
     }
+
+    // Tonausgabe
+    this.soundOutPhase = (col == 9);
 
     // Anzeige
     boolean dirty   = false;
@@ -664,6 +640,51 @@ public class SLC1 extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    this.displayTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    // Anzeige
+    if( this.displayTStates > 0 ) {
+      this.curDisplayTStates += tStates;
+      if( this.curDisplayTStates > this.displayTStates ) {
+	boolean dirty = false;
+	synchronized( this.digitStatus ) {
+	  for( int i = 0; i < this.digitStatus.length; i++ ) {
+	    if( this.digitStatus[ i ] > 0 ) {
+	      --this.digitStatus[ i ];
+	    } else {
+	      if( this.digitValues[ i ] != 0 ) {
+		this.digitValues[ i ] = 0;
+		dirty = true;
+	      }
+	    }
+	  }
+	  if( !this.ledValue && (this.ledStatus > 0) ) {
+	    --this.ledStatus;
+	    if( this.ledStatus == 0 ) {
+	      dirty = true;
+	    }
+	  }
+	}
+	if( dirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+	this.curDisplayTStates = 0;
+      }
+    }
+  }
+
+
 	/* --- privated Methoden --- */
 
   private void setChessMode( boolean state )
@@ -683,4 +704,3 @@ public class SLC1 extends EmuSys implements
       this.keyboardFld.updKeySelection( this.keyboardMatrix );
   }
 }
-

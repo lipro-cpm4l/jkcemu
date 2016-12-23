@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,16 +8,28 @@
 
 package jkcemu.text;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.Collection;
+import java.util.EventObject;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
-public class SaveTextDlg extends BasicDlg
+public class SaveTextDlg extends BaseDlg
 {
   private JCheckBox         btnTrailing1A;
   private JCheckBox         btnTrimLines;
@@ -200,7 +212,7 @@ public class SaveTextDlg extends BasicDlg
 			editText.getTrimLines(),
 			editText.getLineEnd() );
       saved = true;
-      Main.setLastFile( file, "text" );
+      Main.setLastFile( file, Main.FILE_GROUP_TEXT );
     } else {
       File preSelection = editText.getFile();
 
@@ -208,7 +220,8 @@ public class SaveTextDlg extends BasicDlg
 		editText.getTextEditFrm(),
 		"Textdatei speichern",
 		preSelection != null ?
-			 preSelection : Main.getLastDirFile( "text" ),
+			preSelection
+			: Main.getLastDirFile( Main.FILE_GROUP_TEXT ),
 		TextEditFrm.getTextFileFilters() );
       if( file != null ) {
 
@@ -219,7 +232,7 @@ public class SaveTextDlg extends BasicDlg
 	if( allTexts != null ) {
 	  for( EditText tmpTxt : allTexts ) {
 	    if( (tmpTxt != editText) && tmpTxt.isSameFile( file ) ) {
-	      BasicDlg.showInfoDlg(
+	      showInfoDlg(
 		editText.getTextEditFrm(),
 		"Diese Datei ist bereits ge\u00F6ffnet.\n"
 			+ "Bitte w\u00E4hlen Sie einen anderen Dateinamen.",
@@ -233,7 +246,7 @@ public class SaveTextDlg extends BasicDlg
 	SaveTextDlg dlg = new SaveTextDlg( file, editText );
 	dlg.setVisible( true );
 	saved = dlg.fileSaved();
-	Main.setLastFile( file, "text" );
+	Main.setLastFile( file, Main.FILE_GROUP_TEXT );
       }
     }
     return saved;
@@ -336,4 +349,3 @@ public class SaveTextDlg extends BasicDlg
     }
   }
 }
-

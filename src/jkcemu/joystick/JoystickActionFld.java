@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,11 @@
 
 package jkcemu.joystick;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Polygon;
 import java.lang.*;
 
 
@@ -151,4 +155,3 @@ public class JoystickActionFld extends Component
     return Math.sqrt( (double) ((dx * dx) + (dy * dy)) ) <= (double) r;
   }
 }
-

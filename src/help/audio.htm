@@ -1,108 +1,111 @@
 <html>
 <body>
  <h1>Audio/Kassette</h1>
+  Viele der von JKCEMU emulierten Systeme verwenden im Original einen
+  Kassettenrecorder als Massenspeicher,
+  d.h. die Daten werden in T&ouml;ne umgewandelt und auf Band gespeichert.
+  JKCEMU ist in der Lage, den Anschluss f&uuml;r
+  den Kassettenrecorder zu emulieren, und zwar ein- und ausgangsseitig.
+  Daf&uuml;r werden wahlweise das Audiosystem des Emulatorrechners
+  oder Sound- bzw.
+  <a href="fileformats.htm#tape">Tape</a>-Dateien verwendet.
+ <br/><br/>
+  Ebenfalls in die Rublik <em>Audio/Kassette</em> f&auml;llt
+  die Emulation eines Ton- bzw. Sound-Generators,
+  sofern das emulierte System im Original einen hat
+  und dieser von JKCEMU auch nachgebildet wird.
+ <br/><br/>
   <ul>
-   <li><a href="audio.htm#intro">1. Vorbemerkungen</a></li>
    <li>
-    <a href="audio.htm#fct">2. Audiofunktionen</a>
+    <a href="audio.htm#fct">1. Audiofunktionen</a>
     <ul>
-     <li><a href="audio.htm#sound_out">2.1. T&ouml;ne ausgeben</a></li>
      <li>
-      <a href="audio.htm#data_out">2.2. Daten am Audioausgang ausgeben</a>
+      <a href="audio.htm#tape_in">1.1. Eingang Kassette</a>
+      <ul>
+       <li>
+	<a href="audio.htm#data_in">1.1.1. Audiodaten vom Sound-System lesen (z.B. Mikrofon- oder Line-In-Anschluss)</a>
+       </li>
+       <li>
+	<a href="audio.htm#file_in">1.1.2. Audiodaten aus Sound- oder Tape-Datei lesen</a>
+       </li>
+       <li>
+	<a href="audio.htm#lastfile_in">1.1.3. Letzte Sound- oder Tape-Datei noch einmal lesen</a>
+       </li>
+      </ul>
      </li>
      <li>
-      <a href="audio.htm#data_in">2.3. Daten vom Audioeingang lesen</a>
+      <a href="audio.htm#tape_out">1.2. Ausgang Kassette</a>
+      <ul>
+       <li>
+	<a href="audio.htm#data_out">1.2.1. Audiodaten &uuml;ber Sound-System ausgeben</a>
+       </li>
+       <li>
+	<a href="audio.htm#file_out">1.2.2. Audiodaten aufnehmen und in Datei speichern</a>
+       </li>
+      </ul>
      </li>
-     <li><a href="audio.htm#file_out">2.4. Sound- oder Tape-Datei speichern</a></li>
-     <li><a href="audio.htm#file_in">2.5. Sound- oder Tape-Datei lesen</a></li>
      <li>
-      <a href="audio.htm#lastfile_in">2.6. Letzte Sound-/Tape-Datei (noch einmal) lesen</a>
+      <a href="audio.htm#sound_out">1.3. Ausgang Sound-Generator/Lautsprecher</a>
      </li>
     </ul>
    </li>
    <li>
-    <a href="audio.htm#opt">3. Optionen</a>
+    <a href="audio.htm#opt">2. Optionen</a>
     <ul>
-     <li><a href="audio.htm#device">3.1. Ger&auml;t</a></li>
-     <li><a href="audio.htm#sample_rate">3.2. Abtastrate</a></li>
-     <li><a href="audio.htm#channel">3.3. Aktiver Kanal</a></li>
-     <li><a href="audio.htm#monitor">3.4. Mith&ouml;ren</a></li>
+     <li><a href="audio.htm#device">2.1. Ger&auml;t</a></li>
+     <li><a href="audio.htm#sample_rate">2.2. Abtastrate</a></li>
     </ul>
    </li>
    <li>
-    <a href="audio.htm#note">4. Hinweise</a>
+    <a href="audio.htm#note">3. Hinweise</a>
     <ul>
-     <li><a href="audio.htm#volume">4.1. Lautst&auml;rke</a></li>
-     <li><a href="audio.htm#etc">4.2. Sonstiges</a></li>
+     <li><a href="audio.htm#volume">3.1. Lautst&auml;rke</a></li>
+     <li><a href="audio.htm#etc">3.2. Sonstiges</a></li>
     </ul>
    </li>
   </ul>
  <br/>
 
 
- <h2><a name="intro">1. Vorbemerkungen</a></h2>
-  Die von JKCEMU emulierten Systeme verwenden im Original einen
-  Kassettenrecorder als Massenspeicher,
-  d.h. die Daten werden in T&ouml;ne umgewandelt und auf Band gespeichert.
-  Heute werden Dateien nicht mehr sequentiell auf einem Tonband
-  bzw. einer Kassette gespeichert, sondern in einem Dateisystem.
-  Deshalb geschieht das
-  <a href="loadsave.htm">Laden und Speichern von Programmen und Dateien</a>
-  im Emulator auf eine ganz andere Art und Weise.
-  Trotzdem ist JKCEMU in der Lage, den Anschluss f&uuml;r
-  den Kassettenrecorder zu emulieren.
-  Daf&uuml;r werden wahlweise das Audiosystem oder Sound-Dateien
-  bzw. Tape-Daten verwendet.
- <br/><br/>
-  Damit dieser Anschluss emuliert wird,
-  m&uuml;ssen Sie das Fenster <em>JKCEMU Audio/Kassette</em> &ouml;ffnen
-  und eine entsprechende Audiofunktion aktivieren.
-  Klicken Sie dazu im Hauptfenster im Men&uuml; <em>Extra</em>,
-  auf den Eintrag <em>Audio/Kassette...</em>.
-  Die nachfolgende Beschreibung bezieht sich auf dieses Fenster.
+ <h2><a name="fct">1. Audiofunktionen</a></h2>
+  Zur Emulation des Kassettenrecorderanschlusses oder eines Tongenerators
+  m&uuml;ssen Sie eine Audiofunktion aktivieren.
+  Rufen Sie dazu den Men&uuml;punkt
+  <em>Extra</em> &rarr; <em>Audio/Kassette...</em> auf.
+  Es erscheint ein Fenster, welches in die drei Reiter bzw. Unterfenster
+  <em>Eingang Kassette</em>, <em>Ausgang Kassette</em>
+  und <em>Ausgang Sound-Generator/Lautsprecher</em> unterteilt ist.
  <br/><br/>
 
-
- <h2><a name="fct">2. Audiofunktionen</a></h2>
+ <h3><a name="tape_in">1.1. Eingang&nbsp;Kassette</a></h3>
+  Die Funktionen in diesem Reiter beziehen sich
+  auf die eingangsseitige Emulation der Kassettenschnittstelle,
+  d.h. hier&uuml;ber k&ouml;nnen Sie Kassettenaufzeichnungen
+  in den Emulator einlesen.
+ <br/><br/>
 
  <h3>
-  <a name="sound_out">2.1. T&ouml;ne ausgeben</a>
+  <a name="data_in">1.1.1. Audiodaten vom Sound-System lesen (z.B. Mikrofon- oder Line-In-Anschluss)</a>
  </h3>
-  W&auml;hlen Sie diese Funktion, wenn Sie die T&ouml;ne h&ouml;ren
-  m&ouml;chten, die ein Programm zum Zwecke der Unterhaltung ausgibt
-  (z.B. akustische Untermalung bei Spielprogrammen).
- <br/><br/>
-  <b>Achtung!</b> Manche der emulierten Computer besitzen
-  zwei Audioausg&auml;nge, einen f&uuml;r den Kassettenrecorder
-  zum Speichern von Daten und einen f&uuml;r den Lautsprecher
-  bzw. Sound-Generator.
-  Ist das bei dem gerade emulierten System der Fall,
-  dann wird bei dieser Funktion der Anschluss f&uuml;r den
-  Lautsprecher bzw. Sound-Generator emuliert.
- <br/><br/>
-
- <h3><a name="data_out">2.2. Daten am Audioausgang ausgeben</a></h3>
-  W&auml;hlen Sie diese Funktion, wenn Sie Daten oder
-  Programme auf Magnettonband speichern oder an einen anderen Computer
-  mit Kassettenrecorderanschluss &uuml;bertragen m&ouml;chten.
-  Tipps &amp; Tricks dazu finden Sie unter
-  <a href="tips/savetotape.htm">Dateien auf Magnettonband speichern</a>.
- <br/><br/>
-  <b>Achtung!</b> Manche der emulierten Computer besitzen
-  zwei Audioausg&auml;nge, einen f&uuml;r den Kassettenrecorder
-  zum Speichern von Daten und einen f&uuml;r den Lautsprecher
-  bzw. Sound-Generator.
-  Ist das bei dem gerade emulierten System der Fall,
-  dann wird bei dieser Funktion der Kassettenreorderanschluss emuliert.
- <br/><br/>
-
- <h3><a name="data_in">2.3. Daten vom Audioeingang lesen</a></h3>
   Diese Funktion dient dazu, auf Magnettonband gespeicherte Dateien
   und Programme oder Daten von einem anderen Computer direkt in den Emulator
   zu laden.
-  Tipps und Tricks zu diesem Thema finden Sie unter
-  <a href="tips/loadfromtape.htm">Auf Magnettonband gespeicherte
-  Dateien laden</a>.
+  JKCEMU &ouml;ffnet einen Audiokanal zum Sound-System des Emulatorrechners.
+  Mit dem Auswahlfeld <em>Ger&auml;t</em> k&ouml;nnen Sie festlegen,
+  zu welchem logischen Ger&auml;t oder zu welchem Anschluss
+  der Audiokanal ge&ouml;ffnet wird.
+  Wenn also bei der Auswahl <em>Standard</em> der Audiokanal nicht
+  zu Ihrer gew&uuml;schten Audioquelle ge&ouml;ffnet wird,
+  sondern z.B. zu einem eingebauten Mikrofon,
+  dann probieren Sie notfalls die einzelnen Auswahlm&ouml;glichkeiten
+  solange durch, bis die richtige Audioquelle gefunden wurde.
+  Dazu ist die Pegelanzeige an der rechten Seite im Fenster n&uuml;tzlich.
+  Diese zeigt jedoch erst dann den Pegel an,
+  wenn eine Audiofunktion aktiv ist.
+ <br/><br/>
+  Das Laden von Kassette kann mitunter schwierig und problematisch sein.
+  Tipps und Tricks zu diesem Thema finden Sie
+  <a href="tips/loadfromtape.htm">hier</a>.
  <br/><br/>
   JKCEMU &ouml;ffnet den Audiokanal in Stereo.
   In den Optionen k&ouml;nnen Sie w&auml;hlen,
@@ -112,7 +115,88 @@
   nicht zur Verf&uuml;gung.
  <br/><br/>
 
- <h3><a name="file_out">2.4. Sound- oder Tape-Datei speichern</a></h3>
+ <h3>
+  <a name="file_in">1.1.2. Audiodaten aus Sound- oder Tape-Datei lesen</a>
+ </h3>
+  Diese Funktion emuliert den Anschluss f&uuml;r den Kassettenrecorder,
+  indem die Audiodaten von einer Sound- oder Tape-Datei gelesen werden.
+  Ein Fortschrittsbalken visualisiert den Einleseprozess.
+  Es k&ouml;nnen auch mit GZIP komprimierte Sound-Dateien gelesen werden,
+  wenn sie die Dateiendung <em>.gz</em> haben,
+  also z.B.: <em>datei.wav.gz</em>
+ <br/><br/>
+  Einige der emulierten Computer fragen den Kassettenrecorderanschluss
+  im Polling-Verfahren ab.
+  Im Emulator wirkt sich das so aus,
+  dass die Datei immer nur dann gelesen wird,
+  wenn auch der emulierte Kassettenrecorderanschluss abgefragt wird.
+  Ist das gerade nicht der Fall, bleibt der Fortschrittsbalken stehen.
+ <br/><br/>
+  <b>Achtung!</b> Nach dem Aktivieren dieser Audiofunktion
+  m&uuml;ssen Sie noch auf <em>Abspielen</em> dr&uuml;cken,
+  um das eigentliche Einlesen zu starten.
+  Sie k&ouml;nnen auch jederzeit mit <em>Pause</em> anhalten und
+  mit erneutem Dr&uuml;cken auf <em>Abspielen</em> wieder fortsetzen.
+  Au&szlig;erdem l&auml;sst sich das Einlesen mit der Taste <em>Turbo</em>
+  beschleunigen.
+  Dabei wird bis zum Erreichen des Dateiendes die Geschwindigkeitssteuerung
+  ausgeschaltet,
+  so dass der Emulator mit maximaler Geschwindigkeit l&auml;uft.
+ <br/><br/>
+  <b>Hinweis:</b> Sie k&ouml;nnen die Audiofunktion
+  <em>Sound- oder Tape-Datei lesen</em> auch aktivieren,
+  indem Sie per Drag&amp;Drop eine passende Datei in das
+  Audio/Kassette-Fenster ziehen und im Reiter <em>Eingang Kassette</em>
+  &uuml;ber dem Feld <em>Datei</em> loslassen.
+ <br/><br/>
+  <b>Hinweis:</b> Durch Setzen des H&auml;kchens <em>Mith&ouml;ren</em>
+  werden die aus der Datei gelesenen Audiodaten &uuml;ber das Sound-System
+  wieder ausgegeben, so dass Sie mith&ouml;ren k&ouml;nnen.
+  Dazu wird ein Audiokanal mit den gleichen Parametern
+  (Abtastrate, Anzahl Kan&auml;le) ge&ouml;ffnet.
+  Ist das nicht m&ouml;glich, z.B. weil eine Tape-Datei
+  mit einer ungew&ouml;hnlichen Abtastrate eingelesen wird,
+  schaltet sich die Option <em>Mith&ouml;ren</em> ohne Fehlermeldung
+  automatisch wieder aus.
+  Au&szlig;erdem ist zu beachten, dass <em>Mith&ouml;ren</em>
+  und <em>Turbo</em> sich gegenseitig ausschlie&szlig;en.
+ <br/><br/>
+
+ <h3>
+  <a name="lastfile_in">1.1.3. Letzte Sound- oder Tape-Datei noch einmal lesen</a>
+ </h3>
+  Diese Audiofunktion entspricht der vorherigen nur mit dem Unterschied,
+  dass kein Dateiauswahldialog erscheint, sondern die zuletzt gelesene
+  Sound- bzw. Tape-Datei wieder eingelesen wird.
+ <br/><br/>
+
+ <h3><a name="tape_out">1.2. Ausgang&nbsp;Kassette</a></h3>
+  Die Funktionen in diesem Reiter beziehen sich
+  auf die ausgangsseitige Emulation der Kassettenschnittstelle,
+  d.h. hier&uuml;ber k&ouml;nnen Sie die Audiodaten
+  ausgeben oder aufzeichnen,
+  die das im Emulator laufende System beim &quot;Speichern&quot; erzeugt.
+ <br/><br/>
+
+ <h3>
+  <a name="data_out">1.2.1. Audiodaten &uuml;ber Sound-System ausgeben</a>
+ </h3>
+  Bei dieser Funktion werden die am emulierten Kassettenrecorderanschluss
+  ausgegebenen T&ouml;ne &uuml;ber das Sound-System des Emulatorrechners
+  ausgegeben, d.h., Sie h&ouml;ren die T&ouml;ne
+  &uuml;ber die eingebauten oder angeschlossenen Lautsprecher.
+ <br/><br/>
+  M&ouml;chten Sie Programme auf Magnettonband speichern oder direkt
+  an einen anderen Computer mit Kassettenrecorderanschluss &uuml;bertragen,
+  dann schlie&szlig;en Sie den Kassettenrecorder oder den Computer
+  am Kopfh&ouml;rer- bzw. Line-Out-Anschluss an.
+  Tipps &amp; Tricks zum Speichern von Daten auf Magenttonband finden Sie
+  <a href="tips/savetotape.htm">hier</a>.
+ <br/><br/>
+
+ <h3>
+  <a name="file_out">1.2.2. Audiodaten aufnehmen und in Datei speichern</a>
+ </h3>
   Bei dieser Funktion werden die Daten, die am emulierten Anschluss
   f&uuml;r das Magnettonbandger&auml;t ausgegeben werden,
   in eine Sound- oder Tape-Datei geschrieben.
@@ -124,124 +208,68 @@
  <br/><br/>
   Die Funktion deaktiviert sich automatisch,
   wenn in den ausgegebenen T&ouml;nen eine Pause gr&ouml;&szlig;er
-  als drei Sekunden auftritt.
+  als f&uuml;nf Sekunden auftritt.
  <br/><br/>
-  Die eigentliche Datei wird erst beim Deaktivieren erzeugt,
-  d.h., bis dahin merkt sich JKCEMU die Audiodaten im Speicher.
-  Aus diesem Grund kann diese Funktion nicht &uuml;ber
-  einen l&auml;ngeren Zeitraum aktiviert bleiben.
- <br/><br/>
-  Die mit der Audiofunktion <em>Sound- oder Tape-Datei speichern</em>
-  erzeugte Dateien enthalten nur Rechteckschwingungen,
+  Die erzeugten Sound-Dateien enthalten nur Rechteckschwingungen,
   d.h. nur zwei Pegelzust&auml;nde.
   Aus diesem Grund lassen sich diese Dateien auch gut komprimieren.
   JKCEMU bietet die M&ouml;glichkeit, beim Speichern von Sound-Dateien
   diese gleich mit GZIP komprimieren zu lassen.
   Wenn Sie das nutzen m&ouml;chten, dann h&auml;ngen Sie an den Dateinamen
   hinter der Endung einfach nur die Endung <em>.gz</em> an,
-  also z.B.: <em>ausgabe.wav.gz</em>
- <br/><br/>
-
- <h3><a name="file_in">2.5. Sound- oder Tape-Datei lesen</a></h3>
-  Diese Funktion emuliert den Anschluss f&uuml;r
-  das Magnettonbandger&auml;t,
-  indem die Audiodaten von einer Sound- oder Tape-Datei gelesen werden.
-  Ein Fortschrittsbalken visualisiert den Einleseprozess.
-  Es k&ouml;nnen auch mit GZIP komprimierte Sound-Dateien gelesen werden,
-  wenn sie die Dateiendung <em>.gz</em> haben,
-  also z.B.: <em>datei.wav.gz</em>
- <br/><br/>
-  Einige der emulierten Computer fragen den Kassettenrecorderanschluss
-  im Polling-Verfahren ab.
-  Im Emulator wirkt sich das dann so aus,
-  dass die Datei immer nur dann gelesen wird,
-  wenn auch der emulierte Kassettenrecorderanschluss abgefragt wird.
-  Ist das gerade nicht der Fall, bleibt der Fortschrittsbalken stehen.
- <br/><br/>
-  <b>Achtung!</b> Nach dem Aktivieren dieser Audiofunktion
-  und dem Ausw&auml;hlen der Datei m&uuml;ssen Sie noch
-  auf <em>Abspielen</em> dr&uuml;cken,
-  um das eigentliche Einlesen zu starten.
-  Sie k&ouml;nnen auch jederzeit mit <em>Pause</em> anhalten und
-  mit erneutem Dr&uuml;cken auf <em>Abspielen</em> wieder fortsetzen.
-  Au&szlig;erdem l&auml;sst sich das Einlesen mit der Taste <em>Turbo</em>
-  beschleunigen.
-  Dabei wird bis zum Erreichen des Dateiendes die Geschwindigkeitssteuerung
-  ausgeschaltet,
-  so dass der Emulator mit maximaler Geschwindigkeit l&auml;uft.
- <br/><br/>
-  <b>Hinweis!</b> Sie k&ouml;nnen die Audiofunktion
-  <em>Sound- oder Tape-Datei lesen</em> auch aktivieren,
-  indem Sie per Drag&amp;Drop eine passende Datei in das
-  Audio/Kassette-Fenster ziehen und &uuml;ber dem Feld <em>Datei</em>
-  im unteren Fensterbereich loslassen.
+  also z.B. <em>ausgabe.wav.gz</em>.
+  Bei Tape-Dateien ist eine solche Komprimierung nicht m&ouml;glich.
  <br/><br/>
 
  <h3>
-  <a name="lastfile_in">2.6. Letzte Sound-/Tape-Datei (noch einmal) lesen</a>
+  <a name="sound_out">1.3. Ausgang&nbsp;Sound-Generator/Lautsprecher</a>
  </h3>
-  Diese Audiofunktion entspricht der vorherigen nur mit dem Unterschied,
-  dass kein Dateiauswahldialog erscheint, sondern die zuletzt gelesene
-  oder gespeicherte Sound- bzw. Tape-Datei wieder eingelesen wird.
+  Die Funktion in diesem Reiter bezieht sich auf den Tonausgang,
+  sofern das emulierte System im Original einen hat.
+  Das kann ein Tongenerator oder auch ein spezieller Ausgang bzw. Anschluss
+  f&uuml;r einen Lautsprecher sein.
  <br/><br/>
 
 
- <h2><a name="opt">3. Optionen</a></h2>
+ <h2><a name="opt">2. Optionen</a></h2>
   Im Bereich Optionen k&ouml;nnen Sie die Eigenschaften der jeweiligen
   Audiofunktion beeinflussen.
   Je nach ausgew&auml;hlter Funktion stehen nur die relevanten
   Optionen zur Verf&uuml;gung.
  <br/><br/>
 
- <h3><a name="device">3.1. Ger&auml;t</a></h3>
+ <h3><a name="device">2.1. Ger&auml;t</a></h3>
   Normalerweise sollten Sie das Auswahlfeld auf &quot;Standard&quot;
   stehen lassen.
   Sind jedoch mehrere Sound-Karten vorhanden
   oder es sind mehrere Sound-Engines (z.B. Mixer) installiert
   oder der Sound-Treiber bietet mehrere Zugangspunkte,
   dann k&ouml;nnen Sie hier das logische Ger&auml;t ausw&auml;hlen,
-  mit dem Sie Arbeiten m&ouml;chten.
+  mit dem Sie arbeiten m&ouml;chten.
  <br/><br/>
 
- <h3><a name="sample_rate">3.2. Abtastrate</a></h3>
+ <h3><a name="sample_rate">2.2. Abtastrate</a></h3>
   Normalerweise sollten Sie das Auswahlfeld auf &quot;Standard&quot;
   stehen lassen.
   Sie k&ouml;nnen jedoch die verschiedenen Abtastraten einzeln ausprobieren,
   wenn Sie mit den Audiofunktionen Probleme haben sollten.
  <br/><br/>
-
- <h3><a name="channel">3.3. Aktiver Kanal</a></h3>
-  Wenn Sie Daten von einer Stereo-Audioquelle einlesen
-  (egal ob vom Audiosystem oder von einer Sound-Datei),
-  bestimmen Sie hiermit, ob die Daten vom linken oder vom rechten Kanal
-  gelesen werden.
- <br/><br/>
-  Den aktiven Kanal k&ouml;nnen Sie auch dann beliebig umschalten,
-  wenn die entsprechende Audiofunktion bereits aktiviert wurde.
- <br/><br/>
-
- <h3><a name="monitor">3.4. Mith&ouml;ren</a></h3>
-  Wenn Sie diese Option einschalten,
-  h&ouml;ren Sie beim Speichern oder Lesen einer Sound-Datei diese mit.
- <br/><br/>
-  Das Speichern oder Lesen einer Sound-Datei kann den Emulator bremsen.
-  Das erkennen Sie daran, dass die emulierte Taktfrequenz unter der
-  eingestellten Geschwindigkeit liegt.
-  In diesem Fall h&ouml;ren Sie kurze Unterbrechungen
-  in der Tonausgabe.
-  Das hat jedoch keinen qualitativen Einfluss auf den Datenfluss zwischen
-  Emulator und Sound-Datei.
+  <b>Hinweis:</b> Wenn Sie sogenannte 1-Bit-Musik abspielen
+  und h&ouml;ren m&ouml;chten, sollten Sie eine
+  m&ouml;glichst hohe Abtastrate einstellen, z.B. 96000.
+  Allerdings unterst&uuml;tzt nicht jede Computer-Hardware
+  solch eine hohe Abtastrate.
  <br/><br/>
 
 
- <h2><a name="note">4. Hinweise</a></h2>
+ <h2><a name="note">3. Hinweise</a></h2>
 
- <h3><a name="volume">4.1. Lautst&auml;rke</a></h3>
+ <h3><a name="volume">3.1. Lautst&auml;rke</a></h3>
   Die Lautst&auml;rke regeln Sie mit der entsprechenden
   Bedienungssoftware des Betriebssystems auf Ihrem Computers.
  <br/><br/>
 
- <h3><a name="etc">4.2. Sonstiges</a></h3>
+ <h3><a name="etc">3.2. Sonstiges</a></h3>
   <ul>
    <li>
     Wenn bereits eine andere Applikation das Audiosystem verwendet,
@@ -258,7 +286,7 @@
     JKCEMU bietet mit dem
     <a href="tools/audiorecorder.htm">Audiorecorder</a>
     und dem <a href="tools/filebrowser.htm">Datei-Browser</a>
-    auch Werkzeuge zum Aufnahmen und Abspielen,
+    auch Werkzeuge zum Aufnehmen und Abspielen,
     doch wenn die Rechenleistung zu gering ist,
     werden diese Werkzeuge m&ouml;glicherweise nicht korrekt funktionieren
     (Unterbrechungen im Audiodatenstrom).
@@ -266,9 +294,8 @@
     k&ouml;nnen Sie diese in den Emulator auch dann laden,
     wenn die Rechenleistung so gering ist,
     dass JKCEMU die zu emulierende Soll-Taktfrequenz nicht erreicht.
-    Bei Sound- und Tape-Dateien ist n&auml;mlich immer die eingestellte
-    und nicht die gerade tats&auml;chlich emulierte Taktfrequenz
-    f&uuml;r Verarbeitung der Sound- bzw. Tape-Dateien von Bedeutung.
+    Bei Sound- und Tape-Dateien ist n&auml;mlich immer die eingestellte und
+    nicht die gerade tats&auml;chlich emulierte Taktfrequenz von Bedeutung.
    </li>
    <li>
     Sie sollten die Audiofunktionen wieder deaktivieren,
@@ -280,4 +307,3 @@
   </ul>
 </body>
 </html>
-

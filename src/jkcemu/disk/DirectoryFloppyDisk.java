@@ -10,15 +10,36 @@
 package jkcemu.disk;
 
 import java.awt.Frame;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.lang.*;
-import java.util.*;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileTimesView;
+import jkcemu.base.FileTimesViewFactory;
 
 
 public class DirectoryFloppyDisk extends AbstractFloppyDisk
 {
+  public static final String PROP_AUTO_REFRESH      = "auto_refresh";
+  public static final String PROP_BLOCK_NUMBER_SIZE = "block_number_size";
+  public static final String PROP_BLOCK_SIZE        = "block_size";
+  public static final String PROP_DATESTAMPER       = "datestamper";
+  public static final String PROP_DIR_BLOCKS        = "dir_blocks";
+  public static final String PROP_DIRECTORY         = "directory";
+  public static final String PROP_FORCE_LOWERCASE   = "force_lowercase";
+  public static final String PROP_SYSTEM_TRACKS     = "system_tracks";
+
   public static final String SYS_FILE_NAME = "@boot.sys";
 
 
@@ -315,30 +336,32 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   {
     super.putSettingsTo( props, prefix );
     if( props != null ) {
-      props.setProperty( prefix + "directory", this.dirFile.getPath() );
       props.setProperty(
-		prefix + "system_tracks",
+		prefix + PROP_DIRECTORY,
+		this.dirFile.getPath() );
+      props.setProperty(
+		prefix + PROP_SYSTEM_TRACKS,
 		Integer.toString( this.sysTracks ) );
       props.setProperty(
-		prefix + "block_size",
+		prefix + PROP_BLOCK_SIZE,
 		Integer.toString( this.blockSize ) );
       props.setProperty(
-		prefix + "block_number_size",
+		prefix + PROP_BLOCK_NUMBER_SIZE,
 		this.blockNum16Bit ? "16" : "8" );
       props.setProperty(
-		prefix + "dir_blocks",
+		prefix + PROP_DIR_BLOCKS,
 		Integer.toString( this.dirBlocks ) );
       props.setProperty(
-		prefix + "datestamper",
+		prefix + PROP_DATESTAMPER,
 		Boolean.toString( this.dsEnabled ) );
       props.setProperty(
-		prefix + "auto_refresh",
+		prefix + PROP_AUTO_REFRESH,
 		Boolean.toString( this.autoRefresh ) );
       props.setProperty(
-		prefix + "readonly",
+		prefix + PROP_READONLY,
 		Boolean.toString( isReadOnly() ) );
       props.setProperty(
-		prefix + "force_lowercase",
+		prefix + PROP_FORCE_LOWERCASE,
 		Boolean.toString( this.forceLowerCase ) );
     }
   }
@@ -440,7 +463,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  rv = false;
 	}
 	finally {
-	  EmuUtil.doClose( raf );
+	  EmuUtil.closeSilent( raf );
 	}
 	rv = true;
       }
@@ -616,7 +639,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	      if( rv == null ) {
 		rv = new ArrayList<>( 32 );
 	      }
-	      rv.add( new Integer( blockNum ) );
+	      rv.add( blockNum );
 	    }
 	    pos += 2;
 	  }
@@ -627,7 +650,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	      if( rv == null ) {
 		rv = new ArrayList<>( 32 );
 	      }
-	      rv.add( new Integer( blockNum ) );
+	      rv.add( blockNum );
 	      if( len == 0 ) {
 		len = 0x100;
 	      }
@@ -1384,7 +1407,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	  raf = null;
 	}
 	finally {
-	  EmuUtil.doClose( raf );
+	  EmuUtil.closeSilent( raf );
 	}
       }
     }

@@ -8,19 +8,28 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.etc.C80KeyboardFld;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
 
 
-public class C80 extends EmuSys implements
-					Z80MaxSpeedListener,
-					Z80TStatesListener
+public class C80 extends EmuSys
 {
+  public static final String SYSNAME     = "C80";
+  public static final String SYSTEXT     = "C-80";
+  public static final String PROP_PREFIX = "jkcemu.c80.";
+
   private static final int[][] keyMatrix = {
 		{ 'R', 'G', 'D', 'A', '7', '4', '1', 0, },
 		{ '+', '-', 'E', 'B', '8', '5', '2', '0' },
@@ -39,14 +48,14 @@ public class C80 extends EmuSys implements
   private long           curDisplayTStates;
   private long           displayCheckTStates;
   private boolean        displayReset;
-  private boolean        audioInPhase;
+  private boolean        tapeInPhase;
   private Z80PIO         pio1;
   private Z80PIO         pio2;
 
 
   public C80( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.c80." );
+    super( emuThread, props, PROP_PREFIX );
     if( mon == null ) {
       mon = readResource( "/rom/c80/c80mon.bin" );
     }
@@ -95,62 +104,14 @@ public class C80 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    boolean phase = this.emuThread.readAudioPhase();
-    if( phase != this.audioInPhase ) {
-      this.audioInPhase = phase;
-      this.pio1.putInValuePortA( this.audioInPhase ? 0x80 : 0, 0x80 );
-    }
-    if( this.a4TStates > 0 ) {
-      this.a4TStates -= tStates;
-      if( this.a4TStates <= 0 ) {
-	this.pio1.putInValuePortA( 0x10, 0x10 );	// A4=1
-      }
-    }
-    if( this.displayCheckTStates > 0 ) {
-      this.curDisplayTStates += tStates;
-      if( this.curDisplayTStates > this.displayCheckTStates ) {
-	boolean dirty = false;
-	synchronized( this.digitValues ) {
-	  for( int i = 0; i < this.digitValues.length; i++ ) {
-	    if( this.digitStatus[ i ] > 0 ) {
-	      --this.digitStatus[ i ];
-	    } else {
-	      if( this.digitValues[ i ] != 0 ) {
-		this.digitValues[ i ] = 0;
-		dirty = true;
-	      }
-	    }
-	  }
-	}
-	if( dirty ) {
-	  this.screenFrm.setScreenDirty( true );
-	}
-	this.curDisplayTStates = 0;
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public boolean canApplySettings( Properties props )
   {
-    return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "C80" );
+    return EmuUtil.getProperty(
+			props,
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
   }
 
 
@@ -250,7 +211,7 @@ public class C80 extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "C-80";
+    return SYSTEXT;
   }
 
 
@@ -396,6 +357,7 @@ public class C80 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ram, props );
     }
@@ -408,7 +370,7 @@ public class C80 extends EmuSys implements
     }
     this.pio1.putInValuePortA( 0xFF, false );
     this.displayReset = false;
-    this.audioInPhase = this.emuThread.readAudioPhase();
+    this.tapeInPhase = this.emuThread.readTapeInPhase();
   }
 
 
@@ -430,14 +392,21 @@ public class C80 extends EmuSys implements
 
 
   @Override
-  public boolean supportsAudio()
+  public boolean supportsKeyboardFld()
   {
     return true;
   }
 
 
   @Override
-  public boolean supportsKeyboardFld()
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
   {
     return true;
   }
@@ -457,7 +426,7 @@ public class C80 extends EmuSys implements
 	  if( (v & 0x20) == 0 ) {
 	    this.displayReset = true;
 	  }
-	  this.emuThread.writeAudioPhase( (v & 0x40) != 0 );
+	  this.tapeOutPhase = ((v & 0x40) != 0);
 	  break;
 
 	case 1:
@@ -543,6 +512,57 @@ public class C80 extends EmuSys implements
     }
   }
 
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    boolean phase = this.emuThread.readTapeInPhase();
+    if( phase != this.tapeInPhase ) {
+      this.tapeInPhase = phase;
+      this.pio1.putInValuePortA( this.tapeInPhase ? 0x80 : 0, 0x80 );
+    }
+    if( this.a4TStates > 0 ) {
+      this.a4TStates -= tStates;
+      if( this.a4TStates <= 0 ) {
+	this.pio1.putInValuePortA( 0x10, 0x10 );	// A4=1
+      }
+    }
+    if( this.displayCheckTStates > 0 ) {
+      this.curDisplayTStates += tStates;
+      if( this.curDisplayTStates > this.displayCheckTStates ) {
+	boolean dirty = false;
+	synchronized( this.digitValues ) {
+	  for( int i = 0; i < this.digitValues.length; i++ ) {
+	    if( this.digitStatus[ i ] > 0 ) {
+	      --this.digitStatus[ i ];
+	    } else {
+	      if( this.digitValues[ i ] != 0 ) {
+		this.digitValues[ i ] = 0;
+		dirty = true;
+	      }
+	    }
+	  }
+	}
+	if( dirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+	this.curDisplayTStates = 0;
+      }
+    }
+  }
+
+
+	/* --- private Methoden --- */
 
   private void updKeyboardFld()
   {

@@ -211,4 +211,3 @@ public class KeyboardMatrix8x8 extends KeyboardMatrix
 	|| ((this.keyboardMatrix[ 7 ] & 0x40) != 0) );
   }
 }
-

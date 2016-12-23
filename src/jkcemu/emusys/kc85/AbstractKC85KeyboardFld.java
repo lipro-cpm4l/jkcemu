@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,7 @@
 package jkcemu.emusys.kc85;
 
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.emusys.KC85;
 
 

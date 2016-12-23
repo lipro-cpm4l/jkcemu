@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -9,7 +9,8 @@
 package z80emu;
 
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 
 public class Z80SIO implements Z80InterruptSource
@@ -210,7 +211,10 @@ public class Z80SIO implements Z80InterruptSource
   {
     if( channel.listeners != null ) {
       for( Z80SIOChannelListener listener : channel.listeners ) {
-	listener.z80SIOChannelByteAvailable( this, channel.channelNum, value );
+	listener.z80SIOChannelByteAvailable(
+					this,
+					channel.channelNum,
+					value );
       }
     }
   }
@@ -232,4 +236,3 @@ public class Z80SIO implements Z80InterruptSource
     }
   }
 }
-

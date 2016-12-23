@@ -75,4 +75,3 @@ public class TextLineSeparator
     return getDisplayText( this.lineEnd );
   }
 }
-

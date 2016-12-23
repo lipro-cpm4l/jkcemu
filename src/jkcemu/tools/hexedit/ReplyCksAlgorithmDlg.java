@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2014 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,24 @@
 
 package jkcemu.tools.hexedit;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
+import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
-import jkcemu.base.*;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import jkcemu.base.BaseDlg;
 import jkcemu.etc.CksCalculator;
 
 
-public class ReplyCksAlgorithmDlg extends BasicDlg
+public class ReplyCksAlgorithmDlg extends BaseDlg
 {
   private String            approvedAlgorithm;
   private JComboBox<String> comboAlgorithm;

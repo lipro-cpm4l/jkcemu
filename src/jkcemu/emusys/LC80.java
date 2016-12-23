@@ -8,22 +8,46 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.lc80.LC80KeyboardFld;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80HaltStateListener;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PCListener;
+import z80emu.Z80PIO;
 
 
 public class LC80 extends EmuSys implements
 					Z80HaltStateListener,
-					Z80MaxSpeedListener,
-					Z80PCListener,
-					Z80TStatesListener
+					Z80PCListener
 {
+  public static final String SYSNAME              = "LC80";
+  public static final String SYSNAME_LC80_U505    = "LC80_U505";
+  public static final String SYSNAME_LC80_2716    = "LC80_2716";
+  public static final String SYSNAME_LC80_2       = "LC80_2";
+  public static final String SYSNAME_LC80_E       = "LC80_E";
+  public static final String SYSNAME_LC80         = "LC80";
+  public static final String SYSTEXT              = "LC-80";
+  public static final String SYSTEXT_LC80_2       = "LC-80.2";
+  public static final String SYSTEXT_LC80_E       = "LC-80e";
+  public static final String PROP_PREFIX          = "jkcemu.lc80.";
+  public static final String PROP_ROM_C000_PREFIX = "rom_c000.";
+
+
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 15000;
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = true;
+
   private static byte[] lc80_u505  = null;
   private static byte[] lc80_2716  = null;
   private static byte[] lc80_2     = null;
@@ -42,10 +66,9 @@ public class LC80 extends EmuSys implements
   private volatile int     pio1BValue;
   private long             curDisplayTStates;
   private long             displayCheckTStates;
-  private boolean          audioInPhase;
-  private boolean          audioOutLED;
-  private volatile boolean audioOutPhase;
-  private volatile boolean audioOutState;
+  private boolean          tapeInPhase;
+  private boolean          tapeOutLED;
+  private volatile boolean tapeOutState;
   private boolean          chessComputer;
   private boolean          chessMode;
   private boolean          haltState;
@@ -58,24 +81,23 @@ public class LC80 extends EmuSys implements
 
   public LC80( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.lc80." );
+    super( emuThread, props, PROP_PREFIX );
     this.chessComputer = false;
     this.romOSFile     = null;
     this.romC000File   = null;
-    this.sysName       = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( this.sysName.equals( "LC80_U505" ) ) {
+    this.sysName       = EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME );
+    if( this.sysName.equals( SYSNAME_LC80_U505 ) ) {
       this.ram = new byte[ 0x0400 ];
     } else {
       this.ram = new byte[ 0x1000 ];
-      if( this.sysName.equals( "LC80e" ) ) {
+      if( this.sysName.equals( SYSNAME_LC80_E ) ) {
 	this.chessComputer = true;
       }
     }
 
-    this.audioInPhase        = false;
-    this.audioOutLED         = false;
-    this.audioOutPhase       = false;
-    this.audioOutState       = false;
+    this.tapeInPhase         = false;
+    this.tapeOutLED          = false;
+    this.tapeOutState        = false;
     this.chessMode           = false;
     this.haltState           = false;
     this.curDisplayTStates   = 0;
@@ -110,7 +132,8 @@ public class LC80 extends EmuSys implements
   {
     return EmuUtil.getProperty(
 		props,
-		"jkcemu.system" ).startsWith( "LC80e" ) ? 1800 : 900;
+		EmuThread.PROP_SYSNAME ).startsWith( SYSNAME_LC80_E ) ?
+								1800 : 900;
   }
 
 
@@ -167,61 +190,6 @@ public class LC80 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    boolean phase = this.emuThread.readAudioPhase();
-    if( phase != this.audioInPhase ) {
-      this.audioInPhase = phase;
-      this.pio1.putInValuePortB( this.audioInPhase ? 1 : 0, false );
-    }
-    this.ctc.z80TStatesProcessed( cpu, tStates );
-    if( this.displayCheckTStates > 0 ) {
-      this.curDisplayTStates += tStates;
-      if( this.curDisplayTStates > this.displayCheckTStates ) {
-	boolean dirty = false;
-	synchronized( this.digitValues ) {
-	  for( int i = 0; i < this.digitValues.length; i++ ) {
-	    if( this.digitStatus[ i ] > 0 ) {
-	      --this.digitStatus[ i ];
-	    } else {
-	      if( this.digitValues[ i ] != 0 ) {
-		this.digitValues[ i ] = 0;
-		dirty = true;
-	      }
-	    }
-	  }
-	}
-	if( this.audioOutState ) {
-	  this.audioOutLED = !this.audioOutLED;
-	  dirty            = true;
-	} else {
-	  if( this.audioOutLED ) {
-	    this.audioOutLED = false;
-	    dirty            = true;
-	  }
-	}
-	if( dirty ) {
-	  this.screenFrm.setScreenDirty( true );
-	}
-	this.audioOutState     = false;
-	this.curDisplayTStates = 0;
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -229,18 +197,20 @@ public class LC80 extends EmuSys implements
   {
     boolean rv = EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( this.sysName );
+			EmuThread.PROP_SYSNAME ).equals( this.sysName );
     if( rv ) {
       rv = TextUtil.equals(
 		this.romOSFile,
-		EmuUtil.getProperty( props, this.propPrefix + "os.file" ) );
-    }
-    if( rv && this.sysName.equals( "LC80e" ) ) {
-      rv = TextUtil.equals(
-		this.romC000File,
 		EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_c000.file" ) );
+			props,
+			this.propPrefix + PROP_OS_FILE ) );
+    }
+    if( rv && this.sysName.equals( SYSNAME_LC80_E ) ) {
+      rv = TextUtil.equals(
+	this.romC000File,
+	EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_ROM_C000_PREFIX + PROP_FILE ) );
     }
     return rv;
   }
@@ -425,14 +395,23 @@ public class LC80 extends EmuSys implements
 
 
   @Override
+  public boolean getSwapKeyCharCase()
+  {
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
+  }
+
+
+  @Override
   public String getTitle()
   {
-    String rv = "LC-80";
-    if( this.romOS == lc80_2 ) {
-      rv = "LC-80.2";
-    }
-    else if( this.romOS == lc80e_0000 ) {
-      rv = "LC-80e";
+    String rv = SYSTEXT;
+    switch( this.sysName ) {
+      case SYSNAME_LC80_2:
+	rv = SYSTEXT_LC80_2;
+	break;
+      case SYSNAME_LC80_E:
+	rv = SYSTEXT_LC80_E;
+	break;
     }
     return rv;
   }
@@ -453,7 +432,7 @@ public class LC80 extends EmuSys implements
 	  break;
 
 	case KeyEvent.VK_F2:
-	  this.kbMatrix[ 5 ] = 0x40;		// DAT / SW / SELF PLAY
+	  this.kbMatrix[ 5 ] = 0x40;		// DAT / SELF PLAY / SW
 	  rv = true;
 	  break;
 
@@ -627,8 +606,10 @@ public class LC80 extends EmuSys implements
 	case 'H':
 	  if( this.chessComputer && this.chessMode ) {
 	    this.kbMatrix[ 3 ] = 0x80;		// auch 8
-	    rv = true;
+	  } else {
+	    this.kbMatrix[ 5 ] = 0x40;		// DAT
 	  }
+	  rv = true;
 	  break;
 
 	case 'K':
@@ -650,8 +631,10 @@ public class LC80 extends EmuSys implements
 	case 'M':
 	  if( this.chessComputer && this.chessMode ) {
 	    this.kbMatrix[ 3 ] = 0x20;		// Dame
-	    rv = true;
+	  } else {
+	    this.kbMatrix[ 5 ] = 0x80;		// ADR
 	  }
+	  rv = true;
 	  break;
 
 	case 'N':
@@ -662,6 +645,13 @@ public class LC80 extends EmuSys implements
 	case 'O':
 	  if( this.chessComputer && this.chessMode ) {
 	    this.kbMatrix[ 2 ] = 0x20;		// BOARD
+	    rv = true;
+	  }
+	  break;
+
+	case 'P':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrix[ 5 ] = 0x40;		// SELF PLAY / SW
 	    rv = true;
 	  }
 	  break;
@@ -696,6 +686,13 @@ public class LC80 extends EmuSys implements
 	  }
 	  break;
 
+	case 'V':
+	  if( this.chessComputer && this.chessMode ) {
+	    this.kbMatrix[ 5 ] = 0x80;		// NEW GAME
+	    rv = true;
+	  }
+	  break;
+
 	case 'W':
 	  if( this.chessComputer && this.chessMode ) {
 	    this.kbMatrix[ 5 ] = 0x10;		// COLOR (WHITE)
@@ -721,8 +718,8 @@ public class LC80 extends EmuSys implements
   public boolean paintScreen( Graphics g, int x, int y, int screenScale )
   {
     // LED fuer Tonausgabe, L-aktiv
-    if( this.audioOutLED
-	|| (!this.audioOutPhase && !this.audioOutState) )
+    if( this.tapeOutLED
+	|| (!this.tapeOutPhase && !this.tapeOutState) )
     {
       g.setColor( this.colorGreenLight );
     } else {
@@ -817,6 +814,7 @@ public class LC80 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
 	loadROMs( props );
@@ -831,7 +829,7 @@ public class LC80 extends EmuSys implements
       Arrays.fill( this.digitValues, 0 );
     }
     setChessMode( false );
-    this.audioInPhase = this.emuThread.readAudioPhase();
+    this.tapeInPhase = this.emuThread.readTapeInPhase();
   }
 
 
@@ -860,13 +858,6 @@ public class LC80 extends EmuSys implements
 
 
   @Override
-  public boolean supportsAudio()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsChessboard()
   {
     return this.chessComputer;
@@ -875,6 +866,20 @@ public class LC80 extends EmuSys implements
 
   @Override
   public boolean supportsKeyboardFld()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
   {
     return true;
   }
@@ -895,12 +900,11 @@ public class LC80 extends EmuSys implements
 
 	case 1:
 	  this.pio1.writeDataB( value );
-	  this.pio1BValue    = this.pio1.fetchOutValuePortB( false );
-	  boolean audioPhase = ((this.pio1BValue & 0x02) != 0);
-	  this.emuThread.writeAudioPhase( audioPhase );
-	  if( audioPhase != this.audioOutPhase ) {
-	    this.audioOutPhase = audioPhase;
-	    this.audioOutState = true;
+	  this.pio1BValue      = this.pio1.fetchOutValuePortB( false );
+	  boolean tapeOutPhase = ((this.pio1BValue & 0x02) != 0);
+	  if( tapeOutPhase != this.tapeOutPhase ) {
+	    this.tapeOutPhase = tapeOutPhase;
+	    this.tapeOutState = true;
 	    this.screenFrm.setScreenDirty( true );
 	  }
 	  putKBMatrixRowValueToPort();
@@ -941,26 +945,80 @@ public class LC80 extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    boolean phase = this.emuThread.readTapeInPhase();
+    if( phase != this.tapeInPhase ) {
+      this.tapeInPhase = phase;
+      this.pio1.putInValuePortB( this.tapeInPhase ? 1 : 0, false );
+    }
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+    if( this.displayCheckTStates > 0 ) {
+      this.curDisplayTStates += tStates;
+      if( this.curDisplayTStates > this.displayCheckTStates ) {
+	boolean dirty = false;
+	synchronized( this.digitValues ) {
+	  for( int i = 0; i < this.digitValues.length; i++ ) {
+	    if( this.digitStatus[ i ] > 0 ) {
+	      --this.digitStatus[ i ];
+	    } else {
+	      if( this.digitValues[ i ] != 0 ) {
+		this.digitValues[ i ] = 0;
+		dirty = true;
+	      }
+	    }
+	  }
+	}
+	if( this.tapeOutState ) {
+	  this.tapeOutLED = !this.tapeOutLED;
+	  dirty            = true;
+	} else {
+	  if( this.tapeOutLED ) {
+	    this.tapeOutLED = false;
+	    dirty            = true;
+	  }
+	}
+	if( dirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+	this.tapeOutState      = false;
+	this.curDisplayTStates = 0;
+      }
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void loadROMs( Properties props )
   {
     this.romOSFile = EmuUtil.getProperty(
 				props,
-				this.propPrefix + "os.file" );
+				this.propPrefix + PROP_OS_FILE );
     this.romOS = readROMFile( this.romOSFile, 0x2000, "Monitorprogramm" );
     if( this.romOS == null ) {
-      if( this.sysName.equals( "LC80_U505" ) ) {
+      if( this.sysName.equals( SYSNAME_LC80_U505 ) ) {
 	if( lc80_u505 == null ) {
 	  lc80_u505 = readResource( "/rom/lc80/lc80_u505.bin" );
 	}
 	this.romOS = lc80_u505;
-      } else if( this.sysName.equals( "LC80.2" ) ) {
+      } else if( this.sysName.equals( SYSNAME_LC80_2 ) ) {
 	if( lc80_2 == null ) {
 	  lc80_2 = readResource( "/rom/lc80/lc80_2.bin" );
 	}
 	this.romOS = lc80_2;
-      } else if( this.sysName.equals( "LC80e" ) ) {
+      } else if( this.sysName.equals( SYSNAME_LC80_E ) ) {
 	if( lc80e_0000 == null ) {
 	  lc80e_0000 = readResource( "/rom/lc80/lc80e_0000.bin" );
 	}
@@ -972,10 +1030,10 @@ public class LC80 extends EmuSys implements
 	this.romOS = lc80_2716;
       }
     }
-    if( this.sysName.equals( "LC80e" ) ) {
+    if( this.sysName.equals( SYSNAME_LC80_E ) ) {
       this.romC000File = EmuUtil.getProperty(
-				props,
-				this.propPrefix + "rom_c000.file" );
+			props,
+			this.propPrefix + PROP_ROM_C000_PREFIX + PROP_FILE );
       this.romC000 = readROMFile(
 			this.romC000File,
 			0x4000,
@@ -1098,4 +1156,3 @@ public class LC80 extends EmuSys implements
       this.keyboardFld.updKeySelection( this.kbMatrix );
   }
 }
-

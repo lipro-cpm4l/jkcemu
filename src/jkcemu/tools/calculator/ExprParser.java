@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2012 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,12 @@
 package jkcemu.tools.calculator;
 
 import java.lang.*;
-import java.math.*;
-import java.text.*;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.text.ParseException;
 
 
 public class ExprParser
@@ -499,7 +503,8 @@ public class ExprParser
       value = new BigDecimal( Math.log( parseFunctionArg().doubleValue() ) );
     }
     else if( identifier.equals( "LOG10" ) ) {
-      value = new BigDecimal( Math.log10( parseFunctionArg().doubleValue() ) );
+      value = new BigDecimal(
+			Math.log10( parseFunctionArg().doubleValue() ) );
     }
     else if( identifier.equals( "MAX" ) ) {
       checkToken( '(' );
@@ -541,7 +546,8 @@ public class ExprParser
       }
       catch( ArithmeticException ex ) {}
       if( value == null ) {
-	value = new BigDecimal( Math.pow( a.doubleValue(), b.doubleValue() ) );
+	value = new BigDecimal(
+			Math.pow( a.doubleValue(), b.doubleValue() ) );
       }
     }
     else if( identifier.equals( "RND" )
@@ -552,7 +558,16 @@ public class ExprParser
       checkToken( ')' );
     }
     else if( identifier.equals( "ROUND" ) ) {
-      value = parseFunctionArg().round( new MathContext( 0 ) );
+      BigDecimal v = parseFunctionArg();
+      try {
+	value = v.round( new MathContext(
+				v.precision() - v.scale(),
+				RoundingMode.HALF_EVEN ) );
+      }
+      catch( ArithmeticException ex ) {}
+      if( value == null ) {
+	value = new BigDecimal( Math.round( v.doubleValue() ) );
+      }
     }
     else if( identifier.equals( "SIG" )
 	     || identifier.equals( "SIGNUM" ) )
@@ -627,4 +642,3 @@ public class ExprParser
     return value.longValueExact();
   }
 }
-

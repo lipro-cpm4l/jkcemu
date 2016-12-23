@@ -11,11 +11,18 @@ package jkcemu.emusys.huebler;
 import java.awt.EventQueue;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.text.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.Properties;
-import jkcemu.base.*;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PCListener;
+import z80emu.Z80PIO;
 
 
 public abstract class AbstractHueblerMC
@@ -27,8 +34,7 @@ public abstract class AbstractHueblerMC
   protected Z80CTC  ctc;
   protected Z80PIO  pio;
 
-  private int              pasteStateNum;
-  private volatile boolean pasteIgnoreMsgActive;
+  private int pasteStateNum;
 
 
   public AbstractHueblerMC(
@@ -37,8 +43,7 @@ public abstract class AbstractHueblerMC
 			String     propPrefix )
   {
     super( emuThread, props, propPrefix );
-    this.pcListenerAdded      = false;
-    this.pasteIgnoreMsgActive = false;
+    this.pcListenerAdded = false;
   }
 
 
@@ -158,36 +163,23 @@ public abstract class AbstractHueblerMC
 	}
 	--this.pasteStateNum;
       } else {
-	if( !this.pasteIgnoreMsgActive ) {
-	  CharacterIterator iter = this.pasteIter;
-	  if( iter != null ) {
-	    char ch = iter.current();
-	    iter.next();
-	    if( ch == CharacterIterator.DONE ) {
-	      cancelPastingText();
+	CharacterIterator iter = this.pasteIter;
+	if( iter != null ) {
+	  char ch = iter.current();
+	  iter.next();
+	  if( ch == CharacterIterator.DONE ) {
+	    cancelPastingText();
+	  } else {
+	    ch = TextUtil.toISO646DE( ch );
+	    if( ch == '\n' ) {
+	      ch = '\r';
+	    }
+	    if( (ch == '\r') || ((ch >= '\u0000') && (ch < '\u007F')) ) {
+	      this.keyChar = ch;
+	      this.pasteStateNum = 8;
 	    } else {
-	      ch = TextUtil.toISO646DE( ch );
-	      if( ch == '\n' ) {
-		ch = '\r';
-	      }
-	      if( (ch == '\r')
-		  || ((ch >= '\u0000') && (ch < '\u007F')) )
-	      {
-		this.keyChar = ch;
-		this.pasteStateNum = 8;
-	      } else {
-		final char ch1            = ch;
-		this.pasteIgnoreMsgActive = true;
-		EventQueue.invokeLater(
-			new Runnable()
-			{
-			  @Override
-			  public void run()
-			  {
-			    showPasteIgnoreMsg( ch1 );
-			  }
-			} );
-	      }
+	      cancelPastingText();
+	      fireShowCharNotPasted( iter );
 	    }
 	  }
 	}
@@ -236,6 +228,7 @@ public abstract class AbstractHueblerMC
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     this.keyChar       = 0;
     this.pasteStateNum = 0;
   }
@@ -249,7 +242,7 @@ public abstract class AbstractHueblerMC
       if( !text.isEmpty() ) {
 	cancelPastingText();
 	this.pasteIter = new StringCharacterIterator( text );
-	done = true;
+	done           = true;
       }
     }
     if( !done ) {
@@ -299,25 +292,5 @@ public abstract class AbstractHueblerMC
 	this.ctc.write( port & 0x03, value, tStates );
 	break;
     }
-  }
-
-
-	/* --- private Methoden --- */
-
-  private void showPasteIgnoreMsg( char ch )
-  {
-    if( BasicDlg.showOptionDlg(
-		this.emuThread.getScreenFrm(),
-		String.format(
-			"Das Zeichen mit dem Code %02Xh kann nicht"
-				+ " eingef\u00FCgt werden.",
-			(int) ch ),
-		"Einf\u00FCgen",
-		"Weiter",
-		"Abbrechen" ) != 0 )
-    {
-      cancelPastingText();
-    }
-    this.pasteIgnoreMsgActive = false;
   }
 }

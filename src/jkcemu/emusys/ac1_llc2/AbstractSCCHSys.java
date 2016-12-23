@@ -10,17 +10,41 @@ package jkcemu.emusys.ac1_llc2;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.text.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.Properties;
-import jkcemu.base.*;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.SourceUtil;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80MemView;
+import z80emu.Z80PCListener;
+import z80emu.Z80PIO;
 
 
 public abstract class AbstractSCCHSys
 			extends EmuSys
 			implements Z80PCListener
 {
+  public static final String PROP_JOYSTICK_ENABLED = "joystick.enabled";
+  public static final String PROP_SCCH_PREFIX      = "scch.";
+  public static final String PROP_PROGRAM_X_PREFIX = "program_x.";
+  public static final String PROP_ROMDISK_PREFIX   = "romdisk.";
+
+  public static final String PROP_BASIC_ADDR   = PROP_BASIC_PREFIX + "addr";
+  public static final String PROP_ROMDISK_ADDR = PROP_ROMDISK_PREFIX + "addr";
+
+  public static final String PROP_SCCH_BASIC_FILE
+		= PROP_SCCH_PREFIX + PROP_BASIC_PREFIX + PROP_FILE;
+
+  public static final String PROP_SCCH_PROGRAM_X_FILE
+		= PROP_SCCH_PREFIX + PROP_PROGRAM_X_PREFIX + PROP_FILE;
+
+  public static final String PROP_SCCH_ROMDISK_FILE
+		= PROP_SCCH_PREFIX + PROP_ROMDISK_PREFIX + PROP_FILE;
+
   // Einprung zum Lesen eines Zeichens von der Tastatur
   private static int ADDR_INCH = 0x1802;
 
@@ -192,7 +216,7 @@ public abstract class AbstractSCCHSys
     if( cpu != null ) {
       boolean pasteFast = EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "paste.fast",
+				this.propPrefix + PROP_PASTE_FAST,
 				false );
       if( pasteFast != this.pasteFast ) {
 	this.pasteFast = pasteFast;
@@ -210,7 +234,7 @@ public abstract class AbstractSCCHSys
   { 
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "floppydisk.enabled",
+			this.propPrefix + PROP_FDC_ENABLED,
 			false );
   }
 
@@ -219,7 +243,7 @@ public abstract class AbstractSCCHSys
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "joystick.enabled",
+			this.propPrefix + PROP_JOYSTICK_ENABLED,
 			false );
   }
 
@@ -228,7 +252,7 @@ public abstract class AbstractSCCHSys
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "kcnet.enabled",
+			this.propPrefix + PROP_KCNET_ENABLED,
 			false );
   }
 
@@ -237,7 +261,7 @@ public abstract class AbstractSCCHSys
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "vdip.enabled",
+			this.propPrefix + PROP_VDIP_ENABLED,
 			false );
   }
 
@@ -312,8 +336,8 @@ public abstract class AbstractSCCHSys
   {
     // SCCH BASIC-ROM
     this.scchBasicRomFile = EmuUtil.getProperty(
-			props,
-			this.propPrefix + "scch.basic.file" );
+		props,
+		this.propPrefix + PROP_SCCH_BASIC_FILE );
     this.scchBasicRomBytes = readROMFile(
 			this.scchBasicRomFile,
 			this.scchBasicRomBegAddr < 0x4000 ? 0x4000 : 0x2000,
@@ -327,21 +351,21 @@ public abstract class AbstractSCCHSys
 
     // SCCH Programmpaket X
     this.scchPrgXRomFile  = EmuUtil.getProperty(
-			props,
-			this.propPrefix + "scch.program_x.file" );
+		props,
+		this.propPrefix + PROP_SCCH_PROGRAM_X_FILE );
     this.scchPrgXRomBytes = readROMFile(
-			this.scchPrgXRomFile,
-			0x2000,
-			"Programmpaket X" );
+		this.scchPrgXRomFile,
+		0x2000,
+		"Programmpaket X" );
 
     // SCCH ROM-Disk
     this.scchRomdiskFile  = EmuUtil.getProperty(
-			props,
-			this.propPrefix + "scch.romdisk.file" );
+		props,
+		this.propPrefix + PROP_SCCH_ROMDISK_FILE );
     this.scchRomdiskBytes = readROMFile(
-			this.scchRomdiskFile,
-			0x40000,
-			"SCCH-Modul 1 ROM-Disk" );
+		this.scchRomdiskFile,
+		0x40000,
+		"SCCH-Modul 1 ROM-Disk" );
   }
 
 
@@ -403,16 +427,16 @@ public abstract class AbstractSCCHSys
       CharacterIterator iter = this.pasteIter;
       if( iter != null ) {
 	char ch = iter.next();
-	while( ch != CharacterIterator.DONE ) {
+	if( ch == CharacterIterator.DONE ) {
+	  cancelPastingText();
+	} else {
 	  if( (ch > 0) && (ch < 0x7F) ) {
 	    cpu.setRegA( ch == '\n' ? '\r' : ch );
 	    cpu.setRegPC( cpu.doPop() );
-	    break;
+	  } else {
+	    cancelPastingText();
+	    fireShowCharNotPasted( iter );
 	  }
-	  ch = iter.next();
-	}
-	if( ch == CharacterIterator.DONE ) {
-	  cancelPastingText();
 	}
       }
     }
@@ -428,7 +452,9 @@ public abstract class AbstractSCCHSys
     if( rv ) {
       rv = TextUtil.equals(
 	this.scchBasicRomFile,
-	EmuUtil.getProperty( props, this.propPrefix + "scch.basic.file" ) );
+	EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_SCCH_BASIC_FILE ) );
     }
     if( rv && (this.scchBasicRomFile != null)) {
       rv = (this.scchBasicRomBegAddr == getScchBasicRomBegAddr( props ));
@@ -437,13 +463,15 @@ public abstract class AbstractSCCHSys
       rv = TextUtil.equals(
 	this.scchPrgXRomFile,
 	EmuUtil.getProperty(
-			props,
-			this.propPrefix + "scch.program_x.file" ) );
+		props,
+		this.propPrefix + PROP_SCCH_PROGRAM_X_FILE ) );
     }
     if( rv ) {
       rv = TextUtil.equals(
 	this.scchRomdiskFile,
-	EmuUtil.getProperty( props, this.propPrefix + "scch.romdisk.file" ) );
+	EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_SCCH_ROMDISK_FILE ) );
     }
     if( rv && (this.scchRomdiskFile != null)) {
       rv = (this.scchRomdiskBegAddr == getScchRomdiskBegAddr( props ));
@@ -582,11 +610,11 @@ public abstract class AbstractSCCHSys
 	if( !sourceOnly ) {
 	  buf.append( String.format( "%04X  %02X", addr, b ) );
 	}
-	EmuSys.appendSpacesToCol( buf, bol, colMnemonic );
+	appendSpacesToCol( buf, bol, colMnemonic );
 	buf.append( "RST" );
-	EmuSys.appendSpacesToCol( buf, bol, colArgs );
+	appendSpacesToCol( buf, bol, colArgs );
 	buf.append( "08H" );
-	EmuSys.appendSpacesToCol( buf, bol, colRemark );
+	appendSpacesToCol( buf, bol, colRemark );
 	buf.append( ";INCH\n" );
 	rv = 1;
 	break;
@@ -595,11 +623,11 @@ public abstract class AbstractSCCHSys
 	if( !sourceOnly ) {
 	  buf.append( String.format( "%04X  %02X", addr, b ) );
 	}
-	EmuSys.appendSpacesToCol( buf, bol, colMnemonic );
+	appendSpacesToCol( buf, bol, colMnemonic );
 	buf.append( "RST" );
-	EmuSys.appendSpacesToCol( buf, bol, colArgs );
+	appendSpacesToCol( buf, bol, colArgs );
 	buf.append( "10H" );
-	EmuSys.appendSpacesToCol( buf, bol, colRemark );
+	appendSpacesToCol( buf, bol, colRemark );
 	buf.append( ";OUTCH\n" );
 	rv = 1;
 	break;
@@ -608,13 +636,13 @@ public abstract class AbstractSCCHSys
 	if( !sourceOnly ) {
 	  buf.append( String.format( "%04X  %02X", addr, b ) );
 	}
-	EmuSys.appendSpacesToCol( buf, bol, colMnemonic );
+	appendSpacesToCol( buf, bol, colMnemonic );
 	buf.append( "RST" );
-	EmuSys.appendSpacesToCol( buf, bol, colArgs );
+	appendSpacesToCol( buf, bol, colArgs );
 	buf.append( "18H" );
-	EmuSys.appendSpacesToCol( buf, bol, colRemark );
+	appendSpacesToCol( buf, bol, colRemark );
 	buf.append( ";OUTS\n" );
-	rv = 1 + EmuSys.reassStringBit7(
+	rv = 1 + reassStringBit7(
 				this.emuThread,
 				addr + 1,
 				buf,
@@ -651,11 +679,11 @@ public abstract class AbstractSCCHSys
 				w >> 8,
 				w & 0xFF ) );
 	  }
-	  EmuSys.appendSpacesToCol( buf, bol, colMnemonic );
+	  appendSpacesToCol( buf, bol, colMnemonic );
 	  buf.append( "JP" );
-	  EmuSys.appendSpacesToCol( buf, bol, colArgs );
+	  appendSpacesToCol( buf, bol, colArgs );
 	  buf.append( String.format( "%04XH", w ) );
-	  EmuSys.appendSpacesToCol( buf, bol, colRemark );
+	  appendSpacesToCol( buf, bol, colRemark );
 	  buf.append( (char) ';' );
 	  buf.append( s );
 	  buf.append( (char) '\n' );
@@ -676,11 +704,11 @@ public abstract class AbstractSCCHSys
 				w >> 8,
 				w & 0xFF ) );
 	    }
-	    EmuSys.appendSpacesToCol( buf, bol, colMnemonic );
+	    appendSpacesToCol( buf, bol, colMnemonic );
 	    buf.append( "CALL" );
-	    EmuSys.appendSpacesToCol( buf, bol, colArgs );
+	    appendSpacesToCol( buf, bol, colArgs );
 	    buf.append( String.format( "%04XH", w ) );
-	    EmuSys.appendSpacesToCol( buf, bol, colRemark );
+	    appendSpacesToCol( buf, bol, colRemark );
 	    buf.append( ";INCH\n" );
 	    rv = 3;
 	    break;
@@ -695,11 +723,11 @@ public abstract class AbstractSCCHSys
 				w >> 8,
 				w & 0xFF ) );
 	    }
-	    EmuSys.appendSpacesToCol( buf, bol, colMnemonic );
+	    appendSpacesToCol( buf, bol, colMnemonic );
 	    buf.append( "CALL" );
-	    EmuSys.appendSpacesToCol( buf, bol, colArgs );
+	    appendSpacesToCol( buf, bol, colArgs );
 	    buf.append( String.format( "%04XH", w ) );
-	    EmuSys.appendSpacesToCol( buf, bol, colRemark );
+	    appendSpacesToCol( buf, bol, colRemark );
 	    buf.append( ";OUTCH\n" );
 	    rv = 3;
 	    break;
@@ -714,13 +742,13 @@ public abstract class AbstractSCCHSys
 				w >> 8,
 				w & 0xFF ) );
 	    }
-	    EmuSys.appendSpacesToCol( buf, bol, colMnemonic );
+	    appendSpacesToCol( buf, bol, colMnemonic );
 	    buf.append( "CALL" );
-	    EmuSys.appendSpacesToCol( buf, bol, colArgs );
+	    appendSpacesToCol( buf, bol, colArgs );
 	    buf.append( String.format( "%04XH", w ) );
-	    EmuSys.appendSpacesToCol( buf, bol, colRemark );
+	    appendSpacesToCol( buf, bol, colRemark );
 	    buf.append( ";OUTS\n" );
-	    rv = 3 + EmuSys.reassStringBit7(
+	    rv = 3 + reassStringBit7(
 					this.emuThread,
 					addr + 3,
 					buf,
@@ -738,6 +766,7 @@ public abstract class AbstractSCCHSys
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     this.joystickSelected    = false;
     this.joystickValue       = 0;
     this.keyboardValue       = 0;
@@ -764,6 +793,7 @@ public abstract class AbstractSCCHSys
     if( text != null ) {
       if( !text.isEmpty() ) {
 	if( this.pasteFast ) {
+	  cancelPastingText();
 	  CharacterIterator iter = new StringCharacterIterator( text );
 	  char              ch   = iter.first();
 	  if( ch != CharacterIterator.DONE ) {
@@ -778,18 +808,23 @@ public abstract class AbstractSCCHSys
 	     * damit der Systemaufruf beendet wird und somit
 	     * der naechste Aufruf dann abgefangen werden kann.
 	     */
-	    keyTyped( ch );
-	    long millis = (ch == '\r' ?
+	    try {
+	      keyReleased();
+	      Thread.sleep( 100 );
+	      if( keyTyped( ch ) ) {
+		long millis = (ch == '\r' ?
 				getDelayMillisAfterPasteEnter()
 				: getDelayMillisAfterPasteChar());
-	    if( millis > 0 ) {
-	      try {
-		Thread.sleep( millis );
+		if( millis > 0 ) {
+		  Thread.sleep( millis );
+		}
+		this.pasteIter = iter;
+		done           = true;
+	      } else {
+		fireShowCharNotPasted( iter );
 	      }
-	      catch( InterruptedException ex ) {}
 	    }
-	    this.pasteIter = iter;
-	    done           = true;
+	    catch( InterruptedException ex ) {}
 	  }
 	} else {
 	  super.startPastingText( text );
@@ -824,12 +859,12 @@ public abstract class AbstractSCCHSys
     int rv = 0x4000;
     if( props != null ) {
       if( !EmuUtil.getProperty(
-			props,
-			this.propPrefix + "scch.basic.file" ).isEmpty() )
+		props,
+		this.propPrefix + PROP_SCCH_BASIC_FILE ).isEmpty() )
       {
 	String text = EmuUtil.getProperty(
-			props,
-			this.propPrefix + "scch.basicrom.address.begin" );
+		props,
+		this.propPrefix + PROP_SCCH_PREFIX + PROP_BASIC_ADDR );
 	if( text != null ) {
 	  if( text.trim().startsWith( "2000" ) ) {
 	    rv = 0x2000;
@@ -846,8 +881,8 @@ public abstract class AbstractSCCHSys
     int rv = 0xC000;
     if( props != null ) {
       String text = EmuUtil.getProperty(
-			props,
-			this.propPrefix + "scch.romdisk.address.begin" );
+		props,
+		this.propPrefix + PROP_SCCH_PREFIX + PROP_ROMDISK_ADDR );
       if( text != null ) {
 	if( text.trim().startsWith( "8000" ) ) {
 	  rv = 0x8000;

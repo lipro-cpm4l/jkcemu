@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,8 +11,9 @@ package jkcemu.base;
 import java.io.File;
 import java.lang.*;
 import java.text.DateFormat;
-import java.util.*;
-import javax.swing.table.*;
+import java.util.Collections;
+import java.util.Comparator;
+import javax.swing.table.AbstractTableModel;
 
 
 public class FileTableModel

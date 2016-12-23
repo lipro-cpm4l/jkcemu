@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,23 @@
 
 package jkcemu.programming.assembler;
 
-import java.awt.*;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.programming.*;
+import java.util.EventObject;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import jkcemu.base.EmuThread;
+import jkcemu.base.UserInputException;
+import jkcemu.programming.AbstractOptionsDlg;
+import jkcemu.programming.PrgOptions;
 
 
 public class AsmOptionsDlg extends AbstractOptionsDlg
@@ -294,4 +303,3 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 			&& this.btnLabelsToDebugger.isSelected() );
   }
 }
-

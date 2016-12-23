@@ -8,7 +8,11 @@
 
 package jkcemu.base;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
@@ -41,7 +45,7 @@ public class FileSaver
 	if( fmt.equals( FileFormat.HEADERSAVE ) ) {
 	  int typeChar = 0x20;
 	  if( headFileType != null ) {
-	    if( headFileType.isEmpty() ) {
+	    if( !headFileType.isEmpty() ) {
 	      char ch = headFileType.charAt( 0 );
 	      if( (ch >= '\u0020') && (ch < '\u007F') ) {
 		typeChar = ch;
@@ -379,7 +383,7 @@ public class FileSaver
 	out = null;
       }
       finally {
-	EmuUtil.doClose( out );
+	EmuUtil.closeSilent( out );
       }
     }
   }

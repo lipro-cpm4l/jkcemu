@@ -12,7 +12,9 @@ package jkcemu.programming.basic.target;
 import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.Z1013;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AbstractTarget;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
 
 
 public class Z1013Target extends AbstractTarget

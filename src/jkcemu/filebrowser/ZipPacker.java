@@ -8,14 +8,29 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Dialog;
+import java.awt.Window;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.lang.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.InvalidPathException;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.Collection;
-import java.util.zip.*;
-import jkcemu.base.*;
+import java.util.zip.CRC32;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import jkcemu.base.AbstractThreadDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileProgressInputStream;
 
 
 public class ZipPacker extends AbstractThreadDlg
@@ -46,7 +61,7 @@ public class ZipPacker extends AbstractThreadDlg
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    return this.canceled ? FileVisitResult.TERMINATE
+    return this.cancelled ? FileVisitResult.TERMINATE
 				: FileVisitResult.CONTINUE;
   }
 
@@ -57,7 +72,7 @@ public class ZipPacker extends AbstractThreadDlg
 				BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.SKIP_SUBTREE;
-    if( (this.out == null) || this.canceled ) {
+    if( (this.out == null) || this.cancelled ) {
       rv = FileVisitResult.TERMINATE;
     } else {
       if( (dir != null) && (attrs != null) ) {
@@ -94,7 +109,7 @@ public class ZipPacker extends AbstractThreadDlg
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
     FileVisitResult rv = FileVisitResult.SKIP_SIBLINGS;
-    if( (this.out == null) || this.canceled ) {
+    if( (this.out == null) || this.cancelled ) {
       rv = FileVisitResult.TERMINATE;
     } else {
       if( (file != null) && (attrs != null) ) {
@@ -114,7 +129,7 @@ public class ZipPacker extends AbstractThreadDlg
 		  CRC32 crc32 = new CRC32();
 		  long  fSize = 0;
 		  int   b     = in.read();
-		  while( !this.canceled && (b != -1) ) {
+		  while( !this.cancelled && (b != -1) ) {
 		    fSize++;
 		    crc32.update( b );
 		    b = in.read();
@@ -134,7 +149,7 @@ public class ZipPacker extends AbstractThreadDlg
 
 		  // Datei in Eintrag schreiben
 		  b = in.read();
-		  while( !this.canceled && (b != -1) ) {
+		  while( !this.cancelled && (b != -1) ) {
 		    this.out.write( b );
 		    b = in.read();
 		  }
@@ -148,7 +163,7 @@ public class ZipPacker extends AbstractThreadDlg
 		  appendIgnoredToLog();
 		}
 		finally {
-		  EmuUtil.doClose( in );
+		  EmuUtil.closeSilent( in );
 		}
 	      } else if( attrs.isSymbolicLink() ) {
 		appendToLog( " Symbolischer Link ignoriert\n" );
@@ -174,7 +189,7 @@ public class ZipPacker extends AbstractThreadDlg
       appendErrorToLog( ex );
       incErrorCount();
     }
-    return this.canceled ? FileVisitResult.TERMINATE
+    return this.cancelled ? FileVisitResult.TERMINATE
 				: FileVisitResult.CONTINUE;
   }
 
@@ -218,9 +233,9 @@ public class ZipPacker extends AbstractThreadDlg
       failed = true;
     }
     finally {
-      EmuUtil.doClose( this.out );
+      EmuUtil.closeSilent( this.out );
     }
-    if( this.canceled || failed ) {
+    if( this.cancelled || failed ) {
       this.outFile.delete();
     }
     FileBrowserFrm.fireFileChanged( this.outFile.getParentFile() );

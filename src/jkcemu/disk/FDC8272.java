@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,13 +13,15 @@ import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
 import jkcemu.base.EmuThread;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80MaxSpeedListener;
+import z80emu.Z80TStatesListener;
 
 
 public class FDC8272 implements
 			Runnable,
-			Z80TStatesListener,
-			Z80MaxSpeedListener
+			Z80MaxSpeedListener,
+			Z80TStatesListener
 {
   public interface DriveSelector
   {

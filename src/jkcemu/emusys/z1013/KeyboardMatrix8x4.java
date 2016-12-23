@@ -288,4 +288,3 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
     setShiftKeysPressed( isAnyControlKeyPressed() );
   }
 }
-

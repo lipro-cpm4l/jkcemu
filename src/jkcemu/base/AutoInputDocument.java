@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,11 @@
 package jkcemu.base;
 
 import java.lang.*;
-import java.util.*;
-import javax.swing.text.*;
+import java.util.HashMap;
+import java.util.Map;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 
 
 public class AutoInputDocument extends PlainDocument

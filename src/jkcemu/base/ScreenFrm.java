@@ -8,46 +8,194 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.DisplayMode;
+import java.awt.EventQueue;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.IllegalComponentStateException;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.Window;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.FlavorEvent;
+import java.awt.datatransfer.FlavorListener;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.*;
 import java.net.URL;
-import java.text.*;
-import java.util.*;
-import javax.imageio.ImageIO;
-import javax.swing.*;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JToolBar;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import jkcemu.Main;
-import jkcemu.audio.*;
-import jkcemu.disk.*;
-import jkcemu.etc.*;
+import jkcemu.audio.AudioFrm;
+import jkcemu.audio.AudioRecorderFrm;
+import jkcemu.disk.AbstractFloppyDisk;
+import jkcemu.disk.DiskImgCreateFrm;
+import jkcemu.disk.DiskImgProcessDlg;
+import jkcemu.disk.DiskImgViewFrm;
+import jkcemu.disk.DiskUtil;
+import jkcemu.disk.DriveSelectDlg;
+import jkcemu.disk.FloppyDiskStationFrm;
+import jkcemu.etc.ChessboardFrm;
+import jkcemu.etc.Plotter;
+import jkcemu.etc.PlotterFrm;
+import jkcemu.etc.USBInterfaceFrm;
 import jkcemu.joystick.JoystickFrm;
-import jkcemu.filebrowser.*;
-import jkcemu.image.*;
+import jkcemu.filebrowser.FileBrowserFrm;
+import jkcemu.filebrowser.FindFilesFrm;
+import jkcemu.image.ImageCaptureFrm;
+import jkcemu.image.ImageFrm;
+import jkcemu.image.ImgSaver;
+import jkcemu.image.ImgSelection;
+import jkcemu.image.VideoCaptureFrm;
 import jkcemu.print.PrintListFrm;
-import jkcemu.text.*;
+import jkcemu.text.TextEditFrm;
+import jkcemu.text.TextUtil;
 import jkcemu.tools.ReassFrm;
 import jkcemu.tools.calculator.CalculatorFrm;
 import jkcemu.tools.debugger.DebugFrm;
 import jkcemu.tools.fileconverter.FileConvertFrm;
 import jkcemu.tools.hexdiff.HexDiffFrm;
-import jkcemu.tools.hexedit.*;
-import z80emu.*;
+import jkcemu.tools.hexedit.HexEditFrm;
+import jkcemu.tools.hexedit.MemEditFrm;
+import z80emu.Z80Breakpoint;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80Memory;
+import z80emu.Z80StatusListener;
 
 
-public class ScreenFrm extends BasicFrm implements
+public class ScreenFrm extends BaseFrm implements
 						DropTargetListener,
 						FlavorListener,
 						Z80StatusListener
 {
-  private static final String textFullScreenOn  = "Vollbildmodus einschalten";
-  private static final String textFullScreenOff = "Vollbildmodus ausschalten";
+  public static final String PROP_PREFIX            = "jkcemu.";
+  public static final String PROP_CONFIRM_NMI       = "confirm.nmi";
+  public static final String PROP_CONFIRM_RESET     = "confirm.reset";
+  public static final String PROP_CONFIRM_QUIT      = "confirm.quit";
+  public static final String PROP_CONFIRM_POWER_ON  = "confirm.power_on";
+  public static final String PROP_SCREEN_MARGIN     = "screen.margin";
+  public static final String PROP_SCREEN_REFRESH_MS = "screen.refresh.ms";
 
-  private static final String textMaxSpeed = "Maximale Geschwindigkeit";
-  private static final String textStdSpeed = "Standard-Geschwindigkeit";
+  public static final String PROP_COPY_AND_PASTE_DIRECT
+					= "copy_and_paste.direct";
+
+  public static final boolean DEFAULT_CONFIRM_NMI           = true;
+  public static final boolean DEFAULT_CONFIRM_RESET         = false;
+  public static final boolean DEFAULT_CONFIRM_POWER_ON      = false;
+  public static final boolean DEFAULT_CONFIRM_QUIT          = false;
+  public static final boolean DEFAULT_COPY_AND_PASTE_DIRECT = true;
+
+  private static final String HELP_PAGE_HOME    = "/help/home.htm";
+  private static final String HELP_PAGE_LICENSE = "/help/license.htm";
+
+  private static final String TEXT_FULLSCREEN_ON
+					= "Vollbildmodus einschalten";
+  private static final String TEXT_FULLSCREEN_OFF
+					= "Vollbildmodus ausschalten";
+
+  private static final String TEXT_MAX_SPEED = "Maximale Geschwindigkeit";
+  private static final String TEXT_STD_SPEED = "Standard-Geschwindigkeit";
+
+  private static final String ACTION_AUDIO             = "audio";
+  private static final String ACTION_AUDIORECORDER     = "audiorecorder";
+  private static final String ACTION_BASIC_OPEN        = "basic.open";
+  private static final String ACTION_BASIC_SAVE        = "basic.save";
+  private static final String ACTION_CALCULATOR        = "calculator";
+  private static final String ACTION_CHESSBOARD        = "chessboard";
+  private static final String ACTION_DEBUGGER          = "debugger";
+  private static final String ACTION_DISK_UNPACK       = "disk.unpack";
+  private static final String ACTION_DISKIMAGE_BUILD   = "diskimage.build";
+  private static final String ACTION_DISKIMAGE_CAPTURE = "diskimage.capture";
+  private static final String ACTION_DISKIMAGE_UNPACK  = "diskimage.unpack";
+  private static final String ACTION_DISKIMAGE_WRITE   = "diskimage.write";
+  private static final String ACTION_DISKVIEWER        = "diskviewer";
+  private static final String ACTION_FILEBROWSER       = "filebrowser";
+  private static final String ACTION_FILECONVERTER     = "fileconverter";
+  private static final String ACTION_FILE_LOAD         = "file.load";
+  private static final String ACTION_FILE_SAVE         = "file.save";
+  private static final String ACTION_FIND_FILES        = "find_files";
+  private static final String ACTION_FLOPPYDISKS       = "floppydisks";
+  private static final String ACTION_FULLSCREEN        = "fullscreen";
+  private static final String ACTION_HELP_ABOUT        = "help.about";
+  private static final String ACTION_HELP_CONTENT      = "help.content";
+  private static final String ACTION_HELP_LICENSE      = "help.license";
+  private static final String ACTION_HELP_SYSTEM       = "help.system";
+  private static final String ACTION_HEXDIFF           = "hexdiff";
+  private static final String ACTION_HEXEDITOR         = "hexeditor";
+  private static final String ACTION_IMAGEVIEWER       = "imageviewer";
+  private static final String ACTION_JOYSTICK          = "joystick";
+  private static final String ACTION_KEYBOARD          = "keyboard";
+  private static final String ACTION_COPY              = "edit.copy";
+  private static final String ACTION_PASTE             = "edit.paste";
+  private static final String ACTION_PASTE_CANCEL      = "edit.paste.cancel";
+  private static final String ACTION_PASTE_WITH        = "edit.paste.with";
+  private static final String ACTION_PLOTTER           = "plotter";
+  private static final String ACTION_PRINTER           = "printer";
+  private static final String ACTION_PROFILE           = "profile";
+  private static final String ACTION_QUIT              = "file.quit";
+  private static final String ACTION_MEMEDITOR         = "memeditor";
+  private static final String ACTION_NMI               = "nmi";
+  private static final String ACTION_PAUSE             = "pause";
+  private static final String ACTION_POWER_ON          = "power_on";
+  private static final String ACTION_RAMFLOPPIES       = "ramfloppies";
+  private static final String ACTION_REASSEMBLER       = "reassembler";
+  private static final String ACTION_RESET             = "reset";
+  private static final String ACTION_SCALE_1           = "scale.1";
+  private static final String ACTION_SCALE_2           = "scale.2";
+  private static final String ACTION_SCALE_3           = "scale.3";
+  private static final String ACTION_SCALE_4           = "scale.4";
+  private static final String ACTION_SCREENIMAGE_SHOW  = "screen.image.show";
+  private static final String ACTION_SCREENIMAGE_COPY  = "screen.image.copy";
+  private static final String ACTION_SCREENIMAGE_SAVE  = "screen.image.save";
+  private static final String ACTION_SCREENTEXT_SHOW   = "screen.text.show";
+  private static final String ACTION_SCREENTEXT_COPY   = "screen.text.copy";
+  private static final String ACTION_SCREENTEXT_SAVE   = "screen.text.save";
+  private static final String ACTION_SCREENSHOT        = "screenshot";
+  private static final String ACTION_SCREENVIDEO       = "screen.video";
+  private static final String ACTION_SETTINGS          = "extra.settings";
+  private static final String ACTION_SPEED             = "speed";
+  private static final String ACTION_TEXTEDITOR        = "texteditor";
+  private static final String ACTION_USB               = "usb";
+
 
   private JMenuBar             mnuBar;
   private JMenuItem            mnuScreenTextShow;
@@ -61,7 +209,7 @@ public class ScreenFrm extends BasicFrm implements
   private JMenuItem            mnuBasicSave;
   private JMenuItem            mnuAudio;
   private JMenuItem            mnuChessboard;
-  private JMenuItem            mnuFloppyDisk;
+  private JMenuItem            mnuFloppyDisks;
   private JMenuItem            mnuFullScreen;
   private JMenuItem            mnuJoystick;
   private JMenuItem            mnuKeyboard;
@@ -94,7 +242,7 @@ public class ScreenFrm extends BasicFrm implements
   private JButton              btnPaste;
   private JButton              btnAudio;
   private JButton              btnChessboard;
-  private JButton              btnFloppyDisk;
+  private JButton              btnFloppyDisks;
   private JButton              btnKeyboard;
   private JButton              btnSettings;
   private JButton              btnReset;
@@ -174,20 +322,20 @@ public class ScreenFrm extends BasicFrm implements
 
     mnuFile.add( createJMenuItem(
 			"Laden...",
-			"file.load",
+			ACTION_FILE_LOAD,
 			KeyStroke.getKeyStroke(
 					KeyEvent.VK_L,
 					InputEvent.ALT_MASK ) ) );
     mnuFile.add( createJMenuItem(
 			"Speichern...",
-			"file.save",
+			ACTION_FILE_SAVE,
 			KeyStroke.getKeyStroke(
 					KeyEvent.VK_S,
 					InputEvent.ALT_MASK ) ) );
     mnuFile.addSeparator();
     this.mnuBasicOpen = createJMenuItem(
 	"BASIC-Programm im Texteditor \u00F6ffnen...",
-	"file.basic.open",
+	ACTION_BASIC_OPEN,
 	KeyStroke.getKeyStroke(
 			KeyEvent.VK_T,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) );
@@ -195,7 +343,7 @@ public class ScreenFrm extends BasicFrm implements
 
     this.mnuBasicSave = createJMenuItem(
 	"BASIC-Programm speichern...",
-	"file.basic.save",
+	ACTION_BASIC_SAVE,
 	KeyStroke.getKeyStroke(
 			KeyEvent.VK_S,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) );
@@ -204,60 +352,60 @@ public class ScreenFrm extends BasicFrm implements
 
     this.mnuRAMFloppies = createJMenuItem(
 				"RAM-Floppies...",
-				"file.ramfloppies" );
+				ACTION_RAMFLOPPIES );
     mnuFile.add( this.mnuRAMFloppies );
 
-    this.mnuFloppyDisk = createJMenuItem(
+    this.mnuFloppyDisks = createJMenuItem(
 				"Diskettenstation...",
-				"file.floppydisk.station" );
-    mnuFile.add( this.mnuFloppyDisk );
+				ACTION_FLOPPYDISKS );
+    mnuFile.add( this.mnuFloppyDisks );
     mnuFile.addSeparator();
 
     // Untermenu Bildschirmausgabe
     JMenu mnuScreen = new JMenu( "Bildschirmausgabe" );
     mnuFile.add( mnuScreen );
     mnuScreen.add( createJMenuItem(
-			"als Bildschirmfoto anzeigen...",
-			"file.screen.image.show" ) );
+				"als Bildschirmfoto anzeigen...",
+				ACTION_SCREENIMAGE_SHOW ) );
     mnuScreen.add( createJMenuItem(
-			"als Bild kopieren",
-			"file.screen.image.copy" ) );
+				"als Bild kopieren",
+				ACTION_SCREENIMAGE_COPY ) );
     mnuScreen.add( createJMenuItem(
-			"als Bilddatei speichern...",
-			"file.screen.image.save" ) );
+				"als Bilddatei speichern...",
+				ACTION_SCREENIMAGE_SAVE ) );
     mnuScreen.addSeparator();
 
     this.mnuScreenTextShow = createJMenuItem(
 				"im Texteditor anzeigen",
-				"file.screen.text.show" );
+				ACTION_SCREENTEXT_SHOW );
     mnuScreen.add( this.mnuScreenTextShow );
 
     this.mnuScreenTextCopy = createJMenuItem(
 				"als Text kopieren",
-				"file.screen.text.copy" );
+				ACTION_SCREENTEXT_COPY );
     mnuScreen.add( this.mnuScreenTextCopy );
 
     this.mnuScreenTextSave = createJMenuItem(
 				"als Textdatei speichern...",
-				"file.screen.text.save" );
+				ACTION_SCREENTEXT_SAVE );
     mnuScreen.add( this.mnuScreenTextSave );
     mnuFile.addSeparator();
 
     mnuFile.add( createJMenuItem(
 			"Texteditor/Programmierung...",
-			"file.texteditor",
+			ACTION_TEXTEDITOR,
 			KeyStroke.getKeyStroke(
 				KeyEvent.VK_T,
 				InputEvent.ALT_MASK ) ) );
-    mnuFile.add( createJMenuItem( "Datei-Browser...", "file.browser" ) );
+    mnuFile.add( createJMenuItem( "Datei-Browser...", ACTION_FILEBROWSER ) );
     mnuFile.add( createJMenuItem(
 			"Dateien suchen...",
-			"file.find",
+			ACTION_FIND_FILES,
 			KeyStroke.getKeyStroke(
 					KeyEvent.VK_F,
 					InputEvent.ALT_MASK ) ) );
     mnuFile.addSeparator();
-    mnuFile.add( createJMenuItem( "Beenden", "file.quit" ) );
+    mnuFile.add( createJMenuItem( "Beenden", ACTION_QUIT ) );
 
 
     // Menu Bearbeiten
@@ -266,7 +414,7 @@ public class ScreenFrm extends BasicFrm implements
 
     this.mnuEditCopy = createJMenuItem(
 			"Kopieren",
-			"edit.copy",
+			ACTION_COPY,
 			KeyStroke.getKeyStroke(
 					KeyEvent.VK_C,
 					InputEvent.ALT_MASK ) );
@@ -275,7 +423,7 @@ public class ScreenFrm extends BasicFrm implements
 
     this.mnuEditPaste = createJMenuItem(
 			"Einf\u00FCgen",
-			"edit.paste",
+			ACTION_PASTE,
 			KeyStroke.getKeyStroke(
 					KeyEvent.VK_V,
 					InputEvent.ALT_MASK ) );
@@ -284,14 +432,14 @@ public class ScreenFrm extends BasicFrm implements
 
     this.mnuEditPasteWith = createJMenuItem(
 				"Einf\u00FCgen mit...",
-				"edit.paste.with" );
+				ACTION_PASTE_WITH );
     this.mnuEditPasteWith.setEnabled( false );
     mnuEdit.add( this.mnuEditPasteWith );
     mnuEdit.addSeparator();
 
     this.mnuEditPasteCancel = createJMenuItem(
 				"Einf\u00FCgen abbrechen",
-				"edit.paste.cancel" );
+				ACTION_PASTE_CANCEL );
     this.mnuEditPasteCancel.setEnabled( false );
     mnuEdit.add( this.mnuEditPasteCancel );
 
@@ -305,41 +453,41 @@ public class ScreenFrm extends BasicFrm implements
     ButtonGroup grpScale = new ButtonGroup();
 
     this.btnScreenScale1 = createJRadioButtonMenuItem(
-			grpScale,
-			"100 %",
-			"extra.scale.1",
-			true,
-			KeyStroke.getKeyStroke(
+				grpScale,
+				"100 %",
+				ACTION_SCALE_1,
+				true,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_1,
 					InputEvent.ALT_MASK ) );
     mnuExtraScale.add( this.btnScreenScale1 );
 
     this.btnScreenScale2 = createJRadioButtonMenuItem(
-			grpScale,
-			"200 %",
-			"extra.scale.2",
-			false,
-			KeyStroke.getKeyStroke(
+				grpScale,
+				"200 %",
+				ACTION_SCALE_2,
+				false,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_2,
 					InputEvent.ALT_MASK ) );
     mnuExtraScale.add( this.btnScreenScale2 );
 
     this.btnScreenScale3 = createJRadioButtonMenuItem(
-			grpScale,
-			"300 %",
-			"extra.scale.3",
-			false,
-			KeyStroke.getKeyStroke(
+				grpScale,
+				"300 %",
+				ACTION_SCALE_3,
+				false,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_3,
 					InputEvent.ALT_MASK ) );
     mnuExtraScale.add( this.btnScreenScale3 );
 
     this.btnScreenScale4 = createJRadioButtonMenuItem(
-			grpScale,
-			"400 %",
-			"extra.scale.4",
-			false,
-			KeyStroke.getKeyStroke(
+				grpScale,
+				"400 %",
+				ACTION_SCALE_4,
+				false,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_4,
 					InputEvent.ALT_MASK ) );
     mnuExtraScale.add( this.btnScreenScale4 );
@@ -348,131 +496,133 @@ public class ScreenFrm extends BasicFrm implements
     mnuExtra.addSeparator();
 
     this.mnuAudio = createJMenuItem(
-			"Audio/Kassette...",
-			"extra.audio",
-			KeyStroke.getKeyStroke(
+				"Audio/Kassette...",
+				ACTION_AUDIO,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_A,
 					InputEvent.ALT_MASK ) );
     mnuExtra.add( this.mnuAudio );
 
     this.mnuKeyboard = createJMenuItem(
-			"Tastatur...",
-			"extra.keyboard",
-			KeyStroke.getKeyStroke(
+				"Tastatur...",
+				ACTION_KEYBOARD,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_K,
 					InputEvent.ALT_MASK ) );
     mnuExtra.add( this.mnuKeyboard );
 
     this.mnuJoystick = createJMenuItem(
-			"Joysticks...",
-			"extra.joystick",
-			KeyStroke.getKeyStroke(
+				"Joysticks...",
+				ACTION_JOYSTICK,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_J,
 					InputEvent.ALT_MASK ) );
     mnuExtra.add( this.mnuJoystick );
 
     this.mnuPrintJobs = createJMenuItem(
 				"Druckauftr\u00E4ge...",
-				"extra.print" );
+				ACTION_PRINTER );
     mnuExtra.add( this.mnuPrintJobs );
 
     this.mnuPlotter = createJMenuItem(
 				"Plotter...",
-				"extra.plotter" );
+				ACTION_PLOTTER );
     mnuExtra.add( this.mnuPlotter );
 
     this.mnuUSB = createJMenuItem(
-			"USB-Anschluss...",
-			"extra.usb",
-			KeyStroke.getKeyStroke(
+				"USB-Anschluss...",
+				ACTION_USB,
+				KeyStroke.getKeyStroke(
 					KeyEvent.VK_U,
 					InputEvent.ALT_MASK ) );
     mnuExtra.add( this.mnuUSB );
 
     this.mnuChessboard = createJMenuItem(
 				"Schachbrett...",
-				"extra.chessboard" );
+				ACTION_CHESSBOARD );
     mnuExtra.add( this.mnuChessboard );
     mnuExtra.addSeparator();
 
     mnuExtra.add( createJMenuItem(
 				"Bildschirmfoto...",
-				"extra.screen.photo" ) );
+				ACTION_SCREENSHOT ) );
     mnuExtra.add( createJMenuItem(
 				"Bildschirmvideo...",
-				"extra.screen.video" ) );
+				ACTION_SCREENVIDEO ) );
 
     JMenu mnuExtraTools = new JMenu( "Werkzeuge" );
     mnuExtraTools.add( createJMenuItem(
 		"Debugger...",
-		"extra.debugger",
+		ACTION_DEBUGGER,
 		KeyStroke.getKeyStroke(
 			KeyEvent.VK_D,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) ) );
     mnuExtraTools.add( createJMenuItem(
 		"Reassembler...",
-		"extra.reassembler",
+		ACTION_REASSEMBLER,
 		KeyStroke.getKeyStroke(
 			KeyEvent.VK_R,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) ) );
     mnuExtraTools.add( createJMenuItem(
 		"Speichereditor...",
-		"extra.memeditor",
+		ACTION_MEMEDITOR,
 		KeyStroke.getKeyStroke(
 			KeyEvent.VK_M,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) ) );
     mnuExtraTools.add( createJMenuItem(
 		"Hex-Editor...",
-		"extra.hexeditor",
+		ACTION_HEXEDITOR,
 		KeyStroke.getKeyStroke(
 			KeyEvent.VK_H,
 			InputEvent.ALT_MASK | InputEvent.SHIFT_MASK ) ) );
     mnuExtraTools.add( createJMenuItem(
 				"Hex-Dateivergleicher...",
-				"extra.hexdiff" ) );
+				ACTION_HEXDIFF ) );
     mnuExtraTools.add( createJMenuItem(
 				"Dateikonverter...",
-				"extra.fileconverter" ) );
+				ACTION_FILECONVERTER ) );
     mnuExtraTools.add( createJMenuItem(
-				"Bildbetrachter...", "extra.imageviewer" ) );
+				"Bildbetrachter/-bearbeitung...",
+				ACTION_IMAGEVIEWER ) );
     mnuExtraTools.add( createJMenuItem(
-				"Audiorecorder...", "extra.audiorecorder" ) );
-    mnuExtraTools.add( createJMenuItem( "Rechner...", "extra.calculator" ) );
+				"Audiorecorder...",
+				ACTION_AUDIORECORDER ) );
+    mnuExtraTools.add( createJMenuItem( "Rechner...", ACTION_CALCULATOR ) );
     mnuExtraTools.add( createJMenuItem(
 			"Diskettenabbilddatei-Inspektor...",
-			"extra.diskviewer" ) );
+			ACTION_DISKVIEWER ) );
     mnuExtraTools.addSeparator();
     mnuExtraTools.add( createJMenuItem(
 			"CP/M-Diskettenabbilddatei manuell erstellen...",
-			"extra.diskimage.create_manually" ) );
+			ACTION_DISKIMAGE_BUILD ) );
     mnuExtraTools.add( createJMenuItem(
 			"CP/M-Diskettenabbilddatei entpacken...",
-			"extra.diskimage.unpack" ) );
+			ACTION_DISKIMAGE_UNPACK ) );
     mnuExtraTools.add( createJMenuItem(
 			"CP/M-Diskette entpacken...",
-			"extra.disk.unpack" ) );
+			ACTION_DISK_UNPACK ) );
     mnuExtraTools.addSeparator();
     mnuExtraTools.add( createJMenuItem(
 			"Abbilddatei von Datentr\u00E4ger erstellen...",
-			"extra.diskimage.create_from_disk" ) );
+			ACTION_DISKIMAGE_CAPTURE ) );
     mnuExtraTools.add( createJMenuItem(
 			"Abbilddatei auf Datentr\u00E4ger schreiben...",
-			"extra.diskimage.write_to_disk" ) );
+			ACTION_DISKIMAGE_WRITE ) );
     mnuExtra.add( mnuExtraTools );
     mnuExtra.addSeparator();
 
-    mnuExtra.add( createJMenuItem( "Einstellungen...", "extra.settings" ) );
-    mnuExtra.add( createJMenuItem( "Profil anwenden...", "extra.profile" ) );
+    mnuExtra.add( createJMenuItem( "Einstellungen...", ACTION_SETTINGS ) );
+    mnuExtra.add( createJMenuItem( "Profil anwenden...", ACTION_PROFILE ) );
     mnuExtra.addSeparator();
 
     this.mnuFullScreen = createJMenuItem(
-				textFullScreenOn,
-				"extra.fullscreen" );
+				TEXT_FULLSCREEN_ON,
+				ACTION_FULLSCREEN );
     mnuExtra.add( this.mnuFullScreen );
 
     this.mnuSpeed = createJMenuItem(
-				textMaxSpeed,
-				"extra.speed",
+				TEXT_MAX_SPEED,
+				ACTION_SPEED,
 				KeyStroke.getKeyStroke(
 					KeyEvent.VK_G,
 					InputEvent.ALT_MASK ) );
@@ -480,7 +630,7 @@ public class ScreenFrm extends BasicFrm implements
 
     this.mnuPause = createJMenuItem(
 				"Pause",
-				"extra.pause",
+				ACTION_PAUSE,
 				KeyStroke.getKeyStroke(
 					KeyEvent.VK_P,
 					InputEvent.ALT_MASK ) );
@@ -488,19 +638,19 @@ public class ScreenFrm extends BasicFrm implements
 
     mnuExtra.add( createJMenuItem(
 				"NMI ausl\u00F6sen",
-				"extra.nmi",
+				ACTION_NMI,
 				KeyStroke.getKeyStroke(
 					KeyEvent.VK_N,
 					InputEvent.ALT_MASK ) ) );
     mnuExtra.add( createJMenuItem(
 				"Zur\u00FCcksetzen (RESET)",
-				"extra.reset",
+				ACTION_RESET,
 				KeyStroke.getKeyStroke(
 					KeyEvent.VK_R,
 					InputEvent.ALT_MASK ) ) );
     mnuExtra.add( createJMenuItem(
 				"Einschalten (Power On)",
-				"extra.power_on",
+				ACTION_POWER_ON,
 				KeyStroke.getKeyStroke(
 					KeyEvent.VK_I,
 					InputEvent.ALT_MASK ) ) );
@@ -508,16 +658,20 @@ public class ScreenFrm extends BasicFrm implements
 
     // Menu Hilfe
     JMenu mnuHelp = new JMenu( "?" );
-    mnuHelp.add( createJMenuItem( "Hilfe...", "help.content" ) );
+    mnuHelp.add( createJMenuItem( "Hilfe...", ACTION_HELP_CONTENT ) );
 
     this.mnuHelpSys = createJMenuItem(
 				"Hilfe zum emulierten System...",
-				"help.system" );
+				ACTION_HELP_SYSTEM );
     this.mnuHelpSys.setEnabled( false );
     mnuHelp.add( this.mnuHelpSys );
     mnuHelp.addSeparator();
-    mnuHelp.add( createJMenuItem( "\u00DCber JKCEMU...", "help.about" ) );
-    mnuHelp.add( createJMenuItem( "Lizenzbestimmungen...", "help.license" ) );
+    mnuHelp.add( createJMenuItem(
+			"\u00DCber JKCEMU...",
+			ACTION_HELP_ABOUT ) );
+    mnuHelp.add( createJMenuItem(
+			"Lizenzbestimmungen...",
+			ACTION_HELP_LICENSE ) );
 
 
     // Menu zusammenbauen
@@ -532,74 +686,74 @@ public class ScreenFrm extends BasicFrm implements
     // Popup-Menu
     this.mnuPopup = new JPopupMenu();
 
-    this.mnuPopupCopy = createJMenuItem( "Kopieren", "edit.copy" );
+    this.mnuPopupCopy = createJMenuItem( "Kopieren", ACTION_COPY );
     this.mnuPopupCopy.setEnabled( false );
     this.mnuPopup.add( this.mnuPopupCopy );
 
-    this.mnuPopupPaste = createJMenuItem( "Einf\u00FCgen", "edit.paste" );
+    this.mnuPopupPaste = createJMenuItem( "Einf\u00FCgen", ACTION_PASTE );
     this.mnuPopupPaste.setEnabled( false );
     this.mnuPopup.add( this.mnuPopupPaste );
     this.mnuPopup.addSeparator();
 
-    this.mnuPopup.add( createJMenuItem( "Laden...", "file.load" ) );
-    this.mnuPopup.add( createJMenuItem( "Speichern...", "file.save" ) );
+    this.mnuPopup.add( createJMenuItem( "Laden...", ACTION_FILE_LOAD ) );
+    this.mnuPopup.add( createJMenuItem( "Speichern...", ACTION_FILE_SAVE ) );
     this.mnuPopup.addSeparator();
 
     this.mnuPopupAudio = createJMenuItem(
 				"Audio/Kassette...",
-				"extra.audio" );
+				ACTION_AUDIO );
     this.mnuPopup.add( this.mnuPopupAudio );
 
     this.mnuPopupFloppyDisk = createJMenuItem(
 				"Diskettenstation...",
-				"file.floppydisk.station" );
+				ACTION_FLOPPYDISKS );
     this.mnuPopup.add( this.mnuPopupFloppyDisk );
 
     this.mnuPopupUSB = createJMenuItem(
 				"USB-Anschluss...",
-				"extra.usb" );
+				ACTION_USB );
     this.mnuPopup.add( this.mnuPopupUSB );
 
     this.mnuPopupKeyboard = createJMenuItem(
 				"Tastatur...",
-				"extra.keyboard" );
+				ACTION_KEYBOARD );
     this.mnuPopup.add( this.mnuPopupKeyboard );
 
     this.mnuPopupJoystick = createJMenuItem(
 				"Joysticks...",
-				"extra.joystick" );
+				ACTION_JOYSTICK );
     this.mnuPopup.add( this.mnuPopupJoystick );
     this.mnuPopup.addSeparator();
 
     mnuPopup.add( createJMenuItem(
 				"Einstellungen...",
-				"extra.settings" ) );
+				ACTION_SETTINGS ) );
     this.mnuPopup.addSeparator();
 
     this.mnuPopupFullScreen = createJMenuItem(
-				textFullScreenOn,
-				"extra.fullscreen" );
+				TEXT_FULLSCREEN_ON,
+				ACTION_FULLSCREEN );
     this.mnuPopup.add( this.mnuPopupFullScreen );
 
     this.mnuPopupSpeed = createJMenuItem(
-				textMaxSpeed,
-				"extra.speed" );
+				TEXT_MAX_SPEED,
+				ACTION_SPEED );
     this.mnuPopup.add( this.mnuPopupSpeed );
 
     this.mnuPopupPause = createJMenuItem(
 				"Pause",
-				"extra.pause" );
+				ACTION_PAUSE );
     this.mnuPopup.add( this.mnuPopupPause );
     this.mnuPopup.addSeparator();
 
     this.mnuPopup.add( createJMenuItem(
 				"Zur\u00FCcksetzen (RESET)",
-				"extra.reset" ) );
+				ACTION_RESET ) );
     this.mnuPopup.add( createJMenuItem(
 				"Einschalten (Power On)",
-				"extra.power_on" ) );
+				ACTION_POWER_ON ) );
     this.mnuPopup.addSeparator();
-    this.mnuPopup.add( createJMenuItem( "Beenden", "file.quit" ) );
+    this.mnuPopup.add( createJMenuItem( "Beenden", ACTION_QUIT ) );
 
 
     // Fensterinhalt
@@ -630,54 +784,54 @@ public class ScreenFrm extends BasicFrm implements
     this.btnLoad = createImageButton(
 				"/images/file/open.png",
 				"Laden",
-				"file.load" );
+				ACTION_FILE_LOAD );
 
     this.btnSave = createImageButton(
 				"/images/file/save.png",
 				"Speichern",
-				"file.save" );
+				ACTION_FILE_SAVE );
 
     this.btnCopy = createImageButton(
 				"/images/edit/copy.png",
 				"Kopieren",
-				"edit.copy" );
+				ACTION_COPY );
     this.btnCopy.setEnabled( false );
 
     this.btnPaste = createImageButton(
 				"/images/edit/paste.png",
 				"Einf\u00FCgen",
-				"edit.paste" );
+				ACTION_PASTE );
     this.btnPaste.setEnabled( false );
 
     this.btnAudio = createImageButton(
-				"/images/file/audio.png",
+				"/images/audio/audio.png",
 				"Audio",
-				"extra.audio" );
+				ACTION_AUDIO );
 
     this.btnChessboard = createImageButton(
 				"/images/chess/chessboard.png",
 				"Schachbrett",
-				"extra.chessboard" );
+				ACTION_CHESSBOARD );
 
-    this.btnFloppyDisk = createImageButton(
+    this.btnFloppyDisks = createImageButton(
 				"/images/disk/floppydiskstation.png",
 				"Diskettenstation",
-				"file.floppydisk.station" );
+				ACTION_FLOPPYDISKS );
 
     this.btnKeyboard = createImageButton(
 				"/images/keyboard/keyboard.png",
 				"Tastatur",
-				"extra.keyboard" );
+				ACTION_KEYBOARD );
 
     this.btnSettings = createImageButton(
 				"/images/file/settings.png",
 				"Einstellungen",
-				"extra.settings" );
+				ACTION_SETTINGS );
 
     this.btnReset = createImageButton(
 				"/images/file/reset.png",
 				"Zur\u00FCcksetzen (RESET)",
-				"extra.reset" );
+				ACTION_RESET );
 
 
     // Bildschirmausgabe
@@ -779,6 +933,9 @@ public class ScreenFrm extends BasicFrm implements
 
   public void fireReset( final EmuThread.ResetLevel resetLevel )
   {
+    if( this.emuThread != null ) {
+      this.emuThread.informWillReset();
+    }
     EventQueue.invokeLater(
 		new Runnable()
 		{
@@ -1028,28 +1185,40 @@ public class ScreenFrm extends BasicFrm implements
   }
 
 
-  public void setMaxSpeed( boolean state )
+  public boolean setMaxSpeed( Component owner, boolean state )
   {
+    boolean rv = false;
     if( this.emuThread != null ) {
       Z80CPU z80cpu = this.emuThread.getZ80CPU();
       if( z80cpu != null ) {
-	z80cpu.setBrakeEnabled( !state );
-	EmuSys emuSys = this.emuThread.getEmuSys();
-	if( emuSys != null ) {
-	  z80cpu = emuSys.getSecondZ80CPU();
-	  if( z80cpu != null ) {
-	    z80cpu.setBrakeEnabled( !state );
-	  }
-	}
-	if( state ) {
-	  this.mnuSpeed.setText( textStdSpeed );
-	  this.mnuPopupSpeed.setText( textStdSpeed );
+	if( state && this.emuThread.isAudioLineOpen() ) {
+	  BaseDlg.showInfoDlg(
+		owner,
+		"Solange ein Audiokanal ge\u00F6ffnet ist,\n"
+			+ "kann nicht auf maximale Geschwindigkeit"
+			+ " geschaltet werden\n"
+			+ "da der Audiokanal bremst." );
 	} else {
-	  this.mnuSpeed.setText( textMaxSpeed );
-	  this.mnuPopupSpeed.setText( textMaxSpeed );
+	  z80cpu.setBrakeEnabled( !state );
+	  EmuSys emuSys = this.emuThread.getEmuSys();
+	  if( emuSys != null ) {
+	    z80cpu = emuSys.getSecondZ80CPU();
+	    if( z80cpu != null ) {
+	      z80cpu.setBrakeEnabled( !state );
+	    }
+	  }
+	  if( state ) {
+	    this.mnuSpeed.setText( TEXT_STD_SPEED );
+	    this.mnuPopupSpeed.setText( TEXT_STD_SPEED );
+	  } else {
+	    this.mnuSpeed.setText( TEXT_MAX_SPEED );
+	    this.mnuPopupSpeed.setText( TEXT_MAX_SPEED );
+	  }
+	  rv = true;
 	}
       }
     }
+    return rv;
   }
 
 
@@ -1272,7 +1441,10 @@ public class ScreenFrm extends BasicFrm implements
 	e.consume();
       }
       else if( (m & InputEvent.BUTTON2_MASK) != 0 ) {
-	if( Main.getBooleanProperty( "jkcemu.copy_and_paste.direct", true ) ) {
+	if( Main.getBooleanProperty(
+			PROP_PREFIX + PROP_COPY_AND_PASTE_DIRECT,
+			DEFAULT_COPY_AND_PASTE_DIRECT ) )
+	{
 	  String text = checkConvertScreenText(
 					this.screenFld.getSelectedText() );
 	  if( text != null ) {
@@ -1376,7 +1548,7 @@ public class ScreenFrm extends BasicFrm implements
       if( !emuSys.isAutoScreenRefresh() ) {
 	this.screenRefreshMillis = EmuUtil.parseIntProperty(
 				props,
-				"jkcemu.screen.refresh.ms",
+				PROP_PREFIX + PROP_SCREEN_REFRESH_MS,
 				0,
 				getDefaultScreenRefreshMillis() );
 	if( this.screenRefreshMillis < 10 ) {
@@ -1412,10 +1584,10 @@ public class ScreenFrm extends BasicFrm implements
     boolean rv     = false;
     boolean done   = false;
     int     margin = EmuUtil.parseIntProperty(
-					props,
-					"jkcemu.screen.margin",
-					0,
-					ScreenFld.DEFAULT_MARGIN );
+				props,
+				PROP_PREFIX + PROP_SCREEN_MARGIN,
+				0,
+				ScreenFld.DEFAULT_MARGIN );
     this.screenFld.setMargin( margin );
     if( visible && (emuSys != null) && (oldEmuSys != null) ) {
       if( emuSys.getClass().equals( oldEmuSys.getClass() )
@@ -1517,254 +1689,254 @@ public class ScreenFrm extends BasicFrm implements
       if( e instanceof ActionEvent ) {
 	String actionCmd = ((ActionEvent) e).getActionCommand();
 	if( actionCmd != null ) {
-	  if( actionCmd.equals( "file.quit" ) ) {
+	  if( actionCmd.equals( ACTION_QUIT ) ) {
 	    rv = true;
 	    doClose();
 	  }
-	  else if( actionCmd.equals( "file.load" ) ) {
+	  else if( actionCmd.equals( ACTION_FILE_LOAD ) ) {
 	    rv = true;
 	    doFileLoad( true );
 	  }
-	  else if( actionCmd.equals( "file.save" ) ) {
+	  else if( actionCmd.equals( ACTION_FILE_SAVE ) ) {
 	    rv = true;
 	    doFileSave();
 	  }
-	  else if( actionCmd.equals( "file.ramfloppies" ) ) {
+	  else if( actionCmd.equals( ACTION_RAMFLOPPIES ) ) {
 	    rv = true;
 	    doRAMFloppies();
           }
-	  else if( actionCmd.equals( "file.floppydisk.station" ) ) {
+	  else if( actionCmd.equals( ACTION_FLOPPYDISKS ) ) {
 	    rv = true;
 	    doFloppyDisk();
           }
-	  else if( actionCmd.equals( "file.basic.open" ) ) {
+	  else if( actionCmd.equals( ACTION_BASIC_OPEN ) ) {
 	    rv            = true;
 	    EmuSys emuSys = getEmuSys();
 	    if( emuSys != null ) {
 	      emuSys.openBasicProgram();
 	    }
 	  }
-	  else if( actionCmd.equals( "file.basic.save" ) ) {
+	  else if( actionCmd.equals( ACTION_BASIC_SAVE ) ) {
 	    rv            = true;
 	    EmuSys emuSys = getEmuSys();
 	    if( emuSys != null ) {
 	      emuSys.saveBasicProgram();
 	    }
 	  }
-	  else if( actionCmd.equals( "file.screen.image.show" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENIMAGE_SHOW ) ) {
 	    rv = true;
 	    doFileScreenImageShow();
 	  }
-	  else if( actionCmd.equals( "file.screen.image.copy" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENIMAGE_COPY ) ) {
 	    rv = true;
 	    doFileScreenImageCopy();
 	  }
-	  else if( actionCmd.equals( "file.screen.image.save" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENIMAGE_SAVE ) ) {
 	    rv = true;
 	    doFileScreenImageSave();
 	  }
-	  else if( actionCmd.equals( "file.screen.text.show" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENTEXT_SHOW ) ) {
 	    rv = true;
 	    doFileScreenTextShow();
 	  }
-	  else if( actionCmd.equals( "file.screen.text.save" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENTEXT_SAVE ) ) {
 	    rv = true;
 	    doFileScreenTextSave();
 	  }
-	  else if( actionCmd.equals( "file.screen.text.copy" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENTEXT_COPY ) ) {
 	    rv = true;
 	    doFileScreenTextCopy();
 	  }
-	  else if( actionCmd.equals( "file.find" ) ) {
+	  else if( actionCmd.equals( ACTION_FIND_FILES ) ) {
 	    rv = true;
 	    FindFilesFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "file.browser" ) ) {
+	  else if( actionCmd.equals( ACTION_FILEBROWSER ) ) {
 	    rv = true;
 	    FileBrowserFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "file.texteditor" ) ) {
+	  else if( actionCmd.equals( ACTION_TEXTEDITOR ) ) {
 	    rv = true;
 	    TextEditFrm.open( this.emuThread );
 	  }
-	  else if( actionCmd.equals( "edit.copy" ) ) {
+	  else if( actionCmd.equals( ACTION_COPY ) ) {
 	    rv = true;
 	    doEditCopy();
 	  }
-	  else if( actionCmd.equals( "edit.paste" ) ) {
+	  else if( actionCmd.equals( ACTION_PASTE ) ) {
 	    rv = true;
 	    doEditPaste( false );
 	  }
-	  else if( actionCmd.equals( "edit.paste.with" ) ) {
+	  else if( actionCmd.equals( ACTION_PASTE_WITH ) ) {
 	    rv = true;
 	    doEditPaste( true );
 	  }
-	  else if( actionCmd.equals( "edit.paste.cancel" ) ) {
+	  else if( actionCmd.equals( ACTION_PASTE_CANCEL ) ) {
 	    rv = true;
 	    doEditPasteCancel();
 	  }
-	  else if( actionCmd.equals( "extra.scale.1" ) ) {
+	  else if( actionCmd.equals( ACTION_SCALE_1 ) ) {
 	    rv = true;
 	    doScreenScale( 1 );
 	  }
-	  else if( actionCmd.equals( "extra.scale.2" ) ) {
+	  else if( actionCmd.equals( ACTION_SCALE_2 ) ) {
 	    rv = true;
 	    doScreenScale( 2 );
 	  }
-	  else if( actionCmd.equals( "extra.scale.3" ) ) {
+	  else if( actionCmd.equals( ACTION_SCALE_3 ) ) {
 	    rv = true;
 	    doScreenScale( 3 );
 	  }
-	  else if( actionCmd.equals( "extra.scale.4" ) ) {
+	  else if( actionCmd.equals( ACTION_SCALE_4 ) ) {
 	    rv = true;
 	    doScreenScale( 4 );
 	  }
-	  else if( actionCmd.equals( "extra.audio" ) ) {
+	  else if( actionCmd.equals( ACTION_AUDIO ) ) {
 	    rv = true;
 	    AudioFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "extra.chessboard" ) ) {
+	  else if( actionCmd.equals( ACTION_CHESSBOARD ) ) {
 	    rv = true;
 	    doExtraChessboard();
 	  }
-	  else if( actionCmd.equals( "extra.joystick" ) ) {
+	  else if( actionCmd.equals( ACTION_JOYSTICK ) ) {
 	    rv = true;
 	    JoystickFrm.open( this.emuThread );
 	  }
-	  else if( actionCmd.equals( "extra.keyboard" ) ) {
+	  else if( actionCmd.equals( ACTION_KEYBOARD ) ) {
 	    rv = true;
 	    doExtraKeyboard();
 	  }
-	  else if( actionCmd.equals( "extra.plotter" ) ) {
+	  else if( actionCmd.equals( ACTION_PLOTTER ) ) {
 	    rv = true;
 	    doExtraPlotter();
 	  }
-	  else if( actionCmd.equals( "extra.print" ) ) {
+	  else if( actionCmd.equals( ACTION_PRINTER ) ) {
 	    rv = true;
 	    PrintListFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "extra.usb" ) ) {
+	  else if( actionCmd.equals( ACTION_USB ) ) {
 	    rv = true;
 	    doExtraUSB();
 	  }
-	  else if( actionCmd.equals( "extra.screen.photo" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENSHOT ) ) {
 	    rv = true;
 	    ImageCaptureFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "extra.screen.video" ) ) {
+	  else if( actionCmd.equals( ACTION_SCREENVIDEO ) ) {
 	    rv = true;
 	    VideoCaptureFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "extra.imageviewer" ) ) {
+	  else if( actionCmd.equals( ACTION_IMAGEVIEWER ) ) {
 	    rv = true;
 	    ImageFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.audiorecorder" ) ) {
+	  else if( actionCmd.equals( ACTION_AUDIORECORDER ) ) {
 	    rv = true;
 	    AudioRecorderFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.debugger" ) ) {
+	  else if( actionCmd.equals( ACTION_DEBUGGER ) ) {
 	    rv = true;
 	    doExtraDebugger();
 	  }
-	  else if( actionCmd.equals( "extra.memeditor" ) ) {
+	  else if( actionCmd.equals( ACTION_MEMEDITOR ) ) {
 	    rv = true;
 	    doExtraMemEditor();
 	  }
-	  else if( actionCmd.equals( "extra.reassembler" ) ) {
+	  else if( actionCmd.equals( ACTION_REASSEMBLER ) ) {
 	    rv = true;
 	    doExtraReassembler();
 	  }
-	  else if( actionCmd.equals( "extra.calculator" ) ) {
+	  else if( actionCmd.equals( ACTION_CALCULATOR ) ) {
 	    rv = true;
 	    CalculatorFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.hexdiff" ) ) {
+	  else if( actionCmd.equals( ACTION_HEXDIFF ) ) {
 	    rv = true;
 	    HexDiffFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.hexeditor" ) ) {
+	  else if( actionCmd.equals( ACTION_HEXEDITOR ) ) {
 	    rv = true;
 	    HexEditFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.fileconverter" ) ) {
+	  else if( actionCmd.equals( ACTION_FILECONVERTER ) ) {
 	    rv = true;
 	    FileConvertFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.diskimage.create_manually" ) ) {
+	  else if( actionCmd.equals( ACTION_DISKIMAGE_BUILD ) ) {
 	    rv = true;
 	    DiskImgCreateFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.diskimage.unpack" ) ) {
+	  else if( actionCmd.equals( ACTION_DISKIMAGE_UNPACK ) ) {
 	    rv = true;
 	    doExtraDiskImgUnpack();
 	  }
-	  else if( actionCmd.equals( "extra.disk.unpack" ) ) {
+	  else if( actionCmd.equals( ACTION_DISK_UNPACK ) ) {
 	    rv = true;
 	    doExtraDiskUnpack();
 	  }
-	  else if( actionCmd.equals( "extra.diskimage.create_from_disk" ) ) {
+	  else if( actionCmd.equals( ACTION_DISKIMAGE_CAPTURE ) ) {
 	    rv = true;
 	    DiskImgProcessDlg.createDiskImageFromDrive( this );
 	  }
-	  else if( actionCmd.equals( "extra.diskimage.write_to_disk" ) ) {
+	  else if( actionCmd.equals( ACTION_DISKIMAGE_WRITE ) ) {
 	    rv = true;
 	    DiskImgProcessDlg.writeDiskImageToDrive( this );
 	  }
-	  else if( actionCmd.equals( "extra.diskviewer" ) ) {
+	  else if( actionCmd.equals( ACTION_DISKVIEWER ) ) {
 	    rv = true;
 	    DiskImgViewFrm.open();
 	  }
-	  else if( actionCmd.equals( "extra.settings" ) ) {
+	  else if( actionCmd.equals( ACTION_SETTINGS ) ) {
 	    rv = true;
 	    SettingsFrm.open( this );
 	  }
-	  else if( actionCmd.equals( "extra.profile" ) ) {
+	  else if( actionCmd.equals( ACTION_PROFILE ) ) {
 	    rv = true;
 	    doExtraProfile();
 	  }
-	  else if( actionCmd.equals( "extra.fullscreen" ) ) {
+	  else if( actionCmd.equals( ACTION_FULLSCREEN ) ) {
 	    rv = true;
 	    if( e.getSource() == this.mnuPopupFullScreen ) {
 	      this.fullScreenInfoDone = true;
 	    }
 	    setFullScreenMode( !this.fullScreenMode );
 	  }
-	  else if( actionCmd.equals( "extra.speed" ) ) {
+	  else if( actionCmd.equals( ACTION_SPEED ) ) {
 	    rv = true;
 	    doExtraSpeed();
 	  }
-	  else if( actionCmd.equals( "extra.pause" ) ) {
+	  else if( actionCmd.equals( ACTION_PAUSE ) ) {
 	    rv = true;
 	    doExtraPause();
 	  }
-	  else if( actionCmd.equals( "extra.nmi" ) ) {
+	  else if( actionCmd.equals( ACTION_NMI ) ) {
 	    rv = true;
 	    doExtraNMI();
 	  }
-	  else if( actionCmd.equals( "extra.reset" ) ) {
+	  else if( actionCmd.equals( ACTION_RESET ) ) {
 	    rv = true;
 	    doExtraReset();
 	  }
-	  else if( actionCmd.equals( "extra.power_on" ) ) {
+	  else if( actionCmd.equals( ACTION_POWER_ON ) ) {
 	    rv = true;
 	    doExtraPowerOn();
 	  }
-	  else if( actionCmd.equals( "help.content" ) ) {
+	  else if( actionCmd.equals( ACTION_HELP_CONTENT ) ) {
 	    rv = true;
-	    HelpFrm.open( "/help/home.htm" );
+	    HelpFrm.open( HELP_PAGE_HOME );
 	  }
-	  else if( actionCmd.equals( "help.system" ) ) {
+	  else if( actionCmd.equals( ACTION_HELP_SYSTEM ) ) {
 	    rv = true;
 	    doHelpSystem();
 	  }
-	  else if( actionCmd.equals( "help.about" ) ) {
+	  else if( actionCmd.equals( ACTION_HELP_ABOUT ) ) {
 	    rv = true;
 	    (new AboutDlg( this )).setVisible( true );
 	  }
-	  else if( actionCmd.equals( "help.license" ) ) {
+	  else if( actionCmd.equals( ACTION_HELP_LICENSE ) ) {
 	    rv = true;
-	    HelpFrm.open( "/help/license.htm" );
+	    HelpFrm.open( HELP_PAGE_LICENSE );
 	  }
 	}
       }
@@ -1778,10 +1950,10 @@ public class ScreenFrm extends BasicFrm implements
   {
     boolean rv = true;
     if( EmuUtil.parseBoolean(
-		Main.getProperty( "jkcemu.confirm.quit" ),
-		false ) )
+		Main.getProperty( PROP_PREFIX + PROP_CONFIRM_QUIT ),
+		DEFAULT_CONFIRM_QUIT ) )
     {
-      if( !BasicDlg.showYesNoDlg(
+      if( !BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie den Emulator jetzt beenden?",
 		"Best\u00E4tigung" ) )
@@ -1807,8 +1979,8 @@ public class ScreenFrm extends BasicFrm implements
       if( frms != null ) {
 	for( Frame f : frms ) {
 	  if( f != this ) {
-	    if( f instanceof BasicFrm ) {
-	      if( !((BasicFrm) f).doQuit() ) {
+	    if( f instanceof BaseFrm ) {
+	      if( !((BaseFrm) f).doQuit() ) {
 		return false;
 	      }
 	    } else {
@@ -1851,16 +2023,16 @@ public class ScreenFrm extends BasicFrm implements
       {
 	String prefix = getSettingsPrefix();
 	props.setProperty(
-			prefix + BasicFrm.PROP_WINDOW_X,
+			prefix + BaseFrm.PROP_WINDOW_X,
 			String.valueOf( this.windowLocation.x ) );
 	props.setProperty(
-			prefix + BasicFrm.PROP_WINDOW_Y,
+			prefix + BaseFrm.PROP_WINDOW_Y,
 			String.valueOf( this.windowLocation.y ) );
 	props.setProperty(
-			prefix + BasicFrm.PROP_WINDOW_WIDTH,
+			prefix + BaseFrm.PROP_WINDOW_WIDTH,
 			String.valueOf( this.windowSize.width ) );
 	props.setProperty(
-			prefix + BasicFrm.PROP_WINDOW_HEIGHT,
+			prefix + BaseFrm.PROP_WINDOW_HEIGHT,
 			String.valueOf( this.windowSize.height ) );
       }
       props.setProperty(
@@ -1910,7 +2082,7 @@ public class ScreenFrm extends BasicFrm implements
     boolean loadWithOptions = true;
     File    file            = null;
     File    preSelection    = EmuUtil.getDirectory(
-				Main.getLastDirFile( "software" ) );
+			Main.getLastDirFile( Main.FILE_GROUP_SOFTWARE ) );
     if( EmuUtil.isJKCEMUFileDialogSelected() ) {
       FileSelectDlg dlg = new FileSelectDlg(
 			this,
@@ -1933,9 +2105,17 @@ public class ScreenFrm extends BasicFrm implements
       startSelected   = dlg.isStartSelected();
     } else {
       file = EmuUtil.showFileOpenDlg(
-				this,
-				"Datei in Arbeitsspeicher laden",
-				preSelection );
+			this,
+			"Datei in Arbeitsspeicher laden",
+			preSelection,
+			EmuUtil.getBinaryFileFilter(),
+			EmuUtil.getAC1Basic6FileFilter(),
+			EmuUtil.getBasicFileFilter(),
+			EmuUtil.getKCSystemFileFilter(),
+			EmuUtil.getKCBasicFileFilter(),
+			EmuUtil.getTapeFileFilter(),
+			EmuUtil.getHeadersaveFileFilter(),
+			EmuUtil.getHexFileFilter() );
     }
     if( file != null ) {
       LoadDlg.loadFile(
@@ -2014,10 +2194,10 @@ public class ScreenFrm extends BasicFrm implements
       String screenText = checkConvertScreenText( emuSys.getScreenText() );
       if( screenText != null ) {
 	File file = EmuUtil.showFileSaveDlg(
-				this,
-				"Textdatei speichern",
-				Main.getLastDirFile( "screen" ),
-				EmuUtil.getTextFileFilter() );
+			this,
+			"Textdatei speichern",
+			Main.getLastDirFile( Main.FILE_GROUP_SCREEN ),
+			EmuUtil.getTextFileFilter() );
 	if( file != null ) {
 	  String fileName = file.getPath();
 	  if( fileName != null ) {
@@ -2040,13 +2220,13 @@ public class ScreenFrm extends BasicFrm implements
 	      showStatusText( "Textdatei gespeichert" );
 	    }
 	    catch( Exception ex ) {
-	      BasicDlg.showErrorDlg(
+	      BaseDlg.showErrorDlg(
 		this,
 		fileName + ":\nSpeichern der Datei fehlgeschlagen\n\n"
 			+ ex.getMessage() );
 	    }
 	    finally {
-	      EmuUtil.doClose( out );
+	      EmuUtil.closeSilent( out );
 	    }
 	  }
 	}
@@ -2078,7 +2258,7 @@ public class ScreenFrm extends BasicFrm implements
 	frm.setDriveCount( n );
 	EmuUtil.showFrame( frm );
       } else {
-	BasicDlg.showInfoDlg(
+	BaseDlg.showInfoDlg(
 		this,
 		"Das gerade emulierte System unterst\u00FCtzt"
 			+ " keine Floppy Disks." );
@@ -2196,7 +2376,7 @@ public class ScreenFrm extends BasicFrm implements
       if( emuSys.supportsChessboard() ) {
 	ChessboardFrm.open( this.emuThread );
       } else {
-        BasicDlg.showInfoDlg(
+        BaseDlg.showInfoDlg(
 		this,
 		"Das Schachbrett kann nur angezeigt werden,\n"
 			+ "wenn ein Schachcomputer oder Lerncomputer\n"
@@ -2228,7 +2408,7 @@ public class ScreenFrm extends BasicFrm implements
 	  if( this.keyboardFrm != null ) {
 	    EmuUtil.showFrame( this.keyboardFrm );
 	  } else {
-	    BasicDlg.showErrorDlg(
+	    BaseDlg.showErrorDlg(
 		this,
 		"F\u00FCr das emulierte System steht keine Tastaturansicht"
 			+ " zur Verf\u00FCgung." );
@@ -2248,7 +2428,7 @@ public class ScreenFrm extends BasicFrm implements
       if( plotter != null ) {
 	PlotterFrm.open( plotter );
       } else {
-        BasicDlg.showInfoDlg(
+        BaseDlg.showInfoDlg(
 		this,
 		"Das Plotter-Fenster kann nur angezeigt werden,\n"
 			+ "wenn auch ein Plotter emuliert wird.\n"
@@ -2290,7 +2470,7 @@ public class ScreenFrm extends BasicFrm implements
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"CP/M-Diskettenabbilddatei entpacken",
-			Main.getLastDirFile( "disk" ),
+			Main.getLastDirFile( Main.FILE_GROUP_DISK ),
 			EmuUtil.getPlainDiskFileFilter(),
 			EmuUtil.getAnaDiskFileFilter(),
 			EmuUtil.getCopyQMFileFilter(),
@@ -2340,7 +2520,7 @@ public class ScreenFrm extends BasicFrm implements
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
   }
@@ -2354,7 +2534,7 @@ public class ScreenFrm extends BasicFrm implements
 	DiskUtil.unpackPlainDisk( this, driveFileName );
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
   }
@@ -2451,7 +2631,7 @@ public class ScreenFrm extends BasicFrm implements
   {
     Z80CPU z80cpu = this.emuThread.getZ80CPU();
     if( z80cpu != null ) {
-      setMaxSpeed( z80cpu.isBrakeEnabled() );
+      setMaxSpeed( this, z80cpu.isBrakeEnabled() );
     }
   }
 
@@ -2481,10 +2661,10 @@ public class ScreenFrm extends BasicFrm implements
     Z80CPU z80cpu = this.emuThread.getZ80CPU();
     if( z80cpu != null ) {
       if( EmuUtil.parseBoolean(
-		Main.getProperty( "jkcemu.confirm.nmi" ),
-		true ) )
+		Main.getProperty( PROP_PREFIX + PROP_CONFIRM_NMI ),
+		DEFAULT_CONFIRM_NMI ) )
       {
-	if( BasicDlg.showYesNoDlg(
+	if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie einen nicht maskierbaren\n"
 			+ "Interrupt (NMI) ausl\u00F6sen?\n\n"
@@ -2507,10 +2687,10 @@ public class ScreenFrm extends BasicFrm implements
   private void doExtraReset()
   {
     if( EmuUtil.parseBoolean(
-		Main.getProperty( "jkcemu.confirm.reset" ),
-		false ) )
+		Main.getProperty( PROP_PREFIX + PROP_CONFIRM_RESET ),
+		DEFAULT_CONFIRM_RESET ) )
     {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie den Emulator neu starten?",
 		"Best\u00E4tigung" ) )
@@ -2526,10 +2706,10 @@ public class ScreenFrm extends BasicFrm implements
   private void doExtraPowerOn()
   {
     if( EmuUtil.parseBoolean(
-		Main.getProperty( "jkcemu.confirm.power_on" ),
-		false ) )
+		Main.getProperty( PROP_PREFIX + PROP_CONFIRM_POWER_ON ),
+		DEFAULT_CONFIRM_POWER_ON ) )
     {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie das Aus- und wieder Einschalten"
 			+ " emulieren?\n"
@@ -2552,7 +2732,7 @@ public class ScreenFrm extends BasicFrm implements
       if( emuSys.supportsUSB() ) {
 	USBInterfaceFrm.open( this );
       } else {
-        BasicDlg.showInfoDlg(
+        BaseDlg.showInfoDlg(
 		this,
 		"Das Fenster f\u00FCr den USB-Anschluss kann nur"
 			+ " angezeigt werden,\n"
@@ -2904,8 +3084,8 @@ public class ScreenFrm extends BasicFrm implements
 	  setUndecorated( true );
 	}
 	catch( IllegalComponentStateException ex ) {}
-	this.mnuFullScreen.setText( textFullScreenOff );
-	this.mnuPopupFullScreen.setText( textFullScreenOff );
+	this.mnuFullScreen.setText( TEXT_FULLSCREEN_OFF );
+	this.mnuPopupFullScreen.setText( TEXT_FULLSCREEN_OFF );
 	if( !this.fullScreenInfoDone ) {
 	  this.fullScreenInfoDone = true;
 	  final Component owner = this;
@@ -2914,7 +3094,7 @@ public class ScreenFrm extends BasicFrm implements
 		{
 		  public void run()
 		  {
-		    BasicDlg.showInfoDlg(
+		    BaseDlg.showInfoDlg(
 			owner,
 			"Den Vollbildmodus k\u00F6nnen Sie"
 				+ " im Kontextmen\u00FC"
@@ -2932,18 +3112,18 @@ public class ScreenFrm extends BasicFrm implements
 	  setUndecorated( false );
 	}
 	catch( IllegalComponentStateException ex ) {}
+	setExtendedState( Frame.NORMAL );
 	if( this.windowLocation != null ) {
 	  setLocation( this.windowLocation );
 	}
 	if( this.windowSize != null ) {
 	  setSize( this.windowSize );
 	} else {
-	  setExtendedState( Frame.NORMAL );
 	  screenFld.updPreferredSize();
 	  pack();
 	}
-	this.mnuFullScreen.setText( textFullScreenOn );
-	this.mnuPopupFullScreen.setText( textFullScreenOn );
+	this.mnuFullScreen.setText( TEXT_FULLSCREEN_ON );
+	this.mnuPopupFullScreen.setText( TEXT_FULLSCREEN_ON );
       }
       setVisible( true );
     }
@@ -3011,7 +3191,7 @@ public class ScreenFrm extends BasicFrm implements
     // Menueeintrage
     this.mnuBasicOpen.setEnabled( supportsOpenBasic );
     this.mnuBasicSave.setEnabled( supportsSaveBasic );
-    this.mnuFloppyDisk.setEnabled( supportsFloppyDisks );
+    this.mnuFloppyDisks.setEnabled( supportsFloppyDisks );
     this.mnuPopupFloppyDisk.setEnabled( supportsFloppyDisks );
     this.mnuAudio.setEnabled( supportsAudio );
     this.mnuPopupAudio.setEnabled( supportsAudio );
@@ -3044,7 +3224,7 @@ public class ScreenFrm extends BasicFrm implements
       this.toolBar.add( this.btnChessboard );
     }
     if( supportsFloppyDisks ) {
-      this.toolBar.add( this.btnFloppyDisk );
+      this.toolBar.add( this.btnFloppyDisks );
     }
     if( supportsKeyboardFld ) {
       this.toolBar.add( this.btnKeyboard );
@@ -3132,4 +3312,3 @@ public class ScreenFrm extends BasicFrm implements
     this.mnuPopupPause.setText( pauseText );
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -55,7 +55,7 @@ public class M035 extends AbstractKC85Module
   @Override
   public Boolean getReadWrite()
   {
-    return new Boolean( this.readWrite );
+    return this.readWrite;
   }
 
 

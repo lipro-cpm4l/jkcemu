@@ -8,29 +8,104 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.FlavorEvent;
+import java.awt.datatransfer.FlavorListener;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DragGestureEvent;
+import java.awt.dnd.DragGestureListener;
+import java.awt.dnd.DragSource;
+import java.awt.dnd.DragSourceContext;
+import java.awt.dnd.DragSourceDragEvent;
+import java.awt.dnd.DragSourceDropEvent;
+import java.awt.dnd.DragSourceEvent;
+import java.awt.dnd.DragSourceListener;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetContext;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.dnd.InvalidDnDOperationException;
+import java.awt.event.ActionEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.net.*;
-import java.nio.file.*;
-import java.util.*;
-import java.util.zip.*;
-import javax.sound.sampled.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.EventObject;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Properties;
+import java.util.Set;
+import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
+import javax.swing.JMenuItem;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JPopupMenu;
+import javax.swing.JSplitPane;
+import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JToolBar;
+import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.event.TreeWillExpandListener;
 import javax.swing.table.TableModel;
-import javax.swing.tree.*;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.DefaultTreeSelectionModel;
+import javax.swing.tree.ExpandVetoException;
+import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 import jkcemu.Main;
-import jkcemu.audio.*;
-import jkcemu.base.*;
-import jkcemu.disk.*;
+import jkcemu.base.AbstractFileWorker;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileCopier;
+import jkcemu.base.FileEntry;
+import jkcemu.base.FileMover;
+import jkcemu.base.FileTableModel;
+import jkcemu.base.FileTreeNode;
+import jkcemu.base.FileTreeNodeComparator;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.ScreenFrm;
 
 
 public class FileBrowserFrm
-			extends BasicFrm
+			extends BaseFrm
 			implements
 				AbstractFileWorker.PathListener,
 				DragGestureListener,
@@ -44,6 +119,7 @@ public class FileBrowserFrm
 {
   private static FileBrowserFrm instance = null;
 
+  private static final String HELP_PAGE = "/help/tools/filebrowser.htm";
   private static final String PROP_SHOW_HIDDEN_FILES
 				= "jkcemu.filebrowser.show_hidden_files";
   private static final String PROP_SORT_CASE_SENSITIVE
@@ -84,7 +160,7 @@ public class FileBrowserFrm
   private FilePreviewFld       filePreviewFld;
   private Component            lastActiveFld;
   private Clipboard            clipboard;
-  private ArrayList<File>      cutFiles;
+  private java.util.List<File> cutFiles;
   private boolean              ignoreFlavorEvent;
   private boolean              pasteState;
 
@@ -348,7 +424,7 @@ public class FileBrowserFrm
 		  if( srcDir != null ) {
 		    try {
 		      if( EmuUtil.equals( srcDir, dstPath.toFile() ) ) {
-			BasicDlg.showErrorDlg(
+			BaseDlg.showErrorDlg(
 			  this,
 			  "Verschieben im selben Verzeichnis"
 				  + " ist nicht m\u00F6glich." );
@@ -399,7 +475,7 @@ public class FileBrowserFrm
 		  } else {
 		    buf.append( " kopieren?" );
 		  }
-		  status = BasicDlg.showYesNoDlg( this, buf.toString() );
+		  status = BaseDlg.showYesNoDlg( this, buf.toString() );
 		}
 		if( status ) {
 		  if( action == DnDConstants.ACTION_MOVE ) {
@@ -441,7 +517,7 @@ public class FileBrowserFrm
       }
       catch( UnsupportedFlavorException ex ) {}
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
       finally {
 	e.dropComplete( success );
@@ -682,7 +758,7 @@ public class FileBrowserFrm
 	  }
 	  else if( src == this.mnuHelpContent ) {
 	    rv = true;
-	    HelpFrm.open( "/help/tools/filebrowser.htm" );
+	    HelpFrm.open( HELP_PAGE );
 	  }
 	  if( !rv && (e instanceof ActionEvent) ) {
 	    String actionCmd = ((ActionEvent) e).getActionCommand();
@@ -725,7 +801,7 @@ public class FileBrowserFrm
       }
     }
     catch( IOException ex ) {
-      BasicDlg.showErrorDlg( this, ex );
+      BaseDlg.showErrorDlg( this, ex );
     }
     return rv;
   }
@@ -806,7 +882,7 @@ public class FileBrowserFrm
 	      done = true;
 	    }
 	    catch( IOException ex ) {
-	      BasicDlg.showErrorDlg( this, ex );
+	      BaseDlg.showErrorDlg( this, ex );
 	    }
 	    e.consume();
 	  }
@@ -852,7 +928,6 @@ public class FileBrowserFrm
     if( fObjs != null ) {
       int n = fObjs.size();
       if( n > 0 ) {
-	this.cutFiles.ensureCapacity( n );
 	for( FileActionMngr.FileObject fObj : fObjs ) {
 	  File file = fObj.getFile();
 	  if( file != null ) {
@@ -923,10 +998,10 @@ public class FileBrowserFrm
       catch( IllegalStateException ex ) {}
       catch( UnsupportedFlavorException ex ) {}
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     } else {
-      BasicDlg.showErrorDlg(
+      BaseDlg.showErrorDlg(
 		this,
 		"Kein Verzeichnis ausgew\u00E4hlt,"
 			+ " in das eingef\u00FCgt werden soll" );

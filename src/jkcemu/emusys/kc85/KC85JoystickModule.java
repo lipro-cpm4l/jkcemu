@@ -11,7 +11,8 @@ package jkcemu.emusys.kc85;
 import java.lang.*;
 import jkcemu.base.EmuThread;
 import jkcemu.joystick.JoystickThread;
-import z80emu.*;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
 
 
 public abstract class KC85JoystickModule
@@ -209,4 +210,3 @@ public abstract class KC85JoystickModule
     return rv;
   }
 }
-

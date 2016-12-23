@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,12 +10,15 @@ package jkcemu.filebrowser;
 
 import java.awt.Component;
 import java.lang.*;
-import java.text.*;
-import javax.swing.*;
+import java.text.DateFormat;
+import java.text.NumberFormat;
+import javax.swing.JLabel;
+import javax.swing.JTable;
+import javax.swing.SwingConstants;
+import javax.swing.table.DefaultTableCellRenderer;
 
 
-public class FileTableCellRenderer
-			extends javax.swing.table.DefaultTableCellRenderer
+public class FileTableCellRenderer extends DefaultTableCellRenderer
 {
   private DateFormat dateFmt;
   private NumberFormat numFmt;
@@ -66,4 +69,3 @@ public class FileTableCellRenderer
     return c;
   }
 }
-

@@ -8,20 +8,38 @@
 
 package jkcemu.emusys.ac1_llc2;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.RAMFloppy;
+import jkcemu.base.RAMFloppySettingsFld;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.AC1;
 
 
 public class AC1SettingsFld extends AbstractSettingsFld
 {
-  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 500;
-
   private JTabbedPane            tabbedPane;
   private JRadioButton           btnMon31_64x16;
   private JRadioButton           btnMon31_64x32;
@@ -116,8 +134,8 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     // Tab SCCH-Modul 1
     this.tabSCCH = new SCCHModule1SettingsFld(
-					settingsFrm,
-					propPrefix + "scch.");
+				settingsFrm,
+				propPrefix + AC1.PROP_SCCH_PREFIX);
     this.tabbedPane.addTab( "SCCH-Modul 1", this.tabSCCH );
     updSCCHFieldsEnabled();
 
@@ -137,14 +155,14 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     this.fldAltPio2Rom2010 = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "2010.pio2rom.",
+		propPrefix + AC1.PROP_2010_PIO2ROM_PREFIX,
 		"Alternativer Inhalt der ROM-B\u00E4nke auf der PIO2-Karte"
 					+ " (4 x 2000h-27FFh):" );
     this.tab2010.add( this.fldAltPio2Rom2010, gbc2010 );
 
     this.fldRomBank2010 = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "2010.rombank.",
+		propPrefix + AC1.PROP_2010_ROMBANK_PREFIX,
 		"Inhalt der weiteren 16 ROM-B\u00E4nke (16 x ab A000h):" );
     gbc2010.gridy++;
     this.tab2010.add( this.fldRomBank2010, gbc2010 );
@@ -154,7 +172,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
     // Tab RAM-Floppy
     this.tabRF = new RAMFloppySettingsFld(
 		settingsFrm,
-		propPrefix + "ramfloppy.",
+		propPrefix + AC1.PROP_RF_PREFIX,
 		"RAM-Floppy nach MP 3/88 (256 KByte) an E/A-Adressen E0h-E7h",
 		RAMFloppy.RFType.MP_3_1988 );
     this.tabbedPane.addTab( "RAM-Floppy", this.tabRF );
@@ -264,7 +282,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     this.fldAltOS = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "os.",
+		propPrefix + AC1.PROP_OS_PREFIX,
 		"Alternatives Monitorprogramm (0000h-0FFFh):" );
     gbcEtc.insets.top    = 5;
     gbcEtc.insets.bottom = 5;
@@ -273,7 +291,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     this.fldAltFont = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "font.",
+				propPrefix + AC1.PROP_FONT_PREFIX,
 				"Alternativer Zeichensatz:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltFont, gbcEtc );
@@ -281,19 +299,19 @@ public class AC1SettingsFld extends AbstractSettingsFld
 
     // Tab AutoLoad
     this.tabAutoLoad = new AutoLoadSettingsFld(
-					settingsFrm,
-					propPrefix,
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
-					true );
+				settingsFrm,
+				propPrefix,
+				AC1.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX,
+				true );
     this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
 
 
     // Tab AutoInput
     this.tabAutoInput = new AutoInputSettingsFld(
-					settingsFrm,
-					propPrefix,
-					AC1.getDefaultSwapKeyCharCase(),
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+				settingsFrm,
+				propPrefix,
+				AC1.DEFAULT_SWAP_KEY_CHAR_CASE,
+				AC1.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
@@ -326,20 +344,20 @@ public class AC1SettingsFld extends AbstractSettingsFld
       tab = this.tabModel;
 
       // Tab Modell
-      String os = "3.1_64x32";
+      String os = AC1.VALUE_MON_31_64X32;
       if( this.btnMon31_64x16.isSelected() ) {
-	os = "3.1_64x16";
+	os = AC1.VALUE_MON_31_64X16;
       }
       else if( this.btnMonSCCH80.isSelected() ) {
-	os = "SCCH8.0";
+	os = AC1.VALUE_MON_SCCH80;
       }
       else if( this.btnMonSCCH1088.isSelected() ) {
-	os = "SCCH10/88";
+	os = AC1.VALUE_MON_SCCH1088;
       }
       else if( this.btnMon2010.isSelected() ) {
-	os = "2010";
+	os = AC1.VALUE_MON_2010;
       }
-      props.setProperty( this.propPrefix + "os.version", os );
+      props.setProperty( this.propPrefix + AC1.PROP_OS_VERSION, os );
 
       // Tab RAM-Floppy
       tab = this.tabRF;
@@ -362,34 +380,34 @@ public class AC1SettingsFld extends AbstractSettingsFld
       tab = this.tabExt;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "color",
+		this.propPrefix + AC1.PROP_COLOR,
 		this.btnColor.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "floppydisk.enabled",
+		this.propPrefix + AC1.PROP_FDC_ENABLED,
 		this.btnFloppyDisk.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "kcnet.enabled",
+		this.propPrefix + AC1.PROP_KCNET_ENABLED,
 		this.btnKCNet.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "vdip.enabled",
+		this.propPrefix + AC1.PROP_VDIP_ENABLED,
 		this.btnVDIP.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "joystick.enabled",
+		this.propPrefix + AC1.PROP_JOYSTICK_ENABLED,
 		this.btnJoystick.isSelected() );
 
       // Tab Sonstiges
       tab = this.tabEtc;
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "ctc.m1_to_clk2",
+		this.propPrefix + AC1.PROP_M1_TO_CTC_CLK2,
 		this.btnCTCM1ToClk2.isSelected() );
       EmuUtil.setProperty(
 		props,
-		this.propPrefix + "paste.fast",
+		this.propPrefix + AC1.PROP_PASTE_FAST,
 		this.btnPasteFast.isSelected() );
       this.fldAltOS.applyInput( props, selected );
       this.fldAltFont.applyInput( props, selected );
@@ -467,14 +485,16 @@ public class AC1SettingsFld extends AbstractSettingsFld
   @Override
   public void updFields( Properties props )
   {
-    String os = EmuUtil.getProperty( props, this.propPrefix + "os.version" );
-    if( os.equals( "3.1_64x16" ) ) {
+    String os = EmuUtil.getProperty(
+			props,
+			this.propPrefix + AC1.PROP_OS_VERSION );
+    if( os.equals( AC1.VALUE_MON_31_64X16 ) ) {
       this.btnMon31_64x16.setSelected( true );
-    } else if( os.equals( "3.1_64x32" ) ) {
+    } else if( os.equals( AC1.VALUE_MON_31_64X32 ) ) {
       this.btnMon31_64x32.setSelected( true );
-    } else if( os.equals( "SCCH8.0" ) ) {
+    } else if( os.equals( AC1.VALUE_MON_SCCH80 ) ) {
       this.btnMonSCCH80.setSelected( true );
-    } else if( os.equals( "2010" ) ) {
+    } else if( os.equals( AC1.VALUE_MON_2010 ) ) {
       this.btnMon2010.setSelected( true );
     } else {
       this.btnMonSCCH1088.setSelected( true );
@@ -490,36 +510,36 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.btnColor.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "color",
+			this.propPrefix + AC1.PROP_COLOR,
 			false ) );
 
     this.btnFloppyDisk.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "floppydisk.enabled",
+			this.propPrefix + AC1.PROP_FDC_ENABLED,
 			false ) );
 
     this.btnKCNet.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "kcnet.enabled",
+			this.propPrefix + AC1.PROP_KCNET_ENABLED,
 			false ) );
 
     this.btnVDIP.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "vdip.enabled",
+			this.propPrefix + AC1.PROP_VDIP_ENABLED,
 			false ) );
 
     this.btnJoystick.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "joystick.enabled",
+			this.propPrefix + AC1.PROP_JOYSTICK_ENABLED,
 			false ) );
 
     if( EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "ctc.m1_to_clk2",
+			this.propPrefix + AC1.PROP_M1_TO_CTC_CLK2,
 			false ) )
     {
       this.btnCTCM1ToClk2.setSelected( true );
@@ -530,7 +550,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
     this.btnPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "paste.fast",
+			this.propPrefix + AC1.PROP_PASTE_FAST,
 			false ) );
 
     this.fldAltOS.updFields( props );

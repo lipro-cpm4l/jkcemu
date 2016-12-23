@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,6 +18,51 @@ import jkcemu.programming.basic.BasicOptions;
 
 public class PrgOptions
 {
+  public static final String OPTION_PREFIX = "jkcemu.programming.";
+
+  private static final String OPTION_ASM_ALLOW_UNDOC_INSTRUCTIONS
+		= OPTION_PREFIX + "asm.allow_undocumented_instructions";
+
+  private static final String OPTION_ASM_LABELS_CASE_SENSITIVE
+		= OPTION_PREFIX + "asm.labels.case_sensitive";
+
+  private static final String OPTION_ASM_LABELS_PRINT
+		= OPTION_PREFIX + "asm.labels.print";
+
+  private static final String OPTION_ASM_SYNTAX
+		= OPTION_PREFIX + "asm.syntax";
+
+  private static final String OPTION_CODE_FILENAME
+		= OPTION_PREFIX + "code.file.name";
+
+  private static final String OPTION_CODE_TO_EMULATOR
+		= OPTION_PREFIX + "code.to_emulator";
+
+  private static final String OPTION_CODE_TO_FILE
+		= OPTION_PREFIX + "code.to_file";
+
+  private static final String OPTION_CODE_TO_SECOND_SYSTEM
+		= OPTION_PREFIX + "code.to_second_system";
+
+  private static final String OPTION_FORMAT_SOURCE
+		= OPTION_PREFIX + "format.source";
+
+  private static final String OPTION_LABELS_TO_DEBUGGER
+		= OPTION_PREFIX + "labels_to_debugger";
+
+  private static final String OPTION_LABELS_TO_REASSEMBLER
+		= OPTION_PREFIX + "labels_to_reassembler";
+
+  private static final String OPTION_SUPPRESS_LABEL_RECREATE_IN_DEBUGGER
+		= OPTION_PREFIX + "suppress_label_recreate_in_debugger";
+
+  private static final String OPTION_WARN_NON_ASCII_CHARS
+			= OPTION_PREFIX + "warn_non_ascii_chars";
+
+  private static final String VALUE_ASM_SYNTAX_ALL      = "all";
+  private static final String VALUE_ASM_SYNTAX_ROBOTRON = "robotron";
+  private static final String VALUE_ASM_SYNTAX_ZILOG    = "zilog";
+
   private Z80Assembler.Syntax asmSyntax;
   private boolean             allowUndocInst;
   private boolean             labelsCaseSensitive;
@@ -135,54 +180,53 @@ public class PrgOptions
   {
     PrgOptions options = BasicOptions.getBasicOptions( props );
     if( props != null ) {
-      String syntaxText = props.getProperty( "jkcemu.programming.asm.syntax" );
+      String syntaxText = props.getProperty( OPTION_ASM_SYNTAX );
 
       Boolean allowUndocInst = getBoolean(
-		props,
-		"jkcemu.programming.asm.allow_undocumented_instructions" );
+			props,
+			OPTION_ASM_ALLOW_UNDOC_INSTRUCTIONS );
 
       Boolean labelsCaseSensitive = getBoolean(
-		props,
-		"jkcemu.programming.asm.labels.case_sensitive" );
+			props,
+			OPTION_ASM_LABELS_CASE_SENSITIVE );
 
       Boolean printLabels = getBoolean(
-		props,
-		"jkcemu.programming.asm.labels.print" );
+			props,
+			OPTION_ASM_LABELS_PRINT );
 
       Boolean codeToEmu = getBoolean(
-		props,
-		"jkcemu.programming.code.to_emulator" );
+			props,
+			OPTION_CODE_TO_EMULATOR );
 
       Boolean codeToSecondSys = getBoolean(
-		props,
-		"jkcemu.programming.code.to_second_system" );
+			props,
+			OPTION_CODE_TO_SECOND_SYSTEM );
 
       Boolean codeToFile = getBoolean(
-		props,
-		"jkcemu.programming.code.to_file" );
+			props,
+			OPTION_CODE_TO_FILE );
 
-      String codeFileName = props.getProperty(
-		"jkcemu.programming.code.file.name" );
+      String codeFileName = props.getProperty( OPTION_CODE_FILENAME );
 
       Boolean suppressLabelRecreateInDebugger = getBoolean(
-		props,
-		"jkcemu.programming.suppress_label_recreate_in_debugger" );
+			props,
+			OPTION_SUPPRESS_LABEL_RECREATE_IN_DEBUGGER );
 
       Boolean labelsToDebugger = getBoolean(
-		props,
-		"jkcemu.programming.labels_to_debugger" );
+			props,
+			OPTION_LABELS_TO_DEBUGGER );
 
       Boolean labelsToReass = getBoolean(
-		props,
-		"jkcemu.programming.labels_to_reassembler" );
+			props,
+			OPTION_LABELS_TO_REASSEMBLER );
 
       Boolean formatSource = getBoolean(
-		props,
-		"jkcemu.programming.format.source" );
+			props,
+			OPTION_FORMAT_SOURCE );
 
       Boolean warnNonAsciiChars = getBoolean(
-		props,
-		"jkcemu.programming.warn_non_ascii_chars" );
+			props,
+			OPTION_WARN_NON_ASCII_CHARS );
 
       if( (syntaxText != null)
 	  || (allowUndocInst != null)
@@ -202,9 +246,9 @@ public class PrgOptions
 	  options = new PrgOptions();
 	}
 	if( syntaxText != null ) {
-	  if( syntaxText.equals( "zilog" ) ) {
+	  if( syntaxText.equals( VALUE_ASM_SYNTAX_ZILOG ) ) {
 	    options.asmSyntax = Z80Assembler.Syntax.ZILOG_ONLY;
-	  } else if( syntaxText.equals( "robotron" ) ) {
+	  } else if( syntaxText.equals( VALUE_ASM_SYNTAX_ROBOTRON ) ) {
 	    options.asmSyntax = Z80Assembler.Syntax.ROBOTRON_ONLY;
 	  } else {
 	    options.asmSyntax = Z80Assembler.Syntax.ALL;
@@ -275,40 +319,40 @@ public class PrgOptions
       if( this.asmSyntax != null ) {
 	switch( this.asmSyntax ) {
 	  case ZILOG_ONLY:
-	    props.setProperty( "jkcemu.programming.asm.syntax", "zilog" );
+	    props.setProperty( OPTION_ASM_SYNTAX, VALUE_ASM_SYNTAX_ZILOG );
 	    break;
 
 	  case ROBOTRON_ONLY:
-	    props.setProperty( "jkcemu.programming.asm.syntax", "robotron" );
+	    props.setProperty( OPTION_ASM_SYNTAX, VALUE_ASM_SYNTAX_ROBOTRON );
 	    break;
 
 	  default:
-	    props.setProperty( "jkcemu.programming.asm.syntax", "all" );
+	    props.setProperty( OPTION_ASM_SYNTAX, VALUE_ASM_SYNTAX_ALL );
 	}
       }
 
       props.setProperty(
-		"jkcemu.programming.asm.allow_undocumented_instructions",
+		OPTION_ASM_ALLOW_UNDOC_INSTRUCTIONS,
 		Boolean.toString( this.allowUndocInst ) );
 
       props.setProperty(
-		"jkcemu.programming.asm.labels.case_sensitive",
+		OPTION_ASM_LABELS_CASE_SENSITIVE,
 		Boolean.toString( this.labelsCaseSensitive ) );
 
       props.setProperty(
-		"jkcemu.programming.asm.labels.print",
+		OPTION_ASM_LABELS_PRINT,
 		Boolean.toString( this.printLabels ) );
 
       props.setProperty(
-		"jkcemu.programming.code.to_emulator",
+		OPTION_CODE_TO_EMULATOR,
 		Boolean.toString( this.codeToEmu ) );
 
       props.setProperty(
-		"jkcemu.programming.code.to_second_system",
+		OPTION_CODE_TO_SECOND_SYSTEM,
 		Boolean.toString( this.codeToSecondSys ) );
 
       props.setProperty(
-		"jkcemu.programming.code.to_file",
+		OPTION_CODE_TO_FILE,
 		Boolean.toString( this.codeToFile ) );
 
       String codeFileName = null;
@@ -316,27 +360,27 @@ public class PrgOptions
 	codeFileName = this.codeFile.getPath();
       }
       props.setProperty(
-		"jkcemu.programming.code.file.name",
+		OPTION_CODE_FILENAME,
 		codeFileName != null ? codeFileName : "" );
 
       props.setProperty(
-		"jkcemu.programming.labels_to_debugger",
+		OPTION_LABELS_TO_DEBUGGER,
 		Boolean.toString( this.labelsToDebugger ) );
 
       props.setProperty(
-		"jkcemu.programming.suppress_label_recreate_in_debugger",
+		OPTION_SUPPRESS_LABEL_RECREATE_IN_DEBUGGER,
 		Boolean.toString( this.suppressLabelRecreateInDebugger ) );
 
       props.setProperty(
-		"jkcemu.programming.labels_to_reassembler",
+		OPTION_LABELS_TO_REASSEMBLER,
 		Boolean.toString( this.labelsToReass ) );
 
       props.setProperty(
-		"jkcemu.programming.format.source",
+		OPTION_FORMAT_SOURCE,
 		Boolean.toString( this.formatSource ) );
 
       props.setProperty(
-		"jkcemu.programming.warn_non_ascii_chars",
+		OPTION_WARN_NON_ASCII_CHARS,
 		Boolean.toString( this.warnNonAsciiChars ) );
     }
   }

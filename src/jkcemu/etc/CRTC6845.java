@@ -9,10 +9,12 @@
 package jkcemu.etc;
 
 import java.lang.*;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80MaxSpeedListener;
+import z80emu.Z80TStatesListener;
 
 
-public class CRTC6845 implements Z80TStatesListener, Z80MaxSpeedListener
+public class CRTC6845 implements Z80MaxSpeedListener, Z80TStatesListener
 {
   public interface SyncListener
   {
@@ -298,4 +300,3 @@ public class CRTC6845 implements Z80TStatesListener, Z80MaxSpeedListener
     this.lineTStatesCounter = 0;
   }
 }
-

@@ -10,24 +10,42 @@ package jkcemu.emusys;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
-import jkcemu.disk.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.RAMFloppy;
+import jkcemu.disk.FDC8272;
+import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.disk.FloppyDiskFormat;
+import jkcemu.disk.FloppyDiskInfo;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80CTCListener;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
+import z80emu.Z80SIO;
+import z80emu.Z80SIOChannelListener;
 
 
 public class PCM extends EmuSys implements
 					FDC8272.DriveSelector,
 					Z80CTCListener,
-					Z80SIOChannelListener,
-					Z80TStatesListener
+					Z80SIOChannelListener
 {
-  public static final String PROP_AUTO_LOAD_BDOS      = "auto_load_bdos";
-  public static final String PROP_FDC_ENABLDED        = "floppydisk.enabled";
-  public static final String PROP_GRAPHIC_KEY         = "graphic";
-  public static final String PROP_GRAPHIC_VALUE_80X24 = "80x24";
-  public static final String PROP_GRAPHIC_VALUE_64X32 = "64x32";
+  public static final String SYSNAME     = "PCM";
+  public static final String SYSTEXT     = "PC/M";
+  public static final String PROP_PREFIX = "jkcemu.pcm.";
+
+  public static final String PROP_AUTO_LOAD_BDOS = "auto_load_bdos";
+  public static final String PROP_GRAPHIC        = "graphic";
+  public static final String VALUE_GRAPHIC_80X24 = "80x24";
+  public static final String VALUE_GRAPHIC_64X32 = "64x32";
+
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE = true;
 
   private static FloppyDiskInfo disk64x16 = new FloppyDiskInfo(
 			"/disks/pcm/pcmsys330_64x16.dump.gz",
@@ -62,8 +80,7 @@ public class PCM extends EmuSys implements
   private FloppyDiskDrive   curFDDrive;
   private FloppyDiskDrive[] fdDrives;
   private boolean           fdcTC;
-  private boolean           audioInPhase;
-  private boolean           audioOutPhase;
+  private boolean           tapeInPhase;
   private boolean           keyboardUsed;
   private boolean           mode80x24;
   private boolean           romEnabled;
@@ -75,18 +92,17 @@ public class PCM extends EmuSys implements
 
   public PCM( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.pcm." );
-    this.romSize       = 0x2000;
-    this.fontBytes     = null;
-    this.romBytes      = null;
-    this.romFile       = null;
-    this.ramVideo      = new byte[ 0x0800 ];
-    this.audioOutPhase = false;
-    this.fdcTC         = false;
-    this.mode80x24     = emulates80x24( props );
-    this.curFDDrive    = null;
-    this.fdc           = null;
-    this.fdDrives      = null;
+    super( emuThread, props, PROP_PREFIX );
+    this.romSize    = 0x2000;
+    this.fontBytes  = null;
+    this.romBytes   = null;
+    this.romFile    = null;
+    this.ramVideo   = new byte[ 0x0800 ];
+    this.fdcTC      = false;
+    this.mode80x24  = emulates80x24( props );
+    this.curFDDrive = null;
+    this.fdc        = null;
+    this.fdDrives   = null;
     if( emulatesFloppyDisk( props ) ) {
       this.fdc      = new FDC8272( this, 4 );
       this.fdDrives = new FloppyDiskDrive[ 4 ];
@@ -105,7 +121,9 @@ public class PCM extends EmuSys implements
 		"PC/M RAM-B\u00E4nke 1 und 2",
 		EmuUtil.getProperty(
 			props,
-			this.propPrefix + "ramfloppy.file" ) );
+			this.propPrefix
+				+ PCM.PROP_RF_PREFIX
+				+ RAMFloppy.PROP_FILE ) );
     }
 
     Z80CPU cpu = emuThread.getZ80CPU();
@@ -113,10 +131,7 @@ public class PCM extends EmuSys implements
     this.pio   = new Z80PIO( "PIO (84-87)" );
     this.sio   = new Z80SIO( "SIO (88-8B)" );
     cpu.setInterruptSources( this.ctc, this.pio, this.sio );
-    if( this.fdc != null ) {
-      this.fdc.setTStatesPerMilli( cpu.getMaxSpeedKHz() );
-      cpu.addMaxSpeedListener( this.fdc );
-    }
+    cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     this.ctc.addCTCListener( this );
     this.sio.addChannelListener( this, 0 );
@@ -124,6 +139,7 @@ public class PCM extends EmuSys implements
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
+    z80MaxSpeedChanged( cpu );
   }
 
 
@@ -136,12 +152,6 @@ public class PCM extends EmuSys implements
   public static int getDefaultSpeedKHz()
   {
     return 2500;
-  }
-
-
-  public static boolean getDefaultSwapKeyCharCase()
-  {
-    return true;
   }
 
 
@@ -160,10 +170,7 @@ public class PCM extends EmuSys implements
   public void z80CTCUpdate( Z80CTC ctc, int timerNum )
   {
     if( (ctc == this.ctc) && (timerNum == 2) ) {
-      if( this.emuThread.isSoundOutEnabled() ) {
-	this.audioOutPhase = !this.audioOutPhase;
-	this.emuThread.writeAudioPhase( this.audioOutPhase );
-      }
+      this.soundOutPhase = !this.soundOutPhase;
     }
   }
 
@@ -175,23 +182,6 @@ public class PCM extends EmuSys implements
   {
     if( (sio == this.sio) && (channel == 0) )
       this.emuThread.getPrintMngr().putByte( value );
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    boolean phase = this.emuThread.readAudioPhase();
-    if( phase != this.audioInPhase ) {
-      this.audioInPhase = phase;
-      this.pio.putInValuePortB( this.audioInPhase ? 0x80 : 0, 0x80 );
-    }
-    this.ctc.z80TStatesProcessed( cpu, tStates );
-    if( this.fdc != null ) {
-      this.fdc.z80TStatesProcessed( cpu, tStates );
-    }
   }
 
 
@@ -240,11 +230,13 @@ public class PCM extends EmuSys implements
   {
     boolean rv = EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( "PC/M" );
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
     if( rv ) {
       rv = TextUtil.equals(
 		this.romFile,
-		EmuUtil.getProperty( props, this.propPrefix + "rom.file" ) );
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM_PREFIX + PROP_FILE ) );
     }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
       rv = false;
@@ -274,9 +266,9 @@ public class PCM extends EmuSys implements
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+    cpu.removeMaxSpeedListener( this );
     cpu.removeTStatesListener( this );
     if( this.fdc != null ) {
-      cpu.removeMaxSpeedListener( this.fdc );
       this.fdc.die();
     }
   }
@@ -546,14 +538,14 @@ public class PCM extends EmuSys implements
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return getDefaultSwapKeyCharCase();
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
   }
 
 
   @Override
   public String getTitle()
   {
-    return "PC/M (Mugler/Mathes-PC)";
+    return SYSTEXT;
   }
 
 
@@ -623,7 +615,7 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  protected boolean pasteChar( char ch )
+  protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
     if( ch == '\n' ) {
@@ -636,10 +628,7 @@ public class PCM extends EmuSys implements
 	ch = Character.toUpperCase( ch );
       }
       this.pio.putInValuePortA( ch | 0x80, 0xFF );
-      try {
-	Thread.sleep( 100 );
-      }
-      catch( InterruptedException ex ) {}
+      Thread.sleep( 100 );
       this.pio.putInValuePortA( 0, 0xFF );
       rv = true;
     }
@@ -734,6 +723,7 @@ public class PCM extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
 	loadROMs( props );
@@ -775,7 +765,7 @@ public class PCM extends EmuSys implements
 	}
       }
     }
-    this.audioInPhase      = this.emuThread.readAudioPhase();
+    this.tapeInPhase       = this.emuThread.readTapeInPhase();
     this.curFDDrive        = null;
     this.fdcTC             = false;
     this.keyboardUsed      = false;
@@ -841,13 +831,6 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  public boolean supportsAudio()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsPrinter()
   {
     return true;
@@ -876,6 +859,27 @@ public class PCM extends EmuSys implements
 
 
   @Override
+  public boolean supportsSoundOutMono()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
+  {
+    return true;
+  }
+
+
+  @Override
   public void writeIOByte( int port, int value, int tStates )
   {
     switch( port & 0xFF ) {
@@ -892,11 +896,8 @@ public class PCM extends EmuSys implements
 
       case 0x85:
 	this.pio.writeDataB( value );
-	if( !this.emuThread.isSoundOutEnabled() ) {
-	  this.audioOutPhase = ((this.pio.fetchOutValuePortB( false ) & 0x40)
-									!= 0);
-	  this.emuThread.writeAudioPhase( this.audioOutPhase );
-	}
+	this.tapeOutPhase =
+		((this.pio.fetchOutValuePortB( false ) & 0x40) != 0);
 	break;
 
       case 0x86:
@@ -972,14 +973,40 @@ public class PCM extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+    if( this.fdc != null ) {
+      this.fdc.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    boolean phase = this.emuThread.readTapeInPhase();
+    if( phase != this.tapeInPhase ) {
+      this.tapeInPhase = phase;
+      this.pio.putInValuePortB( this.tapeInPhase ? 0x80 : 0, 0x80 );
+    }
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+    if( this.fdc != null ) {
+      this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private boolean emulates80x24( Properties props )
   {
     return EmuUtil.getProperty(
-		props,
-		this.propPrefix + PROP_GRAPHIC_KEY ).equals(
-					PROP_GRAPHIC_VALUE_80X24 );
+	props,
+	this.propPrefix + PROP_GRAPHIC ).equals( VALUE_GRAPHIC_80X24 );
   }
 
 
@@ -987,7 +1014,7 @@ public class PCM extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + PROP_FDC_ENABLDED,
+			this.propPrefix + PROP_FDC_ENABLED,
 			true );
   }
 
@@ -996,7 +1023,7 @@ public class PCM extends EmuSys implements
   {
     this.fontBytes = readFontByProperty(
 				props,
-				this.propPrefix + "font.file",
+				this.propPrefix + PROP_FONT_FILE,
 				0x0800 );
     if( this.fontBytes == null ) {
       if( this.mode80x24 ) {
@@ -1018,7 +1045,7 @@ public class PCM extends EmuSys implements
   {
     this.romFile  = EmuUtil.getProperty(
 			props,
-			this.propPrefix + "rom.file" );
+			this.propPrefix + PROP_ROM_PREFIX + PROP_FILE );
     this.romBytes = readROMFile(
 			this.romFile,
 			0x8000,

@@ -12,7 +12,10 @@ package jkcemu.base;
 import java.awt.Window;
 import java.io.IOException;
 import java.lang.*;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.FileVisitResult;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 
@@ -90,7 +93,7 @@ public class FileRemover extends AbstractFileWorker
 	  buf.append( (char) '\u0020' );
 	}
 	buf.append( "l\u00F6schen?" );
-	if( BasicDlg.showYesNoDlg( owner, buf.toString() ) ) {
+	if( BaseDlg.showYesNoDlg( owner, buf.toString() ) ) {
 	  (new FileRemover(
 			owner,
 			paths,
@@ -129,7 +132,7 @@ public class FileRemover extends AbstractFileWorker
   @Override
   public FileVisitResult postVisitDirectory( Path dir, IOException ex )
   {
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       this.curPath = dir;
       try {
 	Files.delete( dir );
@@ -140,7 +143,7 @@ public class FileRemover extends AbstractFileWorker
 	handleError( dir, ex1 );
       }
     }
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 
@@ -148,7 +151,7 @@ public class FileRemover extends AbstractFileWorker
   @Override
   public FileVisitResult visitFile( Path file, BasicFileAttributes attrs )
   {
-    if( !this.canceled ) {
+    if( !this.cancelled ) {
       this.curPath = file;
       try {
 	Files.delete( file );
@@ -159,7 +162,7 @@ public class FileRemover extends AbstractFileWorker
 	handleError( file, ex1 );
       }
     }
-    return this.canceled ?
+    return this.cancelled ?
 		FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
   }
 

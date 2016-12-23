@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,8 +8,9 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.lang.*;
 
 
@@ -63,4 +64,3 @@ public class ImageCard extends Component
     }
   }
 }
-

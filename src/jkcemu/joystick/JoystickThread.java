@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,11 @@
 
 package jkcemu.joystick;
 
-import java.awt.*;
-import java.io.IOException;
 import java.lang.*;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.DeviceIO;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 
 
 public class JoystickThread extends Thread
@@ -116,9 +116,8 @@ public class JoystickThread extends Thread
     }
     finally {
       this.emuThread.setJoystickAction( this.joyNum, 0 );
-      EmuUtil.doClose( js );
+      EmuUtil.closeSilent( js );
     }
     this.emuThread.joystickThreadTerminated( this );
   }
 }
-

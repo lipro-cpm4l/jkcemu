@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,12 @@
 
 package jkcemu.net;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
 import jkcemu.Main;
 import jkcemu.base.EmuUtil;
 

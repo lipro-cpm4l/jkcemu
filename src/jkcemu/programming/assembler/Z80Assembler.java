@@ -8,13 +8,26 @@
 
 package jkcemu.programming.assembler;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
-import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.programming.*;
-import jkcemu.text.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EmptyStackException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Stack;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileFormat;
+import jkcemu.base.FileSaver;
+import jkcemu.base.LoadData;
+import jkcemu.programming.PrgException;
+import jkcemu.programming.PrgLogger;
+import jkcemu.programming.PrgOptions;
+import jkcemu.programming.PrgSource;
+import jkcemu.programming.TooManyErrorsException;
 
 
 public class Z80Assembler
@@ -3007,7 +3020,7 @@ public class Z80Assembler
 	int     begAddr = this.begAddr;
 	Integer sAddr   = this.entryAddr;
 	if( sAddr == null ) {
-	  sAddr = new Integer( begAddr );
+	  sAddr = begAddr;
 	}
 	FileFormat fileFmt  = FileFormat.BIN;
 	String     fileType = null;

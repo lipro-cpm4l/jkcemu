@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,25 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import jkcemu.Main;
 
 
@@ -178,7 +192,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
   private void doClear()
   {
     if( this.ramFloppy != null ) {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie die RAM-Floppy l\u00F6schen?\n"
 			+ "Dabei gehen alle in ihr gespeicherten Daten"
@@ -199,14 +213,14 @@ public class RAMFloppyFld extends JComponent implements ActionListener
 			"RAM-Floppy laden",
 			file != null ?
 				file
-				: Main.getLastDirFile( "ramfloppy" ) );
+				: Main.getLastDirFile( Main.FILE_GROUP_RF ) );
       if( file != null ) {
 	try {
 	  this.ramFloppy.load( file );
-	  Main.setLastFile( file, "ramfloppy" );
+	  Main.setLastFile( file, Main.FILE_GROUP_RF );
 	}
 	catch( IOException ex ) {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Die RAM-Floppy kann nicht geladen werden.\n\n"
 						+ ex.getMessage() );
@@ -225,14 +239,14 @@ public class RAMFloppyFld extends JComponent implements ActionListener
 			"RAM-Floppy speichern",
 			file != null ?
 				file
-				: Main.getLastDirFile( "ramfloppy" ) );
+				: Main.getLastDirFile( Main.FILE_GROUP_RF ) );
       if( file != null ) {
 	try {
 	  this.ramFloppy.save( file );
-	  Main.setLastFile( file, "ramfloppy" );
+	  Main.setLastFile( file, Main.FILE_GROUP_RF );
 	}
 	catch( IOException ex ) {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"RAM-Floppy kann nicht gespeichert werden.\n\n"
 						+ ex.getMessage() );

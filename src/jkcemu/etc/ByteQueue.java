@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,8 @@
 
 package jkcemu.etc;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.lang.*;
 
 
@@ -172,4 +173,3 @@ public class ByteQueue
     add( b );
   }
 }
-

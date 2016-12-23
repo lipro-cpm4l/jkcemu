@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,8 @@ package jkcemu.programming.basic;
 
 import java.lang.*;
 import java.text.CharacterIterator;
-import jkcemu.programming.*;
+import jkcemu.programming.PrgException;
+import jkcemu.programming.PrgUtil;
 
 
 public class BasicUtil
@@ -273,7 +274,7 @@ public class BasicUtil
 	value &= 0xFFFF;
 	ch = iter.next();
       }
-      rv = new Integer( value );
+      rv = value;
     }
     return rv;
   }
@@ -295,7 +296,7 @@ public class BasicUtil
 	}
 	ch = iter.next();
       }
-      rv = new Integer( value );
+      rv = value;
     }
     return rv;
   }
@@ -330,7 +331,7 @@ public class BasicUtil
 	    // negativer Wert
 	    v = -(0x10000 - (v & 0xFFFF));
 	  }
-	  rv = new Integer( v );
+	  rv = v;
 	}
 	catch( NumberFormatException ex ) {}
       }

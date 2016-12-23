@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,9 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.FocusTraversalPolicy;
 import java.lang.*;
 
 
@@ -92,4 +94,3 @@ public class ListFocusTraversalPolicy extends FocusTraversalPolicy
     return rv;
   }
 }
-

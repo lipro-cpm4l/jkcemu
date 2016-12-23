@@ -8,16 +8,31 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.WindowEvent;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import jkcemu.base.BasicDlg;
+import java.util.EventObject;
+import java.util.ArrayList;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.JRadioButton;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import jkcemu.base.BaseDlg;
 
 
-public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
+public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 {
   public static enum Flag {
 			READONLY,
@@ -170,13 +185,13 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 
       this.comboBlockSize = new JComboBox<>();
       this.comboBlockSize.setEditable( false );
-      this.comboBlockSize.addItem( new Integer( 1 ) );
-      this.comboBlockSize.addItem( new Integer( 2 ) );
-      this.comboBlockSize.addItem( new Integer( 4 ) );
-      this.comboBlockSize.addItem( new Integer( 8 ) );
-      this.comboBlockSize.addItem( new Integer( 16 ) );
+      this.comboBlockSize.addItem( 1 );
+      this.comboBlockSize.addItem( 2 );
+      this.comboBlockSize.addItem( 4 );
+      this.comboBlockSize.addItem( 8 );
+      this.comboBlockSize.addItem( 16 );
       this.comboBlockSize.setSelectedItem(
-			new Integer( DiskUtil.DEFAULT_BLOCK_SIZE / 1024 ) );
+				DiskUtil.DEFAULT_BLOCK_SIZE / 1024 );
       gbc.gridx++;
       add( this.comboBlockSize, gbc );
 
@@ -492,7 +507,7 @@ public class FloppyDiskFormatDlg extends BasicDlg implements ChangeListener
 	this.fmtSelectFld.setBlockSize( value );
       }
       if( this.comboBlockSize != null ) {
-	this.comboBlockSize.setSelectedItem( new Integer( value / 1024 ) );
+	this.comboBlockSize.setSelectedItem( value / 1024 );
 	updDirSizeUnitLabel();
       }
     }

@@ -8,16 +8,28 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Event;
+import java.awt.EventQueue;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.EmptyStackException;
+import java.util.EventObject;
+import java.util.Stack;
+import javax.swing.JButton;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JToolBar;
+import javax.swing.JViewport;
+import javax.swing.KeyStroke;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import jkcemu.Main;
-import jkcemu.print.*;
 
 
 public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
@@ -278,7 +290,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 		if( pt != null ) {
 		  double d = (double) pt.y / (double) h;
 		  if( (d > 0.0) && (d <= 1.0) ) {
-		    topEntry.viewPos = new Double( d );
+		    topEntry.viewPos = d;
 		  }
 		}
 	      }
@@ -307,7 +319,7 @@ public class HelpFrm extends HTMLViewFrm implements HyperlinkListener
 	  this.btnHome.setEnabled( stateHome );
 	}
 	catch( Exception ex ) {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Die Hilfeseite kann nicht angezeigt werden.\n\n"
 			+ ex.getMessage() );

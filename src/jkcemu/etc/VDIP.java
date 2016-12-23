@@ -18,12 +18,22 @@
 
 package jkcemu.etc;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.lang.*;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Properties;
 import jkcemu.Main;
-import jkcemu.base.*;
-import z80emu.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileTimesView;
+import jkcemu.base.FileTimesViewFactory;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 
 
 public class VDIP implements
@@ -31,6 +41,8 @@ public class VDIP implements
 			Z80InterruptSource,
 			Z80PIOPortListener
 {
+  public static final String PROP_USB_DIR = "jkcemu.usb.memstick.directory";
+
   public static enum VdipErr {
 			BAD_COMMAND,
 			COMMAND_FAILED,
@@ -181,9 +193,7 @@ public class VDIP implements
 
   public void applySettings( Properties props )
   {
-    String dirText = EmuUtil.getProperty(
-				props,
-				"jkcemu.usb.memstick.directory" );
+    String dirText = EmuUtil.getProperty( props, PROP_USB_DIR );
     setMemStickDirectory( dirText.isEmpty() ? null : new File( dirText ) );
     setMemStickForceCurrentTimestamp(
 		EmuUtil.getBooleanProperty(
@@ -623,7 +633,7 @@ public class VDIP implements
   {
     synchronized( this.lockObj ) {
       if( this.raf != null ) {
-	EmuUtil.doClose( this.raf );
+	EmuUtil.closeSilent( this.raf );
 	updLastModified();
 	this.fileWrite  = false;
 	this.file       = null;
@@ -1354,7 +1364,7 @@ public class VDIP implements
     if( !found ) {
       throwCommandFailed();
     }
-    this.freeDiskSpace = new Long( freeSpace );
+    this.freeDiskSpace = freeSpace;
     if( extendedOutput ) {
       if( freeSpace > 0xFFFFFFFFFFFFL ) {
 	freeSpace = 0xFFFFFFFFFFFFL;
@@ -1630,7 +1640,7 @@ public class VDIP implements
 	  this.fileWrite  = true;
 	}
 	catch( IOException ex ) {
-	  EmuUtil.doClose( raf );
+	  EmuUtil.closeSilent( raf );
 	}
       }
       if( this.raf == null ) {
@@ -1732,7 +1742,7 @@ public class VDIP implements
 	throwCommandFailed();
       }
       finally {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
   }
@@ -2378,7 +2388,7 @@ public class VDIP implements
 		(int) (value >> 11) & 0x1F,
 		(int) (value >> 5) & 0x3F,
 		(int) (value & 0x1F) * 2 );
-	  millis = new Long( this.calendar.getTimeInMillis() );
+	  millis = this.calendar.getTimeInMillis();
 	}
       }
     }

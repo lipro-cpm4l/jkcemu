@@ -8,9 +8,15 @@
 
 package jkcemu.programming;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.PatternSyntaxException;
 import jkcemu.base.EmuUtil;
 
@@ -201,7 +207,7 @@ public class PrgSource
       }
     }
     finally {
-      EmuUtil.doClose( reader );
+      EmuUtil.closeSilent( reader );
     }
     return lines;
   }

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,26 +8,39 @@
 
 package jkcemu.emusys.kccompact;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.KCcompact;
 
 
 public class KCcompactSettingsFld extends AbstractSettingsFld
 {
-  private JTabbedPane        tabbedPane;
-  private JCheckBox          btnFDC;
-  private JCheckBox          btnFixedScreenSize;
-  private JRadioButton       btnSoundMono;
-  private JRadioButton       btnSoundStereo;
-  private JPanel             tabFDC;
-  private JPanel             tabSound;
-  private JPanel             tabEtc;
-  private ROMFileSettingsFld fldAltFDC;
-  private ROMFileSettingsFld fldAltOS;
-  private ROMFileSettingsFld fldAltBasic;
+  private JTabbedPane          tabbedPane;
+  private JCheckBox            btnFDC;
+  private JCheckBox            btnFixedScreenSize;
+  private JPanel               tabFDC;
+  private JPanel               tabEtc;
+  private ROMFileSettingsFld   fldAltFDC;
+  private ROMFileSettingsFld   fldAltOS;
+  private ROMFileSettingsFld   fldAltBasic;
+  private AutoInputSettingsFld tabAutoInput;
 
 
   public KCcompactSettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -58,50 +71,13 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 
     this.fldAltFDC = new ROMFileSettingsFld(
 		settingsFrm,
-		this.propPrefix + "fdc.rom.",
+		this.propPrefix + KCcompact.PROP_FDC_ROM_PREFIX,
 		"Alternativer ROM in der Floppy-Disk-Station:" );
     gbcFDC.fill        = GridBagConstraints.HORIZONTAL;
     gbcFDC.weightx     = 1.0;
     gbcFDC.insets.left = 50;
     gbcFDC.gridy++;
     this.tabFDC.add( this.fldAltFDC, gbcFDC );
-
-
-    // Tab Sound
-    this.tabSound = new JPanel( new GridBagLayout() );
-    this.tabbedPane.addTab( "Sound", this.tabSound );
-
-    GridBagConstraints gbcSound = new GridBagConstraints(
-					0, 0,
-					GridBagConstraints.REMAINDER, 1,
-					1.0, 0.0,
-					GridBagConstraints.WEST,
-					GridBagConstraints.HORIZONTAL,
-					new Insets( 5, 5, 5, 5 ),
-					0, 0 );
-
-    this.tabSound.add(
-		new JLabel( "Tonausgabe des Sound-Generators:" ),
-		gbcSound );
-
-    ButtonGroup grpSoundChannels = new ButtonGroup();
-
-    this.btnSoundMono = new JRadioButton( "Mono (Kan\u00E4le: A+B+C)", true );
-    this.btnSoundMono.addActionListener( this );
-    grpSoundChannels.add( this.btnSoundMono );
-    gbcSound.insets.left   = 50;
-    gbcSound.insets.top    = 0;
-    gbcSound.insets.bottom = 0;
-    gbcSound.gridy++;
-    this.tabSound.add( this.btnSoundMono, gbcSound );
-
-    this.btnSoundStereo = new JRadioButton(
-                "Stereo (Kan\u00E4le: Links=A+B/2, Rechts=C+B/2)" );
-    this.btnSoundStereo.addActionListener( this );
-    grpSoundChannels.add( this.btnSoundStereo );
-    gbcSound.insets.bottom = 5;
-    gbcSound.gridy++;
-    this.tabSound.add( this.btnSoundStereo, gbcSound );
 
 
     // Tab Sonstiges
@@ -131,7 +107,7 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 
     this.fldAltOS = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "os.",
+				propPrefix + KCcompact.PROP_OS_PREFIX,
 				"Alternativer Betriebssystem-ROM:" );
     gbcEtc.insets.top    = 5;
     gbcEtc.insets.bottom = 5;
@@ -140,10 +116,20 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 
     this.fldAltBasic = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "basic.",
+				propPrefix + KCcompact.PROP_BASIC_PREFIX,
 				"Alternativer BASIC-ROM:" );
     gbcEtc.gridy++;
     this.tabEtc.add( this.fldAltBasic, gbcEtc );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+		settingsFrm,
+		propPrefix,
+		KCcompact.DEFAULT_SWAP_KEY_CHAR_CASE,
+		KCcompact.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
+
 
     updFieldsEnabled();
   }
@@ -156,21 +142,36 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
 		Properties props,
 		boolean    selected ) throws UserInputException
   {
-    EmuUtil.setProperty(
+    Component tab = null;
+    try {
+
+      // Tab Floppy-Disk-Station
+      tab = this.tabFDC;
+      EmuUtil.setProperty(
 		props,
-		this.propPrefix + "floppydisk.enabled",
+		this.propPrefix + KCcompact.PROP_FDC_ENABLED,
 		this.btnFDC.isSelected() );
-    EmuUtil.setProperty(
+
+      // Tab Sonstiges
+      tab = this.tabEtc;
+      EmuUtil.setProperty(
 		props,
-		this.propPrefix + "fixed_screen_size",
+		this.propPrefix + KCcompact.PROP_FIXED_SCREEN_SIZE,
 		this.btnFixedScreenSize.isSelected() );
-    EmuUtil.setProperty(
-		props,
-		this.propPrefix + "sound.stereo",
-		this.btnSoundStereo.isSelected() );
-    this.fldAltFDC.applyInput( props, selected );
-    this.fldAltOS.applyInput( props, selected );
-    this.fldAltBasic.applyInput( props, selected );
+      this.fldAltFDC.applyInput( props, selected );
+      this.fldAltOS.applyInput( props, selected );
+      this.fldAltBasic.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
+    }
+    catch( UserInputException ex ) {
+      if( tab != null ) {
+	this.tabbedPane.setSelectedComponent( tab );
+      }
+      throw ex;
+    }
   }
 
 
@@ -180,7 +181,8 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( src instanceof AbstractButton ) {
+      rv = this.tabAutoInput.doAction( e );
+      if( !rv && (src instanceof AbstractButton) ) {
 	updFieldsEnabled();
 	fireDataChanged();
 	rv = true;
@@ -196,6 +198,7 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
     this.fldAltOS.lookAndFeelChanged();
     this.fldAltFDC.lookAndFeelChanged();
     this.fldAltBasic.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
   }
 
 
@@ -205,25 +208,17 @@ public class KCcompactSettingsFld extends AbstractSettingsFld
     this.btnFDC.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "floppydisk.enabled",
+			this.propPrefix + KCcompact.PROP_FDC_ENABLED,
 			false ) );
     this.btnFixedScreenSize.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			this.propPrefix + "fixed_screen_size",
+			this.propPrefix + KCcompact.PROP_FIXED_SCREEN_SIZE,
 			false ) );
-    if( EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + "sound.stereo",
-			false ) )
-    {
-      this.btnSoundStereo.setSelected( true );
-    } else {
-      this.btnSoundMono.setSelected( true );
-    }
     this.fldAltFDC.updFields( props );
     this.fldAltOS.updFields( props );
     this.fldAltBasic.updFields( props );
+    this.tabAutoInput.updFields( props );
     updFieldsEnabled();
   }
 

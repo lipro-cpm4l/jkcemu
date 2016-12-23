@@ -1,71 +1,740 @@
 <html>
 <body>
-  <h1>Bildbetrachter</h1>
-    Der Bildbetrachter dient dazu,
-    Bildschirmfotos anzuzeigen, zu konvertieren und zu speichern.
-    Sie k&ouml;nnen aber auch Bilddateien &ouml;ffnen
-    oder Bilder aus der Zwischenablage einf&uuml;gen.
-    Neben den &uuml;blichen Dateiformaten werden auch
-    A5105-Bilddateien mit 16&nbsp;Farben (*.scr)
-    und LLC2-HIRES-Bilddateien (*.pix, 16384&nbsp;Bytes gro&szlig;)
-    lesend und schreibend unterst&uuml;tzt,
-    d.h., mit dem Bildbetrachter k&ouml;nnen auch Bilder f&uuml;r
-    den A5105 und LLC2 erzeugt werden,
-    wobei nat&uuml;rlich aufgrund der begrenzten Aufl&ouml;sung und
-    Farbanzahl entsprechende Qualit&auml;tseinbu&szlig;en entstehen.
-  <br/><br/>
-    Der Bildbetrachter kann auch als eigenst&auml;ndiges Programm
-    ohne Emulator gestartet werden.
-    Dazu gibt man beim Aufruf von JKCEMU in der Kommandozeile
-    die Option <em>--iv</em> oder <em>--imageviewer</em> an.
-    Zus&auml;tzlich kann dahinter auch eine Bilddatei angegeben werden,
-    die dann im Bildbetrachter angezeigt wird.
-  <br/><br/>
+ <h1>Bildbetrachter/-bearbeitung</h1>
+  Der Bildbetrachter dient dazu, Bilder anzuzeigen, zu konvertieren
+  und zu speichern.
+  Die Besonderheit des JKCEMU-Bildbetrachters liegt darin,
+  dass er auch Datei- und Bildformate einiger der emulierten Systeme
+  unterst&uuml;tzt,
+  einschlie&szlig;lich der Konvertierung von Bildern in diese Formate.
+  Aus diesem Grund verf&uuml;gt der Bildbetrachter auch &uuml;ber
+  einige &uuml;bliche Bildbearbeitungsfunktionen.
+ <br/><br/>
+  Der Bildbetrachter kann auch als eigenst&auml;ndiges Programm
+  ohne Emulator gestartet werden.
+  Dazu gibt man beim Aufruf von JKCEMU in der Kommandozeile
+  die Option <em>--iv</em> oder <em>--imageviewer</em> an.
+  Zus&auml;tzlich kann dahinter auch eine Bilddatei angegeben werden,
+  die dann im Bildbetrachter angezeigt wird.
+ <br/><br/>
+  <ul>
+   <li><a href="imageviewer.htm#formats">1. Dateiformate</a></li>
+   <li>
+    <a href="imageviewer.htm#open">2. Datei &ouml;ffnen und anzeigen</a>
+   </li>
+   <li><a href="imageviewer.htm#save">3. Datei speichern</a></li>
+   <li><a href="imageviewer.htm#export">4. Exportieren</a></li>
+   <li><a href="imageviewer.htm#etc">5. Weitere Funktionen</a></li>
+   <li>
+    <a href="imageviewer.htm#edit">6. Bildbearbeitung</a>
+    <ul>
+     <li>
+      <a href="imageviewer.htm#rotate">6.1. Drehen</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#cut_out">6.2. Zuschneiden</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#scale">6.3. Skalieren</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#flip_horizontal">6.4. Spiegeln</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#round_corners">6.5. Ecken abrunden</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#adjust">6.6. Helligkeit, Kontrast, Farben</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#index_colors">6.7. Farben reduzieren und indexieren</a>
+      <ul>
+       <li>
+        <a href="imageviewer.htm#create_pal">6.7.1. Farbpalette ermitteln</a>
+       </li>
+       <li>
+        <a href="imageviewer.htm#import_pal">6.7.2. Farbpalette importieren</a>
+       </li>
+       <li>
+        <a href="imageviewer.htm#dithering">6.7.3. Dithering</a>
+        <ul>
+         <li>
+          <a href="imageviewer.htm#floyd_steinberg">6.7.3.1. Floyd-Steinberg</a>
+         </li>
+         <li>
+          <a href="imageviewer.htm#sierra3">6.7.3.2. Sierra-3</a>
+         </li>
+         <li>
+          <a href="imageviewer.htm#atkinson">6.7.3.3. Atkinson</a>
+         </li>
+        </ul>
+       </li>
+      </ul>
+     </li>
+     <li>
+      <a href="imageviewer.htm#black_white">6.8. Schwarz/Wei&szlig; wandeln</a>
+     </li>
+     <li><a href="imageviewer.htm#invert">6.9. Invertieren</a></li>
+     <li>
+      <a href="imageviewer.htm#remove_transp">6.10. Transparenz entfernen</a>
+     </li>
+    </ul>
+   </li>
+   <li>
+    <a href="imageviewer.htm#convert">7. Bild in das Format eines emulierten Systems konvertieren</a>
+    <ul>
+     <li>
+      <a href="imageviewer.htm#convert_manually">7.1 Manuelles Konvertieren des Bildformats</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#convert_llc2">7.2 Konvertieren des Bildformats f&uuml;r LLC2-HIRES</a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
 
-  <h2>1. Anzeige des Bildes</h2>
-    Mit den beiden Pfeilen in der Werkzeugleiste l&auml;sst sich
-    das angezeigte Bild nach links und nach rechts drehen.
-    Daneben k&ouml;nnen Sie einen Skalierungsfaktor ausw&auml;hlen
-    oder eingeben.
-  <br/><br/>
+ <h2><a name="formats">1. Dateiformate</a></h2>
+  Die vom Bildbetrachter unterst&uuml;tzten Dateiformate h&auml;ngen
+  von der verwendeten Java-Laufzeitumgebung ab.
+  Diese unterst&uuml;tzt &uuml;blicherweise dir Formate BMP, GIF,
+  JPEG, PNG und WBMP sowie ab Java&nbsp;9 auch TIFF.
+  Des Weiteren beherrscht der JKCEMU-Bildbetrachter
+  auch das IFF/ILBM-Format.
+  Das ist das Standard-Grafikformat des Commodore Amiga
+  und hat die Dateiendungen:
+  <em>*.iff</em>, <em>*.ilbm</em> und <em>*.lbm</em>
+ <br/><br/>
+  Der JKCEMU-Bildbetrachter kann Bilder
+  f&uuml;r einige der emulierten Systeme erzeugen.
+  Diese werden je nach System entweder in einem speziellen Dateiformat
+  oder als <a href="../fileformats.htm#memimg">Speicherabbilddatei</a>
+  gespeichert (siehe <a href="imageviewer.htm#export">Exportieren</a>).
+ <br/><br/>
 
-  <h2>2. Bild speichern</h2>
-    Im Men&uuml; <em>Datei</em> finden Sie den Eintrag
-    <em>Speichern unter...</em>, mit dem Sie das angezeigte Bild
-    in verschiedenen Formaten speichern k&ouml;nnen.
-    Das Dateiformat wird anhand der Endung des von ihnen gew&auml;hlten
-    Dateinamens festgelegt.
-  <br/><br/>
-    Durch Laden und anschlie&szlig;endes <em>Speichern unter...</em>
-    k&ouml;nnen somit Bilddateien in verschiedene Formate konvertiert werden,
-    u.a. auch f&uuml;r den <a href="../a5105.htm#images">A5105</a>
-    und <a href="../llc2.htm#images">LLC2</a>.
-  <br/><br/>
+ <h2><a name="open">2. Datei &ouml;ffnen und anzeigen</a></h2>
+  Zum &Ouml;ffnen einer Datei gibt es mehrere M&ouml;glichenkeiten:
+  <ul>
+   <li>Men&uuml;punkt <em>Datei</em> &rarr; <em>&Ouml;ffnen</em></li>
+   <li>Klick auf das ganz links stehende Symbol in der Werkzeugleiste</li>
+   <li>
+    per Drag&amp;Drop eine Datei in den Bildbetrachter ziehen
+    und dort loslassen
+   </li>
+   <li>
+    Doppelklick auf eine Bilddatei im
+    <a href="filebrowser.htm">Datei-Browser</a>
+   </li>
+  </ul>
+ <br/>
+  Des Weiteren k&ouml;nnen Sie mit dem Men&uuml;punkt
+  <em>Bearbeiten</em> &rarr; <em>Einf&uuml;gen</em>
+  auch ein in der Zwischenablage befindliches Bild
+  in den Bildbetrachter holen.
+ <br/><br/>
+  Neben den weiter oben genannten Dateiformaten lassen sich auch
+  A5105-Bilddateien mit 16&nbsp;Farben (*.scr) und LLC2-HIRES-Bilddateien
+  (*.pix, 16384&nbsp;Bytes gro&szlig;) &ouml;ffnen.
+ <br/><br/>
+  Nach dem &Ouml;ffnen wird die Datei angezeigt.
+  Wenn im Men&uuml; <em>Einstellungen</em> beim Eintrag
+  <em>Fenster an Bildgr&ouml;&szlig;e anpassen</em>
+  das H&auml;kchen gesetzt ist,
+  wird das Fenster entsprechend vergr&ouml;&szlig;ert oder verkleinert.
+  Diese sowie die ebenfalls in dem Men&uuml; vornehmbare Festlegung
+  der Hintergrundfarbe wird auch dauerhaft gespeichert,
+  wenn Sie in die
+  <a href="../settings.htm#profiles">JKCEMU-Einstellungen speichern</a>.
+ <br/><br/>
+  In der Werkzeugleiste finden Sie Symbole zum Drehen und Skalieren
+  des Bildes.
+  Beides bezieht sich nur auf die Anzeige
+  und &auml;ndert nicht das eigentliche Bild.
+  Mit einem Klick auf das Symbol rechts neben der Skalierung
+  passt sich das Bild an die aktuelle Fenstergr&ouml;&szlig;e an.
+ <br/><br/>
+  Rechts in der Symbolleiste sind zwei Pfeile,
+  mit denen man zum vorherigen bzw. n&auml;chsten Bild gelangt.
+  So kann man sich durch alle unterst&uuml;tzten Bilddateien
+  im gleichen Verzeichniss durchklicken.
+ <br/><br/>
 
-  <h2>3. Bild drucken</h2>
-    Sie k&ouml;nnen das angezeigte Bild &uuml;ber den Eintrag
-    <em>Drucken...</em> im Men&uuml; <em>Datei</em> drucken.
-    Wenn Sie das Bild in der Anzeige gedreht haben,
-    wird es auch gedreht gedruckt.
-    Sollte das Bild gr&ouml;&szlig;er sein als der bedruckbare Bereich,
-    wird das Bild entsprechend verkleinert.
-  <br/><br/>
+ <h2><a name="save">3. Datei speichern</a></h2>
+  Das angezeigte Bild kann mit dem Men&uuml;punkt
+  <em>Datei</em> &rarr; <em>Speichern&nbsp;unter...</em>
+  oder dem zweiten Symbol in der Werkzeugleiste in einem
+  der oben genannten Dateiformate gespeichert werden.
+  Auf diese Weise lassen sich Bilder in andere Dateiformate konvertieren.
+  Es ist aber zu beachten, dass nicht alle Bildeigenschaften
+  in allen Formaten speicherbar sind.
+  Manche Dateiformate unterst&uuml;tzten keine oder nur eingeschr&auml;nkte
+  Transparenz, bei anderen ist die Anzahl der Farben begrenzt
+  (GIF kann z.B. nur max. 256&nbsp;Farben speichern).
+  Beim Speichen wird deshalb je nach Bild und dem ausgew&auml;hlten
+  Dateiformat ggf. die Transparenz aufgel&ouml;st,
+  die Anzahl der Farben reduziert,
+  oder das Speichern mit einer Fehlermeldung abgebrochen.
+  Im letzteren Fall muss man das Bild mit den
+  <a href="imageviewer.htm#edit">Beareitungsfunktionen</a>
+  erst in ein zum Dateiformat kompatibles Bildformat umwandeln,
+  bevor man es speichern kann.
+ <br/><br/>
+  Besonders gro&szlig;e Einschr&auml;nkungen bestehen beim WBMP-Format.
+  Dieses kann nur in schwarz/wei&szlig; und nur
+  in bestimmten Gr&ouml;&szlig;en gespeichert werden.
+ <br/><br/>
+  <b>Achtung!</b> Der JKCEMU-Bildbetrachter unterst&uuml;tzt keine
+  EXIF-Daten.
+  Wenn Sie also ein mit einer Digitalkamera aufgenommenes Foto
+  &ouml;ffnen und wieder speichern,
+  gehen die Informationen &uuml;ber Aufnahmezeitpunkt, Kameramodell,
+  Belichtung usw. verloren.
+ <br/><br/>
 
-  <h2>4. Ecken abrunden</h2>
-   Screenshots von Fenstern haben in den Ecken st&ouml;rende Pixel,
-   wenn die Fensterecken rund sind.
-   Mit der Funktion <em>Ecken abrunden</em> werden die Pixel
-   in den Ecken auf transparent gesetzt, d.h.,
-   der st&ouml;rende Hintergrund ist dort dann nicht mehr zu sehen.
-  <br/><br/>
+ <h2><a name="export">4. Exportieren</a></h2>
+  Im Untermen&uuml; <em>Datei</em> &rarr; <em>Exportieren&nbsp;als</em>
+  gibt es Funktionen, das abgezeigte Bild in einem speziellen Format
+  eines der emulierten Systeme zu speichern.
+  Dazu muss das Bild vorher mit der entsprechenden Funktion im Untermen&uuml;
+  <em>Bearbeiten</em> &rarr; <em>Konvertieren&nbsp;in</em>
+  umgewandelt werden.
+  Dabei werden sowohl die Aufl&ouml;sung als auch die Farben angepasst.
+  Zur Erzielung besserer Ergebnisse k&ouml;nnen diese Schritte auch
+  manuelle durchgef&uuml;hrt werden
+  (siehe <a href="imageviewer.htm#edit">Bildbearbeitung</a>),
+  bevor man die Konvertierungsfunktion aufruft.
+ <br/><br/>
+  Je nach emulierten System l&auml;sst sich das konvertierte Bild als
+  <ul>
+   <li>spezielle Bilddatei,</li>
+   <li>Speicherabbilddatei f&uuml;r den Bildwiederholspeicher und/oder</li>
+   <li>Speicherabbilddatei mit einem Programm zur Anzeige des Bildes</li>
+  </ul>
+  speichern.
+  Im Fall einer speziellen Bilddatei finden Sie in den Hinweisen
+  zur Emulation des jeweiligen System Informationen dar&uuml;ber,
+  wie die Bilddateien angezeigt werden k&ouml;nnen
+  (siehe <a href="../a5105.htm#images">A5105-Bilddateien</a> und
+  <a href="../llc2.htm#images">LLC2-HIRES-Bilddateien</a>).
+ <br/><br/>
 
-  <h2>5. Einstellungen</h2>
-    In den Einstellungen geben Sie an,
-    ob beim Anzeigen eines neuen Bildes, beim Skalieren oder beim Drehen
-    die Fenstergr&ouml;&szlig;e an das Bild angepasst werden soll.
-  <br/><br/>
-    Die Einstellungen des Bildbetrachters werden dauerhaft gespeichert,
-    wenn Sie in den <a href="../settings.htm">JKCEMU Einstellungen</a>
-    ein Profil speichern.
+ <h2><a name="etc">5. Weitere Funktionen</a></h2>
+  Wenn ein Bild angezeigt wird, k&ouml;nnen Sie neben
+  den in den anderen Abschnitten beschriebenen Funktionen auch:
+  <ul>
+   <li>das Bild in die Zwischenablage kopieren</em>
+   <li>das Bild ausdrucken</em>
+   <li>die Bildeigenschaften ansehen</em>
+   <li>die Farbpalette exportieren</li>
+  </ul>
+ <br/>
+  Die Men&uuml;eintr&auml;ge dazu finden Sie unter <em>Datei</em>
+  sowie f&uuml;r das Kopieren in die Zwischenablage unter <em>Bearbeiten</em>.
+ <br/><br/>
+  Die letzte der aufgef&uuml;hrten Funktionen, Farbpalette exportieren,
+  bildet das Gegenst&uuml;ck zu
+  <a href="imageviewer.htm#import_pal">Farbpalette importieren</a>
+  und ist nur m&ouml;glich,
+  wenn das Bild ein indexiertes Farbmodell (Farbtabelle) hat.
+  Die Farbpalette l&auml;sst sich als
+  <em>Paintshop Pro Farbpalettendatei</em> oder als
+  <em>IFF/ILBM-Datei</em> exportieren.
+  Das IFF/ILBM-Format ist zwar &uuml;blicherweise ein Dateiformat
+  f&uuml;r Bilder, wird aber in dem Fall nur f&uuml;r die Farbpalette
+  verwendet. Die Datei enth&auml;lt somit keine Bilddaten.
+ <br/><br/>
+
+ <h2><a name="edit">6. Bildbearbeitung</a></h2>
+  Die Bildbearbeitungsfunktionen dienen haupts&auml;chlich dazu,
+  Bilder so anzupassen, dass sie auf einigen der von JKCEMU
+  emulierten System angezeigt werden k&ouml;nnen.
+  Eine Ausnahme bildet die Funktion <em>Ecken abrunden...</em>.
+  Diese dient zur Nachbearbeitung von Bildschirmfotos.
+ <br/><br/>
+  Nach Anwendung einer Bildbearbeitungsfunktion wird intern
+  ein neues Bild erzeugt und angezeigt.
+  Sie k&ouml;nnen zum alten Bild, also zum unbearbeiteten Bild
+  bzw. zum vorherigen Bearbeitungsschritt, zur&uuml;ckkehren
+  (Men&uuml;punkt <em>Bearbeiten</em> &rarr; <em>R&uuml;ckg&auml;ngig</em>).
+  Dabei gehen die mit der letzten Bildbearbeitungsfunktion vorgenommenen
+  &Auml;nderungen verloren.
+  Die gesamte Bildbearbeitungshistorie ist im Untermen&uuml;
+  <em>Bearbeiten</em> &rarr; <em>Historie</em> zu finden.
+  Auch dort k&ouml;nnen Sie mit einem Klick
+  einen oder mehrere Bearbeitungsschritte zur&uuml;ckgehen.
+ <br/><br/>
+  Die Funktionen zur Bildbearbeitung finden Sie im Men&uuml;
+  <em>Bearbeiten</em>:
+ <br/><br/>
+
+ <h2><a name="rotate">6.1. Drehen</a></h2>
+  Wie der Name sagt, k&ouml;nnen Sie das Bild drehen.
+  Entgegen den Symbolen in der Werkzeugleiste wird bei dieser Funktion
+  nicht die Anzeige, sondern das eigentliche Bild gedreht,
+  und zwar nicht nur in 90&deg;-, sondern in &frac14;&deg;-Schritten.
+  Nach dem Drehen ist das Bild gr&ouml;&szlig;er geworden,
+  und zwar genau so gro&szlig;, dass das gedrehte Bild exakt hineinpasst.
+ <br/><br/>
+  Durch die Drehung abweichend vom 90&deg;-Schritten
+  entstehen Bildbereiche ohne Inhalt.
+  In dem Dialog, der beim Aufruf der Funktion erscheint,
+  legen Sie im unteren Bereich bei <em>Hintergrund</em> fest,
+  ob diese Bereich transparent, wei&szlig;, grau oder schwarz werden sollen.
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie ein Bild mit transparenten Bereich drehen,
+  wirkt sich die Angabe zum Hintergrund auch auf diese Bereich aus.
+ <br/><br/>
+
+ <h2><a name="cut_out">6.2. Zuschneiden</a></h2>
+  Das Zuscheiden eines Bildes geht so:
+  <ol>
+   <li>
+    Markieren Sie mit der Maus und gedr&uuml;ckter erster
+    (i.d.R. linker) Maustaste den Bereich,
+    den Sie behalten m&ouml;chten.
+   </li>
+   <li>
+    Rufen Sie den Men&uuml;punkt <em>Bearbeiten</em>
+    &rarr; <em>Zuschneiden...</em> auf.
+    Es erscheint ein Dialogfenster.
+   </li>
+   <li>
+    In dem Dialog k&ouml;nnen Sie den ausgew&auml;hlten Bereich
+    pixelgenau anpassen, indem Sie in den 4&nbsp;Eingabefeldern
+    die Werte &auml;ndern.
+   </li>
+   <li>
+    Bet&auml;tigen Sie in den Dialog die Schaltfl&auml;che
+    <em>Zuschneiden</em>.
+   </li>
+  </ol>
+ <br/>
+  Sie k&ouml;nnen auch zuerst den Dialog &ouml;ffnen und dann
+  mit der Maus im Bildbetrachterfenster den Bereich ausw&auml;hlen.
+  Das ist vorallem dann sinnvoll, wenn sich die Farbe f&uuml;r die Auswahl
+  nicht deutlich genug vom Bild abhebt.
+  In dem Fall w&auml;hlen Sie bitte im Dialog
+  eine andere Farbe f&uuml;r die Auswahl aus.
+ <br/><br/>
+  Soll der auszuw&auml;hlende Bereich einem bestimmten Seitenverh&auml;ltnis
+  entsprechen, k&ouml;nnen Sie das im Auswahlfeld
+  <em>Seitenverh&auml;ltnis</em> angeben.
+ <br/><br/>
+  <b>Achtung!</b> In der Liste der Seitenverh&auml;ltnisse ist der LLC2
+  bei 4:3 zu finden. Dieser Computer hat aber eine Aufl&ouml;sung
+  von 512x256&nbsp;Pixel, also 2:1.
+  Allerdings erfolgt die Bildschirmausgabe auf dem Fernseher/Monitor
+  in 4:3, d.h., die Pixel sind nicht quadratisch.
+  Aus diesem Grund m&uuml;ssen Sie ein Bild f&uuml;r den LLC2
+  mit 4:3 zuschneiden und danach auf 2:1 skalieren
+  (siehe n&auml;chster Abschnitt sowie
+  <a href="imageviewer.htm#convert_llc2">Konvertieren des Bildformats f&uuml;r LLC2-HIRES</a>),
+  damit es auf dem LLC2 weitgehend unverzerrt wiedergegeben wird.
+ <br/><br/>
+
+ <h2><a name="scale">6.3. Skalieren</a></h2>
+  Zum Skalieren eines Bildes w&auml;hlen Sie den Men&uuml;punkt
+  <em>Bearbeiten</em> &rarr; <em>Skalieren...</em>.
+  Es erscheint ein Dialogfenster, in dem Sie die neue Breite und/oder
+  die neue H&ouml;he eingeben und danach auch <em>Skalieren</em> klicken.
+ <br/><br/>
+  Soll bei der Skalierung das Seitenverh&auml;ltnis beibehalten werden,
+  dann setzen Sie bitte bei der entsprechenden Option das H&auml;kchen.
+  In dem Fall wird beim &Auml;ndern der Breite automatisch
+  die dazugeh&ouml;rige neue H&ouml;he berechnet und umgekehrt.
+ <br/><br/>
+  <b>Achtung!</b> Durch das Skalieren k&ouml;nnen neue Farben entstehen.
+  Besonders deutlich wird das bei einem monochromen Schwarz/Wei&szlig;-Bild.
+  Wenn benachbarte schwarze und wei&szlig;e Pixel zusammengefasst werden,
+  entstehen graue Zwischenwerte.
+  Da die so neu entstehenden Farben bei einem Bild mit indexierten Farben
+  nicht in jedem Fall abgebildet werden k&ouml;nnen,
+  hat das skalierte Bild kein indexiertes Farbmodell mehr.
+  Wenn sie jedoch eins ben&ouml;tigen,
+  dann benutzen Sie bitte den dem Men&uuml;punkt
+  <a href="imageviewer.htm#index_colors">Farben reduzieren und indexieren...</a>.
+ <br/><br/>
+  <b>Achtung!</b> Im Gegensatz zur Skalierung in der Werkzeugleiste
+  &auml;ndert der Men&uuml;punkt <em>Skalieren...</em> das eigentliche Bild.
+ <br/><br/>
+
+ <h2><a name="flip_horizontal">6.4. Spiegeln</a></h2>
+  Diese Funktion spiegelt das Bild horizontal, d.h.,
+  die Seiten werden getauscht.
+  M&ouml;chten Sie das Bild vertikal spiegeln,
+  dann <a href="imageviewer.htm#rotate">drehen</a> Sie es zuerst
+  um 90&deg;, spiegeln es und drehen es mit -90&deg; wieder zur&uuml;ck.
+ <br/><br/>
+
+ <h2><a name="round_corners">6.5. Ecken abrunden</a></h2>
+  Diese Funktion dient zum Nachbearbeiten von Bildschirmfotos (Screenshots),
+  insbesondere von Bildschirmfotos, die exakt ein Fenster darstellen.
+  Auf machen Betriebs- und Fenstersystemen haben die Fenster
+  abgerundete Ecken.
+  Ein mit JKCEMU aufgenommenes Bildschirmfoto hat dagegen keine
+  abgerundeten Ecken, so dass die Ecken u.U. ein Sch&ouml;nheitsmakel sind.
+  Mit der Funktion <em>Ecken abrunden</em> beseitigen Sie diesen Makel,
+  indem Sie die Pixel in den Ecken transparent, also durchsichtig,
+  machen k&ouml;nnen.
+  Sie m&uuml;ssen nur angeben, wieviele Pixel ab der jeweiligen Ecke
+  auf transparent gesetzt werden sollen.
+ <br/><br/>
+  <b>Achtung!</b> Durch das Abrunden der Ecken entsteht ein Bild
+  mit Transparenz.
+  Damit die Transparenz nicht verloren geht,
+  m&uuml;ssen Sie beim Speichern des Bildes ein Format ausw&auml;hlen,
+  welches Transparenz unterst&uuml;tzt (z.B. PNG).
+ <br/><br/>
+
+ <h2><a name="adjust">6.6. Helligkeit, Kontrast, Farben</a></h2>
+  Zum &Auml;ndern der Helligkeit, des Kontrastes und der Farbs&auml;ttigung
+  rufen Sie den Men&uuml;punkt
+  <em>Bearbeiten</em> &rarr; <em>Helligkeit, Kontrast, Farben...</em> auf.
+  Es erscheint ein Dialogfenster mit Schiebereglern und Eingabefeldern
+  zur Einstellung dieser Eigenschaften.
+  Sie k&ouml;nnen die Werte sowohl am Schieberegler als auch am darunter
+  befindlichen Eingabefeld &auml;ndern.
+ <br/><br/>
+  Auf der rechten Seite im Dialogfenster finden Sie Schieberegler
+  und Eingabefelder f&uuml;r die drei Prim&auml;rfarben
+  rot, gr&uuml;n und blau (RGB-Farbmodell).
+  Damit l&auml;sst sich in allen Pixeln des Bildes der jeweilige
+  Rot-, Gr&uuml;n- und Blau-Wert &auml;ndern.
+  Wenn Sie die drei Reglern gleichm&auml;&szlig;ig bet&auml;tigen,
+  entspricht das einer &Auml;nderung der Helligkeit.
+ <br/><br/>
+  Die Wirkung der Schieberegler k&ouml;nnen Sie sofort sehen.
+  Dazu wird zuerst ein Vorschaubild mit 256&nbsp; indexierten Farben erzeugt.
+  Dieses ist f&uuml;r eine performante Vorschau notwendig,
+  denn bei jeder &Auml;nderung eines Wertes m&uuml;ssen nur
+  die 256&nbsp;Eintr&auml;ge in der Farbpalette und nicht jedes Pixel
+  im Vorschaubild ge&auml;ndert werden.
+  Allerdings kann das Erzeugen des Vorschaubildes einige Sekunden dauern.
+  Mit Bet&auml;tigen der Schaltfl&auml;che <em>Anwenden</em>
+  wird dann das eigentliche neue Bild berechnet, was allerdings
+  je nach Bildgr&ouml;&szlig; auch wieder einige Sekunden dauern kann.
+ <br/><br/>
+
+ <h2><a name="index_colors">6.7. Farben reduzieren und indexieren</a></h2>
+  Diese Funktion indexiert die Farben des Bildes,
+  indem es eine Farbpalette anwendet.
+  Die anzuwendende Farbpalette kann aus dem Bild ermittelt
+  von einigen fest vorgegebenen (A5105, KC85/4 HIRES, Graustufen,
+  schwarz/wei&szlig;) ausgew&auml;hlt
+  oder aus einer Datei importiert werden.
+  Da die Farbpalette nur eine begrenzte Anzahl von Farben enth&auml;lt,
+  bedeutet das Anwenden einer Farbpalette, also das Indexieren,
+  meistens auch ein Reduzieren der Farben.
+ <br/><br/>
+
+ <h3><a name="create_pal">6.7.1. Farbpalette ermitteln</a></h3>
+  Bei dieser Funktion wird mit Hilfe eines modifizierten OcTree-Verfahrens
+  eine Farbpalette ermittelt,
+  die die in dem Bild enthaltenen Farben m&ouml;glichst gut abdeckt.
+  Sie m&uuml;ssen nur angeben,
+  wieviele Farben die Palette haben soll (maxiaml 256).
+ <br/><br/>
+
+ <h3><a name="import_pal">6.7.2. Farbpalette importieren</a></h3>
+  Mit dieser Funktion importieren Sie eine Farbpalette aus einer Datei.
+  Die Datei kann eine Paintshop&nbsp;Pro- oder IFF/ILBM-Farbpalettendatei
+  oder eine unterst&uuml;tzte Bilddatei sein,
+  die eine Farbpalette enth&auml;lt.
+ <br/><br/>
+  Durch die M&ouml;glichkeit zum Importieren k&ouml;nnen Sie auch
+  eigene Farbpaletten verwenden.
+  Da eine Paintshop&nbsp;Pro Farbpalettendatei eine Textdatei
+  mit einem recht einfachen Format ist,
+  k&ouml;nnen Sie unter Beachtung dieses Formats Ihre eigene Farbpalette
+  einfach in einen Texteditor eintippen, als <em>*.pal</em>-Datei speichern
+  und dann importieren.
+  Die Zeilenende-Bytes muss dem DOS/Windows-Format entsprechen
+  (Bytes&nbsp;0Dh/0Ah, kann unter Mac/Linux/Unix im
+  <a href="texteditor.htm">JKCEMU-Texteditor</a>
+  mit <em>Speichern unter...</em> erzeugt werden).
+ <br/><br/>
+  Eine Paintshop&nbsp;Pro Farbpalettendatei hat folgenden Aufbau:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Zeile</th><th>Wert/Bedeutung</th></tr>
+   <tr><td>1</td><td nowrap="nowrap">JASC-PAL</td></tr>
+   <tr><td>2</td><td nowrap="nowrap">0100</td></tr>
+   <tr><td>3</td><td>Anzahl Farben als Dezimalzahl</td></tr>
+   <tr>
+    <td>4</td>
+    <td>
+     Rot-, Gr&uuml;n- und Blauwert der ersten Farbe
+     als drei, durch jeweils ein Leerzeichen getrennte Dezimalzahlen
+    </td>
+   </tr>
+   <tr>
+    <td>5</td>
+    <td>
+     Rot-, Gr&uuml;n- und Blauwert der zweiten Farbe
+     als drei, durch jeweils ein Leerzeichen getrennte Dezimalzahlen
+    </td>
+   </tr>
+   <tr><td>6</td><td nowrap="nowrap">3. Farbe usw.</td></tr>
+  </table>
+ <br/>
+  Die Datei f&uuml;r die KC85/4-HIRES-Farbpalette
+  (Farben schwarz, rot, t&uuml;rkis und wei&szlig;)
+  sieht somit folgenderma&szlig;en aus:
+ <br/><br/>
+  <tt>
+   JASC-PAL&#10;<br/>
+   0100&#10;<br/>
+   4&#10;<br/>
+   0 0 0&#10;<br/>
+   255 0 0&#10;<br/>
+   0 255 255&#10;<br/>
+   255 255 255&#10;<br/>
+  </tt>
+ <br/><br/>
+
+ <h3><a name="dithering">6.7.3. Dithering</a></h3>
+  Durch die Anwendung einer Farbpalette wird die Anzahl der Farben,
+  und damit auch die Qualit&auml;t des Bildes verringert.
+  Insbesondere bei einer Reduktion auf sehr wenige Farben
+  ist der Qualit&auml;tsverlust betr&auml;chtlich.
+  Mit Dithering ist es m&ouml;glich,
+  diesem Qualit&auml;tsverlust optisch entgegenzuwirken.
+  Dabei werden fehlende Farben durch das geschickte Setzen
+  von benachbarten Pixel mit unterschiedlichen Farben simuliert.
+  Das menschliche Auge nimmt in dem Fall Mischfarben wahr,
+  die im Bild gar nicht vorhanden sind.
+  Dithering funktieniert besonders gut,
+  wenn das Bild soviele Pixel hat,
+  dass das Auge die einzelnen Pixel nicht erkennt.
+ <br/><br/>
+  Konkret passiert bei Dithering folgendes:
+  Das erste Pixel erh&auml;lt aus der Farbpalette die Farbe,
+  die der urspr&uuml;nglichen Pixelfarbe am n&auml;chsten kommt.
+  Die Differenz zwischen der urspr&uuml;nglichen und der neuen Farbe
+  ist ein Farbfehler.
+  Dieser Farbfehler, d.h. der jeweilige Differenzbetrag f&uuml;r
+  die drei Prim&auml;rfarben rot, gr&uuml;n und blau,
+  wird auf die n&auml;chsten Pixel verteilt.
+  Beim zweiten und den nachfolgenden Pixel wird dann die urspr&uuml;ngliche
+  Farbe mit dem anteiligen Farbfehler addiert,
+  daraus wieder die am n&auml;chsten kommende Farbe gesucht,
+  erneut Fehleranteil berechnet,
+  diesen wieder auf die nachfolgenden Pixel verteilt und so weiter.
+ <br/><br/>
+  Es gibt verschiedene Dithering-Algoritmen,
+  die sich in der Art und Weise der Verteilung
+  des jeweiligen Farbfehlers unterscheiden.
+  Im JKCEMU-Bildbetrachter sind drei Algoritmen enthalten.
+  Welcher Algorithmus das beste Ergebnis liefert,
+  ist eine pers&ouml;nliche Geschmacksfrage und
+  sollte im Einzelfall ausprobiert werden.
+ <br/><br/>
+
+ <h3><a name="floyd_steinberg">6.7.3.1. Floyd-Steinberg</a></h3>
+  Der Floyd-Steinberg-Algoritmus wurde 1976 durch die beiden
+  gleichnamigen Herren ver&ouml;ffentlicht.
+  Der Algorithmus verteilt den jeweiligen Farbfehler zu ungeraden Anteilen
+  auf das n&auml;chste rechts stehende Pixel
+  sowie auf drei Pixel in der n&auml;chsten Zeile.
+  Floyd-Steinberg-Dithering liefert gute Ergebnisse
+  und ist quasi das Standard-Verfahren.
+ <br/><br/>
+
+ <h3><a name="sierra3">6.7.3.2. Sierra&nbsp;3</a></h3>
+  Nach der Ver&ouml;ffentlichung des Floyd-Steinberg-Algorithmus&acute;
+  wurden durch verschiedene Leute weitere Algorithmen vorgeschlagen,
+  die eine noch etwas bessere Bildqualit&auml;t liefern sollen.
+  Einer dieser Algorithmen ist Sierra-3. Die 3 im Namen bedeutet,
+  dass der Farbfehler auf drei (statt wie bei Floyd-Steinberg nur auf zwei)
+  Pixelzeilen verteilt wird.
+  Dadurch ergeben sich etwas feinere &Uuml;berg&auml;nge und Abstufungen.
+  Der Qualit&auml;tsunterschied zu Floyd-Steinberg ist insgesamt gesehen
+  allerdings recht gering, wie auch bei allen anderen Dithering-Algorithmen,
+  die nach Floyd-Steinberg ver&ouml;ffentlicht wurden.
+  Im JKCEMU-Dateibetrachter ist Sierra-3 als Vertreter der 3-zeiligen
+  Dithering-Algorithmen enthalten.
+ <br/><br/>
+
+ <h3><a name="atkinson">6.7.3.3. Atkinson</a></h3>
+  Atkinson war Mitarbeiter bei Apple und ma&szlig;geblich
+  an der Entwicklung von Apple-Grafiksoftware beteiligt.
+  Er hat ein Dithering-Algorithmus ver&ouml;ffentlicht, der sich
+  in einem Punkt wesentlich von den anderer Algorithmen unterscheidet:
+  Atkinson verteilt nicht den gesamten Farbfehler
+  auf die nachfolgenden Pixel, sondern nur Dreiviertel.
+  Das Farbbluten, also das &Uuml;bertragen eines Farbanteils
+  auf die nachfolgenden Pixel, wird damit reduziert.
+ <br/><br/>
+  Dieser Unterschied macht sich auch optisch bemerkbar.
+  Helle und dunkle Fl&auml;chen sind weniger mit Pixeln einer anderen
+  Farbe durchsetzt, wodurch die Fl&auml;chen homogener wirken
+  und der Kontrast st&auml;rker ausf&auml;llt.
+  Aus diesem Grund ist der Atkinson-Algorithmus auch
+  im JKCEMU-Bildbetrachter enthalten.
+ <br/><br/>
+
+ <h2><a name="black_white">6.8. Schwarz/Wei&szlig; wandeln</a></h2>
+  Im Untermen&uuml; <em>Bearbeiten</em> &rarr;
+  <em>Schwarz-/Wei&szlig; wandeln</em> Finden Sie Funktionen
+  zum Umwandeln des Bildes in Graustufen oder in ein monochromes
+  Schwarz-/Wei&szlig;-Bild.
+  Letzteres ist mittels Schwellwert sowie mittels
+  <a href="imageviewer.htm#dithering">Dithering</a> m&ouml;glich.
+  Bei der Wandlung in Graustufen bleibt eine eventuell
+  vorhandene Transparenz erhalten, bei der Wandlung in ein
+  monochromes Schwarz-/Wei&szlig;-Bild dagegen nicht.
+ <br/><br/>
+
+ <h2><a name="invert">6.9. Invertieren</a></h2>
+  Die Funktion Invertieren erzeugt eine Art Negativ-Bild,
+  was allerdings nur f&uuml;r spezielle Anwendungsf&auml;lle sinnvoll ist.
+  Dazu wird in jedem Pixel jede der drei Prim&auml;rfarben invertiert.
+  Der JKCEMU-Bildbetrachter verwendet das RGB-Farbmodell
+  mit einem Byte Aufl&ouml;sung pro Prim&auml;rfarbe, d.h.,
+  jede Prim&auml;rfarbe wird mit einem Wert von 0 bis 255 abgebildet.
+  Beim Invertieren wird nun dieser Wert folgenderma&szlig;en umgewandelt:
+ <br/><br/>
+  <em>Neuer&nbsp;Wert</em> = 255 - <em>Alter&nbsp;Wert</em>
+ <br/><br/>
+  Wenn also z.B. ein Pixel den RGB-Farbwert [38,72,165] hat,
+  wird daraus die Farbe [217,183,90].
+ <br/><br/>
+
+ <h2><a name="remove_transp">6.10. Transparenz entfernen</a></h2>
+  Der JKCEMU-Bildbetrachter kann mit Bildern umgehen,
+  die transparente Pixel enthalten.
+  Allerdings gibt es Funktionen, bei denen Transparenz st&ouml;rt
+  oder gar nicht unterst&uuml;tzt wird.
+  So ist z.B. das Speichern von transparenten Bildern
+  im BMP- und WBMP-Format nicht und im IFF/ILBM-Format
+  nur in bestimmten F&auml;llen m&ouml;glich.
+  Aus diesem Grund gibt es den Men&uuml;eintrag
+  <em>Bearbeiten</em> &rarr; <em>Transparenz entfernen...</em>,
+  der nur dann aufgerufen werden kann,
+  wenn das angezeigte Bild Transparenz enth&auml;lt.
+  Die Funktion ersetzt einfach die transparenten Pixel mit der Farbe,
+  die Sie in dem Dialog angeben.
+  Bei der Auswahl <em>in den Pixel gespeicherte Farbe</em>
+  werden die transparenten Pixel mit der Farbe voll deckend dargestellt,
+  die in den Pixeln selbst gespeichert ist.
+  Auch wenn ein Pixel voll transparent ist,
+  so ist in ihm ein Farbwert enthalten,
+  der in dem Fall genommen wird.
+ <br/><br/>
+
+ <h2>
+  <a name="convert">7. Bild in das Format eines emulierten Systems konvertieren</a>
+ </h2>
+  Mit den Men&uuml;eintr&auml;gen im Untermen&uuml;
+  <em>Bearbeiten</em> &rarr; <em>Konvertieren&nbsp;in</em>
+  &uuml;berf&uuml;hren Sie das Bild in das Format eines von JKCEMU
+  emulierten Systems, nachfolgend auch Zielsystem genannt.
+  Die Konvertierung bezieht sich dabei nur auf das Bildformat,
+  d.h. auf die Aufl&ouml;sung und auf die Farben.
+  Das passende Dateiformat wird erst beim
+  <a href="imageviewer.htm#export">Exportieren</a> erzeugt.
+  Daf&uuml;r ist aber die vorherige Konvertierung des Bildformats
+  eine notwendige Voraussetzung.
+ <br/><br/>
+  Beim Konvertieren in das Format des Zielsystems
+  wird das Bild zuerst auf die notwendige Gr&ouml;&szlig;e skaliert.
+  Passt das Seitenverh&auml;ltnis nicht,
+  werden links und rechts bzw. oben und unten schwarze Balken eingef&uuml;gt.
+  Im zweiten Schritt erfolgt die Umrechnung der Farben auf die Farbpalette
+  des Zielsystem. Dabei wird einfach f&uuml;r jeden Pixel
+  die am n&auml;chsten kommende Farbe aus der Farbpalette genommen.
+  Wenn das Zielsystem &uuml;ber eine Blockgrafik verf&uuml;gt,
+  werden im dritten Schritt die am besten passenden Blockgrafiksymbole
+  ermittelt.
+ <br/><br/>
+
+ <h2>
+  <a name="convert_manually">7.1 Manuelles Konvertieren des Bildformats</a>
+ </h2>
+  Die automatische Konvertierung eines Bildes in das Format
+  des Zielsystems wird nicht immer das Ergebnis liefern,
+  welches Sie sich w&uuml;nschen.
+  Insbesondere die Anpassung des Seitenverh&auml;ltnisses
+  mit Hilfe schwarzer Balken gef&auml;llt nicht immer.
+  Aus diesem Grund ist es mitunter g&uuml;nstiger,
+  die einzelnen Konvertierungsschritte manuell durchzuf&uuml;hren.
+  Zur Erzielung bestm&ouml;glicher Ergebnisse
+  sollten die Schritte in folgender Reihenfolge erfolgen:
+  <ol>
+   <li>
+    <a href="imageviewer.htm#rotate">Drehen</a><br/>
+    (nur bei Bedarf, z.B. um Schr&auml;glage auszugleichen)
+    <br/><br/>
+   </li>
+   <li>
+    <a href="imageviewer.htm#cut_out">Zuschneiden</a><br/>
+    (Option <em>Seitenverh&auml;ltnis&nbsp;beibehalten</em> ausschalten
+    und korrektes Seitenverh&auml;ltnisses selbst sicherstellen)
+    <br/><br/>
+   </li>
+   <li>
+    <a href="imageviewer.htm#scale">Skalieren</a>
+    auf die Pixelauflösung des Zielsystems
+    <br/><br/>
+   </li>
+   <li>
+    Farben anpassen<br/>
+    (Men&uuml;punkt
+    <a href="imageviewer.htm#index_colors">Farben reduzieren und indexieren</a>
+    und dort dann die richtige Farbpalette ausw&auml;hlen oder Men&uuml;punkt
+    <a href="imageviewer.htm#black_white">Schwarz/Wei&szlig; wandeln</a>
+    und monochromes Bild erzeugen)
+    <br/><br/>
+   </li>
+   <li>
+    betreffenden Men&uuml;punkt im Untermen&uuml;
+    <em>Bearbeiten</em> &rarr; <em>Konvertieren&nbsp;in</em>
+    aufrufen
+   </li>
+  </ol>
+ <br/>
+  Die Reichenfolge ist insbesondere bei Anwendung von
+  <a href="imageviewer.htm#dithering">Dithering</a> wichtig,
+  denn nach einem Dithering sollte das Bild nicht mehr skaliert werden.
+ <br/><br/>
+
+ <h2>
+  <a name="convert_llc2">7.2 Konvertieren des Bildformats f&uuml;r LLC2-HIRES</a>
+ </h2>
+  Der LLC2 hat eine Aufl&ouml;sung von 512x256&nbsp;Pixel, d.h. 2:1.
+  Allerdings erfolgt die Bildschirmausgabe &uuml;blicherweise in 4:3.
+  Aus diesem Grund muss das Bild entsprechend verzerrt werden,
+  damit es dann bei der 4:3-Darstellung wieder korrekt angezeigt wird.
+  Beim Men&uuml;punkt <em>Bearbeiten</em>
+  &rarr; <em>Konvertieren&nbsp;in</em>
+  &rarr; <em>LLC2-HIRES-Format (512x256, Monochrom) mit Anpassung
+  f&uuml;r 4:3-Anzeige</em> wird das automatisch getan.
+  Wenn Sie aber die Umwandlung des Bildformats selbst vornehmen,
+  m&uuml;ssen Sie auch selbst die ben&ouml;tigte Verzerrung sicherstellen.
+  Gehen Sie dazu bitte nach der im vorherigen Abschnitt
+  angegebenen Reihenfolge vor und beachten Sie dabei folgendes:
+  <ul>
+   <li>
+    <a href="imageviewer.htm#cut_out">Zuschneiden</a>:<br/>
+    W&auml;hlen Sie das Seitenverh&auml;ltnis&nbsp;4:3 aus
+    und scheiden Sie somit das Bild auf 4:3 zu.
+    <br/><br/>
+   </li>
+   <li>
+    <a href="imageviewer.htm#scale">Skalieren</a>:<br/>
+    Schalten Sie die Option <em>Seitenverh&auml;ltnis beibehalten</em> aus
+    und skalieren Sie das Bild auf 512x256 Pixel.
+    <br/><br/>
+   </li>
+   <li>
+    Konvertieren:<br/>
+    Rufen Sie den Men&uuml;punkt
+    <em>LLC2-HIRES-Format (512x256, Monochrom) ohne Anpassung
+    f&uuml;r 4:3-Anzeige</em> auf.
+    Die Anpassung (Verzerrung) erfolgte ja bereits beim Skalieren.
+    <br/><br/>
+   </li>
+  </ul>
+  </br>
 </body>
 </html>

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,24 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
+import java.awt.Component;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetContext;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.JButton;
+import javax.swing.JPanel;
 import jkcemu.Main;
 
 
@@ -128,7 +138,7 @@ public abstract class AbstractSettingsFld
 	  msg = "Datei nicht gefunden";
 	}
 	if( msg != null ) {
-	  BasicDlg.showErrorDlg( this, msg );
+	  BaseDlg.showErrorDlg( this, msg );
 	}
       }
     }

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,20 @@
 
 package jkcemu.tools.debugger;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.event.WindowEvent;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSeparator;
+import javax.swing.JTextField;
 import javax.swing.text.BadLocationException;
-import jkcemu.base.*;
+import jkcemu.base.HexDocument;
 
 
 public class PCBreakpointDlg extends AbstractBreakpointDlg

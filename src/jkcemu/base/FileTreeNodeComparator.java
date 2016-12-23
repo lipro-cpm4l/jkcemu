@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -77,25 +77,7 @@ public class FileTreeNodeComparator
 	    rv = s1.compareToIgnoreCase( s2 );
 	  }
 	} else {
-	  if( f1.isDirectory() && !f2.isDirectory() ) {
-	    rv = -1;
-	  } else if( !f1.isDirectory() && f2.isDirectory() ) {
-	    rv = 1;
-	  } else {
-	    String s1 = f1.getName();
-	    String s2 = f2.getName();
-	    if( s1 == null ) {
-	      s1 = "";
-	    }
-	    if( s2 == null ) {
-	      s2 = "";
-	    }
-	    if( this.caseSensitive ) {
-	      rv = s1.compareTo( s2 );
-	    } else {
-	      rv = s1.compareToIgnoreCase( s2 );
-	    }
-	  }
+	  rv = FileComparator.compare( f1, f2, this.caseSensitive );
 	}
       }
     }
@@ -118,4 +100,3 @@ public class FileTreeNodeComparator
     this.forFileSystemRoots = false;
   }
 }
-

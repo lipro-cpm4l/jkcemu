@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2011 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,6 @@
 package jkcemu.disk;
 
 import java.lang.*;
-import java.util.*;
-import jkcemu.Main;
 import jkcemu.base.EmuUtil;
 import jkcemu.text.TextUtil;
 
@@ -246,4 +244,3 @@ public class HardDiskInfo implements Comparable<HardDiskInfo>
     }
   }
 }
-

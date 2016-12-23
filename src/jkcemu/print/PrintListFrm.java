@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,20 +8,49 @@
 
 package jkcemu.print;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Event;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.Arrays;
+import java.util.EventObject;
+import javax.swing.JButton;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JToolBar;
+import javax.swing.JViewport;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.ScreenFrm;
 import jkcemu.tools.hexedit.HexEditFrm;
 
 
-public class PrintListFrm extends BasicFrm implements ListSelectionListener
+public class PrintListFrm extends BaseFrm implements ListSelectionListener
 {
+  private static final String HELP_PAGE = "/help/print.htm";
+
   private static PrintListFrm instance = null;
 
   private ScreenFrm   screenFrm;
@@ -129,7 +158,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
       }
       else if( src == this.mnuHelpContent ) {
         rv = true;
-        HelpFrm.open( "/help/print.htm" );
+        HelpFrm.open( HELP_PAGE );
       }
     }
     return rv;
@@ -173,7 +202,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 	    PrintData data = this.printMngr.getPrintData( modelRow );
 	    if( data != null ) {
 	      if( isActivePrintData( data ) ) {
-		if( BasicDlg.showYesNoDlg(
+		if( BaseDlg.showYesNoDlg(
 			this,
 			"M\u00F6chten Sie den Druckauftrag"
 						+ " abschlie\u00DFen?" ) )
@@ -182,7 +211,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 		  fireUpdActionButtons();
 		}
 	      } else {
-		BasicDlg.showInfoDlg(
+		BaseDlg.showInfoDlg(
 			this,
 			"Der Druckauftrag ist bereits abgeschlossen." );
 	      }
@@ -253,17 +282,17 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 	File file = EmuUtil.showFileSaveDlg(
 				this,
 				"Druckauftrag speichern",
-				Main.getLastDirFile( "print" ),
+				Main.getLastDirFile( Main.FILE_GROUP_PRINT ),
 				EmuUtil.getTextFileFilter() );
 	if( file != null ) {
 	  data.saveToFile( file );
 	  this.printMngr.fireTableDataChanged();
-	  Main.setLastFile( file, "print" );
+	  Main.setLastFile( file, Main.FILE_GROUP_PRINT );
 	}
       }
     }
     catch( IOException ex ) {
-      BasicDlg.showErrorDlg(
+      BaseDlg.showErrorDlg(
 		this,
 		"Der Druckauftrag kann nicht gespeichert werden."
 						+ ex.getMessage() );
@@ -276,14 +305,14 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
     int[] rows = this.table.getSelectedRows();
     if( rows != null ) {
       if( rows.length == 1 ) {
-	if( !BasicDlg.showYesNoDlg(
+	if( !BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie den Druckauftrag l\u00F6schen?" ) )
 	{
 	  rows = null;
 	}
       } else if( rows.length > 1 ) {
-	if( !BasicDlg.showYesNoDlg(
+	if( !BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie die ausgew\u00E4hlten"
 			+ " Druckauftr\u00E4ge l\u00F6schen?" ) )
@@ -519,7 +548,7 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
 	  data = this.printMngr.getPrintData( row );
 	  if( data != null ) {
 	    if( isActivePrintData( data ) ) {
-	      if( BasicDlg.showYesNoDlg(
+	      if( BaseDlg.showYesNoDlg(
 			this,
 			"Der Druckauftrag ist noch nicht abgeschlossen.\n"
 			  + "M\u00F6chten Sie ihn jetzt abschlie\u00DFen?" ) )
@@ -598,4 +627,3 @@ public class PrintListFrm extends BasicFrm implements ListSelectionListener
       vp.setBackground( color );
   }
 }
-

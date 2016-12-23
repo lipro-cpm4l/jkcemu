@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,22 +8,38 @@
 
 package jkcemu.joystick;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuThread;
+import jkcemu.base.HelpFrm;
 
 
-public class JoystickFrm extends BasicFrm
+public class JoystickFrm extends BaseFrm
 {
-  private static final String textNotEmulated  = "Nicht emuliert";
-  private static final String textNotConnected = "Nicht verbunden";
-  private static final String textConnected    = "Aktiv";
-  private static final String textConnect      = "Verbinden";
-  private static final String textDisconnect   = "Trennen";
+  private static final String HELP_PAGE          = "/help/joystick.htm";
+  private static final String TEXT_NOT_EMULATED  = "Nicht emuliert";
+  private static final String TEXT_NOT_CONNECTED = "Nicht verbunden";
+  private static final String TEXT_CONNECTED     = "Aktiv";
+  private static final String TEXT_CONNECT       = "Verbinden";
+  private static final String TEXT_DISCONNECT    = "Trennen";
 
   private static JoystickFrm instance = null;
 
@@ -69,14 +85,14 @@ public class JoystickFrm extends BasicFrm
 			boolean emulated,
 			boolean connected )
   {
-    String btnText    = textConnect;
-    String statusText = textNotEmulated;
+    String btnText    = TEXT_CONNECT;
+    String statusText = TEXT_NOT_EMULATED;
     if( emulated ) {
       if( connected ) {
-	btnText    = textDisconnect;
-	statusText = textConnected;
+	btnText    = TEXT_DISCONNECT;
+	statusText = TEXT_CONNECTED;
       } else {
-	statusText = textNotConnected;
+	statusText = TEXT_NOT_CONNECTED;
       }
     }
     if( joyNum == 0 ) {
@@ -115,7 +131,7 @@ public class JoystickFrm extends BasicFrm
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/joystick.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
     }
     return rv;
@@ -219,9 +235,9 @@ public class JoystickFrm extends BasicFrm
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.labelStatus0 = new JLabel( textNotConnected );
+    this.labelStatus0 = new JLabel( TEXT_NOT_CONNECTED );
     this.joyFld0      = new JoystickActionFld();
-    this.btnConnect0  = new JButton( textConnect );
+    this.btnConnect0  = new JButton( TEXT_CONNECT );
     this.btnConnect0.addActionListener( this );
     this.panel0 = createJoystickPanel(
 				this.labelStatus0,
@@ -230,9 +246,9 @@ public class JoystickFrm extends BasicFrm
 				"Joystick 1" );
     add( this.panel0, gbc );
 
-    this.labelStatus1 = new JLabel( textNotConnected );
+    this.labelStatus1 = new JLabel( TEXT_NOT_CONNECTED );
     this.joyFld1      = new JoystickActionFld();
-    this.btnConnect1  = new JButton( textConnect );
+    this.btnConnect1  = new JButton( TEXT_CONNECT );
     this.btnConnect1.addActionListener( this );
     this.panel1 = createJoystickPanel(
 				this.labelStatus1,
@@ -306,4 +322,3 @@ public class JoystickFrm extends BasicFrm
       this.emuThread.changeJoystickConnectState( joyNum );
   }
 }
-

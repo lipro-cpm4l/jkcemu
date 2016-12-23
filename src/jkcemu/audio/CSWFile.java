@@ -8,111 +8,20 @@
 
 package jkcemu.audio;
 
-import java.io.*;
-import java.util.*;
-import javax.sound.sampled.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.FileInfo;
+import jkcemu.base.EmuUtil;
 
 
 public class CSWFile
 {
-  private static class RLEDecoder extends InputStream
-  {
-    private InputStream in;
-    private boolean     phase;
-    private long        remainPhasePulses;
-
-    private RLEDecoder( InputStream in, boolean initialPhase )
-    {
-      this.in                = in;
-      this.phase             = !initialPhase;
-      this.remainPhasePulses = 0;
-    }
-
-    @Override
-    public int available()
-    {
-      return (int) (this.remainPhasePulses > Integer.MAX_VALUE ?
-				Integer.MAX_VALUE
-				: (int) this.remainPhasePulses);
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      this.in.close();
-    }
-
-    @Override
-    public boolean markSupported()
-    {
-      return false;
-    }
-
-    @Override
-    public synchronized int read() throws IOException
-    {
-      if( this.remainPhasePulses <= 0 ) {
-	this.phase = !this.phase;
-	while( this.remainPhasePulses <= 0 ) {
-	  int b = this.in.read();
-	  if( b < 0 ) {
-	    break;
-	  }
-	  if( b > 0 ) {
-	    this.remainPhasePulses = b;
-	    break;
-	  }
-	  byte[] m = new byte[ 4 ];
-	  if( this.in.read( m ) != m.length ) {
-	    break;
-	  }
-	  this.remainPhasePulses = EmuUtil.getInt4( m, 0 );
-	}
-      }
-      int rv = -1;
-      if( this.remainPhasePulses > 0 ) {
-	--this.remainPhasePulses;
-	rv = (this.phase ? AudioOut.SIGNED_VALUE_1 : AudioOut.SIGNED_VALUE_0);
-      }
-      return rv;
-    }
-
-    @Override
-    public void reset() throws IOException
-    {
-      throw new IOException(
-		"CSWFile.RLEDecoder: reset() nicht unters\u00FCtzt" );
-    }
-
-    @Override
-    public synchronized long skip( long n ) throws IOException
-    {
-      long rv = 0;
-      while( n > 0 ) {
-	if( this.remainPhasePulses > 0 ) {
-	  if( n > this.remainPhasePulses ) {
-	    n  -= this.remainPhasePulses;
-	    rv += this.remainPhasePulses;
-	    this.remainPhasePulses = 0;
-	  } else {
-	    rv += n;
-	    this.remainPhasePulses -= n;
-	  }
-	} else {
-	  if( read() < 0 ) {
-	    break;
-	  }
-	  --n;
-	  rv++;
-	}
-      }
-      return rv;
-    }
-  };
-
-
   private static class CSWFormat
   {
     private long    sampleRate;
@@ -134,155 +43,166 @@ public class CSWFile
   };
 
 
-  private static class MyByteArrayOutputStream extends ByteArrayOutputStream
+  private static final String[] fileExts = { "csw", "csw1" };
+
+  private static javax.swing.filechooser.FileFilter fileFilter = null;
+
+
+  public static String[] getFileExtensions()
   {
-    private MyByteArrayOutputStream()
-    {
-      super( 0x10000 );
-    }
-
-    private byte[] getBuf()
-    {
-      return this.buf;
-    }
-  };
-
-
-  public static AudioFileFormat getAudioFileFormat( InputStream in )
-			throws IOException, UnsupportedAudioFileException
-  {
-    AudioFileFormat rv  = null;
-    CSWFormat       fmt = parseHeader( in );
-    return new AudioFileFormat(
-			new AudioFileFormat.Type( "CSW", "csw" ),
-			createAudioFormat( fmt ),
-			AudioSystem.NOT_SPECIFIED );
+    return fileExts;
   }
 
 
-  public static AudioInputStream getAudioInputStream(
+  public static String getFileExtensionText()
+  {
+    return "*.csw; *.csw1";
+  }
+
+
+  public static javax.swing.filechooser.FileFilter getFileFilter()
+  {
+    if( fileFilter == null ) {
+      fileFilter = new FileNameExtensionFilter(
+			"CSW-Dateien (" + getFileExtensionText() + ")",
+			fileExts );
+    }
+    return fileFilter;
+  }
+
+
+  public static BitSampleBuffer getBitSampleBuffer(
 					byte[] fileBytes,
-					int    pos,
-					int    len )
-			throws IOException, UnsupportedAudioFileException
+					int    pos ) throws IOException
   {
-    AudioInputStream rv      = null;
-    CSWFormat        fmt     = parseHeader( fileBytes, pos, len );
-    int              dataPos = pos + fmt.headerLen;
-    int              dataLen = len - fmt.headerLen;
-    long             pulses  = fmt.pulses;
-    if( pulses <= 0 ) {
-      /*
-       * Wenn die Anzahl der Pulse nicht im Kopf steht,
-       * muss sie ermittelt werden.
-       */
-      int tmpPos = dataPos;
-      int tmpLen = dataLen;
-      pulses = 0;
-      while( (tmpPos < fileBytes.length) && (tmpLen > 0) ) {
-	int b = (int) fileBytes[ tmpPos++ ] & 0xFF;
-	--tmpLen;
-	if( b > 0 ) {
-	  pulses += b;
-	} else {
-	  if( ((tmpPos + 3) >= fileBytes.length) && (tmpLen > 3) ) {
-	    break;
-	  }
-	  pulses += EmuUtil.getInt4( fileBytes, tmpPos );
-	  tmpPos += 4;
-	  tmpLen -= 4;
+    CSWFormat       fmt = parseHeader( fileBytes, pos );
+    BitSampleBuffer buf = new BitSampleBuffer(
+					(int) fmt.sampleRate,
+					0x8000 );
+    int     dataPos = fmt.headerLen;
+    int     dataLen = fileBytes.length - fmt.headerLen;
+    boolean phase   = fmt.initialPhase;
+    while( (dataPos < fileBytes.length) && (dataLen > 0) ) {
+      int b = (int) fileBytes[ dataPos++ ] & 0xFF;
+      --dataLen;
+      if( b > 0 ) {
+	buf.addSamples( b, phase );
+	phase = !phase;
+      } else {
+	if( ((dataPos + 3) >= fileBytes.length) && (dataLen > 3) ) {
+	  break;
 	}
+	long n = EmuUtil.getInt4LE( fileBytes, dataPos );
+	if( n > Integer.MAX_VALUE ) {
+	  EmuUtil.throwMysteriousData();
+	}
+	buf.addSamples( (int) n, phase );
+	phase = !phase;
+	dataPos += 4;
+	dataLen -= 4;
       }
     }
-    return new AudioInputStream(
-			new RLEDecoder(
-				new ByteArrayInputStream(
-						fileBytes,
-						dataPos,
-						dataLen ),
-				fmt.initialPhase ),
-			createAudioFormat( fmt ),
-			pulses );
+    return buf;
   }
 
 
-  public static AudioInputStream getAudioInputStream( InputStream in )
-			throws IOException, UnsupportedAudioFileException
+  public static PCMDataSource getPCMDataSource(
+					byte[] fileBytes,
+					int    pos ) throws IOException
   {
-    AudioInputStream rv     = null;
-    CSWFormat        fmt    = parseHeader( in );
-    long             pulses = fmt.pulses;
-    if( pulses <= 0 ) {
-      /*
-       * Wenn die Anzahl der Pulse nicht im Kopf steht,
-       * werden die Daten in einen Puffer gelesen
-       * und dabei die Anzahl der Pulse ermittelt.
-       */
-      pulses                      = 0;
-      MyByteArrayOutputStream buf = new MyByteArrayOutputStream();
-      int                     b   = in.read();
-      while( b >= 0 ) {
-	buf.write( b );
-	if( b > 0 ) {
-	  pulses += b;
-	} else {
-	  byte[] m = new byte[ 4 ];
-	  if( in.read( m ) != m.length ) {
-	    break;
-	  }
-	  buf.write( m );
-	  pulses += EmuUtil.getInt4( m, 0 );
-	}
-	b = in.read();
-      }
-      in = new ByteArrayInputStream( buf.getBuf(), 0, buf.size() );
-    }
-    return new AudioInputStream(
-			new RLEDecoder( in, fmt.initialPhase ),
-			createAudioFormat( fmt ),
-			pulses );
+    return getBitSampleBuffer( fileBytes, pos ).newReader();
   }
 
 
   public static void write(
-			int         sampleRate,
-			InputStream in,		// 1 Byte pro Sample
-			long        len,
-			File        file ) throws IOException
+			PCMDataSource pcm,
+			File          file ) throws IOException
   {
-    boolean      lastPhase = (in.read() > 0);
+    String fName = file.getName();
+    if( fName == null ) {
+      fName = "";
+    }
+    fName        = fName.toLowerCase();
+    boolean csw1 = fName.endsWith( ".csw1" );
+    if( !csw1 && !fName.endsWith( ".csw" ) ) {
+      throw new IOException( "Dateiformat nicht unterst\u00FCtzt!"
+		+ "\n\nUnterst\u00FCtzte Dateiendungen sind"
+		+ " *.csw und *.csw1" );
+    }
+    int frameRate = pcm.getFrameRate();
+    if( csw1 && (frameRate > 0xFFFF) ) {
+      throw new IOException( "Die Abtastrate ist f\u00FCr eine"
+		+ " CSW1-Datei zu gro\u00DF.\n"
+		+ "Speichern Sie bitte die Datei mit der Endung *.csw,\n"
+		+ "damit sie im CSW2-Format erzeugt wird." );
+    }
+    if( (pcm.getSampleSizeInBits() > 1) || (pcm.getChannels() > 1) ) {
+      throw new IOException( "In einer CSW-Datei k\u00F6nnen nur"
+			+ " 1-Bit-Mono-Audiodaten gespeichert werden." );
+    }
+    byte[] frameBuf = new byte[ 1 ];
+    if( pcm.read( frameBuf, 0, 1 ) != frameBuf.length ) {
+      AudioUtil.throwNoAudioData();
+    }
+    boolean      lastPhase = (frameBuf[ 0 ] != 0);
     OutputStream out       = null;
     try {
       out = new BufferedOutputStream( new FileOutputStream( file ) );
 
-      // CSW-Signatur mit Versionsnummer
+      // CSW-Signatur
       EmuUtil.writeASCII( out, FileInfo.CSW_MAGIC );
-      out.write( 2 );
-      out.write( 0 );
 
-      // 4 Bytes Abtastrate
-      writeInt4( out, sampleRate );
+      // Kopf unterscheidet sich zwischen Version 1 und 2
+      if( csw1 ) {
 
-      // 4 Bytes Gesamtanzahl Pulse
-      writeInt4( out, len );
+	// Versionsnummer 1.01
+	out.write( 1 );
+	out.write( 1 );
 
-      // Kompression
-      out.write( 1 );				// RLE
+	// 2 Bytes Abtastrate
+	out.write( (int) (frameRate & 0xFF) );
+	out.write( (int) ((frameRate >> 8) & 0xFF) );
 
-      // Flags
-      out.write( lastPhase ? 0x01 : 0 );	// B0: Initial-Phase
+	// Kompression
+	out.write( 1 );				// RLE
 
-      // Header Extension
-      out.write( 0 );				// keine Erweiterung
+	// Flags
+	out.write( lastPhase ? 0x01 : 0 );	// Bit 0: Initial-Phase
 
-      // Encoding Application
-      EmuUtil.writeFixLengthASCII( out, Main.APPNAME, 16, 0 );
+	// 3 reserverte Bytes
+	for( int i = 0; i < 3; i++ ) {
+	  out.write( 0 );
+	}
+
+      } else {
+
+	// Versionsnummer 2.00
+	out.write( 2 );
+	out.write( 0 );
+
+	// 4 Bytes Abtastrate
+	writeInt4( out, frameRate );
+
+	// 4 Bytes Gesamtanzahl Pulse
+	writeInt4( out, pcm.getFrameCount() );
+
+	// Kompression
+	out.write( 1 );				// RLE
+
+	// Flags
+	out.write( lastPhase ? 0x01 : 0 );	// Bit 0: Initial-Phase
+
+	// Header Extension
+	out.write( 0 );				// keine Erweiterung
+
+	// Encoding Application
+	EmuUtil.writeFixLengthASCII( out, Main.APPNAME, 16, 0 );
+      }
 
       // CSW-Daten
-      --len;
-      int n = 1;
-      while( len > 0 ) {
-	boolean phase = (in.read() > 0);
+      int n = 0;
+      while( pcm.read( frameBuf, 0, 1 ) == frameBuf.length ) {
+	boolean phase = (frameBuf[ 0 ] != 0);
 	if( phase == lastPhase ) {
 	  n++;
 	} else {
@@ -290,39 +210,27 @@ public class CSWFile
 	  n = 1;
 	  lastPhase = phase;
 	}
-	--len;
       }
       writeSampleCount( out, n );
+
+      out.close();
+      out = null;
     }
     finally {
-      if( out != null ) {
-	out.close();
-      }
+      EmuUtil.closeSilent( out );
     }
   }
 
 
 	/* --- private Methoden --- */
 
-  private static AudioFormat createAudioFormat( CSWFormat fmt )
-  {
-    /*
-     * CSW hat zwar nur 1 Bit Aufloesung pro Sample,
-     * aber es werden 8-Bit-Werte gelesen.
-     */
-    return new AudioFormat( (float) fmt.sampleRate, 8, 1, true, false );
-  }
-
-
   private static CSWFormat parseHeader(
 				byte[] buf,
-				int    pos,
-				int    len )
-			throws IOException, UnsupportedAudioFileException
+				int    pos ) throws IOException
   {
     CSWFormat rv = null;
-    if( !FileInfo.isCswMagicAt( buf, pos, len ) ) {
-      throwMissingCswHeader();
+    if( !FileInfo.isCswMagicAt( buf, pos ) ) {
+      EmuUtil.throwUnsupportedFileFormat();
     }
     long sampleRate  = 0;
     long pulses      = 0;
@@ -335,14 +243,14 @@ public class CSWFile
       flags       = (int) buf[ pos + 0x1C ] & 0xFF;
       headerLen   = 0x20;
     } else {
-      sampleRate  = EmuUtil.getInt4( buf, pos + 0x19 );
-      pulses      = EmuUtil.getInt4( buf, pos + 0x1D );
+      sampleRate  = EmuUtil.getInt4LE( buf, pos + 0x19 );
+      pulses      = EmuUtil.getInt4LE( buf, pos + 0x1D );
       compression = (int) buf[ pos + 0x21 ] & 0xFF;
       flags       = (int) buf[ pos + 0x22 ] & 0xFF;
       headerLen   = 0x34 + ((int) buf[ pos + 0x23 ] & 0xFF);
     }
-    if( sampleRate < 1 ) {
-      throw new UnsupportedAudioFileException( "Ung\u00FCltige Abtastrate" );
+    if( (sampleRate < 1) || (sampleRate > 192000) ) {
+      throw new IOException( "Ung\u00FCltige Abtastrate" );
     }
     if( compression != 1 ) {
       StringBuilder strBuf = new StringBuilder( 256 );
@@ -353,48 +261,13 @@ public class CSWFile
 	strBuf.append( compression );
       }
       strBuf.append( " nicht unterst\u00FCtzt" );
-      throw new UnsupportedAudioFileException( strBuf.toString() );
+      throw new IOException( strBuf.toString() );
     }
     return new CSWFormat(
 			sampleRate,
 			pulses,
 			(flags & 0x01) != 0,
 			headerLen );
-  }
-
-
-  private static CSWFormat parseHeader( InputStream in )
-			throws IOException, UnsupportedAudioFileException
-  {
-    // Puffergroesse fuer einen CSW2-Kopf
-    byte[] header = new byte[ 0x34 ];
-
-    // Erstmal nur soviele Bytes lesen wie ein CSW1-Kopf gross ist.
-    if( in.read( header, 0, 0x20 ) != 0x20 ) {
-      throwMissingCswHeader();
-    }
-
-    /*
-     * Wenn es ein CSW2-Kopf ist, dann den Rest lesen.
-     * Die Pruefung auf die CSW-Kennung erfolgt spaeter.
-     */
-    if( (header[ 0x17 ] & 0xFF) >= 2 ) {
-      if( in.read( header, 0x20, 0x14 ) != 0x14 ) {
-	throwMissingCswHeader();
-      }
-      in.skip( (int) header[ 0x23 ] & 0xFF );
-    }
-
-    // Kopf auswerten
-    return parseHeader( header, 0, header.length );
-  }
-
-
-  private static void throwMissingCswHeader()
-				throws UnsupportedAudioFileException
-  {
-    throw new UnsupportedAudioFileException(
-			"Dateiformat nicht unterst\u00FCtzt" );
   }
 
 
@@ -413,11 +286,13 @@ public class CSWFile
 				OutputStream out,
 				int          n ) throws IOException
   {
-    if( (n & 0xFF) == n ) {
-      out.write( n );
-    } else {
-      out.write( 0 );
-      writeInt4( out, n );
+    if( n > 0 ) {
+      if( (n & 0xFF) == n ) {
+	out.write( n );
+      } else {
+	out.write( 0 );
+	writeInt4( out, n );
+      }
     }
   }
 
