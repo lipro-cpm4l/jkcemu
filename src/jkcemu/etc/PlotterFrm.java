@@ -8,23 +8,53 @@
 
 package jkcemu.etc;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JColorChooser;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JToolBar;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.UserInputException;
 import jkcemu.image.AbstractImageFrm;
 import jkcemu.print.PrintUtil;
 
 
 public class PlotterFrm extends AbstractImageFrm
 {
+  private static final String ACTION_CLOSE         = "close";
+  private static final String ACTION_COLOR_PAPER   = "color.paper";
+  private static final String ACTION_COLOR_PEN     = "color.pen";
+  private static final String ACTION_HELP          = "help";
+  private static final String HELP_PAGE            = "/help/plotter.htm";
+  private static final String PROP_CONFIRM_NEWPAGE = "confirm.newpage";
+
   private static PlotterFrm instance = null;
 
   private Plotter              plotter;
+  private Image                image;
+  private File                 file;
   private javax.swing.Timer    refreshTimer;
   private volatile boolean     dirty;
   private JMenuItem            mnuNewPage;
@@ -85,13 +115,6 @@ public class PlotterFrm extends AbstractImageFrm
   }
 
 
-  public void setImage( Image image )
-  {
-    this.image = image;
-    this.imgFld.setImage( image );
-  }
-
-
   public void setPenThickness( int value )
   {
     switch( value ) {
@@ -121,7 +144,7 @@ public class PlotterFrm extends AbstractImageFrm
     this.mnuConfirmNewPage.setSelected(
 		EmuUtil.parseBooleanProperty(
 			props,
-			getSettingsPrefix() + "confirm_new_page",
+			getSettingsPrefix() + PROP_CONFIRM_NEWPAGE,
 			true ) );
     return super.applySettings( props, resizable );
   }
@@ -166,7 +189,7 @@ public class PlotterFrm extends AbstractImageFrm
 	}
 	else if( (src == this.mnuPrint) || (src == this.btnPrint) ) {
 	  rv = true;
-	  if( this.image != null ) {
+	  if( getImage() != null ) {
 	    PrintUtil.doPrint( this, this.imgFld, "Plotter" );
 	  }
 	}
@@ -176,7 +199,7 @@ public class PlotterFrm extends AbstractImageFrm
 	}
 	else if( src == this.mnuCopy ) {
 	  rv = true;
-	  doImgCopy();
+	  doCopy();
 	}
 	else if( (src == this.mnuPenThk1)
 		 || (src == this.mnuPenThk2)
@@ -201,35 +224,35 @@ public class PlotterFrm extends AbstractImageFrm
 	    }
 	    this.plotter.setPenThickness( thk );
 	    Main.setProperty(
-			"jkcemu.plotter.pen.thickness",
+			Plotter.PROP_PEN_THICKNESS,
 			Integer.toString( thk ) );
 	  }
 	}
 	else if( src == this.mnuConfirmNewPage ) {
 	  rv = true;
 	  Main.setProperty(
-		getSettingsPrefix() + "confirm_new_page",
+		getSettingsPrefix() + PROP_CONFIRM_NEWPAGE,
 		Boolean.toString( this.mnuConfirmNewPage.isSelected() ) );
 	}
       }
       if( !rv && (e instanceof ActionEvent) ) {
 	String cmd = ((ActionEvent) e).getActionCommand();
 	if( cmd != null ) {
-	  if( cmd.equals( "close" ) ) {
+	  if( cmd.equals( ACTION_CLOSE ) ) {
 	    rv = true;
 	    doClose();
 	  }
-	  else if( cmd.equals( "color.pen" ) ) {
+	  else if( cmd.equals( ACTION_COLOR_PEN ) ) {
 	    rv = true;
 	    doColorPen();
           }
-	  else if( cmd.equals( "color.paper" ) ) {
+	  else if( cmd.equals( ACTION_COLOR_PAPER ) ) {
 	    rv = true;
 	    doColorPaper();
           }
-	  else if( cmd.equals( "help" ) ) {
+	  else if( cmd.equals( ACTION_HELP ) ) {
 	    rv = true;
-	    HelpFrm.open( "/help/plotter.htm" );
+	    HelpFrm.open( HELP_PAGE );
           }
 	}
       }
@@ -241,12 +264,20 @@ public class PlotterFrm extends AbstractImageFrm
   }
 
 
+  @Override
+  public BufferedImage getImage()
+  {
+    return this.plotter.getBufferedImage();
+  }
+
+
 	/* --- Konstruktor --- */
 
   private PlotterFrm( Plotter plotter )
   {
     this.plotter = plotter;
     this.dirty   = false;
+    this.image   = null;
     this.file    = null;
     setTitle( "JKCEMU Plotter" );
     Main.updIcon( this );
@@ -273,7 +304,7 @@ public class PlotterFrm extends AbstractImageFrm
     mnuFile.add( this.mnuSaveAs );
     mnuFile.addSeparator();
 
-    mnuFile.add( createJMenuItem( "Schlie\u00DFen", "close" ) );
+    mnuFile.add( createJMenuItem( "Schlie\u00DFen", ACTION_CLOSE ) );
 
 
     // Menu Bearbeiten
@@ -320,8 +351,10 @@ public class PlotterFrm extends AbstractImageFrm
     grpPenThk.add( this.mnuPenThk5 );
     mnuPenThk.add( this.mnuPenThk5 );
 
-    mnuSettings.add( createJMenuItem( "Stiftfarbe...", "color.pen" ) );
-    mnuSettings.add( createJMenuItem( "Papierfarbe...", "color.paper" ) );
+    mnuSettings.add( createJMenuItem( "Stiftfarbe...", ACTION_COLOR_PEN ) );
+    mnuSettings.add( createJMenuItem(
+			"Papierfarbe...",
+			ACTION_COLOR_PAPER ) );
     mnuSettings.addSeparator();
     this.mnuConfirmNewPage = new JCheckBoxMenuItem(
 			"Best\u00E4tigung f\u00FCr neue Seite",
@@ -333,7 +366,7 @@ public class PlotterFrm extends AbstractImageFrm
     // Menu Hilfe
     JMenu mnuHelp = new JMenu( "?" );
     mnuBar.add( mnuHelp );
-    mnuHelp.add( createJMenuItem( "Hilfe...", "help" ) );
+    mnuHelp.add( createJMenuItem( "Hilfe...", ACTION_HELP ) );
 
 
     // Werkzeugleiste
@@ -373,7 +406,7 @@ public class PlotterFrm extends AbstractImageFrm
     toolBar.addSeparator();
 
     toolBar.add( createScaleComboBox( 25, 25, 33, 50, 75, 100 ) );
-    doScale();
+    doScaleView();
 
 
     // Fenstergroesse
@@ -418,10 +451,10 @@ public class PlotterFrm extends AbstractImageFrm
 	  plotter.setPaperColor( color );
 	}
 	catch( UserInputException ex ) {
-	  BasicDlg.showInfoDlg( this, ex.getMessage() );
+	  BaseDlg.showInfoDlg( this, ex.getMessage() );
 	}
 	Main.setProperty(
-		"jkcemu.plotter.paper.color",
+		Plotter.PROP_PAPER_COLOR,
 		String.format( "%08X", color.getRGB() ) );
       }
     }
@@ -441,10 +474,10 @@ public class PlotterFrm extends AbstractImageFrm
 	  plotter.setPenColor( color );
 	}
 	catch( UserInputException ex ) {
-	  BasicDlg.showInfoDlg( this, ex.getMessage() );
+	  BaseDlg.showInfoDlg( this, ex.getMessage() );
 	}
 	Main.setProperty(
-		"jkcemu.plotter.pen.color",
+		Plotter.PROP_PEN_COLOR,
 		String.format( "%08X", color.getRGB() ) );
       }
     }
@@ -456,12 +489,21 @@ public class PlotterFrm extends AbstractImageFrm
     Plotter plotter = this.plotter;
     if( plotter != null ) {
       if( this.mnuConfirmNewPage.isSelected() ) {
-	if( BasicDlg.showYesNoDlg( this, "Neue Seite?" ) ) {
+	if( BaseDlg.showYesNoDlg( this, "Neue Seite?" ) ) {
 	  plotter.newPage();
 	}
       } else {
 	plotter.newPage();
       }
+    }
+  }
+
+
+  private void doSaveAs()
+  {
+    File file = saveAs( this.file );
+    if( file != null ) {
+      this.file = file;
     }
   }
 
@@ -497,4 +539,3 @@ public class PlotterFrm extends AbstractImageFrm
     this.btnRotateRight.setEnabled( state );
   }
 }
-

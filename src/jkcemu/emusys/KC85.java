@@ -8,26 +8,113 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
 import java.awt.event.KeyEvent;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 import jkcemu.Main;
 import jkcemu.audio.AudioOut;
-import jkcemu.base.*;
-import jkcemu.disk.*;
-import jkcemu.emusys.kc85.*;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileFormat;
+import jkcemu.base.SourceUtil;
+import jkcemu.base.UserCancelException;
+import jkcemu.disk.FloppyDiskDrive;
+import jkcemu.disk.FloppyDiskFormat;
+import jkcemu.disk.FloppyDiskInfo;
+import jkcemu.emusys.kc85.AbstractKC85KeyboardFld;
+import jkcemu.emusys.kc85.AbstractKC85Module;
+import jkcemu.emusys.kc85.D004;
+import jkcemu.emusys.kc85.D005KeyboardFld;
+import jkcemu.emusys.kc85.KC85CharRecognizer;
+import jkcemu.emusys.kc85.KC85JoystickModule;
+import jkcemu.emusys.kc85.KC85KeyboardFld;
+import jkcemu.emusys.kc85.KC85PlainRAMModule;
+import jkcemu.emusys.kc85.KC85ROM8KModule;
+import jkcemu.emusys.kc85.KC85SegmentedRAMModule;
+import jkcemu.emusys.kc85.M003;
+import jkcemu.emusys.kc85.M006;
+import jkcemu.emusys.kc85.M008;
+import jkcemu.emusys.kc85.M011;
+import jkcemu.emusys.kc85.M021;
+import jkcemu.emusys.kc85.M025;
+import jkcemu.emusys.kc85.M028;
+import jkcemu.emusys.kc85.M033;
+import jkcemu.emusys.kc85.M035;
+import jkcemu.emusys.kc85.M040;
+import jkcemu.emusys.kc85.M045;
+import jkcemu.emusys.kc85.M046;
+import jkcemu.emusys.kc85.M047;
+import jkcemu.emusys.kc85.M048;
+import jkcemu.emusys.kc85.M052;
 import jkcemu.etc.VDIP;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80CTCListener;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
+import z80emu.Z80MemView;
+import z80emu.Z80Memory;
+import z80emu.Z80PIO;
+import z80emu.Z80TStatesListener;
 
 
-public class KC85 extends EmuSys implements
-					Z80CTCListener,
-					Z80MaxSpeedListener,
-					Z80TStatesListener
+public class KC85 extends EmuSys implements Z80CTCListener
 {
+  public static final String SYSNAME_HC900  = "HC900";
+  public static final String SYSNAME_KC85_2 = "KC85_2";
+  public static final String SYSNAME_KC85_3 = "KC85_3";
+  public static final String SYSNAME_KC85_4 = "KC85_4";
+  public static final String SYSNAME_KC85_5 = "KC85_5";
+
+  public static final String SYSTEXT_HC900  = "HC900";
+  public static final String SYSTEXT_KC85_2 = "KC85/2";
+  public static final String SYSTEXT_KC85_3 = "KC85/3";
+  public static final String SYSTEXT_KC85_4 = "KC85/4";
+  public static final String SYSTEXT_KC85_5 = "KC85/5";
+
+  public static final String PROP_PREFIX_HC900  = "jkcemu.hc900.";
+  public static final String PROP_PREFIX_KC85_2 = "jkcemu.kc85_2.";
+  public static final String PROP_PREFIX_KC85_3 = "jkcemu.kc85_3.";
+  public static final String PROP_PREFIX_KC85_4 = "jkcemu.kc85_4.";
+  public static final String PROP_PREFIX_KC85_5 = "jkcemu.kc85_5.";
+
+  public static final String PROP_COUNT             = "count";
+  public static final String PROP_NAME              = "name";
+  public static final String PROP_TYPEBYTE          = "typebyte";
+  public static final String PROP_MODULE_PREFIX     = "module.";
+  public static final String PROP_D004_ENABLED      = "d004.enabled";
+  public static final String PROP_D004_ROM          = "d004.rom";
+  public static final String PROP_D004_MAXSPEED_KHZ = "d004.maxspeed.khz";
+  public static final String PROP_ROM_BASIC_FILE    = "rom.basic.file";
+  public static final String PROP_ROM_CAOS_C_FILE   = "rom.caos_c.file";
+  public static final String PROP_ROM_CAOS_E_FILE   = "rom.caos_e.file";
+  public static final String PROP_ROM_CAOS_F_FILE   = "rom.caos_f.file";
+  public static final String PROP_ROM_M052_FILE     = "rom.m052.file";
+
+  public static final String PROP_EMULATE_VIDEO_TIMING
+					= "emulate_video_timing";
+
+  public static final String PROP_KEYS_DIRECT_TO_BUFFER
+					 = "keys.direct_to_buffer";
+
+  public static final String VALUE_STANDARD = "standard";
+
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE              = true;
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX_2 = 3000;
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX_4 = 1500;
+
   public static final String[] basicTokens = {
     "END",       "FOR",      "NEXT",    "DATA",		// 0x80
     "INPUT",     "DIM",      "READ",    "LET",
@@ -187,6 +274,7 @@ public class KC85 extends EmuSys implements
   private static Boolean defaultEmulateVideoTiming = null;
 
   private int                     kcTypeNum;
+  private String                  sysName;
   private String                  basicFile;
   private String                  caosFileC;
   private String                  caosFileE;
@@ -216,10 +304,9 @@ public class KC85 extends EmuSys implements
   private volatile boolean        screen1Visible;
   private boolean                 biState;
   private boolean                 h4State;
-  private boolean                 audioOutPhaseL;
-  private boolean                 audioOutPhaseR;
-  private boolean                 audioInPhase;
-  private boolean                 soundStereo;
+  private boolean                 soundOutPhaseL;
+  private boolean                 soundOutPhaseR;
+  private boolean                 tapeInPhase;
   private int                     ram8SegNum;
   private int                     keyNumStageBuf;
   private int                     keyNumStageNum;
@@ -230,6 +317,11 @@ public class KC85 extends EmuSys implements
   private int                     keyShiftValue;
   private int                     keyTStates;
   private int                     lastIX;
+  private int                     curSoundOutTStates;
+  private int                     soundOutTStates;
+  private int                     soundOutValueM;
+  private int                     soundOutValueL;
+  private int                     soundOutValueR;
   private volatile int            tStatesLinePos0;
   private volatile int            tStatesLinePos1;
   private volatile int            tStatesLinePos2;
@@ -251,7 +343,6 @@ public class KC85 extends EmuSys implements
   private int[]                   rgbValues;
   private Color[]                 colors;
   private AbstractKC85Module[]    modules;
-  private String                  sysName;
   private KC85CharRecognizer      charRecognizer;
   private AbstractKC85KeyboardFld keyboardFld;
   private Z80PIO                  pio;
@@ -265,32 +356,41 @@ public class KC85 extends EmuSys implements
   public KC85( EmuThread emuThread, Properties props )
   {
     super( emuThread, props, "" );
-    this.charSetUnknown = false;
-    this.keyDirectToBuf = false;
-    this.pasteFast      = false;
-    this.keyboardFld    = null;
-    this.basicFile      = null;
-    this.caosFileC      = null;
-    this.caosFileE      = null;
-    this.caosFileF      = null;
-    this.m052File       = null;
+    this.curSoundOutTStates = 0;
+    this.soundOutTStates    = 0;
+    this.soundOutPhaseL     = false;
+    this.soundOutPhaseR     = false;
+    this.charSetUnknown     = false;
+    this.keyDirectToBuf     = false;
+    this.pasteFast          = false;
+    this.keyboardFld        = null;
+    this.basicFile          = null;
+    this.caosFileC          = null;
+    this.caosFileE          = null;
+    this.caosFileF          = null;
+    this.m052File           = null;
 
-    this.sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( this.sysName.equals( "HC900" ) ) {
-      this.kcTypeNum  = 2;
-      this.propPrefix = "jkcemu.hc900.";
-    } else if( this.sysName.equals( "KC85/2" ) ) {
-      this.kcTypeNum  = 2;
-      this.propPrefix = "jkcemu.kc85_2.";
-    } else if( this.sysName.equals( "KC85/3" ) ) {
-      this.kcTypeNum  = 3;
-      this.propPrefix = "jkcemu.kc85_3.";
-    } else if( this.sysName.equals( "KC85/4" ) ) {
-      this.kcTypeNum  = 4;
-      this.propPrefix = "jkcemu.kc85_4.";
-    } else {
-      this.kcTypeNum  = 5;
-      this.propPrefix = "jkcemu.kc85_5.";
+    this.sysName = EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME );
+    switch( this.sysName ) {
+      case SYSNAME_HC900:
+	this.kcTypeNum  = 2;
+	this.propPrefix = PROP_PREFIX_HC900;
+	break;
+      case SYSNAME_KC85_2:
+	this.kcTypeNum  = 2;
+	this.propPrefix = PROP_PREFIX_KC85_2;
+	break;
+      case SYSNAME_KC85_3:
+	this.kcTypeNum  = 3;
+	this.propPrefix = PROP_PREFIX_KC85_3;
+	break;
+      case SYSNAME_KC85_4:
+	this.kcTypeNum  = 4;
+	this.propPrefix = PROP_PREFIX_KC85_4;
+	break;
+      default:
+	this.kcTypeNum  = 5;
+	this.propPrefix = PROP_PREFIX_KC85_5;
     }
 
     // emulierte Hardware konfigurieren
@@ -314,17 +414,18 @@ public class KC85 extends EmuSys implements
     if( emulatesD004( props ) ) {
       byte[] romBytes  = null;
       this.d004RomProp = getD004RomProp( props );
-      if( (this.d004RomProp.length() > 5)
-	  && this.d004RomProp.toUpperCase().startsWith( "FILE:" ) )
+      if( (this.d004RomProp.length() > VALUE_PREFIX_FILE.length())
+	  && this.d004RomProp.toLowerCase().startsWith( VALUE_PREFIX_FILE ) )
       {
 	try {
 	  romBytes = EmuUtil.readFile(
-			new File( this.d004RomProp.substring( 5 ) ),
+			new File( this.d004RomProp.substring(
+					VALUE_PREFIX_FILE.length() ) ),
 			true,
 			16 * 1024 );
 	}
 	catch( IOException ex ) {
-	    BasicDlg.showErrorDlg(
+	    BaseDlg.showErrorDlg(
 		this.emuThread.getScreenFrm(),
 		"D004-ROM-Datei kann nicht geladen werden.\n"
 			+ "Es wird der Standard-ROM verwendet.",
@@ -401,7 +502,6 @@ public class KC85 extends EmuSys implements
     this.colors         = new Color[ basicRGBValues.length ];
     this.charRecognizer = new KC85CharRecognizer();
     applySettings( props );
-    applySoundStereo( props );
     z80MaxSpeedChanged( cpu );
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
@@ -430,15 +530,15 @@ public class KC85 extends EmuSys implements
 
   public static int getDefaultSpeedKHz( Properties props )
   {
-    String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-    return sysName.equals( "KC85/4" ) || sysName.equals( "KC85/5" ) ?
-				DEFAULT_SPEED_4_KHZ : DEFAULT_SPEED_2_KHZ;
-  }
-
-
-  public static boolean getDefaultSwapKeyCharCase()
-  {
-    return true;
+    int rv = DEFAULT_SPEED_4_KHZ;
+    switch( EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME ) ) {
+      case SYSNAME_HC900:
+      case SYSNAME_KC85_2:
+      case SYSNAME_KC85_3:
+	rv = DEFAULT_SPEED_2_KHZ;
+	break;
+    }
+    return rv;
   }
 
 
@@ -474,13 +574,13 @@ public class KC85 extends EmuSys implements
     if( ctc == this.ctc ) {
       switch( timerNum ) {
 	case 0:
-	  this.audioOutPhaseR = !this.audioOutPhaseR;
-	  updAudioOut();
+	  this.soundOutPhaseR = !this.soundOutPhaseR;
+	  updSoundOut();
 	  break;
 
 	case 1:
-	  this.audioOutPhaseL = !this.audioOutPhaseL;
-	  updAudioOut();
+	  this.soundOutPhaseL = !this.soundOutPhaseL;
+	  updSoundOut();
 	  break;
 
 	case 2:
@@ -496,163 +596,6 @@ public class KC85 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    int f = (this.kcTypeNum < 4 ? DEFAULT_SPEED_2_KHZ : DEFAULT_SPEED_4_KHZ);
-    int t = cpu.getMaxSpeedKHz() * 112 / f;
-    this.tStatesLinePos0 = (int) Math.round( t * 32.0 / 112.0 );
-    this.tStatesLinePos1 = (int) Math.round( t * 64.0 / 112.0 );
-    this.tStatesLinePos2 = (int) Math.round( t * 96.0 / 112.0 );
-    this.tStatesPerLine  = t;
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    this.ctc.z80TStatesProcessed( cpu, tStates );
-
-    /*
-     * CTC-Eingaenge:
-     *   Kanal 0 und 1: h4-Signal (doppelte Zeilensynchronfrequenz),
-     *                  pro Pixelzeile 32+32+32+16=112 Takte
-     *   Kanal 2 und 3: Bildsynchronimpulse,
-     *                  256*112 Takte Low, 56*112 Takte High
-     */
-    int tStatesPerLine = this.tStatesPerLine;
-    if( tStatesPerLine > 0 ) {
-      this.lineTStateCounter += tStates;
-      if( this.lineTStateCounter >= tStatesPerLine ) {
-	this.lineTStateCounter %= tStatesPerLine;
-	if( this.lineCounter < 311 ) {
-	  if( this.screenRefreshEnabled ) {
-	    updScreenLine();
-	    this.screenFrm.setScreenDirty( true );
-	  }
-	  this.lineCounter++;
-	} else {
-	  this.lineCounter = 0;
-	  if( this.screenDirty && (this.screenBufUsed != null) ) {
-	    this.screenDirty = false;
-	    this.screenFrm.fireRepaint();
-	    this.screenRefreshEnabled = true;
-	  } else {
-	    this.screenRefreshEnabled = false;
-	  }
-	}
-      }
-      boolean bi = (this.lineCounter < 256);	// "bi" entspricht /BI
-      boolean h4 = false;
-      if( ((this.lineTStateCounter >= this.tStatesLinePos0)
-		&& (this.lineTStateCounter < this.tStatesLinePos1))
-	  || (this.lineTStateCounter >= this.tStatesLinePos2) )
-      {
-	h4 = true;
-      }
-      if( h4 != this.h4State ) {
-	this.h4State = h4;
-        this.ctc.externalUpdate( 0, h4 );
-        this.ctc.externalUpdate( 1, h4 );
-      }
-      if( bi != this.biState ) {
-	this.biState = bi;
-	this.ctc.externalUpdate( 2, bi );
-	this.ctc.externalUpdate( 3, bi );
-	KC85JoystickModule joyModule = this.joyModule;
-	if( joyModule != null ) {
-	  joyModule.setBIState( bi );
-	}
-      }
-    }
-
-    /*
-     * Der Kassettenrecorderanschluss wird eingangsseitig emuliert,
-     * indem zyklisch geschaut wird, ob sich die Eingangsphase geaendert hat.
-     * Wenn ja, wird ein Impuls an der Strobe-Leitung der zugehoerigen PIO
-     * emuliert.
-     */
-    if( this.emuThread.readAudioPhase() != this.audioInPhase ) {
-      this.audioInPhase = !this.audioInPhase;
-      this.pio.strobePortA();
-    }
-
-    /*
-     * Beim Tastaturanschluss wird entsprechend der Pulsabstaende
-     * des Bitmusters der Tastennummer jeweils ein Impuls
-     * an der Strobe-Leitung der zugehoerigen PIO emuliert.
-     * Die Zeitabstaende entsprechen denen des Schaltkreises U807.
-     * Die angegebenen Takte beziehen sich auf die Standardtaktfrequenz.
-     * Wird eine andere Taktfrequenz eingestellt,
-     * laeuft alles mit der anderen Taktfrequenz,
-     * die Zeitverhaeltnisse untereineinander bleiben damit immer gleich.
-     */
-    if( this.keyShiftBitCnt <= 0 ) {
-      if( this.keyTStates > 0 ) {
-	this.keyTStates -= tStates;
-      }
-      if( this.keyTStates <= 0 ) {
-	int keyNum = getSingleKeyNum() ^ 0x01;
-	if( keyNum >= 0 ) {
-	  this.keyNumProcessing = keyNum;
-	  this.keyShiftValue    = keyNum;
-	  this.keyShiftBitCnt   = 8;
-	}
-	this.keyTStates = 0;
-      }
-    }
-    if( this.keyShiftBitCnt > 0 ) {
-      boolean pulse = false;
-      if( this.keyShiftBitCnt == 8 ) {
-	pulse = true;				// Startimpuls
-      }
-      else if( this.keyShiftBitCnt < 8 ) {
-	if( (this.keyShiftValue & 0x01) != 0 ) {
-	  // 1-Bit: 7,14 ms -> 12496 Takte
-	  if( this.keyTStates >= 12496 ) {
-	    pulse = true;
-	    this.keyShiftValue >>= 1;		// Bit verarbeitet
-	  }
-	} else {
-	  // 0-Bit: 5,12 ms -> 8960 Takte
-	  if( this.keyTStates >= 8960 ) {
-	    pulse = true;
-	    this.keyShiftValue >>= 1;		// Bit verarbeitet
-	  }
-	}
-      }
-      if( pulse ) {
-	this.pio.strobePortB();
-	if( this.keyShiftBitCnt == 1 ) {
-	  // letztes Bit verarbeitet
-	  int keyNum = getSingleKeyNum() ^ 0x01;
-	  if( keyNum >= 0 ) {
-	    if( keyNum == this.keyNumProcessing ) {
-	      // Wortabstand 14,43 ms -> 25253 Takte
-	      this.keyTStates = 25253;
-	    } else {
-	      // Doppelwortabstand 19,46 ms -> 34055 Takte
-	      this.keyTStates = 34055;
-	    }
-	  } else {
-	    this.keyTStates = 0;
-	  }
-	  this.keyShiftBitCnt = 0;
-	} else {
-	  this.keyTStates = 0;
-	  --this.keyShiftBitCnt;
-	}
-      } else {
-	this.keyTStates += tStates;
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -663,7 +606,7 @@ public class KC85 extends EmuSys implements
 
       // Status Grundgeraet
       buf.append( "<h1>" );
-      buf.append( this.sysName );
+      EmuUtil.appendHTML( buf, getTitle() );
       buf.append( " Status</h1>\n"
 		+ "<table border=\"1\">\n" );
       if( this.kcTypeNum >= 4 ) {
@@ -831,9 +774,9 @@ public class KC85 extends EmuSys implements
   {
     super.applySettings( props );
     if( EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "emulate_video_timing",
-				getDefaultEmulateVideoTiming() ) )
+			props,
+			this.propPrefix + PROP_EMULATE_VIDEO_TIMING,
+			getDefaultEmulateVideoTiming() ) )
     {
       if( this.screenBufSaved == null ) {
 	this.screenBufSaved = new byte[ 320 * 256 ];
@@ -844,7 +787,6 @@ public class KC85 extends EmuSys implements
     }
     createColors( props );
     applyPasteFast( props );
-    applySoundStereo( props );
     if( this.d004 != null ) {
       this.d004.applySettings( props );
     }
@@ -860,36 +802,36 @@ public class KC85 extends EmuSys implements
     boolean hasD004 = emulatesD004( props );
     boolean rv      = EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( this.sysName );
+			EmuThread.PROP_SYSNAME ).equals( this.sysName );
     if( rv && (this.kcTypeNum > 2)
 	&& !TextUtil.equals(
 		this.basicFile,
-		getProperty( props, "rom.basic.file" ) ) )
+		getProperty( props, PROP_ROM_BASIC_FILE ) ) )
     {
       rv = false;
     }
     if( rv && (this.kcTypeNum > 3)
 	&& !TextUtil.equals(
 		this.caosFileC,
-		getProperty( props, "rom.caos_c.file" ) ) )
+		getProperty( props, PROP_ROM_CAOS_C_FILE ) ) )
     {
       rv = false;
     }
     if( rv && !TextUtil.equals(
 		this.caosFileE,
-		getProperty( props, "rom.caos_e.file" ) ) )
+		getProperty( props, PROP_ROM_CAOS_E_FILE ) ) )
     {
       rv = false;
     }
     if( rv && !TextUtil.equals(
 		this.caosFileF,
-		getProperty( props, "rom.caos_f.file" ) ) )
+		getProperty( props, PROP_ROM_CAOS_F_FILE ) ) )
     {
       rv = false;
     }
     if( rv && !TextUtil.equals(
 		this.m052File,
-		getProperty( props, "rom.m052.file" ) ) )
+		getProperty( props, PROP_ROM_M052_FILE ) ) )
     {
       rv = false;
     }
@@ -916,9 +858,9 @@ public class KC85 extends EmuSys implements
        */
       if( props != null ) {
 	int nRemain = EmuUtil.getIntProperty(
-				props,
-				this.propPrefix + "module.count",
-				0 );
+			props,
+			this.propPrefix + PROP_MODULE_PREFIX + PROP_COUNT,
+			0 );
 	java.util.List<String[]> modEntries = new ArrayList<>( nRemain + 1 );
 	boolean                  loop       = true;
 	int                      slot       = 8;
@@ -926,14 +868,15 @@ public class KC85 extends EmuSys implements
 	  loop = false;
 
 	  String prefix = String.format(
-				"%smodule.%02X.",
+				"%s%s%02X.",
 				this.propPrefix,
+				PROP_MODULE_PREFIX,
 				slot );
-	  String modName = props.getProperty( prefix + "name" );
+	  String modName = props.getProperty( prefix + PROP_NAME );
 	  if( modName != null ) {
 	    if( !modName.isEmpty() ) {
-	      String typeByte = props.getProperty( prefix + "typebyte" );
-	      String fileName = props.getProperty( prefix + "file" );
+	      String typeByte = props.getProperty( prefix + PROP_TYPEBYTE );
+	      String fileName = props.getProperty( prefix + PROP_FILE );
 	      int    nItems   = 1;
 	      if( modName.equals( "M035x4" ) ) {
 		modName = "M035";
@@ -1003,7 +946,7 @@ public class KC85 extends EmuSys implements
   public AbstractKeyboardFld createKeyboardFld() throws UserCancelException
   {
     if( this.kcTypeNum >= 4 ) {
-      switch( BasicDlg.showOptionDlg(
+      switch( BaseDlg.showOptionDlg(
 		this.screenFrm,
 		"Welche Tastatur m\u00F6chten Sie sehen,\n"
 			+ "die originale oder die D005?",
@@ -1302,14 +1245,29 @@ public class KC85 extends EmuSys implements
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return getDefaultSwapKeyCharCase();
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
   }
 
 
   @Override
   public String getTitle()
   {
-    return this.sysName;
+    String rv = SYSTEXT_KC85_4;
+    switch( this.sysName ) {
+      case SYSNAME_HC900:
+	rv = SYSTEXT_HC900;
+	break;
+      case SYSNAME_KC85_2:
+	rv = SYSTEXT_KC85_2;
+	break;
+      case SYSNAME_KC85_3:
+	rv = SYSTEXT_KC85_3;
+	break;
+      case SYSNAME_KC85_4:
+	rv = SYSTEXT_KC85_4;
+	break;
+    }
+    return rv;
   }
 
 
@@ -1489,17 +1447,15 @@ public class KC85 extends EmuSys implements
 	}
     }
     if( keyNum >= 0 ) {
-      boolean done = false;
       if( this.keyDirectToBuf ) {
 	if( ch <= 0 ) {
 	  ch = keyNumToChar( keyNum, pcKeyTabAddr, ctrlDown );
 	}
 	if( ch > 0 ) {
-	  pasteCharToKeyBuffer( (char) ch, false );
-	  done = true;
+	  rv = putCharToKeyBuffer( (char) ch );
 	}
       }
-      if( !done ) {
+      if( !rv ) {
 	setKeyNumPressed( keyNum );
       }
       updKeyboardFld( keyNum );
@@ -1514,6 +1470,13 @@ public class KC85 extends EmuSys implements
   {
     this.keyNumPressed = -1;
     updKeyboardFld( -1 );
+    if( this.keyDirectToBuf ) {
+      int ix = getRegIX();
+      if( ix >= 0 ) {
+	setMemByte( ix + 13, 0 );
+	setMemByte( ix + 8, getMemByte( ix + 8, false ) & 0xFE );
+      }
+    }
   }
 
 
@@ -1535,8 +1498,7 @@ public class KC85 extends EmuSys implements
 	  }
 	}
 	if( ch1 > 0 ) {
-	  pasteCharToKeyBuffer( (char) ch1, false );
-	  rv = true;
+	  rv = putCharToKeyBuffer( (char) ch1 );
 	}
       }
       if( !rv ) {
@@ -1545,8 +1507,7 @@ public class KC85 extends EmuSys implements
       }
     } else {
       if( (ch > 0) && this.keyDirectToBuf ) {
-	pasteCharToKeyBuffer( TextUtil.umlautToISO646DE( ch ), false );
-	rv = true;
+	rv = putCharToKeyBuffer( TextUtil.umlautToISO646DE( ch ) );
       }
     }
     updKeyboardFld( keyNum );
@@ -1615,7 +1576,7 @@ public class KC85 extends EmuSys implements
 
 
   @Override
-  protected boolean pasteChar( char ch )
+  protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
     if( this.pasteFast || this.keyDirectToBuf ) {
@@ -1623,10 +1584,20 @@ public class KC85 extends EmuSys implements
 	if( ch == '\n' ) {
 	  ch = '\r';
 	}
-	pasteCharToKeyBuffer( TextUtil.umlautToISO646DE( ch ), true );
-	rv = true;
+	int ix = getRegIX();
+	if( ix >= 0 ) {
+	  if( (getMemByte( ix + 8, false ) & 0x01) != 0 ) {
+	    do {
+	      Thread.sleep( 10 );
+	    } while( (getMemByte( ix + 8, false ) & 0x01) != 0 );
+	  }
+	  setMemByte( ix + 13, ch );
+	  setMemByte( ix + 8, getMemByte( ix + 8, false ) | 0x01 );
+	  rv = true;
+	}
       }
-    } else {
+    }
+    if( !rv ) {
       rv = super.pasteChar( ch );
     }
     return rv;
@@ -1951,6 +1922,8 @@ public class KC85 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
+
     boolean coldReset = false;
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       coldReset = true;
@@ -1996,9 +1969,13 @@ public class KC85 extends EmuSys implements
     this.screen1Visible       = false;
     this.screenDirty          = true;
     this.screenRefreshEnabled = false;
-    this.audioOutPhaseL       = false;
-    this.audioOutPhaseL       = false;
-    this.audioInPhase         = this.emuThread.readAudioPhase();
+    this.soundOutPhaseL       = false;
+    this.soundOutPhaseL       = false;
+    this.soundOutValueM       = 0;
+    this.soundOutValueL       = 0;
+    this.soundOutValueR       = 0;
+    this.curSoundOutTStates   = 0;
+    this.tapeInPhase          = this.emuThread.readTapeInPhase();
     this.lineTStateCounter    = 0;
     this.lineCounter          = 0;
     this.lastIX               = -1;
@@ -2012,7 +1989,7 @@ public class KC85 extends EmuSys implements
     this.keyTStates           = 0;
     this.ctc.reset( coldReset );
     this.pio.reset( coldReset );
-    updAudioOut();
+    updSoundOut();
   }
 
 
@@ -2059,13 +2036,6 @@ public class KC85 extends EmuSys implements
   public boolean shouldAskConvertScreenChar()
   {
     return this.charSetUnknown;
-  }
-
-
-  @Override
-  public boolean supportsAudio()
-  {
-    return true;
   }
 
 
@@ -2122,9 +2092,37 @@ public class KC85 extends EmuSys implements
 
 
   @Override
-  public boolean supportsStereoSound()
+  public boolean supportsSoundOut8Bit()
   {
-    return this.soundStereo;
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsSoundOutMono()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsSoundOutStereo()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeIn()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsTapeOut()
+  {
+    return true;
   }
 
 
@@ -2142,6 +2140,7 @@ public class KC85 extends EmuSys implements
                         fileFmt,
                         fileType );
   }
+
 
   @Override
   public void writeIOByte( int port, int value, int tStates )
@@ -2205,7 +2204,7 @@ public class KC85 extends EmuSys implements
 	      this.keyboardFld.fireKOut();
 	    }
 	  }
-	  this.kout = new Boolean( kout );
+	  this.kout = kout;
 	}
 	if( this.screenBufUsed != null ) {
 	  this.screenDirty = true;
@@ -2219,9 +2218,9 @@ public class KC85 extends EmuSys implements
 	m = this.pio.fetchOutValuePortB( false );
 	if( this.kcTypeNum > 3 ) {
 	  if( (m & 0x01) == 0 ) {
-	    this.audioOutPhaseL = false;
-	    this.audioOutPhaseR = false;
-	    updAudioOut();
+	    this.soundOutPhaseL = false;
+	    this.soundOutPhaseR = false;
+	    updSoundOut();
 	  }
 	  this.ram8Enabled   = ((m & 0x20) != 0);
 	  this.ram8Writeable = ((m & 0x40) != 0);
@@ -2256,34 +2255,192 @@ public class KC85 extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+
+    int f = (this.kcTypeNum < 4 ? DEFAULT_SPEED_2_KHZ : DEFAULT_SPEED_4_KHZ);
+    int t = cpu.getMaxSpeedKHz() * 112 / f;
+    this.tStatesLinePos0 = (int) Math.round( t * 32.0 / 112.0 );
+    this.tStatesLinePos1 = (int) Math.round( t * 64.0 / 112.0 );
+    this.tStatesLinePos2 = (int) Math.round( t * 96.0 / 112.0 );
+    this.tStatesPerLine  = t;
+    this.soundOutTStates = cpu.getMaxSpeedKHz() / 50;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+
+    /*
+     * CTC-Eingaenge:
+     *   Kanal 0 und 1: h4-Signal (doppelte Zeilensynchronfrequenz),
+     *                  pro Pixelzeile 32+32+32+16=112 Takte
+     *   Kanal 2 und 3: Bildsynchronimpulse,
+     *                  256*112 Takte Low, 56*112 Takte High
+     */
+    int tStatesPerLine = this.tStatesPerLine;
+    if( tStatesPerLine > 0 ) {
+      this.lineTStateCounter += tStates;
+      if( this.lineTStateCounter >= tStatesPerLine ) {
+	this.lineTStateCounter %= tStatesPerLine;
+	if( this.lineCounter < 311 ) {
+	  if( this.screenRefreshEnabled ) {
+	    updScreenLine();
+	    this.screenFrm.setScreenDirty( true );
+	  }
+	  this.lineCounter++;
+	} else {
+	  this.lineCounter = 0;
+	  if( this.screenDirty && (this.screenBufUsed != null) ) {
+	    this.screenDirty = false;
+	    this.screenFrm.fireRepaint();
+	    this.screenRefreshEnabled = true;
+	  } else {
+	    this.screenRefreshEnabled = false;
+	  }
+	}
+      }
+      boolean bi = (this.lineCounter < 256);	// "bi" entspricht /BI
+      boolean h4 = false;
+      if( ((this.lineTStateCounter >= this.tStatesLinePos0)
+		&& (this.lineTStateCounter < this.tStatesLinePos1))
+	  || (this.lineTStateCounter >= this.tStatesLinePos2) )
+      {
+	h4 = true;
+      }
+      if( h4 != this.h4State ) {
+	this.h4State = h4;
+        this.ctc.externalUpdate( 0, h4 );
+        this.ctc.externalUpdate( 1, h4 );
+      }
+      if( bi != this.biState ) {
+	this.biState = bi;
+	this.ctc.externalUpdate( 2, bi );
+	this.ctc.externalUpdate( 3, bi );
+	KC85JoystickModule joyModule = this.joyModule;
+	if( joyModule != null ) {
+	  joyModule.setBIState( bi );
+	}
+      }
+    }
+
+    /*
+     * Der Kassettenrecorderanschluss wird eingangsseitig emuliert,
+     * indem zyklisch geschaut wird, ob sich die Eingangsphase geaendert hat.
+     * Wenn ja, wird ein Impuls an der Strobe-Leitung der zugehoerigen PIO
+     * emuliert.
+     */
+    if( this.emuThread.readTapeInPhase() != this.tapeInPhase ) {
+      this.tapeInPhase = !this.tapeInPhase;
+      this.pio.strobePortA();
+    }
+
+    /*
+     * Ausgabe Tongeneratoren,
+     * Die Ausgabe zum Kassettenrecorder
+     * ist in der Basisklasse implementiert.
+     */
+    if( this.soundOutTStates > 0 ) {
+      if( this.curSoundOutTStates > 0 ) {
+	this.curSoundOutTStates -= tStates;
+      } else {
+	this.curSoundOutTStates = this.soundOutTStates;
+	this.emuThread.writeSoundOutValue(
+				this.soundOutValueM,
+				this.soundOutValueL,
+				this.soundOutValueR );
+      }
+    }
+
+    /*
+     * Beim Tastaturanschluss wird entsprechend der Pulsabstaende
+     * des Bitmusters der Tastennummer jeweils ein Impuls
+     * an der Strobe-Leitung der zugehoerigen PIO emuliert.
+     * Die Zeitabstaende entsprechen denen des Schaltkreises U807.
+     * Die angegebenen Takte beziehen sich auf die Standardtaktfrequenz.
+     * Wird eine andere Taktfrequenz eingestellt,
+     * laeuft alles mit der anderen Taktfrequenz,
+     * die Zeitverhaeltnisse untereineinander bleiben damit immer gleich.
+     */
+    if( this.keyShiftBitCnt <= 0 ) {
+      if( this.keyTStates > 0 ) {
+	this.keyTStates -= tStates;
+      }
+      if( this.keyTStates <= 0 ) {
+	int keyNum = getSingleKeyNum() ^ 0x01;
+	if( keyNum >= 0 ) {
+	  this.keyNumProcessing = keyNum;
+	  this.keyShiftValue    = keyNum;
+	  this.keyShiftBitCnt   = 8;
+	}
+	this.keyTStates = 0;
+      }
+    }
+    if( this.keyShiftBitCnt > 0 ) {
+      boolean pulse = false;
+      if( this.keyShiftBitCnt == 8 ) {
+	pulse = true;				// Startimpuls
+      }
+      else if( this.keyShiftBitCnt < 8 ) {
+	if( (this.keyShiftValue & 0x01) != 0 ) {
+	  // 1-Bit: 7,14 ms -> 12496 Takte
+	  if( this.keyTStates >= 12496 ) {
+	    pulse = true;
+	    this.keyShiftValue >>= 1;		// Bit verarbeitet
+	  }
+	} else {
+	  // 0-Bit: 5,12 ms -> 8960 Takte
+	  if( this.keyTStates >= 8960 ) {
+	    pulse = true;
+	    this.keyShiftValue >>= 1;		// Bit verarbeitet
+	  }
+	}
+      }
+      if( pulse ) {
+	this.pio.strobePortB();
+	if( this.keyShiftBitCnt == 1 ) {
+	  // letztes Bit verarbeitet
+	  int keyNum = getSingleKeyNum() ^ 0x01;
+	  if( keyNum >= 0 ) {
+	    if( keyNum == this.keyNumProcessing ) {
+	      // Wortabstand 14,43 ms -> 25253 Takte
+	      this.keyTStates = 25253;
+	    } else {
+	      // Doppelwortabstand 19,46 ms -> 34055 Takte
+	      this.keyTStates = 34055;
+	    }
+	  } else {
+	    this.keyTStates = 0;
+	  }
+	  this.keyShiftBitCnt = 0;
+	} else {
+	  this.keyTStates = 0;
+	  --this.keyShiftBitCnt;
+	}
+      } else {
+	this.keyTStates += tStates;
+      }
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void applyPasteFast( Properties props )
   {
     this.keyDirectToBuf = EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "keys.direct_to_buffer",
+				this.propPrefix + PROP_KEYS_DIRECT_TO_BUFFER,
 				false );
     this.pasteFast = EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "paste.fast",
+				this.propPrefix + PROP_PASTE_FAST,
 				true );
-  }
-
-
-  private void applySoundStereo( Properties props )
-  {
-    boolean state = EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + "sound.stereo",
-				false );
-    if( state != this.soundStereo ) {
-      this.soundStereo  = state;
-      AudioOut audioOut = this.emuThread.getAudioOut();
-      if( audioOut != null ) {
-        audioOut.fireReopenLine();
-      }
-    }
   }
 
 
@@ -2401,19 +2558,20 @@ public class KC85 extends EmuSys implements
     java.util.List<AbstractKC85Module> modules = null;
     if( props != null ) {
       int nRemain = EmuUtil.getIntProperty(
-				props,
-				this.propPrefix + "module.count",
-				0 );
+			props,
+			this.propPrefix + PROP_MODULE_PREFIX + PROP_COUNT,
+			0 );
       if( nRemain > 0 ) {
 	modules = new ArrayList<>();
 	int     slot = 8;
 	boolean loop = true;
 	while( loop && (slot < 0x100) && (nRemain > 0) ) {
 	  String prefix = String.format(
-					"%smodule.%02X.",
+					"%s%s%02X.",
 					this.propPrefix,
+					PROP_MODULE_PREFIX,
 					slot );
-	  String moduleName = props.getProperty( prefix + "name" );
+	  String moduleName = props.getProperty( prefix + PROP_NAME );
 	  if( moduleName != null ) {
 	    if( moduleName.equals( "M003" ) ) {
 	      modules.add( new M003( slot, this.emuThread ) );
@@ -2451,7 +2609,7 @@ public class KC85 extends EmuSys implements
 	    }
 	    else if( moduleName.equals( "M025" ) ) {
 	      int    typeByte = 0xF7;
-	      String text     = props.getProperty( prefix + "typebyte" );
+	      String text     = props.getProperty( prefix + PROP_TYPEBYTE );
 	      if( text != null ) {
 		if( text.equals( "FB" ) ) {
 		  typeByte = 0xFB;
@@ -2462,7 +2620,7 @@ public class KC85 extends EmuSys implements
 			slot,
 			typeByte,
 			this.screenFrm,
-			props.getProperty( prefix + "file" ) ) );
+			props.getProperty( prefix + PROP_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M026" ) ) {
 	      modules.add( new KC85ROM8KModule(
@@ -2480,7 +2638,7 @@ public class KC85 extends EmuSys implements
 	    }
 	    else if( moduleName.equals( "M028" ) ) {
 	      int    typeByte = 0xF8;
-	      String text     = props.getProperty( prefix + "typebyte" );
+	      String text     = props.getProperty( prefix + PROP_TYPEBYTE );
 	      if( text != null ) {
 		if( text.equals( "FC" ) ) {
 		  typeByte = 0xFC;
@@ -2491,7 +2649,7 @@ public class KC85 extends EmuSys implements
 			slot,
 			typeByte,
 			this.screenFrm,
-			props.getProperty( prefix + "file" ) ) );
+			props.getProperty( prefix + PROP_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M032" ) ) {
 	      modules.add( new KC85SegmentedRAMModule(
@@ -2519,7 +2677,7 @@ public class KC85 extends EmuSys implements
 	    }
 	    else if( moduleName.equals( "M040" ) ) {
 	      int    typeByte = 0xF7;
-	      String text     = props.getProperty( prefix + "typebyte" );
+	      String text     = props.getProperty( prefix + PROP_TYPEBYTE );
 	      if( text != null ) {
 		if( text.equals( "1" ) || text.equals( "01" ) ) {
 		  typeByte = 0x01;
@@ -2533,42 +2691,42 @@ public class KC85 extends EmuSys implements
 			this.emuThread,
 			typeByte,
 			this.screenFrm,
-			props.getProperty( prefix + "file" ) ) );
+			props.getProperty( prefix + PROP_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M045" ) ) {
 	      modules.add(
 		new M045(
 			slot,
 			this.screenFrm,
-			props.getProperty( prefix + "file" ) ) );
+			props.getProperty( prefix + PROP_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M046" ) ) {
 	      modules.add(
 		new M046(
 			slot,
 			this.screenFrm,
-			props.getProperty( prefix + "file" ) ) );
+			props.getProperty( prefix + PROP_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M047" ) ) {
 	      modules.add(
 		new M047(
 			slot,
 			this.screenFrm,
-			props.getProperty( prefix + "file" ) ) );
+			props.getProperty( prefix + PROP_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M048" ) ) {
 	      modules.add(
 		new M048(
 			slot,
 			this.screenFrm,
-			props.getProperty( prefix + "file" ) ) );
+			props.getProperty( prefix + PROP_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M052" ) ) {
 	      modules.add( new M052(
 		slot,
 		this.emuThread.getScreenFrm(),
 		this.emuThread.getFileTimesViewFactory(),
-		props.getProperty( this.propPrefix + "rom.m052.file" ) ) );
+		props.getProperty( this.propPrefix + PROP_ROM_M052_FILE ) ) );
 	    }
 	    else if( moduleName.equals( "M120" ) ) {
 	      modules.add( new KC85PlainRAMModule(
@@ -2619,7 +2777,7 @@ public class KC85 extends EmuSys implements
   {
     return EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "d004.enabled",
+				this.propPrefix + PROP_D004_ENABLED,
 				false );
   }
 
@@ -2641,11 +2799,11 @@ public class KC85 extends EmuSys implements
   {
     String s = EmuUtil.getProperty(
 			props,
-			this.propPrefix + "d004.rom" );
+			this.propPrefix + PROP_D004_ROM ).toLowerCase();
     return s.equals( "2.0" )
 		|| s.equals( "3.2" )
 		|| s.equals( "3.3" )
-		|| s.startsWith( "file:" ) ? s : "standard";
+		|| s.startsWith( VALUE_PREFIX_FILE ) ? s : VALUE_STANDARD;
   }
 
 
@@ -3012,7 +3170,7 @@ public class KC85 extends EmuSys implements
     String resourceCaosE = null;
     String resourceCaosF = null;
     if( this.kcTypeNum == 2 ) {
-      if( this.sysName.equals( "HC900" ) ) {
+      if( this.sysName.equals( SYSNAME_HC900 ) ) {
 	resourceCaosE = "/rom/kc85/hc900_e000.bin";
 	resourceCaosF = "/rom/kc85/hc900_f000.bin";
       } else {
@@ -3036,7 +3194,7 @@ public class KC85 extends EmuSys implements
     this.basicFile = null;
     this.basicC000 = null;
     if( this.kcTypeNum > 2 ) {
-      this.basicFile = getProperty( props, "rom.basic.file" );
+      this.basicFile = getProperty( props, PROP_ROM_BASIC_FILE );
       this.basicC000 = readROMFile(
 				this.basicFile,
 				this.kcTypeNum > 4 ? 0x8000 : 0x2000,
@@ -3056,7 +3214,7 @@ public class KC85 extends EmuSys implements
        * da der Emulator absichtlich auch die Moeglichkeit bietet,
        * auf diese Art und Weise einen 8 KByte grossen ROM C zu emulieren.
        */
-      this.caosFileC = getProperty( props, "rom.caos_c.file" );
+      this.caosFileC = getProperty( props, PROP_ROM_CAOS_C_FILE );
       this.caosC000  = readROMFile(
 				this.caosFileC,
 				0x2000,
@@ -3069,7 +3227,7 @@ public class KC85 extends EmuSys implements
     }
 
     // CAOS-ROM E
-    this.caosFileE = getProperty( props, "rom.caos_e.file" );
+    this.caosFileE = getProperty( props, PROP_ROM_CAOS_E_FILE );
     this.caosE000  = readROMFile(
 				this.caosFileE,
 				this.kcTypeNum < 3 ? 0x0800 : 0x2000,
@@ -3081,7 +3239,7 @@ public class KC85 extends EmuSys implements
     }
 
     // CAOS-ROM F
-    this.caosFileF = getProperty( props, "rom.caos_f.file" );
+    this.caosFileF = getProperty( props, PROP_ROM_CAOS_F_FILE );
     this.caosF000  = readROMFile(
 				this.caosFileF,
 				this.kcTypeNum < 3 ? 0x0800 : 0x1000,
@@ -3105,7 +3263,7 @@ public class KC85 extends EmuSys implements
     }
 
     // M052-ROM
-    this.m052File = getProperty( props, "rom.m052.file" );
+    this.m052File = getProperty( props, PROP_ROM_M052_FILE );
 
     // Module
     AbstractKC85Module[] modules  = this.modules;
@@ -3117,25 +3275,18 @@ public class KC85 extends EmuSys implements
   }
 
 
-  private void pasteCharToKeyBuffer( char ch, boolean forceWait )
+  private boolean putCharToKeyBuffer( char ch )
   {
-    try {
+    boolean rv = false;
+    if( ch <= 0xFF ) {
       int ix = getRegIX();
       if( ix >= 0 ) {
-	int n = 10;
-	while( (n > 0) && (getMemByte( ix + 8, false ) & 0x01) != 0 ) {
-	  Thread.sleep( 10 );
-	  if( !forceWait ) {
-	    --n;
-	  }
-	}
-	if( n > 0 ) {
-	  setMemByte( ix + 13, ch );
-	  setMemByte( ix + 8, getMemByte( ix + 8, false ) | 0x01 );
-	}
+	setMemByte( ix + 13, ch );
+	setMemByte( ix + 8, getMemByte( ix + 8, false ) | 0x01 );
+	rv = true;
       }
     }
-    catch( InterruptedException ex ) {}
+    return rv;
   }
 
 
@@ -3320,51 +3471,41 @@ public class KC85 extends EmuSys implements
   }
 
 
-  private void updAudioOut()
+  private void updSoundOut()
   {
-    AudioOut audioOut = this.emuThread.getAudioOut();
-    if( audioOut != null ) {
-      if( this.emuThread.isSoundOutEnabled() ) {
-	if( this.soundStereo ) {
-	  int leftValue = (this.audioOutPhaseL ? 0 : AudioOut.MAX_USED_VALUE);
-	  audioOut.writeValue(
-			leftValue,
-			leftValue,
-			this.audioOutPhaseR ? 0 : AudioOut.MAX_USED_VALUE );
-	} else {
-	  int value = 0;
-	  if( this.audioOutPhaseL == this.audioOutPhaseR ) {
-	    value = (this.audioOutPhaseL ? 0 : AudioOut.MAX_USED_VALUE);
-	    int m = this.pio.fetchOutValuePortB( false );
-	    if( (m & 0x10) != 0 ) {
-	      value = (value * 30) / 100;	// 1.0 / (2.35 + 1.0)
-	    }
-	    if( (m & 0x08) != 0 ) {
-	      value = (value * 46) / 100;	// 2.0 / (2.35 + 2.0)
-	    }
-	    if( (m & 0x04) != 0 ) {
-	      value = (value * 62) / 100;	// 3.9 / (2.35 + 3.9)
-	    }
-	    if( (m & 0x02) != 0 ) {
-	      value = (value * 78) / 100;	// 8.2 / (2.35 + 8.2)
-	    }
-	    if( (this.kcTypeNum < 4) && ((m & 0x01) != 0) ) {
-	      value = (value * 87) / 100;	// 16.0 / (2.35 + 16.0)
-	    }
-	  }
-	  audioOut.writeValue( value, value, value );
-	}
-      } else {
-	audioOut.writePhase( this.audioOutPhaseL );
-      }
+    this.soundOutValueL = (this.soundOutPhaseL ?
+				0
+				: (AudioOut.MAX_UNSIGNED_USED_VALUE / 4) );
+    this.soundOutValueR = (this.soundOutPhaseR ?
+				0
+				: (AudioOut.MAX_UNSIGNED_USED_VALUE / 4) );
+    int vMono = (this.soundOutValueL + this.soundOutValueR) * 3 / 2;
+    int m     = this.pio.fetchOutValuePortB( false );
+    if( (m & 0x10) != 0 ) {
+      vMono = (vMono * 30) / 100;	// 1.0 / (2.35 + 1.0)
     }
+    if( (m & 0x08) != 0 ) {
+      vMono = (vMono * 46) / 100;	// 2.0 / (2.35 + 2.0)
+    }
+    if( (m & 0x04) != 0 ) {
+      vMono = (vMono * 62) / 100;	// 3.9 / (2.35 + 3.9)
+    }
+    if( (m & 0x02) != 0 ) {
+      vMono = (vMono * 78) / 100;	// 8.2 / (2.35 + 8.2)
+    }
+    if( (this.kcTypeNum < 4) && ((m & 0x01) != 0) ) {
+      vMono = (vMono * 87) / 100;	// 16.0 / (2.35 + 16.0)
+    }
+    this.soundOutValueM = vMono;
+    this.tapeOutPhase   = this.soundOutPhaseL;
   }
 
 
   private void updKeyboardFld( int keyNum )
   {
-    if( this.keyboardFld != null )
+    if( this.keyboardFld != null ) {
       this.keyboardFld.updKeySelection( keyNum );
+    }
   }
 
 

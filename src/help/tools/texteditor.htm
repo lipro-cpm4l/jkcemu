@@ -36,6 +36,9 @@
      </li>
     </ul>
    </li>
+   <li>
+    <a href="texteditor.htm#prg">4. Programmierung mit Assembler und BASIC-Compiler</a>
+   </li>
   </ul>
  <br/>
 
@@ -49,20 +52,6 @@
   und zum <a href="basicc.htm">BASIC-Compiler</a>
   und andereseits kann er mit den &uuml;blichen Zeichens&auml;tzen
   und teilweise auch mit den Dateiformaten der emulierten Systeme umgehen.
- <br/><br/>
-  Der Zugang zum Assembler und zum BASIC-Compiler sieht so aus,
-  dass Sie das jeweilige Assembler- bzw. BASIC-Programm im JKCEMU-Texteditor
-  schreiben und anschlie&szlig;end den Assembler bzw. den BASIC-Compiler
-  &uuml;ber das Men&uuml; <em>Programmierung</em> aufrufen.
-  Ein angefangenes Assembler- oder BASIC-Programm k&ouml;nnen Sie
-  als <a href="prjfiles.htm">Projekt</a> speichern und wieder &ouml;ffnen,
-  damit auch die jeweils eingestellten Optionen erhalten bleiben.
- <br/><br/>
-  M&ouml;chten Sie zur Programmierung einen anderen Texteditor verwenden,
-  k&ouml;nnen Sie den Assembler und den BASIC-Compiler &uuml;ber die
-  Kommandozeile aufrufen (siehe <a href="assembler.htm#cmdline">hier</a>
-  und <a href="basicc/cmdline.htm">hier</a>).
- <br/><br/>
   Alte Dateiformate werden in der Form unterst&uuml;tzt,
   dass beim &Ouml;ffnen von EDAS*4-Assemblerquelltextdateien
   und diversen BASIC-Programmdateien der jeweilige Quelltext extrahiert
@@ -107,16 +96,20 @@
   Mit dieser Funktion &ouml;ffnen Sie eine Datei und laden
   den darin enthaltenen Text in den Editor.
   Dazu erscheint ein Dateiauswahldialog, in dem Sie die zu
-  &ouml;ffnende Datei bestimmen.
+  &ouml;ffnende Datei ausw&auml;hlen.
  <br/><br/>
   Der Texteditor erkennt die Dateieigenschaften automatisch und merkt
   sie sich intern.
   Allerdings kann der Zeichensatz nicht automatisch erkannt werden,
   d.h., der Datei muss der Systemzeichensatz oder
   ein dazu kompatibler Zeichensatz zugrunde liegen.
-  Ist das nicht der Fall,
-  m&uuml;ssen Sie die Datei mit einer anderen Funktion laden,
-  bei der Sie den Zeichensatz angeben k&ouml;nnen (siehe weiter unten).
+  Ist das nicht der Fall, d.h. wenn einzelne Bytes nicht in Zeichen
+  nicht gemappt werden k&ouml;nnen, l&auml;dt der Editor
+  die Datei mit dem Zeichensatz ISO-8859-1 (Latin&nbsp;1).
+  Wenn auch das auch nicht der richtige Zeichensatz ist,
+  m&uuml;ssen Sie die Datei mit dem Men&uuml;punkt
+  <a href="texteditor.htm#open_with">Datei &ouml;ffnen mit Zeichensatz</a>
+  laden und dabei den Zeichensatz angeben.
  <br/><br/>
 
  <h3><a name="emusys">3.1.1. Dateien der emulierten Systeme</a></h3>
@@ -299,8 +292,8 @@
   WordStar war zu Zeiten der 8-Bit-Computer eine weit verbreitete
   Textverarbung.
   Aus diesem Grund wurden viele Dokumentationen in WordStar erstellt.
-  Damit Sie solche Dateien lesen k&ouml;nnen, bietet der JKCEMU-Texteditor
-  daf&uuml;r eine spezielle Unterst&uuml;tzung an:
+  Damit Sie solche Dateien lesen k&ouml;nnen,
+  bietet der JKCEMU-Texteditor eine spezielle Unterst&uuml;tzung an:
   Wenn Sie nach dem &Ouml;ffnen einer Datei erkennen,
   dass es sich um eine WordStar-Datei handelt,
   k&ouml;nnen Sie mit dem Men&uuml;punkt die WordStar-Formatierungen
@@ -309,19 +302,63 @@
   dass der letzte Buchstabe eines jeden Wortes durch ein
   seltsames Zeichen dargestellt wird.
  <br/><br/>
-  <b>Achtung!</b> Eine WordStar-Datei enth&auml;lt auch Bytes,
-  die abh&auml;ngig vom verwendeten Zeichensatz
-  keine lesbaren oder falsche Textzeichen ergeben.
-  Aus diesem Grund sollte eine WordStar-Datei mit einem Zeichensatz
-  ge&ouml;ffnet werden, der nicht zu solchen Effekten f&uuml;hrt.
-  Wenn Sie also feststellen, dass Sie eine WordStar-Datei
-  ge&ouml;ffnet haben,
-  dann sollten Sie am besten die Datei wieder schlie&szlig;en
-  und anschlie&szlig;end mit dem Men&uuml;punkt
-  <a href="texteditor.htm#open_with">Datei &ouml;ffnen mit Zeichensatz</a>
-  erneut &ouml;ffnen und dabei den Zeichensatz
-  <em>ISO-8859-1&nbsp;(Latin&nbsp;1)</em> ausw&auml;hlen.
-  Danach k&ouml;nnen Sie dann bedenkenlos die WordStar-Formatierungen
-  entfernen.
+  <b>Achtung!</b> Bei einer Datei mit deutschsprachigem Inhalt
+  m&uuml;ssen Sie nach dem Entfernen der WordStar-Formatierungen
+  wahrscheinlich noch die Umlaute konvertieren (siehe vorherigen Abschnitt).
+ <br/><br/>
+
+ <h2>
+  <a name="prg">4. Programmierung mit Assembler und BASIC-Compiler</a>
+ </h2>
+  Mit dem Texteditor k&ouml;nnen Sie Assembler- und BASIC-Programme schreiben
+  und diese direkt &uuml;bersetzen lassen.
+  Der Aufruf des <a href="assembler.htm">Assemblers</a> bzw.
+  <a href="basicc.htm">BASIC-Compilers</a> erfolgt &uuml;ber
+  die entsprechenden Men&uuml;eintr&auml;ge im Men&uuml;
+  <em>Programmierung</em>.
+  Beim erstmaligen Aufruf der Men&uuml;punkte <em>Assemblieren</em> und
+  <em>BASIC-Programm compilieren</em> erscheint ein Dialog zur Eingabe
+  bzw. Anpassung der Optionen.
+  Bei nachfolgenden Aufrufen dieser beiden Men&uuml;punkte sehen Sie
+  den Dialog nicht mehr,
+  und es wird mit den gleichen Optionen assembliert bzw. compiliert.
+ <br/><br/>
+  M&ouml;chten Sie die Optionen &auml;ndern,
+  so verwenden Sie die Men&uuml;punkte <em>Assemblieren mit...</em> und
+  <em>BASIC-Programm compilieren mit...</em>.
+  Bei diesen beiden erscheint immer der Dialog mit den Optionen.
+  Ist in den Optionen bei <em>Programmcode in Emulator laden</em>
+  das H&auml;kchen gesetzt, wird der Programmcode direkt
+  in den Arbeitsspeicher (RAM) des Emulators geladen,
+  d.h., Sie k&ouml;nnen das Programm ausf&uuml;hren oder
+  <a href="debugger.htm">debuggen</a>.
+ <br/><br/>
+  Nach dem Assemblieren werden links die jeweiligen Adressen eingeblendet,
+  sofern im Men&uuml; <em>Programmierung</em> &rarr;
+  <em>Adressleiste nach Assemblieren anzeigen</em> eingeschaltet ist.
+  Damit sehen Sie, auf welchen Adressen die jeweiligen Quelltextzeilen
+  assembliert wurden.
+  Das erleichert den &Uuml;berblick bei der Arbeit mit dem
+  <a href="debugger.htm">Debugger</a>.
+  Au&szlig;erdem ist es damit auch m&ouml;glich,
+  &uuml;ber das Kontextmen&uuml; im Texteditor direkt einen Haltepunkt
+  im Debugger anzulegen.
+ <br/><br/>
+  Der JKCEMU-Texteditor bietet die M&ouml;glichkeit,
+  ein angefangenes Assembler- oder BASIC-Programm als
+  <a href="prjfiles.htm">Projekt</a> zu speichern.
+  Dabei wird eine Projektdatei erzeugt, die die eingestellten Optionen
+  sowie einen Verweis auf die Quelltextdatei enth&auml;lt.
+  Damit die Optionen beim &Ouml;ffnen wieder richtig gesetzt sind,
+  m&uuml;ssen Sie zwingend die Projektdatei
+  anstelle der Quelltextdatei &ouml;ffnen!
+ <br/><br/>
+  M&ouml;chten Sie zur Programmierung einen anderen
+  als den JKCEMU-Texteditor verwenden,
+  k&ouml;nnen Sie den Assembler und den BASIC-Compiler &uuml;ber die
+  Kommandozeile aufrufen (siehe <a href="assembler.htm#cmdline">hier</a>
+  und <a href="basicc/cmdline.htm">hier</a>).
+ <br/><br/>
+
 </body>
 </html>

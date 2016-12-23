@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,11 @@
 package jkcemu.etc;
 
 import java.lang.*;
-import java.security.*;
-import java.util.zip.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.zip.Adler32;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 
 public class CksCalculator

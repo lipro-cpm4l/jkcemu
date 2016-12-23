@@ -110,4 +110,3 @@ public class KeyboardMatrixS6009 extends KeyboardMatrix12x8
     return rv;
   }
 }
-

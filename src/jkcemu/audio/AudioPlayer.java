@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,44 +9,43 @@
 package jkcemu.audio;
 
 import java.awt.Component;
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.File;
 import java.lang.*;
-import javax.sound.sampled.*;
-import javax.swing.*;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.SourceDataLine;
+import javax.swing.ProgressMonitor;
+import javax.swing.ProgressMonitorInputStream;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
 
 
 public class AudioPlayer implements Runnable
 {
-  private Component             owner;
-  private AudioInputStream      ais;
-  private EmuSysAudioDataStream ads;
-  private File                  file;
-  private String                title;
+  private Component     owner;
+  private PCMDataSource pcm;
+  private File          file;
+  private String        title;
 
 
   public static void play(
-			Component        owner,
-			AudioInputStream ais,
-			String           title )
+			Component     owner,
+			PCMDataSource pcm,
+			String        title )
   {
-    play( owner, ais, null, null, title );
+    if( (owner != null) && (pcm != null) && (title != null) ) {
+      play( owner, pcm, null, title );
+    }
   }
 
 
-  public static void play(
-			Component             owner,
-			EmuSysAudioDataStream ads,
-			String                title )
+  public static void play( Component owner, File file )
   {
-    play( owner, null, ads, null, title );
-  }
-
-
-  public static void play( Component owner, File f )
-  {
-    play( owner, null, null, f, "Wiedergabe von " + f.getName() + "..." );
+    if( (owner != null) && (file != null) ) {
+      play( owner, null, file, "Wiedergabe von " + file.getName() + "..." );
+    }
   }
 
 
@@ -55,32 +54,40 @@ public class AudioPlayer implements Runnable
   @Override
   public void run()
   {
-    BufferedInputStream        inRaw = null;
     BufferedInputStream        inBuf = null;
     ProgressMonitorInputStream inPM  = null;
     SourceDataLine             line  = null;
+    AudioInputStream           ais   = null;
     try {
-      if( this.ais == null ) {
-	if( this.ads != null ) {
-	  this.ais = new AudioInputStream(
-				this.ads,
-				this.ads.getAudioFormat(),
-				this.ads.getFrameLength() );
-	} else if( this.file != null ) {
-	  inRaw      = EmuUtil.openBufferedOptionalGZipFile( this.file );
-	  this.ais   = AudioSystem.getAudioInputStream(
-					new BufferedInputStream( inRaw ) );
-	  this.title = "Wiedergabe von " + this.file.getName() + "...";
-	}
+      if( (this.pcm == null) && (this.file != null) ) {
+	this.pcm = AudioUtil.openAudioOrTapeFile( file );
       }
-      if( this.ais != null ) {
-	AudioFormat fmt      = this.ais.getFormat();
-	long        frameLen = this.ais.getFrameLength();
+      if( this.pcm != null ) {
+	boolean signed           = this.pcm.isSigned();
+	int     channels         = this.pcm.getChannels();
+	int     sampleSizeInBits = this.pcm.getSampleSizeInBits();
+	if( sampleSizeInBits < 8 ) {
+	  sampleSizeInBits = 8;
+	}
+	ais = new AudioInputStream(
+			new PCMConverterInputStream(
+					this.pcm,
+					signed,
+					false ),
+			new AudioFormat(
+					(float) this.pcm.getFrameRate(),
+					sampleSizeInBits,
+					channels,
+					signed,
+					false ),
+			this.pcm.getFrameCount() );
+	AudioFormat fmt      = ais.getFormat();
+	long        frameLen = ais.getFrameLength();
 	if( (fmt != null) && (frameLen > 0) ) {
 	  inPM = new ProgressMonitorInputStream(
 			this.owner,
 			this.title != null ? this.title : "Wiedergabe...",
-			this.ais );
+			ais );
 	  ProgressMonitor pm = inPM.getProgressMonitor();
 	  if( pm != null ) {
 	    pm.setMinimum( 0 );
@@ -116,10 +123,9 @@ public class AudioPlayer implements Runnable
     }
     catch( Exception ex ) {}
 
-    EmuUtil.doClose( inPM );
-    EmuUtil.doClose( this.ais );
-    EmuUtil.doClose( inBuf );
-    EmuUtil.doClose( inRaw );
+    EmuUtil.closeSilent( inPM );
+    EmuUtil.closeSilent( ais );
+    EmuUtil.closeSilent( inBuf );
     if( line != null ) {
       try {
 	line.stop();
@@ -136,36 +142,27 @@ public class AudioPlayer implements Runnable
 	/* --- private Konstruktoren und Methoden --- */
 
   private AudioPlayer(
-		Component             owner,
-		AudioInputStream      ais,
-		EmuSysAudioDataStream ads,
-		File                  file,
-		String                title )
+		Component     owner,
+		PCMDataSource pcm,
+		File          file,
+		String        title )
   {
     this.owner = owner;
-    this.ais   = ais;
-    this.ads   = ads;
+    this.pcm   = pcm;
     this.file  = file;
     this.title = title;
   }
 
 
-  private static void play(
-			Component             owner,
-			AudioInputStream      ais,
-			EmuSysAudioDataStream ads,
-			File                  file,
-			String                title )
+  public static void play(
+			Component     owner,
+			PCMDataSource pcm,
+			File          file,
+			String        title )
   {
-    if( (owner != null)
-	&& ((file != null) || (ais != null) || (ads != null))
-	&& (title != null) )
-    {
-      (new Thread(
-		Main.getThreadGroup(),
-		new AudioPlayer( owner, ais, ads, file, title ),
-		"JKCEMU audio player" )).start();
-    }
+    (new Thread(
+	Main.getThreadGroup(),
+	new AudioPlayer( owner, pcm, file, title ),
+	"JKCEMU audio player" )).start();
   }
 }
-

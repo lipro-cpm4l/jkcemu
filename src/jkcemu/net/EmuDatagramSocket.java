@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,9 +11,14 @@
 
 package jkcemu.net;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.IOException;
 import java.lang.*;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+import java.net.SocketException;
 
 
 public class EmuDatagramSocket implements AutoCloseable, Closeable

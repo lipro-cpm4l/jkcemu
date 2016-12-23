@@ -8,17 +8,27 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
 import java.lang.*;
 import java.text.ParseException;
 import java.util.EventObject;
-import javax.swing.*;
-import jkcemu.base.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+import jkcemu.base.BaseDlg;
 
 
-public class ReplyBytesDlg extends BasicDlg
+public class ReplyBytesDlg extends BaseDlg
 {
   public enum InputFormat { HEX8, DEC8, DEC16, DEC32, STRING };
 

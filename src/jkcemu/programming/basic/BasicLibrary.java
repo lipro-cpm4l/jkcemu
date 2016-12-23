@@ -8,13 +8,12 @@
 
 package jkcemu.programming.basic;
 
-import java.awt.*;
-import java.io.*;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
-import jkcemu.base.*;
-import jkcemu.programming.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
 
 
 public class BasicLibrary
@@ -5079,15 +5078,13 @@ public class BasicLibrary
        */
       buf.append( "S_STR:\tLD\tA,H\n"
 		+ "\tXOR\t80H\n"
-		+ "\tOR\tL\n"
+		+ "\tOR\tL\n"			// CY=0
 		+ "\tJR\tZ,S_STR4\n"
 		+ "\tLD\tA,20H\n"
 		+ "\tBIT\t7,H\n"
 		+ "\tJR\tZ,S_STR1\n"
 		+ "\tEX\tDE,HL\n"
-		+ "\tXOR\tA\n"			// CY=0
-		+ "\tLD\tH,A\n"
-		+ "\tLD\tL,A\n"
+		+ "\tLD\tHL,0000H\n"
 		+ "\tSBC\tHL,DE\n"
 		+ "\tLD\tA,2DH\n"		// Minuszeichen
 		+ "S_STR1:\tEXX\n"
@@ -5107,9 +5104,8 @@ public class BasicLibrary
 		+ "\tLD\tDE,0001H\n"		// 1
 		+ "\tLD\tB,01H\n"		// Null ausgeben
 		+ "\tCALL\tS_STR2\n"
-		+ "\tXOR\tA\n"
 		+ "\tEXX\n"
-		+ "\tLD\t(HL),A\n"
+		+ "\tLD\t(HL),00H\n"
 		+ "\tLD\tHL,M_STR\n"
 		+ "\tRET\n"
 		+ "S_STR2:\tLD\tA,0FFH\n"

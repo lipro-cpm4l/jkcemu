@@ -3,14 +3,16 @@
  *
  * Kleincomputer-Emulator
  *
- * Parser fuer einen Ausdrucks
+ * Parser fuer einen Ausdruck
  */
 
 package jkcemu.programming.assembler;
 
 import java.lang.*;
-import java.text.*;
-import java.util.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.util.Arrays;
+import java.util.Map;
 import jkcemu.programming.*;
 
 
@@ -177,7 +179,7 @@ public class ExprParser
       /*
        * Wenn das letzte Zeichen im Token ein Zeichen
        * fuer einen Bezeichner war,
-       * darf das naechste Zeichen im Eingabestrom auch kein Zeichen
+       * darf das naechste Zeichen im Eingabestrom kein Zeichen
        * eines Bezeichners sein.
        */
       if( rv && AsmLabel.isIdentifierPart( chToken ) ) {
@@ -223,7 +225,7 @@ public class ExprParser
       if( checkAndParseToken( "OR" ) ) {
 	Integer v2 = parseXorExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() | v2.intValue() );
+	  value = (value.intValue() | v2.intValue());
 	}
       } else {
 	break;
@@ -240,7 +242,7 @@ public class ExprParser
       if( checkAndParseToken( "XOR" ) ) {
 	Integer v2 = parseAndExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() ^ v2.intValue() );
+	  value = (value.intValue() ^ v2.intValue());
 	}
       } else {
 	break;
@@ -257,7 +259,7 @@ public class ExprParser
       if( checkAndParseToken( "AND" ) ) {
 	Integer v2 = parseEqualityExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() & v2.intValue() );
+	  value = (value.intValue() & v2.intValue());
 	}
       } else {
 	break;
@@ -274,13 +276,13 @@ public class ExprParser
       if( checkAndParseToken( "=" ) || checkAndParseToken( "EQ" ) ) {
 	Integer v2 = parseRelationalExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() == v2.intValue() ? -1 : 0 );
+	  value = (value.intValue() == v2.intValue() ? -1 : 0);
 	}
       }
       else if( checkAndParseToken( "<>" ) || checkAndParseToken( "NE" ) ) {
 	Integer v2 = parseRelationalExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() != v2.intValue() ? 0 : -1 );
+	  value = (value.intValue() != v2.intValue() ? 0 : -1);
 	}
       } else {
 	break;
@@ -297,25 +299,25 @@ public class ExprParser
       if( checkAndParseToken( "<=" ) || checkAndParseToken( "LE" ) ) {
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() <= v2.intValue() ? -1 : 0 );
+	  value = (value.intValue() <= v2.intValue() ? -1 : 0);
 	}
       }
       else if( checkAndParseToken( "<" ) || checkAndParseToken( "LT" ) ) {
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() < v2.intValue() ? -1 : 0 );
+	  value = (value.intValue() < v2.intValue() ? -1 : 0);
 	}
       }
       else if( checkAndParseToken( ">=" ) || checkAndParseToken( "GE" ) ) {
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() >= v2.intValue() ? -1 : 0 );
+	  value = (value.intValue() >= v2.intValue() ? -1 : 0);
 	}
       }
       else if( checkAndParseToken( ">" ) || checkAndParseToken( "GT" ) ) {
 	Integer v2 = parseShiftExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() > v2.intValue() ? -1 : 0 );
+	  value = (value.intValue() > v2.intValue() ? -1 : 0);
 	}
       } else {
 	break;
@@ -332,13 +334,13 @@ public class ExprParser
       if( checkAndParseToken( "<<" ) || checkAndParseToken( "SHL" ) ) {
 	Integer v2 = parseAddExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() << v2.intValue() );
+	  value = (value.intValue() << v2.intValue());
 	}
       }
       else if( checkAndParseToken( ">>" ) || checkAndParseToken( "SHR" ) ) {
 	Integer v2 = parseAddExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() >> v2.intValue() );
+	  value = (value.intValue() >> v2.intValue());
 	}
       } else {
 	break;
@@ -355,12 +357,12 @@ public class ExprParser
       if( checkAndParseToken( "+" ) ) {
 	Integer v2 = parseMulExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() + v2.intValue() );
+	  value = (value.intValue() + v2.intValue());
 	}
       } else if( checkAndParseToken( "-" ) ) {
 	Integer v2 = parseMulExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() - v2.intValue() );
+	  value = (value.intValue() - v2.intValue());
 	}
       } else {
 	break;
@@ -377,7 +379,7 @@ public class ExprParser
       if( checkAndParseToken( "*" ) ) {
 	Integer v2 = parseUnaryExpr();
 	if( (value != null) && (v2 != null) ) {
-	  value = new Integer( value.intValue() * v2.intValue() );
+	  value = (value.intValue() * v2.intValue());
 	}
       }
       else if( checkAndParseToken( "/" ) ) {
@@ -386,7 +388,7 @@ public class ExprParser
 	  if( v2.intValue() == 0 ) {
 	    throw new PrgException( "Division durch 0" );
 	  }
-	  value = new Integer( value.intValue() / v2.intValue() );
+	  value = (value.intValue() / v2.intValue());
 	}
 
 
@@ -398,7 +400,7 @@ public class ExprParser
 	  if( v2.intValue() == 0 ) {
 	    throw new PrgException( "Modulo 0" );
 	  }
-	  value = new Integer( value.intValue() % v2.intValue() );
+	  value = (value.intValue() % v2.intValue());
 	}
       } else {
 	break;
@@ -416,13 +418,13 @@ public class ExprParser
     } else if( checkAndParseToken( "-" ) ) {
       Integer v2 = parsePrimExpr();
       if( v2 != null ) {
-	value = new Integer( -v2.intValue() );
+	value = -v2.intValue();
       }
     } else if( checkAndParseToken( "LOW" ) ) {
       parseToken( '(' );
       Integer v2 = parseExpr();
       if( v2 != null ) {
-	value = new Integer( v2.intValue() & 0xFF );
+	value = (v2.intValue() & 0xFF);
       }
       parseToken( ')' );
     }
@@ -430,14 +432,14 @@ public class ExprParser
       parseToken( '(' );
       Integer v2 = parseExpr();
       if( v2 != null ) {
-	value = new Integer( (v2.intValue() >> 8) & 0xFF );
+	value = ((v2.intValue() >> 8) & 0xFF);
       }
       parseToken( ')' );
     }
     else if( checkAndParseToken( "NOT" ) ) {
       Integer v2 = parseExpr();
       if( v2 != null ) {
-	value = new Integer( ~v2.intValue() );
+	value = ~v2.intValue();
       }
       parseToken( ')' );
     }
@@ -461,7 +463,7 @@ public class ExprParser
       if( ch == CharacterIterator.DONE ) {
 	throw new PrgException( "Unerwartetes Ende des Zeichenliterals" );
       }
-      value = new Integer( ch );
+      value = Integer.valueOf( ch );
       ch    = this.iter.next();
       if( ch != '\'' ) {
 	throw new PrgException(

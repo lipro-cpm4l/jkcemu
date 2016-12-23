@@ -12,7 +12,9 @@ import java.lang.*;
 import java.util.Set;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.KC85;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AbstractTarget;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
 
 
 public class KC85Target extends AbstractTarget
@@ -591,7 +593,7 @@ public class KC85Target extends AbstractTarget
   /*
    * Farbe eines Pixels ermitteln
    * Parameter:
-   *   DE: X-Koordinate (0...255)
+   *   DE: X-Koordinate (0...319)
    *   HL: Y-Koordinate (0...255)
    * Rueckgabe:
    *   HL >= 0: Farbcode des Pixels

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -50,7 +50,7 @@ public class ReplyIntDlg extends AbstractReplyDlg
   {
     boolean rv = false;
     try {
-      this.reply = new Integer( this.docInt.intValue() );
+      this.reply = this.docInt.intValue();
       if( this.reply != null )
 	rv = true;
     }

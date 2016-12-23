@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,17 +8,24 @@
 
 package jkcemu.image;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Image;
+import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JScrollPane;
 import jkcemu.Main;
-import jkcemu.base.BasicFrm;
+import jkcemu.base.BaseFrm;
 
 
-public class VideoPlayFrm extends BasicFrm
+public class VideoPlayFrm extends BaseFrm
 {
   private JMenuItem mnuClose;
   private JLabel    labelPlayer;
@@ -99,4 +106,3 @@ public class VideoPlayFrm extends BasicFrm
     return rv;
   }
 }
-

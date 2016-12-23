@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,17 @@
 
 package jkcemu.emusys.zxspectrum;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.event.MouseEvent;
 import java.lang.*;
 import java.util.Arrays;
-import jkcemu.base.*;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
 import jkcemu.emusys.ZXSpectrum;
 
 
@@ -520,4 +526,3 @@ public class ZXSpectrumKeyboardFld extends AbstractKeyboardFld<ZXSpectrum>
     }
   }
 }
-

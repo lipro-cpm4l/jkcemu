@@ -8,9 +8,14 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileSaver;
+import jkcemu.base.UserInputException;
 
 
 public class KCSystemFileTarget extends AbstractConvertTarget
@@ -70,7 +75,7 @@ public class KCSystemFileTarget extends AbstractConvertTarget
 		out,
 		begAddr,
 		(begAddr + this.len - 1) & 0xFFFF,
-		startAddr >= 0 ? new Integer( startAddr ) : null,
+		startAddr >= 0 ? startAddr : null,
 		false,
 		fileDesc,
 		null );
@@ -86,7 +91,7 @@ public class KCSystemFileTarget extends AbstractConvertTarget
       out = null;
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
     return null;
   }

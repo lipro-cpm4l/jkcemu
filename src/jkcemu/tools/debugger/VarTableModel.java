@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,7 @@
 package jkcemu.tools.debugger;
 
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
 import javax.swing.table.AbstractTableModel;
 import z80emu.Z80MemView;
 

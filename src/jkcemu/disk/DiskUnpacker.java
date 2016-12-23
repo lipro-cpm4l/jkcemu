@@ -8,12 +8,22 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Dialog;
+import java.awt.EventQueue;
+import java.awt.Window;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.*;
-import jkcemu.Main;
-import jkcemu.base.*;
+import java.util.ArrayList;
+import jkcemu.base.AbstractThreadDlg;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileTimesView;
+import jkcemu.base.FileTimesViewFactory;
+import jkcemu.base.NIOFileTimesViewFactory;
 import jkcemu.filebrowser.FileBrowserFrm;
 
 
@@ -133,7 +143,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 	  err = true;
 	}
 	finally {
-	  EmuUtil.doClose( out );
+	  EmuUtil.closeSilent( out );
 	  if( err ) {
 	    fName = "@boot.sys.error";
 	    if( file.renameTo( new File( outDir, "@boot.sys.error" ) ) ) {
@@ -250,7 +260,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 		    this.fileErr = true;
 		  }
 		  finally {
-		    EmuUtil.doClose( out );
+		    EmuUtil.closeSilent( out );
 		  }
 
 		  // Zeitstempel setzen
@@ -323,15 +333,15 @@ public class DiskUnpacker extends AbstractThreadDlg
 		  public void run()
 		  {
 		    if( error ) {
-		      BasicDlg.showWarningDlg( owner, msg );
+		      BaseDlg.showWarningDlg( owner, msg );
 		    } else {
-		      BasicDlg.showInfoDlg( owner, msg, "Entpacken" );
+		      BaseDlg.showInfoDlg( owner, msg, "Entpacken" );
 		    }
 		  }
 		} );
       }
     }
-    this.disk.doClose();
+    this.disk.closeSilent();
   }
 
 

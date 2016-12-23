@@ -16,7 +16,13 @@
       </ul>
      </li>
      <li><a href="fileformats.htm#kcbasic">2.4. KC-BASIC-Programmdatei</a></li>
-     <li><a href="fileformats.htm#kctap">2.5. KC-TAP-Format</a></li>
+     <li><a href="fileformats.htm#kctap">2.5. KC-TAP-Format</a>
+      <ul>
+       <li>
+	<a href="fileformats.htm#multi_kctap">2.5.1. Multi-KC-TAP-Dateien</a>
+       </li>
+      </ul>
+     </li>
      <li><a href="fileformats.htm#basic">2.6. BASIC-Programmdatei</a></li>
      <li><a href="fileformats.htm#rbasic">2.7. RBASIC-Programmdatei</a></li>
      <li><a href="fileformats.htm#hex">2.8. Intel-HEX-Format</a></li>
@@ -510,20 +516,16 @@
   (siehe <a href="fileformats.htm#kcc_endaddr">hier</a>).
  <br/><br/>
   <b>Hinweis:</b> KC-TAP-Dateien werden auch als Tape-Dateien
-  unterst&uuml;tzt und k&ouml;nnen dadurch ebenfalls mit der Audiofunktion
-  <a href="audio.htm#file_in">Sound- oder Tape-Datei lesen</a>
+  unterst&uuml;tzt und k&ouml;nnen deshalb auch mit der Funktion
+  <a href="audio.htm#file_in">Audiodaten aus Sound- oder Tape-Datei lesen</a>
   in den Emulator geladen werden.
   Das ist &uuml;brigens der einzige Weg, eine KC-TAP-Datei,
   die ein KC-BASIC-Programm im ASCII-Format oder ein KC-BASIC-Datenfeld
   enth&auml;lt, so zu laden,
   dass der BASIC-Interpreter damit auch etwas anfangen kann.
  <br/><br/>
-  <b>Hinweis:</b> Im <a href="tools/filebrowser.htm">Datei-Browser</a>
-  und im <a href="tools/fileconverter.htm">Dateikonverter</a> k&ouml;nnen
-  KC-TAP-Dateien in Sound-Dateien exportiert bzw. konvertiert werden.
- <br/><br/>
 
- <h3><a name="multi_kctap">5.1. Multi-KC-TAP-Dateien</a></h3>
+ <h3><a name="multi_kctap">2.5.1. Multi-KC-TAP-Dateien</a></h3>
   Mehrere KC-TAP-Dateien k&ouml;nnen zu einer Datei zusammengekettet werden,
   was sinngem&auml;&szlig; mehrere, hintereinander liegende
   Kassettenaufzeichnungen bedeutet.
@@ -532,7 +534,7 @@
   Multi-KC-TAP-Dateien eignen sich f&uuml;r Programme,
   die aus mehreren Dateien bestehen.
   Meistens handelt es sich dabei um Spielprogramme.
-  Die ersten Datei, d.h. die erste Kassettenaufnahme,
+  Die erste Datei, d.h. die erste Kassettenaufnahme,
   enth&auml;lt h&auml;ufig nur ein kleines Programm,
   welches ein Startbild anzeigt und anschlie&szlig;end die restlichen Dateien,
   d.h., die nachfolgenden Kassettenaufnahmen, einliest
@@ -556,7 +558,7 @@
  <br/><br/>
 
  <h3><a name="basic">2.6. BASIC-Programmdatei</a></h3>
-  Ein BASIC-Programmdatei enth&auml;lt ein BASIC-Programm,
+  Eine BASIC-Programmdatei enth&auml;lt ein BASIC-Programm,
   so wie es im Arbeitsspeicher vorliegt.
   Das erste Byte in der Datei ist das erste Byte des eigentlichen
   BASIC-Programms.
@@ -565,7 +567,7 @@
  <br/><br/>
 
  <h3><a name="rbasic">2.7. RBASIC-Programmdatei</a></h3>
-  Der A5105 (BIC, ALBA PC) benutzt dieses Dateiformat zur Speicherung
+  Der A5105 (BIC, ALBA-PC) benutzt dieses Dateiformat zur Speicherung
   von BASIC-Programmen auf Diskette.
   Das erste Byte in der Datei hat den Wert 0FFh.
   Danach folgt das RBASIC-Programm, so wie es im Arbeistspeicher
@@ -666,8 +668,9 @@
   Da Magnetbandaufzeichnungen im Original &uuml;ber die Kassettenschnittstelle
   in den Computer geladen werden, m&uuml;ssen Tape-Dateien &uuml;ber
   die emulierte Kassettenschnittstelle in JKCEMU geladen werden.
-  Dazu wird die Audiofunktion
-  <a href="audio.htm#file_in">Sound- oder Tape-Datei lesen</a> verwendet.
+  Dazu wird die Funktion
+  <a href="audio.htm#file_in">Audiodaten aus Sound- oder Tape-Datei lesen</a>
+  verwendet.
  <br/><br/>
   Tape-Dateien unterscheiden sich von Sound-Dateien dadurch,
   dass sie entweder die Audiodaten nur mit einem Bit Aufl&ouml;sung
@@ -688,13 +691,18 @@
  <br/><br/>
 
  <h3><a name="csw">3.2 CSW-Format</a></h3>
-  CSW steht f&uuml;r <em>Compressed Square Wave</em>.
-  Das Format speichert die Audiodaten mit einem Bit Aufl&ouml;sung
-  und ist somit f&uuml;r die Speicherung beliebiger
-  digitaler Kassettenaufzeichnungen geeignet.
-  Eine Beschreibung des Formats ist im Internet zu finden.
+  CSW steht f&uuml;r <em>Compressed Square Wave</em> und
+  wurde speziell f&uuml;r die Speicherung digitaler
+  Kassettenaufzeichnungen entwickelt.
+  Das Format speichert die Audiodaten mit einem Bit Aufl&ouml;sung.
  <br/><br/>
-  JKCEMU unterst&uuml;tzt CSW-Dateien sowohl lesend und schreibend.
+  JKCEMU unterst&uuml;tzt CSW-Dateien lesend und schreibend,
+  und zwar sowohl im alten CSW1- als auch im CSW2-Format.
+  Wenn Sie beim Speichern einer Datei die Endung <em>.csw</em> angeben,
+  wird im CSW2-Format gespeichert.
+  Sie k&ouml;nnen bei Bedarf auch das alte CSW1-Format erzeugen.
+  Dazu m&uuml;ssen Sie die Endung <em>.csw1</em> angeben und
+  nach dem Speichern die Datei in <em>.csw</em> umbenennen.
  <br/><br/>
 
  <h3><a name="tzx">3.3 TZX-Format</a></h3>
@@ -711,7 +719,6 @@
   um Metadaten, Steuerungsinformationen und nat&uuml;rlich
   die zu speichernden Daten in den unterschiedlichen Aufzeichnungsverfahren
   abbilden zu k&ouml;nnen.
-  Eine Beschreibung des TZX-Formats ist im Internet zu finden.
  <br/><br/>
   JKCEMU unterst&uuml;tzt TZX-Dateien,
   allerdings mit einigen Einschr&auml;nkungen:
@@ -719,21 +726,22 @@
    <li>
     JKCEMU kann nicht alle Blockarten (Block-IDs) verarbeiten.
     Enth&auml;lt eine TZX-Datei eine nicht unterst&uuml;tzte Block-ID,
-    l&auml;sst sich diese Datei nicht in den Emulator laden.
+    l&auml;sst sich die Datei nicht in den Emulator laden.
    </li>
    <li>
-    Bei der Audiofunktion
-    <a href="audio.htm#file_out">Sound- oder Tape-Datei speichern</a>
-    kann auch eine TZX-Datei angegeben werden.
-    Die Audiodaten werden dann in einem Block mit der ID&nbsp;15h
+    Beim Erzeugen einer TZX-Datei
+    (<a href="audio.htm#file_out">Audiodaten aufnehmen und in Datei speichern</a>
+    oder im <a href="tools/fileconverter.htm">Dateikonverter</a>
+    Umwandeln einer CSW-Datei in eine TZX-Datei)
+    werden die Audiodaten in einem Block mit der ID&nbsp;15h
     (Direct Recording Block) gespeichert.
     Laut den Entwicklern des TZX-Formats sollte diese Block-ID
-    nur dann verwendet werden,
-    wenn sich keine andere Block-ID daf&uuml;r eignet.
+    nur dann verwendet werden, wenn sich keine andere Block-ID eignet.
     Der Sinn hinter dem TZX-Format ist n&auml;mlich,
     m&ouml;glichst nicht die Audiodaten,
-    sondern direkt die Nutzdaten zu speichern,
-    was aber in dem Fall nicht m&ouml;glich ist.
+    sondern direkt die Nutzdaten zu speichern.
+    Da dies aber in dem Fall nicht ohne Weiteres m&ouml;glich ist,
+    verwendet JKCEMU die Block-ID&nbsp;15h.
    </li>
   <br/>
 
@@ -745,8 +753,8 @@
   Beide Formate werden als Tape-Datei nur lesend unterst&uuml;tzt, d.h.,
   sie lassen sich &uuml;ber die emulierte Kassettenschnittstelle einlesen,
   nicht aber speichern.
-  Dar&uuml;ber hinaus wird aber das KC-TAP-Format von JKCEMU
-  in vollem Umfang als Speicherabbilddatei unterst&uuml;tzt.
+  Dar&uuml;ber hinaus wird das KC-TAP-Format von JKCEMU in vollem Umfang
+  lesend und schreibend auch als Speicherabbilddatei unterst&uuml;tzt.
   Es k&ouml;nnen also Bereiche des Arbeitsspeichers direkt in eine
   KC-TAP-Datei gespeichert und von dort wieder direkt zur&uuml;ck
   in den Arbeitsspeicher geladen werden.

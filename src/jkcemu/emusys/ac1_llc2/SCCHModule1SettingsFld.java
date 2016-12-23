@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,27 @@
 
 package jkcemu.emusys.ac1_llc2;
 
-import java.awt.*;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.ButtonGroup;
+import javax.swing.AbstractButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.UserInputException;
 
 
 public class SCCHModule1SettingsFld
@@ -50,14 +64,14 @@ public class SCCHModule1SettingsFld
     // Programmpaket X
     this.fldPrgX = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "program_x.",
+		propPrefix + AbstractSCCHSys.PROP_PROGRAM_X_PREFIX,
 		"ROM-Datei f\u00FCr Programmpaket X (E000h-FFFFh):" );
     add( this.fldPrgX, gbc );
 
     // ROM-Disk
     this.fldRomDisk = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "romdisk.",
+		propPrefix + AbstractSCCHSys.PROP_ROMDISK_PREFIX,
 		"ROM-Datei f\u00FCr ROM-Disk"
 			+ " (8000h-FFFFh bzw. C000h-FFFFh):" );
     gbc.insets.bottom = 0;
@@ -93,7 +107,7 @@ public class SCCHModule1SettingsFld
     // BASIC-ROM
     this.fldBasicRom = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "basic.",
+		propPrefix + AbstractSCCHSys.PROP_BASIC_PREFIX,
 		"Alternativer BASIC-ROM (2000h-5FFFh bzw. 4000h-5FFFh):" );
     gbc.insets.top    = 5;
     gbc.insets.bottom = 0;
@@ -160,11 +174,11 @@ public class SCCHModule1SettingsFld
     this.fldBasicRom.applyInput( props, selected );
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "basicrom.address.begin",
+		this.propPrefix + AbstractSCCHSys.PROP_BASIC_ADDR,
 		this.btnBasicRom2000.isSelected() ? "2000" : "4000" );
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + "romdisk.address.begin",
+		this.propPrefix + AbstractSCCHSys.PROP_ROMDISK_ADDR,
 		this.btnRomDisk8000.isSelected() ? "8000" : "C000" );
   }
 
@@ -204,8 +218,8 @@ public class SCCHModule1SettingsFld
     this.fldBasicRom.updFields( props );
 
     String text = EmuUtil.getProperty(
-			props,
-			this.propPrefix + "basicrom.address.begin" );
+		props,
+		this.propPrefix + AbstractSCCHSys.PROP_BASIC_ADDR );
     if( text.startsWith( "2000" ) ) {
       this.btnBasicRom2000.setSelected( true );
     } else {
@@ -214,8 +228,8 @@ public class SCCHModule1SettingsFld
     updBasicRomAddrFieldsEnabled();
 
     text = EmuUtil.getProperty(
-			props,
-			this.propPrefix + "romdisk.address.begin" );
+		props,
+		this.propPrefix + AbstractSCCHSys.PROP_ROMDISK_ADDR );
     if( text.startsWith( "8000" ) ) {
       this.btnRomDisk8000.setSelected( true );
     } else {
@@ -248,4 +262,3 @@ public class SCCHModule1SettingsFld
     this.btnRomDiskC000.setEnabled( state );
   }
 }
-

@@ -9,10 +9,18 @@
 package jkcemu.disk;
 
 import java.awt.Frame;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.lang.*;
-import java.nio.channels.*;
-import java.util.*;
+import java.nio.channels.FileLock;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
 
@@ -87,7 +95,7 @@ public class AnaDisk extends AbstractFloppyDisk
       }
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
     return msgBuf != null ? msgBuf.toString() : null;
   }
@@ -119,8 +127,8 @@ public class AnaDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.doRelease( fl );
-	EmuUtil.doClose( raf );
+	EmuUtil.releaseSilent( fl );
+	EmuUtil.closeSilent( raf );
       }
     }
     return rv;
@@ -139,8 +147,8 @@ public class AnaDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.doRelease( fl );
-	EmuUtil.doClose( raf );
+	EmuUtil.releaseSilent( fl );
+	EmuUtil.closeSilent( raf );
       }
     }
     return rv;
@@ -160,7 +168,7 @@ public class AnaDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
     return rv;
@@ -179,10 +187,10 @@ public class AnaDisk extends AbstractFloppyDisk
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public synchronized void doClose()
+  public synchronized void closeSilent()
   {
-    EmuUtil.doRelease( this.fileLock );
-    EmuUtil.doClose( this.raf );
+    EmuUtil.releaseSilent( this.fileLock );
+    EmuUtil.closeSilent( this.raf );
   }
 
 
@@ -214,11 +222,10 @@ public class AnaDisk extends AbstractFloppyDisk
 	  }
 	  map = this.side0;
 	}
-	Integer                    cylObj   = new Integer( physCyl );
-	java.util.List<SectorData> cylSects = map.get( cylObj );
+	java.util.List<SectorData> cylSects = map.get( physCyl );
 	if( cylSects == null ) {
 	  cylSects = new ArrayList<>( sectorIDs.length );
-	  map.put( cylObj, cylSects );
+	  map.put( physCyl, cylSects );
 	}
 	if( cylSects.isEmpty() ) {
 	  try {
@@ -327,12 +334,12 @@ public class AnaDisk extends AbstractFloppyDisk
   {
     if( (props != null) && (this.fileName != null) ) {
       if( this.resource ) {
-	props.setProperty( prefix + "resource", this.fileName );
+	props.setProperty( prefix + PROP_RESOURCE, this.fileName );
       } else {
-	props.setProperty( prefix + "file", this.fileName );
+	props.setProperty( prefix + PROP_FILE, this.fileName );
       }
       props.setProperty(
-		prefix + "readonly",
+		prefix + PROP_READONLY,
 		Boolean.toString( isReadOnly() ) );
     }
   }
@@ -489,15 +496,14 @@ public class AnaDisk extends AbstractFloppyDisk
 	map = side1;
       }
       if( map != null ) {
-	Integer keyObj                     = new Integer( physCyl );
-	java.util.List<SectorData> sectors = map.get( keyObj );
+	java.util.List<SectorData> sectors = map.get( physCyl );
 	if( sectors == null ) {
 	  if( (physCyl > 0) && (sectorsPerCyl > 0) ) {
 	    sectors = new ArrayList<>( sectorsPerCyl );
 	  } else {
 	    sectors = new ArrayList<>();
 	  }
-	  map.put( keyObj, sectors );
+	  map.put( physCyl, sectors );
 	}
 	// doppelte Sektoren herausfiltern
 	boolean found = false;
@@ -565,7 +571,7 @@ public class AnaDisk extends AbstractFloppyDisk
     Map<Integer,java.util.List<SectorData>> map = ((physHead & 0x01) != 0 ?
 							side1 : side0);
     if( map != null ) {
-      rv = map.get( new Integer( physCyl ) );
+      rv = map.get( physCyl );
     }
     return rv;
   }

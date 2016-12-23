@@ -8,21 +8,41 @@
 
 package jkcemu.tools.hexedit;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.print.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.EventQueue;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
 import java.lang.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.EventObject;
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.BorderFactory;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.ByteDataSource;
+import jkcemu.base.HexCharFld;
+import jkcemu.base.ReplyBytesDlg;
 import jkcemu.etc.CksCalculator;
 
 
 public abstract class AbstractHexCharFrm
-				extends BasicFrm
+				extends BaseFrm
 				implements
 					ByteDataSource,
 					CaretListener,
@@ -441,7 +461,7 @@ public abstract class AbstractHexCharFrm
 	  }
 	  String value = cc.getValue();
 	  if( value != null ) {
-	    BasicDlg.showInfoDlg(
+	    BaseDlg.showInfoDlg(
 		this,
 		String.format(
 			"%s des ausgew\u00E4hlten Bereichs: %s",
@@ -450,7 +470,7 @@ public abstract class AbstractHexCharFrm
 	  }
 	}
 	catch( NoSuchAlgorithmException ex ) {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		algorithm + ": Unbekannter bzw. nicht"
 			+ " unterst\u00FCtzter Algorithmus" );
@@ -539,7 +559,7 @@ public abstract class AbstractHexCharFrm
 			  }
 			} );
 	  } else {
-	    BasicDlg.showInfoDlg( this, "Byte-Folge nicht gefunden" );
+	    BaseDlg.showInfoDlg( this, "Byte-Folge nicht gefunden" );
 	  }
 	}
       }
@@ -563,7 +583,7 @@ public abstract class AbstractHexCharFrm
 	  value = (value << 8) | ((int) (getDataByte( pos + i )) & 0xFF);
 	}
       }
-      rv = new Long( value );
+      rv = value;
     }
     return rv;
   }
@@ -589,7 +609,7 @@ public abstract class AbstractHexCharFrm
       catch( NumberFormatException ex ) {}
     }
     if( !done ) {
-      BasicDlg.showErrorDlg( this, "Ung\u00FCltige Eingabe" );
+      BaseDlg.showErrorDlg( this, "Ung\u00FCltige Eingabe" );
     }
   }
 

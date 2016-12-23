@@ -8,20 +8,47 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.EventQueue;
+import java.awt.Frame;
 import java.awt.event.KeyEvent;
-import java.io.*;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.Arrays;
+import java.util.Properties;
 import jkcemu.Main;
-import jkcemu.audio.*;
-import jkcemu.disk.*;
-import jkcemu.emusys.*;
-import jkcemu.joystick.*;
+import jkcemu.audio.AudioFrm;
+import jkcemu.audio.AudioIO;
+import jkcemu.audio.AudioIn;
+import jkcemu.audio.AudioOut;
+import jkcemu.disk.FloppyDiskStationFrm;
+import jkcemu.emusys.A5105;
+import jkcemu.emusys.AC1;
+import jkcemu.emusys.BCS3;
+import jkcemu.emusys.C80;
+import jkcemu.emusys.HueblerEvertMC;
+import jkcemu.emusys.HueblerGraphicsMC;
+import jkcemu.emusys.KC85;
+import jkcemu.emusys.KCcompact;
+import jkcemu.emusys.KramerMC;
+import jkcemu.emusys.LC80;
+import jkcemu.emusys.LLC1;
+import jkcemu.emusys.LLC2;
+import jkcemu.emusys.NANOS;
+import jkcemu.emusys.PCM;
+import jkcemu.emusys.Poly880;
+import jkcemu.emusys.SC2;
+import jkcemu.emusys.SLC1;
+import jkcemu.emusys.VCS80;
+import jkcemu.emusys.Z1013;
+import jkcemu.emusys.Z9001;
+import jkcemu.emusys.ZXSpectrum;
+import jkcemu.joystick.JoystickFrm;
+import jkcemu.joystick.JoystickThread;
 import jkcemu.print.PrintMngr;
 import jkcemu.text.TextUtil;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80IOSystem;
+import z80emu.Z80Memory;
 
 
 public class EmuThread extends Thread implements
@@ -31,8 +58,28 @@ public class EmuThread extends Thread implements
 {
   public enum ResetLevel { NO_RESET, WARM_RESET, COLD_RESET, POWER_ON };
 
+  public static final String PROP_SYSNAME = "jkcemu.system";
+
+  public static final String PROP_EXT_ROM_RELOAD_ON_POWER_ON
+				= "jkcemu.external_rom.reload_on_power_on";
+  public static final boolean DEFAULT_EXT_ROM_RELOAD_ON_POWER_ON = false;
+
+  public static final String PROP_MAXSPEED_KHZ = "jkcemu.maxspeed.khz";
+  public static final String VALUE_MAXSPEED_KHZ_DEFAULT   = "default";
+  public static final String VALUE_MAXSPEED_KHZ_UNLIMITED = "unlimited";
+
+  public static final String PROP_RF_CLEAR_ON_POWER_ON
+				= "jkcemu.ramfloppy.clear_on_power_on";
+  public static final boolean DEFAULT_RF_CLEAR_ON_POWER_ON = false;
+
+  public static final String PROP_SRAM_INIT         = "jkcemu.sram.init";
+  public static final String VALUE_SRAM_INIT_00     = "00";
+  public static final String VALUE_SRAM_INIT_RANDOM = "random";
+
+
   private ScreenFrm            screenFrm;
   private Z80CPU               z80cpu;
+  private boolean              willResetDone;
   private Object               monitor;
   private FileTimesViewFactory fileTimesViewFactory;
   private JoystickFrm          joyFrm;
@@ -42,8 +89,9 @@ public class EmuThread extends Thread implements
   private RAMFloppy            ramFloppy1;
   private RAMFloppy            ramFloppy2;
   private PrintMngr            printMngr;
-  private volatile AudioIn     audioIn;
-  private volatile AudioOut    audioOut;
+  private volatile AudioIn     tapeIn;
+  private volatile AudioOut    tapeOut;
+  private volatile AudioOut    soundOut;
   private volatile LoadData    loadData;
   private volatile ResetLevel  resetLevel;
   private volatile boolean     emuRunning;
@@ -56,6 +104,7 @@ public class EmuThread extends Thread implements
     super( Main.getThreadGroup(), "JKCEMU CPU" );
     this.screenFrm            = screenFrm;
     this.z80cpu               = new Z80CPU( this, this );
+    this.willResetDone        = false;
     this.monitor              = "a monitor object for synchronization";
     this.fileTimesViewFactory = new NIOFileTimesViewFactory();
     this.joyFrm               = null;
@@ -65,8 +114,9 @@ public class EmuThread extends Thread implements
     this.ramFloppy1           = new RAMFloppy();
     this.ramFloppy2           = new RAMFloppy();
     this.printMngr            = new PrintMngr();
-    this.audioIn              = null;
-    this.audioOut             = null;
+    this.tapeIn               = null;
+    this.tapeOut              = null;
+    this.soundOut             = null;
     this.loadData             = null;
     this.resetLevel           = ResetLevel.POWER_ON;
     this.emuRunning           = false;
@@ -93,57 +143,85 @@ public class EmuThread extends Thread implements
 	emuSys.cancelPastingText();
 	emuSys.die();
       }
-      String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-      if( sysName.startsWith( "AC1" ) ) {
-	emuSys = new AC1( this, props );
-      } else if( sysName.startsWith( "BCS3" ) ) {
-	emuSys = new BCS3( this, props );
-      } else if( sysName.startsWith( "C80" ) ) {
-	emuSys = new C80( this, props );
-      } else if( sysName.startsWith( "HueblerEvertMC" ) ) {
-	emuSys = new HueblerEvertMC( this, props );
-      } else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
-	emuSys = new HueblerGraphicsMC( this, props );
-      } else if( sysName.startsWith( "KC85/1" )
-		 || sysName.startsWith( "KC87" )
-		 || sysName.startsWith( "Z9001" ) )
-      {
-	emuSys = new Z9001( this, props );
-      } else if( sysName.startsWith( "HC900" )
-		 || sysName.startsWith( "KC85/2" )
-		 || sysName.startsWith( "KC85/3" )
-		 || sysName.startsWith( "KC85/4" )
-		 || sysName.startsWith( "KC85/5" ) )
-      {
-	emuSys = new KC85( this, props );
-      } else if( sysName.startsWith( "KCcompact" ) ) {
-	emuSys = new KCcompact( this, props );
-      } else if( sysName.startsWith( "KramerMC" ) ) {
-	emuSys = new KramerMC( this, props );
-      } else if( sysName.startsWith( "LC80" ) ) {
-	emuSys = new LC80( this, props );
-      } else if( sysName.startsWith( "LLC1" ) ) {
-	emuSys = new LLC1( this, props );
-      } else if( sysName.startsWith( "LLC2" ) ) {
-	emuSys = new LLC2( this, props );
-      } else if( sysName.startsWith( "NANOS" ) ) {
-	emuSys = new NANOS( this, props );
-      } else if( sysName.startsWith( "PC/M" ) ) {
-	emuSys = new PCM( this, props );
-      } else if( sysName.startsWith( "Poly880" ) ) {
-	emuSys = new Poly880( this, props );
-      } else if( sysName.startsWith( "SC2" ) ) {
-	emuSys = new SC2( this, props );
-      } else if( sysName.startsWith( "SLC1" ) ) {
-	emuSys = new SLC1( this, props );
-      } else if( sysName.startsWith( "VCS80" ) ) {
-	emuSys = new VCS80( this, props );
-      } else if( sysName.startsWith( "Z1013" ) ) {
-	emuSys = new Z1013( this, props );
-      } else if( sysName.startsWith( "ZXSpectrum" ) ) {
-	emuSys = new ZXSpectrum( this, props );
-      } else {
-	emuSys = new A5105( this, props );
+      AudioFrm audioFrm = AudioFrm.lazyGetInstance();
+      if( audioFrm != null ) {
+	audioFrm.willReset();
+      }
+      switch( EmuUtil.getProperty( props, PROP_SYSNAME ) ) {
+	case AC1.SYSNAME:
+	  emuSys = new AC1( this, props );
+	  break;
+	case BCS3.SYSNAME:
+	  emuSys = new BCS3( this, props );
+	  break;
+	case C80.SYSNAME:
+	  emuSys = new C80( this, props );
+	  break;
+	case HueblerEvertMC.SYSNAME:
+	  emuSys = new HueblerEvertMC( this, props );
+	  break;
+	case HueblerGraphicsMC.SYSNAME:
+	  emuSys = new HueblerGraphicsMC( this, props );
+	  break;
+	case Z9001.SYSNAME_KC85_1:
+	case Z9001.SYSNAME_KC87:
+	case Z9001.SYSNAME_Z9001:
+	  emuSys = new Z9001( this, props );
+	  break;
+	case KC85.SYSNAME_HC900:
+	case KC85.SYSNAME_KC85_2:
+	case KC85.SYSNAME_KC85_3:
+	case KC85.SYSNAME_KC85_4:
+	case KC85.SYSNAME_KC85_5:
+	  emuSys = new KC85( this, props );
+	  break;
+	case KCcompact.SYSNAME:
+	  emuSys = new KCcompact( this, props );
+	  break;
+	case KramerMC.SYSNAME:
+	  emuSys = new KramerMC( this, props );
+	  break;
+	case LC80.SYSNAME_LC80_U505:
+	case LC80.SYSNAME_LC80_2716:
+	case LC80.SYSNAME_LC80_2:
+	case LC80.SYSNAME_LC80_E:
+	  emuSys = new LC80( this, props );
+	  break;
+	case LLC1.SYSNAME:
+	  emuSys = new LLC1( this, props );
+	  break;
+	case LLC2.SYSNAME:
+	  emuSys = new LLC2( this, props );
+	  break;
+	case NANOS.SYSNAME:
+	  emuSys = new NANOS( this, props );
+	  break;
+	case PCM.SYSNAME:
+	  emuSys = new PCM( this, props );
+	  break;
+	case Poly880.SYSNAME:
+	  emuSys = new Poly880( this, props );
+	  break;
+	case SC2.SYSNAME:
+	  emuSys = new SC2( this, props );
+	  break;
+	case SLC1.SYSNAME:
+	  emuSys = new SLC1( this, props );
+	  break;
+	case VCS80.SYSNAME:
+	  emuSys = new VCS80( this, props );
+	  break;
+	case Z1013.SYSNAME_Z1013_01:
+	case Z1013.SYSNAME_Z1013_12:
+	case Z1013.SYSNAME_Z1013_16:
+	case Z1013.SYSNAME_Z1013_64:
+	  emuSys = new Z1013( this, props );
+	  break;
+	case ZXSpectrum.SYSNAME:
+	  emuSys = new ZXSpectrum( this, props );
+	  break;
+	default:
+	  emuSys = new A5105( this, props );
       }
       ResetLevel resetLevel = ResetLevel.POWER_ON;
       if( this.emuSys != null ) {
@@ -237,97 +315,91 @@ public class EmuThread extends Thread implements
 		  @Override
 		  public void run()
 		  {
-		    BasicDlg.showErrorDlg( owner, msg );
+		    BaseDlg.showErrorDlg( owner, msg );
 		  }
 		} );
     }
   }
 
 
-  public AudioIn getAudioIn()
-  {
-    return this.audioIn;
-  }
-
-
-  public AudioOut getAudioOut()
-  {
-    return this.audioOut;
-  }
-
-
   public static int getDefaultSpeedKHz( Properties props )
   {
     int    rv      = A5105.getDefaultSpeedKHz();
-    String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
+    String sysName = EmuUtil.getProperty( props, PROP_SYSNAME );
     if( sysName != null ) {
-      if( sysName.startsWith( "AC1" ) ) {
-	rv = AC1.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "BCS3" ) ) {
-	rv = BCS3.getDefaultSpeedKHz( props );
-      }
-      else if( sysName.startsWith( "C80" ) ) {
-	rv = C80.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "HC900" )
-	       || sysName.startsWith( "KC85/2" )
-	       || sysName.startsWith( "KC85/3" )
-	       || sysName.startsWith( "KC85/4" )
-	       || sysName.startsWith( "KC85/5" ) )
-      {
-	rv = KC85.getDefaultSpeedKHz( props );
-      }
-      else if( sysName.startsWith( "HueblerEvertMC" ) ) {
-	rv = HueblerEvertMC.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "HueblerGraphicsMC" ) ) {
-	rv = HueblerGraphicsMC.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "KC85/1" )
-	       || sysName.startsWith( "KC87" )
-	       || sysName.startsWith( "Z9001" ) )
-      {
-	rv = Z9001.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "KCcompact" ) ) {
-	rv = KCcompact.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "KramerMC" ) ) {
-	rv = KramerMC.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "LC80" ) ) {
-	rv = LC80.getDefaultSpeedKHz( props );
-      }
-      else if( sysName.startsWith( "LLC1" ) ) {
-	rv = LLC1.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "LLC2" ) ) {
-	rv = LLC2.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "NANOS" ) ) {
-	rv = NANOS.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "PC/M" ) ) {
-	rv = PCM.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "Poly880" ) ) {
-	rv = Poly880.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "SC2" ) ) {
-	rv = SC2.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "SLC1" ) ) {
-	rv = SLC1.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "VCS80" ) ) {
-	rv = VCS80.getDefaultSpeedKHz();
-      }
-      else if( sysName.startsWith( "Z1013" ) ) {
-	rv = Z1013.getDefaultSpeedKHz( props );
-      }
-      else if( sysName.startsWith( "ZXSpectrum" ) ) {
-	rv = ZXSpectrum.getDefaultSpeedKHz( props );
+      switch( sysName ) {
+	case AC1.SYSNAME:
+	  rv = AC1.getDefaultSpeedKHz();
+	  break;
+	case BCS3.SYSNAME:
+	  rv = BCS3.getDefaultSpeedKHz( props );
+	  break;
+	case C80.SYSNAME:
+	  rv = C80.getDefaultSpeedKHz();
+	  break;
+	case HueblerEvertMC.SYSNAME:
+	  rv = HueblerEvertMC.getDefaultSpeedKHz();
+	  break;
+	case HueblerGraphicsMC.SYSNAME:
+	  rv = HueblerGraphicsMC.getDefaultSpeedKHz();
+	  break;
+	case KC85.SYSNAME_HC900:
+	case KC85.SYSNAME_KC85_2:
+	case KC85.SYSNAME_KC85_3:
+	case KC85.SYSNAME_KC85_4:
+	case KC85.SYSNAME_KC85_5:
+	  rv = KC85.getDefaultSpeedKHz( props );
+	  break;
+	case KCcompact.SYSNAME:
+	  rv = KCcompact.getDefaultSpeedKHz();
+	  break;
+	case KramerMC.SYSNAME:
+	  rv = KramerMC.getDefaultSpeedKHz();
+	  break;
+	case LC80.SYSNAME_LC80_U505:
+	case LC80.SYSNAME_LC80_2716:
+	case LC80.SYSNAME_LC80_2:
+	case LC80.SYSNAME_LC80_E:
+	  rv = LC80.getDefaultSpeedKHz( props );
+	  break;
+	case LLC1.SYSNAME:
+	  rv = LLC1.getDefaultSpeedKHz();
+	  break;
+	case LLC2.SYSNAME:
+	  rv = LLC2.getDefaultSpeedKHz();
+	  break;
+	case NANOS.SYSNAME:
+	  rv = NANOS.getDefaultSpeedKHz();
+	  break;
+	case PCM.SYSNAME:
+	  rv = PCM.getDefaultSpeedKHz();
+	  break;
+	case Poly880.SYSNAME:
+	  rv = Poly880.getDefaultSpeedKHz();
+	  break;
+	case SC2.SYSNAME:
+	  rv = SC2.getDefaultSpeedKHz();
+	  break;
+	case SLC1.SYSNAME:
+	  rv = SLC1.getDefaultSpeedKHz();
+	  break;
+	case VCS80.SYSNAME:
+	  rv = VCS80.getDefaultSpeedKHz();
+	  break;
+	case Z1013.SYSNAME_Z1013_01:
+	case Z1013.SYSNAME_Z1013_12:
+	case Z1013.SYSNAME_Z1013_16:
+	case Z1013.SYSNAME_Z1013_64:
+	  rv = Z1013.getDefaultSpeedKHz( props );
+	  break;
+	case Z9001.SYSNAME_KC85_1:
+	case Z9001.SYSNAME_KC87:
+	case Z9001.SYSNAME_Z9001:
+	  rv = Z9001.getDefaultSpeedKHz();
+	  break;
+	case ZXSpectrum.SYSNAME:
+	  rv = ZXSpectrum.getDefaultSpeedKHz( props );
+	  break;
       }
     }
     return rv;
@@ -404,6 +476,24 @@ public class EmuThread extends Thread implements
   }
 
 
+  public AudioOut getSoundOut()
+  {
+    return this.soundOut;
+  }
+
+
+  public AudioIn getTapeIn()
+  {
+    return this.tapeIn;
+  }
+
+
+  public AudioOut getTapeOut()
+  {
+    return this.tapeOut;
+  }
+
+
   public ScreenFrm getScreenFrm()
   {
     return this.screenFrm;
@@ -416,22 +506,43 @@ public class EmuThread extends Thread implements
   }
 
 
+  public void informWillReset()
+  {
+    if( !this.willResetDone ) {
+      this.willResetDone = true;
+      Frame[] frms = Frame.getFrames();
+      if( frms != null ) {
+	for( Frame f : frms ) {
+	  if( f instanceof BaseFrm ) {
+	    ((BaseFrm) f).willReset();
+	  }
+	}
+      }
+    }
+  }
+
+
+  public boolean isAudioLineOpen()
+  {
+    AudioIO[] audioIOs = new AudioIO[] {
+				this.tapeIn,
+				this.tapeOut,
+				this.soundOut };
+    for( AudioIO audioIO : audioIOs ) {
+      if( audioIO != null ) {
+	if( audioIO.isLineOpen() ) {
+	  return true;
+	}
+      }
+    }
+    return false;
+  }
+
+
   public static boolean isColdReset( EmuThread.ResetLevel resetLevel )
   {
     return (resetLevel == EmuThread.ResetLevel.POWER_ON)
 		|| (resetLevel == EmuThread.ResetLevel.POWER_ON);
-  }
-
-
-  /*
-   * Mit diese Methode wird ermittelt,
-   * ob die Tonausgabe auf dem Kassettenrecorderanschluss
-   * oder einen evtl. vorhandenen Lautsprecheranschluss
-   * emuliert werden soll.
-   */
-  public boolean isSoundOutEnabled()
-  {
-    return audioOut != null ? audioOut.isSoundOutEnabled() : false;
   }
 
 
@@ -481,10 +592,10 @@ public class EmuThread extends Thread implements
   }
 
 
-  public boolean readAudioPhase()
+  public boolean readTapeInPhase()
   {
     boolean phase   = false;
-    AudioIn audioIn = this.audioIn;
+    AudioIn audioIn = this.tapeIn;
     if( audioIn != null ) {
       phase = audioIn.readPhase();
     }
@@ -492,18 +603,30 @@ public class EmuThread extends Thread implements
   }
 
 
-  public void setAudioIn( AudioIn audioIn )
+  public void setSoundOut( AudioOut audioOut )
   {
-    this.audioIn = audioIn;
+    this.soundOut = audioOut;
+    EmuSys emuSys = this.emuSys;
+    if( emuSys != null ) {
+      emuSys.soundOutFrameRateChanged(
+		audioOut != null ? audioOut.getFrameRate() : 0 );
+    }
   }
 
 
-  public void setAudioOut( AudioOut audioOut )
+  public void setTapeIn( AudioIn audioIn )
   {
-    this.audioOut = audioOut;
+    this.tapeIn = audioIn;
+  }
+
+
+  public void setTapeOut( AudioOut audioOut )
+  {
+    this.tapeOut  = audioOut;
     EmuSys emuSys = this.emuSys;
     if( emuSys != null ) {
-      emuSys.audioOutChanged( audioOut );
+      emuSys.tapeOutFrameRateChanged(
+		audioOut != null ? audioOut.getFrameRate() : 0 );
     }
   }
 
@@ -562,16 +685,19 @@ public class EmuThread extends Thread implements
   public void updCPUSpeed( Properties props )
   {
     int    maxSpeedKHz  = getDefaultSpeedKHz( props );
-    String maxSpeedText = EmuUtil.getProperty( props, "jkcemu.maxspeed.khz" );
-    if( maxSpeedText.equals( "unlimited" ) ) {
+    String maxSpeedText = EmuUtil.getProperty(
+				props,
+				PROP_MAXSPEED_KHZ );
+    if( maxSpeedText.equals( VALUE_MAXSPEED_KHZ_UNLIMITED ) ) {
       maxSpeedKHz = 0;
     } else {
-      if( !maxSpeedText.equals( "default" ) ) {
-	if( maxSpeedText.length() > 0 ) {
+      if( !maxSpeedText.equals( VALUE_MAXSPEED_KHZ_DEFAULT ) ) {
+	if( !maxSpeedText.isEmpty() ) {
 	  try {
 	    int value = Integer.parseInt( maxSpeedText );
-	    if( value > 0 )
+	    if( value > 0 ) {
 	      maxSpeedKHz = value;
+	    }
 	  }
 	  catch( NumberFormatException ex ) {}
 	}
@@ -581,9 +707,43 @@ public class EmuThread extends Thread implements
   }
 
 
-  public void writeAudioPhase( boolean phase )
+  public void writeSoundOutPhase( boolean phase )
   {
-    AudioOut audioOut = this.audioOut;
+    AudioOut audioOut = this.soundOut;
+    if( audioOut != null ) {
+      audioOut.writePhase( phase );
+    }
+  }
+
+
+  public void writeSoundOutFrames(
+				int nFrames,
+				int monoValue,
+				int leftValue,
+				int rightValue )
+  {
+    AudioOut audioOut = this.soundOut;
+    if( audioOut != null ) {
+      audioOut.writeFrames( nFrames, monoValue, leftValue, rightValue );
+    }
+  }
+
+
+  public void writeSoundOutValue(
+				int monoValue,
+				int leftValue,
+				int rightValue )
+  {
+    AudioOut audioOut = this.soundOut;
+    if( audioOut != null ) {
+      audioOut.writeValue( monoValue, leftValue, rightValue );
+    }
+  }
+
+
+  public void writeTapeOutPhase( boolean phase )
+  {
+    AudioOut audioOut = this.tapeOut;
     if( audioOut != null ) {
       audioOut.writePhase( phase );
     }
@@ -611,14 +771,6 @@ public class EmuThread extends Thread implements
       this.resetLevel = resetLevel;
       this.loadData   = null;
       this.z80cpu.fireExit();
-    }
-    AudioIn audioIn = this.audioIn;
-    if( audioIn != null ) {
-      audioIn.reset();
-    }
-    AudioOut audioOut = this.audioOut;
-    if( audioOut != null ) {
-      audioOut.reset();
     }
   }
 
@@ -783,8 +935,8 @@ public class EmuThread extends Thread implements
 	  if( (this.emuSys != null)
 	      && (this.resetLevel == ResetLevel.POWER_ON)
 	      && Main.getBooleanProperty(
-			"jkcemu.ramfloppy.clear_on_power_on",
-			false ) )
+			PROP_RF_CLEAR_ON_POWER_ON,
+			DEFAULT_RF_CLEAR_ON_POWER_ON ) )
 	  {
 	    if( this.emuSys.supportsRAMFloppy1()
 		&& (this.ramFloppy1.getUsedSize() > 0) )
@@ -807,6 +959,7 @@ public class EmuThread extends Thread implements
 	  // Fenster informieren
 	  final Frame[] frms = Frame.getFrames();
 	  if( frms != null ) {
+	    final EmuThread emuThread = this;
 	    EventQueue.invokeLater(
 			new Runnable()
 			{
@@ -814,10 +967,11 @@ public class EmuThread extends Thread implements
 			  public void run()
 			  {
 			    for( Frame f : frms ) {
-			      if( f instanceof BasicFrm ) {
-				((BasicFrm) f).resetFired();
+			      if( f instanceof BaseFrm ) {
+				((BaseFrm) f).resetFired();
 			      }
 			    }
+			    emuThread.willResetDone = false;
 			  }
 			} );
 	  }
@@ -827,7 +981,6 @@ public class EmuThread extends Thread implements
 	this.resetLevel = ResetLevel.NO_RESET;
 	this.z80cpu.run();
       }
-      catch( Z80ExternalException ex ) {}
       catch( Exception ex ) {
 	this.emuRunning = false;
 	EventQueue.invokeLater( new ErrorMsg( this.screenFrm, ex ) );
@@ -864,4 +1017,3 @@ public class EmuThread extends Thread implements
     }
   }
 }
-

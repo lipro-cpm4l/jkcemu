@@ -13,9 +13,23 @@
 package jkcemu.disk;
 
 import java.awt.Frame;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Random;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
 import jkcemu.etc.CRC16;
@@ -293,7 +307,7 @@ public class TeleDisk extends AbstractFloppyDisk
       out = null;
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
   }
 
@@ -605,11 +619,10 @@ public class TeleDisk extends AbstractFloppyDisk
 	      map = side1;
 	    }
 	    if( map != null ) {
-	      Integer keyObj                     = new Integer( track );
-	      java.util.List<SectorData> sectors = map.get( keyObj );
+	      java.util.List<SectorData> sectors = map.get( track );
 	      if( sectors == null ) {
 		sectors = new ArrayList<>( nSec > 0 ? nSec : 1 );
-		map.put( keyObj, sectors );
+		map.put( track, sectors );
 	      }
 	      // doppelte Sektoren herausfiltern
 	      boolean found  = false;
@@ -776,7 +789,7 @@ public class TeleDisk extends AbstractFloppyDisk
       }
     }
     finally {
-      EmuUtil.doClose( in );
+      EmuUtil.closeSilent( in );
     }
     return rv;
   }
@@ -834,8 +847,8 @@ public class TeleDisk extends AbstractFloppyDisk
   public void putSettingsTo( Properties props, String prefix )
   {
     if( (props != null) && (this.fileName != null) ) {
-      props.setProperty( prefix + "file", this.fileName );
-      props.setProperty( prefix + "readonly", "true" );
+      props.setProperty( prefix + PROP_FILE, this.fileName );
+      props.setProperty( prefix + PROP_READONLY, EmuUtil.VALUE_TRUE );
     }
   }
 
@@ -878,7 +891,7 @@ public class TeleDisk extends AbstractFloppyDisk
     Map<Integer,java.util.List<SectorData>> map = ((physHead & 0x01) != 0 ?
 							side1 : side0);
     if( map != null ) {
-      rv = map.get( new Integer( physCyl ) );
+      rv = map.get( physCyl );
     }
     return rv;
   }

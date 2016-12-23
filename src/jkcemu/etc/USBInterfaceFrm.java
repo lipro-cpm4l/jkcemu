@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,21 +8,44 @@
 
 package jkcemu.etc;
 
-import java.awt.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.DirSelectDlg;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileNameFld;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.ScreenFrm;
 
 
 public class USBInterfaceFrm
-			extends BasicFrm
+			extends BaseFrm
 			implements DropTargetListener
 {
+  private static final String ACTION_CLOSE = "close";
+  private static final String ACTION_HELP  = "help";
+  private static final String HELP_PAGE    = "/help/usb.htm";
+
   private static USBInterfaceFrm instance = null;
 
   private ScreenFrm   screenFrm;
@@ -136,13 +159,13 @@ public class USBInterfaceFrm
       if( !rv && (e instanceof ActionEvent) ) {
 	String cmd = ((ActionEvent) e).getActionCommand();
 	if( cmd != null ) {
-	  if( cmd.equals( "close" ) ) {
+	  if( cmd.equals( ACTION_CLOSE ) ) {
 	    rv = true;
 	    doClose();
 	  }
-	  else if( cmd.equals( "help" ) ) {
+	  else if( cmd.equals( ACTION_HELP ) ) {
 	    rv = true;
-	    HelpFrm.open( "/help/usb.htm" );
+	    HelpFrm.open( HELP_PAGE );
           }
 	}
       }
@@ -168,13 +191,13 @@ public class USBInterfaceFrm
     // Menu Datei
     JMenu mnuFile = new JMenu( "Datei" );
     mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuFile.add( createJMenuItem( "Schlie\u00DFen", "close" ) );
+    mnuFile.add( createJMenuItem( "Schlie\u00DFen", ACTION_CLOSE ) );
     mnuBar.add( mnuFile );
 
 
     // Menu Hilfe
     JMenu mnuHelp = new JMenu( "?" );
-    mnuHelp.add( createJMenuItem( "Hilfe...", "help" ) );
+    mnuHelp.add( createJMenuItem( "Hilfe...", ACTION_HELP ) );
     mnuBar.add( mnuHelp );
 
 
@@ -262,7 +285,7 @@ public class USBInterfaceFrm
   {
     File lastDir = this.dirFld.getFile();
     if( lastDir == null ) {
-      lastDir = Main.getLastDirFile( "usb" );
+      lastDir = Main.getLastDirFile( Main.FILE_GROUP_USB );
     }
     if( lastDir != null ) {
       if( !lastDir.isDirectory() ) {
@@ -285,10 +308,8 @@ public class USBInterfaceFrm
 	  this.dirFld.setFile( dirFile );
 	  emuSys.setUSBMemStickDirectory( dirFile );
 	  this.btnDirRemove.setEnabled( true );
-	  Main.setProperty(
-			"jkcemu.usb.memstick.directory",
-			dirFile.getPath() );
-	  Main.setLastFile( dirFile, "usb" );
+	  Main.setProperty( VDIP.PROP_USB_DIR, dirFile.getPath() );
+	  Main.setLastFile( dirFile, Main.FILE_GROUP_USB );
 	  setReadOnly( this.btnReadOnly.isSelected() );
 	  setForceLowerCase( this.btnForceLowerCase.isSelected() );
 	}
@@ -296,8 +317,8 @@ public class USBInterfaceFrm
 	this.dirFld.setFile( null );
 	emuSys.setUSBMemStickDirectory( null );
 	this.btnDirRemove.setEnabled( false );
-	Main.setProperty( "jkcemu.usb.memstick.directory", "" );
-	Main.setLastFile( dirFile, "usb" );
+	Main.setProperty( VDIP.PROP_USB_DIR, "" );
+	Main.setLastFile( dirFile, Main.FILE_GROUP_USB );
       }
     }
   }
@@ -360,4 +381,3 @@ public class USBInterfaceFrm
     this.btnDirRemove.setEnabled( dirFile != null );
   }
 }
-

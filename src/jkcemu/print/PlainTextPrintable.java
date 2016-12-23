@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,8 +8,12 @@
 
 package jkcemu.print;
 
-import java.awt.*;
-import java.awt.print.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.print.PageFormat;
+import java.awt.print.Printable;
+import java.awt.print.PrinterException;
 import java.lang.*;
 import jkcemu.Main;
 
@@ -123,4 +127,3 @@ public class PlainTextPrintable implements Printable
     return rv;
   }
 }
-

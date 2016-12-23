@@ -8,20 +8,28 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.etc.VCS80KeyboardFld;
-import z80emu.*;
+import z80emu.Z80AddressListener;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
 
 
-public class VCS80 extends EmuSys implements
-					Z80AddressListener,
-					Z80MaxSpeedListener,
-					Z80TStatesListener
+public class VCS80 extends EmuSys implements Z80AddressListener
 {
+  public static final String SYSNAME     = "VCS80";
+  public static final String PROP_PREFIX = "jkcemu.vcs80.";
+
   private static final int[][] kbMatrix = {
 		{ '7', '6', '5', '4', '3', '2', '1', '0' },
 		{ 'F', 'E', 'D', 'C', 'B', 'A', '9', '8' },
@@ -42,7 +50,7 @@ public class VCS80 extends EmuSys implements
 
   public VCS80( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.vcs80." );
+    super( emuThread, props, PROP_PREFIX );
     if( mon == null ) {
       mon = readResource( "/rom/vcs80/vcs80mon.bin" );
     }
@@ -100,82 +108,14 @@ public class VCS80 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    /*
-     * Der Takt fuer die Multiplexansteruerung der Anzeige
-     * soll 500 bis 1000 Hz betragen.
-     * Fuer die Laenge einer Halbschwingung wird hier CPU-Taktfrequenz
-     * durch 2 geteilt,
-     * was einen Takt fuer die Anzeige von 625 KHz ergibt.
-     */
-    this.dispHCycleTStates = cpu.getMaxSpeedKHz() / 2;
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    long hCycleTStates = this.dispHCycleTStates;
-    if( hCycleTStates > 0 ) {
-      this.curDispTStates += tStates;
-      if( this.curDispTStates > hCycleTStates ) {
-	this.curDispTStates    = 0;
-	this.curDispCycleState = !this.curDispCycleState;
-	if( this.curDispCycleState ) {
-
-	  // alte Spalte anzeigen
-	  boolean dirty = false;
-	  int     value = toDigitValue(
-				this.pio.fetchOutValuePortB( false ) & 0x7F );
-	  synchronized( this.digitValues ) {
-	    int idx = this.colValue;
-	    if( idx >= 4 ) {
-	      idx++;
-	    }
-	    if( idx < this.digitValues.length ) {
-	      if( value != this.digitValues[ idx ] ) {
-		this.digitValues[ idx ] = value;
-		dirty = true;
-	      }
-	    }
-	  }
-	  if ( dirty ) {
-	    this.screenFrm.setScreenDirty( true );
-	  }
-
-	  // Spaltenzaehler inkrementieren
-	  this.colValue = (this.colValue + 1) & 0x07;
-	}
-
-	// Port-A-Eingaenge aktualisieren
-	int v = 0x70 | this.colValue;
-	synchronized( this.keyboardMatrix ) {
-	  int idx = ~this.colValue & 0x07;
-	  if( idx < this.keyboardMatrix.length ) {
-	    v &= ~this.keyboardMatrix[ idx ];
-	  }
-	}
-	if( this.curDispCycleState ) {
-	  v |= 0x80;
-	}
-	this.pio.putInValuePortA( v, 0xFF );
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public boolean canApplySettings( Properties props )
   {
-    return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "VCS80" );
+    return EmuUtil.getProperty(
+			props,
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
   }
 
 
@@ -274,7 +214,7 @@ public class VCS80 extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "VCS80";
+    return SYSNAME;
   }
 
 
@@ -378,6 +318,7 @@ public class VCS80 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ram, props );
     }
@@ -433,6 +374,76 @@ public class VCS80 extends EmuSys implements
       case 7:
 	this.pio.writeDataA( value );
 	break;
+    }
+  }
+
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+
+    /*
+     * Der Takt fuer die Multiplexansteruerung der Anzeige
+     * soll 500 bis 1000 Hz betragen.
+     * Fuer die Laenge einer Halbschwingung wird hier CPU-Taktfrequenz
+     * durch 2 geteilt,
+     * was einen Takt fuer die Anzeige von 625 KHz ergibt.
+     */
+    this.dispHCycleTStates = cpu.getMaxSpeedKHz() / 2;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+
+    long hCycleTStates = this.dispHCycleTStates;
+    if( hCycleTStates > 0 ) {
+      this.curDispTStates += tStates;
+      if( this.curDispTStates > hCycleTStates ) {
+	this.curDispTStates    = 0;
+	this.curDispCycleState = !this.curDispCycleState;
+	if( this.curDispCycleState ) {
+
+	  // alte Spalte anzeigen
+	  boolean dirty = false;
+	  int     value = toDigitValue(
+				this.pio.fetchOutValuePortB( false ) & 0x7F );
+	  synchronized( this.digitValues ) {
+	    int idx = this.colValue;
+	    if( idx >= 4 ) {
+	      idx++;
+	    }
+	    if( idx < this.digitValues.length ) {
+	      if( value != this.digitValues[ idx ] ) {
+		this.digitValues[ idx ] = value;
+		dirty = true;
+	      }
+	    }
+	  }
+	  if ( dirty ) {
+	    this.screenFrm.setScreenDirty( true );
+	  }
+
+	  // Spaltenzaehler inkrementieren
+	  this.colValue = (this.colValue + 1) & 0x07;
+	}
+
+	// Port-A-Eingaenge aktualisieren
+	int v = 0x70 | this.colValue;
+	synchronized( this.keyboardMatrix ) {
+	  int idx = ~this.colValue & 0x07;
+	  if( idx < this.keyboardMatrix.length ) {
+	    v &= ~this.keyboardMatrix[ idx ];
+	  }
+	}
+	if( this.curDispCycleState ) {
+	  v |= 0x80;
+	}
+	this.pio.putInValuePortA( v, 0xFF );
+      }
     }
   }
 

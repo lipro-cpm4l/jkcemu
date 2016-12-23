@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,11 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import jkcemu.programming.PrgSource;
 
 
@@ -54,7 +58,7 @@ public abstract class CallableEntry extends BasicSourcePos
   {
     this.name2iyOffs.put(
 		varName,
-		new Integer( getVarIYOffs( this.vars.size() ) ) );
+		getVarIYOffs( this.vars.size() ) );
     this.var2SourcePos.put(
 		varName,
 		new BasicSourcePos( source, basicLineNum ) );
@@ -199,7 +203,7 @@ public abstract class CallableEntry extends BasicSourcePos
       this.name2iyOffs.remove( this.args.get( idx ) );
       this.name2iyOffs.put(
 		argName,
-		new Integer( getArgIYOffs( idx, this.args.size() ) ) );
+		getArgIYOffs( idx, this.args.size() ) );
       this.args.set( idx, argName );
     }
   }
@@ -214,7 +218,7 @@ public abstract class CallableEntry extends BasicSourcePos
 	for( String arg : args ) {
 	  this.name2iyOffs.put(
 		arg,
-		new Integer( getArgIYOffs( this.args.size(), nArgs ) ) );
+		getArgIYOffs( this.args.size(), nArgs ) );
 	  this.args.add( arg );
 	}
       }

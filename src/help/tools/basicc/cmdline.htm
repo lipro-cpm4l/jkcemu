@@ -117,8 +117,9 @@
       <li>2000h bei SCCH und LLC2_HIRES</li>
      </ul>
      Wird die BSS-Adresse nicht angegeben, liegen die Variablen,
-     die Speicherzellen und, sofern ein eigener Stack verwendet wird,
-     der Stack direkt hinter dem Programmcode.
+     die Speicherzellen und,
+     sofern ein eigener Stack verwendet wird auch dieser,
+     direkt hinter dem Programmcode.
     </td>
    </tr>
    <tr>
@@ -135,14 +136,14 @@
      &nbsp;<tt>-D "CRT,LPT"</tt><br/>
      <br/>
      Folgende Treiber stehen zur Verf&uuml;gung:
-     <em>CRT</em>, <em>LPT</em>, <em>VDIP</em>
+     <em>CRT</em>, <em>FILE</em>, <em>LPT</em>, <em>VDIP</em>
      <br/>
      Die Gro&szlig;/Kleinschreibung der Treibernamen spielt keine Rolle.
      <br/><br/>
      Wird ein Treiber angegeben obwohl das BASIC-Programm gar
      keine Anweisung oder Funktion enth&auml;lt,
      die den Treiber verwenden k&ouml;nnte
-     (CRT, LPT, FILE und VDIP werden z.B. nur von
+     (CRT, FILE, LPT und VDIP werden z.B. nur von
      <a href="instructions.htm#open">OPEN</a> verwendet),
      wird der Treiber nicht eingebunden.
      <br/><br/>

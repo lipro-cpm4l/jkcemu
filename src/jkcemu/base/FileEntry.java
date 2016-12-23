@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -154,7 +154,7 @@ public class FileEntry
   public void setLastModified( long lastModified )
   {
     if( lastModified > 0 ) {
-      this.lastModified = new Long( lastModified );
+      this.lastModified = lastModified;
     } else {
       this.lastModified = null;
     }

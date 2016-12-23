@@ -10,7 +10,9 @@
 package jkcemu.programming.basic.target;
 
 import java.lang.*;
-import jkcemu.programming.basic.*;
+import jkcemu.programming.basic.AsmCodeBuf;
+import jkcemu.programming.basic.BasicCompiler;
+import jkcemu.programming.basic.BasicLibrary;
 
 
 public class Z1013PetersTarget extends Z1013Target

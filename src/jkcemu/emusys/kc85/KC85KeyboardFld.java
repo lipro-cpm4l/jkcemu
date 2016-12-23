@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,14 @@
 
 package jkcemu.emusys.kc85;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.base.EmuSys;
 import jkcemu.emusys.KC85;
 
 
@@ -535,4 +540,3 @@ public class KC85KeyboardFld extends AbstractKC85KeyboardFld
     }
   }
 }
-

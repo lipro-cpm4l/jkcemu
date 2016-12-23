@@ -258,7 +258,7 @@ public class SourceUtil
     if( text != null ) {
       Component owner = screenFrm.openText( text );
       if( (owner != null) && (begAddr != 0x0401) && (begAddr != 0x2C01) ) {
-	BasicDlg.showInfoDlg(
+	BaseDlg.showInfoDlg(
 		owner,
 		"Das BASIC-Programm befindet sich au\u00DFerhalb\n"
 			+ "des standardm\u00E4\u00DFigen Adressbereichs." );
@@ -296,7 +296,7 @@ public class SourceUtil
 		SaveDlg.BasicType.KCBASIC,
 		EmuUtil.getKCBasicFileFilter() )).setVisible( true );
       } else {
-	BasicDlg.showErrorDlg(
+	BaseDlg.showErrorDlg(
 		screenFrm,
 		"Es ist zwar ein BASIC-Programm vorhanden, jedoch befindet\n"
 			+ "es sich au\u00DFerhalb des"
@@ -369,7 +369,7 @@ public class SourceUtil
 
   private static void showNoBasic( Component owner )
   {
-    BasicDlg.showErrorDlg(
+    BaseDlg.showErrorDlg(
 	owner,
 	"Es ist kein BASIC-Programm im entsprechenden\n"
 		+ "Adressbereich des Arbeitsspeichers vorhanden." );

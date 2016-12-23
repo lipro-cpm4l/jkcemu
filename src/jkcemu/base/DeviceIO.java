@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2012 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,14 @@
 
 package jkcemu.base;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.lang.*;
 import java.net.URL;
 import java.nio.channels.FileChannel;
@@ -19,6 +26,9 @@ import jkcemu.base.EmuUtil;
 
 public class DeviceIO
 {
+  public static final String LIBNAME_WIN32 = "jkcemu_win32.dll";
+  public static final String LIBNAME_WIN64 = "jkcemu_win64.dll";
+
   private static boolean libChecked = false;
   private static boolean libLoaded  = false;
 
@@ -75,7 +85,7 @@ public class DeviceIO
     public void close() throws IOException
     {
       if( this.in != null ) {
-	EmuUtil.doClose( this.in );
+	EmuUtil.closeSilent( this.in );
 	this.in = null;
       }
       this.active = false;
@@ -529,9 +539,9 @@ public class DeviceIO
 	if( arch != null ) {
 	  String libName = null;
 	  if( arch.indexOf( "64" ) >= 0 ) {
-	    libName = "jkcemu_win64.dll";
+	    libName = LIBNAME_WIN64;
 	  } else if( arch.indexOf( "86" ) >= 0 ) {
-	    libName = "jkcemu_win32.dll";
+	    libName = LIBNAME_WIN32;
 	  }
 	  if( libName != null ) {
 	    File libFile = null;
@@ -563,7 +573,8 @@ public class DeviceIO
 	      }
 	    }
 	    /*
-	     * Wenn die Bibliothek nicht direkt von der URL geladen werden kann,
+	     * Wenn die Bibliothek nicht direkt von der URL
+	     * geladen werden kann,
 	     * dann schauen, ob sie bereits im JKCEMU-Verzeichnis steht.
 	     * Wenn nicht, dann wird sie dorthin kopiert.
 	     */
@@ -587,8 +598,8 @@ public class DeviceIO
 		      out = null;
 		    }
 		    finally {
-		      EmuUtil.doClose( in );
-		      EmuUtil.doClose( out );
+		      EmuUtil.closeSilent( in );
+		      EmuUtil.closeSilent( out );
 		    }
 		  }
 		  catch( Exception ex ) {
@@ -603,8 +614,8 @@ public class DeviceIO
 			Main.getScreenFrm(),
 			"Es wurde soeben im JKCEMU-Konfigurationsverzeichnis"
 				+ " eine DLL f\u00FCr den Zugriff\n"
-				+ "auf physische Diskettenlaufwerke, Joysticks"
-				+ " und andere am Emulatorrechner\n"
+				+ "auf physische Diskettenlaufwerke,"
+				+ " Joysticks und andere am Emulatorrechner\n"
 				+ "angeschlossene Ger\u00E4te installiert.\n"
 				+ "Die Benutzung dieser DLL und somit"
 				+ " der Zugriff auf solche Ger\u00E4te"

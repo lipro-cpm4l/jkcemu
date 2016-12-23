@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,12 +9,14 @@
 package jkcemu.base;
 
 import java.lang.*;
-import java.util.*;
+import java.util.Properties;
 import jkcemu.Main;
 
 
 public class AutoInputWorker extends Thread
 {
+  public static final String PROP_AUTOINPUT_PREFIX = "autoinput.";
+
   private EmuThread                      emuThread;
   private java.util.List<AutoInputEntry> entries;
 
@@ -24,8 +26,8 @@ public class AutoInputWorker extends Thread
     EmuSys emuSys = emuThread.getEmuSys();
     if( emuSys != null ) {
       java.util.List<AutoInputEntry> entries = AutoInputEntry.readEntries(
-				props,
-				emuSys.getPropPrefix() + "autoinput." );
+			props,
+			emuSys.getPropPrefix() + PROP_AUTOINPUT_PREFIX );
       if( entries != null ) {
 	if( !entries.isEmpty() ) {
 	  (new AutoInputWorker( emuThread, entries )).start();

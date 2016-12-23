@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,7 @@
 
 package jkcemu.base;
 
-import java.io.*;
+import java.io.IOException;
 import java.lang.*;
 import jkcemu.base.EmuMemView;
 

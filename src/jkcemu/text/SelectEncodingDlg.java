@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,22 @@
 
 package jkcemu.text;
 
-import java.awt.*;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
-import jkcemu.base.*;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import jkcemu.base.BaseDlg;
 
 
-public class SelectEncodingDlg extends BasicDlg
+public class SelectEncodingDlg extends BaseDlg
 {
   private boolean           applied;
   private CharConverter     charConverter;
@@ -209,4 +217,3 @@ public class SelectEncodingDlg extends BasicDlg
     }
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,11 @@ package jkcemu.emusys.kc85;
 import java.lang.*;
 import jkcemu.base.EmuThread;
 import jkcemu.print.PrintMngr;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80SIO;
+import z80emu.Z80SIOChannelListener;
 
 
 public class M003 extends AbstractKC85Module implements

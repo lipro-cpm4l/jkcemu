@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,22 +8,51 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.WindowEvent;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Writer;
 import java.lang.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EventObject;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.PatternSyntaxException;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.table.*;
+import javax.swing.JButton;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JViewport;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 import jkcemu.text.TextUtil;
 
 
-public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
+public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
 {
+  public static final String HARDDISKS_FILE = "harddisks.csv";
+
   private boolean            dataChangedInfoShown;
   private HardDiskInfo       selectedRow;
   private HardDiskTableModel tableModel;
@@ -50,7 +79,7 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
     this.btnSave.setEnabled( true );
     if( !this.dataChangedInfoShown ) {
       this.dataChangedInfoShown = true;
-      BasicDlg.showInfoDlg(
+      BaseDlg.showInfoDlg(
 		this,
 		"Sie m\u00FCssen das Festplattenverzeichnis"
 			+ " erst speichern,\n"
@@ -142,14 +171,14 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
       try {
 	File configDir = Main.getConfigDir();
 	if( configDir != null ) {
-	  File file = new File( configDir, "harddisks.csv" );
+	  File file = new File( configDir, HARDDISKS_FILE );
 	  if( file.exists() ) {
 	    reader = new BufferedReader( new FileReader( file ) );
 	  }
 	}
 	if( reader == null ) {
 	  InputStream in = getClass().getResourceAsStream(
-						  "/disks/harddisks.csv" );
+					  "/disks/" + HARDDISKS_FILE );
 	  if( in != null ) {
 	    reader = new BufferedReader( new InputStreamReader( in ) );
 	  }
@@ -180,7 +209,7 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
 	}
       }
       finally {
-	EmuUtil.doClose( reader );
+	EmuUtil.closeSilent( reader );
       }
     }
     catch( IOException ex ) {
@@ -361,7 +390,7 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
 		this.table.convertRowIndexToView( modelRow ) );
       }
       if( msg != null ) {
-	BasicDlg.showErrorDlg( this, msg );
+	BaseDlg.showErrorDlg( this, msg );
       }
     }
   }
@@ -395,7 +424,7 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
       try {
 	Writer writer = null;
 	try {
-	  writer = new FileWriter( new File( configDir, "harddisks.csv" ) );
+	  writer = new FileWriter( new File( configDir, HARDDISKS_FILE ) );
 
 	  int n = this.tableModel.getRowCount();
 	  for( int i = 0; i < n; i++ ) {
@@ -419,14 +448,14 @@ public class HardDiskListDlg extends BasicDlg implements ListSelectionListener
 	  updActionButtons();
 	}
 	finally {
-	  EmuUtil.doClose( writer );
+	  EmuUtil.closeSilent( writer );
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     } else {
-      BasicDlg.showErrorDlg(
+      BaseDlg.showErrorDlg(
 		this,
 		"Speichern nicht m\u00F6glich, da das\n"
 			+ "JKCEMU-Konfigurationsverzeichnis"

@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,11 +11,17 @@ package jkcemu.base;
 import java.io.UnsupportedEncodingException;
 import java.lang.*;
 import java.net.URLDecoder;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Properties;
 
 
 public class AutoInputEntry
 {
+  public static final String PROP_COUNT       = "count";
+  public static final String PROP_INPUT_TEXT  = "input_text";
+  public static final String PROP_REMARK      = "remark";
+  public static final String PROP_WAIT_MILLIS = "wait.millis";
+
   private int    millisToWait;
   private String inputText;
   private String remark;
@@ -53,22 +59,22 @@ public class AutoInputEntry
   {
     java.util.List<AutoInputEntry> rv = null;
     if( (props != null) && (propPrefix != null) ) {
-      int n = EmuUtil.getIntProperty( props, propPrefix + "count", 0 );
+      int n = EmuUtil.getIntProperty( props, propPrefix + PROP_COUNT, 0 );
       if( n > 0 ) {
 	rv = new ArrayList<>();
 	for( int i = 0; i < n; i++ ) {
-	  String prefix    = propPrefix + String.valueOf( i );
-	  String inputText = props.getProperty( prefix + ".input_text" );
+	  String prefix    = String.format( "%s%d.", propPrefix, i );
+	  String inputText = props.getProperty( prefix + PROP_INPUT_TEXT );
 	  if( inputText != null ) {
 	    if( !inputText.isEmpty() ) {
 	      try {
 		rv.add( new AutoInputEntry(
 				EmuUtil.getIntProperty(
 					props,
-					prefix + ".wait.millis",
+					prefix + PROP_WAIT_MILLIS,
 					0 ),
 				URLDecoder.decode( inputText, "UTF-8" ),
-				props.getProperty( prefix + ".remark" ) ) );
+				props.getProperty( prefix + PROP_REMARK ) ) );
 	      }
 	      catch( UnsupportedEncodingException ex ) {}
 	    }

@@ -1,83 +1,81 @@
 <html>
 <body>
-  <h1>Tipps &amp; Tricks</h1>
+ <h1>Tipps &amp; Tricks</h1>
 
-  <h2>Dateien auf Magnettonband speichern</h2>
+ <h2>Dateien auf Magnettonband speichern</h2>
 
-  <h3>Voraussetzungen</h3>
-    <ol>
-      <li>
-	Sie m&uuml;ssen das Magnettonbandger&auml;t (z.B. Kassettenrecorder)
-        an die Line-Out- oder Kopfh&ouml;rerbuchse
-        des Emulatorrechners anschlie&szlig;en.
-      </li>
-      <li>
-	Sie ben&ouml;tigen im Emulator eine Software,
-	die eine Datei im gew&uuml;nschten Format auf Magnettonband
-	speichern kann.
-	<br/>
-	Die im JKCEMU vorhandenen Betriebssysteme bzw. Monitorprogramme
-	bieten i.d.R die M&ouml;glichkeit,
-	im jeweiligen Standardformat Maschinencode-
-	und/oder BASIC-Programme zu speichern.
-      </li>
-    </ol>
-  <br/><br/>
+ <h3>Voraussetzungen</h3>
+  <ol>
+   <li>
+    Sie m&uuml;ssen das Magnettonbandger&auml;t (z.B. Kassettenrecorder)
+    an die Line-Out- oder Kopfh&ouml;rerbuchse
+    des Emulatorrechners anschlie&szlig;en.
+   </li>
+   <li>
+    Sie ben&ouml;tigen im Emulator eine Software,
+    die eine Datei im gew&uuml;nschten Format auf Magnettonband
+    speichern kann.
+    <br/>
+    Die im JKCEMU vorhandenen Betriebssysteme bzw. Monitorprogramme
+    bieten i.d.R die M&ouml;glichkeit,
+    im jeweiligen Standardformat Maschinencode-
+    und/oder BASIC-Programme zu speichern.
+   </li>
+  </ol>
+ <br/><br/>
 
-  <h3>Vorgehensweise</h3>
-    Mit der Audiofunktion
-    <a href="../audio.htm#data_out">Daten am Audioausgang ausgeben</a>
-    k&ouml;nnen Sie Daten direkt auf Magnettonband speichern.
-    Allerdings wissen Sie nicht, ob die Daten wirklich fehlerfrei
-    gespeichert wurden.
-    Es besteht die Gefahr, dass in den Audiodaten eine kurze,
-    nicht h&ouml;rbare Unterbrechung aufgetreten ist,
-    die dann beim Einlesen zu Fehlern f&uuml;hrt.
-    Die Wahrscheinlichkeit, dass so eine Unterbrechung auftritt,
-    ist nat&uuml;rlich gr&ouml;&szlig;er,
-    wenn die Audiodaten in Echtzeit erzeugt werden m&uuml;ssen.
-    Aus diesem Grund wird der Umweg &uuml;ber eine Sound-Datei empfohlen.
-  <br/><br/>
-    <ol>
-      <li>
-	Schlie&szlig;en Sie das Magnettonbandger&auml;t an die Line-Out- oder
-	falls diese nicht vorhanden oder der Signalpegel zu gering ist
-	an die Kopfh&ouml;rerbuchse des Emulator-Computers an.
-	Entsprechende Kabel und Adapter finden Sie im Fachhandel.
-      </li>
-      <li>
-	Geben Sie in dem emulierten System
-	(z.B. Betriebssystem, Monitorprogramm)
-	den Befehl zum Speichern der Datei ein,
-	dr&uuml;cken aber noch nicht auf <em>ENTER</em>.
-      </li>
-      <li>
-	Aktivieren Sie die Audiofunktion
-	<a href="../audio.htm#file_out">Sound- oder Tape-Datei
-	speichern</a>.
-      </li>
-      <li>
-	Bet&auml;tigen Sie die <em>ENTER</em>-Taste,
-        um mit dem Speichern der Sound-Datei zu beginnen.
-      </li>
-      <li>
-	Etwa eine Sekunde nachdem das im Emulator laufende Programm
-	das Ende des Speicherns signalisiert hat,
-	deaktivieren Sie die Audiofunktion.
-	Die Wartezeit von einer Sekunde ist deshalb notwendig,
-	da die Audiodaten gepuffert und somit etwas zeitverz&ouml;gert
-	ausgegeben werden.
-      </li>
-      <li>
-	&Ouml;ffnen Sie die Sound-Datei in einem entsprechenden
-        Abspielprogramm, pr&uuml;fen Sie die Lautst&auml;rke
-        und den Aufnahmepegel.
-      </li>
-      <li>
-	Spielen Sie die Sound-Datei ab und nehmen Sie diese
-        mit dem Magnettonbandger&auml;t auf.
-      </li>
-    </ol>
+ <h3>Vorgehensweise</h3>
+  Mit der Funktion
+  <a href="../audio.htm#data_out">Audiodaten &uuml;ber Sound-System ausgeben</a>
+  k&ouml;nnen Sie Daten direkt auf Magnettonband speichern.
+  Allerdings wissen Sie nicht, ob die Daten wirklich fehlerfrei
+  gespeichert wurden.
+  Es besteht die Gefahr, dass in den Audiodaten eine kurze,
+  nicht h&ouml;rbare Unterbrechung aufgetreten ist,
+  die dann beim Einlesen zu Fehlern f&uuml;hrt.
+  Die Wahrscheinlichkeit, dass so eine Unterbrechung auftritt,
+  ist nat&uuml;rlich gr&ouml;&szlig;er,
+  wenn die Audiodaten in Echtzeit erzeugt werden m&uuml;ssen.
+  Aus diesem Grund wird der Umweg &uuml;ber eine Sound-Datei empfohlen.
+ <br/><br/>
+  <ol>
+   <li>
+    Schlie&szlig;en Sie das Magnettonbandger&auml;t an die Line-Out- oder
+    falls diese nicht vorhanden oder der Signalpegel zu gering ist
+    an die Kopfh&ouml;rerbuchse des Emulator-Computers an.
+    Entsprechende Kabel und Adapter finden Sie im Fachhandel.
+   </li>
+   <li>
+    Geben Sie in dem emulierten System
+    (z.B. Betriebssystem, Monitorprogramm)
+    den Befehl zum Speichern der Datei ein,
+    dr&uuml;cken aber noch nicht auf <em>ENTER</em>.
+   </li>
+   <li>
+    Aktivieren Sie die Funktion
+    <a href="../audio.htm#file_out">Audiodaten aufnehmen und in Datei speichern</a>.
+   </li>
+   <li>
+    Bet&auml;tigen Sie die <em>ENTER</em>-Taste,
+    um mit dem Speichern zu beginnen.
+   </li>
+   <li>
+    Etwa eine Sekunde nachdem das im Emulator laufende Programm
+    das Ende des Speicherns signalisiert hat,
+    deaktivieren Sie die Audiofunktion und speichern die Datei.
+    Die Wartezeit von einer Sekunde ist deshalb notwendig,
+    da die Audiodaten gepuffert und somit etwas zeitverz&ouml;gert
+    ausgegeben werden.
+   </li>
+   <li>
+    &Ouml;ffnen Sie die Sound-Datei in einem entsprechenden
+    Abspielprogramm, pr&uuml;fen Sie die Lautst&auml;rke
+    und den Aufnahmepegel.
+   </li>
+   <li>
+    Spielen Sie die Sound-Datei ab und nehmen Sie diese
+    mit dem Magnettonbandger&auml;t auf.
+   </li>
+  </ol>
 </body>
 </html>
-

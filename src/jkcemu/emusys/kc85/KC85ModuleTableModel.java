@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,7 @@
 package jkcemu.emusys.kc85;
 
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
 
 
 public class KC85ModuleTableModel extends javax.swing.table.AbstractTableModel
@@ -133,4 +133,3 @@ public class KC85ModuleTableModel extends javax.swing.table.AbstractTableModel
     }
   }
 }
-

@@ -8,19 +8,19 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import javax.sound.sampled.AudioInputStream;
 import javax.swing.JComboBox;
-import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
-import jkcemu.emusys.z1013.Z1013AudioDataStream;
+import jkcemu.audio.AudioFile;
+import jkcemu.audio.PCMDataSource;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.z1013.Z1013AudioCreator;
 
 
 public class Z1013AudioFileTarget extends AbstractConvertTarget
 {
-  private byte[]  fileBytes;
-  private byte[]  dataBytes;
+  private byte[]  buf;
   private int     offs;
   private int     len;
   private boolean headersave;
@@ -28,14 +28,13 @@ public class Z1013AudioFileTarget extends AbstractConvertTarget
 
   public Z1013AudioFileTarget(
 		FileConvertFrm fileConvertFrm,
-		byte[]         dataBytes,
+		byte[]         buf,
 		int            offs,
 		int            len,
 		boolean        headersave )
   {
     super( fileConvertFrm, createInfoText( headersave ) );
-    this.fileBytes  = null;
-    this.dataBytes  = dataBytes;
+    this.buf        = buf;
     this.offs       = offs;
     this.len        = len;
     this.headersave = headersave;
@@ -52,80 +51,66 @@ public class Z1013AudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public AudioInputStream getAudioInputStream() throws UserInputException
+  public PCMDataSource createPCMDataSource()
+				throws IOException, UserInputException
   {
-    if( this.headersave && (this.fileBytes == null) ) {
-      int len = Math.min( this.len, this.dataBytes.length - this.offs );
-      if( len > 0 ) {
-	int begAddr   = this.fileConvertFrm.getBegAddr( true );
-	int endAddr   = begAddr + len - 1;
-	int startAddr = this.fileConvertFrm.getBegAddr( false );
-	if( startAddr < 0 ) {
-	  startAddr = 0;
-	}
-	int fileType = this.fileConvertFrm.getFileTypeChar( true );
-	if( fileType < 0 ) {
-	  fileType = 0x20;
-	}
-	String s = this.fileConvertFrm.getFileDesc( true );
-	byte[] m = new byte[ 32 + len ];
-	m[ 0 ]   = (byte) begAddr;
-	m[ 1 ]   = (byte) (begAddr >> 8);
-	m[ 2 ]   = (byte) endAddr;
-	m[ 3 ]   = (byte) (endAddr >> 8);
-	m[ 4 ]   = (byte) startAddr;
-	m[ 5 ]   = (byte) (startAddr >> 8);
-	m[ 6 ]   = (byte) 'J';
-	m[ 7 ]   = (byte) 'K';
-	m[ 8 ]   = (byte) 'C';
-	m[ 9 ]   = (byte) 'E';
-	m[ 10 ]  = (byte) 'M';
-	m[ 11 ]  = (byte) 'U';
-	m[ 12 ]  = (byte) fileType;
-	m[ 13 ]  = (byte) 0xD3;
-	m[ 14 ]  = (byte) 0xD3;
-	m[ 15 ]  = (byte) 0xD3;
-	int p = 16;
-	if( s != null ) {
-	  int l = s.length();
-	  int i = 0;
-	  while( (p < 32) && (i < l) ) {
-	    m[ p++ ] = (byte) s.charAt( i++ );
-	  }
-	}
-	while( p < 32 ) {
-	  m[ p++ ] = (byte) 0x20;
-	}
-	System.arraycopy( this.dataBytes, this.offs, m, p, len );
-	this.fileBytes = m;
+    byte[]  buf  = this.buf;
+    int     offs = this.offs;
+    int     len  = Math.min( this.len, this.buf.length - this.offs );
+    boolean hs   = false;
+    if( this.headersave ) {
+      int begAddr   = this.fileConvertFrm.getBegAddr( true );
+      int endAddr   = begAddr + len - 1;
+      int startAddr = this.fileConvertFrm.getBegAddr( false );
+      if( startAddr < 0 ) {
+	startAddr = 0;
       }
+      int fileType = this.fileConvertFrm.getFileTypeChar( true );
+      if( fileType < 0 ) {
+	fileType = 0x20;
+      }
+      String s   = this.fileConvertFrm.getFileDesc( true );
+      buf        = new byte[ 32 + len ];
+      buf[ 0 ]   = (byte) begAddr;
+      buf[ 1 ]   = (byte) (begAddr >> 8);
+      buf[ 2 ]   = (byte) endAddr;
+      buf[ 3 ]   = (byte) (endAddr >> 8);
+      buf[ 4 ]   = (byte) startAddr;
+      buf[ 5 ]   = (byte) (startAddr >> 8);
+      buf[ 6 ]   = (byte) 'J';
+      buf[ 7 ]   = (byte) 'K';
+      buf[ 8 ]   = (byte) 'C';
+      buf[ 9 ]   = (byte) 'E';
+      buf[ 10 ]  = (byte) 'M';
+      buf[ 11 ]  = (byte) 'U';
+      buf[ 12 ]  = (byte) fileType;
+      buf[ 13 ]  = (byte) 0xD3;
+      buf[ 14 ]  = (byte) 0xD3;
+      buf[ 15 ]  = (byte) 0xD3;
+      int p = 16;
+      if( s != null ) {
+	int l = s.length();
+	int i = 0;
+	while( (p < 32) && (i < l) ) {
+	  buf[ p++ ] = (byte) s.charAt( i++ );
+	}
+      }
+      while( p < 32 ) {
+	buf[ p++ ] = (byte) 0x20;
+      }
+      System.arraycopy( this.buf, this.offs, buf, p, len );
+      offs = 0;
+      len  = buf.length;
+      hs   = true;
     }
-    Z1013AudioDataStream ads = null;
-    if( this.headersave && (this.fileBytes != null) ) {
-      ads = new Z1013AudioDataStream(
-				true,
-				this.fileBytes,
-				0,
-				this.fileBytes.length );
-
-    } else {
-      ads = new Z1013AudioDataStream(
-				false,
-				this.dataBytes,
-				this.offs,
-				this.len );
-    }
-    return new AudioInputStream(
-			ads,
-			ads.getAudioFormat(),
-			ads.getFrameLength() );
+    return new Z1013AudioCreator( hs, buf, offs, len ).newReader();
   }
 
 
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return AudioUtil.getAudioOutFileFilter();
+    return AudioFile.getFileFilter();
   }
 
 
@@ -153,7 +138,7 @@ public class Z1013AudioFileTarget extends AbstractConvertTarget
   @Override
   public String save( File file ) throws IOException, UserInputException
   {
-    saveAudioFile( file, getAudioInputStream() );
+    saveAudioFile( file, createPCMDataSource() );
     return null;
   }
 
@@ -192,11 +177,9 @@ public class Z1013AudioFileTarget extends AbstractConvertTarget
     if( headersave ) {
       buf.append( "Headersave-" );
     }
-    buf.append( "Format" );
-    AudioUtil.appendAudioFileExtensionText(
-			buf,
-			3,
-			AudioUtil.getAudioOutFileExtensions( null, null ) );
+    buf.append( "Format (" );
+    buf.append( AudioFile.getFileExtensionText() );
+    buf.append( (char) ')' );
     return buf.toString();
   }
 }

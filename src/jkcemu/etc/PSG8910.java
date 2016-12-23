@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2013 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -27,7 +27,7 @@ public class PSG8910 extends Thread
   {
     public int  psgReadPort( PSG8910 psg, int port );
     public void psgWritePort( PSG8910 psg, int port, int value );
-    public void psgWriteSample( PSG8910 psg, int a, int b, int c );
+    public void psgWriteFrame( PSG8910 psg, int a, int b, int c );
   };
 
   public static final int PORT_A = 0;
@@ -36,7 +36,7 @@ public class PSG8910 extends Thread
   private Callback         callback;
   private int              clockHz;
   private int              regNum;
-  private volatile int     sampleRate;
+  private volatile int     frameRate;
   private volatile int     amplitudeA;
   private volatile int     amplitudeB;
   private volatile int     amplitudeC;
@@ -75,7 +75,7 @@ public class PSG8910 extends Thread
     super( Main.getThreadGroup(), "JKCEMU PSG" );
     this.clockHz       = clockHz;
     this.callback      = callback;
-    this.sampleRate    = 0;
+    this.frameRate     = 0;
     this.volumeValues  = new int[ 16 ];
     this.random        = new Random();
     this.waitMonitor   = new Object();
@@ -129,6 +129,12 @@ public class PSG8910 extends Thread
     this.threadEnabled = false;
     interrupt();
     wakeUp();
+  }
+
+
+  public int getFrameRate()
+  {
+    return this.frameRate;
   }
 
 
@@ -231,6 +237,15 @@ public class PSG8910 extends Thread
   }
 
 
+  public void setFrameRate( int frameRate )
+  {
+    this.frameRate = frameRate;
+    if( this.frameRate > 0 ) {
+      wakeUp();
+    }
+  }
+
+
   public void setRegister( int regNum, int value )
   {
     switch( regNum ) {
@@ -307,33 +322,24 @@ public class PSG8910 extends Thread
   }
 
 
-  public void setSampleRate( int sampleRate )
-  {
-    this.sampleRate = sampleRate;
-    if( this.sampleRate > 0 ) {
-      wakeUp();
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
   public void run()
   {
-    int remainClocks   = 0;
-    int lastSampleRate = 0;
-    int div8Counter    = 0;
+    int remainClocks  = 0;
+    int lastFrameRate = 0;
+    int div8Counter   = 0;
     while( this.threadEnabled ) {
 
-      // naechstes Sample erzeugen
-      int sampleRate = this.sampleRate;
-      if( sampleRate > 0 ) {
-	if( sampleRate != lastSampleRate ) {
+      // naechstes Frame erzeugen
+      int frameRate = this.frameRate;
+      if( frameRate > 0 ) {
+	if( frameRate != lastFrameRate ) {
 	  remainClocks = 0;
 	}
-	int clocksPerSample = (this.clockHz + remainClocks) / sampleRate;
-	if( clocksPerSample > 0 ) {
+	int clocksPerFrame = (this.clockHz + remainClocks) / frameRate;
+	if( clocksPerFrame > 0 ) {
 	  /*
 	   * 1:16-Teiler
 	   *
@@ -345,19 +351,19 @@ public class PSG8910 extends Thread
 	   * Aus diesem Grund darf der Vorteiler nur durch 8 teilen,
 	   * um auf die gleiche Frequenz zu kommen.
 	   */
-	  int n = div8Counter + clocksPerSample;
+	  int n = div8Counter + clocksPerFrame;
 	  while( n >= 8 ) {
 	    n -= 8;
 	    internalClockPhaseChange();
 	  }
 	  div8Counter = n;
 	}
-	this.callback.psgWriteSample(
+	this.callback.psgWriteFrame(
 				this,
 				this.channelOutA,
 				this.channelOutB,
 				this.channelOutC );
-	remainClocks = this.clockHz - (clocksPerSample * sampleRate);
+	remainClocks = this.clockHz - (clocksPerFrame * frameRate);
       } else {
 	synchronized( this.waitMonitor ) {
 	  try {

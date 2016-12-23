@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2013 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,9 @@
 package jkcemu.base;
 
 import java.lang.*;
-import javax.swing.text.*;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 
 
 public class HexDocument extends PlainDocument
@@ -57,7 +59,7 @@ public class HexDocument extends PlainDocument
       String s = getText( 0, getLength() );
       if( s != null ) {
 	if( !s.isEmpty() ) {
-	  rv = new Integer( parseHex( s ) );
+	  rv = Integer.valueOf( s );
 	}
       }
     }
@@ -147,17 +149,19 @@ public class HexDocument extends PlainDocument
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public void insertString( int offs, String str, AttributeSet a )
-						throws BadLocationException
+  public void insertString(
+			int          offs,
+			String       s,
+			AttributeSet a ) throws BadLocationException
   {
-    if( str != null ) {
-      int len = str.length();
+    if( s != null ) {
+      int len = s.length();
       if( len > 0 ) {
 	// ungueltige Zeichen aussortieren
 	int	pos = 0;
 	char[]	buf = new char[ len ];
 	for( int i = 0; i < len; i++ ) {
-	  char ch = Character.toUpperCase( str.charAt( i ) );
+	  char ch = Character.toUpperCase( s.charAt( i ) );
 	  if( ((ch >= '0') && (ch <= '9')) ||
 	      ((ch >= 'A') && (ch <= 'F') ) )
 	  {

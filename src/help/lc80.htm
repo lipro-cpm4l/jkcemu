@@ -136,12 +136,12 @@
     </tr>
     <tr>
      <td valign="top">ADR</td>
-     <td valign="top">F1</td>
+     <td valign="top">F1 oder M</td>
      <td valign="top">Adresseingabe einleiten</td>
     </tr>
     <tr>
      <td valign="top">DAT</td>
-     <td valign="top">F2</td>
+     <td valign="top">F2 oder H</td>
      <td valign="top">Dateneingabe einleiten</td>
     </tr>
     <tr>
@@ -226,10 +226,10 @@
   <a name="usage">2.1. Hinweise zur Bedienung des originalen Monitorprogramm</a>
  </h3>
   Nach dem Einschalten spielt der LC-80 eine Melodie ab.
-  Damit Sie diese auch im Emulator h&ouml;ren k&ouml;nnen,
-  m&uuml;ssen Sie entweder die Audiofunktion
-  <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> oder
-  <a href="audio.htm#data_out">Daten am Audioausgang ausgeben</a>
+  Damit Sie diese im Emulator h&ouml;ren k&ouml;nnen,
+  m&uuml;ssen Sie im Fenster <a href="audio.htm">Audio/Kassette</a>
+  im Reiter <em>Ausgang Kassette</em> die Funktion
+  <a href="audio.htm#data_out">Audiodaten &uuml;ber Sound-System ausgeben</a>
   aktivieren und anschlie&szlig;end den Men&uuml;punkt
   <em>Einschalten (Power On)</em> im Men&uuml; <em>Extra</em> aufrufen.
  <br/><br/>
@@ -265,11 +265,9 @@
   Nach dem Einlesen sehen Sie im Display die Endadresse&nbsp;+&nbsp;1
   oder im Fehlerfall die Ausschrift <em>Error</em>.
  <br/><br/>
-  <b>Achtung!</b> Im JKCEMU m&uuml;ssen Sie auch die eingangsseitige
-  Emulation des Kassettenrecorderanschlusses aktivieren,
-  entweder mit der Audiofunktion
-  <a href="audio.htm#data_in">Daten vom Audioeingang lesen</a>
-  oder mit der Funktion <a href="audio.htm#file_in">Sound-Datei lesen</a>.
+  <b>Achtung!</b> Im JKCEMU m&uuml;ssen Sie
+  <a href="audio.htm#tape_in">eingangsseitige Emulation des Kassettenrecorderanschlusses</a>
+  aktivieren.
  <br/><br/>
 
  <h3><a name="save">2.1.3. Programm auf Kassette speichern</a></h3>
@@ -282,12 +280,9 @@
   Dateiname und Adressangaben sind jeweils eine vierstellige
   hexadezimale Zahl.
  <br/><br/>
-  <b>Achtung!</b> Im JKCEMU m&uuml;ssen Sie auch die ausgangsseitige
-  Emulation des Kassettenrecorderanschlusses aktivieren,
-  entweder mit der Audiofunktion
-  <a href="audio.htm#data_out">Daten am Audioausgang ausgeben</a>
-  oder mit der Funktion
-  <a href="audio.htm#file_out">Sound-Datei speichern</a>.
+  <b>Achtung!</b> Im JKCEMU m&uuml;ssen Sie
+  <a href="audio.htm#tape_out">ausgangsseitige Emulation des Kassettenrecorderanschlusses</a>
+  aktivieren.
  <br/><br/>
 
  <h3><a name="run">2.1.4. Programm starten</a></h3>
@@ -362,7 +357,7 @@
      NEW&nbsp;GAME<br/>
      LEV
     </td>
-    <td valign="top">F1</td>
+    <td valign="top">F1 oder V</td>
     <td valign="top">
      Nach dem Start des Schachprogramms muss diese Taste
      gedr&uuml;ckt werden, um ein Spiel zu beginnen.
@@ -374,7 +369,7 @@
      SELF&nbsp;PLAY<br/>
      SW
     </td>
-    <td valign="top">F2</td>
+    <td valign="top">F2 oder P</td>
     <td valign="top">
      Wird nach dem Start des Schachprogramms
      <em>NEW&nbsp;GAME&nbsp;(F1)</em> und anschlie&szlig;end

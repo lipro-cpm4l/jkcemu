@@ -8,27 +8,92 @@
 
 package jkcemu.text;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Event;
+import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.FlavorEvent;
+import java.awt.datatransfer.FlavorListener;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
 import java.text.CharacterIterator;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EventObject;
+import java.util.InvalidPropertiesFormatException;
+import java.util.Map;
+import java.util.Properties;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JToolBar;
+import javax.swing.JViewport;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.text.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.Segment;
 import jkcemu.Main;
-import jkcemu.programming.*;
-import jkcemu.programming.assembler.*;
-import jkcemu.programming.basic.*;
-import jkcemu.base.*;
-import jkcemu.print.*;
+import jkcemu.programming.AbstractOptionsDlg;
+import jkcemu.programming.PrgOptions;
+import jkcemu.programming.PrgSource;
+import jkcemu.programming.PrgThread;
+import jkcemu.programming.assembler.AsmThread;
+import jkcemu.programming.assembler.AsmOptionsDlg;
+import jkcemu.programming.basic.AbstractTarget;
+import jkcemu.programming.basic.BasicCompilerThread;
+import jkcemu.programming.basic.BasicOptions;
+import jkcemu.programming.basic.BasicOptionsDlg;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.ReplyIntDlg;
+import jkcemu.base.ScreenFrm;
+import jkcemu.base.UserCancelException;
+import jkcemu.print.PlainTextPrintable;
+import jkcemu.print.PrintOptionsDlg;
+import jkcemu.print.PrintUtil;
+import jkcemu.tools.debugger.DebugFrm;
 
 
-public class TextEditFrm extends BasicFrm implements
+public class TextEditFrm extends BaseFrm implements
 					ChangeListener,
 					DropTargetListener,
 					FlavorListener
@@ -43,6 +108,7 @@ public class TextEditFrm extends BasicFrm implements
 				= "jkcemu.texteditor.shift.use_tabs";
 
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
+  private static final String HELP_PAGE = "/help/tools/texteditor.htm";
 
   private static TextEditFrm                          instance        = null;
   private static javax.swing.filechooser.FileFilter[] textFileFilters = null;
@@ -73,6 +139,7 @@ public class TextEditFrm extends BasicFrm implements
   private JMenuItem                mnuEditUmlautDosToUni;
   private JMenuItem                mnuEditRemoveWordstarFmt;
   private JMenuItem                mnuEditFind;
+  private JMenuItem                mnuEditFindPrev;
   private JMenuItem                mnuEditFindNext;
   private JMenuItem                mnuEditReplace;
   private JMenuItem                mnuEditBracket;
@@ -96,8 +163,11 @@ public class TextEditFrm extends BasicFrm implements
   private JMenuItem                mnuPopupCopy;
   private JMenuItem                mnuPopupPaste;
   private JMenuItem                mnuPopupFind;
+  private JMenuItem                mnuPopupFindPrev;
   private JMenuItem                mnuPopupFindNext;
   private JMenuItem                mnuPopupReplace;
+  private JMenuItem                mnuPopupBreak;
+  private JMenuItem                mnuPopupSelectAll;
   private JButton                  btnNew;
   private JButton                  btnOpen;
   private JButton                  btnSave;
@@ -120,6 +190,7 @@ public class TextEditFrm extends BasicFrm implements
   private PrgThread                prgThread;
   private AbstractOptionsDlg       prgOptionsDlg;
   private int                      lastNewTextNum;
+  private int                      popupLineAddr;
   private int                      shiftWidth;
   private boolean                  shiftUseTabs;
 
@@ -281,12 +352,12 @@ public class TextEditFrm extends BasicFrm implements
       props = null;
     }
     finally {
-      EmuUtil.doClose( in );
+      EmuUtil.closeSilent( in );
     }
     if( props != null ) {
       String s = props.getProperty( EditText.PROP_PROPERTIES_TYPE );
       if( s != null ) {
-	if( !s.equals( "project" ) ) {
+	if( !s.equals( EditText.VALUE_PROPERTIES_TYPE_PROJECT ) ) {
 	  props = null;
 	}
       } else {
@@ -350,7 +421,7 @@ public class TextEditFrm extends BasicFrm implements
 	EditText editText = openTextFile( srcFile );
 	if( editText != null ) {
 	  editText.setProject( file, props );
-	  Main.setLastFile( file, "project" );
+	  Main.setLastFile( file, Main.FILE_GROUP_PROJECT );
 	}
       }
     }
@@ -527,6 +598,21 @@ public class TextEditFrm extends BasicFrm implements
 
 	/* --- ueberschriebene Methoden --- */
 
+
+  @Override
+  public void setVisible( boolean state )
+  {
+    super.setVisible( state );
+    if( state && !this.editTexts.isEmpty() ) {
+      JTextArea textArea = this.editTexts.get( 0 ).getJTextArea();
+      if( textArea != null ) {
+	textArea.setColumns( 0 );
+	textArea.setRows( 0 );
+      }
+    }
+  }
+
+
   @Override
   public boolean applySettings( Properties props, boolean resizable )
   {
@@ -663,11 +749,17 @@ public class TextEditFrm extends BasicFrm implements
 	rv = true;
 	doEditFind();
       }
+      else if( (src == this.mnuEditFindPrev)
+	       || (src == this.mnuPopupFindPrev) )
+      {
+	rv = true;
+	doEditFindNext( true );
+      }
       else if( (src == this.mnuEditFindNext)
 	       || (src == this.mnuPopupFindNext) )
       {
 	rv = true;
-	doEditFindNext();
+	doEditFindNext( false );
       }
       else if( (src == this.mnuEditReplace)
 	       || (src == this.mnuPopupReplace) )
@@ -683,7 +775,9 @@ public class TextEditFrm extends BasicFrm implements
 	rv = true;
 	doEditGoto();
       }
-      else if( src == this.mnuEditSelectAll ) {
+      else if( (src == this.mnuEditSelectAll)
+	       || (src == this.mnuPopupSelectAll) )
+      {
 	rv = true;
 	doEditSelectAll();
       }
@@ -737,7 +831,11 @@ public class TextEditFrm extends BasicFrm implements
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/tools/texteditor.htm" );
+	HelpFrm.open( HELP_PAGE );
+      }
+      else if( src == this.mnuPopupBreak ) {
+	rv = true;
+	doCreateBreakpoint();
       }
     }
     return rv;
@@ -803,6 +901,19 @@ public class TextEditFrm extends BasicFrm implements
     boolean   rv = false;
     Component c  = e.getComponent();
     if( c != null ) {
+      this.popupLineAddr = -1;
+      if( this.mnuPopupBreak != null ) {
+	EditText editText = getSelectedEditText();
+	if( editText != null ) {
+	  PrgOptions options  = editText.getPrgOptions();
+	  if( options != null ) {
+	    if( options.getCodeToEmu() ) {
+	      this.popupLineAddr = getLineAddr( e );
+	    }
+	  }
+	}
+	this.mnuPopupBreak.setEnabled( this.popupLineAddr >= 0 );
+      }
       this.mnuPopup.show( c, e.getX(), e.getY() );
       rv = true;
     }
@@ -831,7 +942,7 @@ public class TextEditFrm extends BasicFrm implements
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"Textdatei \u00F6ffnen",
-			Main.getLastDirFile( "text" ),
+			Main.getLastDirFile( Main.FILE_GROUP_TEXT ),
 			getTextFileFilters() );
     if( file != null ) {
       openFile( file );
@@ -844,7 +955,7 @@ public class TextEditFrm extends BasicFrm implements
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"Textdatei \u00F6ffnen mit Zeichensatz",
-			Main.getLastDirFile( "text" ),
+			Main.getLastDirFile( Main.FILE_GROUP_TEXT ),
 			getTextFileFilters() );
     if( file != null ) {
       if( checkFileAlreadyOpen( file ) == null ) {
@@ -881,7 +992,7 @@ public class TextEditFrm extends BasicFrm implements
         }
       }
       catch( IOException ex ) {
-        BasicDlg.showErrorDlg(
+        BaseDlg.showErrorDlg(
                 this,
                 "Die Datei kann nicht gespeichert werden.\n\n"
                         + ex.getMessage() );
@@ -1094,11 +1205,11 @@ public class TextEditFrm extends BasicFrm implements
       String oldText = editText.getText();
       if( oldText != null ) {
 	if( oldText.indexOf( '\t' ) < 0 ) {
-	  BasicDlg.showInfoDlg(
+	  BaseDlg.showInfoDlg(
 		this,
 		"Der Text enth\u00E4lt keine Tabulatoren." );
 	} else {
-	  if( BasicDlg.showYesNoDlg(
+	  if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie die Tabulatoren durch Leerzeichen"
 			+ " ersetzen?" ) )
@@ -1267,7 +1378,7 @@ public class TextEditFrm extends BasicFrm implements
   {
     EditText editText = getSelectedEditText();
     if( editText != null ) {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie die Zeichen \"[\\]{|}~\"\n"
 			+ "in deutsche Umlaute konvertieren?" ) )
@@ -1331,7 +1442,7 @@ public class TextEditFrm extends BasicFrm implements
   {
     EditText editText = getSelectedEditText();
     if( editText != null ) {
-      if( BasicDlg.showYesNoDlg(
+      if( BaseDlg.showYesNoDlg(
 		this,
 		"M\u00F6chten Sie die im DOS-Zeichensatz kodierten\n"
 			+ "deutschen Umlaute konvertieren und so"
@@ -1410,7 +1521,7 @@ public class TextEditFrm extends BasicFrm implements
 		+ "und dann erst die WordStar-Formatierungen entfernen.\n\n"
 		+ msg;
       }
-      if( BasicDlg.showYesNoDlg( this, msg ) ) {
+      if( BaseDlg.showYesNoDlg( this, msg ) ) {
 	String oldText = editText.getText();
 	if( oldText != null ) {
 	  int           oldCrs = editText.getCaretPosition();
@@ -1459,7 +1570,12 @@ public class TextEditFrm extends BasicFrm implements
       JTextArea textArea = editText.getJTextArea();
       if( textArea != null ) {
 	String textFind = textArea.getSelectedText();
-	if( (textFind == null) || (textFind.length() < 1) ) {
+	if( textFind != null ) {
+	  if( textFind.isEmpty() ) {
+	    textFind = null;
+	  }
+	}
+	if( textFind == null ) {
 	  textFind = this.textFind;
 	}
 	FindTextDlg dlg = new FindTextDlg(
@@ -1471,8 +1587,8 @@ public class TextEditFrm extends BasicFrm implements
 
 	switch( dlg.getAction() ) {
 	  case FIND_NEXT:
-	    this.textFind       = dlg.getTextFind();
-	    this.textReplace    = dlg.getTextReplace();
+	    this.textFind       = dlg.getFindText();
+	    this.textReplace    = dlg.getReplaceText();
 	    this.findIgnoreCase = dlg.getIgnoreCase();
 
 	    findText(
@@ -1481,15 +1597,16 @@ public class TextEditFrm extends BasicFrm implements
                 Math.max(
                         textArea.getCaretPosition(),
                         textArea.getSelectionEnd() ),
+		false,
                 true );
 	    break;
 
 	  case REPLACE_ALL:
-	    this.textFind       = dlg.getTextFind();
-	    this.textReplace    = dlg.getTextReplace();
+	    this.textFind       = dlg.getFindText();
+	    this.textReplace    = dlg.getReplaceText();
 	    this.findIgnoreCase = dlg.getIgnoreCase();
 
-	    boolean found = findText( editText, textArea, 0, false );
+	    boolean found = findText( editText, textArea, 0, false, false );
 	    int     n     = 0;
 
 	    while( found ) {
@@ -1502,13 +1619,14 @@ public class TextEditFrm extends BasicFrm implements
                         Math.max(
                                 textArea.getCaretPosition(),
                                 textArea.getSelectionEnd() ),
-                        false );
+                        false,
+			false );
 	    }
 
 	    if( n == 0 ) {
-	      showTextNotFound();
+	      TextUtil.showTextNotFound( this );
 	    } else {
-	      BasicDlg.showInfoDlg(
+	      BaseDlg.showInfoDlg(
                 this,
                 String.valueOf( n ) + " Textersetzungen durchgef\u00FChrt.",
                 "Text ersetzen" );
@@ -1520,7 +1638,7 @@ public class TextEditFrm extends BasicFrm implements
   }
 
 
-  private void doEditFindNext()
+  private void doEditFindNext( boolean backward )
   {
     EditText editText = getSelectedEditText();
     if( editText != null ) {
@@ -1529,13 +1647,25 @@ public class TextEditFrm extends BasicFrm implements
 	if( this.textFind == null ) {
 	  doEditFind();
 	} else {
-	  findText(
+	  if( backward ) {
+	    findText(
+		editText,
+                textArea,
+                Math.min(
+                        textArea.getCaretPosition(),
+                        textArea.getSelectionStart() ) - 1,
+		true,
+                true );
+	  } else {
+	    findText(
 		editText,
                 textArea,
                 Math.max(
                         textArea.getCaretPosition(),
                         textArea.getSelectionEnd() ),
+		false,
                 true );
+	  }
 	}
       }
     }
@@ -1587,7 +1717,7 @@ public class TextEditFrm extends BasicFrm implements
 	      while( pos < len ) {
 		ch = text.charAt( pos );
 		if( (ch == ')') || (ch == ']') || (ch == '}') ) {
-		  dstPos = new Integer( pos );
+		  dstPos = pos;
 		  break;
 		}
 		pos++;
@@ -1612,8 +1742,7 @@ public class TextEditFrm extends BasicFrm implements
       // Zeilennummer ermitteln
       Integer lineNum = null;
       try {
-        lineNum = new Integer( textArea.getLineOfOffset(
-                                textArea.getCaretPosition() ) + 1 );
+        lineNum = textArea.getLineOfOffset( textArea.getCaretPosition() ) + 1;
       }
       catch( BadLocationException ex ) {
         lineNum = null;
@@ -1624,7 +1753,7 @@ public class TextEditFrm extends BasicFrm implements
                                 this,
                                 "Zeilenummer:",
                                 lineNum,
-                                new Integer( 1 ),
+                                1,
                                 null );
       dlg.setTitle( "Gehe zu Zeile" );
       dlg.setVisible( true );
@@ -1760,7 +1889,7 @@ public class TextEditFrm extends BasicFrm implements
     File file = EmuUtil.showFileOpenDlg(
 			this,
 			"Projekt \u00F6ffnen",
-			Main.getLastDirFile( "text" ),
+			Main.getLastDirFile( Main.FILE_GROUP_TEXT ),
 			EmuUtil.getProjectFileFilter() );
     if( file != null ) {
       try {
@@ -1768,13 +1897,13 @@ public class TextEditFrm extends BasicFrm implements
 	if( props != null ) {
 	  openProject( file, props );
 	} else {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		this,
 		"Die ausgew\u00E4hlte Datei ist keine JKCEMU-Projektdatei." );
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showOpenFileErrorDlg( this, file, ex );
+	BaseDlg.showOpenFileErrorDlg( this, file, ex );
       }
     }
   }
@@ -1799,22 +1928,50 @@ public class TextEditFrm extends BasicFrm implements
   }
 
 
+	/* --- sonstige Aktionen --- */
+
+  private void doCreateBreakpoint()
+  {
+    if( this.popupLineAddr >= 0 ) {
+      EditText  editText  = getSelectedEditText();
+      ScreenFrm screenFrm = Main.getScreenFrm();
+      if( (editText != null) && (screenFrm != null) ) {
+	boolean    secondSys = false;
+	DebugFrm   debugFrm  = null;
+	PrgOptions options   = editText.getPrgOptions();
+	if( options != null ) {
+	  secondSys = options.getCodeToSecondSystem();
+	}
+	if( secondSys ) {
+	  debugFrm = screenFrm.openSecondDebugger();
+	} else {
+	  debugFrm = screenFrm.openPrimaryDebugger();
+	}
+	if( debugFrm != null ) {
+	  debugFrm.doDebugBreakPCAdd( this.popupLineAddr );
+	}
+      }
+    }
+  }
+
+
 	/* --- Konstruktor --- */
 
   private TextEditFrm( EmuThread emuThread )
   {
-    this.emuThread       = emuThread;
-    this.editTexts       = new ArrayList<>();
-    this.hasTextFind     = false;
-    this.findIgnoreCase  = true;
-    this.textFind        = null;
-    this.textReplace     = null;
-    this.clipboard       = null;
-    this.logFrm          = null;
-    this.prgThread       = null;
-    this.prgOptionsDlg   = null;
-    this.lastNewTextNum  = 0;
-    this.shiftWidth      = Main.getIntProperty( PROP_SHIFT_WIDTH, 2 );
+    this.emuThread      = emuThread;
+    this.editTexts      = new ArrayList<>();
+    this.hasTextFind    = false;
+    this.findIgnoreCase = true;
+    this.textFind       = null;
+    this.textReplace    = null;
+    this.clipboard      = null;
+    this.logFrm         = null;
+    this.prgThread      = null;
+    this.prgOptionsDlg  = null;
+    this.lastNewTextNum = 0;
+    this.popupLineAddr  = -1;
+    this.shiftWidth     = Main.getIntProperty( PROP_SHIFT_WIDTH, 2 );
     this.shiftUseTabs   = Main.getBooleanProperty(
 					PROP_SHIFT_USE_TABS,
 					true );
@@ -1973,6 +2130,11 @@ public class TextEditFrm extends BasicFrm implements
 		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
     mnuEdit.add( this.mnuEditFindNext );
 
+    this.mnuEditFindPrev = createJMenuItem(
+		"R\u00FCckw\u00E4rts suchen",
+		KeyStroke.getKeyStroke( KeyEvent.VK_F3, Event.SHIFT_MASK ) );
+    mnuEdit.add( this.mnuEditFindPrev );
+
     this.mnuEditReplace = createJMenuItem(
 		"Ersetzen",
 		KeyStroke.getKeyStroke( KeyEvent.VK_R, Event.CTRL_MASK ) );
@@ -2083,8 +2245,23 @@ public class TextEditFrm extends BasicFrm implements
     this.mnuPopupFindNext = createJMenuItem( "Weitersuchen" );
     this.mnuPopup.add( this.mnuPopupFindNext );
 
+    this.mnuPopupFindPrev = createJMenuItem( "R\u00FCckw\u00E4rts suchen" );
+    this.mnuPopup.add( this.mnuPopupFindPrev );
+
     this.mnuPopupReplace = createJMenuItem( "Ersetzen" );
     this.mnuPopup.add( this.mnuPopupReplace );
+    this.mnuPopup.addSeparator();
+
+    if( this.emuThread != null ) {
+      this.mnuPopupBreak = createJMenuItem( "Halte-/Log-Punkt anlegen" );
+      this.mnuPopup.add( this.mnuPopupBreak );
+      this.mnuPopup.addSeparator();
+    } else {
+      this.mnuPopupBreak = null;
+    }
+
+    this.mnuPopupSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
+    this.mnuPopup.add( this.mnuPopupSelectAll );
 
 
     // Fensterinhalt
@@ -2191,14 +2368,31 @@ public class TextEditFrm extends BasicFrm implements
     add( this.labelStatus, gbc );
 
 
+    // leeren Text erzeugen
+    doFileNew();
+
+
     // Fenstergroesse
     if( !applySettings( Main.getProperties(), true ) ) {
-      setBoundsToDefaults();
+      boolean done = false;
+      if( !this.editTexts.isEmpty() ) {
+	JTextArea textArea = this.editTexts.get( 0 ).getJTextArea();
+	if( textArea != null ) {
+	  textArea.setColumns( 80 );
+	  textArea.setRows( 25 );
+	  setLocationByPlatform( true );
+	  pack();
+	  done = true;
+	}
+      }
+      if( !done ) {
+	setBoundsToDefaults();
+      }
     }
     setResizable( true );
 
+
     // sonstiges
-    doFileNew();
     updCaretButtons();
     updUndoButtons();
     updTitle();
@@ -2268,6 +2462,23 @@ public class TextEditFrm extends BasicFrm implements
   }
 
 
+  private EditText checkFileAlreadyOpen( File file )
+  {
+    EditText rv = null;
+    for( EditText editText : this.editTexts ) {
+      if( editText.isSameFile( file ) ) {
+        setSelectedEditText( editText );
+        BaseDlg.showInfoDlg(
+		this,
+		"Diese Datei ist bereits ge\u00F6ffnet.",
+		"Hinweis" );
+        rv = editText;
+      }
+    }
+    return rv;
+  }
+
+
   private JTextArea createJTextArea()
   {
     JTextArea textArea = new JTextArea();
@@ -2315,7 +2526,7 @@ public class TextEditFrm extends BasicFrm implements
       else if( ch == bracket2 ) {
 	--level;
 	if( level <= 0 ) {
-	  return new Integer( pos );
+	  return pos;
 	}
       }
       pos += step;
@@ -2328,30 +2539,40 @@ public class TextEditFrm extends BasicFrm implements
 			EditText  editText,
                         JTextArea textArea,
                         int       startPos,
+			boolean   backward,
                         boolean   interactive )
   {
     boolean rv       = false;
     String  textFind = this.textFind;
+    String  textBase = textArea.getText();
+    if( textBase == null ) {
+      textBase = "";
+    }
+    int len = textBase.length();
 
-    if( (textFind != null) && (textFind.length() > 0) ) {
+    if( (textFind != null) && !textFind.isEmpty() ) {
       this.hasTextFind = true;
       setFindNextBtnsEnabled( this.hasTextFind );
 
-      String textBase = textArea.getText();
-      if( textBase == null ) {
-        textBase = "";
-      }
       if( this.findIgnoreCase ) {
         textFind = textFind.toUpperCase();
         textBase = textBase.toUpperCase();
       }
-      if( startPos < 0 ) {
-        startPos = 0;
-      }
-      int len     = textBase.length();
       int posFind = -1;
-      if( startPos < len ) {
-        posFind = textBase.indexOf( textFind, startPos );
+      if( backward ) {
+	if( startPos >= (len - 1) ) {
+	  startPos = len - 1;
+	}
+	if( startPos > 0 ) {
+	  posFind = textBase.lastIndexOf( textFind, startPos );
+	}
+      } else {
+	if( startPos < 0 ) {
+	  startPos = 0;
+	}
+	if( startPos < len ) {
+	  posFind = textBase.indexOf( textFind, startPos );
+	}
       }
       if( (posFind >= 0) && (posFind < len) ) {
 	toFront();
@@ -2364,13 +2585,62 @@ public class TextEditFrm extends BasicFrm implements
       }
     }
     if( !rv && interactive ) {
-      if( startPos > 0 ) {
-	rv = findText( editText, textArea, 0, interactive );
+      if( backward ) {
+	if( startPos < (len - 1) ) {
+	  rv = findText( editText, textArea, len - 1, true, interactive );
+	} else {
+	  TextUtil.showTextNotFound( this );
+	}
       } else {
-	showTextNotFound();
+	if( startPos > 0 ) {
+	  rv = findText( editText, textArea, 0, false, interactive );
+	} else {
+	  TextUtil.showTextNotFound( this );
+	}
       }
     }
     return rv;
+  }
+
+
+  private int getLineAddr( MouseEvent e )
+  {
+    int addr = -1;
+    try {
+      Component c    = e.getComponent();
+      Point     pt   = e.getPoint();
+      if( (c != null) && (pt != null) ) {
+	JScrollPane scrollPane = null;
+	Component   parent     = c.getParent();
+	while( parent != null ) {
+	  if( parent instanceof JScrollPane ) {
+	    scrollPane = (JScrollPane) parent;
+	    break;
+	  }
+	  parent = parent.getParent();
+	}
+	if( scrollPane != null ) {
+	  JViewport vp = scrollPane.getRowHeader();
+	  if( vp != null ) {
+	    Component v = vp.getView();
+	    if( v != null ) {
+	      if( v instanceof LineAddrRowHeader ) {
+		JTextArea textArea = ((LineAddrRowHeader) v).getJTextArea();
+		if( (textArea != null) && (textArea == c) ) {
+		  int offs = textArea.viewToModel( pt );
+		  if( offs >= 0 ) {
+		    addr = ((LineAddrRowHeader) v).getAddrByLine(
+					textArea.getLineOfOffset( offs ) );
+		  }
+		}
+	      }
+	    }
+	  }
+	}
+      }
+    }
+    catch( BadLocationException ex ) {}
+    return addr;
   }
 
 
@@ -2392,23 +2662,6 @@ public class TextEditFrm extends BasicFrm implements
   {
     EditText editText = getSelectedEditText();
     return editText != null ? editText.getJTextArea() : null;
-  }
-
-
-  private EditText checkFileAlreadyOpen( File file )
-  {
-    EditText rv = null;
-    for( EditText editText : this.editTexts ) {
-      if( editText.isSameFile( file ) ) {
-        setSelectedEditText( editText );
-        BasicDlg.showInfoDlg(
-		this,
-		"Diese Datei ist bereits ge\u00F6ffnet.",
-		"Hinweis" );
-        rv = editText;
-      }
-    }
-    return rv;
   }
 
 
@@ -2453,7 +2706,7 @@ public class TextEditFrm extends BasicFrm implements
         this.editTexts.add( editText );
         tabbedPane.addTab( editText.getName(), scrollPane );
       }
-      Main.setLastFile( file, "text" );
+      Main.setLastFile( file, Main.FILE_GROUP_TEXT );
 
       // Text sichtbar machen und Oberflaechenelemente aktualisieren
       setSelectedTabComponent( editText.getTabComponent() );
@@ -2462,7 +2715,7 @@ public class TextEditFrm extends BasicFrm implements
     }
     catch( IOException ex ) {
       editText = null;
-      BasicDlg.showOpenFileErrorDlg( this, file, ex );
+      BaseDlg.showOpenFileErrorDlg( this, file, ex );
     }
     catch( UserCancelException ex ) {
       editText = null;
@@ -2572,6 +2825,7 @@ public class TextEditFrm extends BasicFrm implements
     this.mnuPrgCompileOpt.setEnabled( prgState );
     this.mnuPrjSaveAs.setEnabled( state );
     this.mnuPopupFind.setEnabled( state );
+    this.mnuPopupSelectAll.setEnabled( state );
     this.btnPrint.setEnabled( state );
     this.btnClose.setEnabled( state );
     this.btnFind.setEnabled( state );
@@ -2580,7 +2834,9 @@ public class TextEditFrm extends BasicFrm implements
 
   private void setFindNextBtnsEnabled( boolean state )
   {
+    this.mnuEditFindPrev.setEnabled( state );
     this.mnuEditFindNext.setEnabled( state );
+    this.mnuPopupFindPrev.setEnabled( state );
     this.mnuPopupFindNext.setEnabled( state );
   }
 
@@ -2665,16 +2921,7 @@ public class TextEditFrm extends BasicFrm implements
 
   private void showConvResult( int cnt )
   {
-    BasicDlg.showInfoDlg( this, String.valueOf( cnt ) + " Ersetzungen" );
-  }
-
-
-  private void showTextNotFound()
-  {
-    BasicDlg.showInfoDlg(
-                this,
-                "Text nicht gefunden!",
-                "Text suchen" );
+    BaseDlg.showInfoDlg( this, String.valueOf( cnt ) + " Ersetzungen" );
   }
 
 

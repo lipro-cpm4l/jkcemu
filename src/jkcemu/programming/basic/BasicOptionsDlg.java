@@ -8,16 +8,44 @@
 
 package jkcemu.programming.basic;
 
-import java.awt.*;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.emusys.*;
-import jkcemu.programming.*;
-import jkcemu.programming.basic.target.*;
+import java.util.EventObject;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+import javax.swing.JTabbedPane;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.HexDocument;
+import jkcemu.base.IntegerDocument;
+import jkcemu.base.LimitedDocument;
+import jkcemu.base.UserInputException;
+import jkcemu.programming.AbstractOptionsDlg;
+import jkcemu.programming.PrgOptions;
+import jkcemu.programming.basic.target.AC1Target;
+import jkcemu.programming.basic.target.CPMTarget;
+import jkcemu.programming.basic.target.HueblerGraphicsMCTarget;
+import jkcemu.programming.basic.target.KC854Target;
+import jkcemu.programming.basic.target.KC85Target;
+import jkcemu.programming.basic.target.KramerMCTarget;
+import jkcemu.programming.basic.target.LLC2HIRESTarget;
+import jkcemu.programming.basic.target.SCCHTarget;
+import jkcemu.programming.basic.target.Z1013PetersTarget;
+import jkcemu.programming.basic.target.Z1013Target;
+import jkcemu.programming.basic.target.Z9001KRTTarget;
+import jkcemu.programming.basic.target.Z9001Target;
 
 
 public class BasicOptionsDlg extends AbstractOptionsDlg
@@ -260,9 +288,9 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
     this.fldHeapSize = new JTextField( 5 );
     this.docHeapSize = new IntegerDocument(
-				fldHeapSize,
-				new Integer( BasicOptions.MIN_HEAP_SIZE ),
-				new Integer( BasicOptions.MAX_HEAP_SIZE ) );
+		fldHeapSize,
+		BasicOptions.MIN_HEAP_SIZE,
+		BasicOptions.MAX_HEAP_SIZE );
     gbcGeneral.insets.top = 5;
     gbcGeneral.gridx      = 1;
     gbcGeneral.gridy++;
@@ -298,9 +326,9 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 
     this.fldStackSize = new JTextField( 5 );
     this.docStackSize = new IntegerDocument(
-				this.fldStackSize,
-				new Integer( BasicOptions.MIN_STACK_SIZE ),
-				null );
+		this.fldStackSize,
+		BasicOptions.MIN_STACK_SIZE,
+		null );
     panelStackSeparate.add( this.fldStackSize );
     panelStackSeparate.add( Box.createRigidArea( new Dimension( 5, 0 ) ) );
 
@@ -829,8 +857,7 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
 	    Object o = this.comboTarget.getItemAt( i );
 	    if( o != null ) {
 	      if( o instanceof AbstractTarget ) {
-		if( ((AbstractTarget) o).getCompatibilityLevel(
-							emuSys ) > 0 )
+		if( ((AbstractTarget) o).getCompatibilityLevel( emuSys ) > 0 )
 		{
 		  targetIdx = i;
 		  break;
@@ -927,7 +954,8 @@ public class BasicOptionsDlg extends AbstractOptionsDlg
       Object o = this.comboTarget.getSelectedItem();
       if( o != null ) {
 	if( o instanceof AbstractTarget ) {
-	  if( ((AbstractTarget) o).getCompatibilityLevel( this.emuSys ) > 0 ) {
+	  if( ((AbstractTarget) o).getCompatibilityLevel( this.emuSys ) > 0 )
+	  {
 	    codeToEmu = true;
 	  }
 	}

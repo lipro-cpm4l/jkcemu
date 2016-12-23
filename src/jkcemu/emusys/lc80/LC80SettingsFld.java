@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,24 +8,43 @@
 
 package jkcemu.emusys.lc80;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.LC80;
 
 
 public class LC80SettingsFld extends AbstractSettingsFld
 {
-  private JTabbedPane        tabbedPane;
-  private JPanel             tabModel;
-  private JPanel             tabRom;
-  private JRadioButton       btnLC80_U505;
-  private JRadioButton       btnLC80_2716;
-  private JRadioButton       btnLC80_2;
-  private JRadioButton       btnLC80e;
-  private ROMFileSettingsFld fldAltOS;
-  private ROMFileSettingsFld fldAltC000;
+  private JTabbedPane          tabbedPane;
+  private JPanel               tabModel;
+  private JPanel               tabRom;
+  private AutoLoadSettingsFld  tabAutoLoad;
+  private AutoInputSettingsFld tabAutoInput;
+  private JRadioButton         btnLC80_U505;
+  private JRadioButton         btnLC80_2716;
+  private JRadioButton         btnLC80_2;
+  private JRadioButton         btnLC80e;
+  private ROMFileSettingsFld   fldAltOS;
+  private ROMFileSettingsFld   fldAltC000;
 
 
   public LC80SettingsFld( SettingsFrm settingsFrm, String propPrefix )
@@ -101,31 +120,50 @@ public class LC80SettingsFld extends AbstractSettingsFld
 
     this.fldAltOS = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "os.",
+		propPrefix + LC80.PROP_OS_PREFIX,
 		"Alternatives Monitorprogramm (0000h-1FFFh):" );
     gbcRom.gridy++;
     this.tabRom.add( this.fldAltOS, gbcRom );
 
     this.fldAltC000 = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "rom_c000.",
+		propPrefix + LC80.PROP_ROM_C000_PREFIX,
 		"Alternatives Schachprogramm (C000h-FFFFh, nur LC80e):" );
     gbcRom.gridy++;
     this.tabRom.add( this.fldAltC000, gbcRom );
+
+
+    // Tab AutoLoad
+    this.tabAutoLoad = new AutoLoadSettingsFld(
+		settingsFrm,
+		propPrefix,
+		LC80.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX,
+		true );
+    this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
+
+
+    // Tab AutoInput
+    this.tabAutoInput = new AutoInputSettingsFld(
+		settingsFrm,
+		propPrefix,
+		LC80.DEFAULT_SWAP_KEY_CHAR_CASE,
+		LC80.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
+    this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
+
 
     updFldAltC000Enabled();
   }
 
 
-  public String getModelText()
+  public String getModelSysName()
   {
-    String rv = "LC80_2716";
+    String rv = LC80.SYSNAME_LC80_2716;
     if( this.btnLC80_U505.isSelected() ) {
-      rv = "LC80_U505";
+      rv = LC80.SYSNAME_LC80_U505;
     } else if( this.btnLC80_2.isSelected() ) {
-      rv = "LC80.2";
+      rv = LC80.SYSNAME_LC80_2;
     } else if( this.btnLC80e.isSelected() ) {
-      rv = "LC80e";
+      rv = LC80.SYSNAME_LC80_E;
     }
     return rv;
   }
@@ -138,10 +176,21 @@ public class LC80SettingsFld extends AbstractSettingsFld
 			Properties props,
 			boolean    selected ) throws UserInputException
   {
-    Component tab = this.tabRom;
+    Component tab = null;
     try {
+
+      // Tab ROM
+      tab = this.tabRom;
       this.fldAltOS.applyInput( props, selected );
       this.fldAltC000.applyInput( props, selected );
+
+      // Tab AutoLoad
+      tab = this.tabAutoLoad;
+      this.tabAutoLoad.applyInput( props, selected );
+
+      // Tab AutoInput
+      tab = this.tabAutoInput;
+      this.tabAutoInput.applyInput( props, selected );
     }
     catch( UserInputException ex ) {
       if( tab != null ) {
@@ -157,16 +206,24 @@ public class LC80SettingsFld extends AbstractSettingsFld
   {
     boolean rv  = false;
     Object  src = e.getSource();
-    if( src != null ) {
-      if( (src == this.btnLC80_U505)
-	  || (src == this.btnLC80_2716)
-	  || (src == this.btnLC80_2)
-	  || (src == this.btnLC80e) )
-      {
-	rv = true;
-	updFldAltC000Enabled();
-	fireDataChanged();
-      }
+    if( (src == this.btnLC80_U505)
+	|| (src == this.btnLC80_2716)
+	|| (src == this.btnLC80_2)
+	|| (src == this.btnLC80e) )
+    {
+      rv = true;
+      updFldAltC000Enabled();
+      fireDataChanged();
+    }
+    if( !rv ) {
+      rv = this.tabAutoLoad.doAction( e );
+    }
+    if( !rv ) {
+      rv = this.tabAutoInput.doAction( e );
+    }
+    if( !rv && (src instanceof AbstractButton) ) {
+      fireDataChanged();
+      rv = true;
     }
     return rv;
   }
@@ -177,25 +234,32 @@ public class LC80SettingsFld extends AbstractSettingsFld
   {
     this.fldAltOS.lookAndFeelChanged();
     this.fldAltC000.lookAndFeelChanged();
+    this.tabAutoLoad.lookAndFeelChanged();
+    this.tabAutoInput.lookAndFeelChanged();
   }
 
 
   @Override
   public void updFields( Properties props )
   {
-    String sysName = EmuUtil.getProperty( props, "jkcemu.system" );
-    if( sysName.startsWith( "LC80_U505" ) ) {
-      this.btnLC80_U505.setSelected( true );
-    } else if( sysName.startsWith( "LC80.2" ) ) {
-      this.btnLC80_2.setSelected( true );
-    } else if( sysName.startsWith( "LC80e" ) ) {
-      this.btnLC80e.setSelected( true );
-    } else {
-      this.btnLC80_2716.setSelected( true );
+    switch( EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME ) ) {
+      case LC80.SYSNAME_LC80_U505:
+	this.btnLC80_U505.setSelected( true );
+	break;
+      case LC80.SYSNAME_LC80_2:
+	this.btnLC80_2.setSelected( true );
+	break;
+      case LC80.SYSNAME_LC80_E:
+	this.btnLC80e.setSelected( true );
+	break;
+      default:
+	this.btnLC80_2716.setSelected( true );
     }
     updFldAltC000Enabled();
     this.fldAltOS.updFields( props );
     this.fldAltC000.updFields( props );
+    this.tabAutoLoad.updFields( props );
+    this.tabAutoInput.updFields( props );
   }
 
 

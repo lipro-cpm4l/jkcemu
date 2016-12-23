@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@
 package jkcemu.audio;
 
 import java.lang.*;
-import javax.sound.sampled.*;
 import z80emu.Z80CPU;
 
 
@@ -19,28 +18,23 @@ public abstract class AudioIn extends AudioIO
   protected int minValue;
   protected int maxValue;
 
-  private int     selectedChannel;
-  private int     sampleSignMask;
-  private int     sampleBitMask;
-  private int     sampleSizeInBytes;
-  private int     channelCount;
-  private int     adjustPeriodLen;
-  private int     adjustPeriodCnt;
-  private boolean bigEndian;
-  private boolean dataSigned;
+  private int adjustPeriodCnt;
+  private int adjustPeriodLen;
+  private int sampleNegMask;
+  private int sampleSignMask;
+  private int selectedChannel;
 
 
-  protected AudioIn( AudioFrm audioFrm, Z80CPU z80cpu )
+  protected AudioIn( AudioIOObserver observer, Z80CPU z80cpu )
   {
-    super( audioFrm, z80cpu );
-    this.minValue          = 0;
-    this.maxValue          = 0;
-    this.selectedChannel   = 0;
-    this.sampleBitMask     = 0;
-    this.sampleSizeInBytes = 0;
-    this.channelCount      = 0;
-    this.bigEndian         = false;
-    this.dataSigned        = false;
+    super( observer, z80cpu );
+    this.minValue        = 0;
+    this.maxValue        = 0;
+    this.adjustPeriodCnt = 0;
+    this.adjustPeriodLen = 0;
+    this.sampleNegMask   = 0;
+    this.sampleSignMask  = 0;
+    this.selectedChannel = 0;
   }
 
 
@@ -56,68 +50,76 @@ public abstract class AudioIn extends AudioIO
   }
 
 
+  public boolean isProgressUpdateEnabled()
+  {
+    return false;
+  }
+
+
   protected abstract byte[] readFrame();
 
 
-  protected void setAudioFormat( AudioFormat fmt )
+  @Override
+  protected void setFormat(
+			int     frameRate,
+			int     sampleSizeInBits,
+			int     channels,
+			boolean dataSigned,
+			boolean bigEndian )
   {
-    this.audioFmt = fmt;
-    if( fmt != null ) {
-      int sampleSizeInBits = fmt.getSampleSizeInBits();
+    super.setFormat(
+		frameRate,
+		sampleSizeInBits,
+		channels,
+		dataSigned,
+		bigEndian );
 
-      this.sampleBitMask = 0;
-      for( int i = 0; i < sampleSizeInBits; i++ ) {
-	this.sampleBitMask = (this.sampleBitMask << 1) | 1;
+    // Vorzeichenbit
+    this.sampleSignMask = 0;
+    if( this.dataSigned ) {
+      switch( this.bytesPerSample ) {
+	case 1:
+	  this.sampleSignMask = 0x00000080;
+	  this.sampleNegMask  = 0xFFFFFF00;
+	  break;
+	case 2:
+	  this.sampleSignMask = 0x00008000;
+	  this.sampleNegMask  = 0xFFFF0000;
+	  break;
+	case 3:
+	  this.sampleSignMask = 0x00800000;
+	  this.sampleNegMask  = 0xFF000000;
+	  break;
+	case 4:
+	  this.sampleSignMask = 0x80000000;
+	  break;
       }
-      this.sampleSizeInBytes = (sampleSizeInBits + 7) / 8;
-      this.channelCount      = fmt.getChannels();
-      this.bigEndian         = fmt.isBigEndian();
-      this.dataSigned        = fmt.getEncoding().equals(
-					AudioFormat.Encoding.PCM_SIGNED );
-
-      // Wertebereich der Pegelanzeige,
-      if( this.sampleSizeInBytes == 1 ) {
-	if( this.dataSigned ) {
-	  this.audioFrm.setVolumeLimits( -128, 127 );
-	} else {
-	  this.audioFrm.setVolumeLimits( 0, 255 );
-	}
-      } else {
-	if( this.dataSigned ) {
-	  this.audioFrm.setVolumeLimits( -32768, 32767 );
-	} else {
-	  this.audioFrm.setVolumeLimits( 0, 65535 );
-	}
-      }
-
-      // Vorzeichenbit
-      this.sampleSignMask = 0;
-      if( this.dataSigned ) {
-	this.sampleSignMask = 1;
-	for( int i = 1; i < sampleSizeInBits; i++ ) {
-	  this.sampleSignMask <<= 1;
-	}
-      }
-
-      /*
-       * Min-/Max-Regelung initialisieren
-       *
-       * Nach einer Periodenlaenge werden die Minimum- und Maximum-Werte
-       * zueinander um einen Schritt angenaehert,
-       * um so einen dynamischen Mittelwert errechnen zu koennen.
-       */
-      this.adjustPeriodLen = (int) fmt.getSampleRate() / 256;
-      if( this.adjustPeriodLen < 1 ) {
-	this.adjustPeriodLen = 1;
-      }
-      this.adjustPeriodCnt = this.adjustPeriodLen;
     }
+
+    /*
+     * Min-/Max-Regelung initialisieren
+     *
+     * Nach einer Periodenlaenge werden die Minimum- und Maximum-Werte
+     * zueinander um einen Schritt angenaehert,
+     * um so einen dynamischen Mittelwert errechnen zu koennen.
+     */
+    this.adjustPeriodLen = this.frameRate / 256;
+    if( this.adjustPeriodLen < 1 ) {
+      this.adjustPeriodLen = 1;
+    }
+    this.adjustPeriodCnt = this.adjustPeriodLen;
   }
 
 
   public void setSelectedChannel( int channel )
   {
     this.selectedChannel = channel;
+  }
+
+
+  public void stopAudio()
+  {
+    // leer
   }
 
 
@@ -145,51 +147,54 @@ public abstract class AudioIn extends AudioIO
 	    // bis zum naechsten auszuwertenden Samples lesen
 	    int nSamples = (int) (diffTStates / this.tStatesPerFrame);
 	    if( nSamples > 0 ) {
-	      int v = 0;
+	      int v1 = 0;
+	      int v2 = 0;
 	      int i = nSamples;
 	      do {
-		v = readSample();
-		if( v >= 0 ) {
-
-		  // dynamische Mittelwertbestimmung
-		  if( this.adjustPeriodCnt > 0 ) {
-		    --this.adjustPeriodCnt;
-		  } else {
-		    this.adjustPeriodCnt = this.adjustPeriodLen;
-		    if( this.minValue < this.maxValue ) {
-		      this.minValue++;
-		    }
-		    if( this.maxValue > this.minValue ) {
-		      --this.maxValue;
-		    }
-		  }
-
-		  // Wenn gelesender Wert negativ ist, Zahl korrigieren
-		  if( this.dataSigned && ((v & this.sampleSignMask) != 0) ) {
-		    v |= ~this.sampleBitMask;
-		  }
-
-		  // Minimum-/Maximum-Werte aktualisieren
-		  if( v < this.minValue ) {
-		    this.minValue = v;
-		  }
-		  else if( v > this.maxValue ) {
-		    this.maxValue = v;
-		  }
-
-		  // Pegelanzeige
-		  this.audioFrm.updVolume( v );
+		v1 = readSample();
+		if( v1 < 0 ) {
+		  break;
 		}
+		v2 = v1;
+
+		// dynamische Mittelwertbestimmung
+		if( this.adjustPeriodCnt > 0 ) {
+		  --this.adjustPeriodCnt;
+		} else {
+		  this.adjustPeriodCnt = this.adjustPeriodLen;
+		  if( this.minValue < this.maxValue ) {
+		    this.minValue++;
+		  }
+		  if( this.maxValue > this.minValue ) {
+		    --this.maxValue;
+		  }
+		}
+
+		// Wenn gelesender Wert negativ ist, Zahl korrigieren
+		if( this.dataSigned && ((v2 & this.sampleSignMask) != 0) ) {
+		  v2 |= ~this.sampleNegMask;
+		}
+
+		// Minimum-/Maximum-Werte aktualisieren
+		if( v2 < this.minValue ) {
+		  this.minValue = v2;
+		}
+		else if( v2 > this.maxValue ) {
+		  this.maxValue = v2;
+		}
+
+		// Pegelanzeige
+		this.observer.updVolume( v2 );
 	      } while( --i > 0 );
 
-	      if( v != -1 ) {
+	      if( v1 >= 0 ) {
 		int d = this.maxValue - this.minValue;
 		if( this.lastPhase ) {
-		  if( v < this.minValue + (d / 3) ) {
+		  if( v2 < this.minValue + (d / 3) ) {
 		    this.lastPhase = false;
 		  }
 		} else {
-		  if( v > this.maxValue - (d / 3) ) {
+		  if( v2 > this.maxValue - (d / 3) ) {
 		    this.lastPhase = true;
 		  }
 		}
@@ -228,19 +233,18 @@ public abstract class AudioIn extends AudioIO
     if( !isPause() ) {
       byte[] frameData = readFrame();
       if( frameData != null ) {
-	int offset = this.selectedChannel * this.sampleSizeInBytes;
-	if( offset + this.sampleSizeInBytes <= frameData.length ) {
+	int offset = this.selectedChannel * this.bytesPerSample;
+	if( offset + this.bytesPerSample <= frameData.length ) {
 	  value = 0;
 	  if( this.bigEndian ) {
-	    for( int i = 0; i < this.sampleSizeInBytes; i++ ) {
+	    for( int i = 0; i < this.bytesPerSample; i++ ) {
 	      value = (value << 8) | ((int) frameData[ offset + i ] & 0xFF);
 	    }
 	  } else {
-	    for( int i = this.sampleSizeInBytes - 1; i >= 0; --i ) {
+	    for( int i = this.bytesPerSample - 1; i >= 0; --i ) {
 	      value = (value << 8) | ((int) frameData[ offset + i ] & 0xFF);
 	    }
 	  }
-	  value &= this.sampleBitMask;
 	}
       }
     }

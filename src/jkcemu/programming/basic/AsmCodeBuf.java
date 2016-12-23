@@ -9,7 +9,7 @@
 package jkcemu.programming.basic;
 
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
 
 
 public class AsmCodeBuf
@@ -319,11 +319,9 @@ public class AsmCodeBuf
 
   public java.util.List<String> getLinesAsList( int begPos )
   {
-    ArrayList<String> lines = new ArrayList<>();
+    java.util.List<String> lines = new ArrayList<>();
     synchronized( this.buf ) {
-      int len      = this.buf.length();
-      int initSize = len / 4;
-      lines.ensureCapacity( initSize > 10 ? initSize : 10 );
+      int len = this.buf.length();
       if( begPos < 0 ) {
 	begPos = 0;
       }

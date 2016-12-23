@@ -52,11 +52,18 @@
    <li>
     <a href="a5105.htm#hardware">1. Emulierte Hardware</a>
     <ul>
-     <li><a href="a5105.htm#keyboard">1.1. Tastatur</a></li>
-     <li><a href="a5105.htm#sound">1.2. Sound-Generator</a></li>
      <li>
+      <a href="a5105.htm#keyboard">1.1. Tastatur</a>
       <ul>
-       <li><a href="#sound_ex">1.2.1. Sound-Beispielprogramme</a></li>
+       <li><a href="a5105.htm#autoinput">1.1.1. AutoInput</a></li>
+      </ul>
+     </li>
+     <li>
+      <a href="a5105.htm#sound">1.2. Sound-Generator / Tonausgabe</a>
+      <ul>
+       <li>
+	<a href="a5105.htm#sound_ex">1.2.1. Sound-Beispielprogramme</a>
+       </li>
       </ul>
      </li>
      <li>
@@ -84,9 +91,14 @@
      </li>
      <li>
       <a href="a5105.htm#basic_io">4.2. BASIC-Programme speichern und laden</a>
+      <ul>
+       <li>
+	<a href="a5105.htm#audio_io">4.2.1. BASIC-Programme &uuml;ber die emulierte Kassettenschnittstelle speichern</a>
+       </li>
+      </ul>
      </li>
      <li>
-      <a href="a5105.htm#load_into_mem">4.3. Dateien in den Arbeistspeicher laden</a>
+      <a href="a5105.htm#load_into_mem">4.3. Dateien in den Arbeitsspeicher laden</a>
      </li>
      <li><a href="a5105.htm#font">4.4. Zeichensatz</a></li>
      <li>
@@ -145,18 +157,39 @@
    <tr><td>DEL</td><td>Entf</td></tr>
   </table>
  <br/>
-
- <h3><a name="sound">1.2. Sound-Generator</a></h3>
-  Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
-  m&uuml;ssen Sie die Audiofunktion
-  <a href="audio.htm#sound_out">T&ouml;ne ausgeben</a> aktivieren.
-  Alle anderen Audiofunktionen beziehen sich auf den emulierten
-  Kassettenrecorderanschluss.
+  Der Tastenklick wird nicht emuliert.
  <br/><br/>
-  Der Sound-Generator wird immer mit der originalen Taktfrequenz emuliert,
-  d.h., wenn Sie in den <a href="settings.htm">Einstellungen</a>
+
+
+ <h3><a name="autoinput">1.1.1. AutoInput</a></h3>
+  Wenn Sie die AutoInput-Funktion bei gleichzeitig aktivierter Option
+  <em>Einf&uuml;gen von Text durch Abfangen des Systemaufrufs</em> nutzen,
+  kann es passieren, dass das erste Zeichen nicht automatisch eingegeben wird.
+  Um das zu verhindern, geben Sie am besten vor dem ersten Befehl
+  die Steuertaste <em>Enter / Return</em> ein.
+ <br/><br/>
+
+ <h3><a name="sound">1.2. Sound-Generator / Tonausgabe</a></h3>
+  Zum H&ouml;ren des Tastenklicks sowie der vom Sound-Generator
+  ausgegebenen T&ouml;ne m&uuml;ssen Sie im Fenster
+  <em>Audio/Kassette</em> den
+  <a href="audio.htm#sound_out">Ausgang Sound-Generator/Lautsprecher</a>
+  aktivieren.
+ <br/><br/>
+  <b>Achtung!</b> Im Original befindet sich in der Datenspeichereinheit
+  ein Lautsprecher, der &uuml;ber die IO-Adresse&nbsp;70h
+  an- und abgeschaltet werden kann.
+  Der Ton am Audio-/Video-Anschluss l&auml;sst
+  sich damit jedoch nicht abschalten.
+  JKCEMU emuliert bez&uuml;glich der Tonausgabe den Audio-/Video-Anschluss,
+  d.h., Ausgaben auf die IO-Adresse&nbsp;70h haben im Emulator keine Wirkung.
+ <br/><br/>
+  <b>Hinweis:</b> Der Sound-Generator wird immer mit der
+  originalen Taktfrequenz emuliert, d.h.,
+  wenn Sie in den <a href="settings.htm">Einstellungen</a>
   eine andere Taktfrequenz angeben,
-  wirkt sich das nur auf die Emulation des Mikroprozessors aus.
+  wirkt sich das nur auf die Emulation des Mikroprozessors aus,
+  nicht aber auf den Sound-Generator.
  <br/><br/>
 
  <h3><a name="sound_ex">1.2.1. Sound-Beispielprogramme</a></h3>
@@ -365,7 +398,28 @@
  <br/><br/>
 
  <h3>
-  <a name="load_into_mem">4.3. Dateien in den Arbeistspeicher laden</a>
+  <a name="audio_io">4.2.1. BASIC-Programme &uuml;ber die emulierte Kassettenschnittstelle speichern</a>
+ </h3>
+  Wenn Sie ein BASIC-Programm &uuml;ber die emulierte Kassettenschnittstelle
+  speichern m&ouml;chten,
+  dann tun Sie das bitte mit der Geschwindigkeit&nbsp;1.
+  Der Programmname kann 6&nbsp;Zeichen lang sein.
+  Hier im Beispiel wird das BASIC-Programm unter dem Namen <em>prog</em>
+  gespeichert:
+ <br/><br/>
+  &nbsp;&nbsp;<tt>csave "prog",1</tt>
+ <br/><br/>
+  Einlesen k&ouml;nnen Sie das Programm dann mit:
+ <br/><br/>
+  &nbsp;&nbsp;<tt>cload</tt>
+ <br/><br/>
+  oder
+ <br/><br/>
+  &nbsp;&nbsp;<tt>cload "prog"</tt>
+ <br/><br/>
+
+ <h3>
+  <a name="load_into_mem">4.3. Dateien in den Arbeitsspeicher laden</a>
  </h3>
   In der SCPX-Betriebsart wird durch das Betriebssystem automatisch
   der ROM zyklisch eingeblendet.
@@ -425,6 +479,13 @@
   funktioniert das Einf&uuml;gen von Text nicht,
   und Sie m&uuml;ssen die Option ausschalten.
  <br/><br/>
+  <b>Achtung!</b> Wenn beim Einf&uuml;gen von Text aus der Zwischenablage
+  nichts passiert, befindet sich das Betriebssystem gerade in einem
+  f&uuml;r Tastatureingaben ung&uuml;nstigen Status.
+  Bet&auml;tigen Sie in dem Fall eine Taste auf der Tastatur,
+  am besten die Taste mit dem ersten einzuf&uuml;genden Zeichen,
+  um das Betriebssystem &quot;aufzuwachen&quot;.
+ <br/><br/>
 
  <h3><a name="images">4.7. A5105-Bilddateien</a></h3>
   Der <a href="tools/imageviewer.htm">JKCEMU Bildbetrachter</a>
@@ -446,8 +507,9 @@
    30 PRINT:INPUT "Bilddatei:";F$&#10;<br/>
    40 IF INSTR(F$,".")=0 THEN F$=F$+".SCR"&#10;<br/>
    50 SCREEN 5,0:CLS&#10;<br/>
-   60 BLOAD F$,S:PAUSE 300&#10;<br/>
-   70 GOTO 10&#10;<br/>
+   60 BLOAD F$,S:PAUSE 50&#10;<br/>
+   70 IF INKEY$="" THEN 70&#10;<br/>
+   80 GOTO 10&#10;<br/>
   </tt>
  <br/>
   Das Programm zeigt die Liste der vorhandenen Bilddateien an
@@ -462,7 +524,7 @@
   eingelegt haben und sich im RBASIC befinden,
   k&ouml;nnen Sie das Programm starten mit:
  <br/><br/>
-  <tt>run &quot;viewscr.bas&quot;</tt>
+  &nbsp;&nbsp;<tt>run &quot;viewscr.bas&quot;</tt>
  <br/><br/>
 </body>
 </html>

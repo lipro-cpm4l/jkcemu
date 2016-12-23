@@ -8,12 +8,23 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.lang.*;
 import java.util.ArrayList;
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 
 public class FloppyDiskFormatSelectFld extends JPanel
@@ -559,7 +570,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
     combo.setEditable( false );
     if( items != null ) {
       for( int i = 0; i < items.length; i++ ) {
-	combo.addItem( new Integer( items[ i ] ) );
+	combo.addItem( items[ i ] );
       }
     }
     return combo;
@@ -631,7 +642,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
   private static void setValue( JComboBox combo, int value )
   {
     if( combo != null )
-      combo.setSelectedItem( new Integer( value ) );
+      combo.setSelectedItem( value );
   }
 
 
@@ -639,7 +650,7 @@ public class FloppyDiskFormatSelectFld extends JPanel
   {
     if( spinner != null ) {
       try {
-	spinner.setValue( new Integer( value ) );
+	spinner.setValue( value );
       }
       catch( IllegalArgumentException ex ) {}
     }

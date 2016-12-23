@@ -10,17 +10,36 @@ package jkcemu.emusys;
 
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.Main;
-import jkcemu.base.*;
-import z80emu.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuMemView;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.SaveDlg;
+import jkcemu.base.SourceUtil;
+import jkcemu.base.FileFormat;
+import jkcemu.text.TextUtil;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80MemView;
+import z80emu.Z80PCListener;
+import z80emu.Z80PIO;
 
 
-public class KramerMC extends EmuSys implements
-					Z80MaxSpeedListener,
-					Z80PCListener,
-					Z80TStatesListener
+public class KramerMC extends EmuSys implements Z80PCListener
 {
+  public static final String SYSNAME          = "KramerMC";
+  public static final String SYSTEXT          = "Kramer-MC";
+  public static final String PROP_PREFIX      = "jkcemu.kramermc.";
+  public static final String PROP_ROM0_PREFIX = "rom.0000.";
+  public static final String PROP_ROM8_PREFIX = "rom.8000.";
+  public static final String PROP_ROMC_PREFIX = "rom.c000.";
+
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 300;
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = true;
+
   private static final int[][] kbMatrixNormal = {
 		{ 0,   0,   ';', '<', 3,   0,   0,    ':'  },
 		{ 'P', 'O', 0,   'K', 0,   'L', '0',  '9'  },
@@ -73,13 +92,18 @@ public class KramerMC extends EmuSys implements
 			"LO", "CSTS", "IOCHK", "IOSET" };
 
   private static byte[] rom0000 = null;
-  private static byte[] rom0400 = null;
   private static byte[] rom8000 = null;
   private static byte[] romC000 = null;
   private static byte[] romFont = null;
 
+  private String       rom0000File;
+  private String       rom8000File;
+  private String       romC000File;
   private byte[]       fontBytes;
   private byte[]       ramVideo;
+  private byte[]       rom0000Bytes;
+  private byte[]       rom8000Bytes;
+  private byte[]       romC000Bytes;
   private int[]        kbMatrix;
   private int          kbRow;
   private int          kbTStates;
@@ -94,31 +118,15 @@ public class KramerMC extends EmuSys implements
 
   public KramerMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.kramermmc." );
-    this.fontBytes = readFontByProperty(
-				props,
-				this.propPrefix + "font.file",
-				0x0800 );
-    if( this.fontBytes == null ) {
-      if( romFont == null ) {
-	romFont = readResource( "/rom/kramermc/kramermcfont.bin" );
-      }
-      this.fontBytes = romFont;
-    }
-    if( rom0000 == null ) {
-      rom0000 = readResource( "/rom/kramermc/rom_0000.bin" );
-    }
-    if( rom0400 == null ) {
-      rom0400 = readResource( "/rom/kramermc/rom_0400.bin" );
-    }
-    if( rom8000 == null ) {
-      rom8000 = readResource( "/rom/kramermc/rom_8000.bin" );
-    }
-    if( romC000 == null ) {
-      romC000 = readResource( "/rom/kramermc/rom_c000.bin" );
-    }
-    this.ramVideo = new byte[ 0x0400 ];
-    this.kbMatrix = new int[ 8 ];
+    super( emuThread, props, PROP_PREFIX );
+    this.rom0000File  = null;
+    this.rom0000Bytes = null;
+    this.rom8000File  = null;
+    this.rom8000Bytes = null;
+    this.romC000File  = null;
+    this.romC000Bytes = null;
+    this.ramVideo     = new byte[ 0x0400 ];
+    this.kbMatrix     = new int[ 8 ];
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.pio   = new Z80PIO( "PIO (E/A-Adressen FC-FF)" );
@@ -129,6 +137,10 @@ public class KramerMC extends EmuSys implements
     this.pcListenerAdded = false;
     checkAddPCListener( props );
     z80MaxSpeedChanged( cpu );
+
+    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
+      loadROMs( props );
+    }
   }
 
 
@@ -144,20 +156,6 @@ public class KramerMC extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    /*
-     * Anzahl der Taktzyklen,
-     * die eine Taste gedrueckt und danach wieder losgelassen werden soll,
-     * bevor das Druecken der eigentlichen Taste emuliert wird.
-     */
-    this.kbTStates = cpu.getMaxSpeedKHz() * 100;
-  }
-
-
 	/* --- Z80PCListener --- */
 
   @Override
@@ -170,30 +168,6 @@ public class KramerMC extends EmuSys implements
   }
 
 
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    if( this.kbStatus > 0 ) {
-      synchronized( this.kbMatrix ) {
-	if( this.kbStatus > 0 ) {
-	  this.kbTStateCounter += tStates;
-	  if( this.kbTStateCounter > this.kbTStates ) {
-	    this.kbTStateCounter = 0;
-	    this.shiftPressed    = false;
-	    this.ctrlPressed     = false;
-	    --this.kbStatus;
-	    if( this.kbStatus == 0 ) {
-	      Arrays.fill( this.kbMatrix, 0 );
-	    }
-	  }
-	}
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -201,13 +175,38 @@ public class KramerMC extends EmuSys implements
   {
     super.applySettings( props );
     checkAddPCListener( props );
+    loadFont( props );
   }
 
 
   @Override
   public boolean canApplySettings( Properties props )
   {
-    return EmuUtil.getProperty( props, "jkcemu.system" ).equals( "KramerMC" );
+    boolean rv = EmuUtil.getProperty(
+			props,
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.rom0000File,
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM0_PREFIX + PROP_FILE ) );
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.rom8000File,
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM8_PREFIX + PROP_FILE ) );
+    }
+    if( rv ) {
+      rv = TextUtil.equals(
+		this.romC000File,
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROMC_PREFIX + PROP_FILE ) );
+    }
+    return rv;
   }
 
 
@@ -304,30 +303,25 @@ public class KramerMC extends EmuSys implements
 
     int     rv   = 0xFF;
     boolean done = false;
-    if( rom0000 != null ) {
-      if( addr < rom0000.length ) {
-	rv   = (int) rom0000[ addr ] & 0xFF;
+    if( (addr < 0x0C00) && (this.rom0000Bytes != null) ) {
+      if( addr < this.rom0000Bytes.length ) {
+	rv   = (int) this.rom0000Bytes[ addr ] & 0xFF;
 	done = true;
       }
     }
-    if( !done && (addr >= 0x0400) && (rom0400 != null) ) {
-      int idx = addr - 0x0400;
-      if( idx < rom0400.length ) {
-	rv   = (int) rom0400[ idx ] & 0xFF;
-	done = true;
-      }
-    }
-    if( !done && (addr >= 0x8000) && (rom8000 != null) ) {
+    if( !done && (addr >= 0x8000) && (addr < 0xB000)
+	&& (this.rom8000Bytes != null) ) {
       int idx = addr - 0x8000;
-      if( idx < rom8000.length ) {
-	rv   = (int) rom8000[ idx ] & 0xFF;
+      if( idx < this.rom8000Bytes.length ) {
+	rv   = (int) this.rom8000Bytes[ idx ] & 0xFF;
 	done = true;
       }
     }
-    if( !done && (addr >= 0xC000) && (romC000 != null) ) {
+    if( !done && (addr >= 0xC000) && (addr < 0xE000)
+	&& (this.romC000Bytes != null) ) {
       int idx = addr - 0xC000;
-      if( idx < romC000.length ) {
-	rv   = (int) romC000[ idx ] & 0xFF;
+      if( idx < this.romC000Bytes.length ) {
+	rv   = (int) this.romC000Bytes[ idx ] & 0xFF;
 	done = true;
       }
     }
@@ -384,14 +378,14 @@ public class KramerMC extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "Kramer-MC";
+    return SYSTEXT;
   }
 
 
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return true;
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
   }
 
 
@@ -504,7 +498,7 @@ public class KramerMC extends EmuSys implements
 
 
   @Override
-  protected boolean pasteChar( char ch )
+  protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
     switch( ch ) {
@@ -522,10 +516,7 @@ public class KramerMC extends EmuSys implements
     }
     if( rv ) {
       while( this.kbStatus > 0 ) {
-	try {
-	  Thread.sleep( 50 );
-	}
-	catch( InterruptedException ex ) {}
+	Thread.sleep( 50 );
       }
     }
     return rv;
@@ -584,7 +575,11 @@ public class KramerMC extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
+	loadROMs( props );
+      }
       fillRandom( ramVideo );
     }
     if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
@@ -628,40 +623,20 @@ public class KramerMC extends EmuSys implements
   {
     addr &= 0xFFFF;
 
-    boolean rv   = false;
-    boolean done = false;
-    if( rom0000 != null ) {
-      if( addr < rom0000.length ) {
-	done = true;
-      }
-    }
-    if( !done && (addr >= 0x0400) && (rom0400 != null) ) {
-      if( (addr - 0x0400) < rom0400.length ) {
-	done = true;
-      }
-    }
-    if( !done && (addr >= 0x8000) && (rom8000 != null) ) {
-      if( (addr - 0x8000) < rom8000.length ) {
-	done = true;
-      }
-    }
-    if( !done && (addr >= 0xC000) && (romC000 != null) ) {
-      if( (addr - 0xC000) < romC000.length ) {
-	done = true;
-      }
-    }
-    if( !done && (addr >= 0xFC00) ) {
+    boolean rv = false;
+    if( ((addr >= 0x0C00) && (addr < 0x8000))
+	|| ((addr >= 0xB000) && (addr < 0xC000))
+	|| ((addr >= 0xE000) && (addr < 0xFC00)) )
+    {
+      this.emuThread.setRAMByte( addr, value );
+      rv = true;
+    } else if( addr >= 0xFC00 ) {
       int idx = addr - 0xFC00;
       if( idx < this.ramVideo.length ) {
 	this.ramVideo[ idx ] = (byte) value;
 	this.screenFrm.setScreenDirty( true );
-	done = true;
-	rv   = true;
+	rv = true;
       }
-    }
-    if( !done ) {
-      this.emuThread.setRAMByte( addr, value );
-      rv = true;
     }
     return rv;
   }
@@ -760,13 +735,50 @@ public class KramerMC extends EmuSys implements
   }
 
 
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+
+    /*
+     * Anzahl der Taktzyklen,
+     * die eine Taste gedrueckt und danach wieder losgelassen werden soll,
+     * bevor das Druecken der eigentlichen Taste emuliert wird.
+     */
+    this.kbTStates = cpu.getMaxSpeedKHz() * 100;
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    if( this.kbStatus > 0 ) {
+      synchronized( this.kbMatrix ) {
+	if( this.kbStatus > 0 ) {
+	  this.kbTStateCounter += tStates;
+	  if( this.kbTStateCounter > this.kbTStates ) {
+	    this.kbTStateCounter = 0;
+	    this.shiftPressed    = false;
+	    this.ctrlPressed     = false;
+	    --this.kbStatus;
+	    if( this.kbStatus == 0 ) {
+	      Arrays.fill( this.kbMatrix, 0 );
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private synchronized void checkAddPCListener( Properties props )
   {
     boolean state = EmuUtil.getBooleanProperty(
 				props,
-				"jkcemu.kramermc.catch_print_calls",
+				this.propPrefix + PROP_CATCH_PRINT_CALLS,
 				false );
     if( state != this.pcListenerAdded ) {
       Z80CPU cpu = this.emuThread.getZ80CPU();
@@ -777,6 +789,69 @@ public class KramerMC extends EmuSys implements
       }
       this.pcListenerAdded = state;
     }
+  }
+
+
+  private void loadFont( Properties props )
+  {
+    this.fontBytes = readFontByProperty(
+				props,
+				this.propPrefix + PROP_FONT_FILE,
+				0x0800 );
+    if( this.fontBytes == null ) {
+      if( romFont == null ) {
+	romFont = readResource( "/rom/kramermc/kramermcfont.bin" );
+      }
+      this.fontBytes = romFont;
+    }
+  }
+
+
+  private void loadROMs( Properties props )
+  {
+    this.rom0000File  = EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_ROM0_PREFIX + PROP_FILE );
+    this.rom0000Bytes = readROMFile(
+				this.rom0000File,
+				0x0C00,
+				"ROM (0000-0BFF)" );
+    if( this.rom0000Bytes == null ) {
+      if( rom0000 == null ) {
+	rom0000 = readResource( "/rom/kramermc/rom_0000.bin" );
+      }
+      this.rom0000Bytes = rom0000;
+    }
+
+    this.rom8000File  = EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_ROM8_PREFIX + PROP_FILE );
+    this.rom8000Bytes = readROMFile(
+				this.rom8000File,
+				0x3000,
+				"ROM (8000-AFFF)" );
+    if( this.rom8000Bytes == null ) {
+      if( rom8000 == null ) {
+	rom8000 = readResource( "/rom/kramermc/rom_8000.bin" );
+      }
+      this.rom8000Bytes = rom8000;
+    }
+
+    this.romC000File  = EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_ROMC_PREFIX + PROP_FILE );
+    this.romC000Bytes = readROMFile(
+				this.romC000File,
+				0x2000,
+				"ROM (C000-DFFF)" );
+    if( this.romC000Bytes == null ) {
+      if( romC000 == null ) {
+	romC000 = readResource( "/rom/kramermc/rom_c000.bin" );
+      }
+      this.romC000Bytes = romC000;
+    }
+
+    loadFont( props );
   }
 
 
@@ -830,4 +905,3 @@ public class KramerMC extends EmuSys implements
     this.pio.putInValuePortB( colValue, 0xFF );
   }
 }
-

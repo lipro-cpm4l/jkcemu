@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,19 @@
 
 package jkcemu.filebrowser;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.IOException;
 import java.lang.*;
-import java.nio.file.*;
-import java.util.*;
-import javax.sound.sampled.*;
-import javax.swing.tree.*;
-import jkcemu.Main;
-import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
-import jkcemu.disk.*;
-import jkcemu.image.ImgLoader;
-import jkcemu.text.TextUtil;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.nio.file.InvalidPathException;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileTreeNode;
+import jkcemu.base.FileTreeNodeComparator;
 
 
 public class FileNode extends FileTreeNode
@@ -129,7 +130,7 @@ public class FileNode extends FileTreeNode
     finally {
       if( entries != null ) {
 	if( entries instanceof Closeable ) {
-	  EmuUtil.doClose( (Closeable) entries );
+	  EmuUtil.closeSilent( (Closeable) entries );
 	}
       }
       this.fileCheckResult = null;

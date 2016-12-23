@@ -8,21 +8,60 @@
 
 package jkcemu.text;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.EventQueue;
+import java.awt.Frame;
 import java.awt.dnd.DropTarget;
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PushbackInputStream;
+import java.io.PushbackReader;
+import java.io.Reader;
+import java.io.UnsupportedEncodingException;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.text.*;
-import javax.swing.undo.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JViewport;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.undo.UndoManager;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.emusys.*;
-import jkcemu.programming.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileFormat;
+import jkcemu.base.FileInfo;
+import jkcemu.base.LoadData;
+import jkcemu.base.SourceUtil;
+import jkcemu.base.UserCancelException;
+import jkcemu.emusys.AC1;
+import jkcemu.emusys.BCS3;
+import jkcemu.emusys.KC85;
+import jkcemu.emusys.KramerMC;
+import jkcemu.emusys.LLC1;
+import jkcemu.emusys.Z1013;
+import jkcemu.emusys.Z9001;
+import jkcemu.programming.PrgOptions;
+import jkcemu.programming.PrgSource;
 import jkcemu.programming.basic.BasicOptions;
-import jkcemu.print.*;
 import z80emu.Z80MemView;
 
 
@@ -37,6 +76,26 @@ public class EditText implements
 				= "jkcemu.properties.type";
   public static final String PROP_PRG_SOURCE_FILE_NAME
 				= "jkcemu.programming.source.file.name";
+  public static final String VALUE_PROPERTIES_TYPE_PROJECT = "project";
+
+  private static class TextProps
+  {
+    private String  encodingName;
+    private String  encodingDesc;
+    private String  lineEnd;
+    private boolean hasBOM;
+    private boolean charsLost;
+
+    private TextProps( String encodingName, String encodingDesc )
+    {
+      this.encodingName = encodingName;
+      this.encodingDesc = encodingDesc;
+      this.lineEnd      = null;
+      this.hasBOM       = false;
+      this.charsLost    = false;
+    }
+  };
+
 
   private boolean       used;
   private boolean       charsLostOnOpen;
@@ -352,28 +411,18 @@ public class EditText implements
 		String        encodingDesc )
 			throws IOException, UserCancelException
   {
-    PushbackInputStream inStream  = null;
-    PushbackReader      reader    = null;
-    boolean             charsLost = false;
-    boolean             hasBOM    = false;
-    boolean             hasCR     = false;
-    boolean             hasNL     = false;
-    boolean             has1E     = false;
-
     try {
-      boolean  filtered  = false;
-      FileInfo fileInfo  = null;
-      String   text      = null;
-      String   info      = null;
-      byte[]   fileBytes = EmuUtil.readFile( file, true, Integer.MAX_VALUE );
+      TextProps textProps = new TextProps( encodingName, encodingDesc );
+      boolean   filtered  = false;
+      FileInfo  fileInfo  = null;
+      String    text      = null;
+      String    info      = null;
+      byte[]    fileBytes = EmuUtil.readFile( file, true, Integer.MAX_VALUE );
       if( fileBytes != null ) {
 	if( (charConverter == null) && (encodingName == null) ) {
 
 	  // Speicherabbilddatei?
-	  fileInfo = FileInfo.analyzeFile(
-					fileBytes,
-					fileBytes.length,
-					file );
+	  fileInfo = FileInfo.analyzeFile( fileBytes, file );
 	  if( fileInfo != null ) {
 	    FileFormat fileFmt = fileInfo.getFileFormat();
 	    if( fileFmt != null ) {
@@ -541,7 +590,7 @@ public class EditText implements
 			+ "Der in der Datei enthaltene Text wird aber\n"
 			+ "extrahiert und als neue Textdatei"
 			+ " ge\u00F6ffnet." );
-	    BasicDlg.showInfoDlg( this.textEditFrm, buf.toString() );
+	    BaseDlg.showInfoDlg( this.textEditFrm, buf.toString() );
 	  }
 	}
 	if( text != null ) {
@@ -549,189 +598,37 @@ public class EditText implements
 	  charConverter = null;
 	} else {
 	  if( fileBytes.length > 0 ) {
-	    StringBuilder textBuf = new StringBuilder( fileBytes.length );
-
-	    // Byte-Order-Markierung pruefen
-	    String bomEnc = null;
-	    int    bomLen = 0;
-	    if( fileBytes.length >= 2 ) {
-	      int b0 = (int) fileBytes[ 0 ] & 0xFF;
-	      int b1 = (int) fileBytes[ 1 ] & 0xFF;
-	      if( (b0 == 0xFE) && (b1 == 0xFF) ) {
-		bomEnc = "UTF-16BE";
-		bomLen = 2;
-	      } else if( (b0 == 0xFF) && (b1 == 0xFE) ) {
-		bomEnc = "UTF-16LE";
-		bomLen = 2;
-	      } else if( (b0 == 0xEF) && (b1 == 0xBB) ) {
-		if( fileBytes.length >= 3 ) {
-		  if( ((int) fileBytes[ 2 ] & 0xFF) == 0xBF ) {
-		    bomEnc = "UTF-8";
-		    bomLen = 3;
-		  }
-		}
-	      }
-	    }
-
-	    /*
-	     * Wenn eine Byte-Order-Markierung existiert,
-	     * dann wird daraus das Encoding ausgewertet.
-	     * Wurde allerdings ein Encoding uebergeben,
-	     * dass nicht dem der Byte-Order-Markierung entspricht,
-	     * dann hat das uebergebene die hoehere Prioritaet, d.h.,
-	     * die Bytes der Byte-Order-Markierung werden als Text gewertet.
-	     */
-	    if( bomEnc != null ) {
-	      if( (charConverter == null) && (encodingName == null) ) {
-		encodingName = bomEnc;
-		encodingDesc = bomEnc + TEXT_WITH_BOM;
-		hasBOM       = true;
-	      } else {
-		if( encodingName != null ) {
-		  if( encodingName.equals( bomEnc ) ) {
-		    encodingDesc = bomEnc + TEXT_WITH_BOM;
-		    hasBOM       = true;
-		  }
-		}
-	      }
-	    }
-
-	    // Eingabestraems mit evtl. Zeichensatzumwandlung oeffnen
-	    if( !hasBOM ) {
-	      bomLen = 0;
-	    }
-	    inStream = new PushbackInputStream(
-				new ByteArrayInputStream(
-					fileBytes,
-					bomLen,
-					fileBytes.length - bomLen ) );
-	    if( charConverter == null ) {
-	      if( encodingName != null ) {
-		reader = new PushbackReader(
-				new InputStreamReader(
-						inStream,
-						encodingName ) );
-	      } else {
-		reader = new PushbackReader(
-				new InputStreamReader( inStream ) );
-	      }
-	    }
-
-	    // erste Zeile bis zum Zeilenende lesen
-	    int ch = readChar( reader, inStream, charConverter );
-	    while( (ch != -1)
-		   && (ch != '\n') && (ch != '\r')
-		   && (ch != '\u001E') )
+	    text = readText( fileBytes, charConverter, textProps );
+	    if( textProps.charsLost
+		&& (charConverter == null)
+		&& (encodingName == null) )
 	    {
-	      if( ch == CharConverter.REPLACEMENT_CHAR ) {
-		charsLost = true;
-	      } else {
-		textBuf.append( (char) ch );
-	      }
-	      ch = readChar( reader, inStream, charConverter );
-	    }
-
-	    // Zeilenende pruefen
-	    if( ch == '\r' ) {
-
-	      // Zeilenende ist entweder CR oder CRLF
-	      hasCR = true;
-	      textBuf.append( (char) '\n' );
-
-	      // kommt noch ein LF?
-	      ch = readChar( reader, inStream, charConverter );
-	      if( ch == CharConverter.REPLACEMENT_CHAR ) {
-		charsLost = true;
-	      }
-	      else if( ch == '\n' ) {
-		// Zeilenende ist CRLF
-		hasNL = true;
-	      }
-	      else if( ch != -1 ) {
-		// Zeilenende ist nur CR
-		// gelesenes Zeichen zurueck
-		if( reader != null ) {
-		  reader.unread( ch );
-		} else {
-		  inStream.unread( ch );
-		}
+	      /*
+	       * Wenn beim Einlesen der Datei mit dem Systemzeichensatz
+	       * Zeichen nicht gemappt werden konnten,
+	       * wird die Datei mit ISO.8859-1 (Latin1) eingelesen.
+	       */
+	      CharConverter cc2 = new CharConverter(
+					CharConverter.Encoding.LATIN1 );
+	      TextProps props2 = new TextProps(
+					cc2.getEncodingName(),
+					cc2.toString() );
+	      String text2 = readText( fileBytes, cc2, props2 );
+	      if( (text2 != null) && !props2.charsLost ) {
+		text          = text2;
+	        charConverter = cc2;
+		textProps     = props2;
 	      }
 	    }
-	    else if( ch == '\n' ) {
-	      textBuf.append( (char) '\n' );
-	      hasNL = true;
-	    }
-	    else if( ch == '\u001E' ) {
-	      textBuf.append( (char) '\n' );
-	      has1E = true;
-	    }
-
-	    // restliche Datei einlesen, aber nur,
-	    // wenn das zuletzt gelesene Zeichen nicht EOF war
-	    if( ch != -1 ) {
-	      boolean wasCR = false;
-	      ch = readChar( reader, inStream, charConverter );
-	      while( ch >= 0 ) {
-		if( ch == CharConverter.REPLACEMENT_CHAR ) {
-		  charsLost = true;
-		}
-		else if( ch == '\r' ) {
-		  textBuf.append( (char) '\n' );
-		  wasCR = true;
-		} else {
-		  if( ch == '\n' ) {
-		    if( !wasCR )
-		      textBuf.append( (char) ch );
-		  }
-		  else if( (ch == '\u001E') || (ch == '\f') ) {
-		    textBuf.append( (char) '\n' );
-		  }
-		  // Null-Bytes und Textendezeichen herausfiltern
-		  else if( (ch != 0)
-			   && (ch != '\u0003')
-			   && (ch != '\u0004') )
-		  {
-		    textBuf.append( (char) ch );
-		  }
-		  wasCR = false;
-		}
-		ch = readChar( reader, inStream, charConverter );
-	      }
-	    }
-	    if( reader != null ) {
-	      reader.close();
-	      reader = null;
-	    } else {
-	      inStream.close();
-	    }
-	    inStream = null;
-
-	    // alles OK -> Text und Werte uebernehmen
-	    if( hasCR ) {
-	      if( hasNL ) {
-		this.lineEnd = "\r\n";
-	      } else {
-		this.lineEnd = "\r";
-	      }
-	    } else {
-	      if( hasNL ) {
-		this.lineEnd = "\n";
-	      } else if( has1E ) {
-		this.lineEnd = "\u001E";
-	      } else {
-		this.lineEnd = null;
-	      }
-	    }
-	    text = textBuf.toString();
 	  }
 	}
       }
       this.used          = true;
-      this.byteOrderMark = hasBOM;
-      this.trailing1A    = false;
+      this.byteOrderMark = textProps.hasBOM;
       this.charConverter = charConverter;
-      this.encodingName  = encodingName;
-      this.encodingDesc  = encodingDesc;
+      this.encodingName  = textProps.encodingName;
+      this.encodingDesc  = textProps.encodingDesc;
+      this.trailing1A    = false;
       if( text != null ) {
 	int len = text.length();
 	int pos = len - 1;
@@ -768,8 +665,8 @@ public class EditText implements
       this.textEditFrm.updCaretButtons();
       this.textEditFrm.updTitle();
 
-      this.charsLostOnOpen = charsLost;
-      if( charsLost ) {
+      this.charsLostOnOpen = textProps.charsLost;
+      if( textProps.charsLost ) {
 	StringBuilder buf = new StringBuilder( 512 );
 	buf.append( "Die Datei enth\u00E4lt Bytes bzw. Bytefolgen,"
 		+ " die sich nicht\n"
@@ -793,7 +690,7 @@ public class EditText implements
 		  @Override
 		  public void run()
 		  {
-		    BasicDlg.showWarningDlg( owner, msg );
+		    BaseDlg.showWarningDlg( owner, msg );
 		  }
 		} );
       }
@@ -802,10 +699,6 @@ public class EditText implements
       throw new IOException(
 		encodingName + ": Der Zeichensatz wird auf dieser Plattform"
 			+ " nicht unterst\u00FCtzt." );
-    }
-    finally {
-      EmuUtil.doClose( reader );
-      EmuUtil.doClose( inStream );
     }
   }
 
@@ -1032,7 +925,7 @@ public class EditText implements
       this.textEditFrm.updTitle();
 
       if( charsLost ) {
-	BasicDlg.showWarningDlg(
+	BaseDlg.showWarningDlg(
 		owner,
 		"Der Text enth\u00E4lt Zeichen, die in dem gew\u00FCnschten\n"
 			+ "Zeichensatz nicht existieren und somit auch"
@@ -1048,7 +941,7 @@ public class EditText implements
 			+ " nicht unterst\u00FCtzt." );
     }
     finally {
-      EmuUtil.doClose( outStream );
+      EmuUtil.closeSilent( outStream );
     }
   }
 
@@ -1089,7 +982,9 @@ public class EditText implements
 	  out = new FileOutputStream( prjFile );
 
 	  Properties props = new Properties();
-	  props.setProperty( PROP_PROPERTIES_TYPE, "project" );
+	  props.setProperty(
+			PROP_PROPERTIES_TYPE,
+			VALUE_PROPERTIES_TYPE_PROJECT );
 
 	  // Pfad relativ zur Projektdatei
 	  String filename   = this.file.getPath();
@@ -1124,20 +1019,20 @@ public class EditText implements
 	  this.prjFile    = prjFile;
 	  this.prjChanged = true;
 	  setProjectChanged( false );
-	  Main.setLastFile( prjFile, "project" );
+	  Main.setLastFile( prjFile, Main.FILE_GROUP_PROJECT );
 	}
 	catch( IOException ex ) {
-	  BasicDlg.showErrorDlg(
+	  BaseDlg.showErrorDlg(
 		frame,
 		"Speichern des Projektes fehlgeschlagen:\n"
 			+ ex.getMessage() );
 	}
 	finally {
-	  EmuUtil.doClose( out );
+	  EmuUtil.closeSilent( out );
 	}
       }
     } else {
-      BasicDlg.showErrorDlg(
+      BaseDlg.showErrorDlg(
 		frame,
 		"Das Projekt kann nicht gespeichert werden,\n"
 			+ "da kein Dateiname f\u00FCr den Quelltext"
@@ -1474,10 +1369,10 @@ public class EditText implements
   }
 
 
-  private int readChar(
-		Reader        reader,
-		InputStream   inStream,
-		CharConverter charConverter ) throws IOException
+  private static int readChar(
+			Reader        reader,
+			InputStream   inStream,
+			CharConverter charConverter ) throws IOException
   {
     int ch = -1;
     if( reader != null ) {
@@ -1489,6 +1384,199 @@ public class EditText implements
       }
     }
     return ch;
+  }
+
+
+  private static String readText(
+				byte[]        fileBytes,
+				CharConverter charConverter,
+				TextProps     textProps ) throws IOException
+  {
+    StringBuilder       textBuf  = new StringBuilder( fileBytes.length );
+    PushbackReader      reader   = null;
+    PushbackInputStream inStream = null;
+    boolean             has1E    = false;
+    boolean             hasCR    = false;
+    boolean             hasNL    = false;
+    try {
+
+      // Byte-Order-Markierung pruefen
+      String bomEnc = null;
+      int    bomLen = 0;
+      if( fileBytes.length >= 2 ) {
+	int b0 = (int) fileBytes[ 0 ] & 0xFF;
+	int b1 = (int) fileBytes[ 1 ] & 0xFF;
+	if( (b0 == 0xFE) && (b1 == 0xFF) ) {
+	  bomEnc = "UTF-16BE";
+	  bomLen = 2;
+	} else if( (b0 == 0xFF) && (b1 == 0xFE) ) {
+	  bomEnc = "UTF-16LE";
+	  bomLen = 2;
+	} else if( (b0 == 0xEF) && (b1 == 0xBB) ) {
+	  if( fileBytes.length >= 3 ) {
+	    if( ((int) fileBytes[ 2 ] & 0xFF) == 0xBF ) {
+	      bomEnc = "UTF-8";
+	      bomLen = 3;
+	    }
+	  }
+	}
+      }
+
+      /*
+       * Wenn eine Byte-Order-Markierung existiert,
+       * dann wird daraus das Encoding ausgewertet.
+       * Wurde allerdings ein Encoding uebergeben,
+       * dass nicht dem der Byte-Order-Markierung entspricht,
+       * dann hat das uebergebene die hoehere Prioritaet, d.h.,
+       * die Bytes der Byte-Order-Markierung werden als Text gewertet.
+       */
+      if( bomEnc != null ) {
+	if( (charConverter == null) && (textProps.encodingName == null) ) {
+	  textProps.encodingName = bomEnc;
+	  textProps.encodingDesc = bomEnc + TEXT_WITH_BOM;
+	  textProps.hasBOM       = true;
+	} else {
+	  if( textProps.encodingName != null ) {
+	    if( textProps.encodingName.equals( bomEnc ) ) {
+	      textProps.encodingDesc = bomEnc + TEXT_WITH_BOM;
+	      textProps.hasBOM       = true;
+	    }
+	  }
+	}
+      }
+
+      // Eingabestreams mit evtl. Zeichensatzumwandlung oeffnen
+      if( !textProps.hasBOM ) {
+	bomLen = 0;
+      }
+      inStream = new PushbackInputStream(
+			new ByteArrayInputStream(
+				fileBytes,
+				bomLen,
+				fileBytes.length - bomLen ) );
+      if( charConverter == null ) {
+	if( textProps.encodingName != null ) {
+	  reader = new PushbackReader(
+			new InputStreamReader(
+					inStream,
+					textProps.encodingName ) );
+	} else {
+	  reader = new PushbackReader(
+			new InputStreamReader( inStream ) );
+	}
+      }
+
+      // erste Zeile bis zum Zeilenende lesen
+      int ch = readChar( reader, inStream, charConverter );
+      while( (ch != -1)
+	     && (ch != '\n') && (ch != '\r')
+	     && (ch != '\u001E') )
+      {
+	if( ch == CharConverter.REPLACEMENT_CHAR ) {
+	  textProps.charsLost = true;
+	} else {
+	  textBuf.append( (char) ch );
+	}
+	ch = readChar( reader, inStream, charConverter );
+      }
+
+      // Zeilenende pruefen
+      if( ch == '\r' ) {
+
+	// Zeilenende ist entweder CR oder CRLF
+	hasCR = true;
+	textBuf.append( (char) '\n' );
+
+	// kommt noch ein LF?
+	ch = readChar( reader, inStream, charConverter );
+	if( ch == CharConverter.REPLACEMENT_CHAR ) {
+	  textProps.charsLost = true;
+	}
+	else if( ch == '\n' ) {
+	  // Zeilenende ist CRLF
+	  hasNL = true;
+	}
+	else if( ch != -1 ) {
+	  // Zeilenende ist nur CR
+	  // gelesenes Zeichen zurueck
+	  if( reader != null ) {
+	    reader.unread( ch );
+	  } else {
+	    inStream.unread( ch );
+	  }
+	}
+      }
+      else if( ch == '\n' ) {
+	textBuf.append( (char) '\n' );
+	hasNL = true;
+      }
+      else if( ch == '\u001E' ) {
+	textBuf.append( (char) '\n' );
+	has1E = true;
+      }
+
+      // restliche Datei einlesen, aber nur,
+      // wenn das zuletzt gelesene Zeichen nicht EOF war
+      if( ch != -1 ) {
+	boolean wasCR = false;
+	ch = readChar( reader, inStream, charConverter );
+	while( ch >= 0 ) {
+	  if( ch == CharConverter.REPLACEMENT_CHAR ) {
+	    textProps.charsLost = true;
+	  }
+	  else if( ch == '\r' ) {
+	    textBuf.append( (char) '\n' );
+	    wasCR = true;
+	  } else {
+	    if( ch == '\n' ) {
+	      if( !wasCR )
+		textBuf.append( (char) ch );
+	    }
+	    else if( (ch == '\u001E') || (ch == '\f') ) {
+	      textBuf.append( (char) '\n' );
+	    }
+	    // Null-Bytes und Textendezeichen herausfiltern
+	    else if( (ch != 0)
+		     && (ch != '\u0003')
+		     && (ch != '\u0004') )
+	    {
+	      textBuf.append( (char) ch );
+	    }
+	    wasCR = false;
+	  }
+	  ch = readChar( reader, inStream, charConverter );
+	}
+      }
+      if( reader != null ) {
+	reader.close();
+	reader = null;
+      } else {
+	inStream.close();
+      }
+      inStream = null;
+
+      // alles OK -> Text und Werte uebernehmen
+      if( hasCR ) {
+	if( hasNL ) {
+	  textProps.lineEnd = "\r\n";
+	} else {
+	  textProps.lineEnd = "\r";
+	}
+      } else {
+	if( hasNL ) {
+	  textProps.lineEnd = "\n";
+	} else if( has1E ) {
+	  textProps.lineEnd = "\u001E";
+	} else {
+	  textProps.lineEnd = null;
+	}
+      }
+    }
+    finally {
+      EmuUtil.closeSilent( reader );
+      EmuUtil.closeSilent( inStream );
+    }
+    return textBuf.toString();
   }
 
 

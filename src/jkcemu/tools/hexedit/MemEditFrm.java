@@ -8,20 +8,42 @@
 
 package jkcemu.tools.hexedit;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Dimension;
+import java.awt.Event;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.EventObject;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.print.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.HexDocument;
+import jkcemu.base.ReplyBytesDlg;
+import jkcemu.base.ScreenFrm;
+import jkcemu.print.PrintOptionsDlg;
+import jkcemu.print.PrintUtil;
 import z80emu.Z80Memory;
 
 
 public class MemEditFrm extends AbstractHexCharFrm
 {
+  private static final String HELP_PAGE  = "/help/tools/memeditor.htm";
+
   private Z80Memory   memory;
   private int         begAddr;
   private int         endAddr;
@@ -289,7 +311,7 @@ public class MemEditFrm extends AbstractHexCharFrm
 	doFindNext();
       } else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/tools/memeditor.htm" );
+	HelpFrm.open( HELP_PAGE );
       } else {
 	rv = super.doAction( e );
       }
@@ -322,6 +344,38 @@ public class MemEditFrm extends AbstractHexCharFrm
     return (this.begAddr >= 0) && (this.begAddr <= this.endAddr) ?
 					this.endAddr - this.begAddr + 1
 					: 0;
+  }
+
+
+  @Override
+  public void resetFired()
+  {
+    ScreenFrm screenFrm = Main.getScreenFrm();
+    if( screenFrm != null ) {
+      EmuThread emuThread = screenFrm.getEmuThread();
+      if( emuThread != null ) {
+	EmuSys emuSys = emuThread.getEmuSys();
+	if( emuSys != null ) {
+	  int millis = emuSys.getDefaultPromptAfterResetMillisMax();
+	  if( millis > 0 ) {
+	    javax.swing.Timer timer = new javax.swing.Timer(
+			millis,
+			new ActionListener()
+			{
+			  @Override
+			  public void actionPerformed( ActionEvent e )
+			  {
+			    updView();
+			  }
+			} );
+	    timer.setRepeats( false );
+	    timer.start();
+	  } else {
+	    updView();
+	  }
+	}
+      }
+    }
   }
 
 
@@ -378,7 +432,7 @@ public class MemEditFrm extends AbstractHexCharFrm
 	    int     addr   = this.begAddr + caretPos;
 	    while( src < a.length ) {
 	      if( addr > 0xFFFF ) {
-		BasicDlg.showWarningDlg(
+		BaseDlg.showWarningDlg(
 			this,
 			"Die von Ihnen eingegebenen Bytes gehen \u00FCber"
 				+ " die Adresse FFFF hinaus.\n"
@@ -392,7 +446,7 @@ public class MemEditFrm extends AbstractHexCharFrm
 				+  "konnte nicht ge\u00E4ndert werden.",
 			addr );
 		  if( src == (a.length - 1) ) {
-		    BasicDlg.showErrorDlg( this, msg );
+		    BaseDlg.showErrorDlg( this, msg );
 		  } else {
 		    boolean     cancel  = true;
 		    String[]    options = { "Weiter", "Abbrechen" };
@@ -452,7 +506,7 @@ public class MemEditFrm extends AbstractHexCharFrm
       updView();
     }
     catch( NumberFormatException ex ) {
-      BasicDlg.showErrorDlg( this, ex.getMessage(), "Eingabefehler" );
+      BaseDlg.showErrorDlg( this, ex.getMessage(), "Eingabefehler" );
     }
   }
 

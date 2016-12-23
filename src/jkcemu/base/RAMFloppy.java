@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,16 +8,25 @@
 
 package jkcemu.base;
 
-import java.awt.EventQueue;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Properties;
 import jkcemu.Main;
 import jkcemu.text.TextUtil;
 
 
 public class RAMFloppy
 {
+  public static final String PROP_FILE    = "file";
+  public static final String PROP_ENABLED = "enabled";
+  public static final String PROP_KBYTE   = "kbyte";
+
   public enum RFType { ADW, MP_3_1988, OTHER };
 
   private RFType           rfType;
@@ -68,7 +77,7 @@ public class RAMFloppy
       size  = 256 * 1024;
       state = EmuUtil.getBooleanProperty(
 				props,
-				propPrefix + "enabled",
+				propPrefix + PROP_ENABLED,
 				false );
     } else {
       size = getRAMFloppySize( props, propPrefix );
@@ -213,7 +222,7 @@ public class RAMFloppy
 	fireRAMFloppyChanged();
       }
       finally {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
   }
@@ -232,7 +241,7 @@ public class RAMFloppy
       if( rfType == RFType.MP_3_1988 ) {
 	if( EmuUtil.getBooleanProperty(
 				props,
-				propPrefix + "enabled",
+				propPrefix + PROP_ENABLED,
 				false ) )
 	{
 	  rf.install(
@@ -240,7 +249,9 @@ public class RAMFloppy
 		rfType,
 		256 * 1024,
 		infoText,
-		EmuUtil.getProperty( props, propPrefix + "file" ) );
+		EmuUtil.getProperty(
+			props,
+			propPrefix + PROP_FILE ) );
 	  rv = rf;
 	}
       } else {
@@ -251,7 +262,9 @@ public class RAMFloppy
 		rfType,
 		size,
 		infoText,
-		EmuUtil.getProperty( props, propPrefix + "file" ) );
+		EmuUtil.getProperty(
+			props,
+			propPrefix + PROP_FILE ) );
 	  rv = rf;
 	}
       }
@@ -317,7 +330,7 @@ public class RAMFloppy
       fireRAMFloppyChanged();
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
   }
 
@@ -431,7 +444,7 @@ public class RAMFloppy
 
   private static int getRAMFloppySize( Properties props, String propPrefix )
   {
-    int kb = EmuUtil.getIntProperty( props, propPrefix + "kbyte", 0 );
+    int kb = EmuUtil.getIntProperty( props, propPrefix + PROP_KBYTE, 0 );
     return (kb == 128) || (kb == 512) || (kb == 2048) ? (kb * 1024) : 0;
   }
 
@@ -451,4 +464,3 @@ public class RAMFloppy
     this.file            = null;
   }
 }
-

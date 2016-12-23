@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2015 Jens Mueller
+ * (c) 2012-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,21 @@
 
 package jkcemu.programming.assembler;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.*;
-import java.text.*;
-import java.util.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Map;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.programming.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.programming.CmdLineArgIterator;
+import jkcemu.programming.PrgException;
+import jkcemu.programming.PrgLogger;
+import jkcemu.programming.PrgOptions;
 
 
 public class CmdLineAssembler
@@ -163,7 +171,7 @@ public class CmdLineAssembler
 	}
 	arg = iter.next();
 	if( (arg == null) && (backIter != null) ) {
-	  EmuUtil.doClose( iter );
+	  EmuUtil.closeSilent( iter );
 	  iter     = backIter;
 	  backIter = null;
 	  arg      = iter.next();
@@ -224,7 +232,7 @@ public class CmdLineAssembler
       status = false;
     }
     finally {
-      EmuUtil.doClose( iter );
+      EmuUtil.closeSilent( iter );
     }
     return status;
   }
@@ -346,8 +354,8 @@ public class CmdLineAssembler
       }
     }
     labels.add( new AbstractMap.SimpleImmutableEntry<>(
-					labelName,
-					new Integer( labelValue ) ) );
+						labelName,
+						labelValue ) );
   }
 
 

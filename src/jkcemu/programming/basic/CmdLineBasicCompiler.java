@@ -8,15 +8,32 @@
 
 package jkcemu.programming.basic;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.PatternSyntaxException;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.programming.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.programming.CmdLineArgIterator;
+import jkcemu.programming.PrgLogger;
 import jkcemu.programming.assembler.Z80Assembler;
-import jkcemu.programming.basic.target.*;
+import jkcemu.programming.basic.target.AC1Target;
+import jkcemu.programming.basic.target.CPMTarget;
+import jkcemu.programming.basic.target.HueblerGraphicsMCTarget;
+import jkcemu.programming.basic.target.KC854Target;
+import jkcemu.programming.basic.target.KC85Target;
+import jkcemu.programming.basic.target.KramerMCTarget;
+import jkcemu.programming.basic.target.LLC2HIRESTarget;
+import jkcemu.programming.basic.target.SCCHTarget;
+import jkcemu.programming.basic.target.Z1013PetersTarget;
+import jkcemu.programming.basic.target.Z1013Target;
+import jkcemu.programming.basic.target.Z9001KRTTarget;
+import jkcemu.programming.basic.target.Z9001Target;
 
 
 public class CmdLineBasicCompiler
@@ -217,7 +234,7 @@ public class CmdLineBasicCompiler
 	}
 	arg = iter.next();
 	if( (arg == null) && (backIter != null) ) {
-	  EmuUtil.doClose( iter );
+	  EmuUtil.closeSilent( iter );
 	  iter     = backIter;
 	  backIter = null;
 	  arg      = iter.next();
@@ -479,7 +496,7 @@ public class CmdLineBasicCompiler
       status = false;
     }
     finally {
-      EmuUtil.doClose( iter );
+      EmuUtil.closeSilent( iter );
     }
     return status;
   }
@@ -562,7 +579,7 @@ public class CmdLineBasicCompiler
 	    status = true;
 	  }
 	  finally {
-	    EmuUtil.doClose( out );
+	    EmuUtil.closeSilent( out );
 	  }
 	} else {
 	  Z80Assembler assembler = new Z80Assembler(

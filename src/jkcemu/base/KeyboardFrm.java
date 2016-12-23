@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,17 +8,24 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JSeparator;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
 
 
-public class KeyboardFrm extends BasicFrm
+public class KeyboardFrm extends BaseFrm
 {
+  private static final String HELP_PAGE = "/help/keyboard.htm";
+
   private ScreenFrm           screenFrm;
   private AbstractKeyboardFld keyboardFld;
   private JMenuItem           mnuClose;
@@ -124,7 +131,7 @@ public class KeyboardFrm extends BasicFrm
 	}
 	else if( src == this.mnuHelpContent ) {
 	  rv = true;
-	  HelpFrm.open( "/help/keyboard.htm" );
+	  HelpFrm.open( HELP_PAGE );
 	}
       }
     }
@@ -224,4 +231,3 @@ public class KeyboardFrm extends BasicFrm
     this.mnuHoldShiftSep.setVisible( state );
   }
 }
-

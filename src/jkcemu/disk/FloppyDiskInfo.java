@@ -9,9 +9,9 @@
 package jkcemu.disk;
 
 import java.awt.Frame;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
-import java.net.URL;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
 
@@ -81,8 +81,8 @@ public class FloppyDiskInfo implements Comparable<FloppyDiskInfo>
       }
     }
     finally {
-      EmuUtil.doClose( gz );
-      EmuUtil.doClose( in );
+      EmuUtil.closeSilent( gz );
+      EmuUtil.closeSilent( in );
     }
     if( disk == null ) {
       throw new IOException( "Resource " + this.resource

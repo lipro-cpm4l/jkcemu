@@ -8,26 +8,25 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
 import java.util.Arrays;
-import javax.sound.sampled.AudioInputStream;
 import javax.swing.JComboBox;
-import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
-import jkcemu.emusys.kc85.KCAudioDataStream;
+import jkcemu.audio.AudioFile;
+import jkcemu.audio.PCMDataSource;
+import jkcemu.base.UserInputException;
+import jkcemu.emusys.kc85.KCAudioCreator;
 
 
 public class KCAudioFileTarget extends AbstractConvertTarget
 {
   public static enum Target { Z9001, KC85, KCBASIC_PRG };
 
-  private byte[] fileBytes;
   private byte[] dataBytes;
   private int    offs;
   private int    len;
   private Target target;
-  private int    blkNum;
 
 
   public KCAudioFileTarget(
@@ -38,12 +37,10 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 		Target         target )
   {
     super( fileConvertFrm, createInfoText( target ) );
-    this.fileBytes  = null;
-    this.dataBytes  = dataBytes;
-    this.offs       = offs;
-    this.len        = len;
-    this.target     = target;
-    this.blkNum     = 1;
+    this.dataBytes = dataBytes;
+    this.offs      = offs;
+    this.len       = len;
+    this.target    = target;
   }
 
 
@@ -57,13 +54,16 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public AudioInputStream getAudioInputStream()
+  public PCMDataSource createPCMDataSource()
 				throws IOException, UserInputException
   {
-    if( (this.fileBytes == null) && (this.target != null) ) {
+    PCMDataSource pcm       = null;
+    int           blkNum    = 0;
+    byte[]        fileBytes = null;
+    if( this.target != null ) {
       int len = Math.min( this.len, this.dataBytes.length - this.offs );
       if( len > 0 ) {
-	if( this.target == Target.Z9001 ) {
+	if( this.target.equals( Target.Z9001 ) ) {
 	  int    begAddr = this.fileConvertFrm.getBegAddr( true );
 	  int    endAddr = begAddr + len - 1;
 	  int    startAddr = this.fileConvertFrm.getStartAddr( false );
@@ -98,9 +98,9 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 	    m[ p++ ] = (byte) (startAddr >> 8);
 	  }
 	  System.arraycopy( this.dataBytes, this.offs, m, 128, len );
-	  this.fileBytes = m;
-	  this.blkNum    = 0;
-	} else if( this.target == Target.KC85 ) {
+	  fileBytes = m;
+	  blkNum    = 0;
+	} else if( this.target.equals( Target.KC85 ) ) {
 	  int    begAddr = this.fileConvertFrm.getBegAddr( true );
 	  int    endAddr = begAddr + len;
 	  int    startAddr = this.fileConvertFrm.getStartAddr( false );
@@ -130,9 +130,9 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 	    m[ p++ ] = (byte) (startAddr >> 8);
 	  }
 	  System.arraycopy( this.dataBytes, this.offs, m, 128, len );
-	  this.fileBytes = m;
-	  this.blkNum    = 1;
-	} else if( this.target == Target.KCBASIC_PRG ) {
+	  fileBytes = m;
+	  blkNum    = 1;
+	} else if( this.target.equals( Target.KCBASIC_PRG ) ) {
 	  String s = this.fileConvertFrm.getFileDesc( true );
 	  byte[] m = new byte[ 13 + len ];
 	  m[ 0 ] = (byte) 0xD3;
@@ -153,31 +153,34 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 	  m[ p++ ] = (byte) len;
 	  m[ p++ ] = (byte) (len >> 8);
 	  System.arraycopy( this.dataBytes, this.offs, m, p, len );
-	  this.fileBytes = m;
-	  this.blkNum    = 1;
+	  fileBytes = m;
+	  blkNum    = 1;
 	}
       }
     }
-    KCAudioDataStream ads = null;
-    if( this.fileBytes != null ) {
-      ads = new KCAudioDataStream(
-				false,
-				this.blkNum,
-				this.fileBytes,
-				0,
-				this.fileBytes.length );
+    if( fileBytes != null ) {
+      pcm = new KCAudioCreator(
+			false,
+			blkNum,
+			fileBytes,
+			0,
+			fileBytes.length ).newReader();
     } else {
-      ads = new KCAudioDataStream(
-				false,
-				1,
-				this.dataBytes,
-				this.offs,
-				this.len );
+      pcm = new KCAudioCreator(
+			false,
+			1,
+			this.dataBytes,
+			this.offs,
+			this.len ).newReader();
     }
-    return new AudioInputStream(
-			ads,
-			ads.getAudioFormat(),
-			ads.getFrameLength() );
+    return pcm;
+  }
+
+
+  @Override
+  public javax.swing.filechooser.FileFilter getFileFilter()
+  {
+    return AudioFile.getFileFilter();
   }
 
 
@@ -196,13 +199,6 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 
 
   @Override
-  public javax.swing.filechooser.FileFilter getFileFilter()
-  {
-    return AudioUtil.getAudioOutFileFilter();
-  }
-
-
-  @Override
   public File getSuggestedOutFile( File srcFile )
   {
     return replaceExtensionToAudioFile( srcFile );
@@ -212,7 +208,7 @@ public class KCAudioFileTarget extends AbstractConvertTarget
   @Override
   public String save( File file ) throws IOException, UserInputException
   {
-    saveAudioFile( file, getAudioInputStream() );
+    saveAudioFile( file, createPCMDataSource() );
     return null;
   }
 
@@ -255,31 +251,22 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 
   private static String createInfoText( Target target )
   {
-    String rv = "Sound-Datei im KC-Format";
+    String text = "Sound-Datei im KC-Format";
     if( target != null ) {
       switch( target ) {
 	case Z9001:
-	  rv = "Sound-Datei im KC-Systemformat"
+	  text = "Sound-Datei im KC-Systemformat"
 			+ " f\u00FCr KC85/1, KC87 und Z9001";
 	  break;
 	case KC85:
-	  rv = "Sound-Datei im KC-Systemformat"
+	  text = "Sound-Datei im KC-Systemformat"
 			+ " f\u00FCr HC900 und KC85/2..5";
 	  break;
 	case KCBASIC_PRG:
-	  rv = "Sound-Datei im KC-BASIC-Format";
+	  text = "Sound-Datei im KC-BASIC-Format";
 	  break;
       }
     }
-    String[] ext = AudioUtil.getAudioOutFileExtensions( null, null );
-    if( ext != null ) {
-      if( ext.length > 0 ) {
-	StringBuilder buf = new StringBuilder( rv.length() + 40 );
-	buf.append( rv );
-	AudioUtil.appendAudioFileExtensionText( buf, 3, ext );
-	rv = buf.toString();
-      }
-    }
-    return rv;
+    return text + " (" + AudioFile.getFileExtensionText() + ")";
   }
 }

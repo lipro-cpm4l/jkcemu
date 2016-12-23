@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,10 +8,12 @@
 
 package jkcemu.filebrowser;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
 import java.nio.file.attribute.PosixFilePermission;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 
 public class TarEntry
@@ -356,4 +358,3 @@ public class TarEntry
     return true;
   }
 }
-

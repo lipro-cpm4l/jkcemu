@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,12 +11,14 @@ package jkcemu.filebrowser;
 import java.awt.Component;
 import java.io.File;
 import java.lang.*;
-import javax.swing.*;
+import javax.swing.Icon;
+import javax.swing.JLabel;
+import javax.swing.JTree;
 import javax.swing.filechooser.FileSystemView;
+import javax.swing.tree.DefaultTreeCellRenderer;
 
 
-public class FileTreeCellRenderer
-			extends javax.swing.tree.DefaultTreeCellRenderer
+public class FileTreeCellRenderer extends DefaultTreeCellRenderer
 {
   FileSystemView fsv;
 

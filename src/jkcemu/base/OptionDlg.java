@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,13 +10,21 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 
 
-public class OptionDlg extends BasicDlg
+public class OptionDlg extends BaseDlg
 {
   private int            selectedIdx;
   private JRadioButton[] optionBtns;
@@ -188,4 +196,3 @@ public class OptionDlg extends BasicDlg
     setParentCentered();
   }
 }
-

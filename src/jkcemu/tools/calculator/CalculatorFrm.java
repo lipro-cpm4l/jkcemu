@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2014 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,28 +8,60 @@
 
 package jkcemu.tools.calculator;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Event;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.FlavorEvent;
+import java.awt.datatransfer.FlavorListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowEvent;
 import java.lang.*;
-import java.math.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.text.ParseException;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.text.*;
+import java.util.EventObject;
+import javax.swing.BorderFactory;
+import javax.swing.JEditorPane;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.KeyStroke;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.Document;
+import javax.swing.text.JTextComponent;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
+import jkcemu.base.HelpFrm;
 
 
-public class CalculatorFrm extends BasicFrm implements
+public class CalculatorFrm extends BaseFrm implements
 						CaretListener,
 						DocumentListener,
 						FlavorListener,
 						FocusListener
 {
-  private static final String defaultText = "Geben Sie bitte ein Zeichen"
+  private static final String DEFAULT_TEXT = "Geben Sie bitte ein Zeichen"
 		+ " oder einen numerischen Ausdruck ein!";
+
+  private static final String HELP_PAGE = "/help/tools/calculator.htm";
+
 
   private static CalculatorFrm instance = null;
 
@@ -162,7 +194,7 @@ public class CalculatorFrm extends BasicFrm implements
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/tools/calculator.htm" );
+	HelpFrm.open( HELP_PAGE );
       }
     }
     return rv;
@@ -174,10 +206,10 @@ public class CalculatorFrm extends BasicFrm implements
   {
     boolean rv = super.doClose();
     if( rv ) {
-      Main.checkQuit( this );
-    } else {
-      // damit beim erneuten Oeffnen das Eingabefeld leer ist
-      this.fldInput.setText( "" );
+      if( !Main.checkQuit( this ) ) {
+	// damit beim erneuten Oeffnen das Eingabefeld leer ist
+	this.fldInput.setText( "" );
+      }
     }
     return rv;
   }
@@ -370,7 +402,7 @@ public class CalculatorFrm extends BasicFrm implements
 
     panelOutput.setBorder( BorderFactory.createTitledBorder( "Ausgabe" ) );
 
-    this.fldOutput = new JEditorPane( "text/html", defaultText );
+    this.fldOutput = new JEditorPane( "text/html", DEFAULT_TEXT );
     this.fldOutput.setBorder( BorderFactory.createLoweredBevelBorder() );
     this.fldOutput.setEditable( false );
     this.fldOutput.addCaretListener( this );
@@ -412,7 +444,7 @@ public class CalculatorFrm extends BasicFrm implements
 
   private void updOutput()
   {
-    String result = defaultText;
+    String result = DEFAULT_TEXT;
     String text   = this.fldInput.getText();
     if( text != null ) {
       int len = text.length();
@@ -426,7 +458,7 @@ public class CalculatorFrm extends BasicFrm implements
 	      appendResultRow(
 			buf,
 			"Unicode des Zeichen",
-			new Integer( (int) ch ) );
+			(int) ch );
 	    }
 	  }
 	  appendResultRow(
@@ -601,7 +633,7 @@ public class CalculatorFrm extends BasicFrm implements
 	    }
 	    else if( ch > '\u007E' ) {
 	      buf.append( "&#" );
-	      buf.append( String.valueOf( ch ) );
+	      buf.append( (int) ch );
 	      buf.append( (char) ';' );
 	    } else {
 	      buf.append( (char) ch );
@@ -649,4 +681,3 @@ public class CalculatorFrm extends BasicFrm implements
     this.mnuEditPaste.setEnabled( editable && this.clipboardHasText );
   }
 }
-

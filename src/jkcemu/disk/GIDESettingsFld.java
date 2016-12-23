@@ -8,18 +8,38 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.awt.dnd.*;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.dnd.DropTargetContext;
+import java.awt.dnd.DropTargetDragEvent;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.util.*;
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileNameFld;
+import jkcemu.base.OptionDlg;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 
 
 public class GIDESettingsFld extends AbstractSettingsFld
 {
+  private static final String ACTION_HD_NONE   = "hd.none";
+  private static final String ACTION_HD_SELECT = "hd.select";
+
   private static final int DISK_CNT = 2;
 
   private int            popupDiskIdx;
@@ -86,7 +106,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
       if( props != null ) {
 	EmuUtil.setProperty(
 			props,
-			this.propPrefix + "enabled",
+			this.propPrefix + GIDE.PROP_ENABLED,
 			this.btnEnabled.isSelected() );
 	for( int i = 0; i < DISK_CNT; i++ ) {
 	  String       prefix = createPrefix( i );
@@ -94,9 +114,9 @@ public class GIDESettingsFld extends AbstractSettingsFld
 	  if( info != null ) {
 	    File file = this.fileNameFlds[ i ].getFile();
 	    if( file != null ) {
-	      props.setProperty( prefix + "file", file.getPath() );
+	      props.setProperty( prefix + GIDE.PROP_FILE, file.getPath() );
 	    } else {
-	      props.setProperty( prefix + "file", "" );
+	      props.setProperty( prefix + GIDE.PROP_FILE, "" );
 	      if( selected ) {
 		throw new UserInputException(
 		    String.format(
@@ -106,30 +126,30 @@ public class GIDESettingsFld extends AbstractSettingsFld
 	    }
 	    EmuUtil.setProperty(
 			props,
-			prefix + "offset",
+			prefix + GIDE.PROP_OFFSET,
 			this.offsets[ i ] );
 	    EmuUtil.setProperty(
 			props,
-			prefix + "model",
+			prefix + GIDE.PROP_MODEL,
 			info.getFullDiskModel() );
 	    EmuUtil.setProperty(
 			props,
-			prefix + "cylinders",
+			prefix + GIDE.PROP_CYLINDERS,
 			info.getCylinders() );
 	    EmuUtil.setProperty(
 			props,
-			prefix + "heads",
+			prefix + GIDE.PROP_HEADS,
 			info.getHeads() );
 	    EmuUtil.setProperty(
 			props,
-			prefix + "sectors_per_track",
+			prefix + GIDE.PROP_SECTORS_PER_TRACK,
 			info.getSectorsPerTrack() );
 	  } else {
-	    props.setProperty( prefix + "model", "" );
-	    props.setProperty( prefix + "cylinders", "" );
-	    props.setProperty( prefix + "heads", "" );
-	    props.setProperty( prefix + "sectors_per_track", "" );
-	    props.setProperty( prefix + "file", "" );
+	    props.setProperty( prefix + GIDE.PROP_MODEL, "" );
+	    props.setProperty( prefix + GIDE.PROP_CYLINDERS, "" );
+	    props.setProperty( prefix + GIDE.PROP_HEADS, "" );
+	    props.setProperty( prefix + GIDE.PROP_SECTORS_PER_TRACK, "" );
+	    props.setProperty( prefix + GIDE.PROP_FILE, "" );
 	  }
 	}
       }
@@ -166,9 +186,9 @@ public class GIDESettingsFld extends AbstractSettingsFld
 	if( !rv && (e instanceof ActionEvent) ) {
 	  String actionCmd = ((ActionEvent) e).getActionCommand();
 	  if( actionCmd != null ) {
-	    if( actionCmd.startsWith( "harddisk." ) ) {
+	    if( actionCmd.startsWith( GIDE.PROP_HARDDISK_PREFIX ) ) {
 	      rv = true;
-	      if( actionCmd.equals( "harddisk.select" ) ) {
+	      if( actionCmd.equals( ACTION_HD_SELECT ) ) {
 		HardDiskInfo info = HardDiskListDlg.showHardDiskListDlg(
 							this.settingsFrm );
 		if( info != null ) {
@@ -187,7 +207,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
 	      } else {
 		idx = this.popupDiskIdx;
 		if( (idx >= 0) && (idx < this.diskTypes.length) ) {
-		  if( actionCmd.equals( "harddisk.none" ) ) {
+		  if( actionCmd.equals( ACTION_HD_NONE ) ) {
 		    this.diskTypes[ idx ] = null;
 		    this.diskTypeFlds[ idx ].setText( "" );
 		    setFile( idx, null, 0 );
@@ -238,7 +258,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
 	  if( this.fileNameFlds[ i ].isEnabled() ) {
 	    setFile( i, file, 0 );
 	    updFieldsEnabled();
-	    Main.setLastFile( file, "disk" );
+	    Main.setLastFile( file, Main.FILE_GROUP_DISK );
 	    rv = true;
 	    break;
 	  }
@@ -274,22 +294,32 @@ public class GIDESettingsFld extends AbstractSettingsFld
     this.btnEnabled.setSelected(
 		EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "enabled",
+				this.propPrefix + GIDE.PROP_ENABLED,
 				false ) );
     for( int i = 0; i < DISK_CNT; i++ ) {
       String prefix    = createPrefix( i );
-      String diskModel = EmuUtil.getProperty( props, prefix + "model" );
+      String diskModel = EmuUtil.getProperty(
+				props,
+				prefix + GIDE.PROP_MODEL );
       if( !diskModel.isEmpty() ) {
-	int c = EmuUtil.getIntProperty( props, prefix + "cylinders", 0 );
-	int h = EmuUtil.getIntProperty( props, prefix + "heads", 0 );
+	int c = EmuUtil.getIntProperty(
+				props,
+				prefix + GIDE.PROP_CYLINDERS,
+				0 );
+	int h = EmuUtil.getIntProperty(
+				props,
+				prefix + GIDE.PROP_HEADS,
+				0 );
 	int n = EmuUtil.getIntProperty(
 				props,
-				prefix + "sectors_per_track",
+				prefix + GIDE.PROP_SECTORS_PER_TRACK,
 				0 );
 	if( (c > 0) && (h > 0) && (n > 0) ) {
 	  try {
 	    this.diskTypes[ i ] = new HardDiskInfo( null, diskModel, c, h, n );
-	    String fName = EmuUtil.getProperty( props, prefix + "file" );
+	    String fName = EmuUtil.getProperty(
+					props,
+					prefix + GIDE.PROP_FILE );
 	    setFile( i, fName.isEmpty() ? null : new File( fName ), 0 );
 	    this.diskTypeFlds[ i ].setText( this.diskTypes[ i ].toString() );
 	  }
@@ -388,7 +418,11 @@ public class GIDESettingsFld extends AbstractSettingsFld
 
   private String createPrefix( int idx )
   {
-    return String.format( "%sharddisk.%d.", this.propPrefix, idx + 1 );
+    return String.format(
+		"%s%s%d.",
+		this.propPrefix,
+		GIDE.PROP_HARDDISK_PREFIX,
+		idx + 1 );
   }
 
 
@@ -397,7 +431,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
     if( (idx >= 0) && (idx < DISK_CNT) ) {
       File preSelection = this.fileNameFlds[ idx ].getFile();
       if( preSelection == null ) {
-	preSelection = Main.getLastDirFile( "disk" );
+	preSelection = Main.getLastDirFile( Main.FILE_GROUP_DISK );
       }
       int  offset = -1;
       File file   = EmuUtil.showFileOpenDlg(
@@ -446,14 +480,14 @@ public class GIDESettingsFld extends AbstractSettingsFld
 	  }
 	}
 	if( msg != null ) {
-	  BasicDlg.showErrorDlg( this, file.getPath() + ": " + msg );
+	  BaseDlg.showErrorDlg( this, file.getPath() + ": " + msg );
 	  file = null;
 	}
       }
       if( file != null ) {
 	setFile( idx, file, offset );
 	updFieldsEnabled();
-	Main.setLastFile( file, "disk" );
+	Main.setLastFile( file, Main.FILE_GROUP_DISK );
 	fireDataChanged();
       }
     }
@@ -493,11 +527,11 @@ public class GIDESettingsFld extends AbstractSettingsFld
   {
     if( this.popupMenu == null ) {
       this.popupMenu = new JPopupMenu();
-      addToPopupMenu( "Festplatte ausw\u00E4hlen...", "harddisk.select" );
+      addToPopupMenu( "Festplatte ausw\u00E4hlen...", ACTION_HD_SELECT );
       this.popupMenu.addSeparator();
       this.mnuDiskNone = addToPopupMenu(
 				"Festplatte nicht emulieren",
-				"harddisk.none" );
+				ACTION_HD_NONE );
     }
     if( this.mnuDiskNone != null ) {
       this.mnuDiskNone.setEnabled( this.diskTypes[ idx ] != null );
@@ -538,4 +572,3 @@ public class GIDESettingsFld extends AbstractSettingsFld
     }
   }
 }
-

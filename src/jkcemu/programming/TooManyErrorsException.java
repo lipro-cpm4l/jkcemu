@@ -18,4 +18,3 @@ public class TooManyErrorsException extends Exception
     // leer
   }
 }
-

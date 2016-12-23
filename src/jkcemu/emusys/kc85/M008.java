@@ -27,4 +27,3 @@ public class M008 extends KC85JoystickModule
     return "M008";
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,23 @@
 
 package jkcemu.etc;
 
-import java.awt.*;
-import java.awt.image.*;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
+import java.awt.image.IndexColorModel;
 import java.lang.*;
 import java.util.Properties;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.UserInputException;
 
 
 public class Plotter
 {
+  public static final String PROP_PAPER_COLOR = "jkcemu.plotter.paper.color";
+  public static final String PROP_PEN_COLOR   = "jkcemu.plotter.pen.color";
+  public static final String PROP_PEN_THICKNESS
+					= "jkcemu.plotter.pen.thickness";
+
   public static final int DEFAULT_PEN_THICKNESS = 3;
 
   private Color           colorPaper;
@@ -56,7 +64,7 @@ public class Plotter
 
   public void applySettings( Properties props )
   {
-    String text = EmuUtil.getProperty( props, "jkcemu.plotter.paper.color" );
+    String text = EmuUtil.getProperty( props, PROP_PAPER_COLOR );
     if( !text.isEmpty() ) {
       try {
 	setPaperColor( new Color( (int) Long.parseLong( text, 16 ) ) );
@@ -64,7 +72,7 @@ public class Plotter
       catch( NumberFormatException ex ) {}
       catch( UserInputException ex ) {}
     }
-    text = EmuUtil.getProperty( props, "jkcemu.plotter.pen.color" );
+    text = EmuUtil.getProperty( props, PROP_PEN_COLOR );
     if( !text.isEmpty() ) {
       try {
 	setPenColor( new Color( (int) Long.parseLong( text, 16 ) ) );
@@ -72,7 +80,7 @@ public class Plotter
       catch( NumberFormatException ex ) {}
       catch( UserInputException ex ) {}
     }
-    text = EmuUtil.getProperty( props, "jkcemu.plotter.pen.thickness" );
+    text = EmuUtil.getProperty( props, PROP_PEN_THICKNESS );
     if( !text.isEmpty() ) {
       try {
 	int v = Integer.parseInt( text );
@@ -99,6 +107,12 @@ public class Plotter
       this.image = null;
       this.clean = true;
     }
+  }
+
+
+  public BufferedImage getBufferedImage()
+  {
+    return this.image;
   }
 
 
@@ -261,7 +275,6 @@ public class Plotter
   {
     this.plotterFrm = frm;
     if( this.plotterFrm != null ) {
-      this.plotterFrm.setImage( this.image );
       this.plotterFrm.setPenThickness( this.penThickness );
     }
   }
@@ -307,9 +320,6 @@ public class Plotter
 				BufferedImage.TYPE_BYTE_INDEXED,
 				this.colorModel );
       clearPage();
-      if( this.plotterFrm != null ) {
-	this.plotterFrm.setImage( this.image );
-      }
     }
   }
 
@@ -365,4 +375,3 @@ public class Plotter
     return rv;
   }
 }
-

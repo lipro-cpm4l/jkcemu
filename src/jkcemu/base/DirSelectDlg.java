@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2014 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,41 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.EventQueue;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.nio.file.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.tree.*;
+import java.nio.file.Files;
+import java.nio.file.FileSystems;
+import java.nio.file.InvalidPathException;
+import java.nio.file.LinkOption;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.EventObject;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTree;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.event.TreeWillExpandListener;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.DefaultTreeSelectionModel;
+import javax.swing.tree.ExpandVetoException;
+import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 
 
 public class DirSelectDlg
-		extends BasicDlg
+		extends BaseDlg
 		implements TreeSelectionListener, TreeWillExpandListener
 {
   private File                   selectedFile;
@@ -334,7 +357,7 @@ public class DirSelectDlg
       finally {
 	if( entries != null ) {
 	  if( entries instanceof Closeable ) {
-	    EmuUtil.doClose( (Closeable) entries );
+	    EmuUtil.closeSilent( (Closeable) entries );
 	  }
 	}
       }

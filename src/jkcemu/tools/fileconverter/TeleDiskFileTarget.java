@@ -8,10 +8,12 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
 import jkcemu.base.EmuUtil;
-import jkcemu.disk.*;
+import jkcemu.disk.AbstractFloppyDisk;
+import jkcemu.disk.TeleDisk;
 
 
 public class TeleDiskFileTarget extends AbstractConvertTarget

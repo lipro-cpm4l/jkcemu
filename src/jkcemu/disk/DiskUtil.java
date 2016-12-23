@@ -8,15 +8,30 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Frame;
+import java.awt.Window;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 import javax.swing.JOptionPane;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.DeviceIO;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileEntry;
 import jkcemu.text.TextUtil;
 
 
@@ -210,7 +225,7 @@ public class DiskUtil
 		  blockSize = tmpBlkSize;
 		}
 	      } else {
-		rv        = new Boolean( tmp16Bit );
+		rv        = tmp16Bit;
 		blockSize = tmpBlkSize;
 	      }
 	    }
@@ -226,7 +241,7 @@ public class DiskUtil
 		&& ((maxBlkNum16 * DEFAULT_BLOCK_SIZE) >= diskSize)
 		&& ((maxBlkNum16 * halfBlkSize) < diskSize) )
 	    {
-	      blockSize = new Integer( halfBlkSize );
+	      blockSize = halfBlkSize;
 	    }
 	  } else {
 	    // 8-Bit-Blocknummern
@@ -234,7 +249,7 @@ public class DiskUtil
 		&& ((maxBlkNum8 * DEFAULT_BLOCK_SIZE) >= diskSize)
 		&& ((maxBlkNum8 * halfBlkSize) < diskSize) )
 	    {
-	      blockSize = new Integer( halfBlkSize );
+	      blockSize = halfBlkSize;
 	    }
 	  }
 	}
@@ -270,7 +285,7 @@ public class DiskUtil
       }
     }
     if( !rv ) {
-      rv = BasicDlg.showYesNoWarningDlg(
+      rv = BaseDlg.showYesNoWarningDlg(
 		owner,
 		"Die Dateiendung entspricht nicht der f\u00FCr"
 			+ " diesen Dateityp \u00FCblichen Endung.\n"
@@ -470,7 +485,7 @@ public class DiskUtil
       }
       catch( IOException ex ) {}
       finally {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
     return rv;
@@ -705,7 +720,7 @@ public class DiskUtil
       }
     }
     finally {
-      EmuUtil.doClose( rad );
+      EmuUtil.closeSilent( rad );
     }
   }
 
@@ -741,7 +756,7 @@ public class DiskUtil
       }
     }
     finally {
-      EmuUtil.doClose( raf );
+      EmuUtil.closeSilent( raf );
     }
   }
 
@@ -782,9 +797,9 @@ public class DiskUtil
 	      String eName = buf.toString();
 	      Long   value = entrySizes.get( eName );
 	      if( value != null ) {
-		value = new Long( value.longValue() + eLen );
+		value = Long.valueOf( value.longValue() + eLen );
 	      } else {
-		value = new Long( eLen );
+		value = Long.valueOf( eLen );
 	      }
 	      entrySizes.put( eName, value );
 	    }

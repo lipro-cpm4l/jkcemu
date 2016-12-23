@@ -8,70 +8,89 @@
 
 package jkcemu.audio;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
 import java.util.EventObject;
-import java.util.zip.*;
-import javax.sound.sampled.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.TargetDataLine;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JOptionPane;
+import javax.swing.JRadioButton;
+import javax.swing.SwingConstants;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.MyByteArrayOutputStream;
 
 
 public class AudioRecorderFrm
 		extends AbstractAudioFrm
 		implements Runnable
 {
-  public class DataBuf extends ByteArrayOutputStream
-  {
-    public DataBuf( int size )
-    {
-      super( size );
-    }
-
-    public InputStream newInputStream()
-    {
-      return new ByteArrayInputStream( this.buf, 0, this.count );
-    }
-  }
-
-
-  private final static String TEXT_START          = "Start";
-  private final static String TEXT_STOP           = "Stop";
-  private final static String DEFAULT_STATUS_TEXT = "Bereit";
+  private static final String TEXT_START          = "Start";
+  private static final String TEXT_STOP           = "Stop";
+  private static final String DEFAULT_STATUS_TEXT = "Bereit";
+  private static final String HELP_PAGE = "/help/tools/audiorecorder.htm";
 
   private static AudioRecorderFrm instance = null;
 
-  private AudioFormat       audioFmt;
-  private Thread            audioThread;
-  private Mixer             mixer;
-  private DataBuf           dataBuf;
-  private boolean           dataSaved;
-  private boolean           suppressAskDataSaved;
-  private volatile boolean  recording;
-  private volatile boolean  recEnabled;
-  private volatile long     begMillis;
-  private int               sampleRate;
-  private int               sampleSizeInBits;
-  private int               channels;
-  private volatile int      dataLen;
-  private javax.swing.Timer timerDuration;
-  private JLabel            labelDuration;
-  private JLabel            labelDurationValue;
-  private JLabel            labelSampleSize;
-  private JLabel            labelVolume;
-  private JRadioButton      btn8Bit;
-  private JRadioButton      btn16Bit;
-  private JRadioButton      btnMono;
-  private JRadioButton      btnStereo;
-  private JButton           btnStartStop;
-  private JButton           btnPlay;
-  private JButton           btnSave;
-  private JButton           btnHelp;
-  private JButton           btnClose;
+  private AudioFormat             audioFmt;
+  private Thread                  audioThread;
+  private Mixer                   mixer;
+  private VolumeBar               volumeBar;
+  private MyByteArrayOutputStream dataBuf;
+  private boolean                 dataSaved;
+  private boolean                 suppressAskDataSaved;
+  private volatile boolean        recording;
+  private volatile boolean        recEnabled;
+  private volatile long           begMillis;
+  private int                     frameRate;
+  private int                     sampleSizeInBits;
+  private int                     channels;
+  private volatile int            dataLen;
+  private javax.swing.Timer       timerDuration;
+  private JLabel                  labelDuration;
+  private JLabel                  labelDurationValue;
+  private JLabel                  labelMixer;
+  private JLabel                  labelFrameRate;
+  private JLabel                  labelSampleSize;
+  private JLabel                  labelVolume;
+  private JComboBox<String>       comboMixer;
+  private JComboBox<Object>       comboFrameRate;
+  private JRadioButton            btn8Bit;
+  private JRadioButton            btn16Bit;
+  private JRadioButton            btnMono;
+  private JRadioButton            btnStereo;
+  private JButton                 btnStartStop;
+  private JButton                 btnPlay;
+  private JButton                 btnSave;
+  private JButton                 btnHelp;
+  private JButton                 btnClose;
 
 
   public static AudioRecorderFrm open()
@@ -96,7 +115,7 @@ public class AudioRecorderFrm
   {
     Exception      errEx   = null;
     TargetDataLine line    = null;
-    if( (this.sampleRate > 0)
+    if( (this.frameRate > 0)
 	&& (this.sampleSizeInBits > 0)
 	&& (this.channels > 0)
 	&& (this.dataBuf != null) )
@@ -118,7 +137,7 @@ public class AudioRecorderFrm
 	    try {
 	      isSigned = (k == 1);
 	      fmt      = new AudioFormat(
-				(float) this.sampleRate,
+				(float) this.frameRate,
 				this.sampleSizeInBits,
 				this.channels,
 				isSigned,
@@ -167,16 +186,16 @@ public class AudioRecorderFrm
 	     * Bei 16 Bit wird nur das hoechstwertige Byte verwendet.
 	     */
 	    if( isSigned ) {
-	      setVolumeLimits( -128, 127 );
+	      this.volumeBar.setVolumeLimits( -128, 127 );
 	    } else {
-	      setVolumeLimits( 0, 255 );
+	      this.volumeBar.setVolumeLimits( 0, 255 );
 	    }
 
 	    /*
 	     * Puffer fuer 100 ms anlegen und ermitteln,
 	     * welche Bytes davon (Index) das jeweils hoechstwertige ist
 	     */
-	    int bufFrameCnt = this.sampleRate / 10;
+	    int bufFrameCnt = this.frameRate / 10;
 	    if( bufFrameCnt < 1 ) {
 	      bufFrameCnt = 1;
 	    }
@@ -196,15 +215,15 @@ public class AudioRecorderFrm
 		break;
 	      }
 	      out.write( audioBuf );
-	      this.dataLen += bufFrameCnt;
+	      this.dataLen += audioBuf.length;
 
 	      // Anzeige aktualisieren
 	      int idx = hiIdx;
 	      while( idx < audioBuf.length ) {
 		if( isSigned ) {
-		  updVolume( (int) audioBuf[ idx ] );
+		  this.volumeBar.updVolume( (int) audioBuf[ idx ] );
 		} else {
-		  updVolume( ((int) audioBuf[ idx ]) & 0xFF );
+		  this.volumeBar.updVolume( ((int) audioBuf[ idx ]) & 0xFF );
 		}
 		idx += frameSize;
 	      }
@@ -220,8 +239,15 @@ public class AudioRecorderFrm
       catch( Exception ex ) {
 	errEx = ex;
       }
+      catch( OutOfMemoryError e ) {
+	out          = null;
+	this.dataLen = 0;
+	this.dataBuf.resetAndFreeMem();
+	System.gc();
+	errEx = new IOException( AudioUtil.ERROR_RECORDING_OUT_OF_MEMORY );
+      }
       finally {
-	EmuUtil.doClose( out );
+	EmuUtil.closeSilent( out );
 	close( line );
       }
     }
@@ -258,7 +284,7 @@ public class AudioRecorderFrm
     }
     else if( src == this.btnHelp ) {
       rv = true;
-      HelpFrm.open( "/help/tools/audiorecorder.htm" );
+      HelpFrm.open( HELP_PAGE );
     }
     else if( src == this.btnClose ) {
       rv = true;
@@ -299,7 +325,7 @@ public class AudioRecorderFrm
     this.suppressAskDataSaved = false;
     this.dataSaved            = true;
     this.dataLen              = 0;
-    this.sampleRate           = 0;
+    this.frameRate            = 0;
     this.sampleSizeInBits     = 0;
     this.channels             = 0;
     this.begMillis            = -1;
@@ -321,10 +347,12 @@ public class AudioRecorderFrm
 						0, 0 );
 
     // Labels
+    this.labelMixer   = new JLabel( "Ger\u00E4t:" );
     add( this.labelMixer, gbc );
 
+    this.labelFrameRate = new JLabel( "Abtastrate (Hz):" );
     gbc.gridy++;
-    add( this.labelSampleRate, gbc );
+    add( this.labelFrameRate, gbc );
 
     this.labelSampleSize = new JLabel( "Aufl\u00F6sung:" );
     gbc.gridy++;
@@ -342,6 +370,7 @@ public class AudioRecorderFrm
 
 
     // Mixer
+    this.comboMixer   = createMixerComboBox();
     gbc.anchor        = GridBagConstraints.WEST;
     gbc.gridy         = 0;
     gbc.insets.bottom = 0;
@@ -350,8 +379,9 @@ public class AudioRecorderFrm
 
 
     // Abtastrate
+    this.comboFrameRate = createFrameRateComboBox();
     gbc.gridy++;
-    add( this.comboSampleRate, gbc );
+    add( this.comboFrameRate, gbc );
 
 
     // Aufloesung
@@ -396,9 +426,9 @@ public class AudioRecorderFrm
 
 
     // Pegel
-    this.volumeBar.setOrientation( SwingConstants.HORIZONTAL );
-    gbc.fill    = GridBagConstraints.HORIZONTAL;
-    gbc.weightx = 1.0;
+    this.volumeBar = new VolumeBar( SwingConstants.HORIZONTAL );
+    gbc.fill       = GridBagConstraints.HORIZONTAL;
+    gbc.weightx    = 1.0;
     gbc.gridy++;
     add( this.volumeBar, gbc );
 
@@ -478,17 +508,17 @@ public class AudioRecorderFrm
     } else {
       if( this.audioThread == null ) {
 	if( confirmDataSaved() ) {
-	  this.mixer      = getSelectedMixer();
-	  this.sampleRate = getSelectedSampleRate();
-	  if( this.sampleRate <= 0 ) {
-	    this.sampleRate = 44100;
+	  this.mixer     = getSelectedMixer( this.comboMixer );
+	  this.frameRate = getSelectedFrameRate( this.comboFrameRate );
+	  if( this.frameRate <= 0 ) {
+	    this.frameRate = 44100;
 	  }
 	  this.sampleSizeInBits = (this.btn8Bit.isSelected() ? 8 : 16);
 	  this.channels         = (this.btnMono.isSelected() ? 1 : 2);
 	  if( this.dataBuf != null ) {
 	    this.dataBuf.reset();
 	  } else {
-	    this.dataBuf = new DataBuf( 0x100000 );
+	    this.dataBuf = new MyByteArrayOutputStream( 0x100000 );
 	  }
 	  this.dataLen   = 0;
 	  this.dataSaved = false;
@@ -505,7 +535,7 @@ public class AudioRecorderFrm
 	  this.begMillis = -1;
 	  updDuration();
 	  updFieldsEnabled();
-	  setVolumeBarState( true );
+	  this.volumeBar.setVolumeBarState( true );
 	  this.timerDuration.start();
 	  this.btnStartStop.setText( TEXT_STOP );
 	}
@@ -525,11 +555,11 @@ public class AudioRecorderFrm
       try {
 	AudioPlayer.play(
 		this,
-		createAudioInputStream(),
+		createPCMDataSource(),
 		"Wiedergabe der Aufnahme..." );
       }
       catch( Exception ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
   }
@@ -544,19 +574,16 @@ public class AudioRecorderFrm
       File file = EmuUtil.showFileSaveDlg(
 			this,
 			"Sound-Datei speichern",
-			Main.getLastDirFile( "audio" ),
-			AudioUtil.getAudioOutFileFilter() );
+			Main.getLastDirFile( Main.FILE_GROUP_AUDIO ),
+			AudioFile.getFileFilter() );
       if( file != null ) {
-	AudioFileFormat.Type type = AudioUtil.getAudioFileType( this, file );
-	if( type != null ) {
-	  try {
-	    AudioUtil.write( createAudioInputStream(), type, file );
-	    Main.setLastFile( file, "audio" );
-	    this.dataSaved = true;
-	  }
-	  catch( Exception ex ) {
-	    BasicDlg.showErrorDlg( this, ex );
-	  }
+	try {
+	  AudioFile.write( createPCMDataSource(), file );
+	  Main.setLastFile( file, Main.FILE_GROUP_AUDIO );
+	  this.dataSaved = true;
+	}
+	catch( Exception ex ) {
+	  BaseDlg.showErrorDlg( this, ex );
 	}
       }
     }
@@ -621,18 +648,37 @@ public class AudioRecorderFrm
   }
 
 
-  private AudioInputStream createAudioInputStream() throws IOException
+  private PCMDataSource createPCMDataSource() throws IOException
   {
-    return new AudioInputStream(
-		new GZIPInputStream( this.dataBuf.newInputStream() ),
-		this.audioFmt,
-		this.dataLen );
+    return new PCMDataStream(
+			Math.round( this.audioFmt.getSampleRate() ),
+			this.audioFmt.getSampleSizeInBits(),
+			this.audioFmt.getChannels(),
+			this.audioFmt.getEncoding()
+				== AudioFormat.Encoding.PCM_SIGNED,
+			this.audioFmt.isBigEndian(),
+			new GZIPInputStream( this.dataBuf.newInputStream() ),
+			this.dataLen );
+  }
+
+
+  private void setFrameRateState( boolean state )
+  {
+    this.labelFrameRate.setEnabled( state );
+    this.comboFrameRate.setEnabled( state );
+  }
+
+
+  private void setMixerState( boolean state )
+  {
+    this.labelMixer.setEnabled( state );
+    this.comboMixer.setEnabled( state );
   }
 
 
   private void recFinished( Exception ex )
   {
-    setVolumeBarState( false );
+    this.volumeBar.setVolumeBarState( false );
     this.timerDuration.stop();
     this.recEnabled  = false;
     this.audioThread = null;
@@ -645,7 +691,7 @@ public class AudioRecorderFrm
 	state = true;
       }
       if( ex != null ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     } else {
       showError( ex != null ? ex.getMessage() : null );
@@ -658,6 +704,20 @@ public class AudioRecorderFrm
   }
 
 
+  private void showError( String errorText )
+  {
+    if( errorText == null ) {
+      if( this.frameRate > 0 ) {
+	errorText = "Es konnte kein Audiokanal mit den angegebenen"
+				+ " Optionen ge\u00F6ffnet werden.";
+      } else {
+	errorText = "Es konnte kein Audiokanal ge\u00F6ffnet werden.";
+      }
+    }
+    BaseDlg.showErrorDlg( this, errorText );
+  }
+
+
   private void updDuration()
   {
     int seconds = -1;
@@ -667,7 +727,11 @@ public class AudioRecorderFrm
 								/ 1000);
       } else {
 	if( this.audioFmt != null ) {
-	  seconds = this.dataLen / (int) this.audioFmt.getSampleRate();
+	  int bps = (this.audioFmt.getSampleSizeInBits() + 7) / 8;
+	  seconds = this.dataLen
+			/ Math.round( this.audioFmt.getSampleRate() )
+			/ this.audioFmt.getChannels()
+			/ bps;
 	}
       }
     }
@@ -685,7 +749,7 @@ public class AudioRecorderFrm
 	}
       }
       this.labelDurationValue.setText( text );
-      if( minutes >= 45 ) {
+      if( minutes >= AudioUtil.RECORDING_MINUTES_MAX ) {
 	this.recEnabled = false;
       }
     }
@@ -696,7 +760,7 @@ public class AudioRecorderFrm
   {
     boolean state = (this.audioThread == null);
     setMixerState( state );
-    setSampleRateState( state );
+    setFrameRateState( state );
     this.labelSampleSize.setEnabled( state );
     this.btn8Bit.setEnabled( state );
     this.btn16Bit.setEnabled( state );
@@ -708,4 +772,3 @@ public class AudioRecorderFrm
     this.volumeBar.setEnabled( state );
   }
 }
-

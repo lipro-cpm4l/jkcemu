@@ -20,4 +20,3 @@ public class PrgUtil
 		|| (ch == '\uC2A0');
   }
 }
-

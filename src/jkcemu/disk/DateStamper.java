@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,8 +10,10 @@ package jkcemu.disk;
 
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import jkcemu.base.*;
+import java.util.Arrays;
+import java.util.Calendar;
+import jkcemu.base.FileTimesView;
+import jkcemu.base.FileTimesViewFactory;
 
 
 public class DateStamper
@@ -139,7 +141,7 @@ public class DateStamper
 	    synchronized( calendar ) {
 	      calendar.clear();
 	      calendar.set( year, month - 1, day, hour, minute );
-	      millis = new Long( calendar.getTimeInMillis() );
+	      millis = calendar.getTimeInMillis();
 	    }
 	  }
 	}

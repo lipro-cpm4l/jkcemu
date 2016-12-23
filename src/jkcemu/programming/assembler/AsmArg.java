@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,10 @@
 package jkcemu.programming.assembler;
 
 import java.lang.*;
-import java.text.*;
-import jkcemu.programming.*;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import jkcemu.programming.PrgException;
+import jkcemu.programming.PrgUtil;
 
 
 public class AsmArg
@@ -65,7 +67,7 @@ public class AsmArg
   public String createFormattedText()
   {
     CharacterIterator iter = new StringCharacterIterator( this.argText );
-    StringBuffer      buf  = new StringBuffer(
+    StringBuilder     buf  = new StringBuilder(
 					Math.max( iter.getEndIndex(), 16 ) );
 
     char ch = iter.first();
@@ -348,4 +350,3 @@ public class AsmArg
     return rv;
   }
 }
-

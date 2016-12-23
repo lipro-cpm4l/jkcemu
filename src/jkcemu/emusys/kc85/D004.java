@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,9 +11,10 @@ package jkcemu.emusys.kc85;
 import java.lang.*;
 import java.util.Properties;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.ScreenFrm;
 import jkcemu.disk.FloppyDiskDrive;
-import z80emu.*;
+import z80emu.Z80CPU;
+import z80emu.Z80Memory;
 
 
 public class D004 extends AbstractKC85Module
@@ -249,4 +250,3 @@ public class D004 extends AbstractKC85Module
     }
   }
 }
-

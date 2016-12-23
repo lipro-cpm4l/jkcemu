@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,27 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.UnsupportedEncodingException;
 import java.lang.*;
 import java.net.URLEncoder;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import jkcemu.Main;
+import java.util.Arrays;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 
 public class AutoInputSettingsFld
@@ -46,7 +58,7 @@ public class AutoInputSettingsFld
 		boolean     swapKeyCharCase,
 		int         defaultFirstMillisToWait )
   {
-    super( settingsFrm, propPrefix + "autoinput.");
+    super( settingsFrm, propPrefix + AutoInputWorker.PROP_AUTOINPUT_PREFIX );
     this.defaultFirstMillisToWait = defaultFirstMillisToWait;
     this.swapKeyCharCase          = swapKeyCharCase;
     setLayout( new GridBagLayout() );
@@ -210,25 +222,25 @@ public class AutoInputSettingsFld
       AutoInputEntry entry = this.tableModel.getRow( i );
       if( entry != null ) {
 	try {
-	  String prefix = this.propPrefix + String.valueOf( i );
+	  String prefix = String.format( "%s%d.", this.propPrefix, i );
 	  EmuUtil.setProperty(
 			props,
-			prefix + ".wait.millis",
+			prefix + AutoInputEntry.PROP_WAIT_MILLIS,
 			String.valueOf( entry.getMillisToWait() ) );
 	  EmuUtil.setProperty(
 			props,
-			prefix + ".input_text",
+			prefix + AutoInputEntry.PROP_INPUT_TEXT,
 			URLEncoder.encode( entry.getInputText(), "UTF-8" ) );
 	  EmuUtil.setProperty(
 			props,
-			prefix + ".remark",
+			prefix + AutoInputEntry.PROP_REMARK,
 			entry.getRemark() );
 	}
 	catch( UnsupportedEncodingException ex ) {}
       }
     }
     props.setProperty(
-		this.propPrefix + "count",
+		this.propPrefix + AutoInputEntry.PROP_COUNT,
 		Integer.toString( nRows ) );
 
   }

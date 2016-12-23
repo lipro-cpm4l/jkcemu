@@ -10,7 +10,7 @@ package jkcemu.programming.basic;
 
 import java.lang.*;
 import java.util.Properties;
-import jkcemu.base.*;
+import jkcemu.base.EmuSys;
 import jkcemu.programming.PrgOptions;
 import jkcemu.programming.assembler.Z80Assembler;
 import jkcemu.text.TextUtil;
@@ -26,7 +26,70 @@ public class BasicOptions extends PrgOptions
   public static final int DEFAULT_HEAP_SIZE  = 1024;
   public static final int DEFAULT_STACK_SIZE = 128;
 
-  public static final String DEFAULT_APP_NAME = "MYAPP";
+  public static final String DEFAULT_APP_NAME    = "MYAPP";
+  public static final String OPTION_BASIC_PREFIX = OPTION_PREFIX + "basic.";
+
+
+  private static final String OPTION_APP_NAME
+			= OPTION_BASIC_PREFIX + "name";
+
+  private static final String OPTION_APP_LANG
+			= OPTION_BASIC_PREFIX + "language.code";
+
+  private static final String OPTION_BSS_ADDR
+			= OPTION_BASIC_PREFIX + "address.bss";
+
+  private static final String OPTION_CODE_ADDR
+			= OPTION_BASIC_PREFIX + "address.code";
+
+  private static final String OPTION_CHECK_BOUNDS
+			= OPTION_BASIC_PREFIX + "bounds.check";
+
+  private static final String OPTION_CHECK_STACK
+			= OPTION_BASIC_PREFIX + "stack.check";
+
+  private static final String OPTION_BREAK
+			= OPTION_BASIC_PREFIX + "breakoption";
+
+  private static final String OPTION_HEAP_SIZE
+			= OPTION_BASIC_PREFIX + "heap.size";
+
+  private static final String OPTION_INCLUDE_BASIC_LINES
+			= OPTION_BASIC_PREFIX + "include_basic_lines";
+
+  private static final String OPTION_OPEN_FILE_ENABLED
+			= OPTION_BASIC_PREFIX + "open.file.enabled";
+
+  private static final String OPTION_OPEN_CRT_ENABLED
+			= OPTION_BASIC_PREFIX + "open.crt.enabled";
+
+  private static final String OPTION_OPEN_LPT_ENABLED
+			= OPTION_BASIC_PREFIX + "open.lpt.enabled";
+
+  private static final String OPTION_OPEN_VDIP_ENABLED
+			= OPTION_BASIC_PREFIX + "open.vdip.enabled";
+
+  private static final String OPTION_PREFER_REL_JUMPS
+			= OPTION_BASIC_PREFIX + "prefer_relative_jumps";
+
+  private static final String OPTION_TARGET
+			= OPTION_BASIC_PREFIX + "target";
+
+  private static final String OPTION_PRINT_LINE_NUM_ON_ABORT
+			= OPTION_BASIC_PREFIX + "print_line_num_on_abort";
+
+  private static final String OPTION_SHOW_ASM_TEXT
+			= OPTION_BASIC_PREFIX + "show_assembler_source";
+
+  private static final String OPTION_STACK_SIZE
+			= OPTION_BASIC_PREFIX + "stack.size";
+
+  private static final String OPTION_WARN_UNUSED_ITEMS
+			= OPTION_BASIC_PREFIX + "warn_unused_items";
+
+  private static final String VALUE_BREAK_ALWAYS = "always";
+  private static final String VALUE_BREAK_INPUT  = "input";
+  private static final String VALUE_BREAK_NEVER  = "never";
 
   private String         appName;
   private String         langCode;
@@ -104,77 +167,34 @@ public class BasicOptions extends PrgOptions
   {
     BasicOptions options = null;
     if( props != null ) {
-      String appName  = props.getProperty(
-			"jkcemu.programming.basic.name" );
-
-      String langCode = props.getProperty(
-			"jkcemu.programming.basic.language.code" );
-
-      String targetText = props.getProperty(
-			"jkcemu.programming.basic.target" );
-
-      Integer codeBegAddr = getInteger(
-			props,
-			"jkcemu.programming.basic.address.begin.code" );
-
-      Integer bssBegAddr = getInteger(
-			props,
-			"jkcemu.programming.basic.address.begin.bss" );
-
-      Integer heapSize = getInteger(
-			props,
-			"jkcemu.programming.basic.heap.size" );
-
-      Integer stackSize = getInteger(
-			props,
-			"jkcemu.programming.basic.stack.size" );
-
-      Boolean checkStack = getBoolean(
-			props,
-			"jkcemu.programming.basic.stack.check" );
-
-      Boolean checkBounds = getBoolean(
-			props,
-			"jkcemu.programming.basic.bounds.check" );
-
-      Boolean openCrtEnabled = getBoolean(
-			props,
-			"jkcemu.programming.basic.open.crt.enabled" );
-
-      Boolean openLptEnabled = getBoolean(
-			props,
-			"jkcemu.programming.basic.open.lpt.enabled" );
-
-      Boolean openFileEnabled = getBoolean(
-			props,
-			"jkcemu.programming.basic.open.file.enabled" );
-
-      Boolean openVdipEnabled = getBoolean(
-			props,
-			"jkcemu.programming.basic.open.vdip.enabled" );
-
-      Boolean preferRelJumps = getBoolean(
-			props,
-			"jkcemu.programming.basic.prefer_relative_jumps" );
+      String  appName         = props.getProperty( OPTION_APP_NAME );
+      String  langCode        = props.getProperty( OPTION_APP_LANG );
+      String  targetText      = props.getProperty( OPTION_TARGET );
+      String  breakOptionText = props.getProperty( OPTION_BREAK );
+      Integer codeBegAddr     = getInteger( props, OPTION_CODE_ADDR );
+      Integer bssBegAddr      = getInteger( props, OPTION_BSS_ADDR );
+      Integer heapSize        = getInteger( props, OPTION_HEAP_SIZE );
+      Integer stackSize       = getInteger( props, OPTION_STACK_SIZE );
+      Boolean checkStack      = getBoolean( props, OPTION_CHECK_STACK );
+      Boolean checkBounds     = getBoolean( props, OPTION_CHECK_BOUNDS );
+      Boolean openCrtEnabled  = getBoolean( props, OPTION_OPEN_CRT_ENABLED );
+      Boolean openLptEnabled  = getBoolean( props, OPTION_OPEN_LPT_ENABLED );
+      Boolean openFileEnabled = getBoolean( props, OPTION_OPEN_FILE_ENABLED );
+      Boolean openVdipEnabled = getBoolean( props, OPTION_OPEN_VDIP_ENABLED );
+      Boolean preferRelJumps  = getBoolean( props, OPTION_PREFER_REL_JUMPS );
+      Boolean showAsmText     = getBoolean( props, OPTION_SHOW_ASM_TEXT );
 
       Boolean printLineNumOnAbort = getBoolean(
-			props,
-			"jkcemu.programming.basic.print_line_num_on_abort" );
-
-      Boolean showAsmText = getBoolean(
-			props,
-			"jkcemu.programming.basic.show_assembler_source" );
+					props,
+					OPTION_PRINT_LINE_NUM_ON_ABORT );
 
       Boolean inclBasicLines = getBoolean(
-			props,
-			"jkcemu.programming.basic.include_basic_lines" );
+					props,
+					OPTION_INCLUDE_BASIC_LINES );
 
       Boolean warnUnusedItems = getBoolean(
-			props,
-			"jkcemu.programming.basic.warn_unused_items" );
-
-      String breakOptionText = props.getProperty(
-			"jkcemu.programming.basic.breakoption" );
+					props,
+					OPTION_WARN_UNUSED_ITEMS );
 
       if( (appName != null)
 	  || (langCode != null)
@@ -253,9 +273,9 @@ public class BasicOptions extends PrgOptions
 	  options.warnUnusedItems = warnUnusedItems.booleanValue();
 	}
 	if( breakOptionText != null ) {
-	  if( breakOptionText.equals( "never" ) ) {
+	  if( breakOptionText.equals( VALUE_BREAK_NEVER ) ) {
 	    options.breakOption = BreakOption.NEVER;
-	  } else if( breakOptionText.equals( "input" ) ) {
+	  } else if( breakOptionText.equals( VALUE_BREAK_INPUT ) ) {
 	    options.breakOption = BreakOption.INPUT;
 	  } else {
 	    options.breakOption = BreakOption.ALWAYS;
@@ -551,88 +571,88 @@ public class BasicOptions extends PrgOptions
     super.putOptionsTo( props );
     if( props != null ) {
       props.setProperty(
-		"jkcemu.programming.basic.name",
+		OPTION_APP_NAME,
 		this.appName != null ? this.appName : "" );
 
       props.setProperty(
-		"jkcemu.programming.basic.language.code",
+		OPTION_APP_LANG,
 		this.langCode != null ? this.langCode : "" );
 
       props.setProperty(
-		"jkcemu.programming.basic.target",
+		OPTION_TARGET,
 		this.targetText != null ? this.targetText : "" );
 
       props.setProperty(
-		"jkcemu.programming.basic.address.begin.code",
+		OPTION_CODE_ADDR,
                 Integer.toString( this.codeBegAddr ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.address.begin.bss",
-                Integer.toString( this.bssBegAddr ) );
+		OPTION_BSS_ADDR,
+		Integer.toString( this.bssBegAddr ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.heap.size",
+		OPTION_HEAP_SIZE,
                 Integer.toString( this.heapSize ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.stack.size",
+		OPTION_STACK_SIZE,
                 Integer.toString( this.stackSize ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.stack.check",
+		OPTION_CHECK_STACK,
                 Boolean.toString( this.checkStack ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.bounds.check",
+		OPTION_CHECK_BOUNDS,
                 Boolean.toString( this.checkBounds ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.open.crt.enabled",
+		OPTION_OPEN_CRT_ENABLED,
                 Boolean.toString( this.openCrtEnabled ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.open.lpt.enabled",
+		OPTION_OPEN_LPT_ENABLED,
                 Boolean.toString( this.openLptEnabled ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.open.file.enabled",
+		OPTION_OPEN_FILE_ENABLED,
                 Boolean.toString( this.openFileEnabled ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.open.vdip.enabled",
+		OPTION_OPEN_VDIP_ENABLED,
                 Boolean.toString( this.openVdipEnabled ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.prefer_relative_jumps",
+		OPTION_PREFER_REL_JUMPS,
                 Boolean.toString( this.preferRelJumps ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.print_line_num_on_abort",
+		OPTION_PRINT_LINE_NUM_ON_ABORT,
                 Boolean.toString( this.printLineNumOnAbort ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.show_assembler_source",
+		OPTION_SHOW_ASM_TEXT,
                 Boolean.toString( this.showAsmText ) );
 
       props.setProperty(
-		"jkcemu.programming.basic.include_basic_lines",
+		OPTION_INCLUDE_BASIC_LINES,
                 Boolean.toString( this.inclBasicLines ) );
 
       props.setProperty(
-		"jkcemu.programming.warn_unused_items",
+		OPTION_WARN_UNUSED_ITEMS,
 		Boolean.toString( this.warnUnusedItems ) );
 
       if( this.breakOption != null ) {
-	String value = "always";
+	String value = VALUE_BREAK_ALWAYS;
 	switch( this.breakOption ) {
 	  case NEVER:
-	    value = "never";
+	    value = VALUE_BREAK_NEVER;
 	    break;
 	  case INPUT:
-	    value = "input";
+	    value = VALUE_BREAK_INPUT;
 	    break;
 	}
-	props.setProperty( "jkcemu.programming.basic.breakoption", value );
+	props.setProperty( OPTION_BREAK, value );
       }
     }
   }

@@ -13,10 +13,11 @@
 package jkcemu.base;
 
 import java.awt.Dimension;
-import java.awt.event.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
+import java.util.ArrayList;
 
 
 public class FileNameFld extends javax.swing.JTextField

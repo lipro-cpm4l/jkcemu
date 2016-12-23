@@ -10,11 +10,13 @@ jar cvmf Manifest.txt ..\jkcemu.jar ^
   jkcemu\emusys\*.class ^
   jkcemu\emusys\a5105\*.class ^
   jkcemu\emusys\ac1_llc2\*.class ^
+  jkcemu\emusys\bcs3\*.class ^
   jkcemu\emusys\etc\*.class ^
   jkcemu\emusys\huebler\*.class ^
   jkcemu\emusys\kccompact\*.class ^
   jkcemu\emusys\kc85\*.class ^
   jkcemu\emusys\lc80\*.class ^
+  jkcemu\emusys\llc1\*.class ^
   jkcemu\emusys\poly880\*.class ^
   jkcemu\emusys\z1013\*.class ^
   jkcemu\emusys\z9001\*.class ^
@@ -58,6 +60,7 @@ jar cvmf Manifest.txt ..\jkcemu.jar ^
   rom\z9001\*.bin ^
   rom\z9001\*.gz ^
   rom\zxspectrum\*.bin ^
+  images\audio\*.png ^
   images\chess\*.png ^
   images\debug\*.png ^
   images\disk\*.png ^

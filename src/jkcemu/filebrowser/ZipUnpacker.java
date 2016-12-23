@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2015 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,11 +8,21 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.io.*;
+import java.awt.Dialog;
+import java.awt.Window;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.zip.*;
-import jkcemu.base.*;
+import java.util.zip.CRC32;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import jkcemu.base.AbstractThreadDlg;
+import jkcemu.base.EmuUtil;
 
 
 public class ZipUnpacker extends AbstractThreadDlg
@@ -42,7 +52,7 @@ public class ZipUnpacker extends AbstractThreadDlg
       in    = openInputFile( this.srcFile, 1 );
       inZip = new ZipInputStream( new BufferedInputStream( in ) );
       ZipEntry entry = inZip.getNextEntry();
-      while( !this.canceled && (entry != null) ) {
+      while( !this.cancelled && (entry != null) ) {
 	String entryName = entry.getName();
 	if( entryName != null ) {
 	  File outFile = null;
@@ -101,7 +111,7 @@ public class ZipUnpacker extends AbstractThreadDlg
 				new FileOutputStream( outFile ) );
 
 		int b = inZip.read();
-		while( !this.canceled && (b != -1) ) {
+		while( !this.cancelled && (b != -1) ) {
 		  if( crc32 != null ) {
 		    crc32.update( b );
 		  }
@@ -124,7 +134,7 @@ public class ZipUnpacker extends AbstractThreadDlg
 		failed = true;
 	      }
 	      finally {
-		EmuUtil.doClose( out );
+		EmuUtil.closeSilent( out );
 	      }
 	      if( failed ) {
 		outFile.delete();
@@ -157,9 +167,9 @@ public class ZipUnpacker extends AbstractThreadDlg
     }
     finally {
       if( inZip != null ) {
-	EmuUtil.doClose( inZip );
+	EmuUtil.closeSilent( inZip );
       } else {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
     FileBrowserFrm.fireFileChanged(
@@ -176,4 +186,3 @@ public class ZipUnpacker extends AbstractThreadDlg
     this.outDir  = outDir;
   }
 }
-

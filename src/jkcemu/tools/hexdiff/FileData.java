@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2010 Jens Mueller
+ * (c) 2008-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,12 @@
 
 package jkcemu.tools.hexdiff;
 
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
 
 
@@ -69,4 +74,3 @@ public class FileData implements Closeable
     return this.file.getPath();
   }
 }
-

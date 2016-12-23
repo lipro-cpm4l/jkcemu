@@ -218,6 +218,7 @@ Besonders bedanken moechte ich mich bei:
 - Norbert Richter fuer die Bereitstellung von Informationen
   und Software zum AC1
 - Peter Salomon fuer seine Homepage http://www.robotron-net.de
+- Ralf Daeubner fuer seine Hilfe bei der A5105-Emulation
 - Ralf Kaestner fuer die freundliche Genehmigung zur Integration
   der von ihm entwickelten KCNet-Software,
   fuer seine Homepage http://susowa.homeftp.net
@@ -229,7 +230,8 @@ Besonders bedanken moechte ich mich bei:
 - Siegfried Schenk fuer die Bereitstellung von Informationen
   und Software zum LLC2 und zu den SCCH-Modulen
 - Steffen Gruhn fuer seine Hilfe bei der A5105- und KC-compact-Emulation
-- Stephan Linz fuer seine Hilfe bei der PC/M-Emulation
+- Stephan Linz fuer seine Hilfe bei der PC/M-Emulation,
+  der Bereitstellung von Disketten-Images und PC/M-Systemprogrammen
   sowie fuer seine Homepage http://www.li-pro.net
 - Thomas Scherrer fuer seine Z80-Seite http://www.z80.info
 - Torsten Paul fuer seinen Emulator KCemu (http://kcemu.sourceforge.net)

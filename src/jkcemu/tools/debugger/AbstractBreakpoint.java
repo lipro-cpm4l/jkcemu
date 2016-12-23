@@ -9,7 +9,9 @@
 package jkcemu.tools.debugger;
 
 import java.lang.*;
-import z80emu.*;
+import z80emu.Z80Breakpoint;
+import z80emu.Z80CPU;
+import z80emu.Z80InterruptSource;
 
 
 public abstract class AbstractBreakpoint

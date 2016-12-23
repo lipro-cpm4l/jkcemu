@@ -8,18 +8,32 @@
 
 package jkcemu.emusys.etc;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import jkcemu.base.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
+import jkcemu.base.AbstractSettingsFld;
+import jkcemu.base.AutoInputSettingsFld;
+import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.ROMFileSettingsFld;
+import jkcemu.base.SettingsFrm;
+import jkcemu.base.UserInputException;
 import jkcemu.emusys.PCM;
 
 
 public class PCMSettingsFld extends AbstractSettingsFld
 {
-  private static final int DEFAULT_AUTO_ACTION_WAIT_MILLIS = 500;
-
   private JTabbedPane          tabbedPane;
   private JPanel               tabModel;
   private AutoLoadSettingsFld  tabAutoLoad;
@@ -100,7 +114,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
     this.fldAltROM = new ROMFileSettingsFld(
 		settingsFrm,
-		propPrefix + "rom.",
+		propPrefix + PCM.PROP_ROM_PREFIX,
 		"Alternativer ROM-Inhalt (Grundbetriebssystem):" );
     gbcModel.insets.top    = 5;
     gbcModel.insets.bottom = 5;
@@ -109,7 +123,7 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
     this.fldAltFont = new ROMFileSettingsFld(
 				settingsFrm,
-				propPrefix + "font.",
+				propPrefix + PCM.PROP_FONT_PREFIX,
 				"Alternativer Zeichensatz:" );
     gbcModel.gridy++;
     this.tabModel.add( this.fldAltFont, gbcModel );
@@ -117,19 +131,19 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
     // Tab AutoLoad
     this.tabAutoLoad = new AutoLoadSettingsFld(
-					settingsFrm,
-					propPrefix,
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS,
-					true );
+				settingsFrm,
+				propPrefix,
+				PCM.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX,
+				true );
     this.tabbedPane.addTab( "AutoLoad", this.tabAutoLoad );
 
 
     // Tab AutoInput
     this.tabAutoInput = new AutoInputSettingsFld(
-					settingsFrm,
-					propPrefix,
-					PCM.getDefaultSwapKeyCharCase(),
-					DEFAULT_AUTO_ACTION_WAIT_MILLIS );
+				settingsFrm,
+				propPrefix,
+				PCM.DEFAULT_SWAP_KEY_CHAR_CASE,
+				PCM.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
   }
 
@@ -146,14 +160,14 @@ public class PCMSettingsFld extends AbstractSettingsFld
     boolean fdc80x24 = this.btnFDC80x24.isSelected();
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + PCM.PROP_FDC_ENABLDED,
+		this.propPrefix + PCM.PROP_FDC_ENABLED,
 		fdc64x16 || fdc80x24 );
     EmuUtil.setProperty(
 		props,
-		this.propPrefix + PCM.PROP_GRAPHIC_KEY,
+		this.propPrefix + PCM.PROP_GRAPHIC,
 		fdc80x24 ?
-			PCM.PROP_GRAPHIC_VALUE_80X24
-			: PCM.PROP_GRAPHIC_VALUE_64X32 );
+			PCM.VALUE_GRAPHIC_80X24
+			: PCM.VALUE_GRAPHIC_64X32 );
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + PCM.PROP_AUTO_LOAD_BDOS,
@@ -208,13 +222,13 @@ public class PCMSettingsFld extends AbstractSettingsFld
   {
     if( EmuUtil.getBooleanProperty(
 		props,
-		this.propPrefix + PCM.PROP_FDC_ENABLDED,
+		this.propPrefix + PCM.PROP_FDC_ENABLED,
 		false ) )
     {
       if( EmuUtil.getProperty(
 		props,
-		this.propPrefix + PCM.PROP_GRAPHIC_KEY ).equals(
-					PCM.PROP_GRAPHIC_VALUE_80X24 ) )
+		this.propPrefix + PCM.PROP_GRAPHIC ).equals(
+					PCM.VALUE_GRAPHIC_80X24 ) )
       {
 	this.btnFDC80x24.setSelected( true );
       } else {

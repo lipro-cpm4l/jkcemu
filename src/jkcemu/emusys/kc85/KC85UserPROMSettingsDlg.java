@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2015 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,33 @@
 
 package jkcemu.emusys.kc85;
 
-import java.awt.*;
-import java.awt.dnd.*;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetContext;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileNameFld;
 
 
 public class KC85UserPROMSettingsDlg
-			extends BasicDlg
+			extends BaseDlg
 			implements DropTargetListener
 {
   private static String[][] moduleTable = {
@@ -309,7 +324,7 @@ public class KC85UserPROMSettingsDlg
   {
     File file = this.fileNameFld.getFile();
     if( file == null ) {
-      file = Main.getLastDirFile( "rom" );
+      file = Main.getLastDirFile( Main.FILE_GROUP_ROM );
     }
     file = EmuUtil.showFileOpenDlg(
 			this.owner,
@@ -319,7 +334,7 @@ public class KC85UserPROMSettingsDlg
     if( file != null ) {
       this.fileNameFld.setFile( file );
       this.btnOK.setEnabled( true );
-      Main.setLastFile( file, "rom" );
+      Main.setLastFile( file, Main.FILE_GROUP_ROM );
     }
   }
 }

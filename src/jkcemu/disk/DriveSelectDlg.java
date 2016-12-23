@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2014 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,18 +8,26 @@
 
 package jkcemu.disk;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.filechooser.FileSystemView;
 import jkcemu.Main;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.BaseDlg;
 
 
-public class DriveSelectDlg extends BasicDlg
+public class DriveSelectDlg extends BaseDlg
 {
   private static final String[] unixDevFiles = {
 					"/dev/floppy",

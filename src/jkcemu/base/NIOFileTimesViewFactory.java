@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,10 +12,15 @@
 
 package jkcemu.base;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.FileAttributeView;
+import java.nio.file.attribute.FileTime;
 
 
 public class NIOFileTimesViewFactory extends FileTimesViewFactory
@@ -106,6 +111,6 @@ public class NIOFileTimesViewFactory extends FileTimesViewFactory
 
   private static Long toMillis( FileTime fileTime )
   {
-    return fileTime != null ? new Long( fileTime.toMillis() ) : null;
+    return fileTime != null ? fileTime.toMillis() : null;
   }
 }

@@ -8,17 +8,42 @@
 
 package jkcemu.tools.hexdiff;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.awt.event.KeyEvent;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
-import javax.swing.event.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EventObject;
+import java.util.Vector;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JScrollPane;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HTMLViewFrm;
+import jkcemu.base.ReplyIntDlg;
 
 
 public class HexDiffFrm extends HTMLViewFrm implements
@@ -73,7 +98,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 	      }
 	      if( alreadyAdded ) {
 		if( files.size() == 1 ) {
-		  BasicDlg.showInfoDlg(
+		  BaseDlg.showInfoDlg(
 			this,
 			"Die Datei wurde bereits hinzugef\u00FCgt." );
 		}
@@ -87,7 +112,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 		  if( fName == null ) {
 		    fName = curFile.getPath();
 		  }
-		  if( BasicDlg.showOptionDlg(
+		  if( BaseDlg.showOptionDlg(
 			this,
 			fName + ": Datei ist leer.",
 			"Datei leer",
@@ -107,7 +132,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showOpenFileErrorDlg( this, curFile, ex );
+	BaseDlg.showOpenFileErrorDlg( this, curFile, ex );
       }
     }
     return nAdded;
@@ -218,12 +243,12 @@ public class HexDiffFrm extends HTMLViewFrm implements
   {
     boolean rv = super.doClose();
     if( rv ) {
-      Main.checkQuit( this );
-    } else {
-      // damit beim erneuten Oeffnen das Fenster leer ist
-      this.files.clear();
-      this.listFiles.setListData( this.files );
-      updResult();
+      if( !Main.checkQuit( this ) ) {
+	// damit beim erneuten Oeffnen das Fenster leer ist
+	this.files.clear();
+	this.listFiles.setListData( this.files );
+	updResult();
+      }
     }
     return rv;
   }
@@ -335,13 +360,13 @@ public class HexDiffFrm extends HTMLViewFrm implements
   private void doFileAdd()
   {
     java.util.List<File> files = EmuUtil.showMultiFileOpenDlg(
-				this,
-				"Dateien \u00F6ffnen",
-				Main.getLastDirFile( "hexdiff" ) );
+			this,
+			"Dateien \u00F6ffnen",
+			Main.getLastDirFile( Main.FILE_GROUP_HEXDIFF ) );
     if( files != null ) {
       if( !files.isEmpty() ) {
 	if( addFiles( files ) > 0 ) {
-	  Main.setLastFile( files.get( 0 ), "hexdiff" );
+	  Main.setLastFile( files.get( 0 ), Main.FILE_GROUP_HEXDIFF );
 	}
       }
     }
@@ -373,8 +398,8 @@ public class HexDiffFrm extends HTMLViewFrm implements
     ReplyIntDlg dlg  = new ReplyIntDlg(
 			this,
 			"Max. Dateiunterschiede (0 f\u00FCr unendlich):",
-			new Integer( vOld ),
-			new Integer( 0 ),
+			vOld,
+			0,
 			null );
     dlg.setTitle( "Einstellung" );
     dlg.setVisible( true );
@@ -519,9 +544,8 @@ public class HexDiffFrm extends HTMLViewFrm implements
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex.getMessage() );
+	BaseDlg.showErrorDlg( this, ex.getMessage() );
       }
     }
   }
 }
-

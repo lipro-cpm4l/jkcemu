@@ -8,9 +8,14 @@
 
 package jkcemu.tools.fileconverter;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.*;
-import jkcemu.base.*;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileInfo;
+import jkcemu.base.UserInputException;
 
 
 public class KCTapBasicFileTarget extends AbstractConvertTarget
@@ -135,7 +140,7 @@ public class KCTapBasicFileTarget extends AbstractConvertTarget
       out = null;
     }
     finally {
-      EmuUtil.doClose( out );
+      EmuUtil.closeSilent( out );
     }
     return null;
   }

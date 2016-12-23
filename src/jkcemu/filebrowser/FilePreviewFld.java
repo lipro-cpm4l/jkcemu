@@ -8,24 +8,55 @@
 
 package jkcemu.filebrowser;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Dimension;
+import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Image;
+import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.*;
-import java.nio.file.*;
-import java.text.*;
-import java.util.*;
-import java.util.zip.*;
-import javax.sound.sampled.*;
-import javax.swing.*;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.table.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import javax.swing.BorderFactory;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.ListSelectionModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 import jkcemu.Main;
+import jkcemu.audio.AudioFile;
 import jkcemu.audio.AudioUtil;
-import jkcemu.base.*;
-import jkcemu.disk.*;
-import jkcemu.image.*;
+import jkcemu.audio.PCMDataInfo;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.FileEntry;
+import jkcemu.base.FileInfo;
+import jkcemu.base.FileTableModel;
+import jkcemu.disk.AbstractFloppyDisk;
+import jkcemu.disk.DiskUtil;
+import jkcemu.image.ImgEntry;
+import jkcemu.image.ImgLoader;
+import jkcemu.image.ImgUtil;
 
 
 public class FilePreviewFld extends JPanel
@@ -33,6 +64,11 @@ public class FilePreviewFld extends JPanel
 					MouseListener,
 					Runnable
 {
+  private static final String CARD_NAME_FILE_TABLE = "file.table";
+  private static final String CARD_NAME_IMAGE      = "image";
+  private static final String CARD_NAME_TEXT       = "text";
+  private static final String CARD_NAME_EMPTY      = "empty";
+
   private Frame          owner;
   private long           maxFileSize;
   private Object         lockMonitor;
@@ -72,10 +108,10 @@ public class FilePreviewFld extends JPanel
     this.detailsFld = new JPanel( this.cardLayout );
     add( this.detailsFld, BorderLayout.CENTER );
 
-    this.detailsFld.add( new JPanel(), "empty" );
+    this.detailsFld.add( new JPanel(), CARD_NAME_EMPTY );
 
     this.imageCard = new ImageCard();
-    this.detailsFld.add( this.imageCard, "image" );
+    this.detailsFld.add( this.imageCard, CARD_NAME_IMAGE );
 
     this.textArea = new JTextArea();
     this.textArea.setBorder( BorderFactory.createLineBorder(
@@ -84,7 +120,7 @@ public class FilePreviewFld extends JPanel
     this.textArea.setEditable( false );
     this.textArea.setFont( new Font( Font.MONOSPACED, Font.PLAIN, 9 ) );
     this.textArea.setPreferredSize( new Dimension( 1, 1 ) );
-    this.detailsFld.add( this.textArea, "text" );
+    this.detailsFld.add( this.textArea, CARD_NAME_TEXT );
 
     this.fileTableModel = new FileTableModel(
 				FileTableModel.Column.NAME,
@@ -102,7 +138,7 @@ public class FilePreviewFld extends JPanel
 			this.fileTable,
 			JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
 			JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED ),
-		"file.table" );
+		CARD_NAME_FILE_TABLE );
 
     TableCellRenderer renderer = new FileTableCellRenderer();
     this.fileTable.setDefaultRenderer( Number.class, renderer );
@@ -232,9 +268,7 @@ public class FilePreviewFld extends JPanel
 	    if( file != null ) {
 	      long lastModified = file.lastModified();
 	      if( lastModified > 0 ) {
-		infoItems.put(
-			FileInfoFld.Item.LAST_MODIFIED,
-			new Long( lastModified ) );
+		infoItems.put( FileInfoFld.Item.LAST_MODIFIED, lastModified );
 	      }
 	      String fName = file.getName();
 	      if( fName != null ) {
@@ -247,7 +281,7 @@ public class FilePreviewFld extends JPanel
 			infoItems,
 			fileNode.children(),
 			sortCaseSensitive );
-		cardName = "file.table";
+		cardName = CARD_NAME_FILE_TABLE;
 	      }
 	      Path path = fileNode.getPath();
 	      if( path != null ) {
@@ -271,16 +305,14 @@ public class FilePreviewFld extends JPanel
 		} else {
 		  infoItems.put( FileInfoFld.Item.TYPE, "Datei" );
 		}
-		infoItems.put(
-			FileInfoFld.Item.SIZE,
-			new Long( file.length() ) );
+		infoItems.put( FileInfoFld.Item.SIZE, file.length() );
 
 		FileCheckResult checkResult = fileNode.getCheckResult();
 		if( checkResult.isAudioFile() ) {
 		  addAudioInfo( infoItems, file );
 		} else if( checkResult.isImageFile() ) {
 		  if( addImageInfo( infoItems, file, maxFileSize ) ) {
-		    cardName = "image";
+		    cardName = CARD_NAME_IMAGE;
 		  }
 		} else if( checkResult.isPlainDiskFile() ) {
 		  if( addPlainDiskInfo(
@@ -292,7 +324,7 @@ public class FilePreviewFld extends JPanel
 				maxFileSize,
 				sortCaseSensitive ) )
 		  {
-		    cardName = "file.table";
+		    cardName = CARD_NAME_FILE_TABLE;
 		  }
 		} else if( checkResult.isNonPlainDiskFile() ) {
 		  if( checkFileSize( file.length(), maxFileSize ) ) {
@@ -307,14 +339,14 @@ public class FilePreviewFld extends JPanel
 				checkResult.isCompressedFile(),
 				disk,
 				sortCaseSensitive );
-			cardName = "file.table";
+			cardName = CARD_NAME_FILE_TABLE;
 		      }
 		    }
 		    catch( IOException ex ) {}
 		  }
 		} else if( checkResult.isTextFile() ) {
 		  if( addTextInfo( infoItems, file, maxFileSize ) ) {
-		    cardName = "text";
+		    cardName = CARD_NAME_TEXT;
 		  }
 		} else if( checkResult.isArchiveFile() ) {
 		  if( addArchiveInfo(
@@ -323,7 +355,7 @@ public class FilePreviewFld extends JPanel
 				maxFileSize,
 				sortCaseSensitive ) )
 		  {
-		    cardName = "file.table";
+		    cardName = CARD_NAME_FILE_TABLE;
 		  }
 		} else {
 		  FileInfo fileInfo = checkResult.getFileInfo();
@@ -411,82 +443,29 @@ public class FilePreviewFld extends JPanel
 			Map<FileInfoFld.Item,Object> infoItems,
 			File                         file )
   {
-    boolean gzip = EmuUtil.isGZipFile( file );
-    
-    // AudioFileFormat ermitteln
-    BufferedInputStream bIn  = null;
-    AudioInputStream    aIn  = null;
-    AudioFileFormat     fFmt = null;
+    boolean     gzip = EmuUtil.isGZipFile( file );
+    PCMDataInfo info = null;
     try {
-      if( gzip ) {
-	bIn  = EmuUtil.openBufferedOptionalGZipFile( file );
-	fFmt = AudioSystem.getAudioFileFormat( bIn );
-      } else {
-	fFmt = AudioSystem.getAudioFileFormat( file );
-      }
-    }
-    catch( UnsupportedAudioFileException ex1 ) {}
-    catch( IOException ex2 ) {}
-    finally {
-      EmuUtil.doClose( aIn );
-      EmuUtil.doClose( bIn );
-      aIn = null;
-      bIn = null;
-    }
-
-    // AudioFormat ermitteln
-    try {
-      if( gzip ) {
-	bIn = EmuUtil.openBufferedOptionalGZipFile( file );
-	aIn = AudioSystem.getAudioInputStream( bIn );
-      } else {
-	aIn = AudioSystem.getAudioInputStream( file );
-      }
-      if( aIn != null ) {
-	AudioFormat aFmt = aIn.getFormat();
-	if( aFmt != null ) {
-	  infoItems.put(
+      info = AudioFile.getInfo( file );
+      if( info != null ) {
+	infoItems.put(
 		FileInfoFld.Item.TYPE,
 		gzip ? "Komprimierte Sound-Datei" : "Sound-Datei" );
-	  String fmtText = AudioUtil.getAudioFormatText( aFmt );
-	  if( fmtText != null ) {
-	    if( !fmtText.isEmpty() ) {
-	      infoItems.put( FileInfoFld.Item.FORMAT, fmtText );
-	    }
+	String fmtText = AudioUtil.getAudioFormatText( info );
+	if( fmtText != null ) {
+	  if( !fmtText.isEmpty() ) {
+	    infoItems.put( FileInfoFld.Item.FORMAT, fmtText );
 	  }
-	  if( fFmt != null ) {
-	    Object author = fFmt.getProperty( "author" );
-	    if( author != null ) {
-	      infoItems.put( FileInfoFld.Item.AUTHOR, author );
-	    }
-	    Object title = fFmt.getProperty( "title" );
-	    if( title != null ) {
-	      infoItems.put( FileInfoFld.Item.TITLE, title );
-	    }
-	    Object date = fFmt.getProperty( "date" );
-	    if( date != null ) {
-	      infoItems.put( FileInfoFld.Item.DATE, date );
-	    }
-	    Object comment = fFmt.getProperty( "comment" );
-	    if( comment != null ) {
-	      infoItems.put( FileInfoFld.Item.COMMENT, comment );
-	    }
-	    infoItems.put(
-			FileInfoFld.Item.DURATION,
-			new Double( (double) fFmt.getFrameLength()
-						/ aFmt.getFrameRate() ) );
-	  }
+	}
+	long frameCount = info.getFrameCount();
+	if( frameCount > 0 ) {
+	  infoItems.put(
+		FileInfoFld.Item.DURATION,
+		(double) frameCount / (double) info.getFrameRate() );
 	}
       }
     }
-    catch( UnsupportedAudioFileException ex1 ) {}
     catch( IOException ex2 ) {}
-    finally {
-      EmuUtil.doClose( aIn );
-      EmuUtil.doClose( bIn );
-      aIn = null;
-      bIn = null;
-    }
   }
 
 
@@ -518,7 +497,7 @@ public class FilePreviewFld extends JPanel
 	catch( NoSuchElementException ex ) {}
 	catch( IOException ex ) {}
 	finally {
-	  EmuUtil.doClose( in );
+	  EmuUtil.closeSilent( in );
 	}
 	rv = true;
       }
@@ -549,7 +528,7 @@ public class FilePreviewFld extends JPanel
 	}
 	catch( IOException ex ) {}
 	finally {
-	  EmuUtil.doClose( in );
+	  EmuUtil.closeSilent( in );
 	}
 	rv = true;
       }
@@ -640,7 +619,10 @@ public class FilePreviewFld extends JPanel
 	if( image != null ) {
 	  ImgUtil.ensureImageLoaded( this, image );
 	} else {
-	  image = ImgLoader.load( file );
+	  ImgEntry entry = ImgLoader.load( file );
+	  if( entry != null ) {
+	    image = entry.getImage();
+	  }
 	}
 	if( image != null ) {
 	  infoItems.put( FileInfoFld.Item.TYPE, "Bilddatei" );
@@ -650,12 +632,6 @@ public class FilePreviewFld extends JPanel
 	    infoItems.put(
 			FileInfoFld.Item.FORMAT,
 			String.format( "%dx%d Pixel", w, h ) );
-	  }
-	  Object date = image.getProperty( "date", this );
-	  if( date != null ) {
-	    if( !date.equals( Image.UndefinedProperty ) ) {
-	      infoItems.put( FileInfoFld.Item.DATE, date );
-	    }
 	  }
 	  Object comment = image.getProperty( "comment", this );
 	  if( comment != null ) {
@@ -750,7 +726,7 @@ public class FilePreviewFld extends JPanel
     }
     catch( Exception ex ) {}
     finally {
-      EmuUtil.doClose( in );
+      EmuUtil.closeSilent( in );
     }
     return rv;
   }
@@ -773,8 +749,7 @@ public class FilePreviewFld extends JPanel
     this.headerFld.setValues( infoItems, addonLines );
     this.cardLayout.show(
 		this.detailsFld,
-		cardName != null ? cardName : "empty" );
+		cardName != null ? cardName : CARD_NAME_EMPTY );
     invalidate();
   }
 }
-

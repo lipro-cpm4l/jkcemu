@@ -8,20 +8,35 @@
 
 package jkcemu.emusys;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.lang.*;
-import java.util.*;
-import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.emusys.etc.LLC1KeyboardFld;
-import z80emu.*;
+import java.util.Arrays;
+import java.util.Properties;
+import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuMemView;
+import jkcemu.base.EmuSys;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.SaveDlg;
+import jkcemu.base.SourceUtil;
+import jkcemu.emusys.llc1.LLC1KeyboardFld;
+import z80emu.Z80CPU;
+import z80emu.Z80CTC;
+import z80emu.Z80InterruptSource;
+import z80emu.Z80PIO;
 
 
-public class LLC1 extends EmuSys implements
-					Z80MaxSpeedListener,
-					Z80TStatesListener
+public class LLC1 extends EmuSys
 {
+  public static final String SYSNAME     = "LLC1";
+  public static final String PROP_PREFIX = "jkcemu.llc1.";
+
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 500;
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = true;
+
   private static final int DISPLAY_DISTANCE = 30;
 
   private static byte[] rom0000 = null;
@@ -50,7 +65,7 @@ public class LLC1 extends EmuSys implements
 
   public LLC1( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.llc1." );
+    super( emuThread, props, PROP_PREFIX );
     if( rom0000 == null ) {
       rom0000 = readResource( "/rom/llc1/llc1mon.bin" );
     }
@@ -121,63 +136,6 @@ public class LLC1 extends EmuSys implements
   }
 
 
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    int maxSpeedKHz          = cpu.getMaxSpeedKHz();
-    this.displayCheckTStates = maxSpeedKHz * 50;
-    synchronized( this.keyboardMatrix ) {
-      this.keyAlphaTStates = maxSpeedKHz * 1000;	// 1 Sekunde
-      this.keyStartTStates = maxSpeedKHz * 10;		// 1/100 Sekunde
-    }
-  }
-
-
-	/* --- Z80TStatesListener --- */
-
-  @Override
-  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
-  {
-    this.ctc.z80TStatesProcessed( cpu, tStates );
-    if( this.displayCheckTStates > 0 ) {
-      this.curDisplayTStates += tStates;
-      if( this.curDisplayTStates > this.displayCheckTStates ) {
-	boolean dirty = false;
-	synchronized( this.digitValues ) {
-	  for( int i = 0; i < this.digitValues.length; i++ ) {
-	    if( this.digitStatus[ i ] > 0 ) {
-	      --this.digitStatus[ i ];
-	    } else {
-	      if( this.digitValues[ i ] != 0 ) {
-		this.digitValues[ i ] = 0;
-		dirty = true;
-	      }
-	    }
-	  }
-	}
-	if( dirty ) {
-	  this.screenFrm.setScreenDirty( true );
-	}
-	this.curDisplayTStates = 0;
-      }
-    }
-    if( (this.keyAlphaTStateCounter > 0)
-	|| (this.keyStartTStateCounter > 0) )
-    {
-      synchronized( this.keyboardMatrix ) {
-	if( this.keyAlphaTStateCounter > 0 ) {
-	  this.keyAlphaTStateCounter -= tStates;
-	}
-	if( this.keyStartTStateCounter > 0 ) {
-	  this.keyStartTStateCounter -= tStates;
-	}
-      }
-    }
-  }
-
-
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -185,7 +143,7 @@ public class LLC1 extends EmuSys implements
   {
     return EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( "LLC1" );
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
   }
 
 
@@ -475,14 +433,14 @@ public class LLC1 extends EmuSys implements
   @Override
   public String getTitle()
   {
-    return "LLC1";
+    return SYSNAME;
   }
 
 
   @Override
   public boolean getSwapKeyCharCase()
   {
-    return true;
+    return DEFAULT_SWAP_KEY_CHAR_CASE;
   }
 
 
@@ -953,6 +911,7 @@ public class LLC1 extends EmuSys implements
   @Override
   public void reset( EmuThread.ResetLevel resetLevel, Properties props )
   {
+    super.reset( resetLevel, props );
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ramStatic, props );
       fillRandom( this.ramVideo );
@@ -1137,6 +1096,62 @@ public class LLC1 extends EmuSys implements
 	case 3:
 	  this.pio2.writeControlB( value );
 	  break;
+      }
+    }
+  }
+
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    super.z80MaxSpeedChanged( cpu );
+
+    int maxSpeedKHz          = cpu.getMaxSpeedKHz();
+    this.displayCheckTStates = maxSpeedKHz * 50;
+    synchronized( this.keyboardMatrix ) {
+      this.keyAlphaTStates = maxSpeedKHz * 1000;	// 1 Sekunde
+      this.keyStartTStates = maxSpeedKHz * 10;		// 1/100 Sekunde
+    }
+  }
+
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    super.z80TStatesProcessed( cpu, tStates );
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+    if( this.displayCheckTStates > 0 ) {
+      this.curDisplayTStates += tStates;
+      if( this.curDisplayTStates > this.displayCheckTStates ) {
+	boolean dirty = false;
+	synchronized( this.digitValues ) {
+	  for( int i = 0; i < this.digitValues.length; i++ ) {
+	    if( this.digitStatus[ i ] > 0 ) {
+	      --this.digitStatus[ i ];
+	    } else {
+	      if( this.digitValues[ i ] != 0 ) {
+		this.digitValues[ i ] = 0;
+		dirty = true;
+	      }
+	    }
+	  }
+	}
+	if( dirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+	this.curDisplayTStates = 0;
+      }
+    }
+    if( (this.keyAlphaTStateCounter > 0)
+	|| (this.keyStartTStateCounter > 0) )
+    {
+      synchronized( this.keyboardMatrix ) {
+	if( this.keyAlphaTStateCounter > 0 ) {
+	  this.keyAlphaTStateCounter -= tStates;
+	}
+	if( this.keyStartTStateCounter > 0 ) {
+	  this.keyStartTStateCounter -= tStates;
+	}
       }
     }
   }

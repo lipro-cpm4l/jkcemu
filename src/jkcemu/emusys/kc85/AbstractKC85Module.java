@@ -192,4 +192,3 @@ public abstract class AbstractKC85Module
     return 0;
   }
 }
-

@@ -11,13 +11,23 @@ package jkcemu.emusys;
 import java.awt.event.KeyEvent;
 import java.lang.*;
 import java.util.Properties;
-import jkcemu.base.*;
+import jkcemu.base.CharRaster;
+import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.huebler.AbstractHueblerMC;
-import z80emu.*;
+import z80emu.Z80MemView;
+import z80emu.Z80PIO;
 
 
 public class HueblerEvertMC extends AbstractHueblerMC
 {
+  public static final String SYSNAME     = "HueblerEvertMC";
+  public static final String SYSTEXT     = "H\u00FCbler/Evert-MC";
+  public static final String PROP_PREFIX = "jkcemu.hemc.";
+
+  public static final int     DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 4000;
+  public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE            = true;
+
   private static final String[] sysCallNames = {
 			"BEGIN", "CI",    "RI",   "COE",
 			"POE",   "LOE",   "CSTS", "CRI",
@@ -33,31 +43,22 @@ public class HueblerEvertMC extends AbstractHueblerMC
 			'\u00F6', '\u00DC', '\u00FC', '\u2192',
 			'\u221A', '\u00B2', '\u00A3', '\u00A5' };
 
-  private static byte[] hemcFontBytes = null;
-  private static byte[] monBytes      = null;
+  private static byte[] hemcFont = null;
+  private static byte[] mon21    = null;
 
   private byte[] fontBytes;
   private byte[] ramVideo;
   private byte[] ramStatic;
+  private byte[] osBytes;
+  private String osFile;
   private Z80PIO pio2;
 
 
   public HueblerEvertMC( EmuThread emuThread, Properties props )
   {
-    super( emuThread, props, "jkcemu.hemc." );
-    this.fontBytes = readFontByProperty(
-				props,
-				this.propPrefix + "font.file",
-				0x0800 );
-    if( this.fontBytes == null ) {
-      if( hemcFontBytes == null ) {
-	hemcFontBytes = readResource( "/rom/huebler/hemcfont.bin" );
-      }
-      this.fontBytes = hemcFontBytes;
-    }
-    if( monBytes == null ) {
-      monBytes = readResource( "/rom/huebler/mon21.bin" );
-    }
+    super( emuThread, props, PROP_PREFIX );
+    this.osBytes   = null;
+    this.osFile    = null;
     this.ramVideo  = new byte[ 0x0800 ];
     this.ramStatic = new byte[ 0x0400 ];
     this.pio2      = new Z80PIO( "PIO (E/A-Adressen 10h-13h)" );
@@ -67,6 +68,9 @@ public class HueblerEvertMC extends AbstractHueblerMC
 					this.pio,
 					this.pio2 );
     checkAddPCListener( props );
+    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
+      loadROMs( props );
+    }
   }
 
 
@@ -83,7 +87,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
   {
     return EmuUtil.getProperty(
 			props,
-			"jkcemu.system" ).equals( "HueblerEvertMC" );
+			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
   }
 
 
@@ -92,6 +96,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
   {
     super.applySettings( props );
     checkAddPCListener( props );
+    loadFont( props );
   }
 
 
@@ -182,9 +187,11 @@ public class HueblerEvertMC extends AbstractHueblerMC
       }
     }
     else if( (addr >= 0xF000) && (addr < 0xFC00) ) {
-      int idx = addr - 0xF000;
-      if( idx < monBytes.length ) {
-	rv = (int) monBytes[ idx ] & 0xFF;
+      if( this.osBytes != null ) {
+	int idx = addr - 0xF000;
+	if( idx < this.osBytes.length ) {
+	  rv = (int) this.osBytes[ idx ] & 0xFF;
+	}
       }
     }
     else if( addr >= 0xFC00 ) {
@@ -210,7 +217,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
     int ch  = -1;
     int idx = (chY * 64) + chX;
     if( (idx >= 0) && (idx < this.ramVideo.length) ) {
-      if( this.fontBytes == hemcFontBytes ) {
+      if( this.fontBytes == hemcFont ) {
 	// integrierter Zeichensatz
 	int b = (int) this.ramVideo[ idx ] & 0x7F;	// B7=1: invertiert
 	if( (b >= 0) && (b < charToUnicode.length) ) {
@@ -248,7 +255,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
   @Override
   public String getTitle()
   {
-    return "H\u00FCbler/Evert-MC";
+    return SYSTEXT;
   }
 
 
@@ -414,6 +421,9 @@ public class HueblerEvertMC extends AbstractHueblerMC
     if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
       initSRAM( this.ramStatic, props );
       fillRandom( this.ramVideo );
+      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
+	loadROMs( props );
+      }
     }
   }
 
@@ -450,7 +460,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
   @Override
   public boolean shouldAskConvertScreenChar()
   {
-    return this.fontBytes != hemcFontBytes;
+    return this.fontBytes != hemcFont;
   }
 
 
@@ -492,7 +502,37 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
   private void checkAddPCListener( Properties props )
   {
-    checkAddPCListener( props, this.propPrefix + "catch_print_calls" );
+    checkAddPCListener( props, this.propPrefix + PROP_CATCH_PRINT_CALLS );
+  }
+
+
+  private void loadFont( Properties props )
+  {
+    this.fontBytes = readFontByProperty(
+			props,
+			this.propPrefix + PROP_FONT_PREFIX + PROP_FILE,
+			0x0800 );
+    if( this.fontBytes == null ) {
+      if( hemcFont == null ) {
+	hemcFont = readResource( "/rom/huebler/hemcfont.bin" );
+      }
+      this.fontBytes = hemcFont;
+    }
+  }
+
+
+  private void loadROMs( Properties props )
+  {
+    this.osFile = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_OS_PREFIX + PROP_FILE );
+    this.osBytes = readROMFile( this.osFile, 0x0C00, "Monitorprogramm" );
+    if( this.osBytes == null ) {
+      if( mon21 == null ) {
+	mon21 = readResource( "/rom/huebler/mon21.bin" );
+      }
+      this.osBytes = mon21;
+    }
+    loadFont( props );
   }
 }
-

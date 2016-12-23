@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,24 @@
 
 package jkcemu.image;
 
-import java.awt.*;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.Window;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import jkcemu.Main;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
 
 
-public class RoundCornersDlg extends BasicDlg
+public class RoundCornersDlg extends BaseDlg
 {
   private int      numTopPixels;
   private int      numBottomPixels;
@@ -59,7 +68,7 @@ public class RoundCornersDlg extends BasicDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    add( new Label( "Obere Ecken:" ), gbc );
+    add( new JLabel( "Obere Ecken:" ), gbc );
 
     this.spinnerTopPixels = new JSpinner(
 			new SpinnerNumberModel(
@@ -67,16 +76,18 @@ public class RoundCornersDlg extends BasicDlg
 				0,
 				ImgUtil.ROUND_PIXELS_MAX,
 				1 ) );
+    gbc.insets.left = 0;
     gbc.gridx++;
     add( this.spinnerTopPixels, gbc );
 
     gbc.gridx++;
-    add( new Label( "Pixel" ), gbc );
+    add( new JLabel( "Pixel" ), gbc );
 
-    gbc.insets.top = 0;
-    gbc.gridx      = 0;
+    gbc.insets.top  = 0;
+    gbc.insets.left = 5;
+    gbc.gridx       = 0;
     gbc.gridy++;
-    add( new Label( "Untere Ecken:" ), gbc );
+    add( new JLabel( "Untere Ecken:" ), gbc );
 
     this.spinnerBottomPixels = new JSpinner(
 			new SpinnerNumberModel(
@@ -84,15 +95,17 @@ public class RoundCornersDlg extends BasicDlg
 				0,
 				ImgUtil.ROUND_PIXELS_MAX,
 				1 ) );
+    gbc.insets.left = 0;
     gbc.gridx++;
     add( this.spinnerBottomPixels, gbc );
 
     gbc.gridx++;
-    add( new Label( "Pixel" ), gbc );
+    add( new JLabel( "Pixel" ), gbc );
 
 
     // Knoepfe
     JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    gbc.insets.top  = 10;
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
     gbc.gridx       = 0;
     gbc.gridy++;
@@ -153,22 +166,9 @@ public class RoundCornersDlg extends BasicDlg
 
   private void doApply()
   {
-    this.numTopPixels    = getInt( this.spinnerTopPixels );
-    this.numBottomPixels = getInt( this.spinnerBottomPixels );
+    this.numTopPixels    = EmuUtil.getInt( this.spinnerTopPixels );
+    this.numBottomPixels = EmuUtil.getInt( this.spinnerBottomPixels );
     doClose();
-  }
-
-
-  private static int getInt( JSpinner spinner )
-  {
-    int rv = 0;
-    Object o = spinner.getValue();
-    if( o != null ) {
-      if( o instanceof Number ) {
-	rv = ((Number) o).intValue();
-      }
-    }
-    return rv;
   }
 }
 

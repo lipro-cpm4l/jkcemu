@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2014 Jens Mueller
+ * (c) 2011-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,21 @@
 
 package jkcemu.base;
 
-import java.awt.*;
-import java.awt.dnd.*;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.dnd.DropTargetContext;
+import java.awt.dnd.DropTargetDragEvent;
 import java.io.File;
 import java.lang.*;
-import java.util.*;
-import javax.swing.*;
+import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import jkcemu.Main;
-import jkcemu.base.*;
 
 
 public class RAMFloppySettingsFld extends AbstractSettingsFld
@@ -122,8 +129,8 @@ public class RAMFloppySettingsFld extends AbstractSettingsFld
 		boolean    selected ) throws UserInputException
   {
     if( props != null ) {
-      props.remove( this.propPrefix + "enabled" );
-      props.remove( this.propPrefix + "kbyte" );
+      props.remove( this.propPrefix + RAMFloppy.PROP_ENABLED );
+      props.remove( this.propPrefix + RAMFloppy.PROP_KBYTE );
       if( this.comboSize != null ) {
 	int kb = 0;
 	switch( this.comboSize.getSelectedIndex() ) {
@@ -137,17 +144,20 @@ public class RAMFloppySettingsFld extends AbstractSettingsFld
 	    kb = 2048;
 	    break;
 	}
-	EmuUtil.setProperty( props, this.propPrefix + "kbyte", kb );
+	EmuUtil.setProperty(
+			props,
+			this.propPrefix + RAMFloppy.PROP_KBYTE,
+			kb );
       } else if( this.btnRF != null ) {
 	EmuUtil.setProperty(
 			props,
-			this.propPrefix + "enabled",
+			this.propPrefix + RAMFloppy.PROP_ENABLED,
 			Boolean.toString( this.btnRF.isSelected() ) );
       }
 
       File file = this.fileNameFld.getFile();
       props.setProperty(
-		this.propPrefix + "file",
+		this.propPrefix + RAMFloppy.PROP_FILE,
 		file != null ? file.getPath() : "" );
     }
   }
@@ -167,7 +177,7 @@ public class RAMFloppySettingsFld extends AbstractSettingsFld
       else if( src == this.btnSelect ) {
 	File file = selectFile(
 			"RAM-Floppy-Abbilddatei ausw\u00E4hlen",
-			"ramfloppy",
+			Main.FILE_GROUP_RF,
 			this.fileNameFld.getFile(),
 			EmuUtil.getBinaryFileFilter() );
 	if( file != null ) {
@@ -217,7 +227,7 @@ public class RAMFloppySettingsFld extends AbstractSettingsFld
     if( file != null ) {
       this.fileNameFld.setFile( file );
       this.btnRemove.setEnabled( this.labelFile.isEnabled() );
-      Main.setLastFile( file, "ramfloppy" );
+      Main.setLastFile( file, Main.FILE_GROUP_RF );
       fireDataChanged();
       rv = true;
     }
@@ -245,11 +255,13 @@ public class RAMFloppySettingsFld extends AbstractSettingsFld
       this.btnRF.setSelected(
 		EmuUtil.getBooleanProperty(
 				props,
-				this.propPrefix + "enabled",
+				this.propPrefix + RAMFloppy.PROP_ENABLED,
 				false ) );
     } else if( this.comboSize != null ) {
       int    idx = 0;
-      String s   = EmuUtil.getProperty( props, this.propPrefix + "kbyte" );
+      String s   = EmuUtil.getProperty(
+				props,
+				this.propPrefix + RAMFloppy.PROP_KBYTE );
       if( s != null ) {
 	if( !s.isEmpty() ) {
 	  try {
@@ -276,7 +288,9 @@ public class RAMFloppySettingsFld extends AbstractSettingsFld
       }
     }
     this.fileNameFld.setFileName(
-		EmuUtil.getProperty( props, this.propPrefix + "file" ) );
+		EmuUtil.getProperty(
+			props,
+			this.propPrefix + RAMFloppy.PROP_FILE ) );
     updFieldsEnabled();
   }
 

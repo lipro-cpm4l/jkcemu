@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,21 @@
 
 package jkcemu.base;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Window;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseFrm;
 
 
-public class MsgFrm extends BasicFrm
+public class MsgFrm extends BaseFrm
 {
   private static final int DEFAULT_WIDHTH = 500;
   private static final int DEFAULT_HEIGHT = 120;

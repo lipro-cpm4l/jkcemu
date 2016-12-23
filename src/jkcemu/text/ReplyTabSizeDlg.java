@@ -8,23 +8,35 @@
 
 package jkcemu.text;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.WindowEvent;
 import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.JTextArea;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.text.JTextComponent;
 import jkcemu.Main;
-import jkcemu.base.BasicDlg;
+import jkcemu.base.BaseDlg;
 
 
-public class ReplyTabSizeDlg extends BasicDlg
+public class ReplyTabSizeDlg extends BaseDlg
 {
-  private JTextArea  textArea;
-  private JSpinner   spinnerTabSize;
-  private JCheckBox  tglAsDefault;
-  private JButton    btnApply;
-  private JButton    btnClose;
+  private JTextArea textArea;
+  private JSpinner  spinnerTabSize;
+  private JCheckBox tglAsDefault;
+  private JButton   btnApply;
+  private JButton   btnClose;
 
 
   public ReplyTabSizeDlg(
@@ -149,4 +161,3 @@ public class ReplyTabSizeDlg extends BasicDlg
     }
   }
 }
-

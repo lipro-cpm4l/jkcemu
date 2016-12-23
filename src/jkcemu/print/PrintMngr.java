@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2015 Jens Mueller
+ * (c) 2009-2016 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -153,11 +153,11 @@ public class PrintMngr extends AbstractTableModel
     if( data != null ) {
       switch( col ) {
 	case 0:
-	  rv = new Integer( data.getEntryNum() );
+	  rv = data.getEntryNum();
 	  break;
 
 	case 1:
-	  rv = new Integer( data.size() );
+	  rv = data.size();
 	  break;
 
 	case 2:
@@ -194,4 +194,3 @@ public class PrintMngr extends AbstractTableModel
     }
   }
 }
-

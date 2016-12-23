@@ -8,25 +8,50 @@
 
 package jkcemu.tools.hexedit;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.Dimension;
+import java.awt.Event;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.*;
-import java.util.*;
+import java.util.EventObject;
 import javax.naming.SizeLimitExceededException;
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JToolBar;
+import javax.swing.KeyStroke;
 import jkcemu.Main;
-import jkcemu.base.*;
-import jkcemu.print.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.HelpFrm;
+import jkcemu.base.ReplyBytesDlg;
+import jkcemu.print.PrintOptionsDlg;
+import jkcemu.print.PrintUtil;
 
 
 public class HexEditFrm
 		extends AbstractHexCharFrm
 		implements DropTargetListener
 {
-  private static final int BUF_EXTEND = 0x2000;
+  private static final String HELP_PAGE  = "/help/tools/hexeditor.htm";
+  private static final int    BUF_EXTEND = 0x2000;
 
   private static HexEditFrm instance = null;
 
@@ -230,7 +255,7 @@ public class HexEditFrm
 	doFindNext();
       } else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( "/help/tools/hexeditor.htm" );
+	HelpFrm.open( HELP_PAGE );
       } else {
 	rv = super.doAction( e );
       }
@@ -332,7 +357,7 @@ public class HexEditFrm
 	  insertBytes( this.fileLen, a, 0 );
 	}
 	catch( SizeLimitExceededException ex ) {
-	  BasicDlg.showErrorDlg( this, ex.getMessage() );
+	  BaseDlg.showErrorDlg( this, ex.getMessage() );
 	}
 	setDataChanged( true );
 	updView();
@@ -362,7 +387,7 @@ public class HexEditFrm
 	    insertBytes( caretPos, a, 0 );
 	  }
 	  catch( SizeLimitExceededException ex ) {
-	    BasicDlg.showErrorDlg( this, ex.getMessage() );
+	    BaseDlg.showErrorDlg( this, ex.getMessage() );
 	  }
 	  setDataChanged( true );
 	  updView();
@@ -405,7 +430,7 @@ public class HexEditFrm
 		this.fileBytes[ m1 ] );
       }
       if( msg != null ) {
-	if( BasicDlg.showYesNoDlg( this, msg ) ) {
+	if( BaseDlg.showYesNoDlg( this, msg ) ) {
 	  int p = m1;
 	  while( p <= m2 ) {
 	    this.fileBytes[ p ] = (byte) ~this.fileBytes[ p ];
@@ -447,7 +472,7 @@ public class HexEditFrm
 	    }
 	  }
 	  catch( SizeLimitExceededException ex ) {
-	    BasicDlg.showErrorDlg( this, ex.getMessage() );
+	    BaseDlg.showErrorDlg( this, ex.getMessage() );
 	  }
 	  setDataChanged( true );
 	  updView();
@@ -488,7 +513,7 @@ public class HexEditFrm
 		this.fileBytes[ m1 ] );
       }
       if( msg != null ) {
-	if( BasicDlg.showYesNoDlg( this, msg ) ) {
+	if( BaseDlg.showYesNoDlg( this, msg ) ) {
 	  if( m2 + 1 < this.fileLen ) {
 	    m2++;
 	    while( m2 < this.fileLen ) {
@@ -526,9 +551,9 @@ public class HexEditFrm
       int len = Math.min( m2, this.fileBytes.length ) - m1 + 1;
       if( len > 0 ) {
 	File file = EmuUtil.showFileSaveDlg(
-					this,
-					"Datei speichern",
-					Main.getLastDirFile( "hexedit" ) );
+			this,
+			"Datei speichern",
+			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
 	if( file != null ) {
 	  try {
 	    OutputStream out = null;
@@ -539,12 +564,12 @@ public class HexEditFrm
 	      out = null;
 	    }
 	    finally {
-	      EmuUtil.doClose( out );
+	      EmuUtil.closeSilent( out );
 	    }
-	    Main.setLastFile( file, "hexedit" );
+	    Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
 	  }
 	  catch( Exception ex ) {
-	    BasicDlg.showErrorDlg( this, ex );
+	    BaseDlg.showErrorDlg( this, ex );
 	  }
 	}
       }
@@ -555,9 +580,9 @@ public class HexEditFrm
   private void doFileAppend()
   {
     File file = EmuUtil.showFileOpenDlg(
-				this,
-				"Datei anh\u00E4ngen",
-				Main.getLastDirFile( "hexedit" ) );
+			this,
+			"Datei anh\u00E4ngen",
+			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
     if( file != null ) {
       try {
 	int  oldLen  = this.fileLen;
@@ -574,17 +599,17 @@ public class HexEditFrm
 	      insertBytes( this.fileLen, a, 0 );
 	    }
 	    catch( SizeLimitExceededException ex ) {
-	      BasicDlg.showErrorDlg( this, ex.getMessage() );
+	      BaseDlg.showErrorDlg( this, ex.getMessage() );
 	    }
 	    setDataChanged( true );
 	    updView();
 	    setSelection( oldLen, this.fileLen - 1 );
-	    Main.setLastFile( file, "hexedit" );
+	    Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
 	  }
 	}
       }
       catch( IOException ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
   }
@@ -595,9 +620,9 @@ public class HexEditFrm
     int caretPos = this.hexCharFld.getCaretPosition();
     if( (caretPos >= 0) && (caretPos < this.fileLen) ) {
       File file = EmuUtil.showFileOpenDlg(
-				this,
-				"Datei einf\u00FCgen",
-				Main.getLastDirFile( "hexedit" ) );
+			this,
+			"Datei einf\u00FCgen",
+			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
       if( file != null ) {
 	try {
 	  long fileLen = file.length();
@@ -613,17 +638,17 @@ public class HexEditFrm
 		insertBytes( caretPos, a, 0 );
 	      }
 	      catch( SizeLimitExceededException ex ) {
-		BasicDlg.showErrorDlg( this, ex.getMessage() );
+		BaseDlg.showErrorDlg( this, ex.getMessage() );
 	      }
 	      setDataChanged( true );
 	      updView();
 	      setSelection( caretPos, caretPos + a.length - 1 );
-	      Main.setLastFile( file, "hexedit" );
+	      Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
 	    }
 	  }
 	}
 	catch( IOException ex ) {
-	  BasicDlg.showErrorDlg( this, ex );
+	  BaseDlg.showErrorDlg( this, ex );
 	}
       }
     }
@@ -643,9 +668,9 @@ public class HexEditFrm
   {
     if( confirmDataSaved() ) {
       File file = EmuUtil.showFileOpenDlg(
-				this,
-				"Datei \u00F6ffnen",
-				Main.getLastDirFile( "hexedit" ) );
+			this,
+			"Datei \u00F6ffnen",
+			Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
       if( file != null )
 	openFileInternal( file );
     }
@@ -660,7 +685,9 @@ public class HexEditFrm
       file = EmuUtil.showFileSaveDlg(
 		this,
 		"Datei speichern",
-		file != null ? file : Main.getLastDirFile( "hexedit" ) );
+		file != null ?
+			file
+			: Main.getLastDirFile( Main.FILE_GROUP_HEXEDIT ) );
     }
     if( file != null ) {
       try {
@@ -682,12 +709,12 @@ public class HexEditFrm
 	  }
 	}
 	finally {
-	  EmuUtil.doClose( out );
+	  EmuUtil.closeSilent( out );
 	}
-	Main.setLastFile( file, "hexedit" );
+	Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
       }
       catch( Exception ex ) {
-	BasicDlg.showErrorDlg( this, ex );
+	BaseDlg.showErrorDlg( this, ex );
       }
     }
     return rv;
@@ -1084,14 +1111,14 @@ public class HexEditFrm
 	}
 	updView();
 	setCaretPosition( -1, false );
-	Main.setLastFile( file, "hexedit" );
+	Main.setLastFile( file, Main.FILE_GROUP_HEXEDIT );
       }
       finally {
-	EmuUtil.doClose( in );
+	EmuUtil.closeSilent( in );
       }
     }
     catch( IOException ex ) {
-      BasicDlg.showErrorDlg( this, ex );
+      BaseDlg.showErrorDlg( this, ex );
     }
   }
 

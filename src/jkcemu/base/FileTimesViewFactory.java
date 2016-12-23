@@ -46,7 +46,7 @@ public class FileTimesViewFactory
 		  public Long getLastModifiedMillis()
 		  {
 		    long millis = file.lastModified();
-		    return millis != 0L ? new Long( millis ) : null;
+		    return millis != 0L ? millis : null;
 		  }
 
 		  @Override
