@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -733,6 +733,10 @@ public class BasicCompiler
     }
     int nArgs = entry.getArgCount();
     if( nArgs > 0 ) {
+      /*
+       * Der nachfolgende Programmcode nutzt die Eingenheit aus,
+       * dass ein Argument immer 16 Bit breit ist.
+       */
       BasicUtil.parseToken( iter, '(' );
       for( int i = 0; i < nArgs; i++ ) {
 	if( i > 0 ) {
@@ -775,7 +779,7 @@ public class BasicCompiler
     this.asmOut.newLine();
     if( nArgs > 0 ) {
       if( nArgs > 5 ) {
-	this.asmOut.append_LD_HL_nn( -nArgs );
+	this.asmOut.append_LD_HL_nn( 2 * nArgs );
 	this.asmOut.append( "\tADD\tHL,SP\n"
 			+ "\tLD\tSP,HL\n" );
       } else {
@@ -4332,7 +4336,7 @@ public class BasicCompiler
          * Im Gegensatz zur gewoehnlichen String-Behandlung,
          * bei der CHR$(0) eine leere Zeichenkette liefert,
          * wird bei PRINT jedes mit CHR$(...) angegebene Byte ausgegeben,
-         * auch wenn es sich um ein Null-Byte handelt.
+         * auch wenn es sich um ein Nullbyte handelt.
          */
 	boolean done   = false;
 	int     srcPos = iter.getIndex();

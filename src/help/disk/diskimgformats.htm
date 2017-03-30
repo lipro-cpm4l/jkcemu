@@ -15,10 +15,22 @@
   Diese Dateien k&ouml;nnen dabei auch
   <a href="diskimgformats.htm#gzip">GZIP-komprimiert</a> sein.
  <br/><br/>
-  Einfache Abbilddateien, AnaDisk-, CPC-Disk und ImageDisk-Dateien
-  k&ouml;nnen von JKCEMU erzeugt werden
-  (siehe <a href="creatediskimg.htm">hier</a>
-  sowie die Tabelle am Ende dieser Seite).
+  Alle diese Formate werden von JKCEMU lesend und schreibend
+  unterst&uuml;tzt.
+  Bei der Schreibunterst&uuml;tzung gibt es allerdings
+  eine Einschr&auml;nkung:
+  Die <a href="floppydiskintro.htm#file">Emulation einer Diskette mit Hilfe einer Abbilddatei</a>
+  ist nur mit den Dateiformaten schreibend m&ouml;glich,
+  die ohne jegliche Kompression auskommen und einen wahlfreien Zugriff
+  auf die Daten eines jeden einzelnen Sektors erm&ouml;glichen.
+  Das ist nur bei einfachen Abbilddateien, AnaDisk- und CPC-Disk-Dateien
+  gegeben.
+  Volle Schreibunterst&uuml;tzung, also das Erzeugen einer solchen Datei,
+  wird dagegen bei der
+  <a href="creatediskimg.htm#manually">manuallen Erstellung einer Diskettenabbildatei</a>
+  sowie im <a href="../tools/fileconverter.htm">Dateikonverter</a>
+  geboten (siehe auch
+  <a href="diskimgformats.htm#summary">Zusammenfassung</a>).
  <br/><br/>
 
  <h2><a name="plain">1. Einfache Abbilddateien</a></h2>
@@ -275,7 +287,7 @@
   nur lesend unterst&uuml;tzt.
  <br/><br/>
 
- <h2>8. Zusammenfassung</h2>
+ <h2><a name="summary">8. Zusammenfassung</a></h2>
   Die Tabelle zeigt zusammenfassend die Unterst&uuml;tzung der einzelnen
   Formate f&uuml;r Diskettenabbilddateien im JKCEMU:
   <table border="1">

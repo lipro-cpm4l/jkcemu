@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -170,7 +170,7 @@ public class SaveTextDlg extends BaseDlg
 
 
     // Vorbelegungen
-    this.btnTrailing1A.setSelected( this.editText.getTrailing1A() );
+    this.btnTrailing1A.setSelected( this.editText.getEofByte() == 0x1A );
     this.btnTrimLines.setSelected( this.editText.getTrimLines() );
 
     Object encObj = editText.getCharConverter();
@@ -208,7 +208,7 @@ public class SaveTextDlg extends BaseDlg
 			editText.getEncodingName(),
 			editText.getEncodingDescription(),
 			editText.hasByteOrderMark(),
-			editText.getTrailing1A(),
+			editText.getEofByte(),
 			editText.getTrimLines(),
 			editText.getLineEnd() );
       saved = true;
@@ -331,7 +331,7 @@ public class SaveTextDlg extends BaseDlg
 			encodingName,
 			encodingDesc,
 			byteOrderMark,
-			this.btnTrailing1A.isSelected(),
+			this.btnTrailing1A.isSelected() ? 0x1A : -1,
 			this.btnTrimLines.isSelected(),
 			lineEnd );
       this.fileSaved = true;

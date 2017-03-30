@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -58,7 +58,7 @@ import jkcemu.tools.hexedit.HexEditFrm;
 public class Main
 {
   public static final String APPNAME = "JKCEMU";
-  public static final String VERSION = "0.9.6";
+  public static final String VERSION = "0.9.7";
   public static final String APPINFO = APPNAME + " Version " + VERSION;
 
   public static final String FILE_GROUP_AUDIO    = "audio";
@@ -76,6 +76,7 @@ public class Main
   public static final String FILE_GROUP_RF       = "ramfloppy";
   public static final String FILE_GROUP_ROM      = "rom";
   public static final String FILE_GROUP_SCREEN   = "screen";
+  public static final String FILE_GROUP_SECTOR   = "sector";
   public static final String FILE_GROUP_SOFTWARE = "software";
   public static final String FILE_GROUP_TEXT     = "text";
   public static final String FILE_GROUP_USB      = "usb";
@@ -152,7 +153,8 @@ public class Main
   public static void main( String[] args )
   {
     /*
-     * In der DOS-Box von Windows ist der DOS-Zeichensatz installiert.
+     * In der Eingabeaufforderung von Windows
+     * ist der DOS-Zeichensatz installiert.
      * Deshalb werden ueber System.out und System.err ausgegebene Umlaute
      * dort falsch angezeigt.
      * Ueber System.console() erfolgt die Ausgabe dagegen richtig.

@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2016 Jens Mueller
+ * (c) 2014-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -152,18 +152,14 @@ public class FileActionMngr
 	} else if( actionCmd.equals( ACTION_EMU_START ) ) {
 	  doFileLoadIntoEmu( files, false, true );
 	} else if( actionCmd.equals( ACTION_RF1_LOAD ) ) {
-	  if( this.screenFrm != null ) {
-	    EmuThread emuThread = this.screenFrm.getEmuThread();
-	    if( emuThread != null ) {
-	      doFileRAMFloppyLoad( files, emuThread.getRAMFloppy1() );
-	    }
+	  EmuThread emuThread = getEmuThread();
+	  if( emuThread != null ) {
+	    doFileRAMFloppyLoad( files, emuThread.getRAMFloppy1() );
 	  }
 	} else if( actionCmd.equals( ACTION_RF2_LOAD ) ) {
-	  if( this.screenFrm != null ) {
-	    EmuThread emuThread = this.screenFrm.getEmuThread();
-	    if( emuThread != null ) {
-	      doFileRAMFloppyLoad( files, emuThread.getRAMFloppy2() );
-	    }
+	  EmuThread emuThread = getEmuThread();
+	  if( emuThread != null ) {
+	    doFileRAMFloppyLoad( files, emuThread.getRAMFloppy2() );
 	  }
 	} else if( actionCmd.equals( ACTION_TEXT_EDIT ) ) {
 	  doFileEditText( files );
@@ -555,11 +551,7 @@ public class FileActionMngr
 	      ImageFrm.open( file );
 	      done = true;
 	    } else if( checkResult.isTextFile() ) {
-	      EmuThread emuThread = null;
-	      if( this.screenFrm != null ) {
-		emuThread = this.screenFrm.getEmuThread();
-	      }
-	      TextEditFrm.open( emuThread ).openFile( file );
+	      TextEditFrm.open( getEmuThread() ).openFile( file );
 	      done = true;
 	    }
 	  }
@@ -573,11 +565,7 @@ public class FileActionMngr
 	    if( fName.endsWith( ".prj" ) ) {
 	      Properties props = TextEditFrm.loadProject( file );
 	      if( props != null ) {
-		EmuThread emuThread = null;
-		if( this.screenFrm != null ) {
-		  emuThread = this.screenFrm.getEmuThread();
-		}
-		TextEditFrm.open( emuThread ).openProject( file, props );
+		TextEditFrm.open( getEmuThread() ).openProject( file, props );
 		done = true;
 	      } else {
 		  throw new IOException(
@@ -769,34 +757,43 @@ public class FileActionMngr
 
   private void doEditFileCopy( java.util.List<FileObject> files )
   {
-    try {
-      Toolkit tk = this.owner.getToolkit();
-      if( tk != null ) {
-	Clipboard clipboard = tk.getSystemClipboard();
-	if( clipboard != null ) {
-	  java.util.List<File> fileList = getFiles( files, false );
-	  if( !fileList.isEmpty() ) {
-	    FileListSelection fls = new FileListSelection( fileList );
-	    clipboard.setContents( fls, fls );
-	  }
-	}
-      }
-    }
-    catch( IllegalStateException ex ) {}
-  }
-
-
-  private void doEditPathCopy( java.util.List<FileObject> files )
-  {
-    int n = files.size();
-    if( n > 0 ) {
+    java.util.List<File> fileList = getFiles( files, false );
+    int                  nAll     = fileList.size();
+    if( nAll > 0 ) {
+      int nCopied  = 0;
       try {
 	Toolkit tk = this.owner.getToolkit();
 	if( tk != null ) {
 	  Clipboard clipboard = tk.getSystemClipboard();
 	  if( clipboard != null ) {
-	    boolean       multi = false;
-	    StringBuilder buf   = new StringBuilder( n * 256 );
+	    FileListSelection fls = new FileListSelection( fileList );
+	    clipboard.setContents( fls, fls );
+	    nCopied = nAll;
+	  }
+	}
+      }
+      catch( Exception ex ) {
+	BaseDlg.showErrorDlg( this.owner, ex );
+	nAll = 0;
+      }
+      finally {
+	checkShowCopyError( nAll, nCopied );
+      }
+    }
+  }
+
+
+  private void doEditPathCopy( java.util.List<FileObject> files )
+  {
+    int nAll = files.size();
+    if( nAll > 0 ) {
+      int nCopied = 0;
+      try {
+	Toolkit tk = this.owner.getToolkit();
+	if( tk != null ) {
+	  Clipboard clipboard = tk.getSystemClipboard();
+	  if( clipboard != null ) {
+	    StringBuilder buf = new StringBuilder( nAll * 256 );
 	    for( FileObject fObj : files ) {
 	      Path path = fObj.getPath();
 	      if( path != null ) {
@@ -805,7 +802,7 @@ public class FileActionMngr
 		  if( !fName.isEmpty() ) {
 		    if( buf.length() > 0 ) {
 		      buf.append( (char) '\n' );
-		      multi = true;
+		      nCopied++;
 		    }
 		    buf.append( fName );
 		  }
@@ -813,7 +810,7 @@ public class FileActionMngr
 	      }
 	    }
 	    if( buf.length() > 0 ) {
-	      if( multi ) {
+	      if( nCopied > 1 ) {
 		buf.append( (char) '\n' );
 	      }
 	      StringSelection ss = new StringSelection( buf.toString() );
@@ -822,22 +819,29 @@ public class FileActionMngr
 	  }
 	}
       }
-      catch( IllegalStateException ex ) {}
+      catch( Exception ex ) {
+	BaseDlg.showErrorDlg( this.owner, ex );
+	nAll = 0;
+      }
+      finally {
+	checkShowCopyError( nAll, nCopied );
+      }
     }
   }
 
 
   private void doEditURLCopy( java.util.List<FileObject> files )
   {
-    int n = files.size();
-    if( n > 0 ) {
+    int nAll = files.size();
+    if( nAll > 0 ) {
+      int nCopied = 0;
       try {
 	Toolkit tk = this.owner.getToolkit();
 	if( tk != null ) {
 	  Clipboard clipboard = tk.getSystemClipboard();
 	  if( clipboard != null ) {
 	    boolean       multi = false;
-	    StringBuilder buf   = new StringBuilder( n * 256 );
+	    StringBuilder buf   = new StringBuilder( nAll * 256 );
 	    for( FileObject fObj : files ) {
 	      File file = fObj.getFile();
 	      if( file != null ) {
@@ -850,7 +854,7 @@ public class FileActionMngr
 		      if( !urlText.isEmpty() ) {
 			if( buf.length() > 0 ) {
 			  buf.append( (char) '\n' );
-			  multi = true;
+			  nCopied++;
 			}
 			buf.append( urlText );
 		      }
@@ -860,7 +864,7 @@ public class FileActionMngr
 	      }
 	    }
 	    if( buf.length() > 0 ) {
-	      if( multi ) {
+	      if( nCopied > 1 ) {
 		buf.append( (char) '\n' );
 	      }
 	      StringSelection ss = new StringSelection( buf.toString() );
@@ -869,9 +873,12 @@ public class FileActionMngr
 	  }
 	}
       }
-      catch( IllegalStateException ex ) {}
-      catch( MalformedURLException ex ) {
+      catch( Exception ex ) {
 	BaseDlg.showErrorDlg( this.owner, ex );
+	nAll = 0;
+      }
+      finally {
+	checkShowCopyError( nAll, nCopied );
       }
     }
   }
@@ -957,7 +964,7 @@ public class FileActionMngr
     File file = getFile( files, true );
     if( file != null ) {
       if( file.isFile() ) {
-	TextEditFrm.open( null ).openFile( file );
+	TextEditFrm.open( getEmuThread() ).openFile( file );
       }
     }
   }
@@ -1676,6 +1683,34 @@ public class FileActionMngr
   }
 
 
+  private void checkShowCopyError( int nAll, int nCopied )
+  {
+    if( (nAll > 0) && (nCopied < nAll) ) {
+      String msg = null;
+      if( nCopied == 1 ) {
+	msg = "Es konnte nur eine Datei bzw. ein Verzeichnis"
+		      + " kopiert werden.";
+      } else if( nCopied > 1 ) {
+	msg = String.format(
+		      "Es konnten nur %d Dateien bzw. Verzeichnisse"
+			      + " kopiert werden.",
+		      nCopied );
+      } else {
+	if( nAll == 1 ) {
+	  msg = "Die Datei bzw. das Verzeichnis\n"
+		      + "konnte nicht kopiert werden.";
+	} else {
+	  msg = "Die Dateien bzw. Verzeichnisse\n"
+		      + "konnten nicht kopiert werden.";
+	}
+      }
+      if( msg != null ) {
+	BaseDlg.showErrorDlg( this.owner, msg );
+      }
+    }
+  }
+
+
   private JButton createAndRegisterImageButton(
 				String resource,
 				String text,
@@ -1702,6 +1737,12 @@ public class FileActionMngr
     item.addActionListener( this.owner );
     registerButton( item, actionCmd );
     return item;
+  }
+
+
+  private EmuThread getEmuThread()
+  {
+    return this.screenFrm != null ? this.screenFrm.getEmuThread() : null;
   }
 
 

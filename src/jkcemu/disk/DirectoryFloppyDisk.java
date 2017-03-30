@@ -1,10 +1,10 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Emulation einer Diskette,
- * die ein Verzeichnis im Dateisystem des Host-Systems abbildet
+ * die auf ein Verzeichnis im Dateisystem des Host-Systems abbildet
  */
 
 package jkcemu.disk;
@@ -91,6 +91,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   private int                   dirBlocks;
   private int                   dirSectors;
   private int                   maxDirEntries;
+  private int                   extentsPerDirEntry;
   private int                   sysTracks;
   private int                   sysSectors;
   private int                   blockSize;
@@ -125,31 +126,34 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 			boolean               forceLowerCase )
   {
     super( owner, sides, cyls, sectorsPerCyl, sectorSize );
-    this.dirFile         = dirFile;
-    this.sysFile         = new File( this.dirFile, SYS_FILE_NAME );
-    this.sysTracks       = sysTracks;
-    this.sysSectors      = sysTracks * sides * sectorsPerCyl;
-    this.blockSize       = blockSize;
-    this.blockNum16Bit   = blockNum16Bit;
-    this.sectorsPerBlock = blockSize / sectorSize;
-    this.dirBlocks       = dirBlocks;
-    this.dirSectors      = dirBlocks * this.sectorsPerBlock;
-    this.sectorSizeCode  = SectorData.getSizeCode( sectorSize );
-    this.autoRefresh     = autoRefresh;
-    this.readOnly        = readOnly;
-    this.forceLowerCase  = forceLowerCase;
-    this.lastBuildMillis = -1L;
-    this.fileMap         = new HashMap<>();
-    this.errorMap        = null;;
-    this.dirBytes        = null;
-    this.dsEnabled       = dateStamperEnabled;
-    this.dsBytes         = null;
-    this.dsFirstSector   = -1;
-    this.dsSectors       = 0;
-    this.ftvFactory      = ftvFactory;
-    this.maxDirEntries   = 0;
-    this.sectors         = new SectorData[ sides * cyls * sectorsPerCyl ];
-    this.refreshFired    = false;
+    this.dirFile            = dirFile;
+    this.sysFile            = new File( this.dirFile, SYS_FILE_NAME );
+    this.sysTracks          = sysTracks;
+    this.sysSectors         = sysTracks * sides * sectorsPerCyl;
+    this.blockSize          = blockSize;
+    this.blockNum16Bit      = blockNum16Bit;
+    this.sectorsPerBlock    = blockSize / sectorSize;
+    this.dirBlocks          = dirBlocks;
+    this.dirSectors         = dirBlocks * this.sectorsPerBlock;
+    this.sectorSizeCode     = SectorData.getSizeCode( sectorSize );
+    this.autoRefresh        = autoRefresh;
+    this.readOnly           = readOnly;
+    this.forceLowerCase     = forceLowerCase;
+    this.lastBuildMillis    = -1L;
+    this.fileMap            = new HashMap<>();
+    this.errorMap           = null;;
+    this.dirBytes           = null;
+    this.dsEnabled          = dateStamperEnabled;
+    this.dsBytes            = null;
+    this.dsFirstSector      = -1;
+    this.dsSectors          = 0;
+    this.ftvFactory         = ftvFactory;
+    this.maxDirEntries      = 0;
+    this.sectors            = new SectorData[ sides * cyls * sectorsPerCyl ];
+    this.refreshFired       = false;
+    this.extentsPerDirEntry = DiskUtil.getExtentsPerDirEntry(
+							blockSize,
+							blockNum16Bit );
     if( this.autoRefresh ) {
       this.remark = "Automatische Aktualisierung aktiv";
     } else {
@@ -314,6 +318,13 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public int getSectorOffset()
+  {
+    return 0;
   }
 
 
@@ -495,7 +506,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
   }
 
 
-  private void ensureFileLoaded(String entryName )
+  private void ensureFileLoaded( String entryName )
   {
     if( (entryName != null)
 	&& (this.dirBytes != null)
@@ -551,27 +562,27 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	int pos = 0;
 	while( (pos + 31) < this.dirBytes.length ) {
 	  int b0 = (int) this.dirBytes[ pos ] & 0xFF;
-	  if( (b0 != 0xE5) && ((b0 & 0xF0) == 0)
-	      && (((int) this.dirBytes[ pos + 12 ] & 0xFF)
-						== (extentNum & 0x1F))
-	      && (((int) this.dirBytes[ pos + 14 ] & 0xFF)
-						== ((extentNum >> 5) & 0x3F)) )
-	  {
-	    boolean found = false;
-	    if( (b0 & 0x0F) == (entryName.charAt( 0 ) - '0') ) {
-	      found = true;
-	      for( int i = 1; i < 12; i++ ) {
-		if( ((int) this.dirBytes[ pos + i ] & 0x7F)
+	  if( (b0 != 0xE5) && ((b0 & 0xF0) == 0) ) {
+	    int xNum = DiskUtil.getExtentNumByEntryPos( this.dirBytes, pos );
+	    if( (xNum >= extentNum)
+		&& (xNum < (extentNum + this.extentsPerDirEntry)) )
+	    {
+	      boolean found = false;
+	      if( (b0 & 0x0F) == (entryName.charAt( 0 ) - '0') ) {
+		found = true;
+		for( int i = 1; i < 12; i++ ) {
+		  if( ((int) this.dirBytes[ pos + i ] & 0x7F)
 						!= entryName.charAt( i ) )
-		{
-		  found = false;
-		  break;
+		  {
+		    found = false;
+		    break;
+		  }
 		}
 	      }
-	    }
-	    if( found ) {
-	      rv = pos;
-	      break;
+	      if( found ) {
+		rv = pos;
+		break;
+	      }
 	    }
 	  }
 	  pos += 32;
@@ -627,10 +638,20 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
       if( fileLen != null ) {
 	fileLen.set( -1 );
       }
-      int extentNum = 0;
-      int entryPos  = findEntryBegPosByNameAndExtent( entryName, extentNum );
+      int baseExtentNum = 0;
+      int entryPos      = findEntryBegPosByNameAndExtent(
+						entryName,
+						baseExtentNum );
       while( (entryPos >= 0) && (entryPos < this.dirBytes.length) ) {
-	int len = ((int) this.dirBytes[ entryPos + 15 ] & 0xFF) * 128;
+	int len       = ((int) this.dirBytes[ entryPos + 15 ] & 0xFF) * 128;
+	int extentNum = DiskUtil.getExtentNumByEntryPos(
+						this.dirBytes,
+						entryPos );
+	if( (extentNum > baseExtentNum) && (this.extentsPerDirEntry > 1) ) {
+	  int blocksPerExtent = (this.blockNum16Bit ? 8 : 16)
+						/ this.extentsPerDirEntry;
+	  len += (blocksPerExtent * this.blockSize);
+	}
 	int pos = entryPos + 16;
 	if( this.blockNum16Bit ) {
 	  for( int i = 0; i < 8; i++ ) {
@@ -665,8 +686,8 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	    fileLen.addAndGet( len );
 	  }
 	}
-	extentNum++;
-	entryPos = findEntryBegPosByNameAndExtent( entryName, extentNum );
+	baseExtentNum += this.extentsPerDirEntry;
+	entryPos = findEntryBegPosByNameAndExtent( entryName, baseExtentNum );
       }
     }
     return rv;
@@ -756,6 +777,9 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     }
     this.lastBuildMillis = System.currentTimeMillis();
     try {
+      int extentsPerDirEntry = DiskUtil.getExtentsPerDirEntry(
+							blockSize,
+							blockNum16Bit );
 
       // Dateien ermitteln, die in der emulierten Disketten enthalten sind
       Map<String,File> fileMap     = new HashMap<>();
@@ -873,12 +897,9 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	int dirIdx         = 0;
 	int blkIdx         = this.dirBlocks;
 	int nRemainBlocks  = (getDiskSize() / this.blockSize) - blkIdx;
-	int maxFileEntries = (this.blockNum16Bit ? 32 : 1);
+	int maxFileEntries = Math.max( 32 / extentsPerDirEntry, 1 );
 	int maxEntrySize   = (this.blockNum16Bit ? 8 : 16) * this.blockSize;
-	if( maxEntrySize > (0xFF * 128) ) {
-	  maxEntrySize   = 0xFF * 128;
-	  maxFileEntries = 1;
-	}
+	int maxEntrySegs   = maxEntrySize / 128;
 	for( int i = 0; i < entryNames.length; i++ ) {
 	  String entryName = entryNames[ i ];
 	  if( entryName != null ) {
@@ -908,6 +929,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	      {
 		long nBlocks = (fSize + this.blockSize - 1) / this.blockSize;
 		if( nBlocks <= nRemainBlocks ) {
+		  int baseExtentNum = 0;
 		  for( int k = 0; k < nEntries; k++ ) {
 		    int roAttrPos = dirIdx + 9;
 		    int len       = entryName.length();
@@ -927,14 +949,31 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		    if( !writable ) {
 		      this.dirBytes[ roAttrPos ] |= 0x80;
 		    }
-		    this.dirBytes[ dirIdx++ ] = (byte) k;
-		    this.dirBytes[ dirIdx++ ] = (byte) 0;
-		    this.dirBytes[ dirIdx++ ] = (byte) 0;
-		    long nSegs = 0;
+		    int nEntrySegs = 0;
 		    if( fSize > 0 ) {
-		      nSegs = (Math.min( fSize, maxEntrySize ) + 127) / 128;
+		      nEntrySegs = Math.min(
+					(int) ((fSize + 127) / 128),
+					maxEntrySegs );
 		    }
-		    this.dirBytes[ dirIdx++ ] = (byte) nSegs;
+		    int nExtentSegs = nEntrySegs % 128;
+		    if( (nEntrySegs > 0) && (nExtentSegs == 0) ) {
+		      nExtentSegs = 128;
+		    }
+		    int nEntryExtents = (nEntrySegs + 127) / 128;
+		    int tmpExtentNum  = baseExtentNum;
+		    if( (nEntryExtents > 1)
+			&& (nEntryExtents <= extentsPerDirEntry) )
+		    {
+		      tmpExtentNum = baseExtentNum + nEntryExtents - 1;
+		    }
+		    this.dirBytes[ dirIdx++ ] = (byte) tmpExtentNum;
+		    this.dirBytes[ dirIdx++ ] = (byte) 0;
+		    this.dirBytes[ dirIdx++ ] = (byte) 0;
+		    nEntrySegs %= 128;
+		    if( (fSize > 0) && (nEntrySegs == 0) ) {
+		      nEntrySegs = 128;
+		    }
+		    this.dirBytes[ dirIdx++ ] = (byte) nEntrySegs;
 		    if( this.blockNum16Bit ) {
 		      for( int m = 0; m < 8; m++ ) {
 			if( nBlocks > 0 ) {
@@ -964,6 +1003,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		    if( dateStamper != null ) {
 		      dateStamper.addFileTimes( file );
 		    }
+		    baseExtentNum += extentsPerDirEntry;
 		  }
 		}
 	      }
@@ -1095,6 +1135,8 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 	     * um beim Verschwinden von diesem die Datei zu loeschen,
 	     * Eine Datei kann nur dann geloscht werden,
 	     * wenn es den Eintrag fuer Extent 0 nicht mehr gibt.
+	     * Des Weiteren auch die alte Datei laden,
+	     * damit ein evtl. umbenennen funktioniert.
 	     */
 	    if( (this.dirBytes[ 12 ] == 0)
 		&& (this.dirBytes[ 14 ] == 0) )
@@ -1105,6 +1147,7 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
 		  oldEntryNames = new TreeSet<>();
 		}
 		oldEntryNames.add( oldEntryName );
+		ensureFileLoaded( oldEntryName );
 	      }
 	    }
 	  } else {
@@ -1413,4 +1456,3 @@ public class DirectoryFloppyDisk extends AbstractFloppyDisk
     }
   }
 }
-

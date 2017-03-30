@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -311,6 +311,7 @@ public class AC1SettingsFld extends AbstractSettingsFld
 				settingsFrm,
 				propPrefix,
 				AC1.DEFAULT_SWAP_KEY_CHAR_CASE,
+				AC1.FUNCTION_KEY_COUNT,
 				AC1.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 

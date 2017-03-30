@@ -13,7 +13,7 @@
   ebenfalls erworben werden.
   Das Monitorprogramm bedient man mit der Hexadezimaltastatur,
   den ebenfalls im ROM enthaltenen BASIC-Interpreter
-  aber mit der alphanumerischen Tastatur.
+  dagegen mit der alphanumerischen Tastatur.
  <br/><br/>
 
  <h2>Hinweise zur Emulation</h2>
@@ -21,7 +21,13 @@
    <li>
     <a href="llc1.htm#hardware">1. Emulierte Hardware</a>
     <ul>
-     <li><a href="llc1.htm#keyboard">1.1. Hexadezimaltastatur</a></li>
+     <li><a href="llc1.htm#hex_keyboard">1.1. Hexadezimaltastatur</a></li>
+     <li>
+      <a href="llc1.htm#alpha_screen">1.2. Alphanumerischer Bildschirm</a>
+     </li>
+     <li>
+      <a href="llc1.htm#alpha_keyboard">1.3. Alphanumerische Tastatur</a>
+     </li>
     </ul>
    </li>
    <li>
@@ -59,6 +65,14 @@
      </li>
     </ul>
    </li>
+   <li>
+    <a href="llc1.htm#etc">4. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="llc1.htm#autoinput">4.1. AutoInput</a>
+     </li>
+    </ul>
+   </li>
   </ul>
  <br/>
 
@@ -71,23 +85,11 @@
    <li>8-stellige 7-Segment-Anzeige</li>
    <li>Hexadezimaltastatur mit zus&auml;tzlichen Funktionstasten</li>
    <li>Alphanumerische Tastatur</li>
+   <li>Alphanumerischer Bildschirm</li>
   </ul>
  <br/>
-  Wie in der Liste zu sehen ist, werden beide Tastaturen emuliert.
-  JKCMEU schaltet auch automatisch zwischen beiden um,
-  so dass Sie als Anwender beide LLC1-Tastaturen nur &uuml;ber
-  die eine Tastatur des Emulatorrechners bedienen.
-  Die automatische Umschaltung funktioniert dabei folgenderma&szlig;en:
-  Ab dem Zeitpunkt, wenn das Anwendungsprogramm
-  das Eingabetor f&uuml;r die alphanumerische Tastatur liest,
-  ist die Hexadezimaltastatur f&uuml;r eine Sekunde lang gesperrt
-  und kann keine Interrupts ausl&ouml;sen.
-  Die Hexadezimaltastatur ist somit nur aktiv,
-  wenn die im Emulator laufende Software die alphanumerische Tastatur
-  gerade nicht verwendet.
- <br/><br/>
 
- <h3><a name="keyboard">1.1. Hexadezimaltastatur</a></h3>
+ <h3><a name="hex_keyboard">1.1. Hexadezimaltastatur</a></h3>
   Die Tabelle zeigt, wie die Tasten der LLC1-Hexadezimaltastatur
   auf der Tastatur des Emulatorrechners abgebildet werden:
  <br/>
@@ -133,6 +135,25 @@
    </tr>
   </table>
  <br/>
+
+ <h3><a name="alpha_screen">1.2. Alphanumerischer Bildschirm</a></h3>
+  Der alphanumerische Bildschirm wird in einem separaten Fenster angezeigt.
+  Dieses Fenster &ouml;ffnet sich automatisch,
+  sobald der betreffende Bildwiederholspeicher beschrieben wird.
+  Wenn Sie das Fenster geschlossen haben und erneut &ouml;ffnen m&ouml;chten,
+  dann rufen Sie im Hauptfenster den Men&uuml;punkt
+  <em>Extra</em> &rarr; <em>Zweite Anzeigeeinheit...</em> auf.
+ <br/><br/>
+
+ <h3><a name="alpha_keyboard">1.3. Alphanumerische Tastatur</a></h3>
+  Die alphanumerische Tastatur ist mit dem alphanumerischen Bildschirm
+  verbunden, d.h., wenn Sie mit der alphanumerischen Tastatur
+  Eingaben t&auml;tigen m&ouml;chten,
+  m&uuml;ssen Sie das Fenster mit dem alphanumerischen Bildschirm aktivieren.
+  Ist dagegen das Hauptfenster mit der Hexadezimalanzeige aktiviert,
+  f&uuml;hren Tastatureingaben zu Bet&auml;tigungen
+  auf der emulierten hexadezimalen Tastatur.
+ <br/><br/>
 
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
@@ -244,6 +265,14 @@
   Verwenden Sie hierf&uuml;r bitte den Men&uuml;punkt
   <em>BASIC-Programm&nbsp;im&nbsp;Texteditor&nbsp;&ouml;ffnen...</em>
   im Men&uuml; <em>Datei</em>.
+ <br/><br/>
+
+
+ <h2><a name="etc">4. Sonstiges</a></h2>
+
+ <h3><a name="autoinput">4.1. AutoInput</a></h3>
+  AutoInput f&uuml;hrt automatische Tastaturbet&auml;tigungen
+  nur auf der hexadezimalen Tastatur aus.
+  Die emulierte alphanumerische Tastatur kann damit nicht bedient werden.
 </body>
 </html>
-

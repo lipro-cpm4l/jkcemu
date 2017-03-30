@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -14,6 +14,6 @@ import java.lang.*;
 
 public interface Z80SIOChannelListener
 {
-  public void z80SIOChannelByteAvailable( Z80SIO sio, int channel, int value );
+  public void z80SIOByteSent( Z80SIO sio, int channel, int value );
 }
 

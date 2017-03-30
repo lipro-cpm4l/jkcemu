@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -40,6 +40,7 @@ public class AutoInputSettingsFld
   private static final int DEFAULT_MILLIS_TO_WAIT = 200;
 
   private boolean             swapKeyCharCase;
+  private int                 functionKeyCount;
   private int                 defaultFirstMillisToWait;
   private AutoInputTableModel tableModel;
   private JTable              table;
@@ -58,7 +59,24 @@ public class AutoInputSettingsFld
 		boolean     swapKeyCharCase,
 		int         defaultFirstMillisToWait )
   {
+    this(
+	settingsFrm,
+	propPrefix,
+	swapKeyCharCase,
+	0,
+	defaultFirstMillisToWait );
+  }
+
+
+  public AutoInputSettingsFld(
+		SettingsFrm settingsFrm,
+		String      propPrefix,
+		boolean     swapKeyCharCase,
+		int         functionKeyCount,
+		int         defaultFirstMillisToWait )
+  {
     super( settingsFrm, propPrefix + AutoInputWorker.PROP_AUTOINPUT_PREFIX );
+    this.functionKeyCount         = functionKeyCount;
     this.defaultFirstMillisToWait = defaultFirstMillisToWait;
     this.swapKeyCharCase          = swapKeyCharCase;
     setLayout( new GridBagLayout() );
@@ -303,6 +321,7 @@ public class AutoInputSettingsFld
     AutoInputEntry entry = AutoInputEntryDlg.openNewEntryDlg(
 						this.settingsFrm,
 						this.swapKeyCharCase,
+						this.functionKeyCount,
 						millisToWait );
     if( entry != null ) {
       int nRows = this.tableModel.getRowCount();
@@ -328,6 +347,7 @@ public class AutoInputSettingsFld
 	    AutoInputEntry newEntry = AutoInputEntryDlg.openEditEntryDlg(
 						this.settingsFrm,
 						this.swapKeyCharCase,
+						this.functionKeyCount,
 						oldEntry );
 	    if( newEntry != null ) {
 	      this.tableModel.setRow( modelRow, newEntry );

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -90,8 +90,10 @@ public class FileConvertFrm extends BaseFrm implements
   private String                        orgFileDesc;
   private int                           orgFileTypeChar;
   private int                           orgStartAddr;
-  private boolean                       orgIsBasicPrg;
   private String                        orgRemark;
+  private boolean                       orgIsBasicPrg;
+  private boolean                       lastOutDirAsInDir;
+  private String                        lastSavedTargetText;
   private FileNameFld                   fldSrcFile;
   private JButton                       btnSrcSelect;
   private JButton                       btnSrcRemove;
@@ -260,13 +262,31 @@ public class FileConvertFrm extends BaseFrm implements
 	String fName = file.getName();
 	if( fName != null ) {
 	  if( !fName.isEmpty() ) {
+	    /*
+	     * Dateibasisname als Bezeichnung uebernehmen,
+	     * Wenn ein Grossbuchstabe enthalten ist,
+	     * dann die Gross-/Kleinschreibung des Basisnamen beibehalten,
+	     * anderenfalls alles gross wandeln,
+	     */
 	    String tmpName = fName;
 	    int pos = tmpName.lastIndexOf( '.' );
 	    if( pos >= 0 ) {
 	      tmpName = tmpName.substring( 0, pos );
 	    }
-	    if( !tmpName.isEmpty() ) {
-	      this.orgFileDesc = tmpName;
+	    int len = tmpName.length();
+	    if( len > 0 ) {
+	      boolean hasUpper = false;
+	      for( int i = 0; i < len; i++ ) {
+		if( Character.isUpperCase( tmpName.charAt( i ) ) ) {
+		  hasUpper = true;
+		  break;
+		}
+	      }
+	      if( hasUpper ) {
+		this.orgFileDesc = tmpName;
+	      } else {
+		this.orgFileDesc = tmpName.toUpperCase();
+	      }
 	    }
 	  }
 	  fName = fName.toLowerCase();
@@ -376,8 +396,12 @@ public class FileConvertFrm extends BaseFrm implements
 					&& (this.orgFileTypeChar == 'B')
 					&& (begAddr == 0x0401))
 		  || fileFmt.equals( FileFormat.KCB )
+		  || fileFmt.equals( FileFormat.KCB_BLKN )
+		  || fileFmt.equals( FileFormat.KCB_BLKN_CKS )
 		  || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
 		  || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+		  || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+		  || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS )
 		  || fileFmt.equals( FileFormat.KCBASIC_PRG ) )
 	      {
 		byte[] fileBytes = EmuUtil.readFile(
@@ -403,9 +427,17 @@ public class FileConvertFrm extends BaseFrm implements
 	      if( fileFmt.equals( FileFormat.KCB ) ) {
 		fileFmt = FileFormat.KCC;
 	      }
+	      else if( fileFmt.equals( FileFormat.KCB_BLKN ) ) {
+		fileFmt = FileFormat.KCC_BLKN;
+	      }
+	      else if( fileFmt.equals( FileFormat.KCB_BLKN_CKS ) ) {
+		fileFmt = FileFormat.KCC_BLKN_CKS;
+	      }
 	      if( fileFmt.equals( FileFormat.HEADERSAVE )
 		  || fileFmt.equals( FileFormat.INTELHEX )
 		  || fileFmt.equals( FileFormat.KCC )
+		  || fileFmt.equals( FileFormat.KCC_BLKN )
+		  || fileFmt.equals( FileFormat.KCC_BLKN_CKS )
 		  || fileFmt.equals( FileFormat.KCTAP_SYS )
 		  || fileFmt.equals( FileFormat.KCTAP_Z9001 )
 		  || fileFmt.equals( FileFormat.KCTAP_KC85 ) )
@@ -648,7 +680,20 @@ public class FileConvertFrm extends BaseFrm implements
 	  }
 	  catch( ClassCastException ex ) {}
 	  this.listTarget.setListData( this.targets );
-	  EmuUtil.fireSelectRow( this.listTarget, 0 );
+	  int rowToSelect = 0;
+	  if( this.lastSavedTargetText != null ) {
+	    int n = this.targets.size();
+	    for( int i = 0; i < n; i++ ) {
+	      String s = this.targets.get( i ).toString();
+	      if( s != null ) {
+		if( s.equals( this.lastSavedTargetText ) ) {
+		  rowToSelect = i;
+		  break;
+		}
+	      }
+	    }
+	  }
+	  EmuUtil.fireSelectRow( this.listTarget, rowToSelect );
 	} else {
 	  if( infoBuf.length() == 0 ) {
 	    infoBuf.append( "unbekannt" );
@@ -858,32 +903,46 @@ public class FileConvertFrm extends BaseFrm implements
   {
     AbstractConvertTarget target = this.listTarget.getSelectedValue();
     if( target != null ) {
-      File file = target.getSuggestedOutFile( this.fldSrcFile.getFile() );
-      if( file != null ) {
+      File inFile  = this.fldSrcFile.getFile();
+      File outFile = target.getSuggestedOutFile( inFile );
+      if( (outFile != null) && !this.lastOutDirAsInDir ) {
 	File dirFile = Main.getLastDirFile( Main.FILE_GROUP_FC_OUT );
-	if( (dirFile != null) && (file != null) ) {
-	  String fName = file.getName();
+	if( (dirFile != null) && (outFile != null) ) {
+	  String fName = outFile.getName();
 	  if( fName != null ) {
 	    if( !fName.isEmpty() ) {
-	      file = new File( dirFile, fName );
+	      outFile = new File( dirFile, fName );
 	    }
 	  }
 	}
       }
-      file = EmuUtil.showFileSaveDlg(
+      outFile = EmuUtil.showFileSaveDlg(
 				this,
 				"Konvertierte Datei speichern",
-				file,
+				outFile,
 				target.getFileFilters() );
-      if( file != null ) {
+      if( outFile != null ) {
 	try {
-	  String logText = target.save( file );
-	  Main.setLastFile( file, Main.FILE_GROUP_FC_OUT );
+	  String logText = target.save( outFile );
+	  Main.setLastFile( outFile, Main.FILE_GROUP_FC_OUT );
+	  this.lastOutDirAsInDir = false;
+	  if( inFile != null ) {
+	    File inDir  = inFile.getParentFile();
+	    File outDir = outFile.getParentFile();
+	    if( (inDir != null) && (outDir != null) ) {
+	      this.lastOutDirAsInDir = outDir.equals( inDir );
+	    } else {
+	      if( (inDir == null) && (outDir == null) ) {
+		this.lastOutDirAsInDir = true;
+	      }
+	    }
+	  }
 	  if( logText != null ) {
 	    if( !logText.isEmpty() ) {
 	      LogDlg.showDlg( this, logText, "Hinweise" );
 	    }
 	  }
+	  this.lastSavedTargetText = target.toString();
 	}
 	catch( IOException ex ) {
 	  BaseDlg.showErrorDlg( this, ex );
@@ -900,11 +959,13 @@ public class FileConvertFrm extends BaseFrm implements
 
   private FileConvertFrm()
   {
-    this.orgFileDesc     = null;
-    this.orgFileTypeChar = -1;
-    this.orgStartAddr    = -1;
-    this.orgIsBasicPrg   = false;
-    this.orgRemark       = null;
+    this.orgFileDesc         = null;
+    this.orgFileTypeChar     = -1;
+    this.orgStartAddr        = -1;
+    this.orgRemark           = null;
+    this.orgIsBasicPrg       = false;
+    this.lastOutDirAsInDir   = false;
+    this.lastSavedTargetText = null;
     setTitle( "JKCEMU Dateikonverter" );
     Main.updIcon( this );
 

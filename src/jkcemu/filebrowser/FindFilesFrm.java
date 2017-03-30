@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2016 Jens Mueller
+ * (c) 2014-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -300,7 +300,9 @@ public class FindFilesFrm
 	  try {
 	    e.startDrag( null, new FileListSelection( files ) );
 	  }
-	  catch( InvalidDnDOperationException ex ) {}
+	  catch( Exception ex ) {
+	    BaseDlg.showErrorDlg( this, ex );
+	  }
 	}
       }
     }
@@ -914,6 +916,7 @@ public class FindFilesFrm
 	thread.interrupt();
       }
       instance = null;
+      Main.checkQuit( this );
     }
     return rv;
   }

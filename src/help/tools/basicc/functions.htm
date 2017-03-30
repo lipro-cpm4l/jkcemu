@@ -459,7 +459,7 @@
   <b>Achtung!</b> Bei den Anweisungen
   <a href="instructions.htm#print">PRINT</a> und
   <a href="instructions.htm#lprint">LPRINT</a> wird mit <tt>CHR$(0)</tt>
-  ein Null-Byte ausgegeben.
+  ein Nullbyte ausgegeben.
  <br/><br/>
 
  <h3><a name="deek">DEEK</a></h3>
@@ -671,17 +671,17 @@
   Dabei werden die Fehlervariablen <a href="functions.htm#err">ERR</a>
   und <a href="functions.htm#err$">ERR$</a> gesetzt.
  <br/><br/>
-  <b>Achtung!</b> Null-Bytes dienen bei Zeichenketten als Endezeichen,
-  d.h., wenn ein Null-Byte gelesen wird, enth&auml;lt die
+  <b>Achtung!</b> Nullbytes dienen bei Zeichenketten als Endezeichen,
+  d.h., wenn ein Nullbyte gelesen wird, enth&auml;lt die
   zur&uuml;ckgelieferte Zeichenkette nur die Bytes bis zum ersten
-  gelesenen Null-Byte.
+  gelesenen Nullbyte.
   Es werden aber trotzdem soviele Bytes aus dem Eingabekanal gelesen,
   wie im ersten Argument &uuml;bergeben wurde.
   Wenn also die zur&uuml;ckgelieferte Zeichenkette k&uuml;rzer ist
   als die Anzahl der gelesenen Bytes und in der Fehlervariable
   <a href="functions.htm#err">ERR</a> steht der Wert&nbsp;0
   (Konstante E_OK, kein Fehler aufgetreten),
-  dann wurde hinter der Zeichenkette ein Null-Byte gelesen.
+  dann wurde hinter der Zeichenkette ein Nullbyte gelesen.
   Damit ist auch generell das Lesen von Bin&auml;rdateien m&ouml;glich.
   Das Beispiel zeigt, wie eine Datei Byte f&uuml;r Byte eingelesen
   und als Hex-Dump auf dem Bildschirm ausgegeben wird:
@@ -1032,7 +1032,7 @@
  <br/>
   Die Funktion MEMSTR$ erm&ouml;glicht es, eine an der angegebenen Adresse
   im Arbeitsspeicher befindliche Zeichenkette als BASIC-String zu verwenden.
-  Ein Null-Byte markiert das Ende der Zeichenkette.
+  Ein Nullbyte markiert das Ende der Zeichenkette.
   Folgendes Beispiel erzeugt im Arbeitsspeicher eine Zeichenkette
   mit dem Alphabet, auf die dann mit MEMSTR$ zugegriffen wird:
  <br/>
@@ -1215,7 +1215,7 @@
  <br/><br/>
   Beispiel W&uuml;rfel (Ergebnis 1 bis 6):
  <br/><br/>
-  <tt>PRINT "Wuerfelergebnis:";RND(6)+1
+  <tt>PRINT "Wuerfelergebnis:";RND(6)+1</tt>
  <br/><br/>
 
  <h3><a name="rtrim$">RTRIM$</a></h3>

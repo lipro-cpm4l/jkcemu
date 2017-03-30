@@ -617,6 +617,7 @@
    &#10;<br/>
    DATA "Jan",31,"Feb",28,"Mar",31,"Apr",30,"Mai",31,"Jun",30&#10;<br/>
    DATA "Jul",31,"Aug",31,"Sep",30,"Okt",31,"Nov",31,"Dez",30&#10;<br/>
+  </tt>
  <br/>
 
  <h3><a name="declare">DECLARE</a></h3>
@@ -668,7 +669,7 @@
  <br/>
   <tt>
    &#10;<br/>
-   DEF USR 0 = &H4000&#10;<br/>
+   DEF USR 0 = &amp;H4000&#10;<br/>
    PRINT USR 0 (123)&#10;<br/>
   </tt>
  <br/>
@@ -677,9 +678,9 @@
  <br/>
   <tt>
    &#10;<br/>
-   DEF USR0 = &H4000&#10;<br/>
-   DEFUSR 0 = &H4000&#10;<br/>
-   DEFUSR0 = &H4000&#10;<br/>
+   DEF USR0 = &amp;H4000&#10;<br/>
+   DEFUSR 0 = &amp;H4000&#10;<br/>
+   DEFUSR0 = &amp;H4000&#10;<br/>
   </tt>
  <br/>
 
@@ -1067,6 +1068,7 @@
       END<br/>
       END FUNCTION<br/>
       END SUB
+     </tt>
     </td>
    </tr>
   </table>
@@ -1090,6 +1092,7 @@
       EXIT DO<br/>
       EXIT FOR<br/>
       EXIT WHILE
+     </tt>
     </td>
    </tr>
   </table>
@@ -1880,10 +1883,10 @@
     <td>Syntax:</td>
     <td nowrap="nowrap">
      <tt>ON</tt> &lt;Auswahl&gt; <tt>GOSUB</tt>
-     &lt;Zeilennummer&gt; <tt>,<tt> &lt;Zeilennummer&gt;
+     &lt;Zeilennummer&gt; <tt>,</tt> &lt;Zeilennummer&gt;
      [ <tt>,</tt> &lt;Zeilennummer&gt; [ <tt>,</tt> ... ] ]<br/>
      <tt>ON</tt> &lt;Auswahl&gt; <tt>GOSUB</tt>
-     &lt;Marke&gt; <tt>,<tt> &lt;Marke&gt;
+     &lt;Marke&gt; <tt>,</tt> &lt;Marke&gt;
      [ <tt>,</tt> &lt;Marke&gt; [ <tt>,</tt> ... ] ]
     </td>
    </tr>
@@ -1934,10 +1937,10 @@
     <td>Syntax:</td>
     <td nowrap="nowrap">
      <tt>ON</tt> &lt;Auswahl&gt; <tt>GOTO</tt>
-     &lt;Zeilennummer&gt; <tt>,<tt>  &lt;Zeilennummer&gt;
+     &lt;Zeilennummer&gt; <tt>,</tt>  &lt;Zeilennummer&gt;
      [ <tt>,</tt> &lt;Zeilennummer&gt; [ <tt>,</tt> ... ] ]<br/>
      <tt>ON</tt> &lt;Auswahl&gt; <tt>GOTO</tt>
-     &lt;Marke&gt; <tt>,<tt>  &lt;Marke&gt;
+     &lt;Marke&gt; <tt>,</tt>  &lt;Marke&gt;
      [ <tt>,</tt> &lt;Marke&gt; [ <tt>,</tt> ... ] ]
     </td>
    </tr>
@@ -2004,7 +2007,7 @@
    </tr>
    <tr valign="top">
     <td>Betriebsart:</td>
-    <tdi valign="top">
+    <td valign="top">
      <tt>INPUT</tt>, <tt>OUTPUT</tt> oder <tt>APPEND</tt>
     </td>
    </tr>
@@ -2518,7 +2521,7 @@
   <u>CHR$-Funktion</u>
  <br/><br/>
   Mit der Funktion&nbsp;<a href="functions.htm#chr$">CHR$</a>
-  k&ouml;nnen beliebige Bytes, auch Null-Bytes, ausgegeben werden.
+  k&ouml;nnen beliebige Bytes, auch Nullbytes, ausgegeben werden.
   &Uuml;bergibt man der Funktion den Wert&nbsp;0,
   liefert sie normalerweise eine leere Zeichenkette zur&uuml;ck.
   Das gilt jedoch nicht, wenn die CHR$-Funktion ein eigenst&auml;ndiger
@@ -2527,7 +2530,7 @@
   dessen Wert der CHR$-Funktion &uuml;bergeben wurde,
   auch wenn der Wert&nbsp;0 ist.
   Das Beispiel zeigt das Schreiben einer bin&auml;ren Datei,
-  welche nur aus einem Null-Byte besteht:
+  welche nur aus einem Nullbyte besteht:
  <br/>
   <tt>
    &#10;<br/>
@@ -2560,7 +2563,7 @@
   BASIC-Funktionen beschrieben.
  <br/><br/>
   Die SPC-Funktion hat die gleiche Wirkung wie die
-  Funktion&nbsp;<a href="functions.htm#space$">SPACE$</>.
+  Funktion&nbsp;<a href="functions.htm#space$">SPACE$</a>.
   Allerdings ist die SPC-Funktion insbesondere bei der Ausgabe
   von vielen Leerzeichen besser geeignet,
   da bei ihr nicht die interne Zeichenkettenverarbeitung zur Anwendung
@@ -2695,11 +2698,9 @@
    <tr valign="top">
     <td>Syntax:</td>
     <td nowrap="nowrap">
-     <tt>
-      RESTORE</tt><br/>
-      RESTORE</tt> &lt;Zeilennummer&gt;<br/>
-      RESTORE</tt> &lt;Marke&gt;
-     </tt>
+     <tt>RESTORE</tt><br/>
+     <tt>RESTORE</tt> &lt;Zeilennummer&gt;<br/>
+     <tt>RESTORE</tt> &lt;Marke&gt;
     </td>
    </tr>
   </table>

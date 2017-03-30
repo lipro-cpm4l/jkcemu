@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,7 +18,7 @@
  *  Bit 8-15:  Tastencode bei Shift
  *  Bit 16-23: Tastencode bei Control
  *  Bit 24:    0: 1-Byte-Tastencode senden
- *             1: Bei CTRL im PC-Mode zwei-Byte-Tastencode senden
+ *             1: Bei CTRL im PC-Mode Zwei-Byte-Tastencode senden
  */
 
 package jkcemu.emusys.kc85;

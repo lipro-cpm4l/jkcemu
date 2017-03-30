@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,16 +13,21 @@ import jkcemu.base.EmuThread;
 import jkcemu.print.PrintMngr;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
+import z80emu.Z80CTCListener;
 import z80emu.Z80InterruptSource;
 import z80emu.Z80SIO;
 import z80emu.Z80SIOChannelListener;
+import z80emu.Z80TStatesListener;
 
 
 public class M003 extends AbstractKC85Module implements
+						Z80CTCListener,
 						Z80InterruptSource,
-						Z80SIOChannelListener
+						Z80SIOChannelListener,
+						Z80TStatesListener
 {
   private String    title;
+  private int       remainTStates;
   private PrintMngr printMngr;
   private Z80CPU    cpu;
   private Z80CTC    ctc;
@@ -32,13 +37,32 @@ public class M003 extends AbstractKC85Module implements
   public M003( int slot, EmuThread emuThread )
   {
     super( slot );
-    this.title     = String.format( "M003 im Schacht %02X", slot );
-    this.printMngr = emuThread.getPrintMngr();
-    this.cpu       = emuThread.getZ80CPU();
-    this.ctc       = new Z80CTC( "CTC (M003)" );
-    this.sio       = new Z80SIO( "SIO (M003)" );
+    this.title         = String.format( "M003 im Schacht %02X", slot );
+    this.remainTStates = 0;
+    this.printMngr     = emuThread.getPrintMngr();
+    this.cpu           = emuThread.getZ80CPU();
+    this.ctc           = new Z80CTC( "CTC (M003)" );
+    this.sio           = new Z80SIO( "SIO (M003)" );
     this.sio.addChannelListener( this, 0 );
-    this.cpu.addTStatesListener( this.ctc );
+    this.ctc.addCTCListener( this );
+    this.cpu.addTStatesListener( this );
+  }
+
+
+	/* --- Z80CTCListener --- */
+
+  @Override
+  public void z80CTCUpdate( Z80CTC ctc, int timerNum )
+  {
+    if( ctc == this.ctc ) {
+      if( timerNum == 0 ) {
+	this.sio.clockPulseSenderA();
+	this.sio.clockPulseReceiverA();
+      } else if( timerNum == 1 ) {
+	this.sio.clockPulseSenderB();
+	this.sio.clockPulseReceiverB();
+      }
+    }
   }
 
 
@@ -102,18 +126,41 @@ public class M003 extends AbstractKC85Module implements
   @Override
   public void reset( boolean powerOn )
   {
-    this.sio.reset( powerOn );
     this.ctc.reset( powerOn );
+    this.sio.reset( powerOn );
+    this.sio.setClearToSendA( true );
+    this.sio.setClearToSendB( true );
   }
 
 
 	/* --- Z80SIOChannelListener --- */
 
   @Override
-  public void z80SIOChannelByteAvailable( Z80SIO sio, int channel, int value )
+  public void z80SIOByteSent( Z80SIO sio, int channel, int value )
   {
-    if( (sio == this.sio) && (channel == 0) )
+    if( (sio == this.sio) && (channel == 0) ) {
       this.printMngr.putByte( value );
+      this.sio.setClearToSendA( false );
+      this.sio.setClearToSendA( true );
+    }
+  }
+
+
+	/* --- Z80TStatesListener --- */
+
+  @Override
+  public void z80TStatesProcessed( Z80CPU cpu, int tStates )
+  {
+    this.ctc.z80TStatesProcessed( cpu, tStates );
+
+    // Systemtakt durch 2 teilen und den ersten beiden CTC-Kanaelen zufuehren
+    this.remainTStates += tStates;
+    int pulses = this.remainTStates / 2;
+    if( pulses > 0 ) {
+      this.ctc.externalUpdate( 0, pulses );
+      this.ctc.externalUpdate( 1, pulses );
+      this.remainTStates -= (pulses * 2);
+    }
   }
 
 
@@ -122,7 +169,8 @@ public class M003 extends AbstractKC85Module implements
   @Override
   public void die()
   {
-    this.cpu.removeTStatesListener( this.ctc );
+    this.cpu.removeTStatesListener( this );
+    this.ctc.removeCTCListener( this );
     this.sio.removeChannelListener( this, 0 );
   }
 
@@ -227,4 +275,3 @@ public class M003 extends AbstractKC85Module implements
     return rv;
   }
 }
-

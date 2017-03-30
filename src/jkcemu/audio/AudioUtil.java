@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -32,9 +32,8 @@ public class AudioUtil
 	"Kein Speicher mehr f\u00FCr die Aufzeichnung\n"
 		+ "der Audiodaten verf\u00FCgbar.";
 
-  public static final int GZIP_FILE_FULL_READ_SIZE_MAX = 0x100000;
-  public static final int FILE_FULL_READ_SIZE_MAX      = 0x1000000;
-  public static final int RECORDING_MINUTES_MAX        = 120;
+  public static final int FILE_READ_MAX         = 0x1000000;
+  public static final int RECORDING_MINUTES_MAX = 120;
 
 
   public static void appendAudioFormatText(
@@ -116,19 +115,9 @@ public class AudioUtil
     if( file.isFile() ) {
       String fName = file.getName();
       if( fName != null ) {
-	fName = fName.toLowerCase();
-	isTAP = fName.endsWith( ".tap" ) || fName.endsWith( ".tap.gz" );
-	if( fName.endsWith( ".gz" ) ) {
-	  fileBytes = EmuUtil.readFile(
-				file,
-				true,
-				GZIP_FILE_FULL_READ_SIZE_MAX );
-	} else {
-	  fileBytes = EmuUtil.readFile(
-				file,
-				false,
-				FILE_FULL_READ_SIZE_MAX );
-	}
+	fName     = fName.toLowerCase();
+	isTAP     = fName.endsWith( ".tap" ) || fName.endsWith( ".tap.gz" );
+	fileBytes = EmuUtil.readFile( file, true, FILE_READ_MAX );
       }
     }
     if( fileBytes != null ) {

@@ -368,7 +368,7 @@ public class FilePropDlg
 	sizeText = "wegen fehlender Berechtigung nicht ermittelbar";
       }
       catch( Exception ex ) {
-	sizeText = "konnte aufgrund eines Fehlers nicht ermittelt werden";
+	sizeText = "konnte nicht ermittelt werden";
       }
       final String text = sizeText;
       EventQueue.invokeLater(

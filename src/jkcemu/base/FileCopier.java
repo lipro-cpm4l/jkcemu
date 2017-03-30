@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2016 Jens Mueller
+ * (c) 2014-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -88,16 +88,19 @@ public class FileCopier extends AbstractFileWorker
       this.curPath = dir;
       Path dstDir  = resolveDst( dir );
       try {
-	boolean exists    = false;
-	boolean forceCopy = false;
-	if( this.copyAllDirs != null ) {
-	  forceCopy = this.copyAllDirs.booleanValue();
-	}
-	if( !forceCopy ) {
-	  exists = Files.exists( dstDir, LinkOption.NOFOLLOW_LINKS );
-	}
-	if( (this.copyAllDirs == null) && exists ) {
-	  switch( showJOptionPane(
+	if( Files.isSameFile( dstDir, dir ) ) {
+	  rv = FileVisitResult.SKIP_SUBTREE;
+	} else {
+	  boolean exists    = false;
+	  boolean forceCopy = false;
+	  if( this.copyAllDirs != null ) {
+	    forceCopy = this.copyAllDirs.booleanValue();
+	  }
+	  if( !forceCopy ) {
+	    exists = Files.exists( dstDir, LinkOption.NOFOLLOW_LINKS );
+	  }
+	  if( (this.copyAllDirs == null) && exists ) {
+	    switch( showJOptionPane(
 			"Das Verzeichnis \'" + dstDir.toString()
 				+ "\' existiert bereits.\n"
 				+ "M\u00F6chten Sie trotzdem in das"
@@ -110,34 +113,35 @@ public class FileCopier extends AbstractFileWorker
 				"\u00DCberspringen",
 				"Alle \u00FCberspringen",
 				"Abbrechen" } ) )
-	  {
-	    case 0:
-	      forceCopy = true;
-	      break;
-	    case 1:
-	      forceCopy        = true;
-	      this.copyAllDirs = Boolean.TRUE;
-	      break;
-	    case 2:
-	      forceCopy = false;
-	      break;
-	    case 3:
-	      forceCopy        = false;
-	      this.copyAllDirs = Boolean.FALSE;
-	      break;
-	    default:
-	      this.cancelled = true;
+	    {
+	      case 0:
+		forceCopy = true;
+		break;
+	      case 1:
+		forceCopy        = true;
+		this.copyAllDirs = Boolean.TRUE;
+		break;
+	      case 2:
+		forceCopy = false;
+		break;
+	      case 3:
+		forceCopy        = false;
+		this.copyAllDirs = Boolean.FALSE;
+		break;
+	      default:
+		this.cancelled = true;
+	    }
 	  }
-	}
-	if( !this.cancelled && (!exists || forceCopy) ) {
-	  Files.copy(
+	  if( !this.cancelled && (!exists || forceCopy) ) {
+	    Files.copy(
 		dir,
 		dstDir,
 		StandardCopyOption.COPY_ATTRIBUTES,
 		LinkOption.NOFOLLOW_LINKS );
-	  pathPasted( dstDir );
-	} else {
-	  rv = FileVisitResult.SKIP_SUBTREE;
+	    pathPasted( dstDir );
+	  } else {
+	    rv = FileVisitResult.SKIP_SUBTREE;
+	  }
 	}
       }
       catch( IOException ex ) {
@@ -161,17 +165,18 @@ public class FileCopier extends AbstractFileWorker
     if( !this.cancelled ) {
       this.curPath = file;
       try {
-	Path    dstFile      = resolveDst( file );
-	boolean exists       = false;
-	boolean forceReplace = false;
-	if( this.replaceAllFiles != null ) {
-	  forceReplace = this.replaceAllFiles.booleanValue();
-	}
-	if( !forceReplace ) {
-	  exists = Files.exists( dstFile, LinkOption.NOFOLLOW_LINKS );
-	}
-	if( (this.replaceAllFiles == null) && exists ) {
-	  switch( showJOptionPane(
+	Path dstFile = resolveDst( file );
+	if( !Files.isSameFile( dstFile, file ) ) {
+	  boolean exists       = false;
+	  boolean forceReplace = false;
+	  if( this.replaceAllFiles != null ) {
+	    forceReplace = this.replaceAllFiles.booleanValue();
+	  }
+	  if( !forceReplace ) {
+	    exists = Files.exists( dstFile, LinkOption.NOFOLLOW_LINKS );
+	  }
+	  if( (this.replaceAllFiles == null) && exists ) {
+	    switch( showJOptionPane(
 			"Die Datei \'" + dstFile.toString()
 				+ "\' existiert bereits.\n"
 				+ "M\u00F6chten Sie die Datei ersetzen?",
@@ -183,33 +188,34 @@ public class FileCopier extends AbstractFileWorker
 				"Nicht ersetzen",
 				"Alle nicht ersetzen",
 				"Abbrechen" } ) )
-	  {
-	    case 0:
-	      forceReplace = true;
-	      break;
-	    case 1:
-	      forceReplace         = true;
-	      this.replaceAllFiles = Boolean.TRUE;
-	      break;
-	    case 2:
-	      forceReplace = false;
-	      break;
-	    case 3:
-	      forceReplace         = false;
-	      this.replaceAllFiles = Boolean.FALSE;
-	      break;
-	    default:
-	      this.cancelled = true;
+	    {
+	      case 0:
+		forceReplace = true;
+		break;
+	      case 1:
+		forceReplace         = true;
+		this.replaceAllFiles = Boolean.TRUE;
+		break;
+	      case 2:
+		forceReplace = false;
+		break;
+	      case 3:
+		forceReplace         = false;
+		this.replaceAllFiles = Boolean.FALSE;
+		break;
+	      default:
+		this.cancelled = true;
+	    }
 	  }
-	}
-	if( !this.cancelled && (!exists || forceReplace) ) {
-	  Files.copy(
+	  if( !this.cancelled && (!exists || forceReplace) ) {
+	    Files.copy(
 		file,
 		dstFile,
 		StandardCopyOption.REPLACE_EXISTING,
 		StandardCopyOption.COPY_ATTRIBUTES,
 		LinkOption.NOFOLLOW_LINKS );
-	  pathPasted( dstFile );
+	    pathPasted( dstFile );
+	  }
 	}
       }
       catch( IOException ex ) {

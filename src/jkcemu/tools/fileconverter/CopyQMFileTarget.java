@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -57,7 +57,9 @@ public class CopyQMFileTarget extends AbstractConvertTarget
   public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".cqm" );
-    CopyQMDisk.export( this.disk, file, this.fileConvertFrm.getRemark() );
-    return null;
+    return CopyQMDisk.export(
+			this.disk,
+			file,
+			this.fileConvertFrm.getRemark() );
   }
 }

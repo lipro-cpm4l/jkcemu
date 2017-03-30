@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.*;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import jkcemu.Main;
 
 
@@ -158,23 +159,50 @@ public class FileInfo
 	}
       }
       if( (fileFmt == null) && (fileLen > 20) && (header.length > 2) ) {
-	int b0 = (int) header[ 0 ] & 0xFF;
-	int b1 = (int) header[ 1 ] & 0xFF;
-	int b2 = (int) header[ 2 ] & 0xFF;
+	AtomicBoolean cks     = new AtomicBoolean();
+	boolean       blkNums = hasKCBlkNums( header, cks );
+	int           pos     = blkNums ? 1 : 0;
+	int           b0      = (int) header[ pos++ ] & 0xFF;
+	int           b1      = (int) header[ pos++ ] & 0xFF;
+	int           b2      = (int) header[ pos ] & 0xFF;
 	if( ((b0 == 0xD3) && (b1 == 0xD3) && (b2 == 0xD3))
 	    || ((b0 == 0xD7) && (b1 == 0xD7) && (b2 == 0xD7)) )
 	{
-	  fileFmt = FileFormat.KCBASIC_HEAD_PRG;
+	  if( blkNums ) {
+	    if( cks.get() ) {
+	      fileFmt = FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS;
+	    } else {
+	      fileFmt = FileFormat.KCBASIC_HEAD_PRG_BLKN;
+	    }
+	  } else {
+	    fileFmt = FileFormat.KCBASIC_HEAD_PRG;
+	  }
 	}
 	else if( ((b0 == 0xD4) && (b1 == 0xD4) && (b2 == 0xD4))
 		 || ((b0 == 0xD8) && (b1 == 0xD8) && (b2 == 0xD8)) )
 	{
-	  fileFmt = FileFormat.KCBASIC_HEAD_DATA;
+	  if( blkNums ) {
+	    if( cks.get() ) {
+	      fileFmt = FileFormat.KCBASIC_HEAD_DATA_BLKN_CKS;
+	    } else {
+	      fileFmt = FileFormat.KCBASIC_HEAD_DATA_BLKN;
+	    }
+	  } else {
+	    fileFmt = FileFormat.KCBASIC_HEAD_DATA;
+	  }
 	}
 	else if( ((b0 == 0xD5) && (b1 == 0xD5) && (b2 == 0xD5))
 		 || ((b0 == 0xD9) && (b1 == 0xD9) && (b2 == 0xD9)) )
 	{
-	  fileFmt = FileFormat.KCBASIC_HEAD_ASC;
+	  if( blkNums ) {
+	    if( cks.get() ) {
+	      fileFmt = FileFormat.KCBASIC_HEAD_ASC_BLKN_CKS;
+	    } else {
+	      fileFmt = FileFormat.KCBASIC_HEAD_ASC_BLKN;
+	    }
+	  } else {
+	    fileFmt = FileFormat.KCBASIC_HEAD_ASC;
+	  }
 	}
       }
       if( (fileFmt == null)
@@ -225,16 +253,28 @@ public class FileInfo
 	if( upperFileName.endsWith( ".KCB" )
 	    && (fileLen > 127) && (header.length > 20) )
 	{
-	  int b16 = (int) header[ 16 ] & 0xFF;
+	  AtomicBoolean cks     = new AtomicBoolean();
+	  boolean       blkNums = hasKCBlkNums( header, cks );
+	  int           begPos  = blkNums ? 1 : 0;
+	  int b16 = (int) header[ begPos + 16 ] & 0xFF;
 	  if( (b16 >= 2) && (b16 <= 4)
-	      && (EmuUtil.getWord( header, 17 ) <= 0x0401)
-	      && (EmuUtil.getWord( header, 19 ) >= 0x0409) )
+	      && (EmuUtil.getWord( header, begPos + 17 ) <= 0x0401)
+	      && (EmuUtil.getWord( header, begPos + 19 ) >= 0x0409) )
 	  {
-	    fileFmt = FileFormat.KCB;
+	    if( blkNums ) {
+	      if( cks.get() ) {
+		fileFmt = FileFormat.KCB_BLKN_CKS;
+	      } else {
+		fileFmt = FileFormat.KCB_BLKN;
+	      }
+	    } else {
+	      fileFmt = FileFormat.KCB;
+	    }
 	  }
 	}
 	if( (fileFmt == null)
 	    && (upperFileName.endsWith( ".KCC" )
+			|| upperFileName.endsWith( ".KCM" )
 			|| upperFileName.endsWith( ".851" )
 			|| upperFileName.endsWith( ".852" )
 			|| upperFileName.endsWith( ".853" )
@@ -242,7 +282,16 @@ public class FileInfo
 			|| upperFileName.endsWith( ".855" ))
 	    && (fileLen > 127) && (header.length > 16) )
 	{
-	  fileFmt = FileFormat.KCC;
+	  AtomicBoolean cks = new AtomicBoolean();
+	  if( hasKCBlkNums( header, cks ) ) {
+	    if( cks.get() ) {
+	      fileFmt = FileFormat.KCC_BLKN_CKS;
+	    } else {
+	      fileFmt = FileFormat.KCC_BLKN;
+	    }
+	  } else {
+	    fileFmt = FileFormat.KCC;
+	  }
 	  begAddr = getBegAddr( header, fileFmt );
 	  endAddr = getEndAddr( header, fileFmt );
 	}
@@ -438,6 +487,38 @@ public class FileInfo
   {
     LoadData rv = null;
     if( fileFmt != null ) {
+      if( fileFmt.equals( FileFormat.KCTAP_BASIC_DATA )
+	  || fileFmt.equals( FileFormat.KCTAP_BASIC_ASC )
+	  || fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC )
+	  || fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC_BLKN )
+	  || fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC_BLKN_CKS )
+	  || fileFmt.equals( FileFormat.KCBASIC_HEAD_DATA )
+	  || fileFmt.equals( FileFormat.KCBASIC_HEAD_DATA_BLKN )
+	  || fileFmt.equals( FileFormat.KCBASIC_HEAD_DATA_BLKN_CKS ) )
+      {
+	throw new IOException( "Laden von KC-BASIC-Datenfeldern"
+			+ " und KC-BASIC-ASCII-Listings\n"
+			+ "wird nicht unterst\u00FCtzt" );
+      }
+      if( fileFmt.equals( FileFormat.KCB_BLKN ) ) {
+	fileBuf = removeKCBlockNums( fileBuf );
+	fileFmt = FileFormat.KCB;
+      } else if( fileFmt.equals( FileFormat.KCC_BLKN ) ) {
+	fileBuf = removeKCBlockNums( fileBuf );
+	fileFmt = FileFormat.KCC;
+      } else if( fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN ) ) {
+	fileBuf = removeKCBlockNums( fileBuf );
+	fileFmt = FileFormat.KCBASIC_HEAD_PRG;
+      } else if( fileFmt.equals( FileFormat.KCB_BLKN_CKS ) ) {
+	fileBuf = removeKCBlockNumsAndChecksums( fileBuf );
+	fileFmt = FileFormat.KCB;
+      } else if( fileFmt.equals( FileFormat.KCC_BLKN_CKS ) ) {
+	fileBuf = removeKCBlockNumsAndChecksums( fileBuf );
+	fileFmt = FileFormat.KCC;
+      } else if( fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS ) ) {
+	fileBuf = removeKCBlockNumsAndChecksums( fileBuf );
+	fileFmt = FileFormat.KCBASIC_HEAD_PRG;
+      }
       if( fileFmt.equals( FileFormat.CDT )
 	  || fileFmt.equals( FileFormat.TZX )
 	  || fileFmt.equals( FileFormat.ZXTAP ) )
@@ -453,14 +534,6 @@ public class FileInfo
 	  || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG ) )
       {
 	rv = createLoadDataFromKCTAP( fileBuf, fileFmt );
-      } if( fileFmt.equals( FileFormat.KCTAP_BASIC_DATA )
-	    || fileFmt.equals( FileFormat.KCTAP_BASIC_ASC )
-	    || fileFmt.equals( FileFormat.KCBASIC_HEAD_DATA )
-	    || fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC ) )
-      {
-	throw new IOException( "Laden von KC-BASIC-Datenfeldern"
-			+ " und KC-BASIC-ASCII-Listings\n"
-			+ "wird nicht unterst\u00FCtzt" );
       } else if( fileFmt.equals( FileFormat.INTELHEX ) ) {
 	rv = createLoadDataFromINTELHEX( fileBuf );
       } else {
@@ -635,8 +708,24 @@ public class FileInfo
 	  rv = 0x0401;
 	}
       }
+      else if( (fileFmt.equals( FileFormat.KCB_BLKN )
+			|| fileFmt.equals( FileFormat.KCB_BLKN_CKS ))
+	       && (header.length > 21) )
+      {
+	if( (EmuUtil.getWord( header, 18 ) <= 0x0401)
+	    && (EmuUtil.getWord( header, 20 ) >= 0x0409) )
+	{
+	  rv = 0x0401;
+	}
+      }
       else if( fileFmt.equals( FileFormat.KCC ) && (header.length > 18) ) {
 	rv = EmuUtil.getWord( header, 17 );
+      }
+      else if( (fileFmt.equals( FileFormat.KCC_BLKN )
+			|| fileFmt.equals( FileFormat.KCC_BLKN_CKS ))
+	       && (header.length > 19) )
+      {
+	rv = EmuUtil.getWord( header, 18 );
       }
       else if( (fileFmt.equals( FileFormat.KCTAP_SYS )
 			|| fileFmt.equals( FileFormat.KCTAP_Z9001)
@@ -654,6 +743,12 @@ public class FileInfo
 	       && (header.length > 14) )
       {
 	rv = getKCBasicBegAddr( header, 14 );
+      }
+      else if( (fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS ))
+	       && (header.length > 15) )
+      {
+	rv = getKCBasicBegAddr( header, 15 );
       }
       else if( fileFmt.equals( FileFormat.KCBASIC_PRG )
 	       && (header.length > 3) )
@@ -740,9 +835,29 @@ public class FileInfo
 	  rv = fileEndAddr > 0 ? fileEndAddr : 0xFFFF;
 	}
       }
+      else if( (fileFmt.equals( FileFormat.KCB_BLKN )
+			|| fileFmt.equals( FileFormat.KCB_BLKN_CKS ))
+	       && (header.length > 21) )
+      {
+	int fileEndAddr = (EmuUtil.getWord( header, 20 ) - 1) & 0xFFFF;
+	if( (EmuUtil.getWord( header, 18 ) <= 0x0401)
+	    && (fileEndAddr >= 0x0409) )
+	{
+	  rv = fileEndAddr > 0 ? fileEndAddr : 0xFFFF;
+	}
+      }
       else if( fileFmt.equals( FileFormat.KCC ) && (header.length > 20) ) {
 	rv = (EmuUtil.getWord( header, 19 ) - 1) & 0xFFFF;
 	if( (rv == 0) && (EmuUtil.getWord( header, 17 ) != 0) ) {
+	  rv = 0xFFFF;
+	}
+      }
+      else if( (fileFmt.equals( FileFormat.KCC_BLKN )
+			|| fileFmt.equals( FileFormat.KCC_BLKN_CKS ))
+	       && (header.length > 21) )
+      {
+	rv = (EmuUtil.getWord( header, 20 ) - 1) & 0xFFFF;
+	if( (rv == 0) && (EmuUtil.getWord( header, 18 ) != 0) ) {
 	  rv = 0xFFFF;
 	}
       }
@@ -772,6 +887,12 @@ public class FileInfo
 	       && (header.length > 14) )
       {
 	rv = EmuUtil.getWord( header, 11 ) + ((header[ 14 ] & 0xFF) << 8);
+      }
+      else if( (fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS ))
+	       && (header.length > 15) )
+      {
+	rv = EmuUtil.getWord( header, 12 ) + ((header[ 15 ] & 0xFF) << 8);
       }
       else if( fileFmt.equals( FileFormat.KCBASIC_PRG )
 	       && (header.length > 3) )
@@ -840,12 +961,38 @@ public class FileInfo
 	  }
 	}
       }
-      else if( (fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+      else if( (fileFmt.equals( FileFormat.KCB_BLKN )
+			|| fileFmt.equals( FileFormat.KCB_BLKN_CKS )
+			|| fileFmt.equals( FileFormat.KCC_BLKN )
+			|| fileFmt.equals( FileFormat.KCC_BLKN_CKS ))
+	       && (header.length >= 12) )
+      {
+	rv = getFileDesc( header, 1, 11 );
+	if( rv != null ) {
+	  if( rv.length() < 8 ) {
+	    String ext = getFileDesc( header, 9, 3 );
+	    if( ext != null ) {
+	      rv = rv + "." + ext;
+	    }
+	  }
+	}
+      }
+      else if( (fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC )
 			|| fileFmt.equals( FileFormat.KCBASIC_HEAD_DATA )
-			|| fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC ))
+			|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG ))
 	       && (header.length >= 11) )
       {
 	rv = getFileDesc( header, 3, 8 );
+      }
+      else if( (fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC_BLKN )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_ASC_BLKN_CKS )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_DATA_BLKN )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_DATA_BLKN_CKS )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS ))
+	       && (header.length >= 12) )
+      {
+	rv = getFileDesc( header, 4, 8 );
       }
     }
     return rv;
@@ -909,6 +1056,15 @@ public class FileInfo
 	  rv = -1;
 	}
       }
+      else if( (fileFmt.equals( FileFormat.KCC_BLKN )
+			|| fileFmt.equals( FileFormat.KCC_BLKN_CKS ))
+	       && (header.length > 23) )
+      {
+	rv = EmuUtil.getWord( header, 22 );
+	if( rv == 0 ) {
+	  rv = -1;
+	}
+      }
       else if( (fileFmt.equals( FileFormat.KCTAP_SYS )
 			|| fileFmt.equals( FileFormat.KCTAP_Z9001 )
 			|| fileFmt.equals( FileFormat.KCTAP_KC85 ))
@@ -944,8 +1100,12 @@ public class FileInfo
     boolean rv = false;
     if( fileFmt != null ) {
       rv = fileFmt.equals( FileFormat.KCB )
+		|| fileFmt.equals( FileFormat.KCB_BLKN )
+		|| fileFmt.equals( FileFormat.KCB_BLKN_CKS )
 		|| fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
 		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS )
 		|| fileFmt.equals( FileFormat.KCBASIC_PRG );
     }
     return rv;
@@ -1298,6 +1458,53 @@ public class FileInfo
   }
 
 
+  private static boolean hasKCBlkNums(
+				byte[]        header,
+				AtomicBoolean cksOut )
+  {
+    boolean rv     = false;
+    boolean hasCks = false;
+    if( header != null ) {
+      if( header.length > 0 ) {
+	int blkNum = (int) header[ 0 ] & 0xFF;
+	if( (blkNum == 0) || (blkNum == 1) ) {
+	  if( header.length > 129 ) {
+	    int cks = 0;
+	    for( int i = 1; i <= 128; i++ ) {
+	      cks += ((int) header[ i ] & 0xFF);
+	    }
+	    if( (cks & 0xFF) == ((int) header[ 129 ] & 0xFF) ) {
+	      hasCks = true;
+	    }
+	  }
+	  rv = true;
+	  int blkSize = (hasCks ? 130 : 129);
+	  int pos     = blkSize;
+	  while( pos < header.length ) {
+	    int b = (int) header[ pos ] & 0xFF;
+	    if( b == 0xFF ) {
+	      if( (pos + blkSize) < header.length ) {
+		rv = false;		// nicht der letzte Block
+	      }
+	      break;
+	    }
+	    if( b != (blkNum + 1) ) {
+	      rv = false;		// nicht aufsteigend
+	      break;
+	    }
+	    blkNum++;
+	    pos += blkSize;
+	  }
+	}
+      }
+    }
+    if( cksOut != null ) {
+      cksOut.set( hasCks );
+    }
+    return rv;
+  }
+
+
   private static int parseHex( InputStream in, int cnt ) throws IOException
   {
     int value = 0;
@@ -1316,5 +1523,43 @@ public class FileInfo
       --cnt;
     }
     return value;
+  }
+
+
+  private static byte[] removeKCBlockNums( byte[] fileBuf )
+  {
+    byte[] rv = fileBuf;
+    if( fileBuf.length > 0 ) {
+      ByteArrayOutputStream buf = new ByteArrayOutputStream( fileBuf.length );
+      int pos = 0;
+      while( pos < fileBuf.length ) {
+	int b = (int) fileBuf[ pos ];
+	if( (pos % 129) != 0 ) {
+	  buf.write( b );
+	}
+	pos++;
+      }
+      rv = buf.toByteArray();
+    }
+    return rv;
+  }
+
+
+  private static byte[] removeKCBlockNumsAndChecksums( byte[] fileBuf )
+  {
+    byte[] rv = fileBuf;
+    if( fileBuf.length > 0 ) {
+      ByteArrayOutputStream buf = new ByteArrayOutputStream( fileBuf.length );
+      int pos = 0;
+      while( pos < fileBuf.length ) {
+	int b = (int) fileBuf[ pos ];
+	if( ((pos % 130) != 0) && ((pos % 130) != 129) ) {
+	  buf.write( b );
+	}
+	pos++;
+      }
+      rv = buf.toByteArray();
+    }
+    return rv;
   }
 }

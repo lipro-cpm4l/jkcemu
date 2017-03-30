@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2016 Jens Mueller
+ * (c) 2013-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -23,7 +23,8 @@ import jkcemu.base.CharRaster;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
-import jkcemu.emusys.zxspectrum.ZXSpectrumKeyboardFld;
+import jkcemu.emusys.zxspectrum.ZXSpectrum128KeyboardFld;
+import jkcemu.emusys.zxspectrum.ZXSpectrum48KeyboardFld;
 import jkcemu.etc.PSG8910;
 import jkcemu.joystick.JoystickThread;
 import jkcemu.text.TextUtil;
@@ -114,37 +115,37 @@ public class ZXSpectrum extends EmuSys implements
   private static byte[]              os128k           = null;
   private static Map<Long,Character> pixelCRC32ToChar = null;
 
-  private Color[]               colors;
-  private String                osFile;
-  private volatile float        fTStatesPerLine;
-  private volatile int          tStatesPerLine;
-  private boolean               mode128k;
-  private boolean               cfgRegProtected;
-  private boolean               interruptRequested;
-  private boolean               earPhase;
-  private boolean               blinkState;
-  private int                   blinkLineCounter;
-  private int                   tapeOutBits;
-  private int                   tapeInLDelayTStateCounter;
-  private int                   joyActionMask;
-  private int                   linesPerScreen;
-  private int                   firstScreenLine;
-  private int                   lastScreenLine;
-  private int                   curScreenLine;
-  private int                   screenTStateCounter;
-  private int                   lineTStateCounter;
-  private int                   borderColorNum;
-  private int                   romOffs;
-  private int                   ramC000Offs;
-  private volatile int          screenOffs;
-  private int                   psgRegNum;
-  private int[]                 kbMatrix;
-  private byte[]                osBytes;
-  private byte[]                borderColorNums;
-  private byte[]                screenColorNums;
-  private byte[]                ram;
-  private PSG8910               psg;
-  private ZXSpectrumKeyboardFld keyboardFld;
+  private Color[]             colors;
+  private String              osFile;
+  private volatile float      fTStatesPerLine;
+  private volatile int        tStatesPerLine;
+  private boolean             mode128k;
+  private boolean             cfgRegProtected;
+  private boolean             interruptRequested;
+  private boolean             earPhase;
+  private boolean             blinkState;
+  private int                 blinkLineCounter;
+  private int                 tapeOutBits;
+  private int                 tapeInLDelayTStateCounter;
+  private int                 joyActionMask;
+  private int                 linesPerScreen;
+  private int                 firstScreenLine;
+  private int                 lastScreenLine;
+  private int                 curScreenLine;
+  private int                 screenTStateCounter;
+  private int                 lineTStateCounter;
+  private int                 borderColorNum;
+  private int                 romOffs;
+  private int                 ramC000Offs;
+  private volatile int        screenOffs;
+  private int                 psgRegNum;
+  private int[]               kbMatrix;
+  private byte[]              osBytes;
+  private byte[]              borderColorNums;
+  private byte[]              screenColorNums;
+  private byte[]              ram;
+  private PSG8910             psg;
+  private AbstractKeyboardFld keyboardFld;
 
 
   public ZXSpectrum( EmuThread emuThread, Properties props )
@@ -201,6 +202,12 @@ public class ZXSpectrum extends EmuSys implements
   public static int getDefaultSpeedKHz( Properties props )
   {
     return emulates128K( props ) ? DEFAULT_128K_KHZ : DEFAULT_48K_KHZ;
+  }
+
+
+  public boolean isMode128K()
+  {
+    return this.mode128k;
   }
 
 
@@ -380,7 +387,11 @@ public class ZXSpectrum extends EmuSys implements
   @Override
   public AbstractKeyboardFld createKeyboardFld()
   {
-    this.keyboardFld = new ZXSpectrumKeyboardFld( this );
+    if( this.mode128k ) {
+      this.keyboardFld = new ZXSpectrum128KeyboardFld( this );
+    } else {
+      this.keyboardFld = new ZXSpectrum48KeyboardFld( this );
+    }
     return this.keyboardFld;
   }
 

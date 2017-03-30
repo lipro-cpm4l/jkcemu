@@ -22,7 +22,7 @@
       <a href="assembler.htm#case">3.1. Gro&szlig;- und Kleinschreibung</a>
      </li>
      <li>
-      <a href=assembler.htm#line_syntax">3.2. Aufbau einer Assembler-Quelltextzeile</a>
+      <a href="assembler.htm#line_syntax">3.2. Aufbau einer Assembler-Quelltextzeile</a>
      </li>
      <li>
       <a href="assembler.htm#instructions">3.4. Assembler-Befehle</a>
@@ -282,7 +282,7 @@
      d.h. die Adressen mitgez&auml;hlt,
      jedoch wird kein Programmcode erzeugt.
      Steht dagegen der Befehl mitten im Quelltext,
-     wird der Bereich mit Null-Bytes aufgef&uuml;llt.
+     wird der Bereich mit Nullbytes aufgef&uuml;llt.
     </td>
    </tr>
    <tr>
@@ -346,7 +346,7 @@
      Programmz&auml;hler (Adresse) auf den angegebenen Wert setzen,<br/>
      Steht der Befehl mitten im Quelltext,
      wird der Bereich zwischen der letzten und der neuen Adresse
-     mit Null-Bytes aufgef&uuml;llt.
+     mit Nullbytes aufgef&uuml;llt.
     </td>
    </tr>
    <tr>
@@ -767,10 +767,16 @@
    </tr>
   </table>
  <br/>
-  Hexadezimalzahlen k&ouml;nnen auch in einer anderen Syntax
-  geschrieben werden: X gefolgt von der in einfachen Hochkommas
-  eingeschlossenen Hexadezimalzahl.
- <br/><br/>
+  Hexadezimalzahlen k&ouml;nnen auch in zwei anderen Syntax-Varianten
+  geschrieben werden:
+  <ul>
+   <li>% gefolgt von der Hexadezimalzahl</li>
+   <li>
+    X gefolgt von der in einfachen Hochkommas
+    eingeschlossenen Hexadezimalzahl
+   </li>
+  </ul>
+ <br/>
   Beispiele:
   <table border="1">
    <tr><th>Beispiel</th><th>Dezimaler Wert</th></tr>
@@ -778,6 +784,7 @@
    <tr><td>101b</td><td>5</td></tr>
    <tr><td>123q</td><td>83</td></tr>
    <tr><td>0AFh</td><td>175</td></tr>
+   <tr><td>%AF</td><td>175</td></tr>
    <tr><td>X'AF'</td><td>175</td></tr>
   </table>
  <br/><br/>

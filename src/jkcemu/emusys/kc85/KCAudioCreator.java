@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -48,7 +48,7 @@ public class KCAudioCreator extends BitSampleBuffer
       throw new IOException( "KC-TAP-Kopf erwartet" );
     }
 
-    boolean      firstBlk = true;
+    boolean firstBlk = true;
     while( iter.hasNext() ) {
 
       // Vorton
@@ -68,7 +68,6 @@ public class KCAudioCreator extends BitSampleBuffer
       for( int i = 0; i < nHalf; i++ ) {
 	addPhaseChangeSamples( 4 );
       }
-      firstBlk = false;
 
       // Trennschwingung
       addPhaseChangeSamples( 8 );
@@ -93,6 +92,7 @@ public class KCAudioCreator extends BitSampleBuffer
 
       // Pruefsumme
       addByteSamples( cks );
+      firstBlk = false;
     }
 
     // abschliessender Phasenwechsel

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -62,6 +62,7 @@ import jkcemu.emusys.A5105;
 import jkcemu.emusys.AC1;
 import jkcemu.emusys.BCS3;
 import jkcemu.emusys.C80;
+import jkcemu.emusys.CustomSys;
 import jkcemu.emusys.HueblerEvertMC;
 import jkcemu.emusys.HueblerGraphicsMC;
 import jkcemu.emusys.KC85;
@@ -83,6 +84,7 @@ import jkcemu.emusys.a5105.A5105SettingsFld;
 import jkcemu.emusys.ac1_llc2.AC1SettingsFld;
 import jkcemu.emusys.ac1_llc2.LLC2SettingsFld;
 import jkcemu.emusys.bcs3.BCS3SettingsFld;
+import jkcemu.emusys.customsys.CustomSysSettingsFld;
 import jkcemu.emusys.etc.KramerMCSettingsFld;
 import jkcemu.emusys.etc.NANOSSettingsFld;
 import jkcemu.emusys.etc.PCMSettingsFld;
@@ -137,6 +139,7 @@ public class SettingsFrm extends BaseFrm
   private JRadioButton                 btnSysAC1;
   private JRadioButton                 btnSysBCS3;
   private JRadioButton                 btnSysC80;
+  private JRadioButton                 btnSysCustomSys;
   private JRadioButton                 btnSysHC900;
   private JRadioButton                 btnSysHEMC;
   private JRadioButton                 btnSysHGMC;
@@ -162,12 +165,13 @@ public class SettingsFrm extends BaseFrm
   private JRadioButton                 btnSysZXSpectrum;
   private A5105SettingsFld             a5105SettingsFld;
   private AC1SettingsFld               ac1SettingsFld;
-  private LLC1SettingsFld              llc1SettingsFld;
-  private LLC2SettingsFld              llc2SettingsFld;
+  private CustomSysSettingsFld         customSysSettingsFld;
   private BCS3SettingsFld              bcs3SettingsFld;
   private HueblerEvertMCSettingsFld    hemcSettingsFld;
   private HueblerGraphicsMCSettingsFld hgmcSettingsFld;
   private KC85SettingsFld              hc900SettingsFld;
+  private LLC1SettingsFld              llc1SettingsFld;
+  private LLC2SettingsFld              llc2SettingsFld;
   private Z9001SettingsFld             kc85_1_SettingsFld;
   private KC85SettingsFld              kc85_2_SettingsFld;
   private KC85SettingsFld              kc85_3_SettingsFld;
@@ -233,6 +237,12 @@ public class SettingsFrm extends BaseFrm
 		    setDataChanged();
 		  }
 		} );
+  }
+
+
+  public NumberFormat getSpeedFmt()
+  {
+    return this.fmtSpeed;
   }
 
 
@@ -316,6 +326,7 @@ public class SettingsFrm extends BaseFrm
 		   || (src == this.btnSysAC1)
 		   || (src == this.btnSysBCS3)
 		   || (src == this.btnSysC80)
+		   || (src == this.btnSysCustomSys)
 		   || (src == this.btnSysHC900)
 		   || (src == this.btnSysHEMC)
 		   || (src == this.btnSysHGMC)
@@ -374,8 +385,7 @@ public class SettingsFrm extends BaseFrm
     this.tabKCNet.lookAndFeelChanged();
     this.a5105SettingsFld.lookAndFeelChanged();
     this.ac1SettingsFld.lookAndFeelChanged();
-    this.llc1SettingsFld.lookAndFeelChanged();
-    this.llc2SettingsFld.lookAndFeelChanged();
+    this.customSysSettingsFld.lookAndFeelChanged();
     this.hc900SettingsFld.lookAndFeelChanged();
     this.hemcSettingsFld.lookAndFeelChanged();
     this.hgmcSettingsFld.lookAndFeelChanged();
@@ -384,6 +394,8 @@ public class SettingsFrm extends BaseFrm
     this.kc85_3_SettingsFld.lookAndFeelChanged();
     this.kc85_4_SettingsFld.lookAndFeelChanged();
     this.kc85_5_SettingsFld.lookAndFeelChanged();
+    this.llc1SettingsFld.lookAndFeelChanged();
+    this.llc2SettingsFld.lookAndFeelChanged();
     this.z1013SettingsFld.lookAndFeelChanged();
     this.kc87SettingsFld.lookAndFeelChanged();
     this.z9001SettingsFld.lookAndFeelChanged();
@@ -794,16 +806,14 @@ public class SettingsFrm extends BaseFrm
     this.btnSysKCcompact = new JRadioButton( KCcompact.SYSTEXT, false );
     this.btnSysKCcompact.addActionListener( this );
     grpSys.add( this.btnSysKCcompact );
-    gbcSys.insets.bottom = 5;
     gbcSys.gridy++;
     panelSys.add( this.btnSysKCcompact, gbcSys );
 
     this.btnSysKramerMC = new JRadioButton( KramerMC.SYSTEXT, false );
     this.btnSysKramerMC.addActionListener( this );
     grpSys.add( this.btnSysKramerMC );
-    gbcSys.insets.top    = 5;
-    gbcSys.insets.bottom = 0;
-    gbcSys.gridy         = 0;
+    gbcSys.insets.top = 5;
+    gbcSys.gridy      = 0;
     gbcSys.gridx++;
     panelSys.add( this.btnSysKramerMC, gbcSys );
 
@@ -880,6 +890,16 @@ public class SettingsFrm extends BaseFrm
     gbcSys.gridy++;
     panelSys.add( this.btnSysZXSpectrum, gbcSys );
 
+    this.btnSysCustomSys = new JRadioButton( CustomSys.SYSTEXT, false );
+    this.btnSysCustomSys.addActionListener( this );
+    grpSys.add( this.btnSysCustomSys );
+    gbcSys.insets.top    = 10;
+    gbcSys.insets.bottom = 5;
+    gbcSys.gridwidth     = GridBagConstraints.REMAINDER;
+    gbcSys.gridx         = 0;
+    gbcSys.gridy += 2;
+    panelSys.add( this.btnSysCustomSys, gbcSys );
+
 
     // Optionen
     this.cardLayoutSysOpt = new CardLayout( 5, 5);
@@ -928,6 +948,14 @@ public class SettingsFrm extends BaseFrm
     // Optionen fuer BCS3
     this.bcs3SettingsFld = new BCS3SettingsFld( this, BCS3.PROP_PREFIX );
     this.panelSysOpt.add( this.bcs3SettingsFld, BCS3.SYSNAME );
+
+
+    // Optionen fuer A5105
+    this.customSysSettingsFld = new CustomSysSettingsFld(
+					this,
+					CustomSys.PROP_PREFIX );
+    this.panelSysOpt.add( this.customSysSettingsFld, CustomSys.SYSNAME );
+
 
 
     // Optionen fuer HC900
@@ -1149,7 +1177,11 @@ public class SettingsFrm extends BaseFrm
     gbcScreen.gridy++;
     this.tabScreen.add( new JLabel( "Rand:" ), gbcScreen );
 
-    this.spinnerModelMargin = new SpinnerNumberModel( 20, 0, MAX_MARGIN, 1 );
+    this.spinnerModelMargin = new SpinnerNumberModel(
+					ScreenFld.DEFAULT_MARGIN,
+					0,
+					MAX_MARGIN,
+					1 );
     this.spinnerMargin = new JSpinner( this.spinnerModelMargin );
     this.spinnerMargin.addChangeListener( this );
 
@@ -1361,7 +1393,7 @@ public class SettingsFrm extends BaseFrm
 
     ButtonGroup grpSRAMInit = new ButtonGroup();
 
-    this.btnSRAMInit00 = new JRadioButton( "Null-Bytes", true );
+    this.btnSRAMInit00 = new JRadioButton( "Nullbytes", true );
     grpSRAMInit.add( this.btnSRAMInit00 );
     this.btnSRAMInit00.addActionListener( this );
     gbcEtc.insets.top  = 0;
@@ -1584,7 +1616,7 @@ public class SettingsFrm extends BaseFrm
       String text = obj.toString();
       if( text != null ) {
 	props.setProperty(
-		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_SCREEN_MARGIN,
+		ScreenFrm.PROP_PREFIX + ScreenFrm.PROP_SCREEN_REFRESH_MS,
 		text );
       }
     }
@@ -1630,8 +1662,8 @@ public class SettingsFrm extends BaseFrm
 
 
   private void applySys( Properties props ) throws
-					UserCancelException,
-					UserInputException
+						UserCancelException,
+						UserInputException
   {
     // System
     String valueSys = "";
@@ -1646,6 +1678,9 @@ public class SettingsFrm extends BaseFrm
     }
     else if( this.btnSysC80.isSelected() ) {
       valueSys = C80.SYSNAME;
+    }
+    else if( this.btnSysCustomSys.isSelected() ) {
+      valueSys = CustomSys.SYSNAME;
     }
     else if( this.btnSysHC900.isSelected() ) {
       valueSys = KC85.SYSNAME_HC900;
@@ -1732,6 +1767,11 @@ public class SettingsFrm extends BaseFrm
     this.bcs3SettingsFld.applyInput(
 		props,
 		valueSys.equals( BCS3.SYSNAME ) );
+
+    // Optionen fuer benutzerdefinierten Computer
+    this.customSysSettingsFld.applyInput(
+		props,
+		valueSys.equals( CustomSys.SYSNAME ) );
 
     // Optionen fuer HC900
     this.hc900SettingsFld.applyInput(
@@ -1933,6 +1973,9 @@ public class SettingsFrm extends BaseFrm
       case C80.SYSNAME:
 	this.btnSysC80.setSelected( true );
 	break;
+      case CustomSys.SYSNAME:
+	this.btnSysCustomSys.setSelected( true );
+	break;
       case KC85.SYSNAME_HC900:
 	this.btnSysHC900.setSelected( true );
 	break;
@@ -1970,6 +2013,7 @@ public class SettingsFrm extends BaseFrm
       case LC80.SYSNAME_LC80_2716:
       case LC80.SYSNAME_LC80_2:
       case LC80.SYSNAME_LC80_E:
+      case LC80.SYSNAME_LC80_EX:
 	this.btnSysLC80.setSelected( true );
 	break;
       case LLC1.SYSNAME:
@@ -2020,6 +2064,9 @@ public class SettingsFrm extends BaseFrm
 
     // Optionen fuer BCS3
     this.bcs3SettingsFld.updFields( props );
+
+    // Optionen fuer benutzerdefinierten Computer
+    this.customSysSettingsFld.updFields( props );
 
     // Optionen fuer HC900
     this.hc900SettingsFld.updFields( props );
@@ -2238,6 +2285,9 @@ public class SettingsFrm extends BaseFrm
     }
     else if( this.btnSysBCS3.isSelected() ) {
       cardName = BCS3.SYSNAME;
+    }
+    else if( this.btnSysCustomSys.isSelected() ) {
+      cardName = CustomSys.SYSNAME;
     }
     else if( this.btnSysHC900.isSelected() ) {
       cardName = KC85.SYSNAME_HC900;

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -182,6 +182,7 @@ public class LLC2SettingsFld extends AbstractSettingsFld
 				settingsFrm,
 				propPrefix,
 				LLC2.DEFAULT_SWAP_KEY_CHAR_CASE,
+				LLC2.FUNCTION_KEY_COUNT,
 				LLC2.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 

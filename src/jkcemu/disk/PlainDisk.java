@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -126,10 +126,13 @@ public class PlainDisk extends AbstractFloppyDisk
 			AbstractFloppyDisk disk,
 			File               file ) throws IOException
   {
-    StringBuilder msgBuf = null;
-    OutputStream  out    = null;
+    StringBuilder msgBuf  = null;
+    IOException   ioEx    = null;
+    OutputStream  out     = null;
+    boolean       created = false;
     try {
-      out = new FileOutputStream( file );
+      out     = new FileOutputStream( file );
+      created = true;
 
       boolean hasDeleted    = false;
       int     sides         = disk.getSides();
@@ -163,10 +166,47 @@ public class PlainDisk extends AbstractFloppyDisk
 	    if( sector == null ) {
 	      throw new IOException(
 		String.format(
-			"Seite %d, Spur %d: Sektor %d nicht gefunden",
+			"Seite %d, Spur %d: Sektor %d nicht gefunden"
+				+ "\n\nDas Format unterst\u00FCtzt"
+				+ " keine freie Sektoranordnung.",
 			head + 1,
 			cyl,
 			i + 1  ) );
+	    }
+	    if( sector.checkError()
+		|| sector.hasBogusID()
+		|| sector.isDeleted() )
+	    {
+	      if( msgBuf == null ) {
+		msgBuf = new StringBuilder( 1024 );
+	      }
+	      msgBuf.append(
+			String.format(
+				"Seite %d, Spur %d, Sektor %d:",
+				head + 1,
+				cyl,
+				sector.getSectorNum() ) );
+	      boolean appended = false;
+	      if( sector.hasBogusID() ) {
+		msgBuf.append( " Sektor-ID generiert" );
+		appended = true;
+	      }
+	      if( sector.checkError() ) {
+		if( appended ) {
+		  msgBuf.append( (char) ',' );
+		}
+		msgBuf.append( " CRC-Fehler" );
+		appended = true;
+	      }
+	      if( sector.isDeleted() ) {
+		if( appended ) {
+		  msgBuf.append( (char) ',' );
+		}
+		msgBuf.append( " als gel\u00F6scht markiert" );
+		appended   = true;
+		hasDeleted = true;
+	      }
+	      msgBuf.append( (char) '\n' );
 	    }
 	    if( sector.isDeleted() ) {
 	      hasDeleted = true;
@@ -184,7 +224,9 @@ public class PlainDisk extends AbstractFloppyDisk
 	    if( sector.getDataLength() > sectorSize ) {
 	      throw new IOException(
 		String.format(
-			"Seite %d, Spur %d: Sektor %d ist zu gro\u00DF.",
+			"Seite %d, Spur %d: Sektor %d ist zu gro\u00DF."
+				+ "\n\nDas Format unterst\u00FCtzt"
+				+ " keine \u00FCbergro\u00DFen Sektoren.",
 			head + 1,
 			cyl,
 			sector.getSectorNum() ) );
@@ -200,14 +242,29 @@ public class PlainDisk extends AbstractFloppyDisk
       out.close();
       out = null;
 
-      if( hasDeleted && (msgBuf != null) ) {
-	msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+      if( msgBuf != null ) {
+	msgBuf.append( "\nDie angezeigten Informationen k\u00F6nnen"
+		+ " in einer einfachen Abbilddatei nicht gespeichert werden\n"
+		+ "und sind deshalb in der erzeugten Datei"
+		+ " nicht mehr enthalten.\n" );
+	if( hasDeleted ) {
+	  msgBuf.append( "\nGel\u00F6schte Sektoren werden"
 		+ " in einfachen Abbilddateien nicht unterst\u00FCtzt\n"
 		+ "und sind deshalb als normale Sektoren enthalten.\n" );
+	}
       }
+    }
+    catch( IOException ex ) {
+      ioEx = ex;
     }
     finally {
       EmuUtil.closeSilent( out );
+    }
+    if( ioEx != null ) {
+      if( created ) {
+	file.delete();
+      }
+      throw ioEx;
     }
     return msgBuf != null ? msgBuf.toString() : null;
   }
@@ -403,6 +460,13 @@ public class PlainDisk extends AbstractFloppyDisk
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public int getSectorOffset()
+  {
+    return 0;
   }
 
 

@@ -49,7 +49,8 @@
      <li>
       <a href="kc85.htm#sound">1.4. Tongeneratoren und Kassettenrecorderanschluss</a>
      </li>
-     <li><a href="kc85.htm#d004">1.5. Diskettenerweiterung D004</a></li>
+     <li><a href="kc85.htm#led">1.5. LEDs</a></li>
+     <li><a href="kc85.htm#d004">1.6. Diskettenerweiterung D004</a></li>
     </ul>
    </li>
    <li><a href="kc85.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -77,6 +78,9 @@
      </li>
      <li>
       <a href="kc85.htm#d004memerror">4.5. Vermeintlicher D004-Speicherfehler</a>
+     </li>
+     <li>
+      <a href="kc85.htm#autoloadinput">4.6. AutoLoad und AutoInput</a>
      </li>
     </ul>
    </li>
@@ -319,7 +323,12 @@
   bei dem jedoch die Lautst&auml;rke nicht gesteuert wird.
  <br/><br/>
 
- <h3><a name="d004">1.5. Diskettenerweiterung D004</a></h3>
+ <h3><a name="led">1.5. LEDs</a></h3>
+  Die LEDs werden als zweite Anzeigeeinheit emuliert
+  (Men&uuml;punlt <em>Extra</em> &rarr; <em>Zweite Anzeigeeinheit...</em>).
+ <br/><br/>
+
+ <h3><a name="d004">1.6. Diskettenerweiterung D004</a></h3>
   Die Diskettenerweiterung D004 ist ein Aufsatzger&auml;t,
   welches ein ROM-Modul (ansprechbar &uuml;ber Modulsteckplatz&nbsp;FC)
   und ein eigenes Prozessorsystem enth&auml;lt.
@@ -580,5 +589,13 @@
   und deshalb in der D004 der Speichertest vielleicht noch gar nicht
   begonnen hat, wird auch die R&uuml;ckmeldung zu sp&auml;lt erfolgen
   und somit zu einer Fehlermeldung f&uuml;hren.
+ <br/><br/>
+
+ <h3><a name="autoloadinput">4.6. AutoLoad und AutoInput</a></h3>
+  Bei den Computern HC900 und KC85/2..5 bewirkt RESET einen Warmstart,
+  bei dem das System nicht vollst&auml;ndig neu initialisiert wird.
+  In solch einem Fall k&ouml;nnen AutoLoad und AutoInput st&ouml;ren.
+  Aus diesem Grund werden AutoLoad und AutoInput nur bei einem Kaltstart
+  (emuliertes Einschalten) ausgef&uuml;hrt.
 </body>
 </html>

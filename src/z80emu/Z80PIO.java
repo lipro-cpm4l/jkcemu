@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -361,12 +361,13 @@ public class Z80PIO implements Z80InterruptSource
   public synchronized int interruptAccept()
   {
     int rv = 0;
-    if( this.portA.interruptRequested ) {
+    if( !this.portA.interruptAccepted && this.portA.interruptRequested ) {
       this.portA.interruptAccepted  = true;
       this.portA.interruptRequested = false;
       rv = this.portA.interruptVector;
     }
-    else if( this.portB.interruptRequested ) {
+    else if( !this.portB.interruptAccepted && this.portB.interruptRequested )
+    {
       this.portB.interruptAccepted  = true;
       this.portB.interruptRequested = false;
       rv = this.portB.interruptVector;

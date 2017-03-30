@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -729,7 +729,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
       else if( (addr >= 0x1800) && (addr < 0x1C00)) {
 	/*
 	 * Zugriff auf den Bildwiederholspeicher mit Auswertung von Bit 7:
-	 * Wenn Bit 7 nicht gesetzt ist, liest die CPU Null-Bytes
+	 * Wenn Bit 7 nicht gesetzt ist, liest die CPU Nullbytes
 	 * waehrend die Datenbytes auf dem Bildschirm ausgegeben werden.
 	 * Wenn Bit 7 gesetzt ist, liest die CPU die Datenbytes
 	 * und nichts wird auf dem Bildschirm ausgegeben.
@@ -1112,7 +1112,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     else if( (addr >= 0x1800) && (addr < 0x1C00)) {
       /*
        * Zugriff auf den Bildwiederholspeicher mit Auswertung von Bit 7:
-       * Wenn Bit 7 nicht gesetzt ist, liest die CPU Null-Bytes
+       * Wenn Bit 7 nicht gesetzt ist, liest die CPU Nullbytes
        * waehrend die Datenbytes auf dem Bildschirm ausgegeben werden.
        * Wenn Bit 7 gesetzt ist, liest die CPU die Datenbytes
        * und nichts wird auf dem Bildschirm ausgegeben.

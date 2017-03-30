@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -586,10 +586,10 @@ public class KCcompact extends EmuSys implements
     buf.append( "<h1>KC compact Status</h1>\n"
 	+ "<table border=\"1\">\n"
 	+ "<tr><td>Betriebssystem-ROM:</td><td>" );
-    buf.append( this.osROMEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.osROMEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>BASIC-ROM:</td><td>" );
-    buf.append( this.basicROMEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.basicROMEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>ROM Select Port:</td><td>" );
     buf.append( this.romSelect );
@@ -1456,7 +1456,7 @@ public class KCcompact extends EmuSys implements
 
   private boolean isFixedScreenSize( Properties props )
   {
-    return EmuUtil.parseBooleanProperty(
+    return EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + PROP_FIXED_SCREEN_SIZE,
 			false );

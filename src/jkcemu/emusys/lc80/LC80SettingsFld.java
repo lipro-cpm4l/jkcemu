@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -43,7 +43,9 @@ public class LC80SettingsFld extends AbstractSettingsFld
   private JRadioButton         btnLC80_2716;
   private JRadioButton         btnLC80_2;
   private JRadioButton         btnLC80e;
+  private JRadioButton         btnLC80ex;
   private ROMFileSettingsFld   fldAltOS;
+  private ROMFileSettingsFld   fldAltA000;
   private ROMFileSettingsFld   fldAltC000;
 
 
@@ -100,9 +102,17 @@ public class LC80SettingsFld extends AbstractSettingsFld
 		false );
     this.btnLC80e.addActionListener( this );
     grpModel.add( this.btnLC80e );
-    gbcModel.insets.bottom = 5;
     gbcModel.gridy++;
     this.tabModel.add( this.btnLC80e, gbcModel );
+
+    this.btnLC80ex = new JRadioButton(
+		"LC-80ex, 20 KByte ROM, 32 KByte RAM, TV-Terminal 1.2",
+		false );
+    this.btnLC80ex.addActionListener( this );
+    grpModel.add( this.btnLC80ex );
+    gbcModel.insets.bottom = 5;
+    gbcModel.gridy++;
+    this.tabModel.add( this.btnLC80ex, gbcModel );
 
 
     // Tab ROM
@@ -110,13 +120,13 @@ public class LC80SettingsFld extends AbstractSettingsFld
     this.tabbedPane.addTab( "ROM", this.tabRom );
 
     GridBagConstraints gbcRom = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						1.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.HORIZONTAL,
-						new Insets( 5, 5, 5, 5 ),
-						0, 0 );
+					0, 0,
+					1, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
 
     this.fldAltOS = new ROMFileSettingsFld(
 		settingsFrm,
@@ -125,10 +135,17 @@ public class LC80SettingsFld extends AbstractSettingsFld
     gbcRom.gridy++;
     this.tabRom.add( this.fldAltOS, gbcRom );
 
+    this.fldAltA000 = new ROMFileSettingsFld(
+		settingsFrm,
+		propPrefix + LC80.PROP_ROM_A000_PREFIX,
+		"Alternativer ROM-Inhalt A000h-BFFFh (nur LC80ex):" );
+    gbcRom.gridy++;
+    this.tabRom.add( this.fldAltA000, gbcRom );
+
     this.fldAltC000 = new ROMFileSettingsFld(
 		settingsFrm,
 		propPrefix + LC80.PROP_ROM_C000_PREFIX,
-		"Alternatives Schachprogramm (C000h-FFFFh, nur LC80e):" );
+		"Alternativer ROM-Inhalt C000h-FFFFh (nur LC80e/LC80ex):" );
     gbcRom.gridy++;
     this.tabRom.add( this.fldAltC000, gbcRom );
 
@@ -147,6 +164,7 @@ public class LC80SettingsFld extends AbstractSettingsFld
 		settingsFrm,
 		propPrefix,
 		LC80.DEFAULT_SWAP_KEY_CHAR_CASE,
+		LC80.FUNCTION_KEY_COUNT,
 		LC80.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
@@ -164,6 +182,8 @@ public class LC80SettingsFld extends AbstractSettingsFld
       rv = LC80.SYSNAME_LC80_2;
     } else if( this.btnLC80e.isSelected() ) {
       rv = LC80.SYSNAME_LC80_E;
+    } else if( this.btnLC80ex.isSelected() ) {
+      rv = LC80.SYSNAME_LC80_EX;
     }
     return rv;
   }
@@ -182,6 +202,7 @@ public class LC80SettingsFld extends AbstractSettingsFld
       // Tab ROM
       tab = this.tabRom;
       this.fldAltOS.applyInput( props, selected );
+      this.fldAltA000.applyInput( props, selected );
       this.fldAltC000.applyInput( props, selected );
 
       // Tab AutoLoad
@@ -209,9 +230,11 @@ public class LC80SettingsFld extends AbstractSettingsFld
     if( (src == this.btnLC80_U505)
 	|| (src == this.btnLC80_2716)
 	|| (src == this.btnLC80_2)
-	|| (src == this.btnLC80e) )
+	|| (src == this.btnLC80e)
+	|| (src == this.btnLC80ex) )
     {
       rv = true;
+      updFldAltA000Enabled();
       updFldAltC000Enabled();
       fireDataChanged();
     }
@@ -233,6 +256,7 @@ public class LC80SettingsFld extends AbstractSettingsFld
   public void lookAndFeelChanged()
   {
     this.fldAltOS.lookAndFeelChanged();
+    this.fldAltA000.lookAndFeelChanged();
     this.fldAltC000.lookAndFeelChanged();
     this.tabAutoLoad.lookAndFeelChanged();
     this.tabAutoInput.lookAndFeelChanged();
@@ -252,11 +276,15 @@ public class LC80SettingsFld extends AbstractSettingsFld
       case LC80.SYSNAME_LC80_E:
 	this.btnLC80e.setSelected( true );
 	break;
+      case LC80.SYSNAME_LC80_EX:
+	this.btnLC80ex.setSelected( true );
+	break;
       default:
 	this.btnLC80_2716.setSelected( true );
     }
     updFldAltC000Enabled();
     this.fldAltOS.updFields( props );
+    this.fldAltA000.updFields( props );
     this.fldAltC000.updFields( props );
     this.tabAutoLoad.updFields( props );
     this.tabAutoInput.updFields( props );
@@ -265,8 +293,15 @@ public class LC80SettingsFld extends AbstractSettingsFld
 
 	/* --- private Methoden --- */
 
+  private void updFldAltA000Enabled()
+  {
+    this.fldAltA000.setEnabled( this.btnLC80ex.isSelected() );
+  }
+
+
   private void updFldAltC000Enabled()
   {
-    this.fldAltC000.setEnabled( this.btnLC80e.isSelected() );
+    this.fldAltC000.setEnabled(
+		this.btnLC80e.isSelected() || this.btnLC80ex.isSelected() );
   }
 }

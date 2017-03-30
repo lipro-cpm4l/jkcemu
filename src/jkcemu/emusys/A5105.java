@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -67,6 +67,7 @@ private static int lastAA = -1;
   public static final String SYSTEXT     = "A5105 (BIC)";
   public static final String PROP_PREFIX = "jkcemu.a5105.";
 
+  public static final int FUNCTION_KEY_COUNT                    = 5;
   public static final int DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 4000;
 
   /*
@@ -110,9 +111,10 @@ private static int lastAA = -1;
   private static final int   BIOS_ADDR_CONIN        = 0xFD09;
   private static final int   V24_TSTATES_PER_BIT    = 390;
 
-  private static CharConverter cp437    = null;
   private static byte[]        romK1505 = null;
   private static byte[]        romK5651 = null;
+  private static CharConverter cp437
+			= new CharConverter( CharConverter.Encoding.CP437 );
 
   /*
    * Die Tastaturmatrix enthaelt die Spalten 0-7 und die Zeilen 0-8.
@@ -401,13 +403,8 @@ private static int lastAA = -1;
 	if( ch == CharacterIterator.DONE ) {
 	  cancelPastingText();
 	} else {
-	  if( (ch > 0) && (ch < 0x7F) ) {
-	    cpu.setRegA( ch == '\n' ? '\r' : ch );
-	    cpu.setRegPC( cpu.doPop() );
-	  } else {
-	    cancelPastingText();
-	    fireShowCharNotPasted( iter );
-	  }
+	  cpu.setRegA( ch == '\n' ? '\r' : cp437.toCharsetByte( ch ) );
+	  cpu.setRegPC( cpu.doPop() );
 	}
       }
     }
@@ -502,6 +499,9 @@ private static int lastAA = -1;
     }
     createColors( props );
     checkAddPCListener( props );
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
   }
 
 
@@ -735,9 +735,6 @@ private static int lastAA = -1;
   @Override
   protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
-    if( cp437 == null ) {
-      cp437 = new CharConverter( CharConverter.Encoding.CP437 );
-    }
     return cp437.toUnicode( this.gdc.getScreenChar( chX, chY ) );
   }
 
@@ -958,6 +955,31 @@ private static int lastAA = -1;
 	    this.keyboardMatrix[ 7 ] = 0x04;	// Graph
 	    this.keyboardMatrix[ 6 ] = 0x01;	// Shift
 	    this.keyboardMatrix[ 1 ] = 0x80;
+	    rv = true;
+	    break;
+
+	  case '\u00F1':			// PF1
+	    this.keyboardMatrix[ 7 ] |= 0x02;
+	    rv = true;
+	    break;
+
+	  case '\u00F2':			// PF2
+	    this.keyboardMatrix[ 7 ] |= 0x01;
+	    rv = true;
+	    break;
+
+	  case '\u00F3':			// PF3
+	    this.keyboardMatrix[ 6 ] |= 0x80;
+	    rv = true;
+	    break;
+
+	  case '\u00F4':			// PF4
+	    this.keyboardMatrix[ 6 ] |= 0x40;
+	    rv = true;
+	    break;
+
+	  case '\u00F5':			// PF5
+	    this.keyboardMatrix[ 6 ] |= 0x20;
 	    rv = true;
 	    break;
 
@@ -1791,7 +1813,7 @@ private static int lastAA = -1;
 
   private boolean isFixedScreenSize( Properties props )
   {
-    return EmuUtil.parseBooleanProperty(
+    return EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + PROP_FIXED_SCREEN_SIZE,
 			false );

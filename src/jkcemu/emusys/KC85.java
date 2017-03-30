@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -39,6 +39,7 @@ import jkcemu.emusys.kc85.D005KeyboardFld;
 import jkcemu.emusys.kc85.KC85CharRecognizer;
 import jkcemu.emusys.kc85.KC85JoystickModule;
 import jkcemu.emusys.kc85.KC85KeyboardFld;
+import jkcemu.emusys.kc85.KC85LEDFld;
 import jkcemu.emusys.kc85.KC85PlainRAMModule;
 import jkcemu.emusys.kc85.KC85ROM8KModule;
 import jkcemu.emusys.kc85.KC85SegmentedRAMModule;
@@ -90,7 +91,6 @@ public class KC85 extends EmuSys implements Z80CTCListener
   public static final String PROP_PREFIX_KC85_4 = "jkcemu.kc85_4.";
   public static final String PROP_PREFIX_KC85_5 = "jkcemu.kc85_5.";
 
-  public static final String PROP_COUNT             = "count";
   public static final String PROP_NAME              = "name";
   public static final String PROP_TYPEBYTE          = "typebyte";
   public static final String PROP_MODULE_PREFIX     = "module.";
@@ -163,7 +163,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
 			"KC85 MicroDOS Systemdiskette",
 			2, 2048, true ) };
 
-  private static final int[][] basicRGBValues = {
+  private static final int[][] rawRGBValues = {
 
 			// primaere Vordergrundfarben
 			{   0,   0,   0 },	// schwarz
@@ -345,6 +345,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
   private AbstractKC85Module[]    modules;
   private KC85CharRecognizer      charRecognizer;
   private AbstractKC85KeyboardFld keyboardFld;
+  private KC85LEDFld              ledFld;
   private Z80PIO                  pio;
   private Z80CTC                  ctc;
   private KC85JoystickModule      joyModule;
@@ -364,6 +365,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
     this.keyDirectToBuf     = false;
     this.pasteFast          = false;
     this.keyboardFld        = null;
+    this.ledFld             = null;
     this.basicFile          = null;
     this.caosFileC          = null;
     this.caosFileE          = null;
@@ -498,8 +500,8 @@ public class KC85 extends EmuSys implements Z80CTCListener
 
     this.screenBufUsed  = null;
     this.screenBufSaved = null;
-    this.rgbValues      = new int[ basicRGBValues.length ];
-    this.colors         = new Color[ basicRGBValues.length ];
+    this.rgbValues      = new int[ rawRGBValues.length ];
+    this.colors         = new Color[ rawRGBValues.length ];
     this.charRecognizer = new KC85CharRecognizer();
     applySettings( props );
     z80MaxSpeedChanged( cpu );
@@ -545,6 +547,27 @@ public class KC85 extends EmuSys implements Z80CTCListener
   public int getKCTypeNum()
   {
     return this.kcTypeNum;
+  }
+
+
+  public static int getRawColorCount()
+  {
+    return rawRGBValues.length;
+  }
+
+
+  public static int getRawRGB( int colorIdx )
+  {
+    int rv = 0xFF000000;
+    if( (colorIdx >= 0) && (colorIdx < rawRGBValues.length) ) {
+      int[] rgb = rawRGBValues[ colorIdx ];
+      if( rgb.length >= 3 ) {
+	rv |= ((rgb[ 0 ] << 16) & 0x00FF0000);
+	rv |= ((rgb[ 1 ] << 8)  & 0x0000FF00);
+	rv |= (rgb[ 2 ] & 0x000000FF);
+      }
+    }
+    return rv;
   }
 
 
@@ -611,7 +634,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
 		+ "<table border=\"1\">\n" );
       if( this.kcTypeNum >= 4 ) {
 	buf.append( "<tr><td>CAOS ROM C:</td><td>" );
-	buf.append( this.caosC000Enabled ? "ein" : "aus" );
+	EmuUtil.appendOnOffText( buf, this.caosC000Enabled );
 	buf.append( "</td></tr>\n" );
       }
       buf.append( "<tr><td>CAOS ROM" );
@@ -619,7 +642,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	buf.append( " E" );
       }
       buf.append( ":</td><td>" );
-      buf.append( this.caosE000Enabled ? "ein" : "aus" );
+      EmuUtil.appendOnOffText( buf, this.caosE000Enabled );
       buf.append( "</td></tr>\n" );
       if( this.kcTypeNum >= 3 ) {
 	buf.append( "<tr><td>BASIC" );
@@ -636,32 +659,32 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	      buf.append( this.basicSegNum );
 	      buf.append( (char) '\u0020' );
 	    }
-	    buf.append( "ein" );
+	    buf.append( EmuUtil.TEXT_ON );
 	  }
 	} else {
-	  buf.append( "aus" );
+	  buf.append( EmuUtil.TEXT_OFF );
 	}
 	buf.append( "</td></tr>\n" );
       }
       buf.append( "<tr><td>RAM 0:</td><td>" );
       if( this.ram0Enabled ) {
-	buf.append( "ein" );
+	buf.append( EmuUtil.TEXT_ON );
 	if( !this.ram0Writeable ) {
 	  buf.append( "(schreibgesch&uuml;tzt)" );
 	}
       } else {
-	buf.append( "aus" );
+	buf.append( EmuUtil.TEXT_OFF );
       }
       buf.append( "</td></tr>\n" );
       if( this.kcTypeNum >= 4 ) {
 	buf.append( "<tr><td>RAM 4:</td><td>" );
 	if( this.ram4Enabled ) {
-	  buf.append( "ein" );
+	  buf.append( EmuUtil.TEXT_ON );
 	  if( !this.ram4Writeable ) {
 	    buf.append( "(schreibgesch&uuml;tzt)" );
 	  }
 	} else {
-	  buf.append( "aus" );
+	  buf.append( EmuUtil.TEXT_OFF );
 	}
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>RAM 8:</td><td>" );
@@ -671,7 +694,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	    buf.append( this.ram8SegNum );
 	    buf.append( (char) '\u0020' );
 	  }
-	  buf.append( "ein" );
+	  buf.append( EmuUtil.TEXT_ON );
 	  if( !this.ram8Writeable ) {
 	    buf.append( "(schreibgesch&uuml;tzt)" );
 	  }
@@ -679,7 +702,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	    buf.append( ", aber vom IRM &uuml;berdeckt" );
 	  }
 	} else {
-	  buf.append( "aus" );
+	  buf.append( EmuUtil.TEXT_OFF );
 	}
 	buf.append( "</td></tr>\n" );
       }
@@ -691,9 +714,9 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	  buf.append( this.ramColorEnabled ? " Farb" : " Pixel" );
 	  buf.append( "ebene " );
 	}
-	buf.append( "ein" );
+	buf.append( EmuUtil.TEXT_ON );
       } else {
-	buf.append( "aus" );
+	buf.append( EmuUtil.TEXT_OFF );
       }
       buf.append( "</td></tr>\n" );
       if( this.kcTypeNum >= 4 ) {
@@ -701,20 +724,24 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	buf.append( this.screen1Visible ? "1" : "0" );
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>Hohe Farbaufl&ouml;sung:</td><td>" );
-	buf.append( this.hiColorRes ? "ein" : "aus" );
+	EmuUtil.appendOnOffText( buf, this.hiColorRes );
 	buf.append( "</td></tr>\n" );
       }
       buf.append( "<tr><td>Blinken:</td><td>" );
-      buf.append( this.blinkEnabled ? "ein" : "aus" );
+      EmuUtil.appendOnOffText( buf, this.blinkEnabled );
+      buf.append( "</td></tr>\n" );
+      if( this.kcTypeNum >= 4 ) {
+	buf.append( "<tr><td>K&nbsp;OUT:</td><td>" );
+	buf.append( (pioA >> 4) & 0x01 );
+	buf.append( "</td></tr>\n" );
+      }
+      buf.append( "<tr><td>Motorschaltspannung:</td><td>" );
+      EmuUtil.appendOnOffText( buf, (pioA & 0x40) != 0 );
       buf.append( "</td></tr>\n"
-		+ "<tr><td>K&nbsp;OUT:</td><td>" );
-      buf.append( (pioA >> 4) & 0x01 );
-      buf.append( "</td></tr>\n"
-		+ "<tr><td>Motorschaltspannung:</td><td>" );
-      buf.append( (pioA & 0x40) != 0 ? "ein" : "aus" );
-      buf.append( "</td></tr>\n"
-		+ "<tr><td>System-LED:</td><td>" );
-      buf.append( (pioA & 0x20) != 0 ? "ein" : "aus" );
+		+ "<tr><td>" );
+      buf.append( this.kcTypeNum >= 4 ? "SYSTEM" : "TAPE" );
+      buf.append( "-LED:</td><td>" );
+      EmuUtil.appendOnOffText( buf, (pioA & 0x20) != 0 );
       buf.append( "</td></tr>\n"
 		+ "</table>\n" );
 
@@ -743,10 +770,10 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	      if( readWrite != null ) {
 		buf.append( readWrite.booleanValue() ? "RW" : "RO" );
 	      } else {
-		buf.append( "ein" );
+		buf.append( EmuUtil.TEXT_ON );
 	      }
 	    } else {
-	      buf.append( "aus" );
+	      buf.append( EmuUtil.TEXT_OFF );
 	    }
 	    buf.append( "</td><td>" );
 	    int begAddr = module.getBegAddr();
@@ -997,6 +1024,13 @@ public class KC85 extends EmuSys implements Z80CTCListener
 
 
   @Override
+  public boolean getAutoLoadInputOnSoftReset()
+  {
+    return false;
+  }
+
+
+  @Override
   public int getBasicMemByte( int addr )
   {
     return getMemByteInternal( addr, false, false, false );
@@ -1200,6 +1234,17 @@ public class KC85 extends EmuSys implements Z80CTCListener
 
 
   @Override
+  public KC85LEDFld getSecondScreenDevice()
+  {
+    if( this.ledFld == null ) {
+      this.ledFld = new KC85LEDFld( this, Main.getProperties() );
+      this.ledFld.setPioAValue( this.pio.fetchOutValuePortA( false ) );
+    }
+    return this.ledFld;
+  }
+
+
+  @Override
   public String getSecondSystemName()
   {
     return this.d004 != null ? "D004" : null;
@@ -1252,7 +1297,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
   @Override
   public String getTitle()
   {
-    String rv = SYSTEXT_KC85_4;
+    String rv = SYSTEXT_KC85_5;
     switch( this.sysName ) {
       case SYSNAME_HC900:
 	rv = SYSTEXT_HC900;
@@ -2211,6 +2256,7 @@ public class KC85 extends EmuSys implements Z80CTCListener
 	} else {
 	  this.screenFrm.setScreenDirty( true );
 	}
+	this.ledFld.setPioAValue( m );
 	break;
 
       case 0x89:
@@ -2540,10 +2586,10 @@ public class KC85 extends EmuSys implements Z80CTCListener
   {
     float brightness = getBrightness( props );
     if( (brightness >= 0F) && (brightness <= 1F) ) {
-      for( int i = 0; i < basicRGBValues.length; i++ ) {
-	int r = Math.round( basicRGBValues[ i ][ 0 ] * brightness );
-	int g = Math.round( basicRGBValues[ i ][ 1 ] * brightness );
-	int b = Math.round( basicRGBValues[ i ][ 2 ] * brightness );
+      for( int i = 0; i < rawRGBValues.length; i++ ) {
+	int r = Math.round( rawRGBValues[ i ][ 0 ] * brightness );
+	int g = Math.round( rawRGBValues[ i ][ 1 ] * brightness );
+	int b = Math.round( rawRGBValues[ i ][ 2 ] * brightness );
 
 	this.rgbValues[ i ] = (r << 16) | (g << 8) | b;
 	this.colors[ i ]    = new Color( this.rgbValues[ i ] );

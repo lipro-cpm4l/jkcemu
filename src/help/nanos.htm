@@ -11,6 +11,9 @@
   F&uuml;r solch einen Computer standen verschiedene Betriebssysteme
   zur Verf&uuml;gung.
  <br/><br/>
+  JKCEMU emuliert die wichtigesten NANOS-Platinen sowie einige
+  neuzeitliche Entwicklungen.
+ <br/><br/>
 
  <h2>Hinweise zur Emulation</h2>
   <ul>
@@ -27,6 +30,7 @@
      <li><a href="nanos.htm#kcnet">1.8. KCNet</a></li>
      <li><a href="nanos.htm#vdip">1.9. USB-Anschluss</a></li>
      <li><a href="nanos.htm#keyboard">1.10. Tastatur</a></li>
+     <li><a href="nanos.htm#printer">1.11. Drucker</a></li>
     </ul>
    </li>
    <li><a href="nanos.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -150,19 +154,26 @@
  <h3><a name="keyboard">1.10. Tastatur</a></h3>
   Es gibt keine spezielle NANOS-Tastatur und damit auch keine
   einheitliche Tastaturschnittstelle.
-  Eine Tastatur wurde einfach an eine der zahlreichen Schnittstellen
+  Die Tastatur wurde einfach an eine der zahlreichen Schnittstellen
   angeschlossen.
-  JKCEMU emuliert die Tastatur in Form von zwei verschiedenen
-  Anschlussvarianten an der PIO Port&nbsp;A auf der ZRE-Baugruppe:
+  JKCEMU emuliert drei verschiedene Varianten f&uuml;r den Tastaturanschluss:
  <br/>
   <ul>
-   <li>Handshake mit Ready/Strobe</li>
+   <li>ZRE-Baugruppe: PIO Port&nbsp;A, Handshake mit Ready/Strobe</li>
    <li>
+    ZRE-Baugruppe: PIO Port&nbsp;A,
     Strobe an Bit&nbsp;7
     (Bei gedr&uuml;ckter Taste ist Bit&nbsp;7 gesetzt.)
    </li>
+   <li>IO-Baugruppe: SIO Kanal&nbsp;A</li>
   </ul>
  <br/>
+
+ <h3><a name="printer">1.11. Drucker</a></h3>
+  Es wird ein Drucker <a href="print.htm">emuliert</a>,
+  der an der IO-Karte, SIO Kanal&nbsp;A mit Hardware-Handshake (CTS),
+  angeschlossen ist.
+ <br/><br/>
 
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
@@ -198,6 +209,7 @@
      <li>Tastatur an ZRE-PIO Port&nbsp;A mit Read/Strobe-Handshake</li>
      <li>Boot-ROM f&uuml;r NANOS&nbsp;2.2</li>
     </ul>
+    <br/><br/>
    </li>
    <li>
     <u>EPOS&nbsp;2.1 Boot-Diskette (64x32 Zeichen)</u><br/>
@@ -214,6 +226,7 @@
      <li>Tastatur an ZRE-PIO Port&nbsp;A mit Strobe an Bit&nbsp;7</li>
      <li>Boot-ROM f&uuml;r EPOS&nbsp;2.1</li>
     </ul>
+    <br/><br/>
    </li>
    <li>
     <u>EPOS&nbsp;2.1 Boot-Diskette (80x24 Zeichen)</u><br/>

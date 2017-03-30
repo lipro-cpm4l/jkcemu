@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -56,6 +56,7 @@ import jkcemu.emusys.AC1;
 import jkcemu.emusys.BCS3;
 import jkcemu.emusys.KC85;
 import jkcemu.emusys.KramerMC;
+import jkcemu.emusys.LC80;
 import jkcemu.emusys.LLC1;
 import jkcemu.emusys.Z1013;
 import jkcemu.emusys.Z9001;
@@ -85,6 +86,7 @@ public class EditText implements
     private String  lineEnd;
     private boolean hasBOM;
     private boolean charsLost;
+    private int     eofByte;
 
     private TextProps( String encodingName, String encodingDesc )
     {
@@ -93,6 +95,7 @@ public class EditText implements
       this.lineEnd      = null;
       this.hasBOM       = false;
       this.charsLost    = false;
+      this.eofByte      = -1;
     }
   };
 
@@ -104,8 +107,8 @@ public class EditText implements
   private boolean       saved;
   private boolean       askFileNameOnSave;
   private boolean       byteOrderMark;
-  private boolean       trailing1A;
   private boolean       trimLines;
+  private int           eofByte;
   private PrgOptions    prgOptions;
   private File          file;
   private File          prjFile;
@@ -145,11 +148,17 @@ public class EditText implements
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
-		String        encodingDesc )
+		String        encodingDesc,
+		boolean       ignoreEofByte )
 				throws IOException, UserCancelException
   {
     init( textEditFrm );
-    loadFile( file, charConverter, encodingName, encodingDesc );
+    loadFile(
+	file,
+	charConverter,
+	encodingName,
+	encodingDesc,
+	ignoreEofByte );
   }
 
 
@@ -217,6 +226,12 @@ public class EditText implements
   public String getEncodingName()
   {
     return this.encodingName;
+  }
+
+
+  public int getEofByte()
+  {
+    return this.eofByte;
   }
 
 
@@ -312,12 +327,6 @@ public class EditText implements
   }
 
 
-  public boolean getTrailing1A()
-  {
-    return this.trailing1A;
-  }
-
-
   public boolean getTrimLines()
   {
     return this.trimLines;
@@ -408,7 +417,8 @@ public class EditText implements
 		File          file,
 		CharConverter charConverter,
 		String        encodingName,
-		String        encodingDesc )
+		String        encodingDesc,
+		boolean       ignoreEofByte )
 			throws IOException, UserCancelException
   {
     try {
@@ -515,8 +525,13 @@ public class EditText implements
 		  }
 		}
 		else if( fileFmt.equals( FileFormat.KCB )
+			 || fileFmt.equals( FileFormat.KCB_BLKN )
+			 || fileFmt.equals( FileFormat.KCB_BLKN_CKS )
 			 || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
 			 || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+			 || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+			 || fileFmt.equals(
+				FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS )
 			 || fileFmt.equals( FileFormat.KCBASIC_PRG ) )
 		{
 		  LoadData loadData = FileInfo.createLoadData(
@@ -542,6 +557,11 @@ public class EditText implements
 		    case 0x1001:
 		      info = "KramerMC-BASIC-Programm";
 		      text = KramerMC.getBasicProgram( basicLoadData );
+		      break;
+
+		    case 0x2400:
+		      info = "LC-80ex-BASIC-Programm";
+		      text = LC80.getBasicProgram( basicLoadData );
 		      break;
 
 		    case 0x2BC0:
@@ -598,7 +618,11 @@ public class EditText implements
 	  charConverter = null;
 	} else {
 	  if( fileBytes.length > 0 ) {
-	    text = readText( fileBytes, charConverter, textProps );
+	    text = readText(
+			fileBytes,
+			charConverter,
+			ignoreEofByte,
+			textProps );
 	    if( textProps.charsLost
 		&& (charConverter == null)
 		&& (encodingName == null) )
@@ -613,7 +637,11 @@ public class EditText implements
 	      TextProps props2 = new TextProps(
 					cc2.getEncodingName(),
 					cc2.toString() );
-	      String text2 = readText( fileBytes, cc2, props2 );
+	      String text2 = readText(
+				fileBytes,
+				cc2,
+				ignoreEofByte,
+				props2 );
 	      if( (text2 != null) && !props2.charsLost ) {
 		text          = text2;
 	        charConverter = cc2;
@@ -628,22 +656,7 @@ public class EditText implements
       this.charConverter = charConverter;
       this.encodingName  = textProps.encodingName;
       this.encodingDesc  = textProps.encodingDesc;
-      this.trailing1A    = false;
-      if( text != null ) {
-	int len = text.length();
-	int pos = len - 1;
-	while( pos >= 0 ) {
-	  if( text.charAt( pos ) != 0x1A ) {
-	    break;
-	  }
-	  this.trailing1A = true;
-	  --pos;
-	}
-	pos++;
-	if( this.trailing1A && (pos >= 0) && (pos < len) ) {
-	  text = text.substring( 0, pos );
-	}
-      }
+      this.eofByte       = textProps.eofByte;
       if( filtered ) {
 	this.file     = null;
 	this.textName = "Neuer Text (Quelle: " + file.getName() + ")";
@@ -757,7 +770,7 @@ public class EditText implements
 		String        encodingName,
 		String        encodingDesc,
 		boolean       byteOrderMark,
-		boolean       trailing1A,
+		int           eofByte,
 		boolean       trimLines,
 		String        lineEnd ) throws IOException
   {
@@ -894,14 +907,14 @@ public class EditText implements
       }
 
       if( outWriter != null ) {
-	if( trailing1A ) {
-	  outWriter.write( 0x1A );
+	if( eofByte >= 0 ) {
+	  outWriter.write( eofByte );
 	}
 	outWriter.flush();
 	outWriter.close();		// schliesst auch "outStream"
       } else {
-	if( trailing1A ) {
-	  outStream.write( 0x1A );
+	if( eofByte >= 0 ) {
+	  outStream.write( eofByte );
 	}
 	outStream.close();
       }
@@ -917,7 +930,7 @@ public class EditText implements
       this.encodingName  = encodingName;
       this.encodingDesc  = encodingDesc;
       this.byteOrderMark = byteOrderMark;
-      this.trailing1A    = trailing1A;
+      this.eofByte       = eofByte;
       this.trimLines     = trimLines;
       this.lineEnd       = lineEnd;
       this.textName      = this.file.getName();
@@ -1238,8 +1251,8 @@ public class EditText implements
     this.saved             = true;
     this.askFileNameOnSave = false;
     this.byteOrderMark     = false;
-    this.trailing1A        = false;
     this.trimLines         = false;
+    this.eofByte           = -1;
   }
 
 
@@ -1390,6 +1403,7 @@ public class EditText implements
   private static String readText(
 				byte[]        fileBytes,
 				CharConverter charConverter,
+				boolean       ignoreEofByte,
 				TextProps     textProps ) throws IOException
   {
     StringBuilder       textBuf  = new StringBuilder( fileBytes.length );
@@ -1472,6 +1486,11 @@ public class EditText implements
 	     && (ch != '\n') && (ch != '\r')
 	     && (ch != '\u001E') )
       {
+	if( !ignoreEofByte && (ch == 0x1A) ) {
+	  textProps.eofByte = ch;
+	  ch                = -1;
+	  break;
+	}
 	if( ch == CharConverter.REPLACEMENT_CHAR ) {
 	  textProps.charsLost = true;
 	} else {
@@ -1521,6 +1540,10 @@ public class EditText implements
 	boolean wasCR = false;
 	ch = readChar( reader, inStream, charConverter );
 	while( ch >= 0 ) {
+	  if( !ignoreEofByte && (ch == 0x1A) ) {
+	    textProps.eofByte = ch;
+	    break;
+	  }
 	  if( ch == CharConverter.REPLACEMENT_CHAR ) {
 	    textProps.charsLost = true;
 	  }
@@ -1535,7 +1558,7 @@ public class EditText implements
 	    else if( (ch == '\u001E') || (ch == '\f') ) {
 	      textBuf.append( (char) '\n' );
 	    }
-	    // Null-Bytes und Textendezeichen herausfiltern
+	    // Nullbytes und Textendezeichen herausfiltern
 	    else if( (ch != 0)
 		     && (ch != '\u0003')
 		     && (ch != '\u0004') )

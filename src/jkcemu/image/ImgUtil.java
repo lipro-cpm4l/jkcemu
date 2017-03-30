@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -64,6 +64,30 @@ public class ImgUtil
   private static IndexColorModel cmSortedGray = null;
   private static IndexColorModel cmA5105      = null;
   private static IndexColorModel cmKC854Hires = null;
+
+
+  public static BufferedImage createBlackKC854HiresImage()
+  {
+    BufferedImage img = new BufferedImage(
+				KC85_W,
+				KC85_H,
+				BufferedImage.TYPE_BYTE_BINARY,
+				getColorModelKC854Hires() );
+    fillBlack( img );
+    return img;
+  }
+
+
+  public static BufferedImage createBlackKC85BWImage()
+  {
+    BufferedImage img = new BufferedImage(
+				KC85_W,
+				KC85_H,
+				BufferedImage.TYPE_BYTE_BINARY,
+				getColorModelBW() );
+    fillBlack( img );
+    return img;
+  }
 
 
   public static BufferedImage createCompatibleImage(
@@ -240,6 +264,30 @@ public class ImgUtil
   }
 
 
+  public static FileNameExtensionFilter createKC852ImageFileFilter()
+  {
+    return new FileNameExtensionFilter(
+				"KC85/2,3-Bilddateien",
+				"pic" );
+  }
+
+
+  public static FileNameExtensionFilter createKC854HiresImageFileFilter()
+  {
+    return new FileNameExtensionFilter(
+				"KC85/4,5-HIRES-Bilddateien",
+				"hip" );
+  }
+
+
+  public static FileNameExtensionFilter createKC854LowresImageFileFilter()
+  {
+    return new FileNameExtensionFilter(
+				"KC85/4,5-LOWRES-Bilddateien",
+				"pip" );
+  }
+
+
   public static FileNameExtensionFilter createLLC2HiresImageFileFilter()
   {
     return new FileNameExtensionFilter(
@@ -253,56 +301,144 @@ public class ImgUtil
    * KC85/4-Bildwiederholspeicher im HIRES-Modus.
    * Die erzeugten Bytes werden in die beiden uebergebenen Puffer
    * fuer Pixel- und den Farbbereich geschrieben.
-   * Es wird davon ausgegangen, dass das uebergebene Bild
-   * dem KC85/4-HIRES-Format entspricht.
    */
   public static void createKC854HiresMemBytes(
 				BufferedImage image,
 				byte[]        pixelBuf,
 				byte[]        colorBuf )
   {
-    IndexColorModel icm = getIndexColorModel( image );
-    if( icm != null ) {
-      Map<Integer,Integer> rgb2Idx = new HashMap<>();
+    IndexColorModel      icm     = getColorModelKC854Hires();
+    Map<Integer,Integer> rgb2Idx = new HashMap<>();
 
-      int pos = 0;
-      int w   = image.getWidth();
-      int h   = image.getHeight();
-      int chW = KC85_W / KC85_COLS;
-      for( int col = 0; col < KC85_COLS; col++ ) {
-	for( int y = 0; y < KC85_H; y++ ) {
-	  int x = col * 8;
-	  int p = 0;
-	  int c = 0;
-	  int m = 0x80;
-	  for( int i = 0; i < chW; i++ ) {
-	    int rgb = 0;
-	    if( (x < w) && (y < h) ) {
-	      rgb = image.getRGB( x, y );
-	    }
-	    Integer idx = rgb2Idx.get( rgb );
-	    if( idx == null ) {
-	      idx = ImgUtil.getNearestIndex( icm, rgb );
-	      rgb2Idx.put( rgb, idx );
-	    }
-	    int v = idx.intValue();
-	    if( (v & 0x01) != 0 ) {
-	      p |= m;
-	    }
-	    if( (v & 0x02) != 0 ) {
-	      c |= m;
-	    }
-	    m >>= 1;
-	    x++;
+    int pos = 0;
+    int w   = image.getWidth();
+    int h   = image.getHeight();
+    int chW = KC85_W / KC85_COLS;
+    for( int col = 0; col < KC85_COLS; col++ ) {
+      for( int y = 0; y < KC85_H; y++ ) {
+	int x = col * 8;
+	int p = 0;
+	int c = 0;
+	int m = 0x80;
+	for( int i = 0; i < chW; i++ ) {
+	  int rgb = 0;
+	  if( (x < w) && (y < h) ) {
+	    rgb = image.getRGB( x, y );
 	  }
-	  if( pos < pixelBuf.length ) {
-	    pixelBuf[ pos ] = (byte) p;
+	  Integer idx = rgb2Idx.get( rgb );
+	  if( idx == null ) {
+	    idx = getNearestIndex( icm, rgb );
+	    rgb2Idx.put( rgb, idx );
 	  }
-	  if( pos < colorBuf.length ) {
-	    colorBuf[ pos ] = (byte) c;
+	  int v = idx.intValue();
+	  if( (v & 0x01) != 0 ) {
+	    p |= m;
 	  }
-	  pos++;
+	  if( (v & 0x02) != 0 ) {
+	    c |= m;
+	  }
+	  m >>= 1;
+	  x++;
 	}
+	if( pos < pixelBuf.length ) {
+	  pixelBuf[ pos ] = (byte) p;
+	}
+	if( pos < colorBuf.length ) {
+	  colorBuf[ pos ] = (byte) c;
+	}
+	pos++;
+      }
+    }
+  }
+
+
+  /*
+   * Die Methode erzeugt die Pixelbytes (schwarz/weiss)
+   * fuer den KC85/2-Bildwiederholspeicher.
+   * Die erzeugten Bytes werden in den uebergebenen Puffer geschrieben.
+   */
+  public static void createKC852MonochromeMemBytes(
+				BufferedImage image,
+				byte[]        pixelBuf )
+  {
+    Map<Integer,Integer> rgb2Idx = new HashMap<>();
+
+    int w   = image.getWidth();
+    int h   = image.getHeight();
+    int chW = KC85_W / KC85_COLS;
+    for( int y = 0; y < KC85_H; y++ ) {
+      for( int col = 0; col < KC85_COLS; col++ ) {
+	int pos = 0;
+	if( col < 32 ) {
+	  pos = ((y << 7) & 0x0180)		// Y0-Y1
+		| ((y << 3) & 0x0060)		// Y2-Y3
+		| ((y << 5) & 0x1E00)		// Y4-Y7
+		| (col & 0x001F);		// COL0-COL5
+	} else {
+	  pos = ((y << 7) & 0x0180)		// Y0-Y1
+		| ((y << 3) & 0x0660)		// Y2-Y3,Y6-Y7
+		| ((y >> 1) & 0x0018)		// Y4-Y5
+		| (col & 0x0007)		// COL0-COL2
+		| 0x2000;
+	}
+	int x = col * 8;
+	int p = 0;
+	int m = 0x80;
+	for( int i = 0; i < chW; i++ ) {
+	  int rgb = 0;
+	  if( (x < w) && (y < h) ) {
+	    rgb = image.getRGB( x, y );
+	  }
+	  if( (GrayScaler.toGray( rgb ) & 0xFF) < 0x80 ) {
+	    p |= m;
+	  }
+	  m >>= 1;
+	  x++;
+	}
+	if( pos < pixelBuf.length ) {
+	  pixelBuf[ pos ] = (byte) p;
+	}
+	pos++;
+      }
+    }
+  }
+
+
+  /*
+   * Die Methode erzeugt die Pixelbytes (schwarz/weiss)
+   * fuer den KC85/4-Bildwiederholspeicher im LOWRES-Modus.
+   * Die erzeugten Bytes werden in den uebergebenen Puffer geschrieben.
+   */
+  public static void createKC854MonochromeMemBytes(
+				BufferedImage image,
+				byte[]        pixelBuf )
+  {
+    Map<Integer,Integer> rgb2Idx = new HashMap<>();
+
+    int pos = 0;
+    int w   = image.getWidth();
+    int h   = image.getHeight();
+    int chW = KC85_W / KC85_COLS;
+    for( int col = 0; col < KC85_COLS; col++ ) {
+      for( int y = 0; y < KC85_H; y++ ) {
+	int x = col * 8;
+	int p = 0;
+	int m = 0x80;
+	for( int i = 0; i < chW; i++ ) {
+	  int rgb = 0;
+	  if( (x < w) && (y < h) ) {
+	    rgb = image.getRGB( x, y );
+	  }
+	  if( (GrayScaler.toGray( rgb ) & 0xFF) < 0x80 ) {
+	    p |= m;
+	  }
+	  m >>= 1;
+	  x++;
+	}
+	if( pos < pixelBuf.length ) {
+	  pixelBuf[ pos ] = (byte) p;
+	}
+	pos++;
       }
     }
   }

@@ -1,9 +1,9 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Dialog zur Auswahl eines Zeichensatzes
+ * Dialog zur Auswahl eines Zeichensatzes und weiterer Optionen
  */
 
 package jkcemu.text;
@@ -17,6 +17,7 @@ import java.awt.Insets;
 import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -26,10 +27,12 @@ import jkcemu.base.BaseDlg;
 public class SelectEncodingDlg extends BaseDlg
 {
   private boolean           applied;
+  private boolean           ignoreEofByte;
   private CharConverter     charConverter;
   private String            encodingName;
   private String            encodingDisplayText;
   private JComboBox<Object> comboEncoding;
+  private JCheckBox         btnIgnoreEofByte;
   private JButton           btnOK;
   private JButton           btnCancel;
 
@@ -41,6 +44,7 @@ public class SelectEncodingDlg extends BaseDlg
 
     // Initialisierungen
     this.applied             = false;
+    this.ignoreEofByte       = false;
     this.charConverter       = null;
     this.encodingName        = null;
     this.encodingDisplayText = null;
@@ -92,7 +96,7 @@ public class SelectEncodingDlg extends BaseDlg
     if( font != null ) {
       label.setFont( font.deriveFont( Font.BOLD ) );
     }
-    gbc.anchor = GridBagConstraints.WEST;
+    gbc.anchor        = GridBagConstraints.WEST;
     gbc.insets.top    = 20;
     gbc.insets.bottom = 0;
     gbc.gridy++;
@@ -113,11 +117,17 @@ public class SelectEncodingDlg extends BaseDlg
 			+ " Textdatei ist oder in einem" ),
 	gbc );
 
-    gbc.insets.bottom = 5;
     gbc.gridy++;
     add(
 	new JLabel( "anderem Zeichensatz gespeichert wurde." ),
 	gbc );
+
+    this.btnIgnoreEofByte = new JCheckBox(
+		"Eventuell vorhandenes Dateiendezeichen ignorieren" );
+    gbc.anchor     = GridBagConstraints.CENTER;
+    gbc.insets.top = 20;
+    gbc.gridy++;
+    add( this.btnIgnoreEofByte, gbc );
 
 
     // Knoepfe
@@ -134,8 +144,7 @@ public class SelectEncodingDlg extends BaseDlg
     this.btnCancel.addKeyListener( this );
     panelBtn.add( this.btnCancel );
 
-    gbc.anchor = GridBagConstraints.CENTER;
-    gbc.insets.top = 5;
+    gbc.insets.top = 10;
     gbc.gridy++;
     add( panelBtn, gbc );
 
@@ -168,6 +177,12 @@ public class SelectEncodingDlg extends BaseDlg
   public String getEncodingDisplayText()
   {
     return this.encodingDisplayText;
+  }
+
+
+  public boolean getIgnoreEofByte()
+  {
+    return this.ignoreEofByte;
   }
 
 
@@ -212,8 +227,9 @@ public class SelectEncodingDlg extends BaseDlg
 	  }
 	}
       }
-      this.applied = true;
-      doClose();
     }
+    this.ignoreEofByte = this.btnIgnoreEofByte.isSelected();
+    this.applied       = true;
+    doClose();
   }
 }

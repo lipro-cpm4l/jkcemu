@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -22,7 +22,7 @@ public class ImgEntry
 		INVERTED_GRAY, INVERTED_MONOCHROME,
 		A5105,
 		AC1_ACC, AC1_SCCH, AC1_2010,
-		KC854HIRES,
+		KC854_HIRES,
 		Z1013,
 		Z9001 };
 
@@ -150,7 +150,15 @@ public class ImgEntry
 
   public boolean isKC854HiresFormat()
   {
-    return this.mode.equals( Mode.KC854HIRES );
+    return this.mode.equals( Mode.KC854_HIRES );
+  }
+
+
+  public boolean isKC85MonochromeFormat()
+  {
+    return isAMonochromeMode()
+		&& (getWidth() == ImgUtil.KC85_W)
+		&& (getHeight() == ImgUtil.KC85_H);
   }
 
 

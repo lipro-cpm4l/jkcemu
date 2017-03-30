@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -141,7 +141,7 @@ public class SourceUtil
 	    b         = memory.getBasicMemByte( addr++ );
 	    tmpTokens = tokensFF;
 	  }
-	  if( b >= 0x80 ) {
+	  if( (tmpTokens != null) && (b >= 0x80) ) {
 	    int pos = b - 0x80;
 	    if( (pos >= 0) && (pos < tmpTokens.length) ) {
 	      String s = tmpTokens[ pos ];
@@ -161,6 +161,8 @@ public class SourceUtil
 		  }
 		}
 		b = 0;
+	      } else {
+		buf.append( (char) (b + 0x80) );
 	      }
 	    }
 	  }
@@ -346,7 +348,7 @@ public class SourceUtil
 	basicBegAddr = 0x2C01;
       }
       if( basicBegAddr >= 0 ) {
-	int topAddr = getBasicEndAddr( emuThread, basicBegAddr );
+	int topAddr = getBasicEndAddr( emuThread, basicBegAddr ) + 1;
 	if( topAddr > basicBegAddr ) {
 	  emuThread.setBasicMemWord( begAddr - 42, topAddr );
 	  emuThread.setBasicMemWord( begAddr - 40, topAddr );

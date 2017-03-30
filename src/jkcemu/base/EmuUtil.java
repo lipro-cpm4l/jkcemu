@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -53,6 +53,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -101,6 +102,8 @@ public class EmuUtil
 					".c", ".cc", ".cmd", ".cpp", ".csh",
 					".h", ".java", ".log", ".sh", ".txt" };
 
+  public static final String PROP_SHOW_PHYS_FILESYS
+					= "jkcemu.show_phys_filesys";
   public static final String PROP_FILEDIALOG         = "jkcemu.filedialog";
   public static final String VALUE_FILEDIALOG_NATIVE = "native";
   public static final String VALUE_FILEDIALOG_JKCEMU = "jkcemu";
@@ -108,6 +111,11 @@ public class EmuUtil
 
   public static final String VALUE_FALSE = Boolean.FALSE.toString();
   public static final String VALUE_TRUE  = Boolean.TRUE.toString();
+
+  public static final String TEXT_ON  = "ein";
+  public static final String TEXT_OFF = "aus";
+  public static final String TEXT_DONT_SHOW_MSG_AGAIN
+		= "Diese Meldung zuk\u00FCnftig nicht mehr anzeigen";
 
   private static DecimalFormat          decFmtFix1     = null;
   private static DecimalFormat          decFmtMax1     = null;
@@ -204,6 +212,12 @@ public class EmuUtil
 	}
       }
     }
+  }
+
+
+  public static void appendOnOffText( StringBuilder buf, boolean state )
+  {
+    buf.append( state ? TEXT_ON : TEXT_OFF );
   }
 
 
@@ -1121,6 +1135,27 @@ public class EmuUtil
   }
 
 
+  public static FileSystemView getDifferentLogicalFileSystemView()
+  {
+    FileSystemView rv  = null;
+    FileSystemView fsv = FileSystemView.getFileSystemView();
+    if( fsv != null ) {
+      SortedSet<String> fsvRoots  = new TreeSet<>();
+      SortedSet<String> physRoots = new TreeSet<>();
+      for( File f : fsv.getRoots() ) {
+	fsvRoots.add( f.getPath() );
+      }
+      for( File f : File.listRoots() ) {
+	physRoots.add( f.getPath() );
+      }
+      if( !fsvRoots.equals( physRoots ) ) {
+	rv = fsv;
+      }
+    }
+    return rv;
+  }
+
+
   /*
    * Die Methode liest aus einem Text an der angegebenen Stelle eine
    * vierstellige Hexadezimalzahl.
@@ -1183,6 +1218,27 @@ public class EmuUtil
     if( o != null ) {
       if( o instanceof Number ) {
 	rv = ((Number) o).floatValue();
+      }
+    }
+    return rv;
+  }
+
+
+  public static int getInt( JComboBox combo )
+  {
+    int    rv = 0;
+    Object o  = combo.getSelectedItem();
+    if( o != null ) {
+      if( o instanceof Number ) {
+	rv = ((Number) o).intValue();
+      } else {
+	String s = o.toString();
+	if( s != null ) {
+	  try {
+	    rv = Integer.parseInt( s.trim() );
+	  }
+	  catch( NumberFormatException ex ) {}
+	}
       }
     }
     return rv;
@@ -1652,53 +1708,6 @@ public class EmuUtil
   }
 
 
-  public static boolean parseBoolean( String text, boolean defaultValue )
-  {
-    Boolean value = null;
-    if( text != null ) {
-      value = Boolean.valueOf( text );
-    }
-    return value != null ? value.booleanValue() : defaultValue;
-  }
-
-
-  public static boolean parseBooleanProperty(
-				Properties props,
-				String     keyword,
-				boolean    defaultValue )
-  {
-    return parseBoolean(
-		props != null ? props.getProperty( keyword ) : null,
-		defaultValue );
-  }
-
-
-  public static int parseInt( String text, int minValue, int defaultValue )
-  {
-    int value = defaultValue;
-    if( text != null ) {
-      try {
-	value = Integer.parseInt( text );
-      }
-      catch( NumberFormatException ex ) {}
-    }
-    return value >= minValue ? value : minValue;
-  }
-
-
-  public static int parseIntProperty(
-				Properties props,
-				String     keyword,
-				int        minValue,
-				int        defaultValue )
-  {
-    return parseInt(
-		props != null ? props.getProperty( keyword ) : null,
-		minValue,
-		defaultValue );
-  }
-
-
   public static void printErr( String text )
   {
     if( Main.consoleWriter != null ) {
@@ -1808,37 +1817,35 @@ public class EmuUtil
   {
     byte[] rv = null;
     if( file != null ) {
-      long        len = file.length();
+      long        len = -1;
       InputStream in  = null;
       try {
 	if( allowUncompress && isGZipFile( file ) ) {
 	  in = new GZIPInputStream( new FileInputStream( file ) );
 	} else {
-	  in = new FileInputStream( file );
+	  len = file.length();
+	  in  = new FileInputStream( file );
 	}
-	if( len < 0 ) {
+	if( len > 0 ) {
+	  if( maxLen < 1 ) {
+	    maxLen = Integer.MAX_VALUE;
+	  }
+	  rv = new byte[ (int) Math.min( len, maxLen ) ];
+	  if( len > 0 ) {
+	    int n = read( in, rv );
+	    if( (n > 0) && (n < rv.length) ) {
+	      rv = Arrays.copyOf( rv, n );
+	    }
+	  }
+	} else {
 	  ByteArrayOutputStream buf = new ByteArrayOutputStream( 0x10000 );
 	  int b = in.read();
-	  while( (b != -1) && (maxLen > 0) ) {
+	  while( (b != -1) && (maxLen != 0) ) {
 	    buf.write( b );
 	    b = in.read();
 	    --maxLen;
 	  }
 	  rv = buf.toByteArray();
-	}
-	else if( len > 0 ) {
-	  if( maxLen < 1 ) {
-	    maxLen = Integer.MAX_VALUE;
-	  }
-	  rv    = new byte[ (int) Math.min( len, maxLen ) ];
-	  int n = read( in, rv );
-	  if( n < rv.length ) {
-	    if( n > 0 ) {
-	      rv = Arrays.copyOf( rv, n );
-	    } else {
-	      rv = null;
-	    }
-	  }
 	}
       }
       finally {

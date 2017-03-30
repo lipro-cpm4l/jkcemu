@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -34,8 +34,20 @@ public class FileFormat
   public static FileFormat KCB
 	= new FileFormat( "KCB-Datei (BASIC-Programm)", 11 );
 
+  public static FileFormat KCB_BLKN
+	= new FileFormat( "KCB-Datei (BASIC-Programm, Dateityp B)", 11 );
+
+  public static FileFormat KCB_BLKN_CKS
+	= new FileFormat( "KCB-Datei (BASIC-Programm, Dateityp B+P)", 11 );
+
   public static FileFormat KCC
 	= new FileFormat( "KCC/JTC-Datei", 11 );
+
+  public static FileFormat KCC_BLKN
+	= new FileFormat( "KCC/JTC-Datei (Typ B)", 11 );
+
+  public static FileFormat KCC_BLKN_CKS
+	= new FileFormat( "KCC/JTC-Datei (Typ B+P)", 11 );
 
   public static FileFormat KCTAP_SYS
 	= new FileFormat( "KC-TAP-Datei", 11 );
@@ -56,13 +68,31 @@ public class FileFormat
 	= new FileFormat( "KC-TAP-BASIC-ASCII-Listing", 8 );
 
   public static FileFormat KCBASIC_HEAD_PRG
-	= new FileFormat( "KC-BASIC-Programmdatei mit Kopfdaten", 8 );
+	= new FileFormat( "KC-BASIC-Programmdatei (Dateityp K)", 8 );
+
+  public static FileFormat KCBASIC_HEAD_PRG_BLKN
+	= new FileFormat( "KC-BASIC-Programmdatei (Dateityp K+B)", 8 );
+
+  public static FileFormat KCBASIC_HEAD_PRG_BLKN_CKS
+	= new FileFormat( "KC-BASIC-Programmdatei (Dateityp K+B+P)", 8 );
 
   public static FileFormat KCBASIC_HEAD_DATA
-	= new FileFormat( "KC-BASIC-Datenfeld mit Kopfdaten", 8 );
+	= new FileFormat( "KC-BASIC-Datenfeld (Dateityp K)", 8 );
+
+  public static FileFormat KCBASIC_HEAD_DATA_BLKN
+	= new FileFormat( "KC-BASIC-Datenfeld (Dateityp K+B)", 8 );
+
+  public static FileFormat KCBASIC_HEAD_DATA_BLKN_CKS
+	= new FileFormat( "KC-BASIC-Datenfeld (Dateityp K+B+P)", 8 );
 
   public static FileFormat KCBASIC_HEAD_ASC
-	= new FileFormat( "KC-BASIC-ASCII-Listing mit Kopfdaten", 8 );
+	= new FileFormat( "KC-BASIC-ASCII-Listing (Dateityp K", 8 );
+
+  public static FileFormat KCBASIC_HEAD_ASC_BLKN
+	= new FileFormat( "KC-BASIC-ASCII-Listing (Dateityp K+B)", 8 );
+
+  public static FileFormat KCBASIC_HEAD_ASC_BLKN_CKS
+	= new FileFormat( "KC-BASIC-ASCII-Listing (Dateityp K+B+P)", 8 );
 
   public static FileFormat KCBASIC_PRG
 	= new FileFormat( "KC-BASIC-Programmdatei", 0 );

@@ -4,7 +4,8 @@
   Der LC-80, auch LC 80 oder LC80 geschrieben,
   ist ein als Lerncomputer konzipierter Einplatinenrechner
   mit hexadezimaler Tastatur und 7-Segment-Anzeige.
-  Produziert wurde er ab 1984 im VEB Mikroelektronik Erfurt.
+  Produziert wurde er ab 1984 im VEB Mikroelektronik Erfurt
+  mit zwei verschiedenen ROM-Best&uuml;ckungen (2x U505 oder 1x U2716).
  <br/><br/>
   Ein geplanter Exportauftrag f&uuml;hrte sp&auml;ter zur Entwicklung
   des LC80e, einer erweiterten Version mit doppelter Taktfrequenz,
@@ -12,8 +13,10 @@
   Da der Exportauftrag nicht zustande kam,
   gab es vom LC-80e nur Entwicklungsmuster.
  <br/><br/>
-  Des Weiteren gab es mit dem LC-80.2 auch eine private Weiterentwicklung
-  von Eckart Buschendorf.
+  Es gab auch private Weiterentwicklungen des LC-80.
+  Eine stammt von Eckart Buschendorf und tr&auml;gt den Namen LC-80.2.
+  Eine andere entstand in den Jahren 2014 bis 2016
+  in der Retrocomputer-Szene und nennt sich LC-80ex.
   Alle diese Varianten werden von JKCEMU emuliert.
  <br/><br/>
 
@@ -22,7 +25,13 @@
    <li>
     <a href="lc80.htm#hardware">1. Emulierte Hardware</a>
     <ul>
-     <li><a href="lc80.htm#keyboard">1.1. Tastatur</a></li>
+     <li><a href="lc80.htm#lc80_2u505">1.1. LC-80 mit ROM 2 x U505</a></li>
+     <li><a href="lc80.htm#lc80_2716">1.2. LC-80 mit ROM 2716</a></li>
+     <li><a href="lc80.htm#lc80.2">1.3. LC-80.2</a></li>
+     <li><a href="lc80.htm#lc80e">1.4. LC-80e (Export-Variante)</a></li>
+     <li><a href="lc80.htm#lc80ex">1.5. LC-80ex</a></li>
+     <li><a href="lc80.htm#keyboard">1.6. Hexadezimale Tastatur</a></li>
+     <li><a href="lc80.htm#sound">1.7. Tonausgabe</a></li>
     </ul>
    </li>
    <li>
@@ -56,6 +65,19 @@
        </li>
       </ul>
      </li>
+     <li><a href="lc80.htm#lctools">2.3. LCTools</a></li>
+     <li><a href="lc80.htm#basic">2.4. BASIC</a></li>
+    </ul>
+   </li>
+   <li>
+    <a href="lc80.htm#etc">3. Sonstiges</a>
+    <ul>
+     <li>
+      <a href="lc80.htm#autoloadinput">3.1. AutoLoad und AutoInput</a>
+     </li>
+     <li>
+      <a href="lc80.htm#sio_speed">3.2. LC-80ex SIO-Geschwindigkeit</a>
+     </li>
     </ul>
    </li>
   </ul>
@@ -63,6 +85,7 @@
 
 
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
+  Bei allen Modellvarianten werden emuliert:
   <ul>
    <li>6-stellige 7-Segment-Anzeige</li>
    <li>HALT-LED</li>
@@ -70,62 +93,112 @@
    <li>Tastatur mit Hexadezimal- und Funktionstasten</li>
    <li>Kassettenrecorderanschluss</li>
   </ul>
-  <br/>
-  Der emulierte Speicher unterscheidet sich je nach Einstellung:
+ <br/>
+
+ <h3><a name="lc80_2u505">1.1. LC-80 mit ROM 2 x U505</a></h3>
   <ul>
-   <li>LC-80 mit ROM 2xU505:<br/>
-    <ul>
-     <li>2&nbsp;KByte ROM im Adressbereich 0000-03FF und 0800-0BFF</li>
-     <li>1&nbsp;KByte RAM im Adressbereich 2000-23FF</li>
-    </ul>
-    Aufgrund der unvollst&auml;ndigen Adressdekodierung
-    ist der ROM-Bereich 0000-03FF auch im Adressbereich 0400-07FF
-    sowie der ROM-Bereich 0800-0BFF auch im Adressbereich 0C00-0FFF
-    sichtbar.
-    <br/><br/>
+   <li>900&nbsp;kHz Taktfrequenz</li>
+   <li>2&nbsp;KByte ROM im Adressbereich 0000h-03FFh und 0800h-0BFFh</li>
+   <li>1&nbsp;KByte RAM im Adressbereich 2000h-23FFh</li>
+  </ul>
+ <br/>
+  <b>Achtung!</b> Aufgrund der unvollst&auml;ndigen Adressdekodierung
+  ist der Adressbereich 0000h-3FFFh auch in den Bereichen
+  ab 4000h, 8000h und C000h sichtbar.
+ <br/><br/>
+
+ <h3><a name="lc80_2716">1.2. LC-80 mit ROM 2716</a></h3>
+  <ul>
+   <li>900&nbsp;kHz Taktfrequenz</li>
+   <li>2&nbsp;KByte ROM im Adressbereich 0000h-07FFh</li>
+   <li>4&nbsp;KByte RAM im Adressbereich 2000h-3FFFh</li>
+  </ul>
+ <br/>
+  Vom Hersteller wurde diese LC-80-Version nur mit 1&nbsp;KByte RAM
+  ausgeliefert.
+  Damit aber JKCEMU auch eine Konfiguration anbietet,
+  die das originale Monitorprogramm mit dem maximalen RAM-Ausbau vereint,
+  werden 4&nbsp;KByte RAM emuliert.
+ <br/><br/>
+  <b>Achtung!</b> Aufgrund der unvollst&auml;ndigen Adressdekodierung
+  ist der Adressbereich 0000h-3FFFh auch in den Bereichen
+  ab 4000h, 8000h und C000h sichtbar.
+ <br/><br/>
+
+ <h3><a name="lc80.2">1.3. LC-80.2</a></h3>
+  <ul>
+   <li>900&nbsp;kHz Taktfrequenz</li>
+   <li>4&nbsp;KByte ROM im Adressbereich 0000h-0FFFh</li>
+   <li>4&nbsp;KByte RAM im Adressbereich 2000h-3FFFh</li>
+  </ul>
+ <br/>
+  <b>Achtung!</b> Aufgrund der unvollst&auml;ndigen Adressdekodierung
+  ist der Adressbereich 0000h-3FFFh auch in den Bereichen
+  ab 4000h, 8000h und C000h sichtbar.
+ <br/><br/>
+
+ <h3><a name="lc80e">1.4. LC-80e (Export-Variante)</a></h3>
+  <ul>
+   <li>1,8&nbsp;MHz Taktfrequenz</li>
+   <li>
+    12&nbsp;KByte ROM in den Adressbereichen 0000h-1FFFh und C000h-CFFFh
    </li>
-   <li>LC-80 mit ROM 2716:<br/>
-    <ul>
-     <li>2&nbsp;KByte ROM im Adressbereich 0000-07FF</li>
-     <li>4&nbsp;KByte RAM im Adressbereich 2000-3FFF</li>
-    </ul>
-    Vom Hersteller wurde diese LC-80-Version nur mit 1&nbsp;KByte RAM
-    ausgeliefert.
-    Damit aber JKCEMU auch eine Konfiguration anbietet,
-    die das originale Monitorprogramm mit dem maximalen RAM-Ausbau vereint,
-    werden 4&nbsp;KByte RAM emuliert.
-    <br/><br/>
+   <li>4&nbsp;KByte RAM im Adressbereich 2000-3FFF</li>
+  </ul>
+ <br/>
+  <b>Achtung!</b> Aufgrund der doppelten Taktfrequenz laufen
+  die originalen LC-80-Programme auch doppelt so schnell.
+  Das ist insbesondere bei zeitrelevanten Programmen (z.B. Uhrprogramm)
+  zu beachten.
+ <br/><br/>
+  <b>Hinweis:</b> Durch Einbindung einer entsprechend gro&szlig;en
+  externen ROM-Datei l&auml;sst sich der ROM ab Adresse C000h
+  auf bis 16&nbsp;KByte vergr&ouml;&szlig;ern,
+  so dass insgesamt bis zu 24&nbsp;KByte ROM emuliert werden.
+ <br/><br/>
+
+ <h3><a name="lc80ex">1.5. LC-80ex</a></h3>
+  <ul>
+   <li>1,843&nbsp;MHz Taktfrequenz</li>
+   <li>
+    20&nbsp;KByte ROM in den Adressbereichen 0000h-1FFFh, A000h-BFFFh
+    und C000h-CFFFh,
    </li>
-   <li>LC-80.2:<br/>
-    <ul>
-     <li>4&nbsp;KByte ROM im Adressbereich 0000-0FFF</li>
-     <li>4&nbsp;KByte RAM im Adressbereich 2000-3FFF</li>
-    </ul>
-    <br/>
+   <li>
+    32&nbsp;KByte RAM im Adressbereich 2000-9FFF inkl. Timekeeper-RAM
    </li>
-   <li>LC-80e (Export-Variante):<br/>
+   <li>
+    2&nbsp;serielle Schnitstellen
+    (Z80 SIO an den IO-Ports DCh-DFh, siehe auch
+    <a href="lc80.htm#sio_speed">LC-80ex SIO-Geschwindigkeit</a>)
     <ul>
-     <li>12&nbsp;KByte ROM im Adressbereich 0000-1FFF und C000-CFFF</li>
-     <li>4&nbsp;KByte RAM im Adressbereich 2000-3FFF</li>
+     <li>Kanal&nbsp;A: Drucker</li>
+     <li>Kanal&nbsp;B: TV-Terminal&nbsp;1.2 (alphanumerisch)</li>
     </ul>
+   </li>
+   <li>
+    <a href="usb.htm">USB-Anschluss</a>
+    (Vinculum VDIP Modul an den IO-Ports BCh-BFh)
+   </li>
+   <li>
+    Echtzeituhr (nur lesend) Timekeeper MT48T08 mit Arbeitszellen
+    im Adressbereich 7FF9h-7FFFh
    </li>
   </ul>
  <br/>
-  Bei allen LC-80-Versionen au&szlig;er dem LC-80e
-  ist aufgrund der unvollst&auml;ndigen Adressdekodierung
-  der Adressbereich 0000-3FFF auch unter 4000-7FFF, 8000-BFFF
-  und unter C000-FFFF sichtbar.
+  <b>Achtung!</b> Aufgrund der mehr als doppelt so hohen Taktfrequenz
+  gegen&uuml;ber einem originalen LC-80 laufen die Programme
+  entsprechend schneller.
  <br/><br/>
-  <b>Achtung!</b> Beim LC-80 mit U505-Best&uuml;ckung befindet sich
-  ein Teil des Monitorprogramms und damit auch der Systemfunktionen
-  auf anderen Adressen.
-  Programme, die diese Systemfunktionen benutzen,
-  laufen deshalb entweder nicht oder nur auf dieser LC-80-Version.
+  <b>Hinweis:</b> Durch Einbindung einer entsprechend gro&szlig;en
+  externen ROM-Datei l&auml;sst sich der ROM ab Adresse C000h
+  auf bis 16&nbsp;KByte vergr&ouml;&szlig;ern,
+  so dass insgesamt bis zu 32&nbsp;KByte ROM emuliert werden k&ouml;nnen.
  <br/><br/>
 
- <h3><a name="keyboard">1.1. Tastatur</a></h3>
-  Die Tabelle zeigt, wie die LC-80-Tasten auf der Tastatur
-  des Emulatorrechners abgebildet werden:
+ <h3><a name="keyboard">1.6. Hexadezimale Tastatur</a></h3>
+  Die Tabelle zeigt, wie die Tasten der hexadezimalen LC-80-Tastatur
+  auf der Tastatur des Emulatorrechners abgebildet werden:
  <br/>
   <table border="1">
    <tr><th>LC-80-Taste</th><th>Taste im JKCEMU</th><th>Bedeutung</th></tr>
@@ -194,6 +267,17 @@
   aktiviert ist.
  <br/><br/>
 
+ <h3><a name="sound">1.7. Tonausgabe</a></h3>
+  Der LC-80 besitzt nur einen Tonausgang,
+  der sowohl f&uuml;r f&uuml;r akustische Zwecke als auch
+  f&uuml;r die Speicherung von Programmen auf Kassette verwendet wird.
+  Aus diesem Grund wird auch nur ein Tonausgang emuliert.
+  Diesen aktivieren Sie im Fenster <a href="audio.htm">Audio/Kassette</a> 
+  im Reiter <em>Ausgang Kassette</em>.
+  Der Reiter <em>Ausgang Sound-Generator/Lautsprecher</em>
+  hat beim LC-80 keine Wirkung.
+ <br/><br/>
+
 
  <h2><a name="software">2. Im ROM enthaltene Software</a></h2>
   <ul>
@@ -206,20 +290,43 @@
    <li>
     LC-80.2:<br/>
     <ul>
-     <li>Monitorprogramm von Eckhard Buschendorf</li>
+     <li>
+      Erweitertes und verbessertes Monitorprogramm
+      von Eckhard Buschendorf
+     </li>
     </ul>
    </li>
    <li>
     LC-80e:<br/>
     <ul>
-     <li>Originales Monitorprprogramm</li>
+     <li>
+      Originales Monitorprprogramm f&uuml;r LC-80e<br/>
+      (Anpassung der Taktfrequenz)
+     </li>
      <li>Schachprogramm SC-80</li>
+    </ul>
+   </li>
+   <li>
+    LC-80ex:<br/>
+    <ul>
+     <li>Originales Monitorprprogramm f&uuml;r LC-80e</li>
+     <li>LCTools&nbsp;4 von Rolf Weidlich</li>
+     <li>
+      LC80ex-BASIC&nbsp;2.0*USB von Rolf Weidlich<br/>
+      (Adaption des AC1/LLC2-Grafik/Sound-BASIC auf den LC-80ex)
+     </li>
     </ul>
    </li>
   </ul>
   Die originalen Monitorprogramme der einzelnen LC-80-Versionen
   sind funktional gleich, unterscheiden sich aber in ihrem
-  bin&auml;ren Abbild, vorallem beim LC-80e.
+  bin&auml;ren Abbild, vorallem beim LC-80e/LC-80ex.
+ <br/><br/>
+  <b>Achtung!</b> Beim LC-80 mit U505-Best&uuml;ckung befindet sich
+  ein Teil des Monitorprogramms und damit auch der Systemfunktionen
+  auf anderen Adressen.
+  Programme, die diese Systemfunktionen benutzen,
+  laufen deshalb entweder nicht oder nur auf dieser LC-80-Version.
  <br/><br/>
 
  <h3>
@@ -571,5 +678,107 @@
   indem Sie nach dem Start des Schachprogramms folgendes eingeben:
  <br/><br/>
   <em>NEW&nbsp;GAME&nbsp;(F1) &rarr; SELF&nbsp;PLAY&nbsp;(F2)</em>
+ <br/><br/>
+
+ <h3><a name="lctools">2.3. LCTools</a></h3>
+  Die LCTools sind nur im LC-80ex enthalten
+  und liegen im Adressbereich A000h-BFFFh.
+  Sie stellen folgende Funktionen zur Verf&uuml;gung:
+  <ul>
+   <li>
+    Laden und Speichern von Programmen &uuml;ber die serielle Schnittstelle
+    (im Emulator nicht nutzbar)
+   </li>
+   <li>
+    Laden und Speichern von Programmen &uuml;ber USB
+    im <a href="fileformats.htm#headersave">Headersave</a>-Format
+   </li>
+  </ul>
+ <br/>
+  Diese Funktionen k&ouml;nnen sowohl interaktiv
+  &uuml;ber die hexadezimale Tastatur als auch
+  &uuml;ber einen Sprungverteiler aus Programmen heraus verwendet werden.
+  Des Weiteren sind drei Programme enthalten:
+  <ul>
+   <li>Timekeeper-Uhr (Start auf Adresse&nbsp;A030h)</li>
+   <li>
+    AD-Umsetzer (Start auf Adresse&nbsp;A033h)<br/>
+    <b>Achtung!</b> Da keine entsprechende Hardware emuliert wird,
+    ist das Programm im JKCEMU nicht nutzbar.
+   </li>
+   <li>Maschinencode-Editor (Start auf Adresse&nbsp;B000h)</li>
+  </ul>
+ <br/>
+
+ <h3><a name="basic">2.4. BASIC</a></h3>
+  Der BASIC-Interpreter ist nur im LC-80ex verf&uuml;gbar
+  und liegt im Adressbereich C000h-DFFFh.
+  Er setzt die LCTools im Adressbereich A000h-BFFFh
+  sowie ein an der SIO Kanal&nbsp;B angeschlossenes Terminal voraus.
+  JKCEMU emuliert das TV-Terminal&nbsp;1.2 als zweite Anzeigeeinheit,
+  d.h., den BASIC-Interpreter bedienen Sie &uuml;ber das Terminal-Fenster,
+  welches &uuml;ber den Men&uuml;eintrag
+  <em>Extra</em> &rarr; <em>Zweite Anzeigeeinheit...</em> ge&ouml;ffnet wird.
+ <br/><br/>
+  Gestartet wird das BASIC auf Adresse C000h.
+  Geben Sie dazu im JKCEMU-Hauptfenster folgendes ein:
+ <br/><br/>
+  <em>RES&nbsp;(Escape) &rarr; ADR&nbsp;(F1)
+  &rarr; C &rarr; 0 &rarr; 0 &rarr; 0 &rarr; EX&nbsp;(Enter)</em>
+ <br/><br/>
+  Erst danach wechseln Sie in das Terminal-Fenster.
+  Wenn Sie den BASIC-Interpreter mit <em>BYE</em> beenden
+  und ohne Datenverlust wieder neu starten m&ouml;chten,
+  dann verwenden Sie die Adresse C003h (Warmstart-Adresse).
+ <br/><br/>
+  Das BASIC ist eine Adaption des AC1/LLC2-Grafik/Sound-BASIC
+  und bietet somit einen &auml;hnlichen Funktionsumfang wie dieses.
+  Direktzugriff auf die Tastatur sowie Pseudopixelgrafik
+  (<em>SET</em>, <em>RESET</em>, <em>POINT</em>)
+  sind jedoch nicht m&ouml;glich.
+  Daf&uuml;r werden die BASIC-Programme auf einem USB-Speicher gesichert
+  (Kommandos <em>SAVE</em>, <em>LOAD</em> und <em>FILES</em>).
+  Drucken ist mit <em>LFILES</em>, <em>LLIST</em> und <em>LPRINT</em>
+  m&ouml;glich und das Bearbeiten eines BASIC-Programms mit dem Kommando
+  <em>EDIT</em>.
+  Zu guter letzt seien noch die Funktionen <em>DATE$(0)</em>
+  und <em>TIME$(0)</em> genannt, mit denen man die Echtzeituhr auslesen kann.
+ <br/><br/>
+
+
+ <h2><a name="etc">3. Sonstiges</a></h2>
+
+ <h3><a name="autoloadinput">3.1. AutoLoad und AutoInput</a></h3>
+  Beim LC-80 bewirkt RESET einen Warmstart,
+  bei dem keine Daten verloren gehen.
+  Aus diesem Grund ist es durchaus &uuml;blich,
+  vor Ausf&uuml;hrung eines Kommandos ein RESET auszul&ouml;sen.
+  Da in solchen F&auml;llen AutoLoad und AutoInput st&ouml;ren w&uuml;rde,
+  werden AutoLoad und AutoInput nur bei einem Kaltstart
+  (emuliertes Einschalten) ausgef&uuml;hrt.
+ <br/><br/>
+  <b>Achtung!</b> Da in der LC-80-Emulation mit der Escape-Taste
+  ein RESET (Warmstart) ausgel&ouml;st wird,
+  f&uuml;hrt ein Escape im AutoInput ebenfalls zu einem RESET.
+ <br/><br/>
+  <b>Achtung!</b> AutoInput f&uuml;hrt automatische Tastaturbet&auml;tigungen
+  nur auf der hexadezimalen Tastatur aus.
+  Die am TV&nbsp;Terminal emulierte alphanumerische Tastatur
+  kann damit nicht bedient werden.
+ <br/><br/>
+
+ <h3><a name="sio_speed">3.2. LC-80ex SIO-Geschwindigkeit</a></h3>
+  Beim LC-80ex werden die SIO-Kan&auml;le standardm&auml;&szlig;ig
+  vom CTC-Kanal&nbsp;0 getaktet.
+  Damit lassen sich standardisierte Geschwindigkeiten
+  von bis zu 2400&nbsp;Baud erreichen.
+  Da das jedoch recht langsam ist,
+  gibt es von Rolf Weidlich eine Schaltungserg&auml;nzung,
+  bei der die SIO-Kan&auml;le &uuml;ber einen 1:12-Teiler
+  direkt vom CPU-Takt gespeist werden.
+  Damit ergibt sich ohne &Auml;nderung der Software eine Geschwindigkeit
+  von 9600&nbsp;Baud.
+  JKCEMU emuliert diese Schaltungserg&auml;nzung und somit
+  die 9600&nbsp;Baud.
 </body>
 </html>
