@@ -15,10 +15,10 @@ specific network and USB adapters.
 
 A5105 (BIC, ALBA PC 1505), AC1 and AC1-2010, BCS3, C-80, HC900,
 Huebler/Evert-MC, Huebler-Grafik-MC, KC85/1, KC85/2, KC85/3,
-KC85/4, KC85/5, KC87, KC compact, Kramer-MC, LC-80, LLC1,
-LLC2, NANOS, PC/M (Mugler/Mathes-PC), Poly-Computer 880,
+KC85/4, KC85/5, KC87, KC compact, Kramer-MC, LC-80 and LC-80ex,
+LLC1, LLC2, NANOS, PC/M (Mugler/Mathes-PC), Poly-Computer 880,
 Schachcomputer SC2, Schach- und Lerncomputer SLC1, VCS80, Z1013,
-Z9001, ZX-Spectrum
+Z9001, ZX-Spectrum, *user customizable system*
 
 **Integrated Tools**:
 
@@ -27,6 +27,13 @@ Audio Recorder, Floppy Disk Image Inspector, Calculator, File
 Browser, File Converter, File Search Engine, Image Viewer, Memory
 Editor, Text-File Editor, Hex-File Editor, Hex-File Comparison,
 Checksum and Hash Value Calculation
+
+**Special Features**:
+
+Network Emulation, USB Emulation, Floppy Disk Emulation, Hard Disk
+Emulation (GIDE), CP/M Floppy Disk Image creation, CP/M Floppy
+Disk (Image) packaging, Files and Programs stored on Audio
+Compact Casset, Joysticks, ZEXALL and ZEXDOC
 
 ## Compilation
 
