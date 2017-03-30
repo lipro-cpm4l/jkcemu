@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -40,11 +40,13 @@ public class ImageDisk extends AbstractFloppyDisk
   private Map<Integer,java.util.List<SectorData>> side1;
 
 
-  public static void export(
+  public static String export(
 			AbstractFloppyDisk disk,
 			File               file,
 			String             remark ) throws IOException
   {
+    StringBuilder msgBuf = null;
+
     /*
      * Pruefen, ob geloschte Sektoren oder Sektoren mit CRC-Fehler
      * vorhanden sind
@@ -182,6 +184,18 @@ public class ImageDisk extends AbstractFloppyDisk
 	      sectorSize <<= sizeCode;
 	    }
 	    for( SectorData sector : sectors ) {
+	      if( sector.hasBogusID() ) {
+		if( msgBuf == null ) {
+		  msgBuf = new StringBuilder( 1024 );
+		}
+		msgBuf.append(
+			String.format(
+				"Seite %d, Spur %d, Sektor %d:"
+					+ " Sektor-ID generiert\n",
+				head + 1,
+				cyl,
+				sector.getSectorNum() ) );
+	      }
 	      int     fillByte = -1;
 	      boolean deleted  = sector.isDeleted();
 	      boolean err      = sector.checkError();
@@ -228,10 +242,18 @@ public class ImageDisk extends AbstractFloppyDisk
       }
       out.close();
       out = null;
+
+      if( msgBuf != null ) {
+	msgBuf.append( "\nDie angezeigten Informationen k\u00F6nnen"
+		+ " in einer ImageDisk-Datei nicht gespeichert werden\n"
+		+ "und sind deshalb in der erzeugten Datei"
+		+ " nicht mehr enthalten.\n" );
+      }
     }
     finally {
       EmuUtil.closeSilent( out );
     }
+    return msgBuf != null ? msgBuf.toString() : null;
   }
 
 

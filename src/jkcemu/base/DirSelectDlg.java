@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EventObject;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
@@ -33,12 +34,14 @@ import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeWillExpandListener;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultTreeSelectionModel;
 import javax.swing.tree.ExpandVetoException;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
+import jkcemu.Main;
 
 
 public class DirSelectDlg
@@ -46,10 +49,12 @@ public class DirSelectDlg
 		implements TreeSelectionListener, TreeWillExpandListener
 {
   private File                   selectedFile;
+  private FileSystemView         fsv;
   private FileTreeNodeComparator comparator;
   private FileTreeNode           rootNode;
   private DefaultTreeModel       treeModel;
   private JTree                  tree;
+  private JCheckBox              btnPhysFileSys;
   private JButton                btnApprove;
   private JButton                btnCancel;
   private JButton                btnNew;
@@ -127,6 +132,10 @@ public class DirSelectDlg
 	  rv = true;
 	  doApprove();
 	}
+	else if( src == this.btnPhysFileSys ) {
+	  rv = true;
+	  doPhysFileSys();
+	}
 	else if( src == this.btnNew ) {
 	  rv = true;
 	  doNew();
@@ -149,6 +158,18 @@ public class DirSelectDlg
     super( owner, "Verzeichnisauswahl" );
     this.selectedFile = null;
     this.comparator   = FileTreeNodeComparator.getIgnoreCaseInstance();
+    this.fsv          = EmuUtil.getDifferentLogicalFileSystemView();
+
+
+    // Art der Dateisystemstruktur
+    boolean statePhysFileSys = true;
+    if( this.fsv != null ) {
+      if( preselection == null ) {
+	statePhysFileSys = Main.getBooleanProperty(
+				EmuUtil.PROP_SHOW_PHYS_FILESYS,
+				false );
+      }
+    }
 
 
     // Fensterinhalt
@@ -167,7 +188,12 @@ public class DirSelectDlg
     DefaultTreeSelectionModel selModel = new DefaultTreeSelectionModel();
     selModel.setSelectionMode( TreeSelectionModel.SINGLE_TREE_SELECTION );
 
-    this.rootNode = new FileTreeNode( null, null, true );
+    this.rootNode = new FileTreeNode(
+				null,
+				null,
+				null,
+				true,
+				statePhysFileSys ? null : this.fsv );
     refreshNode( this.rootNode );
 
     this.treeModel = new DefaultTreeModel( this.rootNode );
@@ -178,6 +204,21 @@ public class DirSelectDlg
     this.tree.setScrollsOnExpand( true );
     this.tree.setShowsRootHandles( true );
     add( new JScrollPane( this.tree ), gbc );
+
+
+    // Auswahl Dateisystemstruktur
+    this.btnPhysFileSys = null;
+    if( this.fsv != null ) {
+      this.btnPhysFileSys = new JCheckBox(
+		"Physische Dateisystemstruktur anzeigen",
+		statePhysFileSys );
+      this.btnPhysFileSys.addActionListener( this );
+      gbc.fill    = GridBagConstraints.NONE;
+      gbc.weightx = 0.0;
+      gbc.weighty = 0.0;
+      gbc.gridy++;
+      add( this.btnPhysFileSys, gbc );
+    }
 
 
     // Knoepfe
@@ -264,6 +305,22 @@ public class DirSelectDlg
   }
 
 
+  private void doPhysFileSys()
+  {
+    if( this.btnPhysFileSys != null ) {
+      boolean state = this.btnPhysFileSys.isSelected();
+      EmuUtil.setProperty(
+		Main.getProperties(),
+		EmuUtil.PROP_SHOW_PHYS_FILESYS,
+		state );
+      this.rootNode.setFileSystemView( state ? null : this.fsv );
+      this.rootNode.setChildrenLoaded( false );
+      refreshNode( this.rootNode );
+      this.treeModel.nodeStructureChanged( this.rootNode );
+    }
+  }
+
+
   private void doNew()
   {
     TreePath parentPath = this.tree.getSelectionPath();
@@ -283,7 +340,9 @@ public class DirSelectDlg
 		    FileTreeNode newNode = new FileTreeNode(
 							parent,
 							newDir.toPath(),
-							false );
+							null,
+							false,
+							null );
 		    parent.add( newNode );
 		    this.treeModel.nodeStructureChanged( parent );
 		    final JTree    tree    = this.tree;
@@ -328,36 +387,72 @@ public class DirSelectDlg
   private void refreshNode( FileTreeNode node )
   {
     if( !node.hasChildrenLoaded() ) {
-      boolean        fsRoot  = false;
-      Iterable<Path> entries = null;
-      try {
-	Path path = node.getPath();
-	if( path != null ) {
-	  if( Files.isDirectory( path, LinkOption.NOFOLLOW_LINKS )
-	      && !Files.isSymbolicLink( path ) )
-	  {
-	    entries = Files.newDirectoryStream( path );
-	  }
+      node.removeAllChildren();
+
+      boolean        done   = false;
+      boolean        fsRoot = false;
+      FileSystemView fsv    = node.getFileSystemView();
+      if( fsv != null ) {
+	File[] entries = null;
+	File   file    = node.getFile();
+	if( file != null ) {
+	  entries = fsv.getFiles( file, true );
 	} else {
-	  entries = FileSystems.getDefault().getRootDirectories();
+	  entries = fsv.getRoots();
 	  fsRoot  = true;
 	}
-	for( Path tmpPath : entries ) {
-	  try {
-	    if( Files.isDirectory( tmpPath )
-		&& (fsRoot || !Files.isHidden( tmpPath )) )
+	if( entries != null ) {
+	  for( File tmpFile : entries ) {
+	    if( tmpFile.isDirectory()
+		&& (fsRoot || !tmpFile.isHidden()) )
 	    {
-	      node.add( new FileTreeNode( node, tmpPath, fsRoot ) );
+	      node.add( new FileTreeNode(
+					node,
+					null,
+					tmpFile,
+					fsRoot,
+					fsv ) );
 	    }
 	  }
-	  catch( IOException ex ) {}
 	}
+	done = true;
       }
-      catch( Exception ex ) {}
-      finally {
-	if( entries != null ) {
-	  if( entries instanceof Closeable ) {
-	    EmuUtil.closeSilent( (Closeable) entries );
+      if( !done ) {
+	Iterable<Path> entries = null;
+	try {
+	  Path path = node.getPath();
+	  if( path != null ) {
+	    if( Files.isDirectory( path, LinkOption.NOFOLLOW_LINKS )
+		&& !Files.isSymbolicLink( path ) )
+	    {
+	      entries = Files.newDirectoryStream( path );
+	    }
+	  } else {
+	    entries = FileSystems.getDefault().getRootDirectories();
+	    fsRoot  = true;
+	  }
+	  for( Path tmpPath : entries ) {
+	    try {
+	      if( Files.isDirectory( tmpPath )
+		  && (fsRoot || !Files.isHidden( tmpPath )) )
+	      {
+		node.add( new FileTreeNode(
+					node,
+					tmpPath,
+					null,
+					fsRoot,
+					null ) );
+	      }
+	    }
+	    catch( IOException ex ) {}
+	  }
+	}
+	catch( Exception ex ) {}
+	finally {
+	  if( entries != null ) {
+	    if( entries instanceof Closeable ) {
+	      EmuUtil.closeSilent( (Closeable) entries );
+	    }
 	  }
 	}
       }
@@ -410,4 +505,3 @@ public class DirSelectDlg
     }
   }
 }
-

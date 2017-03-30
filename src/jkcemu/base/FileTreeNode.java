@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Vector;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.tree.TreeNode;
 
 
@@ -25,6 +26,7 @@ public class FileTreeNode implements TreeNode
   protected File                 file;
   protected boolean              fileSystemRoot;
   protected boolean              childrenLoaded;
+  protected FileSystemView       fsv;
   protected Vector<FileTreeNode> vChildren;
 
   private TreeNode parent;
@@ -33,12 +35,18 @@ public class FileTreeNode implements TreeNode
   private String   nodeName;
 
 
-  public FileTreeNode( TreeNode parent, Path path, boolean fileSystemRoot )
+  public FileTreeNode(
+		TreeNode       parent,
+		Path           path,
+		File           file,
+		boolean        fileSystemRoot,
+		FileSystemView fsv )
   {
     this.parent         = parent;
     this.path           = path;
-    this.file           = null;
+    this.file           = file;
     this.fileSystemRoot = fileSystemRoot;
+    this.fsv            = fsv;
     this.allowsChildren = fileSystemRoot;
     this.leaf           = !fileSystemRoot;
     this.childrenLoaded = false;
@@ -70,8 +78,20 @@ public class FileTreeNode implements TreeNode
   }
 
 
+  public FileSystemView getFileSystemView()
+  {
+    return this.fsv;
+  }
+
+
   public Path getPath()
   {
+    if( (this.path == null) && (this.file != null) ) {
+      try {
+	this.path = this.file.toPath();
+      }
+      catch( InvalidPathException ex ) {}
+    }
     return this.path;
   }
 
@@ -128,6 +148,12 @@ public class FileTreeNode implements TreeNode
   }
 
 
+  public void setFileSystemView( FileSystemView fsv )
+  {
+    this.fsv = fsv;
+  }
+
+
   public void sort( FileTreeNodeComparator comparator )
   {
     if( (this.vChildren != null) && (comparator != null) ) {
@@ -141,20 +167,32 @@ public class FileTreeNode implements TreeNode
 
   protected void updNode()
   {
-    if( this.path != null ) {
+    this.nodeName = null;
+    if( this.fsv != null ) {
+      File file = getFile();
+      if( file != null ) {
+	this.nodeName = fsv.getSystemDisplayName( file );
+	if( this.nodeName != null ) {
+	  if( this.nodeName.isEmpty() ) {
+	    this.nodeName = null;
+	  }
+	}
+      }
+    }
+    Path path = getPath();
+    if( path != null ) {
       if( this.fileSystemRoot ) {
-	this.nodeName = this.path.toString();
+	if( this.nodeName == null ) {
+	  this.nodeName = this.path.toString();
+	}
       } else {
-	Path p = null;
-	int  n = this.path.getNameCount();
-	if(  n > 0 ) {
-	  p = this.path.getName( n - 1 );
+	if( this.nodeName == null ) {
+	  Path p = path.getFileName();
+	  if( p != null ) {
+	    this.nodeName = p.toString();
+	  }
 	}
-	if( p == null ) {
-	  p = this.path;
-	}
-	this.nodeName = p.toString();
-	if( Files.isDirectory( this.path ) ) {
+	if( Files.isDirectory( path ) ) {
 	  this.allowsChildren = true;
 	  this.leaf           = false;
 	} else {
@@ -184,6 +222,26 @@ public class FileTreeNode implements TreeNode
 	}
 	catch( Exception ex ) {
 	  this.allowsChildren = false;
+	}
+      }
+    } else {
+      File file = getFile();
+      if( file != null ) {
+	if( this.fileSystemRoot ) {
+	  if( this.nodeName == null ) {
+	    this.nodeName = this.file.getPath();
+	  }
+	} else {
+	  if( this.nodeName == null ) {
+	    this.nodeName = file.getName();
+	  }
+	  if( this.file.isDirectory() ) {
+	    this.allowsChildren = true;
+	    this.leaf           = false;
+	  } else {
+	    this.allowsChildren = false;
+	    this.leaf           = true;
+	  }
 	}
       }
     }
@@ -261,4 +319,3 @@ public class FileTreeNode implements TreeNode
     return this.nodeName;
   }
 }
-

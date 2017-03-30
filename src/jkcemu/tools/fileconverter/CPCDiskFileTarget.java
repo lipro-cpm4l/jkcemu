@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -50,7 +50,6 @@ public class CPCDiskFileTarget extends AbstractConvertTarget
   public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".dsk" );
-    CPCDisk.export( this.disk, file );
-    return null;
+    return CPCDisk.export( this.disk, file );
   }
 }

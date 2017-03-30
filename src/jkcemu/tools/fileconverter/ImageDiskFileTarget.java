@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -57,7 +57,9 @@ public class ImageDiskFileTarget extends AbstractConvertTarget
   public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".imd" );
-    ImageDisk.export( this.disk, file, this.fileConvertFrm.getRemark() );
-    return null;
+    return ImageDisk.export(
+			this.disk,
+			file,
+			this.fileConvertFrm.getRemark() );
   }
 }

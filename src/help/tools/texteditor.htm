@@ -38,6 +38,9 @@
    </li>
    <li>
     <a href="texteditor.htm#prg">4. Programmierung mit Assembler und BASIC-Compiler</a>
+    <ul>
+     <li><a href="texteditor.htm#prj">4.1. Projektdateien</a></li>
+    </ul>
    </li>
   </ul>
  <br/>
@@ -186,6 +189,21 @@
   werden m&ouml;glicherweise einige Zeichen falsch angezeigt
   oder fehlen ganz.
  <br/><br/>
+  Des Weiteren haben Sie die M&ouml;glichkeit, die Option
+  <em>Eventuell vorhandenes Dateiendezeichen ignorieren</em>
+  zu aktivieren.
+  Damit wird eine Datei bis zum physischen Ende eingelesen,
+  auch wenn vorher ein Dateiendezeichen kommt.
+  Ein Dateiendezeichen (Byte 1Ah) wird &uuml;blicherweise als Ende
+  einer Textdatei bei Speicherung auf einem blockorientierten Medium
+  (z.B. Kassettenaufzeichnung, CP/M-Diskettenspeicherung) verwendet.
+  Heute werden Dateien byte-exakt gespeichert,
+  so dass ein Dateiendezeichen nicht mehr notwendig ist.
+  Doch bei blockorientierter Speicherung wird eine Datei bis zum
+  Ende des Blocks eingelesen.
+  Dadurch k&ouml;nnen hinter dem Text noch verwirrende Bytes folgen.
+  Das wird mit dem Dateiendezeichen verhindert.
+ <br/><br/>
 
  <h3><a name="save">3.3. Datei speichern</a></h3>
   Diese Funktion speichert den angezeigten Text in eine Datei.
@@ -208,7 +226,7 @@
   in dem Sie die Eigenschaften angeben k&ouml;nnen.
   Damit ist es auch m&ouml;glich, eine Textdatei in einem anderen
   als den Systemzeichensatz zu speichern oder
-  die Zeilenende-Bytes (DOS/Windows- bzw. Unix/Linux-Format)
+  die Zeilenendebytes (DOS/Windows- bzw. Unix/Linux-Format)
   zu &auml;ndern.
  <br/><br/>
 
@@ -310,8 +328,18 @@
  <h2>
   <a name="prg">4. Programmierung mit Assembler und BASIC-Compiler</a>
  </h2>
-  Mit dem Texteditor k&ouml;nnen Sie Assembler- und BASIC-Programme schreiben
-  und diese direkt &uuml;bersetzen lassen.
+  Dieser Abschnitt geht auf die Programmierung mit
+  <a href="assembler.htm">Assemblers</a> und
+  <a href="basicc.htm">BASIC-Compilers</a>
+  unter Nutzung des im JKCEMU integrierten Texteditors ein.
+  M&ouml;chten Sie zur Programmierung jedoch einen anderen
+  Texteditor verwenden,
+  k&ouml;nnen Sie den Assembler und den BASIC-Compiler &uuml;ber die
+  Kommandozeile aufrufen (siehe <a href="assembler.htm#cmdline">hier</a>
+  und <a href="basicc/cmdline.htm">hier</a>).
+ <br/><br/>
+  Mit dem JKCEMU-Texteditor k&ouml;nnen Sie Assembler-
+  und BASIC-Programme schreiben und diese direkt &uuml;bersetzen lassen.
   Der Aufruf des <a href="assembler.htm">Assemblers</a> bzw.
   <a href="basicc.htm">BASIC-Compilers</a> erfolgt &uuml;ber
   die entsprechenden Men&uuml;eintr&auml;ge im Men&uuml;
@@ -344,21 +372,25 @@
   &uuml;ber das Kontextmen&uuml; im Texteditor direkt einen Haltepunkt
   im Debugger anzulegen.
  <br/><br/>
+
+ <h3><a name="prj">4.1. Projektdateien</a></h3>
   Der JKCEMU-Texteditor bietet die M&ouml;glichkeit,
-  ein angefangenes Assembler- oder BASIC-Programm als
-  <a href="prjfiles.htm">Projekt</a> zu speichern.
+  ein angefangenes Assembler- oder BASIC-Programm als Projekt zu speichern
+  (Men&uuml;punkte <em>Programmierung</em> &rarr; <em>Projekt speichern</em>
+  sowie <em>Programmierung</em> &rarr; <em>Projekt speichern unter...</em>).
   Dabei wird eine Projektdatei erzeugt, die die eingestellten Optionen
   sowie einen Verweis auf die Quelltextdatei enth&auml;lt.
-  Damit die Optionen beim &Ouml;ffnen wieder richtig gesetzt sind,
-  m&uuml;ssen Sie zwingend die Projektdatei
-  anstelle der Quelltextdatei &ouml;ffnen!
+  Sie k&ouml;nnen ein Projekt erst speichern,
+  wenn der Quelltext einmal gespeichert wurde,
+  damit der Name der Quelltextdatei bekannt.
  <br/><br/>
-  M&ouml;chten Sie zur Programmierung einen anderen
-  als den JKCEMU-Texteditor verwenden,
-  k&ouml;nnen Sie den Assembler und den BASIC-Compiler &uuml;ber die
-  Kommandozeile aufrufen (siehe <a href="assembler.htm#cmdline">hier</a>
-  und <a href="basicc/cmdline.htm">hier</a>).
+  Das &Ouml;ffnen eines Projektes geschieht im dem Men&uuml;punkt
+  <em>Programmierung</em> &rarr; <em>Projektdatei &ouml;ffnen...</em>.
+  Dabei werden die Assembler- bzw. BASIC-Compiler-Optionen geladen
+  und die zugeh&ouml;rige Quelltextdatei ge&ouml;ffnet.
  <br/><br/>
-
+  <b>Achtung!</b> Wenn Sie nur die Quelltextdatei anstelle der Projektdatei
+  &ouml;ffnen, werden die Assembler- bzw. Compiler-Optionen
+  nicht wieder so eingestellt, wie sie beim Speichern des Projektes waren.
 </body>
 </html>

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,6 +20,7 @@ import java.awt.Toolkit;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
@@ -308,7 +309,7 @@ public class FilePreviewFld extends JPanel
 		infoItems.put( FileInfoFld.Item.SIZE, file.length() );
 
 		FileCheckResult checkResult = fileNode.getCheckResult();
-		if( checkResult.isAudioFile() ) {
+		if( checkResult.isAudioFile() || checkResult.isTapeFile() ) {
 		  addAudioInfo( infoItems, file );
 		} else if( checkResult.isImageFile() ) {
 		  if( addImageInfo( infoItems, file, maxFileSize ) ) {
@@ -447,10 +448,16 @@ public class FilePreviewFld extends JPanel
     PCMDataInfo info = null;
     try {
       info = AudioFile.getInfo( file );
+    }
+    catch( IOException ex ) {}
+    try {
+      if( info == null ) {
+	info = AudioUtil.openAudioOrTapeFile( file );
+      }
       if( info != null ) {
 	infoItems.put(
 		FileInfoFld.Item.TYPE,
-		gzip ? "Komprimierte Sound-Datei" : "Sound-Datei" );
+		gzip ? "Komprimierte Sound-Datei" : "Sound-/Tape-Datei" );
 	String fmtText = AudioUtil.getAudioFormatText( info );
 	if( fmtText != null ) {
 	  if( !fmtText.isEmpty() ) {
@@ -465,7 +472,14 @@ public class FilePreviewFld extends JPanel
 	}
       }
     }
-    catch( IOException ex2 ) {}
+    catch( IOException ex ) {}
+    finally {
+      if( info != null ) {
+	if( info instanceof Closeable ) {
+	  EmuUtil.closeSilent( (Closeable) info );
+	}
+      }
+    }
   }
 
 

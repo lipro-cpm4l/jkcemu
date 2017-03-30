@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -71,6 +71,7 @@ import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.border.Border;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
@@ -127,6 +128,8 @@ public class DebugFrm extends BaseFrm implements
   private static final int TAB_IDX_CPU = 0;
   private static final int TAB_IDX_LOG = 1;
   private static final int TAB_IDX_VAR = 2;
+
+  private static final int DEFAULT_FLD_MEM_PC_ROWS = 5;
 
   private static final String TEXT_STOP
 			= "Programmausf\u00FChrung anhalten";
@@ -1120,8 +1123,9 @@ public class DebugFrm extends BaseFrm implements
 
 
     // Programmcode-Anzeige
-    this.fldMemPC = new JTextArea( 5, 38 );
+    this.fldMemPC = new JTextArea( DEFAULT_FLD_MEM_PC_ROWS, 38 );
     this.fldMemPC.setEditable( false );
+    this.fldMemPC.setPreferredSize( new Dimension( 1, 1 ) );
     this.fldMemPC.addMouseListener( this );
     this.spMemPC     = new JScrollPane( this.fldMemPC );
     gbcReg.anchor    = GridBagConstraints.WEST;
@@ -3178,23 +3182,6 @@ public class DebugFrm extends BaseFrm implements
   }
 
 
-  private boolean hasSpaceInMemPC( int row )
-  {
-    boolean   rv       = false;
-    Dimension prefSize = this.fldMemPC.getPreferredSize();
-    if( prefSize != null ) {
-      if( prefSize.height > 0 ) {
-	int hMax = this.spMemPC.getHeight() - 4;
-	int hRow = prefSize.height / (row + 1);
-	if( (prefSize.height + hRow) < hMax ) {
-	  rv = true;
-	}
-      }
-    }
-    return rv;
-  }
-
-
   private boolean importLabels(
 			jkcemu.tools.Label[] labels,
 			boolean              suppressRecreate,
@@ -3989,14 +3976,38 @@ public class DebugFrm extends BaseFrm implements
     this.fldRegPC.setText( String.format( "%04X", addr ) );
 
     // Befehle anzeigen
+    int    nRows  = 0;
+    int    hAvail = this.fldMemPC.getHeight();
+    Border border = this.fldMemPC.getBorder();
+    if( border != null ) {
+      if( border != null ) {
+	Insets insets = border.getBorderInsets( this.fldMemPC );
+	if( insets != null ) {
+	  hAvail -= insets.top;
+	  hAvail -= insets.bottom;
+	}
+      }
+    }
+    Insets margin = this.fldMemPC.getMargin();
+    if( margin != null ) {
+      hAvail -= margin.top;
+      hAvail -= margin.bottom;
+    }
+    if( hAvail > 0 ) {
+      nRows = DEFAULT_FLD_MEM_PC_ROWS;
+      Font font = this.fldMemPC.getFont();
+      if( font != null ) {
+	int hFont = font.getSize();
+	if( hFont > 0 ) {
+	  nRows = hAvail / hFont;
+	}
+      }
+    }
     this.fldMemPC.setText( "" );
-    int row = 0;
-    while( hasSpaceInMemPC( row ) ) {
+    for( int row = 0; row < nRows; row++ ) {
       if( row > 0 ) {
 	this.fldMemPC.append( "\n" );
       }
-      row++;
-
       int    linePos = 0;
       String label   = null;
       if( (doc != null) && (bpModel != null) ) {
@@ -4231,8 +4242,14 @@ public class DebugFrm extends BaseFrm implements
 	}
       }
       if( !done ) {
-	this.fldIntSrc.setContentType( "text/plain" );
-	this.fldIntSrc.setText( "Bitte Interrupt-Quelle ausw\u00E4hlen!" );
+	ListModel lm = this.listIntSrc.getModel();
+	if( lm != null ) {
+	  if( lm.getSize() > 0 ) {
+	    this.fldIntSrc.setContentType( "text/plain" );
+	    this.fldIntSrc.setText(
+			"Bitte Interrupt-Quelle ausw\u00E4hlen!" );
+	  }
+	}
       }
     }
     try {

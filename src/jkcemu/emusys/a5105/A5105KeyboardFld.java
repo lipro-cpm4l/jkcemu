@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -75,9 +75,9 @@ public class A5105KeyboardFld extends AbstractKeyboardFld<A5105>
     this.imgHome      = getImage( "/images/keyboard/a5105/home.png" );
     this.imgShift     = getImage( "/images/keyboard/a5105/shift.png" );
 
-    this.colorLEDGreenOn   = Color.green;
+    this.colorLEDGreenOn   = Color.GREEN;
     this.colorLEDGreenOff  = new Color( 60, 120, 60 );
-    this.colorLEDYellowOn  = Color.yellow;
+    this.colorLEDYellowOn  = Color.YELLOW;
     this.colorLEDYellowOff = new Color( 120, 120, 0 );
 
     this.fontText   = new Font( "SansSerif", Font.PLAIN, TEXT_FONT_SIZE );

@@ -160,7 +160,7 @@
  <br/>
   <tt>
    &#10;<br/>
-   10 A=&H7F00&#10;<br/>
+   10 A=&amp;H7F00&#10;<br/>
    20 N=0&#10;<br/>
    30 FOR I=0 TO 999&#10;<br/>
    40 IF PEEK(A+I)=0 THEN N=N+1&#10;<br/>
@@ -169,7 +169,7 @@
   </tt>
  <br/>
   Ab der Adresse 7F00h sollen in den folgenden 1000 Bytes die Anzahl
-  der Null-Bytes gez&auml;hlt werden.
+  der Nullbytes gez&auml;hlt werden.
   Bei der Adresse 8000h bricht das Programm mit einem numerischen
   &Uuml;berlauf ab, da der gr&ouml;&szlig;tm&ouml;gliche
   vorzeichenbehaftete Wert von&nbsp;32767 (7FFFh) &uuml;berschritten wurde.
@@ -177,7 +177,7 @@
  <br/>
   <tt>
    &#10;<br/>
-   10 A=&H7F00&#10;<br/>
+   10 A=&amp;H7F00&#10;<br/>
    20 N=0&#10;<br/>
    30 FOR I=0 TO 999&#10;<br/>
    40 IF PEEK(A ADD I)=0 THEN N=N+1&#10;<br/>

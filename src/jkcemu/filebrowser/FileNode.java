@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.filebrowser;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.lang.*;
 import java.nio.file.FileSystems;
@@ -16,6 +17,8 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.InvalidPathException;
+import java.util.ArrayList;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import jkcemu.base.EmuUtil;
@@ -29,9 +32,14 @@ public class FileNode extends FileTreeNode
   private FileCheckResult fileCheckResult;
 
 
-  public FileNode( TreeNode parent, Path path, boolean fileSystemRoot )
+  public FileNode(
+	TreeNode       parent,
+	Path           path,
+	File           file,
+	boolean        fileSystemRoot,
+	FileSystemView fsv )
   {
-    super( parent, path, fileSystemRoot );
+    super( parent, path, file, fileSystemRoot, fsv );
     this.fileCheckResult = null;
   }
 
@@ -54,8 +62,7 @@ public class FileNode extends FileTreeNode
   {
     if( this.fileCheckResult == null ) {
       try {
-	this.fileCheckResult = FileCheckResult.checkFile(
-						this.path.toFile() );
+	this.fileCheckResult = FileCheckResult.checkFile( getFile() );
       }
       catch( UnsupportedOperationException ex ) {}
     }
@@ -68,32 +75,90 @@ public class FileNode extends FileTreeNode
 		boolean                hiddenFiles,
 		FileTreeNodeComparator comparator )
   {
-    Iterable<Path> entries = null;
+    Iterable<Path> pathEntries = null;
+    removeAllChildren();
     try {
-      removeAllChildren();
+      boolean fileSystemRoot = false;
+      File[]  fileEntries    = null;
+      File    file           = getFile();
+      if( file != null ) {
 
-      boolean fileSystemRoots = false;
-      if( this.file != null ) {
-	try {
-	  Path path = this.file.toPath();
-	  if( Files.isDirectory( path, LinkOption.NOFOLLOW_LINKS )
-	      && !Files.isSymbolicLink( path ) )
+	// Verzeichnis lesen
+	boolean ignore = false;
+	Path    path   = getPath();
+	if( path != null ) {
+	  if( !Files.isDirectory( path, LinkOption.NOFOLLOW_LINKS )
+	      || Files.isSymbolicLink( path ) )
 	  {
-	    entries = Files.newDirectoryStream( path );
+	    ignore = true;
 	  }
 	}
-	catch( InvalidPathException ex ) {}
-	catch( IOException ex ) {}
+	if( !ignore ) {
+	  if( this.fsv != null ) {
+	    if( file.isDirectory() ) {
+	      fileEntries = fsv.getFiles( file, !hiddenFiles );
+	    }
+	  } else {
+	    try {
+	      pathEntries = Files.newDirectoryStream( path );
+	    }
+	    catch( IOException ex ) {}
+	  }
+	}
+
       } else {
-	fileSystemRoots = true;
-	entries         = FileSystems.getDefault().getRootDirectories();
+
+	// Dateisystemwurzeln ermitteln
+	fileSystemRoot = true;
+	if( this.fsv != null ) {
+	  fileEntries = this.fsv.getRoots();
+	} else {
+	  pathEntries = FileSystems.getDefault().getRootDirectories();
+	}
       }
-      if( entries != null ) {
-	for( Path entry : entries ) {
+
+      // Kindobjekte anlegen
+      if( fileEntries != null ) {
+	for( File entry : fileEntries ) {
+	  boolean ignore    = false;
+	  boolean hidden    = false;
+	  String  entryName = null;
+	  if( this.fsv != null ) {
+	    entryName = this.fsv.getSystemDisplayName( entry );
+	    hidden    = this.fsv.isHiddenFile( entry );
+	  } else {
+	    hidden = entry.isHidden();
+	  }
+	  if( entryName == null ) {
+	    if( fileSystemRoot ) {
+	      entryName = entry.getPath();
+	    } else {
+	      entryName = entry.getName();
+	    }
+	  }
+	  if( entryName != null ) {
+	    if( entryName.equals( "." ) || entryName.equals( ".." ) ) {
+	      ignore = true;
+	    }
+	    if( !ignore && (hiddenFiles || !hidden) ) {
+	      FileNode fn = new FileNode(
+					this,
+					null,
+					entry,
+					fileSystemRoot,
+					this.fsv );
+	      fn.updNode();
+	      add( fn );
+	    }
+	  }
+	}
+      }
+      if( pathEntries != null ) {
+	for( Path entry : pathEntries ) {
 	  try {
 	    boolean ignore    = false;
 	    String  entryName = null;
-	    if( fileSystemRoots ) {
+	    if( fileSystemRoot ) {
 	      entryName = entry.toString();
 	    } else {
 	      Path namePath = entry.getFileName();
@@ -106,7 +171,12 @@ public class FileNode extends FileTreeNode
 		ignore = true;
 	      }
 	      if( !ignore && (hiddenFiles || !Files.isHidden( entry )) ) {
-		FileNode fn = new FileNode( this, entry, fileSystemRoots );
+		FileNode fn = new FileNode(
+					this,
+					entry,
+					null,
+					fileSystemRoot,
+					fileSystemRoot ? null : this.fsv );
 		fn.updNode();
 		add( fn );
 	      }
@@ -114,41 +184,35 @@ public class FileNode extends FileTreeNode
 	  }
 	  catch( IOException ex ) {}
 	}
-
-	// Sortieren
-	comparator.setForFileSystemRoots( fileSystemRoots );
-	sort( comparator );
       }
 
-      // Aenderungen melden
-      if( model != null ) {
-	model.nodeStructureChanged( this );
-	model.reload( this );
-      }
-      this.childrenLoaded = true;
+      // Sortieren
+      comparator.setForFileSystemRoots( fileSystemRoot );
+      sort( comparator );
     }
     finally {
-      if( entries != null ) {
-	if( entries instanceof Closeable ) {
-	  EmuUtil.closeSilent( (Closeable) entries );
+      if( pathEntries != null ) {
+	if( pathEntries instanceof Closeable ) {
+	  EmuUtil.closeSilent( (Closeable) pathEntries );
 	}
       }
-      this.fileCheckResult = null;
+      if( model != null ) {
+	model.nodeStructureChanged( this );
+      }
     }
   }
 
 
-  public FileNode refreshNodeFor(
+  public java.util.List<FileNode> refreshNodeFor(
 			Path                   path,
 			DefaultTreeModel       model,
-			boolean                forceLoadChildren,
 			boolean                hiddenFiles,
 			FileTreeNodeComparator comparator )
   {
-    FileNode node = null;
+    java.util.List<FileNode> nodes = null;
     if( path != null ) {
       try {
-	node = refreshNodeFor(
+	nodes = refreshNodeForInternal(
 			path.toAbsolutePath().normalize(),
 			model,
 			hiddenFiles,
@@ -156,7 +220,7 @@ public class FileNode extends FileTreeNode
       }
       catch( Exception ex ) {}
     }
-    return node;
+    return nodes;
   }
 
 
@@ -172,13 +236,13 @@ public class FileNode extends FileTreeNode
 
 	/* --- private Mathoden --- */
 
-  private FileNode refreshNodeFor(
+  private java.util.List<FileNode> refreshNodeForInternal(
 			Path                   absolutePath,
 			DefaultTreeModel       model,
 			boolean                hiddenFiles,
 			FileTreeNodeComparator comparator )
   {
-    FileNode rv = null;
+    java.util.List<FileNode> nodes = null;
     if( absolutePath != null ) {
       try {
 	boolean recursive = true;
@@ -187,21 +251,28 @@ public class FileNode extends FileTreeNode
 	  if( myAbsPath.equals( absolutePath ) ) {
 	    refresh( model, hiddenFiles, comparator );
 	    recursive = false;
-	    rv      = this;
+	    nodes     = new ArrayList<>();
+	    nodes.add( this );
 	  } else if( myAbsPath.startsWith( absolutePath ) ) {
-	    rv = this;
+	    nodes = new ArrayList<>();
+	    nodes.add( this );
 	  }
 	}
 	if( recursive && (this.vChildren != null) ) {
 	  for( FileTreeNode child : this.vChildren ) {
 	    if( child instanceof FileNode ) {
-	      FileNode tmpNode = ((FileNode) child).refreshNodeFor(
+	      java.util.List<FileNode> tmpNodes
+			= ((FileNode) child).refreshNodeForInternal(
 							absolutePath,
 							model,
 							hiddenFiles,
 							comparator );
-	      if( tmpNode != null ) {
-		rv = tmpNode;
+	      if( tmpNodes != null ) {
+		if( nodes != null ) {
+		  nodes.addAll( tmpNodes );
+		} else {
+		  nodes = tmpNodes;
+		}
 	      }
 	    }
 	  }
@@ -209,6 +280,6 @@ public class FileNode extends FileTreeNode
       }
       catch( Exception ex ) {}
     }
-    return rv;
+    return nodes;
   }
 }

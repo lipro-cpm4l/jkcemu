@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -47,15 +47,23 @@ import jkcemu.emusys.Z9001;
 
 public class LoadDlg extends BaseDlg implements DocumentListener
 {
+  public static final String PROP_KEEP_HEADER = "jkcemu.loadsave.header.keep";
+
   private static final String HELP_PAGE = "/help/loadsave.htm";
 
   private static final FileFormat[] fileFormats = {
 					FileFormat.KCB,
+					FileFormat.KCB_BLKN,
+					FileFormat.KCB_BLKN_CKS,
 					FileFormat.KCC,
+					FileFormat.KCC_BLKN,
+					FileFormat.KCC_BLKN_CKS,
 					FileFormat.KCTAP_SYS,
 					FileFormat.KCTAP_BASIC_PRG,
-					FileFormat.KCBASIC_HEAD_PRG,
 					FileFormat.KCBASIC_PRG,
+					FileFormat.KCBASIC_HEAD_PRG,
+					FileFormat.KCBASIC_HEAD_PRG_BLKN,
+					FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS,
 					FileFormat.RBASIC_PRG,
 					FileFormat.RMC,
 					FileFormat.BASIC_PRG,
@@ -251,10 +259,9 @@ public class LoadDlg extends BaseDlg implements DocumentListener
 		  // ggf. Dateikopf in Arbeitsspeicher kopieren
 		  if( fileFmt.equals( FileFormat.HEADERSAVE ) ) {
 		    if( isZ1013
-			&& EmuUtil.parseBoolean(
-				Main.getProperty(
-					"jkcemu.loadsave.header.keep" ),
-				false )
+			&& Main.getBooleanProperty(
+					PROP_KEEP_HEADER,
+					false )
 			&& (loadData.getOffset() == 32) )
 		    {
 		      for( int i = 0; i < 32; i++ ) {
@@ -635,9 +642,7 @@ public class LoadDlg extends BaseDlg implements DocumentListener
     if( emuSys != null ) {
       this.btnKeepHeader.setSelected(
 		(emuSys instanceof Z1013)
-		&& EmuUtil.parseBoolean(
-			Main.getProperty( "jkcemu.loadsave.header.keep" ),
-			false ) );
+		&& Main.getBooleanProperty( PROP_KEEP_HEADER, false ) );
     }
     updFields();
 
@@ -852,27 +857,6 @@ public class LoadDlg extends BaseDlg implements DocumentListener
   }
 
 
-  private static int parseHex( InputStream in, int cnt ) throws IOException
-  {
-    int value = 0;
-    while( cnt > 0 ) {
-      int ch = in.read();
-      if( (ch >= '0') && (ch <= '9') ) {
-	value = (value << 4) | ((ch - '0') & 0x0F);
-      } else if( (ch >= 'A') && (ch <= 'F') ) {
-	value = (value << 4) | ((ch - 'A' + 10) & 0x0F);
-      } else if( (ch >= 'a') && (ch <= 'f') ) {
-	value = (value << 4) | ((ch - 'a' + 10) & 0x0F);
-      } else {
-	throw new IOException(
-		"Datei entspricht nicht dem erwarteten Hex-Format." );
-      }
-      --cnt;
-    }
-    return value;
-  }
-
-
   /*
    * Diese Methode liest eine Datei und gibt den Inhalt
    * als byte-Array zurueck.
@@ -921,8 +905,6 @@ public class LoadDlg extends BaseDlg implements DocumentListener
     boolean isKCTAP_BASIC_DATA  = false;
     boolean isKCTAP_BASIC_ASC   = false;
     boolean isKCBASIC_HEAD_PRG  = false;
-    boolean isKCBASIC_HEAD_DATA = false;
-    boolean isKCBASIC_HEAD_ASC  = false;
     boolean isKCBASIC_PRG       = false;
     boolean isRMC               = false;
     boolean isBASIC             = false;
@@ -943,8 +925,10 @@ public class LoadDlg extends BaseDlg implements DocumentListener
 				|| fileFmt.equals( FileFormat.KCTAP_Z9001 )
 				|| fileFmt.equals( FileFormat.KCTAP_KC85 );
       isKCTAP_BASIC_PRG  = fileFmt.equals( FileFormat.KCTAP_BASIC_PRG );
-      isKCBASIC_HEAD_PRG = fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG );
       isKCBASIC_PRG      = fileFmt.equals( FileFormat.KCBASIC_PRG );
+      isKCBASIC_HEAD_PRG = fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+		|| fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS );
       isRMC              = fileFmt.equals( FileFormat.RMC );
       isBASIC            = fileFmt.equals( FileFormat.BASIC_PRG )
 				|| fileFmt.equals( FileFormat.RBASIC_PRG );
@@ -998,7 +982,8 @@ public class LoadDlg extends BaseDlg implements DocumentListener
     }
 
     boolean stateInfoDesc = (isHS || isKCB || isKCC
-				|| isKCTAP_SYS || isKCTAP_BASIC_PRG);
+				|| isKCTAP_SYS || isKCTAP_BASIC_PRG
+				|| isKCBASIC_HEAD_PRG);
     this.labelInfoDesc.setEnabled( stateInfoDesc );
     if( stateInfoDesc && (fileDesc != null) ) {
       this.fldInfoDesc.setText( fileDesc );

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -181,6 +181,46 @@ public abstract class AbstractKeyboardFld<T extends EmuSys>
 	g.drawString( line1, xText, yText );
 	if( line2 != null ) {
 	  g.drawString( line2, xText, yText + fontSize + 1 );
+	}
+      }
+    }
+  }
+
+
+  protected static void drawStringCenter(
+				Graphics g,
+				String   text,
+				int      x,
+				int      y,
+				int      w )
+  {
+    if( text != null ) {
+      if( !text.isEmpty() ) {
+	FontMetrics fm = g.getFontMetrics();
+	if( fm != null ) {
+	  g.drawString( text, x + ((w - fm.stringWidth( text )) / 2), y );
+	} else {
+	  g.drawString( text, x, y );
+	}
+      }
+    }
+  }
+
+
+  protected static void drawStringRight(
+				Graphics g,
+				String   text,
+				int      x,
+				int      y,
+				int      w )
+  {
+    if( text != null ) {
+      if( !text.isEmpty() ) {
+	FontMetrics fm = g.getFontMetrics();
+	if( fm != null ) {
+	  g.drawString( text, x + w - fm.stringWidth( text ), y );
+	} else {
+	  g.drawString( text, x, y );
 	}
       }
     }

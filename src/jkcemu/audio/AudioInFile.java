@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -72,17 +72,10 @@ public class AudioInFile extends AudioIn
 	  if( fName != null ) {
 	    fName = fName.toLowerCase();
 	    isTAP = fName.endsWith( ".tap" ) || fName.endsWith( ".tap.gz" );
-	    if( fName.endsWith( ".gz" ) ) {
-	      fileBytes = EmuUtil.readFile(
+	    fileBytes = EmuUtil.readFile(
 				file,
 				true,
-				AudioUtil.GZIP_FILE_FULL_READ_SIZE_MAX );
-	    } else {
-	      fileBytes = EmuUtil.readFile(
-				file,
-				false,
-				AudioUtil.FILE_FULL_READ_SIZE_MAX );
-	    }
+				AudioUtil.FILE_READ_MAX );
 	  }
 	}
       }

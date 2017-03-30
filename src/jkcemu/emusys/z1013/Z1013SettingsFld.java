@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -497,6 +497,7 @@ public class Z1013SettingsFld extends AbstractSettingsFld
 			settingsFrm,
 			propPrefix,
 			Z1013.DEFAULT_SWAP_KEY_CHAR_CASE,
+			Z1013.FUNCTION_KEY_COUNT,
 			Z1013.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
   }
@@ -655,7 +656,8 @@ public class Z1013SettingsFld extends AbstractSettingsFld
       this.tabAutoInput.applyInput( props, selected );
 
       // ggf. Warnung ausgeben
-      if( this.btnMonA2.isSelected()
+      if( selected
+	  && this.btnMonA2.isSelected()
 	  && this.btnModBasic.isSelected()
 	  && (this.fldAltBasic.getFile() == null) )
       {

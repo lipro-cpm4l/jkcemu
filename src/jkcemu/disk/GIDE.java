@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -26,7 +26,8 @@ public class GIDE implements Runnable
 {
   public static final String PROP_HARDDISK_PREFIX   = "harddisk.";
   public static final String PROP_CYLINDERS         = "cylinders";
-  public static final String PROP_ENABLED           = "enabled";
+  public static final String PROP_ENABLED           = "gide.enabled";
+  public static final String PROP_IOBASEADDR        = "gide.io_base_addr";
   public static final String PROP_FILE              = "file";
   public static final String PROP_HEADS             = "heads";
   public static final String PROP_MODEL             = "model";

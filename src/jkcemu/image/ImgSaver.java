@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2016 Jens Mueller
+ * (c) 2013-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,6 +13,7 @@ import java.awt.Frame;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.Transparency;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -54,31 +55,88 @@ public class ImgSaver
 	(byte) 0x10, (byte) 0x00, (byte) 0xC3, (byte) 0xFD,
 	(byte) 0x07 };
 
+  private static final byte[] kc852BWAppMemBytes = {
+	(byte) 0x7F, (byte) 0x7F, (byte) 0x53, (byte) 0x48,
+	(byte) 0x4F, (byte) 0x57, (byte) 0x49, (byte) 0x4D,
+	(byte) 0x47, (byte) 0x01, (byte) 0xDB, (byte) 0x88,
+	(byte) 0xF5, (byte) 0xF6, (byte) 0x04, (byte) 0xD3,
+	(byte) 0x88, (byte) 0x11, (byte) 0x58, (byte) 0x03,
+	(byte) 0x21, (byte) 0x00, (byte) 0x80, (byte) 0xCD,
+	(byte) 0x3A, (byte) 0x03, (byte) 0x21, (byte) 0x00,
+	(byte) 0xA8, (byte) 0x3E, (byte) 0x07, (byte) 0x0E,
+	(byte) 0x0A, (byte) 0x06, (byte) 0x00, (byte) 0x77,
+	(byte) 0x23, (byte) 0x10, (byte) 0xFC, (byte) 0x0D,
+	(byte) 0x20, (byte) 0xF7, (byte) 0xCD, (byte) 0x03,
+	(byte) 0xF0, (byte) 0x0E, (byte) 0x30, (byte) 0xFA,
+	(byte) 0xF1, (byte) 0xD3, (byte) 0x88, (byte) 0x3E,
+	(byte) 0x0C, (byte) 0xCD, (byte) 0x03, (byte) 0xF0,
+	(byte) 0x00, (byte) 0xC9, (byte) 0x1A, (byte) 0x13,
+	(byte) 0xFE, (byte) 0x80, (byte) 0xC8, (byte) 0x38,
+	(byte) 0x0D, (byte) 0x47, (byte) 0x3E, (byte) 0x01,
+	(byte) 0x90, (byte) 0x47, (byte) 0x1A, (byte) 0x13,
+	(byte) 0x77, (byte) 0x23, (byte) 0x10, (byte) 0xFC,
+	(byte) 0x18, (byte) 0xEC, (byte) 0x3C, (byte) 0x47,
+	(byte) 0x1A, (byte) 0x13, (byte) 0x77, (byte) 0x23,
+	(byte) 0x10, (byte) 0xFA, (byte) 0x18, (byte) 0xE2 };
+
   private static final byte[] kc854HiresAppMemBytes = {
 	(byte) 0x7F, (byte) 0x7F, (byte) 0x53, (byte) 0x48,
 	(byte) 0x4F, (byte) 0x57, (byte) 0x49, (byte) 0x4D,
-	(byte) 0x47, (byte) 0x01, (byte) 0xDD, (byte) 0x7E,
-	(byte) 0x01, (byte) 0xF5, (byte) 0xE6, (byte) 0xF1,
-	(byte) 0xEE, (byte) 0x01, (byte) 0x28, (byte) 0x02,
-	(byte) 0xF6, (byte) 0x04, (byte) 0xD3, (byte) 0x84,
-	(byte) 0xDD, (byte) 0x77, (byte) 0x01, (byte) 0xF5,
-	(byte) 0x11, (byte) 0x5E, (byte) 0x03, (byte) 0x21,
-	(byte) 0x00, (byte) 0x80, (byte) 0xCD, (byte) 0x40,
-	(byte) 0x03, (byte) 0xF1, (byte) 0xF6, (byte) 0x02,
-	(byte) 0xD3, (byte) 0x84, (byte) 0xDD, (byte) 0x77,
-	(byte) 0x01, (byte) 0x21, (byte) 0x00, (byte) 0x80,
-	(byte) 0xCD, (byte) 0x40, (byte) 0x03, (byte) 0xCD,
-	(byte) 0x03, (byte) 0xF0, (byte) 0x0E, (byte) 0x30,
-	(byte) 0xFA, (byte) 0xF1, (byte) 0xD3, (byte) 0x84,
-	(byte) 0xDD, (byte) 0x77, (byte) 0x01, (byte) 0xC9,
-	(byte) 0x1A, (byte) 0x13, (byte) 0xFE, (byte) 0x80,
-	(byte) 0xC8, (byte) 0x38, (byte) 0x0D, (byte) 0x47,
-	(byte) 0x3E, (byte) 0x01, (byte) 0x90, (byte) 0x47,
+	(byte) 0x47, (byte) 0x01, (byte) 0xDB, (byte) 0x88,
+	(byte) 0xF5, (byte) 0xF6, (byte) 0x04, (byte) 0xD3,
+	(byte) 0x88, (byte) 0xDD, (byte) 0x7E, (byte) 0x01,
+	(byte) 0xF5, (byte) 0xE6, (byte) 0xF1, (byte) 0xEE,
+	(byte) 0x01, (byte) 0x28, (byte) 0x02, (byte) 0xF6,
+	(byte) 0x04, (byte) 0xD3, (byte) 0x84, (byte) 0xDD,
+	(byte) 0x77, (byte) 0x01, (byte) 0xF5, (byte) 0x11,
+	(byte) 0x68, (byte) 0x03, (byte) 0x21, (byte) 0x00,
+	(byte) 0x80, (byte) 0xCD, (byte) 0x4A, (byte) 0x03,
+	(byte) 0xF1, (byte) 0xF6, (byte) 0x02, (byte) 0xD3,
+	(byte) 0x84, (byte) 0xDD, (byte) 0x77, (byte) 0x01,
+	(byte) 0x21, (byte) 0x00, (byte) 0x80, (byte) 0xCD,
+	(byte) 0x4A, (byte) 0x03, (byte) 0xCD, (byte) 0x03,
+	(byte) 0xF0, (byte) 0x0E, (byte) 0x30, (byte) 0xFA,
+	(byte) 0xF1, (byte) 0xD3, (byte) 0x84, (byte) 0xDD,
+	(byte) 0x77, (byte) 0x01, (byte) 0xF1, (byte) 0xD3,
+	(byte) 0x88, (byte) 0xC9, (byte) 0x1A, (byte) 0x13,
+	(byte) 0xFE, (byte) 0x80, (byte) 0xC8, (byte) 0x38,
+	(byte) 0x0D, (byte) 0x47, (byte) 0x3E, (byte) 0x01,
+	(byte) 0x90, (byte) 0x47, (byte) 0x1A, (byte) 0x13,
+	(byte) 0x77, (byte) 0x23, (byte) 0x10, (byte) 0xFC,
+	(byte) 0x18, (byte) 0xEC, (byte) 0x3C, (byte) 0x47,
 	(byte) 0x1A, (byte) 0x13, (byte) 0x77, (byte) 0x23,
-	(byte) 0x10, (byte) 0xFC, (byte) 0x18, (byte) 0xEC,
-	(byte) 0x3C, (byte) 0x47, (byte) 0x1A, (byte) 0x13,
-	(byte) 0x77, (byte) 0x23, (byte) 0x10, (byte) 0xFA,
-	(byte) 0x18, (byte) 0xE2 };
+	(byte) 0x10, (byte) 0xFA, (byte) 0x18, (byte) 0xE2 };
+
+  private static final byte[] kc854LowresBWAppMemBytes = {
+	(byte) 0x7F, (byte) 0x7F, (byte) 0x53, (byte) 0x48,
+	(byte) 0x4F, (byte) 0x57, (byte) 0x49, (byte) 0x4D,
+	(byte) 0x47, (byte) 0x01, (byte) 0xDB, (byte) 0x88,
+	(byte) 0xF5, (byte) 0xF6, (byte) 0x04, (byte) 0xD3,
+	(byte) 0x88, (byte) 0xDD, (byte) 0x7E, (byte) 0x01,
+	(byte) 0xF5, (byte) 0xE6, (byte) 0xF1, (byte) 0xF6,
+	(byte) 0x08, (byte) 0xEE, (byte) 0x01, (byte) 0x28,
+	(byte) 0x02, (byte) 0xF6, (byte) 0x04, (byte) 0xD3,
+	(byte) 0x84, (byte) 0xDD, (byte) 0x77, (byte) 0x01,
+	(byte) 0xF5, (byte) 0x11, (byte) 0x74, (byte) 0x03,
+	(byte) 0x21, (byte) 0x00, (byte) 0x80, (byte) 0xCD,
+	(byte) 0x56, (byte) 0x03, (byte) 0xF1, (byte) 0xF6,
+	(byte) 0x02, (byte) 0xD3, (byte) 0x84, (byte) 0xDD,
+	(byte) 0x77, (byte) 0x01, (byte) 0x21, (byte) 0x00,
+	(byte) 0x80, (byte) 0x3E, (byte) 0x07, (byte) 0x0E,
+	(byte) 0x28, (byte) 0x06, (byte) 0x00, (byte) 0x77,
+	(byte) 0x23, (byte) 0x10, (byte) 0xFC, (byte) 0x0D,
+	(byte) 0x20, (byte) 0xF7, (byte) 0xCD, (byte) 0x03,
+	(byte) 0xF0, (byte) 0x0E, (byte) 0x30, (byte) 0xFA,
+	(byte) 0xF1, (byte) 0xD3, (byte) 0x84, (byte) 0xDD,
+	(byte) 0x77, (byte) 0x01, (byte) 0xF1, (byte) 0xD3,
+	(byte) 0x88, (byte) 0xC9, (byte) 0x1A, (byte) 0x13,
+	(byte) 0xFE, (byte) 0x80, (byte) 0xC8, (byte) 0x38,
+	(byte) 0x0D, (byte) 0x47, (byte) 0x3E, (byte) 0x01,
+	(byte) 0x90, (byte) 0x47, (byte) 0x1A, (byte) 0x13,
+	(byte) 0x77, (byte) 0x23, (byte) 0x10, (byte) 0xFC,
+	(byte) 0x18, (byte) 0xEC, (byte) 0x3C, (byte) 0x47,
+	(byte) 0x1A, (byte) 0x13, (byte) 0x77, (byte) 0x23,
+	(byte) 0x10, (byte) 0xFA, (byte) 0x18, (byte) 0xE2 };
 
   private static final byte[] llc2HiresAppMemBytes = {
 	(byte) 0x31, (byte) 0x00, (byte) 0x20, (byte) 0x11,
@@ -123,6 +181,16 @@ public class ImgSaver
 	(byte) 0xCD, (byte) 0x05, (byte) 0x00, (byte) 0xC3,
 	(byte) 0x00, (byte) 0x00 };
 
+  private static final byte[] kcUnpackBytes = {
+	(byte) 0x21, (byte) 0x1E, (byte) 0x40, (byte) 0x11,
+	(byte) 0x00, (byte) 0x80, (byte) 0x3E, (byte) 0xA8,
+	(byte) 0xBA, (byte) 0xC8, (byte) 0x7E, (byte) 0x23,
+	(byte) 0xFE, (byte) 0x1B, (byte) 0x28, (byte) 0x04,
+	(byte) 0x12, (byte) 0x13, (byte) 0x18, (byte) 0xF2,
+	(byte) 0x7E, (byte) 0x23, (byte) 0x46, (byte) 0x23,
+	(byte) 0x12, (byte) 0x13, (byte) 0x10, (byte) 0xFC,
+	(byte) 0x18, (byte) 0xE8 };
+
 
   public static void saveAppAC1ACC(
 			byte[] videoMemBytes,
@@ -140,25 +208,67 @@ public class ImgSaver
   }
 
 
+  public static void saveAppKC852BW(
+			BufferedImage image,
+			File          file ) throws IOException
+  {
+    byte[] pixelIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    ImgUtil.createKC852MonochromeMemBytes( image, pixelIRM );
+
+    byte[] packedPixels = ImgUtil.toPackBits( pixelIRM );
+    if( packedPixels != null ) {
+      if( packedPixels.length > 0 ) {
+	saveApp(
+		file,
+		false,
+		0x0300,
+		kc852BWAppMemBytes,
+		packedPixels );
+      }
+    }
+  }
+
+
   public static void saveAppKC854Hires(
 			BufferedImage image,
 			File          file ) throws IOException
   {
-    byte[] plainPixel = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
-    byte[] plainColor = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
-    ImgUtil.createKC854HiresMemBytes( image, plainPixel, plainColor );
+    byte[] pixelIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    byte[] colorIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    ImgUtil.createKC854HiresMemBytes( image, pixelIRM, colorIRM );
 
-    byte[] packedPixel = ImgUtil.toPackBits( plainPixel );
-    byte[] packedColor = ImgUtil.toPackBits( plainColor );
-    if( (packedPixel != null) && (packedColor != null) ) {
-      if( (packedPixel.length > 0) && (packedColor.length > 0) ) {
+    byte[] packedPixels = ImgUtil.toPackBits( pixelIRM );
+    byte[] packedColors = ImgUtil.toPackBits( colorIRM );
+    if( (packedPixels != null) && (packedColors != null) ) {
+      if( (packedPixels.length > 0) && (packedColors.length > 0) ) {
 	saveApp(
 		file,
 		false,
 		0x0300,
 		kc854HiresAppMemBytes,
-		packedPixel,
-		packedColor );
+		packedPixels,
+		packedColors );
+      }
+    }
+  }
+
+
+  public static void saveAppKC854LowresBW(
+			BufferedImage image,
+			File          file ) throws IOException
+  {
+    byte[] pixelIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    ImgUtil.createKC854MonochromeMemBytes( image, pixelIRM );
+
+    byte[] packedPixels = ImgUtil.toPackBits( pixelIRM );
+    if( packedPixels != null ) {
+      if( packedPixels.length > 0 ) {
+	saveApp(
+		file,
+		false,
+		0x0300,
+		kc854LowresBWAppMemBytes,
+		packedPixels );
       }
     }
   }
@@ -204,6 +314,9 @@ public class ImgSaver
       if( icm.getMapSize() == 2 ) {
 	monochrome = true;
       }
+    }
+    if( presetFile == null ) {
+      presetFile = Main.getLastDirFile( Main.FILE_GROUP_IMAGE );
     }
     File file = EmuUtil.showFileSaveDlg(
 				owner,
@@ -384,6 +497,71 @@ public class ImgSaver
   }
 
 
+  // Die Methode speichert ein Bild im KC85/2-Format ohne Farben.
+  public static void saveImageKC852Monochrome(
+			BufferedImage image,
+			File          file ) throws IOException
+  {
+    byte[] pixelIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    ImgUtil.createKC852MonochromeMemBytes( image, pixelIRM );
+    saveKC85File( file, 1, 3, pixelIRM );
+  }
+
+
+  /*
+   * Die Methode speichert ein Bild im KC85/4-HIRES-Format.
+   * Dabei werden zwei Dateien erzeugt, naemlich *.hip und *.hif.
+   */
+  public static void saveImageKC854Hires(
+			BufferedImage image,
+			File          file ) throws IOException
+  {
+    File   dirFile = file.getParentFile();
+    String fName   = file.getName();
+    if( fName == null ) {
+      throwInvalidKC854HiresFileSuffix();
+    }
+    String baseName = "";
+    int    pos      = fName.lastIndexOf( '.' );
+    if( pos >= 0 ) {
+      baseName = fName.substring( 0, pos + 1 );
+    } else {
+     baseName = fName + ".";
+    }
+
+    byte[] pixelIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    byte[] colorIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    ImgUtil.createKC854HiresMemBytes( image, pixelIRM, colorIRM );
+
+    saveKC85File(
+		dirFile != null ?
+			new File( dirFile, baseName + "hip" )
+			: new File( baseName + "hip" ),
+		-1,
+		-1,
+		pixelIRM );
+
+    saveKC85File(
+		dirFile != null ?
+			new File( dirFile, baseName + "hif" )
+			: new File( baseName + "hif" ),
+		-1,
+		-1,
+		colorIRM );
+  }
+
+
+  // Die Methode speichert ein Bild im KC85/4-LOWRES-Format ohne Farben.
+  public static void saveImageKC854Monochrome(
+			BufferedImage image,
+			File          file ) throws IOException
+  {
+    byte[] pixelIRM = new byte[ ImgUtil.KC85_COLS * ImgUtil.KC85_H ];
+    ImgUtil.createKC854MonochromeMemBytes( image, pixelIRM );
+    saveKC85File( file, 5, 7, pixelIRM );
+  }
+
+
 	/* --- private Methoden --- */
 
   private static EmuMemView createEmuMemView(
@@ -491,7 +669,7 @@ public class ImgSaver
   }
 
 
-  public static void saveApp(
+  private static void saveApp(
 			File      file,
 			boolean   tapForZ9001,
 			int       begAddr,
@@ -537,6 +715,127 @@ public class ImgSaver
 		appName,
 		"C",
 		null );
+  }
+
+
+  private static void saveKC85File(
+				File   file,
+				int    typeByteUncompressed,
+				int    typeByteCompressed,
+				byte[] irm ) throws IOException
+  {
+    OutputStream out = null;
+    try {
+
+      // Daten komprimieren
+      ByteArrayOutputStream buf = new ByteArrayOutputStream( 0x2800 );
+      buf.write( kcUnpackBytes );
+
+      int pos = 0;
+      while( pos < 0x2800 ) {
+	int  nEqual = 1;
+	byte b0     = (byte) 0;
+	if( irm != null ) {
+	  if( pos < irm.length ) {
+	    b0 = irm[ pos ];
+	  }
+	}
+	int p2 = pos + 1;
+	while( (nEqual < 256) && (p2 < 0x2800) ) {
+	  byte b1 = (byte) 0;
+	  if( irm != null ) {
+	    if( p2 < irm.length ) {
+	      b1 = irm[ p2 ];
+	    }
+	  }
+	  if( b1 != b0 ) {
+	    break;
+	  }
+	  nEqual++;
+	  p2++;
+	}
+	if( (nEqual > 3) || (b0 == (byte) 0x1B) ) {
+	  buf.write( 0x1B );
+	  buf.write( b0 );
+	  buf.write( nEqual );
+	  pos += nEqual;
+	} else {
+	  buf.write( b0 );
+	  pos++;
+	}
+      }
+      buf.close();
+      if( buf.size() >= 0x2800 ) {
+	buf = null;
+      }
+
+      // Datei schreiben
+      out = new FileOutputStream( file );
+      for( int i = 0; i < 16; i++ ) {
+	out.write( 0 );
+      }
+      if( (typeByteUncompressed >= 0) || (typeByteCompressed >= 0) ) {
+	out.write( 2 );				// Anzahl Argumente
+	out.write( 0xFF );			// Anfangsadresse
+	out.write( 0x3F );
+      } else {
+	out.write( buf != null ? 3 : 2 );	// Anzahl Argumente
+	out.write( 0 );				// Anfangsadresse
+	out.write( 0x40 );
+      }
+      if( buf != null ) {
+	int endAddr = 0x4000 + buf.size();
+	out.write( endAddr );			// Endadresse
+	out.write( endAddr >> 8 );
+	out.write( 0 );				// Startadresse
+	out.write( 0x40 );
+	for( int i = 0; i < 105; i++ ) {
+	  out.write( 0 );
+	}
+	if( typeByteCompressed >= 0 ) {
+	  out.write( typeByteCompressed );
+	}
+	buf.writeTo( out );
+	int len = buf.size();
+	while( (len & 0x007F) != 0 ) {
+	  out.write( 0 );
+	  len++;
+	}
+      } else {
+	out.write( 0 );			// Endadresse
+	out.write( 0x68 );
+	for( int i = 0; i < 107; i++ ) {
+	  out.write( 0 );
+	}
+	if( typeByteUncompressed >= 0 ) {
+	  out.write( typeByteUncompressed );
+	}
+	int len = 0;
+	if( irm != null ) {
+	  len = Math.min( irm.length, 0x2800 );
+	  if( len > 0 ) {
+	    out.write( irm, 0, len );
+	  }
+	}
+	while( len < 0x2800 ) {
+	  out.write( 0 );
+	  len++;
+	}
+      }
+      out.close();
+      out = null;
+    }
+    finally {
+      EmuUtil.closeSilent( out );
+    }
+  }
+
+
+  private static void throwInvalidKC854HiresFileSuffix()
+						throws IOException
+  {
+    throw new IOException(
+	"Der Dateiname muss die Endung *.hif oder *.hip haben." );
   }
 
 

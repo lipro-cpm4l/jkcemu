@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -93,8 +93,9 @@ public class TextPropDlg extends BaseDlg
     gbc.gridy++;
     add( new JLabel( displayText ), gbc );
 
-    if( editText.getTrailing1A() ) {
-      displayText = "1Ah";
+    int eofByte = editText.getEofByte();
+    if( eofByte >= 0 ) {
+      displayText = String.format( "%02Xh", eofByte );
     } else {
       displayText = "Nicht vorhanden";
     }

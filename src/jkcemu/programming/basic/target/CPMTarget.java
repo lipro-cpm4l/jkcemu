@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -687,7 +687,7 @@ public class CPMTarget extends AbstractTarget
 		+ "\tINC\tHL\n"
 	/*
 	 * Dateinamesfeld mit Leerzeichen
-	 * und der Rest mit Null-Bytes vorbelegen
+	 * und der Rest mit Nullbytes vorbelegen
 	 */
 		+ "\tPUSH\tHL\n"
 		+ "\tLD\tA,20H\n"

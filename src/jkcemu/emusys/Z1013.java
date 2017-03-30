@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -87,8 +87,9 @@ public class Z1013 extends EmuSys implements
 
   public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE = true;
 
-  public static final int MEM_ARG1 = 0x001B;
-  public static final int MEM_HEAD = 0x00E0;
+  public static final int FUNCTION_KEY_COUNT = 4;
+  public static final int MEM_ARG1           = 0x001B;
+  public static final int MEM_HEAD           = 0x00E0;
 
   public static final String[] basicTokens = {
     "END",       "FOR",      "NEXT",    "DATA",		// 0x80
@@ -513,7 +514,7 @@ public class Z1013 extends EmuSys implements
       }
     }
     buf.append( ":</td><td>" );
-    buf.append( this.romDisabled ? "aus" : "ein" );
+    EmuUtil.appendOnOffText( buf, !this.romDisabled );
     buf.append( "</td></tr>\n" );
     if( this.romMega != null ) {
       buf.append( "<tr><td>Mega-ROM (C000h-E7FFh):</td><td>Bank " );
@@ -570,7 +571,7 @@ public class Z1013 extends EmuSys implements
   {
     super.applySettings( props );
     checkAddPCListener( props );
-    loadFont( props );
+    loadFonts( props );
     applyUserPortSettings( props );
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
@@ -2219,7 +2220,7 @@ public class Z1013 extends EmuSys implements
   }
 
 
-  private void loadFont( Properties props )
+  private void loadFonts( Properties props )
   {
     this.stdFontBytes = readFontByProperty(
 				props,
@@ -2323,7 +2324,7 @@ public class Z1013 extends EmuSys implements
 			0x280000,
 			"Mega-ROM-Modul" );
     }
-    loadFont( props );
+    loadFonts( props );
   }
 
 

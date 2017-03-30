@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -41,7 +41,17 @@ public class VDIP implements
 			Z80InterruptSource,
 			Z80PIOPortListener
 {
-  public static final String PROP_USB_DIR = "jkcemu.usb.memstick.directory";
+  public static final String PROP_USB_DIR
+			= "jkcemu.usb.memstick.directory";
+
+  public static final String PROP_USB_FORCE_CURRENT_TIMESTAMP
+			= "jkcemu.usb.memstick.force_current_timestamp";
+
+  public static final String PROP_USB_FORCE_LOWERCASE_FILENAMES
+			= "jkcemu.usb.memstick.force_lowercase_filenames";
+
+  public static final String PROP_USB_READONLY
+			= "jkcemu.usb.memstick.readonly";
 
   public static enum VdipErr {
 			BAD_COMMAND,
@@ -198,17 +208,17 @@ public class VDIP implements
     setMemStickForceCurrentTimestamp(
 		EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.usb.memstick.force_current_timestamp",
+			PROP_USB_FORCE_CURRENT_TIMESTAMP,
 			true ) );
     setMemStickForceLowerCaseFileNames(
 		EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.usb.memstick.force_lowercase_filenames",
+			PROP_USB_FORCE_LOWERCASE_FILENAMES,
 			false ) );
     setMemStickReadOnly(
 		EmuUtil.getBooleanProperty(
 			props,
-			"jkcemu.usb.memstick.readonly",
+			PROP_USB_READONLY,
 			true ) );
   }
 
@@ -779,7 +789,7 @@ public class VDIP implements
 	// Set Flow Control: nichts tun
 	doCmdFinish( true );
       } else if( (shortCmd == 0x1C) || extCmd.equals( "FGM" ) ) {
-	// Get Modem Status: 2 Null-Bytes zurueckliefern
+	// Get Modem Status: 2 Nullbytes zurueckliefern
 	execGetNullBytes( 2 );
       } else if( (shortCmd == 0x22) || extCmd.equals( "FSL" ) ) {
 	// Set Latency Timer: nichts tun
@@ -791,7 +801,7 @@ public class VDIP implements
       } else if( (shortCmd == 0x28) || extCmd.equals( "SEK" ) ) {
 	execSeek();
       } else if( (shortCmd == 0x29) || extCmd.equals( "IOR" ) ) {
-	// IO-Byte lesen: so tun, als ob ein Null-Byte gelesen wurde
+	// IO-Byte lesen: so tun, als ob ein Nullbyte gelesen wurde
 	execGetNullBytes( 1 );
       } else if( (shortCmd == 0x2A) || extCmd.equals( "IOW" ) ) {
 	// IO-Byte schreiben: nichts tun
@@ -807,7 +817,7 @@ public class VDIP implements
       } else if( (shortCmd == 0x2F) || extCmd.equals( "DIRT" ) ) {
 	execDirT();
       } else if( (shortCmd == 0x81) || extCmd.equals( "PGS" ) ) {
-	// Get Printer Status: Null-Byte (kein Drucker) zurueckliefern
+	// Get Printer Status: Nullbyte (kein Drucker) zurueckliefern
 	execGetNullBytes( 1 );
       } else if( (shortCmd == 0x82) || extCmd.equals( "PSR" ) ) {
 	// Printer Soft Reset: nichts tun

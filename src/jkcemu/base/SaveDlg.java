@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -48,6 +48,7 @@ public class SaveDlg extends BaseDlg implements DocumentListener
 				NO_BASIC,
 				TINYBASIC,
 				MS_DERIVED_BASIC,
+				MS_DERIVED_BASIC_HS,
 				KCBASIC,
 				RBASIC,
 				OTHER_BASIC };
@@ -405,6 +406,12 @@ public class SaveDlg extends BaseDlg implements DocumentListener
 	basEnabled = true;
 	basic      = true;
 	break;
+      case MS_DERIVED_BASIC_HS:
+	this.btnFileFmtHS.setSelected( true );
+	hsFileType = 'B';
+	basEnabled = true;
+	basic      = true;
+	break;
       case KCBASIC:
 	this.btnFileFmtSSS.setSelected( true );
 	this.btnBegBlkNum1.setSelected( true );
@@ -449,9 +456,7 @@ public class SaveDlg extends BaseDlg implements DocumentListener
       } else if( z1013 ) {
 	this.btnFileFmtHS.setSelected( true );
 	this.btnKeepHeader.setSelected(
-		EmuUtil.parseBoolean(
-			Main.getProperty( "jkcemu.loadsave.header.keep" ),
-			false ) );
+		Main.getBooleanProperty( LoadDlg.PROP_KEEP_HEADER, false ) );
       } else {
 	this.btnFileFmtBIN.setSelected( true );
       }
@@ -675,6 +680,7 @@ public class SaveDlg extends BaseDlg implements DocumentListener
       String prefBasicFmt = null;
       switch( this.basicType ) {
 	case MS_DERIVED_BASIC:
+	case MS_DERIVED_BASIC_HS:
 	case RBASIC:
 	  if( !isBAS && !isHS ) {
 	    prefBasicFmt = this.btnFileFmtBAS.getText();

@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -54,8 +54,8 @@ public class CropDlg extends BaseDlg
 	{ "16:9",                divF( 16, 9 ) },
 	{ "16:10 (A5105)",       divF( 16, 10 ) },
 	{ "AC1",                 divF( ImgUtil.AC1_W,   ImgUtil.AC1_H ) },
-	{ "HC900, KC85/2..5",    divF( ImgUtil.KC85_W,  ImgUtil.KC85_H ) },
-	{ "KC85/1, KC87, Z9001", divF( ImgUtil.KC85_W,  ImgUtil.KC85_H ) } };
+	{ "KC85/1, KC87, Z9001", divF( ImgUtil.KC85_W,  ImgUtil.KC85_H ) },
+	{ "KC85/2..5, HC900",    divF( ImgUtil.KC85_W,  ImgUtil.KC85_H ) } };
 
   private Object[][] selectionColors = {
 	{ "rot",       Color.RED },

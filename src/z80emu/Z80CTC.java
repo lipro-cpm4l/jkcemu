@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -211,7 +211,9 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   {
     int rv = 0;
     for( int i = 0; i < this.timer.length; i++ ) {
-      if( this.timer[ i ].interruptRequested ) {
+      if( !this.timer[ i ].interruptAccepted
+	  && this.timer[ i ].interruptRequested )
+      {
 	this.timer[ i ].interruptAccepted  = true;
 	this.timer[ i ].interruptRequested = false;
 	rv = this.interruptVector + (i * 2);

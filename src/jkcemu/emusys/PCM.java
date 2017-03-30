@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -169,8 +169,20 @@ public class PCM extends EmuSys implements
   @Override
   public void z80CTCUpdate( Z80CTC ctc, int timerNum )
   {
-    if( (ctc == this.ctc) && (timerNum == 2) ) {
-      this.soundOutPhase = !this.soundOutPhase;
+    if( ctc == this.ctc ) {
+      switch( timerNum ) {
+	case 0:
+	  this.sio.clockPulseSenderA();
+	  this.sio.clockPulseReceiverA();
+	  break;
+	case 1:
+	  this.sio.clockPulseSenderB();
+	  this.sio.clockPulseReceiverB();
+	  break;
+	case 2:
+	  this.soundOutPhase = !this.soundOutPhase;
+	  break;
+      }
     }
   }
 
@@ -178,10 +190,13 @@ public class PCM extends EmuSys implements
 	/* --- Z80SIOChannelListener --- */
 
   @Override
-  public void z80SIOChannelByteAvailable( Z80SIO sio, int channel, int value )
+  public void z80SIOByteSent( Z80SIO sio, int channel, int value )
   {
-    if( (sio == this.sio) && (channel == 0) )
+    if( (sio == this.sio) && (channel == 0) ) {
       this.emuThread.getPrintMngr().putByte( value );
+      this.sio.setClearToSendA( false );
+      this.sio.setClearToSendA( true );
+    }
   }
 
 
@@ -753,10 +768,14 @@ public class PCM extends EmuSys implements
     {
       this.ctc.reset( true );
       this.pio.reset( true );
+      this.sio.reset( true );
     } else {
       this.ctc.reset( false );
       this.pio.reset( false );
+      this.sio.reset( false );
     }
+    this.sio.setClearToSendA( true );
+    this.sio.setClearToSendB( true );
     if( this.fdDrives != null ) {
       for( int i = 0; i < this.fdDrives.length; i++ ) {
 	FloppyDiskDrive drive = this.fdDrives[ i ];

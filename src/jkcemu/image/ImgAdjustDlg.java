@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -535,13 +535,18 @@ public class ImgAdjustDlg
 	&& (this.srcBlues != null)
 	&& (this.srcAlphas != null) )
     {
-      this.appliedBrightness = this.sliderBrightness.getValue();
-      this.appliedContrast   = getContrast();
-      this.appliedSaturation = (float) this.sliderSaturation.getValue();
-      this.appliedDiffR      = this.sliderRed.getValue();
-      this.appliedDiffG      = this.sliderGreen.getValue();
-      this.appliedDiffB      = this.sliderBlue.getValue();
-      if( this.srcImg == this.orgImg ) {
+      this.appliedBrightness   = this.sliderBrightness.getValue();
+      this.appliedContrast    = getContrast();
+      this.appliedSaturation  = (float) this.sliderSaturation.getValue();
+      this.appliedDiffR       = this.sliderRed.getValue();
+      this.appliedDiffG       = this.sliderGreen.getValue();
+      this.appliedDiffB       = this.sliderBlue.getValue();
+      int             nColors = 0;
+      IndexColorModel orgICM  = ImgUtil.getIndexColorModel( this.orgImg );
+      if( orgICM != null ) {
+	nColors = orgICM.getMapSize();
+      }
+      if( (nColors > 0) && (nColors <= this.srcColorCnt) ) {
 	byte[] reds   = new byte[ this.srcColorCnt ];
 	byte[] greens = new byte[ this.srcColorCnt ];
 	byte[] blues  = new byte[ this.srcColorCnt ];

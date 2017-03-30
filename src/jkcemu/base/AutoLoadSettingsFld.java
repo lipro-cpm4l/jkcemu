@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -81,7 +81,7 @@ public class AutoLoadSettingsFld
     gbc.insets.bottom = 5;
     gbc.gridy++;
     add(
-	new JLabel( "automatisch in den Arbeitsspeicher"
+	new JLabel( "automatisch in den Arbeitsspeicher (RAM)"
 			+ " geladen werden sollen:" ),
 	gbc );
 

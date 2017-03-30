@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -142,7 +142,7 @@ public class PlotterFrm extends AbstractImageFrm
   public boolean applySettings( Properties props, boolean resizable )
   {
     this.mnuConfirmNewPage.setSelected(
-		EmuUtil.parseBooleanProperty(
+		EmuUtil.getBooleanProperty(
 			props,
 			getSettingsPrefix() + PROP_CONFIRM_NEWPAGE,
 			true ) );

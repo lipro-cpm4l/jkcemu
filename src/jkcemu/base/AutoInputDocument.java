@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,12 +19,24 @@ import javax.swing.text.PlainDocument;
 public class AutoInputDocument extends PlainDocument
 {
   private static char[][] codeMapping = {
-				{ '\u0003', '\u21B1' },
+				{ '\u0003', '\u220E' },
 				{ '\u0008', '\u2190' },
 				{ '\t',     '\u2192' },
 				{ '\n',     '\u2193' },
 				{ '\u000B', '\u2191' },
-				{ '\r',     '\u21B5' } };
+				{ '\r',     '\u21B5' },
+				{ '\u001B', '\u21B1' },
+				{ '\u00F1', '\u2460' },
+				{ '\u00F2', '\u2461' },
+				{ '\u00F3', '\u2462' },
+				{ '\u00F4', '\u2463' },
+				{ '\u00F5', '\u2464' },
+				{ '\u00F6', '\u2465' },
+				{ '\u00F7', '\u2466' },
+				{ '\u00F8', '\u2467' },
+				{ '\u00F9', '\u2468' },
+				{ '\u00FB', '\u246A' },
+				{ '\u00FC', '\u246B' } };
 
   private static Map<Character,Character> raw2Visible = null;
   private static Map<Character,Character> visible2Raw = null;

@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -122,6 +122,7 @@ public class A5105SettingsFld extends AbstractSettingsFld
 				settingsFrm,
 				propPrefix,
 				A5105.DEFAULT_SWAP_KEY_CHAR_CASE,
+				A5105.FUNCTION_KEY_COUNT,
 				A5105.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 

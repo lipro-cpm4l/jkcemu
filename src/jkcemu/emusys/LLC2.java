@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -51,6 +51,7 @@ public class LLC2
   public static final String VALUE_SCREEN_RATIO_43       = "4:3";
   public static final String VALUE_SCREEN_RATIO_UNSCALED = "unscaled";
 
+  public static final int     FUNCTION_KEY_COUNT         = 2;
   public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE = true;
 
   /*
@@ -152,6 +153,7 @@ public class LLC2
       this.vdip = new VDIP(
 			this.emuThread.getFileTimesViewFactory(),
 			"USB-PIO (E/A-Adressen DC-DF, FC-FF)" );
+      this.vdip.applySettings( props );
     }
 
     this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
@@ -246,19 +248,19 @@ public class LLC2
     buf.append( "<h1>LLC2 Status</h1>\n"
 	+ "<table border=\"1\">\n"
 	+ "<tr><td>Monitor-ROM:</td><td>" );
-    buf.append( this.osRomEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.osRomEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>ROM-Disk:</td><td>" );
-    buf.append( this.scchRomdiskEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.scchRomdiskEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>ROM-Disk Bank:</td><td>" );
     buf.append( (this.scchRomdiskBankAddr >> 14) & 0x0F );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>Programmpaket X ROM:</td><td>" );
-    buf.append( this.scchPrgXRomEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.scchPrgXRomEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>BASIC-ROM:</td><td>" );
-    buf.append( this.scchBasicRomEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.scchBasicRomEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>Grafikmodus:</td><td>" );
     buf.append( this.hiRes ? "HIRES-Vollgrafik" : "Text" );
@@ -289,6 +291,9 @@ public class LLC2
     checkAddPCListener( props );
     if( updScreenRatio( props ) ) {
       this.screenFrm.fireScreenSizeChanged();
+    }
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
     }
   }
 
@@ -575,6 +580,29 @@ public class LLC2
 
       default:
 	rv = super.keyPressed( keyCode, ctrlDown, shiftDown );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean keyTyped( char ch )
+  {
+    boolean rv = false;
+    switch( ch ) {
+      case '\u00F1':
+	this.screenInverseMode = !this.screenInverseMode;
+	this.screenFrm.setScreenDirty( true );
+	rv = true;
+	break;
+
+      case '\u00F2':
+        this.graphicKeyState = !this.graphicKeyState;
+        rv = true;
+        break;
+
+      default:
+	rv = super.keyTyped( ch );
     }
     return rv;
   }
@@ -990,10 +1018,10 @@ public class LLC2
 		&& (begAddr <= 0x60F7)
 		&& ((begAddr + len) > 0x60FE)) )
       {
-	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x60F7 );
-	this.emuThread.setMemWord( 0x60D2, topAddr );
-	this.emuThread.setMemWord( 0x60D4, topAddr );
-	this.emuThread.setMemWord( 0x60D6, topAddr );
+	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x60F7 ) + 1;
+	this.emuThread.setMemWord( 0x60D2, tAddr );
+	this.emuThread.setMemWord( 0x60D4, tAddr );
+	this.emuThread.setMemWord( 0x60D6, tAddr );
       }
     }
   }

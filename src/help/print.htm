@@ -12,20 +12,16 @@
   <h2>1. Drucken in den emulierten Systemen </h2>
     Einige Systeme bieten einen hardwarem&auml;&szlig;igen Druckeranschlusses
     (evtl. auch als Zusatzmodul).
-    Dieser Anschluss wird von JKCEMU nachgebildet,
-    d.h., jedes Zeichen, welches dort ausgegeben wird,
-    f&auml;ngt der Emulator auf und h&auml;ngt es an den
-    aktuellen Druckaufrag an.
+    Dieser Anschluss wird von JKCEMU nachgebildet.
   <br/><br/>
     H&auml;ufig wurde auch eine Software-Schnittstelle definiert,
     die Anwendungsprogramme zum Drucken benutzen k&ouml;nnen.
     Die datentechnische Verbindung von dieser Software-Schnittstelle
-    zum eigentlichen Druckeranschluss &uuml;bernimmt dann ein Treiber,
+    zum eigentlichen Druckeranschluss &uuml;bernimmt ein Treiber,
     der i.d.R. separat geladen werden muss.
     JKCEMU kann auch die Systemaufrufe an dieser Software-Schnittstelle
-    abfangen und die Daten an den aktuellen Druckaufrag anh&auml;ngen.
-    Das hat den Vorteil, dass Sie im Emulator keinen speziellen Treiber
-    laden m&uuml;ssen.
+    abfangen, so dass im Emulator kein spezieller Treiber
+    geladen werden muss.
   <br/><br/>
     Das Abfangen der Systemaufrufe f&uuml;r Druckerausgaben
     k&ouml;nnen Sie in den Einstellungen abschalten.
@@ -33,7 +29,7 @@
 
   <h3><a name="jobs">1.1. Drucken und Druckauftr&auml;ge</a></h3>
     Die Emulation des Druckers erfolgt auf der Art und Weise,
-    dass die an den Drucker gesendeten Bytes erst einmal
+    dass die an den Drucker gesendeten Zeichen erst einmal
     in Form von Druckauftr&auml;gen gesammelt werden.
     Diese Druckauftr&auml;ge k&ouml;nnen Sie speichern,
     im Texteditor &ouml;ffnen und nat&uuml;rlich auch auf Papier drucken.
@@ -61,7 +57,7 @@
     z.B. weil Sie ihn bereits auf Papier gedruckt haben,
     k&ouml;nnen Sie ihn auch l&ouml;schen.
     Alle diese Funktionen finden Sie im Fenster
-    &quot;JKCEMU Druckauftr&auml;ge&quot; im Men&uuml; <em>Datei</em>.
+    <em>JKCEMU Druckauftr&auml;ge</em> im Men&uuml; <em>Datei</em>.
   <br/><br/>
     Mit der Funktion <em>Druckoptionen...</em> legen Sie
     die Schriftgr&ouml;&szlig;e fest, mit der gedruckt wird.

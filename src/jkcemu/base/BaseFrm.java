@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -75,24 +75,24 @@ public class BaseFrm extends JFrame implements
     if( (props != null) && !isVisible() ) {
       String prefix = getSettingsPrefix();
 
-      int x = EmuUtil.parseInt(
-		props.getProperty( prefix + PROP_WINDOW_X ),
-		-1,
-		-1 );
-      int y = EmuUtil.parseInt(
-		props.getProperty( prefix + PROP_WINDOW_Y ),
-		-1,
-		-1 );
+      int x = EmuUtil.getIntProperty(
+				props,
+				prefix + PROP_WINDOW_X,
+				-1 );
+      int y = EmuUtil.getIntProperty(
+				props,
+				prefix + PROP_WINDOW_Y,
+				-1 );
       if( (x >= 0) && (y >= 0) ) {
-	if( resizable ) {
-	  int w = EmuUtil.parseInt(
-			props.getProperty( prefix + PROP_WINDOW_WIDTH ),
-			-1,
-			-1 );
-	  int h = EmuUtil.parseInt(
-			props.getProperty( prefix + PROP_WINDOW_HEIGHT ),
-			-1,
-			-1 );
+	int w = EmuUtil.getIntProperty(
+				props,
+				prefix + PROP_WINDOW_WIDTH,
+				0 );
+	int h = EmuUtil.getIntProperty(
+				props,
+				prefix + PROP_WINDOW_HEIGHT,
+				0 );
+	if( resizable && (w > 0) && (h > 0) ) {
 	  setBounds( x, y, w, h );
 	} else {
 	  setLocation( x, y );

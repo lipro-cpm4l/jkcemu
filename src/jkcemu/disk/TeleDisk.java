@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -48,7 +48,7 @@ public class TeleDisk extends AbstractFloppyDisk
   private Map<Integer,java.util.List<SectorData>> side1;
 
 
-  public static void export(
+  public static String export(
 			AbstractFloppyDisk disk,
 			File               file,
 			String             remark ) throws IOException
@@ -235,6 +235,9 @@ public class TeleDisk extends AbstractFloppyDisk
 		if( sector.isDeleted() ) {
 		  secCtrl |= 0x04;
 		}
+		if( sector.hasBogusID() ) {
+		  secCtrl |= 0x40;
+		}
 		if( dataLen <= 0 ) {
 		  secCtrl |= 0x20;
 		}
@@ -309,6 +312,7 @@ public class TeleDisk extends AbstractFloppyDisk
     finally {
       EmuUtil.closeSilent( out );
     }
+    return null;
   }
 
 
@@ -597,7 +601,8 @@ public class TeleDisk extends AbstractFloppyDisk
 		  default:
 		    throwUnsupportedTeleDiskFmt(
 			String.format(
-				"Sektorkodierung %02Xh nicht unterst\u00FCtzt",
+				"Sektorkodierung %02Xh"
+					+ " nicht unterst\u00FCtzt",
 				secEncoding ) );
 		}
 		if( len > 0 ) {
@@ -639,7 +644,7 @@ public class TeleDisk extends AbstractFloppyDisk
 		    if( sector.equalsData( secBuf, 0, secLen ) ) {
 		      /*
 		       * Daten sind gleich:
-		       *   sofern mofern moeglich, den Sektor als fehlerfrei
+		       *   sofern moeglich, den Sektor als fehlerfrei
 		       *   und nicht geloescht behalten
 		       */
 		      if( !secCrcError ) {
@@ -651,7 +656,7 @@ public class TeleDisk extends AbstractFloppyDisk
 		    } else {
 		      /*
 		       * Daten sind unterschiedlich
-		       *   sofern moeglich den fehlerhaften durch den
+		       *   sofern moeglich, den fehlerhaften durch den
 		       *   fehlerfreien Sektor ersetzen
 		       */
 		      if( sector.checkError() && !secCrcError ) {
@@ -737,11 +742,13 @@ public class TeleDisk extends AbstractFloppyDisk
 						track,
 						head,
 						secNums.last() + 1 );
+			  bogusHeaderSector.setBogusID( false );
 			  autoRepaired = true;
 			  break;
 			case 2:
 			  // Sektornummer fehlt am Anfang
 			  bogusHeaderSector.setSectorID( track, head, 1 );
+			  bogusHeaderSector.setBogusID( false );
 			  autoRepaired = true;
 		      }
 		    } else if( secNumRange == nSec ) {
@@ -754,6 +761,7 @@ public class TeleDisk extends AbstractFloppyDisk
 						track,
 						head,
 						tmpSecNum );
+			  bogusHeaderSector.setBogusID( false );
 			  autoRepaired = true;
 			}
 			tmpSecNum++;

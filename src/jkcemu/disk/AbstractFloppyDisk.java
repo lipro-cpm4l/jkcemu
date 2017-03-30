@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -266,6 +266,41 @@ public abstract class AbstractFloppyDisk
   public String getRemark()
   {
     return null;
+  }
+
+
+  public int getSectorOffset() throws IOException
+  {
+    int sectorOffs = -1;
+    int cyls       = getCylinders();
+    int sides      = getSides();
+    for( int cyl = 0; cyl < cyls; cyl++ ) {
+      for( int head = 0; head < sides; head++ ) {
+	int minSectorNum = -1;
+	int cylSectors   = getSectorsOfCylinder( cyl, head );
+	for( int i = 0; i < cylSectors; i++ ) {
+	  SectorData sector = getSectorByIndex( cyl, head, i );
+	  if( sector != null ) {
+	    int sectorNum = sector.getSectorNum();
+	    if( (minSectorNum < 0) || (sectorNum < minSectorNum) ) {
+	      minSectorNum = sectorNum;
+	      if( minSectorNum <= 1 ) {
+		break;
+	      }
+	    }
+	  }
+	}
+	int trackSectorOffs = 1 - minSectorNum;
+	if( (minSectorNum < 1)
+	    || ((sectorOffs >= 0) && (sectorOffs != trackSectorOffs)) )
+	{
+	  throw new IOException(
+		"Diskette hat unregelm\u00E4\u00DFige Sektornummern" );
+	}
+	sectorOffs = trackSectorOffs;
+      }
+    }
+    return sectorOffs;
   }
 
 

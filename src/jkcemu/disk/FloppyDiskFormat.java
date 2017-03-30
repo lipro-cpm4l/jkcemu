@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,7 +28,7 @@ public class FloppyDiskFormat
   public static final FloppyDiskFormat FMT_711K_I5_BASDOS
 	= new FloppyDiskFormat(
 		2, 80, 9, 512, 5,
-		1, 1, 4096, true, false,
+		1, 1, 4096, false, false,
 		"711K (KC compact BASDOS)" );
 
   public static final FloppyDiskFormat FMT_720K

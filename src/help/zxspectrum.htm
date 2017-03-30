@@ -15,7 +15,14 @@
    <li>
     <a href="zxspectrum.htm#hardware">1. Emulierte Hardware</a>
     <ul>
-     <li><a href="zxspectrum.htm#keyboard">1.1. Tastatur</a></li>
+     <li>
+      <a href="zxspectrum.htm#keyboard">1.1. Tastatur</a>
+      <ul>
+       <li>
+	<a href="zxspectrum.htm#keyb48k">1.1.1. Tastatur des ZX&nbsp;Spectrum&nbsp;48K</a>
+       </li>
+      </ul>
+     </li>
     </ul>
     <a href="zxspectrum.htm#etc">2. Sonstiges</a>
     <ul>
@@ -57,64 +64,43 @@
  <br/>
 
  <h3><a name="keyboard">1.1. Tastatur</a></h3>
-  Beim ZX&nbsp;Spectrum sind die Tasten mehrfach benutzt.
-  Dem entsprechend gibt es auch in der Emulation mehrere Eingabemodi:
+  Beim ZX&nbsp;Spectrum gibt es mehrere Eingabemodi,
+  weshalb die Tasten mehrfach benutzt werden.
+  Das Tastenmapping im Emulator ist zwar so gestaltet,
+  dass es f&uuml;r den Anwender m&ouml;glichst einfach ist,
+  jedoch sind aufgrund der verschiedenen Eingabemodi
+  nicht alle Zeichen direkt eingebbar.
+  Aus diesem Grund ist es wichtig,
+  dass Sie die verschiedenen Eingabemodi kennen:
  <br/><br/>
-  <table border="1">
-   <tr>
-    <th>Zeichen/Text auf der originalen Tastatur</th>
-    <th>Zu dr&uuml;ckende Taste(n) auf der Tastaur des Emulatorrechners</th>
-   </tr>
-   <tr>
-    <td valign="top">Gro&szlig;es wei&szlig;es Zeichen auf der Taste</td>
-    <td valign="top">Gleich bezeichnete Buchstabentaste</td>
-   </tr>
-   <tr>
-    <td valign="top">
-     Kleiner wei&szlig;er Text auf der Taste (BASIC-Kommando)
-    </td>
-    <td valign="top">
-     Gleich bezeichnete Buchstabentaste (nur beim K-Cursor relevant)
-    </td>
-   </tr>
-   <tr>
-    <td valign="top">Roter Text auf der Taste</td>
-    <td valign="top">
-     Wenn das Zeichen auf der Emulatortastatur vorhanden ist,
-     dann dieses eingeben,<br/>
-     sonst <em>Strg</em> + gleich bezeichnete Buchstabentaste</td>
-   </tr>
-   <tr>
-    <td valign="top">
-     Wei&szlig;er Text &uuml;ber der Taste (nur erste Tastenreihe)
-    </td>
-    <td valign="top">
-     <em>F1</em> bis <em>F4</em>, <em>F9</em>, <em>Entf (Del)</em>
-     oder Cursor-Tasten
-    </td>
-   </tr>
-   <tr>
-    <td valign="top">
-     Gr&uuml;ner Text &uuml;ber der Taste (ab zweiter Tastenreihe)
-    </td>
-    <td valign="top">
-     Zuerst <em>Strg / CTRL</em> + <em>Shift</em>,
-     danach nur die gleich bezeichnete Buchstabentaste
-    </td>
-   </tr>
-   <tr>
-    <td valign="top">Roter Text unter der Taste</td>
-    <td valign="top">
-     Zuerst <em>Strg / CTRL</em> + <em>Shift</em>,
-     danach <em>Strg</em> + gleich bezeichnete Buchstabentaste
-    </td>
-   </tr>
-  </table>
- <br/>
+  Die wichtigsten Zeichen sind direkt &uuml;ber die gleichnamigen
+  Tasten eintippbar.
+  Bei einigen Zeichen muss eine der beiden Shift-Tasten
+  (<em>CAPS SHIFT</em> bzw. <em>SYMBOL SHIFT</em>) zusammen
+  mit der eigentlichen Zeichentaste bet&auml;tigt werden.
+  F&uuml;r etwas seltener benutzte Zeichen ist es erforderlich,
+  zuerst den sogenannten <em>Extended Mode</em> einzuschalten
+  (gleichzeitiges Dr&uuml;cken von
+  <em>CAPS SHIFT</em> und <em>SYMBOL SHIFT</em>) und erst danach
+  die eigentliche Zeichentaste (ggf. zusammen mit einer Shift-Taste)
+  zu bet&auml;tigen.
+  F&uuml;r den ZX&nbsp;Spectrum&nbsp;48K ist
+  <a href="zxspectrum.htm#keyb48k">weiter unten</a>
+  eine Tabelle angegeben,
+  die die verschiedenen Eingabemodi detailliert erl&auml;utert.
+  Beim ZX&nbsp;Spectrum+&nbsp;128K wurden einige Steuertasten
+  hinzuge&uuml;gt, die beim 48K nur mit Tastenkombinationen erreichbar sind.
+  Dadurch sowie durch das neue <em>128&nbsp;BASIC</em> sind die Eingaben
+  beim ZX&nbsp;Spectrum+&nbsp;128K etwas einfacher geworden.
+ <br/><br/>
+  Der Emulator unterst&uuml;tzt die verschiedenen Eingabemodi
+  folgenderma&szlig;en:
+ <br/><br/>
   Beim gleichzeitigen Dr&uuml;cken von <em>Strg</em> bzw. <em>CTRL</em>
   und <em>Shift</em> wird das gleichzeitige Dr&uuml;cken von
-  <em>CAPS&nbsp;SHIFT</em> und <em>SYMBOL&nbsp;SHIFT</em> emuliert,
-  woraufhin &uuml;blicherweise der E-Cursor erscheint.
+  <em>CAPS&nbsp;SHIFT</em> und <em>SYMBOL&nbsp;SHIFT</em>
+  (Extended Mode) emuliert, woraufhin beim <em>48&nbsp;BASIC</em>
+  &uuml;blicherweise der E-Cursor erscheint.
  <br/><br/>
   Die beiden Tasten <em>CAPS&nbsp;SHIFT</em> und <em>SYMBOL&nbsp;SHIFT</em>
   k&ouml;nnen auch einzeln mit den Funktionstasten <em>F5</em>
@@ -180,6 +166,74 @@
    </tr>
   </table>
  <br/><br/>
+
+ <h3>
+  <a name="keyb48k">1.1.1. Tastatur des ZX&nbsp;Spectrum&nbsp;48K</a>
+ </h3>
+  <table border="1">
+   <tr>
+    <th>Zeichen/Text auf der originalen Tastatur</th>
+    <th>Zu dr&uuml;ckende Taste(n) auf der originalen Tastaur</th>
+    <th>Zu dr&uuml;ckende Taste(n) auf der Tastaur des Emulatorrechners</th>
+   </tr>
+   <tr>
+    <td valign="top">Gro&szlig;es wei&szlig;es Zeichen auf der Taste</td>
+    <td valign="top">nur diese Taste</td>
+    <td valign="top">Gleich bezeichnete Buchstabentaste</td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Kleiner wei&szlig;er Text auf der Taste<br/>
+     (BASIC-Kommando, nur beim K-Cursor relevant)
+    </td>
+    <td valign="top">nur diese Taste</td>
+    <td valign="top">Gleich bezeichnete Buchstabentaste</td>
+   </tr>
+   <tr>
+    <td valign="top">Roter Text auf der Taste</td>
+    <td valign="top"><em>SYMBOL&nbsp;SHIFT</em> + Taste</td>
+    <td valign="top">
+     Wenn das Zeichen auf der Emulatortastatur vorhanden ist,
+     dann dieses eingeben,<br/>
+     sonst <em>Strg</em> + gleich bezeichnete Buchstabentaste</td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Wei&szlig;er Text &uuml;ber der Taste (nur erste Tastenreihe)
+    </td>
+    <td valign="top"><em>CAPS&nbsp;SHIFT</em> + Taste</td>
+    <td valign="top">
+     <em>F1</em> bis <em>F4</em>, <em>F9</em>, <em>Entf (Del)</em>
+     oder Cursor-Tasten
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">
+     Ab zweiter Tastenreihe gr&uuml;ner Text &uuml;ber der Taste<br/>
+     (BASIC-Funktion, nur beim L-Cursor relevant)
+    </td>
+    <td valign="top">
+     <em>CAPS&nbsp;SHIFT</em> + <em>SYMBOL&nbsp;SHIFT</em>
+    </td>
+    <td valign="top">
+     Zuerst <em>Strg / CTRL</em> + <em>Shift</em>,
+     danach nur die gleich bezeichnete Buchstabentaste
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">Roter Text unter der Taste</td>
+    <td valign="top">
+     Zuerst <em>CAPS&nbsp;SHIFT</em> + <em>SYMBOL&nbsp;SHIFT</em>,<br/>
+     dann <em>SYMBOL&nbsp;SHIFT</em> + Taste
+    </td>
+    <td valign="top">
+     Zuerst <em>Strg / CTRL</em> + <em>Shift</em>,
+     danach <em>Strg</em> + gleich bezeichnete Buchstabentaste
+    </td>
+   </tr>
+  </table>
+ <br/>
+
 
  <h2><a name="etc">2. Sonstiges</a></h2>
 

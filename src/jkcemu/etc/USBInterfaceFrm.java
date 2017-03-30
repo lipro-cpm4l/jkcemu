@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -330,7 +330,7 @@ public class USBInterfaceFrm
     if( emuSys != null ) {
       emuSys.setUSBMemStickForceCurrentTimestamp( state );
       Main.setProperty(
-		"jkcemu.usb.memstick.force_current_timestamp",
+		VDIP.PROP_USB_FORCE_CURRENT_TIMESTAMP,
 		Boolean.toString( state ) );
     }
   }
@@ -342,7 +342,7 @@ public class USBInterfaceFrm
     if( emuSys != null ) {
       emuSys.setUSBMemStickForceLowerCaseFileNames( state );
       Main.setProperty(
-		"jkcemu.usb.memstick.force_lowercase_filenames",
+		VDIP.PROP_USB_FORCE_LOWERCASE_FILENAMES,
 		Boolean.toString( state ) );
     }
   }
@@ -354,7 +354,7 @@ public class USBInterfaceFrm
     if( emuSys != null ) {
       emuSys.setUSBMemStickReadOnly( state );
       Main.setProperty(
-		"jkcemu.usb.memstick.readonly",
+		VDIP.PROP_USB_READONLY,
 		Boolean.toString( state ) );
     }
     this.btnForceCurTimestamp.setEnabled( !state );

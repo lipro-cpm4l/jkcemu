@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -622,7 +622,7 @@ public class TextEditFrm extends BaseFrm implements
       dlg.settingsChanged();
     }
     this.mnuPrgLineAddrs.setSelected(
-		EmuUtil.parseBooleanProperty(
+		EmuUtil.getBooleanProperty(
 				props,
 				PROP_SHOW_LINE_ADDRS,
 				true ) );
@@ -965,7 +965,8 @@ public class TextEditFrm extends BaseFrm implements
 		file,
 		dlg.getCharConverter(),
 		dlg.getEncodingName(),
-		dlg.getEncodingDisplayText() );
+		dlg.getEncodingDisplayText(),
+		dlg.getIgnoreEofByte() );
       }
     }
   }
@@ -2669,7 +2670,8 @@ public class TextEditFrm extends BaseFrm implements
 			File          file,
 			CharConverter charConverter,
                 	String        encodingName,
-                	String        encodingDisplayText )
+                	String        encodingDisplayText,
+			boolean       ignoreEofByte )
   {
     EditText editText = getSelectedEditText();
     if( editText != null ) {
@@ -2683,14 +2685,16 @@ public class TextEditFrm extends BaseFrm implements
 			file,
 			charConverter,
 			encodingName,
-			encodingDisplayText );
+			encodingDisplayText,
+			ignoreEofByte );
 
-	// neuer Dateiname auf der Lasche
+	// neuer Dateiname auf dem Reiter
 	Component tabComponent = editText.getTabComponent();
 	if( tabComponent != null ) {
 	  int i = this.tabbedPane.indexOfComponent( tabComponent );
-	  if( i >= 0 )
+	  if( i >= 0 ) {
 	    this.tabbedPane.setTitleAt( i, editText.getName() );
+	  }
 	}
       }
       if( editText == null ) {
@@ -2699,7 +2703,8 @@ public class TextEditFrm extends BaseFrm implements
 				file,
 				charConverter,
 				encodingName,
-				encodingDisplayText );
+				encodingDisplayText,
+				ignoreEofByte );
         JTextArea   textArea   = createJTextArea();
         JScrollPane scrollPane = new JScrollPane( textArea );
         editText.setComponents( scrollPane, textArea );
@@ -2728,7 +2733,7 @@ public class TextEditFrm extends BaseFrm implements
   {
     EditText editText = checkFileAlreadyOpen( file );
     if( editText == null ) {
-      editText = forceOpenFile( file, null, null, null );
+      editText = forceOpenFile( file, null, null, null, false );
     }
     return editText;
   }

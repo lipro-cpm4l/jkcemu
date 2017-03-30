@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -546,7 +546,7 @@ public class Z9001SettingsFld extends AbstractSettingsFld
       // Tab Grafik
       tab = this.tabGraph;
       boolean color = false;
-      String  graph = "none";
+      String  graph = Z9001.VALUE_NONE;
       if( this.btnMonoGraphKRT.isSelected() ) {
 	graph = "krt";
       } else if( this.btnColorGraphNone.isSelected() ) {

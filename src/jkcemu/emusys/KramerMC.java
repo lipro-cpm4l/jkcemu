@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -700,11 +700,11 @@ public class KramerMC extends EmuSys implements Z80PCListener
 		&& (begAddr <= 0x1001)
 		&& ((begAddr + len) > 0x1007)) )
       {
-	int topAddr = begAddr + len;
-	if( topAddr > 0x1001 ) {
-	  this.emuThread.setMemWord( 0x0C5E, topAddr );
-	  this.emuThread.setMemWord( 0x0C60, topAddr );
-	  this.emuThread.setMemWord( 0x0C62, topAddr );
+	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x1001 ) + 1;
+	if( tAddr > 0x1001 ) {
+	  this.emuThread.setMemWord( 0x0C5E, tAddr );
+	  this.emuThread.setMemWord( 0x0C60, tAddr );
+	  this.emuThread.setMemWord( 0x0C62, tAddr );
 	}
       }
     }
