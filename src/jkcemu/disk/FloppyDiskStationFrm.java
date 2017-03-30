@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -2000,9 +2000,7 @@ public class FloppyDiskStationFrm
 		+ "(bei CP/M-kompatiblen Betriebssystemen meistens"
 		+ " mit CTRL-C bzw. Strg-C)\n\n";
 
-    JCheckBox cb = new JCheckBox(
-			"Diese Meldung zuk\u00FCnftig nicht mehr anzeigen",
-			false );
+    JCheckBox cb = new JCheckBox( EmuUtil.TEXT_DONT_SHOW_MSG_AGAIN, false );
 
     JOptionPane.showMessageDialog(
 			this,

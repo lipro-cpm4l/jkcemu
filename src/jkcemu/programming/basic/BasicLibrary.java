@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -322,7 +322,7 @@ public class BasicLibrary
        *   HL: Anfangsadresse des Puffers
        *   C:  max. Anzahl einzugebender Zeichen (Pufferlaenge - 1)
        * Rueckgabewert:
-       *   HL: Zeiger auf das terminierende Null-Byte
+       *   HL: Zeiger auf das terminierende Nullbyte
        */
       buf.append( "INLNR:\tPUSH\tHL\n"
 		+ "\tLD\tB,C\n"
@@ -4297,7 +4297,7 @@ public class BasicLibrary
       /*
        * Umwandlung eines numerischen Wertes in eine Zeichenkette
        * mit einer Hexadezimalzahl.
-       * Es wird kein terminierendes Null-Byte geschrieben!
+       * Es wird kein terminierendes Nullbyte geschrieben!
        *
        * Parameter:
        *   HL: numerischer Wert (Ausgabe 4-stellig)
@@ -4314,7 +4314,7 @@ public class BasicLibrary
       /*
        * Umwandlung eines numerischen Wertes in eine Zeichenkette
        * mit einer Hexadezimalzahl.
-       * Es wird kein terminierendes Null-Byte geschrieben!
+       * Es wird kein terminierendes Nullbyte geschrieben!
        *
        * Parameter:
        *   S_HXA:  A: numerischer Wert (Ausgabe 2-stellig)
@@ -4642,7 +4642,7 @@ public class BasicLibrary
        *   HL: Zeiger auf die Zeichenkette
        * Rueckgabewerte:
        *   DE: Zeiger auf das Ende der kopierten Zeichenkette
-       *       (terminierendes Null-Byte) im Zielpuffer
+       *       (terminierendes Nullbyte) im Zielpuffer
        *   BC: Restgroesse des Zielpuffers - 1
        */
       buf.append( "STNCP:\tLD\tA,B\n"
@@ -5247,7 +5247,7 @@ public class BasicLibrary
     target.appendEtcPreXOutTo( buf );
     if( libItems.contains( LibItem.XOUTST ) ) {
       /*
-       * Ausgabe eines mit einem Null-Byte abgeschlossenen Textes
+       * Ausgabe eines mit einem Nullbyte abgeschlossenen Textes
        * auf dem Bildschirm,
        * der sich unmittelbar an den Funktionsaufruf anschliesst.
        */
@@ -5259,13 +5259,13 @@ public class BasicLibrary
     }
     if( libItems.contains( LibItem.XOUTS ) ) {
       /*
-       * Ausgabe eines mit einem Null-Byte abgeschlossenen Textes
+       * Ausgabe eines mit einem Nullbyte abgeschlossenen Textes
        * auf dem Bildschirm
        *
        * Parameter:
        *   HL: Adresse des Textes
        * Rueckgabe:
-       *   HL: erstes Byte hinter dem abschliessenden Null-Byte
+       *   HL: erstes Byte hinter dem abschliessenden Nullbyte
        */
       buf.append( "XOUTS:\tLD\tA,(HL)\n"
 		+ "\tINC\tHL\n"

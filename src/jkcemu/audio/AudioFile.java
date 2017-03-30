@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -185,15 +185,13 @@ public class AudioFile
 	 * um die Abspielposition aendern zu koennen.
 	 * Bei grossen GZip-komprimierten Dateien geht das dann nicht.
 	 */
-	if( !gz && (fileLen > AudioUtil.FILE_FULL_READ_SIZE_MAX) ) {
+	if( !gz && (fileLen > AudioUtil.FILE_READ_MAX) ) {
 	  raf       = new RandomAccessFile( file, "r" );
 	  header    = new byte[ 0x1000 ];
 	  headerLen = in.read( header );
 	  raf.seek( 0 );
 	} else {
-	  if( !gz
-	      || (gz && (fileLen <= AudioUtil.GZIP_FILE_FULL_READ_SIZE_MAX)) )
-	  {
+	  if( !gz || (gz && (fileLen <= AudioUtil.FILE_READ_MAX)) ) {
 	    fileBytes = EmuUtil.readFile( file, true );
 	    header    = fileBytes;
 	    headerLen = fileBytes.length;

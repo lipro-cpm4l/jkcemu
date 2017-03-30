@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -563,6 +563,16 @@ public abstract class AbstractHexCharFrm
 	  }
 	}
       }
+    }
+  }
+
+
+  protected void doSelectAll()
+  {
+    int len = getDataLength();
+    if( len > 0 ) {
+      setSelection( 0, len - 1 );
+      setContentActionsEnabled( true );
     }
   }
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -59,7 +59,7 @@ public class AC1
   public static final String VALUE_MON_SCCH1088 = "SCCH10/88";
   public static final String VALUE_MON_2010     = "2010";
 
-
+  public static final int     FUNCTION_KEY_COUNT         = 2;
   public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE = true;
 
   /*
@@ -870,15 +870,16 @@ public class AC1
       buf.append( "<h1>AC1 Status</h1>\n"
 		+ "<table border=\"1\">\n"
 		+ "<tr><td>Monitor ROM:</td><td>" );
-      buf.append( !this.lowerDRAMEnabled && this.osRomEnabled ?
-						"ein" : "aus" );
+      EmuUtil.appendOnOffText(
+		buf,
+		!this.lowerDRAMEnabled && this.osRomEnabled );
       buf.append( "</td></tr>\n"
 		+ "<tr><td>SRAM / BWS</td><td>" );
-      buf.append( this.lowerDRAMEnabled ? "aus" : "ein" );
+      EmuUtil.appendOnOffText( buf, !this.lowerDRAMEnabled );
       buf.append( "</td></tr>\n" );
       if( this.modeSCCH ) {
 	buf.append( "<tr><td>ROM-Disk:</td><td>" );
-	buf.append( this.scchRomdiskEnabled ? "ein" : "aus" );
+	EmuUtil.appendOnOffText( buf, this.scchRomdiskEnabled );
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>ROM-Disk Bank:</td><td>" );
 	if( this.scchRomdiskBegAddr == 0x8000 ) {
@@ -888,10 +889,10 @@ public class AC1
 	}
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>Programmpaket X ROM:</td><td>" );
-	buf.append( this.scchPrgXRomEnabled ? "ein" : "aus" );
+	EmuUtil.appendOnOffText( buf, this.scchPrgXRomEnabled );
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>SCCH-BASIC ROM:</td><td>" );
-	buf.append( this.scchBasicRomEnabled ? "ein" : "aus" );
+	EmuUtil.appendOnOffText( buf, this.scchBasicRomEnabled );
 	buf.append( "</td></tr>\n" );
       }
       if( this.mode2010 ) {
@@ -901,7 +902,7 @@ public class AC1
 		+ "<tr><td>PIO2 ROM Segment-Offset:</td><td>" );
 	  buf.append( String.format( "%Xh", this.pio2Rom2010Offs ) );
 	} else {
-	  buf.append( "aus" );
+	  buf.append( EmuUtil.TEXT_OFF );
 	}
 	buf.append( "</td></tr>\n"
 		+ "<tr><td>ROM-Bank:</td><td>" );
@@ -913,7 +914,7 @@ public class AC1
 		+ "<tr><td>ROM-Bank Segment-Offset:</td><td>" );
 	  buf.append( String.format( "%Xh", this.romBank2010Offs ) );
 	} else {
-	  buf.append( "aus" );
+	  buf.append( EmuUtil.TEXT_OFF );
 	}
 	buf.append( "</td></tr>\n" );
       }
@@ -1332,6 +1333,31 @@ public class AC1
     if( ch > 0 ) {
       setKeyboardValue( ch | 0x80 );
       rv = true;
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean keyTyped( char ch )
+  {
+    boolean rv = false;
+    switch( ch ) {
+      case '\u00F1':
+	this.inverseByKey = !this.inverseByKey;
+	this.screenFrm.setScreenDirty( true );
+	rv = true;
+	break;
+
+      case '\u00F2':
+	if( this.modeSCCH || this.mode2010 ) {
+	  this.graphicKeyState = !this.graphicKeyState;
+	}
+	rv = true;
+	break;
+
+      default:
+	rv = super.keyTyped( ch );
     }
     return rv;
   }
@@ -2080,11 +2106,11 @@ public class AC1
 			&& (begAddr <= 0x60F7)
 			&& ((begAddr + len) > 0x60FE)) )
       {
-	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x60F7 );
-	if( topAddr > 0x60F7 ) {
-	  this.emuThread.setMemWord( 0x60D2, topAddr );
-	  this.emuThread.setMemWord( 0x60D4, topAddr );
-	  this.emuThread.setMemWord( 0x60D6, topAddr );
+	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x60F7 ) + 1;
+	if( tAddr > 0x60F7 ) {
+	  this.emuThread.setMemWord( 0x60D2, tAddr );
+	  this.emuThread.setMemWord( 0x60D4, tAddr );
+	  this.emuThread.setMemWord( 0x60D6, tAddr );
 	}
       }
       if( (fileFmt.equals( FileFormat.BASIC_PRG )
@@ -2095,11 +2121,11 @@ public class AC1
 			&& (begAddr <= 0x6300)
 			&& ((begAddr + len) > 0x6307)) )
       {
-	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x6300 );
-	if( topAddr > 0x6300 ) {
-	  this.emuThread.setMemWord( 0x60A8, topAddr );
-	  this.emuThread.setMemWord( 0x60AA, topAddr );
-	  this.emuThread.setMemWord( 0x60AC, topAddr );
+	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x6300 ) + 1;
+	if( tAddr > 0x6300 ) {
+	  this.emuThread.setMemWord( 0x60A8, tAddr );
+	  this.emuThread.setMemWord( 0x60AA, tAddr );
+	  this.emuThread.setMemWord( 0x60AC, tAddr );
 	}
       }
       else if( (fileFmt.equals( FileFormat.BASIC_PRG )
@@ -2110,11 +2136,11 @@ public class AC1
 			&& (begAddr > 0x60F7) && (begAddr <= 0x6FB7)
 			&& ((begAddr + len) > 0x6FBE)) )
       {
-	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x6FB7 );
-	if( topAddr > 0x6FB7 ) {
-	  this.emuThread.setMemWord( 0x415E, topAddr );
-	  this.emuThread.setMemWord( 0x4160, topAddr );
-	  this.emuThread.setMemWord( 0x4162, topAddr );
+	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x6FB7 ) + 1;
+	if( tAddr > 0x6FB7 ) {
+	  this.emuThread.setMemWord( 0x415E, tAddr );
+	  this.emuThread.setMemWord( 0x4160, tAddr );
+	  this.emuThread.setMemWord( 0x4162, tAddr );
 	}
       }
     }

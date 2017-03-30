@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -57,7 +57,9 @@ public class TeleDiskFileTarget extends AbstractConvertTarget
   public String save( File file ) throws IOException
   {
     checkFileExtension( file, ".td0" );
-    TeleDisk.export( this.disk, file, this.fileConvertFrm.getRemark() );
-    return null;
+    return TeleDisk.export(
+			this.disk,
+			file,
+			this.fileConvertFrm.getRemark() );
   }
 }

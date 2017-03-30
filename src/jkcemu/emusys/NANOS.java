@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -30,6 +30,7 @@ import jkcemu.net.KCNet;
 import jkcemu.text.TextUtil;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
+import z80emu.Z80CTCListener;
 import z80emu.Z80InterruptSource;
 import z80emu.Z80PIO;
 import z80emu.Z80PIOPortListener;
@@ -39,6 +40,7 @@ import z80emu.Z80SIOChannelListener;
 
 public class NANOS extends EmuSys implements
 					FDC8272.DriveSelector,
+					Z80CTCListener,
 					Z80PIOPortListener,
 					Z80SIOChannelListener
 {
@@ -60,6 +62,7 @@ public class NANOS extends EmuSys implements
   public static final String VALUE_GRAPHIC_POPPE        = "poppe";
   public static final String VALUE_KEYBOARD_PIO00A_HS   = "pio00a_hs";
   public static final String VALUE_KEYBOARD_PIO00A_BIT7 = "pio00a_bit7";
+  public static final String VALUE_KEYBOARD_SIO84A      = "sio84a";
 
   public static final int DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 2000;
 
@@ -69,7 +72,7 @@ public class NANOS extends EmuSys implements
 			Video3_80x24,
 			Video3_80x25,
 			Poppe_64x32_80x24 };
-  private enum KeyboardHW { PIO00A_HS, PIO00A_BIT7 };
+  private enum KeyboardHW { PIO00A_HS, PIO00A_BIT7, SIO84A };
 
   private static FloppyDiskInfo epos20Disk64x32 =
 		new FloppyDiskInfo(
@@ -175,6 +178,7 @@ public class NANOS extends EmuSys implements
       this.vdip = new VDIP(
 			this.emuThread.getFileTimesViewFactory(),
 			"USB-PIO (E/A-Adressen 88h-8Bh)" );
+      this.vdip.applySettings( props );
     }
 
     this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
@@ -215,11 +219,10 @@ public class NANOS extends EmuSys implements
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     this.pio00.addPIOPortListener( this, Z80PIO.PortInfo.A );
-    this.sio84.addChannelListener( this, 0 );
+    this.sio84.addChannelListener( this, 1 );
+    this.ctc8C.addCTCListener( this );
 
-    if( this.vdip != null ) {
-      this.vdip.applySettings( props );
-    }
+    applyKeyboardSettings( props );
     if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
       loadROMs( props );
     }
@@ -257,6 +260,23 @@ public class NANOS extends EmuSys implements
   }
 
 
+	/* --- Z80CTCListener --- */
+
+  @Override
+  public void z80CTCUpdate( Z80CTC ctc, int timerNum )
+  {
+    if( ctc == this.ctc8C ) {
+      if( timerNum == 0 ) {
+	this.sio84.clockPulseSenderA();
+	this.sio84.clockPulseReceiverA();
+      } else if( timerNum == 1 ) {
+	this.sio84.clockPulseSenderB();
+	this.sio84.clockPulseReceiverB();
+      }
+    }
+  }
+
+
 	/* --- Z80PIOPortListener --- */
 
   @Override
@@ -279,10 +299,13 @@ public class NANOS extends EmuSys implements
 	/* --- Z80SIOChannelListener --- */
 
   @Override
-  public void z80SIOChannelByteAvailable( Z80SIO sio, int channel, int value )
+  public void z80SIOByteSent( Z80SIO sio, int channel, int value )
   {
-    if( (sio == this.sio84) && (channel == 1) )
+    if( (sio == this.sio84) && (channel == 1) ) {
       this.emuThread.getPrintMngr().putByte( value );
+      this.sio84.setClearToSendB( false );
+      this.sio84.setClearToSendB( true );
+    }
   }
 
 
@@ -294,7 +317,7 @@ public class NANOS extends EmuSys implements
     buf.append( "<h1>NANOS Konfiguration</h1>\n"
 	+ "<table border=\"1\">\n"
 	+ "<tr><td>ZRE-ROM/RAM:</td><td>" );
-    buf.append( this.bootMemEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.bootMemEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>256K RAM:</td><td>" );
     if( this.ram256kEnabled ) {
@@ -341,19 +364,10 @@ public class NANOS extends EmuSys implements
   public void applySettings( Properties props )
   {
     super.applySettings( props );
-    if( EmuUtil.getProperty(
-		props,
-		this.propPrefix + PROP_KEYBOARD ).equals(
-					VALUE_KEYBOARD_PIO00A_BIT7 ) )
-    {
-      this.keyboardHW = KeyboardHW.PIO00A_BIT7;
-    } else {
-      this.keyboardHW = KeyboardHW.PIO00A_HS;
+    applyKeyboardSettings( props );
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
     }
-    this.swapKeyCharCase = EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + PROP_KEYBOARD_SWAP_CASE,
-				false );
     loadFonts( props );
   }
 
@@ -412,6 +426,8 @@ public class NANOS extends EmuSys implements
   @Override
   public void die()
   {
+    this.pio00.removePIOPortListener( this, Z80PIO.PortInfo.A );
+    this.ctc8C.removeCTCListener( this );
     this.sio84.removeChannelListener( this, 0 );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
@@ -901,11 +917,7 @@ public class NANOS extends EmuSys implements
   @Override
   public boolean keyTyped( char ch )
   {
-    boolean rv = false;
-    if( (ch > 0) && (ch < 0x7F) && this.pio00.isReadyPortA() ) {
-      rv = putKeyChar( ch );
-    }
-    return rv;
+    return putKeyChar( ch );
   }
 
 
@@ -919,6 +931,16 @@ public class NANOS extends EmuSys implements
       }
       if( (ch > 0) && (ch < 0x7F) ) {
 	while( !this.pio00.isReadyPortA() ) {
+	  Thread.sleep( 50 );
+	}
+	rv = putKeyChar( ch );
+      }
+    } else if( this.keyboardHW == KeyboardHW.SIO84A ) {
+      if( ch == '\n' ) {
+	ch = '\r';
+      }
+      if( (ch > 0) && (ch < 0xFF) ) {
+	while( !this.sio84.isReadyReceiverA() ) {
 	  Thread.sleep( 50 );
 	}
 	rv = putKeyChar( ch );
@@ -1088,6 +1110,8 @@ public class NANOS extends EmuSys implements
       this.pio80.reset( coldReset );
     }
     this.sio84.reset( coldReset );
+    this.sio84.setClearToSendA( true );
+    this.sio84.setClearToSendB( true );
     if( this.pio88 != null ) {
       this.pio88.reset( coldReset );
     }
@@ -1472,6 +1496,28 @@ public class NANOS extends EmuSys implements
 
 	/* --- private Methoden --- */
 
+  private void applyKeyboardSettings( Properties props )
+  {
+    switch( EmuUtil.getProperty(
+		props,
+		this.propPrefix + PROP_KEYBOARD ) )
+    {
+      case VALUE_KEYBOARD_PIO00A_BIT7:
+	this.keyboardHW = KeyboardHW.PIO00A_BIT7;
+	break;
+      case VALUE_KEYBOARD_SIO84A:
+	this.keyboardHW = KeyboardHW.SIO84A;
+	break;
+      default:
+	this.keyboardHW = KeyboardHW.PIO00A_HS;
+    }
+    this.swapKeyCharCase = EmuUtil.getBooleanProperty(
+				props,
+				this.propPrefix + PROP_KEYBOARD_SWAP_CASE,
+				false );
+  }
+
+
   private boolean emulatesKCNet( Properties props )
   {
     return EmuUtil.getBooleanProperty(
@@ -1613,6 +1659,12 @@ public class NANOS extends EmuSys implements
 	}
 	else if( (ch > 0) && (ch <= 0x7F) ) {
 	  this.pio00.putInValuePortA( ch | 0x80, 0xFF );
+	  rv = true;
+	}
+	break;
+      case SIO84A:
+	if( (ch > 0) && (ch <= 0xFF) ) {
+	  this.sio84.putToReceiverA( TextUtil.toReverseCase( ch ) );
 	  rv = true;
 	}
 	break;

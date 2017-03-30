@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -54,18 +54,40 @@ public class AnaDisk extends AbstractFloppyDisk
 	  for( int i = 0; i < cylSectors; i++ ) {
 	    SectorData sector = disk.getSectorByIndex( cyl, head, i );
 	    if( sector != null ) {
-	      if( sector.isDeleted() ) {
-		hasDeleted = true;
+	      if( sector.checkError()
+		  || sector.hasBogusID()
+		  || sector.isDeleted() )
+	      {
 		if( msgBuf == null ) {
 		  msgBuf = new StringBuilder( 1024 );
 		}
 		msgBuf.append(
 			String.format(
-				"Seite %d, Spur %d: Sektor %d ist als"
-					+ " gel\u00F6scht markiert\n",
+				"Seite %d, Spur %d, Sektor %d:",
 				head + 1,
 				cyl,
 				sector.getSectorNum() ) );
+		boolean appended = false;
+		if( sector.hasBogusID() ) {
+		  msgBuf.append( " Sektor-ID generiert" );
+		  appended = true;
+		}
+		if( sector.checkError() ) {
+		  if( appended ) {
+		    msgBuf.append( (char) ',' );
+		  }
+		  msgBuf.append( " CRC-Fehler" );
+		  appended = true;
+		}
+		if( sector.isDeleted() ) {
+		  if( appended ) {
+		    msgBuf.append( (char) ',' );
+		  }
+		  msgBuf.append( " als gel\u00F6scht markiert" );
+		  appended   = true;
+		  hasDeleted = true;
+		}
+		msgBuf.append( (char) '\n' );
 	      }
 	      out.write( cyl );
 	      out.write( head );
@@ -88,10 +110,17 @@ public class AnaDisk extends AbstractFloppyDisk
       }
       out.close();
       out = null;
-      if( hasDeleted && (msgBuf != null) ) {
-	msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+
+      if( msgBuf != null ) {
+	msgBuf.append( "\nDie angezeigten Informationen k\u00F6nnen"
+		+ " in einer AnaDisk-Datei nicht gespeichert werden\n"
+		+ "und sind deshalb in der erzeugten Datei"
+		+ " nicht mehr enthalten.\n" );
+	if( hasDeleted ) {
+	  msgBuf.append( "\nGel\u00F6schte Sektoren werden"
 		+ " in AnaDisk-Dateien nicht unterst\u00FCtzt\n"
 		+ "und sind deshalb als normale Sektoren enthalten.\n" );
+	}
       }
     }
     finally {

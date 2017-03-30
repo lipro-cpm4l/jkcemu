@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -57,6 +57,7 @@ public class ExprParser
     int           value       = 0;
     StringBuilder buf         = new StringBuilder();
     boolean       enclosedHex = checkAndParseToken( iter, "X\'" );
+    boolean       simpleHex   = checkAndParseToken( iter, "%" );
     char          ch          = skipSpaces( iter );
     while( ((ch >= '0') && (ch <= '9'))
 	   || ((ch >= 'A') && (ch <= 'F'))
@@ -65,12 +66,14 @@ public class ExprParser
       buf.append( (char) ch );
       ch = iter.next();
     }
-    if( enclosedHex || (ch == 'H') || (ch == 'h') ) {
+    if( enclosedHex || simpleHex || (ch == 'H') || (ch == 'h') ) {
       if( enclosedHex && (ch != '\'') ) {
 	throw new PrgException(
 		"\' als Ende der Hexadezimalzahl erwartet" );
       }
-      ch = iter.next();
+      if( !simpleHex ) {
+	ch = iter.next();
+      }
       try {
 	value = Integer.parseInt( buf.toString(), 16 );
       }
@@ -471,8 +474,13 @@ public class ExprParser
       }
       this.iter.next();
     } else {
-      char ch = skipSpaces();
-      if( (ch >= '0') && (ch <= '9') ) {
+      boolean isNum = false;
+      char    ch    = skipSpaces();
+      if( (ch == 'X') || (ch == 'x') ) {
+	isNum = (iter.next() == '\'');
+	iter.previous();
+      }
+      if( isNum || (ch == '%') || ((ch >= '0') && (ch <= '9')) ) {
 	value = parseNumber( this.iter );
       }
       else if( AsmLabel.isIdentifierStart( ch ) ) {

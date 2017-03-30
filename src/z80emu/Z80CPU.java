@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-public class Z80CPU
+public class Z80CPU implements Runnable
 {
   public static enum Action {
 			RUN,
@@ -1163,8 +1163,9 @@ public class Z80CPU
   }
 
 
-	/* --- Emulation ausfuehren --- */
+	/* --- Runnable --- */
 
+  @Override
   public void run()
   {
     int opCode = 0;

@@ -10,6 +10,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   jkcemu/emusys/*.class \
   jkcemu/emusys/a5105/*.class \
   jkcemu/emusys/ac1_llc2/*.class \
+  jkcemu/emusys/customsys/*.class \
   jkcemu/emusys/bcs3/*.class \
   jkcemu/emusys/etc/*.class \
   jkcemu/emusys/huebler/*.class \
@@ -43,6 +44,7 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   rom/ac1/*.bin \
   rom/bcs3/*.bin \
   rom/c80/*.bin \
+  rom/customsys/*.bin \
   rom/huebler/*.bin \
   rom/kc85/*.bin \
   rom/kccompact/*.bin \
@@ -75,7 +77,8 @@ jar cvmf Manifest.txt ../jkcemu.jar \
   images/keyboard/sc2/*.png \
   images/keyboard/z1013/*.png \
   images/keyboard/z9001/*.png \
-  images/keyboard/zxspectrum/*.png \
+  images/keyboard/zxspectrum/128k/*.png \
+  images/keyboard/zxspectrum/48k/*.png \
   images/nav/*.png \
   disks/harddisks.csv \
   disks/a5105/*.gz \

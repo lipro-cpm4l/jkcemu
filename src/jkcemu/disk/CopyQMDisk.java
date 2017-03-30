@@ -1,12 +1,12 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Emulation einer Diskette, deren Daten in einer CopyQM-Datei vorliegen
  *
  * Die Informationen ueber das CopyQM-Format sowie die hier verwendete
- * CRC-Tabelle entstammen aus dem Projekt LIBDSK, (c) 2001-2005 John Elliott
+ * CRC-Tabelle stammen aus dem Projekt LIBDSK, (c) 2001-2005 John Elliott
  */
 
 package jkcemu.disk;
@@ -121,25 +121,8 @@ public class CopyQMDisk extends AbstractFloppyDisk
       int     sectorSize     = disk.getSectorSize();
       int     totalSectorCnt = sides * cyls * sectorsPerCyl;
 
-      // kleinste Sektornummer ermitteln
-      int minSectorNum   = -1;
-      for( int cyl = 0; (minSectorNum != 1) && (cyl < cyls); cyl++ ) {
-	for( int head = 0; (minSectorNum != 1) && (head < sides); head++ ) {
-	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
-	  for( int i = 0; i < sectorsPerCyl; i++ ) {
-	    SectorData sector = disk.getSectorByIndex( cyl, head, i );
-	    if( sector != null ) {
-	      int sectorNum = sector.getSectorNum();
-	      if( (minSectorNum < 0) || (sectorNum < minSectorNum) ) {
-		minSectorNum = sectorNum;
-		if( minSectorNum == 1 ) {
-		  break;
-		}
-	      }
-	    }
-	  }
-	}
-      }
+      // Sektorffset ermitteln
+      int sectorOffset = disk.getSectorOffset();
 
       // Interleave ermitteln
       int interleave     = 1;
@@ -204,40 +187,66 @@ public class CopyQMDisk extends AbstractFloppyDisk
 						head,
 						cyl,
 						head,
-						i + minSectorNum,
+						i + 1 + sectorOffset,
 						-1 );
 	    if( sector == null ) {
 	      throw new IOException(
 		String.format(
-			"Seite %d, Spur %d: Sektor %d nicht gefunden",
+			"Seite %d, Spur %d: Sektor %d nicht gefunden"
+				+ "\n\nDas CopyQM-Format unterst\u00FCtzt"
+				+ " keine freie Sektoranordnung.",
 			head + 1,
 			cyl,
 			i + 1  ) );
 	    }
-	    if( sector.isDeleted() ) {
-	      hasDeleted = true;
+	    if( sector.checkError()
+		|| sector.hasBogusID()
+		|| sector.isDeleted() )
+	    {
 	      if( msgBuf == null ) {
 		msgBuf = new StringBuilder( 1024 );
 	      }
 	      msgBuf.append(
 			String.format(
-				"Seite %d, Spur %d: Sektor %d ist als"
-					+ " gel\u00F6scht markiert\n",
+				"Seite %d, Spur %d, Sektor %d:",
 				head + 1,
 				cyl,
 				sector.getSectorNum() ) );
+	      boolean appended = false;
+	      if( sector.hasBogusID() ) {
+		msgBuf.append( " Sektor-ID generiert" );
+		appended = true;
+	      }
+	      if( sector.checkError() ) {
+		if( appended ) {
+		  msgBuf.append( (char) ',' );
+		}
+		msgBuf.append( " CRC-Fehler" );
+		appended = true;
+	      }
+	      if( sector.isDeleted() ) {
+		if( appended ) {
+		  msgBuf.append( (char) ',' );
+		}
+		msgBuf.append( " als gel\u00F6scht markiert" );
+		appended   = true;
+		hasDeleted = true;
+	      }
+	      msgBuf.append( (char) '\n' );
 	    }
 	    if( sector.getDataLength() > sectorSize ) {
 	      throw new IOException(
 		String.format(
-			"Seite %d, Spur %d: Sektor %d ist zu gro\u00DF.",
+			"Seite %d, Spur %d: Sektor %d ist zu gro\u00DF."
+				+ "\n\nDas CopyQM-Format unterst\u00FCtzt"
+				+ " keine \u00FCbergro\u00DFen Sektoren.",
 			head + 1,
 			cyl,
 			sector.getSectorNum() ) );
 	    }
 	    int n = sector.writeTo( dataBuf, sectorSize );
 	    while( n < sectorSize ) {
-	      out.write( 0 );
+	      dataBuf.write( 0 );
 	      n++;
 	    }
 	  }
@@ -278,7 +287,7 @@ public class CopyQMDisk extends AbstractFloppyDisk
       headerBuf.write( sectorSize );
       headerBuf.write( sectorSize >> 8 );
 
-      // im Blind-Mode 6 Null-Bytes
+      // im Blind-Mode 6 Nullbytes
       for( int i = 0; i < 6; i++ ) {
 	headerBuf.write( 0 );
       }
@@ -300,7 +309,7 @@ public class CopyQMDisk extends AbstractFloppyDisk
        */
       headerBuf.write( cyls + (sides * sectorsPerCyl) );
 
-      // im Blind-Mode 4 Null-Bytes
+      // im Blind-Mode 4 Nullbytes
       for( int i = 0; i < 4; i++ ) {
 	headerBuf.write( 0 );
       }
@@ -310,7 +319,7 @@ public class CopyQMDisk extends AbstractFloppyDisk
       headerBuf.write( sides );
       headerBuf.write( sides >> 8 );
 
-      // im Blind-Mode 8 Null-Bytes
+      // im Blind-Mode 8 Nullbytes
       for( int i = 0; i < 8; i++ ) {
 	headerBuf.write( 0 );
       }
@@ -371,9 +380,9 @@ public class CopyQMDisk extends AbstractFloppyDisk
       headerBuf.write( remarkLen >> 8 );
 
       // Sektoroffset
-      headerBuf.write( minSectorNum - 1 );
+      headerBuf.write( sectorOffset );
 
-      // 2 Null-Bytes, Bedeutung unbekannt
+      // 2 Nullbytes, Bedeutung unbekannt
       headerBuf.write( 0 );
       headerBuf.write( 0 );
 
@@ -404,7 +413,7 @@ public class CopyQMDisk extends AbstractFloppyDisk
       }
       headerBuf.write( driveType );
 
-      // 13 Null-Bytes, Bedeutung unbekannt
+      // 13 Nullbytes, Bedeutung unbekannt
       for( int i = 0; i < 13; i++ ) {
 	headerBuf.write( 0 );
       }
@@ -464,10 +473,16 @@ public class CopyQMDisk extends AbstractFloppyDisk
       out.close();
       out = null;
 
-      if( hasDeleted && (msgBuf != null) ) {
-	msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+      if( msgBuf != null ) {
+	msgBuf.append( "\nDie angezeigten Informationen k\u00F6nnen"
+		+ " in einer CopyQM-Datei nicht gespeichert werden\n"
+		+ "und sind deshalb in der erzeugten Datei"
+		+ " nicht mehr enthalten.\n" );
+	if( hasDeleted ) {
+	  msgBuf.append( "\nGel\u00F6schte Sektoren werden"
 		+ " in CopyQM-Dateien nicht unterst\u00FCtzt\n"
 		+ "und sind deshalb als normale Sektoren enthalten.\n" );
+	}
       }
     }
     finally {
@@ -744,6 +759,13 @@ public class CopyQMDisk extends AbstractFloppyDisk
 
 
   @Override
+  public int getSectorOffset()
+  {
+    return this.sectorOffset;
+  }
+
+
+  @Override
   public void putSettingsTo( Properties props, String prefix )
   {
     if( (props != null) && (this.fileName != null) ) {
@@ -838,7 +860,6 @@ public class CopyQMDisk extends AbstractFloppyDisk
   private static void throwUnsupportedCopyQMFmt( String msg )
 							throws IOException
   {
-    
     throw new IOException( "Die Datei enth\u00E4lt ein nicht"
 			+ " unterst\u00FCtztes CopyQM-Format:\n"
 			+ msg );

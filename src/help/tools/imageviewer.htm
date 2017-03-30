@@ -21,6 +21,11 @@
    <li><a href="imageviewer.htm#formats">1. Dateiformate</a></li>
    <li>
     <a href="imageviewer.htm#open">2. Datei &ouml;ffnen und anzeigen</a>
+    <ul>
+     <li>
+      <a href="imageviewer.htm#load_kc854img">2.1. KC85/4-Bilddateien</a>
+     </li>
+    </ul>
    </li>
    <li><a href="imageviewer.htm#save">3. Datei speichern</a></li>
    <li><a href="imageviewer.htm#export">4. Exportieren</a></li>
@@ -159,6 +164,23 @@
   im gleichen Verzeichniss durchklicken.
  <br/><br/>
 
+ <h2><a name="load_kc854img">2.1. KC85/4-Bilddateien</a></h2>
+  KC85/4-Bilder (gilt auch f&uuml;r den KC85/5) bestehen aus jeweils
+  zwei Dateien, eine f&uuml;r die Pixeldaten (*.hip; *.pip)
+  und eine f&uuml;r die Farbinformationen (*.hif; *.pif).
+  Wenn sie eine der beiden Dateien &ouml;ffnen,
+  wird automatisch die dazugeh&ouml;rige zweite Datei mit geladen.
+  Ist die Farbdatei nicht vorhanden,
+  wird nur die Pixeldatei geladen und das Bild schwarz/wei&szlig;
+  angezeigt.
+ <br/><br/>
+  Der Dateifilter <em>Unterst&uuml;tzte Bilddateien (...)</em>
+  im Dateiauswahldialog (Auswahl <em>Dateityp</em>)
+  zeigt nur die Pixeldateien an, damit es nicht zu un&uuml;bersichtlich wird.
+  Wenn Sie die Farbdateien sehen m&ouml;chten,
+  m&uuml;ssen Sie auf den Dateifilter <em>Alle Dateien</em> umschalten.
+ <br/><br/>
+
  <h2><a name="save">3. Datei speichern</a></h2>
   Das angezeigte Bild kann mit dem Men&uuml;punkt
   <em>Datei</em> &rarr; <em>Speichern&nbsp;unter...</em>
@@ -222,9 +244,9 @@
   Wenn ein Bild angezeigt wird, k&ouml;nnen Sie neben
   den in den anderen Abschnitten beschriebenen Funktionen auch:
   <ul>
-   <li>das Bild in die Zwischenablage kopieren</em>
-   <li>das Bild ausdrucken</em>
-   <li>die Bildeigenschaften ansehen</em>
+   <li>das Bild in die Zwischenablage kopieren</li>
+   <li>das Bild ausdrucken</li>
+   <li>die Bildeigenschaften ansehen</li>
    <li>die Farbpalette exportieren</li>
   </ul>
  <br/>
@@ -448,7 +470,7 @@
   k&ouml;nnen Sie unter Beachtung dieses Formats Ihre eigene Farbpalette
   einfach in einen Texteditor eintippen, als <em>*.pal</em>-Datei speichern
   und dann importieren.
-  Die Zeilenende-Bytes muss dem DOS/Windows-Format entsprechen
+  Die Zeilenendebytes muss dem DOS/Windows-Format entsprechen
   (Bytes&nbsp;0Dh/0Ah, kann unter Mac/Linux/Unix im
   <a href="texteditor.htm">JKCEMU-Texteditor</a>
   mit <em>Speichern unter...</em> erzeugt werden).
@@ -735,6 +757,5 @@
     <br/><br/>
    </li>
   </ul>
-  </br>
 </body>
 </html>

@@ -27,38 +27,36 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   public static final int    DEFAULT_BRIGHTNESS = 80;
   public static final int    DEFAULT_MARGIN     = 20;
 
-  private ScreenFrm  screenFrm;
-  private Color      markXORColor;
-  private EmuSys     emuSys;
-  private CharRaster charRaster;
-  private Point      dragStart;
-  private Point      dragEnd;
-  private boolean    textSelected;
-  private int        selectionCharX1;
-  private int        selectionCharX2;
-  private int        selectionCharY1;
-  private int        selectionCharY2;
-  private int        lastColorIdx;
-  private int        screenScale;
-  private int        margin;
-  private int        xOffs;
-  private int        yOffs;
+  private AbstractScreenFrm             screenFrm;
+  private volatile AbstractScreenDevice screenDevice;
+  private volatile CharRaster           charRaster;
+  private Point                         dragStart;
+  private Point                         dragEnd;
+  private Color                         markXORColor;
+  private boolean                       textSelected;
+  private int                           selectionCharX1;
+  private int                           selectionCharX2;
+  private int                           selectionCharY1;
+  private int                           selectionCharY2;
+  private int                           scale;
+  private int                           margin;
+  private int                           xOffs;
+  private int                           yOffs;
 
 
-  public ScreenFld( ScreenFrm screenFrm )
+  public ScreenFld( AbstractScreenFrm screenFrm )
   {
     this.screenFrm       = screenFrm;
-    this.markXORColor    = new Color( 192, 192, 0 );
-    this.emuSys          = null;
+    this.screenDevice    = null;
     this.dragStart       = null;
     this.dragEnd         = null;
+    this.markXORColor    = new Color( 192, 192, 0 );
     this.textSelected    = false;
     this.selectionCharX1 = -1;
     this.selectionCharY1 = -1;
     this.selectionCharX2 = -1;
     this.selectionCharY2 = -1;
-    this.lastColorIdx    = -1;
-    this.screenScale     = 1;
+    this.scale           = 1;
     this.margin          = DEFAULT_MARGIN;
     this.xOffs           = 0;
     this.yOffs           = 0;
@@ -81,12 +79,12 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 
   public BufferedImage createBufferedImage()
   {
-    BufferedImage img = null;
-
-    int w = getWidth();
-    int h = getHeight();
-    if( (w > 0) && (h > 0) && (this.emuSys != null) ) {
-      int nColors = this.emuSys.getColorCount();
+    BufferedImage        img          = null;
+    int                  w            = getWidth();
+    int                  h            = getHeight();
+    AbstractScreenDevice screenDevice = this.screenDevice;
+    if( (screenDevice != null) && (w > 0) && (h > 0) ) {
+      int nColors = screenDevice.getColorCount();
       int value   = nColors - 1;
       int nBits   = 0;
       while( value > 0 ) {
@@ -97,7 +95,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
       byte[] g = new byte[ nColors ];
       byte[] b = new byte[ nColors ];
       for( int i = 0; i < nColors; i++ ) {
-	Color color = this.emuSys.getColor( i );
+	Color color = screenDevice.getColor( i );
 	r[ i ] = (byte) color.getRed();
 	g[ i ] = (byte) color.getGreen();
 	b[ i ] = (byte) color.getBlue();
@@ -118,30 +116,32 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   }
 
 
-  public EmuSys getEmuSys()
-  {
-    return this.emuSys;
-  }
-
-
   public int getMargin()
   {
     return this.margin;
   }
 
 
+  public AbstractScreenDevice getScreenDevice()
+  {
+    return this.screenDevice;
+  }
+
+
   public int getScreenScale()
   {
-    return this.screenScale;
+    return this.scale;
   }
 
 
   public String getSelectedText()
   {
-    String screenText = null;
-    if( (this.emuSys != null) && (this.charRaster != null) ) {
-      screenText = this.emuSys.getScreenText(
-					this.charRaster,
+    String               screenText   = null;
+    AbstractScreenDevice screenDevice = this.screenDevice;
+    CharRaster           charRaster   = this.charRaster;
+    if( (screenDevice != null) && (charRaster != null) ) {
+      screenText = screenDevice.getScreenText(
+					charRaster,
 					this.selectionCharX1,
 					this.selectionCharY1,
 					this.selectionCharX2,
@@ -154,14 +154,6 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   }
 
 
-  public void setEmuSys( EmuSys emuSys )
-  {
-    this.emuSys = emuSys;
-    clearSelection();
-    updPreferredSize();
-  }
-
-
   public void setMargin( int margin )
   {
     this.margin = margin;
@@ -169,10 +161,18 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   }
 
 
-  public void setScreenScale( int screenScale )
+  public void setScreenDevice( AbstractScreenDevice screenDevice )
   {
-    if( (screenScale > 0) && (screenScale != this.screenScale) ) {
-      this.screenScale = screenScale;
+    this.screenDevice = screenDevice;
+    clearSelection();
+    updPreferredSize();
+  }
+
+
+  public void setScreenScale( int scale )
+  {
+    if( (scale > 0) && (scale != this.scale) ) {
+      this.scale = scale;
       updPreferredSize();
     }
   }
@@ -181,14 +181,16 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   public void updPreferredSize()
   {
     clearSelection();
-    if( this.emuSys != null ) {
+    AbstractScreenDevice device = this.screenDevice;
+    if( device != null ) {
       int margin = this.margin;
       if( margin < 0 ) {
 	margin = 0;
       }
-      setPreferredSize( new Dimension(
-	(2 * margin) + (this.emuSys.getScreenWidth() * this.screenScale),
-	(2 * margin) + (this.emuSys.getScreenHeight() * this.screenScale) ) );
+      setPreferredSize(
+	new Dimension(
+		(2 * margin) + (device.getScreenWidth() * this.scale),
+		(2 * margin) + (device.getScreenHeight() * this.scale) ) );
     }
     Container parent = getParent();
     if( parent != null ) {
@@ -204,9 +206,10 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   @Override
   public void mouseDragged( MouseEvent e )
   {
-    if( (e.getComponent() == this) && (this.emuSys != null) ) {
+    AbstractScreenDevice screenDevice = this.screenDevice;
+    if( (e.getComponent() == this) && (screenDevice != null) ) {
       if( this.dragStart == null ) {
-	this.charRaster = this.emuSys.getCurScreenCharRaster();
+	this.charRaster = screenDevice.getCurScreenCharRaster();
 	if( this.charRaster != null ) {
 	  this.dragStart = new Point( e.getX(), e.getY() );
 	  this.dragEnd   = null;
@@ -260,38 +263,39 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 
   private void paint( Graphics g, int w, int h, boolean withMarking )
   {
-    boolean textSelected = false;
-    if( (w > 0) && (h > 0) && (this.emuSys != null) ) {
+    boolean              textSelected = false;
+    AbstractScreenDevice screenDevice = this.screenDevice;
+    if( (w > 0) && (h > 0) && (screenDevice != null) ) {
 
       // Vordergrund zentrieren
-      int wBase = this.emuSys.getScreenWidth();
-      int hBase = this.emuSys.getScreenHeight();
+      int wBase = screenDevice.getScreenWidth();
+      int hBase = screenDevice.getScreenHeight();
 
-      this.xOffs = (w - (wBase * this.screenScale)) / 2;
+      this.xOffs = (w - (wBase * this.scale)) / 2;
       if( this.xOffs < 0) {
 	this.xOffs = 0;
       }
-      this.yOffs = (h - (hBase * this.screenScale)) / 2;
+      this.yOffs = (h - (hBase * this.scale)) / 2;
       if( this.yOffs < 0) {
 	this.yOffs = 0;
       }
 
       // Hintergrund zeichnen
-      int bgColorIdx = this.emuSys.getBorderColorIndex();
-      if( this.emuSys.supportsBorderColorByLine() ) {
-	int scale = this.screenScale;
+      int bgColorIdx = screenDevice.getBorderColorIndex();
+      if( screenDevice.supportsBorderColorByLine() ) {
+	int scale = this.scale;
 	if( scale > 1 ) {
-	  int line = (-yOffs / scale);
-	  for( int y = 0; y < h; y += this.screenScale ) {
-	    bgColorIdx = this.emuSys.getBorderColorIndexByLine( line++ );
-	    g.setColor( this.emuSys.getColor( bgColorIdx ) );
+	  int line = (-this.yOffs / scale);
+	  for( int y = 0; y < h; y += scale ) {
+	    bgColorIdx = screenDevice.getBorderColorIndexByLine( line++ );
+	    g.setColor( screenDevice.getColor( bgColorIdx ) );
 	    g.fillRect( 0, y, w, y + scale );
 	  }
 	} else {
 	  int line = -this.yOffs;
 	  for( int y = 0; y < h; y++ ) {
-	    bgColorIdx = this.emuSys.getBorderColorIndexByLine( line++ );
-	    g.setColor( this.emuSys.getColor( bgColorIdx ) );
+	    bgColorIdx = screenDevice.getBorderColorIndexByLine( line++ );
+	    g.setColor( screenDevice.getColor( bgColorIdx ) );
 	    g.drawLine( 0, y, w, y );
 	  }
 	}
@@ -303,16 +307,16 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	 */
 	bgColorIdx = -1;
       } else {
-	g.setColor( this.emuSys.getColor( bgColorIdx ) );
+	g.setColor( screenDevice.getColor( bgColorIdx ) );
 	g.fillRect( 0, 0, w, h );
       }
 
       // Vordergrund zeichnen
-      if( !this.emuSys.paintScreen(
+      if( !screenDevice.paintScreen(
 				g,
 				this.xOffs,
 				this.yOffs,
-				this.screenScale ) )
+				this.scale ) )
       {
 	if( (this.xOffs > 0) || (this.yOffs > 0) ) {
 	  g.translate( this.xOffs, this.yOffs );
@@ -326,18 +330,18 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	  int lastColorIdx = -1;
 	  int yColorBeg    = -1;
 	  for( int y = 0; y < hBase; y++ ) {
-	    int curColorIdx = this.emuSys.getColorIndex( x, y );
+	    int curColorIdx = screenDevice.getColorIndex( x, y );
 	    if( curColorIdx != lastColorIdx ) {
 	      if( (lastColorIdx >= 0)
 		  && (lastColorIdx != bgColorIdx)
 		  && (yColorBeg >= 0) )
 	      {
-		g.setColor( this.emuSys.getColor( lastColorIdx ) );
+		g.setColor( screenDevice.getColor( lastColorIdx ) );
 		g.fillRect(
-			x * this.screenScale,
-			yColorBeg * this.screenScale,
-			this.screenScale,
-			(y - yColorBeg) * this.screenScale );
+			x * this.scale,
+			yColorBeg * this.scale,
+			this.scale,
+			(y - yColorBeg) * this.scale );
 	      }
 	      yColorBeg    = y;
 	      lastColorIdx = curColorIdx;
@@ -347,12 +351,12 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	      && (lastColorIdx != bgColorIdx)
 	      && (yColorBeg >= 0) )
 	  {
-	    g.setColor( this.emuSys.getColor( lastColorIdx ) );
+	    g.setColor( screenDevice.getColor( lastColorIdx ) );
 	    g.fillRect(
-		x * this.screenScale,
-		yColorBeg * this.screenScale,
-		this.screenScale,
-		(hBase - yColorBeg) * this.screenScale );
+		x * this.scale,
+		yColorBeg * this.scale,
+		this.scale,
+		(hBase - yColorBeg) * this.scale );
 	  }
 	}
 	if( (this.xOffs > 0) || (this.yOffs > 0) ) {
@@ -361,128 +365,130 @@ public class ScreenFld extends JComponent implements MouseMotionListener
       }
 
       // Markierter Text
-      if( withMarking
-	  && (this.screenScale > 0)
-	  && (this.charRaster != null)
-	  && (this.dragStart != null)
-	  && (this.dragEnd != null) )
-      {
-	int topLine = this.charRaster.getTopLine();
-	int nCols   = this.charRaster.getColCount();
-	int nRows   = this.charRaster.getRowCount();
-	int hRow    = this.charRaster.getRowHeight();
-	int hChar   = this.charRaster.getCharHeight();
-	int wChar   = this.charRaster.getCharWidth();
-	if( (nCols > 0) && (nRows > 0)
-	    && (hRow > 0) && (hChar > 0) && (wChar > 0) )
+      if( withMarking ) {
+	CharRaster charRaster = this.charRaster;
+	Point      dragStart  = this.dragStart;
+	Point      dragEnd    = this.dragEnd;
+	int        scale      = this.scale;
+	if( (charRaster != null)
+	    && (dragStart != null)
+	    && (dragEnd != null)
+	    && (scale > 0) )
 	{
-	  int x1    = this.dragStart.x;
-	  int y1    = this.dragStart.y;
-	  int x2    = this.dragEnd.x;
-	  int y2    = this.dragEnd.y;
-	  int yOffs = this.yOffs + (topLine * this.screenScale);
-
-	  // Zeichenpositionen berechnen
-	  this.selectionCharX1 = Math.max(
-			(x1 - this.xOffs) / this.screenScale, 0 ) / wChar;
-	  this.selectionCharY1 = Math.max(
-			(y1 - yOffs) / this.screenScale, 0 ) / hRow;
-	  this.selectionCharX2 = Math.max(
-			(x2 - this.xOffs) / this.screenScale, 0 ) / wChar;
-	  this.selectionCharY2 = Math.max(
-			(y2 - yOffs) / this.screenScale , 0 ) / hRow;
-	  if( this.selectionCharX1 >= nCols ) {
-	    this.selectionCharX1 = nCols - 1;
-	  }
-	  if( this.selectionCharY1 >= nRows ) {
-	    this.selectionCharY1 = nRows - 1;
-	  }
-	  if( this.selectionCharX2 >= nCols ) {
-	    this.selectionCharX2 = nCols - 1;
-	  }
-	  if( this.selectionCharY2 >= nRows ) {
-	    this.selectionCharY2 = nRows - 1;
-	  }
-
-	  // Koordinaten tauschen, wenn Endpunkt vor Startpunkt liegt
-	  if( (this.selectionCharY1 > this.selectionCharY2)
-	      || ((this.selectionCharY1 == this.selectionCharY2)
-		  && (this.selectionCharX1 > this.selectionCharX2)) )
+	  int topLine = this.charRaster.getTopLine();
+	  int nCols   = this.charRaster.getColCount();
+	  int nRows   = this.charRaster.getRowCount();
+	  int hRow    = this.charRaster.getRowHeight();
+	  int hChar   = this.charRaster.getCharHeight();
+	  int wChar   = this.charRaster.getCharWidth();
+	  if( (nCols > 0) && (nRows > 0)
+	      && (hRow > 0) && (hChar > 0) && (wChar > 0) )
 	  {
-	    int m = this.selectionCharX1;
-	    this.selectionCharX1 = this.selectionCharX2;
-	    this.selectionCharX2 = m;
+	    int x1    = dragStart.x;
+	    int y1    = dragStart.y;
+	    int x2    = dragEnd.x;
+	    int y2    = dragEnd.y;
+	    int yOffs = this.yOffs + (topLine * scale);
 
-	    m = this.selectionCharY1;
-	    this.selectionCharY1 = this.selectionCharY2;
-	    this.selectionCharY2 = m;
-
-	    m  = x1;
-	    x1 = x2;
-	    x2 = m;
-
-	    m  = y1;
-	    y1 = y2;
-	    y2 = m;
-	  }
-
-	  /*
-	   * Koordinaten anpassen,
-	   * wenn Endpunkt ausserhalb der Bildschirmausgabe liegt
-	   */
-	  if( y1 < yOffs ) {
-	    this.selectionCharX1 = 0;
-	    this.selectionCharY1 = 0;
-	  } else {
-	    if( x1 > (this.xOffs + (this.screenScale * nCols * wChar)) ) {
-	      this.selectionCharX1 = 0;
-	      this.selectionCharY1++;
+	    // Zeichenpositionen berechnen
+	    this.selectionCharX1 = Math.max(
+			(x1 - this.xOffs) / scale, 0 ) / wChar;
+	    this.selectionCharY1 = Math.max(
+			(y1 - yOffs) / scale, 0 ) / hRow;
+	    this.selectionCharX2 = Math.max(
+			(x2 - this.xOffs) / scale, 0 ) / wChar;
+	    this.selectionCharY2 = Math.max(
+			(y2 - yOffs) / scale , 0 ) / hRow;
+	    if( this.selectionCharX1 >= nCols ) {
+	      this.selectionCharX1 = nCols - 1;
 	    }
-	  }
-	  if( y2 > (yOffs + (this.screenScale
-					* (((nRows - 1) * hRow) + hChar))) )
-	  {
-	    this.selectionCharX2 = nCols - 1;
-	    this.selectionCharY2 = nRows - 1;
-	  } else {
-	    if( x2 < this.xOffs ) {
+	    if( this.selectionCharY1 >= nRows ) {
+	      this.selectionCharY1 = nRows - 1;
+	    }
+	    if( this.selectionCharX2 >= nCols ) {
 	      this.selectionCharX2 = nCols - 1;
-	      --this.selectionCharY2;
 	    }
-	  }
+	    if( this.selectionCharY2 >= nRows ) {
+	      this.selectionCharY2 = nRows - 1;
+	    }
 
-	  // Markierter Text visualisieren
-	  g.setColor( Color.white );
-	  g.setXORMode( this.markXORColor );
-	  if( this.selectionCharY1 == this.selectionCharY2 ) {
-	    g.fillRect(
-		this.xOffs + (this.screenScale * this.selectionCharX1 * wChar),
-		yOffs + (this.screenScale * this.selectionCharY1 * hRow),
-		this.screenScale * (this.selectionCharX2
-					- this.selectionCharX1 + 1) * wChar,
-		this.screenScale * hChar );
-	  } else {
-	    g.fillRect(
-		this.xOffs + (this.screenScale * this.selectionCharX1 * wChar),
-		yOffs + (this.screenScale * this.selectionCharY1 * hRow),
-		this.screenScale * (nCols - this.selectionCharX1) * wChar,
-		this.screenScale * hRow );
-	    if( this.selectionCharY1 + 1 < this.selectionCharY2 ) {
-	      g.fillRect(
-		this.xOffs,
-		yOffs + (this.screenScale * (this.selectionCharY1 + 1)
-								* hRow),
-		this.screenScale * nCols * wChar,
-		this.screenScale * (this.selectionCharY2
-					- this.selectionCharY1 - 1) * hRow );
+	    // Koordinaten tauschen, wenn Endpunkt vor Startpunkt liegt
+	    if( (this.selectionCharY1 > this.selectionCharY2)
+		|| ((this.selectionCharY1 == this.selectionCharY2)
+		    && (this.selectionCharX1 > this.selectionCharX2)) )
+	    {
+	      int m = this.selectionCharX1;
+	      this.selectionCharX1 = this.selectionCharX2;
+	      this.selectionCharX2 = m;
+
+	      m = this.selectionCharY1;
+	      this.selectionCharY1 = this.selectionCharY2;
+	      this.selectionCharY2 = m;
+
+	      m  = x1;
+	      x1 = x2;
+	      x2 = m;
+
+	      m  = y1;
+	      y1 = y2;
+	      y2 = m;
 	    }
-	    g.fillRect(
-		this.xOffs,
-		yOffs + (this.screenScale * this.selectionCharY2 * hRow),
-		this.screenScale * (this.selectionCharX2 + 1) * wChar,
-		this.screenScale * hChar );
+
+	    /*
+	     * Koordinaten anpassen,
+	     * wenn Endpunkt ausserhalb der Bildschirmausgabe liegt
+	     */
+	    if( y1 < yOffs ) {
+	      this.selectionCharX1 = 0;
+	      this.selectionCharY1 = 0;
+	    } else {
+	      if( x1 > (this.xOffs + (scale * nCols * wChar)) ) {
+		this.selectionCharX1 = 0;
+		this.selectionCharY1++;
+	      }
+	    }
+	    if( y2 > (yOffs + (scale * (((nRows - 1) * hRow) + hChar))) ) {
+	      this.selectionCharX2 = nCols - 1;
+	      this.selectionCharY2 = nRows - 1;
+	    } else {
+	      if( x2 < this.xOffs ) {
+		this.selectionCharX2 = nCols - 1;
+		--this.selectionCharY2;
+	      }
+	    }
+
+	    // Markierter Text visualisieren
+	    g.setColor( Color.white );
+	    g.setXORMode( this.markXORColor );
+	    if( this.selectionCharY1 == this.selectionCharY2 ) {
+	      g.fillRect(
+			this.xOffs + (scale * this.selectionCharX1 * wChar),
+			yOffs + (scale * this.selectionCharY1 * hRow),
+			scale * (this.selectionCharX2
+					- this.selectionCharX1 + 1) * wChar,
+			scale * hChar );
+	    } else {
+	      g.fillRect(
+			this.xOffs + (scale * this.selectionCharX1 * wChar),
+			yOffs + (scale * this.selectionCharY1 * hRow),
+			scale * (nCols - this.selectionCharX1) * wChar,
+			scale * hRow );
+	      if( this.selectionCharY1 + 1 < this.selectionCharY2 ) {
+		g.fillRect(
+			this.xOffs,
+			yOffs + (scale * (this.selectionCharY1 + 1) * hRow),
+			scale * nCols * wChar,
+			scale * (this.selectionCharY2
+					- this.selectionCharY1 - 1) * hRow );
+	      }
+	      g.fillRect(
+			this.xOffs,
+			yOffs + (scale * this.selectionCharY2 * hRow),
+			scale * (this.selectionCharX2 + 1) * wChar,
+			scale * hChar );
+	    }
+	    textSelected = true;
 	  }
-	  textSelected = true;
 	}
       }
     }

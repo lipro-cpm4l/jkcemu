@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -239,7 +239,7 @@ public class GDC82720 implements
    * zeitlich hintereinander uebertragen,
    * werden diese Informationen hier auf hoehere Bits gelegt.
    * Die einzelnen Werte werden durch bitweise UND-Verknuepfung
-   * des Rueckgabewert mit den Konstanten DISPL_... extrahiert.
+   * des Rueckgabewerts mit den Konstanten DISPL_... extrahiert.
    * Die Konstante DISPL_IMAGE_MODE markiert das Image Flag,
    * d.h. die Ausgabe hat im Pixelmode zu erfolgen
    * und x muss anschliessend um die Anzahl der horizontalen Pixel

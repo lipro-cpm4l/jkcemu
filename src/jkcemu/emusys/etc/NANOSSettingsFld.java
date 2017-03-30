@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -50,6 +50,7 @@ public class NANOSSettingsFld extends AbstractSettingsFld
   private JPanel               tabKeyboard;
   private JRadioButton         btnKbPio00Ahs;
   private JRadioButton         btnKbPio00Abit7;
+  private JRadioButton         btnKbSio84A;
   private JCheckBox            btnKbSwapCase;
   private JPanel               tabRom;
   private JRadioButton         btnRomNanos;
@@ -179,6 +180,11 @@ public class NANOSSettingsFld extends AbstractSettingsFld
     gbcKeyboard.gridy++;
     this.tabKeyboard.add( this.btnKbPio00Abit7, gbcKeyboard );
 
+    this.btnKbSio84A = new JRadioButton( "IO-Karte SIO Port A" );
+    grpKeyboard.add( this.btnKbSio84A );
+    gbcKeyboard.gridy++;
+    this.tabKeyboard.add( this.btnKbSio84A, gbcKeyboard );
+
     this.btnKbSwapCase = new JCheckBox(
 		"Gro\u00DF-/Kleinschreibung umkehren" );
     gbcKeyboard.insets.top    = 10;
@@ -288,6 +294,7 @@ public class NANOSSettingsFld extends AbstractSettingsFld
     this.btnGraphicPoppe.addActionListener( this );
     this.btnKbPio00Ahs.addActionListener( this );
     this.btnKbPio00Abit7.addActionListener( this );
+    this.btnKbSio84A.addActionListener( this );
     this.btnKbSwapCase.addActionListener( this );
     this.btnRomNanos.addActionListener( this );
     this.btnRomEpos.addActionListener( this );
@@ -337,6 +344,8 @@ public class NANOSSettingsFld extends AbstractSettingsFld
       text = NANOS.VALUE_KEYBOARD_PIO00A_HS;
       if( this.btnKbPio00Abit7.isSelected() ) {
 	text = NANOS.VALUE_KEYBOARD_PIO00A_BIT7;
+      } else if( this.btnKbSio84A.isSelected() ) {
+	text = NANOS.VALUE_KEYBOARD_SIO84A;
       }
       EmuUtil.setProperty(
 		props,
@@ -489,14 +498,18 @@ public class NANOSSettingsFld extends AbstractSettingsFld
     }
     this.fldAltFont8x8.updFields( props );
     this.fldAltFont8x6.updFields( props );
-    if( EmuUtil.getProperty(
+    switch( EmuUtil.getProperty(
 		props,
-		this.propPrefix + NANOS.PROP_KEYBOARD ).equals(
-				NANOS.VALUE_KEYBOARD_PIO00A_BIT7 ) )
+		this.propPrefix + NANOS.PROP_KEYBOARD ) )
     {
-      this.btnKbPio00Abit7.setSelected( true );
-    } else {
-      this.btnKbPio00Ahs.setSelected( true );
+      case NANOS.VALUE_KEYBOARD_PIO00A_BIT7:
+	this.btnKbPio00Abit7.setSelected( true );
+	break;
+      case NANOS.VALUE_KEYBOARD_SIO84A:
+	this.btnKbSio84A.setSelected( true );
+	break;
+      default:
+	this.btnKbPio00Ahs.setSelected( true );
     }
     this.btnKbSwapCase.setSelected(
 		EmuUtil.getBooleanProperty(

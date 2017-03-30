@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -88,27 +88,33 @@ public class ImageFrm extends AbstractImageFrm implements
   private static final String TEXT_A5105_FMT =
 			"A5105-Format (320x200, 16 Farben)";
   private static final String TEXT_AC1_ACC_FMT =
-			"AC1-ACC-Blockgrafik (384x256, Monochrom)";
+			"AC1-ACC-Blockgrafik (384x256, monochrom)";
   private static final String TEXT_AC1_SCCH_FMT =
-			"AC1-SCCH-Blockgrafik (384x256, Monochrom)";
+			"AC1-SCCH-Blockgrafik (384x256, monochrom)";
   private static final String TEXT_AC1_2010_FMT =
-			"AC1-2010-Blockgrafik (384x256, Monochrom)";
+			"AC1-2010-Blockgrafik (384x256, monochrom)";
+  private static final String TEXT_KC85MONO_FMT =
+			"KC85/2..5-Format ohne Farben (320x256, monochrom)";
   private static final String TEXT_KC854HIRES_FMT =
-			"KC85/4-HIRES-Format (320x256, 4 Farben)";
+			"KC85/4,5-HIRES-Format (320x256, 4 Farben)";
   private static final String TEXT_LLC2HIRES_FMT =
-			"LLC2-HIRES-Format (512x256, Monochrom)";
+			"LLC2-HIRES-Format (512x256, monochrom)";
   private static final String TEXT_Z1013_FMT =
-			"Z1013-Blockgrafik (256x256, Monochrom)";
+			"Z1013-Blockgrafik (256x256, monochrom)";
   private static final String TEXT_Z9001_FMT =
-			"Z9001-Blockgrafik (320x192, Monochrom)";
+			"Z9001-Blockgrafik (320x192, monochrom)";
 
 
   private enum ExpFmt {
 		IMG_A5105,
-		IMG_LLC2HIRES,
+		IMG_KC852_MONOCHROME,
+		IMG_KC854_MONOCHROME,
+		IMG_KC854_HIRES,
+		IMG_LLC2_HIRES,
 		APP_AC1,
-		APP_KC854HIRES,
-		APP_LLC2HIRES,
+		APP_KC852,
+		APP_KC854,
+		APP_LLC2_HIRES,
 		APP_Z1013,
 		APP_Z9001,
 		MEM_AC1,
@@ -137,12 +143,16 @@ public class ImageFrm extends AbstractImageFrm implements
   private JMenuItem         mnuOpen;
   private JMenuItem         mnuSaveAs;
   private JMenuItem         mnuExpImgA5105;
+  private JMenuItem         mnuExpImgKC852Monochrome;
+  private JMenuItem         mnuExpImgKC854Monochrome;
+  private JMenuItem         mnuExpImgKC854Hires;
   private JMenuItem         mnuExpImgLLC2Hires;
   private JMenuItem         mnuExpMemAC1;
   private JMenuItem         mnuExpMemZ1013;
   private JMenuItem         mnuExpMemZ9001;
   private JMenuItem         mnuExpAppAC1;
-  private JMenuItem         mnuExpAppKC854Hires;
+  private JMenuItem         mnuExpAppKC852;
+  private JMenuItem         mnuExpAppKC854;
   private JMenuItem         mnuExpAppLLC2Hires;
   private JMenuItem         mnuExpAppZ1013;
   private JMenuItem         mnuExpAppZ9001;
@@ -176,6 +186,7 @@ public class ImageFrm extends AbstractImageFrm implements
   private JMenuItem         mnuToAC1_ACC;
   private JMenuItem         mnuToAC1_SCCH;
   private JMenuItem         mnuToAC1_2010;
+  private JMenuItem         mnuToKC85Monochrome;
   private JMenuItem         mnuToKC854Hires;
   private JMenuItem         mnuToLLC2Hires21;
   private JMenuItem         mnuToLLC2Hires43;
@@ -484,9 +495,10 @@ public class ImageFrm extends AbstractImageFrm implements
       String prefix = getSettingsPrefix();
 
       this.mnuAutoResize.setSelected(
-		EmuUtil.parseBoolean(
-			props.getProperty( prefix + PROP_AUTORESIZE ),
-			false ) );
+		EmuUtil.getBooleanProperty(
+				props,
+				prefix + PROP_AUTORESIZE,
+				false ) );
 
       AbstractButton btn   = this.mnuBgSystem;
       Color          color = SystemColor.window;
@@ -557,21 +569,37 @@ public class ImageFrm extends AbstractImageFrm implements
       rv = true;
       doExport( ExpFmt.IMG_A5105 );
     }
+    else if( src == this.mnuExpImgKC852Monochrome ) {
+      rv = true;
+      doExport( ExpFmt.IMG_KC852_MONOCHROME );
+    }
+    else if( src == this.mnuExpImgKC854Monochrome ) {
+      rv = true;
+      doExport( ExpFmt.IMG_KC854_MONOCHROME );
+    }
+    else if( src == this.mnuExpImgKC854Hires ) {
+      rv = true;
+      doExport( ExpFmt.IMG_KC854_HIRES );
+    }
     else if( src == this.mnuExpImgLLC2Hires ) {
       rv = true;
-      doExport( ExpFmt.IMG_LLC2HIRES );
+      doExport( ExpFmt.IMG_LLC2_HIRES );
     }
     else if( src == this.mnuExpAppAC1 ) {
       rv = true;
       doExport( ExpFmt.APP_AC1 );
     }
-    else if( src == this.mnuExpAppKC854Hires ) {
+    else if( src == this.mnuExpAppKC852 ) {
       rv = true;
-      doExport( ExpFmt.APP_KC854HIRES );
+      doExport( ExpFmt.APP_KC852 );
+    }
+    else if( src == this.mnuExpAppKC854 ) {
+      rv = true;
+      doExport( ExpFmt.APP_KC854 );
     }
     else if( src == this.mnuExpAppLLC2Hires ) {
       rv = true;
-      doExport( ExpFmt.APP_LLC2HIRES );
+      doExport( ExpFmt.APP_LLC2_HIRES );
     }
     else if( src == this.mnuExpAppZ1013 ) {
       rv = true;
@@ -703,6 +731,10 @@ public class ImageFrm extends AbstractImageFrm implements
 	"AC1-2010-Blockgrafik",
 	"/rom/ac1/font2010.bin",
 	ImgEntry.Mode.AC1_2010 );
+    }
+    else if( src == this.mnuToKC85Monochrome ) {
+      rv = true;
+      doToKC85Monochrome();
     }
     else if( src == this.mnuToKC854Hires ) {
       rv = true;
@@ -948,24 +980,60 @@ public class ImageFrm extends AbstractImageFrm implements
 	    status = true;
 	  }
 	  break;
-	case APP_KC854HIRES:
-	  formatText  = "KC85/4-HIRES-";
+	case APP_KC852:
+	  formatText  = "KC85/2,3-";
 	  softwareDir = true;
-	  if( entry.isKC854HiresFormat() ) {
+	  if( entry.isKC85MonochromeFormat() ) {
 	    fileFilter = EmuUtil.getKCSystemFileFilter();
 	    fileExt    = ".kcc";
 	    status     = true;
 	  }
 	  break;
-	case APP_LLC2HIRES:
-	case IMG_LLC2HIRES:
+	case APP_KC854:
+	  formatText  = "KC85/4,5-";
+	  softwareDir = true;
+	  if( entry.isKC854HiresFormat() || entry.isKC85MonochromeFormat() ) {
+	    fileFilter = EmuUtil.getKCSystemFileFilter();
+	    fileExt    = ".kcc";
+	    status     = true;
+	  }
+	  break;
+	case IMG_KC852_MONOCHROME:
+	  formatText  = "KC85/2,3-Monochrom-";
+	  softwareDir = true;
+	  if( entry.isKC85MonochromeFormat() ) {
+	    fileFilter = ImgUtil.createKC852ImageFileFilter();
+	    fileExt    = ".pic";
+	    status     = true;
+	  }
+	  break;
+	case IMG_KC854_MONOCHROME:
+	  formatText  = "KC85/4,5-Monochrom-";
+	  softwareDir = true;
+	  if( entry.isKC85MonochromeFormat() ) {
+	    fileFilter = ImgUtil.createKC854LowresImageFileFilter();
+	    fileExt    = ".pip";
+	    status     = true;
+	  }
+	  break;
+	case IMG_KC854_HIRES:
+	  formatText  = "KC85/4,5-HIRES-";
+	  softwareDir = true;
+	  if( entry.isKC854HiresFormat() || entry.isKC85MonochromeFormat() ) {
+	    fileFilter = ImgUtil.createKC854HiresImageFileFilter();
+	    fileExt    = ".hip";
+	    status     = true;
+	  }
+	  break;
+	case APP_LLC2_HIRES:
+	case IMG_LLC2_HIRES:
 	  formatText  = "LLC2-HIRES-";
 	  softwareDir = true;
 	  if( entry.isLLC2HiresFormat() ) {
 	    if( entry.getMemBytes() == null ) {
 	      entry.setMemBytes( ImgUtil.createLLC2HiresMemBytes( image ) );
 	    }
-	    if( expFmt.equals( ExpFmt.APP_LLC2HIRES ) ) {
+	    if( expFmt.equals( ExpFmt.APP_LLC2_HIRES ) ) {
 	      fileFilter = EmuUtil.getHeadersaveFileFilter();
 	      fileExt    = ".z80";
 	    } else {
@@ -1072,7 +1140,16 @@ public class ImageFrm extends AbstractImageFrm implements
 	      case IMG_A5105:
 		ImgSaver.saveImageA5105( this, image, file );
 		break;
-	      case IMG_LLC2HIRES:
+	      case IMG_KC852_MONOCHROME:
+		ImgSaver.saveImageKC852Monochrome( image, file );
+		break;
+	      case IMG_KC854_MONOCHROME:
+		ImgSaver.saveImageKC854Monochrome( image, file );
+		break;
+	      case IMG_KC854_HIRES:
+		ImgSaver.saveImageKC854Hires( image, file );
+		break;
+	      case IMG_LLC2_HIRES:
 		ImgUtil.writeToFile( entry.getMemBytes(), file );
 		break;
 	      case APP_AC1:
@@ -1082,10 +1159,17 @@ public class ImageFrm extends AbstractImageFrm implements
 		  ImgSaver.saveAppAC1SCCH( entry.getMemBytes(), file );
 		}
 		break;
-	      case APP_KC854HIRES:
-		ImgSaver.saveAppKC854Hires( image, file );
+	      case APP_KC852:
+		ImgSaver.saveAppKC852BW( image, file );
 		break;
-	      case APP_LLC2HIRES:
+	      case APP_KC854:
+		if( entry.isKC854HiresFormat() ) {
+		  ImgSaver.saveAppKC854Hires( image, file );
+		} else {
+		  ImgSaver.saveAppKC854LowresBW( image, file );
+		}
+		break;
+	      case APP_LLC2_HIRES:
 		ImgSaver.saveAppLLC2Hires( entry.getMemBytes(), file );
 		break;
 	      case APP_Z1013:
@@ -1127,7 +1211,7 @@ public class ImageFrm extends AbstractImageFrm implements
 			+ this.mnuEdit.getText()
 			+ "\" \u2192 \""
 			+ this.mnuConvert.getText() + "\"\n"
-			+ "in das " + formatText + "Format umwandeln,\n"
+			+ "in das entsprechende Format umwandeln,\n"
 			+ "bevor Sie es in dem Format exportieren"
 			+ " k\u00F6nnen.\n"
 			+ "Lesen Sie dazu bitte auch die Hinweise"
@@ -1783,25 +1867,49 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  private void doToKC854Hires()
+  private void doToKC85Monochrome()
   {
     ImgEntry entry = getCurImgEntry();
     if( entry != null ) {
-      if( entry.isKC854HiresFormat() && isUnrotated() ) {
+      if( entry.isKC85MonochromeFormat() && isUnrotated() ) {
 	BaseDlg.showInfoDlg(
-			this,
-			"Das Bild ist bereits im KC85/4-HIRES-Format." );
+		this,
+		"Das Bild ist bereits im KC85/2..5-Format ohne Farben." );
       } else {
 	showImageInternal(
 		drawImageTo(
 			entry.getImage(),
 			null,
-			new BufferedImage(
-				ImgUtil.KC85_W,
-				ImgUtil.KC85_H,
-				BufferedImage.TYPE_BYTE_BINARY,
-				ImgUtil.getColorModelKC854Hires() ) ),
-		ImgEntry.Mode.KC854HIRES,
+			ImgUtil.createBlackKC85BWImage() ),
+		ImgEntry.Mode.MONOCHROME,
+		ImgFld.Rotation.NONE,
+		null,
+		TEXT_KC85MONO_FMT,
+		false,
+		null,
+		null );
+      }
+    }
+  }
+
+
+  private void doToKC854Hires()
+  {
+    ImgEntry entry = getCurImgEntry();
+    if( entry != null ) {
+      if( (entry.isKC854HiresFormat() || entry.isKC85MonochromeFormat())
+	  && isUnrotated() )
+      {
+	BaseDlg.showInfoDlg(
+			this,
+			"Das Bild ist bereits im KC85/4,5-HIRES-Format." );
+      } else {
+	showImageInternal(
+		drawImageTo(
+			entry.getImage(),
+			null,
+			ImgUtil.createBlackKC854HiresImage() ),
+		ImgEntry.Mode.KC854_HIRES,
 		ImgFld.Rotation.NONE,
 		null,
 		TEXT_KC854HIRES_FMT,
@@ -1960,6 +2068,18 @@ public class ImageFrm extends AbstractImageFrm implements
     this.mnuExpImgA5105 = createJMenuItem( "A5105-Bilddatei..." );
     mnuExp.add( this.mnuExpImgA5105 );
 
+    this.mnuExpImgKC852Monochrome = createJMenuItem(
+				"KC85/2,3-Bilddatei ohne Farben..." );
+    mnuExp.add( this.mnuExpImgKC852Monochrome );
+
+    this.mnuExpImgKC854Monochrome = createJMenuItem(
+				"KC85/4,5-Bilddatei ohne Farben..." );
+    mnuExp.add( this.mnuExpImgKC854Monochrome );
+
+    this.mnuExpImgKC854Hires = createJMenuItem(
+					"KC85/4,5-HIRES-Bilddatei..." );
+    mnuExp.add( this.mnuExpImgKC854Hires );
+
     this.mnuExpImgLLC2Hires = createJMenuItem(
 					"LLC2-HIRES-Bilddatei..." );
     mnuExp.add( this.mnuExpImgLLC2Hires );
@@ -1983,8 +2103,11 @@ public class ImageFrm extends AbstractImageFrm implements
     this.mnuExpAppAC1 = createJMenuItem( "AC1..." );
     mnuExpApp.add( this.mnuExpAppAC1 );
 
-    this.mnuExpAppKC854Hires = createJMenuItem( "KC85/4..." );
-    mnuExpApp.add( this.mnuExpAppKC854Hires );
+    this.mnuExpAppKC852 = createJMenuItem( "KC85/2,3..." );
+    mnuExpApp.add( this.mnuExpAppKC852 );
+
+    this.mnuExpAppKC854 = createJMenuItem( "KC85/4,5..." );
+    mnuExpApp.add( this.mnuExpAppKC854 );
 
     this.mnuExpAppLLC2Hires = createJMenuItem( "LLC2..." );
     mnuExpApp.add( this.mnuExpAppLLC2Hires );
@@ -2117,6 +2240,9 @@ public class ImageFrm extends AbstractImageFrm implements
 
     this.mnuToAC1_2010 = createJMenuItem( TEXT_AC1_2010_FMT );
     this.mnuConvert.add( this.mnuToAC1_2010 );
+
+    this.mnuToKC85Monochrome = createJMenuItem( TEXT_KC85MONO_FMT );
+    this.mnuConvert.add( this.mnuToKC85Monochrome );
 
     this.mnuToKC854Hires = createJMenuItem( TEXT_KC854HIRES_FMT );
     this.mnuConvert.add( this.mnuToKC854Hires );
@@ -2765,9 +2891,13 @@ public class ImageFrm extends AbstractImageFrm implements
     this.btnRotateRight.setEnabled( state );
     this.mnuSaveAs.setEnabled( state );
     this.mnuExpImgA5105.setEnabled( state );
+    this.mnuExpImgKC852Monochrome.setEnabled( state );
+    this.mnuExpImgKC854Monochrome.setEnabled( state );
+    this.mnuExpImgKC854Hires.setEnabled( state );
     this.mnuExpImgLLC2Hires.setEnabled( state );
     this.mnuExpAppAC1.setEnabled( state );
-    this.mnuExpAppKC854Hires.setEnabled( state );
+    this.mnuExpAppKC852.setEnabled( state );
+    this.mnuExpAppKC854.setEnabled( state );
     this.mnuExpAppLLC2Hires.setEnabled( state );
     this.mnuExpAppZ1013.setEnabled( state );
     this.mnuExpAppZ9001.setEnabled( state );
@@ -2798,6 +2928,7 @@ public class ImageFrm extends AbstractImageFrm implements
     this.mnuToAC1_ACC.setEnabled( state );
     this.mnuToAC1_SCCH.setEnabled( state );
     this.mnuToAC1_2010.setEnabled( state );
+    this.mnuToKC85Monochrome.setEnabled( state );
     this.mnuToKC854Hires.setEnabled( state );
     this.mnuToLLC2Hires21.setEnabled( state );
     this.mnuToLLC2Hires43.setEnabled( state );

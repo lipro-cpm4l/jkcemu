@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -1124,19 +1124,25 @@ public class Z80Reassembler
 	return new Z80ReassInstr(
 			4, getShiftName( b3 ), getIXYMem( ixy, b2 ) );
       } else {
+	String instrName = getShiftName( b3 );
+	if( !instrName.startsWith( "*" ) ) {
+	  instrName = "*" + instrName;
+	}
 	return new Z80ReassInstr(
 			4,
-			"*LD",
-			getRegName( b3 ),
-			getShiftName( b3 ) + getIXYMem( ixy, b2 ) );
+			instrName,
+			String.format(
+				"%s,%s",
+				getIXYMem( ixy, b2 ),
+				getRegName( b3 ) ) );
       }
     }
 
     String instrName = "BIT";
     if( (b3 >= 0x40) && (b3 <= 0x7F) ) {
-      if( ((b3 & 0x0F) != 0x06) && ((b3 & 0x0F) != 0x0E) )
+      if( ((b3 & 0x0F) != 0x06) && ((b3 & 0x0F) != 0x0E) ) {
 	instrName = "*BIT";
-
+      }
       return new Z80ReassInstr(
 			4,
 			instrName,
@@ -1152,15 +1158,17 @@ public class Z80Reassembler
 			String.valueOf( (b3 >> 3) & 0x07 ),
 			getIXYMem( ixy, b2 ) );
     }
+    if( !instrName.startsWith( "*" ) ) {
+      instrName = "*" + instrName;
+    }
     return new Z80ReassInstr(
 			4,
-			"*LD",
-			getRegName( b3 ),
+			instrName,
 			String.format(
-				"%s %d,%s",
-				instrName,
+				"%d,%s,%s",
 				(b3 >> 3) & 0x07,
-				getIXYMem( ixy, b2 ) ) );
+				getIXYMem( ixy, b2 ),
+				getRegName( b3 ) ) );
   }
 
 

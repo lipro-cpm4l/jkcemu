@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -258,7 +258,7 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
     buf.append( "<h1>H&uuml;bler-Grafik-MC Status</h1>\n"
 	+ "<table border=\"1\">\n"
 	+ "<tr><td>ROM:</td><td>" );
-    buf.append( this.romEnabled ? "ein" : "aus" );
+    EmuUtil.appendOnOffText( buf, this.romEnabled );
     buf.append( "</td></tr>\n"
 	+ "<tr><td>Bildwiederholspeicher:</td><td>" );
     buf.append(
@@ -276,6 +276,9 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
   {
     super.applySettings( props );
     checkAddPCListener( props );
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
   }
 
 
@@ -655,11 +658,11 @@ public class HueblerGraphicsMC extends AbstractHueblerMC
 		&& (begAddr <= 0x3770)
 		&& ((begAddr + len) > 0x3777)) )
       {
-	int topAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x3770 );
-	if( topAddr > 0x3770 ) {
-	  this.emuThread.setMemWord( 0x0199, topAddr );
-	  this.emuThread.setMemWord( 0x019B, topAddr );
-	  this.emuThread.setMemWord( 0x019D, topAddr );
+	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x3770 ) + 1;
+	if( tAddr > 0x3770 ) {
+	  this.emuThread.setMemWord( 0x0199, tAddr );
+	  this.emuThread.setMemWord( 0x019B, tAddr );
+	  this.emuThread.setMemWord( 0x019D, tAddr );
 	}
       }
     }

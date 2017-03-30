@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -569,23 +569,14 @@ public class LastModifiedDlg extends BaseDlg
 
 	// Dateiattribute setzen
 	if( attrs != null ) {
-	  boolean failed = false;
 	  for( String s : attrs.keySet() ) {
 	    Object v = attrs.get( s );
 	    if( v != null ) {
 	      try {
 		Files.setAttribute( file, s, v, LinkOption.NOFOLLOW_LINKS );
 	      }
-	      catch( Exception ex ) {
-		failed = true;
-	      }
+	      catch( Exception ex ) {}
 	    }
-	  }
-	  if( failed ) {
-	    fireAppendToLog(
-		file.toString() + ":\n"
-			+ "Die urspr\u00FCnglichen Dateiattribute"
-			+ " konnten nicht wieder hergestellt werden." );
 	  }
 	}
       }

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,6 +25,7 @@ import jkcemu.emusys.A5105;
 import jkcemu.emusys.AC1;
 import jkcemu.emusys.BCS3;
 import jkcemu.emusys.C80;
+import jkcemu.emusys.CustomSys;
 import jkcemu.emusys.HueblerEvertMC;
 import jkcemu.emusys.HueblerGraphicsMC;
 import jkcemu.emusys.KC85;
@@ -185,6 +186,7 @@ public class EmuThread extends Thread implements
 	case LC80.SYSNAME_LC80_2716:
 	case LC80.SYSNAME_LC80_2:
 	case LC80.SYSNAME_LC80_E:
+	case LC80.SYSNAME_LC80_EX:
 	  emuSys = new LC80( this, props );
 	  break;
 	case LLC1.SYSNAME:
@@ -219,6 +221,9 @@ public class EmuThread extends Thread implements
 	  break;
 	case ZXSpectrum.SYSNAME:
 	  emuSys = new ZXSpectrum( this, props );
+	  break;
+	case CustomSys.SYSNAME:
+	  emuSys = new CustomSys( this, props );
 	  break;
 	default:
 	  emuSys = new A5105( this, props );
@@ -360,6 +365,7 @@ public class EmuThread extends Thread implements
 	case LC80.SYSNAME_LC80_2716:
 	case LC80.SYSNAME_LC80_2:
 	case LC80.SYSNAME_LC80_E:
+	case LC80.SYSNAME_LC80_EX:
 	  rv = LC80.getDefaultSpeedKHz( props );
 	  break;
 	case LLC1.SYSNAME:
@@ -399,6 +405,9 @@ public class EmuThread extends Thread implements
 	  break;
 	case ZXSpectrum.SYSNAME:
 	  rv = ZXSpectrum.getDefaultSpeedKHz( props );
+	  break;
+	case CustomSys.SYSNAME:
+	  rv = CustomSys.getDefaultSpeedKHz( props );
 	  break;
       }
     }
@@ -915,13 +924,9 @@ public class EmuThread extends Thread implements
 	    }
 	  }
 	} else {
-	  if( (this.resetLevel == ResetLevel.COLD_RESET)
-	      || (this.resetLevel == ResetLevel.POWER_ON) )
-	  {
-	    this.z80cpu.resetCPU( true );
-	  } else {
-	    this.z80cpu.resetCPU( false );
-	  }
+	  boolean coldReset = (this.resetLevel == ResetLevel.COLD_RESET)
+				|| (this.resetLevel == ResetLevel.POWER_ON);
+	  this.z80cpu.resetCPU( coldReset );
 	  if( this.emuSys != null ) {
 	    this.emuSys.reset( this.resetLevel, Main.getProperties() );
 	    this.z80cpu.setRegPC(
@@ -950,11 +955,15 @@ public class EmuThread extends Thread implements
 	    }
 	  }
 
-	  // AutoLoader starten
-	  AutoLoader.start( this, Main.getProperties() );
-
-	  // AutoInputWorker starten
-	  AutoInputWorker.start( this, Main.getProperties() );
+	  // AutoLoader und AutoInputWorker starten
+	  boolean autoLoadInput = coldReset;
+	  if( !coldReset && (this.emuSys != null) ) {
+	    autoLoadInput = this.emuSys.getAutoLoadInputOnSoftReset();
+	  }
+	  if( autoLoadInput ) {
+	    AutoLoader.start( this, Main.getProperties() );
+	    AutoInputWorker.start( this, Main.getProperties() );
+	  }
 
 	  // Fenster informieren
 	  final Frame[] frms = Frame.getFrames();

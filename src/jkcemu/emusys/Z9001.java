@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -436,11 +436,14 @@ public class Z9001 extends EmuSys implements
 	iSources.toArray( new Z80InterruptSource[ iSources.size() ] ) );
     }
     catch( ArrayStoreException ex ) {}
+    this.ctc80.setTimerConnection( 2, 3 );
+    this.ctc80.addCTCListener( this );
     if( this.sioB0 != null ) {
       this.sioB0.addChannelListener( this, 0 );
     }
-    this.ctc80.setTimerConnection( 2, 3 );
-    this.ctc80.addCTCListener( this );
+    if( this.ctcA8 != null ) {
+      this.ctcA8.addCTCListener( this );
+    }
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     checkAddPCListener( props );
@@ -576,6 +579,12 @@ public class Z9001 extends EmuSys implements
       this.tapeOutPhase = !this.tapeOutPhase;
       updLoudspeaker( this.pio88.fetchOutValuePortA( false ) );
     }
+    else if( (ctc == this.ctcA8) && (timerNum == 0)
+	     && (this.sioB0 != null) )
+    {
+      this.sioB0.clockPulseSenderA();
+      this.sioB0.clockPulseReceiverA();
+    }
   }
 
 
@@ -595,10 +604,13 @@ public class Z9001 extends EmuSys implements
 	/* --- Z80SIOChannelListener --- */
 
   @Override
-  public void z80SIOChannelByteAvailable( Z80SIO sio, int channel, int value )
+  public void z80SIOByteSent( Z80SIO sio, int channel, int value )
   {
-    if( this.printerModule && (sio == this.sioB0) && (channel == 0) )
+    if( this.printerModule && (sio == this.sioB0) && (channel == 0) ) {
       this.emuThread.getPrintMngr().putByte( value );
+      this.sioB0.setClearToSendA( false );
+      this.sioB0.setClearToSendA( true );
+    }
   }
 
 
@@ -880,6 +892,9 @@ public class Z9001 extends EmuSys implements
       this.sioB0.removeChannelListener( this, 0 );
     }
     this.ctc80.removeCTCListener( this );
+    if( this.ctcA8 != null ) {
+      this.ctcA8.removeCTCListener( this );
+    }
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeMaxSpeedListener( this );
@@ -1759,8 +1774,8 @@ public class Z9001 extends EmuSys implements
       if( (this.romBoot != null) || (this.romMega != null) ) {
 	/*
 	 * Der originale DRAM enthaelt nach dem Einschalten
-	 * abwechselnd die Bytes FF und 00.
-	 * Wenn nur 00-Bytes vorhanden sind,
+	 * abwechselnd die Bytes FFh und 00h.
+	 * Wenn nur Nullbytes vorhanden sind,
 	 * wird der ROM-Modul nicht aktiviert.
 	 * Aus diesem diesem Grund wird hier das originale Byte-Muster
 	 * nachgebildet.
@@ -1794,6 +1809,8 @@ public class Z9001 extends EmuSys implements
     }
     if( this.sioB0 != null ) {
       this.sioB0.reset( coldReset );
+      this.sioB0.setClearToSendA( true );
+      this.sioB0.setClearToSendB( true );
     }
     if( this.fdc != null ) {
       this.fdc.reset( coldReset );
@@ -2915,7 +2932,7 @@ public class Z9001 extends EmuSys implements
   private boolean isFixedScreenSize( Properties props )
   {
     return this.c80Enabled
-	   && EmuUtil.parseBooleanProperty(
+	   && EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + PROP_FIXED_SCREEN_SIZE,
 			false );

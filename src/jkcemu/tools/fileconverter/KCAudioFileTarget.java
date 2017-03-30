@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -134,12 +134,11 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 	  blkNum    = 1;
 	} else if( this.target.equals( Target.KCBASIC_PRG ) ) {
 	  String s = this.fileConvertFrm.getFileDesc( true );
-	  byte[] m = new byte[ 13 + len ];
-	  m[ 0 ] = (byte) 0xD3;
-	  m[ 1 ] = (byte) 0xD3;
-	  m[ 2 ] = (byte) 0xD3;
-
-	  int p = 0;
+	  byte[] m = new byte[ 14 + len ];
+	  int    p = 0;
+	  m[ p++ ] = (byte) 0xD3;
+	  m[ p++ ] = (byte) 0xD3;
+	  m[ p++ ] = (byte) 0xD3;
 	  if( s != null ) {
 	    int l = s.length();
 	    int i = 0;
@@ -153,8 +152,9 @@ public class KCAudioFileTarget extends AbstractConvertTarget
 	  m[ p++ ] = (byte) len;
 	  m[ p++ ] = (byte) (len >> 8);
 	  System.arraycopy( this.dataBytes, this.offs, m, p, len );
-	  fileBytes = m;
-	  blkNum    = 1;
+	  m[ 13 + len ] = (byte) 0x03;
+	  fileBytes     = m;
+	  blkNum        = 1;
 	}
       }
     }

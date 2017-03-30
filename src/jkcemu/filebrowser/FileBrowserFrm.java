@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -61,6 +61,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JMenuItem;
@@ -82,6 +84,7 @@ import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeWillExpandListener;
+import javax.swing.filechooser.FileSystemView;
 import javax.swing.table.TableModel;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultTreeSelectionModel;
@@ -131,12 +134,14 @@ public class FileBrowserFrm
 
   private ScreenFrm            screenFrm;
   private FileActionMngr       fileActionMngr;
+  private FileSystemView       fsv;
   private JMenuItem            mnuFileCreateDir;
   private JMenuItem            mnuFileFind;
   private JMenuItem            mnuFileRefresh;
   private JMenuItem            mnuFileClose;
   private JMenuItem            mnuEditCut;
   private JMenuItem            mnuEditPaste;
+  private JCheckBoxMenuItem    mnuPhysFileSys;
   private JCheckBoxMenuItem    mnuHiddenFiles;
   private JCheckBoxMenuItem    mnuSortCaseSensitive;
   private JRadioButtonMenuItem mnuNoPreview;
@@ -259,7 +264,9 @@ public class FileBrowserFrm
 	  try {
 	    e.startDrag( null, new FileListSelection( files ), this );
 	  }
-	  catch( InvalidDnDOperationException ex ) {}
+	  catch( Exception ex ) {
+	    BaseDlg.showErrorDlg( this, ex );
+	  }
 	}
       }
     }
@@ -399,7 +406,7 @@ public class FileBrowserFrm
 	    if( o instanceof Collection ) {
 	      Collection files = (Collection) o;
 
-	      // Pruefung und Sicherheitsanfrage
+	      // Pruefung und Sicherheitsabfrage
 	      boolean status    = true;
 	      File    srcFile   = null;
 	      int     nSrcFiles = 0;
@@ -424,10 +431,36 @@ public class FileBrowserFrm
 		  if( srcDir != null ) {
 		    try {
 		      if( EmuUtil.equals( srcDir, dstPath.toFile() ) ) {
-			BaseDlg.showErrorDlg(
-			  this,
-			  "Verschieben im selben Verzeichnis"
-				  + " ist nicht m\u00F6glich." );
+			/*
+			 * Fehlermeldung nur anzeigen, wenn der Mauszeiger
+			 * nicht mehr ueber der Quelldatei steht.
+			 */
+			boolean msgState = true;
+			Point   point    = e.getLocation();
+			if( point != null ) {
+			  TreePath tp = this.tree.getPathForLocation(
+								point.x,
+								point.y );
+			  if( tp != null ) {
+			    Object o1 = tp.getLastPathComponent();
+			    if( o1 != null ) {
+			      if( o1 instanceof FileNode ) {
+				File tmpFile = ((FileNode) o1).getFile();
+				if( tmpFile != null ) {
+				  if( EmuUtil.equals( srcFile, tmpFile ) ) {
+				    msgState = false;
+				  }
+				}
+			      }
+			    }
+			  }
+			}
+			if( msgState ) {
+			  BaseDlg.showErrorDlg(
+			  	this,
+			  	"Verschieben im selben Verzeichnis"
+					  + " ist nicht m\u00F6glich." );
+			}
 			status = false;
 		      }
 		    }
@@ -647,16 +680,6 @@ public class FileBrowserFrm
   {
     boolean rv = super.applySettings( props, resizable );
     if( !isVisible() ) {
-      this.mnuHiddenFiles.setSelected(
-		EmuUtil.parseBooleanProperty(
-				props,
-				PROP_SHOW_HIDDEN_FILES,
-				false ) );
-      this.mnuSortCaseSensitive.setSelected(
-		EmuUtil.parseBooleanProperty(
-				props,
-				PROP_SORT_CASE_SENSITIVE,
-				false ) );
       String previewMaxFileSize = null;
       if( props != null ) {
 	previewMaxFileSize = props.getProperty(
@@ -679,10 +702,9 @@ public class FileBrowserFrm
       } else {
 	this.mnuPreviewNoFileSizeLimit.setSelected( true );
       }
-      int splitPos = EmuUtil.parseIntProperty(
+      int splitPos = EmuUtil.getIntProperty(
 				props,
 				PROP_SPLIT_POSITION,
-				-1,
 				-1 );
       if( splitPos >= 0 ) {
 	this.splitPane.setDividerLocation( splitPos );
@@ -700,7 +722,37 @@ public class FileBrowserFrm
 	  this.splitPane.setDividerLocation( xDiv );
 	}
       }
-      doFileRefresh();
+    }
+    boolean changed = false;
+    boolean state   = EmuUtil.getBooleanProperty(
+				props,
+				PROP_SHOW_HIDDEN_FILES,
+				false );
+    if( state != this.mnuHiddenFiles.isSelected() ) {
+      this.mnuHiddenFiles.setSelected( state );
+      changed = true;
+    }
+    state = EmuUtil.getBooleanProperty(
+				props,
+				PROP_SORT_CASE_SENSITIVE,
+				File.separatorChar == '/' );
+    if( state != this.mnuSortCaseSensitive.isSelected() ) {
+      this.mnuSortCaseSensitive.setSelected( state );
+      changed = true;
+    }
+    if( this.mnuPhysFileSys != null ) {
+      state = EmuUtil.getBooleanProperty(
+				props,
+				EmuUtil.PROP_SHOW_PHYS_FILESYS,
+				false );
+      if( state != this.mnuPhysFileSys.isSelected() ) {
+	this.mnuPhysFileSys.setSelected( state );
+	this.rootNode.setFileSystemView( state ? this.fsv : null );
+	changed = true;
+      }
+    }
+    if( changed ) {
+      refreshNode( this.rootNode );
     }
     return rv;
   }
@@ -750,11 +802,17 @@ public class FileBrowserFrm
 	    rv = true;
 	    doEditPaste();
 	  }
-	  else if( (src == this.mnuHiddenFiles)
-		   || (src == this.mnuSortCaseSensitive) )
-	  {
+	  else if( src == this.mnuHiddenFiles ) {
 	    rv = true;
-	    doFileRefresh();
+	    doSettingsHiddenFiles();
+	  }
+	  else if( src == this.mnuPhysFileSys ) {
+	    rv = true;
+	    doSettingsPhysFileSys();
+	  }
+	  else if( src == this.mnuSortCaseSensitive ) {
+	    rv = true;
+	    doSettingsSortCaseSensitive();
 	  }
 	  else if( src == this.mnuHelpContent ) {
 	    rv = true;
@@ -1043,8 +1101,18 @@ public class FileBrowserFrm
       if( (parent != null) && (file != null) ) {
 	File dirFile = EmuUtil.createDir( this, file );
 	if( dirFile != null ) {
-	  if( parent instanceof FileNode ) {
-	    refreshNode( (FileNode) parent );
+	  boolean selected = false;
+	  try {
+	    this.rootNode.refreshNodeFor(
+				file.toPath(),
+				this.treeModel,
+				this.mnuHiddenFiles.isSelected(),
+				getFileTreeNodeComparator() );
+	  }
+	  catch( InvalidPathException ex ) {
+	    if( parent instanceof FileNode ) {
+	      refreshNode( (FileNode) parent );
+	    }
 	  }
 	  fireSelectNode( parent, dirFile );
 	  updActionButtons();
@@ -1076,12 +1144,47 @@ public class FileBrowserFrm
   }
 
 
+  private void doSettingsHiddenFiles()
+  {
+    EmuUtil.setProperty(
+		Main.getProperties(),
+		PROP_SHOW_HIDDEN_FILES,
+		this.mnuHiddenFiles.isSelected() );
+    refreshNode( this.rootNode );
+  }
+
+
+  private void doSettingsPhysFileSys()
+  {
+    if( this.mnuPhysFileSys != null ) {
+      boolean state = this.mnuPhysFileSys.isSelected();
+      EmuUtil.setProperty(
+		Main.getProperties(),
+		EmuUtil.PROP_SHOW_PHYS_FILESYS,
+		state );
+      this.rootNode.setFileSystemView( state ? null : this.fsv );
+      refreshNode( this.rootNode );
+    }
+  }
+
+
+  private void doSettingsSortCaseSensitive()
+  {
+    EmuUtil.setProperty(
+		Main.getProperties(),
+		PROP_SORT_CASE_SENSITIVE,
+		this.mnuSortCaseSensitive.isSelected() );
+    refreshNode( this.rootNode );
+  }
+
+
 	/* --- Konstruktor --- */
 
   private FileBrowserFrm( ScreenFrm screenFrm )
   {
     this.screenFrm             = screenFrm;
     this.fileActionMngr        = new FileActionMngr( this, screenFrm, this );
+    this.fsv                   = EmuUtil.getDifferentLogicalFileSystemView();
     this.ignoreFlavorEvent     = false;
     this.pasteState            = false;
     this.lastActiveFld         = null;
@@ -1161,15 +1264,26 @@ public class FileBrowserFrm
     JMenu mnuSettings = new JMenu( "Einstellungen" );
     mnuSettings.setMnemonic( KeyEvent.VK_E );
 
+    this.mnuPhysFileSys = null;
+    if( this.fsv != null ) {
+      this.mnuPhysFileSys = new JCheckBoxMenuItem(
+		"Physische Dateisystemstruktur anzeigen",
+		Main.getBooleanProperty(
+				EmuUtil.PROP_SHOW_PHYS_FILESYS,
+				false ) );
+      this.mnuPhysFileSys.addActionListener( this );
+      mnuSettings.add( this.mnuPhysFileSys );
+    }
+
     this.mnuHiddenFiles = new JCheckBoxMenuItem(
-					"Versteckte Dateien anzeigen",
-					false );
+		"Versteckte Dateien anzeigen",
+		Main.getBooleanProperty( PROP_SHOW_HIDDEN_FILES, false ) );
     this.mnuHiddenFiles.addActionListener( this );
     mnuSettings.add( this.mnuHiddenFiles );
 
     this.mnuSortCaseSensitive = new JCheckBoxMenuItem(
-			"Gro\u00DF-/Kleinschreibung bei Sortierung beachten",
-			true );
+		"Gro\u00DF-/Kleinschreibung bei Sortierung beachten",
+		Main.getBooleanProperty( PROP_SORT_CASE_SENSITIVE, false ) );
     this.mnuSortCaseSensitive.addActionListener( this );
     mnuSettings.add( this.mnuSortCaseSensitive );
     mnuSettings.addSeparator();
@@ -1261,7 +1375,11 @@ public class FileBrowserFrm
     selModel.setSelectionMode(
 		TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION );
 
-    this.rootNode = new FileNode( null, null, true );
+    this.rootNode = new FileNode( null, null, null, true, null );
+    if( this.mnuPhysFileSys != null ) {
+      this.rootNode.setFileSystemView(
+		this.mnuPhysFileSys.isSelected() ? null : this.fsv );
+    }
     this.rootNode.refresh(
 			null,
 			this.mnuHiddenFiles.isSelected(),
@@ -1776,19 +1894,21 @@ public class FileBrowserFrm
   private void refreshNodeFor( Path path )
   {
     if( path != null ) {
-      final FileNode node = this.rootNode.refreshNodeFor(
+      Collection<FileNode> nodes = this.rootNode.refreshNodeFor(
 				path,
 				this.treeModel,
-				false,
 				this.mnuHiddenFiles.isSelected(),
 				getFileTreeNodeComparator() );
 
-      if( node != null ) {
+      if( nodes != null ) {
 	if( this.tree.getSelectionCount() == 1 ) {
 	  Object o = this.tree.getLastSelectedPathComponent();
 	  if( o != null ) {
-	    if( o.equals( node ) ) {
-	      setPreviewedFileNode( node );
+	    for( FileNode node : nodes ) {
+	      if( o.equals( node ) ) {
+		setPreviewedFileNode( node );
+		break;
+	      }
 	    }
 	  }
 	}

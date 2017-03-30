@@ -116,6 +116,7 @@ James A. Woods, Joe Orost, David Rowley:
 - Mario Leubner (CAOS 4.5 und EDAS fuer KC85/5,
   D004-ROM-Versionen 3.2 und 3.3 sowie USB-Software)
 - Ralf Kaestner (KCNet-Software)
+- Rolf Weidlich (LCTools und BASIC-Adaption fuer LC-80ex)
 - Torsten Musiol (Maschinenkode-Editor fuer BCS3)
 - Ulrich Zander (Treiberanpassungen fuer A5105, KC81/1, KC87 und Z9001)
 
@@ -135,10 +136,11 @@ James A. Woods, Joe Orost, David Rowley:
    z.B. unter Linux/Unix nach "/tmp" oder unter Windows nach "C:\".
 4. Starten Sie JKCEMU
    - unter Linux/Unix mit: "java -jar /tmp/jkcemu.jar"
-   - unter Windows in der DOS-Box mit: "javaw.exe -jar C:\jkcemu.jar"
+   - unter Windows in der Eingabeaufforderung mit:
+     "javaw.exe -jar C:\jkcemu.jar"
 5. Legen Sie auf dem Desktop eine "Verknuepfung zu einem Programm" an,
-   und tragen dort die in der Console/DOS-Box erfolgreich verwendete
-   Kommandozeile ein.
+   und tragen dort die in der Console bzw. Eingabeaufforderung
+   erfolgreich verwendete Kommandozeile ein.
 
 
 6. Compilieren
@@ -150,7 +152,7 @@ Moechten Sie den Quelltext compilieren, sind folgende Schritte notwendig:
 2. Wechseln Sie in das cmd-Verzeichnis des JKCEMU-Quelltextes
 3. Compilieren Sie
    - unter Linux/Unix mit: "./compile"
-   - unter Windows in der DOS-Box mit: "compile.bat"
+   - unter Windows in der Eingabeaufforderung mit: "compile.cmd"
 
 Alternativ koennen Sie auch mit "ant" compilieren.
 Die dazu notwendige Datei build.xml finden Sie im Wurzelverzeichnis
@@ -188,7 +190,7 @@ Besonders bedanken moechte ich mich bei:
   des VCS80- und der BCS3-ROM-Images im JKCEMU
 - Enrico Graemer fuer die Bereitstellung von Material zum KC compact
 - Frank Pruefer fuer die freundliche Genehmigung zur Integration
-  von S/P-BASIC 3.3 im JKCEMU und fuer die Unterstuetzung
+  von S/P-BASIC 3.3 im JKCEMU sowie fuer die Unterstuetzung
   bei der BCS3-Emulation
 - Gunar Haenke fuer seine Hilfe bei der AC1- und Diskettenemulation
 - Heiko Poppe fuer die freundliche Genehmigung zur Integration
@@ -205,10 +207,10 @@ Besonders bedanken moechte ich mich bei:
   (CRC-Berechnung fuer das CopyQM-Dateiformat)
 - Joerg Felgentreu fuer seine Unterstuetzung bei der A5105-Emulation
 - Juergen Helas fuer das intensive Testen des Assemblers und Reassemblers
+- Klaus Junge fuer die Unterstuetzung bei der NANOS-Emulation
 - Klaus Wilfling fuer die freundliche Genehmigung zur Integration
   des von Ihm um Farbfunktionalitaet erweiterten EPOS
   sowie fuer die Unterstuetzung bei der NANOS-Emulation
-- Klaus Junge fuer die Unterstuetzung bei der NANOS-Emulation
 - Manfred Kramer fuer die freundliche Genehmigung zur Integration
   der Systemsoftware des Kramer-MC im JKCEMU
 - Mario Leubner fuer die freundliche Genehmigung zur Integration
@@ -226,7 +228,10 @@ Besonders bedanken moechte ich mich bei:
 - Ralph Haensel fuer seine umfangreiche Hilfe
   bei der AC1-, Disketten-, Festplatten- und USB-Emulation
 - Rene Nitzsche fuer die leihweise Bereitstellung eines KC85/5
-- Rolf Weidlich fuer die Unterstuetzung bei der AC1-, LLC1- und LLC2-Emulation
+- Rolf Weidlich fuer die freundliche Genehmigung zur Integration
+  seiner LC-80ex-Software (LCTools und BASIC-Adaption)
+  sowie  fuer die Unterstuetzung bei der AC1-, LC-80-,
+  LLC1- und LLC2-Emulation
 - Siegfried Schenk fuer die Bereitstellung von Informationen
   und Software zum LLC2 und zu den SCCH-Modulen
 - Steffen Gruhn fuer seine Hilfe bei der A5105- und KC-compact-Emulation

@@ -1,0 +1,253 @@
+<html>
+<body>
+ <h1>Benutzerdefinierter Computer</h1>
+  Bei dem benutzerdefinierten Computer k&ouml;nnen Sie in gewissen Grenzen
+  selbst einen Computer virtuell zusammenbauen, der dann emuliert wird.
+  Im Grundausbau besitzt der Computer eine Z80&nbsp;CPU
+  und 64&nbsp;KByte RAM.
+  In den <a href="settings.htm">Einstellungen</a>
+  k&ouml;nnen Sie weitere Hardware-Komponenten hinzuf&uuml;gen,
+  die nachfolgend beschrieben werden.
+ <br/><br/>
+  <b>Achtung!</b> Es lassen sich nicht alle m&ouml;glichen
+  Hardware-Varianten nachbilden,
+  sondern nur gewisse &uuml;bliche Standardbeschaltungen.
+ <br/><br/>
+  <ul>
+   <li><a href="customsys.htm#rom">ROM</a></li>
+   <li><a href="customsys.htm#screen">Bildschirmausgabe</a></li>
+   <li><a href="customsys.htm#keyboard">Tastatur</a></li>
+   <li><a href="customsys.htm#io">E/A-Bausteine</a></li>
+   <li><a href="customsys.htm#fdc">FDC (Floppy Disk Controller)</a></li>
+   <li><a href="customsys.htm#gide">GIDE (Festplatten)</a></li>
+  </ul>
+ <br/>
+
+ <h2><a name="rom">ROM</a></h2>
+  Sie k&ouml;nnen beliebig viele ROM-Bereiche definieren,
+  auch im gleichen Adressbereich liegende.
+  Den ROM-Inhalt legen Sie durch Auswahl einer entsprechenden Datei fest.
+  Wird keine Datei angegeben, enth&auml;t der ROM-Bereich FFh-Bytes.
+ <br/><br/>
+  Jeder ROM-Bereich kann optional schaltbar sein,
+  d.h. entweder nur ausblendbar oder aus- und einblendbar.
+  Dazu m&uuml;ssen Sie E/A-Adresse angeben,
+  &uuml;ber die das Ein- und Ausblenden geschieht.
+  Ist der ROM-Bereich nur ausblendbar,
+  bewirkt ein Ausgabebefehl auf diese Adresse unabh&auml;gig
+  vom ausgegebenen Wert das Ausblenden.
+  Bei einem ein- und ausblenbaren ROM muss ein Bit sowie die Aktivit&auml;t
+  (H- oder L-aktiv) angegeben werden, mit dem geschaltet wird.
+ <br/><br/>
+  Die Programmausf&uuml;hrung nach RESET startet gew&ouml;hnlich
+  bei Adresse 0000h.
+  Wenn der zu emulierende Computer eine andere Startadresse hat,
+  dann markieren Sie den ROM,
+  bei dem die Programmausf&uuml;hrung beginnen soll, als Boot-ROM.
+ <br/><br/>
+  Beim Lesen aus einem ROM-Bereich wird die Liste der ROMs
+  von oben nach unten durchgegangen und der erste passende ROM,
+  d.h. der an der betreffenden Adresse eingeblendet ist, genommen.
+  Wenn also mehrere ROMs im gleichen Adressbereich definiert
+  und auch eingeblendet sind, wird aus dem ersten gelesen.
+ <br/><br/>
+  Im benutzerdefinierten Computer sind die ROMs durchschreibend,
+  d.h., bei einem Schreibzugriff auf eine ROM-Adresse
+  wird das betreffende Byte in den darunter liegenden RAM geschrieben.
+  Wird sp&auml;ter an der Adresse der ROM ausgeblendet,
+  kann man den geschriebenen Wert lesen.
+ <br/><br/>
+
+ <h2><a name="screen">Bildschirmausgabe</a></h2>
+  Die Emulation der Bildschirmausgabe geschieht in der Form,
+  dass ein Teil des RAM als Bildwiederholspeicher definiert wird.
+  Jedes Zeichen, dass in dem RAM-Bereich steht,
+  wird auf dem Bildschirm ausgegeben.
+  Die Bildschirmausgabe ist alphanumerisch.
+  Pixel- bzw. Vollgrafik wird nicht emuliert.
+ <br/><br/>
+  Zur Festlegung der Bildschirmausgabe geben Sie die Anfangsadresse
+  des Bildwiederholspeichers sowie die Anzahl der Spalten und Zeilen an.
+  Die Zeilen und Spalten sind im Bildwiederholspeicher aufsteigend
+  organisiert, d.h., zuerst kommt Zeile&nbsp;1
+  und darin die Zeichen von links nach rechts,
+  dann Zeile&nbsp;2 und so weiter.
+ <br/><br/>
+  Als Zeichensatz ist der englische DOS-Zeichensatz Codepage&nbsp;437
+  hinterlegt.
+  Optional k&ouml;nnen Sie eine eigende Zeichensatzdatei einbinden.
+ <br/><br/>
+  Der Bildwiederholspeicher liegt immer im RAM.
+  Auch wenn in dem Adressbereich ein ROM eingeblendet ist,
+  werden die Zeichen aus dem RAM angezeigt.
+  In Verbindung mit der Eigenschaft,
+  dass die ROMs durchschreibend sind (siehe weiter oben),
+  lassen sich so ROM und Bildwiederholspeicher
+  im gleichen Adressbereich betreiben.
+ <br/><br/>
+
+ <h2><a name="keyboard">Tastatur</a></h2>
+  Es werden verschiedene Varianten f&uuml;r den Anschluss einer Tastatur
+  emuliert, von der sie eine ausw&auml;hlen k&ouml;nnen.
+  Allen Varianten ist gemeinsam,
+  dass die von der Tastatur gelieferten Zeichen mit Eingabebefehlen
+  gelesen werden m&uuml;ssen.
+  Demzufolge ist auch die Angabe einer E/A-Adresse notwendig.
+  Bei der Emulation &uuml;ber ein einfaches Eingabetor
+  geben Sie die E/A-Adresse rechts dahinter an.
+  Bei den anderen Varianten wird die Tastatur an eine PIO oder SIO
+  angeschlossen.
+  Diese PIO oder SIO m&uuml;ssen Sie im Reiter <em>E/A-Bausteine</em>
+  (siehe weiter unten) aktivieren und dort auch die E/A-Adresse angeben.
+ <br/><br/>
+  Anschlussvarianten der Tastatur:
+  <ul>
+   <li>
+    <u>Einfaches Eingabetor:</u><br/>
+    Bei dieser Variante wird beim Dr&uuml;cken einer Taste
+    der 8-Bit-Zeichencode an dem Eingabetor angelegt.
+    Ist keine Taste gedr&uuml;ckt, liest man ein Nullbyte.
+    <br/><br/>
+   </li>
+   <li>
+    <u>PIO Port A oder B mit Ready/Strobe-Handshake:</u><br/>
+    Beim Dr&uuml;cken einer Taste wird der 8-Bit-Zeichencode
+    an dem entsprechenden Tor der PIO angelegt und die
+    f&uuml;r das Tor zust&auml;ndige Strobe-Leitung aktiviert.
+    Bei dieses Anschlussvariante wird die PIO &uuml;blicherweise
+    in der Betriebsart <em>Byte-Eingabe</em> betrieben
+    und kann somit auch einen Interrupt ausl&ouml;en.
+    <br/><br/>
+   </li>
+   <li>
+    <u>PIO Port A oder B mit Strobe an Bit&nbsp;7:</u><br/>
+    Bei dieser Variante wird beim Dr&uuml;cken einer Taste
+    der 7-Bit-Zeichencode an dem PIO-Tor angelegt
+    und Bit&nbsp;7 auf H gesetzt.
+    Ist keine Taste gedr&uuml;ckt, ist Bit&nbsp;7 L
+    und die Bits&nbsp;0 bis 6 unbestimmt.
+    Die PIO wird &uuml;blicherweise in der Betriebsart
+    <em>Bit-Ein/Ausgabe</em> betrieben.
+    Durch entsprechende Programmierung kann Bit&nbsp;7
+    einen Interrupt ausl&ouml;sen,
+    der das Dr&uuml;cken einer Taste signalisiert.
+    <br/><br/>
+   </li>
+   <li>
+    <u>SIO Kanal&nbsp;A oder B:</u><br/>
+    Der 8-Bit-Zeichencode ist &uuml;ber den entsprechenden Kanal
+    der SIO lesbar.
+    Wir der SIO-Kanal auf 5-, 6- oder 7-Bit-Empfang programmiert,
+    werden nur die unteren 5-, 6- oder 7 Bits gelesen.
+    Die Interrupt-M&ouml;glichkeiten der SIO stehen zur Verf&uuml;gung.
+    Ein Hardware- oder Software-Handshake wird nicht emuliert.
+   </li>
+  </ul>
+ <br/>
+
+ <h2><a name="io">E/A-Bausteine</a></h2>
+  In diesem Reiter k&ouml;nnen Sie die zum Z80-System geh&ouml;renden
+  Bausteine PIO, SIO und CTC sowie eine <a href="kcnet.htm">KCNet</a>-Karte
+  und ein <a href="usb.htm">VDIP-Modul (USB-Anschluss)</a> aktivieren.
+  Pro E/A-Baustein m&uuml;ssen Sie die E/A-Basisadresse angeben.
+  Jeder dieser Bausteine belegt ab der angegebenen Basisadresse
+  vier aufeinanderfolgende Adressen:
+ <br/><br/>
+  <table border="1">
+   <tr><th>Bautein</th><th>E/A-Adresse</th><th>Bedeutung</th></tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">PIO</td>
+    <td valign="top" nowrap="nowrap">
+     E/A-Basisadresse:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;1:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;2:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;3:
+    </td>
+    <td valign="top" nowrap="nowrap">
+     Port&nbsp;A&nbsp;Daten<br/>
+     Port&nbsp;B&nbsp;Daten<br/>
+     Port&nbsp;A&nbsp;Steuerung<br/>
+     Port&nbsp;B&nbsp;Steuerung<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">SIO</td>
+    <td valign="top" nowrap="nowrap">
+     E/A-Basisadresse:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;1:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;2:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;3:
+    </td>
+    <td valign="top" nowrap="nowrap">
+     Kanal&nbsp;A&nbsp;Daten<br/>
+     Kanal&nbsp;B&nbsp;Daten<br/>
+     Kanal&nbsp;A&nbsp;Steuerung<br/>
+     Kanal&nbsp;B&nbsp;Steuerung<br/>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">CTC</td>
+    <td valign="top" nowrap="nowrap">
+     E/A-Basisadresse:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;1:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;2:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;3:
+    </td>
+    <td valign="top" nowrap="nowrap">
+     Z&auml;hler/Zeitgeber&nbsp;0<br/>
+     Z&auml;hler/Zeitgeber&nbsp;1<br/>
+     Z&auml;hler/Zeitgeber&nbsp;2<br/>
+     Z&auml;hler/Zeitgeber&nbsp;3
+    </td>
+   </tr>
+   <tr>
+    <td valign="top" nowrap="nowrap">KCNet und VDIP</td>
+    <td valign="top" nowrap="nowrap">
+     E/A-Basisadresse:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;1:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;2:<br/>
+     E/A-Basisadresse&nbsp;+&nbsp;3:
+    </td>
+    <td valign="top" nowrap="nowrap">
+     PIO&nbsp;Port&nbsp;A&nbsp;Daten<br/>
+     PIO&nbsp;Port&nbsp;B&nbsp;Daten<br/>
+     PIO&nbsp;Port&nbsp;A&nbsp;Steuerung<br/>
+     PIO&nbsp;Port&nbsp;B&nbsp;Steuerung<br/>
+    </td>
+   </tr>
+  </table>
+ <br/><br/>
+  Bei der SIO k&ouml;nnen Sie angeben, ob an deren Ausg&auml;ngen
+  ein <a href="print.htm"> Drucker</a> angeschlossen ist.
+  Wenn Sie an beiden Kan&auml;len einen Drucker angeben,
+  so werden die dar&uuml;ber ausgegebenen Bytes
+  an den gleichen Druckauftrag angeh&auml;gt,
+  da JKCEMU nur einen Drucker emuliert.
+ <br/><br/>
+  Bei der CTC sind die Z&auml;hler/Zeitgeber durchgekoppelt,
+  d.h., Ausgang Z&auml;hler/Zeitgeber&nbsp;0 geht auf Eingang
+  Z&auml;hler/Zeitgeber&nbsp;1 und so weiter.
+ <br/><br/>
+  Zum Schluss legen Sie in dem Reiter fest,
+  welcher Wert von nicht belegten E/A-Adressen gelesen werden soll.
+ <br/><br/>
+
+ <h2><a name="fdc">FDC (Floppy Disk Controller)</a></h2>
+  Hier legen Sie fest, ob und an welchen E/A-Adressen ein
+  <a href="disk/floppydiskintro.htm">Floppy Disk Controller</a>
+  mit vier angeschlossenen <a href="floppydisk.htm">Diskettenlaufwerken</a>
+  emuliert werden soll.
+  Wenn die Original-Hardware weitere E/A-Adressen zur Steuerung
+  der Diskettenlaufwerke enth&auml;lt
+  (z.B. zum Ein- und Ausschalten der Laufwerksmotoren),
+  so werden diese von JKCEMU nicht emuliert
+  bzw. spielen in der Emulation keine Rolle  (da gibt es keine Motoren,
+  die ein- und ausgeschaltet werden k&ouml;nnten).
+ <br/><br/>
+
+ <h2><a name="gide">GIDE (Festplatten)</a></h2>
+  In diesem Reiter legen Sie fest, ob <a href="gide.htm">GIDE</a>
+  mit bis zu zwei angeschlossenen Festplatten emuliert werden soll.
+  GIDE belegt 16 aufeinanderfolgende E/A-Adressen.
+</body>
+</html>

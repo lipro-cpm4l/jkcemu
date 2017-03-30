@@ -10,6 +10,7 @@ del %SRC_DIR%\jkcemu\emusys\*.class
 del %SRC_DIR%\jkcemu\emusys\a5105\*.class
 del %SRC_DIR%\jkcemu\emusys\ac1_llc2\*.class
 del %SRC_DIR%\jkcemu\emusys\bcs3\*.class
+del %SRC_DIR%\jkcemu\emusys\customsys\*.class
 del %SRC_DIR%\jkcemu\emusys\etc\*.class
 del %SRC_DIR%\jkcemu\emusys\huebler\*.class
 del %SRC_DIR%\jkcemu\emusys\kc85\*.class
