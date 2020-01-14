@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/mkgj9ab635dp7hfo/branch/master?svg=true)](https://ci.appveyor.com/project/rexut/jkcemu/branch/master)
+
 JKCEMU - Java KC Emulator
 =========================
 
