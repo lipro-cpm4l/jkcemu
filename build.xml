@@ -36,7 +36,7 @@
   </target>
 
   <target name="jar" depends="compile">
-    <jar destfile="${basedir}/jkcemu.jar" basedir="${build}">
+    <jar destfile="${basedir}/jkcemu.jar" basedir="${build}" manifest="${source}/Manifest.txt">
       <manifest>
         <attribute name="Built-By" value="${user.name}"/>
         <attribute name="Main-Class" value="jkcemu.Main"/>
