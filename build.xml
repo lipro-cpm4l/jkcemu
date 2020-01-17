@@ -9,6 +9,10 @@
   <property name="images"  location="${source}/images"/>
   <property name="rom"     location="${source}/rom"/>
 
+  <presetdef name="javac">
+    <javac includeantruntime="false" />
+  </presetdef>
+
   <target name="clean">
     <delete dir="${build}"/>
     <delete dir="${javadoc}"/>
