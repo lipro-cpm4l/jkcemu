@@ -46,14 +46,14 @@ and [ANT](https://ant.apache.org/). You can also easily use the
 
 ### Get the Code
 
-```
+```bash
 git clone https://github.com/lipro-cpm4l/jkcemu.git
 cd jkcemu
 ```
 
 ### Build the JAR and execute
 
-```
+```bash
 ant jar
 java -jar jkcemu.jar
 ```
