@@ -47,7 +47,7 @@ and [ANT](https://ant.apache.org/). You can also easily use the
 ### Get the Code
 
 ```
-git clone https://github.com/lipro/jkcemu.git
+git clone https://github.com/lipro-cpm4l/jkcemu.git
 cd jkcemu
 ```
 
