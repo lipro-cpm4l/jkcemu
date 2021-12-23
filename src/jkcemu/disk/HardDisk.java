@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 package jkcemu.disk;
 
 import java.io.File;
-import jkcemu.base.*;
 
 
 public class HardDisk

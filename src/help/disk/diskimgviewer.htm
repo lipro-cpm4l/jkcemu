@@ -5,10 +5,26 @@
   von Diskettenabbilddateien.
   Man kann damit die Anordnung und den Inhalt der einzelnen Sektoren sehen
   sowie in der Abbilddatei suchen.
+  Sektoren mit problematischen Eigenschaften werden rot markiert.
   Des Weiteren wird im Fall einer CP/M-kompatiblen Abbilddatei
   das logische Diskettenformat angezeigt,
   wenn es automatisch erkannt werden konnte.
- <br/><br/>
+ <br/>
+  <ul>
+   <li><a href="diskimgviewer.htm#general">1. Allgemeines</a></li>
+   <li>
+    <a href="diskimgviewer.htm#cpm_fmt">2. Logisches Diskettenformat</a>
+   </li>
+   <li>
+    <a href="diskimgviewer.htm#repair">3. Diskettenabbilddatei reparieren</a>
+   </li>
+   <li>
+    <a href="diskimgviewer.htm#export">4. Spuren und Sektoren exportieren</a>
+   </li>
+  </ul>
+ <br/>
+
+ <h2><a name="general">1. Allgemeines</a></h2>
   Der haupts&auml;chliche Sinn des Werkzeugs besteht darin,
   von realen Disketten erstellte Abbilder zu untersuchen,
   die im Emulator Probleme bereiten.
@@ -21,7 +37,7 @@
   <a href="diskimgformats.htm#anadisk">AnaDisk-</a>,
   <a href="diskimgformats.htm#cpcdisk">CPC-Disk-</a>,
   <a href="diskimgformats.htm#imagedisk">ImageDisk-</a> und
-  <a href="diskimgformats.htm#teledisk">TeleDisk-Dateien</a> speichern.
+  <a href="dis.kimgformats.htm#teledisk">TeleDisk-Dateien</a> speichern.
   <a href="diskimgformats.htm#copyqm">CopyQM-Dateien</a> enthalten
   dagegen nur Angaben zu Interleave und Skew,
   wobei diese Werte h&auml;ufig noch nicht einmal korrekt gesetzt sind.
@@ -52,7 +68,7 @@
   k&ouml;nnen einen solchen Zeitstempel haben.
  <br/><br/>
 
- <h2>Logisches Diskettenformat</h2>
+ <h2><a name="cpm_fmt">2. Logisches Diskettenformat</a></h2>
   Der Diskettenabbilddatei-Inspektor versucht,
   das logische CP/M-Diskettenformat
   (Systemspuren, Directory-Gr&ouml;&szlig;e, Blockgr&ouml;&szlig;e
@@ -64,6 +80,70 @@
   Das Blocknummernformat (8 oder 16&nbsp;Bit) ist nur erkennbar,
   wenn das Diskettenabbild Dateien enth&auml;lt,
   die mindestens zwei Bl&ouml;cke gro&szlig; sind.
+ <br/><br/>
+
+ <h2><a name="repair">3. Diskettenabbilddatei reparieren</a></h2>
+  Wenn JKCEMU beim Laden einer Diskettenabbilddateien eine automatische
+  Reparatur der Daten vornimmt
+  (siehe <a href="diskimgformats.htm#teledisk">TeleDisk-Dateien</a>),
+  werden Sie gefragt, ob die reparierten oder die originalen Daten
+  geladen werden sollen.
+  Der Diskettenabbilddatei-Inspektor ist damit die einzige
+  M&ouml;glichkeit im JKCEMU, die automatische Reparatur
+  zu umgehen und auf die originalen Daten der Abbilddatei zuzugreifen.
+ <br/><br/>
+  Abgesehen von der automatischen Reparatur beim Laden der Datei
+  bietet der Diskettenabbilddatei-Inspektor keine Funktionen
+  zum Reparieren oder Bearbeiten der Abbilddateien.
+  Es gibt aber die M&ouml;glichkeit, die Nutzdaten von Spuren
+  oder einzelner Sektoren zu exportieren und dann in einen Hex-Editor,
+  z.B. dem in JKCEMU <a href="../tools/hexeditor.htm">integrierten</a>,
+  zu laden und dort zu bearbeiten.
+  So kann man im Hex-Editor mit den exportierten Daten eine neue
+  bzw. reparierte (<a href="diskimgformats.htm#plain">einfache</a>)
+  Diskettenabbilddatei erzeugen, vorausgesetzt,
+  es lie&szlig;en sich die notwendigen Daten exportieren und man hat
+  das entsprechende Wissen &uuml;ber den Aufbau der Abbiilddatei.
+ <br/><br/>
+
+ <h2><a name="export">4. Spuren und Sektoren exportieren</a></h2>
+  Mit dem Men&uuml;punkt <em>Datei</em> &rarr;
+  <em>Spuren exportieren...</em> haben Sie die M&ouml;glichkeit,
+  die Nutzdaten einer oder mehrere Spuren in eine Bin&auml;rdatei
+  zu exportieren.
+  Dabei werden pro Spur die Sektoren aufsteigend sortiert
+  nach Diskettenseite und Sektornummer in die Datei geschrieben.
+  Ist ein Sektor mehrfach vorhanden (gleiche Sektornummer),
+  wird von diesen der &quot;beste&quot; Sektor ausgew&auml;hlt
+  und exportiert.
+  Der &quot;beste&quot; Sektor ist der Sektor,
+  der die wenigsten &quot;Negativkriterien&quot;
+  (CRC-Fehler, Sektor als gel&ouml;scht markiert,
+  Kopf- oder Spurnummer in der Sektor-ID stimmen nicht
+  mit der physischen Seiten- bzw. Spurnummer &uuml;berein) hat.
+ <br/><br/>
+  Beim Exportieren von Spuren wird ein ausf&uuml;hrlicher Ergebnistext
+  erzeugt, in dem jeder exportierter Sektor mit seiner Nummer und dahinter
+  in Klammern mit seiner Gr&ouml;&szlig;e aufgef&uuml;hrt ist.
+  Dort k&ouml;nnen Sie sehen, ob die Sektoranordnung in der exportierten
+  Datei regelm&auml;&szlig;ig (alle Spuren haben die gleichen Sektornummern
+  und alle Sektoren sind gleich gro&szlig;)
+  oder unregelm&auml;&szlig;ig ist.
+  Des Weiteren sind auch die Sektoren mit den oben genannten
+  &quot;Negativkriterien&quot; entsprechend markiert.
+ <br/><br/>
+  Neben dem Export von ganzen Spuren gibt es auch die M&ouml;glichkeit,
+  die Nutzdaten eines jeden Sektors einzeln zu exportieren
+  oder als hexadezimale Zahlen in die Zwischenablage zu kopieren.
+  Damit k&ouml;nnen Sie auch die Daten der Sektoren exportieren,
+  deren Sektornummer auf einer Spur mehrfach vorhanden ist
+  und die beim Exportieren von Spuren wegen &quot;nicht bester Sektor&quot;
+  ausgelassen wurden.
+ <br/><br/>
+  Zum Exportieren einzelner Sektoren klicken Sie in der linken Ansicht
+  auf den gew&uuml;nschten Sektor, so dass dessen Daten
+  in der rechten Ansicht angezeigt werden.
+  Dort klicken Sie dann auf die Schaltfl&auml;che
+  <em>Sektor exportieren...</em> oder <em>Sektor kopieren</em>.
 </body>
 </html>
-

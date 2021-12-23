@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,7 @@
 
 package jkcemu.emusys.huebler;
 
-import java.awt.EventQueue;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Properties;
@@ -99,6 +97,7 @@ public abstract class AbstractHueblerMC
     if( this.pcListenerAdded ) {
       cpu.removePCListener( this );
     }
+    super.die();
   }
 
 
@@ -127,6 +126,53 @@ public abstract class AbstractHueblerMC
   public boolean getSwapKeyCharCase()
   {
     return true;
+  }
+
+
+  @Override
+  public boolean keyPressed(
+			int     keyCode,
+			boolean ctrlDown,
+			boolean shiftDown )
+  {
+    boolean rv = false;
+    int     ch = 0;
+    switch( keyCode ) {
+      case KeyEvent.VK_LEFT:
+      case KeyEvent.VK_BACK_SPACE:
+	ch = 8;
+	break;
+
+      case KeyEvent.VK_RIGHT:
+      case KeyEvent.VK_TAB:
+	ch = 9;
+	break;
+
+      case KeyEvent.VK_DOWN:
+	ch = 0x0A;
+	break;
+
+      case KeyEvent.VK_UP:
+	ch = 0x0B;
+	break;
+
+      case KeyEvent.VK_ENTER:
+	ch = 0x0D;
+	break;
+
+      case KeyEvent.VK_SPACE:
+	ch = 0x20;
+	break;
+
+      case KeyEvent.VK_DELETE:
+	ch = 0x7F;
+	break;
+    }
+    if( ch > 0 ) {
+      this.keyChar = ch;
+      rv = true;
+    }
+    return rv;
   }
 
 
@@ -202,16 +248,8 @@ public abstract class AbstractHueblerMC
 	rv = this.pio.readDataA();
 	break;
 
-      case 0x0D:
-	rv = this.pio.readControlA();
-	break;
-
       case 0x0E:
 	rv = this.pio.readDataB();
-	break;
-
-      case 0x0F:
-	rv = this.pio.readControlB();
 	break;
 
       case 0x14:
@@ -226,11 +264,17 @@ public abstract class AbstractHueblerMC
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
+    super.reset( powerOn, props );
     this.keyChar       = 0;
     this.pasteStateNum = 0;
+    if( this.ctc != null ) {
+      this.ctc.reset( powerOn );
+    }
+    if( this.pio != null ) {
+      this.pio.reset( powerOn );
+    }
   }
 
 
@@ -241,12 +285,13 @@ public abstract class AbstractHueblerMC
     if( text != null ) {
       if( !text.isEmpty() ) {
 	cancelPastingText();
+	informPastingTextStatusChanged( true );
 	this.pasteIter = new StringCharacterIterator( text );
 	done           = true;
       }
     }
     if( !done ) {
-      this.screenFrm.firePastingTextFinished();
+      informPastingTextStatusChanged( false );
     }
   }
 

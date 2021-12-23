@@ -1,11 +1,14 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
  * Dithering
  *
- * Die Klasse implemntiert den Sierra-3Zeilen-Dithering-Algorithmus
+ * Die Klasse implemntiert die Dithering-Algorithmen:
+ *   Floyd Steinberg
+ *   Sierra-3-Zeilen
+ *   Atkinson
  */
 
 package jkcemu.image;
@@ -13,7 +16,6 @@ package jkcemu.image;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.Main;
 import jkcemu.base.CancelableProgressDlg;
@@ -96,7 +98,7 @@ public class Dithering
 	  retImg.setRGB( x, y, transpColorARGB );
 	} else {
 
-	  // neue Soll-Farbe fuer den Pixel
+	  // neue Soll-Farbe fuer das Pixel
 	  int r1 = ((rgb1 >> 16) & 0xFF) + this.rDiffBuf[ 0 ][ x ];
 	  if( r1 < 0 ) {
 	    r1 = 0;
@@ -116,9 +118,9 @@ public class Dithering
 	    b1 = 0xFF;
 	  }
 
-	  // neue Ist-Farbe fuer den Pixel
+	  // neue Ist-Farbe fuer das Pixel
 	  int rgb2 = this.icm.getRGB(
-			ImgUtil.getNearestIndex(
+			ImageUtil.getNearestIndex(
 					this.icm,
 					r1,
 					g1,
@@ -163,6 +165,7 @@ public class Dithering
 	}
 	this.progressValue++;
       }
+
       // Pufferzeilen fuer Differenzen rotieren
       short[] rRow = this.rDiffBuf[ 0 ];
       short[] gRow = this.gDiffBuf[ 0 ];
@@ -194,7 +197,7 @@ public class Dithering
 	rv = "Sierra-3 (feinere Abstufungen)";
 	break;
       case ATKINSON:
-	rv = "Atkinson (reduziertes Farbbluten)";
+	rv = "Atkinson (weniger Farbbluten, mehr Kontrast)";
 	break;
     }
     return rv;
@@ -215,9 +218,9 @@ public class Dithering
   {
     Dithering instance = new Dithering( srcImg, icm, algorithm );
     instance.dlg       = new CancelableProgressDlg(
-					owner,
-					"Dithering...",
-					instance );
+						owner,
+						"Dithering...",
+						instance );
     (new Thread(
 		Main.getThreadGroup(),
 		instance,
@@ -248,7 +251,7 @@ public class Dithering
   public void run()
   {
     try {
-      this.retImg = this.doDithering();
+      this.retImg = doDithering();
     }
     finally {
       dlg.fireProgressFinished();

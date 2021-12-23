@@ -58,12 +58,12 @@
    <tr>
     <td valign="top">
      Diskettenabbilddatei<br/>
-     (*.cqm; *.dump; *.imd; *.img; *.image; *.qm; *.raw; *.td0)
+     (*.cqm; *.dd; *.dump; *.imd; *.img; *.image; *.qm; *.raw; *.td0)
     </td>
     <td valign="top">
      <ul>
       <li>
-       Einfache Diskettenabbilddatei (*.img; *.image; *.raw)
+       Einfache Diskettenabbilddatei (*.dd; *.img; *.image; *.raw)
       </li>
       <li>AnaDisk-Datei (*.dump)</li>
       <li>CopyQM-Datei (*.cqm)</li>
@@ -125,14 +125,14 @@
    <tr>
     <td valign="top">
      Sound-Datei<br/>
-     (*.aif; *.aifc; *.aiff; *.au; *.wav)
+     (*.aif; *.aiff; *.au; *.wav)
     </td>
     <td valign="top">
      <ul>
-      <li>Sound-Datei (*.aif; *.aifc; *.aiff; *.au; *.wav)</li>
+      <li>Sound-Datei (*.aif; *.aiff; *.au; *.wav)</li>
       <li>
        Komprimierte Sound-Datei
-       (*.aif.gz; *.aifc.gz; *.aiff.gz; *.au.gz; *.wav.gz)
+       (*.aif.gz; *.aiff.gz; *.au.gz; *.wav.gz)
       </li>
      </ul>
     </td>
@@ -140,14 +140,14 @@
    <tr>
     <td valign="top">
      Komprimierte Sound-Datei<br/>
-     (*.aif.gz; *.aifc.gz; *.aiff.gz; *.au.gz; *.wav.gz)
+     (*.aif.gz; *.aiff.gz; *.au.gz; *.wav.gz)
     </td>
     <td valign="top">
      <ul>
-      <li>Sound-Datei (*.aif; *.aifc; *.aiff; *.au; *.wav)</li>
+      <li>Sound-Datei (*.aif; *.aiff; *.au; *.wav)</li>
       <li>
        Komprimierte Sound-Datei
-       (*.aif.gz; *.aifc.gz; *.aiff.gz; *.au.gz; *.wav.gz)
+       (*.aif.gz; *.aiff.gz; *.au.gz; *.wav.gz)
      </li>
      </ul>
     </td>
@@ -183,6 +183,18 @@
   Bei letzterem enth&auml;lt die Ausgabedatei nur das eigentliche
   BASIC-Programm, d.h., eventuelle Maschinencode- oder Datenbereiche
   gehen dabei verloren.
+ <br/><br/>
+  <b>Achtung!</b> Bei
+  <a href="../fileformats.htm#multi_kctap">Multi-KC-TAP-Dateien</a>,
+  d.h. TAP-Dateien,
+  die aus mehreren einzelnen KC-TAP-Dateien bestehen und somit
+  mehrere hintereinander liegende Kassettenaufzeichnungen darstellen,
+  wird nur die erste Teildatei konvertiert.
+  Einzige Ausnahme ist das Ausgabeformat <em>Sound-Datei im KC-Format,
+  1:1 aus KC-TAP- oder KC-Multi-TAP-Datei konvertiert</em>.
+  Bei diesem wird der Inhalt der TAP-Datei 1:1 in Audiodaten umgewandelt.
+  Damit sind auch Multi-KC-TAP-Dateien sowie KC-TAP-Dateien mit einem
+  unregelm&auml;&szlig;igen Aufbau konvertierbar.
+  Daf&uuml;r lassen sich keine Kopfdaten &auml;ndern.
 </body>
 </html>
-

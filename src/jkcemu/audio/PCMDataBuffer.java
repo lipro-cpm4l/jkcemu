@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@
 package jkcemu.audio;
 
 import java.io.IOException;
-import java.lang.*;
 
 
 public class PCMDataBuffer extends AbstractPCMDataReader
@@ -27,7 +26,7 @@ public class PCMDataBuffer extends AbstractPCMDataReader
 		boolean dataSigned,
 		boolean bigEndian,
 		byte[]  dataBytes,
-		long    pcmDataOffs,
+		int     pcmDataOffs,
 		long    pcmDataLen ) throws IOException
   {
     super(
@@ -39,7 +38,7 @@ public class PCMDataBuffer extends AbstractPCMDataReader
 	pcmDataOffs,
 	pcmDataLen );
     this.dataBytes = dataBytes;
-    this.dataPos   = 0;
+    this.dataPos   = pcmDataOffs;
 
     if( dataBytes.length < (pcmDataOffs + pcmDataLen) ) {
       pcmDataLen = dataBytes.length - pcmDataOffs;
@@ -52,6 +51,13 @@ public class PCMDataBuffer extends AbstractPCMDataReader
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public long getFramePos()
+  {
+    return (this.dataPos - this.pcmDataOffs) / this.bytesPerFrame;
+  }
+
 
   @Override
   public synchronized int read( byte[] buf, int offs, int len )

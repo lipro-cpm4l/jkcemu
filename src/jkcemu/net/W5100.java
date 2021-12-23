@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,12 +12,12 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
 import java.net.BindException;
 import java.net.DatagramPacket;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -178,7 +178,7 @@ public class W5100
 		+ "in das emulierte KCNet eintragen,\n"
 		+ "wodurch das im Emulator laufende Nertwerkprogramm\n"
 		+ "eine Gegenstelle ohne g\u00FCltige IP-Adresse sieht." );
-	EmuUtil.fireShowInfo( Main.getScreenFrm(), buf.toString() );
+	EmuUtil.fireShowInfoDlg( Main.getScreenFrm(), buf.toString() );
 	this.nonIPv4MsgShown = true;
       }
     }
@@ -190,10 +190,10 @@ public class W5100
       if( datagramSocket != null ) {
         datagramSocket.close();
       }
-      EmuUtil.closeSilent( this.sendStream );
-      EmuUtil.closeSilent( this.recvStream );
-      EmuUtil.closeSilent( this.socket );
-      EmuUtil.closeSilent( this.serverSocket );
+      EmuUtil.closeSilently( this.sendStream );
+      EmuUtil.closeSilently( this.recvStream );
+      EmuUtil.closeSilently( this.socket );
+      EmuUtil.closeSilently( this.serverSocket );
       this.sendStream      = null;
       this.recvStream      = null;
       this.socket          = null;
@@ -250,7 +250,9 @@ public class W5100
 	  catch( IllegalArgumentException ex ) {}
 	  InetAddress iAddr = createInetAddrByMem( this.baseAddr + Sn_DIPR );
 	  if( iAddr != null ) {
-	    ds.joinGroup( iAddr );
+	    ds.joinGroup(
+			new InetSocketAddress( iAddr, ds.getLocalPort() ),
+			NetworkInterface.getByInetAddress( iAddr ) );
 	  }
 	}
       } else {
@@ -329,15 +331,18 @@ public class W5100
 	    if( socketAddr != null ) {
 	      s = socketAddr.toString();
 	    }
+	    if( s == null ) {
+	      s = "";
+	    }
 	    System.out.printf(
-			"connect: %s, timeout=%dms\n",
-			socketAddr,
+			"connect to: %s, timeout=%dms\n",
+			s.isEmpty() ? "?" : s,
 			timeoutMillis );
 	    if( socketEx != null ) {
 	      socketEx.printStackTrace( System.out );
 	    }
 	  }
-	  EmuUtil.closeSilent( socket );
+	  EmuUtil.closeSilently( socket );
 	  closeSocket();
 	  setSnIRBits( INT_TIMEOUT_MASK );
 	}
@@ -395,7 +400,7 @@ public class W5100
 	      ex.printStackTrace( System.out );
 	    }
 	  }
-	  EmuUtil.closeSilent( socket );
+	  EmuUtil.closeSilently( socket );
 	}
       }
       switch( getCR() ) {
@@ -840,7 +845,7 @@ public class W5100
 		setSR( SOCK_CLOSE_WAIT );
 		Socket socket = this.socket;
 		if( socket != null ) {
-		  EmuUtil.closeSilent( socket );
+		  EmuUtil.closeSilently( socket );
 		  this.recvStream = null;
 		  this.sendStream = null;
 		  this.socket     = null;
@@ -852,7 +857,7 @@ public class W5100
 	  }
 	}
 	catch( IOException ex ) {
-	  EmuUtil.closeSilent( this.recvStream );
+	  EmuUtil.closeSilently( this.recvStream );
 	  this.recvStream = null;
 	}
       }
@@ -1238,7 +1243,7 @@ public class W5100
 	setSR( SOCK_CLOSE_WAIT );
 	Socket socket = this.socket;
 	if( socket != null ) {
-	  EmuUtil.closeSilent( socket );
+	  EmuUtil.closeSilently( socket );
 	  this.recvStream = null;
 	  this.sendStream = null;
 	  this.socket     = null;
@@ -1673,7 +1678,6 @@ public class W5100
   private SocketFactory                     socketFactory;
   private DhcpServer                        dhcpServer;
   private NetConfig                         netConfig;
-  private boolean                           threadsEnabled;
   private int                               debugMask;
 
 
@@ -1695,7 +1699,6 @@ public class W5100
     this.reservedDatagramSockets = new ArrayList<>();
     this.pings                   = new ArrayList<>();
     this.netConfig               = null;
-    this.threadsEnabled          = true;
     this.debugMask               = 0;
 
     String text = System.getProperty( KCNet.SYSPROP_DEBUG );
@@ -1718,7 +1721,6 @@ public class W5100
 
   public void die()
   {
-    this.threadsEnabled = false;
     for( SocketData socket : this.sockets ) {
       socket.die();
     }
@@ -1897,7 +1899,7 @@ public class W5100
 	  if( (msg.indexOf( "permission" ) >= 0)
 	      || (msg.indexOf( "recht" ) >= 0) )
 	  {
-	    EmuUtil.fireShowError(
+	    EmuUtil.fireShowErrorDlg(
 		Main.getScreenFrm(),
 		"Das Betriebssystem, auf dem JKCEMU l\u00E4uft,\n"
 			+ "gestattet Ihnen die gew\u00FCnschte"
@@ -2259,4 +2261,3 @@ public class W5100
     }
   }
 }
-

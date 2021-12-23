@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,24 +8,32 @@
 
 package jkcemu.emusys.llc1;
 
-import java.awt.Component;
 import java.awt.BorderLayout;
-import java.lang.*;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
+import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AutoLoadSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.LLC1;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class LLC1SettingsFld extends AbstractSettingsFld
 {
   private JTabbedPane          tabbedPane;
+  private JPanel               tabRom;
+  private ROMFileSettingsFld   fldAltRom;
+  private ROMFileSettingsFld   fldAltFont;
   private AutoLoadSettingsFld  tabAutoLoad;
   private AutoInputSettingsFld tabAutoInput;
 
@@ -38,8 +46,36 @@ public class LLC1SettingsFld extends AbstractSettingsFld
 
     setLayout( new BorderLayout() );
 
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
+
+
+    // Tab ROM
+    this.tabRom = GUIFactory.createPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "ROM", this.tabRom );
+
+    GridBagConstraints gbcRom = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 5, 5, 5, 5 ),
+					0, 0 );
+
+    this.fldAltRom = new ROMFileSettingsFld(
+		settingsFrm,
+		propPrefix + LLC1.PROP_ROM_PREFIX,
+		"Alternativer ROM-Inhalt (0000h-13FFh):" );
+    gbcRom.gridy++;
+    this.tabRom.add( this.fldAltRom, gbcRom );
+
+    this.fldAltFont = new ROMFileSettingsFld(
+		settingsFrm,
+		propPrefix + LLC1.PROP_FONT_PREFIX,
+		"Alternativer Zeichensatz:" );
+    gbcRom.gridy++;
+    this.tabRom.add( this.fldAltFont, gbcRom );
 
 
     // Tab AutoLoad
@@ -55,6 +91,7 @@ public class LLC1SettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 				settingsFrm,
 				propPrefix,
+				LLC1.getAutoInputCharSet(),
 				LLC1.DEFAULT_SWAP_KEY_CHAR_CASE,
 				LLC1.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
@@ -70,6 +107,10 @@ public class LLC1SettingsFld extends AbstractSettingsFld
   {
     Component tab = null;
     try {
+
+      // ROM
+      this.fldAltRom.applyInput( props, selected );
+      this.fldAltFont.applyInput( props, selected );
 
       // Tab AutoLoad
       tab = this.tabAutoLoad;
@@ -108,16 +149,10 @@ public class LLC1SettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
+    this.fldAltRom.updFields( props );
+    this.fldAltFont.updFields( props );
     this.tabAutoLoad.updFields( props );
     this.tabAutoInput.updFields( props );
   }

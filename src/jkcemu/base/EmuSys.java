@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,30 +8,29 @@
 
 package jkcemu.base;
 
-import java.awt.Color;
 import java.awt.EventQueue;
-import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.image.ImageObserver;
 import java.io.File;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Arrays;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-import javax.swing.JOptionPane;
 import jkcemu.Main;
-import jkcemu.base.ScreenFrm;
+import jkcemu.audio.AbstractSoundDevice;
+import jkcemu.audio.AudioIn;
+import jkcemu.audio.AudioOut;
 import jkcemu.disk.FloppyDiskDrive;
 import jkcemu.disk.FloppyDiskFormat;
 import jkcemu.disk.FloppyDiskInfo;
 import jkcemu.etc.Plotter;
-import jkcemu.etc.VDIP;
+import jkcemu.etc.PSG8910;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileUtil;
 import jkcemu.text.TextUtil;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
-import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80Memory;
 import z80emu.Z80MemView;
 import z80emu.Z80TStatesListener;
@@ -42,7 +41,6 @@ public abstract class EmuSys
 			implements
 				ImageObserver,
 				Runnable,
-				Z80MaxSpeedListener,
 				Z80TStatesListener
 {
   public static final String PROP_COLOR        = "color";
@@ -57,17 +55,18 @@ public abstract class EmuSys
   public static final String PROP_OS_VERSION   = PROP_OS_PREFIX + "version";
   public static final String PROP_ROM_PREFIX   = "rom.";
   public static final String PROP_MODEL        = "model";
-  public static final String PROP_CATCH_PRINT_CALLS = "catch_print_calls";
-  public static final String PROP_FIXED_SCREEN_SIZE = "fixed_screen_size";
-  public static final String PROP_KCNET_ENABLED     = "kcnet.enabled";
-  public static final String PROP_ROMMEGA_ENABLED   = "rom_mega.enabled";
-  public static final String PROP_PASTE_FAST        = "paste.fast";
-  public static final String PROP_RF_PREFIX         = "ramfloppy.";
-  public static final String PROP_RF1_PREFIX        = "ramfloppy.1.";
-  public static final String PROP_RF2_PREFIX        = "ramfloppy.2.";
-  public static final String PROP_RTC_ENABLED       = "rtc.enabled";
-  public static final String PROP_VDIP_ENABLED      = "vdip.enabled";
+  public static final String PROP_CATCH_PRINT_CALLS   = "catch_print_calls";
+  public static final String PROP_FIXED_SCREEN_SIZE   = "fixed_screen_size";
+  public static final String PROP_KCNET_ENABLED       = "kcnet.enabled";
+  public static final String PROP_PASTE_FAST          = "paste.fast";
+  public static final String PROP_RF_PREFIX           = "ramfloppy.";
+  public static final String PROP_RF1_PREFIX          = "ramfloppy.1.";
+  public static final String PROP_RF2_PREFIX          = "ramfloppy.2.";
+  public static final String PROP_RTC_ENABLED         = "rtc.enabled";
+  public static final String PROP_K1520SOUND_ENABLED  = "k1520sound.enabled";
+  public static final String PROP_VDIP_ENABLED        = "vdip.enabled";
 
+  public static final String VALUE_DEFAULT     = "default";
   public static final String VALUE_NONE        = "none";
   public static final String VALUE_PREFIX_FILE = "file:";
 
@@ -93,17 +92,11 @@ public abstract class EmuSys
   protected String                     propPrefix;
   protected Thread                     pasteThread;
   protected volatile CharacterIterator pasteIter;
-  protected volatile boolean           soundOutPhase;
+  protected volatile AudioIn           tapeIn;
+  protected volatile AudioOut          tapeOut;
   protected volatile boolean           tapeOutPhase;
-
-  private int          curSoundOutTStates;
-  private int          curTapeOutTStates;
-  private int          soundOutTStates;
-  private int          tapeOutTStates;
-  private volatile int soundOutFrameRate;
-  private volatile int tapeOutFrameRate;
-
-  private static final int CHESSBOARD_SQUARE_WIDTH = 48;
+  protected volatile boolean           tapeInPhase;
+  protected boolean                    secondScreenFired;
 
 
   public EmuSys(
@@ -112,19 +105,16 @@ public abstract class EmuSys
 		String     propPrefix )
   {
     super( props );
-    this.emuThread          = emuThread;
-    this.screenFrm          = emuThread.getScreenFrm();
-    this.pasteThread        = null;
-    this.pasteIter          = null;
-    this.propPrefix         = propPrefix;
-    this.curSoundOutTStates = 0;
-    this.soundOutTStates    = 0;
-    this.soundOutFrameRate  = 0;
-    this.soundOutPhase      = false;
-    this.curTapeOutTStates  = 0;
-    this.tapeOutTStates     = 0;
-    this.tapeOutFrameRate   = 0;
-    this.tapeOutPhase       = false;
+    this.emuThread         = emuThread;
+    this.screenFrm         = emuThread.getScreenFrm();
+    this.pasteThread       = null;
+    this.pasteIter         = null;
+    this.propPrefix        = propPrefix;
+    this.tapeIn            = null;
+    this.tapeOut           = null;
+    this.tapeOutPhase      = false;
+    this.tapeInPhase       = false;
+    this.secondScreenFired = false;
   }
 
 
@@ -135,7 +125,7 @@ public abstract class EmuSys
   {
     int n = begOfLine + col - buf.length();
     while( n > 0 ) {
-      buf.append( (char) '\u0020' );
+      buf.append( '\u0020' );
       --n;
     }
   }
@@ -161,7 +151,16 @@ public abstract class EmuSys
   }
 
 
-  public AbstractKeyboardFld createKeyboardFld()
+  protected void checkAndFireOpenSecondScreen()
+  {
+    if( !this.secondScreenFired ) {
+      this.screenFrm.fireOpenSecondScreen();
+      this.secondScreenFired = true;
+    }
+  }
+
+
+  public AbstractKeyboardFld<? extends EmuSys> createKeyboardFld()
 		throws UnsupportedOperationException, UserCancelException
   {
     throw new UnsupportedOperationException();
@@ -170,7 +169,43 @@ public abstract class EmuSys
 
   public void die()
   {
-    // leer
+    cancelPastingText();
+  }
+
+
+  protected boolean emulatesFloppyDisk( Properties props )
+  { 
+    return EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PROP_FDC_ENABLED,
+			false );
+  }
+
+
+  protected boolean emulatesKCNet( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PROP_KCNET_ENABLED,
+			false );
+  }
+
+
+  protected boolean emulatesK1520Sound( Properties props )
+  { 
+    return EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PROP_K1520SOUND_ENABLED,
+			false );
+  }
+
+
+  protected boolean emulatesVDIP( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PROP_VDIP_ENABLED,
+			false );
   }
 
 
@@ -285,9 +320,9 @@ public abstract class EmuSys
   }
 
 
-  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
+  public int getResetStartAddress( boolean powerOn )
   {
-    return 0;
+    return 0x0000;
   }
 
 
@@ -327,6 +362,12 @@ public abstract class EmuSys
   }
 
 
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return new AbstractSoundDevice[ 0 ];
+  }
+
+
   public FloppyDiskInfo[] getSuitableFloppyDisks()
   {
     return null;
@@ -351,47 +392,22 @@ public abstract class EmuSys
   }
 
 
-  public File getUSBMemStickDirectory()
+
+  public AudioIn getTapeIn()
   {
-    VDIP vdip = getVDIP();
-    return vdip != null ? vdip.getMemStickDirectory() : null;
+    return this.tapeIn;
   }
 
 
-  public boolean getUSBMemStickForceCurrentTimestamp()
+  public AudioOut getTapeOut()
   {
-    VDIP vdip = getVDIP();
-    return vdip != null ?
-		vdip.getMemStickForceCurrentTimestamp()
-		: true;
+    return this.tapeOut;
   }
 
 
-  public boolean getUSBMemStickForceLowerCaseFileNames()
+  public VDIP[] getVDIPs()
   {
-    VDIP vdip = getVDIP();
-    return vdip != null ?
-		vdip.getMemStickForceLowerCaseFileNames()
-		: false;
-  }
-
-
-  public boolean getUSBMemStickReadOnly()
-  {
-    VDIP vdip = getVDIP();
-    return vdip != null ? vdip.getMemStickReadOnly() : false;
-  }
-
-
-  protected VDIP getVDIP()
-  {
-    return null;
-  }
-
-
-  public boolean hasKCBasicInROM()
-  {
-    return false;
+    return new VDIP[ 0 ];
   }
 
 
@@ -401,19 +417,21 @@ public abstract class EmuSys
   }
 
 
-  protected void initSRAM( byte[] a, Properties props )
+  public boolean hasKCBasicInROM()
   {
-    if( a != null ) {
-      if( EmuUtil.getProperty(
-		props,
-		EmuThread.PROP_SRAM_INIT ).equalsIgnoreCase(
-					EmuThread.VALUE_SRAM_INIT_RANDOM ) )
-      {
-	fillRandom( a );
-      } else {
-	Arrays.fill( a, (byte) 0 );
-      }
-    }
+    return false;
+  }
+
+
+  protected void initDRAM()
+  {
+    this.emuThread.initDRAM();
+  }
+
+
+  protected void initSRAM( byte[] ram, Properties props )
+  {
+    EmuUtil.initSRAM( ram, props );
   }
 
 
@@ -426,15 +444,6 @@ public abstract class EmuSys
   public boolean isPastingText()
   {
     return this.pasteThread != null;
-  }
-
-
-  protected boolean isReloadExtROMsOnPowerOnEnabled( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			EmuThread.PROP_EXT_ROM_RELOAD_ON_POWER_ON,
-			EmuThread.DEFAULT_EXT_ROM_RELOAD_ON_POWER_ON );
   }
 
 
@@ -471,10 +480,7 @@ public abstract class EmuSys
   }
 
 
-  public void loadIntoSecondSystem(
-			byte[] loadData,
-			int    loadAddr,
-			int    startAddr )
+  public void loadIntoSecondSystem( byte[] loadData, int loadAddr )
   {
     // leer
   }
@@ -488,12 +494,13 @@ public abstract class EmuSys
    * muss die Methode ueberschrieben werden.
    */
   public void loadIntoMem(
-			int        begAddr,
-			byte[]     data,
-			int        idx,
-			int        len,
-			FileFormat fileFmt,
-			int        fileType )
+			int           begAddr,
+			byte[]        data,
+			int           idx,
+			int           len,
+			FileFormat    fileFmt,
+			int           fileType,
+			StringBuilder rvStatusMsg )
   {
     if( data != null ) {
       int n   = len;
@@ -504,6 +511,12 @@ public abstract class EmuSys
       }
       updSysCells( begAddr, len, fileFmt, fileType );
     }
+  }
+
+
+  public void loadROMs( Properties props )
+  {
+    // leer
   }
 
 
@@ -519,9 +532,9 @@ public abstract class EmuSys
       case '\u0020':
 	rv = keyPressed( KeyEvent.VK_SPACE, false, false );
 	break;
-
-      default:
-	rv = keyTyped( ch );
+    }
+    if( !rv ) {
+      rv = keyTyped( ch );
     }
     if( rv ) {
       long millis = getHoldMillisPasteChar();
@@ -540,7 +553,7 @@ public abstract class EmuSys
 				int        maxLen )
   {
     return props != null ?
-		EmuUtil.readFile(
+		FileUtil.readFile(
 			this.emuThread.getScreenFrm(),
 			props.getProperty( propName ),
 			true,
@@ -570,7 +583,7 @@ public abstract class EmuSys
 
   protected byte[] readROMFile( String fileName, int maxLen, String objName )
   {
-    return EmuUtil.readFile(
+    return FileUtil.readFile(
 			this.emuThread.getScreenFrm(),
 			fileName,
 			true,
@@ -647,21 +660,21 @@ public abstract class EmuSys
 	  int b = (int) m2 & 0xFF;
 	  if( (b & 0x80) != 0 ) {
 	    if( quote ) {
-	      buf.append( (char) '\'' );
+	      buf.append( '\'' );
 	      quote = false;
 	    }
 	    if( first ) {
 	      first = false;
 	    } else {
-	      buf.append( (char) ',' );
+	      buf.append( ',' );
 	    }
 	    if( (b >= 0xA0) && (b < 0xFF) ) {
 	      buf.append( "80H+\'" );
 	      buf.append( (char) (b & 0x7F) );
-	      buf.append( (char) '\'' );
+	      buf.append( '\'' );
 	    } else {
 	      if( b >= 0xA0 ) {
-		buf.append( (char) '0' );
+		buf.append( '0' );
 	      }
 	      buf.append( String.format( "%02XH", b ) );
 	    }
@@ -671,21 +684,21 @@ public abstract class EmuSys
 		if( first ) {
 		  first = false;
 		} else {
-		  buf.append( (char) ',' );
+		  buf.append( ',' );
 		}
-		buf.append( (char) '\'' );
+		buf.append( '\'' );
 		quote = true;
 	      }
 	      buf.append( (char) b );
 	    } else {
 	      if( quote ) {
-		buf.append( (char) '\'' );
+		buf.append( '\'' );
 		quote = false;
 	      }
 	      if( first ) {
 		first = false;
 	      } else {
-		buf.append( (char) ',' );
+		buf.append( ',' );
 	      }
 	      buf.append( String.format( "%02XH", b ) );
 	    }
@@ -693,9 +706,9 @@ public abstract class EmuSys
 	  m2 >>= 8;
 	}
 	if( quote ) {
-	  buf.append( (char) '\'' );
+	  buf.append( '\'' );
 	}
-	buf.append( (char) '\n' );
+	buf.append( '\n' );
 	addr += n;
 	rv   += n;
       }
@@ -750,13 +763,13 @@ public abstract class EmuSys
 	  buf.append( s );
 	  appendSpacesToCol( buf, bol, colArgs );
 	  if( w >= 0xA000 ) {
-	    buf.append( (char) '0' );
+	    buf.append( '0' );
 	  }
 	  buf.append( String.format( "%04XH", w ) );
 	  appendSpacesToCol( buf, bol, colRemark );
-	  buf.append( (char) ';' );
+	  buf.append( ';' );
 	  buf.append( sysCallNames[ idx ] );
-	  buf.append( (char) '\n' );
+	  buf.append( '\n' );
 	  rv = 3;
 	}
       }
@@ -792,12 +805,12 @@ public abstract class EmuSys
   }
 
 
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    this.curSoundOutTStates = 0;
-    this.curTapeOutTStates  = 0;
-    this.soundOutPhase      = false;
-    this.tapeOutPhase       = false;
+    AudioIn tapeIn = this.tapeIn;
+    if( tapeIn != null ) {
+      this.tapeInPhase = tapeIn.readPhase();
+    }
   }
 
 
@@ -828,6 +841,18 @@ public abstract class EmuSys
   public abstract boolean setMemByte( int addr, int value );
 
 
+  public void setTapeIn( AudioIn audioIn )
+  {
+    this.tapeIn = audioIn;
+  }
+
+
+  public void setTapeOut( AudioOut audioOut )
+  {
+    this.tapeOut = audioOut;
+  }
+
+
   protected void showNoBasic()
   {
     BaseDlg.showErrorDlg(
@@ -837,59 +862,21 @@ public abstract class EmuSys
   }
 
 
-  public void setUSBMemStickDirectory( File dirFile )
-  {
-    VDIP vdip = getVDIP();
-    if( vdip != null ) {
-      vdip.setMemStickDirectory( dirFile );
-    }
-  }
-
-
-  public void setUSBMemStickForceCurrentTimestamp( boolean state )
-  {
-    VDIP vdip = getVDIP();
-    if( vdip != null ) {
-      vdip.setMemStickForceCurrentTimestamp( state );
-    }
-  }
-
-
-  public void setUSBMemStickForceLowerCaseFileNames( boolean state )
-  {
-    VDIP vdip = getVDIP();
-    if( vdip != null ) {
-      vdip.setMemStickForceLowerCaseFileNames( state );
-    }
-  }
-
-
-  public void setUSBMemStickReadOnly( boolean state )
-  {
-    VDIP vdip = getVDIP();
-    if( vdip != null ) {
-      vdip.setMemStickReadOnly( state );
-    }
-  }
-
-
-  public void soundOutFrameRateChanged( int frameRate )
-  {
-    this.soundOutFrameRate = frameRate;
-    updSoundOutTStates();
-  }
-
-
   public boolean supportsAudio()
   {
-    return (supportsTapeIn()
+    return supportsTapeIn()
 		|| supportsTapeOut()
-		|| supportsSoundOutMono()
-		|| supportsSoundOutStereo());
+		|| (getSoundDevices().length > 0);
   }
 
 
   public boolean supportsChessboard()
+  {
+    return false;
+  }
+
+
+  public boolean supportsHDDisks()
   {
     return false;
   }
@@ -937,24 +924,6 @@ public abstract class EmuSys
   }
 
 
-  public boolean supportsSoundOut8Bit()
-  {
-    return false;
-  }
-
-
-  public boolean supportsSoundOutMono()
-  {
-    return false;
-  }
-
-
-  public boolean supportsSoundOutStereo()
-  {
-    return false;
-  }
-
-
   public boolean supportsTapeIn()
   {
     return false;
@@ -969,14 +938,13 @@ public abstract class EmuSys
 
   public boolean supportsUSB()
   {
-    return (getVDIP() != null);
+    return (getVDIPs().length > 0);
   }
 
 
-  public void tapeOutFrameRateChanged( int frameRate )
+  public void tapeInPhaseChanged()
   {
-    this.tapeOutFrameRate = frameRate;
-    updTapeOutTStates();
+    // leer
   }
 
 
@@ -1080,43 +1048,38 @@ public abstract class EmuSys
     }
     catch( InterruptedException ex ) {}
     finally {
-      this.screenFrm.firePastingTextFinished();
-    }
-  }
-
-
-	/* --- Z80MaxSpeedListener --- */
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    if( cpu == this.emuThread.getZ80CPU() ) {
-      updSoundOutTStates();
-      updTapeOutTStates();
+      informPastingTextStatusChanged( false );
     }
   }
 
 
 	/* --- Z80TStatesListener --- */
 
+  /*
+   * Da die Audiokanaele und die zu lesenden Audiodateien
+   * im CPU-Thread geoeffnet und geschlossen werden, ist es erforderlich,
+   * die einzelnen Audio-Emulationssysteme permanent zu lesen
+   * bzw. zu beschreiben, und zwar auch dann, wenn das emulierte System
+   * die jeweilige Audiofunktion gar nicht unterstuetzt.
+   * Es kann naemlich sein, dass ein Audiokanal geoeffnet
+   * und danach das emulierte System dahingehend geaendert wird,
+   * dass die Audiofunktion nicht mehr unterstuetzt wird.
+   * In dem Fall muss durch das neue emulierte System
+   * der alte Audiokanal geschlossen werden.
+   */
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
-    if( this.soundOutTStates > 0 ) {
-      if( this.curSoundOutTStates > 0 ) {
-	this.curSoundOutTStates -= tStates;
-      } else {
-	this.curSoundOutTStates = this.soundOutTStates;
-	this.emuThread.writeSoundOutPhase( this.soundOutPhase );
+    AudioIn tapeIn = this.tapeIn;
+    if( tapeIn != null ) {
+      if( tapeIn.readPhase() != this.tapeInPhase ) {
+	this.tapeInPhase = !this.tapeInPhase;
+	tapeInPhaseChanged();
       }
     }
-    if( this.tapeOutTStates > 0 ) {
-      if( this.curTapeOutTStates > 0 ) {
-	this.curTapeOutTStates -= tStates;
-      } else {
-	this.curTapeOutTStates = this.tapeOutTStates;
-	this.emuThread.writeTapeOutPhase( this.tapeOutPhase );
-      }
+    AudioOut tapeOut = this.tapeOut;
+    if( tapeOut != null ) {
+      tapeOut.writePhase( this.tapeOutPhase );
     }
   }
 
@@ -1132,11 +1095,13 @@ public abstract class EmuSys
 	thread.interrupt();
       }
       catch( Exception ex ) {}
-      this.pasteThread = null;
+      finally {
+	this.pasteThread = null;
+      }
     }
     if( this.pasteIter != null ) {
       this.pasteIter = null;
-      this.screenFrm.firePastingTextFinished();
+      informPastingTextStatusChanged( false );
     }
     EventQueue.invokeLater(
 		new Runnable()
@@ -1164,6 +1129,7 @@ public abstract class EmuSys
     if( text != null ) {
       if( !text.isEmpty() ) {
 	cancelPastingText();
+	informPastingTextStatusChanged( true );
 	this.pasteIter   = new StringCharacterIterator( text );
 	this.pasteThread = new Thread(
 				Main.getThreadGroup(),
@@ -1174,7 +1140,7 @@ public abstract class EmuSys
       }
     }
     if( !done ) {
-      this.screenFrm.firePastingTextFinished();
+      informPastingTextStatusChanged( false );
     }
   }
 
@@ -1224,35 +1190,5 @@ public abstract class EmuSys
 	this.screenFrm,
 	"Diese Funktion steht f\u00FCr das gerade emulierte System\n"
 		+ "nicht zur Verf\u00FCgung." );
-  }
-
-
-  private void updSoundOutTStates()
-  {
-    int frameRate = this.soundOutFrameRate;
-    if( (frameRate > 0)
-	&& supportsSoundOutMono()
-	&& !supportsSoundOutStereo()
-	&& !supportsSoundOut8Bit() )
-    {
-      this.soundOutTStates = Math.min(
-		this.emuThread.getZ80CPU().getMaxSpeedKHz() * 300 / frameRate,
-		1 );
-    } else {
-      this.soundOutTStates = 0;
-    }
-  }
-
-
-  private void updTapeOutTStates()
-  {
-    int frameRate = this.tapeOutFrameRate;
-    if( (frameRate > 0) && supportsTapeOut() ) {
-      this.tapeOutTStates = Math.min(
-		this.emuThread.getZ80CPU().getMaxSpeedKHz() * 100 / frameRate,
-		1 );
-    } else {
-      this.tapeOutTStates = 0;
-    }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,23 +11,28 @@ package jkcemu.emusys;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
-import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.audio.AbstractSoundDevice;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
 import jkcemu.emusys.poly880.Poly880KeyboardFld;
+import jkcemu.etc.CPUSynchronSoundDevice;
 import jkcemu.text.TextUtil;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80CTCListener;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 
 
-public class Poly880 extends EmuSys implements Z80CTCListener
+public class Poly880 extends EmuSys implements
+					Z80CTCListener,
+					Z80MaxSpeedListener,
+					Z80PIOPortListener
 {
   public static final String SYSNAME              = "Poly880";
   public static final String SYSTEXT              = "Poly-880";
@@ -40,37 +45,37 @@ public class Poly880 extends EmuSys implements Z80CTCListener
   public static final String PROP_ROM3000_PREFIX  = "rom_3000.";
 
 
-  private static final int[] key4 = { 'G', -1,  'X', '-', 'R', -1,  'S', 'M' };
-  private static final int[] key5 = { '0', '2', '3', '1', '8', '9', 'B', 'A' };
-  private static final int[] key7 = { '4', '6', '7', '5', 'C', 'D', 'F', 'E' };
+  private static final int[] k4 = { 'G', -1,  'X', '-', 'R', -1,  'S', 'M' };
+  private static final int[] k5 = { '0', '2', '3', '1', '8', '9', 'B', 'A' };
+  private static final int[] k7 = { '4', '6', '7', '5', 'C', 'D', 'F', 'E' };
 
   private static byte[] mon0000 = null;
   private static byte[] mon1000 = null;
 
-  private byte[]             ram;
-  private byte[]             rom0Bytes;
-  private byte[]             rom1Bytes;
-  private byte[]             rom2Bytes;
-  private byte[]             rom3Bytes;
-  private String             rom0File;
-  private String             rom1File;
-  private String             rom2File;
-  private String             rom3File;
-  private int[]              keyboardMatrix;
-  private int[]              digitStatus;
-  private int[]              digitValues;
-  private int                colMask;
-  private long               curDisplayTStates;
-  private long               displayCheckTStates;
-  private boolean            tapeInPhase;
-  private boolean            nmiEnabled;
-  private boolean            nmiTrigger;
-  private boolean            ram8000;
-  private boolean            extRomsNegated;
-  private Z80CTC             ctc;
-  private Z80PIO             pio1;
-  private Z80PIO             pio2;
-  private Poly880KeyboardFld keyboardFld;
+  private byte[]                 ram;
+  private byte[]                 rom0Bytes;
+  private byte[]                 rom1Bytes;
+  private byte[]                 rom2Bytes;
+  private byte[]                 rom3Bytes;
+  private String                 rom0File;
+  private String                 rom1File;
+  private String                 rom2File;
+  private String                 rom3File;
+  private int[]                  keyboardMatrix;
+  private int[]                  digitStatus;
+  private int[]                  digitValues;
+  private int                    colMask;
+  private long                   curDisplayTStates;
+  private long                   displayCheckTStates;
+  private boolean                nmiEnabled;
+  private boolean                nmiTrigger;
+  private boolean                ram8000;
+  private boolean                extRomsNegated;
+  private Z80CTC                 ctc;
+  private Z80PIO                 pio1;
+  private Z80PIO                 pio2;
+  private Poly880KeyboardFld     keyboardFld;
+  private CPUSynchronSoundDevice loudspeaker;
 
 
   public Poly880( EmuThread emuThread, Properties props )
@@ -93,22 +98,20 @@ public class Poly880 extends EmuSys implements Z80CTCListener
     this.digitValues         = new int[ 8 ];
     this.keyboardMatrix      = new int[ 8 ];
     this.keyboardFld         = null;
+    this.loudspeaker         = new CPUSynchronSoundDevice( "Lautsprecher" );
 
     Z80CPU cpu = emuThread.getZ80CPU();
-    this.pio1  = new Z80PIO( "PIO (80-83)" );
-    this.pio2  = new Z80PIO( "PIO (84-87)" );
-    this.ctc   = new Z80CTC( "CTC (88-8B)" );
+    this.pio1  = new Z80PIO( "PIO (E/A-Adressen 80h-83h)" );
+    this.pio2  = new Z80PIO( "PIO (E/A-Adressen 84h-87h)" );
+    this.ctc   = new Z80CTC( "CTC (E/A-Adressen 88h-8Bh)" );
     cpu.setInterruptSources( this.pio1, this.pio2, this.ctc );
 
     this.ctc.setTimerConnection( 2, 3 );
     this.ctc.addCTCListener( this );
+    this.pio1.addPIOPortListener( this, Z80PIO.PortInfo.B );
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     z80MaxSpeedChanged( cpu );
-
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
-    }
   }
 
 
@@ -151,6 +154,37 @@ public class Poly880 extends EmuSys implements Z80CTCListener
     if( (ctc == this.ctc) && (timerNum == 0) && this.nmiEnabled ) {
       this.nmiEnabled = false;
       this.nmiTrigger = true;	// nach dem naechsten Befehl NMI ausloesen
+    }
+  }
+
+
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.loudspeaker.z80MaxSpeedChanged( cpu );
+    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (pio == this.pio1)
+	&& (port == Z80PIO.PortInfo.B)
+	&& ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	    || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+    {
+      int v = this.pio1.fetchOutValuePortB( 0xFF );
+      this.loudspeaker.setCurPhase( (v & 0x01) != 0 );
+      this.tapeOutPhase = ((v & 0x04) != 0);
+      this.nmiEnabled   = ((v & 0x40) == 0);
     }
   }
 
@@ -207,7 +241,7 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public Poly880KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new Poly880KeyboardFld( this );
     return this.keyboardFld;
@@ -218,11 +252,15 @@ public class Poly880 extends EmuSys implements Z80CTCListener
   public void die()
   {
     this.ctc.removeCTCListener( this );
+    this.pio1.removePIOPortListener( this, Z80PIO.PortInfo.B );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+
+    this.loudspeaker.fireStop();
+    super.die();
   }
 
 
@@ -236,7 +274,7 @@ public class Poly880 extends EmuSys implements Z80CTCListener
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
+    Color color = Color.BLACK;
     switch( colorIdx ) {
       case 1:
 	color = this.colorGreenDark;
@@ -331,6 +369,13 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 
 
   @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return new AbstractSoundDevice[] { this.loudspeaker };
+  }
+
+
+  @Override
   public String getTitle()
   {
     return SYSTEXT;
@@ -357,7 +402,7 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 	  break;
 
 	case KeyEvent.VK_ESCAPE:
-	  this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
+	  this.emuThread.fireReset( false );
 	  rv = true;
 	  break;
 
@@ -395,18 +440,55 @@ public class Poly880 extends EmuSys implements Z80CTCListener
     boolean rv = false;
     if( keyChar > 0 ) {
       int ch = Character.toUpperCase( keyChar );
-      rv = setKeyMatrixValue( key4, ch, 0x10 );
+      rv = setKeyMatrixValue( k4, ch, 0x10 );
       if( !rv ) {
-	rv = setKeyMatrixValue( key5, ch, 0x20 );
+	rv = setKeyMatrixValue( k5, ch, 0x20 );
       }
       if( !rv ) {
-	rv = setKeyMatrixValue( key7, ch, 0x80 );
+	rv = setKeyMatrixValue( k7, ch, 0x80 );
       }
     }
     if( rv ) {
       updKeyboardFld();
     }
     return rv;
+  }
+
+
+  @Override
+  public void loadROMs( Properties props )
+  {
+    this.rom0File  = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM0000_PREFIX + PROP_FILE );
+    this.rom0Bytes = readPoly880ROMFile( this.rom0File, "ROM 0" );
+    if( this.rom0Bytes == null ) {
+      if( mon0000 == null ) {
+	mon0000 = readResource( "/rom/poly880/poly880_0000.bin" );
+      }
+      this.rom0Bytes = mon0000;
+    }
+
+    this.rom1File = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM1000_PREFIX + PROP_FILE );
+    this.rom1Bytes = readPoly880ROMFile( this.rom1File, "ROM 1" );
+    if( this.rom1Bytes == null ) {
+      if( mon1000 == null ) {
+	mon1000 = readResource( "/rom/poly880/poly880_1000.bin" );
+      }
+      this.rom1Bytes = mon1000;
+    }
+
+    this.rom2File  = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM2000_PREFIX + PROP_FILE );
+    this.rom2Bytes = readPoly880ROMFile( this.rom2File, "ROM 2" );
+
+    this.rom3File  = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM3000_PREFIX + PROP_FILE );
+    this.rom3Bytes = readPoly880ROMFile( this.rom3File, "ROM 3" );
   }
 
 
@@ -440,10 +522,6 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 	rv = this.pio1.readDataA();
 	break;
 
-      case 0x81:
-	rv = this.pio1.readControlA();
-	break;
-
       case 0x82:
 	{
 	  int v = 0;
@@ -461,24 +539,12 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 	}
 	break;
 
-      case 0x83:
-	rv = this.pio1.readControlB();
-	break;
-
       case 0x84:
 	rv = this.pio2.readDataA();
 	break;
 
-      case 0x85:
-	rv = this.pio2.readControlA();
-	break;
-
       case 0x86:
 	rv = this.pio2.readDataB();
-	break;
-
-      case 0x87:
-	rv = this.pio2.readControlB();
 	break;
 
       case 0x88:
@@ -504,14 +570,14 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
-	loadROMs( props );
-      }
+    super.reset( powerOn, props );
+    if( powerOn ) {
       initSRAM( this.ram, props );
+      if( this.ram8000 ) {
+	initDRAM();
+      }
     }
     synchronized( this.digitValues ) {
       Arrays.fill( this.digitStatus, 0 );
@@ -520,10 +586,13 @@ public class Poly880 extends EmuSys implements Z80CTCListener
     synchronized( this.keyboardMatrix ) {
       Arrays.fill( this.keyboardMatrix, 0 );
     }
-    this.colMask     = 0;
-    this.tapeInPhase = this.emuThread.readTapeInPhase();
-    this.nmiEnabled  = true;
-    this.nmiTrigger  = false;
+    this.colMask    = 0;
+    this.nmiEnabled = true;
+    this.nmiTrigger = false;
+    this.ctc.reset( powerOn );
+    this.pio1.reset( powerOn );
+    this.pio2.reset( powerOn );
+    this.loudspeaker.reset();
   }
 
 
@@ -560,13 +629,6 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public boolean supportsSoundOutMono()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsTapeIn()
   {
     return true;
@@ -581,9 +643,15 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 
 
   @Override
+  public void tapeInPhaseChanged()
+  {
+    this.pio1.putInValuePortB( this.tapeInPhase ? 0x02 : 0, 0x02 );
+  }
+
+
+  @Override
   public void writeIOByte( int port, int value, int tStates )
   {
-    int v = 0;
     switch( port & 0x8F ) {	// A4 bis A6 ignorieren
       case 0x80:
 	this.pio1.writeDataA( value );
@@ -595,10 +663,6 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 
       case 0x82:
 	this.pio1.writeDataB( value );
-	v = this.pio1.fetchOutValuePortB( false );
-	this.soundOutPhase = ((v & 0x01) != 0);
-	this.tapeOutPhase  = ((v & 0x04) != 0);
-	this.nmiEnabled    = ((v & 0x40) == 0);
 	break;
 
       case 0x83:
@@ -630,7 +694,7 @@ public class Poly880 extends EmuSys implements Z80CTCListener
     if( (port & 0xB0) == 0xB0 ) {
       this.colMask  = value;
       boolean dirty = false;
-      v = toDigitValue( this.pio1.fetchOutValuePortA( false ) );
+      int v = toDigitValue( this.pio1.fetchOutValuePortA( 0xFF ) );
       synchronized( this.digitValues ) {
 	int m = 0x80;
 	for( int i = 0; i < this.digitValues.length; i++ ) {
@@ -652,24 +716,11 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    this.displayCheckTStates = cpu.getMaxSpeedKHz() * 50;
-  }
-
-
-  @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
-
-    boolean phase = this.emuThread.readTapeInPhase();
-    if( phase != this.tapeInPhase ) {
-      this.tapeInPhase = phase;
-      this.pio1.putInValuePortB( this.tapeInPhase ? 0x02 : 0, 0x02 );
-    }
     this.ctc.z80TStatesProcessed( cpu, tStates );
+    this.loudspeaker.z80TStatesProcessed( cpu, tStates );
     if( this.displayCheckTStates > 0 ) {
       this.curDisplayTStates += tStates;
       if( this.curDisplayTStates > this.displayCheckTStates ) {
@@ -712,42 +763,6 @@ public class Poly880 extends EmuSys implements Z80CTCListener
 			props,
 			this.propPrefix + PROP_RAM8000_ENABLED,
 			false );
-  }
-
-
-  private void loadROMs( Properties props )
-  {
-    this.rom0File  = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM0000_PREFIX + PROP_FILE );
-    this.rom0Bytes = readPoly880ROMFile( this.rom0File, "ROM 0" );
-    if( this.rom0Bytes == null ) {
-      if( mon0000 == null ) {
-	mon0000 = readResource( "/rom/poly880/poly880_0000.bin" );
-      }
-      this.rom0Bytes = mon0000;
-    }
-
-    this.rom1File = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM1000_PREFIX + PROP_FILE );
-    this.rom1Bytes = readPoly880ROMFile( this.rom1File, "ROM 1" );
-    if( this.rom1Bytes == null ) {
-      if( mon1000 == null ) {
-	mon1000 = readResource( "/rom/poly880/poly880_1000.bin" );
-      }
-      this.rom1Bytes = mon1000;
-    }
-
-    this.rom2File  = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM2000_PREFIX + PROP_FILE );
-    this.rom2Bytes = readPoly880ROMFile( this.rom2File, "ROM 2" );
-
-    this.rom3File  = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM3000_PREFIX + PROP_FILE );
-    this.rom3Bytes = readPoly880ROMFile( this.rom3File, "ROM 3" );
   }
 
 

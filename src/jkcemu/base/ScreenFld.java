@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.lang.*;
 import javax.swing.JComponent;
 
 
@@ -40,8 +39,6 @@ public class ScreenFld extends JComponent implements MouseMotionListener
   private int                           selectionCharY2;
   private int                           scale;
   private int                           margin;
-  private int                           xOffs;
-  private int                           yOffs;
 
 
   public ScreenFld( AbstractScreenFrm screenFrm )
@@ -58,10 +55,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
     this.selectionCharY2 = -1;
     this.scale           = 1;
     this.margin          = DEFAULT_MARGIN;
-    this.xOffs           = 0;
-    this.yOffs           = 0;
     addMouseMotionListener( this );
-    updPreferredSize();
   }
 
 
@@ -85,29 +79,36 @@ public class ScreenFld extends JComponent implements MouseMotionListener
     AbstractScreenDevice screenDevice = this.screenDevice;
     if( (screenDevice != null) && (w > 0) && (h > 0) ) {
       int nColors = screenDevice.getColorCount();
-      int value   = nColors - 1;
-      int nBits   = 0;
-      while( value > 0 ) {
-	value >>= 1;
-	nBits++;
-      }
-      byte[] r = new byte[ nColors ];
-      byte[] g = new byte[ nColors ];
-      byte[] b = new byte[ nColors ];
-      for( int i = 0; i < nColors; i++ ) {
-	Color color = screenDevice.getColor( i );
-	r[ i ] = (byte) color.getRed();
-	g[ i ] = (byte) color.getGreen();
-	b[ i ] = (byte) color.getBlue();
-      }
-      IndexColorModel cm = new IndexColorModel( nBits, nColors, r, g, b );
-      img = new BufferedImage(
+      if( (nColors > 0) && (nColors <= 256) ) {
+	int value   = nColors - 1;
+	int nBits   = 0;
+	while( value > 0 ) {
+	  value >>= 1;
+	  nBits++;
+	}
+	byte[] r = new byte[ nColors ];
+	byte[] g = new byte[ nColors ];
+	byte[] b = new byte[ nColors ];
+	for( int i = 0; i < nColors; i++ ) {
+	  Color color = screenDevice.getColor( i );
+	  r[ i ] = (byte) color.getRed();
+	  g[ i ] = (byte) color.getGreen();
+	  b[ i ] = (byte) color.getBlue();
+	}
+	IndexColorModel cm = new IndexColorModel( nBits, nColors, r, g, b );
+	img = new BufferedImage(
 			w,
 			h,
 			nBits > 4 ?
 				BufferedImage.TYPE_BYTE_INDEXED
 				: BufferedImage.TYPE_BYTE_BINARY,
 			cm );
+      } else {
+	img = new BufferedImage(
+			w,
+			h,
+			BufferedImage.TYPE_3BYTE_BGR );
+      }
       Graphics graphics = img.createGraphics();
       paint( graphics, w, h, false );
       graphics.dispose();
@@ -271,13 +272,13 @@ public class ScreenFld extends JComponent implements MouseMotionListener
       int wBase = screenDevice.getScreenWidth();
       int hBase = screenDevice.getScreenHeight();
 
-      this.xOffs = (w - (wBase * this.scale)) / 2;
-      if( this.xOffs < 0) {
-	this.xOffs = 0;
+      int xOffs = (w - (wBase * this.scale)) / 2;
+      if( xOffs < 0) {
+	xOffs = 0;
       }
-      this.yOffs = (h - (hBase * this.scale)) / 2;
-      if( this.yOffs < 0) {
-	this.yOffs = 0;
+      int yOffs = (h - (hBase * this.scale)) / 2;
+      if( yOffs < 0) {
+	yOffs = 0;
       }
 
       // Hintergrund zeichnen
@@ -285,14 +286,14 @@ public class ScreenFld extends JComponent implements MouseMotionListener
       if( screenDevice.supportsBorderColorByLine() ) {
 	int scale = this.scale;
 	if( scale > 1 ) {
-	  int line = (-this.yOffs / scale);
+	  int line = (-yOffs / scale);
 	  for( int y = 0; y < h; y += scale ) {
 	    bgColorIdx = screenDevice.getBorderColorIndexByLine( line++ );
 	    g.setColor( screenDevice.getColor( bgColorIdx ) );
 	    g.fillRect( 0, y, w, y + scale );
 	  }
 	} else {
-	  int line = -this.yOffs;
+	  int line = -yOffs;
 	  for( int y = 0; y < h; y++ ) {
 	    bgColorIdx = screenDevice.getBorderColorIndexByLine( line++ );
 	    g.setColor( screenDevice.getColor( bgColorIdx ) );
@@ -314,12 +315,12 @@ public class ScreenFld extends JComponent implements MouseMotionListener
       // Vordergrund zeichnen
       if( !screenDevice.paintScreen(
 				g,
-				this.xOffs,
-				this.yOffs,
+				xOffs,
+				yOffs,
 				this.scale ) )
       {
-	if( (this.xOffs > 0) || (this.yOffs > 0) ) {
-	  g.translate( this.xOffs, this.yOffs );
+	if( (xOffs > 0) || (yOffs > 0) ) {
+	  g.translate( xOffs, yOffs );
 	}
 
 	/*
@@ -359,8 +360,8 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 		(hBase - yColorBeg) * this.scale );
 	  }
 	}
-	if( (this.xOffs > 0) || (this.yOffs > 0) ) {
-	  g.translate( -this.xOffs, -this.yOffs );
+	if( (xOffs > 0) || (yOffs > 0) ) {
+	  g.translate( -xOffs, -yOffs );
 	}
       }
 
@@ -375,30 +376,30 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	    && (dragEnd != null)
 	    && (scale > 0) )
 	{
-	  int topLine = this.charRaster.getTopLine();
-	  int nCols   = this.charRaster.getColCount();
-	  int nRows   = this.charRaster.getRowCount();
-	  int hRow    = this.charRaster.getRowHeight();
-	  int hChar   = this.charRaster.getCharHeight();
-	  int wChar   = this.charRaster.getCharWidth();
+	  int nCols = this.charRaster.getColCount();
+	  int nRows = this.charRaster.getRowCount();
+	  int hRow  = this.charRaster.getRowHeight();
+	  int hChar = this.charRaster.getCharHeight();
+	  int wChar = this.charRaster.getCharWidth();
 	  if( (nCols > 0) && (nRows > 0)
 	      && (hRow > 0) && (hChar > 0) && (wChar > 0) )
 	  {
-	    int x1    = dragStart.x;
-	    int y1    = dragStart.y;
-	    int x2    = dragEnd.x;
-	    int y2    = dragEnd.y;
-	    int yOffs = this.yOffs + (topLine * scale);
+	    int x1 = dragStart.x;
+	    int y1 = dragStart.y;
+	    int x2 = dragEnd.x;
+	    int y2 = dragEnd.y;
+	    xOffs += (this.charRaster.getXOffset() * scale);
+	    yOffs += (this.charRaster.getYOffset() * scale);
 
 	    // Zeichenpositionen berechnen
 	    this.selectionCharX1 = Math.max(
-			(x1 - this.xOffs) / scale, 0 ) / wChar;
+			(x1 - xOffs) / scale, 0 ) / wChar;
 	    this.selectionCharY1 = Math.max(
 			(y1 - yOffs) / scale, 0 ) / hRow;
 	    this.selectionCharX2 = Math.max(
-			(x2 - this.xOffs) / scale, 0 ) / wChar;
+			(x2 - xOffs) / scale, 0 ) / wChar;
 	    this.selectionCharY2 = Math.max(
-			(y2 - yOffs) / scale , 0 ) / hRow;
+			(y2 - yOffs) / scale, 0 ) / hRow;
 	    if( this.selectionCharX1 >= nCols ) {
 	      this.selectionCharX1 = nCols - 1;
 	    }
@@ -442,7 +443,7 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	      this.selectionCharX1 = 0;
 	      this.selectionCharY1 = 0;
 	    } else {
-	      if( x1 > (this.xOffs + (scale * nCols * wChar)) ) {
+	      if( x1 > (xOffs + (scale * nCols * wChar)) ) {
 		this.selectionCharX1 = 0;
 		this.selectionCharY1++;
 	      }
@@ -451,38 +452,38 @@ public class ScreenFld extends JComponent implements MouseMotionListener
 	      this.selectionCharX2 = nCols - 1;
 	      this.selectionCharY2 = nRows - 1;
 	    } else {
-	      if( x2 < this.xOffs ) {
+	      if( x2 < xOffs ) {
 		this.selectionCharX2 = nCols - 1;
 		--this.selectionCharY2;
 	      }
 	    }
 
 	    // Markierter Text visualisieren
-	    g.setColor( Color.white );
+	    g.setColor( Color.WHITE );
 	    g.setXORMode( this.markXORColor );
 	    if( this.selectionCharY1 == this.selectionCharY2 ) {
 	      g.fillRect(
-			this.xOffs + (scale * this.selectionCharX1 * wChar),
+			xOffs + (scale * this.selectionCharX1 * wChar),
 			yOffs + (scale * this.selectionCharY1 * hRow),
 			scale * (this.selectionCharX2
 					- this.selectionCharX1 + 1) * wChar,
 			scale * hChar );
 	    } else {
 	      g.fillRect(
-			this.xOffs + (scale * this.selectionCharX1 * wChar),
+			xOffs + (scale * this.selectionCharX1 * wChar),
 			yOffs + (scale * this.selectionCharY1 * hRow),
 			scale * (nCols - this.selectionCharX1) * wChar,
 			scale * hRow );
 	      if( this.selectionCharY1 + 1 < this.selectionCharY2 ) {
 		g.fillRect(
-			this.xOffs,
+			xOffs,
 			yOffs + (scale * (this.selectionCharY1 + 1) * hRow),
 			scale * nCols * wChar,
 			scale * (this.selectionCharY2
 					- this.selectionCharY1 - 1) * hRow );
 	      }
 	      g.fillRect(
-			this.xOffs,
+			xOffs,
 			yOffs + (scale * this.selectionCharY2 * hRow),
 			scale * (this.selectionCharX2 + 1) * wChar,
 			scale * hChar );

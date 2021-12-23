@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2014 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,75 +8,95 @@
 
 package jkcemu.programming.basic;
 
-import java.lang.*;
-import java.util.Map;
 import jkcemu.programming.PrgSource;
 
 
 public class VarDecl extends BasicSourcePos
 {
-  private String  varName;
-  private int     dim1;
-  private int     dim2;
-  private int     nDims;
-  private int     size;
-  private boolean used;
-  private String  label;
-  private String  infoText;
+  public static final String LABEL_PREFIX_INT2   = "V_I2_";
+  public static final String LABEL_PREFIX_INT4   = "V_I4_";
+  public static final String LABEL_PREFIX_FLOAT4 = "V_F4_";
+  public static final String LABEL_PREFIX_DEC6   = "V_D6_";
+  public static final String LABEL_PREFIX_STRING = "V_S_";
+
+  private BasicCompiler.DataType dataType;
+  private int                    dim1;
+  private int                    dim2;
+  private int                    nDims;
+  private int                    elemSize;
+  private int                    totalSize;
+  private boolean                read;
+  private boolean                written;
+  private String                 label;
+  private String                 infoText;
 
 
   public VarDecl(
-		PrgSource source,
-		long      basicLineNum,
-		String    varName,
-		int       dim1,
-		int       dim2 )
+		PrgSource              source,
+		long                   basicLineNum,
+		String                 name,
+		BasicCompiler.DataType dataType,
+		int                    dim1,
+		int                    dim2 )
   {
     super( source, basicLineNum );
-    this.varName = varName;
-    this.dim1    = dim1;
-    this.dim2    = dim2;
-    this.nDims   = 0;
-    this.size    = 2;
-    this.used    = false;
+    this.dataType = dataType;
+    this.dim1     = dim1;
+    this.dim2     = dim2;
+    this.nDims    = 0;
+    this.elemSize = 2;
+    this.read     = false;
+    this.written  = false;
+    this.label    = LABEL_PREFIX_INT2 + name;
+    this.infoText = "Variable ";
+    switch( this.dataType ) {
+      case INT4:
+	this.label    = LABEL_PREFIX_INT4 + name;
+	this.elemSize = 4;
+	break;
+      case FLOAT4:
+	this.label    = LABEL_PREFIX_FLOAT4 + name;
+	this.elemSize = 4;
+	break;
+      case DEC6:
+	this.label    = LABEL_PREFIX_DEC6 + name;
+	this.elemSize = 6;
+	break;
+      case STRING:
+	this.label = LABEL_PREFIX_STRING
+				+ name.substring( 0, name.length() - 1 );
+	this.elemSize = 2;
+	break;
+    }
+    this.totalSize = this.elemSize;
     if( dim1 > 0 ) {
       this.nDims++;
-      this.size *= (dim1 + 1);
+      this.totalSize *= (dim1 + 1);
       if( dim2 > 0 ) {
 	this.nDims++;
-	this.size *= (dim2 + 1);
+	this.totalSize *= (dim2 + 1);
       }
-    }
-    if( varName.endsWith( "$" ) ) {
-      this.label = "VS_" + varName.substring( 0, varName.length() - 1 );
-    } else {
-      this.label = "VI_" + varName;
     }
     if( this.nDims > 0 ) {
       this.infoText = "Feldvariable ";
-    } else {
-      this.infoText = "Variable ";
     }
-    this.infoText += varName;
+    this.infoText += name;
   }
 
 
   public VarDecl(
-		PrgSource source,
-		long      basicLineNum,
-		String    varName,
-		int       dim1 )
+		PrgSource              source,
+		long                   basicLineNum,
+		String                 name,
+		BasicCompiler.DataType dataType )
   {
-    this( source, basicLineNum, varName, dim1, 0 );
+    this( source, basicLineNum, name, dataType, 0, 0 );
   }
 
 
-  public VarDecl(
-		PrgSource source,
-		long      basicLineNum,
-		String    varName )
+  public BasicCompiler.DataType getDataType()
   {
-    this( source, basicLineNum, varName, 0, 0 );
+    return this.dataType;
   }
 
 
@@ -98,27 +118,45 @@ public class VarDecl extends BasicSourcePos
   }
 
 
+  public int getElemSize()
+  {
+    return this.elemSize;
+  }
+
+
   public String getLabel()
   {
     return this.label;
   }
 
 
-  public int getSize()
+  public int getTotalSize()
   {
-    return this.size;
+    return this.totalSize;
   }
 
 
-  public boolean isUsed()
+  public boolean isRead()
   {
-    return this.used;
+    return this.read;
   }
 
 
-  public void setUsed()
+  public boolean isWritten()
   {
-    this.used = true;
+    return this.written;
+  }
+
+
+  public void setRead()
+  {
+    this.read = true;
+  }
+
+
+  public void setWritten()
+  {
+    this.written = true;
   }
 
 

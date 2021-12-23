@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.MouseEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.EmuSys;
 import jkcemu.base.AbstractKeyboardFld;
@@ -53,13 +52,13 @@ public class SC2KeyboardFld extends AbstractKeyboardFld<SC2>
     super( sc2, 15, true );
     this.kbMatrix       = new int[ 4 ];
     this.colorBg        = new Color( 20, 20, 20 );
-    this.colorLEDon     = Color.red;
+    this.colorLEDon     = Color.RED;
     this.colorLEDoff    = new Color( 80, 50, 50 );
     this.colorTextDark  = new Color( 20, 20, 20 );
     this.colorTextLight = new Color( 180, 180, 180 );
-    this.fontTitle      = new Font( "SansSerif", Font.BOLD, 16 );
-    this.fontLabel      = new Font( "SansSerif", Font.BOLD, 12 );
-    this.fontKey        = new Font( "SansSerif", Font.BOLD, 16 );
+    this.fontTitle      = new Font( Font.SANS_SERIF, Font.BOLD, 16 );
+    this.fontLabel      = new Font( Font.SANS_SERIF, Font.BOLD, 12 );
+    this.fontKey        = new Font( Font.SANS_SERIF, Font.BOLD, 16 );
     this.imgLedFld      = getImage( "/images/keyboard/sc2/led_field.png" );
     this.imgKeyDark     = getImage( "/images/keyboard/sc2/key_dark.png" );
     this.imgKeyLight    = getImage( "/images/keyboard/sc2/key_light.png" );
@@ -125,7 +124,7 @@ public class SC2KeyboardFld extends AbstractKeyboardFld<SC2>
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	fireWarmResetAfterDelay();
+	fireResetAfterDelay();
       }
       super.mousePressed( e );
     }
@@ -137,7 +136,7 @@ public class SC2KeyboardFld extends AbstractKeyboardFld<SC2>
   {
     g.setColor( this.colorBg );
     g.fillRect( 0, 0, getWidth(), KEY_Y0 - MARGIN );
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
     g.fillRect(
 	0,
 	KEY_Y0 - MARGIN,
@@ -274,4 +273,3 @@ public class SC2KeyboardFld extends AbstractKeyboardFld<SC2>
     return keyData;
   }
 }
-

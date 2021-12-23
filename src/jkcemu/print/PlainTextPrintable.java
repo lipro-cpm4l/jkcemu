@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.Graphics;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.lang.*;
 import jkcemu.Main;
 
 
@@ -22,14 +21,43 @@ public class PlainTextPrintable implements Printable
 {
   private String text;
   private int    tabSize;
+  private int    contentFontSize;
+  private Font   contentFont;
+  private Font   footerFont;
   private String fileName;
 
 
-  public PlainTextPrintable( String text, int tabSize, String fileName )
+  public PlainTextPrintable(
+			String text,
+			int    tabSize,
+			Font   font,
+			String fileName )
   {
-    this.text     = text;
-    this.tabSize  = tabSize;
-    this.fileName = fileName;
+    this.text            = text;
+    this.tabSize         = tabSize;
+    this.fileName        = fileName;
+    this.footerFont      = null;
+    this.contentFont     = null;
+    this.contentFontSize = Main.getPrintFontSize();
+    if( this.contentFontSize > 0 ) {
+      if( font != null ) {
+	if( font.getSize() == this.contentFontSize ) {
+	  this.contentFont = font;
+	} else {
+	  this.contentFont = font.deriveFont( (float) this.contentFontSize );
+	}
+      } else {
+	this.contentFont = new Font(
+				Font.MONOSPACED,
+				Font.PLAIN,
+				this.contentFontSize );
+      }
+      int footerSize = this.contentFontSize - 2;
+      if( footerSize < 6 ) {
+	footerSize = 6;
+      }
+      this.footerFont = this.contentFont.deriveFont( (float) footerSize );
+    }
   }
 
 
@@ -42,11 +70,13 @@ public class PlainTextPrintable implements Printable
 		int        pageNum ) throws PrinterException
   {
     int rv = NO_SUCH_PAGE;
-    if( (this.text != null) && (this.tabSize > 0) ) {
-
+    if( (this.text != null)
+	&& (this.tabSize > 0)
+	&& (this.contentFontSize > 0)
+	&& (this.contentFont != null) )
+    {
       // Anzahl Zeilen pro Seite
-      int fontSize     = Main.getPrintFontSize();
-      int linesPerPage = (int) pf.getImageableHeight() / fontSize;
+      int linesPerPage = (int) pf.getImageableHeight() / this.contentFontSize;
       if( Main.getPrintFileName() || Main.getPrintPageNum() ) {
 	linesPerPage -= 2;
       }
@@ -57,36 +87,48 @@ public class PlainTextPrintable implements Printable
       }
 
       // vorherige Seiten ueberspringen
-      int linesToSkip = pageNum * linesPerPage;
+      int pagesToSkip = pageNum;
       int len         = this.text.length();
       int pos         = 0;
-      while( (linesToSkip > 0) && (pos < len) ) {
-	int i = this.text.indexOf( '\n', pos );
-	if( i < pos ) {
-	  pos = len;
-	  break;
+      int linesOnPage = 0;
+      while( (pagesToSkip > 0) && (pos < len) ) {
+	char ch = this.text.charAt( pos++ );
+	if( ch == '\f' ) {
+	  --pagesToSkip;
+	  linesOnPage = 0;
+	} else if( ch == '\n' ) {
+	  linesOnPage++;
+	  if( linesOnPage > linesPerPage ) {
+	    linesOnPage = 0;
+	    --pagesToSkip;
+	    linesOnPage = 0;
+	  }
 	}
-	pos = i + 1;
-	--linesToSkip;
       }
-      if( (linesToSkip == 0) && (pos < len) ) {
+      if( (pagesToSkip == 0) && (pos < len) ) {
 
 	// Seite drucken
-	g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
-	g.setColor( Color.black );
+	g.setFont( this.contentFont );
+	g.setColor( Color.BLACK );
 
 	int x = (int) pf.getImageableX();
-	int y = (int) pf.getImageableY() + fontSize;
+	int y = (int) pf.getImageableY() + this.contentFontSize;
 	while( (linesPerPage > 0) && (pos < len) ) {
-	  int i = this.text.indexOf( '\n', pos );
-	  if( i >= pos ) {
+	  boolean newPage = false;
+	  int     eop     = this.text.indexOf( '\f', pos );
+	  int     idx     = this.text.indexOf( '\n', pos );
+	  if( (idx < 0) || ((eop >= 0) && (eop < idx)) ) {
+	    idx     = eop;
+	    newPage = true;
+	  }
+	  if( idx >= pos ) {
 	    g.drawString(
 		PrintUtil.expandTabs(
-				this.text.substring( pos, i ),
+				this.text.substring( pos, idx ),
 				this.tabSize ),
 		x,
 		y );
-	    pos = i + 1;
+	    pos = idx + 1;
 	  } else {
 	    g.drawString(
 		PrintUtil.expandTabs(
@@ -96,30 +138,36 @@ public class PlainTextPrintable implements Printable
 		y );
 	    pos = len;
 	  }
-	  y += fontSize;
+	  if( newPage ) {
+	    break;
+	  }
+	  y += this.contentFontSize;
 	  --linesPerPage;
 	}
 
 	// Fusszeile
-	fontSize -= 2;
-	if( fontSize < 6 ) {
-	  fontSize = 6;
-	}
-	y = (int) (pf.getImageableY() + pf.getImageableHeight());
-	if( Main.getPrintFileName() && (this.fileName != null) ) {
-	  g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
-	  g.drawString( this.fileName, x, y );
-	  if( Main.getPrintPageNum() ) {
-	    String s = String.valueOf( pageNum + 1 );
-	    g.drawString(
+	if( this.footerFont != null ) {
+	  y = (int) (pf.getImageableY() + pf.getImageableHeight());
+	  if( Main.getPrintFileName() && (this.fileName != null) ) {
+	    g.setFont( this.footerFont );
+	    g.drawString( this.fileName, x, y );
+	    if( Main.getPrintPageNum() ) {
+	      String s = String.valueOf( pageNum + 1 );
+	      g.drawString(
 		s,
 		(int) (pf.getImageableX() + pf.getImageableWidth()
 				- g.getFontMetrics().stringWidth( s )),
 		y );
+	    }
+	  } else {
+	    if( Main.getPrintPageNum() ) {
+	      PrintUtil.printCenteredPageNum(
+					g,
+					pf,
+					this.footerFont,
+					pageNum + 1 );
+	    }
 	  }
-	} else {
-	  if( Main.getPrintPageNum() )
-	    PrintUtil.printCenteredPageNum( g, pf, fontSize, pageNum + 1 );
 	}
 	rv = PAGE_EXISTS;
       }

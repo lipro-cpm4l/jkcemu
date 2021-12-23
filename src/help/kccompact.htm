@@ -11,13 +11,14 @@
   Trotzdem ist die Kompatibilit&auml;t sehr hoch, zumindest,
   wenn man auf den undokumentierten Grafikmodus&nbsp;3 verzichtet.
  <br/><br/>
-  Der KC&nbsp;compact entspricht von der Soft- und Hardwareausstattung
+  Der KC&nbsp;compact entspricht von der Soft- und Hardware-Ausstattung
   am ehesten einem CPC664 (64&nbsp;KByte RAM, Locomotive Basic&nbsp;1.1),
   allerdings ohne einem eingebauten Diskettenlaufwerk.
   Die Floppy-Disk-Erweiterung ist beim KC&nbsp;compact als abgesetztes
   Ger&auml;t ausgelegt und musste auch separat erworben werden.
   Au&szlig;erdem wurden statt der CPC-spezifischen 3''-Disketten
-  die in der DDR &uuml;blichen 5,25''-Disketten verwendet.
+  mit 40&nbsp;Spuren die in der DDR &uuml;blichen 5,25''-Disketten
+  mit 80&nbsp;Spuren verwendet.
  <br/><br/>
 
  <h2>Hinweise zur Emulation</h2>
@@ -26,16 +27,22 @@
     <a href="kccompact.htm#hardware">1. Emulierte Hardware</a>
     <ul>
      <li><a href="kccompact.htm#keyboard">1.1. Tastatur</a></li>
+     <li><a href="kccompact.htm#sound">1.2. Sound-Generator</a></li>
      <li>
-      <a href="kccompact.htm#fdc">1.2. Floppy-Disk-Station</a>
+      <a href="kccompact.htm#fdc">1.3. Floppy-Disk-Station</a>
       <ul>
        <li>
-	<a href="kccompact.htm#fdcrom">1.2.1. ROM in der Floppy-Disk-Station</a>
+	<a href="kccompact.htm#fdcrom">1.3.1. ROM in der Floppy-Disk-Station</a>
        </li>
-       <li><a href="kccompact.htm#diskfmt">1.2.2 Diskettenformate</a></li>
+       <li><a href="kccompact.htm#diskfmt">1.3.2 Diskettenformate</a></li>
       </ul>
      </li>
-     <li><a href="kccompact.htm#sound">1.3. Sound-Generator</a></li>
+     <li>
+      <a href="kccompact.htm#rom_ext">1.4. ROM-Erweiterungen</a>
+     </li>
+     <li>
+      <a href="kccompact.htm#ram_ext">1.5. RAM-Erweiterung&nbsp;512K</a>
+     </li>
     </ul>
    </li>
    <li><a href="kccompact.htm#disks">2. Enthaltene Diskettenabbilder</a></li>
@@ -43,7 +50,18 @@
     <a href="kccompact.htm#etc">3. Sonstiges</a>
     <ul>
      <li>
-      <a href="kccompact.htm#screen">3.1. Bildschirmausgabe</a>
+      <a href="kccompact.htm#load">3.1. Programme laden</a>
+      <ul>
+       <li>
+	<a href="kccompact.htm#load_kcc">3.1.1. KC-compact- und CPC-Programme laden</a>
+       </li>
+       <li>
+	<a href="kccompact.htm#load_cpm">3.1.2. CP/M-Programme laden</a>
+       </li>
+      </ul>
+     </li>
+     <li>
+      <a href="kccompact.htm#screen">3.2. Bildschirmausgabe</a>
       <ul>
        <li>
 	<a href="kccompact.htm#screensize">3.1.1. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis</a>
@@ -57,10 +75,25 @@
 
 
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
-  Emuliert werden Grundger&auml;t, <a href="print.htm">Drucker</a>
-  und zwei <a href="joystick.htm">Joysticks</a>
-  sowie optional die <a href="kccompact.htm#fdc">Floppy-Disk-Station</a>.
- <br/><br/>
+  Emuliert werden:
+  <ul>
+   <li>Grundger&auml;t</li>
+   <li>Drucker</li>
+   <li>Zwei <a href="joystick.html">Joysticks</a></li>
+   <li>
+    optional:
+    <ul>
+     <li>
+      <a href="kccompact.htm#rom_ext">15&nbsp;ROM-Erweiterungsmodule a 16K</a>
+     </li>
+     <li>
+      <a href="kccompact.htm#ram_ext">RAM-Erweiterung&nbsp;512K</a>
+     </li>
+     <li><a href="kccompact.htm#fdc">Floppy-Disk-Station</a></li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
 
  <h3><a name="keyboard">1.1. Tastatur</a></h3>
   F&uuml;r einige Tasten auf der KC-compact-Tastatur gibt es
@@ -97,13 +130,25 @@
   als auf der Tastatur des Emulatorrechners.
  <br/><br/>
 
- <h3><a name="fdc">1.2. Floppy-Disk-Station</a></h3>
+ <h3><a name="sound">1.2. Sound-Generator</a></h3>
+  Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
+  m&uuml;ssen Sie im Fenster <a href="audio.htm">Audio/Kassette</a>
+  im Reiter <em>Sound-Generator</em> die Tonausgabe aktivieren.
+ <br/><br/>
+  <b>Hinweis:</b> Der Sound-Generator wird immer mit der
+  originalen Taktfrequenz emuliert, d.h.,
+  wenn Sie in den <a href="settings.htm">Einstellungen</a>
+  eine andere Taktfrequenz angeben,
+  wirkt sich das nur auf die Emulation des Mikroprozessors aus.
+ <br/><br/>
+
+ <h3><a name="fdc">1.3. Floppy-Disk-Station</a></h3>
   Die optional als Beistellger&auml;t zum KC&nbsp;compact erh&auml;tlich
   gewesene Floppy-Disk-Station wird <a href="floppydisk.htm">emuliert</a>,
   wenn Sie das in den <a href="settings.htm">Einstellungen</a> so angeben.
   Mit der Floppy-Disk-Station stehen zwei Diskettenlaufwerke und
-  zus&auml;tzlich 64&nbsp;KByte RAM sowie 32&nbsp;KByte ROM
-  zur Verf&uuml;gung.
+  zus&auml;tzlich 64&nbsp;KByte RAM sowie 16&nbsp;KByte ROM
+  (davon aber nur 8&nbsp;KByte belegt) zur Verf&uuml;gung.
  <br/><br/>
   Da mit dem KC&nbsp;compact eine weitgehende Kompatibilit&auml;t
   zu den CPC-Computern von Amstrad angestrebt wurde,
@@ -125,32 +170,22 @@
   </ul>
  <br/>
 
- <h3><a name="fdcrom">1.2.1 ROM in der Floppy-Disk-Station</a></h3>
-  In der Floppy-Disk-Station gibt es einen 32&nbsp;KByte gro&szlig;en ROM.
-  Die unteren 16&nbsp;KByte enthalten das BASDOS.
-  Das ist ein um ein zus&auml;tzliches Diskettenformat erweitertes AMSDOS
-  der CPC-Computer.
-  Dieser ROM-Bereich ist als ROM&nbsp;7 (Ausgabe einer 7
-  auf dem ROM-Select-Port) ab der Adresse C000h einblendbar.
-  &Uuml;ber die oberen 16&nbsp;KByte des 32&nbsp;KByte gro&szlig;en ROMs
-  schweigt sich die Dokumentation des KC&nbsp;compact v&ouml;llig aus.
-  Es ist aber m&ouml;glich, diesen ROM-Bereich durch Ausgabe einer 6
-  auf dem ROM-Select-Port einzublenden.
-  Bei den CPC-Computern gibt es so einen ROM&nbsp;6 nicht.
- <br/><br/>
-  JKCEMU emuliert zwar die vollen 32&nbsp;KByte ROM,
-  allerdings ist nur in den unteren 16&nbsp;KByte ein sinnvoller Inhalt
-  enthalten (BASDOS).
-  Sie k&ouml;nnen aber auch den ROM&nbsp;6 mit einem Inhalt versehen,
-  indem Sie in den Einstellungen eine externe 32&nbsp;KByte gro&szlig;e
-  ROM-Datei einbinden.
-  Die unteren 16&nbsp;KByte dieser ROM-Datei werden als ROM&nbsp;7
-  und die oberen als ROM&nbsp;6 behandelt.
-  Ist die externe ROM-Datei nur 16&nbsp;KByte gro&szlig;,
-  wird nur ROM&nbsp;7 mit einem anderen Inhalt belegt.
+ <h3><a name="fdcrom">1.3.1 ROM in der Floppy-Disk-Station</a></h3>
+  In der Floppy-Disk-Station gibt es einen ROM,
+  der das BASDOS (ein um ein zus&auml;tzliches Diskettenformat
+  erweitertes AMSDOS der CPC-Computer) enth&auml;lt.
+  Dieser ROM wird als ROM-Erweiterung mit der ROM-Nummer&nbsp;7
+  in das System eingebunden,
+  ohne das dies in den KC-compact-Einstellungen im Unterfenster
+  <em>ROM-Erweiterungen</em> erscheint.
+  M&ouml;chten Sie diesen ROM-Inhalt durch einen anderen ersetzen,
+  dann f&uuml;gen Sie in den Einstellungen
+  eine ROM-Erweiterung mit der Nummer&nbsp;7 hinzu
+  (siehe <a href="kccompact.htm#rom_ext">ROM-Erweiterungen</a>).
+  Diese Erweiterung ersetzt dann den ROM in der Floppy-Disk-Station.
  <br/><br/>
 
- <h3><a name="diskfmt">1.2.2 Diskettenformate</a></h3>
+ <h3><a name="diskfmt">1.3.2 Diskettenformate</a></h3>
   Beim KC&nbsp;compact gibt es in Bezug auf die Diskettennutzung
   zwei Betriebsarten mit unterschiedlichen Diskettenformaten.
   Die erste Betriebsart nennt sich BASDOS.
@@ -191,7 +226,7 @@
   eingeschaltet oder zur&uuml;ckgesetzt wird (RESET).
  <br/><br/>
   Die zweite Betriebsart ist das CP/M-kompatible MicroDOS.
-  In diese Betriebsart gelangt man mit dem Kommando <em>|cpm</em>.
+  In diese Betriebsart gelangt man mit dem Kommando <tt>|cpm</tt>.
   Dazu muss vorher die MicroDOS-Systemdiskette im ersten
   Diskettenlaufwerk eingelegt worden sein.
  <br/><br/>
@@ -235,7 +270,7 @@
    <li>Emulation des KC&nbsp;compact mit Floppy-Disk-Station einstellen</li>
    <li>Fenster <em>Diskettenstation</em> &ouml;ffnen</li>
    <li>darin die <em>KC&nbsp;compact MicroDOS Systemdiskette</em> einlegen</li>
-   <li>mit <em>|cpm</em> MicroDOS starten</li>
+   <li>mit <tt>|cpm</tt> MicroDOS starten</li>
    <li><em>formatcc</em> starten</li>
    <li>
     im Fenster <em>Diskettenstation</em> eine neue Diskettenabbilddatei
@@ -252,18 +287,44 @@
   </ol>
  <br/>
 
- <h3><a name="sound">1.3. Sound-Generator</a></h3>
-  Zum H&ouml;ren der vom Sound-Generator ausgegebenen T&ouml;ne
-  m&uuml;ssen Sie im Fenster <a href="audio.htm">Audio/Kassette</a>
-  die Funktion
-  <a href="audio.htm#sound_out">Ausgang Sound-Generator/Lautsprecher</a>
-  aktivieren.
+ <h3><a name="rom_ext">1.4. ROM-Erweiterungen</a></h3>
+  Das Betriebssystem des KC&nbsp;compact kann 15
+  jeweils 16&nbsp;KByte gro&szlig;e ROM-Erweiterungsmodule verwalten.
+  Dazu wird jedem ROM-Modul eine Nummer von 1 bis 15 vergeben.
  <br/><br/>
-  <b>Hinweis:</b> Der Sound-Generator wird immer mit der
-  originalen Taktfrequenz emuliert, d.h.,
-  wenn Sie in den <a href="settings.htm">Einstellungen</a>
-  eine andere Taktfrequenz angeben,
-  wirkt sich das nur auf die Emulation des Mikroprozessors aus.
+  Beim Booten f&uuml;hrt das Betriebssystem einen sogenannter ROM Walk durch.
+  Es blendet beginnend mit der Nummer&nbsp;15 der Reihe nach
+  die ROM-Module in den Arbeitsspeicher ein und testet,
+  ob dort Betriebssystemerweiterungen enthalten sind.
+  Wenn ja, werden die gefundenen Erweiterungen in das Betriebssystem
+  eingebunden.
+ <br/><br/>
+  Hardwarem&auml;&szlig;ig kann der KC&nbsp;compact sogar
+  255&nbsp;ROM-Erweiterungsmodule unterscheiden,
+  das Betriebssystem verwaltet jedoch nur 15.
+  Aus diesem Grund werden in JKCEMU auch nur max. 15&nbsp;Module emuliert.
+  Zum Hinzuf&uuml;gen einer ROM-Erweiterung klicken Sie in den
+  KC-compact-Einstellungen im Unterfenster <em>ROM-Erweiterungen</em>
+  auf die Schaltfl&auml;che <em>Hinzuf&uuml;gen</em>.
+  Es &ouml;ffnet sich ein Dialog, in dem Sie die ROM-Nummer
+  und die Datei mit dem ROM-Inhalt angeben.
+  Das Hinzuf&uuml;gen ist auch m&ouml;glich,
+  indem Sie eine ROM-Datei per Drag&amp;Drop in das Unterfenster
+  <em>ROM-Erweiterungen</em> ziehen und &uuml;ber der ROM-Liste loslassen.
+ <br/><br/>
+
+ <h3><a name="ram_ext">1.5. RAM-Erweiterung&nbsp;512K</a></h3>
+  Die optional emulierte RAM-Erweiterung entspricht funktional
+  zwei 256K RAM-Erweiterungsmodulen von DK'tronics.
+  Damit sind alle 8&nbsp;B&auml;nke im Bankswitschregister
+  7F&nbsp;XX&nbsp;CX mit RAM belegt.
+ <br/><br/>
+  <b>Achtung!</b> Bei gleichzeitiger Emulation der Floppy-Disk-Station
+  und der 512K RAM-Erweiterung &uuml;berdeckt die RAM-Erweiterung
+  den RAM in der Floppy-Disk-Station, d.h.,
+  es stehen insgesamt 576&nbsp;KByte RAM zur Verf&uuml;gung
+  (64&nbsp;KByte im Grundger&auml;t und
+  512&nbsp;KByte in der RAM-Erweiterung).
  <br/><br/>
 
 
@@ -297,11 +358,59 @@
   <em>D</em>, und nicht wie bei CP/M-kompatiblen Betriebssystemen
   sonst &uuml;blich mit <em>DIR</em>.
  <br/><br/>
+  <b>Achtung!</b> Auf der Diskette sind auch die leeren Dateien
+  <a href="go_com.htm">G.COM</a> und <a href="go_com.htm">GO.COM</a>
+  enthalten.
+  Diese dienen zum Starten eines im Arbeitsspeicher befindlichen
+  CP/M-kompatiblen Programms.
+  Wird <em>G</em> bzw. <em>GO</em> aufgerufen,
+  ohne dass ein Programm im Arbeitsspeicher vorhanden ist,
+  f&uuml;hrt das zu einem Absturz.
+ <br/><br/>
 
 
  <h2><a name="etc">3. Sonstiges</a></h2>
 
- <h3><a name="screen">3.1. Bildschirmausgabe</a></h3>
+ <h3><a name="load">3.1. Programme laden</a></h3>
+
+ <h3>
+  <a name="load_kcc">3.1.1. KC-compact- und CPC-Programme laden</a>
+ </h3>
+  JKCEMU bietet zwar die M&ouml;glichkeit,
+  Dateien direkt in den Arbeitsspeicher des Emulators zu laden,
+  jedoch erkennt das Betriebssystem des KC&nbsp;compact
+  die so geladenen Programme nicht.
+  Aus diesem Grund m&uuml;ssen Programme immer mit Hilfe
+  des KC-compact-Betriebssystems geladen werden,
+  entweder &uuml;ber die
+  <a href="audio.htm#tape_in">emulierte Kassettenschnittstelle</a> oder
+  von einer <a href="floppydisk.htm">emulierten Diskette</a>.
+ <br/><br/>
+
+ <h3>
+  <a name="load_cpm">3.1.2. CP/M-Programme laden</a>
+ </h3>
+  Bei CP/M-kompatiblen Betriebssystemen werden Programme von einer Diskette
+  geladen, in einem Emulator somit von einer
+  <a href="floppydisk.htm">emulierten Diskette</a>.
+  JKCEMU bietet aber zus&auml;tzlich die M&ouml;glichkeit,
+  CP/M-Programmdateien (*.com) mit Hilfe der Emulatorfunktionen
+  direkt in den Arbeitsspeicher zu laden und mit Hilfe der leeren Datei
+  <a href="go_com.htm">GO.COM</a> zu starten,
+  ohne dass die betreffende CP/M-Programmdatei auf der emulierten Diskette
+  vorhanden sein muss.
+  Voraussetzung ist, dass in der KC-compact-Emulation ein CP/M-kompatibles
+  Betriebssystem (z.B. MicroDOS) gestartet wurde.
+ <br/><br/>
+  <b>Achtung!</b> Bei MicroDOS wird der in der Floppy-Disk-Station
+  enthaltene RAM als Arbeitsspeicher verwendet.
+  Aus diesem Grund l&auml;dt JKCEMU COM-Dateien in diesen RAM.
+  Alle anderen Dateitypen
+  (und falls die Diskettenemulation deaktiviert ist, auch COM-Dateien)
+  werden in den RAM des Grundger&auml;ts geladen.
+ <br/><br/>
+
+ <h3><a name="screen">3.2. Bildschirmausgabe</a></h3>
   Die Aktualisierung der Bildschirmausgabe erfolgt immer
   synchron zur Emulation der Bildschirmsteuerung.
   Dies ist f&uuml;r die korrekte Darstellungn von schnellen
@@ -311,7 +420,7 @@
  <br/><br/>
 
  <h3>
-  <a name="screensize">3.1.1. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis</a>
+  <a name="screensize">3.2.1. Gr&ouml;&szlig;e und Seitenverh&auml;ltnis</a>
  </h3>
   Der KC&nbsp;compact bietet drei Bildschirmaufl&ouml;sungen.
   Wenn zwischen diesen umgeschaltet wird
@@ -326,4 +435,3 @@
   dass die h&ouml;chste Bildschirmaufl&ouml;sung dargestellt werden kann.
 </body>
 </html>
-

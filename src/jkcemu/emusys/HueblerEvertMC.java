@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,8 +8,6 @@
 
 package jkcemu.emusys;
 
-import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.CharRaster;
 import jkcemu.base.EmuThread;
@@ -68,9 +66,6 @@ public class HueblerEvertMC extends AbstractHueblerMC
 					this.pio,
 					this.pio2 );
     checkAddPCListener( props );
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
-    }
   }
 
 
@@ -160,7 +155,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
   @Override
   public CharRaster getCurScreenCharRaster()
   {
-    return new CharRaster( 64, 24, 10, 8, 6, 0 );
+    return new CharRaster( 64, 24, 10, 6, 8 );
   }
 
 
@@ -205,7 +200,7 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
   @Override
-  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
+  public int getResetStartAddress( boolean powerOn )
   {
     return 0xF000;
   }
@@ -256,52 +251,6 @@ public class HueblerEvertMC extends AbstractHueblerMC
   public String getTitle()
   {
     return SYSTEXT;
-  }
-
-
-  @Override
-  public boolean keyPressed(
-			int     keyCode,
-			boolean ctrlDown,
-			boolean shiftDown )
-  {
-    boolean rv = false;
-    int     ch = 0;
-    switch( keyCode ) {
-      case KeyEvent.VK_LEFT:
-      case KeyEvent.VK_BACK_SPACE:
-	ch = 8;
-	break;
-
-      case KeyEvent.VK_RIGHT:
-	ch = 9;
-	break;
-
-      case KeyEvent.VK_DOWN:
-	ch = 0x0A;
-	break;
-
-      case KeyEvent.VK_UP:
-	ch = 0x0B;
-	break;
-
-      case KeyEvent.VK_ENTER:
-	ch = 0x0D;
-	break;
-
-      case KeyEvent.VK_SPACE:
-	ch = 0x20;
-	break;
-
-      case KeyEvent.VK_DELETE:
-	ch = 0x7F;
-	break;
-    }
-    if( ch > 0 ) {
-      keyTyped( (char) ch );
-      rv = true;
-    }
-    return rv;
   }
 
 
@@ -362,6 +311,23 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    this.osFile = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_OS_PREFIX + PROP_FILE );
+    this.osBytes = readROMFile( this.osFile, 0x0C00, "Monitorprogramm" );
+    if( this.osBytes == null ) {
+      if( mon21 == null ) {
+	mon21 = readResource( "/rom/huebler/mon21.bin" );
+      }
+      this.osBytes = mon21;
+    }
+    loadFont( props );
+  }
+
+
+  @Override
   public int readIOByte( int port, int tStates )
   {
     port &= 0x3F;
@@ -372,16 +338,8 @@ public class HueblerEvertMC extends AbstractHueblerMC
         rv = this.pio2.readDataA();
         break;
 
-      case 0x11:
-        rv = this.pio2.readControlA();
-        break;
-
       case 0x12:
         rv = this.pio2.readDataB();
-        break;
-
-      case 0x13:
-        rv = this.pio2.readControlB();
         break;
 
       default:
@@ -415,16 +373,15 @@ public class HueblerEvertMC extends AbstractHueblerMC
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+    super.reset( powerOn, props );
+    if( powerOn ) {
+      initDRAM();
       initSRAM( this.ramStatic, props );
       fillRandom( this.ramVideo );
-      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
-	loadROMs( props );
-      }
     }
+    this.pio2.reset( powerOn );
   }
 
 
@@ -518,21 +475,5 @@ public class HueblerEvertMC extends AbstractHueblerMC
       }
       this.fontBytes = hemcFont;
     }
-  }
-
-
-  private void loadROMs( Properties props )
-  {
-    this.osFile = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_OS_PREFIX + PROP_FILE );
-    this.osBytes = readROMFile( this.osFile, 0x0C00, "Monitorprogramm" );
-    if( this.osBytes == null ) {
-      if( mon21 == null ) {
-	mon21 = readResource( "/rom/huebler/mon21.bin" );
-      }
-      this.osBytes = mon21;
-    }
-    loadFont( props );
   }
 }

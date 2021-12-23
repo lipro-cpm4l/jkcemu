@@ -10,9 +10,9 @@
 package jkcemu.emusys.z1013;
 
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.emusys.Z1013;
 
 
 public class KeyboardMatrix8x4 extends KeyboardMatrix
@@ -166,7 +166,7 @@ public class KeyboardMatrix8x4 extends KeyboardMatrix
 
 
   @Override
-  public void updKeyboardFld( AbstractKeyboardFld keyboardFld )
+  public void updKeyboardFld( AbstractKeyboardFld<Z1013> keyboardFld )
   {
     if( keyboardFld != null )
       keyboardFld.updKeySelection( this.keyboardMatrix );

@@ -1,5 +1,5 @@
 /*
- * (c) 2014-2016 Jens Mueller
+ * (c) 2014-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,25 +11,25 @@ package jkcemu.emusys.zxspectrum;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
-import jkcemu.base.AbstractSettingsFld;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.ROMFileSettingsFld;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.ZXSpectrum;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class ZXSpectrumSettingsFld extends AbstractSettingsFld
 {
-  private JRadioButton       btn48K;
-  private JRadioButton       btn128K;
+  private JRadioButton       rb48K;
+  private JRadioButton       rb128K;
   private ROMFileSettingsFld fldAltROM;
 
 
@@ -49,23 +49,23 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
 
     ButtonGroup grpModel = new ButtonGroup();
 
-    this.btn48K = new JRadioButton( "ZX Spectrum 48K", true );
-    grpModel.add( this.btn48K );
-    add( this.btn48K, gbc );
+    this.rb48K = GUIFactory.createRadioButton( "ZX Spectrum 48K", true );
+    grpModel.add( this.rb48K );
+    add( this.rb48K, gbc );
 
-    this.btn128K = new JRadioButton( "ZX Spectrum+ 128K", false );
-    grpModel.add( this.btn128K );
+    this.rb128K = GUIFactory.createRadioButton( "ZX Spectrum+ 128K" );
+    grpModel.add( this.rb128K );
     gbc.insets.top    = 0;
     gbc.insets.bottom = 5;
     gbc.gridy++;
-    add( this.btn128K, gbc );
+    add( this.rb128K, gbc );
 
     gbc.fill          = GridBagConstraints.HORIZONTAL;
     gbc.weightx       = 1.0;
     gbc.insets.top    = 10;
     gbc.insets.bottom = 10;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
     this.fldAltROM = new ROMFileSettingsFld(
 		settingsFrm,
@@ -78,8 +78,8 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
 
 
     // Listener
-    this.btn48K.addActionListener( this );
-    this.btn128K.addActionListener( this );
+    this.rb48K.addActionListener( this );
+    this.rb128K.addActionListener( this );
   }
 
 
@@ -93,7 +93,7 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + ZXSpectrum.PROP_MODEL,
-		this.btn128K.isSelected() ? "128k" : "48k" );
+		this.rb128K.isSelected() ? "128k" : "48k" );
     this.fldAltROM.applyInput( props, selected );
   }
 
@@ -114,13 +114,6 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.fldAltROM.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
     if( EmuUtil.getProperty(
@@ -128,9 +121,9 @@ public class ZXSpectrumSettingsFld extends AbstractSettingsFld
 		this.propPrefix + ZXSpectrum.PROP_MODEL ).equals(
 						ZXSpectrum.VALUE_128K ) )
     {
-      this.btn128K.setSelected( true );
+      this.rb128K.setSelected( true );
     } else {
-      this.btn48K.setSelected( true );
+      this.rb48K.setSelected( true );
     }
     this.fldAltROM.updFields( props );
   }

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
@@ -22,14 +21,16 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.ROMFileSettingsFld;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.PCM;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class PCMSettingsFld extends AbstractSettingsFld
@@ -38,10 +39,13 @@ public class PCMSettingsFld extends AbstractSettingsFld
   private JPanel               tabModel;
   private AutoLoadSettingsFld  tabAutoLoad;
   private AutoInputSettingsFld tabAutoInput;
-  private JCheckBox            btnAutoLoadBDOS;
-  private JRadioButton         btnRF64x16;
-  private JRadioButton         btnFDC64x16;
-  private JRadioButton         btnFDC80x24;
+  private JCheckBox            cbAutoLoadBDOS;
+  private JRadioButton         rbRF64x16;
+  private JRadioButton         rbFDC64x16;
+  private JRadioButton         rbFDC80x24;
+  private JPanel               tabExt;
+  private JCheckBox            cbK1520Sound;
+  private JCheckBox            cbVDIP;
   private ROMFileSettingsFld   fldAltROM;
   private ROMFileSettingsFld   fldAltFont;
 
@@ -52,12 +56,12 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
     setLayout( new BorderLayout() );
 
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
     // Tab Modell
-    this.tabModel = new JPanel( new GridBagLayout() );
+    this.tabModel = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Modell", this.tabModel );
 
     GridBagConstraints gbcModel = new GridBagConstraints(
@@ -71,46 +75,40 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
     ButtonGroup grpSys = new ButtonGroup();
 
-    this.btnRF64x16 = new JRadioButton(
+    this.rbRF64x16 = GUIFactory.createRadioButton(
 				"RAM-Floppy-System, 64x16 Zeichen",
 				true );
-    grpSys.add( this.btnRF64x16 );
-    this.btnRF64x16.addActionListener( this );
-    this.tabModel.add( this.btnRF64x16, gbcModel );
+    grpSys.add( this.rbRF64x16 );
+    this.tabModel.add( this.rbRF64x16, gbcModel );
 
-    this.btnAutoLoadBDOS = new JCheckBox(
+    this.cbAutoLoadBDOS = GUIFactory.createCheckBox(
 				"Bei RESET automatisch BDOS laden",
 				true );
-    this.btnAutoLoadBDOS.addActionListener( this );
     gbcModel.insets.top  = 0;
     gbcModel.insets.left = 50;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnAutoLoadBDOS, gbcModel );
+    this.tabModel.add( this.cbAutoLoadBDOS, gbcModel );
 
-    this.btnFDC64x16 = new JRadioButton(
-				"Floppy-Disk-System, 64x16 Zeichen",
-				false );
-    grpSys.add( this.btnFDC64x16 );
-    this.btnFDC64x16.addActionListener( this );
+    this.rbFDC64x16 = GUIFactory.createRadioButton(
+				"Floppy-Disk-System, 64x16 Zeichen" );
+    grpSys.add( this.rbFDC64x16 );
     gbcModel.insets.left = 5;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnFDC64x16, gbcModel );
+    this.tabModel.add( this.rbFDC64x16, gbcModel );
 
-    this.btnFDC80x24 = new JRadioButton(
-				"Floppy-Disk-System, 80x24 Zeichen",
-				false );
-    grpSys.add( this.btnFDC80x24 );
-    this.btnFDC80x24.addActionListener( this );
+    this.rbFDC80x24 = GUIFactory.createRadioButton(
+				"Floppy-Disk-System, 80x24 Zeichen" );
+    grpSys.add( this.rbFDC80x24 );
     gbcModel.insets.bottom = 5;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnFDC80x24, gbcModel );
+    this.tabModel.add( this.rbFDC80x24, gbcModel );
 
     gbcModel.fill          = GridBagConstraints.HORIZONTAL;
     gbcModel.weightx       = 1.0;
     gbcModel.insets.top    = 10;
     gbcModel.insets.bottom = 10;
     gbcModel.gridy++;
-    this.tabModel.add( new JSeparator(), gbcModel );
+    this.tabModel.add( GUIFactory.createSeparator(), gbcModel );
 
     this.fldAltROM = new ROMFileSettingsFld(
 		settingsFrm,
@@ -129,6 +127,30 @@ public class PCMSettingsFld extends AbstractSettingsFld
     this.tabModel.add( this.fldAltFont, gbcModel );
 
 
+    // Tab Erweiterungen
+    this.tabExt = GUIFactory.createPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "Erweiterungen", this.tabExt );
+
+    GridBagConstraints gbcExt = new GridBagConstraints(
+					0, 0,
+					GridBagConstraints.REMAINDER, 1,
+					0.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.NONE,
+					new Insets( 5, 5, 0, 5 ),
+					0, 0 );
+
+    this.cbK1520Sound = GUIFactory.createCheckBox( "K1520-Sound-Karte" );
+    this.tabExt.add( this.cbK1520Sound, gbcExt );
+
+    this.cbVDIP = GUIFactory.createCheckBox(
+				"USB-Anschluss (Vinculum VDIP Modul)" );
+    gbcExt.insets.top    = 0;
+    gbcExt.insets.bottom = 5;
+    gbcExt.gridy++;
+    this.tabExt.add( this.cbVDIP, gbcExt );
+
+
     // Tab AutoLoad
     this.tabAutoLoad = new AutoLoadSettingsFld(
 				settingsFrm,
@@ -142,9 +164,19 @@ public class PCMSettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 				settingsFrm,
 				propPrefix,
+				AutoInputCharSet.getCPMCharSet(),
 				PCM.DEFAULT_SWAP_KEY_CHAR_CASE,
 				PCM.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
+
+
+    // Listener
+    this.rbRF64x16.addActionListener( this );
+    this.rbFDC64x16.addActionListener( this );
+    this.rbFDC80x24.addActionListener( this );
+    this.cbAutoLoadBDOS.addActionListener( this );
+    this.cbK1520Sound.addActionListener( this );
+    this.cbVDIP.addActionListener( this );
   }
 
 
@@ -156,8 +188,8 @@ public class PCMSettingsFld extends AbstractSettingsFld
 			boolean    selected ) throws UserInputException
   {
     // Tab Modell
-    boolean fdc64x16 = this.btnFDC64x16.isSelected();
-    boolean fdc80x24 = this.btnFDC80x24.isSelected();
+    boolean fdc64x16 = this.rbFDC64x16.isSelected();
+    boolean fdc80x24 = this.rbFDC80x24.isSelected();
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + PCM.PROP_FDC_ENABLED,
@@ -171,9 +203,19 @@ public class PCMSettingsFld extends AbstractSettingsFld
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + PCM.PROP_AUTO_LOAD_BDOS,
-		this.btnAutoLoadBDOS.isSelected() );
+		this.cbAutoLoadBDOS.isSelected() );
     this.fldAltROM.applyInput( props, selected );
     this.fldAltFont.applyInput( props, selected );
+
+    // Tab Erweiterungen
+    EmuUtil.setProperty(
+		props,
+		this.propPrefix + PCM.PROP_K1520SOUND_ENABLED,
+		this.cbK1520Sound.isSelected() );
+    EmuUtil.setProperty(
+		props,
+		this.propPrefix + PCM.PROP_VDIP_ENABLED,
+		this.cbVDIP.isSelected() );
 
     // Tab AutoLoad
     this.tabAutoLoad.applyInput( props, selected );
@@ -210,14 +252,6 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
     if( EmuUtil.getBooleanProperty(
@@ -230,14 +264,14 @@ public class PCMSettingsFld extends AbstractSettingsFld
 		this.propPrefix + PCM.PROP_GRAPHIC ).equals(
 					PCM.VALUE_GRAPHIC_80X24 ) )
       {
-	this.btnFDC80x24.setSelected( true );
+	this.rbFDC80x24.setSelected( true );
       } else {
-	this.btnFDC64x16.setSelected( true );
+	this.rbFDC64x16.setSelected( true );
       }
     } else {
-      this.btnRF64x16.setSelected( true );
+      this.rbRF64x16.setSelected( true );
     }
-    this.btnAutoLoadBDOS.setSelected(
+    this.cbAutoLoadBDOS.setSelected(
 		EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + PCM.PROP_AUTO_LOAD_BDOS,
@@ -245,6 +279,17 @@ public class PCMSettingsFld extends AbstractSettingsFld
     this.fldAltROM.updFields( props );
     this.fldAltFont.updFields( props );
     updAutoLoadBDOSFieldEnabled();
+
+    this.cbK1520Sound.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PCM.PROP_K1520SOUND_ENABLED,
+			false ) );
+    this.cbVDIP.setSelected(
+		EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PCM.PROP_VDIP_ENABLED,
+			false ) );
 
     this.tabAutoLoad.updFields( props );
     this.tabAutoInput.updFields( props );
@@ -255,6 +300,6 @@ public class PCMSettingsFld extends AbstractSettingsFld
 
   private void updAutoLoadBDOSFieldEnabled()
   {
-    this.btnAutoLoadBDOS.setEnabled( this.btnRF64x16.isSelected() );
+    this.cbAutoLoadBDOS.setEnabled( this.rbRF64x16.isSelected() );
   }
 }

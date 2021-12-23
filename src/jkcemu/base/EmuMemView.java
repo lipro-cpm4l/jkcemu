@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.base;
 
-import java.lang.*;
 import z80emu.Z80MemView;
 
 

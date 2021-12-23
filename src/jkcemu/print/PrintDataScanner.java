@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2010 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,19 +9,21 @@
 
 package jkcemu.print;
 
-import java.lang.*;
+import jkcemu.text.CharConverter;
 
 
 public class PrintDataScanner
 {
-  private byte[] dataBytes;
-  private int    pos;
+  private byte[]        dataBytes;
+  private CharConverter charConverter;
+  private int           pos;
 
 
-  public PrintDataScanner( byte[] dataBytes )
+  public PrintDataScanner( byte[] dataBytes, CharConverter charConverter )
   {
-    this.dataBytes = dataBytes;
-    this.pos       = 0;
+    this.dataBytes     = dataBytes;
+    this.charConverter = charConverter;
+    this.pos           = 0;
   }
 
 
@@ -60,8 +62,15 @@ public class PrintDataScanner
 	break;
       }
 
-      if( (b != 0) && (b != 3) ) {
-	buf.append( (char) b );
+      if( (b == 0x1B) || (b >= 0x20) ) {
+	if( this.charConverter != null ) {
+	  char ch = this.charConverter.toUnicode( b );
+	  if( ch != CharConverter.REPLACEMENT_CHAR ) {
+	    buf.append( ch );
+	  }
+	} else {
+	  buf.append( (char) b );
+	}
       }
     }
     return buf != null ? buf.toString() : null;

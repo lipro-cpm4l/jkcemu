@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.disk;
 
-import java.lang.*;
 import jkcemu.base.EmuUtil;
 import jkcemu.text.TextUtil;
 

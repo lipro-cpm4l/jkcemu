@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2011 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 
 package jkcemu.emusys.z1013;
 
-import java.lang.*;
 import java.util.Arrays;
 
 

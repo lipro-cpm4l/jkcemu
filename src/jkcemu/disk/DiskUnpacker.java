@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,15 +16,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import java.util.ArrayList;
 import jkcemu.base.AbstractThreadDlg;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileTimesView;
-import jkcemu.base.FileTimesViewFactory;
-import jkcemu.base.NIOFileTimesViewFactory;
-import jkcemu.filebrowser.FileBrowserFrm;
+import jkcemu.file.FileTimesData;
+import jkcemu.file.FileUtil;
 
 
 public class DiskUnpacker extends AbstractThreadDlg
@@ -34,7 +31,7 @@ public class DiskUnpacker extends AbstractThreadDlg
   private File               outDir;
   private int                sysTracks;
   private int                sides;
-  private int                sectPerCyl;
+  private int                sectorsPerTrack;
   private int                sectorOffset;
   private int                sectorSize;
   private int                blockSize;
@@ -79,7 +76,7 @@ public class DiskUnpacker extends AbstractThreadDlg
   protected void doProgress()
   {
     if( (this.sides < 1) || (this.sides > 2)
-	|| (this.sectPerCyl < 1)
+	|| (this.sectorsPerTrack < 1)
 	|| (this.sectorSize < 256)
 	|| (this.blockSize < 1024)
 	|| (this.sectPerBlock < 1)
@@ -90,7 +87,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 		+ "\nSeiten:                  " );
       buf.append( this.sides );
       buf.append( "\nSektoren pro Spur:       " );
-      buf.append( this.sectPerCyl );
+      buf.append( this.sectorsPerTrack );
       buf.append( "\nSektorgr\u00F6\u00DFe:             " );
       buf.append( this.sectorSize );
       buf.append( "\nBlockgr\u00F6\u00DFe:              " );
@@ -99,7 +96,7 @@ public class DiskUnpacker extends AbstractThreadDlg
       buf.append( this.sectPerBlock );
       buf.append( "\nMax. Bl\u00F6cke pro Eintrag: " );
       buf.append( this.maxBlocksPerEntry );
-      buf.append( (char) '\n' );
+      buf.append( '\n' );
       appendToLog( buf.toString() );
       incErrorCount();
     } else {
@@ -107,7 +104,7 @@ public class DiskUnpacker extends AbstractThreadDlg
       // Systemspuren
       if( this.sysTracks > 0 ) {
 	String       fName = "@boot.sys";
-	File         file  = new File( outDir, fName );
+	File         file  = prepareOutFile( this.outDir, fName );
 	OutputStream out   = null;
 	boolean      err   = false;
 	this.outDir.mkdirs();
@@ -115,10 +112,10 @@ public class DiskUnpacker extends AbstractThreadDlg
 	try {
 	  out = new FileOutputStream( file );
 
-	  int sectPerCyl = this.disk.getSectorsPerCylinder();
+	  int sectorsPerTrack = this.disk.getSectorsPerTrack();
 	  for( int cyl = 0; cyl < this.sysTracks; cyl++ ) {
 	    for( int head = 0; head < this.disk.getSides(); head++ ) {
-	      for( int sectIdx = 0; sectIdx < sectPerCyl; sectIdx++ ) {
+	      for( int sectIdx = 0; sectIdx < sectorsPerTrack; sectIdx++ ) {
 		SectorData sector = this.disk.getSectorByID(
 					cyl,
 					head,
@@ -144,7 +141,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 	  err = true;
 	}
 	finally {
-	  EmuUtil.closeSilent( out );
+	  EmuUtil.closeSilently( out );
 	  if( err ) {
 	    fName = "@boot.sys.error";
 	    if( file.renameTo( new File( outDir, "@boot.sys.error" ) ) ) {
@@ -178,9 +175,8 @@ public class DiskUnpacker extends AbstractThreadDlg
 	int extentsPerDirEntry = DiskUtil.getExtentsPerDirEntry(
 							this.blockSize,
 							this.blockNum16Bit );
-	int                  dirBlkOffs = 0;
-	boolean              firstEntry = true;
-	FileTimesViewFactory ftvFactory = new NIOFileTimesViewFactory();
+	int     dirBlkOffs = 0;
+	boolean firstEntry = true;
 	this.outDir.mkdirs();
 	for( byte[] dirBlockBuf : dirBlocks ) {
 	  if( dirBlockBuf != null ) {
@@ -218,7 +214,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 		  } else {
 		    appendToLog( fileName + "\n" );
 		  }
-		  File         file = new File( outDir, fileName );
+		  File         file = prepareOutFile( outDir, fileName );
 		  OutputStream out  = null;
 		  try {
 		    if( firstEntry
@@ -260,20 +256,17 @@ public class DiskUnpacker extends AbstractThreadDlg
 		    this.fileErr = true;
 		  }
 		  finally {
-		    EmuUtil.closeSilent( out );
+		    EmuUtil.closeSilently( out );
 		  }
 
 		  // Zeitstempel setzen
 		  if( timeBytes != null ) {
 		    int p = (dirBlkOffs + entryPos) / 2;
 		    if( (p + 15) < timeBytes.length ) {
-		      FileTimesView ftv = ftvFactory.getFileTimesView( file );
-		      if( ftv != null ) {
-			ftv.setTimesInMillis(
+		      FileTimesData.createOf( file ).setTimesInMillis(
 				DateStamper.getMillis( timeBytes, p ),
 				DateStamper.getMillis( timeBytes, p + 5 ),
 				DateStamper.getMillis( timeBytes, p + 10 ) );
-		      }
 		    }
 		  }
 		  // Bei Fehler Datei umbenennen
@@ -287,7 +280,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 		    }
 		  } else {
 		    if( readOnly ) {
-		      EmuUtil.setFileWritable( file, false );
+		      FileUtil.setFileWritable( file, false );
 		    }
 		  }
 		}
@@ -299,7 +292,6 @@ public class DiskUnpacker extends AbstractThreadDlg
 	  dirBlkOffs += this.blockSize;
 	}
       }
-      FileBrowserFrm.fireFileChanged( this.outDir.getParentFile() );
 
       // Fertig-Meldung
       final Window owner = getOwner();
@@ -313,8 +305,8 @@ public class DiskUnpacker extends AbstractThreadDlg
 	    buf.append( "\n\nWahrscheinlich ist die Blockgr\u00F6\u00DFe"
 		+ " zu gro\u00DF oder das Blocknummernformat (8/16 Bit)"
 		+ " falsch eingestellt.\n"
-		+ "Wenn dem so ist, sind auch die ohne Fehlermeldung"
-		+ " entpackten Dateien korrupt!" );
+		+ "Wenn dem so ist, dann enthalten auch die ohne"
+		+ " Fehlermeldung entpackten Dateien falsche Daten!" );
 	  }
 	} else {
 	  buf.append( "Fertig!" );
@@ -341,7 +333,7 @@ public class DiskUnpacker extends AbstractThreadDlg
 		} );
       }
     }
-    this.disk.closeSilent();
+    this.disk.closeSilently();
   }
 
 
@@ -364,7 +356,7 @@ public class DiskUnpacker extends AbstractThreadDlg
     this.outDir            = outDir;
     this.sysTracks         = sysTracks;
     this.sides             = disk.getSides();
-    this.sectPerCyl        = disk.getSectorsPerCylinder();
+    this.sectorsPerTrack   = disk.getSectorsPerTrack();
     this.sectorOffset      = disk.getSectorOffset();
     this.sectorSize        = disk.getSectorSize();
     this.blockSize         = blockSize;
@@ -436,14 +428,14 @@ public class DiskUnpacker extends AbstractThreadDlg
     int    nRemain = buf.length;
     for( int i = 0; i < this.sectPerBlock; i++ ) {
       int nRead      = 0;
-      int absSectIdx = (this.sides * this.sysTracks * this.sectPerCyl)
+      int absSectIdx = (this.sides * this.sysTracks * this.sectorsPerTrack)
 				+ ((this.sectPerBlock * blockIdx) + i);
-      int cyl        = absSectIdx / this.sectPerCyl / this.sides;
-      int head       = 0;
-      int sectIdx    = absSectIdx - (cyl * this.sectPerCyl * this.sides);
-      if( sectIdx >= this.sectPerCyl ) {
+      int cyl     = absSectIdx / this.sectorsPerTrack / this.sides;
+      int head    = 0;
+      int sectIdx = absSectIdx - (cyl * this.sides * this.sectorsPerTrack);
+      if( sectIdx >= this.sectorsPerTrack ) {
 	head++;
-	sectIdx -= this.sectPerCyl;
+	sectIdx -= this.sectorsPerTrack;
       }
       SectorData sector = this.disk.getSectorByID(
 					cyl,
@@ -504,14 +496,14 @@ public class DiskUnpacker extends AbstractThreadDlg
 			extentNum ) );
       }
       for( int k = 0; k < this.sectPerBlock; k++ ) {
-	int absSectIdx = (this.sides * this.sysTracks * this.sectPerCyl)
+	int absSectIdx = (this.sides * this.sysTracks * this.sectorsPerTrack)
 				+ ((this.sectPerBlock * blockIdx) + k);
-	int cyl        = absSectIdx / this.sectPerCyl / this.sides;
-	int head       = 0;
-	int sectIdx    = absSectIdx - (cyl * this.sectPerCyl * this.sides);
-	if( sectIdx >= this.sectPerCyl ) {
+	int cyl     = absSectIdx / this.sectorsPerTrack / this.sides;
+	int head    = 0;
+	int sectIdx = absSectIdx - (cyl * this.sides * this.sectorsPerTrack);
+	if( sectIdx >= this.sectorsPerTrack ) {
 	  head++;
-	  sectIdx -= this.sectPerCyl;
+	  sectIdx -= this.sectorsPerTrack;
 	}
 	SectorData sector = this.disk.getSectorByID(
 					cyl,

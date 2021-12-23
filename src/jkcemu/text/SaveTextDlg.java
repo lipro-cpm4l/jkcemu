@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Collection;
 import java.util.EventObject;
 import javax.swing.BorderFactory;
@@ -27,12 +26,14 @@ import javax.swing.JPanel;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
+import jkcemu.file.FileUtil;
 
 
 public class SaveTextDlg extends BaseDlg
 {
-  private JCheckBox         btnTrailing1A;
-  private JCheckBox         btnTrimLines;
+  private JCheckBox         cbTrailing1A;
+  private JCheckBox         cbTrimLines;
   private JComboBox<Object> comboEncoding;
   private JComboBox<Object> comboLineEnd;
   private JButton           btnSave;
@@ -40,6 +41,7 @@ public class SaveTextDlg extends BaseDlg
   private File              file;
   private EditText          editText;
   private boolean           fileSaved;
+  private boolean           notified;
 
 
   public SaveTextDlg( File file, EditText editText )
@@ -51,6 +53,7 @@ public class SaveTextDlg extends BaseDlg
     this.file      = file;
     this.editText  = editText;
     this.fileSaved = false;
+    this.notified  = false;
 
 
     // Fensterinhalt
@@ -68,16 +71,17 @@ public class SaveTextDlg extends BaseDlg
 
     // Bereich Dateiname
     String fileName = file.getName();
-    JPanel panelFileName = new JPanel(
+    JPanel panelFileName = GUIFactory.createPanel(
 		new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
-    panelFileName.setBorder( BorderFactory.createTitledBorder( "Dateiname" ) );
-    panelFileName.add( new JLabel( fileName != null ? fileName : "" ) );
+    panelFileName.setBorder( GUIFactory.createTitledBorder( "Dateiname" ) );
+    panelFileName.add( GUIFactory.createLabel(
+					fileName != null ? fileName : "" ) );
     add( panelFileName, gbc );
 
 
     // Bereich Eigenschaften
-    JPanel panelProp = new JPanel( new GridBagLayout() );
-    panelProp.setBorder( BorderFactory.createTitledBorder( "Eigenschaften" ) );
+    JPanel panelProp = GUIFactory.createPanel( new GridBagLayout() );
+    panelProp.setBorder( GUIFactory.createTitledBorder( "Eigenschaften" ) );
     gbc.gridy++;
     add( panelProp, gbc );
 
@@ -87,15 +91,15 @@ public class SaveTextDlg extends BaseDlg
 					0.0, 0.0,
 					GridBagConstraints.EAST,
 					GridBagConstraints.NONE,
-					new Insets( 5, 5, 2, 5 ),
+					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    panelProp.add( new JLabel( "Zeichensatz:" ), gbcProp );
+    panelProp.add( GUIFactory.createLabel( "Zeichensatz:" ), gbcProp );
 
-    this.comboEncoding = new JComboBox<>();
+    this.comboEncoding = GUIFactory.createComboBox();
     this.comboEncoding.addItem( "Systemzeichensatz" );
     this.comboEncoding.addItem(
-		new CharConverter( CharConverter.Encoding.ASCII_7BIT ) );
+		new CharConverter( CharConverter.Encoding.ASCII ) );
     this.comboEncoding.addItem(
 		new CharConverter( CharConverter.Encoding.ISO646DE ) );
     this.comboEncoding.addItem(
@@ -116,13 +120,12 @@ public class SaveTextDlg extends BaseDlg
     gbcProp.gridx++;
     panelProp.add( this.comboEncoding, gbcProp );
 
-    gbcProp.anchor     = GridBagConstraints.EAST;
-    gbcProp.insets.top = 2;
-    gbcProp.gridx      = 0;
+    gbcProp.anchor = GridBagConstraints.EAST;
+    gbcProp.gridx  = 0;
     gbcProp.gridy++;
-    panelProp.add( new JLabel( "Zeilenende:" ), gbcProp );
+    panelProp.add( GUIFactory.createLabel( "Zeilenende:" ), gbcProp );
 
-    this.comboLineEnd = new JComboBox<>();
+    this.comboLineEnd = GUIFactory.createComboBox();
     this.comboLineEnd.addItem( new TextLineSeparator( "\r\n" ) );
     this.comboLineEnd.addItem( new TextLineSeparator( "\n" ) );
     this.comboLineEnd.addItem( new TextLineSeparator( "\r" ) );
@@ -131,29 +134,26 @@ public class SaveTextDlg extends BaseDlg
     gbcProp.gridx++;
     panelProp.add( this.comboLineEnd, gbcProp );
 
-    this.btnTrimLines = new JCheckBox(
+    this.cbTrimLines = GUIFactory.createCheckBox(
 		"Unsichtbare Zeichen am Zeilenende entfernen" );
+    gbcProp.gridy++;
+    panelProp.add( this.cbTrimLines, gbcProp );
+
+    this.cbTrailing1A = GUIFactory.createCheckBox(
+		"Datei mit Byte 1Ah abschlie\u00DFen" );
+    gbcProp.insets.top    = 0;
     gbcProp.insets.bottom = 5;
     gbcProp.gridy++;
-    panelProp.add( this.btnTrimLines, gbcProp );
-
-    this.btnTrailing1A = new JCheckBox(
-		"Datei mit Byte 1Ah abschlie\u00DFen" );
-    gbcProp.gridy++;
-    panelProp.add( this.btnTrailing1A, gbcProp );
+    panelProp.add( this.cbTrailing1A, gbcProp );
 
 
     // Bereich Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 2, 1, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 2, 1, 5, 5 ) );
 
-    this.btnSave = new JButton( "Speichern" );
-    this.btnSave.addActionListener( this );
-    this.btnSave.addKeyListener( this );
+    this.btnSave = GUIFactory.createButton( EmuUtil.TEXT_SAVE );
     panelBtn.add( this.btnSave );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
     gbc.fill       = GridBagConstraints.NONE;
@@ -170,8 +170,8 @@ public class SaveTextDlg extends BaseDlg
 
 
     // Vorbelegungen
-    this.btnTrailing1A.setSelected( this.editText.getEofByte() == 0x1A );
-    this.btnTrimLines.setSelected( this.editText.getTrimLines() );
+    this.cbTrailing1A.setSelected( this.editText.getEofByte() == 0x1A );
+    this.cbTrimLines.setSelected( this.editText.getTrimLines() );
 
     Object encObj = editText.getCharConverter();
     if( encObj == null ) {
@@ -215,14 +215,19 @@ public class SaveTextDlg extends BaseDlg
       Main.setLastFile( file, Main.FILE_GROUP_TEXT );
     } else {
       File preSelection = editText.getFile();
-
-      file = EmuUtil.showFileSaveDlg(
-		editText.getTextEditFrm(),
-		"Textdatei speichern",
-		preSelection != null ?
-			preSelection
-			: Main.getLastDirFile( Main.FILE_GROUP_TEXT ),
-		TextEditFrm.getTextFileFilters() );
+      if( preSelection == null ) {
+	String fileName = editText.getFileName();
+	if( fileName != null ) {
+	  preSelection = new File( fileName );
+	} else {
+	  preSelection = Main.getLastDirFile( Main.FILE_GROUP_TEXT );
+	}
+      }
+      file = FileUtil.showFileSaveDlg(
+				editText.getTextEditFrm(),
+				"Textdatei speichern",
+				preSelection,
+				TextEditFrm.getTextFileFilters() );
       if( file != null ) {
 
 	/*
@@ -262,6 +267,18 @@ public class SaveTextDlg extends BaseDlg
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      this.btnSave.addActionListener( this );
+      this.btnCancel.addActionListener( this );
+    }
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -280,13 +297,25 @@ public class SaveTextDlg extends BaseDlg
   }
 
 
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      this.btnSave.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void doSave()
   {
     try {
 
-      // Zeichendsatz ermitteln
+      // Zeichensatz ermitteln
       CharConverter charConverter = null;
       String        encodingName  = null;
       String        encodingDesc  = null;
@@ -331,8 +360,8 @@ public class SaveTextDlg extends BaseDlg
 			encodingName,
 			encodingDesc,
 			byteOrderMark,
-			this.btnTrailing1A.isSelected() ? 0x1A : -1,
-			this.btnTrimLines.isSelected(),
+			this.cbTrailing1A.isSelected() ? 0x1A : -1,
+			this.cbTrimLines.isSelected(),
 			lineEnd );
       this.fileSaved = true;
       doClose();

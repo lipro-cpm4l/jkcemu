@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,50 +14,45 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Calendar;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileTimesView;
-import jkcemu.base.FileTimesViewFactory;
+import jkcemu.file.FileTimesData;
 
 
 public class DiskImgCreator
 {
-  private FileTimesViewFactory ftvFactory;
-  private boolean              blockNum16Bit;
-  private int                  blockSize;
-  private int                  dirBlocks;
-  private int                  begDirArea;
-  private int                  begFileArea;
-  private int                  dstDirPos;
-  private int                  dstFilePos;
-  private int                  blockNum;
-  private int                  begTimeFile;
-  private int                  dstTimeFile;
-  private int                  endTimeFile;
-  private Calendar             calendar;
-  private byte[]               diskBuf;
+  private boolean  blockNum16Bit;
+  private int      blockSize;
+  private int      dirBlocks;
+  private int      begDirArea;
+  private int      begFileArea;
+  private int      dstDirPos;
+  private int      dstFilePos;
+  private int      blockNum;
+  private int      begTimeFile;
+  private int      dstTimeFile;
+  private int      endTimeFile;
+  private Calendar calendar;
+  private byte[]   diskBuf;
 
 
   public DiskImgCreator(
-		FileTimesViewFactory fileTimesViewFactory,
-		int                  sides,
-		int                  cyls,
-		int                  sysTracks,
-		int                  sectPerCyl,
-		int                  sectorSize,
-		boolean              blockNum16Bit,
-		int                  blockSize,
-		int                  dirBlocks,
-		boolean              dateStamper ) throws IOException
+		int     cyls,
+		int     sides,
+		int     sysTracks,
+		int     sectPerTrack,
+		int     sectorSize,
+		boolean blockNum16Bit,
+		int     blockSize,
+		int     dirBlocks,
+		boolean dateStamper ) throws IOException
   {
-    this.ftvFactory    = fileTimesViewFactory;
     this.blockNum16Bit = blockNum16Bit;
     this.blockSize     = blockSize;
     this.dirBlocks     = dirBlocks;
-    this.diskBuf       = new byte[ sides * cyls * sectPerCyl * sectorSize ];
-    this.begDirArea    = sysTracks * sides * sectPerCyl * sectorSize;
+    this.diskBuf       = new byte[ cyls * sides * sectPerTrack * sectorSize ];
+    this.begDirArea    = sysTracks * sides * sectPerTrack * sectorSize;
     this.begFileArea   = this.begDirArea + (this.dirBlocks * this.blockSize);
     this.dstDirPos     = this.begDirArea;
     this.dstFilePos    = this.begFileArea;
@@ -142,10 +137,10 @@ public class DiskImgCreator
 		readOnly,
 		sysFile,
 		archived,
-		this.ftvFactory.getFileTimesView( file ) );
+		FileTimesData.createOf( file ) );
       }
       finally {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
   }
@@ -169,7 +164,7 @@ public class DiskImgCreator
 	}
       }
       finally {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
   }
@@ -202,7 +197,7 @@ public class DiskImgCreator
 			boolean       readOnly,
 			boolean       sysFile,
 			boolean       archived,
-			FileTimesView fileTimesView,
+			FileTimesData fileTimesData,
 			int           extentNum ) throws IOException
   {
     if( this.dstDirPos >= this.begFileArea ) {
@@ -252,14 +247,10 @@ public class DiskImgCreator
       this.diskBuf[ this.dstDirPos++ ] = (byte) 0;
     }
     if( (this.dstTimeFile >= 0) && (this.dstTimeFile < this.endTimeFile) ) {
-      if( fileTimesView != null ) {
-	writeTimeEntry( fileTimesView.getCreationMillis() );
-	writeTimeEntry( fileTimesView.getLastAccessMillis() );
-	writeTimeEntry( fileTimesView.getLastModifiedMillis() );
-	this.dstTimeFile++;
-      } else {
-	this.dstTimeFile += 0x10;
-      }
+      writeTimeEntry( fileTimesData.getCreationMillis() );
+      writeTimeEntry( fileTimesData.getLastAccessMillis() );
+      writeTimeEntry( fileTimesData.getLastModifiedMillis() );
+      this.dstTimeFile++;
     }
     return entryBegPos;
   }
@@ -272,7 +263,7 @@ public class DiskImgCreator
 		boolean       readOnly,
 		boolean       sysFile,
 		boolean       archived,
-		FileTimesView fileTimesView ) throws IOException
+		FileTimesData fileTimesData ) throws IOException
   {
     int extentNum  = 0;
     int b          = in.read();
@@ -290,7 +281,7 @@ public class DiskImgCreator
 				readOnly,
 				sysFile,
 				archived,
-				fileTimesView,
+				fileTimesData,
 				extentNum );
 	int blkPos = dirPos + 0x10;
 
@@ -366,7 +357,7 @@ public class DiskImgCreator
 		readOnly,
 		sysFile,
 		archived,
-		fileTimesView,
+		fileTimesData,
 		extentNum );
     }
   }

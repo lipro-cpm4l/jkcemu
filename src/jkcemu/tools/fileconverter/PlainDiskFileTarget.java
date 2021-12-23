@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,10 +10,9 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
 import jkcemu.disk.AbstractFloppyDisk;
 import jkcemu.disk.PlainDisk;
+import jkcemu.file.FileUtil;
 
 
 public class PlainDiskFileTarget extends AbstractConvertTarget
@@ -27,7 +26,7 @@ public class PlainDiskFileTarget extends AbstractConvertTarget
   {
     super(
 	fileConvertFrm,
-	"Einfache Diskettenabbilddatei (*.img; *.image; *.raw)" );
+	"Einfache Diskettenabbilddatei (*.dd; *.img; *.image; *.raw)" );
     this.disk = disk;
   }
 
@@ -37,21 +36,21 @@ public class PlainDiskFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getPlainDiskFileFilter();
+    return FileUtil.getPlainDiskFileFilter();
   }
 
 
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".img" );
+    return FileUtil.replaceExtension( srcFile, ".img" );
   }
 
 
   @Override
   public String save( File file ) throws IOException
   {
-    checkFileExtension( file, ".img", ".image", ".raw" );
+    checkFileExtension( file, ".dd", ".img", ".image", ".raw" );
     return PlainDisk.export( this.disk, file );
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2013 Jens Mueller
+ * (c) 2013-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.base;
 
-import java.lang.*;
 import java.util.Map;
 
 
@@ -17,9 +16,10 @@ public class CharRaster
   private int                 colCount;
   private int                 rowCount;
   private int                 rowHeight;
-  private int                 charHeight;
   private int                 charWidth;
-  private int                 topLine;
+  private int                 charHeight;
+  private int                 xOffs;
+  private int                 yOffs;
   private Map<Long,Character> charMap;
 
 
@@ -27,17 +27,30 @@ public class CharRaster
 		int colCount,
 		int rowCount,
 		int rowHeight,
-		int charHeight,
 		int charWidth,
-		int topLine )
+		int charHeight,
+		int xOffs,
+		int yOffs )
   {
     this.colCount   = colCount;
     this.rowCount   = rowCount;
     this.rowHeight  = rowHeight;
-    this.charHeight = charHeight;
     this.charWidth  = charWidth;
-    this.topLine    = topLine;
+    this.charHeight = charHeight;
+    this.xOffs      = xOffs;
+    this.yOffs      = yOffs;
     this.charMap    = null;
+  }
+
+
+  public CharRaster(
+		int colCount,
+		int rowCount,
+		int rowHeight,
+		int charWidth,
+		int charHeight )
+  {
+    this( colCount, rowCount, rowHeight, charWidth, charHeight, 0, 0 );
   }
 
 
@@ -77,9 +90,15 @@ public class CharRaster
   }
 
 
-  public int getTopLine()
+  public int getXOffset()
   {
-    return this.topLine;
+    return this.xOffs;
+  }
+
+
+  public int getYOffset()
+  {
+    return this.yOffs;
   }
 
 

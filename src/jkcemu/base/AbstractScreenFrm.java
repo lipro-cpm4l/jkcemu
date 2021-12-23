@@ -1,5 +1,5 @@
 /*
- * (c) 2016-2017 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,9 @@ package jkcemu.base;
 
 import java.awt.Component;
 import java.awt.EventQueue;
+import java.awt.Frame;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.FlavorEvent;
@@ -22,30 +24,32 @@ import java.awt.event.MouseEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.lang.*;
+import java.io.UnsupportedEncodingException;
 import java.util.EventObject;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import jkcemu.Main;
+import jkcemu.base.PopupMenuOwner;
+import jkcemu.file.FileUtil;
 import jkcemu.image.ImageFrm;
-import jkcemu.image.ImgSaver;
-import jkcemu.image.ImgSelection;
+import jkcemu.image.ImageSaver;
+import jkcemu.image.ImageUtil;
+import jkcemu.joystick.JoystickFrm;
 import jkcemu.text.TextUtil;
 
 
 public abstract class AbstractScreenFrm
 			extends BaseFrm
-			implements FlavorListener
+			implements FlavorListener, PopupMenuOwner
 {
   public static final String PROP_PREFIX = "jkcemu.";
 
@@ -60,10 +64,6 @@ public abstract class AbstractScreenFrm
   protected static final String ACTION_PASTE            = "edit.paste";
   protected static final String ACTION_PASTE_CANCEL     = "edit.paste.cancel";
   protected static final String ACTION_PASTE_WITH       = "edit.paste.with";
-  protected static final String ACTION_SCALE_1          = "scale.1";
-  protected static final String ACTION_SCALE_2          = "scale.2";
-  protected static final String ACTION_SCALE_3          = "scale.3";
-  protected static final String ACTION_SCALE_4          = "scale.4";
   protected static final String ACTION_SCREENIMAGE_SHOW = "screen.image.show";
   protected static final String ACTION_SCREENIMAGE_COPY = "screen.image.copy";
   protected static final String ACTION_SCREENIMAGE_SAVE = "screen.image.save";
@@ -73,37 +73,43 @@ public abstract class AbstractScreenFrm
   protected static final String ACTION_SCREENSHOT       = "screenshot";
   protected static final String ACTION_SCREENVIDEO      = "screen.video";
 
-  protected JButton              btnCopy;
-  protected JButton              btnPaste;
-  protected JMenuItem            mnuCopy;
-  protected JMenuItem            mnuPaste;
-  protected JMenuItem            mnuPasteWith;
-  protected JMenuItem            mnuPasteCancel;
-  protected JMenuItem            mnuScreenTextCopy;
-  protected JMenuItem            mnuScreenTextSave;
-  protected JMenuItem            mnuScreenTextShow;
-  protected JMenuItem            mnuPopupCopy;
-  protected JMenuItem            mnuPopupPaste;
-  protected JRadioButtonMenuItem mnuScale1;
-  protected JRadioButtonMenuItem mnuScale2;
-  protected JRadioButtonMenuItem mnuScale3;
-  protected JRadioButtonMenuItem mnuScale4;
-  protected JPopupMenu           mnuPopup;
-  protected Clipboard            clipboard;
-  protected boolean              copyEnabled;
-  protected boolean              pasteEnabled;
-  protected volatile boolean     screenDirty;
-  protected ScreenFld            screenFld;
-  protected int                  screenRefreshMillis;
-  protected javax.swing.Timer    screenRefreshTimer;
+  protected EmuThread         emuThread;
+  protected JButton           btnCopy;
+  protected JButton           btnPaste;
+  protected JMenuItem         mnuCopy;
+  protected JMenuItem         mnuPaste;
+  protected JMenuItem         mnuPasteWith;
+  protected JMenuItem         mnuPasteCancel;
+  protected JMenuItem         mnuScreenTextCopy;
+  protected JMenuItem         mnuScreenTextSave;
+  protected JMenuItem         mnuScreenTextShow;
+  protected JMenuItem         popupCopy;
+  protected JMenuItem         popupPaste;
+  protected JPopupMenu        popupMnu;
+  protected Clipboard         clipboard;
+  protected boolean           copyEnabled;
+  protected boolean           pasteEnabled;
+  protected volatile boolean  screenDirty;
+  protected ScreenFld         screenFld;
+  protected int               screenRefreshMillis;
+  protected javax.swing.Timer screenRefreshTimer;
 
-  private static Set<String> closeMsgShownSet = new TreeSet<>();
 
-  private String closeMsg;
+  private static final int[] screenScaleKeyCodes = new int[] {
+							KeyEvent.VK_1,
+							KeyEvent.VK_2,
+							KeyEvent.VK_3,
+							KeyEvent.VK_4 };
+
+  private JRadioButtonMenuItem[] mnuScaleItems;
+  private int                    mnuShortcutKeyMask;
+  private boolean                ignoreKeyChar;
+  private boolean                joyActionByKey;
 
 
   protected AbstractScreenFrm()
   {
+    this.emuThread           = null;
     this.btnCopy             = null;
     this.btnPaste            = null;
     this.mnuCopy             = null;
@@ -113,17 +119,15 @@ public abstract class AbstractScreenFrm
     this.mnuScreenTextCopy   = null;
     this.mnuScreenTextSave   = null;
     this.mnuScreenTextShow   = null;
-    this.mnuPopupCopy        = null;
-    this.mnuPopupPaste       = null;
-    this.mnuPopup            = null;
-    this.mnuScale1           = null;
-    this.mnuScale2           = null;
-    this.mnuScale3           = null;
-    this.mnuScale4           = null;
-    this.closeMsg            = null;
+    this.mnuScaleItems       = null;
+    this.popupMnu            = null;
+    this.popupCopy           = null;
+    this.popupPaste          = null;
     this.clipboard           = null;
     this.copyEnabled         = false;
     this.pasteEnabled        = false;
+    this.ignoreKeyChar       = false;
+    this.joyActionByKey      = false;
     this.screenDirty         = false;
     this.screenRefreshMillis = getDefaultScreenRefreshMillis();
     this.screenRefreshTimer  = new javax.swing.Timer(
@@ -131,9 +135,122 @@ public abstract class AbstractScreenFrm
 					this );
     this.screenRefreshTimer.start();
 
-    Toolkit tk = getToolkit();
+    // Zwischenablage
+    Toolkit tk = EmuUtil.getToolkit( this );
     if( tk != null ) {
       this.clipboard = tk.getSystemClipboard();
+    }
+
+    /*
+     * Die Shortcut-Taste soll nicht die Control-Taste sein.
+     * Aus diesem Grund wird geprueft,
+     * ob die uebliche Shortcut-Taste die Control-Taste ist.
+     * Wenn nein, wird diese verwendet (ist beim Mac so),
+     * anderenfalls die ALT-Taste.
+     */
+    this.mnuShortcutKeyMask = 0;
+    try {
+      // Seit Java 10 gibt es die Methode Toolkit.getMenuShortcutKeyMaskEx()
+      Object v = tk.getClass().getMethod( "getMenuShortcutKeyMaskEx" )
+							.invoke( tk );
+      if( v != null ) {
+	if( v instanceof Number ) {
+	  this.mnuShortcutKeyMask = ((Number) v).intValue();
+	  if( this.mnuShortcutKeyMask == InputEvent.CTRL_DOWN_MASK ) {
+	    this.mnuShortcutKeyMask = InputEvent.ALT_DOWN_MASK;
+	  }
+	}
+      }
+    }
+    catch( Exception ex ) {}
+    if( this.mnuShortcutKeyMask == 0 ) {
+      /*
+       * Vor Java 10 gibt es die Methode Toolkit.getMenuShortcutKeyMask(),
+       * die noch eine alte Control-Maske liefert
+       * (Event.CTRL_MASK bzw. InputEvent.CTRL_MASK).
+       * Da aber die Felder der alten Codes mit Java 9 deprecated sind,
+       * werden diese hier per Reflection ausgelesen und es wird auch
+       * auf InputEvent.CTRL_DOWN_MASK geprueft.
+       */
+      int ctrlMask = InputEvent.CTRL_DOWN_MASK;
+      try {
+	ctrlMask |= Class.forName( "java.awt.Event" )
+					.getDeclaredField( "CTRL_MASK" )
+					.getInt( null );
+      }
+      catch( Exception ex ) {}
+      try {
+	ctrlMask |= InputEvent.class.getDeclaredField( "CTRL_MASK" )
+					.getInt( null );
+      }
+      catch( Exception ex ) {}
+      try {
+	Object v = tk.getClass().getMethod( "getMenuShortcutKeyMask" )
+							.invoke( tk );
+	if( v != null ) {
+	  if( v instanceof Number ) {
+	    this.mnuShortcutKeyMask = ((Number) v).intValue();
+	    if( (this.mnuShortcutKeyMask & ctrlMask) != 0 ) {
+	      this.mnuShortcutKeyMask = InputEvent.ALT_DOWN_MASK;
+	    }
+	  }
+	}
+      }
+      catch( Exception ex ) {}
+    }
+    if( this.mnuShortcutKeyMask == 0 ) {
+      this.mnuShortcutKeyMask = InputEvent.ALT_DOWN_MASK;
+    }
+  }
+
+
+  protected JMenuItem createMenuItemWithNonControlAccelerator(
+						String text,
+						String actionCmd,
+						int    keyCode )
+  {
+    JMenuItem item = createMenuItem( text, actionCmd );
+    item.setAccelerator(
+	KeyStroke.getKeyStroke( keyCode, this.mnuShortcutKeyMask ) );
+    return item;
+  }
+
+
+  protected JMenuItem createMenuItemWithNonControlAccelerator(
+						String  text,
+						String  actionCmd,
+						int     keyCode,
+						boolean shiftDown )
+  {
+    JMenuItem item = createMenuItem( text, actionCmd );
+    item.setAccelerator(
+	KeyStroke.getKeyStroke(
+		keyCode,
+		this.mnuShortcutKeyMask
+			| (shiftDown ? InputEvent.SHIFT_DOWN_MASK : 0) ) );
+    return item;
+  }
+
+
+  protected void createPopupMenu( boolean copy, boolean paste )
+  {
+    this.popupMnu = GUIFactory.createPopupMenu();
+    if( copy ) {
+      this.popupCopy = createMenuItem(
+				EmuUtil.TEXT_COPY,
+				ACTION_COPY );
+      this.popupCopy.setEnabled( false );
+      this.popupMnu.add( this.popupCopy );
+    }
+    if( paste ) {
+      this.popupPaste = createMenuItem(
+				EmuUtil.TEXT_PASTE,
+				ACTION_PASTE );
+      this.popupPaste.setEnabled( false );
+      this.popupMnu.add( this.popupPaste );
+    }
+    if( copy || paste ) {
+      this.popupMnu.addSeparator();
     }
   }
 
@@ -165,8 +282,11 @@ public abstract class AbstractScreenFrm
 	      iso646de = emuThread.getISO646DE();
 	    }
 	    if( iso646de == null ) {
-	      String[]    options = { "ASCII", "Umlaute", "Abbrechen" };
-	      JOptionPane pane    = new JOptionPane(
+	      String[] options = {
+				"ASCII",
+				"Umlaute",
+				EmuUtil.TEXT_CANCEL };
+	      JOptionPane pane = new JOptionPane(
 		"Der Text enth\u00E4lt Zeichencodes, die nach ASCII"
 			+ " die Zeichen [ \\ ] { | } ~\n"
 			+ "und nach ISO646-DE deutsche Umlaute darstellen.\n"
@@ -204,28 +324,28 @@ public abstract class AbstractScreenFrm
 		char ch = text.charAt( k );
 		switch( ch ) {
 		  case '[':
-		    buf.append( (char) '\u00C4' );
+		    buf.append( '\u00C4' );
 		    break;
 		  case '\\':
-		    buf.append( (char) '\u00D6' );
+		    buf.append( '\u00D6' );
 		    break;
 		  case ']':
-		    buf.append( (char) '\u00DC' );
+		    buf.append( '\u00DC' );
 		    break;
 		  case '{':
-		    buf.append( (char) '\u00E4' );
+		    buf.append( '\u00E4' );
 		    break;
 		  case '|':
-		    buf.append( (char) '\u00F6' );
+		    buf.append( '\u00F6' );
 		    break;
 		  case '}':
-		    buf.append( (char) '\u00FC' );
+		    buf.append( '\u00FC' );
 		    break;
 		  case '~':
-		    buf.append( (char) '\u00DF' );
+		    buf.append( '\u00DF' );
 		    break;
 		  default:
-		    buf.append( (char) ch );
+		    buf.append( ch );
 		}
 	      }
 	      text = buf.toString();
@@ -244,38 +364,35 @@ public abstract class AbstractScreenFrm
   {
     JMenu mnuEdit = null;
     if( createCopyItem || createPasteItems ) {
-      mnuEdit = new JMenu( "Bearbeiten" );
-      mnuEdit.setMnemonic( KeyEvent.VK_B );
+      mnuEdit = createMenuEdit();
 
       if( createCopyItem ) {
-	this.mnuCopy = createJMenuItem(
-			"Kopieren",
-			ACTION_COPY,
-			KeyStroke.getKeyStroke(
-					KeyEvent.VK_C,
-					InputEvent.ALT_MASK ) );
+	this.mnuCopy = createMenuItem( EmuUtil.TEXT_COPY, ACTION_COPY );
+	this.mnuCopy.setAccelerator(
+		KeyStroke.getKeyStroke(
+				KeyEvent.VK_C,
+				this.mnuShortcutKeyMask ) );
 	this.mnuCopy.setEnabled( false );
 	mnuEdit.add( this.mnuCopy );
       }
 
       if( createPasteItems ) {
-	this.mnuPaste = createJMenuItem(
-			"Einf\u00FCgen",
-			ACTION_PASTE,
-			KeyStroke.getKeyStroke(
-					KeyEvent.VK_V,
-					InputEvent.ALT_MASK ) );
+	this.mnuPaste = createMenuItem( EmuUtil.TEXT_PASTE, ACTION_PASTE );
+	this.mnuPaste.setAccelerator(
+		KeyStroke.getKeyStroke(
+				KeyEvent.VK_V,
+				this.mnuShortcutKeyMask ) );
 	this.mnuPaste.setEnabled( false );
 	mnuEdit.add( this.mnuPaste );
 
-	this.mnuPasteWith = createJMenuItem(
+	this.mnuPasteWith = createMenuItem(
 				"Einf\u00FCgen mit...",
 				ACTION_PASTE_WITH );
 	this.mnuPasteWith.setEnabled( false );
 	mnuEdit.add( this.mnuPasteWith );
 	mnuEdit.addSeparator();
 
-	this.mnuPasteCancel = createJMenuItem(
+	this.mnuPasteCancel = createMenuItem(
 				"Einf\u00FCgen abbrechen",
 				ACTION_PASTE_CANCEL );
 	this.mnuPasteCancel.setEnabled( false );
@@ -288,78 +405,59 @@ public abstract class AbstractScreenFrm
 
   protected JMenu createScaleMenu()
   {
-    JMenu       mnuScale = new JMenu( "Ansicht" );
+    JMenu       mnuScale = GUIFactory.createMenu( "Ansicht" );
     ButtonGroup grpScale = new ButtonGroup();
 
-    this.mnuScale1 = createJRadioButtonMenuItem(
-				grpScale,
-				"100 %",
-				ACTION_SCALE_1,
-				true,
-				KeyStroke.getKeyStroke(
-					KeyEvent.VK_1,
-					InputEvent.ALT_MASK ) );
-    mnuScale.add( this.mnuScale1 );
-
-    this.mnuScale2 = createJRadioButtonMenuItem(
-				grpScale,
-				"200 %",
-				ACTION_SCALE_2,
-				false,
-				KeyStroke.getKeyStroke(
-					KeyEvent.VK_2,
-					InputEvent.ALT_MASK ) );
-    mnuScale.add( this.mnuScale2 );
-
-    this.mnuScale3 = createJRadioButtonMenuItem(
-				grpScale,
-				"300 %",
-				ACTION_SCALE_3,
-				false,
-				KeyStroke.getKeyStroke(
-					KeyEvent.VK_3,
-					InputEvent.ALT_MASK ) );
-    mnuScale.add( this.mnuScale3 );
-
-    this.mnuScale4 = createJRadioButtonMenuItem(
-				grpScale,
-				"400 %",
-				ACTION_SCALE_4,
-				false,
-				KeyStroke.getKeyStroke(
-					KeyEvent.VK_4,
-					InputEvent.ALT_MASK ) );
-    mnuScale.add( this.mnuScale4 );
+    this.mnuScaleItems = new JRadioButtonMenuItem[
+					screenScaleKeyCodes.length ];
+    for( int i = 0; i < this.mnuScaleItems.length; i++ ) {
+      JRadioButtonMenuItem item = GUIFactory.createRadioButtonMenuItem(
+		String.format( "%d%%", (i + 1) * 100 ) );
+      item.setAccelerator(
+		KeyStroke.getKeyStroke(
+				screenScaleKeyCodes[ i ],
+				this.mnuShortcutKeyMask ) );
+      item.addActionListener( this );
+      grpScale.add( item );
+      mnuScale.add( item );
+      this.mnuScaleItems[ i ] = item;
+    }
     return mnuScale;
+  }
+
+
+  public void clearScreenSelection()
+  {
+    this.screenFld.clearSelection();
   }
 
 
   protected JMenu createScreenMenu( boolean createTextItems )
   {
-    JMenu mnuScreen = new JMenu( "Bildschirmausgabe" );
-    mnuScreen.add( createJMenuItem(
-				"als Bildschirmfoto anzeigen...",
+    JMenu mnuScreen = GUIFactory.createMenu( "Grafische Ausgabe" );
+    mnuScreen.add( createMenuItem(
+				"im Bildbetrachter anzeigen...",
 				ACTION_SCREENIMAGE_SHOW ) );
-    mnuScreen.add( createJMenuItem(
+    mnuScreen.add( createMenuItem(
 				"als Bild kopieren",
 				ACTION_SCREENIMAGE_COPY ) );
-    mnuScreen.add( createJMenuItem(
+    mnuScreen.add( createMenuItem(
 				"als Bilddatei speichern...",
 				ACTION_SCREENIMAGE_SAVE ) );
     if( createTextItems ) {
       mnuScreen.addSeparator();
 
-      this.mnuScreenTextShow = createJMenuItem(
+      this.mnuScreenTextShow = createMenuItem(
 				"im Texteditor anzeigen",
 				ACTION_SCREENTEXT_SHOW );
       mnuScreen.add( this.mnuScreenTextShow );
 
-      this.mnuScreenTextCopy = createJMenuItem(
+      this.mnuScreenTextCopy = createMenuItem(
 				"als Text kopieren",
 				ACTION_SCREENTEXT_COPY );
       mnuScreen.add( this.mnuScreenTextCopy );
 
-      this.mnuScreenTextSave = createJMenuItem(
+      this.mnuScreenTextSave = createMenuItem(
 				"als Textdatei speichern...",
 				ACTION_SCREENTEXT_SAVE );
       mnuScreen.add( this.mnuScreenTextSave );
@@ -370,9 +468,10 @@ public abstract class AbstractScreenFrm
 
   protected boolean doScreenImageSave()
   {
-    return (ImgSaver.saveImageAs(
+    return (ImageSaver.saveImageAs(
 			this,
 			this.screenFld.createBufferedImage(),
+			ImageUtil.createScreenshotExifData(),
 			null ) != null );
   }
 
@@ -392,11 +491,11 @@ public abstract class AbstractScreenFrm
       String screenText = checkConvertScreenText(
 					screenDevice.getScreenText() );
       if( screenText != null ) {
-	File file = EmuUtil.showFileSaveDlg(
+	File file = FileUtil.showFileSaveDlg(
 			this,
 			"Textdatei speichern",
 			Main.getLastDirFile( Main.FILE_GROUP_SCREEN ),
-			EmuUtil.getTextFileFilter() );
+			FileUtil.getTextFileFilter() );
 	if( file != null ) {
 	  String fileName = file.getPath();
 	  if( fileName != null ) {
@@ -425,7 +524,7 @@ public abstract class AbstractScreenFrm
 			+ ex.getMessage() );
 	    }
 	    finally {
-	      EmuUtil.closeSilent( out );
+	      EmuUtil.closeSilently( out );
 	    }
 	  }
 	}
@@ -435,15 +534,44 @@ public abstract class AbstractScreenFrm
   }
 
 
-  public void firePastingTextFinished()
+  public void fireScreenSizeChanged()
   {
+    if( getExtendedState() != Frame.MAXIMIZED_BOTH ) {
+      final Window    window    = this;
+      final ScreenFld screenFld = this.screenFld;
+      if( (window != null) && (screenFld != null) ) {
+	EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    screenFld.updPreferredSize();
+		    window.pack();
+		  }
+		} );
+      }
+    }
+  }
+
+
+  public void fireUpdScreenTextActionsEnabled()
+  {
+    final AbstractScreenDevice screenDevice = getScreenDevice();
     EventQueue.invokeLater(
 		new Runnable()
 		{
 		  @Override
 		  public void run()
 		  {
-		    pastingTextFinished();
+		    boolean state = false;
+		    if( screenDevice != null ) {
+		      state = screenDevice.canExtractScreenText();
+		    }
+		    if( !state ) {
+		      clearScreenSelection();
+		    }
+		    setScreenTextActionsEnabled( state );
 		  }
 		} );
   }
@@ -472,13 +600,6 @@ public abstract class AbstractScreenFrm
   protected abstract AbstractScreenDevice getScreenDevice();
 
 
-  public void lookAndFeelChanged()
-  {
-    if( this.mnuPopup != null )
-      SwingUtilities.updateComponentTreeUI( this.mnuPopup );
-  }
-
-
   protected void pasteText( String text )
   {
     AbstractScreenDevice screenDevice = getScreenDevice();
@@ -491,28 +612,23 @@ public abstract class AbstractScreenFrm
 	if( text.indexOf( '\u00A0' ) >= 0 ) {
 	  text = text.replace( '\u00A0', '\u0020' );
 	}
-	if( this.mnuPasteCancel != null ) {
-	  this.mnuPasteCancel.setEnabled( true );
-	}
-	updPasteBtns();
 	screenDevice.startPastingText( text );
       }
     }
   }
 
 
-  protected void pastingTextFinished()
+  public void pastingTextStatusChanged( final boolean pasting )
   {
-    if( this.mnuPasteCancel != null ) {
-      this.mnuPasteCancel.setEnabled( false );
-    }
-    updPasteBtns();
-  }
-
-
-  public void setCloseMsg( String closeMsg )
-  {
-    this.closeMsg = closeMsg;
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    pastingTextStatusChangedInternal( pasting );
+		  }
+		} );
   }
 
 
@@ -525,30 +641,25 @@ public abstract class AbstractScreenFrm
   protected void setScreenScale( int screenScale )
   {
     this.screenFld.setScreenScale( screenScale );
-    switch( screenScale ) {
-      case 1:
-	if( this.mnuScale1 != null ) {
-	  this.mnuScale1.setSelected( true );
-	}
-	break;
+    if( this.mnuScaleItems != null ) {
+      int idx = screenScale - 1;
+      if( (idx >= 0) && (idx < this.mnuScaleItems.length) ) {
+	this.mnuScaleItems[ idx ].setSelected( true );
+      }
+    }
+  }
 
-      case 2:
-	if( this.mnuScale2 != null ) {
-	  this.mnuScale2.setSelected( true );
-	}
-	break;
 
-      case 3:
-	if( this.mnuScale3 != null ) {
-	  this.mnuScale3.setSelected( true );
-	}
-	break;
-
-      case 4:
-	if( this.mnuScale4 != null ) {
-	  this.mnuScale4.setSelected( true );
-	}
-	break;
+  public void setScreenTextActionsEnabled( boolean state )
+  {
+    if( this.mnuScreenTextShow != null ) {
+      this.mnuScreenTextShow.setEnabled( state );
+    }
+    if( this.mnuScreenTextCopy != null ) {
+      this.mnuScreenTextCopy.setEnabled( state );
+    }
+    if( this.mnuScreenTextSave != null ) {
+      this.mnuScreenTextSave.setEnabled( state );
     }
   }
 
@@ -561,8 +672,8 @@ public abstract class AbstractScreenFrm
     if( this.mnuCopy != null ) {
       this.mnuCopy.setEnabled( state );
     }
-    if( this.mnuPopupCopy != null ) {
-      this.mnuPopupCopy.setEnabled( state );
+    if( this.popupCopy != null ) {
+      this.popupCopy.setEnabled( state );
     }
     if( this.btnCopy != null ) {
       this.btnCopy.setEnabled( state );
@@ -570,13 +681,13 @@ public abstract class AbstractScreenFrm
   }
 
 
-  protected boolean showPopup( MouseEvent e )
+  protected boolean showPopupMenu( MouseEvent e )
   {
     boolean rv = false;
-    if( this.mnuPopup != null ) {
+    if( this.popupMnu != null ) {
       Component c = e.getComponent();
       if( c != null ) {
-	this.mnuPopup.show( c, e.getX(), e.getY() );
+	this.popupMnu.show( c, e.getX(), e.getY() );
 	rv = true;
       }
     }
@@ -606,8 +717,8 @@ public abstract class AbstractScreenFrm
     if( this.mnuPasteWith != null ) {
       this.mnuPasteWith.setEnabled( state );
     }
-    if( this.mnuPopupPaste != null ) {
-      this.mnuPopupPaste.setEnabled( state );
+    if( this.popupPaste != null ) {
+      this.popupPaste.setEnabled( state );
     }
     if( this.btnPaste != null ) {
       this.btnPaste.setEnabled( state );
@@ -621,6 +732,15 @@ public abstract class AbstractScreenFrm
   public void flavorsChanged( FlavorEvent e )
   {
     updPasteBtns();
+  }
+
+
+	/* --- PopupMenuOwner --- */
+
+  @Override
+  public JPopupMenu getPopupMenu()
+  {
+    return this.popupMnu;
   }
 
 
@@ -690,54 +810,17 @@ public abstract class AbstractScreenFrm
 	  rv = true;
 	  doScreenTextCopy();
 	}
-	else if( actionCmd.equals( ACTION_SCALE_1 ) ) {
-	  rv = true;
-	  doScreenScale( 1 );
-	}
-	else if( actionCmd.equals( ACTION_SCALE_2 ) ) {
-	  rv = true;
-	  doScreenScale( 2 );
-	}
-	else if( actionCmd.equals( ACTION_SCALE_3 ) ) {
-	  rv = true;
-	  doScreenScale( 3 );
-	}
-	else if( actionCmd.equals( ACTION_SCALE_4 ) ) {
-	  rv = true;
-	  doScreenScale( 4 );
-	}
       }
     }
-    return rv;
-  }
-
-
-  @Override
-  public boolean doClose()
-  {
-    boolean rv       = false;
-    boolean canClose = true;
-    if( (this.closeMsg != null) && !isVisible() ) {
-      AbstractScreenDevice screenDevice = getScreenDevice();
-      if( screenDevice != null ) {
-	String className = screenDevice.getClass().getName();
-	if( !closeMsgShownSet.contains( className ) ) {
-	  JCheckBox cb = new JCheckBox( EmuUtil.TEXT_DONT_SHOW_MSG_AGAIN );
-	  canClose     = (JOptionPane.showConfirmDialog(
-				this,
-				new Object[] { this.closeMsg, cb },
-				"Hinweis",
-				JOptionPane.OK_CANCEL_OPTION,
-				JOptionPane.INFORMATION_MESSAGE )
-						== JOptionPane.OK_OPTION);
-	  if( cb.isSelected() ) {
-	    closeMsgShownSet.add( className );
-	  }
+    if( !rv && (this.mnuScaleItems != null) ) {
+      Object src = e.getSource();
+      for( int i = 0; i < this.mnuScaleItems.length; i++ ) {
+	if( src == this.mnuScaleItems[ i ] ) {
+	  rv = true;
+	  doScreenScale( i + 1 );
+	  break;
 	}
       }
-    }
-    if( canClose ) {
-      rv = super.doClose();
     }
     return rv;
   }
@@ -751,16 +834,111 @@ public abstract class AbstractScreenFrm
 
 
   @Override
+  public boolean getPackOnUIUpdate()
+  {
+    return true;
+  }
+
+
+  /*
+   * Die Taste F10 dient der Menuesteuerung des Emulators
+   * (Oeffnen des Menues, von Java so vorgegeben)
+   * und wird deshalb nicht an das emulierte System weitergegeben.
+   */
+  @Override
+  public void keyPressed( KeyEvent e )
+  {
+    if( (this.emuThread != null) && (e.getKeyCode() != KeyEvent.VK_F10) ) {
+      if( e.isAltDown() || e.isMetaDown() ) {
+	int a = JoystickFrm.getJoystickActionByKeyCode( e.getKeyCode() );
+	if( a != 0 ) {
+	  this.joyActionByKey = true;
+	  if( e.isShiftDown() ) {
+	    this.emuThread.setJoystickAction( 1, a );
+	  } else {
+	    this.emuThread.setJoystickAction( 0, a );
+	  }
+	}
+      } else {
+	/*
+	 * CTRL-M liefert auf verschiedenen Betriebssystemen
+	 * unterschiedliche ASCII-Codes (10 bzw. 13).
+	 * Aus diesem Grund wird hier CTRL-M fest auf 13 gemappt,
+	 * so wie es auch die von JKCEMU emulierten Computer im Original tun.
+	 */
+	if( (e.getKeyCode() == KeyEvent.VK_M)
+	    && !e.isAltDown()
+	    && !e.isAltGraphDown()
+	    && e.isControlDown()
+	    && !e.isMetaDown()
+	    && !e.isShiftDown() )
+	{
+	  this.emuThread.keyTyped( '\r' );
+	  this.ignoreKeyChar = true;
+	  e.consume();
+	} else {
+	  if( this.emuThread.keyPressed( e ) ) {
+	    this.ignoreKeyChar = true;
+	    e.consume();
+	  }
+	}
+      }
+    }
+  }
+
+
+  @Override
+  public void keyReleased( KeyEvent e )
+  {
+    if( this.emuThread != null ) {
+      if( this.joyActionByKey ) {
+	this.joyActionByKey = false;
+	this.emuThread.setJoystickAction( 0, 0 );
+	this.emuThread.setJoystickAction( 1, 0 );
+      }
+      if( !e.isAltDown() && !e.isMetaDown() ) {
+	/*
+	 * Das Loslassen von F10 und CONTROL nicht melden,
+	 * da F10 von Java selbst verwendet wird und CONTROL
+	 * im Tastaturfenster zum Deselektieren der Tasten fuehren wuerde.
+	 */
+	int keyCode = e.getKeyCode();
+	if( (keyCode != KeyEvent.VK_F10)
+	    && (keyCode != KeyEvent.VK_CONTROL) )
+	{
+	  this.emuThread.keyReleased();
+	  e.consume();
+	}
+	this.ignoreKeyChar = false;
+      }
+    }
+  }
+
+
+  @Override
+  public void keyTyped( KeyEvent e )
+  {
+    if( (this.emuThread != null) && !e.isAltDown() && !e.isMetaDown() ) {
+      if( this.ignoreKeyChar ) {
+	this.ignoreKeyChar = false;
+      } else {
+	this.emuThread.keyTyped( e.getKeyChar() );
+      }
+    }
+  }
+
+
+  @Override
   public void mousePressed( MouseEvent e )
   {
     if( (e.getSource() == this.screenFld) && (e.getClickCount() == 1) ) {
-      int m = e.getModifiers();
-      if( (m & InputEvent.BUTTON1_MASK) != 0 ) {
+      int m = e.getModifiersEx();
+      if( (m & InputEvent.BUTTON1_DOWN_MASK) != 0 ) {
 	this.screenFld.clearSelection();
 	this.screenFld.requestFocus();
 	e.consume();
       }
-      else if( (m & InputEvent.BUTTON2_MASK) != 0 ) {
+      else if( (m & InputEvent.BUTTON2_DOWN_MASK) != 0 ) {
 	if( Main.getBooleanProperty(
 			PROP_PREFIX + PROP_COPY_AND_PASTE_DIRECT,
 			DEFAULT_COPY_AND_PASTE_DIRECT ) )
@@ -768,7 +946,7 @@ public abstract class AbstractScreenFrm
 	  String text = checkConvertScreenText(
 					this.screenFld.getSelectedText() );
 	  if( text != null ) {
-	    if( text.length() > 0 ) {
+	    if( !text.isEmpty() ) {
 	      setWaitCursor( true );
 	      pasteText( text );
 	      setWaitCursor( false );
@@ -785,7 +963,7 @@ public abstract class AbstractScreenFrm
 
 
   @Override
-  public void resetFired()
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
   {
     if( this.mnuPasteCancel != null ) {
       this.mnuPasteCancel.setEnabled( false );
@@ -804,7 +982,7 @@ public abstract class AbstractScreenFrm
       }
       super.setVisible( state );
       if( !state && (this.clipboard != null) ) {
-	this.clipboard.addFlavorListener( this );
+	this.clipboard.removeFlavorListener( this );
       }
     }
   }
@@ -880,7 +1058,7 @@ public abstract class AbstractScreenFrm
   }
 
 
-  protected void doPasteCancel()
+  private void doPasteCancel()
   {
     AbstractScreenDevice screenDevice = getScreenDevice();
     if( screenDevice != null ) {
@@ -891,20 +1069,16 @@ public abstract class AbstractScreenFrm
 
   private void doScreenImageCopy()
   {
-    try {
-      if( this.clipboard != null ) {
-	ImgSelection ims = new ImgSelection(
-				this.screenFld.createBufferedImage() );
-	this.clipboard.setContents( ims, ims );
-      }
-    }
-    catch( IllegalStateException ex ) {}
+    ImageUtil.copyToClipboard( this, this.screenFld.createBufferedImage() );
   }
 
 
   private void doScreenImageShow()
   {
-    ImageFrm.open( this.screenFld.createBufferedImage(), "Schnappschuss" );
+    ImageFrm.open(
+		this.screenFld.createBufferedImage(),
+		ImageUtil.createScreenshotExifData(),
+		"Schnappschuss" );
   }
 
 
@@ -932,5 +1106,14 @@ public abstract class AbstractScreenFrm
 	}
       }
     }
+  }
+
+
+  private void pastingTextStatusChangedInternal( boolean pasting )
+  {
+    if( this.mnuPasteCancel != null ) {
+      this.mnuPasteCancel.setEnabled( pasting );
+    }
+    updPasteBtns();
   }
 }

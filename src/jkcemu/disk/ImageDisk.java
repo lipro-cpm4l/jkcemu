@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2017 Jens Mueller
+ * (c) 2012-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.*;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 import jkcemu.text.CharConverter;
 
 
@@ -48,24 +48,24 @@ public class ImageDisk extends AbstractFloppyDisk
     StringBuilder msgBuf = null;
 
     /*
-     * Pruefen, ob geloschte Sektoren oder Sektoren mit CRC-Fehler
+     * Pruefen, ob Sektoren mit geloschten Daten oder CRC-Fehlern
      * vorhanden sind
      */
-    boolean errorOrDeleted = false;
-    int     cyls           = disk.getCylinders();
-    int     sides          = disk.getSides();
-    int     sectorBufSize  = 1024;
-    for( int cyl = 0; !errorOrDeleted && (cyl < cyls); cyl++ ) {
-      for( int head = 0; !errorOrDeleted && (head < sides); head++ ) {
-	int n = disk.getSectorsOfCylinder( cyl, head );
+    boolean needsVersion117 = false;
+    int     cyls            = disk.getCylinders();
+    int     sides           = disk.getSides();
+    int     sectorBufSize   = 1024;
+    for( int cyl = 0; !needsVersion117 && (cyl < cyls); cyl++ ) {
+      for( int head = 0; !needsVersion117 && (head < sides); head++ ) {
+	int n = disk.getSectorsOfTrack( cyl, head );
 	for( int i = 0; i < n; i++ ) {
 	  SectorData sector = disk.getSectorByIndex( cyl, head, i );
 	  if( sector != null ) {
 	    if( sector.getDataLength() > sectorBufSize ) {
 	      sectorBufSize = sector.getDataLength();
 	    }
-	    if( sector.checkError() || sector.isDeleted() ) {
-	      errorOrDeleted = true;
+	    if( sector.checkError() || sector.getDataDeleted() ) {
+	      needsVersion117 = true;
 	      break;
 	    }
 	  }
@@ -90,14 +90,14 @@ public class ImageDisk extends AbstractFloppyDisk
     // Datei oeffnen
     OutputStream out = null;
     try {
-      out = EmuUtil.createOptionalGZipOutputStream( file );
+      out = FileUtil.createOptionalGZipOutputStream( file );
 
       // Dateikopf
       EmuUtil.writeASCII(
 		out,
 		String.format(
 			"IMD 1.1%c: %02d/%02d/%04d %02d:%02d:%02d",
-			(char) (errorOrDeleted ? '7' : '6'),
+			needsVersion117 ? '7' : '6',
 			calendar.get( Calendar.DAY_OF_MONTH ),
 			calendar.get( Calendar.MONTH ) + 1,
 			calendar.get( Calendar.YEAR ),
@@ -127,7 +127,7 @@ public class ImageDisk extends AbstractFloppyDisk
       // Spuren
       for( int cyl = 0; cyl < cyls; cyl++ ) {
 	for( int head = 0; head < sides; head++ ) {
-	  int nSec = disk.getSectorsOfCylinder( cyl, head );
+	  int nSec = disk.getSectorsOfTrack( cyl, head );
 	  if( nSec > 0 ) {
 	    SectorData[] sectors  = new SectorData[ nSec ];
 	    boolean      cylMap   = false;
@@ -196,10 +196,10 @@ public class ImageDisk extends AbstractFloppyDisk
 				cyl,
 				sector.getSectorNum() ) );
 	      }
-	      int     fillByte = -1;
-	      boolean deleted  = sector.isDeleted();
-	      boolean err      = sector.checkError();
-	      int     dataLen  = sector.getDataLength();
+	      int     fillByte    = -1;
+	      boolean err         = sector.checkError();
+	      boolean dataDeleted = sector.getDataDeleted();
+	      int     dataLen     = sector.getDataLength();
 	      if( dataLen > 0 ) {
 		fillByte = sector.getDataByte( 0 );
 		if( fillByte >= 0 ) {
@@ -212,13 +212,13 @@ public class ImageDisk extends AbstractFloppyDisk
 		}
 		int code = 1;		// normale Daten
 		if( err ) {
-		  if( deleted ) {
+		  if( dataDeleted ) {
 		    code = 7;		// geloeschte und fehlerhafte Daten
 		  } else {
 		    code = 5;		// fehlerhafte Daten
 		  }
 		} else {
-		  if( deleted ) {
+		  if( dataDeleted ) {
 		    code = 3;		// geloeschte Daten
 		  }
 		}
@@ -251,7 +251,7 @@ public class ImageDisk extends AbstractFloppyDisk
       }
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
     return msgBuf != null ? msgBuf.toString() : null;
   }
@@ -283,14 +283,14 @@ public class ImageDisk extends AbstractFloppyDisk
     InputStream in    = null;
     Exception   errEx = null;
     try {
-      int sides          = 0;
-      int cyls           = 0;
-      int sectorsPerCyl  = 0;
-      int diskSectorSize = 0;
+      int cyls            = 0;
+      int sides           = 0;
+      int sectorsPerTrack = 0;
+      int diskSectorSize  = 0;
 
       // Datei oeffnen
       in = new FileInputStream( file );
-      if( EmuUtil.isGZipFile( file ) ) {
+      if( FileUtil.isGZipFile( file ) ) {
 	in = new GZIPInputStream( in );
       }
 
@@ -387,12 +387,12 @@ public class ImageDisk extends AbstractFloppyDisk
 	// Sektordaten
 	head &= 0x01;
 	for( int i = 0; i < nSec; i++ ) {
-	  boolean crcError = false;
-	  boolean deleted  = false;
-	  byte[]  secBuf   = null;
-	  int     fillByte = 0;
-	  int     secNum   = sectorNums[ i ];
-	  int     secType  = readMandatoryByte( in );
+	  boolean crcError    = false;
+	  boolean dataDeleted = false;
+	  byte[]  secBuf      = null;
+	  int     fillByte    = 0;
+	  int     secNum      = sectorNums[ i ];
+	  int     secType     = readMandatoryByte( in );
 	  switch( secType ) {
 	    case 0:	// keine Daten
 	      break;
@@ -430,7 +430,7 @@ public class ImageDisk extends AbstractFloppyDisk
 	    if( (secType == 3) || (secType == 4)
 		|| (secType == 7) || (secType == 8) )
 	    {
-	      deleted = true;
+	      dataDeleted = true;
 	    }
 	    if( (secType >= 5) && (secType <= 8) ) {
 	      crcError = true;
@@ -476,7 +476,7 @@ public class ImageDisk extends AbstractFloppyDisk
 					0,
 					secBuf != null ? secBuf.length : 0 );
 	    sector.setError( crcError );
-	    sector.setDeleted( deleted );
+	    sector.setDataDeleted( dataDeleted );
 	    sectors.add( sector );
 
 	    if( cyl >= cyls ) {
@@ -485,8 +485,8 @@ public class ImageDisk extends AbstractFloppyDisk
 	    if( head >= sides ) {
 	      sides = head + 1;
 	    }
-	    if( i >= sectorsPerCyl ) {
-	      sectorsPerCyl = i + 1;
+	    if( i >= sectorsPerTrack ) {
+	      sectorsPerTrack = i + 1;
 	    }
 	    if( sectorSize > diskSectorSize ) {
 	      diskSectorSize = sectorSize;
@@ -497,9 +497,9 @@ public class ImageDisk extends AbstractFloppyDisk
       }
       rv = new ImageDisk(
 		owner,
-		sides,
 		cyls,
-		sectorsPerCyl,
+		sides,
+		sectorsPerTrack,
 		diskSectorSize,
 		file.getPath(),
 		remark,
@@ -508,7 +508,7 @@ public class ImageDisk extends AbstractFloppyDisk
 		side1 );
     }
     finally {
-      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilently( in );
     }
     return rv;
   }
@@ -555,7 +555,7 @@ public class ImageDisk extends AbstractFloppyDisk
 
 
   @Override
-  public int getSectorsOfCylinder( int physCyl, int physHead )
+  public int getSectorsOfTrack( int physCyl, int physHead )
   {
     java.util.List<SectorData> sectors = getSectorList( physCyl, physHead );
     return sectors != null ? sectors.size() : 0;
@@ -573,7 +573,7 @@ public class ImageDisk extends AbstractFloppyDisk
 
 
   @Override
-  public boolean supportsDeletedSectors()
+  public boolean supportsDeletedDataSectors()
   {
     return true;
   }
@@ -583,9 +583,9 @@ public class ImageDisk extends AbstractFloppyDisk
 
   private ImageDisk(
 		Frame                                   owner,
-		int                                     sides,
 		int                                     cyls,
-		int                                     sectorsPerCyl,
+		int                                     sides,
+		int                                     sectorsPerTrack,
 		int                                     sectorSize,
 		String                                  fileName,
 		String                                  remark,
@@ -593,7 +593,7 @@ public class ImageDisk extends AbstractFloppyDisk
 		Map<Integer,java.util.List<SectorData>> side0,
 		Map<Integer,java.util.List<SectorData>> side1 )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize );
+    super( owner, cyls, sides, sectorsPerTrack, sectorSize );
     this.fileName = fileName;
     this.remark   = remark;
     this.diskDate = diskDate;
@@ -631,4 +631,3 @@ public class ImageDisk extends AbstractFloppyDisk
     throw new IOException( "Datei ist keine ImageDisk-Datei." );
   }
 }
-

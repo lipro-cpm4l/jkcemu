@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,26 +10,28 @@
 package jkcemu.audio;
 
 import java.io.IOException;
-import java.lang.*;
+import java.util.Arrays;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.Mixer;
 import javax.sound.sampled.TargetDataLine;
+import jkcemu.file.FileUtil;
 import z80emu.Z80CPU;
 
 
 public class AudioInLine extends AudioIn
 {
-  private static int[] frameRates = { 44100, 48000, 32000, 22050 };
+  private static final int[] frameRates = { 44100, 48000, 32000, 22050 };
 
+  private Mixer.Info              mixerInfo;
   private volatile TargetDataLine dataLine;
   private byte[]                  frameBuf;
   private byte[]                  audioDataBuf;
   private int                     audioDataLen;
   private int                     audioDataPos;
   private int                     maxPauseTStates;
+  private volatile boolean        lineRequested;
 
 
   public AudioInLine(
@@ -37,62 +39,62 @@ public class AudioInLine extends AudioIn
 		Z80CPU          z80cpu,
 		int             speedKHz,
 		int             frameRate,
-		Mixer           mixer ) throws IOException
+		Mixer.Info      mixerInfo )
   {
     super( observer, z80cpu );
+    this.speedHz         = speedKHz * 1000;
+    this.frameRate       = frameRate;
+    this.mixerInfo       = mixerInfo;
     this.dataLine        = null;
     this.frameBuf        = null;
     this.audioDataBuf    = null;
     this.audioDataLen    = 0;
     this.audioDataPos    = 0;
     this.maxPauseTStates = 0;
-
-    TargetDataLine line = null;
-    if( frameRate > 0 ) {
-      line = openTargetDataLine( mixer, frameRate );
-    } else {
-      for( int i = 0;
-	   (line == null) && (i < this.frameRates.length);
-	   i++ )
-      {
-	line = openTargetDataLine( mixer, this.frameRates[ i ] );
-      }
-    }
-    if( line == null ) {
-      throw new IOException(
-		"Der Audiokanal konnte nicht ge\u00F6ffnet werden." );
-    }
-    AudioFormat fmt      = line.getFormat();
-    this.dataLine        = line;
-    this.maxPauseTStates = speedKHz * 1000;	// 1 Sekunde
-    this.tStatesPerFrame = (int) (((float) speedKHz) * 1000.0F
-						/ fmt.getSampleRate());
-    setFormat(
-	Math.round( fmt.getSampleRate() ),
-	fmt.getSampleSizeInBits(),
-	fmt.getChannels(),
-	fmt.isBigEndian(),
-	fmt.getEncoding().equals( AudioFormat.Encoding.PCM_SIGNED ) );
-
-    // Buffer fuer ein Frame anlegen
-    this.frameBuf = new byte[ fmt.getFrameSize() ];
-
-    // Buffer fuer Leseoperationen anlegen
-    int r = Math.round( fmt.getFrameRate() );
-    int n = this.dataLine.getBufferSize() / 32;
-    if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
-      n = r / 2;
-    }
-    if( n < 1 ) {
-      n = 1;
-    }
-    this.audioDataBuf = new byte[ n * this.frameBuf.length ];
-    this.audioDataLen = 0;
-    this.audioDataPos = this.audioDataLen;
+    this.lineRequested   = true;
   }
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  protected void checkCloseAndFinished()
+  {
+    if( this.stopRequested ) {
+      this.stopRequested = false;
+      closeLine();
+    }
+    checkFinished();
+  }
+
+
+  @Override
+  protected synchronized void checkOpen()
+  {
+    if( this.lineRequested ) {
+      this.lineRequested = false;
+      if( (this.dataLine == null) && !this.stopRequested ) {
+	try {
+	  this.dataLine = openTargetDataLine();
+	}
+	catch( IOException ex ) {
+	  setErrorText( ex.getMessage() );
+	}
+      }
+    }
+  }
+
+
+  @Override
+  public synchronized void closeLine()
+  {
+    if( this.dataLine != null ) {
+      closeDataLine( this.dataLine );
+      this.dataLine = null;
+      checkFinished();
+    }
+  }
+
 
   /*
    * Mit dieser Methode erfaehrt die Klasse die Anzahl
@@ -129,121 +131,172 @@ public class AudioInLine extends AudioIn
 
 
   @Override
-  public boolean isLineOpen()
-  {
-    return super.isLineOpen() || (this.dataLine != null);
-  }
-
-
-  @Override
   protected byte[] readFrame()
   {
-    int            value        = -1;
     TargetDataLine line         = this.dataLine;
     byte[]         audioDataBuf = this.audioDataBuf;
     byte[]         frameBuf     = this.frameBuf;
     if( (line != null) && (audioDataBuf != null) && (frameBuf != null) ) {
-      
-      if( this.audioDataPos >= this.audioDataLen ) {
-	this.audioDataLen = line.read(
+      try {
+	if( this.audioDataPos >= this.audioDataLen ) {
+	  this.audioDataLen = line.read(
 				this.audioDataBuf,
 				0,
 				this.audioDataBuf.length );
-	this.audioDataPos = 0;
+	  this.audioDataPos = 0;
+	}
+	if( this.audioDataPos + frameBuf.length <= this.audioDataLen ) {
+	  System.arraycopy(
+			audioDataBuf,
+			this.audioDataPos,
+			frameBuf, 0,
+			frameBuf.length );
+	  this.audioDataPos += frameBuf.length;
+	}
       }
-      if( this.audioDataPos + frameBuf.length <= this.audioDataLen ) {
-	System.arraycopy(
-		audioDataBuf,
-		this.audioDataPos,
-		frameBuf, 0,
-		frameBuf.length );
-	this.audioDataPos += frameBuf.length;
+      catch( Exception ex ) {
+	line = null;
+	fireStop();
       }
+    }
+    if( (line == null) && (frameBuf != null) ) {
+      Arrays.fill( frameBuf, (byte) 0 );
     }
     return frameBuf;
   }
 
 
-  @Override
-  public void stopAudio()
-  {
-    this.frameBuf     = null;
-    this.audioDataBuf = null;
-    this.audioDataPos = 0;
+	/* --- private Methoden --- */
 
-    DataLine line = dataLine;
-    this.dataLine = null;
-    DataLineCloser.closeDataLine( line );
+  private void checkFinished()
+  {
+    if( this.dataLine == null ) {
+      this.frameBuf     = null;
+      this.audioDataBuf = null;
+      this.audioDataPos = 0;
+      finished();
+    }
   }
 
 
-	/* --- private Methoden --- */
-
-  private TargetDataLine openTargetDataLine(
-				Mixer mixer,
-				int   frameRate ) throws IOException
+  private TargetDataLine openTargetDataLine() throws IOException
   {
-    TargetDataLine line = openTargetDataLine( mixer, frameRate, 2 );
-    if( line == null ) {
-      line = openTargetDataLine( mixer, frameRate, 1 );
+    TargetDataLine line = null;
+    if( this.frameRate > 0 ) {
+      line = openTargetDataLine( this.frameRate );
+    } else {
+      for( int i = 0; i < frameRates.length; i++ ) {
+	line = openTargetDataLine( frameRates[ i ] );
+	if( line != null ) {
+	  break;
+	}
+      }
+    }
+    if( line != null ) {
+      AudioFormat fmt = line.getFormat();
+      this.dataLine        = line;
+      this.maxPauseTStates = this.speedHz;	// 1 Sekunde
+      setFormat(
+	null,
+	Math.round( fmt.getSampleRate() ),
+	fmt.getSampleSizeInBits(),
+	fmt.getChannels(),
+	fmt.isBigEndian(),
+	fmt.getEncoding().equals( AudioFormat.Encoding.PCM_SIGNED ) );
+
+      // Buffer fuer ein Frame anlegen
+      this.frameBuf = new byte[ fmt.getFrameSize() ];
+
+      // Buffer fuer Leseoperationen anlegen
+      int r = Math.round( fmt.getFrameRate() );
+      int n = this.dataLine.getBufferSize() / 32;
+      if( n > r / 2 ) {		// max. 1/2 Sekunde puffern
+	n = r / 2;
+      }
+      if( n < 1 ) {
+	n = 1;
+      }
+      this.audioDataBuf = new byte[ n * this.frameBuf.length ];
+      this.audioDataLen = 0;
+      this.audioDataPos = this.audioDataLen;
+    } else {
+      setErrorText( ERROR_NO_LINE );
     }
     return line;
   }
 
 
   private TargetDataLine openTargetDataLine(
-				Mixer mixer,
+				int frameRate ) throws IOException
+  {
+    TargetDataLine line = openTargetDataLine( frameRate, 2 );
+    if( line == null ) {
+      line = openTargetDataLine( frameRate, 1 );
+    }
+    return line;
+  }
+
+
+  private TargetDataLine openTargetDataLine(
 				int   frameRate,
 				int   channels ) throws IOException
   {
-    TargetDataLine line = openTargetDataLine(
-				mixer,
-				frameRate,
-				channels,
-				false );
+    TargetDataLine line = openTargetDataLine( frameRate, channels, false );
     if( line == null ) {
-      line = openTargetDataLine( mixer, frameRate, channels, true );
+      line = openTargetDataLine( frameRate, channels, true );
     }
     return line;
   }
 
 
   private TargetDataLine openTargetDataLine(
-				Mixer   mixer,
 				int     frameRate,
 				int     channels,
+				boolean dataSigned ) throws IOException
+  {
+    TargetDataLine line = openTargetDataLine(
+					frameRate,
+					channels,
+					dataSigned,
+					false );
+    if( line == null ) {
+      line = openTargetDataLine( frameRate, channels, dataSigned, true );
+    }
+    return line;
+  }
+
+
+  private TargetDataLine openTargetDataLine(
+				int     frameRate,
+				int     channels,
+				boolean dataSigned,
 				boolean bigEndian ) throws IOException
   {
     AudioFormat fmt = new AudioFormat(
 				frameRate,
 				8,
 				channels,
-				true,
+				dataSigned,
 				bigEndian );
 
-    DataLine.Info  info = new DataLine.Info( TargetDataLine.class, fmt );
     TargetDataLine line = null;
     try {
-      if( mixer != null ) {
-	if( mixer.isLineSupported( info ) ) {
-	  line = (TargetDataLine) mixer.getLine( info );
-	}
+      if( this.mixerInfo != null ) {
+	line = AudioSystem.getTargetDataLine( fmt, this.mixerInfo );
       } else {
-	if( AudioSystem.isLineSupported( info ) ) {
-	  line = (TargetDataLine) AudioSystem.getLine( info );
-	}
+	line = AudioSystem.getTargetDataLine( fmt );
       }
       if( line != null ) {
+	registerCPUSynchronLine( line );
 	line.open( fmt );
-	line.flush();
 	line.start();
       }
     }
     catch( Exception ex ) {
-      DataLineCloser.closeDataLine( line );
+      closeDataLine( line );
       line = null;
       if( ex instanceof LineUnavailableException ) {
-	throw new IOException( AudioUtil.ERROR_TEXT_LINE_UNAVAILABLE );
+	throw new IOException( ERROR_LINE_UNAVAILABLE );
       }
     }
     return line;

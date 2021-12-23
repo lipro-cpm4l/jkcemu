@@ -45,7 +45,14 @@
      <li><a href="ac1.htm#printer">1.11. V24-Schnittstelle mit Drucker</a></li>
      <li><a href="ac1.htm#rom2010">1.12. AC1-2010 ROM-B&auml;nke</a></li>
      <li><a href="ac1.htm#joystick">1.13. Joystick</a></li>
-     <li><a href="ac1.htm#audio">1.14. Kassetten- und Tonausgabe</a></li>
+     <li>
+      <a href="ac1.htm#audio">1.14. Kassetten- und Tonausgabe</a>
+      <ul>
+       <li>
+	<a href="ac1.htm#ctc_sound">1.14.1. Tonausgabe &uuml;ber CTC-Kanal&nbsp;0</a>
+       </li>
+      </ul>
+     </li>
     </ul>
    </li>
    <li><a href="ac1.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -186,6 +193,7 @@
       <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
       an der E/A-Basisadresse&nbsp;80h
      </li>
+     <li><a href="k1520sound.htm">K1520-Sound-Karte</a></li>
      <li>
       <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
       an der E/A-Basisadresse&nbsp;C0h
@@ -203,7 +211,7 @@
  <h3><a name="keyboard">1.1. Tastatur</a></h3>
   Neben den gew&ouml;hnlichen Tasten f&uuml;r Buchstaben, Ziffern und
   Sonderzeichen werden folgende Steuertasten unterst&uuml;tzt:
- <br/>
+ <br/><br/>
   <table border="1">
    <tr><th>Taste</th><th>Erzeugter Tastencode / Bedeutung</th></tr>
    <tr><td>Home / Pos1</td><td>1</td></tr>
@@ -212,8 +220,9 @@
    <tr><td>Cursor&nbsp;runter</td><td>0Ah</td></tr>
    <tr><td>Cursor&nbsp;hoch</td><td>0Bh</td></tr>
    <tr><td>Enter / Return</td><td>0Dh</td></tr>
-   <tr><td>Backspace</td><td>SCCH-Mode: 7Fh, sonst 8</td></tr>
-   <tr><td>Delete / Entf</td><td>SCCH-Mode: 4, sonst 7Fh</td></tr>
+   <tr><td>Backspace</td><td>SCCH- und 2010-Modus: 7Fh, sonst 8</td></tr>
+   <tr><td>Tabulator</td><td>SCCH- und 2010-Modus: 0Fh, sonst 9</td></tr>
+   <tr><td>Delete / Entf</td><td>SCCH- und 2010-Modus: 4, sonst 7Fh</td></tr>
    <tr><td>Insert / Einfg</td><td>5</td></tr>
    <tr><td>Bild auf</td><td>11h</td></tr>
    <tr><td>Bild ab</td><td>15h</td></tr>
@@ -248,6 +257,7 @@
   auch die Taktfrequenz umgeschaltet werden kann.
  <br/><br/>
   Bedeutung des Ein-/Ausgabetors F0h:
+ <br/><br/>
   <table border="1">
    <tr>
     <th></th><th>Bedeutung bei Wert 0</th><th>Bedeutung bei Wert 1</th>
@@ -268,6 +278,7 @@
   </table>
  <br/><br/>
   Bedeutung einer Speicherzelle im Farbspeicher:
+ <br/><br/>
   <table border="1">
    <tr><th>Bit</th><th>Bedeutung</th></tr>
    <tr><td>0</td><td>Vordergrundfarbe rot</td></tr>
@@ -299,7 +310,7 @@
   JKCEMU <a href="floppydisk.htm">emuliert</a> gleichzeitig
   mehrere der gel&auml;ufigsten Schaltungen.
   Konkret werden folgende E/A-Adressen unterst&uuml;tzt:
- <br/>
+ <br/><br/>
   <table border="1">
    <tr>
     <th>E/A-Adresse (hexadezimal)</th>
@@ -349,6 +360,7 @@
   </ul>
  <br/>
   Gesteuert wird das Modul &uuml;ber das Ausgabetor&nbsp;14h:<br/>
+ <br/><br/>
   <table border="1">
    <tr>
     <td valign="top">Bit&nbsp;0:</td>
@@ -596,13 +608,27 @@
 
  <h3><a name="audio">1.14. Kassetten- und Tonausgabe</a></h3>
   Die am emulierten Kassettenrecorderanschluss
-  (PIO&nbsp;1, Port&nbsp;B, Bit&nbsp;0) ausgegebenen Tonsignale
+  (PIO&nbsp;1, Port&nbsp;B, Bit&nbsp;6) ausgegebenen Tonsignale
   k&ouml;nnen Sie im Fenster <a href="audio.htm">Audio/Kassette</a>
   im Reiter <em>Ausgang Kassette</em> h&ouml;rbar machen
   bzw. aufnehmen und anschlie&szlig;end in eine Datei speichern.
-  F&uuml;r die &uuml;ber PIO&nbsp;1, Port&nbsp;B, Bit&nbsp;2
-  ausgegebenen Tonsignale (Lautsprecheranschluss) ist der Reiter
-  <em>Ausgang Sound-Generator/Lautsprecher</em> zust&auml;ndig.
+  F&uuml;r die &uuml;ber Bit&nbsp;0 ausgegebenen Tonsignale
+  (Lautsprecheranschluss) ist der Reiter <em>Lautsprecher</em>
+  zust&auml;ndig.
+  Ein weiterer Reiter erscheint, wenn Sie die Emulation der
+  <a href="k1520sound.htm">K1520-Sound-Karte</a> aktiviert haben.
+ <br/><br/>
+
+ <h3>
+  <a name="ctc_sound">1.14.1. Tonausgabe &uuml;ber CTC-Kanal&nbsp;0</a>
+ </h3>
+  Optional wird auch die Tonausgabe &uuml;ber den CTC-Kanal&nbsp;0 emuliert.
+  Ad&auml;quat zum <a href="llc2.htm#loudspeaker">LLC2</a> sperrt
+  (L-Pegel) bzw. entsperrt (H-Pegel) PIO&nbsp;1, Port&nbsp;B, Bit&nbsp;0
+  ein Flip-Flop.
+  Ist dieses Flip-Flop entsperrt, f&uuml;hrt jeder am CTC-Kanal&nbsp;0
+  ausgegebene Impuls zu einer &Auml;nderung der Phasenlage und damit
+  zu einer halben Tonschwingung am Lautsprecheranschluss.
  <br/><br/>
 
 

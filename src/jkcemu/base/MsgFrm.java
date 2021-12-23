@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,12 +14,9 @@ import java.awt.Font;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Window;
-import java.lang.*;
-import java.util.EventObject;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import jkcemu.Main;
-import jkcemu.base.BaseFrm;
 
 
 public class MsgFrm extends BaseFrm
@@ -34,16 +31,15 @@ public class MsgFrm extends BaseFrm
   public MsgFrm( Window owner )
   {
     setTitle( "JKCEMU Meldungen" );
-    Main.updIcon( this );
     this.frameEmpty = true;
 
     // Fensterinhalt
     setLayout( new BorderLayout() );
 
-    this.fldText = new JTextArea();
+    this.fldText = GUIFactory.createTextArea();
     this.fldText.setEditable( false );
     this.fldText.setMargin( new Insets( 5, 5, 5, 5 ) );
-    add( new JScrollPane( this.fldText ), BorderLayout.CENTER );
+    add( GUIFactory.createScrollPane( this.fldText ), BorderLayout.CENTER );
 
     Font font = this.fldText.getFont();
     if( font != null ) {
@@ -52,7 +48,8 @@ public class MsgFrm extends BaseFrm
 
 
     // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       setSize( DEFAULT_WIDHTH, DEFAULT_HEIGHT );
       boolean done = false;
       if( owner != null ) {
@@ -70,7 +67,6 @@ public class MsgFrm extends BaseFrm
 	setLocationByPlatform( true );
       }
     }
-    setResizable( true );
   }
 
 

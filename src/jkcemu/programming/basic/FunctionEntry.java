@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,57 +8,53 @@
 
 package jkcemu.programming.basic;
 
-import java.lang.*;
+import jkcemu.programming.PrgException;
 import jkcemu.programming.PrgSource;
 
 
 public class FunctionEntry extends CallableEntry
 {
-  private int           retVarIYOffs;
-  private SimpleVarInfo retVarInfo;
+  private BasicCompiler.DataType retType;
+  private SimpleVarInfo          retVarInfo;
 
 
   public FunctionEntry(
-		PrgSource source,
-		long      basicLineNum,
-		String    name )
+		PrgSource              source,
+		long                   basicLineNum,
+		String                 name,
+		BasicCompiler.DataType retType ) throws PrgException
   {
-    super(
-	source,
-	basicLineNum,
-	name,
-	name.endsWith( "$" ) ?
-		("UFS_" + name.substring( 0, name.length() - 1 ))
-		: ("UFI_" + name) );
+    super( source, basicLineNum, name, getLabel( name, retType ) );
+    this.retType = retType;
 
     // Pseudovariable fuer Rueckgabewert
-    addVar( source, basicLineNum, name );
-    setVarUsed( name );
-    this.retVarIYOffs = getVarIYOffs( getVarCount() - 1);
-    this.retVarInfo   = new SimpleVarInfo(
-				getReturnType(),
-				null,
-				this.retVarIYOffs );
+    addVar( source, basicLineNum, name, retType );
+    updVarUsage( name, BasicCompiler.AccessMode.READ_WRITE );
+    this.retVarInfo = null;
   }
 
 
   public BasicCompiler.DataType getReturnType()
   {
-    return getName().endsWith( "$" ) ?
-			BasicCompiler.DataType.STRING
-			: BasicCompiler.DataType.INTEGER;
+    return this.retType;
   }
 
 
-  public SimpleVarInfo getReturnVarInfo()
+  public synchronized SimpleVarInfo getReturnVarInfo()
   {
+    if( this.retVarInfo == null ) {
+      this.retVarInfo = new SimpleVarInfo(
+				getReturnType(),
+				null,
+				getReturnVarIYOffs() );
+    }
     return this.retVarInfo;
   }
 
 
   public int getReturnVarIYOffs()
   {
-    return this.retVarIYOffs;
+    return getIYOffs( getName() );
   }
 
 
@@ -69,5 +65,26 @@ public class FunctionEntry extends CallableEntry
   {
     return "Funktion " + getName();
   }
-}
 
+
+	/* --- private Methoden --- */
+
+  private static String getLabel(
+				String                 name,
+				BasicCompiler.DataType retType )
+  {
+    String rv = "UF_I2_" + name;
+    switch( retType ) {
+      case INT4:
+	rv = "UF_I4_" + name;
+	break;
+      case DEC6:
+	rv = "UF_D6_" + name;
+	break;
+      case STRING:
+	rv = "UF_S_" + name.substring( 0, name.length() - 1 );
+	break;
+    }
+    return rv;
+  }
+}

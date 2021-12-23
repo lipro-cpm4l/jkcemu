@@ -1,5 +1,5 @@
 /*
- * (c) 2010 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.base;
 
-import java.lang.*;
 import java.util.Comparator;
 
 
@@ -60,13 +59,6 @@ public class ObjectByStringComparator implements Comparator<Object>
     return this.ignoreCase ?
 		s1.compareToIgnoreCase( s2 )
 		: s1.compareTo( s2 );
-  }
-
-
-  @Override
-  public boolean equals( Object o )
-  {
-    return o == this;
   }
 
 

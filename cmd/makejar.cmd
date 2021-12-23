@@ -6,6 +6,8 @@ jar cvmf Manifest.txt ..\jkcemu.jar ^
   jkcemu\*.class ^
   jkcemu\audio\*.class ^
   jkcemu\base\*.class ^
+  jkcemu\base\deviceio\*.class ^
+  jkcemu\base\jversion\*.class ^
   jkcemu\disk\*.class ^
   jkcemu\emusys\*.class ^
   jkcemu\emusys\a5105\*.class ^
@@ -23,7 +25,7 @@ jar cvmf Manifest.txt ..\jkcemu.jar ^
   jkcemu\emusys\z9001\*.class ^
   jkcemu\emusys\zxspectrum\*.class ^
   jkcemu\etc\*.class ^
-  jkcemu\filebrowser\*.class ^
+  jkcemu\file\*.class ^
   jkcemu\image\*.class ^
   jkcemu\joystick\*.class ^
   jkcemu\net\*.class ^
@@ -32,19 +34,24 @@ jar cvmf Manifest.txt ..\jkcemu.jar ^
   jkcemu\programming\assembler\*.class ^
   jkcemu\programming\basic\*.class ^
   jkcemu\programming\basic\target\*.class ^
+  jkcemu\settings\*.class ^
   jkcemu\text\*.class ^
   jkcemu\tools\*.class ^
   jkcemu\tools\calculator\*.class ^
   jkcemu\tools\debugger\*.class ^
+  jkcemu\tools\filebrowser\*.class ^
   jkcemu\tools\fileconverter\*.class ^
+  jkcemu\tools\findfiles\*.class ^
   jkcemu\tools\hexdiff\*.class ^
   jkcemu\tools\hexedit\*.class ^
+  jkcemu\usb\*.class ^
   z80emu\*.class ^
   rom\a5105\*.bin ^
   rom\ac1\*.bin ^
   rom\bcs3\*.bin ^
   rom\c80\*.bin ^
   rom\customsys\*.bin ^
+  rom\etc\*.bin ^
   rom\huebler\*.bin ^
   rom\kc85\*.bin ^
   rom\kccompact\*.bin ^
@@ -62,12 +69,10 @@ jar cvmf Manifest.txt ..\jkcemu.jar ^
   rom\z9001\*.bin ^
   rom\z9001\*.gz ^
   rom\zxspectrum\*.bin ^
-  images\audio\*.png ^
   images\chess\*.png ^
   images\debug\*.png ^
-  images\disk\*.png ^
-  images\edit\*.png ^
-  images\file\*.png ^
+  images\emusys\kc85\*.png ^
+  images\etc\*.png ^
   images\icon\*.png ^
   images\keyboard\*.png ^
   images\keyboard\a5105\*.png ^
@@ -79,7 +84,21 @@ jar cvmf Manifest.txt ..\jkcemu.jar ^
   images\keyboard\z9001\*.png ^
   images\keyboard\zxspectrum\128k\*.png ^
   images\keyboard\zxspectrum\48k\*.png ^
-  images\nav\*.png ^
+  images\psg\*.png ^
+  images\s\audio\*.png ^
+  images\s\debug\*.png ^
+  images\s\disk\*.png ^
+  images\s\edit\*.png ^
+  images\s\etc\*.png ^
+  images\s\file\*.png ^
+  images\s\nav\*.png ^
+  images\x\audio\*.png ^
+  images\x\debug\*.png ^
+  images\x\disk\*.png ^
+  images\x\edit\*.png ^
+  images\x\etc\*.png ^
+  images\x\file\*.png ^
+  images\x\nav\*.png ^
   disks\harddisks.csv ^
   disks\a5105\*.gz ^
   disks\kc85\*.gz ^

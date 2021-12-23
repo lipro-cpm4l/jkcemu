@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,8 @@
 
 package jkcemu.emusys.z1013;
 
-import java.lang.*;
 import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.emusys.Z1013;
 
 
 public abstract class KeyboardMatrix
@@ -91,7 +91,7 @@ public abstract class KeyboardMatrix
   }
 
 
-  public void updKeyboardFld( AbstractKeyboardFld keyboardFld )
+  public void updKeyboardFld( AbstractKeyboardFld<Z1013> keyboardFld )
   {
     // leer
   }

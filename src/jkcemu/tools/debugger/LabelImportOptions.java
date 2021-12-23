@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 package jkcemu.tools.debugger;
 
 import java.io.File;
-import java.lang.*;
 
 
 public class LabelImportOptions
@@ -19,23 +18,23 @@ public class LabelImportOptions
 
   private LabelSource labelSource;
   private File        file;
-  private boolean     suppressRecreateRemovedLabels;
-  private boolean     removeObsoleteLabels;
   private boolean     caseSensitive;
+  private boolean     updBreakpointsOnly;
+  private boolean     removeObsoleteLabels;
 
 
   public LabelImportOptions(
 		LabelSource labelSource,
 		File        file,
-		boolean     suppressRecreateRemovedLabels,
-		boolean     removeObsoleteLabels,
-		boolean     caseSensitive )
+		boolean     caseSensitive,
+		boolean     updBreakpointsOnly,
+		boolean     removeObsoleteLabels )
   {
-    this.labelSource                   = labelSource;
-    this.file                          = file;
-    this.suppressRecreateRemovedLabels = suppressRecreateRemovedLabels;
-    this.removeObsoleteLabels          = removeObsoleteLabels;
-    this.caseSensitive                 = caseSensitive;
+    this.labelSource          = labelSource;
+    this.file                 = file;
+    this.caseSensitive        = caseSensitive;
+    this.updBreakpointsOnly   = updBreakpointsOnly;
+    this.removeObsoleteLabels = removeObsoleteLabels;
   }
 
 
@@ -63,9 +62,9 @@ public class LabelImportOptions
   }
 
 
-  public boolean getSuppressRecreateRemovedLabels()
+  public boolean getUpdateBreakpointsOnly()
   {
-    return this.suppressRecreateRemovedLabels;
+    return this.updBreakpointsOnly;
   }
 
 
@@ -93,9 +92,8 @@ public class LabelImportOptions
   }
 
 
-  public void setSuppressRecreateRemovedLabels( boolean state )
+  public void setUpdateBreakpointsOnly( boolean state )
   {
-    this.suppressRecreateRemovedLabels = state;
+    this.updBreakpointsOnly = state;
   }
 }
-

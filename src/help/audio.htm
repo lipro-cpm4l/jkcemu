@@ -45,7 +45,7 @@
       </ul>
      </li>
      <li>
-      <a href="audio.htm#sound_out">1.3. Ausgang Sound-Generator/Lautsprecher</a>
+      <a href="audio.htm#sound_out">1.3. Lautsprecher, Sound-Generator</a>
      </li>
     </ul>
    </li>
@@ -72,15 +72,18 @@
   m&uuml;ssen Sie eine Audiofunktion aktivieren.
   Rufen Sie dazu den Men&uuml;punkt
   <em>Extra</em> &rarr; <em>Audio/Kassette...</em> auf.
-  Es erscheint ein Fenster, welches in die drei Reiter bzw. Unterfenster
-  <em>Eingang Kassette</em>, <em>Ausgang Kassette</em>
-  und <em>Ausgang Sound-Generator/Lautsprecher</em> unterteilt ist.
+  Sofern der emulierte Computer &uuml;ber einen
+  Kassettenrecorderanschluss oder einen Tongenerator verf&uuml;gt,
+  erscheint ein Fenster, in dem Sie pro Richtung des
+  Kassettenrecorderanschlusses bzw. pro Lautsprecheranschluss
+  einen Reiter sehen.
  <br/><br/>
 
  <h3><a name="tape_in">1.1. Eingang&nbsp;Kassette</a></h3>
-  Die Funktionen in diesem Reiter beziehen sich
-  auf die eingangsseitige Emulation der Kassettenschnittstelle,
-  d.h. hier&uuml;ber k&ouml;nnen Sie Kassettenaufzeichnungen
+  Wenn ein Kassettenrecorderanschluss emuliert wird,
+  ist der Reiter <em>Eingang Kassette</em> vorhanden,
+  mit dem man die eingangsseitige Emulation der Kassettenschnittstelle
+  steuert, d.h. hier&uuml;ber k&ouml;nnen Sie Kassettenaufzeichnungen
   in den Emulator einlesen.
  <br/><br/>
 
@@ -92,8 +95,7 @@
   zu laden.
   JKCEMU &ouml;ffnet einen Audiokanal zum Sound-System des Emulatorrechners.
   Mit dem Auswahlfeld <em>Ger&auml;t</em> k&ouml;nnen Sie festlegen,
-  zu welchem logischen Ger&auml;t oder zu welchem Anschluss
-  der Audiokanal ge&ouml;ffnet wird.
+  zu welchem Audioger&auml;t der Kanal ge&ouml;ffnet wird.
   Wenn also bei der Auswahl <em>Standard</em> der Audiokanal nicht
   zu Ihrer gew&uuml;schten Audioquelle ge&ouml;ffnet wird,
   sondern z.B. zu einem eingebauten Mikrofon,
@@ -125,13 +127,6 @@
   wenn sie die Dateiendung <em>.gz</em> haben,
   also z.B.: <em>datei.wav.gz</em>
  <br/><br/>
-  Einige der emulierten Computer fragen den Kassettenrecorderanschluss
-  im Polling-Verfahren ab.
-  Im Emulator wirkt sich das so aus,
-  dass die Datei immer nur dann gelesen wird,
-  wenn auch der emulierte Kassettenrecorderanschluss abgefragt wird.
-  Ist das gerade nicht der Fall, bleibt der Fortschrittsbalken stehen.
- <br/><br/>
   <b>Achtung!</b> Nach dem Aktivieren dieser Audiofunktion
   m&uuml;ssen Sie noch auf <em>Abspielen</em> dr&uuml;cken,
   um das eigentliche Einlesen zu starten.
@@ -144,22 +139,24 @@
   so dass der Emulator mit maximaler Geschwindigkeit l&auml;uft.
  <br/><br/>
   <b>Hinweis:</b> Sie k&ouml;nnen die Audiofunktion
-  <em>Sound- oder Tape-Datei lesen</em> auch aktivieren,
+  <em>Audiodaten aus Sound- oder Tape-Datei lesen</em> auch aktivieren,
   indem Sie per Drag&amp;Drop eine passende Datei in das
   Audio/Kassette-Fenster ziehen und im Reiter <em>Eingang Kassette</em>
   &uuml;ber dem Feld <em>Datei</em> loslassen.
  <br/><br/>
-  <b>Hinweis:</b> Durch Setzen des H&auml;kchens <em>Mith&ouml;ren</em>
-  werden die aus der Datei gelesenen Audiodaten &uuml;ber das Sound-System
-  wieder ausgegeben, so dass Sie mith&ouml;ren k&ouml;nnen.
-  Dazu wird ein Audiokanal mit den gleichen Parametern
-  (Abtastrate, Anzahl Kan&auml;le) ge&ouml;ffnet.
-  Ist das nicht m&ouml;glich, z.B. weil eine Tape-Datei
-  mit einer ungew&ouml;hnlichen Abtastrate eingelesen wird,
-  schaltet sich die Option <em>Mith&ouml;ren</em> ohne Fehlermeldung
-  automatisch wieder aus.
-  Au&szlig;erdem ist zu beachten, dass <em>Mith&ouml;ren</em>
-  und <em>Turbo</em> sich gegenseitig ausschlie&szlig;en.
+  <b>Hinweis:</b> Mit dem Auswahlfeld <em>Mith&ouml;ren &uuml;ber</em>
+  k&ouml;nnen Sie das Mith&ouml;ren beim Einlesen der Datei einschalten.
+  W&auml;hlen Sie dazu den Eintrag <em>Standard</em> oder ein konkretes
+  Audioger&auml;t aus.
+  Dabei wird ein Audiokanal mit dem gleichen Format wie das der Audiodatei
+  zu dem ausgew&auml;hlten Ger&auml;t ge&ouml;ffnet.
+  Sollte sich mit diesem Format kein Kanal &ouml;ffnen lassen,
+  ist das Mith&ouml;ren &uuml;ber das Audioger&auml;t
+  nicht m&ouml;glich und die Auswahl springt zur&uuml;ck auf
+  <em>nicht mith&ouml;ren</em>.
+  &Uuml;ber das gleiche Auswahlfeld k&ouml;nnen Sie jederzeit
+  das Mith&ouml;ren beenden oder auf einen anderes Ger&auml;t
+  umschalten.
  <br/><br/>
 
  <h3>
@@ -197,10 +194,12 @@
  <h3>
   <a name="file_out">1.2.2. Audiodaten aufnehmen und in Datei speichern</a>
  </h3>
-  Bei dieser Funktion werden die Daten, die am emulierten Anschluss
+  Bei dieser Funktion werden die T&ouml;ne, die am emulierten Anschluss
   f&uuml;r das Magnettonbandger&auml;t ausgegeben werden,
-  in eine Sound- oder Tape-Datei geschrieben.
-  Die Datei beginnt mit dem ersten Phasenwechsel
+  aufgezeichnet.
+  Nach dem Deaktivieren der Audiofunktion lassen sich die
+  aufgezeichneten T&ouml;ne in einer Sound- oder Tape-Datei speichern.
+  Diese Datei beginnt mit dem ersten Phasenwechsel
   nach Aktivierung der Funktion und endet beim letzten Phasenwechsel
   vor Deaktivierung, d.h,
   die Datei enth&auml;lt weder an ihrem Anfang noch
@@ -210,24 +209,26 @@
   wenn in den ausgegebenen T&ouml;nen eine Pause gr&ouml;&szlig;er
   als f&uuml;nf Sekunden auftritt.
  <br/><br/>
-  Die erzeugten Sound-Dateien enthalten nur Rechteckschwingungen,
-  d.h. nur zwei Pegelzust&auml;nde.
-  Aus diesem Grund lassen sich diese Dateien auch gut komprimieren.
-  JKCEMU bietet die M&ouml;glichkeit, beim Speichern von Sound-Dateien
-  diese gleich mit GZIP komprimieren zu lassen.
+  <b>Hinweis:</b> JKCEMU bietet die M&ouml;glichkeit,
+  beim Speichern von Sound-Dateien diese gleich mit GZIP
+  komprimieren zu lassen.
   Wenn Sie das nutzen m&ouml;chten, dann h&auml;ngen Sie an den Dateinamen
-  hinter der Endung einfach nur die Endung <em>.gz</em> an,
+  hinter der Endung einfach die Endung <em>.gz</em> an,
   also z.B. <em>ausgabe.wav.gz</em>.
   Bei Tape-Dateien ist eine solche Komprimierung nicht m&ouml;glich.
  <br/><br/>
 
  <h3>
-  <a name="sound_out">1.3. Ausgang&nbsp;Sound-Generator/Lautsprecher</a>
+  <a name="sound_out">1.3. Lautsprecher, Sound-Generator</a>
  </h3>
-  Die Funktion in diesem Reiter bezieht sich auf den Tonausgang,
-  sofern das emulierte System im Original einen hat.
-  Das kann ein Tongenerator oder auch ein spezieller Ausgang bzw. Anschluss
-  f&uuml;r einen Lautsprecher sein.
+  F&uuml;r jeden weiteren emulierten Audio-Anschluss
+  (z.B. Lautsprecher, Sound-Generator) wird ein separater Reiter
+  im Fenster angezeigt.
+  In diesem k&ouml;nnen Sie die Tonausgabe aktivieren
+  und zus&auml;tzlich auch aufnehmen,
+  bei Bedarf auch nur zeitweise aufnehmen.
+  Die Aufnahme l&auml;sst sich selbstverst&auml;ndlich
+  auch als Sound-Datei speichern.
  <br/><br/>
 
 
@@ -244,7 +245,7 @@
   Sind jedoch mehrere Sound-Karten vorhanden
   oder es sind mehrere Sound-Engines (z.B. Mixer) installiert
   oder der Sound-Treiber bietet mehrere Zugangspunkte,
-  dann k&ouml;nnen Sie hier das logische Ger&auml;t ausw&auml;hlen,
+  dann k&ouml;nnen Sie hier das Ger&auml;t ausw&auml;hlen,
   mit dem Sie arbeiten m&ouml;chten.
  <br/><br/>
 
@@ -275,6 +276,7 @@
     Wenn bereits eine andere Applikation das Audiosystem verwendet,
     kann mitunter kein weiterer Audiokanal ge&ouml;ffnet werden.
     Schlie&szlig;en Sie in diesem Fall die andere Applikation.
+    Das kann mitunter auch die Pegelanzeige des Betriebssystems sein.
    </li>
    <li>
     Sollte die Rechenleistung nicht ausreichen,
@@ -302,7 +304,7 @@
     wenn Sie diese nicht mehr ben&ouml;tigen oder wenn Sie Probleme
     mit der Performance haben, denn die Nutzung der Audiofunktionen
     erfordert zus&auml;tzliche Rechenleistung,
-    die Sie m&ouml;glicherweise anderweitig gut gebrauchen k&ouml;nnten.
+    die Sie m&ouml;glicherweise anderweitig gut gebrauchen k&ouml;nnen.
    </li>
   </ul>
 </body>

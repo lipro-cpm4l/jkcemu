@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.Graphics;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -52,9 +51,15 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld<Z1013>
     this.imgRight   = getImage( "/images/keyboard/right.png" );
     this.imgUp      = getImage( "/images/keyboard/up.png" );
     this.imgDown    = getImage( "/images/keyboard/down.png" );
-    this.fontText   = new Font( "SansSerif", Font.PLAIN, TEXT_FONT_SIZE );
-    this.fontLetter = new Font( "SansSerif", Font.PLAIN, LETTER_FONT_SIZE );
-    this.fontDigit  = new Font( "SansSerif", Font.PLAIN, DIGIT_FONT_SIZE );
+    this.fontText   = new Font( Font.SANS_SERIF, Font.PLAIN, TEXT_FONT_SIZE );
+    this.fontLetter = new Font(
+			Font.SANS_SERIF,
+			Font.PLAIN,
+			LETTER_FONT_SIZE );
+    this.fontDigit  = new Font(
+			Font.SANS_SERIF,
+			Font.PLAIN,
+			DIGIT_FONT_SIZE );
     this.kbMatrix   = new int[ 8 ];
     this.curIdx     = 0;
     this.curX       = MARGIN;
@@ -305,15 +310,15 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld<Z1013>
   protected void paintComponent( Graphics g )
   {
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     for( KeyData key : this.keys ) {
       boolean selected = isKeySelected( key );
       if( selected ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1 );
       }
-      g.setColor( Color.lightGray );
+      g.setColor( Color.LIGHT_GRAY );
       g.draw3DRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1, !selected );
       if( key.image != null ) {
 	g.drawImage(
@@ -322,7 +327,7 @@ public class Z1013KeyboardFld8x8 extends AbstractKeyboardFld<Z1013>
 		key.y + ((key.h - key.image.getHeight( this )) / 2) + 1,
 		this );
       } else {
-	g.setColor( Color.black );
+	g.setColor( Color.BLACK );
 	if( key.text1 != null ) {
 	  if( key.text2 != null ) {
 	    g.setFont( this.fontDigit );

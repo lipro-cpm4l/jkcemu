@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.Z1013;
 import jkcemu.programming.basic.AbstractTarget;
@@ -21,6 +20,7 @@ public class Z1013Target extends AbstractTarget
 {
   public static final String BASIC_TARGET_NAME = "TARGET_Z1013";
 
+  protected boolean xGetCrsPosAppended;
   protected boolean xptestAppended;
 
   private boolean pixUtilAppended;
@@ -38,12 +38,40 @@ public class Z1013Target extends AbstractTarget
   }
 
 
+  /*
+   * Ermittlung der Cursor-Position
+   * Rueckgabe:
+   *   HL: Bit 0..4: Spalte bei 32x32
+   *       Bit 5..9: Zeile bei 32x32
+   *   CY=1: Fehler -> HL=0FFFFH
+   */
+  protected void appendXGetCrsPosTo( AsmCodeBuf buf )
+  {
+    if( !this.xGetCrsPosAppended ) {
+      buf.append( "X_GET_CRS_POS:\n"
+		+ "\tLD\tHL,(002BH)\n"
+		+ "\tLD\tA,H\n"
+		+ "\tAND\t0FCH\n"
+		+ "\tCP\t0ECH\n"
+		+ "\tRET\tZ\n"			// CY=0
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tSCF\n"
+		+ "\tRET\n" );
+      this.xGetCrsPosAppended = true;
+    }
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public void appendExitTo( AsmCodeBuf buf )
+  public void appendExitTo( AsmCodeBuf buf, boolean isAppTypeSub )
   {
-    buf.append( "\tJP\t0038H\n" );
+    if( isAppTypeSub ) {
+      buf.append( "\tRET\n" );
+    } else {
+      buf.append( "\tJP\t0038H\n" );
+    }
   }
 
 
@@ -64,15 +92,15 @@ public class Z1013Target extends AbstractTarget
   @Override
   public void appendInputTo(
 			AsmCodeBuf buf,
-			boolean    xckbrk,
-			boolean    xinkey,
-			boolean    xinch,
+			boolean    xCheckBreak,
+			boolean    xInkey,
+			boolean    xInch,
 			boolean    canBreakOnInput )
   {
-    if( xckbrk ) {
-      buf.append( "XCKBRK:\n" );
+    if( xCheckBreak ) {
+      buf.append( "XCHECK_BREAK:\n" );
     }
-    if( xckbrk || xinkey) {
+    if( xCheckBreak || xInkey) {
       buf.append( "XINKEY:\tXOR\tA\n"
 		+ "\tLD\t(0004H),A\n"
 		+ "\tRST\t20H\n"
@@ -83,8 +111,9 @@ public class Z1013Target extends AbstractTarget
       }
       buf.append( "\tRET\n" );
     }
-    if( xinch) {
-      buf.append( "XINCH:\tRST\t20H\n"
+    if( xInch) {
+      buf.append( "XINCH:\n"
+		+ "\tRST\t20H\n"
 		+ "\tDB\t01H\n" );
       if( canBreakOnInput ) {
 	buf.append( "\tCP\t03H\n"
@@ -110,17 +139,59 @@ public class Z1013Target extends AbstractTarget
 
 
   /*
+   * Abfrage der Zeile der aktuellen Cursor-Position
+   */
+  @Override
+  public void appendXCrsLinTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCRSLIN:\n"
+		+ "\tCALL\tX_GET_CRS_POS\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,H\n"
+		+ "\tAND\t03H\n"
+		+ "\tLD\tB,03H\n"
+		+ "X_CRSLIN_1:\n"
+		+ "\tSLA\tL\n"
+		+ "\tRLA\n"
+		+ "\tDJNZ\tX_CRSLIN_1\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n" );
+    appendXGetCrsPosTo( buf );
+  }
+
+
+  /*
+   * Abfrage der Spalte der aktuellen Cursor-Position
+   */
+  @Override
+  public void appendXCrsPosTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCRSPOS:\n"
+		+ "\tCALL\tX_GET_CRS_POS\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,L\n"
+		+ "\tAND\t1FH\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n" );
+    appendXGetCrsPosTo( buf );
+  }
+
+
+  /*
    * Ein- und Ausschalten des Cursors
    * Parameter:
    *   HL: 0:   Cursor ausschalten
    *       <>0: Cursor einschalten
    */
   @Override
-  public void appendXCursTo( AsmCodeBuf buf )
+  public void appendXCursorTo( AsmCodeBuf buf )
   {
-    buf.append( "XCURS:\tLD\tA,H\n"
+    buf.append( "XCURSOR:\n"
+		+ "\tLD\tA,H\n"
                 + "\tOR\tL\n"
-		+ "\tJR\tZ,XCURS1\n"
+		+ "\tJR\tZ,X_CURSOR_1\n"
 		+ "\tLD\tHL,(002BH)\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tCP\t0FFH\n"
@@ -128,10 +199,72 @@ public class Z1013Target extends AbstractTarget
 		+ "\tLD\t(001FH),A\n"
 		+ "\tLD\t(HL),0FFH\n"
 		+ "\tRET\n"
-		+ "XCURS1:\tLD\tA,(001FH)\n"
+		+ "X_CURSOR_1:\n"
+		+ "\tLD\tA,(001FH)\n"
 		+ "\tLD\tHL,(002BH)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRET\n" );
+  }
+
+
+  /*
+   * Lesen des Datums und der Uhrzeit
+   * Rueckgabe:
+   *   X_M_DATETIME:    Jahr Tausender
+   *   X_M_DATETIME+1:  Jahr Hunderter
+   *   X_M_DATETIME+2:  Jahr Zehner
+   *   X_M_DATETIME+3:  Jahr Einser
+   *   X_M_DATETIME+4:  Monat Zehner
+   *   X_M_DATETIME+5:  Monat Einser
+   *   X_M_DATETIME+6:  Tag Zehner
+   *   X_M_DATETIME+7:  Tag Einser
+   *   X_M_DATETIME+8:  Stunde Zehner (0...23)
+   *   X_M_DATETIME+9:  Stunde Einser
+   *   X_M_DATETIME+10: Minute Zehner
+   *   X_M_DATETIME+11: Minute Einser
+   *   X_M_DATETIME+12: Sekunde Zehner
+   *   X_M_DATETIME+13: Sekunde Einser
+   *   CY=1:            Fehler
+   */
+  @Override
+  public void appendXDateTimeTo( AsmCodeBuf buf )
+  {
+    buf.append( "XDATETIME:\n"
+                + "\tLD\tHL,x_M_DATETIME\n"
+		+ "\tLD\t(HL),02H\n"	// Jahr Tausender
+                + "\tINC\tHL\n"
+                + "\tLD\t(HL),00H\n"	// Jahr Hunderter
+                + "\tINC\tHL\n"
+    // RTC-Modul lesen
+		+ "\tLD\tA,04H\n"	// 24-Stunden-Modus einstellen
+                + "\tOUT\t(7FH),A\n"
+		+ "\tLD\tBC,0C7BH\n"	// von RTC-Modul lesen
+                + "X_DATETIME_1:\n"
+		+ "\tIN\tA,(C)\n"
+		+ "\tAND\t0FH\n"
+		+ "\tLD\t(HL),A\n"
+                + "\tINC\tHL\n"
+                + "\tDEC\tC\n"
+		+ "\tDJNZ\tX_DATETIME_1\n"
+		+ "\tCALL\tX_CHECK_DATETIME\n"
+		+ "\tRET\tNC\n"
+    // RTC im GIDE lesen
+		+ "\tLD\tBC,0F85H\n"
+		+ "\tLD\tA,04H\n"
+                + "\tOUT\t(C),A\n"	// 24-Stunden-Modus einstellen
+		+ "\tLD\tB,0BH\n"	// GIDE: Register fuer Zehner Jahr
+		+ "\tLD\tHL,X_M_DATETIME+02H\n"
+                + "X_DATETIME_2:\n"
+                + "\tIN\tA,(C)\n"
+                + "\tAND\t0FH\n"
+                + "\tLD\t(HL),A\n"
+                + "\tINC\tHL\n"
+                + "\tDJNZ\tX_DATETIME_2\n"
+                + "\tIN\tA,(C)\n"
+                + "\tAND\t0FH\n"	// CY=0
+                + "\tLD\t(HL),A\n" );
+    appendXCheckDateTimeTo( buf );
+    this.usesX_M_DATETIME = true;
   }
 
 
@@ -147,24 +280,26 @@ public class Z1013Target extends AbstractTarget
   {
     buf.append( "XJOY:\tLD\tA,H\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XJOY2\n"
+		+ "\tJR\tNZ,X_JOY_2\n"
 		+ "\tLD\tA,(0FFBBH)\n"
 		+ "\tCP\t0C3H\n"
-		+ "\tJR\tNZ,XJOY2\n"
+		+ "\tJR\tNZ,X_JOY_2\n"
 		+ "\tLD\tA,L\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XJOY1\n"
+		+ "\tJR\tNZ,X_JOY_1\n"
 		+ "\tCALL\t0FFBBH\n"
 		+ "\tLD\tL,C\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
-		+ "XJOY1:\tCP\t01H\n"
-		+ "\tJR\tNZ,XJOY2\n"
+		+ "X_JOY_1:\n"
+		+ "\tCP\t01H\n"
+		+ "\tJR\tNZ,X_JOY_2\n"
 		+ "\tCALL\t0FFBBH\n"
 		+ "\tLD\tL,B\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
-		+ "XJOY2:\tLD\tHL,0000H\n"
+		+ "X_JOY_2:\n"
+		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\n" );
   }
 
@@ -214,13 +349,13 @@ public class Z1013Target extends AbstractTarget
   @Override
   public void appendXOutchTo( AsmCodeBuf buf )
   {
-    if( !this.xoutchAppended ) {
+    if( !this.xOutchAppended ) {
       buf.append( "XOUTCH:\tCP\t0AH\n"
 		+ "\tRET\tZ\n"
 		+ "\tRST\t20H\n"
 		+ "\tDB\t00H\n"
 		+ "\tRET\n" );
-      this.xoutchAppended = true;
+      this.xOutchAppended = true;
     }
   }
 
@@ -232,8 +367,8 @@ public class Z1013Target extends AbstractTarget
   public void appendXOutnlTo( AsmCodeBuf buf )
   {
     buf.append( "XOUTNL:\tLD\tA,0DH\n" );
-    if( this.xoutchAppended ) {
-      buf.append( "\tJR\tXOUTCH\n" );
+    if( this.xOutchAppended ) {
+      buf.append( "\tJP\tXOUTCH\n" );
     } else {
       appendXOutchTo( buf );
     }
@@ -252,13 +387,13 @@ public class Z1013Target extends AbstractTarget
   @Override
   public void appendXPaintTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPAINT:\tCALL\tX_PST\n"
+    buf.append( "XPAINT:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
-		+ "\tCALL\tXPSET2\n"
+		+ "\tCALL\tX_PSET_2\n"
 		+ "\tOR\tA\n"		// CY=0
 		+ "\tRET\n" );
     appendXPSetTo( buf, compiler );
@@ -270,8 +405,8 @@ public class Z1013Target extends AbstractTarget
    * Die Rueckgabewerte sind identisch zur Funktion XPTEST
    *
    * Parameter:
-   *   DE: X-Koordinate (0...255)
-   *   HL: Y-Koordinate (0...255)
+   *   DE: X-Koordinate
+   *   HL: Y-Koordinate
    * Rueckgabe:
    *   HL >= 0: Farbcode des Pixels
    *   HL=-1:   Pixel exisitiert nicht
@@ -292,15 +427,15 @@ public class Z1013Target extends AbstractTarget
   @Override
   public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PST\n"
+    buf.append( "XPRES:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n" );
     if( this.usesX_M_PEN ) {
-      buf.append( "\tJR\tXPSET1\n" );
+      buf.append( "\tJR\tX_PSET_1\n" );
     } else {
       buf.append( "\tLD\tA,C\n"
 		+ "\tCPL\n"
 		+ "\tAND\tB\n"
-		+ "\tJR\tXPSET3\n" );
+		+ "\tJR\tX_PSET_3\n" );
     }
     appendXPSetTo( buf, compiler );
   }
@@ -316,36 +451,39 @@ public class Z1013Target extends AbstractTarget
   public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PST\n"
+      buf.append( "XPSET:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n" );
       if( this.usesX_M_PEN ) {
 	buf.append( "\tLD\tA,(X_M_PEN)\n"
                 + "\tDEC\tA\n"
-                + "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
+                + "\tJR\tZ,X_PSET_2\n"		// Stift 1 (Normal)
                 + "\tDEC\tA\n"
-                + "\tJR\tZ,XPSET1\n"		// Stift 2 (Loeschen)
+                + "\tJR\tZ,X_PSET_1\n"		// Stift 2 (Loeschen)
                 + "\tDEC\tA\n"
                 + "\tRET\tNZ\n"
 		+ "\tLD\tA,B\n"			// Stift 3 (XOR-Mode)
 		+ "\tXOR\tC\n"
-		+ "\tJR\tXPSET3\n"
-		+ "XPSET1:\tLD\tA,C\n"		// Pixel loeschen
+		+ "\tJR\tX_PSET_3\n"
+		+ "X_PSET_1:\n"			// Pixel loeschen
+		+ "\tLD\tA,C\n"
 		+ "\tCPL\n"
 		+ "\tAND\tB\n"
-		+ "\tJR\tXPSET3\n" );
+		+ "\tJR\tX_PSET_3\n" );
       }
-      buf.append( "XPSET2:\tLD\tA,B\n"		// Pixel setzen
+      buf.append( "X_PSET_2:\n"			// Pixel setzen
+		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
-		+ "XPSET3:\tEX\tDE,HL\n"
+		+ "X_PSET_3:\n"
+		+ "\tEX\tDE,HL\n"
 		+ "\tLD\tB,0\n"
 		+ "\tLD\tC,A\n"
-		+ "\tLD\tHL,XPSET_TAB\n"
+		+ "\tLD\tHL,X_PSET_TAB\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tLD\tA,(HL)\n"
 		+ "\tLD\t(DE),A\n"
 		+ "\tRET\n"
       // Umcodierungstabelle von Bitmuster zu Zeichen
-		+ "XPSET_TAB:\n"
+		+ "X_PSET_TAB:\n"
 		+ "\tDB\t20H,0B3H,0B2H,0B7H,0B0H,0B4H,0B8H,0BBH\n"
 		+ "\tDB\t0B1H,0B9H,0B5H,0BAH,0B6H,0BCH,0BDH,0FFH\n" );
       appendPixUtilTo( buf, compiler );
@@ -369,15 +507,15 @@ public class Z1013Target extends AbstractTarget
   {
     if( !this.xptestAppended ) {
       buf.append( "XPOINT:\n"
-		+ "XPTEST:\tCALL\tX_PST\n"
-		+ "\tJR\tC,X_PTEST1\n"
+		+ "XPTEST:\tCALL\tX_PINFO\n"
+		+ "\tJR\tC,X_PTEST_1\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
 		+ "\tRET\n"
-		+ "X_PTEST1:\n"
+		+ "X_PTEST_1:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
       appendPixUtilTo( buf, compiler );
@@ -406,7 +544,7 @@ public class Z1013Target extends AbstractTarget
     int rv = 0;
     if( emuSys != null ) {
       if( emuSys instanceof Z1013 ) {
-        rv = 3;
+        rv = 2;
       }
     }
     return rv;
@@ -417,6 +555,13 @@ public class Z1013Target extends AbstractTarget
   public int getDefaultBegAddr()
   {
     return 0x0100;
+  }
+
+
+  @Override
+  public int getGideIOBaseAddr()
+  {
+    return 0x80;
   }
 
 
@@ -444,9 +589,10 @@ public class Z1013Target extends AbstractTarget
   public void reset()
   {
     super.reset();
-    this.pixUtilAppended = false;
-    this.xpsetAppended   = false;
-    this.xptestAppended  = false;
+    this.pixUtilAppended    = false;
+    this.xGetCrsPosAppended = false;
+    this.xpsetAppended      = false;
+    this.xptestAppended     = false;
   }
 
 
@@ -458,7 +604,7 @@ public class Z1013Target extends AbstractTarget
 
 
   @Override
-  public boolean supportsXCURS()
+  public boolean supportsXCURSOR()
   {
     return true;
   }
@@ -472,7 +618,7 @@ public class Z1013Target extends AbstractTarget
 
 
   @Override
-  public boolean supportsXLOCAT()
+  public boolean supportsXLOCATE()
   {
     return true;
   }
@@ -480,6 +626,13 @@ public class Z1013Target extends AbstractTarget
 
   @Override
   public boolean supportsXLPTCH()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXTIME()
   {
     return true;
   }
@@ -525,11 +678,12 @@ public class Z1013Target extends AbstractTarget
        *         dass das Pixel in der Speicherzelle beschreibt
        *   HL:   Speicherzelle, in der sich das Pixel befindet
        */
-      buf.append( "X_PST:\n" );
+      buf.append( "X_PINFO:\n" );
       appendCheckGraphicScreenTo( buf, compiler );
-      buf.append( "X_PST1:\tLD\tA,D\n"
+      buf.append( "X_PINFO_1:\n"
+		+ "\tLD\tA,D\n"
 		+ "\tOR\tH\n"
-		+ "\tJR\tNZ,X_PST4\n"
+		+ "\tJR\tNZ,X_PINFO_4\n"
 		+ "\tLD\tA,3FH\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\tC\n"
@@ -537,13 +691,15 @@ public class Z1013Target extends AbstractTarget
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,01H\n"
 		+ "\tSRL\tL\n"
-		+ "\tJR\tNC,X_PST2\n"
+		+ "\tJR\tNC,X_PINFO_2\n"
 		+ "\tSLA\tA\n"
 		+ "\tSLA\tA\n"
-		+ "X_PST2:\tSRL\tE\n"
-		+ "\tJR\tNC,X_PST3\n"
+		+ "X_PINFO_2:\n"
+		+ "\tSRL\tE\n"
+		+ "\tJR\tNC,X_PINFO_3\n"
 		+ "\tSLA\tA\n"
-		+ "X_PST3:\tADD\tHL,HL\n"
+		+ "X_PINFO_3:\n"
+		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"
@@ -568,7 +724,7 @@ public class Z1013Target extends AbstractTarget
 		+ "\tCP\t0EH\n"		// >= 0BEh: 4 nicht gesetzte Pixel
 		+ "\tRET\tNC\n"
 		+ "\tPUSH\tHL\n"
-		+ "\tLD\tHL,X_PST_TAB\n"
+		+ "\tLD\tHL,X_PINFO_TAB\n"
 		+ "\tLD\tD,0\n"
 		+ "\tLD\tE,A\n"
 		+ "\tADD\tHL,DE\n"
@@ -577,10 +733,11 @@ public class Z1013Target extends AbstractTarget
 		+ "\tLD\tB,A\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\n"
-		+ "X_PST4:\tSCF\n"
+		+ "X_PINFO_4:\n"
+		+ "\tSCF\n"
 		+ "\tRET\n"
       // Umcodierungstabelle von (Zeichen - 0B0H) zu Bitmuster
-		+ "X_PST_TAB:\n"
+		+ "X_PINFO_TAB:\n"
 		+ "\tDB\t04H,08H,02H,01H,05H,0AH,0CH,03H\n"
 		+ "\tDB\t06H,09H,0BH,07H,0DH,0EH\n" );
       this.pixUtilAppended = true;

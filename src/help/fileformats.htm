@@ -8,7 +8,14 @@
    <li>
     <a href="fileformats.htm#memimg">2. Dateiformate f&uuml;r Speicherabbilddateien</a>
     <ul>
-     <li><a href="fileformats.htm#headersave">2.1. Headersave-Format</a></li>
+     <li>
+      <a href="fileformats.htm#headersave">2.1. Headersave-Format</a>
+      <ul>
+       <li>
+        <a href="fileformats.htm#headersave_cass">2.1.1. Headersave-Kassettenaufzeichnungsformat</a>
+       </li>
+      </ul>
+     </li>
      <li><a href="fileformats.htm#kcb">2.2. KCB-Format</a></li>
      <li>
       <a href="fileformats.htm#kcc">2.3. KCC-Format</a>
@@ -21,7 +28,7 @@
       </ul>
      </li>
      <li>
-      <a href="fileformats.htm#kcbasic">2.4. KC-BASIC-Programmdatei</a>
+      <a href="fileformats.htm#kcbasic">2.4. KC-BASIC-Programmdateien</a>
       <ul>
        <li>
 	<a href="fileformats.htm#other_kcbasic">2.4.1. Abweichende KC-BASIC-Programmdateien</a>
@@ -35,14 +42,22 @@
        </li>
       </ul>
      </li>
-     <li><a href="fileformats.htm#basic">2.6. BASIC-Programmdatei</a></li>
-     <li><a href="fileformats.htm#rbasic">2.7. RBASIC-Programmdatei</a></li>
+     <li><a href="fileformats.htm#basic">2.6. BASIC-Programmdateien</a></li>
+     <li>
+      <a href="fileformats.htm#rbasic">2.7. RBASIC-Programmdateien</a>
+     </li>
      <li><a href="fileformats.htm#hex">2.8. Intel-HEX-Format</a></li>
-     <li><a href="fileformats.htm#bin">2.9. Einfache Speicherabbilddatei</a></li>
+     <li>
+      <a href="fileformats.htm#bin">2.9. Einfache Speicherabbilddateien</a>
+     </li>
+     <li><a href="fileformats.htm#com">2.10. CP/M-Programmdateien</a></li>
     </ul>
    </li>
    <li>
-    <a href="fileformats.htm#tape">3. Dateiformate f&uuml;r Tape-Dateien</a>
+    <a href="fileformats.htm#sound">3. Dateiformate f&uuml;r Sound-Dateien</a>
+   </li>
+   <li>
+    <a href="fileformats.htm#tape">4. Dateiformate f&uuml;r Tape-Dateien</a>
     <ul>
      <li><a href="fileformats.htm#cdt">3.1. CDT-Format</a></li>
      <li><a href="fileformats.htm#csw">3.2. CSW-Format</a></li>
@@ -202,7 +217,9 @@
   Das gilt auch f&uuml;r die Adressangaben im Kopfblock.
  <br/><br/>
 
- <h3>2.1. Headersave-Kassettenaufzeichnungsformat</h3>
+ <h3>
+  <a name="headersave_cass">2.1.1. Headersave-Kassettenaufzeichnungsformat</a>
+ </h3>
   Die beiden originalen Z1013-Monitorprogramme (2.02 und A.2)
   speichern Programmme und Daten, indem ein Bereich des Arbeitsspeichers
   auf den Massenspeicher (Magnettonband) geschrieben wird.
@@ -416,7 +433,7 @@
   Das KCM-Format ist identisch zum KCC-Format.
   Der Unterschied in der Dateiendung soll anzeigen,
   dass die Datei zwar Maschinencode,
-  aber kein ausf&uuml;hrbares Programm enth&auml;t.
+  aber kein ausf&uuml;hrbares Programm enth&auml;lt.
  <br/><br/>
 
  <h3><a name="jtc">2.3.2. JTC-Format</a></h3>
@@ -450,18 +467,17 @@
   JKCEMU erkennt solche Dateien und markiert sie als
   <em>Dateityp&nbsp;B</em> (Blocknummern enthalten) oder
   <em>Dateityp&nbsp;B+P</em> (Blocknummern und Pr&uuml;fbytes enthalten).
-  Diese Dateien k&ouml;nnen in den Emulator geladen,
+  Solche Dateien k&ouml;nnen in den Emulator geladen,
   nicht aber gespeichert werden.
  <br/><br/>
 
- <h3><a name="kcbasic">2.4. KC-BASIC-Programmdatei</a></h3>
+ <h3><a name="kcbasic">2.4. KC-BASIC-Programmdateien</a></h3>
   Eine KC-BASIC-Programmdatei hat &uuml;blicherweise die Dateiendung
   <em>*.sss</em> und enth&auml;lt am Anfang zwei Bytes,
-  die die L&auml;ge des BASIC-Programms angeben.
+  die die L&auml;nge des BASIC-Programms angeben.
   Ab dem dritten Byte folgt das eigentliche Programm.
-  Danach folgt ein Byte mit dem Wert&nbsp;3.
-  Dahinter folgen F&uuml;llbytes,
-  bis die Datel&auml;nge ein Vielfaches von 128&nbsp;Bytes hat.
+  Danach folgt ein Byte mit dem Wert&nbsp;3 und dahinter F&uuml;llbytes,
+  bis die Dateil&auml;nge ein Vielfaches von 128&nbsp;Bytes hat.
  <br/><br/>
   Manche KC-BASIC-Programmdateien haben einen 11-Byte gro&szlig;en
   Dateikopf, der mit einer BASIC-Programmdateikennung beginnt
@@ -600,11 +616,13 @@
     damit sie dar&uuml;ber eingelesen werden k&ouml;nnen.
    </li>
   </ol>
-  Unabh&auml;gig davon k&ouml;nnen Multi-KC-TAP-Dateien auch vollst&auml;ndig
-  &uuml;ber die Audiofunktionen eingelesen werden.
+  Unabh&auml;gig davon k&ouml;nnen Multi-KC-TAP-Dateien auch
+  vollst&auml;ndig &uuml;ber die Audiofunktionen eingelesen sowie
+  mit dem <a href="tools/fileconverter.htm">Dateikonverter</a>
+  in eine Sound-Datei konvertiert werden.
  <br/><br/>
 
- <h3><a name="basic">2.6. BASIC-Programmdatei</a></h3>
+ <h3><a name="basic">2.6. BASIC-Programmdateien</a></h3>
   Eine BASIC-Programmdatei enth&auml;lt ein BASIC-Programm,
   so wie es im Arbeitsspeicher vorliegt.
   Das erste Byte in der Datei ist das erste Byte des eigentlichen
@@ -613,14 +631,14 @@
   (Ausnahme bei AC1-BASIC6: <em>*.abc</em>).
  <br/><br/>
 
- <h3><a name="rbasic">2.7. RBASIC-Programmdatei</a></h3>
+ <h3><a name="rbasic">2.7. RBASIC-Programmdateien</a></h3>
   Der A5105 (BIC, ALBA-PC) benutzt dieses Dateiformat zur Speicherung
   von BASIC-Programmen auf Diskette.
   Das erste Byte in der Datei hat den Wert 0FFh.
   Danach folgt das RBASIC-Programm, so wie es im Arbeistspeicher
   des A5105 ab Adresse 8001h zu finden ist.
   Danach, d.h. hinter den abschlie&szlig;enden drei Nullbytes
-  des BASIC-Programms folgt ein Byte 1Ah.
+  des BASIC-Programms, folgt ein Byte 1Ah.
   Die &uuml;bliche Dateiendung ist <em>*.bas</em>.
  <br/><br/>
 
@@ -698,17 +716,53 @@
   <tt>:00000001FF</tt>
  <br/><br/>
 
- <h3><a name="bin">2.9. Einfache Speicherabbilddatei</a></h3>
-  Eine enfache Speicherabbilddatei enth&auml;lt ein reines Abbild
+ <h3><a name="bin">2.9. Einfache Speicherabbilddateien</a></h3>
+  Eine einfache Speicherabbilddatei enth&auml;lt ein reines Abbild
   eines Teils des Arbeitsspeichers des Emulators.
   Es sind keine Kopfdaten enthalten, d.h.,
   Anfangs- und ggf. Startadresse muss man sich separat merken.
   Die &uuml;bliche Dateiendung ist <em>*.bin</em>.
  <br/><br/>
 
+ <h3><a name="com">2.10. CP/M-Programmdateien</a></h3>
+  CP/M-Programmdateien haben die Endung <em>*.com</em> und enthalten
+  das reine Speicherabbild eines CP/M-kompatiblen Programms.
+  Das Dateiformat ist somit das gleiche wie bei
+  <a href="fileformats.htm#bin">BIN</a>-Dateien,
+  nur die Endung ist anders.
+  CP/M-kompatible Betriebssysteme laden COM-Dateien
+  auf die Adressse&nbsp;0100h und starten dann das Programm dort.
+  Aus diesem Grund nimmt auch JKCEMU bei COM-Dateien
+  die Anfangsadresse&nbsp;0100h an
+  und l&auml;dt sie standardm&auml;&szlig;ig dorthin.
+ <br/><br/>
+
 
  <h2>
-  <a name="tape">3. Dateiformate f&uuml;r Tape-Dateien</a>
+  <a name="sound">3. Dateiformate f&uuml;r Sound-Dateien</a>
+ </h2>
+  Es werden lesend und schreibend folgende Sound-Dateitypen unterst&uuml;tzt:
+  <ul>
+   <li>AIFF (*.aif; *.aiff)</li>
+   <li>AU (*.au)</li>
+   <li>WAVE (*.wav)</li>
+  </ul>
+ <br/>
+  In einer Sound-Datei liegen die Audiodaten in einem bestimmtem Format
+  bzw. in einer bestimmten Codierung vor (Encoding).
+  JKCEMU unterst&uuml;tzt nur unkomprimierte PCM-Audiodaten
+  (Pulse Code Modulation), die &uuml;blicherweise mit 8- oder 16-Bit
+  Aufl&ouml;sung gespeichert werden.
+  PCM-Audiodaten als Float-Zahlen, A-law bzw. &mu;-law-Codierungen
+  oder komprimierte Audiodaten werden nicht unterst&uuml;tzt.
+  Es ist aber m&ouml;glich, GZip-komprimierte Sound-Dateien
+  zu lesen und zu schreiben.
+  Dazu muss die Dateiendung <em>.gz</em> angeh&auml;ngt sein
+  bzw. beim Schreiben angeh&auml;ngt werden.
+ <br/><br/>
+
+ <h2>
+  <a name="tape">4. Dateiformate f&uuml;r Tape-Dateien</a>
  </h2>
   Tape-Dateien enthalten die Daten einer digitalen Magnetbandaufzeichnung
   (i.d.R. von einer Kassette).
@@ -801,10 +855,14 @@
   Beide Formate werden als Tape-Datei nur lesend unterst&uuml;tzt, d.h.,
   sie lassen sich &uuml;ber die emulierte Kassettenschnittstelle einlesen,
   nicht aber speichern.
-  Dar&uuml;ber hinaus wird das KC-TAP-Format von JKCEMU in vollem Umfang
-  lesend und schreibend auch als Speicherabbilddatei unterst&uuml;tzt.
+  Dar&uuml;ber hinaus wird das KC-TAP-Format auch als Speicherabbilddatei
+  unterst&uuml;tzt, und zwar in vollem Umfang, d.h. lesend und schreibend.
   Es k&ouml;nnen also Bereiche des Arbeitsspeichers direkt in eine
   KC-TAP-Datei gespeichert und von dort wieder direkt zur&uuml;ck
   in den Arbeitsspeicher geladen werden.
+  Das funktioniert dann &uuml;ber die daf&uuml;r vorgesehenen
+  Emulatorfunktionen (siehe
+  <a href="loadsave.htm">Programme und Dateien laden, starten und speichern</a>)
+  und nicht &uuml;ber die emulierte Kassettenschnittstelle.
 </body>
 </html>

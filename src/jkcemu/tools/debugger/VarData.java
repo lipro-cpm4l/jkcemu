@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,10 @@
 
 package jkcemu.tools.debugger;
 
-import java.lang.*;
-import java.util.ArrayList;
-import javax.swing.table.AbstractTableModel;
+import jkcemu.programming.basic.VarDecl;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import z80emu.Z80MemView;
 
 
@@ -18,20 +19,34 @@ public class VarData
 {
   public static enum VarType {
 			INT1,
-			INT2LE,
-			INT2BE,
-			INT3LE,
-			INT3BE,
-			INT4LE,
-			INT4BE,
-			INT8LE,
-			INT8BE,
-			FLOAT4LE,
-			FLOAT4BE,
-			FLOAT8LE,
-			FLOAT8BE,
-			BYTE_ARRAY,
-			POINTER };
+			INT2_LE,
+			INT2_BE,
+			INT3_LE,
+			INT3_BE,
+			INT4_LE,
+			INT4_BE,
+			BC_DEC6,
+			POINTER,
+			BYTE_ARRAY };
+
+  public static final String ELEM_VARIABLE = "variable";
+
+  public static final String ATTR_ADDR     = "addr";
+  public static final String ATTR_NAME     = "name";
+  public static final String ATTR_SIZE     = "size";
+  public static final String ATTR_TYPE     = "type";
+  public static final String ATTR_IMPORTED = "imported";
+
+  public static final String TYPE_INT1       = "INT1";
+  public static final String TYPE_INT2_LE    = "INT2_LE";
+  public static final String TYPE_INT2_BE    = "INT2_BE";
+  public static final String TYPE_INT3_LE    = "INT3_LE";
+  public static final String TYPE_INT3_BE    = "INT3_BE";
+  public static final String TYPE_INT4_LE    = "INT4_LE";
+  public static final String TYPE_INT4_BE    = "INT4_BE";
+  public static final String TYPE_BC_DEC6    = "BC_DEC6";
+  public static final String TYPE_POINTER    = "POINTER";
+  public static final String TYPE_BYTE_ARRAY = "BYTE_ARRAY";
 
   private String  name;
   private int     addr;
@@ -55,11 +70,7 @@ public class VarData
   }
 
 
-  public static VarData createWithDefaultType(
-				String  name,
-				int     addr,
-				int     size,
-				boolean imported )
+  public static VarType createDefaultType( String name, int size )
   {
     VarType type = VarType.BYTE_ARRAY;
     switch( size ) {
@@ -67,19 +78,41 @@ public class VarData
 	type = VarType.INT1;
 	break;
       case 2:
-	type = VarType.INT2LE;
+	type = VarType.INT2_LE;
 	break;
       case 3:
-	type = VarType.INT3LE;
+	type = VarType.INT3_LE;
 	break;
       case 4:
-	type = VarType.INT4LE;
-	break;
-      case 8:
-	type = VarType.INT8LE;
+	type = VarType.INT4_LE;
 	break;
     }
-    return new VarData( name, addr, type, size, imported );
+    if( name != null ) {
+      if( name.startsWith( VarDecl.LABEL_PREFIX_STRING ) ) {
+	type = VarType.BYTE_ARRAY;
+      }
+      else if( name.startsWith( VarDecl.LABEL_PREFIX_DEC6 )
+	         && (size == 6) )
+      {
+	type = VarType.BC_DEC6;
+      }
+    }
+    return type;
+  }
+
+
+  public static VarData createWithDefaultType(
+					String  name,
+					int     addr,
+					int     size,
+					boolean imported )
+  {
+    return new VarData(
+		name,
+		addr,
+		createDefaultType( name, size ),
+		size,
+		imported );
   }
 
 
@@ -98,6 +131,12 @@ public class VarData
   public String getByteText()
   {
     return this.byteText;
+  }
+
+
+  public boolean getImported()
+  {
+    return this.imported;
   }
 
 
@@ -155,53 +194,33 @@ public class VarData
 	this.size     = 1;
 	this.typeText = "Byte / Int1";
 	break;
-      case INT2LE:
+      case INT2_LE:
 	this.size     = 2;
 	this.typeText = "Int2 LE";
 	break;
-      case INT2BE:
+      case INT2_BE:
 	this.size     = 2;
 	this.typeText = "Int2 BE";
 	break;
-      case INT3LE:
+      case INT3_LE:
 	this.size     = 3;
 	this.typeText = "Int3 LE";
 	break;
-      case INT3BE:
+      case INT3_BE:
 	this.size     = 3;
 	this.typeText = "Int3 BE";
 	break;
-      case INT4LE:
+      case INT4_LE:
 	this.size     = 4;
 	this.typeText = "Int4 LE";
 	break;
-      case INT4BE:
+      case INT4_BE:
 	this.size     = 4;
 	this.typeText = "Int4 BE";
 	break;
-      case INT8LE:
-	this.size     = 8;
-	this.typeText = "Int8 LE";
-	break;
-      case INT8BE:
-	this.size     = 8;
-	this.typeText = "Int8 BE";
-	break;
-      case FLOAT4LE:
-	this.size     = 4;
-	this.typeText = "Float4 LE";
-	break;
-      case FLOAT4BE:
-	this.size     = 4;
-	this.typeText = "Float4 BE";
-	break;
-      case FLOAT8LE:
-	this.size     = 8;
-	this.typeText = "Float8 LE";
-	break;
-      case FLOAT8BE:
-	this.size     = 8;
-	this.typeText = "Float8 BE";
+      case BC_DEC6:
+	this.size     = 6;
+	this.typeText = "Decimal (Basic Compiler)";
 	break;
       case BYTE_ARRAY:
 	this.typeText = "Byte-Array / Text";
@@ -235,7 +254,7 @@ public class VarData
       }
       for( int i = 0; i < size; i++ ) {
 	if( i > 0 ) {
-	  buf.append( (char) '\u0020' );
+	  buf.append( '\u0020' );
 	}
 	buf.append( String.format( "%02X", mem.getMemByte( addr, false ) ) );
 	addr = (addr + 1) & 0xFFFF;
@@ -257,45 +276,26 @@ public class VarData
 	  }
 	}
 	break;
-      case INT2LE:
+      case INT2_LE:
 	this.valueText = int2ToString( getMemValueLE( mem, 2 ) );
 	break;
-      case INT2BE:
+      case INT2_BE:
 	this.valueText = int2ToString( getMemValueBE( mem, 2 ) );
 	break;
-      case INT3LE:
+      case INT3_LE:
 	this.valueText = int3ToString( getMemValueLE( mem, 3 ) );
 	break;
-      case INT3BE:
+      case INT3_BE:
 	this.valueText = int3ToString( getMemValueBE( mem, 3 ) );
 	break;
-      case INT4LE:
+      case INT4_LE:
 	this.valueText = int4ToString( getMemValueLE( mem, 4 ) );
 	break;
-      case INT4BE:
+      case INT4_BE:
 	this.valueText = int4ToString( getMemValueBE( mem, 4 ) );
 	break;
-      case INT8LE:
-	this.valueText = Long.toString( getMemValueLE( mem, 8 ) );
-	break;
-      case INT8BE:
-	this.valueText = Long.toString( getMemValueBE( mem, 8 ) );
-	break;
-      case FLOAT4LE:
-	this.valueText = Float.toString(
-		Float.intBitsToFloat( (int) getMemValueLE( mem, 4 ) ) );
-	break;
-      case FLOAT4BE:
-	this.valueText = Float.toString(
-		Float.intBitsToFloat( (int) getMemValueBE( mem, 4 ) ) );
-	break;
-      case FLOAT8LE:
-	this.valueText = Double.toString(
-		Double.longBitsToDouble( (int) getMemValueLE( mem, 8 ) ) );
-	break;
-      case FLOAT8BE:
-	this.valueText = Double.toString(
-		Double.longBitsToDouble( (int) getMemValueBE( mem, 8 ) ) );
+      case BC_DEC6:
+	this.valueText = dec6ToString( mem );
 	break;
       case BYTE_ARRAY:
 	if( this.size > 0 ) {
@@ -320,9 +320,51 @@ public class VarData
   }
 
 
-  public boolean wasImported()
+  public void writeTo( Document doc, Node parent )
   {
-    return this.imported;
+    Element elem = doc.createElement( ELEM_VARIABLE );
+    String  type = TYPE_BYTE_ARRAY;
+    switch( this.type ) {
+      case INT1:
+	type = TYPE_INT1;
+	break;
+      case INT2_LE:
+	type = TYPE_INT2_LE;
+	break;
+      case INT2_BE:
+	type = TYPE_INT2_BE;
+	break;
+      case INT3_LE:
+	type = TYPE_INT3_LE;
+	break;
+      case INT3_BE:
+	type = TYPE_INT3_BE;
+	break;
+      case INT4_LE:
+	type = TYPE_INT4_LE;
+	break;
+      case INT4_BE:
+	type = TYPE_INT4_BE;
+	break;
+      case BC_DEC6:
+	type = TYPE_BC_DEC6;
+	break;
+      case POINTER:
+	type = TYPE_POINTER;
+	break;
+    }
+    elem.setAttribute( ATTR_TYPE, type );
+    elem.setAttribute( ATTR_ADDR, String.format( "%04XH", this.addr ) );
+    if( type.equals( TYPE_BYTE_ARRAY ) ) {
+      elem.setAttribute( ATTR_SIZE, String.format( "%04XH", this.size ) );
+    }
+    if( this.name != null ) {
+      if( !this.name.isEmpty() ) {
+	elem.setAttribute( ATTR_NAME, this.name );
+      }
+    }
+    elem.setAttribute( ATTR_IMPORTED, Boolean.toString( this.imported ) );
+    parent.appendChild( elem );
   }
 
 
@@ -345,6 +387,67 @@ public class VarData
       addr = (addr + 1) & 0xFFFF;
     }
     return buf.toString();
+  }
+
+
+  private String dec6ToString( Z80MemView mem )
+  {
+    boolean       err  = false;
+    int           addr = this.addr;
+    StringBuilder buf  = new StringBuilder( 13 );
+    int           b    = mem.getMemByte( addr++, false );
+    if( (b & 0x80) != 0 ) {
+      buf.append( '-' );
+    }
+    int     digitsToPoint  = 10 - ((b >> 4) & 0x07);
+    boolean prePointDigits = false;
+    b &= 0x0F;
+    if( b > 0 ) {
+      if( b > 0x09 ) {
+	err = true;
+      } else {
+	buf.append( (char) (b + '0') );
+	prePointDigits = true;
+      }
+    }
+    int     zeros = 0;
+    boolean point = false;
+    for( int i = 0; i < 5; i++ ) {
+      b = mem.getMemByte( addr++, false );
+      for( int k = 0; k < 2; k++ ) {
+	int c = (b >> 4) & 0x0F;
+	if( c > 9 ) {
+	  err = true;
+	  break;
+	}
+	if( digitsToPoint == 0 ) {
+	  if( !prePointDigits ) {
+	    buf.append( '0' );
+	  }
+	  buf.append( '.' );
+	  point = true;
+	}
+	--digitsToPoint;
+	if( point ) {
+	  if( c == 0 ) {
+	    zeros++;
+	  } else {
+	    while( zeros > 0 ) {
+	      buf.append( '0' );
+	      --zeros;
+	    }
+	    buf.append( (char) (c + '0') );
+	  }
+	} else {
+	  if( prePointDigits || (c != 0) ) {
+	    buf.append( (char) (c + '0') );
+	    prePointDigits = true;
+	  }
+	}
+	b <<= 4;
+      }
+    }
+    return err ? "ung\u00FCltig" : buf.toString();
   }
 
 

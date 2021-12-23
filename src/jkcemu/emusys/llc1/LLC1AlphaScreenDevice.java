@@ -1,5 +1,5 @@
 /*
- * (c) 2016-2017 Jens Mueller
+ * (c) 2016-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@ package jkcemu.emusys.llc1;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.lang.*;
 import java.util.Properties;
 import jkcemu.Main;
 import jkcemu.base.AbstractScreenDevice;
@@ -104,10 +103,6 @@ public class LLC1AlphaScreenDevice
   public void cancelPastingText()
   {
     this.llc1.cancelPastingAlphaText();
-    AbstractScreenFrm screenFrm = getScreenFrm();
-    if( screenFrm != null ) {
-      screenFrm.firePastingTextFinished();
-    }
   }
 
 
@@ -157,7 +152,7 @@ public class LLC1AlphaScreenDevice
   @Override
   public CharRaster getCurScreenCharRaster()
   {
-    return new CharRaster( 64, 16, 14, 8, 8, 0 );
+    return new CharRaster( 64, 16, 14, 8, 8 );
   }
 
 
@@ -165,6 +160,13 @@ public class LLC1AlphaScreenDevice
   public EmuThread getEmuThread()
   {
     return this.llc1.getEmuThread();
+  }
+
+
+  @Override
+  public KeyListener getKeyListener()
+  {
+    return this;
   }
 
 

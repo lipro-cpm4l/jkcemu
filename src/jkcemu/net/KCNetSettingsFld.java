@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,23 +8,25 @@
 
 package jkcemu.net;
 
+import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import java.util.regex.PatternSyntaxException;
 import javax.swing.JCheckBox;
-import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.Document;
-import jkcemu.base.AbstractSettingsFld;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class KCNetSettingsFld
@@ -35,14 +37,18 @@ public class KCNetSettingsFld
   private JTextField fldSubnetMask;
   private JTextField fldGateway;
   private JTextField fldDNSServer;
-  private JCheckBox  btnAutoConfig;
+  private JCheckBox  cbAutoConfig;
 
 
-  public KCNetSettingsFld( SettingsFrm settingsFrm, String propPrefix )
+  public KCNetSettingsFld(
+		SettingsFrm settingsFrm,
+		String      propPrefix )
   {
     super( settingsFrm, propPrefix );
+    setLayout( new BorderLayout() );
 
-    setLayout( new GridBagLayout() );
+    JPanel panel = GUIFactory.createPanel( new GridBagLayout() );
+    add( GUIFactory.createScrollPane( panel ), BorderLayout.CENTER );
 
     GridBagConstraints gbc = new GridBagConstraints(
 					0, 0,
@@ -53,48 +59,49 @@ public class KCNetSettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    add(
-	new JLabel( "Beim \"Einschalten\" KCNet konfigurieren (optional):" ),
+    panel.add(
+	GUIFactory.createLabel(
+		"Beim \"Einschalten\" KCNet konfigurieren (optional):" ),
 	gbc );
 
     gbc.insets.left = 50;
     gbc.gridwidth   = 1;
     gbc.gridy++;
-    add( new JLabel( "IP-Adresse (d.d.d.d):" ), gbc );
+    panel.add( GUIFactory.createLabel( "IP-Adresse (d.d.d.d):" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "Subnetzmaske (d.d.d.d):" ), gbc );
+    panel.add( GUIFactory.createLabel( "Subnetzmaske (d.d.d.d):" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "Gateway (d.d.d.d):" ), gbc );
+    panel.add( GUIFactory.createLabel( "Gateway (d.d.d.d):" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "DNS-Server (d.d.d.d):" ), gbc );
+    panel.add( GUIFactory.createLabel( "DNS-Server (d.d.d.d):" ), gbc );
 
-    this.btnAutoConfig = new JCheckBox(
+    this.cbAutoConfig = GUIFactory.createCheckBox(
 		"IP-Adressen der leer gelassenen Felder"
 			+ " automatisch ermitteln",
 		true );
-    this.btnAutoConfig.addActionListener( this );
+    this.cbAutoConfig.addActionListener( this );
     gbc.gridwidth = GridBagConstraints.REMAINDER;
     gbc.gridy++;
-    add( this.btnAutoConfig, gbc );
+    panel.add( this.cbAutoConfig, gbc );
 
     this.fldIpAddr  = createJTextField();
     gbc.insets.left = 5;
     gbc.gridwidth   = 1;
     gbc.gridy       = 1;
     gbc.gridx++;
-    add( this.fldIpAddr, gbc );
+    panel.add( this.fldIpAddr, gbc );
 
     this.fldSubnetMask = createJTextField();
     gbc.gridy++;
-    add( this.fldSubnetMask, gbc );
+    panel.add( this.fldSubnetMask, gbc );
 
     this.fldGateway = createJTextField();
     gbc.gridy++;
-    add( this.fldGateway, gbc );
+    panel.add( this.fldGateway, gbc );
 
     this.fldDNSServer = createJTextField();
     gbc.gridy++;
-    add( this.fldDNSServer, gbc );
+    panel.add( this.fldDNSServer, gbc );
   }
 
 
@@ -126,21 +133,21 @@ public class KCNetSettingsFld
 		boolean    selected ) throws UserInputException
   {
     props.setProperty(
-		KCNet.PROP_PREFIX + KCNet.PROP_IP_ADDR,
+		this.propPrefix + KCNet.PROP_IP_ADDR,
 		parseIpAddrText( this.fldIpAddr, "IP-Adresse" ) );
     props.setProperty(
-		KCNet.PROP_PREFIX + KCNet.PROP_SUBNET_MASK,
+		this.propPrefix + KCNet.PROP_SUBNET_MASK,
 		parseIpAddrText( this.fldSubnetMask, "Subnetzmaske" ) );
     props.setProperty(
-		KCNet.PROP_PREFIX + KCNet.PROP_GATEWAY,
+		this.propPrefix + KCNet.PROP_GATEWAY,
 		parseIpAddrText( this.fldGateway, "Gateway" ) );
     props.setProperty(
-		KCNet.PROP_PREFIX + KCNet.PROP_DNS_SERVER,
+		this.propPrefix + KCNet.PROP_DNS_SERVER,
 		parseIpAddrText( this.fldDNSServer, "DNS-Server" ) );
     EmuUtil.setProperty(
 		props,
-		KCNet.PROP_PREFIX + KCNet.PROP_AUTOCONFIG,
-		this.btnAutoConfig.isSelected() );
+		this.propPrefix + KCNet.PROP_AUTOCONFIG,
+		this.cbAutoConfig.isSelected() );
   }
 
 
@@ -148,7 +155,7 @@ public class KCNetSettingsFld
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
-    if( e.getSource() == this.btnAutoConfig ) {
+    if( e.getSource() == this.cbAutoConfig ) {
       rv = true;
       fireDataChanged();
     }
@@ -162,27 +169,27 @@ public class KCNetSettingsFld
     this.fldIpAddr.setText(
 		EmuUtil.getProperty(
 			props,
-			KCNet.PROP_PREFIX + KCNet.PROP_IP_ADDR ) );
+			this.propPrefix + KCNet.PROP_IP_ADDR ) );
 
     this.fldSubnetMask.setText(
 		EmuUtil.getProperty(
 			props,
-			KCNet.PROP_PREFIX + KCNet.PROP_SUBNET_MASK ) );
+			this.propPrefix + KCNet.PROP_SUBNET_MASK ) );
 
     this.fldGateway.setText(
 		EmuUtil.getProperty(
 			props,
-			KCNet.PROP_PREFIX + KCNet.PROP_GATEWAY ) );
+			this.propPrefix + KCNet.PROP_GATEWAY ) );
 
     this.fldDNSServer.setText(
 		EmuUtil.getProperty(
 			props,
-			KCNet.PROP_PREFIX + KCNet.PROP_DNS_SERVER ) );
+			this.propPrefix + KCNet.PROP_DNS_SERVER ) );
 
-    this.btnAutoConfig.setSelected(
+    this.cbAutoConfig.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
-			KCNet.PROP_PREFIX + KCNet.PROP_AUTOCONFIG,
+			this.propPrefix + KCNet.PROP_AUTOCONFIG,
 			KCNet.DEFAULT_AUTOCONFIG ) );
   }
 
@@ -191,7 +198,7 @@ public class KCNetSettingsFld
 
   private JTextField createJTextField()
   {
-    JTextField fld = new JTextField( 15 );
+    JTextField fld = GUIFactory.createTextField( 15 );
     Document   doc = fld.getDocument();
     if( doc != null ) {
       doc.addDocumentListener( this );

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,12 +12,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import javax.swing.JComboBox;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileInfo;
-import jkcemu.base.FileSaver;
 import jkcemu.base.UserInputException;
+import jkcemu.file.FileInfo;
+import jkcemu.file.FileSaver;
+import jkcemu.file.FileUtil;
 
 
 public class KCTapSystemFileTarget extends AbstractConvertTarget
@@ -52,7 +52,7 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getKCTapFileFilter();
+    return FileUtil.getKCTapFileFilter();
   }
 
 
@@ -73,7 +73,7 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".tap" );
+    return FileUtil.replaceExtension( srcFile, ".tap" );
   }
 
 
@@ -128,7 +128,7 @@ public class KCTapSystemFileTarget extends AbstractConvertTarget
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
     return null;
   }

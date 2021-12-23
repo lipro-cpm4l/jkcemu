@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,11 +20,9 @@ import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetContext;
 import java.awt.dnd.DropTargetDragEvent;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.EventObject;
 import java.util.Properties;
@@ -44,103 +42,123 @@ import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileNameFld;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
+import jkcemu.base.PopupMenusOwner;
+import jkcemu.base.UserCancelException;
 import jkcemu.base.UserInputException;
 import jkcemu.disk.GIDESettingsFld;
 import jkcemu.emusys.KC85;
+import jkcemu.file.FileNameFld;
+import jkcemu.file.FileUtil;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class KC85SettingsFld
 			extends AbstractSettingsFld
-			implements ListSelectionListener, MouseListener
+			implements
+				ListSelectionListener,
+				MouseListener,
+				PopupMenusOwner
 {
   private static final String ACTION_MODULE_ADD_PREFIX = "kc85.module.add.";
+
+  private static final String MT_RAM = "RAM";
+  private static final String MT_ROM = "ROM";
+  private static final String MT_ETC = "ETC";
 
   private static final int MOD_IDX_TYPE = 0;
   private static final int MOD_IDX_NAME = 1;
   private static final int MOD_IDX_DESC = 2;
 
   private static final String[][] modules = {
-	{ "ETC", "M003", "V.24 mit angeschlossenem Drucker" },
-	{ "ROM", "M006", "BASIC" },
-	{ "ETC", "M008", "Joystick" },
-	{ "RAM", "M011", "64 KByte RAM" },
-	{ "ROM", "M012", "TEXOR" },
-	{ "ETC", "M021", "Joystick/Centronics mit angeschlossenem Drucker" },
-	{ "RAM", "M022", "16 KByte Expander RAM" },
-	{ "ROM", "M025", "8 KByte User PROM" },
-	{ "ROM", "M026", "Forth" },
-	{ "ROM", "M027", "Development" },
-	{ "ROM", "M028", "16 KByte User PROM" },
-	{ "RAM", "M032", "256 KByte Segmented RAM" },
-	{ "ROM", "M033", "TypeStar" },
-	{ "RAM", "M034", "512 KByte Segmented RAM" },
-	{ "RAM", "M035", "1 MByte Segmented RAM" },
-	{ "RAM", "M035x4", "4 MByte Segmented RAM" },
-	{ "RAM", "M036", "128 KByte Segmented RAM" },
-	{ "ROM", "M040", "8/16 KByte User PROM" },
-	{ "ROM", "M045", "4x8 KByte User PROM" },
-	{ "ROM", "M046", "8x8 KByte User PROM" },
-	{ "ROM", "M047", "16x8 KByte User PROM" },
-	{ "ROM", "M048", "16x16 KByte User PROM" },
-	{ "ETC", "M052", "USB/Netzwerk" },
-	{ "RAM", "M120", "8 KByte CMOS RAM" },
-	{ "RAM", "M122", "16 KByte CMOS RAM" },
-	{ "RAM", "M124", "32 KByte CMOS RAM" } };
+	{ MT_ETC, "M003", "V.24 mit angeschlossenem Drucker" },
+	{ MT_ROM, "M006", "BASIC" },
+	{ MT_ETC, "M008", "Joystick" },
+	{ MT_RAM, "M011", "64 KByte RAM" },
+	{ MT_ROM, "M012", "TEXOR" },
+	{ MT_ETC, "M021", "Joystick/Centronics mit angeschlossenem Drucker" },
+	{ MT_RAM, "M022", "16 KByte Expander RAM" },
+	{ MT_ROM, "M025", "8 KByte User PROM" },
+	{ MT_ROM, "M026", "Forth" },
+	{ MT_ROM, "M027", "Development" },
+	{ MT_ROM, "M028", "16 KByte User PROM" },
+	{ MT_RAM, "M032", "256 KByte Segmented RAM" },
+	{ MT_ROM, "M033", "TypeStar" },
+	{ MT_RAM, "M034", "512 KByte Segmented RAM" },
+	{ MT_RAM, "M035", "1 MByte Segmented RAM" },
+	{ MT_RAM, "M035x4", "4 MByte Segmented RAM" },
+	{ MT_RAM, "M036", "128 KByte Segmented RAM" },
+	{ MT_ROM, "M040", "8/16 KByte User PROM" },
+	{ MT_ROM, "M041", "2 x 16 KByte EEPROM" },
+	{ MT_ROM, "M045", "4x8 KByte User PROM" },
+	{ MT_ROM, "M046", "8x8 KByte User PROM" },
+	{ MT_ROM, "M047", "16x8 KByte User PROM" },
+	{ MT_ROM, "M048", "16x16 KByte User PROM" },
+	{ MT_ETC, "M052", M052.DESCRIPTION },
+	{ MT_ETC, "M066", "Sound" },
+	{ MT_RAM, "M120", "8 KByte CMOS RAM" },
+	{ MT_RAM, "M122", "16 KByte CMOS RAM" },
+	{ MT_RAM, "M124", "32 KByte CMOS RAM" } };
 
   private static final String[] altRomTitles2 = {
-					"CAOS-ROM E000-E7FF",
-					"CAOS-ROM F000-F7FF",
-					"M052-ROM (USB/Netzwerk)" };
+				"CAOS-ROM E000-E7FF",
+				"CAOS-ROM F000-F7FF",
+				"ROM f\u00FCr erstes M052 (USB/Netzwerk)",
+				"ROM f\u00FCr weitere M052 (nur USB)" };
 
   private static final String[] altRomKeys2 = {
-					KC85.PROP_ROM_CAOS_E_FILE,
-					KC85.PROP_ROM_CAOS_F_FILE,
-					KC85.PROP_ROM_M052_FILE };
+				KC85.PROP_ROM_CAOS_E_FILE,
+				KC85.PROP_ROM_CAOS_F_FILE,
+				KC85.PROP_ROM_M052_FILE,
+				KC85.PROP_ROM_M052USB_FILE };
 
   private static final String[] altRomTitles3 = {
-					"BASIC-ROM C000-DFFF",
-					"CAOS-ROM E000-FFFF",
-					"M052-ROM (USB/Netzwerk)" };
+				"BASIC-ROM C000-DFFF",
+				"CAOS-ROM E000-FFFF",
+				"ROM f\u00FCr erstes M052 (USB/Netzwerk)",
+				"ROM f\u00FCr weitere M052 (nur USB)" };
 
   private static final String[] altRomKeys3 = {
-					KC85.PROP_ROM_BASIC_FILE,
-					KC85.PROP_ROM_CAOS_E_FILE,
-					KC85.PROP_ROM_M052_FILE };
+				KC85.PROP_ROM_BASIC_FILE,
+				KC85.PROP_ROM_CAOS_E_FILE,
+				KC85.PROP_ROM_M052_FILE,
+				KC85.PROP_ROM_M052USB_FILE };
 
   private static final String[] altRomTitles4 = {
-					"BASIC-ROM C000-DFFF",
-					"CAOS-ROM C000-CFFF (oder C000-DFFF)",
-					"CAOS-ROM E000-FFFF",
-					"M052-ROM (USB/Netzwerk)" };
+				"BASIC-ROM C000-DFFF",
+				"CAOS-ROM C000-CFFF (oder C000-DFFF)",
+				"CAOS-ROM E000-FFFF",
+				"ROM f\u00FCr erstes M052 (USB/Netzwerk)",
+				"ROM f\u00FCr weitere M052 (nur USB)" };
 
   private static final String[] altRomKeys4 = {
-					KC85.PROP_ROM_BASIC_FILE,
-					KC85.PROP_ROM_CAOS_C_FILE,
-					KC85.PROP_ROM_CAOS_E_FILE,
-					KC85.PROP_ROM_M052_FILE };
+				KC85.PROP_ROM_BASIC_FILE,
+				KC85.PROP_ROM_CAOS_C_FILE,
+				KC85.PROP_ROM_CAOS_E_FILE,
+				KC85.PROP_ROM_M052_FILE,
+				KC85.PROP_ROM_M052USB_FILE };
 
   private static final String[] altRomTitles5 = {
-					"BASIC-/USER-ROM C000-DFFF (4x8K)",
-					"CAOS-ROM C000-DFFF",
-					"CAOS-ROM E000-FFFF",
-					"M052-ROM (USB/Netzwerk)" };
+				"BASIC-/USER-ROM C000-DFFF (4x8K)",
+				"CAOS-ROM C000-DFFF",
+				"CAOS-ROM E000-FFFF",
+				"ROM f\u00FCr erstes M052 (USB/Netzwerk)",
+				"ROM f\u00FCr weitere M052 (nur USB)" };
 
   private static final String[] altRomKeys5 = {
-					KC85.PROP_ROM_BASIC_FILE,
-					KC85.PROP_ROM_CAOS_C_FILE,
-					KC85.PROP_ROM_CAOS_E_FILE,
-					KC85.PROP_ROM_M052_FILE };
+				KC85.PROP_ROM_BASIC_FILE,
+				KC85.PROP_ROM_CAOS_C_FILE,
+				KC85.PROP_ROM_CAOS_E_FILE,
+				KC85.PROP_ROM_M052_FILE,
+				KC85.PROP_ROM_M052USB_FILE };
 
   private int                  kcTypeNum;
   private String               modulePropPrefix;
@@ -151,34 +169,40 @@ public class KC85SettingsFld
   private JTable               tableModule;
   private JTabbedPane          tabbedPane;
   private JPanel               tabModule;
-  private JPanel               tabD004;
+  private JPanel               tabDiskStation;
   private JPanel               tabROM;
   private JPanel               tabEtc;
   private AutoLoadSettingsFld  tabAutoLoad;
   private AutoInputSettingsFld tabAutoInput;
-  private JPopupMenu           popupModule;
+  private JPopupMenu           popupModuleAdd;
+  private JPopupMenu           popupModuleChange;
+  private JMenuItem            mnuModuleEdit;
+  private JMenuItem            mnuModuleIntoD001orD002;
+  private JMenuItem            mnuModuleIntoDiskStation;
   private JButton              btnModuleAdd;
-  private JButton              btnModuleEdit;
+  private JButton              btnModuleChange;
   private JButton              btnModuleRemove;
   private JButton              btnModuleUp;
   private JButton              btnModuleDown;
-  private JCheckBox            btnD004Enabled;
-  private JComboBox<String>    comboD004Rom;
-  private JLabel               labelD004Rom;
-  private JLabel               labelD004Speed;
-  private JRadioButton         btnD004Speed4MHz;
-  private JRadioButton         btnD004Speed8MHz;
-  private JRadioButton         btnD004Speed16MHz;
-  private FileNameFld          fldD004RomFile;
-  private JButton              btnD004RomFileSelect;
-  private JButton              btnD004RomFileRemove;
+  private JRadioButton         rbDiskStationNone;
+  private JRadioButton         rbDiskStationD004_20;
+  private JRadioButton         rbDiskStationD004_33;
+  private JRadioButton         rbDiskStationD008;
+  private JLabel               labelDiskStationRom;
+  private JLabel               labelDiskStationSpeed;
+  private JRadioButton         rbDiskStationSpeedDefault;
+  private JRadioButton         rbDiskStationSpeed8MHz;
+  private JRadioButton         rbDiskStationSpeed16MHz;
+  private FileNameFld          fldDiskStationRomFile;
+  private JButton              btnDiskStationRomFileSelect;
+  private JButton              btnDiskStationRomFileRemove;
   private GIDESettingsFld      tabGIDE;
   private FileNameFld[]        altRomTextFlds;
   private JButton[]            altRomSelectBtns;
   private JButton[]            altRomRemoveBtns;
-  private JCheckBox            btnKeysDirectToBuf;
-  private JCheckBox            btnPasteFast;
-  private JCheckBox            btnVideoTiming;
+  private JCheckBox            cbKeysDirectToBuf;
+  private JCheckBox            cbPasteFast;
+  private JCheckBox            cbVideoTiming;
 
 
   public KC85SettingsFld(
@@ -206,12 +230,12 @@ public class KC85SettingsFld
 
     setLayout( new BorderLayout() );
 
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
     // Tab Module
-    this.tabModule = new JPanel( new GridBagLayout() );
+    this.tabModule = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Module", this.tabModule );
 
     GridBagConstraints gbcModule = new GridBagConstraints(
@@ -225,7 +249,7 @@ public class KC85SettingsFld
 
     this.tableModelModule = new KC85ModuleTableModel();
 
-    this.tableModule = new JTable( this.tableModelModule );
+    this.tableModule = GUIFactory.createTable( this.tableModelModule );
     this.tableModule.setAutoCreateRowSorter( false );
     this.tableModule.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
     this.tableModule.setColumnSelectionAllowed( false );
@@ -238,39 +262,51 @@ public class KC85SettingsFld
 			ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
     this.tableModule.addMouseListener( this );
 
-    this.tabModule.add( new JScrollPane( this.tableModule ), gbcModule );
+    this.tabModule.add(
+		GUIFactory.createScrollPane( this.tableModule ),
+		gbcModule );
 
     EmuUtil.setTableColWidths( this.tableModule, 60, 60, 300 );
 
-    JPanel panelModBtnRight = new JPanel( new GridLayout( 2, 1, 5, 5 ) );
+    JPanel panelModBtnRight = GUIFactory.createPanel(
+					new GridLayout( 2, 1, 5, 5 ) );
     gbcModule.fill    = GridBagConstraints.NONE;
     gbcModule.weightx = 0.0;
     gbcModule.weighty = 0.0;
     gbcModule.gridx++;
     this.tabModule.add( panelModBtnRight, gbcModule );
 
-    this.btnModuleUp = createImageButton( "/images/nav/up.png", "Auf" );
+    this.btnModuleUp = GUIFactory.createRelImageResourceButton(
+						this,
+						"nav/up.png",
+						"Auf" );
+    this.btnModuleUp.addActionListener( this );
     panelModBtnRight.add( this.btnModuleUp );
 
-    this.btnModuleDown = createImageButton( "/images/nav/down.png", "Ab" );
+    this.btnModuleDown = GUIFactory.createRelImageResourceButton(
+						this,
+						"nav/down.png",
+						"Ab" );
+    this.btnModuleDown.addActionListener( this );
     panelModBtnRight.add( this.btnModuleDown );
 
-    JPanel panelModBtnBottom = new JPanel( new GridLayout( 1, 3, 5, 5 ) );
+    JPanel panelModBtnBottom = GUIFactory.createPanel(
+					new GridLayout( 1, 3, 5, 5 ) );
     gbcModule.gridx = 0;
     gbcModule.gridy++;
     this.tabModule.add( panelModBtnBottom, gbcModule );
 
-    this.btnModuleAdd = new JButton( "Hinzuf\u00FCgen" );
+    this.btnModuleAdd = GUIFactory.createButtonAdd();
     this.btnModuleAdd.addActionListener( this );
     this.btnModuleAdd.addKeyListener( this );
     panelModBtnBottom.add( this.btnModuleAdd );
 
-    this.btnModuleEdit = new JButton( "Bearbeiten" );
-    this.btnModuleEdit.addActionListener( this );
-    this.btnModuleEdit.addKeyListener( this );
-    panelModBtnBottom.add( this.btnModuleEdit );
+    this.btnModuleChange = GUIFactory.createButton( "\u00C4ndern" );
+    this.btnModuleChange.addActionListener( this );
+    this.btnModuleChange.addKeyListener( this );
+    panelModBtnBottom.add( this.btnModuleChange );
 
-    this.btnModuleRemove = new JButton( "Entfernen" );
+    this.btnModuleRemove = GUIFactory.createButtonRemove();
     this.btnModuleRemove.addActionListener( this );
     this.btnModuleRemove.addKeyListener( this );
     panelModBtnBottom.add( this.btnModuleRemove );
@@ -280,50 +316,67 @@ public class KC85SettingsFld
       this.selModelModule.addListSelectionListener( this );
       this.btnModuleUp.setEnabled( false );
       this.btnModuleDown.setEnabled( false );
-      this.btnModuleEdit.setEnabled( false );
+      this.btnModuleChange.setEnabled( false );
       this.btnModuleRemove.setEnabled( false );
     }
 
-    this.popupModule = new JPopupMenu();
+    this.popupModuleAdd = GUIFactory.createPopupMenu();
 
-    JMenu mnuModRAM = new JMenu( "RAM-Module" );
-    this.popupModule.add( mnuModRAM );
+    JMenu mnuModuleRAM = GUIFactory.createMenu( "RAM-Module" );
+    this.popupModuleAdd.add( mnuModuleRAM );
 
-    JMenu mnuModROM = new JMenu( "ROM-Module" );
-    this.popupModule.add( mnuModROM );
+    JMenu mnuModuleROM = GUIFactory.createMenu( "ROM-Module" );
+    this.popupModuleAdd.add( mnuModuleROM );
 
-    JMenu mnuModEtc = new JMenu( "Sonstige Module" );
-    this.popupModule.add( mnuModEtc );
+    JMenu mnuModuleEtc = GUIFactory.createMenu( "Sonstige Module" );
+    this.popupModuleAdd.add( mnuModuleEtc );
 
     for( int i = 0; i < modules.length; i++ ) {
       String modName = modules[ i ][ MOD_IDX_NAME ];
       if( (kcTypeNum < 3) || !modName.equals( "M006" ) ) {
-	JMenuItem modItem = new JMenuItem( String.format(
+	JMenuItem modItem = GUIFactory.createMenuItem(
+				String.format(
 					"%s - %s",
 					modName,
 					modules[ i ][ MOD_IDX_DESC ] ) );
 	modItem.setActionCommand( ACTION_MODULE_ADD_PREFIX + modName );
 	modItem.addActionListener( this );
 	switch( modules[ i ][ MOD_IDX_TYPE ] ) {
-	  case "RAM":
-	    mnuModRAM.add( modItem );
+	  case MT_RAM:
+	    mnuModuleRAM.add( modItem );
 	    break;
-	  case "ROM":
-	    mnuModROM.add( modItem );
+	  case MT_ROM:
+	    mnuModuleROM.add( modItem );
 	    break;
-	  case "ETC":
-	    mnuModEtc.add( modItem );
+	  case MT_ETC:
+	    mnuModuleEtc.add( modItem );
 	    break;
 	}
       }
     }
 
+    this.popupModuleChange = GUIFactory.createPopupMenu();
 
-    // Tab D004
-    this.tabD004 = new JPanel( new GridBagLayout() );
-    this.tabbedPane.addTab( "D004", this.tabD004 );
+    this.mnuModuleEdit = GUIFactory.createMenuItem( "Bearbeiten..." );
+    this.mnuModuleEdit.addActionListener( this );
+    this.popupModuleChange.add( this.mnuModuleEdit );
 
-    GridBagConstraints gbcDisk = new GridBagConstraints(
+    this.mnuModuleIntoD001orD002 = GUIFactory.createMenuItem(
+						"In D001/D002 stecken" );
+    this.mnuModuleIntoD001orD002.addActionListener( this );
+    this.popupModuleChange.add( this.mnuModuleIntoD001orD002 );
+
+    this.mnuModuleIntoDiskStation = GUIFactory.createMenuItem(
+						"In D004/D008 stecken" );
+    this.mnuModuleIntoDiskStation.addActionListener( this );
+    this.popupModuleChange.add( this.mnuModuleIntoDiskStation );
+
+
+    // Tab D004/D008
+    this.tabDiskStation = GUIFactory.createPanel( new GridBagLayout() );
+    this.tabbedPane.addTab( "D004/D008", this.tabDiskStation );
+
+    GridBagConstraints gbcDiskStation = new GridBagConstraints(
 					0, 0,
 					GridBagConstraints.REMAINDER, 1,
 					0.0, 0.0,
@@ -332,88 +385,113 @@ public class KC85SettingsFld
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    this.btnD004Enabled = new JCheckBox(
-			"Floppy-Disk-Erweiterung D004 emulieren"
-					+ " (bei Bedarf mit GIDE)",
-			false );
-    this.btnD004Enabled.addActionListener( this );
-    this.tabD004.add( this.btnD004Enabled, gbcDisk );
+    ButtonGroup grpDiskStation = new ButtonGroup();
 
-    this.labelD004Rom   = new JLabel( "D004-ROM:" );
-    gbcDisk.insets.left = 50;
-    gbcDisk.insets.top  = 20;
-    gbcDisk.gridwidth   = 1;
-    gbcDisk.gridy++;
-    this.tabD004.add( this.labelD004Rom, gbcDisk );
+    this.rbDiskStationNone = GUIFactory.createRadioButton(
+		"Keine Floppy-Disk-Erweiterung emulieren",
+		true );
+    grpDiskStation.add( this.rbDiskStationNone );
+    this.rbDiskStationNone.addActionListener( this );
+    this.tabDiskStation.add( this.rbDiskStationNone, gbcDiskStation );
 
-    this.comboD004Rom = new JComboBox<>();
-    this.comboD004Rom.setEditable( false );
-    this.comboD004Rom.addItem( "Version 2.0" );
-    this.comboD004Rom.addItem( "Version 3.3" );
-    this.comboD004Rom.addItem( "Datei" );
-    this.comboD004Rom.addActionListener( this );
-    gbcDisk.insets.left = 0;
-    gbcDisk.gridx++;
-    this.tabD004.add( this.comboD004Rom, gbcDisk );
+    this.rbDiskStationD004_20 = GUIFactory.createRadioButton(
+		"Floppy-Disk-Erweiterung D004 mit Original-ROM-Version 2.0"
+					+ " (optional mit GIDE)" );
+    grpDiskStation.add( this.rbDiskStationD004_20 );
+    this.rbDiskStationD004_20.addActionListener( this );
+    gbcDiskStation.insets.top = 0;
+    gbcDiskStation.gridy++;
+    this.tabDiskStation.add( this.rbDiskStationD004_20, gbcDiskStation );
 
-    this.fldD004RomFile = new FileNameFld();
-    gbcDisk.fill        = GridBagConstraints.HORIZONTAL;
-    gbcDisk.weightx     = 1.0;
-    gbcDisk.insets.top  = 0;
-    gbcDisk.insets.left = 50;
-    gbcDisk.gridwidth   = 2;
-    gbcDisk.gridx       = 0;
-    gbcDisk.gridy++;
-    this.tabD004.add( this.fldD004RomFile, gbcDisk );
+    this.rbDiskStationD004_33 = GUIFactory.createRadioButton(
+		"Floppy-Disk-Erweiterung D004 mit ROM-Version 3.31"
+					+ " (optional mit GIDE)" );
+    grpDiskStation.add( this.rbDiskStationD004_33 );
+    this.rbDiskStationD004_33.addActionListener( this );
+    gbcDiskStation.insets.top = 0;
+    gbcDiskStation.gridy++;
+    this.tabDiskStation.add( this.rbDiskStationD004_33, gbcDiskStation );
 
-    this.btnD004RomFileSelect = createImageButton(
-					"/images/file/open.png",
-					"ROM-Datei ausw\u00E4hlen" );
-    gbcDisk.fill        = GridBagConstraints.NONE;
-    gbcDisk.weightx     = 0.0;
-    gbcDisk.insets.left = 0;
-    gbcDisk.gridwidth   = 1;
-    gbcDisk.gridx += 2;
-    this.tabD004.add( this.btnD004RomFileSelect, gbcDisk );
+    this.rbDiskStationD008 = GUIFactory.createRadioButton(
+		"Floppy-Disk-Erweiterung D008 (immer mit GIDE)" );
+    grpDiskStation.add( this.rbDiskStationD008 );
+    this.rbDiskStationD008.addActionListener( this );
+    gbcDiskStation.gridy++;
+    this.tabDiskStation.add( this.rbDiskStationD008, gbcDiskStation );
 
-    this.btnD004RomFileRemove = createImageButton(
-					"/images/file/delete.png",
-					"ROM-Datei entfernen" );
-    gbcDisk.gridx++;
-    this.tabD004.add( this.btnD004RomFileRemove, gbcDisk );
+    this.labelDiskStationRom = GUIFactory.createLabel(
+				"Alternativer D004/D008-ROM-Inhalt:" );
+    gbcDiskStation.insets.top = 20;
+    gbcDiskStation.gridy++;
+    this.tabDiskStation.add( this.labelDiskStationRom, gbcDiskStation );
 
-    this.labelD004Speed = new JLabel( "Taktfrequenz:" );
-    gbcDisk.insets.left = 50;
-    gbcDisk.insets.top  = 20;
-    gbcDisk.gridwidth   = 1;
-    gbcDisk.gridx       = 0;
-    gbcDisk.gridy++;
-    this.tabD004.add( this.labelD004Speed, gbcDisk );
+    this.fldDiskStationRomFile = new FileNameFld();
+    gbcDiskStation.fill        = GridBagConstraints.HORIZONTAL;
+    gbcDiskStation.weightx     = 1.0;
+    gbcDiskStation.insets.top  = 0;
+    gbcDiskStation.gridwidth   = 1;
+    gbcDiskStation.gridy++;
+    this.tabDiskStation.add( this.fldDiskStationRomFile, gbcDiskStation );
 
-    JPanel panelD004Speed = new JPanel(
+    this.btnDiskStationRomFileSelect
+		= GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					EmuUtil.TEXT_SELECT_ROM_FILE );
+    this.btnDiskStationRomFileSelect.addActionListener( this );
+    gbcDiskStation.fill        = GridBagConstraints.NONE;
+    gbcDiskStation.weightx     = 0.0;
+    gbcDiskStation.insets.left = 0;
+    gbcDiskStation.gridx++;
+    this.tabDiskStation.add(
+		this.btnDiskStationRomFileSelect,
+		gbcDiskStation );
+
+    this.btnDiskStationRomFileRemove
+		= GUIFactory.createRelImageResourceButton(
+					this,
+					"file/delete.png",
+					EmuUtil.TEXT_REMOVE_ROM_FILE );
+    this.btnDiskStationRomFileRemove.addActionListener( this );
+    gbcDiskStation.gridx++;
+    this.tabDiskStation.add(
+		this.btnDiskStationRomFileRemove,
+		gbcDiskStation );
+
+    this.labelDiskStationSpeed = GUIFactory.createLabel( "Taktfrequenz:" );
+    gbcDiskStation.insets.left = 5;
+    gbcDiskStation.insets.top  = 20;
+    gbcDiskStation.gridwidth   = GridBagConstraints.REMAINDER;
+    gbcDiskStation.gridx       = 0;
+    gbcDiskStation.gridy++;
+    this.tabDiskStation.add( this.labelDiskStationSpeed, gbcDiskStation );
+
+    JPanel panelDiskStationSpeed = GUIFactory.createPanel(
 			new FlowLayout( FlowLayout.LEFT, 10, 0 ) );
-    gbcDisk.insets.top    = 0;
-    gbcDisk.insets.bottom = 5;
-    gbcDisk.gridwidth     = GridBagConstraints.REMAINDER;
-    gbcDisk.gridy++;
-    this.tabD004.add( panelD004Speed, gbcDisk );
+    gbcDiskStation.insets.top    = 0;
+    gbcDiskStation.insets.bottom = 5;
+    gbcDiskStation.gridwidth     = GridBagConstraints.REMAINDER;
+    gbcDiskStation.gridy++;
+    this.tabDiskStation.add( panelDiskStationSpeed, gbcDiskStation );
 
-    ButtonGroup grpD004Speed = new ButtonGroup();
+    ButtonGroup grpDiskStationSpeed = new ButtonGroup();
 
-    this.btnD004Speed4MHz = new JRadioButton( "4 MHz (original)", true );
-    this.btnD004Speed4MHz.addActionListener( this );
-    grpD004Speed.add( this.btnD004Speed4MHz );
-    panelD004Speed.add( this.btnD004Speed4MHz );
+    this.rbDiskStationSpeedDefault = GUIFactory.createRadioButton(
+							"Original",
+							true );
+    this.rbDiskStationSpeedDefault.addActionListener( this );
+    grpDiskStationSpeed.add( this.rbDiskStationSpeedDefault );
+    panelDiskStationSpeed.add( this.rbDiskStationSpeedDefault );
 
-    this.btnD004Speed8MHz = new JRadioButton( "8 MHz", false );
-    this.btnD004Speed8MHz.addActionListener( this );
-    grpD004Speed.add( this.btnD004Speed8MHz );
-    panelD004Speed.add( this.btnD004Speed8MHz );
+    this.rbDiskStationSpeed8MHz = GUIFactory.createRadioButton( "8 MHz" );
+    this.rbDiskStationSpeed8MHz.addActionListener( this );
+    grpDiskStationSpeed.add( this.rbDiskStationSpeed8MHz );
+    panelDiskStationSpeed.add( this.rbDiskStationSpeed8MHz );
 
-    this.btnD004Speed16MHz = new JRadioButton( "16 MHz", false );
-    this.btnD004Speed16MHz.addActionListener( this );
-    grpD004Speed.add( this.btnD004Speed16MHz );
-    panelD004Speed.add( this.btnD004Speed16MHz );
+    this.rbDiskStationSpeed16MHz = GUIFactory.createRadioButton( "16 MHz" );
+    this.rbDiskStationSpeed16MHz.addActionListener( this );
+    grpDiskStationSpeed.add( this.rbDiskStationSpeed16MHz );
+    panelDiskStationSpeed.add( this.rbDiskStationSpeed16MHz );
 
 
     // Tab GIDE
@@ -422,7 +500,7 @@ public class KC85SettingsFld
 
 
     // Tab ROM
-    this.tabROM = new JPanel( new GridBagLayout() );
+    this.tabROM = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "ROM", this.tabROM );
 
     GridBagConstraints gbcROM = new GridBagConstraints(
@@ -434,7 +512,9 @@ public class KC85SettingsFld
 						new Insets( 5, 5, 5, 5 ),
 						0, 0 );
 
-    this.tabROM.add( new JLabel( "Alternative ROM-Inhalte:" ), gbcROM );
+    this.tabROM.add(
+		GUIFactory.createLabel( "Alternative ROM-Inhalte:" ),
+		gbcROM );
 
     this.altRomTextFlds   = new FileNameFld[ this.altRomTitles.length ];
     this.altRomSelectBtns = new JButton[ this.altRomTitles.length ];
@@ -444,7 +524,9 @@ public class KC85SettingsFld
       gbcROM.insets.bottom = 0;
       gbcROM.gridx         = 0;
       gbcROM.gridy++;
-      this.tabROM.add( new JLabel( this.altRomTitles[ i ] + ":" ), gbcROM );
+      this.tabROM.add(
+		GUIFactory.createLabel( this.altRomTitles[ i ] + ":" ),
+		gbcROM );
 
       FileNameFld fld      = new FileNameFld();
       gbcROM.fill          = GridBagConstraints.HORIZONTAL;
@@ -455,9 +537,11 @@ public class KC85SettingsFld
       this.tabROM.add( fld, gbcROM );
       this.altRomTextFlds[ i ] = fld;
 
-      JButton btn = createImageButton(
-				"/images/file/open.png",
-				"ROM-Datei ausw\u00E4hlen" );
+      JButton btn = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					EmuUtil.TEXT_SELECT_ROM_FILE );
+      btn.addActionListener( this );
       gbcROM.fill        = GridBagConstraints.NONE;
       gbcROM.weightx     = 0.0;
       gbcROM.insets.left = 0;
@@ -465,9 +549,11 @@ public class KC85SettingsFld
       this.tabROM.add( btn, gbcROM );
       this.altRomSelectBtns[ i ] = btn;
 
-      btn = createImageButton(
-			"/images/file/delete.png",
-			"ROM-Datei entfernen" );
+      btn = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/delete.png",
+					EmuUtil.TEXT_REMOVE_ROM_FILE );
+      btn.addActionListener( this );
       gbcROM.gridx++;
       this.tabROM.add( btn, gbcROM );
       this.altRomRemoveBtns[ i ] = btn;
@@ -475,7 +561,7 @@ public class KC85SettingsFld
 
 
     // Tab Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabEtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
@@ -487,56 +573,57 @@ public class KC85SettingsFld
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    this.btnKeysDirectToBuf = new JCheckBox(
+    this.cbKeysDirectToBuf = GUIFactory.createCheckBox(
 			"Schnellere Tastatureingaben durch direktes"
-				+ " Schreiben in den Tastaturpuffer",
-			false );
-    this.btnKeysDirectToBuf.addActionListener( this );
-    this.tabEtc.add( this.btnKeysDirectToBuf, gbcEtc );
+				+ " Schreiben in den Tastaturpuffer" );
+    this.cbKeysDirectToBuf.addActionListener( this );
+    this.tabEtc.add( this.cbKeysDirectToBuf, gbcEtc );
 
-    this.btnPasteFast = new JCheckBox(
-		"Einf\u00FCgen von Text direkt in den Tastaturpuffer",
+    this.cbPasteFast = GUIFactory.createCheckBox(
+		"Einf\u00FCgen von Text aus der Zwischenablage"
+			+ " direkt in den Tastaturpuffer",
 		true );
     gbcEtc.insets.top = 0;
     gbcEtc.gridy++;
-    this.btnPasteFast.addActionListener( this );
-    this.tabEtc.add( this.btnPasteFast, gbcEtc );
+    this.cbPasteFast.addActionListener( this );
+    this.tabEtc.add( this.cbPasteFast, gbcEtc );
 
     gbcEtc.fill       = GridBagConstraints.HORIZONTAL;
     gbcEtc.weightx    = 1.0;
     gbcEtc.insets.top = 10;
     gbcEtc.gridy++;
-    this.tabEtc.add( new JSeparator(), gbcEtc );
+    this.tabEtc.add( GUIFactory.createSeparator(), gbcEtc );
 
     gbcEtc.fill    = GridBagConstraints.NONE;
     gbcEtc.weightx = 0.0;
     gbcEtc.gridy++;
     this.tabEtc.add(
-	new JLabel( "Die folgende Option ist f\u00FCr die korrekte"
-			+ " Darstellung einiger Programme notwendig," ),
+	GUIFactory.createLabel( "Die folgende Option ist"
+		+ " f\u00FCr die korrekte Darstellung"
+		+ " einiger Programme notwendig," ),
 	gbcEtc );
 
     gbcEtc.insets.top = 0;
     gbcEtc.gridy++;
     this.tabEtc.add(
-	new JLabel( "ben\u00F6tigt aber relativ viel"
-			+ " Rechenleistung. Sollte diese Leistung nicht zur" ),
+	GUIFactory.createLabel( "ben\u00F6tigt aber relativ viel"
+		+ " Rechenleistung. Sollte diese Leistung nicht zur" ),
 	gbcEtc );
 
     gbcEtc.gridy++;
     this.tabEtc.add(
-	new JLabel( "Verf\u00FCgung stehen,"
-			+ " dann schalten Sie die Option bitte aus." ),
+	GUIFactory.createLabel( "Verf\u00FCgung stehen,"
+		+ " dann schalten Sie die Option bitte aus." ),
 	gbcEtc );
 
-    this.btnVideoTiming = new JCheckBox(
+    this.cbVideoTiming = GUIFactory.createCheckBox(
 			"Zeitverhalten der Bildschirmsteuerung emulieren",
 			KC85.getDefaultEmulateVideoTiming() );
-    this.btnVideoTiming.addActionListener( this );
+    this.cbVideoTiming.addActionListener( this );
     gbcEtc.insets.top    = 5;
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
-    this.tabEtc.add( this.btnVideoTiming, gbcEtc );
+    this.tabEtc.add( this.cbVideoTiming, gbcEtc );
 
 
     // Tab AutoLoad
@@ -554,6 +641,7 @@ public class KC85SettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 		settingsFrm,
 		propPrefix,
+		KC85.getAutoInputCharSet(),
 		KC85.DEFAULT_SWAP_KEY_CHAR_CASE,
 		this.kcTypeNum < 4 ?
 			KC85.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX_2
@@ -562,7 +650,7 @@ public class KC85SettingsFld
 
 
     // Drag&Drop ermoeglichen
-    (new DropTarget( this.fldD004RomFile, this )).setActive( true );
+    (new DropTarget( this.fldDiskStationRomFile, this )).setActive( true );
     for( int i = 0; i < this.altRomTextFlds.length; i++ ) {
       (new DropTarget( this.altRomTextFlds[ i ], this )).setActive( true );
     }
@@ -583,30 +671,7 @@ public class KC85SettingsFld
       this.btnModuleUp.setEnabled( (nSelRows == 1) && (selRowNum > 0) );
       this.btnModuleDown.setEnabled( stateOne && (selRowNum < (nRows - 1)) );
       this.btnModuleRemove.setEnabled( nSelRows > 0 );
-      if( stateOne ) {
-	int row = this.tableModule.convertRowIndexToModel( selRowNum );
-	if( row >= 0 ) {
-	  String[] cells = this.tableModelModule.getRow( row );
-	  if( cells != null ) {
-	    if( cells.length > 1 ) {
-	      String moduleName = cells[ 1 ];
-	      if( moduleName != null ) {
-		if( moduleName.equals( "M025" )
-		    || moduleName.equals( "M028" )
-		    || moduleName.equals( "M040" )
-		    || moduleName.equals( "M045" )
-		    || moduleName.equals( "M046" )
-		    || moduleName.equals( "M047" )
-		    || moduleName.equals( "M048" ) )
-		{
-		  stateEdit = true;
-		}
-	      }
-	    }
-	  }
-	}
-      }
-      this.btnModuleEdit.setEnabled( stateEdit );
+      this.btnModuleChange.setEnabled( stateOne );
     }
   }
 
@@ -616,12 +681,16 @@ public class KC85SettingsFld
   @Override
   public void mouseClicked( MouseEvent e )
   {
-    if( (e.getButton() == MouseEvent.BUTTON1)
-	&& (e.getClickCount() > 1)
-	&& (e.getComponent() == this.tableModule) )
-    {
-      doModuleEdit();
-      e.consume();
+    if( e.getComponent() == this.tableModule ) {
+      if( e.isPopupTrigger() ) {
+	showModuleChangePopup( e );
+      }
+      else if( (e.getButton() == MouseEvent.BUTTON1)
+	       && (e.getClickCount() > 1) )
+      {
+	doModuleEdit();
+	e.consume();
+      }
     }
   }
 
@@ -643,14 +712,27 @@ public class KC85SettingsFld
   @Override
   public void mousePressed( MouseEvent e )
   {
-    // leer
+    if( (e.getComponent() == this.tableModule) && e.isPopupTrigger() )
+      showModuleChangePopup( e );
   }
 
 
   @Override
   public void mouseReleased( MouseEvent e )
   {
-    // leer
+    if( (e.getComponent() == this.tableModule) && e.isPopupTrigger() )
+      showModuleChangePopup( e );
+  }
+
+
+	/* --- PopupMenusOwner --- */
+
+  @Override
+  public JPopupMenu[] getPopupMenus()
+  {
+    return new JPopupMenu[] {
+			this.popupModuleAdd,
+			this.popupModuleChange };
   }
 
 
@@ -658,15 +740,19 @@ public class KC85SettingsFld
 
   @Override
   public void applyInput(
-			Properties props,
-			boolean    selected ) throws UserInputException
+		Properties props,
+		boolean    selected ) throws
+					UserCancelException,
+					UserInputException
   {
     Component tab = null;
     try {
 
       // Tab Module
-      tab = this.tabModule;
-      int nRows = this.tableModelModule.getRowCount();
+      EmuUtil.removePropertiesByPrefix( props, this.modulePropPrefix );
+      tab                     = this.tabModule;
+      int nDiskStationModules = 0;
+      int nRows               = this.tableModelModule.getRowCount();
       for( int i = 0; i < nRows; i++ ) {
 	Object slotObj   = this.tableModelModule.getValueAt( i, 0 );
 	Object moduleObj = this.tableModelModule.getValueAt( i, 1 );
@@ -693,6 +779,9 @@ public class KC85SettingsFld
 				props,
 				prefix + KC85.PROP_FILE,
 				fileName );
+	      if( KC85ModuleTableModel.isDiskStationSlot( slotText ) ) {
+		nDiskStationModules++;
+	      }
 	    }
 	  }
 	}
@@ -700,52 +789,53 @@ public class KC85SettingsFld
       props.setProperty(
 		this.modulePropPrefix + KC85.PROP_COUNT,
 		Integer.toString( nRows ) );
-
-      // Tab D004
-      tab = this.tabD004;
-      boolean d004Enabled = this.btnD004Enabled.isSelected();
       props.setProperty(
-		this.propPrefix + KC85.PROP_D004_ENABLED,
-		Boolean.toString( d004Enabled ) );
-      String d004Rom = KC85.VALUE_STANDARD;
-      switch( this.comboD004Rom.getSelectedIndex() ) {
-	case 0:
-	  d004Rom = "2.0";
-	  break;
-	case 1:
-	  d004Rom = "3.3";
-	  break;
-	case 2:
-	  {
-	    File file = this.fldD004RomFile.getFile();
-	    if( (file == null) && d004Enabled ) {
-	      if( selected ) {
-		this.tabbedPane.setSelectedComponent( this.tabD004 );
-		throw new UserInputException(
-			"D004-ROM: Bitte w\u00E4hlen Sie eine ROM-Datei aus\n"
-				+ "oder stellen Sie einen anderen D004-ROM"
-				+ " ein." );
-	      }
-	    }
-	    if( file != null ) {
-	      d004Rom = KC85.VALUE_PREFIX_FILE + file.getPath();
-	    }
-	  }
-	  break;
+		this.modulePropPrefix + KC85.PROP_DISKSTATION_MODULE_COUNT,
+		Integer.toString( nDiskStationModules ) );
+      if( !isDiskStationEnabled() && (nDiskStationModules > 0) ) {
+	throw new UserInputException(
+		"Sie k\u00F6nnen nur dann Module in die D004-Sch\u00E4chte"
+			+ "F0 und F4 stecken,\n"
+			+ "wenn Sie die D004-Emulation aktivieren." );
       }
-      props.setProperty( this.propPrefix + KC85.PROP_D004_ROM, d004Rom );
-      if( this.btnD004Speed8MHz.isSelected() ) {
+
+      // Tab D004/D008
+      tab                   = this.tabDiskStation;
+      String diskStation    = KC85.VALUE_NONE;
+      String diskStationRom = KC85.VALUE_DEFAULT;
+      if( this.rbDiskStationD004_20.isSelected() ) {
+	diskStation    = KC85.VALUE_D004;
+	diskStationRom = KC85.VALUE_ROM_20;
+      } else if( this.rbDiskStationD004_33.isSelected() ) {
+	diskStation    = KC85.VALUE_D004;
+	diskStationRom = KC85.VALUE_ROM_33;
+      } else if( this.rbDiskStationD008.isSelected() ) {
+	diskStation = KC85.VALUE_D008;
+      }
+      EmuUtil.setProperty(
+		props,
+		this.propPrefix + KC85.PROP_DISKSTATION,
+		diskStation );
+      File diskStationRomFile = this.fldDiskStationRomFile.getFile();
+      if( diskStationRomFile != null ) {
+	diskStationRom = KC85.VALUE_PREFIX_FILE
+				+ diskStationRomFile.getPath();
+      }
+      props.setProperty(
+		this.propPrefix + KC85.PROP_DISKSTATION_ROM,
+		diskStationRom );
+      if( this.rbDiskStationSpeed8MHz.isSelected() ) {
 	props.setProperty(
-		this.propPrefix + KC85.PROP_D004_MAXSPEED_KHZ,
+		this.propPrefix + KC85.PROP_DISKSTATION_MAXSPEED_KHZ,
 		"8000" );
-      } else if( this.btnD004Speed16MHz.isSelected() ) {
+      } else if( this.rbDiskStationSpeed16MHz.isSelected() ) {
 	props.setProperty(
-		this.propPrefix + KC85.PROP_D004_MAXSPEED_KHZ,
+		this.propPrefix + KC85.PROP_DISKSTATION_MAXSPEED_KHZ,
 		"16000" );
       } else {
 	props.setProperty(
-		this.propPrefix + KC85.PROP_D004_MAXSPEED_KHZ,
-		"4000" );
+		this.propPrefix + KC85.PROP_DISKSTATION_MAXSPEED_KHZ,
+		KC85.VALUE_DEFAULT );
       }
 
       // Tab GIDE
@@ -763,15 +853,18 @@ public class KC85SettingsFld
 
       // Tab Sonstiges
       tab = this.tabEtc;
-      props.setProperty(
+      EmuUtil.setProperty(
+		props,
 		this.propPrefix + KC85.PROP_KEYS_DIRECT_TO_BUFFER,
-		Boolean.toString( this.btnKeysDirectToBuf.isSelected() ) );
-      props.setProperty(
+		this.cbKeysDirectToBuf.isSelected() );
+      EmuUtil.setProperty(
+		props,
 		this.propPrefix + KC85.PROP_PASTE_FAST,
-		Boolean.toString( this.btnPasteFast.isSelected() ) );
-      props.setProperty(
+		this.cbPasteFast.isSelected() );
+      EmuUtil.setProperty(
+		props,
 		this.propPrefix + KC85.PROP_EMULATE_VIDEO_TIMING,
-		Boolean.toString( this.btnVideoTiming.isSelected() ) );
+		this.cbVideoTiming.isSelected() );
 
       // Tab AutoLoad
       tab = this.tabAutoLoad;
@@ -801,9 +894,9 @@ public class KC85SettingsFld
       if( src == this.btnModuleAdd ) {
 	rv = true;
 	doModuleAdd();
-      } else if( src == this.btnModuleEdit ) {
+      } else if( src == this.btnModuleChange ) {
 	rv = true;
-	doModuleEdit();
+	doModuleChange();
       } else if( src == this.btnModuleRemove ) {
 	rv = true;
 	doModuleRemove();
@@ -813,25 +906,36 @@ public class KC85SettingsFld
       } else if( src == this.btnModuleDown ) {
 	rv = true;
 	doModuleMove( 1 );
-      } else if( (src == this.btnD004Enabled)
-	       || (src == this.comboD004Rom)
-	       || (src == this.btnD004Speed4MHz)
-	       || (src == this.btnD004Speed8MHz)
-	       || (src == this.btnD004Speed16MHz) )
+      } else if( src == this.mnuModuleEdit ) {
+	rv = true;
+	doModuleEdit();
+      } else if( src == this.mnuModuleIntoD001orD002 ) {
+	rv = true;
+	doModuleIntoD001orD002();
+      } else if( src == this.mnuModuleIntoDiskStation ) {
+	rv = true;
+	doModuleIntoDiskStation();
+      } else if( (src == this.rbDiskStationNone)
+	       || (src == this.rbDiskStationD004_20)
+	       || (src == this.rbDiskStationD004_33)
+	       || (src == this.rbDiskStationD008)
+	       || (src == this.rbDiskStationSpeedDefault)
+	       || (src == this.rbDiskStationSpeed8MHz)
+	       || (src == this.rbDiskStationSpeed16MHz) )
       {
 	rv = true;
 	fireDataChanged();
-	updD004FieldsEnabled();
-      } else if( src == this.btnD004RomFileSelect ) {
+	updDiskStationFieldsEnabled();
+      } else if( src == this.btnDiskStationRomFileSelect ) {
 	rv = true;
 	doRomFileSelect(
-	      this.fldD004RomFile,
-	      this.btnD004RomFileRemove,
-	      "D004-ROM-Datei ausw\u00E4hlen" );
-      } else if( src == this.btnD004RomFileRemove ) {
+	      this.fldDiskStationRomFile,
+	      this.btnDiskStationRomFileRemove,
+	      "D004/D008-ROM-Datei ausw\u00E4hlen" );
+      } else if( src == this.btnDiskStationRomFileRemove ) {
 	rv = true;
-	doD004RomFileRemove();
-      } else if( src == this.btnKeysDirectToBuf ) {
+	doDiskStationRomFileRemove();
+      } else if( src == this.cbKeysDirectToBuf ) {
 	rv = true;
 	updPasteFastEnabled();
 	fireDataChanged();
@@ -842,11 +946,11 @@ public class KC85SettingsFld
 	    int len = ACTION_MODULE_ADD_PREFIX.length();
 	    if( cmd.length() > len ) {
 	      addModule( cmd.substring( len ) );
+	      fireDataChanged();
 	      rv = true;
 	    }
 	  }
 	}
-	fireDataChanged();
       }
       if( !rv ) {
 	for( int i = 0; i < this.altRomSelectBtns.length; i++ ) {
@@ -866,6 +970,7 @@ public class KC85SettingsFld
 	    rv = true;
 	    this.altRomTextFlds[ i ].setFile( null );
 	    this.altRomRemoveBtns[ i ].setEnabled( false );
+	    fireDataChanged();
 	  }
 	}
       }
@@ -894,8 +999,8 @@ public class KC85SettingsFld
     boolean           rejected = false;
     DropTargetContext context  = e.getDropTargetContext();
     if( context != null ) {
-      if( context.getComponent() == this.fldD004RomFile ) {
-	if( !this.fldD004RomFile.isEnabled() ) {
+      if( context.getComponent() == this.fldDiskStationRomFile ) {
+	if( !this.fldDiskStationRomFile.isEnabled() ) {
 	  e.rejectDrag();
 	  rejected = true;
 	}
@@ -908,16 +1013,14 @@ public class KC85SettingsFld
 
 
   @Override
-  protected boolean fileDropped( Component c, File file )
+  protected void fileDropped( Component c, File file )
   {
-    boolean rv = false;
-    if( c == this.fldD004RomFile ) {
-      if( this.fldD004RomFile.isEnabled() ) {
-	this.fldD004RomFile.setFile( file );
-	this.btnD004RomFileRemove.setEnabled( file != null );
+    if( c == this.fldDiskStationRomFile ) {
+      if( this.fldDiskStationRomFile.isEnabled() ) {
+	this.fldDiskStationRomFile.setFile( file );
+	this.btnDiskStationRomFileRemove.setEnabled( file != null );
 	Main.setLastFile( file, Main.FILE_GROUP_ROM );
 	fireDataChanged();
-	rv = true;
       }
     } else {
       for( int i = 0; i < this.altRomTextFlds.length; i++ ) {
@@ -926,23 +1029,9 @@ public class KC85SettingsFld
 	  this.altRomRemoveBtns[ i ].setEnabled( file != null );
 	  Main.setLastFile( file, Main.FILE_GROUP_ROM );
 	  fireDataChanged();
-	  rv = true;
 	  break;
 	}
       }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    this.tabGIDE.lookAndFeelChanged();
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-    if( this.popupModule != null ) {
-      SwingUtilities.updateComponentTreeUI( this.popupModule );
     }
   }
 
@@ -957,9 +1046,17 @@ public class KC85SettingsFld
 				props,
 				this.modulePropPrefix + KC85.PROP_COUNT,
 				0 );
+      int nDiskStationModules = EmuUtil.getIntProperty(
+				props,
+				this.modulePropPrefix
+					+ KC85.PROP_DISKSTATION_MODULE_COUNT,
+				0 );
       int     slotNum = 8;
       boolean loop    = true;
-      while( loop && (nRemain > 0) ) {
+      while( loop && (nRemain > 0) && (slotNum < 0x100) ) {
+	if( nRemain == nDiskStationModules ) {
+	  slotNum = 0xF0;
+	}
 	String slotText = String.format( "%02X", slotNum );
 	String prefix   = String.format(
 				"%s%s.",
@@ -975,47 +1072,62 @@ public class KC85SettingsFld
       }
     }
 
-    // Tab D004
-    this.btnD004Enabled.setSelected(
-			EmuUtil.getBooleanProperty(
-				props,
-				this.propPrefix + KC85.PROP_D004_ENABLED,
-				false ) );
+    // Tab D004/D008
+    boolean diskStationRom20   = false;
+    String  diskStationRomFile = null;
     try {
-      String d004Rom = EmuUtil.getProperty(
-				props,
-				this.propPrefix + KC85.PROP_D004_ROM );
-      if( d004Rom.equals( "2.0" ) ) {
-	this.comboD004Rom.setSelectedIndex( 0 );
+      String romType = EmuUtil.getProperty(
+			props,
+			this.propPrefix + KC85.PROP_DISKSTATION_ROM );
+      if( romType.equals( KC85.VALUE_ROM_20 ) ) {
+	diskStationRom20 = true;
       }
-      else if( d004Rom.equals( "3.3" ) ) {
-	this.comboD004Rom.setSelectedIndex( 1 );
-      }
-      else if( d004Rom.toLowerCase().startsWith( KC85.VALUE_PREFIX_FILE ) )
-      {
-	this.comboD004Rom.setSelectedIndex( 2 );
-	if( d004Rom.length() > KC85.VALUE_PREFIX_FILE.length() ) {
-	  this.fldD004RomFile.setFileName(
-		d004Rom.substring( KC85.VALUE_PREFIX_FILE.length() ) );
-	} else {
-	  this.fldD004RomFile.setFile( null );
-	}
-      } else {
-	this.comboD004Rom.setSelectedIndex( this.kcTypeNum > 4 ? 1 : 0 );
+      else if( romType.toLowerCase().startsWith( KC85.VALUE_PREFIX_FILE ) ) {
+	diskStationRomFile = 
+			romType.substring( KC85.VALUE_PREFIX_FILE.length() );
       }
     }
     catch( IllegalArgumentException ex ) {}
-    String d004Speed = EmuUtil.getProperty(
+    this.fldDiskStationRomFile.setFileName(
+		diskStationRomFile != null ? diskStationRomFile : null );
+
+    boolean diskStationRomState = true;
+    switch( EmuUtil.getProperty(
 			props,
-			this.propPrefix + KC85.PROP_D004_MAXSPEED_KHZ );
-    if( d004Speed.equals( "8000" ) ) {
-      this.btnD004Speed8MHz.setSelected( true );
-    } else if( d004Speed.equals( "16000" ) ) {
-      this.btnD004Speed16MHz.setSelected( true );
-    } else {
-      this.btnD004Speed4MHz.setSelected( true );
+			this.propPrefix + KC85.PROP_DISKSTATION ) )
+    {
+      case KC85.VALUE_D004:
+	if( diskStationRom20 ) {
+	  this.rbDiskStationD004_20.setSelected( true );
+	} else {
+	  this.rbDiskStationD004_33.setSelected( true );
+	}
+	break;
+      case KC85.VALUE_D008:
+	this.rbDiskStationD008.setSelected( true );
+	break;
+      default:
+	this.rbDiskStationNone.setSelected( true );
+	diskStationRomState = false;
+	break;
     }
-    updD004FieldsEnabled();
+    this.labelDiskStationRom.setEnabled( diskStationRomState );
+    this.fldDiskStationRomFile.setEnabled( diskStationRomState );
+
+    switch( EmuUtil.getProperty(
+		props,
+		this.propPrefix + KC85.PROP_DISKSTATION_MAXSPEED_KHZ ) )
+    {
+      case "8000":
+	this.rbDiskStationSpeed8MHz.setSelected( true );
+	break;
+      case "16000":
+	this.rbDiskStationSpeed16MHz.setSelected( true );
+	break;
+      default:
+	this.rbDiskStationSpeedDefault.setSelected( true );
+    }
+    updDiskStationFieldsEnabled();
 
     // Tab GIDE
     this.tabGIDE.updFields( props );
@@ -1031,17 +1143,17 @@ public class KC85SettingsFld
     }
 
     // Tab Sonstiges
-    this.btnKeysDirectToBuf.setSelected(
+    this.cbKeysDirectToBuf.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + KC85.PROP_KEYS_DIRECT_TO_BUFFER,
 			false ) );
-    this.btnPasteFast.setSelected(
+    this.cbPasteFast.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + KC85.PROP_PASTE_FAST,
 			true ) );
-    this.btnVideoTiming.setSelected(
+    this.cbVideoTiming.setSelected(
 		EmuUtil.getBooleanProperty(
 			props,
 			this.propPrefix + KC85.PROP_EMULATE_VIDEO_TIMING,
@@ -1058,72 +1170,115 @@ public class KC85SettingsFld
 
 	/* --- Aktionen --- */
 
-  private void doD004RomFileRemove()
+  private void doDiskStationRomFileRemove()
   {
-    this.fldD004RomFile.setFile( null );
-    this.btnD004RomFileRemove.setEnabled( false );
+    this.fldDiskStationRomFile.setFile( null );
+    this.btnDiskStationRomFileRemove.setEnabled( false );
     fireDataChanged();
   }
 
 
   private void doModuleAdd()
   {
-    this.popupModule.show(
+    this.popupModuleAdd.show(
 		this.btnModuleAdd,
 		0,
 		this.btnModuleAdd.getHeight() );
   }
 
 
+  private void doModuleChange()
+  {
+    showModuleChangePopup(
+		this.btnModuleChange,
+		0,
+		this.btnModuleChange.getHeight() );
+  }
+
+
   private void doModuleEdit()
   {
-    int[] viewRows = this.tableModule.getSelectedRows();
-    if( viewRows != null ) {
-      if( viewRows.length == 1 ) {
-	int row = this.tableModule.convertRowIndexToModel( viewRows[ 0 ] );
-	if( row >= 0 ) {
-	  String[] cells = this.tableModelModule.getRow( row );
-	  if( cells != null ) {
-	    if( cells.length > 1 ) {
-	      String moduleName = cells[ 1 ];
-	      if( moduleName != null ) {
-		if( moduleName.equals( "M025" )
-		    || moduleName.equals( "M028" )
-		    || moduleName.equals( "M040" )
-		    || moduleName.equals( "M045" )
-		    || moduleName.equals( "M046" )
-		    || moduleName.equals( "M047" )
-		    || moduleName.equals( "M048" ) )
-		{
-		  KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
+    int row = getSelectedModuleModelRow();
+    if( row >= 0 ) {
+      String[] cells = this.tableModelModule.getRow( row );
+      if( cells != null ) {
+	if( cells.length > 1 ) {
+	  String moduleName = cells[ 1 ];
+	  if( moduleName != null ) {
+	    if( isEditableROMModule( moduleName ) ) {
+	      KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
 				this.settingsFrm,
 				moduleName,
 				cells.length > 3 ? cells[ 3 ] : null,
 				cells.length > 4 ? cells[ 4 ] : null );
-		  dlg.setVisible( true );
-		  String approvedFileName     = dlg.getApprovedFileName();
-		  String approvedTypeByteText = dlg.getApprovedTypeByteText();
-		  if( approvedTypeByteText != null ) {
-		    if( !approvedTypeByteText.isEmpty() ) {
-		      if( cells.length > 2 ) {
-			cells[ 2 ] = createModuleDesc(
+	      dlg.setVisible( true );
+	      String approvedFileName     = dlg.getApprovedFileName();
+	      String approvedTypeByteText = dlg.getApprovedTypeByteText();
+	      if( approvedTypeByteText != null ) {
+		if( !approvedTypeByteText.isEmpty() ) {
+		  if( cells.length > 2 ) {
+		    cells[ 2 ] = createModuleDesc(
 						moduleName,
 						approvedTypeByteText,
 						approvedFileName );
-		      }
-		      if( cells.length > 3 ) {
-			cells[ 3 ] = approvedTypeByteText;
-		      }
-		      if( cells.length > 4 ) {
-			cells[ 4 ] = approvedFileName;
-		      }
-		      this.tableModelModule.fireTableRowsUpdated( row, row );
-		      fireDataChanged();
-		    }
 		  }
+		  if( cells.length > 3 ) {
+		    cells[ 3 ] = approvedTypeByteText;
+		  }
+		  if( cells.length > 4 ) {
+		    cells[ 4 ] = approvedFileName;
+		  }
+		  this.tableModelModule.fireTableRowsUpdated( row, row );
+		  fireDataChanged();
 		}
 	      }
 	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doModuleIntoD001orD002()
+  {
+    int row = getSelectedModuleModelRow();
+    if( row >= 0 ) {
+      /*
+       * Wenn das letzte Modul nicht mehr in der D004/D008 stecken soll,
+       * kann das vorletzte Modul auch nicht dort drin stecken.
+       */
+      int begRow = row;
+      if( (row > 0) && (row == (this.tableModelModule.getRowCount() - 1)) ) {
+	begRow = row - 1;
+      }
+      for( int i = begRow; i <= row; i++ ) {
+	String[] rowData = this.tableModelModule.getRow( i );
+	if( rowData != null ) {
+	  if( rowData.length > 0 ) {
+	    if( this.tableModelModule.isDiskStationSlot( i ) ) {
+	      rowData[ 0 ] = "00";
+	      this.tableModelModule.recalcSlots();
+	      fireDataChanged();
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+
+  private void doModuleIntoDiskStation()
+  {
+    int row = getSelectedModuleModelRow();
+    if( row >= (this.tableModelModule.getRowCount() - 2) ) {
+      String[] rowData = this.tableModelModule.getRow( row );
+      if( rowData != null ) {
+	if( rowData.length > 0 ) {
+	  if( !this.tableModelModule.isDiskStationSlot( row ) ) {
+	    rowData[ 0 ] = "F0";
+	    this.tableModelModule.recalcSlots();
+	    fireDataChanged();
 	  }
 	}
       }
@@ -1143,11 +1298,7 @@ public class KC85SettingsFld
 	    this.tableModelModule.removeRow( row );
 	  }
 	}
-	int nRows = this.tableModelModule.getRowCount();
-	for( int i = 0; i < nRows; i++ ) {
-	  this.tableModelModule.setValueAt(
-			String.format( "%02X", (i + 2) * 4 ), i, 0 );
-	}
+	this.tableModelModule.recalcSlots();
 	fireDataChanged();
       }
     }
@@ -1177,6 +1328,7 @@ public class KC85SettingsFld
 	    this.tableModelModule.fireTableRowsUpdated(
 						Math.min( row1, row2 ),
 						Math.max( row1, row2 ) );
+	    this.tableModelModule.updateDescriptions();
 	    EmuUtil.fireSelectRow( this.tableModule, row2 );
 	    fireDataChanged();
 	  }
@@ -1228,6 +1380,7 @@ public class KC85SettingsFld
 					fileName ),
 				typeByteText,
 				fileName );
+	    this.tableModelModule.recalcSlots();
 	    rv = true;
 	    break;
 	  }
@@ -1244,14 +1397,7 @@ public class KC85SettingsFld
       if( !moduleName.isEmpty() ) {
 	String typeText = null;
 	String fileName = null;
-	if( moduleName.equals( "M025" )
-	    || moduleName.equals( "M028" )
-	    || moduleName.equals( "M040" )
-	    || moduleName.equals( "M045" )
-	    || moduleName.equals( "M046" )
-	    || moduleName.equals( "M047" )
-	    || moduleName.equals( "M048" ) )
-	{
+	if( isEditableROMModule( moduleName ) ) {
 	  boolean                 ok  = false;
 	  KC85UserPROMSettingsDlg dlg = new KC85UserPROMSettingsDlg(
 							this.settingsFrm,
@@ -1291,7 +1437,11 @@ public class KC85SettingsFld
     if( moduleName != null ) {
       if( typeByteText != null ) {
 	if( moduleName.equals( "M025" ) ) {
-	  if( typeByteText.equals( "F7" ) ) {
+	  if( typeByteText.equals( "1" )
+	      || typeByteText.equals( "01" ) )
+	  {
+	    moduleDesc = "8K Autostart User PROM";
+	  } else if( typeByteText.equals( "F7" ) ) {
 	    moduleDesc = "8K User PROM";
 	  } else if( typeByteText.equals( "FB" ) ) {
 	    moduleDesc = "8 KByte ROM";
@@ -1315,6 +1465,55 @@ public class KC85SettingsFld
 	    moduleDesc = "16K User PROM";
 	  }
 	}
+	else if( moduleName.equals( "M041" ) ) {
+	  if( typeByteText.equals( "1" )
+	      || typeByteText.equals( "01" ) )
+	  {
+	    moduleDesc = "16K Autostart User PROM";
+	  } else if( typeByteText.equals( "F1" ) ) {
+	    moduleDesc = "16K EEPROM";
+	  } else if( typeByteText.equals( "F8" ) ) {
+	    moduleDesc = "16K PROM/EPROM";
+	  } if( typeByteText.equals( "FC" ) ) {
+	    moduleDesc = "16K ROM";
+	  }
+	}
+	else if( moduleName.equals( "M045" ) ) {
+	  if( typeByteText.equals( "1" )
+	      || typeByteText.equals( "01" ) )
+	  {
+	    moduleDesc = "4x8K Autostart User PROM";
+	  } else if( typeByteText.equals( "70" ) ) {
+	    moduleDesc = "4x8K User PROM";
+	  }
+	}
+	else if( moduleName.equals( "M046" ) ) {
+	  if( typeByteText.equals( "1" )
+	      || typeByteText.equals( "01" ) )
+	  {
+	    moduleDesc = "8x8K Autostart User PROM";
+	  } else if( typeByteText.equals( "71" ) ) {
+	    moduleDesc = "8x8K User PROM";
+	  }
+	}
+	else if( moduleName.equals( "M047" ) ) {
+	  if( typeByteText.equals( "1" )
+	      || typeByteText.equals( "01" ) )
+	  {
+	    moduleDesc = "16x8K Autostart User PROM";
+	  } else if( typeByteText.equals( "72" ) ) {
+	    moduleDesc = "16x8K User PROM";
+	  }
+	}
+	else if( moduleName.equals( "M048" ) ) {
+	  if( typeByteText.equals( "1" )
+	      || typeByteText.equals( "01" ) )
+	  {
+	    moduleDesc = "16x16K Autostart User PROM";
+	  } else if( typeByteText.equals( "73" ) ) {
+	    moduleDesc = "16x16K User PROM";
+	  }
+	}
       }
       if( moduleDesc == null ) {
 	for( int i = 0; i < modules.length; i++ ) {
@@ -1333,16 +1532,50 @@ public class KC85SettingsFld
   }
 
 
+  private int getSelectedModuleModelRow()
+  {
+    int   row      = -1;
+    int[] viewRows = this.tableModule.getSelectedRows();
+    if( viewRows != null ) {
+      if( viewRows.length == 1 ) {
+	row = this.tableModule.convertRowIndexToModel( viewRows[ 0 ] );
+      }
+    }
+    return row;
+  }
+
+
+  private boolean isDiskStationEnabled()
+  {
+    return this.rbDiskStationD004_20.isSelected()
+			|| this.rbDiskStationD004_33.isSelected()
+			|| this.rbDiskStationD008.isSelected();
+  }
+
+
+  private static boolean isEditableROMModule( String moduleName )
+  {
+    return moduleName.equals( "M025" )
+		|| moduleName.equals( "M028" )
+		|| moduleName.equals( "M040" )
+		|| moduleName.equals( "M041" )
+		|| moduleName.equals( "M045" )
+		|| moduleName.equals( "M046" )
+		|| moduleName.equals( "M047" )
+		|| moduleName.equals( "M048" );
+  }
+
+
   private File selectRomFile( File oldFile, String title )
   {
     File rv   = null;
-    File file = EmuUtil.showFileOpenDlg(
+    File file = FileUtil.showFileOpenDlg(
 			this.settingsFrm,
 			title,
 			oldFile != null ?
 				oldFile
 				: Main.getLastDirFile( Main.FILE_GROUP_ROM ),
-			EmuUtil.getROMFileFilter() );
+			FileUtil.getROMFileFilter() );
     if( file != null ) {
       String msg = null;
       if( file.exists() ) {
@@ -1371,33 +1604,68 @@ public class KC85SettingsFld
   }
 
 
-  private void updD004FieldsEnabled()
+  private void showModuleChangePopup( MouseEvent e )
   {
-    boolean state = this.btnD004Enabled.isSelected();
-    this.tabGIDE.setEnabled( state );
-    this.labelD004Rom.setEnabled( state );
-    this.comboD004Rom.setEnabled( state );
-    this.labelD004Speed.setEnabled( state );
-    this.btnD004Speed4MHz.setEnabled( state );
-    this.btnD004Speed8MHz.setEnabled( state );
-    this.btnD004Speed16MHz.setEnabled( state );
-    if( state && (this.comboD004Rom.getSelectedIndex() != 2) ) {
-      state = false;
+    Component c = e.getComponent();
+    if( c != null ) {
+      showModuleChangePopup( c, e.getX(), e.getY() );
     }
-    this.fldD004RomFile.setEnabled( state );
-    this.btnD004RomFileSelect.setEnabled( state );
-    if( state ) {
-      state = (this.fldD004RomFile.getFile() != null);
+  }
+
+
+  private void showModuleChangePopup( Component c, int x, int y )
+  {
+    boolean inDiskStation  = false;
+    boolean canDiskStation = false;
+    boolean editable       = false;
+    int     row            = getSelectedModuleModelRow();
+    if( row >= 0 ) {
+      String[] rowData = this.tableModelModule.getRow( row );
+      if( rowData != null ) {
+	if( rowData.length > 1 ) {
+	  String moduleName = rowData[ 1 ];
+	  if( moduleName != null ) {
+	    editable = isEditableROMModule( moduleName );
+	  }
+	  inDiskStation = KC85ModuleTableModel.isDiskStationSlot(
+							rowData[ 0 ] );
+	}
+      }
     }
-    this.btnD004RomFileRemove.setEnabled( state );
+    if( row >= (this.tableModelModule.getRowCount() - 2) ) {
+      canDiskStation = true;
+    }
+    this.mnuModuleEdit.setEnabled( editable );
+    this.mnuModuleIntoD001orD002.setEnabled( inDiskStation );
+    this.mnuModuleIntoDiskStation.setEnabled(
+		!inDiskStation && canDiskStation && isDiskStationEnabled() );
+    this.popupModuleChange.show( c, x, y );
+  }
+
+
+  private void updDiskStationFieldsEnabled()
+  {
+    boolean d4_20 = this.rbDiskStationD004_20.isSelected();
+    boolean d4_33 = this.rbDiskStationD004_33.isSelected();
+    boolean state = (d4_20 || d4_33 || this.rbDiskStationD008.isSelected());
+    this.tabGIDE.setEnabledEx( state, d4_20 || d4_33 );
+    this.labelDiskStationRom.setEnabled( state );
+    this.fldDiskStationRomFile.setEnabled( state );
+    this.btnDiskStationRomFileSelect.setEnabled( state );
+    this.btnDiskStationRomFileRemove.setEnabled(
+		state & (this.fldDiskStationRomFile.getFile() != null) );
+    this.labelDiskStationSpeed.setEnabled( state );
+    this.rbDiskStationSpeedDefault.setEnabled( state );
+    this.rbDiskStationSpeed8MHz.setEnabled( state );
+    this.rbDiskStationSpeed16MHz.setEnabled( state );
   }
 
 
   private void updPasteFastEnabled()
   {
-    if( this.btnPasteFast != null ) {
-      this.btnPasteFast.setEnabled(
-		!this.btnKeysDirectToBuf.isSelected() );
+    if( this.cbPasteFast != null ) {
+      this.cbPasteFast.setEnabled(
+		!this.cbKeysDirectToBuf.isSelected() );
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,38 +11,37 @@ package jkcemu.emusys;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
 import jkcemu.base.CharRaster;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileFormat;
 import jkcemu.base.RAMFloppy;
-import jkcemu.base.SaveDlg;
 import jkcemu.base.SourceUtil;
 import jkcemu.disk.FDC8272;
 import jkcemu.disk.FloppyDiskDrive;
 import jkcemu.disk.FloppyDiskFormat;
-import jkcemu.disk.GIDE;
 import jkcemu.emusys.ac1_llc2.AbstractSCCHSys;
-import jkcemu.etc.VDIP;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileUtil;
+import jkcemu.file.SaveDlg;
 import jkcemu.joystick.JoystickThread;
-import jkcemu.net.KCNet;
 import jkcemu.text.TextUtil;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80CTCListener;
 import z80emu.Z80InterruptSource;
 import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 
 
 public class LLC2
 		extends AbstractSCCHSys
 		implements
 			FDC8272.DriveSelector,
-			Z80CTCListener
+			Z80CTCListener,
+			Z80PIOPortListener
 {
   public static final String SYSNAME           = "LLC2";
   public static final String PROP_PREFIX       = "jkcemu.llc2.";
@@ -51,7 +50,6 @@ public class LLC2
   public static final String VALUE_SCREEN_RATIO_43       = "4:3";
   public static final String VALUE_SCREEN_RATIO_UNSCALED = "unscaled";
 
-  public static final int     FUNCTION_KEY_COUNT         = 2;
   public static final boolean DEFAULT_SWAP_KEY_CHAR_CASE = true;
 
   /*
@@ -76,7 +74,6 @@ public class LLC2
 
   private Z80CTC            ctc;
   private Z80PIO            pio2;
-  private GIDE              gide;
   private FDC8272           fdc;
   private RAMFloppy         ramFloppy1;
   private RAMFloppy         ramFloppy2;
@@ -88,8 +85,8 @@ public class LLC2
   private boolean           osRomEnabled;
   private boolean           bit7InverseMode;
   private boolean           screenInverseMode;
-  private boolean           loudspeakerEnabled;
-  private boolean           tapeInPhase;
+  private boolean           ctcSoundEnabled;
+  private boolean           soundPhase;
   private boolean           keyboardUsed;
   private volatile boolean  graphicKeyState;
   private boolean           hiRes;
@@ -101,8 +98,7 @@ public class LLC2
   private int               lineCounter;
   private FloppyDiskDrive   curFDDrive;
   private FloppyDiskDrive[] fdDrives;
-  private KCNet             kcNet;
-  private VDIP              vdip;
+
 
 
   public LLC2( EmuThread emuThread, Properties props )
@@ -112,8 +108,7 @@ public class LLC2
     this.screenBuf  = new byte[ 64 * 256 ];
     this.osBytes    = null;
     this.osFile     = null;
-    this.pasteFast  = false;
-    this.ramModule3 = this.emuThread.getExtendedRAM( 0x100000 );  // 1MByte
+    this.ramModule3 = new byte[ 0x100000 ];		// 1MByte
     this.ramFloppy1 = RAMFloppy.prepare(
 				this.emuThread.getRAMFloppy1(),
 				"LLC2",
@@ -139,24 +134,9 @@ public class LLC2
       this.fdc = new FDC8272( this, 4 );
     }
 
-    this.ctc  = new Z80CTC( "CTC (E/A-Adressen F8-FB)" );
-    this.pio1 = new Z80PIO( "PIO (E/A-Adressen E8-EB)" );
-    this.pio2 = new Z80PIO( "V24-PIO (E/A-Adressen E4-E7)" );
-
-    this.kcNet = null;
-    if( emulatesKCNet( props ) ) {
-      this.kcNet = new KCNet( "Netzwerk-PIO (E/A-Adressen C0-C3)" );
-    }
-
-    this.vdip = null;
-    if( emulatesUSB( props ) ) {
-      this.vdip = new VDIP(
-			this.emuThread.getFileTimesViewFactory(),
-			"USB-PIO (E/A-Adressen DC-DF, FC-FF)" );
-      this.vdip.applySettings( props );
-    }
-
-    this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
+    this.ctc  = new Z80CTC( "CTC (E/A-Adressen F8h-FBh)" );
+    this.pio1 = new Z80PIO( "PIO (E/A-Adressen E8h-EBh)" );
+    this.pio2 = new Z80PIO( "V24-PIO (E/A-Adressen E4h-E7h)" );
 
     java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
     iSources.add( this.ctc );
@@ -168,6 +148,9 @@ public class LLC2
     if( this.vdip != null ) {
       iSources.add( this.vdip );
     }
+    if( this.k1520Sound != null ) {
+      iSources.add( this.k1520Sound );
+    }
     Z80CPU cpu = emuThread.getZ80CPU();
     try {
       cpu.setInterruptSources(
@@ -177,15 +160,11 @@ public class LLC2
 
     this.ctc.setTimerConnection( 1, 3 );
     this.ctc.addCTCListener( this );
+    this.pio1.addPIOPortListener( this, Z80PIO.PortInfo.B );
+    this.pio2.addPIOPortListener( this, Z80PIO.PortInfo.A );
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
-    if( this.vdip != null ) {
-      this.vdip.applySettings( props );
-    }
     z80MaxSpeedChanged( cpu );
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
-    }
     checkAddPCListener( props );
     updScreenRatio( props );
   }
@@ -194,27 +173,6 @@ public class LLC2
   public static int getDefaultSpeedKHz()
   {
     return 3000;
-  }
-
-
-  protected void loadROMs( Properties props )
-  {
-    super.loadROMs( props, "/rom/llc2/gsbasic.bin" );
-
-    // OS-ROM
-    this.osFile  = EmuUtil.getProperty(
-				props,
-				this.propPrefix + PROP_OS_FILE );
-    this.osBytes = readROMFile( this.osFile, 0x1000, "Monitorprogramm" );
-    if( this.osBytes == null ) {
-      if( scchMon91 == null ) {
-	scchMon91 = readResource( "/rom/llc2/scchmon_91g.bin" );
-      }
-      this.osBytes = scchMon91;
-    }
-
-    // Zeichensatz
-    loadFont( props );
   }
 
 
@@ -233,8 +191,86 @@ public class LLC2
   public void z80CTCUpdate( Z80CTC ctc, int timerNum )
   {
     if( (ctc == this.ctc) && (timerNum == 0) ) {
-      if( this.loudspeakerEnabled ) {
-	this.soundOutPhase = !this.soundOutPhase;
+      // Sound-Ausgabe entsprechend Ur-LLC2
+      if( this.ctcSoundEnabled ) {
+	this.soundPhase = !this.soundPhase;
+	this.loudspeaker.setCurPhase( this.soundPhase );
+      }
+    }
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	|| (status == Z80PIO.Status.OUTPUT_CHANGED) )
+    {
+      if( (pio == this.pio1) && (port == Z80PIO.PortInfo.B) ) {
+	boolean dirty = false;
+	synchronized( this.pio1 ) {
+	  int v             = this.pio1.fetchOutValuePortB( 0xFF );
+	  this.tapeOutPhase = ((v & 0x01) != 0);
+	  if( this.fontBytes != llc2Font ) {
+	    if( this.fontBytes.length > 0x0800 ) {
+	      if( (v & 0x08) != 0 ) {
+		if( this.fontBytes.length > 0x1000 ) {
+		  this.fontOffset = 0x1000;
+		} else {
+		  this.fontOffset = 0x0800;
+		}
+	      } else {
+		this.fontOffset = 0;
+	      }
+	    }
+	  }
+	  boolean b = ((v & 0x20) != 0);
+	  if( b != this.bit7InverseMode ) {
+	    this.bit7InverseMode = b;
+	    dirty                = true;
+	  }
+	  b = ((v & 0x40) != 0);
+	  if( b != this.ctcSoundEnabled ) {
+	    // Ur-LLC2
+	    this.ctcSoundEnabled = b;
+	  }
+	  // SCCH-Sound-Ausgabe
+	  this.soundPhase = b;
+	  this.loudspeaker.setCurPhase( this.soundPhase );
+	  if( this.joystickEnabled ) {
+	    b = ((v & 0x10) == 0);
+	    if( b != this.joystickSelected ) {
+	      this.joystickSelected = b;
+	      this.pio1.putInValuePortA(
+		      b ? this.joystickValue : this.keyboardValue,
+		      0xFF );
+	    }
+	  }
+	}
+	if( dirty ) {
+	  this.screenFrm.setScreenDirty( true );
+	}
+      }
+      else if( (pio == this.pio2) && (port == Z80PIO.PortInfo.A) ) {
+	synchronized( this ) {
+	  boolean state = ((this.pio2.fetchOutValuePortA( 0xFF )
+							& 0x02) != 0);
+	  /*
+	   * fallende Flanke: Wenn gerade keine Ausgabe laeuft,
+	   * dann beginnt jetzt eine.
+	   */
+	  if( !state && this.v24BitOut && (this.v24BitNum == 0) ) {
+	    this.v24ShiftBuf      = 0;
+	    this.v24TStateCounter = 3 * this.v24TStatesPerBit / 2;
+	    this.v24BitNum++;
+	  }
+	  this.v24BitOut = state;
+	}
       }
     }
   }
@@ -292,20 +328,20 @@ public class LLC2
     if( updScreenRatio( props ) ) {
       this.screenFrm.fireScreenSizeChanged();
     }
-    if( this.vdip != null ) {
-      this.vdip.applySettings( props );
-    }
   }
 
 
   @Override
   public boolean canApplySettings( Properties props )
   {
-    boolean rv = EmuUtil.getProperty(
+    boolean rv = super.canApplySettings( props );
+    if( rv ) {
+      rv = EmuUtil.getProperty(
 			props,
 			EmuThread.PROP_SYSNAME ).equals( SYSNAME );
+    }
     if( rv ) {
-      rv = super.canApplySettings( props );
+      rv = canApplyScchSettings( props );
     }
     if( rv ) {
       rv = TextUtil.equals(
@@ -330,16 +366,7 @@ public class LLC2
 			props,
 			this.propPrefix + PROP_RF2_PREFIX );
     }
-    if( rv ) {
-      rv = GIDE.complies( this.gide, props, this.propPrefix );
-    }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
-      rv = false;
-    }
-    if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
-      rv = false;
-    }
-    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
       rv = false;
     }
     return rv;
@@ -356,9 +383,6 @@ public class LLC2
   @Override
   public void die()
   {
-    if( this.gide != null ) {
-      this.gide.die();
-    }
     if( this.ramFloppy1 != null ) {
       this.ramFloppy1.deinstall();
     }
@@ -371,20 +395,14 @@ public class LLC2
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
-    if( this.pasteFast ) {
-      cpu.removePCListener( this );
-      this.pasteFast = false;
-    }
+
+    this.pio1.removePIOPortListener( this, Z80PIO.PortInfo.B );
+    this.pio2.removePIOPortListener( this, Z80PIO.PortInfo.A );
 
     if( this.fdc != null ) {
       this.fdc.die();
     }
-    if( this.kcNet != null ) {
-      this.kcNet.die();
-    }
-    if( this.vdip != null ) {
-      this.vdip.die();
-    }
+    super.die();
   }
 
 
@@ -432,9 +450,9 @@ public class LLC2
     CharRaster raster = null;
     if( !this.hiRes ) {
       if( this.screenImg != null ) {
-	raster = new CharRaster( 64, 32, 12, 12, 8, 0 );
+	raster = new CharRaster( 64, 32, 12, 8, 12 );
       } else {
-	raster = new CharRaster( 64, 32, 8, 8, 8, 0 );
+	raster = new CharRaster( 64, 32, 8, 8, 8 );
       }
     }
     return raster;
@@ -553,13 +571,6 @@ public class LLC2
 
 
   @Override
-  protected VDIP getVDIP()
-  {
-    return this.vdip;
-  }
-
-
-  @Override
   public boolean keyPressed(
 			int     keyCode,
 			boolean ctrlDown,
@@ -567,6 +578,11 @@ public class LLC2
   {
     boolean rv = false;
     switch( keyCode ) {
+      case KeyEvent.VK_TAB:
+	setKeyboardValue( 0x8F );
+        rv = true;
+        break;
+
       case KeyEvent.VK_F1:
 	this.screenInverseMode = !this.screenInverseMode;
 	this.screenFrm.setScreenDirty( true );
@@ -609,6 +625,28 @@ public class LLC2
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    loadScchROMs( props, "/rom/llc2/gsbasic.bin" );
+
+    // OS-ROM
+    this.osFile  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + PROP_OS_FILE );
+    this.osBytes = readROMFile( this.osFile, 0x1000, "Monitorprogramm" );
+    if( this.osBytes == null ) {
+      if( scchMon91 == null ) {
+	scchMon91 = readResource( "/rom/llc2/scchmon_91g.bin" );
+      }
+      this.osBytes = scchMon91;
+    }
+
+    // Zeichensatz
+    loadFont( props );
+  }
+
+
+  @Override
   public boolean paintScreen( Graphics g, int x, int y, int screenScale )
   {
     boolean       rv  = false;
@@ -639,12 +677,7 @@ public class LLC2
   public int readIOByte( int port, int tStates )
   {
     int rv = 0xFF;
-    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
-      int value = this.gide.read( port );
-      if( value >= 0 ) {
-	rv = value;
-      }
-    } else if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
+    if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
       rv = this.ramFloppy1.readByte( port & 0x07 );
     } else if( ((port & 0xF8) == 0xB0) && (this.ramFloppy2 != null) ) {
       rv = this.ramFloppy2.readByte( port & 0x07 );
@@ -698,28 +731,6 @@ public class LLC2
 	  }
 	  break;
 
-	case 0xC0:
-	case 0xC1:
-	case 0xC2:
-	case 0xC3:
-	  if( this.kcNet != null ) {
-	    rv = this.kcNet.read( port );
-	  }
-	  break;
-
-	case 0xDC:
-	case 0xDD:
-	case 0xDE:
-	case 0xDF:
-	case 0xFC:
-	case 0xFD:
-	case 0xFE:
-	case 0xFF:
-	  if( this.vdip != null ) {
-	    rv = this.vdip.read( port );
-	  }
-	  break;
-
 	case 0xE0:
 	case 0xE1:
 	case 0xE2:
@@ -735,14 +746,6 @@ public class LLC2
 
 	case 0xE5:
 	  rv = this.pio2.readDataB();
-	  break;
-
-	case 0xE6:
-	  rv = this.pio2.readControlA();
-	  break;
-
-	case 0xE7:
-	  rv = this.pio2.readControlB();
 	  break;
 
 	case 0xE8:
@@ -762,20 +765,15 @@ public class LLC2
 	  rv = this.pio1.readDataB();
 	  break;
 
-	case 0xEA:
-	  rv = this.pio1.readControlA();
-	  break;
-
-	case 0xEB:
-	  rv = this.pio1.readControlB();
-	  break;
-
 	case 0xF8:
 	case 0xF9:
 	case 0xFA:
 	case 0xFB:
 	  rv = this.ctc.read( port & 0x03, tStates );
 	  break;
+
+	default:
+	  rv = super.readIOByte( port, tStates );
       }
     }
     return rv;
@@ -783,30 +781,20 @@ public class LLC2
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
-	loadROMs( props );
+    super.reset( powerOn, props );
+    if( powerOn ) {
+      initDRAM();
+      if( this.ramModule3 != null ) {
+	EmuUtil.initDRAM( this.ramModule3 );
       }
     }
-    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
-	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
-    {
-      this.ctc.reset( true );
-      this.pio1.reset( true );
-      this.pio2.reset( true );
-    } else {
-      this.ctc.reset( false );
-      this.pio1.reset( false );
-      this.pio2.reset( false );
-    }
-    if( this.gide != null ) {
-      this.gide.reset();
-    }
+    this.ctc.reset( powerOn );
+    this.pio1.reset( powerOn );
+    this.pio2.reset( powerOn );
     if( this.fdc != null ) {
-      this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
+      this.fdc.reset( powerOn );
     }
     if( this.fdDrives != null ) {
       for( int i = 0; i < this.fdDrives.length; i++ ) {
@@ -816,23 +804,22 @@ public class LLC2
 	}
       }
     }
-    this.curFDDrive         = null;
-    this.osRomEnabled       = true;
-    this.bit7InverseMode    = false;
-    this.screenInverseMode  = false;
-    this.loudspeakerEnabled = false;
-    this.tapeInPhase        = this.emuThread.readTapeInPhase();
-    this.keyboardUsed       = false;
-    this.joystickSelected   = false;
-    this.graphicKeyState    = false;
-    this.hiRes              = false;
-    this.joystickValue      = 0x1F;
-    this.keyboardValue      = 0;
-    this.fontOffset         = 0;
-    this.lineCounter        = 0;
-    this.lineTStateCounter  = 0;
-    this.videoPixelAddr     = 0xC000;
-    this.videoTextAddr      = 0xC000;
+    this.curFDDrive        = null;
+    this.osRomEnabled      = true;
+    this.bit7InverseMode   = false;
+    this.screenInverseMode = false;
+    this.ctcSoundEnabled   = false;
+    this.keyboardUsed      = false;
+    this.joystickSelected  = false;
+    this.graphicKeyState   = false;
+    this.hiRes             = false;
+    this.joystickValue     = 0x1F;
+    this.keyboardValue     = 0;
+    this.fontOffset        = 0;
+    this.lineCounter       = 0;
+    this.lineTStateCounter = 0;
+    this.videoPixelAddr    = 0xC000;
+    this.videoTextAddr     = 0xC000;
     if( this.osBytes == scchMon91 ) {
       this.v24TStatesPerBit = V24_TSTATES_PER_BIT_INTERN;
     } else {
@@ -853,7 +840,7 @@ public class LLC2
 		endAddr,
 		"LLC2-BASIC-Programm speichern",
 		SaveDlg.BasicType.MS_DERIVED_BASIC,
-		EmuUtil.getBasicFileFilter() )).setVisible( true );
+		FileUtil.getBasicFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -973,13 +960,6 @@ public class LLC2
 
 
   @Override
-  public boolean supportsSoundOutMono()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsTapeIn()
   {
     return true;
@@ -990,6 +970,13 @@ public class LLC2
   public boolean supportsTapeOut()
   {
     return true;
+  }
+
+
+  @Override
+  public void tapeInPhaseChanged()
+  {
+    this.pio1.putInValuePortB( this.tapeInPhase ? 0x02 : 0, 0x02 );
   }
 
 
@@ -1018,10 +1005,10 @@ public class LLC2
 		&& (begAddr <= 0x60F7)
 		&& ((begAddr + len) > 0x60FE)) )
       {
-	int tAddr = SourceUtil.getBasicEndAddr( this.emuThread, 0x60F7 ) + 1;
-	this.emuThread.setMemWord( 0x60D2, tAddr );
-	this.emuThread.setMemWord( 0x60D4, tAddr );
-	this.emuThread.setMemWord( 0x60D6, tAddr );
+	int topAddr = begAddr + len;
+	this.emuThread.setMemWord( 0x60D2, topAddr );
+	this.emuThread.setMemWord( 0x60D4, topAddr );
+	this.emuThread.setMemWord( 0x60D6, topAddr );
       }
     }
   }
@@ -1030,9 +1017,7 @@ public class LLC2
   @Override
   public void writeIOByte( int port, int value, int tStates )
   {
-    if( (this.gide != null) && ((port & 0xF0) == 0x80) ) {
-      this.gide.write( port, value );
-    } else if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
+    if( ((port & 0xF8) == 0xD0) && (this.ramFloppy1 != null) ) {
       this.ramFloppy1.writeByte( port & 0x07, value );
     } else if( ((port & 0xF8) == 0xB0) && (this.ramFloppy2 != null) ) {
       this.ramFloppy2.writeByte( port & 0x07, value );
@@ -1075,28 +1060,6 @@ public class LLC2
 	  }
 	  break;
 
-	case 0xC0:
-	case 0xC1:
-	case 0xC2:
-	case 0xC3:
-	  if( this.kcNet != null ) {
-	    this.kcNet.write( port, value );
-	  }
-	  break;
-
-	case 0xDC:
-	case 0xDD:
-	case 0xDE:
-	case 0xDF:
-	case 0xFC:
-	case 0xFD:
-	case 0xFE:
-	case 0xFF:
-	  if( this.vdip != null ) {
-	    this.vdip.write( port, value );
-	  }
-	  break;
-
 	case 0xE0:
 	case 0xE1:
 	case 0xE2:
@@ -1106,20 +1069,6 @@ public class LLC2
 
 	case 0xE4:
 	  this.pio2.writeDataA( value );
-	  synchronized( this ) {
-	    boolean state = ((this.pio2.fetchOutValuePortA( false )
-							& 0x02) != 0);
-	    /*
-	     * fallende Flanke: Wenn gerade keine Ausgabe laeuft,
-	     * dann beginnt jetzt eine.
-	     */
-	    if( !state && this.v24BitOut && (this.v24BitNum == 0) ) {
-	      this.v24ShiftBuf      = 0;
-	      this.v24TStateCounter = 3 * this.v24TStatesPerBit / 2;
-	      this.v24BitNum++;
-	    }
-	    this.v24BitOut = state;
-	  }
 	  break;
 
 	case 0xE5:
@@ -1140,42 +1089,6 @@ public class LLC2
 
 	case 0xE9:
 	  this.pio1.writeDataB( value );
-	  synchronized( this.pio1 ) {
-	    int v             = this.pio1.fetchOutValuePortB( false );
-	    this.tapeOutPhase = ((v & 0x01) != 0);
-	    if( this.fontBytes != llc2Font ) {
-	      if( this.fontBytes.length > 0x0800 ) {
-		if( (v & 0x08) != 0 ) {
-		  if( this.fontBytes.length > 0x1000 ) {
-		    this.fontOffset = 0x1000;
-		  } else {
-		    this.fontOffset = 0x0800;
-		  }
-		} else {
-		  this.fontOffset = 0;
-		}
-	      }
-	    }
-	    boolean b = ((v & 0x20) != 0);
-            if( b != this.bit7InverseMode ) {
-              this.bit7InverseMode = b;
-              dirty                = true;
-            }
-	    b = ((v & 0x40) != 0);
-	    if( b != this.loudspeakerEnabled ) {
-	      this.loudspeakerEnabled = b;
-	      this.soundOutPhase      = !this.soundOutPhase;
-	    }
-	    if( this.joystickEnabled ) {
-	      b = ((v & 0x10) == 0);
-	      if( b != this.joystickSelected ) {
-		this.joystickSelected = b;
-		this.pio1.putInValuePortA(
-			b ? this.joystickValue : this.keyboardValue,
-			0xFF );
-	      }
-	    }
-	  }
 	  break;
 
 	case 0xEA:
@@ -1247,6 +1160,9 @@ public class LLC2
 	case 0xFB:
 	  this.ctc.write( port & 0x03, value, tStates );
 	  break;
+
+	default:
+	  super.writeIOByte( port, value, tStates );
       }
       if( dirty ) {
 	this.screenFrm.setScreenDirty( true );
@@ -1265,9 +1181,6 @@ public class LLC2
     if( this.fdc != null ) {
       this.fdc.z80MaxSpeedChanged( cpu );
     }
-    if( this.kcNet != null ) {
-      this.kcNet.z80MaxSpeedChanged( cpu );
-    }
   }
 
 
@@ -1278,9 +1191,6 @@ public class LLC2
     this.ctc.z80TStatesProcessed( cpu, tStates );
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
-    }
-    if( this.kcNet != null ) {
-      this.kcNet.z80TStatesProcessed( cpu, tStates );
     }
     if( this.tStatesPerLine > 0 ) {
       this.lineTStateCounter += tStates;
@@ -1312,11 +1222,6 @@ public class LLC2
 	  }
 	}
       }
-    }
-    boolean phase = this.emuThread.readTapeInPhase();
-    if( phase != this.tapeInPhase ) {
-      this.tapeInPhase = phase;
-      this.pio1.putInValuePortB( this.tapeInPhase ? 0x02 : 0, 0x02 );
     }
   }
 

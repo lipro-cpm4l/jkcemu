@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,7 @@
 
 package jkcemu.emusys.kc85;
 
-import java.lang.*;
-import java.util.Arrays;
-import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 
 
 public class M011 extends AbstractKC85Module
@@ -53,13 +51,6 @@ public class M011 extends AbstractKC85Module
 
 
   @Override
-  public void clearRAM()
-  {
-    Arrays.fill( this.ram, (byte) 0 );
-  }
-
-
-  @Override
   public String getModuleName()
   {
     return "M011";
@@ -91,6 +82,14 @@ public class M011 extends AbstractKC85Module
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void reset( boolean powerOn )
+  {
+    if( powerOn )
+      EmuUtil.initDRAM( this.ram );
   }
 
 

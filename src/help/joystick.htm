@@ -1,15 +1,33 @@
 <html>
 <body>
  <h1>Joysticks (Spielhebel)</h1>
+  <ul>
+   <li><a href="joystick.htm#intro">1. Allgemeines</a></li>
+   <li>
+    <a href="joystick.htm#real_joy">2.Spielhebel-Emulation mit angeschlossenen Joysticks</a>
+   </li>
+   <li>
+    <a href="joystick.htm#virtual_joy">3. Spielhebel-Emulation ohne angeschlossene Joysticks</a>
+   </li>
+   <li>
+    <a href="joystick.htm#by_keyboard">4. Emulierte Spielhebel mit der Tastatur bedienen</a>
+   </li>
+   <li><a href="joystick.htm#buttons">5. Aktionskn&ouml;pfe</a></li>
+  </ul>
+ <br/>
+
+ <h2><a name="intro">1. Allgemeines</a></h2>
   Der Emulator unterst&uuml;tzt Joysticks unter den Betriebssystemen
-  Windows und Linux (jeweils 32 und 64&nbsp;Bit).
+  Windows und Linux.
   Wenn das emulierte System im Original &uuml;ber Joystick-Anschl&uuml;sse
-  verf&uuml;gt, die von JKCEMU auch emuliert werden,
+  verf&uuml;gt, die von JKCEMU emuliert werden,
   dann k&ouml;nnen diese emulierten Spielhebel mit den am Emulatorrechner
   angeschlossenen Joysticks bedient werden.
  <br/><br/>
 
- <h2>Spielhebel-Emulation mit angeschlossenen Joysticks</h2>
+ <h2>
+  <a name="real_joy">2.Spielhebel-Emulation mit angeschlossenen Joysticks</a>
+ </h2>
   JKCEMU verbindet automatisch die emulierten Spielhebel der Reihe nach
   mit den angeschlossenen Joysticks,
   d.h., werden zwei Spielhebel emuliert,
@@ -17,14 +35,15 @@
   angeschlossenen Joystick verbunden
   und der emulierte Spielhebel&nbsp;2 mit dem zweiten.
   Ist nur ein Joystick angeschlossen,
-  kann der zweite emulierte Spielhebel standardm&auml;&szlig;ig
-  erstmal nicht bedient werden.
+  wird dieser mit dem ersten emulierten Spielhebel verbunden.
+  Der zweite emulierte Spielhebel hat dann keinen &quot;echten&quot;
+  Joystick.
  <br/><br/>
   Die Zuordnung zwischen emulierten Spielhebeln und
   angeschlossenen Joysticks k&ouml;nnen Sie jedoch &auml;ndern.
   Rufen Sie dazu im Emulatorfenster im Men&uuml; <em>Extra</em>
   den Men&uuml;punkt <em>Spielhebel...</em> auf.
-  Es &ouml;ffnet sich das Fenster <em>JKCEMU Spielhebel</em>,
+  Es &ouml;ffnet sich das Fenster <em>JKCEMU Joysticks</em>,
   in dem Sie jeden emulierten Spielhebel mit einem angeschlossenen Joystick
   einzeln verbinden und wieder trennen k&ouml;nnen.
   Damit ist es bei nur einem angeschlossenen Joystick m&ouml;glich,
@@ -34,12 +53,52 @@
   beide emulierte Spielhebel parallel.
  <br/><br/>
 
- <h2>Spielhebel-Emulation ohne angeschlossene Joysticks</h2>
+ <h2>
+  <a name="virtual_joy">3. Spielhebel-Emulation ohne angeschlossene Joysticks</a>
+ </h2>
   Haben Sie keine Joysticks am Emulatorrechner angeschlossen
   oder werden diese nicht unterst&uuml;tzt,
   k&ouml;nnen Sie die Spielhebelemulation trotzdem nutzen.
-  Klicken Sie dazu mit der Maus im Spielhebelfenster auf die Pfeile
+  Klicken Sie dazu mit der Maus im Joystick-Fenster auf die Pfeile
   und Aktionskn&ouml;pfe.
+ <br/><br/>
+
+ <h2>
+  <a name="by_keyboard">4. Emulierte Spielhebel mit der Tastatur bedienen</a>
+ </h2>
+  Die emulierten Spielhebel k&ouml;nnen auch mit der Tastatur bedient werden,
+  ohne dass das Joystick-Fenster ge&ouml;ffnet sein muss.
+  Durch gleichzeitiges Dr&uuml;cken der Alt-Taste
+  bzw. auf einem Mac der Command-Taste zusammen mit einer Cursor-Taste,
+  <em>F1</em>, <em>F2</em> oder <em>Enter</em> wird der erste
+  emulierte Spielhebel bedient.
+  Den zweiten emulierten Spielhebel erreicht man durch zus&auml;tzliches
+  gleichzeitiges Dr&uuml;cken der Shift-Taste.
+ <br/><br/>
+  Die view Cursor-Tasten sind f&uuml;r die Richtungen zust&auml;ndig,
+  <em>Enter</em> und <em>F1</em> f&uuml;r den ersten Aktionsknopf
+  sowie <em>F2</em> f&uuml;r den zweiten Aktionsknopf.
+ <br/><br/>
+  Im Joystick-Fenster ist das Dr&uuml;cken der Alt- bzw. Command-Taste
+  nicht notwendig, um die emulierten Spielhebel mit der Tastatur
+  bedienen zu k&ouml;nnen.
+ <br/><br/>
+
+ <h2><a name="buttons">5. Aktionskn&ouml;pfe</a></h2>
+  JKCEMU simuliert zwei Aktionskn&ouml;pfe pro Joystick.
+  Manche der emulierten Systeme unterst&uuml;tzen jedoch
+  nur einen Aktionsknopf.
+  In dem Fall haben beide simulierten Kn&ouml;pfe die gleiche Wirkung.
+  Sie l&ouml;sen beide den einen vom emulierten System unterst&uuml;tzten
+  Aktionsknopf aus.
+ <br/><br/>
+  Falls Sie am Emulatorrechner angeschlossene Joysticks verwenden,
+  die mehr als zwei Aktionskn&ouml;pfe haben,
+  werden diese der Reihe nach abwechselnd auf die beiden von JKCEMU
+  simulierten Kn&ouml;pfe gemappt.
+  Sollte aber das auf dem Emulatorrechner laufende Betriebssystem
+  bzw. der verwendete Joystick-Treiber bei allen Aktionskn&ouml;pfen
+  die gleiche Nummer melden, dann l&ouml;sen sie logischerweise
+  auch alle den gleichen von JKCEMU simulierten Aktionsknopf aus.
 </body>
 </html>
-

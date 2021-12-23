@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.emusys.kc85;
 
-import java.lang.*;
 import jkcemu.base.EmuThread;
 import jkcemu.print.PrintMngr;
 import z80emu.Z80CPU;
@@ -26,7 +25,6 @@ public class M003 extends AbstractKC85Module implements
 						Z80SIOChannelListener,
 						Z80TStatesListener
 {
-  private String    title;
   private int       remainTStates;
   private PrintMngr printMngr;
   private Z80CPU    cpu;
@@ -37,7 +35,6 @@ public class M003 extends AbstractKC85Module implements
   public M003( int slot, EmuThread emuThread )
   {
     super( slot );
-    this.title         = String.format( "M003 im Schacht %02X", slot );
     this.remainTStates = 0;
     this.printMngr     = emuThread.getPrintMngr();
     this.cpu           = emuThread.getZ80CPU();
@@ -94,14 +91,13 @@ public class M003 extends AbstractKC85Module implements
 
 
   @Override
-  public synchronized void interruptFinish()
+  public synchronized boolean interruptFinish( int addr )
   {
-    if( this.sio.isInterruptAccepted() ) {
-      this.sio.interruptFinish();
+    boolean rv = this.sio.interruptFinish( addr );
+    if( !rv ) {
+      rv = this.ctc.interruptFinish( addr );
     }
-    else if( this.ctc.isInterruptAccepted() ) {
-      this.ctc.interruptFinish();
-    }
+    return rv;
   }
 
 
@@ -116,20 +112,10 @@ public class M003 extends AbstractKC85Module implements
   public boolean isInterruptRequested()
   {
     boolean rv = this.sio.isInterruptRequested();
-    if( !rv && !this.sio.isInterruptAccepted() ) {
+    if( !rv ) {
       rv = this.ctc.isInterruptRequested();
     }
     return rv;
-  }
-
-
-  @Override
-  public void reset( boolean powerOn )
-  {
-    this.ctc.reset( powerOn );
-    this.sio.reset( powerOn );
-    this.sio.setClearToSendA( true );
-    this.sio.setClearToSendB( true );
   }
 
 
@@ -224,16 +210,19 @@ public class M003 extends AbstractKC85Module implements
 
 
   @Override
-  public boolean supportsPrinter()
+  public void reset( boolean powerOn )
   {
-    return true;
+    this.ctc.reset( powerOn );
+    this.sio.reset( powerOn );
+    this.sio.setClearToSendA( true );
+    this.sio.setClearToSendB( true );
   }
 
 
   @Override
-  public String toString()
+  public boolean supportsPrinter()
   {
-    return this.title;
+    return true;
   }
 
 

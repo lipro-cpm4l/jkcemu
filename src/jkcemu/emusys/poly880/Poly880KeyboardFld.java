@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.MouseEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -59,10 +58,10 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld<Poly880>
     super( poly880, 27, true );
     this.kbMatrix     = new int[ 8 ];
     this.colorBg      = new Color( 20, 20, 20 );
-    this.fontInfo     = new Font( "SansSerif", Font.PLAIN, 18 );
-    this.fontFct      = new Font( "SansSerif", Font.PLAIN, 16 );
-    this.fontHex      = new Font( "SansSerif", Font.BOLD, 24 );
-    this.fontReg      = new Font( "SansSerif", Font.PLAIN, 12 );
+    this.fontInfo     = new Font( Font.SANS_SERIF, Font.PLAIN, 18 );
+    this.fontFct      = new Font( Font.SANS_SERIF, Font.PLAIN, 16 );
+    this.fontHex      = new Font( Font.SANS_SERIF, Font.BOLD, 24 );
+    this.fontReg      = new Font( Font.SANS_SERIF, Font.PLAIN, 12 );
     this.imgKeyRed    = getImage( "/images/keyboard/poly880/key_red.png" );
     this.imgKeyGreen  = getImage( "/images/keyboard/poly880/key_green.png" );
     this.imgKeyOrange = getImage( "/images/keyboard/poly880/key_orange.png" );
@@ -182,7 +181,7 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld<Poly880>
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	fireWarmResetAfterDelay();
+	fireResetAfterDelay();
       } else if( hits( this.monKey, e ) ) {
 	this.emuSys.fireMonKey();
       }
@@ -212,7 +211,7 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld<Poly880>
       if( image != null ) {
 	g.drawImage( image, key.x, key.y, this );
       }
-      g.setColor( Color.black );
+      g.setColor( Color.BLACK );
       if( key.text1 != null ) {
 	g.setFont( this.fontFct );
 	FontMetrics fm = g.getFontMetrics();
@@ -273,9 +272,9 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld<Poly880>
 	w += 20;
 	int x = (getWidth() - w) / 2;
 	int y = (getHeight() - h) / 2;
-	g.setColor( Color.yellow );
+	g.setColor( Color.YELLOW );
 	g.fillRect( x, y, w, h );
-	g.setColor( Color.black );
+	g.setColor( Color.BLACK );
 	x += 10;
 	y += 8;
 	y += r;
@@ -351,4 +350,3 @@ public class Poly880KeyboardFld extends AbstractKeyboardFld<Poly880>
     addKey( this.imgKeyWhite, text, null, null, col, value, null );
   }
 }
-

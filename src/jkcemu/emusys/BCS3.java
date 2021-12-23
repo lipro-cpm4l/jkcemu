@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,17 +9,17 @@
 package jkcemu.emusys;
 
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
-import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.CharRaster;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileFormat;
-import jkcemu.base.SaveDlg;
 import jkcemu.emusys.bcs3.BCS3KeyboardFld;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileUtil;
+import jkcemu.file.SaveDlg;
 import jkcemu.text.TextUtil;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
@@ -125,13 +125,15 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	"NEW",     null,     "RANDOMIZE", null,
 	"READ",    null,     "DATA",      null };
 
-  private static int SCREEN_CHARS_PER_ROW_MAX = 42;
-  private static int SCREEN_HIDDEN_LINES      = 60;
-  private static int SCREEN_HEIGHT            = 320;
+  private static final int SCREEN_CHARS_PER_ROW_MAX = 42;
+  private static final int SCREEN_HIDDEN_LINES      = 60;
+  private static final int SCREEN_HEIGHT            = 320;
 
-  private static int[] endInstBytesSE24 = { 0x0F, 0x27, 0xDE, 0x1E };
-  private static int[] endInstBytesSE31 = { 0x0F, 0x27, 0xCE, 0x1E };
-  private static int[] endInstBytesSP33 = { 0x00, 0x27, 0xCA, 0x1E };
+  private final static int[] endInstBytesSE24 = { 0x0F, 0x27, 0xDE, 0x1E };
+  private final static int[] endInstBytesSE31 = { 0x0F, 0x27, 0xCE, 0x1E };
+  private final static int[] endInstBytesSP33 = { 0x00, 0x27, 0xCA, 0x1E };
+
+  private static AutoInputCharSet autoInputCharSet = null;
 
   private static byte[] fontBytesSE24  = null;
   private static byte[] fontBytesSE31  = null;
@@ -163,7 +165,6 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   private int              screenChar1Y;
   private int[]            kbMatrix;
   private long             lastTapeOutTStates;
-  private boolean          lastTapeOutPhase;
   private boolean          removeHSyncFromAudio;
   private volatile boolean screenEnabled;
   private CharRaster       charRaster;
@@ -177,51 +178,18 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     this.osBytes   = null;
     this.fontBytes = null;
     this.romF000   = null;
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
-    }
 
     String version = EmuUtil.getProperty(
 				props,
 				this.propPrefix + PROP_OS_VERSION );
     if( version.equals( VALUE_OS_VERSION_31_29 ) ) {
-      this.osVersion = 31;
-      if( this.osBytes == null ) {
-	if( osBytesSE31_29 == null ) {
-	  osBytesSE31_29 = readResource( "/rom/bcs3/se31_29.bin" );
-	}
-	this.osBytes = osBytesSE31_29;
-      }
-      if( this.romF000 == null ) {
-	if( mcEdtitorSE31 == null ) {
-	  mcEdtitorSE31 = readResource( "/rom/bcs3/se31mceditor.bin" );
-	}
-	this.romF000 = mcEdtitorSE31;
-      }
+      this.osVersion = 3129;
     } else if( version.equals( VALUE_OS_VERSION_31_40 ) ) {
-      this.osVersion = 31;
-      if( this.osBytes == null ) {
-	if( osBytesSE31_40 == null ) {
-	  osBytesSE31_40 = readResource( "/rom/bcs3/se31_40.bin" );
-	}
-	this.osBytes = osBytesSE31_40;
-      }
-    } else if( version.equals( "3.3" ) ) {
-      this.osVersion = 33;
-      if( this.osBytes == null ) {
-	if( osBytesSP33_29 == null ) {
-	  osBytesSP33_29 = readResource( "/rom/bcs3/sp33_29.bin" );
-	}
-	this.osBytes = osBytesSP33_29;
-      }
+      this.osVersion = 3140;
+    } else if( version.equals( VALUE_OS_VERSION_33 ) ) {
+      this.osVersion = 3300;
     } else {
-      this.osVersion = 24;
-      if( this.osBytes == null ) {
-	if( osBytesSE24 == null ) {
-	  osBytesSE24 = readResource( "/rom/bcs3/se24.bin" );
-	}
-	this.osBytes = osBytesSE24;
-      }
+      this.osVersion = 2400;
     }
     this.ram                  = new byte[ 0x0400 ];
     this.ramEndAddr           = getRAMEndAddr( props );
@@ -236,7 +204,6 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     this.screenChar0Y         = -1;
     this.screenChar1Y         = -1;
     this.lastTapeOutTStates   = 0;
-    this.lastTapeOutPhase     = false;
     this.removeHSyncFromAudio = getRemoveHSyncFromAudio( props );
     this.charRaster           = null;
     this.keyboardFld          = null;
@@ -263,8 +230,19 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     this.ctc.setTimerConnection( 0, 1 );
     this.ctc.setTimerConnection( 1, 2 );
     this.ctc.addCTCListener( this );
-    cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
+  }
+
+
+  public static AutoInputCharSet getAutoInputCharSet()
+  {
+    if( autoInputCharSet == null ) {
+      autoInputCharSet = new AutoInputCharSet();
+      autoInputCharSet.addAsciiChars();
+      autoInputCharSet.addEnterChar();
+      autoInputCharSet.addBackSpaceChar();
+    }
+    return autoInputCharSet;
   }
 
 
@@ -320,7 +298,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	    int     ch  = (int) data[ pos++ ] & 0xFF;
 	    while( (ch != 0) && (ch != 0x1E) ) {
 	      if( spc ) {
-		buf.append( (char) '\u0020' );
+		buf.append( '\u0020' );
 		sep = false;
 		spc = false;
 	      }
@@ -334,7 +312,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 		      if( isIdentifierChar( buf.charAt( buf.length() - 1 ) )
 			  && isIdentifierChar( s.charAt( 0 ) ) )
 		      {
-			buf.append( (char) '\u0020' );
+			buf.append( '\u0020' );
 		      }
 		      buf.append( s );
 		      if( isIdentifierChar( s.charAt( len - 1 ) ) ) {
@@ -353,14 +331,14 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 				|| (ch == '\'')
 				|| (ch == '\"')) )
 		{
-		  buf.append( (char) '\u0020' );
+		  buf.append( '\u0020' );
 		}
 		buf.append( (char) ch );
 		sep = false;
 	      }
 	      ch = (int) data[ pos++ ] & 0xFF;
 	    }
-	    buf.append( (char) '\n' );
+	    buf.append( '\n' );
 	    if( ch == 0 ) {
 	      break;
 	    }
@@ -475,7 +453,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	      if( (this.charRaster.getColCount() != this.screenColCnt)
 		  || (this.charRaster.getRowCount() != rowCount)
 		  || (this.charRaster.getRowHeight() != rowHeight)
-		  || (this.charRaster.getTopLine() != topLine) )
+		  || (this.charRaster.getYOffset() != topLine) )
 	      {
 		rasChanged = true;
 	      }
@@ -492,8 +470,9 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 					this.screenColCnt,
 					rowCount,
 					rowHeight,
-					Math.min( rowHeight, 8 ),
 					8,
+					Math.min( rowHeight, 8 ),
+					0,
 					topLine );
 	      }
 	    }
@@ -590,7 +569,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public BCS3KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new BCS3KeyboardFld( this );
     return this.keyboardFld;
@@ -604,15 +583,16 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
     Z80CPU cpu = emuThread.getZ80CPU();
     cpu.removeTStatesListener( this );
-    cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+
+    super.die();
   }
 
 
   @Override
   public int getAppStartStackInitValue()
   {
-    return this.osBytes == this.osBytesSE24 ? 0x3C50 : 0x3C80;
+    return this.osBytes == osBytesSE24 ? 0x3C50 : 0x3C80;
   }
 
 
@@ -720,7 +700,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	  }
 	  m <<= 1;
 	}
-	if( this.emuThread.readTapeInPhase() ) {
+	if( this.tapeInPhase ) {
 	  rv |= 0x80;
 	} else {
 	  rv &= 0x7F;
@@ -737,7 +717,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	rv      = 0;
 	int idx = addr - 0x1800;
 	if( (idx >= 0) && (idx < this.ram.length) ) {
-	  int ch = (int) (this.ram[ idx ] & 0xFF);
+	  int ch = this.ram[ idx ] & 0xFF;
 	  if( (ch & 0x80) != 0 ) {
 	    rv = ch;
 	  }
@@ -746,7 +726,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
       else if( (addr >= 0x1C00) && (addr < 0x2000)) {
 	int idx = addr - 0x1C00;
 	if( (idx >= 0) && (idx < this.ram.length) ) {
-	  rv = (int) (this.ram[ idx ] & 0xFF);
+	  rv = this.ram[ idx ] & 0xFF;
 	}
       }
       else if( this.osBytes != null ) {
@@ -778,11 +758,11 @@ public class BCS3 extends EmuSys implements Z80CTCListener
       b = (int) this.screenChars[ idx ] & 0xFF;
     }
     if( (b >= 0) && (b < 0x10) ) {
-      if( this.osVersion < 32 ) {
+      if( this.osVersion < 3200 ) {
 	ch = '\u0020';
       }
     } else if( (b >= 10) && (b < 0x20) ) {
-      if( this.osVersion < 32 ) {
+      if( this.osVersion < 3200 ) {
 	ch = '\u0020';
       } else {
 	switch( b ) {
@@ -827,14 +807,14 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     } else if( (b >= 0x20) && (b <= 0x7F) ) {
       switch( b ) {
 	case 0x5D:
-	  if( this.osVersion >= 32 ) {
+	  if( this.osVersion >= 3200 ) {
 	    ch = ']';
 	  }
 	  break;
 	case 0x5F:			// invertiertes Groesserzeichen
 	  break;
 	case 0x60:
-	  if( this.osVersion < 32 ) {
+	  if( this.osVersion < 3200 ) {
 	    ch = '\u0020';
 	  } else {
 	    ch = b;
@@ -853,7 +833,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	  ch = '|';
 	  break;
 	case 0x7F:
-	  if( this.osVersion < 32 ) {
+	  if( this.osVersion < 3200 ) {
 	    ch = '\u25A0';			// ausgefuelltes Feld
 	  } else {
 	    ch = '\u00B7';			// Punkt in der Mitte
@@ -991,6 +971,48 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    this.osFile  = EmuUtil.getProperty(
+				props,
+				this.propPrefix + PROP_OS_FILE );
+    this.osBytes = readROMFile( this.osFile, 0x1000, "Betriebssystem" );
+    if( this.osBytes == null ) {
+      if( this.osVersion == 3129 ) {
+	if( osBytesSE31_29 == null ) {
+	  osBytesSE31_29 = readResource( "/rom/bcs3/se31_29.bin" );
+	}
+	this.osBytes = osBytesSE31_29;
+      } else if( this.osVersion == 3140 ) {
+	if( osBytesSE31_40 == null ) {
+	  osBytesSE31_40 = readResource( "/rom/bcs3/se31_40.bin" );
+	}
+	this.osBytes = osBytesSE31_40;
+      } else if( this.osVersion == 3300 ) {
+	if( osBytesSP33_29 == null ) {
+	  osBytesSP33_29 = readResource( "/rom/bcs3/sp33_29.bin" );
+	}
+	this.osBytes = osBytesSP33_29;
+      } else {
+	if( osBytesSE24 == null ) {
+	  osBytesSE24 = readResource( "/rom/bcs3/se24.bin" );
+	}
+	this.osBytes = osBytesSE24;
+      }
+    }
+    if( this.osVersion == 3129 ) {
+      if( this.romF000 == null ) {
+	if( mcEdtitorSE31 == null ) {
+	  mcEdtitorSE31 = readResource( "/rom/bcs3/se31mceditor.bin" );
+	}
+	this.romF000 = mcEdtitorSE31;
+      }
+    }
+    loadFont( props );
+  }
+
+
+  @Override
   public void openBasicProgram()
   {
     String   text       = null;
@@ -1026,7 +1048,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	  int     ch  = this.emuThread.getMemByte( addr++, false );
 	  while( (ch != 0) && (ch != 0x1E) ) {
 	    if( spc ) {
-	      buf.append( (char) '\u0020' );
+	      buf.append( '\u0020' );
 	      sep = false;
 	      spc = false;
 	    }
@@ -1041,7 +1063,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 		    if( (preCh != ':') && (preCh != '\u0020')
 			&& isIdentifierChar( s.charAt( 0 ) ) )
 		    {
-		      buf.append( (char) '\u0020' );
+		      buf.append( '\u0020' );
 		    }
 		    buf.append( s );
 		    if( isIdentifierChar( s.charAt( len - 1 ) ) ) {
@@ -1060,14 +1082,14 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 				|| (ch == '\'')
 				|| (ch == '\"')) )
 	      {
-		buf.append( (char) '\u0020' );
+		buf.append( '\u0020' );
 	      }
 	      buf.append( (char) ch );
 	      sep = false;
 	    }
 	    ch = this.emuThread.getMemByte( addr++, false );
 	  }
-	  buf.append( (char) '\n' );
+	  buf.append( '\n' );
 	  if( ch == 0 ) {
 	    break;
 	  }
@@ -1119,7 +1141,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
        */
       int idx = addr - 0x1800;
       if( (idx >= 0) && (idx < this.ram.length) ) {
-	int ch = (int) (this.ram[ idx ] & 0xFF);
+	int ch = this.ram[ idx ] & 0xFF;
 	if( ((ch & 0x80) == 0)
 	    && (this.screenLineNum >= SCREEN_HIDDEN_LINES) )
 	{
@@ -1179,22 +1201,14 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
-	&& isReloadExtROMsOnPowerOnEnabled( props ) )
-    {
-      loadROMs( props );
-    }
-    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
-	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
-    {
+    super.reset( powerOn, props );
+    if( powerOn ) {
+      initDRAM();
       initSRAM( this.ram, props );
-      this.ctc.reset( true );
-    } else {
-      this.ctc.reset( false );
     }
+    this.ctc.reset( powerOn );
     this.screenEnabled       = false;
     this.screenActiveTStates = 0;
     this.screenColCnt        = 0;
@@ -1205,7 +1219,6 @@ public class BCS3 extends EmuSys implements Z80CTCListener
     this.screenChar0Y        = -1;
     this.screenChar1Y        = -1;
     this.lastTapeOutTStates  = 0;
-    this.lastTapeOutPhase    = false;
     this.charRaster          = null;
     Arrays.fill( this.kbMatrix, 0 );
     Arrays.fill( this.screenChars, (byte) 0x20 );
@@ -1258,7 +1271,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 		endAddr - 1,
 		"BASIC-Programm speichern",
 		SaveDlg.BasicType.OTHER_BASIC,
-		EmuUtil.getBinaryFileFilter() )).setVisible( true );
+		FileUtil.getBinaryFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -1415,7 +1428,7 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 	  int a = addr;
 	  int b = 0;
 	  while( b < endInstBytes.length ) {
-	    if( ((int) endInstBytes[ b ] & 0xFF)
+	    if( (endInstBytes[ b ] & 0xFF)
 				!= this.emuThread.getMemByte( a, false ) )
 	    {
 	      b = -1;
@@ -1537,12 +1550,13 @@ public class BCS3 extends EmuSys implements Z80CTCListener
 				this.propPrefix + PROP_FONT_FILE,
 				0x0400 );
     if( this.fontBytes == null ) {
-      if( this.osVersion == 31 ) {
+      int osMainVersion = this.osVersion / 100;
+      if( osMainVersion == 31 ) {
 	if( fontBytesSE31 == null ) {
 	  fontBytesSE31 = readResource( "/rom/bcs3/se31font.bin" );
 	}
 	this.fontBytes = fontBytesSE31;
-      } else if( this.osVersion == 33 ) {
+      } else if( osMainVersion == 33 ) {
 	if( fontBytesSP33 == null ) {
 	  fontBytesSP33 = readResource( "/rom/bcs3/sp33font.bin" );
 	}
@@ -1557,24 +1571,14 @@ public class BCS3 extends EmuSys implements Z80CTCListener
   }
 
 
-  private void loadROMs( Properties props )
-  {
-    this.osFile  = EmuUtil.getProperty(
-				props,
-				this.propPrefix + PROP_OS_FILE );
-    this.osBytes = readROMFile( this.osFile, 0x1000, "Betriebssystem" );
-    loadFont( props );
-  }
-
-
   private void updTapeOutPhase( boolean phase )
   {
     if( this.removeHSyncFromAudio ) {
-      Z80CPU cpu = this.emuThread.getZ80CPU();
-      long t = cpu.getProcessedTStates();
-      long d = cpu.calcTStatesDiff( this.lastTapeOutTStates, t );
-      this.lastTapeOutTStates = t;
-      if( (d > 300) && (d < 40000) ) {
+      Z80CPU cpu              = this.emuThread.getZ80CPU();
+      long   curTStates       = cpu.getProcessedTStates();
+      long   diffTStates      = curTStates - this.lastTapeOutTStates;
+      this.lastTapeOutTStates = curTStates;
+      if( (diffTStates > 300) && (diffTStates < 40000) ) {
 	this.tapeOutPhase = phase;
       }
     } else {

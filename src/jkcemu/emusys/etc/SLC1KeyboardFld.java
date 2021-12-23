@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -40,8 +39,8 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld<SLC1>
   public SLC1KeyboardFld( SLC1 slc1 )
   {
     super( slc1, 12, true );
-    this.fontMain = new Font( "SansSerif", Font.BOLD, FONT_SIZE_MAIN );
-    this.fontSub  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE_SUB );
+    this.fontMain = new Font( Font.SANS_SERIF, Font.BOLD, FONT_SIZE_MAIN );
+    this.fontSub  = new Font( Font.SANS_SERIF, Font.PLAIN, FONT_SIZE_SUB );
     this.kbMatrix = new int[ 3 ];
     this.curIdx   = 0;
     this.curX     = MARGIN;
@@ -117,19 +116,19 @@ public class SLC1KeyboardFld extends AbstractKeyboardFld<SLC1>
   {
     boolean chessMode = this.emuSys.isChessMode();
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
     g.fillRect( 0, 0, getWidth(), getHeight() );
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
 
     for( KeyData key : this.keys ) {
       boolean selected = isKeySelected( key );
       if( selected ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1 );
       }
-      g.setColor( Color.lightGray );
+      g.setColor( Color.LIGHT_GRAY );
       g.draw3DRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1, !selected );
-      g.setColor( Color.black );
+      g.setColor( Color.BLACK );
       String subText = getText( key.text3, chessMode );
       if( subText != null ) {
 	if( subText.isEmpty() ) {

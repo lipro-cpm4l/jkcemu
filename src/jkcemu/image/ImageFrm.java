@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,6 +19,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.Transparency;
@@ -37,42 +38,50 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
+import java.awt.image.BufferedImageOp;
+import java.awt.image.ConvolveOp;
+import java.awt.image.ByteLookupTable;
 import java.awt.image.IndexColorModel;
+import java.awt.image.Kernel;
+import java.awt.image.LookupOp;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.EventObject;
+import java.util.Hashtable;
 import java.util.Properties;
 import java.util.Stack;
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
-import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JToolBar;
 import javax.swing.JViewport;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileComparator;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
+import jkcemu.file.Downloader;
+import jkcemu.file.FileComparator;
+import jkcemu.file.FileUtil;
 import jkcemu.print.PrintUtil;
 
 
 public class ImageFrm extends AbstractImageFrm implements
+						Downloader.Consumer,
 						DropTargetListener,
 						FlavorListener,
 						MouseMotionListener
 {
+  public static final String TITLE = Main.APPNAME + " Bildbetrachter";
+
   private static final String PROP_AUTORESIZE = "auto_resize";
   private static final String PROP_BACKGROUND = "background";
   private static final String VALUE_BLACK     = "black";
@@ -131,7 +140,7 @@ public class ImageFrm extends AbstractImageFrm implements
   private Object            savedViewScale;
   private Point             selectionStart;
   private CropDlg           cropDlg;
-  private Stack<ImgEntry>   imgStack;
+  private Stack<ImageEntry> imgStack;
   private JButton           btnOpen;
   private JButton           btnSaveAs;
   private JButton           btnPrint;
@@ -156,9 +165,10 @@ public class ImageFrm extends AbstractImageFrm implements
   private JMenuItem         mnuExpAppLLC2Hires;
   private JMenuItem         mnuExpAppZ1013;
   private JMenuItem         mnuExpAppZ9001;
-  private JMenuItem         mnuExpColorTab;
-  private JMenuItem         mnuImgProps;
   private JMenuItem         mnuPrint;
+  private JMenuItem         mnuImgProps;
+  private JMenuItem         mnuExifEdit;
+  private JMenuItem         mnuExifRemove;
   private JMenuItem         mnuPrev;
   private JMenuItem         mnuNext;
   private JMenuItem         mnuClose;
@@ -167,20 +177,25 @@ public class ImageFrm extends AbstractImageFrm implements
   private JMenuItem         mnuCopy;
   private JMenuItem         mnuUndo;
   private JMenuItem         mnuPaste;
-  private JMenuItem         mnuSelectArea;
+  private JMenuItem         mnuCropImage;
+  private JMenuItem         mnuDetectEdges;
+  private JMenuItem         mnuInvertImage;
   private JMenuItem         mnuScaleImage;
+  private JMenuItem         mnuSharpenImage;
+  private JMenuItem         mnuSoftenImage;
   private JMenuItem         mnuRotateImage;
   private JMenuItem         mnuFlipHorizontal;
   private JMenuItem         mnuRoundCorners;
   private JMenuItem         mnuAdjustImage;
   private JMenuItem         mnuIndexColors;
+  private JMenu             mnuToBW;
   private JMenuItem         mnuToGray;
   private JMenuItem         mnuToMonoFloydSteinberg;
   private JMenuItem         mnuToMonoSierra3;
   private JMenuItem         mnuToMonoAtkinson;
   private JMenuItem         mnuThreshold;
-  private JMenuItem         mnuInvertImage;
   private JMenuItem         mnuRemoveTransparency;
+  private JMenuItem         mnuColorPalette;
   private JMenu             mnuConvert;
   private JMenuItem         mnuToA5105;
   private JMenuItem         mnuToAC1_ACC;
@@ -216,9 +231,9 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  public ImgFld getImgFld()
+  public ImageFld getImageFld()
   {
-    return this.imgFld;
+    return this.imageFld;
   }
 
 
@@ -231,7 +246,7 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  public static void open()
+  public static ImageFrm open()
   {
     if( instance != null ) {
       if( instance.getExtendedState() == Frame.ICONIFIED ) {
@@ -242,90 +257,83 @@ public class ImageFrm extends AbstractImageFrm implements
     }
     instance.toFront();
     instance.setVisible( true );
+    return instance;
   }
 
 
-  public static void open( BufferedImage image, String title )
+  public static ImageFrm open(
+			BufferedImage image,
+			ExifData      exifData,
+			String        title )
   {
     open();
     if( image != null ) {
       if( instance.confirmImageSaved() ) {
-	ImgEntry.Mode   mode = ImgEntry.Mode.UNSPECIFIED;
-	IndexColorModel icm  = ImgUtil.getIndexColorModel( image );
-	if( icm != null ) {
-	  boolean mono = true;
-	  boolean gray = true;
-	  int     n    = icm.getMapSize();
-	  for( int i = 0; i < n; i++ ) {
-	    int v = icm.getRGB( i );
-	    int c = v & 0xFF;
-	    if( (((v >> 16) & 0xFF) != c) || (((v >> 8) & 0xFF) != c) ) {
-	      mono = false;
-	      gray = false;
-	      break;
-	    }
-	    if( (c != 0) && (c != 0xFF) ) {
-	      mono = false;
-	    }
-	  }
-	  if( mono ) {
-	    mode = ImgEntry.Mode.MONOCHROME;
-	  } else if( gray ) {
-	    mode = ImgEntry.Mode.GRAY;
-	  }
-	}
 	instance.showImageInternal(
 				image,
-				mode,
-				ImgFld.Rotation.NONE,
+				exifData,
+				ImageEntry.Action.INITIAL_LOADED,
+				ImageUtil.probeMode( image ),
+				ImageFld.Rotation.NONE,
 				null,
 				title,
-				true,
 				null,
 				null );
 	instance.updFileList();
       }
     }
+    return instance;
   }
 
 
-  public static void open( File file )
+  public static ImageFrm open( File file )
   {
     open();
     if( file != null ) {
       if( instance.confirmImageSaved() ) {
-	instance.showImageFile( file );
+	instance.showImageFile( file, null, null );
       }
     }
+    return instance;
   }
 
 
   public void setSelection( int x, int y, int w, int h )
   {
-    this.imgFld.setSelection( x, y, w, h );
+    this.imageFld.setSelection( x, y, w, h );
   }
 
 
   public void setSelectionColor( Color color )
   {
-    this.imgFld.setSelectionColor( color );
+    this.imageFld.setSelectionColor( color );
   }
 
 
-  public void showDerivatedImage( BufferedImage image, String title )
+  public void showCroppedImage( BufferedImage image )
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( (entry != null) && (image != null) ) {
       showImageInternal(
 		image,
+		entry.getSharedExifDataCopyForResizedImage(),
+		ImageEntry.Action.CHANGED,
 		entry.getMode(),
-		this.imgFld.getRotation(),
+		this.imageFld.getRotation(),
 		null,
-		title,
-		false,
+		"Zugeschnitten",
 		null,
 		null );
     }
+  }
+
+
+	/* --- Downloader.Consumer --- */
+
+  @Override
+  public void consume( byte[] fileBytes, String fileName )
+  {
+    showImageFile( null, fileBytes, fileName );
   }
 
 
@@ -334,7 +342,7 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void dragEnter( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
+    if( !FileUtil.isFileDrop( e ) )
       e.rejectDrag();
   }
 
@@ -342,24 +350,41 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void dragExit( DropTargetEvent e )
   {
-    // empty
+    // leer
   }
 
 
   @Override
   public void dragOver( DropTargetDragEvent e )
   {
-    // empty
+    // leer
   }
 
 
   @Override
   public void drop( DropTargetDropEvent e )
   {
-    File file = EmuUtil.fileDrop( this, e );
+    final File file = FileUtil.fileDrop( this, e );
     if( file != null ) {
       if( confirmImageSaved() ) {
-	showImageFile( file );
+	if( !Downloader.checkAndStart(
+			this,
+			file,
+			64 * 1024 * 1024,	// 64 MByte
+			true,			// GZip-Dateien entpacken
+			e,
+			this ) )
+	{
+	  EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    showImageFile( file, null, null );
+			  }
+			} );
+	}
       }
     }
   }
@@ -368,8 +393,7 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
+    // leer
   }
 
 
@@ -388,7 +412,7 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void mouseDragged( MouseEvent e )
   {
-    if( e.getComponent() == this.imgFld ) {
+    if( e.getComponent() == this.imageFld ) {
       String text     = DEFAULT_STATUS_TEXT;
       Point  curPos   = toUnscaledPoint( e );
       Point  startPos = this.selectionStart;
@@ -410,11 +434,11 @@ public class ImageFrm extends AbstractImageFrm implements
 	}
 	if( r != null ) {
 	  // Startpunkt soll erhalten bleiben
-	  this.imgFld.setSelection( r );
+	  this.imageFld.setSelection( r );
 	} else {
-	  this.imgFld.setSelection( x, y, w, h );
+	  this.imageFld.setSelection( x, y, w, h );
 	}
-	r = this.imgFld.getSelectedArea();
+	r = this.imageFld.getSelectedArea();
 	if( r != null ) {
 	  if( this.cropDlg != null ) {
 	    if( this.cropDlg.isVisible() ) {
@@ -440,8 +464,8 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void mouseMoved( MouseEvent e )
   {
-    if( (e.getComponent() == this.imgFld)
-	&& (this.imgFld.getSelection() == null) )
+    if( (e.getComponent() == this.imageFld)
+	&& (this.imageFld.getSelection() == null) )
     {
       String        text  = DEFAULT_STATUS_TEXT;
       BufferedImage image = getImage();
@@ -486,11 +510,11 @@ public class ImageFrm extends AbstractImageFrm implements
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean applySettings( Properties props, boolean resizable )
+  public boolean applySettings( Properties props )
   {
     boolean rv = false;
     if( props != null ) {
-      rv = super.applySettings( props, resizable );
+      rv = super.applySettings( props );
 
       String prefix = getSettingsPrefix();
 
@@ -506,21 +530,21 @@ public class ImageFrm extends AbstractImageFrm implements
       if( text != null ) {
 	text = text.trim().toLowerCase();
 	if( text.equals( VALUE_BLACK ) ) {
-	  color = Color.black;
+	  color = Color.BLACK;
 	  btn   = this.mnuBgBlack;
 	}
 	else if( text.equals( VALUE_GRAY ) ) {
-	  color = Color.gray;
+	  color = Color.GRAY;
 	  btn   = this.mnuBgGray;
 	}
 	else if( text.equals( VALUE_WHITE ) ) {
-	  color = Color.white;
+	  color = Color.WHITE;
 	  btn   = this.mnuBgWhite;
 	}
       }
       btn.setSelected( true );
-      this.imgFld.setBackground( color );
-      this.imgFld.repaint();
+      this.imageFld.setBackground( color );
+      this.imageFld.repaint();
     }
     return rv;
   }
@@ -540,7 +564,7 @@ public class ImageFrm extends AbstractImageFrm implements
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
-    Object src = e.getSource();
+    Object  src = e.getSource();
     if( src == this.btnRotateLeft ) {
       rv = true;
       doRotateLeft();
@@ -621,19 +645,23 @@ public class ImageFrm extends AbstractImageFrm implements
       rv = true;
       doExport( ExpFmt.MEM_Z9001 );
     }
-    else if( src == this.mnuExpColorTab ) {
+    else if( (src == this.btnPrint) || (src == this.mnuPrint) ) {
       rv = true;
-      doExportColorTab();
+      if( getImage() != null ) {
+	PrintUtil.doPrint( this, this.imageFld, "Bildbetrachter" );
+      }
     }
     else if( src == this.mnuImgProps ) {
       rv = true;
       doImgProps();
     }
-    else if( (src == this.btnPrint) || (src == this.mnuPrint) ) {
+    else if( src == this.mnuExifEdit ) {
       rv = true;
-      if( getImage() != null ) {
-	PrintUtil.doPrint( this, this.imgFld, "Bildbetrachter" );
-      }
+      doExifEdit();
+    }
+    else if( src == this.mnuExifRemove ) {
+      rv = true;
+      doExifRemove();
     }
     else if( (src == this.btnPrev) || (src == this.mnuPrev) ) {
       rv = true;
@@ -651,17 +679,33 @@ public class ImageFrm extends AbstractImageFrm implements
       rv = true;
       doPaste();
     }
+    else if( src == this.mnuDetectEdges ) {
+      rv = true;
+      doDetectEdges();
+    }
+    else if( src == this.mnuInvertImage ) {
+      rv = true;
+      doInvertImage();
+    }
     else if( src == this.mnuRoundCorners ) {
       rv = true;
       doRoundCorners();
     }
-    else if( src == this.mnuSelectArea ) {
+    else if( src == this.mnuCropImage ) {
       rv = true;
-      doSelectArea();
+      doCropImage();
     }
     else if( src == this.mnuScaleImage ) {
       rv = true;
       doScaleImage();
+    }
+    else if( src == this.mnuSharpenImage ) {
+      rv = true;
+      doSharpenImage();
+    }
+    else if( src == this.mnuSoftenImage ) {
+      rv = true;
+      doSoftenImage();
     }
     else if( src == this.mnuRotateImage ) {
       rv = true;
@@ -699,13 +743,13 @@ public class ImageFrm extends AbstractImageFrm implements
       rv = true;
       doThreshold();
     }
-    else if( src == this.mnuInvertImage ) {
-      rv = true;
-      doInvertImage();
-    }
     else if( src == this.mnuRemoveTransparency ) {
       rv = true;
       doRemoveTransparency();
+    }
+    else if( src == this.mnuColorPalette ) {
+      rv = true;
+      doColorPalette();
     }
     else if( src == this.mnuToA5105 ) {
       rv = true;
@@ -716,21 +760,21 @@ public class ImageFrm extends AbstractImageFrm implements
       doToAC1(
 	"AC1-ACC-Blockgrafik",
 	"/rom/ac1/accfont.bin",
-	ImgEntry.Mode.AC1_ACC );
+	ImageEntry.Mode.AC1_ACC );
     }
     else if( src == this.mnuToAC1_SCCH ) {
       rv = true;
       doToAC1(
 	"AC1-SCCH-Blockgrafik",
 	"/rom/ac1/scchfont.bin",
-	ImgEntry.Mode.AC1_SCCH );
+	ImageEntry.Mode.AC1_SCCH );
     }
     else if( src == this.mnuToAC1_2010 ) {
       rv = true;
       doToAC1(
 	"AC1-2010-Blockgrafik",
 	"/rom/ac1/font2010.bin",
-	ImgEntry.Mode.AC1_2010 );
+	ImageEntry.Mode.AC1_2010 );
     }
     else if( src == this.mnuToKC85Monochrome ) {
       rv = true;
@@ -762,27 +806,27 @@ public class ImageFrm extends AbstractImageFrm implements
     }
     else if( src == this.mnuBgSystem ) {
       rv = true;
-      this.imgFld.setBackground( SystemColor.window );
-      this.imgFld.repaint();
+      this.imageFld.setBackground( SystemColor.window );
+      this.imageFld.repaint();
     }
     else if( src == this.mnuBgBlack ) {
       rv = true;
-      this.imgFld.setBackground( Color.black );
-      this.imgFld.repaint();
+      this.imageFld.setBackground( Color.BLACK );
+      this.imageFld.repaint();
     }
     else if( src == this.mnuBgGray ) {
       rv = true;
-      this.imgFld.setBackground( Color.gray );
-      this.imgFld.repaint();
+      this.imageFld.setBackground( Color.GRAY );
+      this.imageFld.repaint();
     }
     else if( src == this.mnuBgWhite ) {
       rv = true;
-      this.imgFld.setBackground( Color.white );
-      this.imgFld.repaint();
+      this.imageFld.setBackground( Color.WHITE );
+      this.imageFld.repaint();
     }
     else if( src == this.mnuHelpContent ) {
       rv = true;
-      HelpFrm.open( HELP_PAGE );
+      HelpFrm.openPage( HELP_PAGE );
     }
     if( !rv && (e instanceof ActionEvent) ) {
       String cmd = ((ActionEvent) e).getActionCommand();
@@ -811,12 +855,20 @@ public class ImageFrm extends AbstractImageFrm implements
   {
     boolean rv = false;
     if( confirmImageSaved() ) {
-      rv = super.doClose();
-      if( rv ) {
-	if( !Main.checkQuit( this ) ) {
-	  // damit beim erneuten Oeffnen das Fenster leer ist
-	  clearContent();
+      if( Main.isTopFrm( this ) ) {
+	rv = EmuUtil.closeOtherFrames( this );
+	if( rv ) {
+	  rv = super.doClose();
 	}
+	if( rv ) {
+	  Main.exitSuccess();
+	}
+      } else {
+	rv = super.doClose();
+      }
+      if( rv ) {
+	// damit beim erneuten Oeffnen das Fenster leer ist
+	clearContent();
       }
     }
     return rv;
@@ -855,6 +907,15 @@ public class ImageFrm extends AbstractImageFrm implements
 
 
   @Override
+  protected ExifData getExifData()
+  {
+    return this.imgStack.isEmpty() ?
+			null
+			: this.imgStack.peek().getExifData();
+  }
+
+
+  @Override
   protected BufferedImage getImage()
   {
     return this.imgStack.isEmpty() ? null : this.imgStack.peek().getImage();
@@ -864,7 +925,7 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void mouseExited( MouseEvent e )
   {
-    if( e.getComponent() == this.imgFld )
+    if( e.getComponent() == this.imageFld )
       this.labelStatus.setText( DEFAULT_STATUS_TEXT );
   }
 
@@ -872,9 +933,9 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void mousePressed( MouseEvent e )
   {
-    if( e.getComponent() == this.imgFld ) {
-      this.imgFld.setSelection( null );
-      this.imgFld.requestFocus();
+    if( e.getComponent() == this.imageFld ) {
+      this.imageFld.setSelection( null );
+      this.imageFld.requestFocus();
       this.labelStatus.setText( DEFAULT_STATUS_TEXT );
     }
   }
@@ -883,7 +944,7 @@ public class ImageFrm extends AbstractImageFrm implements
   @Override
   public void mouseReleased( MouseEvent e )
   {
-    if( e.getComponent() == this.imgFld )
+    if( e.getComponent() == this.imageFld )
       this.selectionStart = null;
   }
 
@@ -919,13 +980,13 @@ public class ImageFrm extends AbstractImageFrm implements
   protected void updWindowSize()
   {
     if( this.mnuAutoResize.isSelected() ) {
-      Dimension imgSize = this.imgFld.getRotatedImageSize();
+      Dimension imgSize = this.imageFld.getRotatedImageSize();
       if( imgSize != null ) {
 	int wImg = imgSize.width;
 	int hImg = imgSize.height;
 	if( (wImg > 0) && (hImg > 0) ) {
 	  removeComponentListener( this );
-	  double    scale   = this.imgFld.getScale();
+	  double    scale   = this.imageFld.getScale();
 	  wImg              = (int) Math.round( (double) wImg * scale );
 	  hImg              = (int) Math.round( (double) hImg * scale );
 	  Dimension maxSize = getMaxContentSize();
@@ -946,9 +1007,141 @@ public class ImageFrm extends AbstractImageFrm implements
 
 	/* --- Aktionen --- */
 
+  private void doAdjustImage()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      saveView();
+      BufferedImage image = ImageAdjustDlg.showDlg( this );
+      if( image != null ) {
+	showSameBoundsImage(
+		image,
+		entry.getSharedExifDataCopyForChangedImage(),
+		ImageEntry.Action.CHANGED,
+		entry.getMode() == ImageEntry.Mode.INDEXED_COLORS ?
+			ImageEntry.Mode.INDEXED_COLORS 
+			: ImageEntry.Mode.UNSPECIFIED,
+		"Helligkeit,  Kontrast, Farben eingestellt" );
+      } else {
+	restoreView();
+      }
+    }
+  }
+
+
+  private void doColorPalette()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      saveView();
+      BufferedImage image = ColorPaletteDlg.showDlg( this );
+      if( image != null ) {
+	showSameBoundsImage(
+		image,
+		entry.getSharedExifDataCopyForChangedImage(),
+		ImageEntry.Action.CHANGED,
+		ImageEntry.Mode.INDEXED_COLORS,
+		"Farbpalette ge\u00E4ndert" );
+      } else {
+	restoreView();
+      }
+    }
+  }
+
+
+  private void doCropImage()
+  {
+    BufferedImage image = getImage();
+    if( image != null ) {
+      int w = image.getWidth();
+      int h = image.getHeight();
+      if( (w > 0) && (h > 0) ) {
+	Rectangle r = this.imageFld.getSelectedArea();
+	if( this.cropDlg == null ) {
+	  this.cropDlg = new CropDlg( this );
+	}
+	this.cropDlg.setImageSize( w, h );
+	this.cropDlg.setSelectedArea( r );
+	this.cropDlg.setVisible( true );
+	this.cropDlg.toFront();
+	this.imageFld.setSelection( r );
+      }
+    }
+  }
+
+
+  private void doDetectEdges()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      if( convolveAndShowImage(
+			entry,
+			new Kernel(
+				3, 3,
+				new float[] {
+					-0.7F, -1F,   -0.7F,
+					-1F,    6.8F, -1F,
+					-0.7F, -1F,   -0.7F } ),
+			ImageEntry.Action.CHANGED,
+			"Konturen hervorgehoben" ) != null )
+      {
+	BaseDlg.showSuppressableInfoDlg(
+		this,
+		"M\u00F6glicherweise m\u00FCssen Sie das Bild aufhellen"
+			+ " und und den Kontrast erh\u00F6hen,"
+			+ " um die Konturen zu sehen.\n"
+			+ "Auch die Funktion \'"
+			+ this.mnuToBW.getText()
+			+ "\' \u2192 \'"
+			+ this.mnuThreshold.getText()
+			+ "\'\n"
+			+ "kann f\u00FCr die weitere Bearbeitung"
+			+ " n\u00FCtzlich sein." );
+      }
+    }
+  }
+
+
+  private void doExifEdit()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      ExifData exifData = ExifEditDlg.showDlg( this, entry.getExifData() );
+      if( exifData != null ) {
+	showSameBoundsImage(
+			entry.getImage(),
+			exifData,
+			ImageEntry.Action.CHANGED,
+			entry.getMode(),
+			"Zusatzinformationen ge\u00E4ndert" );
+      }
+    }
+  }
+
+
+  private void doExifRemove()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      if( BaseDlg.showYesNoDlg(
+		this,
+		"M\u00F6chten Sie die an dem Bild angeh\u00E4ngten\n"
+			+ "Zusatzinformationen (EXIF-Daten) entfernen?" ) )
+      {
+	showSameBoundsImage(
+			entry.getImage(),
+			null,
+			ImageEntry.Action.CHANGED,
+			entry.getMode(),
+			"Zusatzinformationen entfernt" );
+      }
+    }
+  }
+
+
   private void doExport( ExpFmt expFmt )
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       javax.swing.filechooser.FileFilter fileFilter  = null;
       String                             fileExt     = "";
@@ -960,7 +1153,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	case IMG_A5105:
 	  formatText = "A5105-";
 	  if( entry.isA5105Format() ) {
-	    fileFilter = ImgUtil.createA5105ImageFileFilter();
+	    fileFilter = ImageUtil.createA5105ImageFileFilter();
 	    fileExt    = ".scr";
 	    status     = true;
 	  }
@@ -971,10 +1164,10 @@ public class ImageFrm extends AbstractImageFrm implements
 	  softwareDir = true;
 	  if( entry.isAC1Format()) {
 	    if( expFmt.equals( ExpFmt.APP_AC1 ) ) {
-	      fileFilter = EmuUtil.getHeadersaveFileFilter();
+	      fileFilter = FileUtil.getHeadersaveFileFilter();
 	      fileExt    = ".z80";
 	    } else {
-	      fileFilter = EmuUtil.getBinaryFileFilter();
+	      fileFilter = FileUtil.getBinaryFileFilter();
 	      fileExt    = "_1000_17FF.bin";
 	    }
 	    status = true;
@@ -984,7 +1177,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  formatText  = "KC85/2,3-";
 	  softwareDir = true;
 	  if( entry.isKC85MonochromeFormat() ) {
-	    fileFilter = EmuUtil.getKCSystemFileFilter();
+	    fileFilter = FileUtil.getKCSystemFileFilter();
 	    fileExt    = ".kcc";
 	    status     = true;
 	  }
@@ -993,7 +1186,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  formatText  = "KC85/4,5-";
 	  softwareDir = true;
 	  if( entry.isKC854HiresFormat() || entry.isKC85MonochromeFormat() ) {
-	    fileFilter = EmuUtil.getKCSystemFileFilter();
+	    fileFilter = FileUtil.getKCSystemFileFilter();
 	    fileExt    = ".kcc";
 	    status     = true;
 	  }
@@ -1002,7 +1195,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  formatText  = "KC85/2,3-Monochrom-";
 	  softwareDir = true;
 	  if( entry.isKC85MonochromeFormat() ) {
-	    fileFilter = ImgUtil.createKC852ImageFileFilter();
+	    fileFilter = ImageUtil.createKC852ImageFileFilter();
 	    fileExt    = ".pic";
 	    status     = true;
 	  }
@@ -1011,7 +1204,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  formatText  = "KC85/4,5-Monochrom-";
 	  softwareDir = true;
 	  if( entry.isKC85MonochromeFormat() ) {
-	    fileFilter = ImgUtil.createKC854LowresImageFileFilter();
+	    fileFilter = ImageUtil.createKC854LowresImageFileFilter();
 	    fileExt    = ".pip";
 	    status     = true;
 	  }
@@ -1020,7 +1213,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  formatText  = "KC85/4,5-HIRES-";
 	  softwareDir = true;
 	  if( entry.isKC854HiresFormat() || entry.isKC85MonochromeFormat() ) {
-	    fileFilter = ImgUtil.createKC854HiresImageFileFilter();
+	    fileFilter = ImageUtil.createKC854HiresImageFileFilter();
 	    fileExt    = ".hip";
 	    status     = true;
 	  }
@@ -1031,13 +1224,13 @@ public class ImageFrm extends AbstractImageFrm implements
 	  softwareDir = true;
 	  if( entry.isLLC2HiresFormat() ) {
 	    if( entry.getMemBytes() == null ) {
-	      entry.setMemBytes( ImgUtil.createLLC2HiresMemBytes( image ) );
+	      entry.setMemBytes( ImageUtil.createLLC2HiresMemBytes( image ) );
 	    }
 	    if( expFmt.equals( ExpFmt.APP_LLC2_HIRES ) ) {
-	      fileFilter = EmuUtil.getHeadersaveFileFilter();
+	      fileFilter = FileUtil.getHeadersaveFileFilter();
 	      fileExt    = ".z80";
 	    } else {
-	      fileFilter = ImgUtil.createLLC2HiresImageFileFilter();
+	      fileFilter = ImageUtil.createLLC2HiresImageFileFilter();
 	      fileExt    = ".pix";
 	    }
 	    status = true;
@@ -1049,10 +1242,10 @@ public class ImageFrm extends AbstractImageFrm implements
 	  softwareDir = true;
 	  if( entry.isZ1013Format() ) {
 	    if( expFmt.equals( ExpFmt.APP_Z1013 ) ) {
-	      fileFilter = EmuUtil.getHeadersaveFileFilter();
+	      fileFilter = FileUtil.getHeadersaveFileFilter();
 	      fileExt    = ".z80";
 	    } else {
-	      fileFilter = EmuUtil.getBinaryFileFilter();
+	      fileFilter = FileUtil.getBinaryFileFilter();
 	      fileExt    = "_EC00_EFFF.bin";
 	    }
 	    status = true;
@@ -1064,10 +1257,10 @@ public class ImageFrm extends AbstractImageFrm implements
 	  softwareDir = true;
 	  if( entry.isZ9001Format()) {
 	    if( expFmt.equals( ExpFmt.APP_Z9001 ) ) {
-	      fileFilter = EmuUtil.getKCSystemFileFilter();
+	      fileFilter = FileUtil.getKCSystemFileFilter();
 	      fileExt    = ".kcc";
 	    } else {
-	      fileFilter = EmuUtil.getBinaryFileFilter();
+	      fileFilter = FileUtil.getBinaryFileFilter();
 	      fileExt    = "_EC00_EFBF.bin";
 	    }
 	    status = true;
@@ -1127,7 +1320,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  fileName = "noname";
 	}
 	fileName  = fileName + fileExt;
-	File file = EmuUtil.showFileSaveDlg(
+	File file = FileUtil.showFileSaveDlg(
 			this,
 			formatText + "Bild exportieren",
 			dirFile != null ?
@@ -1138,54 +1331,54 @@ public class ImageFrm extends AbstractImageFrm implements
 	  try {
 	    switch( expFmt ) {
 	      case IMG_A5105:
-		ImgSaver.saveImageA5105( this, image, file );
+		ImageSaver.saveImageA5105( this, image, file );
 		break;
 	      case IMG_KC852_MONOCHROME:
-		ImgSaver.saveImageKC852Monochrome( image, file );
+		ImageSaver.saveImageKC852Monochrome( image, file );
 		break;
 	      case IMG_KC854_MONOCHROME:
-		ImgSaver.saveImageKC854Monochrome( image, file );
+		ImageSaver.saveImageKC854Monochrome( image, file );
 		break;
 	      case IMG_KC854_HIRES:
-		ImgSaver.saveImageKC854Hires( image, file );
+		ImageSaver.saveImageKC854Hires( image, file );
 		break;
 	      case IMG_LLC2_HIRES:
-		ImgUtil.writeToFile( entry.getMemBytes(), file );
+		ImageUtil.writeToFile( entry.getMemBytes(), file );
 		break;
 	      case APP_AC1:
-		if( entry.equalsMode( ImgEntry.Mode.AC1_ACC ) ) {
-		  ImgSaver.saveAppAC1ACC( entry.getMemBytes(), file );
+		if( entry.equalsMode( ImageEntry.Mode.AC1_ACC ) ) {
+		  ImageSaver.saveAppAC1ACC( entry.getMemBytes(), file );
 		} else {
-		  ImgSaver.saveAppAC1SCCH( entry.getMemBytes(), file );
+		  ImageSaver.saveAppAC1SCCH( entry.getMemBytes(), file );
 		}
 		break;
 	      case APP_KC852:
-		ImgSaver.saveAppKC852BW( image, file );
+		ImageSaver.saveAppKC852BW( image, file );
 		break;
 	      case APP_KC854:
 		if( entry.isKC854HiresFormat() ) {
-		  ImgSaver.saveAppKC854Hires( image, file );
+		  ImageSaver.saveAppKC854Hires( image, file );
 		} else {
-		  ImgSaver.saveAppKC854LowresBW( image, file );
+		  ImageSaver.saveAppKC854LowresBW( image, file );
 		}
 		break;
 	      case APP_LLC2_HIRES:
-		ImgSaver.saveAppLLC2Hires( entry.getMemBytes(), file );
+		ImageSaver.saveAppLLC2Hires( entry.getMemBytes(), file );
 		break;
 	      case APP_Z1013:
-		ImgSaver.saveAppZ1013( entry.getMemBytes(), file );
+		ImageSaver.saveAppZ1013( entry.getMemBytes(), file );
 		break;
 	      case APP_Z9001:
-		ImgSaver.saveAppZ9001( entry.getMemBytes(), file );
+		ImageSaver.saveAppZ9001( entry.getMemBytes(), file );
 		break;
 	      case MEM_AC1:
-		ImgUtil.writeToFile( entry.getMemBytes(), file );
+		ImageUtil.writeToFile( entry.getMemBytes(), file );
 		break;
 	      case MEM_Z1013:
-		ImgUtil.writeToFile( entry.getMemBytes(), file );
+		ImageUtil.writeToFile( entry.getMemBytes(), file );
 		break;
 	      case MEM_Z9001:
-		ImgUtil.writeToFile( entry.getMemBytes(), file );
+		ImageUtil.writeToFile( entry.getMemBytes(), file );
 		break;
 	      default:
 		status = false;
@@ -1222,47 +1415,77 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  private void doExportColorTab()
+  private void doFitImage( boolean allowScaleUp )
   {
-    BufferedImage image = getImage();
-    if( image != null ) {
-      int             colorCnt = 0;
-      IndexColorModel icm      = ImgUtil.getIndexColorModel( image );
-      if( icm != null ) {
-	colorCnt = icm.getMapSize();
-	if( colorCnt > 0 ) {
-	  File file = EmuUtil.showFileSaveDlg(
-				this,
-				"Farbpalette exportieren",
-				Main.getLastDirFile( Main.FILE_GROUP_IMAGE ),
-				IFFFile.getPaletteFileFilter(),
-				JASCPaletteFile.getFileFilter() );
-	  if( file != null ) {
-	    try {
-	      if( JASCPaletteFile.accept( file ) ) {
-		JASCPaletteFile.write( file, icm );
-	      } else if( IFFFile.accept( file ) ) {
-		IFFFile.writePalette( file, icm );
-	      } else {
-		throw new IOException(
-			ImgUtil.createFileSuffixNotSupportedMsg(
-					JASCPaletteFile.getFileSuffixes(),
-					IFFFile.getFileSuffixes() ) );
-	      }
-	      Main.setLastFile( file, Main.FILE_GROUP_IMAGE );
-	    }
-	    catch( IOException ex ) {
-	      BaseDlg.showErrorDlg( this, ex );
-	    }
+    this.autoFitImage = true;
+    fitImage( allowScaleUp );
+  }
+
+
+  private void doFlipHorizontal()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      if( entry.getAction() == ImageEntry.Action.HORIZONTAL_FLIPPED ) {
+	doUndo();
+      } else {
+	int w = entry.getWidth();
+	int h = entry.getHeight();
+	if( (w > 0) && (h > 0) ) {
+	  BufferedImage newImg = ImageUtil.createCompatibleImage(
+							entry.getImage(),
+							w,
+							h );
+	  if( newImg != null ) {
+	    Graphics g = newImg.createGraphics();
+	    g.drawImage( entry.getImage(), w, 0, -w, h, this );
+	    g.dispose();
+	    showSameBoundsImage(
+			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.HORIZONTAL_FLIPPED,
+			entry.getMode(),
+			"Horizontal gespiegelt" );
 	  }
 	}
       }
-      if( colorCnt == 0 ) {
-	BaseDlg.showErrorDlg(
-		this,
-		"Das Bild hat keine indexierten Farben,\n"
-			+ "die als Farbpalette exportiert"
-			+ " werden k\u00F6nnten." );
+    }
+  }
+
+
+  private void doImgProps()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      ImagePropsDlg.showDlg( this, entry );
+    }
+  }
+
+
+  private void doIndexColors()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      BufferedImage newImg = IndexColorsDlg.showDlg(
+					this,
+					entry.getImage() );
+      if( newImg != null ) {
+	String          title = "Indexierte Farben";
+	IndexColorModel icm   = ImageUtil.getIndexColorModel( newImg );
+	if( icm != null ) {
+	  int nColors = icm.getMapSize();
+	  if( nColors > 0 ) {
+	    title = String.format( "%d indexierte Farben", nColors );
+	  }
+	}
+	if( newImg != null ) {
+	  showSameBoundsImage(
+			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.CHANGED,
+			ImageEntry.Mode.INDEXED_COLORS,
+			title );
+	}
       }
     }
   }
@@ -1271,13 +1494,13 @@ public class ImageFrm extends AbstractImageFrm implements
   private void doOpen()
   {
     if( instance.confirmImageSaved() ) {
-      File file = EmuUtil.showFileOpenDlg(
+      File file = FileUtil.showFileOpenDlg(
 			this,
 			"Bilddatei \u00F6ffnen",
 			Main.getLastDirFile( Main.FILE_GROUP_IMAGE ),
-			ImgLoader.createFileFilter() );
+			ImageLoader.createFileFilter() );
       if( file != null ) {
-	if( showImageFile( file ) ) {
+	if( showImageFile( file, null, null ) ) {
 	  Main.setLastFile( file, Main.FILE_GROUP_IMAGE );
 	}
       }
@@ -1307,8 +1530,8 @@ public class ImageFrm extends AbstractImageFrm implements
 	      for( int i = idx; i >= 0; --i ) {
 		File f = files[ i ];
 		if( !f.equals( file ) ) {
-		  if( ImgLoader.accept( f ) ) {
-		    showImageFile( f );
+		  if( ImageLoader.accept( f ) ) {
+		    showImageFile( f, null, null );
 		    done = true;
 		    break;
 		  }
@@ -1349,8 +1572,8 @@ public class ImageFrm extends AbstractImageFrm implements
 	      for( int i = idx; i < files.length; i++ ) {
 		File f = files[ i ];
 		if( !f.equals( file ) ) {
-		  if( ImgLoader.accept( f ) ) {
-		    showImageFile( f );
+		  if( ImageLoader.accept( f ) ) {
+		    showImageFile( f, null, null );
 		    done = true;
 		    break;
 		  }
@@ -1368,22 +1591,6 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  private void doImgProps()
-  {
-    ImgEntry entry = getCurImgEntry();
-    if( entry != null ) {
-      ImgPropsDlg.showDlg( this, entry.getImage(), entry.getFile() );
-    }
-  }
-
-
-  private void doFitImage( boolean allowScaleUp )
-  {
-    this.autoFitImage = true;
-    fitImage( allowScaleUp );
-  }
-
-
   private void doPaste()
   {
     if( this.clipboard != null ) {
@@ -1393,18 +1600,20 @@ public class ImageFrm extends AbstractImageFrm implements
 	  if( o != null ) {
 	    if( o instanceof Image ) {
 	      if( confirmImageSaved() ) {
-		BufferedImgBuilder builder = new BufferedImgBuilder( this );
-		BufferedImage      image   = builder.buildFrom(
+		BufferedImageBuilder builder
+				    = new BufferedImageBuilder( this );
+		BufferedImage image = builder.buildOf(
 						(Image) o,
 						"Bild einf\u00FCgen..." );
 		if( image != null ) {
 		  showImageInternal(
 				image,
+				null,
+				ImageEntry.Action.INITIAL_LOADED,
 				builder.getMode(),
-				ImgFld.Rotation.NONE,
+				ImageFld.Rotation.NONE,
 				null,
 				"Eingef\u00FCgtes Bild",
-				true,
 				null,
 				null );
 		  updFileList();
@@ -1423,9 +1632,8 @@ public class ImageFrm extends AbstractImageFrm implements
   {
     int nEntries = this.imgStack.size();
     if( nEntries > 0 ) {
-      ImgEntry entry = this.imgStack.peek();
-      File     file  = null;
-      int      idx   = nEntries - 1;
+      File file = null;
+      int  idx  = nEntries - 1;
       while( (file == null) && (idx >= 0) ) {
 	file = this.imgStack.get( idx ).getFile();
 	--idx;
@@ -1469,55 +1677,23 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  private void doFlipHorizontal()
-  {
-    ImgEntry entry = getCurImgEntry();
-    if( entry != null ) {
-      int w = entry.getWidth();
-      int h = entry.getHeight();
-      if( (w > 0) && (h > 0) ) {
-	BufferedImage newImg = ImgUtil.createCompatibleImage(
-							entry.getImage(),
-							w,
-							h );
-	if( newImg != null ) {
-	  Graphics g = newImg.createGraphics();
-	  g.drawImage( entry.getImage(), w, 0, -w, h, this );
-	  g.dispose();
-	  double viewScale = getViewScale();
-	  showImageInternal(
-		newImg,
-		entry.getMode(),
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Horizontal gespiegelt",
-		false,
-		null,
-		null );
-	}
-      }
-    }
-  }
-
-
   private void doRotateImage()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       saveView();
       BufferedImage image = RotateDlg.showDlg( this );
       if( image != null ) {
-	boolean autoFitImage = this.autoFitImage;
-	double  viewScale    = getViewScale();
 	showImageInternal(
-		image,
-		entry.getMode(),
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Gedreht",
-		false,
-		null,
-		null );
+			image,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.CHANGED,
+			entry.getMode(),
+			this.imageFld.getRotation(),
+			getViewScale(),
+			"Gedreht",
+			null,
+			null );
 	doFitImage( false );
 	this.autoFitImage = autoFitImage;
       } else {
@@ -1529,7 +1705,7 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doRoundCorners()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       RoundCornersDlg dlg = new RoundCornersDlg(
 					this,
@@ -1539,21 +1715,18 @@ public class ImageFrm extends AbstractImageFrm implements
       int nTopPixels    = dlg.getNumTopPixels();
       int nBottomPixels = dlg.getNumBottomPixels();
       if( (nTopPixels > 0) || (nBottomPixels > 0) ) {
-	BufferedImage newImg = ImgUtil.roundCorners(
+	BufferedImage newImg = ImageUtil.roundCorners(
 						this,
 						entry.getImage(),
 						nTopPixels,
 						nBottomPixels );
 	if( newImg != null ) {
-	  showImageInternal(
+	  showSameBoundsImage(
 			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.CHANGED,
 			entry.getMode(),
-			this.imgFld.getRotation(),
-			getViewScale(),
-			"Ecken abgerundet",
-			false,
-			null,
-			null );
+			"Ecken abgerundet" );
 	}
 	this.lastRoundTopPixels    = nTopPixels;
 	this.lastRoundBottomPixels = nBottomPixels;
@@ -1564,97 +1737,78 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doScaleImage()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       BufferedImage newImg = ScaleDlg.showDlg( this, entry.getImage() );
       if( newImg != null ) {
 	showImageInternal(
-			newImg,
-			ImgEntry.probeMode( newImg ),
-			this.imgFld.getRotation(),
-			null,
-			"Skaliert",
-			false,
-			null,
-			null );
-      }
-    }
-  }
-
-
-  private void doSelectArea()
-  {
-    BufferedImage image = getImage();
-    if( image != null ) {
-      int w = image.getWidth();
-      int h = image.getHeight();
-      if( (w > 0) && (h > 0) ) {
-	Rectangle r = this.imgFld.getSelectedArea();
-	if( this.cropDlg == null ) {
-	  this.cropDlg = new CropDlg( this );
-	}
-	this.cropDlg.setImageSize( w, h );
-	this.cropDlg.setSelectedArea( r );
-	this.cropDlg.setVisible( true );
-	this.cropDlg.toFront();
-	this.imgFld.setSelection( r );
-      }
-    }
-  }
-
-
-  private void doAdjustImage()
-  {
-    ImgEntry entry = getCurImgEntry();
-    if( entry != null ) {
-      saveView();
-      BufferedImage image = ImgAdjustDlg.showDlg( this );
-      if( image != null ) {
-	double viewScale = getViewScale();
-	showImageInternal(
-		image,
-		entry.getMode() == ImgEntry.Mode.INDEXED_COLORS ?
-			ImgEntry.Mode.INDEXED_COLORS 
-			: ImgEntry.Mode.UNSPECIFIED,
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Helligkeit,  Kontrast, Farben eingestellt",
-		false,
-		null,
-		null );
-      } else {
-	restoreView();
-      }
-    }
-  }
-
-
-  private void doIndexColors()
-  {
-    BufferedImage image = getImage();
-    if( image != null ) {
-      BufferedImage newImg = IndexColorsDlg.showDlg( this, image );
-      if( newImg != null ) {
-	String          title = "Indexierte Farben";
-	IndexColorModel icm   = ImgUtil.getIndexColorModel( newImg );
-	if( icm != null ) {
-	  int nColors = icm.getMapSize();
-	  if( nColors > 0 ) {
-	    title = String.format( "%d indexierte Farben", nColors );
-	  }
-	}
-	if( newImg != null ) {
-	  double viewScale = getViewScale();
-	  showImageInternal(
 		newImg,
-		ImgEntry.Mode.INDEXED_COLORS,
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		title,
-		false,
+		entry.getSharedExifDataCopyForResizedImage(),
+		ImageEntry.Action.CHANGED,
+		ImageUtil.probeMode( newImg ),
+		this.imageFld.getRotation(),
+		null,
+		"Skaliert",
 		null,
 		null );
+      }
+    }
+  }
+
+
+  private void doSharpenImage()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      if( entry.getAction() == ImageEntry.Action.SOFTENED ) {
+	if( BaseDlg.showSuppressableConfirmDlg(
+		this,
+		"Statt zu sch\u00E4rfen wird der letzte Beabeitungsschritt"
+			+ " \'Weichzeichnen\' zur\u00FCckgenommen." ) )
+	{
+	  doUndo();
 	}
+      } else {
+	saveView();
+	BufferedImage newImg = SharpenDlg.showDlg( this );
+	if( newImg != null ) {
+	  showSameBoundsImage(
+			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.SHARPENED,
+			entry.getMode(),
+			"Gesch\u00E4rft" );
+	} else {
+	  restoreView();
+	}
+      }
+    }
+  }
+
+
+  private void doSoftenImage()
+  {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      if( entry.getAction() == ImageEntry.Action.SHARPENED ) {
+	if( BaseDlg.showSuppressableConfirmDlg(
+		this,
+		"Statt weichzuzeichnen wird der letzte Beabeitungsschritt"
+			+ " \'Sch\u00E4rfen\' zur\u00FCckgenommen." ) )
+	{
+	  doUndo();
+	}
+      } else {
+	convolveAndShowImage(
+			entry,
+			new Kernel(
+				3, 3,
+				new float[] {
+					0.07F, 0.1F,  0.07F,
+					0.1F,  0.32F, 0.1F,
+					0.07F, 0.1F,  0.07F } ),
+			ImageEntry.Action.SOFTENED,
+			"Weichgezeichnet" );
       }
     }
   }
@@ -1662,25 +1816,21 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToGray()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
-      if( entry.isAGrayMode() || entry.isAMonochromeMode() ) {
+      if( entry.isGray() || entry.isMonochrome() ) {
 	BaseDlg.showInfoDlg(
 			this,
 			"Das Bild ist bereits in Graustufen" );
       } else {
 	BufferedImage newImg = GrayScaler.toGray( this, entry.getImage() );
 	if( newImg != null ) {
-	  double viewScale = getViewScale();
-	  showImageInternal(
-		newImg,
-		ImgEntry.Mode.GRAY,
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Graustufen",
-		false,
-		null,
-		null );
+	  showSameBoundsImage(
+			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.CHANGED,
+			ImageEntry.Mode.GRAY,
+			"Graustufen" );
 	}
       }
     }
@@ -1689,27 +1839,24 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToMonochrome( Dithering.Algorithm algorithm )
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
-      if( entry.isAMonochromeMode() ) {
+      if( entry.isMonochrome() ) {
 	showImgAlreadyMonochrome();
       } else {
 	BufferedImage newImg = Dithering.work(
 					this,
 					entry.getImage(),
-					ImgUtil.getColorModelBW(),
+					ImageUtil.getColorModelBW(),
 					algorithm );
 	if( newImg != null ) {
 	  double viewScale = getViewScale();
-	  showImageInternal(
-		newImg,
-		ImgEntry.Mode.MONOCHROME,
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Monochrom",
-		false,
-		null,
-		null );
+	  showSameBoundsImage(
+			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.CHANGED,
+			ImageEntry.Mode.MONOCHROME,
+			"Monochrom" );
 	}
       }
     }
@@ -1718,24 +1865,20 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doThreshold()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
-      if( entry.equalsMode( ImgEntry.Mode.MONOCHROME ) ) {
+      if( entry.equalsMode( ImageEntry.Mode.MONOCHROME ) ) {
 	showImgAlreadyMonochrome();
       } else {
 	saveView();
 	BufferedImage newImg = ThresholdDlg.showDlg( this );
 	if( newImg != null ) {
-	  double viewScale = getViewScale();
-	  showImageInternal(
-		newImg,
-		ImgEntry.Mode.MONOCHROME,
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Monochrom",
-		false,
-		null,
-		null );
+	  showSameBoundsImage(
+			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.CHANGED,
+			ImageEntry.Mode.MONOCHROME,
+			"Monochrom" );
 	} else {
 	  restoreView();
 	}
@@ -1746,37 +1889,63 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doInvertImage()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
-      if( entry.isAInversionMode() ) {
-	BaseDlg.showErrorDlg(
-		this,
-		"Das Bild wurde bereits invertiert." );
+      if( entry.getAction() == ImageEntry.Action.INVERTED ) {
+	doUndo();
       } else {
-	BufferedImage retImg = ColorInverter.work( this, entry.getImage() );
-	if( retImg != null ) {
-	  ImgEntry.Mode newMode = ImgEntry.Mode.INVERTED;
-	  switch( entry.getMode() ) {
-	    case INDEXED_COLORS:
-	      newMode = ImgEntry.Mode.INVERTED_INDEXED_COLORS;
-	      break;
-	    case GRAY:
-	      newMode = ImgEntry.Mode.INVERTED_GRAY;
-	      break;
-	    case MONOCHROME:
-	      newMode = ImgEntry.Mode.INVERTED_MONOCHROME;
-	      break;
+	BufferedImage   srcImg = entry.getImage();
+	IndexColorModel icm    = ImageUtil.getIndexColorModel( srcImg );
+	if( icm != null ) {
+	  int colorCnt = icm.getMapSize();
+	  if( colorCnt > 0 ) {
+	    boolean transp = false;
+	    byte[]  alphas = new byte[ colorCnt ];
+	    byte[]  reds   = new byte[ colorCnt ];
+	    byte[]  greens = new byte[ colorCnt ];
+	    byte[]  blues  = new byte[ colorCnt ];
+	    for( int i = 0; i < colorCnt; i++ ) {
+	      int argb = icm.getRGB( i );
+	      int a    = (argb >> 24) & 0xFF;
+	      if( a < 0xFF ) {
+		transp = true;
+	      }
+	      alphas[ i ] = (byte) a;
+	      reds[ i ]   = (byte) (0xFF - ((argb >> 16) & 0xFF));
+	      greens[ i ] = (byte) (0xFF - ((argb >> 8) & 0xFF));
+	      blues[ i ]  = (byte) (0xFF - (argb & 0xFF));
+	    }
+	    if( !transp ) {
+	      alphas = null;
+	    }
+	    showSameBoundsImage(
+			new BufferedImage(
+				ImageUtil.createIndexColorModel(
+						colorCnt,
+						reds,
+						greens,
+						blues,
+						alphas ),
+				srcImg.getRaster(),
+				false,
+				new Hashtable<>() ),
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.INVERTED,
+			entry.getMode(),			
+			"Invertiert" );
 	  }
-	  double viewScale = getViewScale();
-	  showImageInternal(
-		retImg,
-		newMode,
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Invertiert",
-		false,
-		null,
-		null );
+	} else {
+	  byte[] elements = new byte[ 256 ];
+	  for( int i = 0; i < elements.length; i++ ) {
+	    elements[ i ] = (byte) (0xFF - i);
+	  }
+	  filterAndShowImage(
+			entry,
+			new LookupOp(
+				new ByteLookupTable( 0, elements ),
+				null ),
+			ImageEntry.Action.INVERTED,
+			"Invertiert" );
 	}
       }
     }
@@ -1785,23 +1954,20 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doRemoveTransparency()
   {
-    BufferedImage image = getImage();
-    if( image != null ) {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
+      BufferedImage image = entry.getImage();
       if( image.getTransparency() != Transparency.OPAQUE ) {
 	BufferedImage retImg = RemoveTransparencyDlg.showDlg(
 							this,
 							image );
 	if( retImg != null ) {
-	  double viewScale = getViewScale();
-	  showImageInternal(
-		retImg,
-		ImgEntry.Mode.UNSPECIFIED,
-		this.imgFld.getRotation(),
-		!this.autoFitImage && viewScale > 0.0 ? viewScale : null,
-		"Transparenz entfernt",
-		false,
-		null,
-		null );
+	  showSameBoundsImage(
+			retImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			ImageEntry.Action.CHANGED,
+			ImageEntry.Mode.UNSPECIFIED,
+			"Transparenz entfernt" );
 	}
       }
     }
@@ -1810,7 +1976,7 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToA5105()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       if( entry.isA5105Format() && isUnrotated() ) {
 	BaseDlg.showInfoDlg(
@@ -1822,15 +1988,16 @@ public class ImageFrm extends AbstractImageFrm implements
 			entry.getImage(),
 			null,
 			new BufferedImage(
-				ImgUtil.A5105_W,
-				ImgUtil.A5105_H,
+				ImageUtil.A5105_W,
+				ImageUtil.A5105_H,
 				BufferedImage.TYPE_BYTE_BINARY,
-				ImgUtil.getColorModelA5105() ) ),
-		ImgEntry.Mode.A5105,
-		ImgFld.Rotation.NONE,
+				ImageUtil.getColorModelA5105() ) ),
+		entry.getSharedExifDataCopyForChangedImage(),
+		ImageEntry.Action.CHANGED,
+		ImageEntry.Mode.A5105,
+		ImageFld.Rotation.NONE,
 		null,
 		TEXT_A5105_FMT,
-		false,
 		null,
 		null );
       }
@@ -1839,11 +2006,11 @@ public class ImageFrm extends AbstractImageFrm implements
 
 
   private void doToAC1(
-		String        title,
-		String        fontResource,
-		ImgEntry.Mode mode )
+		String          title,
+		String          fontResource,
+		ImageEntry.Mode mode )
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       if( entry.equalsMode( mode )
 	  && entry.isAC1Format()
@@ -1855,10 +2022,11 @@ public class ImageFrm extends AbstractImageFrm implements
       } else {
 	toMonochromCharImage(
 			entry.getImage(),
+			entry.getSharedExifDataCopyForChangedImage(),
 			title,
 			fontResource,
-			ImgUtil.AC1_W,
-			ImgUtil.AC1_H,
+			ImageUtil.AC1_W,
+			ImageUtil.AC1_H,
 			mode,
 			6,
 			true );
@@ -1869,7 +2037,7 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToKC85Monochrome()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       if( entry.isKC85MonochromeFormat() && isUnrotated() ) {
 	BaseDlg.showInfoDlg(
@@ -1880,12 +2048,13 @@ public class ImageFrm extends AbstractImageFrm implements
 		drawImageTo(
 			entry.getImage(),
 			null,
-			ImgUtil.createBlackKC85BWImage() ),
-		ImgEntry.Mode.MONOCHROME,
-		ImgFld.Rotation.NONE,
+			ImageUtil.createBlackKC85BWImage() ),
+			entry.getSharedExifDataCopyForChangedImage(),
+		ImageEntry.Action.CHANGED,
+		ImageEntry.Mode.MONOCHROME,
+		ImageFld.Rotation.NONE,
 		null,
 		TEXT_KC85MONO_FMT,
-		false,
 		null,
 		null );
       }
@@ -1895,7 +2064,7 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToKC854Hires()
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       if( (entry.isKC854HiresFormat() || entry.isKC85MonochromeFormat())
 	  && isUnrotated() )
@@ -1908,12 +2077,13 @@ public class ImageFrm extends AbstractImageFrm implements
 		drawImageTo(
 			entry.getImage(),
 			null,
-			ImgUtil.createBlackKC854HiresImage() ),
-		ImgEntry.Mode.KC854_HIRES,
-		ImgFld.Rotation.NONE,
+			ImageUtil.createBlackKC854HiresImage() ),
+		entry.getSharedExifDataCopyForChangedImage(),
+		ImageEntry.Action.CHANGED,
+		ImageEntry.Mode.KC854_HIRES,
+		ImageFld.Rotation.NONE,
 		null,
 		TEXT_KC854HIRES_FMT,
-		false,
 		null,
 		null );
       }
@@ -1923,7 +2093,7 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToLLC2Hires( boolean for43 )
   {
-    ImgEntry entry = getCurImgEntry();
+    ImageEntry entry = getCurImageEntry();
     if( entry != null ) {
       if( entry.isLLC2HiresFormat() && isUnrotated() ) {
 	BaseDlg.showInfoDlg(
@@ -1939,15 +2109,16 @@ public class ImageFrm extends AbstractImageFrm implements
 			entry.getImage(),
 			ratioCorrection,
 			new BufferedImage(
-				ImgUtil.LLC2_W,
-				ImgUtil.LLC2_H,
+				ImageUtil.LLC2_W,
+				ImageUtil.LLC2_H,
 				BufferedImage.TYPE_BYTE_BINARY,
-				ImgUtil.getColorModelBW() ) ),
-		ImgEntry.Mode.MONOCHROME,
-		ImgFld.Rotation.NONE,
+				ImageUtil.getColorModelBW() ) ),
+		entry.getSharedExifDataCopyForChangedImage(),
+		ImageEntry.Action.CHANGED,
+		ImageEntry.Mode.MONOCHROME,
+		ImageFld.Rotation.NONE,
 		null,
 		TEXT_LLC2HIRES_FMT,
-		false,
 		null,
 		null );
       }
@@ -1957,15 +2128,16 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToZ1013()
   {
-    BufferedImage image = getImage();
-    if( image != null ) {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
       toMonochromCharImage(
-			image,
+			entry.getImage(),
+			entry.getSharedExifDataCopyForChangedImage(),
 			"Z1013-Blockgrafik",
 			"/rom/z1013/z1013font.bin",
-			ImgUtil.Z1013_W,
-			ImgUtil.Z1013_H,
-			ImgEntry.Mode.Z1013,
+			ImageUtil.Z1013_W,
+			ImageUtil.Z1013_H,
+			ImageEntry.Mode.Z1013,
 			8,
 			false );
     }
@@ -1974,15 +2146,16 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private void doToZ9001()
   {
-    BufferedImage image = getImage();
-    if( image != null ) {
+    ImageEntry entry = getCurImageEntry();
+    if( entry != null ) {
       toMonochromCharImage(
-			image,
+			entry.getImage(),
+			entry.getSharedExifDataCopyForChangedImage(),
 			"Z9001-Blockgrafik",
 			"/rom/z9001/z9001font.bin",
-			ImgUtil.Z9001_W,
-			ImgUtil.Z9001_H,
-			ImgEntry.Mode.Z9001,
+			ImageUtil.Z9001_W,
+			ImageUtil.Z9001_H,
+			ImageEntry.Mode.Z9001,
 			8,
 			false );
     }
@@ -2001,21 +2174,45 @@ public class ImageFrm extends AbstractImageFrm implements
 			+ " Bildbearbeitungsschritte verwerfen?" );
       }
       if( state ) {
+	ImageEntry curEntry     = getCurImageEntry();
+	Double     curViewScale = getViewScale();
+
 	// zu verwerfende Eintraege uebergeben
 	while( (idx + 1) < this.imgStack.size() ) {
 	  this.imgStack.pop();
 	}
-	ImgEntry e = this.imgStack.pop();	// anzuzeigendes Bild
+
+	// anzuzeigendes Bild
+	ImageEntry    entry = this.imgStack.pop();
+	BufferedImage image = entry.getImage();
+
+	/*
+	 * Wenn die Bildgroesse und die Drehung sich nicht aendern,
+	 * dann auch die Skalierung belassen
+	 */
+	Double viewScale = null;
+	if( curEntry != null ) {
+	  BufferedImage curImage = curEntry.getImage();
+	  if( (curEntry.getRotation() == entry.getRotation())
+	      && (curImage.getWidth() == image.getWidth())
+	      && (curImage.getHeight() == image.getHeight()) )
+	  {
+	    viewScale = curViewScale;
+	  }
+	}
+
+	// Bild anzeigen
 	rebuildHistoryMenu();
 	showImageInternal(
-		e.getImage(),
-		e.getMode(),
-		e.getRotation(),
-		null,
-		e.getTitle(),
-		this.imgStack.isEmpty(),
-		e.getFile(),
-		e.getMemBytes() );
+		image,
+		entry.getExifData(),
+		entry.getAction(),
+		entry.getMode(),
+		entry.getRotation(),
+		viewScale,
+		entry.getTitle(),
+		entry.getFile(),
+		entry.getMemBytes() );
       }
     }
   }
@@ -2041,313 +2238,341 @@ public class ImageFrm extends AbstractImageFrm implements
     this.cropDlg               = null;
     this.imgStack              = new Stack<>();
     setTitleInternal( null );
-    Main.updIcon( this );
 
 
     // Menu
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
     // Menu Datei
-    this.mnuOpen = createJMenuItem(
-			"\u00D6ffnen...",
-			KeyEvent.VK_O,
-			InputEvent.CTRL_MASK );
+    this.mnuOpen = createMenuItemWithStandardAccelerator(
+					EmuUtil.TEXT_OPEN_OPEN,
+					KeyEvent.VK_O );
     mnuFile.add( this.mnuOpen );
 
-    this.mnuSaveAs = createJMenuItem(
-			"Speichern unter...",
-			KeyEvent.VK_P,
-			InputEvent.CTRL_MASK | InputEvent.SHIFT_MASK );
+    this.mnuSaveAs = createMenuItemSaveAs( true );
     mnuFile.add( this.mnuSaveAs );
 
-    JMenu mnuExp = new JMenu( "Exportieren als" );
+    JMenu mnuExp = GUIFactory.createMenu( "Exportieren als" );
     mnuFile.add( mnuExp );
-    mnuFile.addSeparator();
 
-    this.mnuExpImgA5105 = createJMenuItem( "A5105-Bilddatei..." );
+    this.mnuExpImgA5105 = createMenuItem( "A5105-Bilddatei..." );
     mnuExp.add( this.mnuExpImgA5105 );
 
-    this.mnuExpImgKC852Monochrome = createJMenuItem(
+    this.mnuExpImgKC852Monochrome = createMenuItem(
 				"KC85/2,3-Bilddatei ohne Farben..." );
     mnuExp.add( this.mnuExpImgKC852Monochrome );
 
-    this.mnuExpImgKC854Monochrome = createJMenuItem(
+    this.mnuExpImgKC854Monochrome = createMenuItem(
 				"KC85/4,5-Bilddatei ohne Farben..." );
     mnuExp.add( this.mnuExpImgKC854Monochrome );
 
-    this.mnuExpImgKC854Hires = createJMenuItem(
+    this.mnuExpImgKC854Hires = createMenuItem(
 					"KC85/4,5-HIRES-Bilddatei..." );
     mnuExp.add( this.mnuExpImgKC854Hires );
 
-    this.mnuExpImgLLC2Hires = createJMenuItem(
+    this.mnuExpImgLLC2Hires = createMenuItem(
 					"LLC2-HIRES-Bilddatei..." );
     mnuExp.add( this.mnuExpImgLLC2Hires );
 
-    JMenu mnuExpMem = new JMenu(
+    JMenu mnuExpMem = GUIFactory.createMenu(
 		"Abbilddatei f\u00FCr Bildwiederholspeicher f\u00FCr" );
     mnuExp.add( mnuExpMem );
 
-    this.mnuExpMemAC1 = createJMenuItem( "AC1..." );
+    this.mnuExpMemAC1 = createMenuItem( "AC1..." );
     mnuExpMem.add( this.mnuExpMemAC1 );
 
-    this.mnuExpMemZ1013 = createJMenuItem( "Z1013..." );
+    this.mnuExpMemZ1013 = createMenuItem( "Z1013..." );
     mnuExpMem.add( this.mnuExpMemZ1013 );
 
-    this.mnuExpMemZ9001 = createJMenuItem( "Z9001..." );
+    this.mnuExpMemZ9001 = createMenuItem( "Z9001..." );
     mnuExpMem.add( this.mnuExpMemZ9001 );
 
-    JMenu mnuExpApp = new JMenu( "Programm zur Anzeige des Bildes im" );
+    JMenu mnuExpApp = GUIFactory.createMenu(
+			"Programm zur Anzeige des Bildes im" );
     mnuExp.add( mnuExpApp );
 
-    this.mnuExpAppAC1 = createJMenuItem( "AC1..." );
+    this.mnuExpAppAC1 = createMenuItem( "AC1..." );
     mnuExpApp.add( this.mnuExpAppAC1 );
 
-    this.mnuExpAppKC852 = createJMenuItem( "KC85/2,3..." );
+    this.mnuExpAppKC852 = createMenuItem( "KC85/2,3..." );
     mnuExpApp.add( this.mnuExpAppKC852 );
 
-    this.mnuExpAppKC854 = createJMenuItem( "KC85/4,5..." );
+    this.mnuExpAppKC854 = createMenuItem( "KC85/4,5..." );
     mnuExpApp.add( this.mnuExpAppKC854 );
 
-    this.mnuExpAppLLC2Hires = createJMenuItem( "LLC2..." );
+    this.mnuExpAppLLC2Hires = createMenuItem( "LLC2..." );
     mnuExpApp.add( this.mnuExpAppLLC2Hires );
 
-    this.mnuExpAppZ1013 = createJMenuItem( "Z1013..." );
+    this.mnuExpAppZ1013 = createMenuItem( "Z1013..." );
     mnuExpApp.add( this.mnuExpAppZ1013 );
 
-    this.mnuExpAppZ9001 = createJMenuItem( "Z9001..." );
+    this.mnuExpAppZ9001 = createMenuItem( "Z9001..." );
     mnuExpApp.add( this.mnuExpAppZ9001 );
 
-    this.mnuExpColorTab = createJMenuItem( "Farbpalette exportieren..." );
-    mnuFile.add( this.mnuExpColorTab );
-    mnuFile.addSeparator();
-
-    this.mnuImgProps = createJMenuItem( "Bildeigenschaften..." );
-    mnuFile.add( this.mnuImgProps );
-
-    this.mnuPrint = createJMenuItem(
-			"Drucken...",
-			KeyEvent.VK_P,
-			InputEvent.CTRL_MASK );
+    this.mnuPrint = createMenuItemOpenPrint( true );
     mnuFile.add( this.mnuPrint );
     mnuFile.addSeparator();
 
-    this.mnuPrev = createJMenuItem(
-			"Vorheriges Bild",
-			KeyEvent.VK_LEFT,
-			InputEvent.CTRL_MASK );
+    this.mnuImgProps = createMenuItem( "Bildeigenschaften..." );
+    mnuFile.add( this.mnuImgProps );
+
+    this.mnuExifEdit = createMenuItem( "Zusatzinformationen bearbeiten..." );
+    mnuFile.add( this.mnuExifEdit );
+
+    this.mnuExifRemove = createMenuItem( "Zusatzinformationen entfernen" );
+    mnuFile.add( this.mnuExifRemove );
+
+    mnuFile.addSeparator();
+
+    this.mnuPrev = createMenuItemWithStandardAccelerator(
+						"Vorheriges Bild",
+						KeyEvent.VK_LEFT );
     mnuFile.add( this.mnuPrev );
 
-    this.mnuNext = createJMenuItem(
-			"N\u00E4chstes Bild",
-			KeyEvent.VK_RIGHT,
-			InputEvent.CTRL_MASK );
+    this.mnuNext = createMenuItemWithStandardAccelerator(
+						"N\u00E4chstes Bild",
+						KeyEvent.VK_RIGHT );
     mnuFile.add( this.mnuNext );
     mnuFile.addSeparator();
 
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
 
     // Menu Bearbeiten
-    this.mnuEdit = new JMenu( "Bearbeiten" );
-    this.mnuEdit.setMnemonic( KeyEvent.VK_B );
+    this.mnuEdit = createMenuEdit();
 
-    this.mnuUndo = createJMenuItem(
-			"R\u00FCckg\u00E4ngig",
-			KeyEvent.VK_Z,
-			InputEvent.CTRL_MASK );
+    this.mnuUndo = createMenuItemWithStandardAccelerator(
+					"R\u00FCckg\u00E4ngig",
+					KeyEvent.VK_Z );
     this.mnuEdit.add( this.mnuUndo );
 
-    this.mnuHistory = new JMenu( "Historie" );
+    this.mnuHistory = GUIFactory.createMenu( "Historie" );
     this.mnuEdit.add( this.mnuHistory );
     this.mnuEdit.addSeparator();
 
-    this.mnuCopy = createJMenuItem( "Bild kopieren" );
+    this.mnuCopy = createMenuItemWithStandardAccelerator(
+					"Bild kopieren",
+					KeyEvent.VK_C );
     this.mnuEdit.add( this.mnuCopy );
 
-    this.mnuPaste = createJMenuItem( "Bild einf\u00FCgen" );
+    this.mnuPaste = createMenuItemWithStandardAccelerator(
+					"Bild einf\u00FCgen",
+					KeyEvent.VK_V );
     this.mnuEdit.add( this.mnuPaste );
     this.mnuEdit.addSeparator();
 
-    this.mnuRotateImage = createJMenuItem( "Drehen..." );
-    this.mnuEdit.add( this.mnuRotateImage );
-
-    this.mnuFlipHorizontal = createJMenuItem( "Spiegeln..." );
+    this.mnuFlipHorizontal = createMenuItem( "Spiegeln" );
     this.mnuEdit.add( this.mnuFlipHorizontal );
 
-    this.mnuSelectArea = createJMenuItem( "Zuschneiden..." );
-    this.mnuEdit.add( this.mnuSelectArea );
+    this.mnuRotateImage = createMenuItemWithStandardAccelerator(
+					"Drehen...",
+					KeyEvent.VK_R );
+    this.mnuEdit.add( this.mnuRotateImage );
 
-    this.mnuScaleImage = createJMenuItem( "Skalieren..." );
+    this.mnuCropImage = createMenuItemWithStandardAccelerator(
+					"Zuschneiden...",
+					KeyEvent.VK_C,
+					true );
+    this.mnuEdit.add( this.mnuCropImage );
+
+    this.mnuScaleImage = createMenuItem( "Skalieren..." );
     this.mnuEdit.add( this.mnuScaleImage );
 
-    this.mnuRoundCorners = createJMenuItem( "Ecken abrunden..." );
-    this.mnuEdit.add( this.mnuRoundCorners );
+    this.mnuSharpenImage = createMenuItem( "Sch\u00E4rfen..." );
+    this.mnuEdit.add( this.mnuSharpenImage );
+
+    this.mnuSoftenImage = createMenuItem( "Weichzeichnen" );
+    this.mnuEdit.add( this.mnuSoftenImage );
+
+    this.mnuDetectEdges = createMenuItem(
+				"Konturen erkennen und darstellen" );
+    this.mnuEdit.add( this.mnuDetectEdges );
     this.mnuEdit.addSeparator();
 
-    this.mnuAdjustImage = createJMenuItem(
+    this.mnuRoundCorners = createMenuItem( "Ecken abrunden..." );
+    this.mnuEdit.add( this.mnuRoundCorners );
+
+    this.mnuAdjustImage = createMenuItem(
 				"Helligkeit, Kontrast, Farben..." );
     this.mnuEdit.add( this.mnuAdjustImage );
 
-    this.mnuIndexColors = createJMenuItem(
+    this.mnuIndexColors = createMenuItem(
 				"Farben reduzieren und indexieren..." );
     this.mnuEdit.add( this.mnuIndexColors );
 
-    JMenu mnuToBW = new JMenu( "Schwarz/Wei\u00DF wandeln" );
-    this.mnuEdit.add( mnuToBW );
+    this.mnuToBW = GUIFactory.createMenu( "Schwarz/Wei\u00DF wandeln" );
+    this.mnuEdit.add( this.mnuToBW );
 
-    this.mnuToGray = createJMenuItem( "Graustufen" );
-    mnuToBW.add( this.mnuToGray );
+    this.mnuToGray = createMenuItem( "Graustufen" );
+    this.mnuToBW.add( this.mnuToGray );
 
-    this.mnuThreshold = createJMenuItem( "Monochrom mittels Schwellwert" );
-    mnuToBW.add( this.mnuThreshold );
+    this.mnuThreshold = createMenuItem( "Monochrom mittels Schwellwert" );
+    this.mnuToBW.add( this.mnuThreshold );
 
-    JMenu mnuToMonochrome = new JMenu( "Monochrom mittels Dithering" );
-    mnuToBW.add( mnuToMonochrome );
+    JMenu mnuToMonoDith = GUIFactory.createMenu(
+					"Monochrom mittels Dithering" );
+    this.mnuToBW.add( mnuToMonoDith );
 
-    this.mnuToMonoFloydSteinberg = createJMenuItem(
+    this.mnuToMonoFloydSteinberg = createMenuItem(
 	Dithering.getAlgorithmText( Dithering.Algorithm.FLOYD_STEINBERG ) );
-    mnuToMonochrome.add( this.mnuToMonoFloydSteinberg );
+    mnuToMonoDith.add( this.mnuToMonoFloydSteinberg );
 
-    this.mnuToMonoSierra3 = createJMenuItem(
+    this.mnuToMonoSierra3 = createMenuItem(
 	Dithering.getAlgorithmText( Dithering.Algorithm.SIERRA3 ) );
-    mnuToMonochrome.add( this.mnuToMonoSierra3 );
+    mnuToMonoDith.add( this.mnuToMonoSierra3 );
 
-    this.mnuToMonoAtkinson = createJMenuItem(
+    this.mnuToMonoAtkinson = createMenuItem(
 	Dithering.getAlgorithmText( Dithering.Algorithm.ATKINSON ) );
-    mnuToMonochrome.add( this.mnuToMonoAtkinson );
+    mnuToMonoDith.add( this.mnuToMonoAtkinson );
 
-    this.mnuInvertImage = createJMenuItem( "Invertieren" );
+    this.mnuInvertImage = createMenuItem( "Invertieren" );
     this.mnuEdit.add( this.mnuInvertImage );
 
-    this.mnuRemoveTransparency = createJMenuItem(
+    this.mnuRemoveTransparency = createMenuItem(
 					"Transparenz entfernen..." );
     this.mnuEdit.add( this.mnuRemoveTransparency );
+
+    this.mnuColorPalette = createMenuItem( "Farbpalette..." );
+    this.mnuEdit.add( this.mnuColorPalette );
     this.mnuEdit.addSeparator();
 
-    this.mnuConvert = new JMenu( "Konvertieren in" );
+    this.mnuConvert = GUIFactory.createMenu( "Konvertieren in" );
     this.mnuEdit.add( mnuConvert );
 
-    this.mnuToA5105 = createJMenuItem( TEXT_A5105_FMT );
+    this.mnuToA5105 = createMenuItem( TEXT_A5105_FMT );
     this.mnuConvert.add( this.mnuToA5105 );
 
-    this.mnuToAC1_ACC = createJMenuItem( TEXT_AC1_ACC_FMT );
+    this.mnuToAC1_ACC = createMenuItem( TEXT_AC1_ACC_FMT );
     this.mnuConvert.add( this.mnuToAC1_ACC );
 
-    this.mnuToAC1_SCCH = createJMenuItem( TEXT_AC1_SCCH_FMT );
+    this.mnuToAC1_SCCH = createMenuItem( TEXT_AC1_SCCH_FMT );
     this.mnuConvert.add( this.mnuToAC1_SCCH );
 
-    this.mnuToAC1_2010 = createJMenuItem( TEXT_AC1_2010_FMT );
+    this.mnuToAC1_2010 = createMenuItem( TEXT_AC1_2010_FMT );
     this.mnuConvert.add( this.mnuToAC1_2010 );
 
-    this.mnuToKC85Monochrome = createJMenuItem( TEXT_KC85MONO_FMT );
+    this.mnuToKC85Monochrome = createMenuItem( TEXT_KC85MONO_FMT );
     this.mnuConvert.add( this.mnuToKC85Monochrome );
 
-    this.mnuToKC854Hires = createJMenuItem( TEXT_KC854HIRES_FMT );
+    this.mnuToKC854Hires = createMenuItem( TEXT_KC854HIRES_FMT );
     this.mnuConvert.add( this.mnuToKC854Hires );
 
-    this.mnuToLLC2Hires21 = createJMenuItem(
+    this.mnuToLLC2Hires21 = createMenuItem(
 		TEXT_LLC2HIRES_FMT + " ohne Anpassung f\u00FCr 4:3-Anzeige" );
     this.mnuConvert.add( this.mnuToLLC2Hires21 );
 
-    this.mnuToLLC2Hires43 = createJMenuItem(
+    this.mnuToLLC2Hires43 = createMenuItem(
 		TEXT_LLC2HIRES_FMT + " mit Anpassung f\u00FCr 4:3-Anzeige" );
     this.mnuConvert.add( this.mnuToLLC2Hires43 );
 
-    this.mnuToZ1013 = createJMenuItem( TEXT_Z1013_FMT );
+    this.mnuToZ1013 = createMenuItem( TEXT_Z1013_FMT );
     this.mnuConvert.add( this.mnuToZ1013 );
 
-    this.mnuToZ9001 = createJMenuItem( TEXT_Z9001_FMT );
+    this.mnuToZ9001 = createMenuItem( TEXT_Z9001_FMT );
     this.mnuConvert.add( this.mnuToZ9001 );
 
 
     // Menu Einstellungen
-    JMenu mnuSettings = new JMenu( "Einstellungen" );
-    mnuSettings.setMnemonic( KeyEvent.VK_E );
+    JMenu mnuSettings = createMenuSettings();
 
-    this.mnuAutoResize = new JCheckBoxMenuItem(
+    this.mnuAutoResize = GUIFactory.createCheckBoxMenuItem(
 				"Fenster an Bildgr\u00F6\u00DFe anpassen",
 				false );
     mnuSettings.add( this.mnuAutoResize );
     mnuSettings.addSeparator();
 
-    JMenu mnuBgColor = new JMenu( "Hintergrundfarbe" );
+    JMenu mnuBgColor = GUIFactory.createMenu( "Hintergrundfarbe" );
     mnuSettings.add( mnuBgColor );
 
     ButtonGroup grpBgColor = new ButtonGroup();
 
-    this.mnuBgSystem = new JRadioButtonMenuItem( "System", true );
+    this.mnuBgSystem = GUIFactory.createRadioButtonMenuItem(
+							"System",
+							true );
     this.mnuBgSystem.addActionListener( this );
     grpBgColor.add( this.mnuBgSystem );
     mnuBgColor.add( this.mnuBgSystem );
     mnuBgColor.addSeparator();
 
-    this.mnuBgBlack = new JRadioButtonMenuItem( "schwarz", false );
+    this.mnuBgBlack = GUIFactory.createRadioButtonMenuItem( "schwarz" );
     this.mnuBgBlack.addActionListener( this );
     grpBgColor.add( this.mnuBgBlack );
     mnuBgColor.add( this.mnuBgBlack );
 
-    this.mnuBgGray = new JRadioButtonMenuItem( "grau", false );
+    this.mnuBgGray = GUIFactory.createRadioButtonMenuItem( "grau" );
     this.mnuBgGray.addActionListener( this );
     grpBgColor.add( this.mnuBgGray );
     mnuBgColor.add( this.mnuBgGray );
 
-    this.mnuBgWhite = new JRadioButtonMenuItem( "wei\u00DF", false );
+    this.mnuBgWhite = GUIFactory.createRadioButtonMenuItem( "wei\u00DF" );
     this.mnuBgWhite.addActionListener( this );
     grpBgColor.add( this.mnuBgWhite );
     mnuBgColor.add( this.mnuBgWhite );
 
 
     // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
+    JMenu mnuHelp = createMenuHelp();
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    this.mnuHelpContent = createMenuItem(
+		"Hilfe zu Bildbetrachter/Bildbearbeitung..." );
     mnuHelp.add( this.mnuHelpContent );
 
 
     // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( this.mnuEdit );
-    mnuBar.add( mnuSettings );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar(
+					mnuFile,
+					this.mnuEdit,
+					mnuSettings,
+					mnuHelp ) );
 
 
     // Werkzeugleiste
-    JPanel panelToolBar = new JPanel(
+    JPanel panelToolBar = GUIFactory.createPanel(
 		new FlowLayout( FlowLayout.LEFT, 0, 0 ) );
     add( panelToolBar, BorderLayout.NORTH );
 
-    JToolBar toolBar = new JToolBar();
+    JToolBar toolBar = GUIFactory.createToolBar();
     toolBar.setFloatable( false );
     toolBar.setBorderPainted( false );
     toolBar.setOrientation( JToolBar.HORIZONTAL );
     toolBar.setRollover( true );
     panelToolBar.add( toolBar );
 
-    this.btnOpen = createImageButton(
-				"/images/file/open.png",
-				this.mnuOpen.getText() );
+    this.btnOpen = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					this.mnuOpen.getText() );
+    this.btnOpen.addActionListener( this );
     toolBar.add( this.btnOpen );
 
-    this.btnSaveAs = createImageButton(
-			"/images/file/save_as.png", "Speichern unter" );
+    this.btnSaveAs = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/save_as.png",
+					this.mnuSaveAs.getText() );
+    this.btnSaveAs.addActionListener( this );
     toolBar.add( this.btnSaveAs );
 
-    this.btnPrint = createImageButton( "/images/file/print.png", "Drucken" );
+    this.btnPrint = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/print.png",
+					this.mnuPrint.getText() );
+    this.btnPrint.addActionListener( this );
     toolBar.add( this.btnPrint );
     toolBar.addSeparator();
 
-    this.btnRotateLeft = createImageButton(
-				"/images/edit/rotate_left.png",
-				"Nach links drehen" );
+    this.btnRotateLeft = GUIFactory.createRelImageResourceButton(
+					this,
+					"edit/rotate_left.png",
+					"Nach links drehen" );
+    this.btnRotateLeft.addActionListener( this );
     toolBar.add( this.btnRotateLeft );
 
-    this.btnRotateRight = createImageButton(
-				"/images/edit/rotate_right.png",
-				"Nach rechts drehen" );
+    this.btnRotateRight = GUIFactory.createRelImageResourceButton(
+					this,
+					"edit/rotate_right.png",
+					"Nach rechts drehen" );
+    this.btnRotateRight.addActionListener( this );
     toolBar.add( this.btnRotateRight );
     toolBar.addSeparator();
 
@@ -2355,49 +2580,55 @@ public class ImageFrm extends AbstractImageFrm implements
 		100, 10, 15, 25, 33, 50, 75, 100, 200, 300, 400 );
     toolBar.add( this.comboViewScale );
 
-    this.btnFitImage = createImageButton(
-				"/images/edit/fit.png",
+    this.btnFitImage = GUIFactory.createRelImageResourceButton(
+				this,
+				"edit/fit.png",
 				"Bild an Fenstergr\u00F6\u00DFe anpassen" );
+    this.btnFitImage.addActionListener( this );
     toolBar.add( this.btnFitImage );
     toolBar.addSeparator();
 
-    this.btnPrev = createImageButton(
-				"/images/nav/back.png",
-				"Vorheriges Bild" );
+    this.btnPrev = GUIFactory.createRelImageResourceButton(
+					this,
+					"nav/back.png",
+					this.mnuPrev.getText() );
+    this.btnPrev.addActionListener( this );
     toolBar.add( this.btnPrev );
     toolBar.addSeparator();
 
-    this.btnNext = createImageButton(
-				"/images/nav/next.png",
-				"N\u00E4chstes Bild" );
+    this.btnNext = GUIFactory.createRelImageResourceButton(
+					this,
+					"nav/next.png",
+					this.mnuNext.getText() );
+    this.btnNext.addActionListener( this );
     toolBar.add( this.btnNext );
     toolBar.addSeparator();
 
 
     // Statuszeile
-    this.labelStatus = new JLabel( DEFAULT_STATUS_TEXT );
-    JPanel panelStatus = new JPanel(
+    this.labelStatus = GUIFactory.createLabel( DEFAULT_STATUS_TEXT );
+    JPanel panelStatus = GUIFactory.createPanel(
 		new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
     panelStatus.add( this.labelStatus );
     add( panelStatus, BorderLayout.SOUTH );
 
 
     // Drop-Ziele
-    (new DropTarget( this.imgFld, this )).setActive( true );
+    (new DropTarget( this.imageFld, this )).setActive( true );
     (new DropTarget( this.scrollPane, this )).setActive( true );
 
 
     // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       pack();
       setScreenCentered();
     }
-    setResizable( true );
 
 
     // sonstiges
-    this.imgFld.addMouseListener( this );
-    this.imgFld.addMouseMotionListener( this );
+    this.imageFld.addMouseListener( this );
+    this.imageFld.addMouseMotionListener( this );
     if( this.clipboard != null ) {
       this.clipboard.addFlavorListener( this );
     }
@@ -2411,11 +2642,12 @@ public class ImageFrm extends AbstractImageFrm implements
   {
     showImageInternal(
 		null,
-		ImgEntry.Mode.UNSPECIFIED,
-		ImgFld.Rotation.NONE,
+		null,
+		ImageEntry.Action.INITIAL_LOADED,
+		ImageEntry.Mode.UNSPECIFIED,
+		ImageFld.Rotation.NONE,
 		null,
 		null,
-		true,
 		null,
 		null );
     updFileList();
@@ -2453,17 +2685,37 @@ public class ImageFrm extends AbstractImageFrm implements
     return rv;
   }
 
+
+  private BufferedImage convolveAndShowImage(
+					ImageEntry        entry,
+					Kernel            kernel,
+					ImageEntry.Action action,
+					String            title )
+  {
+    return filterAndShowImage(
+		entry,
+		new ConvolveOp(
+			kernel,
+			ConvolveOp.EDGE_NO_OP,
+			new RenderingHints(
+					RenderingHints.KEY_DITHERING,
+					RenderingHints.VALUE_DITHER_ENABLE ) ),
+		action,
+		title );
+  }
+
+
   private BufferedImage drawImageTo(
 				BufferedImage srcImg,
 				Float         ratioCorrection,
 				BufferedImage dstImg )
   {
     if( (srcImg != null) && (dstImg != null) ) {
-      float           srcW     = (float) srcImg.getWidth();
-      float           srcH     = (float) srcImg.getHeight();
-      ImgFld.Rotation rotation = this.imgFld.getRotation();
-      if( rotation.equals( ImgFld.Rotation.LEFT )
-	  || rotation.equals( ImgFld.Rotation.RIGHT ) )
+      float             srcW     = (float) srcImg.getWidth();
+      float             srcH     = (float) srcImg.getHeight();
+      ImageFld.Rotation rotation = this.imageFld.getRotation();
+      if( rotation.equals( ImageFld.Rotation.LEFT )
+	  || rotation.equals( ImageFld.Rotation.RIGHT ) )
       {
 	srcW = (float) srcImg.getHeight();
 	srcH = (float) srcImg.getWidth();
@@ -2494,9 +2746,9 @@ public class ImageFrm extends AbstractImageFrm implements
       }
 
       Graphics2D g = dstImg.createGraphics();
-      g.setColor( Color.black );
+      g.setColor( Color.BLACK );
       g.fillRect( 0, 0, dstW, dstH );
-      if( !rotation.equals( ImgFld.Rotation.NONE ) ) {
+      if( !rotation.equals( ImageFld.Rotation.NONE ) ) {
 	int m = 0;
 	switch( rotation ) {
 	  case LEFT:
@@ -2531,10 +2783,30 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
+  private BufferedImage filterAndShowImage(
+				ImageEntry        entry,
+				BufferedImageOp   op,
+				ImageEntry.Action action,
+				String            title )
+  {
+    BufferedImage newImg = null;
+    if( entry != null ) {
+      newImg = op.filter( entry.getImage(), null );
+      showSameBoundsImage(
+			newImg,
+			entry.getSharedExifDataCopyForChangedImage(),
+			action,
+			entry.getMode(),
+			title );
+    }
+    return newImg;
+  }
+
+
   private void fitImage( boolean allowScaleUp )
   {
     boolean   fitBtnState = false;
-    Dimension imgSize     = this.imgFld.getRotatedImageSize();
+    Dimension imgSize     = this.imageFld.getRotatedImageSize();
     if( imgSize != null ) {
       fitBtnState = true;
 
@@ -2551,7 +2823,7 @@ public class ImageFrm extends AbstractImageFrm implements
 		  || (vpW < imgSize.width) || (vpH < imgSize.height)) )
 	  {
 	    this.scrollPane.invalidate();
-	    this.imgFld.setScale(
+	    this.imageFld.setScale(
 			Math.min(
 				(double) vpW / (double) imgSize.width,
 				(double) vpH / (double) imgSize.height ) );
@@ -2567,7 +2839,7 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  private ImgEntry getCurImgEntry()
+  private ImageEntry getCurImageEntry()
   {
     return this.imgStack.isEmpty() ? null : this.imgStack.peek();
   }
@@ -2576,7 +2848,7 @@ public class ImageFrm extends AbstractImageFrm implements
   private Dimension getMaxContentSize()
   {
     Dimension rv = null;
-    Toolkit   tk = getToolkit();
+    Toolkit   tk = EmuUtil.getToolkit( this );
     if( tk != null ) {
       Dimension screenSize = tk.getScreenSize();
       if( screenSize != null ) {
@@ -2646,7 +2918,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  }
 	}
       } else {
-	ImgEntry entry = getCurImgEntry();
+	ImageEntry entry = getCurImageEntry();
 	if( entry != null ) {
 	  entry.setFile( file );
 	}
@@ -2657,7 +2929,7 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private boolean isUnrotated()
   {
-    return this.imgFld.getRotation().equals( ImgFld.Rotation.NONE );
+    return this.imageFld.getRotation().equals( ImageFld.Rotation.NONE );
   }
 
 
@@ -2670,7 +2942,7 @@ public class ImageFrm extends AbstractImageFrm implements
       if( title == null ) {
 	title = "kein Titel";
       }
-      JMenuItem item = new JMenuItem( title );
+      JMenuItem item = GUIFactory.createMenuItem( title );
       item.setActionCommand( ACTION_HISTORY_PREFIX + String.valueOf( i ) );
       item.addActionListener( this );
       this.mnuHistory.add( item );
@@ -2685,13 +2957,13 @@ public class ImageFrm extends AbstractImageFrm implements
     } else {
       this.savedViewScale = this.comboViewScale.getSelectedItem();
     }
-    this.imgFld.save();
+    this.imageFld.save();
   }
 
 
   private void restoreView()
   {
-    this.imgFld.restore();
+    this.imageFld.restore();
 
     String viewScale = null;
     if( this.savedViewScale != null ) {
@@ -2708,7 +2980,7 @@ public class ImageFrm extends AbstractImageFrm implements
   private void setTitleInternal( String title )
   {
     StringBuilder buf = new StringBuilder( 64 );
-    buf.append( "JKCEMU Bildbetrachter" );
+    buf.append( TITLE );
     if( title != null ) {
       if( !title.isEmpty() ) {
 	buf.append( ": " );
@@ -2723,7 +2995,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	if( !title.contains( resolution ) ) {
 	  buf.append( " (" );
 	  buf.append( resolution );
-	  buf.append( (char) ')' );
+	  buf.append( ')' );
 	}
       }
     }
@@ -2731,32 +3003,59 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  private boolean showImageFile( File file )
+  private ImageEntry showSameBoundsImage(
+				BufferedImage     image,
+				ExifData          exifData,
+				ImageEntry.Action action,
+				ImageEntry.Mode   mode,
+				String            title )
+  {
+    return showImageInternal(
+			image,
+			exifData,
+			action,
+			mode,
+			this.imageFld.getRotation(),
+			getViewScale(),
+			title,
+			null,
+			null );
+  }
+
+
+  private boolean showImageFile(
+			File   file,
+			byte[] fileBytes,
+			String fileName )
   {
     boolean rv = false;
-    if( file != null ) {
-      ImgEntry entry  = null;
+    if( (file != null) || (fileBytes != null) ) {
+      ImageEntry entry  = null;
       String   errMsg = null;
       try {
-	entry = ImgLoader.load( file );
+	entry = ImageLoader.load( file, fileBytes, fileName );
 	if( entry != null ) {
-	  String title = file.getName();
+	  String title = fileName;
+	  if( (title == null) && (file != null) ) {
+	    title = file.getName();
+	    if( title == null ) {
+	      title = file.getPath();
+	    }
+	  }
 	  if( title != null ) {
 	    if( title.isEmpty() ) {
 	      title = null;
 	    }
 	  }
-	  if( title == null ) {
-	    title = file.getPath();
-	  }
 	  BufferedImage image = entry.getImage();
 	  showImageInternal(
 			image,
+			entry.getExifData(),
+			ImageEntry.Action.INITIAL_LOADED,
 			entry.getMode(),
-			ImgFld.Rotation.NONE,
+			ImageFld.Rotation.NONE,
 			null,
 			title,
-			true,
 			file,
 			null );
 	  updFileList();
@@ -2775,7 +3074,7 @@ public class ImageFrm extends AbstractImageFrm implements
 	  buf.append( ":\n" );
 	  buf.append( errMsg );
 	} else {
-	  buf.append( (char) '.' );
+	  buf.append( '.' );
 	}
 	BaseDlg.showErrorDlg( this, buf.toString() );
       }
@@ -2784,21 +3083,23 @@ public class ImageFrm extends AbstractImageFrm implements
   }
 
 
-  private void showImageInternal(
-			BufferedImage   image,
-			ImgEntry.Mode   mode,
-			ImgFld.Rotation rotation,
-			Double          scale,
-			String          title,
-			boolean         baseImg,
-			File            file,
-			byte[]          videoMemBytes )
+  private ImageEntry showImageInternal(
+			BufferedImage     image,
+			ExifData          exifData,
+			ImageEntry.Action action,
+			ImageEntry.Mode   mode,
+			ImageFld.Rotation rotation,
+			Double            scale,
+			String            title,
+			File              file,
+			byte[]            videoMemBytes )
   {
-    boolean autoResize = false;
-    boolean state      = false;
-    int     wImg       = 0;
-    int     hImg       = 0;
-    double  myScale    = 1.0;
+    ImageEntry newEntry   = null;
+    boolean    autoResize = false;
+    boolean    state      = false;
+    int        wImg       = 0;
+    int        hImg       = 0;
+    double     myScale    = 1.0;
     if( image != null ) {
 
       // Bildgroesse ermitteln
@@ -2848,36 +3149,38 @@ public class ImageFrm extends AbstractImageFrm implements
     }
 
     // Bild anzeigen
-    boolean  transp   = false;
-    ImgEntry oldEntry = getCurImgEntry();
-    if( baseImg ) {
+    boolean    transp   = false;
+    ImageEntry oldEntry = getCurImageEntry();
+    if( action == ImageEntry.Action.INITIAL_LOADED ) {
       this.imgStack.clear();
       clearHistoryMenu();
     } else {
-      oldEntry.setRotation( this.imgFld.getRotation() );
+      oldEntry.setRotation( this.imageFld.getRotation() );
     }
     if( image != null ) {
-      this.imgStack.push(
-		new ImgEntry(
+      newEntry = new ImageEntry(
 			image,
+			exifData,
+			action,
 			mode,
 			rotation,
 			title,
 			file,
-			videoMemBytes ) );
+			videoMemBytes );
+      this.imgStack.push( newEntry );
       rebuildHistoryMenu();
       transp = (image.getTransparency() != Transparency.OPAQUE);
     }
     this.scrollPane.invalidate();
-    this.imgFld.setImage( image );
+    this.imageFld.setImage( image );
     if( scale != null ) {
-      this.imgFld.setScale( scale.doubleValue() );
+      this.imageFld.setScale( scale.doubleValue() );
       this.autoFitImage = false;
     } else {
-      this.imgFld.setScale( myScale );
+      this.imageFld.setScale( myScale );
       this.autoFitImage = true;
     }
-    this.imgFld.setRotation( rotation );
+    this.imageFld.setRotation( rotation );
     this.scrollPane.validate();
     this.scrollPane.repaint();
     setTitleInternal( title );
@@ -2904,19 +3207,24 @@ public class ImageFrm extends AbstractImageFrm implements
     this.mnuExpMemAC1.setEnabled( state );
     this.mnuExpMemZ1013.setEnabled( state );
     this.mnuExpMemZ9001.setEnabled( state );
-    this.mnuExpColorTab.setEnabled( state );
-    this.mnuImgProps.setEnabled( state );
+    this.mnuColorPalette.setEnabled( state );
     this.mnuPrint.setEnabled( state );
+    this.mnuImgProps.setEnabled( state );
+    this.mnuExifEdit.setEnabled( state );
+    this.mnuExifRemove.setEnabled( state );
     this.mnuUndo.setEnabled( this.imgStack.size() > 1 );
     this.mnuHistory.setEnabled( this.imgStack.size() > 1 );
     this.mnuCopy.setEnabled( state );
     this.mnuAdjustImage.setEnabled( state );
+    this.mnuCropImage.setEnabled( state );
+    this.mnuDetectEdges.setEnabled( state );
     this.mnuFlipHorizontal.setEnabled( state );
     this.mnuIndexColors.setEnabled( state );
     this.mnuRoundCorners.setEnabled( state );
     this.mnuRotateImage.setEnabled( state );
-    this.mnuSelectArea.setEnabled( state );
     this.mnuScaleImage.setEnabled( state );
+    this.mnuSharpenImage.setEnabled( state );
+    this.mnuSoftenImage.setEnabled( state );
     this.mnuToGray.setEnabled( state );
     this.mnuToMonoFloydSteinberg.setEnabled( state );
     this.mnuToMonoSierra3.setEnabled( state );
@@ -2947,6 +3255,7 @@ public class ImageFrm extends AbstractImageFrm implements
     if( scale == null ) {
       fitImage( false );
     }
+    return newEntry;
   }
 
 
@@ -2965,21 +3274,22 @@ public class ImageFrm extends AbstractImageFrm implements
 
 
   private void toMonochromCharImage(
-			BufferedImage image,
-			String        title,
-			String        fontResource,
-			int           w,
-			int           h,
-			ImgEntry.Mode mode,
-			int           chXPixels,
-			boolean       ac1 )
+			BufferedImage   image,
+			ExifData        exifData,
+			String          title,
+			String          fontResource,
+			int             w,
+			int             h,
+			ImageEntry.Mode mode,
+			int             chXPixels,
+			boolean         ac1 )
   {
     // zuerst monochrome und skalierte Vollgrafik erzeugen
     BufferedImage newImg = new BufferedImage(
 					w,
 					h,
 					BufferedImage.TYPE_BYTE_BINARY,
-					ImgUtil.getColorModelBW() );
+					ImageUtil.getColorModelBW() );
     drawImageTo( image, null, newImg );
 
     /*
@@ -3090,11 +3400,12 @@ public class ImageFrm extends AbstractImageFrm implements
     }
     showImageInternal(
 		newImg,
+		exifData,
+		ImageEntry.Action.CHANGED,
 		mode,
-		ImgFld.Rotation.NONE,
+		ImageFld.Rotation.NONE,
 		null,
 		title,
-		false,
 		null,
 		videoMemBytes );
   }
@@ -3102,7 +3413,7 @@ public class ImageFrm extends AbstractImageFrm implements
 
   private Point toUnscaledPoint( MouseEvent e )
   {
-    double f = this.imgFld.getCurScale();
+    double f = this.imageFld.getCurScale();
     return new Point(
 		(int) Math.round( (double) e.getX() / f ),
 		(int) Math.round( (double) e.getY() / f ) );
@@ -3113,7 +3424,7 @@ public class ImageFrm extends AbstractImageFrm implements
   {
     if( this.cropDlg != null ) {
       if( this.cropDlg.isVisible() ) {
-	Dimension imgSize = this.imgFld.getRotatedImageSize();
+	Dimension imgSize = this.imageFld.getRotatedImageSize();
 	if( imgSize != null ) {
 	  this.cropDlg.setImageSize( imgSize.width, imgSize.height );
 	} else {
@@ -3129,7 +3440,8 @@ public class ImageFrm extends AbstractImageFrm implements
     boolean state = false;
     if( this.clipboard != null ) {
       try {
-	state = this.clipboard.isDataFlavorAvailable( DataFlavor.imageFlavor );
+	state = this.clipboard.isDataFlavorAvailable(
+					DataFlavor.imageFlavor );
       }
       catch( IllegalStateException ex ) {}
     }
@@ -3182,15 +3494,14 @@ public class ImageFrm extends AbstractImageFrm implements
 			  public boolean accept( File dir, String fName )
 			  {
 			    return fName != null ?
-				ImgLoader.accept( new File( dir, fName ) )
+				ImageLoader.accept( new File( dir, fName ) )
 				: false;
 			  }
 			} );
 	  if( files != null ) {
 	    if( files.length > 1 ) {
 	      try {
-		FileComparator fc = FileComparator.getInstance();
-		Arrays.sort( files, fc );
+		Arrays.sort( files, FileComparator.getInstance() );
 	      }
 	      catch( Exception ex ) {}
 	    } else {

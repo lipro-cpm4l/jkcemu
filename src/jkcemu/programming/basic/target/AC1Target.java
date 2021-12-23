@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2016 Jens Mueller
+ * (c) 2013-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.AC1;
 import jkcemu.emusys.ac1_llc2.AbstractSCCHSys;
@@ -41,57 +40,15 @@ public class AC1Target extends SCCHTarget
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
   @Override
   public void appendBssTo( AsmCodeBuf buf )
   {
     super.appendBssTo( buf );
     if( this.usesColors ) {
-      buf.append( "X_MCOS:\tDS\t1\n"		// Status: 0 = keine Farbe
-		+ "X_MCOV:\tDS\t1\n" );		// Farbwert
-    }
-  }
-
-
-  @Override
-  public void appendXClsTo( AsmCodeBuf buf )
-  {
-    if( !this.xclsAppended ) {
-      buf.append( "XCLS:" );
-      if( this.usesColors ) {
-	buf.append( "\tLD\tA,(X_MCOS)\n"
-		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XCOL1\n"
-		+ "\tIN\tA,(0F0H)\n"
-		+ "\tOR\t04H\n"
-		+ "\tOUT\t(0F0H),A\n"
-		+ "\tEX\tAF,AF\'\n"
-		+ "\tLD\tA,(X_MCOV)\n"
-		+ "\tLD\tHL,1000H\n"
-		+ "\tLD\t(HL),A\n"
-		+ "\tLD\tDE,1001H\n"
-		+ "\tLD\tBC,07FFH\n"
-		+ "\tLDIR\n"
-		+ "\tEX\tAF,AF\'\n"
-		+ "\tAND\t0FBH\n"
-		+ "\tOUT\t(0F0H),A\n"
-		+ "XCOL1:\tLD\tA,20H\n"
-		+ "\tLD\tHL,1000H\n"
-		+ "\tLD\t(HL),A\n"
-		+ "\tLD\tDE,1001H\n"
-		+ "\tLD\tBC,07FFH\n"
-		+ "\tLDIR\n"
-		+ "\tLD\t(1800H),HL\n"
-		+ "\tLD\t(1846H),A\n"
-		+ "\tRET\n" );
-      } else {
-	buf.append( "\tLD\tA,0CH\n" );
-	if( this.xoutchAppended ) {
-	  buf.append( "\tJR\tXOUTCH\n" );
-	} else {
-	  appendXOutchTo( buf );
-	}
-      }
-      this.xclsAppended = true;
+      buf.append( "X_M_COLOR_STATUS:\tDS\t1\n"		// 0: keine Farbe
+		+ "X_M_COLOR_VALUE:\tDS\t1\n" );	// Farbwert
     }
   }
 
@@ -108,9 +65,11 @@ public class AC1Target extends SCCHTarget
   {
     super.appendInitTo( buf );
     if( this.usesColors ) {
-      buf.append( "\tLD\tB,00H\n"		// erstmal keine Farbe
-      // Farbkarte vorhanden?
-		+ "\tLD\tC,0F0H\n"
+      /*
+       * B=0:    erstmal keine Farbe
+       * danach: Test, ob Farbkarte vorhanden ist
+       */
+      buf.append( "\tLD\tBC,00F0H\n"
 		+ "\tIN\tE,(C)\n"
 		+ "\tSET\t2,E\n"
 		+ "\tOUT\t(C),E\n"
@@ -120,7 +79,7 @@ public class AC1Target extends SCCHTarget
 		+ "\tIN\tA,(C)\n"
 		+ "\tXOR\tD\n"
 		+ "\tAND\t04H\n"
-		+ "\tJR\tZ,X_INIT1\n"
+		+ "\tJR\tZ,X_INIT_1\n"
 		+ "\tLD\tB,0FH\n"		// weiss auf schwarz
       // Farbbyte lesen
 		+ "\tLD\tA,(181FH)\n"
@@ -132,13 +91,13 @@ public class AC1Target extends SCCHTarget
 		+ "\tSLA\tA\n"
 		+ "\tXOR\tD\n"
 		+ "\tAND\t0F0H\n"
-		+ "\tJR\tZ,X_INIT1\n"
+		+ "\tJR\tZ,X_INIT_1\n"
 		+ "\tLD\tB,D\n"
       // Farbbyte uebernehmen
-		+ "X_INIT1:\n"
+		+ "X_INIT_1:\n"
 		+ "\tLD\tA,B\n"
-		+ "\tLD\t(X_MCOS),A\n"
-		+ "\tLD\t(X_MCOV),A\n" );
+		+ "\tLD\t(X_M_COLOR_STATUS),A\n"
+		+ "\tLD\t(X_M_COLOR_VALUE),A\n" );
     }
   }
 
@@ -147,6 +106,51 @@ public class AC1Target extends SCCHTarget
   public void appendWPixelTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0080H\n" );
+  }
+
+
+  @Override
+  public void appendXClsTo( AsmCodeBuf buf )
+  {
+    if( !this.xclsAppended ) {
+      buf.append( "XCLS:" );
+      if( this.usesColors ) {
+	buf.append( "\tLD\tA,(X_M_COLOR_STATUS)\n"
+		+ "\tOR\tA\n"
+		+ "\tJR\tZ,X_CLS_1\n"
+		+ "\tIN\tA,(0F0H)\n"
+		+ "\tOR\t04H\n"
+		+ "\tOUT\t(0F0H),A\n"
+		+ "\tEX\tAF,AF\'\n"
+		+ "\tLD\tA,(X_M_COLOR_VALUE)\n"
+		+ "\tLD\tHL,1000H\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tLD\tDE,1001H\n"
+		+ "\tLD\tBC,07FFH\n"
+		+ "\tLDIR\n"
+		+ "\tEX\tAF,AF\'\n"
+		+ "\tAND\t0FBH\n"
+		+ "\tOUT\t(0F0H),A\n"
+		+ "X_CLS_1:\n"
+		+ "\tLD\tA,20H\n"
+		+ "\tLD\tHL,1000H\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tLD\tDE,1001H\n"
+		+ "\tLD\tBC,07FFH\n"
+		+ "\tLDIR\n"
+		+ "\tLD\t(1800H),HL\n"
+		+ "\tLD\t(1846H),A\n"
+		+ "\tRET\n" );
+      } else {
+	buf.append( "\tLD\tA,0CH\n" );
+	if( this.xOutchAppended ) {
+	  buf.append( "\tJR\tXOUTCH\n" );
+	} else {
+	  appendXOutchTo( buf );
+	}
+      }
+      this.xclsAppended = true;
+    }
   }
 
 
@@ -169,7 +173,7 @@ public class AC1Target extends SCCHTarget
                 + "\tLD\tA,L\n"
                 + "\tAND\t0FH\n"
                 + "\tOR\tB\n"
-                + "\tLD\t(X_MCOV),A\n"
+                + "\tLD\t(X_M_COLOR_VALUE),A\n"
                 + "\tRET\n" );
     this.usesColors = true;
   }
@@ -178,15 +182,44 @@ public class AC1Target extends SCCHTarget
   @Override
   public void appendXInkTo( AsmCodeBuf buf )
   {
-    buf.append( "XINK:\tLD\tA,(X_MCOV)\n"
+    buf.append( "XINK:\tLD\tA,(X_M_COLOR_VALUE)\n"
 		+ "\tAND\t0F0H\n"
 		+ "\tLD\tB,A\n"
 		+ "\tLD\tA,L\n"
 		+ "\tAND\t0FH\n"
 		+ "\tOR\tB\n"
-		+ "\tLD\t(X_MCOV),A\n"
+		+ "\tLD\t(X_M_COLOR_VALUE),A\n"
 		+ "\tRET\n" );
     this.usesColors = true;
+  }
+
+
+  /*
+   * Ermittlung der Cursor-Position
+   * Rueckgabe:
+   *   HL: Bit 0..5:  Spalte
+   *       Bit 6..10: Zeile
+   *   CY=1: Fehler -> HL=0FFFFH
+   */
+  @Override
+  protected void appendXGetCrsPosTo( AsmCodeBuf buf )
+  {
+    if( !this.xGetCrsPosAppended ) {
+      buf.append( "X_GET_CRS_POS:\n"
+		+ "\tLD\tDE,(1800H)\n"
+		+ "\tLD\tHL,17FFH\n"
+		+ "\tOR\tA\n"
+		+ "\tSBC\tHL,DE\n"
+		+ "\tJR\tC,X_GET_CRS_POS_1\n"
+		+ "\tLD\tA,H\n"
+		+ "\tAND\t0F8H\n"
+		+ "\tRET\tZ\n"			// CY=0
+		+ "X_GET_CRS_POS_1:\n"
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tSCF\n"
+		+ "\tRET\n" );
+      this.xGetCrsPosAppended = true;
+    }
   }
 
 
@@ -240,7 +273,7 @@ public class AC1Target extends SCCHTarget
   @Override
   public void appendXOutchTo( AsmCodeBuf buf )
   {
-    if( !this.xoutchAppended ) {
+    if( !this.xOutchAppended ) {
       if( this.usesColors ) {
 	buf.append( "XOUTCH:\tLD\tD,A\n"
 		+ "\tLD\tA,(1846H)\n"
@@ -250,97 +283,106 @@ public class AC1Target extends SCCHTarget
 		+ "\tIN\tE,(C)\n"
 		+ "\tLD\tA,D\n"
 		+ "\tCP\t08H\n"
-		+ "\tJR\tZ,XOUTC7\n"
+		+ "\tJR\tZ,X_OUTCH_7\n"
 		+ "\tCP\t09H\n"
-		+ "\tJR\tZ,XOUTC1\n"
+		+ "\tJR\tZ,X_OUTCH_1\n"
 		+ "\tCP\t0AH\n"
-		+ "\tJR\tZ,XOUTC8\n"
+		+ "\tJR\tZ,X_OUTCH_8\n"
 		+ "\tCP\t0BH\n"
-		+ "\tJR\tZ,XOUTC9\n"
+		+ "\tJR\tZ,X_OUTCH_9\n"
 		+ "\tCP\t0CH\n"
 		+ "\tJP\tZ,XCLS\n"
 		+ "\tCP\t0DH\n"
-		+ "\tJR\tZ,XOUTC10\n"
+		+ "\tJR\tZ,X_OUTCH_10\n"
 	// Schreiben des Zeichens in D auf die Adresse in HL mit Farbausgabe
 		+ "\tSET\t2,E\n"
 		+ "\tOUT\t(C),E\n"
-		+ "\tLD\tA,(X_MCOV)\n"
+		+ "\tLD\tA,(X_M_COLOR_VALUE)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRES\t2,E\n"
 		+ "\tOUT\t(C),E\n"
 		+ "\tLD\t(HL),D\n"
 	// Cursor eins weiter
-		+ "XOUTC1:\tDEC\tHL\n"
+		+ "X_OUTCH_1:\n"
+		+ "\tDEC\tHL\n"
 	// ggf. scrollen
-		+ "XOUTC2:\tLD\tA,H\n"
+		+ "X_OUTCH_2:\n"
+		+ "\tLD\tA,H\n"
 		+ "\tCP\t10H\n"
-		+ "\tCALL\tC,XOUTC3\n"
+		+ "\tCALL\tC,X_OUTCH_3\n"
 	// Cursor setzen
 		+ "\tLD\tA,(HL)\n"
 		+ "\tLD\t(1846H),A\n"
 		+ "\tLD\t(1800H),HL\n"
 		+ "\tRET\n"
 	// Bildschirm scrollen
-		+ "XOUTC3:\tPUSH\tHL\n"
-		+ "\tLD\tA,(X_MCOS)\n"
+		+ "X_OUTCH_3:\n"
+		+ "\tPUSH\tHL\n"
+		+ "\tLD\tA,(X_M_COLOR_STATUS)\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XOUTC4\n"
+		+ "\tJR\tZ,X_OUTCH_4\n"
 		+ "\tSET\t2,E\n"
-		+ "\tLD\tA,(X_MCOV)\n"
+		+ "\tLD\tA,(X_M_COLOR_VALUE)\n"
 		+ "\tPUSH\tDE\n"
-		+ "\tCALL\tXOUTC5\n"
+		+ "\tCALL\tX_OUTCH_5\n"
 		+ "\tPOP\tDE\n"
 		+ "\tRES\t2,E\n"
-		+ "XOUTC4:\tLD\tA,20H\n"
-		+ "\tCALL\tXOUTC5\n"
+		+ "X_OUTCH_4:\n"
+		+ "\tLD\tA,20H\n"
+		+ "\tCALL\tX_OUTCH_5\n"
 		+ "\tPOP\tHL\n"
 		+ "\tLD\tBC,0040H\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tRET\n"
-		+ "XOUTC5:\tLD\tC,0F0H\n"
+		+ "X_OUTCH_5:\n"
+		+ "\tLD\tC,0F0H\n"
 		+ "\tOUT\t(C),E\n"
 		+ "\tLD\tHL,17BFH\n"
 		+ "\tLD\tDE,17FFH\n"
 		+ "\tLD\tBC,07C0H\n"
 		+ "\tLDDR\n"
 		+ "\tLD\tB,40H\n"
-		+ "XOUTC6:\tLD\t(DE),A\n"
+		+ "X_OUTCH_6:\n"
+		+ "\tLD\t(DE),A\n"
 		+ "\tDEC\tDE\n"
-		+ "\tDJNZ\tXOUTC6\n"
+		+ "\tDJNZ\tX_OUTCH_6\n"
 		+ "\tRET\n"
-		+ "XOUTC7:\tINC\tHL\n"
+		+ "X_OUTCH_7:\n"
+		+ "\tINC\tHL\n"
 		+ "\tLD\tA,H\n"
 		+ "\tCP\t18H\n"
-		+ "\tJR\tC,XOUTC2\n"
+		+ "\tJR\tC,X_OUTCH_2\n"
 		+ "\tLD\tHL,1000H\n"
-		+ "\tJR\tXOUTC2\n"
-		+ "XOUTC8:\tLD\tBC,0040H\n"
+		+ "\tJR\tX_OUTCH_2\n"
+		+ "X_OUTCH_8:\n"
+		+ "\tLD\tBC,0040H\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,BC\n"
-		+ "\tJR\tXOUTC2\n"
-		+ "XOUTC9:\tLD\tBC,0040H\n"
+		+ "\tJR\tX_OUTCH_2\n"
+		+ "X_OUTCH_9:\n"
+		+ "\tLD\tBC,0040H\n"
 		+ "\tADD\tHL,BC\n"
 		+ "\tLD\tA,H\n"
 		+ "\tCP\t18H\n"
-		+ "\tJR\tC,XOUTC2\n"
+		+ "\tJR\tC,X_OUTCH_2\n"
 		+ "\tLD\tA,L\n"
 		+ "\tAND\t3FH\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,10H\n"
-		+ "\tJR\tXOUTC2\n"
-		+ "XOUTC10:\n"
+		+ "\tJR\tX_OUTCH_2\n"
+		+ "X_OUTCH_10:\n"
 		+ "\tLD\tA,L\n"
 		+ "\tAND\t0C0H\n"
 		+ "\tLD\tL,A\n"
 		+ "\tDEC\tHL\n"
-		+ "\tJR\tXOUTC2\n" );
+		+ "\tJR\tX_OUTCH_2\n" );
 	if( !this.xclsAppended ) {
 	  appendXClsTo( buf );
 	}
       } else {
 	super.appendXOutchTo( buf );
       }
-      this.xoutchAppended = true;
+      this.xOutchAppended = true;
     }
   }
 
@@ -367,10 +409,10 @@ public class AC1Target extends SCCHTarget
 		+ "\tSLA\tA\n"
 		+ "\tAND\t0F0H\n"
 		+ "\tLD\tB,A\n"
-		+ "\tLD\tA,(X_MCOV)\n"
+		+ "\tLD\tA,(X_M_COLOR_VALUE)\n"
 		+ "\tAND\t0FH\n"
 		+ "\tOR\tB\n"
-		+ "\tLD\t(X_MCOV),A\n"
+		+ "\tLD\t(X_M_COLOR_VALUE),A\n"
 		+ "\tRET\n" );
     this.usesColors = true;
   }
@@ -388,13 +430,13 @@ public class AC1Target extends SCCHTarget
   @Override
   public void appendXPaintTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPAINT:\tCALL\tX_PST\n"
+    buf.append( "XPAINT:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
-		+ "\tCALL\tXPSET2\n"
+		+ "\tCALL\tX_PSET_2\n"
 		+ "\tOR\tA\n"		// CY=0
 		+ "\tRET\n" );
     appendXPSetTo( buf, compiler );
@@ -410,10 +452,11 @@ public class AC1Target extends SCCHTarget
    *   HL >= 0: Farbcode des Pixels
    *   HL=-1:   Pixel exisitiert nicht
    */
+  @Override
   public void appendXPointTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPOINT:\tCALL\tX_PST\n"
-		+ "\tJR\tC,XPOINT2\n"
+    buf.append( "XPOINT:\tCALL\tX_PINFO\n"
+		+ "\tJR\tC,X_POINT_2\n"
     // Farbbyte lesen
 		+ "\tIN\tA,(0F0H)\n"
 		+ "\tOR\t04H\n"
@@ -425,17 +468,17 @@ public class AC1Target extends SCCHTarget
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tLD\tA,D\n"
-		+ "\tJR\tNZ,XPOINT1\n"
+		+ "\tJR\tNZ,X_POINT_1\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
 		+ "\tSRL\tA\n"
-		+ "XPOINT1:\n"
+		+ "X_POINT_1:\n"
 		+ "\tAND\t0FH\n"
 		+ "\tLD\tL,A\n"
 		+ "\tLD\tH,00H\n"
 		+ "\tRET\n"
-		+ "XPOINT2:\n"
+		+ "X_POINT_2:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
     appendPixUtilTo( buf );
@@ -451,15 +494,15 @@ public class AC1Target extends SCCHTarget
   @Override
   public void appendXPResTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPRES:\tCALL\tX_PST\n"
+    buf.append( "XPRES:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n" );
     if( this.usesX_M_PEN ) {
-      buf.append( "\tJR\tXPSET1\n" );
+      buf.append( "\tJR\tX_PSET_1\n" );
     } else {
       buf.append( "\tLD\tA,C\n"
 		+ "\tCPL\n"
 		+ "\tAND\tB\n"
-		+ "\tJR\tXPSET3\n" );
+		+ "\tJR\tX_PSET_3\n" );
     }
     appendXPSetTo( buf, compiler );
   }
@@ -475,34 +518,37 @@ public class AC1Target extends SCCHTarget
   public void appendXPSetTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
     if( !this.xpsetAppended ) {
-      buf.append( "XPSET:\tCALL\tX_PST\n"
+      buf.append( "XPSET:\tCALL\tX_PINFO\n"
 		+ "\tRET\tC\n" );
       if( this.usesX_M_PEN ) {
 	buf.append( "\tLD\tA,(X_M_PEN)\n"
                 + "\tDEC\tA\n"
-                + "\tJR\tZ,XPSET2\n"		// Stift 1 (Normal)
+                + "\tJR\tZ,X_PSET_2\n"		// Stift 1 (Normal)
                 + "\tDEC\tA\n"
-                + "\tJR\tZ,XPSET1\n"		// Stift 2 (Loeschen)
+                + "\tJR\tZ,X_PSET_1\n"		// Stift 2 (Loeschen)
                 + "\tDEC\tA\n"
                 + "\tRET\tNZ\n"
 		+ "\tLD\tA,B\n"			// Stift 3 (XOR-Mode)
 		+ "\tXOR\tC\n"
-		+ "\tJR\tXPSET3\n"
-		+ "XPSET1:\tLD\tA,C\n"		// Pixel loeschen
+		+ "\tJR\tX_PSET_3\n"
+		+ "X_PSET_1:\n"			// Pixel loeschen
+		+ "\tLD\tA,C\n"
 		+ "\tCPL\n"
 		+ "\tAND\tB\n"
-		+ "\tJR\tXPSET3\n" );
+		+ "\tJR\tX_PSET_3\n" );
       }
-      buf.append( "XPSET2:\tLD\tA,B\n"		// Pixel setzen
+      buf.append( "X_PSET_2:\n"			// Pixel setzen
+		+ "\tLD\tA,B\n"
 		+ "\tOR\tC\n"
-		+ "XPSET3:\tAND\t0FH\n" );
+		+ "X_PSET_3:\n"
+		+ "\tAND\t0FH\n" );
       if( this.usesColors ) {
 	buf.append( "\tLD\tD,A\n"
 		+ "\tLD\tC,0F0H\n"
 		+ "\tIN\tE,(C)\n"
 		+ "\tSET\t2,E\n"
 		+ "\tOUT\t(C),E\n"
-		+ "\tLD\tA,(X_MCOV)\n"
+		+ "\tLD\tA,(X_M_COLOR_VALUE)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tRES\t2,E\n"
 		+ "\tOUT\t(C),E\n"
@@ -530,15 +576,15 @@ public class AC1Target extends SCCHTarget
   @Override
   public void appendXPTestTo( AsmCodeBuf buf, BasicCompiler compiler )
   {
-    buf.append( "XPTEST:\tCALL\tX_PST\n"
-		+ "\tJR\tC,X_PTEST1\n"
+    buf.append( "XPTEST:\tCALL\tX_PINFO\n"
+		+ "\tJR\tC,X_PTEST_1\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
 		+ "\tRET\n"
-		+ "X_PTEST1:\n"
+		+ "X_PTEST_1:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
     appendPixUtilTo( buf );
@@ -558,10 +604,13 @@ public class AC1Target extends SCCHTarget
     int rv = 0;
     if( emuSys != null ) {
       if( emuSys instanceof AC1 ) {
-	rv = 2;
+	rv = 1;
 	if( ((AC1) emuSys).emulates2010Mode()
 	    || ((AC1) emuSys).emulatesSCCHMode() )
 	{
+	  rv = 2;
+	}
+	if( emuSys.getColorCount() > 2 ) {
 	  rv = 3;
 	}
       } else if( emuSys instanceof AbstractSCCHSys ) {
@@ -612,9 +661,9 @@ public class AC1Target extends SCCHTarget
 
 
   @Override
-  public boolean supportsXLOCAT()
+  public boolean supportsXLOCATE()
   {
-    return this.usesColors ? true : super.supportsXLOCAT();
+    return this.usesColors ? true : super.supportsXLOCATE();
   }
 
 
@@ -630,26 +679,28 @@ public class AC1Target extends SCCHTarget
   private void appendPixUtilTo( AsmCodeBuf buf )
   {
     if( !this.pixUtilAppended ) {
-      buf.append(
-	    /*
-	     * Pruefen der Parameter und
-	     * ermitteln von Informationen zu einem Pixel
-	     * Parameter:
-	     *   DE: X-Koordinate (0...127)
-	     *   HL: Y-Koordinate (0...63)
-	     * Rueckgabe:
-	     *   CY=1: Pixel ausserhalb des gueltigen Bereichs
-	     *   B:    Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
-	     *         Bitanordnung innerhalb einer Zeichenposition:
-	     *           +---+
-	     *           |0 1|
-	     *           |2 3|
-	     *           +---+
-	     *   C:    Bitmuster mit einem gesetzten Bit,
-             *         dass das Pixel in der Speicherzelle beschreibt
-	     *   HL:   Speicherzelle, in der sich das Pixel befindet
-	     */
-		"X_PST:\tLD\tA,D\n"
+      /*
+       * Pruefen der Parameter und
+       * ermitteln von Informationen zu einem Pixel
+       *
+       * Parameter:
+       *   DE: X-Koordinate (0...127)
+       *   HL: Y-Koordinate (0...63)
+       *
+       * Rueckgabe:
+       *   CY=1: Pixel ausserhalb des gueltigen Bereichs
+       *   B:    Aktuelles Bitmuster (gesetzte Pixel) in der Speicherzelle,
+       *         Bitanordnung innerhalb einer Zeichenposition:
+       *           +---+
+       *           |0 1|
+       *           |2 3|
+       *           +---+
+       *   C:    Bitmuster mit einem gesetzten Bit,
+       *         dass das Pixel in der Speicherzelle beschreibt
+       *   HL:   Speicherzelle, in der sich das Pixel befindet
+       */
+      buf.append( "X_PINFO:\n"
+		+ "\tLD\tA,D\n"
 		+ "\tOR\tH\n"
 		+ "\tSCF\n"
 		+ "\tRET\tNZ\n"
@@ -661,13 +712,15 @@ public class AC1Target extends SCCHTarget
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,01H\n"
 		+ "\tSRL\tL\n"
-		+ "\tJR\tC,X_PST1\n"
+		+ "\tJR\tC,X_PINFO_1\n"
 		+ "\tSLA\tA\n"
 		+ "\tSLA\tA\n"
-		+ "X_PST1:\tSRL\tE\n"
-		+ "\tJR\tNC,X_PST2\n"
+		+ "X_PINFO_1:\n"
+		+ "\tSRL\tE\n"
+		+ "\tJR\tNC,X_PINFO_2\n"
 		+ "\tSLA\tA\n"
-		+ "X_PST2:\tADD\tHL,HL\n"
+		+ "X_PINFO_2:\n"
+		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"

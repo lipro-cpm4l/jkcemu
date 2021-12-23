@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.etc;
 
-import java.lang.*;
 import z80emu.Z80CPU;
 import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80TStatesListener;

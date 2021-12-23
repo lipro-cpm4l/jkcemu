@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,7 +25,6 @@ import java.io.PushbackInputStream;
 import java.io.PushbackReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,11 +46,11 @@ import javax.swing.undo.UndoManager;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileFormat;
-import jkcemu.base.FileInfo;
-import jkcemu.base.LoadData;
 import jkcemu.base.SourceUtil;
 import jkcemu.base.UserCancelException;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileInfo;
+import jkcemu.file.LoadData;
 import jkcemu.emusys.AC1;
 import jkcemu.emusys.BCS3;
 import jkcemu.emusys.KC85;
@@ -60,6 +59,7 @@ import jkcemu.emusys.LC80;
 import jkcemu.emusys.LLC1;
 import jkcemu.emusys.Z1013;
 import jkcemu.emusys.Z9001;
+import jkcemu.file.FileUtil;
 import jkcemu.programming.PrgOptions;
 import jkcemu.programming.PrgSource;
 import jkcemu.programming.basic.BasicOptions;
@@ -110,16 +110,18 @@ public class EditText implements
   private boolean       trimLines;
   private int           eofByte;
   private PrgOptions    prgOptions;
+  private String        fileName;
   private File          file;
   private File          prjFile;
   private CharConverter charConverter;
   private String        encodingName;
   private String        encodingDesc;
   private String        lineEnd;
-  private String        textName;
   private String        textValue;
+  private String        textName;
+  private int           textNum;
   private JTextArea     textArea;
-  private Component     tabComponent;
+  private Component     tab;
   private DropTarget    dropTarget1;
   private DropTarget    dropTarget2;
   private UndoManager   undoMngr;
@@ -129,23 +131,21 @@ public class EditText implements
 
   public EditText(
 		TextEditFrm textEditFrm,
-		Component   tabComponent,
+		Component   tab,
 		JTextArea   textArea )
   {
     init( textEditFrm );
-    this.textName = "Neuer Text";
-
-    int n = this.textEditFrm.getNewTextNum();
-    if( n > 1 ) {
-      this.textName += " <" + String.valueOf( n ) + ">";
-    }
-    setComponents( tabComponent, textArea );
+    this.textName = null;
+    this.textNum  = this.textEditFrm.getNewTextNum();
+    setComponents( tab, textArea );
   }
 
 
   public EditText(
 		TextEditFrm   textEditFrm,
 		File          file,
+		byte[]        fileBytes,
+		String        fileName,
 		CharConverter charConverter,
 		String        encodingName,
 		String        encodingDesc,
@@ -155,6 +155,8 @@ public class EditText implements
     init( textEditFrm );
     loadFile(
 	file,
+	fileBytes,
+	fileName,
 	charConverter,
 	encodingName,
 	encodingDesc,
@@ -181,6 +183,7 @@ public class EditText implements
     }
     this.textEditFrm   = null;
     this.file          = null;
+    this.fileName      = null;
     this.charConverter = null;
     this.encodingDesc  = null;
     this.encodingName  = null;
@@ -188,7 +191,7 @@ public class EditText implements
     this.textName      = null;
     this.textValue     = null;
     this.textArea      = null;
-    this.tabComponent  = null;
+    this.tab           = null;
     this.undoMngr.discardAllEdits();
   }
 
@@ -241,6 +244,27 @@ public class EditText implements
   }
 
 
+  public String getFileName()
+  {
+    return this.fileName;
+  }
+
+
+  public JScrollPane getJScrollPane()
+  {
+    JScrollPane sp = null;
+    Component   c  = this.tab;
+    while( (sp == null) && (c != null) ) {
+      if( c instanceof JScrollPane ) {
+	sp = (JScrollPane) c;
+	break;
+      }
+      c = c.getParent();
+    }
+    return sp;
+  }
+
+
   public JTextArea getJTextArea()
   {
     return this.textArea;
@@ -255,6 +279,12 @@ public class EditText implements
 
   public String getName()
   {
+    if( this.textName == null ) {
+      this.textName = "Neuer Text";
+      if( this.textNum > 1 ) {
+	this.textName += String.format( "<%d>", this.textNum );
+      }
+    }
     return this.textName;
   }
 
@@ -277,9 +307,23 @@ public class EditText implements
   }
 
 
-  public Component getTabComponent()
+  public Component getRowHeader()
   {
-    return this.tabComponent;
+    Component   c  = null;
+    JScrollPane sp = getJScrollPane();
+    if( sp != null ) {
+      JViewport vp = sp.getRowHeader();
+      if( vp != null ) {
+	c = vp.getView();
+      }
+    }
+    return c;
+  }
+
+
+  public Component getTab()
+  {
+    return this.tab;
   }
 
 
@@ -337,7 +381,7 @@ public class EditText implements
   {
     this.textEditFrm.setState( Frame.NORMAL );
     this.textEditFrm.toFront();
-    this.textEditFrm.setSelectedTabComponent( this.tabComponent );
+    this.textEditFrm.setSelectedTab( this.tab );
     this.textEditFrm.gotoLine( this.textArea, lineNum );
   }
 
@@ -362,25 +406,20 @@ public class EditText implements
 
   public boolean hasRowHeader()
   {
-    boolean     rv = false;
-    JScrollPane sp = getJScrollPane();
-    if( sp != null ) {
-      JViewport vp = sp.getRowHeader();
-      if( vp != null ) {
-	Component c = vp.getView();
-	if( c != null ) {
-	  rv = true;
-	}
-      }
-    }
-    return rv;
+    return (getRowHeader() != null);
+  }
+
+
+  public boolean hasText()
+  {
+    return (getTextLength() > 0);
   }
 
 
   public boolean isSameFile( File file )
   {
     return ((this.file != null) && (file != null)) ?
-				EmuUtil.equals( this.file, file )
+				FileUtil.equals( this.file, file )
 				: false;
   }
 
@@ -389,7 +428,7 @@ public class EditText implements
   {
     boolean rv = false;
     if( src != null ) {
-      String srcText = src.getText();
+      String srcText = src.getOrgText();
       if( srcText != null ) {
 	rv = (!srcText.isEmpty() && srcText.equals( getText() ));
       }
@@ -415,6 +454,8 @@ public class EditText implements
 
   public void loadFile(
 		File          file,
+		byte[]        fileBytes,
+		String        fileName,
 		CharConverter charConverter,
 		String        encodingName,
 		String        encodingDesc,
@@ -427,7 +468,12 @@ public class EditText implements
       FileInfo  fileInfo  = null;
       String    text      = null;
       String    info      = null;
-      byte[]    fileBytes = EmuUtil.readFile( file, true, Integer.MAX_VALUE );
+      if( (fileBytes == null) && (file != null) ) {
+	fileBytes = FileUtil.readFile(
+				file,
+				true,
+				Integer.MAX_VALUE );
+      }
       if( fileBytes != null ) {
 	if( (charConverter == null) && (encodingName == null) ) {
 
@@ -502,17 +548,17 @@ public class EditText implements
 			  int b = fileBytes[ i ] & 0xFF;
 			  if( b == '\r' ) {
 			    cr = true;
-			    buf.append( (char) '\n' );
+			    buf.append( '\n' );
 			  }
 			  else if( b == '\n' ) {
 			    if( cr ) {
 			      cr = false;
 			    } else {
-			      buf.append( (char) '\n' );
+			      buf.append( '\n' );
 			    }
 			  }
 			  else if( b == 0x1E ) {
-			    buf.append( (char) '\n' );
+			    buf.append( '\n' );
 			  }
 			  else if( (b == '\t') || (b >= 0x20) ) {
 			    buf.append( (char) b );
@@ -600,9 +646,9 @@ public class EditText implements
 	    if( info != null ) {
 	      buf.append( info );
 	      if( !info.endsWith( ":" ) ) {
-		buf.append( (char) ':' );
+		buf.append( ':' );
 	      }
-	      buf.append( (char) '\n' );
+	      buf.append( '\n' );
 	    }
 	    buf.append( "Die Datei ist keine reine Textdatei und kann\n"
 			+ "deshalb auch nicht als solche ge\u00F6ffnet"
@@ -630,7 +676,7 @@ public class EditText implements
 	      /*
 	       * Wenn beim Einlesen der Datei mit dem Systemzeichensatz
 	       * Zeichen nicht gemappt werden konnten,
-	       * wird die Datei mit ISO.8859-1 (Latin1) eingelesen.
+	       * wird die Datei mit ISO-8859-1 (Latin1) eingelesen.
 	       */
 	      CharConverter cc2 = new CharConverter(
 					CharConverter.Encoding.LATIN1 );
@@ -659,11 +705,20 @@ public class EditText implements
       this.eofByte       = textProps.eofByte;
       if( filtered ) {
 	this.file     = null;
-	this.textName = "Neuer Text (Quelle: " + file.getName() + ")";
+	this.fileName = null;
+	this.textName = "Neuer Text";
+	if( file != null ) {
+	  this.textName += (" (Quelle: " + file.getName() + ")");
+	}
 	setDataUnchanged( false );
       } else {
 	this.file     = file;
-	this.textName = file.getName();
+	this.fileName = fileName;
+	if( file != null ) {
+	  this.textName = file.getName();
+	} else {
+	  this.textName = fileName;
+	}
 	setDataUnchanged( true );
       }
       if( this.textArea != null ) {
@@ -713,6 +768,13 @@ public class EditText implements
 		encodingName + ": Der Zeichensatz wird auf dieser Plattform"
 			+ " nicht unterst\u00FCtzt." );
     }
+  }
+
+
+  public void pasteText( String text )
+  {
+    if( (text != null) && (this.textArea != null) )
+      this.textArea.replaceSelection( text );
   }
 
 
@@ -795,14 +857,12 @@ public class EditText implements
       }
     }
     if( lineEnd == null ) {
-      lineEndBytes      = new byte[ 2 ];
-      lineEndBytes[ 0 ] = (byte) '\r';
-      lineEndBytes[ 1 ] = (byte) '\n';
+      lineEndBytes = new byte[] { (byte) '\r', (byte) '\n' };
     }
 
     OutputStream outStream = null;
     try {
-      outStream = EmuUtil.createOptionalGZipOutputStream( file );
+      outStream = FileUtil.createOptionalGZipOutputStream( file );
 
       BufferedWriter outWriter = null;
       if( charConverter == null ) {
@@ -876,8 +936,9 @@ public class EditText implements
 	      if( outWriter != null ) {
 		outWriter.write( ch );
 	      } else {
-		if( !writeChar( outStream, charConverter, ch ) )
+		if( !writeChar( outStream, charConverter, ch ) ) {
 		  charsLost = true;
+		}
 	      }
 	  }
 	}
@@ -899,8 +960,9 @@ public class EditText implements
 	    if( ch == '\n' ) {
 	      outStream.write( lineEndBytes );
 	    } else {
-	      if( !writeChar( outStream, charConverter, ch ) )
+	      if( !writeChar( outStream, charConverter, ch ) ) {
 		charsLost = true;
+	      }
 	    }
 	  }
 	}
@@ -926,6 +988,7 @@ public class EditText implements
       }
 
       this.file          = file;
+      this.fileName      = fileName;
       this.charConverter = charConverter;
       this.encodingName  = encodingName;
       this.encodingDesc  = encodingDesc;
@@ -954,7 +1017,7 @@ public class EditText implements
 			+ " nicht unterst\u00FCtzt." );
     }
     finally {
-      EmuUtil.closeSilent( outStream );
+      EmuUtil.closeSilently( outStream );
     }
   }
 
@@ -983,11 +1046,11 @@ public class EditText implements
 	    }
 	  }
 	}
-	prjFile = EmuUtil.showFileSaveDlg(
+	prjFile = FileUtil.showFileSaveDlg(
 				frame,
 				"Projekt speichern",
 				preSelection,
-				EmuUtil.getProjectFileFilter() );
+				FileUtil.getProjectFileFilter() );
       }
       if( prjFile != null ) {
 	OutputStream out = null;
@@ -1041,7 +1104,7 @@ public class EditText implements
 			+ ex.getMessage() );
 	}
 	finally {
-	  EmuUtil.closeSilent( out );
+	  EmuUtil.closeSilently( out );
 	}
       }
     } else {
@@ -1075,10 +1138,10 @@ public class EditText implements
   }
 
 
-  public void setComponents( Component tabComponent, JTextArea textArea )
+  public void setComponents( Component tab, JTextArea textArea )
   {
-    this.tabComponent = tabComponent;
-    this.textArea     = textArea;
+    this.tab      = tab;
+    this.textArea = textArea;
 
     // Text anzeigen
     if( this.textArea != null ) {
@@ -1097,8 +1160,8 @@ public class EditText implements
 
     // Komponenten als Drop-Ziele aktivieren
     disableDropTargets();
-    if( tabComponent != null ) {
-      this.dropTarget1 = new DropTarget( tabComponent, this.textEditFrm );
+    if( tab != null ) {
+      this.dropTarget1 = new DropTarget( tab, this.textEditFrm );
       this.dropTarget1.setActive( true );
     }
     if( textArea != null ) {
@@ -1123,10 +1186,15 @@ public class EditText implements
   {
     boolean prjChanged = true;
     if( (this.prgOptions != null) && (options != null) ) {
-      prjChanged = !this.prgOptions.equals( options );
+      setProjectChanged( !this.prgOptions.sameOptions( options ) );
+    } else {
+      if( ((this.prgOptions != null) && (options == null))
+	  || ((this.prgOptions == null) && (options != null)) )
+      {
+	setProjectChanged( true );
+      }
     }
     this.prgOptions = options;
-    setProjectChanged( prjChanged );
   }
 
 
@@ -1194,7 +1262,7 @@ public class EditText implements
   @Override 
   public void changedUpdate( DocumentEvent e )
   {
-    setDataChanged();
+    docChanged( e );
     this.used = true;
   }
 
@@ -1202,7 +1270,7 @@ public class EditText implements
   @Override
   public void insertUpdate( DocumentEvent e )
   {
-    setDataChanged();
+    docChanged( e );
     this.used = true;
   }
 
@@ -1210,7 +1278,7 @@ public class EditText implements
   @Override 
   public void removeUpdate( DocumentEvent e )
   {
-    setDataChanged();
+    docChanged( e );
     this.used = true;
   }
 
@@ -1233,6 +1301,7 @@ public class EditText implements
     this.undoMngr          = new UndoManager();
     this.prgOptions        = null;
     this.file              = null;
+    this.fileName          = null;
     this.charConverter     = null;
     this.encodingName      = null;
     this.encodingDesc      = null;
@@ -1241,7 +1310,7 @@ public class EditText implements
     this.textName          = null;
     this.textValue         = null;
     this.textArea          = null;
-    this.tabComponent      = null;
+    this.tab               = null;
     this.dropTarget1       = null;
     this.dropTarget2       = null;
     this.used              = false;
@@ -1267,6 +1336,17 @@ public class EditText implements
     if( dt != null ) {
       this.dropTarget2 = null;
       dt.setActive( false );
+    }
+  }
+
+
+  private void docChanged( DocumentEvent e )
+  {
+    if( this.textArea != null ) {
+      if( e.getDocument() == this.textArea.getDocument() ) {
+	setDataChanged();
+	this.textEditFrm.updTextButtons();
+      }
     }
   }
 
@@ -1334,7 +1414,7 @@ public class EditText implements
 	}
 	else if( n > 1 ) {
 	  try {
-	    optionTexts.add( "Abbrechen" );
+	    optionTexts.add( EmuUtil.TEXT_CANCEL );
 	    String[] options = optionTexts.toArray( new String[ n + 1 ] );
 	    if( options != null ) {
 	      JOptionPane pane = new JOptionPane(
@@ -1367,24 +1447,10 @@ public class EditText implements
   }
 
 
-  private JScrollPane getJScrollPane()
-  {
-    JScrollPane sp = null;
-    Component   c  = this.tabComponent;
-    while( (sp == null) && (c != null) ) {
-      if( c instanceof JScrollPane ) {
-	sp = (JScrollPane) c;
-	break;
-      }
-      c = c.getParent();
-    }
-    return sp;
-  }
-
-
   private static int readChar(
 			Reader        reader,
 			InputStream   inStream,
+			boolean       ignoreEofByte,
 			CharConverter charConverter ) throws IOException
   {
     int ch = -1;
@@ -1392,7 +1458,12 @@ public class EditText implements
       ch = reader.read();
     } else {
       ch = inStream.read();
-      if( (ch != -1) && (charConverter != null) ) {
+      if( (ch != -1)
+	     && (ch != '\n') && (ch != '\r')
+	     && (ch != '\f') && (ch != '\u001E')
+	     && (ignoreEofByte || (ch != 0x1A))
+	     && (charConverter != null) )
+      {
 	ch = charConverter.toUnicode( ch );
       }
     }
@@ -1481,10 +1552,10 @@ public class EditText implements
       }
 
       // erste Zeile bis zum Zeilenende lesen
-      int ch = readChar( reader, inStream, charConverter );
+      int ch = readChar( reader, inStream, ignoreEofByte, charConverter );
       while( (ch != -1)
 	     && (ch != '\n') && (ch != '\r')
-	     && (ch != '\u001E') )
+	     && (ch != '\f') && (ch != '\u001E') )
       {
 	if( !ignoreEofByte && (ch == 0x1A) ) {
 	  textProps.eofByte = ch;
@@ -1496,7 +1567,7 @@ public class EditText implements
 	} else {
 	  textBuf.append( (char) ch );
 	}
-	ch = readChar( reader, inStream, charConverter );
+	ch = readChar( reader, inStream, ignoreEofByte, charConverter );
       }
 
       // Zeilenende pruefen
@@ -1504,10 +1575,10 @@ public class EditText implements
 
 	// Zeilenende ist entweder CR oder CRLF
 	hasCR = true;
-	textBuf.append( (char) '\n' );
+	textBuf.append( '\n' );
 
 	// kommt noch ein LF?
-	ch = readChar( reader, inStream, charConverter );
+	ch = readChar( reader, inStream, ignoreEofByte, charConverter );
 	if( ch == CharConverter.REPLACEMENT_CHAR ) {
 	  textProps.charsLost = true;
 	}
@@ -1526,11 +1597,11 @@ public class EditText implements
 	}
       }
       else if( ch == '\n' ) {
-	textBuf.append( (char) '\n' );
+	textBuf.append( '\n' );
 	hasNL = true;
       }
       else if( ch == '\u001E' ) {
-	textBuf.append( (char) '\n' );
+	textBuf.append( '\n' );
 	has1E = true;
       }
 
@@ -1538,7 +1609,7 @@ public class EditText implements
       // wenn das zuletzt gelesene Zeichen nicht EOF war
       if( ch != -1 ) {
 	boolean wasCR = false;
-	ch = readChar( reader, inStream, charConverter );
+	ch = readChar( reader, inStream, ignoreEofByte, charConverter );
 	while( ch >= 0 ) {
 	  if( !ignoreEofByte && (ch == 0x1A) ) {
 	    textProps.eofByte = ch;
@@ -1548,15 +1619,16 @@ public class EditText implements
 	    textProps.charsLost = true;
 	  }
 	  else if( ch == '\r' ) {
-	    textBuf.append( (char) '\n' );
+	    textBuf.append( '\n' );
 	    wasCR = true;
 	  } else {
 	    if( ch == '\n' ) {
-	      if( !wasCR )
+	      if( !wasCR ) {
 		textBuf.append( (char) ch );
+	      }
 	    }
-	    else if( (ch == '\u001E') || (ch == '\f') ) {
-	      textBuf.append( (char) '\n' );
+	    else if( ch == '\u001E' ) {
+	      textBuf.append( '\n' );
 	    }
 	    // Nullbytes und Textendezeichen herausfiltern
 	    else if( (ch != 0)
@@ -1567,7 +1639,7 @@ public class EditText implements
 	    }
 	    wasCR = false;
 	  }
-	  ch = readChar( reader, inStream, charConverter );
+	  ch = readChar( reader, inStream, ignoreEofByte, charConverter );
 	}
       }
       if( reader != null ) {
@@ -1596,8 +1668,8 @@ public class EditText implements
       }
     }
     finally {
-      EmuUtil.closeSilent( reader );
-      EmuUtil.closeSilent( inStream );
+      EmuUtil.closeSilently( reader );
+      EmuUtil.closeSilently( inStream );
     }
     return textBuf.toString();
   }

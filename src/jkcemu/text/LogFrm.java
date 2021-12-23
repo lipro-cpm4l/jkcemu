@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,25 +11,22 @@ package jkcemu.text;
 import java.awt.BorderLayout;
 import java.awt.Event;
 import java.awt.EventQueue;
-import java.awt.Font;
 import java.awt.Insets;
 import java.awt.Point;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.KeyStroke;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import jkcemu.Main;
 import jkcemu.base.BaseFrm;
+import jkcemu.base.GUIFactory;
 
 
 public class LogFrm extends BaseFrm implements Appendable, CaretListener
@@ -45,66 +42,48 @@ public class LogFrm extends BaseFrm implements Appendable, CaretListener
   {
     this.correspondingEditText = correspondingEditText;
     setTitle( title );
-    Main.updIcon( this );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-
-    this.mnuFileClose = createJMenuItem( "Schlie\u00DFen" );
+    JMenu mnuFile     = createMenuFile();
+    this.mnuFileClose = createMenuItemClose();
     mnuFile.add( this.mnuFileClose );
 
 
     // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
+    JMenu mnuEdit = createMenuEdit();
 
-    this.mnuEditCopy = createJMenuItem(
-		"Kopieren",
-		KeyStroke.getKeyStroke( KeyEvent.VK_C, Event.CTRL_MASK ) );
+    this.mnuEditCopy = createMenuItemCopy( true );
     mnuEdit.add( this.mnuEditCopy );
     mnuEdit.addSeparator();
 
-    this.mnuEditSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
+    this.mnuEditSelectAll = createMenuItemSelectAll( true );
     mnuEdit.add( this.mnuEditSelectAll );
 
 
     // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuEdit );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile, mnuEdit ) );
 
 
     // Fensterinhalt
     setLayout( new BorderLayout() );
 
-    this.fldText = new JTextArea();
+    this.fldText = GUIFactory.createCodeArea( 10, 50 );
     this.fldText.setEditable( false );
     this.fldText.setMargin( new Insets( 5, 5, 5, 5 ) );
     this.fldText.addCaretListener( this );
     this.fldText.addMouseListener( this );
     add(
-	new JScrollPane(
+	GUIFactory.createScrollPane(
 		this.fldText,
 		JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
 		JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS ),
 	BorderLayout.CENTER );
 
-    Font font = this.fldText.getFont();
-    if( font != null ) {
-      this.fldText.setFont(
-	new Font( Font.MONOSPACED, font.getStyle(), font.getSize() ) );
-    } else {
-      this.fldText.setFont( new Font( Font.MONOSPACED, Font.PLAIN, 12 ) );
-    }
-
-
     // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
-      setBoundsToDefaults();
-    }
+    pack();
+    this.fldText.setColumns( 0 );
+    this.fldText.setRows( 0 );
     setResizable( true );
   }
 
@@ -195,9 +174,9 @@ public class LogFrm extends BaseFrm implements Appendable, CaretListener
     if( (e.getComponent() == this.fldText)
 	&& (e.getClickCount() > 1) )
     {
-      Point pt = e.getPoint();
-      if( pt != null ) {
-	int pos = this.fldText.viewToModel( pt );
+      Point point = e.getPoint();
+      if( point != null ) {
+	int pos = TextUtil.viewToModel( this.fldText, point );
 	if( pos >= 0 ) {
 	  String text = this.fldText.getText();
 	  if( text != null ) {

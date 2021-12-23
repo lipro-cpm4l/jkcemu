@@ -1,0 +1,98 @@
+<html>
+<head><title>BASIC-Compiler: Variablen</title></head>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Variablen</h2>
+  Variablen dienen zur Speicherung von numerischen Werten oder
+  von Zeichenketten (Strings).
+  Jede Variable hat einen Namen und einen
+  <a href="datatypes.htm">Datentyp</a>.
+  Der Variablenname ist frei w&auml;hlbar.
+  Er muss mit einem Buchstaben beginnen und kann,
+  sofern er l&auml;nger als ein Zeichen ist,
+  ab der zweiten Stelle Buchstaben und Ziffern enthalten.
+  Gro&szlig;-/Kleinschreibung wird nicht unterschieden.
+  Der Variablenname darf kein reserviertes Schl&uuml;sselwort sein.
+ <br/><br/>
+  Der Datentyp legt fest, was in der Variable gespeichert werden kann.
+  String-Variablen sind auf 255&nbsp;Zeichen begrenzt.
+ <br/><br/>
+  <ol>
+   <li><a href="variables.htm#kinds">Einfache Variablen und Felder</a></li>
+   <li><a href="variables.htm#scope">Globale und lokale Variablen</a></li>
+   <li><a href="variables.htm#declare">Variablen deklarieren</a></li>
+   <li><a href="variables.htm#access">Werte zuweisen und auslesen</a></li>
+  </ol>
+ <br/>
+
+ <h3><a name="kinds">1. Einfache Variablen und Felder</a></h3>
+  Es gibt einfache Variablen und Feldvariablen (kurz Felder).
+  Felder bestehen aus mehreren Feldelementen.
+  Der JKCEMU-BASIC-Compiler unterst&uuml;tzt Felder
+  mit bis zu zwei Dimensionen, d.h.,
+  die Feldelemente k&ouml;nnen ein- oder zweidimensional angeordnet sein.
+  Die Dimensionen bzw. die Indexe zum Zugriff auf ein Feldelement
+  werden in runden Klammern hinter dem Variablennamen
+  (in dem Fall auch Feldnamen genannt) geschrieben.
+ <br/><br/>
+
+ <h3><a name="scope">2. Globale und lokale Variablen</a></h3>
+  Variablen haben einen G&uuml;ltigkeitsbereich,
+  innerhalb dessen sie sichtbar und somit benutzbar sind.
+  Der G&uuml;ltigkeitsbereich und somit die Sichtbarkeit kann global
+  oder lokal sein.
+  Globale Variablen sind im gesamten BASIC-Programm sichtbar,
+  lokale nur in der
+  <a href="usersubs.htm">benutzerdefinierten Funktion oder Prozedur</a>,
+  in der sie mittels <a href="instructions.htm#local">LOCAL</a>
+  deklariert wurden.
+  Hat eine lokale Variable den gleichen Namen wie eine globale,
+  dann verdeckt sie die globale, d.h., im G&uuml;ltigkeitsbreich
+  der lokalen Variable kann auf die gleichnamige
+  globale nicht zugegriffen werden.
+ <br/><br/>
+
+ <h3><a name="declare">3. Variablen deklarieren</a></h3>
+  Variablen m&uuml;ssen deklariert werden,
+  bevor sie benutzt werden k&ouml;nnen.
+  Die Deklaration bedeutet, den Namen und den Typ der Variable festzulegen.
+ <br/><br/>
+  Der JKCEMU-BASIC-Compiler kennt zwei Arten von Variablendeklaration:
+  die implizite und die explizite.
+  Die implizite Variablendeklaration ist vom klassischen BASIC her bekannt
+  und bedeutet, dass man eine Variable einfach verwendet.
+  Wenn der Compiler (oder im klassischen BASIC auch Interpreter)
+  auf eine Variable st&ouml;&szlig;t, die er noch nicht kennt,
+  legt er sie einfach an.
+  Beim JKCEMU-BASIC-Compiler k&ouml;nnen nur einfache
+  Integer- und String-Variablen implizit deklariert werden.
+  Der Datentyp ergibt sich dabei aus dem Namen:
+  Endet dieser auf ein $-Zeichen, ist es eine String-Variable,
+  anderenfalls eine Integer-Variable.
+ <br/><br/>
+  Bei der expliziten Variablendeklaration werden die Variablen
+  mit der <a href="instructions.htm#dim">DIM</a>- oder
+  <a href="instructions.htm#local">LOACL</a>-Anweisung bekannt gemacht.
+  Long- und Decimal-Variablen sowie Felder m&uuml;ssen,
+  Integer- und String-Variablen k&ouml;nnen explizit deklariert werden.
+  Im Sinne eines &quot;sauberen Programmierstils&quot;
+  und mit Blick auf andere moderne Programmiersprachen
+  ist es empfehlenswert, alle, also auch Integer- und String-Variablen,
+  explizit zu deklarieren.
+ <br/><br/>
+
+ <h3><a name="access">4. Werte zuweisen und auslesen</a></h3>
+  Einfachen Variablen sowie den einzelnen Feldelementen von Feldvariablen
+  kann beliebig oft ein Wert zugewiesen und auch wieder gelesen werden.
+  Die Zuweisung ist mit dem Anweisungen
+  <a href="instructions.htm#let">LET</a>,
+  <a href="instructions.htm#input">INPUT</a>,
+  <a href="instructions.htm#line_input">LINE&nbsp;INPUT</a>,
+  <a href="instructions.htm#password_input">PASSWORD&nbsp;INPUT</a> und
+  <a href="instructions.htm#read">READ</a> m&ouml;glich.
+  Zum Lesen des in einer Variable stehenden Wertes gibt man
+  den Variablennamen innerhalb eines
+  <a href="expressions.htm">Ausdrucks</a> an.
+</body>
+</html>

@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,20 @@
 
 package jkcemu.text;
 
-import java.awt.Component;
-import java.lang.*;
-import jkcemu.base.BaseDlg;
+import java.awt.Point;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import javax.swing.text.JTextComponent;
 
 
 public class TextUtil
 {
+  private static Method modelToViewMethod = null;
+  private static Method viewToModelMethod = null;
+
+
   public static String emptyToNull( String text )
   {
     if( text != null ) {
@@ -41,6 +48,20 @@ public class TextUtil
   }
 
 
+  public static boolean endsWithIgnoreCase( String text, String suffix )
+  {
+    boolean rv       = false;
+    int     startPos = text.length() - suffix.length();
+    if( startPos >= 0 ) {
+      if( startPos > 0 ) {
+	text = text.substring( startPos );
+      }
+      rv = text.equalsIgnoreCase( suffix );
+    }
+    return rv;
+  }
+
+
   public static boolean equals( String s1, String s2 )
   {
     if( s1 == null ) {
@@ -59,12 +80,78 @@ public class TextUtil
   }
 
 
-  public static void showTextNotFound( Component owner )
+
+  public static String getFirstLine( String text )
   {
-    BaseDlg.showInfoDlg(
-                owner,
-                "Text nicht gefunden!",
-                "Text suchen" );
+    if( text != null ) {
+      int eol = text.indexOf( '\n' );
+      if( eol >= 0 ) {
+	text = text.substring( 0, eol );
+      }
+    }
+    return text;
+  }
+
+  public static boolean isTextSelected( JTextComponent c )
+  {
+    int selBeg = c.getSelectionStart();
+    return (selBeg >= 0) && (selBeg < c.getSelectionEnd());
+  }
+
+
+  /*
+   * Ab Java 9 ersetzt die Methode JTextComponent.modelToView2D(...)
+   * die Methode JTextComponent.modelToView2(...).
+   * Aud diesem Grund wird die Funktionalitaet in einer Wrapper-Methode
+   * gekapselt.
+   */
+  public static Rectangle2D modelToView( JTextComponent textComp, int pos )
+  {
+    Rectangle2D rv = null;
+    if( modelToViewMethod == null ) {
+      try {
+	modelToViewMethod = textComp.getClass().getMethod(
+							"modelToView2D",
+							int.class );
+	if( !isPublic( modelToViewMethod ) ) {
+	  modelToViewMethod = null;
+	}
+      }
+      catch( NoSuchMethodException ex ) {}
+    }
+    if( modelToViewMethod == null ) {
+      try {
+	modelToViewMethod = textComp.getClass().getMethod(
+							"modelToView",
+							int.class );
+	if( !isPublic( modelToViewMethod ) ) {
+	  modelToViewMethod = null;
+	}
+      }
+      catch( NoSuchMethodException ex ) {}
+    }
+    if( modelToViewMethod != null ) {
+      try {
+	Object obj = modelToViewMethod.invoke( textComp, pos );
+	if( obj != null ) {
+	  if( obj instanceof Rectangle2D ) {
+	    rv = (Rectangle2D) obj;
+	  }
+	}
+      }
+      catch( Exception ex ) {}
+    }
+    return rv;
+  }
+
+
+  public static boolean startsWithIgnoreCase( String text, String prefix )
+  {
+    int prefixLen = prefix.length();
+    if( prefixLen < text.length() ) {
+      text = text.substring( 0, prefixLen );
+    }
+    return text.equalsIgnoreCase( prefix );
   }
 
 
@@ -180,6 +267,66 @@ public class TextUtil
       }
     }
     return text;
+  }
+
+
+  /*
+   * Ab Java 9 ersetzt die Methode JTextComponent.viewToModel2D(...)
+   * die Methode JTextComponent.viewToModel(...).
+   * Aud diesem Grund wird die Funktionalitaet in einer Wrapper-Methode
+   * gekapselt.
+   */
+  public static int viewToModel( JTextComponent textComp, Point point )
+  {
+    int rv = -1;
+    if( viewToModelMethod == null ) {
+      try {
+	viewToModelMethod = textComp.getClass().getMethod(
+							"viewToModel2D",
+							Point2D.class );
+	if( !isPublic( viewToModelMethod ) ) {
+	  viewToModelMethod = null;
+	}
+      }
+      catch( NoSuchMethodException ex ) {}
+    }
+    if( viewToModelMethod == null ) {
+      try {
+	viewToModelMethod = textComp.getClass().getMethod(
+							"viewToModel",
+							Point.class );
+	if( !isPublic( viewToModelMethod ) ) {
+	  viewToModelMethod = null;
+	}
+      }
+      catch( NoSuchMethodException ex ) {}
+    }
+    if( viewToModelMethod != null ) {
+      try {
+	Object pos = viewToModelMethod.invoke( textComp, point );
+	if( pos != null ) {
+	  if( pos instanceof Number ) {
+	    rv = ((Number) pos).intValue();
+	  }
+	}
+      }
+      catch( Exception ex ) {}
+    }
+    return rv;
+  }
+
+
+	/* --- private Methoden --- */
+
+  private static boolean isPublic( Method method )
+  {
+    boolean rv = false;
+    if( method != null ) {
+      if( (method.getModifiers() & Modifier.PUBLIC) != 0 ) {
+	rv = true;
+      }
+    }
+    return rv;
   }
 
 

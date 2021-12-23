@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,7 +7,7 @@
  * AY-3-8910 sowie deren abgeleiteten Versionen
  *
  * Die einzelnen Schaltkreise der Schaltkreisfamilie unterscheiden
- * sich nur durch die Anzahl der zusaetlichen IO-Ports.
+ * sich nur durch die Anzahl der zusaetzlichen IO-Ports.
  * Es wird der Grundtyp AY-3-8910 emuliert,
  * da er die maximale Anzahl an solchen Ports besitzt.
  * Moechte man einen abgeleiteten Schaltkreis emulieren,
@@ -16,8 +16,7 @@
 
 package jkcemu.etc;
 
-import java.lang.*;
-import java.util.Random;
+import java.net.URL;
 import jkcemu.Main;
 
 
@@ -33,6 +32,27 @@ public class PSG8910 extends Thread
   public static final int PORT_A = 0;
   public static final int PORT_B = 1;
 
+  private static final String TEXT_OUT_FIX        = "konstanter&nbsp;Pegel";
+  private static final String TEXT_OUT_NOISE      = "Rauschen";
+  private static final String TEXT_OUT_NOISE_TONE = "Rauschen+Ton";
+  private static final String TEXT_OUT_TONE       = "Ton";
+
+  /*
+   * Tabelle mit den Werten fuer die 16 Pegelstufen
+   * mit einem Umfang von 0 bis 200
+   *
+   * Die Abstufung betraegt laut Datenblatt 0.707 pro Stufe.
+   * Die Werte in der Tabelle sind entsprechend der originalen Abstufung
+   * gerundete Werte, wobei die unteren Werte so angepasst wurden,
+   * dass bei Addition eines Kanalwertes mit dem halben Wert
+   * eines anderen Kanals und anschliessender Normierung
+   * (also (A + (B/2)) * 2 / 3)
+   * immer noch 16 unterschiedliche Werte entstehen.
+   */
+  private static int[] volumeValues = {
+				0, 2, 4, 6, 8, 11, 14, 18,
+				23, 29, 37, 50, 71, 100, 141, 200 };
+
   private Callback         callback;
   private int              clockHz;
   private int              regNum;
@@ -45,11 +65,10 @@ public class PSG8910 extends Thread
   private volatile int     periodC;
   private volatile int     periodNoise;
   private volatile int     periodEnvelope;
-  private volatile int     shapeEnvelope;
+  private volatile int     envelopeShape;
   private volatile int     modeBits;
   private volatile int     portA;
   private volatile int     portB;
-  private volatile int[]   volumeValues;
   private int              channelOutA;
   private int              channelOutB;
   private int              channelOutC;
@@ -57,40 +76,29 @@ public class PSG8910 extends Thread
   private int              toneCounterA;
   private int              toneCounterB;
   private int              toneCounterC;
-  private int              shapeCounter;
-  private int              shapeStep;
-  private int              shapeValue;
+  private int              envPeriodCounter;
+  private int              envShapeStep;
+  private int              envShapeValue;
+  private int              noiseShifter;
   private boolean          toneStateA;
   private boolean          toneStateB;
   private boolean          toneStateC;
   private boolean          noiseState;
-  private boolean          envelopeDiv2Counter;
+  private volatile boolean envelopeReset;
+  private boolean          envelopeDiv2;
+  private boolean          envelopeEnd;
   private volatile boolean threadEnabled;
-  private Random           random;
   private Object           waitMonitor;
 
 
-  public PSG8910( int clockHz, int maxOutValue, Callback callback )
+  public PSG8910( int clockHz, Callback callback )
   {
     super( Main.getThreadGroup(), "JKCEMU PSG" );
     this.clockHz       = clockHz;
     this.callback      = callback;
     this.frameRate     = 0;
-    this.volumeValues  = new int[ 16 ];
-    this.random        = new Random();
     this.waitMonitor   = new Object();
     this.threadEnabled = true;
-
-    /*
-     * Berechnung der Lautstaerkewerte,
-     * Laut Datenblatt AY-3-891X betraegt die Abstufung 0.707 pro Stufe.
-     */
-    float normValue = 1.0F;
-    for( int i = this.volumeValues.length - 1; i > 0; --i ) {
-      this.volumeValues[ i ] = Math.round( normValue * (float) maxOutValue );
-      normValue *= 0.707;
-    }
-    this.volumeValues[ 0 ] = 0;
     reset();
   }
 
@@ -124,7 +132,170 @@ public class PSG8910 extends Thread
   }
 
 
-  public void die()
+  public void appendStatusHTMLTo( StringBuilder buf )
+  {
+    buf.append( "<table border=\"1\">\n"
+	+ "<tr><th>Register</th><th>Wert</th></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "0/1 - Periodendauer Ton Kanal A:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%03Xh", this.periodA & 0x0FFF ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "2/3 - Periodendauer Ton Kanal B:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%03Xh", this.periodB & 0x0FFF ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "4/5 - Periodendauer Ton Kanal C:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%03Xh", this.periodC & 0x0FFF ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "6 - Periodendauer Rauschen:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%02Xh", this.periodNoise & 0x1F ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "7 - Mixer:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">" );
+    buf.append( String.format( "%02Xh:", this.modeBits & 0xFF ) );
+    buf.append( "<br/>Kanal A: " );
+    switch( this.modeBits & 0x09 ) {
+      case 0x00:			// Rauschen + Tongenerator
+	buf.append( TEXT_OUT_NOISE_TONE );
+	break;
+      case 0x01:			// Rauschen
+	buf.append( TEXT_OUT_NOISE );
+	break;
+      case 0x08:			// Tongenerator
+	buf.append( TEXT_OUT_TONE );
+	break;
+      default:				// konstanter Pegel
+	buf.append( TEXT_OUT_FIX );
+    }
+    buf.append( "<br/>Kanal B: " );
+    switch( this.modeBits & 0x12 ) {
+      case 0x00:			// Rauschen + Tongenerator
+	buf.append( TEXT_OUT_NOISE_TONE );
+	break;
+      case 0x02:			// Rauschen
+	buf.append( TEXT_OUT_NOISE );
+	break;
+      case 0x10:			// Tongenerator
+	buf.append( TEXT_OUT_TONE );
+	break;
+      default:				// konstanter Pegel
+	buf.append( TEXT_OUT_FIX );
+    }
+    buf.append( "<br/>Kanal C: " );
+    switch( this.modeBits & 0x24 ) {
+      case 0x00:			// Rauschen + Tongenerator
+	buf.append( TEXT_OUT_NOISE_TONE );
+	break;
+      case 0x04:			// Rauschen
+	buf.append( TEXT_OUT_NOISE );
+	break;
+      case 0x20:			// Tongenerator
+	buf.append( TEXT_OUT_TONE );
+	break;
+      default:				// konstanter Pegel
+	buf.append( TEXT_OUT_FIX );
+    }
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "10 - Amplitude Kanal A:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%02Xh", this.amplitudeA & 0x1F ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "11 - Amplitude Kanal B:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%02Xh", this.amplitudeB & 0x1F ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "12 - Amplitude Kanal C:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%02Xh", this.amplitudeC & 0x1F ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "13/14 - Periodendauer H&uuml;llkurve:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\">" );
+    buf.append( String.format( "%04Xh", this.periodEnvelope & 0xFFFF ) );
+    buf.append( "</td></tr>\n"
+	+ "<tr>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">"
+	+ "15 - H&uuml;llkurvenform:"
+	+ "</td>"
+	+ "<td align=\"left\" valign=\"top\" nowrap=\"nowrap\">" );
+    buf.append( String.format( "%1Xh", this.envelopeShape & 0x0F ) );
+    String envelopeFile = null;
+    switch( this.envelopeShape & 0x0F ) {
+      case 0x00:
+      case 0x01:
+      case 0x02:
+      case 0x03:
+      case 0x09:
+	envelopeFile = "envelope_00XX.png";
+	break;
+      case 0x04:
+      case 0x05:
+      case 0x06:
+      case 0x07:
+      case 0x0F:
+	envelopeFile = "envelope_01XX.png";
+	break;
+      case 0x08:
+	envelopeFile = "envelope_1000.png";
+	break;
+      case 0x0A:
+	envelopeFile = "envelope_1010.png";
+	break;
+      case 0x0B:
+	envelopeFile = "envelope_1011.png";
+	break;
+      case 0x0C:
+	envelopeFile = "envelope_1100.png";
+	break;
+      case 0x0D:
+	envelopeFile = "envelope_1101.png";
+	break;
+      case 0x0E:
+	envelopeFile = "envelope_1110.png";
+	break;
+    }
+    if( envelopeFile != null ) {
+      URL url = getClass().getResource( "/images/psg/" + envelopeFile );
+      if( url != null ) {
+	buf.append( ": <img src=\"" );
+	buf.append( url );
+	buf.append( "\" />" );
+      }
+    }
+    buf.append( "</td></tr>\n"
+	+ "</table>\n" );
+  }
+
+
+  public void fireStop()
   {
     this.threadEnabled = false;
     interrupt();
@@ -182,21 +353,17 @@ public class PSG8910 extends Thread
 	rv = (this.periodEnvelope >> 8) & 0xFF;
 	break;
       case 13:
-	rv = this.shapeEnvelope;
+	rv = this.envelopeShape;
 	break;
       case 14:
 	rv = this.portA;
-	if( ((this.modeBits & 0x40) == 0)
-	    && (this.callback != null) )
-	{
+	if( (this.modeBits & 0x40) == 0 ) {
 	  rv = this.callback.psgReadPort( this, PORT_A );
 	}
 	break;
       case 15:
 	rv = this.portB;
-	if( ((this.modeBits & 0x80) == 0)
-	    && (this.callback != null) )
-	{
+	if( (this.modeBits & 0x80) == 0 ) {
 	  rv = this.callback.psgReadPort( this, PORT_B );
 	}
 	break;
@@ -207,41 +374,48 @@ public class PSG8910 extends Thread
 
   public void reset()
   {
-    this.portA          = 0xFF;
-    this.portB          = 0xFF;
-    this.modeBits       = 0xFF;
-    this.amplitudeA     = 0;
-    this.amplitudeB     = 0;
-    this.amplitudeC     = 0;
-    this.periodA        = 0;
-    this.periodB        = 0;
-    this.periodC        = 0;
-    this.periodNoise    = 0;
-    this.periodEnvelope = 0;
-    this.shapeEnvelope  = 0;
-    this.regNum         = 0;
-    this.channelOutA    = 0;
-    this.channelOutB    = 0;
-    this.channelOutC    = 0;
-    this.noiseCounter   = 0;
-    this.shapeCounter   = 0;
-    this.shapeStep      = 0;
-    this.shapeValue     = 0;
-    this.toneCounterA   = 0;
-    this.toneCounterB   = 0;
-    this.toneCounterC   = 0;
-    this.toneStateA     = false;
-    this.toneStateB     = false;
-    this.toneStateC     = false;
-    this.noiseState     = false;
+    this.portA            = 0xFF;
+    this.portB            = 0xFF;
+    this.modeBits         = 0xFF;
+    this.noiseShifter     = 0;
+    this.amplitudeA       = 0;
+    this.amplitudeB       = 0;
+    this.amplitudeC       = 0;
+    this.periodA          = 0;
+    this.periodB          = 0;
+    this.periodC          = 0;
+    this.periodNoise      = 0;
+    this.periodEnvelope   = 0;
+    this.envelopeShape    = 0;
+    this.regNum           = 0;
+    this.channelOutA      = 0;
+    this.channelOutB      = 0;
+    this.channelOutC      = 0;
+    this.noiseCounter     = 0;
+    this.envPeriodCounter = 0;
+    this.envShapeStep     = 0;
+    this.envShapeValue    = 0;
+    this.toneCounterA     = 0;
+    this.toneCounterB     = 0;
+    this.toneCounterC     = 0;
+    this.toneStateA       = false;
+    this.toneStateB       = false;
+    this.toneStateC       = false;
+    this.noiseState       = false;
+    this.envelopeReset    = false;
+    this.envelopeDiv2     = false;
+    this.envelopeEnd      = false;
   }
 
 
   public void setFrameRate( int frameRate )
   {
-    this.frameRate = frameRate;
-    if( this.frameRate > 0 ) {
-      wakeUp();
+    synchronized( this.waitMonitor ) {
+      int oldFrameRate = this.frameRate;
+      this.frameRate   = frameRate;
+      if( (frameRate > 0) && (oldFrameRate <= 0) ) {
+	wakeUp();
+      }
     }
   }
 
@@ -286,36 +460,31 @@ public class PSG8910 extends Thread
 	synchronized( this ) {
 	  this.periodEnvelope = (this.periodEnvelope & 0xFF00)
 					| (value & 0x00FF);
-	  resetShape();
 	}
 	break;
       case 12:
 	synchronized( this ) {
 	  this.periodEnvelope = ((value << 8) & 0xFF00)
 					| (this.periodEnvelope & 0x00FF);
-	  resetShape();
 	}
 	break;
       case 13:
 	synchronized( this ) {
-	  this.shapeEnvelope = value & 0x0F;
-	  resetShape();
+	  this.envelopeShape = value & 0x0F;
+	  this.envelopeEnd   = true;
+	  this.envelopeReset = true;
 	}
 	break;
       case 14:
 	if( (this.modeBits & 0x40) != 0 ) {
 	  this.portA = value;
-	  if( this.callback != null ) {
-	    this.callback.psgWritePort( this, PORT_A, value );
-	  }
+	  this.callback.psgWritePort( this, PORT_A, value );
 	}
 	break;
       case 15:
 	if( (this.modeBits & 0x80) != 0 ) {
 	  this.portB = value;
-	  if( this.callback != null ) {
-	    this.callback.psgWritePort( this, PORT_B, value );
-	  }
+	  this.callback.psgWritePort( this, PORT_B, value );
 	}
 	break;
     }
@@ -374,6 +543,15 @@ public class PSG8910 extends Thread
 	}
       }
     }
+    /*
+     * Noch ein Frame schreiben, um sicherzustellen,
+     * dass der Audiokanal geschlossen werden kann.
+     */
+    this.callback.psgWriteFrame(
+				this,
+				this.channelOutA,
+				this.channelOutB,
+				this.channelOutC );
   }
 
 
@@ -384,9 +562,9 @@ public class PSG8910 extends Thread
     int rv = 0;
     if( channelState ) {
       if( amplitudeReg > 0x0F ) {
-	rv = this.volumeValues[ this.shapeValue ];
+	rv = volumeValues[ this.envShapeValue ];
       } else {
-	rv = this.volumeValues[ amplitudeReg ];
+	rv = volumeValues[ amplitudeReg ];
       }
     }
     return rv;
@@ -429,7 +607,7 @@ public class PSG8910 extends Thread
       this.toneCounterC = this.periodC;
       if( this.toneCounterC > 0 ) {
 	--this.toneCounterC;
-	this.toneStateC = !this.toneStateB;
+	this.toneStateC = !this.toneStateC;
       } else {
 	this.toneStateC = true;
       }
@@ -446,18 +624,27 @@ public class PSG8910 extends Thread
       if( this.noiseCounter > 0 ) {
 	--this.noiseCounter;
       }
-      if( this.random.nextBoolean() ) {
-	this.noiseState = !this.noiseState;
+      /*
+       * Das Rauschen wird ueber ein rueckgekoppeltes 17-stelliges
+       * Schieberegister erzeugt:
+       * Rueckkopplung: Negation(Bit13 XOR Bit16) -> Bit0
+       * Ausgang:       Bit16
+       */
+      boolean bit13   = ((this.noiseShifter & 0x00002000) != 0);  // Bit13
+      this.noiseState = ((this.noiseShifter & 0x00010000) != 0);  // Bit16
+      this.noiseShifter <<= 1;
+      if( bit13 == this.noiseState ) {
+	this.noiseShifter |= 0x01;
       }
     }
 
     // Mixer
-    boolean stateA = false;
-    boolean stateB = false;
-    boolean stateC = false;
+    boolean stateA = true;
+    boolean stateB = true;
+    boolean stateC = true;
     switch( this.modeBits & 0x09 ) {
-      case 0x00:			// Tongenerator + Rauschen
-	stateA = this.toneStateA || this.noiseState;
+      case 0x00:			// Rauschen + Tongenerator
+	stateA = this.noiseState || this.toneStateA;
 	break;
       case 0x01:			// Rauschen
 	stateA = this.noiseState;
@@ -467,8 +654,8 @@ public class PSG8910 extends Thread
 	break;
     }
     switch( this.modeBits & 0x12 ) {
-      case 0x00:			// Tongenerator + Rauschen
-	stateB = this.toneStateB || this.noiseState;
+      case 0x00:			// Rauschen + Tongenerator
+	stateB = this.noiseState || this.toneStateB;
 	break;
       case 0x02:			// Rauschen
 	stateB = this.noiseState;
@@ -478,8 +665,8 @@ public class PSG8910 extends Thread
 	break;
     }
     switch( this.modeBits & 0x24 ) {
-      case 0x00:			// Tongenerator + Rauschen
-	stateC = this.toneStateC || this.noiseState;
+      case 0x00:			// Rauschen + Tongenerator
+	stateC = this.noiseState || this.toneStateC;
 	break;
       case 0x04:			// Rauschen
 	stateC = this.noiseState;
@@ -496,90 +683,94 @@ public class PSG8910 extends Thread
      * muss noch durch zwei geteilt werden.
      * Periode=0 ist wie Periode=1 sehr kurz
      */
-    this.envelopeDiv2Counter = !this.envelopeDiv2Counter;
-    if( this.envelopeDiv2Counter ) {
-      if( this.shapeCounter > 0 ) {
-	--this.shapeCounter;
+    this.envelopeDiv2 = !this.envelopeDiv2;
+    if( this.envelopeDiv2 ) {
+      if( this.envPeriodCounter > 0 ) {
+	--this.envPeriodCounter;
       }
-      if( this.shapeCounter == 0 ) {
-	this.shapeCounter = this.periodEnvelope;
-	switch( this.shapeEnvelope ) {
+      if( this.envelopeReset || (this.envPeriodCounter == 0) ) {
+	int envelopeShape = 0;
+	synchronized( this ) {
+	  envelopeShape         = this.envelopeShape;
+	  this.envPeriodCounter = this.periodEnvelope;
+	}
+	if( this.envelopeReset
+	    && (this.envelopeEnd || (this.envShapeStep == 0)) )
+	{
+	  this.envelopeReset = false;
+	  this.envelopeEnd   = false;
+	  this.envShapeStep  = 0;
+	  if( (envelopeShape <= 3)
+	      || ((envelopeShape >= 8) && (envelopeShape <= 11)) )
+	  {
+	    this.envShapeValue = 15;
+	  } else {
+	    this.envShapeValue = 0;
+	  }
+	}
+	switch( envelopeShape ) {
 	  case 4:						// /____
 	  case 5:
 	  case 6:
 	  case 7:
 	  case 15:
-	    if( this.shapeStep < 15 ) {
-	      this.shapeStep++;
-	      this.shapeValue = this.shapeStep & 0x0F;
+	    if( this.envShapeStep < 16 ) {
+	      this.envShapeValue = (this.envShapeStep & 0x0F);
+	      this.envShapeStep++;
 	    } else {
-	      this.shapeValue = 0;
+	      this.envShapeValue = 0;
+	      this.envelopeEnd   = true;
 	    }
 	    break;
 	  case 8:						// \\\\
-	    if( this.shapeStep < 15 ) {
-	      this.shapeStep++;
-	      this.shapeValue = (15 - this.shapeStep) & 0x0F;
-	    } else {
-	      this.shapeStep  = 0;
-	      this.shapeValue = 15;
-	    }
+	    this.envShapeValue = (15 - this.envShapeStep) & 0x0F;
+	    this.envShapeStep  = (this.envShapeStep + 1) & 0x0F;
 	    break;
 	  case 10:						// \/\/
-	    if( this.shapeStep < 31 ) {
-	      this.shapeStep++;
+	    if( this.envShapeStep < 16 ) {
+	      this.envShapeValue = (15 - this.envShapeStep) & 0x0F;
 	    } else {
-	      this.shapeStep = 0;
+	      this.envShapeValue = (this.envShapeStep - 16) & 0x0F;
 	    }
-	    if( this.shapeStep < 16 ) {
-	      this.shapeValue = (15 - this.shapeStep) & 0x0F;
-	    } else {
-	      this.shapeValue = (this.shapeStep - 16) & 0x0F;
-	    }
+	    this.envShapeStep  = (this.envShapeStep + 1) & 0x1F;
 	    break;
 	  case 11:						// \~~~
-	    if( this.shapeStep < 15 ) {
-	      this.shapeStep++;
-	      if( this.shapeValue > 0 ) {
-		--this.shapeValue;
-	      }
+	    if( this.envShapeStep < 16 ) {
+	      this.envShapeValue = (15 - this.envShapeStep) & 0x0F;
+	      this.envShapeStep++;
 	    } else {
-	      this.shapeValue = 15;
+	      this.envShapeValue = 15;
+	      this.envelopeEnd   = true;
 	    }
 	    break;
 	  case 12:						// ////
-	    if( this.shapeStep < 15 ) {
-	      this.shapeStep++;
-	      this.shapeValue = this.shapeStep & 0x0F;
-	    } else {
-	      this.shapeStep  = 0;
-	      this.shapeValue = 0;
-	    }
+	    this.envShapeValue = this.envShapeStep & 0x0F;
+	    this.envShapeStep  = (this.envShapeStep + 1) & 0x0F;
 	    break;
 	  case 13:						// /~~~
-	    if( this.shapeStep < 15 ) {
-	      this.shapeStep++;
-	      this.shapeValue = this.shapeStep & 0x0F;
+	    if( this.envShapeStep < 16 ) {
+	      this.envShapeValue = this.envShapeStep & 0x0F;
+	      this.envShapeStep++;
+	    } else {
+	      this.envShapeValue = 15;
+	      this.envelopeEnd   = true;
 	    }
 	    break;
 	  case 14:						// /\/\
-	    if( this.shapeStep < 31 ) {
-	      this.shapeStep++;
+	    if( this.envShapeStep < 16 ) {
+	      this.envShapeValue = this.envShapeStep & 0x0F;
 	    } else {
-	      this.shapeStep = 0;
+	      this.envShapeValue = (31 - this.envShapeStep) & 0x0F;
 	    }
-	    if( this.shapeStep < 16 ) {
-	      this.shapeValue = this.shapeStep & 0x0F;
-	    } else {
-	      this.shapeValue = (31 - this.shapeStep) & 0x0F;
-	    }
+	    this.envShapeStep = (this.envShapeStep + 1) & 0x1F;
 	    break;
 	  default:						// \___
-	    if( this.shapeStep < 16 ) {
-	      this.shapeStep++;
-	    }
-	    if( this.shapeValue > 0 ) {
-	      --this.shapeValue;
+	    if( this.envShapeStep < 16 ) {
+	      this.envShapeValue = (15 - this.envShapeStep) & 0x0F;
+	      this.envShapeStep++;
+	    } else {
+	      this.envShapeValue = 0;
+	      this.envelopeEnd   = true;
 	    }
 	    break;
 	}
@@ -593,19 +784,6 @@ public class PSG8910 extends Thread
   }
 
 
-  private void resetShape()
-  {
-    this.shapeStep = 0;
-    if( (this.shapeEnvelope <= 3)
-	|| ((this.shapeEnvelope >= 8) && (this.shapeEnvelope <= 11)) )
-    {
-      this.shapeValue = 15;
-    } else {
-      this.shapeValue = 0;
-    }
-  }
-
-
   private void wakeUp()
   {
     synchronized( this.waitMonitor ) {
@@ -616,4 +794,3 @@ public class PSG8910 extends Thread
     }
   }
 }
-

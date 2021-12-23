@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2019 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -8,7 +8,6 @@
 
 package z80emu;
 
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -75,6 +74,18 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   }
 
 
+  public synchronized void reset( boolean powerOn )
+  {
+    if( powerOn ) {
+      this.interruptVector = 0;
+    }
+    for( int i = 0; i < this.timer.length; i++ ) {
+      this.timer[ i ].reset();
+    }
+    this.tStatesToIgnore = 0;
+  }
+
+
   /*
    * Diese Methode stellt eine Verbindung
    * vom Ausgang fromTimerNum zum Eingang toTimerNum her.
@@ -118,7 +129,6 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   @Override
   public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    boolean showISR = false;
     buf.append( "<table border=\"1\">\n"
 	+ "<tr><th></th><th>Kanal&nbsp;0</th><th>Kanal&nbsp;1</th>"
 	+ "<th>Kanal&nbsp;2</th><th>Kanal&nbsp;3</th></tr>\n"
@@ -157,7 +167,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
       Integer counterInit = this.timer[ i ].counterInit;
       if( counterInit != null ) {
 	buf.append( this.timer[ i ].counter & 0xFF );
-	buf.append( (char) '/' );
+	buf.append( '/' );
 	buf.append( counterInit );
       } else {
 	buf.append( "keine Zeitkonstante" );
@@ -186,13 +196,10 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
       buf.append( "<td>" );
       if( this.timer[ i ].interruptAccepted ) {
 	buf.append( "angenommen (wird gerade bedient)" );
-	showISR = true;
       } else if( this.timer[ i ].interruptRequested ) {
 	buf.append( "angemeldet" );
-	showISR = true;
       } else if( this.timer[ i ].interruptEnabled ) {
 	buf.append( "freigegeben" );
-	showISR = true;
       } else {
 	buf.append( "gesperrt" );
       }
@@ -225,24 +232,28 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
 
 
   @Override
-  public synchronized void interruptFinish()
+  public synchronized boolean interruptFinish( int addr )
   {
+    boolean rv = false;
     for( int i = 0; i < this.timer.length; i++ ) {
       if( this.timer[ i ].interruptAccepted ) {
 	this.timer[ i ].interruptAccepted = false;
+	rv = true;
 	break;
       }
     }
+    return rv;
   }
 
 
   @Override
   public boolean isInterruptAccepted()
   {
-    return this.timer[ 0 ].interruptAccepted
-		|| this.timer[ 1 ].interruptAccepted
-		|| this.timer[ 2 ].interruptAccepted
-		|| this.timer[ 3 ].interruptAccepted;
+    boolean rv = false;
+    for( Timer t : this.timer ) {
+      rv |= t.interruptAccepted;
+    }
+    return rv;
   }
 
 
@@ -262,19 +273,6 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
       }
     }
     return rv;
-  }
-
-
-  @Override
-  public synchronized void reset( boolean powerOn )
-  {
-    if( powerOn ) {
-      this.interruptVector = 0;
-    }
-    for( int i = 0; i < this.timer.length; i++ ) {
-      this.timer[ i ].reset();
-    }
-    this.tStatesToIgnore = 0;
   }
 
 
@@ -300,7 +298,7 @@ public class Z80CTC implements Z80InterruptSource, Z80TStatesListener
   @Override
   public String toString()
   {
-    return this.title;
+    return this.title != null ? this.title : "CTC";
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.PatternSyntaxException;
@@ -26,12 +25,15 @@ import jkcemu.programming.basic.target.AC1Target;
 import jkcemu.programming.basic.target.CPMTarget;
 import jkcemu.programming.basic.target.HueblerGraphicsMCTarget;
 import jkcemu.programming.basic.target.KC854Target;
+import jkcemu.programming.basic.target.KC85Caos48Target;
 import jkcemu.programming.basic.target.KC85Target;
 import jkcemu.programming.basic.target.KramerMCTarget;
 import jkcemu.programming.basic.target.LLC2HIRESTarget;
 import jkcemu.programming.basic.target.SCCHTarget;
 import jkcemu.programming.basic.target.Z1013PetersTarget;
 import jkcemu.programming.basic.target.Z1013Target;
+import jkcemu.programming.basic.target.Z1013KRTTarget;
+import jkcemu.programming.basic.target.Z1013ZXTarget;
 import jkcemu.programming.basic.target.Z9001KRTTarget;
 import jkcemu.programming.basic.target.Z9001Target;
 
@@ -50,16 +52,18 @@ public class CmdLineBasicCompiler
 	"  -g              bei Abbruch aufgrund eines Fehlers"
 						+ " Zeilennummer ausgeben",
 	"  -o <Datei>      Ausgabedatei festlegen",
-	"  -t <System>     Zielsystem festlegen (ac1, cpm, huebler, kc85,"
-						+ " kc85_4,",
-	"                  kramer, llc2_hires, scch, z1013, z1013_64x16,",
-	"                  z9001, z9001_krt)",
+	"  -t <System>     Zielsystem festlegen (AC1, CPM, HUEBLER, KC85,"
+						+ " kC85_4,",
+	"                  KC85_CAOS48, KRAMER, LLC2_HIRES, SCCH, Z1013,"
+						+ " Z1013_64X16,",
+	"                  Z1013_KRT, Z1013_ZX, Z9001, Z9001_KRT)",
+	"  -u              als Unterprogramm compilieren",
 	"  -A <AAdr>       Anfangsadresse festlegen (hexadezimal)",
 	"  -A <AAdr:BAdr>  Anfangsadressen f\u00FCr Programmcode (AAdr) und",
 	"                  BSS-Bereich (BAdr) festlegen (hexadezimal)",
-	"  -D <Treiber>    einzubindende Treiber festlegen"
-						+ " (z.B.: -D \"CRT,LPT\")",
-	"                  vorhandene Treiber: CRT, LPT, FILE, VDIP",
+	"  -D <Treiber>    einzubindende Treiber f\u00FCr OPEN festlegen"
+						+ " (z.B. -D \"crt,lpt\")",
+	"                  vorhandene Treiber: CRT, LPT, DISK, VDIP",
 	"  -L <Sprache>    Sprache der Laufzeitausschriften festlegen"
 						+ " (de, en)",
 	"  -M <Zahl>       Stack-Gr\u00F6\u00DFe festlegen"
@@ -83,11 +87,15 @@ public class CmdLineBasicCompiler
 	"  -O3             zus\u00E4tzlich relative Spr\u00FCnge bevorzugen",
 	"",
 	"Option fuer Warnungen:",
-	"  -W all          alle Warnungen einschalten (Standard)",
+	"  -W all          alle Warnungen einschalten",
 	"  -W none         alle Warnungen ausschalten",
-	"  -W nonascii     Bei Nicht-ASCII-Zeichen warnen",
+	"  -W implicit     Bei impliziten Variablendeklarationen warnen",
+	"                  (Standard: aus)",
+	"  -W many-digits  Bei Zahlen mit zu vielen Nachkommastellen warnen",
+	"                  (Standard: ein)",
+	"  -W non-ascii    Bei Nicht-ASCII-Zeichen warnen (Standard: ein)",
 	"  -W unused       Bei nicht verwendeten Funktionen, Prozeduren und",
-	"                  Variablen warnen",
+	"                  Variablen warnen (Standard: ein)",
 	"" };
 
 
@@ -97,6 +105,7 @@ public class CmdLineBasicCompiler
     boolean                  asmFlag        = false;
     boolean                  helpFlag       = false;
     boolean                  debugFlag      = false;
+    boolean                  subFlag        = false;
     int                      optimizerLevel = 0;
     String                   srcFileName    = null;
     Map<String,String>       optToArg       = new HashMap<>();
@@ -155,6 +164,9 @@ public class CmdLineBasicCompiler
 		  break;
 		case 'S':
 		  asmFlag = true;
+		  break;
+		case 'u':
+		  subFlag = true;
 		  break;
 		case 'B':
 		  if( pos < len ) {
@@ -234,17 +246,17 @@ public class CmdLineBasicCompiler
 	}
 	arg = iter.next();
 	if( (arg == null) && (backIter != null) ) {
-	  EmuUtil.closeSilent( iter );
+	  EmuUtil.closeSilently( iter );
 	  iter     = backIter;
 	  backIter = null;
 	  arg      = iter.next();
 	}
       }
       if( helpFlag ) {
-	EmuUtil.printlnOut();
-	EmuUtil.printlnOut( Main.APPINFO + " BASIC-Compiler" );
+	Main.printlnOut();
+	Main.printlnOut( Main.APPINFO + " BASIC-Compiler" );
 	for( String s : usageLines ) {
-	  EmuUtil.printlnOut( s );
+	  Main.printlnOut( s );
 	}
       } else {
 
@@ -280,6 +292,9 @@ public class CmdLineBasicCompiler
 	  else if( sysName.equalsIgnoreCase( "KC85_4" ) ) {
 	    target = new KC854Target();
 	  }
+	  else if( sysName.equalsIgnoreCase( "KC85_CAOS48" ) ) {
+	    target = new KC85Caos48Target();
+	  }
 	  else if( sysName.equalsIgnoreCase( "HUEBLER" ) ) {
 	    target = new HueblerGraphicsMCTarget();
 	  }
@@ -302,6 +317,12 @@ public class CmdLineBasicCompiler
 	  }
 	  else if( sysName.equalsIgnoreCase( "Z1013_64X16" ) ) {
 	    target = new Z1013PetersTarget();
+	  }
+	  else if( sysName.equalsIgnoreCase( "Z1013_KRT" ) ) {
+	    target = new Z1013KRTTarget();
+	  }
+	  else if( sysName.equalsIgnoreCase( "Z1013_ZX" ) ) {
+	    target = new Z1013ZXTarget();
 	  }
 	}
 	if( target == null ) {
@@ -357,7 +378,7 @@ public class CmdLineBasicCompiler
 	if( driverNames != null ) {
 	  boolean crtDrv  = false;
 	  boolean lptDrv  = false;
-	  boolean fileDrv = false;
+	  boolean diskDrv = false;
 	  boolean vdipDrv = false;
 	  int     argLen  = driverNames.length();
 	  if( argLen > 1 ) {
@@ -375,8 +396,8 @@ public class CmdLineBasicCompiler
 		  crtDrv = true;
 		} else if( driver.equalsIgnoreCase( "LPT" ) ) {
 		  lptDrv = true;
-		} else if( driver.equalsIgnoreCase( "FILE" ) ) {
-		  fileDrv = true;
+		} else if( driver.equalsIgnoreCase( "DISK" ) ) {
+		  diskDrv = true;
 		} else if( driver.equalsIgnoreCase( "VDIP" ) ) {
 		  vdipDrv = true;
 		} else {
@@ -388,7 +409,7 @@ public class CmdLineBasicCompiler
 	  catch( PatternSyntaxException ex ) {}
 	  options.setOpenCrtEnabled( crtDrv );
 	  options.setOpenLptEnabled( lptDrv );
-	  options.setOpenFileEnabled( fileDrv );
+	  options.setOpenDiskEnabled( diskDrv );
 	  options.setOpenVdipEnabled( vdipDrv );
 	}
 
@@ -449,12 +470,20 @@ public class CmdLineBasicCompiler
 	// Warnungen
 	String warnText = optToArg.get( "W" );
 	if( warnText != null ) {
+	  options.setWarnImplicitDecls( false );
 	  options.setWarnNonAsciiChars( false );
+	  options.setWarnTooManyDigits( false );
 	  options.setWarnUnusedItems( false );
 	  if( warnText.equalsIgnoreCase( "ALL" ) ) {
+	    options.setWarnImplicitDecls( true );
 	    options.setWarnNonAsciiChars( true );
+	    options.setWarnTooManyDigits( true );
 	    options.setWarnUnusedItems( true );
-	  } else if( warnText.equalsIgnoreCase( "NONASCII" ) ) {
+	  } else if( warnText.equalsIgnoreCase( "IMPLICIT" ) ) {
+	    options.setWarnImplicitDecls( true );
+	  } else if( warnText.equalsIgnoreCase( "MANY-DIGITS" ) ) {
+	    options.setWarnTooManyDigits( true );
+	  } else if( warnText.equalsIgnoreCase( "NON-ASCII" ) ) {
 	    options.setWarnNonAsciiChars( true );
 	  } else if( warnText.equalsIgnoreCase( "UNUSED" ) ) {
 	    options.setWarnUnusedItems( true );
@@ -463,11 +492,14 @@ public class CmdLineBasicCompiler
 				+ warnText + " nicht unterst\u00FCtzt" );
 	  }
 	} else {
+	  options.setWarnImplicitDecls( false );
+	  options.setWarnTooManyDigits( true );
 	  options.setWarnNonAsciiChars( true );
 	  options.setWarnUnusedItems( true );
 	}
 
 	// sonstige Optionen
+	options.setAppTypeSubroutine( subFlag );
 	options.setPrintLineNumOnAbort( debugFlag );
 	options.setShowAssemblerText( asmFlag );
 
@@ -475,28 +507,27 @@ public class CmdLineBasicCompiler
 	status = compile(
 			srcFile,
 			outFileName,
-			appName,
 			forZ9001,
 			options,
 			asmFlag );
       }
     }
     catch( IOException ex ) {
-      EmuUtil.printlnErr();
-      EmuUtil.printlnErr( Main.APPINFO + " BASIC-Compiler:" );
+      Main.printlnErr();
+      Main.printlnErr( Main.APPINFO + " BASIC-Compiler:" );
       String msg = ex.getMessage();
       if( msg != null ) {
 	if( !msg.isEmpty() ) {
-	  EmuUtil.printlnErr( msg );
+	  Main.printlnErr( msg );
 	}
       }
       for( String s : usageLines ) {
-	EmuUtil.printlnErr( s );
+	Main.printlnErr( s );
       }
       status = false;
     }
     finally {
-      EmuUtil.closeSilent( iter );
+      EmuUtil.closeSilently( iter );
     }
     return status;
   }
@@ -507,7 +538,6 @@ public class CmdLineBasicCompiler
   private static boolean compile(
 				File         srcFile,
 				String       outFileName,
-				String       appName,
 				boolean      forZ9001,
 				BasicOptions options,
 				boolean      suppressAssembler )
@@ -579,7 +609,7 @@ public class CmdLineBasicCompiler
 	    status = true;
 	  }
 	  finally {
-	    EmuUtil.closeSilent( out );
+	    EmuUtil.closeSilently( out );
 	  }
 	} else {
 	  Z80Assembler assembler = new Z80Assembler(
@@ -589,9 +619,9 @@ public class CmdLineBasicCompiler
 						options,
 						logger,
 						false );
-	  status = assembler.assemble( appName, forZ9001 );
+	  status = assembler.assemble( forZ9001 );
 	  if( assembler.getRelJumpsTooLong() ) {
-	    EmuUtil.printlnErr( "Compilieren Sie bitte mit einer"
+	    Main.printlnErr( "Compilieren Sie bitte mit einer"
 			+ " niedrigeren Optimierungsstufe (max. \'-O3\')." );
 	  }
 	}
@@ -601,7 +631,7 @@ public class CmdLineBasicCompiler
       String msg = ex.getMessage();
       if( msg != null ) {
 	if( !msg.isEmpty() ) {
-	  EmuUtil.printlnErr( msg );
+	  Main.printlnErr( msg );
 	}
       }
       status = false;

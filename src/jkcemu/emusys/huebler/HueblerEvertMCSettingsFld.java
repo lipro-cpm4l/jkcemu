@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
@@ -20,14 +19,16 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.ROMFileSettingsFld;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.HueblerEvertMC;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
@@ -36,7 +37,7 @@ public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
   private JPanel               tabEtc;
   private AutoLoadSettingsFld  tabAutoLoad;
   private AutoInputSettingsFld tabAutoInput;
-  private JCheckBox            btnCatchPrintCalls;
+  private JCheckBox            cbCatchPrintCalls;
   private ROMFileSettingsFld   fldAltOS;
   private ROMFileSettingsFld   fldAltFont;
 
@@ -49,7 +50,7 @@ public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
 
     setLayout( new BorderLayout() );
 
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
@@ -66,13 +67,14 @@ public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 		settingsFrm,
 		propPrefix,
+		AutoInputCharSet.getStdCharSet(),
 		HueblerEvertMC.DEFAULT_SWAP_KEY_CHAR_CASE,
 		HueblerEvertMC.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
 
     // Tab Sonstiges
-    this.tabEtc = new JPanel( new GridBagLayout() );
+    this.tabEtc = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Sonstiges", this.tabEtc );
 
     GridBagConstraints gbcEtc = new GridBagConstraints(
@@ -84,18 +86,18 @@ public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.btnCatchPrintCalls = new JCheckBox(
+    this.cbCatchPrintCalls = GUIFactory.createCheckBox(
 		"Betriebssystemaufrufe f\u00FCr Druckerausgaben abfangen",
 		true );
 
-    this.tabEtc.add( this.btnCatchPrintCalls, gbcEtc );
+    this.tabEtc.add( this.cbCatchPrintCalls, gbcEtc );
 
     gbcEtc.fill          = GridBagConstraints.HORIZONTAL;
     gbcEtc.weightx       = 1.0;
     gbcEtc.insets.top    = 10;
     gbcEtc.insets.bottom = 10;
     gbcEtc.gridy++;
-    this.tabEtc.add( new JSeparator(), gbcEtc );
+    this.tabEtc.add( GUIFactory.createSeparator(), gbcEtc );
 
     this.fldAltOS = new ROMFileSettingsFld(
 		settingsFrm,
@@ -115,7 +117,7 @@ public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
 
 
     // Listener
-    this.btnCatchPrintCalls.addActionListener( this );
+    this.cbCatchPrintCalls.addActionListener( this );
   }
 
 
@@ -129,7 +131,7 @@ public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
     EmuUtil.setProperty(
 		props,
 		this.propPrefix + HueblerEvertMC.PROP_CATCH_PRINT_CALLS,
-		this.btnCatchPrintCalls.isSelected() );
+		this.cbCatchPrintCalls.isSelected() );
 
     this.fldAltOS.applyInput( props, selected );
     this.fldAltFont.applyInput( props, selected );
@@ -159,19 +161,9 @@ public class HueblerEvertMCSettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.fldAltOS.lookAndFeelChanged();
-    this.fldAltFont.lookAndFeelChanged();
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
-    this.btnCatchPrintCalls.setSelected(
+    this.cbCatchPrintCalls.setSelected(
 	EmuUtil.getBooleanProperty(
 		props,
 		this.propPrefix + HueblerEvertMC.PROP_CATCH_PRINT_CALLS,

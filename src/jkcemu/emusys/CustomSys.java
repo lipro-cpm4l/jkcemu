@@ -1,5 +1,5 @@
 /*
- * (c) 2017 Jens Mueller
+ * (c) 2017-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,10 +14,10 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
+import jkcemu.audio.AbstractSoundDevice;
 import jkcemu.base.CharRaster;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
@@ -26,14 +26,16 @@ import jkcemu.disk.FDC8272;
 import jkcemu.disk.FloppyDiskDrive;
 import jkcemu.disk.GIDE;
 import jkcemu.emusys.customsys.CustomSysROM;
-import jkcemu.etc.VDIP;
+import jkcemu.etc.K1520Sound;
 import jkcemu.net.KCNet;
 import jkcemu.text.CharConverter;
 import jkcemu.text.TextUtil;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80CTCListener;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
 import z80emu.Z80SIO;
 import z80emu.Z80SIOChannelListener;
@@ -44,45 +46,49 @@ public class CustomSys
 		implements
 			FDC8272.DriveSelector,
 			Z80CTCListener,
+			Z80MaxSpeedListener,
 			Z80SIOChannelListener
 {
   public static final String SYSNAME     = "CUSTOMSYS";
   public static final String SYSTEXT     = "Benutzerdefinierter Computer";
   public static final String PROP_PREFIX = "jkcemu.customsys.";
-  public static final String PROP_TITLE              = "title";
-  public static final String PROP_BOOT               = "boot";
-  public static final String PROP_BEGADDR            = "addr.begin";
-  public static final String PROP_SIZE               = "size";
-  public static final String PROP_SWITCH_IOADDR      = "switch.ioaddr";
-  public static final String PROP_SWITCH_IOMASK      = "switch.iomask";
-  public static final String PROP_SWITCH_IOVALUE     = "switch.iovalue";
-  public static final String PROP_ENABLE_ON_RESET    = "enable_on_reset";
-  public static final String PROP_SCREEN_ENABLED     = "screen.enabled";
-  public static final String PROP_SCREEN_BEGADDR     = "screen.addr.begin";
-  public static final String PROP_SCREEN_COLS        = "screen.cols";
-  public static final String PROP_SCREEN_ROWS        = "screen.rows";
-  public static final String PROP_SPEED_KHZ          = "speed.khz";
-  public static final String PROP_KEYBOARD_HW        = "keyboard.hardware";
-  public static final String PROP_KEYBOARD_IOADDR    = "keyboard.io_addr";
-  public static final String PROP_SWAP_KEY_CHAR_CASE = "swap_key_char_case";
-  public static final String PROP_PIO_ENABLED        = "pio.enabled";
-  public static final String PROP_SIO_ENABLED        = "sio.enabled";
-  public static final String PROP_CTC_ENABLED        = "ctc.enabled";
-  public static final String PROP_PIO_IOBASEADDR     = "pio.io_base_addr";
-  public static final String PROP_SIO_IOBASEADDR     = "sio.io_base_addr";
-  public static final String PROP_SIO_A_CLOCK        = "sio.a.clock";
-  public static final String PROP_SIO_A_OUT          = "sio.a.out";
-  public static final String PROP_SIO_B_CLOCK        = "sio.b.clock";
-  public static final String PROP_SIO_B_OUT          = "sio.b.out";
-  public static final String PROP_CTC_IOBASEADDR     = "ctc.io_base_addr";
-  public static final String PROP_KCNET_IOBASEADDR   = "kcnet.io_base_addr";
-  public static final String PROP_VDIP_IOBASEADDR    = "vdip.io_base_addr";
-  public static final String PROP_FDC_DATA_IOADDR    = "fdc.data.ioaddr";
-  public static final String PROP_FDC_STATUS_IOADDR  = "fdc.status.ioaddr";
-  public static final String PROP_FDC_TC_IOADDR      = "fdc.tc.ioaddr";
-  public static final String PROP_FDC_TC_IOMASK      = "fdc.tc.iomask";
-  public static final String PROP_FDC_TC_IOVALUE     = "fdc.tc.iovalue";
-  public static final String PROP_UNUSED_PORT_VALUE  = "unused_port.value";
+  public static final String PROP_TITLE               = "title";
+  public static final String PROP_BOOT                = "boot";
+  public static final String PROP_BEGADDR             = "addr.begin";
+  public static final String PROP_SIZE                = "size";
+  public static final String PROP_SWITCH_IOADDR       = "switch.ioaddr";
+  public static final String PROP_SWITCH_IOMASK       = "switch.iomask";
+  public static final String PROP_SWITCH_IOVALUE      = "switch.iovalue";
+  public static final String PROP_ENABLE_ON_RESET     = "enable_on_reset";
+  public static final String PROP_SCREEN_ENABLED      = "screen.enabled";
+  public static final String PROP_SCREEN_BEGADDR      = "screen.addr.begin";
+  public static final String PROP_SCREEN_COLS         = "screen.cols";
+  public static final String PROP_SCREEN_ROWS         = "screen.rows";
+  public static final String PROP_ALT_FONT_BIT0_RIGHT = "alt_font.bit0.right";
+  public static final String PROP_SPEED_KHZ           = "speed.khz";
+  public static final String PROP_KEYBOARD_HW         = "keyboard.hardware";
+  public static final String PROP_KEYBOARD_IOADDR     = "keyboard.io_addr";
+  public static final String PROP_SWAP_KEY_CHAR_CASE  = "swap_key_char_case";
+  public static final String PROP_PIO_ENABLED         = "pio.enabled";
+  public static final String PROP_SIO_ENABLED         = "sio.enabled";
+  public static final String PROP_CTC_ENABLED         = "ctc.enabled";
+  public static final String PROP_PIO_IOBASEADDR      = "pio.io_base_addr";
+  public static final String PROP_SIO_IOBASEADDR      = "sio.io_base_addr";
+  public static final String PROP_SIO_A_CLOCK         = "sio.a.clock";
+  public static final String PROP_SIO_A_OUT           = "sio.a.out";
+  public static final String PROP_SIO_B_CLOCK         = "sio.b.clock";
+  public static final String PROP_SIO_B_OUT           = "sio.b.out";
+  public static final String PROP_CTC_IOBASEADDR      = "ctc.io_base_addr";
+  public static final String PROP_K1520SOUND_IOBASEADDR
+						= "k1520sound.io_base_addr";
+  public static final String PROP_KCNET_IOBASEADDR  = "kcnet.io_base_addr";
+  public static final String PROP_VDIP_IOBASEADDR   = "vdip.io_base_addr";
+  public static final String PROP_FDC_DATA_IOADDR   = "fdc.data.ioaddr";
+  public static final String PROP_FDC_STATUS_IOADDR = "fdc.status.ioaddr";
+  public static final String PROP_FDC_TC_IOADDR     = "fdc.tc.ioaddr";
+  public static final String PROP_FDC_TC_IOMASK     = "fdc.tc.iomask";
+  public static final String PROP_FDC_TC_IOVALUE    = "fdc.tc.iovalue";
+  public static final String PROP_UNUSED_PORT_VALUE = "unused_port.value";
 
   public static final int DEFAULT_KEYBOARD_IOADDR  = 0x00;
   public static final int DEFAULT_SCREEN_BEGADDR   = 0xF800;
@@ -103,16 +109,17 @@ public class CustomSys
 
   private static final String DEFAULT_TITLE = "Benutzerdefinierter Computer";
 
-  private static final int DEFAULT_SPEED_KHZ         = 2458;
-  private static final int DEFAULT_PORT_VALUE        = 0xFF;
-  private static final int DEFAULT_PIO_IOBASEADDR    = 0x00;
-  private static final int DEFAULT_SIO_IOBASEADDR    = 0x04;
-  private static final int DEFAULT_CTC_IOBASEADDR    = 0x08;
-  private static final int DEFAULT_FDC_DATA_IOADDR   = 0x95;
-  private static final int DEFAULT_FDC_STATUS_IOADDR = 0x94;
-  private static final int DEFAULT_FDC_TC_IOADDR     = 0x92;
-  private static final int DEFAULT_KCNET_IOBASEADDR  = 0xC0;
-  private static final int DEFAULT_VDIP_IOBASEADDR   = 0xFC;
+  private static final int DEFAULT_SPEED_KHZ             = 2458;
+  private static final int DEFAULT_PORT_VALUE            = 0xFF;
+  private static final int DEFAULT_PIO_IOBASEADDR        = 0x00;
+  private static final int DEFAULT_SIO_IOBASEADDR        = 0x04;
+  private static final int DEFAULT_CTC_IOBASEADDR        = 0x08;
+  private static final int DEFAULT_FDC_DATA_IOADDR       = 0x95;
+  private static final int DEFAULT_FDC_STATUS_IOADDR     = 0x94;
+  private static final int DEFAULT_FDC_TC_IOADDR         = 0x92;
+  private static final int DEFAULT_K1520SOUND_IOBASEADDR = 0x38;
+  private static final int DEFAULT_KCNET_IOBASEADDR      = 0xC0;
+  private static final int DEFAULT_VDIP_IOBASEADDR       = 0xFC;
 
   private enum KeyboardHW {
 			NONE,
@@ -152,6 +159,7 @@ public class CustomSys
   private int            fdcTCIOValue;
   private int            lastTCIOValue;
   private int            gideIOBaseAddr;
+  private int            k1520SoundIOBaseAddr;
   private int            kcNetIOBaseAddr;
   private int            vdipIOBaseAddr;
   private byte[]         fontBytes;
@@ -160,11 +168,13 @@ public class CustomSys
   private Z80SIO         sio;
   private SioOut         sioAout;
   private SioOut         sioBout;
+  private K1520Sound     k1520Sound;
   private KCNet          kcNet;
   private VDIP           vdip;
   private GIDE           gide;
   private FDC8272        fdc;
   private FloppyDiskDrive[] floppyDiskDrives;
+  private boolean        fontBit0Right;
   private boolean        keyboardUsed;
   private boolean        swapKeyCharCase;
 
@@ -204,7 +214,7 @@ public class CustomSys
       this.ctcIOBaseAddr = getCtcIOBaseAddr( props );
       this.ctc           = new Z80CTC(
 				String.format(
-					"CTC (E/A-Adressen %02X-%02X)",
+					"CTC (E/A-Adressen %02Xh-%02Xh)",
 					this.ctcIOBaseAddr,
 					this.ctcIOBaseAddr + 3 ) );
       iSources.add( this.ctc );
@@ -217,7 +227,7 @@ public class CustomSys
       this.pioIOBaseAddr = getPioIOBaseAddr( props );
       this.pio           = new Z80PIO(
 				String.format(
-					"PIO (E/A-Adressen %02X-%02X)",
+					"PIO (E/A-Adressen %02Xh-%02Xh)",
 					this.pioIOBaseAddr,
 					this.pioIOBaseAddr + 3 ) );
       iSources.add( this.pio );
@@ -238,7 +248,7 @@ public class CustomSys
       this.sioIOBaseAddr = getSioIOBaseAddr( props );
       this.sio           = new Z80SIO(
 				String.format(
-					"SIO (E/A-Adressen %02X-%02X)",
+					"SIO (E/A-Adressen %02Xh-%02Xh)",
 					this.sioIOBaseAddr,
 					this.sioIOBaseAddr + 3 ) );
       iSources.add( this.sio );
@@ -258,16 +268,27 @@ public class CustomSys
       this.sioBout = SioOut.NONE;
     }
 
+    // K1520-Sound
+    this.k1520Sound           = null;
+    this.k1520SoundIOBaseAddr = -1;
+    if( emulatesK1520SoundCard( props ) ) {
+      this.k1520SoundIOBaseAddr = getK1520SoundIOBaseAddr( props );
+      this.k1520Sound = new K1520Sound(
+				this,
+				this.k1520SoundIOBaseAddr );
+      iSources.add( this.k1520Sound );
+    }
+
     // KCNet
     this.kcNet           = null;
     this.kcNetIOBaseAddr = -1;
-    if( emulatesKCNet( props ) ) {
+    if( emulatesKCNetCard( props ) ) {
       this.kcNetIOBaseAddr = getKCNetIOBaseAddr( props );
-      this.kcNet           = new KCNet(
-				String.format(
-					"KCNet (E/A-Adressen %02X-%02X)",
-					this.kcNetIOBaseAddr,
-					this.kcNetIOBaseAddr + 3 ) );
+      this.kcNet = new KCNet(
+			String.format(
+				"KCNet (E/A-Adressen %02Xh-%02Xh)",
+				this.kcNetIOBaseAddr,
+				this.kcNetIOBaseAddr + 3 ) );
       iSources.add( this.kcNet );
     }
 
@@ -286,6 +307,9 @@ public class CustomSys
     this.fdcDataIOAddr   = getFdcDataIOAddr( props );
     this.fdcStatusIOAddr = getFdcStatusIOAddr( props );
     this.fdcTCIOAddr     = getFdcTCIOAddr( props );
+    this.fdcTCIOMask     = getFdcTCIOMask( props );
+    this.fdcTCIOValue    = getFdcTCIOValue( props ) & this.fdcTCIOMask;
+    this.lastTCIOValue   = this.fdcTCIOValue;
 
     // VDIP
     this.vdip           = null;
@@ -293,9 +317,10 @@ public class CustomSys
     if( emulatesSIO( props ) ) {
       this.vdipIOBaseAddr = getVdipIOBaseAddr( props );
       this.vdip           = new VDIP(
-				this.emuThread.getFileTimesViewFactory(),
+				0,
+				this.emuThread.getZ80CPU(),
 				String.format(
-					"USB-PIO (E/A-Adressen %02X-%02X)",
+					"USB-PIO (E/A-Adressen %02Xh-%02Xh)",
 					this.vdipIOBaseAddr,
 					this.vdipIOBaseAddr + 3 ) );
       iSources.add( this.vdip );
@@ -317,9 +342,16 @@ public class CustomSys
 
     // Sonstiges
     updSwapKeyCharCase( props );
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
-    }
+    z80MaxSpeedChanged( cpu );
+  }
+
+
+  public static boolean emulatesAltFontBit0Right( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+			props,
+			PROP_PREFIX + PROP_ALT_FONT_BIT0_RIGHT,
+			false );
   }
 
 
@@ -333,19 +365,10 @@ public class CustomSys
 
 
   public static boolean emulatesFDC( Properties props )
-  {
+  { 
     return EmuUtil.getBooleanProperty(
 			props,
 			PROP_PREFIX + PROP_FDC_ENABLED,
-			false );
-  }
-
-
-  public static boolean emulatesKCNet( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			PROP_PREFIX + PROP_KCNET_ENABLED,
 			false );
   }
 
@@ -355,6 +378,24 @@ public class CustomSys
     return EmuUtil.getBooleanProperty(
 			props,
 			PROP_PREFIX + PROP_PIO_ENABLED,
+			false );
+  }
+
+
+  public static boolean emulatesK1520SoundCard( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+			props,
+			PROP_PREFIX + PROP_K1520SOUND_ENABLED,
+			false );
+  }
+
+
+  public static boolean emulatesKCNetCard( Properties props )
+  {
+    return EmuUtil.getBooleanProperty(
+			props,
+			PROP_PREFIX + PROP_KCNET_ENABLED,
 			false );
   }
 
@@ -377,7 +418,7 @@ public class CustomSys
   }
 
 
-  public static boolean emulatesVDIP( Properties props )
+  public static boolean emulatesVdipCard( Properties props )
   {
     return EmuUtil.getBooleanProperty(
 			props,
@@ -484,12 +525,39 @@ public class CustomSys
   }
 
 
+  public static int getFdcTCIOMask( Properties props )
+  {
+    return EmuUtil.getIntProperty(
+			props,
+			PROP_PREFIX + PROP_FDC_TC_IOMASK,
+			0 ) & 0xFF;
+  }
+
+
+  public static int getFdcTCIOValue( Properties props )
+  {
+    return EmuUtil.getIntProperty(
+			props,
+			PROP_PREFIX + PROP_FDC_TC_IOVALUE,
+			0 ) & 0xFF;
+  }
+
+
   public static int getKeyboardIOAddr( Properties props )
   {
     return EmuUtil.getIntProperty(
 			props,
 			PROP_PREFIX + PROP_KEYBOARD_IOADDR,
 			DEFAULT_KEYBOARD_IOADDR ) & 0xFF;
+  }
+
+
+  public static int getK1520SoundIOBaseAddr( Properties props )
+  {
+    return EmuUtil.getIntProperty(
+			props,
+			PROP_PREFIX + PROP_K1520SOUND_IOBASEADDR,
+			DEFAULT_K1520SOUND_IOBASEADDR ) & 0xFF;
   }
 
 
@@ -610,6 +678,23 @@ public class CustomSys
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    if( this.fdc != null ) {
+      this.fdc.z80MaxSpeedChanged( cpu );
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80MaxSpeedChanged( cpu );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
 	/* --- Z80SIOChannelListener --- */
 
   @Override
@@ -675,6 +760,7 @@ public class CustomSys
     super.applySettings( props );
     this.title = getTitle( props );
     loadFont( props );
+    this.screenFrm.setScreenDirty( true );
     updSwapKeyCharCase( props );
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
@@ -767,7 +853,7 @@ public class CustomSys
     }
     if( rv ) {
       boolean hasFdc = (this.fdc != null);
-      if( emulatesFdc( props ) == hasFdc ) {
+      if( emulatesFDC( props ) == hasFdc ) {
 	if( hasFdc
 	    && ((getFdcDataIOAddr( props ) != this.fdcDataIOAddr)
 		|| (getFdcStatusIOAddr( props ) != this.fdcStatusIOAddr)
@@ -788,8 +874,21 @@ public class CustomSys
       }
     }
     if( rv ) {
+      boolean hasK1520Sound = (this.k1520Sound != null);
+      if( emulatesK1520SoundCard( props ) == hasK1520Sound ) {
+	if( hasK1520Sound
+	    && (getK1520SoundIOBaseAddr( props )
+				!= this.k1520SoundIOBaseAddr) )
+	{
+	  rv = false;
+	}
+      } else {
+	rv = false;
+      }
+    }
+    if( rv ) {
       boolean hasKCNet = (this.kcNet != null);
-      if( emulatesKCNet( props ) == hasKCNet ) {
+      if( emulatesKCNetCard( props ) == hasKCNet ) {
 	if( hasKCNet
 	    && (getKCNetIOBaseAddr( props ) != this.kcNetIOBaseAddr) )
 	{
@@ -801,7 +900,7 @@ public class CustomSys
     }
     if( rv ) {
       boolean hasVdip = (this.vdip != null);
-      if( emulatesVDIP( props ) == hasVdip ) {
+      if( emulatesVdipCard( props ) == hasVdip ) {
 	if( hasVdip && getVdipIOBaseAddr( props ) != this.vdipIOBaseAddr ) {
 	  rv = false;
 	}
@@ -846,12 +945,16 @@ public class CustomSys
     if( this.gide != null ) {
       this.gide.die();
     }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.die();
+    }
     if( this.kcNet != null ) {
       this.kcNet.die();
     }
     if( this.vdip != null ) {
       this.vdip.die();
     }
+    super.die();
   }
 
 
@@ -872,10 +975,18 @@ public class CustomSys
 	if( (addr >= 0) && (addr < 0x10000) ) {
 	  int idx = (this.emuThread.getRAMByte( addr ) & 0xFF) * 8 + rPix;
 	  if( (idx >= 0) && (idx < fontBytes.length) ) {
-	    int m = 0x80;
+	    int m = 0;
 	    int n = x % 8;
-	    if( n > 0 ) {
-	      m >>= n;
+	    if( this.fontBit0Right ) {
+	      m = 0x01;
+	      if( n > 0 ) {
+		m <<= n;
+	      }
+	    } else {
+	      m = 0x80;
+	      if( n > 0 ) {
+		m >>= n;
+	      }
 	    }
 	    if( (fontBytes[ idx ] & m) != 0 ) {
 	      rv = WHITE;
@@ -903,7 +1014,7 @@ public class CustomSys
 	&& (this.screenCols > 0)
 	&& (this.screenRows > 0) )
     {
-      rv = new CharRaster( this.screenCols, this.screenRows, 8, 8, 8, 0 );
+      rv = new CharRaster( this.screenCols, this.screenRows, 8, 8, 8 );
     }
     return rv;
   }
@@ -921,12 +1032,13 @@ public class CustomSys
   {
     addr &= 0xFFFF;
 
-    int     rv   = -1;
-    boolean done = false;
-    for( CustomSysROM rom : roms ) {
+    int rv = -1;
+    for( CustomSysROM rom : this.roms ) {
       if( rom.isEnabled() ) {
 	rv = rom.getMemByte( addr );
-	break;
+	if( rv >= 0 ) {
+	  break;
+	}
       }
     }
     if( rv < 0 ) {
@@ -937,10 +1049,10 @@ public class CustomSys
 
 
   @Override
-  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
+  public int getResetStartAddress( boolean powerOn )
   {
     int rv = 0;
-    for( CustomSysROM rom : roms ) {
+    for( CustomSysROM rom : this.roms ) {
       if( rom.isBootROM() ) {
 	rv = rom.getBegAddr();
 	break;
@@ -999,6 +1111,16 @@ public class CustomSys
 
 
   @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return this.k1520Sound != null ?
+		new AbstractSoundDevice[] {
+				this.k1520Sound.getSoundDevice() }
+		: super.getSoundDevices();
+  }
+
+
+  @Override
   public int getSupportedFloppyDiskDriveCount()
   {
     return this.floppyDiskDrives != null ? this.floppyDiskDrives.length : 0;
@@ -1020,9 +1142,11 @@ public class CustomSys
 
 
   @Override
-  protected VDIP getVDIP()
+  public VDIP[] getVDIPs()
   {
-    return this.vdip;
+    return this.vdip != null ?
+			new VDIP[] { this.vdip }
+			: super.getVDIPs();
   }
 
 
@@ -1076,6 +1200,16 @@ public class CustomSys
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    for( CustomSysROM rom : this.roms ) {
+      rom.load( this.emuThread.getScreenFrm() );
+    }
+    loadFont( props );
+  }
+
+
+  @Override
   public boolean paintScreen(
 			Graphics g,
 			int      xOffs,
@@ -1111,24 +1245,23 @@ public class CustomSys
 
 
   @Override
-  public int readIOByte( int port, int tStates )
+  public int readIOByte( int port16, int tStates )
   {
-    port &= 0xFF;
-
-    int     rv   = 0xFF;
-    boolean done = false;
+    int     rv    = 0xFF;
+    int     port8 = port16 & 0xFF;
+    boolean done  = false;
     if( (this.ctc != null)
-	&& (port >= this.ctcIOBaseAddr)
-	&& (port < (this.ctcIOBaseAddr + 4)) )
+	&& (port8 >= this.ctcIOBaseAddr)
+	&& (port8 < (this.ctcIOBaseAddr + 4)) )
     {
-      rv &= this.ctc.read( port - this.ctcIOBaseAddr, tStates );
+      rv &= this.ctc.read( port8 - this.ctcIOBaseAddr, tStates );
       done = true;
     }
     if( (this.pio != null)
-	&& (port >= this.pioIOBaseAddr)
-	&& (port < (this.pioIOBaseAddr + 4)) )
+	&& (port8 >= this.pioIOBaseAddr)
+	&& (port8 < (this.pioIOBaseAddr + 4)) )
     {
-      switch( port - this.pioIOBaseAddr ) {
+      switch( port8 - this.pioIOBaseAddr ) {
 	case 0:
 	  if( ((this.keyboardHW == KeyboardHW.PIO_A_HS)
 			|| (this.keyboardHW == KeyboardHW.PIO_A_BIT7))
@@ -1151,21 +1284,13 @@ public class CustomSys
 	  rv &= this.pio.readDataB();
 	  done = true;
 	  break;
-	case 2:
-	  rv &= this.pio.readControlA();
-	  done = true;
-	  break;
-	case 3:
-	  rv &= this.pio.readControlB();
-	  done = true;
-	  break;
       }
     }
     if( (this.sio != null)
-	&& (port >= this.sioIOBaseAddr)
-	&& (port < (this.sioIOBaseAddr + 4)) )
+	&& (port8 >= this.sioIOBaseAddr)
+	&& (port8 < (this.sioIOBaseAddr + 4)) )
     {
-      switch( port - this.sioIOBaseAddr ) {
+      switch( port8 - this.sioIOBaseAddr ) {
 	case 0:
 	  rv &= this.sio.readDataA();
 	  done = true;
@@ -1185,36 +1310,44 @@ public class CustomSys
       }
     }
     if( this.fdc != null ) {
-      if( port == this.fdcDataIOAddr ) {
+      if( port8 == this.fdcDataIOAddr ) {
 	rv &= this.fdc.readData();
 	done = true;
-      } else if( port == this.fdcStatusIOAddr ) {
+      } else if( port8 == this.fdcStatusIOAddr ) {
 	rv &= this.fdc.readMainStatusReg();
 	done = true;
       }
     }
-    if( this.gide != null ) {
-      int value = this.gide.read( port );
+    if( (this.gide != null)
+	&& ((port8 & 0xF0) == this.gideIOBaseAddr) )
+    {
+      int value = this.gide.read( port16 );
       if( value >= 0 ) {
 	rv   = value;
 	done = true;
       }
     }
-    if( (this.kcNet != null)
-	&& (port >= this.kcNetIOBaseAddr)
-	&& (port < (this.kcNetIOBaseAddr + 4)) )
+    if( (this.k1520Sound != null)
+	&& (port8 >= this.k1520SoundIOBaseAddr)
+	&& (port8 < (this.k1520SoundIOBaseAddr + 4)) )
     {
-      rv &= this.kcNet.read( port - this.kcNetIOBaseAddr );
+      rv &= this.k1520Sound.read( port8, tStates );
+    }
+    if( (this.kcNet != null)
+	&& (port8 >= this.kcNetIOBaseAddr)
+	&& (port8 < (this.kcNetIOBaseAddr + 4)) )
+    {
+      rv &= this.kcNet.read( port8 - this.kcNetIOBaseAddr );
     }
     if( (this.vdip != null)
-	&& (port >= this.vdipIOBaseAddr)
-	&& (port < (this.vdipIOBaseAddr + 4)) )
+	&& (port8 >= this.vdipIOBaseAddr)
+	&& (port8 < (this.vdipIOBaseAddr + 4)) )
     {
-      rv &= this.vdip.read( port - this.vdipIOBaseAddr );
+      rv &= this.vdip.read( port8 - this.vdipIOBaseAddr );
       done = true;
     }
     if( (this.keyboardHW == KeyboardHW.PORT_RAW)
-	&& (port == this.keyboardIOAddr) )
+	&& (port8 == this.keyboardIOAddr) )
     {
       rv &= this.keyChar;
       done = true;
@@ -1224,32 +1357,27 @@ public class CustomSys
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
+    super.reset( powerOn, props );
     this.keyChar       = 0;
     this.keyboardUsed  = false;
     this.lastTCIOValue = this.fdcTCIOValue;
 
-
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
-	loadROMs( props );
-      }
+    if( powerOn ) {
+      initDRAM();
     }
-    boolean coldReset = (resetLevel == EmuThread.ResetLevel.POWER_ON)
-		|| (resetLevel == EmuThread.ResetLevel.COLD_RESET);
     if( this.ctc != null ) {
-      this.ctc.reset( coldReset );
+      this.ctc.reset( powerOn );
     }
     if( this.pio != null ) {
-      this.pio.reset( coldReset );
+      this.pio.reset( powerOn );
     }
     if( this.sio != null ) {
-      this.sio.reset( coldReset );
+      this.sio.reset( powerOn );
     }
     if( this.fdc != null ) {
-      this.fdc.reset( coldReset );
+      this.fdc.reset( powerOn );
     }
     if( this.floppyDiskDrives != null ) {
       for( int i = 0; i < this.floppyDiskDrives.length; i++ ) {
@@ -1262,13 +1390,16 @@ public class CustomSys
     if( this.gide != null ) {
       this.gide.reset();
     }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.reset( powerOn );
+    }
     if( this.kcNet != null ) {
-      this.kcNet.reset( coldReset );
+      this.kcNet.reset( powerOn );
     }
     if( this.vdip != null ) {
-      this.vdip.reset( coldReset );
+      this.vdip.reset( powerOn );
     }
-    for( CustomSysROM rom : roms ) {
+    for( CustomSysROM rom : this.roms ) {
       rom.reset();
     }
   }
@@ -1321,23 +1452,23 @@ public class CustomSys
 
 
   @Override
-  public void writeIOByte( int port, int value, int tStates )
+  public void writeIOByte( int port16, int value, int tStates )
   {
-    port &= 0xFF;
-    for( CustomSysROM rom : roms ) {
-      rom.writeIOByte( port, value );
+    int port8 = port16 & 0xFF;
+    for( CustomSysROM rom : this.roms ) {
+      rom.writeIOByte( port16, value );
     }
     if( (this.ctc != null)
-	&& (port >= this.ctcIOBaseAddr)
-	&& (port < (this.ctcIOBaseAddr + 4)) )
+	&& (port8 >= this.ctcIOBaseAddr)
+	&& (port8 < (this.ctcIOBaseAddr + 4)) )
     {
-      this.ctc.write( port - this.ctcIOBaseAddr, value, tStates );
+      this.ctc.write( port8 - this.ctcIOBaseAddr, value, tStates );
     }
     if( (this.pio != null)
-	&& (port >= this.pioIOBaseAddr)
-	&& (port < (this.pioIOBaseAddr + 4)) )
+	&& (port8 >= this.pioIOBaseAddr)
+	&& (port8 < (this.pioIOBaseAddr + 4)) )
     {
-      switch( port - this.pioIOBaseAddr ) {
+      switch( port8 - this.pioIOBaseAddr ) {
 	case 0:
 	  this.pio.writeDataA( value );
 	  break;
@@ -1353,10 +1484,10 @@ public class CustomSys
       }
     }
     if( (this.sio != null)
-	&& (port >= this.sioIOBaseAddr)
-	&& (port < (this.sioIOBaseAddr + 4)) )
+	&& (port8 >= this.sioIOBaseAddr)
+	&& (port8 < (this.sioIOBaseAddr + 4)) )
     {
-      switch( port - this.sioIOBaseAddr ) {
+      switch( port8 - this.sioIOBaseAddr ) {
 	case 0:
 	  this.sio.writeDataA( value );
 	  break;
@@ -1372,11 +1503,11 @@ public class CustomSys
       }
     }
     if( this.fdc != null ) {
-      if( port == this.fdcDataIOAddr ) {
+      if( port8 == this.fdcDataIOAddr ) {
 	this.fdc.write( value );
-      } else if( port == this.fdcTCIOAddr ) {
+      } else if( port8 == this.fdcTCIOAddr ) {
 	if( this.fdcTCIOMask != 0 ) {
-	  int tcValue = (this.lastTCIOValue & this.fdcTCIOMask);
+	  int tcValue = (value & this.fdcTCIOMask);
 	  if( (tcValue != this.lastTCIOValue)
 	      && (tcValue == this.fdcTCIOValue) )
 	  {
@@ -1389,35 +1520,28 @@ public class CustomSys
       }
     }
     if( (this.gide != null)
-	&& (port >= this.gideIOBaseAddr)
-	&& (port < (this.gideIOBaseAddr + 16)) )
+	&& (port8 >= this.gideIOBaseAddr)
+	&& (port8 < (this.gideIOBaseAddr + 16)) )
     {
-      this.gide.write( port - this.gideIOBaseAddr, value );
+      this.gide.write( port16, value );
+    }
+    if( (this.k1520Sound != null)
+	&& (port8 >= this.k1520SoundIOBaseAddr)
+	&& (port8 < (this.k1520SoundIOBaseAddr + 4)) )
+    {
+      this.k1520Sound.write( port8, value, tStates );
     }
     if( (this.kcNet != null)
-	&& (port >= this.kcNetIOBaseAddr)
-	&& (port < (this.kcNetIOBaseAddr + 4)) )
+	&& (port8 >= this.kcNetIOBaseAddr)
+	&& (port8 < (this.kcNetIOBaseAddr + 4)) )
     {
-      this.kcNet.write( port - this.kcNetIOBaseAddr, value );
+      this.kcNet.write( port8 - this.kcNetIOBaseAddr, value );
     }
     if( (this.vdip != null)
-	&& (port >= this.vdipIOBaseAddr)
-	&& (port < (this.vdipIOBaseAddr + 4)) )
+	&& (port8 >= this.vdipIOBaseAddr)
+	&& (port8 < (this.vdipIOBaseAddr + 4)) )
     {
-      this.vdip.write( port - this.vdipIOBaseAddr, value );
-    }
-  }
-
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    if( this.fdc != null ) {
-      this.fdc.z80MaxSpeedChanged( cpu );
-    }
-    if( this.kcNet != null ) {
-      this.kcNet.z80MaxSpeedChanged( cpu );
+      this.vdip.write( port8 - this.vdipIOBaseAddr, value );
     }
   }
 
@@ -1429,6 +1553,9 @@ public class CustomSys
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
     }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80TStatesProcessed( cpu, tStates );
+    }
     if( this.kcNet != null ) {
       this.kcNet.z80TStatesProcessed( cpu, tStates );
     }
@@ -1436,15 +1563,6 @@ public class CustomSys
 
 
 	/* --- private Methoden --- */
-
-  private boolean emulatesFdc( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_FDC_ENABLED,
-			false );
-  }
-
 
   private static int getGideIOBaseAddr( Properties props )
   {
@@ -1503,28 +1621,22 @@ public class CustomSys
 				props,
 				this.propPrefix + PROP_FONT_FILE,
 				0x0800 );
-    if( this.fontBytes == null ) {
+    if( this.fontBytes != null ) {
+      this.fontBit0Right = emulatesAltFontBit0Right( props );
+    } else {
       if( romFont == null ) {
 	romFont = readResource( "/rom/customsys/cp437.bin" );
       }
-      this.fontBytes = romFont;
+      this.fontBytes     = romFont;
+      this.fontBit0Right = false;
     }
-  }
-
-
-  private void loadROMs( Properties props )
-  {
-    for( CustomSysROM rom : this.roms ) {
-      rom.load( this.emuThread.getScreenFrm() );
-    }
-    loadFont( props );
   }
 
 
   private boolean putKeyChar( int ch )
   {
     boolean rv = false;
-    if( ch > 0 ) {
+    if( ch > 0x20 ) {
       ch = cp437.toCharsetByte( (char) ch );
     }
     switch( this.keyboardHW ) {

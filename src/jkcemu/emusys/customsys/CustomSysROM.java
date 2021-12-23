@@ -9,8 +9,7 @@
 package jkcemu.emusys.customsys;
 
 import java.awt.Component;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 import jkcemu.text.TextUtil;
 
 
@@ -56,13 +55,13 @@ public class CustomSysROM
 				this.begAddr + this.size - 1 );
     StringBuilder buf = new StringBuilder();
     if( this.switchIOAddr >= 0 ) {
-      buf.append( (char) (this.switchIOMask != 0 ? 'S' : 'A') );
+      buf.append( this.switchIOMask != 0 ? 'S' : 'A' );
     }
     if( bootROM ) {
       if( buf.length() > 0 ) {
-	buf.append( (char) '\u0020' );
+	buf.append( '\u0020' );
       }
-      buf.append( (char) 'B' );
+      buf.append( 'B' );
     }
     this.optionText = buf.toString();
 
@@ -199,7 +198,7 @@ public class CustomSysROM
 
   public synchronized void load( Component owner )
   {
-    this.data = EmuUtil.readFile(
+    this.data = FileUtil.readFile(
 			owner,
 			this.fileName,
 			true,

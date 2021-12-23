@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,20 +13,21 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
-import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.audio.AbstractSoundDevice;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
 import jkcemu.emusys.etc.SC2KeyboardFld;
+import jkcemu.etc.CPUSynchronSoundDevice;
 import z80emu.Z80CPU;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
 
 
-public class SC2 extends EmuSys
+public class SC2 extends EmuSys implements Z80MaxSpeedListener
 {
   public static final String SYSNAME     = "SC2";
   public static final String PROP_PREFIX = "jkcemu.sc2.";
@@ -34,18 +35,19 @@ public class SC2 extends EmuSys
   private static byte[] rom0000 = null;
   private static byte[] rom2000 = null;
 
-  private byte[]         ram;
-  private int[]          digitStatus;
-  private int[]          digitValues;
-  private int[]          keyboardMatrix;
-  private SC2KeyboardFld keyboardFld;
-  private int            ledChessStatus;
-  private int            ledMateStatus;
-  private boolean        ledChessValue;
-  private boolean        ledMateValue;
-  private long           curDisplayTStates;
-  private long           displayTStates;
-  private Z80PIO         pio;
+  private byte[]                 ram;
+  private int[]                  digitStatus;
+  private int[]                  digitValues;
+  private int[]                  keyboardMatrix;
+  private SC2KeyboardFld         keyboardFld;
+  private int                    ledChessStatus;
+  private int                    ledMateStatus;
+  private boolean                ledChessValue;
+  private boolean                ledMateValue;
+  private long                   curDisplayTStates;
+  private long                   displayTStates;
+  private CPUSynchronSoundDevice loudspeaker;
+  private Z80PIO                 pio;
 
 
   public SC2( EmuThread emuThread, Properties props )
@@ -62,6 +64,7 @@ public class SC2 extends EmuSys
     this.keyboardMatrix = new int[ 4 ];
     this.digitStatus    = new int[ 4 ];
     this.digitValues    = new int[ 4 ];
+    this.loudspeaker    = new CPUSynchronSoundDevice( "Lautsprecher" );
 
     Z80CPU cpu = emuThread.getZ80CPU();
     this.pio   = new Z80PIO( "PIO" );
@@ -108,6 +111,16 @@ public class SC2 extends EmuSys
   }
 
 
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.loudspeaker.z80MaxSpeedChanged( cpu );
+    this.displayTStates = cpu.getMaxSpeedKHz() * 50;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -120,7 +133,7 @@ public class SC2 extends EmuSys
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public SC2KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new SC2KeyboardFld( this );
     return this.keyboardFld;
@@ -134,6 +147,9 @@ public class SC2 extends EmuSys
     cpu.removeTStatesListener( this );
     cpu.removeMaxSpeedListener( this );
     cpu.setInterruptSources( (Z80InterruptSource[]) null );
+
+    this.loudspeaker.fireStop();
+    super.die();
   }
 
 
@@ -199,7 +215,7 @@ public class SC2 extends EmuSys
   @Override
   public Color getColor( int colorIdx )
   {
-    Color color = Color.black;
+    Color color = Color.BLACK;
     switch( colorIdx ) {
       case 1:
 	color = this.colorGreenDark;
@@ -269,6 +285,13 @@ public class SC2 extends EmuSys
 
 
   @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return new AbstractSoundDevice[] { this.loudspeaker };
+  }
+
+
+  @Override
   public String getTitle()
   {
     return SYSNAME;
@@ -295,7 +318,7 @@ public class SC2 extends EmuSys
       }
     }
     else if( keyCode == KeyEvent.VK_ESCAPE ) {
-      this.emuThread.fireReset( EmuThread.ResetLevel.WARM_RESET );
+      this.emuThread.fireReset( false );
       rv = true;
     }
     if( rv ) {
@@ -415,7 +438,7 @@ public class SC2 extends EmuSys
     synchronized( this.digitValues ) {
 
       // LED Schach
-      g.setFont( new Font( "SansSerif", Font.BOLD, 18 * screenScale ) );
+      g.setFont( new Font( Font.SANS_SERIF, Font.BOLD, 18 * screenScale ) );
       g.setColor( this.ledChessValue ?
 				this.colorGreenLight
 				: this.colorGreenDark );
@@ -464,7 +487,7 @@ public class SC2 extends EmuSys
 
         case 1:
 	  {
-	    int v = this.pio.fetchOutValuePortB( false ) & 0x0F;
+	    int v = this.pio.fetchOutValuePortB( 0x0F ) & 0x0F;
 	    synchronized( this.keyboardMatrix ) {
 	      int m = 0x01;
 	      for( int i = 0; i < this.keyboardMatrix.length; i++ ) {
@@ -478,14 +501,6 @@ public class SC2 extends EmuSys
 	  }
           rv = this.pio.readDataB();
           break;
-
-        case 2:
-          rv = this.pio.readControlA();
-          break;
-
-        case 3:
-          rv = this.pio.readControlB();
-          break;
       }
     }
     return rv;
@@ -496,16 +511,16 @@ public class SC2 extends EmuSys
   public int readMemByte( int addr, boolean m1 )
   {
     addr &= 0x3FFF;
-    updSoundOutPhase( addr );
+    updSoundPhase( addr );
     return getMemByte( addr, m1);
   }
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
+    super.reset( powerOn, props );
+    if( powerOn ) {
       initSRAM( this.ram, props );
     }
     synchronized( this.digitValues ) {
@@ -517,6 +532,8 @@ public class SC2 extends EmuSys
     this.ledChessStatus     = 0;
     this.ledMateStatus      = 0;
     this.curDisplayTStates  = 0;
+    this.loudspeaker.reset();
+    this.pio.reset( powerOn );
   }
 
 
@@ -555,13 +572,6 @@ public class SC2 extends EmuSys
 
 
   @Override
-  public boolean supportsSoundOutMono()
-  {
-    return true;
-  }
-
-
-  @Override
   public void writeIOByte( int port, int value, int tStates )
   {
     if( (port & 0x08) == 0 ) {
@@ -592,16 +602,8 @@ public class SC2 extends EmuSys
   public void writeMemByte( int addr, int value )
   {
     addr &= 0x3FFF;
-    updSoundOutPhase( addr );
+    updSoundPhase( addr );
     setMemByte( addr, value );
-  }
-
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    this.displayTStates = cpu.getMaxSpeedKHz() * 50;
   }
 
 
@@ -609,6 +611,7 @@ public class SC2 extends EmuSys
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
+    this.loudspeaker.z80TStatesProcessed( cpu, tStates );
 
     // Anzeige
     if( this.displayTStates > 0 ) {
@@ -712,9 +715,9 @@ public class SC2 extends EmuSys
 
   private void updDisplay()
   {
-    int     portAValue   = this.pio.fetchOutValuePortA( false );
+    int     portAValue   = this.pio.fetchOutValuePortA( 0x00 );
     int     digitValue   = toDigitValue( portAValue & 0x7F );
-    int     colValue     = this.pio.fetchOutValuePortB( false );
+    int     colValue     = this.pio.fetchOutValuePortB( 0x0F );
     boolean ledValue     = ((portAValue & 0x80) != 0);
     boolean displayDirty = false;
     boolean ledDirty     = false;
@@ -775,8 +778,8 @@ public class SC2 extends EmuSys
   }
 
 
-  private void updSoundOutPhase( int addr )
+  private void updSoundPhase( int addr )
   {
-    this.soundOutPhase = (addr >= 0x3C00);
+    this.loudspeaker.setCurPhase( addr >= 0x3C00 );
   }
 }

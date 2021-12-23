@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
-import java.lang.*;
 import java.util.Properties;
 import jkcemu.base.EmuUtil;
 import jkcemu.base.UserInputException;
@@ -47,8 +46,8 @@ public class Plotter
   {
     this.image        = null;
     this.plotterFrm   = null;
-    this.width        = width;
-    this.height       = height;
+    this.width        = 0;
+    this.height       = 0;
     this.curX         = 0;
     this.curY         = 0;
     this.paperRGB     = 0xFFFFFFFF;
@@ -158,7 +157,9 @@ public class Plotter
 	if( (this.curX < this.image.getWidth())
 	    && (this.curY < this.image.getHeight()) )
 	{
-	  if( (dx != dy) && ((Math.abs( dx ) > 1) || (Math.abs( dy ) > 1)) ) {
+	  if( (dx != dy)
+	      && ((Math.abs( dx ) > 1) || (Math.abs( dy ) > 1)) ) 
+	  {
 	    Graphics g = this.image.createGraphics();
 	    int      n = this.penThickness;
 	    if( n > 1 ) {
@@ -275,6 +276,7 @@ public class Plotter
   {
     this.plotterFrm = frm;
     if( this.plotterFrm != null ) {
+      this.plotterFrm.imageChanged( this.image );
       this.plotterFrm.setPenThickness( this.penThickness );
     }
   }
@@ -320,6 +322,9 @@ public class Plotter
 				BufferedImage.TYPE_BYTE_INDEXED,
 				this.colorModel );
       clearPage();
+      if( this.plotterFrm != null ) {
+	this.plotterFrm.imageChanged( this.image );
+      }
     }
   }
 
@@ -356,14 +361,20 @@ public class Plotter
     if( image != null ) {
       int x = this.curX;
       int y = this.curY;
-      if( (x >= 0) && (x < this.image.getWidth())
-	  && (y >= 0) && (y < this.image.getHeight()) )
-      {
+      int w = this.image.getWidth();
+      int h = this.image.getHeight();
+      if( (x >= 0) && (x < w) && (y >= 0) && (y < h) ) {
 	int n = this.penThickness;
 	if( n > 1 ) {
 	  for( int i = 0; i < n; i++ ) {
-	    for( int k = 0; k < n; k++ ) {
-	      this.image.setRGB( x + i, y + k, this.penRGB );
+	    int x2 = x + i;
+	    if( x2 < w ) {
+	      for( int k = 0; k < n; k++ ) {
+		int y2 = y + k;
+		if( y2 < h ) {
+		  this.image.setRGB( x2, y2, this.penRGB );
+		}
+	      }
 	    }
 	  }
 	} else {

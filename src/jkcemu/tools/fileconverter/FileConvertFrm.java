@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2017 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.tools.fileconverter;
 
 import java.awt.Component;
+import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
@@ -23,7 +24,6 @@ import java.awt.dnd.DropTargetListener;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Collections;
 import java.util.EventObject;
 import java.util.Vector;
@@ -42,7 +42,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.text.JTextComponent;
 import jkcemu.Main;
 import jkcemu.audio.AudioFile;
-import jkcemu.audio.AudioPlayer;
+import jkcemu.audio.AudioPlayFrm;
 import jkcemu.audio.AudioUtil;
 import jkcemu.audio.BitSampleBuffer;
 import jkcemu.audio.PCMDataInfo;
@@ -50,13 +50,10 @@ import jkcemu.audio.CSWFile;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.BaseFrm;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileFormat;
-import jkcemu.base.FileInfo;
-import jkcemu.base.FileNameFld;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
 import jkcemu.base.HexDocument;
 import jkcemu.base.LimitedDocument;
-import jkcemu.base.LoadData;
 import jkcemu.base.UserInputException;
 import jkcemu.disk.AbstractFloppyDisk;
 import jkcemu.disk.AnaDisk;
@@ -69,6 +66,11 @@ import jkcemu.disk.ImageDisk;
 import jkcemu.disk.PlainDisk;
 import jkcemu.disk.TeleDisk;
 import jkcemu.emusys.zxspectrum.ZXSpectrumAudioCreator;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileInfo;
+import jkcemu.file.FileNameFld;
+import jkcemu.file.FileUtil;
+import jkcemu.file.LoadData;
 import jkcemu.text.TextUtil;
 
 
@@ -76,6 +78,8 @@ public class FileConvertFrm extends BaseFrm implements
 						DropTargetListener,
 						ListSelectionListener
 {
+  public static final String TITLE = Main.APPNAME + " Dateikonverter";
+
   private static final int MAX_MEM_FILE_SIZE  = 0x40000;	// 256 KByte
   private static final int MAX_DISK_FILE_SIZE = 0x200000;	// 2 MByte
   private static final int MAX_TAPE_FILE_SIZE = 0x100000;	// 1 MByte
@@ -121,7 +125,7 @@ public class FileConvertFrm extends BaseFrm implements
   private JButton                       btnClose;
 
 
-  public static void open()
+  public static FileConvertFrm open()
   {
     if( instance != null ) {
       if( instance.getExtendedState() == Frame.ICONIFIED ) {
@@ -132,15 +136,17 @@ public class FileConvertFrm extends BaseFrm implements
     }
     instance.toFront();
     instance.setVisible( true );
+    return instance;
   }
 
 
-  public static void open( File file )
+  public static FileConvertFrm open( File file )
   {
     open();
     if( file != null ) {
       instance.openFile( file );
     }
+    return instance;
   }
 
 
@@ -254,6 +260,7 @@ public class FileConvertFrm extends BaseFrm implements
 	int                dataLen      = 0;
 	byte[]             dataBytes    = null;
 	byte[]             kcbasicBytes = null;
+	byte[]             fileBytes    = null;
 	FileFormat         fileFmt      = null;
 	boolean            multiTAP     = false;
 
@@ -322,7 +329,7 @@ public class FileConvertFrm extends BaseFrm implements
 	if( !done && (fName != null) ) {
 	  if( fName.endsWith( ".bin" ) || fName.endsWith( ".rom" ) ) {
 	    infoBuf.append( "Einfache Speicherabbilddatei" );
-	    int[] addrs = EmuUtil.extractAddressesFromFileName( fName );
+	    int[] addrs = FileUtil.extractAddressesFromFileName( fName );
 	    if( addrs != null ) {
 	      if( addrs.length > 0 ) {
 		begAddr = addrs[ 0 ];
@@ -333,8 +340,8 @@ public class FileConvertFrm extends BaseFrm implements
 		setAddr( this.fldStartAddr, this.orgStartAddr );
 	      }
 	    }
-	    fileFmt          = FileFormat.BIN;
-	    byte[] fileBytes = EmuUtil.readFile(
+	    fileFmt   = FileFormat.BIN;
+	    fileBytes = FileUtil.readFile(
 					file,
 					false,
 					MAX_MEM_FILE_SIZE );
@@ -379,36 +386,35 @@ public class FileConvertFrm extends BaseFrm implements
 
 	// Speicherabbilddatei pruefen
 	if( !done ) {
-	  FileInfo fileInfo = FileInfo.analyzeFile( file );
-	  if( fileInfo != null ) {
-	    fileFmt = fileInfo.getFileFormat();
-	    if( fileFmt != null ) {
-	      infoBuf.append( fileInfo.getInfoText() );
-	      String fileDesc = fileInfo.getFileDesc();
-	      if( fileDesc != null ) {
-		if( !fileDesc.isEmpty() ) {
-		  this.orgFileDesc = fileDesc;
+	  if( fileBytes == null ) {
+	    fileBytes = FileUtil.readFile( file, false, MAX_MEM_FILE_SIZE );
+	  }
+	  if( fileBytes != null ) {
+	    FileInfo fileInfo = FileInfo.analyzeFile( fileBytes, file );
+	    if( fileInfo != null ) {
+	      fileFmt = fileInfo.getFileFormat();
+	      if( fileFmt != null ) {
+		infoBuf.append( fileInfo.getInfoText() );
+		String fileDesc = fileInfo.getFileDesc();
+		if( fileDesc != null ) {
+		  if( !fileDesc.isEmpty() ) {
+		    this.orgFileDesc = fileDesc;
+		  }
 		}
-	      }
-	      this.orgFileTypeChar = fileInfo.getFileType();
-	      begAddr              = fileInfo.getBegAddr();
-	      if( (fileFmt.equals( FileFormat.HEADERSAVE )
+		this.orgFileTypeChar = fileInfo.getFileType();
+		begAddr              = fileInfo.getBegAddr();
+		if( (fileFmt.equals( FileFormat.HEADERSAVE )
 					&& (this.orgFileTypeChar == 'B')
 					&& (begAddr == 0x0401))
-		  || fileFmt.equals( FileFormat.KCB )
-		  || fileFmt.equals( FileFormat.KCB_BLKN )
-		  || fileFmt.equals( FileFormat.KCB_BLKN_CKS )
-		  || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
-		  || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
-		  || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
-		  || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS )
-		  || fileFmt.equals( FileFormat.KCBASIC_PRG ) )
-	      {
-		byte[] fileBytes = EmuUtil.readFile(
-						file,
-						false,
-						MAX_MEM_FILE_SIZE );
-		if( fileBytes != null ) {
+		    || fileFmt.equals( FileFormat.KCB )
+		    || fileFmt.equals( FileFormat.KCB_BLKN )
+		    || fileFmt.equals( FileFormat.KCB_BLKN_CKS )
+		    || fileFmt.equals( FileFormat.KCTAP_BASIC_PRG )
+		    || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG )
+		    || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN )
+		    || fileFmt.equals( FileFormat.KCBASIC_HEAD_PRG_BLKN_CKS )
+		    || fileFmt.equals( FileFormat.KCBASIC_PRG ) )
+		{
 		  try {
 		    LoadData loadData = fileInfo.createLoadData( fileBytes );
 		    if( loadData != null ) {
@@ -423,32 +429,26 @@ public class FileConvertFrm extends BaseFrm implements
 		  }
 		  catch( IOException ex ) {}
 		}
-	      }
-	      if( fileFmt.equals( FileFormat.KCB ) ) {
-		fileFmt = FileFormat.KCC;
-	      }
-	      else if( fileFmt.equals( FileFormat.KCB_BLKN ) ) {
-		fileFmt = FileFormat.KCC_BLKN;
-	      }
-	      else if( fileFmt.equals( FileFormat.KCB_BLKN_CKS ) ) {
-		fileFmt = FileFormat.KCC_BLKN_CKS;
-	      }
-	      if( fileFmt.equals( FileFormat.HEADERSAVE )
-		  || fileFmt.equals( FileFormat.INTELHEX )
-		  || fileFmt.equals( FileFormat.KCC )
-		  || fileFmt.equals( FileFormat.KCC_BLKN )
-		  || fileFmt.equals( FileFormat.KCC_BLKN_CKS )
-		  || fileFmt.equals( FileFormat.KCTAP_SYS )
-		  || fileFmt.equals( FileFormat.KCTAP_Z9001 )
-		  || fileFmt.equals( FileFormat.KCTAP_KC85 ) )
-	      {
-		byte[] fileBytes = EmuUtil.readFile(
-						file,
-						false,
-						MAX_MEM_FILE_SIZE );
-		if( fileBytes != null ) {
+		if( fileFmt.equals( FileFormat.KCB ) ) {
+		  fileFmt = FileFormat.KCC;
+		}
+		else if( fileFmt.equals( FileFormat.KCB_BLKN ) ) {
+		  fileFmt = FileFormat.KCC_BLKN;
+		}
+		else if( fileFmt.equals( FileFormat.KCB_BLKN_CKS ) ) {
+		  fileFmt = FileFormat.KCC_BLKN_CKS;
+		}
+		if( fileFmt.equals( FileFormat.HEADERSAVE )
+		    || fileFmt.equals( FileFormat.INTELHEX )
+		    || fileFmt.equals( FileFormat.KCC )
+		    || fileFmt.equals( FileFormat.KCC_BLKN )
+		    || fileFmt.equals( FileFormat.KCC_BLKN_CKS )
+		    || fileFmt.equals( FileFormat.KCTAP_SYS )
+		    || fileFmt.equals( FileFormat.KCTAP_Z9001 )
+		    || fileFmt.equals( FileFormat.KCTAP_KC85 ) )
+		{
 		  try {
-		    LoadData loadData = fileInfo.createLoadData(
+		    LoadData loadData = FileInfo.createLoadData(
 							fileBytes,
 							fileFmt );
 		    if( loadData != null ) {
@@ -464,13 +464,15 @@ public class FileConvertFrm extends BaseFrm implements
 		  }
 		  catch( IOException ex ) {}
 		}
-	      }
-	      if( (fileInfo.getNextTAPOffset() > 0)
-		  && ((kcbasicBytes != null) || (dataBytes != null)) )
-	      {
-		infoMsg = "Die Quelldatei ist eine Mutli-TAP-Datei.\n"
-				+ "Es wird nur die erste Teildatei"
-				+ " konvertiert.";
+		if( (fileInfo.getNextTAPOffset() > 0)
+		    && ((kcbasicBytes != null) || (dataBytes != null)) )
+		{
+		  infoMsg = "Die Quelldatei ist eine Mutli-KC-TAP-Datei."
+			+ " Au\u00DFer bei\n\'"
+			+ KCAudioMultiFileTarget.INFO_TEXT
+			+ "\'\nwird bei allen anderen Ausgangsformaten"
+			+ " nur die erste Teildatei verarbeitet.";
+		}
 	      }
 	    }
 	    done = true;
@@ -643,11 +645,19 @@ public class FileConvertFrm extends BaseFrm implements
 					dataLen,
 					true ) );
 	  }
+	  if( fileBytes != null ) {
+	    if( FileInfo.isKCTapMagicAt( fileBytes, 0 ) ) {
+	      this.targets.add(
+			new KCAudioMultiFileTarget( this, fileBytes ) );
+	    }
+	  }
 	  if( fileFmt.equals( FileFormat.CSW ) ) {
-	    byte[] fileBytes = EmuUtil.readFile(
+	    if( fileBytes == null ) {
+	      fileBytes = FileUtil.readFile(
 					file,
 					false,
 					MAX_TAPE_FILE_SIZE );
+	    }
 	    if( fileBytes != null ) {
 	      BitSampleBuffer samples = CSWFile.getBitSampleBuffer(
 								fileBytes,
@@ -660,10 +670,12 @@ public class FileConvertFrm extends BaseFrm implements
 	      || fileFmt.equals( FileFormat.TZX )
 	      || fileFmt.equals( FileFormat.ZXTAP ) )
 	  {
-	    byte[] fileBytes = EmuUtil.readFile(
+	    if( fileBytes == null ) {
+	      fileBytes = FileUtil.readFile(
 					file,
 					false,
 					MAX_TAPE_FILE_SIZE );
+	    }
 	    if( fileBytes != null ) {
 	      BitSampleBuffer samples = new ZXSpectrumAudioCreator(
 							fileBytes,
@@ -720,7 +732,7 @@ public class FileConvertFrm extends BaseFrm implements
   @Override
   public void dragEnter( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
+    if( !FileUtil.isFileDrop( e ) )
       e.rejectDrag();
   }
 
@@ -728,31 +740,39 @@ public class FileConvertFrm extends BaseFrm implements
   @Override
   public void dragExit( DropTargetEvent e )
   {
-    // empty
+    // leer
   }
 
 
   @Override
   public void dragOver( DropTargetDragEvent e )
   {
-    // empty
+    // leer
   }
 
 
   @Override
   public void drop( DropTargetDropEvent e )
   {
-    File file = EmuUtil.fileDrop( this, e );
-    if( file != null )
-      openFile( file );
+    final File file = FileUtil.fileDrop( this, e );
+    if( file != null ) {
+      EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    openFile( file );
+		  }
+		} );
+    }
   }
 
 
   @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
+    // leer
   }
 
 
@@ -773,7 +793,7 @@ public class FileConvertFrm extends BaseFrm implements
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
-    if( e != null ) {
+    try {
       Object src = e.getSource();
       if( src == this.btnSrcSelect ) {
 	rv = true;
@@ -797,8 +817,11 @@ public class FileConvertFrm extends BaseFrm implements
       }
       else if( src == this.btnHelp ) {
 	rv = true;
-	HelpFrm.open( HELP_PAGE );
+	HelpFrm.openPage( HELP_PAGE );
       }
+    }
+    catch( UserInputException ex ) {
+      BaseDlg.showErrorDlg( this, ex );
     }
     return rv;
   }
@@ -807,22 +830,23 @@ public class FileConvertFrm extends BaseFrm implements
   @Override
   public boolean doClose()
   {
-    boolean rv = super.doClose();
-    if( rv ) {
-      if( !Main.checkQuit( this ) ) {
-	// damit beim erneuten Oeffnen das Fenster leer ist
-	doRemoveSrcFile();
+    boolean rv = false;
+    if( Main.isTopFrm( this ) ) {
+      rv = EmuUtil.closeOtherFrames( this );
+      if( rv ) {
+	rv = super.doClose();
       }
+      if( rv ) {
+	Main.exitSuccess();
+      }
+    } else {
+      rv = super.doClose();
+    }
+    if( rv ) {
+      // damit beim erneuten Oeffnen das Fenster leer ist
+      doRemoveSrcFile();
     }
     return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    super.lookAndFeelChanged();
-    setFileTypeDocument();
   }
 
 
@@ -836,22 +860,23 @@ public class FileConvertFrm extends BaseFrm implements
 
 	/* --- Aktionen --- */
 
-  private void doPlay()
+  private void doPlay() throws UserInputException
   {
     AbstractConvertTarget target = this.listTarget.getSelectedValue();
     if( target != null ) {
       if( target.canPlay() ) {
-	try {
-	  AudioPlayer.play(
-			this,
+	if( checkFileDesc( target ) ) {
+	  try {
+	    AudioPlayFrm.open(
 			target.createPCMDataSource(),
 			"Wiedergabe..." );
-	}
-	catch( IOException ex ) {
-	  BaseDlg.showErrorDlg( this, ex );
-	}
-	catch( UserInputException ex ) {
-	  BaseDlg.showErrorDlg( this, ex );
+	  }
+	  catch( IOException ex ) {
+	    BaseDlg.showErrorDlg( this, ex );
+	  }
+	  catch( UserInputException ex ) {
+	    BaseDlg.showErrorDlg( this, ex );
+	  }
 	}
       }
     }
@@ -876,33 +901,33 @@ public class FileConvertFrm extends BaseFrm implements
     if( file == null ) {
       file = Main.getLastDirFile( Main.FILE_GROUP_FC_IN );
     }
-    file = EmuUtil.showFileOpenDlg(
+    file = FileUtil.showFileOpenDlg(
 			this,
 			"Quelldatei ausw\u00E4hlen",
-			file,
+			FileUtil.getDirectory( file ),
 			AudioFile.getFileFilter(),
-			EmuUtil.getBinaryFileFilter(),
-			EmuUtil.getHeadersaveFileFilter(),
-			EmuUtil.getHexFileFilter(),
-			EmuUtil.getKCBasicFileFilter(),
-			EmuUtil.getKCSystemFileFilter(),
-			EmuUtil.getTapeFileFilter(),
-			EmuUtil.getPlainDiskFileFilter(),
-			EmuUtil.getAnaDiskFileFilter(),
-			EmuUtil.getCopyQMFileFilter(),
-			EmuUtil.getDskFileFilter(),
-			EmuUtil.getImageDiskFileFilter(),
-			EmuUtil.getTeleDiskFileFilter() );
+			FileUtil.getBinaryFileFilter(),
+			FileUtil.getHeadersaveFileFilter(),
+			FileUtil.getHexFileFilter(),
+			FileUtil.getKCBasicFileFilter(),
+			FileUtil.getKCSystemFileFilter(),
+			FileUtil.getTapeFileFilter(),
+			FileUtil.getPlainDiskFileFilter(),
+			FileUtil.getAnaDiskFileFilter(),
+			FileUtil.getCopyQMFileFilter(),
+			FileUtil.getDskFileFilter(),
+			FileUtil.getImageDiskFileFilter(),
+			FileUtil.getTeleDiskFileFilter() );
     if( file != null ) {
       openFile( file );
     }
   }
 
 
-  private void doSave()
+  private void doSave() throws UserInputException
   {
     AbstractConvertTarget target = this.listTarget.getSelectedValue();
-    if( target != null ) {
+    if( (target != null) && checkFileDesc( target ) ) {
       File inFile  = this.fldSrcFile.getFile();
       File outFile = target.getSuggestedOutFile( inFile );
       if( (outFile != null) && !this.lastOutDirAsInDir ) {
@@ -916,7 +941,7 @@ public class FileConvertFrm extends BaseFrm implements
 	  }
 	}
       }
-      outFile = EmuUtil.showFileSaveDlg(
+      outFile = FileUtil.showFileSaveDlg(
 				this,
 				"Konvertierte Datei speichern",
 				outFile,
@@ -939,7 +964,11 @@ public class FileConvertFrm extends BaseFrm implements
 	  }
 	  if( logText != null ) {
 	    if( !logText.isEmpty() ) {
-	      LogDlg.showDlg( this, logText, "Hinweise" );
+	      LogDlg.showDlg(
+			this,
+			logText,
+			"Hinweise",
+			FileUtil.replaceExtension( outFile, "log" ) );
 	    }
 	  }
 	  this.lastSavedTargetText = target.toString();
@@ -966,8 +995,7 @@ public class FileConvertFrm extends BaseFrm implements
     this.orgIsBasicPrg       = false;
     this.lastOutDirAsInDir   = false;
     this.lastSavedTargetText = null;
-    setTitle( "JKCEMU Dateikonverter" );
-    Main.updIcon( this );
+    setTitle( TITLE );
 
 
     // Fensterinhalt
@@ -984,10 +1012,10 @@ public class FileConvertFrm extends BaseFrm implements
 
 
     // Bereich Quelldatei
-    JPanel panelSrc = new JPanel( new GridBagLayout() );
+    JPanel panelSrc = GUIFactory.createPanel( new GridBagLayout() );
     add( panelSrc, gbc );
 
-    panelSrc.setBorder( BorderFactory.createTitledBorder( "Quelldatei" ) );
+    panelSrc.setBorder( GUIFactory.createTitledBorder( "Quelldatei" ) );
 
     GridBagConstraints gbcSrc = new GridBagConstraints(
 						0, 0,
@@ -998,7 +1026,7 @@ public class FileConvertFrm extends BaseFrm implements
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    panelSrc.add( new JLabel( "Datei:" ), gbcSrc );
+    panelSrc.add( GUIFactory.createLabel( "Datei:" ), gbcSrc );
 
     this.fldSrcFile    = new FileNameFld();
     gbcSrc.weightx     = 1.0;
@@ -1007,17 +1035,19 @@ public class FileConvertFrm extends BaseFrm implements
     gbcSrc.gridx++;
     panelSrc.add( this.fldSrcFile, gbcSrc );
 
-    this.btnSrcSelect = createImageButton(
-				"/images/file/open.png",
-				"Quelldatei ausw\u00E4hlen" );
+    this.btnSrcSelect = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					"Quelldatei ausw\u00E4hlen" );
     gbcSrc.weightx = 0.0;
     gbcSrc.fill    = GridBagConstraints.NONE;
     gbcSrc.gridx++;
     panelSrc.add( this.btnSrcSelect, gbcSrc );
 
-    this.btnSrcRemove = createImageButton(
-				"/images/file/delete.png",
-				"Quelldatei entfernen" );
+    this.btnSrcRemove = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/delete.png",
+					"Quelldatei entfernen" );
     this.btnSrcRemove.setEnabled( false );
     gbcSrc.gridx++;
     panelSrc.add( this.btnSrcRemove, gbcSrc );
@@ -1025,9 +1055,9 @@ public class FileConvertFrm extends BaseFrm implements
     gbcSrc.insets.left = 5;
     gbcSrc.gridx       = 0;
     gbcSrc.gridy++;
-    panelSrc.add( new JLabel( "Typ:" ), gbcSrc );
+    panelSrc.add( GUIFactory.createLabel( "Typ:" ), gbcSrc );
 
-    this.fldSrcInfo = new JTextField();
+    this.fldSrcInfo = GUIFactory.createTextField();
     this.fldSrcInfo.setEditable( false );
     gbcSrc.weightx     = 1.0;
     gbcSrc.fill        = GridBagConstraints.HORIZONTAL;
@@ -1038,13 +1068,13 @@ public class FileConvertFrm extends BaseFrm implements
 
 
     // Bereich Ausgabedatei
-    JPanel panelOut = new JPanel( new GridBagLayout() );
+    JPanel panelOut = GUIFactory.createPanel( new GridBagLayout() );
     gbc.fill        = GridBagConstraints.BOTH;
     gbc.weighty     = 1.0;
     gbc.gridy++;
     add( panelOut, gbc );
 
-    panelOut.setBorder( BorderFactory.createTitledBorder( "Ausgabedatei" ) );
+    panelOut.setBorder( GUIFactory.createTitledBorder( "Ausgabedatei" ) );
 
     GridBagConstraints gbcOut = new GridBagConstraints(
 						0, 0,
@@ -1055,26 +1085,25 @@ public class FileConvertFrm extends BaseFrm implements
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    panelOut.add( new JLabel( "Dateiformat:" ), gbcOut );
+    panelOut.add( GUIFactory.createLabel( "Dateiformat:" ), gbcOut );
 
     this.targets    = new Vector<>();
-    this.listTarget = new JList<>();
+    this.listTarget = GUIFactory.createList();
     this.listTarget.setSelectionMode( ListSelectionModel.SINGLE_SELECTION );
-    this.listTarget.addListSelectionListener( this );
     gbcOut.fill    = GridBagConstraints.BOTH;
     gbcOut.weightx = 1.0;
     gbcOut.weighty = 1.0;
     gbcOut.gridy++;
-    panelOut.add( new JScrollPane( this.listTarget ), gbcOut );
+    panelOut.add( GUIFactory.createScrollPane( this.listTarget ), gbcOut );
 
     gbcOut.fill       = GridBagConstraints.NONE;
     gbcOut.weightx    = 0.0;
     gbcOut.weighty    = 0.0;
     gbcOut.insets.top = 15;
     gbcOut.gridy++;
-    panelOut.add( new JLabel( "Kopfdaten:" ), gbcOut );
+    panelOut.add( GUIFactory.createLabel( "Kopfdaten:" ), gbcOut );
 
-    JPanel panelHead = new JPanel( new GridBagLayout() );
+    JPanel panelHead = GUIFactory.createPanel( new GridBagLayout() );
     panelHead.setBorder( BorderFactory.createEtchedBorder() );
     gbcOut.fill          = GridBagConstraints.HORIZONTAL;
     gbcOut.weightx       = 1.0;
@@ -1092,18 +1121,18 @@ public class FileConvertFrm extends BaseFrm implements
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    this.labelFileDesc = new JLabel( "Bezeichnung:" );
+    this.labelFileDesc = GUIFactory.createLabel( "Bezeichnung:" );
     panelHead.add( this.labelFileDesc, gbcHead );
 
     this.docFileDesc  = new LimitedDocument();
-    this.fldFileDesc  = new JTextField( this.docFileDesc, "", 0 );
+    this.fldFileDesc  = GUIFactory.createTextField( this.docFileDesc, 0 );
     gbcHead.fill      = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx   = 1.0;
     gbcHead.gridwidth = 3;
     gbcHead.gridx++;
     panelHead.add( this.fldFileDesc, gbcHead );
 
-    this.labelFileType = new JLabel( "Typ:" );
+    this.labelFileType = GUIFactory.createLabel( "Typ:" );
     gbcHead.fill       = GridBagConstraints.NONE;
     gbcHead.weightx    = 0.0;
     gbcHead.gridwidth  = 1;
@@ -1111,7 +1140,7 @@ public class FileConvertFrm extends BaseFrm implements
     gbcHead.gridy++;
     panelHead.add( this.labelFileType, gbcHead );
 
-    this.comboFileType = new JComboBox<>();
+    this.comboFileType = GUIFactory.createComboBox();
     this.comboFileType.setEditable( true );
     gbcHead.fill      = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx   = 1.0;
@@ -1128,7 +1157,7 @@ public class FileConvertFrm extends BaseFrm implements
       this.comboFileType.setFont( font );
     }
 
-    this.labelBegAddr = new JLabel( LABEL_BEG_ADDR );
+    this.labelBegAddr = GUIFactory.createLabel( LABEL_BEG_ADDR );
     gbcHead.fill      = GridBagConstraints.NONE;
     gbcHead.weightx   = 0.0;
     gbcHead.gridwidth = 1;
@@ -1137,27 +1166,27 @@ public class FileConvertFrm extends BaseFrm implements
     panelHead.add( this.labelBegAddr, gbcHead );
 
     this.docBegAddr = new HexDocument( 4, LABEL_BEG_ADDR );
-    this.fldBegAddr = new JTextField( this.docBegAddr, "", 0 );
+    this.fldBegAddr = GUIFactory.createTextField( this.docBegAddr, 0 );
     gbcHead.fill    = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx = 0.5;
     gbcHead.gridx++;
     panelHead.add( this.fldBegAddr, gbcHead );
 
-    this.labelStartAddr = new JLabel( LABEL_START_ADDR );
+    this.labelStartAddr = GUIFactory.createLabel( LABEL_START_ADDR );
     gbcHead.fill        = GridBagConstraints.NONE;
     gbcHead.weightx     = 0.0;
     gbcHead.gridx++;
     panelHead.add( this.labelStartAddr, gbcHead );
 
     this.docStartAddr   = new HexDocument( 4, LABEL_START_ADDR );
-    this.fldStartAddr   = new JTextField( this.docStartAddr, "", 0 );
+    this.fldStartAddr   = GUIFactory.createTextField( this.docStartAddr, 0 );
     gbcHead.fill        = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx     = 0.5;
     gbcHead.insets.left = 0;
     gbcHead.gridx++;
     panelHead.add( this.fldStartAddr, gbcHead );
 
-    this.labelRemark      = new JLabel( "Kommentar:" );
+    this.labelRemark      = GUIFactory.createLabel( "Kommentar:" );
     gbcHead.fill          = GridBagConstraints.NONE;
     gbcHead.weightx       = 0.0;
     gbcHead.insets.left   = 5;
@@ -1167,14 +1196,14 @@ public class FileConvertFrm extends BaseFrm implements
     panelHead.add( this.labelRemark, gbcHead );
 
     this.docRemark    = new LimitedDocument();
-    this.fldRemark    = new JTextField( this.docRemark, "", 0 );
+    this.fldRemark    = GUIFactory.createTextField( this.docRemark, 0 );
     gbcHead.fill      = GridBagConstraints.HORIZONTAL;
     gbcHead.weightx   = 1.0;
     gbcHead.gridwidth = 3;
     gbcHead.gridx++;
     panelHead.add( this.fldRemark, gbcHead );
 
-    JPanel panelOutFile = new JPanel( new GridBagLayout() );
+    JPanel panelOutFile = GUIFactory.createPanel( new GridBagLayout() );
     gbcOut.fill         = GridBagConstraints.HORIZONTAL;
     gbcOut.weightx      = 1.0;
     gbcOut.gridwidth    = GridBagConstraints.REMAINDER;
@@ -1193,7 +1222,7 @@ public class FileConvertFrm extends BaseFrm implements
 
 
     // Knoepfe
-    JPanel panelBtn   = new JPanel( new GridLayout( 1, 4, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 4, 5, 5 ) );
     gbc.fill          = GridBagConstraints.NONE;
     gbc.weightx       = 0.0;
     gbc.weighty       = 0.0;
@@ -1201,31 +1230,37 @@ public class FileConvertFrm extends BaseFrm implements
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnConvert = new JButton( "Konvertieren" );
-    this.btnConvert.addActionListener( this );
+    this.btnConvert = GUIFactory.createButton( "Konvertieren" );
     panelBtn.add( this.btnConvert );
 
-    this.btnPlay = new JButton( "Wiedergeben" );
-    this.btnPlay.addActionListener( this );
+    this.btnPlay = GUIFactory.createButton( "Wiedergeben" );
     panelBtn.add( this.btnPlay );
 
-    this.btnHelp = new JButton( "Hilfe" );
-    this.btnHelp.addActionListener( this );
+    this.btnHelp = GUIFactory.createButtonHelp();
     panelBtn.add( this.btnHelp );
 
-    this.btnClose = new JButton( "Schlie\u00DFen" );
-    this.btnClose.addActionListener( this );
+    this.btnClose = GUIFactory.createButtonClose();
     panelBtn.add( this.btnClose );
 
 
     // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       this.listTarget.setVisibleRowCount( 7 );
       pack();
       this.listTarget.setVisibleRowCount( 1 );
       setScreenCentered();
     }
-    setResizable( true );
+
+
+    // Listener
+    this.btnSrcSelect.addActionListener( this );
+    this.btnSrcRemove.addActionListener( this );
+    this.listTarget.addListSelectionListener( this );
+    this.btnConvert.addActionListener( this );
+    this.btnPlay.addActionListener( this );
+    this.btnHelp.addActionListener( this );
+    this.btnClose.addActionListener( this );
 
 
     // sonstiges
@@ -1264,7 +1299,29 @@ public class FileConvertFrm extends BaseFrm implements
   }
 
 
-  public int getAddr( HexDocument hexDoc ) throws UserInputException
+  private boolean checkFileDesc( AbstractConvertTarget target )
+					throws UserInputException
+  {
+    boolean rv = false;
+    if( target != null ) {
+      int maxFileDescLen = target.getMaxFileDescLength();
+      if( maxFileDescLen > 0 ) {
+	rv = FileUtil.checkFileDesc( this, getFileDesc(), maxFileDescLen );
+      } else {
+	/*
+	 * Wenn das Zielformat keine Bezeichnung unterstuetzt
+	 * und somit das entsprechende Eingabefeld gedimmt ist,
+	 * soll kein Fehler erscheinen,
+	 * wenn dort schon als Vorbelegung etwas drin steht.
+	 */
+	rv = true;
+      }
+    }
+    return rv;
+  }
+
+
+  private int getAddr( HexDocument hexDoc ) throws UserInputException
   {
     int rv = -1;
     try {
@@ -1284,10 +1341,11 @@ public class FileConvertFrm extends BaseFrm implements
 						throws IOException
   {
     AbstractFloppyDisk disk = null;
-    byte[] fileBytes = EmuUtil.readFile( file, false, MAX_DISK_FILE_SIZE );
+    byte[] fileBytes = FileUtil.readFile( file, false, MAX_DISK_FILE_SIZE );
     if( fileBytes != null ) {
       FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
 			this,
+			true,
 			FloppyDiskFormat.getFormatByDiskSize( file.length() ),
 			FloppyDiskFormatDlg.Flag.PHYS_FORMAT );
       dlg.setVisible( true );
@@ -1365,7 +1423,7 @@ public class FileConvertFrm extends BaseFrm implements
 	/*
 	 * Da sich die maximale Laenge geaendert haben kann,
 	 * muss das Feld gesetzt werden.
-	 * Allerdings wir der alte Text (bis zur. max. Laenge) eibehalten,
+	 * Allerdings wir der alte Text (bis zur. max. Laenge) beibehalten,
 	 * wenn es sich vom urspruenglichen Wert unterscheidet
 	 * und somit durch den Anwender geaendert wurde.
 	 */

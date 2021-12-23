@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,6 @@ import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
-import java.lang.*;
 import java.util.Locale;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
@@ -84,7 +83,7 @@ public class PrintUtil
 	  if( ch == '\t' ) {
 	    int n = tabSize - (buf.length() % tabSize);
 	    for( int k = 0; k < n; k++ ) {
-	      buf.append( (char) '\u0020' );
+	      buf.append( '\u0020' );
 	    }
 	  } else {
 	    buf.append( ch );
@@ -100,22 +99,35 @@ public class PrintUtil
 
 
   /*
-   * Die Methode druckt am unteren Rand zentriert eine Seitenzahl
+   * Die Methoden drucken am unteren Rand zentriert eine Seitenzahl
    */
+  public static void printCenteredPageNum(
+				Graphics   g,
+				PageFormat pf,
+				Font       font,
+				int        pageNum )
+  {
+    String s = "- " + String.valueOf( pageNum ) + " -";
+    g.setColor( Color.BLACK );
+    g.setFont( font );
+    g.drawString(
+	s,
+	(int) (pf.getImageableX() + (pf.getImageableWidth() / 2))
+			- (g.getFontMetrics().stringWidth( s ) / 2),
+	(int) (pf.getImageableY() + pf.getImageableHeight()) );
+  }
+
+
   public static void printCenteredPageNum(
 				Graphics   g,
 				PageFormat pf,
 				int        fontSize,
 				int        pageNum )
   {
-    String s = "- " + String.valueOf( pageNum ) + " -";
-    int    w = g.getFontMetrics().stringWidth( s );
-    g.setColor( Color.black );
-    g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
-    g.drawString(
-	s,
-	(int) (pf.getImageableX() + (pf.getImageableWidth() / 2))
-			- (g.getFontMetrics().stringWidth( s ) / 2),
-	(int) (pf.getImageableY() + pf.getImageableHeight()) );
+    printCenteredPageNum(
+		g,
+		pf,
+		new Font( Font.MONOSPACED, Font.PLAIN, fontSize ),
+		pageNum );
   }
 }

@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,6 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -24,6 +23,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import jkcemu.base.BaseDlg;
+import jkcemu.base.GUIFactory;
 
 
 public class RemoveTransparencyDlg extends BaseDlg
@@ -32,10 +32,10 @@ public class RemoveTransparencyDlg extends BaseDlg
 
   private BufferedImage image;
   private BufferedImage appliedImage;
-  private JRadioButton  btnKeepColor;
-  private JRadioButton  btnToWhite;
-  private JRadioButton  btnToGray;
-  private JRadioButton  btnToBlack;
+  private JRadioButton  rbKeepColor;
+  private JRadioButton  rbToWhite;
+  private JRadioButton  rbToGray;
+  private JRadioButton  rbToBlack;
   private JButton       btnApply;
   private JButton       btnCancel;
 
@@ -66,6 +66,18 @@ public class RemoveTransparencyDlg extends BaseDlg
   }
 
 
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.btnApply.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
+    return rv;
+  }
+
+
 	/* --- Konstruktor --- */
 
   private RemoveTransparencyDlg( Window owner, BufferedImage image )
@@ -88,55 +100,57 @@ public class RemoveTransparencyDlg extends BaseDlg
 					0, 0 );
 
 
-    add( new JLabel( "Transparente Bereiche f\u00FCllen mit:" ), gbc );
+    add(
+	GUIFactory.createLabel( "Transparente Bereiche f\u00FCllen mit:" ),
+	gbc );
 
     ButtonGroup grpTransp = new ButtonGroup();
 
-    this.btnKeepColor = new JRadioButton(
+    this.rbKeepColor = GUIFactory.createRadioButton(
 				"in den Pixeln gespeicherte Farbe",
 				lastColorIdx == 0 );
-    grpTransp.add( this.btnKeepColor );
+    grpTransp.add( this.rbKeepColor );
     gbc.insets.left   = 50;
     gbc.insets.bottom = 0;
     gbc.gridy++;
-    add( this.btnKeepColor, gbc );
+    add( this.rbKeepColor, gbc );
 
-    this.btnToWhite = new JRadioButton(
+    this.rbToWhite = GUIFactory.createRadioButton(
 				"wei\u00DF",
 				lastColorIdx == 1 );
-    grpTransp.add( this.btnToWhite );
+    grpTransp.add( this.rbToWhite );
     gbc.insets.top = 0;
     gbc.gridy++;
-    add( this.btnToWhite, gbc );
+    add( this.rbToWhite, gbc );
 
-    this.btnToGray = new JRadioButton(
+    this.rbToGray = GUIFactory.createRadioButton(
 				"grau",
 				lastColorIdx == 2 );
-    grpTransp.add( this.btnToGray );
+    grpTransp.add( this.rbToGray );
     gbc.gridy++;
-    add( this.btnToGray, gbc );
+    add( this.rbToGray, gbc );
 
-    this.btnToBlack = new JRadioButton(
+    this.rbToBlack = GUIFactory.createRadioButton(
 				"schwarz",
 				lastColorIdx == 3 );
-    grpTransp.add( this.btnToBlack );
+    grpTransp.add( this.rbToBlack );
     gbc.insets.bottom = 5;
     gbc.gridy++;
-    add( this.btnToBlack, gbc );
+    add( this.rbToBlack, gbc );
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.insets.left = 5;
     gbc.insets.top  = 10;
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnApply = new JButton( "OK" );
+    this.btnApply = GUIFactory.createButtonOK();
     panelBtn.add( this.btnApply );
 
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -144,6 +158,9 @@ public class RemoveTransparencyDlg extends BaseDlg
     pack();
     setParentCentered();
     setResizable( false );
+
+
+    // Listener
     this.btnApply.addActionListener( this );
     this.btnCancel.addActionListener( this );
   }
@@ -162,13 +179,13 @@ public class RemoveTransparencyDlg extends BaseDlg
 					BufferedImage.TYPE_3BYTE_BGR );
       Graphics g     = tmpImg.createGraphics();
       Color    color = null;
-      if( this.btnToWhite.isSelected() ) {
+      if( this.rbToWhite.isSelected() ) {
 	color        = Color.WHITE;
 	lastColorIdx = 1;
-      } else if( this.btnToGray.isSelected() ) {
+      } else if( this.rbToGray.isSelected() ) {
 	color        = Color.GRAY;
 	lastColorIdx = 2;
-      } else if( this.btnToBlack.isSelected() ) {
+      } else if( this.rbToBlack.isSelected() ) {
 	color        = Color.BLACK;
 	lastColorIdx = 3;
       } else {

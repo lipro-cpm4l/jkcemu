@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.lang.*;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,6 +22,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public class AnaDisk extends AbstractFloppyDisk
@@ -43,20 +43,20 @@ public class AnaDisk extends AbstractFloppyDisk
     StringBuilder msgBuf = null;
     OutputStream  out    = null;
     try {
-      out = EmuUtil.createOptionalGZipOutputStream( file );
+      out = FileUtil.createOptionalGZipOutputStream( file );
 
-      boolean hasDeleted = false;
-      int     sides      = disk.getSides();
-      int     cyls       = disk.getCylinders();
+      boolean dataDeleted = false;
+      int     sides       = disk.getSides();
+      int     cyls        = disk.getCylinders();
       for( int cyl = 0; cyl < cyls; cyl++ ) {
 	for( int head = 0; head < sides; head++ ) {
-	  int cylSectors = disk.getSectorsOfCylinder( cyl, head );
+	  int cylSectors = disk.getSectorsOfTrack( cyl, head );
 	  for( int i = 0; i < cylSectors; i++ ) {
 	    SectorData sector = disk.getSectorByIndex( cyl, head, i );
 	    if( sector != null ) {
 	      if( sector.checkError()
-		  || sector.hasBogusID()
-		  || sector.isDeleted() )
+		  || sector.getDataDeleted()
+		  || sector.hasBogusID() )
 	      {
 		if( msgBuf == null ) {
 		  msgBuf = new StringBuilder( 1024 );
@@ -74,20 +74,20 @@ public class AnaDisk extends AbstractFloppyDisk
 		}
 		if( sector.checkError() ) {
 		  if( appended ) {
-		    msgBuf.append( (char) ',' );
+		    msgBuf.append( ',' );
 		  }
 		  msgBuf.append( " CRC-Fehler" );
 		  appended = true;
 		}
-		if( sector.isDeleted() ) {
+		if( sector.getDataDeleted() ) {
 		  if( appended ) {
-		    msgBuf.append( (char) ',' );
+		    msgBuf.append( ',' );
 		  }
-		  msgBuf.append( " als gel\u00F6scht markiert" );
-		  appended   = true;
-		  hasDeleted = true;
+		  msgBuf.append( " Daten als gel\u00F6scht markiert" );
+		  appended    = true;
+		  dataDeleted = true;
 		}
-		msgBuf.append( (char) '\n' );
+		msgBuf.append( '\n' );
 	      }
 	      out.write( cyl );
 	      out.write( head );
@@ -116,15 +116,15 @@ public class AnaDisk extends AbstractFloppyDisk
 		+ " in einer AnaDisk-Datei nicht gespeichert werden\n"
 		+ "und sind deshalb in der erzeugten Datei"
 		+ " nicht mehr enthalten.\n" );
-	if( hasDeleted ) {
-	  msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+	if( dataDeleted ) {
+	  msgBuf.append( "\nSektoren mit gel\u00F6schten Daten werden"
 		+ " in AnaDisk-Dateien nicht unterst\u00FCtzt\n"
 		+ "und sind deshalb als normale Sektoren enthalten.\n" );
 	}
       }
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
     return msgBuf != null ? msgBuf.toString() : null;
   }
@@ -137,7 +137,7 @@ public class AnaDisk extends AbstractFloppyDisk
     RandomAccessFile  raf = null;
     try {
       raf = new RandomAccessFile( file, "rw" );
-      fl  = EmuUtil.lockFile( file, raf );
+      fl  = FileUtil.lockFile( file, raf );
       raf.setLength( 0 );
       raf.seek( 0 );
       rv = new AnaDisk(
@@ -156,8 +156,8 @@ public class AnaDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.releaseSilent( fl );
-	EmuUtil.closeSilent( raf );
+	FileUtil.releaseSilent( fl );
+	EmuUtil.closeSilently( raf );
       }
     }
     return rv;
@@ -171,13 +171,13 @@ public class AnaDisk extends AbstractFloppyDisk
     RandomAccessFile raf = null;
     try {
       raf = new RandomAccessFile( file, "rw" );
-      fl  = EmuUtil.lockFile( file, raf );
+      fl  = FileUtil.lockFile( file, raf );
       rv  = createInstance( owner, null, raf, fl, file.getPath(), false );
     }
     finally {
       if( rv == null ) {
-	EmuUtil.releaseSilent( fl );
-	EmuUtil.closeSilent( raf );
+	FileUtil.releaseSilent( fl );
+	EmuUtil.closeSilently( raf );
       }
     }
     return rv;
@@ -190,14 +190,14 @@ public class AnaDisk extends AbstractFloppyDisk
     InputStream in = null;
     try {
       in = new FileInputStream( file );
-      if( EmuUtil.isGZipFile( file ) ) {
+      if( FileUtil.isGZipFile( file ) ) {
 	in = new GZIPInputStream( in );
       }
       rv = createInstance( owner, in, null, null, file.getPath(), false );
     }
     finally {
       if( rv == null ) {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
     return rv;
@@ -216,10 +216,10 @@ public class AnaDisk extends AbstractFloppyDisk
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public synchronized void closeSilent()
+  public synchronized void closeSilently()
   {
-    EmuUtil.releaseSilent( this.fileLock );
-    EmuUtil.closeSilent( this.raf );
+    FileUtil.releaseSilent( this.fileLock );
+    EmuUtil.closeSilently( this.raf );
   }
 
 
@@ -292,8 +292,8 @@ public class AnaDisk extends AbstractFloppyDisk
 	      if( physCyl >= getCylinders() ) {
 		setCylinders( physCyl + 1 );
 	      }
-	      if( sectorIDs.length > getSectorsPerCylinder() ) {
-		setSectorsPerCylinder( sectorIDs.length );
+	      if( sectorIDs.length > getSectorsPerTrack() ) {
+		setSectorsPerTrack( sectorIDs.length );
 	      }
 	      if( getSectorSize() == 0 ) {
 		setSectorSize( dataBuf.length );
@@ -330,7 +330,9 @@ public class AnaDisk extends AbstractFloppyDisk
 					int sectorIdx )
   {
     SectorData                 rv      = null;
-    java.util.List<SectorData> sectors = getSectorsOfCyl( physCyl, physHead );
+    java.util.List<SectorData> sectors = getSectorsOfTrackInternal(
+								physCyl,
+								physHead );
     if( sectors != null ) {
       if( (sectorIdx >= 0) && (sectorIdx < sectors.size()) ) {
 	rv = sectors.get( sectorIdx );
@@ -344,9 +346,11 @@ public class AnaDisk extends AbstractFloppyDisk
 
 
   @Override
-  public int getSectorsOfCylinder( int physCyl, int physHead )
+  public int getSectorsOfTrack( int physCyl, int physHead )
   {
-    java.util.List<SectorData> sectors = getSectorsOfCyl( physCyl, physHead );
+    java.util.List<SectorData> sectors = getSectorsOfTrackInternal(
+								physCyl,
+								physHead );
     return sectors != null ? sectors.size() : 0;
   }
 
@@ -381,12 +385,12 @@ public class AnaDisk extends AbstractFloppyDisk
 			SectorData sector,
 			byte[]     dataBuf,
 			int        dataLen,
-			boolean    deleted )
+			boolean    dataDeleted )
   {
     boolean rv = false;
     if( (this.raf != null)
 	&& (sector != null)
-	&& (dataBuf != null) && !deleted )
+	&& (dataBuf != null) && !dataDeleted )
     {
       if( sector.getDisk() == this ) {
 	int  sectorNum = sector.getSectorNum();
@@ -401,7 +405,7 @@ public class AnaDisk extends AbstractFloppyDisk
 	    }
 	    this.raf.seek( filePos + 8 );	// hinter Kopf positionieren
 	    this.raf.write( dataBuf, 0, dataLen );
-	    sector.setData( deleted, dataBuf, dataLen );
+	    sector.setData( dataDeleted, dataBuf, dataLen );
 	    rv = true;
 	  }
 	  catch( IOException ex ) {
@@ -419,9 +423,9 @@ public class AnaDisk extends AbstractFloppyDisk
 
   private AnaDisk(
 		Frame                                   owner,
-		int                                     sides,
 		int                                     cyls,
-		int                                     sectorsPerCyl,
+		int                                     sides,
+		int                                     sectorsPerTrack,
 		int                                     sectorSize,
 		String                                  fileName,
 		boolean                                 resource,
@@ -431,7 +435,7 @@ public class AnaDisk extends AbstractFloppyDisk
 		Map<Integer,java.util.List<SectorData>> side0,
 		Map<Integer,java.util.List<SectorData>> side1 )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize );
+    super( owner, cyls, sides, sectorsPerTrack, sectorSize );
     this.fileName = fileName;
     this.resource = resource;
     this.raf      = raf;
@@ -452,16 +456,16 @@ public class AnaDisk extends AbstractFloppyDisk
   {
     AnaDisk rv = null;
     if( in == null ) {
-      in = EmuUtil.createInputStream( raf );
+      in = FileUtil.createInputStream( raf );
     }
 
     Map<Integer,java.util.List<SectorData>> side0 = null;
     Map<Integer,java.util.List<SectorData>> side1 = null;
 
-    long filePos       = 0;
-    int  cyls          = 0;
-    int  sectorsPerCyl = 0;
-    int  sectorSize    = 0;
+    long filePos         = 0;
+    int  cyls            = 0;
+    int  sectorsPerTrack = 0;
+    int  sectorSize      = 0;
     for(;;) {
       long sectorFilePos = filePos;
 
@@ -527,8 +531,8 @@ public class AnaDisk extends AbstractFloppyDisk
       if( map != null ) {
 	java.util.List<SectorData> sectors = map.get( physCyl );
 	if( sectors == null ) {
-	  if( (physCyl > 0) && (sectorsPerCyl > 0) ) {
-	    sectors = new ArrayList<>( sectorsPerCyl );
+	  if( (physCyl > 0) && (sectorsPerTrack > 0) ) {
+	    sectors = new ArrayList<>( sectorsPerTrack );
 	  } else {
 	    sectors = new ArrayList<>();
 	  }
@@ -562,7 +566,7 @@ public class AnaDisk extends AbstractFloppyDisk
 	  sector.setFilePos( sectorFilePos );
 	  sector.setFilePortionLen( (int) (filePos - sectorFilePos) );
 	  sectors.add( sector );
-	  sectorsPerCyl = Math.max( sectorsPerCyl, sectors.size() );
+	  sectorsPerTrack = Math.max( sectorsPerTrack, sectors.size() );
 	}
       }
     }
@@ -573,9 +577,9 @@ public class AnaDisk extends AbstractFloppyDisk
       }
       rv = new AnaDisk(
 		owner,
-		sides,
 		cyls,
-		sectorsPerCyl,
+		sides,
+		sectorsPerTrack,
 		sectorSize,
 		fileName,
 		resource,
@@ -592,9 +596,9 @@ public class AnaDisk extends AbstractFloppyDisk
   }
 
 
-  private java.util.List<SectorData> getSectorsOfCyl(
-						int physCyl,
-						int physHead )
+  private java.util.List<SectorData> getSectorsOfTrackInternal(
+							int physCyl,
+							int physHead )
   {
     java.util.List<SectorData>              rv  = null;
     Map<Integer,java.util.List<SectorData>> map = ((physHead & 0x01) != 0 ?
@@ -605,4 +609,3 @@ public class AnaDisk extends AbstractFloppyDisk
     return rv;
   }
 }
-

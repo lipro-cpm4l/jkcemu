@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,13 +8,11 @@
 
 package jkcemu.text;
 
-import java.lang.*;
-
 
 public class CharConverter
 {
   public static enum Encoding {
-			ASCII_7BIT,
+			ASCII,
 			ISO646DE,
 			CP437,
 			CP850,
@@ -80,49 +78,95 @@ public class CharConverter
 
   public CharConverter( Encoding encoding )
   {
-    this.encoding            = encoding;
-    this.encodingDisplayText = "ASCII (keine Umlaute)";
-    switch( this.encoding ) {
+    this.encoding = (encoding != null ? encoding : Encoding.ASCII);
+    this.encodingDisplayText = getEncodingDisplayText( encoding );
+  }
+
+
+  public static CharConverter getCharConverter( Encoding encoding )
+  {
+    return encoding != null ?
+		new CharConverter( encoding )
+		: null;
+  }
+
+
+  public static Encoding getEncodingByName( String encodingName )
+  {
+    Encoding encoding = null;
+    if( encodingName != null ) {
+      switch( encodingName ) {
+	case "ASCII":
+	case "US_ASCII":
+	  encoding = Encoding.ASCII;
+	  break;
+	case "ISO646DE":
+	  encoding = Encoding.ISO646DE;
+	  break;
+	case "CP437":
+	  encoding = Encoding.CP437;
+	  break;
+	case "CP850":
+	  encoding = Encoding.CP850;
+	  break;
+	case "LATIN1":
+	case "ISO-8859-1":
+	  encoding = Encoding.LATIN1;
+	  break;
+     }
+    }
+    return encoding;
+  }
+
+
+  public static String getEncodingDisplayText( Encoding encoding )
+  {
+    String rv = "ASCII (keine Umlaute)";
+    switch( encoding ) {
       case ISO646DE:
-	this.encodingDisplayText =
-		"Deutsche Variante von ISO-646"
-			+ " (Umlaute anstelle von [\\]{|}~)";
+	rv = "Deutsche Variante von ISO-646 (Umlaute anstelle von [\\]{|}~)";
 	break;
-
       case CP437:
-	this.encodingDisplayText = "Codepage 437 (alter DOS-Zeichensatz)";
+	rv = "Codepage 437 (alter DOS-Zeichensatz)";
 	break;
-
       case CP850:
-	this.encodingDisplayText = "Codepage 850 (DOS-Zeichensatz)";
+	rv = "Codepage 850 (DOS-Zeichensatz)";
 	break;
-
       case LATIN1:
-	this.encodingDisplayText = "ISO-8859-1 (Latin 1)";
+	rv = "ISO-8859-1 (Latin 1)";
 	break;
     }
+    return rv;
   }
 
 
   public String getEncodingName()
   {
-    String rv = "ASCII";
-    switch( this.encoding ) {
-      case ISO646DE:
-	rv = "ISO646DE";
-	break;
+    return getEncodingName( this.encoding );
+  }
 
-      case CP437:
-	rv = "CP437";
-	break;
 
-      case CP850:
-	rv = "CP850";
-	break;
-
-      case LATIN1:
-	rv = "LATIN1";
-	break;
+  public static String getEncodingName( Encoding encoding )
+  {
+    String rv = null;
+    if( encoding != null ) {
+      switch( encoding ) {
+	case ASCII:
+	  rv = "ASCII";
+	  break;
+	case ISO646DE:
+	  rv = "ISO646DE";
+	  break;
+	case CP437:
+	  rv = "CP437";
+	  break;
+	case CP850:
+	  rv = "CP850";
+	  break;
+	case LATIN1:
+	  rv = "LATIN1";
+	  break;
+      }
     }
     return rv;
   }
@@ -131,7 +175,7 @@ public class CharConverter
   public char toUnicode( int ch )
   {
     char rv = REPLACEMENT_CHAR;
-    if( this.encoding == Encoding.ASCII_7BIT ) {
+    if( this.encoding == Encoding.ASCII ) {
       if( (ch > 0) && (ch < 0x7F) ) {
 	rv = (char) ch;
       }
@@ -141,33 +185,25 @@ public class CharConverter
 	case '[':		// Ae
 	  rv = '\u00C4';
 	  break;
-
 	case '\\':		// Oe
 	  rv = '\u00D6';
 	  break;
-
 	case ']':		// Ue
 	  rv = '\u00DC';
 	  break;
-
 	case '{':		// ae
 	  rv = '\u00E4';
 	  break;
-
 	case '|':		// oe
 	  rv = '\u00F6';
 	  break;
-
 	case '}':		// ue
 	  rv = '\u00FC';
 	  break;
-
 	case '~':		// ss
 	  rv = '\u00DF';
 	  break;
-
 	default:
-	  rv = REPLACEMENT_CHAR;
 	  if( (ch > 0) && (ch < 0x7F) ) {
 	    rv = (char) ch;
 	  }
@@ -194,7 +230,7 @@ public class CharConverter
   public int toCharsetByte( char ch )
   {
     int rv = 0;
-    if( this.encoding == Encoding.ASCII_7BIT ) {
+    if( this.encoding == Encoding.ASCII ) {
       if( (ch > 0) && (ch < 0x7F) ) {
 	rv = ch;
       }
@@ -207,31 +243,24 @@ public class CharConverter
 	  case '\u00C4':	// Ae
 	    rv = '[';
 	    break;
-
 	  case '\u00D6':	// Oe
 	    rv = '\\';
 	    break;
-
 	  case '\u00DC':	// Ue
 	    rv = ']';
 	    break;
-
 	  case '\u00E4':	// ae
 	    rv = '{';
 	    break;
-
 	  case '\u00F6':	// oe
 	    rv = '|';
 	    break;
-
 	  case '\u00FC':	// ue
 	    rv = '}';
 	    break;
-
 	  case '\u00DF':	// ss
 	    rv = '~';
 	    break;
-
 	  default:
 	    if( (ch > 0) && (ch < 0x7F) ) {
 	      rv = ch;
@@ -254,18 +283,6 @@ public class CharConverter
 
 
 	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public boolean equals( Object o )
-  {
-    if( o != null ) {
-      if( o instanceof CharConverter ) {
-	return this.encoding == ((CharConverter) o).encoding;
-      }
-    }
-    return super.equals( o );
-  }
-
 
   @Override
   public String toString()

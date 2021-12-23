@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2017 Jens Mueller
+ * (c) 2012-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,7 +21,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
-import java.lang.*;
 import java.nio.channels.FileLock;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,6 +30,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public class CPCDisk extends AbstractFloppyDisk
@@ -54,7 +54,7 @@ public class CPCDisk extends AbstractFloppyDisk
     {
       this.trackPos  = trackPos;
       this.trackSize = trackSize;
-      sectors        = new ArrayList<>( MAX_SECTORS_PER_TRACK );
+      this.sectors   = new ArrayList<>( MAX_SECTORS_PER_TRACK );
     }
 
     public void add( SectorData sector )
@@ -117,18 +117,18 @@ public class CPCDisk extends AbstractFloppyDisk
 			"%d Seiten nicht unterst\u00FCtzt",
 			sides ) );
     }
-    int sectorsPerCyl = disk.getSectorsPerCylinder();
-    if( (sectorsPerCyl < 0) || (sectorsPerCyl > 255) ) {
+    int sectorsPerTrack = disk.getSectorsPerTrack();
+    if( (sectorsPerTrack < 0) || (sectorsPerTrack > 255) ) {
       throw new IOException(
 		String.format(
 			"%d Sektoren pro Zylinder nicht unterst\u00FCtzt",
-			sectorsPerCyl ) );
+			sectorsPerTrack ) );
     }
     int     sectorSize     = disk.getSectorSize();
     int     sectorSizeCode = getSectorSizeCode( sectorSize );
     int     initBufSize    = (disk.getDiskSize() * 5 / 4) + 0x4000;
     boolean needsExtFmt    = false;
-    boolean hasDeleted     = false;
+    boolean dataDeleted    = false;
 
     // Sektoren lesen
     SectorData[][] tracks = new SectorData[ cyls * sides ][];
@@ -136,7 +136,7 @@ public class CPCDisk extends AbstractFloppyDisk
     int trackIdx = 0;
     for( int cyl = 0; cyl < cyls; cyl++ ) {
       for( int head = 0; head < sides; head++ ) {
-	int nTrackSectors = disk.getSectorsOfCylinder( cyl, head );
+	int nTrackSectors = disk.getSectorsOfTrack( cyl, head );
 	if( (nTrackSectors < 0) || (nTrackSectors > MAX_SECTORS_PER_TRACK) ) {
 	    throw new IOException(
 		String.format(
@@ -146,7 +146,7 @@ public class CPCDisk extends AbstractFloppyDisk
 			cyl,
 			nTrackSectors ) );
 	}
-	if( nTrackSectors != sectorsPerCyl ) {
+	if( nTrackSectors != sectorsPerTrack ) {
 	  needsExtFmt = true;
 	}
 	SectorData[] trackSectors = new SectorData[ nTrackSectors ];
@@ -161,8 +161,8 @@ public class CPCDisk extends AbstractFloppyDisk
 			i + 1  ) );
 	  }
 	  if( sector.checkError()
-	      || sector.hasBogusID()
-	      || sector.isDeleted() )
+	      || sector.getDataDeleted()
+	      || sector.hasBogusID() )
 	  {
 	    if( msgBuf == null ) {
 	      msgBuf = new StringBuilder( 1024 );
@@ -180,20 +180,20 @@ public class CPCDisk extends AbstractFloppyDisk
 	    }
 	    if( sector.checkError() ) {
 	      if( appended ) {
-		msgBuf.append( (char) ',' );
+		msgBuf.append( ',' );
 	      }
 	      msgBuf.append( " CRC-Fehler" );
 	      appended = true;
 	    }
-	    if( sector.isDeleted() ) {
+	    if( sector.getDataDeleted() ) {
 	      if( appended ) {
-		msgBuf.append( (char) ',' );
+		msgBuf.append( ',' );
 	      }
-	      msgBuf.append( " als gel\u00F6scht markiert" );
-	      appended   = true;
-	      hasDeleted = true;
+	      msgBuf.append( " Daten als gel\u00F6scht markiert" );
+	      appended    = true;
+	      dataDeleted = true;
 	    }
-	    msgBuf.append( (char) '\n' );
+	    msgBuf.append( '\n' );
 	  }
 	  if( (sector.getSizeCode() != sectorSizeCode)
 	      || (sector.getDataLength() != sectorSize) )
@@ -216,7 +216,7 @@ public class CPCDisk extends AbstractFloppyDisk
       try {
 
 	// Disk Information Block
-	int trackSize = 0x0100 + (sectorsPerCyl * sectorSize);
+	int trackSize = 0x0100 + (sectorsPerTrack * sectorSize);
 	EmuUtil.writeASCII( outBuf, FILE_HEADER_STD );
 	EmuUtil.writeFixLengthASCII( outBuf, "JKCEMU", 14, 0 );
 	outBuf.write( cyls );
@@ -230,7 +230,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	  int          cyl          = i / sides;
 	  int          head         = i % sides;
 	  SectorData[] trackSectors = tracks[ i ];
-	  if( trackSectors.length != sectorsPerCyl ) {
+	  if( trackSectors.length != sectorsPerTrack ) {
 	    needsExtFmt = true;
 	    break;
 	  }
@@ -275,18 +275,18 @@ public class CPCDisk extends AbstractFloppyDisk
 	}
       }
       finally {
-	EmuUtil.closeSilent( outBuf );
+	EmuUtil.closeSilently( outBuf );
       }
       if( !needsExtFmt ) {
 	OutputStream out = null;
 	try {
-	  out = EmuUtil.createOptionalGZipOutputStream( file );
+	  out = FileUtil.createOptionalGZipOutputStream( file );
 	  outBuf.writeTo( out );
 	  out.close();
 	  out = null;
 	}
 	finally {
-	  EmuUtil.closeSilent( out );
+	  EmuUtil.closeSilently( out );
 	}
       }
     }
@@ -298,7 +298,7 @@ public class CPCDisk extends AbstractFloppyDisk
     if( needsExtFmt ) {
       OutputStream out = null;
       try {
-	out = EmuUtil.createOptionalGZipOutputStream( file );
+	out = FileUtil.createOptionalGZipOutputStream( file );
 
 	// Disk Information Block
 	EmuUtil.writeASCII( out, FILE_HEADER_EXT );
@@ -358,7 +358,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	out = null;
       }
       finally {
-	EmuUtil.closeSilent( out );
+	EmuUtil.closeSilently( out );
       }
     }
     if( msgBuf != null ) {
@@ -366,8 +366,8 @@ public class CPCDisk extends AbstractFloppyDisk
 		+ " in einer CPC-Disk-Datei nicht gespeichert werden\n"
 		+ "und sind deshalb in der erzeugten Datei"
 		+ " nicht mehr enthalten.\n" );
-      if( hasDeleted ) {
-	msgBuf.append( "\nGel\u00F6schte Sektoren werden"
+      if( dataDeleted ) {
+	msgBuf.append( "\nSektoren mit gel\u00F6schten Daten werden"
 		+ " in CPC-Disk-Dateien nicht unterst\u00FCtzt\n"
 		+ "und sind deshalb als normale Sektoren enthalten.\n" );
       }
@@ -390,7 +390,7 @@ public class CPCDisk extends AbstractFloppyDisk
     RandomAccessFile raf = null;
     try {
       raf = new RandomAccessFile( file, "rw" );
-      fl  = EmuUtil.lockFile( file, raf );
+      fl  = FileUtil.lockFile( file, raf );
       raf.setLength( 0 );
       raf.seek( 0 );
       rv = new CPCDisk(
@@ -410,8 +410,8 @@ public class CPCDisk extends AbstractFloppyDisk
     }
     finally {
       if( rv == null ) {
-	EmuUtil.releaseSilent( fl );
-	EmuUtil.closeSilent( raf );
+	FileUtil.releaseSilent( fl );
+	EmuUtil.closeSilently( raf );
       }
     }
     return rv;
@@ -425,13 +425,13 @@ public class CPCDisk extends AbstractFloppyDisk
     RandomAccessFile raf = null;
     try {
       raf = new RandomAccessFile( file, "rw" );
-      fl  = EmuUtil.lockFile( file, raf );
+      fl  = FileUtil.lockFile( file, raf );
       rv  = createInstance( owner, null, raf, fl, file.getPath(), false );
     }
     finally {
       if( rv == null ) {
-	EmuUtil.releaseSilent( fl );
-	EmuUtil.closeSilent( raf );
+	FileUtil.releaseSilent( fl );
+	EmuUtil.closeSilently( raf );
       }
     }
     return rv;
@@ -444,14 +444,14 @@ public class CPCDisk extends AbstractFloppyDisk
     InputStream in = null;
     try {
       in = new FileInputStream( file );
-      if( EmuUtil.isGZipFile( file ) ) {
+      if( FileUtil.isGZipFile( file ) ) {
 	in = new GZIPInputStream( in );
       }
       rv = createInstance( owner, in, null, null, file.getPath(), false );
     }
     finally {
       if( rv == null ) {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
     return rv;
@@ -461,10 +461,10 @@ public class CPCDisk extends AbstractFloppyDisk
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public synchronized void closeSilent()
+  public synchronized void closeSilently()
   {
-    EmuUtil.releaseSilent( this.fileLock );
-    EmuUtil.closeSilent( this.raf );
+    FileUtil.releaseSilent( this.fileLock );
+    EmuUtil.closeSilently( this.raf );
   }
 
 
@@ -498,7 +498,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	    setCylinders( 0 );
 	    setSides( 0 );
 	    setSectorSize( 0 );
-	    setSectorsPerCylinder( 0 );
+	    setSectorsPerTrack( 0 );
 	    this.extendedFmt = false;
 	    this.trackSize   = trackSize;
 	    if( this.side0 != null ) {
@@ -694,8 +694,8 @@ public class CPCDisk extends AbstractFloppyDisk
 	    this.raf.seek( 0x31 );
 	    this.raf.write( getSides() );
 	  }
-	  if( sectorIDs.length > getSectorsPerCylinder() ) {
-	    setSectorsPerCylinder( sectorIDs.length );
+	  if( sectorIDs.length > getSectorsPerTrack() ) {
+	    setSectorsPerTrack( sectorIDs.length );
 	  }
 	  if( getSectorSize() == 0 ) {
 	    setSectorSize( dataBuf.length );
@@ -732,7 +732,9 @@ public class CPCDisk extends AbstractFloppyDisk
 					int sectorIdx )
   {
     SectorData                 rv      = null;
-    java.util.List<SectorData> sectors = getSectorsOfCyl( physCyl, physHead );
+    java.util.List<SectorData> sectors = getSectorsOfTrackInternal(
+								physCyl,
+								physHead );
     if( sectors != null ) {
       if( (sectorIdx >= 0) && (sectorIdx < sectors.size()) ) {
 	rv = sectors.get( sectorIdx );
@@ -746,9 +748,11 @@ public class CPCDisk extends AbstractFloppyDisk
 
 
   @Override
-  public int getSectorsOfCylinder( int physCyl, int physHead )
+  public int getSectorsOfTrack( int physCyl, int physHead )
   {
-    java.util.List<SectorData> sectors = getSectorsOfCyl( physCyl, physHead );
+    java.util.List<SectorData> sectors = getSectorsOfTrackInternal(
+								physCyl,
+								physHead );
     return sectors != null ? sectors.size() : 0;
   }
 
@@ -783,12 +787,12 @@ public class CPCDisk extends AbstractFloppyDisk
 			SectorData sector,
 			byte[]     dataBuf,
 			int        dataLen,
-			boolean    deleted )
+			boolean    dataDeleted )
   {
     boolean rv = false;
     if( (this.raf != null)
 	&& (sector != null)
-	&& (dataBuf != null) && !deleted )
+	&& (dataBuf != null) && !dataDeleted )
     {
       if( sector.getDisk() == this ) {
 	int  sectorNum = sector.getSectorNum();
@@ -803,7 +807,7 @@ public class CPCDisk extends AbstractFloppyDisk
 	    }
 	    this.raf.seek( filePos );
 	    this.raf.write( dataBuf, 0, dataLen );
-	    sector.setData( deleted, dataBuf, dataLen );
+	    sector.setData( dataDeleted, dataBuf, dataLen );
 	    rv = true;
 	  }
 	  catch( IOException ex ) {
@@ -821,9 +825,9 @@ public class CPCDisk extends AbstractFloppyDisk
 
   private CPCDisk(
 		Frame                  owner,
-		int                    sides,
 		int                    cyls,
-		int                    sectorsPerCyl,
+		int                    sides,
+		int                    sectorsPerTrack,
 		int                    sectorSize,
 		String                 fileName,
 		boolean                resource,
@@ -834,7 +838,7 @@ public class CPCDisk extends AbstractFloppyDisk
 		Map<Integer,TrackData> side0,
 		Map<Integer,TrackData> side1 )
   {
-    super( owner, sides, cyls, sectorsPerCyl, sectorSize );
+    super( owner, cyls, sides, sectorsPerTrack, sectorSize );
     this.fileName  = fileName;
     this.resource  = resource;
     this.raf       = raf;
@@ -878,7 +882,7 @@ public class CPCDisk extends AbstractFloppyDisk
   {
     CPCDisk rv = null;
     if( in == null ) {
-      in = EmuUtil.createInputStream( raf );
+      in = FileUtil.createInputStream( raf );
     }
 
     // Disk Header pruefen
@@ -887,8 +891,8 @@ public class CPCDisk extends AbstractFloppyDisk
     if( filePos == fileHeader.length ) {
       boolean extendedFmt = isDiskFileHeader( fileHeader, FILE_HEADER_EXT );
       if( extendedFmt || isDiskFileHeader( fileHeader, FILE_HEADER_STD ) ) {
-	int sectorsPerCyl  = 0;
-	int diskSectorSize = 0;
+	int sectorsPerTrack = 0;
+	int diskSectorSize  = 0;
 	int nCyls          = (int) fileHeader[ 0x30 ] & 0xFF;
 	int nSides         = (int) fileHeader[ 0x31 ] & 0xFF;
 	int diskTrackSize  = 0;
@@ -958,8 +962,8 @@ public class CPCDisk extends AbstractFloppyDisk
 
 	    // Sektorliste
 	    if( nSectors > 0 ) {
-	      if( sectorsPerCyl < nSectors ) {
-		sectorsPerCyl = nSectors;
+	      if( sectorsPerTrack < nSectors ) {
+		sectorsPerTrack = nSectors;
 	      }
 	      TrackData              trackData = null;
 	      Map<Integer,TrackData> trackMap  = null;
@@ -1020,9 +1024,9 @@ public class CPCDisk extends AbstractFloppyDisk
 	    }
 	    rv = new CPCDisk(
 			owner,
-			nSides,
 			nCyls,
-			sectorsPerCyl,
+			nSides,
+			sectorsPerTrack,
 			diskSectorSize,
 			fileName,
 			resource,
@@ -1043,9 +1047,9 @@ public class CPCDisk extends AbstractFloppyDisk
   }
 
 
-  private java.util.List<SectorData> getSectorsOfCyl(
-						int physCyl,
-						int physHead )
+  private java.util.List<SectorData> getSectorsOfTrackInternal(
+							int physCyl,
+							int physHead )
   {
     java.util.List<SectorData> rv = null;
     Map<Integer,TrackData> map = ((physHead & 0x01) != 0 ? side1 : side0);
@@ -1097,4 +1101,3 @@ public class CPCDisk extends AbstractFloppyDisk
     return trackData;
   }
 }
-

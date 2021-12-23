@@ -1,5 +1,6 @@
 /*
- * (c) 2008 Jens Mueller
+
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -7,8 +8,6 @@
  */
 
 package jkcemu.base;
-
-import java.lang.*;
 
 
 public class UserInputException extends Exception
@@ -35,4 +34,3 @@ public class UserInputException extends Exception
     return this.fieldName;
   }
 }
-

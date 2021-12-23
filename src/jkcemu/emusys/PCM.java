@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,9 +9,10 @@
 package jkcemu.emusys;
 
 import java.awt.event.KeyEvent;
-import java.lang.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Properties;
+import jkcemu.audio.AbstractSoundDevice;
 import jkcemu.base.CharRaster;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
@@ -21,12 +22,17 @@ import jkcemu.disk.FDC8272;
 import jkcemu.disk.FloppyDiskDrive;
 import jkcemu.disk.FloppyDiskFormat;
 import jkcemu.disk.FloppyDiskInfo;
+import jkcemu.etc.CPUSynchronSoundDevice;
+import jkcemu.etc.K1520Sound;
 import jkcemu.text.TextUtil;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80CTCListener;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 import z80emu.Z80SIO;
 import z80emu.Z80SIOChannelListener;
 
@@ -34,6 +40,8 @@ import z80emu.Z80SIOChannelListener;
 public class PCM extends EmuSys implements
 					FDC8272.DriveSelector,
 					Z80CTCListener,
+					Z80MaxSpeedListener,
+					Z80PIOPortListener,
 					Z80SIOChannelListener
 {
   public static final String SYSNAME     = "PCM";
@@ -68,26 +76,29 @@ public class PCM extends EmuSys implements
   private static byte[] pcmFontBytes64x16 = null;
   private static byte[] pcmFontBytes80x24 = null;
 
-  private byte[]            fontBytes;
-  private byte[]            romBytes;
-  private String            romFile;
-  private byte[]            ramVideo;
-  private RAMFloppy         ramFloppy;
-  private Z80CTC            ctc;
-  private Z80PIO            pio;
-  private Z80SIO            sio;
-  private FDC8272           fdc;
-  private FloppyDiskDrive   curFDDrive;
-  private FloppyDiskDrive[] fdDrives;
-  private boolean           fdcTC;
-  private boolean           tapeInPhase;
-  private boolean           keyboardUsed;
-  private boolean           mode80x24;
-  private boolean           romEnabled;
-  private boolean           upperBank0Enabled;
-  private int               ramBank;
-  private int               romSize;
-  private int               nmiCounter;
+  private byte[]                 fontBytes;
+  private byte[]                 romBytes;
+  private String                 romFile;
+  private byte[]                 ramVideo;
+  private RAMFloppy              ramFloppy;
+  private CPUSynchronSoundDevice loudspeaker;
+  private K1520Sound             k1520Sound;
+  private VDIP                   vdip;
+  private Z80CTC                 ctc;
+  private Z80PIO                 pio;
+  private Z80SIO                 sio;
+  private FDC8272                fdc;
+  private FloppyDiskDrive        curFDDrive;
+  private FloppyDiskDrive[]      fdDrives;
+  private boolean                fdcTC;
+  private boolean                keyboardUsed;
+  private boolean                mode80x24;
+  private boolean                soundPhase;
+  private boolean                romEnabled;
+  private boolean                upperBank0Enabled;
+  private int                    ramBank;
+  private int                    romSize;
+  private int                    nmiCounter;
 
 
   public PCM( EmuThread emuThread, Properties props )
@@ -111,6 +122,22 @@ public class PCM extends EmuSys implements
       this.fdc      = null;
       this.fdDrives = null;
     }
+    this.loudspeaker = new CPUSynchronSoundDevice( "Lautsprecher" );
+
+    if( emulatesK1520Sound( props ) ) {
+      this.k1520Sound = new K1520Sound( this, 0x38 );
+    } else {
+      this.k1520Sound = null;
+    }
+
+    if( emulatesVDIP( props ) ) {
+      this.vdip = new VDIP(
+			0,
+			this.emuThread.getZ80CPU(),
+			"USB-PIO (E/A-Adressen DCh-DFh und FCh-FFh)" );
+    } else {
+      this.vdip = null;
+    }
 
     this.ramFloppy = this.emuThread.getRAMFloppy1();
     if( this.ramFloppy != null ) {
@@ -127,17 +154,33 @@ public class PCM extends EmuSys implements
     }
 
     Z80CPU cpu = emuThread.getZ80CPU();
-    this.ctc   = new Z80CTC( "CTC (80-83)" );
-    this.pio   = new Z80PIO( "PIO (84-87)" );
-    this.sio   = new Z80SIO( "SIO (88-8B)" );
-    cpu.setInterruptSources( this.ctc, this.pio, this.sio );
+    this.ctc   = new Z80CTC( "CTC (E/A-Adressen 80h-83h)" );
+    this.pio   = new Z80PIO( "PIO (E/A-Adressen 84h-87h)" );
+    this.sio   = new Z80SIO( "SIO (E/A-Adressen 88h-8Bh)" );
     cpu.addMaxSpeedListener( this );
     cpu.addTStatesListener( this );
     this.ctc.addCTCListener( this );
+    this.pio.addPIOPortListener( this, Z80PIO.PortInfo.B );
     this.sio.addChannelListener( this, 0 );
 
-    if( !isReloadExtROMsOnPowerOnEnabled( props ) ) {
-      loadROMs( props );
+    java.util.List<Z80InterruptSource> iSources = new ArrayList<>();
+    iSources.add( this.ctc );
+    iSources.add( this.pio );
+    iSources.add( this.sio );
+    if( this.k1520Sound != null ) {
+      iSources.add( this.k1520Sound );
+    }
+    if( this.vdip != null ) {
+      iSources.add( this.vdip );
+    }
+    try {
+      cpu.setInterruptSources(
+        iSources.toArray( new Z80InterruptSource[ iSources.size() ] ) );
+    }
+    catch( ArrayStoreException ex ) {}
+
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
     }
     z80MaxSpeedChanged( cpu );
   }
@@ -180,9 +223,43 @@ public class PCM extends EmuSys implements
 	  this.sio.clockPulseReceiverB();
 	  break;
 	case 2:
-	  this.soundOutPhase = !this.soundOutPhase;
+	  this.soundPhase = !this.soundPhase;
+	  this.loudspeaker.setCurPhase( this.soundPhase );
 	  break;
       }
+    }
+  }
+
+
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.loudspeaker.z80MaxSpeedChanged( cpu );
+    if( this.fdc != null ) {
+      this.fdc.z80MaxSpeedChanged( cpu );
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80MaxSpeedChanged( cpu );
+    }
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (pio == this.pio)
+	&& (port == Z80PIO.PortInfo.B)
+	&& ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	    || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+    {
+      this.tapeOutPhase = ((this.pio.fetchOutValuePortB( 0xFF ) & 0x40) != 0);
     }
   }
 
@@ -237,6 +314,9 @@ public class PCM extends EmuSys implements
   {
     super.applySettings( props );
     loadFont( props );
+    if( this.vdip != null ) {
+      this.vdip.applySettings( props );
+    }
   }
 
 
@@ -259,6 +339,12 @@ public class PCM extends EmuSys implements
     if( rv && emulates80x24( props ) != this.mode80x24 ) {
       rv = false;
     }
+    if( rv && (emulatesK1520Sound( props ) != (this.k1520Sound != null)) ) {
+      rv = false;
+    }
+    if( rv && (emulatesVDIP( props ) != (this.vdip != null)) ) {
+      rv = false;
+    }
     return rv;
   }
 
@@ -277,6 +363,7 @@ public class PCM extends EmuSys implements
       this.ramFloppy.deinstall();
     }
     this.sio.removeChannelListener( this, 0 );
+    this.pio.removePIOPortListener( this, Z80PIO.PortInfo.B );
     this.ctc.removeCTCListener( this );
 
     Z80CPU cpu = this.emuThread.getZ80CPU();
@@ -286,6 +373,14 @@ public class PCM extends EmuSys implements
     if( this.fdc != null ) {
       this.fdc.die();
     }
+    this.loudspeaker.fireStop();
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.die();
+    }
+    if( this.vdip != null ) {
+      this.vdip.die();
+    }
+    super.die();
   }
 
 
@@ -357,8 +452,8 @@ public class PCM extends EmuSys implements
   public CharRaster getCurScreenCharRaster()
   {
     return this.mode80x24 ?
-		new CharRaster( 80, 24, 10, 10, 6, 0 )
-		: new CharRaster( 64, 32, 8, 8, 7, 0 );
+		new CharRaster( 80, 24, 10, 6, 10 )
+		: new CharRaster( 64, 32, 8, 7, 8 );
   }
 
 
@@ -529,6 +624,17 @@ public class PCM extends EmuSys implements
 
 
   @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return this.k1520Sound != null ?
+		new AbstractSoundDevice[] {
+			this.loudspeaker,
+			this.k1520Sound.getSoundDevice() }
+		: new AbstractSoundDevice[] { this.loudspeaker };
+  }
+
+
+  @Override
   public FloppyDiskInfo[] getSuitableFloppyDisks()
   {
     FloppyDiskInfo[] rv = null;
@@ -561,6 +667,15 @@ public class PCM extends EmuSys implements
   public String getTitle()
   {
     return SYSTEXT;
+  }
+
+
+  @Override
+  public VDIP[] getVDIPs()
+  {
+    return this.vdip != null ?
+			new VDIP[] { this.vdip }
+			: super.getVDIPs();
   }
 
 
@@ -630,6 +745,49 @@ public class PCM extends EmuSys implements
 
 
   @Override
+  public void loadROMs( Properties props )
+  {
+    this.romFile  = EmuUtil.getProperty(
+			props,
+			this.propPrefix + PROP_ROM_PREFIX + PROP_FILE );
+    this.romBytes = readROMFile(
+			this.romFile,
+			0x8000,
+			"ROM-Inhalt (Grundbetriebssystem)" );
+    if( this.romBytes != null ) {
+      // ROM-Groesse ermitteln
+      int n8k = (this.romBytes.length + 0x1FFF) / 0x2000;
+      if( n8k < 1 ) {
+	n8k = 1;
+      } else if( n8k > 4 ) {
+	n8k = 4;
+      }
+      this.romSize = n8k * 0x2000;
+    } else {
+      if( this.fdc != null ) {
+	if( this.mode80x24 ) {
+	  if( romFDC80x24 == null ) {
+	    romFDC80x24 = readResource( "/rom/pcm/pcmsys330_80x24.bin" );
+	  }
+	  this.romBytes = romFDC80x24;
+	} else {
+	  if( romFDC64x16 == null ) {
+	    romFDC64x16 = readResource( "/rom/pcm/pcmsys330_64x16.bin" );
+	  }
+	  this.romBytes = romFDC64x16;
+	}
+      } else {
+	if( romRF64x16 == null ) {
+	  romRF64x16 = readResource( "/rom/pcm/pcmsys210_64x16.bin" );
+	}
+	this.romBytes = romRF64x16;
+      }
+    }
+    loadFont( props );
+  }
+
+
+  @Override
   protected boolean pasteChar( char ch ) throws InterruptedException
   {
     boolean rv = false;
@@ -675,14 +833,6 @@ public class PCM extends EmuSys implements
 	rv = this.pio.readDataB();
 	break;
 
-      case 0x86:
-	rv = this.pio.readControlA();
-	break;
-
-      case 0x87:
-	rv = this.pio.readControlB();
-	break;
-
       case 0x88:
 	rv = this.sio.readDataA();
 	break;
@@ -717,6 +867,24 @@ public class PCM extends EmuSys implements
 	  rv = this.fdc.readData();
 	}
 	break;
+
+      case 0xDC:
+      case 0xDD:
+      case 0xDE:
+      case 0xDF:
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  rv = this.vdip.read( port );
+	}
+	break;
+
+      default:
+	if( (this.k1520Sound != null) && ((port & 0xF8) == 0x38) ) {
+	  rv = this.k1520Sound.read( port, tStates );
+	}
     }
     return rv;
   }
@@ -736,13 +904,11 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( resetLevel == EmuThread.ResetLevel.POWER_ON ) {
-      if( isReloadExtROMsOnPowerOnEnabled( props ) ) {
-	loadROMs( props );
-      }
+    super.reset( powerOn, props );
+    if( powerOn ) {
+      initDRAM();
       fillRandom( this.ramVideo );
     }
     if( EmuUtil.getBooleanProperty(
@@ -761,19 +927,11 @@ public class PCM extends EmuSys implements
       }
     }
     if( this.fdc != null ) {
-      this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
+      this.fdc.reset( powerOn );
     }
-    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
-	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
-    {
-      this.ctc.reset( true );
-      this.pio.reset( true );
-      this.sio.reset( true );
-    } else {
-      this.ctc.reset( false );
-      this.pio.reset( false );
-      this.sio.reset( false );
-    }
+    this.ctc.reset( powerOn );
+    this.pio.reset( powerOn );
+    this.sio.reset( powerOn );
     this.sio.setClearToSendA( true );
     this.sio.setClearToSendB( true );
     if( this.fdDrives != null ) {
@@ -784,10 +942,17 @@ public class PCM extends EmuSys implements
 	}
       }
     }
-    this.tapeInPhase       = this.emuThread.readTapeInPhase();
+    this.loudspeaker.reset();
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.reset( powerOn );
+    }
+    if( this.vdip != null ) {
+      this.vdip.reset( powerOn );
+    }
     this.curFDDrive        = null;
     this.fdcTC             = false;
     this.keyboardUsed      = false;
+    this.soundPhase        = false;
     this.romEnabled        = true;
     this.upperBank0Enabled = true;
     this.ramBank           = 0;
@@ -878,13 +1043,6 @@ public class PCM extends EmuSys implements
 
 
   @Override
-  public boolean supportsSoundOutMono()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsTapeIn()
   {
     return true;
@@ -895,6 +1053,13 @@ public class PCM extends EmuSys implements
   public boolean supportsTapeOut()
   {
     return true;
+  }
+
+
+  @Override
+  public void tapeInPhaseChanged()
+  {
+    this.pio.putInValuePortB( this.tapeInPhase ? 0x80 : 0, 0x80 );
   }
 
 
@@ -915,8 +1080,6 @@ public class PCM extends EmuSys implements
 
       case 0x85:
 	this.pio.writeDataB( value );
-	this.tapeOutPhase =
-		((this.pio.fetchOutValuePortB( false ) & 0x40) != 0);
 	break;
 
       case 0x86:
@@ -988,16 +1151,24 @@ public class PCM extends EmuSys implements
 	  this.fdcTC = tc;
 	}
 	break;
-    }
-  }
 
+      case 0xDC:
+      case 0xDD:
+      case 0xDE:
+      case 0xDF:
+      case 0xFC:
+      case 0xFD:
+      case 0xFE:
+      case 0xFF:
+	if( this.vdip != null ) {
+	  this.vdip.write( port, value );
+	}
+	break;
 
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    if( this.fdc != null ) {
-      this.fdc.z80MaxSpeedChanged( cpu );
+      default:
+	if( (this.k1520Sound != null) && ((port & 0xF8) == 0x38) ) {
+	  this.k1520Sound.write( port, value, tStates );
+	}
     }
   }
 
@@ -1006,15 +1177,13 @@ public class PCM extends EmuSys implements
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
     super.z80TStatesProcessed( cpu, tStates );
-
-    boolean phase = this.emuThread.readTapeInPhase();
-    if( phase != this.tapeInPhase ) {
-      this.tapeInPhase = phase;
-      this.pio.putInValuePortB( this.tapeInPhase ? 0x80 : 0, 0x80 );
-    }
+    this.loudspeaker.z80TStatesProcessed( cpu, tStates );
     this.ctc.z80TStatesProcessed( cpu, tStates );
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80TStatesProcessed( cpu, tStates );
     }
   }
 
@@ -1026,15 +1195,6 @@ public class PCM extends EmuSys implements
     return EmuUtil.getProperty(
 	props,
 	this.propPrefix + PROP_GRAPHIC ).equals( VALUE_GRAPHIC_80X24 );
-  }
-
-
-  private boolean emulatesFloppyDisk( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_FDC_ENABLED,
-			true );
   }
 
 
@@ -1057,47 +1217,5 @@ public class PCM extends EmuSys implements
 	this.fontBytes = pcmFontBytes64x16;
       }
     }
-  }
-
-
-  private void loadROMs( Properties props )
-  {
-    this.romFile  = EmuUtil.getProperty(
-			props,
-			this.propPrefix + PROP_ROM_PREFIX + PROP_FILE );
-    this.romBytes = readROMFile(
-			this.romFile,
-			0x8000,
-			"ROM-Inhalt (Grundbetriebssystem)" );
-    if( this.romBytes != null ) {
-      // ROM-Groesse ermitteln
-      int n8k = (this.romBytes.length + 0x1FFF) / 0x2000;
-      if( n8k < 1 ) {
-	n8k = 1;
-      } else if( n8k > 4 ) {
-	n8k = 4;
-      }
-      this.romSize = n8k * 0x2000;
-    } else {
-      if( this.fdc != null ) {
-	if( this.mode80x24 ) {
-	  if( romFDC80x24 == null ) {
-	    romFDC80x24 = readResource( "/rom/pcm/pcmsys330_80x24.bin" );
-	  }
-	  this.romBytes = romFDC80x24;
-	} else {
-	  if( romFDC64x16 == null ) {
-	    romFDC64x16 = readResource( "/rom/pcm/pcmsys330_64x16.bin" );
-	  }
-	  this.romBytes = romFDC64x16;
-	}
-      } else {
-	if( romRF64x16 == null ) {
-	  romRF64x16 = readResource( "/rom/pcm/pcmsys210_64x16.bin" );
-	}
-	this.romBytes = romRF64x16;
-      }
-    }
-    loadFont( props );
   }
 }

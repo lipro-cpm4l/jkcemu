@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.text.ParseException;
 import java.util.EventObject;
 import java.util.Set;
@@ -25,6 +24,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import jkcemu.base.BaseDlg;
+import jkcemu.base.GUIFactory;
 import jkcemu.text.TextUtil;
 
 
@@ -110,16 +110,16 @@ public class HardDiskDetailsDlg extends BaseDlg
 						0, 0 );
 
     // Eingabefelder
-    add( new JLabel( "Hersteller:" ), gbc );
+    add( GUIFactory.createLabel( "Hersteller:" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "Modell:" ), gbc );
+    add( GUIFactory.createLabel( "Modell:" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "Zylinder:" ), gbc );
+    add( GUIFactory.createLabel( "Zylinder:" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "K\u00F6pfe:" ), gbc );
+    add( GUIFactory.createLabel( "K\u00F6pfe:" ), gbc );
     gbc.insets.bottom = 5;
     gbc.gridy++;
-    add( new JLabel( "Sektoren pro Spur:" ), gbc );
+    add( GUIFactory.createLabel( "Sektoren pro Spur:" ), gbc );
 
     gbc.fill          = GridBagConstraints.HORIZONTAL;
     gbc.weightx       = 1.0;
@@ -131,7 +131,7 @@ public class HardDiskDetailsDlg extends BaseDlg
     this.fldProducer   = null;
     if( producers != null ) {
       if( !producers.isEmpty() ) {
-	this.comboProducer = new JComboBox<>();
+	this.comboProducer = GUIFactory.createComboBox();
 	for( String producer : producers ) {
 	  this.comboProducer.addItem( producer );
 	}
@@ -141,26 +141,26 @@ public class HardDiskDetailsDlg extends BaseDlg
       }
     }
     if( this.comboProducer == null ) {
-      this.fldProducer = new JTextField();
+      this.fldProducer = GUIFactory.createTextField();
       add( this.fldProducer, gbc );
     }
 
-    this.fldModel = new JTextField();
+    this.fldModel = GUIFactory.createTextField();
     this.fldModel.addActionListener( this );
     gbc.gridy++;
     add( this.fldModel, gbc );
 
-    this.fldCylinders = new JTextField();
+    this.fldCylinders = GUIFactory.createTextField();
     this.fldCylinders.addActionListener( this );
     gbc.gridy++;
     add( this.fldCylinders, gbc );
 
-    this.fldHeads = new JTextField();
+    this.fldHeads = GUIFactory.createTextField();
     this.fldHeads.addActionListener( this );
     gbc.gridy++;
     add( this.fldHeads, gbc );
 
-    this.fldSectors   = new JTextField();
+    this.fldSectors   = GUIFactory.createTextField();
     this.fldSectors.addActionListener( this );
     gbc.insets.bottom = 5;
     gbc.gridy++;
@@ -174,7 +174,7 @@ public class HardDiskDetailsDlg extends BaseDlg
     }
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.fill        = GridBagConstraints.NONE;
     gbc.weightx     = 0.0;
@@ -183,11 +183,11 @@ public class HardDiskDetailsDlg extends BaseDlg
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
+    this.btnOK = GUIFactory.createButtonOK();
     this.btnOK.addActionListener( this );
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     this.btnCancel.addActionListener( this );
     panelBtn.add( this.btnCancel );
 

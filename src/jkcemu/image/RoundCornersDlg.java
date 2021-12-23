@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -23,6 +22,7 @@ import javax.swing.SpinnerNumberModel;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 
 
 public class RoundCornersDlg extends BaseDlg
@@ -46,13 +46,13 @@ public class RoundCornersDlg extends BaseDlg
 
     if( nTopPixels < 0 ) {
       nTopPixels = 0;
-    } else if( nTopPixels > ImgUtil.ROUND_PIXELS_MAX ) {
-      nTopPixels = ImgUtil.ROUND_PIXELS_MAX;
+    } else if( nTopPixels > ImageUtil.ROUND_PIXELS_MAX ) {
+      nTopPixels = ImageUtil.ROUND_PIXELS_MAX;
     }
     if( nBottomPixels < 0 ) {
       nBottomPixels = 0;
-    } else if( nBottomPixels > ImgUtil.ROUND_PIXELS_MAX ) {
-      nBottomPixels = ImgUtil.ROUND_PIXELS_MAX;
+    } else if( nBottomPixels > ImageUtil.ROUND_PIXELS_MAX ) {
+      nBottomPixels = ImageUtil.ROUND_PIXELS_MAX;
     }
 
 
@@ -68,55 +68,53 @@ public class RoundCornersDlg extends BaseDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    add( new JLabel( "Obere Ecken:" ), gbc );
+    add( GUIFactory.createLabel( "Obere Ecken:" ), gbc );
 
-    this.spinnerTopPixels = new JSpinner(
+    this.spinnerTopPixels = GUIFactory.createSpinner(
 			new SpinnerNumberModel(
 				nTopPixels,
 				0,
-				ImgUtil.ROUND_PIXELS_MAX,
+				ImageUtil.ROUND_PIXELS_MAX,
 				1 ) );
     gbc.insets.left = 0;
     gbc.gridx++;
     add( this.spinnerTopPixels, gbc );
 
     gbc.gridx++;
-    add( new JLabel( "Pixel" ), gbc );
+    add( GUIFactory.createLabel( "Pixel" ), gbc );
 
     gbc.insets.top  = 0;
     gbc.insets.left = 5;
     gbc.gridx       = 0;
     gbc.gridy++;
-    add( new JLabel( "Untere Ecken:" ), gbc );
+    add( GUIFactory.createLabel( "Untere Ecken:" ), gbc );
 
-    this.spinnerBottomPixels = new JSpinner(
+    this.spinnerBottomPixels = GUIFactory.createSpinner(
 			new SpinnerNumberModel(
 				nBottomPixels,
 				0,
-				ImgUtil.ROUND_PIXELS_MAX,
+				ImageUtil.ROUND_PIXELS_MAX,
 				1 ) );
     gbc.insets.left = 0;
     gbc.gridx++;
     add( this.spinnerBottomPixels, gbc );
 
     gbc.gridx++;
-    add( new JLabel( "Pixel" ), gbc );
+    add( GUIFactory.createLabel( "Pixel" ), gbc );
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.insets.top  = 10;
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
     gbc.gridx       = 0;
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -124,6 +122,11 @@ public class RoundCornersDlg extends BaseDlg
     pack();
     setParentCentered();
     setResizable( false );
+
+
+    // Listener
+    this.btnOK.addActionListener( this );
+    this.btnCancel.addActionListener( this );
   }
 
 
@@ -144,18 +147,16 @@ public class RoundCornersDlg extends BaseDlg
   @Override
   protected boolean doAction( EventObject e )
   {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src != null ) {
-	if( src == this.btnOK ) {
-	  rv = true;
-	  doApply();
-	}
-	else if( src == this.btnCancel ) {
-	  rv = true;
-	  doClose();
-	}
+    boolean rv  = false;
+    Object  src = e.getSource();
+    if( src != null ) {
+      if( src == this.btnOK ) {
+	rv = true;
+	doApply();
+      }
+      else if( src == this.btnCancel ) {
+	rv = true;
+	doClose();
       }
     }
     return rv;
@@ -171,4 +172,3 @@ public class RoundCornersDlg extends BaseDlg
     doClose();
   }
 }
-

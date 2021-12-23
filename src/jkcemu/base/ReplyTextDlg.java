@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,12 +10,11 @@ package jkcemu.base;
 
 import java.awt.Component;
 import java.awt.Window;
-import java.lang.*;
 
 
 public class ReplyTextDlg extends AbstractReplyDlg
 {
-  private ReplyTextDlg(
+  protected ReplyTextDlg(
 		Window owner,
 		String msg,
 		String title,
@@ -26,11 +25,11 @@ public class ReplyTextDlg extends AbstractReplyDlg
   }
 
 
-  public static String showReplyTextDlg(
-				Component owner,
-				String    msg,
-				String    title,
-				String    defaultReply )
+  public static String showDlg(
+			Component owner,
+			String    msg,
+			String    title,
+			String    defaultReply )
   {
     String       reply       = null;
     ReplyTextDlg dlg         = null;

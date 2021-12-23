@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,12 +8,11 @@
 
 package jkcemu.tools;
 
-import java.lang.*;
-
 
 public interface Label extends Comparable<Label>
 {
-  public String getLabelName();
-  public int    getVarSize();
-  public int    intValue();
+  public String  getLabelName();
+  public int     getVarSize();
+  public int     intValue();
+  public boolean isAddress();
 }

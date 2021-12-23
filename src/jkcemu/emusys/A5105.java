@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2017 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,57 +18,61 @@ package jkcemu.emusys;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Properties;
+import jkcemu.audio.AbstractSoundDevice;
 import jkcemu.audio.AudioOut;
-import jkcemu.base.AbstractKeyboardFld;
+import jkcemu.base.AutoInputCharSet;
 import jkcemu.base.ByteIterator;
 import jkcemu.base.CharRaster;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileFormat;
 import jkcemu.base.RAMFloppy;
-import jkcemu.base.SaveDlg;
 import jkcemu.base.SourceUtil;
 import jkcemu.disk.FDC8272;
 import jkcemu.disk.FloppyDiskDrive;
 import jkcemu.disk.FloppyDiskFormat;
 import jkcemu.disk.FloppyDiskInfo;
+import jkcemu.disk.GIDE;
 import jkcemu.emusys.a5105.A5105KeyboardFld;
 import jkcemu.emusys.a5105.VIS;
 import jkcemu.etc.GDC82720;
 import jkcemu.etc.PSG8910;
-import jkcemu.etc.VDIP;
+import jkcemu.etc.PSGSoundDevice;
+import jkcemu.etc.K1520Sound;
+import jkcemu.file.FileFormat;
+import jkcemu.file.FileUtil;
+import jkcemu.file.SaveDlg;
 import jkcemu.joystick.JoystickThread;
 import jkcemu.net.KCNet;
 import jkcemu.text.CharConverter;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
 import z80emu.Z80CTC;
 import z80emu.Z80InterruptSource;
+import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 import z80emu.Z80PCListener;
 
 
 public class A5105 extends EmuSys implements
 					FDC8272.DriveSelector,
 					PSG8910.Callback,
-					Z80PCListener
+					Z80MaxSpeedListener,
+					Z80PCListener,
+					Z80PIOPortListener
 {
-
-private static int lastAA = -1;
-
   public static final String SYSNAME     = "A5105";
   public static final String SYSTEXT     = "A5105 (BIC)";
   public static final String PROP_PREFIX = "jkcemu.a5105.";
 
-  public static final int FUNCTION_KEY_COUNT                    = 5;
-  public static final int DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 4000;
+  public static final int DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX = 6000;
 
   /*
    * Das SCPX bringt einen Fehler, wenn die Diskette schreibgeschuetzt ist.
@@ -80,6 +84,12 @@ private static int lastAA = -1;
    * Aus diesem Grund wird die SCPX-Systemdiskette nur als "verfuegbare",
    * nicht aber als "direkt zum Einlegen geeignete" Diskette angeboten.
    */
+  private static FloppyDiskInfo rbasicPicDisk =
+		new FloppyDiskInfo(
+			"/disks/a5105/a5105rbasicpic.dump.gz",
+                        "BIC A5105 RBASIC Diskette mit Bildern",
+			2, 2048, true );
+
   private static FloppyDiskInfo rbasicPrgDisk =
 		new FloppyDiskInfo(
 			"/disks/a5105/a5105rbasicprg.dump.gz",
@@ -93,6 +103,7 @@ private static int lastAA = -1;
 			2, 2048, true );
 
   private static final FloppyDiskInfo[] availableFloppyDisks = {
+		rbasicPicDisk,
 		rbasicPrgDisk,
 		rbasicSysDisk,
 		new FloppyDiskInfo(
@@ -101,18 +112,23 @@ private static int lastAA = -1;
 			2, 2048, true ) };
 
   private static final FloppyDiskInfo[] suitableFloppyDisks = {
+							rbasicPicDisk,
 							rbasicPrgDisk,
 							rbasicSysDisk };
 
-  private static final float KEY_CLICK_HWAVE_MILLIS = 0.1F;
-  private static final int   OUT_AA_KEY_CLICK       = 0x80;
-  private static final int   OUT_AA_TAPE_LED        = 0x40;
-  private static final int   OUT_AA_TAPE_OUT        = 0x20;
-  private static final int   BIOS_ADDR_CONIN        = 0xFD09;
-  private static final int   V24_TSTATES_PER_BIT    = 390;
+  private static final float  KEY_CLICK_HWAVE_MILLIS = 0.1F;
+  private static final int    OUT_AA_KEY_CLICK       = 0x80;
+  private static final int    OUT_AA_TAPE_LED        = 0x40;
+  private static final int    OUT_AA_TAPE_OUT        = 0x20;
+  private static final int    BIOS_ADDR_CONIN        = 0xFD09;
+  private static final int    V24_TSTATES_PER_BIT    = 390;
+  private static final String SCPX_PREFIX            = "SCPX: ";
 
-  private static byte[]        romK1505 = null;
-  private static byte[]        romK5651 = null;
+  private static AutoInputCharSet autoInputCharSet = null;
+
+  private static byte[] romK1505 = null;
+  private static byte[] romK5651 = null;
+
   private static CharConverter cp437
 			= new CharConverter( CharConverter.Encoding.CP437 );
 
@@ -137,12 +153,12 @@ private static int lastAA = -1;
 	{ 's',  't', 'u', 'v', 'w',      'x',      'y',      'z' } };
 
   private static int[][] kbMatrixShift = {
-	{ '=',      '!',      '\"', '\\', '$',      '%',      '&',      '/' },
+	{ '=',      '!',      '\"', '\\', '$',      '%',      '&',    '/' },
 	{ '(',      ')',      '>',  '*',  '\u00D6', '\u00C4', '\u00DC', '^' },
-	{ '\u0060', '\u00DF', ';',  ':',  '_',      '=',      'A',      'B' },
-	{ 'C',      'D',      'E',  'F',  'G',      'H',      'I',      'J' },
-	{ 'K',      'L',      'M',  'N',  'O',      'P',      'Q',      'R' },
-	{ 'S',      'T',      'U',  'V',  'W',      'X',      'Y',      'Z' } };
+	{ '\u0060', '\u00DF', ';',  ':',  '_',      '=',      'A',    'B' },
+	{ 'C',      'D',      'E',  'F',  'G',      'H',      'I',    'J' },
+	{ 'K',      'L',      'M',  'N',  'O',      'P',      'Q',    'R' },
+	{ 'S',      'T',      'U',  'V',  'W',      'X',      'Y',    'Z' } };
 
   private static int[][] kbMatrixControl = {
 	{ -1, -1, -1, -1, -1, -1, -1, -1 },
@@ -157,7 +173,10 @@ private static int lastAA = -1;
   private Z80PIO                pio90;
   private GDC82720              gdc;
   private VIS                   vis;
-  private PSG8910               psg;
+  private PSG8910               svgPSG;
+  private PSGSoundDevice        svgSoundDevice;
+  private K1520Sound            k1520Sound;
+  private GIDE                  gide;
   private FDC8272               fdc;
   private FloppyDiskDrive[]     floppyDiskDrives;
   private KCNet                 kcNet;
@@ -171,7 +190,6 @@ private static int lastAA = -1;
   private int                   joy1ActionMask;
   private boolean               keyClickPhase;
   private boolean               capsLockLED;
-  private boolean               tapeInPhase;
   private boolean               tapeLED;
   private boolean               v24BitOut;
   private int                   v24BitNum;
@@ -179,10 +197,8 @@ private static int lastAA = -1;
   private int                   v24TStateCounter;
   private int                   shiftTStateCounter;
   private int                   memConfig;
-  private int                   ledValues;
-  private int                   psgRegNum;
+  private int                   svgPSGRegNum;
   private int                   outAA;
-  private int                   coninRetAddr;
   private int[]                 keyboardMatrix;
   private A5105KeyboardFld      keyboardFld;
   private volatile ByteIterator keyClickSamples;
@@ -195,14 +211,14 @@ private static int lastAA = -1;
     if( romK1505 == null ) {
       romK1505 = readResource( "/rom/a5105/k1505_0000.bin" );
     }
-    this.pasteFast      = false;
-    this.keyClickPhase  = false;
-    this.capsLockLED    = false;
-    this.tapeLED        = false;
-    this.tapeInPhase    = false;
-    this.outAA          = 0xFF;
-    this.keyboardFld    = null;
-    this.keyboardMatrix = new int[ 9 ];
+    this.pasteFast       = false;
+    this.keyClickPhase   = false;
+    this.capsLockLED     = false;
+    this.tapeLED         = false;
+    this.outAA           = 0xFF;
+    this.keyboardFld     = null;
+    this.keyboardMatrix  = new int[ 9 ];
+    this.keyClickSamples = null;
     Arrays.fill( keyboardMatrix, 0 );
 
     if( emulatesFloppyDisk( props ) ) {
@@ -239,11 +255,20 @@ private static int lastAA = -1;
 				props,
 				this.propPrefix + PROP_RF2_PREFIX );
 
-    this.psg = new PSG8910(
-			getDefaultSpeedKHz() * 1000 / 2,
-			AudioOut.MAX_UNSIGNED_USED_VALUE,
-			this );
-    this.psg.start();
+    this.svgPSG = new PSG8910( getDefaultSpeedKHz() * 1000 / 2, this );
+    this.svgSoundDevice = new PSGSoundDevice(
+					"Sound-Generator",
+					false,
+					this.svgPSG );
+    this.svgPSG.start();
+
+    if( emulatesK1520Sound( props ) ) {
+      this.k1520Sound = new K1520Sound( this, 0x38 );
+    } else {
+      this.k1520Sound = null;
+    }
+
+    this.gide = GIDE.getGIDE( this.screenFrm, props, this.propPrefix );
 
     if( this.fdc != null ) {
       this.ctc50 = new Z80CTC( "CTC (E/A-Adressen 50h-53h)" );
@@ -257,9 +282,10 @@ private static int lastAA = -1;
     }
 
     this.vdip = null;
-    if( emulatesUSB( props ) ) {
+    if( emulatesVDIP( props ) ) {
       this.vdip = new VDIP(
-			this.emuThread.getFileTimesViewFactory(),
+			0,
+			this.emuThread.getZ80CPU(),
 			"USB-PIO (E/A-Adressen FCh-FFh)" );
     }
 
@@ -268,6 +294,9 @@ private static int lastAA = -1;
     iSources.add( this.pio90 );
     if( this.ctc50 != null ) {
       iSources.add( this.ctc50 );
+    }
+    if( this.k1520Sound != null ) {
+      iSources.add( this.k1520Sound );
     }
     if( this.kcNet != null ) {
       iSources.add( this.kcNet );
@@ -286,11 +315,59 @@ private static int lastAA = -1;
     cpu.addTStatesListener( this );
     this.ctc80.setTimerConnection( 0, 2 );
     this.ctc80.setTimerConnection( 2, 3 );
+    this.pio90.addPIOPortListener( this, Z80PIO.PortInfo.B );
     if( this.vdip != null ) {
       this.vdip.applySettings( props );
     }
     checkAddPCListener( props );
     z80MaxSpeedChanged( cpu );
+  }
+
+
+  public static AutoInputCharSet getAutoInputCharSet()
+  {
+    if( autoInputCharSet == null ) {
+      autoInputCharSet = new AutoInputCharSet();
+      autoInputCharSet.addAsciiChars();
+      autoInputCharSet.addEnterChar();
+      autoInputCharSet.addEscChar();
+      autoInputCharSet.addDelChar();
+      autoInputCharSet.addKeyChar( 18, "INS MODE" );
+      autoInputCharSet.addSpecialChar(
+			29,
+			AutoInputCharSet.VIEW_LEFT,
+			AutoInputCharSet.TEXT_LEFT );
+      autoInputCharSet.addSpecialChar(
+			28,
+			AutoInputCharSet.VIEW_RIGHT,
+			AutoInputCharSet.TEXT_RIGHT );
+      autoInputCharSet.addSpecialChar(
+			31,
+			AutoInputCharSet.VIEW_DOWN,
+			AutoInputCharSet.TEXT_DOWN );
+      autoInputCharSet.addSpecialChar(
+			30,
+			AutoInputCharSet.VIEW_UP,
+			AutoInputCharSet.TEXT_UP );
+      autoInputCharSet.addSpecialChar(
+			11,
+			AutoInputCharSet.VIEW_HOME,
+			AutoInputCharSet.TEXT_HOME );
+      autoInputCharSet.addCtrlCodes();
+      autoInputCharSet.setCtrlCodeDesc(
+			8,
+			SCPX_PREFIX + AutoInputCharSet.TEXT_LEFT );
+      autoInputCharSet.setCtrlCodeDesc(
+			4,
+			SCPX_PREFIX + AutoInputCharSet.TEXT_RIGHT );
+      autoInputCharSet.setCtrlCodeDesc(
+			24,
+			SCPX_PREFIX + AutoInputCharSet.TEXT_DOWN );
+      autoInputCharSet.setCtrlCodeDesc(
+			5,
+			SCPX_PREFIX + AutoInputCharSet.TEXT_UP );
+    }
+    return autoInputCharSet;
   }
 
 
@@ -370,7 +447,7 @@ private static int lastAA = -1;
   @Override
   public void psgWriteFrame( PSG8910 psg, int a, int b, int c )
   {
-    int          value           = (a + b + c) / 6;
+    int          value           = (a + b + c) / 3;
     ByteIterator keyClickSamples = this.keyClickSamples;
     if( keyClickSamples != null ) {
       if( keyClickSamples.hasNext() ) {
@@ -387,7 +464,25 @@ private static int lastAA = -1;
 	this.keyClickSamples = null;
       }
     }
-    this.emuThread.writeSoundOutFrames( 1, value, value, value );
+    this.svgSoundDevice.writeFrames( 1, value, value, value );
+  }
+
+
+	/* --- Z80MaxSpeedListener --- */
+
+  @Override
+  public void z80MaxSpeedChanged( Z80CPU cpu )
+  {
+    this.gdc.z80MaxSpeedChanged( cpu );
+    if( this.fdc != null ) {
+      this.fdc.z80MaxSpeedChanged( cpu );
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80MaxSpeedChanged( cpu );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.z80MaxSpeedChanged( cpu );
+    }
   }
 
 
@@ -407,6 +502,41 @@ private static int lastAA = -1;
 	  cpu.setRegPC( cpu.doPop() );
 	}
       }
+    }
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public synchronized void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (pio == this.pio90)
+	&& (port == Z80PIO.PortInfo.B)
+	&& ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	    || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+    {
+      int v = this.pio90.fetchOutValuePortB( 0xFF );
+
+      /*
+       * Bit 1: V24 TxD,
+       * Wenn bei fallender Flanke gerade keine Ausgabe laeuft,
+       * dann beginnt jetzt eine.
+       */
+      boolean state = ((v & 0x02) != 0);
+      if( !state && this.v24BitOut && (this.v24BitNum == 0) ) {
+	this.v24ShiftBuf      = 0;
+	this.v24TStateCounter = 3 * V24_TSTATES_PER_BIT / 2;
+	this.v24BitNum++;
+      }
+      this.v24BitOut = state;
+
+      // Bit 5 und 6: Joystick
+      this.joyEnabled   = ((v & 0x40) == 0);
+      this.joy1Selected = ((v & 0x20) == 0);
     }
   }
 
@@ -527,13 +657,19 @@ private static int lastAA = -1;
 			props,
 			this.propPrefix + PROP_RF2_PREFIX );
     }
+    if( rv ) {
+      rv = GIDE.complies( this.gide, props, this.propPrefix );
+    }
     if( rv && emulatesFloppyDisk( props ) != (this.fdc != null) ) {
+      rv = false;
+    }
+    if( rv && (emulatesK1520Sound( props ) != (this.k1520Sound != null)) ) {
       rv = false;
     }
     if( rv && (emulatesKCNet( props ) != (this.kcNet != null)) ) {
       rv = false;
     }
-    if( rv && (emulatesUSB( props ) != (this.vdip != null)) ) {
+    if( rv && (emulatesVDIP( props ) != (this.vdip != null)) ) {
       rv = false;
     }
     return rv;
@@ -548,7 +684,7 @@ private static int lastAA = -1;
 
 
   @Override
-  public AbstractKeyboardFld createKeyboardFld()
+  public A5105KeyboardFld createKeyboardFld()
   {
     this.keyboardFld = new A5105KeyboardFld( this );
     return this.keyboardFld;
@@ -566,9 +702,11 @@ private static int lastAA = -1;
       cpu.removePCListener( this );
       this.pasteFast = false;
     }
-    this.psg.die();
+    this.pio90.removePIOPortListener( this, Z80PIO.PortInfo.B );
     this.gdc.setGDCListener( null );
     this.gdc.setVRAM( null );
+    this.svgSoundDevice.fireStop();
+    this.svgPSG.fireStop();
     if( this.ramFloppy1 != null ) {
       this.ramFloppy1.deinstall();
     }
@@ -578,9 +716,29 @@ private static int lastAA = -1;
     if( this.fdc != null ) {
       this.fdc.die();
     }
+    if( this.gide != null ) {
+      this.gide.die();
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.die();
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.die();
+    }
     if( this.vdip != null ) {
       this.vdip.die();
     }
+    super.die();
+  }
+
+
+  @Override
+  public boolean emulatesFloppyDisk( Properties props )
+  { 
+    return EmuUtil.getBooleanProperty(
+			props,
+			this.propPrefix + PROP_FDC_ENABLED,
+			true );
   }
 
 
@@ -627,8 +785,9 @@ private static int lastAA = -1;
 			this.vis.getCharColCount(),
 			this.vis.getCharRowCount(),
 			rowHeight,
-			charHeight,
 			this.vis.getCharWidth(),
+			charHeight,
+			0,
 			this.vis.getCharTopLine() );
     }
     return rv;
@@ -726,13 +885,6 @@ private static int lastAA = -1;
 
 
   @Override
-  public int getResetStartAddress( EmuThread.ResetLevel resetLevel )
-  {
-    return 0x0000;
-  }
-
-
-  @Override
   protected int getScreenChar( CharRaster chRaster, int chX, int chY )
   {
     return cp437.toUnicode( this.gdc.getScreenChar( chX, chY ) );
@@ -750,6 +902,17 @@ private static int lastAA = -1;
   public int getScreenWidth()
   {
     return this.vis.getScreenWidth();
+  }
+
+
+  @Override
+  public AbstractSoundDevice[] getSoundDevices()
+  {
+    return this.k1520Sound != null ?
+		new AbstractSoundDevice[] {
+				this.svgSoundDevice,
+				this.k1520Sound.getSoundDevice() }
+		: new AbstractSoundDevice[] { this.svgSoundDevice };
   }
 
 
@@ -782,9 +945,11 @@ private static int lastAA = -1;
 
 
   @Override
-  protected VDIP getVDIP()
+  public VDIP[] getVDIPs()
   {
-    return this.vdip;
+    return this.vdip != null ?
+			new VDIP[] { this.vdip }
+			: super.getVDIPs();
   }
 
 
@@ -909,80 +1074,96 @@ private static int lastAA = -1;
 	boolean oldShift   = ((this.keyboardMatrix[ 6 ] & 0x01) != 0);
 	Arrays.fill( this.keyboardMatrix, 0 );
 	switch( ch ) {
+	  case '\n':
+	  case '\r':
+	    this.keyboardMatrix[ 7 ] |= 0x80;	// Enter
+	    rv = true;
+	    break;
+	  case '\u001B':
+	    this.keyboardMatrix[ 6 ] |= 0x02;	// Escape
+	    rv = true;
+	    break;
+	  case '\u001C':
+	    this.keyboardMatrix[ 8 ] |= 0x80;	// Cursor rechts
+	    rv = true;
+	    break;
+	  case '\u001D':
+	    this.keyboardMatrix[ 8 ] |= 0x10;	// Cursor links
+	    rv = true;
+	    break;
+	  case '\u001E':
+	    this.keyboardMatrix[ 8 ] |= 0x20;	// Cursor hoch
+	    rv = true;
+	    break;
+	  case '\u001F':
+	    this.keyboardMatrix[ 8 ] |= 0x40;	// Cursor runter
+	    rv = true;
+	    break;
+	  case '\u0020':
+	    this.keyboardMatrix[ 8 ] |= 0x01;	// Leertaste
+	    rv = true;
+	    break;
 	  case '@':
 	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
 	    this.keyboardMatrix[ 0 ] = 0x04;
 	    rv = true;
 	    break;
-
 	  case '\u00A7':			// Paragraph
 	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
 	    this.keyboardMatrix[ 0 ] = 0x08;
 	    rv = true;
 	    break;
-
 	  case '|':
 	    this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
 	    this.keyboardMatrix[ 1 ] = 0x20;
 	    rv = true;
 	    break;
-
 	  case '[':
 	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
 	    this.keyboardMatrix[ 1 ] = 0x01;
 	    rv = true;
 	    break;
-
 	  case ']':
 	    this.keyboardMatrix[ 6 ] = 0x10;	// Alt
 	    this.keyboardMatrix[ 1 ] = 0x02;
 	    rv = true;
 	    break;
-
 	  case '{':
 	    this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
 	    this.keyboardMatrix[ 1 ] = 0x01;
 	    rv = true;
 	    break;
-
 	  case '}':
 	    this.keyboardMatrix[ 6 ] = 0x11;	// Alt+Shift
 	    this.keyboardMatrix[ 1 ] = 0x02;
 	    rv = true;
 	    break;
-
 	  case '~':
 	    this.keyboardMatrix[ 7 ] = 0x04;	// Graph
 	    this.keyboardMatrix[ 6 ] = 0x01;	// Shift
 	    this.keyboardMatrix[ 1 ] = 0x80;
 	    rv = true;
 	    break;
-
 	  case '\u00F1':			// PF1
 	    this.keyboardMatrix[ 7 ] |= 0x02;
 	    rv = true;
 	    break;
-
 	  case '\u00F2':			// PF2
 	    this.keyboardMatrix[ 7 ] |= 0x01;
 	    rv = true;
 	    break;
-
 	  case '\u00F3':			// PF3
 	    this.keyboardMatrix[ 6 ] |= 0x80;
 	    rv = true;
 	    break;
-
 	  case '\u00F4':			// PF4
 	    this.keyboardMatrix[ 6 ] |= 0x40;
 	    rv = true;
 	    break;
-
 	  case '\u00F5':			// PF5
 	    this.keyboardMatrix[ 6 ] |= 0x20;
 	    rv = true;
 	    break;
-
 	  default:
 	    rv = setCharInKBMatrix( kbMatrixNormal, ch );
 	    if( !rv ) {
@@ -1012,19 +1193,20 @@ private static int lastAA = -1;
 
 
   /*
-   * In der SCP-Betriebsart wird zyklisch der ROM eingeblendet.
+   * In der SCPX-Betriebsart wird zyklisch der ROM eingeblendet.
    * Dadurch funktioniert das Laden in den RAM nicht sicher.
-   * Aus diesem Grund ist die Methoden ueberschrieben,
+   * Aus diesem Grund ist die Methode ueberschrieben,
    * um ein sicheres Laden in den RAM zu gewaehrleisten.
    */
   @Override
   public void loadIntoMem(
-			int        begAddr,
-			byte[]     data,
-			int        idx,
-			int        len,
-			FileFormat fileFmt,
-			int        fileType )
+			int           begAddr,
+			byte[]        data,
+			int           idx,
+			int           len,
+			FileFormat    fileFmt,
+			int           fileType,
+			StringBuilder rvStatusMsg )
   {
     if( data != null ) {
       int n   = len;
@@ -1124,14 +1306,6 @@ private static int lastAA = -1;
 	rv = this.pio90.readDataB();
 	break;
 
-      case 0x92:
-	rv = this.pio90.readControlA();
-	break;
-
-      case 0x93:
-	rv = this.pio90.readControlB();
-	break;
-
       case 0x98:
 	rv = this.gdc.readStatus();
 	break;
@@ -1145,10 +1319,10 @@ private static int lastAA = -1;
 	break;
 
       case 0xA1:				// Sound-Register lesen
-	if( this.psgRegNum == 7 ) {
-	  rv = ~this.psg.getRegister( this.psgRegNum ) & 0xFF;
-	} else if( this.psgRegNum <= 13 ) {
-	  rv = this.psg.getRegister( this.psgRegNum );
+	if( this.svgPSGRegNum == 7 ) {
+	  rv = ~this.svgPSG.getRegister( this.svgPSGRegNum ) & 0xFF;
+	} else if( this.svgPSGRegNum <= 13 ) {
+	  rv = this.svgPSG.getRegister( this.svgPSGRegNum );
 	}
 	break;
 
@@ -1217,6 +1391,16 @@ private static int lastAA = -1;
 	  rv = this.kcNet.read( port );
 	}
 	break;
+
+      default:
+	if( (this.k1520Sound != null) && ((port & 0xF8) == 0x38) ) {
+	  rv = this.k1520Sound.read( port, tStates );
+	} else if( (this.gide != null) && ((port & 0xF0) == 0xD0) ) {
+	  int value = this.gide.read( port );
+	  if( value >= 0 ) {
+	    rv = value;
+	  }
+	}
     }
     return rv;
   }
@@ -1233,21 +1417,21 @@ private static int lastAA = -1;
 
 
   @Override
-  public void reset( EmuThread.ResetLevel resetLevel, Properties props )
+  public void reset( boolean powerOn, Properties props )
   {
-    super.reset( resetLevel, props );
-    if( (resetLevel == EmuThread.ResetLevel.POWER_ON)
-	|| (resetLevel == EmuThread.ResetLevel.COLD_RESET) )
-    {
-      this.ctc80.reset( true );
-      this.pio90.reset( true );
-    } else {
-      this.ctc80.reset( false );
-      this.pio90.reset( false );
+    super.reset( powerOn, props );
+    if( powerOn ) {
+      initDRAM();
     }
-    this.vis.reset( resetLevel );
+    if( this.ctc50 != null ) {
+      this.ctc50.reset( powerOn );
+    }
+    this.ctc80.reset( powerOn );
+    this.pio90.reset( powerOn );
+    this.vis.reset( powerOn );
+    this.svgPSG.reset();
     if( this.fdc != null ) {
-      this.fdc.reset( resetLevel == EmuThread.ResetLevel.POWER_ON );
+      this.fdc.reset( powerOn );
     }
     if( this.floppyDiskDrives != null ) {
       for( int i = 0; i < this.floppyDiskDrives.length; i++ ) {
@@ -1257,14 +1441,26 @@ private static int lastAA = -1;
 	}
       }
     }
-    this.tapeInPhase        = this.emuThread.readTapeInPhase();
+    if( this.gide != null ) {
+      this.gide.reset();
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.reset( powerOn );
+    }
+    if( this.kcNet != null ) {
+      this.kcNet.reset( powerOn );
+    }
+    if( this.vdip != null ) {
+      this.vdip.reset( powerOn );
+    }
+    this.keyClickSamples    = null;
     this.fdcReset           = false;
     this.joyEnabled         = false;
     this.joy1Selected       = false;
     this.joy0ActionMask     = 0;
     this.joy1ActionMask     = 0;
     this.memConfig          = 0;
-    this.psgRegNum          = 0;
+    this.svgPSGRegNum       = 0;
     this.v24BitOut          = true;	// V24: H-Pegel
     this.v24BitNum          = 0;
     this.v24ShiftBuf        = 0;
@@ -1287,7 +1483,7 @@ private static int lastAA = -1;
 		endAddr,
 		"RBASIC-Programm speichern",
 		SaveDlg.BasicType.RBASIC,
-		EmuUtil.getBasicFileFilter() )).setVisible( true );
+		FileUtil.getBasicOrRBasicFileFilter() )).setVisible( true );
     } else {
       showNoBasic();
     }
@@ -1338,35 +1534,29 @@ private static int lastAA = -1;
 
 
   @Override
-  public void soundOutFrameRateChanged( int frameRate )
-  {
-    this.psg.setFrameRate( frameRate );
-  }
-
-
-  @Override
   public synchronized void startPastingText( String text )
   {
     boolean done = false;
-    if( text != null ) {
-      if( !text.isEmpty() ) {
-	if( this.pasteFast ) {
-	  cancelPastingText();
-	  CharacterIterator iter = new StringCharacterIterator( text );
-	  char              ch   = iter.first();
-	  if( ch != CharacterIterator.DONE ) {
-	    if( ch == '\n' ) {
-	      ch = '\r';
-	    }
-	    /*
-	     * Da sich die Programmausfuehrung i.d.R. bereits
-	     * in der betreffenden Systemfunktion befindet,
-	     * muss das erste Zeichen direkt an der Tastatur
-	     * angelegt werden,
-	     * damit der Systemaufruf beendet wird und somit
-	     * der naechste Aufruf dann abgefangen werden kann.
-	     */
-	    try {
+    try {
+      if( text != null ) {
+	if( !text.isEmpty() ) {
+	  if( this.pasteFast ) {
+	    cancelPastingText();
+	    informPastingTextStatusChanged( true );
+	    CharacterIterator iter = new StringCharacterIterator( text );
+	    char              ch   = iter.first();
+	    if( ch != CharacterIterator.DONE ) {
+	      if( ch == '\n' ) {
+		ch = '\r';
+	      }
+	      /*
+	       * Da sich die Programmausfuehrung i.d.R. bereits
+	       * in der betreffenden Systemfunktion befindet,
+	       * muss das erste Zeichen direkt an der Tastatur
+	       * angelegt werden,
+	       * damit der Systemaufruf beendet wird und somit
+	       * der naechste Aufruf dann abgefangen werden kann.
+	       */
 	      keyReleased();
 	      Thread.sleep( 100 );
 	      if( keyTyped( ch ) ) {
@@ -1376,16 +1566,18 @@ private static int lastAA = -1;
 		fireShowCharNotPasted( iter );
 	      }
 	    }
-	    catch( InterruptedException ex ) {}
+	  } else {
+	    super.startPastingText( text );
+	    done = true;
 	  }
-	} else {
-	  super.startPastingText( text );
-	  done = true;
 	}
       }
     }
+    catch( InterruptedException ex ) {
+      done = false;
+    }
     if( !done ) {
-      this.screenFrm.firePastingTextFinished();
+      informPastingTextStatusChanged( false );
     }
   }
 
@@ -1440,20 +1632,6 @@ private static int lastAA = -1;
 
 
   @Override
-  public boolean supportsSoundOut8Bit()
-  {
-    return true;
-  }
-
-
-  @Override
-  public boolean supportsSoundOutMono()
-  {
-    return true;
-  }
-
-
-  @Override
   public boolean supportsTapeIn()
   {
     return true;
@@ -1464,6 +1642,13 @@ private static int lastAA = -1;
   public boolean supportsTapeOut()
   {
     return true;
+  }
+
+
+  @Override
+  public void tapeInPhaseChanged()
+  {
+    this.pio90.putInValuePortB( this.tapeInPhase ? 0x80 : 0, 0x80 );
   }
 
 
@@ -1484,15 +1669,14 @@ private static int lastAA = -1;
 		&& (begAddr <= 0x8001)
 		&& ((begAddr + len) > 0x8008)) )
       {
-	int endAddr = SourceUtil.getBasicEndAddr(
-						this.emuThread,
-						0x8001 );
-	if( endAddr > 0x8001 ) {
-	  endAddr++;
+	int topAddr = SourceUtil.getBasicEndAddr(
+					this.emuThread,
+					0x8001 ) + 1;
+	if( topAddr > 0x8001 ) {
 	  this.emuThread.setMemByte( 0x8000, 0 );
-	  this.emuThread.setMemWord( 0xF588, endAddr );
-	  this.emuThread.setMemWord( 0xF58A, endAddr );
-	  this.emuThread.setMemWord( 0xF58C, endAddr );
+	  this.emuThread.setMemWord( 0xF588, topAddr );
+	  this.emuThread.setMemWord( 0xF58A, topAddr );
+	  this.emuThread.setMemWord( 0xF58C, topAddr );
 	  this.emuThread.setMemWord( 0xF58E, 0x8000 );
 	  this.emuThread.setMemWord( 0xF67B, 0 );
 	}
@@ -1586,25 +1770,7 @@ private static int lastAA = -1;
 	break;
 
       case 0x91:
-	synchronized( this ) {
-	  this.pio90.writeDataB( value );
-	  int v = this.pio90.fetchOutValuePortB( false );
-	  /*
-	   * Bit 1: V24 TxD,
-	   * Wenn bei fallender Flanke gerade keine Ausgabe laeuft,
-	   * dann beginnt jetzt eine.
-	   */
-	  boolean state = ((v & 0x02) != 0);
-	  if( !state && this.v24BitOut && (this.v24BitNum == 0) ) {
-	    this.v24ShiftBuf      = 0;
-	    this.v24TStateCounter = 3 * V24_TSTATES_PER_BIT / 2;
-	    this.v24BitNum++;
-	  }
-	  this.v24BitOut = state;
-	  // Bit 5 und 6: Joystick
-	  this.joyEnabled   = ((v & 0x40) == 0);
-	  this.joy1Selected = ((v & 0x20) == 0);
-	}
+	this.pio90.writeDataB( value );
 	break;
 
       case 0x92:
@@ -1636,15 +1802,15 @@ private static int lastAA = -1;
 	break;
 
       case 0xA0:				// Auswahl Sound-Register
-	this.psgRegNum = value & 0x0F;
+	this.svgPSGRegNum = value & 0x0F;
 	break;
 
       case 0xA1:				// Sound-Register schreiben
-	if( this.psgRegNum <= 13 ) {
-	  if( this.psgRegNum == 7 ) {
-	    this.psg.setRegister( this.psgRegNum, ~value );
+	if( this.svgPSGRegNum <= 13 ) {
+	  if( this.svgPSGRegNum == 7 ) {
+	    this.svgPSG.setRegister( this.svgPSGRegNum, ~value );
 	  } else {
-	    this.psg.setRegister( this.psgRegNum, value );
+	    this.svgPSG.setRegister( this.svgPSGRegNum, value );
 	  }
 	}
 	break;
@@ -1687,20 +1853,13 @@ private static int lastAA = -1;
 	  this.kcNet.write( port, value );
 	}
 	break;
-    }
-  }
 
-
-  @Override
-  public void z80MaxSpeedChanged( Z80CPU cpu )
-  {
-    super.z80MaxSpeedChanged( cpu );
-    this.gdc.z80MaxSpeedChanged( cpu );
-    if( this.fdc != null ) {
-      this.fdc.z80MaxSpeedChanged( cpu );
-    }
-    if( this.kcNet != null ) {
-      this.kcNet.z80MaxSpeedChanged( cpu );
+      default:
+	if( (this.k1520Sound != null) && ((port & 0xF8) == 0x38) ) {
+	  this.k1520Sound.write( port, value, tStates );
+	} else if( (this.gide != null) && ((port & 0xF0) == 0xD0) ) {
+	  this.gide.write( port, value );
+	}
     }
   }
 
@@ -1716,6 +1875,9 @@ private static int lastAA = -1;
     this.gdc.z80TStatesProcessed( cpu, tStates );
     if( this.fdc != null ) {
       this.fdc.z80TStatesProcessed( cpu, tStates );
+    }
+    if( this.k1520Sound != null ) {
+      this.k1520Sound.z80TStatesProcessed( cpu, tStates );
     }
     if( this.kcNet != null ) {
       this.kcNet.z80TStatesProcessed( cpu, tStates );
@@ -1742,13 +1904,6 @@ private static int lastAA = -1;
 	  }
 	}
       }
-    }
-
-    // Toneingang vom Kassettenrecorder
-    boolean phase = this.emuThread.readTapeInPhase();
-    if( phase != this.tapeInPhase ) {
-      this.tapeInPhase = phase;
-      this.pio90.putInValuePortB( this.tapeInPhase ? 0x80 : 0, 0x80 );
     }
   }
 
@@ -1781,33 +1936,6 @@ private static int lastAA = -1;
     if( (brightness >= 0F) && (brightness <= 1F) ) {
       this.vis.createColors( brightness );
     }
-  }
-
-
-  private boolean emulatesFloppyDisk( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_FDC_ENABLED,
-			true );
-  }
-
-
-  private boolean emulatesKCNet( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_KCNET_ENABLED,
-			false );
-  }
-
-
-  private boolean emulatesUSB( Properties props )
-  {
-    return EmuUtil.getBooleanProperty(
-			props,
-			this.propPrefix + PROP_VDIP_ENABLED,
-			false );
   }
 
 
@@ -1856,7 +1984,7 @@ private static int lastAA = -1;
   private void setKeyClickPhase( boolean state )
   {
     if( (state != this.keyClickPhase) && (this.keyClickSamples == null) ) {
-      int frameRate = this.psg.getFrameRate();
+      int frameRate = this.svgPSG.getFrameRate();
       if( frameRate > 0 ) {
 	int hWave = Math.round( (float) frameRate * KEY_CLICK_HWAVE_MILLIS
 								/ 1000F );
@@ -1866,9 +1994,9 @@ private static int lastAA = -1;
 	byte[] samples = new byte[ 5 * hWave ];
 	for( int i = 0; i < samples.length; i++ ) {
 	  if( (i < hWave) || (i >= (4 * hWave)) ) {
-	    samples[ i ] = (byte) AudioOut.MAX_UNSIGNED_USED_VALUE / 3;
+	    samples[ i ] = (byte) (AudioOut.MAX_USED_UNSIGNED_VALUE / 3);
 	  } else if( (i >= (2 * hWave)) && (i < (3 * hWave)) ) {
-	    samples[ i ] = (byte) AudioOut.MAX_UNSIGNED_USED_VALUE / 2;
+	    samples[ i ] = (byte) (AudioOut.MAX_USED_UNSIGNED_VALUE / 2);
 	  } else {
 	    samples[ i ] = (byte) 0;
 	  }

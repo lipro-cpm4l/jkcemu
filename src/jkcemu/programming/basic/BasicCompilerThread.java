@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,10 +8,7 @@
 
 package jkcemu.programming.basic;
 
-import java.awt.Component;
-import java.awt.EventQueue;
 import java.io.IOException;
-import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.programming.PrgLogger;
@@ -74,15 +71,7 @@ public class BasicCompilerThread extends PrgThread
       final String asmText = this.compiler.compile();
       if( asmText != null ) {
 	if( this.basicOptions.getShowAssemblerText() ) {
-	  EventQueue.invokeLater(
-			new Runnable()
-			{
-			  @Override
-			  public void run()
-			  {
-			    openAsmText( asmText );
-			  }
-			} );
+	  fireOpenResultText( asmText );
 	}
 	appendToLog( "Assembliere...\n" );
 	Z80Assembler assembler = new Z80Assembler(
@@ -93,8 +82,6 @@ public class BasicCompilerThread extends PrgThread
 						this.logger,
 						true );
 	status = assembler.assemble(
-			target.getMaxAppNameLen() > 0 ?
-				this.basicOptions.getAppName() : null,
 			(target instanceof Z9001Target)
 				|| (target instanceof Z9001KRTTarget) );
 	if( (this.basicOptions.getBssBegAddr() >= 0)
@@ -138,8 +125,14 @@ public class BasicCompilerThread extends PrgThread
 	      if( this.options.getCodeToEmu()
 		  || this.options.getForceRun() )
 	      {
-		writeCodeToEmu( assembler, false );
-		if( !this.options.getForceRun() && (this.emuThread != null) ) {
+		writeCodeToEmu(
+			assembler,
+			target.getDefaultFileFormat(),
+			false );
+		if( !this.basicOptions.isAppTypeSubroutine()
+		    && !this.options.getForceRun()
+		    && (this.emuThread != null) )
+		{
 		  EmuSys emuSys = this.emuThread.getEmuSys();
 		  if( emuSys != null ) {
 		    String startCmd = target.getStartCmd(
@@ -179,33 +172,4 @@ public class BasicCompilerThread extends PrgThread
     super.cancel();
     this.compiler.cancel();
   }
-
-
-	/* --- private Methoden --- */
-
-  private void openAsmText( String text )
-  {
-    TextEditFrm textEditFrm = this.editText.getTextEditFrm();
-    if( textEditFrm != null ) {
-      EditText asmEditText = this.editText.getResultEditText();
-      if( asmEditText != null ) {
-	if( asmEditText.hasDataChanged()
-	    || !textEditFrm.contains( asmEditText ) )
-	{
-	  asmEditText = null;
-	}
-      }
-      if( asmEditText != null ) {
-	asmEditText.setText( text );
-	Component tabComponent = asmEditText.getTabComponent();
-	if( tabComponent != null ) {
-	  textEditFrm.setSelectedTabComponent( tabComponent );
-	}
-      } else {
-	asmEditText = textEditFrm.openText( text );
-	this.editText.setResultEditText( asmEditText );
-      }
-    }
-  }
 }
-

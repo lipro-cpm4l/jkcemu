@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,8 +8,7 @@
 
 package jkcemu.programming;
 
-import java.lang.*;
-import jkcemu.base.EmuUtil;
+import jkcemu.Main;
 
 
 public class PrgLogger
@@ -45,13 +44,13 @@ public class PrgLogger
 		  @Override
 		  public void appendToErrLog( String text )
 		  {
-		    EmuUtil.printErr( text );
+		    Main.printErr( text );
 		  }
 
 		  @Override
 		  public void appendToOutLog( String text )
 		  {
-		    EmuUtil.printOut( text );
+		    Main.printOut( text );
 		  }
 		};
   }

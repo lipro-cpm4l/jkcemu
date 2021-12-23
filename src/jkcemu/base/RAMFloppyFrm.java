@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,12 +13,9 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
-import javax.swing.BorderFactory;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import jkcemu.Main;
 import jkcemu.text.TextUtil;
 
@@ -66,9 +63,9 @@ public class RAMFloppyFrm extends BaseFrm
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean applySettings( Properties props, boolean resizable )
+  public boolean applySettings( Properties props )
   {
-    boolean   rv        = super.applySettings( props, resizable );
+    boolean   rv        = super.applySettings( props );
     boolean   different = true;
     if( this.emuThread != null ) {
       EmuSys emuSys = this.emuThread.getEmuSys();
@@ -109,7 +106,7 @@ public class RAMFloppyFrm extends BaseFrm
 	  }
 	  else if( cmd.equals( ACTION_HELP ) ) {
 	    rv = true;
-	    HelpFrm.open( HELP_PAGE );
+	    HelpFrm.openPage( HELP_PAGE );
 	  }
 	}
       }
@@ -119,7 +116,7 @@ public class RAMFloppyFrm extends BaseFrm
 
 
   @Override
-  public void resetFired()
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
   {
     if( this.rfFld1 != null ) {
       this.rfFld1.fireRAMFloppyChanged();
@@ -142,11 +139,10 @@ public class RAMFloppyFrm extends BaseFrm
     this.rfSize1   = -1;
     this.rfSize2   = -1;
     setTitle( "JKCEMU RAM-Floppies" );
-    Main.updIcon( this );
 
-    int       nRFs      = 0;
-    RAMFloppy rf1       = null;
-    RAMFloppy rf2       = null;
+    int       nRFs = 0;
+    RAMFloppy rf1  = null;
+    RAMFloppy rf2  = null;
     if( emuThread != null ) {
       EmuSys emuSys = emuThread.getEmuSys();
       if( emuSys != null ) {
@@ -166,22 +162,19 @@ public class RAMFloppyFrm extends BaseFrm
     }
 
 
-    // Menu
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
-
-
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuFile.add( createJMenuItem( "Schlie\u00DFen", ACTION_CLOSE ) );
-    mnuBar.add( mnuFile );
+    JMenu mnuFile = createMenuFile();
+    mnuFile.add( createMenuItemClose( ACTION_CLOSE ) );
 
 
     // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-    mnuHelp.add( createJMenuItem( "Hilfe...", ACTION_HELP ) );
-    mnuBar.add( mnuHelp );
+    JMenu mnuHelp = createMenuHelp();
+    mnuHelp.add(
+	createMenuItem( "Hilfe zu RAM-Floppies...", ACTION_HELP ) );
+
+
+    // Menu
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile, mnuHelp ) );
 
 
     // Fensterinhalt
@@ -193,7 +186,7 @@ public class RAMFloppyFrm extends BaseFrm
 	this.rfSize1 = rf1.getSize();
 	this.rfFld1  = new RAMFloppyFld( this, rf1 );
 	this.rfFld1.setBorder(
-		BorderFactory.createTitledBorder( this.rfInfo1 ) );
+		GUIFactory.createTitledBorder( this.rfInfo1 ) );
 	add( this.rfFld1 );
 	--nRFs;
       }
@@ -203,22 +196,18 @@ public class RAMFloppyFrm extends BaseFrm
 	this.rfSize2 = rf2.getSize();
 	this.rfFld2  = new RAMFloppyFld( this, rf2 );
 	this.rfFld2.setBorder(
-		BorderFactory.createTitledBorder( this.rfInfo2 ) );
+		GUIFactory.createTitledBorder( this.rfInfo2 ) );
 	add( this.rfFld2 );
       }
     }
 
 
     // Fenstergroesse
-    setLocationByPlatform( true );
-    /*
-     * Es soll immer die pack()-Methode aufgerufen werden.
-     * Aus diesem Grund soll in der Vater-Klasse die Fenstergroesse
-     * nicht gesetzt werden, weshalb als resizable=false uebergeben wird.
-     */
-    applySettings( Main.getProperties(), false );
-    pack();
     setResizable( true );
+    if( !super.applySettings( Main.getProperties() ) ) {
+      setLocationByPlatform( true );
+      pack();
+    }
 
 
     // Timer

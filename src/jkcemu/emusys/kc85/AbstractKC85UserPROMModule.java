@@ -1,5 +1,5 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,8 +9,7 @@
 package jkcemu.emusys.kc85;
 
 import java.awt.Component;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public abstract class AbstractKC85UserPROMModule extends AbstractKC85Module
@@ -98,7 +97,7 @@ public abstract class AbstractKC85UserPROMModule extends AbstractKC85Module
   @Override
   public void reload( Component owner )
   {
-    this.rom = EmuUtil.readFile(
+    this.rom = FileUtil.readFile(
 			owner,
 			this.fileName,
 			true,

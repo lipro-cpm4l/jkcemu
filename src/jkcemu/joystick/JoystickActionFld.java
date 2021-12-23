@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Polygon;
-import java.lang.*;
 
 
 public class JoystickActionFld extends Component
@@ -74,9 +73,9 @@ public class JoystickActionFld extends Component
       rv |= JoystickThread.UP_MASK;
     } else if( pgDown.contains( x, y ) ) {
       rv |= JoystickThread.DOWN_MASK;
-    } else if( isInCircle( 20, 90, 10, x, y ) ) {
+    } else if( isWithinCircle( 20, 90, 10, x, y ) ) {
       rv |= JoystickThread.BUTTON1_MASK;
-    } else if( isInCircle( 50, 90, 10, x, y ) ) {
+    } else if( isWithinCircle( 50, 90, 10, x, y ) ) {
       rv |= JoystickThread.BUTTON2_MASK;
     }
     return rv;
@@ -101,42 +100,42 @@ public class JoystickActionFld extends Component
   public void paint( Graphics g )
   {
     boolean enabled     = isEnabled();
-    Color   colorBorder = (enabled ? Color.black : Color.gray);
+    Color   colorBorder = (enabled ? Color.BLACK : Color.GRAY);
 
     g = g.create();
 
     // Hoch
-    g.setColor( enabled && this.stateUp ?  Color.red : Color.lightGray );
+    g.setColor( enabled && this.stateUp ? Color.RED : Color.LIGHT_GRAY );
     g.fillPolygon( pgUp );
     g.setColor( colorBorder );
     g.drawPolygon( pgUp );
 
     // Links
-    g.setColor( enabled && this.stateLeft ?  Color.red : Color.lightGray );
+    g.setColor( enabled && this.stateLeft ? Color.RED : Color.LIGHT_GRAY );
     g.fillPolygon( pgLeft );
     g.setColor( colorBorder );
     g.drawPolygon( pgLeft );
 
     // Rechts
-    g.setColor( enabled && this.stateRight ?  Color.red : Color.lightGray );
+    g.setColor( enabled && this.stateRight ? Color.RED : Color.LIGHT_GRAY );
     g.fillPolygon( pgRight );
     g.setColor( colorBorder );
     g.drawPolygon( pgRight );
 
     // Runter
-    g.setColor( enabled && this.stateDown ?  Color.red : Color.lightGray );
+    g.setColor( enabled && this.stateDown ? Color.RED : Color.LIGHT_GRAY );
     g.fillPolygon( pgDown );
     g.setColor( colorBorder );
     g.drawPolygon( pgDown );
 
     // Aktionsknopf 1
-    g.setColor( enabled && this.stateButton1 ?  Color.red : Color.lightGray );
+    g.setColor( enabled && this.stateButton1 ? Color.RED : Color.LIGHT_GRAY );
     g.fillOval( 10, 80, 20, 20 );
     g.setColor( colorBorder );
     g.drawOval( 10, 80, 20, 20 );
 
     // Aktionsknopf 2
-    g.setColor( enabled && this.stateButton2 ?  Color.red : Color.lightGray );
+    g.setColor( enabled && this.stateButton2 ? Color.RED : Color.LIGHT_GRAY );
     g.fillOval( 40, 80, 20, 20 );
     g.setColor( colorBorder );
     g.drawOval( 40, 80, 20, 20 );
@@ -147,7 +146,12 @@ public class JoystickActionFld extends Component
 
 	/* --- private Methoden --- */
 
-  private static boolean isInCircle( int xm, int ym, int r, int xp, int yp )
+  private static boolean isWithinCircle(
+					int xm,
+					int ym,
+					int r,
+					int xp,
+					int yp )
   {
     // Abstand vom Kreismittelpunkt berechnen und mit Radius vergleichen
     int dx = Math.abs( xm - xp );

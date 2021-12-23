@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,12 +10,12 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import javax.swing.JComboBox;
 import jkcemu.audio.AudioFile;
 import jkcemu.audio.PCMDataSource;
 import jkcemu.base.EmuUtil;
 import jkcemu.base.UserInputException;
+import jkcemu.file.FileUtil;
 
 
 public abstract class AbstractConvertTarget
@@ -158,7 +158,7 @@ public abstract class AbstractConvertTarget
 	    }
 	  }
 	}
-	outFile = replaceExtension( srcFile, ext );
+	outFile = FileUtil.replaceExtension( srcFile, ext );
       }
     }
     return outFile;
@@ -181,35 +181,11 @@ public abstract class AbstractConvertTarget
   }
 
 
-  protected File replaceExtension( File srcFile, String ext )
-  {
-    File outFile = null;
-    if( (srcFile != null) && (ext != null) ) {
-      String fName = srcFile.getName();
-      if( fName != null ) {
-	int pos = fName.lastIndexOf( '.' );
-	if( pos >= 0 ) {
-	  if( ext.startsWith( "." ) ) {
-	    fName = fName.substring( 0, pos ) + ext;
-	  } else {
-	    fName = fName.substring( 0, pos + 1 ) + ext;
-	  }
-	  File dirFile = srcFile.getParentFile();
-	  if( dirFile != null ) {
-	    outFile = new File( dirFile, fName );
-	  } else {
-	    outFile = new File( fName );
-	  }
-	}
-      }
-    }
-    return outFile;
-  }
-
-
   protected File replaceExtensionToAudioFile( File srcFile )
   {
-    return replaceExtension( srcFile, getSuggestedAudioFileExtension() );
+    return FileUtil.replaceExtension(
+				srcFile,
+				getSuggestedAudioFileExtension() );
   }
 
 
@@ -223,7 +199,7 @@ public abstract class AbstractConvertTarget
       }
     }
     finally {
-      EmuUtil.closeSilent( pcm );
+      EmuUtil.closeSilently( pcm );
     }
   }
 
@@ -273,12 +249,7 @@ public abstract class AbstractConvertTarget
       String[] supportedExts = AudioFile.getSupportedFileExtensions();
       if( supportedExts != null ) {
 	if( supportedExts.length > 0 ) {
-	  String[] orderedExts = {
-				"wav",
-				"aif",
-				"aifc",
-				"aiff",
-				"au" };
+	  final String[] orderedExts = { "wav", "aif", "aiff", "au" };
 	  for( String e1 : orderedExts ) {
 	    for( String e2 : supportedExts ) {
 	      if( e1.equalsIgnoreCase( e2 ) ) {

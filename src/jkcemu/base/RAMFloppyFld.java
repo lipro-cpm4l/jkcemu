@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,13 +21,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import jkcemu.Main;
+import jkcemu.file.FileUtil;
 
 
 public class RAMFloppyFld extends JComponent implements ActionListener
@@ -40,6 +40,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
   private JButton      btnClear;
   private JComponent   ledFld;
   private boolean      ledState;
+  private boolean      notified;
   private volatile int accessCounter;
 
 
@@ -48,6 +49,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
     this.owner         = owner;
     this.ramFloppy     = ramFloppy;
     this.ledState      = false;
+    this.notified      = false;
     this.accessCounter = 0;
 
     setLayout( new GridBagLayout() );
@@ -61,21 +63,21 @@ public class RAMFloppyFld extends JComponent implements ActionListener
 						new Insets( 5, 5, 5, 5 ),
 						0, 0 );
 
-    add( new JLabel( "Gr\u00F6\u00DFe:" ), gbc );
+    add( GUIFactory.createLabel( "Gr\u00F6\u00DFe:" ), gbc );
     gbc.gridy++;
-    add( new JLabel( "Davon beschrieben:" ), gbc );
+    add( GUIFactory.createLabel( "Davon beschrieben:" ), gbc );
 
     gbc.gridwidth = 2;
     gbc.gridy     = 0;
     gbc.gridx++;
     add(
-	new JLabel( EmuUtil.formatSize(
+	GUIFactory.createLabel( EmuUtil.formatSize(
 				this.ramFloppy.getSize(),
 				false,
 				false ) ),
 	gbc );
 
-    this.labelUsedSize = new JLabel();
+    this.labelUsedSize = GUIFactory.createLabel();
     gbc.gridwidth = 1;
     gbc.gridy++;
     add( this.labelUsedSize, gbc );
@@ -88,6 +90,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
 	    paintLED( g, getWidth(), getHeight() );
 	  }
 	};
+    GUIFactory.initFont( this.ledFld );
     this.ledFld.setBorder( BorderFactory.createLoweredBevelBorder() );
     this.ledFld.setOpaque( true );
     this.ledFld.setPreferredSize( ledSize );
@@ -97,23 +100,20 @@ public class RAMFloppyFld extends JComponent implements ActionListener
     gbc.gridx++;
     add( this.ledFld, gbc );
 
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 3, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 3, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
     gbc.gridx = 0;
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnLoad = new JButton( "Laden..." );
-    this.btnLoad.addActionListener( this );
+    this.btnLoad = GUIFactory.createButton( EmuUtil.TEXT_OPEN_LOAD );
     panelBtn.add( this.btnLoad );
 
-    this.btnSave = new JButton( "Speichern..." );
-    this.btnSave.addActionListener( this );
+    this.btnSave = GUIFactory.createButton( EmuUtil.TEXT_SAVE );
     panelBtn.add( this.btnSave );
 
-    this.btnClear = new JButton( "L\u00F6schen" );
-    this.btnClear.addActionListener( this );
+    this.btnClear = GUIFactory.createButton( EmuUtil.TEXT_DELETE );
     panelBtn.add( this.btnClear );
 
     if( this.ramFloppy != null ) {
@@ -187,6 +187,34 @@ public class RAMFloppyFld extends JComponent implements ActionListener
   }
 
 
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      this.btnLoad.addActionListener( this );
+      this.btnSave.addActionListener( this );
+      this.btnClear.addActionListener( this );
+    }
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      this.btnLoad.removeActionListener( this );
+      this.btnSave.removeActionListener( this );
+      this.btnClear.removeActionListener( this );
+    }
+  }
+
+
 	/* --- Aktionen --- */
 
   private void doClear()
@@ -208,7 +236,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
   {
     if( this.ramFloppy != null ) {
       File file = this.ramFloppy.getFile();
-      file      = EmuUtil.showFileOpenDlg(
+      file      = FileUtil.showFileOpenDlg(
 			this.owner,
 			"RAM-Floppy laden",
 			file != null ?
@@ -234,7 +262,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
   {
     if( this.ramFloppy != null ) {
       File file = this.ramFloppy.getFile();
-      file      = EmuUtil.showFileSaveDlg(
+      file      = FileUtil.showFileSaveDlg(
 			this.owner,
 			"RAM-Floppy speichern",
 			file != null ?
@@ -261,7 +289,7 @@ public class RAMFloppyFld extends JComponent implements ActionListener
   private void paintLED( Graphics g, int w, int h )
   {
     if( (w > 0) && (h > 0) ) {
-      g.setColor( this.ledState ? Color.red : Color.gray );
+      g.setColor( this.ledState ? Color.RED : Color.GRAY );
       g.fillRect( 0, 0, w, h );
     }
   }

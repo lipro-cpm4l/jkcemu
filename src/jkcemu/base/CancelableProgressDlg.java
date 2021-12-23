@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,7 +14,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Window;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
 import javax.swing.JProgressBar;
@@ -32,6 +31,7 @@ public class CancelableProgressDlg extends BaseDlg
 
   private Progressable      progressable;
   private volatile boolean  cancelled;
+  private boolean           notified;
   private javax.swing.Timer timer;
   private JProgressBar      progressBar;
   private JButton           btnCancel;
@@ -46,6 +46,7 @@ public class CancelableProgressDlg extends BaseDlg
     super( owner, title );
     this.progressable =  progressable;
     this.cancelled    = false;
+    this.notified     = false;
     this.timer        = new javax.swing.Timer( 200, this );
 
 
@@ -61,7 +62,7 @@ public class CancelableProgressDlg extends BaseDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    this.progressBar = new JProgressBar(
+    this.progressBar = GUIFactory.createProgressBar(
 				SwingConstants.HORIZONTAL,
 				0,
 				progressable.getProgressMax() );
@@ -70,7 +71,7 @@ public class CancelableProgressDlg extends BaseDlg
 
 
     // Abbrechen-Button
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     gbc.insets.top = 10;
     gbc.gridy++;
     add( this.btnCancel, gbc );
@@ -80,10 +81,6 @@ public class CancelableProgressDlg extends BaseDlg
     pack();
     setParentCentered();
     setResizable( false );
-
-
-    // Listener
-    this.btnCancel.addActionListener( this );
   }
 
 
@@ -110,6 +107,17 @@ public class CancelableProgressDlg extends BaseDlg
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      this.btnCancel.addActionListener( this );
+    }
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
@@ -133,6 +141,17 @@ public class CancelableProgressDlg extends BaseDlg
       this.cancelled = true;
     }
     return rv;
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      this.btnCancel.removeActionListener( this );
+    }
   }
 
 

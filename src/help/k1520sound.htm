@@ -1,0 +1,61 @@
+<html>
+<body>
+ <h1>K1520-Sound-Karte</h1>
+  F&uuml;r Computer mit einem K1520-Busanschluss,
+  und damit auch f&uuml;r einige der von JKCEMU emulierten Computer,
+  wurde eine Sound-Karte entwickelt,
+  die den Chip AY-3-8910 bzw. AY-3-8912 verwendet.
+  Eine CTC ist ebenfalls enthalten.
+ <br/><br/>
+  Die Sound-Karte ist &uuml;ber Jumper flexibel konfigurierbar.
+  Im JKCEMU wird diese Karte mit folgenden Einstellungen emuliert:
+ <br/><br/>
+  <table border="1">
+   <tr>
+    <td align="left" valign="top">Taktfrequenz des Sound-Chips:</td>
+    <td align="left" valign="top">1,79&nbsp;MHz</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">Taktfrequenz der CTC:</td>
+    <td align="left" valign="top">= Taktfrequenz des emulierten Systems</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">CTC Eingang Kanal&nbsp;0:</td>
+    <td align="left" valign="top">
+     = ein Viertel der Taktfrequenz des Sound-Chips,
+     also 447,5&nbsp;kHz
+    </td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">CTC Eingang Kanal&nbsp;1:</td>
+    <td align="left" valign="top">CTC Ausgang Kanal&nbsp;0</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">CTC Eingang Kanal&nbsp;2:</td>
+    <td align="left" valign="top">CTC Ausgang Kanal&nbsp;1</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">CTC Eingang Kanal&nbsp;3:</td>
+    <td align="left" valign="top">CTC Ausgang Kanal&nbsp;2</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">Zurdnung Tonkan&auml;e:</td>
+    <td align="left" valign="top">A: Links, B: Mitte, C: Rechts</td>
+   </tr>
+   <tr>
+    <td align="left" valign="top">E/A-Adressen:</td>
+    <td align="left" valign="top">
+     38h: Sound-Register ausw&auml;hlen bzw. lesen<br/>
+     39h: Sound-Register beschreiben<br/>
+     3Ch: CTC-Kanal&nbsp;0<br/>
+     3Dh: CTC-Kanal&nbsp;1<br/>
+     3Eh: CTC-Kanal&nbsp;2<br/>
+     3Fh: CTC-Kanal&nbsp;3
+    </td>
+   </tr>
+  </table>
+ <br/>
+  <b>Achtung!</b> Im <a href="nanos.htm">NANOS</a> wird die Sound-Karte
+  abweichend im E/A-Adressbereich E0h bis E7h betrieben.
+</body>
+</html>

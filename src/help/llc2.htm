@@ -3,12 +3,18 @@
  <h1>LLC2</h1>
   Der LLC2 ist ein von Dr. Gerd Maudrich 1985 entwickelter
   Eigenbau-Computer.
-  Der Studio Computer Club Halle (SCCH) hat sich der Weiterentwicklung
-  des LLC2 angenommen und ein Monitorprogramm sowie
-  einige Erweiterungsmodule entwickelt, die auch f&uuml;r den
-  <a href="ac1.htm">AC1</a> verf&uuml;gbar sind.
+  Im urspr&uuml;nglichen Konzept verf&uuml;gte der Computer &uuml;ber
+  einen 2&nbsp;KByte gro&szlig;en EPROM, der einen Urlader enthielt.
+  Der Studio Computer Club Halle (SCCH) hatte sich der Weiterentwicklung
+  des LLC2 angenommen und ein 4&nbsp;KByte gro&szlig;es Monitorprogramm
+  sowie einige Erweiterungsmodule entwickelt.
+  Das Monitorprogramm und die Erweiterungsmodule sind in angepasster Form
+  auch f&uuml;r den <a href="ac1.htm">AC1</a> verf&uuml;gbar.
   Dadurch besteht in gewissen Grenzen eine Softwarekompatibilit&auml;t
   zwischen AC1 und LLC2.
+  JKCEMU emuliert den LLC2 mit den SCCH-Weiterentwicklungen.
+  Deswegen ist auch das SCCH-Monitorprogramm anstelle des
+  urspr&uuml;nglichen Urladers enthalten.
  <br/><br/>
 
  <h2>Hinweise zur Emulation</h2>
@@ -31,6 +37,14 @@
      <li><a href="llc2.htm#fdc">1.11. Floppy-Disk-Modul</a></li>
      <li><a href="llc2.htm#printer">1.12. V24-Schnittstelle mit Drucker</a></li>
      <li><a href="llc2.htm#joystick">1.13. Joystick</a></li>
+     <li>
+      <a href="llc2.htm#audio">1.14. Kassetten- und Tonausgabe</a>
+      <ul>
+       <li>
+	<a href="llc2.htm#loudspeaker">1.14.1. Lautsprecheranschluss</a>
+       </li>
+      </ul>
+     </li>
     </ul>
    </li>
    <li><a href="llc2.htm#software">2. Im ROM enthaltene Software</a></li>
@@ -95,6 +109,11 @@
       <a href="gide.htm">GIDE</a> mit bis zu zwei Festplatten
       an der E/A-Basisadresse&nbsp;80h
      </li>
+      <li><a href="llc2.htm#joystick">Joystick</a></li>
+      <li>
+       <a href="k1520sound.htm">K1520-Sound-Karte</a>
+       (siehe auch <a href="llc2.htm#audio">Kassetten- und Tonausgabe</a>)
+      </li>
      <li>
        <a href="kcnet.htm">KCNet</a>-kompatible Netzwerkkarte
        an der E/A-Basisadresse&nbsp;C0h
@@ -103,7 +122,6 @@
        <a href="usb.htm">USB-Anschluss</a> (Vinculum VDIP Modul)
        an den E/A-Basisadressen&nbsp;DCh und FCh
       </li>
-     <li><a href="llc2.htm#joystick">Joystick</a></li>
      </ul>
     </li>
   </ul>
@@ -122,6 +140,7 @@
    <tr><td>Cursor&nbsp;hoch</td><td>0Bh</td></tr>
    <tr><td>Enter / Return</td><td>0Dh</td></tr>
    <tr><td>Backspace</td><td>7Fh</td></tr>
+   <tr><td>Tabulator</td><td>0Fh</td></tr>
    <tr><td>Delete / Entf</td><td>4</td></tr>
    <tr><td>Insert / Einfg</td><td>5</td></tr>
    <tr><td>Bild auf</td><td>11h</td></tr>
@@ -379,6 +398,41 @@
   die Joystick-Schaltung nicht ber&uuml;cksichtigt,
   sind u.U. keine Tastatureingabe mehr m&ouml;glich.
   In dem Fall m&uuml;ssen Sie die Joystick-Emulation ausschalten.
+ <br/><br/>
+
+ <h3><a name="audio">1.14. Kassetten- und Tonausgabe</a></h3>
+  Die am emulierten Kassettenrecorderanschluss
+  (PIO&nbsp;1, Port&nbsp;B, Bit&nbsp;0) ausgegebenen Tonsignale
+  k&ouml;nnen Sie im Fenster <a href="audio.htm">Audio/Kassette</a>
+  im Reiter <em>Ausgang Kassette</em> h&ouml;rbar machen
+  bzw. aufnehmen und anschlie&szlig;end in eine Datei speichern.
+  F&uuml;r die &uuml;ber den CTC-Kanal&nbsp;0 bzw. &uuml;ber
+  PIO&nbsp;1, Port&nbsp;B, Bit&nbsp;6 ausgegebenen Tonsignale
+  (Lautsprecheranschluss, siehe weiter unten) ist der Reiter
+  <em>Lautsprecher</em> zust&auml;ndig.
+  Ein weiterer Reiter erscheint, wenn Sie die Emulation der
+  <a href="k1520sound.htm">K1520-Sound-Karte</a> aktiviert haben.
+ <br/><br/>
+
+ <h3><a name="loudspeaker">1.14.1. Lautsprecheranschluss</a></h3>
+  Beim von Dr. Gerd Maudrich urspr&uuml;nglich entwickelten LLC2
+  ist der Lausprecher &uuml;ber ein Flip-Flop am CTC-Kanal&nbsp;0
+  angeschlossen.
+  &Uuml;ber PIO&nbsp;1, Port&nbsp;B, Bit&nbsp;6 kann das Flip-Flop
+  und damit die Tonausgabe ein- und ausgeschaltet werden.
+  Bei der Weiterentwicklung des LLC2 durch den
+  Studio Computer Club Halle wurde der Lautsprecheranschluss
+  dahingehend ge&auml;ndert, dass dieser nun direkt auf den PIO-Port
+  geht und keine Verbindung mehr zur CTC hat.
+  JKCEMU bildet parallel beide Varianten ab.
+  Bei Ausgaben auf PIO&nbsp;1 wird die Phasenlage
+  des Lautsprecheranschlusses direkt auf den Wert
+  von Port&nbsp;B, Bit&nbsp;6 geschaltet.
+  Gleichzeitig wird das emulierte Flip-Flop bei L-Pegel gesperrt bzw.
+  bei H-Pegel freigegeben.
+  Ist dieses Flip-Flop freigegeben, f&uuml;hrt jeder am CTC-Kanal&nbsp;0
+  ausgegebene Impuls zu einer &Auml;nderung der Phasenlage und damit
+  zu einer halben Tonschwingung am Lautsprecheranschluss.
  <br/><br/>
 
 

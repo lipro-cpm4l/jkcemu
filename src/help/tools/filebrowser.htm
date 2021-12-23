@@ -29,14 +29,7 @@
    </li>
    <li><a href="filebrowser.htm#etc">6. Weitere Funktionen</a></li>
    <li><a href="filebrowser.htm#keyboard">7. Tastaturbedienung</a></li>
-   <li>
-    <a href="filebrowser.htm#settings">8. Einstellungen</a>
-    <ul>
-     <li>
-      <a href="filebrowser.htm#phys_filesys">8.1. Phyische Dateisystemstruktur anzeigen</a>
-     </li>
-    </ul>
-   </li>
+   <li><a href="filebrowser.htm#settings">8. Einstellungen</a></li>
   </ul>
  <br/>
   Der Datei-Browser dient dazu,
@@ -57,12 +50,11 @@
  <h2><a name="layout">1. Ansicht</a></h2>
   Der Datei-Browser zeigt auf der linken Seite das Dateisystem
   in einer Baumdarstellung an.
-  Mit den <a href="filebrowser.htm#settings">Einstellungen</a>
-  k&ouml;nnen Sie Einfluss auf die angezeigten Dateien und Verzeichnisse
-  nehmen.
-  Sofern vorhanden, sollten Sie insbesondere den Men&uuml;punkt
-  <a href="filebrowser.htm#phys_filesys">Phyische Dateisystemstruktur anzeigen</a>
-  beachten.
+  Mit den Eintr&auml;gen im Men&uuml;
+  <a href="filebrowser.htm#settings">Einstellungen</a>
+  haben Sie die M&ouml;glichkeit festzulegen,
+  wie die Dateien und Verzeichnisse sortiert werden und ob auch versteckte
+  Dateien bzw. Verzeichnisse angezeigt werden sollen.
  <br/><br/>
   Die rechte Seite dient zur Anzeige von Details.
   Zwischen beiden Seiten befindet sich ein Balken,
@@ -89,13 +81,17 @@
   In der anderen Richtung, d.h., wenn Sie eine Datei in die linke Ansicht
   des Datei-Browsers hineinziehen und dort &uuml;ber einem Verzeichnis
   loslassen, wird die Datei in das Verzeichnis kopiert bzw. verschoben.
+  Es ist auch m&ouml;glich, eine Datei aus einem Web-Browser heraus in 
+  den Datei-Browser zu ziehen, sofern der Web-Browser das unterst&uuml;tzt.
+  In dem Fall wird JKCEMU die Datei herunterladen und in dem betreffenden
+  Verzeichnis speíchern.
  <br/><br/>
   Mit Drag&amp;Drop kann man aber nicht nur eine einzelne Datei
-  &uuml;bertragen, sondern auch mehrere und auch Verzeichnisse.
-  Es kann aber sein, das das Zielfenster nur etwas mit einer Datei
-  anfangen kann.
+  &uuml;bertragen, sondern auch mehrere Dateien und auch Verzeichnisse.
+  Es kann aber sein, dass das Zielfenster nur etwas mit einer Datei
+  anfangen kann, nicht aber mit mehreren Dateien oder mit Verzeichnissen.
   So macht es i.d.R. wenig Sinn, ein Verzeichnis in einen Texteditor
-  hinziehen und dort &ouml;ffnen zu wollen.
+  hineinzuziehen und dort &ouml;ffnen zu wollen.
  <br/><br/>
 
  <h2><a name="load_start">3. Dateien laden und starten</a></h2>
@@ -147,24 +143,8 @@
   (wenn das Dateiformat unterst&uuml;tzt wird)
   und eine Sound-Datei abgespielt
   (wenn das Dateiformat unterst&uuml;tzt wird).
-  Wenn JKCEMU selbst nicht wei&szlig;, was es mit der Datei machen soll,
-  wird das Betriebssystem gefragt,
-  ob es die Datei sinnvoll &ouml;ffnen kann.
-  Ist das alles nicht der Fall, wird davon ausgegangen,
-  dass die Datei in den Arbeitsspeicher des Emulator geladen werden soll.
-  In dem Fall erscheint der Dialog mit den
-  <a href="../loadsave.htm#options">Ladeoptionen</a>.
-  Da es aber hinderlich sein kann,
-  jedesmal diesen Dialog best&auml;tigen zu m&uuml;ssen,
-  k&ouml;nnen Sie dieses Verhalten im Men&uuml; <em>Einstellungen</em>
-  abschalten. Mit dem Men&uuml;punkt
-  <em>Doppelklick f&uuml;hrt Laden/Starten ohne Nachfrage aus</em>
-  legen Sie fest, dass beim Doppelklick auf eine Datei,
-  deren Format Ladeadressen kennt, keine
-  <a href="../loadsave.htm#options">Ladeoptionen</a> mehr abgefragt werden.
-  Enth&auml;lt die Datei ein ausf&uuml;hrbares Maschinencodeprogramm,
-  d.h. ist eine Startadresse eingetragen,
-  wird das Programm auch sofort gestartet.
+  Wenn JKCEMU nicht wei&szlig;, was es mit der Datei machen soll,
+  wird das Betriebssystem beauftragt, die Datei zu &ouml;ffnen.
  <br/><br/>
 
  <h2><a name="copy_paste">4. Ausschneiden, Kopieren und Einf&uuml;gen</a></h2>
@@ -238,8 +218,8 @@
    </tr>
    <tr>
     <td valign="top">
-     KC-System-Dateien (*.kcc)<br>
-     KC-System-Dateien mit BASIC-Programm (*.kcb)<br>
+     KC-System-Dateien (*.kcc)<br/>
+     KC-System-Dateien mit BASIC-Programm (*.kcb)<br/>
     </td>
     <td valign="top">
      <ul>
@@ -301,26 +281,6 @@
   k&ouml;nnen Sie auch dauerhaft in einem Profil speichern.
   Das tun Sie in dem separaten Fenster f&uuml;r
   <a href="../settings.htm">Einstellungen</a>.
- <br/><br/>
-
- <h3>
-  <a name="phys_filesys">8.1. Phyische Dateisystemstruktur anzeigen</a>
- </h3>
-  Es gibt Betriebssysteme,
-  die dem Anwender eine Dateisystemansicht zeigen,
-  welche nicht der physischen Dateisystemstruktur entspricht.
-  So eine Anwendersicht kann z.B. Verzeichnisse wie <em>Bibliotheken</em>
-  oder <em>Computer</em> oder auch in die lokale Sprache
-  &uuml;bersetzte Verzeichnisnamen enthalten.
-  Wenn sowohl das Betriebssystem und als auch die Java-Laufzeitumgebung
-  eine solche Anwendersicht auf das Dateisystem unterst&uuml;tzen,
-  kann der Datei-Browser auch beide Sichten anzeigen.
-  In dem Fall gibt es im Men&uuml; <em>Einstellungen</em>
-  den Punkt <em>Phyische Dateisystemstruktur anzeigen</em>,
-  mit dem Sie zwischen den beiden Sichten umschalten k&ouml;nnen.
-  Ist diese Men&uuml;eintrag nicht vorhanden,
-  ist auch keine Anwendersicht verf&uuml;gbar,
-  und es wird immer die physische Dateisystemstruktur angezeigt.
 </body>
 </html>
 

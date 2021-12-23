@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,11 +13,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.Main;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileInfo;
+import jkcemu.file.FileInfo;
 
 
 public class TZXFile
@@ -102,10 +101,10 @@ public class TZXFile
       out.write( 0x15 );		// Block-ID
 
       /*
-       * Spectrum-T-States pro Sample,
+       * ZX-Spectrum-T-States pro Sample,
        * Fuer die Abtastfrequenz 22050 Hz wuerde der
        * gerundete Wert 159 betragen,
-       * in der TXZ-Spezifikation steht aber 158.
+       * in der TZX-Spezifikation steht aber 158.
        * Aus diesem Grund wird hier fuer 22050 Hz der Wert 158
        * gesetzt und fuer alle anderen Abtastfrequenzen
        * der Wert berechnet und anschliessend gerundet.
@@ -151,7 +150,7 @@ public class TZXFile
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 

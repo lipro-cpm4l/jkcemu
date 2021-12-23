@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -20,7 +20,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseAdapter;
-import java.lang.*;
 import java.util.ArrayList;
 import javax.swing.JComponent;
 import javax.swing.JTextArea;
@@ -28,6 +27,7 @@ import javax.swing.JViewport;
 import javax.swing.Scrollable;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import jkcemu.Main;
 
 
 public class HexCharFld extends JComponent implements Scrollable
@@ -38,12 +38,13 @@ public class HexCharFld extends JComponent implements Scrollable
   private static final int SEP_W = 20;
   private static final int PAD_Y = 1;
 
-  private static final JComponent fontPrototypeFld = new JTextArea();
-
   private ByteDataSource                dataSrc;
   private java.util.List<CaretListener> caretListeners;
   private Dimension                     prefScrollableVPSize;
   private boolean                       asciiSelected;
+  private boolean                       editable;
+  private boolean                       nibbleTyped;
+  private String                        readOnlyErrMsg;
   private int                           caretPos;
   private int                           markPos;
   private int                           hRow;
@@ -65,6 +66,9 @@ public class HexCharFld extends JComponent implements Scrollable
     this.caretListeners       = null;
     this.prefScrollableVPSize = null;
     this.asciiSelected        = false;
+    this.editable             = true;
+    this.nibbleTyped          = false;
+    this.readOnlyErrMsg       = null;
     this.caretPos             = -1;
     this.markPos              = -1;
     this.hRow                 = 0;
@@ -78,13 +82,7 @@ public class HexCharFld extends JComponent implements Scrollable
     this.visibleWidth         = 0;
     this.visibleHeight        = 0;
 
-    Font font = fontPrototypeFld.getFont();
-    if( font != null ) {
-      font = new Font( Font.MONOSPACED, font.getStyle(), font.getSize() );
-    } else {
-      font = new Font( Font.MONOSPACED, Font.PLAIN, 12 );
-    }
-    setFont( font );
+    setFont( FontMngr.getFont( FontMngr.FontUsage.CODE, true ) );
     setBackground( SystemColor.text );
     setForeground( SystemColor.textText );
     addKeyListener(
@@ -93,7 +91,7 @@ public class HexCharFld extends JComponent implements Scrollable
 		  @Override
 		  public void keyPressed( KeyEvent e )
 		  {
-		    if( keyAction( e.getKeyCode(), e.isShiftDown() ) ) {
+		    if( keyAction( e ) ) {
 		      e.consume();
 		    }
 		  }
@@ -247,9 +245,9 @@ public class HexCharFld extends JComponent implements Scrollable
 	  if( (ch < 0x20) || (ch > 0x7F) ) {
 	    ch = '.';
 	  }
-	  buf.append( (char) ch );
+	  buf.append( ch );
 	}
-	buf.append( (char) '\n' );
+	buf.append( '\n' );
 	pos += BYTES_PER_ROW;
       }
       if( buf.length() > 0 ) {
@@ -375,8 +373,16 @@ public class HexCharFld extends JComponent implements Scrollable
     repaint();
 
     if( changed ) {
+      this.nibbleTyped = false;
       fireCaretListeners();
     }
+  }
+
+
+  public void setEditable( boolean state, String readOnlyErrMsg )
+  {
+    this.editable       = state;
+    this.readOnlyErrMsg = readOnlyErrMsg;
   }
 
 
@@ -638,20 +644,11 @@ public class HexCharFld extends JComponent implements Scrollable
   public void setFont( Font font )
   {
     super.setFont( font );
+    this.wChar = 0;	// Positionen neu berechnen
     this.hChar = font.getSize();
     this.hRow  = this.hChar + PAD_Y;
-  }
-
-
-  @Override
-  public void updateUI()
-  {
-    super.updateUI();
-    fontPrototypeFld.updateUI();
-    Font font = fontPrototypeFld.getFont();
-    if( font != null ) {
-      setFont( font );
-    }
+    revalidate();
+    repaint();
   }
 
 
@@ -662,7 +659,7 @@ public class HexCharFld extends JComponent implements Scrollable
     FontMetrics fm = getFontMetrics( getFont() );
     if( fm != null ) {
       this.wChar  = fm.stringWidth( "0" );
-      this.wHex   = 3 * wChar;
+      this.wHex   = 3 * this.wChar;
       this.xHex   = MARGIN + (6 * this.wChar) + SEP_W;
       this.xAscii = this.xHex + (BYTES_PER_ROW * this.wHex) + SEP_W;
     }
@@ -699,14 +696,64 @@ public class HexCharFld extends JComponent implements Scrollable
   }
 
 
-  private boolean keyAction( int keyCode, boolean moveOp )
+  private boolean keyAction( KeyEvent e )
   {
-    boolean rv      = false;
-    int     dataLen = this.dataSrc.getDataLength();
+    boolean rv           = false;
+    int     keyCode      = e.getKeyCode();
+    int     nibbleValue  = -1;
+    int     dataLen      = this.dataSrc.getDataLength();
     if( (this.caretPos >= 0) && (this.caretPos < dataLen) ) {
       rv        = true;
       int steps = 0;
       switch( keyCode ) {
+	case KeyEvent.VK_0:
+	  nibbleValue = 0;
+	  break;
+	case KeyEvent.VK_1:
+	  nibbleValue = 1;
+	  break;
+	case KeyEvent.VK_2:
+	  nibbleValue = 2;
+	  break;
+	case KeyEvent.VK_3:
+	  nibbleValue = 3;
+	  break;
+	case KeyEvent.VK_4:
+	  nibbleValue = 4;
+	  break;
+	case KeyEvent.VK_5:
+	  nibbleValue = 5;
+	  break;
+	case KeyEvent.VK_6:
+	  nibbleValue = 6;
+	  break;
+	case KeyEvent.VK_7:
+	  nibbleValue = 7;
+	  break;
+	case KeyEvent.VK_8:
+	  nibbleValue = 8;
+	  break;
+	case KeyEvent.VK_9:
+	  nibbleValue = 9;
+	  break;
+	case KeyEvent.VK_A:
+	  nibbleValue = 0x0A;
+	  break;
+	case KeyEvent.VK_B:
+	  nibbleValue = 0x0B;
+	  break;
+	case KeyEvent.VK_C:
+	  nibbleValue = 0x0C;
+	  break;
+	case KeyEvent.VK_D:
+	  nibbleValue = 0x0D;
+	  break;
+	case KeyEvent.VK_E:
+	  nibbleValue = 0x0E;
+	  break;
+	case KeyEvent.VK_F:
+	  nibbleValue = 0x0F;
+	  break;
 	case KeyEvent.VK_LEFT:
 	  steps = -1;
 	  break;
@@ -735,19 +782,59 @@ public class HexCharFld extends JComponent implements Scrollable
 	default:
 	  rv = false;
       }
+      if( nibbleValue >= 0 ) {
+	if( !this.dataSrc.getDataReadOnly()
+	    && !e.isControlDown()
+	    && !e.isMetaDown() )
+	{
+	  int idx = this.caretPos;
+	  if( (idx >= 0) && (idx < this.dataSrc.getDataLength()) ) {
+	    if( this.editable ) {
+	      int b = this.dataSrc.getDataByte( this.caretPos );
+	      if( this.nibbleTyped ) {
+		if( this.dataSrc.setDataByte(
+			idx,
+			(b & 0xF0) | (nibbleValue & 0x0F) ) )
+		{
+		  repaint();
+		}
+		this.nibbleTyped = false;
+		steps = 1;
+	      } else {
+		if( this.dataSrc.setDataByte(
+			idx,
+			((nibbleValue << 4) & 0xF0) | (b & 0x0F) ) )
+		{
+		  repaint();
+		}
+		this.nibbleTyped = true;
+	      }
+	    } else {
+	      if( this.readOnlyErrMsg != null ) {
+		BaseDlg.showSuppressableInfoDlg(
+					this,
+					this.readOnlyErrMsg );
+	      }
+	    }
+	  }
+	}
+      } else {
+	this.nibbleTyped = false;
+      }
       if( steps != 0 ) {
 	int idx = this.caretPos + steps;
 	if( Math.abs( steps ) > 1 ) {
 	  if( idx < 0 ) {
-	    // gleichen Spalte ersten Zeile
+	    // gleiche Spalte erste Zeile
 	    idx += ((1 - (idx / BYTES_PER_ROW)) * BYTES_PER_ROW);
 	  } else if( idx >= dataLen ) {
-	    // gleichen Spalte letzten Zeile
-	    idx -= ((1 + ((idx - dataLen) / BYTES_PER_ROW)) * BYTES_PER_ROW);
+	    // gleiche Spalte letzte Zeile
+	    idx -= ((1 + ((idx - dataLen) / BYTES_PER_ROW))
+						* BYTES_PER_ROW);
 	  }
 	}
 	if( (idx >= 0) && (idx < dataLen) ) {
-	  setCaretPosition( idx, moveOp );
+	  setCaretPosition( idx, e.isShiftDown() );
 	}
       }
     }

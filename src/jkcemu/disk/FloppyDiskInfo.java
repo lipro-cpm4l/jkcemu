@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,7 +11,6 @@ package jkcemu.disk;
 import java.awt.Frame;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.*;
 import java.util.zip.GZIPInputStream;
 import jkcemu.base.EmuUtil;
 
@@ -81,8 +80,8 @@ public class FloppyDiskInfo implements Comparable<FloppyDiskInfo>
       }
     }
     finally {
-      EmuUtil.closeSilent( gz );
-      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilently( gz );
+      EmuUtil.closeSilently( in );
     }
     if( disk == null ) {
       throw new IOException( "Resource " + this.resource
@@ -111,7 +110,6 @@ public class FloppyDiskInfo implements Comparable<FloppyDiskInfo>
   @Override
   public String toString()
   {
-    return this.infoText;
+    return this.infoText != null ? this.infoText : "";
   }
 }
-

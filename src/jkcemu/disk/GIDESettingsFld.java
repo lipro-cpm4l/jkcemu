@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2017 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,9 @@ import java.awt.dnd.DropTargetContext;
 import java.awt.dnd.DropTargetDragEvent;
 import java.awt.event.ActionEvent;
 import java.io.File;
-import java.util.*;
+import java.util.Arrays;
+import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -24,20 +26,23 @@ import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JSeparator;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 import jkcemu.Main;
-import jkcemu.base.AbstractSettingsFld;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileNameFld;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.OptionDlg;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.PopupMenuOwner;
 import jkcemu.base.UserInputException;
+import jkcemu.file.FileNameFld;
+import jkcemu.file.FileUtil;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
-public class GIDESettingsFld extends AbstractSettingsFld
+public class GIDESettingsFld
+			extends AbstractSettingsFld
+			implements PopupMenuOwner
 {
   private static final String ACTION_HD_NONE
 				= GIDE.PROP_HARDDISK_PREFIX + "none";
@@ -51,7 +56,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
   private int               popupDiskIdx;
   private JPopupMenu        popupMenu;
   private JMenuItem         mnuDiskNone;
-  private JCheckBox         btnEnabled;
+  private JCheckBox         cbEnabled;
   private JComboBox<String> comboIOBaseAddr;
   private HardDiskInfo[]    diskTypes;
   private JLabel[]          titleLabels;
@@ -103,15 +108,15 @@ public class GIDESettingsFld extends AbstractSettingsFld
 
     int nIOBaseAddrs = (ioBaseAddrs != null ? ioBaseAddrs.length : 0);
     if( nIOBaseAddrs > 1 ) {
-      this.btnEnabled = new JCheckBox(
+      this.cbEnabled = GUIFactory.createCheckBox(
 			"GIDE emulieren an E/A-Basisadresse:" );
-      this.comboIOBaseAddr = new JComboBox<>();
+      this.comboIOBaseAddr = GUIFactory.createComboBox();
       this.comboIOBaseAddr.setEditable( false );
       for( int i = 0; i < nIOBaseAddrs; i++ ) {
 	this.comboIOBaseAddr.addItem(
 		String.format( "%02Xh", ioBaseAddrs[ i ] ) );
       }
-      JPanel panelGeneral = new JPanel( new GridBagLayout() );
+      JPanel panelGeneral = GUIFactory.createPanel( new GridBagLayout() );
       GridBagConstraints gbcGeneral = new GridBagConstraints(
 					0, 0,
 					1, 1,
@@ -120,22 +125,22 @@ public class GIDESettingsFld extends AbstractSettingsFld
 					GridBagConstraints.NONE,
 					new Insets( 0, 0, 0, 0 ),
 					0, 0 );
-      panelGeneral.add( this.btnEnabled, gbcGeneral );
+      panelGeneral.add( this.cbEnabled, gbcGeneral );
       gbcGeneral.insets.left = 5;
       gbcGeneral.gridx++;
       panelGeneral.add( this.comboIOBaseAddr, gbcGeneral );
       add( panelGeneral, gbc );
     } else {
-      this.btnEnabled      = new JCheckBox( "GIDE emulieren" );
+      this.cbEnabled       = GUIFactory.createCheckBox( "GIDE emulieren" );
       this.comboIOBaseAddr = null;
-      add( this.btnEnabled, gbc );
+      add( this.cbEnabled, gbc );
     }
     gbc.gridy++;
     for( int i = 0; i < DISK_CNT; i++ ) {
       addDiskFlds( i, gbc );
       gbc.gridy++;
     }
-    this.btnEnabled.addActionListener( this );
+    this.cbEnabled.addActionListener( this );
     if( this.comboIOBaseAddr != null ) {
       this.comboIOBaseAddr.addActionListener( this );
     }
@@ -152,6 +157,23 @@ public class GIDESettingsFld extends AbstractSettingsFld
   }
 
 
+  public void setEnabledEx( boolean stateAll, boolean switchable )
+  {
+    super.setEnabled( stateAll );
+    this.cbEnabled.setEnabled( stateAll && switchable );
+    updFieldsEnabled();
+  }
+
+
+	/* --- PopupMenuOwner --- */
+
+  @Override
+  public JPopupMenu getPopupMenu()
+  {
+    return this.popupMenu;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -162,7 +184,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
     int ioBaseAddr = -1;
     try {
       if( props != null ) {
-        boolean enabled = this.btnEnabled.isSelected();
+        boolean enabled = this.cbEnabled.isSelected();
 	EmuUtil.setProperty(
 			props,
 			this.propPrefix + GIDE.PROP_ENABLED,
@@ -256,7 +278,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( src == this.btnEnabled ) {
+      if( src == this.cbEnabled ) {
 	rv = true;
 	updFieldsEnabled();
 	fireDataChanged();
@@ -342,32 +364,18 @@ public class GIDESettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public boolean fileDropped( Component c, File file )
+  public void fileDropped( Component c, File file )
   {
-    boolean rv = false;
     if( (c != null) && (file != null) ) {
       for( int i = 0; i < DISK_CNT; i++ ) {
 	if( c == this.fileNameFlds[ i ] ) {
 	  if( this.fileNameFlds[ i ].isEnabled() ) {
 	    setFile( i, file, 0 );
 	    updFieldsEnabled();
-	    Main.setLastFile( file, Main.FILE_GROUP_DISK );
-	    rv = true;
 	    break;
 	  }
 	}
       }
-    }
-    return rv;
-  }
-
-
-  @Override
-  public void lookAndFeelChanged()
-  {
-    JPopupMenu menu = popupMenu;
-    if( menu != null ) {
-      SwingUtilities.updateComponentTreeUI( menu );
     }
   }
 
@@ -376,7 +384,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
   public void setEnabled( boolean state )
   {
     super.setEnabled( state );
-    this.btnEnabled.setEnabled( state );
+    this.cbEnabled.setEnabled( state );
     updFieldsEnabled();
   }
 
@@ -384,7 +392,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
   @Override
   public void updFields( Properties props )
   {
-    this.btnEnabled.setSelected(
+    this.cbEnabled.setSelected(
 		EmuUtil.getBooleanProperty(
 				props,
 				this.propPrefix + GIDE.PROP_ENABLED,
@@ -448,14 +456,15 @@ public class GIDESettingsFld extends AbstractSettingsFld
     gbc.insets.bottom = 10;
     gbc.gridwidth     = GridBagConstraints.REMAINDER;
     gbc.gridx         = 0;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
     gbc.gridy++;
 
     // 1. Zeile
     if( idx == 0 ) {
-      this.titleLabels[ idx ] = new JLabel( "1. Festplatte (Master):" );
+      this.titleLabels[ idx ] = GUIFactory.createLabel(
+					"1. Festplatte (Master):" );
     } else {
-      this.titleLabels[ idx ] = new JLabel(
+      this.titleLabels[ idx ] = GUIFactory.createLabel(
 		String.format( "%d. Festplatte (Slave):", idx + 1 ) );
     }
     gbc.fill          = GridBagConstraints.NONE;
@@ -468,7 +477,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
     gbc.gridx         = 0;
     add( this.titleLabels[ idx ], gbc );
 
-    this.diskTypeFlds[ idx ] = new JTextField();
+    this.diskTypeFlds[ idx ] = GUIFactory.createTextField();
     this.diskTypeFlds[ idx ].setEditable( false );
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
@@ -476,9 +485,11 @@ public class GIDESettingsFld extends AbstractSettingsFld
     gbc.gridx++;
     add( this.diskTypeFlds[ idx ], gbc );
 
-    this.diskTypeBtns[ idx ] = createImageButton(
-				"/images/disk/harddiskmodel.png",
+    this.diskTypeBtns[ idx ] = GUIFactory.createRelImageResourceButton(
+				this,
+				"disk/harddiskmodel.png",
 				"Festplattenmodell ausw\u00E4hlen" );
+    this.diskTypeBtns[ idx ].addActionListener( this );
     gbc.fill    = GridBagConstraints.NONE;
     gbc.weightx = 0.0;
     gbc.gridx++;
@@ -486,17 +497,19 @@ public class GIDESettingsFld extends AbstractSettingsFld
 
     // 2.Zeile
     this.fileNameFlds[ idx ] = new FileNameFld();
-    gbc.fill        = GridBagConstraints.HORIZONTAL;
-    gbc.weightx     = 1.0;
-    gbc.insets.left = 50;
-    gbc.gridwidth   = 2;
-    gbc.gridx       = 0;
+    gbc.fill                 = GridBagConstraints.HORIZONTAL;
+    gbc.weightx              = 1.0;
+    gbc.insets.left          = 50;
+    gbc.gridwidth            = 2;
+    gbc.gridx                = 0;
     gbc.gridy++;
     add( this.fileNameFlds[ idx ], gbc );
 
-    this.selectBtns[ idx ] = createImageButton(
-				"/images/file/open.png",
+    this.selectBtns[ idx ] = GUIFactory.createRelImageResourceButton(
+				this,
+				"file/open.png",
 				"Festplattenabbilddatei ausw\u00E4hlen" );
+    this.selectBtns[ idx ].addActionListener( this );
     gbc.fill        = GridBagConstraints.NONE;
     gbc.weightx     = 0.0;
     gbc.insets.left = 0;
@@ -510,7 +523,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
 
   private JMenuItem addToPopupMenu( String text, String actionCmd )
   {
-    JMenuItem item = new JMenuItem( text );
+    JMenuItem item = GUIFactory.createMenuItem( text );
     item.setActionCommand( actionCmd );
     item.addActionListener( this );
     this.popupMenu.add( item );
@@ -536,7 +549,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
 	preSelection = Main.getLastDirFile( Main.FILE_GROUP_DISK );
       }
       int  offset = -1;
-      File file   = EmuUtil.showFileOpenDlg(
+      File file   = FileUtil.showFileOpenDlg(
 				this.settingsFrm,
 				"Festplattenabbilddatei ausw\u00E4hlen",
 				preSelection );
@@ -628,7 +641,7 @@ public class GIDESettingsFld extends AbstractSettingsFld
   private void showDiskTypePopup( int idx )
   {
     if( this.popupMenu == null ) {
-      this.popupMenu = new JPopupMenu();
+      this.popupMenu = GUIFactory.createPopupMenu();
       addToPopupMenu( "Festplatte ausw\u00E4hlen...", ACTION_HD_SELECT );
       this.popupMenu.addSeparator();
       this.mnuDiskNone = addToPopupMenu(
@@ -648,7 +661,10 @@ public class GIDESettingsFld extends AbstractSettingsFld
 
   public void updFieldsEnabled()
   {
-    boolean stateGeneral = (isEnabled() && this.btnEnabled.isSelected());
+    boolean stateGeneral = isEnabled();
+    if( stateGeneral && this.cbEnabled.isEnabled() ) {
+      stateGeneral = this.cbEnabled.isSelected();
+    }
     if( this.comboIOBaseAddr != null ) {
       this.comboIOBaseAddr.setEnabled( stateGeneral );
     }

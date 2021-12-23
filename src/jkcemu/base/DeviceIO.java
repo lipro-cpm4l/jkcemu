@@ -1,93 +1,261 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Zugriff auf physische Geraete
+ * Basisklasse fuer Zugriff auf physische Geraete
  */
 
 package jkcemu.base;
 
+import java.awt.EventQueue;
+import java.awt.Frame;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.OutputStream;
-import java.io.RandomAccessFile;
-import java.lang.*;
-import java.net.URL;
-import java.nio.channels.FileChannel;
-import javax.swing.JOptionPane;
+import java.net.InetAddress;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import jkcemu.Main;
-import jkcemu.base.EmuUtil;
+import jkcemu.base.deviceio.LinuxDeviceIO;
+import jkcemu.base.deviceio.MacDeviceIO;
+import jkcemu.base.deviceio.UnixDeviceIO;
+import jkcemu.base.deviceio.WinDeviceIO;
 
 
 public class DeviceIO
 {
-  public static final String LIBNAME_WIN32 = "jkcemu_win32.dll";
-  public static final String LIBNAME_WIN64 = "jkcemu_win64.dll";
+  public static enum LibStatus {
+			NOT_USED,
+			LOADED,
+			LOAD_ERROR,
+			INSTALL_ERROR };
 
-  private static boolean libChecked = false;
-  private static boolean libLoaded  = false;
+  public static enum MediaType {
+			ANY_DISK,
+			ANY_DISK_READ_ONLY,
+			ANY_DISK_WRITE_ONLY,
+			FLOPPYDISK,
+			FLOPPYDISK_READ_ONLY };
+
+  public static class DiskInfo
+  {
+    private String  text;
+    private int     heads;
+    private int     cyls;
+    private int     sectorsPerTrack;
+    private int     sectorSize;
+    private long    diskSize;
+    private boolean usb;
+
+    public DiskInfo(
+		String  text,
+		int     cyls,
+		int     heads,
+		int     sectorsPerTrack,
+		int     sectorSize )
+    {
+      this.text            = text;
+      this.cyls            = cyls;
+      this.heads           = heads;
+      this.sectorsPerTrack = sectorsPerTrack;
+      this.sectorSize      = sectorSize;
+      this.usb             = false;
+      this.diskSize        = ((long) heads
+					* (long) cyls
+					* (long) sectorsPerTrack
+					* (long) sectorSize);
+    }
+
+    public DiskInfo( String text, long diskSize )
+    {
+      this.text            = text;
+      this.usb             = false;
+      this.heads           = 0;
+      this.cyls            = 0;
+      this.sectorsPerTrack = 0;
+      this.sectorSize      = 0;
+      this.diskSize        = diskSize;
+    }
+
+    public int getCylinders()
+    {
+      return this.cyls;
+    }
+
+    public long getDiskSize()
+    {
+      return this.diskSize;
+    }
+
+    public int getHeads()
+    {
+      return this.heads;
+    }
+
+    public int getSectorSize()
+    {
+      return this.sectorSize;
+    }
+
+    public int getSectorsPerTrack()
+    {
+      return this.sectorsPerTrack;
+    }
+
+    public boolean hasGeometry()
+    {
+      return ((this.cyls > 0)
+		&& (this.heads > 0)
+		&& (this.sectorsPerTrack > 0)
+		&& (this.sectorSize > 0));
+    }
+
+    public boolean isUSB()
+    {
+      return this.usb;
+    }
+
+    public void setUSB( boolean state )
+    {
+      this.usb = state;
+    }
+
+    @Override
+    public String toString()
+    {
+      return this.text;
+    }
+  };
 
 
-	/* --- Zugriff auf einen Joystick --- */
+  public static class Drive
+  {
+    private String  fileName;
+    private String  text;
+    private Boolean cdrom;
+    private long    diskSize;
+    private boolean specialPriv;
+
+    public Drive(
+		String  fileName,
+		String  text,
+		Boolean cdrom,
+		long    diskSize,
+		boolean specialPriv )
+    {
+      this.fileName    = fileName;
+      this.cdrom       = cdrom;
+      this.text        = text;
+      this.diskSize    = diskSize;
+      this.specialPriv = specialPriv;
+    }
+
+    public long getDiskSize()
+    {
+      return this.diskSize;
+    }
+
+    public String getFileName()
+    {
+      return this.fileName;
+    }
+
+    public Boolean getCDRom()
+    {
+      return this.cdrom;
+    }
+
+    public boolean needsSpecialPrivileges()
+    {
+      return this.specialPriv;
+    }
+
+    @Override
+    public String toString()
+    {
+      return this.text;
+    }
+  };
+
+
+  public static class LibInfo
+  {
+    private File      file;
+    private LibStatus status;
+    private int       recognizedVersion;
+    private int       requiredVersion;
+    private boolean   updRequested;
+
+    public LibInfo(
+		File      file,
+		LibStatus status,
+		int       recognizedVersion,
+		int       requiredVersion,
+		boolean   updRequested )
+    {
+      this.file              = file;
+      this.status            = status;
+      this.recognizedVersion = recognizedVersion;
+      this.requiredVersion   = requiredVersion;
+      this.updRequested      = updRequested;
+    }
+
+    public File getFile()
+    {
+      return this.file;
+    }
+
+    public int getRecognizedVersion()
+    {
+      return this.recognizedVersion;
+    }
+
+    public int getRequiredVersion()
+    {
+      return this.requiredVersion;
+    }
+
+    public LibStatus getStatus()
+    {
+      return this.status;
+    }
+
+    public boolean isUpdateRequested()
+    {
+      return this.updRequested;
+    }
+  };
+
 
   public static class Joystick implements Closeable
   {
-    private int                 joyNum;
-    private java.io.InputStream in;
-    private long                xMin;
-    private long                xMax;
-    private long                yMin;
-    private long                yMax;
-    private long                xLastRaw;
-    private long                yLastRaw;
-    private float               xAxis;
-    private float               yAxis;
-    private int                 pressedBtns;
-    private boolean             active;
-    private byte[]              evtBuf;
-    private long[]              resultBuf;
+    protected int     joyNum;
+    protected float   xAxis;
+    protected float   yAxis;
+    protected int     pressedBtns;
+    protected boolean active;
 
-    private Joystick(
-		int joyNum,
-		java.io.InputStream in,
-		long                xMin,
-		long                xMax,
-		long                yMin,
-		long                yMax )
+    protected Joystick( int joyNum )
     {
-      this.joyNum         = joyNum;
-      this.in             = in;
-      this.xMin           = xMin;
-      this.xMax           = xMax;
-      this.yMin           = yMin;
-      this.yMax           = yMax;
-      this.xLastRaw       = 0;
-      this.yLastRaw       = 0;
-      this.xAxis          = 0F;
-      this.yAxis          = 0F;
-      this.pressedBtns    = 0;
-      this.active         = true;
-      if( this.in != null ) {
-	this.evtBuf    = new byte[ 8 ];
-	this.resultBuf = null;
-      } else {
-	this.evtBuf    = null;
-	this.resultBuf = new long[ 3 ];
-      }
+      this.joyNum      = joyNum;
+      this.xAxis       = 0F;
+      this.yAxis       = 0F;
+      this.pressedBtns = 0;
+      this.active      = true;
     }
 
     @Override
     public void close() throws IOException
     {
-      if( this.in != null ) {
-	EmuUtil.closeSilent( this.in );
-	this.in = null;
-      }
       this.active = false;
     }
 
@@ -108,635 +276,429 @@ public class DeviceIO
 
     public boolean waitForEvent()
     {
-      boolean rv = false;
-      if( this.active ) {
-	if( this.in != null ) {
-	  try {
-	    do {
-	      if( EmuUtil.read(
-			this.in,
-			this.evtBuf ) == this.evtBuf.length )
-	      {
-		short evtValue = (short) (((this.evtBuf[ 5 ] << 8) & 0xFF00)
-						| (this.evtBuf[ 4 ] & 0xFF));
-		int   evtType    = evtBuf[ 6 ] & 0xFF;
-		int   evtSubType = evtBuf[ 7 ] & 0xFF;
-		if( (evtType & 0x3) == 1 ) {
-		  this.pressedBtns = (int) evtValue & 0xFFFF;
-		  rv               = true;
-		}
-		else if( (evtType & 0x3) == 2 ) {
-		  if( evtSubType == 0 ) {
-		    this.xAxis = (float) evtValue / (float) Short.MAX_VALUE;
-		    rv         = true;
-		  }
-		  else if( evtSubType == 1 ) {
-		    this.yAxis = (float) evtValue / (float) Short.MAX_VALUE;
-		    rv         = true;
-		  }
-		}
-	      }
-	    } while( this.active && !rv );
-	  }
-	  catch( IOException ex ) {
-	    this.active = false;
-	  }
+      return false;
+    }
+  };
+
+
+  public static abstract class RandomAccessDevice implements Closeable
+  {
+    protected RandomAccessDevice()
+    {
+      // leer
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      // leer
+    }
+
+    public DiskInfo getDiskInfo() throws IOException
+    {
+      return null;
+    }
+
+    public abstract int read(
+			byte[] buf,
+			int    offs,
+			int    len ) throws IOException;
+
+    public abstract void seek( long pos ) throws IOException;
+
+    public abstract void write(
+			byte[] buf,
+			int    offs,
+			int    len ) throws IOException;
+  };
+
+
+  private static volatile NumberFormat numFmt                = null;
+  private static volatile Set<String>  unreachableNetPaths   = null;
+  private static volatile Thread       unreachableFindThread = null;
+
+
+  public static void addAllTo( Collection<String> c, String... items )
+  {
+    for( String item : items )
+      c.add( item );
+  }
+
+
+  public static void appendSizeTextTo( StringBuilder buf, long size )
+  {
+    if( size > 0 ) {
+      if( buf.length() > 0 ) {
+	buf.append( '\u0020' );
+      }
+      long kByte = size / 1024;
+      if( kByte < 10000 ) {
+	buf.append( kByte );
+	buf.append( " KByte" );
+      } else {
+	long mByte = kByte / 1024;
+	if( mByte < 1000 ) {
+	  buf.append( mByte );
+	  buf.append( " MByte" );
 	} else {
-	  if( checkUseLib() ) {
-	    do {
-	      if( getJoystickPos( this.joyNum, this.resultBuf ) == 0 ) {
-		int  b = (int) this.resultBuf[ 0 ];
-		long x = this.resultBuf[ 1 ];
-		long y = this.resultBuf[ 2 ];
-		if( (b == this.pressedBtns)
-		    && (x == this.xLastRaw)
-		    && (y == this.yLastRaw) )
-		{
-		  try {
-		    Thread.sleep( 20 );
-		  }
-		  catch( InterruptedException ex ) {
-		    this.active = false;
-		  }
-		} else {
-		  this.pressedBtns = b;
-		  this.xLastRaw    = x;
-		  this.yLastRaw    = y;
-		  this.xAxis       = adjustToFloat( x, this.xMin, this.xMax );
-		  this.yAxis       = adjustToFloat( y, this.yMin, this.yMax );
-		  rv               = true;
-		}
-	      } else {
-		this.active = false;
+	  synchronized( DeviceIO.class ) {
+	    if( numFmt == null ) {
+	      numFmt = NumberFormat.getNumberInstance();
+	      if( numFmt instanceof DecimalFormat ) {
+		((DecimalFormat) numFmt).applyPattern( "#####0.#" );
 	      }
-	    } while( this.active && !rv );
-	  }
-	}
-      }
-      return rv;
-    }
-  };
-
-
-	/* --- InputStream zum Lesen von Geraetedateien --- */
-
-  public static class InputStream extends java.io.InputStream
-  {
-    private long   handle;
-    private byte[] singleByteBuf;
-
-    private InputStream( long handle ) throws IOException
-    {
-      this.handle        = handle;
-      this.singleByteBuf = null;
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      int errCode = closeDevice( this.handle );
-      if( errCode != 0 ) {
-	throwErrMsg( errCode );
-      }
-    }
-
-    @Override
-    public int read() throws IOException
-    {
-      if( this.singleByteBuf == null ) {
-	this.singleByteBuf = new byte[ 1 ];
-      }
-      return read( this.singleByteBuf, 0, 1 ) == 1 ?
-			((int) this.singleByteBuf[ 0 ] & 0xFF)
-			: -1;
-    }
-
-    @Override
-    public int read( byte[] buf ) throws IOException
-    {
-      return read( buf, 0, buf.length );
-    }
-
-    @Override
-    public int read( byte[] buf, int offs, int len ) throws IOException
-    {
-      return readInternal( this.handle, buf, offs, len );
-    }
-
-    @Override
-    public long skip( long n ) throws IOException
-    {
-      throw new IOException(
-		"DeviceIO.InputStream.skip(...) nicht implementiert" );
-    }
-  };
-
-
-	/* --- OutputStream zum Schreiben auf Geraetedateien --- */
-
-  public static class OutputStream extends java.io.OutputStream
-  {
-    private long   handle;
-    private byte[] singleByteBuf;
-
-    private OutputStream( long handle ) throws IOException
-    {
-      this.handle        = handle;
-      this.singleByteBuf = null;
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      int errCode = closeDevice( this.handle );
-      if( errCode != 0 ) {
-	throwErrMsg( errCode );
-      }
-    }
-
-    @Override
-    public void flush() throws IOException
-    {
-      int errCode = flushDevice( this.handle );
-      if( errCode != 0 ) {
-	throwErrMsg( errCode );
-      }
-    }
-
-    @Override
-    public void write( int b ) throws IOException
-    {
-      if( this.singleByteBuf == null ) {
-	this.singleByteBuf      = new byte[ 1 ];
-	this.singleByteBuf[ 0 ] = (byte) b;
-      }
-      write( this.singleByteBuf, 0, 1 );
-    }
-
-    @Override
-    public void write( byte[] buf ) throws IOException
-    {
-      write( buf, 0, buf.length );
-    }
-
-    @Override
-    public void write( byte[] buf, int offs, int len ) throws IOException
-    {
-      if( len > 0 ) {
-	int[] lenOut = new int[ 1 ];
-	do {
-	  int errCode = writeDevice( this.handle, buf, offs, len, lenOut );
-	  if( errCode != 0 ) {
-	    throwErrMsg( errCode );
-	  }
-	  offs += lenOut[ 0 ];
-	  len  -= lenOut[ 0 ];
-	} while( len > 0 );
-      }
-    }
-  };
-
-
-	/* --- Klasse fuer wahlfreien Zugriff auf Geraetedateien --- */
-
-  public static class RandomAccessDevice implements Closeable
-  {
-    private long             handle;
-    private RandomAccessFile raf;
-
-    private RandomAccessDevice( long handle )
-    {
-      this.handle = handle;
-      this.raf    = null;
-    }
-
-    private RandomAccessDevice( RandomAccessFile raf )
-    {
-      this.handle = -1;
-      this.raf    = raf;
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      if( this.raf != null ) {
-	this.raf.close();
-      } else {
-	int errCode = closeDevice( this.handle );
-	if( errCode != 0 ) {
-	  throwErrMsg( errCode );
-	}
-      }
-    }
-
-    public int read( byte[] buf, int offs, int len ) throws IOException
-    {
-      int rv = -1;
-      if( this.raf != null ) {
-	rv = this.raf.read( buf, offs, len );
-      } else {
-	rv = readInternal( this.handle, buf, offs, len );
-      }
-      return rv;
-    }
-
-    public void seek( long pos ) throws IOException
-    {
-      if( this.raf != null ) {
-	this.raf.seek( pos );
-      } else {
-	int errCode = seekDevice( this.handle, pos );
-	if( errCode != 0 ) {
-	  throwErrMsg( errCode );
-	}
-      }
-    }
-
-    public void write( byte[] buf, int offs, int len ) throws IOException
-    {
-      if( this.raf != null ) {
-	this.raf.write( buf, offs, len );
-      } else {
-	if( len > 0 ) {
-	  int[] lenOut = new int[ 1 ];
-	  do {
-	    int errCode = writeDevice( this.handle, buf, offs, len, lenOut );
-	    if( errCode != 0 ) {
-	      throwErrMsg( errCode );
 	    }
-	    offs += lenOut[ 0 ];
-	    len  -= lenOut[ 0 ];
-	  } while( len > 0 );
+	  }
+	  buf.append( numFmt.format( (double) size / 1073741824.0 ) );
+	  buf.append( " GByte" );
 	}
       }
     }
-  };
+  }
 
 
-	/* --- oeffentliche Methoden --- */
+  public static String createVendorModelText( String vendor, String model )
+  {
+    String rv = "";
+    if( vendor != null ) {
+      if( model != null ) {
+	rv = String.format( "%s %s", vendor, model ).trim();
+      } else {
+	rv = vendor;
+      }
+    } else {
+      if( model != null ) {
+	rv = model;
+      }
+    }
+    return rv;
+  }
 
-  public static DeviceIO.RandomAccessDevice openDeviceForRandomAccess(
+
+  public static List<Drive> getDrives( MediaType mediaType )
+  {
+    List<Drive> drives = new ArrayList<>();
+    switch( Main.getOS() ) {
+      case LINUX:
+	LinuxDeviceIO.addDrivesTo( drives, mediaType );
+	break;
+      case MAC:
+	MacDeviceIO.addDrivesTo( drives, mediaType );
+	break;
+      case UNIX:
+	UnixDeviceIO.addDrivesTo( drives, mediaType );
+	break;
+      case WINDOWS:
+	WinDeviceIO.addDrivesTo( drives, mediaType );
+	break;
+    }
+    return drives;
+  }
+
+
+  public static LibInfo getLibInfo()
+  {
+    return Main.getOS() == Main.OS.WINDOWS ?
+			WinDeviceIO.getLibInfo()
+			: null;
+  }
+
+
+  public static String getShortPathName( String longName )
+  {
+    return Main.getOS() == Main.OS.WINDOWS ?
+			WinDeviceIO.getShortPathName( longName )
+			: null;
+  }
+
+
+  /*
+   * Die Methode liefert die Pfade (Laufwerke bzw. Mount Points) zurueck,
+   * die auf nicht erreichbare Netzwerk-Shares zeigen
+   * und die durch einen Aufruf der Methode
+   * startFindUnreachableNetPaths(...) ermittelt wurden.
+   * Die zurueckgelieferten Pfade haben am Ende das Pfadtrennzeichen.
+   */
+  public static Set<String> getUnreachableNetPaths()
+  {
+    return unreachableNetPaths;
+  }
+
+
+  public static boolean hasUnreachableNetPaths()
+  {
+    return (unreachableNetPaths != null);
+  }
+
+
+  public static boolean isReachable(
+				String              hostName,
+				Map<String,Boolean> cache )
+  {
+    boolean reachable = false;
+    if( hostName != null ) {
+      Boolean lastReachable = cache.get( hostName );
+      if( lastReachable != null ) {
+	reachable = lastReachable.booleanValue();
+      } else {
+	try {
+	  reachable = InetAddress.getByName( hostName ).isReachable( 5000 );
+	}
+	catch( IOException ex ) {}
+	cache.put( hostName, reachable );
+      }
+    }
+    return reachable;
+  }
+
+
+  public static File[] listRoots()
+  {
+    File[] roots = null;
+    if( Main.getOS() == Main.OS.WINDOWS ) {
+      roots = WinDeviceIO.listRoots();
+    }
+    return roots != null ? roots : File.listRoots();
+  }
+
+
+  public static boolean needsSpecialPrivileges(
+					String             fileName,
+					DeviceIO.MediaType requestedType )
+  {
+    boolean rv    = false;
+    boolean read  = false;
+    boolean write = false;
+    switch( requestedType ) {
+      case ANY_DISK:
+      case FLOPPYDISK:
+	read  = true;
+	write = true;
+	break;
+      case ANY_DISK_READ_ONLY:
+      case FLOPPYDISK_READ_ONLY:
+	read  = true;
+	break;
+      case ANY_DISK_WRITE_ONLY:
+	write = true;
+	break;
+    }
+    if( read || write ) {
+      File file = new File( fileName );
+      if( read && !file.canRead() ) {
+	rv = true;
+      }
+      if( write && !file.canWrite() ) {
+	rv = true;
+      }
+    }
+    return rv;
+  }
+
+
+  public static RandomAccessDevice openDeviceForRandomAccess(
 				String  deviceName,
 				boolean readOnly ) throws IOException
   {
-    DeviceIO.RandomAccessDevice rad = null;
-    if( checkUseLib() ) {
-      long[] handleOut = new long[ 1 ];
-      int    errCode   = openDevice( deviceName, readOnly, true, handleOut );
-      if( errCode != 0 ) {
-	throwErrMsg( errCode );
-      }
-      rad = new DeviceIO.RandomAccessDevice( handleOut[ 0 ] );
-    } else {
-      rad = new DeviceIO.RandomAccessDevice(
-		new RandomAccessFile( deviceName, readOnly ? "r" : "rw" ) );
+    RandomAccessDevice rad = null;
+    switch( Main.getOS() ) {
+      case LINUX:
+	rad = LinuxDeviceIO.openDeviceForRandomAccess( deviceName, readOnly );
+	break;
+      case MAC:
+	rad = MacDeviceIO.openDeviceForRandomAccess( deviceName, readOnly );
+	break;
+      case UNIX:
+	rad = UnixDeviceIO.openDeviceForRandomAccess( deviceName, readOnly );
+	break;
+      case WINDOWS:
+	rad = WinDeviceIO.openDeviceForRandomAccess( deviceName, readOnly );
+	break;
     }
     return rad;
   }
 
 
-  public static java.io.InputStream openDeviceForSequentialRead(
+  public static InputStream openDeviceForSequentialRead(
 				String deviceName ) throws IOException
   {
-    java.io.InputStream in = null;
-    if( checkUseLib() ) {
-      long[] handleOut = new long[ 1 ];
-      int    errCode   = openDevice( deviceName, true, false, handleOut );
-      if( errCode != 0 ) {
-	throwErrMsg( errCode );
-      }
-      in = new DeviceIO.InputStream( handleOut[ 0 ] );
-    } else {
-      in = new FileInputStream( deviceName );
+    InputStream in = null;
+    switch( Main.getOS() ) {
+      case LINUX:
+	in = LinuxDeviceIO.openDeviceForSequentialRead( deviceName );
+	break;
+      case MAC:
+	in = MacDeviceIO.openDeviceForSequentialRead( deviceName );
+	break;
+      case UNIX:
+	in = UnixDeviceIO.openDeviceForSequentialRead( deviceName );
+	break;
+      case WINDOWS:
+	in = WinDeviceIO.openDeviceForSequentialRead( deviceName );
+	break;
     }
     return in;
   }
 
 
-  public static java.io.OutputStream openDeviceForSequentialWrite(
-				String deviceName ) throws IOException
+  public static OutputStream openDeviceForSequentialWrite(
+				String  deviceName ) throws IOException
   {
-    java.io.OutputStream out = null;
-    if( checkUseLib() ) {
-      long[] handleOut = new long[ 1 ];
-      int    errCode   = openDevice( deviceName, false, false, handleOut );
-      if( errCode != 0 ) {
-	throwErrMsg( errCode );
-      }
-      out = new DeviceIO.OutputStream( handleOut[ 0 ] );
-    } else {
-      out = new FileOutputStream( deviceName );
+    OutputStream out = null;
+    switch( Main.getOS() ) {
+      case LINUX:
+	out = LinuxDeviceIO.openDeviceForSequentialWrite( deviceName );
+	break;
+      case MAC:
+	out = MacDeviceIO.openDeviceForSequentialWrite( deviceName );
+	break;
+      case UNIX:
+	out = UnixDeviceIO.openDeviceForSequentialWrite( deviceName );
+	break;
+      case WINDOWS:
+	out = WinDeviceIO.openDeviceForSequentialWrite( deviceName );
+	break;
     }
     return out;
   }
 
 
-  public static DeviceIO.Joystick openJoystick( int joyNum )
+  public static Joystick openJoystick( int joyNum )
   {
-    DeviceIO.Joystick joystick = null;
-    if( checkUseLib() ) {
-      long[] resultBuf = new long[ 4 ];
-      /*
-       * getJoystickBounds(...) liefert auch dann noch gueltige Werte,
-       * nachdem der Joystick abgezogen wurde.
-       * Aus diesem Grund wird zuerst getJoystickPos(...) aufgerufen,
-       * um zu testen, ob der Joystick angeschlossen ist.
-       */
-      if( getJoystickPos( joyNum, resultBuf ) == 0 ) {
-	if( getJoystickBounds( joyNum, resultBuf ) == 0 ) {
-	  joystick = new DeviceIO.Joystick(
-				joyNum,
-				null,
-				resultBuf[ 0 ],		// Xmin
-				resultBuf[ 1 ],		// Xmax
-				resultBuf[ 2 ],		// Ymin
-				resultBuf[ 3 ] );	// Ymax
-	}
-      }
-    } else {
-      try {
-	final String[] devPrefixes = {
-			"/dev/js",
-			"/dev/input/js",
-			"/dev/usb/js" };
-	for( int i = 0; i < devPrefixes.length; i++ ) {
-	  File devFile = new File( String.format(
-					"%s%d",
-					devPrefixes[ i ],
-					joyNum ) );
-	  if( devFile.exists() ) {
-	    joystick = new DeviceIO.Joystick(
-				joyNum, 
-				new FileInputStream( devFile ),
-				0,
-				0,
-				0,
-				0 );
-	    if( joystick != null ) {
-	      break;
-	    }
-	  }
-	}
-      }
-      catch( IOException ex ) {}
+    Joystick joystick = null;
+    switch( Main.getOS() ) {
+      case LINUX:
+	joystick = LinuxDeviceIO.openJoystick( joyNum );
+	break;
+      case WINDOWS:
+	joystick = WinDeviceIO.openJoystick( joyNum );
+	break;
     }
     return joystick;
   }
 
 
-	/* --- native Methoden --- */
+  public static DiskInfo readDiskInfo( String deviceName ) throws IOException
+  {
+    DiskInfo           info = null;
+    RandomAccessDevice rad  = null;
+    try {
+      rad  = openDeviceForRandomAccess( deviceName, true );
+      info = rad.getDiskInfo();
+    }
+    finally {
+      EmuUtil.closeSilently( rad );
+    }
+    return info;
+  }
 
-  private static native int openDevice(
-				String  deviceName,
-				boolean readOnly,
-				boolean randomAccess,
-				long[]  handleOut );
 
-  private static native int readDevice(
-				long   handle,
-				byte[] buf,
-				int    offs,
-				int    len,
-				int[]  lenOut );
+  public static void showError( String msg )
+  {
+    Frame owner = Main.getTopFrm();
+    if( owner == null ) {
+      owner = new Frame();
+    }
+    ErrorMsg.showLater( owner, msg, null );
+  }
 
-  private static native int writeDevice(
-				long   handle,
-				byte[] buf,
-				int    offs,
-				int    len,
-				int[]  lenOut );
 
-  private static native int    seekDevice( long handle, long pos );
-  private static native int    closeDevice( long handle );
-  private static native int    flushDevice( long handle );
-  private static native String getErrorMsg( int errCode );
-  private static native int    getJoystickBounds( int joyNum, long[] result );
-  private static native int    getJoystickPos( int joyNum, long[] result );
+  /*
+   * Die Methode ermittelt die Netzwerkpfade,
+   * markiert diese erst einmal als nicht erreichbar,
+   * und startet dann einen Thread,
+   * der die Erreichbarkeit der Netzwerkpfade prueft.
+   * Der uebergebene "observer", sofern not null,
+   * wird nach der Suche im AWT-Thread aufgerufen.
+   *
+   * Ruechgabe:
+   *    Netzwerkpfade, auch erreichbare
+   */
+  public synchronized static Set<String> startFindUnreachableNetPaths(
+						final Runnable observer )
+  {
+    final Set<String> oldPaths = unreachableNetPaths;
+    unreachableNetPaths        = getNetPaths();
+    if( (unreachableNetPaths != null) && (unreachableFindThread == null) ) {
+      unreachableFindThread = new Thread(
+				Main.getThreadGroup(),
+				new Runnable()
+				{
+				  @Override
+				  public void run()
+				  {
+				    findUnreachableNetPaths( observer );
+				  }
+				},
+				"JKCEMU unreachable net path finder" );
+      unreachableFindThread.setDaemon( true );
+      unreachableFindThread.start();
+    }
+    return unreachableNetPaths;
+  }
 
 
 	/* --- private Methoden --- */
 
-  private static float adjustToFloat( long v, long vMin, long vMax )
+  private static void findUnreachableNetPaths( final Runnable observer )
   {
-    float rv = 0F;
-    if( vMax > vMin ) {
-      if( v < vMin ) {
-	v = vMin;
-      } else if( v > vMax ) {
-	v = vMax;
+    try {
+      switch( Main.getOS() ) {
+	case LINUX:
+	  unreachableNetPaths = LinuxDeviceIO.findUnreachableNetPaths();
+	  break;
+	case MAC:
+	  unreachableNetPaths = MacDeviceIO.findUnreachableNetPaths();
+	  break;
+	case UNIX:
+	  unreachableNetPaths = UnixDeviceIO.findUnreachableNetPaths();
+	  break;
+	case WINDOWS:
+	  unreachableNetPaths = WinDeviceIO.findUnreachableNetPaths();
+	  break;
       }
-      rv = (((float) (v - vMin) / (float) (vMax - vMin)) * 2F) - 1F;
     }
-    return rv;
+    finally {
+      if( unreachableFindThread == Thread.currentThread() ) {
+	unreachableFindThread = null;
+      }
+    }
+    if( observer != null ) {
+      EventQueue.invokeLater( observer );
+    }
   }
 
 
-  private synchronized static boolean checkUseLib()
+  /*
+   * Die Methode liefert die eingehaengten Netzwerkpfade
+   * (Laufwerke bzw. Mount Points) zurueck.
+   * Die zurueckgelieferten Pfade haben am Ende das Pfadtrennzeichen.
+   */
+  private static Set<String> getNetPaths()
   {
-    if( !libChecked ) {
-      if( File.separatorChar == '\\' ) {
-	String arch = System.getProperty( "os.arch" );
-	if( arch != null ) {
-	  String libName = null;
-	  if( arch.indexOf( "64" ) >= 0 ) {
-	    libName = LIBNAME_WIN64;
-	  } else if( arch.indexOf( "86" ) >= 0 ) {
-	    libName = LIBNAME_WIN32;
-	  }
-	  if( libName != null ) {
-	    File libFile = null;
-	    URL  url     = DeviceIO.class.getResource( "/lib/" + libName );
-	    if(  url != null ) {
-	      /*
-	       * Wenn die URL auf eine lokale Datei zeigt,
-	       * dann diese laden
-	       */
-	      String protocol = url.getProtocol();
-	      String fileName = url.getFile();
-	      if( (protocol != null) && (fileName != null) ) {
-		if( protocol.equals( "file" ) && (fileName.length() > 3) ) {
-		  char ch1 = Character.toUpperCase( fileName.charAt( 1 ) );
-		  if( (fileName.charAt( 0 ) == '/')
-		      && ((ch1 >= 'A') && (ch1 <= 'Z'))
-		      && (fileName.charAt( 2 ) == ':') )
-		  {
-		    fileName = fileName.substring( 1 );
-		  }
-		  if( fileName.indexOf( '/' ) >= 0 ) {
-		    fileName.replace( '/', '\\' );
-		  }
-		  File file = new File( fileName );
-		  if( file.exists() ) {
-		    libFile = file;
-		  }
-		}
-	      }
-	    }
-	    /*
-	     * Wenn die Bibliothek nicht direkt von der URL
-	     * geladen werden kann,
-	     * dann schauen, ob sie bereits im JKCEMU-Verzeichnis steht.
-	     * Wenn nicht, dann wird sie dorthin kopiert.
-	     */
-	    if( libFile == null ) {
-	      File configDir = Main.getConfigDir();
-	      if( configDir != null ) {
-		libFile = new File( configDir, libName );
-		if( !libFile.exists() && (url != null) ) {
-		  try {
-		    java.io.InputStream  in = null;
-		    java.io.OutputStream out = null;
-		    try {
-		      in = url.openStream();
-		      out = new FileOutputStream( libFile );
-		      int b = in.read();
-		      while( b >= 0 ) {
-			out.write( b );
-			b = in.read();
-		      }
-		      out.close();
-		      out = null;
-		    }
-		    finally {
-		      EmuUtil.closeSilent( in );
-		      EmuUtil.closeSilent( out );
-		    }
-		  }
-		  catch( Exception ex ) {
-		    showLibError(
-			"Die Bibliothek \'" + libFile.getPath()
-				+ "\' konnte nicht angelegt werden.",
-			ex );
-		    libFile = null;
-		  }
-		  if( libFile != null ) {
-		    JOptionPane.showMessageDialog(
-			Main.getScreenFrm(),
-			"Es wurde soeben im JKCEMU-Konfigurationsverzeichnis"
-				+ " eine DLL f\u00FCr den Zugriff\n"
-				+ "auf physische Diskettenlaufwerke,"
-				+ " Joysticks und andere am Emulatorrechner\n"
-				+ "angeschlossene Ger\u00E4te installiert.\n"
-				+ "Die Benutzung dieser DLL und somit"
-				+ " der Zugriff auf solche Ger\u00E4te"
-				+ " ist aber erst\n"
-				+ "nach Schlie\u00DFen und erneutem Starten"
-				+ " des Emulators m\u00F6glich.",
-			"Hinweis",
-			JOptionPane.INFORMATION_MESSAGE );
-		  }
-		}
-	      }
-	    }
-	    if( libFile != null ) {
-	      if( !libFile.isAbsolute() ) {
-		libFile = libFile.getAbsoluteFile();
-	      }
-	    }
-	    if( libFile != null ) {
-	      try {
-		System.load( libFile.getPath() );
-		libLoaded = true;
-	      }
-	      catch( Exception ex ) {
-		showLibErrorLoadFailed( libFile, ex );
-	      }
-	      catch( UnsatisfiedLinkError e ) {
-		showLibErrorLoadFailed( libFile, e );
-	      }
-	    }
-	  }
-	}
-      }
-      libChecked = true;
+    Set<String> paths = null;
+    switch( Main.getOS() ) {
+      case LINUX:
+	paths = LinuxDeviceIO.getNetPaths();
+	break;
+      case MAC:
+	paths = MacDeviceIO.getNetPaths();
+	break;
+      case UNIX:
+	paths = UnixDeviceIO.getNetPaths();
+	break;
+      case WINDOWS:
+	paths = WinDeviceIO.getNetDrives();
+	break;
     }
-    return libLoaded;
+    return paths;
   }
 
 
-  private static int readInternal(
-			long   handle,
-			byte[] buf,
-			int    offs,
-			int    len ) throws IOException
+	/* --- Konstruktor --- */
+
+  private DeviceIO()
   {
-    int rv = 0;
-    if( len > 0 ) {
-      int[] lenOut  = new int[ 1 ];
-      int   errCode = readDevice( handle, buf, offs, len, lenOut );
-      if( errCode == 0 ) {
-	if( lenOut[ 0 ] > 0 ) {
-	  rv = lenOut[ 0 ];		// Anzahl der gelesenen Bytes
-	} else {
-	  rv = -1;			// Dateiende
-	}
-      } else if( errCode == 1 ) {
-	/*
-	 * Bei Leseoperationen hinter dem Ende der Geraetedatei
-	 * kommt bei Windows ein Fehler mit dem Code 1.
-	 * Bei den anderen ueblichen Fehlerursachen
-	 * (z.B. Geraet nicht verfuegbar oder CRC-Fehler)
-	 * kommt ein anderer Fehlercode.
-	 * Aus diesem Grund wird hier der Fehlercode 1
-	 * als Dateiende gewertet, auch wenn im konkreten Fall
-	 * der Fehler eine andere Ursache haben sollte.
-	 */
-	rv = -1;
-      } else {
-	throwErrMsg( errCode );		// Fehler
-      }
-    }
-    return rv;
-  }
-
-
-  private static void showLibError( String msg, Throwable t )
-  {
-    StringBuilder msgBuf = new StringBuilder( 1024 );
-    msgBuf.append( msg );
-    msgBuf.append( "\nDadurch ist der Zugriff auf physische"
-	+ " Diskettenlaufwerke, Joysticks und andere\n"
-	+ "am Emulatorrechner angeschlossene Ger\u00E4te nicht"
-	+ " oder nur eingeschr\u00E4nkt m\u00F6glich.\n"
-	+ "Ansonsten ist JKCEMU voll funktionsf\u00E4hig.\n\n"
-	+ "Das Problem l\u00E4sst sich m\u00F6glicherweise l\u00F6sen,"
-	+ " indem Sie in den Einstellungen,\n"
-	+ "Bereich Sonstiges, das Verzeichnis f\u00FCr Einstellungen"
-	+ " und Profile l\u00F6schen\n"
-	+ "und danach JKCEMU erneut starten." );
-
-    String exMsg = t.getMessage();
-    if( exMsg != null ) {
-      if( !exMsg.isEmpty() ) {
-	msgBuf.append( "\n\nDetaillierte Fehlermeldung:\n" );
-	msgBuf.append( exMsg );
-      }
-    }
-    JOptionPane.showMessageDialog(
-			Main.getScreenFrm(),
-			msgBuf.toString(),
-			"Fehler",
-			JOptionPane.ERROR_MESSAGE );
-  }
-
-
-  private static void showLibErrorLoadFailed( File libFile, Throwable t )
-  {
-    showLibError(
-		"Die Bibliothek \'" + libFile.getPath()
-			+ "\' konnte nicht geladen werden.",
-		t );
-  }
-
-
-  private static void throwErrMsg( int errCode ) throws IOException
-  {
-    String errMsg = getErrorMsg( errCode );
-    if( errMsg != null ) {
-      if( errMsg.isEmpty() ) {
-	errMsg = null;
-      }
-    }
-    throw new IOException( errMsg != null ? errMsg : "Ein-/Ausgabefehler" );
+    // leer
   }
 }

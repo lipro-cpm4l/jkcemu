@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,15 +8,14 @@
 
 package jkcemu.programming.assembler;
 
-import java.awt.EventQueue;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Collection;
 import jkcemu.Main;
 import jkcemu.base.EmuSys;
 import jkcemu.base.EmuThread;
 import jkcemu.base.ScreenFrm;
 import jkcemu.emusys.Z9001;
+import jkcemu.file.FileFormat;
 import jkcemu.programming.PrgLogger;
 import jkcemu.programming.PrgOptions;
 import jkcemu.programming.PrgSource;
@@ -67,8 +66,14 @@ public class AsmThread extends PrgThread
 	forZ9001 = (emuSys instanceof Z9001 );
       }
     }
-    boolean status = this.assembler.assemble( null, forZ9001 );
+    boolean status = this.assembler.assemble( forZ9001 );
     if( status ) {
+      if( this.options.getCreateAsmListing() ) {
+	StringBuilder listing = this.assembler.getListing();
+	if( listing != null ) {
+	  fireOpenResultText( listing.toString() );
+	}
+      }
       if( this.options.getFormatSource() ) {
 	String srcOut = this.assembler.getFormattedSourceText();
 	if( srcOut != null ) {
@@ -78,7 +83,7 @@ public class AsmThread extends PrgThread
       if( this.options.getCodeToEmu() || this.options.getForceRun() ) {
 	byte[] code = this.assembler.getCreatedCode();
 	if( code != null ) {
-	  writeCodeToEmu( this.assembler, true );
+	  writeCodeToEmu( this.assembler, FileFormat.BIN, true );
 	  if( this.options.getLabelsToDebugger() ) {
 	    labelsToDebugger( this.options.getCodeToSecondSystem() );
 	  }
@@ -126,8 +131,8 @@ public class AsmThread extends PrgThread
 	  if( debugFrm != null ) {
 	    debugFrm.setLabels(
 			labels,
-			this.options.getSuppressLabelRecreateInDebugger(),
-			this.options.getLabelsCaseSensitive() );
+			this.options.getLabelsCaseSensitive(),
+			this.options.getLabelsUpdateBreakpointsOnly() );
 	  }
 	}
       }

@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,11 +10,9 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import jkcemu.audio.BitSampleBuffer;
 import jkcemu.audio.PCMDataSource;
 import jkcemu.audio.TZXFile;
-import jkcemu.base.*;
 
 
 public class TZXFileTarget extends AbstractConvertTarget

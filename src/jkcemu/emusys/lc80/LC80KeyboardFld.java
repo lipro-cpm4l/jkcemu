@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.MouseEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -58,7 +57,7 @@ public class LC80KeyboardFld extends AbstractKeyboardFld<LC80>
 
     this.colorKeySelected = new Color( 100, 100, 100 );
     this.colorKeyBorder   = new Color( 80, 80, 80 );
-    this.colorKeyLight    = Color.white;
+    this.colorKeyLight    = Color.WHITE;
     Color dark            = new Color( 20, 20, 20 );
     Color red             = new Color( 200, 0, 0 );
     Color light           = this.colorKeyLight;
@@ -150,7 +149,7 @@ public class LC80KeyboardFld extends AbstractKeyboardFld<LC80>
   {
     if( e.getComponent() == this ) {
       if( hits( this.resetKey, e ) ) {
-	fireWarmResetAfterDelay();
+	fireResetAfterDelay();
       } else if( hits( this.nmiKey, e ) ) {
 	fireNMIAfterDelay();
       }

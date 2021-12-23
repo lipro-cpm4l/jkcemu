@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -25,7 +25,6 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.ParseException;
@@ -34,12 +33,10 @@ import javax.swing.BorderFactory;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.KeyStroke;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.event.DocumentEvent;
@@ -48,7 +45,9 @@ import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 import jkcemu.Main;
 import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
 import jkcemu.base.HelpFrm;
+import jkcemu.base.GUIFactory;
 
 
 public class CalculatorFrm extends BaseFrm implements
@@ -57,6 +56,8 @@ public class CalculatorFrm extends BaseFrm implements
 						FlavorListener,
 						FocusListener
 {
+  public static final String TITLE = Main.APPNAME + " Rechner";
+
   private static final String DEFAULT_TEXT = "Geben Sie bitte ein Zeichen"
 		+ " oder einen numerischen Ausdruck ein!";
 
@@ -80,7 +81,7 @@ public class CalculatorFrm extends BaseFrm implements
   private JEditorPane    fldOutput;
 
 
-  public static void open()
+  public static CalculatorFrm open()
   {
     if( instance != null ) {
       if( instance.getExtendedState() == Frame.ICONIFIED ) {
@@ -91,6 +92,7 @@ public class CalculatorFrm extends BaseFrm implements
     }
     instance.toFront();
     instance.setVisible( true );
+    return instance;
   }
 
 
@@ -144,8 +146,9 @@ public class CalculatorFrm extends BaseFrm implements
     JTextComponent fld = null;
     Component      c   = e.getComponent();
     if( c != null ) {
-      if( c instanceof JTextComponent )
+      if( c instanceof JTextComponent ) {
 	fld = (JTextComponent) c;
+      }
     }
     this.lastTextFld = fld;
     updCutCopyButtons();
@@ -156,7 +159,7 @@ public class CalculatorFrm extends BaseFrm implements
   @Override
   public void focusLost( FocusEvent e )
   {
-    // empty
+    // leer
   }
 
 
@@ -194,7 +197,7 @@ public class CalculatorFrm extends BaseFrm implements
       }
       else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( HELP_PAGE );
+	HelpFrm.openPage( HELP_PAGE );
       }
     }
     return rv;
@@ -204,12 +207,21 @@ public class CalculatorFrm extends BaseFrm implements
   @Override
   public boolean doClose()
   {
-    boolean rv = super.doClose();
-    if( rv ) {
-      if( !Main.checkQuit( this ) ) {
-	// damit beim erneuten Oeffnen das Eingabefeld leer ist
-	this.fldInput.setText( "" );
+    boolean rv = false;
+    if( Main.isTopFrm( this ) ) {
+      rv = EmuUtil.closeOtherFrames( this );
+      if( rv ) {
+	rv = super.doClose();
       }
+      if( rv ) {
+	Main.exitSuccess();
+      }
+    } else {
+      rv = super.doClose();
+    }
+    if( rv ) {
+      // damit beim erneuten Oeffnen das Eingabefeld leer ist
+      this.fldInput.setText( "" );
     }
     return rv;
   }
@@ -228,32 +240,36 @@ public class CalculatorFrm extends BaseFrm implements
   private void doEditCut()
   {
     JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
+    if( textFld != null ) {
       textFld.cut();
+    }
   }
 
 
   private void doEditCopy()
   {
     JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
+    if( textFld != null ) {
       textFld.copy();
+    }
   }
 
 
   private void doEditPaste()
   {
     JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
+    if( textFld != null ) {
       textFld.paste();
+    }
   }
 
 
   private void doEditSelectAll()
   {
     JTextComponent textFld = this.lastTextFld;
-    if( textFld != null )
+    if( textFld != null ) {
       textFld.selectAll();
+    }
   }
 
 
@@ -265,55 +281,42 @@ public class CalculatorFrm extends BaseFrm implements
     this.lastTextFld      = null;
     this.clipboard        = null;
     this.clipboardHasText = false;
-    setTitle( "JKCEMU Rechner" );
-    Main.updIcon( this );
+    setTitle( TITLE );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuFileClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuFileClose = createMenuItemClose();
     mnuFile.add( this.mnuFileClose );
 
 
     // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
+    JMenu mnuEdit = createMenuEdit();
 
-    this.mnuEditCut = createJMenuItem(
-		"Ausschneiden",
-		KeyStroke.getKeyStroke( KeyEvent.VK_X, Event.CTRL_MASK ) );
+    this.mnuEditCut = createMenuItemCut( true );
     mnuEdit.add( this.mnuEditCut );
 
-    this.mnuEditCopy = createJMenuItem(
-		"Kopieren",
-		KeyStroke.getKeyStroke( KeyEvent.VK_C, Event.CTRL_MASK ) );
+    this.mnuEditCopy = createMenuItemCopy( true );
     mnuEdit.add( this.mnuEditCopy );
 
-    this.mnuEditPaste = createJMenuItem(
-		"Einf\u00FCgen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_V, Event.CTRL_MASK ) );
+    this.mnuEditPaste = createMenuItemPaste( true );
     mnuEdit.add( this.mnuEditPaste );
     mnuEdit.addSeparator();
 
-    this.mnuEditSelectAll = createJMenuItem( "Alles ausw\u00E4hlen" );
+    this.mnuEditSelectAll = createMenuItemSelectAll( true );
     mnuEdit.add( this.mnuEditSelectAll );
 
 
     // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
+    JMenu mnuHelp = createMenuHelp();
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    this.mnuHelpContent = createMenuItem( "Hilfe zum Rechner..." );
     mnuHelp.add( this.mnuHelpContent );
 
 
     // Menuleiste zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuEdit );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile, mnuEdit, mnuHelp ) );
 
 
     // Fensterinhalt
@@ -330,10 +333,10 @@ public class CalculatorFrm extends BaseFrm implements
 
 
     // Bereich Eingabe
-    JPanel panelInput = new JPanel( new GridBagLayout() );
+    JPanel panelInput = GUIFactory.createPanel( new GridBagLayout() );
     add( panelInput, gbc );
 
-    panelInput.setBorder( BorderFactory.createTitledBorder( "Eingabe" ) );
+    panelInput.setBorder( GUIFactory.createTitledBorder( "Eingabe" ) );
 
     GridBagConstraints gbcInput = new GridBagConstraints(
 						0, 0,
@@ -344,16 +347,10 @@ public class CalculatorFrm extends BaseFrm implements
 						new Insets( 5, 5, 5, 5 ),
 						0, 0 );
 
-    panelInput.add( new JLabel( "Ausdruck:" ), gbcInput );
+    panelInput.add( GUIFactory.createLabel( "Ausdruck:" ), gbcInput );
 
-    this.fldInput = new JTextField();
-    this.fldInput.addActionListener( this );
-    this.fldInput.addCaretListener( this );
-    this.fldInput.addFocusListener( this );
-    this.docInput = this.fldInput.getDocument();
-    if( this.docInput != null ) {
-      this.docInput.addDocumentListener( this );
-    }
+    this.fldInput      = GUIFactory.createTextField();
+    this.docInput      = this.fldInput.getDocument();
     gbcInput.fill      = GridBagConstraints.HORIZONTAL;
     gbcInput.weightx   = 1.0;
     gbcInput.gridwidth = GridBagConstraints.REMAINDER;
@@ -366,70 +363,83 @@ public class CalculatorFrm extends BaseFrm implements
     gbcInput.weightx       = 0.0;
     gbcInput.gridwidth     = 1;
     gbcInput.gridy++;
-    panelInput.add( new JLabel( "Bin\u00E4rzahl:" ), gbcInput );
+    panelInput.add( GUIFactory.createLabel( "Bin\u00E4rzahl:" ), gbcInput );
 
     gbcInput.anchor = GridBagConstraints.WEST;
     gbcInput.gridx++;
-    panelInput.add( new JLabel( "$..." ), gbcInput );
+    panelInput.add( GUIFactory.createLabel( "$..." ), gbcInput );
 
     gbcInput.anchor     = GridBagConstraints.EAST;
     gbcInput.insets.top = 0;
     gbcInput.gridx      = 1;
     gbcInput.gridy++;
-    panelInput.add( new JLabel( "Oktalzahl:" ), gbcInput );
+    panelInput.add( GUIFactory.createLabel( "Oktalzahl:" ), gbcInput );
 
     gbcInput.anchor = GridBagConstraints.WEST;
     gbcInput.gridx++;
-    panelInput.add( new JLabel( "...Q" ), gbcInput );
+    panelInput.add( GUIFactory.createLabel( "...Q" ), gbcInput );
 
     gbcInput.anchor        = GridBagConstraints.EAST;
     gbcInput.insets.bottom = 5;
     gbcInput.gridx         = 1;
     gbcInput.gridy++;
-    panelInput.add( new JLabel( "Hexadezimalzahl:" ), gbcInput );
+    panelInput.add( GUIFactory.createLabel( "Hexadezimalzahl:" ), gbcInput );
 
     gbcInput.anchor = GridBagConstraints.WEST;
     gbcInput.gridx++;
-    panelInput.add( new JLabel( "0x... oder ...H" ), gbcInput );
+    panelInput.add( GUIFactory.createLabel( "0x... oder ...H" ), gbcInput );
 
 
     // Bereich Ausgabe
-    JPanel panelOutput = new JPanel( new BorderLayout() );
+    JPanel panelOutput = GUIFactory.createPanel( new BorderLayout() );
     gbc.fill    = GridBagConstraints.BOTH;
     gbc.weighty = 1.0;
     gbc.gridy++;
     add( panelOutput, gbc );
 
-    panelOutput.setBorder( BorderFactory.createTitledBorder( "Ausgabe" ) );
+    panelOutput.setBorder( GUIFactory.createTitledBorder( "Ausgabe" ) );
 
-    this.fldOutput = new JEditorPane( "text/html", DEFAULT_TEXT );
+    this.fldOutput = GUIFactory.createEditorPane();
+    this.fldOutput.setContentType( "text/html" );
+    this.fldOutput.setText( DEFAULT_TEXT );
     this.fldOutput.setBorder( BorderFactory.createLoweredBevelBorder() );
     this.fldOutput.setEditable( false );
-    this.fldOutput.addCaretListener( this );
-    this.fldOutput.addFocusListener( this );
-    panelOutput.add( new JScrollPane( this.fldOutput ), BorderLayout.CENTER );
+    panelOutput.add(
+		GUIFactory.createScrollPane( this.fldOutput ),
+		BorderLayout.CENTER );
 
 
     // Zwischenablage
-    Toolkit tk = getToolkit();
+    Toolkit tk = EmuUtil.getToolkit( this );
     if( tk != null ) {
       this.clipboard = tk.getSystemClipboard();
-      if( this.clipboard != null ) {
-	this.clipboard.addFlavorListener( this );
-	this.mnuEditPaste.setEnabled( false );
-	updClipboardStatus();
-      }
     }
 
 
     // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       this.fldOutput.setPreferredSize( new Dimension( 300, 100 ) );
       pack();
       setScreenCentered();
       this.fldOutput.setPreferredSize( null );
     }
-    setResizable( true );
+
+
+    // Listener
+    this.fldInput.addActionListener( this );
+    this.fldInput.addCaretListener( this );
+    this.fldInput.addFocusListener( this );
+    if( this.docInput != null ) {
+      this.docInput.addDocumentListener( this );
+    }
+    this.fldOutput.addCaretListener( this );
+    this.fldOutput.addFocusListener( this );
+    if( this.clipboard != null ) {
+      this.clipboard.addFlavorListener( this );
+      this.mnuEditPaste.setEnabled( false );
+      updClipboardStatus();
+    }
   }
 
 
@@ -479,11 +489,11 @@ public class CalculatorFrm extends BaseFrm implements
 	      pos = 0;
 	    }
 	    buf.append( "<html>\n<p>" );
-	    appendText( buf, ex.getMessage() );
+	    EmuUtil.appendHTML( buf, ex.getMessage() );
 	    buf.append( "</p>\n<p>" );
-	    appendText( buf, text.substring( 0, pos ) );
+	    EmuUtil.appendHTML( buf, text.substring( 0, pos ) );
 	    buf.append( " <b>?</b> " );
-	    appendText( buf, text.substring( pos ) );
+	    EmuUtil.appendHTML( buf, text.substring( pos ) );
 	    buf.append( "</p>\n</html>\n" );
 	  }
 	}
@@ -498,7 +508,10 @@ public class CalculatorFrm extends BaseFrm implements
   }
 
 
-  private void appendResultRow( StringBuilder buf, String title, Number value )
+  private void appendResultRow(
+			StringBuilder buf,
+			String        title,
+			Number        value )
   {
     if( value != null ) {
       boolean isLong = false;
@@ -531,10 +544,10 @@ public class CalculatorFrm extends BaseFrm implements
 		+ "<th nowrap>Unicode-Zeichen</th></tr>\n" );
       }
       buf.append( "<tr><td nowrap>" );
-      appendText( buf, title );
+      EmuUtil.appendHTML( buf, title );
       buf.append( ":</td><td>" );
       if( isLong ) {
-	appendText( buf, Long.toHexString( lValue ).toUpperCase() );
+	EmuUtil.appendHTML( buf, Long.toHexString( lValue ).toUpperCase() );
       }
       buf.append( "</td><td nowrap>" );
       String decText = null;
@@ -546,20 +559,20 @@ public class CalculatorFrm extends BaseFrm implements
       if( decText == null ) {
 	decText = value.toString();
       }
-      appendText( buf, decText );
+      EmuUtil.appendHTML( buf, decText );
       buf.append( "</td><td nowrap>" );
       if( isLong ) {
-	appendText( buf, Long.toOctalString( lValue ) );
+	EmuUtil.appendHTML( buf, Long.toOctalString( lValue ) );
       }
       buf.append( "</td><td nowrap>" );
       if( isLong ) {
-	appendText( buf, Long.toBinaryString( lValue ) );
+	EmuUtil.appendHTML( buf, Long.toBinaryString( lValue ) );
       }
       buf.append( "</td><td nowrap>" );
       if( isLong ) {
 	if( (lValue >= 0) && (lValue < Integer.MAX_VALUE) ) {
 	  if( (lValue > '\u0020') && (lValue <= '\u007E') ) {
-	    appendText( buf, Character.toString( (char) lValue ) );
+	    EmuUtil.appendHTML( buf, Character.toString( (char) lValue ) );
 	  } else if( Character.isDefined( (int) lValue ) ) {
 	    buf.append( String.format( "&#%d;", lValue ) );
 	  }
@@ -573,74 +586,6 @@ public class CalculatorFrm extends BaseFrm implements
   private void appendResultEnd( StringBuilder buf )
   {
     buf.append( "</table>\n</html>\n" );
-  }
-
-
-  private void appendText( StringBuilder buf, String text )
-  {
-    if( text != null ) {
-      int len = text.length();
-      for( int i = 0; i < len; i++ ) {
-	char ch = text.charAt( i );
-	switch( ch ) {
-	  case '<':
-	    buf.append( "&lt;" );
-	    break;
-
-	  case '>':
-	    buf.append( "&gt;" );
-	    break;
-
-	  case '\"':
-	    buf.append( "&quot;" );
-	    break;
-
-	  case '&':
-	    buf.append( "&amp;" );
-	    break;
-
-	  case '\u00C4':
-	    buf.append( "&Auml;" );
-	    break;
-
-	  case '\u00D6':
-	    buf.append( "&Ouml;" );
-	    break;
-
-	  case '\u00DC':
-	    buf.append( "&Uuml;" );
-	    break;
-
-	  case '\u00E4':
-	    buf.append( "&auml;" );
-	    break;
-
-	  case '\u00F6':
-	    buf.append( "&ouml;" );
-	    break;
-
-	  case '\u00FC':
-	    buf.append( "&uuml;" );
-	    break;
-
-	  case '\u00DF':
-	    buf.append( "&szlig;" );
-	    break;
-
-	  default:
-	    if( ch < '\u0020' ) {
-	      buf.append( (char) '\u0020' );
-	    }
-	    else if( ch > '\u007E' ) {
-	      buf.append( "&#" );
-	      buf.append( (int) ch );
-	      buf.append( (char) ';' );
-	    } else {
-	      buf.append( (char) ch );
-	    }
-	}
-      }
-    }
   }
 
 

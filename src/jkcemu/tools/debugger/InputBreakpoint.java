@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,13 +9,21 @@
 
 package jkcemu.tools.debugger;
 
-import java.lang.*;
+import org.xml.sax.Attributes;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import z80emu.Z80CPU;
 import z80emu.Z80InterruptSource;
 
 
 public class InputBreakpoint extends AbstractBreakpoint
 {
+  public static final String BP_TYPE = "input";
+
+  private static final String ATTR_PORT = "port";
+  private static final String ATTR_SIZE = "size";
+
   private boolean is8Bit;
   private int     begPort;
   private int     endPort;
@@ -23,9 +31,9 @@ public class InputBreakpoint extends AbstractBreakpoint
 
   public InputBreakpoint(
 		DebugFrm debugFrm,
-		boolean is8Bit,
-		int     begPort,
-		int     endPort )
+		boolean  is8Bit,
+		int      begPort,
+		int      endPort )
   {
     super( debugFrm );
     this.is8Bit  = is8Bit;
@@ -46,6 +54,37 @@ public class InputBreakpoint extends AbstractBreakpoint
 	setText( String.format( "%04X", this.begPort ) );
       }
     }
+  }
+
+
+  public static InputBreakpoint createByAttrs(
+					DebugFrm   debugFrm,
+					Attributes attrs )
+  {
+    InputBreakpoint bp = null;
+    if( attrs != null ) {
+      String portText = attrs.getValue( ATTR_PORT );
+      if( portText != null ) {
+	portText = portText.toUpperCase();
+	int len  = portText.length();
+	if( len > 0 ) {
+	  try {
+	    int port = BreakpointVarLoader.getIntValue( portText );
+	    int size = getHex4Value( attrs, ATTR_SIZE );
+	    if( portText.endsWith( "H" ) ) {
+	      --len;
+	    }
+	    bp = new InputBreakpoint(
+				debugFrm,
+				len < 3,
+				port,
+				size > 1 ? (port + size - 1) : -1 );
+	  }
+	  catch( NumberFormatException ex ) {}
+	}
+      }
+    }
+    return bp;
   }
 
 
@@ -97,6 +136,27 @@ public class InputBreakpoint extends AbstractBreakpoint
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void writeTo( Document doc, Node parent )
+  {
+    Element elem = createBreakpointElement( doc, BP_TYPE );
+    elem.setAttribute(
+		ATTR_PORT,
+		this.is8Bit ?
+			toHex2( this.begPort )
+			: toHex4( this.begPort ) );
+    int size = 1;
+    if( this.endPort > this.begPort ) {
+      size = this.endPort - this.begPort + 1;
+    }
+    elem.setAttribute(
+		ATTR_SIZE,
+		this.is8Bit ? toHex2( size ) : toHex4( size ) );
+    appendAttributesTo( elem );
+    parent.appendChild( elem );
   }
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,10 +13,10 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Toolkit;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
+import jkcemu.base.EmuUtil;
 import jkcemu.emusys.Z1013;
 
 
@@ -72,7 +72,7 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld<Z1013>
 
     int x = MARGIN;
     int y = MARGIN;
-    Toolkit tk = getToolkit();
+    Toolkit tk = EmuUtil.getToolkit( this );
     if( tk != null ) {
       int m = 0x01;
       for( int i = 0; i < keyImgResources.length; i++ ) {
@@ -172,12 +172,12 @@ public class Z1013KeyboardFld8x4 extends AbstractKeyboardFld<Z1013>
     int w = getWidth();
     int h = getHeight();
     if( (w > 0) && (h > 0) && (this.keyWidth > 0) && (this.keyHeight > 0) ) {
-      g.setColor( Color.gray );
+      g.setColor( Color.GRAY );
       g.fillRect( 0, 0, w, h );
       for( KeyData key : this.keys ) {
 	if( key.image != null ) {
 	  if( isKeySelected( key ) ) {
-	    g.setColor( Color.darkGray );
+	    g.setColor( Color.DARK_GRAY );
 	    g.fillRect( key.x, key.y, this.keyWidth, this.keyHeight );
 	  }
 	  g.drawImage( key.image, key.x, key.y, this );

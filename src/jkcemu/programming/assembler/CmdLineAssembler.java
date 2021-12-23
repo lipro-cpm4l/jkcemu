@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,10 +8,11 @@
 
 package jkcemu.programming.assembler;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.*;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.AbstractMap;
@@ -36,7 +37,9 @@ public class CmdLineAssembler
 	"Optionen:",
 	"  -h              diese Hilfe anzeigen",
 	"  -f <Datei>      Kommandozeile aus Datei lesen",
-	"  -l              Markentabelle ausgeben",
+	"  -l              Listing erzeugen",
+	"  -t              Markentabelle ausgeben bzw. an Listing"
+							+ " anh\u00E4ngen",
 	"  -o <Datei>      Ausgabedatei festlegen",
 	"  -9              Ausgabedatei f\u00FCr Z9001, KC85/1 und KC87"
 							+ " erzeugen",
@@ -44,6 +47,8 @@ public class CmdLineAssembler
 	"  -D <Marke>      Marke mit dem Wert -1 (alle Bits gesetzt)"
 							+ " definieren",
 	"  -D <Marke=Wert> Marke mit angegebenen Wert definieren",
+	"  -J              zu gro\u00DFe relative Spr\u00FCnge als"
+					+ " absolute \u00FCbersetzen",
 	"  -U              undokumentierte Befehle erlauben",
 	"  -R              nur Robotron-Syntax erlauben",
 	"  -Z              nur Zilog-Syntax erlauben",
@@ -54,16 +59,18 @@ public class CmdLineAssembler
   {
     java.util.List<Map.Entry<String,Integer>> labels = new ArrayList<>();
 
-    boolean status       = false;
-    boolean caseFlag     = false;
-    boolean helpFlag     = false;
-    boolean robotronFlag = false;
-    boolean zilogFlag    = false;
-    boolean undocFlag    = false;
-    boolean listFlag     = false;
-    boolean forZ9001     = false;
-    String  outFileName  = null;
-    String  srcFileName  = null;
+    boolean status         = false;
+    boolean caseFlag       = false;
+    boolean helpFlag       = false;
+    boolean jumpFlag       = false;
+    boolean robotronFlag   = false;
+    boolean zilogFlag      = false;
+    boolean undocFlag      = false;
+    boolean listFlag       = false;
+    boolean labelTableFlag = false;
+    boolean forZ9001       = false;
+    String  outFileName    = null;
+    String  srcFileName    = null;
 
     CmdLineArgIterator backIter = null;
     CmdLineArgIterator iter     = CmdLineArgIterator.createFromStringArray(
@@ -128,6 +135,9 @@ public class CmdLineAssembler
 		    parseLabel( labels, labelText );
 		  }
 		  break;
+		case 'J':
+		  jumpFlag = true;
+		  break;
 		case 'R':
 		  robotronFlag = true;
 		  break;
@@ -157,6 +167,9 @@ public class CmdLineAssembler
 		case '9':
 		  forZ9001 = true;
 		  break;
+		case 't':
+		  labelTableFlag = true;
+		  break;
 		default:
 		  throw new IOException(
 			String.format( "Unbekannte Option \'%c\'", ch ) );
@@ -171,17 +184,17 @@ public class CmdLineAssembler
 	}
 	arg = iter.next();
 	if( (arg == null) && (backIter != null) ) {
-	  EmuUtil.closeSilent( iter );
+	  EmuUtil.closeSilently( iter );
 	  iter     = backIter;
 	  backIter = null;
 	  arg      = iter.next();
 	}
       }
       if( helpFlag ) {
-	EmuUtil.printlnOut();
-	EmuUtil.printlnOut( Main.APPINFO + " Assembler" );
+	Main.printlnOut();
+	Main.printlnOut( Main.APPINFO + " Assembler" );
 	for( String s : usageLines ) {
-	  EmuUtil.printlnOut( s );
+	  Main.printlnOut( s );
 	}
       } else {
 
@@ -204,9 +217,11 @@ public class CmdLineAssembler
 	} else {
 	  options.setAsmSyntax( Z80Assembler.Syntax.ALL );
 	}
-	options.setLabelsCaseSensitive( caseFlag );
 	options.setAllowUndocInst( undocFlag );
-	options.setPrintLabels( listFlag );
+	options.setCreateAsmListing( listFlag );
+	options.setLabelsCaseSensitive( caseFlag );
+	options.setPrintLabels( labelTableFlag );
+	options.setReplaceTooLongRelJumps( jumpFlag );
 
 	// Assembler starten
 	status = assemble(
@@ -218,21 +233,21 @@ public class CmdLineAssembler
       }
     }
     catch( IOException ex ) {
-      EmuUtil.printlnErr();
-      EmuUtil.printlnErr( Main.APPINFO + " Assembler:" );
+      Main.printlnErr();
+      Main.printlnErr( Main.APPINFO + " Assembler:" );
       String msg = ex.getMessage();
       if( msg != null ) {
 	if( !msg.isEmpty() ) {
-	  EmuUtil.printlnErr( msg );
+	  Main.printlnErr( msg );
 	}
       }
       for( String s : usageLines ) {
-	EmuUtil.printlnErr( s );
+	Main.printlnErr( s );
       }
       status = false;
     }
     finally {
-      EmuUtil.closeSilent( iter );
+      EmuUtil.closeSilently( iter );
     }
     return status;
   }
@@ -253,27 +268,24 @@ public class CmdLineAssembler
       if( outFileName != null ) {
 	outFile = new File( outFileName );
       } else {
-	String fName = srcFile.getName();
-	if( fName != null ) {
-	  int pos = fName.lastIndexOf( '.' );
-	  if( (pos >= 0) && (pos < fName.length()) ) {
-	    fName = fName.substring( 0, pos );
-	  }
-	  fName += ".bin";
-	} else {
-	  fName = "out.bin";
-	}
-	File dirFile = srcFile.getParentFile();
-        if( dirFile != null ) {
-          outFile = new File( dirFile, fName );
-        } else {
-          outFile = new File( fName );
-        }
+	outFile = getFileWithOtherExt( srcFile, ".bin" );
       }
       if( outFile.equals( srcFile ) ) {
 	throw new IOException( "Quelltext- und Ausgabedatei sind identisch" );
       }
       options.setCodeToFile( true, outFile );
+      File listFile = null;
+      if( options.getCreateAsmListing() ) {
+	listFile = getFileWithOtherExt( srcFile, ".lst" );
+	if( listFile.equals( srcFile ) ) {
+	  throw new IOException(
+			"Quelltext- und Listing-Datei sind identisch" );
+	}
+	if( listFile.equals( outFile ) ) {
+	  throw new IOException(
+			"Ausgabe- und Listing-Datei sind identisch" );
+	}
+      }
       Z80Assembler asm = new Z80Assembler(
 					null,
 					null,
@@ -284,21 +296,63 @@ public class CmdLineAssembler
       for( Map.Entry<String,Integer> label : labels ) {
 	String  s = label.getKey();
 	Integer v = label.getValue();
-	if( !asm.addLabel( s, v != null ? v.intValue() : -1 ) ) {
+	if( !asm.addLabel( s, v != null ? v.intValue() : -1, false ) ) {
 	  throw new IOException( "Marke " + s + " bereits vorhanden" );
 	}
       }
-      status = asm.assemble( null, forZ9001 );
+      status = asm.assemble( forZ9001 );
+      if( status && (listFile != null) ) {
+	StringBuilder listing = asm.getListing();
+	if( listing != null ) {
+	  BufferedWriter writer = null;
+	  try {
+	    writer = new BufferedWriter( new FileWriter( listFile ) );
+	    int len = listing.length();
+	    for( int i = 0; i < len; i++ ) {
+	      char ch = listing.charAt( i );
+	      if( ch == '\n' ) {
+		writer.newLine();
+	      } else {
+		writer.write( ch );
+	      }
+	    }
+	    writer.close();
+	    writer = null;
+	  }
+	  finally {
+	    EmuUtil.closeSilently( writer );
+	  }
+	}
+      }
     }
     catch( IOException ex ) {
       String msg = ex.getMessage();
       if( msg != null ) {
 	if( !msg.isEmpty() ) {
-	  EmuUtil.printlnErr( msg );
+	  Main.printlnErr( msg );
 	}
       }
     }
     return status;
+  }
+
+
+  private static File getFileWithOtherExt( File srcFile, String ext )
+  {
+    String fName = srcFile.getName();
+    if( fName != null ) {
+      int pos = fName.lastIndexOf( '.' );
+      if( (pos >= 0) && (pos < fName.length()) ) {
+	fName = fName.substring( 0, pos );
+      }
+      fName += ext;
+    } else {
+      fName = "out" + ext;
+    }
+    File dirFile = srcFile.getParentFile();
+    return dirFile != null ?
+		new File( dirFile, fName )
+		: new File( fName );
   }
 
 

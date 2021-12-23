@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,25 +18,26 @@ import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
-import javax.swing.KeyStroke;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuSys;
+import jkcemu.base.EmuUtil;
 import jkcemu.base.EmuThread;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
 import jkcemu.base.HexDocument;
 import jkcemu.base.ReplyBytesDlg;
 import jkcemu.base.ScreenFrm;
 import jkcemu.print.PrintOptionsDlg;
 import jkcemu.print.PrintUtil;
+import jkcemu.text.TextFinder;
 import z80emu.Z80Memory;
 
 
@@ -82,103 +83,97 @@ public class MemEditFrm extends AbstractHexCharFrm
     setTitle( "JKCEMU Speichereditor" );
 
 
-    // Menu
-    JMenuBar mnuBar = new JMenuBar();
-    setJMenuBar( mnuBar );
-
-
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
-    mnuBar.add( mnuFile );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuRefresh = createJMenuItem( "Aktualisieren" );
+    this.mnuRefresh = createMenuItem( "Aktualisieren" );
     mnuFile.add( this.mnuRefresh );
     mnuFile.addSeparator();
 
-    this.mnuPrintOptions = createJMenuItem( "Druckoptionen..." );
+    this.mnuPrintOptions = createMenuItemOpenPrintOptions();
     mnuFile.add( this.mnuPrintOptions );
 
-    this.mnuPrint = createJMenuItem(
-			"Drucken...",
-			KeyStroke.getKeyStroke(
-				KeyEvent.VK_P,
-				InputEvent.CTRL_MASK ) );
+    this.mnuPrint = createMenuItemOpenPrint( true );
     this.mnuPrint.setEnabled( false );
     mnuFile.add( this.mnuPrint );
     mnuFile.addSeparator();
 
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
 
     // Menu Bearbeiten
-    JMenu mnuEdit = new JMenu( "Bearbeiten" );
-    mnuEdit.setMnemonic( KeyEvent.VK_B );
-    mnuBar.add( mnuEdit );
+    JMenu mnuEdit = createMenuEdit();
 
-    this.mnuBytesCopyHex = createJMenuItem(
+    this.mnuBytesCopyHex = createMenuItem(
 		"Ausgw\u00E4hlte Bytes als Hexadezimalzahlen kopieren" );
     this.mnuBytesCopyHex.setEnabled( false );
     mnuEdit.add( this.mnuBytesCopyHex );
 
-    this.mnuBytesCopyAscii = createJMenuItem(
+    this.mnuBytesCopyAscii = createMenuItem(
 		"Ausgw\u00E4hlte Bytes als ASCII-Text kopieren" );
     this.mnuBytesCopyAscii.setEnabled( false );
     mnuEdit.add( this.mnuBytesCopyAscii );
 
-    this.mnuBytesCopyDump = createJMenuItem(
+    this.mnuBytesCopyDump = createMenuItem(
 		"Ausgw\u00E4hlte Bytes als Hex-ASCII-Dump kopieren" );
     this.mnuBytesCopyDump.setEnabled( false );
     mnuEdit.add( this.mnuBytesCopyDump );
     mnuEdit.addSeparator();
 
-    this.mnuOverwrite = createJMenuItem(
-		"Bytes \u00FCberschreiben...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_O, Event.CTRL_MASK ) );
+    this.mnuOverwrite = createMenuItemWithStandardAccelerator(
+				"Bytes \u00FCberschreiben...",
+				KeyEvent.VK_O );
     this.mnuOverwrite.setEnabled( false );
     mnuEdit.add( this.mnuOverwrite );
     mnuEdit.addSeparator();
 
-    this.mnuSaveAddr = createJMenuItem( "Adresse merken" );
+    this.mnuSaveAddr = createMenuItem( "Adresse merken" );
     this.mnuSaveAddr.setEnabled( false );
     mnuEdit.add( this.mnuSaveAddr );
 
-    this.mnuGotoSavedAddr = createJMenuItem(
+    this.mnuGotoSavedAddr = createMenuItem(
                                 "Zur gemerkten Adresse springen" );
     this.mnuGotoSavedAddr.setEnabled( false );
     mnuEdit.add( this.mnuGotoSavedAddr );
 
-    this.mnuSelectToSavedAddr = createJMenuItem(
+    this.mnuSelectToSavedAddr = createMenuItem(
                                 "Bis zur gemerkten Adresse ausw\u00E4hlen" );
     this.mnuSelectToSavedAddr.setEnabled( false );
     mnuEdit.add( this.mnuSelectToSavedAddr );
     mnuEdit.addSeparator();
 
-    this.mnuChecksum = createJMenuItem( "Pr\u00FCfsumme/Hash-Wert..." );
+    this.mnuChecksum = createMenuItem( "Pr\u00FCfsumme/Hashwert..." );
     this.mnuChecksum.setEnabled( false );
     mnuEdit.add( this.mnuChecksum );
     mnuEdit.addSeparator();
 
-    this.mnuFind = createJMenuItem(
-		"Suchen...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F, Event.CTRL_MASK ) );
+    this.mnuFind = createMenuItemOpenFind( true );
     this.mnuFind.setEnabled( false );
     mnuEdit.add( this.mnuFind );
 
-    this.mnuFindNext = createJMenuItem(
-		"Weitersuchen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_F3, 0 ) );
+    this.mnuFindNext = createMenuItemFindNext( true );
     this.mnuFindNext.setEnabled( false );
     mnuEdit.add( this.mnuFindNext );
 
 
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
-    mnuBar.add( mnuHelp );
+    // Einstellungen
+    JMenu mnuSettings = createMenuSettings();
+    addDirectEditMenuItemTo( mnuSettings );
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+
+    // Menu Hilfe
+    JMenu mnuHelp       = createMenuHelp();
+    this.mnuHelpContent = createMenuItem( "Hilfe zum Speichereditor..." );
     mnuHelp.add( this.mnuHelpContent );
+
+
+    // Menu
+    setJMenuBar( GUIFactory.createMenuBar(
+					mnuFile,
+					mnuEdit,
+					mnuSettings,
+					mnuHelp ) );
 
 
     // Fensterinhalt
@@ -194,10 +189,10 @@ public class MemEditFrm extends AbstractHexCharFrm
 					0, 0 );
 
     // Adresseingabe
-    add( new JLabel( "Anfangsadresse:" ), gbc );
+    add( GUIFactory.createLabel( "Anfangsadresse:" ), gbc );
 
     this.docBegAddr = new HexDocument( 4, "Anfangsadresse" );
-    this.fldBegAddr = new JTextField( this.docBegAddr, "", 4 );
+    this.fldBegAddr = GUIFactory.createTextField( this.docBegAddr, 4 );
     this.fldBegAddr.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 0.5;
@@ -207,10 +202,10 @@ public class MemEditFrm extends AbstractHexCharFrm
     gbc.fill    = GridBagConstraints.NONE;
     gbc.weightx = 0.0;
     gbc.gridx++;
-    add( new JLabel( "Endadresse:" ), gbc );
+    add( GUIFactory.createLabel( "Endadresse:" ), gbc );
 
     this.docEndAddr = new HexDocument( 4, "Endadresse" );
-    this.fldEndAddr = new JTextField( this.docEndAddr, "", 4 );
+    this.fldEndAddr = GUIFactory.createTextField( this.docEndAddr, 4 );
     this.fldEndAddr.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 0.5;
@@ -241,11 +236,11 @@ public class MemEditFrm extends AbstractHexCharFrm
 
 
     // sonstiges
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       pack();
       setScreenCentered();
     }
-    setResizable( true );
     this.hexCharFld.setPreferredSize( null );
   }
 
@@ -311,7 +306,7 @@ public class MemEditFrm extends AbstractHexCharFrm
 	doFindNext();
       } else if( src == this.mnuHelpContent ) {
 	rv = true;
-	HelpFrm.open( HELP_PAGE );
+	HelpFrm.openPage( HELP_PAGE );
       } else {
 	rv = super.doAction( e );
       }
@@ -348,7 +343,14 @@ public class MemEditFrm extends AbstractHexCharFrm
 
 
   @Override
-  public void resetFired()
+  public boolean getDataReadOnly()
+  {
+    return false;
+  }
+
+
+  @Override
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
   {
     ScreenFrm screenFrm = Main.getScreenFrm();
     if( screenFrm != null ) {
@@ -384,6 +386,17 @@ public class MemEditFrm extends AbstractHexCharFrm
   {
     this.mnuPrint.setEnabled( state );
     this.mnuFind.setEnabled( state );
+  }
+
+
+  @Override
+  public boolean setDataByte( int idx, int value )
+  {
+    boolean rv = false;
+    if( (this.begAddr >= 0) && ((this.begAddr + idx) <= this.endAddr) ) {
+      rv = this.memory.setMemByte( this.begAddr + idx, value );
+    }
+    return rv;
   }
 
 
@@ -449,12 +462,14 @@ public class MemEditFrm extends AbstractHexCharFrm
 		    BaseDlg.showErrorDlg( this, msg );
 		  } else {
 		    boolean     cancel  = true;
-		    String[]    options = { "Weiter", "Abbrechen" };
+		    String[]    options = { "Weiter", EmuUtil.TEXT_CANCEL };
 		    JOptionPane pane    = new JOptionPane(
 						msg,
 						JOptionPane.ERROR_MESSAGE );
 		    pane.setOptions( options );
-		    pane.createDialog( this, "Fehler" ).setVisible( true );
+		    pane.createDialog(
+				this,
+				EmuUtil.TEXT_ERROR ).setVisible( true );
 		    Object value = pane.getValue();
 		    if( value != null ) {
 		      if( value.equals( options[ 0 ] ) ) {

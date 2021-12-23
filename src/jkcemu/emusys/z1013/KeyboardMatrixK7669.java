@@ -1,5 +1,5 @@
 /*
- * (c) 2011 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Z1013-Emulator
  *
@@ -10,7 +10,6 @@
 package jkcemu.emusys.z1013;
 
 import java.awt.event.KeyEvent;
-import java.lang.*;
 
 
 public class KeyboardMatrixK7669 extends KeyboardMatrix12x8

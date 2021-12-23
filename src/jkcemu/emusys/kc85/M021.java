@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,14 +8,17 @@
 
 package jkcemu.emusys.kc85;
 
-import java.lang.*;
 import jkcemu.base.EmuThread;
 import jkcemu.print.PrintMngr;
 import z80emu.Z80CPU;
+import z80emu.Z80PIO;
+import z80emu.Z80PIOPortListener;
 import z80emu.Z80TStatesListener;
 
 
-public class M021 extends KC85JoystickModule implements Z80TStatesListener
+public class M021
+		extends KC85JoystickModule
+		implements Z80PIOPortListener, Z80TStatesListener
 {
   private EmuThread    emuThread;
   private boolean      cenStrobe;
@@ -29,6 +32,41 @@ public class M021 extends KC85JoystickModule implements Z80TStatesListener
     this.cenStrobe            = false;
     this.cenBusyTStateCounter = 0;
     this.pio.putInValuePortA( 0, 0x40 );	// BUSY=0
+    this.pio.addPIOPortListener( this, Z80PIO.PortInfo.A );
+  }
+
+
+	/* --- Z80PIOPortListener --- */
+
+  @Override
+  public void z80PIOPortStatusChanged(
+				Z80PIO          pio,
+				Z80PIO.PortInfo port,
+				Z80PIO.Status   status )
+  {
+    if( (pio == this.pio)
+	&& ((status == Z80PIO.Status.OUTPUT_AVAILABLE)
+	    || (status == Z80PIO.Status.OUTPUT_CHANGED)) )
+    {
+      PrintMngr pm = this.emuThread.getPrintMngr();
+      if( pm != null ) {
+	boolean strobe = ((this.pio.fetchOutValuePortA( 0xFF ) & 0x80) == 0);
+	if( strobe != this.cenStrobe ) {
+	  this.cenStrobe = strobe;
+	  if( strobe ) {
+	    pm.putByte( this.pio.fetchOutValuePortB( 0xFF ) );
+	    this.pio.putInValuePortA( 0x40, 0x40 );	// BUSY=1
+	    synchronized( this ) {
+	      this.cenBusyTStateCounter =
+			this.emuThread.getZ80CPU().getMaxSpeedKHz() / 20;
+	      if( this.cenBusyTStateCounter < 1 ) {
+		this.cenBusyTStateCounter = 1;
+	      }
+	    }
+	  }
+	}
+      }
+    }
   }
 
 
@@ -47,6 +85,14 @@ public class M021 extends KC85JoystickModule implements Z80TStatesListener
 
 
 	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void die()
+  {
+    this.pio.removePIOPortListener( this, Z80PIO.PortInfo.A );
+    super.die();
+  }
+
 
   @Override
   public String getModuleName()
@@ -70,28 +116,7 @@ public class M021 extends KC85JoystickModule implements Z80TStatesListener
     if( (port >= 0x90) && (port < 0x98) ) {
       switch( port & 0xFF ) {
 	case 0x90:
-	  {
-	    this.pio.writeDataA( value );
-	    PrintMngr pm = this.emuThread.getPrintMngr();
-	    if( pm != null ) {
-	      boolean strobe = ((this.pio.fetchOutValuePortA( false )
-							& 0x80) == 0);
-	      if( strobe != this.cenStrobe ) {
-		this.cenStrobe = strobe;
-		if( strobe ) {
-		  pm.putByte( this.pio.fetchOutValuePortB( false ) );
-		  this.pio.putInValuePortA( 0x40, 0x40 );	// BUSY=1
-		  synchronized( this ) {
-		    this.cenBusyTStateCounter =
-			this.emuThread.getZ80CPU().getMaxSpeedKHz() / 20;
-		    if( this.cenBusyTStateCounter < 1 ) {
-		      this.cenBusyTStateCounter = 1;
-		    }
-		  }
-		}
-	      }
-	    }
-	  }
+	  this.pio.writeDataA( value );
 	  break;
 
 	case 0x91:

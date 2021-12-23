@@ -1,6 +1,6 @@
 <html>
 <body>
- <h1>Bildbetrachter/-bearbeitung</h1>
+ <h1>Bildbetrachter/Bildbearbeitung</h1>
   Der Bildbetrachter dient dazu, Bilder anzuzeigen, zu konvertieren
   und zu speichern.
   Die Besonderheit des JKCEMU-Bildbetrachters liegt darin,
@@ -29,7 +29,9 @@
    </li>
    <li><a href="imageviewer.htm#save">3. Datei speichern</a></li>
    <li><a href="imageviewer.htm#export">4. Exportieren</a></li>
-   <li><a href="imageviewer.htm#etc">5. Weitere Funktionen</a></li>
+   <li>
+    <a href="imageviewer.htm#exif">5. Zusatzinformationen (EXIF-Daten)</a>
+   </li>
    <li>
     <a href="imageviewer.htm#edit">6. Bildbearbeitung</a>
     <ul>
@@ -43,45 +45,51 @@
       <a href="imageviewer.htm#scale">6.3. Skalieren</a>
      </li>
      <li>
-      <a href="imageviewer.htm#flip_horizontal">6.4. Spiegeln</a>
+      <a href="imageviewer.htm#sharpen">6.4. Sch&auml;rfen</a>
      </li>
      <li>
-      <a href="imageviewer.htm#round_corners">6.5. Ecken abrunden</a>
+      <a href="imageviewer.htm#flip_horizontal">6.5. Spiegeln</a>
      </li>
      <li>
-      <a href="imageviewer.htm#adjust">6.6. Helligkeit, Kontrast, Farben</a>
+      <a href="imageviewer.htm#round_corners">6.6. Ecken abrunden</a>
      </li>
      <li>
-      <a href="imageviewer.htm#index_colors">6.7. Farben reduzieren und indexieren</a>
+      <a href="imageviewer.htm#adjust">6.7. Helligkeit, Kontrast, Farben</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#index_colors">6.8. Farben reduzieren und indexieren</a>
       <ul>
        <li>
-        <a href="imageviewer.htm#create_pal">6.7.1. Farbpalette ermitteln</a>
+        <a href="imageviewer.htm#create_pal">6.8.1. Farbpalette ermitteln</a>
        </li>
        <li>
-        <a href="imageviewer.htm#import_pal">6.7.2. Farbpalette importieren</a>
+        <a href="imageviewer.htm#import_pal">6.8.2. Farbpalette importieren</a>
        </li>
        <li>
-        <a href="imageviewer.htm#dithering">6.7.3. Dithering</a>
+        <a href="imageviewer.htm#dithering">6.8.3. Dithering</a>
         <ul>
          <li>
-          <a href="imageviewer.htm#floyd_steinberg">6.7.3.1. Floyd-Steinberg</a>
+          <a href="imageviewer.htm#floyd_steinberg">6.8.3.1. Floyd-Steinberg</a>
          </li>
          <li>
-          <a href="imageviewer.htm#sierra3">6.7.3.2. Sierra-3</a>
+          <a href="imageviewer.htm#sierra3">6.8.3.2. Sierra-3</a>
          </li>
          <li>
-          <a href="imageviewer.htm#atkinson">6.7.3.3. Atkinson</a>
+          <a href="imageviewer.htm#atkinson">6.8.3.3. Atkinson</a>
          </li>
         </ul>
        </li>
       </ul>
      </li>
      <li>
-      <a href="imageviewer.htm#black_white">6.8. Schwarz/Wei&szlig; wandeln</a>
+      <a href="imageviewer.htm#black_white">6.9. Schwarz/Wei&szlig; wandeln</a>
      </li>
-     <li><a href="imageviewer.htm#invert">6.9. Invertieren</a></li>
+     <li><a href="imageviewer.htm#invert">6.10. Invertieren</a></li>
      <li>
-      <a href="imageviewer.htm#remove_transp">6.10. Transparenz entfernen</a>
+      <a href="imageviewer.htm#remove_transp">6.11. Transparenz entfernen</a>
+     </li>
+     <li>
+      <a href="imageviewer.htm#color_pal">6.12. Farbpalette</a>
      </li>
     </ul>
    </li>
@@ -96,13 +104,14 @@
      </li>
     </ul>
    </li>
+   <li><a href="imageviewer.htm#etc">8. Weitere Funktionen</a></li>
   </ul>
  <br/>
 
  <h2><a name="formats">1. Dateiformate</a></h2>
   Die vom Bildbetrachter unterst&uuml;tzten Dateiformate h&auml;ngen
   von der verwendeten Java-Laufzeitumgebung ab.
-  Diese unterst&uuml;tzt &uuml;blicherweise dir Formate BMP, GIF,
+  Diese unterst&uuml;tzt &uuml;blicherweise die Formate BMP, GIF,
   JPEG, PNG und WBMP sowie ab Java&nbsp;9 auch TIFF.
   Des Weiteren beherrscht der JKCEMU-Bildbetrachter
   auch das IFF/ILBM-Format.
@@ -205,13 +214,6 @@
   Dieses kann nur in schwarz/wei&szlig; und nur
   in bestimmten Gr&ouml;&szlig;en gespeichert werden.
  <br/><br/>
-  <b>Achtung!</b> Der JKCEMU-Bildbetrachter unterst&uuml;tzt keine
-  EXIF-Daten.
-  Wenn Sie also ein mit einer Digitalkamera aufgenommenes Foto
-  &ouml;ffnen und wieder speichern,
-  gehen die Informationen &uuml;ber Aufnahmezeitpunkt, Kameramodell,
-  Belichtung usw. verloren.
- <br/><br/>
 
  <h2><a name="export">4. Exportieren</a></h2>
   Im Untermen&uuml; <em>Datei</em> &rarr; <em>Exportieren&nbsp;als</em>
@@ -226,7 +228,7 @@
   (siehe <a href="imageviewer.htm#edit">Bildbearbeitung</a>),
   bevor man die Konvertierungsfunktion aufruft.
  <br/><br/>
-  Je nach emulierten System l&auml;sst sich das konvertierte Bild als
+  Je nach emuliertem System l&auml;sst sich das konvertierte Bild als
   <ul>
    <li>spezielle Bilddatei,</li>
    <li>Speicherabbilddatei f&uuml;r den Bildwiederholspeicher und/oder</li>
@@ -240,30 +242,85 @@
   <a href="../llc2.htm#images">LLC2-HIRES-Bilddateien</a>).
  <br/><br/>
 
- <h2><a name="etc">5. Weitere Funktionen</a></h2>
-  Wenn ein Bild angezeigt wird, k&ouml;nnen Sie neben
-  den in den anderen Abschnitten beschriebenen Funktionen auch:
-  <ul>
-   <li>das Bild in die Zwischenablage kopieren</li>
-   <li>das Bild ausdrucken</li>
-   <li>die Bildeigenschaften ansehen</li>
-   <li>die Farbpalette exportieren</li>
-  </ul>
- <br/>
-  Die Men&uuml;eintr&auml;ge dazu finden Sie unter <em>Datei</em>
-  sowie f&uuml;r das Kopieren in die Zwischenablage unter <em>Bearbeiten</em>.
+ <h2><a name="exif">5. Zusatzinformationen (EXIF-Daten)</a></h2>
+  Manche Bilddateien enthalten zus&auml;tzliche Informationen,
+  wie z.B. eine Beschreibung oder das Aufnahmedatum des Bildes.
+  Der JKCEMU-Bildbetrachter unterst&uuml;tzt solche auch Metadaten
+  genannte Zusatzinformationen bei GIF-, IFF/ILBM-, JPEG/JEG-
+  und PNG-Dateien lesend und schreibend.
+  Die Tabelle zeigt, bei welchen Dateiformaten
+  welche Zusatzinformationen unterst&uuml;tzt werden:
  <br/><br/>
-  Die letzte der aufgef&uuml;hrten Funktionen, Farbpalette exportieren,
-  bildet das Gegenst&uuml;ck zu
-  <a href="imageviewer.htm#import_pal">Farbpalette importieren</a>
-  und ist nur m&ouml;glich,
-  wenn das Bild ein indexiertes Farbmodell (Farbtabelle) hat.
-  Die Farbpalette l&auml;sst sich als
-  <em>Paintshop Pro Farbpalettendatei</em> oder als
-  <em>IFF/ILBM-Datei</em> exportieren.
-  Das IFF/ILBM-Format ist zwar &uuml;blicherweise ein Dateiformat
-  f&uuml;r Bilder, wird aber in dem Fall nur f&uuml;r die Farbpalette
-  verwendet. Die Datei enth&auml;lt somit keine Bilddaten.
+  <table border="1">
+   <tr>
+    <th>Dateiformat</th>
+    <th>Unterst&uuml;tzte Zusatzinformationen</th>
+   </tr>
+   <tr>
+    <td valign="top">GIF</td>
+    <td valign="top">
+     <ul>
+      <li>Kommentar</li>
+     </ul>
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">IFF/ILBM</td>
+    <td valign="top">
+     <ul>
+      <li>Name</li>
+      <li>Beschreibung/Bemerkung</li>
+      <li>Author</li>
+      <li>Copyright</li>
+     </ul>
+   </tr>
+   <tr>
+    <td valign="top">JPEG/JPG</td>
+    <td valign="top">
+     <ul>
+      <li>
+       EXIF-Daten
+      </li>
+     </ul>
+     <b>Hinweis:</b> JKCEMU liest die meisten allgemeing&uuml;ltigen
+     Eintr&auml;ge aus den EXIF-Daten und speichert sie auch wieder.
+     Herstellerspezifische EXIF-Eintr&auml;ge werden jedoch ignoriert.
+    </td>
+   </tr>
+   <tr>
+    <td valign="top">PNG</td>
+    <td valign="top">
+     <ul>
+      <li>Titel</li>
+      <li>Beschreibung</li>
+      <li>Author</li>
+      <li>Copyright</li>
+      <li>Kommentar</li>
+      <li>Software</li>
+      <li>Datum und Uhrzeit der Aufnahme bzw. der Bilderzeugung</li>
+     </ul>
+     <b>Hinweis:</b> Das PNG-Format bietet die drei Chunk-Typen
+     <em>tEXt</em>, <em>iTXt</em> und <em>zTXt</em>
+     zur Speicherung von Textinformationen.
+     JKCEMU verwendet davon ausschlie&szlig;lich
+     den Chunk&nbsp;<em>tEXt</em>.
+   </tr>
+  </table>
+ <br>
+  Zum Anzeigen der zus&auml;tzlichen Informationen w&auml;hlt man
+  im Men&uuml; <em>Datei</em> die Bildeigenschaften an.
+  Die Zusatzinformationen k&ouml;nnen auch entfernt
+  oder in begrenztem Umfang ge&auml;ndert werden.
+ <br/><br/>
+  Soweit m&ouml;glich, werden die Zusatzinformationen
+  zwischen den einzelnen Dateiformaten geteilt.
+  &Ouml;ffnet man z.B. eine IFF/ILBM-Datei,
+  bei der das Feld <em>Beschreibung/Bemerkung</em> gef&uuml;llt ist,
+  wird dieser Text beim Speichern des Bildes als JPEG/JPG-Datei
+  als EXIF-Daten im Eintrag <em>Beschreibung</em> gespeichert.
+  Beim Speichern als GIF-Datei findet sich der Text
+  als Kommentar in der Datei wieder.
+  In die andere Richtung funktioniert es genauso.
  <br/><br/>
 
  <h2><a name="edit">6. Bildbearbeitung</a></h2>
@@ -373,14 +430,26 @@
   nicht in jedem Fall abgebildet werden k&ouml;nnen,
   hat das skalierte Bild kein indexiertes Farbmodell mehr.
   Wenn sie jedoch eins ben&ouml;tigen,
-  dann benutzen Sie bitte den dem Men&uuml;punkt
+  dann erzeugen sie sich wieder eins mit dem Men&uuml;punkt
   <a href="imageviewer.htm#index_colors">Farben reduzieren und indexieren...</a>.
  <br/><br/>
   <b>Achtung!</b> Im Gegensatz zur Skalierung in der Werkzeugleiste
   &auml;ndert der Men&uuml;punkt <em>Skalieren...</em> das eigentliche Bild.
  <br/><br/>
 
- <h2><a name="flip_horizontal">6.4. Spiegeln</a></h2>
+ <h2><a name="sharpen">6.4. Sch&auml;rfen</a></h2>
+  Zum Sch&auml;rfen des Bildes ruft man den Men&uuml;punkt
+  <em>Bearbeiten</em> &rarr; <em>Sch&auml;rfen...</em> auf.
+  Dabei &ouml;ffnet sich ein Dialogfenster,
+  in dem mehrere Sch&auml;rfegrade angeboten werden.
+  Sie k&ouml;nnen diese einzeln durchprobieren.
+  Mit einem Klick auf einen Sch&auml;rfegrad wird das Bild unmittelbar
+  entsprechend gesch&auml;rft.
+  Haben Sie den optimalen Sch&auml;rfegrad gefunden,
+  best&auml;tigen Sie mit <em>OK</em>.
+ <br/><br/>
+
+ <h2><a name="flip_horizontal">6.5. Spiegeln</a></h2>
   Diese Funktion spiegelt das Bild horizontal, d.h.,
   die Seiten werden getauscht.
   M&ouml;chten Sie das Bild vertikal spiegeln,
@@ -388,7 +457,7 @@
   um 90&deg;, spiegeln es und drehen es mit -90&deg; wieder zur&uuml;ck.
  <br/><br/>
 
- <h2><a name="round_corners">6.5. Ecken abrunden</a></h2>
+ <h2><a name="round_corners">6.6. Ecken abrunden</a></h2>
   Diese Funktion dient zum Nachbearbeiten von Bildschirmfotos (Screenshots),
   insbesondere von Bildschirmfotos, die exakt ein Fenster darstellen.
   Auf machen Betriebs- und Fenstersystemen haben die Fenster
@@ -408,7 +477,7 @@
   welches Transparenz unterst&uuml;tzt (z.B. PNG).
  <br/><br/>
 
- <h2><a name="adjust">6.6. Helligkeit, Kontrast, Farben</a></h2>
+ <h2><a name="adjust">6.7. Helligkeit, Kontrast, Farben</a></h2>
   Zum &Auml;ndern der Helligkeit, des Kontrastes und der Farbs&auml;ttigung
   rufen Sie den Men&uuml;punkt
   <em>Bearbeiten</em> &rarr; <em>Helligkeit, Kontrast, Farben...</em> auf.
@@ -437,7 +506,7 @@
   je nach Bildgr&ouml;&szlig; auch wieder einige Sekunden dauern kann.
  <br/><br/>
 
- <h2><a name="index_colors">6.7. Farben reduzieren und indexieren</a></h2>
+ <h2><a name="index_colors">6.8. Farben reduzieren und indexieren</a></h2>
   Diese Funktion indexiert die Farben des Bildes,
   indem es eine Farbpalette anwendet.
   Die anzuwendende Farbpalette kann aus dem Bild ermittelt
@@ -449,7 +518,7 @@
   meistens auch ein Reduzieren der Farben.
  <br/><br/>
 
- <h3><a name="create_pal">6.7.1. Farbpalette ermitteln</a></h3>
+ <h3><a name="create_pal">6.8.1. Farbpalette ermitteln</a></h3>
   Bei dieser Funktion wird mit Hilfe eines modifizierten OcTree-Verfahrens
   eine Farbpalette ermittelt,
   die die in dem Bild enthaltenen Farben m&ouml;glichst gut abdeckt.
@@ -457,7 +526,7 @@
   wieviele Farben die Palette haben soll (maxiaml 256).
  <br/><br/>
 
- <h3><a name="import_pal">6.7.2. Farbpalette importieren</a></h3>
+ <h3><a name="import_pal">6.8.2. Farbpalette importieren</a></h3>
   Mit dieser Funktion importieren Sie eine Farbpalette aus einer Datei.
   Die Datei kann eine Paintshop&nbsp;Pro- oder IFF/ILBM-Farbpalettendatei
   oder eine unterst&uuml;tzte Bilddatei sein,
@@ -513,8 +582,15 @@
    255 255 255&#10;<br/>
   </tt>
  <br/><br/>
+  <b>Achtung!</b> Im Gegensatz zum 
+  <a href="imageviewer.htm#color_pal">weiter unten</a> beschriebenen
+  Importieren einer Farbpalette wird hier das Bild auf Basis
+  der importierten Farbpalette neu erzeugt.
+  Eine evtl. bestehende Zuordnung von Pixel zu Farbpalettenindexen
+  bleibt nicht zwingend erhalten.
+ <br/><br/>
 
- <h3><a name="dithering">6.7.3. Dithering</a></h3>
+ <h3><a name="dithering">6.8.3. Dithering</a></h3>
   Durch die Anwendung einer Farbpalette wird die Anzahl der Farben,
   und damit auch die Qualit&auml;t des Bildes verringert.
   Insbesondere bei einer Reduktion auf sehr wenige Farben
@@ -552,7 +628,7 @@
   sollte im Einzelfall ausprobiert werden.
  <br/><br/>
 
- <h3><a name="floyd_steinberg">6.7.3.1. Floyd-Steinberg</a></h3>
+ <h3><a name="floyd_steinberg">6.8.3.1. Floyd-Steinberg</a></h3>
   Der Floyd-Steinberg-Algoritmus wurde 1976 durch die beiden
   gleichnamigen Herren ver&ouml;ffentlicht.
   Der Algorithmus verteilt den jeweiligen Farbfehler zu ungeraden Anteilen
@@ -562,7 +638,7 @@
   und ist quasi das Standard-Verfahren.
  <br/><br/>
 
- <h3><a name="sierra3">6.7.3.2. Sierra&nbsp;3</a></h3>
+ <h3><a name="sierra3">6.8.3.2. Sierra&nbsp;3</a></h3>
   Nach der Ver&ouml;ffentlichung des Floyd-Steinberg-Algorithmus&acute;
   wurden durch verschiedene Leute weitere Algorithmen vorgeschlagen,
   die eine noch etwas bessere Bildqualit&auml;t liefern sollen.
@@ -577,11 +653,11 @@
   Dithering-Algorithmen enthalten.
  <br/><br/>
 
- <h3><a name="atkinson">6.7.3.3. Atkinson</a></h3>
+ <h3><a name="atkinson">6.8.3.3. Atkinson</a></h3>
   Atkinson war Mitarbeiter bei Apple und ma&szlig;geblich
   an der Entwicklung von Apple-Grafiksoftware beteiligt.
-  Er hat ein Dithering-Algorithmus ver&ouml;ffentlicht, der sich
-  in einem Punkt wesentlich von den anderer Algorithmen unterscheidet:
+  Er hat einen Dithering-Algorithmus ver&ouml;ffentlicht, der sich
+  in einem Punkt wesentlich von den anderen Algorithmen unterscheidet:
   Atkinson verteilt nicht den gesamten Farbfehler
   auf die nachfolgenden Pixel, sondern nur Dreiviertel.
   Das Farbbluten, also das &Uuml;bertragen eines Farbanteils
@@ -595,7 +671,7 @@
   im JKCEMU-Bildbetrachter enthalten.
  <br/><br/>
 
- <h2><a name="black_white">6.8. Schwarz/Wei&szlig; wandeln</a></h2>
+ <h2><a name="black_white">6.9. Schwarz/Wei&szlig; wandeln</a></h2>
   Im Untermen&uuml; <em>Bearbeiten</em> &rarr;
   <em>Schwarz-/Wei&szlig; wandeln</em> Finden Sie Funktionen
   zum Umwandeln des Bildes in Graustufen oder in ein monochromes
@@ -607,7 +683,7 @@
   monochromes Schwarz-/Wei&szlig;-Bild dagegen nicht.
  <br/><br/>
 
- <h2><a name="invert">6.9. Invertieren</a></h2>
+ <h2><a name="invert">6.10. Invertieren</a></h2>
   Die Funktion Invertieren erzeugt eine Art Negativ-Bild,
   was allerdings nur f&uuml;r spezielle Anwendungsf&auml;lle sinnvoll ist.
   Dazu wird in jedem Pixel jede der drei Prim&auml;rfarben invertiert.
@@ -622,7 +698,7 @@
   wird daraus die Farbe [217,183,90].
  <br/><br/>
 
- <h2><a name="remove_transp">6.10. Transparenz entfernen</a></h2>
+ <h2><a name="remove_transp">6.11. Transparenz entfernen</a></h2>
   Der JKCEMU-Bildbetrachter kann mit Bildern umgehen,
   die transparente Pixel enthalten.
   Allerdings gibt es Funktionen, bei denen Transparenz st&ouml;rt
@@ -644,6 +720,72 @@
   der in dem Fall genommen wird.
  <br/><br/>
 
+ <h2><a name="color_pal">6.12. Farbpalette</a></h2>
+  Mit diesem Men&uuml;punkt k&ouml;nnen Sie sich bei einem Bild
+  mit indexierten Farben die Farbpalatte ansehen, &auml;ndern,
+  exportieren und importieren.
+  Beim &Auml;ndern und Importieren werden nur die Farbwerte
+  in der Palette ge&auml;ndert.
+  Die Zuordnung der Pixel zu den Indexen in der Farbpalette
+  bleibt unver&auml;ndert.
+  Auf diese Weise kann man Farben austauschen
+  und Falschfarbenbilder erzeugen.
+ <br/><br/>
+  Die einfachste Art zum &Auml;ndern einer Farbe ist das manuelle Eingeben
+  eines neuen Farbwertes als hexadezimale Zahl in der Spalte
+  <em>Neuer ARGB-Wert (hex)</em>.
+  Klicken Sie dazu doppelt auf die Tabellenzelle, geben den Wert ein
+  und dr&uuml;cken danach <em>Enter</em>.
+  Der 8-stellige Farbwert enth&auml;lt von links nach rechts
+  den Alpha-Wert sowie die Werte f&uuml;r die Prim&auml;farben
+  rot, gr&uuml;n und blau.
+ <br/><br/>
+  Der Alpha-Wert gibt die Deckkraft der Farbe an.
+  Beim Wert&nbsp;00 ist die Farbe voll durchscheinend,
+  hat also keine Deckkraft und somit volle Transparenz.
+  Beim Wert FF ist die Farbe voll deckend, d.h. keine Transparenz.
+  Wenn Sie nur 6 oder weniger hexadezimale Ziffern eingeben,
+  wird der urspr&uuml;ngliche Alpha-Wert &uuml;bernommen.
+ <br/><br/>
+  Mit dem Knopf <em>Farbe...</em> k&ouml;nnen Sie die Farbe
+  aus einer vorgegebenen oder der zuletzt importierten
+  Farbpalette ausw&auml;hlen.
+  Dazu muss vorher eine Tabellenzeile markiert worden sein,
+  f&uuml;r die der Farbwert ge&auml;ndert wird.
+ <br/><br/>
+  Das Exportieren der Farbpalette ist m&ouml;glich
+  in die beiden Dateiformate:
+  <ul>
+   <li>Paintshop Pro Farbpalettendatei</li>
+   <li>IFF/ILBM-Datei ohne Bilddaten</li>
+  </ul>
+  Beide Formate unterst&uuml;tzen keine Alpha-Werte,
+  d.h., die Alpha-Werte werden nicht exportiert.
+ <br/><br/>
+  Das IFF/ILBM-Format dient eigentlich zur Speicherung von Bildern,
+  wird jedoch ohne Bilddaten auch zur Speicherung von Farbpaletten verwendet.
+  Das Format kann prinzipiell auch Alpha-Werte speichern,
+  jedoch nur in den Bilddaten, nicht jedoch in der Farbpalette.
+  Aus diesem Grund wird auch beim IFF/ILBM-Format die Farbpalette
+  ohne Alpha-Werte exportiert.
+ <br/><br/>
+  Importieren lassen sich Farbpaletten von den beiden o.g. Formaten
+  sowie von anderen unterst&uuml;tzten Bildformaten,
+  die eine Farbpalette bzw. Farbtabelle enthalten.
+  Beim Importieren werden die Farben bestm&ouml;glich
+  zu den urspr&uuml;nglichen Farben zugeordnet.
+  Wenn Ihnen die automatische Zuordnung nicht gef&auml;llt,
+  k&ouml;nnen Sie diese mit dem Knopf <em>Farbe...</em> &auml;ndern.
+  Alpha-Werte werden nicht importiert, d.h.,
+  die ursp&uuml;nglichen Alpha-Werte bleiben erhalten.
+ <br/><br/>
+  <b>Achtung!</b> Im Gegensatz zum 
+  <a href="imageviewer.htm#import_pal">weiter oben</a> beschriebenen
+  Importieren einer Farbpalette werden hier nur die Farben ausgetauscht.
+  Die bestehende Zuordnung von Pixel zu Farbpalettenindexen
+  bleibt erhalten.
+ <br/><br/>
+
  <h2>
   <a name="convert">7. Bild in das Format eines emulierten Systems konvertieren</a>
  </h2>
@@ -663,7 +805,7 @@
   Passt das Seitenverh&auml;ltnis nicht,
   werden links und rechts bzw. oben und unten schwarze Balken eingef&uuml;gt.
   Im zweiten Schritt erfolgt die Umrechnung der Farben auf die Farbpalette
-  des Zielsystem. Dabei wird einfach f&uuml;r jeden Pixel
+  des Zielsystem. Dabei wird einfach f&uuml;r jedes Pixel
   die am n&auml;chsten kommende Farbe aus der Farbpalette genommen.
   Wenn das Zielsystem &uuml;ber eine Blockgrafik verf&uuml;gt,
   werden im dritten Schritt die am besten passenden Blockgrafiksymbole
@@ -685,27 +827,46 @@
   <ol>
    <li>
     <a href="imageviewer.htm#rotate">Drehen</a><br/>
-    (nur bei Bedarf, z.B. um Schr&auml;glage auszugleichen)
+    nur bei Bedarf notwendig, z.B. um eine Schr&auml;glage auszugleichen
     <br/><br/>
    </li>
    <li>
     <a href="imageviewer.htm#cut_out">Zuschneiden</a><br/>
-    (Option <em>Seitenverh&auml;ltnis&nbsp;beibehalten</em> ausschalten
-    und korrektes Seitenverh&auml;ltnisses selbst sicherstellen)
+    Option <em>Seitenverh&auml;ltnis&nbsp;beibehalten</em> ausschalten
+    und daf&uuml;r das korrekte Seitenverh&auml;ltnis des Zielsystems
+    ausw&auml;hlen oder dieses selbst sicherstellen
     <br/><br/>
    </li>
    <li>
     <a href="imageviewer.htm#scale">Skalieren</a>
-    auf die Pixelauflösung des Zielsystems
+    auf die Pixelaufl&ouml;sung des Zielsystems
+    <br/><br/>
+   </li>
+   <li>
+    <a href="imageviewer.htm#sharpen">Sch&auml;rfen</a><br/>
+    nur bei Bedarf
     <br/><br/>
    </li>
    <li>
     Farben anpassen<br/>
-    (Men&uuml;punkt
+    Unterst&uuml;tzt das Zielsystem Farben, dann muss man meistens
+    den Kontrast und die Farbs&auml;ttigung kr&auml;ftig anheben
+    und anschlie&szlig;end die Helligkeit so regeln,
+    dass ein farbenfrohes und ausgewogenes Bild entsteht
+    (alle diese Funktionen im Men&uuml;punkt
+    <a href="imageviewer.htm#adjust">Helligkeit, Kontrast, Farben</a>).
+    Danach ruft man den Men&uuml;eintrag
     <a href="imageviewer.htm#index_colors">Farben reduzieren und indexieren</a>
-    und dort dann die richtige Farbpalette ausw&auml;hlen oder Men&uuml;punkt
+    auf, w&auml;hlt dort die richtige Farbpalette aus und wandelt
+    entweder mit oder ohne Dithering die Farben auf die Farbpalette
+    das Zielsystem um.
+    <br/>
+    Unterst&uuml;tzt das Zielsystem keine Farben,
+    dann verwendet man im Untermen&uuml;
     <a href="imageviewer.htm#black_white">Schwarz/Wei&szlig; wandeln</a>
-    und monochromes Bild erzeugen)
+    eine der beiden Funktionen zur Erzeugung eines monochromen Bildes.
+    Eventuell ist es sinnvoll,
+    vorher die Helligkeit und den Kontrast das Bildes anzupassen.
     <br/><br/>
    </li>
    <li>
@@ -732,7 +893,7 @@
   &rarr; <em>LLC2-HIRES-Format (512x256, Monochrom) mit Anpassung
   f&uuml;r 4:3-Anzeige</em> wird das automatisch getan.
   Wenn Sie aber die Umwandlung des Bildformats selbst vornehmen,
-  m&uuml;ssen Sie auch selbst die ben&ouml;tigte Verzerrung sicherstellen.
+  m&uuml;ssen Sie auch selbst die notwendige Verzerrung sicherstellen.
   Gehen Sie dazu bitte nach der im vorherigen Abschnitt
   angegebenen Reihenfolge vor und beachten Sie dabei folgendes:
   <ul>
@@ -746,6 +907,7 @@
     <a href="imageviewer.htm#scale">Skalieren</a>:<br/>
     Schalten Sie die Option <em>Seitenverh&auml;ltnis beibehalten</em> aus
     und skalieren Sie das Bild auf 512x256 Pixel.
+    Damit erfolgt die notwendige Verzerrung.
     <br/><br/>
    </li>
    <li>
@@ -753,9 +915,22 @@
     Rufen Sie den Men&uuml;punkt
     <em>LLC2-HIRES-Format (512x256, Monochrom) ohne Anpassung
     f&uuml;r 4:3-Anzeige</em> auf.
-    Die Anpassung (Verzerrung) erfolgte ja bereits beim Skalieren.
+    Die Anpassung (Verzerrung) erfolgte bereits beim Skalieren.
     <br/><br/>
    </li>
   </ul>
+ <br/><br/>
+
+ <h2><a name="etc">8. Weitere Funktionen</a></h2>
+  Wenn ein Bild angezeigt wird, k&ouml;nnen Sie neben
+  den in den anderen Abschnitten beschriebenen Funktionen auch:
+  <ul>
+   <li>das Bild in die Zwischenablage kopieren</li>
+   <li>das Bild ausdrucken</li>
+   <li>die Bildeigenschaften ansehen</li>
+  </ul>
+ <br/>
+  Die Men&uuml;eintr&auml;ge dazu finden Sie unter <em>Datei</em>
+  sowie f&uuml;r das Kopieren in die Zwischenablage unter <em>Bearbeiten</em>.
 </body>
 </html>

@@ -10,10 +10,9 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
 import jkcemu.disk.AbstractFloppyDisk;
 import jkcemu.disk.CopyQMDisk;
+import jkcemu.file.FileUtil;
 
 
 public class CopyQMFileTarget extends AbstractConvertTarget
@@ -42,14 +41,14 @@ public class CopyQMFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getCopyQMFileFilter();
+    return FileUtil.getCopyQMFileFilter();
   }
 
 
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".cqm" );
+    return FileUtil.replaceExtension( srcFile, ".cqm" );
   }
 
 

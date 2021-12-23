@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,7 +15,6 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.ArrayList;
 import javax.swing.ButtonGroup;
@@ -30,6 +29,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import jkcemu.base.BaseDlg;
+import jkcemu.base.GUIFactory;
 
 
 public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
@@ -47,26 +47,27 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 			FORCE_LOWERCASE };
 
   private static final String TEXT_CHOOSE      = "Bitte ausw\u00E4hlen!";
-  private static final Color  COLOR_EMPHASIZED = Color.red;
+  private static final Color  COLOR_EMPHASIZED = Color.RED;
   private static final Color  COLOR_RECOGNIZED = new Color( 0xFF007F00 );
 
   private static boolean lastApplyReadOnly  = false;
   private static boolean lastForceLowerCase = true;
 
   private boolean                   approved;
+  private boolean                   notified;
   private Boolean                   recognizedBlockNum16Bit;
   private Integer                   recognizedSysTracks;
   private FloppyDiskFormat          selectedFmt;
   private FloppyDiskFormatSelectFld fmtSelectFld;
   private JComboBox<Object>         comboFmt;
-  private JCheckBox                 btnReadOnly;
-  private JCheckBox                 btnApplyReadOnly;
-  private JCheckBox                 btnAutoRefresh;
-  private JCheckBox                 btnForceLowerCase;
+  private JCheckBox                 cbReadOnly;
+  private JCheckBox                 cbApplyReadOnly;
+  private JCheckBox                 cbAutoRefresh;
+  private JCheckBox                 cbForceLowerCase;
   private JSpinner                  spinnerSysTracks;
   private JComboBox<Integer>        comboBlockSize;
-  private JRadioButton              btnBlockNum8Bit;
-  private JRadioButton              btnBlockNum16Bit;
+  private JRadioButton              rbBlockNum8Bit;
+  private JRadioButton              rbBlockNum16Bit;
   private JSpinner                  spinnerDirBlocks;
   private JLabel                    labelDirSizeUnit;
   private JLabel                    infoSysTracks;
@@ -78,12 +79,14 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
   public FloppyDiskFormatDlg(
 			Window           owner,
+			boolean          withHDformats,
 			FloppyDiskFormat preSelFmt,
 			Flag...          flags )
   {
     super( owner, "Datei laden" );
     setTitle( "JKCEMU Diskettenformat" );
-    this.approved            = false;
+    this.approved                = false;
+    this.notified                = false;
     this.recognizedBlockNum16Bit = null;
     this.recognizedSysTracks     = null;
     this.selectedFmt             = null;
@@ -113,7 +116,7 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
     // Formatauswahl
     if( containsFlag( flags, Flag.PHYS_FORMAT ) ) {
-      this.comboFmt = new JComboBox<>();
+      this.comboFmt = GUIFactory.createComboBox();
       this.comboFmt.setEditable( false );
       if( preSelFmt == null ) {
 	this.comboFmt.addItem( "--- Bitte ausw\u00E4hlen ---" );
@@ -123,7 +126,8 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 	boolean state = false;
 	for( int i = 0; i < formats.length; i++ ) {
 	  FloppyDiskFormat fmt = formats[ i ];
-	  if( (fmt.getSides() == 2)
+	  if( (withHDformats || !fmt.isHD())
+	      && (fmt.getSides() == 2)
 	      && (fmt.getCylinders() == 80)
 	      && (fmt.getSectorSize() >= 512) )
 	  {
@@ -133,9 +137,10 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 	}
 	for( int i = 0; i < formats.length; i++ ) {
 	  FloppyDiskFormat fmt = formats[ i ];
-	  if( (fmt.getSides() != 2)
-	      || (fmt.getCylinders() != 80)
-	      || (fmt.getSectorSize() < 512) )
+	  if( (withHDformats || !fmt.isHD())
+	      && ((fmt.getSides() != 2)
+			|| (fmt.getCylinders() != 80)
+			|| (fmt.getSectorSize() < 512)) )
 	  {
 	    if( state ) {
 	      this.comboFmt.addItem( "--- \u00C4ltere Formate ---" );
@@ -158,14 +163,14 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
     if( containsFlag( flags, Flag.SYSTEM_TRACKS ) ) {
       gbc.anchor    = GridBagConstraints.WEST;
       gbc.gridwidth = 1;
-      add( new JLabel( "Systemspuren:" ), gbc );
+      add( GUIFactory.createLabel( "Systemspuren:" ), gbc );
 
-      this.spinnerSysTracks = new JSpinner(
+      this.spinnerSysTracks = GUIFactory.createSpinner(
 			new SpinnerNumberModel( 0, 0, 9, 1 ) );
       gbc.gridx++;
       add( this.spinnerSysTracks, gbc );
 
-      this.infoSysTracks = new JLabel( TEXT_CHOOSE );
+      this.infoSysTracks = GUIFactory.createLabel( TEXT_CHOOSE );
       this.infoSysTracks.setForeground( COLOR_EMPHASIZED );
       gbc.gridx += 2;
       add( this.infoSysTracks, gbc );
@@ -181,9 +186,9 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
     if( containsFlag( flags, Flag.BLOCK_SIZE ) ) {
       gbc.anchor    = GridBagConstraints.WEST;
       gbc.gridwidth = 1;
-      add( new JLabel( "Blockgr\u00F6\u00DFe:" ), gbc );
+      add( GUIFactory.createLabel( "Blockgr\u00F6\u00DFe:" ), gbc );
 
-      this.comboBlockSize = new JComboBox<>();
+      this.comboBlockSize = GUIFactory.createComboBox();
       this.comboBlockSize.setEditable( false );
       this.comboBlockSize.addItem( 1 );
       this.comboBlockSize.addItem( 2 );
@@ -196,9 +201,9 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
       add( this.comboBlockSize, gbc );
 
       gbc.gridx++;
-      add( new JLabel( "KByte" ), gbc );
+      add( GUIFactory.createLabel( "KByte" ), gbc );
 
-      this.infoBlockSize = new JLabel( TEXT_CHOOSE );
+      this.infoBlockSize = GUIFactory.createLabel( TEXT_CHOOSE );
       this.infoBlockSize.setForeground( COLOR_EMPHASIZED );
       gbc.gridx++;
       add( this.infoBlockSize, gbc );
@@ -207,26 +212,26 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
     }
 
     // Blocknummerngroesse
-    this.btnBlockNum8Bit  = null;
-    this.btnBlockNum16Bit = null;
+    this.rbBlockNum8Bit  = null;
+    this.rbBlockNum16Bit = null;
     if( containsFlag( flags, Flag.BLOCK_NUM_SIZE ) ) {
       gbc.anchor    = GridBagConstraints.WEST;
       gbc.gridwidth = 1;
-      add( new JLabel( "Blocknummern:" ), gbc );
+      add( GUIFactory.createLabel( "Blocknummern:" ), gbc );
 
       ButtonGroup grpBlkNumSize = new ButtonGroup();
 
-      this.btnBlockNum8Bit = new JRadioButton( "8 Bit", false );
-      grpBlkNumSize.add( this.btnBlockNum8Bit );
+      this.rbBlockNum8Bit = GUIFactory.createRadioButton( "8 Bit" );
+      grpBlkNumSize.add( this.rbBlockNum8Bit );
       gbc.gridx++;
-      add( this.btnBlockNum8Bit, gbc );
+      add( this.rbBlockNum8Bit, gbc );
 
-      this.btnBlockNum16Bit = new JRadioButton( "16 Bit", true );
-      grpBlkNumSize.add( this.btnBlockNum16Bit );
+      this.rbBlockNum16Bit = GUIFactory.createRadioButton( "16 Bit", true );
+      grpBlkNumSize.add( this.rbBlockNum16Bit );
       gbc.gridx++;
-      add( this.btnBlockNum16Bit, gbc );
+      add( this.rbBlockNum16Bit, gbc );
 
-      this.infoBlockNumFmt = new JLabel( TEXT_CHOOSE );
+      this.infoBlockNumFmt = GUIFactory.createLabel( TEXT_CHOOSE );
       this.infoBlockNumFmt.setForeground( COLOR_EMPHASIZED );
       gbc.gridx++;
       add( this.infoBlockNumFmt, gbc );
@@ -240,14 +245,14 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
     if( containsFlag( flags, Flag.DIR_BLOCKS ) ) {
       gbc.anchor    = GridBagConstraints.WEST;
       gbc.gridwidth = 1;
-      add( new JLabel( "Directory-Gr\u00F6\u00DFe:" ), gbc );
+      add( GUIFactory.createLabel( "Directory-Gr\u00F6\u00DFe:" ), gbc );
 
-      this.spinnerDirBlocks = new JSpinner(
+      this.spinnerDirBlocks = GUIFactory.createSpinner(
 			new SpinnerNumberModel( 1, 1, 9, 1 ) );
       gbc.gridx++;
       add( this.spinnerDirBlocks, gbc );
 
-      this.labelDirSizeUnit = new JLabel();
+      this.labelDirSizeUnit = GUIFactory.createLabel();
       gbc.gridx++;
       add( this.labelDirSizeUnit, gbc );
       gbc.gridx = 0;
@@ -257,41 +262,41 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
     // Checkboxen
     java.util.List<JCheckBox> checkBoxes = null;
-    this.btnApplyReadOnly                = null;
-    this.btnReadOnly                     = null;
-    this.btnAutoRefresh                  = null;
-    this.btnForceLowerCase               = null;
+    this.cbApplyReadOnly                 = null;
+    this.cbReadOnly                      = null;
+    this.cbAutoRefresh                   = null;
+    this.cbForceLowerCase                = null;
     if( flags != null ) {
       checkBoxes = new ArrayList<>( 4 );
       for( int i = 0; i < flags.length; i++ ) {
 	if( flags[ i ] != null ) {
 	  switch( flags[ i ] ) {
 	    case APPLY_READONLY:
-	      this.btnApplyReadOnly = new JCheckBox(
-				"Schreibschutzattribut anwenden",
-				lastApplyReadOnly );
-	      checkBoxes.add( this.btnApplyReadOnly );
+	      this.cbApplyReadOnly = GUIFactory.createCheckBox(
+					"Schreibschutzattribut anwenden",
+					lastApplyReadOnly );
+	      checkBoxes.add( this.cbApplyReadOnly );
 	      break;
 
 	    case READONLY:
-	      this.btnReadOnly = new JCheckBox(
-				"Schreibschutz (Nur-Lese-Modus)",
-				true );
-	      checkBoxes.add( this.btnReadOnly );
+	      this.cbReadOnly = GUIFactory.createCheckBox(
+					"Schreibschutz (Nur-Lese-Modus)",
+					true );
+	      checkBoxes.add( this.cbReadOnly );
 	      break;
 
 	    case AUTO_REFRESH:
-	      this.btnAutoRefresh = new JCheckBox(
-				"Automatisch aktualisieren",
-				false );
-	      checkBoxes.add( this.btnAutoRefresh );
+	      this.cbAutoRefresh = GUIFactory.createCheckBox(
+					"Automatisch aktualisieren",
+					false );
+	      checkBoxes.add( this.cbAutoRefresh );
 	      break;
 
 	    case FORCE_LOWERCASE:
-	      this.btnForceLowerCase = new JCheckBox(
-				"Dateinamen klein schreiben",
-				lastForceLowerCase );
-	      checkBoxes.add( this.btnForceLowerCase );
+	      this.cbForceLowerCase = GUIFactory.createCheckBox(
+					"Dateinamen klein schreiben",
+					lastForceLowerCase );
+	      checkBoxes.add( this.cbForceLowerCase );
 	      break;
 	  }
 	}
@@ -322,7 +327,8 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
     updReadOnlyDependingFlds();
 
     // Knoepfe
-    JPanel panelBtns = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtns = GUIFactory.createPanel(
+					new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor        = GridBagConstraints.CENTER;
     gbc.fill          = GridBagConstraints.NONE;
     gbc.insets.top    = 10;
@@ -330,29 +336,11 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
     gbc.gridwidth     = GridBagConstraints.REMAINDER;
     add( panelBtns, gbc );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
-    this.btnOK.addKeyListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtns.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtns.add( this.btnCancel );
-
-
-    // Listener
-    if( this.labelDirSizeUnit != null ) {
-      if( this.spinnerDirBlocks != null ) {
-	this.spinnerDirBlocks.addChangeListener( this );
-      }
-      if( this.comboBlockSize != null ) {
-	this.comboBlockSize.addActionListener( this );
-      }
-    }
-    if( this.btnReadOnly != null ) {
-      this.btnReadOnly.addActionListener( this );
-    }
 
 
     // Fenstergroesse und -position
@@ -364,8 +352,8 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
   public boolean getApplyReadOnly()
   {
-    return this.btnApplyReadOnly != null ?
-				this.btnApplyReadOnly.isSelected()
+    return this.cbApplyReadOnly != null ?
+				this.cbApplyReadOnly.isSelected()
 				: false;
   }
 
@@ -373,8 +361,8 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
   public boolean getAutoRefresh()
   {
     boolean state = false;
-    if( this.btnAutoRefresh != null ) {
-      state = this.btnAutoRefresh.isSelected();
+    if( this.cbAutoRefresh != null ) {
+      state = this.cbAutoRefresh.isSelected();
     }
     return state;
   }
@@ -385,8 +373,8 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
     boolean rv = true;
     if( this.fmtSelectFld != null ) {
       rv = this.fmtSelectFld.isBlockNum16Bit();
-    } else if( this.btnBlockNum16Bit != null ) {
-      rv = this.btnBlockNum16Bit.isSelected();
+    } else if( this.rbBlockNum16Bit != null ) {
+      rv = this.rbBlockNum16Bit.isSelected();
     }
     return rv;
   }
@@ -423,8 +411,8 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
   public boolean getForceLowerCase()
   {
-    return this.btnForceLowerCase != null ?
-				this.btnForceLowerCase.isSelected()
+    return this.cbForceLowerCase != null ?
+				this.cbForceLowerCase.isSelected()
 				: false;
   }
 
@@ -437,7 +425,7 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
   public boolean getReadOnly()
   {
-    return this.btnReadOnly != null ? this.btnReadOnly.isSelected() : false;
+    return this.cbReadOnly != null ? this.cbReadOnly.isSelected() : false;
   }
 
 
@@ -455,15 +443,15 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
   public void setAutoRefresh( boolean state )
   {
-    if( this.btnAutoRefresh != null )
-      this.btnAutoRefresh.setSelected( state );
+    if( this.cbAutoRefresh != null )
+      this.cbAutoRefresh.setSelected( state );
   }
 
 
   public void setForceLowerCase( boolean state )
   {
-    if( this.btnForceLowerCase != null )
-      this.btnForceLowerCase.setSelected( state );
+    if( this.cbForceLowerCase != null )
+      this.cbForceLowerCase.setSelected( state );
   }
 
 
@@ -475,12 +463,12 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 	this.fmtSelectFld.setBlockNum16Bit( state );
       }
       if( state ) {
-	if( this.btnBlockNum16Bit != null ) {
-	  this.btnBlockNum16Bit.setSelected( true );
+	if( this.rbBlockNum16Bit != null ) {
+	  this.rbBlockNum16Bit.setSelected( true );
 	}
       } else {
-	if( this.btnBlockNum8Bit != null ) {
-	  this.btnBlockNum8Bit.setSelected( true );
+	if( this.rbBlockNum8Bit != null ) {
+	  this.rbBlockNum8Bit.setSelected( true );
 	}
       }
     }
@@ -521,8 +509,9 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
       Color  color = COLOR_EMPHASIZED;
       if( value != null ) {
 	text = String.format(
-		"%d KByte erkannt, aber bitte trotzdem pr\u00FCfen!",
-		value.intValue() / 1024 );
+			"%d KByte erkannt",
+			value.intValue() / 1024 );
+	color = COLOR_RECOGNIZED;
       }
       this.infoBlockSize.setText( text );
       this.infoBlockSize.setForeground( color );
@@ -582,6 +571,29 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      if( this.labelDirSizeUnit != null ) {
+	if( this.spinnerDirBlocks != null ) {
+	  this.spinnerDirBlocks.addChangeListener( this );
+	}
+	if( this.comboBlockSize != null ) {
+	  this.comboBlockSize.addActionListener( this );
+	}
+      }
+      if( this.cbReadOnly != null ) {
+	this.cbReadOnly.addActionListener( this );
+      }
+      this.btnOK.addActionListener( this );
+      this.btnCancel.addActionListener( this );
+    }
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
@@ -604,11 +616,11 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 	  this.approved = true;
 	}
 	if( this.approved ) {
-	  if( this.btnApplyReadOnly != null ) {
-	    lastApplyReadOnly = this.btnApplyReadOnly.isSelected();
+	  if( this.cbApplyReadOnly != null ) {
+	    lastApplyReadOnly = this.cbApplyReadOnly.isSelected();
 	  }
-	  if( this.btnForceLowerCase != null ) {
-	    lastForceLowerCase = this.btnForceLowerCase.isSelected();
+	  if( this.cbForceLowerCase != null ) {
+	    lastForceLowerCase = this.cbForceLowerCase.isSelected();
 	  }
 	  doClose();
 	}
@@ -621,12 +633,35 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 	rv = true;
 	updDirSizeUnitLabel();
       }
-      else if( src == this.btnReadOnly ) {
+      else if( src == this.cbReadOnly ) {
 	rv = true;
 	updReadOnlyDependingFlds();
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      if( this.labelDirSizeUnit != null ) {
+	if( this.spinnerDirBlocks != null ) {
+	  this.spinnerDirBlocks.removeChangeListener( this );
+	}
+	if( this.comboBlockSize != null ) {
+	  this.comboBlockSize.removeActionListener( this );
+	}
+      }
+      if( this.cbReadOnly != null ) {
+	this.cbReadOnly.removeActionListener( this );
+      }
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
   }
 
 
@@ -705,9 +740,9 @@ public class FloppyDiskFormatDlg extends BaseDlg implements ChangeListener
 
   private void updReadOnlyDependingFlds()
   {
-    if( this.btnReadOnly != null ) {
-      if( this.btnForceLowerCase != null ) {
-	this.btnForceLowerCase.setEnabled( !this.btnReadOnly.isSelected() );
+    if( this.cbReadOnly != null ) {
+      if( this.cbForceLowerCase != null ) {
+	this.cbForceLowerCase.setEnabled( !this.cbReadOnly.isSelected() );
       }
     }
   }

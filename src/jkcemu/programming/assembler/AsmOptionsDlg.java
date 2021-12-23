@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,8 +13,6 @@ import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -22,6 +20,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import jkcemu.base.EmuThread;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.programming.AbstractOptionsDlg;
 import jkcemu.programming.PrgOptions;
@@ -29,23 +28,28 @@ import jkcemu.programming.PrgOptions;
 
 public class AsmOptionsDlg extends AbstractOptionsDlg
 {
-  private JRadioButton btnSyntaxZilog;
-  private JRadioButton btnSyntaxRobotron;
-  private JRadioButton btnSyntaxBoth;
-  private JCheckBox    btnAllowUndocInst;
-  private JCheckBox    btnLabelsCaseSensitive;
-  private JCheckBox    btnPrintLabels;
-  private JCheckBox    btnLabelsToReass;
-  private JCheckBox    btnLabelsToDebugger;
-  private JCheckBox    btnSuppressLabelRecreateInDebugger;
-  private JCheckBox    btnFormatSource;
-  private JCheckBox    btnWarnNonAsciiChars;
+  private JRadioButton rbSyntaxZilog;
+  private JRadioButton rbSyntaxRobotron;
+  private JRadioButton rbSyntaxBoth;
+  private JCheckBox    cbAllowUndocInst;
+  private JCheckBox    cbAsmListing;
+  private JCheckBox    cbLabelsCaseSensitive;
+  private JCheckBox    cbPrintLabels;
+  private JCheckBox    cbLabelsToReass;
+  private JCheckBox    cbLabelsToDebugger;
+  private JCheckBox    cbFormatSource;
+  private JCheckBox    cbReplaceTooLongRelJumps;
+  private JCheckBox    cbWarnNonAsciiChars;
+  private JRadioButton rbLabelsCreateOrUpdateBPs;
+  private JRadioButton rbLabelsUpdateBPsOnly;
 
 
-  public AsmOptionsDlg( Frame owner, EmuThread emuThread, PrgOptions options )
+  public AsmOptionsDlg(
+		Frame      owner,
+		EmuThread  emuThread,
+		PrgOptions options )
   {
-    super( owner, emuThread, "Assembler-Optionen" );
-
+    super( owner, emuThread, options, "Assembler-Optionen" );
 
     // Fensterinhalt
     setLayout( new GridBagLayout() );
@@ -60,8 +64,8 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 
 
     // Bereich Mnemonik/Syntax
-    JPanel panelSyntax = new JPanel( new GridBagLayout() );
-    panelSyntax.setBorder( BorderFactory.createTitledBorder(
+    JPanel panelSyntax = GUIFactory.createPanel( new GridBagLayout() );
+    panelSyntax.setBorder( GUIFactory.createTitledBorder(
 						"Mnemonik/Syntax" ) );
     add( panelSyntax, gbc );
 
@@ -76,57 +80,59 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 
     ButtonGroup grpSyntax = new ButtonGroup();
 
-    this.btnSyntaxBoth = new JRadioButton(
+    this.rbSyntaxBoth = GUIFactory.createRadioButton(
 				"Zilog- und Robotron-Mnemonik/-Syntax" );
-    grpSyntax.add( this.btnSyntaxBoth );
-    panelSyntax.add( this.btnSyntaxBoth, gbcSyntax );
+    grpSyntax.add( this.rbSyntaxBoth );
+    panelSyntax.add( this.rbSyntaxBoth, gbcSyntax );
 
-    this.btnSyntaxZilog = new JRadioButton(
+    this.rbSyntaxZilog = GUIFactory.createRadioButton(
 				"Nur Zilog-Mnemonik/-Syntax erlauben" );
-    grpSyntax.add( this.btnSyntaxZilog );
+    grpSyntax.add( this.rbSyntaxZilog );
     gbcSyntax.insets.top = 0;
     gbcSyntax.gridy++;
-    panelSyntax.add( this.btnSyntaxZilog, gbcSyntax );
+    panelSyntax.add( this.rbSyntaxZilog, gbcSyntax );
 
-    this.btnSyntaxRobotron = new JRadioButton(
+    this.rbSyntaxRobotron = GUIFactory.createRadioButton(
 				"Nur Robotron-Mnemonik/-Syntax erlauben" );
-    grpSyntax.add( this.btnSyntaxRobotron );
+    grpSyntax.add( this.rbSyntaxRobotron );
     gbcSyntax.insets.bottom = 5;
     gbcSyntax.gridy++;
-    panelSyntax.add( this.btnSyntaxRobotron, gbcSyntax );
+    panelSyntax.add( this.rbSyntaxRobotron, gbcSyntax );
 
-    this.btnAllowUndocInst = new JCheckBox(
+    this.cbAllowUndocInst = GUIFactory.createCheckBox(
 				"Undokumentierte Befehle erlauben" );
     gbcSyntax.insets.top = 0;
     gbcSyntax.gridy++;
-    panelSyntax.add( this.btnAllowUndocInst, gbcSyntax );
+    panelSyntax.add( this.cbAllowUndocInst, gbcSyntax );
 
 
     // Bereich Marken
-    JPanel panelLabel = new JPanel( new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
-    panelLabel.setBorder( BorderFactory.createTitledBorder( "Marken" ) );
+    JPanel panelLabel = GUIFactory.createPanel(
+				new FlowLayout( FlowLayout.LEFT, 5, 5 ) );
+    panelLabel.setBorder( GUIFactory.createTitledBorder( "Marken" ) );
     gbc.gridy++;
     add( panelLabel, gbc );
 
-    this.btnLabelsCaseSensitive = new JCheckBox(
+    this.cbLabelsCaseSensitive = GUIFactory.createCheckBox(
 			"Gro\u00DF-/Kleinschreibung bei Marken beachten" );
-    panelLabel.add( this.btnLabelsCaseSensitive );
+    panelLabel.add( this.cbLabelsCaseSensitive );
 
-    this.btnPrintLabels = new JCheckBox( "Markentabelle ausgeben" );
-    panelLabel.add( this.btnPrintLabels );
+    this.cbPrintLabels = GUIFactory.createCheckBox(
+					"Markentabelle ausgeben" );
+    panelLabel.add( this.cbPrintLabels );
 
 
     // Bereich Erzeugter Programmcode
-    JPanel panelCodeDest = createCodeDestOptions();
-    panelCodeDest.setBorder( BorderFactory.createTitledBorder(
+    JPanel panelCodeDest = createCodeDestOptions( true );
+    panelCodeDest.setBorder( GUIFactory.createTitledBorder(
 						"Erzeugter Programmcode" ) );
     gbc.gridy++;
     add( panelCodeDest, gbc );
 
 
     // Bereich Sonstiges
-    JPanel panelEtc = new JPanel( new GridBagLayout() );
-    panelEtc.setBorder( BorderFactory.createTitledBorder( "Sonstiges" ) );
+    JPanel panelEtc = GUIFactory.createPanel( new GridBagLayout() );
+    panelEtc.setBorder( GUIFactory.createTitledBorder( "Sonstiges" ) );
     gbc.gridy++;
     add( panelEtc, gbc );
 
@@ -140,35 +146,57 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 					0, 0 );
 
 
-    this.btnWarnNonAsciiChars = new JCheckBox(
+    this.cbWarnNonAsciiChars = GUIFactory.createCheckBox(
 					"Bei Nicht-ASCII-Zeichen warnen" );
-    panelEtc.add( this.btnWarnNonAsciiChars, gbcEtc );
+    panelEtc.add( this.cbWarnNonAsciiChars, gbcEtc );
 
-    this.btnFormatSource = new JCheckBox( "Quelltext formatieren" );
+    this.cbReplaceTooLongRelJumps = GUIFactory.createCheckBox(
+		"Zu gro\u00DFe relative Spr\u00FCnge als absolute"
+			+ " \u00FCbersetzen (nicht bei DJNZ)" );
     gbcEtc.insets.top = 0;
     gbcEtc.gridy++;
-    panelEtc.add( this.btnFormatSource, gbcEtc );
+    panelEtc.add( this.cbReplaceTooLongRelJumps, gbcEtc );
 
-    this.btnLabelsToDebugger = new JCheckBox(
-			"Im Debugger Halte-/Log-Punkte bzw. Variablen"
-				+ " auf Marken anlegen" );
-    this.btnLabelsToDebugger.setEnabled( false );
+    this.cbFormatSource = GUIFactory.createCheckBox(
+					"Quelltext formatieren" );
     gbcEtc.gridy++;
-    panelEtc.add( this.btnLabelsToDebugger, gbcEtc );
+    panelEtc.add( this.cbFormatSource, gbcEtc );
 
-    this.btnSuppressLabelRecreateInDebugger = new JCheckBox(
-			"Im Debugger manuell entfernte Halte-/Log-Punkte"
-				+ " bzw. Variablen nicht wieder anlegen" );
-    this.btnSuppressLabelRecreateInDebugger.setEnabled( false );
+    this.cbLabelsToDebugger = GUIFactory.createCheckBox(
+				"Marken im Debugger verwenden" );
+    this.cbLabelsToDebugger.setEnabled( false );
     gbcEtc.gridy++;
-    panelEtc.add( this.btnSuppressLabelRecreateInDebugger, gbcEtc );
+    panelEtc.add( this.cbLabelsToDebugger, gbcEtc );
 
-    this.btnLabelsToReass = new JCheckBox(
+    ButtonGroup grpLabelInDebugger = new ButtonGroup();
+
+    this.rbLabelsCreateOrUpdateBPs = GUIFactory.createRadioButton(
+		"Halte-/Log-Punkte und Variablen auf Marken anlegen"
+				+ " bzw. aktualisieren" );
+    grpLabelInDebugger.add( this.rbLabelsCreateOrUpdateBPs );
+    gbcEtc.insets.left = 50;
+    gbcEtc.gridy++;
+    panelEtc.add( this.rbLabelsCreateOrUpdateBPs, gbcEtc );
+
+    this.rbLabelsUpdateBPsOnly = GUIFactory.createRadioButton(
+		"Nur vorhandene Halte-/Log-Punkte und Variablen"
+				+ " aktualisieren" );
+    grpLabelInDebugger.add( this.rbLabelsUpdateBPsOnly );
+    gbcEtc.gridy++;
+    panelEtc.add( this.rbLabelsUpdateBPsOnly, gbcEtc );
+
+    this.cbLabelsToReass = GUIFactory.createCheckBox(
 				"Marken im Reassembler verwenden" );
-    this.btnLabelsToReass.setEnabled( false );
+    this.cbLabelsToReass.setEnabled( false );
+    gbcEtc.insets.left = 5;
+    gbcEtc.gridy++;
+    panelEtc.add( this.cbLabelsToReass, gbcEtc );
+
+    this.cbAsmListing = GUIFactory.createCheckBox(
+					"Assembler-Listing erzeugen" );
     gbcEtc.insets.bottom = 5;
     gbcEtc.gridy++;
-    panelEtc.add( this.btnLabelsToReass, gbcEtc );
+    panelEtc.add( this.cbAsmListing, gbcEtc );
 
 
     // Bereich Knoepfe
@@ -183,43 +211,51 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
     if( options != null ) {
       switch( options.getAsmSyntax() ) {
 	case ZILOG_ONLY:
-	  this.btnSyntaxZilog.setSelected( true );
+	  this.rbSyntaxZilog.setSelected( true );
 	  break;
 	case ROBOTRON_ONLY:
-	  this.btnSyntaxRobotron.setSelected( true );
+	  this.rbSyntaxRobotron.setSelected( true );
 	  break;
 	default:
-	  this.btnSyntaxBoth.setSelected( true );
+	  this.rbSyntaxBoth.setSelected( true );
 	  break;
       }
-      this.btnAllowUndocInst.setSelected( options.getAllowUndocInst() );
-      this.btnLabelsCaseSensitive.setSelected(
+      this.cbAllowUndocInst.setSelected( options.getAllowUndocInst() );
+      this.cbAsmListing.setSelected( options.getCreateAsmListing() );
+      this.cbLabelsCaseSensitive.setSelected(
 					options.getLabelsCaseSensitive() );
-      this.btnPrintLabels.setSelected( options.getPrintLabels() );
-      this.btnWarnNonAsciiChars.setSelected( options.getWarnNonAsciiChars() );
-      this.btnFormatSource.setSelected( options.getFormatSource() );
-      this.btnLabelsToDebugger.setSelected( options.getLabelsToDebugger() );
-      this.btnSuppressLabelRecreateInDebugger.setSelected(
-				options.getSuppressLabelRecreateInDebugger() );
-      this.btnLabelsToReass.setSelected( options.getLabelsToReassembler() );
+      this.cbPrintLabels.setSelected( options.getPrintLabels() );
+      this.cbWarnNonAsciiChars.setSelected( options.getWarnNonAsciiChars() );
+      this.cbReplaceTooLongRelJumps.setSelected(
+				options.getReplaceTooLongRelJumps() );
+      this.cbFormatSource.setSelected( options.getFormatSource() );
+      this.cbLabelsToDebugger.setSelected( options.getLabelsToDebugger() );
+      if( options.getLabelsUpdateBreakpointsOnly() ) {
+	this.rbLabelsUpdateBPsOnly.setSelected( true );
+      } else {
+	this.rbLabelsCreateOrUpdateBPs.setSelected( true );
+      }
+      this.cbLabelsToReass.setSelected( options.getLabelsToReassembler() );
       updCodeDestFields( options, false );
     } else {
-      this.btnSyntaxBoth.setSelected( true );
-      this.btnAllowUndocInst.setSelected( false );
-      this.btnLabelsCaseSensitive.setSelected( false );
-      this.btnPrintLabels.setSelected( false );
-      this.btnWarnNonAsciiChars.setSelected( true );
-      this.btnFormatSource.setSelected( false );
-      this.btnLabelsToDebugger.setSelected( false );
-      this.btnSuppressLabelRecreateInDebugger.setSelected( false );
-      this.btnLabelsToReass.setSelected( false );
+      this.rbSyntaxBoth.setSelected( true );
+      this.cbAllowUndocInst.setSelected( false );
+      this.cbAsmListing.setSelected( false );
+      this.cbLabelsCaseSensitive.setSelected( false );
+      this.cbPrintLabels.setSelected( false );
+      this.cbWarnNonAsciiChars.setSelected( true );
+      this.cbReplaceTooLongRelJumps.setSelected( false );
+      this.cbFormatSource.setSelected( false );
+      this.cbLabelsToDebugger.setSelected( false );
+      this.rbLabelsCreateOrUpdateBPs.setSelected( true );
+      this.cbLabelsToReass.setSelected( false );
       updCodeDestFields( options, true );
     }
-    updSuppressLabelRecreateInDebuggerEnabled();
+    updLabelToDebuggerActionsEnabled();
 
 
     // Listener
-    this.btnLabelsToDebugger.addActionListener( this );
+    this.cbLabelsToDebugger.addActionListener( this );
 
 
     // Fenstergroesse und -position
@@ -234,9 +270,9 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   @Override
   protected void codeToEmuChanged( boolean state )
   {
-    this.btnLabelsToDebugger.setEnabled( state );
-    this.btnLabelsToReass.setEnabled( state );
-    updSuppressLabelRecreateInDebuggerEnabled();
+    this.cbLabelsToDebugger.setEnabled( state );
+    this.cbLabelsToReass.setEnabled( state );
+    updLabelToDebuggerActionsEnabled();
   }
 
 
@@ -244,8 +280,8 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   protected boolean doAction( EventObject e )
   {
     boolean rv = super.doAction( e );
-    if( !rv && (e.getSource() == this.btnLabelsToDebugger) ) {
-      updSuppressLabelRecreateInDebuggerEnabled();
+    if( !rv && (e.getSource() == this.cbLabelsToDebugger) ) {
+      updLabelToDebuggerActionsEnabled();
       rv = true;
     }
     return rv;
@@ -257,29 +293,33 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
   {
     try {
       Z80Assembler.Syntax syntax = Z80Assembler.Syntax.ALL;
-      if( this.btnSyntaxZilog.isSelected() ) {
+      if( this.rbSyntaxZilog.isSelected() ) {
 	syntax = Z80Assembler.Syntax.ZILOG_ONLY;
       }
-      else if( this.btnSyntaxRobotron.isSelected() ) {
+      else if( this.rbSyntaxRobotron.isSelected() ) {
 	syntax = Z80Assembler.Syntax.ROBOTRON_ONLY;
       }
-      this.appliedOptions = new PrgOptions();
+      this.appliedOptions = new PrgOptions( this.oldOptions );
       this.appliedOptions.setAsmSyntax( syntax );
       this.appliedOptions.setAllowUndocInst(
-			this.btnAllowUndocInst.isSelected() );
+			this.cbAllowUndocInst.isSelected() );
+      this.appliedOptions.setCreateAsmListing(
+			this.cbAsmListing.isSelected() );
       this.appliedOptions.setLabelsCaseSensitive(
-			this.btnLabelsCaseSensitive.isSelected() );
-      this.appliedOptions.setPrintLabels( this.btnPrintLabels.isSelected() );
+			this.cbLabelsCaseSensitive.isSelected() );
+      this.appliedOptions.setPrintLabels( this.cbPrintLabels.isSelected() );
       this.appliedOptions.setLabelsToDebugger(
-			this.btnLabelsToDebugger.isSelected() );
-      this.appliedOptions.setSuppressLabelRecreateInDebugger(
-			this.btnSuppressLabelRecreateInDebugger.isSelected() );
+			this.cbLabelsToDebugger.isSelected() );
+      this.appliedOptions.setLabelsUpdateBreakpointsOnly(
+			this.rbLabelsUpdateBPsOnly.isSelected() );
       this.appliedOptions.setLabelsToReassembler(
-			this.btnLabelsToReass.isSelected() );
+			this.cbLabelsToReass.isSelected() );
       this.appliedOptions.setFormatSource(
-			this.btnFormatSource.isSelected() );
+			this.cbFormatSource.isSelected() );
+      this.appliedOptions.setReplaceTooLongRelJumps(
+			this.cbReplaceTooLongRelJumps.isSelected() );
       this.appliedOptions.setWarnNonAsciiChars(
-			this.btnWarnNonAsciiChars.isSelected() );
+			this.cbWarnNonAsciiChars.isSelected() );
       try {
 	applyCodeDestOptionsTo( this.appliedOptions );
 	doClose();
@@ -296,10 +336,11 @@ public class AsmOptionsDlg extends AbstractOptionsDlg
 
 	/* --- private Methoden --- */
 
-  private void updSuppressLabelRecreateInDebuggerEnabled()
+  private void updLabelToDebuggerActionsEnabled()
   {
-    this.btnSuppressLabelRecreateInDebugger.setEnabled(
-		this.btnLabelsToDebugger.isEnabled()
-			&& this.btnLabelsToDebugger.isSelected() );
+    boolean state = this.cbLabelsToDebugger.isEnabled()
+			&& this.cbLabelsToDebugger.isSelected();
+    this.rbLabelsCreateOrUpdateBPs.setEnabled( state );
+    this.rbLabelsUpdateBPsOnly.setEnabled( state );
   }
 }

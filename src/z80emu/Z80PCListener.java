@@ -1,5 +1,5 @@
 /*
- * (c) 2009 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Z80-Emulator
  *
@@ -8,8 +8,6 @@
  */
 
 package z80emu;
-
-import java.lang.*;
 
 
 public interface Z80PCListener

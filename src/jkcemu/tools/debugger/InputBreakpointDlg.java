@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,11 +12,11 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JLabel;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HexDocument;
 
 
@@ -47,25 +47,24 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    add( new JLabel( "Eingabeadresse (8 oder 16 Bit):" ), gbc );
+    add( GUIFactory.createLabel( "Eingabeadresse (8 oder 16 Bit):" ), gbc );
 
     this.docBegPort = new HexDocument( 4 );
-    this.fldBegPort = new JTextField( this.docBegPort, "", 4 );
+    this.fldBegPort = GUIFactory.createTextField( this.docBegPort, 4 );
     gbc.anchor      = GridBagConstraints.WEST;
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
     gbc.gridx++;
     add( this.fldBegPort, gbc );
 
-    gbc.fill          = GridBagConstraints.NONE;
-    gbc.weightx       = 0.0;
-    gbc.insets.bottom = 5;
-    gbc.gridx         = 0;
+    gbc.fill    = GridBagConstraints.NONE;
+    gbc.weightx = 0.0;
+    gbc.gridx   = 0;
     gbc.gridy++;
-    add( new JLabel( "Bis Eingabeadresse (optional):" ), gbc );
+    add( GUIFactory.createLabel( "Bis Eingabeadresse (optional):" ), gbc );
 
     this.docEndPort = new HexDocument( 4 );
-    this.fldEndPort = new JTextField( this.docEndPort, "", 4 );
+    this.fldEndPort = GUIFactory.createTextField( this.docEndPort, 4 );
     gbc.anchor      = GridBagConstraints.WEST;
     gbc.fill        = GridBagConstraints.HORIZONTAL;
     gbc.weightx     = 1.0;
@@ -78,7 +77,7 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
     gbc.gridwidth  = GridBagConstraints.REMAINDER;
     gbc.gridx      = 0;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
     gbc.anchor     = GridBagConstraints.CENTER;
     gbc.fill       = GridBagConstraints.NONE;
@@ -144,7 +143,7 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
   @Override
   protected void doApprove()
   {
-    String fldName = "Ausgabeadresse";
+    String curFldName = "Ausgabeadresse";
     try {
       boolean is8Bit  = false;
       int     begPort = this.docBegPort.intValue() & 0xFFFF;
@@ -171,7 +170,7 @@ public class InputBreakpointDlg extends AbstractBreakpointDlg
 				endPort ) );
     }
     catch( NumberFormatException ex ) {
-      showInvalidFmt( fldName );
+      showInvalidFmt( curFldName );
     }
   }
 

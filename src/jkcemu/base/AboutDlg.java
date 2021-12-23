@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,14 +9,18 @@
 package jkcemu.base;
 
 import java.awt.BorderLayout;
+import java.awt.Dialog;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.Window;
+import java.awt.event.WindowEvent;
+import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,12 +40,65 @@ import jkcemu.Main;
 
 public class AboutDlg extends BaseDlg
 {
+  private static Rectangle lastBounds = null;
+
   private JButton btnOK;
 
 
-  public AboutDlg( Window owner )
+  public static void fireOpen( final Window owner )
   {
-    super( owner, "\u00DCber JKCEMU..." );
+    EventQueue.invokeLater(
+		new Runnable()
+		{
+		  @Override
+		  public void run()
+		  {
+		    open( owner );
+		  }
+		} );
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public boolean doAction( EventObject e )
+  {
+    boolean rv = false;
+    if( e.getSource() == this.btnOK ) {
+      rv = true;
+      doClose();
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    lastBounds = getBounds();
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.btnOK.removeActionListener( this );
+    }
+    return rv;
+  }
+
+
+  @Override
+  public void windowClosing( WindowEvent e )
+  {
+    lastBounds = getBounds();
+    super.windowClosing( e );
+  }
+
+
+	/* --- Konstruktor --- */
+
+  private AboutDlg( Window owner )
+  {
+    super( owner, Dialog.ModalityType.MODELESS );
+    setTitle( "\u00DCber JKCEMU..." );
 
 
     // Fensterinhalt
@@ -56,12 +113,12 @@ public class AboutDlg extends BaseDlg
 						new Insets( 5, 5, 5, 5 ),
                                         	0, 0 );
 
-    JTabbedPane tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    JTabbedPane tabbedPane = GUIFactory.createTabbedPane();
     add( tabbedPane, gbc );
 
 
     // Tab Allgemein
-    JPanel panelGeneral = new JPanel( new GridBagLayout() );
+    JPanel panelGeneral = GUIFactory.createPanel( new GridBagLayout() );
     tabbedPane.addTab( "Allgemein", panelGeneral );
 
     GridBagConstraints gbcGeneral = new GridBagConstraints(
@@ -73,55 +130,65 @@ public class AboutDlg extends BaseDlg
 					new Insets( 10, 10, 10, 10 ),
                                        	0, 0 );
 
-    URL url = getClass().getResource( "/images/icon/jkcemu50x50.png" );
+    URL url = getClass().getResource( "/images/icon/jkcemu_48x48.png" );
     if( url != null ) {
-      panelGeneral.add( new JLabel( new ImageIcon( url ) ), gbcGeneral );
+      panelGeneral.add(
+		GUIFactory.createLabel( new ImageIcon( url ) ),
+		gbcGeneral );
       gbcGeneral.gridx++;
     }
 
-    JLabel label = new JLabel( Main.APPINFO );
-    label.setFont( new Font( "SansSerif", Font.BOLD, 18 ) );
     gbcGeneral.insets.bottom = 0;
     gbcGeneral.gridheight    = 1;
-    panelGeneral.add( label, gbcGeneral );
+    panelGeneral.add(
+	GUIFactory.createLabel(
+			Main.APPINFO,
+			Font.SANS_SERIF,
+			Font.BOLD,
+			1.5F ),
+	gbcGeneral );
 
     gbcGeneral.insets.top = 0;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "...ein in Java geschriebener Kleincomputer-Emulator" ),
+	GUIFactory.createLabel(
+		"...ein in Java geschriebener Kleincomputer-Emulator" ),
 	gbcGeneral );
 
     gbcGeneral.insets.top = 12;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "(c) 2008-2017 Jens M\u00FCller" ),
+	GUIFactory.createLabel( Main.COPYRIGHT ),
 	gbcGeneral );
 
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "Lizenz: GNU General Public License Version 3" ),
+	GUIFactory.createLabel(
+		"Lizenz: GNU General Public License Version 3" ),
 	gbcGeneral );
 
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "Im JKCEMU sind ROM- und Disketteninhalte enthaltenen," ),
+	GUIFactory.createLabel(
+		"Im JKCEMU sind ROM- und Disketteninhalte enthaltenen," ),
 	gbcGeneral );
 
     gbcGeneral.insets.top = 0;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "die nicht der GNU General Public License unterliegen." ),
+	GUIFactory.createLabel(
+		"die nicht der GNU General Public License unterliegen." ),
 	gbcGeneral );
 
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "Lesen Sie dazu bitte die Hinweise zu den"
+	GUIFactory.createLabel( "Lesen Sie dazu bitte die Hinweise zu den"
 			+ " Urheberschaften!" ),
 	gbcGeneral );
     gbcGeneral.insets.top = 12;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "Die Anwendung dieser Software erfolgt"
+	GUIFactory.createLabel( "Die Anwendung dieser Software erfolgt"
 			+ " ausschlie\u00DFlich auf eigenes Risiko." ),
 	gbcGeneral );
 
@@ -129,7 +196,7 @@ public class AboutDlg extends BaseDlg
     gbcGeneral.insets.bottom = 10;
     gbcGeneral.gridy++;
     panelGeneral.add(
-	new JLabel( "Jegliche Gew\u00E4hrleistung und Haftung"
+	GUIFactory.createLabel( "Jegliche Gew\u00E4hrleistung und Haftung"
 			+ " ist ausgeschlossen!" ),
 	gbcGeneral );
 
@@ -138,9 +205,9 @@ public class AboutDlg extends BaseDlg
     url = getClass().getResource( "/help/copyright.htm" );
     if( url != null ) {
       try {
-	JPanel panel = new JPanel( new BorderLayout() );
+	JPanel panel = GUIFactory.createPanel( new BorderLayout() );
 	panel.add(
-		new JScrollPane( createJEditorPane( url ) ),
+		GUIFactory.createScrollPane( createJEditorPane( url ) ),
 		BorderLayout.CENTER );
 	tabbedPane.addTab( "Urheberschaften", panel );
       }
@@ -152,9 +219,9 @@ public class AboutDlg extends BaseDlg
     url = getClass().getResource( "/help/thanks.htm" );
     if( url != null ) {
       try {
-	JPanel panel = new JPanel( new BorderLayout() );
+	JPanel panel = GUIFactory.createPanel( new BorderLayout() );
 	panel.add(
-		new JScrollPane( createJEditorPane( url ) ),
+		GUIFactory.createScrollPane( createJEditorPane( url ) ),
 		BorderLayout.CENTER );
 	tabbedPane.addTab( "Danksagung", panel );
       }
@@ -163,37 +230,41 @@ public class AboutDlg extends BaseDlg
 
 
     // Tab Java
-    Properties props = System.getProperties();
-    if( props != null ) {
-      int n = props.size();
-      if( n > 0 ) {
-	java.util.List<String> propNames = new ArrayList<String>( n );
-	try {
-	  Enumeration<?> keys = props.propertyNames();
-	  while( keys.hasMoreElements() ) {
-	    Object o = keys.nextElement();
-	    if( o != null ) {
-	      String s = o.toString();
-	      if( s != null ) {
-		propNames.add( s );
+    try {
+      StringBuilder buf = new StringBuilder( 2048 );
+
+      // Eigenschaften
+      Properties props = System.getProperties();
+      if( props != null ) {
+	int n = props.size();
+	if( n > 0 ) {
+	  java.util.List<String> propNames = new ArrayList<String>( n );
+	  try {
+	    Enumeration<?> keys = props.propertyNames();
+	    while( keys.hasMoreElements() ) {
+	      Object o = keys.nextElement();
+	      if( o != null ) {
+		String s = o.toString();
+		if( s != null ) {
+		  propNames.add( s );
+		}
 	      }
 	    }
 	  }
-	}
-	catch( NoSuchElementException ex ) {}
-	if( !propNames.isEmpty() ) {
-	  try {
-	    Collections.sort( propNames );
-	  }
-	  catch( ClassCastException ex1 ) {}
-	  catch( IllegalArgumentException ex2 ) {}
-	  try {
-	    StringBuilder buf = new StringBuilder( 2048 );
+	  catch( NoSuchElementException ex ) {}
+	  if( !propNames.isEmpty() ) {
+	    try {
+	      Collections.sort( propNames );
+	    }
+	    catch( ClassCastException ex1 ) {}
+	    catch( IllegalArgumentException ex2 ) {}
+
 	    buf.append( "<html>\n"
-		+ "<h2>Eigenschaften der Java-Laufzeitumgebung</h2>\n"
-		+ "<table border=\"1\">\n"
-		+ "<tr><th align=\"left\">Eigenschaft</th>"
-		+ "<th align=\"left\">Wert</th></tr>\n" );
+			+ "<h2>Eigenschaften der"
+			+ " Java-Laufzeitumgebung</h2>\n"
+			+ "<table border=\"1\">\n"
+			+ "<tr><th align=\"left\">Eigenschaft</th>"
+			+ "<th align=\"left\">Wert</th></tr>\n" );
 	    for( String propName : propNames ) {
 	      buf.append( "<tr><td align=\"left\" nowrap=\"nowrap\">" );
 	      EmuUtil.appendHTML( buf, propName );
@@ -207,29 +278,103 @@ public class AboutDlg extends BaseDlg
 	      }
 	      buf.append( "</td></tr>\n" );
 	    }
-	    buf.append( "</table>\n"
-			+ "</html>\n" );
-	    JEditorPane editorPane = createJEditorPane( null );
-	    editorPane.setContentType( "text/html" );
-	    editorPane.setText( buf.toString() );
-	    try {
-	      editorPane.setCaretPosition( 0 );
-	    }
-	    catch( IllegalArgumentException ex ) {}
-	    JPanel panel= new JPanel( new BorderLayout() );
-	    panel.add( new JScrollPane( editorPane ), BorderLayout.CENTER );
-	    tabbedPane.addTab( "Java", panel );
+	    buf.append( "</table>\n" );
 	  }
-	  catch( IOException ex ) {}
 	}
       }
+
+      // Bibliothek
+      DeviceIO.LibInfo libInfo = DeviceIO.getLibInfo();
+      if( libInfo != null ) {
+	int recognizedVersion = libInfo.getRecognizedVersion();
+	int requiredVersion   = libInfo.getRequiredVersion();
+	if( buf.length() > 0 ) {
+	  buf.append( "<br/><br/>\n" );
+	} else {
+	  buf.append( "<html>\n" );
+	}
+	buf.append( "<h2>Bibliothek mit nativem Programmcode</h2>\n"
+		+ "<table border=\"1\">\n"
+		+ "<tr><td align=\"left\">Status:</td><td align=\"left\">" );
+	switch( libInfo.getStatus() ) {
+	  case NOT_USED:
+	    buf.append( "Bibliothek nicht geladen,"
+		+ " da noch nicht ben\u00F6tigt" );
+	    break;
+	  case LOADED:
+	    buf.append( "Bibliothek geladen" );
+	    if( (recognizedVersion >= 0) && (requiredVersion >= 0) ) {
+	      if( recognizedVersion >= requiredVersion ) {
+		buf.append( " und in Verwendnung" );
+	      } else {
+		buf.append( ", aber nicht in Verwendnung" );
+	      }
+	    }
+	    break;
+	  case LOAD_ERROR:
+	    buf.append( "Bibliothek konnte nicht geladen werden." );
+	    break;
+	  case INSTALL_ERROR:
+	    buf.append( "Bibliothek konnte nicht installiert werden." );
+	    break;
+	}
+	buf.append( "</td></tr>\n" );
+	File file = libInfo.getFile();
+	if( file != null ) {
+	  buf.append( "<tr><td align=\"left\">Datei:</td>"
+					+ "<td align=\"left\">" );
+	  EmuUtil.appendHTML( buf, file.getPath() );
+	  buf.append( "</td></tr>\n" );
+	  if( libInfo.getStatus() == DeviceIO.LibStatus.LOADED ) {
+	    buf.append( "<tr><td align=\"left\">Version:</td>"
+					+ "<td align=\"left\">" );
+	    EmuUtil.appendHTML(
+			buf,
+			String.valueOf( recognizedVersion ) );
+	    buf.append( "</td></tr>\n" );
+	    if( (recognizedVersion != requiredVersion)
+		&& (requiredVersion > 0) )
+	    {
+	      buf.append( "<tr><td align=\"left\">"
+					+ "Ben\u00F6tigte Version:</td>"
+					+ "<td align=\"left\">" );
+	      EmuUtil.appendHTML(
+			buf,
+			String.valueOf( requiredVersion ) );
+	      buf.append( "</td></tr>\n" );
+	    }
+	  }
+	}
+	buf.append( "</table>\n" );
+	if( (file != null) && libInfo.isUpdateRequested() ) {
+	  buf.append( "<br/>\n"
+		+ "Die Bibliothek wird beim n&auml;chsten Start"
+		+ " von JKCEMU aktualisiert." );
+	}
+      }
+
+      // Tab
+      if( buf.length() > 0 ) {
+	buf.append( "</html>\n" );
+	JEditorPane editorPane = createJEditorPane( null );
+	editorPane.setContentType( "text/html" );
+	editorPane.setText( buf.toString() );
+	try {
+	  editorPane.setCaretPosition( 0 );
+	}
+	catch( IllegalArgumentException ex ) {}
+	JPanel panel= GUIFactory.createPanel( new BorderLayout() );
+	panel.add(
+		GUIFactory.createScrollPane( editorPane ),
+		BorderLayout.CENTER );
+	tabbedPane.addTab( "Java", panel );
+      }
     }
+    catch( IOException ex ) {}
 
 
     // Knopf
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
-    this.btnOK.addKeyListener( this );
+    this.btnOK        = GUIFactory.createButtonOK();
     gbc.fill          = GridBagConstraints.NONE;
     gbc.weightx       = 0.0;
     gbc.weighty       = 0.0;
@@ -239,29 +384,12 @@ public class AboutDlg extends BaseDlg
     add( this.btnOK, gbc );
 
 
-    // Fenstergroesse und -position
-    pack();
-    setParentCentered();
+    // Listener
+    this.btnOK.addActionListener( this );
+
+
+    // Sonstiges
     setResizable( true );
-  }
-
-
-	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  protected boolean doAction( EventObject e )
-  {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src != null ) {
-        if( src == this.btnOK ) {
-	  rv = true;
-	  doClose();
-	}
-      }
-    }
-    return rv;
   }
 
 
@@ -269,7 +397,7 @@ public class AboutDlg extends BaseDlg
 
   private JEditorPane createJEditorPane( URL url ) throws IOException
   {
-    JEditorPane fld = new JEditorPane();
+    JEditorPane fld = GUIFactory.createEditorPane();
     fld.setMargin( new Insets( 5, 5, 5, 5 ) );
     fld.setEditable( false );
     if( url != null ) {
@@ -277,5 +405,18 @@ public class AboutDlg extends BaseDlg
     }
     fld.setPreferredSize( new Dimension( 1, 1 ) );
     return fld;
+  }
+
+
+  private static void open( Window owner )
+  {
+    AboutDlg dlg = new AboutDlg( owner );
+    if( lastBounds != null ) {
+      dlg.setBounds( lastBounds );
+    } else {
+      dlg.pack();
+      BaseDlg.setParentCentered( dlg );
+    }
+    dlg.setVisible( true );
   }
 }

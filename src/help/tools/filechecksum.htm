@@ -3,14 +3,43 @@
  <h1>Pr&uuml;fsummen-/Hashwertberechnung</h1>
   In diesem Fenster, welches Sie &uuml;ber den
   <a href="filebrowser.htm">Datei-Browser</a> erreichen,
-  k&ouml;nnen Sie Pr&uuml;fsummen und Hash-Werte von Dateien
+  k&ouml;nnen Sie Pr&uuml;fsummen und Hashwerte von Dateien
   berechnen lassen.
   Markieren Sie dazu im <a href="filebrowser.htm">Datei-Browser</a>
   die gew&uuml;nschten Dateien und rufen im Men&uuml; <em>Datei</em>
-  die Funktion <em>Pr&uuml;fsumme/Hash-Wert berechnen...</em> auf.
+  die Funktion <em>Pr&uuml;fsumme/Hashwert berechnen...</em> auf.
   In dem nun erscheinenden Fenster w&auml;hlen Sie den gew&uuml;nschten
   Algorithmus aus und dr&uuml;cken auf den Knopf <em>Berechnen</em>.
  <br/><br/>
+
+ <h2>Unterst&uuml;tzte Algorithmen</h2>
+  Es werden folgende Pr&uuml;fsummenberechnungen unterst&uuml;tzt:
+ <br/>
+  <ul>
+   <li>Summe der Bytes</li>
+   <li>Summe der 16-Bit-Worte (Little Endian)</li>
+   <li>Summe der 16-Bit-Worte (Big Endian)</li>
+   <li>CRC-CCITT (CRC-16 HDLC)</li>
+   <li>CRC-32</li>
+   <li>Adler-32</li>
+  </ul>
+ <br/>
+  Die unterst&uuml;tzten Algorithmen f&uuml;r die Hashwertberechnung
+  h&auml;ngen von der verwendeten Java-Laufzeitumgebung ab
+  und k&ouml;nnen sich somit &auml;ndern.
+  &Uuml;blicherweise werden folgende Algorithmen unterst&uuml;tzt:
+ <br/>
+  <ul>
+   <li>MD2</li>
+   <li>MD5</li>
+   <li>SHA (SHA-1)</li>
+   <li>SHA-256</li>
+   <li>SHA-384</li>
+   <li>SHA-512</li>
+  </ul>
+ <br/>
+
+ <h2>Ist-/Soll-Wertvergleich</h2>
   Sinn der Berechnung ist gew&ouml;hnlich, den berechneten Wert (Ist-Wert)
   mit einem vorgegebenen Wert (Soll-Wert) zu vergleichen.
   Das ist besonders komfortabel m&ouml;glich,

@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2017 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,7 +17,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.lang.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,7 +30,8 @@ import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.DeviceIO;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileEntry;
+import jkcemu.file.FileEntry;
+import jkcemu.file.FileUtil;
 import jkcemu.text.TextUtil;
 
 
@@ -43,7 +43,8 @@ public class DiskUtil
   public static final String[] imageDiskFileExt = { ".imd" };
   public static final String[] isoFileExt       = { ".iso" };
   public static final String[] teleDiskFileExt  = { ".td0" };
-  public static final String[] plainDiskFileExt = { ".img", ".image", ".raw" };
+  public static final String[] plainDiskFileExt = {
+					".dd", ".img", ".image", ".raw" };
 
   public static final String[] gzAnaDiskFileExt   = { ".dump.gz" };
   public static final String[] gzCopyQMFileExt    = { ".cqm.gz", ".qm.gz" };
@@ -52,6 +53,7 @@ public class DiskUtil
   public static final String[] gzISOFileExt       = { ".iso.gz" };
   public static final String[] gzTeleDiskFileExt  = { ".td0.gz" };
   public static final String[] gzPlainDiskFileExt = {
+						".dd.gz",
 						".img.gz",
 						".image.gz",
 						".raw.gz" };
@@ -59,6 +61,11 @@ public class DiskUtil
   public static final int DEFAULT_BLOCK_SIZE = 2048;
 
   private enum DirStatus { NO_DIR, EMPTY_DIR, FILLED_DIR };
+
+  private static FloppyDiskFormat[] stdFloppyFormats35 = {
+			new FloppyDiskFormat( 80, 2,  9, 512 ),
+			new FloppyDiskFormat( 80, 2, 18, 512 ),
+			new FloppyDiskFormat( 80, 2, 36, 512 ) };
 
 
   public static boolean checkAndConfirmWarning(
@@ -70,7 +77,7 @@ public class DiskUtil
       String msg = disk.getWarningText();
       if( msg != null ) {
 	if( JOptionPane.showConfirmDialog(
-		owner,
+		EmuUtil.getWindow( owner ),
 		msg,
 		"Warnung",
 		JOptionPane.OK_CANCEL_OPTION,
@@ -79,190 +86,6 @@ public class DiskUtil
 	  rv = false;
 	}
       }
-    }
-    return rv;
-  }
-
-
-  public static Boolean checkBlockNum16Bit(
-				byte[]        dirBytes,
-				long          diskSize,
-				AtomicInteger rvBlockSize )
-  {
-    Boolean rv        = null;
-    Integer blockSize = null;
-    if( dirBytes != null ) {
-      int maxBlkNum8  = -1;
-      int maxBlkNum16 = -1;
-      int halfBlkSize = DEFAULT_BLOCK_SIZE / 2;
-      if( diskSize <= 0 ) {
-	diskSize = FloppyDiskFormat.getMaxDiskSize();
-      }
-      int pos = 0;
-      while( ((rv == null) || (blockSize == null))
-	     && ((pos + 31) < dirBytes.length) )
-      {
-	int b0  = (int) dirBytes[ pos ] & 0xFF;
-	int b15 = (int) dirBytes[ pos + 15 ] & 0xFF;
-	if( (b0 >= 0) && (b0 <= 0x1F) && (b15 > 0) ) {
-
-	  /*
-	   * Anzahl der benoetigten Bloecke bei Standard-
-	   * und bei halber Standardblockgroesse ermitteln
-	   */
-	  int nBlocksHalf = ((b15 * 128) + halfBlkSize - 1)
-					      / halfBlkSize;
-	  int nBlocksStd  = ((b15 * 128) + DEFAULT_BLOCK_SIZE - 1)
-					      / DEFAULT_BLOCK_SIZE;
-	  if( nBlocksStd > 8 ) {
-	    /*
-	     * Bei 16-Bit-Blocknummern koennen nur max. 8 Bloecke
-	     * pro Directory-Eintrag referenziert werden.
-	     */
-	    rv = Boolean.FALSE;
-	  }
-
-	  /*
-	   * Anzahl der eingetragenen Blocknummern bei 8 Bit ermitteln,
-	   * Gleichzeitig wird geprueft, ob bei den mindestens
-	   * benoetigten Blocknummern (siehe nBlocksStd)
-	   * Dopplungen auftreten.
-	   * Wenn das der Fall ist,
-	   * koennen es keine 8-Bit-Blocknummern sein.
-	   */
-	  int          tmpPos     = pos + 16;
-	  int          nBlocks8   = 0;
-	  Set<Integer> blockNums8 = new TreeSet<>();
-	  for( int i = 0; i < 16; i++ ) {
-	    int blockNum = (int) dirBytes[ tmpPos++ ] & 0xFF;
-	    if( blockNum == 0 ) {
-	      break;
-	    }
-	    nBlocks8++;
-	    if( i < nBlocksStd ) {
-	      if( blockNum > maxBlkNum8 ) {
-		maxBlkNum8 = blockNum;
-	      }
-	      if( !blockNums8.add( blockNum ) ) {
-		rv       = Boolean.TRUE;
-		nBlocks8 = 0;
-		break;
-	      }
-	    }
-	  }
-
-	  /*
-	   * Anzahl der eingetragenen Blocknummern bei 16 Bit ermitteln,
-	   * Gleichzeitig wird geprueft bei den mindestens
-	   * benoetigten Blocknummern (siehe nBlocksStd) geprueft,
-	   * ob so eine Blocknummer ausserhalb der Diskette liegt.
-	   */
-	  tmpPos        = pos + 16;
-	  int nBlocks16 = 0;
-	  for( int i = 0; i < 8; i++ ) {
-	    int blockNum = EmuUtil.getWord( dirBytes, tmpPos );
-	    tmpPos += 2;
-	    if( blockNum == 0 ) {
-	      break;
-	    }
-	    nBlocks16++;
-	    if( i < nBlocksStd ) {
-	      if( blockNum > maxBlkNum16 ) {
-		maxBlkNum16 = blockNum;
-	      }
-	      if( (blockNum * halfBlkSize) >= diskSize ) {
-		rv = Boolean.FALSE;
-	      }
-	    }
-	  }
-
-	  // Benoetigte und vorhandene Blockanzahlen vergleichen
-	  if( nBlocks8 != nBlocks16 ) {
-	    boolean only16Bit  = false;
-	    boolean only8Bit   = false;
-	    boolean tmp16Bit   = false;
-	    int     tmpBlkSize = 0;
-	    int     nMatches   = 0;
-	    if( rv != null ) {
-	      if( rv.booleanValue() ) {
-		only16Bit = true;
-	      } else {
-		only8Bit = true;
-	      }
-	    }
-	    if( nBlocksHalf > 0 ) {
-	      if( !only16Bit && (nBlocksHalf == nBlocks8) ) {
-		// halbe Standardblockgroesse + 8 Bit Blocknummern passt
-		tmp16Bit   = false;
-		tmpBlkSize = halfBlkSize;
-		nMatches++;
-	      }
-	      if( !only8Bit && (nBlocksHalf == nBlocks16) ) {
-		// halbe Standardblockgroesse + 16 Bit Blocknummern passt
-		tmp16Bit   = true;
-		tmpBlkSize = halfBlkSize;
-		nMatches++;
-	      }
-	    }
-	    if( nBlocksStd > 0 ) {
-	      if( !only16Bit && (nBlocksStd == nBlocks8) ) {
-		// Standardblockgroesse + 8 Bit Blocknummern passt
-		tmp16Bit   = false;
-		tmpBlkSize = DEFAULT_BLOCK_SIZE;
-		nMatches++;
-	      }
-	      if( !only8Bit && (nBlocksStd == nBlocks16) ) {
-		// Standardblockgroesse + 16 Bit Blocknummern passt
-		tmp16Bit   = true;
-		tmpBlkSize = DEFAULT_BLOCK_SIZE;
-		nMatches++;
-	      }
-	    }
-	    if( nMatches == 1 ) {
-	      // eindeutige Kombination gefunden
-	      if( rv != null ) {
-		if( rv.booleanValue() == tmp16Bit ) {
-		  blockSize = tmpBlkSize;
-		}
-	      } else {
-		rv        = tmp16Bit;
-		blockSize = tmpBlkSize;
-	      }
-	    }
-	  }
-	}
-	pos += 32;
-      }
-      if( rv != null ) {
-	if( blockSize == null ) {
-	  if( rv.booleanValue() ) {
-	    // 16-Bit-Blocknummern
-	    if( (maxBlkNum16 > 0)
-		&& ((maxBlkNum16 * DEFAULT_BLOCK_SIZE) >= diskSize)
-		&& ((maxBlkNum16 * halfBlkSize) < diskSize) )
-	    {
-	      blockSize = halfBlkSize;
-	    }
-	  } else {
-	    // 8-Bit-Blocknummern
-	    if( (maxBlkNum8 > 0)
-		&& ((maxBlkNum8 * DEFAULT_BLOCK_SIZE) >= diskSize)
-		&& ((maxBlkNum8 * halfBlkSize) < diskSize) )
-	    {
-	      blockSize = halfBlkSize;
-	    }
-	  }
-	}
-      } else {
-	if( (maxBlkNum16 > 0)
-	    && ((maxBlkNum16 * halfBlkSize) > diskSize) )
-	{
-	  rv = Boolean.FALSE;
-	}
-      }
-    }
-    if( (rvBlockSize != null) && (blockSize != null) ) {
-      rvBlockSize.set( blockSize.intValue() );
     }
     return rv;
   }
@@ -444,12 +267,27 @@ public class DiskUtil
   }
 
 
+  public static int getEntryBlock128Count(
+				byte[] dirBytes,
+				int    entryPos )
+  {
+    int rv = -1;
+    if( dirBytes != null ) {
+      if( (entryPos >= 0) && ((entryPos + 15) < dirBytes.length) ) {
+	rv = (getExtentNumByEntryPos( dirBytes, entryPos ) * 0x80)
+			+ ((int) dirBytes[ entryPos + 15 ] & 0xFF);
+      }
+    }
+    return rv;
+  }
+
+
   public static int getExtentNumByEntryPos( byte[] dirBytes, int entryPos )
   {
     int rv = 0;
     if( dirBytes != null ) {
       if( (entryPos + 14) < dirBytes.length ) {
-	rv = ((int) dirBytes[ entryPos + 12 ] & 0x001F)
+	rv = ((int) dirBytes[ entryPos + 12 ] & 0x1F)
 		| (((int) dirBytes[ entryPos + 14 ] << 5) & 0x07E0);
       }
     }
@@ -473,9 +311,69 @@ public class DiskUtil
   }
 
 
+  public static FloppyDiskFormat getFloppyDiskFormat(
+				DeviceIO.RandomAccessDevice rad )
+						throws IOException
+  {
+    FloppyDiskFormat fmt = null;
+    if( rad != null ) {
+      long              diskSize = 0;
+      DeviceIO.DiskInfo diskInfo = rad.getDiskInfo();
+      if( diskInfo != null ) {
+	if( diskInfo.hasGeometry() ) {
+	  int cyls            = diskInfo.getCylinders();
+	  int heads           = diskInfo.getHeads();
+	  int sectorsPerTrack = diskInfo.getSectorsPerTrack();
+	  int sectorSize      = diskInfo.getSectorSize();
+	  if( (heads > 2)
+	      || (cyls > 0x7F)
+	      || (sectorsPerTrack > 0x7F)
+	      || (sectorSize > 0x2000) )
+	  {
+	    throw new IOException( "Datentr\u00E4ger ist keine Diskette." );
+	  }
+	  fmt = new FloppyDiskFormat(
+				cyls,
+				heads,
+				sectorsPerTrack,
+				sectorSize );
+	}
+	diskSize = diskInfo.getDiskSize();
+      }
+      if( fmt == null ) {
+	for( FloppyDiskFormat tmpFmt : stdFloppyFormats35 ) {
+	  if( diskSize == tmpFmt.getDiskSize() ) {
+	    fmt = tmpFmt;
+	    break;
+	  }
+	}
+      }
+      if( fmt == null ) {
+	for( FloppyDiskFormat tmpFmt : stdFloppyFormats35 ) {
+	  if( DiskUtil.equalsDiskSize( rad, tmpFmt.getDiskSize() ) ) {
+	    fmt = tmpFmt;
+	    break;
+	  }
+	}
+      }
+    }
+    if( fmt == null ) {
+      throw new IOException( "Diskettenformat unbekannt"
+				+ " oder nicht unterst\u00FCtzt" );
+    }
+    return fmt;
+  }
+
+
   public static boolean isFilledDir( byte[] dirBytes )
   {
     return getDirStatus( dirBytes ) == DirStatus.FILLED_DIR;
+  }
+
+
+  public static boolean isHD( int sectorsPerTrack, int sectorSize )
+  {
+    return ((sectorsPerTrack * sectorSize) > 7000);
   }
 
 
@@ -506,7 +404,7 @@ public class DiskUtil
       InputStream in = null;
       try {
 	in = new FileInputStream( file );
-	if( EmuUtil.isGZipFile( file ) ) {
+	if( FileUtil.isGZipFile( file ) ) {
 	  in = new GZIPInputStream( in );
 	}
 	rv = extractDirectory(
@@ -514,7 +412,7 @@ public class DiskUtil
       }
       catch( IOException ex ) {}
       finally {
-	EmuUtil.closeSilent( in );
+	EmuUtil.closeSilently( in );
       }
     }
     return rv;
@@ -524,7 +422,7 @@ public class DiskUtil
   /*
    * Lesen einer Diskettenabbilddatei
    * Rueckgabe:
-   *   null: Abbrechen gedrueckt
+   *   null: Bei Auswahl des Formats Abbrechen gedrueckt
    */
   public static AbstractFloppyDisk readDiskFile(
 				Frame   owner,
@@ -544,6 +442,7 @@ public class DiskUtil
 	{
 	  FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
 			owner,
+			true,
 			FloppyDiskFormat.getFormatByDiskSize( file.length() ),
 			FloppyDiskFormatDlg.Flag.PHYS_FORMAT );
 	  dlg.setVisible( true );
@@ -552,7 +451,7 @@ public class DiskUtil
 	    disk = PlainDisk.createForByteArray(
 			owner,
 			file.getPath(),
-			EmuUtil.readFile(
+			FileUtil.readFile(
 					file,
 					true,
 					FloppyDiskFormat.getMaxDiskSize() ),
@@ -565,31 +464,6 @@ public class DiskUtil
       }
     }
     return disk;
-  }
-
-
-  /*
-   * Diese Methode testet die Kapazitaet der Diskette,
-   * die in dem mit raf geoeffneten Laufwerk liegt.
-   * Kann dies nicht ermittelt werden, wird -1 zurueckgegeben.
-   */
-  public static int readDiskSize(
-			DeviceIO.RandomAccessDevice rad ) throws IOException
-  {
-    int   diskSize  = -1;
-    int[] diskSizes = {
-		720 * 1024,
-		800 * 1024,
-		1200 * 1024,
-		1440 * 1024,
-		2880 * 1024 };
-    for( int i = 0; i < diskSizes.length; i++ ) {
-      if( equalsDiskSize( rad, diskSizes[ i ] ) ) {
-	diskSize = diskSizes[ i ];
-	break;
-      }
-    }
-    return diskSize;
   }
 
 
@@ -610,7 +484,7 @@ public class DiskUtil
 	}
       }
       if( disk == null ) {
-	byte[] header = EmuUtil.readFile( file, true, 0x100 );
+	byte[] header = FileUtil.readFile( file, true, 0x100 );
 	if( header != null ) {
 	  if( CopyQMDisk.isCopyQMFileHeader( header ) ) {
 	    disk = CopyQMDisk.readFile( owner, file );
@@ -631,6 +505,123 @@ public class DiskUtil
   }
 
 
+  public static boolean recognizeBlockNumFmt(
+				byte[]        dirBytes,
+				long          diskSize,
+				AtomicInteger blockNumSizeOut,
+				AtomicInteger blockSizeOut )
+  {
+    boolean rv = false;
+    if( dirBytes != null ) {
+      boolean block8possible = true;
+      int     block8Size     = 0;
+      int     block16Size    = 0;
+      int     pos            = 0;
+      while( (block8possible || (block16Size == 0))
+	     && (pos + 31) < dirBytes.length )
+      {
+	int b0       = (int) dirBytes[ pos ] & 0xFF;
+	int nBlks128 = getEntryBlock128Count( dirBytes, pos );
+	if( (b0 >= 0) && (b0 <= 0x1F) && (nBlks128 > 0) ) {
+	  int entryFileSize = nBlks128 * 128;
+	  if( entryFileSize > 0 ) {
+
+	    // 8-Bit-Blocknummern pruefen
+	    if( block8possible ) {
+	      boolean      hasNull   = false;
+	      int          tmpPos    = pos + 16;
+	      int          nBlocks   = 0;
+	      Set<Integer> blockNums = new TreeSet<>();
+	      for( int i = 0; i < 16; i++ ) {
+		int blockNum = (int) dirBytes[ tmpPos++ ] & 0xFF;
+		if( blockNum == 0 ) {
+		  hasNull = true;
+		} else {
+		  if( hasNull ) {
+		    /*
+		     * Bei einem Nicht-Nullbyte nach einen Nullbyte
+		     * koennen es keine 8-Bit-Blocknummer sein.
+		     */
+		    block8possible = false;
+		    break;
+		  } else {
+		    if( blockNums.add( blockNum ) ) {
+		      nBlocks++;
+		    } else {
+		      /*
+		       * Bei zwei gleichen Nicht-Nullbytes
+		       * koennen es keine 8-Bit-Blocknummer sein.
+		       */
+		      block8possible = false;
+		      break;
+		    }
+		  }
+		}
+	      }
+	      if( block8possible && (nBlocks > 1) ) {
+		int blockSize = getBlockSize( entryFileSize, nBlocks );
+		if( blockSize > 0 ) {
+		  if( (block8Size > 0) && (block8Size != blockSize) ) {
+		    block8possible = false;
+		  } else {
+		    block8Size = blockSize;
+		  }
+		}
+	      }
+	    }
+
+	    // 16-Bit-Blocknummern pruefen
+	    if( block16Size == 0 ) {
+	      int          tmpPos    = pos + 16;
+	      int          nBlocks   = 0;
+	      Set<Integer> blockNums = new TreeSet<>();
+	      for( int i = 0; i < 8; i++ ) {
+		int blockNum = EmuUtil.getWord( dirBytes, tmpPos );
+		tmpPos += 2;
+		if( blockNum == 0 ) {
+		  break;
+		} else {
+		  if( blockNums.add( blockNum ) ) {
+		    nBlocks++;
+		  } else {
+		    break;
+		  }
+		}
+	      }
+	      if( nBlocks > 1 ) {
+		block16Size = getBlockSize( entryFileSize, nBlocks );
+	      }
+	    }
+	  }
+	}
+	pos += 32;
+      }
+      if( !block8possible ) {
+	block8Size = 0;
+      }
+      if( (block8Size > 0) && (block16Size > 0) ) {
+	if( (block8Size * 255) < diskSize ) {
+	  /*
+	   * Bei dieser Blockgroesse laesst sich mit 8-Bit-Blocknummern
+	   * nicht die ganze Disk adressieren.
+	   */
+	  block8Size = 0;
+	}
+      }
+      if( block8Size > 0 ) {
+	blockNumSizeOut.set( 8 );
+	blockSizeOut.set( block8Size );
+	rv = true;
+      } else if( block16Size > 0 ) {
+	blockNumSizeOut.set( 16 );
+	blockSizeOut.set( block16Size );
+	rv = true;
+      }
+    }
+    return rv;
+  }
+
+
   public static void unpackDisk(
 			Window             owner,
 			File               diskFile,
@@ -638,13 +629,13 @@ public class DiskUtil
 			boolean            forceAskLogicalFmt )
 							throws IOException
   {
-    // Vorbelegung ermitteln
-    int           sysTracks     = 0;
-    int           blockSize     = DEFAULT_BLOCK_SIZE;
-    boolean       blockNum16Bit = true;
-    AtomicInteger rvSysBytes    = new AtomicInteger( -1 );
-    AtomicInteger rvBlockSize   = new AtomicInteger( -1 );
-    byte[]        dirBytes      = findAndReadDirBytes(
+    int           sysTracks      = 0;
+    int           blockSize      = DEFAULT_BLOCK_SIZE;
+    Boolean       blockNum16Bit  = null;
+    AtomicInteger rvSysBytes     = new AtomicInteger( -1 );
+    AtomicInteger rvBlockNumSize = new AtomicInteger( -1 );
+    AtomicInteger rvBlockSize    = new AtomicInteger( -1 );
+    byte[]        dirBytes       = findAndReadDirBytes(
 						null,
 						null,
 						null,
@@ -652,52 +643,26 @@ public class DiskUtil
 						rvSysBytes );
     if( rvSysBytes.get() > 0 ) {
       int bytesPerTrack = disk.getSides()
-				* disk.getSectorsPerCylinder()
+				* disk.getSectorsPerTrack()
 				* disk.getSectorSize();
       if( bytesPerTrack > 0 ) {
 	sysTracks = rvSysBytes.get() / bytesPerTrack;
       }
     }
-    int     diskSize = disk.getDiskSize();
-    Boolean tmp16Bit = checkBlockNum16Bit( dirBytes, diskSize, rvBlockSize );
-    if( tmp16Bit != null ) {
-      blockNum16Bit = tmp16Bit.booleanValue();
-    }
-    if( rvBlockSize.get() > 0 ) {
-      blockSize = rvBlockSize.get();
-    } else {
-      /*
-       * Blockgroesse konnte nicht ermittelt werden.
-       * Deshalb andere Indizien suchen.
-       *
-       * zuerst CPC-AMSDOS-Format, dann minimale Blockgroesse pruefen
-       */
-      boolean done = false;
-      if( (disk.getCylinders() == 40)
-	  && (disk.getSides() == 1)
-	  && (disk.getSectorsPerCylinder() == 9)
-	  && (disk.getSectorSize() == 512) )
-      {
-	int sectorOffset = disk.getSectorOffset();
-	if( (sectorOffset == 0x40) || (sectorOffset == 0xC0) ) {
-	  blockSize = 1024;
-	  done      = true;
-	}
-      }
-      if( !done && (tmp16Bit != null) ) {
-	if( !tmp16Bit.booleanValue() ) {
-	  int minBlockSize = diskSize / 0x100;
-	  while( blockSize < minBlockSize ) {
-	    blockSize *= 2;
-	  }
-	  rvBlockSize.set( blockSize );
-	}
-      }
+    if( recognizeBlockNumFmt(
+			dirBytes,
+			disk.getDiskSize(),
+			rvBlockNumSize,
+			rvBlockSize ) )
+    {
+      blockNum16Bit = Boolean.valueOf( rvBlockNumSize.get() == 16 );
+      blockSize     = rvBlockSize.get();
     }
     FloppyDiskFormatDlg dlg = null;
     if( forceAskLogicalFmt ) {
       dlg = new FloppyDiskFormatDlg(
 			owner,
+			true,
 			null,
 			FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
 			FloppyDiskFormatDlg.Flag.BLOCK_SIZE,
@@ -707,8 +672,8 @@ public class DiskUtil
       if( (dirBytes.length > 0) && (rvSysBytes.get() >= 0) ) {
 	dlg.setRecognizedSysTracks( sysTracks );
       }
-      if( tmp16Bit != null ) {
-	dlg.setRecognizedBlockNum16Bit( tmp16Bit );
+      if( blockNum16Bit != null ) {
+	dlg.setRecognizedBlockNum16Bit( blockNum16Bit );
 	if( rvBlockSize.get() > 0 ) {
 	  dlg.setRecognizedBlockSize( rvBlockSize.get() );
 	}
@@ -716,6 +681,7 @@ public class DiskUtil
     } else {
       dlg = new FloppyDiskFormatDlg(
 			owner,
+			true,
 			null,
 			FloppyDiskFormatDlg.Flag.APPLY_READONLY,
 			FloppyDiskFormatDlg.Flag.FORCE_LOWERCASE );
@@ -732,7 +698,7 @@ public class DiskUtil
 	if( fileFmtText == null ) {
 	  fileFmtText = "Diskettenabbilddatei";
 	}
-	File outDir = EmuUtil.askForOutputDir(
+	File outDir = FileUtil.askForOutputDir(
 					owner,
 					diskFile,
 					"Entpacken nach:",
@@ -768,15 +734,15 @@ public class DiskUtil
 			rad,
 			null,
 			"Diskette",
-			readDiskSize( rad ),
-			EmuUtil.getHomeDirFile(),
+			-1,
+			FileUtil.getHomeDirFile(),
 			"diskette" ) )
       {
 	rad = null;		// Schliessen verhindern
       }
     }
     finally {
-      EmuUtil.closeSilent( rad );
+      EmuUtil.closeSilently( rad );
     }
   }
 
@@ -799,20 +765,20 @@ public class DiskUtil
       }
       raf = new RandomAccessFile( diskFile, "r" );
       if( unpackPlainDisk(
-			owner,
-			diskFile.getPath(),
-			null,
-			raf,
-			"Einfache Abbilddatei",
-			fileLen,
-			diskFile.getParentFile(),
-			presetName ) )
+		owner,
+		diskFile.getPath(),
+		null,
+		raf,
+		"Einfache Abbilddatei",
+		fileLen,
+		diskFile.getParentFile(),
+		presetName ) )
       {
 	raf = null;		// Schliessen verhindern
       }
     }
     finally {
-      EmuUtil.closeSilent( raf );
+      EmuUtil.closeSilently( raf );
     }
   }
 
@@ -843,21 +809,26 @@ public class DiskUtil
 		int ch = (int) dirBytes[ pos++ ] & 0x7F;
 		if( (ch > 0x20) && (ch < 0x7F) ) {
 		  if( point ) {
-		    buf.append( (char) '.' );
+		    buf.append( '.' );
 		    point = false;
 		  }
 		  buf.append( (char) ch );
 		}
 	      }
-	      int    eLen  = ((int) dirBytes[ entryPos + 15 ] & 0xFF) * 128;
 	      String eName = buf.toString();
-	      Long   value = entrySizes.get( eName );
-	      if( value != null ) {
-		value = Long.valueOf( value.longValue() + eLen );
-	      } else {
-		value = Long.valueOf( eLen );
+	      long   eLen  = getEntryBlock128Count(
+						dirBytes,
+						entryPos ) * 128L;
+	      if( eLen >= 0 ) {
+		Long value = entrySizes.get( eName );
+		if( value != null ) {
+		  if( eLen > value.intValue() ) {
+		    entrySizes.put( eName, value );
+		  }
+		} else {
+		  entrySizes.put( eName, value );
+		}
 	      }
-	      entrySizes.put( eName, value );
 	    }
 	  }
 	  entryPos += 32;
@@ -936,6 +907,19 @@ public class DiskUtil
   }
 
 
+  private static int getBlockSize( int entryFileSize, int nBlocks )
+  {
+    int blockSize = 0;
+    if( (entryFileSize > 0) && (nBlocks > 1) ) {
+      blockSize = 0x80;
+      while( (blockSize * nBlocks) < entryFileSize ) {
+	blockSize <<= 1;
+      }
+    }
+    return blockSize;
+  }
+
+
   private static boolean readBlock(
 				byte[]                      outBuf,
 				int                         blockIdx,
@@ -958,22 +942,22 @@ public class DiskUtil
 	}
       }
       else if( disk != null ) {
-	int nRemain    = outBuf.length;
-	int sides      = disk.getSides();
-	int sectPerCyl = disk.getSectorsPerCylinder();
+	int nRemain      = outBuf.length;
+	int sides        = disk.getSides();
+	int sectPerTrack = disk.getSectorsPerTrack();
 	int sectorSize = disk.getSectorSize();
-	if( (sides > 0) && (sectPerCyl > 0) && (sectorSize > 0) ) {
+	if( (sides > 0) && (sectPerTrack > 0) && (sectorSize > 0) ) {
 	  int sectPerBlock = outBuf.length / sectorSize;
 	  if( sectPerBlock > 0 ) {
 	    for( int i = 0; i < sectPerBlock; i++ ) {
 	      int nRead      = 0;
 	      int absSectIdx = (sectPerBlock * blockIdx) + i;
-	      int cyl        = absSectIdx / sectPerCyl / sides;
+	      int cyl        = absSectIdx / sectPerTrack / sides;
 	      int head       = 0;
-	      int sectIdx    = absSectIdx - (cyl * sectPerCyl * sides);
-	      if( sectIdx >= sectPerCyl ) {
+	      int sectIdx    = absSectIdx - (cyl * sectPerTrack * sides);
+	      if( sectIdx >= sectPerTrack ) {
 		head++;
-		sectIdx -= sectPerCyl;
+		sectIdx -= sectPerTrack;
 	      }
 	      SectorData sector = disk.getSectorByID(
 						cyl,
@@ -1014,49 +998,45 @@ public class DiskUtil
 		File                        presetDir,
 		String                      presetName ) throws IOException
   {
-    boolean       rv          = false;
-    int           blockSize   = DEFAULT_BLOCK_SIZE;
-    int           sysTracks   = 0;
-    AtomicInteger rvSysBytes  = new AtomicInteger( -1 );
-    AtomicInteger rvBlockSize = new AtomicInteger( -1 );
-    byte[]        dirBytes    = findAndReadDirBytes(
+    boolean       rv             = false;
+    int           sysTracks      = 0;
+    int           blockSize      = DEFAULT_BLOCK_SIZE;
+    Boolean       blkNum16Bit    = null;
+    AtomicInteger rvSysBytes     = new AtomicInteger( -1 );
+    AtomicInteger rvBlockNumSize = new AtomicInteger( -1 );
+    AtomicInteger rvBlockSize    = new AtomicInteger( -1 );
+    byte[]        dirBytes       = findAndReadDirBytes(
 						null,
 						rad,
 						raf,
 						null,
 						rvSysBytes );
-    FloppyDiskFormat fmt = FloppyDiskFormat.getFormatByDiskSize( diskSize );
+    FloppyDiskFormat fmt = null;
+    if( rad != null ) {
+      fmt = getFloppyDiskFormat( rad );
+    } else {
+      fmt = FloppyDiskFormat.getFormatByDiskSize( diskSize );
+    }
     if( (fmt != null) && (rvSysBytes.get() > 0) ) {
       int bytesPerTrack = fmt.getSides()
-				* fmt.getSectorsPerCylinder()
+				* fmt.getSectorsPerTrack()
 				* fmt.getSectorSize();
       if( bytesPerTrack > 0 ) {
 	sysTracks = rvSysBytes.get() / bytesPerTrack;
       }
     }
-    Boolean blkNum16Bit = checkBlockNum16Bit(
-					dirBytes,
-					diskSize,
-					rvBlockSize );
-    if( rvBlockSize.get() > 0 ) {
-      blockSize = rvBlockSize.get();
-    } else {
-      /*
-       * Blockgroesse konnte nicht ermittelt werden.
-       * Deshalb andere Indizien suchen.
-       */
-      if( blkNum16Bit != null ) {
-	if( !blkNum16Bit.booleanValue() ) {
-	  int minBlockSize = (int) (diskSize / 0x100);
-	  while( blockSize < minBlockSize ) {
-	    blockSize *= 2;
-	  }
-	  rvBlockSize.set( blockSize );
-	}
-      }
+    if( recognizeBlockNumFmt(
+			dirBytes,
+			diskSize,
+			rvBlockNumSize,
+			rvBlockSize ) )
+    {
+      blkNum16Bit = Boolean.valueOf( rvBlockNumSize.get() == 16 );
+      blockSize   = rvBlockSize.get();
     }
     FloppyDiskFormatDlg dlg = new FloppyDiskFormatDlg(
 			owner,
+			true,
 			fmt,
 			FloppyDiskFormatDlg.Flag.PHYS_FORMAT,
 			FloppyDiskFormatDlg.Flag.SYSTEM_TRACKS,
@@ -1079,7 +1059,7 @@ public class DiskUtil
       sysTracks = dlg.getSysTracks();
       blockSize = dlg.getBlockSize();
       if( (sysTracks >= 0) && (blockSize > 0) ) {
-	File outDir = EmuUtil.askForOutputDir(
+	File outDir = FileUtil.askForOutputDir(
 					owner,
 					presetDir,
 					presetName,

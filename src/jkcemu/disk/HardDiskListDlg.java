@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -15,6 +15,7 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
 import java.io.File;
@@ -24,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Writer;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.EventObject;
 import java.util.Set;
@@ -46,6 +46,7 @@ import javax.swing.table.TableColumnModel;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.text.TextUtil;
 
 
@@ -56,6 +57,7 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
   private boolean            dataChangedInfoShown;
   private HardDiskInfo       selectedRow;
   private HardDiskTableModel tableModel;
+  private ListSelectionModel selectionModel;
   private JTable             table;
   private JScrollPane        scrollPane;
   private JButton            btnSelect;
@@ -158,8 +160,34 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
     }
     if( rv ) {
       rv = super.doClose();
+      if( rv ) {
+	this.table.removeMouseListener( this );
+	this.btnSelect.removeActionListener( this );
+	this.btnAdd.removeActionListener( this );
+	this.btnRemove.removeActionListener( this );
+	this.btnSave.removeActionListener( this );
+	this.btnCancel.removeActionListener( this );
+	if( this.selectionModel != null ) {
+	  this.selectionModel.removeListSelectionListener( this );
+	}
+      }
     }
     return rv;
+  }
+
+
+  @Override
+  public void mouseClicked( MouseEvent e )
+  {
+    if( (e.getSource() == this.table)
+	&& (e.getButton() == MouseEvent.BUTTON1)
+	&& (e.getClickCount() > 1) )
+    {
+      doSelect();
+      e.consume();
+    } else {
+      super.mouseClicked( e );
+    }
   }
 
 
@@ -209,7 +237,7 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
 	}
       }
       finally {
-	EmuUtil.closeSilent( reader );
+	EmuUtil.closeSilently( reader );
       }
     }
     catch( IOException ex ) {
@@ -248,7 +276,7 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
 
     // Tabelle
     this.tableModel = new HardDiskTableModel( this );
-    this.table      = new JTable( this.tableModel );
+    this.table      = GUIFactory.createTable( this.tableModel );
     this.table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
     this.table.setColumnSelectionAllowed( false );
     this.table.setPreferredScrollableViewportSize( new Dimension( 560, 300 ) );
@@ -259,8 +287,6 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
     this.table.setShowVerticalLines( false );
     this.table.setSelectionMode(
 			ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
-    this.table.addMouseListener( this );
-
     EmuUtil.setTableColWidths( this.table, 120, 120, 70, 70, 70, 100 );
 
     // ab der 3. Spalte rechtsbuendig
@@ -278,7 +304,7 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
       }
     }
 
-    this.scrollPane = new JScrollPane(
+    this.scrollPane = GUIFactory.createScrollPane(
 			this.table,
 			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 			JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED );
@@ -286,32 +312,27 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 5, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 5, 5, 5 ) );
     gbc.fill        = GridBagConstraints.NONE;
     gbc.weightx     = 0.0;
     gbc.weighty     = 0.0;
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnSelect = new JButton( "Ausw\u00E4hlen" );
-    this.btnSelect.addActionListener( this );
+    this.btnSelect = GUIFactory.createButton( "Ausw\u00E4hlen" );
     panelBtn.add( this.btnSelect );
 
-    this.btnAdd = new JButton( "Hinzuf\u00FCgen..." );
-    this.btnAdd.addActionListener( this );
+    this.btnAdd = GUIFactory.createButtonAdd();
     panelBtn.add( this.btnAdd );
 
-    this.btnRemove = new JButton( "Entfernen" );
-    this.btnRemove.addActionListener( this );
+    this.btnRemove = GUIFactory.createButtonRemove();
     panelBtn.add( this.btnRemove );
 
-    this.btnSave = new JButton( "Speichern" );
+    this.btnSave = GUIFactory.createButtonSave();
     this.btnSave.setEnabled( false );
-    this.btnSave.addActionListener( this );
     panelBtn.add( this.btnSave );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -321,10 +342,19 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
     setResizable( true );
 
 
+    // Listener
+    this.table.addMouseListener( this );
+    this.btnSelect.addActionListener( this );
+    this.btnAdd.addActionListener( this );
+    this.btnRemove.addActionListener( this );
+    this.btnSave.addActionListener( this );
+    this.btnCancel.addActionListener( this );
+
+
     // sonstiges
-    ListSelectionModel selectionModel = this.table.getSelectionModel();
-    if( selectionModel != null ) {
-      selectionModel.addListSelectionListener( this );
+    this.selectionModel = this.table.getSelectionModel();
+    if( this.selectionModel != null ) {
+      this.selectionModel.addListSelectionListener( this );
       updActionButtons();
     }
     updBgColor();
@@ -448,7 +478,7 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
 	  updActionButtons();
 	}
 	finally {
-	  EmuUtil.closeSilent( writer );
+	  EmuUtil.closeSilently( writer );
 	}
       }
       catch( IOException ex ) {
@@ -503,4 +533,3 @@ public class HardDiskListDlg extends BaseDlg implements ListSelectionListener
     }
   }
 }
-

@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,6 @@ import java.awt.Window;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
 import java.io.ByteArrayOutputStream;
-import java.lang.*;
 import java.text.ParseException;
 import java.util.EventObject;
 import javax.swing.ButtonGroup;
@@ -25,7 +24,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
-import jkcemu.base.BaseDlg;
 
 
 public class ReplyBytesDlg extends BaseDlg
@@ -36,13 +34,14 @@ public class ReplyBytesDlg extends BaseDlg
   private String       approvedText;
   private InputFormat  approvedInputFmt;
   private boolean      approvedBigEndian;
-  private JRadioButton btnHex8;
-  private JRadioButton btnDec8;
-  private JRadioButton btnDec16;
-  private JRadioButton btnDec32;
-  private JRadioButton btnString;
-  private JRadioButton btnLittleEndian;
-  private JRadioButton btnBigEndian;
+  private boolean      notified;
+  private JRadioButton rbHex8;
+  private JRadioButton rbDec8;
+  private JRadioButton rbDec16;
+  private JRadioButton rbDec32;
+  private JRadioButton rbString;
+  private JRadioButton rbLittleEndian;
+  private JRadioButton rbBigEndian;
   private JLabel       labelByteOrder;
   private JTextField   fldInput;
   private JButton      btnPaste;
@@ -62,6 +61,7 @@ public class ReplyBytesDlg extends BaseDlg
     this.approvedText      = null;
     this.approvedInputFmt  = null;
     this.approvedBigEndian = false;
+    this.notified          = false;
 
 
     // Fensterinhalt
@@ -78,100 +78,99 @@ public class ReplyBytesDlg extends BaseDlg
 
 
     // Eingabebereich
-    add( new JLabel( "Bytes eingeben als:" ), gbc );
+    add( GUIFactory.createLabel( "Bytes eingeben als:" ), gbc );
 
-    this.labelByteOrder = new JLabel( "Byte-Anordnung:" );
+    this.labelByteOrder = GUIFactory.createLabel( "Byte-Anordnung:" );
     gbc.gridx++;
     add( this.labelByteOrder, gbc );
 
     ButtonGroup grpType  = new ButtonGroup();
     ButtonGroup grpOrder = new ButtonGroup();
 
-    this.btnHex8 = new JRadioButton( "8-Bit hexadezimale Zahlen", true );
-    this.btnHex8.setMnemonic( KeyEvent.VK_H );
-    this.btnHex8.addActionListener( this );
-    grpType.add( this.btnHex8 );
+    this.rbHex8 = GUIFactory.createRadioButton(
+					"8-Bit hexadezimale Zahlen",
+					true );
+    this.rbHex8.setMnemonic( KeyEvent.VK_H );
+    grpType.add( this.rbHex8 );
     gbc.insets.top = 0;
     gbc.gridx      = 0;
     gbc.gridy++;
-    add( this.btnHex8, gbc );
+    add( this.rbHex8, gbc );
 
-    this.btnLittleEndian = new JRadioButton( "Little Endian", !bigEndian );
-    this.btnLittleEndian.setMnemonic( KeyEvent.VK_L );
-    this.btnLittleEndian.addActionListener( this );
-    grpOrder.add( this.btnLittleEndian );
+    this.rbLittleEndian = GUIFactory.createRadioButton(
+						"Little Endian",
+						!bigEndian );
+    this.rbLittleEndian.setMnemonic( KeyEvent.VK_L );
+    grpOrder.add( this.rbLittleEndian );
     gbc.gridx++;
-    add( this.btnLittleEndian, gbc );
+    add( this.rbLittleEndian, gbc );
   
-    this.btnDec8 = new JRadioButton( "8-Bit Dezimalzahlen", false );
-    this.btnDec8.setMnemonic( KeyEvent.VK_8 );
-    this.btnDec8.addActionListener( this );
-    grpType.add( this.btnDec8 );
+    this.rbDec8 = GUIFactory.createRadioButton( "8-Bit Dezimalzahlen" );
+    this.rbDec8.setMnemonic( KeyEvent.VK_8 );
+    grpType.add( this.rbDec8 );
     gbc.gridx = 0;
     gbc.gridy++;
-    add( this.btnDec8, gbc );
+    add( this.rbDec8, gbc );
 
-    this.btnBigEndian = new JRadioButton( "Big Endian", bigEndian );
-    this.btnBigEndian.setMnemonic( KeyEvent.VK_B );
-    this.btnBigEndian.addActionListener( this );
-    grpOrder.add( this.btnBigEndian );
+    this.rbBigEndian = GUIFactory.createRadioButton(
+						"Big Endian",
+						bigEndian );
+    this.rbBigEndian.setMnemonic( KeyEvent.VK_B );
+    grpOrder.add( this.rbBigEndian );
     gbc.gridx++;
-    add( this.btnBigEndian, gbc );
+    add( this.rbBigEndian, gbc );
   
-    this.btnDec16 = new JRadioButton( "16-Bit Dezimalzahlen", false );
-    this.btnDec16.setMnemonic( KeyEvent.VK_6 );
-    this.btnDec16.addActionListener( this );
-    grpType.add( this.btnDec16 );
+    this.rbDec16 = GUIFactory.createRadioButton( "16-Bit Dezimalzahlen" );
+    this.rbDec16.setMnemonic( KeyEvent.VK_6 );
+    grpType.add( this.rbDec16 );
     gbc.gridx = 0;
     gbc.gridy++;
-    add( this.btnDec16, gbc );
+    add( this.rbDec16, gbc );
 
-    this.btnDec32 = new JRadioButton( "32-Bit Dezimalzahlen", false );
-    this.btnDec32.setMnemonic( KeyEvent.VK_3 );
-    this.btnDec32.addActionListener( this );
-    grpType.add( this.btnDec32 );
+    this.rbDec32 = GUIFactory.createRadioButton( "32-Bit Dezimalzahlen" );
+    this.rbDec32.setMnemonic( KeyEvent.VK_3 );
+    grpType.add( this.rbDec32 );
     gbc.gridy++;
-    add( this.btnDec32, gbc );
+    add( this.rbDec32, gbc );
 
-    this.btnString = new JRadioButton( "ASCII-Zeichenkette", false );
-    this.btnString.setMnemonic( KeyEvent.VK_A );
-    this.btnString.addActionListener( this );
-    grpType.add( this.btnString );
+    this.rbString = GUIFactory.createRadioButton( "ASCII-Zeichenkette" );
+    this.rbString.setMnemonic( KeyEvent.VK_A );
+    grpType.add( this.rbString );
     gbc.insets.bottom = 5;
     gbc.gridy++;
-    add( this.btnString, gbc );
+    add( this.rbString, gbc );
 
     gbc.insets.top    = 5;
     gbc.insets.bottom = 0;
     gbc.gridwidth     = 2;
     gbc.gridy++;
-    add( new JLabel( "Eingabe:" ), gbc );
+    add( GUIFactory.createLabel( "Eingabe:" ), gbc );
 
     if( inputFmt != null ) {
       switch( inputFmt ) {
 	case HEX8:
-	  this.btnHex8.setSelected( true );
+	  this.rbHex8.setSelected( true );
 	  break;
 
 	case DEC8:
-	  this.btnDec8.setSelected( true );
+	  this.rbDec8.setSelected( true );
 	  break;
 
 	case DEC16:
-	  this.btnDec16.setSelected( true );
+	  this.rbDec16.setSelected( true );
 	  break;
 
 	case DEC32:
-	  this.btnHex8.setSelected( true );
+	  this.rbHex8.setSelected( true );
 	  break;
 
 	case STRING:
-	  this.btnString.setSelected( true );
+	  this.rbString.setSelected( true );
 	  break;
       }
     }
 
-    JPanel panelInput = new JPanel( new GridBagLayout() );
+    JPanel panelInput = GUIFactory.createPanel( new GridBagLayout() );
     gbc.fill          = GridBagConstraints.HORIZONTAL;
     gbc.weightx       = 1.0;
     gbc.insets.top    = 0;
@@ -180,24 +179,24 @@ public class ReplyBytesDlg extends BaseDlg
     add( panelInput, gbc );
 
     GridBagConstraints gbcInput = new GridBagConstraints(
-						0, 0,
-						1, 1,
-						1.0, 0.0,
-						GridBagConstraints.WEST,
-						GridBagConstraints.HORIZONTAL,
-						new Insets( 0, 0, 0, 0 ),
-						0, 0 );
+					0, 0,
+					1, 1,
+					1.0, 0.0,
+					GridBagConstraints.WEST,
+					GridBagConstraints.HORIZONTAL,
+					new Insets( 0, 0, 0, 0 ),
+					0, 0 );
 
-    this.fldInput = new JTextField();
+    this.fldInput = GUIFactory.createTextField();
     if( text != null ) {
       this.fldInput.setText( text );
     }
-    this.fldInput.addActionListener( this );
     panelInput.add( this.fldInput, gbcInput );
 
-    this.btnPaste = createImageButton(
-                                "/images/edit/paste.png",
-                                "Einf\u00FCgen" );
+    this.btnPaste = GUIFactory.createRelImageResourceButton(
+					this,
+					"edit/paste.png",
+	                                EmuUtil.TEXT_PASTE );
     gbcInput.fill        = GridBagConstraints.NONE;
     gbcInput.weightx     = 0.0;
     gbcInput.insets.left = 5;
@@ -206,7 +205,7 @@ public class ReplyBytesDlg extends BaseDlg
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.fill        = GridBagConstraints.NONE;
     gbc.weightx     = 0.0;
@@ -214,12 +213,10 @@ public class ReplyBytesDlg extends BaseDlg
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -261,39 +258,86 @@ public class ReplyBytesDlg extends BaseDlg
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified ) {
+      this.notified = true;
+      this.rbHex8.addActionListener( this );
+      this.rbLittleEndian.addActionListener( this );
+      this.rbDec8.addActionListener( this );
+      this.rbBigEndian.addActionListener( this );
+      this.rbDec16.addActionListener( this );
+      this.rbDec32.addActionListener( this );
+      this.rbString.addActionListener( this );
+      this.fldInput.addActionListener( this );
+      this.btnPaste.addActionListener( this );
+      this.btnOK.addActionListener( this );
+      this.btnCancel.addActionListener( this );
+    }
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( (src == this.btnHex8)
-	  || (src == this.btnDec8)
-	  || (src == this.btnDec16)
-	  || (src == this.btnDec32)
-	  || (src == this.btnString) )
-      {
-	rv = true;
-	updByteOrderFields();
-	this.fldInput.requestFocus();
-      }
-      else if( (src == this.btnLittleEndian) || (src == this.btnBigEndian) ) {
-	rv = true;
-	this.fldInput.requestFocus();
-      }
-      else if( (src == this.fldInput) || (src == this.btnOK) ) {
-	rv = true;
-	doApprove();
-      }
-      else if( src == this.btnCancel ) {
-	rv = true;
-	doClose();
-      }
-      else if( src == this.btnPaste ) {
-	rv = true;
-	this.fldInput.paste();
-      }
+    boolean rv  = false;
+    Object  src = e.getSource();
+    if( (src == this.rbHex8)
+	|| (src == this.rbDec8)
+	|| (src == this.rbDec16)
+	|| (src == this.rbDec32)
+	|| (src == this.rbString) )
+    {
+      rv = true;
+      updByteOrderFields();
+      this.fldInput.requestFocus();
+    }
+    else if( (src == this.rbLittleEndian) || (src == this.rbBigEndian) ) {
+      rv = true;
+      this.fldInput.requestFocus();
+    }
+    else if( (src == this.fldInput) || (src == this.btnOK) ) {
+      rv = true;
+      doApprove();
+    }
+    else if( src == this.btnCancel ) {
+      rv = true;
+      doClose();
+    }
+    else if( src == this.btnPaste ) {
+      rv = true;
+      this.fldInput.paste();
     }
     return rv;
+  }
+
+
+  @Override
+  public boolean getPackOnUIUpdate()
+  {
+    return true;
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified ) {
+      this.notified = false;
+      this.rbHex8.removeActionListener( this );
+      this.rbLittleEndian.removeActionListener( this );
+      this.rbDec8.removeActionListener( this );
+      this.rbBigEndian.removeActionListener( this );
+      this.rbDec16.removeActionListener( this );
+      this.rbDec32.removeActionListener( this );
+      this.rbString.removeActionListener( this );
+      this.fldInput.removeActionListener( this );
+      this.btnPaste.removeActionListener( this );
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
   }
 
 
@@ -311,12 +355,12 @@ public class ReplyBytesDlg extends BaseDlg
     byte[] rv = null;
     try {
       InputFormat inputFmt  = null;
-      boolean     bigEndian = this.btnBigEndian.isSelected();
+      boolean     bigEndian = this.rbBigEndian.isSelected();
       String      text      = this.fldInput.getText();
       if( text != null ) {
 	int len = text.length();
 	if( len > 0 ) {
-	  if( this.btnString.isSelected() ) {
+	  if( this.rbString.isSelected() ) {
 	    inputFmt = InputFormat.STRING;
 	    rv       = new byte[ len ];
 	    for( int i = 0; i < len; i++ ) {
@@ -334,16 +378,16 @@ public class ReplyBytesDlg extends BaseDlg
 	    inputFmt         = InputFormat.HEX8;
 	    int bytesPerItem = 1;
 	    int radix        = 16;
-	    if( this.btnDec8.isSelected() ) {
+	    if( this.rbDec8.isSelected() ) {
 	      inputFmt = InputFormat.DEC8;
 	      radix    = 10;
 	    }
-	    else if( this.btnDec16.isSelected() ) {
+	    else if( this.rbDec16.isSelected() ) {
 	      inputFmt     = InputFormat.DEC16;
 	      bytesPerItem = 2;
 	      radix        = 10;
 	    }
-	    else if( this.btnDec32.isSelected() ) {
+	    else if( this.rbDec32.isSelected() ) {
 	      inputFmt     = InputFormat.DEC32;
 	      bytesPerItem = 4;
 	      radix        = 10;
@@ -352,7 +396,7 @@ public class ReplyBytesDlg extends BaseDlg
 	    if( items != null ) {
 	      if( items.length > 0 ) {
 		ByteArrayOutputStream buf = new ByteArrayOutputStream(
-						items.length * bytesPerItem );
+					items.length * bytesPerItem );
 		for( int i = 0; i < items.length; i++ ) {
 		  String itemText = items[ i ];
 		  if( itemText != null ) {
@@ -360,7 +404,7 @@ public class ReplyBytesDlg extends BaseDlg
 		      try {
 			int value = Integer.parseInt( items[ i ], radix );
 			int pos   = i * bytesPerItem;
-			if( this.btnBigEndian.isSelected() ) {
+			if( this.rbBigEndian.isSelected() ) {
 			  for( int k = bytesPerItem - 1; k >= 0; --k ) {
 			    if( k > 0 ) {
 			      buf.write( (value >> (k * 8)) & 0xFF );
@@ -407,10 +451,9 @@ public class ReplyBytesDlg extends BaseDlg
 
   private void updByteOrderFields()
   {
-    boolean state = (this.btnDec16.isSelected() || this.btnDec32.isSelected());
+    boolean state = (this.rbDec16.isSelected() || this.rbDec32.isSelected());
     this.labelByteOrder.setEnabled( state );
-    this.btnLittleEndian.setEnabled( state );
-    this.btnBigEndian.setEnabled( state );
+    this.rbLittleEndian.setEnabled( state );
+    this.rbBigEndian.setEnabled( state );
   }
 }
-

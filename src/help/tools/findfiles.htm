@@ -5,17 +5,39 @@
   in einem <a href="../dirchooser.htm">Verzeichnis</a>
   einschlie&szlig;lich deren Unterverzeichnisse
   Dateien nach bestimmten Kriterien zu suchen.
+  Die gefundenen Dateien lassen sich &ouml;ffnen, kopieren, umbenennen,
+  l&ouml;schen oder auch anderweitig verwenden.
  <br/><br/>
+  <ul>
+   <li>
+    <a href="findfiles.htm#conditions">1. Suchkriterien</a>
+    <ul>
+     <li><a href="findfiles.htm#filename">1.1. Dateiname</a></li>
+     <li><a href="findfiles.htm#filesize">1.2. Dateigr&ouml;&szlig;e</a></li>
+     <li>
+      <a href="findfiles.htm#last_modified">1.3. &Auml;nderungszeitpunkt</a>
+     </li>
+     <li>
+      <a href="findfiles.htm#content_pattern">1.4. Enthaltener Text</a>
+     </li>
+    </ul>
+   </li>
+   <li><a href="findfiles.htm#result">2. Suchergebnis</a></li>
+  </ul>
+ <br/>
 
- <h2>1. Suchkriterien</h2>
-  Nachfolgend werden die Kriterien beschrieben,
-  nach denen die Dateien gesucht werden k&ouml;nnen.
+
+ <h2><a name="conditions">1. Suchkriterien</a></h2>
+  Die Suchkriterien geben an, welche Dateien gefunden werden sollen.
+  Wenn keine Angaben f&uuml;r Dateigr&ouml;&szlig;e und enthaltenen Text
+  gemacht werden, wird auch nach passenenden Verzeichnisnamen gesucht.
+ <br/><br/>
   Die Suchkriterien sind UND-verkn&uuml;pft,
   d.h., es werden nur die Dateien gefunden,
   die allen angegebenen Suchkriterien entsprechen.
  <br/><br/>
 
- <h3>1.1. Dateiname</h3>
+ <h3><a name="filename">1.1. Dateiname</a></h3>
   Den Dateinamen k&ouml;nnen Sie in Form einer Dateinamensmaske vorgeben.
   In dieser Maske werden die Zeichen * und ? als Platzhalter interpretiert.
   Dabei steht das Sternchen f&uuml;r beliebig viele Zeichen
@@ -26,6 +48,9 @@
   Sie k&ouml;nnen in dem Eingabefeld auch mehrere Dateinamensmasken angeben,
   indem Sie diese einfach mit Leerzeichen, Komma oder Semikolon getrennt
   hintereinander schreiben.
+  Das Suchkriterium <em>Dateiname</em> ist erf&uuml;llt,
+  wenn eine dieser Dateinamensmasken zutrifft.
+ <br/><br/>
   Soll in einer Dateinamensmaske ein Leerzeichen, Komma oder Semikolon
   vorkommen, m&uuml;ssen Sie diese in doppelte Hochkommas schreiben,
   damit diese Zeichen nicht als Trennzeichen gewertet werden.
@@ -41,7 +66,7 @@
   dann geben Sie einfach nur ein Sternchen ein.
  <br/><br/>
 
- <h3>1.2. Dateigr&ouml;&szlig;e</h3>
+ <h3><a name="filesize">1.2. Dateigr&ouml;&szlig;e</a></h3>
   Hier k&ouml;nnen Sie die zu suchenden Dateien nach ihrer Gr&ouml;&szlig;e
   einschr&auml;nken, indem Sie eine minimale und/oder eine maximale
   Gr&ouml;&szlig;e angeben.
@@ -50,8 +75,8 @@
   Die Gr&ouml;&szlig;e muss in Bytes angegeben werden.
  <br/><br/>
 
- <h3>1.3. &Auml;nderungszeitpunkt</h3>
-  Mit den beiden Feldern hinter &quot;Zuletzt ge&auml;ndert am&quot;
+ <h3><a name="last_modified">1.3. &Auml;nderungszeitpunkt</a></h3>
+  Mit den beiden Feldern hinter <em>Zuletzt ge&auml;ndert am</em>
   k&ouml;nnen Sie die Suche nach dem Zeitstempel der letzten &Auml;nderung
   einschr&auml;nken.
   Als Zeitangaben sind m&ouml;glich:
@@ -70,11 +95,16 @@
   werden die Dateien gefunden, die im Laufe des angegebenen Tages
   ge&auml;ndert wurden.
  <br/><br/>
+  Alternativ zu einem konkreten Datum k&ouml;nnen auch
+  die Schl&uuml;sselw&ouml;rter <em>Heute</em>, <em>Gestern</em>
+  und <em>Vorgestern</em> eingegeben werden.
+  Die Gro&szlig;-/kleinschreibung spielt dabei keine Rolle.
+ <br/><br/>
 
- <h3>1.4. Enthaltener Text</h3>
+ <h3><a name="content_pattern">1.4. Enthaltener Text</a></h3>
   M&ouml;chten Sie Dateien suchen, die einen bestimmten Text enthalten,
   so geben Sie den gesuchten Text in dem Feld hinter
-  &quot;Enthaltener Text&quot; ein.
+  <em>Enthaltener Text</em> ein.
   Es werden dann nur die Dateien gefunden, die den Text enthalten.
   Sollte in einer Datei der enthaltene Text durch Formatierungen
   oder andere Bytes in sich aufgesplittet bzw. getrennt sein,
@@ -90,5 +120,31 @@
   die mit einem anderen als den lokalen Systemzeichensatz erzeugt wurden,
   wahrscheinlich nicht gefunden werden,
   wenn der gesuchte Text Nicht-ASCII-Zeichen enth&auml;lt.
+ <br/><br/>
+
+
+ <h2><a name="result">2. Suchergebnis</a></h2>
+  Die gefundenen Dateien und Verzeichnisse werden im Feld
+  <em>Suchergebnis</em> aufgef&uuml;hrt.
+  Dort sind auch rot markiert Fehlermeldungen enthalten,
+  z.B. wenn in einem Verzeichnis aufgrund fehlender Berechtigungen
+  nicht gesucht werden darf.
+  Ebenfalls ausgegeben werden die gefundenen Textstellen,
+  sofern Sie die entsprechende Option angeklickt haben.
+ <br/><br/>
+  Ist Ihnen das Suchergebnis zu gro&szlig;, k&ouml;nnen Sie nicht mehr
+  ben&ouml;tigte Eintr&auml;ge markieren und anschlie&szlig;end
+  entfernen (Men&uuml;eintrag
+  <em>Bearbeiten</em> &rarr; <em>Aus Suchergebnis entfernen</em>).
+  Das geht auch, w&auml;hrend die Suche noch l&auml;uft.
+  Das Entfernen aus dem Suchergebnis oder das L&ouml;schen des gesamten
+  Suchergebnisses hat keinen Einfluss auf die gefundenen Dateien
+  oder Verzeichnisse selbst, d.h., diese werden dadurch nicht gel&ouml;scht.
+ <br/><br/>
+  Zur Verwendung der gefundenen Dateien oder Verzeichnisse
+  markieren Sie diese und rufen anschlie&szlig;end die gew&uuml;nschte
+  Funktion im Men&uuml; <em>Datei</em> oder <em>Bearbeiten</em> auf.
+  Sie k&ouml;nnen aber auch die gefundenen Dateien per Drag&amp;Drop
+  aus dem Suchergebnis heraus in ein anderes Fenster ziehen.
 </body>
 </html>

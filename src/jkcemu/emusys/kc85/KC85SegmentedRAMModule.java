@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2013 Jens Mueller
+ * (c) 2009-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,7 @@
 
 package jkcemu.emusys.kc85;
 
-import java.lang.*;
-import java.util.Arrays;
-import jkcemu.base.EmuThread;
+import jkcemu.base.EmuUtil;
 
 
 public class KC85SegmentedRAMModule extends AbstractKC85Module
@@ -40,13 +38,6 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
 
 
 	/* --- ueberschriebene Methoden --- */
-
-  @Override
-  public void clearRAM()
-  {
-    Arrays.fill( this.ram, (byte) 0 );
-  }
-
 
   @Override
   public int getBegAddr()
@@ -101,6 +92,14 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
 
 
   @Override
+  public void reset( boolean powerOn )
+  {
+    if( powerOn )
+      EmuUtil.initDRAM( this.ram );
+  }
+
+
+  @Override
   public void setStatus( int value )
   {
     super.setStatus( value );
@@ -131,4 +130,3 @@ public class KC85SegmentedRAMModule extends AbstractKC85Module
     return rv;
   }
 }
-

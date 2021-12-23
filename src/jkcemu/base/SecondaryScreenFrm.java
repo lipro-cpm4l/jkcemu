@@ -1,5 +1,5 @@
 /*
- * (c) 2016-2017 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,13 +10,11 @@ package jkcemu.base;
 
 import java.awt.BorderLayout;
 import java.awt.Point;
-import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.lang.*;
+import java.awt.event.WindowEvent;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import jkcemu.Main;
 
@@ -36,15 +34,14 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
 			AbstractScreenDevice screenDevice )
   {
     this.screenFrm    = screenFrm;
+    this.emuThread    = screenFrm.getEmuThread();
     this.copyEnabled  = screenDevice.supportsCopyToClipboard();
     this.pasteEnabled = screenDevice.supportsPasteFromClipboard();
     setTitle( screenDevice.getTitle() );
-    Main.updIcon( this );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
     JMenu mnuScreen = createScreenMenu( this.copyEnabled );
     if( mnuScreen != null ) {
@@ -52,8 +49,7 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
       mnuFile.addSeparator();
     }
 
-    this.mnuClose = new JMenuItem( "Schlie\u00DFen" );
-    this.mnuClose.addActionListener( this );
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( mnuClose );
 
 
@@ -62,13 +58,16 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
 
 
     // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    if( mnuEdit != null ) {
-      mnuBar.add( mnuEdit );
+    setJMenuBar( GUIFactory.createMenuBar(
+					mnuFile,
+					mnuEdit, 
+					createScaleMenu() ) );
+
+
+    // Popup-Menu
+    if( this.copyEnabled || this.pasteEnabled ) {
+      createPopupMenu( this.copyEnabled, this.pasteEnabled );
     }
-    mnuBar.add( createScaleMenu() );
-    setJMenuBar( mnuBar );
 
 
     // Fensterinhalt
@@ -85,7 +84,7 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
     // sonstiges
     setScreenDevice( screenDevice );
     setResizable( true );
-    if( !applySettings( Main.getProperties(), true ) ) {
+    if( !applySettings( Main.getProperties() ) ) {
       if( oldLocation != null ) {
 	setLocation( oldLocation );
       } else {
@@ -116,9 +115,9 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
 	/* --- ueberschriebene Methoden --- */
 
   @Override
-  public boolean applySettings( Properties props, boolean resizable )
+  public boolean applySettings( Properties props )
   {
-    boolean rv      = super.applySettings( props, resizable );
+    boolean rv      = super.applySettings( props );
     boolean changed = false;
     if( !isVisible() ) {
       int scale = EmuUtil.getIntProperty(
@@ -161,6 +160,7 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
     if( !rv ) {
       rv = super.doAction( e );
     }
+    this.screenFld.requestFocus();
     return rv;
   }
 
@@ -171,9 +171,9 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
     Point   location = getLocation();
     boolean rv       = super.doClose();
     if( rv ) {
-      AbstractScreenDevice screenDevice = this.screenFld.getScreenDevice();
-      if( screenDevice instanceof KeyListener ) {
-	this.screenFld.removeKeyListener( (KeyListener) screenDevice );
+      KeyListener l = this.screenFld.getScreenDevice().getKeyListener();
+      if( l != null ) {
+	this.screenFld.removeKeyListener( l );
       }
       this.screenFrm.childFrameClosed( this );
       oldLocation = location;
@@ -201,19 +201,41 @@ public class SecondaryScreenFrm extends AbstractScreenFrm
   }
 
 
+  @Override
+  public void windowActivated( WindowEvent e )
+  {
+    super.windowActivated( e );
+    if( e.getWindow() == this ) {
+      Main.setWindowActivated( Main.WINDOW_MASK_SECONDARY_SCREEN );
+    }
+  }
+
+
+  @Override
+  public void windowDeactivated( WindowEvent e )
+  {
+    super.windowDeactivated( e );
+    if( e.getWindow() == this ) {
+      Main.setWindowDeactivated( Main.WINDOW_MASK_SECONDARY_SCREEN );
+    }
+  }
+
+
 	/* --- private Methoden --- */
 
   private void setScreenDevice( AbstractScreenDevice screenDevice )
   {
     AbstractScreenDevice oldScreenDevice = this.screenFld.getScreenDevice();
     if( oldScreenDevice != null ) {
-      if( oldScreenDevice instanceof KeyListener ) {
-	this.screenFld.removeKeyListener( (KeyListener) oldScreenDevice );
+      KeyListener oldListener = oldScreenDevice.getKeyListener();
+      if( oldListener != null ) {
+	this.screenFld.removeKeyListener( oldListener );
       }
     }
     this.screenFld.setScreenDevice( screenDevice );
-    if( screenDevice instanceof KeyListener ) {
-      this.screenFld.addKeyListener( (KeyListener) screenDevice );
+    KeyListener listener = screenDevice.getKeyListener();
+    if( listener != null ) {
+      this.screenFld.addKeyListener( listener );
     }
     screenDevice.setScreenFrm( this );
   }

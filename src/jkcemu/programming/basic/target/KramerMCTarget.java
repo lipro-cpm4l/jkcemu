@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
 import jkcemu.base.EmuSys;
 import jkcemu.emusys.KramerMC;
 import jkcemu.programming.basic.AbstractTarget;
@@ -19,16 +18,49 @@ public class KramerMCTarget extends AbstractTarget
 {
   public static final String BASIC_TARGET_NAME = "TARGET_KRAMER";
 
+  private boolean xGetCrsPosAppended;
+
+
   public KramerMCTarget()
   {
     // leer
   }
 
 
-  @Override
-  public void appendExitTo( AsmCodeBuf buf )
+  /*
+   * Ermittlung der Cursor-Position
+   * Rueckgabe:
+   *   HL: Bit 0..5:  Spalte
+   *       Bit 6..10: Zeile
+   *   CY=1: Fehler -> HL=0FFFFH
+   */
+  protected void appendXGetCrsPosTo( AsmCodeBuf buf )
   {
-    buf.append( "\tJP\t0000H\n" );
+    if( !this.xGetCrsPosAppended ) {
+      buf.append( "X_GET_CRS_POS:\n"
+		+ "\tLD\tHL,(0FF1H)\n"
+		+ "\tLD\tA,H\n"
+		+ "\tAND\t0FCH\n"
+		+ "\tCP\t0FCH\n"
+		+ "\tRET\tZ\n"			// CY=0
+		+ "\tLD\tHL,0FFFFH\n"
+		+ "\tSCF\n"
+		+ "\tRET\n" );
+      this.xGetCrsPosAppended = true;
+    }
+  }
+
+
+	/* --- ueberschriebene Methoden --- */
+
+  @Override
+  public void appendExitTo( AsmCodeBuf buf, boolean isAppTypeSub )
+  {
+    if( isAppTypeSub ) {
+      buf.append( "\tRET\n" );
+    } else {
+      buf.append( "\tJP\t0000H\n" );
+    }
   }
 
 
@@ -42,27 +74,29 @@ public class KramerMCTarget extends AbstractTarget
   @Override
   public void appendInputTo(
 			AsmCodeBuf buf,
-			boolean    xckbrk,
-			boolean    xinkey,
-			boolean    xinch,
+			boolean    xCheckBreak,
+			boolean    xInkey,
+			boolean    xInch,
 			boolean    canBreakOnInput )
   {
-    if( xckbrk ) {
-      buf.append( "XCKBRK:\n" );
+    if( xCheckBreak ) {
+      buf.append( "XCHECK_BREAK:\n" );
     }
-    if( xckbrk || xinkey) {
+    if( xCheckBreak || xInkey) {
       buf.append( "XINKEY:\tCALL\t00EFH\n"
 		+ "\tOR\tA\n"
 		+ "\tRET\tZ\n" );
     }
-    if( xckbrk || xinkey || xinch ) {
+    if( xCheckBreak || xInkey || xInch ) {
       if( canBreakOnInput ) {
-	buf.append( "XINCH:\tCALL\t00E0H\n"
+	buf.append( "XINCH:\n"
+		+ "\tCALL\t00E0H\n"
 		+ "\tCP\t03H\n"
 		+ "\tJR\tZ,XBREAK\n"
 		+ "\tRET\n" );
       } else {
-	buf.append( "XINCH:\tJP\t00E0H\n" );
+	buf.append( "XINCH:\n"
+		+ "\tJP\t00E0H\n" );
       }
     }
   }
@@ -72,6 +106,105 @@ public class KramerMCTarget extends AbstractTarget
   public void appendWCharTo( AsmCodeBuf buf )
   {
     buf.append( "\tLD\tHL,0040H\n" );
+  }
+
+
+  @Override
+  public void appendXCrsLinTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCRSLIN:\n"
+		+ "\tCALL\tX_GET_CRS_POS\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,H\n"
+		+ "\tAND\t03H\n"
+		+ "\tSLA\tL\n"
+		+ "\tRLA\n"
+		+ "\tSLA\tL\n"
+		+ "\tRLA\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n" );
+    appendXGetCrsPosTo( buf );
+  }
+
+
+  @Override
+  public void appendXCrsPosTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCRSPOS:\n"
+		+ "\tCALL\tX_GET_CRS_POS\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,L\n"
+		+ "\tAND\t3FH\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n" );
+    appendXGetCrsPosTo( buf );
+  }
+
+
+  /*
+   * Ein- und Ausschalten des Cursors
+   * Parameter:
+   *   HL: 0:   Cursor ausschalten
+   *       <>0: Cursor einschalten
+   */
+  @Override
+  public void appendXCursorTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCURSOR:\n"
+		+ "\tLD\tA,H\n"
+                + "\tOR\tL\n"
+		+ "\tLD\tHL,0FF1H\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tJR\tZ,XCURSOR_1\n"
+		+ "\tOR\t80H\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tRET\n"
+		+ "XCURSOR_1:\n"
+		+ "\tAND\t7FH\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tRET\n" );
+  }
+
+
+  /*
+   * Setzen der Cursor-Position auf dem Bildschirm
+   * Parameter:
+   *   DE: Zeile, >= 0
+   *   HL: Spalte, >= 0
+   */
+  @Override
+  public void appendXLocateTo( AsmCodeBuf buf )
+  {
+    buf.append( "XLOCATE:\n"
+		+ "\tLD\tA,0FH\n"
+		+ "\tCP\tE\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tA,3FH\n"
+		+ "\tCP\tL\n"
+		+ "\tRET\tC\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,HL\n"
+		+ "\tADD\tHL,DE\n"
+		+ "\tLD\tBC,0FC00H\n"
+		+ "\tADD\tHL,BC\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\tHL,(0FF1H)\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tAND\t7FH\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tEX\tDE,HL\n"
+		+ "\tLD\t(0FF1H),HL\n"
+		+ "\tLD\tA,(HL)\n"
+		+ "\tOR\t80H\n"
+		+ "\tLD\t(HL),A\n"
+		+ "\tRET\n" );
   }
 
 
@@ -86,10 +219,10 @@ public class KramerMCTarget extends AbstractTarget
   @Override
   public void appendXOutchTo( AsmCodeBuf buf )
   {
-    if( !this.xoutchAppended ) {
+    if( !this.xOutchAppended ) {
       buf.append( "XOUTCH:\tLD\tC,A\n"
 		+ "\tJP\t00E6H\n" );
-      this.xoutchAppended = true;
+      this.xOutchAppended = true;
     }
   }
 
@@ -124,7 +257,7 @@ public class KramerMCTarget extends AbstractTarget
     int rv = 0;
     if( emuSys != null ) {
       if( emuSys instanceof KramerMC ) {
-	rv = 3;
+	rv = 2;
       }
     }
     return rv;
@@ -148,6 +281,28 @@ public class KramerMCTarget extends AbstractTarget
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void reset()
+  {
+    super.reset();
+    this.xGetCrsPosAppended = false;
+  }
+
+
+  @Override
+  public boolean supportsXCURSOR()
+  {
+    return true;
+  }
+
+
+  @Override
+  public boolean supportsXLOCATE()
+  {
+    return true;
   }
 
 

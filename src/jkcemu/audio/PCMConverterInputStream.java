@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -17,17 +17,14 @@ package jkcemu.audio;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.*;
 
 
 public class PCMConverterInputStream extends InputStream
 {
-  private static final int SIGNED_VALUE_1 = AudioOut.UNSIGNED_VALUE_1 / 2;
-  private static final int SIGNED_VALUE_0 = -SIGNED_VALUE_1;
-
   private PCMDataSource source;
   private boolean       toSigned;
   private boolean       toBigEndian;
+  private boolean       ignoreClose;
   private byte[]        inBuf;
   private int           outBuf;
   private int           bytesInOutBuf;
@@ -39,9 +36,20 @@ public class PCMConverterInputStream extends InputStream
 			boolean       toSigned,
 			boolean       toBigEndian )
   {
+    this( source, toSigned, toBigEndian, false );
+  }
+
+
+  public PCMConverterInputStream(
+			PCMDataSource source,
+			boolean       toSigned,
+			boolean       toBigEndian,
+			boolean       ignoreClose )
+  {
     this.source        = source;
     this.toSigned      = toSigned;
     this.toBigEndian   = toBigEndian;
+    this.ignoreClose   = ignoreClose;
     this.inBuf         = new byte[ (source.getSampleSizeInBits() + 7) / 8 ];
     this.outBuf        = 0;
     this.bytesInOutBuf = 0;
@@ -91,7 +99,8 @@ public class PCMConverterInputStream extends InputStream
   @Override
   public void close() throws IOException
   {
-    this.source.close();
+    if( !ignoreClose )
+      this.source.close();
   }
 
 
@@ -108,11 +117,11 @@ public class PCMConverterInputStream extends InputStream
 	int value = 0;
 	if( this.source.getSampleSizeInBits() == 1 ) {
 	  if( this.inBuf[ 0 ] == 0 ) {
-	    value = (this.toSigned ? SIGNED_VALUE_0 : 0);
+	    value = (this.toSigned ? AudioOut.SIGNED_VALUE_0 : 0);
 	  } else {
 	    value = (this.toSigned ?
-				SIGNED_VALUE_1
-				: AudioOut.UNSIGNED_VALUE_1);
+				AudioOut.SIGNED_VALUE_1
+				: AudioOut.MAX_USED_UNSIGNED_VALUE);
 	  }
 	} else {
 	  if( this.source.isBigEndian() ) {
@@ -128,7 +137,7 @@ public class PCMConverterInputStream extends InputStream
 	      --pos;
 	    }
 	  }
-	  this.outBuf += this.valueOffs;
+	  value += this.valueOffs;
 	  if( this.toBigEndian ) {
 	    switch( this.inBuf.length ) {
 	      case 2:

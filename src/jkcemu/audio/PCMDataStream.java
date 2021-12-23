@@ -1,5 +1,5 @@
 /*
- * (c) 2016 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,16 +12,16 @@ package jkcemu.audio;
 
 import java.io.InputStream;
 import java.io.IOException;
-import java.lang.*;
 
 
 public class PCMDataStream extends AbstractPCMDataReader
 {
-  private InputStream in;
-  private boolean     eof;
-  private byte[]      buf;
-  private int         bufLen;	// gelesene Daten im Puffer
-  private int         bufPos;	// Leseposition im Puffer
+  protected InputStream in;
+  protected boolean     eof;
+  protected byte[]      buf;
+  protected int         bufLen;	// gelesene Daten im Puffer
+  protected int         bufPos;	// Leseposition im Puffer
+  protected long        totalRead;
 
 
   public PCMDataStream(
@@ -41,11 +41,12 @@ public class PCMDataStream extends AbstractPCMDataReader
 	bigEndian,
 	0,
 	pcmDataLen );
-    this.in     = in;
-    this.eof    = false;
-    this.buf    = new byte[ 0x8000 ];
-    this.bufLen = 0;
-    this.bufPos = 0;
+    this.in        = in;
+    this.eof       = false;
+    this.buf       = new byte[ 0x8000 ];
+    this.bufLen    = 0;
+    this.bufPos    = 0;
+    this.totalRead = 0;
   }
 
 
@@ -55,6 +56,13 @@ public class PCMDataStream extends AbstractPCMDataReader
   public void close() throws IOException
   {
     this.in.close();
+  }
+
+
+  @Override
+  public long getFramePos()
+  {
+    return this.totalRead / this.bytesPerFrame;
   }
 
 
@@ -80,6 +88,7 @@ public class PCMDataStream extends AbstractPCMDataReader
 	--len;
       }
     }
+    this.totalRead += rv;
     return rv;
   }
 }

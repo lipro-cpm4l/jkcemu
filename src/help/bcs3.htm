@@ -36,9 +36,12 @@
  <h2><a name="hardware">1. Emulierte Hardware</a></h2>
   <ul>
    <li>Je nach Einstellung 2, 4 oder 5&nbsp;KByte ROM</li>
-   <li>1&nbsp;KByte RAM</li>
+   <li>1&nbsp;KByte RAM (1C00h-1FFFh)</li>
    <li>Kassettenrecorderanschluss</li>
-   <li>Optional eine Speichererweiterung mit 16&nbsp;KByte RAM</li>
+   <li>
+     Optional eine Speichererweiterung mit 16&nbsp;KByte RAM
+     (4000h-7FFFh)
+   </li>
   </ul>
  <br/>
 
@@ -71,14 +74,14 @@
   speichern m&ouml;chte, gibt es in den Einstellungen die Option
   <em>HSync-Signale aus Audioausgabe entfernen</em>.
   Ist die Option eingeschaltet, was standardm&auml;&szlig;ig der Fall ist,
-  werden sie HSync-Impulse herausgefiltert
+  werden die HSync-Impulse herausgefiltert
   und Sie h&ouml;ren nur die eigentliche Tonausgabe.
  <br/><br/>
   <b>Achtung!</b> BASIC-SE&nbsp;2.4 enth&auml;lt keine Unterst&uuml;tzung
   f&uuml;r das Speichern auf bzw. Laden von Kassette.
   Die Befehle <em>LOAD</em> und <em>SAVE</em> springen zur Adresse
   0800 bzw.0803, d.h., au&szlig;erhalb des ROM-Bereichs.
-  Man kannt dort seine eigenen Routinen zum Laden und Speichern installieren.
+  Man kann dort seine eigenen Routinen zum Laden und Speichern installieren.
   Da sich dort aber standardm&auml;&szlig;ig kein g&uuml;ltiger Programmcode
   befindet, f&uuml;hren die Befehle <em>LOAD</em> und <em>SAVE</em>
   zu einem undefinierten Verhalten.
@@ -90,26 +93,30 @@
   <ul>
    <li>
     <a href="bcs3/basic_se24.htm">BASIC-SE&nbsp;2.4</a>
+    (0000h-07FFh)
     f&uuml;r 27 sichtbare Zeichen pro Zeile und 2,5&nbsp;MHz Taktfrequenz
    </li>
    <li>
     <a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
+    (0000h-0FFFh)
     f&uuml;r 29 sichtbare Zeichen pro Zeile
     und 2,5&nbsp;MHz Taktfrequenz
    </li>
    <li>
     <a href="bcs3/basic_se31.htm">BASIC-SE&nbsp;3.1</a>
+    (0000h-0FFFh)
     f&uuml;r 40 sichtbare Zeichen pro Zeile
     und 3,5&nbsp;MHz Taktfrequenz
    </li>
    <li>
     <a href="bcs3/sp_basic_33.htm">S/P-BASIC&nbsp;V3.3</a>
+    (0000h-0FFFh)
     f&uuml;r 29 sichtbare Zeichen pro Zeile
     und 2,5&nbsp;MHz Taktfrequenz
    </li>
    <li>
-    <a href="bcs3/mc_editor.htm">Maschinenkode-Editor</a>
-    (nur in Verbindung mit BASIC-SE&nbsp;3.1
+    <a href="bcs3/mc_editor.htm">Maschinencode-Editor</a>
+    (F000h-F3FFh, nur in Verbindung mit BASIC-SE&nbsp;3.1
     f&uuml;r 29 sichtbare Zeichen pro Zeile)
    </li>
   </ul>

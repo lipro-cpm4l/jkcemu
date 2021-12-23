@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,10 +14,8 @@ import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
@@ -26,6 +24,7 @@ public class AbstractReplyDlg extends BaseDlg
 {
   protected JTextField replyTextField;
 
+  private boolean notified;
   private String  replyText;
   private JButton btnOK;
   private JButton btnCancel;
@@ -38,6 +37,7 @@ public class AbstractReplyDlg extends BaseDlg
 			String defaultReply )
   {
     super( owner, title );
+    this.notified  = false;
     this.replyText = null;
 
     // Fensterinhalt
@@ -53,35 +53,36 @@ public class AbstractReplyDlg extends BaseDlg
 					0, 0 );
 
     // Bereich Eingabe
-    add( new JLabel( msg ), gbc );
-    this.replyTextField = new JTextField();
+    add( GUIFactory.createLabel( msg ), gbc );
+    this.replyTextField = GUIFactory.createTextField();
     if( defaultReply != null ) {
       this.replyTextField.setText( defaultReply );
     }
-    this.replyTextField.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
-    gbc.gridx++;
+    if( msg.length() > 20 ) {
+      gbc.insets.top = 0;
+      gbc.gridy++;
+    } else {
+      gbc.gridx++;
+    }
     add( this.replyTextField, gbc );
 
     // Bereich Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
 
-    this.btnOK = new JButton( "OK" );
-    this.btnOK.addActionListener( this );
-    this.btnOK.addKeyListener( this );
+    this.btnOK = GUIFactory.createButtonOK();
     panelBtn.add( this.btnOK );
 
-    this.btnCancel = new JButton( "Abbrechen" );
-    this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
-    gbc.anchor    = GridBagConstraints.CENTER;
-    gbc.fill      = GridBagConstraints.NONE;
-    gbc.weightx   = 0.0;
-    gbc.gridwidth = 2;
-    gbc.gridx     = 0;
+    gbc.anchor     = GridBagConstraints.CENTER;
+    gbc.insets.top = 5;
+    gbc.fill       = GridBagConstraints.NONE;
+    gbc.weightx    = 0.0;
+    gbc.gridwidth  = 2;
+    gbc.gridx      = 0;
     gbc.gridy++;
     add( panelBtn, gbc );
   }
@@ -118,6 +119,19 @@ public class AbstractReplyDlg extends BaseDlg
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    super.addNotify();
+    if( !this.notified  ) {
+      this.notified = true;
+      this.replyTextField.addActionListener( this );
+      this.btnOK.addActionListener( this );
+      this.btnCancel.addActionListener( this );
+    }
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
@@ -136,6 +150,19 @@ public class AbstractReplyDlg extends BaseDlg
       }
     }
     return rv;
+  }
+
+
+  @Override
+  public void removeNotify()
+  {
+    super.removeNotify();
+    if( this.notified  ) {
+      this.notified = false;
+      this.replyTextField.removeActionListener( this );
+      this.btnOK.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
+    }
   }
 
 

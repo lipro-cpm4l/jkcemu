@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2017 Jens Mueller
+ * (c) 2008-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,12 +21,14 @@ import java.awt.Insets;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
-import java.lang.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -36,9 +38,12 @@ import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.BaseFrm;
 import jkcemu.base.ByteDataSource;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HexCharFld;
 import jkcemu.base.ReplyBytesDlg;
 import jkcemu.etc.CksCalculator;
+import jkcemu.text.TextUtil;
 
 
 public abstract class AbstractHexCharFrm
@@ -48,24 +53,28 @@ public abstract class AbstractHexCharFrm
 					CaretListener,
 					Printable
 {
+  protected static final String PROP_DIRECT_EDIT = "direct_edit.enabled";
+
   protected HexCharFld                hexCharFld;
   protected ReplyBytesDlg.InputFormat lastInputFmt;
   protected boolean                   lastBigEndian;
 
-  private String     lastCksAlgorithm;
-  private String     lastFindText;
-  private int        findPos;
-  private byte[]     findBytes;
-  private JTextField fldCaretDec;
-  private JTextField fldCaretHex;
-  private JTextField fldValue8;
-  private JTextField fldValue16;
-  private JTextField fldValue32;
-  private JLabel     labelValue8;
-  private JLabel     labelValue16;
-  private JLabel     labelValue32;
-  private JCheckBox  btnValueSigned;
-  private JCheckBox  btnLittleEndian;
+  private String            lastCksAlgorithm;
+  private String            lastFindText;
+  private String            readOnlyErrorMsg;
+  private int               findPos;
+  private byte[]            findBytes;
+  private JTextField        fldCaretDec;
+  private JTextField        fldCaretHex;
+  private JTextField        fldValue8;
+  private JTextField        fldValue16;
+  private JTextField        fldValue32;
+  private JLabel            labelValue8;
+  private JLabel            labelValue16;
+  private JLabel            labelValue32;
+  private JCheckBox         cbValueSigned;
+  private JCheckBox         cbLittleEndian;
+  private JCheckBoxMenuItem mnuDirectEdit;
 
 
   public AbstractHexCharFrm()
@@ -74,16 +83,45 @@ public abstract class AbstractHexCharFrm
     this.lastInputFmt     = null;
     this.lastCksAlgorithm = null;
     this.lastFindText     = null;
+    this.readOnlyErrorMsg = null;
     this.findPos          = 0;
     this.findBytes        = null;
-    Main.updIcon( this );
+    this.mnuDirectEdit    = null;
+  }
+
+
+  protected void addDirectEditMenuItemTo( JMenu menu )
+  {
+    this.mnuDirectEdit = GUIFactory.createCheckBoxMenuItem(
+		"Bytes durch direkte Eingabe \u00FCberschreiben",
+		Main.getBooleanProperty(
+			getSettingsPrefix() + PROP_DIRECT_EDIT,
+			false ) );
+    this.mnuDirectEdit.addActionListener( this );
+    menu.add( this.mnuDirectEdit );
+
+    // ReadOnly-Fehlermeldung erzeugen
+    StringBuilder buf      = new StringBuilder();
+    String        menuText = menu.getText();
+    buf.append( "Sie m\u00FCssen zuerst den Men\u00FCeintrag" );
+    if( menuText != null ) {
+      buf.append( "\n\'" );
+      buf.append( menuText );
+      buf.append( "\' \u2192" );
+    }
+    buf.append( " \'" );
+    buf.append( this.mnuDirectEdit.getText() );
+    buf.append( "\'\n"
+		+ "aktivieren, bevor Sie die Bytes direkt"
+		+ " in der Anzeige \u00E4ndern k\u00F6nnen." );
+    this.readOnlyErrorMsg = buf.toString();
   }
 
 
   protected Component createCaretPosFld( String title )
   {
-    JPanel panel = new JPanel( new GridBagLayout() );
-    panel.setBorder( BorderFactory.createTitledBorder( title ) );
+    JPanel panel = GUIFactory.createPanel( new GridBagLayout() );
+    panel.setBorder( GUIFactory.createTitledBorder( title ) );
 
     GridBagConstraints gbc = new GridBagConstraints(
 					0, 0,
@@ -94,9 +132,9 @@ public abstract class AbstractHexCharFrm
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    panel.add( new JLabel( "Hexadezimal:" ), gbc );
+    panel.add( GUIFactory.createLabel( "Hexadezimal:" ), gbc );
 
-    this.fldCaretHex = new JTextField();
+    this.fldCaretHex = GUIFactory.createTextField();
     this.fldCaretHex.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 0.5;
@@ -106,9 +144,9 @@ public abstract class AbstractHexCharFrm
     gbc.fill    = GridBagConstraints.NONE;
     gbc.weightx = 0.0;
     gbc.gridx++;
-    panel.add( new JLabel( "Dezimal:" ), gbc );
+    panel.add( GUIFactory.createLabel( "Dezimal:" ), gbc );
 
-    this.fldCaretDec = new JTextField();
+    this.fldCaretDec = GUIFactory.createTextField();
     this.fldCaretDec.addActionListener( this );
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 0.5;
@@ -121,12 +159,15 @@ public abstract class AbstractHexCharFrm
 
   protected Component createHexCharFld()
   {
-    JPanel panel = new JPanel( new BorderLayout() );
+    JPanel panel = GUIFactory.createPanel( new BorderLayout() );
 
     this.hexCharFld = new HexCharFld( this );
+    GUIFactory.initFont( this.hexCharFld );
     this.hexCharFld.setBorder( BorderFactory.createEtchedBorder() );
     this.hexCharFld.addCaretListener( this );
-    panel.add( new JScrollPane( this.hexCharFld ), BorderLayout.CENTER );
+    panel.add(
+	GUIFactory.createScrollPane( this.hexCharFld ),
+	BorderLayout.CENTER );
 
     return panel;
   }
@@ -134,8 +175,8 @@ public abstract class AbstractHexCharFrm
 
   protected Component createValueFld()
   {
-    JPanel panel = new JPanel( new GridBagLayout() );
-    panel.setBorder( BorderFactory.createTitledBorder(
+    JPanel panel = GUIFactory.createPanel( new GridBagLayout() );
+    panel.setBorder( GUIFactory.createTitledBorder(
 			"Dezimalwerte der Bytes ab Cursor-Position" ) );
 
     GridBagConstraints gbcValue = new GridBagConstraints(
@@ -147,46 +188,46 @@ public abstract class AbstractHexCharFrm
 					new Insets( 5, 5, 2, 5 ),
 					0, 0 );
 
-    this.labelValue8 = new JLabel( "8 Bit:" );
+    this.labelValue8 = GUIFactory.createLabel( "8 Bit:" );
     this.labelValue8.setEnabled( false );
     panel.add( this.labelValue8, gbcValue );
 
-    this.fldValue8 = new JTextField();
+    this.fldValue8 = GUIFactory.createTextField();
     this.fldValue8.setEditable( false );
     gbcValue.fill    = GridBagConstraints.HORIZONTAL;
     gbcValue.weightx = 0.33;
     gbcValue.gridx++;
     panel.add( this.fldValue8, gbcValue );
 
-    this.labelValue16 = new JLabel( "16 Bit:" );
+    this.labelValue16 = GUIFactory.createLabel( "16 Bit:" );
     this.labelValue16.setEnabled( false );
     gbcValue.fill    = GridBagConstraints.NONE;
     gbcValue.weightx = 0.0;
     gbcValue.gridx++;
     panel.add( this.labelValue16, gbcValue );
 
-    this.fldValue16 = new JTextField();
+    this.fldValue16 = GUIFactory.createTextField();
     this.fldValue16.setEditable( false );
     gbcValue.fill    = GridBagConstraints.HORIZONTAL;
     gbcValue.weightx = 0.33;
     gbcValue.gridx++;
     panel.add( this.fldValue16, gbcValue );
 
-    this.labelValue32 = new JLabel( "32 Bit:" );
+    this.labelValue32 = GUIFactory.createLabel( "32 Bit:" );
     this.labelValue32.setEnabled( false );
     gbcValue.fill    = GridBagConstraints.NONE;
     gbcValue.weightx = 0.0;
     gbcValue.gridx++;
     panel.add( this.labelValue32, gbcValue );
 
-    this.fldValue32 = new JTextField();
+    this.fldValue32 = GUIFactory.createTextField();
     this.fldValue32.setEditable( false );
     gbcValue.fill    = GridBagConstraints.HORIZONTAL;
     gbcValue.weightx = 0.33;
     gbcValue.gridx++;
     panel.add( this.fldValue32, gbcValue );
 
-    JPanel panelOpt = new JPanel(
+    JPanel panelOpt = GUIFactory.createPanel(
 			new FlowLayout( FlowLayout.LEFT, 5, 0 ) );
     gbcValue.weightx   = 1.0;
     gbcValue.gridwidth = GridBagConstraints.REMAINDER;
@@ -194,15 +235,19 @@ public abstract class AbstractHexCharFrm
     gbcValue.gridy++;
     panel.add( panelOpt, gbcValue );
 
-    this.btnValueSigned = new JCheckBox( "Vorzeichenbehaftet", true );
-    this.btnValueSigned.addActionListener( this );
-    this.btnValueSigned.setEnabled( false );
-    panelOpt.add( this.btnValueSigned, gbcValue );
+    this.cbValueSigned = GUIFactory.createCheckBox(
+						"Vorzeichenbehaftet",
+						true );
+    this.cbValueSigned.addActionListener( this );
+    this.cbValueSigned.setEnabled( false );
+    panelOpt.add( this.cbValueSigned, gbcValue );
 
-    this.btnLittleEndian = new JCheckBox( "Little Endian", true );
-    this.btnLittleEndian.addActionListener( this );
-    this.btnLittleEndian.setEnabled( false );
-    panelOpt.add( this.btnLittleEndian, gbcValue );
+    this.cbLittleEndian = GUIFactory.createCheckBox(
+						"Little Endian",
+						true );
+    this.cbLittleEndian.addActionListener( this );
+    this.cbLittleEndian.setEnabled( false );
+    panelOpt.add( this.cbLittleEndian, gbcValue );
 
     return panel;
   }
@@ -283,7 +328,18 @@ public abstract class AbstractHexCharFrm
 
 
   @Override
-  abstract public int  getDataLength();
+  abstract public int getDataLength();
+
+
+  @Override
+  public abstract boolean getDataReadOnly();
+
+
+  @Override
+  public boolean setDataByte( int addr, int value )
+  {
+    return false;
+  }
 
 
 	/* --- CaretListener --- */
@@ -323,7 +379,16 @@ public abstract class AbstractHexCharFrm
     int dataLen = getDataLength();
     int pos     = nRows * HexCharFld.BYTES_PER_ROW * pageNum;
     if( pos < dataLen ) {
-      g.setFont( new Font( Font.MONOSPACED, Font.PLAIN, fontSize ) );
+      Font font = null;
+      if( this.hexCharFld != null ) {
+	font = this.hexCharFld.getFont();
+      }
+      if( font != null ) {
+	font = font.deriveFont( (float) fontSize );
+      } else {
+	font = new Font( Font.MONOSPACED, Font.PLAIN, fontSize );
+      }
+      g.setFont( font );
 
       String        addrFmt = this.hexCharFld.createAddrFmtString();
       StringBuilder buf     = new StringBuilder( addrFmt.length() + 6
@@ -342,7 +407,7 @@ public abstract class AbstractHexCharFrm
 	  int idx = pos + i;
 	  if( idx < dataLen ) {
 	    buf.append(
-		String.format( "%02X", (int) getDataByte( idx ) & 0xFF ) );
+		String.format( "%02X", getDataByte( idx ) & 0xFF ) );
 	  } else {
 	    buf.append( "\u0020\u0020" );
 	  }
@@ -351,7 +416,7 @@ public abstract class AbstractHexCharFrm
 	for( int i = 0; i < HexCharFld.BYTES_PER_ROW; i++ ) {
 	  int idx = pos + i;
 	  if( idx < dataLen ) {
-	    int ch = (int) getDataByte( idx ) & 0xFF;
+	    int ch = getDataByte( idx ) & 0xFF;
 	    if( (ch < 0x20) || (ch > 0x7E) ) {
 	      ch = '.';
 	    }
@@ -404,6 +469,14 @@ public abstract class AbstractHexCharFrm
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void addNotify()
+  {
+    updDirectEditDependFields();
+    super.addNotify();
+  }
+
+
+  @Override
   protected boolean doAction( EventObject e )
   {
     boolean rv  = false;
@@ -417,11 +490,14 @@ public abstract class AbstractHexCharFrm
 	rv = true;
 	setCaretPosition( this.fldCaretDec, 10 );
       }
-      else if( (src == this.btnValueSigned)
-	       || (src == this.btnLittleEndian) )
+      else if( (src == this.cbValueSigned)
+	       || (src == this.cbLittleEndian) )
       {
 	rv = true;
 	updValueFields();
+      } else if( src == this.mnuDirectEdit ) {
+	rv = true;
+	updDirectEditDependFields();
       }
     }
     return rv;
@@ -429,9 +505,15 @@ public abstract class AbstractHexCharFrm
 
 
   @Override
-  public void lookAndFeelChanged()
+  public void putSettingsTo( Properties props )
   {
-    this.hexCharFld.repaint();
+    super.putSettingsTo( props );
+    if( this.mnuDirectEdit != null ) {
+      EmuUtil.setProperty(
+		props,
+		getSettingsPrefix() + PROP_DIRECT_EDIT,
+		this.mnuDirectEdit.isSelected() );
+    }
   }
 
 
@@ -439,7 +521,6 @@ public abstract class AbstractHexCharFrm
 
   protected void doChecksum()
   {
-    int dataLen  = getDataLength();
     int caretPos = this.hexCharFld.getCaretPosition();
     int markPos  = this.hexCharFld.getMarkPosition();
     int m1       = -1;
@@ -522,7 +603,9 @@ public abstract class AbstractHexCharFrm
 	  for( int k = 0; k < this.findBytes.length; k++ ) {
 	    int idx = i + k;
 	    if( idx < dataLen ) {
-	      if( getDataByte( idx ) != this.findBytes[ k ] ) {
+	      if( getDataByte( idx ) !=
+			((int) this.findBytes[ k ] & 0xFF) )
+	      {
 		found = false;
 		break;
 	      }
@@ -586,11 +669,11 @@ public abstract class AbstractHexCharFrm
       long value = 0L;
       if( littleEndian ) {
 	for( int i = pos + len - 1; i >= pos; --i ) {
-	  value = (value << 8) | ((int) (getDataByte( i )) & 0xFF);
+	  value = (value << 8) | (getDataByte( i ) & 0xFF);
 	}
       } else {
 	for( int i = 0; i < len; i++ ) {
-	  value = (value << 8) | ((int) (getDataByte( pos + i )) & 0xFF);
+	  value = (value << 8) | (getDataByte( pos + i ) & 0xFF);
 	}
       }
       rv = value;
@@ -624,6 +707,16 @@ public abstract class AbstractHexCharFrm
   }
 
 
+  private void updDirectEditDependFields()
+  {
+    if( (this.hexCharFld != null) && (this.mnuDirectEdit != null) ) {
+      this.hexCharFld.setEditable(
+			this.mnuDirectEdit.isSelected(),
+			this.readOnlyErrorMsg );
+    }
+  }
+
+
   private void updValueFields()
   {
     String  text8    = null;
@@ -635,13 +728,13 @@ public abstract class AbstractHexCharFrm
     if( (caretPos >= 0) && (caretPos < getDataLength()) ) {
       state8 = true;
 
-      boolean valueSigned  = this.btnValueSigned.isSelected();
-      boolean littleEndian = this.btnLittleEndian.isSelected();
+      boolean valueSigned  = this.cbValueSigned.isSelected();
+      boolean littleEndian = this.cbLittleEndian.isSelected();
 
       if( valueSigned ) {
 	text8 = Integer.toString( (int) (byte) getDataByte( caretPos ) );
       } else {
-	text8 = Integer.toString( (int) getDataByte( caretPos ) & 0xFF );
+	text8 = Integer.toString( getDataByte( caretPos ) & 0xFF );
       }
 
       Long value = getLong( caretPos, 2, littleEndian );
@@ -671,8 +764,8 @@ public abstract class AbstractHexCharFrm
     this.labelValue16.setEnabled( text16 != null );
     this.labelValue32.setEnabled( text32 != null );
 
-    this.btnValueSigned.setEnabled( state8 );
-    this.btnLittleEndian.setEnabled( state16 );
+    this.cbValueSigned.setEnabled( state8 );
+    this.cbLittleEndian.setEnabled( state16 );
 
     setSelectedByteActionsEnabled( state8 );
   }

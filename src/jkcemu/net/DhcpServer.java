@@ -1,18 +1,14 @@
 /*
- * (c) 2015 Jens Mueller
+ * (c) 2015-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
- * Wrapper-Klasse fuer DatagramSocket und MulticastSocket
- *
- * Der Sinn der Wrapper-Klasse besteht darin,
- * DHCP-Pakete abfangen und simulieren zu koennen.
+ * Simulation eines DHCP-Servers
  */
 
 package jkcemu.net;
 
 import java.io.IOException;
-import java.lang.*;
 import java.net.DatagramPacket;
 
 

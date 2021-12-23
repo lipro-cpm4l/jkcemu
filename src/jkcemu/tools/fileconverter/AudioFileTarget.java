@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,7 +10,6 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import jkcemu.audio.AudioFile;
 import jkcemu.audio.BitSampleBuffer;
 import jkcemu.audio.PCMDataSource;
@@ -71,7 +70,7 @@ public class AudioFileTarget extends AbstractConvertTarget
       }
     }
     catch( IOException ex ) {
-      EmuUtil.closeSilent( pcm );
+      EmuUtil.closeSilently( pcm );
       throw ex;
     }
     return pcm;

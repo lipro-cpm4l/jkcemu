@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,9 +8,11 @@
 
 package jkcemu.etc;
 
-import java.lang.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.zip.Adler32;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
@@ -166,19 +168,15 @@ public class CksCalculator
   private static final String CKS_CRC16CCITT = "CRC-CCITT (CRC-16 HDLC)";
   private static final String CKS_CRC32      = "CRC-32";
 
-  private static String[] algorithms = {
-				CKS_ADD8,
-				CKS_ADD16LE,
-				CKS_ADD16BE,
-				CKS_CRC16CCITT,
-				CKS_CRC32,
-				CKS_ADLER32,
-				"MD2",
-				"MD5",
-				"SHA-1",
-				"SHA-256",
-				"SHA-384",
-				"SHA-512" };
+  private static final String[] sumAlgorithms = {
+					CKS_ADD8,
+					CKS_ADD16LE,
+					CKS_ADD16BE,
+					CKS_CRC16CCITT,
+					CKS_CRC32,
+					CKS_ADLER32 };
+
+  private static volatile String[] algorithms = null;
 
   private String        algorithm;
   private String        value;
@@ -218,6 +216,29 @@ public class CksCalculator
 
   public static String[] getAvailableAlgorithms()
   {
+    if( algorithms == null ) {
+      String[] mds = null;
+      try {
+	Set<String> mdSet = Security.getAlgorithms(
+				MessageDigest.class.getSimpleName() );
+	if( mdSet != null ) {
+	  int size = mdSet.size();
+	  if( size > 0 ) {
+	    mds = mdSet.toArray( new String[ size ] );
+	    Arrays.sort( mds );
+	  }
+	}
+      }
+      catch( Exception ex ) {}
+      if( mds != null ) {
+	String[] a = new String[ sumAlgorithms.length + mds.length ];
+	System.arraycopy( sumAlgorithms, 0, a, 0, sumAlgorithms.length );
+	System.arraycopy( mds, 0, a, sumAlgorithms.length, mds.length );
+	algorithms = a;
+      } else {
+	algorithms = sumAlgorithms;
+      }
+    }
     return algorithms;
   }
 

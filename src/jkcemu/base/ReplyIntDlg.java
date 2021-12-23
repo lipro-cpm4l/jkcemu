@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 package jkcemu.base;
 
 import java.awt.Frame;
-import java.lang.*;
 
 
 public class ReplyIntDlg extends AbstractReplyDlg

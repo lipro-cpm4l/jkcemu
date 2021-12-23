@@ -1,5 +1,5 @@
 /*
- * (c) 2016-2017 Jens Mueller
+ * (c) 2016-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -19,7 +19,6 @@ import java.awt.Insets;
 import java.awt.Rectangle;
 import java.awt.Transparency;
 import java.awt.image.BufferedImage;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -33,6 +32,7 @@ import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.CancelableProgressDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 
 
 public class CropDlg extends BaseDlg
@@ -42,20 +42,20 @@ public class CropDlg extends BaseDlg
 				Runnable
 {
   private Object[][] ratios = {
-	{ "frei \u00E4nderbar",  null },
-	{ "beibehalten",         null },
-	{ "1:1 (Z1013)",         1F },
-	{ "1:2",                 0.5F },
-	{ "2:1",                 2F },
-	{ "2:3",                 divF( 2, 3 ) },
-	{ "3:2",                 divF( 3, 2 ) },
-	{ "3:4",                 divF( 3, 4 ) },
-	{ "4:3 (LLC2)",          divF( 4, 3 ) },
-	{ "16:9",                divF( 16, 9 ) },
-	{ "16:10 (A5105)",       divF( 16, 10 ) },
-	{ "AC1",                 divF( ImgUtil.AC1_W,   ImgUtil.AC1_H ) },
-	{ "KC85/1, KC87, Z9001", divF( ImgUtil.KC85_W,  ImgUtil.KC85_H ) },
-	{ "KC85/2..5, HC900",    divF( ImgUtil.KC85_W,  ImgUtil.KC85_H ) } };
+    { "frei \u00E4nderbar",  null },
+    { "beibehalten",         null },
+    { "1:1 (Z1013)",         1F },
+    { "1:2",                 0.5F },
+    { "2:1",                 2F },
+    { "2:3",                 divF( 2, 3 ) },
+    { "3:2",                 divF( 3, 2 ) },
+    { "3:4",                 divF( 3, 4 ) },
+    { "4:3 (LLC2)",          divF( 4, 3 ) },
+    { "16:9",                divF( 16, 9 ) },
+    { "16:10 (A5105)",       divF( 16, 10 ) },
+    { "AC1",                 divF( ImageUtil.AC1_W,   ImageUtil.AC1_H ) },
+    { "KC85/1, KC87, Z9001", divF( ImageUtil.Z9001_W, ImageUtil.Z9001_H ) },
+    { "KC85/2..5, HC900",    divF( ImageUtil.KC85_W,  ImageUtil.KC85_H ) } };
 
   private Object[][] selectionColors = {
 	{ "rot",       Color.RED },
@@ -66,7 +66,7 @@ public class CropDlg extends BaseDlg
 	{ "schwarz",   Color.BLACK } };
 
   private ImageFrm              imageFrm;
-  private ImgFld                imgFld;
+  private ImageFld              imageFld;
   private int                   wImg;
   private int                   hImg;
   private int                   progressMax;
@@ -111,7 +111,7 @@ public class CropDlg extends BaseDlg
 	setValueHeightSilent( this.hImg );
       }
       catch( IllegalArgumentException ex ) {
-	EmuUtil.exitSysError( this, null, ex );
+	EmuUtil.logSysError( this, null, ex );
       }
     }
   }
@@ -129,7 +129,7 @@ public class CropDlg extends BaseDlg
 	setValueHeightSilent( h <= this.hImg ? h : this.hImg );
       }
       catch( IllegalArgumentException ex ) {
-	EmuUtil.exitSysError( this, null, ex );
+	EmuUtil.logSysError( this, null, ex );
       }
     }
   }
@@ -214,7 +214,7 @@ public class CropDlg extends BaseDlg
   {
     super( imageFrm, Dialog.ModalityType.MODELESS );
     this.imageFrm      = imageFrm;
-    this.imgFld        = imageFrm.getImgFld();
+    this.imageFld      = imageFrm.getImageFld();
     this.wImg          = 0;
     this.hImg          = 0;
     this.progressMax   = 0;
@@ -238,20 +238,21 @@ public class CropDlg extends BaseDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    add( new JLabel( "X:" ), gbc );
+    add( GUIFactory.createLabel( "X:" ), gbc );
 
     this.spinnerModelX = new SpinnerNumberModel( 0, 0, 9999, 1 );
-    this.spinnerX      = new JSpinner( this.spinnerModelX );
+    this.spinnerX      = GUIFactory.createSpinner( this.spinnerModelX );
     gbc.insets.left    = 0;
     gbc.gridx++;
     add( this.spinnerX, gbc );
 
     gbc.insets.left = 20;
     gbc.gridx++;
-    add( new JLabel( "Breite:" ), gbc );
+    add( GUIFactory.createLabel( "Breite:" ), gbc );
 
     this.spinnerModelWidth = new SpinnerNumberModel( 0, 0, 9999, 1 );
-    this.spinnerWidth      = new JSpinner( this.spinnerModelWidth );
+    this.spinnerWidth      = GUIFactory.createSpinner(
+						this.spinnerModelWidth );
     gbc.insets.left        = 0;
     gbc.gridx++;
     add( this.spinnerWidth, gbc );
@@ -259,27 +260,28 @@ public class CropDlg extends BaseDlg
     gbc.insets.left = 5;
     gbc.gridx       = 0;
     gbc.gridy++;
-    add( new JLabel( "Y:" ), gbc );
+    add( GUIFactory.createLabel( "Y:" ), gbc );
 
     this.spinnerModelY = new SpinnerNumberModel( 0, 0, 9999, 1 );
-    this.spinnerY      = new JSpinner( this.spinnerModelY );
+    this.spinnerY      = GUIFactory.createSpinner( this.spinnerModelY );
     gbc.insets.left    = 0;
     gbc.gridx++;
     add( this.spinnerY, gbc );
 
     gbc.insets.left = 20;
     gbc.gridx++;
-    add( new JLabel( "H\u00F6he:" ), gbc );
+    add( GUIFactory.createLabel( "H\u00F6he:" ), gbc );
 
     this.spinnerModelHeight = new SpinnerNumberModel( 0, 0, 9999, 1 );
-    this.spinnerHeight      = new JSpinner( this.spinnerModelHeight );
+    this.spinnerHeight      = GUIFactory.createSpinner(
+						this.spinnerModelHeight );
     gbc.insets.left         = 0;
     gbc.gridx++;
     add( this.spinnerHeight, gbc );
 
 
     // Optionen
-    JPanel panelOpt = new JPanel( new GridBagLayout() );
+    JPanel panelOpt = GUIFactory.createPanel( new GridBagLayout() );
     gbc.anchor      = GridBagConstraints.CENTER;
     gbc.insets.top  = 10;
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
@@ -296,11 +298,15 @@ public class CropDlg extends BaseDlg
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    panelOpt.add( new JLabel( "Seitenverh\u00E4ltnis:" ), gbcOpt );
+    panelOpt.add(
+		GUIFactory.createLabel( "Seitenverh\u00E4ltnis:" ),
+		gbcOpt );
     gbcOpt.gridy++;
-    panelOpt.add( new JLabel( "Farbe f\u00FCr Auswahl:" ), gbcOpt );
+    panelOpt.add(
+		GUIFactory.createLabel( "Farbe f\u00FCr Auswahl:" ),
+		gbcOpt );
 
-    this.comboRatio = new JComboBox<>();
+    this.comboRatio = GUIFactory.createComboBox();
     this.comboRatio.setEditable( false );
     for( Object[] e : ratios ) {
       this.comboRatio.addItem( e[ 0 ] );
@@ -310,7 +316,7 @@ public class CropDlg extends BaseDlg
     gbcOpt.gridx++;
     panelOpt.add( this.comboRatio, gbcOpt );
 
-    this.comboSelectionColor = new JComboBox<>();
+    this.comboSelectionColor = GUIFactory.createComboBox();
     this.comboSelectionColor.setEditable( false );
     for( Object[] e : selectionColors ) {
       this.comboSelectionColor.addItem( e[ 0 ] );
@@ -321,14 +327,14 @@ public class CropDlg extends BaseDlg
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnCrop = new JButton( "Zuschneiden" );
+    this.btnCrop = GUIFactory.createButton( "Zuschneiden" );
     panelBtn.add( this.btnCrop );
 
-    this.btnClose = new JButton( "Schlie\u00DFen" );
+    this.btnClose = GUIFactory.createButtonClose();
     panelBtn.add( this.btnClose );
 
 
@@ -346,7 +352,7 @@ public class CropDlg extends BaseDlg
     this.comboRatio.addActionListener( this );
     this.comboSelectionColor.addActionListener( this );
     this.btnCrop.addActionListener( this );
-    this.btnClose.addActionListener( this );
+    this.btnClose .addActionListener( this );
 
 
     // sicherstellen, dass die ausgewaehlte Auswahlfarbe auch verwendet wird
@@ -493,7 +499,7 @@ public class CropDlg extends BaseDlg
 			  @Override
 			  public void run()
 			  {
-			    showCropImage();
+			    showCroppedImage();
 			  }
 			} );
       }
@@ -549,7 +555,7 @@ public class CropDlg extends BaseDlg
 
   private void doCrop()
   {
-    this.image = this.imgFld.getImage();
+    this.image = this.imageFld.getImage();
     if( this.image != null ) {
       boolean state = true;
       if( ensureRatio() ) {
@@ -568,7 +574,7 @@ public class CropDlg extends BaseDlg
 	int w = EmuUtil.getInt( this.spinnerWidth );
 	int h = EmuUtil.getInt( this.spinnerHeight );
 	if( (x >= 0) && (y >= 0 ) && (w > 0) && (h > 0) ) {
-	  Rectangle r = this.imgFld.toUnrotated( x, y, w, h );
+	  Rectangle r = this.imageFld.toUnrotated( x, y, w, h );
 	  if( r != null ) {
 	    x = r.x;
 	    y = r.y;
@@ -594,7 +600,7 @@ public class CropDlg extends BaseDlg
 	      doClose();
 	      this.cropImg = this.image.getSubimage( x, y, w, h );
 	      if( this.cropImg.getTransparency() == Transparency.OPAQUE ) {
-		showCropImage();
+		showCroppedImage();
 	      } else {
 		this.progressDlg = new CancelableProgressDlg(
 						this,
@@ -732,10 +738,10 @@ public class CropDlg extends BaseDlg
   }
 
 
-  private void showCropImage()
+  private void showCroppedImage()
   {
     if( this.cropImg != null ) {
-      this.imageFrm.showDerivatedImage( this.cropImg, "Zugeschnitten" );
+      this.imageFrm.showCroppedImage( this.cropImg );
     }
   }
 }

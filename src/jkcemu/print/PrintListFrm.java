@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -21,62 +21,73 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.EventObject;
+import java.util.Properties;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JToolBar;
 import javax.swing.JViewport;
-import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.BaseFrm;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HelpFrm;
+import jkcemu.base.PopupMenuOwner;
 import jkcemu.base.ScreenFrm;
+import jkcemu.file.FileUtil;
+import jkcemu.text.CharConverter;
 import jkcemu.tools.hexedit.HexEditFrm;
 
 
-public class PrintListFrm extends BaseFrm implements ListSelectionListener
+public class PrintListFrm
+			extends BaseFrm
+			implements ListSelectionListener, PopupMenuOwner
 {
-  private static final String HELP_PAGE = "/help/print.htm";
+  private static final String HELP_PAGE    = "/help/print.htm";
+  private static final String PROP_CHARSET = "jkcemu.printer.charset";
 
   private static PrintListFrm instance = null;
 
-  private ScreenFrm   screenFrm;
-  private PrintMngr   printMngr;
-  private JMenuItem   mnuFileFinish;
-  private JMenuItem   mnuFilePrintOptions;
-  private JMenuItem   mnuFilePrint;
-  private JMenuItem   mnuFileOpenText;
-  private JMenuItem   mnuFileOpenHex;
-  private JMenuItem   mnuFileSave;
-  private JMenuItem   mnuFileDelete;
-  private JMenuItem   mnuFileClose;
-  private JMenuItem   mnuHelpContent;
-  private JPopupMenu  mnuPopup;
-  private JMenuItem   mnuPopupFinish;
-  private JMenuItem   mnuPopupPrint;
-  private JMenuItem   mnuPopupOpenText;
-  private JMenuItem   mnuPopupOpenHex;
-  private JMenuItem   mnuPopupSave;
-  private JMenuItem   mnuPopupDelete;
-  private JButton     btnPrint;
-  private JButton     btnOpenText;
-  private JButton     btnSave;
-  private JButton     btnDelete;
-  private JTable      table;
-  private JScrollPane scrollPane;
+  private ScreenFrm            screenFrm;
+  private PrintMngr            printMngr;
+  private JMenuItem            mnuFileFinish;
+  private JMenuItem            mnuFilePrintOptions;
+  private JMenuItem            mnuFilePrint;
+  private JMenuItem            mnuFileOpenText;
+  private JMenuItem            mnuFileOpenHex;
+  private JMenuItem            mnuFileSaveAs;
+  private JMenuItem            mnuFileDelete;
+  private JMenuItem            mnuFileClose;
+  private JMenuItem            mnuHelpContent;
+  private JRadioButtonMenuItem mnuCharsetASCII;
+  private JRadioButtonMenuItem mnuCharsetISO646DE;
+  private JRadioButtonMenuItem mnuCharsetCP437;
+  private JRadioButtonMenuItem mnuCharsetCP850;
+  private JRadioButtonMenuItem mnuCharsetLATIN1;
+  private JPopupMenu           popupMnu;
+  private JMenuItem            popupFinish;
+  private JMenuItem            popupPrint;
+  private JMenuItem            popupOpenText;
+  private JMenuItem            popupOpenHex;
+  private JMenuItem            popupSaveAs;
+  private JMenuItem            popupDelete;
+  private JButton              btnPrint;
+  private JButton              btnOpenText;
+  private JButton              btnSaveAs;
+  private JButton              btnDelete;
+  private JTable               table;
+  private JScrollPane          scrollPane;
 
 
   public static void open( ScreenFrm screenFrm )
@@ -102,6 +113,15 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
   }
 
 
+	/* --- PopupMenuOwner --- */
+
+  @Override
+  public JPopupMenu getPopupMenu()
+  {
+    return this.popupMnu;
+  }
+
+
 	/* --- ueberschriebene Methoden --- */
 
   @Override
@@ -110,7 +130,7 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
     boolean rv = false;
     if( e != null ) {
       Object src = e.getSource();
-      if( (src == this.mnuFileFinish) || (src == this.mnuPopupFinish) ) {
+      if( (src == this.mnuFileFinish) || (src == this.popupFinish) ) {
 	rv = true;
 	doFinish();
       }
@@ -119,34 +139,34 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
 	PrintOptionsDlg.showPrintOptionsDlg( this, true, false );
       }
       else if((src == this.mnuFilePrint)
-	      || (src == this.mnuPopupPrint)
+	      || (src == this.popupPrint)
 	      || (src == this.btnPrint) )
       {
 	rv = true;
 	doPrint();
       }
       else if( (src == this.mnuFileOpenText)
-	       || (src == this.mnuPopupOpenText)
+	       || (src == this.popupOpenText)
 	       || (src == this.btnOpenText) )
       {
 	rv = true;
 	doOpenText();
       }
       else if( (src == this.mnuFileOpenHex)
-	       || (src == this.mnuPopupOpenHex) )
+	       || (src == this.popupOpenHex) )
       {
 	rv = true;
 	doOpenHex();
       }
-      else if( (src == this.mnuFileSave)
-	       || (src == this.mnuPopupSave)
-	       || (src == this.btnSave) )
+      else if( (src == this.mnuFileSaveAs)
+	       || (src == this.popupSaveAs)
+	       || (src == this.btnSaveAs) )
       {
 	rv = true;
-	doSave();
+	doSaveAs();
       }
       else if( (src == this.mnuFileDelete)
-	       || (src == this.mnuPopupDelete)
+	       || (src == this.popupDelete)
 	       || (src == this.btnDelete) )
       {
 	rv = true;
@@ -158,7 +178,7 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
       }
       else if( src == this.mnuHelpContent ) {
         rv = true;
-        HelpFrm.open( HELP_PAGE );
+        HelpFrm.openPage( HELP_PAGE );
       }
     }
     return rv;
@@ -166,22 +186,26 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
 
 
   @Override
-  public void lookAndFeelChanged()
+  public void putSettingsTo( Properties props )
   {
-    if( this.mnuPopup != null ) {
-      SwingUtilities.updateComponentTreeUI( this.mnuPopup );
+    if( props != null ) {
+      super.putSettingsTo( props );
+      EmuUtil.setProperty(
+		props,
+		PROP_CHARSET,
+		CharConverter.getEncodingName(
+				getSelectedCharConverterEncoding() ) );
     }
-    updBgColor();
   }
 
 
   @Override
-  protected boolean showPopup( MouseEvent e )
+  protected boolean showPopupMenu( MouseEvent e )
   {
     boolean   rv = false;
     Component c  = e.getComponent();
     if( c != null ) {
-      this.mnuPopup.show( c, e.getX(), e.getY() );
+      this.popupMnu.show( c, e.getX(), e.getY() );
       rv = true;
     }
     return rv;
@@ -227,6 +251,7 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
   {
     PrintData data = getSelectedPrintData();
     if( data != null ) {
+      data.setCharConverter( getSelectedCharConverter() );
       PrintUtil.doPrint(
 		this,
 		data,
@@ -245,16 +270,19 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
 
       byte[] dataBytes = data.getBytes();
       if( dataBytes != null ) {
-	PrintDataScanner scanner = new PrintDataScanner( dataBytes );
+	PrintDataScanner scanner = new PrintDataScanner(
+					dataBytes,
+					getSelectedCharConverter() );
 	while( !scanner.endReached() ) {
 	  String line = scanner.readLine();
 	  while( line != null ) {
 	    buf.append( line );
-	    buf.append( (char) '\n' );
+	    buf.append( '\n' );
 	    line = scanner.readLine();
 	  }
-	  if( !scanner.skipFormFeed() )
-	    break;
+	  if( scanner.skipFormFeed() ) {
+	    buf.append( '\f' );
+	  }
 	}
       }
       this.screenFrm.openText( buf.toString() );
@@ -274,16 +302,16 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
   }
 
 
-  private void doSave()
+  private void doSaveAs()
   {
     try {
       PrintData data = getSelectedPrintData();
       if( data != null ) {
-	File file = EmuUtil.showFileSaveDlg(
+	File file = FileUtil.showFileSaveDlg(
 				this,
 				"Druckauftrag speichern",
 				Main.getLastDirFile( Main.FILE_GROUP_PRINT ),
-				EmuUtil.getTextFileFilter() );
+				FileUtil.getTextFileFilter() );
 	if( file != null ) {
 	  data.saveToFile( file );
 	  this.printMngr.fireTableDataChanged();
@@ -345,84 +373,124 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
   {
     this.screenFrm = screenFrm;
     this.printMngr = screenFrm.getEmuThread().getPrintMngr();
-
     setTitle( "JKCEMU Druckauftr\u00E4ge" );
-    Main.updIcon( this );
 
 
     // Menu Datei
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuFileFinish = createJMenuItem( "Abschlie\u00DFen" );
+    this.mnuFileFinish = createMenuItem( "Abschlie\u00DFen" );
     mnuFile.add( this.mnuFileFinish );
     mnuFile.addSeparator();
 
-    this.mnuFilePrintOptions = createJMenuItem( "Druckoptionen..." );
+    this.mnuFilePrintOptions = createMenuItemOpenPrintOptions();
     mnuFile.add( this.mnuFilePrintOptions );
 
-    this.mnuFilePrint = createJMenuItem(
-		"Drucken...",
-		KeyStroke.getKeyStroke( KeyEvent.VK_P, Event.CTRL_MASK ) );
+    this.mnuFilePrint = createMenuItemOpenPrint( true );
     mnuFile.add( this.mnuFilePrint );
     mnuFile.addSeparator();
 
-    this.mnuFileOpenText = createJMenuItem( "Im Texteditor \u00F6ffnen..." );
+    this.mnuFileOpenText = createMenuItem( "Im Texteditor \u00F6ffnen..." );
     mnuFile.add( this.mnuFileOpenText );
 
-    this.mnuFileOpenHex = createJMenuItem( "Im Hex-Editor \u00F6ffnen..." );
+    this.mnuFileOpenHex = createMenuItem( "Im Hex-Editor \u00F6ffnen..." );
     mnuFile.add( this.mnuFileOpenHex );
 
-    this.mnuFileSave = createJMenuItem( "Speichern unter..." );
-    mnuFile.add( this.mnuFileSave );
+    this.mnuFileSaveAs = createMenuItemSaveAs( true );
+    mnuFile.add( this.mnuFileSaveAs );
     mnuFile.addSeparator();
 
-    this.mnuFileDelete = createJMenuItem(
-		"L\u00F6schen",
-		KeyStroke.getKeyStroke( KeyEvent.VK_DELETE, 0 ) );
+    this.mnuFileDelete = createMenuItemWithDirectAccelerator(
+						EmuUtil.TEXT_DELETE,
+						KeyEvent.VK_DELETE );
     mnuFile.add( this.mnuFileDelete );
     mnuFile.addSeparator();
 
-    this.mnuFileClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuFileClose = createMenuItemClose();
     mnuFile.add( this.mnuFileClose );
 
 
-    // Menu Hilfe
-    JMenu mnuHelp = new JMenu( "?" );
+    // Menu Zeichensatz
+    JMenu mnuCharset = GUIFactory.createMenu( "Zeichensatz" );
 
-    this.mnuHelpContent = createJMenuItem( "Hilfe..." );
+    ButtonGroup grpCharset = new ButtonGroup();
+
+    CharConverter.Encoding encoding = CharConverter.getEncodingByName(
+					Main.getProperty( PROP_CHARSET ) );
+
+    this.mnuCharsetASCII = GUIFactory.createRadioButtonMenuItem(
+				CharConverter.getEncodingDisplayText(
+					CharConverter.Encoding.ASCII ),
+				encoding == CharConverter.Encoding.ASCII );
+    grpCharset.add( this.mnuCharsetASCII );
+    mnuCharset.add( this.mnuCharsetASCII );
+
+    this.mnuCharsetISO646DE = GUIFactory.createRadioButtonMenuItem(
+				CharConverter.getEncodingDisplayText(
+					CharConverter.Encoding.ISO646DE ),
+				encoding == CharConverter.Encoding.ISO646DE );
+    grpCharset.add( this.mnuCharsetISO646DE );
+    mnuCharset.add( this.mnuCharsetISO646DE );
+
+    this.mnuCharsetCP437 = GUIFactory.createRadioButtonMenuItem(
+				CharConverter.getEncodingDisplayText(
+					CharConverter.Encoding.CP437 ),
+				(encoding == CharConverter.Encoding.CP437)
+					|| (encoding == null) );
+    grpCharset.add( this.mnuCharsetCP437 );
+    mnuCharset.add( this.mnuCharsetCP437 );
+
+    this.mnuCharsetCP850 = GUIFactory.createRadioButtonMenuItem(
+				CharConverter.getEncodingDisplayText(
+					CharConverter.Encoding.CP850 ),
+				encoding == CharConverter.Encoding.CP850 );
+    grpCharset.add( this.mnuCharsetCP850 );
+    mnuCharset.add( this.mnuCharsetCP850 );
+
+    this.mnuCharsetLATIN1 = GUIFactory.createRadioButtonMenuItem(
+				CharConverter.getEncodingDisplayText(
+					CharConverter.Encoding.LATIN1 ),
+				encoding == CharConverter.Encoding.LATIN1 );
+    grpCharset.add( this.mnuCharsetLATIN1 );
+    mnuCharset.add( this.mnuCharsetLATIN1 );
+
+
+    // Menu Hilfe
+    JMenu mnuHelp = createMenuHelp();
+
+    this.mnuHelpContent = createMenuItem(
+				"Hilfe zu Druckauftr\u00E4gen..." );
     mnuHelp.add( this.mnuHelpContent );
 
 
     // Menu zusammenbauen
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    mnuBar.add( mnuHelp );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile, mnuCharset, mnuHelp ) );
 
 
     // Popup-Menu
-    this.mnuPopup = new JPopupMenu();
+    this.popupMnu = GUIFactory.createPopupMenu();
 
-    this.mnuPopupFinish = createJMenuItem( "Abschlie\u00DFen" );
-    mnuPopup.add( this.mnuPopupFinish );
-    mnuPopup.addSeparator();
+    this.popupFinish = createMenuItem( this.mnuFileFinish.getText() );
+    popupMnu.add( this.popupFinish );
+    popupMnu.addSeparator();
 
-    this.mnuPopupPrint = createJMenuItem( "Drucken..." );
-    mnuPopup.add( this.mnuPopupPrint );
+    this.popupPrint = createMenuItemOpenPrint( false );
+    popupMnu.add( this.popupPrint );
 
-    this.mnuPopupOpenText = createJMenuItem( "Im Texteditor \u00F6ffnen..." );
-    mnuPopup.add( this.mnuPopupOpenText );
+    this.popupOpenText = createMenuItem(
+				this.mnuFileOpenText.getText() );
+    popupMnu.add( this.popupOpenText );
 
-    this.mnuPopupOpenHex = createJMenuItem( "Im Hex-Editor \u00F6ffnen..." );
-    mnuPopup.add( this.mnuPopupOpenHex );
+    this.popupOpenHex = createMenuItem(
+				this.mnuFileOpenHex.getText() );
+    popupMnu.add( this.popupOpenHex );
 
-    this.mnuPopupSave = createJMenuItem( "Speichern unter..." );
-    mnuPopup.add( this.mnuPopupSave );
-    mnuPopup.addSeparator();
+    this.popupSaveAs = createMenuItem( this.mnuFileSaveAs.getText() );
+    popupMnu.add( this.popupSaveAs );
+    popupMnu.addSeparator();
 
-    this.mnuPopupDelete = createJMenuItem( "L\u00F6schen" );
-    mnuPopup.add( this.mnuPopupDelete );
+    this.popupDelete = createMenuItem( EmuUtil.TEXT_DELETE );
+    popupMnu.add( this.popupDelete );
 
 
     // Fensterinhalt
@@ -439,31 +507,39 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
 
 
     // Werkzeugleiste
-    JToolBar toolBar = new JToolBar();
+    JToolBar toolBar = GUIFactory.createToolBar();
     toolBar.setFloatable( false );
     toolBar.setBorderPainted( false );
     toolBar.setOrientation( JToolBar.HORIZONTAL );
     toolBar.setRollover( true );
 
-    this.btnPrint = createImageButton(
-			"/images/file/print.png",
-			"Drucken..." );
+    this.btnPrint = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/print.png",
+					this.mnuFilePrint.getText() );
+    this.btnPrint.addActionListener( this );
     toolBar.add( this.btnPrint );
 
-    this.btnOpenText = createImageButton(
-			"/images/file/edit.png",
-			"Im Texteditor \u00F6ffnen" );
+    this.btnOpenText = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/edit.png",
+					this.mnuFileOpenText.getText() );
+    this.btnOpenText.addActionListener( this );
     toolBar.add( this.btnOpenText );
 
-    this.btnSave = createImageButton(
-			"/images/file/save_as.png",
-			"Speichern unter" );
-    toolBar.add( this.btnSave );
+    this.btnSaveAs = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/save_as.png",
+					this.mnuFileSaveAs.getText() );
+    this.btnSaveAs.addActionListener( this );
+    toolBar.add( this.btnSaveAs );
     toolBar.addSeparator();
 
-    this.btnDelete = createImageButton(
-			"/images/file/delete.png",
-			"L\u00F6schen" );
+    this.btnDelete = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/delete.png",
+					EmuUtil.TEXT_DELETE );
+    this.btnDelete.addActionListener( this );
     toolBar.add( this.btnDelete );
 
     add( toolBar, gbc );
@@ -477,7 +553,7 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
     gbc.gridwidth = 2;
     gbc.gridy++;
 
-    this.table = new JTable( this.printMngr );
+    this.table = GUIFactory.createTable( this.printMngr );
     this.table.setAutoResizeMode( JTable.AUTO_RESIZE_OFF );
     this.table.setColumnSelectionAllowed( false );
     this.table.setPreferredScrollableViewportSize( new Dimension( 340, 200 ) );
@@ -497,7 +573,7 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
       updActionButtons();
     }
 
-    this.scrollPane = new JScrollPane(
+    this.scrollPane = GUIFactory.createScrollPane(
 			this.table,
 			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
 			JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS );
@@ -507,11 +583,11 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
 
 
     // Fenstergroesse
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       pack();
       setScreenCentered();
     }
-    setResizable( true );
 
 
     // sonstiges
@@ -533,6 +609,29 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
 		    updActionButtons();
 		  }
 		} );
+  }
+
+
+  private CharConverter getSelectedCharConverter()
+  {
+    return CharConverter.getCharConverter(
+				getSelectedCharConverterEncoding() );
+  }
+
+
+  private CharConverter.Encoding getSelectedCharConverterEncoding()
+  {
+    CharConverter.Encoding encoding = CharConverter.Encoding.ASCII;
+    if( this.mnuCharsetISO646DE.isSelected() ) {
+      encoding = CharConverter.Encoding.ISO646DE;
+    } else if( this.mnuCharsetCP437.isSelected() ) {
+      encoding = CharConverter.Encoding.CP437;
+    } else if( this.mnuCharsetCP850.isSelected() ) {
+      encoding = CharConverter.Encoding.CP850;
+    } else if( this.mnuCharsetLATIN1.isSelected() ) {
+      encoding = CharConverter.Encoding.LATIN1;
+    }
+    return encoding;
   }
 
 
@@ -570,8 +669,9 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
     boolean status = false;
     if( data != null ) {
       PrintData activeData = this.printMngr.getActivePrintData();
-      if( (activeData != null) && (activeData == data) )
+      if( (activeData != null) && (activeData == data) ) {
 	status = true;
+      }
     }
     return status;
   }
@@ -593,7 +693,7 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
       }
     }
     this.mnuFileFinish.setEnabled( state );
-    this.mnuPopupFinish.setEnabled( state );
+    this.popupFinish.setEnabled( state );
   }
 
 
@@ -604,16 +704,16 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
     this.mnuFilePrint.setEnabled( state );
     this.mnuFileOpenText.setEnabled( state );
     this.mnuFileOpenHex.setEnabled( state );
-    this.mnuFileSave.setEnabled( state );
+    this.mnuFileSaveAs.setEnabled( state );
     this.mnuFileDelete.setEnabled( nRows > 0 );
-    this.mnuPopupPrint.setEnabled( state );
-    this.mnuPopupOpenText.setEnabled( state );
-    this.mnuPopupOpenHex.setEnabled( state );
-    this.mnuPopupSave.setEnabled( state );
-    this.mnuPopupDelete.setEnabled( nRows > 0 );
+    this.popupPrint.setEnabled( state );
+    this.popupOpenText.setEnabled( state );
+    this.popupOpenHex.setEnabled( state );
+    this.popupSaveAs.setEnabled( state );
+    this.popupDelete.setEnabled( nRows > 0 );
     this.btnPrint.setEnabled( state );
     this.btnOpenText.setEnabled( state );
-    this.btnSave.setEnabled( state );
+    this.btnSaveAs.setEnabled( state );
     this.btnDelete.setEnabled( nRows > 0 );
     updFinishButtons();
   }
@@ -623,7 +723,8 @@ public class PrintListFrm extends BaseFrm implements ListSelectionListener
   {
     Color     color = this.table.getBackground();
     JViewport vp    = this.scrollPane.getViewport();
-    if( (color != null) && (vp != null) )
+    if( (color != null) && (vp != null) ) {
       vp.setBackground( color );
+    }
   }
 }

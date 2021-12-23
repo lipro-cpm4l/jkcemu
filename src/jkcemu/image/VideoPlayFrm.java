@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,57 +13,65 @@ import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
-import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
 import jkcemu.Main;
 import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 
 
 public class VideoPlayFrm extends BaseFrm
 {
+  private File      file;
+  private Image     image;
   private JMenuItem mnuClose;
+  private JMenuItem mnuPlayAgain;
   private JLabel    labelPlayer;
 
 
   public VideoPlayFrm()
   {
+    this.file  = null;
+    this.image = null;
     setTitle( "JKCEMU Videoplayer" );
-    Main.updIcon( this );
 
 
     // Menu
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuClose = createJMenuItem( "Schlie\u00DFen" );
+    this.mnuPlayAgain = createMenuItem( "Video erneut wiedergeben" );
+    this.mnuPlayAgain.setEnabled( false );
+    mnuFile.add( this.mnuPlayAgain );
+    mnuFile.addSeparator();
+
+    this.mnuClose = createMenuItemClose();
     mnuFile.add( this.mnuClose );
 
-    JMenuBar mnuBar = new JMenuBar();
-    mnuBar.add( mnuFile );
-    setJMenuBar( mnuBar );
+    setJMenuBar( GUIFactory.createMenuBar( mnuFile ) );
 
 
     // Fensterinhalt
     setLayout( new BorderLayout( 5, 5 ) );
 
-    this.labelPlayer = new JLabel();
+    this.labelPlayer = GUIFactory.createLabel();
     this.labelPlayer.setHorizontalAlignment( JLabel.CENTER );
     this.labelPlayer.setVerticalAlignment( JLabel.CENTER );
-    add( new JScrollPane( this.labelPlayer ), BorderLayout.CENTER );
+    add(
+	GUIFactory.createScrollPane( this.labelPlayer ),
+	BorderLayout.CENTER );
 
 
     // sonstiges
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       setSize( 400, 300 );
       setScreenCentered();
     }
-    setResizable( true );
   }
 
 
@@ -71,21 +79,29 @@ public class VideoPlayFrm extends BaseFrm
   {
     boolean done = false;
     if( file != null ) {
-      try {
-	Toolkit tk = getToolkit();
-	if( tk != null ) {
-	  Image image = tk.createImage( file.getPath() );
-	  if( image != null ) {
-	    this.labelPlayer.setText( "" );
-	    this.labelPlayer.setIcon( new ImageIcon( image ) );
-	    done = true;
+      if( file.canRead() ) {
+	try {
+	  Toolkit tk = EmuUtil.getToolkit( this );
+	  if( tk != null ) {
+	    Image image = tk.createImage( file.getPath() );
+	    if( image != null ) {
+	      this.labelPlayer.setText( "" );
+	      this.labelPlayer.setIcon( new ImageIcon( image ) );
+	      this.file  = file;
+	      this.image = image;
+	      this.mnuPlayAgain.setEnabled( true);
+	      done = true;
+	    }
 	  }
 	}
+	catch( Exception ex ) {}
       }
-      catch( Exception ex ) {}
-    }
-    if( !done ) {
-      this.labelPlayer.setText( "Video kann nicht wiedergegeben werden." );
+      if( !done ) {
+	this.mnuPlayAgain.setEnabled( false );
+	this.labelPlayer.setIcon( null );
+	this.labelPlayer.setText(
+			"Video kann nicht wiedergegeben werden." );
+      }
     }
   }
 
@@ -95,14 +111,30 @@ public class VideoPlayFrm extends BaseFrm
   @Override
   protected boolean doAction( EventObject e )
   {
-    boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( src == this.mnuClose ) {
-	rv = true;
-	doClose();
+    boolean rv  = false;
+    Object  src = e.getSource();
+    if( src == this.mnuPlayAgain ) {
+      rv = true;
+      if( this.file != null ) {
+	setFile( file );
       }
     }
+    else if( src == this.mnuClose ) {
+      rv = true;
+      doClose();
+    }
     return rv;
+  }
+
+
+  @Override
+  public void setVisible( boolean state )
+  {
+    if( !state && (this.image != null) ) {
+      this.labelPlayer.setIcon( null );
+      this.image.flush();
+      this.image = null;
+    }
+    super.setVisible( state );
   }
 }

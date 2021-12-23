@@ -1,5 +1,5 @@
 /*
- * (c) 2009-2016 Jens Mueller
+ * (c) 2009-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,12 +9,13 @@
 package jkcemu.emusys.kc85;
 
 import java.awt.EventQueue;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Properties;
+import jkcemu.Main;
 import jkcemu.base.EmuUtil;
 import jkcemu.base.ErrorMsg;
 import jkcemu.base.ScreenFrm;
+import jkcemu.emusys.KC85;
 import jkcemu.disk.FDC8272;
 import jkcemu.disk.FloppyDiskDrive;
 import jkcemu.disk.GIDE;
@@ -32,48 +33,58 @@ public class D004ProcSys implements
 				Z80Memory,
 				Z80TStatesListener
 {
+  protected KC85   kc85;
+  protected String propPrefix;
+  protected byte[] ramBytes;
+  protected Z80CPU cpu;
+
+  private static final int DOWN     = 0;
+  private static final int START_UP = 1;
+  private static final int RUNNING  = 2;
+
+  private D004              d004;
   private ScreenFrm         screenFrm;
-  private String            propPrefix;
   private FloppyDiskDrive   curFDDrive;
   private FloppyDiskDrive[] fdDrives;
-  private byte[]            ram;
-  private byte[]            loadData;
-  private int               loadAddr;
-  private int               startAddr;
-  private int               ctcTStateCounter;
+  private int               ctcTStatesCounter;
+  private volatile int      gideTStatesCounter;
+  private int               gideTStatesInit;
   private volatile int      runLevel;
-  private Object            loadLock;
   private Object            runLock;
   private GIDE              gide;
   private FDC8272           fdc;
-  private Z80CPU            cpu;
   private Z80CTC            ctc;
 
 
   public D004ProcSys(
+		D004       d004,
 		ScreenFrm  screenFrm,
 		Properties props,
 		String     propPrefix )
   {
-    this.screenFrm        = screenFrm;
-    this.propPrefix       = propPrefix;
-    this.ctcTStateCounter = 0;
-    this.runLevel         = 0;
-    this.startAddr        = -1;
-    this.loadAddr         = -1;
-    this.loadData         = null;
-    this.curFDDrive       = null;
-    this.fdDrives         = new FloppyDiskDrive[ 4 ];
-    this.ram              = new byte[ 0x10000 ];
-    clearRAM();
+    this.d004               = d004;
+    this.kc85               = d004.getKC85();
+    this.screenFrm          = screenFrm;
+    this.propPrefix         = propPrefix;
+    this.ctcTStatesCounter  = 0;
+    this.gideTStatesCounter = 0;
+    this.gideTStatesInit    = 0;
+    this.runLevel           = DOWN;
+    this.runLock            = new Object();
+    this.curFDDrive         = null;
+    this.fdDrives           = new FloppyDiskDrive[ 4 ];
+    this.ramBytes           = new byte[ 0x10000 ];
+    clearRAM( props );
     Arrays.fill( this.fdDrives, null );
 
-    this.loadLock = new Object();
-    this.runLock  = new Object();
-    this.gide     = GIDE.getGIDE( this.screenFrm, props, propPrefix );
-    this.fdc      = new FDC8272( this, 4 );
-    this.cpu      = new Z80CPU( this, this );
-    this.ctc      = new Z80CTC( "CTC (FCh-FFh)" );
+    if( alwaysEmulatesGIDE() ) {
+      this.gide = GIDE.createGIDE( screenFrm, props, propPrefix );
+    } else {
+      this.gide = GIDE.getGIDE( screenFrm, props, propPrefix );
+    }
+    this.fdc = new FDC8272( this, 4 );
+    this.cpu = new Z80CPU( this, this );
+    this.ctc = new Z80CTC( "CTC (FCh-FFh)" );
     this.ctc.setTimerConnection( 0, 1 );
     this.ctc.setTimerConnection( 1, 2 );
     this.ctc.setTimerConnection( 2, 3 );
@@ -82,29 +93,44 @@ public class D004ProcSys implements
     this.cpu.addMaxSpeedListener( this.fdc );
     this.cpu.addTStatesListener( this );
     this.fdc.setTStatesPerMilli( this.cpu.getMaxSpeedKHz() );
+    maxSpeedChanged();
+  }
+
+
+  protected boolean alwaysEmulatesGIDE()
+  {
+    return false;
   }
 
 
   public void applySettings( Properties props )
   {
-    this.cpu.setMaxSpeedKHz(
-		EmuUtil.getIntProperty(
-				props,
-				this.propPrefix + "d004.maxspeed.khz",
-				4000 ) );
-    this.fdc.setTStatesPerMilli( this.cpu.getMaxSpeedKHz() );
+    setMaxSpeedKHz(
+	EmuUtil.getIntProperty(
+		props,
+		this.propPrefix + KC85.PROP_DISKSTATION_MAXSPEED_KHZ,
+		4000 ) );
   }
 
 
   public boolean canApplySettings( Properties props )
   {
-    return GIDE.complies( this.gide, props, this.propPrefix );
+    return GIDE.complies(
+			this.gide,
+			props,
+			this.propPrefix,
+			alwaysEmulatesGIDE() );
   }
 
 
-  public void clearRAM()
+  public void clearRAM( Properties props )
   {
-    Arrays.fill( this.ram, (byte) 0 );
+    EmuUtil.initDRAM( this.ramBytes );
+    if( EmuUtil.isSRAMInit00( props ) ) {
+      Arrays.fill( this.ramBytes, 0xFC00, 0x10000, (byte) 0x00 );
+    } else {
+      EmuUtil.fillRandom( this.ramBytes, 0xFC00 );
+    }
   }
 
 
@@ -133,7 +159,7 @@ public class D004ProcSys implements
 
   public void fireStop()
   {
-    this.runLevel = 0;
+    this.runLevel = DOWN;
     this.cpu.fireExit();
   }
 
@@ -150,20 +176,43 @@ public class D004ProcSys implements
   }
 
 
-  public void loadIntoRAM( byte[] loadData, int loadAddr, int startAddr )
+  public boolean isLEDofGIDEon()
   {
-    if( loadData != null ) {
-      if( (this.runLevel > 0) && (startAddr >= 0) ) {
-	synchronized( this.loadLock ) {
-	  this.loadData  = loadData;
-	  this.loadAddr  = loadAddr;
-	  this.startAddr = startAddr;
-	  this.cpu.fireExit();
-	}
-      } else {
-	loadIntoRAM( loadData, loadAddr );
+    return (this.gideTStatesCounter > 0);
+  }
+
+
+  public void loadIntoRAM(
+			byte[] dataBytes,
+			int    dataOffs,
+			int    addr )
+  {
+    if( (dataBytes != null) && (addr >= 0) ) {
+      while( (dataOffs < dataBytes.length)
+	     && (addr < this.ramBytes.length) )
+      {
+	this.ramBytes[ addr++ ] = dataBytes[ dataOffs++ ];
       }
     }
+  }
+
+
+  protected void maxSpeedChanged()
+  {
+    // LED-Nachleuchtzeit 100 ms
+    this.gideTStatesInit = this.cpu.getMaxSpeedKHz() * 100;
+  }
+
+
+  protected void reset()
+  {
+    this.curFDDrive = null;
+    this.fdc.reset( false );
+    if( this.gide != null ) {
+      this.gide.reset();
+    }
+    this.ctc.reset( false );
+    this.cpu.reset( false );
   }
 
 
@@ -171,6 +220,14 @@ public class D004ProcSys implements
   {
     if( (idx >= 0) && (idx < this.fdDrives.length) )
       this.fdDrives[ idx ] = drive;
+  }
+
+
+  protected void setMaxSpeedKHz( int maxSpeedKHz )
+  {
+    this.cpu.setMaxSpeedKHz( maxSpeedKHz );
+    this.fdc.setTStatesPerMilli( this.cpu.getMaxSpeedKHz() );
+    maxSpeedChanged();
   }
 
 
@@ -188,7 +245,7 @@ public class D004ProcSys implements
   @Override
   public void run()
   {
-    this.runLevel = 1;
+    this.runLevel = START_UP;
     /*
      * Sicherstellen, dass nicht zwei Threads gleichzeitig laufen;
      * Es koennte sein, dass durch Aenderung der Einstellungen
@@ -198,40 +255,24 @@ public class D004ProcSys implements
      * weil z.B. eine IO-Operation des FDC haengt.
      */
     synchronized( this.runLock ) {
-      boolean powerOn = true;
-      while( this.runLevel > 0 ) {
-	try {
-	  byte[] loadData  = null;
-	  int    loadAddr  = -1;
-	  int    startAddr = -1;
-	  synchronized( this.loadLock ) {
-	    loadData       = this.loadData;
-	    loadAddr       = this.loadAddr;
-	    startAddr      = this.startAddr;
-	    this.loadData  = null;
-	    this.loadAddr  = -1;
-	    this.startAddr = -1;
-	  }
-	  if( (loadData != null) && (loadAddr >= 0) ) {
-	    loadIntoRAM( loadData, loadAddr );
-	    if( startAddr >= 0 ) {
-	      this.cpu.setRegPC( startAddr );
-	    }
-	  } else {
-	    this.curFDDrive = null;
-	    this.fdc.reset( powerOn );
-	    if( this.gide != null ) {
-	      this.gide.reset();
-	    }
-	    this.cpu.resetCPU( powerOn );
-	  }
+      try {
+	boolean powerOn = true;
+	while( this.runLevel > DOWN ) {
+	  reset();
 	  this.cpu.run();
-	}
-	catch( Exception ex ) {
-	  EventQueue.invokeLater( new ErrorMsg( this.screenFrm, ex ) );
+	  powerOn = false;
 	}
       }
-      powerOn = false;
+      catch( Exception ex ) {
+	ErrorMsg.showLater(
+		this.screenFrm,
+		this.d004.getModuleName() + " aufgrund eines Fehlers"
+			+ " in Dauer-RESET gegangen",
+		ex );
+      }
+      finally {
+	this.runLevel = DOWN;
+      }
     }
   }
 
@@ -243,6 +284,7 @@ public class D004ProcSys implements
   {
     int rv = 0xFF;
     if( ((port & 0xF0) == 0) && (this.gide != null) ) {
+      setLEDofGIDEon();
       int value = this.gide.read( port );
       if( value >= 0 ) {
 	rv = value;
@@ -304,6 +346,7 @@ public class D004ProcSys implements
   public void writeIOByte( int port, int value, int tStates )
   {
     if( ((port & 0xF0) == 0) && (this.gide != null) ) {
+      setLEDofGIDEon();
       this.gide.write( port, value );
     } else {
       switch( port & 0xFF ) {
@@ -329,6 +372,7 @@ public class D004ProcSys implements
 	      mask <<= 1;
 	    }
 	    this.curFDDrive = fdd;
+	    this.fdc.setHDMode( (value & 0x40) != 0 );
 	  }
 	  break;
 
@@ -354,8 +398,8 @@ public class D004ProcSys implements
   public int getMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
-    return (addr >= 0) && (addr < this.ram.length) ?
-			(int) this.ram[ addr ] & 0xFF
+    return (addr >= 0) && (addr < this.ramBytes.length) ?
+			(int) this.ramBytes[ addr ] & 0xFF
 			: 0;
   }
 
@@ -371,21 +415,14 @@ public class D004ProcSys implements
   public int readMemByte( int addr, boolean m1 )
   {
     addr &= 0xFFFF;
-    int rv = 0;
-    if( (this.runLevel > 0) && (addr >= 0) && (addr < this.ram.length) ) {
-      if( this.runLevel == 1 ) {
-	if( addr >= 0xFC00 ) {
-	  this.runLevel = 2;
-	} else {
-	  setMemByte( addr, 0 );
-	  this.ram[ addr ] = (byte) rv;
-	}
-      }
-      if( runLevel > 1 ) {
-	rv = getMemByte( addr, m1 );
+    if( this.runLevel == START_UP ) {
+      if( addr < 0xFC00 ) {
+	this.ramBytes[ addr ] = (byte) 0;
+      } else {
+	this.runLevel = RUNNING;
       }
     }
-    return rv;
+    return getMemByte( addr, m1 );
   }
 
 
@@ -395,8 +432,8 @@ public class D004ProcSys implements
     addr &= 0xFFFF;
 
     boolean rv = false;
-    if( (addr >= 0) && (addr < this.ram.length) ) {
-      this.ram[ addr ] = (byte) value;
+    if( (addr >= 0) && (addr < this.ramBytes.length) ) {
+      this.ramBytes[ addr ] = (byte) value;
       rv          = true;
     }
     return rv;
@@ -415,10 +452,16 @@ public class D004ProcSys implements
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
-    this.ctcTStateCounter += tStates;
-    while( this.ctcTStateCounter >= 8 ) {
+    this.ctcTStatesCounter += tStates;
+    while( this.ctcTStatesCounter >= 8 ) {
       ctc.externalUpdate( 0, 1 );
-      this.ctcTStateCounter -= 8;
+      this.ctcTStatesCounter -= 8;
+    }
+    if( this.gideTStatesCounter > 0 ) {
+      this.gideTStatesCounter -= tStates;
+      if( this.gideTStatesCounter <= 0 ) {
+	this.kc85.setFrontFldDirty();
+      }
     }
     this.ctc.z80TStatesProcessed( cpu, tStates );
     this.fdc.z80TStatesProcessed( cpu, tStates );
@@ -427,14 +470,12 @@ public class D004ProcSys implements
 
 	/* --- private Methoden --- */
 
-  private void loadIntoRAM( byte[] dataBytes, int addr )
+  private void setLEDofGIDEon()
   {
-    if( (dataBytes != null) && (addr >= 0) ) {
-      int pos = 0;
-      while( (pos < dataBytes.length) && (addr < this.ram.length) ) {
-	this.ram[ addr++ ] = dataBytes[ pos++ ];
-      }
+    int tStates             = this.gideTStatesCounter;
+    this.gideTStatesCounter = this.gideTStatesInit;
+    if( (tStates <= 0) && (this.gideTStatesCounter > 0) ) {
+      this.kc85.setFrontFldDirty();
     }
   }
 }
-

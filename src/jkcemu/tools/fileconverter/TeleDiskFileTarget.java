@@ -10,10 +10,9 @@ package jkcemu.tools.fileconverter;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
-import jkcemu.base.EmuUtil;
 import jkcemu.disk.AbstractFloppyDisk;
 import jkcemu.disk.TeleDisk;
+import jkcemu.file.FileUtil;
 
 
 public class TeleDiskFileTarget extends AbstractConvertTarget
@@ -42,14 +41,14 @@ public class TeleDiskFileTarget extends AbstractConvertTarget
   @Override
   public javax.swing.filechooser.FileFilter getFileFilter()
   {
-    return EmuUtil.getTeleDiskFileFilter();
+    return FileUtil.getTeleDiskFileFilter();
   }
 
 
   @Override
   public File getSuggestedOutFile( File srcFile )
   {
-    return replaceExtension( srcFile, ".td0" );
+    return FileUtil.replaceExtension( srcFile, ".td0" );
   }
 
 

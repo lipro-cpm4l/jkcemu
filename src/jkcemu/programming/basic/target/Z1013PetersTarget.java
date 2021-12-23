@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2015 Jens Mueller
+ * (c) 2013-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 
 package jkcemu.programming.basic.target;
 
-import java.lang.*;
 import jkcemu.programming.basic.AsmCodeBuf;
 import jkcemu.programming.basic.BasicCompiler;
 import jkcemu.programming.basic.BasicLibrary;
@@ -51,7 +50,7 @@ public class Z1013PetersTarget extends Z1013Target
     if( this.usesScreens ) {
       buf.append( "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,X_PST1\n" );
+		+ "\tJR\tZ,X_PINFO_1\n" );
       appendExitNoGraphicsScreenTo( buf, compiler );
     }
   }
@@ -169,6 +168,60 @@ public class Z1013PetersTarget extends Z1013Target
 
 
   /*
+   * Abfrage der Zeile der aktuellen Cursor-Position
+   */
+  @Override
+  public void appendXCrsLinTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCRSLIN:\n"
+		+ "\tCALL\tX_GET_CRS_POS\n"
+		+ "\tRET\tC\n"
+    /*
+     * M_SCREEN=0: B=3
+     * M_SCREEN=1: B=2
+     */
+		+ "\tLD\tA,(X_M_SCREEN)\n"
+		+ "\tSUB\t03H\n"
+		+ "\tNEG\n"
+		+ "\tLD\tB,A\n"
+		+ "\tLD\tA,H\n"
+		+ "\tAND\t03H\n"
+		+ "X_CRSLIN_1:\n"
+		+ "\tSLA\tL\n"
+		+ "\tRLA\n"
+		+ "\tDJNZ\tX_CRSLIN_1\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n" );
+    appendXGetCrsPosTo( buf );
+  }
+
+
+  /*
+   * Abfrage der Spalte der aktuellen Cursor-Position
+   */
+  @Override
+  public void appendXCrsPosTo( AsmCodeBuf buf )
+  {
+    buf.append( "XCRSPOS:\n"
+		+ "\tCALL\tX_GET_CRS_POS\n"
+		+ "\tRET\tC\n"
+		+ "\tLD\tC,3FH\n"
+		+ "\tLD\tA,(X_M_SCREEN)\n"
+		+ "\tDEC\tA\n"
+		+ "\tJR\tZ,X_CRSPOS_1\n"
+		+ "\tLD\tC,1FH\n"
+		+ "X_CRSPOS_1:\n"
+		+ "\tLD\tA,L\n"
+		+ "\tAND\tB\n"
+		+ "\tLD\tL,A\n"
+		+ "\tLD\tH,00H\n"
+		+ "\tRET\n" );
+    appendXGetCrsPosTo( buf );
+  }
+
+
+  /*
    * Setzen der Cursor-Position auf dem Bildschirm
    * Parameter:
    *   DE: Zeile, >= 0
@@ -181,24 +234,24 @@ public class Z1013PetersTarget extends Z1013Target
       buf.append( "XLOCATE:\n"
 		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XLOCATE1\n"
+		+ "\tJR\tZ,X_LOCATE_1\n"
 		+ "\tLD\tA,1FH\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\tC\n"
 		+ "\tCP\tL\n"
 		+ "\tRET\tC\n"
-		+ "\tCALL\tXLOCATE3\n"
-		+ "\tJR\tXLOCATE2\n"
-		+ "XLOCATE1:\n"
+		+ "\tCALL\tX_LOCATE_3\n"
+		+ "\tJR\tX_LOCATE_2\n"
+		+ "X_LOCATE_1:\n"
 		+ "\tLD\tA,0FH\n"
 		+ "\tCP\tE\n"
 		+ "\tRET\tC\n"
 		+ "\tLD\tA,3FH\n"
 		+ "\tCP\tL\n"
 		+ "\tRET\tC\n"
-		+ "\tCALL\tXLOCATE3\n"
+		+ "\tCALL\tX_LOCATE_3\n"
 		+ "\tADD\tHL,HL\n"
-		+ "XLOCATE2:\n"
+		+ "X_LOCATE_2:\n"
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"
 		+ "\tADD\tHL,HL\n"
@@ -211,7 +264,7 @@ public class Z1013PetersTarget extends Z1013Target
 		+ "\tLD\t(HL),0FFH\n"
 		+ "\tLD\t(002BH),HL\n"
 		+ "\tRET\n"
-		+ "XLOCATE3:\n"
+		+ "X_LOCATE_3:\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tLD\tHL,(002BH)\n"
 		+ "\tLD\tA,(001FH)\n"
@@ -229,68 +282,76 @@ public class Z1013PetersTarget extends Z1013Target
   public void appendXOutchTo( AsmCodeBuf buf )
   {
     if( this.usesScreens ) {
-      if( !this.xoutchAppended ) {
+      if( !this.xOutchAppended ) {
 	buf.append( "XOUTCH:\tCP\t0AH\n"
 		+ "\tRET\tZ\n"
 		+ "\tLD\tD,A\n"
 		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tDEC\tA\n"
-		+ "\tJR\tZ,XOUTC1\n"
+		+ "\tJR\tZ,X_OUTCH_1\n"
 		+ "\tLD\tA,D\n"
 		+ "\tRST\t20H\n"
 		+ "\tDB\t00H\n"
 		+ "\tRET\n"
 	// Bildschirmroutine fuer 64x16-Modus
-		+ "XOUTC1:\tLD\tA,(001FH)\n"
+		+ "X_OUTCH_1:\n"
+		+ "\tLD\tA,(001FH)\n"
 		+ "\tLD\tHL,(002BH)\n"
 		+ "\tLD\t(HL),A\n"
 		+ "\tLD\tA,D\n"
 		+ "\tCP\t08H\n"
-		+ "\tJR\tZ,XOUTC7\n"
+		+ "\tJR\tZ,X_OUTCH_7\n"
 		+ "\tCP\t09H\n"
-		+ "\tJR\tZ,XOUTC2\n"
+		+ "\tJR\tZ,X_OUTCH_2\n"
 		+ "\tCP\t0CH\n"
-		+ "\tJP\tZ,XOUTC8\n"
+		+ "\tJP\tZ,X_OUTCH_8\n"
 		+ "\tCP\t0DH\n"
-		+ "\tJR\tZ,XOUTC9\n"
+		+ "\tJR\tZ,X_OUTCH_9\n"
 		+ "\tLD\t(HL),D\n"
 	// Cursor eins weiter
-		+ "XOUTC2:\tINC\tHL\n"
+		+ "X_OUTCH_2:\n"
+		+ "\tINC\tHL\n"
 	// ggf. scrollen
-		+ "XOUTC3:\tLD\tA,H\n"
+		+ "X_OUTCH_3:\n"
+		+ "\tLD\tA,H\n"
 		+ "\tCP\t0F0H\n"
-		+ "\tCALL\tNC,XOUTC5\n"
+		+ "\tCALL\tNC,X_OUTCH_5\n"
 	// Cursor setzen
-		+ "XOUTC4:\tLD\tA,(HL)\n"
+		+ "X_OUTCH_4:\n"
+		+ "\tLD\tA,(HL)\n"
 		+ "\tLD\t(001FH),A\n"
 		+ "\tLD\t(HL),0FFH\n"
 		+ "\tLD\t(002BH),HL\n"
 		+ "\tRET\n"
 	// Bildschirm scrollen
-		+ "XOUTC5:\tPUSH\tHL\n"
+		+ "X_OUTCH_5:\n"
+		+ "\tPUSH\tHL\n"
 		+ "\tLD\tHL,0EC40H\n"
 		+ "\tLD\tDE,0EC00H\n"
 		+ "\tLD\tBC,03C0H\n"
 		+ "\tLDIR\n"
 		+ "\tLD\tA,20H\n"
 		+ "\tLD\tB,40H\n"
-		+ "XOUTC6:\tLD\t(DE),A\n"
+		+ "X_OUTCH_6:\n"
+		+ "\tLD\t(DE),A\n"
 		+ "\tINC\tDE\n"
-		+ "\tDJNZ\tXOUTC6\n"
+		+ "\tDJNZ\tX_OUTCH_6\n"
 		+ "\tPOP\tHL\n"
 		+ "\tLD\tBC,0040H\n"
 		+ "\tOR\tA\n"
 		+ "\tSBC\tHL,BC\n"
 		+ "\tRET\n"
 	// Cursor links
-		+ "XOUTC7:\tDEC\tHL\n"
+		+ "X_OUTCH_7:\n"
+		+ "\tDEC\tHL\n"
 		+ "\tLD\tA,H\n"
 		+ "\tCP\t0ECH\n"
-		+ "\tJR\tNC,XOUTC4\n"
+		+ "\tJR\tNC,X_OUTCH_4\n"
 		+ "\tLD\tHL,0EFFFH\n"
-		+ "\tJR\tXOUTC4\n"
+		+ "\tJR\tX_OUTCH_4\n"
 	// Bildschirm loeschen
-		+ "XOUTC8:\tLD\tHL,0EC00H\n"
+		+ "X_OUTCH_8:\n"
+		+ "\tLD\tHL,0EC00H\n"
 		+ "\tPUSH\tHL\n"
 		+ "\tLD\tA,20H\n"
 		+ "\tLD\t(HL),A\n"
@@ -298,17 +359,18 @@ public class Z1013PetersTarget extends Z1013Target
 		+ "\tLD\tBC,03FFH\n"
 		+ "\tLDIR\n"
 		+ "\tPOP\tHL\n"
-		+ "\tJR\tXOUTC4\n"
+		+ "\tJR\tX_OUTCH_4\n"
 	// Cursor auf neue Zeile
-		+ "XOUTC9:\tLD\tB,20H\n"
-		+ "XOUTC10:\n"
+		+ "X_OUTCH_9:\n"
+		+ "\tLD\tB,20H\n"
+		+ "X_OUTCH_10:\n"
 		+ "\tLD\t(HL),B\n"
 		+ "\tINC\tHL\n"
 		+ "\tLD\tA,L\n"
 		+ "\tAND\t03FH\n"
-		+ "\tJR\tNZ,XOUTC10\n"
-		+ "\tJR\tXOUTC3\n" );
-	this.xoutchAppended = true;
+		+ "\tJR\tNZ,X_OUTCH_10\n"
+		+ "\tJR\tX_OUTCH_3\n" );
+	this.xOutchAppended = true;
       }
     } else {
       super.appendXOutchTo( buf );
@@ -336,15 +398,15 @@ public class Z1013PetersTarget extends Z1013Target
 		+ "\tOR\tA\n"
 		+ "\tSCF\n"
 		+ "\tRET\tZ\n"
-		+ "\tCALL\tX_PST1\n"
-		+ "\tJR\tC,X_PTEST1\n"
+		+ "\tCALL\tX_PINFO_1\n"
+		+ "\tJR\tC,X_PTEST_1\n"
 		+ "\tLD\tA,B\n"
 		+ "\tAND\tC\n"
 		+ "\tLD\tHL,0000H\n"
 		+ "\tRET\tZ\n"
 		+ "\tINC\tHL\n"
 		+ "\tRET\n"
-		+ "X_PTEST1:\n"
+		+ "X_PTEST_1:\n"
 		+ "\tLD\tHL,0FFFFH\n"
 		+ "\tRET\n" );
 	appendPixUtilTo( buf, compiler );
@@ -371,7 +433,7 @@ public class Z1013PetersTarget extends Z1013Target
       buf.append( "XSCREEN:\n"
 		+ "\tLD\tA,H\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tNZ,XSCRN1\n"
+		+ "\tJR\tNZ,X_SCREEN_1\n"
 		+ "\tLD\tA,(X_M_SCREEN)\n"
 		+ "\tCP\tL\n"
 		+ "\tRET\tZ\n"
@@ -379,15 +441,19 @@ public class Z1013PetersTarget extends Z1013Target
 		+ "\tIN\tB,(C)\n"
 		+ "\tLD\tA,L\n"
 		+ "\tOR\tA\n"
-		+ "\tJR\tZ,XSCRN2\n"
+		+ "\tJR\tZ,X_SCREEN_2\n"
 		+ "\tCP\t01H\n"
-		+ "\tJR\tZ,XSCRN3\n"
-		+ "XSCRN1:\tSCF\n"
+		+ "\tJR\tZ,X_SCREEN_3\n"
+		+ "X_SCREEN_1:\n"
+		+ "\tSCF\n"
 		+ "\tRET\n"
-		+ "XSCRN2:\tRES\t7,B\n"		// SCREEN 0
-		+ "\tJR\tXSCRN4\n"
-		+ "XSCRN3:\tSET\t7,B\n"		// SCREEN 1
-		+ "XSCRN4:\tOUT\t(C),B\n"
+		+ "X_SCREEN_2:\n"
+		+ "\tRES\t7,B\n"		// SCREEN 0
+		+ "\tJR\tX_SCREEN_4\n"
+		+ "X_SCREEN_3:\n"
+		+ "\tSET\t7,B\n"		// SCREEN 1
+		+ "X_SCREEN_4:\n"
+		+ "\tOUT\t(C),B\n"
 		+ "\tLD\t(X_M_SCREEN),A\n"
 		+ "\tOR\tA\n"			// CY=0
 		+ "\tRET\n" );

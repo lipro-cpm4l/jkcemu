@@ -1,4 +1,5 @@
 <html>
+<head><title>BASIC-Compiler: Anweisungen</title></head>
 <body>
  <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
 
@@ -75,7 +76,9 @@
   &nbsp;<a href="instructions.htm#restore"><tt>RESTORE</tt></a>
   &nbsp;<a href="instructions.htm#return"><tt>RETURN</tt></a>
   &nbsp;<a href="instructions.htm#screen"><tt>SCREEN</tt></a>
+  &nbsp;<a href="instructions.htm#select_case"><tt>SELECT&nbsp;CASE</tt></a>
   &nbsp;<a href="instructions.htm#sub"><tt>SUB</tt></a>
+  &nbsp;<a href="instructions.htm#swap"><tt>SWAP</tt></a>
   &nbsp;<a href="instructions.htm#wait"><tt>WAIT</tt></a>
   &nbsp;<a href="instructions.htm#wend"><tt>WEND</tt></a>
   &nbsp;<a href="instructions.htm#while"><tt>WHILE</tt></a>
@@ -124,7 +127,7 @@
    <tr valign="top">
     <td><a href="instructions.htm#data"><tt>DATA</tt></a></td>
     <td>
-     Angabe von numerischen Werten,
+     Angabe von numerischen Werten und Zeichenketten,
      die mit READ gelesen werden k&ouml;nnen
     </td>
    </tr>
@@ -142,7 +145,7 @@
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#dim"><tt>DIM</tt></a></td>
-    <td>Feldvariable anlegen</td>
+    <td>Globale Variablen deklarieren</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#do"><tt>DO</tt></a></td>
@@ -348,8 +351,18 @@
     <td>Einstellen eines Bildschirm- bzw. Grafikmodus</td>
    </tr>
    <tr valign="top">
+    <td>
+     <a href="instructions.htm#select_case"><tt>SELECT&nbsp;CASE</tt></a>
+    </td>
+    <td>Bedingte Verzweigungen</td>
+   </tr>
+   <tr valign="top">
     <td><a href="instructions.htm#sub"><tt>SUB</tt></a></td>
     <td>Implementierung einer benutzerdefinierten Prozedur</td>
+   </tr>
+   <tr valign="top">
+    <td><a href="instructions.htm#swap"><tt>SWAP</tt></a></td>
+    <td>Tauschen der Werte zweier Variablen</td>
    </tr>
    <tr valign="top">
     <td><a href="instructions.htm#wait"><tt>WAIT</tt></a></td>
@@ -394,8 +407,7 @@
   Mit der ASM-Anweisung kann man im BASIC-Programm
   eigene Assemblerroutinen schreiben.
   Dabei werden die angegebenen Zeichenketten unver&auml;ndert
-  in Form von jeweils einer Zeile in den vom Compiler erzeugten
-  Assemblerquelltext eingef&uuml;gt.
+  in den vom Compiler erzeugten Assemblerquelltext eingef&uuml;gt.
  <br/><br/>
   Die erste Version mit dem Schl&uuml;sselwort CODE
   f&uuml;gt den Assemblertext an der aktuellen Stelle im Code-Segment ein.
@@ -412,28 +424,15 @@
   Neben der ASM-Anweisung gibt es auch die
   <a href="functions.htm#asm">ASM</a>-Funktion.
  <br/><br/>
-  <b>Achtung!</b> Der BASIC-Compiler enth&auml;lt einen Global-Optimizer,
-  der den erzeugten Assembler-Code durchgeht und unn&ouml;tige Befehle
-  entfernt.
-  Dabei kann auch der mit ASM-Anweisungen erzeugte Assembler-Code
-  ver&auml;ndert werden.
-  Der Global-Optimizer fasst aber nur solche Assembler-Zeilen an,
-  bei denen die Befehls-Mnemonik durch einen Tabulator vom Zeilenanfang
-  bzw. der Marke getrennt ist.
-  Wenn sie also sichergehen wollen, dass der Optimizer Ihren
-  Assembler-Code nicht ver&auml;ndert,
-  dann verwenden Sie keine Tabulatoren in den ASM-Anweisungen.
- <br/><br/>
-  <b>Achtung!</b> Die ASM-Anweisung greift direkt
-  in die Programmcodeerzeugung ein und ist deshalb nur
-  f&uuml;r Experten gedacht, die genau wissen, was sie tun!
+  <b>Achtung!</b> Lesen Sie bitte die Hinweise zum
+  <a href="userasm.htm">Einbinden von eigenem Assembler-Quellcode</a>!
  <br/><br/>
 
  <h3><a name="border">BORDER</a></h3>
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
-    <td nowrap="nowrap">BORDER&nbsp;&lt;numerischer Ausdruck&gt;</td>
+    <td nowrap="nowrap">BORDER&nbsp;&lt;Integer-Ausdruck&gt;</td>
    </tr>
   </table>
  <br/>
@@ -457,7 +456,7 @@
      <tt>CALL</tt> <tt>*</tt> &lt;Hex-Adresse&gt;
     </td>
    </tr>
-   <tr><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+   <tr><td>Adresse:</td><td>Integer-Ausdruck</td></tr>
    <tr><td>Hex-Adresse:</td><td>Adresse als Hexadezimalzahl</td></tr>
   </table>
  <br/>
@@ -481,15 +480,15 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Radius:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -508,7 +507,7 @@
    </tr>
    <tr valign="top">
     <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+    <td>Integer-Ausdruck mit dem Wert 1 oder 2</td>
    </tr>
   </table>
  <br/>
@@ -542,15 +541,15 @@
    </tr>
    <tr valign="top">
     <td>Vordergrunddarbe:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Hintergrundfarbe:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Randfarbe:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -567,7 +566,7 @@
    <tr valign="top">
     <td>Syntax:</td>
     <td nowrap="nowrap">
-     <tt>CURSOR</tt> &lt;numerischer Ausdruck&gt;
+     <tt>CURSOR</tt> &lt;Integer-Ausdruck&gt;
     </td>
    </tr>
   </table>
@@ -640,7 +639,7 @@
   (Anweisungen <a href="instructions.htm#function">FUNCTION</a>
   und <a href="instructions.htm#sub">SUB</a>) aufgerufen werden kann.
   Lesen Sie bitte auch die Erl&auml;uterungen zu den
-  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>.
+  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>!
  <br/><br/>
 
  <h3>
@@ -659,7 +658,7 @@
     </td>
    </tr>
    <tr valign="top"><td>Funktionsnummer:</td><td>0...9</td></tr>
-   <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Adresse:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
   Die Anweisung legt die Adresse f&uuml;r eine der zehn m&ouml;glichen
@@ -689,41 +688,74 @@
    <tr valign="top">
     <td>Syntax:</td>
     <td nowrap="nowrap">
+     <tt>DIM</tt> &lt;Name&gt [, ... ]<br/>
+     <tt>DIM</tt> &lt;Name&gt <tt>AS</tt> &lt;Typ&gt; [, ... ]<br/>
      <tt>DIM</tt> &lt;Name&gt; <tt>(</tt> &lt;Dimension&gt; <tt>)</tt>
 	[, ... ]<br/>
      <tt>DIM</tt> &lt;Name&gt; <tt>(</tt> &lt;Dimension&gt;
-	<tt>,</tt> &lt;Dimension&gt; <tt>)</tt> [, ... ]
+	<tt>) AS</tt> &lt;Typ&gt; [, ... ]<br/>
+     <tt>DIM</tt> &lt;Name&gt; <tt>(</tt> &lt;Dimension&gt;
+	<tt>,</tt> &lt;Dimension&gt; <tt>)</tt> [, ... ]<br/>
+     <tt>DIM</tt> &lt;Name&gt; <tt>(</tt> &lt;Dimension&gt;
+	<tt>,</tt> &lt;Dimension&gt;
+	<tt>) AS</tt> &lt;Typ&gt; [, ... ]
     </td>
    </tr>
    <tr valign="top"><td>Name:</td>
-    <td>Name der zu deklarierenden Feldvariable</td>
+    <td>Name der zu deklarierenden Variable</td>
+   </tr>
+   <tr valign="top"><td>Typ:</td>
+    <td>
+     <tt>DECIMAL</tt>, <tt>INTEGER</tt>,
+     <tt>LONG</tt> oder <tt>STRING</tt>
+    </td>
    </tr>
    <tr valign="top">
-    <td>Dimension:</td><td>Zahlen-Literal</td>
+    <td>Dimension:</td><td>Integer-Literal</td>
    </tr>
   </table>
  <br/>
-  Die Anweisung deklariert ein- und zweidimensionale Felder.
-  Felder mit mehr als zwei Dimensionen werden nicht unterst&uuml;tzt.
-  In den Klammern hinter dem Variablennamen sind die einzelnen
-  Dimensionen mit konstanten Werten anzugeben.
-  Variable Dimensionsangeben sind nicht m&ouml;glich.
+  Die Anweisung deklariert Variablen, die im gesamten BASIC-Programm
+  (Hauptprogramm und benutzerdefinierte Prozeduren/Funktionen)
+  verwendet werden k&ouml;nnen und somit eine globale Sichtbarkeit haben.
+  Die Variablen k&ouml;nnen sowohl einfache Variablen
+  als auch ein- oder zweidimensionale Felder sein.
+  Feldvariablen mit mehr als zwei Dimensionen werden nicht unterst&uuml;tzt.
+  Bei Feldern sind die einzelnen Dimensionen in Klammern
+  hinter dem Variablennamen anzugeben.
+  Jede Dimensionsangabe muss einen konkreten Wert haben.
+  Variable Dimensionsangaben sind nicht m&ouml;glich.
   Die Anzahl der Elemente in einer Dimension ist um eins gr&ouml;&szlig;er
   als die Dimensionsangabe selbst, da das erste Element den Index&nbsp;0 hat.
  <br/><br/>
-  Wenn der Name der Feldvariable mit einem $-Zeichen endet,
-  haben alle Elemete des Feldes den Typ String,
-  anderenfalls den Typ Integer.
+  Hinter dem Namen bzw. hinter den Dimensionen kann mit <tt>AS</tt>
+  ein Typ angegeben werden.
+  Fehlt diese Angabe, wird der Typ aus dem Namen ermittelt:
+  Endet der Name auf ein $-Zeichen, ist der Typ String, anderenfalls Integer.
+ <br/><br/>
+  Beispiele mit Typangabe:
+ <br/><br/>
+  <tt>
+   DIM A AS INTEGER, grosse_zahl AS LONG, C(3) AS INTEGER,
+   ein_text$(4,5) AS STRING
+  </tt>
+ <br/><br/>
+  Beispiele ohne Typangabe (nur Integer und String m&ouml;glich):
+ <br/><br/>
+  <tt>DIM D, ein_feld(8), T$(4,5)</tt>
+ <br/><br/>
+  <b>Hinweis:</b> Im Sinne eines &quot;sauberen Programmierstils&quot;
+  ist es empfehlenswert, den Typ immer anzugeben.
  <br/><br/>
   Die DIM-Anweisung muss im BASIC-Quelltext vor der ersten Benutzung
-  der Feldvariablen stehen.
+  der Variable stehen.
   Das ist unabh&auml;ngig vom eigentlichen Programmablauf.
   Folgendes Beipiel w&uuml;rde in einem BASIC-Interpreter funktionieren,
   bringt aber im JKCEMU-BASIC-Compiler in Zeile&nbsp;110 einen Syntax-Fehler,
   da zu dem Zeitpunkt die DIM-Anweisung in Zeile&nbsp;200 noch nicht
   compiliert wurde und deshalb die Variable&nbsp;<em>A</em> in Zeile&nbsp;110
   als einfache Variable angesehen wird:
- <br>
+ <br/>
   <tt>
    &#10;<br/>
    100 GOSUB 200&#10;<br/>
@@ -734,7 +766,7 @@
   </tt>
  <br/>
   Richtig ist:
- <br>
+ <br/>
   <tt>
    &#10;<br/>
    100 DIM A(10,20)&#10;<br/>
@@ -763,11 +795,11 @@
      <tt>DOKE</tt> &lt;Adresse&gt; <tt>,</tt> &lt;Wert&gt;
     </td>
    </tr>
-   <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Adresse:</td><td>Integer-Ausdruck</td></tr>
+   <tr valign="top"><td>Wert:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
-  Der 16-Bit-Wert des zweiten numerischen Ausdrucks
+  Der Wert des zweiten Integer-Ausdrucks
   wird in Form von zwei Bytes in den Arbeitsspeicher
   ab der angegebenen Adresse geschrieben.
  <br/><br/>
@@ -787,11 +819,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Macro:</td>
@@ -877,7 +909,7 @@
   sondern nur der Grafik-Cursor entsprechend verschoben wird.
  <br/><br/>
   Die folgende Tabelle fasst die Marco-Kommandos der DRAW-Anweisung zusammen:
- <br>
+ <br/>
   <table border="1">
    <tr><th>Macro-Kommado</th><th>Bedeutung</th></tr>
    <tr>
@@ -1030,7 +1062,7 @@
   damit kein Pixel fehlt.
  <br/><br/>
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="drawr">DRAWR</a></h3>
@@ -1044,11 +1076,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -1128,9 +1160,9 @@
      [ <tt>STEP</tt> &lt;Schrittweite&gt; ]
     </td>
    </tr>
-   <tr valign="top"><td>Startwert:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top"><td>Endwert:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top"><td>Schrittweite:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Startwert:</td><td>Integer-Ausdruck</td></tr>
+   <tr valign="top"><td>Endwert:</td><td>Integer-Ausdruck</td></tr>
+   <tr valign="top"><td>Schrittweite:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
   Zuerst wird der Variable, auch Laufvariable genannt,
@@ -1200,7 +1232,7 @@
   Die Funktion endet mit der Anweisung <tt>END FUNCTION</tt>.
  <br/><br/>
   Lesen Sie bitte auch die Erl&auml;uterungen zu den
-  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>.
+  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>!
  <br/><br/>
 
  <h3><a name="gosub">GOSUB</a></h3>
@@ -1260,22 +1292,22 @@
                  [ <tt>: ELSE :</tt> &lt;Anweisungen&gt; ]<br/>
      <tt>IF</tt> &lt;Bedingung&gt; [ <tt>THEN</tt> ] &lt;Zeilennummer&gt;
                  [ <tt>: ELSE :</tt> &lt;Anweisungen&gt; ]<br/><br/>
-     <tt>IF</tt> &lt;Bedingung&gt; [ <tt>THEN</tt> ]<br>
-     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
-     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
-     [ <tt>ELSEIF</tt> &lt;Bedingung&gt; <tt>THEN</tt><br>
-     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
-     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br>
-     [ <tt>ELSEIF</tt> &lt;Bedingung&gt; <tt>THEN</tt><br>
-     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
-     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br>
+     <tt>IF</tt> &lt;Bedingung&gt; [ <tt>THEN</tt> ]<br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br/>
+     [ <tt>ELSEIF</tt> &lt;Bedingung&gt; <tt>THEN</tt><br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br/>
+     [ <tt>ELSEIF</tt> &lt;Bedingung&gt; <tt>THEN</tt><br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br/>
      [ <tt>ELSE</tt><br/>
-     &nbsp;&nbsp;&lt;Anweisungen&gt;<br>
-     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br>
+     &nbsp;&nbsp;&lt;Anweisungen&gt;<br/>
+     &nbsp;&nbsp;&lt;Anweisungen&gt; ]<br/>
      <tt>ENDIF</tt>
     </td>
    </tr>
-   <tr valign="top"><td>Bedingung:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Bedingung:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
   Die IF-Anweisung stellt eine bedingte Programmverzweigung dar.
@@ -1296,9 +1328,11 @@
   bei anderen BASIC-Dialekten &uuml;blichen Syntax nicht zu empfehlen.
  <br/><br/>
   Eine Bedingung ist erf&uuml;llt,
-  wenn der numerische Ausdruck einen Wert ungleich&nbsp;0 liefert
-  (siehe <a href="expressions.htm#operators1">Operatoren</a>,
-  insbesondere auch die Vergleichsoperatoren).
+  wenn der Integer-Ausdruck einen Wert ungleich&nbsp;0 liefert.
+  Die Bedingung muss nicht zwingend einen Vergleichsoperator enthalten.
+  Allerdings eignen sich Vergleichsoperatoren besonders gut
+  f&uuml;r Bedingungen, da sie einen Integer-Wert zur&uuml;ckliefern
+  (siehe <a href="expressions.htm#cond_op">Vergleichsoperatoren</a>).
  <br/><br/>
   Die IF-Anweisung gibt es in einer einzeiligen und in einer
   mehrzeiligen Variante.
@@ -1409,7 +1443,7 @@
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
-    <td nowrap="nowrap">INK&nbsp;&lt;numerischer Ausdruck&gt;</td>
+    <td nowrap="nowrap">INK&nbsp;&lt;Integer-Ausdruck&gt;</td>
    </tr>
   </table>
  <br/>
@@ -1437,7 +1471,7 @@
    </tr>
    <tr valign="top">
     <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+    <td>Integer-Ausdruck mit dem Wert 1 oder 2</td>
    </tr>
   </table>
  <br/>
@@ -1519,7 +1553,7 @@
   ist die LABEL-Anweisung die einzige M&ouml;glichkeit,
   Text im Grafikmodus auszugeben.
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="let">LET</a></h3>
@@ -1559,19 +1593,19 @@
    </tr>
    <tr valign="top">
     <td>X1:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y1:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>X1:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y2:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -1583,7 +1617,7 @@
  <br/><br/>
   Die LINE-Anweisung beeinflusst nicht den Grafik-Cursor.
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="line_input">LINE&nbsp;INPUT</a></h3>
@@ -1599,7 +1633,7 @@
    </tr>
    <tr valign="top">
     <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+    <td>Integer-Ausdruck mit dem Wert 1 oder 2</td>
    </tr>
   </table>
  <br/>
@@ -1690,11 +1724,11 @@
    </tr>
    <tr valign="top">
     <td>Zeile:</td>
-    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+    <td>Integer-Ausdruck mit einem Wert &gt;= 0</td>
    </tr>
    <tr valign="top">
     <td>Spalte:</td>
-    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+    <td>Integer-Ausdruck mit einem Wert &gt;= 0</td>
    </tr>
   </table>
  <br/>
@@ -1718,7 +1752,7 @@
    </tr>
    <tr valign="top">
     <td>Bedingung:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -1781,7 +1815,7 @@
    </tr>
    <tr valign="top">
     <td>Abschnitt:</td>
-    <td>String-Ausdruck oder numerischer Ausdruck</td>
+    <td>String-Ausdruck oder Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Trennzeichen:</td>
@@ -1813,11 +1847,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -1828,7 +1862,7 @@
   <a href="instructions.htm#mover">MOVER</a>-Anweisung.
  <br/><br/>
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="mover">MOVER</a></h3>
@@ -1842,18 +1876,18 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
   Die MOVER-Anweisung verschiebt den Grafik-Cursor um den angegebenen
   X- und Y-Wert, d.h., die Positionsangabe ist relativ.
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="next">NEXT</a></h3>
@@ -1891,7 +1925,7 @@
     </td>
    </tr>
    <tr valign="top">
-    <td>Auswahl:</td><td>numerischer Ausdruck &gt;= 0</td>
+    <td>Auswahl:</td><td>Integer-Ausdruck &gt;= 0</td>
    </tr>
   </table>
  <br/>
@@ -1945,7 +1979,7 @@
     </td>
    </tr>
    <tr valign="top">
-    <td>Auswahl:</td><td>numerischer Ausdruck &gt;= 0</td>
+    <td>Auswahl:</td><td>Integer-Ausdruck &gt;= 0</td>
    </tr>
   </table>
  <br/>
@@ -2013,7 +2047,7 @@
    </tr>
    <tr valign="top">
     <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+    <td>Integer-Ausdruck mit dem Wert 1 oder 2</td>
    </tr>
   </table>
  <br/>
@@ -2081,7 +2115,7 @@
    </tr>
    <tr>
     <td valign="top"><a href="devices.htm#vdip"><tt>V:</tt></a></td>
-    <td valign="top">USB-Speicher an VDIP-Modul</td>
+    <td valign="top">USB-Speicher am VDIP-Modul</td>
     <td valign="top">INPUT, OUTPUT, APPEND</td>
     <td valign="top">INPUT</td>
    </tr>
@@ -2097,6 +2131,18 @@
   Aus Gr&uuml;nden der Portabilit&auml;t sollten Sie aber immer
   das Schl&uuml;sselwort <em>BINARY</em> angeben,
   wenn es sich um Bin&auml;rdateien handelt.
+ <br/><br/>
+  Beim &Ouml;ffnen einer Datei zum Schreiben
+  (Betriebsarten OUTPUT und APPEND) auf dem
+  Ger&auml;t&nbsp;<em>V:</em> (USB-Speicher)
+  wird die aktuelle Systemzeit als Zeitstempel f&uuml;r
+  die letzte &Auml;nderung mitgegeben, aber nur,
+  wenn die Systemzeit auch ausgelesen werden kann.
+  Und das ist nur dann der Fall, wenn die Funtkion
+  <a href="functions.htm#datetime$">DATETIME$</a>
+  eine nicht-leere Zeichenkette zur&uuml;ckliefert.
+  Anderenfalls wird kein Zeitstempel beim &Ouml;ffnen bzw. Anlegen
+  der Datei mitgegeben.
  <br/><br/>
   Bei einem Eingabekanal k&ouml;nnen die Anweisungen
   <a href="instructions.htm#input">INPUT</a> und
@@ -2156,8 +2202,8 @@
      <tt>OUT</tt> &lt;Port&gt; <tt>,</tt> &lt;Wert&gt;
     </td>
    </tr>
-   <tr valign="top"><td>Port:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Port:</td><td>Integer-Ausdruck</td></tr>
+   <tr valign="top"><td>Wert:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
   Die OUT-Anweisung gibt einen Wert an einem Ausgabetor (Port) aus.
@@ -2185,11 +2231,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -2234,7 +2280,7 @@
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
-    <td nowrap="nowrap">PAPER&nbsp;&lt;numerischer Ausdruck&gt;</td>
+    <td nowrap="nowrap">PAPER&nbsp;&lt;Integer-Ausdruck&gt;</td>
    </tr>
   </table>
  <br/>
@@ -2273,7 +2319,7 @@
     <td>Syntax:</td>
     <td nowrap="nowrap">
      <tt>PAUSE</tt><br/>
-     <tt>PAUSE</tt> &lt;numerischer Ausdruck&gt;
+     <tt>PAUSE</tt> &lt;Integer-Ausdruck&gt;
     </td>
    </tr>
   </table>
@@ -2295,7 +2341,7 @@
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
-    <td nowrap="nowrap"><tt>PEN</tt> &lt;numerischer Ausdruck&gt;</td>
+    <td nowrap="nowrap"><tt>PEN</tt> &lt;Integer-Ausdruck&gt;</td>
    </tr>
   </table>
  <br/>
@@ -2330,7 +2376,7 @@
    </tr>
    <tr>
     <td valign="top">2</td>
-    <td valign="top"><tt>PEN_RUBBER</tt></td>
+    <td valign="top"><tt>PEN_ERASER</tt></td>
     <td>
      L&ouml;schen,<br/>
      Die zu zeichnenden Pixel werden auf die Hintergrundfarbe gesetzt.
@@ -2352,7 +2398,7 @@
   </table>
  <br/>
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="plot">PLOT</a></h3>
@@ -2369,11 +2415,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -2389,7 +2435,7 @@
   <a href="instructions.htm#plotr">PLOTR</a>-Anweisung.
  <br/><br/>
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="plotr">PLOTR</a></h3>
@@ -2403,11 +2449,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck</td>
+    <td>Integer-Ausdruck</td>
    </tr>
   </table>
  <br/>
@@ -2425,12 +2471,12 @@
      <tt>POKE</tt> &lt;Adresse&gt; <tt>,</tt> &lt;Wert&gt;
     </td>
    </tr>
-   <tr valign="top"><td>Adresse:</td><td>numerischer Ausdruck</td></tr>
-   <tr valign="top"><td>Wert:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Adresse:</td><td>Integer-Ausdruck</td></tr>
+   <tr valign="top"><td>Wert:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
   Die durch die Adresse angegebene Speicherzelle wird
-  mit den unteren 8 Bits des Wertes des zweiten numerischen Ausdrucks
+  mit den unteren 8 Bits des Wertes des zweiten Integer-Ausdrucks
   beschrieben.
  <br/><br/>
 
@@ -2445,11 +2491,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+    <td>Integer-Ausdruck mit einem Wert &gt;= 0</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+    <td>Integer-Ausdruck mit einem Wert &gt;= 0</td>
    </tr>
   </table>
  <br/>
@@ -2459,7 +2505,7 @@
   keine Rolle.
   Die Position des Grafik-Cursors wird nicht ver&auml;ndert.
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="print">PRINT</a></h3>
@@ -2487,11 +2533,11 @@
    </tr>
    <tr valign="top">
     <td>Kanal:</td>
-    <td>numerischer Ausdruck mit dem Wert 1 oder 2</td>
+    <td>Integer-Ausdruck mit dem Wert 1 oder 2</td>
    </tr>
    <tr valign="top">
     <td>Abschnitt:</td>
-    <td>String-Ausdruck oder numerischer Ausdruck</td>
+    <td>String-Ausdruck oder Integer-Ausdruck</td>
    </tr>
    <tr valign="top">
     <td>Trennzeichen:</td>
@@ -2567,7 +2613,7 @@
   Allerdings ist die SPC-Funktion insbesondere bei der Ausgabe
   von vielen Leerzeichen besser geeignet,
   da bei ihr nicht die interne Zeichenkettenverarbeitung zur Anwendung
-  kommt und somit auch deren Gr&ouml;&szlig;beschr&auml;nkung
+  kommt und somit auch deren Gr&ouml;&szlig;enbeschr&auml;nkung
   nicht gilt.
  <br/>
 
@@ -2575,14 +2621,14 @@
   <u>Rechts- und linksb&uuml;ndige Ausgabe</u>
  <br/><br/>
   Zeichenketten werden immer linksb&uuml;ndig ausgegeben.
-  Bei numerischen Abschnitten h&auml;ngt die B&uuml;ndigekeit
+  Bei numerischen Abschnitten h&auml;ngt die B&uuml;ndigkeit
   vom voranstehenden Trennzeichen ab.
   Ist der Abschnitt vom vorherigen Abschnitt durch ein Komma getrennt,
   wird die Zahl in einem 14&nbsp;Zeichen breiten Feld rechtsb&uuml;ndig
   ausgegeben.
   Anderenfalls erfolgt die Ausgabe linksb&uuml;ndig.
   Folgende Beispiele demonstrieren das:
- <br><br/>
+ <br/><br/>
   <table border="1">
    <tr>
     <th>linksb&uuml;ndige Ausgabe</th>
@@ -2657,11 +2703,11 @@
    </tr>
    <tr valign="top">
     <td>X:</td>
-    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+    <td>Integer-Ausdruck mit einem Wert &gt;= 0</td>
    </tr>
    <tr valign="top">
     <td>Y:</td>
-    <td>numerischer Ausdruck mit einem Wert &gt;= 0</td>
+    <td>Integer-Ausdruck mit einem Wert &gt;= 0</td>
    </tr>
   </table>
  <br/>
@@ -2670,7 +2716,7 @@
   <a href="instructions.htm#pen">PEN</a> eingestellten Stiftes.
   Die Position des Grafik-Cursors wird nicht ver&auml;ndert.
   Lesen Sie bitte auch die Hinweise zur
-  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>.
+  <a href="graphics.htm">Grafikunterst&uuml;tzung</a>!
  <br/><br/>
 
  <h3><a name="read">READ</a></h3>
@@ -2750,7 +2796,7 @@
   <table border="1">
    <tr valign="top">
     <td>Syntax:</td>
-    <td nowrap="nowrap"><tt>SCREEN</tt> &lt;numerischer Ausdruck&gt;</td>
+    <td nowrap="nowrap"><tt>SCREEN</tt> &lt;Integer-Ausdruck&gt;</td>
    </tr>
   </table>
  <br/>
@@ -2759,7 +2805,7 @@
   Welche bzw. wieviele Modi zur Verf&uuml;gung stehen,
   h&auml;ngt vom Zielsystem ab.
   Lesen Sie dazu bitte die Hinweise zu den
-  <a href="targets.htm">Zielsystemen</a>.
+  <a href="targets.htm">Zielsystemen</a>!
  <br/><br/>
   Mit <tt>SCREEN&nbsp;0</tt> wird der Standardmodus eingestellt,
   der die M&ouml;glichkeit zur Textausgabe bietet und
@@ -2786,6 +2832,85 @@
   in der man sich gerade befindet, passiert nichts.
  <br/><br/>
 
+ <h3><a name="select_case">SELECT&nbsp;CASE</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td valign="top">Syntax:</td>
+    <td nowrap="nowrap">
+     <tt>SELECT CASE</tt> &lt;Integer-Ausdruck&gt;<br/>
+     &nbsp;&nbsp;<tt>CASE</tt> &lt;Werteliste&gt; &lt;Anweisungen&gt;<br/>
+     &nbsp;&nbsp;[ <tt>CASE</tt> &lt;Werteliste&gt; &lt;Anweisungen&gt; ]<br/>
+     &nbsp;&nbsp;[ <tt>CASE&nbsp;ELSE</tt> &lt;Anweisungen&gt; ]<br/>
+     <tt>END SELECT</tt>
+    </td>
+   </tr>
+   <tr valign="top">
+    <td valign="top">Werteliste:</td>
+    <td>
+     durch Komma getrennte Liste von Integer-Literalen
+     und/oder Integer-Konstanten,<br>
+     kann auch nur ein Wert sein
+    </td>
+  </table>
+ <br/>
+  Bei dieser Anweisung wird ein Integer-Ausdruck auf konstante Werte
+  getestet.
+  Stimmt ein Wert &uuml;berein, werden die hinter dem Wert bzw.
+  hinter der Werteliste stehenden Anweisungen ausgef&uuml;hrt
+  und die <tt>SELECT&nbsp;CASE</tt>-Anweisung verlassen.
+  Trifft keiner der angegebenen Werte zu, werden, sofern vorhanden,
+  die Anweisungen hinter <tt>CASE&nbsp;ELSE</tt> abgearbeitet.
+ <br/><br/>
+  Beispiel W&uuml;rfelspiel:
+ <br/>
+  <tt>
+   &#10;<br/>
+   N=0&#10;<br/>
+   DO&#10;<br/>
+   &nbsp;&nbsp;W=FALSE&#10;<br/>
+   &nbsp;&nbsp;P=RND(6)+1&#10;<br/>
+   &nbsp;&nbsp;SELECT CASE P&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;CASE 1 PRINT "ein Punkt"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;CASE 2 PRINT "zwei Punkte"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;CASE 3 PRINT "drei Punkte"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;CASE 4 PRINT "vier Punkte"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;CASE 5 PRINT "fuenf Punkte"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;CASE 6 PRINT "sechs Punkte -> nochmal":W=TRUE&#10;<br/>
+   &nbsp;&nbsp;END SELECT&#10;<br/>
+   &nbsp;&nbsp;N=N+P&#10;<br/>
+   LOOP WHILE W&#10;<br/>
+   PRINT "Insgesamt gewuerfelt:";N
+  </tt>
+ <br/><br/>
+  Beispiel Farbauswertung:
+ <br/>
+  <tt>
+   &#10;<br/>
+   BUNT=FALSE&#10;<br/>
+   SELECT CASE POINT(X,Y)&#10;<br/>
+   &nbsp;&nbsp;CASE BLACK&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "schwarz"&#10;<br/>
+   &nbsp;&nbsp;CASE WHITE&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "weiss"&#10;<br/>
+   &nbsp;&nbsp;CASE RED,GREEN,BLUE&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "Primaerfarbe"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;BUNT=TRUE&#10;<br/>
+   &nbsp;&nbsp;CASE ELSE&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;PRINT "Mischfarbe"&#10;<br/>
+   &nbsp;&nbsp;&nbsp;&nbsp;BUNT=TRUE&#10;<br/>
+   END SELECT&#10;<br/>
+  </tt>
+ <br/><br/>
+  <b>Hinweis:</b> Die <tt>SELECT&nbsp;CASE</tt>-Anweisung kann auch
+  in einer einzigen Zeile geschrieben werden.
+  In dem Fall m&uuml;ssen vor jedem <tt>CASE</tt>-Zweig und vor
+  <tt>END&nbsp;SELECT</tt> ein Doppelpunkt als Trennzeichen f&uuml;r
+  Anweisungen gesetzt werden.
+  Allerdings ist es aus Gr&uuml;nden der besseren Lesbarkeit
+  sehr zu empfehlen, eine der in den beiden Beispielen gezeigten
+  mehrzeiligen Formatierungen zu verwenden.
+ <br/><br/>
+
  <h3><a name="sub">SUB</a></h3>
   <table border="1">
    <tr valign="top">
@@ -2804,8 +2929,38 @@
   Die Prozedur endet mit der Anweisung <tt>END SUB</tt>.
  <br/><br/>
   Lesen Sie bitte auch die Erl&auml;uterungen zu den
-  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>.
+  <a href="usersubs.htm">benutzerdefinierten Funktionen und Prozeduren</a>!
  <br/><br/>
+
+ <h3><a name="swap">SWAP</a></h3>
+  <table border="1">
+   <tr valign="top">
+    <td>Syntax:</td>
+    <td nowrap="nowrap">
+     SWAP &lt;Variable_1&gt; <tt>,</tt> &lt;Variable_2&gt;
+    </td>
+   </tr>
+  </table>
+ <br/>
+  Die Anweisung tauscht den Inhalt zweier Variablen.
+  Das ist effektiver als drei selbst programmierte LET-Anweisungen.
+  Besonders viel bringt die SWAP-Anweisung beim Tauschen
+  der Inhalte von String-Variablen,
+  da in den Fall die dynamische Speicherverwaltung der String-Verarbeitung
+  nicht zur Anwendung kommt.
+ <br/><br/>
+  Beispiel:
+ <br/>
+  <tt>
+   &#10;<br/>
+   DIM T$(2) AS STRING&#10;<br/>
+   T$(1)="Text 1"&#10;<br/>
+   T$(2)="Text 2"&#10;<br/>
+   SWAP T$(1),T$(2)&#10;<br/>
+   PRINT "T$1=";T$(1)&#10;<br/>
+   PRINT "T$2=";T$(2)&#10;<br/>
+  </tt>
+ <br/>
 
  <h3><a name="wait">WAIT</a></h3>
   <table border="1">
@@ -2816,12 +2971,12 @@
      [ <tt>,</tt> &lt;Inversion&gt; ]
     </td>
    </tr>
-   <tr><td>E/A-Adresse:</td><td>numerischer Ausdruck</td></tr>
-   <tr><td>Maske:</td><td>numerischer Ausdruck</td></tr>
-   <tr><td>Inversion:</td><td>numerischer Ausdruck</td></tr>
+   <tr><td>E/A-Adresse:</td><td>Integer-Ausdruck</td></tr>
+   <tr><td>Maske:</td><td>Integer-Ausdruck</td></tr>
+   <tr><td>Inversion:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
-  Die Funktion wartet auf das Eintreten eines bestimmten Zustandes
+  Die Anweisung wartet auf das Eintreten eines bestimmten Zustandes
   an dem mit dem ersten Parameter angegeben Eingabetor.
   Dazu wird st&auml;ndig von diesem Eingabetor (Port) gelesen
   und der gelesene Wert bitweise mit der Maske UND-verkn&uuml;pft.
@@ -2851,7 +3006,7 @@
     <td>Syntax:</td>
     <td nowrap="nowrap"><tt>WHILE</tt> &lt;Bedingung&gt;</td>
    </tr>
-   <tr valign="top"><td>Bedingung:</td><td>numerischer Ausdruck</td></tr>
+   <tr valign="top"><td>Bedingung:</td><td>Integer-Ausdruck</td></tr>
   </table>
  <br/>
   Die WHILE-Anweisung markiert den Anfang einer abweisenden Schleife,
@@ -2873,4 +3028,3 @@
  <br/>
 </body>
 </html>
-

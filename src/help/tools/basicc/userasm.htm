@@ -1,0 +1,164 @@
+<html>
+<head>
+ <title>BASIC-Compiler: Einbinden von eigenem Assembler-Quellcode</title>
+</head>
+<body>
+ <h1><a href="../basicc.htm">BASIC-Compiler</a></h1>
+
+ <h2>Einbinden von eigenem Assembler-Quellcode</h2>
+  <ul>
+   <li>
+    <a href="userasm.htm#asm">1. ASM-Anweisung und ASM-Funktion</a>
+   </li>
+   <li>
+    <a href="userasm.htm#var">2. Zugriff auf BASIC-Variablen</a>
+   </li>
+   <li>
+    <a href="userasm.htm#optimizer">3. Optimierer</a>
+   </li>
+  </ul>
+ <br/>
+  Obwohl der BASIC-Compiler einen hohen Funktionsumfang bietet,
+  lassen sich nicht alle Anforderungen bzw. Programmieraufgaben
+  mit BASIC-Mitteln l&ouml;sen.
+  In solchen F&auml;llen muss man die gew&uuml;schten Funktionen
+  in Assembler schreiben und vom BASIC-Programm aus aufrufen.
+  Eine M&ouml;glichkeit besteht darin,
+  den Maschinencode der eigenen Assembler-Routine in
+  <a href="instructions.htm#data">DATA</a>-Zeilen zu hinterlegen,
+  im Programmablauf mit <a href="instructions.htm#read">READ</a> zu lesen
+  und mit <a href="instructions.htm#poke">POKE</a> bzw.
+  <a href="instructions.htm#doke">DOKE</a> diesen
+  in den Arbeitsspeicher (RAM) zu schreiben
+  (z.B. nach <a href="constants.htm#top">TOP</a>) und dann
+  die Routine mit <a href="instructions.htm#call">CALL</a>
+  oder <a href="functions.htm#usr">USR</a> aufzurufen.
+  Das Beispiel liest den aktuellen Wert des R-Register
+  im Mikroprozessor aus und zeigt ihn als Dezimalzahl an:
+ <br/>
+  <tt>
+   &#10;<br/>
+   DEFUSR0=TOP&#10;<br/>
+   DATA &amp;HED,&amp;H5F,&amp;H6F,&amp;H26,&amp;H00,&amp;HC9&#10;<br/>
+   A=TOP&#10;<br/>
+   FOR I=1 TO 6&#10;<br/>
+   &nbsp;&nbsp;READ B&#10;<br/>
+   &nbsp;&nbsp;POKE A,B&#10;<br/>
+   &nbsp;&nbsp;A=A+1&#10;<br/>
+   NEXT I&#10;<br/>
+   PRINT "R-Register: ";USR0(0)&#10;<br/>
+  </tt>
+ <br/>
+  Dies ist ein klassischer Weg, der recht unkompliziert ist.
+  Allerdings ist dieser Weg uneffektiv bzgl. des ben&ouml;tigten
+  Speicherplatzes und eignet sich deshalb
+  nur f&uuml;r kleinere Maschinencoderoutinen.
+  Au&szlig;erdem kann es auch schwierig werden,
+  wenn der eigene Maschinencode nicht relokatibel
+  und somit an feste Adressen gebunden ist.
+ <br/><br/>
+
+ <h2><a name="asm">1. ASM-Anweisung und ASM-Funktion</a></h2>
+  Der JKCEMU-BASIC-Compiler bietet die M&ouml;glichlkeit,
+  mit der Anweisung <a href="instructions.htm#asm">ASM</a>
+  sowie der Funktion <a href="functions.htm#asm">ASM</a>
+  eigenen Assembler-Quelltext direkt im BASIC-Programm einzubinden.
+  Damit lassen sich viele Dinge deutlich eleganter l&ouml;sen.
+  Das Beispiel von oben sieht dann so aus:
+ <br/>
+  <tt>
+   &#10;<br/>
+   PRINT "R-Register: ";ASM("  CALL lese_Reg_R")&#10;<br/>
+   END&#10;<br/>
+   ASM "lese_Reg_R:"&#10;<br/>
+   ASM "  LD A,R"&#10;<br/>
+   ASM "  LD L,A"&#10;<br/>
+   ASM "  LD H,0"&#10;<br/>
+   ASM "  RET"&#10;<br/>
+  </tt>
+ <br/>
+  Man kann auch auf die eigenst&auml;ndige Routine verzichten
+  und das R-Register so auslesen:
+ <br/>
+  <tt>
+   &#10;<br/>
+   ASM "  LD A,R"&#10;<br/>
+   ASM "  LD L,A"&#10;<br/>
+   ASM "  LD H,0"&#10;<br/>
+   ASM "  PUSH HL"&#10;<br/>
+   PRINT "R-Register: ";ASM("  POP HL")&#10;<br/>
+  </tt>
+ <br/>
+  Insbesondere das letzte Beispiel macht deutlich,
+  dass das Einbinden von eigenen Assembler-Quellcode direkt
+  in die Code-Erzeugung des BASIC-Compilers eingreift.
+  Aus diesem Grund gilt:
+  Die ASM-Anweisung und die ASM-Funktion sind nur f&uuml;r Experten gedacht,
+  <b>die genau wissen, was sie tun</b>!
+ <br/><br/>
+  Zwischen den einzelnen BASIC-Anweisungen und -Funktionen
+  bestehen keine Abh&auml;ngigkeiten bzgl. der Register, d.h.,
+  Sie brauchen bei der Verwendung der ASM-Anweisung und der
+  ASM-Funktion f&uuml;r den BASIC-Compiler keine Register retten.
+ <br/><br/>
+
+ <h2><a name="var">2. Zugriff auf BASIC-Variablen</a></h2>
+  In eigenen Assembler-Routinen kann auch auf BASIC-Variablen
+  zugegriffen werden.
+  Die Adresse einer Variable erf&auml;hrt man mit der BASIC-Funktion
+  <a href="functions.htm#varptr">VARPTR</a>.
+  <a href="datatypes.htm#integer">Integer</a>- und
+  <a href="datatypes.htm#long">Long</a>-Variablen sind&nbsp;2
+  bzw. 4&nbsp;Bytes gro&szlig; und speichern den numerischen Wert
+  im Zweierkomplement mit dem niederwertigsten Byte zuerst
+  (Little Endian).
+ <br/><br/>
+  <a href="datatypes.htm#decimal">Decimal</a>-Variablen
+  sind 6&nbsp;Bytes gro&szlig; und speichern den Wert als gepackte BCD-Zahl
+  im Big-Endian-Format (h&ouml;chstwertiges Byte zuerst).
+  Das oberste Halbbyte des ersten Bytes enth&auml;lt
+  in den Bits&nbsp;4 bis 6 die Anzahl der Nachkommastellen
+  und im Bit&nbsp;7 das Vorzeichen.
+  Das untere Halbbyte des ersten Bytes sowie die 10&nbsp;Halbbytes
+  der nachfolgenden f&uuml;nf Bytes enthalten die 11&nbsp;Dezimalstellen.
+ <br/><br/>
+  <a href="datatypes.htm#string">String</a>-Variablen sind 2&nbsp;Bytes
+  gro&szlig; und enthalten einen Zeiger auf die eigentliche Zeichenkette,
+  die mit einem Nullbyte abgeschlossen ist.
+ <br/><br/>
+  <b>Achtung!</b> Zeichenketten werden in einem dynamischen Speicher
+  abgelegt, der durch das compilierte Programm verwaltet wird.
+  Damit diese Speicherverwaltung nicht durcheinander ger&auml;t,
+  d&uuml;rfen Sie in eigenen Assembler-Routinen niemals
+  einer BASIC-String-Variable einen Wert zuweisen!
+ <br/><br/>
+  M&ouml;chten Sie in eigenen Assembler-Routinen Zeichenketten erzeugen
+  und diese im BASIC nutzen, dann geben Sie bitte die Anfangsadresse
+  der Zeichenkette im HL-Register an das aufrufende BASIC-Programm
+  zur&uuml;ck und wandeln dort mit der Funktion
+  <a href="functions.htm#memstr$">MEMSTR$</a> den Typ in String um.
+  Nun k&ouml;nnen Sie z.B. diese Zeichenkette im BASIC
+  einer String-Variable zuweisen.
+ <br/><br/>
+  <b>Achtung!</b> Wenn Sie in eigenen Assembler-Routinen einer
+  <a href="datatypes.htm#decimal">Decimal</a>-Variable einen Wert zuweisen,
+  muss dieser Wert unbedingt ein g&uuml;ltiges BCD-Format haben!
+  Anderenfalls kann es passieren, dass eine Division
+  mit so einer ung&uuml;ltigen Zahl in einer Endlosschleife
+  h&auml;ngen bleibt.
+ <br/><br/>
+
+ <h2><a name="optimizer">3. Optimierer</a></h2>
+  Der BASIC-Compiler enth&auml;lt einen Global-Optimizer,
+  der den erzeugten Assembler-Code durchgeht und unn&ouml;tige Befehle
+  entfernt.
+  Dabei kann auch der mit ASM-Anweisungen und ASM-Funktionen
+  erzeugte Assembler-Code ver&auml;ndert werden.
+  Der Optimierer fasst aber nur solche Assembler-Zeilen an,
+  bei denen die Befehls-Mnemonik durch einen Tabulator vom Zeilenanfang
+  bzw. der Marke getrennt ist.
+  Wenn sie also sichergehen wollen, dass der Optimierer Ihren
+  Assembler-Code nicht ver&auml;ndert,
+  dann verwenden Sie keine Tabulatoren in den ASM-Anweisungen!
+</body>
+</html>

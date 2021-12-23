@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2017 Jens Mueller
+ * (c) 2010-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,7 +9,6 @@
 
 package jkcemu.etc;
 
-import java.lang.*;
 import z80emu.Z80CPU;
 import z80emu.Z80MaxSpeedListener;
 import z80emu.Z80TStatesListener;
@@ -642,7 +641,7 @@ public class GDC82720 implements
 	} else if( (transType == 0x10) && (this.argIdx == 1) ) {
 	  vNew = this.args[ 0 ];
 	} else if( (transType == 0x18) && (this.argIdx == 1) ) {
-	  vNew = this.args[ 1 ] << 8;
+	  vNew = this.args[ 0 ] << 8;
 	}
 	if( vNew >= 0 ) {
 	  VRAM vram = this.vram;
@@ -887,6 +886,7 @@ System.out.println( "GDC82720: Zoomfaktor groesser 1 nicht implementiert" );
 	  break;
 	case 10:
 	  this.drawingDM = this.args[ 9 ];
+	  break;
 	case 11:
 	  this.drawingDM = ((this.args[ 10 ] << 8) & 0x3F00) | this.args[ 9 ];
 	  this.argIdx    = 0;

@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,7 +12,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -20,6 +19,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JTextField;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HexDocument;
 
 
@@ -32,7 +32,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
   private JLabel            labelValue1;
   private JLabel            labelValue2;
   private JComboBox<String> comboCond;
-  private JCheckBox         btnCheckValue;
+  private JCheckBox         cbCheckValue;
   private JTextField        fldBegPort;
   private JTextField        fldEndPort;
   private JTextField        fldMask;
@@ -58,10 +58,10 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-    add( new JLabel( "Ausgabeadresse (8 oder 16 Bit):" ), gbc );
+    add( GUIFactory.createLabel( "Ausgabeadresse (8 oder 16 Bit):" ), gbc );
 
     this.docBegPort = new HexDocument( 4 );
-    this.fldBegPort = new JTextField( this.docBegPort, "", 4 );
+    this.fldBegPort = GUIFactory.createTextField( this.docBegPort, 4 );
     gbc.anchor  = GridBagConstraints.WEST;
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
@@ -72,10 +72,10 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     gbc.weightx = 0.0;
     gbc.gridx   = 0;
     gbc.gridy++;
-    add( new JLabel( "Bis Ausgabeadresse (optional):" ), gbc );
+    add( GUIFactory.createLabel( "Bis Ausgabeadresse (optional):" ), gbc );
 
     this.docEndPort = new HexDocument( 4 );
-    this.fldEndPort = new JTextField( this.docEndPort, "", 4 );
+    this.fldEndPort = GUIFactory.createTextField( this.docEndPort, 4 );
     gbc.anchor  = GridBagConstraints.WEST;
     gbc.fill    = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
@@ -86,18 +86,17 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     gbc.gridwidth  = GridBagConstraints.REMAINDER;
     gbc.gridx      = 0;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
-    this.btnCheckValue = new JCheckBox(
-		"Zus\u00E4tzlich auszugebenden Wert pr\u00FCfen",
-		false );
+    this.cbCheckValue = GUIFactory.createCheckBox(
+		"Zus\u00E4tzlich auszugebenden Wert pr\u00FCfen" );
     gbc.insets.bottom = 0;
     gbc.fill          = GridBagConstraints.NONE;
     gbc.weightx       = 0.0;
     gbc.gridy++;
-    add( this.btnCheckValue, gbc );
+    add( this.cbCheckValue, gbc );
 
-    JPanel panelValue = new JPanel( new GridBagLayout() );
+    JPanel panelValue = GUIFactory.createPanel( new GridBagLayout() );
     gbc.anchor        = GridBagConstraints.WEST;
     gbc.fill          = GridBagConstraints.HORIZONTAL;
     gbc.weightx       = 1.0;
@@ -114,11 +113,12 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
                                                 new Insets( 0, 0, 0, 0 ),
                                                 0, 0 );
 
-    this.labelValue1 = new JLabel( "Nur anhalten/loggen wenn Wert UND" );
+    this.labelValue1 = GUIFactory.createLabel(
+				"Nur anhalten/loggen wenn Wert UND" );
     panelValue.add( this.labelValue1, gbcValue );
 
     this.docMask = new HexDocument( 2 );
-    this.fldMask = new JTextField( this.docMask, "", 2 );
+    this.fldMask = GUIFactory.createTextField( this.docMask, 2 );
     this.fldMask.setToolTipText( "Maske" );
     gbcValue.fill        = GridBagConstraints.HORIZONTAL;
     gbcValue.weightx     = 0.5;
@@ -126,7 +126,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     gbcValue.gridx++;
     panelValue.add( this.fldMask, gbcValue );
 
-    this.comboCond = new JComboBox<>( conditions );
+    this.comboCond = GUIFactory.createComboBox( conditions );
     this.comboCond.setEditable( false );
     gbcValue.fill    = GridBagConstraints.NONE;
     gbcValue.weightx = 0.0;
@@ -134,14 +134,14 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     panelValue.add( this.comboCond, gbcValue );
 
     this.docValue = new HexDocument( 2 );
-    this.fldValue = new JTextField( this.docValue, "", 2 );
+    this.fldValue = GUIFactory.createTextField( this.docValue, 2 );
     this.fldValue.setToolTipText( "Vergleichswert" );
     gbcValue.fill    = GridBagConstraints.HORIZONTAL;
     gbcValue.weightx = 0.5;
     gbcValue.gridx++;
     panelValue.add( this.fldValue, gbcValue );
 
-    this.labelValue2 = new JLabel( "ist." );
+    this.labelValue2 = GUIFactory.createLabel( "ist." );
     gbcValue.fill    = GridBagConstraints.NONE;
     gbcValue.weightx = 0.0;
     gbcValue.gridx++;
@@ -154,7 +154,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     gbc.gridwidth   = GridBagConstraints.REMAINDER;
     gbc.gridx       = 0;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
     gbc.anchor     = GridBagConstraints.CENTER;
     gbc.fill       = GridBagConstraints.NONE;
@@ -189,7 +189,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     this.docMask.setValue( mask, 2 );
     this.comboCond.setSelectedItem( cond != null ? cond : "=" );
     this.docValue.setValue( value, 2 );
-    this.btnCheckValue.setSelected( valueState );
+    this.cbCheckValue.setSelected( valueState );
     updCheckValueFieldsEnabled();
 
 
@@ -206,7 +206,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     this.fldValue.setColumns( 0 );
     this.fldBegPort.addActionListener( this );
     this.fldEndPort.addActionListener( this );
-    this.btnCheckValue.addActionListener( this );
+    this.cbCheckValue.addActionListener( this );
     this.fldMask.addActionListener( this );
     this.fldValue.addActionListener( this );
   }
@@ -221,7 +221,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     if( e != null ) {
       Object src = e.getSource();
       if( src != null ) {
-	if( src == this.btnCheckValue ) {
+	if( src == this.cbCheckValue ) {
 	  rv = true;
 	  updCheckValueFieldsEnabled();
 	}
@@ -249,7 +249,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
   @Override
   protected void doApprove()
   {
-    String fldName = "Ausgabeadresse";
+    String curFldName = "Ausgabeadresse";
     try {
       boolean status  = true;
       boolean is8Bit  = false;
@@ -272,16 +272,16 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
       String cond  = null;
       int    mask  = 0xFF;
       int    value = 0;
-      if( this.btnCheckValue.isSelected() ) {
+      if( this.cbCheckValue.isSelected() ) {
 	Object o = this.comboCond.getSelectedItem();
 	if( o != null ) {
 	  cond = o.toString();
 	}
 	if( cond != null ) {
-	  fldName = "Maske";
-	  mask    = this.docMask.intValue() & 0xFF;
-	  fldName = "Wert";
-	  value   = this.docValue.intValue() & 0xFF;
+	  curFldName = "Maske";
+	  mask       = this.docMask.intValue() & 0xFF;
+	  curFldName = "Wert";
+	  value      = this.docValue.intValue() & 0xFF;
 	  status  = checkMaskValue( true, mask, value );
 	}
       }
@@ -297,7 +297,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
       }
     }
     catch( NumberFormatException ex ) {
-      showInvalidFmt( fldName );
+      showInvalidFmt( curFldName );
     }
   }
 
@@ -314,7 +314,7 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
 
   private void updCheckValueFieldsEnabled()
   {
-    boolean state = this.btnCheckValue.isSelected();
+    boolean state = this.cbCheckValue.isSelected();
     this.labelValue1.setEnabled( state );
     this.labelValue2.setEnabled( state );
     this.fldMask.setEnabled( state );
@@ -322,4 +322,3 @@ public class OutputBreakpointDlg extends AbstractBreakpointDlg
     this.fldValue.setEnabled( state );
   }
 }
-

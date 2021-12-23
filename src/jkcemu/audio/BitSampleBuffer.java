@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -16,7 +16,6 @@
 package jkcemu.audio;
 
 import java.io.IOException;
-import java.lang.*;
 import jkcemu.base.EmuUtil;
 
 
@@ -30,6 +29,7 @@ public class BitSampleBuffer
     private int    pos;
     private int    frameRate;
     private long   frameCount;
+    private long   framePos;
 
     public Reader(
 		byte[] data,
@@ -41,6 +41,7 @@ public class BitSampleBuffer
       this.size       = size;
       this.frameRate  = frameRate;
       this.frameCount = frameCount;
+      this.framePos   = 0;
       this.cur        = 0;
       this.pos        = 0;
     }
@@ -58,6 +59,13 @@ public class BitSampleBuffer
     public int getChannels()
     {
       return 1;
+    }
+
+
+    @Override
+    public synchronized long getFramePos()
+    {
+      return this.framePos;
     }
 
 
@@ -116,6 +124,7 @@ public class BitSampleBuffer
 	rv++;
 	--len;
       }
+      this.framePos += rv;
       return rv;
     }
 
@@ -124,19 +133,22 @@ public class BitSampleBuffer
     public synchronized void setFramePos( long pos ) throws IOException
     {
       if( pos < 0 ) {
-	this.cur = 0;
-	this.pos = 0;
+	this.cur      = 0;
+	this.pos      = 0;
+        this.framePos = 0;
       } else {
 	for( int i = 0; i < this.size; i++ ) {
 	  int v = this.data[ i ];
 	  int n = Math.abs( v );
 	  if( n > pos ) {
 	    n -= pos;
+	    this.framePos += pos;
 	    this.cur = (byte) (v < 0 ? -n : n);
 	    this.pos = i;
 	    break;
 	  }
-	  pos -= n;
+	  pos           -= n;
+	  this.framePos += n;
 	}
       }
     }
@@ -154,7 +166,6 @@ public class BitSampleBuffer
   private int    size;
   private int    frameRate;
   private long   frameCount;
-  private String errorText;
 
 
   public BitSampleBuffer( int frameRate, int initSize )
@@ -163,7 +174,6 @@ public class BitSampleBuffer
     this.frameCount = 0;
     this.size       = 0;
     this.data       = new byte[ initSize ];
-    this.errorText  = null;
   }
 
 

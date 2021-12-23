@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2016 Jens Mueller
+ * (c) 2010-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -28,8 +28,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.*;
 import java.util.EventObject;
+import java.util.Properties;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -42,24 +42,32 @@ import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.filechooser.FileSystemView;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.BaseFrm;
+import jkcemu.base.EmuSys;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileNameFld;
+import jkcemu.base.GUIFactory;
+import jkcemu.base.HelpFrm;
 import jkcemu.base.ScreenFrm;
+import jkcemu.file.FileNameFld;
+import jkcemu.file.FileUtil;
 
 
 public class VideoCaptureFrm extends BaseFrm implements Runnable
 {
+  private static final String DEFAULT_FILE        = "jkcemu.gif";
   private static final String DEFAULT_STATUS_TEXT = "Bereit";
+  private static final String HELP_PAGE = "/help/videocapture.htm";
 
   private static VideoCaptureFrm instance = null;
 
   private ScreenFrm          screenFrm;
   private volatile boolean   pause;
   private volatile boolean   focusedWindowOnly;
+  private volatile boolean   force256Colors;
+  private volatile boolean   smoothColorReduction;
+  private volatile boolean   playInfinite;
   private volatile boolean   waitForReset;
   private volatile boolean   running;
   private volatile long      recordedMillis;
@@ -71,25 +79,27 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
   private volatile Window    captureWindow;
   private boolean            fileCheckEnabled;
   private Robot              robot;
+  private String             robotMsg;
   private Thread             thread;
   private VideoPlayFrm       videoPlayFrm;
   private javax.swing.Timer  statusTimer;
-  private JRadioButton       btnCaptureEmuSysScreen;
-  private JRadioButton       btnCaptureScreenFrm;
-  private JRadioButton       btnCaptureOtherWindow;
+  private JRadioButton       rbCaptureEmuSysScreen;
+  private JRadioButton       rbCaptureScreenFrm;
+  private JRadioButton       rbCaptureOtherWindow;
   private JLabel             labelWinSelectTime;
   private JLabel             labelWinSelectUnit;
   private JSpinner           spinnerWinSelectSec;
   private JLabel             labelFramesPerSec;
   private JComboBox<Integer> comboFramesPerSec;
   private JLabel             labelColorReduction;
-  private JRadioButton       btnColorReductionSmooth;
-  private JRadioButton       btnColorReductionHard;
+  private JRadioButton       rbColorReductionSmooth;
+  private JRadioButton       rbColorReductionHard;
   private JLabel             labelPlayCnt;
-  private JRadioButton       btnPlayOnce;
-  private JRadioButton       btnPlayInfinite;
-  private JCheckBox          btnStartAfterReset;
-  private JCheckBox          btnFocusedWindowOnly;
+  private JRadioButton       rbPlayOnce;
+  private JRadioButton       rbPlayInfinite;
+  private JCheckBox          cbStartAfterReset;
+  private JCheckBox          cbFocusedWindowOnly;
+  private JCheckBox          cbForce256Colors;
   private FileNameFld        fldFile;
   private JLabel             labelStatus;
   private JButton            btnFileSelect;
@@ -97,6 +107,8 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
   private JButton            btnPause;
   private JButton            btnStop;
   private JButton            btnPlay;
+  private JButton            btnDelete;
+  private JButton            btnHelp;
   private JButton            btnClose;
 
 
@@ -121,16 +133,12 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
     if( file != null ) {
       OutputStream out = null;
       try {
-	boolean smoothColorReduction = true;
-	if( this.btnColorReductionSmooth != null ) {
-	  smoothColorReduction = this.btnColorReductionSmooth.isSelected();
-	}
 	out = new BufferedOutputStream( new FileOutputStream( file ) );
 	AnimatedGIFWriter animGIF = new AnimatedGIFWriter(
-				out,
-				smoothColorReduction,
-				this.btnPlayInfinite.isSelected() );
-
+						out,
+						this.force256Colors,
+						this.smoothColorReduction,
+						this.playInfinite );
 	long begMillis = System.currentTimeMillis();
 	long millis    = 0;
 	try {
@@ -179,7 +187,7 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 	}
       }
       finally {
-	EmuUtil.closeSilent( out );
+	EmuUtil.closeSilently( out );
       }
       if( (file != null) && delete ) {
 	file.delete();
@@ -204,11 +212,12 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
   protected boolean doAction( EventObject e )
   {
     boolean rv = false;
-    if( e != null ) {
-      Object src = e.getSource();
-      if( (src == this.btnCaptureEmuSysScreen)
-	  || (src == this.btnCaptureScreenFrm)
-	  || (src == this.btnCaptureOtherWindow) )
+    try {
+      Object  src = e.getSource();
+      if( (src == this.rbCaptureEmuSysScreen)
+	  || (src == this.rbCaptureScreenFrm)
+	  || (src == this.rbCaptureOtherWindow)
+	  || (src == this.cbForce256Colors) )
       {
 	rv = true;
 	updOptionFieldsEnabled();
@@ -232,10 +241,21 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 	rv = true;
 	doPlay();
       }
+      else if( src == this.btnDelete ) {
+	rv = true;
+	doDelete();
+      }
+      else if( src == this.btnHelp ) {
+	rv = true;
+	HelpFrm.openPage( HELP_PAGE );
+      }
       else if( src == this.btnClose ) {
 	rv = true;
 	doClose();
       }
+    }
+    catch( IOException ex ) {
+      BaseDlg.showErrorDlg( this, ex );
     }
     return rv;
   }
@@ -247,9 +267,7 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
     boolean rv = super.doClose();
     if( rv ) {
       setIdle();
-      if( this.videoPlayFrm != null ) {
-	this.videoPlayFrm.doClose();
-      }
+      closePlayer();
       if( this.thread != null ) {
 	doStop();
 	try {
@@ -263,14 +281,7 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    pack();
-  }
-
-
-  @Override
-  public void resetFired()
+  public void resetFired( EmuSys newEmuSys, Properties newProps )
   {
     if( this.waitForReset ) {
       this.waitForReset = false;
@@ -283,23 +294,27 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 
   private VideoCaptureFrm( ScreenFrm screenFrm )
   {
-    this.screenFrm           = screenFrm;
-    this.pause               = false;
-    this.waitForReset        = false;
-    this.running             = false;
-    this.capturing           = false;
-    this.recordedMillis      = 0;
-    this.frameMillis         = 100;
-    this.waitForWindowMillis = 0;
-    this.captureWidth        = 0;
-    this.captureHeight       = 0;
-    this.captureWindow       = null;
-    this.fileCheckEnabled    = false;
-    this.robot               = null;
-    this.thread              = null;
-    this.videoPlayFrm        = null;
+    this.screenFrm            = screenFrm;
+    this.pause                = false;
+    this.waitForReset         = false;
+    this.running              = false;
+    this.capturing            = false;
+    this.focusedWindowOnly    = false;
+    this.force256Colors       = false;
+    this.smoothColorReduction = false;
+    this.playInfinite         = false;
+    this.recordedMillis       = 0;
+    this.frameMillis          = 100;
+    this.waitForWindowMillis  = 0;
+    this.captureWidth         = 0;
+    this.captureHeight        = 0;
+    this.captureWindow        = null;
+    this.fileCheckEnabled     = false;
+    this.robot                = null;
+    this.robotMsg             = null;
+    this.thread               = null;
+    this.videoPlayFrm         = null;
     setTitle( "JKCEMU Bildschirmvideo" );
-    Main.updIcon( this );
 
     this.statusTimer = new javax.swing.Timer(
 			500,
@@ -326,9 +341,9 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 	this.robot = new Robot();
       }
     }
-    catch( AWTException ex ) {}
-    catch( SecurityException ex ) {}
-
+    catch( Exception ex ) {
+      this.robotMsg = ex.getMessage();
+    }
 
     // Fensterinhalt
     setLayout( new GridBagLayout() );
@@ -342,15 +357,13 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 					new Insets( 5, 5, 5, 5 ),
 					0, 0 );
 
-    // Aufzunehmender Bereich, nur wenn Robot angelegt werden konnte
-    if( this.robot != null ) {
-      JPanel panelCaptureArea = new JPanel( new GridBagLayout() );
-      panelCaptureArea.setBorder(
-		BorderFactory.createTitledBorder( "Aufzunehmender Bereich" ) );
-      add( panelCaptureArea, gbc );
-      gbc.gridy++;
+    JPanel panelCaptureArea = GUIFactory.createPanel( new GridBagLayout() );
+    panelCaptureArea.setBorder(
+		GUIFactory.createTitledBorder( "Aufzunehmender Bereich" ) );
+    add( panelCaptureArea, gbc );
+    gbc.gridy++;
 
-      GridBagConstraints gbcCaptureArea = new GridBagConstraints(
+    GridBagConstraints gbcCaptureArea = new GridBagConstraints(
 						0, 0,
 						1, 1,
 						0.0, 0.0,
@@ -359,42 +372,32 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 						new Insets( 5, 5, 0, 5 ),
 						0, 0 );
 
-      ButtonGroup grpCaptureArea = new ButtonGroup();
+    ButtonGroup grpCaptureArea = new ButtonGroup();
 
-      this.btnCaptureEmuSysScreen = new JRadioButton(
+    this.rbCaptureEmuSysScreen = GUIFactory.createRadioButton(
 		"Bildschirmausgabe des emulierten Systems ohne Fenster",
 		true );
-      grpCaptureArea.add( this.btnCaptureEmuSysScreen );
-      this.btnCaptureEmuSysScreen.addActionListener( this );
-      panelCaptureArea.add( this.btnCaptureEmuSysScreen, gbcCaptureArea );
+    grpCaptureArea.add( this.rbCaptureEmuSysScreen );
+    panelCaptureArea.add( this.rbCaptureEmuSysScreen, gbcCaptureArea );
 
-      this.btnCaptureScreenFrm = new JRadioButton(
-		"Bildschirmausgabe des emulierten Systems mit Fenster",
-		false );
-      grpCaptureArea.add( this.btnCaptureScreenFrm );
-      this.btnCaptureScreenFrm.addActionListener( this );
-      gbcCaptureArea.insets.top = 0;
-      gbcCaptureArea.gridy++;
-      panelCaptureArea.add( this.btnCaptureScreenFrm, gbcCaptureArea );
+    this.rbCaptureScreenFrm = GUIFactory.createRadioButton(
+		"Bildschirmausgabe des emulierten Systems mit Fenster" );
+    grpCaptureArea.add( this.rbCaptureScreenFrm );
+    gbcCaptureArea.insets.top = 0;
+    gbcCaptureArea.gridy++;
+    panelCaptureArea.add( this.rbCaptureScreenFrm, gbcCaptureArea );
 
-      this.btnCaptureOtherWindow = new JRadioButton(
-					"Beliebiges JKCEMU-Fenster",
-					false );
-      grpCaptureArea.add( this.btnCaptureOtherWindow );
-      this.btnCaptureOtherWindow.addActionListener( this );
-      gbcCaptureArea.insets.bottom = 5;
-      gbcCaptureArea.gridy++;
-      panelCaptureArea.add( this.btnCaptureOtherWindow, gbcCaptureArea );
-    } else {
-      this.btnCaptureEmuSysScreen = null;
-      this.btnCaptureScreenFrm    = null;
-      this.btnCaptureOtherWindow  = null;
-    }
+    this.rbCaptureOtherWindow = GUIFactory.createRadioButton(
+					"Beliebiges JKCEMU-Fenster" );
+    grpCaptureArea.add( this.rbCaptureOtherWindow );
+    gbcCaptureArea.insets.bottom = 5;
+    gbcCaptureArea.gridy++;
+    panelCaptureArea.add( this.rbCaptureOtherWindow, gbcCaptureArea );
 
 
     // Optionen
-    JPanel panelOpt = new JPanel( new GridBagLayout() );
-    panelOpt.setBorder( BorderFactory.createTitledBorder( "Optionen" ) );
+    JPanel panelOpt = GUIFactory.createPanel( new GridBagLayout() );
+    panelOpt.setBorder( GUIFactory.createTitledBorder( "Optionen" ) );
     add( panelOpt, gbc );
 
     GridBagConstraints gbcOpt = new GridBagConstraints(
@@ -406,34 +409,28 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 					new Insets( 5, 5, 0, 5 ),
 					0, 0 );
 
-    if( this.btnCaptureOtherWindow != null ) {
-      this.labelWinSelectTime = new JLabel( "Zeit f\u00FCr Fensterauswahl:" );
-      panelOpt.add( this.labelWinSelectTime, gbcOpt );
+    this.labelWinSelectTime = GUIFactory.createLabel(
+					"Zeit f\u00FCr Fensterauswahl:" );
+    panelOpt.add( this.labelWinSelectTime, gbcOpt );
 
-      this.spinnerWinSelectSec = new JSpinner(
+    this.spinnerWinSelectSec = GUIFactory.createSpinner(
 				new SpinnerNumberModel( 5, 1, 9, 1 ) );
-      gbcOpt.fill = GridBagConstraints.HORIZONTAL;
-      gbcOpt.gridx++;
-      panelOpt.add( this.spinnerWinSelectSec, gbcOpt );
+    gbcOpt.fill = GridBagConstraints.HORIZONTAL;
+    gbcOpt.gridx++;
+    panelOpt.add( this.spinnerWinSelectSec, gbcOpt );
 
-      this.labelWinSelectUnit = new JLabel( "Sekunden" );
-      gbcOpt.gridx++;
-      panelOpt.add( this.labelWinSelectUnit, gbcOpt );
+    this.labelWinSelectUnit = GUIFactory.createLabel( "Sekunden" );
+    gbcOpt.gridx++;
+    panelOpt.add( this.labelWinSelectUnit, gbcOpt );
 
-      gbcOpt.fill  = GridBagConstraints.NONE;
-      gbcOpt.gridx = 0;
-      gbcOpt.gridy++;
-    } else {
-      this.labelWinSelectTime  = null;
-      this.spinnerWinSelectSec = null;
-      this.labelWinSelectUnit  = null;
-    }
-
-    this.labelFramesPerSec = new JLabel( "Bilder pro Sekunde:" );
+    this.labelFramesPerSec = GUIFactory.createLabel( "Bilder pro Sekunde:" );
+    gbcOpt.fill            = GridBagConstraints.NONE;
+    gbcOpt.gridx           = 0;
+    gbcOpt.gridy++;
     panelOpt.add( this.labelFramesPerSec, gbcOpt );
 
     Integer defaultFramesPerSec = 10;
-    this.comboFramesPerSec      = new JComboBox<>();
+    this.comboFramesPerSec      = GUIFactory.createComboBox();
     this.comboFramesPerSec.setEditable( false );
     this.comboFramesPerSec.addItem( 5 );
     this.comboFramesPerSec.addItem( 7 );
@@ -448,81 +445,77 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
     gbcOpt.gridx++;
     panelOpt.add( this.comboFramesPerSec, gbcOpt );
 
-    if( this.robot != null ) {
-      this.labelColorReduction = new JLabel( "Farbanpassung:" );
-      gbcOpt.fill  = GridBagConstraints.NONE;
-      gbcOpt.gridx = 0;
-      gbcOpt.gridy++;
-      panelOpt.add( this.labelColorReduction, gbcOpt );
+    this.cbStartAfterReset = GUIFactory.createCheckBox(
+				"Aufnahme erst nach RESET starten" );
+    gbcOpt.insets.top = 10;
+    gbcOpt.gridwidth  = GridBagConstraints.REMAINDER;
+    gbcOpt.gridx      = 0;
+    gbcOpt.gridy++;
+    panelOpt.add( this.cbStartAfterReset, gbcOpt );
 
-      ButtonGroup grpColorReduction = new ButtonGroup();
+    this.cbFocusedWindowOnly = GUIFactory.createCheckBox(
+		"Automatische Pause bei inaktivem Fenster" );
+    gbcOpt.insets.top = 0;
+    gbcOpt.gridy++;
+    panelOpt.add( this.cbFocusedWindowOnly, gbcOpt );
 
-      this.btnColorReductionSmooth = new JRadioButton( "weich", true );
-      grpColorReduction.add( this.btnColorReductionSmooth );
-      gbcOpt.gridx++;
-      panelOpt.add( this.btnColorReductionSmooth, gbcOpt );
+    this.cbForce256Colors = GUIFactory.createCheckBox(
+		"Ausgabedatei immer mit 256 Farben erzeugen" );
+    this.cbForce256Colors.setToolTipText(
+		"Diese Option ist sinnvoll, wenn sich w\u00E4hrend"
+			+ " der Aufnahme die Anzahl der Farben"
+			+ " \u00E4ndert." );
+    gbcOpt.gridy++;
+    panelOpt.add( this.cbForce256Colors, gbcOpt );
 
-      this.btnColorReductionHard = new JRadioButton( "hart", false );
-      grpColorReduction.add( this.btnColorReductionHard );
-      gbcOpt.gridx++;
-      panelOpt.add( this.btnColorReductionHard, gbcOpt );
+    this.labelColorReduction = GUIFactory.createLabel( "Farbanpassung:" );
+    gbcOpt.insets.top        = 5;
+    gbcOpt.fill              = GridBagConstraints.NONE;
+    gbcOpt.gridwidth         = 1;
+    gbcOpt.gridx             = 0;
+    gbcOpt.gridy++;
+    panelOpt.add( this.labelColorReduction, gbcOpt );
 
-      gbcOpt.insets.top = 0;
-    } else {
-      this.labelColorReduction     = null;
-      this.btnColorReductionSmooth = null;
-      this.btnColorReductionHard   = null;
-    }
+    ButtonGroup grpColorReduction = new ButtonGroup();
 
-    this.labelPlayCnt = new JLabel( "Wiedergabe:" );
+    this.rbColorReductionSmooth = GUIFactory.createRadioButton( "weich" );
+    grpColorReduction.add( this.rbColorReductionSmooth );
+    gbcOpt.gridx++;
+    panelOpt.add( this.rbColorReductionSmooth, gbcOpt );
+
+    this.rbColorReductionHard = GUIFactory.createRadioButton(
+							"hart",
+							true );
+    grpColorReduction.add( this.rbColorReductionHard );
+    gbcOpt.gridx++;
+    panelOpt.add( this.rbColorReductionHard, gbcOpt );
+
+    this.labelPlayCnt    = GUIFactory.createLabel( "Wiedergabe:" );
+    gbcOpt.insets.top    = 0;
     gbcOpt.insets.bottom = 5;
-    gbcOpt.gridwidth     = 1;
     gbcOpt.gridx         = 0;
     gbcOpt.gridy++;
     panelOpt.add( this.labelPlayCnt, gbcOpt );
 
     ButtonGroup grpPlayCnt = new ButtonGroup();
 
-    this.btnPlayOnce = new JRadioButton( "einmal", false );
-    grpPlayCnt.add( this.btnPlayOnce );
+    this.rbPlayOnce = GUIFactory.createRadioButton( "einmal" );
+    grpPlayCnt.add( this.rbPlayOnce );
     gbcOpt.gridx++;
-    panelOpt.add( this.btnPlayOnce, gbcOpt );
+    panelOpt.add( this.rbPlayOnce, gbcOpt );
 
-    this.btnPlayInfinite = new JRadioButton(
+    this.rbPlayInfinite = GUIFactory.createRadioButton(
 					"st\u00E4ndig wiederholen",
 					true );
-    grpPlayCnt.add( this.btnPlayInfinite );
+    grpPlayCnt.add( this.rbPlayInfinite );
     gbcOpt.gridx++;
-    panelOpt.add( this.btnPlayInfinite, gbcOpt );
-
-    this.btnStartAfterReset = new JCheckBox(
-					"Aufnahme erst nach RESET starten",
-					false );
-    gbcOpt.insets.bottom = (this.robot != null ? 0: 5);
-    gbcOpt.gridwidth     = GridBagConstraints.REMAINDER;
-    gbcOpt.gridx         = 0;
-    gbcOpt.gridy++;
-    panelOpt.add( this.btnStartAfterReset, gbcOpt );
-
-    if( this.robot != null ) {
-      this.btnFocusedWindowOnly = new JCheckBox(
-		"Automatische Pause bei inaktiven Fenster",
-		false );
-      gbcOpt.insets.bottom = 5;
-      gbcOpt.insets.top    = 0;
-      gbcOpt.gridwidth     = GridBagConstraints.REMAINDER;
-      gbcOpt.gridx         = 0;
-      gbcOpt.gridy++;
-      panelOpt.add( this.btnFocusedWindowOnly, gbcOpt );
-    } else {
-      this.btnFocusedWindowOnly = null;
-    }
+    panelOpt.add( this.rbPlayInfinite, gbcOpt );
 
 
     // Ausgabedatei
-    JPanel panelFile = new JPanel( new GridBagLayout() );
+    JPanel panelFile = GUIFactory.createPanel( new GridBagLayout() );
     panelFile.setBorder(
-		BorderFactory.createTitledBorder( "Ausgabedatei" ) );
+		GUIFactory.createTitledBorder( "Ausgabedatei" ) );
     gbc.gridy++;
     add( panelFile, gbc );
 
@@ -539,9 +532,10 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
     this.fldFile.setText( "--- Bitte ausw\u00E4hlen ---" );
     panelFile.add( this.fldFile, gbcFile );
 
-    this.btnFileSelect = createImageButton(
-				"/images/file/open.png",
-				"Ausw\u00E4hlen" );
+    this.btnFileSelect = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					EmuUtil.TEXT_SELECT );
     gbcFile.fill    = GridBagConstraints.NONE;
     gbcFile.weightx = 0.0;
     gbcFile.gridx++;
@@ -553,9 +547,9 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
     gbc.insets.right = 0;
     gbc.gridwidth    = GridBagConstraints.REMAINDER;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
-    this.labelStatus = new JLabel( DEFAULT_STATUS_TEXT );
+    this.labelStatus = GUIFactory.createLabel( DEFAULT_STATUS_TEXT );
     gbc.anchor       = GridBagConstraints.WEST;
     gbc.fill         = GridBagConstraints.NONE;
     gbc.weightx      = 0.0;
@@ -567,59 +561,73 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 
 
     // Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 5, 1, 5, 5 ) );
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 7, 1, 5, 5 ) );
     gbc.anchor      = GridBagConstraints.NORTHEAST;
     gbc.insets.top  = 5;
     gbc.gridwidth   = 1;
-    gbc.gridheight  = (this.robot != null ? 3 : 2);
+    gbc.gridheight  = 3;
     gbc.gridy       = 0;
     gbc.gridx++;
     add( panelBtn, gbc );
 
-    this.btnRecord = new JButton( "Aufnehmen" );
+    this.btnRecord = GUIFactory.createButton( EmuUtil.TEXT_RECORD );
     this.btnRecord.setEnabled( false );
-    this.btnRecord.addActionListener( this );
     panelBtn.add( btnRecord );
 
-    this.btnPause = new JButton( "Pause" );
+    this.btnPause = GUIFactory.createButton( "Pause" );
     this.btnPause.setEnabled( false );
-    this.btnPause.addActionListener( this );
     panelBtn.add( btnPause );
 
-    this.btnStop = new JButton( "Stopp" );
+    this.btnStop = GUIFactory.createButton( "Stopp" );
     this.btnStop.setEnabled( false );
-    this.btnStop.addActionListener( this );
     panelBtn.add( btnStop );
 
-    this.btnPlay = new JButton( "Wiedergabe" );
+    this.btnPlay = GUIFactory.createButton( "Wiedergabe" );
     this.btnPlay.setEnabled( false );
-    this.btnPlay.addActionListener( this );
     panelBtn.add( btnPlay );
 
-    this.btnClose = new JButton( "Schlie\u00DFen" );
-    this.btnClose.addActionListener( this );
+    this.btnDelete = GUIFactory.createButton( EmuUtil.TEXT_DELETE );
+    this.btnDelete.setEnabled( false );
+    panelBtn.add( btnDelete );
+
+    this.btnHelp = GUIFactory.createButtonHelp();
+    panelBtn.add( btnHelp );
+
+    this.btnClose = GUIFactory.createButtonClose();
     panelBtn.add( btnClose );
 
 
     // Vorbelegung
-    FileSystemView fsv = FileSystemView.getFileSystemView();
-    if( fsv != null ) {
-      File homeDir = fsv.getHomeDirectory();
-      if( homeDir != null ) {
-	this.fldFile.setFile( new File( homeDir, "jkcemu.gif" ) );
-	this.fileCheckEnabled = true;
-	this.btnRecord.setEnabled( true );
-      }
+    File homeDir = FileUtil.getHomeDirFile();
+    if( homeDir != null ) {
+      this.fldFile.setFile( new File( homeDir, DEFAULT_FILE ) );
+      this.fileCheckEnabled = true;
+      this.btnRecord.setEnabled( true );
     }
+
+
+    // Listener
+    this.rbCaptureEmuSysScreen.addActionListener( this );
+    this.rbCaptureScreenFrm.addActionListener( this );
+    this.rbCaptureOtherWindow.addActionListener( this );
+    this.cbForce256Colors.addActionListener( this );
+    this.btnFileSelect.addActionListener( this );
+    this.btnRecord.addActionListener( this );
+    this.btnPause.addActionListener( this );
+    this.btnStop.addActionListener( this );
+    this.btnPlay.addActionListener( this );
+    this.btnDelete.addActionListener( this );
+    this.btnHelp.addActionListener( this );
+    this.btnClose.addActionListener( this );
 
 
     // sonstiges
     updOptionFieldsEnabled();
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       pack();
       setScreenCentered();
     }
-    setResizable( true );
   }
 
 
@@ -651,6 +659,26 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
   }
 
 
+  private void checkFileExists( File file ) throws IOException
+  {
+    if( file != null ) {
+      if( !file.exists() ) {
+	this.btnPlay.setEnabled( false );
+	this.btnDelete.setEnabled( false );
+	throw new IOException( "Die Ausgabedatei existiert nicht mehr." );
+      }
+    }
+  }
+
+
+  private void closePlayer()
+  {
+    if( this.videoPlayFrm != null ) {
+      this.videoPlayFrm.doClose();
+    }
+  }
+
+
   private BufferedImage createSnapshot()
   {
     BufferedImage image  = null;
@@ -674,14 +702,42 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
   }
 
 
+  private void doDelete() throws IOException
+  {
+    boolean deleted = false;
+    File    file    = this.fldFile.getFile();
+    if( file != null ) {
+      checkFileExists( file );
+      closePlayer();
+      if( BaseDlg.showYesNoDlg(
+		this,
+		"M\u00F6chten Sie die Ausgabedatei mit dem"
+			+ " aufgenommenen Video l\u00F6schen?" ) )
+      {
+	if( !file.delete() ) {
+	  throw new IOException(
+		"Ausgabedatei konnte nicht gel\u00F6scht werden." );
+	}
+	deleted = true;
+      }
+    } else {
+      // sollte nie vorkommen
+    }
+    if( deleted ) {
+      this.btnPlay.setEnabled( false );
+      this.btnDelete.setEnabled( false );
+    }
+  }
+
+
   private void doFileSelect()
   {
     if( this.thread == null ) {
-      File file = EmuUtil.showFileSaveDlg(
+      File file = FileUtil.showFileSaveDlg(
 			this,
 			"GIF-Datei speichern",
 			this.fldFile.getFile(),
-			EmuUtil.getGIFFileFilter() );
+			FileUtil.getGIFFileFilter() );
       if( file != null ) {
 	if( !file.exists() || file.canWrite() ) {
 	  String fileName = file.getName();
@@ -719,20 +775,32 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
   }
 
 
-  private void doPlay()
+  private void doPlay() throws IOException
   {
-    if( this.videoPlayFrm != null ) {
-      this.videoPlayFrm.setState( Frame.NORMAL );
+    File file = this.fldFile.getFile();
+    if( file != null ) {
+      checkFileExists( file );
+      if( !file.canRead() ) {
+	this.btnPlay.setEnabled( false );
+	throw new IOException( "Die Ausgabedatei ist nicht lesbar." );
+      }
+      if( this.videoPlayFrm != null ) {
+	this.videoPlayFrm.setState( Frame.NORMAL );
+      } else {
+	this.videoPlayFrm = new VideoPlayFrm();
+      }
+      this.videoPlayFrm.setFile( this.fldFile.getFile() );
+      this.videoPlayFrm.setVisible( true );
+      this.videoPlayFrm.toFront();
     } else {
-      this.videoPlayFrm = new VideoPlayFrm();
+      // sollte nie vorkommen
+      this.btnPlay.setEnabled( false );
+      this.btnDelete.setEnabled( false );
     }
-    this.videoPlayFrm.setFile( this.fldFile.getFile() );
-    this.videoPlayFrm.setVisible( true );
-    this.videoPlayFrm.toFront();
   }
 
 
-  private void doRecord()
+  private void doRecord() throws IOException
   {
     if( this.thread != null ) {
       if( this.pause ) {
@@ -762,85 +830,94 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 	      frameMillis = Math.max( 1000 / ((Integer) o).intValue(), 10 );
 	    }
 	  }
-	  if( this.videoPlayFrm != null ) {
-	    this.videoPlayFrm.doClose();
-	  }
-	  this.frameMillis         = frameMillis;
-	  this.waitForWindowMillis = 0;
-	  this.waitForReset        = false;
-	  this.pause               = false;
-	  this.focusedWindowOnly   = false;
-	  this.capturing           = false;
-	  this.captureWidth        = 0;
-	  this.captureHeight       = 0;
-	  this.captureWindow       = null;
-	  if( (this.btnCaptureEmuSysScreen != null)
-	      && (this.btnCaptureScreenFrm != null)
-	      && (this.btnCaptureOtherWindow != null) )
-	  {
-	    if( this.btnCaptureScreenFrm.isSelected() ) {
-	      this.captureWindow = this.screenFrm;
+	  closePlayer();
+	  this.frameMillis          = frameMillis;
+	  this.waitForWindowMillis  = 0;
+	  this.waitForReset         = false;
+	  this.pause                = false;
+	  this.focusedWindowOnly    = false;
+	  this.force256Colors       = false;
+	  this.smoothColorReduction = false;
+	  this.playInfinite         = false;
+	  this.capturing            = false;
+	  this.captureWidth         = 0;
+	  this.captureHeight        = 0;
+	  this.captureWindow        = null;
+
+	  boolean fromEmuSys    = this.rbCaptureEmuSysScreen.isSelected();
+	  boolean fromScreenFrm = this.rbCaptureScreenFrm.isSelected();
+	  boolean fromOtherWin  = this.rbCaptureOtherWindow.isSelected();
+
+	  if( (fromScreenFrm || fromOtherWin) && (this.robot == null) ) {
+	    StringBuilder buf = new StringBuilder( 512 );
+	    buf.append( "Das Aufnehmen eines Fensters ist nicht"
+			+ " m\u00F6glich,\n"
+			+ "da die Erstellung von Bildschirmfotos"
+			+ " (Screenshots) fehlschl\u00E4gt." );
+	    if( this.robotMsg != null ) {
+	      if( !this.robotMsg.isEmpty() ) {
+		buf.append( "\n\nDetails:\n" );
+		buf.append( this.robotMsg );
+	      }
 	    }
-	    else if( this.btnCaptureOtherWindow.isSelected() ) {
-	      this.waitForWindowMillis = 5000;
-	      if( this.spinnerWinSelectSec != null ) {
-		o = this.spinnerWinSelectSec.getValue();
-		if( o instanceof Number ) {
-		  int v = ((Number) o).intValue();
-		  if( (v >= 1) && (v < 10) ) {
-		    this.waitForWindowMillis = (v + 1) * 1000;
-		  }
+	    throw new IOException( buf.toString() );
+	  }
+
+	  if( fromScreenFrm ) {
+	    this.captureWindow = this.screenFrm;
+	  }
+	  else if( fromOtherWin ) {
+	    this.waitForWindowMillis = 5000;
+	    if( this.spinnerWinSelectSec != null ) {
+	      o = this.spinnerWinSelectSec.getValue();
+	      if( o instanceof Number ) {
+		int v = ((Number) o).intValue();
+		if( (v >= 1) && (v < 10) ) {
+		  this.waitForWindowMillis = (v + 1) * 1000;
 		}
 	      }
 	    }
-	    if( this.btnCaptureEmuSysScreen.isSelected()
-			|| this.btnCaptureScreenFrm.isSelected() )
-	    {
-	      this.waitForReset = this.btnStartAfterReset.isSelected();
-	    }
-	    if( (this.btnCaptureScreenFrm.isSelected()
-			|| this.btnCaptureOtherWindow.isSelected())
-		&& (this.btnFocusedWindowOnly != null) )
-	    {
-	      this.focusedWindowOnly =
-			this.btnFocusedWindowOnly.isSelected();
-	    }
-	    this.btnCaptureEmuSysScreen.setEnabled( false );
-	    this.btnCaptureScreenFrm.setEnabled( false );
-	    this.btnCaptureOtherWindow.setEnabled( false );
-	  } else {
-	    this.waitForReset = this.btnStartAfterReset.isSelected();
 	  }
-	  if( this.labelWinSelectTime != null ) {
-	    this.labelWinSelectTime.setEnabled( false );
+	  if( fromEmuSys || fromScreenFrm ) {
+	    this.waitForReset = this.cbStartAfterReset.isSelected();
 	  }
-	  if( this.spinnerWinSelectSec != null ) {
-	    this.spinnerWinSelectSec.setEnabled( false );
+	  if( fromScreenFrm || fromOtherWin ) {
+	    this.focusedWindowOnly = this.cbFocusedWindowOnly.isSelected();
 	  }
-	  if( this.labelWinSelectUnit != null ) {
-	    this.labelWinSelectUnit.setEnabled( false );
+	  if( fromEmuSys ) {
+	    this.force256Colors = this.cbForce256Colors.isSelected();
 	  }
+	  if( fromEmuSys
+		|| fromScreenFrm
+		|| this.cbForce256Colors.isSelected() )
+	  {
+	    this.smoothColorReduction
+			= this.rbColorReductionSmooth.isSelected();
+	  }
+	  this.playInfinite = this.rbPlayInfinite.isSelected();
+
+	  this.rbCaptureEmuSysScreen.setEnabled( false );
+	  this.rbCaptureScreenFrm.setEnabled( false );
+	  this.rbCaptureOtherWindow.setEnabled( false );
+	  this.labelWinSelectTime.setEnabled( false );
+	  this.spinnerWinSelectSec.setEnabled( false );
+	  this.labelWinSelectUnit.setEnabled( false );
 	  this.labelFramesPerSec.setEnabled( false );
 	  this.comboFramesPerSec.setEnabled( false );
-	  if( this.labelColorReduction != null ) {
-	    this.labelColorReduction.setEnabled( false );
-	  }
-	  if( this.btnColorReductionSmooth != null ) {
-	    this.btnColorReductionSmooth.setEnabled( false );
-	  }
-	  if( this.btnColorReductionHard != null ) {
-	    this.btnColorReductionHard.setEnabled( false );
-	  }
+	  this.cbStartAfterReset.setEnabled( false );
+	  this.cbFocusedWindowOnly.setEnabled( false );
+	  this.cbForce256Colors.setEnabled( false );
+	  this.labelColorReduction.setEnabled( false );
+	  this.rbColorReductionSmooth.setEnabled( false );
+	  this.rbColorReductionHard.setEnabled( false );
 	  this.labelPlayCnt.setEnabled( false );
-	  this.btnPlayOnce.setEnabled( false );
-	  this.btnPlayInfinite.setEnabled( false );
-	  this.btnStartAfterReset.setEnabled( false );
-	  if( this.btnFocusedWindowOnly != null ) {
-	    this.btnFocusedWindowOnly.setEnabled( false );
-	  }
+	  this.rbPlayOnce.setEnabled( false );
+	  this.rbPlayInfinite.setEnabled( false );
 	  this.btnFileSelect.setEnabled( false );
 	  this.btnRecord.setEnabled( false );
 	  this.btnStop.setEnabled( true );
+	  this.btnPlay.setEnabled( false );
+	  this.btnDelete.setEnabled( false );
 	  if( this.waitForWindowMillis <= 0 ) {
 	    if( !this.waitForReset ) {
 	      this.btnPause.setEnabled( true );
@@ -886,29 +963,14 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
     this.captureWidth        = 0;
     this.captureHeight       = 0;
     this.captureWindow       = null;
-    if( this.btnCaptureEmuSysScreen != null ) {
-      this.btnCaptureEmuSysScreen.setEnabled( true );
-    }
-    if( this.btnCaptureScreenFrm != null ) {
-      this.btnCaptureScreenFrm.setEnabled( true );
-    }
-    if( this.btnCaptureOtherWindow != null ) {
-      this.btnCaptureOtherWindow.setEnabled( true );
-    }
+    this.rbCaptureEmuSysScreen.setEnabled( true );
+    this.rbCaptureScreenFrm.setEnabled( true );
+    this.rbCaptureOtherWindow.setEnabled( true );
     this.labelFramesPerSec.setEnabled( true );
     this.comboFramesPerSec.setEnabled( true );
-    if( this.labelColorReduction != null ) {
-      this.labelColorReduction.setEnabled( true );
-    }
-    if( this.btnColorReductionSmooth != null ) {
-      this.btnColorReductionSmooth.setEnabled( true );
-    }
-    if( this.btnColorReductionHard != null ) {
-      this.btnColorReductionHard.setEnabled( true );
-    }
     this.labelPlayCnt.setEnabled( true );
-    this.btnPlayOnce.setEnabled( true );
-    this.btnPlayInfinite.setEnabled( true );
+    this.rbPlayOnce.setEnabled( true );
+    this.rbPlayInfinite.setEnabled( true );
     this.btnFileSelect.setEnabled( true );
     this.btnRecord.setEnabled( true );
     this.btnPause.setEnabled( false );
@@ -921,15 +983,12 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
   private void threadTerminated( Exception ex )
   {
     if( ex != null ) {
-      if( ex instanceof IOException ) {
-	BaseDlg.showErrorDlg( this, ex );
-      } else {
-	EmuUtil.exitSysError(
+      this.btnPlay.setEnabled( false );
+      this.btnDelete.setEnabled( false );
+      EmuUtil.checkAndShowError(
 			this,
 			"Aufnehmen des Bildschirmvideo fehlgeschlagen",
 			ex );
-      }
-      this.btnPlay.setEnabled( false );
     } else {
       boolean state = false;
       File    file  = this.fldFile.getFile();
@@ -937,6 +996,7 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 	state = file.isFile() && file.canRead();
       }
       this.btnPlay.setEnabled( state );
+      this.btnDelete.setEnabled( state );
       this.fileCheckEnabled = true;
     }
     setIdle();
@@ -945,46 +1005,24 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
 
   private void updOptionFieldsEnabled()
   {
-    boolean stateEmuSys      = true;
-    boolean stateScreenFrm   = true;
-    boolean stateOtherWindow = false;
-    if( this.btnCaptureEmuSysScreen != null ) {
-      stateEmuSys = this.btnCaptureEmuSysScreen.isSelected();
-    }
-    if( this.btnCaptureScreenFrm != null ) {
-      stateScreenFrm = this.btnCaptureScreenFrm.isSelected();
-    }
-    if( this.btnCaptureOtherWindow != null ) {
-      stateOtherWindow = this.btnCaptureOtherWindow.isSelected();
-    }
-    if( this.labelWinSelectTime != null ) {
-      this.labelWinSelectTime.setEnabled( stateOtherWindow );
-    }
-    if( this.spinnerWinSelectSec != null ) {
-      this.spinnerWinSelectSec.setEnabled( stateOtherWindow );
-    }
-    if( this.labelWinSelectUnit != null ) {
-      this.labelWinSelectUnit.setEnabled( stateOtherWindow );
-    }
-    if( this.labelColorReduction != null ) {
-      this.labelColorReduction.setEnabled(
-				stateScreenFrm || stateOtherWindow );
-    }
-    if( this.btnColorReductionSmooth != null ) {
-      this.btnColorReductionSmooth.setEnabled(
-				stateScreenFrm || stateOtherWindow );
-    }
-    if( this.btnColorReductionHard != null ) {
-      this.btnColorReductionHard.setEnabled(
-				stateScreenFrm || stateOtherWindow );
-    }
-    if( this.btnStartAfterReset != null ) {
-      this.btnStartAfterReset.setEnabled( stateEmuSys || stateScreenFrm );
-    }
-    if( this.btnFocusedWindowOnly != null ) {
-      this.btnFocusedWindowOnly.setEnabled(
-				stateScreenFrm || stateOtherWindow );
-    }
+    boolean fromEmuSys    = this.rbCaptureEmuSysScreen.isSelected();
+    boolean fromScreenFrm = this.rbCaptureScreenFrm.isSelected();
+    boolean fromOtherWin  = this.rbCaptureOtherWindow.isSelected();
+
+    this.labelWinSelectTime.setEnabled( fromOtherWin );
+    this.spinnerWinSelectSec.setEnabled( fromOtherWin );
+    this.labelWinSelectUnit.setEnabled( fromOtherWin );
+    this.cbStartAfterReset.setEnabled( fromEmuSys || fromScreenFrm );
+    this.cbFocusedWindowOnly.setEnabled( fromScreenFrm || fromOtherWin );
+    this.cbForce256Colors.setEnabled( fromEmuSys );
+
+    boolean stateColorReduction =
+		((fromEmuSys && this.cbForce256Colors.isSelected())
+			|| fromScreenFrm
+			|| fromOtherWin);
+    this.labelColorReduction.setEnabled( stateColorReduction );
+    this.rbColorReductionSmooth.setEnabled( stateColorReduction );
+    this.rbColorReductionHard.setEnabled( stateColorReduction );
   }
 
 
@@ -1049,4 +1087,3 @@ public class VideoCaptureFrm extends BaseFrm implements Runnable
     this.labelStatus.setText( text );
   }
 }
-

@@ -12,7 +12,7 @@
   <a href="memeditor.htm">Speichereditor</a>.
  <br/><br/>
   <ul>
-   <li><a href="debugger.htm#launch">1. Debugger starten</a></li>
+   <li><a href="debugger.htm#window">1. Debugger-Fenster</a></li>
    <li>
     <a href="debugger.htm#stop">2. Programmausf&uuml;hrung anhalten</a>
    </li>
@@ -67,15 +67,34 @@
    </li>
    <li><a href="debugger.htm#trace">7. Befehle aufzeichnen</a></li>
    <li><a href="debugger.htm#var">8. Variablen</a></li>
+   <li>
+    <a href="debugger.htm#load_save">9. Halte-/Log-Punkte und Variablen speichern und laden</a>
+   </li>
   </ul>
  <br/>
 
 
- <h2><a name="launch">1. Debugger starten</a></h2>
-  Sie befinden sich im Hauptfenster und klicken im Men&uuml;
-  <em>Extra</em>, Untermen&uuml; <em>Werkzeuge</em>, den Punkt
-  <em>Debugger...</em> an.
+ <h2><a name="window">1. Debugger-Fenster</a></h2>
+  Den Debugger &ouml;ffnen Sie im Hauptfenster &uuml;ber den Men&uuml;punkt
+  <em>Extra</em> &rarr; <em>Werkzeuge</em> &rarr; <em>Debugger...</em>.
   Die weitere Beschreibung bezieht sich auf das Debugger-Fenster.
+  Dieses besteht aus mehreren Unterfenstern (Reitern).
+  Das Unterfenster <em>CPU</em> ist das wichtigste
+  und bietet auf der linken Seite einen Blick
+  auf die Flags, die Register und die Programmausf&uuml;hrung.
+  Die rechte Seite enth&auml;lt Listen f&uuml;r die verschiedenen
+  Arten von Halte- und Log-Punkten.
+  Diese Listen lassen sich in ihrer dargestellten Gr&ouml;&szlig;e
+  ver&auml;ndern, indem man die Balken dazwischen verschiebt.
+ <br/><br/>
+  Dr&uuml;ckt man &uuml;ber solch einer Liste die rechte Maustaste,
+  &ouml;ffnet sich ein Kontextmen&uuml;.
+  Dieses Kontextmen&uuml; bezieht sich nur auf die Halte-/Log-Punkte
+  in der Liste, &uuml;ber der es ge&ouml;ffnet wurde.
+  Demgegen&uuml;ber bezieht sich das Fenstermen&uuml;
+  <em>Halte-/Log-Punkte</em>, welches teilweise die gleichen Eintr&auml;ge
+  wie das Kontextmen&uuml; enth&auml;lt,
+  auf alle Halte-/Log-Punkte.
  <br/><br/>
 
 
@@ -138,11 +157,12 @@
   Es wird angehalten bzw. eine Log-Meldung ausgegeben,
   wenn die Programmausf&uuml;hrung an der angegebenen Adresse
   angelangt ist.
-  Zus&auml;tzlich k&ouml;nnen Sie den Wert eines Registers
-  pr&uuml;fen lassen.
-  Dann wird nur angehalten bzw. eine Log-Meldung ausgegeben,
-  wenn neben der Adresse auch die Registerwertpr&uuml;fung erfolgreich war.
-  Diese l&auml;uft folgenderma&szlig;en ab:
+  Zus&auml;tzlich k&ouml;nnen Sie den Wert eines Registers und bzw. oder
+  eine Flagbedingung pr&uuml;fen lassen.
+  In dem Fall wird nur angehalten bzw. eine Log-Meldung ausgegeben,
+  wenn neben der angegebenen Adresse auch die Registerwertpr&uuml;fung
+  erfolgreich und bzw. oder die Flagbedingung erf&uuml;llt ist.
+  Die Registerwertpr&uuml;fung l&auml;uft folgenderma&szlig;en ab:
   Vor Abarbeitung des Befehls auf der Halte-/Log-Punktadresse wird der Wert
   des ausgew&auml;hlten Registers mit einer von Ihnen anzugebenden Maske
   UND-verkn&uuml;pft und das Ergebnis dann mit einem ebenfalls von Ihnen
@@ -151,12 +171,10 @@
   sondern auch auf Ungleichheit sowie auf gr&ouml;&szlig;er als
   und kleiner als.
  <br/><br/>
-  Halte-/Log-Punkte auf Programmadressen k&ouml;nnen Sie neben den
-  oben genanten M&ouml;glichkeiten auch &uuml;ber das Kontextmen&uuml;
-  der Programmcodeanzeige sowie im <a href="reassembler.htm">Reassembler</a>
-  &uuml;ber das Kontextmen&uuml; anlegen.
-  Bei diesen beiden Varianten wird gleich die Adresse entsprechend
-  der Position des Kontextmen&uuml;s vorbelegt.
+  Optional kann einem Halte-/Log-Punkt auf eine Programmadresse
+  auch ein Name vergeben werden.
+  Neben einem besseren &Uuml;berblick dient dieser Name der Zuordnung beim
+  <a href="debugger.htm#bp_import">Importieren von Halte-/Log-Punkten</a>.
  <br/><br/>
 
  <h3><a name="bp_mem">5.2. Halte-/Log-Punkt auf Speicherbereich</a></h3>
@@ -244,14 +262,25 @@
   <a href="labelimport.htm">importieren</a>.
   Diese Halte-/Log-Punkte k&ouml;nnen dabei auch einen Namen haben.
   So ist z.B. der Import der Markentabelle eines Assemblers m&ouml;glich,
-  um f&uuml;r jede Marke einen Haltepunkt anzulegen.
+  um f&uuml;r jede Marke einen Halte-/Log-Punkt anzulegen.
  <br/><br/>
-  Die Markentabelle des JKCEMU-Assemblers k&ouml;nnen Sie sogar
-  automatisch in den Debugger importieren lassen.
-  Schalten Sie dazu die
-  <a href="assembler.htm#options">Assembler-Option</a>
-  <em>Im Debugger Halte-/Log-Punkte bzw. Variablen auf Marken anlegen</em>
-  ein.
+  Der Name dient dazu, bereits vorhandene Halte-/Log-Punkte
+  zu aktualisieren, d.h., ist ein zu importierender Halte-/Log-Punkt
+  mit gleichem Namen bereits vorhanden,
+  wird bei diesem nur die Adresse aktualisiert und kein neuer
+  Halte-/Log-Punkt angelegt.
+ <br/><br/>
+  Die Markentabelle des <a href="assembler.htm">JKCEMU-Assemblers</a>
+  k&ouml;nnen Sie automatisch in den Debugger importieren lassen.
+  Schalten Sie dazu die Assembler-Option
+  <em>Marken im Debugger verwenden</em> ein.
+  In dem Fall wird auch noch zwischen Halte-/Log-Punkte auf
+  Programmadressen und auf Speicherbereiche unterschieden.
+  Normalerweise wird f&uuml;r jede Marke ein Halte-/Log-Punkt
+  auf eine Programmadresse angelegt bzw. aktualisiert.
+  Enth&auml;lt jedoch die betreffende Assembler-Quelltextzeile
+  eine <tt>DEFS</tt>- oder <tt>DS</tt>-Instruktion,
+  wird der Halte-/Log-Punkt auf den Speicherbereich angelegt.
  <br/><br/>
 
  <h2><a name="step">6. Schrittbetrieb</a></h2>
@@ -344,6 +373,7 @@
   von der Schreibgeschwindigkeit des Speichermediums deutlich gebremst.
  <br/><br/>
 
+
  <h2><a name="var">8. Variablen</a></h2>
   Ein Programm speichert seine Daten &uuml;blicherweise in Variablen.
   Da es beim Debuggen sehr hilfreich ist,
@@ -362,10 +392,10 @@
   Neben dem manuellen Anlegen k&ouml;nnen Variablen auch von dem
   im JKCEMU integrierten <a href="assembler.htm">Assembler</a>
   importiert werden.
-  Wenn Sie die Assembler-Option <em>Im Debugger Halte-/Log-Punkte
-  bzw. Variablen auf Marken anlegen</em> eingeschaltet haben,
-  wird f&uuml;r jede Marke, die unmittelbar vor einer <em>DS</em>-
-  oder <em>DEFS</em>-Anweisung steht, eine Variable angelegt.
+  Wenn Sie die Assembler-Option <em>Marken im Debugger verwenden</em>
+  eingeschaltet haben, wird f&uuml;r jede Marke,
+  die unmittelbar vor einer <tt>DS</tt>- oder <tt>DEFS</tt>-Anweisung steht,
+  eine Variable angelegt.
  <br/><br/>
   Im technischen Sinne ist eine Variable im JKCEMU Debugger
   nur eine Deklaration,  die besagt, wie ein ein oder mehrere Bytes
@@ -382,5 +412,19 @@
   automatisch aktualisiert wird und dass Sie nur die Bytes sehen,
   die Sie interessieren,
   auch wenn die Bytes im ganzen Arbeitsspeicher verstreut sind.
+ <br/><br/>
+
+ <h2>
+  <a name="load_save">9. Halte-/Log-Punkte und Variablen speichern und laden</a>
+ </h2>
+  Haben Sie ein gr&ouml;&szlig;eres Projekt vor sich,
+  welches Sie am n&auml;chsten Tag weiter debuggen m&ouml;chten,
+  kann es m&uuml;hselig sein, die ganzen Halte-/Log-Punkte und Variablen
+  erneut anlegen zu m&uuml;ssen.
+  Damit Sie sich diese Arbeit sparen k&ouml;nnen,
+  bietet der Debugger die M&ouml;glichkeit, alle Halte-/Log-Punkte
+  und alle Variablen in eine XML-Datei zu speichen
+  und diese auch wieder zu laden.
+  Die Funktionen daf&uuml;r finden Sie im Men&uuml; <em>Datei</em>.
 </body>
 </html>

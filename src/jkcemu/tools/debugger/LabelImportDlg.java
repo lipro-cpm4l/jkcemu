@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,24 +8,38 @@
 
 package jkcemu.tools.debugger;
 
-import java.awt.*;
+import java.awt.Component;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
 import java.io.File;
-import java.lang.*;
 import java.util.EventObject;
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import jkcemu.Main;
-import jkcemu.base.*;
+import jkcemu.base.BaseDlg;
+import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
+import jkcemu.file.FileNameFld;
+import jkcemu.file.FileUtil;
 
 
 public class LabelImportDlg extends BaseDlg
 {
   private DebugFrm     debugFrm;
-  private JRadioButton btnSourceClipboard;
-  private JRadioButton btnSourceFile;
+  private JRadioButton rbSourceClipboard;
+  private JRadioButton rbSourceFile;
+  private JRadioButton rbCreateOrUpdateBPs;
+  private JRadioButton rbUpdateBPsOnly;
   private FileNameFld  fileNameFld;
-  private JCheckBox    btnSuppressRecreateRemovedLabels;
-  private JCheckBox    btnRemoveObsoleteLabels;
-  private JCheckBox    btnCaseSensitive;
+  private JCheckBox    cbRemoveObsoleteLabels;
+  private JCheckBox    cbCaseSensitive;
   private JButton      btnFileSelect;
   private JButton      btnImport;
   private JButton      btnCancel;
@@ -46,25 +60,38 @@ public class LabelImportDlg extends BaseDlg
   {
     boolean rv = false;
     Object  src = e.getSource();
-    if( src != null ) {
-      if( (src == this.btnSourceClipboard)
-	  || (src == this.btnSourceFile) )
-      {
-	updFieldsEnabled();
-	rv = true;
-      }
-      else if( src == this.btnFileSelect ) {
-	doFileSelect();
-	rv = true;
-      }
-      else if( src == this.btnImport ) {
-	doImport();
-	rv = true;
-      }
-      else if( src == this.btnCancel ) {
-	rv = true;
-	doClose();
-      }
+    if( (src == this.rbSourceClipboard)
+	|| (src == this.rbSourceFile) )
+    {
+      updFieldsEnabled();
+      rv = true;
+    }
+    else if( src == this.btnFileSelect ) {
+      doFileSelect();
+      rv = true;
+    }
+    else if( src == this.btnImport ) {
+      doImport();
+      rv = true;
+    }
+    else if( src == this.btnCancel ) {
+      rv = true;
+      doClose();
+    }
+    return rv;
+  }
+
+
+  @Override
+  public boolean doClose()
+  {
+    boolean rv = super.doClose();
+    if( rv ) {
+      this.rbSourceClipboard.removeActionListener( this );
+      this.rbSourceFile.removeActionListener( this );
+      this.btnFileSelect.removeActionListener( this );
+      this.btnImport.removeActionListener( this );
+      this.btnCancel.removeActionListener( this );
     }
     return rv;
   }
@@ -94,8 +121,8 @@ public class LabelImportDlg extends BaseDlg
 
 
     // Bereich Quelle
-    JPanel panelSource = new JPanel( new GridBagLayout() );
-    panelSource.setBorder( BorderFactory.createTitledBorder( "Quelle" ) );
+    JPanel panelSource = GUIFactory.createPanel( new GridBagLayout() );
+    panelSource.setBorder( GUIFactory.createTitledBorder( "Quelle" ) );
     add( panelSource, gbc );
 
     GridBagConstraints gbcSource = new GridBagConstraints(
@@ -109,19 +136,17 @@ public class LabelImportDlg extends BaseDlg
 
     ButtonGroup grpSource = new ButtonGroup();
 
-    this.btnSourceClipboard = new JRadioButton(
-			"Halte-/Log-Punkte aus Zwischenablage importieren",
-			true );
-    grpSource.add( this.btnSourceClipboard );
-    panelSource.add( this.btnSourceClipboard, gbcSource );
+    this.rbSourceClipboard = GUIFactory.createRadioButton(
+			"Halte-/Log-Punkte aus Zwischenablage importieren" );
+    grpSource.add( this.rbSourceClipboard );
+    panelSource.add( this.rbSourceClipboard, gbcSource );
 
-    this.btnSourceFile = new JRadioButton(
-			"Halte-/Log-Punkte aus Datei importieren",
-			false );
-    grpSource.add( this.btnSourceFile );
+    this.rbSourceFile = GUIFactory.createRadioButton(
+			"Halte-/Log-Punkte aus Datei importieren" );
+    grpSource.add( this.rbSourceFile );
     gbcSource.insets.bottom = 0;
     gbcSource.gridy++;
-    panelSource.add( this.btnSourceFile, gbcSource );
+    panelSource.add( this.rbSourceFile, gbcSource );
 
     this.fileNameFld        = new FileNameFld();
     gbcSource.weightx       = 1.0;
@@ -133,9 +158,10 @@ public class LabelImportDlg extends BaseDlg
     gbcSource.gridy++;
     panelSource.add( this.fileNameFld, gbcSource );
 
-    this.btnFileSelect = createImageButton(
-				"/images/file/open.png",
-				"Datei ausw\u00E4hlen" );
+    this.btnFileSelect = GUIFactory.createRelImageResourceButton(
+						this,
+						"file/open.png",
+						EmuUtil.TEXT_SELECT_FILE );
     gbcSource.weightx     = 0.0;
     gbcSource.fill        = GridBagConstraints.NONE;
     gbcSource.insets.left = 5;
@@ -144,45 +170,52 @@ public class LabelImportDlg extends BaseDlg
 
 
     // Bereich Optionen
-    JPanel panelOptions = new JPanel();
-    panelOptions.setBorder( BorderFactory.createTitledBorder( "Optionen" ) );
+    JPanel panelOptions = GUIFactory.createPanel();
+    panelOptions.setBorder( GUIFactory.createTitledBorder( "Optionen" ) );
     gbc.gridy++;
     add( panelOptions, gbc );
 
     panelOptions.setLayout(
 		new BoxLayout( panelOptions, BoxLayout.Y_AXIS ) );
 
-    this.btnSuppressRecreateRemovedLabels = new JCheckBox(
-		"Manuell entfernte Halte-/Log-Punkte nicht erneut anlegen",
-		true );
-    this.btnSuppressRecreateRemovedLabels.setAlignmentX(
-						Component.LEFT_ALIGNMENT );
-    panelOptions.add( this.btnSuppressRecreateRemovedLabels );
+    ButtonGroup grpCreateBPs = new ButtonGroup();
 
-    this.btnRemoveObsoleteLabels = new JCheckBox(
+    this.rbCreateOrUpdateBPs = GUIFactory.createRadioButton(
+		"Halte-/Log-Punkte anlegen oder aktualisieren" );
+    grpCreateBPs.add( this.rbCreateOrUpdateBPs );
+    this.rbCreateOrUpdateBPs.setAlignmentX( Component.LEFT_ALIGNMENT );
+    panelOptions.add( this.rbCreateOrUpdateBPs );
+
+    this.rbUpdateBPsOnly = GUIFactory.createRadioButton(
+		"Nur vorhandene Halte-/Log-Punkte aktualisieren" );
+    grpCreateBPs.add( this.rbUpdateBPsOnly );
+    this.rbUpdateBPsOnly.setAlignmentX( Component.LEFT_ALIGNMENT );
+    panelOptions.add( this.rbUpdateBPsOnly );
+
+    this.cbRemoveObsoleteLabels = GUIFactory.createCheckBox(
 		"Bereits vorher importierte Halte-/Log-Punkte entfernen",
 		true );
-    this.btnRemoveObsoleteLabels.setAlignmentX( Component.LEFT_ALIGNMENT );
-    panelOptions.add( this.btnRemoveObsoleteLabels );
+    this.cbRemoveObsoleteLabels.setAlignmentX( Component.LEFT_ALIGNMENT );
+    panelOptions.add( this.cbRemoveObsoleteLabels );
 
-    this.btnCaseSensitive = new JCheckBox(
-		"Gro\u00DF/-Kleinschreibung bei Namen beachten",
-		false );
-    this.btnCaseSensitive.setAlignmentX( Component.LEFT_ALIGNMENT );
-    panelOptions.add( this.btnCaseSensitive );
+    this.cbCaseSensitive = GUIFactory.createCheckBox(
+		"Gro\u00DF/-Kleinschreibung bei Namen beachten" );
+    this.cbCaseSensitive.setAlignmentX( Component.LEFT_ALIGNMENT );
+    panelOptions.add( this.cbCaseSensitive );
 
 
     // Bereich Knoepfe
-    JPanel panelBtn = new JPanel( new GridLayout( 1, 2, 5, 5 ) );
-    gbc.fill        = GridBagConstraints.NONE;
-    gbc.weightx     = 0.0;
+    JPanel panelBtn = GUIFactory.createPanel( new GridLayout( 1, 2, 5, 5 ) );
+    gbc.insets.bottom = 10;
+    gbc.fill          = GridBagConstraints.NONE;
+    gbc.weightx       = 0.0;
     gbc.gridy++;
     add( panelBtn, gbc );
 
-    this.btnImport = new JButton( "Importieren" );
+    this.btnImport = GUIFactory.createButton( "Importieren" );
     panelBtn.add( this.btnImport );
 
-    this.btnCancel = new JButton( "Abbrechen" );
+    this.btnCancel = GUIFactory.createButtonCancel();
     panelBtn.add( this.btnCancel );
 
 
@@ -196,30 +229,35 @@ public class LabelImportDlg extends BaseDlg
     if( options != null ) {
       switch( options.getLabelSource() ) {
 	case CLIPBOARD:
-	  this.btnSourceClipboard.setSelected( true );
+	  this.rbSourceClipboard.setSelected( true );
 	  break;
 	case FILE:
-	  this.btnSourceFile.setSelected( true );
+	  this.rbSourceFile.setSelected( true );
 	  break;
       }
       this.fileNameFld.setFile( options.getFile() );
-      this.btnSuppressRecreateRemovedLabels.setSelected(
-			options.getSuppressRecreateRemovedLabels() );
-      this.btnRemoveObsoleteLabels.setSelected(
+      if( options.getUpdateBreakpointsOnly() ) {
+	this.rbUpdateBPsOnly.setSelected( true );
+      } else {
+	this.rbCreateOrUpdateBPs.setSelected( true );
+      }
+      this.cbRemoveObsoleteLabels.setSelected(
 			options.getRemoveObsoleteLabels() );
-      this.btnCaseSensitive.setSelected(
+      this.cbCaseSensitive.setSelected(
 			options.getCaseSensitive() );
+    } else {
+      this.rbSourceClipboard.setSelected( true );
+      this.rbCreateOrUpdateBPs.setSelected( true );
     }
     updFieldsEnabled();
 
 
     // Listener
-    this.btnSourceClipboard.addActionListener( this );
-    this.btnSourceFile.addActionListener( this );
+    this.rbSourceClipboard.addActionListener( this );
+    this.rbSourceFile.addActionListener( this );
+    this.btnFileSelect.addActionListener( this );
     this.btnImport.addActionListener( this );
-    this.btnImport.addKeyListener( this );
     this.btnCancel.addActionListener( this );
-    this.btnCancel.addKeyListener( this );
   }
 
 
@@ -228,13 +266,14 @@ public class LabelImportDlg extends BaseDlg
 
   private void doFileSelect()
   {
-    File oldFile = this.fileNameFld.getFile();
-    File file    = EmuUtil.showFileOpenDlg(
-		this,
-		"Datei ausw\u00E4hlen",
-		oldFile != null ?
-			oldFile
-			: Main.getLastDirFile( Main.FILE_GROUP_LABEL ) );
+    File file = this.fileNameFld.getFile();
+    if( file == null ) {
+      file = Main.getLastDirFile( Main.FILE_GROUP_LABEL );
+    }
+    file = FileUtil.showFileOpenDlg(
+			this,
+			EmuUtil.TEXT_SELECT_FILE,
+			FileUtil.getDirectory( file ) );
     if( file != null ) {
       String msg = null;
       if( file.exists() ) {
@@ -256,7 +295,7 @@ public class LabelImportDlg extends BaseDlg
 
   private void doImport()
   {
-    boolean isFileSource = this.btnSourceFile.isSelected();
+    boolean isFileSource = this.rbSourceFile.isSelected();
     File    file         = this.fileNameFld.getFile();
     if( isFileSource && (file == null) ) {
       showErrorDlg(
@@ -271,9 +310,9 @@ public class LabelImportDlg extends BaseDlg
 				LabelImportOptions.LabelSource.FILE
 				: LabelImportOptions.LabelSource.CLIPBOARD,
 			file,
-			this.btnSuppressRecreateRemovedLabels.isSelected(),
-			this.btnRemoveObsoleteLabels.isSelected(),
-			this.btnCaseSensitive.isSelected() ) ) )
+			this.cbCaseSensitive.isSelected(),
+			this.rbUpdateBPsOnly.isSelected(),
+			this.cbRemoveObsoleteLabels.isSelected() ) ) )
       {
 	doClose();
       }
@@ -283,7 +322,7 @@ public class LabelImportDlg extends BaseDlg
 
   private void updFieldsEnabled()
   {
-    boolean state = this.btnSourceFile.isSelected();
+    boolean state = this.rbSourceFile.isSelected();
     this.fileNameFld.setEnabled( state );
     this.btnFileSelect.setEnabled( state );
   }

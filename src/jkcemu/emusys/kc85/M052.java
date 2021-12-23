@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,11 +9,10 @@
 package jkcemu.emusys.kc85;
 
 import java.awt.Component;
-import java.lang.*;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.FileTimesViewFactory;
-import jkcemu.etc.VDIP;
+import jkcemu.file.FileUtil;
 import jkcemu.net.KCNet;
+import jkcemu.usb.VDIP;
 import z80emu.Z80CPU;
 import z80emu.Z80InterruptSource;
 import z80emu.Z80MaxSpeedListener;
@@ -26,11 +25,13 @@ public class M052 extends AbstractKC85Module
 					Z80MaxSpeedListener,
 					Z80TStatesListener
 {
+  public static final String DESCRIPTION          = "USB/Netzwerk";
+  public static final String USB_ONLY_DESCRIPTION = "Nur USB";
+
   private static byte[] m052 = null;
 
   private Component owner;
   private String    fileName;
-  private String    title;
   private KCNet     kcNet;
   private VDIP      vdip;
   private boolean   ioEnabled;
@@ -40,17 +41,24 @@ public class M052 extends AbstractKC85Module
 
 
   public M052(
-	    int                  slot,
-	    Component            owner,
-	    FileTimesViewFactory fileTimesViewFactory,
-	    String               fileName )
+	    int       slot,
+	    Component owner,
+	    Z80CPU    z80cpu,
+	    int       vdipNum,
+	    boolean   usbOnly,
+	    String    fileName )
   {
     super( slot );
-    this.owner     = owner;
-    this.fileName  = fileName;
-    this.title     = String.format( "M052 im Schacht %02X", slot );
-    this.kcNet     = new KCNet( "Netzwerk-PIO" );
-    this.vdip      = new VDIP( fileTimesViewFactory, "USB-PIO" );
+    this.owner    = owner;
+    this.fileName = fileName;
+    if( usbOnly ) {
+      this.kcNet = null;
+    } else {
+      this.kcNet = new KCNet( "Netzwerk-PIO" );
+    }
+    this.vdip = new VDIP( vdipNum, z80cpu, "USB-PIO" );
+    this.vdip.setModuleTitle(
+		String.format( "M052 in Schacht %02X", slot ) );
     this.ioEnabled = false;
     this.romOffs   = 0;
     this.begAddr   = 0;
@@ -76,10 +84,11 @@ public class M052 extends AbstractKC85Module
   @Override
   public void appendInterruptStatusHTMLTo( StringBuilder buf )
   {
-    buf.append( "<h2>Netzwerk-PIO (E/A-Adressen 28-2B)</h2>\n" );
-    this.kcNet.appendInterruptStatusHTMLTo( buf );
-
-    buf.append( "<h2>USB-PIO (E/A-Adressen 2C-2F)</h2>\n" );
+    if( this.kcNet != null ) {
+      buf.append( "<h2>Netzwerk-PIO (E/A-Adressen 28h-2Bh)</h2>\n" );
+      this.kcNet.appendInterruptStatusHTMLTo( buf );
+    }
+    buf.append( "<h2>USB-PIO (E/A-Adressen 2Ch-2Fh)</h2>\n" );
     this.vdip.appendInterruptStatusHTMLTo( buf );
   }
 
@@ -87,53 +96,56 @@ public class M052 extends AbstractKC85Module
   @Override
   public synchronized int interruptAccept()
   {
-    int rv = 0;
-    if( this.kcNet.isInterruptRequested() ) {
-      rv = this.kcNet.interruptAccept();
+    int     rv   = 0;
+    boolean done = false;
+    if( this.kcNet != null ) {
+      if( this.kcNet.isInterruptRequested() ) {
+	rv   = this.kcNet.interruptAccept();
+	done = true;
+      }
     }
-    else if( this.vdip.isInterruptRequested() ) {
-      rv = this.vdip.interruptAccept();
+    if( !done ) {
+      if( this.vdip.isInterruptRequested() ) {
+	rv = this.vdip.interruptAccept();
+      }
     }
     return rv;
   }
 
 
   @Override
-  public synchronized void interruptFinish()
+  public synchronized boolean interruptFinish( int addr )
   {
-    if( this.kcNet.isInterruptAccepted() ) {
-      this.kcNet.interruptFinish();
+    boolean rv = false;
+    if( this.kcNet != null ) {
+      rv = this.kcNet.interruptFinish( addr );
     }
-    else if( this.vdip.isInterruptAccepted() ) {
-      this.vdip.interruptFinish();
+    if( !rv ) {
+      rv = this.vdip.interruptFinish( addr );
     }
+    return rv;
   }
 
 
   @Override
   public boolean isInterruptAccepted()
   {
-    return this.kcNet.isInterruptAccepted()
-			|| this.vdip.isInterruptAccepted();
+    boolean rv = false;
+    if( this.kcNet != null ) {
+      rv = this.kcNet.isInterruptAccepted();
+    }
+    return rv | this.vdip.isInterruptAccepted();
   }
 
 
   @Override
   public boolean isInterruptRequested()
   {
-    boolean rv = this.kcNet.isInterruptRequested();
-    if( !rv && !this.kcNet.isInterruptAccepted() ) {
-      rv = this.vdip.isInterruptRequested();
+    boolean rv = false;
+    if( this.kcNet != null ) {
+      rv = this.kcNet.isInterruptRequested();
     }
-    return rv;
-  }
-
-
-  @Override
-  public void reset( boolean powerOn )
-  {
-    this.kcNet.reset( powerOn );
-    this.vdip.reset( powerOn );
+    return rv | this.vdip.isInterruptRequested();
   }
 
 
@@ -142,7 +154,8 @@ public class M052 extends AbstractKC85Module
   @Override
   public void z80MaxSpeedChanged( Z80CPU cpu )
   {
-    this.kcNet.z80MaxSpeedChanged( cpu );
+    if( this.kcNet != null )
+      this.kcNet.z80MaxSpeedChanged( cpu );
   }
 
 
@@ -151,16 +164,38 @@ public class M052 extends AbstractKC85Module
   @Override
   public void z80TStatesProcessed( Z80CPU cpu, int tStates )
   {
-    this.kcNet.z80TStatesProcessed( cpu, tStates );
+    if( this.kcNet != null )
+      this.kcNet.z80TStatesProcessed( cpu, tStates );
   }
 
 
 	/* --- ueberschriebene Methoden --- */
 
   @Override
+  public void appendEtcInfoHTMLTo( StringBuilder buf )
+  {
+    if( this.kcNet == null ) {
+      buf.append( USB_ONLY_DESCRIPTION );
+    }
+    String fileName = getFileName();
+    if( fileName != null ) {
+      if( !fileName.isEmpty() ) {
+	if( this.kcNet == null ) {
+	  buf.append( ", " );
+	}
+	buf.append( "ROM-Datei: " );
+	EmuUtil.appendHTML( buf, fileName );
+      }
+    }
+  }
+
+
+  @Override
   public void die()
   {
-    this.kcNet.die();
+    if( this.kcNet != null ) {
+      this.kcNet.die();
+    }
     this.vdip.die();
   }
 
@@ -176,6 +211,23 @@ public class M052 extends AbstractKC85Module
   public String getFileName()
   {
     return this.fileName;
+  }
+
+
+  @Override
+  public int getLEDrgb()
+  {
+    int rv = KC85FrontFld.RGB_LED_DARK;
+    if( this.enabled && this.ioEnabled ) {
+      rv = KC85FrontFld.RGB_LED_YELLOW;
+    } else {
+      if( this.enabled ) {
+	rv = KC85FrontFld.RGB_LED_GREEN;
+      } else if( this.ioEnabled ) {
+	rv = KC85FrontFld.RGB_LED_RED;
+      }
+    }
+    return rv;
   }
 
 
@@ -210,7 +262,11 @@ public class M052 extends AbstractKC85Module
 	case 0x29:
 	case 0x2A:
 	case 0x2B:
-	  rv = this.kcNet.read( port );
+	  if( this.kcNet != null ) {
+	    rv = this.kcNet.read( port );
+	  } else {
+	    rv = 0xFF;
+	  }
 	  break;
 
 	case 0x2C:
@@ -248,7 +304,7 @@ public class M052 extends AbstractKC85Module
   {
     if( this.fileName != null ) {
       if( !this.fileName.isEmpty() ) {
-	this.rom = EmuUtil.readFile(
+	this.rom = FileUtil.readFile(
 			owner,
 			this.fileName,
 			true,
@@ -256,6 +312,16 @@ public class M052 extends AbstractKC85Module
 			"M052 ROM-Datei" );
       }
     }
+  }
+
+
+  @Override
+  public void reset( boolean powerOn )
+  {
+    if( this.kcNet != null ) {
+      this.kcNet.reset( powerOn );
+    }
+    this.vdip.reset( powerOn );
   }
 
 
@@ -270,13 +336,6 @@ public class M052 extends AbstractKC85Module
 
 
   @Override
-  public String toString()
-  {
-    return this.title;
-  }
-
-
-  @Override
   public boolean writeIOByte( int port, int value, int tStates )
   {
     boolean rv = false;
@@ -287,7 +346,9 @@ public class M052 extends AbstractKC85Module
 	case 0x2A:
 	case 0x2B:
 	case 0x08:
-	  this.kcNet.write( port, value );
+	  if( this.kcNet != null ) {
+	    this.kcNet.write( port, value );
+	  }
 	  rv = true;
 	  break;
 

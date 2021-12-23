@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -10,10 +10,12 @@ package jkcemu.base;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Properties;
 import jkcemu.Main;
 import jkcemu.audio.AudioUtil;
+import jkcemu.file.FileInfo;
+import jkcemu.file.FileUtil;
+import jkcemu.file.LoadData;
 
 
 public class AutoLoader extends Thread
@@ -61,7 +63,7 @@ public class AutoLoader extends Thread
 		throw new IOException(
 			"Sound-Datei bei AutoLoad nicht unterst\u00FCtzt" );
 	      }
-	      byte[] fileBuf  = EmuUtil.readFile( file, true, 0x10000 );
+	      byte[] fileBuf  = FileUtil.readFile( file, true, 0x10000 );
 	      if( fileBuf == null ) {
 		throw new IOException( TEXT_CANNOT_LOAD );
 	      }
@@ -112,7 +114,7 @@ public class AutoLoader extends Thread
 	      }
 
 	      // Datei laden
-	      emuThread.loadIntoMemory( loadData );
+	      emuThread.loadIntoMemory( loadData, null );
 	    }
 	    catch( IOException ex ) {
 	      String msg = ex.getMessage();

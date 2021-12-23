@@ -7,15 +7,15 @@
   Wenn die Sektoren aufsteigend angeordnet sind, passiert beim
   sequenziellen Lesen von mehreren Sektoren folgendes:
   Wenn der erste Sektor gelesen wurde,
-  muss der Floppy Disk Controller zum Lesen des zweiten Sektors
+  muss evtl. der Floppy Disk Controller zum Lesen des zweiten Sektors
   neu programmiert werden.
   Vielleicht muss auch noch etwas mit den gelesenen Daten getan werden.
-  W&auml;hrend dieser Zeit wird der zweite Sektor am Lesekopf vorbei sein,
+  W&auml;hrend dieser Zeit kann der Anfang des zweiten Sektors
+  schon am Lesekopf vorbei sein,
   so dass nun fast eine ganze Diskettenumdrehung gewartet werden muss,
-  bis der Sektor wieder gelesen werden kann.
-  Wenn nun aber zwischen zwei nacheinander zu lesende Sektoren
-  noch andere Sektoren plaziert w&auml;ren,
-  erg&auml;be das eine Zeit,
+  bis der zweite Sektor wieder gelesen werden kann.
+  Wenn nun aber zwischen zwei nacheinander zu lesenden Sektoren
+  noch andere Sektoren plaziert w&auml;ren, erg&auml;be das eine Zeit,
   in der der Floppy Disk Controller umprogrammiert werden kann.
   In der Folge w&uuml;rde der n&auml;chste Sektor noch in der gleichen
   Diskettenumdrehung gelesen werden k&ouml;nnen.

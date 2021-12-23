@@ -1,5 +1,5 @@
 /*
- * (c) 2013-2017 Jens Mueller
+ * (c) 2013-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -11,11 +11,9 @@ package jkcemu.emusys.zxspectrum;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.MouseEvent;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -276,7 +274,7 @@ public class ZXSpectrum48KeyboardFld extends AbstractKeyboardFld<ZXSpectrum>
   @Override
   protected void paintComponent( Graphics g )
   {
-    g.setColor( Color.black );
+    g.setColor( Color.BLACK );
     g.fillRect( 0, 0, getWidth(), getHeight() );
 
     // Hintergrund
@@ -304,7 +302,7 @@ public class ZXSpectrum48KeyboardFld extends AbstractKeyboardFld<ZXSpectrum>
       }
       if( key == this.keyEnter ) {
 	g.setFont( this.fontStd );
-	g.setColor( Color.white );
+	g.setColor( Color.WHITE );
 	drawStringCenter(
 		g,
 		"ENTER",
@@ -313,7 +311,7 @@ public class ZXSpectrum48KeyboardFld extends AbstractKeyboardFld<ZXSpectrum>
 		key.w - 10 );
       } else if( key == this.keyCapsShift ) {
 	g.setFont( this.fontLarge );
-	g.setColor( Color.white );
+	g.setColor( Color.WHITE );
 	drawStringCenter(
 		g,
 		"CAPS",
@@ -342,7 +340,7 @@ public class ZXSpectrum48KeyboardFld extends AbstractKeyboardFld<ZXSpectrum>
 		key.y + (key.h / 2) + FONT_LARGE_H - 1,
 		key.w - 10 );
       } else if( key == this.keySpace ) {
-	g.setColor( Color.white );
+	g.setColor( Color.WHITE );
 	g.setFont( this.fontStd );
 	drawStringCenter(
 		g,
@@ -363,7 +361,7 @@ public class ZXSpectrum48KeyboardFld extends AbstractKeyboardFld<ZXSpectrum>
 	}
 	g.setFont( this.fontLetter );
 	if( key.text1 != null ) {
-	  g.setColor( Color.white );
+	  g.setColor( Color.WHITE );
 	  if( i < 10 ) {
 	    g.drawString( key.text1, key.x + 5, key.y + 20 );
 	  } else {

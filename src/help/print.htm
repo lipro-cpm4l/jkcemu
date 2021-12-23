@@ -1,67 +1,108 @@
 <html>
 <body>
-  <h1>Drucken</h1>
-    JKCEMU bietet verschiedene M&ouml;glichkeiten zum Drucken.
-    Sie k&ouml;nnen z.B. <a href="about.htm#print">Hilfeseiten drucken</a>
-    oder auch den jeweils angezeigten Text im
-    <a href="tools/texteditor.htm#print">Texteditor</a>.
-    Ein besonderes Thema ist das Drucken in den emulierten Systemen,
-    d.h. die Emulation eines Druckers.
-  <br/><br/>
+ <h1>Drucken</h1>
+  JKCEMU bietet verschiedene M&ouml;glichkeiten zum Drucken.
+  Sie k&ouml;nnen z.B. <a href="about.htm#print">Hilfeseiten drucken</a>
+  oder auch den jeweils angezeigten Text im
+  <a href="tools/texteditor.htm#print">Texteditor</a>.
+  Ein besonderes Thema ist das Drucken in den emulierten Systemen,
+  d.h. die Emulation eines Druckers.
+  Darauf wird hier eingegangen.
+ <br/><br/>
+  <ul>
+   <li>
+    <a href="print.htm#emu">1. Drucken in den emulierten Systemen</a>
+    <ul>
+     <li>
+      <a href="print.htm#jobs">1.1. Drucken und Druckauftr&auml;ge</a>
+     </li>
+     <li>
+      <a href="print.htm#management">1.2. Verwaltung der Druckauftr&auml;ge</a>
+     </li>
+     <li>
+      <a href="print.htm#charset">1.3. Zeichensatz</a>
+     </li>
+    </ul>
+   </li>
+  </ul>
+ <br/>
 
-  <h2>1. Drucken in den emulierten Systemen </h2>
-    Einige Systeme bieten einen hardwarem&auml;&szlig;igen Druckeranschlusses
-    (evtl. auch als Zusatzmodul).
-    Dieser Anschluss wird von JKCEMU nachgebildet.
-  <br/><br/>
-    H&auml;ufig wurde auch eine Software-Schnittstelle definiert,
-    die Anwendungsprogramme zum Drucken benutzen k&ouml;nnen.
-    Die datentechnische Verbindung von dieser Software-Schnittstelle
-    zum eigentlichen Druckeranschluss &uuml;bernimmt ein Treiber,
-    der i.d.R. separat geladen werden muss.
-    JKCEMU kann auch die Systemaufrufe an dieser Software-Schnittstelle
-    abfangen, so dass im Emulator kein spezieller Treiber
-    geladen werden muss.
-  <br/><br/>
-    Das Abfangen der Systemaufrufe f&uuml;r Druckerausgaben
-    k&ouml;nnen Sie in den Einstellungen abschalten.
-  <br/><br/>
 
-  <h3><a name="jobs">1.1. Drucken und Druckauftr&auml;ge</a></h3>
-    Die Emulation des Druckers erfolgt auf der Art und Weise,
-    dass die an den Drucker gesendeten Zeichen erst einmal
-    in Form von Druckauftr&auml;gen gesammelt werden.
-    Diese Druckauftr&auml;ge k&ouml;nnen Sie speichern,
-    im Texteditor &ouml;ffnen und nat&uuml;rlich auch auf Papier drucken.
-    Rufen Sie dazu im JKCEMU Hauptfenster im Men&uuml; <em>Extra</em>
-    die Funktion <em>Druckauftr&auml;ge</em> auf.
-    In dem sich &ouml;ffnenden Fenster verwalten Sie die Druckauftr&auml;ge.
-  <br/><br/>
+ <h2><a name="emu">1. Drucken in den emulierten Systemen</a></h2>
+  Einige Systeme bieten einen hardwarem&auml;&szlig;igen Druckeranschlusses
+  (evtl. auch als Zusatzmodul).
+  Dieser Anschluss wird von JKCEMU nachgebildet.
+ <br/><br/>
+  H&auml;ufig wurde auch eine Software-Schnittstelle definiert,
+  die Anwendungsprogramme zum Drucken benutzen k&ouml;nnen.
+  Die datentechnische Verbindung von dieser Software-Schnittstelle
+  zum eigentlichen Druckeranschluss &uuml;bernimmt ein Treiber,
+  der i.d.R. separat geladen werden muss.
+  JKCEMU kann auch die Systemaufrufe an dieser Software-Schnittstelle
+  abfangen, so dass im Emulator kein spezieller Treiber
+  geladen werden muss.
+ <br/><br/>
+  Das Abfangen der Systemaufrufe f&uuml;r Druckerausgaben
+  k&ouml;nnen Sie in den Einstellungen abschalten.
+ <br/><br/>
 
-  <h3>1.2. Verwaltung der Druckauftr&auml;ge</h3>
-    Mit dem ersten Datenbyte, dass ein Programm zum Drucken ausgibt,
-    wird ein neuer Druckauftrag erzeugt.
-    Dieser Druckauftrag ist nun aktiv, d.h.,
-    alle weiteren Datenbytes wandern in diesen hinein.
-  <br/><br/>
-    Da die Druckeremulation nicht wei&szlig;,
-    wann das Anwendungsprogramm mit dem Drucken fertig ist,
-    wird der Druckauftrag i.d.R. nicht automatisch abgeschlossen.
-    Sie m&uuml;ssen dies somit manuell erledigen.
-    In bestimmten F&auml;llen, z.B. bei einem RESET,
-    wird ein aktiver Druckauftrag jedoch auch automatisch abgeschlossen.
-  <br/><br/>
-    Druckauftr&auml;ge k&ouml;nnen Sie drucken, speichern
-    sowie im Text- oder Hex-Editor &ouml;ffnen.
-    Wenn Sie einen Druckauftrag nicht mehr ben&ouml;tigen,
-    z.B. weil Sie ihn bereits auf Papier gedruckt haben,
-    k&ouml;nnen Sie ihn auch l&ouml;schen.
-    Alle diese Funktionen finden Sie im Fenster
-    <em>JKCEMU Druckauftr&auml;ge</em> im Men&uuml; <em>Datei</em>.
-  <br/><br/>
-    Mit der Funktion <em>Druckoptionen...</em> legen Sie
-    die Schriftgr&ouml;&szlig;e fest, mit der gedruckt wird.
-    Au&szlig;erdem geben Sie an, ob die Seitennummer erscheinen soll.
+ <h3><a name="jobs">1.1. Drucken und Druckauftr&auml;ge</a></h3>
+  Die Emulation des Druckers erfolgt auf der Art und Weise,
+  dass die an den Drucker gesendeten Bytes erst einmal
+  in Form von Druckauftr&auml;gen gesammelt werden.
+  Diese Druckauftr&auml;ge k&ouml;nnen Sie speichern,
+  im <a href="tools/texteditor.htm">Texteditor</a> &ouml;ffnen
+  und nat&uuml;rlich auch auf Papier drucken.
+  Rufen Sie dazu im JKCEMU Hauptfenster im Men&uuml; <em>Extra</em>
+  die Funktion <em>Druckauftr&auml;ge</em> auf.
+  In dem sich &ouml;ffnenden Fenster verwalten Sie die Druckauftr&auml;ge.
+ <br/><br/>
+
+ <h3><a name="management">1.2. Verwaltung der Druckauftr&auml;ge</a></h3>
+  Mit dem ersten Datenbyte, dass ein Programm zum Drucken ausgibt,
+  wird ein neuer Druckauftrag erzeugt.
+  Dieser Druckauftrag ist nun aktiv, d.h.,
+  alle weiteren Datenbytes wandern in diesen hinein.
+ <br/><br/>
+  Da die Druckeremulation nicht wei&szlig;,
+  wann das Anwendungsprogramm mit dem Drucken fertig ist,
+  wird der Druckauftrag i.d.R. nicht automatisch abgeschlossen.
+  Sie m&uuml;ssen dies somit manuell erledigen.
+  In bestimmten F&auml;llen, z.B. bei einem RESET,
+  wird ein aktiver Druckauftrag jedoch auch automatisch abgeschlossen.
+ <br/><br/>
+  Druckauftr&auml;ge k&ouml;nnen Sie drucken, speichern
+  sowie im <a href="tools/texteditor.htm">Text-</a>
+  oder <a href="tools/hexeditor.htm">Hex-Editor</a> &ouml;ffnen.
+  Wenn Sie einen Druckauftrag nicht mehr ben&ouml;tigen,
+  z.B. weil Sie ihn bereits auf Papier gedruckt haben,
+  k&ouml;nnen Sie ihn auch l&ouml;schen.
+  Alle diese Funktionen finden Sie im Fenster
+  <em>JKCEMU Druckauftr&auml;ge</em> im Men&uuml; <em>Datei</em>.
+ <br/><br/>
+  Mit der Funktion <em>Druckoptionen...</em> legen Sie
+  die Schriftgr&ouml;&szlig;e fest, mit der gedruckt wird.
+  Au&szlig;erdem geben Sie an, ob die Seitennummer erscheinen soll.
+ <br/><br/>
+
+ <h3><a name="charset">1.3. Zeichensatz</a></h3>
+  Zum Anzeigen eines Druckauftrags im
+  <a href="tools/texteditor.htm">Texteditor</a>
+  oder Ausdrucken auf Papier muss der Zeichensatz bekannt sein,
+  der diesem Druckauftrag zugrunde liegt.
+  Daf&uuml;r gibt es das Men&uuml; <em>Zeichensatz</em> ein.
+  Dieses Men&uuml; entspricht somit der Zeichensatzeinstellung,
+  die man fr&uuml;her direkt am Drucker vorgenommen hat.
+ <br/><br/>
+  Bei der Umwandlung der Druckbytes in Zeichen werden die Bytes,
+  f&uuml;r die es im eingestellten Zeichensatz keine Entsprechung gibt,
+  ignoriert.
+  Diese Bytes bzw. Zeichen fehlen dann im angezeigten oder ausgedruckten
+  Text.
+ <br/><br/>
+  Beim &Ouml;ffnen eines Druckauftrags im
+  <a href="tools/hexeditor.htm">Hex-Editor</a>
+  oder beim Speichern wird der Druckauftrag nicht ver&auml;ndert,
+  d.h., in dem Fall spielt der eingestellte Zeichensatz keine Rolle.
 </body>
 </html>
-

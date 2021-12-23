@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2017 Jens Mueller
+ * (c) 2012-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.lang.*;
 import java.util.EventObject;
 import java.util.Properties;
 import javax.swing.AbstractButton;
@@ -21,15 +20,16 @@ import javax.swing.ButtonGroup;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTabbedPane;
-import jkcemu.base.AbstractSettingsFld;
-import jkcemu.base.AutoInputSettingsFld;
-import jkcemu.base.AutoLoadSettingsFld;
 import jkcemu.base.EmuThread;
 import jkcemu.base.EmuUtil;
-import jkcemu.base.ROMFileSettingsFld;
-import jkcemu.base.SettingsFrm;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.UserInputException;
 import jkcemu.emusys.LC80;
+import jkcemu.file.ROMFileSettingsFld;
+import jkcemu.settings.AbstractSettingsFld;
+import jkcemu.settings.AutoInputSettingsFld;
+import jkcemu.settings.AutoLoadSettingsFld;
+import jkcemu.settings.SettingsFrm;
 
 
 public class LC80SettingsFld extends AbstractSettingsFld
@@ -39,11 +39,11 @@ public class LC80SettingsFld extends AbstractSettingsFld
   private JPanel               tabRom;
   private AutoLoadSettingsFld  tabAutoLoad;
   private AutoInputSettingsFld tabAutoInput;
-  private JRadioButton         btnLC80_U505;
-  private JRadioButton         btnLC80_2716;
-  private JRadioButton         btnLC80_2;
-  private JRadioButton         btnLC80e;
-  private JRadioButton         btnLC80ex;
+  private JRadioButton         rbLC80_U505;
+  private JRadioButton         rbLC80_2716;
+  private JRadioButton         rbLC80_2;
+  private JRadioButton         rbLC80e;
+  private JRadioButton         rbLC80ex;
   private ROMFileSettingsFld   fldAltOS;
   private ROMFileSettingsFld   fldAltA000;
   private ROMFileSettingsFld   fldAltC000;
@@ -54,12 +54,12 @@ public class LC80SettingsFld extends AbstractSettingsFld
     super( settingsFrm, propPrefix );
 
     setLayout( new BorderLayout() );
-    this.tabbedPane = new JTabbedPane( JTabbedPane.TOP );
+    this.tabbedPane = GUIFactory.createTabbedPane();
     add( this.tabbedPane, BorderLayout.CENTER );
 
 
     // Tab Modell
-    this.tabModel = new JPanel( new GridBagLayout() );
+    this.tabModel = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "Modell", this.tabModel );
 
     GridBagConstraints gbcModel = new GridBagConstraints(
@@ -73,50 +73,46 @@ public class LC80SettingsFld extends AbstractSettingsFld
 
     ButtonGroup grpModel = new ButtonGroup();
 
-    this.btnLC80_U505 = new JRadioButton(
-		"LC-80, 2 KByte ROM (2xU505), 1 KByte RAM",
-		false );
-    this.btnLC80_U505.addActionListener( this );
-    grpModel.add( this.btnLC80_U505 );
-    this.tabModel.add( this.btnLC80_U505, gbcModel );
+    this.rbLC80_U505 = GUIFactory.createRadioButton(
+		"LC-80, 2 KByte ROM (2xU505), 1 KByte RAM" );
+    this.rbLC80_U505.addActionListener( this );
+    grpModel.add( this.rbLC80_U505 );
+    this.tabModel.add( this.rbLC80_U505, gbcModel );
 
-    this.btnLC80_2716 = new JRadioButton(
+    this.rbLC80_2716 = GUIFactory.createRadioButton(
 		"LC-80, 2 KByte ROM (2716), 4 KByte RAM",
 		true );
-    this.btnLC80_2716.addActionListener( this );
-    grpModel.add( this.btnLC80_2716 );
+    this.rbLC80_2716.addActionListener( this );
+    grpModel.add( this.rbLC80_2716 );
     gbcModel.insets.top = 0;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnLC80_2716, gbcModel );
+    this.tabModel.add( this.rbLC80_2716, gbcModel );
 
-    this.btnLC80_2 = new JRadioButton(
-		"LC-80.2, 4 KByte ROM mit Buschendorf-Monitor, 4 KByte RAM",
-		false );
-    this.btnLC80_2.addActionListener( this );
-    grpModel.add( this.btnLC80_2 );
+    this.rbLC80_2 = GUIFactory.createRadioButton(
+	"LC-80.2, 4 KByte ROM mit Buschendorf-Monitor, 4 KByte RAM" );
+    this.rbLC80_2.addActionListener( this );
+    grpModel.add( this.rbLC80_2 );
     gbcModel.gridy++;
-    this.tabModel.add( this.btnLC80_2, gbcModel );
+    this.tabModel.add( this.rbLC80_2, gbcModel );
 
-    this.btnLC80e = new JRadioButton(
-		"LC-80e, 12 KByte ROM mit Schachprogramm SC-80, 4 KByte RAM",
-		false );
-    this.btnLC80e.addActionListener( this );
-    grpModel.add( this.btnLC80e );
+    this.rbLC80e = GUIFactory.createRadioButton(
+	"LC-80e, 12 KByte ROM mit Schachprogramm SC-80, 4 KByte RAM" );
+    this.rbLC80e.addActionListener( this );
+    grpModel.add( this.rbLC80e );
     gbcModel.gridy++;
-    this.tabModel.add( this.btnLC80e, gbcModel );
+    this.tabModel.add( this.rbLC80e, gbcModel );
 
-    this.btnLC80ex = new JRadioButton(
-		"LC-80ex, 20 KByte ROM, 32 KByte RAM, TV-Terminal 1.2",
-		false );
-    this.btnLC80ex.addActionListener( this );
-    grpModel.add( this.btnLC80ex );
+    this.rbLC80ex = GUIFactory.createRadioButton(
+		"LC-80ex, 20 KByte ROM, 32 KByte RAM, TV-Terminal 1.2" );
+    this.rbLC80ex.addActionListener( this );
+    grpModel.add( this.rbLC80ex );
     gbcModel.insets.bottom = 5;
     gbcModel.gridy++;
-    this.tabModel.add( this.btnLC80ex, gbcModel );
+    this.tabModel.add( this.rbLC80ex, gbcModel );
 
 
     // Tab ROM
-    this.tabRom = new JPanel( new GridBagLayout() );
+    this.tabRom = GUIFactory.createPanel( new GridBagLayout() );
     this.tabbedPane.addTab( "ROM", this.tabRom );
 
     GridBagConstraints gbcRom = new GridBagConstraints(
@@ -163,8 +159,8 @@ public class LC80SettingsFld extends AbstractSettingsFld
     this.tabAutoInput = new AutoInputSettingsFld(
 		settingsFrm,
 		propPrefix,
+		LC80.getAutoInputCharSet(),
 		LC80.DEFAULT_SWAP_KEY_CHAR_CASE,
-		LC80.FUNCTION_KEY_COUNT,
 		LC80.DEFAULT_PROMPT_AFTER_RESET_MILLIS_MAX );
     this.tabbedPane.addTab( "AutoInput", this.tabAutoInput );
 
@@ -176,13 +172,13 @@ public class LC80SettingsFld extends AbstractSettingsFld
   public String getModelSysName()
   {
     String rv = LC80.SYSNAME_LC80_2716;
-    if( this.btnLC80_U505.isSelected() ) {
+    if( this.rbLC80_U505.isSelected() ) {
       rv = LC80.SYSNAME_LC80_U505;
-    } else if( this.btnLC80_2.isSelected() ) {
+    } else if( this.rbLC80_2.isSelected() ) {
       rv = LC80.SYSNAME_LC80_2;
-    } else if( this.btnLC80e.isSelected() ) {
+    } else if( this.rbLC80e.isSelected() ) {
       rv = LC80.SYSNAME_LC80_E;
-    } else if( this.btnLC80ex.isSelected() ) {
+    } else if( this.rbLC80ex.isSelected() ) {
       rv = LC80.SYSNAME_LC80_EX;
     }
     return rv;
@@ -227,16 +223,17 @@ public class LC80SettingsFld extends AbstractSettingsFld
   {
     boolean rv  = false;
     Object  src = e.getSource();
-    if( (src == this.btnLC80_U505)
-	|| (src == this.btnLC80_2716)
-	|| (src == this.btnLC80_2)
-	|| (src == this.btnLC80e)
-	|| (src == this.btnLC80ex) )
+    if( (src == this.rbLC80_U505)
+	|| (src == this.rbLC80_2716)
+	|| (src == this.rbLC80_2)
+	|| (src == this.rbLC80e)
+	|| (src == this.rbLC80ex) )
     {
       rv = true;
       updFldAltA000Enabled();
       updFldAltC000Enabled();
       fireDataChanged();
+      this.settingsFrm.fireUpdSpeedTab();
     }
     if( !rv ) {
       rv = this.tabAutoLoad.doAction( e );
@@ -253,34 +250,23 @@ public class LC80SettingsFld extends AbstractSettingsFld
 
 
   @Override
-  public void lookAndFeelChanged()
-  {
-    this.fldAltOS.lookAndFeelChanged();
-    this.fldAltA000.lookAndFeelChanged();
-    this.fldAltC000.lookAndFeelChanged();
-    this.tabAutoLoad.lookAndFeelChanged();
-    this.tabAutoInput.lookAndFeelChanged();
-  }
-
-
-  @Override
   public void updFields( Properties props )
   {
     switch( EmuUtil.getProperty( props, EmuThread.PROP_SYSNAME ) ) {
       case LC80.SYSNAME_LC80_U505:
-	this.btnLC80_U505.setSelected( true );
+	this.rbLC80_U505.setSelected( true );
 	break;
       case LC80.SYSNAME_LC80_2:
-	this.btnLC80_2.setSelected( true );
+	this.rbLC80_2.setSelected( true );
 	break;
       case LC80.SYSNAME_LC80_E:
-	this.btnLC80e.setSelected( true );
+	this.rbLC80e.setSelected( true );
 	break;
       case LC80.SYSNAME_LC80_EX:
-	this.btnLC80ex.setSelected( true );
+	this.rbLC80ex.setSelected( true );
 	break;
       default:
-	this.btnLC80_2716.setSelected( true );
+	this.rbLC80_2716.setSelected( true );
     }
     updFldAltC000Enabled();
     this.fldAltOS.updFields( props );
@@ -295,13 +281,13 @@ public class LC80SettingsFld extends AbstractSettingsFld
 
   private void updFldAltA000Enabled()
   {
-    this.fldAltA000.setEnabled( this.btnLC80ex.isSelected() );
+    this.fldAltA000.setEnabled( this.rbLC80ex.isSelected() );
   }
 
 
   private void updFldAltC000Enabled()
   {
     this.fldAltC000.setEnabled(
-		this.btnLC80e.isSelected() || this.btnLC80ex.isSelected() );
+		this.rbLC80e.isSelected() || this.rbLC80ex.isSelected() );
   }
 }

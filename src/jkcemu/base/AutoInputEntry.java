@@ -1,5 +1,5 @@
 /*
- * (c) 2015-2016 Jens Mueller
+ * (c) 2015-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,15 +9,14 @@
 package jkcemu.base;
 
 import java.io.UnsupportedEncodingException;
-import java.lang.*;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Properties;
+import jkcemu.Main;
 
 
 public class AutoInputEntry
 {
-  public static final String PROP_COUNT       = "count";
   public static final String PROP_INPUT_TEXT  = "input_text";
   public static final String PROP_REMARK      = "remark";
   public static final String PROP_WAIT_MILLIS = "wait.millis";
@@ -59,7 +58,10 @@ public class AutoInputEntry
   {
     java.util.List<AutoInputEntry> rv = null;
     if( (props != null) && (propPrefix != null) ) {
-      int n = EmuUtil.getIntProperty( props, propPrefix + PROP_COUNT, 0 );
+      int n = EmuUtil.getIntProperty(
+				props,
+				propPrefix + Main.PROP_COUNT,
+				0 );
       if( n > 0 ) {
 	rv = new ArrayList<>();
 	for( int i = 0; i < n; i++ ) {

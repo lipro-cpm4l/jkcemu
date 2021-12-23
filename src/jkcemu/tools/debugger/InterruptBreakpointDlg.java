@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2021 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -12,11 +12,11 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.WindowEvent;
-import java.lang.*;
 import java.util.EventObject;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JSeparator;
+import jkcemu.base.GUIFactory;
 import z80emu.Z80InterruptSource;
 
 
@@ -32,7 +32,6 @@ public class InterruptBreakpointDlg extends AbstractBreakpointDlg
   {
     super( debugFrm, "Interrupt-Quelle", breakpoint );
 
-
     // Fensterinhalt
     setLayout( new GridBagLayout() );
 
@@ -42,10 +41,10 @@ public class InterruptBreakpointDlg extends AbstractBreakpointDlg
 						0.0, 0.0,
 						GridBagConstraints.CENTER,
 						GridBagConstraints.NONE,
-						new Insets( 10, 5, 5, 5 ),
+						new Insets( 10, 5, 0, 5 ),
 						0, 0 );
 
-    this.comboIntSource = new JComboBox<>();
+    this.comboIntSource = GUIFactory.createComboBox();
     this.comboIntSource.setEditable( false );
     this.comboIntSource.addKeyListener( this );
     setInterruptSources( iSources );
@@ -55,7 +54,7 @@ public class InterruptBreakpointDlg extends AbstractBreakpointDlg
     gbc.weightx   = 1.0;
     gbc.gridwidth = GridBagConstraints.REMAINDER;
     gbc.gridy++;
-    add( new JSeparator(), gbc );
+    add( GUIFactory.createSeparator(), gbc );
 
     gbc.insets.bottom = 0;
     gbc.gridy++;
@@ -140,4 +139,3 @@ public class InterruptBreakpointDlg extends AbstractBreakpointDlg
       this.comboIntSource.requestFocus();
   }
 }
-

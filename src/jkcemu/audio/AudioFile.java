@@ -1,5 +1,5 @@
 /*
- * (c) 2016-2017 Jens Mueller
+ * (c) 2016-2019 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -14,19 +14,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
-import java.lang.*;
 import java.util.Arrays;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import jkcemu.Main;
 import jkcemu.base.EmuUtil;
+import jkcemu.file.FileUtil;
 
 
 public class AudioFile
 {
-  private static final int SIGNED_VALUE_1 = AudioOut.UNSIGNED_VALUE_1 / 2;
-  private static final int SIGNED_VALUE_0 = -SIGNED_VALUE_1;
-
-
   public static class Info implements PCMDataInfo
   {
     private int     frameRate;
@@ -93,8 +89,8 @@ public class AudioFile
 
 
   private static final String[] fileExts = {
-			"aif", "aiff", "aifc", "au", "wav",
-			"aif.gz", "aiff.gz", "aifc.gz", "au.gz", "wav.gz" };
+			"aif", "aiff", "au", "wav",
+			"aif.gz", "aiff.gz", "au.gz", "wav.gz" };
 
   private static javax.swing.filechooser.FileFilter fileFilter = null;
 
@@ -107,7 +103,7 @@ public class AudioFile
 
   public static String getFileExtensionText()
   {
-    return "*.aif; *.aifc; *.aiff; *.au; *.wav; *.aif.gz; ...";
+    return "*.aif; *.aiff; *.au; *.wav; *.aif.gz; ...";
   }
 
 
@@ -130,18 +126,31 @@ public class AudioFile
       byte[] header    = new byte[ 0x1000 ];
       int    headerLen = 0;
 
-      in        = EmuUtil.openBufferedOptionalGZipFile( file );
+      in        = FileUtil.openBufferedOptionalGZipFile( file );
       headerLen = EmuUtil.read( in, header );
       if( headerLen < header.length ) {
 	header = Arrays.copyOf( header, headerLen );
       }
       rv = processFile( header, null, null, null );
       if( rv == null ) {
-	EmuUtil.throwUnsupportedFileFormat();
+	FileUtil.throwUnsupportedFileFormat();
       }
     }
     finally {
-      EmuUtil.closeSilent( in );
+      EmuUtil.closeSilently( in );
+    }
+    return rv;
+  }
+
+
+  public static PCMDataInfo getInfo( byte[] header ) throws IOException
+  {
+    PCMDataInfo rv = null;
+    if( header != null ) {
+      rv = processFile( header, null, null, null );
+    }
+    if( rv == null ) {
+      FileUtil.throwUnsupportedFileFormat();
     }
     return rv;
   }
@@ -168,14 +177,18 @@ public class AudioFile
     InputStream      in  = null;
     RandomAccessFile raf = null;
     try {
-      byte[] header    = null;
+      long   fileLen   = file.length();
       int    headerLen = 0;
+      byte[] header    = null;
       if( fileBytes != null ) {
 	header    = fileBytes;
 	headerLen = fileBytes.length;
-      } else {
-	long    fileLen = file.length();
-	boolean gz      = EmuUtil.isGZipFile( file );
+	if( (fileLen == 0) || (fileLen > fileBytes.length) ) {
+	  fileBytes = null;
+	}
+      }
+      if( (fileBytes == null) && (file != null) ) {
+	boolean gz = FileUtil.isGZipFile( file );
 
 	/*
 	 * Kleine GZip-komprimierte und etwas groessere
@@ -188,15 +201,15 @@ public class AudioFile
 	if( !gz && (fileLen > AudioUtil.FILE_READ_MAX) ) {
 	  raf       = new RandomAccessFile( file, "r" );
 	  header    = new byte[ 0x1000 ];
-	  headerLen = in.read( header );
+	  headerLen = raf.read( header );
 	  raf.seek( 0 );
 	} else {
 	  if( !gz || (gz && (fileLen <= AudioUtil.FILE_READ_MAX)) ) {
-	    fileBytes = EmuUtil.readFile( file, true );
+	    fileBytes = FileUtil.readFile( file, true );
 	    header    = fileBytes;
 	    headerLen = fileBytes.length;
 	  } else {
-	    in     = EmuUtil.openBufferedOptionalGZipFile( file );
+	    in     = FileUtil.openBufferedOptionalGZipFile( file );
 	    header = new byte[ 0x1000 ];
 	    in.mark( header.length );
 	    headerLen = EmuUtil.read( in, header );
@@ -220,12 +233,12 @@ public class AudioFile
     }
     finally {
       if( rv == null  ) {
-	EmuUtil.closeSilent( in );
-	EmuUtil.closeSilent( raf );
+	EmuUtil.closeSilently( in );
+	EmuUtil.closeSilently( raf );
 	if( ex != null ) {
 	  throw ex;
 	} else {
-	  EmuUtil.throwUnsupportedFileFormat();
+	  FileUtil.throwUnsupportedFileFormat();
 	}
       }
     }
@@ -245,9 +258,7 @@ public class AudioFile
     if( fName.endsWith( ".aif" ) || fName.endsWith( ".aiff" )
 	|| fName.endsWith( ".aif.gz" ) || fName.endsWith( ".aiff.gz" ) )
     {
-      writeAIF( source, file, false );
-    } else if( fName.endsWith( ".aifc" ) || fName.endsWith( ".aifc.gz" ) ) {
-      writeAIF( source, file, true );
+      writeAIF( source, file );
     } else if( fName.endsWith( ".au" ) || fName.endsWith( ".au.gz" ) ) {
       writeAU( source, file );
     } else if( fName.endsWith( ".wav" ) || fName.endsWith( ".wav.gz" ) ) {
@@ -299,6 +310,9 @@ public class AudioFile
   {
     PCMDataInfo rv = null;
     if( fileBytes != null ) {
+      if( dataOffs >= Integer.MAX_VALUE ) {
+	FileUtil.throwUnsupportedFileFormat();
+      }
       rv = new PCMDataBuffer(
 			frameRate,
 			sampleSizeInBits,
@@ -306,7 +320,7 @@ public class AudioFile
 			dataSigned,
 			bigEndian,
 			fileBytes,
-			dataOffs,
+			(int) dataOffs,
 			dataLen );
     }
     else if( raf != null ) {
@@ -347,7 +361,7 @@ public class AudioFile
 
 
   /*
-   * Die Methode liesst ein 10-Byte-Fliesskommazahl nach IEEE 754
+   * Die Methode liesst eine 10-Byte-Fliesskommazahl nach IEEE 754
    * in Big Endian und gibt sie gerundet
    * (die niederwaertigen 6 Bytes werden nicht ausgewertet)
    * als float zurueck.
@@ -375,7 +389,6 @@ public class AudioFile
 
 
   private static PCMDataInfo processAIF(
-				boolean          aifc,
 				byte[]           header,
 				byte[]           fileBytes,
 				RandomAccessFile raf,
@@ -393,22 +406,11 @@ public class AudioFile
     int         pos              = 12;
     while( (remainBytes > 8) && ((pos + 8) < header.length) ) {
       long blkLen = EmuUtil.getInt4BE(header, pos + 4 ) + 8;
-      if( EmuUtil.isTextAt( "COMM", header, pos )
-	  && ((aifc && (blkLen >= 30)) || (!aifc && (blkLen >= 26))) )
-      {
+      if( EmuUtil.isTextAt( "COMM", header, pos ) && (blkLen >= 26) ) {
 	channels         = EmuUtil.getInt2BE( header, pos + 8 );
 	frameCount       = EmuUtil.getInt4BE( header, pos + 10 );
 	sampleSizeInBits = EmuUtil.getInt2BE( header, pos + 14 );
 	frameRate        = Math.round( getFloat10BE( header, pos + 16 ) );
-	if( aifc ) {
-	  if( EmuUtil.isTextAt( "NONE", header, pos + 26 ) ) {
-	    bigEndian = true;
-	  } else if( EmuUtil.isTextAt( "sowt", header, pos + 26 ) ) {
-	    bigEndian = false;
-	  } else {
-	    throwUnsupportedEncoding();
-	  }
-	}
       } else if( EmuUtil.isTextAt( "SSND", header, pos ) ) {
 	long offs = EmuUtil.getInt4BE(header, pos + 8 );
 	if( EmuUtil.getInt4BE(header, pos + 12 ) != 0 ) {
@@ -486,20 +488,20 @@ public class AudioFile
 				InputStream      in ) throws IOException
   {
     PCMDataInfo rv = null;
-    if( EmuUtil.isTextAt( "FORM", header, 0 ) ) {
-      if( EmuUtil.isTextAt( "AIFF", header, 8 ) ) {
-	rv = processAIF( false, header, fileBytes, raf, in );
-      } else if( EmuUtil.isTextAt( "AIFC", header, 8 ) ) {
-	rv = processAIF( true, header, fileBytes, raf, in );
+    if( header != null ) {
+      if( EmuUtil.isTextAt( "FORM", header, 0 ) ) {
+	if( EmuUtil.isTextAt( "AIFF", header, 8 ) ) {
+	  rv = processAIF( header, fileBytes, raf, in );
+	}
       }
-    }
-    else if( EmuUtil.isTextAt( ".snd", header, 0 ) ) {
-      rv = processAU( header, fileBytes, raf, in );
-    }
-    if( EmuUtil.isTextAt( "RIFF", header, 0 )
-	&& EmuUtil.isTextAt( "WAVE", header, 8 ) )
-    {
-      rv = processWAV( header, fileBytes, raf, in );
+      else if( EmuUtil.isTextAt( ".snd", header, 0 ) ) {
+	rv = processAU( header, fileBytes, raf, in );
+      }
+      if( EmuUtil.isTextAt( "RIFF", header, 0 )
+	  && EmuUtil.isTextAt( "WAVE", header, 8 ) )
+      {
+	rv = processWAV( header, fileBytes, raf, in );
+      }
     }
     return rv;
   }
@@ -568,62 +570,43 @@ public class AudioFile
   {
     throw new IOException( "Dateiformat nicht unterst\u00FCtzt!"
 		+ "\n\nUnterst\u00FCtzte Dateiendungen sind:"
-		+ "\n  *.aif; *.aifc; *.aiff; *.au; *.wav"
+		+ "\n  *.aif; *.aiff; *.au; *.wav"
 		+ "\n\nSowie die gleichen mit GZip komprimiert:"
-		+ "\n  *.aif.gz; *.aifc.gz; *.aiff.gz; *.au.gz; *.wav.gz" );
+		+ "\n  *.aif.gz; *.aiff.gz; *.au.gz; *.wav.gz" );
   }
 
 
   private static void writeAIF(
 			PCMDataSource source,
-			File          file,
-			boolean       aifc ) throws IOException
+			File          file ) throws IOException
   {
     long         len = calcDataLen( source );
     OutputStream out = null;
     try {
 
-      /*
-       * Audiodaten vorzeichenbehaftet in Big-Endian speichern,
-       * Ausnahme: AIFF-C/sowt-Dateien (Little Endian),
-       *           was hier im Fall von *.aifc verwendet wird.
-       */
+      // Audiodaten ggf. konvertieren
       PCMConverterInputStream pcm = new PCMConverterInputStream(
 							source,
 							true,
-							!aifc );
+							true );
 
       // Datei schreiben
       out = new BufferedOutputStream(
-			EmuUtil.createOptionalGZipOutputStream( file ) );
+			FileUtil.createOptionalGZipOutputStream( file ) );
 
       // FORM Chunk
       EmuUtil.writeASCII( out, "FORM" );
 				// Chunk-Laenge: restliche Dateilaenge
-      EmuUtil.writeInt4BE( out, aifc ? (len + 74) : (len + 42) );
-      EmuUtil.writeASCII( out, aifc ? "AIFC" : "AIFF" );
-
-      // FVER Chunk (nur AIFF-C)
-      if( aifc ) {
-	EmuUtil.writeASCII( out, "FVER" );
-	EmuUtil.writeInt4BE( out, 4 );
-	// von Apple vorgegebner Wert fuer AIFF-C Version 1
-	EmuUtil.writeInt4BE( out, 0xA2805140 );
-      }
+      EmuUtil.writeInt4BE( out, len + 46 );
+      EmuUtil.writeASCII( out, "AIFF" );
 
       // COMM Chunk
       EmuUtil.writeASCII( out, "COMM" );
-      EmuUtil.writeInt4BE( out, aifc ? 37 : 18 );	// ohne Fuellbyte
+      EmuUtil.writeInt4BE( out, 18 );		// ohne Fuellbyte
       EmuUtil.writeInt2BE( out, source.getChannels() );
       EmuUtil.writeInt4BE( out, source.getFrameCount() );
       EmuUtil.writeInt2BE( out, pcm.getSampleSizeInBits() );
       writeFloat10BE( out, source.getFrameRate() );
-      if( aifc ) {
-	EmuUtil.writeASCII( out, "sowt" );	// Little Endian
-	out.write( 14 );
-	EmuUtil.writeASCII( out, "not compressed" );
-	out.write( 0 );			// Fuellbyte fuer gerade Byteanzahl
-      }
 
       // SSND Chunk
       EmuUtil.writeASCII( out, "SSND" );
@@ -639,7 +622,7 @@ public class AudioFile
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 
@@ -661,7 +644,7 @@ public class AudioFile
 
       // Datei oeffnen und Kopf schreiben
       out = new BufferedOutputStream(
-			EmuUtil.createOptionalGZipOutputStream( file ) );
+			FileUtil.createOptionalGZipOutputStream( file ) );
       EmuUtil.writeASCII( out, ".snd" );
       EmuUtil.writeInt4BE( out, 24 );		// Kopfgroesse
       EmuUtil.writeInt4BE( out, len );		// Groesse Datenbereich
@@ -680,7 +663,7 @@ public class AudioFile
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 
@@ -718,7 +701,7 @@ public class AudioFile
     try {
 
       /*
-       * 1-Byte-Audiodaten vorzeichenlos in Little-Endian speichern
+       * 1-Byte-Audiodaten vorzeichenlos speichern
        * Mehr-Byte-Audiodaten vorzeichenbehaftet in Little-Endian speichern
        */
       int sampleSizeInBits        = source.getSampleSizeInBits();
@@ -733,7 +716,7 @@ public class AudioFile
 
       // Datei oeffnen und Kopf schreiben
       out = new BufferedOutputStream(
-			EmuUtil.createOptionalGZipOutputStream( file ) );
+			FileUtil.createOptionalGZipOutputStream( file ) );
       EmuUtil.writeASCII( out, "RIFF" );
       EmuUtil.writeInt4LE( out, len + 36 );	// restliche Dateilaenge
       EmuUtil.writeASCII( out, "WAVEfmt\u0020" );
@@ -756,7 +739,7 @@ public class AudioFile
       out = null;
     }
     finally {
-      EmuUtil.closeSilent( out );
+      EmuUtil.closeSilently( out );
     }
   }
 

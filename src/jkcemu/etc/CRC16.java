@@ -1,5 +1,5 @@
 /*
- * (c) 2010-2015 Jens Mueller
+ * (c) 2010-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -8,7 +8,6 @@
 
 package jkcemu.etc;
 
-import java.lang.*;
 import java.util.zip.Checksum;
 
 

@@ -1,5 +1,5 @@
 /*
- * (c) 2012-2016 Jens Mueller
+ * (c) 2012-2018 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -13,7 +13,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
-import java.lang.*;
 import java.util.Arrays;
 import jkcemu.base.AbstractKeyboardFld;
 import jkcemu.base.EmuSys;
@@ -36,7 +35,7 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld<VCS80>
   public VCS80KeyboardFld( VCS80 vcs80 )
   {
     super( vcs80, 24, true );
-    this.fontBtn  = new Font( "SansSerif", Font.PLAIN, FONT_SIZE );
+    this.fontBtn  = new Font( Font.SANS_SERIF, Font.PLAIN, FONT_SIZE );
     this.kbMatrix = new int[ 8 ];
     this.curIdx   = 0;
     this.curX     = MARGIN;
@@ -116,20 +115,20 @@ public class VCS80KeyboardFld extends AbstractKeyboardFld<VCS80>
   {
     g.setFont( this.fontBtn );;
     g.setPaintMode();
-    g.setColor( Color.lightGray );
+    g.setColor( Color.LIGHT_GRAY );
     g.fillRect( 0, 0, getWidth(), getHeight() );
     for( KeyData key : this.keys ) {
       boolean selected = isKeySelected( key );
       if( selected ) {
-	g.setColor( Color.gray );
+	g.setColor( Color.GRAY );
 	g.fillRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1 );
       }
-      g.setColor( Color.lightGray );
+      g.setColor( Color.LIGHT_GRAY );
       g.draw3DRect( key.x + 1, key.y + 1, key.w - 1, key.h - 1, !selected );
       if( key.text1 != null ) {
 	FontMetrics fm = g.getFontMetrics();
 	if( fm != null ) {
-	  g.setColor( Color.black );
+	  g.setColor( Color.BLACK );
 	  g.drawString(
 		key.text1,
 		key.x + ((key.w - fm.stringWidth( key.text1 )) / 2) + 1,

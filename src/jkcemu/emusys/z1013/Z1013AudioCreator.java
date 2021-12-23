@@ -1,5 +1,5 @@
 /*
- * (c) 2011-2016 Jens Mueller
+ * (c) 2011-2017 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -18,7 +18,6 @@
 package jkcemu.emusys.z1013;
 
 import java.io.IOException;
-import java.lang.*;
 import java.util.NoSuchElementException;
 import jkcemu.audio.BitSampleBuffer;
 import jkcemu.base.ByteIterator;

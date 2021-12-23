@@ -1,5 +1,5 @@
 /*
- * (c) 2008-2016 Jens Mueller
+ * (c) 2008-2020 Jens Mueller
  *
  * Kleincomputer-Emulator
  *
@@ -9,6 +9,7 @@
 package jkcemu.tools.hexdiff;
 
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -23,9 +24,9 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.lang.*;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EventObject;
@@ -35,6 +36,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -42,14 +44,20 @@ import javax.swing.event.ListSelectionListener;
 import jkcemu.Main;
 import jkcemu.base.BaseDlg;
 import jkcemu.base.EmuUtil;
+import jkcemu.base.GUIFactory;
 import jkcemu.base.HTMLViewFrm;
+import jkcemu.base.PopupMenuOwner;
 import jkcemu.base.ReplyIntDlg;
+import jkcemu.file.FileUtil;
 
 
 public class HexDiffFrm extends HTMLViewFrm implements
 						DropTargetListener,
-						ListSelectionListener
+						ListSelectionListener,
+						PopupMenuOwner
 {
+  public static final String TITLE = Main.APPNAME + " Hex-Dateivergleicher";
+
   private static HexDiffFrm instance = null;
 
   private int              lastDiffs;
@@ -57,6 +65,9 @@ public class HexDiffFrm extends HTMLViewFrm implements
   private JMenuItem        mnuFileAdd;
   private JMenuItem        mnuFileRemove;
   private JMenuItem        mnuMaxDiffs;
+  private JPopupMenu       popupMnu;
+  private JMenuItem        popupFileAdd;
+  private JMenuItem        popupFileRemove;
   private JList<FileData>  listFiles;
   private JButton          btnFileAdd;
   private JButton          btnFileRemove;
@@ -77,7 +88,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
   }
 
 
-  public int addFiles( Collection files )
+  public int addFiles( Collection<?> files )
   {
     int nAdded = 0;
     if( files != null ) {
@@ -117,7 +128,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 			fName + ": Datei ist leer.",
 			"Datei leer",
 			"Weiter",
-			"Abbrechen" ) != 0 )
+			EmuUtil.TEXT_CANCEL ) != 0 )
 		  {
 		    break;
 		  }
@@ -144,7 +155,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
   @Override
   public void dragEnter( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
+    if( !FileUtil.isFileDrop( e ) )
       e.rejectDrag();
   }
 
@@ -152,37 +163,44 @@ public class HexDiffFrm extends HTMLViewFrm implements
   @Override
   public void dragExit( DropTargetEvent e )
   {
-    // empty
+    // leer
   }
 
 
   @Override
   public void dragOver( DropTargetDragEvent e )
   {
-    // empty
+    // leer
   }
 
 
   @Override
   public void drop( DropTargetDropEvent e )
   {
-    if( EmuUtil.isFileDrop( e ) ) {
+    if( FileUtil.isFileDrop( e ) ) {
       e.acceptDrop( DnDConstants.ACTION_COPY ); // Quelle nicht loeschen
-      int          nAdded = 0;
-      Transferable t      = e.getTransferable();
+      Transferable t = e.getTransferable();
       if( t != null ) {
 	try {
-	  Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
+	  final Object o = t.getTransferData( DataFlavor.javaFileListFlavor );
 	  if( o != null ) {
 	    if( o instanceof Collection ) {
-	      nAdded = addFiles( (Collection) o );
+	      EventQueue.invokeLater(
+			new Runnable()
+			{
+			  @Override
+			  public void run()
+			  {
+			    addFiles( (Collection<?>) o );
+			  }
+			} );
 	    }
 	  }
 	}
 	catch( IOException ex ) {}
 	catch( UnsupportedFlavorException ex ) {}
       }
-      e.dropComplete( nAdded > 0 );
+      e.dropComplete( true );
     } else {
       e.rejectDrop();
     }
@@ -192,8 +210,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
   @Override
   public void dropActionChanged( DropTargetDragEvent e )
   {
-    if( !EmuUtil.isFileDrop( e ) )
-      e.rejectDrag();
+    // leer
   }
 
 
@@ -204,9 +221,19 @@ public class HexDiffFrm extends HTMLViewFrm implements
   {
     if( e.getSource() == this.listFiles ) {
       boolean state = (this.listFiles.getSelectedIndex() >= 0);
-      this.mnuFileRemove.setEnabled( state );
       this.btnFileRemove.setEnabled( state );
+      this.mnuFileRemove.setEnabled( state );
+      this.popupFileRemove.setEnabled( state );
     }
+  }
+
+
+	/* --- PopupMenuOwner --- */
+
+  @Override
+  public JPopupMenu getPopupMenu()
+  {
+    return this.popupMnu;
   }
 
 
@@ -218,11 +245,17 @@ public class HexDiffFrm extends HTMLViewFrm implements
     boolean rv  = false;
     Object  src = e.getSource();
     if( src != null ) {
-      if( (src == this.mnuFileAdd) || (src == this.btnFileAdd) ) {
+      if( (src == this.btnFileAdd)
+	  || (src == this.mnuFileAdd)
+	  || (src == this.popupFileAdd) )
+      {
 	rv = true;
 	doFileAdd();
       }
-      else if( (src == this.mnuFileRemove) || (src == this.btnFileRemove) ) {
+      else if( (src == this.btnFileRemove)
+	       || (src == this.mnuFileRemove)
+	       || (src == this.popupFileRemove) )
+      {
 	rv = true;
 	doFileRemove();
       }
@@ -241,14 +274,37 @@ public class HexDiffFrm extends HTMLViewFrm implements
   @Override
   public boolean doClose()
   {
-    boolean rv = super.doClose();
-    if( rv ) {
-      if( !Main.checkQuit( this ) ) {
-	// damit beim erneuten Oeffnen das Fenster leer ist
-	this.files.clear();
-	this.listFiles.setListData( this.files );
-	updResult();
+    boolean rv = false;
+    if( Main.isTopFrm( this ) ) {
+      rv = EmuUtil.closeOtherFrames( this );
+      if( rv ) {
+	rv = super.doClose();
       }
+      if( rv ) {
+	Main.exitSuccess();
+      }
+    } else {
+      rv = super.doClose();
+    }
+    if( rv ) {
+      // damit beim erneuten Oeffnen das Fenster leer ist
+      this.files.clear();
+      this.listFiles.setListData( this.files );
+      updResult();
+    }
+    return rv;
+  }
+
+
+  @Override
+  protected boolean showPopupMenu( MouseEvent e )
+  {
+    boolean rv = false;
+    if( e.getComponent() == this.listFiles ) {
+      this.popupMnu.show( this.listFiles, e.getX(), e.getY() );
+      rv = true;
+    } else {
+      rv = super.showPopupMenu( e );
     }
     return rv;
   }
@@ -258,30 +314,45 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
   private HexDiffFrm()
   {
-    setTitle( "JKCEMU Hex-Dateivergleicher" );
+    setTitle( TITLE );
     this.files     = new Vector<>();
     this.lastDiffs = 0;
 
 
     // Menu
-    JMenu mnuFile = new JMenu( "Datei" );
-    mnuFile.setMnemonic( KeyEvent.VK_D );
+    JMenu mnuFile = createMenuFile();
 
-    this.mnuFileAdd = createJMenuItem( "Datei hinzuf\u00FCgen..." );
+    this.mnuFileAdd = createMenuItem( EmuUtil.TEXT_ADD_FILE );
     mnuFile.add( this.mnuFileAdd );
 
-    this.mnuFileRemove = createJMenuItem( "Datei entfernen" );
+    this.mnuFileRemove = createMenuItem( "Datei entfernen" );
     this.mnuFileRemove.setEnabled( false );
     mnuFile.add( this.mnuFileRemove );
     mnuFile.addSeparator();
 
-    JMenu mnuSettings = new JMenu( "Einstellungen" );
-    mnuSettings.setMnemonic( KeyEvent.VK_E );
-
-    this.mnuMaxDiffs = createJMenuItem( "Max. Dateiunterschiede..." );
+    JMenu mnuSettings = createMenuSettings();
+    this.mnuMaxDiffs  = createMenuItem( "Max. Dateiunterschiede..." );
     mnuSettings.add( this.mnuMaxDiffs );
 
-    createMenuBar( mnuFile, mnuSettings, "/help/tools/hexdiff.htm" );
+    createMenuBar(
+		mnuFile,
+		EmuUtil.TEXT_OPEN_FIND,
+		null,
+		mnuSettings,
+		"Hilfe zum Hex-Dateivergleicher...",
+		"/help/tools/hexdiff.htm" );
+
+
+    // Kontextmenue fuer Dateibereich
+    this.popupMnu = GUIFactory.createPopupMenu();
+
+    this.popupFileAdd = createMenuItem( "Datei hinzuf\u00FCgen..." );
+    this.popupMnu.add( this.popupFileAdd );
+
+    this.popupFileRemove = createMenuItem( "Datei entfernen" );
+    this.popupFileRemove.setEnabled( false );
+    this.popupMnu.add( this.popupFileRemove );
+
 
 
     // Fensterinhalt
@@ -297,34 +368,39 @@ public class HexDiffFrm extends HTMLViewFrm implements
 						0, 0 );
 
     // Dateiliste
-    add( new JLabel( "Dateien:" ), gbc );
+    add( GUIFactory.createLabel( "Dateien:" ), gbc );
 
-    this.listFiles = new JList<>();
+    this.listFiles = GUIFactory.createList();
     this.listFiles.setSelectionMode(
 		ListSelectionModel.MULTIPLE_INTERVAL_SELECTION );
     this.listFiles.setVisibleRowCount( 2 );
     gbc.fill    = GridBagConstraints.BOTH;
     gbc.weightx = 1.0;
     gbc.gridx++;
-    add( new JScrollPane( this.listFiles ), gbc );
+    add( GUIFactory.createScrollPane( this.listFiles ), gbc );
 
-    this.btnFileAdd = createImageButton(
-				"/images/file/open.png",
-				"Datei hinzuf\u00FCgen" );
+    this.btnFileAdd = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/open.png",
+					EmuUtil.TEXT_ADD_FILE );
+    this.btnFileAdd.addActionListener( this );
     gbc.fill       = GridBagConstraints.NONE;
     gbc.weightx    = 0.0;
     gbc.gridheight = 1;
     gbc.gridx++;
     add( this.btnFileAdd, gbc );
 
-    this.btnFileRemove = createImageButton(
-				"/images/file/delete.png",
-				"Datei entfernen" );
+    this.btnFileRemove = GUIFactory.createRelImageResourceButton(
+					this,
+					"file/delete.png",
+					"Datei entfernen" );
     this.btnFileRemove.setEnabled( false );
+    this.btnFileRemove.addActionListener( this );
     gbc.gridy++;
     add( this.btnFileRemove, gbc );
 
     this.listFiles.addListSelectionListener( this );
+    this.listFiles.addMouseListener( this );
 
 
     // Ergebnis
@@ -344,13 +420,13 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
 
     // sonstiges
-    if( !applySettings( Main.getProperties(), true ) ) {
+    setResizable( true );
+    if( !applySettings( Main.getProperties() ) ) {
       this.editorPane.setPreferredSize( new Dimension( 300, 300 ) );
       pack();
       this.editorPane.setPreferredSize( null );
       setScreenCentered();
     }
-    setResizable( true );
     updResult();
   }
 
@@ -359,7 +435,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 
   private void doFileAdd()
   {
-    java.util.List<File> files = EmuUtil.showMultiFileOpenDlg(
+    java.util.List<File> files = FileUtil.showMultiFileOpenDlg(
 			this,
 			"Dateien \u00F6ffnen",
 			Main.getLastDirFile( Main.FILE_GROUP_HEXDIFF ) );
@@ -401,7 +477,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 			vOld,
 			0,
 			null );
-    dlg.setTitle( "Einstellung" );
+    dlg.setTitle( EmuUtil.TEXT_SETTINGS );
     dlg.setVisible( true );
     Integer v = dlg.getReply();
     if( v != null ) {
@@ -496,7 +572,7 @@ public class HexDiffFrm extends HTMLViewFrm implements
 		if( b >= 0 ) {
 		  buf.append( String.format( "%02X", b ) );
 		  if( (b > 0x20) && (b < 0x7F) ) {
-		    buf.append( (char) '\u0020' );
+		    buf.append( '\u0020' );
 		    buf.append( (char) b );
 		  }
 		}
@@ -512,7 +588,8 @@ public class HexDiffFrm extends HTMLViewFrm implements
 	    if( (maxDiffs > 0) && (nDiffs >= maxDiffs) ) {
 	      buf.append( "<br>\n" );
 	      if( maxDiffs == 1 ) {
-		buf.append( "Es wird nur der erste Unterschied angezeigt.\n" );
+		buf.append( "Es wird nur der erste Unterschied"
+						+ " angezeigt.\n" );
 	      } else {
 		buf.append( "Es werden nur die ersten " );
 		buf.append( maxDiffs );
